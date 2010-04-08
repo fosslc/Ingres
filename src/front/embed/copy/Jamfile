@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!embed!copy
+#
+
+SubDir ING_SRC front embed copy ;
+
+IISUBSYS front embed copy ;
+
+
+IILIBRARY COPYLIB : iicopy.c ;
+

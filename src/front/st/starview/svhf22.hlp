@@ -1,0 +1,35 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+TEST NODE
+
+The TESTNODE command allows the testing of nodes that are part of
+the current distributed database. The SINGLENODE command 
+tests the accessibility of the virtual node currently highlighted.
+The ALLNODES command tests the accessibility of all virtual nodes of the 
+current distributed database. Both the SINGLENODE and the ALLNODES commands 
+return automatically to the Nodes and Local Databases menu upon completion.
+The Stat field of the Nodes/Local Database table changes from a '?' to
+up/down if the node is accessible or inaccessible.
+The HELP command displays this screen, and the END command 
+returns to the Nodes and Local Databases menu without testing any nodes.
+
+To test the accessibility of a node that is not part of the current distributed
+database, return to the Nodes and Local Databases menu, and use the 
+TESTLDB command, followed by the NEWLDB command. The NEWLDB command 
+prompts for a node and local database name. Enter the name of the desired 
+node when prompted for node name, and enter 'IIDBDB' when prompted for 
+the local database name.  The accessibility of this node is displayed 
+in a separate popup dialogue box.
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	SingleNode	Test accessibility of the highlighted virtual node.
+
+	AllNodes	Test accessibility of all virtual nodes of the current
+			distributed database.
+
+	Help		Display this screen.
+
+	End		Exit to the Nodes and Local Databases menu.
+

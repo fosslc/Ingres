@@ -1,0 +1,19 @@
+#
+# MANIFEST file for common!gcf!gcj
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#       08-Jan-2008 (bolke01) 119936 
+#           Enabled the build to be targeted at the install library
+#           directory as per the Unix installations which is library
+#           on VMS not lib
+
+SubDir ING_SRC common gcf gcj ;
+
+IISUBSYS common gcf gcj ;
+
+IIBFILES $(LIB_BLD) : JdbcInfo.class iijdbc.jar ;
+
+

@@ -1,0 +1,873 @@
+/*
+** Copyright (c) 1986, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<nm.h>		/* 6-x_PC_80x86 */
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<me.h>
+# include	<ci.h>
+# include	<ex.h>
+# include	<cm.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include	<uf.h>
+# include	<fstm.h>
+# include	<qr.h>
+# include	<ermf.h>
+
+/**
+** Name:	fsrun.qsc -	Interactive Terminal Monitor Run Module.
+**
+** Description:
+**	Contains the routine that runs the interactive terminal monitor
+**	frame (the only one.)  Defines:
+**
+**	FSrun()
+**
+** History:
+**	mm/dd/yy (RTI) -- created for 5.0.
+**	10/20/86 (KY)  -- Changed CH.h to CM.h.
+**	08/25/87 (scl) -- Convert FTprompt to ##prompt
+**	10-aug-88 (bruceb)
+**		Changed ##abort to EXEC SQL ROLLBACK WORK and
+**		##end transaction to EXEC SQL COMMIT WORK.
+**	12-oct-88 (kathryn)	Bugs 2673,3269
+**		End help transaction when all output has not been scrolled 
+**		through.
+**	26-oct-88 (bruceb)	Fix for bug 2603.
+**		Call IIMFdcl_DisplayCleanup when an interrupt causes movement
+**		from output display to input form.
+**		Interrupts react in the following fashion:
+**		  If on the input form and a query is in progress, than
+**			add a message to output buffer, but stay on input
+**			form.
+**		  If on input form with no query in progress, do nothing.
+**		  If on output display and query in progress, add message to
+**			output buffer and stay on output display.
+**		  If on output display and no query in progress, return to
+**			input form.
+**	24-apr-89 (kathryn)  Added OnError option and  FSonError() function.
+**	04-may-89 (kathryn)  Bug# 5632
+**		Changed Quit option to be FRSkey2 ONLY - FRSkey3 no longer
+**		activates the QUIT menuitem.
+**	23-may-89 (kathryn)  Bug# 5631
+**		Always commit when quitting if language was SQL.
+**	25-may-89 (kathryn) Added IIFSend_qry().
+**      25-may-89 (teresal)
+**              Add new activations InsertLine and DeleteLine.
+**	21-jul-89 (teresal)
+**		Bug fix for #6597.  Put out an error message if the query
+**		buffer is full.
+**	27-jul-89 (teresal)
+**		Changed back to having FRSkey3 also activate the QUIT menuitem.
+**		See FRC minutes for 7/3/89.
+**      02-aug-89 (sylviap)
+**		Added _VOID_ to FSmore and FSdisp calls.
+**		Added help file parameters to FSdisp.
+**	04-oct-89 (teresal)
+**		Added check for Runtime INGRES installation.
+**	15-oct-89 (teresal)
+**		The tablefield editing functions have been removed from the
+**		FSTM directory and put into a general facility (uf) so emerald
+**		can use them as well.  The function calls FSedit,
+**		FSload, and FSunload have been replaced by calls to 
+**		IIUFtfeTblFldEdit, IIUFtflTblFldLoad, and IIUFtfuTblFldUnload.
+**		The InsertLine and DeleteLine menu items have been replaced
+**		by a LineEdit menu item that brings up a menu item containing
+**		various line editing functions.
+**      16-oct-89 (sylviap)
+**		Changed IIMFdcl_DisplayCleanup to IIUFdcl_DisplayCleanup, and
+**		   IIUFoof_OnOutputForm to IIMFoof_OnOutputForm.
+**		Changed routine calls from FS to IIUF.
+**	21-dec-89 (teresal)
+**		IBM porting change.  Moved NMgtAt call out of if stmt.
+**		
+**	28-nov-89 (teresal)
+**		Changed global Runtime_INGRES to be referenced rather than
+**		defined here.
+**	08-feb-90 (sylviap)
+**		Added a parameter to IIUFdsp_Display to control scrolling.
+**      02-mar-1990 (Mike S)
+**              Use function interface for "on output form" flag
+**	13-mar-90 (teresal)
+**		Fix for bug 9141.  Only put out SQL committed msg when
+**		COMMIT was sucessful.
+**	20-mar-90 (teresal)
+**		Eliminated 'Query buffer is full' message - Query buffer is
+**		now dynamically allocated. Bug 8389.
+**      01-may-90 (sylviap)
+**		Added new parameters to IIUFdsp_Display for popup titles.
+**	15-may-1990 (teresal)
+**		Added top and bottom frskeys so control keys will appear
+**		in the help keys display.
+**	12-jun-1990 (teresal)
+**		Added help for LineEdit menu item.  Changed Read and Write
+**		menuitems to be ReadFile and WriteFile to make this more
+**		consistent with other frontends and added help explanations
+**		for these menu items.
+**	29-aug-1990 (kathryn) - Integration of Porting changes:
+**		Remove Declaration of inMST() which is an obsolete function.
+**	17-mar-92 (seg)	Exception handlers return STATUS, not EX.
+**	21-apr-92 (seg)	"errno" reserved by ANSI.  Changed to "errnum" for OS/2.
+**	10-oct-92 (rogerl) 
+**		Allocate output buffer dynamically, double it's initial size.
+**	29-jan-93 (rogerl) popform in interrupt handler, reorder calls after
+**		[ backed out ]
+**	5-feb-93 (rogerl) rework above 'fix'.
+**		[ backed out ]
+**	8-mar-93 (rogerl) backed out 29-jan-93, 5-feb-93 changes
+**		Ignore interrupts on subforms as per FRC decision.
+**		Bugs 42020,40968,40449
+**	01/19/94 (dkh) - Fixed bug 58914.  Moved buffer allocation
+**			 for the output buffer to be before the calls
+**			 to FSsetup().  This is needed since the
+**			 completion of a query causes the buffer to be freed.
+**	01/20/94 (ricka)
+**		added "include <me.h>", needed because of MEreqmem added as
+**		part of above fix.
+**	03/21/94 (donc)
+**		replace CI_xxxx_RUNTIME in favor of new CI_CREATE_TABLE
+**	04/23/96 (chech02)
+**		inclued uf.h for windows 3.1 port.
+**      03-oct-1996 (rodjo04)
+**              Changed "ermf.h" to <ermf.h>
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      27-oct-2004 (huazh01)
+**          Call IIhelp() if the query is a detailed 'help' statement. 
+**          b64679, INGCBT545. 
+**      11-Jun-2004 (hanch04)
+**          Removed reference to CI for the open source release.
+**      11-Jan-2005 (wansh01)
+**          INGNET 161 bug # 113737
+**	    Supressed login info[uid,pwd] in vnodeless connection string  
+**	    to display in Database field. 
+**	01-Feb-2005 
+**          correct win32 compiler error 	
+**	28-Mar-2005 (lakvi01)
+**	    Corrected function prototypes.
+**      24-Apr-2007 (kiria01) b118184
+**          Renamed IIhelp to IIhelptoggle to avoid naming conflict
+**          runsys routines.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+*/
+
+GLOBALDEF QRB	*FS_qrb = NULL;
+GLOBALREF bool	Runtime_INGRES;
+
+FUNC_EXTERN	bool	IIUFver();
+FUNC_EXTERN	VOID	IIUFdcl_DisplayCleanup();
+FUNC_EXTERN	VOID	IIUFtfbTblFldBreak();
+FUNC_EXTERN 	VOID    IIUFtfdTblFldDelete();
+FUNC_EXTERN 	STATUS  IIUFtfeTblFldEdit();
+FUNC_EXTERN 	VOID    IIUFtfiTblFldInsert();
+FUNC_EXTERN	VOID	IIUFtfjTblFldJoin();
+FUNC_EXTERN 	STATUS  IIUFtflTblFldLoad();
+FUNC_EXTERN 	STATUS  IIUFtfuTblFldUnload();
+FUNC_EXTERN     VOID    IIUFoosOnOutputSet();
+FUNC_EXTERN     bool    IIUFoogOnOutputGet();
+FUNC_EXTERN     VOID    FTfrminvis();
+FUNC_EXTERN     VOID    FTfrmvis();
+
+GLOBALREF 	ADF_CB	*FS_adfscb;
+
+static STATUS	trap();
+
+#define _Help_Expl	F_FE0100_ExplFrameHelp
+#define _End_Expl	F_FE0102_ExplEnd
+#define _Select_Expl	F_FE0108_ExplSelect
+
+STATUS
+FSrun ( bcb, dbname, dml )
+BCB		*bcb;
+##char	*dbname;
+DB_LANG	dml;	/* display DML */
+{
+	static const
+##		char	_Form[]		= ERx("quelcmds"),
+##			_TabFld[]	= ERx("qin"),
+##			_Column[]	= ERx("quelin");
+
+
+##	char	*editmenu;
+
+	EX_CONTEXT	ctx;
+	QRB		qrb;		/* QR control block structure */
+	DB_DATA_VALUE	dv;		/* QRB output buffer structure */
+	char		*qryerror;
+	char		*err_cont;
+	char		*msg;		/* Error message text */
+	char		title[80];	/* the help title buffer */
+	char		help_scr[80];	/* the help screen buffer */
+	char		file_title[80];	/* the browser popup title */ 
+	char		print_title[80];/* the browser popup title */
+##	i4		errnum;
+
+	if ( IIUFgtfGetForm(IIUFlcfLocateForm(), _Form) != OK )
+	{
+		IIUGerr(E_MF0026_Bad_Get_Form, UG_ERR_ERROR, 0);
+		return FAIL;
+	}
+
+# ifdef	PCINGRES
+	editmenu = NULL;
+# else
+	editmenu = ERget(FE_Edit);
+# endif	/* PCINGRES */
+
+	/* allocate output buffer */
+	dv.db_length = DB_MAXSTRING;
+
+	qrb.qrptr = NULL;	/* bugs 2673,3269 */
+	qrb.severity = 1;
+        qrb.help_stmt = FALSE; 
+
+	NMgtAt(ERx("II_TM_ON_ERROR"), &qryerror);
+	if ((qryerror != NULL) && (*qryerror != EOS))
+	{
+		CVlower(qryerror);
+		if (STcompare(qryerror,ERget(F_MF0039_continue)) == 0)
+		{
+			qrb.severity = 0;
+		}
+	}
+	/* Check if this is a Runtime INGRES installation.  Note: the TM
+	** treats fully restrictive and partially restrictive Runtime
+	** INGRES in the same way - the TM doesn't allow tables to be created
+	** (or dropped, if SQL) when running Runtime INGRES.
+	*/
+	Runtime_INGRES = FALSE;
+	STcopy (ERx("fsoutput.hlp"), help_scr);
+	STcopy (ERget(S_MF0002_FSTM_output_helptitle), title);
+
+	/* Get the correct title based whether it is ISQL or IQUEL */
+	STcopy (ERget
+	   (dml==DB_SQL ? S_MF2103_SQL_print_title : S_MF2105_QUEL_print_title),
+	    print_title);
+	STcopy (ERget
+	    (dml==DB_SQL ? S_MF2104_SQL_file_title : S_MF2106_QUEL_file_title), 
+	     file_title);
+
+##	display _Form UPDATE
+##	initialize
+##	{
+		ER_MSGID	trim;
+		char *pleft,*pright, *pcomma;
+		int  len;
+		char buffer[80];
+
+##		inittable _Form _TabFld FILL;
+
+		trim = dml == DB_SQL ? F_MF000E_Enter_SQL_Statements
+				: F_MF000F_Enter_QUEL_Statements;
+
+		/*
+		**    Display name of database on main form.
+		*/
+		/*
+		**    for vnodeless connection, supress [uid,pwd] info 
+		*/
+		if (( dbname[0] == '@' ) &&
+		    (pleft = STchr(dbname,'[')) &&
+		    (pright = STchr(dbname,']')) && 
+		    ((pleft) && (pcomma= STchr(pleft,','))))
+		{
+		    len = pcomma - dbname +1;
+		    STncpy(buffer,dbname, len);
+		    buffer[len]='\0';
+		    STcat( buffer,"****");
+		    STcat(buffer,pright);
+		    STcpy(dbname,buffer);
+		}
+##		putform ( database = dbname, language = ERget(trim) );
+
+		IIUFoosOnOutputSet(FALSE);
+
+		if ( EXdeclare(trap, &ctx) != OK )
+		{
+			/*
+			** req_complete is also TRUE before the first
+			** query is started, and TRUE again when no query
+			** is still partially run.
+			*/
+
+			if (!bcb->req_complete)
+			{
+			    IIUFadd_AddRec(bcb,
+				ERget(F_MF0010_Terminated_Interrupt), TRUE);
+			    bcb->req_complete = TRUE;
+
+			    IIUFbot_Bottom(bcb);
+
+			    /* reset counts; 'RunToCompletion' may be
+			    ** two down
+			    */
+			    EXinterrupt(EX_RESET);
+
+			    if (IIUFoogOnOutputGet())
+				goto output_done;	/* Display output */
+			    else
+				goto begin_input;	/* Display input form */
+			}
+
+			if (IIUFoogOnOutputGet())
+			    IIUFdcl_DisplayCleanup();
+
+			IIUFoosOnOutputSet(FALSE);
+			goto begin_input;	/* Display input form */
+		}
+
+		EXinterrupt(EX_ON);
+				/* default is interruptable; explicitly shut
+				** interrupts off when necessary
+				*/
+##	}
+
+##	activate menuitem ERget(FE_Go) (expl = ERget(S_MF001D_Run_the_request)),
+##		FRSkey4
+##	{
+		i4		nmrows;
+
+		IIFSend_qry(&qrb,bcb);
+
+		if ( (nmrows = FScount(_Form, _TabFld, _Column)) == 0 )
+		{
+			FTswinerr(ERget(S_MF001C_no_query_req_ignored), FALSE);
+##			resume
+		}
+
+##		message ERget(S_MF001D_Run_the_request)
+
+		bcb->req_complete = FALSE;
+		bcb->eor_warning  = FALSE;
+
+		IIUFoosOnOutputSet(TRUE);
+
+		IIUFclb_ClearBcb(bcb);
+
+		/* initialize DB_DATA_VALUE representing QRB output buffer*/
+		dv.db_data = (PTR)MEreqmem( (u_i4)0, (u_i4) DB_MAXSTRING,
+			FALSE, (STATUS *)0 );
+		if (FSsetup(bcb, _Form, _TabFld, _Column, nmrows, &qrb, &dv)
+			    != OK)
+		{
+			/* Unable to allocate more memory for query buffer */
+			bcb->req_complete = TRUE;
+##			resume
+		}
+
+		_VOID_ IIUFmro_MoreOutput(bcb, bcb->mx_rows-3, &qrb);
+
+output_done:   ;
+		/* 
+		** Make the parent(input frame) invisible to allow the popups
+		** to appear over the scrollable output
+		*/
+		FTfrminvis();	
+		_VOID_ IIUFdsp_Display(bcb, &qrb, help_scr, title, TRUE,
+			print_title, file_title, TRUE);
+
+                /* b64679, INGCBT545 */
+                if (qrb.help_stmt)
+                {
+                   IIhelptoggle(TRUE);
+                   qrb.help_stmt = FALSE; 
+                }
+                else
+                {
+                   IIhelptoggle(FALSE);
+                }
+
+		FTfrmvis();
+begin_input:   ;
+##	}
+
+##	activate menuitem ERget(FE_Resume)
+##		(expl = ERget(S_MF001F_Resume_the_request))
+##	{
+		if (bcb->nrows == 0)
+		{
+			FTswinerr(ERget(S_MF001E_No_active_request), FALSE);
+		}
+		else
+		{
+##			message ERget(S_MF001F_Resume_the_request)
+			IIUFoosOnOutputSet(TRUE);
+
+			/* 
+			** Make the parent(input frame) invisible to allow the 
+			** popups to appear over the scrollable output
+			*/
+			FTfrminvis();	
+			_VOID_ IIUFdsp_Display(bcb, &qrb, help_scr, title, 
+				TRUE, print_title, file_title, TRUE);
+			FTfrmvis();
+		}
+##	}
+
+##	activate menuitem ERget(F_MF0011_Complete) 
+##		(expl = ERget(S_MF0003_Run_to_completion))
+##	{
+		i4		nmrows;
+
+		IIFSend_qry(&qrb,bcb);
+
+		if ( (nmrows = FScount(_Form, _TabFld, _Column)) == 0 )
+		{
+			FTswinerr(ERget(S_MF001C_no_query_req_ignored), FALSE);
+##			resume
+		}
+
+##		message ERget(S_MF0003_Run_to_completion)
+
+		bcb->req_complete = FALSE;
+		bcb->eor_warning  = FALSE;
+
+		IIUFoosOnOutputSet(TRUE);
+
+		IIUFclb_ClearBcb(bcb);
+
+		/* initialize DB_DATA_VALUE representing QRB output buffer*/
+		dv.db_data = (PTR)MEreqmem( (u_i4)0, (u_i4) DB_MAXSTRING,
+			FALSE, (STATUS *)0 );
+		if (FSsetup(bcb, _Form, _TabFld, _Column, nmrows, &qrb, &dv)
+			    != OK)
+		{
+			/* Unable to allocate more memory for query buffer */
+			bcb->req_complete = TRUE;
+##			resume
+		}
+
+		_VOID_ IIUFmro_MoreOutput(bcb, 0, &qrb);
+
+		IIUFbot_Bottom(bcb);
+
+		/* 
+		** Make the parent(input frame) invisible to allow the 
+		** popups to appear over the scrollable output
+		*/
+		FTfrminvis();
+		_VOID_ IIUFdsp_Display(bcb, &qrb, help_scr, title, TRUE,
+			print_title, file_title, TRUE);
+		FTfrmvis();
+##	}
+
+##	activate menuitem ERget(FE_Blank)
+##		(expl = ERget(S_MF0051_ExplBlank))
+##	{
+##		inittable _Form _TabFld FILL
+##	}
+
+##	activate menuitem editmenu (expl = ERget(S_MF0052_ExplEdit))
+##	{
+# ifndef	PCINGRES
+		if (IIUFtfeTblFldEdit(_Form, _TabFld, _Column, &msg) != OK)
+			IIUFpan_Panic(bcb, msg);
+# endif	/* PCINGRES */
+##	}
+
+##	activate menuitem ERget(FE_File)
+##		(expl = ERget(S_MF0053_ExplFile))
+##	{
+		EXinterrupt(EX_OFF);
+
+		for (;;)
+		{
+##			submenu
+##			activate menuitem ERget(FE_ReadFile)
+##			  (expl = ERget(F_FE010D_ReadExpl))
+##			{
+				if (IIUFtflTblFldLoad(_Form, _TabFld, _Column, 
+					&msg) != OK)
+					IIUFpan_Panic(bcb, msg);
+				break;
+##			}
+##			activate menuitem ERget(FE_WriteFile)
+##			  (expl = ERget(F_FE010E_WriteExpl))
+##			{
+				bool	dummy;
+
+				if (IIUFtfuTblFldUnload(_Form, _TabFld, _Column,
+					&msg, &dummy) != OK)
+					IIUFpan_Panic(bcb, msg);
+				break;
+##			}
+##			activate menuitem ERget(FE_Help) (expl = ERget(_Help_Expl)),
+##					FRSkey1
+##			{
+				FEhelp(ERx("fsfile.hlp"),
+					ERget(S_MF0020_FSTM_File_help_banner));
+				continue;
+##			}
+##			activate menuitem ERget(FE_End) (expl = ERget(_End_Expl)),
+##					FRSkey3
+##			{
+				break;
+##			}
+		}
+		EXinterrupt(EX_ON);
+##	}
+
+##	activate menuitem ERget(F_MF0030_OnError) 
+##		(expl = ERget(S_MF0040_ExplOnError), validate = 0)
+##	{
+		EXinterrupt(EX_OFF);
+		qrb.severity = FSonError(qrb.severity);
+		EXinterrupt(EX_ON);
+##	}
+
+##      activate menuitem ERget(FE_LineEdit)
+##                      (expl = ERget(F_FE010F_LineEditExpl))
+##      {
+		EXinterrupt(EX_OFF);
+
+		for (;;)
+		{
+##                      submenu
+##                      activate menuitem ERget(FE_InsLine)
+##                        (expl = ERget(F_FE0110_InsertExpl))
+##                      {
+				IIUFtfiTblFldInsert(_Form, _TabFld);
+				break;
+##                      }
+
+##                      activate menuitem ERget(FE_DelLine)
+##                        (expl = ERget(F_FE0111_DeleteExpl))
+##                      {
+				IIUFtfdTblFldDelete(_Form, _TabFld);
+				break;
+##                      }
+
+##                      activate menuitem ERget(FE_SplitLine)
+##                        (expl = ERget(F_FE0113_SplitExpl))
+##                      {
+				IIUFtfbTblFldBreak(_Form, _TabFld, _Column);
+				break;
+##                      }
+
+##			activate menuitem ERget(FE_JoinLines)
+##                        (expl = ERget(F_FE0112_JoinExpl))
+##                      {
+				IIUFtfjTblFldJoin(_Form, _TabFld, _Column);
+				break;
+##                      }
+
+##			activate menuitem ERget(FE_Help)
+##			  (expl = ERget(F_FE0101_ExplKeyHelp)),
+##				FRSkey1
+##			{
+				FEhelp(ERx("fslinedt.hlp"),
+					ERget(S_MF0028_LineEdit_help_banner));
+				continue;
+##			}
+
+##                      activate menuitem ERget(FE_End)
+##                        (expl = ERget(F_FE0102_ExplEnd)),
+##                      	FRSkey3
+##                      {
+				break;
+##                      }
+		}
+		EXinterrupt(EX_ON);
+##      }
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(_Help_Expl), validate = 0),
+##			FRSkey1 (validate = 0)
+##	{
+	    EXinterrupt(EX_OFF);
+	    FEhelp(dml == DB_SQL ? ERx("fssinput.hlp") : ERx("fsqinput.hlp"),
+				    ERget(S_MF0021_FSTM_input_helpbanner));
+	    EXinterrupt(EX_ON);
+##	}
+
+##	activate frskey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+		/* Top */
+##		scroll _Form _TabFld to 1
+##	}
+
+##	activate frskey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+		/* Bottom */
+##		scroll _Form _TabFld to end
+##	}
+
+##	activate menuitem ERget(FE_Quit) (expl = ERget(S_MF0054_ExplQuit)),
+##		 FRSkey2 (validate=0), FRSkey3
+##	{
+
+		/* flush out any resident unfinished queries */
+		/* inMST - no need for a routine for this -  now defunct */
+	
+		IIFSend_qry(&qrb,bcb);
+		IIUFclb_ClearBcb(bcb);
+
+		/* BEGIN FIX FOR BUG 7149 */
+		/* Use ADF_CB in case '\sql' or '\quel' switched the DML
+		** (even though such switching is not supported.)
+		*/
+
+		if (FS_adfscb->adf_qlang == DB_QUEL)
+		{
+		    if (FEinMST())
+		    {
+			if (!IIUFver(ERget(S_MF0022_in_a_trans_wanna_quit), 0))
+##			    resume
+
+			/* put out a message that the transaction
+			** has been aborted... (especially if TM
+			** was run from a script and inadvertantly
+			** quit with an abort, so there's some
+			** output about it.)
+			*/
+			EXEC SQL ROLLBACK WORK;
+##			MESSAGE ERget(S_MF2101_Pending_trans_aborted)
+		     }
+		}
+		/* END FIX FOR BUG 7149 */
+
+		/* BUG 5631 - ALWAYS COMMIT when exiting if language was SQL.*/
+
+		else	/* assume SQL */
+		{
+			EXEC SQL COMMIT WORK;
+
+			/*
+			** Make sure commit was successful before
+			** displaying "Your SQL statement(s) have been
+			** committed." message. (bug 9141)
+			*/
+##			INQUIRE_INGRES(errnum=ERRORNO)
+			if (errnum == 0)
+			{
+##			   MESSAGE ERget(S_MF2102_SQL_stmt_committed)
+			}
+		}
+##		breakdisplay
+##	}
+
+	EXdelete();
+
+	return OK;
+}
+
+/**
+** Name:	FSonError -	Interactive Terminal Monitor On_Error option.
+**
+** Description:
+**	Contains the routine that runs the pop-up form for the On_Error option
+**	frame of the main FSrun frame.
+**
+**	FSonError()
+**
+** History:
+**	24-apr-89 (kathryn). Created.
+**/
+STATUS
+FSonError(err_terminate)
+i4	err_terminate;
+{
+	static const
+##		char	_errForm[]	= ERx("onErrForm"),
+##			_errTbl []	= ERx("errchoice"),
+##			_errAct[]	= ERx("erraction"),
+##			_errDesc[]	= ERx("errdescript"),
+##			_errCurr[]	= ERx("errcurr"),
+##			_errNew[]	= ERx("errnew");
+
+	i4	err_term;
+##	i4	curr_row;
+	i4	last_row = 2;
+
+	err_term = err_terminate;
+	if ( IIUFgtfGetForm(IIUFlcfLocateForm(), _errForm) != OK )
+	{
+		IIUGerr(E_MF0026_Bad_Get_Form, UG_ERR_ERROR, 0);
+		return FAIL;
+	}
+##	display _errForm read with style=popup
+##	initialize
+##	{
+##		inittable _errForm _errTbl fill
+##		loadtable _errForm _errTbl
+##		(erraction = ERget(S_MF0031_TERMINATE),
+##		 errdescript = ERget(S_MF0037_Choice_Terminate))
+
+##		loadtable _errForm _errTbl
+##		(erraction = ERget(S_MF0032_CONTINUE),
+##		errdescript = ERget(S_MF0038_Choice_Continue))
+
+
+		if (err_terminate == 1)		
+		{
+##			putform _errForm (errcurr = ERget(S_MF0034_Curr_Terminate))
+##			putform _errForm (errnew = ERget(S_MF0035_Select_Continue))
+##			scroll _errForm _errTbl to 1
+##			resume field _errTbl
+		}
+		else
+		{
+##			putform _errForm (errcurr = ERget(S_MF0033_Curr_Continue))
+##			putform _errForm (errnew = ERget(S_MF0036_Select_Terminate))
+##			scroll _errForm _errTbl to 2
+##			resume field _errTbl
+		}
+		
+##	}
+##	activate menuitem ERget(FE_Go) (expl = ERget(_Select_Expl)), FRSkey4
+##	{
+##		inquire_frs table _errForm (curr_row = rowno(_errTbl))
+		if (curr_row == 1)
+			err_terminate = 1;
+		else
+			err_terminate = 0;
+##		breakdisplay
+##	}
+
+## 	activate menuitem ERget(F_MF0031_Terminate) 
+##		(expl = ERget(S_MF0042_ExplTerminate))
+##	{
+		err_terminate = 1;
+##		breakdisplay
+##	}
+##	activate menuitem ERget(F_MF0032_Continue)
+##		(expl = ERget(S_MF0043_ExplContinue))
+##	{
+		err_terminate = 0;
+##		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Help) (expl = ERget(_Help_Expl)), FRSkey1
+##	{
+	       FEhelp(ERx("fserr.hlp"), ERget(S_MF0024_OnError_help_banner));
+		continue;
+##	}
+##	activate menuitem ERget(FE_End) (expl = ERget(_End_Expl)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##	activate scrollup _errTbl
+##	{
+##		inquire_frs table _errForm (curr_row = rowno(_errTbl))
+		if (curr_row < last_row)
+		{
+##			resume next
+		}
+		else
+		{
+##			scroll _errForm _errTbl to 1
+		}
+##	}
+##	activate scrolldown _errTbl
+##	{
+##		inquire_frs table _errForm (curr_row= rowno(_errTbl))
+		if (curr_row == 1)
+		{
+##			scroll _errForm _errTbl to end
+		}
+		else
+		{
+##			resume next
+		}
+##	}
+	return (err_terminate);
+}
+
+
+
+
+/***********************************************************************
+**								      **
+**    trap  --  Capture PA1 and abort active request		      **
+**								      **
+**    Parameters:						      **
+**	none							      **
+**								      **
+***********************************************************************/
+static STATUS
+trap ( ex )
+EX_ARGS *ex;
+{
+	if (ex->exarg_num == EXINTR)
+	{
+
+		IIresync();
+
+		/*
+		** take care of case where QR has started a transaction itself
+		** internally, such as in HELP ALL before the OPEN CURSOR
+		*/
+		/*
+		** NOTE: The call to FEinMST() is here temporarily to work
+		** around a 6.0 BE bug, in which if immediately after a
+ 		** BEGIN TRANSACTION statement is completed, an interrupt is
+		** sent to the BE, the BEGIN TRANSACTION appears to get backed
+		** out.  The FEinMST ensures that in fact a transaction is
+		** active and the ABORT will not fail.
+		*/
+		if ( FS_qrb != NULL && FS_qrb->endtrans && FEinMST() )
+			EXEC SQL ROLLBACK WORK;
+
+		/*
+		** reset FS_qrb so that if another interrupt occurs before the
+		** next call to QR, we won't try to look at a meaningless QRB.
+		*/
+
+		FS_qrb = NULL;
+		return EXDECLARE;
+	}
+
+	return EXRESIGNAL;
+}
+
+/*
+** Name:  	IIFSend_qry - Flush out any resident unfinished queries.
+**
+** Description:
+**	Flush out any resident unfinished queries.  If a request was begun, 
+**	but not completed (because all output had not been scrolled through),
+**	end the request. If the query was a HELP statement, and needs to
+**	be committed then do so.  Otherwise, call IIbreak() to interrupt
+**	the query.
+**	
+**
+** History:
+**	24-may-1989 (kathryn) created. -- Code Cleanup -- 
+**		Moved this code from fsrun(), where it was repeated under
+**		most menu items. Bugs 2673,3269.
+**		Moved IIbreak() from FSsetup() so only called when
+**		necessary.
+**      06-nov-1990 (kathryn) Bug 34247
+**              Always call IIbreak() when query was begun but not completed.
+**
+*/
+VOID
+IIFSend_qry (qrb,bcb)
+QRB	*qrb;
+BCB	*bcb;
+{
+	if (bcb->req_begin && !bcb->req_complete)
+	{
+		IIbreak();
+		if (qrb->qrptr) 
+		{
+			if (qrb->endtrans)
+			{
+				EXEC SQL COMMIT WORK;
+				qrb->endtrans = FALSE;
+			}
+			FS_qrb = NULL;
+			qrb->qrptr = NULL;
+		}
+	}
+}

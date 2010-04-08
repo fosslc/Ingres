@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!frame!specials_vms
+#
+
+SubDir ING_SRC front frame specials_vms ;
+
+IISUBSYS front frame specials_vms ;
+
+IISHLIBRARY $(SHFRAMELIB) ;
+IINEEDLIBS $(SHFRAMELIB) : FRAME_LIBS SHCOMPATLIB SHQLIB ;

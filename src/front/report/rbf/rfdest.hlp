@@ -1,0 +1,41 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This form contains options for the destination of a report.
+
+The selections on the form are:
+
+        SELECTION       DESCRIPTION
+        ---------       -----------
+        Default         Choosing default will either send the report to
+                        the screen or a file depending on the presence
+                        of a .OUTPUT statement in the report.  If a .OUTPUT
+                        statement is present, the output will be sent to
+                        the file specified in the statement, otherwise it
+                        will be sent to the screen.  Only reports saved by
+			SREPORT may have .OUTPUT statements.
+
+        Printer         Choosing Printer will send the report to the printer.
+                        You will be prompted for the printer name, the 
+			desired number of copies of the report to be printed
+			and if you would like to wait for the report to
+			complete before continuing.  If a .OUTPUT statement 
+			is present in the report, the report will also be 
+			sent to the file specified in the statement.  Only 
+			reports saved by SREPORT may have .OUTPUT statements.
+
+        File            This selection will direct the output of the report 
+                        to a specified file.  You will be prompted for the 
+			file name and if you would like to wait for the 
+			report to complete before continuing.  If the report 
+			contained a .OUTPUT statement, the file name you 
+			enter now will override the one in the report.  Only 
+			reports saved by SREPORT may have .OUTPUT statements.
+
+The menu commands are the following: 
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Select          Select one of the choices.
+
+        Cancel          Return to previous frame.
+
+        Help            Print this message.

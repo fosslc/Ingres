@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescbfe.hlp               Before-Field-Entry escape code examples.
+Each form field and table field column can have a Before-Field-Entry escape.
+The Before-Field-Entry escape executes when the cursor enters that field.
+
+Before-Field-Entry escape code example:
+
+    To load a table field when the cursor enters a field or column:
+
+        form.tablefield := SELECT name = d.name, age = d.age
+        FROM dependents d
+        WHERE d.empno = :empno;

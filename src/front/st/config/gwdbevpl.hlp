@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+DBEVENT_POLL_RATE governs the rate, in seconds, at which the gateway will 
+poll for target DBMS events while waiting for user input. A DBEVENT_POLL_RATE 
+of zero turns off Database Event Polling, such that when a Database event is 
+raised, the Gateway client application will never be notified of that event.
+
+Default for DBEVENT_POLL_RATE is 0.  

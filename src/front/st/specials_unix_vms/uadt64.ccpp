@@ -1,0 +1,44 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for uadt64
+*/
+
+/*
+** History
+**	05-sep-2002 (somsa01)
+**	    Created from 32 bit version.
+**	04-Nov-2004 (sheco02)
+**	    Add libdemoudt.1.so due to Windows' Jam build merge.
+*/
+
+PART   uadt64
+   capability CI_USER_ADT
+
+# ifdef FULL_RELEASE
+/*
+** ingres!demo!udadts
+*/
+   DIRECTORY ingres!demo!udadts
+   BUILD_DIR (ING_BUILD)!demo!udadts
+      FILE Makefile64
+
+/*
+** ingres!demo!udadts!lp64
+*/
+   DIRECTORY ingres!demo!udadts!lp64
+   BUILD_DIR (ING_BUILD)!demo!udadts!lp64
+      FILE common.o
+      FILE cpx.o
+      FILE iicvpk.o
+      FILE iimhpk.o
+      FILE intlist.o
+      FILE numeric.o
+      FILE op.o
+      FILE zchar.o
+      FILE nvarchar.o
+      EXECUTABLE libdemoudt.1.$SLSFX
+
+# endif /* FULL_RELEASE */
+

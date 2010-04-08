@@ -1,0 +1,266 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<er.h> 
+# include	<si.h>
+# include	<lo.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ui.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<feconfig.h>
+# include	<abfcnsts.h>
+# include	<abftrace.h>
+# include	<fdesc.h>
+# include	<abfrts.h>
+# include	<frmalign.h>
+# include	<iltypes.h>
+# include	<ioi.h>
+# include	<ifid.h>
+# include	<ilrf.h>
+# include	<rtsdata.h>
+
+/**
+** Name:	abrtsadd.qc -	Add a form for a frame.
+**
+** Description:
+**	Contains:
+**
+**	iiarFormInit()	initialize form for a frame.
+**
+** History:
+**	2-dec-1986 (Joe)
+**		Extracted from abfrts.qc.
+**	21-sep-88 (kenl)
+**		Routine abrtsadd_form() plays some funny games with pointers.
+**		To make work in the DG environment, some casting was changed
+**		and a temporary variable was added (frm_temp).
+**	02-dec-91 (leighb) DeskTop Porting Change:
+**		iiarRegisterIR() - make IRBLK visible for use - added.  This
+**		is for interpreted images.
+**	02/05/92 (emerson)
+**		Clarify return type of iiarRegisterIR.
+**	18-nov-92 (davel)
+**		Disallow uncompiled forms (in iiarFormInit() ) if no default 
+**		session exists.
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**	27-apr-1994 (mgw)
+**		Correct problem with previous fix. <ade.h> was already included
+**		in <frame.h> resulting in re-declaration of some macros. Take
+**		out the <ade.h> include and move the <frame.h> etc. hdrs to
+**		their appropriate places.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+GLOBALREF	bool	IIarNoDB;
+GLOBALREF	bool	IIarUserApp;
+
+static IRBLK	*IrBlock;
+static i2	FormTag;
+
+/*{
+** Name:	iiarRegisterIR() -	make IRBLK visible for use.
+**
+** Description:
+**	In order to retrieve forms from an image, we need the ILRF
+**	session block.  The interpreter calls this after opening the
+**	session.  It also sets a tag for the allocation of forms, which
+**	is used only when IrBlock is.
+**
+** Inputs:
+**	irb	session block.
+**
+** Returns:
+**	VOID
+**	
+** History:
+**	9/91 (bobm)	written.		6.4_PC_80x86
+**	02/05/92 (emerson)
+**		Add return type of VOID and correct return type
+**		in functional description.
+*/
+VOID
+iiarRegisterIR(irb)
+IRBLK *irb;
+{
+	IrBlock = irb;
+	FormTag = FEgettag();
+}
+
+/*{
+** Name:	iiarFormInit() -	Add a form for a frame.
+**
+** Description:
+**	Add a form for a frame. If it has already been added, then
+**	don't add it again.
+**
+** Inputs:
+**	frm	{ABRTSFRM *}  The frame for which to add the form.
+**
+** Returns:
+**	{STATUS}	Indicates whether an error occurred.
+**			The caller should check only to see whether it's OK.
+**	
+** History:
+**	19-aug-1986 (Joe)
+**		Extracted from abrtsnuser.
+**	9/91 (bobm) revive ABFOSIF case for PC.		6.4_PC_80x86
+**	02/06/92 (emerson)
+**		ifdef'd out the call to IIORflFormLoad on platforms
+**		that don't support interpreted images.
+**		Also clarified description of return value.
+**	08/20/93 (DonC) Bug 52384
+**	 	When switching back to the system session, the FEingerr call was
+**		detecting the last SQL error for that session, not that the 
+**		session switch has failed. This caused the forminit not to
+**		occur for the next called frame.  I revised the check.  	
+**	29-oct-1993 (mgw) Bug #49551
+**		Set sys_sess correctly according to whether we were started
+**		in a user application or in ABF or VISION and switch sessions
+**		only if needed.
+*/
+STATUS
+##iiarFormInit ( frm )
+ABRTSFRM	*frm;
+##{
+	register ABRTSFO	*form;
+##	i4			*frm_temp;
+	STATUS			rval = OK;
+
+	STATUS	iiarSvfErr();
+	i4	FEinqferr();
+	VOID	IIARrsiRestoreSessID();
+
+	if ( (form = frm->abrform) != NULL )
+	{
+		STATUS	olderr;
+##		char	*formname = form->abrfoname;
+
+		olderr = iiarSvfErr();
+		if ( ! form->abrforef )
+		{ /* load form */
+			switch ( form->abrfosource )
+			{
+			    case ABFOSIF:
+				/*
+				** For platforms that don't (yet) support
+				** interpreted images, ifdef out the call
+				** to IIORflFormLoad to avoid bringing in
+				** lots of unnecessary junk when ABF images
+				** are linked.
+				*/
+# ifdef INTERPIMG_OK
+				rval = IIORflFormLoad( IrBlock, formname,
+							form->abrfopos,
+							FormTag, &frm_temp );
+				if (rval != OK)
+					break;
+				/*
+				** note - NO INDIRECTION in this case.
+				** fills in an address of a frame structure.
+				*/
+##				ADDFORM frm_temp;
+# else
+				/*
+				** We're in an environment that doesn't
+				** support interpreted images.  This situation
+				** shouldn't arise, because we don't provide
+				** a documented mechanism for the user to
+				** create an interpreted image in such
+				** an environment.  If the situation *does*
+				** somehow arise, we'll return FAIL.
+				** On our way back, we'll issue a somewhat
+				** misleading error message.
+				*/
+				rval = FAIL;
+# endif
+				break;
+			    case ABFOSC:
+			    {
+				i4	**comfrm;
+
+				comfrm = (i4 **)(form->abrfoaddr);
+				frm_temp = *comfrm;
+##				ADDFORM frm_temp;
+				break;
+			    }
+			    case ABFOSDB:
+			    {
+				EXEC SQL BEGIN DECLARE SECTION;
+				i4 saved_id;
+				i4 sys_sess = IIarUserApp ? ABRT_SESSION :
+				                             UI_SESSION;
+                                i4  sess_id; 
+				EXEC SQL END DECLARE SECTION;
+
+				/* FORMINIT should always be done from the
+				** default session.
+				*/
+				if (IIarNoDB)
+				{
+				    /* no default session - disallow uncompiled
+				    ** forms in this case.  Note that the 
+				    ** interpreter always has the def. session.
+				    */
+				    iiarUsrErr(E_AR006A_NOINIFRM_NODB, 2,
+						frm->abrfrname, formname);
+				    return FAIL;
+				}
+				EXEC SQL INQUIRE_INGRES ( :saved_id = SESSION );
+				if (saved_id != UI_SESSION
+				    && saved_id != ABRT_SESSION)
+				{
+				    EXEC SQL SET_INGRES ( SESSION = :sys_sess );
+				    EXEC SQL INQUIRE_INGRES(:sess_id = SESSION);
+				    if ( sess_id != sys_sess )
+				    {
+				        iiarUsrErr(E_AR006A_NOINIFRM_NODB, 2,
+						frm->abrfrname, formname);
+				        return rval;
+                                    }
+				}
+##				FORMINIT formname;
+				rval = FEinqerr();
+				if ( rval != OK )
+				{
+				    iiarUsrErr(NOINIFRM, 2, frm->abrfrname,
+							formname);
+				    return rval;
+				}
+				if (saved_id != UI_SESSION
+				    && saved_id != ABRT_SESSION)
+				{
+				    IIARrsiRestoreSessID(saved_id);
+				}
+				break;
+			    }
+			} /* end switch */
+
+			form->abrforef = TRUE;
+		}
+
+		if ( (rval = FEinqferr()) != OK )
+		{
+			iiarUsrErr( NOINIFRM, 2, frm->abrfrname, formname );
+			return rval;
+		}
+
+		iiarSetfErr(olderr);
+	}
+
+	return OK;
+##}

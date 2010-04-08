@@ -1,0 +1,163 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Lock Summary screen.  This screen displays various pieces of
+information from the Ingres locking system.  By viewing the data on this
+screen, you may determine which locking parameters need to be adjusted.
+Currently, there is no way to view from IPM all of the locking parameters
+used to configure the Ingres locking system.  Those parameters should be
+kept in a handy place when viewing this screen.
+
+This screen will autorefresh the information if the -r flag was specified at
+startup or the "Display Refresh" field on the Option Selection screen was
+changed to a number between 1 and 999 seconds.  Autorefresh is desirable
+when monitoring this information.
+
+When tests or benchmarks are being run it may be desirable to monitor the
+locking system activity during the test.  If you select the "Interval"
+menuitem and then the "Start_Now" menuitem, IPM will display the statistics
+accumulated since the start time.  In addition, if the Interval option was
+not previously enabled, the start time and current time fields appear in the
+upper right hand corner of the Locking System Summary screen.  To reset the
+start time (which is the time when the "Start_Now" menuitem is selected),
+select the "Interval" menuitem followed by the "Start_Now" menuitem.
+
+The start time and statistics obtained at the start time will remain
+unchanged until the "Begin_Now" or "Since_Startup" menuitems are selected or
+the user exits IPM.  This allows other IPM functions (e.g. logging, other
+locking or server information) to be used while accumulating statistics.
+When the Locking System Summary screen is displayed at a later time,
+the running totals since the start time are not lost.
+
+When displaying statistics over an interval, the "autorefresh" option
+should be set.  This causes the display to be automatically updated.
+
+When this screen is displayed on VAXcluster installations of Ingres,
+additional fields are displayed.
+
+Fields of particular interest are the quantities of locks/lock lists
+remaining, in use and total available.  By observing these fields, you
+may spot conditions when more locking system resources need to be made
+available by reconfiguring the locking system (via rcpconfig, see the
+Ingres Installation and Operations guide).
+
+Fields on this screen include:
+
+Create         The number of times a lock list was created on behalf of a
+lock list      server, session or transaction.
+
+Release        The number of times a release of a lock list occurred on
+lock list      behalf of a server, session or transaction.
+
+Request lock   The number of new lock requests that the Ingres locking
+               system processed.
+
+Re-request     The number of times an implicit lock conversion request was
+lock           issued on a resource that the lock list already had locked.
+               Implicit lock conversions can occur when a request is made
+               on a page for update that was previously requested for read.
+
+Convert Lock   The number of times an explicit lock conversion request is
+               made to change a lock mode on a physical lock from one mode
+               to another.  These types of requests occur as a result of a
+               physical lock being converted during an existing transaction
+               to lower or higher modes.
+
+Release Lock   The number of times a specific logical lock is released, as
+               opposed to a full, partial, or physical lock release.
+
+Escalate       The number of times a partial release occurred to allow
+               escalation of lock granularity from page to table level.
+
+Lock Wait      The number of times a new lock request had to wait to be
+               granted.
+
+Convert Wait   The number of times an existing lock waited for conversion
+               to a different lock mode.
+
+Convert        The number of times a request for conversion turned into a
+deadlock       deadlock.
+
+Deadlock       The number of times a deadlock search was initiated.
+search
+
+Deadlock       The number of times that deadlock occurred.
+
+Cancel         The number of times a lock request was cancelled due to a
+               timeout or interrupt.
+
+The following fields appear only in VAXcluster installations (below the
+"--Global Locking Information--" label on the screen:
+
+Enqueue        The number of times the VMS lock manager was called to map
+               Ingres locks onto their VMS counterparts through the use of
+               VMS system calls.
+
+Dequeue        The number of times the VMS lock manager was called to dequeue
+               VMS locks using VMS system calls that occurred as a result of
+               a change in status of the corresponding Ingres lock.
+
+Dlck search    The number of pending global deadlock search requests.
+pending
+
+Deadlock       The number of global deadlocks that occurred.
+
+Lock grant     The number of global locks that were granted without
+before srch    contention as a result of the lock request.
+
+Dlck search    The number of times a global deadlock search was initiated
+requests
+
+Dlck search    The number of times the Cluster Server Process (CSP)
+calls          requested deadlock search information.
+
+Dlck messages  The number of times a global deadlock message was built up
+sent           and sent.
+
+Con't dlck     The number of times a continue global deadlock search
+srch calls     request was issued in response to an unresolved global
+               contention problem.
+
+Con't dlck     The number of continue global deadlock search messages that
+msgs sent      were sent due to an unresolved global contention problem.
+
+Unsent dlck    The number of unsent global deadlock search messages found.
+srch rqsts
+
+Sent all dlck  The number of times that global deadlock search requests
+srch rqsts     were more than 50% of the total number of transactions.
+
+
+Menuitems available on this screen include:
+
+Refresh        Queries the Ingres locking system for locking summary
+               information.  Even if the autorefresh option is set,
+               this menuitem can still be selected at any time.
+
+Interval       Displays a submenu which allows a start time to be set
+               be set to begin measuring locking summary information.
+               This allows display of summary information that occurred
+               since the selected start time.  Otherwise, the information
+               displayed is activity since the Ingres locking system was
+               started.  Choices available from the submenu are:
+
+               Since_Startup  Displays summary information since system
+                              startup.  This is the default.  If the Interval
+                              option was enabled, the start and current time
+                              fields disappear.
+
+               Begin_Now      Enables the Interval option.  Clears all values
+                              from the screen and displays the start time and
+                              current time fields.  The next refresh of the
+                              summary information will cause the activity
+                              since the start time to be displayed.  The start
+                              time and summary information at the start time
+                              are maintained until the "Since_Startup"
+                              menuitem is selected or "Begin_Now" is selected
+                              again.
+
+               End            Returns to the previous menu.
+
+Help           Displays this screen.
+
+End            Returns to the Lock Info Menu screen.
+
+Quit           Exits IPM.

@@ -1,0 +1,15 @@
+#
+# Jamfile file for common!gcf!gcu
+#
+
+SubDir ING_SRC common gcf gcu ;
+
+IISUBSYS common gcf gcu ;
+
+
+IILIBRARY GCFLIB : gcutrace.c gcugtsym.c gcuget.c gcuerlog.c
+	gcudebug.c gcucset.c gcucode.c gcnutil.c 
+	gcnoper.c gcninit.c gcngca.c gcnerror.c gcnencry.c 
+	gcncall.c gcnapi.c ;
+
+IILIBRARY IMPGCFLIBDATA : gcudata.c ;

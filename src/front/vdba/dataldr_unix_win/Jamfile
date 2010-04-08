@@ -1,0 +1,33 @@
+#
+# Jamfile file for front!vdba!dataldr_unix_win
+#
+# History:
+#	10-mar-2005 (toumi01)
+#	    Modified to build on Windows or Linux.
+
+if $(NT)
+{
+    SubDir ING_SRC front vdba dataldr_unix_win ;
+
+    IISUBSYS front vdba dataldr_unix_win ;
+
+
+    IISLN dataldr.exe : dtloader.sln ;
+}
+
+if $(UNIX)
+{
+    SubDir ING_SRC front vdba dataldr_unix_win ;
+
+    IISUBSYS front vdba dataldr_unix_win ;
+
+
+    IIBINEXE dataldr : dtloader.c ;
+    IINEEDLIBS dataldr :  DATALDRLIB LIBINGRES SHCOMPATLIB ;
+    IIUNDEFS dataldr :  malloc ;
+
+    CcScToInc sqlcopy.inc : sqlcopy.sc ;
+
+    IILIBRARY DATALDRLIB : sqlcopy.c tsynchro.c stdafx.c parse.c
+	listchar.c dtstruct.c ;
+}

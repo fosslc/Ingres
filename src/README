@@ -1,0 +1,84 @@
+
+		The Ingres ® Enterprise Relational Database
+
+
+  What is Ingres?
+  ---------------
+
+  Ingres ®, from Ingres Corporation, is a proven, high-performance
+  relational database solution that offers the scalability, integration
+  and flexibility to leverage information resources across a wide
+  range of platforms, including Linux, UNIX, Windows and OpenVMS.
+  Reliable and cost effective, it supports mission-critical applications
+  in Small to Medium Businesses and high volume deployments in large
+  scale enterprises.
+
+
+  What is included in the open source release?
+  --------------------------------------------
+
+  Ingres Corporation has contributed the Ingres database management system; its
+  associated database administration tools; language precompilers;
+  character-based querying, reporting and application development tools;
+  the connectivity components (including ODBC and JDBC connectivity, and
+  the .NET Data Provider for Windows); the Ingres distributed database
+  components; Ingres ® Replicator; the web deployment option; and
+  transaction monitors.
+
+
+  Versions
+  --------
+
+  The open source version of Ingres is being made available for the
+  Ingres r3 and later releases; earlier product releases (e.g. Advantage
+  Ingres release 2.6) are not included in this program.  For information
+  regarding downloading the latest version of Ingres, please see
+  http://www.ingres.com/.
+
+
+  Documentation
+  -------------
+
+  Ingres documentation, in Portable Document Format (PDF) format, is
+  available in this build tree in the src/tools/techpub/pdf directory.
+  Platform specific notes can be found in the src/tools/techpub/genrn
+  directory.
+
+
+  Installation
+  ------------
+
+  Ingres is renowned for its ease of installation and administration.
+  It can also be compiled quickly and easily on Linux with the standard
+  GNU toolset and the Jam build tool, as well as on Windows using the Jam
+  build tool.  Please see the file named INSTALL (Linux) or INSTALL.WIN
+  (Windows) for further details.
+
+
+  Licensing
+  ---------
+
+  Please see the file named LICENSE.
+
+
+  Contacting Ingres Corporation
+  ------------------------------
+
+  For further information please see http://www.ingres.com/. Topics
+  discussed there include:
+
+     o Contacting Ingres Corporation regarding Ingres and other open
+       source initiatives
+
+     o Frequently Asked Questions
+
+     o Licensing
+
+     o Submitting code changes back to Ingres Corporation
+
+     o Subscribing to open source news and announcements from Ingres
+
+     o Press releases
+
+     o Related solutions
+

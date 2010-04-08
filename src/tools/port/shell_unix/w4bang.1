@@ -1,0 +1,35 @@
+.TH SPHBANG 1 "Ingres" "Ingres Corporation" "Ingres Corporation"
+.\" History:
+.\"	28-Jan-1991 (andys)
+.\"		Written.
+.\"	03-Aug-1993 (dwilson)
+.\"		Moved to the ingres library..
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+w4bang \- rebuild the Windows 4GL libraries and executables
+.SH ORIGIN
+Ingres Corporation
+.SH SYNOPSIS
+.B w4bang
+[ -f ]
+[ -n ]
+.SH DESCRIPTION
+.I W4bang
+rebuilds the Windows 4GL II libraries and executables after an initial build.
+.SH OPTIONS
+.TP
+.B -f
+``force'' pass the -f flag to 
+.BR ming
+to force rebuilding of libraries.
+.TP
+.BI -n
+pass the -n flag to 
+.BR ming
+to force it to run without executing commands.
+.SH "SEE ALSO"
+.BR bang(1)
+.SH BUGS
+.I W4bang
+builds the directories listed internally. It can therefore 
+easily become out-of-date.

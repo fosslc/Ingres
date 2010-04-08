@@ -1,0 +1,156 @@
+/*
+** Copyright (c) 1984, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+/*
+NO_OPTIM = nc4_us5
+*/
+
+#include	<compat.h>
+#include	<lo.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	"erqf.h"
+
+/**
+** Name:	initfrms.c -	QBF Forms Initialization Module.
+**
+** Description:
+**	Contains routines to initialize the compiled forms used by MQBF.
+**	Eight compiled forms are initialized as they are needed.  Defines:
+**
+**	mqinitfrms()	-initialize main frames to start:
+**				 mqqexecute, mqbftbls
+**	mqhelpfrms()	-initialize help frames: mqcatalogs,
+**				 tblhelp, colhelp
+**	mqqdfrms()		-initialize query definition frames:
+**				 mqbfjoin, mqbfops, mqchange
+**
+**
+** History:
+**	Revision 6.0  87/08
+**		6-aug-1987  (danielt)
+**			Changed all addform calls to IIUFgtGetForm() calls,
+**			as part of the message extraction effort.
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**		05-dec-88 (kenl)
+**			Added routine mqinitqcre() to handle the
+**			initialization of forms used for the -J flag
+**			(JoinDef editing).
+**		27-oct-1998 (matbe01)
+**			Added NO_OPTIM for NCR (nc4_us5) to eliminate error
+**			E_QF0126.
+**    25-Oct-2005 (hanje04)
+**        Add prototype for _InitForms() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**
+**	Revision 2.0  84/01/12  nadene
+**	Initial revision.
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+*/
+
+/* local prototypes */
+static STATUS _InitForms();
+
+bool
+mqinitfrms()
+{
+	static const
+		char	*_initforms[] = {
+				ERx("mqbftbls"),
+				ERx("iidetail"),
+				ERx("iisave"),
+				NULL
+			};
+
+	/* initialize Table Entry indexed forms */
+	/* Query Execution form is now in qinitfrms() (11/19 -kira ) */
+
+	return (bool)( _InitForms( _initforms ) == OK );
+}
+
+bool
+mqinitqcre()
+{
+	static const
+		char	*_ejoinforms[] = {
+				ERx("mqcrjoin"),
+				ERx("mqjdup"),
+				ERx("mqnewjoin"),
+				NULL
+			};
+
+	return (bool)( _InitForms( _ejoinforms ) == OK );
+}
+
+static STATUS
+_InitForms ( forms )
+char	*forms[];
+{
+	register char		**cp;
+	register LOCATION	*loc;
+
+	LOCATION	*IIUFlcfLocateForm();
+
+	if ( (loc = IIUFlcfLocateForm()) == NULL )
+	{
+		IIUGerr( E_QF00DF_InitFormError, UG_ERR_ERROR, 1, forms[0] );
+		return FAIL;
+	}
+	for ( cp = forms ; *cp != NULL ; ++cp )
+	{
+		if ( IIUFgtfGetForm( loc, *cp) != OK )
+		{
+			IIUGerr( E_QF00DF_InitFormError, UG_ERR_ERROR, 1, *cp );
+			return FAIL;
+		}
+	}
+
+	return OK;
+}
+
+static bool	catfrm_done = FALSE;
+
+bool
+mqcatfrm()
+{
+	static const
+		char	*_catforms[] = {
+				ERx("iicatalog"),
+				NULL
+			};
+
+	/* initialize generic catalog form */
+
+	if ( !catfrm_done )
+	{
+		if ( _InitForms( _catforms ) != OK )
+			return FALSE;
+		catfrm_done = TRUE;
+	}
+	return TRUE;
+}
+
+bool
+mqqdfrms()
+{
+	static const
+		char	*_defforms[] = {
+				ERx("mqbfjoin"),
+				ERx("mqbfops"),
+				ERx("mqchange"),
+				NULL
+			};
+
+	/* initialize Joins, Rules, and Change Display compiled forms */
+
+	return (bool)( _InitForms( _defforms ) == OK );
+}

@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This popup form is asking you to enter the name of a table in the
+current Database.
+
+Select menuitem "ListChoices" if you would like to see a list of available
+tables. You can select a table name from the list, rather than typing
+a table name on this screen.
+
+Once you have entered or selected a table name, select menuitem "OK".
+If you wish to leave this screen without entering a table name, then
+select menuitem "Cancel".
+
+The menu commands are:
+
+        MENU COMMAND    DESCRIPTION
+        ------------    -----------
+	OK		A table has been entered. Return this table name
+			to the previous screen.
+	Cancel		Cancel this operation, and return to prior
+			screen.
+	ListChoices	Display a list of table names to choose from.
+	Help		Display this help file.

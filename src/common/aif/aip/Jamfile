@@ -1,0 +1,21 @@
+#
+# Jamfile file for common!aif!aip
+#
+
+SubDir ING_SRC common aif aip ;
+
+IISUBSYS common aif aip ;
+
+
+IILIBRARY APILIB : apixa.c apiwait.c apivalid.c apitrace.c apitname.c
+	apithndl.c apisqlt.c apisqls.c apisqle.c apisqlc.c apisphnd.c
+	apishndl.c apiseten.c apisetds.c apisetcn.c apiscroll.c apisavep.c
+	apirollb.c apirelxi.c apiregxi.c apiquery.c apiputco.c
+	apiprepc.c apipparm.c apinst.c apinss.c apinsc.c apins.c
+	apimsg.c apimodcn.c apimisc.c apimib.c apilower.c apiinit.c 
+	apiihndl.c apigetqr.c apigetev.c apigeter.c apigetds.c apigetcp.c
+	apigetco.c apigetci.c apige2ss.c apierhnd.c apienhnd.c
+	apiehndl.c apidspth.c apidconn.c apidatav.c apiconn.c
+	apicommt.c apicnvrt.c apiclose.c apichndl.c apicatch.c
+	apicancl.c apibatch.c apiauto.c apiadf.c apiabort.c ;
+

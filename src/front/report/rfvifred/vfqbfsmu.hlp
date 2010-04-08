@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to create a new QBFName to associate with this form.
+You must choose a table or joindef which exists in the database to
+complete the QBFName definition.
+
+You must assure that the internal field names in the form match the
+column names in the table or joindef, before you try to use this QBFName
+in QBF.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Table           Choose an existing table in the database to
+                        associate with the form.  You will be prompted
+                        for a table name.
+
+        JoinDef         Choose an existing joindef, which has been
+                        created in QBF, to associate with the form.  
+                        You will be prompted for the joindef name.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the QBFNames Catalog without creating
+                        a new QBFName.

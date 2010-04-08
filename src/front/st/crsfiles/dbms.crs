@@ -1,0 +1,1437 @@
+--
+--  Copyright (c) 1992, 2008 Ingres Corporation 
+--
+--
+--  This file contains the configuration rules for the INGRES/DBMS.
+--
+--# History:
+--#	18-jan-93 (tyler)
+--#		Created.
+--#	16-feb-93 (tyler)
+--#		Fixed several bugs in the initial revision.
+--#	18-feb-93 (tyler)
+--#		Rewrote History.
+--#	15-mar-93 (tyler)
+--#		Updated ii.$.dbms.$.qsf_memory rule on rog's advice.
+--#	26-apr-93 (tyler)
+--#		Improved ii.$.rcp.log.$ rule constraints.  Added 
+--#		backslash before single quotes in ii.$.dbms.$.vms_input
+--#		and ii.$.dbms.$.vms_output values.  Added VMS syscheck
+--#		rules and changed VMS ii.$.dbms.$.connect_limit default
+--#		to match other platforms.  Changed confusing boolean
+--#		resource names.
+--#	24-may-93 (tyler)
+--#		Renamed FIPS-127 meta switch.  Fixed broken createdb
+--#		rules.  Changed DBMS connect_limit default on VMS to
+--#		32 rather than generating it from system resources.
+--#		Removed ii.$.rcp.log.memory resource.
+--#	21-jun-93 (tyler)
+--#		Changed ii.$.dbms.$.cache_share to ii.$.dbms.$.cache_sharing.
+--#		Added FIPS-127 meta-resource to control FIPS settings behavior
+--#		on a per-database basis.  Removed obsolete (redundant) query
+--#		flattening resources.
+--#	23-jul-93 (tyler)
+--#		Moved fips meta-switch and createdb resources to shared
+--#		rule file.  Changed rule for ii.$.dbms.$.define_symbol
+--#		so that it defaults to OFF and doesn't change based on
+--#		the value of ii.$.dbms.$.name_service.  
+--#		Added rule for ii.$.rcp.lock.resource_limit.  Added rule for
+--#		ii.$.rcp.log.lgk_memory_lock.
+--#	26-jul-93 (tyler)
+--#		Changed ii.$.prefs.standard_fips_127-1 to
+--#		ii.$.prefs.fips_127-1_mode.
+--#	04-aug-93 (tyler)
+--#		Changed ii.$.dbms.$.fips_127-1 to ii.$.dbms.$.fips_127-1_mode.
+--#		Set MAX for ii.$.rcp.lock.resource_limit to
+--#		ii.$.rcp.lock.lock_limit.  Added ii.$.gcn.cluster_mode
+--#		and ii.$.config.cluster_mode rules for VMS.  Added rules
+--#		for ii.*.c2.onswitchlog and enhanced rules for other c2
+--#		resources.  Fixed reference to ii.$.rcp.log.database_limit
+--#		which read ii.$.rcp.log.db_limit.  Changed C2 security
+--#		settings so as not to include node names.
+--#	20-sep-93 (tyler)
+--#		Default setting for ii.$.dbms.$.write_behind changed from
+--#		to 4 from 2.  Set default for ii.$.dbms.$.unix_priority
+--#		to 0.  Added default for ii.$.dbms.$.image_name on Unix.
+--#		Removed VMS quantum size default, since iirundbms didn't 
+--#		like it.  Changed ii.$.dbms.$.opf_active_limit to
+--#		ii.$.dbms.$.opf_active_limit.  Adjusted various rules
+--#		to allow DBMS regression tests to complete successfully
+--#		with generated defaults for 32 concurrent users.  Changed
+--#		default transaction log size to 16M from 8M.  Added
+--#		rule for validating transaction log size during setup.
+--#	19-oct-93 (tyler)
+--#		Security auditing (c2) resources moved to another rule
+--#		file (secure.crs).  Define II_DBMS_SERVER if name_service
+--#		is OFF.  Removed ii.$.dbms.$.vms_uic (replaced by default
+--#		defined in all.crs).  Define the default DBMS server_class
+--#		as "INGRES".  Added recovery server resources.  Changed
+--#		"dmf" to "dbms" in dmf cache resources.  Removed unused
+--#		default location values.  Changed "fips_127-1_mode" to
+--#		"iso_entry_sql-93".
+--#	22-nov-93 (tyler)
+--#		Replaced default Unix location settings removed in the
+--#		last change.  Changed ...sql-92 to ...sql-93
+--#	16-dec-93 (tyler)
+--#		Fixed broken RDF rules.  Reduced per_tx_limit setting
+--#		for installations with Star installed.  Switched from
+--#		iihostnm to iipmhost for setting server_host resource.
+--#		Increased vms_file_limit for DBMS and recovery servers.
+--#	22-feb-94 (tyler/joplin)
+--#		Fixed BUG 59354: added ii.*.rcp.log.cp_timer rule.
+--#		Change direct_cursors to cursor_update_mode.  Added
+--#		default definition for ii.$.gcc.connect_max.
+--#	28-mar-94 (joplin)
+--#		Increased ii.$.recovery.$.vms_file_limit
+--#	19-apr-94 (peterk) bug 62629
+--#		Do not create event threads in the recovery server; set
+--#		recovery server event thread limit to 0
+--#	23-may-94 (jnash) 
+--#		Change defaults and boundaries for ii.$.rcp.log.full_limit.  
+--#		This is part of a set of changes designed to reduce the 
+--#		liklihood of running out of log space during recovery.
+--#     08-nov-94 (forky01)
+--#             Fixed BUG 63476: Rename ii.$.prefs.iso_entry_sql-92
+--#             to ii.$.fixed_prefs.iso_entry_sql-92 so that 
+--#             SQL-92 mode cannot be switched once set.  CBF reads all
+--#             preference variables by scanning for ".prefs.".  This
+--#             change would keep this variable from showing up in the
+--#             CBF preferences menu.
+--#     30-nov-94 (nanpr01)
+--#		Fixed BUG 60404. CBF was generating parameter name db_list
+--#		The correct parameter name should be database_list.
+--#	01-may-95 (amo ICL)
+--#		Added ANB's asyncio and gather write amendments
+--#     21-feb-95 (lawst01)
+--#             Bug 66983. Corrected computation for '..archiver_interval'
+--#             default - as follows:-
+--#             rcp.log.force_abort_limit / rcp.log.cp_interval - 0.5. 
+--#	28-mar-95 (medji01)
+--#		64K+ Lock Project
+--#		- Increased maximum lock limit to 4,294,967,296.
+--#     08-jun-95 (wolf) 
+--#             Set a minimum value of 30000 for dbms.*.vms_page_file. (69186)
+--#     19-jun-95 (wolf) 
+--#             Re-align cluster settings and dbms.$.sole_server for VMS.  
+--#		Use config.cluster_mode, which will be set in iisudbms, to 
+--#		determine the value for 'sole_server'. (69127)
+--#		Also use config.cluster_mode to determine the default value 
+--#		for 'fast_commit' on VMS. (69468) 
+--#	07-spe-95 (abowler)
+--#		Fix for 71000 - default journaling could be set to values
+--#		other than ON or OFF.
+--#	30-oct-95 (nick)
+--#		Make rule for fast_commit shared cache aware. (60196)
+--#	 9-jan-96 (nick)
+--#		Recovery server now configurable.
+--#	18-jan-96 (nick)
+--#		Sort out the quantum_size mess ; on Unix, this is in ms units 
+--#		yet on VMS it is a time format ( which explains why Tyler
+--#		removed it for VMS hence making it unconfigurable ).  Yet
+--#		there is !.vms_quantum defined for the recovery server ( but
+--#		never used ).  Fix, quantum on Unix is still quantum_size, 
+--#		quantum on VMS is vms_quantum ( you can't really have the same
+--#		resource having two different units and rules ).
+--#	20-jan-96 (pchang)
+--#		Reinstate psf_memory as a configurable resource in dbms server.
+--#		The default value of 102400 bytes per session is inadequate for
+--#		applications that utilize database procedures or dynamic cursors
+--#		that involved a large number of tables and attributes (B73396).
+--#     12-feb-1996 (ICL phil.p)
+--#             Introduced 'dmcm' to enable Distributed Multi-Cache Management
+--#             for dbms and recovery servers.
+--#     06-mar-96 (stial01)
+--#             Variable Page Size project:
+--#             Increased minimum number of log buffers from 4 to 20
+--#             This is necessary for large page/large tuple support.
+--#             This may be changed if the code is changed to handle a 
+--#             variable maximum log record size depending on the largest
+--#             page size the installation is configured for.
+--#	05-apr-96 (loera01)
+--#		Added ii.*.dbms.*.vch_compression boolean to support
+--#		variable-length datatype compression.
+--#	06-jun-96 (thaju02)
+--#		For variable page size support:
+--#		Added ii.$.dbms.$.$.p<#>k.dmf_xxxxxxxxxx parameters, 
+--#		where <#> is 4, 8, 16, 32, or 64.
+--#		Added ii.$.dbms.$.$.cache.p<#>k_status parameter, 
+--#		where <#> is 4, 8, 16, 32, 64.
+--#		Added ii.$.dbms.$.$.p<#>.dmf_separate parameters.
+--#		Added ii.$.rcp.dmf_cache_size<_#k> parameters.
+--#		Added ii.$.dbms.$.max_tuple_length and 
+--#		ii.$.recovery.$.max_tuple_length parameters.
+--#	09-jul-1996 (thaju02)
+--#		Put max constraint on ii.$.dbms.$.max_tuple_length of 32767.
+--#		added this constant due to iirelation.relwid datatype 
+--#		restriction of signed i2.  
+--#	16-jul-96 (inkdo01)
+--#		Added ii.*.dbms.*.opf_old_jcard to allow server wide 
+--#		reversion to old OPF join cardinality algorithm.
+--#	20-aug-96 (nick)
+--#		Alter archiver interval calculation to ensure the archiver
+--#		wakes up at least once at about 50% of the force_abort limit. 
+--#		We need some headroom to purge the logfile and we were
+--#		hitting force_abort in some circumstances. #76557
+--#	22-aug-96 (pchang)
+--#		Added opf_timeout_factor to allow queries to timeout earlier on
+--#		installations with fast CPU and/or disk caching.  Default as  
+--#		per OPS_MILADJUST.  (B78136)
+--#	17-jan-97 (thaju02)
+--#		bug # 80141 - ii.$.syscheck.rcp_segment not being updated when
+--#		ii.$.rcp.lock.per_tx_limit is modified.  need to add 
+--#		ii.$.rcp.lock.resource_limit as a requirement of rcp_segment.
+--#	11-feb-1997 (angusm)
+--#		for VMS only: add ii.$.dbms.*.vms_image
+--#	17-april-1997(angusm)
+--#		for VMS only: minimums for vms_buffer_limit, vms_page_size
+--#		based on beta-site experiences (bug 79586)
+--#	10-july-97(angusm)
+--#		ambig_replace_64compat: ON or OFF, but only OFF in SQL92/FIPS
+--#		setup
+--#
+--#     01-aug-1996 (nanpr01 for ICL phil.p)
+--#             Introduced 'dmcm' to enable Distributed Multi-Cache Management
+--#             for dbms and recovery servers.
+--#     25-nov-1996 (nanpr01)
+--#             Introduced 'default_page_size' to set the default page size 
+--#             for dbms servers.
+--#     09-nov-1996 (nanpr01)
+--#		Bug 79703 : Limit the max_tuple_length value.
+--#	30-dev-1996 (hanch04)
+--#		dmf_memory should be calculated per page size, all are not 2K
+--#	13-jan-97 (joea)
+--#		Add rep_qman_threads and rep_txq_size.
+--#	07-feb-1997 (canor01)
+--#		Increase default event_limit for use with RDF cache
+--#		synchronization event.
+--#	19-mar-1997 (rosga02)
+--#		Add Upgrade and Downgrade provs for SEVMS
+--#	08-apr-1997 (nanpr01)
+--#		dmf_hash_size parameter has mistakenly being added as 
+--#		dmf cache dependent parameter.
+--#	14-apr-1997 (canor01)
+--#		gather_write not yet available on su4_us5.
+--#	16-apr-1997 (nanpr01)
+--#		By default with 1 server with private cache, fast commit
+--#		is getting turned off because dmcm is off(Karl Schendel).
+--#	19-may-97 (inkdo01)
+--#		Added ii.*.dbms.*.opf_old_cnf to allow server wide 
+--#		reversion to old OPF conjunctive normal form transformation.
+--#	18-jul-97 (inkdo01)
+--#		Added ii.*.dbms.*.opf_maxmemf to define the percent of OPF
+--#		memory consumable by a single session. Also changed qef_sortmem
+--#		to 200K (as per earlier releases).
+--#	22-jul-1997 (nanpr01)
+--#		Change the lock_limit to 2,147,483,647 instead of
+--#	        4,294,967,296 since CBF cannot handle this big number.
+--#	5-aug-97 (inkdo01)
+--#		Increase max value of opf_timeout_factor for more flexibility.
+--#     29-sep-97 (rigka01)
+--#             back out fix for bug 80231
+--#             return value of ii.$.dbms.$.event_limit to 40 from 80 
+--#     30-sep-97 (rigka01)
+--#             back out for fix of bug 80231 was meant to be done in
+--#             ingres!oping12 not ingres!main.  Return value of
+--#             ii.$.dbms.$.event_limit from 40 to 80   
+--#     30-oct-97 (stial01)
+--#             Added system_isolation, system_maxlocks, system_readlock,
+--#             system_timeout, log_readnolock.
+--#	02-sep-1997 (bobmart) with some change by nanpr01
+--#		Add configurables controlling the logging of lock 
+--#		escalation messages.
+--#     01-nov-97 (teresak)
+--#             Increases stack size & page file for recover server.
+--#             Discovered that these are insuffient for 2.0 testing
+--#	03-nov-1997 (canor01)
+--#		Add stack_caching
+--#	11-nov-1997 (canor01)
+--#		8k dmf_memory needed to use 8k dmf_group_count.
+--#     12-nov-1997 (stial01)
+--#             Added Valid settings for system_isolation, system_readlock
+--#     14-nov-1997 (canor01)
+--#             Log file size in kbytes. Change 'rcp.file.size' to 
+--#             'rcp.file.kbytes'.
+--#     15-dec-1997 (canor01)
+--#             Limit qef_qep_mem to about 1GB (entry is number of blocks
+--#             that are currently 288 bytes each).
+--#     02-feb-1998 (loera01) Bug 79056:
+--#         Moved definition of ii_config and ii_dbms_config to all.crs, so
+--#         that client-only installations may have access to these variables.
+--#	11-feb-1998 (kinte01)
+--#	    Replaced all changes overwritten by previous integration.
+--#     14-May-1998 (jenjo02)
+--#         Removed ii.$.dbms.$.write_behind, replacing it with per-cache
+--#         ii.$.dbms.$.$.pnk.dmf_write_behind: ON|OFF
+--#     16-Jun-1998 (thaal01) Bug 91342, Incomlete rule for derived parameter
+--#         ii.$.gcn.cluster_mode, moved to all.crs
+--#         This is required for the name server on VMS.
+--#     15-jul-1998 (kinte01)
+--#         Increases VMS page file minimum for dbms server.
+--#         Discovered that these are insuffient for 2.0 testing if
+--#         you want to configure all of the cache sizes at the same
+--#         time
+--#	26-Aug-1998 (hanch04)
+--#	    Added rmcmd
+--#     15-sep-98 (sarjo01)
+--#         Added defaults for opf_joinop_timeout, opf_timeout_abort
+--#	30-Nov-1998 (toumi01)
+--#	    Set rmcmd server count to 0 for Linux (lnx_us5).
+--#
+--#	08-dec-98 (chash01)
+--#	    Add VMS specific parameters for RMCMD so that on VMS iirundbms
+--#	    can be used to start the server
+--#     11-jan-1999 (somsa01)
+--#         If TNG_EDITION is defined, bump up the default log file size
+--#         to 48M.
+--#	15-mar-199 (hanch04)
+--#	    Increased recovery server stack size to 64k.
+--#	26-mar-1999 (muhpa01)
+--#	    Don't define ii.$.dbms.$.stack_caching when xCL_NO_STACK_CACHING
+--#	    is defined.
+--#     01-apr-1999 (stial01)
+--#         Removed 'max_tuple_length' from recovery server
+--#     03-Aug-1999 (bonro01)
+--#         Re-align cluster settings and dbms.$.sole_server for UNIX.  
+--#         Use config.cluster_mode, which will be set in iisudbms, to 
+--#         determine the value for 'sole_server'.  sole_server is OFF
+--#         for cluster mode.
+--#         Also use config.cluster_mode to determine the default value 
+--#         for 'fast_commit'. Turn off fast_commit in cluster mode.
+--#         Also removed redundant tests in 'fast_commit' logic.
+--#     12-Mar-99 (hanal04)
+--#         qef_sort_mem must be a positive, non-zero integer. b95823.
+--#	08-Jun-1999 (jenjo02)
+--#	    Reinstated gather_write for su4_us5, which is no longer dependent
+--#	    on async_io. Defaults to ON.
+--#	27-Aug-1999 (hanch04)
+--#	    The 2k page size cache can now be turned on and off with VPS system catalogs.
+--#     31-Aug-1999 (stial01)
+--#         Added etab page size
+--#     17-Sep-1999 (stial01)
+--#         Added etab structure
+--#     28-Sep-1999 (stial01)
+--#         Restrict etab page size to 2048 (temporarily)
+--#	04-Oct-1999 (toumi01)
+--#	    Make rmcmd server count conditional on R_RMCMD.
+--#	03-Nov-1999 (hanch04)
+--#	    Added ii.$.rcp.log.log_file_parts for default of 1 log partition
+--#	    Calculate log_writer threads based on log_file_parts
+--#	22-Nov-1999 (hweho01)
+--#	    Increased dbms server stack size to 128K for AIX 64-bit  
+--#	    platform (ris_u64).  
+--#     08-May-00 (wanfr01)
+--#         Add support for association_timeout, b100847.
+--#     22-Aug-2000 (stial01)
+--#         Temporarily disable vps etab
+--#     01-Dec-2000 (hanal04) Bug 100680 INGSRV 1123
+--#         Added ii.$.dbms.$.rule_upd_prefetch.
+--#     03-Jan-01 (horda03)
+--#         Add support for event_priority, b103596
+--#	26-Mar-2001 (hanch04)
+--#	    Increased dbms server stack size to 128K for all platforms
+--#	12-Jun-2001 (hanje04)
+--#	    Crossing fix for b103596 from oping20 to main (450601) overwrote
+--#	    some dbms parameters. Putting them back to there correct values.
+--#	16-aug-2001 (toumi01)
+--#	    Increased dbms server stack size to 256K for i64_aix.  With
+--#	    128K of stack we SEGV on "createdb -S iidbdb" in the parser.
+--#     27-nov-2001 (stial01)
+--#         gather write disabled temporarily
+--#     03-dec-2001 (stial01)
+--#         Enable gather_write along with fix to B106470 in digather.c
+--#	13-May-2002 (hanje04)
+--#	    Added Itanium Linux (i64_lnx) to platforms needing 256K stack to 
+--#	    stop SEGV creating iidbdb
+--#     08-Oct-2002 (hanje04)
+--#         As part of AMD x86-64 Linux port, replace individual Linux
+--#         defines with generic LNX define where apropriate
+--#     15-oct-2002 (devjo01)
+--#         Turn on DMCM if running clustered.
+--#	04-nov-2002 (somsa01)
+--#	    Enforce the minimum stack size to be 128K. Also, on HP-UX,
+--#	    stack caching is on by default.
+--#	23-jul-2002 (hayke02)
+--#	    Added ii.$.dbms.$.opf_stats_nostats_max. Did not add
+--#	    opf_stats_nostats_factor as this would disallow decimal
+--#	    values for this parameter. This change fixes bug 108327.
+--#     18-oct-2002 (horda03) Bug 108966
+--#             Added NETMBX privilege.
+--#     17-dec-02 (wanfr01)
+--#             Bug 109239, INGSRV 1820
+--#             Added defaults for opf_sort_factor
+--#	15-jan-2003 (abbjo03)
+--#	    Increase VMS working_set and page_file parameters.
+--#	21-mar-2003 (hayke02)
+--#	    Added ii.$.dbms.$.opf_old_subsel.This change fixes bug 109670.
+--#	26-jun-2003 (somsa01)
+--#	    Added ii.$.dbms.$.opf_hash_join, whose default is OFF.
+--#	07-jul-2003 (devjo01)
+--#	    Added ii.$.dbms.$.hex_session_ids.
+--#	16-jul-03 (hayke02)
+--#	    Added ii.$.dbms.$.psf_vch_prec. This change fixes bug 109134.
+--#	15-sep-2003 (abbjo03)
+--#	    Remove obsolete ii_template.
+--#	26-Nov-2003 (schka24)
+--#	    Revise various rules and defaults: increase default DMF cache,
+--#	    reduce default lock limits, etc per this summer's config review.
+--#	    Add opf_pq param for parallel query.
+--#	6-Jan-2004 (schka24)
+--#	    Braindamage in above change for cp-interval and archiver-
+--#	    interval, fix.
+--#	29-jan-2004 (schka24)
+--#	    It has been decided that the larger page-size caches should be
+--#	    scaled down more drastically.  (e.g. the QA suite just turns
+--#	    them all on, which ends up being about 1 Gb for a medium
+--#	    guideline.)  Chop back 32k and 64, and 16k to a lesser extent.
+--#	    More importantly, discovered entirely by accident that
+--#	    the == operator DOES NOT WORK ON STRINGS.  Even though it
+--#	    issues no error (grr), and sometimes works.  Use "IS" instead.
+--#	18-feb-2004 (stial01)
+--#	    Increased rcp.log.buffer_count to support for 256k row support
+--#	8-Mar-2004 (schka24)
+--#	    Add dmf_tcb_limit, remove (deprecate) dmf_hash_size.
+--#	19-mar-2004 (somsa01)
+--#	    Updated setting of DBMS stack_size for 64-bit Linux.
+--#	12-apr-2004 (devjo01)
+--#	    Change default location for II_WORK to II_SYSTEM.  This is
+--#	    intended to reduce fragmentation on II_CHECKPOINT, and
+--#	    potentially removes II_WORK from shared OCFS disks for
+--#	    clustering.
+--#	14-Apr-2004 (stial01)
+--#	    Add max_btree_key (SIR 108315)
+--#	16-Apr-2004 (schka24)
+--#	    qef_dsh_memory default is a little too small, especially when
+--#	    doing partitions/parallel query.  Raise somewhat.
+--#	20-Apr-2004 (schka24)
+--#	    More tweaking.  My tests show little improvement in sort times
+--#	    for exchange buffers > 1000 rows, in general, so reduce the
+--#	    default to 1000 rows.
+--#	21-Apr-2004 (gorvi01)--FOR SRS section 3.1.30
+--#	    Added opf_stats_nostats_factor as the new enhancement of
+--#	    allowing DECIMAL constraint will allow a decimal value for
+--#	    opf_stats_nostats_factor.
+--#	21-Apr-2004 (gorvi01)--FOR SRS section 3.1.30
+--#	    Added DECIMAL constraint for cp_interval as cp_interval can
+--#	    take a decimal value.
+--#	21-Apr-2004 (gorvi01)--FOR SRS section 3.1.30
+--#	    Added SIGNED_INT constraint for system_timeout as system_timeout
+--#	    can take a decimal value which indicates wait indefinitely.
+--#	23-Apr-2004 (fanch01)
+--#	    Added ii.$.$.$.direct_io for O_DIRECT support on Linux following
+--#	    the pattern for async_io.
+--#	11-May-2004 (stial01)
+--#	    Removed unnecessary max_btree_key
+--#	15-Jul-2004 (schka24)
+--#	    Turn on 8K page caches by default, but make the
+--#	    default cache guideline for it "small".  Reason is to
+--#	    make it easier to experiment with row level locking and
+--#	    other large-page features, without grossly inflating the
+--#	    default footprint.  (A "small" non-2K cache is still
+--#	    reasonably useful.)  Inflate "small" for 4K and 8K ever
+--#	    so slightly.
+--#	22-Jul-2004 (lazro01)
+--#	    BUG 112724
+--#	    Turn on/off cache_sharing based on number of DBMS servers,
+--#	    cluster_mode and dmcm.
+--#	26-jul-2004 (hayke02)
+--#	    Added ii.$.dbms.$.opf_old_idxorder.
+--#     31-aug-2004 (sheco02)
+--#         X-integrate change 466442 to main.
+--#	31-Aug-2004 (schka24)
+--#	    Increase per-session hash limit;  at the moment, a hash join
+--#	    can use up to 4Mb+ and there might be multiple hash joins
+--#	    in a query plan.  Reduce computed sort-hash total to
+--#	    compensate.  (We probably need some sort of soft-landing
+--#	    in QEF when sorthash memory gets tight.)
+--#	18-Oct-2004 (shah03)
+--#	   SIR #112918, Added "cursor_default_open" flag.
+--#	17-nov-2004 (devjo01)
+--#	   Add 'class_node_affinity'.
+--#	15-Dec-2004 (shaha03)
+--#	   SIR #113754 Added condition of conf_ADD_ON64 to consider default 
+--#	   value of "ii.$.dbms.$.stack_size" to be of 64-bit, for hybrid build.
+--#	16-dec-2004 (stial01)
+--#	    Changes for config param system_lock_level
+--#	20-Dec-2004 (schka24)
+--#	    Reduce minima for dmf_cache_size's, put floor of 8 under
+--#	    dmf_group_size.  Raise dsh pool default by 2x for || query.
+--#	    Drop default logwriters a little.
+--#	25-Feb-2005 (thaju02)
+--#	    Define minimum for pindex_bsize, pindex_nbuffers. (B113970)
+--#	    Also for psort_bsize.
+--#	18-Apr-2005 (drivi01)
+--#	    SIR: 114339
+--#	    Windows crsfiles are merged with generic.
+--#     25-may-2005 (bolke01) sir 114136
+--#             added sysname,tmpmbx to enable cluster startup
+--#     22-jun-2005 (stial01)
+--#         Changed rule for cache_sharing
+--#     02-aug-2005 (abbjo03)
+--#         Set vms_page_file for DBMS and RCP to 2 billion.
+--#	15-Aug-2005 (penga03)
+--#	    Removed sec_label_cache (obsolete).
+--#	19-Aug-2005 (drivi01)
+--#	    Removed gather_write from window's crs file for now.
+--#	    It's a disabled parameter.
+--#	06-Oct-2005 (jenjo02)
+--#	    Add fd_affinity for DBMS, undefined for RCP
+--#	14-Oct-2005 (jenjo02)
+--#	    Standardize DIRECTIO to ii.$.$.$.direct_io for all
+--#	    Unix/Linux variants, default is OFF.
+--#	24-Oct-2005 (schka24)
+--#	    Added qef_max_mem_sleep for QEF resource wait.
+--#	28-Nov-2005 (kschendel)
+--#	    Added result_structure and di_zero_bufsize.
+--#	21-Mar-2006 (jenjo02)
+--#	    Add ii.$.rcp.log.optimize_writes
+--#     30-Aug-2006 (kschendel)
+--#         Added dmf_build_pages.
+--#	30-Aug-2006 (thaju02)
+--#	    Add ii.$.dbms.$.rule_del_prefetch (B116355)
+--#	14-Sep-2006 (gupsh01)
+--#	    Add ii.$.dbms.*.date_type_alias.
+--#	20-Sep-2006 (gupsh01)
+--#	    Move ii.$.dbms.*.date_type_alias from 
+--#	    ifdef UNIX block to make it generic.
+--#     31-jul-2006 (wonca01) bug 116437
+--#	    Remove references to association_timeout
+--#	02-jan-2007 (abbjo03)
+--#	    Modify RCPs VMS ast_limit, io_buffered and queue_limit for
+--#	    combined RCP/CSP in clusters.
+--#     12-Apr-2007 (karye01)
+--#         Changed default page size to 8k.
+--#         Changed default Transaction Log File size to 256 MB.
+--#         Changed default buffer cache for 8k, 32k, 64k to medium, all now set
+--#         to allocate 48MB under medium cache_guideline.
+--#	25-may-2007 (dougi)
+--#	    Add ii.$.dbms.$.table_auto_structure (S118286).
+--#	04-Jun-2007 (hweho01)
+--#	    Fixed the syntax error in  
+--#	    ii.$.dbms.$.table_auto_structure (S118286).
+--#     07-jun-2007 (huazh01)
+--#         Add config parameter qef_no_dependency_chk. (b112978)
+--#	21-june-2007 (dougi)
+--#	    Add ii.$.dbms.$.opf_pq_partthreads to define max threads for a 
+--#	    partitioned table access.
+--#	10-Jul-2007 (kibro01) b118702
+--#	    Deprecate ii.$.dbms.*.date_type_alias and add
+--#	    ii.$.config.date_alias instead
+--#	19-july-2007 (bonro01)
+--#             Change 'rcp.file.size' minimum to 32MB
+--#	28-Aug-2007 (kibro01) b119023
+--#	    Remove rule for date_alias, since it isn't truly derived
+--#	    and it ends up getting unset after installation by iiinitres
+--#	    re-running (from inside iisuc2).
+--#     29-august-2007 (rapma01) bug 118957
+--#         removed opf_sort_factor since optimizer has changed since
+--#         introduction of this parameter
+--#     05-Nov-2007 (wanfr01) SIR 119419
+--#         Added core_enabled
+--#         introduction of this parameter
+--#     10-Dec-2007 (ashco01) b119486
+--#         Replaced UNSPECIFIED value of dbms and recovery server 
+--#         vms_enqueue_limit with maximum(infinite) of 32767 and now
+--#         derive rmcmd vms_enqueue_limit from dbms connect_sum. 
+--#         Also, set recovery server vms_working_set & vms_maximum_working_set.
+--#	02-jan-2008 (joea)
+--#	    Make class_node_affinity dependent on CNA_ENABLED.
+--#	28-feb-2008 (upake01)
+--#	    Remove Karl Schendel's (schka24) comments just before the
+--#         calculation for "rcp.lock.lock_limit" as it now gets
+--#         calculated using the formula provided.  The comment needed to be 
+--#         taken out as it was for when there was no formula in place to
+--#         to calculate "rcp.lock.lock_limit".
+--#	28-feb-2008 (stial01)
+--#         dbms log_writer MIN=0
+--#	3-march-2008 (dougi)
+--#	    cache_dynamic OFF.
+--#	08-May-2008 (jonj)
+--#	    "system_timeout" cannot assume a negative value, corrupted by
+--#	    change 468009. A value of zero means "wait indefinitely".
+--#     14-May-2008 (Ralph Loen) Bug 117737
+--#         Added ii.$.dbms.$.mechanisms, ii.$.rcp.mechanisms, and
+--#         ii.$.recovery.$.mechanisms with a default value of "none".
+--#     27-Oct-2008 (hanal04) Bug 121136
+--#         unix_priority has a MIN of -19 so needs the SIGNED_INT constraint.
+--#	30-oct-08 (hayke02)
+--#	    Added ii.$.dbms.$.opf_greedy_factor, default 1.0, type DECIMAL.
+--#	    This change fixes bug 121159.
+--#	19-Mar-2009  (hweho01)
+--#	    For AIX, added ii.$.dbms.$.image_data_segments, enable user to 
+--#	    specify the number of data segment in linker flag (-bmaxdata ) 
+--#	    for 32-bit servers.  
+--#	16-Apr-2009 (hanal04) Bug 121873
+--#	    Added ii.$.dbms.$.opf_new_enum, default s ON.
+--#      8-Jun-2009 (hanal04) Code Sprint SIR 122168 Ticket 387
+--#         Added ii.$.dbms.$.mustlog_db_list which is a list of dbnames
+--#         which do not allow SET NOLOGGING through this DBMS.
+--#	22-Jun-2009 (kschendel) SIR 122138
+--#	    Update hybrid symbols.
+--#	20-Jul-2009 (thaju02) B122325
+--#	    Add SIZETYPE constraint for dmf_memory.
+--#	7-Aug-2009 (kschendel) SIR 122512
+--#	    Integrate Datallegro hash parameters.
+--#	28-Aug-2009 (frima01) SIR 122138
+--#	    Update hybrid symbols for HP-UX.
+--#	16-Oct-2009 (smeke01) b122732
+--#	    Added comment to cp_interval_mb section to alert developers to 
+--#	    the fact that cbf uses the MAX calculation explicitly.
+--#	26-Oct-2009 (kiria01) SIR 121883
+--#	    Scalar sub-query support: Added .cardinality_check
+--#	9-Nov-2009 (kschendel) SIR 122757
+--#	    Add config.direct_io, .direct_io_log, .direct_io_load.
+--#	15-Nov-2009 (kschendel) SIR 122890
+--#	    Add a few missing params such as degree-of-parallelism.
+--#	    Allow no recovery logwriters (a preferred config is DBMS
+--#	    logwriters 1, recovery logwriters 0.  Ideally there should be
+--#	    exactly one logwriter in the installation for log-optim-writes.)
+--#	    Try to put the resources in order by name so we can find things.
+--#	03-Dec-2009 (kiria01) b122952
+--#	    Add .opf_inlist_thresh for control of eq keys on large inlists.
+--#	15-Jan-2010 (jonj)
+--#	    SIR 121619 MVCC: Added "mvcc" system_lock_level option.
+--#     11-Jan-2010 (hanal04) bug 120482
+--#         Change opf_pq_dop default to 0. We want the default for
+--#         parallel query to be off and allow those that want to use it
+--#         to do so as documented.
+--#	10-Feb-2010 (kschendel) SIR 122757
+--#	    Revise direct_io_log to default OFF after running perf tests.
+--#	    Add !.fallocate parameter and default it to OFF.
+--#	19-Feb-2010 (jonj)
+--#	    SIR 121619 MVCC: Add rcp.log.readbackward_blocks,
+--#	    rcp.log.readforward_blocks for buffered log reads.
+--#	03-Mar-2010 (jonj)
+--#	    SIR 121619 MVCC: blob support. Change default etab_page_size
+--#	    from 2048 to 8192
+--#	24-Mar-2010 (hanje04)
+--#	    SIR 123296
+--#	    Default locations need to writable for LSB builds, set them here
+--#     29-Mar-2010 (ashco01) Bug 122768 
+--#         Added ii.$.dbms.$.qef_memory to hold total QEF memory requirement
+--#         for dbms QEF parameters for inclusion in syscheck resource checks.
+
+-- location setup resources
+# ifdef UNIX 
+# ifdef conf_LSB_BUILD
+ii.*.setup.ii_database:		"/var/lib";
+ii.*.setup.ii_checkpoint:	"/var/lib";
+# else
+ii.*.setup.ii_checkpoint:	"echo \"$II_SYSTEM\"";
+# endif
+ii.*.setup.ii_journal:		"ingprenv II_CHECKPOINT";
+ii.*.setup.ii_dump:		"ingprenv II_CHECKPOINT";
+ii.*.setup.ii_work:		"echo \"$II_SYSTEM\"";
+ii.*.setup.ii_log_file:		"ingprenv II_CHECKPOINT";
+ii.*.setup.ii_dual_log:		"ingprenv II_DATABASE";
+# endif /* UNIX */
+
+# ifdef VMS
+ii.*.config.server_host:	`iigetsyi nodename`;
+# endif /* VMS */
+ii.*.config.server_host:	`iipmhost`;
+ii.$.config.cluster_mode:	OFF;
+ii.$.config.cluster.numa:	OFF;
+
+ii.$.config.date_alias: 	"INGRESDATE";
+-- direct-IO setting should be global so that it affects everything
+-- that uses DI.  There's no convention for this, but call it a
+-- config resource (will have to be hand edited, cbf can't see it).
+ii.$.config.direct_io:		OFF;
+ii.$.config.direct_io_log:	OFF;
+ii.$.config.direct_io_load:	OFF;
+
+-- start-up resources 
+ii.$.ingstart.$.dbms:		1;
+# if defined(R_RMCMD) || defined(NT_GENERIC)
+ii.$.ingstart.$.rmcmd:		1, MAX = 1;
+# else
+ii.$.ingstart.$.rmcmd:		0;
+# endif /* R_RMCMD */
+
+-- recovery resources
+ii.$.recovery.$.active_limit:	ii.$.recovery.$.connect_limit;
+ii.$.recovery.$.connect_limit:	5, MIN = 5;
+ii.$.recovery.$.cp_timer:	0;
+ii.$.recovery.$.database_limit:	ii.$.rcp.log.database_limit;
+ii.$.recovery.$.dmcm:           IF ( ii.$.dbms.$.dmcm == ON )
+                                        ON
+                                ELSE
+                                        OFF
+                                ENDIF;
+ii.$.recovery.$.event_limit:	0, VALID = { 0 };
+ii.$.recovery.$.fallocate:	OFF;
+ii.$.recovery.$.log_writer:	IF ( ii.$.rcp.log.log_file_parts == 1)
+					0
+				ELSE
+					1
+				ENDIF, MIN = 0;
+ii.$.recovery.$.mechanisms:	"none";
+ii.$.recovery.$.name_service:	ON;
+ii.$.recovery.$.stack_size:	128K, MIN = 128K;
+#ifdef NT_GENERIC
+ii.$.recovery.$.image_name:     "dmfrcp";
+#endif /* NT_GENERIC */
+# ifdef UNIX
+ii.$.recovery.$.async_io:	 OFF;
+ii.$.recovery.$.di_zero_bufsize: 1M, MIN = 64K, MAX=2048M;
+ii.$.recovery.$.fd_affinity: 	 UNDEFINED;
+ii.$.recovery.$.gather_write:	 OFF;
+# endif /* UNIX */
+# ifdef VMS
+ii.$.recovery.$.vms_ast_limit:	IF ( ii.$.config.cluster_mode == ON )
+					256
+				ELSE
+					20
+				ENDIF, MIN = 20;
+ii.$.recovery.$.vms_buffer_limit: 66384;
+ii.$.recovery.$.vms_error:	"ii_system:[ingres.files]dmfrcp.error";
+ii.$.recovery.$.vms_working_set: 	2048;
+ii.$.recovery.$.vms_maximum_working_set: 4096;
+ii.$.recovery.$.vms_extent:	`iigetsyi wsmax`;	
+ii.$.recovery.$.vms_file_limit: 10 + ii.$.dbms.$.vms_file_limit;
+ii.$.recovery.$.vms_io_buffered: IF ( ii.$.config.cluster_mode == ON )
+					256
+				ELSE
+					20
+				ENDIF, MIN = 20;
+ii.$.recovery.$.vms_io_direct:	20;
+ii.$.recovery.$.vms_page_file:	2000000000;
+ii.$.recovery.$.vms_priority:	4, MIN = 0, MAX = 31;
+# ifdef SEVMSBUILD
+ii.$.recovery.$.vms_privileges:	"(prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx,downgrade,upgrade,sysnam,tmpmbx)";
+# else
+ii.$.recovery.$.vms_privileges:	"(prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx,sysnam,tmpmbx)";
+# endif /* SEVMSBUILD */
+ii.$.recovery.$.vms_quantum:	"00:00:01";
+ii.$.recovery.$.vms_queue_limit: IF ( ii.$.config.cluster_mode == ON )
+					30
+				ELSE
+					20
+				ENDIF;
+ii.$.recovery.$.vms_stack_size:	128K, MIN = 128K;
+ii.$.recovery.$.vms_enqueue_limit:  32767;
+# endif /* VMS */
+
+-- dbms resources 
+
+--# I would like to get rid of active_limit, but the CL (cs) reads it,
+--# and there's no great need to be fardling with cs right now.
+ii.$.dbms.$.active_limit:	ii.$.dbms.$.connect_limit;
+ii.$.dbms.$.ambig_replace_64compat:
+				IF ( ii.$.fixed_prefs.iso_entry_sql-92 == ON )
+					OFF
+				ELSE
+					OFF	
+				ENDIF;
+
+ii.$.dbms.$.blob_etab_page_size: 8192, VALID={65536,32768,16384,8192,4096,2048,0};
+ii.$.dbms.$.blob_etab_structure: "BTREE", VALID={ "BTREE", "HASH", "ISAM" };
+ii.$.dbms.$.cache_dynamic:	OFF;
+ii.$.dbms.$.cache_lock:		OFF;	
+ii.$.dbms.$.cache_name:		"cach_def";
+ii.$.dbms.$.cache_sharing: 	IF ( ( SUM( ii.$.ingstart.%.dbms ) > 1 )) 
+					ON
+				ELSE 
+					OFF
+				ENDIF;
+ii.$.dbms.$.cardinality_check:	ON;
+#ifdef conf_CLUSTER_BUILD
+#ifdef conf_CNA_ENABLED
+ii.$.dbms.$.class_node_affinity:	OFF;
+#endif /* CNA_ENABLED */
+#endif 
+ii.$.dbms.$.connect_limit: 	32, MIN = 5, MAX = 10000;
+# ifdef UNIX 
+ii.$.dbms.$.core_enabled:	ON;	
+# endif /* UNIX */
+ii.$.dbms.$.cpu_statistics: 	IF ( ii.$.dbms.$.session_accounting == ON )
+					ON
+				ELSE
+					OFF
+				ENDIF;
+ii.$.dbms.$.cursor_default_open:    "UPDATE" , VALID = { "UPDATE", "READONLY" };
+ii.$.dbms.$.cursor_limit: 	16;
+ii.$.dbms.$.cursor_update_mode:	IF ( ii.$.fixed_prefs.iso_entry_sql-92 == ON )
+					"DIRECT"
+				ELSE
+					"DEFERRED"	
+				ENDIF, VALID = { "DEFERRED", "DIRECT" };
+ii.$.dbms.$.database_limit: 	ii.$.dbms.$.connect_limit + 1, MIN = 10;
+ii.$.dbms.$.database_list:	"";	
+ii.$.dbms.$.default_journaling:	ON;	
+ii.$.dbms.$.default_page_size:	8192, POWER2, MIN = 2048, MAX = 65536;
+ii.$.dbms.$.define_address:	IF ( ii.$.dbms.$.name_service == OFF )
+					ON
+				ELSE
+					OFF
+				ENDIF;
+ii.$.dbms.$.degree_of_parallelism: 4, MIN=0, MAX=16;
+-- ii.$.dbms.$.detach_process:	ON;
+ii.$.dbms.$.dmcm:               IF ( ii.$.config.cluster_mode == ON ||
+                                     ii.$.config.cluster.numa == ON )
+                                    ON
+                                ELSE
+                                    OFF
+                                ENDIF;
+--# the MAX here is simply to keep memory requirements within reason
+ii.$.dbms.$.dmf_build_pages:   16, MIN = 1, MAX = 256;
+ii.$.dbms.$.dmf_db_cache_size:	40;
+ii.$.dbms.$.dmf_int_sort_size:	512K, MIN=100K;
+ii.$.dbms.$.dmf_tbl_cache_size: 40;
+ii.$.dbms.$.dmf_tcb_limit:	10000, MIN=250;
+ii.$.dbms.$.event_limit:        80; 
+--# default, min and max are from the priority defs in csnormal.h
+ii.$.dbms.$.event_priority:	8,
+				MIN = 1, MAX = 14;
+ii.$.dbms.$.fallocate:		OFF;
+--# Fast-commit OFF if multi-server or cluster, private cache, no dmcm.
+--# Fast-commit ON otherwise.
+ii.$.dbms.$.fast_commit:	IF ( ( SUM( ii.$.ingstart.%.dbms ) > 1 
+					|| ii.$.config.cluster_mode == ON )
+				     && ( ii.$.dbms.$.cache_sharing == OFF )
+				     && ( ii.$.dbms.$.dmcm == OFF )
+				 )
+					OFF
+				ELSE 
+					ON
+				ENDIF;
+ii.$.dbms.$.gc_interval:	20;
+ii.$.dbms.$.gc_num_ticks:	5;
+ii.$.dbms.$.gc_threshold:	1;
+ii.$.dbms.$.hex_session_ids:	OFF;
+# ifdef NT_GENERIC
+ii.$.dbms.$.image_name:         "iidbms";
+# endif /* NT_GENERIC */
+ii.$.dbms.$.log_readnolock:     OFF;
+ii.$.dbms.$.log_writer:		IF ( ii.$.rcp.log.log_file_parts == 1 )
+					1
+				ELSE
+					1 + ((ii.$.rcp.log.buffer_count / 7) *
+					  ii.$.rcp.log.log_file_parts) /
+					SUM( ii.$.ingstart.%.dbms )
+				ENDIF, MIN = 0;
+ii.$.dbms.$.log_esc_lpr_sc:   OFF;
+ii.$.dbms.$.log_esc_lpr_ut:   OFF;
+ii.$.dbms.$.log_esc_lpt_sc:   OFF;
+ii.$.dbms.$.log_esc_lpt_ut:   OFF;
+ii.$.dbms.$.max_tuple_length:	2008, MIN = 0, MAX = 32767;
+ii.$.dbms.$.mechanisms:       "none";
+ii.$.dbms.$.mustlog_db_list:	"";	
+ii.$.dbms.$.name_service: 	ON;
+ii.$.dbms.$.opf_active_limit:	0.2 * ii.$.dbms.$.connect_limit,
+				MIN = 1, MAX = ii.$.dbms.$.connect_limit;
+ii.$.dbms.$.opf_greedy_factor:  1.0, DECIMAL;
+ii.$.dbms.$.opf_inlist_thresh:	18000, MIN = 0, MAX = 65535;
+ii.$.dbms.$.opf_hash_join:	ON;
+ii.$.dbms.$.opf_joinop_timeout: 0, MIN = 0;
+ii.$.dbms.$.opf_maxmemf:	50, MIN = 1, MAX = 100; 
+ii.$.dbms.$.opf_memory:		10M + (256K * ii.$.dbms.$.opf_active_limit),
+				MIN = 1M, SIZETYPE;
+ii.$.dbms.$.opf_new_enum:       ON;
+ii.$.dbms.$.opf_old_jcard:	OFF;
+ii.$.dbms.$.opf_old_cnf:	OFF;
+ii.$.dbms.$.opf_old_idxorder:	OFF;
+ii.$.dbms.$.opf_old_subsel:	OFF;
+ii.$.dbms.$.opf_one_rel_opt:	OFF;
+ii.$.dbms.$.opf_pq_dop:		0, MIN = 0;
+ii.$.dbms.$.opf_pq_threshold:	1000;
+ii.$.dbms.$.opf_pq_partthreads:	8, MIN = 0;
+ii.$.dbms.$.opf_stats_nostats_factor:	1.0, DECIMAL;
+ii.$.dbms.$.opf_stats_nostats_max:	OFF;
+ii.$.dbms.$.opf_timeout_factor: 10, MIN = 1, MAX = 100;
+ii.$.dbms.$.opf_timeout_abort:  0, MIN = 0;
+ii.$.dbms.$.psf_maxmemf:	50, MIN = 1, MAX = 100;
+ii.$.dbms.$.psf_memory:		(2M * (100/ii.$.dbms.$.psf_maxmemf)) + (50K * ii.$.dbms.$.connect_limit),
+				MIN = 512K, SIZETYPE;
+ii.$.dbms.$.psf_vch_prec:	OFF;
+ii.$.dbms.$.pindex_bsize:	5000, MIN = 100;
+ii.$.dbms.$.pindex_nbuffers:	3, MIN = 2;
+ii.$.dbms.$.psort_bsize:	1000, MIN = 100;
+ii.$.dbms.$.psort_nthreads:	2;
+ii.$.dbms.$.psort_rows:		10000;
+ii.$.dbms.$.qef_dsh_memory:	16000 * ii.$.dbms.$.connect_limit * ii.$.dbms.$.cursor_limit,
+				MIN = 2M, SIZETYPE;
+ii.$.dbms.$.qef_hash_mem:	20M;
+--# rbsize/wbsize have to be a multiple of 8K, but qec will enforce it.
+ii.$.dbms.$.qef_hash_rbsize:	128K, MIN = 8K;
+ii.$.dbms.$.qef_hash_wbsize:	16K, MIN = 8K;
+ii.$.dbms.$.qef_hash_cmp_threshold: 128;
+ii.$.dbms.$.qef_hashjoin_min:	0;
+ii.$.dbms.$.qef_hashjoin_max:	0;
+ii.$.dbms.$.qef_max_mem_sleep:	30, MIN = 0, MAX = 3600;
+ii.$.dbms.$.qef_no_dependency_chk:   OFF;
+ii.$.dbms.$.qef_sort_mem:	1M, MIN = 64K;
+ii.$.dbms.$.qef_sorthash_memory: (ii.$.dbms.$.connect_limit * ii.$.dbms.$.qef_sort_mem) +
+				((ii.$.dbms.$.connect_limit+5)/10 * ii.$.dbms.$.qef_hash_mem),
+				MIN = ii.$.dbms.$.qef_hash_mem + ii.$.dbms.$.qef_sort_mem, SIZETYPE;
+ii.$.dbms.$.qef_memory:         ii.$.dbms.$.qef_dsh_memory + ii.$.dbms.$.qef_sorthash_memory, SIZETYPE; 
+ii.$.dbms.$.query_flattening:	ON;
+ii.$.dbms.$.qflatten_aggregate:	IF ( ii.$.dbms.$.query_flattening == ON )
+					ON
+				ELSE
+					OFF
+				ENDIF;
+ii.$.dbms.$.qflatten_singleton:	IF ( ii.$.dbms.$.query_flattening == OFF ||
+					ii.$.fixed_prefs.iso_entry_sql-92 == ON
+				)
+					OFF
+				ELSE
+					ON
+				ENDIF;
+# if defined(UNIX) || defined(NT_GENERIC)
+ii.$.dbms.$.quantum_size: 	1000;
+# endif /* UNIX */
+# ifdef VMS
+ii.$.dbms.$.vms_quantum:	"00:00:01";
+# endif /* VMS */
+ii.$.dbms.$.qsf_guideline:	"medium",
+				VALID = {"small","medium","large","huge"};
+ii.$.dbms.$.qsf_memory:		IF ( ii.$.dbms.$.qsf_guideline IS "small" )
+				    5M
+				ELSEIF (ii.$.dbms.$.qsf_guideline IS "medium")
+				    25M
+				ELSEIF (ii.$.dbms.$.qsf_guideline IS "large")
+				    100M
+				ELSE
+				    250M
+				ENDIF, MIN = 2M, SIZETYPE;
+ii.$.dbms.$.rdf_col_defaults: 	50;
+ii.$.dbms.$.rdf_max_tbls:	400;
+ii.$.dbms.$.rdf_memory:		5M + (15K * ii.$.dbms.$.rdf_max_tbls +
+					2K * ii.$.dbms.$.rdf_col_defaults),
+				MIN = 512K, SIZETYPE;
+--# Note that if rdf_tbl_synonyms isn't in the config.dat at all, RDF
+--# defaults to one synonym per table, which seems high.
+ii.$.dbms.$.rdf_tbl_synonyms: 	50;
+ii.$.dbms.$.rep_dq_lockmode:	"page", VALID = {"row","page","table"};
+ii.$.dbms.$.rep_dt_maxlocks:	0;
+ii.$.dbms.$.rep_iq_lockmode:	"user", VALID = {"row","page","table","user"};
+ii.$.dbms.$.rep_qman_threads: 	1;
+ii.$.dbms.$.rep_sa_lockmode:	"user", VALID = {"row","page","table","user"};
+ii.$.dbms.$.rep_txq_size: 	50;
+ii.$.dbms.$.result_structure:	"heap", VALID = {"heap", "cheap", "isam",
+					"cisam", "hash", "chash", "btree",
+					"cbtree", "heapsort", "cheapsort"};
+ii.$.dbms.$.rule_del_prefetch:	ON;
+ii.$.dbms.$.rule_depth:		20;
+ii.$.dbms.$.rule_upd_prefetch:  ON;
+ii.$.dbms.$.scf_rows:		20;
+ii.$.dbms.$.server_class:	"INGRES";
+ii.$.dbms.$.session_accounting:	OFF;
+ii.$.dbms.$.session_check_interval:  30, MIN=0;
+-- size_io_buf = slave transfer buffer, only interesting with internal threads
+ii.$.dbms.$.size_io_buf:	32K;
+-- sole-cache ON, sole-server OFF is a useful mode for sites that can use
+-- fastload -cache_name.
+ii.$.dbms.$.sole_cache:		IF (ii.$.config.cluster_mode == ON 
+                                 || ii.$.config.cluster.numa == ON
+				 || ii.$.dbms.$.dmcm == ON) 
+					OFF
+				ELSE
+					ON
+				ENDIF;
+ii.$.dbms.$.sole_server:	IF ( ii.$.dbms.$.cache_sharing == ON 
+				 || ii.$.config.cluster_mode == ON 
+                                 || ii.$.config.cluster.numa == ON
+				 || ii.$.dbms.$.dmcm == ON) 
+					OFF
+				ELSE
+					ON
+				ENDIF;
+--## FIXME enable these but they need helps first
+--#ii.$.dbms.$.sort_cpu_factor:	1.0, DECIMAL;
+--#ii.$.dbms.$.sort_io_factor:	1.0, DECIMAL;
+# ifndef NT_GENERIC
+# if !defined(xCL_NO_STACK_CACHING)
+# if defined(any_hpux)
+ii.$.dbms.$.stack_caching:	ON;
+# else
+ii.$.dbms.$.stack_caching:	OFF;
+# endif /* HP-UX */
+# endif /* xCL_NO_STACK_CACHING */
+# endif /* NT_GENERIC */
+--# Go with 256K on any 64-bit platform, everything is larger.
+--# 32+64 hybrid will probably run the 64-bit server, so include them.
+#if defined(LP64) || defined(conf_BUILD_ARCH_32_64)
+ii.$.dbms.$.stack_size:		256K;
+#else
+ii.$.dbms.$.stack_size:		150K, MIN = 128K;
+#endif /* LP64 */
+
+--ii.$.dbms.$.sxf_memory:		10000 * ii.$.dbms.$.connect_limit + 10000,
+--					MIN = 10000;
+--ii.$.dbms.$.sxf_memory:		10000 + 5K * ii.$.dbms.$.audit_session_limit +
+--					2K * ii.$.dbms.$.audit_session_limit *
+--					ii.$.dbms.$.audit_log_limit;
+ii.$.dbms.$.system_isolation:   "serializable", 
+					VALID = { "read_uncommitted", 
+					"read_committed", 
+					"repeatable_read", 
+					"serializable" };
+ii.$.dbms.$.system_lock_level:   "default", VALID ={"table","row","page", "mvcc",
+					"default" }; 
+ii.$.dbms.$.system_maxlocks:    50, MIN = 10;
+ii.$.dbms.$.system_readlock:    "shared", VALID ={"nolock","exclusive","shared"};
+ii.$.dbms.$.system_timeout:     0, MIN = 0;
+
+ii.$.dbms.$.table_auto_structure: OFF;
+ii.$.dbms.$.vch_compression:	ON;
+ii.$.dbms.$.ulm_chunk_size:	512K, MIN=128K, MAX = 8M;
+
+# ifdef UNIX
+# if defined(rs4_us5) || defined(r64_us5)
+ii.$.dbms.$.image_data_segments:  4, VALID={ 3, 4, 5, 6, 7, 8 };
+#endif  /* rs4_us5 || r64_us5 */
+ii.$.dbms.$.image_name:		"iidbms";
+ii.$.dbms.$.async_io:		OFF;
+ii.$.dbms.$.di_zero_bufsize:	1M, MIN = 64K, MAX=2048M;
+ii.$.dbms.$.fd_affinity: 	"THREAD", VALID = {"THREAD","FILE"};
+ii.$.dbms.$.gather_write:	ON;
+ii.$.dbms.$.unix_maximum_working_set: UNDEFINED;
+ii.$.dbms.$.unix_priority:	0, MIN = -19, MAX = 20, SIGNED_INT;
+# endif /* UNIX */
+
+# ifdef VMS 
+-- run command qualifiers
+ii.$.dbms.$.vms_accounting:	ON;
+ii.$.dbms.$.vms_ast_limit:	2 * ii.$.dbms.$.connect_limit + 5; 
+ii.$.config.channelcnt:		`iigetsyi channelcnt`;
+ii.$.config.acp_window:		`iigetsyi acp_window`;
+ii.$.config.acp_factor:		IF ( ii.$.config.acp_window > 100 )
+					400
+				ELSE
+					250
+				ENDIF;
+ii.$.dbms.$.vms_buffer_limit:	ii.$.config.acp_factor *
+					( ii.$.config.channelcnt -
+					4 * ii.$.dbms.$.connect_limit ),
+					MIN=227000;
+ii.$.dbms.$.vms_enqueue_limit:	32767;
+ii.$.dbms.$.vms_error:		"ii_system:[ingres.files]iidbms.error";
+ii.$.dbms.$.vms_extent:		`iigetsyi wsmax`;	
+ii.$.dbms.$.vms_file_limit:	10 * ii.$.dbms.$.connect_limit;
+--ii.$.dbms.$.vms_input:		"\'f$trnlnm(\"TT\")\'";
+--ii.$.dbms.$.vms_interval:	"";	
+ii.$.dbms.$.vms_io_buffered:	2 * ii.$.dbms.$.connect_limit + 5; 
+ii.$.dbms.$.vms_io_direct:	ii.$.dbms.$.connect_limit + 4;
+ii.$.dbms.$.vms_image:		"ii_system:[ingres.bin]iidbms.exe";
+ii.$.dbms.$.vms_maximum_working_set: 4096; 
+--ii.$.dbms.$.vms_output:		"\'f$trnlnm(\"TT\")\'";
+ii.$.dbms.$.vms_page_file:	2000000000;
+ii.$.dbms.$.vms_priority:	4, MIN = 0, MAX = 31;
+# ifdef SEVMSBUILD
+ii.$.dbms.$.vms_privileges:	"(prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx,downgrade,upgrade
+,sysnam,tmpmbx)";
+# else
+ii.$.dbms.$.vms_privileges:	"(prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx,sysnam,tmpmbx)";
+# endif /* SEVMSBUILD */
+ii.$.dbms.$.vms_queue_limit:	ii.$.dbms.$.connect_limit + 5; 
+ii.$.dbms.$.vms_working_set: 	2048;
+# endif /* VMS */
+
+# ifdef VMS
+ii.*.lnm.ii_useradt: 		"II_SYSTEM:[INGRES.LIBRARY]IIUSERADT.EXE";
+# endif /* VMS */
+
+-- sum of all connect_limit values of all DBMS servers configured for
+-- start-up
+ii.$.dbms.connect_sum:		`iiresutl -dbms_sum`,
+					REQUIRES ii.$.ingstart.%.dbms,
+					REQUIRES ii.$.dbms.%.connect_limit;
+-- maximum connect_limit of all DBMS servers configured for start-up
+ii.$.dbms.connect_max:		`iiresutl -dbms_max`,
+					REQUIRES ii.$.dbms.%.connect_limit,
+					REQUIRES ii.$.ingstart.%.dbms;
+-- required for syscheck rules before Star is installed 
+ii.$.star.connect_max:		0;
+
+-- shareable dbms (dmf) cache resources 
+ii.$.dbms.$.$.config.dmf_connect: 32;
+
+--
+-- ii.$.dbms.$.$.config.dmf_connect dependencies are handled as a
+-- special-case by the configuration rule inference engine.  When
+-- ii.$.dbms.%.connect is changed, the appropriate instance
+-- of ii.$.dbms.$.$.dmf_connect is modified as necessary and its
+-- derived resources are recomputed.
+--
+-- Cache guideline
+ii.$.dbms.$.$.cache.p2k_status:     ON;
+ii.$.dbms.$.$.cache_guideline:	"medium",
+				VALID = {"small","medium","large","huge"};
+ii.$.dbms.$.$.dmf_write_behind: ON;
+ii.$.dbms.$.$.dmf_cache_size:	IF (ii.$.dbms.$.$.cache_guideline IS "small")
+					2500
+				ELSEIF (ii.$.dbms.$.$.cache_guideline IS "medium")
+					10000
+				ELSEIF (ii.$.dbms.$.$.cache_guideline IS "large")
+					25000
+				ELSE
+					50000
+				ENDIF, MIN = 500;
+ii.$.dbms.$.$.dmf_free_limit:	ii.$.dbms.$.$.dmf_cache_size / 32;	
+ii.$.dbms.$.$.dmf_group_count:	IF (ii.$.dbms.$.$.cache_guideline IS "small")
+					300
+				ELSEIF (ii.$.dbms.$.$.cache_guideline IS "medium")
+					1500
+				ELSEIF (ii.$.dbms.$.$.cache_guideline IS "large")
+					3750
+				ELSE
+					7500
+				ENDIF, MIN = 0;
+ii.$.dbms.$.$.dmf_group_size:	8, MIN = 8;
+ii.$.dbms.$.$.dmf_modify_limit:	0.75 * ii.$.dbms.$.$.dmf_cache_size, MIN = 10;
+ii.$.dbms.$.$.dmf_wb_start:	0.5 * ii.$.dbms.$.$.dmf_cache_size,
+				MIN = 10,
+				MAX = ii.$.dbms.$.$.dmf_cache_size - ii.$.dbms.$.$.dmf_free_limit;
+ii.$.dbms.$.$.dmf_wb_end:	0.6 * ii.$.dbms.$.$.dmf_wb_start,
+				MAX = ii.$.dbms.$.$.dmf_wb_start - 1;
+ii.$.dbms.$.$.dmf_memory:	2K * (ii.$.dbms.$.$.dmf_group_count *
+					ii.$.dbms.$.$.dmf_group_size +
+					ii.$.dbms.$.$.dmf_cache_size),
+				SIZETYPE;
+
+ii.$.dbms.$.$.cache.p4k_status:     OFF;
+ii.$.dbms.$.$.p4k.cache_guideline:	"medium",
+				VALID = {"small","medium","large","huge"};
+ii.$.dbms.$.$.p4k.dmf_write_behind: ON;
+ii.$.dbms.$.$.p4k.dmf_cache_size:  IF (ii.$.dbms.$.$.p4k.cache_guideline IS "small")
+					2500
+				ELSEIF (ii.$.dbms.$.$.p4k.cache_guideline IS "medium")
+					7500
+				ELSEIF (ii.$.dbms.$.$.p4k.cache_guideline IS "large")
+					18750
+				ELSE
+					37500
+				ENDIF, MIN = 200;
+ii.$.dbms.$.$.p4k.dmf_free_limit:   ii.$.dbms.$.$.p4k.dmf_cache_size/32;	
+ii.$.dbms.$.$.p4k.dmf_group_count:  IF (ii.$.dbms.$.$.p4k.cache_guideline IS "small")
+					250
+				ELSEIF (ii.$.dbms.$.$.p4k.cache_guideline IS "medium")
+					900
+				ELSEIF (ii.$.dbms.$.$.p4k.cache_guideline IS "large")
+					2350
+				ELSE
+					4700
+				ENDIF, MIN = 0;
+ii.$.dbms.$.$.p4k.dmf_group_size:   8, MIN = 8;
+ii.$.dbms.$.$.p4k.dmf_modify_limit: 0.75 * ii.$.dbms.$.$.p4k.dmf_cache_size, MIN = 10;
+ii.$.dbms.$.$.p4k.dmf_wb_start:	0.5 * ii.$.dbms.$.$.p4k.dmf_cache_size,
+				MIN = 10,
+				MAX = ii.$.dbms.$.$.p4k.dmf_cache_size - ii.$.dbms.$.$.p4k.dmf_free_limit;
+ii.$.dbms.$.$.p4k.dmf_wb_end:	0.6 * ii.$.dbms.$.$.p4k.dmf_wb_start,
+				MAX = ii.$.dbms.$.$.p4k.dmf_wb_start - 1;
+ii.$.dbms.$.$.p4k.dmf_memory: 	    4K * (ii.$.dbms.$.$.p4k.dmf_group_count *
+					ii.$.dbms.$.$.p4k.dmf_group_size +
+					ii.$.dbms.$.$.p4k.dmf_cache_size),
+				SIZETYPE;
+ii.$.dbms.$.$.p4k.dmf_separate:	    OFF;
+
+ii.$.dbms.$.$.cache.p8k_status:	    ON;
+ii.$.dbms.$.$.p8k.cache_guideline:	"medium",
+				VALID = {"small","medium","large","huge"};
+ii.$.dbms.$.$.p8k.dmf_write_behind: ON;
+ii.$.dbms.$.$.p8k.dmf_cache_size:  IF (ii.$.dbms.$.$.p8k.cache_guideline IS "small")
+					2000
+				ELSEIF (ii.$.dbms.$.$.p8k.cache_guideline IS "medium")
+					6000
+				ELSEIF (ii.$.dbms.$.$.p8k.cache_guideline IS "large")
+					15000
+				ELSE
+					30000
+				ENDIF, MIN = 150;
+ii.$.dbms.$.$.p8k.dmf_free_limit:   ii.$.dbms.$.$.p8k.dmf_cache_size / 32;
+ii.$.dbms.$.$.p8k.dmf_group_count:  IF (ii.$.dbms.$.$.p8k.cache_guideline IS "small")
+					250
+				ELSEIF (ii.$.dbms.$.$.p8k.cache_guideline IS "medium")
+					750
+				ELSEIF (ii.$.dbms.$.$.p8k.cache_guideline IS "large")
+					1850
+				ELSE
+					3700
+				ENDIF, MIN = 0;
+ii.$.dbms.$.$.p8k.dmf_group_size:   8, MIN = 8;
+ii.$.dbms.$.$.p8k.dmf_modify_limit: 0.75 * ii.$.dbms.$.$.p8k.dmf_cache_size, MIN = 10;
+ii.$.dbms.$.$.p8k.dmf_wb_start:	0.5 * ii.$.dbms.$.$.p8k.dmf_cache_size,
+				MIN = 10,
+				MAX = ii.$.dbms.$.$.p8k.dmf_cache_size - ii.$.dbms.$.$.p8k.dmf_free_limit;
+ii.$.dbms.$.$.p8k.dmf_wb_end:	0.6 * ii.$.dbms.$.$.p8k.dmf_wb_start,
+				MAX = ii.$.dbms.$.$.p8k.dmf_wb_start - 1;
+ii.$.dbms.$.$.p8k.dmf_memory:	    8K * (ii.$.dbms.$.$.p8k.dmf_group_count *
+                                        ii.$.dbms.$.$.p8k.dmf_group_size +
+                                        ii.$.dbms.$.$.p8k.dmf_cache_size),
+				SIZETYPE;
+ii.$.dbms.$.$.p8k.dmf_separate:	    OFF;
+
+ii.$.dbms.$.$.cache.p16k_status:    OFF;
+--# The larger caches are scaled back to use less memory.  The 16k
+--# cache is set to be about the same total size as the 8k cache, or a
+--# little smaller.  The 32k and 64k caches are not typically used
+--# nearly as much, so they are cut back to below 8k levels.
+--# This is to accomodate those who simply turn things on without looking.
+--# "Real" users of the larger sizes will want to tune by hand.
+--# Note that setting all caches to "huge" works out to about 1.9 Gb
+--# of memory, which is not likely to be successful on 32-bit platforms.
+ii.$.dbms.$.$.p16k.cache_guideline:	"medium",
+				VALID = {"small","medium","large","huge"};
+ii.$.dbms.$.$.p16k.dmf_write_behind: ON;
+ii.$.dbms.$.$.p16k.dmf_cache_size:  IF (ii.$.dbms.$.$.p16k.cache_guideline IS "small")
+					800
+				ELSEIF (ii.$.dbms.$.$.p16k.cache_guideline IS "medium")
+					3000
+				ELSEIF (ii.$.dbms.$.$.p16k.cache_guideline IS "large")
+					6000
+				ELSE
+					12000
+				ENDIF, MIN = 100;
+ii.$.dbms.$.$.p16k.dmf_free_limit:  ii.$.dbms.$.$.p16k.dmf_cache_size / 32;
+ii.$.dbms.$.$.p16k.dmf_group_count:  IF (ii.$.dbms.$.$.p16k.cache_guideline IS "small")
+					100
+				ELSEIF (ii.$.dbms.$.$.p16k.cache_guideline IS "medium")
+					375
+				ELSEIF (ii.$.dbms.$.$.p16k.cache_guideline IS "large")
+					750
+				ELSE
+					1500
+				ENDIF, MIN = 0;
+ii.$.dbms.$.$.p16k.dmf_group_size:  8, MIN = 8;
+ii.$.dbms.$.$.p16k.dmf_modify_limit:0.75 * ii.$.dbms.$.$.p16k.dmf_cache_size, MIN = 10;
+ii.$.dbms.$.$.p16k.dmf_wb_start:  0.5 * ii.$.dbms.$.$.p16k.dmf_cache_size,
+				MIN = 10,
+				  MAX = ii.$.dbms.$.$.p16k.dmf_cache_size - ii.$.dbms.$.$.p16k.dmf_free_limit;
+ii.$.dbms.$.$.p16k.dmf_wb_end:	0.6 * ii.$.dbms.$.$.p16k.dmf_wb_start,
+				MAX = ii.$.dbms.$.$.p16k.dmf_wb_start - 1;
+ii.$.dbms.$.$.p16k.dmf_memory:      16K * (ii.$.dbms.$.$.p16k.dmf_group_count * 
+					ii.$.dbms.$.$.p16k.dmf_group_size + 
+					ii.$.dbms.$.$.p16k.dmf_cache_size),
+				SIZETYPE;
+ii.$.dbms.$.$.p16k.dmf_separate:    OFF;
+
+ii.$.dbms.$.$.cache.p32k_status:    OFF;
+ii.$.dbms.$.$.p32k.cache_guideline:	"medium",
+				VALID = {"small","medium","large","huge"};
+ii.$.dbms.$.$.p32k.dmf_write_behind: ON;
+ii.$.dbms.$.$.p32k.dmf_cache_size:  IF (ii.$.dbms.$.$.p32k.cache_guideline IS "small")
+					375
+				ELSEIF (ii.$.dbms.$.$.p32k.cache_guideline IS "medium")
+					1500
+				ELSEIF (ii.$.dbms.$.$.p32k.cache_guideline IS "large")
+					2500
+				ELSE
+					5000
+				ENDIF, MIN = 75;
+ii.$.dbms.$.$.p32k.dmf_free_limit:  ii.$.dbms.$.$.p32k.dmf_cache_size / 32;
+ii.$.dbms.$.$.p32k.dmf_group_count:  IF (ii.$.dbms.$.$.p32k.cache_guideline IS "small")
+					45
+				ELSEIF (ii.$.dbms.$.$.p32k.cache_guideline IS "medium")
+					150
+				ELSEIF (ii.$.dbms.$.$.p32k.cache_guideline IS "large")
+					300
+				ELSE
+					600
+				ENDIF, MIN = 0;
+ii.$.dbms.$.$.p32k.dmf_group_size:  8, MIN = 8;
+ii.$.dbms.$.$.p32k.dmf_modify_limit:0.75 * ii.$.dbms.$.$.p32k.dmf_cache_size, MIN = 10;
+ii.$.dbms.$.$.p32k.dmf_wb_start:  0.5 * ii.$.dbms.$.$.p32k.dmf_cache_size,
+				MIN = 10,
+				  MAX = ii.$.dbms.$.$.p32k.dmf_cache_size - ii.$.dbms.$.$.p32k.dmf_free_limit;
+ii.$.dbms.$.$.p32k.dmf_wb_end:	0.6 * ii.$.dbms.$.$.p32k.dmf_wb_start,
+				MAX = ii.$.dbms.$.$.p32k.dmf_wb_start - 1;
+ii.$.dbms.$.$.p32k.dmf_memory:      32K * (ii.$.dbms.$.$.p32k.dmf_group_count * 
+					ii.$.dbms.$.$.p32k.dmf_group_size + 
+					ii.$.dbms.$.$.p32k.dmf_cache_size),
+				SIZETYPE;
+ii.$.dbms.$.$.p32k.dmf_separate:    OFF;
+
+ii.$.dbms.$.$.cache.p64k_status:    OFF;
+ii.$.dbms.$.$.p64k.cache_guideline:	"medium",
+				VALID = {"small","medium","large","huge"};
+ii.$.dbms.$.$.p64k.dmf_write_behind: ON;
+ii.$.dbms.$.$.p64k.dmf_cache_size:  IF (ii.$.dbms.$.$.p64k.cache_guideline IS "small")
+					175
+				ELSEIF (ii.$.dbms.$.$.p64k.cache_guideline IS "medium")
+					750
+				ELSEIF (ii.$.dbms.$.$.p64k.cache_guideline IS "large")
+					1200
+				ELSE
+					2400
+				ENDIF, MIN = 40;
+ii.$.dbms.$.$.p64k.dmf_free_limit:  ii.$.dbms.$.$.p64k.dmf_cache_size / 32;
+ii.$.dbms.$.$.p64k.dmf_group_count:  IF (ii.$.dbms.$.$.p64k.cache_guideline IS "small")
+					20
+				ELSEIF (ii.$.dbms.$.$.p64k.cache_guideline IS "medium")
+					50
+				ELSEIF (ii.$.dbms.$.$.p64k.cache_guideline IS "large")
+					100
+				ELSE
+					200
+				ENDIF, MIN = 0;
+ii.$.dbms.$.$.p64k.dmf_group_size:  8, MIN = 8;
+ii.$.dbms.$.$.p64k.dmf_modify_limit:0.75 * ii.$.dbms.$.$.p64k.dmf_cache_size, MIN = 10;
+ii.$.dbms.$.$.p64k.dmf_wb_start:  0.5 * ii.$.dbms.$.$.p64k.dmf_cache_size,
+				MIN = 10,
+				  MAX = ii.$.dbms.$.$.p64k.dmf_cache_size - ii.$.dbms.$.$.p64k.dmf_free_limit;
+ii.$.dbms.$.$.p64k.dmf_wb_end:	0.6 * ii.$.dbms.$.$.p64k.dmf_wb_start,
+				MAX = ii.$.dbms.$.$.p64k.dmf_wb_start - 1;
+ii.$.dbms.$.$.p64k.dmf_memory:      64K * (ii.$.dbms.$.$.p64k.dmf_group_count * 
+					ii.$.dbms.$.$.p64k.dmf_group_size + 
+					ii.$.dbms.$.$.p64k.dmf_cache_size),
+				SIZETYPE;
+ii.$.dbms.$.$.p64k.dmf_separate:    OFF;
+
+-- rcp buffer cache parameters
+ii.$.rcp.dmf_cache_size:	IF ( ii.$.dbms.$.$.cache.p2k_status == ON )
+				    1000
+				ELSE
+				    0
+				ENDIF;
+ii.$.rcp.dmf_cache_size4k:	IF ( ii.$.dbms.$.$.cache.p4k_status == ON )
+				    200
+				ELSE
+				    0
+				ENDIF;
+ii.$.rcp.dmf_cache_size8k:	IF ( ii.$.dbms.$.$.cache.p8k_status == ON )
+				    200
+				ELSE
+				    0
+				ENDIF;
+ii.$.rcp.dmf_cache_size16k:	IF ( ii.$.dbms.$.$.cache.p16k_status == ON )
+				    200
+				ELSE
+				    0
+				ENDIF;
+ii.$.rcp.dmf_cache_size32k:	IF ( ii.$.dbms.$.$.cache.p32k_status == ON )
+				    200
+				ELSE
+				    0
+				ENDIF;
+ii.$.rcp.dmf_cache_size64k:	IF ( ii.$.dbms.$.$.cache.p64k_status == ON )
+				    200
+				ELSE
+				    0
+				ENDIF;
+-- rcp transaction log size 
+# ifdef TNG_EDITION
+ii.$.rcp.file.kbytes:		49152, MIN = 8192; 
+ii.*.setup.rcp.file.mbytes:	48, MIN = 8; 
+# else
+ii.$.rcp.file.kbytes:		256K, MIN = 32768; 
+ii.*.setup.rcp.file.mbytes:	256, MIN = 32; 
+# endif
+
+-- Total logwriter threads across the installation
+ii.$.rcp.config.logwriter_sum:	`iiresutl -logwriter_sum`,
+					REQUIRES ii.$.dbms.%.log_writer,
+					REQUIRES ii.$.ingstart.%.dbms,
+					REQUIRES ii.$.recovery.%.log_writer;
+-- rcp logging parameters
+ii.$.rcp.log.archiver_interval: 1,
+                                MIN = 1,
+				MAX = ii.$.rcp.file.kbytes / (ii.$.rcp.log.cp_interval_mb * 1024) - 1;
+ii.$.rcp.log.archiver_refresh:	10, MIN = 1, MAX = 100;
+ii.$.rcp.log.block_size:	4, VALID = { 32, 16, 8, 4 };
+ii.$.rcp.log.buffer_count:	35, MIN = 35;
+--# Keep a rule for cp_interval even though it's deprecated, to make it
+--# hide away on the Derived page.
+ii.$.rcp.log.cp_interval:	((ii.$.rcp.log.cp_interval_mb * 1024) / ii.$.rcp.file.kbytes) * 100,
+				MIN = 1, MAX = 100, DECIMAL;
+-- Note that cbf uses the MAX calculation for cp_interval_mb explicitly, 
+-- so if this calculation changes make sure cbf is changed also.
+ii.$.rcp.log.cp_interval_mb:	IF (ii.$.rcp.file.kbytes < 327680 )
+					(ii.$.rcp.file.kbytes * 0.12) / 1024
+				ELSE
+					40
+				ENDIF, MIN = 1, MAX = ii.$.rcp.file.kbytes / 4000;
+-- Limit default database-limit to 200
+ii.$.rcp.log.database_limit:	IF (ii.$.dbms.connect_sum < 200)
+					ii.$.dbms.connect_sum
+				ELSE
+					200
+				ENDIF, MIN = 10;
+--# (schka24) would be nice to have a more intelligent MAX here but it's
+--# not so simple, min/max is just a val_expr not a full expr (no IF's)
+ii.$.rcp.log.force_abort_limit:	0.8 * ii.$.rcp.log.full_limit,
+					MAX = ii.$.rcp.log.full_limit - 15; 
+ii.$.rcp.log.full_limit:	90, MIN = 80, MAX = 96;	
+ii.$.rcp.log.lgk_memory_lock:	OFF;
+--# Essentially one per thread, which is complicated these days by the
+--# parallel query project.  Hence the generosity.
+ii.$.rcp.log.tx_limit:		4 * ii.$.dbms.connect_sum +
+					ii.$.rcp.config.logwriter_sum +
+					20 * SUM(ii.$.ingstart.%.dbms) +
+					ii.$.rcp.log.database_limit + 100,
+				MIN = ii.$.dbms.connect_sum + ii.$.rcp.config.logwriter_sum + 20;
+ii.$.rcp.log.log_file_parts:	1;
+--# optimized log writes allowed iff single-partition log
+ii.$.rcp.log.optimize_writes:	IF ( ii.$.rcp.log.log_file_parts == 1 )
+				    ON
+				ELSE
+				    UNDEFINED
+				ENDIF;
+--# buffered log reads allowed iff single-partition log
+ii.$.rcp.log.readbackward_blocks: IF ( ii.$.rcp.log.log_file_parts > 1 )
+				      UNDEFINED
+				  ELSE
+				      1
+				  ENDIF, MIN = 1;
+ii.$.rcp.log.readforward_blocks: IF ( ii.$.rcp.log.log_file_parts > 1 )
+				      UNDEFINED
+				 ELSE
+				      1
+				 ENDIF, MIN = 1;
+-- rcp locking parameters
+ii.$.rcp.lock.lock_limit:	(ii.$.rcp.lock.per_tx_limit *
+				 ii.$.dbms.connect_sum) / 3 + 5000,
+				MIN = 3000, MAX = 2147483647;
+ii.$.rcp.lock.hash_size:	0.20 * ii.$.rcp.lock.lock_limit, PRIME; 
+ii.$.rcp.lock.list_limit:	ii.$.rcp.log.tx_limit;
+ii.$.rcp.lock.resource_hash:	ii.$.rcp.lock.hash_size;
+ii.$.rcp.lock.resource_limit:	ii.$.rcp.lock.lock_limit,
+					MAX = ii.$.rcp.lock.lock_limit;
+ii.$.rcp.lock.per_tx_limit:	750, MIN = 50;
+ii.$.rcp.mechanisms:            "none";
+#ifndef NT_GENERIC
+ii.$.syscheck.rcp_segment:     	`iircpseg`,
+					REQUIRES ii.$.rcp.log.block_size,
+					REQUIRES ii.$.rcp.log.buffer_count,
+					REQUIRES ii.$.rcp.log.database_limit,
+					REQUIRES ii.$.rcp.log.tx_limit,
+					REQUIRES ii.$.rcp.lock.hash_size,
+					REQUIRES ii.$.rcp.lock.lock_limit,
+					REQUIRES ii.$.rcp.lock.list_limit,
+					REQUIRES ii.$.rcp.lock.resource_limit,
+					REQUIRES ii.$.rcp.lock.resource_hash;
+#endif /* NT_GENERIC */
+# ifdef VMS
+ii.$.rmcmd.$.vms_ast_limit:	20, MIN = 20;
+ii.$.rmcmd.$.vms_buffer_limit: 66384;
+ii.$.rmcmd.$.vms_error:	"ii_system:[ingres.files]rmcmd.error";
+ii.$.rmcmd.$.vms_extent:	`iigetsyi wsmax`;	
+ii.$.rmcmd.$.vms_file_limit: 10 + ii.$.dbms.$.vms_file_limit;
+ii.$.rmcmd.$.vms_io_buffered: 20;
+ii.$.rmcmd.$.vms_io_direct:	20;
+ii.$.rmcmd.$.vms_page_file:	100000, MIN = 50000;
+ii.$.rmcmd.$.vms_priority:	4, MIN = 0, MAX = 31;
+ii.$.rmcmd.$.vms_enqueue_limit:	ii.$.dbms.connect_sum * 10;
+ii.$.rmcmd.$.vms_image:		"ii_system:[ingres.bin]rmcmd.exe";
+ii.$.rmcmd.$.vms_maximum_working_set: 4096; 
+# ifdef SEVMSBUILD
+ii.$.rmcmd.$.vms_privileges:	"(prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx,downgrade,upgrade)";
+# else
+ii.$.rmcmd.$.vms_privileges:	"(prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx)";
+# endif /* SEVMSBUILD */
+ii.$.rmcmd.$.vms_working_set: 	2048;
+ii.$.rmcmd.$.vms_quantum:	"00:00:01";
+ii.$.rmcmd.$.vms_queue_limit:   20;
+ii.$.rmcmd.$.vms_stack_size:	128K, MIN = 128K;
+ii.$.syscheck.virtualpagecnt:	ii.$.dbms.connect_sum * 1275;
+ii.$.syscheck.channelcnt:	ii.$.dbms.connect_sum * 4 +
+					ii.$.dbms.$.vms_file_limit;
+-- the following over-estimates dmf shared memory requirements
+ii.$.syscheck.gblpages:		( ii.$.syscheck.rcp_segment +
+					ii.$.syscheck.dmf_seg_num *
+					ii.$.syscheck.dmf_segment +
+					512 - 1 ) / 512;
+# endif /* VMS */
+
+ii.$.gcc.connect_max:		0;

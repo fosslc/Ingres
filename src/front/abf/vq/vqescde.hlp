@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescde.hlp                Delete-End escape code examples.
+The Delete-End escape executes in Update frames, just after the DELETE 
+query(ies) and before the COMMIT WORK statement.

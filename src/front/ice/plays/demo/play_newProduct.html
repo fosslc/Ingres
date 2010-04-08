@@ -1,0 +1,47 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<!--
+##{
+## History:
+##    04-May-1999 (peeje01)
+##        Replaced .exe with #cgi# for platform independance
+##}
+-->
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Add new product</title>
+</head>
+<body>
+<h1>Add new product</h1>
+<!-- To Do:
+    Entry fields for item:
+	name
+	cost
+	stock
+    Submit values to the procedure newproduct
+<form ACTION="/ice-bin/oiice.#cgi#" METHOD="POST">
+-->
+<!-- #ICE VAR=`
+<FORM ACTION="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_newProductInsert.html]"
+      METHOD="POST">
+` -->
+
+<table>
+<tr>
+<td>Item Name</TD><td>Cost</TD><td>Stock Level</TD>
+</TR>
+<tr>
+<td><input type=text name="name" value=""></TD>
+<td><input type=text name="cost" value=20></TD>
+<td><input type=text name="stock" value=30></TD>
+</TR>
+</table>
+<input type=hidden name="insertor" value="<!-- #ICE VAR=`:ii_userid` -->" >
+<input type=SUBMIT value="Add new Product">
+</form>
+<!-- Standard Session Control -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

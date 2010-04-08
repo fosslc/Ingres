@@ -1,0 +1,34 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are moving a field to a new location.  Move the cursor to the new
+location and then use the "Place" menu command to put the field there.  
+You can also use the other menu commands for other optional placement
+of the field.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Place           Place the field at the current cursor position.
+
+        Left            Move the field to the left border of the form.
+
+        Center          Center the field on the form.
+
+        Right           Move the field to the right border of the form.
+
+        Shift           Move the current field to a position specified by
+                        the cursor, shifting other components to the right,
+                        preserving the spacing.
+
+        Title           Prepare to move the field title only.  This brings
+                        up a submenu for final placement of the title.
+
+        Format          Prepare to move the field data window (as defined
+                        by the format specification) only.  This brings up
+                        a submenu for final placement of the field data
+                        window holding the format.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Form Layout menu without changing 
+                        the location of the field.

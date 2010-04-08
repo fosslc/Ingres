@@ -1,0 +1,599 @@
+/*
+** Copyright (c) 1991, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<lo.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+##include	<abclass.qsh>
+##include	<oocat.qsh>
+##include	"abclinfo.qsh"
+#include	"erab.h"
+
+/**
+** Name:	abrfedit.qc -	ABF Report Frame Component Edit Module.
+**
+** Description:
+**	Contains the definition of the component class information structure
+**	for the Report frame component object.  Defines:
+**
+**	iiABreportFrame	ABF report frame component class edit information.
+**
+** History:
+**	Revision 6.4
+**	03/22/91 (emerson)
+**		Fix interoperability bug 36589:
+**		Change all calls to abexeprog to remove the 3rd parameter
+**		so that images generated in 6.3/02 will continue to work.
+**		(Generated C code may contain calls to abexeprog).
+**		This parameter was introduced in 6.3/03/00, but all calls
+**		to abexeprog specified it as TRUE.  See abfrt/abrtexe.c
+**		for further details.
+**
+**	11/16/92 (DonC)
+**		Change COMP_CLASS_INFO initialization to fix for bug 44162
+**
+**	02/26/93 (DonC)
+**		Modified _save so that when a user blanks out the report 
+**		parameter form the form name is removed from the application
+**		components list for the frame. This rectifies bug 40140.
+**
+**      17-jan-94 (connie) Bug #56909
+**              Modified _save to complete the previous fix(40140) by marking
+**              the dirty flag to TRUE for saving the update.
+**
+**	Revision 6.3/03/00  90/01/05  kenl
+**	Added support for 'RBF Report?' field and toggling of source file field.
+**
+**	Revision 6.2  89/02  wong
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+FORM_REF	*IIAMformRef();
+
+STATUS	iiabFileEdit();
+STATUS	iiabFormEdit();
+STATUS	iiabPrint();
+STATUS	iiabVerifyType();
+
+static STATUS	_test();
+static STATUS	_edit();
+static STATUS	_compile();
+static STATUS	_editform();
+
+static VOID	_display();
+static STATUS	_save();
+static VOID	_destroy();
+
+/*:
+** Name:	iiABreportFrame - ABF Report Frame Component Class Information.
+**
+** Description:
+**	Defines additional class information for the report frame component
+**	objects.
+*/
+
+#define _NewEditExpl	F_AB0052_NewEdit_expl
+#define _GoExpl		F_AB0053_Go_expl
+#define _EditExpl	F_AB0056_EditRep_expl
+#define _CompileExpl	F_AB005B_CompileRep_expl
+#define _FormEditExpl	F_AB005D_EditForm_expl
+#define _PrintExpl	F_AB005F_Print_expl
+
+static const
+##	char	_report[]	= ERx("report"),
+##		_compform[] 	= ERx("compform");
+
+GLOBALDEF const COMP_CLASS_INFO iiABreportFrame = {
+	OC_RWFRAME,
+	ERx("abfreportd"), ERx("abfrepwd.hlp"), ERx("abfrepmi.hlp"), 3,
+	ER_OK,
+	F_AB0041_ARFDet_title,
+	0,	NULL,	/* no types legal */
+	{_report,	_formname}, NULL, NULL,	_library, NULL, 	/* Fields */
+					/* note:  no activation on source */
+	/*{iiabNxtEdit,	AB_NewEdit,	_NewEditExpl,	0},	/* NextEdit */
+	{_test,		FE_Go,		_GoExpl,	4},    /* Go, FRSkey4 */
+	{_edit,		FE_Edit,	_EditExpl,	0},	/* Edit */
+	{_compile,	FE_Compile,	_CompileExpl,	0},	/* Compile */
+	{_editform,	AB_FormEdit,	_FormEditExpl,	0},	/* FormEdit */
+	{iiabPrint,	FE_Print,	_PrintExpl,	0},	/* Print */
+	_display, _save, _destroy, NULL
+};
+
+/*
+** Name:	_edit() -	Edit Report Frame Report Object from Form.
+**
+** Description:
+**	Edits the report object for a Report frame component object as specified
+**	on the component definition form.  The report object is either edited by
+**	modifying the report commands in a file, or through RBF.
+**
+** Inputs:
+**	app	{APPL *}  The application object.
+**	form	{char *}  The component definition form name.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw)  Written.
+**	26-dec-91 (pearl)  bug 41647
+**		Use 'edit_restrict' instead of 'report' as argument to 
+**		abexeprog.  'edit_restrict' will pass the -edit_restrict 
+**		flag to RBF, which signifies that it is being called 
+**		as part of a restricted edit function.
+**	21-jan-92 (pearl)  bug 41791
+**		Change 'table' parameter to 'rpt_object'.
+*/
+static STATUS
+##_edit ( app, dummy, form )
+register APPL	*app;
+OO_OBJECT	*dummy;
+##char		*form;
+##{
+##	char	is_rbf[10];
+
+##	getform form ( is_rbf = _library );
+	if ( !IIUGyn(is_rbf, (STATUS *)NULL))  
+	{
+##		char	srcfile[48+1];
+
+##		getform form ( srcfile = _srcfile );
+		iiabFileEdit(app, NULL, srcfile);
+	}
+	else
+	{
+#ifdef PCINGRES
+		IIUGerr(E_AB003D_no_file, 0, 0);
+#else
+##		char	report[FE_MAXNAME+1];
+
+##		getform form ( report = _report );
+		abexeprog(ERx("rbf"), 
+				ERx("rpt_object = %S, edit_restrict = %S"),
+				2, report, ERx(""));
+#endif
+	}
+##}
+
+/*
+** Name:	_display() -	Display a Report Frame Component Object on the
+**					Component Definition Form.
+** Description:
+**	Displays the attributes of a report frame component on its component
+**	definition form.
+**
+** Inputs:
+**	frm	{REPORT_FRAME *}  The report frame component object.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+static VOID
+##_display ( frm )
+##register REPORT_FRAME	*frm;
+##{
+##	char	*formname = iiABreportFrame.form;
+
+##	set_frs field formname ( invisible(_srcfile) = 0 );
+
+##	putform formname (
+##			_library = ERget( ( *frm->source == EOS )
+##						? F_UG0001_Yes1 : F_UG0006_No1),
+##			_report = frm->report,
+##			_srcfile = frm->source,
+##			_formname = ERx( frm->form != NULL ?
+##						frm->form->name : _
+##			),
+##			_outfile = frm->output,
+##			_comline = frm->cmd_flags
+##	);
+
+	if ( *frm->source == EOS )
+	{ /* RBF report ... */
+		/* ... set 'srcfile' display-only, value "<none>". */
+##		set_frs field formname ( displayonly(_srcfile) = 1 );
+##		putform formname ( _srcfile = ERx("<none>") );
+	}
+
+	/* 
+	** Make the "compile form" field invisible if the application uses
+	** only compiled forms; otherwise set it from the frame definition.
+	*/
+	if ((frm->appl->flags & APC_DBFORMS) == 0)
+	{
+##		set_frs field formname (invisible(_compform) = 1)
+	}
+	else
+	{
+##		set_frs field formname (invisible(_compform) = 0)
+##		putform formname 
+##			(_compform = ERget((frm->flags & APC_DBFORM) ?
+						F_UG0007_No2 : F_UG0002_Yes2))
+	}	
+##}
+
+
+static STATUS
+##_compile ( app, class, comp )
+register APPL		*app;
+##COMP_CLASS_INFO	*class;
+APPL_COMP		*comp;
+##{
+##	char	is_rbf[10];
+
+	LOCATION	*iiabMkLoc();
+
+##	getform class->form ( is_rbf = _library );
+	if ( IIUGyn(is_rbf, (STATUS *)NULL) )
+		IIUGerr(E_AB003E_NoRepFile, UG_ERR_ERROR, 0);
+	else
+	{
+##		char	srcfile[48+1];
+
+##		getform class->form ( srcfile = _srcfile );
+		IIUGmsg(ERget(S_AB0040_Compiling), FALSE, 1, srcfile);
+		abexeprog( ERx("sreport"), ERx("file = %L"),
+				1, iiabMkLoc(app->source, srcfile)
+		);
+#ifdef FT3270
+		FTmore();
+#endif
+	}
+##}
+
+/*
+** Name:	_editform() -	Edit Report Frame Parameter Form.
+**
+** Description:
+**	Edits the parameter form for a Report frame component object as
+**	specified on the component definition form.
+**
+** Inputs:
+**	app	{APPL *}  The application object.
+**	class	{COMP_CLASS_INFO *}  The edit class information.
+**	frm	{REPORT_FRAME *}  The report frame component.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	03/89 (jhw)  Written.
+*/
+static STATUS
+##_editform ( app, class, frm )
+APPL			*app;
+##COMP_CLASS_INFO	*class;
+REPORT_FRAME		*frm;
+##{
+	FORM_REF	*form_ref = NULL;
+##	char		form[FE_MAXNAME+1];
+
+##	getform class->form ( form = _formname );
+
+	if ( STtrmwhite(form) > 0 )
+	{
+		if ( ( frm->form == NULL || !STequal(form, frm->form->name) ) &&
+				_save(app, frm) != OK )
+			return FAIL;
+		form_ref = frm->form;
+	}
+	return iiabFormEdit(app, form_ref);
+##}
+
+/*
+** Name:	_save() -	Save Report Frame Component Definition from
+**					the Form.
+** Description:
+**	Saves the attributes for a report frame component object from the
+**	component definition form for this class.  This checks if any values
+**	changed before modifying the object's attributes and only then writing
+**	the object to the database.
+**
+**	The values that can be changed are the report object name, the optional
+**	source-code file, the optional form name, the optional output file, and
+**	the optional Report Writer command line.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**	frm	{REPORT_FRAME *}  The report frame component object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw)  Written.
+**	05/90 (jhw)  Added long remark check for save.
+*/
+
+static STATUS
+##_save ( app, frm )
+APPL			*app;
+register REPORT_FRAME	*frm;
+##{
+	bool		is_rbf;
+##	register char	*formname = iiABreportFrame.form;
+##	i4		rbf_change;
+##	i4		rep_change;
+##	i4		form_change;
+##	i4		outf_change;
+##	i4		cmd_change;
+##	i4		srem_change;
+##	i4		compform_change;
+
+##	char		isrbf[10];
+
+	FORM_REF	*IIAMfrChangeRef();
+	STATUS		IIAMwrRepFrame();
+
+##	inquire_frs field formname (
+##			rbf_change = change(_library),
+##			rep_change = change(_report),
+##			form_change = change(_formname),
+##			outf_change = change(_outfile),
+##			cmd_change = change(_comline),
+##			srem_change = change(_short_remark),
+##			compform_change = change(_compform)
+##	);
+
+	/* Fields should have been validated already. */
+
+	if ( rep_change == 1 )
+##	{
+##		char	report[FE_MAXNAME+1];
+
+##		getform formname ( report = _report );
+		/* Report is a required DB reference */
+		if ( !STequal(frm->report, report) )
+		{
+			frm->report = FEtsalloc( frm->data.tag, report );
+			frm->data.dirty = TRUE;
+		}
+##	}
+
+##	getform formname ( isrbf = _library )
+	is_rbf = IIUGyn(isrbf, (STATUS *)NULL);
+
+	if ( rbf_change == 1 )
+##	{
+		if ( is_rbf != ( *frm->source == EOS ) )
+		{
+			if ( is_rbf )
+			{ /* clear object name */
+				frm->source = _iiOOempty;
+			}
+			frm->data.dirty = TRUE;
+		}
+##	}
+
+	if ( *frm->source != EOS || ( rbf_change == 1 && !is_rbf ) )
+##	{ /* changed or is no longer a RBF report */
+##		i4	src_change;
+
+##		inquire_frs field formname ( src_change = change(_srcfile) );
+		if ( src_change == 1 )
+##		{
+##			char	source[48+1];
+
+##			getform formname ( source = _srcfile );
+			if ( *frm->source == EOS ||
+					!STequal(frm->source, source) )
+			{
+				frm->source = FEtsalloc(frm->data.tag, source);
+				frm->data.dirty = TRUE;
+			}
+##		}
+##	}
+
+	if ( form_change == 1 )
+##	{
+##		char	form[FE_MAXNAME+1];
+
+##		getform formname ( form = _formname );
+		/* Form name is optional DB reference */
+		if ( ( frm->form == NULL && *form != EOS )  ||
+				( frm->form != NULL && *form != EOS &&
+					!STequal(frm->form->name, form)
+				) )
+		{
+			if ( frm->form != NULL )
+				iiabFrRemoveNames(frm->form);
+			frm->form = IIAMfrChangeRef( app, frm->form, form );
+			/* If it's a new FORM_REF, generate new names */
+			if (frm->form->refs == 1)
+				iiabFoRefNames(frm->form);
+			frm->data.dirty = TRUE;
+		}
+		/* This section was added in order to fix bug 40140
+		** Remove the form name from the application component
+		** list and remove the name (if this is the last
+		** reference to it).
+		*/
+		else if ( *form == EOS && frm->form != NULL ) {
+			iiabFrRemoveNames(frm->form);
+			IIAMfrRemoveRef(frm->form);
+			frm->form = NULL;
+			frm->data.dirty = TRUE;
+		}
+##	}
+
+	if ( outf_change == 1 )
+##	{
+##		char	output[48+1];
+
+##		getform formname ( output = _outfile );
+		if ( !STequal(frm->output, output) )
+		{
+			frm->output = FEtsalloc( frm->data.tag, output );
+			frm->data.dirty = TRUE;
+		}
+##	}
+
+	if ( cmd_change == 1 )
+##	{
+##		char	cmdline[48+1];
+
+##		getform formname ( cmdline = _comline );
+		if ( !STequal(frm->cmd_flags, cmdline) )
+		{
+			frm->cmd_flags = FEtsalloc( frm->data.tag, cmdline );
+			frm->data.dirty = TRUE;
+		}
+##	}
+
+	if ( srem_change != 0 )
+##	{ /* short remark */
+		char	*cp;
+##		char	short_remark[OOSHORTREMSIZE+1];
+
+##		set_frs field formname ( change(_short_remark) = 0 );
+##		getform formname ( short_remark = _short_remark );
+		if ( ! STequal(frm->short_remark, short_remark)
+			&& (cp = FEtsalloc(frm->data.tag, short_remark))
+				!= NULL )
+		{
+			frm->short_remark = cp;
+			frm->data.dirty = TRUE;
+		}
+##	}
+
+	if (compform_change != 0)
+	{ /* Whether to compile the form */
+		bool		is_compform;
+		bool		was_compform = ((frm->flags & APC_DBFORM) == 0);
+##		char		compform[10];
+	
+##		getform formname ( compform = _compform)
+		is_compform = IIUGyn(compform, (STATUS *)NULL);
+		if (is_compform && !was_compform)
+		{
+			frm->flags &= ~APC_DBFORM;
+			frm->data.dirty = TRUE;
+		}
+		else if (!is_compform && was_compform)
+		{
+			frm->flags |= APC_DBFORM;
+			frm->data.dirty = TRUE;
+		}
+	}
+
+	_VOID_ IIOOckLongRemark((OO_OBJECT *)frm);
+
+	if ( frm->data.dirty )
+		return iiabSvComp((APPL_COMP *)frm, IIAMwrRepFrame);
+	else if ( frm->form != NULL && frm->form->data.dirty )
+		return IIAMwrFormRef(frm->form);
+	return OK;
+##}
+
+/*
+** Name:	_destroy() -	Destroy a Report Frame Component Object.
+**
+** Description:
+**	ABF specific destroy simply removes names for the object.
+**
+** Input:
+**	frm	{REPORT_FRAME *}  The report frame component.
+**
+** History:
+**	02/89 (jhw)  Written.
+**	01/90 (jhw)  Removed 'frm->app' parameter to 'IIAMfrRemoveRef()',
+**		since it is NULL by the time this routine is called.  #9533.
+*/
+static VOID
+_destroy ( frm )
+REPORT_FRAME	*frm;
+{
+	if ( frm->form != NULL )
+	{
+		iiabFrRemoveNames(frm->form);
+		IIAMfrRemoveRef(frm->form);
+	}
+}
+
+/*
+** Name:	_test() -	Test Report Frame Component Object.
+**
+** Description:
+**	Runs the report frame for testing purposes.  This simply creates a
+**	run-time frame structure from the frame definition and then runs it.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**	class	{COMP_CLASS_INFO *}  The report frame component class edit
+**					information.
+**	frm	{REPORT_FRAME *}  The report frame component object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+static STATUS
+##_test ( app, class, frm )
+APPL		*app;
+COMP_CLASS_INFO	*class;
+REPORT_FRAME	*frm;
+##{
+##	char		*form = iiABreportFrame.form;
+##	char		report[FE_MAXNAME+1];
+##	char		formname[FE_MAXNAME+1];
+##	char		output[48+1];
+##	char		comline[ABCOMSIZE+1];
+
+	ABRTSFRM	rtsfrm;
+	ABRTSVAR	rtsvar;
+	ABRTSFO		rtsform;
+
+	/* Evenutally, compile the source if necessary */
+
+	/*
+	** Build an ABRTSFRM structure and pass it
+	** to the run-time routine 'IIARrwfReport()'.
+	*/
+##	getform form (	report = _report,
+##			formname = _formname,
+##			comline = _comline,
+##			output = _outfile
+##	);
+
+	rtsfrm.abrfrname = frm->name;
+	rtsfrm.abrfrtype = OC_REPORT;
+
+	rtsfrm.abrfrvar = &rtsvar;
+	STcopy(report, rtsvar.abrfrvrw.abrrwname);
+	STcopy(comline, rtsvar.abrfrvrw.abrrwcomline);
+	STcopy(output, rtsvar.abrfrvrw.abrrwoutput);
+
+	if ( STtrmwhite(formname) <= 0 )
+		rtsfrm.abrform = NULL;
+	else
+	{ /* Form name should be fetched from database */
+		rtsfrm.abrform = &rtsform;
+		rtsform.abrforef = FALSE;
+		rtsform.abrfoname = formname;
+		rtsform.abrfosource = ABFOSDB;
+	}
+
+	IIARrwfReport(&rtsfrm, (ABRTSPRM *)NULL);
+
+	return OK;
+##}

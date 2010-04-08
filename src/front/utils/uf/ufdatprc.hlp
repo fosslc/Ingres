@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You must select a precision and scale for the data type you have chosen.
+Type these into the fields and choose OK.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        OK  	                Choose the precision and scale currently
+				in the fields.
+
+        Cancel                  Return to the previous frame.
+
+        Help                    Access the INGRES Help facility.

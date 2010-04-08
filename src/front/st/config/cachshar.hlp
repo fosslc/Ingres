@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The cache_sharing resource specifies whether the DBMS cache identified
+  by cache_name is shareable by other DBMS servers. This option can be
+  set to either ON or OFF (default).
+

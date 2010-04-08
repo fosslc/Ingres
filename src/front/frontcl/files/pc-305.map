@@ -1,0 +1,110 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* FRS Mapping file for pc-305 */
+
+/* Menu Key */
+	menu = pf2 (F2)
+
+/* Help facility */
+	frskey1 = pf1 (F1)
+
+/* Quit from program */
+	frskey2	= controlU (^U)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf12 (F12)
+
+/* Go or execute function */
+	frskey4 = pf11 (F11)
+
+/* Put cursor on top of form or table field */
+	frskey5 = pf13 (Home)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= pf16 (End)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= pf20 (alt&F1)
+
+/* Save Function */
+	frskey8 = pf21 (alt&F2)
+
+/* Undo and Forget Function */
+	frskey9 = pf22 (alt&F3)
+
+/* Scroll page or form left */
+	scrollleft = pf28 (alt&F9)
+
+/* Scroll page or form right */
+	scrollright = pf27 (alt&F8)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf17 (PageUp)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf18 (PageDown)
+
+/* Print contents of current screen to file or printer */
+	printscreen = pf23 (alt&F4) 
+
+/* Select first menu item */
+	menuitem1 = pf3 (F3)
+
+/* Select second menu item */
+	menuitem2 = pf4 (F4)
+
+/* Select third menu item */
+	menuitem3 = pf5 (F5)
+
+/* Select fourth menu item */
+	menuitem4 = pf6 (F6)
+
+/* Select fifth menu item */
+	menuitem5 = pf7 (F7)
+
+/* Select sixth menu item */
+	menuitem6 = pf8 (F8)
+
+/* Select seventh menu item */
+	menuitem7 = pf9 (F9)
+
+/* Select eighth menu item */
+	menuitem8 = pf10 (F10)
+
+/* Remove character under cursor */
+	deletechar = controlDEL (Delete)
+
+/* Switch between insert and overstrike */
+	mode = pf14 (Insert)
+
+/* Move cursor to next field */
+	nextfield = controlI (->|)
+
+/* Move cursor to previous field */
+	previousfield = pf19 (scrllk-F4) 
+
+/* Move up one word within field */
+	nextword = pf26 (alt&F7)
+
+/* Move back one word within field */
+	previousword = pf25 (alt&F6)
+
+/* Redraw the screen */
+	redraw = pf24 (alt&F5)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlH (<-)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlM (Enter)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlN (^N)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)

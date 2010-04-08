@@ -1,0 +1,242 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<adf.h>
+##include	<abclass.qsh>
+##include	<oocatlog.qsh>
+##include	<oocat.qsh>
+#include	<oodefine.h>
+##include	"abclinfo.qsh"
+#include	"abcatrow.h"
+#include	"erab.h"
+#include	<erar.h>
+
+/**
+** Name:	newedit.qc -	ABF Application Select New Component Object
+**					for Editing SubMenu.
+** Description:
+**	Contains the routine that implements the "NewEdit" submenu.  Defines:
+**
+**	iiabNxtEdit()	select new component for editing submenu.
+**
+** History:
+**	Revision 6.2  89/02  wong
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Aug-2009 (kschendel) 121804
+**	    Update some of the function declarations to fix gcc 4.3 problems.
+**/
+
+/*{
+** Name:	iiabNxtEdit() -	Select New Component for Editing SubMenu.
+**
+** Description:
+**
+** Inputs:
+**	appl	{APPL *}  The application object.
+**	cat	{OO_CATALOG *}  The visual objects catalog.
+**
+** Returns:
+**	{APPL_COMP *}  The application component object selected for editing.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+
+APPL_COMP	*iiabGetComp();
+FUNC_EXTERN char *abinpname();
+
+static APPL_COMP	*_scan();
+
+#define _CreateExpl	F_AB0015_CreateObj_expl
+#define _FrameExpl	F_AB0070_Frame_expl
+#define _ProcedureExpl	F_AB0071_Procedure_expl
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+#define _EndExpl	F_FE0102_ExplEnd
+
+APPL_COMP *
+iiabNxtEdit ( appl, cat )
+APPL		*appl;
+OO_CATALOG	*cat;
+{
+	for (;;)
+##	submenu
+##	activate menuitem ERget(FE_Create) (expl = ERget(_CreateExpl))
+##	{
+		OO_OBJECT	*obj;
+		OOID		id = OC_UNDEFINED;
+
+		STATUS	IIABcreateComp();
+
+		if ( IIABcreateComp( appl, &id, cat ) == OK  &&
+				(obj = OOp(id)) != NULL )
+		{
+			return (APPL_COMP *)obj;
+		}
+##	}
+
+##	activate menuitem ERget(FE_Frame) (expl = ERget(_FrameExpl))
+##	{
+		char	buf[2*FE_MAXNAME];
+
+		_VOID_ abinpname( ERget(F_AB0073_Frame_name),
+					buf, sizeof(buf)-1
+		);
+
+		if ( STtrmwhite(buf) > 0 )
+		{
+			if ( FEchkname(buf) != OK )
+			{
+				i4 len;
+
+				len = FE_MAXNAME;
+				IIUGerr( E_AB0131_BadFrame, UG_ERR_ERROR,
+						2, buf, &len
+				);
+			}
+			else
+			{
+				CVlower(buf);
+				return _scan( appl, cat, buf, OC_APPLFRAME );
+			}
+		}
+		continue;
+##	}
+
+##	activate menuitem ERget(FE_Procedure)(expl = ERget(_ProcedureExpl))
+##	{
+		char	buf[2*FE_MAXNAME];
+
+		_VOID_ abinpname( ERget(F_AB0074_Procedure_name),
+					buf, sizeof(buf)-1
+		);
+
+		if ( STtrmwhite(buf) > 0 )
+		{
+			if ( FEchkname(buf) != OK )
+			{
+				i4 len;
+
+				len = FE_MAXNAME;
+				IIUGerr( E_AB0133_BadProcedure, UG_ERR_ERROR,
+						2, buf, &len
+				);
+			}
+			else
+			{
+				CVlower(buf);
+				return _scan( appl, cat, buf, OC_OSLPROC );
+			}
+		}
+		continue;
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl)), FRSkey1
+##	{
+		FEhelp(ERx("abnwedit.hlp"), ERget(F_AB0072_NewEdit_help));
+		continue;
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(_EndExpl)), FRSkey3
+##	{
+		return NULL;
+##	}
+	/* end sub menu */
+}
+
+# define	stNEW		1
+# define	stUNCHANGED	2
+# define	stCHANGE	3
+
+/*
+** Name:	_scan() -	Scan Visual Object Catalog for Component
+**					Frame or Procedure.
+** Description:
+**	Scans the rows in the visual object catalog table field looking for
+**	a specific component by name.  If found the table field will be
+**	scrolled to that row and the component will be returned.
+**
+** Inputs:
+**	appl	{APPL *}  The application object.
+**	cat	{OO_CATALOG *}  The visual objects catalog.
+**	name	{char *}  The component name.
+**	class	{OOID}  The component class.
+**
+** Returns:
+**	{APPL_COMP *}  The component, or NULL if not found.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+static APPL_COMP *
+##_scan ( appl, cat, name, class )
+APPL		*appl;
+##OO_CATALOG	*cat;
+char		*name;
+OOID		class;
+##{
+	bool		frame;
+	bool		found;
+##	i4		row_no;
+##	i4		status;
+##	OO_CATREC	row;
+
+	frame = ( class >= OC_APPLFRAME && class < OC_APPLFRAME + 99 );
+
+	found = FALSE;
+##	UNLOADTABLE cat->c_form cat->c_tfield (
+##		row.name = _name, row.class = _class,
+##		row_no = _RECORD, status = _STATE
+##	)
+##	{
+		if ( ( status == stUNCHANGED || status == stCHANGE ||
+				status == stNEW )  &&  STequal(row.name, name) )
+		{
+			found = TRUE;
+			if ( ( frame && row.class >= OC_APPLFRAME &&
+					row.class < OC_APPLFRAME + 99 ) ||
+				( !frame && ( row.class == OC_OSLPROC ||
+						row.class == OC_HLPROC ||
+						row.class == OC_DBPROC ) ) )
+			{
+##				ENDLOOP;
+			}
+		}
+		else if ( found )
+		{
+			found = FALSE;
+##			ENDLOOP;
+		}
+##	}
+
+	if ( !found )
+	{
+		IIUGerr( E_AB0137_UnknownObject, UG_ERR_ERROR,
+			2, ERget(frame ? F_AR0005_frame : F_AR0006_procedure),
+			name
+		);
+		return NULL;
+	}
+	else
+	{ /* got it */
+##		scroll cat->c_form cat->c_tfield to row_no;
+		return ( _send(catCheck, cat)( cat, &row ) != OK )
+				? NULL : iiabGetComp( appl, row.id );
+	}
+	/*NOT REACHED*/
+##}

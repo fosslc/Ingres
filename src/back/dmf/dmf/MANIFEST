@@ -1,0 +1,200 @@
+#
+# MANIFEST file for back!dmf!dmf
+#
+#
+# History:
+#	13-Jul-2004 (hanje04)
+#	    SIR 112651
+#	    Updated to build Ingres r3 with jam for Open Source.
+#	25-Aug-2004 (drivi01)
+#	     Modified MANIFEST file this directory appropriately 
+#	     on windows.
+#	7-Aug-2004 (drivi01)
+#	     Modified the name of the ntlockst executable on windows.
+#	06-Oct-2004 (hanch04)
+#	    Use a special rule for DBMSEXE
+#	27-Oct-2004 (hanje04)
+#	    Replace COMPATLIB with SHCOMPATLIB where apropriate
+#	17-dec-2004 (abbjo03)
+#	    Changes needed to build DMFLIB and some of the DMF executables on
+#	    OpenVMS.
+#	11-jan-2005 (abbjo03)
+#	    Add cacheutil, dmfjsp, lartool, lockstat and repstat for VMS.
+#	23-feb-2005 (abbjo03)
+#	    Add acpexit.def for VMS.
+#	31-May-2005 (drivi01)
+#	    tbllst_close, tbllst_read, tbllst_open, tbllst_write, and
+#	    tbllst_create have moved from dmfjsp.c to dmfjnl.c 
+#	    change #477046 for bug 114136.  Added dmfjnl.c to the
+#	    compile line of dmfjsp.exe on windows to resolve missing
+#	    symbols.
+#   26-Jul-2005 (fanra01)
+#       Bug 90455
+#       Add acpexit.def for NT.
+#   01-Aug-2005 (fanra01)
+#       Bug 90455
+#       Update for original change.  SUFSH must remain as .sh on Windows
+#       platforms.
+#	20-apr-2006 (drivi01)
+#	     Removed DBUTILLIB from dmfjsp list of dependencies, it 
+#	     doesn't look like dmfjsp uses it.
+#	31-Jul-2006 (kschendel)
+#	    Remove IILINKS.  iilink does it anyway, and IILINKS makes
+#	    absolute symlinks instead of relative, which is wrong.
+#        8-Oct-2007 (hanal04) Bug 119262
+#           Added archive iimerge.a alternative to shared library server.
+#	16-jan-2008 (smeke01) b90455
+#	     Added IIBINBAT line for acpexit.bat.
+#	29-may-2008 (joea)
+#	    Add SXFLIB as a needed library for dmfjsp on VMS.
+#	27-may-2008 (upake01) b115383
+#	     Added adbtofst for VMS.
+#	01-May-2009 (drivi01)
+#	     Add IIAdminManifest for cacheutil.
+#	     This will ensure that the binary has a built-in manifest
+#	     with elevated privileges.
+#	9-sep-2009 (stephenb)
+#		Add dmfsinfo.c
+#       31-Dec-2009 (horda03)
+#            Correct VMS library dependancies.
+
+IISUBSYS back dmf dmf ;
+
+IILIBRARY DMFLIB : dmfaltdb.c dmfarchive.c dmfatp.c dmfcall.c 
+	dmfcsp.c dmfdbg.c dmfdtp.c dmfgw.c dmfinfo.c dmfinfo1.c dmfinit.c
+	dmfprftst.c dmfrcp.c dmfrecover.c dmfreloc.c dmfrfp.c
+	dmfterm.c dmftinfo.c dmftmmo.c dmftrace.c fastload.c dmfio.c
+	dmfjnl.c dmfsinfo.c ;
+
+if $(UNIX)
+{
+
+DBMSEXE iimerge : iimerge.o ;
+
+if $(SVR_SHLIBS)
+{
+    IINEEDLIBS iimerge : SHBECOMPATLIB SHSCFLIB SHPSFLIB SHOPFLIB 
+	SHPSFLIB SHRDFLIB SHQEFLIB SHQSFLIB SHDMFLIB SHDBUTILLIB SHGWFLIB 
+	SHADFLIB SHULFLIB SHTPFLIB SHRQFLIB SHGCFLIB SHSXFLIB SHCUFLIB 
+	SHULFLIB SHADFLIB SDLIB UDTLIB ;
+
+    IILIBEXE iimerge.o : dmfmerge.c ;
+
+}
+else if $(SVR_ARLIB)
+{
+    IINEEDLIBS iimerge : ARMERGELIB MALLOCLIB SDLIB RPC102441LIB ;
+
+    IILIBEXE iimerge.o : dmfmerge.c ;
+}
+else 
+{
+    IINEEDLIBS iimerge : SCFLIB UDTLIB PSFLIB OPFLIB PSFLIB RDFLIB QEFLIB 
+	QSFLIB DMFLIB DBUTILLIB GWFLIB ADFLIB ULFLIB TPFLIB RQFLIB GCFLIB
+	SXFLIB CUFLIB COMPATLIB MALLOCLIB SDLIB RPC102441LIB ;
+
+    IILIBEXE iimerge.o : dmfmerge.c ;
+    IINEEDLIBS iimerge.o : SCFLIB PSFLIB OPFLIB PSFLIB RDFLIB QEFLIB 
+	QSFLIB DMFLIB DBUTILLIB GWFLIB ADFLIB ULFLIB TPFLIB RQFLIB GCFLIB
+	SXFLIB CUFLIB COMPATLIB MALLOCLIB SDLIB RPC102441LIB ;
+}
+
+IISETUID iimerge ;
+
+IIFILESSH acpexit.def : acpexit$(SUFSH) ;
+
+IIBINSH alterdb : alterdb.sh ;
+IIBINSH auditdb : auditdb.sh ;
+IIBINSH ckpdb : ckpdb.sh ;
+IIBINSH infodb : infodb.sh ;
+IIBINSH relocatedb : relocdb.sh ;
+IIBINSH rollforwarddb : rolldb.sh ;
+IIBINSH acpexit : acpexit.sh ;
+IIBINSH adbtofst : adbtofst.sh ;
+IIBINSH fastload : fastload.sh ;
+
+IILIBRARY DMFLIB : cacheutil.c dmfacp.c dmfjsp.c dmfsvcb.c lartool.c
+	lockstat.c logdump.c logstat.c rcpconfig.c dmfdata.c repstat.c
+	dmfcpp.c ;
+}
+else if $(VMS)
+{
+    IIFILESSH acpexit.def : acpexit$(SUFSH) ;
+
+    IILIBRARY DMFLIB : dmfdata.c dmfsvcb.c dmfcpp.c ;
+
+    IIBINEXE cacheutil : cacheutil.c ;
+    IINEEDLIBS cacheutil : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB QSFLIB 
+                           RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+
+    IIBINEXE dmfacp : dmfacp.c ;
+    IINEEDLIBS dmfacp : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB QSFLIB 
+                        RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+
+    IIBINEXE dmfjsp : dmfjsp.c ;
+    IINEEDLIBS dmfjsp : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB QSFLIB 
+                        RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+
+    IIBINEXE lartool : lartool.c ;
+    IINEEDLIBS lartool : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB QSFLIB 
+                         RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+
+    IIBINEXE lockstat : lockstat.c ;
+    IINEEDLIBS lockstat : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB QSFLIB 
+                          RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+
+    IIBINEXE logdump : logdump.c ;
+    IINEEDLIBS logdump : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB QSFLIB 
+                         RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+
+    IIBINEXE logstat : logstat.c ;
+    IINEEDLIBS logstat : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB QSFLIB 
+                         RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+
+    IIBINEXE rcpconfig : rcpconfig.c ;
+    IINEEDLIBS rcpconfig : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB QSFLIB 
+                           RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+
+    IIBINEXE repstat : repstat.c ;
+    IINEEDLIBS repstat : ADFLIB DMFLIB GCFLIB SCFLIB ULFLIB COMPATLIB ;
+
+    IIBINSH adbtofst : adbtofst$(SUFSH) ;
+}
+else	# NT
+{
+# .bat suffix used explicitly. SUFSH must be .sh for Windows.
+IIBINBAT acpexit.bat : acpexit.bat ;
+IIFILESSH acpexit.def : acpexit.bat ;
+
+IIBINEXE repstat : repstat.c ;
+IINEEDLIBS repstat : COMPATLIB DMFLIB ;
+
+IIBINEXE cacheutil : cacheutil.c ;
+IINEEDLIBS cacheutil : COMPATLIB DMFLIB SCFLIB ULFLIB ;
+IIAdminManifest cacheutil ;
+
+IIBINEXE dmfacp : dmfacp.c ;
+IINEEDLIBS dmfacp : COMPATLIB DMFLIB SCFLIB ULFLIB ;
+
+IIBINEXE dmfjsp : dmfjsp.c dmfinfo.c dmfrfp.c dmfreloc.c dmfcpp.c dmfjnl.c ;
+IINEEDLIBS dmfjsp : COMPATLIB CUFLIB DMFLIB GLFLIB SCFLIB SXFLIB
+	ULFLIB ;
+
+IIBINEXE lartool : lartool.c ;
+IINEEDLIBS lartool : COMPATLIB DMFLIB SCFLIB ULFLIB ;
+
+IIBINEXE ntlockst : lockstat.c ;
+IINEEDLIBS ntlockst : COMPATLIB DMFLIB SCFLIB ULFLIB ;
+
+IIBINEXE ntlogdmp : logdump.c ;
+IINEEDLIBS ntlogdmp : COMPATLIB DMFLIB ULFLIB SCFLIB ;
+
+IIBINEXE ntlogst : logstat.c ;
+IINEEDLIBS ntlogst : COMPATLIB DMFLIB SCFLIB ULFLIB ;
+
+IIBINEXE ntrcpcfg : rcpconfig.c ;
+IINEEDLIBS ntrcpcfg : COMPATLIB DMFLIB SCFLIB ULFLIB ;
+
+IILIBRARY IMPDMFLIBDATA : dmfdata.c dmfsvcb.c ;
+
+}

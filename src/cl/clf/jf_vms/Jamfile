@@ -1,0 +1,9 @@
+#
+# Jamfile file for cl!clf!jf_vms
+#
+
+SubDir ING_SRC cl clf jf_vms ;
+
+IISUBSYS cl clf jf_vms ;
+
+IILIBRARY COMPATLIB : jf.c ;

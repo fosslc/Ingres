@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqedmnu.hlp, behind the AFD Edit Menuitem popup.
+/#-- 
+Changing the menuitem text does not change the frame name, which is based 
+on the original menuitem text.  To change the frame name, select MoreInfo
+from the Application Flow Diagram, then choose Rename.  
+
+The menuitem text:
+
+  * Must be no longer than 32 characters.
+  * Can contain any combination of alphanumeric and special characters.  
+    (Only the special characters  _  #  $  @  carry over into the frame name;
+    other special characters are dropped out.)
+  * Appears in upper and lower case as you enter it.
+  * Can contain blanks, but this might confuse a user into thinking it is 
+    more than one menuitem.
+  * Must be unique among the frame's peers, but can be the same as menuitem 
+    text for frames at other levels.  The system appends a sequence number 
+    to create unique frames if necessary.

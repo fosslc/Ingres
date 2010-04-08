@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqeceend.hlp, help for the confirmation pop-up ending from escape code
+/#-- editing session.
+/#-- 
+You have made changes to the Visual Query for the current frame, but have
+selected the menuitem 'Quit' without having selected 'End' first.  Your
+options are:
+
+  Yes           Save the changes and then quit
+  No		Quit without saving the changes
+
+If you choose 'No', then your changes will be ignored.  The menu commands:
+
+  Select        Choose the currently selected option.
+  Cancel        Return back to editing the Visual Query.
+  Help          Displays this help text.

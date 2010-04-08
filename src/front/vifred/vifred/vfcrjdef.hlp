@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to use a JoinDef to create the new form.  This 'default'
+can then be edited to create a saved form in the database.  This form allows
+you to specify the name of the JoinDef to use.
+
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        OK              Create a new form based on a JoinDef.
+
+	Edit		Edit/create a joindef on which to create the form.
+
+        Cancel          Return to the previous form without creating a new
+                        form.
+
+        ListChoices     Produce a list of the available JoinDefs from which
+                        to create a new form.
+
+        Help            Access the Ingres Help facility.

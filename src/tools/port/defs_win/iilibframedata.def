@@ -1,0 +1,830 @@
+;
+; History:
+;	25-Aug-2004 (drivi01)
+;	     Created using iifrsdata.def, contains 
+;	     front bin data files. For a list of
+;	     libraries included in this shared library
+;	     please refer to Jamdefs in tools/port/jam.
+;
+
+EXPORTS
+samefrm		@1	DATA			
+IIFTscScreenCleared		@2	DATA			
+FTcurwin		@3	DATA			
+FTfullwin		@4	DATA			
+FTgtflg		@5	DATA			
+FTiofrm		@6	DATA			
+FTutilwin		@7	DATA			
+FTwin		@8	DATA			
+FTwmaxx		@9	DATA			
+FTwmaxy		@10	DATA			
+IIFTavcb		@11	DATA			
+IIFTdatwin		@12	DATA			
+IIFTevcb		@13	DATA			
+IIFTglcb		@14	DATA			
+IIFTmpbMenuPrintBuf		@15	DATA			
+frmodewin		@16	DATA			
+froperation		@17	DATA			
+fropflg		@18	DATA			
+frsoper		@19	DATA			
+iigtclrfunc		@20	DATA			
+iigtctlfunc		@21	DATA			
+iigteditfunc		@22	DATA			
+iigtmreffunc		@23	DATA			
+iigtreffunc		@24	DATA			
+iigtslimfunc		@25	DATA			
+iigtsupdfunc		@26	DATA			
+FTuselotus		@27	DATA			
+mu_popup		@28	DATA			
+mu_statline		@29	DATA			
+mu_where		@30	DATA			
+mubutton		@31	DATA			
+mutype		@32	DATA			
+IIFTcurmenu		@33	DATA			
+FTqbf		@34	DATA			
+FTrngtag		@35	DATA			
+FTfrm		@36	DATA			
+IIFTdsi		@37	DATA			
+MUsdwin		@38	DATA			
+MUswin		@39	DATA			
+FTdmpcur		@40	DATA			
+FTdmpmsg		@41	DATA			
+FTfieldval		@42	DATA			
+FTgeterr		@43	DATA			
+FTgethdr		@44	DATA			
+FTgettype		@45	DATA			
+FTgetval		@46	DATA			
+FTrngchk		@47	DATA			
+FTsqlexec		@48	DATA			
+FTvalfld		@49	DATA			
+IIFTdsrDSRecords		@50	DATA			
+IIFTgtcGoToChk		@51	DATA			
+IIFTiaInvalidateAgg		@52	DATA			
+IIFTiaaInvalidAllAggs		@53	DATA			
+IIFTldrLastDsRow		@54	DATA			
+IIFTltLabelTag		@55	DATA			
+IIFTpadProcessAggDeps		@56	DATA			
+Rcv_disabled		@57	DATA			
+fdrcvfile		@58	DATA			
+fdrcvloc		@59	DATA			
+fdrcvname		@60	DATA			
+fdrecover		@61	DATA			
+IIFTdvl		@62	DATA			
+IIFTcommfile		@63	DATA			
+IIFTntsNumTmoutSecs		@64	DATA			
+IIFTtmout		@65	DATA			
+FTdumpfile		@66	DATA			
+ftshmumap		@67	DATA			
+ftactnext		@68	DATA			
+ftvalanymenu		@69	DATA			
+ftvalfrskey		@70	DATA			
+ftvalmenu		@71	DATA			
+ftvalnext		@72	DATA			
+ftvalprev		@73	DATA			
+FKdebug		@74	DATA			
+FTfldno		@75	DATA			
+rgfptr		@76	DATA			
+CHLD		@77	DATA			
+CHLE		@78	DATA			
+CHLS		@79	DATA			
+CHQA		@80	DATA			
+CHQB		@81	DATA			
+CHQC		@82	DATA			
+CHQD		@83	DATA			
+CHQE		@84	DATA			
+CHQF		@85	DATA			
+CHQG		@86	DATA			
+CHQH		@87	DATA			
+CHQI		@88	DATA			
+CHQJ		@89	DATA			
+CHQK		@90	DATA			
+dblflg		@91	DATA			
+dbpflg		@92	DATA			
+drchtbl		@93	DATA			
+keymap		@94	DATA			
+menumap		@95	DATA			
+IIMWmws		@96	DATA			
+GTmap_axis		@97	DATA			
+G_cols		@98	DATA			
+G_datchop		@99	DATA			
+G_dev		@100	DATA			
+G_dloc		@101	DATA			
+G_efunc		@102	DATA			
+G_frame		@103	DATA			
+G_gkserr		@104	DATA			
+G_holdrd		@105	DATA			
+G_homerow		@106	DATA			
+G_idraw		@107	DATA			
+G_interactive		@108	DATA			
+G_last		@109	DATA			
+G_lines		@110	DATA			
+G_locate		@111	DATA			
+G_mfunc		@112	DATA			
+G_mfws		@113	DATA			
+G_mref		@114	DATA			
+G_myterm		@115	DATA			
+G_plotref		@116	DATA			
+G_reflevel		@117	DATA			
+G_restrict		@118	DATA			
+G_tc_GE		@119	DATA			
+G_tc_GL		@120	DATA			
+G_tc_bc		@121	DATA			
+G_tc_be		@122	DATA			
+G_tc_bl		@123	DATA			
+G_tc_ce		@124	DATA			
+G_tc_cl		@125	DATA			
+G_tc_cm		@126	DATA			
+G_tc_dc		@127	DATA			
+G_tc_do		@128	DATA			
+G_tc_nd		@129	DATA			
+G_tc_re		@130	DATA			
+G_tc_rv		@131	DATA			
+G_tc_up		@132	DATA			
+G_ttyloc		@133	DATA			
+G_ws		@134	DATA			
+;    GTrestrict                              DATA
+MTdiagfunc		@135	DATA			
+MTdmpcurfunc		@136	DATA			
+MTdmpmsgfunc		@137	DATA			
+MTfsmorefunc		@138	DATA			
+MTputmufunc		@139	DATA			
+bordscr		@140	DATA			
+dispscr		@141	DATA			
+statscr		@142	DATA			
+titlscr		@143	DATA			
+VTglobx		@144	DATA			
+VTgloby		@145	DATA			
+unImage		@146	DATA			
+unLast		@147	DATA			
+IIVTcbegx		@148	DATA			
+IIVTcbegy		@149	DATA			
+tdprform		@150	DATA			
+destcol		@151	DATA			
+destline		@152	DATA			
+outcol		@153	DATA			
+outline		@154	DATA			
+plodcnt		@155	DATA			
+plodflg		@156	DATA			
+IITDAllocSize		@157	DATA			
+IITDccsCanChgSize		@158	DATA			
+IITDcur_size		@159	DATA			
+IITDiswide		@160	DATA			
+TDisopen		@161	DATA			
+colorattr		@162	DATA			
+dispattr		@163	DATA			
+fontattr		@164	DATA			
+ZZA		@165	DATA			
+ZZB		@166	DATA			
+ZZC		@167	DATA			
+ITdebug		@168	DATA			
+F3INUSE		@169	DATA			
+FKEYS		@170	DATA			
+FKerfnm		@171	DATA			
+INBUF		@172	DATA			
+KEYDEFS		@173	DATA			
+KEYNULLDEF		@174	DATA			
+KEYSEQ		@175	DATA			
+KEYUSE		@176	DATA			
+MACBUF		@177	DATA			
+MACBUFEND		@178	DATA			
+MAXFKEYS		@179	DATA			
+MENUCHAR		@180	DATA			
+beingdef		@181	DATA			
+erfile		@182	DATA			
+in_func		@183	DATA			
+infde_getch		@184	DATA			
+kbufp		@185	DATA			
+keyerrcnt		@186	DATA			
+mp		@187	DATA			
+no_errfile		@188	DATA			
+parsing		@189	DATA			
+IITDdpDebugPrint		@190	DATA			
+macexp		@191	DATA			
+IITDcda_prev		@192	DATA			
+IITDfcFromClear		@193	DATA			
+IITDptr_prev		@194	DATA			
+IIcurscr_firstch		@195	DATA			
+IIhopcount		@196	DATA			
+IItbuf		@197	DATA			
+IIMW		@198	DATA			
+IITDflu_firstlineused		@199	DATA			
+IITDlsLocSupport		@200	DATA			
+IIcurscr		@201	DATA			
+OVERLAYSP		@202	DATA			
+TDobptr		@203	DATA			
+TDoutbuf		@204	DATA			
+TDoutcount		@205	DATA			
+IITDgotolen		@206	DATA			
+IITDwvWVVersion		@207	DATA			
+windex_flag		@208	DATA			
+sflags		@209	DATA			
+sstrs		@210	DATA			
+; Data from termdr
+IIAL		@211	DATA			
+IIAM		@212	DATA			
+IIBC		@213	DATA			
+IIBE		@214	DATA			
+IIBL		@215	DATA			
+IIBO		@216	DATA			
+IIBS		@217	DATA			
+IIBT		@218	DATA			
+IICA		@219	DATA			
+IICAS		@220	DATA			
+IICD		@221	DATA			
+IICE		@222	DATA			
+IICL		@223	DATA			
+IICM		@224	DATA			
+IICOLS		@225	DATA			
+IIDA		@226	DATA			
+IIDC		@227	DATA			
+IIDL		@228	DATA			
+IIDM		@229	DATA			
+IIDO		@230	DATA			
+IIDef_term		@231	DATA			
+IIEA		@232	DATA			
+IIEB		@233	DATA			
+IIED		@234	DATA			
+IIEI		@235	DATA			
+IIEO		@236	DATA			
+IIES		@237	DATA			
+IIGT		@238	DATA			
+IIHO		@239	DATA			
+IIIC		@240	DATA			
+IIIM		@241	DATA			
+IIIN		@242	DATA			
+IIIP		@243	DATA			
+IIIS		@244	DATA			
+IIK0		@245	DATA			
+IIK1		@246	DATA			
+IIK2		@247	DATA			
+IIK3		@248	DATA			
+IIK4		@249	DATA			
+IIK5		@250	DATA			
+IIK6		@251	DATA			
+IIK7		@252	DATA			
+IIK8		@253	DATA			
+IIK9		@254	DATA			
+IIKAA		@255	DATA			
+IIKAB		@256	DATA			
+IIKAC		@257	DATA			
+IIKAD		@258	DATA			
+IIKAE		@259	DATA			
+IIKAF		@260	DATA			
+IIKAG		@261	DATA			
+IIKAH		@262	DATA			
+IIKAI		@263	DATA			
+IIKAJ		@264	DATA			
+IIKAK		@265	DATA			
+IIKAL		@266	DATA			
+IIKAM		@267	DATA			
+IIKAN		@268	DATA			
+IIKAO		@269	DATA			
+IIKAP		@270	DATA			
+IIKAQ		@271	DATA			
+IIKAR		@272	DATA			
+IIKAS		@273	DATA			
+IIKAT		@274	DATA			
+IIKAU		@275	DATA			
+IIKAV		@276	DATA			
+IIKAW		@277	DATA			
+IIKAX		@278	DATA			
+IIKAY		@279	DATA			
+IIKAZ		@280	DATA			
+IIKD		@281	DATA			
+IIKE		@282	DATA			
+IIKEYNUMS		@283	DATA			
+IIKH		@284	DATA			
+IIKKA		@285	DATA			
+IIKKB		@286	DATA			
+IIKKC		@287	DATA			
+IIKKD		@288	DATA			
+IIKL		@289	DATA			
+IIKR		@290	DATA			
+IIKS		@291	DATA			
+IIKU		@292	DATA			
+IIKY		@293	DATA			
+IILD		@294	DATA			
+IILE		@295	DATA			
+IILINES		@296	DATA			
+IILL		@297	DATA			
+IILS		@298	DATA			
+IILSP		@299	DATA			
+IIMA		@300	DATA			
+IIMF		@301	DATA			
+IIMS		@302	DATA			
+IIMy_term		@303	DATA			
+IINC		@304	DATA			
+IIND		@305	DATA			
+IINONL		@306	DATA			
+IIOS		@307	DATA			
+IIPC		@308	DATA			
+IIPF		@309	DATA			
+IIPSP		@310	DATA			
+IIQA		@311	DATA			
+IIQB		@312	DATA			
+IIQC		@313	DATA			
+IIQD		@314	DATA			
+IIQE		@315	DATA			
+IIQF		@316	DATA			
+IIQG		@317	DATA			
+IIQH		@318	DATA			
+IIQI		@319	DATA			
+IIQJ		@320	DATA			
+IIQK		@321	DATA			
+IIRE		@322	DATA			
+IIRSP		@323	DATA			
+IIRV		@324	DATA			
+IISE		@325	DATA			
+IISF		@326	DATA			
+IISO		@327	DATA			
+IISR		@328	DATA			
+IITA		@329	DATA			
+IITDDC		@330	DATA			
+IITDDT		@331	DATA			
+IITDGA		@332	DATA			
+IITDGC		@333	DATA			
+IITDGE		@334	DATA			
+IITDGH		@335	DATA			
+IITDGI		@336	DATA			
+IITDGL		@337	DATA			
+IITDGO		@338	DATA			
+IITDGP		@339	DATA			
+IITDGR		@340	DATA			
+IITDGS		@341	DATA			
+IITDGW		@342	DATA			
+IITDGX		@343	DATA			
+IITDGY		@344	DATA			
+IITDMI		@345	DATA			
+IITDWS		@346	DATA			
+IITDWX		@347	DATA			
+IITDXT		@348	DATA			
+IITDYN		@349	DATA			
+IITDYO		@350	DATA			
+IITDYP		@351	DATA			
+IITDYQ		@352	DATA			
+IITDYR		@353	DATA			
+IITDYS		@354	DATA			
+IITD_GC		@355	DATA			
+IITD_GE		@356	DATA			
+IITD_GL		@357	DATA			
+IITD_GR		@358	DATA			
+IITE		@360	DATA			
+IITI		@361	DATA			
+IIUC		@362	DATA			
+IIUE		@363	DATA			
+IIUL		@364	DATA			
+IIUP		@365	DATA			
+IIUS		@366	DATA			
+IIVB		@367	DATA			
+IIVE		@368	DATA			
+IIVS		@369	DATA			
+IIWG		@370	DATA			
+IIWR		@371	DATA			
+IIXC		@372	DATA			
+IIXD		@373	DATA			
+IIXF		@374	DATA			
+IIXL		@375	DATA			
+IIXN		@376	DATA			
+IIYA		@377	DATA			
+IIYB		@378	DATA			
+IIYC		@379	DATA			
+IIYD		@380	DATA			
+IIYE		@381	DATA			
+IIYF		@382	DATA			
+IIYG		@383	DATA			
+IIYH		@384	DATA			
+IIZA		@385	DATA			
+IIZB		@386	DATA			
+IIZC		@387	DATA			
+IIZD		@388	DATA			
+IIZE		@389	DATA			
+IIZF		@390	DATA			
+IIZG		@391	DATA			
+IIZH		@392	DATA			
+IIZI		@393	DATA			
+IIZJ		@394	DATA			
+IIZK		@395	DATA			
+II_echoit		@396	DATA			
+II_endwin		@397	DATA			
+II_pfast		@398	DATA			
+II_rawmode		@399	DATA			
+IIlastlnwin		@400	DATA			
+IInormtty		@401	DATA			
+IIoutf		@402	DATA			
+IIstdmsg		@403	DATA			
+IIstdscr		@404	DATA			
+IItempwin		@405	DATA			
+IIttytype		@406	DATA			
+XS		@410	DATA			
+II_curwin		@411	DATA			
+II_pwin		@412	DATA			
+II_win		@413	DATA			
+IIdepth		@414	DATA			
+IIlx		@415	DATA			
+IIly		@416	DATA			
+IIpcolor		@417	DATA			
+IIpda		@418	DATA			
+IIpfonts		@419	DATA			
+xPC		@420	DATA			
+xXL		@421	DATA			
+
+IICUadrAbfDependRecord		@423	DATA			
+IICUaorAbfObjectRecord		@424	DATA			
+IICUapdAPplDepend		@425	DATA			
+IICUaprAPplRecord		@426	DATA			
+IICUecrEscapeCodeRecord		@427	DATA			
+IICUfvFrameVarRecord		@428	DATA			
+IICUmaMenuArgRecord		@429	DATA			
+IICUvqcVQColRecord		@430	DATA			
+IICUvqjVQJoinRecord		@431	DATA			
+IICUvqtVQTabRecord		@432	DATA			
+IICUatrATtributeRecord		@433	DATA			
+IICUattATtributeTlist		@434	DATA			
+IICUenrENcodedRecord		@435	DATA			
+IICUfirFIeldRecord		@436	DATA			
+IICUfitFIeldTlist		@437	DATA			
+IICUforFOrmRecord		@438	DATA			
+IICUfotFOrmTlist		@439	DATA			
+IICUtrrTRimRecord		@440	DATA			
+IICUtrtTRimTlist		@441	DATA			
+IICUgbrGBfRecord		@442	DATA			
+IICUgbtGBfTlist		@443	DATA			
+IICUgcrGCommandsRecord		@444	DATA			
+IICUgctGCommandsTlist		@445	DATA			
+IICUjdrJoinDefRecord		@446	DATA			
+IICUjdtJoinDefTlist		@447	DATA			
+IICUqnrQbfNameRecord		@448	DATA			
+IICUqntQbfNameTlist		@449	DATA			
+IICUrcrRCommandsRecord		@450	DATA			
+IICUrctRCommandsTlist		@451	DATA			
+IICUrwrReportWriterRecord		@452	DATA			
+IICUrwtReportWriterTlist		@453	DATA			
+IICUvirVIgraphRecord		@454	DATA			
+iiCUescExtSysCatalogs		@455	DATA			
+iiCUntrNameToRectype		@456	DATA			
+iiCUrtcRectypeToCurecord		@457	DATA			
+DSchar		@478	DATA			
+IIDSchar		@479	DATA			
+DSf8		@480	DATA			
+IIDSf8		@481	DATA			
+DSfldtype		@482	DATA			
+DSfield		@483	DATA			
+DSpfield		@484	DATA			
+DStable		@485	DATA			
+DSfldcol		@486	DATA			
+DSfldhdr		@487	DATA			
+DSfldval		@488	DATA			
+DSframe		@489	DATA			
+IIFSbase		@490	DATA			
+IIFSfp		@491	DATA			
+IIFShashtab		@492	DATA			
+IIFSretstat		@493	DATA			
+IIFStabsize		@494	DATA			
+IIFStemptab		@495	DATA			
+DSi4		@496	DATA			
+DSpregfld		@498	DATA			
+DSregfld		@499	DATA			
+DSstring		@500	DATA			
+DSptblfld		@502	DATA			
+DStblfld		@503	DATA			
+DSptrim		@504	DATA			
+DSspecial		@505	DATA			
+DStrim		@506	DATA			
+IIooCatClass		@507	DATA			
+LevelMask		@508	DATA			
+IIooObjects		@509	DATA			
+KernelTempId		@510	DATA			
+O1		@511	DATA			
+O1002		@512	DATA			
+O12		@513	DATA			
+O1501		@514	DATA			
+O1502		@515	DATA			
+O1511		@516	DATA			
+O1601		@517	DATA			
+O2		@518	DATA			
+O2190		@519	DATA			
+O2201		@520	DATA			
+O2250		@521	DATA			
+O3		@522	DATA			
+O3001		@523	DATA			
+O4		@524	DATA			
+O5		@525	DATA			
+O75		@526	DATA			
+TempId		@527	DATA			
+lmenup		@528	DATA			
+DDebug		@529	DATA			
+IIuserIndex		@530	DATA			
+iiOODBA		@531	DATA			
+;iiOOnil		@532	CONSTANT			
+iiOOsize		@533	DATA			
+iiOOtable		@534	DATA			
+iiOOEndProcTable		@535	DATA			
+iiOOProcTable		@536	DATA			
+Self		@537	DATA			
+_CurMeth		@538	DATA			
+IituMainform		@539	DATA			
+second_pass_emode		@540	DATA			
+iiuftfdDiagFunc		@541	DATA			
+ 
+FdDStab		@555	DATA			
+FDvalqbf		@556	DATA			
+_formdata_		@557	DATA			
+fdprform		@558	DATA			
+IIFDcommfile		@559	DATA			
+_framecast		@560	DATA			
+dmpbuf		@561	DATA			
+fddmpfile		@562	DATA			
+fdutprocs		@563	DATA			
+frcommno		@564	DATA			
+frcurfrm		@565	DATA			
+frdba		@566	DATA			
+frdebuglist		@567	DATA			
+frterminfo		@568	DATA			
+fruser		@569	DATA			
+frusername		@570	DATA			
+IIFDcdCvtData		@571	DATA			
+IIFDfinFldInternalName		@572	DATA			
+IIFDftFldTitle		@573	DATA			
+IIFDdsrDSRecords		@574	DATA			
+IIFDevcb		@575	DATA			
+IIFDglcb		@576	DATA			
+IIFDldrLastDsRow		@577	DATA			
+IIFDrfcb		@578	DATA			
+FDparscol		@579	DATA			
+FEtstin		@580	DATA			
+FEtstout		@581	DATA			
+multp		@582	DATA			
+IIfsiinfo		@583	DATA			
+IIsifld		@584	DATA			
+IIsifrm		@585	DATA			
+IIsiobj		@586	DATA			
+IIsirfrm		@587	DATA			
+IIsirow		@588	DATA			
+IIsitbl		@589	DATA			
+IIsitbs		@590	DATA			
+IIFRpfnPrevFormName		@591	DATA			
+IIFRpfwp		@592	DATA			
+IIclrqbf		@593	DATA			
+IIFR_gparm		@594	DATA			
+IIFR_maxpid		@595	DATA			
+IIFRIOIntOpt		@596	DATA			
+IIcurtbl		@597	DATA			
+IIfrmio		@598	DATA			
+IIfromfnames		@599	DATA			
+IIfrscb		@600	DATA			
+IImenuptr		@601	DATA			
+IIprev		@602	DATA			
+IIresult		@603	DATA			
+IIrootfrm		@604	DATA			
+IIstkfrm		@605	DATA			
+IIvalcomms		@606	DATA			
+IIsimapfile		@607	DATA			
+IIFRtovTmOutVal		@608	DATA			
+IIexted_submu		@609	DATA			
+form_mu		@610	DATA			
+IIqbffrm		@611	DATA			
+IIcurobj		@612	DATA			
+IIfrsobjs		@613	DATA			
+IIattcol		@614	DATA			
+IIattfld		@615	DATA			
+IIattform		@616	DATA			
+IIattfrs		@617	DATA			
+IIatttbl		@618	DATA			
+IIUFlfiLocateFormInit		@619	DATA			
+IITBccvChgdColVals		@620	DATA			
+IIFVcfCurFld		@621	DATA			
+IIFVddpDebugPrint		@622	DATA			
+IIFVocOnlyCnst		@623	DATA			
+IIFVfloat_str		@624	DATA			
+IIFVodcOpdCnt		@625	DATA			
+IIFVorcOprCnt		@626	DATA			
+IIFVcvConstVal		@627	DATA			
+IIFVdc1DbvConst		@628	DATA			
+IIFVdc2DbvConst		@629	DATA			
+vl_help		@630	DATA			
+Lastok		@631	DATA			
+Newline		@632	DATA			
+Opcode		@633	DATA			
+Pchar		@634	DATA			
+Pctr		@635	DATA			
+vl_curfrm		@636	DATA			
+vl_curhdr		@637	DATA			
+vl_curtype		@638	DATA			
+vl_curval		@639	DATA			
+vl_syntax		@640	DATA			
+IIFVflhdr		@641	DATA			
+IIFVxref		@642	DATA			
+vl_buffer		@643	DATA			
+;iiugReqMem		@644	DATA
+Cfversion		@645 	DATA
+Cf_silent		@646	DATA
+iicfBlock		@647	DATA
+	IITU_Blank	@648	DATA			
+	IITU_Def	@649	DATA			
+	IITU_Empty	@650	DATA			
+	IITU_Not	@651	DATA			
+	IITU_NotDef	@652	DATA			
+	IITU_NotNull	@653	DATA			
+	IITU_NotNullWithDef	@654	DATA
+	IITU_NotSysMaint	@655	DATA			
+	IITU_Null	@656	DATA			
+	IITU_ObjectKey	@657	DATA			
+	IITU_SysMaint	@658	DATA			
+	IITU_TableKey	@659	DATA			
+	IITU_User	@660	DATA			
+	IITU_With	@661	DATA			
+	IITU_WithDef	@662	DATA			
+	IITU_WithNull	@663	DATA			
+	IITU_WithSysMaint	@664	DATA
+
+    _altr_count		@768		DATA
+    _altr_date		@665		DATA
+    _atEnd              @666            DATA
+    _atPut              @667                    DATA
+    _catForm            @668                    DATA
+    _catInit            @669                    DATA
+    _cattable           @670                    DATA
+    _class              @671                   DATA
+    _copy               @672                    DATA
+    _copyId             @673                    DATA
+    _create_date        @674                    DATA
+    _currentName        @675                    DATA
+    _decode             @676                    DATA
+    _destroy            @677                    DATA
+    _do                 @678                    DATA
+    _edit               @679                    DATA
+    _encode             @680                    DATA
+    _env                @681                    DATA
+    _estring            @682                    DATA
+    _fetch              @683                    DATA
+    _fetch0             @684                    DATA
+    _fetchAll           @685                    DATA
+    _fetchDb            @686                    DATA
+    _first              @687                    DATA
+    ii_flush            @688                    DATA
+    ii_flush0           @689                    DATA
+    _id                 @691                    DATA
+    _iiOOalloc          @692                    DATA
+    _iiOOempty          @693                    DATA
+    _ii_objects         @695                    DATA
+    _iicatalog          @696                    DATA
+    _iidetail           @697                    DATA
+    _iisave             @698                    DATA
+    _iiOOinit           @699                    DATA
+    _init0              @700                    DATA
+    _initDb             @701                    DATA
+    _insertrow          @702                    DATA
+    _isEmpty            @703                    DATA
+    _isNil              @704                    DATA
+    _is_current         @705                    DATA
+    _last_altered_by    @706                    DATA
+    _long_remark        @707                    DATA
+    _markChange         @708                    DATA
+    _mlook              @709                    DATA
+    _name               @710                    DATA
+    _nameOk             @711                    DATA
+    _new0               @712                    DATA
+    _newDb              @713                    DATA
+    _noMethod           @714                    DATA
+    _object             @715                    DATA
+    _owner              @716                    DATA
+    _ownercode          @717                    DATA
+    _perform            @718                    DATA
+    _print              @719                    DATA
+    _sequence           @720                    DATA
+    _setPermit          @721                    DATA
+    _setRefNull         @722                    DATA
+    _short_remark       @723                    DATA
+    _subClass           @724                    DATA
+    _subResp            @725                    DATA
+    _title              @726                    DATA
+    _vig                @727                    DATA
+    _withName           @728                    DATA
+
+	iiOOnew		@729			DATA
+	iiOOat		@730			DATA
+	iiOOauthorized	@731			DATA
+	iiOOconfirmName	@732			DATA
+	iiOOnil		@733			DATA
+	iiOOnew		@734			DATA
+	iiOOnext	@735			DATA
+	iiOOreadfile	@736			DATA
+	iiOOrename	@737			DATA
+	iiOOtime	@738			DATA
+	iiOOwritefile	@739			DATA
+	iiOODBAsize	@740			DATA
+	
+II_echoit				@741	DATA
+II_rawmode			@742	DATA
+IIMy_term				@743	DATA
+II_endwin				@744	DATA
+IICOLS				@745	DATA
+IITDGC				@748	DATA
+IITDGR				@749	DATA
+IITDGA				@750	DATA
+IITD_GC				@751	DATA
+IITD_GR				@752	DATA
+IITDGX				@753	DATA
+IITDGY				@754	DATA
+IIKEYNUMS				@755	DATA
+IIstdscr				@756	DATA
+IIcurscr				@757	DATA
+IIstdmsg				@758	DATA
+IItempwin				@759	DATA
+IIlastlnwin			@760	DATA
+IITDflu_firstlineused		@761	DATA
+IIJS				@762	DATA
+IITDlsLocSupport		@763	DATA
+TDoutcount			@764	DATA
+TDobptr				@765	DATA
+TDoutbuf			@766	DATA
+sflags				@767	DATA
+sstrs				@769	DATA
+
+samefrm				@770	DATA
+IIFTscScreenCleared 		@771	DATA
+frmodewin 			@772	DATA
+FTwin				@773	DATA
+FTfullwin			@774	DATA
+FTcurwin			@775	DATA
+FTutilwin			@776	DATA
+IIFTdatwin			@777	DATA
+FTwmaxy				@778	DATA
+FTwmaxx				@779	DATA
+FTiofrm				@780	DATA
+IIFTevcb			@781	DATA
+IIFTavcb			@782	DATA
+IIFTglcb			@783	DATA
+IIFTmpbMenuPrintBuf		@784	DATA
+FTgtflg				@785	DATA
+froperation			@786	DATA
+fropflg				@787	DATA
+frsoper				@788	DATA
+FTuselotus			@789	DATA
+FTuselotus			@790	DATA
+mubutton			@791	DATA
+mutype				@792	DATA
+mu_where			@793	DATA
+mu_statline			@794	DATA
+mu_popup			@795	DATA
+IIFTcurmenu			@796	DATA
+FTqbf				@797	DATA
+FTrngtag			@798	DATA
+FTfrm				@799	DATA
+IIFTdsi				@800	DATA
+MUswin				@801	DATA
+MUsdwin				@802	DATA
+fdrcvname			@803	DATA
+fdrcvfile			@804	DATA
+fdrecover			@805	DATA
+Rcv_disabled			@806	DATA
+IIFTcommfile			@808	DATA
+IIFTtmout			@809	DATA
+IIFTntsNumTmoutSecs		@810	DATA
+FTdumpfile			@811	DATA
+ftshmumap			@812	DATA
+ftvalnext			@813	DATA
+ftvalprev			@814	DATA
+ftvalmenu			@815	DATA
+ftvalanymenu			@816	DATA
+ftvalfrskey			@817	DATA
+ftactnext			@818	DATA
+ftactprev			@819	DATA
+FKdebug				@820	DATA
+FTfldno				@821	DATA
+rgfptr				@822	DATA
+keymap				@823	DATA
+menumap				@824	DATA
+IIMWmws				@825	DATA
+IIMWVersionInfo			@826	DATA
+outcol				@827	DATA
+outline				@828	DATA
+destcol				@829	DATA
+destline			@830	DATA
+plodcnt				@831	DATA
+plodflg				@832	DATA
+TDisopen			@833	DATA
+IITDAllocSize			@834	DATA
+IITDiswide			@835	DATA
+IITDcur_size			@837	DATA
+IIospeed			@838	DATA
+dispattr			@839	DATA
+fontattr			@840	DATA
+colorattr			@841	DATA
+IIvt100				@842	DATA
+ZZA				@843	DATA
+ZZB				@844	DATA
+ZZC				@845	DATA
+ITdebug				@846	DATA
+IITDdpDebugPrint		@847	DATA
+macexp				@848	DATA
+IITDcda_prev			@855	DATA
+IITDfcFromClear			@859	DATA
+IIcurscr_firstch		@860	DATA
+IItbuf				@861	DATA
+IIhopcount			@862	DATA
+IITDgotolen			@863	DATA
+windex_flag			@864	DATA
+ii_flushAll			@866	DATA
+_ii_longremarks			@867	DATA
+_long_remark			@868	DATA

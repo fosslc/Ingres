@@ -1,0 +1,67 @@
+/*
+**  abf.qc
+**
+**  Copyright (c) 1989, 2008 Ingres Corporation
+**
+**  History:
+**	4/18/89 (pete)	Remove "application =%s" from subsystem call.
+**			so abf will start in catalog frame.
+**	11/1/89 (mdw)	Remove UTfence call for CMS due to revision
+**			of ABF and repackaging of all FE components.
+**	2/5/90	(pete)	Add support for -v flag to differentiate between
+**			Vision and ABF. Added "item" parameter to abfstart().
+**	3/20/90 (pete)	Rather than calling iiabf with -v, change to call
+**			either 'abf' or 'vision'.
+**	5/3/90	(pete)	Invoke xxx rather than vision.
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<er.h>
+# include	<ug.h>
+# include	"erim.h"
+# include	"imconst.h"
+# include	"imextern.h"
+
+static const char _abf[]		= "abf";
+static const char _vision[]		= "vision";
+static const char _empty[]		= "";
+
+VOID
+abfstart(item)
+ER_MSGID        item;
+{
+	char	*appl;
+	PTR	args[10];
+
+	if (*im_xpipe != EOS)
+	{
+		IIUGerr(E_IM0002_INGRES_MENU_was_not_i, UG_ERR_ERROR, 0);
+		return;
+	}
+
+	if (item == F_IM0012_Applications) 	/* ABF only; no Vision */
+	{
+	    appl = _abf;
+##	    message ERget(F_IM0029_Starting_ABF)
+	}
+	else					/* customer has Vision!! */
+	{
+	    appl = _vision;		/* note: during project Vision was
+					** known as "Vision".
+					*/
+##	    message ERget(F_IM0035_Starting_Vision)
+	}
+
+	if (swspawn(appl, _empty, 0, args) != OK)
+	{
+		starterr(appl);
+	}
+
+##	clear screen
+}

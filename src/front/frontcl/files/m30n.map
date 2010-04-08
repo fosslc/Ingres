@@ -1,0 +1,85 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* switch to menu mode */
+	menu =  pf1 (F1)
+/* go on to next word */
+	nextword = pf23 (Shift&Next)
+/* go back to previoius word */
+	previousword = pf24 (Shift&Prev)
+/* forward tabulate */
+	nextfield = controlI (->|)
+/* back tabulate */
+	previousfield = pf18 (|<-)
+/* toggle insert mode */
+	mode = pf19 (Ins)
+/* redraw the screen */
+	redraw = pf25 (Shift&Reset)
+/* rubout */
+	rubout = controlH (RubOut)
+/* newrow */
+	newrow = pf20 (Cursor Newline)
+/* clear field  */
+	clear = pf26 (Shift&Clear)
+/* clear to end of field  */
+	clearrest = pf17 (Clear)
+/* scroll field up */
+	scrollup = pf14 (Next)
+/* scroll field downward */
+	scrolldown = pf13 (Prev)
+/* scroll field leftward */
+	scrollleft = pf29 (Shift&->)
+/* scroll field rightward */
+	scrollright = pf28 (Shift&<-)
+/* duplicate row */
+	duplicate = pf12 (Reset)
+/* print screen */
+	printscreen = pf16 (Print)
+/* delete */
+	deletechar = controlDEL (Del) 
+/* start up editor on feild */
+	editor = controlV (Ctrl&V)
+
+/** menu items **/
+	menu1 = pf2 (F2)
+/* select second menu item */
+	menu2 = pf3 (F3)
+/* select third menu item */
+	menu3 = pf4 (F4)
+/* select fourth menu item */
+	menu4 = pf5 (F5)
+/* select fifth menu item */
+	menu5 = pf6 (F6)
+/* selct sixth menu item */
+	menu6 = pf7 (F7)
+/* select seventh menu item */
+	menu7 = pf8 (F8)
+/* select eigth menu item */
+        menu8 = pf9 (F9)
+/* select ninth menu item */
+	menu9 = pf10 (F10)
+/* select tenth menu item */
+	menu10 = pf35 (Shift&F4)
+
+/** frs keys **/
+
+/** Help **/
+	frskey1 = pf15 (Help)
+/** Stop **/
+	frskey2 = controlU (Ctrl&U)
+/** Exit **/	
+	frskey3 = pf11 (F11)                 
+/** Go **/	
+	frskey4 = pf21 (Actn)
+/** Top **/	
+	frskey5 = pf30 (Shift&Up)
+/** Bottom **/ 
+	frskey6 = pf31 (Shift&Down)
+/** Find **/ 
+	frskey7 = pf32 (Shift&F1)
+/** Save **/	
+	frskey8 = pf33 (Shift&F2)
+/** Forget **/
+	frskey9 = pf34 (Shift&F3)
+
+/** Listchoices menu selection **/
+	frskey10 = pf36 (Shift&F10)
+

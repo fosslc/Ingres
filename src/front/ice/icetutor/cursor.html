@@ -1,0 +1,25 @@
+<!-- #ICE DECLARE=`session.transaction=:transaction` -->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Cursors&previous=transaction.html&next=rows.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`checkSQL.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`Cursors enable Web Deployment Option applications to process, one at a time, the result rows returned by a <u>select</u> statement.
+After a cursor has opened, it can be advanced through the result rows. A typical cursor application uses SQL statements
+to perform the following steps:<p>
+<ol>
+<LI>Declare a cursor that will select a set of rows for processing
+<LI>Open the cursor, thereby selecting the data.
+<LI>Fetch each row from the result table.
+<LI>Do some kind of processing on that row.
+<LI>Close the cursor and terminate processing.
+</OL>
+<p>
+Using cursors with Web Deployment Option allows the user to choose a specific number of items to view at a time.
+<p>
+Please enter a cursor name:
+<!-- #ICE VAR=``<INPUT SIZE="32" NAME="cursor" VALUE=":cursor">`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

@@ -1,0 +1,15 @@
+COPYFORM:	6.4	2002_06_28 07:26:10 GMT  
+FORM:	imp_lk_locks		
+	70	13	0	0	1	0	1	9	0	0	0	0	0	128	0	9
+FIELD:
+	0	lock_details	0	8	0	8	12	70	1	0	1	3	0		1	1	0	1073741857	0	0	0					1	0
+	0	computed_id	-21	11	0	8	1	8	0	1	8	3	1	ID	1	1	0	0	0	0	0		+c8			2	1
+	1	lkb_rq_state	-21	5	0	2	1	2	0	10	2	3	10	RQ	10	1	0	0	0	0	0		+c2			2	2
+	2	lkb_gr_state	-21	11	0	8	1	8	0	13	8	3	13	State	13	1	0	0	0	0	0		c8			2	3
+	3	lkb_type	-21	13	0	10	1	10	0	22	10	3	22	Lock Type	22	1	0	0	0	0	0		c10			2	4
+	4	lkb_db	-21	13	0	10	1	10	0	33	10	3	33	DB	33	1	0	0	0	0	0		c10			2	5
+	5	lkb_table	-21	18	0	15	1	15	0	44	15	3	44	Table	44	1	0	0	0	0	0		c15			2	6
+	6	lkb_page	-30	5	0	4	1	4	0	60	4	3	60	Page	60	1	0	0	0	0	0		-i4			2	7
+	7	lkb_rsb_id_id	-30	5	0	4	1	4	0	65	4	3	65		65	1	0	16777216	0	0	0		-i4			2	8
+TRIM:
+	0	0	Lock Detail Display	131072	0	0	0

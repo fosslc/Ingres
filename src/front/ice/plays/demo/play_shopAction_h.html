@@ -1,0 +1,25 @@
+<!-- shopAction-h.html:
+    Activate links as appropriate. Link is active if the
+    variable of that name is set to Y, else inactive
+-->
+<hr width="50%">
+<table border=0 cellspacing=4>
+<tr>
+<td>
+<!-- #ICE IF (`:View` == `Yes`)
+    THEN=`<a href="plays[play_shopView.html]">View Bag Contents</a>`
+    ELSE=`View Bag Contents`
+-->
+<td>
+<a href="plays[play_shopHome.html]">Return to Products</a>
+<td>
+<!-- #ICE IF (`:Confirm` == `Yes`)
+    THEN=`<a href="plays[play_shopConfirm.html]">Place Order</a>`
+    ELSE=`Place Order`
+-->
+<td>
+<!-- #ICE IF (`:Remove` == `Yes`)
+    THEN=`<a href="plays[play_shopRemove.html]">Empty Bag</a>`
+    ELSE=`Empty Bag`
+-->
+</table>

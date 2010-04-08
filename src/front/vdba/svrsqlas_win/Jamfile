@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!vdba!svrsqlas_win
+#
+
+SubDir ING_SRC front vdba svrsqlas_win ;
+
+IISUBSYS front vdba svrsqlas_win ;
+
+
+IISLN svrsqlas.dll : svrsqlas.sln ;
+

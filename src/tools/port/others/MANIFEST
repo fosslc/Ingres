@@ -1,0 +1,112 @@
+#
+# JAM MANIFEST file for tools!port!others
+#
+# History:
+#	20-July-2004 (hanje04)
+#	    Added comments.
+#	    Remove vsar as it's no longer used and requires libcurses to build.    
+#	16-Sep-2004 (bonro01)
+#	    IICCFLAGS must follow IITOOLSEXE
+#	07-jan-2005 (abbjo03)
+#	    Exclude Unix-specific executables and man pages from VMS.
+#	13-jan-2005 (abbjo03)
+#	    Correct 7-jan change: IICCFLAGS have to come after the corresponding
+#	    IITOOLSEXE invocation.
+#	18-Feb-2005 (sheco02)
+#	    Move dmp to the outside of if-else block so that it is also built for Unix/
+#	    Linux and then we can use crprint.sh.
+#	25-may-2005 (abbjo03)
+#	    Exclude Unix executables and scripts not needed on VMS.
+#	26-may-2005 (abbjo03)
+#	    Reinstate mathsigs on the Unix side removed by 25-may change.
+#	14-May-2009 (kschendel) b122041
+#	    Remove getopt (the executable);  nothing uses it, and since it's
+#	    different from (e.g.) Linux's normal getopt, bad things happen
+#	    such as looping in the man(1) command.  If something DID want
+#	    a command level getopt, it's available these days as a command
+#	    or shell builtin anyway.
+#	24-Jun-2009 (bonro01)
+#	    Add iidbmaxname program to enhance jam processing
+#	    to support the new IIDBMAXNAME rule.
+#       20-Aug-2009 (horda03)
+#          Identify targets built on VMS without a .LOT file
+#	21-Aug-2009 (drivi01)
+#	     Add IIAdminManifest for sif.
+#	     This will ensure that the binary has a built-in manifest
+#	     with elevated privileges.
+#
+
+IISUBSYS tools port others ;
+
+VMS_NO_LOT dmp iidbmaxname mathsigs ;
+
+if $(NT)
+{
+IIBINEXE prenv : prenv.c ;
+IINEEDLIBS prenv : COMPATLIB ;
+
+IIBINEXE sif : sif.c ;
+IINEEDLIBS sif : COMPATLIB ;
+IIAdminManifest sif ;
+
+IIBINEXE ckxcopy : ckxcopy.c ;
+IINEEDLIBS ckxcopy : COMPATLIB ;
+
+IIBINEXE ckntbkup : ckntbkup.c ;
+IINEEDLIBS ckntbkup : COMPATLIB ;
+
+IIBINEXE syschecknt : syschecknt.c ;
+IINEEDLIBS syschecknt : COMPATLIB ;
+
+IIBINEXE splitprm : splitprm.c ;
+IINEEDLIBS splitprm : COMPATLIB ;
+
+IIBINEXE fileprep : fileprep.c ;
+IINEEDLIBS fileprep : COMPATLIB ;
+
+IIBINEXE dhex : dhex.c ;
+IINEEDLIBS dhex : COMPATLIB ;
+
+IIBINEXE iidbmaxname : iidbmaxname.c ;
+}
+else if $(VMS)
+{
+    IITOOLSEXE mathsigs : mathsigs.c ;
+
+    IITOOLSEXE iidbmaxname : iidbmaxname.c ;
+}
+else
+{
+IITOOLSEXE beingres : beingres.c ;
+IITOOLSEXE biglimit : biglimit.c ;
+IITOOLSEXE context : context.c ;
+IITOOLSEXE eatjunk : eatjunk.c ;
+IITOOLSEXE echo : echo.c ;
+IITOOLSEXE echov : echov.c ;
+IITOOLSEXE mathsigs : mathsigs.c ;
+IITOOLSEXE mkdirs : mkdirs.c ;
+IITOOLSEXE openfiles : openfiles.c ;
+IITOOLSEXE symlink : symlink.c ;
+IITOOLSEXE which : which.c ;
+
+IICCFLAGS mkdirs.c which.c : BSD42 ;
+IICCFLAGS biglimit.c : SYS5 ;
+
+IITOOLSSH mkshar : mkshar.sh ;
+IITOOLSSH uptime : uptime.sh ;
+
+IITOOLSEXE iidbmaxname : iidbmaxname.c ;
+
+IITOOLSEXE chtim : chtim.c ;
+IICCFLAGS chtim.c : SYS5 DIRENT ;
+IITOOLSEXE compress : compress.c ;
+
+IITMANFILES beingres.1 chtim.1 compress.1 context.1 mathsigs.1 symlink.1
+  which.1 ;
+}
+
+
+IIBINEXE dmp : dmp.c ;
+IINEEDLIBS dmp : COMPATLIB ;
+
+

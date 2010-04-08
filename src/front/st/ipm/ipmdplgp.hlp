@@ -1,0 +1,72 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Log Process Display screen.  This screen displays the
+current processes in the logging system.  These include DBMS servers, the
+archiver and recovery processes. On VMS, the "Process_Info" menuitem will
+invoke the Detailed Process Information screen.  Information available
+includes number of open databases and log write requests.  By viewing
+this screen, you may determine (by process) how much logging activity is
+occurring for a DBMS server, for instance.
+
+Columns of interest on the Log Process Display screen include:
+
+    ID             The internal PID of processes in the logging
+                   system.  This is not the operating system process ID.
+
+    PID            The operating system process ID for this process.
+
+    Type           The type of process.  The valid types include:
+
+                   FCTDBMS      The process is a DBMS server running
+                                with fast commit.
+
+                   ARCHIV       This process is the archiver for the
+                                current installation.
+
+                   RECOVER      The recovery process.
+
+                   DBMS         This process is a DBMS server.
+
+                   SBM          Server is attached to a shared data buffer.
+
+                   CKPDB        On line backup.
+
+    OpenDB         The number of different databases currently opened.
+
+    Write          The number of log file write I/O requests made by this
+                   process.
+
+    Force          The number of log buffer forces requested.
+
+    Wait           The number of times the current process waited
+                   to use the logging system.
+
+    Begin          The number of transactions started by this process.
+
+    End            The number of transactions ended.  The difference between
+                   the value in this column and the value in the "Begin"
+                   column is the number of current transactions for this
+                   process.
+
+Menuitems available on this screen include:
+
+    Refresh        Queries the Ingres logging system for logging 
+                   information.  Process, database and transaction information 
+                   are obtained together to ensure a consistent snapshot of 
+                   the logging system.
+
+    Process_Info   Displays a screen which shows various job-process
+                   information for the process on which the cursor is
+                   placed.  Information includes CPU time, Direct
+                   I/O, Buffered I/O, Enqueue limit, etc.  This display
+                   automatically refreshes.  This menuitem is available on
+                   VMS only.
+
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurrences wherever they are in the column.
+
+    Help           Displays Ingres help screens.
+
+    End            Returns to the Log Info Menu screen.
+
+    Quit           Exit IPM.

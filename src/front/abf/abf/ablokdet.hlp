@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- ablokdet.hlp, help while viewing LockStatus MoreInfo screen.
+/#-- 
+The MoreInfo screen displays for each lock:
+
+  * The name of the application component.
+
+  * The type of component.
+
+  * The type of lock in effect.
+
+  * The date and time this session began.

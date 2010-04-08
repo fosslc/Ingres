@@ -1,0 +1,41 @@
+/#-- Copyright (c) 2004 Ingres Corporation 
+/#-- vq4gldt.hlp       Help on 4GL data types.
+Valid 4GL Data Types:
+
+  Data Type                         Storage Type
+  ---------                         ------------
+  char(1) - char(2000)              Fixed length string.
+  varchar(1) - varchar(2000)        Varying length string.
+  integer                           4 byte integer.
+  smallint                          2 byte integer.
+  integer1                          1 byte integer.
+  float                             8 byte floating point.
+  float4                            4 byte floating point.
+  date                              Date data type (12 bytes).
+  money                             Money data type (8 bytes).
+
+Local variables (but not hidden columns) can be created as the 
+following Complex data types:
+
+  TYPE OF FORM <form_name>
+  TYPE OF TABLE FIELD <form_name>.<table_field_name>
+  TYPE OF TABLE <table_name>
+  <type_name>                       
+  
+     For <type_name>, the Type must be a Record Type that is defined
+     for the application in the Edit Application Record Type Definitions
+     screen.
+
+Arrays of complex types may be created by:
+
+  ARRAY OF <complex_type_name>
+
+Complex type examples:
+
+  c_orders = TYPE OF FORM 'orders';
+  c_items  = TYPE OF TABLE FIELD 'orders'.'items';
+  c_parts  = TYPE OF TABLE 'parts';
+  a_parts  = ARRAY OF TYPE OF FORM 'orders';
+  c_names  = Names;  /* Names was defined in the Edit Application Record
+		     ** Type Definitions screen.
+		     */

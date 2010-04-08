@@ -1,0 +1,16 @@
+#
+# Jamfile file for front!st!installcf_win
+#
+
+SubDir ING_SRC front st installcf_win ;
+
+IISUBSYS front st installcf_win ;
+
+
+IIBINEXE instcf : instcf.c ;
+IINEEDLIBS instcf :  COMPATLIB INSTALLLIB ;
+
+IILIBRARY INSTALLLIB : cfreg.c
+	cfinst.c
+	cfconf.c ;
+

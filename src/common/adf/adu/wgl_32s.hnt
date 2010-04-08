@@ -1,0 +1,11 @@
+#
+# wgl_32s.hnt file for common\adf\adu
+#
+# History:
+#       14-Aug-2008 (wridu01)
+#           Added NMAKE hint to allow build of aducompile.exe
+#           as a flatlinked executable.
+#
+
+objonly = aducompile.obj
+

@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- tunames.hlp       Subtopic help on INGRES and Open SQL Naming rules.
+INGRES Naming Rules
+-------------------
+Valid table and column names begin with a letter or underscore.  This can
+be followed by letters, digits, the underscore, or one of the special
+characters '@', '#' or '$'.   Spaces are not allowed.  Names beginning
+with "ii" are reserved for INGRES system use. These rules can be avoided
+by using delimited id's for your table and/or column names.
+
+*Open SQL Naming Rules
+----------------------
+Valid table and column names begin with a letter. This can be followed by
+letters, digits, and the underscore. Spaces are not allowed.  Names beginning
+with "ii" are reserved for INGRES system use.
+
+* Open SQL is a subset of INGRES SQL that is supported by all gateways to
+  non-INGRES databases.
+
+/#-- Add note about FIPS naming conventions and delimited identifiers.
+
+Column names should be entered in the table in the same order you wish
+them to be presented to you from the database.  The first row describes
+the leftmost column of your table.

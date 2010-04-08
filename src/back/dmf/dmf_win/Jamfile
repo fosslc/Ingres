@@ -1,0 +1,42 @@
+#
+# Jamfile file for back!dmf!dmf_win
+#
+
+SubDir ING_SRC back dmf dmf_win ;
+
+IISUBSYS back dmf dmf_win ;
+
+
+IIBINEXE rollforwarddb : rolldb.c ;
+IINEEDLIBS rollforwarddb :  COMPATLIB ;
+
+IIBINEXE relocatedb  : relocdb.c ;
+IINEEDLIBS relocatedb  :  COMPATLIB ;
+
+IIBINEXE rcpconfig  : rcpcfgwrp.c ;
+IINEEDLIBS rcpconfig  :  COMPATLIB GCFLIB ;
+
+IIBINEXE logstat : logstwrp.c ;
+IINEEDLIBS logstat :  COMPATLIB ;
+
+IIBINEXE logdump : lgdmpwrp.c ;
+IINEEDLIBS logdump :  COMPATLIB ;
+
+IIBINEXE lockstat : lckstwrp.c ;
+IINEEDLIBS lockstat :  COMPATLIB ;
+
+IIBINEXE infodb : infodb.c ;
+IINEEDLIBS infodb :  COMPATLIB ;
+
+IIBINEXE fastload : fload.c ;
+IINEEDLIBS fastload :  COMPATLIB ;
+
+IIBINEXE ckpdb : ckpdb.c ;
+IINEEDLIBS ckpdb :  COMPATLIB ;
+
+IIBINEXE auditdb : auditdb.c ;
+IINEEDLIBS auditdb :  COMPATLIB ;
+
+IIBINEXE alterdb : alterdb.c ;
+IINEEDLIBS alterdb :  COMPATLIB ;
+

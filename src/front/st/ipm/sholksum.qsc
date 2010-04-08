@@ -1,0 +1,412 @@
+/*
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+/*
+** includes and defines
+*/
+#include <compat.h>
+#include <si.h>
+#include <st.h>
+#include <cs.h>
+#include <dbms.h>
+#include <fe.h>
+#include <pc.h>
+#include <lk.h>
+#include <lg.h>
+#include <er.h>
+#include        <adf.h>
+#include        <ft.h>
+#include        <fmt.h>
+#include        <frame.h>
+#include "lists.h"
+#include "dba.h"
+
+/*
+** Forward and external references
+*/
+VOID get_lklgstats();
+VOID printlkstats();
+
+/*
+** file wide statics
+**
+** interval_display - set according to whether stats are displayed since
+**	system start or since a user specified time
+** since_time - if there is a user specified time that marks the start
+**	of the stat collection interval, that time is stored in this var
+** startstat - contains the values at interval start.  showlksumm fills
+**	this and printlkstat displays the right value
+*/
+static bool interval_display = FALSE; /* default is since sys startup */
+##static char since_time[26];	/* the start time */
+static LK_STAT	startstat;
+
+/*
+**
+**  File: showlksumm.qc
+**
+**  Purpose - this file contains the routines which display locking
+**	system summary form.  
+**
+**  This file contains:
+**	showlksumm - displays the locking system information form. 
+**	printlkstat - gets the info and puts it on screen or in a file.
+**
+**  History
+**	2/22/89		tomt	created
+**      2/24/89		tomt	added vaxcluster support
+**	8/21/89		tomt	use INGDBA versions of LK structs
+**	8/27/89		tomt	added 6.2 lock summary fields for VAXclusters
+**	9/6/89		tomt	added autorefresh capabilities
+**	9/24/89		tomt	pulled display code into seperate routine
+**	9/24/89		tomt	added interval setting for stats collection
+**	6/21/90		tomt	added locking summary info (# of locks used etc)
+**	3/21/91		tomt	changed title on form to trim.  Removed
+**                              variable used to hold title.
+**      5/26/93 (vijay)
+**              include pc.h
+**      21-Sep-1993 (smc)
+**              Added <cs.h> for CS_SID.
+**	11/1/95		nick	removed flag_file
+**      21-apr-1999 (hanch04)
+**          Added st.h
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+VOID
+showlksumm()
+{
+    bool	e_xit = FALSE;
+##  int		timeout;
+##  char	form_name[FE_MAXNAME + 1];
+
+##  GLOBALREF	int *fshowlksumm;
+##  GLOBALREF   int *fshowlksummno;
+    static bool	forms_added = FALSE;
+
+    /*
+    **  Determine if forms are added, if not addform them.
+    */
+    if (!forms_added)
+    {
+	if (flag_cluster)
+	{
+##	    ADDFORM fshowlksumm;    
+        }
+	else
+	{
+##  	    ADDFORM fshowlksummno;
+	}
+	forms_added = TRUE;
+    }
+
+    /* set FRS timeout */
+    timeout = frs_timeout;		/* place into local frs var */
+##  SET_FRS FRS (timeout = timeout);	/* set the refresh time */
+
+    /* Display the form and get the information */
+    if (flag_cluster) {
+	STcopy("fshowlksumm", form_name);
+    } else {
+	STcopy("fshowlksummno", form_name);
+    }
+
+    /*
+    ** Form used to be a popup
+    */
+/*
+** DISPLAY form_name READ WITH STYLE = POPUP (BORDER = NONE,
+**	STARTCOLUMN = 3, STARTROW = 3)
+*/
+##  DISPLAY form_name READ 
+##  INITIALIZE
+##  {
+	/* Put information on the form */
+	printlkstats(form_name);
+
+        if (interval_display) /* need to place starting time on form */
+        {
+##	    SET_FRS FIELD form_name (invisible(#start_time) = 0,
+##	        invisible(#current_time) = 0)
+##	    PUTFORM form_name (#start_time = since_time, #current_time = "now")
+        }
+	refresh_status(VISIBLE, form_name);
+##	redisplay
+##  }
+##  ACTIVATE TIMEOUT
+##  {
+	printlkstats(form_name);
+##  }
+##  ACTIVATE MENUITEM "Refresh":
+##  {
+	printlkstats(form_name);
+##  }
+##  ACTIVATE MENUITEM "Interval":
+##  {
+	/*
+	**  Allow user to select the interval that is used to determine what
+	**  stats are displayed.  Selecting Since_Startup will display stats
+	**  since the INGRES System was started.  Selecting Begin_Now will
+	**  (if not already) start displaying statistics accumulated since
+	**  Begin_Now is selected.  Also an invisible field will appear
+	**  containing the time that collection started. Same for an invisible
+	**  field showing current time.
+	*/
+##	DISPLAY SUBMENU
+##	INITIALIZE
+##	{
+##	    SET_FRS FRS (timeout = 0)  /* turn off refresh to avoid timeout */
+##	}
+##	ACTIVATE MENUITEM "Since_Startup":
+##	{
+##	    SET_FRS FIELD form_name (invisible(#start_time) = 1,
+##	        invisible(#current_time) = 1)
+	    interval_display = FALSE;	/* display since sys startup */
+##	    BREAKDISPLAY
+##	}
+##	ACTIVATE MENUITEM "Begin_Now":
+##	{
+##	    SET_FRS FIELD form_name (invisible(#start_time) = 0,
+##	        invisible(#current_time) = 0)
+##	    PUTFORM form_name (#start_time = "now", #current_time = "now")
+##	    GETFORM form_name (since_time = #start_time)/* save for later */
+	    interval_display = TRUE;	/* display stats since now */
+	    /* get reference stats */
+	    get_lklgstats(GET_LOCKSTAT, (PTR) &startstat);
+
+##	    BREAKDISPLAY
+##	}
+##	ACTIVATE MENUITEM "End", frskey3:
+##	{
+##	    BREAKDISPLAY
+##	}
+##	FINALIZE
+##	{
+	    printlkstats(form_name);
+##	    SET_FRS FRS (timeout = timeout);	/* set to what it was */
+##	}
+##  }
+##  ACTIVATE MENUITEM "Help", frskey1:
+##  {
+	/*
+	**  set FRS timeout
+	*/
+##	SET_FRS FRS (timeout = 0)  /* turn off refresh to avoid timeout */
+	my_help("ipmshlks.hlp", "Locking System Summary");
+	timeout = frs_timeout;		/* place into local frs var */
+##	SET_FRS FRS (timeout = timeout);	/* set to what it was */
+##  }
+##  ACTIVATE MENUITEM "End", frskey3:
+##  {
+##	BREAKDISPLAY
+##  }
+##  ACTIVATE MENUITEM "Quit", frskey2:
+##  {
+	e_xit = TRUE;		/* user wants to leave */
+##	MESSAGE " "		/* force cursor to bottom of screen */
+##	BREAKDISPLAY
+##  }
+
+    if (e_xit) 
+    {				/* user wants to leave */
+	terminate(OK);
+    }
+##  SET_FRS FRS (timeout = 0);	/* turn off autorefresh */
+    return;
+}
+
+/*
+** printlkstats() - displays the locking stat to a form or to a file
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	locking stats to a file or to a form
+**
+** Returns:
+**	none
+**
+** History:
+**	9/24/89		tomt	written
+**	6/21/90		tomt	added locking summary info
+**
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**	18-Jun-2004 (schka24)
+**	    Revert calculation for locks-in-use (was changed by someone
+**	    unknown, to subtract off lkb's in rsb's, but lkshow already
+**	    does that subtraction.)
+*/
+VOID
+printlkstats(formname)
+##char *formname;
+{
+    LK_STAT	*dispstat;
+    LK_STAT	curstat;
+    LK_STAT	diffstat;
+    LK_SUMM	lksumm;
+##  i4			lkbs_remain, llbs_remain;
+##  i4	ccreate;
+##  i4	request;
+##  i4	re_request;
+##  i4	convert;
+##  i4	release;
+##  i4	escalate;
+##  i4	ddestroy;
+##  i4	wait;
+##  i4	con_wait;
+##  i4	con_dead;
+##  i4	dead_search;
+##  i4	deadlock;
+##  i4	cancel;
+
+##  i4	lkb_size;
+##  i4	lkbs_per_xact;
+##  i4	lkb_hash_size;
+##  i4	lkbs_inuse;
+##  i4	rsb_hash_size;
+##  i4	rsbs_inuse;
+##  i4	llbs_inuse;
+##  i4	llb_size;
+
+
+    get_lklgstats(GET_LOCKSTAT, (PTR) &curstat);	/* get current stats */
+    get_lklgstats(GET_LOCKSUMM, (PTR) &lksumm);	/* get summ stats */
+
+    if (interval_display)	/* calculate the difference */
+    {
+	dispstat = &diffstat;	/* display the difference */
+
+	diffstat.create = curstat.create - startstat.create;
+	diffstat.request = curstat.request - startstat.request;
+	diffstat.re_request = curstat.re_request - startstat.re_request;
+	diffstat.convert = curstat.convert - startstat.convert;
+	diffstat.release = curstat.release - startstat.release;
+	diffstat.escalate = curstat.escalate - startstat.escalate;
+	diffstat.destroy = curstat.destroy - startstat.destroy;
+	diffstat.wait = curstat.wait - startstat.wait;
+	diffstat.con_wait = curstat.con_wait - startstat.con_wait;
+	diffstat.con_dead = curstat.con_dead - startstat.con_dead;
+	diffstat.dead_search = curstat.dead_search - startstat.dead_search;
+	diffstat.deadlock = curstat.deadlock - startstat.deadlock;
+	diffstat.cancel = curstat.cancel - startstat.cancel;
+
+	if (flag_cluster) 
+	{
+	    diffstat.enq = curstat.enq - startstat.enq;
+	    diffstat.deq = curstat.deq - startstat.deq;
+	    diffstat.gdlck_search = curstat.gdlck_search - 
+		startstat.gdlck_search;
+	    diffstat.gdeadlock = curstat.gdeadlock - startstat.gdeadlock;
+	    diffstat.gdlck_grant = curstat.gdlck_grant - startstat.gdlck_grant;
+	    diffstat.totl_gdlck_search = curstat.totl_gdlck_search -
+		startstat.totl_gdlck_search;
+	    diffstat.gdlck_call = curstat.gdlck_call - startstat.gdlck_call;
+	    diffstat.gdlck_sent = curstat.gdlck_sent - startstat.gdlck_sent;
+	    diffstat.cnt_gdlck_call = curstat.cnt_gdlck_call -
+		startstat.cnt_gdlck_call;
+	    diffstat.cnt_gdlck_sent = curstat.cnt_gdlck_sent -
+		startstat.cnt_gdlck_sent;
+	    diffstat.unsent_gdlck_search = curstat.unsent_gdlck_search -
+		startstat.unsent_gdlck_search;
+	    diffstat.sent_all = curstat.sent_all - startstat.sent_all;
+	}
+    }
+    else	/* display the current stats */
+    {
+	dispstat = &curstat;	/* display current stats */
+    }
+
+    /* calculate locks and locklists remaining */
+    /* Note: LK_SHOW has already included locks embedded in rsb's */
+    lkbs_remain = lksumm.lkb_size - lksumm.lkbs_inuse;
+
+    llbs_remain = lksumm.llb_size - lksumm.llbs_inuse;
+
+    ccreate = dispstat->create;
+    request = dispstat->request;
+    re_request = dispstat->re_request;
+    convert = dispstat->convert;
+    release = dispstat->release;
+    escalate = dispstat->escalate;
+    ddestroy = dispstat->destroy;
+    wait = dispstat->wait;
+    con_wait = dispstat->con_wait;
+    con_dead = dispstat->con_dead;
+    dead_search = dispstat->dead_search;
+    deadlock = dispstat->deadlock;
+    cancel = dispstat->cancel;
+
+    lkb_size = lksumm.lkb_size;
+    lkbs_per_xact = lksumm.lkbs_per_xact;
+    lkb_hash_size = lksumm.lkb_hash_size;
+    lkbs_inuse = lksumm.lkbs_inuse;
+    rsb_hash_size = lksumm.rsb_hash_size;
+    rsbs_inuse = lksumm.rsbs_inuse;
+    llbs_inuse = lksumm.llbs_inuse;
+    llb_size = lksumm.llb_size;
+
+##  PUTFORM formname (#createlst = ccreate, #current_time = "now",
+##	#request = request,
+##	#re_request = re_request, #convert = convert,
+##	#release = release, #escalate = escalate,
+##	#destroy = ddestroy, #wait = wait,
+##	#con_wait = con_wait, #con_dead = con_dead,
+##	#dead_search = dead_search,
+##	#deadlock = deadlock, #cancel = cancel,
+##	#lkb_size = lkb_size, #lkbs_per_xact = lkbs_per_xact,
+##	#lkb_hash_size = lkb_hash_size, #lkbs_inuse = lkbs_inuse,
+##	#rsb_hash_size = rsb_hash_size, #rsbs_inuse = rsbs_inuse,
+##	#llbs_inuse = llbs_inuse, #llbs_remain = llbs_remain,
+##	#lkbs_remain = lkbs_remain, #llb_size = llb_size)
+
+    if (flag_cluster) 
+    {
+##	i4	enq;
+##	i4	deq; 
+##	i4	gdlck_search;
+##	i4	gdeadlock;
+##	i4	gdlck_grant;
+##	i4	totl_gdlck_search;
+##	i4	gdlck_call;
+##	i4	gdlck_sent;
+##	i4	cnt_gdlck_call;
+##	i4	cnt_gdlck_sent;
+##	i4	unsent_gdlck_search;
+##	i4	sent_all;
+	
+	enq = dispstat->enq;
+	deq = dispstat->deq; 
+	gdlck_search = dispstat->gdlck_search;
+	gdeadlock = dispstat->gdeadlock;
+	gdlck_grant = dispstat->gdlck_grant;
+	totl_gdlck_search = dispstat->totl_gdlck_search;
+	gdlck_call = dispstat->gdlck_call;
+	gdlck_sent = dispstat->gdlck_sent;
+	cnt_gdlck_call = dispstat->cnt_gdlck_call;
+	cnt_gdlck_sent = dispstat->cnt_gdlck_sent;
+	unsent_gdlck_search = dispstat->unsent_gdlck_search;
+	sent_all = dispstat->sent_all;
+
+##	PUTFORM formname (#enq = enq,
+##	    #deq = deq, #gdlck_search = gdlck_search,
+##	    #gdeadlock = gdeadlock,
+##	    #gdlck_grant = gdlck_grant,
+##	    #totl_gdlck_search = totl_gdlck_search,
+##	    #gdlck_call = gdlck_call,
+##	    #gdlck_sent = gdlck_sent,
+##	    #cnt_gdlck_call = cnt_gdlck_call,
+##	    #cnt_gdlck_sent = cnt_gdlck_sent,
+##	    #unsent_gdlck_search = unsent_gdlck_search,
+##	    #sent_all = sent_all)
+    }
+    return;
+}
+

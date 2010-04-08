@@ -1,0 +1,40 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of a 4GL procedure.  You can change the
+definition on the form and through some of the menu operations.  Within
+the running application this procedure will execute whenever it is invoked
+by any executing 4GL code.
+
+If the name you have chosen for the procedure conflicts with the name of
+an Ingres system function, a reverse-video warning will be displayed on this
+form (unless the "-w" flag was specified when you started up.)  You may
+continue to use the name for the procedure, but you will not be able to call
+the corresponding system function from 4GL in this application.
+
+The Source File field specifies the file in which the 4GL specification for
+this procedure may be found.  This will be set initially when the
+procedure is created, but may be modified.
+
+Fill in the Return Type field with the data type of the value that will be
+returned by this procedure, if any.   Legal return types are any Ingres
+data type, "string," or "none."  Legal return types are listed and may be
+specified by selecting the Field menu item of the Help operation.  A "string"
+or an Ingres data type may also be Nullable, which can be specified in the
+Nullable field.
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Rename                  Give the procedure a new name.
+
+        LongRemark              Display and allow editing of the long remarks.
+
+	ListChoices             Display choices for the current field.
+
+        Cancel                  Ignore any changes and return to the previous 
+                                frame.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Save any changes and return to the previous 
+                                frame.

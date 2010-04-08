@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2005 Ingres Corporation
+  The qef_max_mem_sleep resource controls the maximum time (in seconds)
+  that QEF (Query Execution Facility) is allowed to nap waiting for
+  memory resources.
+
+  QEF can nap if there is a shortage in the sorting/hashing memory pool,
+  and the query has not yet reached its own session limit (qef_sort_mem
+  or qef_hash_mem).  The delay allows other active queries to proceed
+  and perhaps free up memory for the waiting query.  Because the waiting
+  query might be holding other resources (such as locks), it is unwise
+  to wait too long or deadlocks may occur.
+
+  Memory waiting can be disabled by setting this resource to zero;
+  in that case, a memory shortage will produce an immediate out-of-memory
+  error.
+
+  The default is 30 seconds.

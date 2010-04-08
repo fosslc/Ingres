@@ -1,0 +1,50 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqedlptf.hlp       Help while editing local procedure source code
+/#subtopic "4GL Examples" vq4glex.hlp
+/#subtopic "Local Procedure Examples" vqlpex.hlp
+Editing Local Procedure Source Code
+                                                                  
+  (NOTE -- General information about local procedures is provided below the 
+   following description of Menu Items.  Simply scroll down the pages.)
+
+Menu Items
+----------
+     Edit        Puts you in the system text editor. You can use the editor
+                 to enter your local procedure code.
+
+     File        Displays the ReadFile and WriteFile menuitems, which you can 
+                 use to read from an existing file or write your local
+		 procedure out to a file.
+
+     Blank       Clears the source code window. Will ask if you want to save 
+                 your changes or not.
+
+     LineEdit    Allows you to move text in the source code window. You can 
+                 insert, delete, split, or join lines.
+
+     Variables   Displays the Local/Global Components Menu. On this menu, you
+                 select a category: Local Variables, Global Variables, Global
+                 Constants, or Record Types. Vision displays an input form
+                 for the category you choose.
+
+     Save        Saves your changes to the database without leaving the
+                 screen. If you used ReadFile, changes are not saved to
+                 the file.
+
+When entering the source code for a new procedure, Vision provides you with
+the skeleton of an empty procedure. If your procedure has parameters, these
+must be inserted within the parentheses following the procedure name, for
+example:
+	PROCEDURE myproc(var1 = INTEGER, var2 = char(8)) =
+
+Local 4GL procedures:
+    * Cannot declare hidden columns in table fields
+    * Can use the RESUME statement only within a submenu
+    * Can use the RESUME FIELD, RESUME NEXT, RESUME ENTRY and RESUME MENU
+      statements within a DISPLAY SUBMENU statement only
+    * Cannot be called from a different source file
+    * Can refer to local variables or global variables declared in the frame,
+      except when local variables of the same name are declared in the local
+      procedure.
+See the Ingres/4GL reference manual for more information on local 
+procedures.

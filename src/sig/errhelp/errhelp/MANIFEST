@@ -1,0 +1,40 @@
+#
+# MANIFEST file for sig!errhelp!errhelp
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	7-Aug-2004 (drivi01)
+#	    Add copying of files that got missed.
+#	14-dec-2004 (abbjo03)
+#	    Changes to install on VMS.
+#        4-Apr-2007 (hanal04) Bug 118027
+#           Build what we install. It makes patching easier.
+
+
+SubDir ING_SRC sig errhelp errhelp ;
+
+IISUBSYS sig errhelp errhelp ;
+
+IISIGFILES errhelp : faccode.txt errhelp.wri ;
+
+IISIGEXE errhelp errhelp : errhelp.c ;
+IINEEDLIBS errhelp : COMPATLIB ;
+
+IISIGSH cvtnum errhelp : cvtnum.sh ;
+
+if $(UNIX)
+{
+FILE $(INGSIG)/errhelp/read.me : readunix.txt ;
+}
+if $(NT)
+{
+FILE $(INGSIG)/errhelp/read.me : readnt.txt ;
+}
+if $(VMS)
+{
+    INGSIGERRHELP = [ FDirName $(INGSIG) errhelp ] ;
+    File $(INGSIGERRHELP)read.me : readvms.txt ;
+    File $(INGSIGERRHELP)symboldef.com : symdef.com ;
+}

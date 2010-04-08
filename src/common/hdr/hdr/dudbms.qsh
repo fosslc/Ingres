@@ -1,0 +1,794 @@
+/*
+** Copyright (c) 2007 Ingres Corporation
+*/
+
+/**
+** Name: DUDBMS.QSH -	Definitions that are used by both the
+**			DBMS and database utilities.
+**
+** Description:
+**        This file contains constant definitions that are used by both
+**	the DBMS and the database utilities facility, DUF.  It also
+**	contains structures which define the tuple composition for
+**	the system catalogs unique to the dbdb.
+**
+** Dependencies:
+**	dbms.h
+**	duf.h
+**
+** History: 
+**	23-Dec-1986 (ericj)
+**	    Initial creation.
+**	13-Apr-87 (ericj)
+**	    Updated DU_LOCATION struct.
+**	17-Apr-87 (ericj)
+**	    Make constant definitions for application flag and its max length.
+**	15-Jan-87   (ericj)
+**	    Updated to support extensions to iidatabase catalog.
+**	22-Aug-88   (alexc)
+**	    Add definitions iidatabase dbservice DU_1SER_DDB and DU_2SER_CDB,
+**	    also retired definition DU_RES_DDB in access.
+**	22-aug-88   (teg)
+**	    Added a new constant defination under dbservice of DU_FORCED_CONST
+**	15-may-89 (ralph)
+**	    GRANT Enhancements:
+**	    Added du_group field to DU_USER.
+**      30-May-89 (teg)
+**          changed structures that define dbdb catalogs to resolve alignment
+**          issues so they port to non-VMS platforms.
+**	20-jun-89 (ralph)
+**	    Added definitions for 6.2 and 7.0 compat levels.
+**	    Changed current compat level to 7.0
+**      27-jun-89 (jennifer)
+**          Added iisecuritystate system catalog for iidbdb.  This catalog
+**          hold the current security events which are being audited.
+**	31-aug-89 (ralph)
+**	    Added du_status flags to DU_USER for B1:
+**		DU_USYSADMIN, DU_UPRIV, DU_UGROUP.
+**	    Changed DU_SLEVEL flag under du_secstate.du_id to DU_SLVL.
+**	    Added DU_SALARM to du_secstate.du_id flags.
+**	    iidbaccess is obsolete.  Definitions kept for 8.0 conversion only.
+**	22-sep-89 (teg)
+**	    As per Steering Committee decision, changed current compat level
+**	    from 7.0 to 6.3
+**	01-Nov-89 (ralph)
+**	    Added DU_ALL_LOCS to DU_LOCATIONS
+**	16-jan-90 (ralph)
+**	    Added DU_UPASS, du_pass to DU_USER for user password support.
+**	18-jan-90 (jim)
+**	    fixed typo in comment from above fix
+**	09-feb-90 (neil)
+**	    Added audit type (DU_SALERT) to audit user alerts.
+**	6-jul-90 (linda)
+**	    Moved definitions DU_GW_NONE and DU_GW_RMS_FLAG here from the DUF
+**	    local header area, so they could be referenced by FECVT60.  Also
+**	    added DU_ prefixes.
+**	10-july-90 (pete)
+**	    Create symbol DU_MAX_CLIENT_NAME.
+**	27-aug-90 (pete)
+**	    Added symbol DU_ENV_TWRITE.
+**	24-jul-90 (teresa)
+**	    renamed to dudbms.qsh to resolve some build problems.
+**	09-aug-90 (ralph)
+**	    Added DU_UOLDPASS to DU_USER for supporting user password change.
+**	29-apr-1991 (Derek)
+**	    Added downgrade privilege to IIUSER.
+**	10-jun-91 (teresa)
+**	    pick up bugfix 36478 from 6.4 line
+**	20-sep-91 (teresa)
+**	    Pick up ingres63p changes 262349 and 262603:
+**	      02-jul-92 (teresa)
+**		added DU_STARTAIL, DU_RMSTAIL, DU_INGRES_TAIL, DU_TAIL_LEN and
+**		DU_NULL_LEN constants as part of fix to bug 38435.
+**	      07-aug-91 (teresa)
+**              Moved DU_IDENTICAL here (was previously in duve.h)
+**	23-oct-91 (teresa)
+**	    add constants for iidbcapabilities catalog
+**	03-nov-92 (jrb)
+**	    Changed "sort" to "work" for multi-location sorts project.
+**	18-dec-92 (robf)
+**	    Added DUS_INSTALLATION, also changed DUS_ALL to 15 matching SXF
+**	    (this should be done in conjunction with createdb changes)
+**      30-dec-92 (mikem)
+**          su4_us5 port.  Changed definition of DU_UPRIV to be an unsigned
+**          quantity.  The previous definition caused the su4_us5 compiler
+**          warning: 'integer overflow detected: op "U-" '
+**	17-jan-93 (ralph)
+**	    DELIM_IDENT: Overloaded (oh well!) DU_DATABASE.du_dbservice
+**	16-feb-93 (wolf)
+**	    Removed an extra "slash star" that was added on 18-jan.
+**	24-may-93 (jpk)
+**	    COMMON/SQL_LEVEL is now deprecated; changed its value from
+**	    00605 to 00604.  New preferred capability is OPEN/SQL_LEVEL;
+**	    added it and set its value to 00605.
+**	21-jul-93 (ralph)
+**	    DELIM_IDENT: Added DU_REAL_USER_MIXED to DU_DATABASE.du_dbservice
+**	    to indicate that real userids are not to be case translated for
+**	    this database.
+**	24-may-93 (robf)
+**	    Removed ORANGE code for Secure 2.0
+**	10-Nov-94 (ramra01)
+**	    DU_DESTROYDBNOWAIT added to offer cmd line 'l' to destroydb if
+**	    db not in use
+**	22-jan-95 (cohmi01)
+**	    Add DU_EXT_RAW bit for raw locations.      
+**	21-aug-1995 (tchdi01)
+**	    Added DU_PRODUCTION for production mode (no ddl).
+**	15-feb-1996 (canor01)
+**	    Added DU_NOBACKUP for online checkpoint disallowed.
+**	06-mar-96 (nanpr01)
+**	    Bump up the version numbers for variable page size project.      
+**	    Specifically DU_DB2_CUR_SQL_LEVEL, DU_DB3_CUR_INGSQL_LEVEL, 
+**	    DU_DB6_CUR_STDCAT_LEVEL, DU_6DBV80, DU_CUR_DBCMPTLVL.
+**	30-aug-96 (nick)
+**	    Tidy.
+**	29-jan-1997 (hanch04)
+**          Bump up the version numbers for OI2.0
+**	03-feb-1997 (nanpr01)
+**	    Star must use 602 catalogue interface.
+** 	23-apr-1997 (wonst02)
+**	    Add DU_RDONLY_LOC and DU_RDONLY to support readonly databases.
+**	04-feb-1998 (hanch04)
+**          Bump up the version numbers for OI2.5
+**	    Specifically DU_DB2_CUR_SQL_LEVEL, DU_DB3_CUR_INGSQL_LEVEL, 
+**	    DU_DB6_CUR_STDCAT_LEVEL, DU_6DBV85, DU_CUR_DBCMPTLVL.
+**	    DU_1CUR_DBCMPTMINOR back to 0.
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      02-Mar-2001 (hanch04)
+**          Bumped release id to external "II 2.6" internal 860 or 8.6
+**	11-May-2001 (jenjo02)
+**	    Raw changes, moved du_raw_blocks from iilocation to iiextend,
+**	    added du_raw_pct to iilocation.
+**      21-dec-2001
+**          Added DU_LP64
+**      07-Apr-2003 (hanch04)
+**          Bumped release id to external "II 2.65" internal 865 or 8.65.
+**      28-July-2003 (gupsh01)
+**          Added DU_UNOPRIV and DU_UNODEFPRIV to indicate that user
+**          has supplied, noprivileges and nodefault_privileges options.
+**      13-Jan-2004 (sheco02)
+**          Bumped release id to external "II 3.0" internal 900 or 9.0.
+**	30-Dec-2004 (schka24)
+**	    Release ID is now 3.0.2 (external) 902 or 9.02 internal.
+**	15-Feb-2005 (gupsh01)
+**	    Added support for DU_UNICODE_NFC for Normal form C support.
+**	17-Jan-2006 (hweho01)
+**	    Release ID is now 9.0.4.
+**      01-Feb-2006 (hweho01)
+**          Modified  prefix string to "II" for DU_DB1_CUR_QUEL_LEVEL and 
+**          DU_DB2_CUR_SQL_LEVEL. 
+**	27-Apr-2006 (hweho01)
+**	    Changed ID to 9.1.0 for new release.
+**	12-Jul-2006 (kschendel)
+**	    OpenSQL level hasn't changed, restore its value.
+**      23-oct-2006 (stial01)
+**          Database level should not advance for ingres2006r2
+**      07-nov-2006 (stial01)
+**          Standard catalog level should not advance for ingres2006r2
+**	07-May-2007 (drivi01)
+**	    Changed version for 9.2.0 release.
+**      27-Nov-2003 (hanal04) Bug 108310 INGSTR44
+**          Add comment that Database compatibility values are mirrored in
+**          back/hdr/hdr/dbdbms.h
+**	14-Jun-2007 (bonro01)
+**	    Changed version for 9.3.0 release.
+**	19-Nov-2008 (hweho01)
+**	    Changed database level and standard catalog level for 
+**          9.3 release.
+**	10-Jun-2009 (hweho01)
+**	    Changed database level and standard catalog level for 
+**          10.0 release.
+**/
+
+/*
+[@forward_type_references@]
+[@forward_function_references@]
+*/
+
+
+EXEC SQL BEGIN DECLARE SECTION;
+
+   /* the following are the current values for iidbcapabilities values */
+##define        DU_DB1_QUEL_LEVEL              "QUEL_LEVEL"
+##define        DU_DB1_CUR_QUEL_LEVEL          "II10.0.0"
+
+##define        DU_DB2_SQL_LEVEL               "SQL_LEVEL"
+##define        DU_DB2_CUR_SQL_LEVEL           "II10.0.0"
+
+##define        DU_DB3_INGSQL_LEVEL            "INGRES/SQL_LEVEL"
+##define        DU_DB3_CUR_INGSQL_LEVEL        "01000"
+
+/* This one is deprecated and doesn't mean much. */
+##define        DU_DB4_CMNSQL_LEVEL            "COMMON/SQL_LEVEL"
+##define        DU_DB4_CUR_CMNSQL_LEVEL        "01000"
+
+##define        DU_DB5_INGQUEL_LEVEL           "INGRES/QUEL_LEVEL"
+##define        DU_DB5_CUR_INGQUEL_LEVEL       "01000"
+##define        DU_DB5_STAR_INGQUEL_LEVEL      "00000"
+
+##define        DU_DB6_STDCAT_LEVEL            "STANDARD_CATALOG_LEVEL"
+##define        DU_DB6_CUR_STDCAT_LEVEL        "01000"
+##define        DU_DB6_STAR_STDCAT_LEVEL       "00602"
+
+/* Note:  this level is not necessarily in sync with INGRES/SQL_LEVEL!
+** In reality the OpenSQL level should probably be older than 904,
+** but that's what it was at the most recent release (Ingres 2006).
+** I'm not entirely sure what OPEN/SQL_LEVEL is supposed to mean
+** in an Ingres database anyway;  it sort of comes into play with Star,
+** but the Star-supported SQL level is some undefined combination of
+** what the Star server/parser can do, and what the local databases
+** making up the DDB can do.
+*/
+##define        DU_DB7_OPENSQL_LEVEL            "OPEN/SQL_LEVEL"
+##define        DU_DB7_CUR_OPENSQL_LEVEL        "00904"
+
+/*
+**  Defines of other constants.
+*/
+#define     DU_NULL_LEN 1           /* # bytes to hold a null terminator ('\0')
+                                    */
+#define     DU_IDENTICAL 0          /* value returned by MEcompare if a=b */
+
+/*
+**  Define constants associated with the dbdb 
+*/
+
+##define                DU_DBDBNAME	    "iidbdb"
+##define		DU_DBA_DBDB	    "$ingres"
+##define		DU_1DBA_DBDB_FLAG    "-u$ingres"
+
+/*
+**  Define constants associated with RTI applications.
+*/
+
+/*  Define size of char array to hold front-end Dictionary Client names */
+##define		DU_MAX_CLIENT_NAME	256
+
+/*  Define bit mask used by duu_chkenv() to check environment at startup */
+#define			DU_ENV_TWRITE		1
+
+/*  Define application flag and associated values. */
+##define		DU_1APPL_FLAG	    "-A"
+##define		DU_APPL_FLAG_MAX    12
+
+/*  Define special priveledge flag. */
+##define                DU_PRIV_FLAG	    "+Y"
+
+/*  Define quel application language flag. */
+##define		DU_LANG_FLAG	    ""
+
+
+/*
+**      Define constants associated with specifying misc dbms types
+*/
+#define     DU_RMSTAIL  "/rms"      /* use RMS gateway for server */
+#define     DU_STARTAIL "/star"     /* use ingres STAR for server */
+#define     DU_SLASHD   "/d"        /* old style way to specify star */
+#define     DU_INGTAIL  "/ingres"   /* default server type: ingres */
+#define     DU_TAIL_LEN 8           /* # characters required to hold longest
+                                    ** tail string, which happens to be /ingres
+				    ** plus null terminator */
+
+/*
+**	Define Gateway constants.
+*/
+#   define          DU_GW_NONE         0   /* use if *not* creating a GW db */
+#   define          DU_GW_RMS_FLAG     1
+
+/*
+[@global_variable_references@]
+*/
+EXEC SQL END DECLARE SECTION;
+
+/*}
+** Name: DU_DATABASE -   the structure of the "iidatabase" dbdb system catalog.
+**
+** Description:
+**        This structure defines an "iidatabase" tuple as used by the
+**	SCF module in the DBMS.
+**
+** History:
+**      29-dec-86 (ericj)
+**          Initial creation.
+**	28-Jul-87 (ericj)
+**	    Added unique database id field.
+**      22-Aug-88 (alexc)
+**	    Modified for TITAN.
+**	4-Dec-88 (teg)
+**	    Modified du_dbcmptlvl's current compatlevel constant for 6.1a
+**	20-jun-89 (ralph)
+**	    Added definitions for 6.2 and 7.0 compat levels.
+**	    Changed current compat level to 7.0
+**	22-sep-89 (teg)
+**	    As per steering committee decision, changed current compat level
+**	    from 7.0 to 6.3
+**	22-mar-90 (fourt)
+**	    Add dbservice DU_3SER_RMS for RMS Gateway db's.
+**	07-jun-91 (teresa)
+**	    Broke DU_CONVERTING into two fields: DU_CONVERTING and DU_UPGRADING.
+**	    This is in response to bug 37439 where upgradedb was using a bit
+**	    reserved for convto60.
+**	17-jan-93 (ralph)
+**	    DELIM_IDENT: Overloaded (oh well!) DU_DATABASE.du_dbservice
+**	    to contain flags indicating case translation semantics
+**	21-jul-93 (ralph)
+**	    DELIM_IDENT: Added DU_REAL_USER_MIXED to DU_DATABASE.du_dbservice
+**	    to indicate that real userids are not to be case translated for
+**	    this database.
+**	8-jul-94 (robf)
+**          Changed CURDBMINOR to 2 for 1.1/ES
+**	10-Nov-94 (ramra01)
+**	    DU_DESTROYDBNOWAIT flag defined to handle -l option
+**	06-mar-96 (nanpr01)
+**	    Bump up the version numbers for variable page size project.      
+**	    Specifically DU_6DBV80, DU_CUR_DBCMPTLVL and set 
+**	    DU_1CUR_DBCMPTMINOR back to 0 for Variable page size.
+** 	23-apr-1997 (wonst02)
+** 	    Add DU_RDONLY to du_access to support readonly databases.
+**	15-apr-97 (mcgem01)
+**          Changed CURDBMINOR to 1 for 2.0/TCP
+**	04-feb-1998 (hanch04)
+**          Bump up the version numbers for OI2.5
+**	    Specifically DU_6DBV85, DU_CUR_DBCMPTLVL and set 
+**	    DU_1CUR_DBCMPTMINOR back to 0.
+**	09-nov-1998 (mcgem01)
+**	    Change "OI2.5" to "II2.5"
+**	24-mar-2001 (stephenb)
+**	    Add define for DU_UTYPES_ALLOWED
+**	2-apr-2001 (stephenb)
+**	    Fix typo in value for DU_UTYPES_ALLOWED
+**	12-Nov-2009 (kschendel) SIR 122882
+**	    Remove database version definitions to iicommon.h;  dmf needs
+**	    one of the definitions, and we don't want all of dmf to need
+**	    dudbms.h.
+**	    Change dbcmptlvl to an unsigned i4.  (It was a char[4] so the
+**	    tuple size and layout doesn't change.)
+*/
+typedef struct _DU_DATABASE
+{
+    char	    du_dbname[DB_MAXNAME];  /* The database name. */
+    DB_OWN_NAME	    du_own;		/* Database's owner's name. */
+    DB_LOC_NAME	    du_dbloc;		/* Database's default location. */
+    DB_LOC_NAME	    du_ckploc;		/* Database's checkpoint location. */
+    DB_LOC_NAME	    du_jnlloc;		/* Database's journaling location. */
+    DB_LOC_NAME	    du_workloc;		/* Database's work location. */
+    i4		    du_access;		/* Database's accessibility status. */
+##define	DU_GLOBAL	1	/* This is a global db. */
+##define	DU_RES_DDB	2	/* Unused, moved to dbservice 
+					** as DU_1SER_DDB(alexc) */
+##define	DU_DESTROYDB	4	/* Db was/is in process of being
+					** destroyed. */
+##define	DU_CREATEDB	8	/* Db was/is in process of
+					** being created. */ 
+##define	DU_OPERATIVE	16	/* Db is operative, i.e. is
+					** accessible to users. */
+##define	DU_CONVERTING	32	/* This database was created in
+					** release 5 and has not yet 
+					** been converted to r6 
+					** compatibility. */
+##define	DU_UPGRADING	64	/* The database was created via
+					** an earlier version of r6 and
+					** is in the process of being
+					** upgraded to the current r6,
+					** or the upgradedb attempt was
+					** made and failed. */
+##define	DU_MLSDB  	128	/* Database created with MLS (B1) security */
+##define	DU_DESTROYDBNOWAIT  256	/* don't wait during destroydb if 
+					** the database is busy */
+##define	DU_PRODUCTION	512     /* Production mode */
+##define	DU_NOBACKUP	1024    /* No online checkpoints */
+##define	DU_RDONLY	2048	/* Database is readonly */
+    i4		    du_dbservice;	/* Database services available. (E.g.
+					** Is the database distributed, can
+					** it be accessed thru gateways, etc.)
+					*/
+		    /* DDB stands for Distributed Database */
+		    /* CDB stands for the Coordinator Database of a Distributed Database */
+##define	    DU_1SER_DDB	    1		/* hex: 0x0001	-   Specify DDB(distributed database) (alexc) */
+##define	    DU_2SER_CDB	    2		/* hex: 0x0002	-   Specify CDB(coordinator database) (alexc) */
+##define	    DU_3SER_RMS	    4
+##define	DU_NAME_UPPER	65536
+					/* hex 0x00010000L
+					** Regular id's are translated
+					** to upper case.
+					*/
+##define	DU_LP64		131072	/* hex 0x0020000L
+					** Db created with LP64
+					*/
+##define	DU_DELIM_UPPER	262144
+					/* hex 0x00040000L
+					** Delimited id's are translated
+					** to upper case.
+					*/
+##define	DU_DELIM_MIXED	524288
+					/* hex 0x00080000L
+					** Delimited id's are not translated
+					*/
+##define	DU_REAL_USER_MIXED 1048576
+					/* hex 0x00100000L
+					** Real user id's are not translated
+					*/
+##define	DU_UNICODE_NFC	2097152
+					/* hex 0x00200000L
+					** Unicode types use Normal form C
+					** to be stored in database
+					*/
+##define	DU_FORCED_CONST 1073741824 
+					/* hex 0x40000000L
+					** database forced consistent
+					** by verifydb
+					*/
+##define	DU_UTYPES_ALLOWED 2147483648
+					/* hex 0x80000000L
+					** Unicode types (nchar, nvarchar) are
+					** allowed in database
+					*/
+    u_i4	    du_dbcmptlvl;	/* Database compatibility level.
+					** See DU_xxDBVyyy values in iicommon.h
+					*/
+
+    i4		    du_1dbcmptminor;		/* Database's minor compat.
+						** level.
+						*/
+##define		DU_0DBMINOR	    0	/* Database's marked with
+						** a minor level of 0 were
+						** created before the '/06'
+						** release and have not been
+						** upgraded yet.
+						*/
+##define		DU_1DBMINOR	    1   /* Database's compatible with
+						** '/06' release and above.
+						*/
+##define		DU_2DBMINOR	    2	/* Databases compatible with 
+						** ingres 6.1/00(vax.vms/00)
+						*/
+##define		DU_3DBMINOR	    3	/* Databases compatible with 
+						** ingres 6.1/01(vax.vms/00)
+						*/
+
+##define		DU_1CUR_DBCMPTMINOR 0
+						/* SCSINIT and DUF must be
+						** rebuilt when this changes
+						*/
+    i4		    du_dbid;			/* Unique database id. */
+    DB_LOC_NAME	    du_dmploc;		/* Database's dumping location. */
+    char	    du_free[8];		/* Get rid of me */
+}   DU_DATABASE;
+
+
+/*}
+** Name: DU_USER - structure of the "iiuser" dbdb system catalog.
+**
+** Description:
+**        This structure defines an "iiuser" tuple as used by the
+**	SCF module in the DBMS.
+**
+** History:
+**      29-dec-86 (ericj)
+**          Initial creation.
+**	15-may-89 (ralph)
+**	    GRANT Enhancements:
+**	    Added du_group field to DU_USER.
+**	31-aug-89 (ralph)
+**	    Added du_status flags to DU_USER for B1:`
+**		DU_USYSADMIN, DU_UPRIV, DU_UGROUP.
+**	16-jan-90 (ralph)
+**	    Added DU_UPASS, du_pass to DU_USER for user password support.
+**	08-aug-90 (ralph)
+**	    Added DU_UOLDPASS to DU_USER for supporting user password change.
+**      29-apr-1991 (Derek)
+**          Added DU_DOWNGRADE privilege.
+**	23-oct-91 (teresa)
+**	    changed bitmap constants to decimal so they could be included
+**	    by esql preprocessor.
+**	8-nov-92 (ed)
+**	    changed password to DB_PASSWORD to eliminate DB_MAXNAME dependency
+**      30-dec-92 (mikem)
+**          su4_us5 port.  Changed definition of DU_UPRIV to be an unsigned
+**          quantity.  The previous definition caused the su4_us5 compiler
+**          warning: 'integer overflow detected: op "U-" '
+**	27-may-93 (robf)
+**	    Added Secure 2.0 fields, du_limsecid, du_expdate, du_usrprofile,
+**		du_defaultpriv, du_flagsmask
+**	19-oct-93 (robf)
+**          Add du_userpriv. This holds the internal user-defined privileges.
+**	    The actual privileges are in du_status, defined as the union
+**	    of the profile privs and the user privs (stored in du_userpriv)
+**	8-jul-94 (robf)
+**          Moved the DU_UXXX privilege definitions to iicommon.h since 
+**	    they apply to more than just users, and are visible in common 
+**	    & front as well as back.
+[@history_template@]...
+*/
+typedef struct _DU_USER
+{
+    DB_OWN_NAME     du_name;            /* Ingres user's name. */
+    i2		    du_gid;		/* Ingres group id.  Currently, this
+					** is not being used.
+					*/
+    i2		    du_mid;		/* Ingres member id. Currently, this
+					** is not being used.
+					*/
+    i4		    du_status;		/* Ingres user's status. */
+    DB_OWN_NAME	    du_group;		/* Default group identifier;
+					** blanks for no default.
+					*/
+    DB_PASSWORD	    du_pass;		/* Encoded user password;
+					** blanks for no password.
+					*/
+    char	    du_free[8];		/* Get rid of me */
+    DB_OWN_NAME	    du_profile;		/* Profile name */
+    u_i4	    du_defpriv;		/* Default privileges */
+    DB_DATE  	    du_expdate;		/* Expiry date */
+    u_i4 	    du_flagsmask;	/* Status flags */
+/*
+** NOTE: Flags mask is used for USERS, PROFILES and ROLES. If any flags are
+**	 changed make sure all three variants are checked for side effects
+*/
+#define	DU_UOLDPASS   0x01	/* Internal flag to indicate
+				** oldpassword was specified on the ALTER USER
+				** statement. Will not appear in iiuser. */
+#define	DU_UPASS      0x02	/* Internal flag to indicate
+				** password was specified on the ALTER USER
+				** statement. Will not appear in iiuser. */
+#define	DU_UGROUP     0x04	/* Internal flag to indicate
+				** group was specified on the ALTER USER
+				** statement.  Will not appear in iiuser. */
+#define DU_UPRIV     0x08	/*  Internal flag to indicate
+				** privs were specified on the ALTER USER
+				** statement. Will not appear in iiuser. */
+#define DU_UDEFPRIV  0x010	/* Flag to indicate default privs */
+#define DU_UEXPDATE  0x020	/* Flag to specifiy expiration date is valid */
+#define DU_UAPRIV    0x080	/* Internal flag to indicate ADD privs
+				** specified in ALTER USER
+				*/
+#define DU_UDPRIV    0x0100	/* Internal flag to indicate DROP privs
+				** specified in ALTER USER
+				*/
+#define	DU_UQRYTEXT  0x0200     /* Internal flag to indicate Security_audit
+				** QUERY_TEXT was specified
+				*/
+#define	DU_UNOQRYTEXT  0x0400   /* Internal flag to indicate Security_audit
+				** NOQUERY_TEXT was specified
+				*/
+#define	DU_UALLEVENTS  0x0800   /* Internal flag to indicate Security_audit
+				** ALL_EVENTS was specified
+				*/
+#define	DU_UDEFEVENTS  0x01000  /* Internal flag to indicate Security_audit
+				** DEFAULT_EVENTS was specified
+				*/
+#define	DU_UCASCADE    0x02000  /* Internal flag to indicate DROP CASCADE 
+				** was specified
+				*/
+#define DU_UHASPROFILE 0x04000  /* Internal flag to indicate a profile name
+				** was specified
+				*/
+#define DU_UDEFALL     0x010000 /* Default privs are full set */
+
+#define DU_UEXTPASS    0x020000 /* External password */
+
+#define DU_UNOPRIV     0x040000 /* Internal flag to indicate that 
+				** "noprivileges" was specified.
+				*/
+
+#define DU_UNODEFPRIV  0x080000 /* Internal flag to indicate that
+				** "no_defaultprivileges" was specified.
+				*/
+    u_i4	du_userpriv;	/* User defined privileges */
+}   DU_USER;
+
+
+
+/*}
+** Name: DU_DBACCESS - structure of the "iidbaccess" dbdb system catalog.
+**
+** Description:
+**        This structure defines an "iidbaccess" tuple as used by the
+**	SCF module.
+**
+** History:
+**      29-dec-86 (ericj)
+**          Initial creation.
+**	11-sep-89 (ralph)
+**	    iidbaccess is obsolete.  Definitions kept for 8.0 conversion only.
+[@history_template@]...
+*/
+typedef struct _DU_DBACCESS
+{
+    DB_OWN_NAME     du_usrname;         /* The Ingres user name of someone who
+					** has access to this database.
+					*/
+    char	    du_dbname[DB_MAXNAME]; /* The name of an Ingres database. */
+    char	    du_xtra[DB_MAXNAME]; /* Extra space for futures. */
+}   DU_DBACCESS;
+
+/*}
+** Name: DU_EXTEND - structure of the "iiextend" dbdb system catalog.
+**
+** Description:
+**        This structure defines an "iiextend" tuple as used by the
+**	database utilities and the SCF module in the DBMS.
+**
+** History:
+**      29-dec-86 (ericj)
+**          Initial creation.
+**      28-feb-87 (ericj)
+**          Added length specifiers as the corresponding database datatype
+**	    is text.
+**      30-May-89 (teg)
+**          Modified DU_LOC_NAME struct for du_lname to be char[DB_MAXNAME],
+**          because staring a struct on a 2 byte alignment causes problems
+**          for non-VMS platforms.
+**	03-nov-92 (jrb)
+**	    Added two new values for du_status in iiextend.  This is for
+**	    multi-location sorts project.
+**	02-Apr-2001 (jenjo02)
+**	    Added du_raw_start, DU_EXT_RAW.
+**	11-May-2001 (jenjo02)
+**	    Added du_raw_blocks.
+[@history_template@]...
+*/
+typedef struct _DU_EXTEND
+{
+    i2		    du_l_length;	/* Length of database's locationname. */
+    char	    du_lname[DB_MAXNAME]; /* A database's location name. */
+    i2		    du_d_length;	/* Length of database's name. */
+    char	    du_dname[DB_MAXNAME];   /* Database name. */
+    i4		    du_status;		/* Status of database's extension.
+					** This field is bit-mapped as follows:
+					*/
+#define		DU_EXT_OPERATIVE        0x01  /* This extension is operative. */
+#define		DU_EXT_DATA		0x02  /* This is a DATA extension */
+#define		DU_EXT_WORK		0x04  /* This is a WORK extension */
+#define		DU_EXT_AWORK		0x08  /* an auxiliary WORK extension */
+#define		DU_EXT_RAW		0x10  /* Additionally, this is RAW */
+    i4		    du_raw_start;	/* Starting block of location if RAW */
+    i4		    du_raw_blocks;	/* Number of blocks if RAW */
+}   DU_EXTEND;
+
+
+
+/*}
+** Name: DU_LOCATIONS - structure of the "iilocations" dbdb system catalog.
+**
+** Description:
+**        This structure defines an "iilocations" tuple as used by
+**	the SCF module in the DBMS.
+**
+** History:
+**      29-dec-86 (ericj)
+**          Initial creation.
+**      12-Jan-1987 (fred)
+**          Added lengths (du_l_...) to the struct, since these
+**	    fields are text.
+**      13-Apr-86 (ericj)
+**          Updated area length to correspond with DBMS.H defn.
+**      30-May-89 (teg)
+**          Modified DU_LOC_NAME struct for du_lname to be char[DB_MAXNAME],
+**          because staring a struct on a 2 byte alignment causes problems
+**          for non-VMS platforms.
+**	01-Nov-89 (ralph)
+**	    Added DU_ALL_LOCS to DU_LOCATIONS
+**	7-jul-93 (robf)
+**	    Add du_l_secid to relation
+** 	23-apr-1997 (wonst02)
+**	    Add DU_RDONLY_LOC as a new du_status to support readonly databases.
+** 	11-mar-1999 (nanpr01)
+**	    Support for RAW locations.
+**	11-May-2001 (jenjo02)
+**	    Replaced du_raw_blocks with du_raw_pct.
+**	15-Oct-2001 (jenjo02)
+**	    Changed QUEL ##defines to #defines.
+**	    Changed DU_?_LOC from integers to bits for readability.
+**	    Bit values in comments were wrong anyway...
+**	    Changed DU_ALL_LOCS to include only user-specifiable
+**	    (CREATE/ALTER LOCATION) variants.
+[@history_template@]...
+*/
+typedef struct _DU_LOCATIONS
+{
+    i4              du_status;          /* The status of this location. */
+#define		DU_GLOB_LOCS	0x0001	/* General purpose location.*/
+#define		DU_DMPS_LOC	0x0002	/* Dumping location. */
+#define		DU_DBS_LOC	0x0008	/* Database location. */
+#define		DU_WORK_LOC	0x0010	/* Work location. */
+#define		DU_AWORK_LOC	0x0020	/* Auxiliary Work Location */
+#define		DU_JNLS_LOC	0x0040	/* Journaling location. */
+#define		DU_CKPS_LOC	0x0200	/* Checkpoint location. */
+#define		DU_ALL_LOCS     (DU_DBS_LOC | DU_WORK_LOC | \
+				 DU_JNLS_LOC | DU_CKPS_LOC | \
+				 DU_DMPS_LOC) /* All user-specifiable */
+#define		DU_RDONLY_LOC	0x2000	/* Besides above: READONLY */
+
+    i2		    du_l_lname;		/* length of ... */
+    char	    du_lname[DB_MAXNAME]; /* A location name. */
+    i2		    du_l_area;		/* length of ... */
+    char	    du_area[DB_AREA_MAX];   /* The location's corresponding
+					    ** area name.
+					    */
+    char	    du_free[8];		/* Get rid of me */
+    i4		    du_raw_pct;	  	/* pct of raw area to allocate
+					** to this location.
+					*/
+}   DU_LOCATIONS;
+
+/*}
+** Name: DU_SECSTATE - structure of "iisecuritystate" iidbdb system catalog.
+**
+** Description:
+**        This structure defines an "iisecuritystate" tuple as used by the
+**	SCF module in the DBMS.
+**
+** History:
+**      27-jun-89 (jennifer)
+**          Initial creation for security.
+**	07-sep-89 (ralph)
+**	    Changed DU_SLEVEL flag under du_secstate.du_id to DU_SLVL.
+**	    Added DU_SALARM to du_secstate.du_id flags.
+**	09-feb-90 (neil)
+**	    Added audit type (DU_SALERT) to audit user alerts.
+**	2-jul-93 (robf)
+*8	    Added DU_SRESOURCE/QRYTEXT/SYSCAT
+[@history_template@]...
+*/
+typedef struct _DU_SECSTATE
+{
+    i4              du_type;            /* Type of record. */
+#define          DU_SEVENT      1   /* 0000001 */
+#define          DU_SLEVEL	2   /* 0000002 */
+    i4              du_id;              /* ID of record within a type
+                                        ** must be one of following if 
+                                        ** the type is DU_SEVENT or
+                                        ** a valid security level number
+                                        ** when type = DU_SLEVEL. */
+#define          DU_SDATABASE      1
+#define          DU_SAPPLICATION   2
+#define          DU_SPROCEDURE     3
+#define          DU_STABLE         4
+#define          DU_SLOCATION      5
+#define          DU_SVIEW          6
+#define          DU_SRECORD        7
+#define          DU_SSECURITY      8
+#define          DU_SUSER          9
+#define          DU_SLVL	   10
+#define          DU_SALARM	   11
+#define		 DU_SRULE	   12
+#define		 DU_SALERT	   13
+#define		 DU_SINSTALLATION  14
+#define          DU_SALL           15
+#define          DU_SRESOURCE      16
+#define          DU_SQRYTEXT       17
+    i4		    du_state;		/* State (TRUE or FALSE) associated
+                                        ** with ID. */
+#define          DU_STRUE       1
+#define          DU_SFALSE      0
+}   DU_SECSTATE;
+
+
+/*}
+** Name: DU_PROFILE - structure of the "iiprofile" dbdb system catalog.
+**
+** Description:
+**        This structure defines an "iiprofile" tuple as used by the
+**	SCF module in the DBMS.
+**
+** History:
+**	5-aug-93 (robf)
+**	    Created
+[@history_template@]...
+*/
+typedef struct _DU_PROFILE
+{
+    DB_OWN_NAME     du_name;            /* Profile name. */
+    i4		    du_status;		/* Profile status, same as iiuser. */
+
+    DB_OWN_NAME	    du_group;		/* Default group identifier;
+					** blanks for no default.
+					*/
+    char	    du_free[8];		/* Get rid of me */
+    u_i4	    du_defpriv;		/* Default privileges */
+    DB_DATE  	    du_expdate;		/* Expiry date */
+    u_i4 	    du_flagsmask;	/* Status flags, same as iiuser */
+}   DU_PROFILE;

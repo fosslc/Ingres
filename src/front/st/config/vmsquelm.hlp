@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  Specifies the maximum number of timer queue entries that the
+  created process can have outstanding at any one time. This number
+  includes timer requests and scheduled wakeup requests.

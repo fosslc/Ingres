@@ -1,0 +1,3 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+Provides the core name of the library for the Ingres Kerberos driver.  
+This setting should not be modified.

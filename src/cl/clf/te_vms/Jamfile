@@ -1,0 +1,9 @@
+#
+# Jamfile file for cl!clf!te_vms
+#
+
+SubDir ING_SRC cl clf te_vms ;
+
+IISUBSYS cl clf te_vms ;
+
+IILIBRARY COMPATLIB : tegtty.c te.c ;

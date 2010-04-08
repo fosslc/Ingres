@@ -1,0 +1,26 @@
+;
+;  History:
+;	17-oct-2000 (somsa01)
+;	    Created.
+;	13-feb-2004 (somsa01)
+;	    Added Uld_ahd_xlatetab.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	    Renamed iiulfdata.def to iilibulfdata.def.
+;	13-Jan-2005 (drivi01)
+;	    Added symbol Uld_syscat_xlatetab as a result of
+;	    change #474498 SIR 113568, and bugs 111277 and 109969.
+;	15-Dec-2005 (drivi01)
+;	    Change 480264 introduced Uld_struct_xlatetab
+;	02-Jun-2009 (drivi01)
+;	    Bug 122119: Add Uld_mathex_xlatetab export.  
+
+EXPORTS
+Ule_mhdr			@1	DATA			
+Ule_started			@2	DATA			
+Uld_ahd_xlatetab		@3	DATA			
+Uld_psq_xlatetab		@4	DATA
+Uld_syscat_xlatetab		@5	DATA
+Uld_struct_xlatetab		@6	DATA
+Uld_mathex_xlatetab		@7	DATA

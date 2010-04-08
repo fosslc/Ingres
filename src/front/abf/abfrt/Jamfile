@@ -1,0 +1,40 @@
+#
+# Jamfile file for front!abf!abfrt
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front abf abfrt ;
+
+IISUBSYS front abf abfrt ;
+
+
+IIMSGHDR eras.msg ;
+
+IIFORM afrblank.frm ;
+IIFORM afrnproc.frm ;
+IIFORM afrtsdmp.frm ;
+IIFORM afrunfrm.frm ;
+
+File $(INGMSG)$(DFS)abhgbfmu.hlp : abhgbfmu.hlp ;
+File $(INGMSG)$(DFS)abhrepmu.hlp : abhrepmu.hlp ;
+File $(INGMSG)$(DFS)abhufrm.hlp : abhufrm.hlp ;
+File $(INGMSG)$(DFS)abhuproc.hlp : abhuproc.hlp ;
+File $(INGMSG)$(DFS)abhvigmu.hlp : abhvigmu.hlp ;
+File $(INGMSG)$(DFS)abrtlkql.hlp : abrtlkql.hlp ;
+File $(INGMSG)$(DFS)abrtlkup.hlp : abrtlkup.hlp ;
+
+IILIBRARY ABFRTLIB : abrtskey.sc abrtseqv.sc abfexc.sc
+	scrollto.qsc inidb.qsc abrtvig.qsc abrtutil.qsc abrtstk.qsc
+	abrtrw.qsc abrtqry.qsc abrtqbf.qsc abrtpred.qsc abrtnqry.qsc
+	abrtlkup.qsc abrtgetf.qsc abrtgbf.qsc abrtcall.qsc abrtadd.qsc
+	abfrdmp.qsc abfinp.qsc inirfrm.qc abrthelp.qc rtsdata.c
+	ildata.c g4xfer.c g4utils.c g4inqset.c g4init.c g4globs.c
+	g4gloacc.c g4getset.c g4desc.c g4chkobj.c g4call.c g4array.c
+	arcts.c abrtxio.c abrtret.c abrtmain.c abrthash.c abrtgtfr.c
+	abrtgprm.c abrtfrow.c abrtexpr.c abrtexe.c abrterr.c abrtclp.c
+	abrtclas.c abrtbeep.c abrtarry.c abrtargs.c abinqset.c
+	abftrace.c abfrdata.c abfgbf.c abfdbg.c ;
+
+IILIBOBJECT g4xfer.c ;

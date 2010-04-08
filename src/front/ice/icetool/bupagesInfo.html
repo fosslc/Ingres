@@ -1,0 +1,83 @@
+<SCRIPT language="JavaScript">
+		function setFile(name, suffix) 
+		{
+			document.forms[0].ext_file.value = name
+			document.forms[0].ext_suffix.value = suffix
+		}
+
+		function changeFiles(location) 
+		{
+<!-- #ICE VAR=`
+			top.Main.Info.files.document.location = '/ice-bin/oiice.:http_api_ext/iceTools/dirfiles.html?id=' + location
+` -->
+		}
+
+		function refresh(location, storage) 
+		{
+<!-- #ICE VAR=`
+			top.Main.Info.questions.document.location = '/ice-bin/oiice.:http_api_ext/iceTools/buDocsInfo.html?type=:type&unit=:unit&location=' + location + '&storage=' + storage
+			top.Main.Info.files.document.location = '/ice-bin/oiice.:http_api_ext/iceTools/dirfiles.html?id=none'
+` -->
+		}
+</SCRIPT>
+
+<!-- #ICE REPEAT IF (`:storage` == `internal`)
+THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?form=ENCTYPE="multipart/form-data"&title=Document&submit=actDoc.html`` -->` 
+ELSE=`<!-- #ICE REPEAT INCLUDE=``begin.html?form=&title=Document&submit=actDoc.html`` -->` 
+-->
+<!-- #ICE VAR=`
+		<INPUT TYPE="HIDDEN" NAME="action" VALUE="insert">
+		<INPUT TYPE="HIDDEN" NAME="unit" VALUE=":unit">
+		<INPUT TYPE="HIDDEN" NAME="suffix" VALUE="html">
+		<INPUT TYPE="HIDDEN" NAME="type" VALUE=":type">
+		Please fill following information to create the :type:<p>`
+-->
+		<TABLE>
+			<TR>
+				<TD>Storage type</TD>
+				<TD>
+					<SELECT NAME="storage" SIZE="1" onChange="refresh('<!-- #ICE VAR=`:location` -->', this.form.storage.options[this.form.storage.selectedIndex].value)">
+					<OPTION VALUE="internal" <!-- #ICE IF (`:storage` == `internal`) THEN=`SELECTED` -->>inside the repository
+					<OPTION VALUE="external" <!-- #ICE IF (`:storage` == `external`) THEN=`SELECTED` -->>take from the file system
+					</SELECT>
+				</TD>
+			</TR>
+			<TR>
+				<TD WIDTH="150">Document name:</TD>
+				<TD><INPUT ALIGN="RIGHT" MAXLENGTH="32" SIZE="20" NAME="name">.<INPUT SIZE="4" NAME="suffix"></TD>
+			</TR>
+			<TR>
+				<TD>General access: </TD>
+				<TD>
+						<INPUT TYPE="CHECKBOX" NAME="public" VALUE="checked">Public
+				</TD>
+			</TR>
+<!-- #ICE REPEAT IF (`:storage` == `external`)
+THEN=`<TR><TD WIDTH="150">location:</TD>
+			<TD><SELECT NAME="ext_loc" onChange="changeFiles(this.form.ext_loc.options[this.form.ext_loc.selectedIndex].value)">
+			<OPTION VALUE="none">none
+			<!-- #ICE REPEAT FUNCTION=``unit_location?action=select&ul_unit_id=:unit``
+					 HTML=``<OPTION VALUE=":ul_location_id">:ul_location_name</OPTION>`` 
+			-->
+			</SELECT></TD>
+			</TR><TR><TD>file name: </TD>
+			<TD><INPUT ALIGN="RIGHT" MAXLENGTH="32" SIZE="20" NAME="ext_file">.<INPUT MAXLENGTH="4" SIZE="4" NAME="ext_suffix"></TD>
+			</TR>
+` -->
+<!-- #ICE REPEAT IF (`:storage` == `internal`)
+THEN=`<TR>
+				<TD>Cache : </TD>
+				<TD>
+						<INPUT TYPE="RADIO" NAME="cache"	VALUE="doc_pre_cache">Pre-cache<BR>
+						<INPUT TYPE="RADIO" NAME="cache"	VALUE="doc_perm_cache">Permanent cache<BR>
+						<INPUT TYPE="RADIO" NAME="cache"	VALUE="doc_session_cache" checked>Session cache<BR>
+				</TD>
+			</TR>
+			<TR>
+				<TD>path: </TD>
+				<TD><INPUT NAME="file" TYPE="file"></TD>
+			</TR>`
+-->
+
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

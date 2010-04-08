@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!rep!shell_unix
+#
+
+SubDir ING_SRC front rep shell_unix ;
+
+IISUBSYS front rep shell_unix ;
+
+
+IIBINSH rpgensql : rpgensql.sh ;
+IIBINSH rpserver : rpserver.sh ;
+

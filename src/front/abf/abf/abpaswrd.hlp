@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abpaswrd.hlp, help for entering a role password
+/#-- 
+You are building an application to run under the role shown.  You are
+being asked to enter the password for the role.  The password you type will
+not be shown on your screen.  After typing the password, you will be asked to 
+verify it by typing it again, to insure that it was typed correctly.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        OK                      Accept the password which you have typed.
+
+        Cancel                  If you are entering the password, cancel
+                                building the application.  
+
+                                If you are verifying the password you 
+                                previously typed, "Cancel" allows you to
+                                begin again by entering a different password.
+
+        Help                    Print this message.

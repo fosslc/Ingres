@@ -1,0 +1,95 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* FRS mapping file for hpterm with Function Keys */
+
+/* Menu Key */
+	menu = pf6 (f6)
+        menuitem1 = pf1 (f1)
+        menuitem2 = pf2 (f2)
+        menuitem3 = pf3 (f3)
+        menuitem4 = pf4 (f4)
+        menuitem5 = pf5 (f5)
+	menuitem6 = pf9 (Clear line)
+	menuitem7 = pf10 (Clear display)
+	menuitem8 = pf11 (Insert line)
+	menuitem9 = pf12 (Delete line)
+/*	menuitem10 = pf13 (Insert char)*/
+/*	menuitem11 = pf14 (Delete char)*/
+
+/* Help facility */
+/*	frskey1 = pf2 (f2) */
+
+/* Quit from program */
+/*	frskey2	= pf8 (f8)*/
+
+/* End current screen and return to previous screen */
+    	frskey3	= pf8 (f8)
+
+/* Go or execute function */
+	frskey4 = pf7 (f7)
+
+/* Put cursor on top of form or table field */
+	frskey5 = pf15 (Home)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= pf22 (Shift-Home)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = controlK (^K)
+
+/* Forget and Undo */
+	frskey9 = controlY (^Y)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf16 (Prev)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf18 (Next)
+
+/* Scroll left one screen */
+	scrollleft = controlR (^R)
+
+/* Scroll right one screen */
+	scrollright = controlL (^L)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = pf21 (Back-Tab)
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field */
+	previousword = controlN (^N)
+
+/* Switch between insert and overstrike mode */
+	mode = pf13 (Ins Char)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = pf14 (Del)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlH (Backspace)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlM (RETURN)
+
+/* Clear out the rest of the field */
+	clear = pf12 (Del Line)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = pf9 (Clear line)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)
+

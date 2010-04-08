@@ -1,0 +1,19 @@
+{
+| Copyright (c) 2004 Ingres Corporation 
+| FILE:		eqenv.qp
+| DESCRIPTION:	The source file to generate the EQUEL/PASCAL environment file.
+| DIRECTIONS:	As INGRES, EQP this file in the II_FILES directory.
+|		Then PAS the output (eqenv.pas) and remove the object
+|		(eqenv.obj) and the Pascal (eqenv.pas).
+|
+|		Now EQP programs can compile faster by using the INHERIT
+|		attribute
+|			## [INHERIT('EQUEL')] PROGRAM MyProg;
+|		rather than the DECLARE statement
+|			## PROGRAM MyProg;
+|			## DECLARE
+}
+
+[ENVIRONMENT('eqenv.pen')] MODULE equel;
+## declare
+END. {equel}

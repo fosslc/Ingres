@@ -1,0 +1,18 @@
+#
+# Jamfile file for back!awsf!wps
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC back awsf wps ;
+
+IISUBSYS back awsf wps ;
+
+if $(BUILD_ICE)
+{
+IILIBRARY AWSFLIB : wpsreport.c wpspost.c wpsmo.c
+	wpsbuffer.c wpsapp.c wpsFile.c wps.c postpars.c htmlpars.c
+	htmlmeth.c htmlform.c ;
+
+IILIBRARY IMPICELIBDATA : wpsdata.c ;
+}

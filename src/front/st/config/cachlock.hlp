@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The cache_lock resource determines whether or not the server buffer cache
+ should be locked into physical memory.  This will prevent buffer cache
+ pages from being paged out by the operating system when memory shortages
+ occur.  An "ON" setting should be used with caution, as physical memory
+ shortages affect the entire system, not just the buffer cache.
+
+
+ Default: OFF 
+
+

@@ -1,0 +1,1210 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+**
+*/
+
+# include	<compat.h>
+# include	<me.h>
+# include	<pc.h>
+# include	<st.h>
+# include	<ex.h>
+# include	<si.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<uf.h>
+# include	<fstm.h>
+# include	<qr.h>
+# include	"eruf.h"
+# include	<ug.h>
+# include	<me.h>
+
+/**
+** Name:        ufbrowse.qsc -	Output Browser Module.
+**
+** Description:
+**      This file contains routines used to browse through an output file.
+**	The outout is first stored in a memory cache.  If the output overflows
+**	the cache, the output is then saved in a file.  Currently IQUEL/ISQL,
+**	ReportWriter, and Teamwork are using the browser.
+**
+**      This file defines:
+**		IIUFmro_MoreOutput - Gets more output from either the DBMS
+**				     or the browsefile.
+** 		IIUFpan_Panic      - Cleans up the database if in midst of a
+**				     query, and exit.
+**    		IIUFadd_AddRec	   - Adds record into in-memory buffer
+**		IIUFfsh_Flush      - Flushes all the records from memory to disk
+**    		IIUFclb_ClearBcb   - Clears the in-memory 'Browse Buffer'
+**    		IIUFdone           - Shuts down the 'fullscreen' output browser
+**				     routines
+**
+** History:
+**	12-oct-89 (sylviap)
+**		Created from fstm files.
+**	28-jun-90 (dave)
+**		Opened the file for 'append' (rather than 'write') so for
+**		   very large files, it does not overwrite the first page in 
+**		   the spill file.
+**		Added an SIclose to flush out the last pages to the spill file.
+**		(#31005)	
+**	26-nov-90 (sylviap)
+**		Need to close the browsefile so ALL versions can be deleted.
+**		#34629.
+**	17-jan-1996 (toumi01; from 1.1 axp_osf port) (muhpa01)
+**		Changed ME_ALIGN_MACRO for new RCB to align based on size of
+**		ALIGN_RESTRICT rather than hard coded value of 4.  This fixes
+**		unaligned accesses in 64-bit environments (axp_osf port).
+**	20-mar-2000 (kitch01)
+**		Bug 99136. Amendments here for this bug are to pass the correct 
+**		buffer size when reading a record. To create a browse file index
+**		list so that the browse file can be used to display records in 
+**		ISQL.
+**	07-Nov-2000 (horda03)
+**		Previous change (448047) needed to include me.h as compiling
+**		on VMS generates undefined symbol IIMESIZE. Also, the previous
+**              change attempted to calculate the address of a register variable
+**              which is not permitted.
+**	17-nov-2000 (kitch01)
+**      Amend above fix to be CL compliant, and also to reposition spill
+**		(for VMS) we pass the max column size. Changed to SIread() and
+**      SIfprintf() from SIgetrec() and SIputrec() respectively. This is
+**		so the spill file works properly on VMS.
+**      29-Mar-2001 (horda03)
+**              In IIUFgnr_getnextrcb(), too many characters were being copied
+**              from a temporary buffer to the RCB data area. This caused a
+**              SIGSEGV in QUremove() due to pointer corruption.
+**              Bug 104291.
+**      20-Jun-2001 (bespi01)
+**              IIUFgnr_getnextrcb assumption that all lines in the spill file
+**              where the same length is not true. Changed code to handle 
+**              varying line lengths.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	07-mar-2001 (somsa01)
+**	    SIftell() now returns the offset.
+**	17-sep-2001 (somsa01)
+**	    Added missing define of some variables, which are needed due
+**	    to the cross of 451583 (bespi01).
+**      02-Mar-2003 (hanje04)
+**           Make bfr_size SIZE_TYPE so it correctly matches size in MEsize.
+**	08-Sep-2005 (thaju02) B115176
+**	    In IIUFgnr_getnextrcb(), change offset from i4 to OFFSET_TYPE.
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	24-Aug-2009 (kschendel) 121804
+**	    Update some of the function declarations to fix gcc 4.3 problems.
+*/
+
+#define BFRSIZE 8192
+
+#define DIAG(msg)	if (iiuftfdDiagFunc != NULL) (*iiuftfdDiagFunc)(msg);
+
+GLOBALREF VOID  (*iiuftfdDiagFunc)();   /* Diagnostic tracing function */
+
+VOID	IIUFpan_Panic();
+
+/*{
+**    IIUFmro_MoreOutput  --  Get 'more' output, either from the backend or the
+**		  	      browsefile.
+**
+**    IIUFmro_MoreOutput services a request for more output from the backend.
+**    (This usually happens as the result of the user trying to scroll off the
+**    end of the current output.) However, if IIUFmro_MoreOutput discovers that
+**    there are records in the browsefile past the current 'last record
+**    in memory' mark it means we can get some data from the browsefile
+**    before going to the backend. (This condition could only occur if
+**    the user had previously done a 'Top' (IIUFtop) request, which causes
+**    a call to IIUFfsh_Flush.)
+**
+**    Note that IIUFmro_MoreOutput will try to add 'rows' additional records
+**    to the in-memory buffer. (Obviously it will add less if the backend
+**    signals the request is complete.) If 'rows' is <= 0 then
+**    IIUFmro_MoreOutput will add records until the request is flagged
+**    as complete.
+**
+**    Returns: An integer representing the number of records added to
+**	       the in-memory buffer. Consequently a return of '0'
+**	       means the backend has signaled the request is complete.
+**
+** History:
+**	12-may-1987 (daver)
+**		uses 'rows_added' field in bcb rather than local.
+**	11/12/87 (dkh) - FTdiag -> FSdiag.
+**	02-aug-89 (sylviap)
+**		Added the variable, rows_added for ReportWriter's scrollable
+**		output.  Changed the loop that gets the rows of output.
+**		Made FSmore a bool function to be able to pass up to calling
+**		routine if an error occurred.
+**	11-sep-89 (sylviap)
+**		If no more rows, then return FALSE, not FAIL.
+**	11-oct-89 (sylviap)
+**		Create IIUFmro_MoreOutput from FSmore.  Move the 'browser
+**		routines' into the UF directory.
+**	04-apr-90 (teresal)
+**		Bug fix 4064 8484 - increase file buffer size.
+**	02/13/91 (jlw) - added the capture of the return value from SIgetrec()
+**		so that the subsequent error message was correct.
+**	10-oct-91 (seg)
+**		Fixed incorrect use of DIAG macro
+**	20-mar-2000 (kitch01)
+**		Bug 99136. Correctly pass the buffer size to the read function
+**		as the read function may have reallocated the buffer. Free the
+**		buffer area when we are done. If the spill file has been used
+**		then flush the remaining records from the browse buffer to disk
+**		as the spill file will now be used for display purposes.
+**	17-nov-2000 (kitch01)
+**		Amend above fix to be CL compliant. File access is now random and
+**		(for VMS) we pass the max column size. Changed to SIread() and
+**      SIfprintf() from SIgetrec() and SIputrec() respectively. This is
+**		so the spill file works properly on VMS.
+**	02-Mar-2003 (hanje04)
+**	     Make bfr_size SIZE_TYPE so it correctly matches size in MEsize.
+*/
+bool
+IIUFmro_MoreOutput(bcb,rows,qrb)
+register BCB	*bcb;
+register i4	rows;
+QRB		*qrb;
+{
+	i4		rows_added;  /* number of rows added to output buffer */
+	STATUS		rc;
+	char		*bfr = MEreqmem(0, BFRSIZE, TRUE, NULL);
+	SIZE_TYPE	bfr_size = BFRSIZE;
+	i4		len = 0;
+
+   	bcb->rows_added = rows_added = 0;
+
+   	if (iiuftfdDiagFunc != NULL)
+		(*iiuftfdDiagFunc)
+		(ERx("IIUFmro_MoreOutput: entered; %d rows requested\n"), rows);
+   	/*
+   	**    Try to add 'rows' data lines to the bottom of the in-memory
+   	**    buffer. If there are still records in the browsefile which are
+   	**    not in memory then read them in.
+   	*/
+   	if (bcb->lrec < bcb->nrecs)
+	{
+	    register i4  i;
+
+	    for ( i = rows_added ; i < rows || rows == 0 ; ++i )
+	    {
+		if (bcb->rd_ahead)
+	    	{
+		      DIAG(ERx("IIUFmro_MoreOutput: getting read-ahead record\n"));
+	    	      STcopy(bcb->rd_ahead,bfr);
+	    	      MEfree(bcb->rd_ahead);
+	    	      bcb->rd_ahead = 0;
+	    	}
+	 	else
+	    	{
+			DIAG(ERx("IIUFmro_MoreOutput: reading a record\n"));
+	    		if ((rc = SIread(bcb->bffd, bcb->vbfidx->reclen, &len, bfr)) != OK)
+			{
+				iiufBrExit( bcb, E_UF001A_EOFonFile,
+					2, bcb->bfname, (PTR)&rc
+				);
+			}
+			bfr[ STlength(bfr)-1 ] = EOS;
+		}
+
+		IIUFadd_AddRec(bcb,bfr,TRUE);
+		++bcb->rows_added;
+
+		if (iiuftfdDiagFunc != NULL)
+		   (*iiuftfdDiagFunc)
+		      (ERx("IIUFmro_MoreOutput: last rec in mem = %d  num recs in file = %d\n"),
+	              bcb->lrec,bcb->nrecs);
+	 	/*
+	 	**    If we have read all the records out of the browsefile
+	 	**    then close it for read and open it for append (so it
+	 	**    will be ready when we need it). Then break out of the
+	 	**    loop; we may need to start getting data from the
+	 	**    backend.
+	 	*/
+	 	if (bcb->lrec >= bcb->nrecs)
+	    	{
+		   DIAG(ERx("IIUFmro_MoreOutput: closing spill file\n"));
+		   SIclose(bcb->bffd);
+		   bcb->bffd = NULL;
+		   DIAG(ERx("IIUFmro_MoreOutput: opening spill file for append\n"));
+	    	   if ((rc=SIfopen(&bcb->bfloc, ERx("a"), SI_RACC, RACC_BLKSIZE,
+		       &bcb->bffd)) != OK)
+		   {
+		      iiufBrExit( bcb, E_UF001B_FileOpenAppend,
+		  		  2, bcb->bfname, (PTR)&rc );
+		   }
+		   break;
+	       }
+	    }
+	}
+
+   	/*
+   	** If we still need to get some rows then we must get them from
+	** the 'output source', which may be either the backend or a
+   	** file on disk. Call the 'next record' routine to get it.
+   	*/
+
+   	while ( rows == 0 || (bcb->rows_added < rows))
+   	{
+	   /* Get the current size of the buffer */
+	   MEsize(bfr, &bfr_size);
+	   if ( (*bcb->nxrec)(bcb, &bfr, bfr_size, qrb, &rows_added) < 0 )
+	      break;
+	   bcb->rows_added += rows_added;
+	}
+	if (rows_added < 0)
+	   return FALSE;
+
+    /* Free the buffer as this may be very large */
+	MEfree((PTR)bfr);
+
+    /* If the spill file is in use flush the rest of the browse buffer */
+	if (bcb->bf_in_use)
+       	   IIUFfsh_Flush(bcb);
+
+	if (iiuftfdDiagFunc != NULL)
+	   (*iiuftfdDiagFunc)
+	      (ERx("IIUFmro_MoreOutput: leaving (added %d rows)\n"),
+	       bcb->rows_added);
+	return TRUE;
+}
+
+/*{
+** Name:	IIUFpan_Panic -	Leave in great haste.
+**
+** Description:
+**	Clean up the database if in midst of a query, and exit.
+**
+**
+** History:
+**	10-aug-88 (bruceb)
+**		Added this header, and changed ##exit to FEing_exit().
+**	12-oct-90 (sylviap)
+**		Extracted from FSpanic.
+**	20-mar-2000 (kitch01)
+**		Bug 99136. Changes to ensure spill file is cleared before exit.
+*/
+
+VOID
+iiufBrExit ( bcb, err, argcnt, p1, p2, p3 )
+BCB		*bcb;
+ER_MSGID	err;
+i4		argcnt;
+PTR		p1, p2, p3;
+{
+	char	buf[ER_MAX_LEN+1];
+
+	IIUGfmt(buf, sizeof(buf)-1, ERget(err), argcnt, p1, p2, p3);
+
+	IIUFpan_Panic(bcb, buf);
+}
+
+VOID
+IIUFpan_Panic(bcb,msg)
+BCB	*bcb;
+char    *msg;
+{
+    /*
+    **	 If a previous request was begun but not completed then call
+    **	 IIbreak to flush it out.
+    */
+    if (bcb->req_begin && !bcb->req_complete)
+    {
+	IIbreak();
+    }
+
+    /* Get rid of the browse spill file as it can be very large */
+    if (bcb->bffd)
+       SIclose(bcb->bffd);
+    LOpurge(&bcb->bfloc,0);
+	
+    if (bcb->bf_in_use)
+       IIUFfbi_FreeBrowseIdx(bcb->fbfidx);
+
+    FEexits("");
+
+    SIprintf(ERget(S_UF001C_Terminating_msg), msg);
+
+# ifdef	CMS
+    EXsignal(EXSNAP, 1, msg);
+# endif
+
+    PCexit(FAIL);
+}
+
+
+
+
+/*{
+**    IIUFadd_AddRec	--  Add record into in-memory buffer
+**
+**    IIUFadd_AddRec is passed a pointer to a null-terminated string; this
+**    string should be added to the bottom of the 'in-memory browse
+**    buffer'. If there is no room in the buffer IIUFadd_AddRec will take
+**    action based on the boolean 'spill':
+**
+**    If 'spill' is true then IIUFadd_AddRec will flush out records from the
+**    in-memory buffer to make room for the new record if necessary.
+**
+**    If 'spill' is false then IIUFadd_AddRec will only add the record to
+**    the in-memory buffer if there is already sufficient room.
+**
+**
+**    Returns: If 'spill' is allowed, IIUFadd_AddRec always returns TRUE.
+**	       If not, it will return false if adding the record would
+**	       have required a spill to disk.
+**  History:
+**	11/12/87 (dk) - FTdiag -> FSdiag.
+**	12-oct-89 (sylviap)
+**		Extracted from FSaddrec.
+**      25-nov-1993 (smc)
+**		Bug #58882
+**          	Made calculation of the address of a new RCB use portable
+**		ME_ALIGN_MACRO. Changed truncating casts to PTR.
+**      1-dec-1994 (chech02)
+**              Bug #64975, #65001
+**              When pass argument to ME_ALIGN_MACRO to calculate the new
+**              address, the length shall add one more byte for null char
+**              of bcb->lrcb->data.
+**      11-mar-2002 (horda03) Bug 107271.
+**              There can be more than one Browse Buffer now. Keep requesting
+**              a new browse buffer, once the current buffer is full. Once
+**              all memory has been exhausted, then use a spill file. Before
+**              using the spill file, the memory buffer reserved to provide
+**              us with space for opening the spill file is release. Once the
+**              spill file is opened, all the Browse buffer records are copied
+**              to the spill file. Once all the records in a browse buffer are
+**              written to disk, the browse buffer is deleted (with the exception
+**              of the last browse buffer, which we keep).
+*/
+static VOID	_FirstRec();
+
+bool
+IIUFadd_AddRec(BCB *bcb,char *record,bool spill)
+{
+	i4	reclen;
+        BBLIST  *browse_buf;
+        i4      no_pages;
+        CL_SYS_ERR err;
+
+	if (iiuftfdDiagFunc != NULL)
+	   (*iiuftfdDiagFunc)
+	      (ERx("IIUFadd_AddRec: entered; last record in memory = %d\n"),
+	      bcb->lrec);
+   	reclen = STlength(record);
+	if (iiuftfdDiagFunc != NULL)
+	   (*iiuftfdDiagFunc)
+	      (ERx("IIUFadd_AddRec: adding %d byte record '%s'\n"),
+	      reclen, record);
+   	/*
+   	**	 If this is the first record written into the browse buffer then
+   	**	 its sort of a special case; just stick it in.
+   	*/
+   	if (bcb->nrows == 0)
+	{
+                bcb->vrcb = bcb->frcb = bcb->lrcb = (RCB *)bcb->lastbb->bb;
+
+		bcb->vrec = bcb->frec = bcb->lrec = 1;
+
+		bcb->vcol = 1;
+
+		++bcb->nrows;
+
+		bcb->frcb->len = reclen;
+		bcb->mxcol = reclen;
+		bcb->frcb->nrcb = NULL;
+		bcb->frcb->prcb = NULL;
+		MEcopy(record, bcb->frcb->len + 1, bcb->frcb->data);
+	}
+	else
+	{
+		register RCB	*n_rcb;
+		register RCB	*n_rcbend;
+		i4		n_rcblen;
+
+		/*
+		**    Add a new record into the browse buffer.
+		**    Calculate the address of a new RCB following the last one
+		**    (round it up to a fullword boundary)
+		*/
+
+		n_rcb = (RCB *)ME_ALIGN_MACRO(((PTR)bcb->lrcb + RCBLEN + bcb->lrcb->len+1), sizeof(ALIGN_RESTRICT));
+		n_rcblen = RCBLEN + reclen + 1 + 3;
+		n_rcblen &= 0xfffffffc;
+
+		n_rcbend = (RCB *) ((PTR)n_rcb + n_rcblen);
+
+                if (!spill)
+                {
+                   /* No spill file to be used. */
+                   if ( (bcb->frcb >= n_rcb && bcb->frcb < n_rcbend)
+				|| n_rcbend >= (RCB *)bcb->lastbb->bbend)
+                         return (FALSE);
+                }
+
+                if (!bcb->bf_in_use)
+                {
+                   /* We chain together Browse Buffers until there is no more memory available,
+                   ** and then we start using the Spill file.
+                   */
+                   if (n_rcbend >= (RCB *) bcb->lastbb->bbend)
+                   {
+                      /* We need a new Browse Buffer, current record extends beyond the length of the
+                      ** current Browse Buffer.
+                      */
+                      if (bcb->lastbb->nxtbb)
+                      {
+                         /* Use a previously allocated browse buffer */
+                         bcb->lastbb = bcb->lastbb->nxtbb;
+
+                         n_rcb = (RCB *)bcb->lastbb->bb;
+                         n_rcbend = (RCB *) ((PTR)n_rcb + n_rcblen);
+                      }
+                      else if ( IIUFallocate_bblist( bcb, &browse_buf ) == OK)
+                      {
+                         /* We've just allocated a new browse buffer, so add it
+                         ** to the end of the browse buffer list.
+                         */
+                         browse_buf->prvbb = bcb->lastbb;
+                         bcb->lastbb->nxtbb = browse_buf;
+                         bcb->lastbb = browse_buf;
+
+                         n_rcb = (RCB *)browse_buf->bb;
+                         n_rcbend = (RCB *) ((PTR)n_rcb + n_rcblen);
+                      }
+                      else
+                      {
+                         /* We've ran out of memory, so we better think about using a Spill file */
+
+
+                         /* Release some memory (if we can), to ensure that we can build the spill file */
+
+                         if (bcb->membuffer)
+                         {
+                            /* Not bothered about any errors. If it fails here,
+                            ** the Spill file won't be created.
+                            */
+                            MEfree_pages( bcb->membuffer, BBMEMBUFPAGES, &err );
+
+                            bcb->membuffer = NULL;
+                         }
+
+                         /* Now write all the records in memory to the spill file from the memory buffer
+                         ** but leave the records in the last buffer. The memory used for the browse
+                         ** buffers can be released; we only need to keep the last browse buffer now.
+                         */
+                         do
+                         {
+                            _FirstRec(bcb);
+
+                            if ( (bcb->frcb < (RCB *) bcb->firstbb) ||
+                                 (bcb->frcb > (RCB *) bcb->firstbb->bbend) )
+                            {    
+                               /* This record is in a different Browse Buffer to the first.
+                               ** We can free the memory used for the First Browse Buffer.
+                               */
+                               browse_buf = bcb->firstbb;
+
+                               browse_buf->nxtbb->prvbb = NULL;
+                               bcb->firstbb = bcb->firstbb->nxtbb;
+
+                               MEfree( browse_buf );
+
+                               bcb->n_bb--;
+                            }
+                         }
+                         while (bcb->lastbb->prvbb); /* Keep flushing records until
+                                                     ** we reach the last buffer.
+                                                     */
+                      }
+                   }
+                }
+
+                if (bcb->bf_in_use)
+                {
+                   /* We're using the Spill file, so write any records from the "last" (and only)
+                   ** browse buffer.
+                   **
+                   ** Will adding a new RCB here overlay the first one? If
+                   ** so, keep flushing out the first record until there is
+                   ** no overlap.
+                   */
+                   while ( bcb->frcb >= n_rcb && bcb->frcb < n_rcbend )
+                      _FirstRec(bcb);
+
+                   /*
+                   **  Will this new RCB overflow the browse buffer? If so,
+                   **  position the new RCB at the start of the buffer.
+                   **  Flush out any data that is already there.
+                   */
+                   if (n_rcbend >= (RCB *)bcb->lastbb->bbend)
+                   {
+                      n_rcb = (RCB *)bcb->lastbb->bb;
+                      n_rcbend = (RCB *) ((PTR)n_rcb + n_rcblen);
+                      while ( bcb->frcb >= n_rcb && bcb->frcb < n_rcbend )
+                         _FirstRec(bcb);
+                   }
+                }
+
+		/*
+		**    There is now room, so add a new 'last RCB' and chain it
+		**    onto the end.
+		*/
+		bcb->lrcb->nrcb = n_rcb;
+
+		n_rcb->prcb = bcb->lrcb;
+		n_rcb->nrcb = NULL;
+		n_rcb->len  = reclen;
+
+		bcb->lrcb = n_rcb;
+		MEcopy(record, bcb->lrcb->len + 1, bcb->lrcb->data);
+
+		if (reclen > bcb->mxcol)
+			bcb->mxcol = reclen;
+		++bcb->nrows;
+		++bcb->lrec;
+	}
+
+	if (iiuftfdDiagFunc != NULL)
+   		(*iiuftfdDiagFunc)
+		  (ERx("IIUFadd_AddRec: leaving; last record in memory = %d\n"),
+		  bcb->lrec);
+   	return(TRUE);
+}
+
+/*
+**    _FirstRec  --  Flush the first record in the in-memory buffer
+**
+**    IIUFffr_FirstRec will cause the first record in the browse buffer to
+**    written to the browsefile, freeing up some room in the buffer.
+**    (Obviously, the record will not be written to the browsefile
+**    it is was written out previously.)
+**
+**    Returns: nothing
+**  History:
+**	10-oct-91 (seg)
+**		Fixed incorrect use of DIAG macro
+**	20-mar-2000 (kitch01)
+**		Bug 99136. Build an index of the records in the browse file.
+**		This will allow us to display the records correctly in MTdraw().
+**		The position of the file is determined by SIftell on the file 
+**		pointer before the record is written to the file.
+**	17-nov-2000 (kitch01)
+**		Amend above fix to be CL compliant. File access is now random and
+**		(for VMS) we pass the max column size. Also seek to end-of-file so
+**		that SIftell() will return the correct position of the appended
+**		record
+**	07-mar-2001 (somsa01)
+**	    SIftell() now returns the offset.
+*/
+static VOID
+_FirstRec ( bcb )
+register BCB	*bcb;
+{
+	OFFSET_TYPE	filepos = 0;
+	STATUS		rc;
+	i4		len;
+	
+   	DIAG(ERx("IIUFffr_FirstRec: entered\n"));
+
+	/*
+	**    If the browsefile is currently empty then we must create it
+	*/
+   	if (bcb->nrecs == 0)
+	{
+		DIAG(ERx("IIUFffr_FirstRec: open spill file for write\n"));
+		if ((rc = SIfopen(&bcb->bfloc, ERx("w"), SI_RACC, RACC_BLKSIZE,
+			&bcb->bffd)) != OK)
+	 	{
+	 		iiufBrExit( bcb, E_UF001E_FileOpen,
+					2, bcb->bfname, (PTR)&rc
+		  	);
+	 	}
+	}
+
+	/*
+	**    If this record is not yet in the browsefile then we must write
+	**    it out.
+	**    Open with 'append' so as not to write over the first page
+	**    if already flushed to the spill file.  #31005
+	*/
+   	if (bcb->nrecs < bcb->frec)
+	{
+		DIAG(ERx("IIUFffr_FirstRec: writing a record\n"));
+		if (bcb->bffd == NULL)
+		{
+			if ((rc = SIfopen(&bcb->bfloc, ERx("a"), SI_RACC, RACC_BLKSIZE,
+				&bcb->bffd)) != OK)
+			{
+				iiufBrExit( bcb, E_UF001B_FileOpenAppend,
+					2, bcb->bfname, (PTR)&rc);
+				return;
+			} 
+           /* Position spill file at the end 
+           ** Required so that SIftell returns the correct position.
+           */
+	       if ((rc=SIfseek(bcb->bffd, 0, SI_P_END)) != OK)
+	       {
+		      if (iiuftfdDiagFunc != NULL)
+		         (*iiuftfdDiagFunc) (ERx("IIUFffr_FirstRec: Unable to seek end-of-file\n"));
+	          iiufBrExit( bcb, E_UF0080_BrowseFileSeek, 2, 0, (PTR)&rc);
+	          return;
+	       }
+		}
+
+		if ((filepos = SIftell(bcb->bffd)) < 0)
+			iiufBrExit( bcb, E_UF0082_BrowseFileTell,
+				    2, bcb->bfname, (PTR)&errno);
+
+        /* Write record to spill */
+	SIfprintf(bcb->bffd, "%s\n", bcb->frcb->data);
+
+	/* Make sure mxcol reflects the maximum length of a line in
+	 * the spill file (of the lines written so far)
+	 */
+	len = STlength(bcb->frcb->data);
+	if (len > bcb->mxcol)
+	{
+		bcb->mxcol = len;
+	}
+
+		++bcb->nrecs;
+		/* The number of rows in the browse buffer is now 1 less */
+		--bcb->nrows;
+
+		if (bcb->nrecs == 1)
+		{
+		   /* Set up the browse file index link list. */
+		   if ((bcb->fbfidx = (BFPOS *)MEreqmem(0, BFPOSLEN, TRUE, NULL)) == NULL)
+		   {
+		      if (iiuftfdDiagFunc != NULL)
+		         (*iiuftfdDiagFunc) (ERx("IIUFffr_FirstRec: Unable to allocate buffer\n"));
+		      iiufBrExit( bcb, E_UG0009_Bad_Memory_Allocation, 1, "_FirstRec");
+		   }	
+		   bcb->fbfidx->recpos = filepos;
+		   bcb->fbfidx->recnum = bcb->nrecs;
+		   bcb->fbfidx->reclen = len + 1;
+                   bcb->fbfidx->num_recs = 1;
+		   bcb->vbfidx = bcb->lbfidx = bcb->fbfidx;
+                   bcb->vbf_rec = 1;
+		   bcb->bf_in_use = TRUE;
+		}
+                else if ( bcb->lbfidx->reclen == len + 1)
+                {
+                   /* This record is the same length as the previous record, so
+                   ** tag it to the end of this block.
+                   */
+                   if (!bcb->bf_in_use && (bcb->nrecs > 1))
+                      bcb->bf_in_use = TRUE;
+
+                   bcb->lbfidx->num_recs++;
+                }
+		else
+		{
+		   /* If the spill file was not previously in use but there is already
+		   ** more than one record in it, then mark it as in use. This is
+		   ** because when printing or saving the output to file 
+		   ** _bcb_in_memory() in ufbrsave.qsc will have flushed the current
+		   ** buffer to disk. The browse file is only in use for display 
+		   ** purposes if it is spilled to in this function, so mark it in
+		   ** use now.
+		   */
+		   if (!bcb->bf_in_use && (bcb->nrecs > 1))
+		      bcb->bf_in_use = TRUE;
+		   /* Add an entry to the end of browse file index link list */
+		   if ((bcb->lbfidx->nbfpos = (BFPOS *)MEreqmem(0, BFPOSLEN, TRUE, NULL)) == NULL)
+		   {
+		      if (iiuftfdDiagFunc != NULL)
+		         (*iiuftfdDiagFunc) (ERx("IIUFffr_FirstRec: Unable to allocate buffer\n"));
+		      iiufBrExit( bcb, E_UG0009_Bad_Memory_Allocation, 1, "_FirstRec");
+		   }	
+		   bcb->lbfidx->nbfpos->recpos = filepos;
+		   bcb->lbfidx->nbfpos->recnum = bcb->nrecs;
+		   bcb->lbfidx->nbfpos->reclen = len + 1;
+		   bcb->lbfidx->nbfpos->pbfpos = bcb->lbfidx;
+                   bcb->lbfidx->nbfpos->num_recs = 1;
+		   bcb->lbfidx = bcb->lbfidx->nbfpos;
+		}
+	}
+
+	/*
+	**    Change the pointers in the bcb to free up the space the record
+	**    occupied.
+	*/
+   	bcb->frcb = bcb->frcb->nrcb;
+   	bcb->frcb->prcb = NULL;
+   	++bcb->frec;
+
+   	bcb->vrcb = bcb->frcb;
+   	bcb->vrec = bcb->frec;
+
+
+   	return;
+}
+
+/*{
+**    IIUFfsh_Flush  --  Flush all the records from memory to disk
+**
+**    IIUFfsh_Flush will write all the records from the browse buffer to
+**    disk that have not already been written. (If all records have
+**    be written then obviously no I/O is required.) This is done to
+**    prepare for an FStop operation, where the browsefile will be
+**    closed for output and then opened for input.
+**  History:
+**	20-mar-2000 (kitch01)
+**		Bug 99136. Whilst flushing records to the spill file build an
+**		index of them so we can display them correctly in MTdraw().
+**		The position of the file is determined by SIftell on the file 
+**		pointer before the record is written to the file.
+**      07-nov-2000 (horda03)
+**              As need to pass address of "rec", it cannot be a register
+**              variable.
+**  17-nov-2000 (kitch01)
+**      Amend above fix to be CL compliant. File access is now random and
+**      (for VMS) we pass the max column size. Also seek to end-of-file so
+**      that SIftell() will return the correct position of the appended
+**      record. Code change to fix indexing problem and also build an index
+**      of spilt records regardless of whether the spill file is in use or
+**      not. This is because during printing/saving the display a flush will
+**      occur only to get the current buffer to disk, the in memory buffer can
+**      still be used for display. However when the query is run to completion
+**      the buffer may overrun causing a true spill to disk but the index of
+**      the already flushed records must already exist as they are not written
+**      out again. This is because the spill file and the print/save spill file
+**      share the same temporary location.
+**	07-mar-2001 (somsa01)
+**	    SIftell() now returns the offset.
+*/
+VOID
+IIUFfsh_Flush(bcb)
+register BCB	*bcb;
+{
+	register RCB	*rcb;
+	i4		rec;
+	OFFSET_TYPE	filepos = 0;
+	STATUS		rc;
+	i4		len;
+
+	if (iiuftfdDiagFunc != NULL)
+	   (*iiuftfdDiagFunc)
+	      (ERx("IIUFfsh_Flush: entered (number of records = %d)\n"),
+	      bcb->nrecs);
+   	if (bcb->nrecs == 0)
+	{
+
+		DIAG(ERx("IIUFfsh_Flush: opening spill file for write\n"));
+		if ((rc = SIfopen(&bcb->bfloc, ERx("w"), SI_RACC, RACC_BLKSIZE,
+			&bcb->bffd)) != OK)
+	 	{
+	 		iiufBrExit( bcb, E_UF001E_FileOpen,
+					2, bcb->bfname, (PTR)&rc
+			);
+	 	}
+	}
+	else
+	{
+	    /* If the browse file is currently closed reopen it for append */
+		if (bcb->bffd == NULL)
+		{
+		   if ((rc = SIfopen(&bcb->bfloc, ERx("a"), SI_RACC, RACC_BLKSIZE,
+			&bcb->bffd)) != OK)
+		   {
+			iiufBrExit( bcb, E_UF001B_FileOpenAppend,
+				    2, bcb->bfname, (PTR)&rc);
+			return;
+	 	   } 
+           /* Position spill file at the end */
+	       if ((rc=SIfseek(bcb->bffd, 0, SI_P_END)) != OK)
+	       {
+              if (iiuftfdDiagFunc != NULL)
+                 (*iiuftfdDiagFunc) (ERx("IIUFffr_FirstRec: Unable to seek end-of-file\n"));
+              iiufBrExit( bcb, E_UF0080_BrowseFileSeek, 2, 0, (PTR)&rc);
+              return;
+	       }
+		}
+	}
+
+   	rcb = bcb->frcb;
+
+   	for ( rec = bcb->frec ; rcb != NULL ; ++rec )
+	{
+	    /* If this record is not in the spill file write it out and
+		** add its position to the browse file index link list
+		*/
+		if (rec > bcb->nrecs)
+	 	{
+			if (iiuftfdDiagFunc != NULL)
+		   		(*iiuftfdDiagFunc)
+				   (ERx("IIUFfsh_Flush: writing record %d\n"),
+				   rec);
+
+			if ((filepos = SIftell(bcb->bffd)) < 0)
+				iiufBrExit( bcb, E_UF0082_BrowseFileTell,
+					    2, bcb->bfname, (PTR)&errno);
+
+			/* Write record to spill file. */
+			SIfprintf(bcb->bffd, "%s\n", rcb->data);
+
+			/* Make sure mxcol reflects the maximum length of a line in
+	  		 * the spill file (of the lines written so far)
+			 */
+			len = STlength(rcb->data);
+			if (len > bcb->mxcol)
+			{
+				bcb->mxcol = len;
+			}
+
+	 		++bcb->nrecs;
+		    if (bcb->nrecs == 1)
+		    {
+		       if ((bcb->fbfidx = (BFPOS *)MEreqmem(0, BFPOSLEN, TRUE, NULL)) == NULL)
+		       {
+                          if (iiuftfdDiagFunc != NULL)
+                             (*iiuftfdDiagFunc) (ERx("IIUFffr_FirstRec: Unable to allocate buffer\n"));
+                             iiufBrExit( bcb, E_UG0009_Bad_Memory_Allocation, 1, "IIUFfsh_Flush");
+                       }	
+		       bcb->fbfidx->recpos = filepos;
+		       bcb->fbfidx->recnum = bcb->nrecs;
+		       bcb->fbfidx->reclen = len + 1;
+                       bcb->fbfidx->num_recs = 1;
+		       bcb->vbfidx = bcb->lbfidx = bcb->fbfidx;
+                       bcb->vbf_rec = 1;
+		    }
+                    else if ( bcb->lbfidx->reclen == len + 1)
+                    {
+                       /* This record is the same length as the previous record, so
+                       ** tag it to the end of this block.
+                       */
+                       bcb->lbfidx->num_recs++;
+                    }
+		    else
+		    {
+		       if ((bcb->lbfidx->nbfpos = (BFPOS *)MEreqmem(0, BFPOSLEN, TRUE, NULL)) == NULL)
+		       {
+                  if (iiuftfdDiagFunc != NULL)
+                     (*iiuftfdDiagFunc) (ERx("IIUFffr_FirstRec: Unable to allocate buffer\n"));
+                  iiufBrExit( bcb, E_UG0009_Bad_Memory_Allocation, 1, "IIUFfsh_Flush");
+		       }	
+		       bcb->lbfidx->nbfpos->recpos = filepos;
+		       bcb->lbfidx->nbfpos->pbfpos = bcb->lbfidx;
+		       bcb->lbfidx->nbfpos->recnum = bcb->nrecs;
+		       bcb->lbfidx->nbfpos->reclen = len + 1;
+                       bcb->lbfidx->nbfpos->num_recs = 1;
+		       bcb->lbfidx = bcb->lbfidx->nbfpos;
+		    }
+	 	}
+		rcb = rcb->nrcb;
+	}
+
+	/*
+	**  Do OS flush of output to disk. (#31005)
+	*/
+	SIflush(bcb->bffd);
+
+	if (iiuftfdDiagFunc != NULL)
+	   (*iiuftfdDiagFunc)
+	      (ERx("IIUFfsh_Flush: leaving (number of records = %d)\n"),
+	      bcb->nrecs);
+   	return;
+}
+
+/*{
+**    IIUFclb_ClearBcb	--  Clear the in-memory 'Browse Buffer'
+**
+**    This routines resets pointers in the BCB causing the browse
+**    buffer to be empty and ready for the first record to be
+**    FSaddrec'ed.
+**
+**    Returns: nothing
+**
+**  History:
+**	20-mar-2000 (kitch01)
+**		Bug 99136. Clear up the browse file index link list and 
+**		associated variables.
+**      11-mar-2002 (horda03) Bug 107271
+**              Set the Lastbb to Firstbb to reuse all the existing
+**              browse buffers, also obtain "memory buffer" if it was
+**              previously released.
+**	7-oct-2004 (thaju02)
+**	        Change no_pages to SIZE_TYPE.
+*/
+VOID
+IIUFclb_ClearBcb(bcb)
+BCB *bcb;
+{
+	SIZE_TYPE no_pages;
+	CL_SYS_ERR err;
+
+	bcb->nrows = 0;
+
+        bcb->frcb = NULL;
+	bcb->frec = 0;
+
+	bcb->lrcb = NULL;
+	bcb->lrec = 0;
+
+	bcb->vrcb = NULL;
+	bcb->vrec = 0;
+	bcb->vcol = 0;
+
+	if (bcb->bf_in_use)
+	   IIUFfbi_FreeBrowseIdx(bcb->fbfidx);
+
+	bcb->fbfidx = NULL;
+	bcb->lbfidx = NULL;
+	bcb->vbfidx = NULL;
+	bcb->bf_in_use = FALSE;
+        bcb->lastbb = bcb->firstbb;
+        bcb->vbf_rec = 0;
+
+        /* The memory buffer released to ensure sufficient space for
+        ** dumping output from memory to the spill file, may have been
+        ** release, so reclaim the memory if required.
+        */
+        if (!bcb->membuffer)
+        {
+           MEget_pages(ME_NO_MASK, BBMEMBUFPAGES, "", &bcb->membuffer, &no_pages, &err);
+        }
+
+	return;
+}
+
+
+/*
+**    IIUFfbi_FreeBrowseIdx	--  Free browse file index link list
+**
+**    This routines frees the memory allocated to the browse file
+**	  index link list
+**
+**    Returns: nothing
+**
+**  History:
+**	20-mar-2000 (kitch01)
+**		Bug 99136. Created.
+*/
+void 
+IIUFfbi_FreeBrowseIdx(BFPOS *bfidx)
+{
+	BFPOS	*next;
+
+	while (bfidx->nbfpos != NULL)
+	{
+	   next = bfidx->nbfpos;	
+	   MEfree(bfidx);
+	   bfidx = next;
+	}
+
+	return;
+}
+
+
+
+/*{
+**    IIUFdone  --  Shutdown the 'fullscreen' output browser routines
+**
+**    This routines deallocates all the control blocks used by the
+**    the fullscreen browser routines.
+**
+**    Returns: nothing
+**
+** History:
+**	1-jun-90 (teresal)
+**		Change LOdelete to LOpurge so all versions of the spill file
+**		will be deleted.  Problem was evident on VMS but not on Unix.
+**	26-nov-90 (sylviap)
+**		Need to close the browsefile so ALL versions can be deleted.
+**		#34629.
+**	20-mar-2000 (kitch01)
+**		Bug 99136. Clear up the memory allocated to the browse file 
+**		index link list.
+**      11-mar-2002 (horda03) Bug 107271.
+**              Clear memory acquired for Browse Buffers and memory buffer.
+*/
+VOID
+IIUFdone(bcb)
+BCB	*bcb;
+{
+	BBLIST *bb;
+	BBLIST *del_bb;
+        CL_SYS_ERR err;
+
+	if (bcb->iffd)
+		SIclose(bcb->iffd);
+
+	/*
+	**    If a previous backend request was begun but not
+	**    completed then call IIbreak to flush it out.
+	*/
+	if (bcb->backend && (bcb->req_begin && !bcb->req_complete))
+	{
+		IIbreak();
+	}
+
+	/* Need to close so can delete ALL versions of the file #34629 */
+	if (bcb->bffd)
+		SIclose(bcb->bffd);
+	LOpurge(&bcb->bfloc,0);
+
+	if (bcb->rd_ahead)
+		MEfree(bcb->rd_ahead);
+
+	if (bcb->bf_in_use)
+	   IIUFfbi_FreeBrowseIdx(bcb->fbfidx);
+
+	if (bcb->membuffer)
+	{
+		MEfree_pages( bcb->membuffer, BBMEMBUFPAGES, &err );
+	}
+
+	for(bb = bcb->firstbb; bb; )
+	{
+	   del_bb = bb;
+	   bb = bb->nxtbb;
+
+	   MEfree(del_bb);
+	}
+
+	MEfree(bcb);
+
+	return;
+}
+
+/*
+**    IIUFgnr_getnextrcb - Reads the spill file to get the next RCB
+**
+**    This routines reads the browse buffer spill file to retrieve
+**	  records into an RCB for display purposes by MTdraw().
+**
+**    Returns: OK or FAIL
+**
+**	  History:
+**	  20-mar-2000 (kitch01)
+**	     Bug 99136. Created.
+**    17-nov-2000 (kitch01)
+**       Amend above fix to be CL compliant. File access is now random and
+**       (for VMS) we pass the max column size. Also use SIread() 
+**       instead of SIgetrec().
+**    29-Mar-2001 (horda03)
+**       Too many characters were being copied from the temp buffer to the
+**       RCB's data area. Also, a temporary buffer isn't required. We can
+**       copy the data from the file directly into the rcb's data area.
+**       Bug 104291.
+**    20-jun-2001 (bespi01)
+**       Changed usage of line so that 0 rather than -1 causes a seek().
+**       This is so that line corresponds to the line on the screen that
+**       mtdraw() is going to display.
+**    08-Sep-2005 (thaju02) B115176
+**	 Change offset from i4 to OFFSET_TYPE.
+*/
+
+STATUS 
+IIUFgnr_getnextrcb(BCB *bcb, RCB **rcb, i4 line)
+{
+	i4 rc = OK;
+	i4 len = 0;
+	i4 j = line;
+	BFPOS *current_rec = bcb->vbfidx;
+        OFFSET_TYPE	offset;
+
+	if (iiuftfdDiagFunc != NULL)
+	   (*iiuftfdDiagFunc) (ERx("IIUFgnr_getnextrcb: Entering\n"));
+
+        /* line will be 0 if this is the first call from MTdraw(). If it is
+	** we need to close, open and position the spill file
+	*/
+	if (line == 0)
+	{
+  	   if (bcb->bffd != NULL)
+	   {
+	      /* Close spill file so we can reopen for read */
+	      if ((rc=SIclose(bcb->bffd)) != OK)
+	      {
+	         iiufBrExit( bcb, E_UF0019_CloseFile, 2, bcb->bfname, (PTR)&rc);
+	         return(rc);
+	      }
+	      bcb->bffd = NULL;
+	   }
+
+           /* Open spill file for read */
+	   if ((rc=SIfopen(&bcb->bfloc,ERx("r"),SI_RACC, RACC_BLKSIZE, &bcb->bffd)) != OK)
+	   {
+	      iiufBrExit( bcb, E_UF0017_FileOpenRead, 2, bcb->bfname, (PTR)&rc);
+	      return(rc);
+	   }
+           /* Position spill file at the record we need to begin reading from */
+           offset = current_rec->recpos + 
+		(((OFFSET_TYPE)(bcb->vbf_rec - current_rec->recnum)) * 
+		current_rec->reclen);
+	   if ((rc=SIfseek(bcb->bffd, offset, SI_P_START)) != OK)
+	   {
+	       if (iiuftfdDiagFunc != NULL)
+	          (*iiuftfdDiagFunc) 
+			  (ERx("IIUFgnr_getnextrcb: Seek failed position = %d\n"), bcb->vbfidx->recpos);
+	       iiufBrExit( bcb, E_UF0080_BrowseFileSeek, 2, &current_rec->recnum, (PTR)&rc);
+	       return(rc);
+	   }
+	}
+
+
+	/* find the record with length of this line. if we run out of records pretend we hit EOF */
+
+        /* horda03 - Now each "current_rec" refers to a number of (num_recs) in the spill file of
+        **           equal length. So to find the length of the required line, need to access the
+        **           current_rec for the line.
+        */
+        j += bcb->vbf_rec - current_rec->recnum;
+	while (current_rec && j >= current_rec->num_recs)
+	{
+		j -= current_rec->num_recs;
+		current_rec = current_rec->nbfpos;
+	}
+	if (current_rec == 0)
+	{
+		return (ENDFILE);
+	}
+
+
+   /* Get the next record from the spill file.
+   ** Can't pass (*rcb)->len as this is a short and
+   ** SIread will corrupt the start of (*rcb)->data.
+   */
+   rc = SIread(bcb->bffd, current_rec->reclen, &len, (*rcb)->data);
+   if (rc == ENDFILE)
+   {                        
+	*rcb = NULL;
+	if (current_rec->nbfpos != NULL)
+	{
+           if (iiuftfdDiagFunc != NULL)
+              (*iiuftfdDiagFunc) 
+		(ERx("IIUFgnr_getnextrcb: Endfile reached but there are more index records\n"));
+	}
+	return(rc);
+   }
+   else if (rc != OK)
+   {
+      if (iiuftfdDiagFunc != NULL)
+         (*iiuftfdDiagFunc) (ERx("IIUFgnr_getnextrcb: Read file failed rc = %d\n"), rc);
+      iiufBrExit(bcb, E_UF0081_BrowseFileRead, 3, &bcb->vbf_rec, bcb->bfname, (PTR)&rc);
+      return(rc);
+   }
+   /* remove trailing newline */
+   (*rcb)->data[len - 1] = '\0';
+
+   /* As we are using the spill file for record display the RCB will
+   ** only hold one record. So set previous and next RCBs to NULL
+   */
+   (*rcb)->prcb = NULL;
+   (*rcb)->nrcb = NULL;
+   (*rcb)->len  = len;
+
+   if (iiuftfdDiagFunc != NULL)
+      (*iiuftfdDiagFunc) (ERx("IIUFgnr_getnextrcb: Leaving\n"));
+
+   return(rc);
+}

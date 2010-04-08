@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+The domain is the host name of the local installation as described in DNS.
+Note that the domain may or may not correspond to the host name of the
+Key Distribution Center (KDC) for Kerberos.  The Name Server uses the
+domain name to construct the Kerberos service principal for the local machine.
+
+Note that the full host name must be specified, for example:
+   myHost.myDNSDomain.com
+not:
+   myHost
+
+Your local host name must not resolve to 127.0.0.1 (localhost), but must 
+resolve to the TCP/IP (remotely accessible) address. 

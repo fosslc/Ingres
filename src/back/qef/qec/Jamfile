@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!qef!qec
+#
+
+SubDir ING_SRC back qef qec ;
+
+IISUBSYS back qef qec ;
+
+
+IILIBRARY QEFLIB : qecmfunc.c qecdbg.c qec.c ;
+
+IILIBRARY IMPQEFLIBDATA : qecdata.c ;
+

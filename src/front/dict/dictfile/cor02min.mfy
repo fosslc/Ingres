@@ -1,0 +1,32 @@
+modify ii_app_cntns_comp to btree on app_id
+
+CREATE INDEX ii_app_cntns_comp_index
+    ON ii_app_cntns_comp (comp_id)
+    WITH STRUCTURE=BTREE
+
+MODIFY ii_client_dep_mod TO BTREE unique
+    ON client_name, client_version, module_name, module_version
+
+modify ii_dict_modules to btree unique
+    on module_name, module_version
+
+modify ii_encodings to cbtree unique on encode_object, encode_sequence
+
+modify ii_entities to btree unique on entity_id
+
+CREATE UNIQUE INDEX ii_entities_index on ii_entities
+  (folder_id, entity_type, entity_name, branch_name,
+  version_number)
+  with structure=btree
+
+MODIFY ii_locks TO HASH UNIQUE ON entity_id, session_id WHERE minpages = 8
+
+modify ii_id TO HEAP
+
+modify ii_longremarks to cbtree unique on object_id, remark_sequence
+
+modify ii_objects to btree on object_class,object_owner,object_name
+
+CREATE UNIQUE INDEX ii_objects_index ON ii_objects
+    (object_id) with structure=hash, minpages=16
+

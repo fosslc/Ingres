@@ -1,0 +1,2208 @@
+%{
+
+/* %L merge <eqgram.my> -- get the master grammar */
+/* %L fake begin */
+# include <eqgram.my>		-- fake out MING
+/* %L fake end */
+
+/* %L language begin 
+** Define EQ_X_LANG where X is EUC or PL1 for the symbol table
+** Also define the real host lang (if different) for gr_mechanism
+*/
+# define	EQ_EUC_LANG
+# define	EQ_FOR_LANG
+/* %L language end */
+
+# include 	<compat.h>
+# include	<er.h>
+# include	<si.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<equel.h>
+# include	<eqlang.h>
+# include	<equtils.h>
+# include	<eqsym.h>
+# include	<eqgen.h>
+# include	<eqstmt.h>
+# include	<eqscan.h>
+# include	<eqgr.h>
+# include	<ere1.h>
+
+%}
+
+/*
+**  Equel_Lang( VMS/Unix FORTRAN )
+**
+**  Language dependent grammar for the VMS/Unix FORTRAN statements that can be
+**  embedded in Equel.  Basically parses Declarations and Usages of variables
+**  and constants.
+**
+**  Conflicts with the main grammar:
+**	1.	There is a shift/reduce conflict between "## declare forms" and
+**		"## declare" followed by "## forms".
+**	2,3,4.	There is a shift/reduce conflict in variable usage when followed
+**		by a left paren.  This occurs in variables, arrays after a
+**		subscript, and in struct vars.
+**  Notes:
+**	1. We support all types.
+**	2. Indirection in the middle of structure references is not checked, 
+**	   only the indirection of the last member.
+**
+** History:	17-may-1985	- Written (mrw)
+**		10-jun-1987	- Updated for 6.0 (bjb)
+**		22-jun-1990	- Added Decimal support. (teresal)
+**		16-jul-1992	- apollo doesn't need .ftn ext. (sweeney)
+**	06-aug-1992  (kathryn)
+**		Change Fuse_var - Cast sym_g_dims to (i4) for "acc" compiler.  
+**	16-nov-1992 (lan)
+**		Added arguments to db_var calls.
+**		08-Feb-1993	- Added ifdef's for hp9_mpe (MPE/iX) in
+**				  gr_mechanism(). (fredb)
+**	12-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**	23-feb-1994 (johnst)
+**		Bug #59972
+**		Changed type of generic args in gr_mechanism to PTR to avoid
+**		truncations; cast them to the appropriate types when used in
+**		expressions to avoid compiler warnings.
+**	23-apr-1996 (thoda04)
+**		gen_host() expects 2 parms, not 1 for NEWLINE generation.
+**
+** Copyright (c) 2004 Ingres Corporation
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	16-apr-2001 (mcgem01)
+**	    Add support for Windows.
+*/
+
+/* Fake Ingres words reserved for testing */
+%token  tFORMVAR	tFORMSTRING	tFORMINT
+  	tQUELVAR	tQUELSTRING	tQUELINT	
+	tQUELDOT 				/* Test e.name */
+
+%token	tQUELPIN	tQUELPOUT		/* Test Param statements */
+	tFORMPIN	tFORMPOUT
+
+/* Equality operator */
+%token	tEQOP
+
+/* Keywords and Constants defined in G but used here */
+%token	tNAME		tSCONST		tINTCONST	tFLTCONST
+  	tDEREF		tFORMS
+  	tINCLUDE	/* Include filename - or Eof of file */
+	tDECCONST	/* Decimal constant */
+
+/* Punctuation from G */
+%token	tLPAREN		tRPAREN		tCOMMA		tPERIOD
+
+/* Arithmetic binary operator from G - '*' or '**' */
+%token	tMULOP tDIVOP
+
+/* Extra L tokens defined for G */
+%token	tPARAM
+	tMESSAGE	/* Extra C printf syntax */
+
+/* Special L tokens required by G and scanner to fill tok_special */
+%token  tHOSTCODE	/* Host language */
+	tCOMMENT	/* Comment token to trigger skipping comments */
+	tQUOTE		/* Triggers reading strings */
+	tTERMINATE	/* Statement terminators */
+
+/* Special L tokens required by G and scanner to fill tok_ahead */
+%token	tBEGIN_XACT	/* Begin and End Transaction */
+	tEND_XACT
+	tEND 		
+	tARUOP
+
+/* %L tokens begin - VMS FORTRAN tokens to import into G */
+
+/* Extra VMS FORTRAN punctuation */
+%token	tLBRACE	tRBRACE
+
+/* Special VMS FORTRAN tokens: Some are returned explicitly by gr_mechanism() */
+%token
+	tFCHAR		/* CHARACTER keyword */
+	tFDECLARE	/* DECLARE pseudo-keyword */
+	tFDECNAME	/* A new name appearing in a declaration */
+	tFCOMPLEX	/* COMPLEX keyword */
+	tFDOUBLE	/* As in "DOUBLE PRECISION" or "DOUBLE COMPLEX" */
+	tFEXTERN	/* EXTERNAL keyword */
+	tFFUNC		/* FUNCTION keyword */
+	tFMAP		/* MAP keyword */
+	tFPARAM		/* PARAMETER keyword */
+	tFPRECISION	/* PRECISION keyword */
+	tFPROC		/* PROCEDURE keyword */
+	tFPROGRAM	/* PROGRAM keyword */
+	tFRECORD	/* RECORD keyword */
+	tFSEMI		/* Semicolon -- for interactive declarations */
+	tFSTRUCT	/* STRUCTURE keyword */
+	tFSTRCT_VAR	/* The name of a structured variable */
+	tFTAG		/* A name declared as a struct tag when one is wanted */
+	tFTYPE		/* non-CHARACTER type -- REAL, COMPLEX, etc */
+	tFUNION		/* UNION keyword */
+/* %L tokens end */
+
+%nonassoc	tUNARYOP
+
+%start Fprogram
+
+%{
+
+/* %L locals begin - Local variables and gr structure for C */
+# include	<eqf.h>
+# include	<ere1.h>
+
+struct	gr_state {
+	/* Members known to both G and L */
+	SYM	*gr_sym;
+	char	*gr_id;		/* Last full name used */
+	i4	gr_type;
+	i4	gr_flag;	/* Certain state information */
+	i4	gr_func;	/* I/O Function constant */
+	i4	gr_mode;	/* Mode of statement before entering block */
+	i4	gr_adjective;	/* Block modifier */
+	SYM	*gr_nlsym;	/* Symtab pointer to indicator var */
+	char	*gr_nlid;	/* Id of indicator var */
+	i4	gr_nltype;	/* Type of indicator var */
+	SYM	*gr_null;	/* Generic null symbol (for "= null" assgnmts */
+
+	/* Add L (FORTRAN) dependent members after this statement */
+	i4	F_blk;		/* F block level */
+	i4	F_rec;		/* F record level */
+	i4	F_storage;	/* extern, static, auto, register, typedef */
+	i4	F_size;		/* Size of declaration */
+	i4	F_indir;	/* Indirection of variables */
+	i4	F_dec;		/* In declaration or usage */
+	i4	F_isfunc;	/* Is function declaration */
+	i4	F_dims;		/* Number of dimensions of variable */
+	i4	F_intval;	/* Value of last integer const */
+	i4	F_usedec;	/* TRUE iff ## declare already */
+	i4	F_intsize;	/* 2 or 4; the size of an integer */
+	SYM	*F_sym;		/* Current (scanner) name-symtab ptr: for '(' */
+	SYM	*F_struct;	/* Special pointer for references to structs */
+};
+GLOBALDEF struct gr_state _gr_local ZERO_FILL;
+GLOBALDEF struct gr_state *gr = &_gr_local;
+
+/* Make declaring names easy */
+# define	F_DECLARE( name, dims, size )\
+	F_declare( name, dims, size, gr->gr_type, gr->F_struct,\
+	    gr->F_rec, gr->F_blk )
+
+/* %L locals end */
+
+%}
+
+%%
+
+Fprogram:	/* EMPTY */
+	|	Fprogram statement
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+;
+
+statement:	equel_usage 
+		{
+		    gen_eqstmt( G_CLOSE, (char *)0 );
+		}
+	|	tINCLUDE 
+		{
+		    if (*($1.s) == 'i')		/* "include" or "<EOF>" */
+			inc_push_file();
+		    else
+			inc_pop_file();
+		}
+	| 	host_declare	 
+	|	host_code
+	| 	error 
+		{
+		    gr_mechanism( GR_STMTFREE );
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+
+equel_usage:	formvar host_var 
+		{
+		    arg_var_add( gr->gr_sym, gr->gr_id );
+		    gen_call( IIINGOPEN );
+		}
+	|	formstring fm_stringlist		/* Forms string */
+		{
+		    gen_call( IIINGOPEN );
+		}
+	|	formint fm_int		/* Forms integer */
+		{
+		    gen_call( IIINGOPEN );
+		}
+	|	formpin tLPAREN fm_in_param tRPAREN
+	|	formpout tLPAREN fm_out_param tRPAREN
+	|	message_parens
+	|	quelvar host_var 
+		{
+		    db_var( DB_REG, gr->gr_sym, gr->gr_id,
+				(SYM *)0, (char *)0, (char *)0 );
+		    db_close( IISYNCUP );
+		}
+	|	queldot ql_id ql_period ql_id	/* Quel id.id */
+		{
+		    db_close( IISYNCUP );
+		}
+	|	quelstring ql_sconst		/* Quel string constant */
+		{
+		    db_close( IISYNCUP );
+		}
+	|	quelint ql_int
+		{
+		    db_close( IISYNCUP );
+		}
+	|	quelpin ql_lparen ql_in_param ql_rparen
+		{
+		    db_close( IISYNCUP );
+		}
+	|	quelpout ql_lparen ql_out_param ql_rparen
+		{
+		    db_close( IISYNCUP );
+		}
+;
+
+formvar:	tFORMVAR 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+
+formstring:	tFORMSTRING 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+
+formint:	tFORMINT 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+
+formpin:	tFORMPIN
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		    gen_call( IIINGOPEN );
+		    gr->gr_func = IISETFIELD;
+		}
+;
+
+formpout:	tFORMPOUT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		    gen_call( IIINGOPEN );
+		    gr->gr_func = IIRETFIELD;
+		}
+;
+
+message_parens:	message
+;
+
+queldot:	tQUELDOT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+quelvar:	tQUELVAR
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+quelstring:	tQUELSTRING 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+quelint:	tQUELINT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+quelpin:	tQUELPIN
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+quelpout:	tQUELPOUT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+/* Equel objects */
+
+/*
+** fm_string - A forms string is expected.  Either a string constant a
+** 	      string variable or just a name is okay for the forms system.
+*/
+fm_string:	tSCONST	
+		{
+		    arg_str_add( ARG_CHAR, form_sconst($1.s) );
+		}
+	|	host_name_var 
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_CHAR)
+			    arg_var_add( gr->gr_sym, gr->gr_id );
+			else 
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    arg_str_add( ARG_CHAR, gr->gr_id );
+			}
+		    } else
+			arg_str_add( ARG_CHAR, gr->gr_id );
+		}
+;
+
+fm_stringlist:	fm_string
+	|	fm_stringlist fm_string
+;
+
+/* fm_int - Forms integer constant or variable */
+
+fm_int:		tINTCONST 
+		{
+		    arg_str_add( ARG_INT, $1.s );
+		}
+	|	host_name_var 
+		{
+		    if (gr->gr_sym)
+		    {
+			arg_var_add( gr->gr_sym, gr->gr_id );
+			if (gr->gr_type != T_INT && gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0061_grINTVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    } else
+		    {
+			arg_int_add( 11 );
+			er_write( E_EQ0059_grINT, EQ_ERROR, 1, gr->gr_id );
+		    }
+		}
+;
+
+/* ql_id - Quel id. Either a string variable or just a name (no quotes) */
+ql_id:		host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_CHAR)
+			    db_var( DB_ID, gr->gr_sym, gr->gr_id,
+				(SYM *)0, (char *)0, (char *)0 );
+			else
+			{
+			    if (gr->gr_type != T_UNDEF)
+			    	er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    db_key( gr->gr_id );
+			}
+		    } else 	/* No variable - just a name */
+		    {
+			db_key( gr->gr_id );
+		    }
+		}
+;
+
+/* ql_sconst - Quel string constant or string variable */
+ql_sconst:	tSCONST 
+		{
+		    db_sconst( $1.s );
+		}
+	|	host_name_var 
+		{
+		    if (gr->gr_sym && gr->gr_type == T_CHAR)
+			db_var( DB_REG, gr->gr_sym, gr->gr_id,
+				(SYM *)0, (char *)0, (char *)0 );
+		    else
+		    {
+			if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0066_grSTR, EQ_ERROR, 1, gr->gr_id );
+			db_key( gr->gr_id );
+		    }
+		}
+;
+
+/* ql_int - Quel integer constant or variable */
+ql_int:		tINTCONST 
+		{
+		    db_key( $1.s );
+		}
+	|	host_name_var 
+		{
+		    if (gr->gr_sym && gr->gr_type == T_INT)
+			db_var( DB_REG, gr->gr_sym, gr->gr_id,
+				(SYM *)0, (char *)0, (char *)0 );
+		    else
+		    {
+			if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0059_grINT, EQ_ERROR, 1, gr->gr_id );
+			db_key( gr->gr_id );
+		    }
+		}
+;
+
+ql_period:	tPERIOD
+		{
+		    db_op( $1.s );
+		}
+;
+
+ql_lparen:	tLPAREN
+		{
+		    db_op( $1.s );
+		}
+;
+
+ql_rparen:	tRPAREN
+		{
+		    db_op( $1.s );
+		}
+;
+
+/*
+** FORTRAN dependent grammar 
+*/
+
+/*
+** Connecting rules between a usage of a FORTRAN variable, names and string
+** constants and a equivalent Equel objects.
+**
+** Objects that must be defined by the L grammar for use by G:
+**
+** block_open and block_close - Block control syntax.
+** ql_in_param, ql_out_param, fm_in_param and fm_out_param Param target lists.
+** extra rules that may have alternative syntaxes for L.
+** host_code - Host code recognised, set L flags and print code.
+** host_declare - Host language declarations.
+** host_var - Host language variable.
+** host_name_var - Host language name or variable.
+** Note:
+**     Both host_var, and host_name_var must set gr->gr_sym, gr->gr_type and
+** gr->gr_id after freeing the current id space.  Callers above should be able 
+** to access gr->gr_sym, gr->gr_type, and gr->gr_id when wanting the variable.
+** The type of gr->gr_type should be the equivalent Equel type (C) not the 
+** host language type.
+*/
+
+/* %L rules begin - FORTRAN dependent grammar */
+
+/*
+** Fblock is called from statement (via host_declare, thence to Fdeclaration).
+** This allows a program block, a procedure block, or a function block
+** to appear anywhere (at top level).  We catch nested blocks in the semantics,
+** but don't bother checking for repeated program blocks -- it isn't worth
+** the (very little) trouble.  We go ahead and enter a nested block
+** if the user gave us one; this will allow him to declare variables
+** there, but it won't compile very well.  Similarly, inside an EQUEL
+** block he'll be able to declare variables, but his compiler won't
+** like it.
+*/
+
+Fblock:		Fheader Fset_declare Fnewline_gen Fblock_body Freset_declare
+;
+
+Fset_declare:
+		{
+		    gr->F_usedec = FDEC_NONE|FDEC_BLOCK;
+		}
+;
+
+Freset_declare:
+		{
+		    gr->F_usedec = FDEC_NONE;
+		}
+;
+
+Fheader:	Fproc_hdr
+	|	Ffunc_hdr
+	|	Fprog_hdr
+;
+
+Fprog_hdr:	Fprogram_key Fblock_name
+;
+
+Fproc_hdr:	Fproc_key Fblock_name Fopt_parens
+;
+
+Ffunc_hdr:	Ftype_key Fopt_star_len Ffunc_key Fblock_name Ffunc_body
+	|	Ffunc_nl_key Fblock_name Ffunc_body
+;
+
+	/* Allowing "*LEN" after the name (Fopt_star_len) is a VMS Extension */
+Ffunc_body:	Fopt_star_len Fopt_parens
+;
+
+Fblock_body:	Fstatement_list Fblock_end
+;
+
+Fblock_name:	tFDECNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    sym_s_begin( F_CLOSURE );
+		  /* 1: predefined. 2: global "DECLARE" block. 3: PROC block */
+		    if (++gr->F_blk > 3)
+			er_write( E_E10006_hfNESTFUNCDEF, EQ_ERROR, 1, $1.s );
+		}
+;
+
+Fblock_end:	Fend_key
+		{
+		    /* gr->F_blk will always be >= 2 */
+		    if (gr->F_blk > 1)
+			_VOID_ sym_s_end( gr->F_blk-- );
+		}
+;
+
+Fstatement_list: /* EMPTY */
+	|	Fstatement_list statement
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+;
+
+Fopt_parens:	/* EMPTY */
+	|	tLPAREN		/* sc_eat will spit it out for us */
+		{
+		    sc_eat( gen_code, SC_NEST|SC_SEEN, ERx(")"), '(', ')' );
+		}
+;
+
+/* 
+** G rules that must defined by L because of differences between
+** languages and systems.
+*/
+
+/* Equel block delimiters */
+
+block_open:	tLBRACE		/* Pascal uses tBEGIN */
+;
+
+block_close:	tRBRACE		/* Pascal uses tEND */
+		{
+		    gr->gr_flag &= ~GR_HOSTCODE;
+		}
+;
+
+/*
+** Param target lists.
+**
+** Syntax:	PARAM( format, argvec )
+**
+** Generates:
+**		For Out lists:
+**		    IIoutfunc( targetlist, argvector );
+**		For In lists:
+**		    IIinfunc( targetlist, argvector );
+** Note:
+**	In FORTRAN we parse param statements just to the extent of
+**	picking off the string variable/literal targetlist and
+**	the name for the argument vector.  Variables in param statements
+**	are not required to have been declared to EQUEL, so we don't
+**	look them up.
+*/
+
+/* Quel Param target lists */
+
+ql_in_param:	ql_param_parens		/* Input param */
+		{
+#ifdef VMS
+		    arg_str_add( ARG_RAW, ERx("IIxintrans") );
+#endif
+		    gen_call( IIPARSET );
+		}
+;
+
+ql_out_param:	ql_param_parens		/* Output param */
+		{
+#ifdef VMS
+		    arg_str_add( ARG_RAW, ERx("IIxouttrans") );
+#endif
+		    gen_call( IIPARRET );
+		}
+;
+
+ql_param_parens: ql_param_key tLPAREN param_list 
+;
+
+ql_param_key:   tPARAM
+		{
+		    db_send();
+		}
+;
+
+param_list:	param_target tCOMMA param_avar tRPAREN
+;
+
+param_target:	tSCONST
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+	|	param_tvar
+;
+
+param_tvar:	param_varname param_opt_paren    /* Target list */
+		{
+		    SYM		*sy;
+
+		    sy = sym_resolve( (SYM *)0, ERx("character"), 
+			F_CLOSURE, syFisTYPE );
+		    arg_var_add( sy, str_add(STRNULL, id_getname()) );
+		    id_free();
+		}
+;
+
+param_avar:	param_varname param_opt_paren    /* Argument vector */
+		{
+		    SYM		*sy;
+
+		    sy = sym_resolve( (SYM *)0, ERx("integer"),
+			F_CLOSURE, syFisTYPE );
+		    arg_var_add( sy, str_add(STRNULL, id_getname()) );
+		    id_free();
+		}
+;
+
+param_varname:	tNAME
+		{
+		    id_add( $1.s );
+		}
+;
+
+param_opt_paren: /* No array subscripts */
+	|	tLPAREN		/* Eat through subscripts */
+		{
+		    sc_eat( id_add, SC_NEST|SC_SEEN, ERx(")"), '(', ')' );
+		}
+;
+
+
+
+/*
+** Form param target lists.
+**
+** Note:	Based on gr->gr_func verifies validity of a Param list.
+*/
+
+fm_out_param:	fm_param_parens		/* Input param */
+		{
+		    if ($1.i)
+			er_write( E_EQ0055_grFMPARAM, EQ_ERROR, 0 );
+#ifdef VMS
+		    arg_str_add( ARG_RAW, ERx("IIxouttrans") );
+#endif
+		    gen_call( gr->gr_func );
+		}
+;
+
+fm_in_param:	fm_param_parens		/* Output param */
+		{
+		    if ($1.i)
+			er_write( E_EQ0055_grFMPARAM, EQ_ERROR, 0 );
+#ifdef VMS
+		    arg_str_add( ARG_RAW, ERx("IIxintrans") );
+#endif
+		    gen_call( gr->gr_func );
+		}
+;
+
+param_key:	tPARAM
+;
+
+fm_param_parens: param_key tLPAREN param_list
+		{
+		    $$.i = 0;		/* No error */
+		    switch (gr->gr_func)
+		    {
+		      case IIRETFIELD:
+			gr->gr_func = IIRF_PARAM;
+			break;
+
+		      case IISETFIELD:
+			gr->gr_func = IISF_PARAM;
+			break;
+
+		      case IITCOLRET:	
+			gr->gr_func = IITRC_PARAM;
+			break;
+    
+		      case IITCOLSET:	
+			gr->gr_func = IITSC_PARAM;
+			break;
+
+		      case IICSRETRIEVE:
+			gr->gr_func = IICSPARGET;
+			break;
+    
+		      default:
+			$$.i = 1;	/* Error in function */
+			break;
+		    }
+		}
+;
+
+/*
+** Extra syntax for the Message statement for C and Fortran. 
+** 
+** Note:
+**  1. C supports the parens for possible printf syntax.
+**  2. Fortran supports the parens: 	tLPAREN fm_string tRPAREN
+*/
+
+message: 	message_key tLPAREN fm_string tRPAREN
+		{
+		    gen_call( IIMESSAGE );
+		}
+;
+
+/* %L fake begin - message_key already in G */
+message_key:	tMESSAGE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+/* %L fake end - already in G */
+
+/* 
+** Extra syntax for:
+**	COPY, CREATE, INITTABLE
+** statements to allow "integer" and "character" as id's.
+** We cannot allow the ql_id rule to directly allow these types as this would 
+** cause a number of shift reduce conflicts on statements that optionally 
+** allow ql_id on the end of a statment (possibly followed by a FORTRAN type 
+** on the beginning of the next).
+** fm_string has the same problem (it can appear as the last item on an INGRES
+** statement).
+** Note that these problems (the shift/reduce ones) do not exist for ESQL
+** because of terminators, so that the equivalent of ql_id (sqsl_id) and 
+** fm_string can just be made to allow these types.
+*/
+
+copy_qid:	tFTYPE			/* From COPY statement */
+		{
+		    db_key($1.s);
+		}
+	|	tFCHAR
+		{
+		    db_key($1.s);
+		}
+;
+create_qid:	tFTYPE			/* From CREATE statement */
+		{
+		    db_key($1.s);
+		}
+	|	tFCHAR
+		{
+		    db_key($1.s);
+		}
+;
+ql_func:	tFTYPE			/* For left side of function */
+		{
+		    db_key($1.s);
+		}
+	|	tFCHAR
+		{
+		    db_key($1.s);
+		}
+;
+inithide_type:	tFTYPE 			/* From INITTABLE statement */
+		{
+		    id_add( $1.s );
+		}
+	|	tFCHAR
+		{
+		    id_add($1.s);
+		}
+;
+
+
+/* Allow for word MAP in FRS statement - MAP is a FORTRAN reserved word */
+frs_constname:	tFMAP
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/* 
+** Allow for word STRUCTURE in WITH clause (INDEX,CREATE statements).
+** STRUCTURE is a FORTRAN reserved word.
+*/
+ql_with_left:	tFSTRUCT
+		{
+		    db_key($1.s);
+		}
+;
+
+
+/* Host code production
+**
+** The scanner has passed the full line of host language
+** code, as an argument.  The newline is included.
+*/
+host_code:	tHOSTCODE 
+		{
+		    if ((gr->gr_flag & GR_HOSTCODE) == 0)
+		    {
+			gen_line( ERx("host code") );
+			gr->gr_flag |= GR_HOSTCODE;
+		    }
+		    gen_host( G_H_CODE, $1.s );
+		    gr->F_dec = GR_F_DEC;	/* Maybe dec's to follow */
+		}
+	|	tFSEMI			/* for interactive declarations */
+;
+		
+/* FORTRAN declarations */
+
+host_declare:	Fdeclaration
+		{
+		    gr->F_rec = 0;
+		    gr->F_dims = 0;
+		    gr->F_size = 0;
+		    gr->F_indir = 0;
+		    gr->F_dec = GR_F_DEC;	/* Maybe dec's to follow */
+		    gr->gr_type = T_INT;
+		    gr->F_storage = T_NONE;
+		    gr->F_struct = (SYM *)0;
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+	|	tFDECLARE Fopt_forms
+		{
+		    if (gr->F_usedec & FDEC_BLOCK)	/* ## subroutine foo */
+		    {
+			if (gr->F_usedec & FDEC_DECLARE)
+			    er_write( E_E10008_hfREDECLARE, EQ_ERROR, 0 );
+			else
+			{
+			    gr->F_usedec = FDEC_DECLARE | FDEC_BLOCK | $2.i;
+			    gen_declare($2.i == FDEC_FORMS);
+			}
+		    } else	/* new declaration just overrides old one */
+		    {
+			gr->F_usedec = FDEC_DECLARE | $2.i;
+			gen_declare($2.i == FDEC_FORMS);
+
+		      /* end old scope and start new one */
+			_VOID_ sym_s_end( gr->F_blk );
+			sym_s_begin( F_CLOSURE );
+		    }
+
+		    gr->gr_flag |= GR_HOSTCODE;
+		    gr->F_dec = GR_F_DEC;	/* Maybe dec's to follow */
+		}
+;
+
+Fopt_forms:	/* EMPTY */
+		{
+		    $$.i = FDEC_NONE;
+		}
+	|	tFORMS
+		{
+		    $$.i = FDEC_FORMS;
+		}
+;
+
+/*
+** A VMS FORTRAN declaration is
+**	1. A normal declaration
+**	2. A record declaration
+**	3. A structure declaration
+** Only a normal declaration may be initialized.
+** A structure declaration does not declare any variables (reserve storage).
+**
+** Non-standard VMS extension:
+**   All extensions are commented with "VMS Extension".
+**	1. Record declarations
+**	2. Structure declarations (including unions)
+**	3. Initialization in a declaration
+**	4. "*len" specifiers on a non-char name
+*/
+
+/*
+** VMS FORTRAN structures are much like C structures (but of course
+** are more verbose).  Structures are defined with the
+**	STRUCTURE /struct-name/ {field-decl}+ END STRUCTURE
+** statement - the "multi-statement structure declaration",
+** where "field-decl" is:
+**	1. An ordinary FORTRAN declaration (possibly with initialization)
+**	2. A RECORD declaration
+**	3. A nested STRUCTURE declaration (a "substructure declaration")
+**	4. A UNION declaration
+**
+** Variables of structure-type are declared with the
+**	RECORD /tag/ name-list  {, /tag/ name-list}
+** statement, where "tag" is a previously declared "struct-name" and
+** "name-list" is "name {, name}".
+**
+** A substructure declaration is
+**	STRUCTURE [/tag/] [name-list] {field-decl}+ END STRUCTURE
+** At least one of [/tag/] and [name-list] must be present.
+**
+** A UNION declaration is
+**	UNION map_decl {map_decl}+ END UNION
+** where "map_decl" is
+**	MAP {field_decl}+ END MAP
+**
+** An ordinary declaration is
+**	CHARACTER [[char-len] [,]] name-len-init-list
+**	    where "name-len-init-list" is "name-len-init {, name-len-init}" and
+**	    "name-len-init" is "name [(...)] [*len] [/init-val/]" and "char-len"
+**	    is "*(*)" or "*len" "*(len)".
+** or
+**	type-name name-init-list
+**	    where "name-init-list" is "name-init {, name-init}" and
+**	    "name-init" is "name-len [/init-val/]" and "name-len" is
+**	    "name [*len] [(...)]" and "type-name" is
+**	    BYTE | LOGICAL [*1|*2|*4] | INTEGER [*2|*4] | REAL [*4|*8|*16]
+**		 | COMPLEX [*8|*16] | DOUBLE PRECISION | DOUBLE COMPLEX
+**
+**
+** Examples:
+**
+** STRUCTURE /name/ ... END STRUCTURE
+**   STRUCTURE /a/				! "a" not seen as a tag yet
+**	INTEGER b*2, c				! "b" is a 2-byte integer
+**   END STRUCTURE
+**
+** RECORD /tag/ declist
+**    RECORD /a/ b, c				! "a" already seen as a tag
+**
+** UNION map_decl {map_decl}+ END UNION
+** MAP {field_decl}+ END MAP
+**    UNION
+**	MAP
+**	    INTEGER		a(3)	! 1 3-integer array
+**	    LOGICAL*2		b	! 1 2-byte logical
+**	    CHARACTER*32	z(4)*8	! 4 8-byte character arrays
+**	END MAP
+**	MAP
+**	    LOGICAL*2		c	! 1 2-byte logical
+**	    INTEGER		d	! 1 integer
+**	END MAP
+**	MAP
+**	    STRUCTURE structa, structb	! 2 structs, each with 4 shorts, 1 int
+**		INTEGER b*2(4), c	! "b" is array of 2-byte integers
+**	    END STRUCTURE
+**	    RECORD /a/ bar
+**	END MAP
+**    END UNION
+*/
+
+/* Top-level declaration */
+Fdeclaration:	Fdecl
+	|	Frec_decl		/* VMS Extension */
+	|	Fstruct_decl		/* VMS Extension */
+	|	Fblock
+	|	Fparameter
+;
+
+/* structure declaration */
+Fstruct_decl:	Fstruct_key Fslash_name Ffld_lbrace Ffield_decl_list
+		    Ffld_rbrace Fend_key Fstruct_key
+;
+
+Fslash_name:	Fdivop_key Fname_key_or_tag Fdivop_key
+		{
+		    register SYM	*sy;
+
+		  /* if we got tFTAG then we'll get a symtab error here */
+		    sy = $$.v = symDcEuc( $2.s, gr->F_rec, gr->F_blk, syFisTAG,
+			    F_CLOSURE, SY_TAG );
+		    gr->gr_type = T_STRUCT;
+		    if (sy)
+			sym_s_btype( sy, T_STRUCT );
+		    gr->F_dec = GR_F_DEC;
+		}
+;
+
+Fname_key_or_tag: Fname_key
+		{
+		    $$.s = $1.s;
+		}
+	|	tFTAG
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+;
+
+Ffld_lbrace:
+		{
+		    gr->F_rec++;
+		    gen_host( G_H_INDENT | G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+Ffld_rbrace:
+		{
+		    gr->F_rec--;
+		    gen_host( G_H_OUTDENT | G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+Ffield_decl_list: Ffield_decl
+	|	Ffield_decl_list Fnewline_gen Ffield_decl
+;
+
+/* Insides of a structure declaration */
+Ffield_decl:	Ffield_decl_stuff
+		{
+		    gr->F_dims = 0;
+		}
+	|	host_code
+	|	error
+;
+
+Ffield_decl_stuff:
+		Fdecl
+	|	Frec_decl
+	|	Fsub_struct_decl
+	|	Funion_decl
+;
+
+Fsub_struct_decl:
+		Fstruct_key Fopt_slashname Foptname_list Ffld_lbrace
+		    Ffield_decl_list Ffld_rbrace Fend_key Fstruct_key
+;
+
+Fopt_slashname:	/* EMPTY */
+		{
+		    /* BUG 2259 - Explicitly set type of nested struct */
+		    gr->gr_type = T_STRUCT;
+		}
+	|	Fslash_name
+;
+
+/*
+** Ordinary declarations
+*/
+
+Fdecl:		Fchar_decl		/* character declaration */
+	|	Fothr_decl		/* other declaration */
+;
+
+Fchar_decl:	Fchar_key Fopt_star_len_comma Fchar_dims_gen Fchar_init_list
+;
+
+Fothr_decl:	Ftype_key Fopt_star_len Fothr_dims_gen Fothr_init_list
+;
+
+Fchar_dims_gen:
+		{
+		  /* gr->F_intval is set by Fopt_star_len_comma */
+		    gr->F_dims = (gr->F_intval ? 1 : 0);
+		    gr->F_intval = 0;
+		}
+;
+
+Fothr_dims_gen:
+		{
+		    gr->F_dims = 0;		/* not an array */
+		  /* gr->F_intval is set by Fopt_star_len */
+		    if (gr->F_intval)		/* *size */
+			gr->F_size = gr->F_intval;
+		    gr->F_intval = 0;
+		}
+;
+
+Fopt_star_len_comma: /* EMPTY */
+		{
+		    gr->F_intval = 0;
+		}
+	|	Fstar_len Fopt_comma
+		{
+		    gen_host( G_H_OP, ERx(" ") );	/* last token was OP */
+		}
+;
+
+Fstar_len:	Fmulop_key Fintconst_key
+	|	Fmulop_key Fparen_len	/* CHARACTER*(*) or CHARACTER*(expr) */
+		{
+		    gr->F_intval = $2.i;
+		}
+;
+
+Fopt_comma:	/* EMPTY */
+	|	Fcomma_key
+;
+
+Fchar_init_list:
+		Fchar_init
+	|	Fchar_init_list Fcomma_key Fchar_init
+;
+
+Fothr_init_list:
+		Fothr_init
+	|	Fothr_init_list Fcomma_key Fothr_init
+;
+
+Fchar_init:	Fchar_name Fopt_init		/* Fopt_init is VMS Extension */
+;
+
+Fothr_init:	Fothr_name Fopt_init		/* Fopt_init is VMS Extension */
+;
+
+	/*
+	** character*7	nm(10)*(5*7)
+	**          ^       ^    ^
+	**          |       |    |
+	**          |       |    +------ String length (gr->F_intval)
+	**          |       +----------- Number of strings ($2.i)
+	**          +------------------- Default string length (gr->F_dims)
+	**
+	** All of the values are 0 or 1 (we care only how many indices there
+	** are, not what the ranges are).  In fact, since the stuff in parens
+	** could be comma-separated lists of dimensions we could get horribly
+	** confused, so we will check only whether "some" indices are allowed,
+	** not "how many".
+	*/
+Fchar_name:	Fname_key Fopt_paren_len Fopt_star_len
+		{
+		  /*           name  dims                size  */
+		    F_DECLARE( $1.s, $2.i, (gr->F_intval ? 1 : gr->F_dims) );
+		    gr->F_intval = 0;
+		}
+;
+
+Fothr_name:	Fname_key Fopt_star_len Fopt_paren_len
+		{
+		  /*           name  dims    size        */
+		    F_DECLARE( $1.s, $3.i, gr->F_size );
+		    gr->F_intval = 0;
+		}
+;
+
+Fopt_paren_len:	/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+	|	Fparen_len
+;
+
+Fparen_len:	tLPAREN
+		{
+		    sc_eat( gen_code, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+		    $$.i = 1;
+		}
+;
+
+Fopt_star_len:	/* EMPTY */
+	|	Fstar_len
+;
+
+Fopt_init:	/* EMPTY */
+	|	tDIVOP			/*  /stuff/  */
+		{
+		    sc_eat( gen_code, SC_SEEN, ERx("/"), '/', '/' );
+		}
+;
+
+Frec_decl:	Frecord_key Frec_list
+		{
+		    gr->gr_type = T_INT;
+		}
+;
+
+Frec_list:	Ftag Fname
+	|	Frec_list Fcomma_key Ftag_elm
+;
+
+Ftag_elm:	Fname
+	|	Ftag Fname
+;
+
+Ftag:		Fdivop_key Ftag_gen Ftag_key Fdivop_key
+		{
+		    gr->F_dec = GR_F_DEC;
+		}
+;
+
+Ftag_gen:
+		{
+		    gr->F_dec = GR_F_TAG;
+		}
+;
+
+Foptname_list:	/* EMPTY */
+	|	Fname_list
+;
+
+Fname_list:	Fname
+	|	Fname_list Fcomma_key Fname
+;
+
+Fname:		Fname_key Fopt_paren_len
+		{
+		  /*           name  dims size */
+		    F_DECLARE( $1.s, $2.i, 0 );
+		}
+;
+
+/* Union declaration */
+Funion_decl:	Funion_key Findent_gen Fmap_decl_list Foutdent_gen
+		    Fend_key Funion_key
+;
+
+Fmap_decl_list:
+		Fmap_decl
+	|	Fmap_decl_list Fnewline_gen Fmap_decl
+;
+
+Fmap_decl:	Fmap_key Findent_gen Ffield_decl_list Foutdent_gen
+		    Fend_key Fmap_key
+	|	host_code
+	|	error
+;
+
+/*
+ * generators
+ */
+
+Findent_gen:
+		{
+		    gen_host( G_H_INDENT | G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+Foutdent_gen:
+		{
+		    gen_host( G_H_OUTDENT | G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+Fnewline_gen:
+		{
+		    gen_host( G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+/*
+ * keywords
+ */
+
+Fchar_key:	tFCHAR
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_size = 0;		/* for IIvmsret! */
+		    gr->F_indir = 0;
+		    gr->F_dims = 0;
+		    gr->gr_type = T_CHAR;
+		    gr->F_dec = GR_F_DEC;
+		    gr->F_intval = 0;
+		}
+;
+
+Fcomma_key:	tCOMMA
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Fdivop_key:	tDIVOP
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Fend_key:	tEND
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Ffunc_key:	tFFUNC
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_dec = GR_F_DEC;
+		}
+;
+
+Ffunc_nl_key:	tFFUNC
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_dec = GR_F_DEC;
+		}
+;
+
+Fintconst_key:	tINTCONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    CVan( $1.s, &gr->F_intval );
+		}
+	|	tARUOP tINTCONST	%prec tUNARYOP
+		{
+		    i4		i;
+
+		    CVan( $2.s, &gr->F_intval );
+		    if (*($1.s) == '-')
+		    {
+			gen_host( G_H_OP, ERx("-") );
+			gr->F_intval = -gr->F_intval;
+		    }
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+
+Flparen_key:	tLPAREN
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+
+Fmap_key:	tFMAP
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Fmulop_key:	tMULOP
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+
+Fname_key:	tFDECNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+;
+
+Fparameter_key:	tFPARAM
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_OP, ERx(" ") );
+		}
+;
+
+Fproc_key:	tFPROC
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_dec = GR_F_DEC;
+		}
+;
+
+Fprogram_key:	tFPROGRAM
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_dec = GR_F_DEC;
+		}
+;
+
+Frecord_key:	tFRECORD
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_dec = GR_F_TAG;		/* expect a tag */
+		}
+;
+
+Frparen_key:	tRPAREN
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+
+Fstruct_key:	tFSTRUCT
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_dec = GR_F_TAG;		/* expect a tag */
+		}
+;
+
+Ftag_key:	tFTAG
+		{
+		    register SYM	*sy;
+
+		    gen_host( G_H_KEY, $1.s );
+		    sy = sym_resolve( (SYM *)0, $1.s, F_CLOSURE, syFisTAG );
+		    gr->F_struct = sy;
+		    gr->gr_type = T_STRUCT;
+		    gr->F_dec = GR_F_DEC;
+		}
+;
+
+Ftype_key:	tFTYPE
+		{
+		    SYM		*sy;
+
+		    sy = sym_resolve( (SYM *)0, $1.s, F_CLOSURE, syFisTYPE );
+		    if (!sy)
+			er_write( E_E10001_hfBADTYPE, EQ_ERROR, 1, $1.s );
+		    else
+		    {
+			gr->F_size = sym_g_dsize( sy );
+			gr->F_indir = sym_g_indir( sy );
+			gr->gr_type = sym_g_btype( sy );
+		    }
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_dec = GR_F_DEC;
+		    gr->F_intval = 0;
+		}
+	|	tFDOUBLE tFPRECISION
+		{
+		    gr->F_size = 8;
+		    gr->F_indir = 0;
+		    gr->gr_type = T_FLOAT;
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    gr->F_dec = GR_F_DEC;
+		    gr->F_intval = 0;
+		}
+	|	tFDOUBLE tFCOMPLEX
+		{
+		    gr->F_size = 8;
+		    gr->F_indir = 0;
+		    gr->gr_type = T_FLOAT;
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    gr->F_dec = GR_F_DEC;
+		    er_write( E_E10001_hfBADTYPE, EQ_ERROR, 1,
+							ERx("DOUBLE COMPLEX") );
+		    gr->F_intval = 0;
+		}
+	|	tFCOMPLEX
+		{
+		    gr->F_size = 8;
+		    gr->F_indir = 0;
+		    gr->gr_type = T_FLOAT;
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_dec = GR_F_DEC;
+		    er_write( E_E10001_hfBADTYPE, EQ_ERROR, 1, $1.s );
+		    gr->F_intval = 0;
+		}
+;
+
+Funion_key:	tFUNION
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+/* More non-generator FORTRAN rules */
+
+Fparameter:	Fparameter_key Fparameter_list
+	|	Fparameter_key Flparen_key Fparameter_list Frparen_key
+;
+
+Fparameter_list: Fparameter_elm
+	|	Fparameter_list Fcomma_key Fparameter_elm
+;
+
+Fparam_name:	tFDECNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_OP, ERx("=") );
+		}
+;
+
+Fparameter_elm:	Fparam_name tEQOP Fdef_const
+		{
+		    register SYM	*sy;
+
+		    if (gr->gr_type != T_NONE)
+		    {
+			if (sy=symDcEuc($1.s, 0, gr->F_blk, syFisCONST,
+			    F_CLOSURE, SY_NORMAL))
+			{
+			    sym_s_btype( sy, gr->gr_type );
+			    sym_s_dsize( sy, gr->F_size );
+			}
+		    } else
+			er_write( E_E10002_hfDEFINE, EQ_ERROR, 1, $1.s );
+		}
+;
+
+Fdef_const:	Fintconst_key
+		{
+		    gr->gr_type = T_INT;
+		    gr->F_size = gr->F_intsize;
+		}
+	|	Ffltconst_key
+		{
+		    gr->gr_type = T_FLOAT;
+		    gr->F_size = sizeof(f4);	/* real constants are real*4 */
+		}
+	|	tSCONST
+		{
+		    gr->gr_type = T_CHAR;
+		    gr->F_size = STlength( $1.s );
+		    gen_host( G_H_SCONST, $1.s );
+		}
+	|	Fdef_other
+		{
+		    gr->gr_type = T_NONE;
+		}
+;
+
+Ffltconst_key:	tFLTCONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tARUOP tFLTCONST	%prec tUNARYOP
+		{
+		    if (*($1.s) == '-')
+			gen_host( G_H_OP, ERx("-") );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tDECCONST	/* No decimal in FORTRAN, treat as a float */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tARUOP tDECCONST	%prec tUNARYOP
+		{
+		    if (*($1.s) == '-')
+			gen_host( G_H_OP, ERx("-") );
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+
+/* miscellaneous illegal PARAMETER constant expressions -- for warnings */
+Fdef_other:	Fdef_simple
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tFDOUBLE tFPRECISION
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tFDOUBLE tFCOMPLEX
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+
+Fdef_simple:	tFDECNAME
+	|	tFTYPE
+	|	tFCHAR
+	|	tFCOMPLEX
+;
+
+/* 
+** host_var - Host variable to receive data;
+** Uses Fuse_var that returns a symbol table entry;
+** If no variable then enter it as undefined for later referencing;
+*/
+host_var:	Fuse_var 
+		{
+		    SYM		*sy;
+
+		    gr->gr_type = T_UNDEF;		/* Error default */
+		    if ((sy = $1.v) == (SYM *)0)	/* Enter undefined */
+		    {
+			er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								id_getname() );
+		    	sy = symDcEuc( id_getname(), 0, gr->F_blk, 
+			       syFisVAR, F_CLOSURE, SY_NORMAL );
+		    	if (sy)
+			    sym_s_btype( sy, T_UNDEF );
+		    } else if (!syBitAnd(sym_g_useof(sy),syFisVAR) ||
+			      sym_g_btype(sy) == T_STRUCT)
+			er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								id_getname() );
+		    if (sy)
+			gr->gr_type = sym_g_btype( sy );
+		    gr->gr_sym = sy;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+;
+
+/* 
+** host_name_var - Host language variable or just a name;
+** uses Fuse_var that returns a symbol table entry;
+*/
+
+host_name_var:	Fuse_var
+		{
+		    if ($1.v)
+			gr->gr_type = sym_g_btype( $1.v );
+		    else
+			gr->gr_type = T_NONE;
+		    gr->gr_sym = $1.v;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+;
+
+/* Fuse_var returns symbol table pointer */
+Fuse_var:	Fuse_setup Fuse_xvar
+		{
+		    register SYM	*sy = $2.v;
+
+		    if (sy)
+		    {
+		      /* Check to see if subscription was required */
+			if (sym_g_btype(sy)==T_CHAR)
+			{
+			  /* not enough dimensions */
+			    if (gr->F_dims < (i4)sym_g_dims(sy))
+			    {
+				er_write( E_E10003_hfINDIR, EQ_ERROR, 3,
+								id_getname(),
+				    er_na(gr->F_dims), er_na(sym_g_dims(sy)) );
+			    }
+			  /* too many dimensions+substringing */
+			    else if (gr->F_dims > 
+				     (i4)sym_g_dims(sy) + sym_g_dsize(sy)
+				    )
+			    {
+				er_write( E_E10003_hfINDIR, EQ_ERROR, 3,
+				    id_getname(), er_na(gr->F_dims),
+				    er_na(sym_g_dims(sy)) );
+			    }
+			} else if (gr->F_dims != sym_g_dims(sy))
+			    er_write( E_E10003_hfINDIR, EQ_ERROR, 3,
+				id_getname(), er_na(gr->F_dims),
+				er_na(sym_g_dims(sy)) );
+			
+		    }
+		    gr->F_struct = (SYM *)0;	/* Reset for next time */
+		    sym_f_init();
+		    gr->F_dims = 0;
+		    $$.v = $2.v;
+		}
+;
+
+Fuse_setup:	/* Set up variable reference (just in case was not reset) */
+		{
+		    gr->F_struct = (SYM *)0;
+		    sym_f_init();
+		    gr->F_dims = 0;
+		    gr->F_dec = GR_F_USE;
+		}
+;
+/*
+** Fuse_xvar returns pointer to symbol table entry;
+**
+** Fuse_regname:  This path is the standard PL1 reference that can be 
+**		  elliptical, so the sym stack is used.
+** Fstruct_var:   Structures must be fully qualified so it uses sym_resolve
+**		  instead of the messier stack.
+*/
+Fuse_xvar:	Fuse_regname Fuse_paren			/* Simple name */
+		{
+		    $$.v = $1.v;
+		}
+	|	Fstruct_var Fstruct_name Fuse_paren	/* Struct or Ptr use */
+		{
+		    $$.v = $2.v;
+		}
+	|	tDEREF					/* # name */
+		{
+		    id_add( $1.s );
+		    $$.v = (SYM *)0;
+		}
+;
+/*
+** Fuse_paren makes use of the fact that $0 is set so that arrays can 
+** be checked. This rule may come after Fuse_regname or Fstruct_name so both
+** must set $$.v
+*/
+Fuse_paren:	/* No parens */
+	|  	Fause_paren	/* Possibly an array or string subscript */
+	|	Fause_paren Fsuse_paren	/* Possibly an array and subscript */
+;
+
+Fause_paren:	tLPAREN		/* Possibly array or string subscript */
+		{
+		    register SYM	*sy = $0.v;	/* MUST BE SET */
+
+		    if (sy)
+		    {
+			register int	btype;
+
+			/* 
+			** Is this an Equel array reference?  Base type
+			** [Equel type is defined] and
+			** (is array or char string).
+			*/
+			btype = sym_g_btype(sy);
+			if (btype!=T_NONE &&		/* defined */
+			    (sym_g_dims(sy) ||		/* array */
+				(btype==T_CHAR && F_issubstring())) /* string */
+			   )
+			{
+			    sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"),
+								    '(', ')' );
+			    gr->F_dims = 1;
+			} 
+			else
+			{
+			    SC_PTR--;
+			}
+		    } 
+		    else
+		    {
+			SC_PTR--;
+		    }
+		    $$.v = $0.v;
+		}
+;
+
+Fsuse_paren:	tLPAREN			/* Possibly a string subscript */
+		{
+		    register SYM	*sy = $0.v;	/* MUST BE SET */
+
+		    if (sy)
+		    {
+			register int	btype;
+
+			/* 
+			** Is this an Equel substring reference?
+			** Base type is CHAR, and either not an array
+			** or already indexed.
+			*/
+			btype = sym_g_btype(sy);
+			if (btype==T_CHAR &&
+			    (!sym_g_dims(sy) || gr->F_dims) && F_issubstring())
+			{
+			    sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"),
+								    '(', ')' );
+			} 
+			else
+			{
+			    SC_PTR--;
+			}
+		    } 
+		    else
+		    {
+			SC_PTR--;
+		    }
+		    $$.v = $0.v;
+		}
+;
+
+Fuse_regname:	tNAME
+		{
+		    SYM		*sy;
+		    i2		stat;
+
+		    id_add( $1.s );
+		    $$.v = sym_resolve( gr->F_struct, $1.s, 0, 
+			      syFisVAR|syFisCONST );
+		}
+;
+
+/* 
+** Because of problem of Ingres period and FORTRAN period we had to use the same
+** solution as in Equel/C and therefore required any qualified name that starts
+** with either pointer or a structure head to be fully qualified. Under this
+** assumption we can use sym_resolve instead of the messier symRsEuc.
+**
+** Special rules and token, to prevent weird conflicts between the FORTRAN '.'
+** and the Ingres '.', both of which are really just a NAME { .  NAME }
+** The special tFSTRCT_VAR token is returned explicitly by gr_mechanism,
+** and causes all field members to be read till the last non-stuctured member. 
+** Gr_mechanism uses the global F_struct to find out if if we are nesting 
+** structure and pointer references.  Even though F_struct could be set by
+** gr_mechanism, it is not set because Yacc may just be looking ahead.
+*/
+Fstruct_name:	tNAME 		/* Last member on the qualified list */
+		{
+		    SYM		*sy;
+
+		    id_add( $1.s );
+		    /* Use F_struct as the parent pointer */
+		    sy = sym_resolve( gr->F_struct, $1.s, F_CLOSURE, syFisVAR );
+		    if (sy == (SYM *)0)
+			er_write( E_E10004_hfSTRUCTREF, EQ_ERROR, 1,
+								id_getname() );
+		  /* Reset here, because it looks ahead for left paren */
+		    gr->F_struct = (SYM *)0;
+		    $$.v = sy;		/* Set for $0 of Use_paren */
+		}
+;
+Fstruct_var:	Fstruct_elm 			/* structmem */
+	|	Fstruct_var Fstruct_elm 	/* structmem.structmem */
+;
+Fstruct_elm:	Fstruct_varelm Fselect_op  	/* structmem (i) . */
+		{
+		    gr->F_dims = 0;
+		}
+;
+Fstruct_varelm:	Fstruct_varkey
+	|	Fstruct_varkey tLPAREN
+		{
+		    register SYM	*sy = gr->F_struct;
+
+		    /* 
+		    ** Is this an Equel array reference?  Base type 
+		    ** (Equel type is defined) and has array bit set.
+		    ** Whether or not this is an array reference, eat
+		    ** up the left paren!  Otherwise we will get a syntax
+		    ** error at the left paren.  There is a symbol table
+		    ** entry but we may not know it as an array.
+		    */
+		    if (sy)	/* "must be true" */
+		    {
+			if (sym_g_btype(sy) != T_NONE)
+			{
+			    if (sym_g_dims(sy))
+				gr->F_dims = 1;
+			    else
+				er_write( E_E10003_hfINDIR, EQ_ERROR, 3,
+				    id_getname(), er_na(gr->F_dims +1),
+				    er_na(sym_g_dims(sy)) );
+			}
+		    }
+		    sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+		}
+;
+
+Fstruct_varkey:	tFSTRCT_VAR 	/* Returned explicitly by gr_mechanism */
+		{
+		    id_add( $1.s );
+		    gr->F_struct = sym_resolve(gr->F_struct, $1.s, F_CLOSURE, 
+				syFisVAR);
+		}
+;
+
+Fselect_op:	tPERIOD 	 /* FORTRAN '.' , not Ingres '.' */
+		{
+		    id_add( $1.s );
+		}
+;
+
+/* %L rules end */
+
+%%
+
+/* %L mechanism begin - All the stuff to do with gr_mechanism() */
+
+GLOBALDEF GR_TYPES   gr_typetab[] = {
+    { ERx("byte"),		T_INT,		1 },
+    { ERx("character"),		T_CHAR,		1 },
+    { ERx("complex"),		T_FLOAT,	8 },
+    { ERx("dbl precision"),	T_FLOAT,	8 },
+    { ERx("dbl complex"),	T_FLOAT,	16 },
+    { ERx("integer"),		T_INT,		4 },
+    { ERx("logical"),		T_INT,		4 },
+    { ERx("real"),		T_FLOAT,	4 },
+    { (char *)0,  		0,		0 }
+};
+
+/*
+** Gr_mechanism - Language dependent utility called from within the grammar
+**		  or from outside.
+**
+** Parameters:	flag       - Which mechanism to choose.
+**		arg1, arg2 - Whatever is needed for the particular flag.
+** Returns:	None
+*/
+
+void
+gr_mechanism( flag, arg1, arg2 )
+i4	flag;
+PTR	arg1;			/* Extra arguments for particular cases */
+PTR	arg2;
+{
+    register SYM	*sy;
+    i4			use_mask, ret_val;
+    static   i4	einit = 0;
+    i4			yyequlex();
+
+    switch (flag)
+    {
+      case GR_EQINIT:
+	eq->eq_lang = EQ_FORTRAN;
+	eq->eq_def_in = ERx("qf");
+# ifdef UNIX
+	eq->eq_def_out = ERx("f");
+# endif	/* UNIX or NT  */
+# ifdef hp9_mpe	
+	eq->eq_def_out = ERx("for");
+# endif	/*  hp9_mpe */
+# ifdef	VMS
+	eq->eq_def_out = ERx("for");
+# endif	/* VMS */
+# ifdef	NT_GENERIC
+	eq->eq_def_out = ERx("for");
+# endif	/* NT_GENERIC */
+# ifdef	CMS
+	eq->eq_def_out = ERx("fortran");
+# endif	/* CMS */
+	if (!einit)
+	{
+	    eq->eq_in_ext = ERx("qf");
+# ifdef UNIX
+	    eq->eq_out_ext = ERx("f");
+# endif	/* UNIX or NT */
+# ifdef hp9_mpe	
+	    eq->eq_out_ext = ERx("for");
+# endif	/*  hp9_mpe */
+# ifdef	VMS
+	    eq->eq_out_ext = ERx("for");
+# endif	/* VMS */ 
+# ifdef	NT_GENERIC
+	    eq->eq_out_ext = ERx("for");
+# endif	/* NT_GENERIC */ 
+# ifdef	CMS
+	    eq->eq_out_ext = ERx("copy");
+# endif	/* CMS */
+	    einit = 1;
+	}
+
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->gr_id = ERx("");
+	gr->gr_flag = GR_HOSTCODE;
+
+      /* tell the world we're Embedded QUEL! */
+	dml->dm_lex = yyequlex;
+
+	gr->F_dec = GR_F_DEC;
+	gr->F_blk = 1;
+	gr->F_rec = 0;
+	gr->F_storage = T_NONE;
+	gr->F_size = 0;
+	gr->F_indir = 0;
+	gr->F_dims = 0;
+	gr->F_struct = (SYM *)0;
+	gr->F_isfunc = 0;
+	gr->F_usedec = FDEC_NONE;
+
+	break;
+
+      case GR_SYMINIT:
+	{
+	    /* Enter declarations into Equel symbol table */
+	    GR_TYPES	*gt;
+
+	    sym_init( (bool)TRUE );
+	    gen_init();
+	    for (gt=gr_typetab; gt->gt_id; gt++)
+	    {
+		sy = symDcEuc(gt->gt_id, 0, gr->F_blk,
+			(syFisTYPE|syFisSYS), F_CLOSURE, SY_NORMAL);
+		sym_s_btype( sy, gt->gt_rep );
+		sym_s_dsize( sy, gt->gt_len );
+		sym_s_indir( sy, 0 );
+	    }
+
+	  /* remember the size of an integer */
+	    sy = sym_resolve( (SYM *)0, ERx("integer"), F_CLOSURE, syFisTYPE );
+	    if (sy)
+		gr->F_intsize = sym_g_dsize( sy );
+
+	  /* declare "generic null" as a symbol */
+	    sy = symDcEuc( ERx(".null"), 0, gr->F_blk, syFisVAR|syFisSYS, 
+			  F_CLOSURE, SY_NORMAL );
+	    sym_s_btype( sy, T_NUL );
+	    sym_s_dsize( sy, sizeof(i4) );
+	    gr->gr_null = sy;
+
+	  /* start a scope in case user doesn't ## program units */
+	    sym_s_begin( F_CLOSURE );
+	    gr->F_blk++;
+
+	}
+	break;
+
+      case GR_LOOKUP:
+	/* How should we look up this name? */
+	if (gr->F_dec == GR_F_USE)		/* Variable usage */
+	{
+	    /* 
+	    ** If we have a period between name references then it may be the
+	    ** C period or the Ingres period.  To resolve this we use the global
+	    ** gr->F_struct and see if the specified name is a field (child) of
+	    ** structure or a regular variable (including a structure parent).
+	    */
+	    sy = sym_resolve( gr->F_struct, (char *)arg1, 0, 
+			      syFisVAR|syFisCONST );
+
+	    /* 
+	    ** We cannot set F_struct here as Yacc may look ahead and cause
+	    ** it to be reset.
+	    */
+	    if (sy && sym_g_btype(sy) == T_STRUCT)
+		*(i4 *)arg2 = tFSTRCT_VAR;
+	    else
+		*(i4 *)arg2 = tNAME;
+	    gr->F_sym = sy;
+	} else
+	{
+	    switch (gr->F_dec)
+	    {
+	      case GR_F_DEC: 
+		use_mask = syFisTYPE;
+		ret_val = tFTYPE;
+		break;
+	      case GR_F_TAG:
+		use_mask = syFisTAG;
+		ret_val = tFTAG;
+		break;
+	    }
+	    if (sy = sym_resolve((SYM *)0, (char *)arg1, 0, use_mask))
+		*(i4 *)arg2 = ret_val;
+	    else
+		*(i4 *)arg2 = tFDECNAME;
+	}
+	break;
+
+      case GR_STMTFREE:
+	str_reset();
+	sym_f_init();		/* clear the sym stack */
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->F_struct = (SYM *)0;
+	gr->F_storage = 0;
+	break;
+
+      case GR_CLOSE:
+	gr->F_blk--;		/* for the "undeclared" block */
+	if (gr->F_blk > 1)
+	    er_write( E_E10005_hfUNCLOSED, EQ_ERROR, 1, er_na((gr->F_blk-1)) );
+	break;
+
+      case GR_DUMP:
+	{
+	    register FILE	*f = eq->eq_dumpfile;
+
+	    SIfprintf( f, ERx("GR_DUMP: gr_ \n") );
+	    SIfprintf( f,
+		       ERx("  sym = 0x%p, id = '%s', type = %d, flag = 0%o\n"),
+		       gr->gr_sym, gr->gr_id, gr->gr_type, gr->gr_flag );
+	    SIfprintf( f, ERx("  func = %d, mode = 0%o\n"),
+		       gr->gr_func, gr->gr_mode, gr->F_dec );
+	    SIfprintf( f, ERx("  F_blk = %d, F_rec = %d, F_storage = %d, "),
+		       gr->F_blk, gr->F_rec, gr->F_storage );
+	    SIfprintf( f, ERx("F_size = %d, F_indir = %d\n"), 
+		       gr->F_size, gr->F_indir );
+	    SIfprintf( f, ERx("  F_dec = %d, F_struct = 0x%p\n"),
+		       gr->F_dec, gr->F_struct );
+	    SIfprintf( f, ERx("  F_isfunc = %d, F_intsize = %d\n"),
+			gr->F_isfunc, gr->F_intsize );
+	    SIfprintf( f, ERx("  F_usedec = 0x%x\n"),
+			gr->F_usedec );
+	    SIfprintf( f, ERx("  F_sym = 0x%p\n"), gr->F_sym );
+	    SIflush( f );
+	}
+	break;
+
+      case GR_BLOCK:		/* Enter/exit blocks - no symbol table action */
+	if (arg1) /* enter */
+	    gr->F_dec = GR_F_USE;	/* On entry always expect declares */
+	else		/* exit */
+	  /* On Equel block exit reset decl flag - can't be immediate decls */
+	    gr->F_dec = GR_F_USE;
+	break;
+       
+      /*
+      ** change the length of the type (in arg1) to the given length (in arg2).
+      ** for BASIC and FORTRAN.
+      */
+      case GR_LENFIX:
+      {
+ 	i2	is_int;
+	register GR_TYPES *g;
+	extern GR_TYPES gr_typetab[];
+
+	is_int = STcompare((char *)arg1, ERx("integer"))==0;
+	for (g=gr_typetab; g->gt_id; g++)
+	{
+	    if (STcompare((char *)arg1,g->gt_id) == 0 ||
+		(is_int && STcompare(ERx("logical"),g->gt_id) == 0))
+	    {
+		g->gt_len = (i2)arg2;
+	    }
+	}
+      }
+	break;
+
+      case GR_EQSTMT:
+	{
+	    i4		mode = (i4)arg1;
+	    char	*kword = (char *)arg2;
+	    i4		dec_message = FALSE;	/* Already complained? */
+
+	    /* Turn off declarations flag and generate line directive */
+	    gr->gr_flag &= ~GR_HOSTCODE;
+	    gr->F_dec = GR_F_USE;
+	    if (gr->gr_flag & GR_DECLCSR)
+		gen_line( kword );
+	    else
+		gen_eqstmt( G_OPEN, kword );
+
+	    /* Check if ## declare [forms] is required for certain languages */
+	    if ((gr->F_usedec & FDEC_DECLARE) == 0)
+	    {
+		er_write( E_E10007_hfDECLARE, EQ_ERROR, 1, kword );
+		gr->F_usedec |= FDEC_DECLARE;	/* stop further complaints */
+		dec_message = TRUE;
+	    }
+
+	    switch (mode)
+	    {
+	      case GR_sREPEAT:
+		gr->gr_flag |= GR_REPEAT;
+		rep_begin( kword, NULL );
+		/* FALL THROUGH */
+
+	      case GR_sQUEL:
+		if (gr->gr_flag & GR_RETRIEVE)
+		{
+		    gr->gr_flag &= ~GR_RETRIEVE;
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		}
+		gr->gr_flag |= GR_QUEL;
+		db_key( kword );
+		break;
+
+	      case GR_sFORMS:
+	      /* no forms statement yet? */
+		if ((gr->F_usedec & FDEC_FORMS) != FDEC_FORMS)
+		{
+		    if (!dec_message)
+			er_write( E_E10009_hfDECFORMS, EQ_ERROR, 1, kword );
+		    dec_message = TRUE;
+		    gr->F_usedec |= FDEC_FORMS;	   /* stop further complaints */
+		}
+		/* FALL THROUGH! */
+
+	      case GR_sLIBQ:
+		gr->gr_flag |= GR_EQUEL;
+		break;
+
+	      case GR_sCURSOR:
+		if (gr->gr_flag & GR_RETRIEVE)
+		{
+		    gr->gr_flag &= ~GR_RETRIEVE;
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		}
+		break;
+	    }
+	}
+	break;
+
+      default:
+	break;
+    }
+}
+/* %L mechanism end */

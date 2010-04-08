@@ -1,0 +1,41 @@
+#
+# Jamfile file for cl!clf!cv_unix_win
+#
+
+SubDir ING_SRC cl clf cv_unix_win ;
+
+IISUBSYS cl clf cv_unix_win ;
+
+IINOOPTIM cvgcc.c : rs4_us5 ris_u64 i64_aix a64_lnx ppc_lnx ;
+IINOOPTIM cvaf.c : usl_us5 ;
+
+IIBINEXE cvtest : cvtest.c ;
+IINEEDLIBS cvtest : COMPAT ;
+
+IIBINEXE cvnettest : cvnettest.c ;
+IINEEDLIBS cvnettest : COMPAT ;
+
+IIBINSH testcvnet : testcvnet.sh ;
+
+IILIBRARY COMPATLIB : cvupper.c
+	cvrxl.c
+	cvptrax.c
+	cvptra.c
+	cvpk.c
+	cvol.c
+	cvna.c
+	cvlx.c
+	cvlower.c
+	cvla.c
+	cvgcc.c
+	cvfcvt.c
+	cvfa.c
+	cvexhand.c
+	cvaxptr.c
+	cvaptr.c
+	cvan.c
+	cval.c
+	cvahxl.c
+	cvaf.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : cvglobal.c ;

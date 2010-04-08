@@ -1,0 +1,68 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Process Information screen.  This screen displays detailed
+job/process information on the indicated process (usually an Ingres server).
+This screen can also be invoked from the Logging area of IPM.  In that
+case, the information displayed could be for a server, recovery process or
+an archiver.  When this screen is invoked from the Session List screen,
+the front end (or client) process information is displayed.  This will
+only work when front end is local and interactive.
+
+This feature is available only on VMS.
+
+Place the cursor on the process you want displayed from the Server List,
+Log Process Display, or Log Transaction Display.
+
+By examining the Detailed Process Information screen, you may determine
+if the quotas are adequate for the account that started this Ingres process.
+
+The display is automatically refreshed.  The "Display Refresh" field on
+the Options Display screen does not affect the refresh time of this screen.
+
+Displayed information includes:
+
+Process State      The VMS process state.
+
+CPU Time           Cumulative CPU time.  
+	
+Lock Enqueue Info  The important value is the Remaining field.  When this
+                   value reaches zero, it means that the server can't
+                   acquire any more locks.  This could lead to Ingres errors
+                   and/or lock escalation (which implies table level
+                   locking).  Lock escalation can cause serious concurrency
+                   problems.  This is a concern for Ingres installations on
+                   VAXClusters where Ingres uses the VMS Distributed Lock
+                   Manager (DLM).
+
+Direct I/O Info    The Total field shows how many cumulative direct I/O
+                   requests were made.  This indicates how much disk I/O
+                   is being performed.
+
+Open File Info     The Remaining field shows how many more files
+                   the process can open.  On queries which touch many
+                   tables, on databases with journals and queries which
+                   contain aggregates, the File Limit Quota (FILLM) can be
+                   exceeded if not set at recommended levels (see the Ingres
+                   Installation Guide).
+
+Page Faults        Indicates if the working set sizes (also displayed)
+                   are sufficient.
+
+When the process which is being monitored is deleted, an appropriate
+message is displayed in the upper left corner of the form.  At any time, the
+current screen can be written to a file for later analysis.  This display
+is very useful for observing servers which are running large queries, MQTs
+(Multi Query Transactions) or users to ensure that there are sufficient
+OS resources.  For more information on JPI parameters, please reference
+the VMS System Services Manual, information on SYS$GETJPI system call.
+
+The following menuitems are available:
+
+Print_Screen  Captures the current screen's contents.   This stops the
+              screen refresh while writing the screen out.  When the
+              screen is written to the file, the screen refresh resumes.
+
+Help          Displays this screen.
+
+End           Returns to the previous screen.
+
+Quit          Exits IPM.

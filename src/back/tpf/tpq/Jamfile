@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!tpf!tpq
+#
+
+SubDir ING_SRC back tpf tpq ;
+
+IISUBSYS back tpf tpq ;
+
+
+IILIBRARY TPFLIB : tpqupd.c tpqsel.c tpqins.c tpqdel.c ;
+

@@ -1,0 +1,43 @@
+C
+C  Copyright (c) 2004 Ingres Corporation
+C
+C
+C ************************ esqlca definition ***************************
+C 
+C History: 
+C	22-may-89 (sylviap)
+C		Created.
+
+C
+C  SQLCA - Structure to hold the error and status information returned 
+C	   by INGRES runtime routines
+C
+      character*8 sqlcai
+      character*4 sq_cab
+      character*4 sq_cod
+      character*2 sq_txl
+      character*70 sqltxt
+      character*8 sqlerp
+      character*4 sq_err(6)
+      character*1 sqlwrn(0:7)
+      character*8 sqlext
+
+      common /sqlca/  sqlcai, sq_cab, sq_cod, sq_txl, sqltxt, sqlerp, 
+     & sq_err, sqlwrn, sqlext
+
+C
+C  Variable to map the "sqlca" common area to an "sqlca" structure.
+C
+      integer*4 sqlcax
+      equivalence (sqlcax, sqlcai)
+C
+C  Map integer variables into the "sqlca" structure.
+C
+      integer*4 sqlcab
+      equivalence (sqlcab, sq_cab)
+      integer*4 sqlcod
+      equivalence (sqlcod, sq_cod)
+      integer*2 sqltxl
+      equivalence (sqltxl, sq_txl)
+      integer*4 sqlerr(6)
+      equivalence (sqlerr, sq_err)

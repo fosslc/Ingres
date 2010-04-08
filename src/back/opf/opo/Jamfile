@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!opf!opo
+#
+
+SubDir ING_SRC back opf opo ;
+
+IISUBSYS back opf opo ;
+
+
+IILIBRARY OPFLIB : opominc.c opofordr.c opocordr.c opocopyco.c
+	opocombine.c ;
+

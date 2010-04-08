@@ -1,0 +1,29 @@
+#
+#   NMAKE makefile for ingrswin
+#
+#   History:
+#       03-Apr-96 (fanra01)
+#           Modified for building with OpenIngres.
+
+!include ..\..\..\tools\port\make\make.ini
+
+.c.obj:
+    $(CC) $(DLLCFLAGS) $(INCL_HDRS) -Fo$@ $*.c > %|pfF.err
+
+all:    ingrswin.dll
+
+selwin.obj: selwin.c
+
+selwin.res: selwin.rc
+
+ingrswin.dll : selwin.obj selwin.res selwin.def selwin.lnk
+	$(LINKDLL) @<<
+selwin.obj
+$@
+$*.map
+libw +
+ldllcew
+selwin.def
+<<
+	rc selwin.res $@
+	implib $*.lib $@

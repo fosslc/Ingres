@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The resource dmf_modify_limit is the maximum number of modified pages that
+  can be left in the buffer manager.  If this limit is reached, and
+  there are no write-behind threads in use or active in this cache,
+  any modified buffer is written synchronously when a session is finished
+  referencing it.
+
+  When write-behind threads are in use for a cache, this resource has
+  little effect;  the write-behind mechanism manages modified buffers,
+  and it is controlled by dmf_wb_start, dmf_wb_end, and dmf_free_limit.
+
+  The default is 75% of the cache size.

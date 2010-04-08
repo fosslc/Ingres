@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abedlock.hlp, help at the pop-up warning users that the application 
+/#-- is in use by others.
+/#-- 
+The display shows you the login name(s) of the people currently working in 
+this application/frame. 
+
+If you choose to go ahead and work in the same area of the application that 
+is already in use, you run the risk of overwriting the work of others--or 
+having them overwrite yours.  The last session to complete overwrites the 
+work of the other session(s).
+ 
+At this point, you may select Cancel to end the edit request, or you may
+select OK to proceed with the editing of the application/frame.
+
+Note that it is possible that a previous session exited abnormally, leaving
+the impression that another session is still active.  If this is true, you
+may eliminate this session indicator by choosing the 'Delete' menuitem.

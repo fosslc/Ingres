@@ -1,0 +1,9 @@
+#
+# Jamfile file for cl!clf!sa_vms
+#
+
+SubDir ING_SRC cl clf sa_vms ;
+
+IISUBSYS cl clf sa_vms ;
+
+IILIBRARY COMPATLIB : sadummy.c ;

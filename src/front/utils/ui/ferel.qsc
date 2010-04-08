@@ -1,0 +1,657 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h> 
+# include	<st.h> 
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+exec sql include	<ui.sh>;
+exec sql include	<uigdata.sh>;
+
+/**
+** Name:    ferel.sc -	Front-End Utility Access Relation Information Module.
+**
+** Description:
+**	This module defines the interface to relation information 
+**	to be used by most front end facilities.
+**
+**	These routines use a protocol which is very similar to a cursor 
+**	model of interaction.  First you "open" and identify what you 
+**	intend to retrieve.  Then you call "fetch" as many times as 
+**	necessary to retrieve all the items.  Finally you call "close" 
+**	to terminate the interaction.
+**	
+**	To retrieve relation information, first, FErel_open() is called.  
+**	In this call you specify a qualification string and whether you 
+**	want catalog names to be included in the result.  Also, the caller 
+**	specifies whether all of the information available concerning the 
+**	relation will be fetched or just the name and owner.  Retrieving 
+**	the relation details will have a negative performance impact if 
+**	accessing a distributed database and the relation resides on a 
+**	remote node.  This routine initializes the FE_REL_QBLK which is 
+**	passed on to the "fetch" and the "close" routines to identify this 
+**	loop and the current state of the "fetch" requests.
+**	
+**	Next, FErel_fetch() is called as many times as needed to retrieve 
+**	all the general information about relations which meet the 
+**	qualification specified in the FErel_open().  It will return a code 
+**	to indicate that there are no more names to retrieve.
+**	
+**	Finally, FErel_close() is called to terminate the loop.
+**
+**	This file defines five procedures. 
+**	The following three procedures are external entries:
+**		FErel_open	Initialize access to relation information.
+**		FErel_fetch	Retrieve information about next relation.
+**		FErel_close	Terminate access of relation information.
+**
+**	The following procedure is private:
+** 		FErel_trnslt	Translate an FE_REL_SOURCE into an FE_REL_INFO.
+**
+** History:
+**	Revision 6.3  90/03  wong
+**	Replace hard-coded "$ingres" names with 'IIUIdbdata()->catowner'.
+**		JupBug #20030.
+**
+**	Revision 6.0  87/03  rdesmond
+**	26-mar-1987 (rdesmond) first created for Jupiter release.
+**	8-jun-1987 (rdesmond) added hackfor50; uses iirelation.
+**	28-jul-1987 (rdesmond) convert qual in FErel_open to lower case.
+**	19-aug-1988 (peter) update catalog access for 6.1 naming.
+**      09-mar-1989 (wolf)
+**              Temporarily check for table_type = 'R' for SQL/DS
+**	20-jun-1990 (Mike S) Support alter_date for tables
+**	10-oct-91 (seg)
+**		Changed "errno" to "errnum" to avoid naming conflict with
+**		c runtime library
+**	22-jul-1992 (rdrane)
+**		Add 6.5 support for owner.tablename, delimited identifiers,
+**		and synonyms.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for database objects.
+**/
+
+static VOID FErel_trnslt();
+
+
+/*{
+** Name:    FErel_open() -	Initialize access of relation information
+**
+** Description:
+**	This function initializes the FE_REL_QBLK which must be passed
+**	on to FErel_fetch() and FErel_close() to identify this loop and
+**	the current state of the "fetch" requests.  In this call you
+**	specify a qualification string for the names to be retrieved by
+**	subsequent calls to FErel_fetch(), and whether you want system 
+**	catalog names to be included in the result.  If this function is
+**	called while a block is currently open, the open block will
+**	be quietly closed and the query restarted.
+**
+** Inputs:
+**	qblkptr		A pointer to an allocated FE_REL_QBLK.
+**
+**	qual_relname	Qualification string to be used as a query restriction
+**			on the namestrings returned.  Any single value string,
+**			which will be compared with the relation name may be
+**			The matching templates "%", "_" and "\[...\]" may
+**			be used for partial match specification (backslash
+**			is always the escape character).  Use "%" to indicate
+**			that all names are desired.
+**
+**			The qualification string may not contain an owner
+**			specification, and must be otherwise normalized.
+**
+**	qual_relowner	Qualification string to be used as a query restriction
+**			on the owner of the namestrings returned.  Passed
+**			through to FErel_access as is.  It may be NULL or an
+**			empty string, and FErel_access will ignore it
+**			for pre-6.5 databases.  The string may not contain
+**			any SQL wildcards, and must be normalized.
+**		
+**	cats_wanted	Flag to indicate whether catalogs are to be
+**			included in the relation information returned.
+**			TRUE = include catalog names.
+**
+**			(The qual and cats_wanted parameters are needed to 
+**			support the "-e" interface option.)
+**
+**	dets_wanted	Flag to indicate whether relation details, i.e. the 
+**			values of the members of FE_REL_INFO other than 
+**			"name" and "owner," are to be returned.  
+**			If this is set to TRUE, which requests relation
+**			details, it may cause a serious performance 
+**			degradation when the relation is located in a 
+**			remote database.
+**		
+** Outputs:
+**	qblkptr		Block will be initialized for subsequent use in
+**			an FErel_fetch() and FErel_close().
+**			
+**	Returns:
+**		OK		successful
+**		other		DBMS error returned
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	29-mar-1987 (rdesmond) first created for Jupiter release.
+**	8-jun-1987 (rdesmond) added hackfor50; uses iirelation.
+**	28-jul-1987 (rdesmond) convert qual to lower case.
+**	02-oct-1987 (rdesmond) changed query, no more lookahead buffer;
+**		(i.e. sortorder based on dba-user difference).
+**	22-jul-1992 (rdrane)
+**		Added qual_relowner parameter and renamed qual parameter to
+**		qual_relname.  Removed dets_wanted parameter from FErel_access()
+**		invocation and added qual_relowner parameter.  Reinforced qual_*
+**		parameter description to indicate that it must be normalized,
+**		only the name may include SQL wildcards (no QUEL wildcards),
+**		and that they must be normalized.
+*/
+
+DB_STATUS
+FErel_open (qblkptr, qual_relname, qual_relowner, cats_wanted, dets_wanted)
+FE_REL_QBLK	*qblkptr;
+char		*qual_relname;
+char		*qual_relowner;
+bool		cats_wanted;
+bool		dets_wanted;
+{
+    DB_STATUS	ret_value;
+
+    /* open query and fetch first tuple */
+    ret_value = FErel_access(MODE_OPEN, qual_relname, qual_relowner,
+			     &qblkptr->relsrcbuf[0], cats_wanted, &qblkptr->status);
+
+    /* save dets_wanted for projection (in FErel_trnslt()) */
+    qblkptr->dets_wanted = dets_wanted;
+
+    /* save cats_wanted  - not sure anyone bothers with it anymore ... */
+    qblkptr->cats_wanted = cats_wanted;
+
+    /* set bufstatus to indicate tuple already in FE_REL_QBLK or error */
+    qblkptr->bufstatus = ret_value == OK ? 0 : -1;
+
+    return ( ret_value == OK || ret_value == E_UI0002_EOS )
+		? OK : ret_value /* dbms error */;
+}
+
+/*{
+** Name:    FErel_fetch() -	Retrieve information about next relation.
+**
+** Description:
+**	This function retrives the next relation name in the list specified
+**	by the FErel_open() which was used to initialize the FE_REL_QBLK.
+**
+**	The relation information is returned sorted by the relation name.
+**
+** Inputs:
+**	qblkptr		A pointer to the FE_REL_QBLK control block which
+**			was initialized by a call to FErel_open().
+**
+**
+** Outputs:
+**	relinfoptr	A pointer to an allocated FE_REL_INFO structure into
+**			which the general information describing a relation 
+**			will be written.
+**
+**	Returns:
+**		OK			successful
+**		E_UI0001_BLOCK_CLOSED	query block is currently closed
+**		E_UI0002_EOS		no more relations to return
+**		other			DBMS error returned
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	29-mar-1987 (rdesmond)
+**		first created for Jupiter release.
+**	02-oct-1987 (rdesmond) no more lookahead buffer;
+**		(i.e. sortorder based on dba-user difference).
+**	22-jul-1992 (rdrane)
+**		Removed dets_wanted parameter from FErel_access() invocation
+**		and added qual_relowner parameter (forced to NULL like the
+**		qual_relname parameter).
+**	25-aug-1992 (rdrane)
+**		If 6.5, then duplicate relation names are valid, we expect
+**		differing owners, and do not necessarily want only the user's
+**		relation.
+**	31-dec-1993 (rdrane)
+**		Use OpenSQL level to determine 6.5 syntax features support.
+*/
+DB_STATUS
+FErel_fetch(qblkptr, relinfoptr)
+register FE_REL_QBLK	*qblkptr;
+register FE_REL_INFO	*relinfoptr;
+{
+    DB_STATUS	ret_value;
+    bool	resolved;
+
+    if (qblkptr->status == STATUS_DONE)
+	return (E_UI0002_EOS);
+    if (qblkptr->status != STATUS_OPEN)
+	return (E_UI0001_BLOCK_CLOSED);
+
+    /* if no valid records are in the buffer, then get one */
+    if (qblkptr->bufstatus == -1)
+    {
+	/* fetch next tuple */
+	ret_value = FErel_access(MODE_FETCH, NULL, NULL,
+				 &qblkptr->relsrcbuf[0], FALSE, &qblkptr->status);
+
+	/* if no more tuples or dbms error then return error */
+	if (ret_value != OK)
+	    return (ret_value);
+	
+	/* set valid buffer flag to indicate first buffer is valid */
+	qblkptr->bufstatus = 0;
+    }
+
+    /* one buffer is now filled; fetch next tuple into empty buffer*/
+    ret_value = FErel_access(MODE_FETCH, NULL, NULL,
+			     &qblkptr->relsrcbuf[(qblkptr->bufstatus + 1) % 2],
+			     FALSE, &qblkptr->status);
+
+    /* if no more records */
+    if (ret_value == E_UI0002_EOS)
+    {
+	/* last record of active set is in relsrcbuf */
+	/* translate to output structure */
+	FErel_trnslt(&qblkptr->relsrcbuf[qblkptr->bufstatus], relinfoptr, 
+	  qblkptr->dets_wanted);
+	/* set previous record structure status to invalid */
+	qblkptr->status = STATUS_DONE;
+    }
+    else if (ret_value == OK)
+    {
+	/* check if relation name clash.  For 6.5, this is allowed! */
+        if  ((STcompare(IIUIcsl_CommonSQLLevel(),UI_LEVEL_65) >= 0) ||
+	     (!STequal(qblkptr->relsrcbuf[0].table_name,
+			qblkptr->relsrcbuf[1].table_name)))
+	{ /* 6.5 or no clash, copy prev rec struct to output struct */
+	    FErel_trnslt(&qblkptr->relsrcbuf[qblkptr->bufstatus], relinfoptr, 
+	      qblkptr->dets_wanted);
+	    /* change valid buffer flag to indicate other buffer is valid */
+	    qblkptr->bufstatus = (qblkptr->bufstatus + 1) % 2;
+	}
+	else
+	{
+	    i4  bufno;
+	    /* determine which relation belongs to user;
+	    ** check if current record is user's
+	    */
+	    bufno = (STequal(qblkptr->relsrcbuf[0].table_owner,
+			    IIUIdbdata()->user) ? 0 :1);
+	    /* copy appropriate buffer to output structure */
+	    FErel_trnslt(&qblkptr->relsrcbuf[bufno], relinfoptr, 
+	      qblkptr->dets_wanted);
+	    qblkptr->bufstatus = -1;
+	}
+    }
+    else 
+    {
+	/* block closed or dbms error */
+	return(ret_value);
+    }
+    return (OK);
+}
+
+/*{
+** Name:    FErel_close - Terminate access of relation information.
+**
+** Description:
+**	This routine terminates the retrieval of relation information.
+**
+** Inputs:
+**	qblkptr		A pointer to the active FE_REL_QBLK.
+**
+** Outputs:
+**	qblkptr		block will be internally marked as inactive.
+**			
+**	Returns:
+**		OK			successful
+**		other			DBMS error returned
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	29-mar-1987 (rdesmond)
+**		first created for Jupiter release.
+**	22-jul-1992 (rdrane)
+**		Removed dets_wanted parameter from FErel_access() invocation
+**		and added qual_relowner parameter (forced to NULL like the
+**		qual_relname parameter).
+*/
+DB_STATUS
+FErel_close (qblkptr)
+FE_REL_QBLK	*qblkptr;
+{
+    return(FErel_access(MODE_CLOSE, NULL, NULL,
+			(FE_REL_SOURCE *)NULL, FALSE, &qblkptr->status));
+}
+
+/*{
+** Name:    FErel_trnslt() -	translate an FE_REL_SOURCE into an FE_REL_INFO
+**
+** Description:
+**	Translates the underlying table (or view) for relation information
+**	into the structure to be presented to the caller of the facility.
+**
+** Inputs:
+**	relsrcptr_src		pointer to the source REL_SOURCE structure
+**	relinfoptr_dest		pointer to the destination REL_INFO structure
+**	dets_wanted		TRUE if catalog details should be translated
+**
+** History:
+**	29-mar-1987 (rdesmond)
+**		first created for Jupiter release.
+**	05-oct-1987 (rdesmond)
+**		added dets_wanted parameter instead of using Dets_wanted global.
+**	10-nov-1988 (danielt)
+**		added unique key field to FE_REL_INFO.
+**	22-jul-1992 (rdrane)
+**		Add 6.5 support for synonyms (type 'S').  Made the
+**		table_type translation code into a switch statement.
+**		Added explicit return statement.
+**	13-dec-1992 (daver)
+**		Moved table_type code into the generic case. The
+**		dets_wanted flag moves the date information into the
+**		FE_REL_INFO structure; however, the 3 clients of 
+**		FErel_open never use it. I imagine it can be removed someday.
+*/
+static VOID
+FErel_trnslt(relsrcptr_src, relinfoptr_dest, dets_wanted)
+register FE_REL_SOURCE	*relsrcptr_src;
+register FE_REL_INFO	*relinfoptr_dest;
+bool			dets_wanted;
+{
+    STcopy(relsrcptr_src->table_name, relinfoptr_dest->name);
+    STcopy(relsrcptr_src->table_owner, relinfoptr_dest->owner);
+
+    switch(relsrcptr_src->table_type[0])
+    {
+	case 'T':
+	case 'R':
+	    relinfoptr_dest->type = ICTABLE;
+	    break;
+	case 'V':
+	    relinfoptr_dest->type = ICVIEW;
+	    break;
+	case 'I':
+	    relinfoptr_dest->type = ICINDEX;
+	    break;
+	case 'S':
+	    relinfoptr_dest->type = ICSYNONYM;
+	    break;
+	default:
+	    relinfoptr_dest->type = ICUNKNOWN;
+	    break;
+    }
+
+    if (dets_wanted)
+    {
+	UGcat_to_dt(relsrcptr_src->create_date, &relinfoptr_dest->create_date);
+	UGcat_to_dt(relsrcptr_src->alter_date, &relinfoptr_dest->alter_date);
+	STcopy(relsrcptr_src->version, relinfoptr_dest->version);
+
+	relinfoptr_dest->unique_keys = (relsrcptr_src->unique_rule[0] == 'U');
+
+	relinfoptr_dest->catalog = 
+		STequal(relsrcptr_src->table_owner, IIUIdbdata()->catowner);
+    }
+
+    return;
+}
+
+/*{
+** Name:    FErel_ffetch() - get relation info for one relation.
+**
+** Description:
+**	This function fills a FE_REL_INFO structure for one relation.
+**	It is assumed that the qualification given will identify only
+**	one relation in the user's namespace.  If information for more 
+**	than one relation is needed, then the FErel_open, FErel_fetch,
+**	FErel_close sequence should be used.
+**
+** Inputs:
+**	relname		Qualification string to be used as a query restriction
+**			on the namestrings returned.  Any single value string
+**			which identifies only one relation may be used.
+**			This generally means that the qualification should be
+**			fully specified (no wild cards), and must be otherwise
+**			normalized.
+**
+**	relowner	Name of the owner of the relation to further qualify
+**			query.  This is also expected to be in normalized form.
+**                      However, if this is NULL or an empty string (when the
+**			true owner is unknown or unimportant) then the actual
+**			owner will be determined via FE_resolve().  Note that
+**			relowner is not used when connected to a pre-6.5
+**			database.
+**		
+**	relinfoptr	A pointer to an allocated FE_REL_INFO structure into
+**			which the general information describing a relation 
+**			will be written.
+**		
+** Outputs:
+**	relinfoptr	The FE_REL_INFO structure will be filled in with the
+**			requested relation information.
+**			
+** Returns:
+**	OK			successful.
+**	E_UI0002_EOS		no relations meet qualification.
+**	E_UI0003_TOO_MANY_TUP	too many records returned (relname
+**				must uniquely specify a relation).
+**	other			DBMS error returned
+**
+** History:
+**	30-dec-1987 (rdesmond)
+**		first created for Jupiter release.
+**	19-aug-1988 (peter) 
+**		update catalog access for 6.1 naming.
+**	10-nov-1988 (danielt)
+**		changed to call iirelation in order to get 
+**		table uniqueness information. Also changed not to use
+**		the two queries based on whether details are
+**		wanted or not, in order to maximise the likelyhood
+**		that the repeat query will be in the cache.  The
+**		increased IO for the larger row will be insignificant
+**		compared to the cost of preparing a repeated select.
+**	10-oct-91 (seg)
+**		Changed "errno" to "errnum" to avoid naming conflict with
+**		c runtime library
+**	22-jul-1992 (rdrane)
+**		Add 6.5 support for owner.tablename, delimited identifiers,
+**		and synonyms.  Change parameterization to include owner.
+**		Indicate that both relname and owner are expected to be
+**		normalized.  Note that for 6.5, relowner is allowed to be
+**		NULL.  Removed the dets_wanted parameter since it is unused
+**		and the interface is changing anyway.  STtrmwhite() can return
+**		an empty string if all whitespace - need to detect this and
+**		force the result to be one space.
+*/
+
+DB_STATUS
+FErel_ffetch(relname, relowner, relinfoptr)
+    EXEC SQL BEGIN DECLARE SECTION;
+	char		*relname;
+	char		*relowner;
+    EXEC SQL END DECLARE SECTION;
+    register FE_REL_INFO *relinfoptr;
+{
+    register i4	relsrc_idx;
+	STATUS		errnum;
+	FE_RSLV_NAME    w_frn;
+
+    EXEC SQL BEGIN DECLARE SECTION;
+	UIDBDATA	*uidbdata;
+	char		relname_buf[(DB_MAXNAME + 1)];
+	char		relowner_buf[(DB_MAXNAME + 1)];
+	FE_REL_SOURCE	relsrc[3];
+    EXEC SQL END DECLARE SECTION;
+
+
+
+
+    relsrc_idx = 0;
+    uidbdata = IIUIdbdata();
+
+    if  (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_65) < 0)
+    {
+	    EXEC SQL REPEATED SELECT
+		table_name,
+		table_owner,
+		create_date,
+		alter_date,
+		table_type,
+		table_version,
+		system_use,
+		unique_rule
+	    INTO
+		:relsrc[relsrc_idx].table_name,
+		:relsrc[relsrc_idx].table_owner,
+		:relsrc[relsrc_idx].create_date,
+		:relsrc[relsrc_idx].alter_date,
+		:relsrc[relsrc_idx].table_type,
+		:relsrc[relsrc_idx].version,
+		:relsrc[relsrc_idx].system_use,
+		:relsrc[relsrc_idx].unique_rule
+	    FROM iitables
+	    WHERE 
+		table_name = :relname AND
+		(table_owner = :uidbdata->suser OR
+		 table_owner = :uidbdata->sdba OR
+		 table_owner = :uidbdata->catowner);
+	    EXEC SQL BEGIN;
+		STtrmwhite(relsrc[relsrc_idx].table_name);
+		STtrmwhite(relsrc[relsrc_idx].table_owner);
+		STtrmwhite(relsrc[relsrc_idx].create_date);
+		STtrmwhite(relsrc[relsrc_idx].alter_date);
+		STtrmwhite(relsrc[relsrc_idx].table_type);
+		STtrmwhite(relsrc[relsrc_idx].version);
+		STtrmwhite(relsrc[relsrc_idx].system_use);
+		if  (++relsrc_idx == 3)
+		{
+			EXEC SQL ENDSELECT;
+		} 
+	    EXEC SQL END;
+    }
+    else
+    {
+	    /*
+	    ** Effect any synonym resolution, and determine any
+	    ** true owner.
+	    */
+	    w_frn.owner_dest = &relowner_buf[0];
+	    w_frn.name_dest = &relname_buf[0];
+	    if  (!FE_resolve(&w_frn,relname,relowner))
+	    {
+		/*
+		** No relations meet qualification
+		*/
+	   	return (E_UI0002_EOS);
+	    }
+	    EXEC SQL REPEATED SELECT
+		table_name,
+		table_owner,
+		create_date,
+		alter_date,
+		table_type,
+		table_version,
+		system_use,
+		unique_rule
+	    INTO
+		:relsrc[relsrc_idx].table_name,
+		:relsrc[relsrc_idx].table_owner,
+		:relsrc[relsrc_idx].create_date,
+		:relsrc[relsrc_idx].alter_date,
+		:relsrc[relsrc_idx].table_type,
+		:relsrc[relsrc_idx].version,
+		:relsrc[relsrc_idx].system_use,
+		:relsrc[relsrc_idx].unique_rule
+	    FROM iitables
+	    WHERE 
+		table_name = :relname_buf AND
+		table_owner = :relowner_buf;
+	    EXEC SQL BEGIN;
+		if  (STtrmwhite(relsrc[relsrc_idx].table_name) == 0)
+		{
+		    STcopy(ERx(" "),relsrc[relsrc_idx].table_name);
+		}
+		if  (STtrmwhite(relsrc[relsrc_idx].table_owner) == 0)
+		{
+		    STcopy(ERx(" "),relsrc[relsrc_idx].table_owner);
+		}
+		STtrmwhite(relsrc[relsrc_idx].create_date);
+		STtrmwhite(relsrc[relsrc_idx].alter_date);
+		STtrmwhite(relsrc[relsrc_idx].table_type);
+		STtrmwhite(relsrc[relsrc_idx].version);
+		STtrmwhite(relsrc[relsrc_idx].system_use);
+		if  (++relsrc_idx == 3)
+		{
+			EXEC SQL ENDSELECT;
+		} 
+	    EXEC SQL END;
+    }
+
+    if ((errnum = FEinqerr()) != OK)
+    {
+	return(errnum);
+    }
+
+    if (relsrc_idx == 0)
+    {
+	/* no relations meet qualification */
+	return (E_UI0002_EOS);
+    }
+
+    if (relsrc_idx == 1)
+    {
+	/* exactly one match */
+	relsrc_idx = 0;
+    }
+    else if ( !STequal(relsrc[0].table_name, relsrc[1].table_name)
+		|| relsrc_idx >= 3 )
+    {
+	/* too many relations meet qualification - this should NEVER occur! */
+	return (E_UI0003_TOO_MANY_TUP);
+    }
+    else
+    {
+	/*
+	** both user and dba or dba and catowner own table of requested name.
+	** owner must be resolved - should NEVER occur for 6.5, since should
+	** have been resolved via FE_resolve() calling resolve_table()!
+	*/
+	if  (STcompare(IIUIcsl_CommonSQLLevel(),UI_LEVEL_65) < 0)
+	{
+	    relsrc_idx = STequal(relsrc[0].table_owner,uidbdata->suser) ? 0 : 1;
+	}
+	else
+	{
+	    return (E_UI0003_TOO_MANY_TUP);
+	}
+    }
+	    
+    /* translate relation info to output structure (FE_REL_INFO) */
+    FErel_trnslt(&relsrc[relsrc_idx], relinfoptr, TRUE);
+    return (OK);
+}

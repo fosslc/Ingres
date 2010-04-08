@@ -1,0 +1,36 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+LDBHelp Command
+
+This command is used to select a local database from a list of
+local databases. The selected local database name is displayed in
+the Database Name field of the Object Selection Criteria form.
+The distributed objects displayed in the OBJECTS table field are limited 
+to those whose underlying object is on the selected local database.
+If asterisk ('*') is selected, all local databases are displayed.  
+
+The SELECT command selects the highlighted local database 
+and returns automatically to the Objects Selection Criteria form.  
+The TOP/BOTTOM commands move the cursor to the top/bottom of the Local 
+Databases list respectively. The FIND command searches for a specified 
+string within the Local Databases list. The HELP command displays this 
+screen, and the END command returns to the Objects Selection Criteria form 
+without changing the Database Name field.
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	Select		Select the highlighted LDB, and return to the
+			Objects Selection Criteria form.
+
+	Top		Move the cursor to the top of the LDB list.
+
+	Bottom		Move the cursor to the bottom of the LDB list.
+
+	Find		Search for a specified string of characters
+			within the LDB list.
+
+	Help		Display this screen.
+
+	End		Exit to Object Selection Criteria form without 
+			selecting a new LDB.

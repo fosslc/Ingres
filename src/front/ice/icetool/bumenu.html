@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 1998 Ingres Corporation --> 
+<HTML>
+
+<!-- #ICE DECLARE=`session.cancel=buWelcome.html` -->
+
+<SCRIPT language="JavaScript">
+    var unit_count = 0
+    var document_count = 0;
+    var location_count = 0;
+
+    function unitList(level) {
+			<!-- #ICE REPEAT FUNCTION=`unit?action=select`
+					 HTML=`
+			top.Main.iteminsert(level, 't', 1, 'p', :unit_id, ':unit_name', '<!-- #ICE INCLUDE=``icon_unit.gif`` -->', 'BLACK', 'buUnit.html?unit=:unit_id')
+			top.Main.iteminsert(level+1, 'p', :unit_id, 'l', :unit_id, 'locations', '<!-- #ICE INCLUDE=``icon_locs.gif`` -->', 'GRAY', 'buLocs.html?unit=:unit_id', 'yes')
+			top.Main.iteminsert(level+1, 'p', :unit_id, 'h', :unit_id, 'pages', '<!-- #ICE INCLUDE=``icon_pages.gif`` -->', 'GRAY', 'buDocs.html?type=page&unit=:unit_id', 'yes')
+			top.Main.iteminsert(level+1, 'p', :unit_id, 'm', :unit_id, 'facets', '<!-- #ICE INCLUDE=``icon_multis.gif`` -->', 'GRAY', 'buDocs.html?type=facet&unit=:unit_id', 'yes')
+			top.Main.iteminsert(level+1, 'p', :unit_id, 's', :unit_id, 'security', '<!-- #ICE INCLUDE=``icon_access.gif`` -->', 'GRAY', 'buRight.html?unit=:unit_id', 'yes')
+			top.Main.iteminsert(level+1, 'p', :unit_id, 'c', :unit_id, 'copy', '<!-- #ICE INCLUDE=``icon_copy.gif`` -->', 'GRAY', 'buCopy.html?unit=:unit_id&action=out', 'yes')
+
+			<!-- #ICE REPEAT FUNCTION=``unit_location?action=select&ul_unit_id=:unit_id``
+					 HTML=``
+			top.Main.iteminsert(level+2, 'l', :unit_id, 'loc', :ul_location_id, ':ul_location_name', '<!-- #ICE INCLUDE=````icon_loc.gif```` -->', 'BLACK', 'buLoc.html?unit=:unit_id&loc=:ul_location_id&location=:ul_location_name')
+			``
+			-->`
+			-->
+		}
+		unit_count = <!-- #ICE VAR=`:ii_rowcount` -->
+
+		function DocumentList(level) {
+			var icon
+			var name
+			var father
+			var page
+
+			<!-- #ICE REPEAT FUNCTION=`document?action=select`
+					 HTML=`
+ 			if (':doc_type' == 'page')
+			{
+				father = 'h'
+				page = 'buPCode'
+				if (':doc_ext_loc' == '')
+					icon = '<!-- #ICE INCLUDE=``icon_rpage.gif`` -->'
+				else
+					icon = '<!-- #ICE INCLUDE=``icon_page.gif`` -->'
+
+			}
+			else
+			{
+				father = 'm'
+				page = 'buDView'
+				if (':doc_ext_loc' == '')
+					icon = '<!-- #ICE INCLUDE=``icon_rmulti.gif`` -->'
+				else
+					icon = '<!-- #ICE INCLUDE=``icon_multi.gif`` -->'
+			}
+			top.Main.iteminsert(level, father, :doc_unit_id, 'd', :doc_id, ':doc_name.:doc_suffix', icon, 'BLACK', 'buMain.html?unit_id=:doc_unit_id&doc=:doc_id&first=' + page)`
+			-->
+		}
+		document_count = <!-- #ICE VAR=`:ii_rowcount` -->
+
+		top.Main.declareMenu(1 + (4*unit_count) + document_count, 5)
+		top.Main.iteminsert(1, '' , 0, 't', 1, 'Business Units' , '<!-- #ICE INCLUDE=`icon_units.gif`  -->', 'GRAY', 'buUnits.html', 'yes')
+		unitList(2)
+		DocumentList(4)
+		top.Main.setStatus(1, true)
+		top.Main.display()
+</SCRIPT>
+
+</HTML>

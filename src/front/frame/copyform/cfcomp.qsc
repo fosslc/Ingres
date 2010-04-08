@@ -1,0 +1,340 @@
+/*
+** Copyright (c) 1987, 2005 Ingres Corporation
+**
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<si.h>
+# include	<lo.h>
+# include	<nm.h>
+# include	<me.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<afe.h>
+# include	<ft.h>
+# include	<frame.h>
+# include	<encoding.h>
+# include	<ds.h>
+# include	<feds.h>
+## include	<ooclass.qsh>
+# include	<cf.h>
+# include	<ui.h>
+#include	"ercf.h"
+
+/**
+** Name:	cfcompile.sc - encode forms in database.
+**
+** Description:
+**	This file defines:
+**
+**	cfcompwrite	encode one form in database.
+**	cfconvCompFrm	convert FRAME from binary to text.
+**	cfdmpCompFrm	write a row of encoded form to intermediate file.
+**	cfcpcf		copy the file to ii_encoded_forms catalog.
+**	cfcompile	encode multiple forms.
+**
+** History:
+**		16-jun-87 (rdesmond) - cfcompile modified to take ids of
+**			forms in db to compile.	 Other minor changes.
+**		13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	10/22/87 (dkh) - Changed INdiffarch to IIUGdaDiffArch.
+**	11/05/87 (dkh) - Changed to handle 5 byte ASCII count for varchar copy.
+**	11/21/87 (dkh) - Changed to use repeat appends instead of copy.
+**	12-jan-88 (rdesmond)
+**			changed 'static char *cfblock' to
+**			'GLOBALDEF char *iicfBlock' since IIc6compfrm()
+**			(in FECVT60) is coupled by that variable.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	18-jan-89 (wolf)
+**		"ii_encoded_forms" may need to be upper-cased before
+**		being passed to FErelexists.
+**	28-feb-89 (wolf)
+**			PREPARE AND EXECUTE insert queries on SQL/DS long fields
+**	09/23/89 (dkh) - Porting changes integration.
+**	10/03/89 (dkh) - Don't encode forms if FE and BE are running on
+**			 different machine architectures.
+**	11/10/89 (dkh) - Added changes to handle different size for
+**			 ii_encoded_forms catalog due to B1.
+**	09/06/90 (dkh) - Changed to use IIFDgfdGetFdDstab() instead of
+**			 IIFDdstab directly.
+**	03/24/91 (dkh) - Integrated changes from PC group.
+**	04/15/91 (dkh) - Rolled back previous change since it was put on
+**			 the integration list by mistake.
+**	09/07/92 (dkh) - Updated with 6.5 call interface to FErelexists.
+**	10/14/92 (dkh) - Removed use of ArrayOf in favor of DSTARRAY.
+**			 ArrayOf confused the alpha C compiler.
+**      18-Jul-95 (fanra01)
+**                       Added definition of NT_GENERIC so file is opened in
+**                       binary mode.
+**      11-jan-1996 (toumi01; from 1.1 axp_osf port)
+**              Added kchin's change (from 6.4) for axp_osf
+**              10/15/93 (kchin)
+**              Cast argument to PTR when calling FEmsg(), this
+**              is due to the change of datatype of variable parameters
+**              to PTR in FEmsg() routine.  The change here is made in
+**              cfcompile().
+**      24-sep-96 (hanch04)
+**          Global data moved to data.c
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	07-sep-2005 (abbjo03)
+**	    Replace xxx_FILE constants by SI_xxx.
+**	15-oct-2007 (toumi01)
+**	    For UTF8 force ii_encoded_forms.cfdata type to DB_VBYTE_TYPE.
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**/
+
+GLOBALREF char	*iicfBlock ;
+
+FUNC_EXTERN	FRAME	*FDtxtcreate();
+FUNC_EXTERN	i4	IIUGdaDiffArch();
+FUNC_EXTERN	i4	IIFDesEncodeSize();
+
+/*
+** Template table.
+*/
+FUNC_EXTERN	DSTARRAY	*IIFDgfdGetFdDstab();
+
+i4
+cfcompwrite ( frame )
+FRAME	*frame;
+{
+	SH_DESC		sh_desc;
+	char		filebuf[MAX_LOC + 1];
+	LOCATION	fileloc;
+	FILE		*fptr;
+	char		*block;
+	i4		count;
+	STATUS		stat;
+
+	/*
+	** temporarily use IS_FILE until DSstore with IS_MEM is implemented
+	*/
+	sh_desc.sh_type = IS_FILE;
+	sh_desc.sh_reg.file.fp = NULL;
+	sh_desc.sh_keep = 0;
+
+	if (DSstore(&sh_desc, DS_FRAME, frame, IIFDgfdGetFdDstab()) != OK)
+	{
+		IIUGerr(E_CF001A_ERROR__Unable_to_relo, 0, 1, TRUE);
+		return -1;
+	}
+	STcopy(sh_desc.sh_reg.file.name, filebuf);
+	if (LOfroms(PATH & FILENAME, filebuf, &fileloc) != OK)
+	{
+		IIUGerr(E_CF001B_ERROR__Unable_to_conv, 0, 1, TRUE);
+		return -1;
+	}
+# if defined(MSDOS) || defined(NT_GENERIC)
+	if ( SIfopen(&fileloc, ERx("r"), SI_VAR, 4096, &fptr) != OK )
+# else
+#   ifdef PCOS2
+	if ( SIfopen(&fileloc, ERx("r"), SI_VAR, 4096, &fptr) != OK )
+#   else
+# ifndef CMS
+	if ( SIopen(&fileloc, ERx("r"), &fptr) != OK )
+# else
+	if ( SIfopen(&fileloc, ERx("r"), SI_VAR, 4096, &fptr) != OK )
+# endif
+# endif
+# endif
+	{
+		IIUGerr(E_CF001C_ERROR__Unable_to_open, 0, 1, TRUE);
+		return -1;
+	}
+	if ( (block =
+		(char *)MEreqmem(0, (u_i4)sh_desc.size, TRUE, (STATUS *)NULL))
+			== NULL )
+		IIUGbmaBadMemoryAllocation( ERx("cfcompwrite()") );
+
+	stat = SIread(fptr, sh_desc.size, &count, block);
+	SIclose(fptr);
+	LOdelete(&fileloc);
+	if ( stat != OK || count != sh_desc.size )
+	{
+		IIUGerr(E_CF001D_ERROR__Unable_to_re, 0, 0);
+		MEfree(block);
+		return -1;
+	}
+
+	iicfBlock = block;
+
+	return sh_desc.size;
+}
+
+/*
+** cfcpcf
+**
+**	Copy the given file to the iicompfrm catalog.
+*/
+VOID
+cfcpcf ( cffrmid, cfsize )
+EXEC SQL BEGIN DECLARE SECTION;
+OOID	cffrmid;
+i4	cfsize;
+EXEC SQL END DECLARE SECTION;
+{
+	register i4	size;
+	EXEC SQL BEGIN DECLARE SECTION;
+	register char	*addr;
+	i4		seqno;
+	DB_DATA_VALUE	dbv;
+	char		sql_buf[128];	/* chg dimesion if PREPARES chg */
+	EXEC SQL END DECLARE SECTION;
+
+	i4		encode_size;
+	DB_TEXT_STRING	*txtptr;
+	AFE_DCL_TXT_MACRO(MAX_CFTXT)	txtdata;
+
+	/*
+	**  Note that we assume that MAX_CFTXT is large enough
+	**  no matter what IIFDesEncodeSize() returns.
+	*/
+	encode_size = IIFDesEncodeSize();
+
+	iiuicw1_CatWriteOn();
+
+	dbv.db_datatype = DB_VBYTE_TYPE;
+	dbv.db_length = sizeof(txtdata);
+	dbv.db_prec = 0;
+	dbv.db_data = (PTR)&txtdata;
+
+	txtptr = (DB_TEXT_STRING *)&txtdata;
+
+	addr = iicfBlock;
+	seqno = 0;
+	for ( size = cfsize ; size > 0 ; size -= encode_size )
+	{
+		EXEC SQL BEGIN DECLARE SECTION;
+		i4	rowsize;
+		EXEC SQL END DECLARE SECTION;
+
+		rowsize = min(encode_size, size);
+
+		txtptr->db_t_count = rowsize;
+		MEcopy((PTR)addr, rowsize, (PTR)txtptr->db_t_text);
+
+# ifdef IBM370
+		STpolycat(2,
+		 ERx("INSERT INTO ii_encoded_forms(object_id, cfseq, cfdatsize, cftotdat, cfdata)"),
+		 ERx(" VALUES (?, ?, ?, ?, ?)"), sql_buf);
+		EXEC SQL PREPARE cfcpcf_stmt FROM :sql_buf;
+		EXEC SQL EXECUTE cfcpcf_stmt USING :cffrmid, :seqno, :rowsize, :cfsize, :dbv;
+# else
+		EXEC SQL REPEATED INSERT INTO ii_encoded_forms
+					(object_id, 
+					cfseq, 
+					cfdatsize,
+					cftotdat,
+					cfdata)
+				VALUES  (:cffrmid,
+					:seqno,
+					:rowsize,
+					:cfsize,
+					:dbv
+				);
+# endif
+
+		if ( size >= encode_size )
+		{
+			++seqno;
+			addr += rowsize;
+		}
+	} /* end for */
+	iiuicw0_CatWriteOff();
+
+	return;
+}
+VOID
+cfcompile( formlist, count )
+FORMINFO	formlist[];
+register i4     count;
+{
+	register i4	i;
+	char	tblname[FE_MAXTABNAME + 1];
+
+	/*
+	**  If table "iicompfrm" does not exist in the database (if
+	**  we are running against a 3.0 VMS database) then don't
+	**  compile anything.  Also punt if db is across network and
+	**  has a different architecture.
+	*/
+
+	STcopy(ERx("ii_encoded_forms"), tblname);
+	IIUGdbo_dlmBEobject(tblname, FALSE);
+	if (IIUGdaDiffArch() || FErelexists(tblname, NULL) != OK)
+	{
+		return;
+	}
+
+	/*
+	**  Hack to shut up frame driver about
+	**  form being too wide for terminal.
+	**  since copyform does not open terminal
+	**  COLS is 0.
+	*/
+
+	FDfrprint((i4) 1);
+
+	/*
+	**  Tell frame driver to just check the
+	**  syntax of any validation strings.
+	*/
+
+	FDsetparse(TRUE);
+
+	if (!Cf_silent)
+	    FEmsg(ERget(S_CF001E_Compiling_forms_into_), (bool)FALSE, (PTR)0);
+
+	for ( i = 0 ; i < count ; ++i )
+	{
+		register char	*form;
+		register FRAME	*frm;
+		OOID		cffrmid;
+		i2		frmtag;
+
+		form = formlist[i].name;
+		cffrmid = formlist[i].id;
+		frmtag = FEbegintag();
+		frm = FDtxtcreate(form, FALSE, cffrmid);
+		frmtag = FEendtag();
+
+		if (frm == NULL)
+		{
+		    IIUGerr(E_CF0020_Could_not_find_form__, 0, 1, form);
+		}
+		else if (frm == (FRAME *) -1)
+		{
+		    IIUGerr(E_CF0021_Errors_while_accessin, 0, 1, form);
+		}
+		else
+		{
+		    i4	size;
+
+		    if ( (size = cfcompwrite(frm)) > 0 )
+		    {
+			IIUIbeginXaction();
+			cfcpcf( cffrmid, size );
+			IIUIendXaction();
+
+			/*
+			**  Free up memory allocated in cfcompwrite.
+			*/
+			MEfree(iicfBlock);
+		    }
+		    FEfree(frmtag);
+		}
+	} /* end for */
+}

@@ -1,0 +1,33 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ICETranslate", "ICETranslate.vcproj", "{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Debug64 = Debug64
+		DebugAMD64 = DebugAMD64
+		Release = Release
+		Release64 = Release64
+		ReleaseAMD64 = ReleaseAMD64
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.Debug.ActiveCfg = Debug|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.Debug.Build.0 = Debug|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.Debug64.ActiveCfg = Debug64|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.Debug64.Build.0 = Debug64|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.DebugAMD64.ActiveCfg = DebugAMD64|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.DebugAMD64.Build.0 = DebugAMD64|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.Release.ActiveCfg = Release|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.Release.Build.0 = Release|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.Release64.ActiveCfg = Release64|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.Release64.Build.0 = Release64|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.ReleaseAMD64.ActiveCfg = ReleaseAMD64|Win32
+		{8480BDE7-8CC2-4DB4-BD19-078FD7FCAAC2}.ReleaseAMD64.Build.0 = ReleaseAMD64|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

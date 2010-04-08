@@ -1,0 +1,91 @@
+;
+; History:
+;	08-May-2001 (penga03)
+;	    Created.
+;	13-Jun-2001 (penga03)
+;	    Added function ingres_set_environment.
+;	15-Jun-2001 (penga03)
+;	    Added ingres_set_msiloc_in_reg.
+;	23-July-2001 (penga03)
+;	    Added ingres_upgrade_ver25.
+;	17-Aug-2001 (penga03)
+;	    Added ingres_set_feature_attribute.
+;	24-Aug-2001 (penga03)
+;	    Added ingres_check_targetpath_duplicated.
+;	28-Aug-2001 (penga03)
+;	    Added function ingres_cleanup_temp_msi.
+;	31-dec-2001 (penga03)
+;	    Added function ingres_install_license.
+;	28-jan-2002 (penga03)
+;	    Removed ingres_cleanup_temp_msi and ingres_set_msiloc_in_reg. 
+;	    Added ingres_cleanup_commit, ingres_cleanup_immediate, and 
+;	    ingres_update_properties.
+;	30-jan-2002 (penga03)
+;	    Added ingres_set_targetpath.
+;	12-feb-2002 (penga03)
+;	    Moved ingres_set_timezone to dbmsnetmm.c.
+;	28-feb-2002 (penga03)
+;	    Added Ingres SDK specific functions, ingressdk_check_targetpath_duplicated, 
+;	    ingressdk_cleanup, ingressdk_set_environment and ingressdk_uninstall.
+;	12-mar-2002 (penga03)
+;	    Added ingressdk_remove.
+;	06-feb-2003 (penga03)
+;	    Removed ingres_check_license.
+;	11-jun-2003 (penga03)
+;	    Added ingressdk_check_existing_ingres.
+;	17-dec-2003 (penga03)
+;	    Added ingres_checkiflicenseviewed.
+;	22-sep-2004 (penga03)
+;	    Removed ingres_install_license.
+;	14-dec-2004 (penga03)
+;	    Added ingres_start_ingres.
+;	29-jun-2005 (penga03)
+;	    Added ingres_set_controls().
+;	19-Oct-2005 (drivi01)
+;	    Looks like a bad propagation, removed '>>>'.
+;	14-Mar-2007 (drivi01)
+;	    Add new function ingres_Set_corpdir.
+;	30-Oct-2007 (drivi01)
+;	    Added two new functions ingres_set_installlvl_doc,
+;	    ingres_set_installlvl_dotnet.
+;	18-Mar-2009 (drivi01)
+;	    Added ingres_warn_remove_dbms.
+;
+EXPORTS
+	ingres_verify_paths
+	ingres_warning_on_sql92
+	ingres_set_http_server
+	ingres_ini_ice_config
+	ingres_set_coldfusion
+	ingres_verify_user
+	ingres_ice_verify_paths
+	ingres_base_settings
+	ingres_set_properties
+	ingres_set_environment
+	ingres_upgrade_ver25
+	ingres_set_feature_attribute
+	ingres_check_targetpath_duplicated
+	ingres_update_properties
+	ingres_cleanup_commit
+	ingres_cleanup_immediate
+	ingres_set_targetpath
+	ingressdk_cleanup
+	ingressdk_check_targetpath_duplicated
+	ingressdk_set_environment
+	ingressdk_uninstall
+	ingressdk_remove
+	ingressdk_check_existing_ingres
+	ingres_checkiflicenseviewed
+    	ingres_start_ingres
+	ingres_set_controls
+    	ingres_addsummary
+    	ingres_cleansummary
+    	ingres_removesummary
+	ingres_install_documentation
+	ingres_install_dotnet
+	ingres_dbms_dotnet
+	ingres_set_corpdir
+	ingres_set_installlvl_doc
+	ingres_set_installlvl_dotnet
+	ingres_warn_remove_dbms
+

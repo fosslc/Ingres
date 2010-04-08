@@ -1,0 +1,145 @@
+/*
+	Test Name: zaa09.sep
+	Time:  1-FEB-1992 00:05:19
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa09.sep
+	Purpose	: Test SEP functionality
+	Input Files  : none
+	Output Files : none
+	Database     : Septools, created by zaa01.sep.
+	Tables       :
+	Synopsis     : Test diff_numerics fuzz_factor.
+
+ History:  1-FEB-1992	(Author)	Created
+
+	25-feb-1992 (DonJ)
+	    Changed f8 values to be very large rather than very small.
+	    Unix's way of showing the formats was not condusive to the
+	    spirit of the test. Will need to be updated on VMS as
+	    well.
+        26-FEB-1992	(DonJ)
+	    Add VMS canon to the new insert value. Redo some other
+	    canons to ignored.
+	26-FEB-1992	(DonJ)
+	    Add other inserts and diff_numerics stuff to test other aspects
+	    of the feature.
+          30-Jan-1996	(somsa01)
+		Added canons for NT platforms.
+*/
+.if !SEPPARAMDB 
+? setenv SEPPARAMDB septools 
+<<
+environment variable was defined
+>>
+.endif 
+? sql -s SEPPARAMDB 
+<<
+>>
+* set autocommit on;\g
+<<
+>>
+* drop table sss;\g
+<<
+E_US0AC1 DROP: 'sss' does not exist or is not owned by you.
+    (14-MAR-1992 23:59:04)
+
+>>
+* create table sss (col1 f8, col2 c32 );\g
+<<
+>>
+* insert into sss (col1,col2) values (1.3456789e+15,'1.3456789e+15');\g
+/*
+    This value will be compared to itself. The string version is here to
+    force a difference that can test the fuzz_factor flag. The f8 part
+    will fail unless the "-f1e-03" is used in the SEP command line.
+*/
+<<
+(1 row)
+>>
+* select * from sss;\g
+<<
+
+
++------------+--------------+
+| col1       | col2         |
++------------+--------------+
+| 1.346e+015 | 1.345679e+15 |
++------------+--------------+
+(1 row)
+>>
+<<
+
++-----------+--------------------------------+
+|col1       |col2                            |
++-----------+--------------------------------+
+| 1.346e+015|1.3456789e+15                   |
++-----------+--------------------------------+
+(1 row)
+>>
+* \q 
+<<
+>>
+? sepset diff_numerics 1e-05 
+/*
+    Now we'll try changing the fuzz_factor internally and try a finer
+    granularity. This test may fail depending on platform.
+*/
+<<
+>>
+? sql -s SEPPARAMDB 
+<<
+>>
+* set autocommit on;\g
+<<
+>>
+* drop table sss;\g
+<<
+>>
+* create table sss (col1 c32 );\g
+<<
+>>
+* insert into sss (col1) values ('1.3456789e+05');\g
+<<
+(1 row)
+>>
+* select * from sss;\g
+<<
+
++-------------+
+| col1        |
++-------------+
+| 1.34567e+05 |
++-------------+
+(1 row)
+>>
+* delete from sss;\g
+<<
+(1 row)
+>>
+* insert into sss (col1) values ('1.34567e+12');\g
+<<
+(1 row)
+>>
+* select * from sss;\g
+<<
+
++---------------+
+| col1          |
++---------------+
+| 1.3456789e+12 |
++---------------+
+(1 row)
+>>
+* drop table sss;\g
+<<
+>>
+* \q 
+<<
+>>
+
+
+Ending at: Tue Jan 30 09:54:07 1996

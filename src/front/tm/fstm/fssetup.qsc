@@ -1,0 +1,498 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include	<fstm.h>
+# include	<buf.h>
+# include	<qr.h>
+# include	<cm.h>
+# include	<ermf.h>
+
+/**
+** Name:	fssetup.qc -	Interactive Terminal Monitor
+**					Request Initialization Module.
+** Description:
+**	Contains routines for DBMS request initialization for the interactive
+**	terminal monitor.  Defines:
+**
+**	FSsetup()	initializes the bcb and qrb control blocks.
+**	FScount()	counts the number of records in the input tblfield.
+**	FSoutput()	outputs a buffer
+**	FScont()	continue function for QR.
+**	FSqbinit()	initializes the query buffer.
+**	FSqbfull()	allocates more memory if the query buffer is full.	
+**
+** History:
+**	04-may-87 (peterk) First Written.
+**	12-may-87 (daver)
+**		Added Multiple error message support:
+**		Added FSouterr, bcb as parameters to qrinit in FSsettup.
+**		Removed code to chain the error messages in FScont.
+**	11/12/87 (dkh) - FTdiag -> FSdiag.
+**	11-aug-88 (bruceb)
+**		Added ricks' kanji changes.
+**	12-aug-88 (bruceb)
+**		Added new (NULL) arg to call on qrinit.
+**	25-may-89 (kathryn) 
+**		Take out call to IIbreak.  IIbreak will be called by
+**		IIFSend_qry() in FSrun.qsc  - when a request was begun but
+**		not completed.
+**	12-jun-89 (teresal)
+**		Fixed a bug with deleteline activation.  Modified code so 
+**		deleted lines in the input screen are not written to the
+**		request sent to the backend.
+**	21-jul-89 (teresal)
+**		Bug #6597 fixed.  Added better error handling if query buffer
+**		fills up.
+**	26-jul-89 (teresal)
+**		Bug #6440 fixed.  Put in KenL's enhancement to add "\" to 
+**		the end of a query input line to indicate a continue line.
+**		Note: leading blanks are no longer trimed from the input 
+**		query line.  Use '\\' to put a '\' in the last position of an
+**		input query line.
+**	16-oct-89 (sylviap)
+**		Changed FS calls to IIUF.
+**	20-mar-90 (teresal)
+**		Added dynamic allocation of the query buffer. Bug 8389.
+**	16-dec-91 (pearl)
+**		Fix for bug 40202.  Initialize new print_time field in 
+**		bcb (buffer control block) to TRUE.  We want time stamp to 
+**		continue to be printed on data saved to a file.
+**	17-mar-92 (seg)	Must use ZERO_FILL macro to set struct to zero.
+**	6-oct-92 (rogerl) Add tm FALSE to qrinit
+**	05-feb-93 (rogerl) Add init of bcb->onpopup
+**	07-feb-93 (rogerl) Use qrcpbuf and MEreqlng to handle buffers which
+**		may become of mondo proportion
+**	11-feb-93 (rogerl) FScont returns STATUS
+**	9-mar-93 (rogerl) Delete init of bcb->onpopup
+**	08-mar-93 (rogerl) Delete bcb->onpopup
+**      20-apr-94 (timt) bug 55911
+**              Whenever there is a DIRECT CONNECT/DIRECT DISCONNECT/
+**              SET SESSION AUTH., IItm_status will set the flag
+**              libq_connect_chgd to on, we will set the global variable
+**              connect_chgd to TRUE.  This will be referenced by
+**              qrhelp.qsc when a HELP statement is issued.  If
+**              connect_chgd is TRUE, qrhelp.qsc will check the catalog
+**              tables before issuing select stmt for help.
+**              connect_chgd will also reset to FALSE by qrhelp.qsc.
+**              Side effect: since GCA_NEW_EFF_USER_MASK bit flag is
+**                           also set on when SET SESSION AUTH. is
+**                           issued this will cause unnecessary checking
+**                           of catalog tables in qrhelp.qsc. This won't
+**                           have any adverse effect except slowing down
+**                           the help stmt a little bit after  SET
+**                           SESSION AUTH.
+**              Search for b55911 to see all the changes.
+**      03-oct-1996 (rodjo04)
+**              Changed "ermf.h" to <ermf.h>
+**	27-dec-1996 (donc)
+**	    Change GLOBALDEF to GLOBALREF for connect_chgd, it is now
+**	    GLOBALREFed in qrdata.c
+**	27-dec-1996 (donc)
+**	    Delete initialization of connect_chgd.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      29-Nov-1999 (hanch04)
+**          First stage of updating ME calls to use OS memory management.
+**          Make sure me.h is included.  Use SIZE_TYPE for lengths.
+[@history_template@]...
+**/
+
+# define	BFRSIZE		256
+# define	DELETED		4
+
+/*      stat field values       */
+# define        QB_OPEN         01
+
+GLOBALREF bool connect_chgd;                    /* b55911 */
+GLOBALREF QRB	*FS_qrb;
+
+VOID	FSouterr();
+VOID	qrcpbuf();
+
+static BCB	*bcbptr = NULL;
+static char	outbufr[512] ZERO_FILL;
+static i4	outptr = 0;
+static struct qbuf	qbstruct   ZERO_FILL;
+
+
+/*
+**  FSsetup  --	 Setup a New Backend Request
+**
+**  This routine is called when the user is ready to pump a new
+**  request to the backend.  Rows from the input form are
+**  collected and QR (Query Runner) is initialized by calling
+**  qrinit().
+**
+**  The query "block" will be sent to the BE and results retrieved
+**  when IIUFmro_MoreOutput() calls FSrecbe() which calls the BCB.nxrec function
+**  which will be pointing to qrrun().	QR (using standard LIBQ)
+**  handles all FE/BE communication.
+**
+**  Returns: OK	  if no errors occurred.
+**           FAIL if the query buffer is full.
+**
+**  History:
+**	11-nov-2009 (wanfr01) b122875
+**	    Add Outisterm parameter to qrinit
+*/
+STATUS
+##FSsetup ( bcb, formname, tblfldname, colname, nmrows, qrb, dv )
+register BCB	*bcb;
+## char *formname;
+## char *tblfldname;
+## char *colname;
+   i4	nmrows;
+   QRB	*qrb;		/* QR control block */
+   DB_DATA_VALUE *dv;	/* QRB output buffer */
+{
+	register i4		i;
+	register struct qbuf	*qb = &qbstruct;
+	bool			qryfull;	/* Bug #6597 */
+
+##	char bfr[BFRSIZE];
+	i4  bfr_len;
+
+	STATUS	FScont();
+
+	extern ADF_CB	*FS_adfscb;
+
+	bcb->req_begin	 = TRUE;
+	bcb->req_complete = FALSE;
+	bcb->eor_warning  = FALSE;
+	bcb->print_time	 = TRUE;
+
+	if (bcb->bffd)
+	{
+		i4	rc;
+
+		FSdiag(ERx("FSsetup: closing spill file (already open)\n"));
+		if ( (rc = SIclose(bcb->bffd)) != OK )
+		{
+			char	msg[80];
+
+			IIUFpan_Panic( bcb, STprintf( msg,
+					ERget(E_MF0004_Unable_to_close_file),
+					bcb->bfname, rc )
+			);
+			IIUFpan_Panic(bcb,msg);
+		}
+		bcb->bffd = NULL;
+	}
+
+	LOdelete(&bcb->bfloc);
+
+	bcb->nrecs = 0;
+	bcb->mxcol = 0;
+
+	if (bcb->rd_ahead)
+	{
+		MEfree(bcb->rd_ahead);
+		bcb->rd_ahead = NULL;
+	}
+
+# ifdef CMS
+	/*
+	**  This is a special CMS-only call which causes the in-memory
+	**  copy of all minidisk directories to be written to disk; this
+	**  might be important if the user is trying to issue some
+	**  'copy () from' QUEL commands. (Because the backend will try
+	**  to link to the user's minidisk.)
+	*/
+	TOupdir('*');
+# endif
+
+	/*
+	**  initialize the query buffer structure
+	*/
+	if(FSqbinit(qb) != OK)
+		return(FAIL);	/* Couldn't allocate initial query buffer */
+
+	qryfull = FALSE;
+
+	/*
+	**  Collect each line from the input form.
+	*/
+	i = 0;
+##	unloadtable formname tblfldname (bfr = colname)
+##	{
+		if (++i <= nmrows)
+		{
+			if ( STtrmwhite(bfr) > 0 && bfr[0] != EOS )
+			{
+				register i4	length;
+
+				bfr_len = STlength(bfr) - 1;
+				if (bfr[bfr_len] == '\\')
+				{
+				    bfr[bfr_len] = EOS;
+				    if (bfr_len > 0)
+				    {
+				        if (bfr[bfr_len-1] == '\\')
+				        {
+					    STcat(bfr,ERx("\n"));
+				        }
+				    }	
+				}
+				else
+				{
+				    STcat(bfr,ERx("\n"));
+				}
+				length = STlength(bfr);
+
+				if (qb->qb_count > length)
+				{
+					STcopy(bfr, qb->qb_char);
+					qb->qb_char  += length;
+					qb->qb_count -= length;
+					qb->qb_end   += length;
+				}
+				else    /* Query buffer full - increase it */
+				{
+					if(FSqbfull(qb) != OK)
+					{
+						/* Memory allocation failed */
+						qryfull = TRUE;
+##						endloop
+					}
+					else
+					{
+						STcopy(bfr, qb->qb_char);
+						qb->qb_char  += length;
+						qb->qb_count -= length;
+						qb->qb_end   += length;
+					}
+
+				}
+			}
+		}
+##	}
+
+	if (qryfull == TRUE)		/* No more memory available Bug #6597 */
+		return (FAIL);
+	FSdiag(ERx("FSsetup: sending '%s'\n"), qb->qb_pbuf);
+
+	/* Initialize the Query Runner */
+	qrinit(qrb, (bool)(FS_adfscb->adf_qlang == DB_SQL), qb->qb_pbuf, 0,
+		FScont, 0, 0, TRUE, dv, FS_adfscb, FSouterr, (PTR)bcb,
+		NULL, FALSE, TRUE);
+
+	/* point global FS_qrb to QRB so exception handler can know about it */
+	FS_qrb = qrb;
+
+	return(OK);
+}
+
+
+/*
+**  FScount  --	 Count the number of "good" records in the input
+**		 table field
+**
+**  Returns: nothing
+*/
+i4
+## FScount(frmnm, tblnm, colnm)
+## char	 *frmnm;
+## char	 *tblnm;
+## char	 *colnm;
+{
+	register i4	i     = 0;
+	register i4	mxcnt = 0;
+##	char		bf[BFRSIZE];
+##	i4		r_state;
+
+##	unloadtable frmnm tblnm (bf = colnm, r_state = _STATE)
+##	{
+		if (r_state != DELETED)		/* don't count deleted rows */
+		{
+			FSdiag(ERx("FScount: record = '%s'\n"),bf);
+			i++;
+			if (bf[0])
+				mxcnt = i;
+		}
+##	}
+	FSdiag(ERx("FScount: found %d records in table field\n"),mxcnt);
+	return(mxcnt);
+}
+
+
+FSoutput(p, n)
+register char	*p;
+register i4	n;
+{
+	register i4	i, j;
+	char	c; /* local var necessitated by Whitesmiths parameter passing */
+
+	if (n == 0)
+		return;
+
+	for (i = 0; i < n; i++)
+	{
+		c = *p++;
+		switch (c)
+		{
+		  case '\0':
+		  case '\n':
+			outbufr[outptr] = '\0';
+			IIUFadd_AddRec(bcbptr, outbufr, TRUE);
+			outptr = 0;
+			break;
+
+		  case '\t':
+			j = outptr + (8 - (outptr & 07));
+			while  (outptr < j)
+			{
+				outbufr[outptr++] = ' ';
+			}
+			break;
+
+		  default:
+			outbufr[outptr++] = c;
+			break;
+		}
+	}
+}
+
+
+/*
+**	FScont()
+**
+**	FSTM "continue-function", to be executed by Query Runner
+**	after each query result returned from BE.
+**      20-apr-94 (timt) bug 55911
+**              Add a parameter libq_connect_chgd to IItm_status.
+*/
+STATUS
+FScont(qrb)
+QRB	*qrb;
+{
+	i4	rows, err;
+	i4	stat;
+        bool    libq_connect_chgd = FALSE;                      /* b55911 */
+
+	IItm_status(&rows, &err, &stat, &libq_connect_chgd);	/* b55911 */
+	if (qrb->error)
+	{
+	    /* test severity of error */
+	    if (qrb->severity > 0)
+		return FAIL;
+	}
+	else if (rows >= 0)
+	{
+	    /* add the Row Count message to the QRB output buffer */
+	    if (qrb->norowmsg)
+	    {
+		qrprintf(qrb, ERx("\n"));
+		qrb->norowmsg = FALSE;
+	    }
+	    else if (rows == 1)
+	    {
+		qrprintf(qrb, ERget(F_MF0014_1_row));
+	    }
+	    else
+	    {
+		qrprintf(qrb, ERget(F_MF0015_d_rows), rows);
+	    }
+	}
+
+         /* Indicate that a DIRECT [DIS]CONNECT may be issued   b55911 */
+	if (libq_connect_chgd)
+	{
+	    connect_chgd = TRUE;
+	}
+
+	return OK;
+}
+
+/*
+**	FSqbinit()
+**
+**	Initialize the query buffer.  If first time, allocate memory otherwise
+**	just reset the query buffer counters.
+*/
+STATUS
+FSqbinit(qb)
+register struct qbuf *qb;
+{
+	STATUS	stat;
+
+	/*
+	**  initialize the query buffer structure
+	*/
+	if(!(qb->qb_stat & QB_OPEN))	/* First time - allocate query buffer */
+	{
+		qb->qb_bufsiz   = QBUFSIZE;
+		if ((qb->qb_pbuf = (char *)MEreqmem((u_i4)0,
+				(u_i4)QBUFSIZE, (bool)FALSE,
+				&stat)) == NULL)
+		{
+			/* Memory allocation failed */
+			i4	bsize;
+
+			bsize = qb->qb_bufsiz;
+			IIUGerr(E_MF0027_unable_alloc_qb, UG_ERR_FATAL, 1, 
+								&bsize);
+			return(FAIL);
+		}
+		qb->qb_stat   =  QB_OPEN;
+	}
+	qb->qb_count  = qb->qb_bufsiz;
+	qb->qb_end    = 0;
+	qb->qb_char   = qb->qb_pbuf;
+	*qb->qb_char  = NULLCHAR;
+
+	return(OK);
+}
+
+/*
+**	FSqbfull()
+**
+**	This routine is called when the Query Buffer is full; it
+**	allocates more memory for the Query Buffer.
+*/
+STATUS
+FSqbfull(qb)
+register struct qbuf *qb;
+{
+	char    *oldqbuf = qb->qb_pbuf;
+	i4     newbufsiz;
+	STATUS	stat;
+
+	/*
+	** Allocate more memory for the Query Buffer.
+	** Double the buffer size.
+	*/
+	newbufsiz = qb->qb_bufsiz * 2;
+	if ((qb->qb_pbuf = (char *)MEreqmem((u_i4)0,
+		    (SIZE_TYPE)newbufsiz, (bool)FALSE, &stat))
+		== NULL)
+	{
+		/* Memory allocation failed */
+		i4	bsize;
+
+		bsize = newbufsiz;
+		qb->qb_pbuf = oldqbuf;	/* reset ptr */
+		IIUGerr(E_MF0027_unable_alloc_qb, 0, 1, &bsize);
+		return(FAIL);
+	}
+	qrcpbuf( oldqbuf, qb->qb_pbuf, qb->qb_end );
+	MEfree(oldqbuf);
+	qb->qb_count    = newbufsiz - qb->qb_end;
+	qb->qb_char     = qb->qb_pbuf + qb->qb_end;
+	qb->qb_bufsiz   = newbufsiz;
+
+	return(OK);
+}

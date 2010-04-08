@@ -1,0 +1,77 @@
+/*
+	Test Name: zaa08.sep
+	Time: 18-AUG-1991 12:17:07
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa08.sep
+	Purpose	: Test SEP functionality
+	Input Files  : none
+	Output Files : none
+	Database     : Septools, created by zaa01.sep.
+	Tables       :
+	Synopsis     :	Tests masking of column frames.
+
+	History: 18-AUG-1991	Created				DONJ
+          16-Jan-1992   (DonJ)
+                Fix any unix discrepencies in canons.
+
+          29-Jan-1992	(DonJ)
+		Changed final canon for content of trace1.stf
+           6-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+          25-Feb-1992	(DonJ)
+		Redo canons for UNIX. Also check for new functions.
+           6-Apr-1992	(DonJ)
+		Add UNIX canon fro SEP V3.2b.
+	  22-jun-1992	(DONJ)
+		Change open canon option "<< VMS" to the newer "<< if VMS"
+		form.
+*/
+.if !SEPPARAMDB
+? setenv SEPPARAMDB septools
+<<
+environment variable was defined
+>>
+.endif
+? sql SEPPARAMDB
+<<
+INGRES VAX Version 6.4/01 (vax.vms/97) login 29-AUG-1991 23:56:35
+continue
+* 
+>>
+* select dbmsinfo('_version');\g 
+<<
+Executing . . .
+
+
++----------------------------+
+|col1                        |
++----------------------------+
+|6.4/01 (vax.vms/97)         |
++----------------------------+
+(1 row)
+* 
+>>
+* select dbmsinfo('_version');\g 
+<<
+Executing . . .
+
+
++------------------------------------+
+|col1                                |
++------------------------------------+
+|6.4/01 (vax.vms/97)                 |
++------------------------------------+
+(1 row)
+* 
+>>
+* \q 
+<<
+~
+>>
+
+
+Ending at: Mon Apr  6 15:42:16 1992

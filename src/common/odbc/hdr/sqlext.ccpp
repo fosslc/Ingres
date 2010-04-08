@@ -1,0 +1,1897 @@
+XX/*
+XX** Copyright (c) 2004 Ingres Corporation
+XX*/
+XX/*
+XX##
+XX##  19-Apr-2004 (loera01)
+XX##     Created from sqlext.h.
+XX##  17-Feb-2005 (Ralph.Loen@ca.com)  SIR 113913
+XX##     Added SQLConfigDataSource(), ConfigDSN(), SQLDataSources(), 
+XX##     SQLInstallerError(), and associated data definitions.
+XX##
+XX*/
+XX#ifndef __SQLEXT
+XX#define __SQLEXT
+XX
+XX#ifndef __SQLUCODE_H
+XX#define __SQLUCODE_H
+XX
+XX
+XX#ifndef __SQL
+XX#include "sql.h"
+XX#endif
+XX
+XX#ifdef __cplusplus
+XXextern "C" {                         /* Assume C declarations for C++ */
+XX#endif  /* __cplusplus */
+XX
+XX/* generally useful constants */
+XX#define SQL_SPEC_MAJOR     3     	/* Major version of specification  */
+XX#define SQL_SPEC_MINOR	   52     	/* Minor version of specification  */
+XX#define SQL_SPEC_STRING   "03.52"	/* String constant for version */
+XX
+XX#define SQL_SQLSTATE_SIZE	5	/* size of SQLSTATE */
+XX#define SQL_MAX_DSN_LENGTH	32	/* maximum data source name size */
+XX
+XX#define SQL_MAX_OPTION_STRING_LENGTH    256
+XX
+XX/* return code SQL_NO_DATA_FOUND is the same as SQL_NO_DATA */
+XX#define SQL_NO_DATA_FOUND	SQL_NO_DATA
+XX
+XX/* an end handle type */
+XX#define	SQL_HANDLE_SENV		5
+XX
+XX/* env attribute */
+XX#define SQL_ATTR_ODBC_VERSION				200
+XX#define SQL_ATTR_CONNECTION_POOLING			201
+XX#define SQL_ATTR_CP_MATCH				202
+XX
+XX/* values for SQL_ATTR_CONNECTION_POOLING */
+XX#define SQL_CP_OFF			                0UL
+XX#define SQL_CP_ONE_PER_DRIVER				1UL
+XX#define SQL_CP_ONE_PER_HENV				2UL
+XX#define SQL_CP_DEFAULT					SQL_CP_OFF
+XX
+XX/* values for SQL_ATTR_CP_MATCH */
+XX#define SQL_CP_STRICT_MATCH			        0UL
+XX#define SQL_CP_RELAXED_MATCH				1UL
+XX#define SQL_CP_MATCH_DEFAULT				SQL_CP_STRICT_MATCH		
+XX
+XX/* values for SQL_ATTR_ODBC_VERSION */
+XX#define SQL_OV_ODBC2					2UL
+XX#define	SQL_OV_ODBC3					3UL
+XX
+XX/* connection attributes */
+XX#define SQL_ACCESS_MODE                 101
+XX#define SQL_AUTOCOMMIT                  102
+XX#define SQL_LOGIN_TIMEOUT               103
+XX#define SQL_OPT_TRACE                   104
+XX#define SQL_OPT_TRACEFILE               105
+XX#define SQL_TRANSLATE_DLL               106
+XX#define SQL_TRANSLATE_OPTION            107
+XX#define SQL_TXN_ISOLATION               108
+XX#define SQL_CURRENT_QUALIFIER           109
+XX#define SQL_ODBC_CURSORS                110
+XX#define SQL_QUIET_MODE                  111
+XX#define SQL_PACKET_SIZE                 112
+XX
+XX/* connection attributes with new names */
+XX#define SQL_ATTR_ACCESS_MODE		SQL_ACCESS_MODE
+XX#define SQL_ATTR_AUTOCOMMIT	        SQL_AUTOCOMMIT
+XX#define SQL_ATTR_CONNECTION_TIMEOUT	113
+XX#define SQL_ATTR_CURRENT_CATALOG	SQL_CURRENT_QUALIFIER
+XX#define SQL_ATTR_DISCONNECT_BEHAVIOR	114
+XX#define SQL_ATTR_ENLIST_IN_DTC		1207
+XX#define SQL_ATTR_ENLIST_IN_XA		1208
+XX#define SQL_ATTR_LOGIN_TIMEOUT		SQL_LOGIN_TIMEOUT
+XX#define SQL_ATTR_ODBC_CURSORS		SQL_ODBC_CURSORS
+XX#define SQL_ATTR_PACKET_SIZE		SQL_PACKET_SIZE
+XX#define SQL_ATTR_QUIET_MODE		SQL_QUIET_MODE
+XX#define SQL_ATTR_TRACE			SQL_OPT_TRACE
+XX#define SQL_ATTR_TRACEFILE		SQL_OPT_TRACEFILE
+XX#define SQL_ATTR_TRANSLATE_LIB		SQL_TRANSLATE_DLL
+XX#define SQL_ATTR_TRANSLATE_OPTION	SQL_TRANSLATE_OPTION
+XX#define SQL_ATTR_TXN_ISOLATION		SQL_TXN_ISOLATION
+XX
+XX#define SQL_ATTR_CONNECTION_DEAD	1209	/* GetConnectAttr only */
+XX
+XX#define SQL_ATTR_ANSI_APP		115
+XX
+XX/* SQL_ACCESS_MODE options */
+XX#define SQL_MODE_READ_WRITE             0UL
+XX#define SQL_MODE_READ_ONLY              1UL
+XX#define SQL_MODE_DEFAULT                SQL_MODE_READ_WRITE
+XX
+XX/* SQL_AUTOCOMMIT options */
+XX#define SQL_AUTOCOMMIT_OFF              0UL
+XX#define SQL_AUTOCOMMIT_ON               1UL
+XX#define SQL_AUTOCOMMIT_DEFAULT          SQL_AUTOCOMMIT_ON
+XX
+XX/* SQL_LOGIN_TIMEOUT options */
+XX#define SQL_LOGIN_TIMEOUT_DEFAULT       15UL
+XX
+XX/* SQL_OPT_TRACE options */
+XX#define SQL_OPT_TRACE_OFF               0UL
+XX#define SQL_OPT_TRACE_ON                1UL
+XX#define SQL_OPT_TRACE_DEFAULT           SQL_OPT_TRACE_OFF
+XX#define SQL_OPT_TRACE_FILE_DEFAULT      "\\SQL.LOG"
+XX
+XX/* SQL_ODBC_CURSORS options */
+XX#define SQL_CUR_USE_IF_NEEDED           0UL
+XX#define SQL_CUR_USE_ODBC                1UL
+XX#define SQL_CUR_USE_DRIVER              2UL
+XX#define SQL_CUR_DEFAULT                 SQL_CUR_USE_DRIVER
+XX
+XX/* values for SQL_ATTR_DISCONNECT_BEHAVIOR */
+XX#define SQL_DB_RETURN_TO_POOL	        0UL
+XX#define SQL_DB_DISCONNECT		1UL
+XX#define SQL_DB_DEFAULT			SQL_DB_RETURN_TO_POOL
+XX
+XX/* values for SQL_ATTR_ENLIST_IN_DTC */
+XX#define SQL_DTC_DONE			0L
+XX
+XX/* values for SQL_ATTR_CONNECTION_DEAD */
+XX#define SQL_CD_TRUE			1L		/* Connection is closed/dead */
+XX#define SQL_CD_FALSE			0L		/* Connection is open/available */
+XX
+XX/* values for SQL_ATTR_ANSI_APP */
+XX#define SQL_AA_TRUE			1L	/* the application is an ANSI app */
+XX#define SQL_AA_FALSE			0L	/* the application is a Unicode app */
+XX
+XX/* statement attributes */
+XX#define SQL_QUERY_TIMEOUT		0
+XX#define SQL_MAX_ROWS			1
+XX#define SQL_NOSCAN			2
+XX#define SQL_MAX_LENGTH			3
+XX#define SQL_ASYNC_ENABLE		4
+XX#define SQL_BIND_TYPE			5
+XX#define SQL_CURSOR_TYPE			6
+XX#define SQL_CONCURRENCY			7
+XX#define SQL_KEYSET_SIZE			8
+XX#define SQL_ROWSET_SIZE			9
+XX#define SQL_SIMULATE_CURSOR		10
+XX#define SQL_RETRIEVE_DATA		11
+XX#define SQL_USE_BOOKMARKS		12
+XX#define SQL_GET_BOOKMARK		13      /*      GetStmtOption Only */
+XX#define SQL_ROW_NUMBER			14      /*      GetStmtOption Only */
+XX
+XX/* statement attributes for ODBC 3.0 */
+XX#define SQL_ATTR_ASYNC_ENABLE		4
+XX#define SQL_ATTR_CONCURRENCY		SQL_CONCURRENCY
+XX#define SQL_ATTR_CURSOR_TYPE		SQL_CURSOR_TYPE
+XX#define	SQL_ATTR_ENABLE_AUTO_IPD	15
+XX#define SQL_ATTR_FETCH_BOOKMARK_PTR	16
+XX#define SQL_ATTR_KEYSET_SIZE		SQL_KEYSET_SIZE
+XX#define SQL_ATTR_MAX_LENGTH		SQL_MAX_LENGTH
+XX#define SQL_ATTR_MAX_ROWS		SQL_MAX_ROWS
+XX#define SQL_ATTR_NOSCAN			SQL_NOSCAN
+XX#define SQL_ATTR_PARAM_BIND_OFFSET_PTR	17
+XX#define	SQL_ATTR_PARAM_BIND_TYPE	18
+XX#define SQL_ATTR_PARAM_OPERATION_PTR	19
+XX#define SQL_ATTR_PARAM_STATUS_PTR	20
+XX#define	SQL_ATTR_PARAMS_PROCESSED_PTR	21
+XX#define	SQL_ATTR_PARAMSET_SIZE		22
+XX#define SQL_ATTR_QUERY_TIMEOUT		SQL_QUERY_TIMEOUT
+XX#define SQL_ATTR_RETRIEVE_DATA		SQL_RETRIEVE_DATA
+XX#define SQL_ATTR_ROW_BIND_OFFSET_PTR	23
+XX#define	SQL_ATTR_ROW_BIND_TYPE		SQL_BIND_TYPE
+XX#define SQL_ATTR_ROW_NUMBER		SQL_ROW_NUMBER	  	/*GetStmtAttr*/
+XX#define SQL_ATTR_ROW_OPERATION_PTR	24
+XX#define	SQL_ATTR_ROW_STATUS_PTR		25
+XX#define	SQL_ATTR_ROWS_FETCHED_PTR	26
+XX#define SQL_ATTR_ROW_ARRAY_SIZE		27	
+XX#define SQL_ATTR_SIMULATE_CURSOR	SQL_SIMULATE_CURSOR
+XX#define SQL_ATTR_USE_BOOKMARKS		SQL_USE_BOOKMARKS	
+XX#define SQL_STMT_OPT_MAX                SQL_ROW_NUMBER
+XX#define SQL_STMT_OPT_MIN	SQL_QUERY_TIMEOUT
+XX
+XX/* New defines for SEARCHABLE column in SQLGetTypeInfo */
+XX
+XX#define	SQL_COL_PRED_CHAR		SQL_LIKE_ONLY
+XX#define	SQL_COL_PRED_BASIC		SQL_ALL_EXCEPT_LIKE
+XX
+XX/* whether an attribute is a pointer or not */
+XX#define SQL_IS_POINTER		(-4)
+XX#define SQL_IS_UINTEGER		(-5)
+XX#define SQL_IS_INTEGER		(-6)
+XX#define SQL_IS_USMALLINT	(-7)
+XX#define SQL_IS_SMALLINT		(-8)
+XX
+XX/* the value of SQL_ATTR_PARAM_BIND_TYPE */
+XX#define SQL_PARAM_BIND_BY_COLUMN        0UL
+XX#define SQL_PARAM_BIND_TYPE_DEFAULT	SQL_PARAM_BIND_BY_COLUMN
+XX
+XX/* SQL_QUERY_TIMEOUT options */
+XX#define SQL_QUERY_TIMEOUT_DEFAULT       0UL
+XX
+XX/* SQL_MAX_ROWS options */
+XX#define SQL_MAX_ROWS_DEFAULT            0UL
+XX
+XX/* SQL_NOSCAN options */
+XX#define SQL_NOSCAN_OFF                  0UL     /*      1.0 FALSE */
+XX#define SQL_NOSCAN_ON                   1UL     /*      1.0 TRUE */
+XX#define SQL_NOSCAN_DEFAULT              SQL_NOSCAN_OFF
+XX
+XX/* SQL_MAX_LENGTH options */
+XX#define SQL_MAX_LENGTH_DEFAULT          0UL
+XX
+XX/* values for SQL_ATTR_ASYNC_ENABLE */
+XX#define SQL_ASYNC_ENABLE_OFF	        0UL
+XX#define SQL_ASYNC_ENABLE_ON	        1UL
+XX#define SQL_ASYNC_ENABLE_DEFAULT        SQL_ASYNC_ENABLE_OFF
+XX
+XX/* SQL_BIND_TYPE options */
+XX#define SQL_BIND_BY_COLUMN              0UL
+XX#define SQL_BIND_TYPE_DEFAULT           SQL_BIND_BY_COLUMN  /* Default value */
+XX
+XX/* SQL_CONCURRENCY options */
+XX#define SQL_CONCUR_READ_ONLY            1
+XX#define SQL_CONCUR_LOCK                 2
+XX#define SQL_CONCUR_ROWVER               3
+XX#define SQL_CONCUR_VALUES               4
+XX#define SQL_CONCUR_DEFAULT              SQL_CONCUR_READ_ONLY /* Default value */
+XX
+XX/* SQL_CURSOR_TYPE options */
+XX#define SQL_CURSOR_FORWARD_ONLY         0UL
+XX#define SQL_CURSOR_KEYSET_DRIVEN        1UL
+XX#define SQL_CURSOR_DYNAMIC              2UL
+XX#define SQL_CURSOR_STATIC               3UL
+XX#define SQL_CURSOR_TYPE_DEFAULT         SQL_CURSOR_FORWARD_ONLY /* Default value */
+XX
+XX/* SQL_ROWSET_SIZE options */
+XX#define SQL_ROWSET_SIZE_DEFAULT         1UL
+XX
+XX/* SQL_KEYSET_SIZE options */
+XX#define SQL_KEYSET_SIZE_DEFAULT         0UL
+XX
+XX/* SQL_SIMULATE_CURSOR options */
+XX#define SQL_SC_NON_UNIQUE               0UL
+XX#define SQL_SC_TRY_UNIQUE               1UL
+XX#define SQL_SC_UNIQUE                   2UL
+XX
+XX/* SQL_RETRIEVE_DATA options */
+XX#define SQL_RD_OFF                      0UL
+XX#define SQL_RD_ON                       1UL
+XX#define SQL_RD_DEFAULT                  SQL_RD_ON
+XX
+XX/* SQL_USE_BOOKMARKS options */
+XX#define SQL_UB_OFF                      0UL
+XX#define	SQL_UB_ON			01UL
+XX#define SQL_UB_DEFAULT                  SQL_UB_OFF
+XX
+XX/* New values for SQL_USE_BOOKMARKS attribute */
+XX#define SQL_UB_FIXED			SQL_UB_ON
+XX#define SQL_UB_VARIABLE			2UL
+XX
+XX/* extended descriptor field */
+XX#define SQL_DESC_ARRAY_SIZE		20
+XX#define SQL_DESC_ARRAY_STATUS_PT        21
+XX#define SQL_DESC_AUTO_UNIQUE_VALUE	SQL_COLUMN_AUTO_INCREMENT
+XX#define SQL_DESC_BASE_COLUMN_NAME	22
+XX#define SQL_DESC_BASE_TABLE_NAME	23
+XX#define SQL_DESC_BIND_OFFSET_PTR	24
+XX#define SQL_DESC_BIND_TYPE		25
+XX#define SQL_DESC_CASE_SENSITIVE	        SQL_COLUMN_CASE_SENSITIVE
+XX#define SQL_DESC_CATALOG_NAME	        SQL_COLUMN_QUALIFIER_NAME
+XX#define SQL_DESC_CONCISE_TYPE	        SQL_COLUMN_TYPE
+XX#define SQL_DESC_DATETIME_INTERVAL_PRECISION	26
+XX#define SQL_DESC_DISPLAY_SIZE	        SQL_COLUMN_DISPLAY_SIZE
+XX#define SQL_DESC_FIXED_PREC_SCALE       SQL_COLUMN_MONEY
+XX#define SQL_DESC_LABEL		        SQL_COLUMN_LABEL
+XX#define SQL_DESC_LITERAL_PREFIX		27
+XX#define SQL_DESC_LITERAL_SUFFIX		28
+XX#define SQL_DESC_LOCAL_TYPE_NAME	29
+XX#define	SQL_DESC_MAXIMUM_SCALE		30
+XX#define SQL_DESC_MINIMUM_SCALE		31
+XX#define SQL_DESC_NUM_PREC_RADIX		32
+XX#define SQL_DESC_PARAMETER_TYPE		33
+XX#define SQL_DESC_ROWS_PROCESSED_PTR	34
+XX#define SQL_DESC_ROWVER			35
+XX#define SQL_DESC_SCHEMA_NAME		SQL_COLUMN_OWNER_NAME
+XX#define SQL_DESC_SEARCHABLE	        SQL_COLUMN_SEARCHABLE
+XX#define SQL_DESC_TYPE_NAME	        SQL_COLUMN_TYPE_NAME
+XX#define SQL_DESC_TABLE_NAME		SQL_COLUMN_TABLE_NAME
+XX#define SQL_DESC_UNSIGNED		SQL_COLUMN_UNSIGNED
+XX#define SQL_DESC_UPDATABLE		SQL_COLUMN_UPDATABLE
+XX
+XX/* defines for diagnostics fields */
+XX#define SQL_DIAG_CURSOR_ROW_COUNT	(-1249)
+XX#define SQL_DIAG_ROW_NUMBER		(-1248)
+XX#define SQL_DIAG_COLUMN_NUMBER		(-1247)	
+XX
+XX/* SQL extended datatypes */
+XX#define SQL_DATE                        9
+XX#define SQL_INTERVAL			10
+XX#define SQL_TIME                        10
+XX#define SQL_TIMESTAMP                   11
+XX#define SQL_LONGVARCHAR                 (-1)
+XX#define SQL_BINARY                      (-2)
+XX#define SQL_VARBINARY                   (-3)
+XX#define SQL_LONGVARBINARY               (-4)
+XX#define SQL_BIGINT                      (-5)
+XX#define SQL_TINYINT                     (-6)
+XX#define SQL_BIT                         (-7)
+XX#define SQL_GUID			(-11)
+XX
+XX/* interval code */
+XX#define SQL_CODE_YEAR		        1
+XX#define SQL_CODE_MONTH		        2
+XX#define SQL_CODE_DAY			3
+XX#define SQL_CODE_HOUR			4
+XX#define SQL_CODE_MINUTE			5
+XX#define SQL_CODE_SECOND			6
+XX#define SQL_CODE_YEAR_TO_MONTH		7
+XX#define SQL_CODE_DAY_TO_HOUR		8
+XX#define SQL_CODE_DAY_TO_MINUTE		9
+XX#define SQL_CODE_DAY_TO_SECOND		10
+XX#define SQL_CODE_HOUR_TO_MINUTE		11
+XX#define SQL_CODE_HOUR_TO_SECOND		12
+XX#define SQL_CODE_MINUTE_TO_SECOND	13
+XX#define SQL_INTERVAL_YEAR		101
+XX#define SQL_INTERVAL_MONTH		102
+XX#define SQL_INTERVAL_DAY		103
+XX#define SQL_INTERVAL_HOUR		104
+XX#define SQL_INTERVAL_MINUTE		105
+XX#define SQL_INTERVAL_SECOND             106
+XX#define SQL_INTERVAL_YEAR_TO_MONTH	107
+XX#define SQL_INTERVAL_DAY_TO_HOUR	108
+XX#define SQL_INTERVAL_DAY_TO_MINUTE	109
+XX#define SQL_INTERVAL_DAY_TO_SECOND	110
+XX#define SQL_INTERVAL_HOUR_TO_MINUTE	111
+XX#define SQL_INTERVAL_HOUR_TO_SECOND	112
+XX#define SQL_INTERVAL_MINUTE_TO_SECOND   113
+XX
+XX/* C datatype to SQL datatype mapping      SQL types
+XX                                           ------------------- */
+XX#define SQL_C_CHAR    SQL_CHAR             /* CHAR, VARCHAR, DECIMAL, NUMERIC */
+XX#define SQL_C_LONG    SQL_INTEGER          /* INTEGER                      */
+XX#define SQL_C_SHORT   SQL_SMALLINT         /* SMALLINT                     */
+XX#define SQL_C_FLOAT   SQL_REAL             /* REAL                         */
+XX#define SQL_C_DOUBLE  SQL_DOUBLE           /* FLOAT, DOUBLE                */
+XX#define	SQL_C_NUMERIC SQL_NUMERIC
+XX#define SQL_C_DEFAULT 99
+XX
+XX#define SQL_SIGNED_OFFSET       (-20)
+XX#define SQL_UNSIGNED_OFFSET     (-22)
+XX
+XX/* C datatype to SQL datatype mapping */
+XX#define SQL_C_DATE       SQL_DATE
+XX#define SQL_C_TIME       SQL_TIME
+XX#define SQL_C_TIMESTAMP  SQL_TIMESTAMP
+XX#define SQL_C_TYPE_DATE		SQL_TYPE_DATE
+XX#define SQL_C_TYPE_TIME		SQL_TYPE_TIME
+XX#define SQL_C_TYPE_TIMESTAMP	SQL_TYPE_TIMESTAMP
+XX#define SQL_C_INTERVAL_YEAR	SQL_INTERVAL_YEAR
+XX#define SQL_C_INTERVAL_MONTH	SQL_INTERVAL_MONTH
+XX#define SQL_C_INTERVAL_DAY	SQL_INTERVAL_DAY
+XX#define SQL_C_INTERVAL_HOUR	SQL_INTERVAL_HOUR
+XX#define SQL_C_INTERVAL_MINUTE	SQL_INTERVAL_MINUTE
+XX#define SQL_C_INTERVAL_SECOND	SQL_INTERVAL_SECOND
+XX#define SQL_C_INTERVAL_YEAR_TO_MONTH	SQL_INTERVAL_YEAR_TO_MONTH
+XX#define SQL_C_INTERVAL_DAY_TO_HOUR	SQL_INTERVAL_DAY_TO_HOUR
+XX#define SQL_C_INTERVAL_DAY_TO_MINUTE	SQL_INTERVAL_DAY_TO_MINUTE
+XX#define SQL_C_INTERVAL_DAY_TO_SECOND	SQL_INTERVAL_DAY_TO_SECOND
+XX#define SQL_C_INTERVAL_HOUR_TO_MINUTE	SQL_INTERVAL_HOUR_TO_MINUTE
+XX#define SQL_C_INTERVAL_HOUR_TO_SECOND	SQL_INTERVAL_HOUR_TO_SECOND
+XX#define SQL_C_INTERVAL_MINUTE_TO_SECOND	SQL_INTERVAL_MINUTE_TO_SECOND
+XX#define SQL_C_BINARY     SQL_BINARY
+XX#define SQL_C_BIT        SQL_BIT
+XX#define SQL_C_SBIGINT	(SQL_BIGINT+SQL_SIGNED_OFFSET)	   /* SIGNED BIGINT */
+XX#define SQL_C_UBIGINT	(SQL_BIGINT+SQL_UNSIGNED_OFFSET)   /* UNSIGNED BIGINT */
+XX#define SQL_C_TINYINT    SQL_TINYINT
+XX#define SQL_C_SLONG      (SQL_C_LONG+SQL_SIGNED_OFFSET)    /* SIGNED INTEGER  */
+XX#define SQL_C_SSHORT     (SQL_C_SHORT+SQL_SIGNED_OFFSET)   /* SIGNED SMALLINT */
+XX#define SQL_C_STINYINT   (SQL_TINYINT+SQL_SIGNED_OFFSET)   /* SIGNED TINYINT  */
+XX#define SQL_C_ULONG      (SQL_C_LONG+SQL_UNSIGNED_OFFSET)  /* UNSIGNED INTEGER*/
+XX#define SQL_C_USHORT     (SQL_C_SHORT+SQL_UNSIGNED_OFFSET) /* UNSIGNED SMALLINT*/
+XX#define SQL_C_UTINYINT   (SQL_TINYINT+SQL_UNSIGNED_OFFSET) /* UNSIGNED TINYINT*/
+XX#define SQL_C_BOOKMARK   SQL_C_ULONG                       /* BOOKMARK        */
+XX
+XX#define SQL_C_GUID	SQL_GUID
+XX
+XX#define SQL_TYPE_NULL                   0
+XX#define SQL_C_VARBOOKMARK		SQL_C_BINARY
+XX
+XX/* define for SQL_DIAG_ROW_NUMBER and SQL_DIAG_COLUMN_NUMBER */
+XX#define SQL_NO_ROW_NUMBER		(-1)
+XX#define SQL_NO_COLUMN_NUMBER		(-1)
+XX#define SQL_ROW_NUMBER_UNKNOWN		(-2)
+XX#define SQL_COLUMN_NUMBER_UNKNOWN	(-2)
+XX
+XX/* SQLBindParameter extensions */
+XX#define SQL_DEFAULT_PARAM            (-5)
+XX#define SQL_IGNORE                   (-6)
+XX#define SQL_COLUMN_IGNORE            SQL_IGNORE
+XX#define SQL_LEN_DATA_AT_EXEC_OFFSET  (-100)
+XX#define SQL_LEN_DATA_AT_EXEC(length) (-(length)+SQL_LEN_DATA_AT_EXEC_OFFSET)
+XX
+XX/* binary length for driver specific attributes */
+XX#define SQL_LEN_BINARY_ATTR_OFFSET	 (-100)
+XX#define SQL_LEN_BINARY_ATTR(length)	 (-(length)+SQL_LEN_BINARY_ATTR_OFFSET)
+XX
+XX/* Defines used by Driver Manager when mapping SQLSetParam to SQLBindParameter
+XX*/
+XX#define SQL_PARAM_TYPE_DEFAULT           SQL_PARAM_INPUT_OUTPUT
+XX#define SQL_SETPARAM_VALUE_MAX           (-1L)
+XX
+XX/* SQLColAttributes defines */
+XX#define SQL_COLUMN_COUNT                0
+XX#define SQL_COLUMN_NAME                 1
+XX#define SQL_COLUMN_TYPE                 2
+XX#define SQL_COLUMN_LENGTH               3
+XX#define SQL_COLUMN_PRECISION            4
+XX#define SQL_COLUMN_SCALE                5
+XX#define SQL_COLUMN_DISPLAY_SIZE         6
+XX#define SQL_COLUMN_NULLABLE             7
+XX#define SQL_COLUMN_UNSIGNED             8
+XX#define SQL_COLUMN_MONEY                9
+XX#define SQL_COLUMN_UPDATABLE            10
+XX#define SQL_COLUMN_AUTO_INCREMENT       11
+XX#define SQL_COLUMN_CASE_SENSITIVE       12
+XX#define SQL_COLUMN_SEARCHABLE           13
+XX#define SQL_COLUMN_TYPE_NAME            14
+XX#define SQL_COLUMN_TABLE_NAME           15
+XX#define SQL_COLUMN_OWNER_NAME           16
+XX#define SQL_COLUMN_QUALIFIER_NAME       17
+XX#define SQL_COLUMN_LABEL                18
+XX#define SQL_COLATT_OPT_MAX              SQL_COLUMN_LABEL
+XX#define SQL_COLUMN_DRIVER_START         1000
+XX
+XX#define SQL_COLATT_OPT_MIN              SQL_COLUMN_COUNT
+XX
+XX/* SQLColAttributes subdefines for SQL_COLUMN_UPDATABLE */
+XX#define SQL_ATTR_READONLY               0
+XX#define SQL_ATTR_WRITE                  1
+XX#define SQL_ATTR_READWRITE_UNKNOWN      2
+XX
+XX/* SQLColAttributes subdefines for SQL_COLUMN_SEARCHABLE */
+XX/* These are also used by SQLGetInfo                     */
+XX#define SQL_UNSEARCHABLE                0
+XX#define SQL_LIKE_ONLY                   1
+XX#define SQL_ALL_EXCEPT_LIKE             2
+XX#define SQL_SEARCHABLE                  3
+XX#define SQL_PRED_SEARCHABLE				SQL_SEARCHABLE
+XX
+XX
+XX/* Special return values for SQLGetData */
+XX#define SQL_NO_TOTAL                    (-4)
+XX
+XX#define SQL_API_SQLALLOCHANDLESTD   73
+XX#define SQL_API_SQLBULKOPERATIONS   24
+XX#define SQL_API_SQLBINDPARAMETER    72
+XX#define SQL_API_SQLBROWSECONNECT    55    
+XX#define SQL_API_SQLCOLATTRIBUTES    6 
+XX#define SQL_API_SQLCOLUMNPRIVILEGES 56
+XX#define SQL_API_SQLDESCRIBEPARAM    58
+XX#define	SQL_API_SQLDRIVERCONNECT    41 
+XX#define SQL_API_SQLDRIVERS          71
+XX#define SQL_API_SQLEXTENDEDFETCH    59
+XX#define SQL_API_SQLFOREIGNKEYS      60
+XX#define SQL_API_SQLMORERESULTS      61
+XX#define SQL_API_SQLNATIVESQL        62
+XX#define SQL_API_SQLNUMPARAMS        63
+XX#define SQL_API_SQLPARAMOPTIONS     64
+XX#define SQL_API_SQLPRIMARYKEYS      65
+XX#define SQL_API_SQLPROCEDURECOLUMNS 66
+XX#define SQL_API_SQLPROCEDURES       67
+XX#define SQL_API_SQLSETPOS           68
+XX#define SQL_API_SQLSETSCROLLOPTIONS 69
+XX#define SQL_API_SQLTABLEPRIVILEGES  70
+XX
+XX#define SQL_API_ALL_FUNCTIONS       0
+XX
+XX/*----------------------------------------------*/
+XX/* SQL_API_ODBC3_ALL_FUNCTIONS                  */
+XX/* This returns a bitmap, which allows us to    */
+XX/* handle the higher-valued function numbers.   */
+XX/* Use  SQL_FUNC_EXISTS(bitmap,function_number) */
+XX/* to determine if the function exists.         */
+XX/*----------------------------------------------*/
+XX
+XX
+XX#define SQL_API_ODBC3_ALL_FUNCTIONS	999
+XX#define	SQL_API_ODBC3_ALL_FUNCTIONS_SIZE	250		/* array of 250 words */
+XX
+XX#define SQL_FUNC_EXISTS(pfExists, uwAPI) \
+XX				((*(((UWORD*) (pfExists)) + ((uwAPI) >> 4)) \
+XX					& (1 << ((uwAPI) & 0x000F)) \
+XX 				 ) ? SQL_TRUE : SQL_FALSE \
+XX				)
+XX
+XX
+XX#define SQL_INFO_FIRST                       0		
+XX#define SQL_ACTIVE_CONNECTIONS               0	/* MAX_DRIVER_CONNECTIONS */
+XX#define SQL_ACTIVE_STATEMENTS                1	/* MAX_CONCURRENT_ACTIVITIES */
+XX#define SQL_DRIVER_HDBC                      3
+XX#define SQL_DRIVER_HENV                      4
+XX#define SQL_DRIVER_HSTMT                     5
+XX#define SQL_DRIVER_NAME                      6
+XX#define SQL_DRIVER_VER                       7
+XX#define SQL_ODBC_API_CONFORMANCE             9
+XX#define SQL_ODBC_VER                        10
+XX#define SQL_ROW_UPDATES                     11
+XX#define SQL_ODBC_SAG_CLI_CONFORMANCE        12
+XX#define SQL_ODBC_SQL_CONFORMANCE            15
+XX#define SQL_PROCEDURES                      21
+XX#define SQL_CONCAT_NULL_BEHAVIOR            22
+XX#define SQL_CURSOR_ROLLBACK_BEHAVIOR        24
+XX#define SQL_EXPRESSIONS_IN_ORDERBY          27
+XX#define SQL_MAX_OWNER_NAME_LEN              32	/* MAX_SCHEMA_NAME_LEN */
+XX#define SQL_MAX_PROCEDURE_NAME_LEN          33
+XX#define SQL_MAX_QUALIFIER_NAME_LEN          34	/* MAX_CATALOG_NAME_LEN */
+XX#define SQL_MULT_RESULT_SETS                36
+XX#define SQL_MULTIPLE_ACTIVE_TXN             37
+XX#define SQL_OUTER_JOINS                     38
+XX#define SQL_OWNER_TERM                      39
+XX#define SQL_PROCEDURE_TERM                  40
+XX#define SQL_QUALIFIER_NAME_SEPARATOR        41
+XX#define SQL_QUALIFIER_TERM                  42
+XX#define SQL_SCROLL_OPTIONS                  44
+XX#define SQL_TABLE_TERM                      45
+XX#define SQL_CONVERT_FUNCTIONS               48
+XX#define SQL_NUMERIC_FUNCTIONS               49
+XX#define SQL_STRING_FUNCTIONS                50
+XX#define SQL_SYSTEM_FUNCTIONS                51
+XX#define SQL_TIMEDATE_FUNCTIONS              52
+XX#define SQL_CONVERT_BIGINT                  53
+XX#define SQL_CONVERT_BINARY                  54
+XX#define SQL_CONVERT_BIT                     55
+XX#define SQL_CONVERT_CHAR                    56
+XX#define SQL_CONVERT_DATE                    57
+XX#define SQL_CONVERT_DECIMAL                 58
+XX#define SQL_CONVERT_DOUBLE                  59
+XX#define SQL_CONVERT_FLOAT                   60
+XX#define SQL_CONVERT_INTEGER                 61
+XX#define SQL_CONVERT_LONGVARCHAR             62
+XX#define SQL_CONVERT_NUMERIC                 63
+XX#define SQL_CONVERT_REAL                    64
+XX#define SQL_CONVERT_SMALLINT                65
+XX#define SQL_CONVERT_TIME                    66
+XX#define SQL_CONVERT_TIMESTAMP               67
+XX#define SQL_CONVERT_TINYINT                 68
+XX#define SQL_CONVERT_VARBINARY               69
+XX#define SQL_CONVERT_VARCHAR                 70
+XX#define SQL_CONVERT_LONGVARBINARY           71
+XX#define SQL_ODBC_SQL_OPT_IEF                73		/* SQL_INTEGRITY */
+XX#define SQL_CORRELATION_NAME                74
+XX#define SQL_NON_NULLABLE_COLUMNS            75
+XX#define SQL_DRIVER_HLIB                     76
+XX#define SQL_DRIVER_ODBC_VER                 77
+XX#define SQL_LOCK_TYPES                      78
+XX#define SQL_POS_OPERATIONS                  79
+XX#define SQL_POSITIONED_STATEMENTS           80
+XX#define SQL_BOOKMARK_PERSISTENCE            82
+XX#define SQL_STATIC_SENSITIVITY              83
+XX#define SQL_FILE_USAGE                      84
+XX#define SQL_COLUMN_ALIAS                    87
+XX#define SQL_GROUP_BY                        88
+XX#define SQL_KEYWORDS                        89
+XX#define SQL_OWNER_USAGE                     91
+XX#define SQL_QUALIFIER_USAGE                 92
+XX#define SQL_QUOTED_IDENTIFIER_CASE          93
+XX#define SQL_SUBQUERIES                      95
+XX#define SQL_UNION                           96
+XX#define SQL_MAX_ROW_SIZE_INCLUDES_LONG      103
+XX#define SQL_MAX_CHAR_LITERAL_LEN            108
+XX#define SQL_TIMEDATE_ADD_INTERVALS          109
+XX#define SQL_TIMEDATE_DIFF_INTERVALS         110
+XX#define SQL_NEED_LONG_DATA_LEN              111
+XX#define SQL_MAX_BINARY_LITERAL_LEN          112
+XX#define SQL_LIKE_ESCAPE_CLAUSE              113
+XX#define SQL_QUALIFIER_LOCATION              114
+XX
+XX
+XX#define SQL_ACTIVE_ENVIRONMENTS	            116
+XX#define	SQL_ALTER_DOMAIN	            117
+XX
+XX#define	SQL_SQL_CONFORMANCE		    118
+XX#define SQL_DATETIME_LITERALS		    119
+XX
+XX#define	SQL_ASYNC_MODE			10021	/* new X/Open spec */
+XX#define SQL_BATCH_ROW_COUNT		120
+XX#define SQL_BATCH_SUPPORT	        121
+XX#define SQL_CATALOG_LOCATION	        SQL_QUALIFIER_LOCATION
+XX#define SQL_CATALOG_NAME_SEPARATOR      SQL_QUALIFIER_NAME_SEPARATOR
+XX#define SQL_CATALOG_TERM	        SQL_QUALIFIER_TERM
+XX#define SQL_CATALOG_USAGE	        SQL_QUALIFIER_USAGE
+XX#define	SQL_CONVERT_WCHAR	                        122
+XX#define SQL_CONVERT_INTERVAL_DAY_TIME			123
+XX#define SQL_CONVERT_INTERVAL_YEAR_MONTH			124
+XX#define	SQL_CONVERT_WLONGVARCHAR			125
+XX#define	SQL_CONVERT_WVARCHAR				126
+XX#define	SQL_CREATE_ASSERTION				127
+XX#define	SQL_CREATE_CHARACTER_SET			128
+XX#define	SQL_CREATE_COLLATION				129
+XX#define	SQL_CREATE_DOMAIN				130
+XX#define	SQL_CREATE_SCHEMA				131
+XX#define	SQL_CREATE_TABLE				132
+XX#define	SQL_CREATE_TRANSLATION				133
+XX#define	SQL_CREATE_VIEW					134
+XX#define SQL_DRIVER_HDESC				135
+XX#define	SQL_DROP_ASSERTION				136
+XX#define	SQL_DROP_CHARACTER_SET				137
+XX#define	SQL_DROP_COLLATION				138
+XX#define	SQL_DROP_DOMAIN					139
+XX#define	SQL_DROP_SCHEMA					140
+XX#define	SQL_DROP_TABLE					141
+XX#define	SQL_DROP_TRANSLATION				142
+XX#define	SQL_DROP_VIEW					143
+XX#define SQL_DYNAMIC_CURSOR_ATTRIBUTES1			144
+XX#define SQL_DYNAMIC_CURSOR_ATTRIBUTES2			145
+XX#define SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1		146		
+XX#define SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES2		147
+XX#define SQL_INDEX_KEYWORDS			        148
+XX#define SQL_INFO_SCHEMA_VIEWS			        149
+XX#define SQL_KEYSET_CURSOR_ATTRIBUTES1			150
+XX#define SQL_KEYSET_CURSOR_ATTRIBUTES2			151
+XX#define	SQL_MAX_ASYNC_CONCURRENT_STATEMENTS		10022
+XX#define SQL_ODBC_INTERFACE_CONFORMANCE			152
+XX#define SQL_PARAM_ARRAY_ROW_COUNTS     			153
+XX#define SQL_PARAM_ARRAY_SELECTS     			154
+XX#define SQL_SCHEMA_TERM					SQL_OWNER_TERM
+XX#define SQL_SCHEMA_USAGE				SQL_OWNER_USAGE
+XX#define SQL_SQL92_DATETIME_FUNCTIONS			155
+XX#define SQL_SQL92_FOREIGN_KEY_DELETE_RULE		156		
+XX#define SQL_SQL92_FOREIGN_KEY_UPDATE_RULE		157		
+XX#define SQL_SQL92_GRANT					158
+XX#define SQL_SQL92_NUMERIC_VALUE_FUNCTIONS		159
+XX#define SQL_SQL92_PREDICATES				160
+XX#define SQL_SQL92_RELATIONAL_JOIN_OPERATORS		161
+XX#define SQL_SQL92_REVOKE				162
+XX#define SQL_SQL92_ROW_VALUE_CONSTRUCTOR			163
+XX#define SQL_SQL92_STRING_FUNCTIONS			164
+XX#define SQL_SQL92_VALUE_EXPRESSIONS			165
+XX#define SQL_STANDARD_CLI_CONFORMANCE			166
+XX#define SQL_STATIC_CURSOR_ATTRIBUTES1			167	
+XX#define SQL_STATIC_CURSOR_ATTRIBUTES2			168
+XX
+XX#define SQL_AGGREGATE_FUNCTIONS				169
+XX#define SQL_DDL_INDEX					170
+XX#define SQL_DM_VER					171
+XX#define SQL_INSERT_STATEMENT				172
+XX#define	SQL_CONVERT_GUID				173		
+XX#define SQL_UNION_STATEMENT				SQL_UNION
+XX
+XX#define	SQL_DTC_TRANSITION_COST				1750
+XX
+XX/* SQL_ALTER_TABLE bitmasks */
+XX/* the following 5 bitmasks are defined in sql.h
+XX*#define SQL_AT_ADD_COLUMN                   	0x00000001L
+XX*#define SQL_AT_DROP_COLUMN                  	0x00000002L
+XX*#define SQL_AT_ADD_CONSTRAINT               	0x00000008L
+XX*/
+XX#define	SQL_AT_ADD_COLUMN_SINGLE		0x00000020L	
+XX#define	SQL_AT_ADD_COLUMN_DEFAULT		0x00000040L
+XX#define	SQL_AT_ADD_COLUMN_COLLATION		0x00000080L
+XX#define	SQL_AT_SET_COLUMN_DEFAULT		0x00000100L
+XX#define	SQL_AT_DROP_COLUMN_DEFAULT		0x00000200L
+XX#define	SQL_AT_DROP_COLUMN_CASCADE		0x00000400L
+XX#define	SQL_AT_DROP_COLUMN_RESTRICT		0x00000800L
+XX#define SQL_AT_ADD_TABLE_CONSTRAINT		0x00001000L		
+XX#define SQL_AT_DROP_TABLE_CONSTRAINT_CASCADE	0x00002000L		
+XX#define SQL_AT_DROP_TABLE_CONSTRAINT_RESTRICT	0x00004000L		
+XX#define SQL_AT_CONSTRAINT_NAME_DEFINITION	0x00008000L
+XX#define SQL_AT_CONSTRAINT_INITIALLY_DEFERRED	0x00010000L
+XX#define SQL_AT_CONSTRAINT_INITIALLY_IMMEDIATE	0x00020000L
+XX#define SQL_AT_CONSTRAINT_DEFERRABLE		0x00040000L
+XX#define SQL_AT_CONSTRAINT_NON_DEFERRABLE	0x00080000L
+XX
+XX/* SQL_CONVERT_*  return value bitmasks */
+XX
+XX#define SQL_CVT_CHAR                        0x00000001L
+XX#define SQL_CVT_NUMERIC                     0x00000002L
+XX#define SQL_CVT_DECIMAL                     0x00000004L
+XX#define SQL_CVT_INTEGER                     0x00000008L
+XX#define SQL_CVT_SMALLINT                    0x00000010L
+XX#define SQL_CVT_FLOAT                       0x00000020L
+XX#define SQL_CVT_REAL                        0x00000040L
+XX#define SQL_CVT_DOUBLE                      0x00000080L
+XX#define SQL_CVT_VARCHAR                     0x00000100L
+XX#define SQL_CVT_LONGVARCHAR                 0x00000200L
+XX#define SQL_CVT_BINARY                      0x00000400L
+XX#define SQL_CVT_VARBINARY                   0x00000800L
+XX#define SQL_CVT_BIT                         0x00001000L
+XX#define SQL_CVT_TINYINT                     0x00002000L
+XX#define SQL_CVT_BIGINT                      0x00004000L
+XX#define SQL_CVT_DATE                        0x00008000L
+XX#define SQL_CVT_TIME                        0x00010000L
+XX#define SQL_CVT_TIMESTAMP                   0x00020000L
+XX#define SQL_CVT_LONGVARBINARY               0x00040000L
+XX#define SQL_CVT_INTERVAL_YEAR_MONTH	    0x00080000L
+XX#define SQL_CVT_INTERVAL_DAY_TIME	    0x00100000L
+XX#define	SQL_CVT_WCHAR		     	    0x00200000L
+XX#define	SQL_CVT_WLONGVARCHAR		    0x00400000L
+XX#define	SQL_CVT_WVARCHAR		    0x00800000L
+XX#define SQL_CVT_GUID			    0x01000000L
+XX
+XX/* SQL_CONVERT_FUNCTIONS functions */
+XX#define SQL_FN_CVT_CONVERT                  0x00000001L
+XX#define SQL_FN_CVT_CAST			    0x00000002L
+XX
+XX/* SQL_STRING_FUNCTIONS functions */
+XX
+XX#define SQL_FN_STR_CONCAT                   0x00000001L
+XX#define SQL_FN_STR_INSERT                   0x00000002L
+XX#define SQL_FN_STR_LEFT                     0x00000004L
+XX#define SQL_FN_STR_LTRIM                    0x00000008L
+XX#define SQL_FN_STR_LENGTH                   0x00000010L
+XX#define SQL_FN_STR_LOCATE                   0x00000020L
+XX#define SQL_FN_STR_LCASE                    0x00000040L
+XX#define SQL_FN_STR_REPEAT                   0x00000080L
+XX#define SQL_FN_STR_REPLACE                  0x00000100L
+XX#define SQL_FN_STR_RIGHT                    0x00000200L
+XX#define SQL_FN_STR_RTRIM                    0x00000400L
+XX#define SQL_FN_STR_SUBSTRING                0x00000800L
+XX#define SQL_FN_STR_UCASE                    0x00001000L
+XX#define SQL_FN_STR_ASCII                    0x00002000L
+XX#define SQL_FN_STR_CHAR                     0x00004000L
+XX#define SQL_FN_STR_DIFFERENCE               0x00008000L
+XX#define SQL_FN_STR_LOCATE_2                 0x00010000L
+XX#define SQL_FN_STR_SOUNDEX                  0x00020000L
+XX#define SQL_FN_STR_SPACE                    0x00040000L
+XX#define SQL_FN_STR_BIT_LENGTH		    0x00080000L
+XX#define SQL_FN_STR_CHAR_LENGTH		    0x00100000L
+XX#define SQL_FN_STR_CHARACTER_LENGTH	    0x00200000L
+XX#define SQL_FN_STR_OCTET_LENGTH		    0x00400000L
+XX#define SQL_FN_STR_POSITION		    0x00800000L
+XX
+XX/* SQL_SQL92_STRING_FUNCTIONS */
+XX#define SQL_SSF_CONVERT			0x00000001L	
+XX#define SQL_SSF_LOWER			0x00000002L
+XX#define SQL_SSF_UPPER			0x00000004L
+XX#define SQL_SSF_SUBSTRING		0x00000008L
+XX#define SQL_SSF_TRANSLATE		0x00000010L
+XX#define SQL_SSF_TRIM_BOTH		0x00000020L
+XX#define SQL_SSF_TRIM_LEADING		0x00000040L
+XX#define SQL_SSF_TRIM_TRAILING		0x00000080L
+XX
+XX/* SQL_NUMERIC_FUNCTIONS functions */
+XX
+XX#define SQL_FN_NUM_ABS                  0x00000001L
+XX#define SQL_FN_NUM_ACOS                 0x00000002L
+XX#define SQL_FN_NUM_ASIN                 0x00000004L
+XX#define SQL_FN_NUM_ATAN                 0x00000008L
+XX#define SQL_FN_NUM_ATAN2                0x00000010L
+XX#define SQL_FN_NUM_CEILING              0x00000020L
+XX#define SQL_FN_NUM_COS                  0x00000040L
+XX#define SQL_FN_NUM_COT                  0x00000080L
+XX#define SQL_FN_NUM_EXP                  0x00000100L
+XX#define SQL_FN_NUM_FLOOR                0x00000200L
+XX#define SQL_FN_NUM_LOG                  0x00000400L
+XX#define SQL_FN_NUM_MOD                  0x00000800L
+XX#define SQL_FN_NUM_SIGN                 0x00001000L
+XX#define SQL_FN_NUM_SIN                  0x00002000L
+XX#define SQL_FN_NUM_SQRT                 0x00004000L
+XX#define SQL_FN_NUM_TAN                  0x00008000L
+XX#define SQL_FN_NUM_PI                   0x00010000L
+XX#define SQL_FN_NUM_RAND                 0x00020000L
+XX#define SQL_FN_NUM_DEGREES              0x00040000L
+XX#define SQL_FN_NUM_LOG10                0x00080000L
+XX#define SQL_FN_NUM_POWER                0x00100000L
+XX#define SQL_FN_NUM_RADIANS              0x00200000L
+XX#define SQL_FN_NUM_ROUND                0x00400000L
+XX#define SQL_FN_NUM_TRUNCATE             0x00800000L
+XX
+XX/* SQL_SQL92_NUMERIC_VALUE_FUNCTIONS */
+XX#define SQL_SNVF_BIT_LENGTH		0x00000001L
+XX#define SQL_SNVF_CHAR_LENGTH		0x00000002L
+XX#define SQL_SNVF_CHARACTER_LENGTH	0x00000004L
+XX#define SQL_SNVF_EXTRACT		0x00000008L
+XX#define SQL_SNVF_OCTET_LENGTH		0x00000010L
+XX#define SQL_SNVF_POSITION		0x00000020L
+XX
+XX/* SQL_TIMEDATE_FUNCTIONS functions */
+XX
+XX#define SQL_FN_TD_NOW                       0x00000001L
+XX#define SQL_FN_TD_CURDATE                   0x00000002L
+XX#define SQL_FN_TD_DAYOFMONTH                0x00000004L
+XX#define SQL_FN_TD_DAYOFWEEK                 0x00000008L
+XX#define SQL_FN_TD_DAYOFYEAR                 0x00000010L
+XX#define SQL_FN_TD_MONTH                     0x00000020L
+XX#define SQL_FN_TD_QUARTER                   0x00000040L
+XX#define SQL_FN_TD_WEEK                      0x00000080L
+XX#define SQL_FN_TD_YEAR                      0x00000100L
+XX#define SQL_FN_TD_CURTIME                   0x00000200L
+XX#define SQL_FN_TD_HOUR                      0x00000400L
+XX#define SQL_FN_TD_MINUTE                    0x00000800L
+XX#define SQL_FN_TD_SECOND                    0x00001000L
+XX#define SQL_FN_TD_TIMESTAMPADD              0x00002000L
+XX#define SQL_FN_TD_TIMESTAMPDIFF             0x00004000L
+XX#define SQL_FN_TD_DAYNAME                   0x00008000L
+XX#define SQL_FN_TD_MONTHNAME                 0x00010000L
+XX#define SQL_FN_TD_CURRENT_DATE		    0x00020000L
+XX#define SQL_FN_TD_CURRENT_TIME		    0x00040000L
+XX#define SQL_FN_TD_CURRENT_TIMESTAMP	    0x00080000L
+XX#define SQL_FN_TD_EXTRACT		    0x00100000L
+XX
+XX/* SQL_SQL92_DATETIME_FUNCTIONS */
+XX#define SQL_SDF_CURRENT_DATE				0x00000001L
+XX#define SQL_SDF_CURRENT_TIME				0x00000002L
+XX#define SQL_SDF_CURRENT_TIMESTAMP			0x00000004L
+XX
+XX/* SQL_SYSTEM_FUNCTIONS functions */
+XX
+XX#define SQL_FN_SYS_USERNAME                 0x00000001L
+XX#define SQL_FN_SYS_DBNAME                   0x00000002L
+XX#define SQL_FN_SYS_IFNULL                   0x00000004L
+XX
+XX/* SQL_TIMEDATE_ADD_INTERVALS and SQL_TIMEDATE_DIFF_INTERVALS functions */
+XX
+XX#define SQL_FN_TSI_FRAC_SECOND              0x00000001L
+XX#define SQL_FN_TSI_SECOND                   0x00000002L
+XX#define SQL_FN_TSI_MINUTE                   0x00000004L
+XX#define SQL_FN_TSI_HOUR                     0x00000008L
+XX#define SQL_FN_TSI_DAY                      0x00000010L
+XX#define SQL_FN_TSI_WEEK                     0x00000020L
+XX#define SQL_FN_TSI_MONTH                    0x00000040L
+XX#define SQL_FN_TSI_QUARTER                  0x00000080L
+XX#define SQL_FN_TSI_YEAR                     0x00000100L
+XX
+XX/* bitmasks for SQL_DYNAMIC_CURSOR_ATTRIBUTES1,
+XX * SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1, 
+XX * SQL_KEYSET_CURSOR_ATTRIBUTES1, and SQL_STATIC_CURSOR_ATTRIBUTES1 
+XX */
+XX/* supported SQLFetchScroll FetchOrientation's */
+XX#define SQL_CA1_NEXT						0x00000001L
+XX#define SQL_CA1_ABSOLUTE					0x00000002L
+XX#define SQL_CA1_RELATIVE					0x00000004L
+XX#define SQL_CA1_BOOKMARK					0x00000008L
+XX
+XX/* supported SQLSetPos LockType's */
+XX#define SQL_CA1_LOCK_NO_CHANGE		0x00000040L
+XX#define SQL_CA1_LOCK_EXCLUSIVE		0x00000080L
+XX#define SQL_CA1_LOCK_UNLOCK		0x00000100L
+XX
+XX/* supported SQLSetPos Operations */
+XX#define SQL_CA1_POS_POSITION		0x00000200L
+XX#define SQL_CA1_POS_UPDATE		0x00000400L
+XX#define SQL_CA1_POS_DELETE		0x00000800L
+XX#define SQL_CA1_POS_REFRESH		0x00001000L
+XX
+XX/* positioned updates and deletes */
+XX#define SQL_CA1_POSITIONED_UPDATE	0x00002000L
+XX#define SQL_CA1_POSITIONED_DELETE	0x00004000L
+XX#define SQL_CA1_SELECT_FOR_UPDATE	0x00008000L
+XX
+XX/* Column types and scopes in SQLSpecialColumns.  */
+XX#define SQL_BEST_ROWID                  1
+XX#define SQL_ROWVER                      2
+XX
+XX/* Defines for SQLStatistics */
+XX#define SQL_QUICK                       0
+XX#define SQL_ENSURE                      1
+XX
+XX/* bitmasks for SQL_DYNAMIC_CURSOR_ATTRIBUTES2,
+XX * SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES2, 
+XX * SQL_KEYSET_CURSOR_ATTRIBUTES2, and SQL_STATIC_CURSOR_ATTRIBUTES2 
+XX */
+XX/* supported values for SQL_ATTR_SCROLL_CONCURRENCY */
+XX#define SQL_CA2_READ_ONLY_CONCURRENCY		0x00000001L
+XX#define SQL_CA2_LOCK_CONCURRENCY		0x00000002L
+XX#define SQL_CA2_OPT_ROWVER_CONCURRENCY		0x00000004L
+XX#define SQL_CA2_OPT_VALUES_CONCURRENCY		0x00000008L
+XX
+XX/* sensitivity of the cursor to its own inserts, deletes, and updates */
+XX#define SQL_CA2_SENSITIVITY_ADDITIONS		0x00000010L
+XX#define SQL_CA2_SENSITIVITY_DELETIONS		0x00000020L
+XX#define SQL_CA2_SENSITIVITY_UPDATES		0x00000040L
+XX
+XX/* semantics of SQL_ATTR_MAX_ROWS */
+XX#define SQL_CA2_MAX_ROWS_SELECT			0x00000080L
+XX#define SQL_CA2_MAX_ROWS_INSERT			0x00000100L
+XX#define SQL_CA2_MAX_ROWS_DELETE			0x00000200L
+XX#define SQL_CA2_MAX_ROWS_UPDATE			0x00000400L
+XX#define SQL_CA2_MAX_ROWS_CATALOG		0x00000800L
+XX#define SQL_CA2_MAX_ROWS_AFFECTS_ALL		(SQL_CA2_MAX_ROWS_SELECT | \
+XX					SQL_CA2_MAX_ROWS_INSERT | SQL_CA2_MAX_ROWS_DELETE | \
+XX					SQL_CA2_MAX_ROWS_UPDATE | SQL_CA2_MAX_ROWS_CATALOG)
+XX
+XX/* semantics of SQL_DIAG_CURSOR_ROW_COUNT */
+XX#define SQL_CA2_CRC_EXACT			0x00001000L
+XX#define SQL_CA2_CRC_APPROXIMATE			0x00002000L
+XX
+XX/* the kinds of positioned statements that can be simulated */
+XX#define SQL_CA2_SIMULATE_NON_UNIQUE			0x00004000L
+XX#define SQL_CA2_SIMULATE_TRY_UNIQUE			0x00008000L
+XX#define SQL_CA2_SIMULATE_UNIQUE				0x00010000L
+XX
+XX/* SQL_ODBC_API_CONFORMANCE values */
+XX
+XX#define SQL_OAC_NONE                        0x0000
+XX#define SQL_OAC_LEVEL1                      0x0001
+XX#define SQL_OAC_LEVEL2                      0x0002
+XX
+XX/* SQL_ODBC_SAG_CLI_CONFORMANCE values */
+XX
+XX#define SQL_OSCC_NOT_COMPLIANT              0x0000
+XX#define SQL_OSCC_COMPLIANT                  0x0001
+XX
+XX/* SQL_ODBC_SQL_CONFORMANCE values */
+XX
+XX#define SQL_OSC_MINIMUM                     0x0000
+XX#define SQL_OSC_CORE                        0x0001
+XX#define SQL_OSC_EXTENDED                    0x0002
+XX
+XX
+XX/* SQL_CONCAT_NULL_BEHAVIOR values */
+XX
+XX#define SQL_CB_NULL                         0x0000
+XX#define SQL_CB_NON_NULL                     0x0001
+XX
+XX/* SQL_SCROLL_OPTIONS masks */
+XX
+XX#define SQL_SO_FORWARD_ONLY                 0x00000001L
+XX#define SQL_SO_KEYSET_DRIVEN                0x00000002L
+XX#define SQL_SO_DYNAMIC                      0x00000004L
+XX#define SQL_SO_MIXED                        0x00000008L
+XX#define SQL_SO_STATIC                       0x00000010L
+XX
+XX/* SQL_FETCH_DIRECTION masks */
+XX
+XX/* SQL_FETCH_RESUME is no longer supported
+XX#define SQL_FD_FETCH_RESUME                 0x00000040L 
+XX*/
+XX#define SQL_FD_FETCH_BOOKMARK               0x00000080L
+XX
+XX/* SQL_TXN_ISOLATION_OPTION masks */
+XX/* SQL_TXN_VERSIONING is no longer supported
+XX#define SQL_TXN_VERSIONING                  0x00000010L
+XX*/
+XX
+XX/* SQL_CORRELATION_NAME values */
+XX
+XX#define SQL_CN_NONE                         0x0000
+XX#define SQL_CN_DIFFERENT                    0x0001
+XX#define SQL_CN_ANY                          0x0002
+XX
+XX/* SQL_NON_NULLABLE_COLUMNS values */
+XX
+XX#define SQL_NNC_NULL                        0x0000
+XX#define SQL_NNC_NON_NULL                    0x0001
+XX
+XX/* SQL_NULL_COLLATION values */
+XX
+XX#define SQL_NC_START                        0x0002
+XX#define SQL_NC_END                          0x0004
+XX
+XX/* SQL_FILE_USAGE values */
+XX
+XX#define SQL_FILE_NOT_SUPPORTED              0x0000
+XX#define SQL_FILE_TABLE                      0x0001
+XX#define SQL_FILE_QUALIFIER                  0x0002
+XX#define SQL_FILE_CATALOG		SQL_FILE_QUALIFIER	// ODBC 3.0
+XX
+XX
+XX/* SQL_GETDATA_EXTENSIONS values */
+XX
+XX#define SQL_GD_BLOCK                        0x00000004L
+XX#define SQL_GD_BOUND                        0x00000008L
+XX
+XX/* SQL_POSITIONED_STATEMENTS masks */
+XX
+XX#define SQL_PS_POSITIONED_DELETE            0x00000001L
+XX#define SQL_PS_POSITIONED_UPDATE            0x00000002L
+XX#define SQL_PS_SELECT_FOR_UPDATE            0x00000004L
+XX
+XX/* SQL_GROUP_BY values */
+XX
+XX#define SQL_GB_NOT_SUPPORTED                0x0000
+XX#define SQL_GB_GROUP_BY_EQUALS_SELECT       0x0001
+XX#define SQL_GB_GROUP_BY_CONTAINS_SELECT     0x0002
+XX#define SQL_GB_NO_RELATION                  0x0003
+XX#define	SQL_GB_COLLATE	   		    0x0004
+XX
+XX
+XX/* SQL_OWNER_USAGE masks */
+XX
+XX#define SQL_OU_DML_STATEMENTS               0x00000001L
+XX#define SQL_OU_PROCEDURE_INVOCATION         0x00000002L
+XX#define SQL_OU_TABLE_DEFINITION             0x00000004L
+XX#define SQL_OU_INDEX_DEFINITION             0x00000008L
+XX#define SQL_OU_PRIVILEGE_DEFINITION         0x00000010L
+XX
+XX/* SQL_SUBQUERIES masks */
+XX
+XX#define SQL_SQ_COMPARISON                   0x00000001L
+XX#define SQL_SQ_EXISTS                       0x00000002L
+XX#define SQL_SQ_IN                           0x00000004L
+XX#define SQL_SQ_QUANTIFIED                   0x00000008L
+XX#define SQL_SQ_CORRELATED_SUBQUERIES        0x00000010L
+XX
+XX/* SQL_UNION masks */
+XX
+XX#define SQL_U_UNION                         0x00000001L
+XX#define SQL_U_UNION_ALL                     0x00000002L
+XX
+XX/* SQL_STATIC_SENSITIVITY values */
+XX
+XX#define SQL_SS_ADDITIONS                    0x00000001L
+XX#define SQL_SS_DELETIONS                    0x00000002L
+XX#define SQL_SS_UPDATES                      0x00000004L
+XX
+XX/* SQL_VIEW values */
+XX#define	SQL_CV_CREATE_VIEW					0x00000001L
+XX#define	SQL_CV_CHECK_OPTION					0x00000002L
+XX#define	SQL_CV_CASCADED						0x00000004L
+XX#define	SQL_CV_LOCAL						0x00000008L
+XX
+XX/* SQL_POS_OPERATIONS masks */
+XX
+XX#define SQL_POS_POSITION                    0x00000001L
+XX#define SQL_POS_REFRESH                     0x00000002L
+XX#define SQL_POS_UPDATE                      0x00000004L
+XX#define SQL_POS_DELETE                      0x00000008L
+XX#define SQL_POS_ADD                         0x00000010L
+XX
+XX/* SQL_QUALIFIER_LOCATION values */
+XX
+XX#define SQL_QL_START                        0x0001
+XX#define SQL_QL_END                          0x0002
+XX
+XX/* Here start return values for ODBC 3.0 SQLGetInfo */
+XX
+XX/* SQL_AGGREGATE_FUNCTIONS bitmasks */
+XX#define SQL_AF_AVG			0x00000001L
+XX#define SQL_AF_COUNT			0x00000002L
+XX#define SQL_AF_MAX			0x00000004L
+XX#define SQL_AF_MIN			0x00000008L
+XX#define SQL_AF_SUM			0x00000010L
+XX#define SQL_AF_DISTINCT			0x00000020L
+XX#define SQL_AF_ALL			0x00000040L	
+XX
+XX/* SQL_SQL_CONFORMANCE bit masks */
+XX#define	SQL_SC_SQL92_ENTRY		0x00000001L
+XX#define	SQL_SC_FIPS127_2_TRANSITIONAL	0x00000002L
+XX#define	SQL_SC_SQL92_INTERMEDIATE	0x00000004L
+XX#define	SQL_SC_SQL92_FULL		0x00000008L
+XX
+XX/* SQL_DATETIME_LITERALS masks */
+XX#define SQL_DL_SQL92_DATE		0x00000001L
+XX#define SQL_DL_SQL92_TIME		0x00000002L
+XX#define SQL_DL_SQL92_TIMESTAMP		0x00000004L
+XX#define SQL_DL_SQL92_INTERVAL_YEAR	0x00000008L
+XX#define SQL_DL_SQL92_INTERVAL_MONTH	0x00000010L
+XX#define SQL_DL_SQL92_INTERVAL_DAY	0x00000020L
+XX#define SQL_DL_SQL92_INTERVAL_HOUR	0x00000040L
+XX#define	SQL_DL_SQL92_INTERVAL_MINUTE	0x00000080L
+XX#define SQL_DL_SQL92_INTERVAL_SECOND	0x00000100L
+XX#define SQL_DL_SQL92_INTERVAL_YEAR_TO_MONTH 0x00000200L
+XX#define SQL_DL_SQL92_INTERVAL_DAY_TO_HOUR   0x00000400L
+XX#define SQL_DL_SQL92_INTERVAL_DAY_TO_MINUTE 0x00000800L
+XX#define SQL_DL_SQL92_INTERVAL_DAY_TO_SECOND 0x00001000L
+XX#define SQL_DL_SQL92_INTERVAL_HOUR_TO_MINUTE 0x00002000L
+XX#define SQL_DL_SQL92_INTERVAL_HOUR_TO_SECOND 0x00004000L
+XX#define SQL_DL_SQL92_INTERVAL_MINUTE_TO_SECOND	0x00008000L
+XX
+XX/* SQL_CATALOG_LOCATION values */
+XX#define SQL_CL_START			SQL_QL_START
+XX#define SQL_CL_END			SQL_QL_END
+XX
+XX/* Values for SQL_PARAM_ARRAY_ROW_COUNTS getinfo */
+XX#define SQL_PARC_BATCH		1
+XX#define SQL_PARC_NO_BATCH	2
+XX
+XX/* values for SQL_PARAM_ARRAY_SELECTS */
+XX#define SQL_PAS_BATCH				1
+XX#define SQL_PAS_NO_BATCH			2		
+XX#define SQL_PAS_NO_SELECT			3
+XX
+XX/* Bitmasks for SQL_INDEX_KEYWORDS */
+XX#define SQL_IK_NONE			0x00000000L
+XX#define SQL_IK_ASC			0x00000001L
+XX#define SQL_IK_DESC			0x00000002L
+XX#define SQL_IK_ALL			(SQL_IK_ASC | SQL_IK_DESC)
+XX
+XX/* Bitmasks for SQL_ASYNC_MODE */
+XX
+XX#define	SQL_AM_NONE		0
+XX#define	SQL_AM_CONNECTION	1
+XX#define	SQL_AM_STATEMENT	2
+XX
+XX/* SQL_CREATE_SCHEMA bitmasks */
+XX#define	SQL_CS_CREATE_SCHEMA	0x00000001L
+XX#define	SQL_CS_AUTHORIZATION	0x00000002L
+XX#define	SQL_CS_DEFAULT_CHARACTER_SET		0x00000004L
+XX
+XX
+XX/* SQL_CREATE_TABLE bitmasks */
+XX#define	SQL_CT_CREATE_TABLE	0x00000001L
+XX#define	SQL_CT_COMMIT_PRESERVE	0x00000002L
+XX#define	SQL_CT_COMMIT_DELETE	0x00000004L
+XX#define	SQL_CT_GLOBAL_TEMPORARY	0x00000008L
+XX#define	SQL_CT_LOCAL_TEMPORARY	0x00000010L
+XX#define	SQL_CT_CONSTRAINT_INITIALLY_DEFERRED	0x00000020L
+XX#define	SQL_CT_CONSTRAINT_INITIALLY_IMMEDIATE	0x00000040L
+XX#define	SQL_CT_CONSTRAINT_DEFERRABLE		0x00000080L
+XX#define	SQL_CT_CONSTRAINT_NON_DEFERRABLE	0x00000100L
+XX#define SQL_CT_COLUMN_CONSTRAINT		0x00000200L
+XX#define SQL_CT_COLUMN_DEFAULT			0x00000400L
+XX#define SQL_CT_COLUMN_COLLATION			0x00000800L
+XX#define SQL_CT_TABLE_CONSTRAINT			0x00001000L
+XX#define SQL_CT_CONSTRAINT_NAME_DEFINITION	0x00002000L
+XX
+XX/* SQL_DDL_INDEX bitmasks */
+XX#define SQL_DI_CREATE_INDEX			0x00000001L
+XX#define SQL_DI_DROP_INDEX			0x00000002L
+XX
+XX/* SQL_DROP_COLLATION bitmasks */
+XX#define	SQL_DC_DROP_COLLATION			0x00000001L
+XX
+XX/* SQL_DROP_TABLE bitmasks */
+XX#define	SQL_DT_DROP_TABLE			0x00000001L
+XX#define	SQL_DT_RESTRICT				0x00000002L
+XX#define	SQL_DT_CASCADE				0x00000004L
+XX
+XX/* SQL_DROP_VIEW bitmasks */
+XX#define	SQL_DV_DROP_VIEW			0x00000001L
+XX#define	SQL_DV_RESTRICT				0x00000002L
+XX#define	SQL_DV_CASCADE				0x00000004L
+XX
+XX/* SQL_INSERT_STATEMENT bitmasks */
+XX#define	SQL_IS_INSERT_LITERALS			0x00000001L
+XX#define SQL_IS_INSERT_SEARCHED			0x00000002L
+XX#define SQL_IS_SELECT_INTO			0x00000004L
+XX
+XX/* SQL_ODBC_INTERFACE_CONFORMANCE values */
+XX#define SQL_OIC_CORE				1UL
+XX#define SQL_OIC_LEVEL1				2UL
+XX#define SQL_OIC_LEVEL2				3UL
+XX
+XX/* SQL_SQL92_GRANT	bitmasks */
+XX#define SQL_SG_USAGE_ON_DOMAIN			0x00000001L
+XX#define SQL_SG_USAGE_ON_CHARACTER_SET		0x00000002L
+XX#define SQL_SG_USAGE_ON_COLLATION		0x00000004L
+XX#define SQL_SG_USAGE_ON_TRANSLATION		0x00000008L
+XX#define SQL_SG_WITH_GRANT_OPTION		0x00000010L
+XX#define SQL_SG_DELETE_TABLE			0x00000020L
+XX#define SQL_SG_INSERT_TABLE			0x00000040L
+XX#define SQL_SG_INSERT_COLUMN			0x00000080L
+XX#define SQL_SG_REFERENCES_TABLE			0x00000100L
+XX#define SQL_SG_REFERENCES_COLUMN		0x00000200L
+XX#define SQL_SG_SELECT_TABLE			0x00000400L
+XX#define SQL_SG_UPDATE_TABLE			0x00000800L
+XX#define SQL_SG_UPDATE_COLUMN			0x00001000L	
+XX
+XX/* SQL_SQL92_PREDICATES bitmasks */
+XX#define SQL_SP_EXISTS				0x00000001L
+XX#define SQL_SP_ISNOTNULL			0x00000002L
+XX#define SQL_SP_ISNULL				0x00000004L
+XX#define SQL_SP_MATCH_FULL			0x00000008L
+XX#define SQL_SP_MATCH_PARTIAL			0x00000010L
+XX#define SQL_SP_MATCH_UNIQUE_FULL		0x00000020L
+XX#define SQL_SP_MATCH_UNIQUE_PARTIAL		0x00000040L
+XX#define SQL_SP_OVERLAPS				0x00000080L
+XX#define SQL_SP_UNIQUE				0x00000100L
+XX#define SQL_SP_LIKE				0x00000200L
+XX#define SQL_SP_IN				0x00000400L
+XX#define SQL_SP_BETWEEN				0x00000800L
+XX#define SQL_SP_COMPARISON			0x00001000L
+XX#define SQL_SP_QUANTIFIED_COMPARISON		0x00002000L
+XX
+XX/* SQL_SQL92_RELATIONAL_JOIN_OPERATORS bitmasks */
+XX#define SQL_SRJO_CORRESPONDING_CLAUSE	        0x00000001L
+XX#define SQL_SRJO_CROSS_JOIN			0x00000002L
+XX#define SQL_SRJO_EXCEPT_JOIN			0x00000004L
+XX#define SQL_SRJO_FULL_OUTER_JOIN		0x00000008L
+XX#define SQL_SRJO_INNER_JOIN			0x00000010L
+XX#define SQL_SRJO_INTERSECT_JOIN			0x00000020L
+XX#define SQL_SRJO_LEFT_OUTER_JOIN		0x00000040L
+XX#define SQL_SRJO_NATURAL_JOIN			0x00000080L
+XX#define SQL_SRJO_RIGHT_OUTER_JOIN		0x00000100L
+XX#define SQL_SRJO_UNION_JOIN			0x00000200L
+XX
+XX/* SQL_SQL92_REVOKE bitmasks */
+XX#define SQL_SR_USAGE_ON_DOMAIN				0x00000001L
+XX#define SQL_SR_USAGE_ON_CHARACTER_SET			0x00000002L
+XX#define SQL_SR_USAGE_ON_COLLATION			0x00000004L
+XX#define SQL_SR_USAGE_ON_TRANSLATION			0x00000008L
+XX#define SQL_SR_GRANT_OPTION_FOR				0x00000010L
+XX#define SQL_SR_CASCADE					0x00000020L
+XX#define SQL_SR_RESTRICT					0x00000040L
+XX#define SQL_SR_DELETE_TABLE				0x00000080L
+XX#define SQL_SR_INSERT_TABLE				0x00000100L
+XX#define SQL_SR_INSERT_COLUMN				0x00000200L
+XX#define SQL_SR_REFERENCES_TABLE				0x00000400L
+XX#define SQL_SR_REFERENCES_COLUMN			0x00000800L
+XX#define SQL_SR_SELECT_TABLE				0x00001000L
+XX#define SQL_SR_UPDATE_TABLE				0x00002000L
+XX#define SQL_SR_UPDATE_COLUMN				0x00004000L
+XX
+XX/* SQL_SQL92_ROW_VALUE_CONSTRUCTOR bitmasks */
+XX#define SQL_SRVC_VALUE_EXPRESSION			0x00000001L
+XX#define SQL_SRVC_NULL					0x00000002L
+XX#define SQL_SRVC_DEFAULT				0x00000004L
+XX#define SQL_SRVC_ROW_SUBQUERY				0x00000008L
+XX
+XX/* additional SQLDataSources fetch directions */
+XX#define SQL_FETCH_FIRST_USER                            31
+XX#define SQL_FETCH_FIRST_SYSTEM                          32
+XX
+XX/* Defines for SQLSetPos */
+XX#define SQL_ENTIRE_ROWSET            0
+XX
+XX/* Operations in SQLSetPos */
+XX#define SQL_POSITION                 0               /*      1.0 FALSE */
+XX#define SQL_REFRESH                  1               /*      1.0 TRUE */
+XX#define SQL_UPDATE                   2
+XX#define SQL_DELETE                   3
+XX
+XX
+XX/* Lock options in SQLSetPos */
+XX#define SQL_LOCK_NO_CHANGE           0               /*      1.0 FALSE */
+XX#define SQL_LOCK_EXCLUSIVE           1               /*      1.0 TRUE */
+XX#define SQL_LOCK_UNLOCK              2
+XX
+XX#define	SQL_SETPOS_MAX_LOCK_VALUE		SQL_LOCK_UNLOCK
+XX
+XX/* Macros for SQLSetPos */
+XX#define SQL_POSITION_TO(hstmt,irow) SQLSetPos(hstmt,irow,SQL_POSITION,SQL_LOCK_NO_CHANGE)
+XX#define SQL_LOCK_RECORD(hstmt,irow,fLock) SQLSetPos(hstmt,irow,SQL_POSITION,fLock)
+XX#define SQL_REFRESH_RECORD(hstmt,irow,fLock) SQLSetPos(hstmt,irow,SQL_REFRESH,fLock)
+XX#define SQL_UPDATE_RECORD(hstmt,irow) SQLSetPos(hstmt,irow,SQL_UPDATE,SQL_LOCK_NO_CHANGE)
+XX#define SQL_DELETE_RECORD(hstmt,irow) SQLSetPos(hstmt,irow,SQL_DELETE,SQL_LOCK_NO_CHANGE)
+XX#define SQL_ADD_RECORD(hstmt,irow) SQLSetPos(hstmt,irow,SQL_ADD,SQL_LOCK_NO_CHANGE)
+XX
+XX/* Defines for SQLStatistics (returned in the result set)
+XX   SQL_INDEX_CLUSTERED, SQL_INDEX_HASHED, and SQL_INDEX_OTHER are
+XX   defined in sql.h */
+XX#define SQL_TABLE_STAT                  0
+XX
+XX/* Defines for SQLTables */
+XX#define SQL_ALL_CATALOGS				"%"
+XX#define SQL_ALL_SCHEMAS					"%"
+XX#define SQL_ALL_TABLE_TYPES				"%"
+XX
+XX/* Options for SQLDriverConnect */
+XX#define SQL_DRIVER_NOPROMPT             0
+XX#define SQL_DRIVER_COMPLETE             1
+XX#define SQL_DRIVER_PROMPT               2
+XX#define SQL_DRIVER_COMPLETE_REQUIRED    3
+XX
+XX
+XXSQLRETURN SQL_API SQLDriverConnect(
+XX    SQLHDBC            hdbc,
+XX    SQLHWND            hwnd,
+XX    SQLCHAR 	       *szConnStrIn,
+XX    SQLSMALLINT        cbConnStrIn,
+XX    SQLCHAR            *szConnStrOut,
+XX    SQLSMALLINT        cbConnStrOutMax,
+XX    SQLSMALLINT        *pcbConnStrOut,
+XX    SQLUSMALLINT       fDriverCompletion);
+XX
+XX/* Level 2 Functions                             */
+XX
+XX/* SQLExtendedFetch "fFetchType" values */
+XX#define SQL_FETCH_BOOKMARK               8
+XX
+XX/* SQLExtendedFetch "rgfRowStatus" element values */
+XX#define SQL_ROW_SUCCESS                  0
+XX#define SQL_ROW_DELETED                  1
+XX#define SQL_ROW_UPDATED                  2
+XX#define SQL_ROW_NOROW                    3
+XX#define SQL_ROW_ADDED                    4
+XX#define SQL_ROW_ERROR                    5
+XX#define SQL_ROW_SUCCESS_WITH_INFO		6
+XX#define SQL_ROW_PROCEED				0
+XX#define SQL_ROW_IGNORE				1
+XX
+XX/* value for SQL_DESC_ARRAY_STATUS_PTR */
+XX#define SQL_PARAM_SUCCESS	                0
+XX#define SQL_PARAM_SUCCESS_WITH_INFO		6
+XX#define SQL_PARAM_ERROR			        5
+XX#define SQL_PARAM_UNUSED			7
+XX#define SQL_PARAM_DIAG_UNAVAILABLE		1
+XX
+XX#define SQL_PARAM_PROCEED			0
+XX#define SQL_PARAM_IGNORE			1
+XX
+XX/* Defines for SQLForeignKeys (UPDATE_RULE and DELETE_RULE) */
+XX#define SQL_CASCADE                      0
+XX#define SQL_RESTRICT                     1
+XX#define SQL_SET_NULL                     2
+XX#define SQL_NO_ACTION			 3
+XX#define SQL_SET_DEFAULT			 4
+XX
+XX/* Note that the following are in a different column of SQLForeignKeys than */
+XX/* the previous #defines.   These are for DEFERRABILITY.                    */
+XX
+XX#define SQL_INITIALLY_DEFERRED			5
+XX#define SQL_INITIALLY_IMMEDIATE			6
+XX#define SQL_NOT_DEFERRABLE			7
+XX
+XX
+XX/* Defines for SQLBindParameter and
+XX                           SQLProcedureColumns (returned in the result set) */
+XX#define SQL_PARAM_TYPE_UNKNOWN           0
+XX#define SQL_PARAM_INPUT                  1
+XX#define SQL_PARAM_INPUT_OUTPUT           2
+XX#define SQL_RESULT_COL                   3
+XX#define SQL_PARAM_OUTPUT                 4
+XX#define SQL_RETURN_VALUE                 5
+XX
+XX/* Defines for SQLProcedures (returned in the result set) */
+XX#define SQL_PT_UNKNOWN                   0
+XX#define SQL_PT_PROCEDURE                 1
+XX#define SQL_PT_FUNCTION                  2
+XX
+XX#define SQL_DATABASE_NAME               16
+XX#define SQL_SCROLL_FORWARD_ONLY         0L    /*-SQL_CURSOR_FORWARD_ONLY */
+XX#define SQL_SCROLL_KEYSET_DRIVEN        (-1L) /*-SQL_CURSOR_KEYSET_DRIVEN */
+XX#define SQL_SCROLL_DYNAMIC              (-2L) /*-SQL_CURSOR_DYNAMIC */
+XX#define SQL_SCROLL_STATIC               (-3L) /*-SQL_CURSOR_STATIC */
+XX
+XX#define SQL_CONCUR_TIMESTAMP            SQL_CONCUR_ROWVER
+XX#define SQL_SCCO_OPT_TIMESTAMP          SQL_SCCO_OPT_ROWVER
+XX
+XX
+XX#define SQL_WCHAR		(-8)
+XX#define SQL_WVARCHAR	 	(-9)
+XX#define SQL_WLONGVARCHAR 	(-10)
+XX#define SQL_C_WCHAR			SQL_WCHAR
+XX
+XX#define SQL_C_TCHAR		SQL_C_CHAR
+XX
+XX#define SQL_SQLSTATE_SIZEW	10	/* size of SQLSTATE for unicode */
+XX
+XX/* SQLConfigDataSource request flags */
+XX
+XX#define  ODBC_ADD_DSN     1    /* Add data source */
+XX#define  ODBC_CONFIG_DSN  2    /* Configure (edit) data source */
+XX#define  ODBC_REMOVE_DSN  3    /* Remove data source */
+XX
+XX#define  ODBC_ADD_SYS_DSN           4   /* Add a system DSN */
+XX#define  ODBC_CONFIG_SYS_DSN        5   /* Configure a system DSN */
+XX#define  ODBC_REMOVE_SYS_DSN        6   /* Remove a system DSN */
+XX#define  ODBC_REMOVE_DEFAULT_DSN    7   /* Remove the default DSN */
+XX
+XX
+XX/* Error codes for SQLInstallerError */
+XX#define ODBC_ERROR_GENERAL_ERR                   1
+XX#define ODBC_ERROR_INVALID_BUFF_LEN              2
+XX#define ODBC_ERROR_INVALID_HWND                  3
+XX#define ODBC_ERROR_INVALID_STR                   4
+XX#define ODBC_ERROR_INVALID_REQUEST_TYPE          5
+XX#define ODBC_ERROR_COMPONENT_NOT_FOUND           6
+XX#define ODBC_ERROR_INVALID_NAME                  7
+XX#define ODBC_ERROR_INVALID_KEYWORD_VALUE         8
+XX#define ODBC_ERROR_INVALID_DSN                   9
+XX#define ODBC_ERROR_INVALID_INF                  10
+XX#define ODBC_ERROR_REQUEST_FAILED               11
+XX#define ODBC_ERROR_INVALID_PATH                 12
+XX#define ODBC_ERROR_LOAD_LIB_FAILED              13
+XX#define ODBC_ERROR_INVALID_PARAM_SEQUENCE       14
+XX#define ODBC_ERROR_INVALID_LOG_FILE             15
+XX#define ODBC_ERROR_USER_CANCELED                16
+XX#define ODBC_ERROR_USAGE_UPDATE_FAILED          17
+XX#define ODBC_ERROR_CREATE_DSN_FAILED            18
+XX#define ODBC_ERROR_WRITING_SYSINFO_FAILED       19
+XX#define ODBC_ERROR_REMOVE_DSN_FAILED            20
+XX#define ODBC_ERROR_OUT_OF_MEM                   21
+XX
+XX
+XXSQLRETURN SQL_API SQLBrowseConnect(
+XX    SQLHDBC            hdbc,
+XX    SQLCHAR 	       *szConnStrIn,
+XX    SQLSMALLINT        cbConnStrIn,
+XX    SQLCHAR 	       *szConnStrOut,
+XX    SQLSMALLINT        cbConnStrOutMax,
+XX    SQLSMALLINT        *pcbConnStrOut);
+XX
+XXSQLRETURN	SQL_API	SQLBulkOperations(
+XX	SQLHSTMT StatementHandle,
+XX	SQLSMALLINT Operation);
+XX
+XXSQLRETURN SQL_API SQLColAttributes(
+XX    SQLHSTMT           hstmt,
+XX    SQLUSMALLINT       icol,
+XX    SQLUSMALLINT       fDescType,
+XX    SQLPOINTER         rgbDesc,
+XX    SQLSMALLINT        cbDescMax,
+XX    SQLSMALLINT        *pcbDesc,
+XX    SQLINTEGER 	       *pfDesc);
+XX
+XXSQLRETURN SQL_API SQLColumnPrivileges(
+XX    SQLHSTMT           hstmt,
+XX    SQLCHAR 	       *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLCHAR 	       *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLCHAR 	       *szTableName,
+XX    SQLSMALLINT        cbTableName,
+XX    SQLCHAR 	       *szColumnName,
+XX    SQLSMALLINT        cbColumnName);
+XX
+XXSQLRETURN SQL_API SQLDescribeParam(
+XX    SQLHSTMT           hstmt,
+XX    SQLUSMALLINT       ipar,
+XX    SQLSMALLINT        *pfSqlType,
+XX    SQLUINTEGER            *pcbParamDef,
+XX    SQLSMALLINT        *pibScale,
+XX    SQLSMALLINT        *pfNullable);
+XX
+XXSQLRETURN SQL_API SQLExtendedFetch(
+XX    SQLHSTMT           hstmt,
+XX    SQLUSMALLINT       fFetchType,
+XX    SQLINTEGER       irow,
+XX    SQLUINTEGER      *pcrow,
+XX    SQLUSMALLINT       *rgfRowStatus);
+XX
+XXSQLRETURN SQL_API SQLForeignKeys(
+XX    SQLHSTMT           hstmt,
+XX    SQLCHAR 	       *szPkCatalogName,
+XX    SQLSMALLINT        cbPkCatalogName,
+XX    SQLCHAR 	       *szPkSchemaName,
+XX    SQLSMALLINT        cbPkSchemaName,
+XX    SQLCHAR 	       *szPkTableName,
+XX    SQLSMALLINT        cbPkTableName,
+XX    SQLCHAR 	       *szFkCatalogName,
+XX    SQLSMALLINT        cbFkCatalogName,
+XX    SQLCHAR 	       *szFkSchemaName,
+XX    SQLSMALLINT        cbFkSchemaName,
+XX    SQLCHAR 	       *szFkTableName,
+XX    SQLSMALLINT        cbFkTableName);
+XX
+XXSQLRETURN SQL_API SQLMoreResults(
+XX    SQLHSTMT           hstmt);
+XX
+XXSQLRETURN SQL_API SQLNativeSql(
+XX    SQLHDBC            hdbc,
+XX    SQLCHAR 	       *szSqlStrIn,
+XX    SQLINTEGER         cbSqlStrIn,
+XX    SQLCHAR 	       *szSqlStr,
+XX    SQLINTEGER         cbSqlStrMax,
+XX    SQLINTEGER 	       *pcbSqlStr);
+XX
+XXSQLRETURN SQL_API SQLNumParams(
+XX    SQLHSTMT           hstmt,
+XX    SQLSMALLINT        *pcpar);
+XX
+XXSQLRETURN SQL_API SQLParamOptions(
+XX    SQLHSTMT           hstmt,
+XX    SQLUINTEGER      crow,
+XX    SQLUINTEGER      *pirow);
+XX
+XXSQLRETURN SQL_API SQLPrimaryKeys(
+XX    SQLHSTMT           hstmt,
+XX    SQLCHAR 	       *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLCHAR 	       *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLCHAR 	       *szTableName,
+XX    SQLSMALLINT        cbTableName);
+XX
+XXSQLRETURN SQL_API SQLProcedureColumns(
+XX    SQLHSTMT           hstmt,
+XX    SQLCHAR 	       *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLCHAR 	       *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLCHAR 	       *szProcName,
+XX    SQLSMALLINT        cbProcName,
+XX    SQLCHAR 	       *szColumnName,
+XX    SQLSMALLINT        cbColumnName);
+XX
+XXSQLRETURN SQL_API SQLProcedures(
+XX    SQLHSTMT           hstmt,
+XX    SQLCHAR 	       *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLCHAR 	       *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLCHAR 	       *szProcName,
+XX    SQLSMALLINT        cbProcName);
+XX
+XXSQLRETURN SQL_API SQLSetPos(
+XX    SQLHSTMT           hstmt,
+XX    SQLUSMALLINT      irow,
+XX    SQLUSMALLINT       fOption,
+XX    SQLUSMALLINT       fLock);
+XX
+XXSQLRETURN SQL_API SQLTablePrivileges(
+XX    SQLHSTMT           hstmt,
+XX    SQLCHAR 		  *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLCHAR 		  *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLCHAR 		  *szTableName,
+XX    SQLSMALLINT        cbTableName);
+XX
+XXSQLRETURN SQL_API SQLDrivers(
+XX    SQLHENV            henv,
+XX    SQLUSMALLINT       fDirection,
+XX    SQLCHAR 		  *szDriverDesc,
+XX    SQLSMALLINT        cbDriverDescMax,
+XX    SQLSMALLINT 	  *pcbDriverDesc,
+XX    SQLCHAR 		  *szDriverAttributes,
+XX    SQLSMALLINT        cbDrvrAttrMax,
+XX    SQLSMALLINT 	  *pcbDrvrAttr);
+XX
+XXSQLRETURN SQL_API SQLBindParameter(
+XX    SQLHSTMT           hstmt,
+XX    SQLUSMALLINT       ipar,
+XX    SQLSMALLINT        fParamType,
+XX    SQLSMALLINT        fCType,
+XX    SQLSMALLINT        fSqlType,
+XX    SQLUINTEGER            cbColDef,
+XX    SQLSMALLINT        ibScale,
+XX    SQLPOINTER         rgbValue,
+XX    SQLINTEGER             cbValueMax,
+XX    SQLINTEGER     		*pcbValue);
+XX
+XX/*
+XX** Deprecated definitions.
+XX*/
+XX
+XXSQLRETURN SQL_API SQLSetScrollOptions(    /*      Use SQLSetStmtOptions */
+XX    SQLHSTMT           hstmt,
+XX    SQLUSMALLINT       fConcurrency,
+XX    SQLINTEGER             crowKeyset,
+XX    SQLUSMALLINT       crowRowset);
+XX
+XX/* UNICODE versions */
+XX
+XXSQLRETURN SQL_API SQLColAttributeW(
+XX	SQLHSTMT		hstmt,
+XX	SQLUSMALLINT	iCol,
+XX	SQLUSMALLINT	iField,
+XX	SQLPOINTER		pCharAttr,
+XX	SQLSMALLINT		cbCharAttrMax,	
+XX	SQLSMALLINT  *pcbCharAttr,
+XX	SQLPOINTER		pNumAttr);	
+XX
+XXSQLRETURN SQL_API SQLColAttributesW(
+XX    SQLHSTMT           hstmt,
+XX    SQLUSMALLINT       icol,
+XX    SQLUSMALLINT       fDescType,
+XX    SQLPOINTER         rgbDesc,
+XX    SQLSMALLINT        cbDescMax,
+XX    SQLSMALLINT        *pcbDesc,
+XX    SQLINTEGER         *pfDesc);
+XX
+XXSQLRETURN SQL_API SQLConnectW(
+XX    SQLHDBC            hdbc,
+XX    SQLWCHAR        *szDSN,
+XX    SQLSMALLINT        cbDSN,
+XX    SQLWCHAR        *szUID,
+XX    SQLSMALLINT        cbUID,
+XX    SQLWCHAR        *szAuthStr,
+XX    SQLSMALLINT        cbAuthStr);
+XX
+XX
+XXSQLRETURN SQL_API SQLDescribeColW(
+XX    SQLHSTMT           hstmt,
+XX    SQLUSMALLINT       icol,
+XX    SQLWCHAR        *szColName,
+XX    SQLSMALLINT        cbColNameMax,
+XX    SQLSMALLINT    *pcbColName,
+XX    SQLSMALLINT    *pfSqlType,
+XX    SQLUINTEGER       *pcbColDef,
+XX    SQLSMALLINT    *pibScale,
+XX    SQLSMALLINT    *pfNullable);
+XX
+XX
+XXSQLRETURN SQL_API SQLErrorW(
+XX    SQLHENV            henv,
+XX    SQLHDBC            hdbc,
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szSqlState,
+XX    SQLINTEGER     *pfNativeError,
+XX    SQLWCHAR        *szErrorMsg,
+XX    SQLSMALLINT        cbErrorMsgMax,
+XX    SQLSMALLINT    *pcbErrorMsg);
+XX
+XXSQLRETURN SQL_API SQLExecDirectW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szSqlStr,
+XX    SQLINTEGER         cbSqlStr);
+XX
+XXSQLRETURN SQL_API SQLGetConnectAttrW(
+XX    SQLHDBC            hdbc,
+XX    SQLINTEGER         fAttribute,
+XX    SQLPOINTER         rgbValue,
+XX    SQLINTEGER         cbValueMax,
+XX    SQLINTEGER     *pcbValue);
+XX
+XXSQLRETURN SQL_API SQLGetCursorNameW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCursor,
+XX    SQLSMALLINT        cbCursorMax,
+XX    SQLSMALLINT    *pcbCursor);
+XX
+XX#if (ODBCVER >= 0x0300)
+XXSQLRETURN  SQL_API SQLSetDescFieldW(SQLHDESC DescriptorHandle,
+XX           						   SQLSMALLINT RecNumber, 
+XX								   SQLSMALLINT FieldIdentifier,
+XX           						   SQLPOINTER Value, 
+XX								   SQLINTEGER BufferLength);
+XX
+XX
+XX
+XXSQLRETURN SQL_API SQLGetDescFieldW(
+XX    SQLHDESC           hdesc,
+XX    SQLSMALLINT        iRecord,
+XX    SQLSMALLINT        iField,
+XX    SQLPOINTER         rgbValue,
+XX    SQLINTEGER		   cbValueMax,
+XX    SQLINTEGER     *pcbValue);
+XX
+XXSQLRETURN SQL_API SQLGetDescRecW(
+XX    SQLHDESC           hdesc,
+XX    SQLSMALLINT        iRecord,
+XX    SQLWCHAR        *szName,
+XX    SQLSMALLINT        cbNameMax,
+XX    SQLSMALLINT    *pcbName,
+XX    SQLSMALLINT    *pfType,
+XX    SQLSMALLINT    *pfSubType,
+XX    SQLINTEGER     *pLength,
+XX    SQLSMALLINT    *pPrecision, 
+XX    SQLSMALLINT    *pScale,
+XX    SQLSMALLINT    *pNullable);
+XX
+XXSQLRETURN SQL_API SQLGetDiagFieldW(
+XX    SQLSMALLINT        fHandleType,
+XX    SQLHANDLE          handle,
+XX    SQLSMALLINT        iRecord,
+XX    SQLSMALLINT        fDiagField,
+XX    SQLPOINTER         rgbDiagInfo,
+XX    SQLSMALLINT        cbDiagInfoMax,
+XX    SQLSMALLINT    *pcbDiagInfo);
+XX
+XXSQLRETURN SQL_API SQLGetDiagRecW(
+XX    SQLSMALLINT        fHandleType,
+XX    SQLHANDLE          handle,
+XX    SQLSMALLINT        iRecord,
+XX    SQLWCHAR        *szSqlState,
+XX    SQLINTEGER     *pfNativeError,
+XX    SQLWCHAR        *szErrorMsg,
+XX    SQLSMALLINT        cbErrorMsgMax,
+XX    SQLSMALLINT    *pcbErrorMsg);
+XX
+XX
+XX#endif
+XX
+XX
+XXSQLRETURN SQL_API SQLPrepareW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szSqlStr,
+XX    SQLINTEGER         cbSqlStr);
+XX
+XXSQLRETURN SQL_API SQLSetConnectAttrW(
+XX    SQLHDBC            hdbc,
+XX    SQLINTEGER         fAttribute,
+XX    SQLPOINTER         rgbValue,
+XX    SQLINTEGER         cbValue);
+XX
+XXSQLRETURN SQL_API SQLSetCursorNameW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCursor,
+XX    SQLSMALLINT        cbCursor);
+XX
+XX
+XX
+XX    
+XX
+XX
+XX
+XXSQLRETURN SQL_API SQLColumnsW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLWCHAR        *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLWCHAR        *szTableName,
+XX    SQLSMALLINT        cbTableName,
+XX    SQLWCHAR        *szColumnName,
+XX    SQLSMALLINT        cbColumnName);
+XX
+XXSQLRETURN SQL_API SQLGetConnectOptionW(
+XX    SQLHDBC            hdbc,
+XX    SQLUSMALLINT       fOption,
+XX    SQLPOINTER         pvParam);
+XX
+XX
+XX
+XXSQLRETURN SQL_API SQLGetInfoW(
+XX    SQLHDBC            hdbc,
+XX    SQLUSMALLINT       fInfoType,
+XX    SQLPOINTER         rgbInfoValue,
+XX    SQLSMALLINT        cbInfoValueMax,
+XX    SQLSMALLINT    *pcbInfoValue);
+XX
+XXSQLRETURN SQL_API	SQLGetTypeInfoW(
+XX	SQLHSTMT			StatementHandle,
+XX	SQLSMALLINT			DataType);
+XX
+XX
+XXSQLRETURN SQL_API SQLSetConnectOptionW(
+XX    SQLHDBC            hdbc,
+XX    SQLUSMALLINT       fOption,
+XX    SQLUINTEGER        vParam);
+XX
+XX
+XXSQLRETURN SQL_API SQLSpecialColumnsW(
+XX    SQLHSTMT           hstmt,
+XX    SQLUSMALLINT       fColType,
+XX    SQLWCHAR        *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLWCHAR        *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLWCHAR        *szTableName,
+XX    SQLSMALLINT        cbTableName,
+XX    SQLUSMALLINT       fScope,
+XX    SQLUSMALLINT       fNullable);
+XX
+XXSQLRETURN SQL_API SQLStatisticsW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLWCHAR        *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLWCHAR        *szTableName,
+XX    SQLSMALLINT        cbTableName,
+XX    SQLUSMALLINT       fUnique,
+XX    SQLUSMALLINT       fAccuracy);
+XX
+XXSQLRETURN SQL_API SQLTablesW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLWCHAR        *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLWCHAR        *szTableName,
+XX    SQLSMALLINT        cbTableName,
+XX    SQLWCHAR        *szTableType,
+XX    SQLSMALLINT        cbTableType);
+XX
+XX
+XX
+XXSQLRETURN SQL_API SQLDataSourcesW(
+XX    SQLHENV            henv,
+XX    SQLUSMALLINT       fDirection,
+XX    SQLWCHAR        *szDSN,
+XX    SQLSMALLINT        cbDSNMax,
+XX    SQLSMALLINT    *pcbDSN,
+XX    SQLWCHAR        *szDescription,
+XX    SQLSMALLINT        cbDescriptionMax,
+XX    SQLSMALLINT    *pcbDescription);
+XX
+XX
+XX
+XX
+XXSQLRETURN SQL_API SQLDriverConnectW(
+XX    SQLHDBC            hdbc,
+XX    SQLHWND            hwnd,
+XX    SQLWCHAR        *szConnStrIn,
+XX    SQLSMALLINT        cbConnStrIn,
+XX    SQLWCHAR        *szConnStrOut,
+XX    SQLSMALLINT        cbConnStrOutMax,
+XX    SQLSMALLINT    *pcbConnStrOut,
+XX    SQLUSMALLINT       fDriverCompletion);
+XX
+XX
+XXSQLRETURN SQL_API SQLBrowseConnectW(
+XX    SQLHDBC            hdbc,
+XX    SQLWCHAR        *szConnStrIn,
+XX    SQLSMALLINT        cbConnStrIn,
+XX    SQLWCHAR        *szConnStrOut,
+XX    SQLSMALLINT        cbConnStrOutMax,
+XX    SQLSMALLINT    *pcbConnStrOut);
+XX
+XXSQLRETURN SQL_API SQLColumnPrivilegesW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLWCHAR        *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLWCHAR        *szTableName,
+XX    SQLSMALLINT        cbTableName,
+XX    SQLWCHAR        *szColumnName,
+XX    SQLSMALLINT        cbColumnName);
+XX
+XXSQLRETURN SQL_API SQLGetStmtAttrW(
+XX    SQLHSTMT           hstmt,
+XX    SQLINTEGER         fAttribute,
+XX    SQLPOINTER         rgbValue,
+XX    SQLINTEGER         cbValueMax,
+XX    SQLINTEGER     *pcbValue);
+XX
+XXSQLRETURN SQL_API SQLSetStmtAttrW(
+XX    SQLHSTMT           hstmt,
+XX    SQLINTEGER         fAttribute,
+XX    SQLPOINTER         rgbValue,
+XX    SQLINTEGER         cbValueMax);
+XX
+XXSQLRETURN SQL_API SQLForeignKeysW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szPkCatalogName,
+XX    SQLSMALLINT        cbPkCatalogName,
+XX    SQLWCHAR        *szPkSchemaName,
+XX    SQLSMALLINT        cbPkSchemaName,
+XX    SQLWCHAR        *szPkTableName,
+XX    SQLSMALLINT        cbPkTableName,
+XX    SQLWCHAR        *szFkCatalogName,
+XX    SQLSMALLINT        cbFkCatalogName,
+XX    SQLWCHAR        *szFkSchemaName,
+XX    SQLSMALLINT        cbFkSchemaName,
+XX    SQLWCHAR        *szFkTableName,
+XX    SQLSMALLINT        cbFkTableName);
+XX
+XX
+XXSQLRETURN SQL_API SQLNativeSqlW(
+XX    SQLHDBC            hdbc,
+XX    SQLWCHAR        *szSqlStrIn,
+XX    SQLINTEGER         cbSqlStrIn,
+XX    SQLWCHAR        *szSqlStr,
+XX    SQLINTEGER         cbSqlStrMax,
+XX    SQLINTEGER     *pcbSqlStr);
+XX
+XX
+XXSQLRETURN SQL_API SQLPrimaryKeysW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLWCHAR        *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLWCHAR        *szTableName,
+XX    SQLSMALLINT        cbTableName);
+XX
+XXSQLRETURN SQL_API SQLProcedureColumnsW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLWCHAR        *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLWCHAR        *szProcName,
+XX    SQLSMALLINT        cbProcName,
+XX    SQLWCHAR        *szColumnName,
+XX    SQLSMALLINT        cbColumnName);
+XX
+XXSQLRETURN SQL_API SQLProceduresW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLWCHAR        *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLWCHAR        *szProcName,
+XX    SQLSMALLINT        cbProcName);
+XX
+XX
+XXSQLRETURN SQL_API SQLTablePrivilegesW(
+XX    SQLHSTMT           hstmt,
+XX    SQLWCHAR        *szCatalogName,
+XX    SQLSMALLINT        cbCatalogName,
+XX    SQLWCHAR        *szSchemaName,
+XX    SQLSMALLINT        cbSchemaName,
+XX    SQLWCHAR        *szTableName,
+XX    SQLSMALLINT        cbTableName);
+XX
+XXSQLRETURN SQL_API SQLDriversW(
+XX    SQLHENV            henv,
+XX    SQLUSMALLINT       fDirection,
+XX    SQLWCHAR        *szDriverDesc,
+XX    SQLSMALLINT        cbDriverDescMax,
+XX    SQLSMALLINT    *pcbDriverDesc,
+XX    SQLWCHAR        *szDriverAttributes,
+XX    SQLSMALLINT        cbDrvrAttrMax,
+XX    SQLSMALLINT    *pcbDrvrAttr);
+XX
+XX
+XXSQLRETURN SQL_API SQLConfigDataSource(
+XX    SQLHWND       hwndParent,
+XX    SQLSMALLINT   fRequest,
+XX    SQLCHAR       *lpszDriver,
+XX    SQLCHAR       *lpszAttributes);
+XX
+XX
+XXSQLRETURN SQL_API ConfigDSN(
+XX    SQLHWND       hwndParent,
+XX    SQLSMALLINT   fRequest,
+XX    SQLCHAR       *lpszDriver,
+XX    SQLCHAR       *lpszAttributes);
+XX
+XX
+XX#ifdef __cplusplus
+XX}                                     /* End of extern "C" { */
+XX#endif  /* __cplusplus */
+XX
+XX#endif  /*__SQLUCODE_H */
+XX#endif /* __SQLEXT */

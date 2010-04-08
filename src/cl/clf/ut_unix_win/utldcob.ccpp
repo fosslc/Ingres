@@ -1,0 +1,88 @@
+/*
+**Copyright (c) 2004 Ingres Corporation
+**
+**Name:	utldcob.ccpp - UT Loader Rules Definition File when using COBOL
+**                     procedures.
+**
+** Description:
+**	This file is used to create variant "utldcob.def" files for
+**	different target systems.  It specifies rules used to link
+**	objects.  It is seperate from utld.def because it explicitly uses
+**	cob to load objects rather than ld or cc.  This is done to pull in
+**	the appropiate COBOL libraries when building executables that contain
+**	COBOL procedures.  The user is expected  to set the environmental
+**	variables COBDIR to point to the path that the COBOL interpreter 
+**	resides and II_UTLD_FILE to point to the path where utldcob.def
+**	resides.
+**
+**	Create the file via:
+**
+**		ccpp utldcob.ccpp > utldcob.def
+**
+**	If a two letter word beginning with the character '%' is read
+**	from the file, it is interpreted as follows:
+**
+**		%O - the name of the output file is substituted
+**		%D - the name of the directory containing the
+**		     object files is substituted
+**		%i - the input files, the list of object files
+**		     from the objs[] argument, is substituted
+**		     (with relative path names)
+**		%L - the libraries, the list of libraries from
+**		     the usrlist[] argument, is substituted
+**		%% - the character '%' is substituted
+**
+** History:    $Log-for RCS$
+**	13-nov-1990 (kevinm)
+**		File initially added.
+**	08-apr-1991 (bentley)
+**		File introduced for 63/02p on dr6_us5. Copied from mule  
+**		(dr6_us5 62/03u). Added libraries - socket, nsl.
+**	31-May-1991 (bentley)
+**		Enabled dra_us5 machine to pick up the cobol linking
+**		command.
+**	21-Jun-1991 (jkb)
+**		Add entry for sqs_ptx
+**	26-nov-1991 (bentley)
+**		File added for ingres63p.
+**	24-mar-1992 (pauland)
+**		Changes made to the libraries supplied with
+**		DRS/NX 3000 SVR4 Version 5 (dra_us5) requires a change to the
+**		link options for COBOL. Change also compatible with
+**		DRS/NX 6000 SVR4 Version 5 (dr6_us5).
+**	04-nov-1992 (peterw)
+**		File added. (Took copy from ingres63p)
+**	21-oct-1993 (dianeh)
+**		Change the "#if 0" to C-style comments, to accommodate the
+**		new portable preprocessor, yapp (beside, it's more normal).
+**	25-feb-1994 (dianeh)
+**		Added a "default" so utldcob.def doesn't go out as an empty
+**		file; this helps in 2 ways: 1) people won't be confused about
+**		why it's empty (since it won't be anymore); and, 2) it won't
+**		infinitely rebuild, since the timestamp will now be bumped
+**		when it writes out either the "default" or a command-line.
+**	23-may-1997 (canor01)
+**		Replaced undefined preprocessor directive with "#error".
+**	08-Dec-1998 (kosma01)
+**		Sequent changed the default socket library from ABI to BSD when 
+**		DYNIX/ptx 4.4 came out. Since BSD sockets are available on 
+**		4.2, this change uses BSD sockets for the current (4.2) and future
+**		(4.4 and beyond) OS releases.
+**      12-Mar-2008 (hanal04) Bug 119979
+**              Windows does not like #error so we get an empty file and buildrel
+**              complains. Does include the # on Windows.
+*/
+
+#if defined(dr6_us5) || defined(dra_us5)
+cd %D ; $COBDIR/bin/cob -xv -o %O %i %L -lsocket -lnsl -lcurses -lm -Q,2 -lc
+#else
+# if defined(sqs_ptx)
+cd %D ; $COBDIR/bin/cob -xv -e "" -o %O %i -L/usr/lib/bsd-socket %L -lseq -lsocket -linet -lnsl -lld -lm -lc
+# else
+#if defined(NT_GENERIC)
+          error Not applicable on this platform.
+#else
+	# error Not applicable on this platform.
+#endif
+# endif /* sqs_ptx */
+#endif /* dr6_us5 || dra_us5 */

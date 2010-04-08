@@ -1,0 +1,334 @@
+/*
+**	Copyright (c) 2009 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>		/* 6-x_PC_80x86 */
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+##include	<ui.qsh>
+##include	<uigdata.qsh>
+
+/**
+** Name:    uisavept.qsc -Front-End Utility SavePoint Management Module.
+**
+** Description:
+**	General purpose utility routines for managing Savepoints (transactions)
+**	for FE programs, taking account of whether surrounding application code
+**	has established a transaction.  These differ from FEestabsp(),
+**	FEabortsp(), etc. in one IMPORTANT respect:  they are NOT no-ops 
+**	when acting against a gateway.  They will commit all work if savepoints
+**	are not allowed in the given backend, unless a flag to the contrary
+**	is passed to the routine.
+**	Defines:
+**
+**
+**	IIUIesp_estabSP()	establish a savepoint or xact.
+**	IIUIcsp_clearSP()	clear a savepoint or commit xact.
+**	IIUIasp_abortSP()	abort to savepoint or whole xact.
+** 	FEestabsp() cover for new transactional routines (for backwards 
+**			compatibility).
+** 	FEclearsp() cover for new transactional routines (for backwards 
+**			compatibility).
+** 	FEabort() cover for new transactional routines (for backwards 
+**			compatibility).
+**
+** History:
+**	13-oct-1987  (danielt)
+**	written (adapted from fesavept routines)
+**      25-sep-96 (mcgem01)
+**              Global data moved to uidata.c
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	14-Jan-2009 (kiria01) b120451
+**	    Applied fuller prototypes in ANSI form
+**/
+
+/* statics */
+
+EXEC SQL BEGIN DECLARE SECTION;
+	/*
+	**  allocate buffer for EXECUTE IMMEDIATE statements
+	*/
+	GLOBALREF	char	stmt_buffer[FE_MAXNAME + 20];
+EXEC SQL END DECLARE SECTION;
+
+
+no_err()
+{
+	return 0;
+}
+
+/*
+** These three routines are included for backwards compatibility
+** with the old UI routines FEestabsp(), FEclearsp(), and FEabortsp(),
+** which didn't take into account non-INGRES transactions.  They
+** are essentially no-ops against a gateway.
+*/
+
+bool
+FEestabsp(char *sp)
+{
+	return (IIUIesp_estabSP(sp, TRUE));
+}
+
+VOID
+FEclearsp(bool mytrans)
+{
+	IIUIcsp_clearSP(mytrans);
+}
+
+VOID
+FEabortsp(char *sp, bool mytrans)
+{
+	IIUIasp_abortSP(sp, mytrans, TRUE);
+}
+
+
+/*{
+** Name:    IIUIesp_estabSP() -	Establish savepoint or new xaction.
+**
+** Description:
+**	IIUIesp_estabSP() should be called immediately prior to update
+**	operations, when the caller wants to define a transaction
+**	around a logical unit of work.  It is assumed that most callers
+**	will be aware of the transactional state at the time they
+**	are calling this routine (they will be calling from a 'higher level',
+**	rather than from a 'lower level' utility).  As such the caller
+**	should not need to take advantage of INGRES's savepoint facilities
+**	(which are not part of the Gateway SQL standard).  If the caller does
+**	not know the current transactional state, and wants to use
+**	savepoints only, this routine should be used with the no_op set
+**	to TRUE.  The caller should realize, however, that no transactional
+**	boundries will be set when running against a gateway.
+**	 
+**	The caller can FORCE the starting of a transaction against all
+**      backends by passing a NULL pointer in the sp (savepoint name)
+**      input parameter.
+**	
+**	If a non-NULL sp parameter is passed to IIUIesp_estabSP(),
+**	it establishes a SAVEPOINT within a current xaction or else
+**	starts a new transaction.
+**	Note that in SQL, one should always be in a transaction, so 
+**	this routine will do one of three things if emitting SQL.
+**	
+**	1)  If the language is RT/SQL (with savepoints), it should always
+**	set a savepoint.  If for whatever reason a savepoint cannot
+**	be established, a COMMIT WORK statement is issued only if
+**	the no_op flag is set to FALSE, otherwise nothing will be done.
+**	2)  If the language is Gateway SQL, and the no_op input flag is
+**	set to FALSE, it will ALWAYS commit all work that has been done 
+**	up to the time of the last COMMIT WORK statement.  Note that this
+**	will close all open cursors amoung other dire effects, so don't
+**	set the no_op flag to FALSE unless you intend for this to happen.
+**	3)  If the language is Gateway SQL, and the no_op flag is set to
+**	TRUE, the routine will do nothing.
+**
+**	The return value indicates whether a new xaction was started.
+**	The 'sp' parameter will contain the name of the savepoint
+**	established if any.  Both the return value and 'sp' should
+**	be saved for later calls to IIUIcsp_clearsp or IIUIasp_abortSP.
+**
+** Inputs:
+**	char	*sp;	// buffer large enough to hold savepoint name.
+**			    If it is NULL, just go ahead and establish
+**				a transaction.
+**	bool	no_op;   // should this be a no_op if a savepoint
+**			cannot be established.  TRUE if a savepoint ONLY
+**						FALSE is a new transaction
+**						can be established.
+**
+** Outputs:
+**	char	*sp;	// buffer filled in with name; at least FE_MAXNAME.
+**
+** Returns:
+**	bool	TRUE	// a new xaction was started
+**		FALSE	// no new xaction 
+**
+** Side Effects:
+**	A new transaction or savepoint is established; static variable
+**	'IIUIdbdata()->savept_counter' incremented.  Any existing EQUEL
+**      error handler routine is temporarily disabled during execution of this
+**	function.  If a savepoint cannot be established (as is always
+**     	the case with  Gateway SQL) all previous work could
+**	be committed, with all the side effects that intails (all cursors
+**	closed, all prepared statements disgarded, etc.)
+**
+** History:
+**	13-oct-1987 	(danielt)
+**		written.  adapted from FEestabsp()
+*/
+
+bool
+IIUIesp_estabSP(
+	char *sp,      /* should point to a buffer to hold savepoint name */
+	bool no_op)
+{
+	i4	dml;
+	i4	(*saveerr)();
+	bool	ret = FALSE;
+	bool	new_trans = FALSE;
+	i4	(*IIseterr())();
+
+	if (sp == (char *)NULL)
+	{
+		IIUIbeginXaction();
+		IIUIdbdata()->savept_counter = 0;
+		return (TRUE); 
+	}
+
+	if ((dml = IIUIdml()) == UI_DML_GTWSQL)
+	{
+		if (no_op)
+		{
+			return (FALSE);  /* no-op in the gateway case */
+		}
+		else
+		{
+			IIUIbeginXaction();
+			IIUIdbdata()->savept_counter = 0;
+			return (TRUE); 
+		}
+	}
+	_VOID_ STprintf(sp, ERx("II_%d"), IIUIdbdata()->savept_counter++);
+	saveerr = IIseterr(no_err);
+	STcopy("SAVEPOINT ", stmt_buffer);
+	STcat(stmt_buffer, sp);
+	EXEC SQL EXECUTE IMMEDIATE :stmt_buffer;
+	if ((ret = FEinqerr()) != OK)
+	{
+		/* 
+		** if this is SQL, we are already in an MST 
+		** so there should not have been an error created by
+		** the savepoint statement, but we will start a new
+		** transaction if the no_op flag is set to FALSE
+		*/
+		if (no_op == FALSE)
+		{
+			IIUIbeginXaction();
+			IIUIdbdata()->savept_counter = 0;
+			new_trans = TRUE;
+		}
+		else
+		{
+			new_trans = FALSE;
+		}
+	}
+	else
+	{
+		new_trans = FALSE;
+	}
+
+	IIseterr(saveerr);
+	return (new_trans);
+}
+
+
+/*{
+** Name:    IIUIcsp_clearSP() -	Clear savepoint or end xaction
+**
+** Description:
+**	IIUIcsp_clearsp() is used to bracket a corresponding call to
+**	IIUIesp_estabSP when update operations complete successfully.
+**
+**	It "clears" a savepoint (a no-op) or ends current transaction
+**	depending on input parameter 'mytrans'.  This parameter
+**	should be the saved return value of the previous call to
+**	IIUIesp_estabSP made in the immediate scope of the current caller.
+**
+** Inputs:
+**	bool	mytrans;	// if TRUE then end current xaction.
+**
+** Side Effects:
+**	Current transaction may be ended; static variable
+**	'IIUIdbdata()->savept_counter' reset to 0.
+**
+** History:
+**	13-oct-1987  (danielt)
+**		written (adapted from FEclearsp() )
+*/
+
+VOID
+IIUIcsp_clearSP(bool mytrans)
+{
+	i4	dml;
+
+	if (mytrans) 
+	{
+		IIUIendXaction();
+		IIUIdbdata()->savept_counter = 0;
+	}
+}
+
+
+/*{
+** Name:    IIUIasp_abortSP() -	Rollback transaction or rollback to savepoint
+**
+** Description:
+**	IIUIasp_abortSP() is used to bracket a corresponding call to
+**	IIUIesp_estabSP when update operations complete unsuccessfully.
+**
+**	Does an ABORT (ROLLBACK WORK) or ABORT TO SAVEPOINT, (ROLLBACK WORK
+**	TO SAVEPOINT) depending on parameter
+**	'mytrans'.  If 'mytrans' is TRUE, then ABORT (of entire
+**	transaction) is done.  Else an ABORT TO SAVEPOINT 'sp'
+**	is done.
+**
+**	
+**	
+**	Note that if we are sending off Gateway SQL and the no_op flag
+**	is set to TRUE, this routine will rollback all work until the
+**	last COMMIT WORK statement.
+**
+** Inputs:
+**	char	*sp;		// savepoint name. if NULL, the entire
+**					transaction will be aborted.
+**	bool	mytrans;	// if TRUE then abort entire xaction.
+**	bool	no_op;		// if running against a gateway, make this
+**					a no-op
+**
+** Returns:
+**	VOID
+**
+** Side Effects:
+**	Current transaction aborted or aborted to savepoint;
+**
+** History:
+**	13-oct-1987  (danielt)
+**		written (adapted from FEabortsp())
+*/
+
+VOID
+IIUIasp_abortSP(char *sp,
+		bool mytrans,
+		bool no_op)
+{
+	i4	dml;
+	if (((dml = IIUIdml()) == UI_DML_GTWSQL)
+		&& (no_op == TRUE))
+	{
+		return;
+	}
+
+	if (mytrans || sp == (char *) NULL)
+	{
+		IIUIabortXaction();
+		IIUIdbdata()->savept_counter = 0;
+	}
+	else
+	{
+		STcopy("ROLLBACK WORK TO ", stmt_buffer);
+	    	STcat(stmt_buffer, sp);
+		EXEC SQL EXECUTE IMMEDIATE :stmt_buffer;
+	}
+}
+
+
+

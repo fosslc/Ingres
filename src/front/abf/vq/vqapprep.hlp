@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqapprep.hlp, when viewing the application report.
+/#-- 
+The application report gives you detailed information about an application.
+It is divided into three main sections:
+
+  * General information about the application.
+
+  * The frames in the application flow diagram.
+
+  * Details about each frame in the application flow diagram.
+
+Select subtopics for a description of these report sections.
+/#subtopic 'Application Information' vqapinfo.hlp
+/#subtopic 'Application Flow Diagram' vqapflo.hlp
+/#subtopic 'Frame Details' vqapfrdt.hlp

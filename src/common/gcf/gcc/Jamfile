@@ -1,0 +1,36 @@
+#
+# Jamfile file for common!gcf!gcc
+#
+
+SubDir ING_SRC common gcf gcc ;
+
+IISUBSYS common gcf gcc ;
+
+
+IIBINEXE iigcc : iigcc.c ;
+IINEEDLIBS iigcc : GCCLIB GCFLIB CUFLIB COMPATLIB INGNETLIB ;
+
+IIBINEXE iigcb : iigcb.c ;
+IINEEDLIBS iigcb : GCCLIB GCFLIB COMPATLIB INGNETLIB ;
+
+IILIBRARY GCCLIB : gccutil.c
+	gcctlfsm.roc
+	gcctl.c
+	gccslfsm.roc
+	gccsl.c
+	gccplfsm.roc
+	gccpl.c
+	gccpbfsm.roc
+	gccpb.c
+	gccinit.c
+	gccglbl.c
+	gccgblro.roc
+	gccencry.c
+	gcccset.c
+	gccalfsm.roc
+	gccalcv.c
+	gccal.c
+	gccadm.c
+	gcbalfsm.roc
+	gcbal.c ;
+

@@ -1,0 +1,51 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for sigsec
+*/
+
+/*
+** History
+**	16-mar-94 (robf)
+**		Created
+**	23-mar-94 (robf)
+**	       Added files for auditmgr
+**	16-feb-95 (wolf)
+**	       Correct VMS setting for BUILD_DIR
+*/
+
+/*
+** Default directory: ingres/sig/secure
+*/
+
+PART  sigsec
+
+# ifdef VMS
+   BUILD_DIR (sig_path)!secure!auditmgr
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!sig!auditmgr
+# endif /* VMS */
+   DIRECTORY ingres!sig!auditmgr
+	FILE README
+	FILE auditmasks.osq
+	FILE auditmgr.osq
+	FILE audrecdetail.osq
+	FILE changelog.osq
+	FILE detail.osq
+	FILE extract.osq
+	FILE iicopyapp.tmp
+	FILE manageaudit.osq
+	FILE queries.osq
+	FILE rbfreports.osq
+	FILE registerlogs.osq
+	FILE remove1.osq
+	FILE removelogs.osq
+	FILE restartauditing.osq
+	FILE resumeauditing.osq
+	FILE setfilter.osq
+	FILE stopauditing.osq
+	FILE suspendaudit.osq
+	FILE view_via_qbf.osq
+	FILE viewlogs0.osq
+	FILE viewrecords.osq

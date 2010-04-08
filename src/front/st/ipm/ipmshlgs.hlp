@@ -1,0 +1,196 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Logging Summary screen.  This screen displays various pieces
+of information from the Ingres logging system.  By viewing the data on this
+screen, you can determine which logging parameters need to be adjusted.
+Currently, there is no way to view the logging parameters used to configure
+the Ingres logging system from IPM.  Those parameters should be kept in
+a handy place when viewing this screen.
+
+This screen will autorefresh the information if the -r flag was specified at
+startup or the "Display Refresh" field on the Option Selection screen was
+changed to a number between 1 and 999 seconds.  Autorefresh is desirable
+when monitoring this information.
+
+When tests or benchmarks are being run it may be desirable to determine
+the logging system activity during the test.  By selecting the "Interval"
+menuitem then selecting the "Start_Now" menuitem, the statistics displayed
+will be those accumulated since the start time.  In addition, if the Interval
+option was not previously enabled, the start time and current time fields
+appear in the upper right hand corner of the Logging System Summary screen.
+To reset the start time (which is the time when the "Start_Now" menuitem
+is selected), select the "Interval" menuitem followed by the "Start_Now"
+menuitem.
+
+The start time and statistics obtained at the start time will remain
+unchanged until the "Begin_Now" or "Since_Startup" menuitems are selected
+or you exit IPM.  This allows other IPM functions (e.g. locking, other
+logging or server information) to be used while accumulating statistics.
+When the Logging System Summary screen is displayed at a later time,
+the running totals since the start time are not lost.
+
+When displaying statistics over an interval, the "autorefresh" option
+should be set.  This causes the display to be automatically updated.
+
+Some of the fields of interest on the Logging System Summary screen are:
+
+Database add   The number of databases added to the logging system.
+
+Database       The number of databases removed from the logging system.  This
+removes        means the last user of a database has disconnected from Ingres.
+               The number of databases currently open is the difference
+               between "Database add" and "Database removes".
+
+Transaction    The number of transactions started.
+begins
+
+Transaction    The number of COMMITS or transactions ended.  This value does
+ends           not include FORCE-ABORT, LOG-FULL or any other Recovery
+               initiated transaction ends, such as a failover from the DBMS to
+               the RCP on behalf of a transaction. The difference between
+               "Transaction begins" and "Transaction ends" is the number of
+               current transactions.
+
+Log read       The number of read I/O's actually done to the log file.
+I/O's          This is a physical read.
+
+Log write      The number of write I/O's actually done to the log file.
+I/O's          This is a physical write.
+
+Log writes     The number of log write into non-paged pool on VMS and shared
+               memory on UNIX.  This is a memory to memory write.
+
+Log forces     The number of log force requests.  These occur under the
+               following circumstances:
+
+                   The buffer manager forces a specific log page to disk.
+                   This occurs during the consistency point (for fast commit)
+                   or before a transaction commit.
+
+                   The buffer manager forces the last log buffer in the
+                   logging system to disk.  This occurs normally during the
+                   close of a table.
+
+                   The RCP or DBMS server forces the last log record of a
+                   transaction to disk before recovering the transaction.
+
+Log waits      The number of times any event wait condition requires a 
+               log buffer write to stall.  These events include LOG-FULL,
+               CP writing, RECOVERY, archiving required,   FREE WAIT for log
+               buffer, OPENDB wait, log buffer SPLIT WAIT, wait for log I/O to
+               complete (the log buffer being written to the log file).
+
+Log split      The number of times a log split operation is delayed due to
+waits          no free log buffers.  This should be watched because the
+               logging system cannot proceed with the log record split until
+               a free buffer is available.  You may reduce this by increasing
+               the number of log buffers or increasing their size.
+
+Log free       The number of times all the log buffers are either in force
+waits          mode or unavailable for writing.  Only one log buffer is
+               written to at a time currently.  If this state is frequent
+               (more than 5 per minute during busy times), then increasing
+               the number of log buffers may be the solution.  Remember that
+               an increase in the number of buffers requires more memory
+                       (number_of_buffers * buffer_size)
+               This condition will affect throughput to the log file.  Please
+               consult the Ingres Installation Guide for more 
+               information.
+
+Log stall      The number of times stalled while making requests to the
+waits          logging system.  This can occur while consistency points
+               are being taken or during LOG-FULL conditions.  This is
+               acceptable (not in the LOG-FULL case) and these types of
+               stalls only last for a fraction of a second.  If 100 sessions
+               are stalled for one event this count is incremented by 100.
+               The following statuses will be shown in the Logging System
+               Header screen depending on the causes of a Log stall wait:
+
+                   LOGFULL, FORCE_ABORT -- log file is full
+
+                   LOGFULL, CPFLUSH -- log file is overly full while executing
+                   a consistency point (CP).  The CP may have to completed
+                   before log file space can be released.  The status LOGFULL,
+                   ARCHIVE may also be displayed as mentioned above.
+
+                   LOGFULL, ARCHIVE -- the log file is full and journaled
+                   transactions must be archived to free up log file space.
+                   When the archiver is done, log file space is released.
+
+Log group      The number of times that multiple transactions are
+commit         participating in a log buffer flush to the log file.
+               The value is incremented every time a write to disk
+               completes a group commit (piggyback write).
+
+Log group      The number of transactions that are participating in the flush
+count          to the log file.  If one group commit event writes on behalf of
+               10 sessions (threads), this number is incremented by 10.  The
+               ratio between this number and the Log group commit indicates
+               how effective group commit is (e.g. group count/group commit
+               indicates the number of threads' log write requests satisfied
+               per group commit write)
+
+Check commit   The number of times that the timer associated with the group
+timer          commit completes.  This does not necessarily mean that a write
+               to the log file has to occur because the log buffer that
+               initiated the timer may have already been written due to being
+               full.  This timer is only activated when there are multiple
+               transactions active in the logging system so that group commit
+               does not delay a single user for no gain.
+
+               The timer wakes up every 10 milliseconds and checks if there is
+               a buffer waiting to be forced to the log file.  If a buffer is
+               found, the timer will wait for 20 additional milliseconds
+               before calling the routine to write out the buffer.
+
+Timer write    The number of times a group commit timer check resulted in a
+               group commit.
+
+Inconsistent   The number of inconsistent DB occurrences.  This number should
+DB             be zero.  If it is not, check the error log:
+
+                   II_SYSTEM:[INGRES.FILES]ERRLOG.LOG (VMS)
+		  $II_SYSTEM/ingres/files/errlog.log (UNIX)
+
+               Inconsistent databases can be caused by running IISTARTUPINIT
+               after a system crash (this wipes out the log file necessary for
+               recovery).  Please consult the Ingres System Administrator Guide
+               for more information.
+                   
+Kbytes         Kilobytes written to the log file.
+written
+
+Menuitems available on this screen include:
+
+Refresh        Queries the Ingres logging system for logging summary
+               information.  Even if the autorefresh option is set, this
+               menuitem can still be selected at any time.
+
+Interval       Displays a submenu which allows a start time to be set to begin
+               set to begin measuring logging summary information.  This
+               allows display of summary information that occurred since the
+               selected start time.  Otherwise, the information displayed is
+               activity since the Ingres logging system was started.  
+               Choices available from the submenu are:
+
+               Since_Startup  Selecting this menuitem will display summary
+                              information since system startup.  This is the
+                              default.  If the Interval option was enabled,
+                              the start and current time fields disappear.
+
+               Begin_Now      Selecting this menuitem will enable the Interval
+                              option, clear all values from the screen and
+                              display the start time and current time fields.
+                              The next refresh of the summary information will
+                              cause IPM to display the activity since the
+                              start time.  The start time and summary
+                              information at the start time are maintained
+                              until the "Since_Startup" menuitem is selected
+                              or "Begin_Now" is selected again.
+
+               End            Returns to the previous menu.
+
+Help           Displays this screen.
+
+End            Returns to the Log Info Menu screen.
+
+Quit           Exits IPM.

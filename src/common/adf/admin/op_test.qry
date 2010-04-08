@@ -1,0 +1,17 @@
+/*
+** Demonstrate the new functions for computing the
+**	x and y coordinates, the distance from two
+**	points (with the other being the origin),
+**	the slope between two points,
+**	and the midpoint of a line between two points.
+*/
+
+select name,
+	point,
+	x_coord=x_coord(point),
+	y_coord=y_coord(point),
+	distance=distance('(0,0)', point),
+	slope = slope('(0,0)', point),
+	midpoint = midpoint('(0,0)', point)
+from op
+	where point > ord_pair(0,0)\p\g

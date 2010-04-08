@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2006 Ingres Corporation
+  The date_type_alias resource determines if the date keyword in SQL
+  refers to ingresdate column data type or ansidate data type. 
+
+  Ansi date refers to ANSI Date type and can only store a date value,
+  in the format YYYY-MM-DD.
+
+  Ingresdate can be used to store any of the date, time, timestamp or 
+  interval value. Prior to introduction of ANSI date, 'date' keyword 
+  always referred to ingresdate. 
+
+  The valid choices for this resource are ansidate or ingresdate.

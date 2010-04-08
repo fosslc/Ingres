@@ -1,0 +1,257 @@
+	.title	OLcall
+
+; This routine assumes the following:
+; - passed in data area is aligned correctly.
+; - caller has checked for MAX (255) args limit.
+; - the first parameter is the routine to call.
+; - the second parameter is the number of parameters to pass.
+; - the third parameter is pointer to data describing parameters (zero
+;   if a normal parameter or one if a floating point parameer).
+; - the fourth parameter is pointer to parameters.
+; - the fifth parameter is the return type (zero if no return value
+;   needed, one if normal value or two if floating point value).
+; - the sixth parameter is data area for return value.
+;
+; Note that there is no guarantee that is works correctly for a
+; 64 bit environment.
+;
+;  History:
+;	1/24/93 (dkh) - Initial version.
+;	08/05/93 (kevinm) - Changed to this code to assume that IEEE floating
+;			    point is used.
+;       01/06/94 (huffman)- taken from the 6.4 FE port.
+;       20/02/2000 (horda03)
+;            Modified routine to a NULL function type. This means that the
+;            function now runs in the context of the calling module. No need
+;            to setup a Frame, as in VMS 7.x, the frmae being created was 
+;            causing problems with the VMS tools (DEBUG/System Analyser)
+;            when stack information is being displayed. Bug 100533
+;
+;       26/04/2000 (bolke01)
+;            Modified routine to push all registers used onto the stack for safe keeping. 
+;	     These are popped off the stack prior to returning to the calling routine.
+;            Bug 101330 - Failure to return values correctly when basic function called from abf
+;            Calling function expected some registers to be preserved.
+;       11/11/2003 (horda03) Bug 111283/INGCBT 503
+
+;            The R25 register should contain teh appropriate code values for any FLOAT
+;            parameters passed to the called function in Parameter 1 through 6. See
+;            VMS Calling Standards for more details. If this register isn't defined
+;            correctly, then if the called function uses the VA_ARGS builtins to retrieve
+;            the supplied parameters, any FLOAT values will be garbage. Things work OK,
+;            if the called function doesn't use VA_ARGS to get the result.
+
+	$routine OLcall, kind=null
+	$linkage_section
+	$code_section
+olcll::
+	lda	sp, -4360(sp)
+	stq	r27, (sp)
+	stq	r26, 3992(sp)
+	stq r2, 4200(sp)
+	stq r3, 4208(sp)
+	stq r4, 4216(sp)
+	stq r5, 4224(sp)
+	stq r6, 4232(sp)
+	stq r7, 4240(sp)
+	stq r8, 4248(sp)
+	stq r9, 4256(sp)
+	stq r10, 4264(sp)
+	stq r16, 4272(sp)
+	stq r17, 4280(sp)
+	stq r18, 4288(sp)
+	stq r21, 4296(sp)
+	stq r25, 4304(sp)
+	stt f16, 4312(sp)
+	stt f17, 4320(sp)
+	stt f18, 4328(sp)
+	stt f19, 4336(sp)
+	stt f20, 4344(sp)
+	stt f21, 4352(sp)
+  
+	mov	r16, r2			; save the routine to call
+	mov	r17, r3			; save the number of args
+	mov	r17, r25		; set up first piece of AI register
+	mov	r18, r4			; save the arg descriptor area
+	mov	r19, r5			; save the arg pointer
+	mov	r20, r6			; save the return type
+	mov	r21, r7			; save the retrun value pointer
+	mov	r31, r8			; zero out second piece of AI register
+;
+	beq	r3, call_proc		; handle first arg, if any
+	ldl	r9, (r4)		; get description of first arg
+	addq	r4, 4, r4		; increment descriptor pointer
+	beq	r9, L0			; if zero, then a normal arg
+	ldl	r10, (r5)		; move floating point value to f16
+	stl	r10, 2192(sp)
+	addq	r5, 4, r5
+	ldl	r10, (r5)
+	stl	r10, 2196(sp)
+	ldt	f16, 2192(sp)
+	addq	r5, 4, r5		; increment pointer to data area
+	lda	r10, 1280(r31)
+	addq	r25, r10, r25		; indicate IEEE float as first arg in AI
+	br	r31, L1			; skip over non-float code
+L0:	ldl	r16, (r5)		; move non-float value to r16
+	addq	r5, 4, r5		; increment pointer to data area
+;	addq	r8, 0, r8		; indicate normal as first arg in AI
+L1:	subq	r3, 1, r3		; decrement arg count
+;
+	beq	r3, call_proc		; handle second arg, if any
+	ldl	r9, (r4)		; get description of second arg
+	addq	r4, 4, r4		; increment descriptor pointer
+	beq     r9, L2			; if zero, then a normal arg
+	ldl	r10, (r5)		; move floating point value to f17
+	stl	r10, 2192(sp)
+	addq	r5, 4, r5
+	ldl	r10, (r5)
+	stl	r10, 2196(sp)
+	ldt	f17, 2192(sp)
+	addq    r5, 4, r5		; increment pointer to data area
+	lda	r10, 10240(r31)
+	addq    r25, r10, r25		; indicate IEEE float as second arg in AI
+	br	r31, L3			; skip over non-float code
+L2:	ldl	r17, (r5)		; move non-float value to r17
+	addq	r5, 4, r5		; increment pointer to data area
+;	addq	r8, 0, r8		; indicate normal as second arg in AI
+L3:	subq	r3, 1, r3		; decrement arg count
+;
+	beq	r3, call_proc		; handle third arg, if any
+	ldl	r9, (r4)		; get description of third arg
+	addq	r4, 4, r4		; increment descriptor pointer
+	beq	r9, L4			; if zero, then a normal arg
+	ldl	r10, (r5)		; move floating point value to f18
+	stl	r10, 2192(sp)
+	addq	r5, 4, r5
+	ldl	r10, (r5)
+	stl	r10, 2196(sp)
+	ldt	f18, 2192(sp)
+	addq	r5, 4, r5		; increment pointer to data area
+	lda	r10, 16384(r31)
+	ldah	r0, 1(r31)
+	addq	r0, r10, r10
+	addq	r25, r10, r25		; indicate IEEE float as third arg in AI
+	br	r31, L5			; skip over non-float code
+L4:	ldl	r18, (r5)		; move non-float value to r18
+	addq	r5, 4, r5		; increment pointer to data area
+;	addq	r8, 0, r8		; indicate normal as third arg in AI
+L5:	subq	r3, 1, r3		; decrement arg count
+;
+	beq	r3, call_proc		; handle fourth arg, if any
+	ldl	r9, (r4)		; get description of fourth arg
+	addq	r4, 4, r4		; increment descriptor pointer
+	beq	r9, L6			; if zero, then a normal arg
+	ldl	r10, (r5)		; move floating point value to f19
+	stl	r10, 2192(sp)
+	addq	r5, 4, r5
+	ldl	r10, (r5)
+	stl	r10, 2196(sp)
+	ldt	f19, 2192(sp)
+	addq	r5, 4, r5		; increment pointer to data area
+	ldah	r10, 10(r31)
+	addq	r25, r10, r25		; indicate IEEE float as fourth arg in AI
+	br	r31, L7			; skip over non-float code
+L6:	ldl	r19, (r5)		; move non-float value to r19
+	addq	r5, 4, r5		; increment pointer to data area
+;	addq	r8, 0, r8		; indicate normal as fourth arg in AI
+L7:	subq	r3, 1, r3		; decrement arg count
+;
+	beq	r3, call_proc		; handle fifth arg, if any
+	ldl	r9, (r4)		; get description of fifth arg
+	addq	r4, 4, r4		; increment descriptor pointer
+	beq	r9, L8			; if zero, then a normal arg
+	ldl	r10, (r5)		; move floating point value to f20
+	stl	r10, 2192(sp)
+	addq	r5, 4, r5
+	ldl	r10, (r5)
+	stl	r10, 2196(sp)
+	ldt	f20, 2192(sp)
+	addq	r5, 4, r5		; increment pointer to data area
+	ldah	r10, 80(r31)
+	addq	r25, r10, r25		; indicate IEEE float as fifth arg in AI
+	br	r31, L9			; skip over non-float code
+L8:	ldl	r20, (r5)		; move non-float value to r20
+	addq	r5, 4, r5		; increment pointer to data area
+;	addq	r8, 0, r8		; indicate normal as fifth arg in AI
+L9:	subq	r3, 1, r3		; decrement arg count
+;
+	beq	r3, call_proc		; handle sixth arg, if any
+	ldl	r9, (r4)		; get description of sixth arg
+	addq	r4, 4, r4		; increment descriptor pointer
+	beq	r9, L10			; if zero, then a normal arg
+	ldl	r10, (r5)		; move floating point value to f21
+	stl	r10, 2192(sp)
+	addq	r5, 4, r5
+	ldl	r10, (r5)
+	stl	r10, 2196(sp)
+	ldt	f21, 2192(sp)
+	addq	r5, 4, r5		; increment pointer to data area
+	ldah	r10, 640(r31)
+	addq	r25, r10, r25		; indicate IEEE float as sixth arg in AI
+	br	r31, L11		; skip over non-float code
+L10:	ldl	r21, (r5)		; move non-float value to r21
+	addq	r5, 4, r5		; increment pointer to data area
+;	addq	r8, 0, r8		; indicate normal as sixth arg in AI
+L11:	subq	r3, 1, r3		; decrement arg count
+;
+	mov	sp, r8			; use r8 to point to stack space
+L12:	beq	r3, call_proc		; if there are more, use the stack
+	ldl	r9, (r4)		; get descriptor of arg
+	addq	r4, 4, r4		; increment descriptor pointer
+	beq	r9, L14			; if zero, then a normal arg
+	ldl	r10, (r5)		; move float value to temp
+	stl	r10, (r8)		; move value from temp to stack
+	addq	r5, 4, r5
+	addq	r8, 4, r8
+	ldl	r10, (r5)
+	stl	r10, (r8)
+	addq	r5, 4, r5		; increment pointer to data area
+	addq	r8, 4, r8
+	br	r31, L15		; skip over non-float code
+L14:	ldl	r10, (r5)		; move non-float to temp
+	stq	r10, (r8)		; move value from temp to stack
+	addq	r5, 4, r5		; increment pointer to data area
+	addq	r8, 8, r8		; increment pointer to stack
+L15:	subq	r3, 1, r3		; decrement arg count
+	br	r31, L12		; loop for more
+;
+call_proc:
+	mov	r2, r27			; pointer to routine to call
+	ldq	r26, 8(r27)
+	jsr	r26, r26		; call routine
+;
+	beq	r6, L17			; if no retun type, goto cleanup
+	subq	r6, 1, r6
+	beq	r6, L16			; go handle non-float return type
+	stt	f0, 4184(sp)
+	ldq	r10, 4184(sp)
+	stq_u	r10, (r7)		; move float to return area
+	br	r31, L17		; goto cleanup
+L16:	stl	r0, (r7)		; move non-float to return area
+L17:	
+	ldq r2, 4200(sp)
+	ldq r3, 4208(sp)
+	ldq r4, 4216(sp)
+	ldq r5, 4224(sp)
+	ldq r6, 4232(sp)
+	ldq r7, 4240(sp)
+	ldq r8, 4248(sp)
+	ldq r9, 4256(sp)
+	ldq r10, 4264(sp)
+	ldq r16, 4272(sp)
+	ldq r17, 4280(sp)
+	ldq r18, 4288(sp)
+	ldq r21, 4296(sp)
+	ldq r25, 4304(sp)
+	ldt f16, 4312(sp)
+	ldt f17, 4320(sp)
+	ldt f18, 4328(sp)
+	ldt f19, 4336(sp)
+	ldt f20, 4344(sp)
+	ldt f21, 4352(sp)
+
+	ldq	r26, 3992(sp)
+	lda	sp, 4360(sp)
+	ret	r26
+	$end_routine
+	.end

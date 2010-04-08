@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+If you are creating a column you must choose the one to be created.
+If you are creating an aggregate you must choose the column to be 
+aggregated.
+
+The menu commands are as follows:
+
+	MENU COMMANDS   SYNOPSIS
+	-------------   --------
+	Select		Create the column or aggregate based on the
+			column that is highlighted.
+
+	Cancel		Return to the previous frame,
+			no column or aggregate is created.
+
+	Help            Print this message.

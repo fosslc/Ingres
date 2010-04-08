@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The system_timeout resource specifies the default system setting used 
+  to determine how long, in seconds, a lock request can remain pending.
+
+  This default setting is only used if no SET LOCKMODE TIMEOUT statement 
+  was issued, or if one has been issued with the TIMEOUT=SYSTEM parameter.
+
+  The value must be an integer greater than or equal to 0, where 0,
+  the default, means to wait indefinitely.

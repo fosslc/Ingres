@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+The varchar_comp resource specifies whether variable-length data 
+types, such as varchar, are compressed when sent to the client 
+from the Gateway server. This option can be set to either ON  
+or OFF (default). Note that this resource is analogous to the DBMS 
+server parameter, vch_compression.

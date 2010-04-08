@@ -1,0 +1,11 @@
+cm=\E[24;1H
+ce=\E[K
+ea=\E[m
+rv=\E[7m
+bl=\E[5m
+ld=\E)0
+ls=\016
+le=\017
+ve=\E[?25h
+vi=\E[?25l
+sq=0

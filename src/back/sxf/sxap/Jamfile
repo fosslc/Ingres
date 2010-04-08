@@ -1,0 +1,16 @@
+#
+# Jamfile file for back!sxf!sxap
+#
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back sxf sxap ;
+
+IISUBSYS back sxf sxap ;
+
+IINOOPTIM sxapr.c : nc4_us5 ;
+
+IILIBRARY SXFLIB : sxapu.c sxapr.c sxapf.c sxapc.c ;
+
+IILIBRARY IMPSXFLIBDATA : sxapdata.c ;
+

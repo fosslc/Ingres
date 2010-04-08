@@ -1,0 +1,24 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Error Management&previous=repeat.html&next=upload.html` -->
+
+The following variables can be used for error management: <p> 
+ii_status_info
+<BR>
+Additional information associated with the last error. <p>
+ii_error_message 
+<BR>
+The message to be displayed to the client when an Ingres/ICE request has not
+ completed successfully. <p>
+ii_status_number 
+<BR>
+The status number of the last executed macro. <p>
+ii_status_text
+<BR>
+The text associated with the status number.  <p>
+
+<BR>
+Example::<BR>
+<!-- #ICE VAR=`&lt;!-- #ICE DECLARE=``ii_error_message=An error occurred during the execution`` -->`-->
+<p>
+
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

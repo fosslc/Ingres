@@ -1,0 +1,9 @@
+#
+# Jamfile file for cl!clf!st_vms
+#
+
+SubDir ING_SRC cl clf st_vms ;
+
+IISUBSYS cl clf st_vms ;
+
+IILIBRARY COMPATLIB : stprintf.c ;

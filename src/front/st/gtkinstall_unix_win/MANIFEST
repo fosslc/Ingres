@@ -1,0 +1,24 @@
+#
+# Name: MANIFEST
+#
+# Description:
+#       Custom JAM file for front!st!gtkinstall_unix_win
+#
+# History:
+#       17-Oct-2006 (hanje04)
+#	SIR 116877
+#           Created.
+#    20-Oct-2007 (hanje04)
+#	SIR 117044
+#	Only build if BUILD_GTK_GUI = TRUE (Jamdefs.abc_xyz)
+#
+
+SubDir ING_SRC front st gtkinstall_unix_win ;
+
+IISUBSYS front st gtkinstall_unix_win ;
+
+if $(BUILD_GTK_GUI) = "TRUE"
+{
+    IINoHbLibrary GINSTALLLIB : gipsup.c gipinterf.c giputil.c gipdata.c
+	gipcb.c ;
+}

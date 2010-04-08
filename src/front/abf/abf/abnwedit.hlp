@@ -1,0 +1,27 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are in the process of selecting a different application component to edit.
+At this point, you must either create a new component or select the general
+class of component you wish to specify.  Editing a component permits you to
+look at its definition.  If you have selected the component type from the
+menu, you will be prompted for the name of the particular component.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        Create                  Create a new application component.  You will
+                                be allowed to select the type of component
+                                that you wish to create and to specify the
+                                name for the component.
+
+        Frame                   Select a frame.  You will be prompted for the
+                                name of the frame that you want to edit.
+
+        Procedure               Select a procedure.  You will be prompted for
+                                the name of the procedure that you want to
+                                edit.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to the current application
+                                component definition frame.

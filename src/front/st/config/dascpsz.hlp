@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+ Maximum number of connections in the pool.  Set to -1 for no limit.
+

@@ -1,0 +1,118 @@
+#
+# Jamfile file for front!vifred!vifred
+#
+#   20-Oct-2009 (hweho01)
+#     Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front vifred vifred ;
+
+IISUBSYS front vifred vifred ;
+
+IINOOPTIM sequence.c : i64_hpu ;
+IINOOPTIM iivifred.c : vax_vms ris_us5 rs4_us5 m88_us5 sgi_us5 ris_u64 i64_aix i64_hpu ;
+
+IIBINEXE vifred : main.c ;
+IINEEDLIBS vifred : VIFREDLIB PRINTFORMLIB QBFLIB TBLUTILLIB
+	COMPFRMLIB SHFRAMELIB SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW vifred : SHEMBEDLIB SHADFLIB ;
+IIUNDEFS vifred : II_copyright malloc ;
+
+IIMSGHDR ervf.msg ;
+
+IIFORM dupfld.frm ;
+IIFORM tfcreate.frm ;
+IIFORM valerr.frm ;
+IIFORM vfabcfrm.frm ;
+IIFORM vfboxatr.frm ;
+IIFORM vfcat.frm ;
+IIFORM vfcfdup.frm ;
+IIFORM vfcfjdef.frm ;
+IIFORM vfcfrm.frm ;
+IIFORM vfcftbl.frm ;
+IIFORM vfdetail.frm ;
+IIFORM vffrmatr.frm ;
+IIFORM vfqbfcat.frm ;
+IIFORM vfrulfrm.frm ;
+IIFORM vfsave.frm ;
+IIFORM vftblprm.frm ;
+IIFORM vftrmatr.frm ;
+IIFORM vfvalder.frm ;
+IIFORM vifattr.frm ;
+
+File $(INGMSG)$(DFS)rbdetail.hlp : rbdetail.hlp ;
+File $(INGMSG)$(DFS)rbfcmove.hlp : rbfcmove.hlp ;
+File $(INGMSG)$(DFS)rbfmove.hlp : rbfmove.hlp ;
+File $(INGMSG)$(DFS)rbfslcol.hlp : rbfslcol.hlp ;
+File $(INGMSG)$(DFS)rbfsldet.hlp : rbfsldet.hlp ;
+File $(INGMSG)$(DFS)rbftmove.hlp : rbftmove.hlp ;
+File $(INGMSG)$(DFS)rfecreat.hlp : rfecreat.hlp ;
+File $(INGMSG)$(DFS)rflayout.hlp : rflayout.hlp ;
+File $(INGMSG)$(DFS)rfsavend.hlp : rfsavend.hlp ;
+File $(INGMSG)$(DFS)rfsvquit.hlp : rfsvquit.hlp ;
+File $(INGMSG)$(DFS)vfattr.hlp : vfattr.hlp ;
+File $(INGMSG)$(DFS)vfboxatr.hlp : vfboxatr.hlp ;
+File $(INGMSG)$(DFS)vfboxmov.hlp : vfboxmov.hlp ;
+File $(INGMSG)$(DFS)vfcat.hlp : vfcat.hlp ;
+File $(INGMSG)$(DFS)vfcrdup.hlp : vfcrdup.hlp ;
+File $(INGMSG)$(DFS)vfcresb.hlp : vfcresb.hlp ;
+File $(INGMSG)$(DFS)vfcrjdef.hlp : vfcrjdef.hlp ;
+File $(INGMSG)$(DFS)vfcrtbsb.hlp : vfcrtbsb.hlp ;
+File $(INGMSG)$(DFS)vfcursor.hlp : vfcursor.hlp ;
+File $(INGMSG)$(DFS)vfdererr.hlp : vfdererr.hlp ;
+File $(INGMSG)$(DFS)vfderex.hlp : vfderex.hlp ;
+File $(INGMSG)$(DFS)vfderive.hlp : vfderive.hlp ;
+File $(INGMSG)$(DFS)vfdstfrm.hlp : vfdstfrm.hlp ;
+File $(INGMSG)$(DFS)vfdstqbf.hlp : vfdstqbf.hlp ;
+File $(INGMSG)$(DFS)vfdupfld.hlp : vfdupfld.hlp ;
+File $(INGMSG)$(DFS)vfecreat.hlp : vfecreat.hlp ;
+File $(INGMSG)$(DFS)vfedbox.hlp : vfedbox.hlp ;
+File $(INGMSG)$(DFS)vfedfld.hlp : vfedfld.hlp ;
+File $(INGMSG)$(DFS)vfedtrim.hlp : vfedtrim.hlp ;
+File $(INGMSG)$(DFS)vfexpshr.hlp : vfexpshr.hlp ;
+File $(INGMSG)$(DFS)vffield.hlp : vffield.hlp ;
+File $(INGMSG)$(DFS)vfformat.hlp : vfformat.hlp ;
+File $(INGMSG)$(DFS)vffrmatr.hlp : vffrmatr.hlp ;
+File $(INGMSG)$(DFS)vffrmmov.hlp : vffrmmov.hlp ;
+File $(INGMSG)$(DFS)vfgrpmv.hlp : vfgrpmv.hlp ;
+File $(INGMSG)$(DFS)vflsdup.hlp : vflsdup.hlp ;
+File $(INGMSG)$(DFS)vflsflds.hlp : vflsflds.hlp ;
+File $(INGMSG)$(DFS)vflsfrms.hlp : vflsfrms.hlp ;
+File $(INGMSG)$(DFS)vflsjdef.hlp : vflsjdef.hlp ;
+File $(INGMSG)$(DFS)vfqbfcat.hlp : vfqbfcat.hlp ;
+File $(INGMSG)$(DFS)vfqbfdet.hlp : vfqbfdet.hlp ;
+File $(INGMSG)$(DFS)vfqbfsav.hlp : vfqbfsav.hlp ;
+File $(INGMSG)$(DFS)vfqbfsmu.hlp : vfqbfsmu.hlp ;
+File $(INGMSG)$(DFS)vfqjdfls.hlp : vfqjdfls.hlp ;
+File $(INGMSG)$(DFS)vfqjdfnm.hlp : vfqjdfnm.hlp ;
+File $(INGMSG)$(DFS)vfqtblnm.hlp : vfqtblnm.hlp ;
+File $(INGMSG)$(DFS)vfreseq.hlp : vfreseq.hlp ;
+File $(INGMSG)$(DFS)vfructrl.hlp : vfructrl.hlp ;
+File $(INGMSG)$(DFS)vfsavend.hlp : vfsavend.hlp ;
+File $(INGMSG)$(DFS)vfselect.hlp : vfselect.hlp ;
+File $(INGMSG)$(DFS)vfsemov.hlp : vfsemov.hlp ;
+File $(INGMSG)$(DFS)vfslcom.hlp : vfslcom.hlp ;
+File $(INGMSG)$(DFS)vfslfld.hlp : vfslfld.hlp ;
+File $(INGMSG)$(DFS)vfsvquit.hlp : vfsvquit.hlp ;
+File $(INGMSG)$(DFS)vftblfld.hlp : vftblfld.hlp ;
+File $(INGMSG)$(DFS)vftblprm.hlp : vftblprm.hlp ;
+File $(INGMSG)$(DFS)vftfmvsm.hlp : vftfmvsm.hlp ;
+File $(INGMSG)$(DFS)vftrmatr.hlp : vftrmatr.hlp ;
+File $(INGMSG)$(DFS)vfutsmu.hlp : vfutsmu.hlp ;
+File $(INGMSG)$(DFS)vfvalerr.hlp : vfvalerr.hlp ;
+File $(INGMSG)$(DFS)vfvalex.hlp : vfvalex.hlp ;
+File $(INGMSG)$(DFS)vfvalid.hlp : vfvalid.hlp ;
+File $(INGMSG)$(DFS)vfvisadj.hlp : vfvisadj.hlp ;
+
+IILIBRARY VIFREDLIB : writefrm.qsc vifred.qsc vfinittb.qsc
+	vffrmatr.qsc vfedtrim.qsc vfedbox.qsc vfcrtfrm.qsc vfcat.qsc
+	valerr.qsc tfcreate.qsc rbf.qsc qbfmap.qsc getrel.qsc
+	getfrmnm.qsc getfrm.qsc fasttodb.qsc dupfld.qsc db.qsc
+	cursor.qsc attr.qsc widefrm.c vfunique.c vftofrm.c vfsymtbl.c
+	vfrbf.c vfqdef.c vfposarr.c vfinsert.c vfhelp.c vfgtsize.c
+	vfgetdat.c vffrmcnt.c vfframe.c vffeat.c vfexit.c vfdlock.c
+	vfdisp.c vfdata.c undo.c sequence.c select.c rbfdata.c pos.c
+	node.c movedef.c movecomp.c misc.c menudef.c list.c lines.c
+	iivifred.c getargs.c fmt.c feature.c featur2.c fdtosmfd.c
+	enter.c encoding.c edit.c dswrtfrm.c dsvfnode.c dspos.c
+	delete.c debug.c data.c allocarr.c ;
+

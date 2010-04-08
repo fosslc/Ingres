@@ -1,0 +1,19 @@
+ /#-- Copyright (c) 2007 Ingres Corporation.
+ Prior to MS SQL Server 2005, the result of a special-syntaxed UNION 
+ select is truncated to zero length if an empty string ('') is specified
+ in the first select and host variables are used in the WHERE clause.
+ This is Microsoft bug 308264. An example is:
+
+    SELECT '' from tab1 
+    UNION 
+    SELECT col1 from tab1 
+    WHERE col1 = :var1; 
+ 
+ The UNION_ZEROLENGTH_COLUMN_PADDING parameter was created to force the 
+ length of the result and hide the bug found in SQL Server 7 and 2000.
+   
+ Default for UNION_ZEROLENGTH_COLUMN_PADDING is 255. Maximum is 8000.  
+
+ Setting the value to zero will turn off the forced padding. 
+ This parameter has no effect on SQL Server 2005 or above.  
+ 

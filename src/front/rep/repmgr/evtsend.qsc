@@ -1,0 +1,206 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	evtsend.qsc - send a dbevent to a RepServer
+**
+** Description:
+**	Defines
+**		evt_send	- send a dbevent to a RepServer
+**		evt_raise	- raise a dbevent
+**
+** History:
+**	03-dec-96 (joea)
+**		Created based on send.osq in replicator library.
+**	24-oct-97 (joea)
+**		Commit after raising a dbevent in order not to leave an open
+**		transaction.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+# define	SEND_TO_ALL	((i2)-1)
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmsend_event"),
+##	*tf_name = ERx("iitf"),
+##	*fsvr_no = ERx("server_no");
+
+
+void evt_raise(char *evt_name, char *flag_name, i2 svr_no);
+
+
+/*{
+** Name:	evt_send - send dbevent to a RepServer
+**
+** Description:
+**	Displays a list of active of active RepServers and allows user to
+**	send a dbevent to one or all of the servers.
+**
+** Inputs:
+**	evt_name	- event name
+**	startup_value	- server startup parameter
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+evt_send(
+char	*evt_name,
+char	*startup_value)
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i2	svr_no;
+	EXEC SQL END DECLARE SECTION;
+	DBEC_ERR_INFO	errinfo;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+##	inittable form_name tf_name read
+	IIUGmsg(ERget(F_RM001C_Selecting_data), FALSE, 0);
+	EXEC SQL SELECT server_no
+		INTO	:svr_no
+		FROM	dd_servers
+		WHERE	pid != ''
+		ORDER	BY server_no;
+	EXEC SQL BEGIN;
+##		loadtable form_name tf_name (fsvr_no = svr_no)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0013_No_data_found, UG_ERR_ERROR, 0);
+		return;
+	}
+	EXEC SQL COMMIT;
+
+##	display form_name read
+##	activate menuitem ERget(F_RM008F_Send)
+##		(expl = ERget(F_RM0094_Send_one_expl)), FRSkey4
+##	{
+##		getrow form_name tf_name (svr_no = fsvr_no)
+		evt_raise(evt_name, startup_value, svr_no);
+##	}
+
+##	activate menuitem ERget(F_RM006B_All)
+##		(expl = ERget(F_RM0095_Send_all_expl))
+##	{
+		evt_raise(evt_name, startup_value, SEND_TO_ALL);
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmevtsnd.hlp"), ERget(F_RM0096_Select_svr_to_send));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##}
+
+
+/*{
+** Name:	evt_raise - raise a dbevent
+**
+** Description:
+**	Raises dbevent to notify server(s) about changed startup flag.  If
+**	svr_no is SEND_TO_ALL, sends an event to all servers.
+**
+** Inputs:
+**	evt_name		- event name
+**	flag_name	- server parameter
+**	svr_no		- server number
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+evt_raise(
+char	*evt_name,
+char	*flag_name,
+i2	svr_no)
+{
+	char	evt_name2[DB_MAXNAME+1];
+	EXEC SQL BEGIN DECLARE SECTION;
+	char	stmt[256];
+	EXEC SQL END DECLARE SECTION;
+
+	STtrmwhite(evt_name);
+	STtrmwhite(flag_name);
+	if (svr_no == SEND_TO_ALL)
+		STcopy(evt_name, evt_name2);
+	else
+		STprintf(evt_name2, ERx("%s%-d"), evt_name, (i4)svr_no);
+
+	if (flag_name != NULL && *flag_name != EOS)
+		STprintf(stmt, ERx("RAISE DBEVENT %s '%s'"), evt_name2,
+			flag_name);
+	else
+		STprintf(stmt, ERx("RAISE DBEVENT %s"), evt_name2);
+
+	EXEC SQL EXECUTE IMMEDIATE :stmt;
+	if (RPdb_error_check(0, NULL) != OK)
+		IIUGerr(E_RM0067_Error_issuing_event, UG_ERR_ERROR, 0);
+	else
+		IIUGerr(S_RM0068_Event_issued, 0, 0);
+	EXEC SQL COMMIT;
+}

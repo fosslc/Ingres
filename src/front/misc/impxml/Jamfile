@@ -1,0 +1,22 @@
+#
+# Jamfile file for front!misc!impxml
+#
+# History:
+#	07-jan-2005 (abbjo03)
+#	    This cannot be built on VMS until Xerces C++ 2.5 is ported.
+
+
+SubDir ING_SRC front misc impxml ;
+
+IISUBSYS front misc impxml ;
+
+if ! $(VMS)
+{
+IIBINEXE impxml : SAXImport.cpp ;
+IICppNeedLibs impxml :  IMPXMLLIB XFERDBLIB GNLIB MALLOCLIB
+	SHXERCESLIB SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IINEEDLIBSW impxml : SHADFLIB ;
+IIUNDEFS impxml : II_copyright malloc ;
+
+IILIBRARY IMPXMLLIB : SAXImportHandlers.cpp SAXIngres.cpp ;
+}

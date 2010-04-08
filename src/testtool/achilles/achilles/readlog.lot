@@ -1,0 +1,3 @@
+MAINOBJ.obj
+INGTOOLSLIB:libachilles.olb/library
+INGLIB:libcompat.olb/library

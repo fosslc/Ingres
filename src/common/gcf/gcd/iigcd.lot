@@ -1,0 +1,14 @@
+! History:
+!   25-June-2005 (abbjo03)
+!       Created.
+!   11-June-2007 (Ralph Loen) Bug 118488
+!       Link in the static version of the API library.
+!
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libgcd.olb/library, -
+INGLIB:libiiapi.olb/library, -
+INGLIB:libgcf.olb/library, -
+INGLIB:libcuf.olb/library, -
+INGLIB:libadf.olb/library, -
+INGLIB:libcompat.olb/library

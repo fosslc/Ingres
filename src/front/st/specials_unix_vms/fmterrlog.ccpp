@@ -1,0 +1,25 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for fmterrlog
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+*/
+
+/*
+** Default directory: ingres/sig/format_errlog
+*/
+
+PART   fmterrlog
+
+# ifdef VMS
+   BUILD_DIR (sig_path)!format_errlog!format_errlog
+   DIRECTORY ingres!sig!format_errlog
+      FILE format_errlog.readme
+      FILE tpu_command.tpu
+# endif /* VMS */

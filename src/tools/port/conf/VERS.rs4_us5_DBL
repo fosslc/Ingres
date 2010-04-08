@@ -1,0 +1,27 @@
+# rs4_us5_DBL is the pure 32 bit flavor of IBM Power on AIX 5, double-byte.
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+
+#set: config32 rs4_us5
+#set: config64 r64_us5
+#set: option DBL
+##set: option MAINWIN_VDBA (off)
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
+BUILD_ICE = "" ;	##set: option BUILD_ICE (off)
+NO_KRB5HDR = TRUE ;	# Don't check for Kerberos headers
+
+# Hybridization ...
+# rs4_us5 is the pure 32 bit variant.
+BUILD_ARCH = "32" ;	#set: arch 32
+XERCES_ARCH ?= 32 ;
+
+PLATFORM_JAMDEFS = ibm_aix ;

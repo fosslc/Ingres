@@ -1,0 +1,40 @@
+#
+# MANIFEST file for common!gcf!drivers!krb5
+#
+# History:
+#    30-Jul-2004 (hanje04)
+#	Created.
+#    27-Oct-2004 (drivi01)
+#	Moved drivers to drivers_unix_vms.
+#    20-Apr-2005 (loera01)
+#       Moved drivers_unix_vms back to drivers since Windows is now supported.
+#       Added build info for Windows.
+#    07-Jun-2006 (hweho01)
+#	Skip calling the kerberos build procedure fox AIX.
+#	20-Jun-2009 (kschendel) SIR 122138
+#	    Check for r64_us5 too.
+#
+
+SubDir ING_SRC common gcf drivers krb5 ;
+
+IISUBSYS common gcf drivers krb5 ;
+
+if $(NT)
+{
+IIKRB5OBJECTS gcskrb.c gssapi_krb5.c ;
+
+IISHLIBRARY $(SHGCSKRBLIB) : $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(IMPGCFLIB) $(IMPGSSAPILIB) ;
+IINEEDOBJ $(SHGCSKRBLIB) : gcskrb.c ;
+
+IISHLIBRARY $(SHGSSAPILIB) ;
+IINEEDOBJ $(SHGSSAPILIB) : gssapi_krb5.c ;
+}
+else
+{
+if $(VERS) != rs4_us5 && $(VERS) != r64_us5
+{
+IIOBJECTS gcskrb.c gssapi_krb5.c ;
+
+IISHLIBRARY $(SHGCSKRBLIB) ;
+}
+}

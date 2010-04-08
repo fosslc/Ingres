@@ -1,0 +1,14 @@
+#
+# Jamfile file for front!web!hdr
+#
+# History:
+#   22-Sep-2004 (fanra01)
+#       Remove extra message file dependent.
+
+SubDir ING_SRC front web hdr ;
+
+IISUBSYS front web hdr ;
+
+
+IIMSGHDR erwb.msg ;
+

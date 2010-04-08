@@ -1,0 +1,17 @@
+#include "winlink.h"
+
+#ifndef MAINWIN
+#include "gv.rc"
+#endif
+
+IDI_ICON_PLUS   icon  plus.ico
+IDI_ICON_MINUS  icon  minus.ico
+
+
+IDI_ICON_PLUS2   icon  plus2.ico
+IDI_ICON_MINUS2  icon  minus2.ico
+
+
+
+
+

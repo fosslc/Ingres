@@ -1,0 +1,145 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<si.h>
+# include	<lo.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<cf.h>
+#include	"ercf.h"
+
+/*{
+** Name:	CF_EXISTS - given an object class, name, and owner, check
+**			to see if it already exists in the database.
+**
+** Description:
+**
+** Input params:
+**	class		OO class of the object.
+**	name		object name.
+**	owner		owner of the object.
+**	id		pointer to id,	which is set to OOID if exists;
+**			may be null if return ID is not needed.
+**
+** Output params:
+**	id		pointer to id,	which is set to OOID if exists;
+**
+** Returns:
+**	TRUE		if objects exists.
+**	FALSE		if objects does not exist.
+**
+** Exceptions:
+**	none
+**
+** Side Effects:
+**
+** History:
+**	22-Apr-87 (rdesmond) - written.
+**	03-nov-87 (danielt) - changed QUEL retrieve loop to singleton
+**	    SQL select
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	01/25/90 (dkh) - Changes for new LO on VMS.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      06-feb-2009 (stial01)
+**          Define copyform record buffer with size COPYFORM_MAX_REC
+*/
+bool
+cf_objexist(class, name, owner, id)
+EXEC SQL BEGIN DECLARE SECTION; 
+i4	class;
+char *name;
+char *owner;
+EXEC SQL END DECLARE SECTION;
+i4	*id;
+{
+	bool	exists;
+EXEC SQL BEGIN DECLARE SECTION;
+	i4 	rcount;
+	i4	obj_id = 0;
+EXEC SQL END DECLARE SECTION;
+
+	if (name == NULL || owner == NULL)
+		return(FALSE);
+
+	exists = FALSE;
+
+	EXEC SQL SELECT object_id
+	    INTO :obj_id
+	    FROM ii_objects
+	    WHERE object_class = :class
+		AND object_name = :name
+		AND object_owner = :owner;
+	EXEC SQL INQUIRE_INGRES (:rcount = rowcount);
+	if (rcount != 0)
+		exists = TRUE;
+
+	if (id != (i4 *)NULL)
+		*id = obj_id;
+
+	return(exists);
+}
+
+bool
+cf_conflict(filename, owner)
+char	*filename;
+char	*owner;
+{
+	char		inbuf[COPYFORM_MAX_REC];
+	FILE		*fd;
+	LOCATION	loc;
+	char		locbuf[MAX_LOC + 1];
+
+	/* Open intermediate file */
+	STcopy(filename, locbuf);
+	LOfroms(PATH & FILENAME, locbuf, &loc);
+	if (SIopen(&loc, ERx("r"), &fd) != OK)
+	{
+	    IIUGerr(E_CF0000_CANNOT_OPEN_FILE, 0, 1, filename);
+	    return(TRUE);
+	}
+
+	for (;;)
+	{	/* read until end of file reached */
+		if (SIgetrec(inbuf, COPYFORM_MAX_REC, fd) == ENDFILE)
+			break;		/* end of file */
+
+		/* only the hdr rec types contain object names to check */
+		switch(cf_rectype(inbuf))
+		{
+			case RT_QBFHDR:
+				cf_gettok(inbuf);
+				if (cf_objexist(OC_QBFNAME, cf_gettok(NULL),
+				    owner, NULL))
+					return(TRUE);
+				break;
+			case RT_JDEFHDR:
+				cf_gettok(inbuf);
+				if (cf_objexist(OC_JOINDEF, cf_gettok(NULL),
+				    owner, NULL))
+					return(TRUE);
+				break;
+			case RT_FORMHDR:
+				cf_gettok(inbuf);
+				if (cf_objexist(OC_FORM, cf_gettok(NULL),
+				    owner, NULL))
+					return(TRUE);
+				break;
+		}
+	}
+	SIclose(fd);
+	return(FALSE);
+}

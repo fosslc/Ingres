@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The opf_joinop_timeout resource specifies the time in millesconds 
+  after which the optimizer will stop considering new query plans and 
+  use the best plan found to that point. 
+
+  If 0 is specified, this timeout will occur when the optimizer finds
+  that the best plan found so far will take less time to execute than
+  the amount of time already spent evaluating plans (the Ingres default). 
+

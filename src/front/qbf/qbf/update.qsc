@@ -1,0 +1,1738 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+##include	<ui.qsh>
+##include	"mqbf.qsh"
+#include	"mqeglobs.h"
+#include	"erqf.h"
+
+/**
+** Name:	update.qc -  Query Update Frame Module.
+**
+** Description:
+**	Contains the routine that implements the query update frame.  This
+**	routine will be called after all the query has been set-up.  Defines:
+**
+**	IIqfUpdate()
+**
+**	Returns:
+**	     1 = Done with updates, have calling routine
+**		 show form in QUERY mode.
+**	     0 = Error occurred in UPDATE mode.
+**
+**	Written: 2/28 /84 (nml)
+**
+** History:
+**	Revision 6.5
+**	4-aug-1993 (rdrane)
+**		Add check of qdef->mqappendok to preclude append
+**		operations on tables containing unsupported datatype
+**		columns that are NOT NULL and have no defined DEFAULT.
+**		Part of fix for b51411. Change all instances of IIUGerr()
+**		to use #define for error severity.
+**	Revision 6.4
+**      01/13/92 (connie)
+**              changed 'newrow' to 'iinewrow' which is less likely to
+**              conflict with the user table column name
+**	09/26/90 (emerson)
+**		Don't display logical keys (bug 8593).
+**	10/11/90 (emerson)
+**		Replaced global variable allow_appends and allow_updates
+**		by IIQFnkaNoKeyForAppends and IIQFnkuNoKeyForUpdates
+**		(with opposite sense) because the names are misleading:
+**		we now have other reasons for disallowing appends
+**		(certain joins on logical keys), and we might have
+**		other reasons for disallowing appends or updates
+**		in the future.  Keeping separate flags allows us
+**		to give specific error messages.  (bug 8593).
+**	10/13/90 (emerson)
+**		Check for unsupported appends of logical keys (bug 8593):
+**		Put error message E_QF0170 if 'AddDetail' selected;
+**		don't open up new rows in table field (this prevents user
+**		from doing any appends).
+**	11/23/90 (emerson)
+**		Changed calling sequence for IIQFcdb_CopyDBDVs (bug 8593).
+**
+**	Revision 6.3
+**	07-feb-90 (kenl)	bug fix 20007
+**		When an error is encountered when unloading a tablefield, we
+**		now set mqrstate to UNDEF instead of UNCHANGED to guarantee
+**		that the row is not written to the database.
+**	08-mar-90 (kenl)
+**		Added ListChoices menuitem to allow user to obtain help
+**		on fields.
+**
+**	Revision 6.1  88/09  wong
+**	Modified for internation support of menuitems.  Merged duplicate
+**	messages.  Merged 'mqmrowupd()' and 'mqdrowudp()' into '_rowupd()'.
+**	10-aug-88 (kenl)
+**		Changed INQUIRE_EQUEL to INQUIRE_FRS.  The old EQUEL
+**		call used to check forms system (not any more).  Close
+**		temporary file when QUERY selection is made.  Added
+**		INQUIRE_FRS FORM after DELETEROW.  If an error happened
+**		we now RESUME instead of reducing row count, etc.  On
+**		SAVE command, we now validate all tablefields.
+**	20-dec-88 (kenl)
+**		Fixed problems involving mandatory fields and the forms
+**		system.  Removed checks for QBF inserted row on deletes.  Now
+**		we just delete it and re-insert it into the tablefield.  This
+**		avoided validations being done by the forms system.  Also, in
+**		_deltbl() we only scroll to row 1 if greater than 1 rows exist.
+**
+**	Revsion  6.0
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh.  Reversed the order by
+**		which a Master/Detail delete is done.  Now the Detail
+**		is deleted first, followed by the Master.  Changed QUEL
+**		transaction code to SQL.  Added calls to routine
+**		IIQFcdb_CopyDBDVs before all PUTFORM and LOADFORM
+**		statements that initially display values on a form so
+**		that all hidden columns for keys are initialized.
+**	11-dec-87 (kenl)
+**		Removed the addition of 'newrow' to the list of hidden
+**		columns.  This is now done in MQQDESC.QSC.
+**	26-feb-88 (marian)
+**		Took modifications to _chkchange from kenl.
+**	26-feb-88 (marian) 
+**		Integrate fix for 10883.  Don't validate if there were
+**		no changes to the form.
+**	18-jul-88 (kenl)
+**		Fixed several bugs involving a master/detail joindef
+**		where both are displayed in SimpleField format.  This
+**		includes bug numbers 2818, 2816, 2827.  The routines
+**		primarily affected were the MENUITEM additem and _chkchange().
+**
+**	Revision 5.0
+**	17-jan-86 (marian)	bug # 6606
+**		Set the global Mq_intransaction
+**	17-jan-86 (marian)	bug # 6611
+**		Determine if you're already in an unloadtable (caused
+**		by interrupt), if so endloop.
+**	16-jun-86 (mgw)		bug # 9582
+**		Catch bad QG_alloc in QG_qbf properly and return error
+**		message.
+**	17-jun-86 (marian)	bug 9500
+**		Catch errors in unloadtable loop.  This solves the
+**		problem with tablefields and i2 overflow problems.
+**		Changes were made to mmq_tblupd() and mqdmq_tblupd()
+**	11-nov-86 (marian)	bug 10823
+**		Don't do a replace for M/D single row format if there
+**		were no detail rows retrieved.
+**	19-nov-86 (marian)	bug 9170
+**		When the 'AddDetail' menuitem is chosen and there are
+**		no more rows, add the row and then print the message
+**		that there are no more rows.
+**
+**	Revision 2.0  84/02/28  nadene
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototype for _gnxtmas() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ui.h to satisfy gcc 4.3.
+*/
+
+#define	_HelpExpl		F_FE0100_ExplFrameHelp
+#define	_EndExpl		F_FE0102_ExplEnd
+
+static STATUS	_updrest();
+static VOID	_updhlp();
+static VOID	mmq_tblupd();
+static bool	mqdmq_tblupd();
+static bool	_qrydone();
+static VOID	_stillupd();
+static VOID	_rowupd();
+static VOID	_deltbl();
+static i4	_gnxtmas();
+
+VOID	IIQFcdb_CopyDBDVs();
+
+extern bool	Mq_intransaction;
+extern bool	Mq_inunloadtable;
+
+##extern char	mq_frame[];
+##extern char	mq_tbl[];
+##extern char	mq_tids[];
+
+STATUS
+IIqfUpdate ( qdef )
+register MQQDEF	*qdef;
+##{
+	register QDESC	*mqqry;
+	i4		output;
+	i4		i;
+	i4		numflds;
+	STATUS		status;
+
+##	i4		numrows;
+##	char		*nextitem;
+##	char		*scrollitem;
+##	char		*additem;
+##	char		*exititem;
+
+	STATUS	rtncode;
+	bool	anychanges;
+	bool	master_allno;
+	bool	detail_allno;
+	bool	last_del;
+	bool	no_masters;
+
+	mqqry = qdef->mqqdesc;
+	output = 0;
+
+#ifdef DEBUG
+	if (mq_debug)
+	{
+		SIfprintf(mqoutf,ERx("MQUPDATE: qdef_type = %d\n"), qdef_type);
+		SIfprintf(mqoutf,ERx("MQUPDATE: tblfield = %d\n"), tblfield);
+	}
+#endif
+
+	if (IIQG_qbf(mqqry, mqmrec, qdef->mqmrecl) != OK)
+	{
+		FDerror(ERRALLOC, 0, ERx(""));
+		return FAIL;
+	}
+
+	/* open up temp file to store updates */
+	if ( !mqwrtinit() )
+	{
+		FDerror(BADFILEOPEN, 0, ERx(""));
+		return FAIL;
+	}
+
+	_VOID_ IIUIbeginXaction();
+	Mq_intransaction = TRUE;
+
+	if ( (status = IIQG_generate(mqqry, onetbl ? QI_START : QI_USTART,
+				&output)) != OK )
+	{
+		mqwrtfin();
+		mqwrtdel();
+		if ( !IIUIdeadlock(status) )
+		{
+			_VOID_ IIUIendXaction();
+			Mq_intransaction = FALSE;
+		}
+		return OK;
+	}
+	QG_mqqry = mqqry;	/* save for interrupt cleanup */
+	if (output == QO_QDONE)
+	{ /* no rows retrieved */
+##		MESSAGE ERget(S_QF001C_NoRowsForQuery);
+##		SLEEP 3
+
+		mqwrtfin();
+		mqwrtdel();
+		_VOID_ IIUIendXaction();
+		Mq_intransaction = FALSE;
+		return OK;
+	}
+
+	master_allno = TRUE;
+	detail_allno = TRUE;
+	last_del = FALSE;
+	no_masters = FALSE;
+
+	/* enforce no deletes if specified */
+	for ( i = 0 ; i < qdef->mqnumtabs ; ++i )
+	{
+		register RELINFO *rel = qdef->mqtabs[i];
+
+		if (rel->opdelete)
+		{
+			if ( rel->mqtype == mqIN_MASTER )
+				master_allno = FALSE;
+			else
+				detail_allno = FALSE;
+		}
+	}
+
+	/* got data - redisplay the form in UPDATE mode */
+
+	rtncode = OK;
+	anychanges = FALSE;
+	numrows = 0;
+
+	exititem = ( mq_func == mqUPDATE ) ? ERget(FE_Quit) : ERget(FE_End);
+
+	nextitem = scrollitem = additem = ERx("");
+	if (tblfield)
+	{
+		/*
+		**  mq_tids should ALWAYS have key columns and/or tids in
+		**  it.  Otherwise, MQUPDATE should never be called.
+		**  (the global variable IIQFnkuNoKeyForUpdates should be TRUE)
+		*/
+##		INITTABLE mq_frame mq_tbl UPDATE (mq_tids);
+		if (qdef_type == 0)
+		{
+			nextitem = ERget(F_QF0001_NextMaster);
+		}
+	}
+	else
+	{
+		if (qdef_type == 0)
+		{
+			nextitem = ERget(F_QF0001_NextMaster);
+			scrollitem = ERget(F_QF0002_NxtDetail);
+			additem = ERget(F_QF001E_AddDetail);
+		}
+		else
+		{
+			nextitem = ERget(FE_Next);
+		}
+	}
+
+##	DISPLAY mq_frame UPDATE
+##	INITIALIZE
+##	{
+		if ( (status = mqretinit(qdef, &output, &numrows)) != OK )
+		{
+			IIUGerr( E_QF00AB_InitFormErr, UG_ERR_ERROR, 0 );
+			if ((IIQG_generate(mqqry, QI_BREAK, &output)) != OK)
+			{
+				FDerror(BADBREAK, 0, ERx(""));
+			}
+			QG_mqqry = NULL;
+			mqwrtfin();
+			mqwrtdel();
+
+			if ( !IIUIdeadlock(status) )
+				rtncode = FAIL;
+
+##			BREAKDISPLAY
+		}
+		numflds = mq_mflds(qdef);
+
+		if  ((tblfield) && (numrows == 0))
+		{
+			/*
+			** The real question is how do we get here?  If
+			** there are indeed no rows, we should have returned
+			** above out of the IIQG_generate() since output
+			** should have been QO_QDONE.  This pretty much makes
+			** E_QF0178_AppUnDataType unnecessary.  Oh well ... 
+			*/
+			if  (!qdef->mqappendok)
+			{
+				IIUGerr(E_QF0178_AppUnDataType,UG_ERR_ERROR,0);
+##				BREAKDISPLAY
+			}
+
+			/* kludge to allow tabbing into table field */
+			if  ((qdef_type == 0) &&
+			     (!IIQFsddSystemUserLkeyDD) &&
+			     (!IIQFsmmSystemUserLkeyMM))
+			{
+##				INSERTROW mq_frame mq_tbl 0 (iinewrow = 1);
+				numrows = 1;
+			}
+		}
+
+		if  (!qdef->mqappendok)
+		{
+			IIUGerr(E_QF0180_NoAppAllowed,UG_ERR_ERROR,0);
+		}
+##	}
+
+##	ACTIVATE MENUITEM nextitem, FRSkey4
+##	{
+##		i4	fchange;
+
+		if ( nextitem[0] == EOS )
+		{
+			FTbell();
+##			Resume
+		}
+		if (output == QO_QDONE)
+		{
+##			MESSAGE ERget(S_QF0079_No_more_rows_in_query);
+##			SLEEP 3
+##			RESUME
+		}
+
+		/* bug 10883
+		** 	Make sure there was a change to the 
+		** 	form before validating.
+		*/
+##		INQUIRE_FRS FORM (fchange = change(mq_frame))
+		if (fchange)
+		{
+##			VALIDATE
+			anychanges = TRUE;
+		}
+
+		fchange = _gnxtmas(qdef, &status, &output, &numrows);
+
+		if ( fchange < 0 && IIUIdeadlock(status) )
+		{
+##			BREAKDISPLAY
+		}
+
+		if (output == QO_QDONE)
+		{
+			no_masters = TRUE;
+		}
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Query)
+##	{
+##		i4	fchange;
+
+##		INQUIRE_FRS FORM (fchange = CHANGE(mq_frame));
+		if (fchange || anychanges)
+		{
+			anychanges = TRUE;
+			if ( !IIUFver(ERget(S_QF00AC_DoNotUpdateQ), 0) )
+			{
+##				RESUME
+			}
+		}
+##		MESSAGE ERget(S_QF00AF_ReturnQryMode);
+		if ((IIQG_generate(mqqry, QI_BREAK, &output)) != OK)
+		{
+			FDerror(BADBREAK, 0, ERx(""));
+		}
+		QG_mqqry = NULL;
+		mqwrtfin();
+		mqwrtdel();
+
+		anychanges = FALSE;
+##		CLEAR FIELD ALL
+##		BREAKDISPLAY
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Delete)
+##	{
+		if (output == QO_QDONE && !(qdef_type && tblfield))
+		{
+##			MESSAGE ERget(S_QF0079_No_more_rows_in_query);
+##			SLEEP 3
+##			RESUME
+		}
+		if (master_allno && detail_allno)
+		{
+##			MESSAGE ERget(S_QF00B0_DeletesNotPermit);
+##			SLEEP 3
+##			RESUME
+		}
+
+		if (!tblfield && qdef_type == 1)
+		{
+			if ( _qrydone(output, TRUE) || numflds == 0 )
+##				RESUME
+
+##			GETFORM mq_frame (
+##				PARAM(qdef->mqmgform, qdef->mqmgargv)
+##			);
+			_rowupd( qdef, mqDELREC, mqIN_MASTER );
+
+
+			if ( (status = mqgetrecord(qdef, &output)) != OK )
+			{
+##				CLEAR FIELD ALL
+				if ( IIUIdeadlock(status) )
+				{
+					_stillupd(qdef);
+##					BREAKDISPLAY
+				}
+			}
+
+		    	if (output == QO_QDONE)
+		    	{
+##				SET_FRS FORM (MODE(mq_frame) = READ);
+		    	}
+		}
+		else
+		{
+##			char	*delsub1;
+##			char	*delsub2;
+##			char	*delsub3;
+##			i4	anyrows;
+			bool	delrow;
+
+			delsub1 = delsub2 = delsub3 = ERx("");
+			if (tblfield)
+			{
+				if (qdef_type == 0)
+				{
+					delsub1 = ERget(F_QF0013_Master);
+					delsub2 = ERget(F_QF001A_AllDetailRows);
+					delsub3 = ERget(F_QF001B_DetailRow);
+				}
+				else
+				{
+					delsub1 = ERget(F_QF001C_AllRows);
+					delsub2 = ERget(F_QF0003_Row);
+				}
+			}
+			else
+			{
+				if (qdef_type == 0)
+				{
+					delsub1 = ERget(F_QF0013_Master);
+					delsub2 = ERget(F_QF0014_Detail);
+				}
+			}
+			for (;;)
+			{
+##			SUBMENU
+##			ACTIVATE MENUITEM delsub1
+##			{
+				if ( ( qdef_type != 1 &&
+						_qrydone(output, TRUE) ) ||
+							numflds == 0 )
+##					RESUME
+				if ( qdef_type == 1 )
+				{ /* one-to-one tablefield */
+##					INQUIRE_FRS TABLE mq_frame (
+##						anyrows = LASTROW(mq_tbl)
+##					);
+					if (anyrows == 0)
+					{
+						_VOID_ _qrydone(QO_QDONE, TRUE);
+##						RESUME
+					}
+
+					_deltbl(numrows);
+					_VOID_ mmq_tblupd(qdef);
+##					CLEAR FIELD mq_tbl
+					numrows = 0;
+					if  ((!IIQFsmmSystemUserLkeyMM) &&
+					     (qdef->mqappendok))
+					{
+##						INSERTROW mq_frame mq_tbl 0 (iinewrow = 1)
+						numrows = 1;
+					}
+
+##					SET_FRS FORM (CHANGE(mq_frame) = 0);
+
+					if ( _updrest(qdef, &output, mqDELREC)
+							== DLCKERR )
+					{
+##						BREAKDISPLAY
+					}
+				}
+				else if ( tblfield )
+				{ /* master/detail with tablefield */
+##				    GETFORM mq_frame (
+##					PARAM(qdef->mqmgform, qdef->mqmgargv)
+##				    );
+				    _deltbl(numrows);
+				    _VOID_ mqdmq_tblupd(qdef);
+				    if ( _updrest(qdef, &output, mqDELREC)
+						== DLCKERR )
+					{
+##						BREAKDISPLAY
+					}
+
+					_rowupd( qdef, mqDELREC, mqIN_MASTER );
+					numrows = 0;
+					if ( (status = mqgetmaster(qdef,
+								&output,
+								&numrows
+							)) != OK )
+					{
+##						CLEAR FIELD ALL
+						if ( IIUIdeadlock(status) )
+						{
+							_stillupd(qdef);
+##							BREAKDISPLAY
+						}
+
+						/* appends are meaningless at this point so */
+						/* make form read only till next query	    */
+						anychanges = TRUE;
+##						SET_FRS FORM (MODE(mq_frame) = READ);
+##						RESUME
+					}
+					if  ((numrows == 0) &&
+					     (!IIQFsddSystemUserLkeyDD) &&
+					     (qdef->mqappendok))
+					{
+##						INSERTROW mq_frame mq_tbl 0 (iinewrow = 1)
+						numrows = 1;
+					}
+				}
+				else
+				{ /* master/detail without tablefield */
+##					GETFORM mq_frame (
+##					  PARAM(qdef->mqmgform, qdef->mqmgargv)
+##					);
+##					GETFORM mq_frame (
+##					  PARAM(qdef->mqdgform, qdef->mqdgargv)
+##					);
+
+					if (output != QO_DDONE)
+					{
+						_rowupd( qdef, mqDELREC, mqIN_DETAIL );
+					}
+
+					if ( IIUFver(ERget(S_QF00B1_DeleteAllAssoc),0) &&
+						_updrest(qdef, &output,mqDELREC)
+							== DLCKERR )
+					{
+##						BREAKDISPLAY
+					}
+
+					_rowupd( qdef, mqDELREC, mqIN_MASTER );
+					if ( (status = mqgetmaster(qdef,
+								&output,
+								&numrows)
+							) != OK )
+					{
+						no_masters = TRUE;
+##						CLEAR FIELD ALL
+						if ( IIUIdeadlock(status) )
+						{
+							_stillupd(qdef);
+##							BREAKDISPLAY
+						}
+						/*	appends are meaningless at this point so */
+						/*	make form read only till next query	 */
+##						SET_FRS FORM (MODE(mq_frame) = READ);
+						anychanges = TRUE;
+##						RESUME
+					}
+				}
+				break;
+##			}
+##			ACTIVATE MENUITEM delsub2
+##			{
+				delrow = !tblfield || qdef_type != 0;
+			delrowl:
+				if (qdef_type == 0 && detail_allno)
+				{
+					FEmsg(ERget(S_QF00B2_Deletes_of_details_ar), TRUE);
+##					RESUME
+				}
+
+				if (qdef_type)	/* one big table field */
+				{
+					if (numflds == 0)
+##						RESUME
+##					INQUIRE_FRS TABLE mq_frame (anyrows=LASTROW(mq_tbl));
+					if (anyrows == 0)
+					{
+##						MESSAGE ERget(S_QF0079_No_more_rows_in_query);
+##						SLEEP 3
+##						RESUME
+					}
+				}
+				else if (qdef_type == 0 && tblfield)	/* MD and tablefield */
+				{
+##					INQUIRE_FRS TABLE mq_frame (anyrows=LASTROW(mq_tbl));
+					if (anyrows == 0)
+					{
+##						MESSAGE ERget(S_QF00B3_No_more_detail_rows)
+##						SLEEP 3
+##						RESUME
+					}
+				}
+				/* MD and !tablefield */
+				else if ( _qrydone(output, TRUE) || numflds == 0 )
+##					RESUME
+				else if ( qdef_type == 0 && output == QO_DDONE )
+				{
+##					MESSAGE ERget(S_QF00B4_No_detail_rows_to_del)
+##					SLEEP 3
+##					RESUME
+				}
+
+				if (tblfield)
+				{
+				    if (delrow)
+##				    {
+##					i4	istable;
+
+##					INQUIRE_FRS FIELD mq_frame (istable = TABLE);
+
+					if (istable)
+##					{
+##					    i4	lrow;
+##					    i4	err;
+
+##					    INQUIRE_FRS table mq_frame (lrow=rowno(mq_tbl ))
+##					    DELETEROW mq_frame mq_tbl lrow
+##					    INQUIRE_FRS FRS (err = errorno)
+					    if ( err != OK )
+					    {
+##						RESUME
+					    }
+					    else
+					    {
+##					        SET_FRS FORM (CHANGE(mq_frame) = 1);
+					        numrows--;
+					    }
+##					}
+					else
+					{
+						FEmsg(ERget(S_QF00B5_Must_be_on_a_row_to_d), TRUE);
+##						RESUME
+					}
+##				    }
+				    else
+				    { /* AllRows */
+					_deltbl(numrows);
+					if (qdef_type == 0)
+					{
+##						GETFORM mq_frame (PARAM(qdef->mqmgform, qdef->mqmgargv))
+						_VOID_ mqdmq_tblupd(qdef);
+##						CLEAR FIELD mq_tbl
+					}
+					if ( _updrest(qdef, &output, mqDELREC)
+							== DLCKERR )
+					{
+##						BREAKDISPLAY
+					}
+
+					numrows = 0;
+					if ( qdef_type == 0 )
+					{
+    					_rowupd( qdef, mqNOPREC, mqIN_MASTER );
+					}
+				    }
+
+				    anychanges = TRUE;
+				    if (numrows == 0)
+				    {
+					if (delrow)
+					{
+					    if (qdef_type == 0)
+					    {
+						_VOID_ mqdmq_tblupd(qdef);
+					    }
+					    else
+					    {
+						_VOID_ mmq_tblupd(qdef);
+					    }
+					}
+##					CLEAR FIELD mq_tbl
+					if  ((!IIQFsddSystemUserLkeyDD) &&
+					     (!IIQFsmmSystemUserLkeyMM) &&
+					     (qdef->mqappendok))
+					{
+##						INSERTROW mq_frame mq_tbl 0 (iinewrow = 1)
+						numrows = 1;
+					}
+
+				        if ( qdef_type != 0 )
+##					    SET_FRS FORM (CHANGE(mq_frame) = 0);
+				    }
+				}
+				else
+				{
+					anychanges = TRUE;
+##					GETFORM mq_frame (PARAM(qdef->mqmgform, qdef->mqmgargv))
+##					GETFORM mq_frame (PARAM(qdef->mqdgform, qdef->mqdgargv))
+					_rowupd( qdef, mqDELREC, mqIN_DETAIL );
+					_rowupd( qdef, mqUPDREC, mqIN_MASTER );
+					if ( (status = mqgetdtl(qdef, &output))
+							!= OK )
+					{
+					    last_del = TRUE;
+##					    CLEAR FIELD ALL
+					    if ( IIUIdeadlock(status) )
+					    {
+					        _stillupd(qdef);
+##					        BREAKDISPLAY
+					    }
+					    IIQFcdb_CopyDBDVs(qdef, mqIN_MASTER);
+##					    PUTFORM mq_frame (PARAM(qdef->mqmpform,
+						qdef->mqmpargv))
+					}
+##					SET_FRS FORM (CHANGE(mq_frame) = 0);
+				}
+##				RESUME
+				break;
+##			}
+##			ACTIVATE MENUITEM delsub3
+##			{
+				delrow = TRUE;
+				goto delrowl;
+##			}
+##			ACTIVATE MENUITEM ERget(FE_Help)(EXPL=ERget(_HelpExpl)),
+##					FRSkey1
+##			{
+				char	*help_file;
+
+				if (tblfield)
+				{
+				    help_file = ( qdef_type == 0 )
+							? ERx("qdelsbtm.hlp")
+							: ERx("qdelsbto.hlp");
+				}
+				else
+				    help_file = ERx("qdelsbmd.hlp");
+				FEhelp( help_file, ERget(S_QF00B6_DeleteMenu) );
+				continue;
+##			}
+##			ACTIVATE MENUITEM ERget(FE_End)(EXPL=ERget(_EndExpl)),
+##				FRSkey3
+##			{
+				break;
+##			}
+			} /* end SUBMENU */
+		}
+		anychanges = TRUE;
+##		RESUME
+##	}
+
+##	ACTIVATE MENUITEM scrollitem
+##	{
+##		i4	fchange;
+
+		if ( output == QO_QDONE && ( qdef_type == 0 || !tblfield ) )
+		{
+##			MESSAGE ERget(S_QF0079_No_more_rows_in_query);
+##			SLEEP 3
+##			RESUME
+		}
+##		INQUIRE_FRS FORM (fchange = CHANGE(mq_frame));
+		if (fchange)
+		{
+			/* bug 10883
+			** 	Make sure there was a change to the 
+			** 	form before validating.
+			*/
+##			VALIDATE
+			anychanges = TRUE;
+##			GETFORM mq_frame (PARAM(qdef->mqmgform, qdef->mqmgargv))
+##			GETFORM mq_frame (PARAM(qdef->mqdgform, qdef->mqdgargv))
+			_rowupd( qdef, mqUPDREC, mqIN_MASTER );
+
+			/* bug 10823
+			**	Only do an update if there was a detail row
+			**	retrieved.
+			*/
+
+			if (output != QO_DDONE)
+			{
+				_rowupd( qdef, mqUPDREC, mqIN_DETAIL );
+			}
+
+			/*
+			** Do NOT reset 'fchange' because a change to join
+			** field must be reflected for the next detail.
+			*/
+		}
+		status = mqgetdtl(qdef, &output);
+		if ( IIUIdeadlock(status) )
+		{
+			_stillupd(qdef);
+##			CLEAR FIELD ALL
+##			BREAKDISPLAY
+		}
+##	}
+
+##	ACTIVATE MENUITEM additem
+##	{
+		if ( IIQFsddSystemUserLkeyDD )
+		{
+			IIUGerr(E_QF0170_DD_system_user_append,
+				UG_ERR_ERROR, 0);
+##			RESUME
+		}
+
+		if (numflds == 0)
+##			RESUME
+
+		if (no_masters)
+		{
+##		    MESSAGE ERget(S_QF0079_No_more_rows_in_query);
+##		    SLEEP 3
+##		    RESUME
+		}
+
+##		VALIDATE
+
+##		MESSAGE ERget(S_QF0152_DetailAdded);
+
+##		GETFORM mq_frame (PARAM(qdef->mqmgform, qdef->mqmgargv))
+##		GETFORM mq_frame (PARAM(qdef->mqdgform, qdef->mqdgargv))
+		anychanges = TRUE;
+		_rowupd( qdef, mqNOPREC, mqIN_MASTER );
+		_rowupd( qdef, mqADDREC, mqIN_DETAIL );
+
+		/* bug 9170
+		**	Do the set_frs before the if statement and do the
+		**	if statement after appending the new row.
+		*/
+##		SET_FRS FORM (CHANGE(mq_frame) = 0);
+
+		/* clear the detail by clearing all and then */
+		/* restoring the master */
+		IIQFcdb_CopyDBDVs( qdef, mqIN_MASTER );
+##		CLEAR FIELD ALL
+##		PUTFORM mq_frame (PARAM(qdef->mqmpform, qdef->mqmpargv))
+
+	 	if ( output != QO_DDONE && !last_del )
+		{
+		    IIQFcdb_CopyDBDVs( qdef, mqIN_DETAIL );
+##		    PUTFORM mq_frame (PARAM(qdef->mqdpform, qdef->mqdpargv))
+		}
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Save), FRSkey8
+##	{
+##		i4	fchange;
+
+		if (numflds == 0)
+			goto brkqry;
+##		INQUIRE_FRS FORM (fchange = CHANGE(mq_frame));
+
+		/* bug 10883
+		** 	Make sure there was a change to the 
+		** 	form before validating.
+		*/
+		if (fchange)
+		{
+			if ( output == QO_QDONE && qdef_type != 0 && tblfield )
+			{ /* not on cleared field in this case */
+##				VALIDATE
+			}
+			else if (output != QO_QDONE) 
+			{ /* IN CASE OF A MANDATORY FIELD */
+##				VALIDATE    
+			}
+		}
+
+		if ( fchange || anychanges )
+		{
+##			MESSAGE ERget(S_QF00B7_SavingChanges);
+			anychanges = TRUE;
+			if (tblfield && fchange)
+			{
+			    if ( qdef_type == 0 )
+			    {
+##				GETFORM mq_frame (
+##					PARAM(qdef->mqmgform, qdef->mqmgargv)
+##				);
+				_rowupd( qdef, mqUPDREC, mqIN_MASTER );
+				if ( !mqdmq_tblupd(qdef) &&
+				    	_updrest(qdef, &output, mqUPDREC)
+						== DLCKERR )
+				{
+##					BREAKDISPLAY
+				}
+			    }
+			    else
+			    {
+				mmq_tblupd(qdef);
+			    }
+			}
+			if ( !tblfield && fchange )
+			{
+##			    GETFORM mq_frame (PARAM(qdef->mqmgform, qdef->mqmgargv))
+			    if ( qdef_type != 0 )
+			    {
+				_rowupd( qdef, mqUPDREC, mqIN_MASTER );
+			    }
+			    else
+			    {
+##				GETFORM mq_frame (PARAM(qdef->mqdgform, qdef->mqdgargv))
+				_rowupd( qdef, mqUPDREC, mqIN_MASTER );
+
+				/* bug 10823
+				**	Only do an update if there was a detail row
+				**	retrieved.
+				*/
+
+				if (output != QO_DDONE)
+				{
+					_rowupd( qdef, mqUPDREC, mqIN_DETAIL );
+				}
+
+			    }
+			}
+			if (output != QO_QDONE)
+			{
+			    if ((IIQG_generate(mqqry, QI_BREAK, &output)) != OK)
+			    {
+				FDerror(BADBREAK, 0, ERx(""));
+				mqwrtfin();
+				mqwrtdel();
+##				CLEAR FIELD ALL
+				rtncode = FAIL;
+##				BREAKDISPLAY
+			    }
+			    QG_mqqry = NULL;
+			}
+			mqwrtfin();
+
+			IIqfWrtUpd(qdef);
+
+			mqwrtdel();
+			anychanges = FALSE;
+		}
+		else
+		{
+brkqry:
+##			MESSAGE ERget(S_QF00B8_NoUpdates);
+##			SLEEP 2
+			if ((IIQG_generate(mqqry, QI_BREAK, &output)) != OK)
+			{
+				FDerror(BADBREAK, 0, ERx(""));
+			}
+			QG_mqqry = NULL;
+			mqwrtfin();
+			mqwrtdel();
+		}
+##		CLEAR FIELD ALL
+##		BREAKDISPLAY
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##			EXPL = ERget(FE_LookupExpl)), 
+##			FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##	{
+		IIUFfieldHelp();
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Help) (EXPL = ERget(_HelpExpl), VALIDATE=0),
+##		FRSkey1 (VALIDATE = 0)
+##	{
+		_updhlp();
+##	}
+
+##	ACTIVATE FRSkey2	/* QUIT Key */
+##	{
+		if ( mq_func == mqBROWSE )
+		{
+			goto endit;
+		}
+		else
+		{
+			FTbell();	/* quit key not allowed */
+		}
+##	}
+##	ACTIVATE MENUITEM exititem (EXPL = ERget(_EndExpl)),
+##		FRSkey3
+##	{
+##		i4	fchange;
+
+	endit:
+##		INQUIRE_FRS FORM (fchange = CHANGE(mq_frame));
+		if ( fchange || anychanges )
+		{
+			anychanges = TRUE;
+			if ( !IIUFver(ERget(S_QF00AC_DoNotUpdateQ), 0) )
+			{
+##				RESUME
+			}
+		}
+##		MESSAGE ERget(S_QF00BA_EndingUpdate);
+		if ((IIQG_generate(mqqry, QI_BREAK, &output)) != OK)
+			FDerror(BADBREAK, 0, ERx(""));
+		QG_mqqry = NULL;
+		mqwrtfin();
+		mqwrtdel();
+
+##		CLEAR FIELD ALL
+		rtncode = FAIL;
+##		BREAKDISPLAY
+##	}
+
+##	ACTIVATE SCROLLUP mq_tbl
+##	{
+##		i4	botrow;
+
+		if ( output == QO_QDONE && (qdef_type == 0 || !tblfield ) )
+		{
+##			MESSAGE ERget(S_QF0079_No_more_rows_in_query)
+##			SLEEP 3
+##			CLEAR FIELD mq_tbl
+##			RESUME
+		}
+##		VALIDATE
+##		GETROW mq_frame mq_tbl (botrow = _RECORD);
+		if  ((botrow == numrows) &&
+		     ((output == QO_QDONE) || (output == QO_DDONE)) &&
+		     (!IIQFsddSystemUserLkeyDD) &&
+		     (!IIQFsmmSystemUserLkeyMM) &&
+		     (qdef->mqappendok))
+		{
+##			INSERTROW mq_frame mq_tbl (iinewrow = 1)
+			++numrows;
+##			RESUME
+		}
+		if (botrow >= numrows)
+		{
+##			MESSAGE ERget(S_QF0022_RetrieveMore);
+			status = ( mqgetscroll(qdef, &output, &numrows) );
+			if ( IIUIdeadlock(status) )
+			{
+				_stillupd(qdef);
+##				CLEAR FIELD ALL
+##				BREAKDISPLAY
+			}
+		}
+##		SCROLL mq_frame mq_tbl UP
+##	}
+##	FINALIZE
+
+	_VOID_ IIUIendXaction();
+	Mq_intransaction = FALSE;
+
+	return rtncode;
+##}
+
+static bool	_chkchange();
+
+static VOID
+mmq_tblupd ( qdef )
+register MQQDEF	*qdef;
+##{
+	register i4	numrels = qdef->mqnumtabs;
+##	i4		cnt_rows = 0;	/* counts tablefield rows unloaded */
+
+##	UNLOADTABLE mq_frame mq_tbl
+##		(PARAM(qdef->mqmgform, qdef->mqmgargv))
+##	{
+		register RELINFO	*tabl;
+		register i4		i;
+		i4			first;
+##		i4			err;
+
+		/* bug 9500
+		**	check for error in the unloadtable loop
+		*/
+
+		Mq_inunloadtable = TRUE;
+		cnt_rows += 1;
+##		INQUIRE_FRS FRS (err = errorno)
+		if ( err != OK )
+		{
+			IIUGerr(E_QF00BB_IgnoreUpdateWarn, UG_ERR_ERROR,
+					1, (PTR)&cnt_rows
+			);
+
+			/* bug 20007
+			** Don't set mqrstate to UNCHANGED because we may
+			** try doing something with it when the data is not
+			** all there (as we were doing with detail tablefield).
+			*/
+			mqrstate = UNDEF;	/* ignore change */
+		}
+		/* end bug fix for bug # 9500 */
+
+		first = ( qdef_type != 0 ) ? 1 : 2;
+		switch(mqrstate)
+		{
+		   case UNCHANGED:
+			for ( i = 0 ; i < numrels ; ++i )
+			{
+				tabl = qdef->mqtabs[i];
+				mqwrtrec(tabl, qdef->mqmrecl, mqNOPREC, first);
+				if ( first != 0 )
+					first = 0;
+			}
+			break;
+
+		   case CHANGED:
+			for ( i = 0 ; i < numrels ; ++i )
+			{
+				i4	action;
+
+				tabl = qdef->mqtabs[i];
+				if (mqrowstat)
+				{
+					action = mqADDREC;
+				}
+				else if ( _chkchange(qdef, tabl) )
+				{
+					action = mqUPDREC;
+				}
+				else
+				{
+					action = mqNOPREC;
+				}
+				mqwrtrec( tabl, qdef->mqmrecl, action, first );
+				if ( first != 0 )
+					first = 0;
+			}
+			break;
+
+		   case DELETED:
+			if (mqrowstat)	/* newly added row was deleted, ignore */
+				break;
+			for ( i = numrels - 1 ; i >= 0 ; --i )
+			{
+				tabl = qdef->mqtabs[i];
+				mqwrtrec(tabl, qdef->mqmrecl,
+					tabl->opdelete ? mqDELREC : mqNOPREC,
+					first
+				);
+				if ( first != 0 )
+					first = 0;
+			}
+			break;
+
+		   case NEW:
+		   case UNDEF:
+			break;
+		}
+##	} /* end unloadtable */
+	Mq_inunloadtable  = FALSE;
+##}
+
+static bool
+mqdmq_tblupd(qdef)
+register MQQDEF	*qdef;
+##{
+	register i4	numrels = qdef->mqnumtabs;
+	bool		any_chgdone = TRUE;
+##	i4		cnt_rows = 0;	/* counts tablefield rows unloaded */
+
+##	UNLOADTABLE mq_frame mq_tbl
+##		(PARAM(qdef->mqdgform, qdef->mqdgargv))
+##	{
+		register RELINFO	*tabl;
+		register i4		i;
+		i4			first;
+##		i4			err;
+
+		/* bug 9500
+		**	check for error in the unloadtable loop
+		*/
+
+		Mq_inunloadtable = TRUE;
+		cnt_rows += 1;
+##		INQUIRE_FRS FRS (err = errorno)
+		if ( err != OK )
+		{
+			IIUGerr(E_QF00BB_IgnoreUpdateWarn, UG_ERR_ERROR,
+					1, (PTR)&cnt_rows
+			);
+
+			/* bug 20007
+			** Don't set mqrstate to UNCHANGED because we may
+			** try doing something with it when the data is not
+			** all there (as we were doing with detail tablefield).
+			*/
+			mqrstate = UNDEF;	/* ignore change */
+		}
+		/* end bug fix for bug # 9500 */
+
+		first = ( qdef_type != 0 ) ? 1 : 2;
+		switch(mqrstate)
+		{
+		  case UNCHANGED:	/* Check anyway in case join field not
+					   in table field has changed and is
+					   updateable. */
+		  case CHANGED:
+			for ( i = 0 ; i < numrels ; ++i )
+			{
+				tabl = qdef->mqtabs[i];
+				if ( tabl->mqtype == mqIN_DETAIL )
+				{
+					i4	action;
+
+					if (mqrowstat)
+					{
+						action = (mqrstate == UNCHANGED)
+				 			? mqNOPREC : mqADDREC;
+						any_chgdone = FALSE;
+					}
+					else if ( _chkchange(qdef, tabl) )
+					{
+						action = mqUPDREC;
+						any_chgdone = FALSE;
+					}
+					else
+					{
+						action = mqNOPREC;
+					}
+					mqwrtrec( tabl, qdef->mqdrecl, action,
+						first
+					);
+					if ( first != 0 )
+						first = 0;
+				}
+			} /* end for */
+			break;
+
+		   case DELETED:
+			if (mqrowstat)	/* newly added row deleted, ignore */
+				break;
+			for ( i = numrels - 1 ; i >= 0 ; --i )
+			{
+				tabl = qdef->mqtabs[i];
+				if ( tabl->mqtype == mqIN_DETAIL )
+				{
+					mqwrtrec(tabl, qdef->mqdrecl,
+						tabl->opdelete ? mqDELREC
+								: mqNOPREC,
+						first
+					);
+					if ( first != 0 )
+						first = 0;
+				}
+			} /* end for */
+			break;
+
+		   case NEW:
+		   case UNDEF:
+			break;
+		}
+##	} /* end unloadtable */
+	Mq_inunloadtable = FALSE;
+
+	return any_chgdone;
+##}
+
+static VOID
+_rowupd ( qdef, status, type )
+register MQQDEF	*qdef;
+i4		status;
+i4		type;
+{
+	register RELINFO	*tabl;
+	register i4		i;
+	register i4		skip_type;
+	i4			first;
+	i4			recl;
+
+	if ( type == mqIN_MASTER )
+	{
+		first = 1;
+		skip_type = mqIN_DETAIL;
+		recl = qdef->mqmrecl;
+	}
+	else /* if ( type == mqIN_DETAIL ) */
+	{
+		first = 2;
+		skip_type = mqIN_MASTER;
+		recl = qdef->mqdrecl;
+	}
+
+	if ( status == mqDELREC )
+	{
+		for ( i = qdef->mqnumtabs - 1 ; i >= 0 ; --i )
+		{
+			tabl = qdef->mqtabs[i];
+			if ( qdef_type == 0 && tabl->mqtype == skip_type )
+				continue;
+			mqwrtrec(tabl, recl,
+				tabl->opdelete ? mqDELREC : mqNOPREC, first
+			);
+			if ( first != 0 )
+				first = 0;
+		}
+	}
+	else if (status == mqUPDREC)
+	{
+		for ( i = 0 ; i < qdef->mqnumtabs ; ++i )
+		{
+			tabl = qdef->mqtabs[i];
+			if ( qdef_type == 0 && tabl->mqtype == skip_type )
+				continue;
+			mqwrtrec(tabl, recl, 
+				_chkchange(qdef, tabl) ? mqUPDREC : mqNOPREC,
+				first
+			);
+
+			if ( first != 0 )
+				first = 0;
+		}
+	}
+	else if ( status == mqADDREC || status == mqNOPREC )
+	{
+		for ( i = 0 ; i < qdef->mqnumtabs ; ++i )
+		{
+			tabl = qdef->mqtabs[i];
+			if ( qdef_type == 0 && tabl->mqtype == skip_type )
+				continue;
+			mqwrtrec(tabl, recl, status, first);
+			if ( first != 0 )
+				first = 0;
+		}
+	}
+}
+
+/*
+** Name:	_gnxtmas() - get next master record.
+**	Common code for CTRL_F and Next.
+**
+**	Returns:
+**		status = 0 (no changes made)
+**			 1 (changes made)
+**			 2 (error, code in qg_code)
+**	history - prs 1/85.
+*/
+
+static i4
+_gnxtmas ( qdef, qg_code, output, numrows )
+MQQDEF	*qdef;
+i4	*qg_code;
+i4	*output;
+i4	*numrows;
+##{
+##	i4	fchange;
+	i4	status;
+
+	status = 0;
+
+##	INQUIRE_FRS FORM (fchange = CHANGE(mq_frame));
+	if (qdef_type == 0)
+	{
+##		MESSAGE ERget(S_QF001E_Retrieving);
+		if (fchange)
+		{
+		    status = 1;
+##		    GETFORM mq_frame (PARAM(qdef->mqmgform, qdef->mqmgargv))
+		    if (tblfield)
+		    {
+			_rowupd( qdef, mqUPDREC, mqIN_MASTER );
+			if ( !mqdmq_tblupd(qdef) &&
+				(*qg_code = _updrest(qdef, output, mqUPDREC))
+						== DLCKERR)
+			{
+			    return (status = -1);
+			}
+		    }
+		    else
+		    {
+##			GETFORM mq_frame (PARAM(qdef->mqdgform, qdef->mqdgargv))
+			_rowupd( qdef, mqUPDREC, mqIN_MASTER );
+
+			/* bug 10823
+			**	Only do an update if there was a detail
+			**	row retrieved.
+			*/
+
+			if (*output != QO_DDONE)
+			{
+			    _rowupd( qdef, mqUPDREC, mqIN_DETAIL );
+			}
+
+		    }
+		}
+		if ((*qg_code = mqgetmaster(qdef, output, numrows)) != OK)
+		{
+		    if ( IIUIdeadlock(*qg_code) )
+		    {
+			status = -1;
+			return (status);
+		    }
+		    if (*output == QO_QDONE)
+		    {
+		    /*	appends are meaningless at this point so */
+		    /*	make form read only till next query	 */
+##			SET_FRS FORM (MODE(mq_frame) = READ);
+##			CLEAR FIELD ALL
+		    }
+		}
+		if  ((tblfield) && (*numrows == 0) &&
+		     (!IIQFsddSystemUserLkeyDD) &&
+		     (qdef->mqappendok))
+		{
+##		    INSERTROW mq_frame mq_tbl 0 (iinewrow = 1)
+		    *numrows = 1;
+		}
+##		SET_FRS FORM (CHANGE(mq_frame) = 0);
+	}
+	else
+	{
+		if (fchange)
+		{
+		    status = 1;
+		    if (!tblfield)
+		    {
+##			GETFORM mq_frame (PARAM(qdef->mqmgform, qdef->mqmgargv))
+			_rowupd( qdef, mqUPDREC, mqIN_MASTER );
+		    }
+		}
+		if ((*qg_code = mqgetrecord(qdef, output)) != OK)
+		{
+		    if (IIUIdeadlock(*qg_code))
+		    {
+			status = -1;
+			return(status);
+		    }
+		    if (*output == QO_QDONE)
+		    {
+		    /*	appends are meaningless at this point so */
+		    /*	make form read only till next query	 */
+##			SET_FRS FORM (MODE(mq_frame) = READ);
+##			CLEAR FIELD ALL
+		    }
+		}
+##		SET_FRS FORM (CHANGE(mq_frame) = 0);
+	}
+	return (status);
+##}
+
+static VOID
+_deltbl ( numrows )
+i4	numrows;
+##{
+##	char	table_name[FE_MAXNAME + 1];
+	register i4	drow;
+
+##	INQUIRE_FRS FIELD mq_frame (table_name = NAME)
+	if (STequal(mq_tbl, table_name))
+	{
+		for ( drow = 0 ; drow < numrows ; ++drow )
+		{
+##			DELETEROW mq_frame mq_tbl
+		}
+	}
+	else
+	{
+		for ( drow = 0 ; drow < numrows ; ++drow )
+		{
+##			DELETEROW mq_frame mq_tbl 1
+		}
+	}
+##}
+
+static STATUS
+_updrest ( qdef, output, rstat )
+register MQQDEF	*qdef;
+register i4	*output;
+i4		rstat;
+##{
+	register QDESC	*mqqry;
+	register STATUS	done;
+	STATUS	rcode;
+
+	mqqry = qdef->mqqdesc;
+	rcode = OK;
+	done = ( qdef_type == 0 ) ? QO_DDONE : QO_QDONE;
+	while ( *output != done &&
+			(rcode = IIQG_generate(mqqry, QI_GET, output)) == OK )
+	{
+		if ( qdef_type == 0 )
+		{ /* Detail */
+			IIQFcdb_CopyDBDVs( qdef, mqIN_DETAIL );
+
+			if ( rstat == mqUPDREC )
+##			{ /* update record */
+##				i4	curr_row;
+
+##				LOADTABLE mq_frame mq_tbl
+##				   (PARAM(qdef->mqdpform, qdef->mqdpargv)
+##				);
+##				SCROLL mq_frame mq_tbl TO END;
+##				INQUIRE_FRS TABLE mq_frame (
+##					curr_row = ROWNO(mq_tbl)
+##				);
+##				GETROW mq_frame mq_tbl curr_row (
+##					PARAM(qdef->mqdgform, qdef->mqdgargv)
+##				);
+#ifdef DEBUG
+	if (mq_debug)
+	{
+		SIfprintf(mqoutf, ERx("MQUPDREST: update row %d\n"), curr_row);
+	}
+#endif
+##		    }
+		    _rowupd( qdef, rstat, mqIN_DETAIL );
+		}
+		else
+		{ /* Master */
+		    IIQFcdb_CopyDBDVs( qdef, mqIN_MASTER );
+		    _rowupd( qdef, rstat, mqIN_MASTER );
+		}
+	} /* end while */
+
+	if ( IIUIdeadlock(rcode) )
+	{
+		rcode = DLCKERR;
+		_stillupd(qdef);
+##		CLEAR FIELD ALL
+	}
+
+	return rcode;
+##}
+
+static bool
+_chkchange ( qdef, tabl )
+register MQQDEF		*qdef;
+register RELINFO	*tabl;
+{
+	register i4	i;
+	bool		tblchanged = FALSE;
+
+	for ( i = 0 ; i < qdef->mqnumatts ; ++i )
+	{
+		register ATTRIBINFO	*catt = qdef->mqatts[i];
+
+		if ( catt->formfield[0] != EOS && catt->lkeyinfo == 0 &&
+				STequal(tabl->mqrangevar, catt->rvar) )
+##		{
+##			char	*name = catt->formfield;
+##			i4	colchanged;
+
+			if ( catt->intbl == mqIN_TABLE  &&
+					( catt->jpart != mqHIDDEN_JOIN ||
+						catt->mdtype != mqIN_MASTER ||
+						qdef_type != mqMD_JOIN )
+					)
+			{ /* table field */
+##				INQUIRE_FRS ROW mq_frame mq_tbl (
+##					colchanged = CHANGE(name)
+##				);
+			}
+			else
+			{ /* simple field */
+##				INQUIRE_FRS FIELD mq_frame (
+##					colchanged = CHANGE(name)
+##				);
+			}
+
+			/* What follows checks if a non-updateable column
+			** of the table field was changed, since they are
+			** not query-only so that new rows may be added.
+			*/
+
+			if ( colchanged )
+			{
+				if (catt->opupdate)
+				{
+					tblchanged = TRUE;
+				}
+				else if (catt->jpart == mqJOIN_FIELD)
+				{
+					if (catt->intbl)
+					{
+						IIUGerr(E_QF00BC_NoColUpdWarn,
+							UG_ERR_ERROR, 2,
+							(PTR)catt->formfield,
+							(PTR)&mq_record
+						);
+					}
+					else
+					{
+						IIUGerr(E_QF0153_NoFldUpdWarn,
+							UG_ERR_ERROR, 2,
+							(PTR)catt->formfield,
+							(PTR)catt->rvar
+						);
+					}
+				}
+			}
+			if ( tblchanged && !catt->intbl )
+				break;
+##		}
+	}
+	return tblchanged;
+}
+
+/*
+** Name:	_qrydone() - check if current query is done yet and print
+**		  message if so.
+*/
+static bool
+_qrydone ( output, msg )
+i4	output;
+bool	msg;
+{
+	if (output == QO_QDONE)
+	{
+		if (msg)
+		{
+##			MESSAGE ERget(S_QF0079_No_more_rows_in_query)
+##			SLEEP 3
+		}
+	/*	appends are meaningless at this point so */
+	/*	make form read only till next query	 */
+##		SET_FRS FORM (MODE(mq_frame) = READ);
+		return TRUE;
+	}
+	else
+		return FALSE;
+}
+
+/*
+** Name:	_stillupd() -	routine called after a deadlock/abort occurs
+**		 while browsing data in update mode. User is
+**		 asked if updates done so far should still be
+**		 written.  If so, then the file of updates is
+**		 processed  (ie - changes are written to INGRES)
+*/
+static VOID
+_stillupd ( qdef )
+MQQDEF	*qdef;
+##{
+	bool resp;
+
+	/*
+	** since the transaction was just aborted, need to
+	** start a new one.
+	*/
+	Mq_intransaction = TRUE;
+
+	resp = IIUFver(ERget(S_QF00BD_SaveThusFarQ), 0);
+	mqwrtfin();
+	if (resp)
+	{
+		/*
+		** process updates that have been stored
+		** in temp file so far.
+		*/
+		IIqfWrtUpd(qdef);
+	}
+	mqwrtdel();
+##}
+
+
+/*
+**	MQUPDHLP - help for update screens.
+**
+**		history - prs - 1/85.
+**			7-aug-1987 (danielt) removed static char array
+**			(for message extraction)
+*/
+
+static VOID
+_updhlp()
+{
+	char	*help_file;
+
+	if (qdef_type == 0)
+	{
+		if (tblfield)
+		{
+			help_file = (mq_func == mqUPDATE)
+				? ERx("qupdmdtx.hlp") : ERx("qupdmdtn.hlp");
+		}
+		else
+		{
+			help_file = (mq_func == mqUPDATE)
+				? ERx("qupdmdox.hlp") : ERx("qupdmdon.hlp");
+		}
+	}
+	else
+	{
+		if (tblfield)
+		{
+			help_file = (mq_func == mqUPDATE)
+				? ERx("qupdootx.hlp")  : ERx("qupdootn.hlp");
+		}
+		else
+		{
+			help_file = (mq_func == mqUPDATE)
+				? ERx("qupdooox.hlp") : ERx("qupdooon.hlp");
+		}
+	}
+	FEhelp( help_file, ERget(S_QF00BE_QBF_Update_Function) );
+}

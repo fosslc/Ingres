@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqassign.hlp, subtopic 'Assigned values' of subtopic 'Append frames' 
+/#-- behind the main VQ Editor help screen.
+/#-- 
+You can assign values to be inserted into database columns that are not 
+displayed as fields on the form.
+
+A database column to which you assign a value:
+
+  * Can be in either the Master or Detail table.
+  * Must be marked as 'not displayed' in the Visual Query.
+  * Cannot be a sequenced field.
+
+The value you assign must be consistent with the column's datatype and can 
+take the form of any valid 4GL expression.  See Subtopics for information 
+about valid expressions.
+
+To assign a value to a database column, enter the value across from the 
+column name in either the "Assignment/Default" field of a Master table or 
+the "Assignment" field of a Detail table.
+/#subtopic 'Valid expressions' vqexpres.hlp

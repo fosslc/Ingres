@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The user_password parameter represents whether or not user passwords are
+ available in the current installation.
+
+
+ Choices are: OPTIONAL 
+
+ Default: OPTIONAL (C2 installation)

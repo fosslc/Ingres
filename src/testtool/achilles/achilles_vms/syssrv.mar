@@ -1,0 +1,10 @@
+.title syssrv
+; History:
+;	11-feb-2005 (abbjo03)
+;	    Add title so Jam can recognize the module's existence in the
+;	    library.
+;
+$SJCDEF GLOBAL
+$JBCMSGDEF GLOBAL
+$QUIDEF GLOBAL
+.END

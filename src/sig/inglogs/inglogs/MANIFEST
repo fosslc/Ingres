@@ -1,0 +1,22 @@
+# MANIFEST file for sig!inglogs!inglogs
+#
+# History:
+#       16-Oct-2009 (hanal04) Bug 122744
+#           Add inglogs.sh to SIG on UNIX
+#       23-Oct-2009 (maspa05) Bug 122744
+#           Add inglogs.bat to SIG on windows
+
+IISUBSYS sig inglogs inglogs ;
+
+if $(UNIX)
+{
+    FILE $(INGSIG)/inglogs/readme.txt : readme.unix ;
+
+    IISIGSH inglogs inglogs : inglogs.sh ;
+}
+else if $(NT)
+{
+    FILE $(INGSIG)/inglogs/readme.txt : readme.win ;
+
+    IIBULKBAT $(INGSIG)/inglogs : inglogs.bat  ;
+}

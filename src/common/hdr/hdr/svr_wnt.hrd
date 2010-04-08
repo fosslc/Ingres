@@ -1,0 +1,140 @@
+###
+### makefile generated automatically by mknmake (3.02) for WNT.
+###      date: Mon Nov 22 16:56:37 1993
+###      path: D:\rplus\common\hdr\hdr
+###
+
+##
+## Start of extra control macros for the make.ini file.
+##
+
+# Set to sub system type, (windows, console, posix).
+!IF "$(SUBSYS)" == ""
+SUBSYS = windows
+!ENDIF
+
+# Set to true for proto typing.
+!IF "$(PROTO_TYPE)" == ""
+PROTO_TYPE = false
+!ENDIF
+
+# Local flags for the compiler.
+!IF "$(LCL_CFLAGS)" == ""
+LCL_CFLAGS =
+!ENDIF
+
+# Ingres path structure.
+PART = common
+FACILITY = hdr
+SUBSYSTEM = hdr
+LCLPATH = common\hdr\hdr
+
+# DOS file system type.
+FS_FAT = 1
+FS_CASE = 0
+
+
+##
+## End of extra control macros for the make.ini file.
+##
+
+!include "$(ING_SRC)\tools\port\nmake\make.ini"
+!include "deps.mak"
+
+QSHFILES = dudbms.h 
+
+SQLSTATENAME = $(ING_SRC)\common\hdr\hdr\sqlstate.h
+
+HFILES = erclf.h erglf.h erscf.h erusf.h
+
+# chiu 10/8/93 - added destinations for header and message files
+INGFILES = $(II_SYSTEM)\ingres\files
+INGMSG = $(INGFILES)\english
+
+FILES = $(INGFILES)\generr.h $(INGFILES)\sqlstate.h \
+	$(INGMSG)\fast_v4.mnx $(INGMSG)\slow_v4.mnx
+
+MSGFILES = \
+	eradf.msg erclf.msg erdmf.msg erduf.msg ergcf.msg erglf.msg ergwf.msg  \
+	eropf.msg erpsf.msg erqef.msg erqsf.msg errdf.msg errqf.msg erscf.msg  \
+	ersxf.msg ertpf.msg erulf.msg erusf.msg \
+	fe.cat.msg
+
+QHFILES = 
+
+SHFILES = 
+
+QSCFILES = 
+
+SCFILES = 
+
+QCFILES = 
+
+SYFILES = 
+
+STFILES = 
+
+LFILES = 
+
+YFILES = 
+
+YIFILES = 
+
+OBJFILES = 
+
+PROFILES = 
+
+PCFILES = 
+
+EXEFILES = 
+
+
+OBJONLY =
+
+
+all: hdr prh pc lib exe
+hdr: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES) $(FILES)
+prh:
+pc:
+lib: $(OBJONLY)
+exe:
+
+derive: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES) $(QSCFILES) \
+	 $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) $(LFILES) \
+	 $(YFILES) $(YIFILES)
+
+hfiles: $(HFILES)
+
+
+##
+#
+# Custom rule for 
+##
+erclf.h : erclf.msg
+
+erglf.h : erglf.msg
+
+erscf.h : erscf.msg
+
+erusf.h : erusf.msg
+
+$(INGFILES)\generr.h : generr.h
+	$(CP) $? $@
+
+$(INGFILES)\sqlstate.h : sqlstate.h
+	$(CP) $? $@
+
+$(INGMSG)\fast_v4.mnx :
+	$(ERCOMP) -q$(SQLSTATENAME) -f$@ $(MSGFILES)
+
+$(INGMSG)\slow_v4.mnx :
+	$(ERCOMP) -q$(SQLSTATENAME) -s$@ $(MSGFILES)
+
+archive:
+atouch:
+
+##
+## Local install rule.
+##
+install:
+

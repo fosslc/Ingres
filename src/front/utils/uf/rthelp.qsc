@@ -1,0 +1,574 @@
+/*
+** Copyright (c) 1987, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ft.h>
+#include	<fmt.h>
+#include	<adf.h>
+#include	<frame.h>
+#include	<runtime.h>
+#include	<fsicnsts.h>
+#include	<menu.h>
+#include	<help.h>
+#include	<ug.h>
+#include	<lo.h>
+#include	<st.h>
+#include	<er.h>
+#include	"helphlp.h"
+#include	"eruf.h"
+
+/**
+** Name:	rthelp.qc -	FRS Help Utility.
+**
+** Description:
+**	Contains the interface for the FRS help facility, called both
+**	internally and by users.  Defines:
+**
+**	IIRTfrshelp()	called by 'help_frs' command.
+**
+**	The actual help processing is done by...
+**	IIRTdohelp()	actual help processing routine.
+**
+**	The parameter name 'vfrfiq' which shows up in many
+**	of these routines is a switch with the following
+**	values (defined in help.h):
+**
+**		H_EQ - standard EQUEL forms user program.
+**		H_FE - standard INGRES front-end.
+**		H_VFRBF - called from RBF or VIFRED.
+**		H_IQUEL - called from IQUEL or ISQL output phase.
+**		H_VIG	- called from graphics part of VIGRAPH.
+**		H_QBFSRT - called from QBF sort (this suppresses
+**			   field help, but then acts like H_EQ).
+**
+**	This is used because each uses a slightly different
+**	set of keys, interaction with menus, etc.
+**
+**	If these routines are called from EQUEL, with a value of
+**	H_EQ, the help processing routines will assure that the
+**	previous screen is redrawn etc upon return.  IF any other
+**	value is given, the caller must check the return status
+**	from FEfehelp to see whether or not a redraw of the screen
+**	is required, and then perform the action if needed.
+**
+** History:
+**	Revision 6.2  88/12  wong
+**	Added special field help parameter, renamed with 'IIRT' prefix rather
+**	than 'FE' and moved 'FEhelp()' and 'FEfehelp()' to "uf/fehelp.c" and
+**	'FEhlpnam()' as 'IIUGhlpname()' to "ug/ughlpnm.c".
+**
+**	Revision 6.1  88/02  dave
+**	06/13/87 (dkh) - Changed back to use plain submenus.  Lots
+**			 of other help code must changed to use
+**			 display submenus.
+**	08/14/87 (dkh) - ER changes.
+**	08/16/87 (peter) - Added support for II_HELPDIR, and added
+**			support for multiple language versions
+**			of help files.  Also, add FEhlpnam
+**	09/01/87 (dkh) - Locally declared RTFRACT as the one in
+**			 frserrno.h can not be used due to ER changes.
+**	09/05/87 (dkh) - Changes for international formatting.
+**	10/05/87 (dkh) - Help file changes.
+**	02/01/88 (dkh) - Fixed jup bug 1898.
+**	04/07/89 (dkh) - Fixed 6.2 bug 3374.
+**	29-nov-89 (bruceb)
+**		Set up so squirrel away frskey explanation text
+**		to pass down to FEhkeys().  Help-keys will now
+**		display information on frskeys.
+**	11/03/89 (swilson) - changed to handle H_FE and to bring up
+**              "WhatToDo" frame immediately if INGRES front-end
+**	11-dec-89 (bruceb)
+**		Calls on FEhframe() need to pass down a 'Help Keys'
+**		explanation array.
+**	13-dec-89 (bruceb)
+**		Test for what sort of screen rebuild to perform after
+**		Help is finished needs to account for new H_FE value.
+**	23-apr-96 (chech02)
+**		changed IIstkfrm to FAR ptr for windows 3.1 port.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	21-Aug-2009 (kschendel) 121804
+**	    Update some of the function declarations to fix gcc 4.3 problems.
+*/
+
+FUNC_EXTERN	bool	IIRTfrshelp();
+
+FUNC_EXTERN	char	*FTflfrsmu();
+FUNC_EXTERN	STATUS	IIFTgfeGetFrskeyExpl();
+FUNC_EXTERN	bool	IIisfrm();
+FUNC_EXTERN	MENU	IIgtcurmu();
+FUNC_EXTERN	i4	IIishelp();
+
+FUNC_EXTERN	i4	(*IIseterr())();
+
+#ifdef WIN16
+GLOBALREF	RUNFRM	*FAR IIstkfrm;
+#else
+GLOBALREF	RUNFRM	*IIstkfrm;
+#endif /* WIN16 */
+
+/*
+**  Error number indicating that there are no forms currently
+**  being displayed. (dkh)
+*/
+# define	RTFRACT		8102
+
+static	i4	errproc();
+
+/*{
+** Name:	IIRTfrshelp() -	Add Current Menu for Help.
+**
+** Description:
+**	Called by 'FEfehelp()' and 'IIfrshelp()' (which is the interface from
+**	the HELP_FRS and HELP_FORMS statements) to add in the current menu
+**	structure, before calling the actual 'IIRTdohelp()' routine.  This is
+**	needed because VIFRED and RBF get menus from a different place and need
+**	a different interface.
+**
+**	It simply tacks on the menu structure before the call to help itself.
+**
+** Inputs:
+**	name	{char *}  name of file for HELP/FRAME.
+**	subject	{char *}  subject name for title of help frame.
+**	vfrfiq	{nat}  as described above.
+**	fld_hlp	{VOID (*)()}  Optional field help routine.
+**
+** Returns:
+**	{bool}	TRUE if caller to hold redraws.
+**		FALSE if redraw is needed by caller.
+**
+** History:
+**	01-oct-1985 (peter)	written.
+**	13-jan-1986 (peter)	changed the vfrfiq param to three values.
+**	30-jan-1986 (peter)	changes after code review.
+**	12/88 (jhw) - Added optional field help routine.
+*/
+bool
+IIRTfrshelp ( name, subject, vfrfiq, fld_hlp )
+char	*name;
+char	*subject;
+i4	vfrfiq;
+VOID	(*fld_hlp)();
+{
+#ifndef	PCINGRES
+	i2		tag;
+	bool		only_end;
+	MENU		helpmu;
+	MENU		curmu;
+	struct menuType	menu;
+	struct com_tab	comm_table[MAX_MENUITEMS];
+
+	menu.mu_coms = comm_table;
+	if ( (curmu = IIgtcurmu()) == NULL )
+	{
+		helpmu = NULL;
+	}
+	else
+	{
+		register i4		i;
+		register struct com_tab	*menu_items;
+
+		helpmu = &menu;
+		menu_items = curmu->mu_coms;
+
+		FEbegintag();
+		for ( i = 0 ; menu_items[i].ct_name != NULL ; ++i )
+		{
+			register struct com_tab	*ctp;
+
+			ctp = &comm_table[i];
+			ctp->ct_name = FEsalloc(menu_items[i].ct_name);
+			ctp->ct_enum = menu_items[i].ct_enum;
+			ctp->description = FEsalloc(menu_items[i].description);
+		}
+		comm_table[i].ct_name = NULL;
+		tag = FEendtag();
+	}
+
+	only_end = IIRTdohelp(name, subject, helpmu, IIissubmu(),
+			vfrfiq, fld_hlp
+	);
+
+	if ( helpmu != NULL )
+		IIUGtagFree(tag);
+
+	return only_end;
+#else
+	return TRUE;
+#endif	/* PCINGRES */
+}
+
+#ifndef	PCINGRES
+/*{
+** Name:	IIRTdohelp()	- Forms Run-Time Help Utility.
+**
+** Description:
+**	This actually does the processing of help.
+**
+** Inputs:
+**	name	{char *}  name of file for HELP/FRAME.
+**	subject	{char *}  subject name for title of help frame.
+**	menu	{MENU *}  menu structure to use in HELP/KEYS.
+**	submu	{bool}	TRUE if a submenu is in effect.
+**	vfrfiq	{nat}	as described above.
+**	fld_hlp	{VOID (*)()}  Optional field help routine.
+**
+** Returns:
+**	{bool}	TRUE if caller should hold redraw.
+**		FALSE otherwise.
+**
+** History:
+**	14-sep-1985 (grant)	first written.
+**	13-jan-1986 (peter)	changed the vfrfiq param to three values.
+**	15-jan-1986 (peter)	Fix bug 7611 and 7359.	Don't allow field
+**				help except in EQUEL, and put in different
+**				HELP/HELP files depending on whether Field
+**				is in or out.
+**	30-jan-1986 (peter)	Changed after code review.
+**	30-sep-1987 (peter)	copy subject to buffer to guard against
+**				use of ERget's in the mainline code.
+**	12/88 (jhw) - Added optional field help routine.
+*/
+bool
+IIRTdohelp ( char *name, char *subject, MENU menu, bool submu,
+	i4 vfrfiq, void (*fld_hlp)() )
+{
+	bool	helphelp = FALSE;
+	i2	tag;
+	bool	no_allocs = TRUE;
+	bool	grclr,grrest;
+	i4	oldhelp;
+##	char	*fldmenu;
+##	char	*hfilenam;
+##	char	tform[FE_MAXNAME+1],
+##		tfield[FE_MAXNAME+1],
+##		tcolumn[FE_MAXNAME+1];
+	char	*frs_lbls[MAX_MENUITEMS];
+	char	*frskey_expls[Fsi_KEY_PF_MAX];
+	char	subj[FE_PROMPTSIZE+1];
+	i4	i;
+	FRSKY	*frskey;
+	char	*expl;
+    	char	buf[200];	/* Even though lower down, only 80 is
+				** allowed, users may have more (ncg)
+				*/
+
+	/*
+	** Store subject text in temporary buffer in case the subject was
+	** not a fast message, which calls to 'ERget()' below will overwrite.
+	*/
+
+	_VOID_ STlcopy(subject, subj, FE_PROMPTSIZE);
+
+	/*
+	** grclr and grrest control activation of GT hooks
+	*/
+	grclr = vfrfiq == H_GREQ || vfrfiq == H_VIG;
+	grrest = FALSE;
+
+	FEbegintag();
+	if ( menu != NULL )
+	{
+		register i4		i;
+		register struct com_tab	*comm_table;
+
+		comm_table = menu->mu_coms;
+		for ( i = 0 ; comm_table[i].ct_name != NULL ; ++i )
+		{
+			register char	*frslabel;
+
+			frslabel = FTflfrsmu(comm_table[i].ct_enum);
+			if (frslabel == NULL)
+			{
+			    frs_lbls[i] = NULL;
+			}
+			else
+			{
+			    frs_lbls[i] = FEsalloc(frslabel);
+			    no_allocs = FALSE;
+			}
+		}
+	}
+
+	/* Set of frskey_expls on chance user will request Help Keys. */
+	if (!submu && IIstkfrm != NULL)
+	{
+	    for (i = 0; i < Fsi_KEY_PF_MAX; i++)
+	    {
+		frskey_expls[i] = NULL;
+		frskey = &IIstkfrm->fdfrskey[i];
+		if (frskey->frs_int > 0)
+		{
+		    /* 'Activate frskey i' exists for this display loop. */
+		    expl = frskey->frs_exp;
+		    if (expl != NULL)
+		    {
+			frskey_expls[i] = FEsalloc(expl);
+			no_allocs = FALSE;
+		    }
+		}
+	    }
+	}
+	else
+	{
+	    /*
+	    ** More expensive than for display loops.  Must query FT for each
+	    ** frskey to determine whether activated on, and if so, the
+	    ** explanatory text.
+	    */
+	    for (i = 0; i < Fsi_KEY_PF_MAX; i++)
+	    {
+		frskey_expls[i] = NULL;
+		if (IIFTgfeGetFrskeyExpl(i+1, &expl) == OK)
+		{
+		    if (expl != NULL)
+		    {
+			frskey_expls[i] = FEsalloc(expl);
+			no_allocs = FALSE;
+		    }
+		}
+	    }
+	}
+	tag = FEendtag();
+
+	/* This section of code checks to see whether to put in
+	** the 'Field' help selection.  This is only used when
+	** called from EQUEL and when the user is currently
+	** on a field that is updatable, fillable or queriable.
+	*/
+
+	/* BUG FIX 7611.  Only FIELD help if called from user EQUEL
+	** application.
+	*/
+	if ( vfrfiq == H_EQ )
+	{ /* Fields in effect.  Check if form in read mode */
+		fldmenu = NULL;
+		hfilenam = HLPNOFLD_HLP;
+		if ( IIisfrm() )
+##		{
+			static const
+				char	_Read[]	= ERx("READ");
+			static const
+##				char	_[]	= ERx("");
+
+##			char	_mode[10];
+
+##			inquire_frs form ( tform = name, tfield = field,
+##						_mode = mode
+##			);
+
+			if ( STtrmwhite(tfield) > 0 && !STequal(_mode, _Read) )
+##			{ /* Field exists, and form is updatable */
+##				i4	istable;
+
+##				inquire_frs field _ (
+##					istable = table, _mode = mode
+##				);
+				if ( istable == 1 )
+				{ /* it is a table field */
+##					inquire_frs table _ ( _mode = mode );
+
+					if ( !STequal(_mode, _Read) )
+					{ /* Table is updatable */
+##						inquire_frs column _ _ (
+##							tcolumn = name,
+##							_mode = mode
+##						);
+
+						if ( !STequal(_mode, _Read) )
+						{ /* Updatable */
+						    fldmenu = ERget(FE_Field);
+						    hfilenam = HLPFLD_HLP;
+						}
+					}
+				}
+				else
+				{ /* Field not table field */
+					if ( !STequal(_mode, _Read) )
+					{ /* Field is updatable */
+						fldmenu = ERget(FE_Field);
+						hfilenam = HLPFLD_HLP;
+						tcolumn[0] = EOS;
+					}
+				}
+##			}
+##		} /* end no Frame */
+	}
+
+	/* Execute Help Menu */
+
+	oldhelp = IIishelp(TRUE);
+
+	helphelp = FALSE;
+
+	if ( vfrfiq == H_EQ )
+	{
+	    /*
+	    ** Here if user EQUEL application.  Display "WhatToDo" submenu for
+	    ** compatibility.
+	    */
+
+	    for (;;)
+	    {
+##		SUBMENU
+##		ACTIVATE MENUITEM ERget(F_UF000C_WhatToDo)
+##		{
+			helphelp = FALSE;
+			_VOID_ STprintf(buf, ERget(S_UF003F_HELP_sub), subj);
+			if (grclr)
+			{
+				FTgtctl(FALSE);
+				grclr = FALSE;
+				grrest = TRUE;
+			}
+			FEhframe( name, buf, TRUE,
+				(MENU)NULL, (char **)NULL, (char **)NULL, H_EQ
+			);
+			break;
+##		}
+##		ACTIVATE MENUITEM ERget(F_UF000D_Keys)
+##		{
+			helphelp = FALSE;
+			_VOID_ STprintf(buf, ERget(S_UF0040_HELP_Command_Key),
+					subj
+			);
+			if (grclr)
+			{
+				FTgtctl(FALSE);
+				grclr = FALSE;
+				grrest = TRUE;
+			}
+			FEhkeys(buf, menu, frs_lbls, frskey_expls, vfrfiq);
+			break;
+##		}
+##		ACTIVATE MENUITEM fldmenu
+##		{
+			helphelp = FALSE;
+			if (grclr)
+			{
+				FTgtctl(FALSE);
+				grclr = FALSE;
+				grrest = TRUE;
+			}
+			if ( fld_hlp != NULL )
+				(*fld_hlp)(tform, tfield, tcolumn);
+			else
+				FEhvals(tform, tfield, tcolumn);
+			break;
+##		}
+##		ACTIVATE MENUITEM ERget(FE_Help), FRSkey1
+##		{
+			char	nam_buf[MAX_LOC+1];
+
+			if ( IIUGhlpname(hfilenam, nam_buf) != OK )
+			{
+				helphelp = TRUE;
+				continue;
+			}
+
+			if (grclr)
+			{
+				FTgtctl(FALSE);
+				grclr = FALSE;
+				grrest = TRUE;
+			}
+			FEhframe( nam_buf, ERget(S_UF0041_HELP_Help_Submenu),
+					FALSE, (MENU)NULL,
+					(char **)NULL, (char **)NULL, H_EQ
+			);
+			helphelp = TRUE;
+
+			continue;
+##		}
+##		ACTIVATE MENUITEM ERget(FE_End), FRSkey3
+##		{
+			if (!helphelp)
+			{
+				if (!no_allocs)
+					IIUGtagFree(tag);
+				_VOID_ IIishelp(oldhelp);
+				return(TRUE);
+			}
+			break;
+##		}
+	    }
+	}
+	else
+	{
+	        /*
+		** Here if INGRES front-end.  Display "WhatToDo" frame
+		** immediately.
+		*/
+
+		_VOID_ STprintf(buf, ERget(S_UF003F_HELP_sub), subj);
+		if (grclr)
+		{
+			FTgtctl(FALSE);
+			grclr = FALSE;
+			grrest = TRUE;
+		}
+		FEhframe(name, buf, TRUE, menu, frs_lbls, frskey_expls, vfrfiq);
+	}
+	_VOID_ IIishelp(oldhelp);
+
+	if (grrest)
+	{
+    		i4	errval;
+
+		switch (vfrfiq)
+		{
+		  case H_VIG:
+			FTgtctl(TRUE,TRUE);
+			break;
+		  case H_GREQ:
+			FTgtctl(TRUE,FALSE);
+			break;
+		  default:
+			errval = vfrfiq;
+			syserr(ERget(E_UF0042_Unexpected_graphics), &errval);
+		} /* end switch */
+	}
+
+	if (!no_allocs)
+		IIUGtagFree(tag);
+
+	if ( vfrfiq != H_EQ && vfrfiq != H_FE && vfrfiq != H_VIG
+		&& vfrfiq != H_GREQ )
+	{ /* Not called from EQUEL or only help/help selected */
+##		clear screen;
+	}
+	else
+	{ /* Called from EQUEL or general FEs */
+		if (submu)
+		{
+			i4	(*oldproc)();
+
+			IIrebld();
+##			clear screen;
+			oldproc = IIseterr(errproc);
+##			redisplay;
+			IIseterr(oldproc);
+		}
+	}
+
+	return FALSE;
+}
+
+static i4
+errproc (errnum)
+i4	*errnum;
+{
+	return (*errnum == RTFRACT) ? 0 : *errnum;
+}
+#endif	/* PCINGRES */

@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The block_count resource specifies the threshold number of blocks of memory
+  used for storing a generated HTML page.  When this threshold is exceeded
+  the contents are swapped from memory to disk.
+
+  Default: 100

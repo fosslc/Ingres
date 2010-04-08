@@ -1,0 +1,23 @@
+.\"$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/mkbzarch.1,v 1.1 90/03/09 09:18:29 source Exp $
+.TH MKBZARCH 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History: 
+.\"     18-dec-1989 (boba) 
+.\"             Make name in title all caps like other porting tool man pages.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+mkbzarch \- create INGRES 6.1+ `bzarch.h' for this machine
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B mkbzarch
+.SH DESCRIPTION
+.I mkbzarch
+creates a \fBbzarch.h\fR file in the current directory customized for
+the current machine.  The output file should be moved into the
+\fBcl!hdr!hdr\fR directory before building a system.
+.I mkbzarch
+replaces
+.I mkhdr
+for 6.1 and greater INGRES systems.
+.SH SEE ALSO
+.I mksecret

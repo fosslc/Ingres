@@ -1,0 +1,69 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for ingenv
+*/
+
+/*
+**  History
+**	29-jan-1993 (jonb)
+**		Created.
+**	11-feb-1993 (jonb)
+**		Changes.
+**	06-apr-1993 (dianeh)
+**		Deleted "End" (and associated comment); added History;
+**		fixed tabbing; alphabetized entries.
+**	03-may-1993 (dianeh)
+**		ingprall, ingprsym, ingsetall, and ingunsetall live in
+**		utility not bin.
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	27-jan-1995 (forky01)
+**		Fix 63376 - ingsetauth and cichkcap disappeared from utility
+**		dir, add them back in for unix. Also ingchkdate.
+**	26-apr-2000 (somsa01)
+**		Added support for other product builds.
+**	27-jan-2003 (somsa01)
+**		Removed ingsetauth.
+**      11-Jun-2004 (hanch04)
+**          Removed reference to CI for the open source release.
+**	11-Jun-2004 (somsa01)
+**		Cleaned up code for Open Source.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+/*
+** Default directory: ingres/bin
+*/
+
+PART   ingenv
+
+# ifdef VMS
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!bin
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY (PROD2NAME)!bin
+#endif
+      EXECUTABLE (PROG2PRFX)prenv
+      EXECUTABLE (PROG2PRFX)setenv
+      EXECUTABLE (PROG2PRFX)unset
+  {
+   BUILD_DIR (ING_BUILD)!utility
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY (PROD2NAME)!utility
+#endif
+      SCRIPT (PROG2PRFX)prall
+      SCRIPT (PROG2PRFX)prsym
+      SCRIPT (PROG2PRFX)setall
+      SCRIPT (PROG2PRFX)unsetall
+  }
+# endif /* VMS */

@@ -1,0 +1,40 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lbtreelp", "lbtreelp.vcproj", "{F8DFBD6F-D552-4817-A270-1C31EE9C151D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		AIX_Release|Win32 = AIX_Release|Win32
+		DBCS Debug|Win32 = DBCS Debug|Win32
+		DBCS Release|Win32 = DBCS Release|Win32
+		Debug|Win32 = Debug|Win32
+		HPUX_Debug|Win32 = HPUX_Debug|Win32
+		HPUX_Release|Win32 = HPUX_Release|Win32
+		Linux_Release|Win32 = Linux_Release|Win32
+		Release|Win32 = Release|Win32
+		Solaris_Release|Win32 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.AIX_Release|Win32.ActiveCfg = AIX_Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.AIX_Release|Win32.Build.0 = AIX_Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.DBCS Debug|Win32.ActiveCfg = DBCS Debug|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.DBCS Debug|Win32.Build.0 = DBCS Debug|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.DBCS Release|Win32.ActiveCfg = DBCS Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.DBCS Release|Win32.Build.0 = DBCS Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.Debug|Win32.Build.0 = Debug|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.HPUX_Debug|Win32.ActiveCfg = HPUX_Debug|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.HPUX_Debug|Win32.Build.0 = HPUX_Debug|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.HPUX_Release|Win32.ActiveCfg = HPUX_Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.HPUX_Release|Win32.Build.0 = HPUX_Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.Linux_Release|Win32.ActiveCfg = Linux_Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.Linux_Release|Win32.Build.0 = Linux_Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.Release|Win32.ActiveCfg = Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.Release|Win32.Build.0 = Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.Solaris_Release|Win32.ActiveCfg = Solaris_Release|Win32
+		{F8DFBD6F-D552-4817-A270-1C31EE9C151D}.Solaris_Release|Win32.Build.0 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

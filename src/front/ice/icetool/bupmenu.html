@@ -1,0 +1,37 @@
+<HTML>
+<BODY bgcolor="#FFFFFF" topmargin="0" leftmargin="0">
+<FORM 
+ACTION="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext/iceTools/buDView.html?doc=:doc` -->" METHOD="POST" TARGET="view"> 
+<TABLE WIDTH="100%" BORDER="0">
+<TD>
+	<FONT SIZE="5">
+<!-- #ICE REPEAT FUNCTION=`document?action=retrieve&doc_id=:doc`
+				 HTML=`<!-- #ICE FUNCTION=``unit?action=retrieve&unit_id=:unit_id``
+										HTML=``:unit_name[`` -->:doc_name.:doc_suffix]<!-- #ICE IF (``:doc_type`` == ``page``)
+					THEN=``?</FONT><INPUT SIZE=20 NAME="params">``
+					ELSE=``<INPUT TYPE="HIDDEN" NAME="params" VALUE=""></FONT>``
+-->
+</TD>
+<TD>
+	<INPUT TYPE=image NAME="View" BORDER=0 SRC="<!-- #ICE INCLUDE=``view.gif`` -->">
+
+<!-- #ICE REPEAT IF (``:doc_type`` == ``page``)
+THEN=``<A href="/ice-bin/oiice.:http_api_ext/iceTools/buPCode.html?doc=:doc" TARGET="view" ALT="Code">
+			 <IMG BORDER="0" SRC="<!-- #ICE INCLUDE=````code.gif```` -->"></A>``
+-->
+
+<A href="/ice-bin/oiice.:http_api_ext/iceTools/buDRight.html?doc=:doc" TARGET="view" ALT="View">
+	<IMG BORDER="0" SRC="<!-- #ICE INCLUDE=``access.gif`` -->"></A>
+<A href="/ice-bin/oiice.:http_api_ext/iceTools/buUpdate.html?unit_id=:unit_id&doc=:doc" TARGET="view" ALT="Update">
+	<IMG BORDER="0" SRC="<!-- #ICE INCLUDE=``update.gif`` -->"></A>
+<A href="/ice-bin/oiice.:http_api_ext/iceTools/buDelete.html?unit_id=:unit_id&doc=:doc" TARGET="view" ALT="Delete">
+	<IMG BORDER="0" SRC="<!-- #ICE INCLUDE=``delete.gif`` -->"></A>
+<A href="/ice-bin/oiice.:http_api_ext/iceTools/:doc_name.:doc_suffix?ii_action=download&ii_unit=:doc_unit_name" TARGET="view" ALT="Download">
+	<IMG BORDER="0" SRC="<!-- #ICE INCLUDE=``download.gif`` -->"></A>
+</TD>
+` -->
+</TABLE>
+<HR>
+</FORM>
+</BODY>
+</HTML>

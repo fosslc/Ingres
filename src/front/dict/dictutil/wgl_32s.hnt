@@ -1,0 +1,29 @@
+#	Copyright (c) 2004 Ingres Corporation
+#
+# wgl_32s.hnt file for  front\dict\dictutil
+#
+# Note: The wgl_32s.ini file contains a special case for this
+#	directory.  CFLAGS3 is used to compile this directory.
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+#	04-feb-97 (puree)
+#		Fixed typo. Use .obj instead of .c for objonly list.
+#	23-aug-04 (lazro01)
+#		Added apdev15u.obj.
+objonly =  apdev12c.obj 
+objonly =  apdev12u.obj 
+objonly =  apdev13c.obj 
+objonly =  apdev13u.obj 
+objonly =  apdev14u.obj 
+objonly =  apdev15u.obj 
+objonly =  apdev31c.obj 
+objonly =  cor02u.obj 
+objonly =  core2c.obj 
+objonly =  dctinstl.obj 
+objonly =  dctinsup.obj 
+objonly =  dctmdsup.obj 
+objonly =  dictmod.obj 
+objonly =  msc01u.obj 
+objonly =  pdm01u.obj 

@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!demo!data
+#
+
+SubDir ING_SRC front demo data ;
+
+IISUBSYS front demo data ;
+
+IIBFILES demo$(SLASH)data : airline.ingres airport.csv airport.ingres copy.in 
+                          copy.out country.ingres flight_day.ingres
+			  recreatedemodb.bat route.ingres tz.ingres
+			  user_profile.bin version.ingres drop.sql ;

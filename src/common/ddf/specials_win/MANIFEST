@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!ddf!specials_win
+#
+
+SubDir ING_SRC common ddf specials_win ;
+
+IISUBSYS common ddf specials_win ;
+
+IISHLIBRARY $(SHDDFLIB) : $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(DDFLIB) $(IMPICELIBDATA) ;
+
+IISHLIBRARY $(SHDDILIB) : $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(DDILIB) $(IMPAPILIB) $(DDFCOMLIB) ;

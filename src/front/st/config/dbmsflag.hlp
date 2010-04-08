@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The resource qflatten_aggregate can be used to disable flattening for 
+  aggregate subselect queries.
+

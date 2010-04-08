@@ -1,0 +1,1745 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+#include "rctools.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\Ivm.ico"
+IDR_IVMTYPE             ICON                    "res\\maindoc.ico"
+ID_START		ICON			"res\\shield16x16.ico"
+ID_START_CLIENT		ICON			"res\\shield16x16.ico"
+ID_STOP			ICON                    "res\\shield16x16.ico"
+ID_CONFIGURE		ICON			"res\\shield16x16.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
+IDB_INSTALLATION26x16   BITMAP                  "res\\installa.bmp"
+IDB_FOLDER26x16         BITMAP                  "res\\folder26.bmp"
+IDB_BRIDGE26x16         BITMAP                  "res\\bridge26.bmp"
+IDB_DBMS26x16           BITMAP                  "res\\dbms26.bmp"
+IDB_NET26x16            BITMAP                  "res\\net26x16.bmp"
+IDB_STAR26x16           BITMAP                  "res\\star26.bmp"
+IDB_NAME26x16           BITMAP                  "res\\name26.bmp"
+IDB_RMCMD26x16          BITMAP                  "res\\rmcmd26x.bmp"
+IDB_SECURITY26x16       BITMAP                  "res\\security.bmp"
+IDB_LOCKING26x16        BITMAP                  "res\\locking.bmp"
+IDB_LOGGING26x16        BITMAP                  "res\\logging.bmp"
+IDB_TRANSACTION26x16    BITMAP                  "res\\transact.bmp"
+IDB_RECOVERY26x16       BITMAP                  "res\\recovery.bmp"
+IDB_ARCHIVER26x16       BITMAP                  "res\\archiver.bmp"
+IDB_GATEWAY26x16        BITMAP                  "res\\gateway.bmp"
+IDB_ICE26x16            BITMAP                  "res\\ice26x16.bmp"
+IDB_EVENTINDICATOR      BITMAP                  "res\\eventind.bmp"
+IDB_TRAYIMAGE           BITMAP                  "res\\trayimag.bmp"
+IDB_EVIRONMENT_VARIABLE BITMAP                  "res\\evironme.bmp"
+IDB_STARTSTOP_HISTORY   BITMAP                  "res\\hisstart.bmp"
+IDB_MESSAGE_CATEGORY_SETTING BITMAP                  "res\\msgcatse.bmp"
+IDB_EVENTINDICATOR_SETTINGS BITMAP                  "res\\bmp00001.bmp"
+IDB_JDBC26x16           BITMAP                  "res\\jdb26x16.bmp"
+IDB_DASVR26x16          BITMAP                  "res\\das26x16.bmp"
+IDB_SHIELD16X16         BITMAP                  "res\\shield16x16.bmp"
+IDR_MAINFRAME4VISTA     BITMAP                  "res\\toolbar4vista.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+IDR_MAINFRAME TOOLBAR  16, 16
+BEGIN
+    BUTTON      ID_START
+    BUTTON      ID_STOP
+    SEPARATOR
+    BUTTON      ID_MESSAGE_DESCRIPTION
+    SEPARATOR
+    BUTTON      ID_MESSAGE_SETTING
+    BUTTON      ID_PREFERENCE
+    SEPARATOR
+    BUTTON      ID_CONFIGURE
+    SEPARATOR
+    BUTTON      ID_NETWORKUTILITY
+    BUTTON      ID_VISUALDBA
+    BUTTON      ID_SQLQUERY
+    BUTTON      ID_IPM
+    SEPARATOR
+    BUTTON      ID_IIA
+    BUTTON      ID_IEA
+    SEPARATOR
+    BUTTON      ID_IJA
+    SEPARATOR
+    BUTTON      ID_VCDA
+    BUTTON      ID_VDDA
+    SEPARATOR
+    BUTTON      ID_FIND
+    SEPARATOR
+    BUTTON      ID_APP_ABOUT
+END
+
+IDR_MAINFRAME4VISTA TOOLBAR  16, 16
+BEGIN
+    BUTTON      ID_START
+    BUTTON      ID_STOP
+    SEPARATOR
+    BUTTON      ID_MESSAGE_DESCRIPTION
+    SEPARATOR
+    BUTTON      ID_MESSAGE_SETTING
+    BUTTON      ID_PREFERENCE
+    SEPARATOR
+    BUTTON      ID_CONFIGURE
+    SEPARATOR
+    BUTTON      ID_NETWORKUTILITY
+    BUTTON      ID_VISUALDBA
+    BUTTON      ID_SQLQUERY
+    BUTTON      ID_IPM
+    SEPARATOR
+    BUTTON      ID_IIA
+    BUTTON      ID_IEA
+    SEPARATOR
+    BUTTON      ID_IJA
+    SEPARATOR
+    BUTTON      ID_VCDA
+    BUTTON      ID_VDDA
+    SEPARATOR
+    BUTTON      ID_FIND
+    SEPARATOR
+    BUTTON      ID_APP_ABOUT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Start",                      ID_START
+        MENUITEM "Start &Client Installation",  ID_START_CLIENT
+        MENUITEM "Sto&p...",                    ID_STOP
+        MENUITEM SEPARATOR
+        MENUITEM "Co&nfigure",                  ID_CONFIGURE
+        POPUP "Run"
+        BEGIN
+            MENUITEM "Ingres Network &Utility",     ID_NETWORKUTILITY
+            MENUITEM "Ingres &Visual DBA",          ID_VISUALDBA
+            MENUITEM "Ingres Visual S&QL",          ID_SQLQUERY
+            MENUITEM "Ingres Visual Performance &Monitor", ID_IPM
+            MENUITEM SEPARATOR
+            MENUITEM "Ingres &Import Assistant",    ID_IIA
+            MENUITEM "Ingres &Export Assistant",    ID_IEA
+            MENUITEM SEPARATOR
+            MENUITEM "Ingres &Journal Analyzer",    ID_IJA
+            MENUITEM SEPARATOR
+            MENUITEM "Ingres Visual Configuration Differences Analyzer", 
+                                                    ID_VCDA
+            MENUITEM "Ingres Visual Database Objects Differences Analyzer", 
+                                                    ID_VDDA
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "C&ategories and Notification Levels...", 
+                                                ID_MESSAGE_SETTING
+        MENUITEM "Pre&ferences...",             ID_PREFERENCE
+        MENUITEM "Cl&ose",                      ID_APP_EXIT
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "Ingres Message Explanation Window", ID_MESSAGE_DESCRIPTION
+        MENUITEM SEPARATOR
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM SEPARATOR
+        MENUITEM "&Expand All",                 ID_EXPAND_ALL
+        MENUITEM "&Collapse All",               ID_COLLAPSE_ALL
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Help Topics",                ID_DEFAULT_HELP
+        MENUITEM "Ingres Support &Online...",   ID_HELP_SUPPORTONLINE
+        MENUITEM "&About Ingres Visual Manager...", ID_APP_ABOUT
+    END
+END
+
+IDR_POPUP_TREECOMPONENT MENU 
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "&Start",                      ID_START
+        MENUITEM "Start &Client Installation",  ID_START_CLIENT
+        MENUITEM "Sto&p...",                    ID_STOP
+        MENUITEM SEPARATOR
+        MENUITEM "Co&nfigure...",               ID_CONFIGURE
+    END
+END
+
+IDR_POPUP_TRAY MENU 
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "&Activate Ingres Visual Manager Window", 
+                                                ID_ACTIVATE_PROGRAM
+        MENUITEM SEPARATOR
+        MENUITEM "Ingres Command Prompt",       ID_INGRES_PROMPT
+        MENUITEM SEPARATOR
+        MENUITEM "Ingres Co&nfiguration Manager", ID_VCBF
+        MENUITEM SEPARATOR
+        MENUITEM "Ingres Network &Utility",     ID_NETWORKUTILITY
+        MENUITEM "Ingres &Visual DBA",          ID_VISUALDBA
+        MENUITEM "Ingres Visual S&QL",          ID_SQLQUERY
+        MENUITEM "Ingres Visual Performance &Monitor", ID_IPM
+        MENUITEM SEPARATOR
+        MENUITEM "Ingres &Import Assistant",    ID_IIA
+        MENUITEM "Ingres &Export Assistant",    ID_IEA
+        MENUITEM SEPARATOR
+        MENUITEM "Ingres Visual Configuration Differences Analyzer", ID_VCDA
+        MENUITEM "Ingres Visual Database Objects Differences Analyzer", 
+                                                ID_VDDA
+        MENUITEM SEPARATOR
+        MENUITEM "Ingres &Journal Analyzer",    ID_IJA
+        MENUITEM "Ingres User Defined Data Type Linker", ID_IILINK
+        POPUP "Ingres Customized Performance Monitor"
+        BEGIN
+            MENUITEM "Ingres Performance Monitor Wizard", 
+                                                    ID_PERFORMANCE_WIZARD
+            MENUITEM "Monitor Ingres Cache Statistics", ID_INGRES_CACHE
+        END
+        MENUITEM "Ingres Error Log",            ID_ERROR_LOG
+        MENUITEM SEPARATOR
+        MENUITEM "Ingres Readme File",          ID_README
+        POPUP "Ingres Documentation"
+        BEGIN
+            MENUITEM "Character-based Querying and Reporting Tools User Guide", 
+                                                    ID_IGRESDOC_QRYTOOLS
+            MENUITEM "Command Reference Guide",     ID_IGRESDOC_CMDREF
+            MENUITEM "Connectivity Guide",          ID_IGRESDOC_INGNET
+            MENUITEM "Database Administrator Guide", ID_IGRESDOC_DBA
+            MENUITEM "Distributed Option User Guide", ID_IGRESDOC_STARUG
+            MENUITEM "Distributed Transaction Processing User Guide", 32813
+            MENUITEM "Embedded QUEL Companion Guide", ID_IGRESDOC_EQUEL
+            MENUITEM "Embedded SQL Companion Guide", ID_IGRESDOC_ESQLC
+            MENUITEM "Forms-based Application Development Tools User Guide", 
+                                                    ID_IGRESDOC_UFADT
+            MENUITEM "Getting Started",             ID_IGRESDOC_GS
+            MENUITEM "Interactive Performance Monitor User Guide", 
+                                                    ID_IGRESDOC_IPM
+            MENUITEM "Migration Guide",             32818
+            MENUITEM "Object Management Extension User Guide", 
+                                                    ID_IGRESDOC_OME
+            MENUITEM "OpenAPI User Guide",          ID_IGRESDOC_OAPI
+            MENUITEM "OpenSQL Reference Guide",     ID_IGRESDOC_OSQL
+            MENUITEM "QUEL Reference Guide",        ID_IGRESDOC_QUELREF
+            MENUITEM "Release Summary",             ID_IGRESDOC_RELEASE
+            MENUITEM "Replication Option User Guide", ID_IGRESDOC_REP
+            MENUITEM "SQL Reference Guide",         ID_IGRESDOC_SQLREF
+            MENUITEM "System Administrator Guide",  ID_IGRESDOC_SYSADM
+            MENUITEM "Web Deployment Option User Guide", ID_IGRESDOC_ICEUG
+        END
+        MENUITEM "About Ingres",                ID_ABOUT_ADVANTAGE
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_HALT_PROGRAM
+    END
+END
+
+IDR_POPUP_TREEEVENTCATEGORY MENU 
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "&Alert",                      ID_ALERT
+        MENUITEM "&Display",                    ID_NOTIFY
+        MENUITEM "D&iscard",                    ID_DISCARD
+        MENUITEM SEPARATOR
+        MENUITEM "Add New &Folder",             ID_ADD_FOLDER
+        MENUITEM "De&lete (Unclassify)",        ID_DROP_FOLDER
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS 
+BEGIN
+    "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
+    "P",            ID_FILE_PRINT,          VIRTKEY, CONTROL, NOINVERT
+    "V",            ID_EDIT_PASTE,          VIRTKEY, CONTROL, NOINVERT
+    VK_BACK,        ID_EDIT_UNDO,           VIRTKEY, ALT, NOINVERT
+    VK_DELETE,      ID_EDIT_CUT,            VIRTKEY, SHIFT, NOINVERT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY, NOINVERT
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
+    VK_INSERT,      ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
+    VK_INSERT,      ID_EDIT_PASTE,          VIRTKEY, SHIFT, NOINVERT
+    "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL, NOINVERT
+    "Z",            ID_EDIT_UNDO,           VIRTKEY, CONTROL, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_MAIN DIALOG  0, 0, 360, 123
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Install",IDC_STATIC1,81,4,42,10,SS_SUNKEN
+    LTEXT           "Host",IDC_STATIC2,151,4,59,10,SS_SUNKEN
+    LTEXT           "IISYSTEM",IDC_STATIC3,265,4,92,10,SS_SUNKEN
+    LTEXT           "The frame will be created in this area !",
+                    IDC_STATIC_FRAME,2,21,356,95,NOT WS_VISIBLE | WS_BORDER
+    LTEXT           "II_INSTALLATION",IDC_STATIC,5,4,71,8
+    LTEXT           "Host",IDC_STATIC,127,4,21,8
+    LTEXT           "II_SYSTEM",IDC_STATIC,217,4,45,8
+    CONTROL         "Animate1",IDC_ANIMATE1,"SysAnimate32",ACS_TRANSPARENT | 
+                    NOT WS_VISIBLE | WS_TABSTOP,343,2,13,13
+END
+
+IDD_STATUS_INSTALLATION DIALOGEX 0, 0, 246, 208
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    CONTROL         "",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,8,10,10
+    LTEXT           "Unread Critical Events",IDC_STATIC,25,9,75,8
+    CONTROL         "Service Mode",IDC_CHECK4,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,162,47,62,10
+    GROUPBOX        "Startup Status",IDC_STATIC,7,23,232,40
+    CONTROL         "",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,35,10,10
+    CONTROL         "",IDC_CHECK6,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,80,35,10,10
+    CONTROL         "",IDC_CHECK7,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,48,10,10
+    LTEXT           "Started",IDC_STATIC,25,36,51,8
+    LTEXT           "All Components Started with Startup Count",IDC_STATIC,
+                    93,36,139,8
+    LTEXT           "Additional Instances Started Manually",IDC_STATIC,25,48,
+                    127,8
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,7,68,232,133
+    PUSHBUTTON      "External Access",IDC_BUTTON1,106,7,59,12,NOT WS_VISIBLE
+END
+
+IDD_PARAMETER_INSTALLATION DIALOG  0, 0, 324, 124
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,1,7,322,86
+    PUSHBUTTON      "Edit Value",IDC_BUTTON1,1,103,50,14
+    PUSHBUTTON      "Unset",IDC_BUTTON3,53,103,50,14
+    PUSHBUTTON      "Add...",IDC_BUTTON4,105,103,50,14,WS_DISABLED
+    CONTROL         "Show Unset Parameters",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,158,104,113,10
+END
+
+IDD_LOGEVENT_GENERIC DIALOG  0, 0, 256, 68
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,231,22
+    EDITTEXT        IDC_EDIT3,7,33,242,26,ES_MULTILINE | ES_READONLY | 
+                    ES_WANTRETURN
+    SCROLLBAR       IDC_SCROLLBAR1,240,7,9,23,SBS_VERT
+END
+
+IDD_PARAMETER_INSTALLATION_SYSTEM DIALOG  0, 0, 221, 124
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,207,110
+END
+
+IDD_PARAMETER_INSTALLATION_USER DIALOG  0, 0, 221, 124
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,207,110
+END
+
+IDD_PROPPAGE_EVENT_NOTIFY DIALOG  0, 0, 330, 180
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Events"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Maximum (Always the Most Recent)",IDC_STATIC,4,4,322,88
+    CONTROL         "Max Used &Memory",IDC_RADIO1,"Button",
+                    BS_AUTORADIOBUTTON,10,19,73,10
+    CONTROL         "Max Number of &Events",IDC_RADIO2,"Button",
+                    BS_AUTORADIOBUTTON,10,33,91,10
+    CONTROL         "Since ",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,10,47,30,
+                    10
+    CONTROL         "Since Last &Name Server Startup",IDC_RADIO4,"Button",
+                    BS_AUTORADIOBUTTON,10,62,118,10
+    CONTROL         "N&o Limit",IDC_RADIO5,"Button",BS_AUTORADIOBUTTON,10,76,
+                    77,10
+    EDITTEXT        IDC_EDIT1,105,17,40,12,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "MBytes",IDC_STATIC,150,20,32,8
+    EDITTEXT        IDC_EDIT2,105,32,40,12,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_EDIT3,48,46,28,12,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "&Day(s)",IDC_STATIC,84,47,32,8
+    GROUPBOX        "Alert Events Notification",IDC_STATIC,4,98,322,58
+    LTEXT           "Special Icon And :",IDC_STATIC,10,110,74,8
+    CONTROL         "Mail",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT 
+                    WS_VISIBLE | WS_DISABLED | WS_TABSTOP,95,121,29,10
+    CONTROL         "Message &Box",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,10,134,58,10
+    CONTROL         "Special Icons",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | 
+                    NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,96,135,57,10
+    CONTROL         "&Sound",IDC_CHECK8,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,10,121,83,10
+END
+
+IDD_STATUS_INSTALLATION_TAB1 DIALOG  0, 0, 246, 101
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,7,232,87
+END
+
+IDD_STATUS_INSTALLATION_TAB2 DIALOG  0, 0, 246, 101
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,7,232,87,ES_MULTILINE | ES_NOHIDESEL | 
+                    ES_READONLY | WS_VSCROLL | WS_HSCROLL
+END
+
+IDD_STATUS_DUPLICATABLE_COMPONENT DIALOG  0, 0, 246, 159
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,7,10,10
+    LTEXT           "Unread Critical Events",IDC_STATIC,25,8,128,8
+    GROUPBOX        "Startup Status",IDC_STATIC,7,20,232,40
+    CONTROL         "",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,32,10,10
+    CONTROL         "",IDC_CHECK6,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,68,32,10,10
+    CONTROL         "",IDC_CHECK7,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,45,10,10
+    LTEXT           "Started",IDC_STATIC,25,33,37,8
+    LTEXT           "All Sub-Components Startup with Startup Count",
+                    IDC_STATIC,81,33,152,8
+    LTEXT           "Additional Instances Started Manually",IDC_STATIC,25,45,
+                    195,8
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,7,67,232,85
+END
+
+IDD_STATUS_SINGLEINSTANCE_COMPONENT DIALOG  0, 0, 246, 148
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,7,10,10
+    LTEXT           "Unread Critical Events",IDC_STATIC,25,7,128,8
+    CONTROL         "",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,20,10,10
+    LTEXT           "Started",IDC_STATIC,25,21,53,8
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,7,43,232,98
+END
+
+IDD_STATUS_INSTANCE DIALOG  0, 0, 246, 148
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,7,9,10
+    LTEXT           "Unread Critical Events",IDC_STATIC,25,7,128,8
+    CONTROL         "",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | 
+                    WS_DISABLED | WS_TABSTOP,12,20,9,10
+    LTEXT           "Started",IDC_STATIC,25,21,37,8,NOT WS_VISIBLE
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,7,43,232,98
+END
+
+IDD_STATUS_AUTOSTART_COMPONENT DIALOG  0, 0, 246, 113
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,7,10,10
+    LTEXT           "Unread Critical Events",IDC_STATIC,25,8,128,8
+    CONTROL         "",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,12,20,10,10
+    LTEXT           "Started",IDC_STATIC,25,21,53,8
+END
+
+IDD_YOUHAVEMESSAGE DIALOG  0, 0, 176, 62
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Visual Manager"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC1,8,7,20,20
+    LTEXT           "You have Unread Alert Messages .",IDC_STATIC2,40,15,123,
+                    8,SS_NOPREFIX
+    DEFPUSHBUTTON   "&Close",IDOK,62,41,50,14,WS_GROUP
+    PUSHBUTTON      "ESC",IDCANCEL,27,41,26,14,NOT WS_VISIBLE
+END
+
+IDD_PARAMETER_INSTALLATION_EXTRA DIALOG  0, 0, 221, 124
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,207,110
+END
+
+IDD_EVENT_SETTING_BOTTOM DIALOG  0, 0, 352, 130
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Choose Messages from:",IDC_STATIC,1,1,90,11
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | 
+                    WS_BORDER | WS_TABSTOP,1,29,164,78
+    COMBOBOX        IDC_COMBO1,170,14,137,60,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Actual Messages before the Changes",IDC_RADIO1,"Button",
+                    BS_AUTORADIOBUTTON,93,1,133,10
+    CONTROL         "Ingres Category",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,
+                    93,15,66,10
+    CONTROL         "Group by Message ID",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,227,1,92,10
+    CONTROL         "List2",IDC_LIST2,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | 
+                    WS_BORDER | WS_TABSTOP,177,29,63,78
+    LTEXT           "Note: the 2 lists above will be shown one at atime.\nThe left one is for <Actual Message> and the Right one is for Ingres Category.",
+                    IDC_STATIC,1,108,344,15,NOT WS_VISIBLE
+    CONTROL         "List2",IDC_LIST3,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | 
+                    WS_BORDER | WS_TABSTOP,252,30,79,78
+    SCROLLBAR       IDC_SCROLLBAR1,335,30,9,77,SBS_VERT
+    PUSHBUTTON      "&Find",IDC_BUTTON1,310,13,35,14
+END
+
+IDD_EVENT_SETTING_LEFT DIALOG  0, 0, 215, 130
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "State View",IDC_STATIC,1,1,41,11
+    CONTROL         "Show Categories",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,58,1,67,10
+    CONTROL         "Tree1",IDC_TREE1,"SysTreeView32",TVS_HASBUTTONS | 
+                    TVS_HASLINES | TVS_LINESATROOT | TVS_EDITLABELS | 
+                    TVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,1,13,207,110
+END
+
+IDD_EVENT_SETTING_RIGHT DIALOG  0, 0, 215, 130
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Category View",IDC_STATIC,1,1,51,11
+    CONTROL         "Show State Branches",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,58,1,90,10
+    CONTROL         "Tree1",IDC_TREE1,"SysTreeView32",TVS_HASBUTTONS | 
+                    TVS_HASLINES | TVS_LINESATROOT | TVS_EDITLABELS | 
+                    TVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,1,13,207,110
+END
+
+IDD_XEVENT_SETTING DIALOG  0, 0, 380, 300
+STYLE DS_SETFONT | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU | WS_THICKFRAME
+CAPTION "Define Message Categories and Notification Levels"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,2,279,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,54,279,50,14
+    LTEXT           "A frame window will occupy this area !",IDC_STATIC1,2,7,
+                    371,269,SS_SUNKEN | NOT WS_VISIBLE | WS_BORDER
+    LTEXT           "Progress",IDC_STATIC2,109,283,264,10,NOT WS_VISIBLE | 
+                    WS_BORDER
+END
+
+IDD_LOGEVENT_ACPRCP DIALOG  0, 0, 246, 101
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,7,232,87,ES_MULTILINE | ES_NOHIDESEL | 
+                    ES_READONLY | WS_VSCROLL | WS_HSCROLL
+END
+
+IDD_MESSAGE_STATISTIC DIALOG  0, 0, 187, 97
+STYLE DS_SETFONT | DS_MODALFRAME | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,173,83
+END
+
+IDD_XENVIRONMENT_VARIABLE DIALOG  0, 0, 187, 69
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add Ingres Variable"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,12,117,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT2,7,38,117,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,130,12,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,130,28,50,14
+    LTEXT           "Name:",IDC_STATIC,7,1,28,8
+    LTEXT           "Value:",IDC_STATIC,7,27,28,8
+END
+
+IDD_MESSAGE DIALOG  0, 0, 226, 74
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Visual Manager"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC1,7,7,20,20
+    LTEXT           "You have reached the max events limit defined in the settings",
+                    IDC_STATIC2,33,7,186,41
+    DEFPUSHBUTTON   "&Close",IDOK,69,51,50,14,WS_GROUP
+    PUSHBUTTON      "ESC",IDCANCEL,39,51,26,14,NOT WS_VISIBLE
+    CONTROL         "Show this message again",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,126,52,93,
+                    10
+END
+
+IDD_XSYSTEM_INFO DIALOG  0, 0, 233, 86
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "External Access"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "&User Name:",IDC_STATIC,15,42,42,8
+    EDITTEXT        IDC_EDIT1,63,41,108,12,ES_AUTOHSCROLL
+    LTEXT           "&Password:",IDC_STATIC,15,59,40,8
+    EDITTEXT        IDC_EDIT2,63,57,108,12,ES_PASSWORD | ES_AUTOHSCROLL
+    PUSHBUTTON      "&Test",IDC_BUTTON2,177,40,44,14,WS_DISABLED
+    PUSHBUTTON      "&Close",IDC_BUTTON1,177,8,49,14
+    CONTROL         "Installation Password",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,14,9,10,10
+    LTEXT           "Installation Password",IDC_STATIC,27,10,68,8
+    GROUPBOX        "External Access Test",IDC_STATIC,7,25,219,53
+END
+
+IDD_XSERVICE_ACCOUNT DIALOG  0, 0, 238, 69
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Account and Password"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,181,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,181,23,50,14
+    LTEXT           "User Name:",IDC_STATIC,7,8,51,8
+    LTEXT           "Password:",IDC_STATIC,7,25,51,8
+    LTEXT           "Confirm Password:",IDC_STATIC,7,40,62,8
+    EDITTEXT        IDC_MFC_EDIT1,75,7,101,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_MFC_EDIT2,75,23,101,12,ES_PASSWORD | ES_AUTOHSCROLL
+    EDITTEXT        IDC_MFC_EDIT3,75,39,101,12,ES_PASSWORD | ES_AUTOHSCROLL
+END
+
+IDD_XSETENVIRONMENT_INGRES DIALOG  0, 0, 225, 70
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Set Ingres Environment Variable"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,168,12,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,168,27,50,14
+    CONTROL         "",IDC_COMBOBOXEX1,"ComboBoxEx32",CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP,7,12,156,61
+    LTEXT           "Name:",IDC_STATIC,7,1,47,8
+    LTEXT           "Value:",IDC_STATIC,7,32,96,8
+    EDITTEXT        IDC_EDIT1,8,43,151,12,ES_AUTOHSCROLL
+END
+
+IDD_XMESSAGE DIALOG  0, 0, 247, 111
+STYLE DS_SETFONT | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Visual Manager"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "&Yes",IDOK,60,90,34,14
+    PUSHBUTTON      "Cancel",IDCANCEL,132,90,34,14
+    PUSHBUTTON      "&No",IDNO,96,90,34,14
+    LTEXT           "The ""Service Mode"" checkbox has been checked, which will result in Ingres being started as a service.\n\nAre you sure that the Ingres Service password has been setup correctly?\n\n[Select NO to setup the password]",
+                    IDC_STATIC1,32,7,206,56
+    CONTROL         "Show this message again",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,60,71,114,10
+    ICON            "",IDC_STATIC2,7,23,21,20
+END
+
+IDD_MESSAGE_DESCRIPTION DIALOG  0, 0, 325, 236
+STYLE DS_SETFONT | WS_CHILD | WS_CAPTION
+CAPTION "General"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Message Identification",IDC_STATIC,19,2,220,47
+    COMBOBOX        IDC_COMBO1,69,14,160,110,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_COMBO2,69,31,160,110,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "Category:",IDC_STATIC,25,15,39,8
+    LTEXT           "Message:",IDC_STATIC,25,31,39,8
+    PUSHBUTTON      "Find...",IDC_BUTTON1,243,7,50,14
+    LTEXT           "Parameters:",IDC_STATIC,7,63,62,8
+    LTEXT           "Explanation:",IDC_STATIC,7,100,62,8
+    LTEXT           "System Status:",IDC_STATIC,7,158,62,8
+    LTEXT           "Recommendation:",IDC_STATIC,7,192,62,8
+    EDITTEXT        IDC_EDIT1,69,62,249,31,ES_MULTILINE | ES_READONLY | 
+                    ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+    EDITTEXT        IDC_EDIT2,69,99,249,52,ES_MULTILINE | ES_READONLY | 
+                    ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+    EDITTEXT        IDC_EDIT3,69,157,249,31,ES_MULTILINE | ES_READONLY | 
+                    ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+    EDITTEXT        IDC_EDIT4,69,193,249,31,ES_MULTILINE | ES_READONLY | 
+                    ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+    PUSHBUTTON      "Help",IDC_BUTTON2,243,24,50,14
+END
+
+IDD_XFINDMESSAGE DIALOG  0, 0, 232, 45
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Find Message"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,20,159,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,175,3,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,175,19,50,14
+    LTEXT           "Message:",IDC_STATIC1,7,7,77,8
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_MAIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 2
+        RIGHTMARGIN, 358
+        TOPMARGIN, 2
+        BOTTOMMARGIN, 116
+    END
+
+    IDD_STATUS_INSTALLATION, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 239
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 201
+    END
+
+    IDD_PARAMETER_INSTALLATION, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 323
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 117
+    END
+
+    IDD_LOGEVENT_GENERIC, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 249
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 61
+    END
+
+    IDD_PARAMETER_INSTALLATION_SYSTEM, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 214
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 117
+    END
+
+    IDD_PARAMETER_INSTALLATION_USER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 214
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 117
+    END
+
+    IDD_PROPPAGE_EVENT_NOTIFY, DIALOG
+    BEGIN
+        LEFTMARGIN, 4
+        RIGHTMARGIN, 326
+        TOPMARGIN, 4
+        BOTTOMMARGIN, 176
+    END
+
+    IDD_STATUS_INSTALLATION_TAB1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 239
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 94
+    END
+
+    IDD_STATUS_INSTALLATION_TAB2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 239
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 94
+    END
+
+    IDD_STATUS_DUPLICATABLE_COMPONENT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 239
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 152
+    END
+
+    IDD_STATUS_SINGLEINSTANCE_COMPONENT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 239
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 141
+    END
+
+    IDD_STATUS_INSTANCE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 239
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 141
+    END
+
+    IDD_STATUS_AUTOSTART_COMPONENT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 239
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 106
+    END
+
+    IDD_YOUHAVEMESSAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 169
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 55
+    END
+
+    IDD_PARAMETER_INSTALLATION_EXTRA, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 214
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 117
+    END
+
+    IDD_EVENT_SETTING_BOTTOM, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 345
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 123
+    END
+
+    IDD_EVENT_SETTING_LEFT, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 208
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 123
+    END
+
+    IDD_EVENT_SETTING_RIGHT, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 208
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 123
+    END
+
+    IDD_XEVENT_SETTING, DIALOG
+    BEGIN
+        LEFTMARGIN, 2
+        RIGHTMARGIN, 373
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 293
+    END
+
+    IDD_LOGEVENT_ACPRCP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 239
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 94
+    END
+
+    IDD_MESSAGE_STATISTIC, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 90
+    END
+
+    IDD_XENVIRONMENT_VARIABLE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 62
+    END
+
+    IDD_MESSAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 219
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 67
+    END
+
+    IDD_XSYSTEM_INFO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 226
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 79
+    END
+
+    IDD_XSERVICE_ACCOUNT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 231
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 62
+    END
+
+    IDD_XSETENVIRONMENT_INGRES, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 218
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 63
+    END
+
+    IDD_XMESSAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 238
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 104
+    END
+
+    IDD_MESSAGE_DESCRIPTION, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 318
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 229
+    END
+
+    IDD_XFINDMESSAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 225
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 38
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_ANCLOCK             AVI                     "res\\anclock.avi"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Cursor
+//
+
+IDC_DROPCATEGORY        CURSOR                  "res\\dropcat.cur"
+IDC_NODROPCATEGORY      CURSOR                  "res\\nodropca.cur"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDR_MAINFRAME           "Ivm\n\nIvm\n\n\nIvm.Document\nIvm Document"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Ingres Visual Manager"
+    AFX_IDS_IDLEMESSAGE     "Ready"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+    ID_FILE_PAGE_SETUP      "Change the printing options\nPage Setup"
+    ID_FILE_PRINT_SETUP     "Change the printer and printing options\nPrint Setup"
+    ID_FILE_PRINT_PREVIEW   "Display full pages\nPrint Preview"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_APP_ABOUT            "Display Program Information, Version Number and Copyright\nAbout"
+    ID_APP_EXIT             "Quit the Application\nExit"
+    ID_DEFAULT_HELP         "Help Topics\nHelp topics"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_IGRESDOC_INGNET      "Connectivity Guide\nP002641E.pdf"
+    ID_IGRESDOC_RELEASE     "Release Summary\nP002621E.pdf"
+    ID_IGRESDOC_IPM         "Interactive Performance Monitor User Guide\nP002711E.pdf"
+    ID_INGRES_PROMPT        "Ingres Command Prompt"
+    ID_HELP_SUPPORTONLINE   "Ingres Support Online\nIngres Support Online"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_MRU_FILE1       "Open this document"
+    ID_FILE_MRU_FILE2       "Open this document"
+    ID_FILE_MRU_FILE3       "Open this document"
+    ID_FILE_MRU_FILE4       "Open this document"
+    ID_FILE_MRU_FILE5       "Open this document"
+    ID_FILE_MRU_FILE6       "Open this document"
+    ID_FILE_MRU_FILE7       "Open this document"
+    ID_FILE_MRU_FILE8       "Open this document"
+    ID_FILE_MRU_FILE9       "Open this document"
+    ID_FILE_MRU_FILE10      "Open this document"
+    ID_FILE_MRU_FILE11      "Open this document"
+    ID_FILE_MRU_FILE12      "Open this document"
+    ID_FILE_MRU_FILE13      "Open this document"
+    ID_FILE_MRU_FILE14      "Open this document"
+    ID_FILE_MRU_FILE15      "Open this document"
+    ID_FILE_MRU_FILE16      "Open this document"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or Hide the Toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or Hide the Status Bar\nToggle StatusBar"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCSIZE          "Change the window size"
+    AFX_IDS_SCMOVE          "Change the window position"
+    AFX_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    AFX_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    AFX_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    AFX_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCRESTORE       "Restore the window to normal size"
+    AFX_IDS_SCTASKLIST      "Activate Task List"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_PREVIEW_CLOSE   "Close print preview mode\nCancel Preview"
+    IDS_TAB_STATUS          "Status"
+    IDS_TAB_PARAMETER       "Parameters"
+    IDS_TAB_SELFDIANOSTIC   "Self-Dianostic Errors"
+    IDS_TAB_LOGEVENT        "Logged Events"
+    IDS_TAB_TRACE           "Traces"
+    IDS_INIFILENAME         "ivm.ini"
+    IDS_PROPSHT_PREFERENCE_CAPTION "Preferences"
+    IDS_NOTIFY_NEW_EVENTS   "You have new Ingres messages !"
+    IDS_EVM_STARTSTOP_NORMAL 
+                            "Normal Start/Stop Notification\nDescription of normal Start/Stop notification"
+    IDS_EVM_STARTSTOP_PARAM "Use Start/StopParameters\nDescription of using Start/Stop parameters"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_EXPAND_ALL           "Expand All Branches\nExpand All Branches"
+    ID_START                "Start\nStart"
+    ID_STOP                 "Stop\nStop"
+    ID_HALT_PROGRAM         "Exit Ivm\nExit Ivm"
+    ID_ACTIVATE_PROGRAM     "Activate Ivm\nActivate Ivm"
+    ID_IGNORE               "Cancel\nCancel"
+    ID_PREFERENCE           "Preferences\nPreferences"
+    ID_CONFIGURE            "Configure the selected item\nConfigure the Selected Item"
+    ID_CALLAPSE_ALL         "Collapse all\nCollapse all."
+    ID_COLLAPSE_ALL         "Collapse All Branches\nCollapse All Branches"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VISUALDBA            "Visual DBA\nVisual DBA"
+    ID_DISPLAY              "Display the Events of this Category\nDisplay "
+    ID_NOTIFY               "Display\nDisplay"
+    ID_ADD_FOLDER           "Add New Folder\nNew Folder"
+    ID_DROP_FOLDER          "Delete\nDelete"
+    ID_MESSAGE_SETTING      "Categories and Notification Levels\nCategories and Notification Levels"
+    ID_ALERT                "Alert\nAlert"
+    ID_DISCARD              "Discard\nDiscard"
+    ID_FIND                 "Find\nFind"
+    ID_START_CLIENT         "Start Client Installation\nStart Client Installation"
+    ID_MESSAGE_DESCRIPTION  "Ingres Message Explanation Window\nIngres Message Explanation"
+    ID_NETWORKUTILITY       "Ingres Network Utility\nIngres Network Utility"
+    ID_SQLQUERY             "Ingres Visual SQL\nIngres Visual SQL"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_EVM_OTHER           "Other\nDescription of Other Categories"
+    IDS_EVM_BRIDGE          "Bridge\nDescription of Bridge Category"
+    IDS_EVM_DBMS            "DBMS\nDescription of DBMS Category"
+    IDS_CORNER_R_NORMAL     "Ingres [%s]  - Scanning ..."
+    IDS_CORNER_R_NORMAL_DBA "DBA Tools %s - Scanning ..."
+    IDS_CORNER_R_STOPPED    "Ingres [%s]  - Stopped"
+    IDS_CORNER_R_STOPPED_DBA 
+			    "DBA Tools %s  - Stopped"
+    IDS_CORNER_R_STARTED    "Ingres [%s] - Started"
+    IDS_CORNER_R_STARTED_DBA 
+			    "DBA Tools %s - Started"
+    IDS_CORNER_R_STARTEDMORE "Ingres [%s]   - Started > default count"
+    IDS_CORNER_R_STARTEDMORE_DBA 
+			    "DBA Tools %s - Started > default count"
+    IDS_CORNER_R_HALFSTARTED "Ingres [%s]   - Partially started"
+    IDS_CORNER_R_HALFSTARTED_DBA 
+			    "DBA Tools %s - Partially started"
+    IDS_CORNER_N_NORMAL     "Ingres [%s]   - Not ready"
+    IDS_CORNER_N_NORMAL_DBA "DBA Tools %s - Not ready"
+    IDS_CORNER_N_STOPPED    "Ingres [%s]  - Stopped - Unread notified events"
+    IDS_CORNER_N_STOPPED_DBA 
+			    "DBA Tools %s - Stopped - Unread notified events"
+    IDS_CORNER_N_STARTED    "Ingres [%s]   - Started - Unread notified events"
+    IDS_CORNER_N_STARTED_DBA 
+			    "DBA Tools %s - Started - Unread notified events"
+    IDS_CORNER_N_STARTEDMORE 
+                            "Ingres [%s]  - Started > default count - Unread notified events"
+    IDS_CORNER_N_STARTEDMORE_DBA 
+                            "DBA Tools %s - Started > default count - Unread notified events"
+    IDS_CORNER_N_HALFSTARTED 
+                            "Ingres [%s]   - Partially started - Unread notified events"
+    IDS_CORNER_N_HALFSTARTED_DBA 
+                            "DBA Tools %s - Partially started - Unread notified events"
+    IDS_NEW_FOLDER          "New Folder"
+    IDS_MAINTOOLBAR_TITLE   "Ingres Visual Manager"
+    IDS_VARIABLE_NOTSET     "<not set>"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_HEADER_PARAMETER    "Parameter"
+    IDS_HEADER_VALUE        "Value"
+    IDS_HEADER_DESCRIPTION  "Description"
+    IDS_HEADER_SYSTEM       "System"
+    IDS_HEADER_USER         "User"
+    IDS_NOVARAIABLE_DESCRIPTION "This environment variable is not documented"
+    IDS_HEADER_EV_DATE      "Date/Time"
+    IDS_HEADER_EV_COMPONENT "Component"
+    IDS_HEADER_EV_NAME      "Configuration Name"
+    IDS_HEADER_EV_INSTANCE  "Instance"
+    IDS_HEADER_EV_TEXT      "Message"
+    IDS_HEADER_EXTRA        "Extra"
+    IDS_HEADER_STAT_MESSAGE "Message"
+    IDS_HEADER_STAT_COUNT   "Count"
+    IDS_HEADER_STAT_GRAPH   "Graph"
+    IDS_TAB_STATISTIC       "Events Statistics"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_II_BIND_SVC_xx      "Bind address for Ingres tools connections to Enterprise Access."
+    IDS_II_C_COMPILER       "<n/a>"
+    IDS_II_CHARSETxx        "Character set used for string operations."
+    IDS_II_CHECKPOINT       "Default checkpoint location."
+    IDS_II_CLIENT           """TRUE"" for client installations."
+    IDS_II_COLLATION        "Collation sequence when a database is created."
+    IDS_II_CONFIG           "Full file specification of Ingres files directory during installation."
+    IDS_II_CONNECT_RETRIES  "number[d|D]  - number of times an application will retry a connection before returning an error. Flags ""d"" or ""D"" cause a delay before the retry."
+    IDS_II_DATABASE         "Default database location."
+    IDS_II_DBMS_LOG         "Location of the log file containing DBMS server specific error messages."
+    IDS_II_DIRECT_IO        "<n/a>"
+    IDS_II_DUAL_LOG         "Root directory of the dual log."
+    IDS_II_DUAL_LOG_NAME    "Dual log file name."
+    IDS_II_DUMP             "Default location of the dump log files used in on-line backup."
+    IDS_II_ERSEND           "<n/a>"
+    IDS_II_GCNxx_PORT       "Connect address of the local installation's name server."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_II_INSTALLATION     "2 character code used to define a particular installation. This code is set during installation."
+    IDS_II_JOURNAL          "Default journal location."
+    IDS_II_LOG_DEVICE       "<n/a>"
+    IDS_II_LOG_FILE         "<n/a>"
+    IDS_II_LOG_FILE_NAME    "Log file name."
+    IDS_II_MSGDIR           "Directory containing error and information messages."
+    IDS_II_NUM_SLAVES       "<n/a>"
+    IDS_II_TIMEZONE_NAME    "World time zone that determines the installation’s location for timing purposes."
+    IDS_ING_SYSTEM_SET      "Start-up file of set commands to be executed whenever a user connects to the DBMS server via an application, an Ingres/Tool, or a Terminal Monitor."
+    IDS_VEC                 "<n/a>"
+    IDS_DBNAME_ING          "<n/a>"
+    IDS_DBNAME_SQL_INIT     "<n/a>"
+    IDS_II_ABF_RUNOPT       "<n/a>"
+    IDS_II_AFD_TIMEOUT      "Number of seconds before timeout in Vision’s Application Flow Diagram."
+    IDS_II_APPLICATION_LANGUAGE 
+                            "Language used by ABF to translate string constants."
+    IDS_II_DATE_FORMAT      "US (default) (dd-mmm-yyyy), ISO (yymmdd), MULTI NATIONAL (dd/mm/yy), SWEDEN or FINLAND (yyyy-mm-dd), GERMAN (dd.mm.yy), DMY (dd-mmm-yyyy),  MDY (mmm-dd-yyyy),  YMD (yyyy-mmm-dd)."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_II_DBMS_SERVER      "<to be used only when strictly necessary> DBMS server to which the user’s process will automatically connect, bypassing the name server."
+    IDS_II_DECIMAL          "The one character, (.) or  (,) , used to separate fractional and nonfractional parts of a number. Default value is the period (.), as in ""12.34""."
+    IDS_II_DML_DEF          "Default query language for an installation as SQL or QUEL."
+    IDS_II_EMBED_SET        "<n/a>"
+    IDS_II_FRS_KEYFIND      "Allows users to turn off the keyfind frs function on table fields in read mode."
+    IDS_II_GCA_LOG          "Output destination for II_GCx_TRACE trace information. Can be set to stdio or to the full path to a file."
+    IDS_II_GCx_TRACE        "<n/a>"
+    IDS_II_HELP_EDIT        "If set to any value, adds an extra operation, Edit, to menus encountered in help text screens in the forms systems. The Edit operation enables users to edit the help text in the screen with the text editor defined by ING_EDIT. II_HELP_EDIT is usually defined locally by the individual user."
+    IDS_II_LANGUAGE         "Language used for screen messages, menu items, and prompts. Defined installation wide, with default = English."
+    IDS_II_MONEY_FORMAT     "Format of money output."
+    IDS_II_MONEY_PREC       "Number of digits of precision to be used in the default representation of money data. The default is two digits (for decimal currency). Valid choices are 0, 1, and 2. It is set installation wide."
+    IDS_II_NULL_STRING      "String used by the Terminal Monitor and other Ingres/Tools to represent the null value."
+    IDS_II_PATTERN_MATCH    "Set of pattern matching characters for QBF and the ABF qualification function. These can be SQL-like, QUEL-like, or not set."
+    IDS_II_POST_4GLGEN      "Command to be translated and executed by the Vision product following successful generation of 4GL code. The command is passed the full path name of the 4GL source file just generated."
+    IDS_II_PRINTSCREEN_FILE "Specifies a default file name for the output file of the printscreen function."
+    IDS_II_SQL_INIT         "<n/a>"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_II_SYSTEM           "Parent directory of the Ingres directory."
+    IDS_II_TEMPORARY        "Directory where temporary files used by the Ingres/Tools are created."
+    IDS_II_TERMCAP_FILE     "Alternative termcap file to use."
+    IDS_II_TFDIR            "Directory that the Vision code generator searches for 4GL template files."
+    IDS_II_TM_ON_ERROR      "Action taken when an error occurs in the Terminal Monitor."
+    IDS_II_VNODE_PATH       "<n/a>"
+    IDS_ING_ABFDIR          "Top level directory to contain ABF object libraries and work files."
+    IDS_ING_ABFOPT1         "File, used by ABF, in which additional linker options can be placed."
+    IDS_ING_EDIT            "Default editor invoked by various editor commands."
+    IDS_ING_PRINT           "Default printer command issued by the Print function."
+    IDS_ING_SET             "Quoted string or start-up file of set commands to be executed whenever a user connects to the DBMS server via an application, an Ingres/Tool, or a single-line Terminal Monitor."
+    IDS_ING_SET_DBNAME      "<n/a>"
+    IDS_ING_SHELL           "<n/a>"
+    IDS_INGRES_KEYS         "Mapping file to customize a user’s keyboard layout for use with forms based programs."
+    IDS_INIT_INGRES         "<n/a>"
+    IDS_TERM                "No Description"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TERM_INGRES         "Terminal designation for the terminal upon which you are executing one of the Ingres forms-based products, such as QBF or VIFRED."
+    IDS_II_DATE_CENTURY_BOUNDARY 
+                            "Dictates (see the documentation) the inferred century for a date missing the century on input."
+    IDS_II_CKPTMPL_FILE     "The name of the template file to be used when checkpointing or recovering a database."
+    IDS_II_NUM_OF_PROCESSORS 
+                            "On a single CPU machine, if the server thread is unable to gain access to a semaphore, it must sleep and retry later. On a multiple CPU machine, there is a chance that the thread which holds the semaphore will release it momentarily. Any value greater than 1 will cause the requesting server thread to loop II_MAX_SEM_LOOPS times before sleeping. Normally set to the number of processors."
+    IDS_II_MAX_SEM_LOOPS    "The number of times to loop before sleeping when requesting a semaphore that cannot be granted; only used when II_NUM_OF_PROCESSORS is greater than 1."
+    IDS_II_PF_NODE          "Specifies the vnode name of a remote node to be managed through the Microsoft Windows Performance Monitor. The Ingres Name Server and Communications Server must be active on the Windows System in order to monitor performance."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_HEADER_EV_ALERT     "  !"
+    IDS_TAB_ARCHIVER_LOG    "Archiver Log File"
+    IDS_TAB_RECOVERY_LOG    "Recovery Log File"
+    IDS_PRODUCT_VERSION     "Version %s"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_E_PLEASE_RETYPE_PASSWORD 
+                            "Password is not correct.\nPlease retype the password."
+    IDS_E_CONNECT_SERVICE   "Failed to connect to the Service Control Manager."
+    IDS_E_SERVICE_STATUS    "Cannot query the service status information."
+    IDS_E_GET_SERVICE_NAME  "Cannot get the service's display name."
+    IDS_E_CHANGE_SERVICE_CONF 
+                            "Cannot change the service configuration, \nfail to set password."
+    IDS_W_LOGFILE_CHGD_ALL_UNREAD 
+                            "The errlog.log file has been changed since the last time that IVM was started.\n\nAll messages will be considered unread."
+    IDS_W_MARKERCHANGED_READMSG 
+                            "All messages will be considered as not read, since the version marker for file ivmevent.dat has changed."
+    IDS_E_MORE8000CHARSLINES 
+                            "The errlog.log file is corrupted (contains line(s) with more than 8000 characters).\nMessages will not appear, or not appear correctly in Ingres Visual Manager."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_W_ERRLOG_CHGD_EXTERNALLY 
+                            "The error log file has been changed externally.\nVisual Manager will refresh according to the new file.\n\nAll messages of the new file will be considered as not read."
+    IDS_W_INST_CONFIGNAME_NOEXIST 
+                            "Instance %s (%s) was started under the configuration name %s, which no longer exists. It will be displayed under the ""(default)"" configuration branch, and corresponding logged events will only be available at the root, or %s branch levels."
+    IDS_E_INSTANCE_BELONGS_NO_COMPONENT 
+                            "There are instances (such as %s) that seem to belong to no known component, and attached information was not found in the errlog.log file.\nStopping the installation may result in a problem with such instances."
+    IDS_W_MARKERCHANGED_CATEGORIES 
+                            "The previously stored ""Categories and Notification Levels"" will not be taken into account, because of an incompatible version marker for file ivmmsgct.dat."
+    IDS_MSG_FAIL_INITIALIZE_DATA 
+                            "Cannot initialize Ingres Visual Manager data !\nThe application will terminate."
+    IDS_MSG_IVM_ALREADY_RUNNING 
+                            "An instance of Ingres Visual Manager is already running."
+    IDS_MSG_II_SYSTEM_NOT_DEFINED "II_SYSTEM is not defined."
+    IDS_MSG_NAME_SERVER_ALREADY_RUNNING "The Name Server is already running."
+    IDS_MSG_UNABLE_RUN_DBMSxIIGCN 
+                            "Unable to start DBMS server, since the Name Server process is not running."
+    IDS_MSG_UNABLE_RUN_DBMSxIIRCP 
+                            "Unable to start DBMS server, since the Recovery Server process is not running."
+    IDS_MSG_UNABLE_RUN_ICExIIDBMS 
+                            "Unable to start ICE Server, since no DBMS Server processes could be found in this installation."
+    IDS_MSG_UNABLE_RUN_BRIDGExIIGCC 
+                            "Unable to start Bridge Server, since no Net Server processes could be found in this installation."
+    IDS_MSG_UNABLE_RUN_STARxIIDBMS 
+                            "Unable to start Star Server, since no DBMS Server processes could be found in this installation."
+    IDS_MSG_UNABLE_RUN_STARxIIGCC 
+                            "Unable to start Star Server, since no Net Server processes could be found in this installation."
+    IDS_MSG_UNABLE_RUN_RECOVERYxIIGCN 
+                            "Unable to start Recovery Server, since the Name Server process is not running."
+    IDS_MSG_RECOVER_ALREADY_RUNNING "The Recovery Server is already running."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_REQUIRE_SERVICE "Ingres Service must be running to perform this operation."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_UNABLE_RUN_ARCHIVERxIIGCN 
+                            "Unable to start Archiver Server, since the Name Server process is not running."
+    IDS_MSG_ARCHIVER_ALREADY_RUNNING "The Archiver server is already running."
+    IDS_MSG_UNABLE_RUN_RMCMDxIIDBMS 
+                            "Unable to start a Remote Command Server, since no DBMS Server processes could be found in this installation."
+    IDS_MSG_RMCMD_ALREADY_RUNNING 
+                            "An instance of the Remote Command Server is already running."
+    IDS_MSG_UNABLE_RUN_ORACLExIIGCN 
+                            "Unable to start the ORACLE Gateway, since the Name Server process is not running."
+    IDS_MSG_ORACLE_ALREADY_RUNNING 
+                            "An instance of the ORACLE Gateway is already running."
+    IDS_MSG_UNABLE_RUN_INFORMIXxIIGCN 
+                            "Unable to start the INFORMIX Gateway, since the Name Server process is not running."
+    IDS_MSG_INFORMIX_ALREADY_RUNNING 
+                            "An instance of the INFORMIX Gateway is already running."
+    IDS_MSG_UNABLE_RUN_SYBASExIIGCN 
+                            "Unable to start the SYBASE Gateway, since the Name Server process is not running."
+    IDS_MSG_SYBASE_ALREADY_RUNNING 
+                            "An instance of the SYBASE Gateway is already running."
+    IDS_MSG_UNABLE_RUN_MSSQLxIIGCN 
+                            "Unable to start the MSSQL Gateway, since the Name Server process is not running."
+    IDS_MSG_MSSQL_ALREADY_RUNNING 
+                            "An instance of the MSSQL Gateway is already running."
+    IDS_MSG_UNABLE_RUN_ODBCxIIGCN 
+                            "Unable to start the ODBC Gateway, since the Name Server process is not running."
+    IDS_MSG_ODBC_ALREADY_RUNNING 
+                            "An instance of the ODBC Gateway is already running."
+    IDS_MSG_UNABLE_STOP_INSTALLATION 
+                            "Unable to shut down Ingres as the Name Server is not running or not responding to requests."
+    IDS_MSG_UNABLE_STOP_IIGCNxIIDBMS 
+                            "Unable to stop the Name Server, since some DBMS Server processes are still running."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_UNABLE_STOP_IIGCNxIIGCC 
+                            "Unable to stop the Name Server, since some Net Server processes are still running."
+    IDS_MSG_UNABLE_STOP_IIGCNxGATEWAY 
+                            "Unable to stop the Name Server, since some Gateways are still running."
+    IDS_MSG_IIGCN_NOT_RUNNING "No DBMS Server is running."
+    IDS_MSG_UNABLE_STOP_IIDBMSxRMCMD 
+                            "Unable to stop the DBMS Server, since the Remote Command Server is still running."
+    IDS_MSG_UNABLE_STOP_IIDBMSxICE 
+                            "Unable to stop the DBMS Server, since an ICE Server is still running."
+    IDS_MSG_UNABLE_STOP_IIDBMSxSTAR 
+                            "Unable to stop the DBMS Server, since a Star Server is still running."
+    IDS_MSG_IIDBMS_NOT_RUNNING "No DBMS Server is running."
+    IDS_MSG_ICE_NOT_RUNNING "No ICE server is currently running."
+    IDS_MSG_UNABLE_STOP_NETxBRIDGE 
+                            "Unable to stop the Net Server, since a Bridge Server is still running."
+    IDS_MSG_UNABLE_STOP_NETxSTAR 
+                            "Unable to stop the Net Server, since a Star Server is still running."
+    IDS_MSG_IIGCC_NOT_RUNNING "No NET Server is currently running."
+    IDS_MSG_BRIDGE_NOT_RUNNING "No BRIDGE Server is currently running."
+    IDS_MSG_STAR_NOT_RUNNING "No STAR Server is currently running."
+    IDS_MSG_UNABLE_STOP_RECOVERYxIIDBMS 
+                            "Unable to Stop the Recovery Server, since a DBMS Server is still running."
+    IDS_MSG_UNABLE_STOP_ARCHIVERxIIDBMS 
+                            "Unable to stop the Archiver Server, since a DBMS Server is still running."
+    IDS_MSG_RMCMD_NOT_RUNNING "The Remote Command Server is not running."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_ORACLE_NOT_RUNNING "No ORACLE gateway is running."
+    IDS_MSG_INFORMIX_NOT_RUNNING "No INFORMIX gateway is running"
+    IDS_MSG_SYBASE_NOT_RUNNING "No SYBASE gateway is running"
+    IDS_MSG_MSSQL_NOT_RUNNING "No MSSQL gateway is running."
+    IDS_MSG_ODBC_NOT_RUNNING "No ODBC gateway is running."
+    IDS_MSG_MESSAGE_ALREADY_CLASSIFIED "This message is already classified."
+    IDS_MSG_SCROLL_TO       "Scroll To %d%%"
+    IDS_MSG_UNABLE_RUN_IIGCCxIIGCN 
+                            "Unable to start Net Server, since the Name Server process is not running."
+    IDS_MSG_INGRES_NOT_RUNNING_AS_SERVICE 
+                            "Ingres is not running as a service.\nPlease don't forget to shut it down, before logging out or shutting down the computer."
+    IDS_MSG_EVENTLIMIT_REACHED 
+                            "You have reached the max events limit defined in the Preferences.\nThe oldest messages (possibly including unread messages) will no longer be available.\nYou may consider changing the Preferences.\n"
+    IDS_MSG_UNCLASSIFY_XXX  "Unclassified %s Messages."
+    IDS_MSG_RESERVE_C1      "'/'  is a reserved character."
+    IDS_MSG_CANNOT_CHANGE_LABEL1 
+                            "Cannot change the label.\nItem '%1' already exists."
+    IDS_MSG_MOVE_FOLDER     "Move folder '%1'?"
+    IDS_MSG_MOVE_ITEM       "Do you wish to move the item?"
+    IDS_MSG_ALERTxMOVE_FOLDER 
+                            "Do you wish to change the state to 'Alert' and move the %1 '%2'?"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_ALERTxMOVE_ITEM "Do you wish to change the state to 'Alert' and move the item?"
+    IDS_MSG_ALERT_BRANCHxSUB 
+                            "All messages in the sub-branches will be set to 'Alert'.\nContinue?"
+    IDS_MSG_NOTIFYxMOVE_FOLDER 
+                            "Do you wish to change the state to 'Display' and move the %1 '%2'?"
+    IDS_MSG_NOTIFYxMOVE_ITEM 
+                            "Do you wish to change the state to 'Display' and move the item?"
+    IDS_MSG_NOTIFY_BRANCHxSUB 
+                            "All  messages in the sub-branches will be set to 'Display'.\nContinue?"
+    IDS_MSG_DISCARDxMOVE_FOLDER 
+                            "Do you wish to change the state to 'Discard' and move the %1 '%2'?"
+    IDS_MSG_DISCARDxMOVE_ITEM 
+                            "Do you wish to change the state to 'Discard', and move the item?"
+    IDS_MSG_DISCARD_BRANCHxSUB 
+                            "All messages in the sub-branches will be set to 'Discard'.\nContinue?"
+    IDS_MSG_FOLDER_EXIST_IN_TARGET 
+                            "Target folder already contains folder '%1'."
+    IDS_MSG_CANNOT_DELETE_MULTIPLE_MESSAGES 
+                            "Multiple instances of this message existed.\nCannot delete it if <Show Category> is not checked."
+    IDS_MSG_REMOVE_BRANCHxSUB 
+                            "All messages in the sub-branches will be removed.\nContinue?"
+    IDS_MSG_UNSET_PARAMETER_X "Do you wish to unset parameter %1?"
+    IDS_MSG_IIGCN_MUSTBE_RUNNING 
+                            "The Name Server must be running for this operation."
+    IDS_MSG_IIGCC_MUSTBE_RUNNING 
+                            "A Net Server process is required for this operation."
+    IDS_MSG_STAR_SIGN_IN_ACCOUNT 
+                            "* is a reserved keyword that cannot be used for this test."
+    IDS_MSG_EXTERNAL_TEST_SUCCESS "The External Access Test is Successful."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_EXTERNAL_TEST_FAILED 
+                            "The Test has Failed.\nIf the user name and password are correct, please refer to the ""Creating the Ingres System Administrator's Account"" section in the ""Getting Started"" documentation.\n"
+    IDS_FOLDER_x            "folder"
+    IDS_ITEM_x              "item"
+    IDS_MSG_PROCESS_STARTxSTOP_RUNNING 
+                            "A Start or Stop operation is already in progress."
+    IDS_MSG_ASK2STOP_SERVICE 
+		 "You've asked to stop %1. Do you want to stop the remaining sessions without\nwaiting for currently executing transactions to complete?\n\nSelect No to ensure an orderly shutdown. (Recommended)\nSelect Yes if you do not want to wait or if you are having trouble shutting down the installation."
+    IDS_MSG_ERROR_SETTING_MAXEVENT 
+                            "The minimum value for the ""Max Number of Events"" is 100."
+    IDS_MSG_ERROR_SETTING_SINCEDAY 
+                            "Invalid Value for the ""Since ... days"" parameter."
+    IDS_MSG_ERROR_SETTING_MAXMEMORY 
+                            "Invalid Value for the ""Max Used Memory"" parameter."
+    IDS_MSG_CLOSE_MODALDIALOG "Please close the modal dialog first."
+    IDS_MSG_RUN_INGRES_SERVICE 
+                            "The ""Service Mode"" checkbox has been checked, which will result in Ingres being started as a service.\n\nAre you sure that the Ingres Service password has been setup correctly?\n\n[Select NO to setup the password]"
+    IDS_ALERT               "<Alert>"
+    IDS_NOTIFY              "<Display>"
+    IDS_DISCARD             "<Discard>"
+    IDS_STATES              "<States>"
+    IDS_CATEGORIES          "<Categories>"
+    IDS_UNCLASSIFIED_MESSAGE "<Unclassified Messages>"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INSTALLATION        "Ingres Installation"
+    IDS_THE_INGRES_INST     "the Ingres installation"
+    IDS_WARNING_NOT_ADMINISTRATOR 
+                            "You don't have the Administrator User right, which is required to start the Ingres Service if the DBMS server component is installed.\nContinue?"
+    IDS_WARNING_ON9598EXIT_INSTALLSTARTED 
+                            "Please don't forget to shut down your Ingres installation, before logging out or shutting down the computer."
+    IDS_ERROR_NUMERIC_RANGE "Please enter the number between %1 and %2."
+    IDS_SEARCH_NOTFOUND     "Search string '%1' not found."
+    IDS_SEARCH_END          "You have reached the end of document.\nWould you like to restart searching from the beginning?"
+    IDS_INST_STARTHISTTAB   "Startup Events"
+    IDS_FORCEDITHER         "Allows a user to specify that a colour bitmap be displayed in greyscale."
+    IDS_IIDLDIR             "Specifies the search path for shared libraries."
+    IDS_II_DEBUG_W4GL       "Sets a debugging level. If non-zero then you can use shift+ctrl+rightbtn to enter debug mode. "
+    IDS_II_DOUBLE_CLICK     "Turns double click action off if set to n, N or NO."
+    IDS_II_MATCH_EMPTY_BLANK 
+                            "Forces the arrayobject.find() method to match an empty string with a single blank when set to T."
+    IDS_II_MONOCHROME_DISPLAY "If set, forces the display to monochrome."
+    IDS_II_W4GL_COLOR_TABLE_METHOD 
+                            "Size of the colour table to use with JPEGs. Value between 222 and 999."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_IIW4GL_DEBUG_3GL    "If defined, OpenROAD will produce a trace listing of all 3GL Procedures (defined in the Component Catalog) as they are called during execution. This can be useful for debugging."
+    IDS_II_4GL_DECIMAL      "Specifies the decimal point character for 4GL source. Default value is ""."". Valid values are ""."" and "","". This is different than II_DECIMAL which OpenROAD uses for data representation and database access, so you must set both to completely change the decimal point character."
+    IDS_II_COLORTABLE       "The name of a color table file in the ""files"" directory of the OpenROAD installation. The installation process normally sets II_COLORTABLE_FILE to point to the ""apped.ctb"" file. If neither II_COLORTABLE nor II_COLORTABLE_FILE is given, the default is ""wdepth4.ctb"" or ""wdepth8.ctb"" for Windows and ""depth4.ctb"" or ""depth8.ctb"" for UNIX depending on the pixel depth of the display being used. Displays with fewer than 256 colors (such as 64 or 16) will use the depth4 files, displays with 256 or more will use the depth8 files. Specifying II_COLORTABLE_FILE overrides this variable."
+    IDS_II_FONT_CONVENTION  "Specifies a font convention file that describes mappings for font names. OpenROAD provides these files in the ""files"" directory of the OpenROAD installation."
+    IDS_II_FONT_FILE        "Specifies a font convention file that describes mappings for font names. If this file does not have the suffix "".ff"" or is not located in the ""files"" directory of the OpenROAD installation, specify the path and full file name as the value of II_FONT_FILE."
+    IDS_II_KEYBOARD         "Specifies the name of a keyboard mapping file contained in the ""files"" directory of your OpenROAD installation."
+    IDS_II_KEYBOARD_FILE    "Specifies the full path and file name of a keyboard mapping file that either does not have the default "".kbd"" suffix or does not reside in the ""files"" directory of your OpenROAD installation. Specifying this variable overrides the II_KEYBOARD variable."
+    IDS_II_LIBU3GL          "Specifies the file names of the dynamic-link libraries containing your 3GL procedures. If you specify more than one file, separate file names with semicolons. The path (directory) is optional. It is only needed if the DLL is not in the current directory."
+    IDS_II_SCREEN_HEIGHT_INCHES 
+                            "Specifies the height of the display in inches. If desired, you may use millimeters instead by setting II_SCREEN_HEIGHT_MMS. Setting only one of II_SCREEN_HEIGHT_xxxx or II_SCREEN_WIDTH_xxxx will enable OpenROAD to calculate the other value to preserve the aspect ratio based on the pixel size of the display. These values are used to translate OpenROAD dimensions (given in 1000th of an inch) to screen pixels. You do not need to specify this value. If not given, OpenROAD will calculate the values from the information provided by the windowing system."
+    IDS_II_SCREEN_HEIGHT_MMS "Alternative method of specifying screen height."
+    IDS_II_SCREEN_WIDTH_INCHES 
+                            "Specifies the width of the display in inches. If desired, you may use millimeters instead by setting II_SCREEN_WIDTH_MMS. Setting only one of II_SCREEN_HEIGHT_xxxx or II_SCREEN_WIDTH_xxxx will enable OpenROAD to calculate the other value to preserve the aspect ratio based on the pixel size of the display. These values are used to translate OpenROAD dimensions (given in 1000th of an inch) to screen pixels. You do not need to specify this value. If not given, OpenROAD will calculate the values from the information provided by the windowing system."
+    IDS_II_SCREEN_WIDTH_MMS "Alternative method of specifying screen width. See II_SCREEN_WIDTH_INCHES."
+    IDS_II_W4GLAPPS_DIR     "A path specification for the location of OpenROAD application image files, often used for included applications. If not set, II_W4GLAPPS_SYS is used."
+    IDS_II_W4GLAPPS_SYS     "A path specification for the location of the OpenROAD system image files. If not set, the %II_SYSTEM%\\ingres\\w4glapps directory (under Windows), or $II_SYSTEM/ingres/w4glapps directory (under UNIX) is used. "
+    IDS_II_W4GL_CACHE_LIMIT "Specifies the size, in bytes, of the Source Object Cache. Setting this environment variable causes OpenROAD to free unused objects when the size of the cache exceeds this amount. If you do not set this environment variable, objects are stored in the cache until OpenROAD exits. "
+    IDS_II_W4GL_LINEWIDTHS  "This variable overrides the default settings for LW_MINIMUM, LW_VERYTHIN, LW_THIN, LW_MIDDLE, LW_THICK, and LW_MAXIMUM (and its equivalent, LW_VERYTHICK). The value of this variable must be a list of six values separated by commas. Each value represents its respective line width in pixels. All values within the list must be present, and none can be equal to zero. The list must be in a non-decreasing order. For example, the default values may be specified as 1,3,5,7,9,11, or 1,2,3,4,5,6 or 2,9,9,9,9,20."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_II_W4GL_OPEN_IMAGES "Specifies the maximum number of image files OpenROAD will keep open at a time. Default is 10. If you specify zero, OpenROAD will keep an unlimited number of open image files. Minimum value is 2."
+    IDS_II_COLORTABLE_FILE  "The full path specification of a color table file. If you do not set this, OpenROAD will use II_COLORTABLE instead."
+    IDS_II_FORCE_C_CONVENTION 
+                            "If defined, OpenROAD will always use the C language calling convention when calling your 3GL procedures, regardless of the language setting in the 3GL Procedure component editor. This is necessary for Windows NT. Default is to use the language given by the 3GL Procedure definition."
+    IDS_II_DEFINE_COLORMAP  "Whether or not to define a local colormap for OpenROAD to use. Setting this variable to ""TRUE"" may help if your color bitmap images do not display correct colors. Default is ""FALSE"". Valid values are ""TRUE"" or ""FALSE"""
+    IDS_II_WINDOWEDIT       "Specifies the command template to invoke a system editor in edit mode. This is used to specify a system editor that OpenROAD will use instead of its own script editor for editing scripts. For more information, refer to Using Templates for II_WINDOWEDIT and II_WINDOWVIEW."
+    IDS_II_WINDOWVIEW       "Specifies the command template to invoke a system editor in read-only or view mode. This is used (for a read-only editor) to specify a system editor that OpenROAD will use instead of its own script editor for viewing scripts. For more information, refer to Using Templates for II_WINDOWEDIT and II_WINDOWVIEW."
+    IDS_II_W4GL_USE_PURE_COLORS 
+                            "Specifies whether or not OpenROAD will use dithering to represent colors that are not supported by the underlying windowing system. Valid values are ""NO"", ""no"", ""YES"", ""yes"",""TRUE"", and ""FALSE"". Default is ""FALSE""."
+    IDS_II_VIEW             "Used to specify a system editor that OpenROAD will use instead."
+    IDS_II_W4GL_LOCKS       "Allows you to modify the default number of page locks for an encoding table to any value appropriate to the environment. For example, if frames are small or development is taking place in a single-user environment, the value can be lowered."
+    IDS_II_W4GL_USE_256_COLORS 
+                            "Enables or disables the use of a logical palette by OpenROAD thus enabling or disabling display of 256 color images within your OpenROAD applications. Some video drivers will crash when attempting to display 256 colors with OpenROAD, so this variable is provided to disable this use in order to prevent the crashing. Valid values are ""yes"", ""YES"", ""no"",""NO"", ""TRUE"", and ""FALSE"". Default is ""FALSE"", so you must specifically set this variable to be able to display 256 color images in your OpenROAD applications. "
+    IDS_UNIX_OPERATION_NOT_SUPPORTED 
+                            "This operation is not supported on UNIX platforms."
+    IDS_II_WORK             "Contains temporary files used by Ingres for certain queries (such as sorts, copies, and modifies)."
+    IDS_MSG_UNABLE_RUN_IIJDBCxIIGCN 
+                            "Unable to start a JDBC Server, since the Name Server process is not running."
+    IDS_MSG_UNABLE_STOP_IIGCNxIIJDBC 
+                            "Unable to stop the Name Server, since some JDBC Server processes are still running."
+    IDS_MSG_IIJDBC_NOT_RUNNING "No JDBC Server is currently running."
+    IDS_MSG_FAIL_2_LOCATEDLL "Failed to locate the DLL: '%1'."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_UNABLE_RUN_GATEWAYxIIGCN 
+                            "Unable to start the %s Gateway, since the Name Server process is not running."
+    IDS_MSG_GATEWAY_ALREADY_RUNNING 
+                            "An instance of the %s Gateway is already running."
+    IDS_MSG_GATEWAY_NOT_RUNNING "No %s gateway is running."
+    IDS_GW_PARENTBRANCH     "Gateways"
+    IDS_GW_SINGLE           "Gateway"
+    IDS_MESSAGEDESCRIPTION_CAPTION "Ingres Message Explanation"
+    IDS_MSG_MESSAGE_UNIDENTIFIED "The message is not recognized."
+    IDS_INGRES_ADVANTAGE_TITLE "Ingres"
+    IDS_II_HALF_DUPLEX      "If set to 0 or undefined, this variable enables Net duplex operation for SNA LU6.2 conversations. If set to 1, the Net halfduplex operation is enabled."
+    IDS_II_STAR_LOG         "Location of the log file containing distributed DBMS server specific error messages."
+    IDS_DD_RSERVERS         "Directory hierarchy that is used by the Replicator servers."
+    IDS_CHOOSE_FOLDER       "Please Select a Folder Name:"
+    IDS_MSG_UNABLE_RUN_IIDASVRxIIGCN 
+                            "Unable to start a DASVR Server, since the Name Server process is not running."
+    IDS_MSG_UNABLE_STOP_IIGCNxIIDASVR 
+                            "Unable to stop the Name Server, since some DASVR Server processes are still running."
+    IDS_MSG_IIDASVR_NOT_RUNNING "No DASVR Server is currently running."
+    IDS_MSG_CANNOT_START_IVM 
+                            "Cannot start this instance of IVM (maybe due to the launch of concurrent instances of IVM under different users)."
+END
+
+STRINGTABLE 
+BEGIN
+    ID_IPM                  "Ingres Visual Performance Monitor\nIngres Visual Performance Monitor"
+    ID_IIA                  "Ingres Import Assistant\nIngres Import Assistant"
+    ID_IEA                  "Ingres Export Assistant\nIngres Export Assistant"
+    ID_VCDA                 "Ingres Visual Configuration Differences Analyzer\nIngres Visual Configuration Differences Analyzer"
+    ID_VDDA                 "Ingres Visual Database Objects Differences Analyzer\nIngres Visual Database Objects Differences Analyzer"
+    ID_IJA                  "Ingres Journal Analyzer\nIngres Journal Analyzer"
+    ID_IILINK               "Ingres User Defined Data Type Linker\niilink"
+    ID_PERFORMANCE_WIZARD   "Ingres Performance Monitor Wizard\nIngres Performance Monitor Wizard"
+    ID_INGRES_CACHE         "Monitor Ingres Cache Statistics\nMonitor Ingres Cache Statistics"
+    ID_ERROR_LOG            "Ingres Error Log\nIngres Error Log"
+    ID_README               "Ingres Readme File\nReadme"
+    ID_IGRESDOC_CMDREF      "Command Reference Guide\nP002791E.pdf"
+    ID_IGRESDOC_DBA         "Database Administrator Guide\nP002661E.pdf"
+    ID_IGRESDOC_DTP         "Distributed Transaction Processing User Guide\nP002771E.pdf"
+    ID_IGRESDOC_ESQLC       "Embedded SQL Companion Guide\nP002811E.pdf"
+    ID_IGRESDOC_EQUEL       "Embedded QUEL Companion Guide\nP002821E.pdf"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_IGRESDOC_GS          "Getting Started\nP002611E.pdf"
+    ID_IGRESDOC_ICEUG       "Web Deployment Option User Guide\nP002801E.pdf"
+    ID_IGRESDOC_MG          "Migration Guide\nP002751E.pdf"
+    ID_IGRESDOC_OME         "Object Management Extension User Guide\nP002691E.pdf"
+    ID_IGRESDOC_OAPI        "OpenAPI User Guide\nP002841E.pdf"
+    ID_IGRESDOC_OSQL        "OpenSQL Reference Guide\nP002831E.pdf"
+    ID_IGRESDOC_QUELREF     "QUEL Reference Guide\nP002681E.pdf"
+    ID_IGRESDOC_REP         "Replication Option User Guide\nP002701E.pdf"
+    ID_IGRESDOC_SQLREF      "SQL Reference Guide\nP002671E.pdf"
+    ID_IGRESDOC_STARUG      "Distributed Option User Guide\nP002781E.pdf"
+    ID_IGRESDOC_SYSADM      "System Administrator Guide\nP002651E.pdf"
+    ID_IGRESDOC_QRYTOOLS    "Character-based Querying and Reporting Tools User Guide\nP002731E.pdf"
+    ID_IGRESDOC_UFADT       "Forms-based Application Development Tools User Guide\nP002721E.pdf"
+    ID_ABOUT_ADVANTAGE      "About Ingres\nAbout Ingres"
+    ID_VCBF                 "Ingres Configuration Manager\nIngres Configuration Manager"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "#include ""rctools.h""\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\Ivm.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#include ""afxprint.rc""       // printing/print preview resources\r\n"
+    "#include ""rctools.rc""         // custom controls \r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\Ivm.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "afxprint.rc"       // printing/print preview resources
+#include "rctools.rc"         // custom controls 
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

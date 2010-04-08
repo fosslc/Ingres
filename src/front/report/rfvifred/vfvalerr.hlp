@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vfvalerr.hlp      Help for the Vifred "Error in Validation String" screen
+/#subtopic "Field Validation Examples" vfvalex.hlp
+You are trying to write out a form definition.  However, there is an error
+in the validation string for the field named in the preceding form.
+You should be able to ascertain the error from the description given
+in the form.  You must correct the error before you can successfully 
+save the form definition in the database.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Cancel          Continue editing the form without writing out the
+                        form definition to the database.
+
+        Help            Access the Ingres Help facility.
+
+        End             Quit this form and return to writing out
+                        the form definition.  The error must be corrected
+                        before you can write out the definition.
+                        If you are stuck, and cannot determine what
+                        the error is, simply clear out the validation
+                        check in this form.  You will then be allowed
+                        to write out the form.

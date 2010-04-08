@@ -1,0 +1,23 @@
+#
+# Jamfile file for gl!glf!pm
+#
+# History:
+#	27-jan-2005 (abbjo03)
+#	    Rename pmtest to pmtest2 to avoid conflict with front!st!util.
+
+SubDir ING_SRC gl glf pm ;
+
+IISUBSYS gl glf pm ;
+
+IINOOPTIM pm.c : sgi_us5 ris_u64 ;
+
+IIBINEXE retest : retest.c ;
+IINEEDLIBS retest : PMLIB COMPATLIB ;
+IIUNDEFS retest : II_copyright ;
+
+IIBINEXE pmtest2 : pmtest2.c ;
+IINEEDLIBS pmtest2 : COMPATLIB ;
+
+IILIBRARY COMPATLIB : re.c
+	pm.c ;
+

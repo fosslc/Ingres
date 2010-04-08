@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The Audit Writer DBMS server thread, is used to help move audit records
+ from the shared audit queue to the audit page.   The audit_writer_start
+ value sets the number of buffers which are used in the queue before the 
+ Audit Writer thread starts operating.  This option is only used when
+ ii.*.c2.audit_mechanism is set to INGRES

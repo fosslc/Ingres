@@ -1,0 +1,38 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+With the UPDATE function, you can change or delete existing rows in your 
+JoinDef.  You can invoke the UPDATE function either by specifying the 
+"-mupdate" flag in your command line or by typing the "Update" command 
+in the main Query Execution phase menu.
+
+There are two states in the UPDATE function.  The first state is the QUERY
+state in which you can specify which rows you wish to retrieve to change or
+delete.  Once you enter your query, QBF will display your data to edit. 
+This is called the GO state.
+
+You are now in the GO state of the QBF UPDATE function.  You can browse and 
+edit the your data in this state.
+
+Depress the MENU KEY to see the available commands.  From here you may write
+the changes you have made by selecting the "Save" command, delete the rows 
+you are viewing with the "Delete" command, start a new query without
+writing your changes by typing the "Query" command or leave the UPDATE
+function by typing "Quit".
+
+As in the RETRIEVE and APPEND functions, the menu displayed in the UPDATE
+function is tailored to fit the type of Join Definition you are running
+and the format in which you are displaying your data.  
+
+QBF stores all the changes you make to your data in a temporary buffer as 
+you browse through and edit the data.  Those changes are not written to the
+database until you select the "Save" command.
+
+To summarize, the commands in the UPDATE Function are:
+
+    COMMAND             FUNCTION
+    -------             --------
+    Query               Exit the GO state and return to QUERY state.
+    Delete              Call a submenu to specify what record components are
+                        to be deleted.
+    Save                Write the changes stored in the buffer to INGRES.
+    Help                Print this message.
+    Quit                Leave QBF and return to the operating system

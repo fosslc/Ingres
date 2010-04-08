@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!ijactrl_win
+#
+
+SubDir ING_SRC front vdba ijactrl_win ;
+
+IISUBSYS front vdba ijactrl_win ;
+
+
+IISLN ijactrl.ocx : ijactrl.sln ;

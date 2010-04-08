@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The inbound_limit resource specifies the maximum number of inbound
+  connections which can be supported by a Net server created with this
+  definition.

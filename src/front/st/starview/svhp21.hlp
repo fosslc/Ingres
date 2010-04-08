@@ -1,0 +1,74 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+CRITERIA
+
+Distributed objects are displayed based on the following criteria:
+
+	Node Name		Underlying objects must reside on
+				'Node Name'. Use the NODEHELP command to 
+				change this field.
+				DEFAULT:  *, all nodes.
+
+	Database Name		Underlying objects must belong to
+				local 'Database Name'.  Use the LDBHELP 
+				command to change this field.
+				DEFAULT:  *, all local databases.
+
+	Object Owner    	Underlying objects must be owned by 
+				'Object Owner'. Use the OWNERHELP command to 
+				change this field.
+				DEFAULT: *, all owners.
+
+	Show Views		Display (if 'y') or do not display (if 'n')
+				local views.
+				DEFAULT: 'y'.
+
+	Show Tables		Display (if 'y') or do not display (if 'n')
+				local tables.
+				DEFAULT: 'y'.
+
+	Show System Catalog	Display (if 'y') or do not display (if 'n')
+				system catalogs.	
+				DEFAULT: 'n'.
+
+
+Only distributed objects that meet all the criteria are displayed in 
+the OBJECTS table field.
+
+The Select command saves the current object selection criteria, updates
+the display to meet the new criteria, and returns to the Distributed Database
+Contents form.
+
+The criteria may be modified by :
+
+  1) Using the NODEHELP, LDBHELP, or OWNERHELP commands to modify
+     the node name, local database name, or object owner respectively.
+  
+  2) Changing 'y' to 'n' (or 'n' to 'y') for any of the SHOW 
+     criteria.
+
+  3) Use SELECT to save the new criteria. The OBJECTS table field may change
+     to meet the new criteria.
+
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	Select		Save new object selection criteria, re-display the
+			OBJECTS table field according to the new criteria, and
+			return to the Distributed Database Contents form. 
+
+	NodeHelp	List the nodes of the distributed database, and 
+			allow Node Name criterion to be changed.
+
+	LDBHelp		List the local databases that may be selected, and
+			allow Database Name criterion to be changed.
+
+	OwnerHelp	List all known object owners, and allow Object Owner
+			criterion to be changed.
+
+	Help		Display this screen.
+
+	End		Exit to the Distributed Database Contents form 
+			without changing the selection criteria.
+

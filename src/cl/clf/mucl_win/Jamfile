@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!mucl_win
+#
+
+SubDir ING_SRC cl clf mucl_win ;
+
+IISUBSYS cl clf mucl_win ;
+
+
+IILIBRARY COMPATLIB : mucl.c ;
+

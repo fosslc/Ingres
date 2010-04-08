@@ -1,0 +1,41 @@
+#
+# Manifest file for gl!glf!cx
+#
+# History:
+#	10-dec-2004 (abbjo03)
+#	    Don't build test programs on VMS for now.
+#	20-apr-2005 (devjo01)
+#	    Re-enable cxtest & cxmsgtest.
+#	16-May-2005 (devjo01)
+#	    Add cxppp.c, cxppptest.
+#	12-feb-2008 (joea)
+#	    Add cxdmd.c.
+#
+SubDir ING_SRC gl glf cx ;
+
+IISUBSYS gl glf cx ;
+
+if ! $(NT)
+{
+IIBINEXE cxtest : cxtest.c ;
+IINEEDLIBS cxtest : COMPAT MALLOCLIB ;
+
+IIBINEXE cxmsgtest : cxmsgtest.c ;
+IINEEDLIBS cxmsgtest : COMPAT MALLOCLIB ;
+
+IIBINEXE cxppptest : cxppptest.c ;
+IINEEDLIBS cxppptest : COMPAT MALLOCLIB ;
+
+IILIBRARY COMPATLIB : cxnuma.c cxmsg.c cxinit.c cxinfo.c cxdmd.c
+	cxdlm.c cxdata.c cxcmo.c cxapi.c cxppp.c ;
+
+}
+else
+{
+IILIBRARY COMPATLIB : cxnuma.c cxmsg.c cxinit.c cxinfo.c cxdmd.c
+	cxdlm.c	cxcmo.c	cxapi.c ;
+
+
+IILIBRARY IMPCOMPATLIBDATA : cxdata.c ;
+}
+

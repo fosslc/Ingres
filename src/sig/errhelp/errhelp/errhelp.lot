@@ -1,0 +1,3 @@
+INGLIB:frontmain.obj
+MAINOBJ.obj
+INGLIB:libcompat.olb/library

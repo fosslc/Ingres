@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+ The sqlda_size parameter specifies the default size that the gateway 
+ allocates for a sqlda. The sqlda_size determines the maximum number of 
+ columns allowed in a select list of a query. If more columns are 
+ selected than the value set in sqlda_size, the gateway automatically 
+ releases the current sqlda and allocates a new, larger sqlda to handle 
+ the query result correctly. The sqlda_size setting should be set to 
+ accommodate most queries to save wasted (unused) sqlda memory and to 
+ avoid frequent memory deallocations and reallocations. 
+
+ For example, if an application typically selects more than 50 columns, 
+ set sqlda_size to 50 to save the amount of virtual memory used by 
+ Enterprise Access. 
+
+ Default for sqlda_size is 128. Minimum value is 50. Maximum value is 255.

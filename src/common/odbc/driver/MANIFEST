@@ -1,0 +1,68 @@
+#
+# MANIFEST file for common!odbc!driver
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	20-Jul-2004 (hanje04)
+#	    Remove caiiodbc.rc
+#	18-Aug-2004 (drivi01)
+#	    Added a rule for building odbc driver shared lib.
+#	25-Aug-2004 (drivi01)
+#	    Modified libraries being used for building odbc
+#	    shared library.
+#	7-Aug-2004 (drivi01)
+#	    Added rule for building caiiro35.dll (SHODBCROLIB).
+#	13-Aug-2004 (drivi01)
+#	    Added a rule for compiling files into objects and copying
+#	    those objects to II_SYSTEM/ingres/lib. Rule is windows
+#	    specific to replace IIOBJECTS rule. Cleaned up a build
+#	    process for odbc shared libraries.
+#	23-feb-2005 (abbjo03)
+#	    Build the ODBC shared library on VMS.
+#       19-apr-2005 (loera01)
+#           Read-only ODBC driver is linked against getro.obj, not
+#           getrw.obj.
+#       10-may-2004 (loera01)
+#           Added read-only ODBC driver for VMS.
+
+
+SubDir ING_SRC common odbc driver ;
+
+IISUBSYS common odbc driver ;
+
+
+IILIBRARY ODBCDRIVERLIB : unicode.c transact.c trace.c sql.c
+	results.c prepare.c options.c lock.c info.c execute.c error.c 
+	encrypt.c descript.c convert.c connect.c catalog.c ;
+
+if ! $(NT)
+{
+IIOBJECTS getrw.c getro.c ;
+}
+else
+{
+IILIBOBJECT getrw.c getro.c encrypt.c ;
+}
+if $(VMS)
+{
+    IISHLIBRARY $(SHODBCDRIVERLIB) : $(ODBCLIB) ;
+    IISHLIBRARY $(SHODBCROLIB) : $(ODBCLIB) ;
+}
+
+
+
+if $(NT)
+{
+IISHLIBRARY $(SHODBCDRIVERLIB) : $(ODBCLIB) $(ODBCDRIVERLIB)  $(IMPAPILIB) $(IMPGCFLIB) 
+				 $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(ODBC32LIB) ;
+IINEEDOBJ $(SHODBCDRIVERLIB) : dllmai32.c getrw.c ;
+IINEEDRES $(SHODBCDRIVERLIB) : caiiodbc.res ;
+
+IISHLIBRARY $(SHODBCROLIB) : $(ODBCLIB) $(ODBCDRIVERLIB)  $(IMPAPILIB) $(IMPGCFLIB) 
+				 $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(ODBC32LIB) ;
+IINEEDOBJ $(SHODBCROLIB) : dllmai32.c getro.c ;
+IINEEDRES $(SHODBCROLIB) : caiiodbc.res ;
+				
+}

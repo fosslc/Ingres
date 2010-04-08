@@ -1,0 +1,32 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Unit/Location association&submit=actbuLoc.html` -->
+		<INPUT TYPE="HIDDEN" NAME="action" VALUE="insert">
+		<INPUT TYPE="HIDDEN" NAME="pro" VALUE="<!-- #ICE VAR=`:unit` -->">
+
+		<!-- #ICE FUNCTION=`unit?action=retrieve&unit_id=:unit`
+					 HTML=`<INPUT TYPE="HIDDEN" NAME="name" VALUE=":unit_name">`
+		-->
+
+		<TABLE BORDER=0>
+			<TR>
+				<TD  colspan=2>Please select the location you want to associate :</TD>
+			</TR>
+			<TR>
+				<TD>location: </TD>
+				<TD><SELECT NAME="loc">
+				<!-- #ICE FUNCTION=`ice_locations?action=select`
+					 HTML=`
+					 <OPTION VALUE=":loc_id">:loc_name</OPTION>`
+				-->
+				</SELECT></TD>
+			</TR>
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

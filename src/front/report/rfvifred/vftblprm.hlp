@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This pop-up form is asking you to enter the name of a table in the
+current database.  The columns in the selected table will be used to
+fill in default column descriptors in the table field, one for each
+column in the database table.
+
+Select "ListChoices" if you would like to see a list of available tables.
+You can select from the list rather than typing in a table name.
+
+Once you have entered or selected a table name, select "OK".  If you wish
+to leave this screen without entering a table name, select "Cancel".
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	OK		A table name has been entered.  Return this table
+			to the previous screen.
+
+	Cancel		Cancel this operation and return to the previous
+			screen.
+
+	ListChoices	Display a list of table names from which to choose.
+
+	Help		Display this help file.

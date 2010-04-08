@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  This list specifies the names of databases which can be accessed by
+  DBMS servers created with this definition.  If the list is empty, a
+  DBMS server created with this definition can access all databases.
+  However, connecting directly to a DBMS server (bypassing the name
+  server) defeats this mechanism.

@@ -1,0 +1,9 @@
+#
+# Jamfile file for common!jdbc!java
+#
+
+SubDir ING_SRC common jdbc java ;
+
+IISUBSYS common jdbc java ;
+
+

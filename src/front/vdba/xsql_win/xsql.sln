@@ -1,0 +1,31 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xsql", "xsql.vcproj", "{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		EDBC_Debug|Win32 = EDBC_Debug|Win32
+		EDBC_Release|Win32 = EDBC_Release|Win32
+		Release|Win32 = Release|Win32
+		Unicode Debug|Win32 = Unicode Debug|Win32
+		Unicode Release|Win32 = Unicode Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.Debug|Win32.Build.0 = Debug|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.EDBC_Debug|Win32.ActiveCfg = EDBC_Debug|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.EDBC_Debug|Win32.Build.0 = EDBC_Debug|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.EDBC_Release|Win32.ActiveCfg = EDBC_Release|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.EDBC_Release|Win32.Build.0 = EDBC_Release|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.Release|Win32.ActiveCfg = Release|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.Release|Win32.Build.0 = Release|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.Unicode Debug|Win32.ActiveCfg = Unicode Debug|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.Unicode Debug|Win32.Build.0 = Unicode Debug|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.Unicode Release|Win32.ActiveCfg = Unicode Release|Win32
+		{AEE4AF1E-05A2-46BC-BD38-8E63F6DAD6E8}.Unicode Release|Win32.Build.0 = Unicode Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

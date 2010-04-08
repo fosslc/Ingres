@@ -1,0 +1,39 @@
+#
+# Jamfile file for back!opf!opq
+#
+#       4-apr-2008  (bolke01) 120219
+#          Jamfile was not in sync with the .lot files
+#       20-Oct-2009 (hweho01)
+#          Remove the IINOOPTIM entries that were generated incorrectly.
+
+
+SubDir ING_SRC back opf opq ;
+
+IISUBSYS back opf opq ;
+
+IINOOPTIM opqoptdb.sc : dgi_us5 ;
+
+IIBINEXE statdump : opqstatd.sc ;
+if ! $(VMS)
+{
+   IINEEDLIBS statdump : OPFLIB SHQLIB ULFLIB SHCOMPATLIB SHFRAMELIB ;
+   IINEEDLIBSW statdump : SHEMBEDLIB SHADFLIB ;
+}
+else
+{
+    IINEEDLIBS statdump : OPFLIB LIBQLIB LIBQGCALIB GCFLIB CUFLIB UGLIB AFELIB ADFLIB COMPATLIB ;
+}
+IIBINEXE optimizedb : opqoptdb.sc ;
+if ! $(VMS)
+{
+   IINEEDLIBS optimizedb : OPFLIB SHQLIB ULFLIB SHCOMPATLIB SHFRAMELIB ;
+   IINEEDLIBSW optimizedb : SHADFLIB SHEMBEDLIB ;
+}
+else
+{
+    IINEEDLIBS optimizedb : OPFLIB LIBQLIB LIBQGCALIB GCFLIB CUFLIB UGLIB AFELIB ADFLIB COMPATLIB ;
+}
+
+IILIBRARY OPFLIB : opqutils.sc opqscanf.c ;
+
+IILIBRARY IMPOPFLIBDATA : opqdata.sc ;

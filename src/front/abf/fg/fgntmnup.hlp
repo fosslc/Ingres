@@ -1,0 +1,10 @@
+/#-- Help File: fgntmnup.hlp
+/#-- Menu frame help file.
+This screen allows you to call another frame in the application.
+To call another frame, select the appropriate menu command (other than
+the built-in menu commands described below).
+
+  Help        Get help about this screen.
+  TopFrame    Return to the top frame in the application.
+              (optional menuitem; may not appear)
+  End         Return to the screen that called this one.

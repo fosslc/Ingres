@@ -1,0 +1,845 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+#include "rctools.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_SQLWIZARD_DELETE1 DIALOG  0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Description of Delete Step 1 of 1"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Select the Table or View to delete rows from:",
+                    IDC_STATIC1,127,34,93,17
+    GROUPBOX        "Part 1",IDC_STATIC,123,22,249,40
+    CONTROL         "Table",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,232,28,34,
+                    10
+    CONTROL         "View",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,282,28,31,
+                    10
+    COMBOBOX        IDC_COMBO1,233,42,132,65,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    GROUPBOX        "Part 2",IDC_STATIC,123,64,249,114
+    LTEXT           "Enter the search condition for the delete:",IDC_STATIC2,
+                    128,80,83,25
+    EDITTEXT        IDC_EDIT1,233,78,132,92,ES_MULTILINE | WS_VSCROLL | 
+                    WS_HSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON1,216,78,12,14
+    LTEXT           "Zone of bitmap",IDC_IMAGE_DELETE,7,7,112,196
+END
+
+IDD_SQLWIZARD_INSERT1 DIALOG  0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Description of Insert. Step 1 of 2"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Select the Table or View to insert the data:",
+                    IDC_STATIC1,128,29,108,17
+    GROUPBOX        "Part 1",IDC_STATIC,121,17,262,40
+    CONTROL         "Table",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,266,23,34,
+                    10
+    CONTROL         "View",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,311,23,31,
+                    10
+    COMBOBOX        IDC_COMBO1,268,37,112,65,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    GROUPBOX        "Part 2",IDC_STATIC,121,59,262,77
+    LTEXT           "Select the Columns in which the data will be inserted:",
+                    IDC_STATIC2,128,73,105,25
+    LISTBOX         IDC_LIST1,268,68,111,60,LBS_OWNERDRAWFIXED | 
+                    LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | 
+                    WS_TABSTOP
+    GROUPBOX        "Part 3",IDC_STATIC,121,143,262,45
+    LTEXT           "Choose the method in which the data will be entered:",
+                    IDC_STATIC3,128,156,127,27
+    CONTROL         "Manually Enter the Data",IDC_RADIO3,"Button",
+                    BS_AUTORADIOBUTTON,267,155,106,10
+    CONTROL         "Create a Sub-Select Statement",IDC_RADIO4,"Button",
+                    BS_AUTORADIOBUTTON,267,169,110,10
+    LTEXT           "Zone of bitmap",IDC_IMAGE_INSERT,7,7,109,196
+END
+
+IDD_SQLWIZARD_INSERT2 DIALOGEX 0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Description of Insert. Step 2 of 2"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "Please specify the values for each column:",IDC_STATIC1,
+                    132,24,180,15
+    CONTROL         "List2",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,131,40,252,136,WS_EX_CLIENTEDGE
+    LTEXT           "Zone of bitmap",IDC_IMAGE_FINISH,7,7,118,190
+END
+
+IDD_SQLWIZARD_MAIN DIALOG  0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Choose Type of Statement"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "&Select",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,187,73,
+                    35,10
+    CONTROL         "&Insert",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,187,88,
+                    32,10
+    CONTROL         "&Update",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,187,103,
+                    39,10
+    CONTROL         "&Delete",IDC_RADIO4,"Button",BS_AUTORADIOBUTTON,187,119,
+                    36,10
+    GROUPBOX        "Please Choose an SQL Statement to Build:",IDC_STATIC1,
+                    160,52,175,92
+    LTEXT           "Zone of bitmap",IDC_IMAGE_OPENING,7,7,145,196
+END
+
+IDD_SQLWIZARD_SELECT1 DIALOG  0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Description of Select. Step 1 of 3, Choose Objects"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Please specify the tables and/or views to select data from:",
+                    IDC_STATIC1,121,33,245,17
+    CONTROL         "Include System Objects",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,121,172,86,10
+    LTEXT           "Zone of bitmap",IDC_IMAGE_SELECT,7,7,110,196
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,121,54,128,112
+    CONTROL         "List2",IDC_LIST2,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,255,55,128,112
+END
+
+IDD_SQLWIZARD_SELECT2 DIALOGEX 0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Description of Select. Step 2 of 3, Specify Columns"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "",IDC_STATIC,123,25,260,168,0,WS_EX_TRANSPARENT
+    CONTROL         "All Columns from all tables",IDC_RADIO2,"Button",
+                    BS_AUTORADIOBUTTON,131,11,106,10
+    CONTROL         "Specify Columns:",IDC_RADIO1,"Button",
+                    BS_AUTORADIOBUTTON,131,25,67,10,WS_EX_TRANSPARENT
+    COMBOBOX        IDC_COMBO1,130,58,108,60,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LISTBOX         IDC_LIST1,130,76,108,76,LBS_NOINTEGRALHEIGHT | 
+                    LBS_EXTENDEDSEL | WS_VSCROLL | WS_TABSTOP
+    LISTBOX         IDC_LIST2,269,76,108,76,LBS_NOINTEGRALHEIGHT | 
+                    LBS_EXTENDEDSEL | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      ">>",IDC_BUTTON2,244,104,18,14
+    PUSHBUTTON      "&Up",IDC_BUTTON3,274,155,32,14
+    PUSHBUTTON      "&Down",IDC_BUTTON5,310,155,32,14
+    PUSHBUTTON      "D&elete",IDC_BUTTON6,346,155,30,14
+    PUSHBUTTON      "V",IDC_BUTTON1,130,171,12,14
+    EDITTEXT        IDC_EDIT1,143,171,95,14,ES_AUTOHSCROLL
+    LTEXT           "Result Columns:",IDC_STATIC1,269,64,91,10
+    LTEXT           "Please specify the\ncolumns for each table:",
+                    IDC_STATIC2,130,37,91,17
+    LTEXT           "and / or Expression:",IDC_STATIC3,130,158,106,8
+    LTEXT           "Zone of bitmap",IDC_IMAGE_SELECT,7,7,112,190
+END
+
+IDD_SQLWIZARD_SELECT3 DIALOG  0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Description of Select. Step 3 of 3, Ordering and Criteria"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Order by:",IDC_STATIC1,123,127,68,9
+    LTEXT           "Please specify other components of the select statement:",
+                    IDC_STATIC12,123,12,203,11
+    LISTBOX         IDC_LIST1,191,56,88,38,LBS_NOINTEGRALHEIGHT | NOT 
+                    WS_VISIBLE | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Where:",IDC_STATIC,123,37,27,8
+    PUSHBUTTON      "V",IDC_BUTTON1,151,34,12,12
+    EDITTEXT        IDC_EDIT1,191,34,192,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON2,151,111,12,12
+    LISTBOX         IDC_LIST2,123,140,68,44,LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Up",IDC_BUTTON3,151,63,32,14,NOT WS_VISIBLE
+    PUSHBUTTON      "Down",IDC_BUTTON5,151,79,32,14,NOT WS_VISIBLE
+    CONTROL         "Distinct",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,123,22,64,10
+    CONTROL         "Group by Clause",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,123,53,64,9
+    EDITTEXT        IDC_EDIT2,170,111,213,12,ES_AUTOHSCROLL
+    LTEXT           "Union:",IDC_STATIC,123,114,27,8
+    PUSHBUTTON      "V",IDC_BUTTON9,371,67,12,12,NOT WS_VISIBLE
+    EDITTEXT        IDC_EDIT4,286,81,97,12,ES_AUTOHSCROLL | NOT WS_VISIBLE
+    LTEXT           "Having:",IDC_STATIC3,286,66,27,8,NOT WS_VISIBLE
+    PUSHBUTTON      "Up",IDC_BUTTON10,351,133,32,14
+    PUSHBUTTON      ">>",IDC_BUTTON6,197,145,23,14
+    CONTROL         "List1",IDC_LIST3,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,225,132,123,52
+    PUSHBUTTON      "Down",IDC_BUTTON11,351,149,32,14
+    PUSHBUTTON      "<<",IDC_BUTTON7,197,163,23,14
+    LTEXT           "Zone of bitmap",IDC_IMAGE_FINISH,7,7,110,190
+END
+
+IDD_SQLWIZARD_UPDATE1 DIALOG  0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Description of Update Step 1 of 3"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Select the Table or View to update the data:",
+                    IDC_STATIC1,125,33,108,22
+    GROUPBOX        "Part 1",IDC_STATIC,121,21,262,40
+    CONTROL         "Table",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,242,27,34,
+                    10
+    CONTROL         "View",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,287,27,31,
+                    10
+    COMBOBOX        IDC_COMBO1,243,41,136,65,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    GROUPBOX        "Part 2",IDC_STATIC,121,63,262,110
+    LTEXT           "Choose the Columns in which \nthe data will be updated:",
+                    IDC_STATIC2,125,77,105,25
+    LISTBOX         IDC_LIST1,243,72,135,94,LBS_OWNERDRAWFIXED | 
+                    LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "Zone of bitmap",IDC_IMAGE_UPDATE,7,7,110,190
+END
+
+IDD_SQLWIZARD_UPDATE2 DIALOG  0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Description of Update. Step 2 of 3"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Part 1",IDC_STATIC,123,7,260,98
+    GROUPBOX        "Part 2",IDC_STATIC,123,112,260,78
+    LTEXT           "Specify the search condition for the rows to be updated:",
+                    IDC_STATIC,133,121,230,11
+    PUSHBUTTON      "V",IDC_BUTTON1,133,133,11,14
+    EDITTEXT        IDC_EDIT1,149,133,230,55,ES_MULTILINE | WS_VSCROLL | 
+                    WS_HSCROLL
+    CONTROL         "Specify the Tables and/or Views from which the data is being used:",
+                    IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,133,18,
+                    235,10
+    LTEXT           "Zone of bitmap",IDC_IMAGE_UPDATE,7,7,111,189
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,133,34,120,64
+    CONTROL         "List2",IDC_LIST2,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,259,34,120,64
+END
+
+IDD_SQLWIZARD_UPDATE3 DIALOGEX 0, 0, 390, 210
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Description of Update. Step 3 of 3"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "Enter the expression for each column to be updated:",
+                    IDC_STATIC1,124,23,208,10
+    CONTROL         "List2",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,123,68,260,108,WS_EX_CLIENTEDGE
+    GROUPBOX        "Use the value from other tables",IDC_STATIC,124,34,259,
+                    31
+    COMBOBOX        IDC_COMBO1,130,46,225,81,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    PUSHBUTTON      ">>",IDC_BUTTON1,360,46,18,12
+    LTEXT           "Zone of bitmap",IDC_IMAGE_FINISH,7,7,111,190
+END
+
+IDD_EXPR_AGGREGATE_PARAMETER DIALOG  0, 0, 300, 151
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Aggregate Parameter"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,106,62,187,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON1,81,60,13,14
+    GROUPBOX        "",IDC_STATIC,82,86,84,46
+    CONTROL         "All",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,90,99,24,10
+    CONTROL         "Distinct",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,90,112,
+                    38,10
+    LTEXT           "Function Name",IDC_STATIC1,7,7,286,8
+    LTEXT           "Help 1",IDC_STATIC2,7,20,286,29
+    LTEXT           "Help 2",IDC_STATIC3,7,47,21,8,NOT WS_VISIBLE
+    LTEXT           "Help 3",IDC_STATIC4,7,49,23,8,NOT WS_VISIBLE
+    LTEXT           "Param 1",IDC_STATIC5,7,63,70,8
+END
+
+IDD_EXPR_ANYALLEXIST_PARAMETER DIALOG  0, 0, 300, 151
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Any All Exist Parameter"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,106,62,187,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON1,81,60,13,14
+    LTEXT           "Function Name",IDC_STATIC1,7,7,286,8
+    LTEXT           "Help 1",IDC_STATIC2,7,20,286,34
+    LTEXT           "Help 2",IDC_STATIC3,7,43,24,8,NOT WS_VISIBLE
+    LTEXT           "Help 3",IDC_STATIC4,7,49,24,8,NOT WS_VISIBLE
+    LTEXT           "Param 1",IDC_STATIC5,7,63,70,8
+END
+
+IDD_EXPR_COMPARE DIALOG  0, 0, 300, 151
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Comparison"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,106,62,187,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON1,81,60,13,14
+    GROUPBOX        "",IDC_STATIC,106,77,92,40
+    CONTROL         ">",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,116,85,20,10
+    CONTROL         "<",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,145,85,20,10
+    CONTROL         ">=",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,174,84,23,10
+    CONTROL         "<=",IDC_RADIO4,"Button",BS_AUTORADIOBUTTON,116,100,23,
+                    10
+    CONTROL         "!=",IDC_RADIO5,"Button",BS_AUTORADIOBUTTON,145,99,21,10
+    CONTROL         "=",IDC_RADIO6,"Button",BS_AUTORADIOBUTTON,174,99,20,10
+    EDITTEXT        IDC_EDIT2,106,122,187,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON2,81,120,13,14
+    LTEXT           "Function Name",IDC_STATIC1,7,7,286,8
+    LTEXT           "Help 1",IDC_STATIC2,7,20,286,33
+    LTEXT           "Help 2",IDC_STATIC3,7,52,23,8,NOT WS_VISIBLE
+    LTEXT           "Help 3",IDC_STATIC4,7,45,23,8,NOT WS_VISIBLE
+    LTEXT           "Param 1",IDC_STATIC5,7,63,70,8
+    LTEXT           "Comp Operator",IDC_STATIC6,7,91,87,8
+    LTEXT           "Param 2",IDC_STATIC7,7,124,67,8
+END
+
+IDD_EXPR_DBOBJECT DIALOG  0, 0, 300, 151
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Database Objects"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Function Name",IDC_STATIC1,7,7,286,8
+    LTEXT           "Help 1",IDC_STATIC2,7,20,286,35
+    LTEXT           "Help 2",IDC_STATIC3,7,50,286,8,NOT WS_VISIBLE
+    LTEXT           "Help 3",IDC_STATIC4,7,56,286,8,NOT WS_VISIBLE
+    LISTBOX         IDC_LIST1,7,68,286,76,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_EXPR_FUNCTION_PARAMETER DIALOG  0, 0, 300, 151
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Function Parameters"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,106,62,187,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON1,81,60,13,14
+    EDITTEXT        IDC_EDIT2,106,91,187,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON2,81,89,13,14
+    EDITTEXT        IDC_EDIT3,106,119,187,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON3,81,117,13,14
+    LTEXT           "Function Name",IDC_STATIC1,7,7,286,8
+    LTEXT           "Help 1",IDC_STATIC2,7,20,286,33
+    LTEXT           "Help 2",IDC_STATIC3,16,51,19,8,NOT WS_VISIBLE
+    LTEXT           "Help 3",IDC_STATIC4,7,50,19,8,NOT WS_VISIBLE
+    LTEXT           "Param 1",IDC_STATIC5,7,63,70,8
+    LTEXT           "Param 1 Text",IDC_STATIC6,7,78,58,8
+    LTEXT           "Op 1",IDC_STATIC7,106,78,187,8
+    LTEXT           "Param 2",IDC_STATIC8,7,92,69,8
+    LTEXT           "Param 2 Text",IDC_STATIC9,7,108,69,8
+    LTEXT           "Op 2",IDC_STATIC10,106,108,187,8
+    LTEXT           "Param 3",IDC_STATIC11,7,123,69,8
+END
+
+IDD_EXPR_IN_PARAMETER DIALOG  0, 0, 300, 151
+STYLE DS_SETFONT | WS_CHILD | WS_CAPTION
+CAPTION "In Parameters"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,106,44,109,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON1,81,42,13,14
+    EDITTEXT        IDC_EDIT2,106,60,187,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON2,81,58,13,14
+    LISTBOX         IDC_LIST1,7,83,72,61,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Ins&ert",IDC_BUTTON5,84,83,50,14
+    PUSHBUTTON      "&Add",IDC_BUTTON6,84,98,50,14
+    PUSHBUTTON      "&Replace",IDC_BUTTON7,84,113,50,14
+    PUSHBUTTON      "Re&move",IDC_BUTTON8,84,128,50,14
+    EDITTEXT        IDC_EDIT3,162,108,131,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "V",IDC_BUTTON3,143,107,13,14
+    LTEXT           "Function Name",IDC_STATIC1,7,2,286,8
+    LTEXT           "Help 1",IDC_STATIC2,7,12,286,24
+    LTEXT           "Help 2",IDC_STATIC3,7,33,19,8,NOT WS_VISIBLE
+    LTEXT           "Help 3",IDC_STATIC4,7,34,21,8,NOT WS_VISIBLE
+    LTEXT           "Expression",IDC_STATIC5,7,45,70,8
+    CONTROL         "Sub Query",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,7,60,
+                    48,10
+    CONTROL         "List",IDC_RADIO4,"Button",BS_AUTORADIOBUTTON,7,71,26,10
+    GROUPBOX        "",IDC_STATIC,219,34,74,24,NOT WS_VISIBLE | WS_GROUP
+    CONTROL         "In",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,226,45,21,10
+    CONTROL         "Not In",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,255,45,
+                    33,10
+END
+
+IDD_EXPR_MAIN DIALOG  0, 0, 300, 151
+STYLE DS_SETFONT | WS_CHILD | WS_CAPTION
+CAPTION "Choose Function"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "SQL Component &Category",IDC_STATIC,7,7,106,9
+    LTEXT           "SQL Component N&ame",IDC_STATIC,160,7,106,9
+    LISTBOX         IDC_LIST1,7,21,133,74,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | 
+                    WS_TABSTOP
+    LISTBOX         IDC_LIST2,160,21,133,74,LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Function Name",IDC_STATIC1,7,109,286,8
+    LTEXT           "Help 1",IDC_STATIC2,7,121,286,20
+    LTEXT           "Help 2",IDC_STATIC3,7,140,23,8,NOT WS_VISIBLE
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_SQLWIZARD_DELETE1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_SQLWIZARD_INSERT1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_SQLWIZARD_INSERT2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_SQLWIZARD_MAIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_SQLWIZARD_SELECT1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_SQLWIZARD_SELECT2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_SQLWIZARD_SELECT3, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_SQLWIZARD_UPDATE1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_SQLWIZARD_UPDATE2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_SQLWIZARD_UPDATE3, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 383
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_EXPR_AGGREGATE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 144
+    END
+
+    IDD_EXPR_ANYALLEXIST_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 144
+    END
+
+    IDD_EXPR_COMPARE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 144
+    END
+
+    IDD_EXPR_DBOBJECT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 144
+    END
+
+    IDD_EXPR_FUNCTION_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 144
+    END
+
+    IDD_EXPR_IN_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 2
+        BOTTOMMARGIN, 144
+    END
+
+    IDD_EXPR_MAIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 144
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "#include ""rctools.h""\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 12, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\svrsqlas.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""          // Standard components\r\n"
+    "#include ""rctools.rc""\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_FAIL_TO_LOAD_DLL    "Failed to load the dll %1."
+    IDS_HEADER_COLUMN       "Column"
+    IDS_HEADER_SORT_TYPE    "Sort Type"
+    IDS_SORT_NONE           "(none)"
+    IDS_SORT_ASC            "asc"
+    IDS_SORT_DESC           "desc"
+    IDS_SELECTALL           "<All Columns>"
+    IDS_HEADER_VALUE        "Value"
+    IDS_OWNERxITEM          "[%1].%2"
+    IDS_HEADER_VIEW         "View"
+    IDS_HEADER_OWNER        "Owner"
+    IDS_HEADER_TABLE        "Table"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_H_DATACONV1_BYTE    "Converts the expression to BYTE binary data."
+    IDS_H_DATACONV1_C       "Converts argument to c string."
+    IDS_H_DATACONV1_CHAR    "Converts argument to char string."
+    IDS_H_DATACONV1_DATE    "Converts a c, char, varchar or text string\nto internal date representation."
+    IDS_H_DATACONV1_DECIMAL "Converts any numeric expression to a decimal value."
+    IDS_H_DATACONV1_DOW     "Converts an absolute date into its day of week\n(for example, 'Mon', 'Tue')."
+    IDS_H_DATACONV1_FLOAT4  "Converts the specified expression to float4."
+    IDS_H_DATACONV1_FLOAT8  "Converts the specified expression to float8."
+    IDS_H_DATACONV1_HEX     "Returns the hexadecimal representation of\n the argument string."
+    IDS_H_DATACONV1_INT1    "Converts the specified expression to integer1."
+    IDS_H_DATACONV1_INT2    "Converts the specified expression to smallint."
+    IDS_H_DATACONV1_INT4    "Converts the specified expression to integer."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_H_DATACONV1_LONGBYTE 
+                            "Converts the expression to long byte, binary data."
+    IDS_H_DATACONV1_LONGVARCHAR "Converts the expression to a long varchar."
+    IDS_H_DATACONV1_MONEY   "Converts the specified expression to\ninternal money representation."
+    IDS_H_DATACONV1_OBJECTKEY "Converts the operand to an object_key."
+    IDS_H_DATACONV1_TABLEKEY "Converts the operand to a table_key."
+    IDS_H_DATACONV1_TEXT    "Converts argument to text string."
+    IDS_H_DATACONV1_VARBYTE "Converts argument to byte varying binary data."
+    IDS_H_DATACONV1_VARCHAR "Converts argument to varchar string."
+    IDS_H_NUMERIC_ABS       "Absolute Value of n."
+    IDS_H_NUMERIC_ATAN      "Arctangent of n;\nreturns value from (-pi/2) to pi/2 "
+    IDS_H_NUMERIC_COS       "Cosine of n; \nreturns a value from -1 to 1"
+    IDS_H_NUMERIC_EXP       "Exponential of n."
+    IDS_H_NUMERIC_LOG       "Natural Logarithm of n."
+    IDS_H_NUMERIC_MOD       "n Modulo b."
+    IDS_H_NUMERIC_SIN       "Sine of n;\nreturns a value from -1 to 1."
+    IDS_H_NUMERIC_SQRT      "Square Root of n."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_H_STRING_CHAREXTRACT "Returns the nth byte of c1."
+    IDS_H_STRING_CONCAT     "Concatenates one string to another."
+    IDS_H_STRING_LEFT       "Returns the leftmost len characters of c1."
+    IDS_H_STRING_LENGTH     "Length of c1 without trailing blanks, or \nnumber of chars if variable-length string."
+    IDS_H_STRING_LOCATE     "Returns the location of first occurrence \nof c2 within c1."
+    IDS_H_STRING_LOWERCASE  "Converts all uppercase characters in c1 \nto lowercase."
+    IDS_H_STRING_PAD        "Returns c1 with trailing blanks appended to c1."
+    IDS_H_STRING_RIGHT      "Returns the rightmost len characters of c1."
+    IDS_H_STRING_SHIFT      "Shifts the string nshift places to the \nright or to the left (nshift >0 or <0 )."
+    IDS_H_STRING_SIZE       "Returns the declared size of c1, without removal of trailing blanks."
+    IDS_H_STRING_SQUEEZE    "Compresses white spaces."
+    IDS_H_STRING_TRIM       "Returns c1 without trailing blanks."
+    IDS_H_STRING_NOTRIM     "Retains trailing blanks when placing \na value in a char column."
+    IDS_H_STRING_UPPERCS    "Converts all lowercase characters in c1 \nto uppercase."
+    IDS_H_DATE_DATETRUNC    "Returns a date value truncated \nto the specified unit."
+    IDS_H_DATE_DATEPART     "Returns an integer containing the specified \n(unit) component of the input date."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_H_DATE_GMT          "Converts an absolute date into the GMT \ncharacter equivalent."
+    IDS_H_DATE_INTERVAL     "Converts a date interval into a floating \npoint constant expressed according to (unit)."
+    IDS_H_DATE_DATE         "Returns string giving the date s seconds \nafter January 1, 1970 GMT."
+    IDS_H_DATE_TIME         "Returns string giving the time s seconds \nafter January 1, 1970 GMT."
+    IDS_H_AGG_ANY           "Returns 1 if any row in the table fulfills \nthe where clause, else 0."
+    IDS_H_AGG_COUNT         "Count of occurrences."
+    IDS_H_AGG_SUM           "Column total."
+    IDS_H_AGG_AVG           "Average (sum/count)."
+    IDS_H_AGG_MAX           "Maximum value."
+    IDS_H_AGG_MIN           "Minimum value."
+    IDS_H_IF_IFNULL         "Returns a non-null value v2 when a null \nis encountered for v1, else returns v1."
+    IDS_H_PRED_COMPARISON   "Example : amount > 300 "
+    IDS_H_PRED_LIKE         "Example : name like 'a%'."
+    IDS_H_PRED_BETWEEN      "Between"
+    IDS_H_PRED_IN           "is TRUE if y is equal to one of the values in the \nlist, or returned by the subquery."
+    IDS_H_PRED_ANY          "Example: ... where dept = any(select dno from dept \nwhere floor = 3);"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_H_PRED_ALL          "A predicate using ALL is true if the specified comparison \nis true for all values y returned by the subquery."
+    IDS_H_PRED_EXISTS       "is TRUE if the set returned by the subquery \nis not empty."
+    IDS_H_PRED_ISNULL       "is TRUE if x is a null."
+    IDS_H_PREDCOMB_AND      "true if both predicates are true, \nunknown if one (or both) are unknown."
+    IDS_H_PREDCOMB_OR       "true if one (or both) are true, \nunknown if both are unknown."
+    IDS_H_PREDCOMB_NOT      "Not(true) is false, Not(false) is true, \nand not(unknown) is unknown."
+    IDS_H_DB_COLUMN         "Returns a column of current table."
+    IDS_H_DB_TABLE          "Returns a Table of current database."
+    IDS_H_DB_DATABASE       "Returns a Database of current node."
+    IDS_H_DB_USER           "Returns a User of current node."
+    IDS_H_DB_GROUP          "Returns a Group of current node."
+    IDS_H_DB_ROLE           "Returns a Role of current node."
+    IDS_H_DB_PROFILE        "Returns a Profile of current node."
+    IDS_H_DB_LOCATION       "Returns a Location of current node."
+    IDS_H_SUBSEL            "Enter or build a (sub)select statement \ncan take the place of some expressions in some predicates."
+    IDS_ANIMATE_TITLE_QUERYOBJECT "Querying Objects..."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ASSIST_EXPRESSION   "expression"
+    IDS_ASSIST_OPT_LENGTH   "(optional) length"
+    IDS_ASSIST_OPT_PREC     "(optional) precision"
+    IDS_ASSIST_OPT_SCALE    "(optional) scale"
+    IDS_ASSIST_ARGUMENT     "argument"
+    IDS_ASSIST_STRING       "string"
+    IDS_ASSIST_STRING1      "string1"
+    IDS_ASSIST_STRING2      "string2"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ASSIST_NB_CHARS     "number of characters"
+    IDS_ASSIST_MODULO       "modulo"
+    IDS_ASSIST_OCC_IN_STRING "Occurrence within string"
+    IDS_ASSIST_NB_PLACES    "number of places"
+    IDS_ASSIST_UNIT         "unit"
+    IDS_ASSIST_DATE         "date"
+    IDS_ASSIST_DATE_INTERVAL "date_interval"
+    IDS_ASSIST_CHAR_STRING  "character string"
+    IDS_ASSIST_PREDICATE    "predicate"
+    IDS_ASSIST_CHECKED_ARGS "checked argument"
+    IDS_ASSIST_RETVAL_IFNULL "return value if checked arg null"
+    IDS_ASSIST_PATTERN      "pattern"
+    IDS_ASSIST_ESCAPE_CHAR  "(opt) Escape character"
+    IDS_ASSIST_CHECKED4NULL "checked for null expression"
+    IDS_ASSIST_SELECT_STMT  "Select Statement"
+    IDS_ASSIST_COMP_OPERATOR "comparison operator"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ASSIST_SUBQUERY     "subquery"
+    IDS_ASSIST_NUMBER       "number"
+    IDS_ASSIST_DBAREA       "DBArea"
+    IDS_ASSIST_STO_GROUP    "Stogroup"
+    IDS_ASSIST_COL          "Column"
+    IDS_ASSIST_TABLE        "Table"
+    IDS_ASSIST_DATABASE     "Database"
+    IDS_ASSIST_USER         "User"
+    IDS_ASSIST_GROUP        "Group"
+    IDS_ASSIST_ROLE         "Role"
+    IDS_ASSIST_PROFILE      "Profile"
+    IDS_ASSIST_LOCATION     "Location"
+    IDS_ASSIST_X_RAD        "x (in radians)"
+    IDS_ASSIST_POS_ARG      "(positive) argument"
+    IDS_ASSIST_POSORNULL_X  "(positive or null) x"
+    IDS_ASSIST_INT_RATE     "interest rate"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ASSIST_FUT_VALUE    "future value"
+    IDS_ASSIST_PRES_VALUE   "present value"
+    IDS_ASSIST_PMT          "pmt"
+    IDS_ASSIST_INT          "int"
+    IDS_ASSIST_N            "n"
+    IDS_ASSIST_PRINCIPAL    "principal"
+    IDS_ASSIST_INTEREST     "interest"
+    IDS_ASSIST_PERIODS      "periods"
+    IDS_ASSIST_N_PERIODS    "n. periods"
+    IDS_ASSIST_COST         "cost"
+    IDS_ASSIST_SALVAGE      "salvage"
+    IDS_ASSIST_LIFE         "life"
+    IDS_ASSIST_FV           "fv"
+    IDS_ASSIST_YEAR         "year"
+    IDS_ASSIST_MONTH        "month"
+    IDS_ASSIST_DAY          "day"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ASSIST_PICTURE      "picture"
+    IDS_ASSIST_DATE_STRING  "date string"
+    IDS_ASSIST_HOUR         "hour"
+    IDS_ASSIST_MINUTE       "minute"
+    IDS_ASSIST_SECOND       "second"
+    IDS_ASSIST_TIME         "time"
+    IDS_ASSIST_POS          "pos"
+    IDS_ASSIST_START        "start"
+    IDS_ASSIST_LENGTH       "length"
+    IDS_ASSIST_SCALE        "scale"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_CHANGE_EDIT     "Cannot change edit text"
+    IDS_MSG_CHANGE_COMBO    "Cannot change combo text."
+    IDS_MSG_SORTORDER       "Cannot get the sort order column."
+    IDS_MSG_SQL_ASSISTANT   "Cannot initialize the SQL assistant."
+    IDS_MSG_FAIL_2_QUERY_OBJECT "Cannot query objects."
+    IDS_MSG_FAIL_2_QUERY_TABLE "Cannot query tables."
+    IDS_MSG_FAIL_2_QUERY_VIEW "Cannot query views."
+    IDS_MSG_FAIL_2_GENERATE_STATEMENT 
+                            "Internal error: cannot generate the statement."
+    IDS_MSG_FAIL_2_QUERY_COLUMN 
+                            "Cannot query the columns of the selected table."
+    IDS_MSG_COLUMNS_VALUE   "Not all the columns have values.\nDo you want to continue?"
+    IDS_MSG_FAIL_2_QUERY_TABLExVIEW "Cannot Query Tables and Views."
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "SQL Assistant"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 12, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\svrsqlas.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"          // Standard components
+#include "rctools.rc"
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

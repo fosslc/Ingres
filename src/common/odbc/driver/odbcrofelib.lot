@@ -1,0 +1,129 @@
+!
+! History:
+!    13-Mar-02 (loera01)
+!        Created.
+!	09-may-2003 (abbjo03)
+!	    Increment major/minor version id to 126,0 for 2.6/0305.
+!    11-jun-2004 (loera01)
+!        Removed reference to calic_lib.
+!    02-feb-2007 (upake01)
+!        Commented out entries for SQLColAttributes & SQLColAttributesW
+!    19-oct-1007 (Ralph Loen) Bug 119329
+!        Added getDriverVersion()
+!    31-jan-2008 (Ralph Loen) SIR 119723
+!        Added SQLSetPos().
+!    07-feb-2008 (Ralph Loen) SIR 119723
+!        Added SQLSetScrollOptions().
+!    23-mar-2009 (Ralph Loen) Bug 121838
+!        Add support for SQLGetFunctions().
+!
+IDENT=odbclib
+GSMATCH=LEQUAL,126,0
+SYMBOL_VECTOR=(SQLColumns=PROCEDURE,-
+SQLForeignKeys=PROCEDURE,-
+SQLPrimaryKeys=PROCEDURE,-
+SQLProcedureColumns=PROCEDURE,-
+SQLProcedures=PROCEDURE,-
+SQLSpecialColumns=PROCEDURE,-
+SQLStatistics=PROCEDURE,-
+SQLTables=PROCEDURE,-
+SQLAllocConnect=PROCEDURE,-
+SQLAllocEnv=PROCEDURE,-
+SQLAllocHandle=PROCEDURE,-
+SQLConnect=PROCEDURE,-
+SQLDisconnect=PROCEDURE,-
+SQLDriverConnect=PROCEDURE,-
+SQLFreeConnect=PROCEDURE,-
+SQLFreeEnv=PROCEDURE,-
+SQLFreeHandle=PROCEDURE,-
+SQLColAttribute=PROCEDURE,-
+SQLCopyDesc=PROCEDURE,-
+SQLGetDescField=PROCEDURE,-
+SQLGetDescRec=PROCEDURE,-
+SQLSetDescField=PROCEDURE,-
+SQLSetDescRec=PROCEDURE,-
+SQLError=PROCEDURE,-
+SQLGetDiagField=PROCEDURE,-
+SQLGetDiagRec=PROCEDURE,-
+SQLCancel=PROCEDURE,-
+SQLExecDirect=PROCEDURE,-
+SQLExecute=PROCEDURE,-
+SQLParamData=PROCEDURE,-
+SQLPutData=PROCEDURE,-
+SQLGetInfo=PROCEDURE,-
+SQLGetTypeInfo=PROCEDURE,-
+SQLGetConnectAttr=PROCEDURE,-
+SQLGetConnectOption=PROCEDURE,-
+SQLGetEnvAttr=PROCEDURE,-
+SQLGetStmtAttr=PROCEDURE,-
+SQLGetStmtOption=PROCEDURE,-
+SQLSetConnectAttr=PROCEDURE,-
+SQLSetConnectOption=PROCEDURE,-
+SQLSetEnvAttr=PROCEDURE,-
+SQLSetStmtAttr=PROCEDURE,-
+SQLSetStmtOption=PROCEDURE,-
+SQLAllocStmt=PROCEDURE,-
+SQLBindParameter=PROCEDURE,-
+SQLCloseCursor=PROCEDURE,-
+SQLFreeStmt=PROCEDURE,-
+SQLGetCursorName=PROCEDURE,-
+SQLNativeSql=PROCEDURE,-
+SQLParamOptions=PROCEDURE,-
+SQLPrepare=PROCEDURE,-
+SQLSetCursorName=PROCEDURE,-
+SQLBindCol=PROCEDURE,-
+SPARE,-				! SQLColAttributes
+SQLDescribeCol=PROCEDURE,-
+SQLFetch=PROCEDURE,-
+SQLFetchScroll=PROCEDURE,-
+SQLGetData=PROCEDURE,-
+SQLMoreResults=PROCEDURE,-
+SQLNumParams=PROCEDURE,-
+SQLNumResultCols=PROCEDURE,-
+SQLRowCount=PROCEDURE,-
+SQLEndTran=PROCEDURE,-
+SQLTransact=PROCEDURE,-
+SQLColAttributeW=PROCEDURE,-
+SPARE,-				! SQLColAttributesW
+SQLColumnsW=PROCEDURE,-
+SQLConnectW=PROCEDURE,-
+SQLDescribeColW=PROCEDURE,-
+SQLDriverConnectW=PROCEDURE,-
+SQLErrorW=PROCEDURE,-
+SQLExecDirectW=PROCEDURE,-
+SQLForeignKeysW=PROCEDURE,-
+SQLGetConnectAttrW=PROCEDURE,-
+SQLGetConnectOptionW=PROCEDURE,-
+SQLGetCursorNameW=PROCEDURE,-
+SQLGetDescFieldW=PROCEDURE,-
+SQLGetDescRecW=PROCEDURE,-
+SQLGetDiagFieldW=PROCEDURE,-
+SQLGetDiagRecW=PROCEDURE,-
+SQLGetInfoW=PROCEDURE,-
+SQLGetStmtAttrW=PROCEDURE,-
+SQLGetTypeInfoW=PROCEDURE,-
+SQLNativeSqlW=PROCEDURE,-
+SQLPrepareW=PROCEDURE,-
+SQLPrimaryKeysW=PROCEDURE,-
+SQLProcedureColumnsW=PROCEDURE,-
+SQLProceduresW=PROCEDURE,-
+SQLSetConnectAttrW=PROCEDURE,-
+SQLSetConnectOptionW=PROCEDURE,-
+SQLSetCursorNameW=PROCEDURE,-
+SQLSetDescFieldW=PROCEDURE,-
+SQLSetStmtAttrW=PROCEDURE,-
+SQLSpecialColumnsW=PROCEDURE,-
+SQLStatisticsW=PROCEDURE,-
+SQLTablesW=PROCEDURE,-
+getDriverVersion=PROCEDURE,-
+SQLSetPos=PROCEDURE,-
+SQLSetScrollOptions=PROCEDURE,-
+SQLGetFunctions=PROCEDURE)
+getro.obj
+INGLIB:libodbcdriver.olb/lib
+II_APILIB/share
+II_COMPATLIB/share
+psect_attr=II_ADDRESS_DATA,NOWRT,SHR,LCL
+cluster=II_ADDRESS_DATA
+collect=II_ADDRESS_DATA,II_ADDRESS_DATA
+psect_attr=SQLCA,NOSHR,LCL

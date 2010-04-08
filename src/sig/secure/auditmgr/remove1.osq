@@ -1,0 +1,57 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: remove1
+**
+** Description: Remove registered audit logs
+**
+** History:
+**	17-feb-94 (robf)
+**	   Written
+*/
+
+procedure remove1 (table_name=varchar(32) not null,
+	table_owner=varchar(32) not null) =
+declare
+	yn=char(1) not null;
+	cmd=char(128) not null;
+	errno=integer4 not null;
+
+{
+	set session 
+	add privileges (auditor);
+
+	inquire_sql (errno=errorno);
+	if(errno!=0)
+	then
+		message 'You lack appropriate privileges to perform this operation'
+		with style=popup;
+		return 0;
+	endif;
+	yn=prompt 'Really remove audit file "'+table_name+'" ? [y/n]'
+		with style=popup;
+
+	if lowercase(yn)!='y'
+	then
+		message 'Audit log NOT removed'
+		with style=popup;
+		return 0;
+	endif;
+	cmd='remove table "'+table_owner+'"."'+table_name+'"';
+	execute immediate :cmd;
+	inquire_sql (errno=errorno);
+	if(errno!=0)
+	then
+		message 'Unable to remove audit log.'
+		with style=popup;
+		return 0;
+	endif;
+	message 'Auditlog is removed';
+	sleep  2;
+	set session 
+	with privileges=default;
+	return 1;
+}
+
+

@@ -1,0 +1,120 @@
+<!ELEMENT characterMapping (history?, ((validity|stateful_siso), assignments))>
+
+<!ATTLIST characterMapping
+    id CDATA #REQUIRED
+    version CDATA #REQUIRED
+    description CDATA #IMPLIED
+    contact CDATA #IMPLIED
+    registrationAuthority CDATA #IMPLIED
+    registrationName CDATA #IMPLIED
+    copyright CDATA #IMPLIED
+    bidiOrder (logical|RTL|LTR) "logical"
+    combiningOrder (before|after) "after"
+    normalization (undetermined|neither|NFC|NFD|NFC_NFD) "undetermined"
+>
+
+<!--
+    The stateful_siso element is an alternative to one single validity element,
+    and contains two validity specifications:
+    The single-byte specification followed by the double-byte specification.
+-->
+<!ELEMENT stateful_siso (validity, validity)>
+
+<!ELEMENT history (modified+)>
+<!ELEMENT modified (#PCDATA)>
+<!ATTLIST modified
+    version CDATA #REQUIRED
+    date CDATA #REQUIRED
+>
+
+<!ELEMENT validity (state+)>
+<!ELEMENT state EMPTY>
+<!ATTLIST state
+    type CDATA #REQUIRED
+    next CDATA #REQUIRED
+    s CDATA #REQUIRED
+    e CDATA #IMPLIED
+    max CDATA #IMPLIED
+>
+
+<!ELEMENT assignments (a*, fub*, fbu*, sub1*, range*)>
+<!ATTLIST assignments
+    sub NMTOKENS "1A"
+    sub1 NMTOKEN #IMPLIED
+>
+
+<!ELEMENT a EMPTY>
+<!ATTLIST a
+    b NMTOKENS #REQUIRED
+    u NMTOKENS #REQUIRED
+    c CDATA #IMPLIED
+    v CDATA #IMPLIED
+>
+
+<!ELEMENT fub EMPTY>
+<!ATTLIST fub
+    b NMTOKENS #REQUIRED
+    u NMTOKENS #REQUIRED
+    c CDATA #IMPLIED
+    ru CDATA #IMPLIED
+    rc CDATA #IMPLIED
+    v CDATA #IMPLIED
+>
+
+<!ELEMENT fbu EMPTY>
+<!ATTLIST fbu
+    b NMTOKENS #REQUIRED
+    u NMTOKENS #REQUIRED
+    v CDATA #IMPLIED
+>
+
+<!ELEMENT sub1 EMPTY>
+<!ATTLIST sub1
+    u NMTOKENS #REQUIRED
+    c CDATA #IMPLIED
+    v CDATA #IMPLIED
+>
+
+<!ELEMENT range EMPTY>
+<!ATTLIST range
+    bFirst NMTOKENS #REQUIRED
+    bLast NMTOKENS #REQUIRED
+    uFirst NMTOKENS #REQUIRED
+    uLast NMTOKENS #REQUIRED
+    bMin NMTOKENS #REQUIRED
+    bMax NMTOKENS #REQUIRED
+    v CDATA #IMPLIED
+>
+
+<!-- iso2022 element and sub-elements, lists ISO 2022 announcers and sub-mapping tables -->
+<!ELEMENT iso2022 (default2022?, (escape|si|so|ss2|ss3)+)>
+
+<!-- encoding used in the initial state; if this element is missing, then US-ASCII is the initial encoding -->
+<!ELEMENT default2022 EMPTY>
+<!ATTLIST default2022
+    name NMTOKEN #REQUIRED
+>
+
+<!--
+    sequence attributes contain the hexadecimal byte values of the invocation sequences in a ISO 2022 variant
+    name attribute contain canonical names of embedded encodings
+    and refer to mapping tables outside of the document that defines an ISO 2022 variant
+-->
+
+<!ELEMENT escape EMPTY>
+<!ATTLIST escape
+    sequence NMTOKENS #REQUIRED
+    name NMTOKEN #REQUIRED
+>
+
+<!ELEMENT si (designator+)>
+<!ELEMENT so (designator+)>
+<!ELEMENT ss2 (designator+)>
+<!ELEMENT ss3 (designator+)>
+
+<!ELEMENT designator EMPTY>
+<!ATTLIST designator
+    sequence NMTOKENS #REQUIRED
+    name NMTOKEN #REQUIRED
+>
+

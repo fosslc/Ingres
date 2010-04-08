@@ -1,0 +1,30 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for iievutil
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+*/
+
+/*
+** Default directory: ingres/sig/iievutil
+*/
+
+PART   iievutil
+
+# ifdef VMS
+   BUILD_DIR (jpt_scf_bin)
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!sig!iievutil
+# endif /* VMS */
+   DIRECTORY ingres!sig!iievutil
+      EXECUTABLE iievutil
+# ifdef VMS
+   BUILD_DIR (jpt_scf_src)!sce
+# endif /* VMS */
+      FILE read.me

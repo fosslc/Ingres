@@ -1,0 +1,14 @@
+<SCRIPT language="JavaScript">
+			<!-- #ICE REPEAT FUNCTION=`profile?action=:action&profile_id=:id&profile_name=:name&profile_dbuser=:dbuser&profile_administration=:fadm&profile_security=:fsec&profile_unit=:funit&profile_timeout=:timeout&profile_monitor=:fmonitor`
+					 HTML=`
+			top.Main.item:action(2, 't', 5, 'p', :profile_id, ':profile_name', '<!-- #ICE INCLUDE=``icon_profile.gif`` -->', 'BLACK', 'secProfile.html?profile=:profile_id')
+			if (':action' == 'insert')
+			{
+				top.Main.iteminsert(3, 'p', :profile_id, 'pd', :profile_id, 'database connections', '<!-- #ICE INCLUDE=``icon_dbs.gif`` -->', 'GRAY', 'secProfConns.html?profile=:profile_id', 'yes')
+				top.Main.iteminsert(3, 'p', :profile_id, 'pr', :profile_id, 'roles', '<!-- #ICE INCLUDE=``icon_roles.gif`` -->', 'GRAY', 'secProfRoles.html?profile=:profile_id', 'yes')
+			}`
+			-->
+			top.Main.refresh()
+</SCRIPT>
+
+<!-- #ICE REPEAT INCLUDE=`result.html?submit=&cancel=&object=profile` -->

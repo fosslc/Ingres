@@ -1,0 +1,24 @@
+You are currently in the "output phase" of the Report Writer,
+in which you may scroll through the results of your report.
+
+You may scroll forwards or backwards using your SCROLLDOWN and SCROLLUP
+keys defined in your Key Definition File.  Likewise, you may scroll
+left and right using your SCROLLLEFT and SCROLLRIGHT keys.  Examine
+the Help for Keys if you need to know the current definitions.
+
+In addition, the following menu commands are available for viewing the
+output.
+
+      MENU COMMANDS	SYNOPSIS
+      -------------	--------
+
+      Print       	Send the report to a printer.  You will be prompted 
+			for a printer name, the number of copies and a 
+			file name.  
+
+      File        	Save the report in a file.  You will be prompted 
+			for a file name.  
+ 
+      Help        	Display this Help file.
+     
+      End         	End the execution of the report. 

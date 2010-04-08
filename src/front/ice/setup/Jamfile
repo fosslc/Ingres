@@ -1,0 +1,50 @@
+#
+# Jamfile file for front!ice!setup
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC front ice setup ;
+
+IISUBSYS front ice setup ;
+
+if $(BUILD_ICE)
+{
+
+IIBINEXE makeid : makeid.sc ;
+IINEEDLIBS makeid :  LIBINGRES SHCOMPATLIB ;
+IIUNDEFS makeid :  malloc ;
+
+IIBINEXE regdocs : regdocs.c ;
+IINEEDLIBS regdocs :  C_APILIB DDFLIB ICECLILIB SETUPLIB
+	SHFRAMELIB SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW regdocs : SHEMBEDLIB SHGCFLIB ;
+IIUNDEFS regdocs :  malloc ;
+
+IIBINEXE icevar : icevar.c ;
+IINEEDLIBS icevar :  C_APILIB DDFLIB ICECLILIB SETUPLIB
+	SHFRAMELIB SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW icevar : SHEMBEDLIB SHGCFLIB ;
+IIUNDEFS icevar :  malloc ;
+
+IIBINEXE icesvrloc : icesvrloc.c ;
+IINEEDLIBS icesvrloc :  C_APILIB DDFLIB ICECLILIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW icesvrloc : SHEMBEDLIB SHGCFLIB ;
+IIUNDEFS icesvrloc :  malloc ;
+
+IIBINEXE icedbuser : icedbuser.c ;
+IINEEDLIBS icedbuser :  C_APILIB DDFLIB ICECLILIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW icedbuser : SHEMBEDLIB SHGCFLIB ;
+IIUNDEFS icedbuser :  malloc ;
+
+IIBINEXE deregdocs : deregdocs.c ;
+IINEEDLIBS deregdocs :  C_APILIB DDFLIB ICECLILIB SETUPLIB
+	SHFRAMELIB SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW deregdocs : SHEMBEDLIB SHGCFLIB ;
+IIUNDEFS deregdocs :  malloc ;
+
+IILIBRARY SETUPLIB : readinp.lex ;
+
+}

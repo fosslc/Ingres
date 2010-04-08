@@ -1,0 +1,42 @@
+.\" $Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/each.1,v 1.1 90/03/09 09:18:24 source Exp $
+.TH EACH rti rti "Relational Technology" "Relational Technology"
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+\f(CWeach\fR \- run a single-argument command for each line read from stdin
+.SH SYNTAX
+.ft CW
+each
+.ft I
+command-template
+.ft R
+.SH DESCRIPTION
+.PP
+\f(CWeach\fR reads a list of arguments, one per line,
+from the standard input.  For each of these, the command resulting
+from substituting the argument for `@' in \fIcommand-template\fR is run.
+If \fIcommand-template\fR contains no `@' characters, \fIi.e.\fR, is
+a simple command, the argument is passed to that command.
+.SH EXAMPLES
+.DS
+.nf
+To touch a huge list of files:
+
+.ft CW
+	each touch < flist
+.ft R
+
+To report all locked RCS files in a number of source directories:
+
+.ft CW
+	each 'cd @; rlocks -v RCS/* | sed "s,^,@/,"' < dirlist
+.ft R
+.fi
+.DE
+.SH AUTHOR
+.PP
+Roger Rohrbach
+.SH CAVEATS
+.PP
+The Bourne shell, \f(CW/bin/sh\fR, is used to run commands.
+.SH "SEE ALSO"
+sh(1)

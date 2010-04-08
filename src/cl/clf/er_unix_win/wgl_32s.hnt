@@ -1,0 +1,11 @@
+#
+# OpenROAD makefile generation hints for cl\clf\er_unix_win
+#
+# History:
+#	21-feb-2007 (wridu01)
+#		Ignore all unneeded files for OpenROAD
+#
+ignore = codeexam.c 
+ignore = callexam.c 
+ignore = eritest.c 
+objonly = ercomp.obj 

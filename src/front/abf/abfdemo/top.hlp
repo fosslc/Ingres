@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+              
+
+
+The Top Frame menu options allow you to 
+
+	* Examine the contents and structure of the database.
+
+	* Run the main application to retrieve employee information.
+
+        * Retrieve information on each employee's dependents.
+
+        * Provide reports on the database.
+
+	* Use the system Mail facility.
+

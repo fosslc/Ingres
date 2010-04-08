@@ -1,0 +1,30 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##      05-Apr-2004 (fanra01)
+##          Bug 112091
+##          Replaced ICE with Web Deployment Option
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Documents (Definition)&previous=unitConf.html&next=docCache.html` -->
+
+An HTTP document is defined as the HTML pages and the objects that may be rendered within them.  
+These resources are usually located on a file system and accessed from the HTTP server. References to HTTP 
+documents are aliased with a name that will allow access to the file system without providing the file system 
+structure to the requesting client.
+<p>
+With Ingres Web Deployment Option it is possible to have the HTTP documents stored within a database and these must be made available 
+on demand by requests from the HTTP server.  This introduces two models available via Web Deployment Option:<p>
+<ol>
+<li>Caching of frequently requested documents<p>
+<LI>Referencing a mixture of documents, some stored within a database and others located on the file system
+</ol>
+<p>
+The collective term of HTML pages and their related objects that are managed by the ICE server are known as 
+documents whether they are stored directly on the file system or anywhere else within the Ingres enterprise.
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->    
+##
+## (DO NOT REMOVE)

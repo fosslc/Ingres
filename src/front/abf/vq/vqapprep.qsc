@@ -1,0 +1,695 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<cv.h>
+# include	<er.h>
+# include	<ug.h>
+# include	<adf.h>
+# include	<afe.h>
+# include	<st.h>
+# include	<fmt.h>
+# include	<abclass.h>
+# include	<metafrm.h>
+# include	<ooclass.h>
+# include	<oodefine.h>
+# include       <erfe.h>
+# include       <erug.h>
+# include       "ervq.h"
+# include       "vqloc.h"
+
+/**
+** Name:	vqapprep.qsc - Application report
+**
+** Description:
+**	This file defines:
+**
+**	IIVQdarDisplayAppReport	- display application report
+**
+** History:
+**	11/24/89  (tom)	created
+**	28-aug-92 (blaise)
+**	    Removed the meaningless "batch" field from the report. 
+**	12-oct-93 (connie) Bug #50433
+**		Use a new vqapprepabf.hlp for abf, which doesn't mention
+**		application flow diagram in the text or in the list of subtopic
+**	14-oct-93 (connie)
+**		Renamed vqapprepabf.hlp to vqappabf.hlp since filename can
+**		only be 8 chars long
+**	23-dec-1993 (mgw) Bug #58190
+**		IIabVision is a bool, not a bool*. This improper GLOBALREF
+**		was causing AV on AppReport Help.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototype for rdp_write_partname() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**/
+
+/* # define's */
+
+/* GLOBALDEF's */
+
+/* extern's */
+FUNC_EXTERN STATUS	FEtabfnd();
+FUNC_EXTERN STATUS	IIUFtfeTblFldEdit();
+FUNC_EXTERN STATUS	IIUFtfuTblFldUnload();
+FUNC_EXTERN char	*IIUGdmlStr();
+FUNC_EXTERN i4		IIVQfcsFrameCompSort();
+FUNC_EXTERN VOID	IIVQctlCatToLocal();
+
+GLOBALREF char 		*IIabExename;
+GLOBALREF bool 		IIabVision;
+
+
+/* static's */
+
+APPL *_appl;	/* ptr to the application structure for the current app */
+
+## static char _form[]	= ERx("vqapprep");	/* Form name */
+## static char _tf[]	= ERx("tf");		/* Tablefield name */
+## static char _col[] 	= ERx("col");		/* column name */
+
+static char *afd_line;		/* app flow diagram report line */
+static bool init_vqapprep = FALSE;	/* Have we init'ed this form */
+
+static VOID vq_LoadAppRep();
+static VOID vq_LoadOne();
+static APPL_COMP *vq_FrTop();
+static APPL_COMP **vq_FrList();
+static STATUS vq_TreePrint();
+static STATUS vq_BoxLine();
+static STATUS vq_Load();
+
+
+/*{
+** Name:	IIVQdarDisplayAppRep  - Display application report
+**
+** Description:
+**	The display loop for displaying application report.
+**
+** Inputs:
+**	APPL *appl;	- ptr to the application structure
+**
+** Outputs:
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	11/25/89 (tom)	created
+*/
+VOID
+IIVQdarDisplayAppReport(appl)
+APPL *appl;
+{
+##	char	*msg;
+##	char	title[80];
+
+	/* set static application pointer */
+	_appl = appl;	
+
+	/* Bring up the form */
+	if (!init_vqapprep)
+	{
+		IIARiaForm(_form);
+		init_vqapprep = TRUE;
+	}
+## 	display	_form READ 
+##	initialize
+##	{
+
+	
+		IIUGfmt(title, sizeof(title) - 1, ERget(F_VQ013C_AppRepTitle), 
+			1, IIabExename);
+##		putform(ERx("title_fld") = title); 
+
+##		inittable _form _tf READ 
+		vq_LoadAppRep();
+##	}
+
+##	/* Find a matching pattern */
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(_form, _tf);
+##	}
+
+##	activate menuitem ERget(FE_WriteFile)(expl = ERget(F_FE010E_WriteExpl))
+##	{
+		bool	dummy;
+
+		if (IIUFtfuTblFldUnload(_form, _tf, _col, 
+					&msg, &dummy) != OK)
+		{
+## 			message msg
+##			sleep 2
+		}
+##	}
+##	/* Top of tablefield */
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll _form _tf to 1
+##	}
+##	/* Bottom of tablefield */
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll _form _tf to end
+##	}
+##	/* Display Help */
+##      activate menuitem ERget(FE_Help) 
+##		(expl = ERget(F_VQ007C_AppRepHelpExpl)), FRSkey1
+##      {
+		if (IIabVision )
+			FEhelp(ERx("vqapprep.hlp"),ERget(F_VQ007E_AppRepTitle));
+		else
+			FEhelp(ERx("vqappabf.hlp"),ERget(F_VQ007E_AppRepTitle));
+##      }   
+##      activate menuitem ERget(FE_End) (expl = ERget(F_VQ007D_AppRepEndExpl)), 
+##			  FRSkey3
+##      {
+##		breakdisplay;
+##      }   
+
+}
+
+
+/*{
+** Name:	vq_LoadAppRep  - Load application Report
+**
+** Description:
+**	Load the table field with the application report
+**
+** Inputs:
+**
+** Outputs:
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	11/25/89 (tom)	created
+*/
+static VOID 
+vq_LoadAppRep()
+{
+	char buf[100];
+	char buf2[40];
+	APPL_COMP **fr_list;
+	i4 i;
+	i4 j;
+	i4 count;
+	APPL_COMP *top = vq_FrTop();
+
+	/********************************* application header stuff */
+	STprintf(buf, ERget(S_VQ0029_AppInfo));
+	vq_BoxLine(buf);
+
+	STprintf(buf, ERget(S_VQ002A_AppName), _appl->name);  
+	vq_Load(buf);
+
+	STprintf(buf, ERget(S_VQ002B_AppOwner), _appl->owner);  
+	vq_Load(buf);
+
+	IIVQctlCatToLocal(_appl->create_date, buf2);
+	STprintf(buf, ERget(S_VQ002C_AppCreate), buf2);  
+	vq_Load(buf);
+
+	IIVQctlCatToLocal(_appl->alter_date, buf2);
+	STprintf(buf, ERget(S_VQ002D_AppMod), buf2);  
+	vq_Load(buf);
+
+	STprintf(buf, ERget(S_VQ002E_AppRemark), _appl->short_remark);  
+	vq_Load(buf);
+
+#if 0	
+	/* the version number is an internal thing, and probably 
+	   shouldn't be surfaced to the users */
+	STprintf(buf, ERget(S_VQ002F_AppVersion), _appl->version);  
+	vq_Load(buf);
+#endif
+	STprintf(buf, ERget(S_VQ0030_AppSrcDir), _appl->source);  
+	vq_Load(buf);
+
+	STcopy( IIUGdmlStr(_appl->dml), buf2);
+	STprintf(buf, ERget(S_VQ0031_AppQryLang), buf2);
+	vq_Load(buf);
+
+	if (_appl->start_name && _appl->start_name[0])
+	{
+		STcopy( (_appl->start_proc 
+				? ERget(FE_Procedure) 
+				: ERget(FE_Frame)), 	buf2);
+		STprintf(buf, ERget(S_VQ0032_AppStart), 
+			_appl->start_name, buf2);  
+		vq_Load(buf);
+	}
+
+	STprintf(buf, ERget(S_VQ0033_AppExe), _appl->executable);
+	vq_Load(buf);
+
+	STprintf(buf, ERget(S_VQ0034_AppLinkOpt), _appl->link_file);
+	vq_Load(buf);
+
+	/*************************** application flow diagram */
+
+	if (top != (APPL_COMP*)NULL) /* only if there is an app flow */
+	{
+		STprintf(buf, ERget(S_VQ0036_AppFlow));
+		vq_BoxLine(buf);
+
+		afd_line = ERget(F_VQ0125_AFD_Line);
+
+		STcopy(ERget(S_VQ0037_AppStartup), buf);
+		vq_TreePrint(buf, (OO_OBJECT *)top, 0);
+	}
+
+	/*************************** frame details */
+	STprintf(buf, ERget(S_VQ0038_FrameDetails));
+	vq_BoxLine(buf);
+
+	/* make a list of all frames/procs sorted by name */
+	fr_list = vq_FrList(&count);
+
+	/* loop through the list and report on each one */
+	for (i = 0; i < count; i++)
+	{
+		vq_LoadOne(fr_list[i]);
+
+		/* put out seperation lines except at the end */
+		if (i < count - 1)
+		{
+			buf[0] = EOS;		/* a blank line */
+			vq_Load(buf);
+
+			for (j = 0; j < 40; j++)
+			{
+				buf[j] = ERx('-');
+			}
+			buf[j] = EOS;
+			vq_Load(buf);
+
+			buf[0] = EOS;		/* a blank line */
+			vq_Load(buf);
+			
+		}
+	}
+
+	if (count == 0)		/* report the case where there are no frames */
+	{
+		buf[0] = EOS;		/* a blank line */
+		vq_Load(buf);
+
+		vq_Load(ERget(S_VQ003F_NoFrames));
+
+	}
+	
+	MEfree((PTR)fr_list);
+}
+
+/*{
+** Name:	vq_LoadOne  - Load a frame into table field for a report
+**
+** Description:
+**	Load info on one frame into the table field for a report
+**
+** Inputs:
+**	OO_OBJECT *obj;		- object to report on
+**
+** Outputs:
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	11/26/89 (tom)	created
+*/
+static VOID 
+vq_LoadOne(obj)
+APPL_COMP *obj;
+{
+	char buf[100];
+	char buf2[40];
+	
+
+	STprintf(buf, ERget(S_VQ0039_FrmName), obj->name);  
+	vq_Load(buf);
+
+	STprintf(buf, ERget(S_VQ003A_FrmType), OOpclass(obj->class)->name);
+	vq_Load(buf);
+
+	STprintf(buf, ERget(S_VQ003B_FrmOwner), obj->owner);  
+	vq_Load(buf);
+
+	IIVQctlCatToLocal(obj->create_date, buf2);
+	STprintf(buf, ERget(S_VQ003C_FrmCreate), buf2);
+	vq_Load(buf);
+
+	IIVQctlCatToLocal(obj->alter_date, buf2);
+	STprintf(buf, ERget(S_VQ003D_FrmMod), buf2);  
+	vq_Load(buf);
+
+	STprintf(buf, ERget(S_VQ003E_FrmRemark), obj->short_remark);  
+	vq_Load(buf);
+
+	switch (obj->class)
+	{
+	case OC_MUFRAME:
+	case OC_APPFRAME:
+	case OC_UPDFRAME:
+	case OC_BRWFRAME:
+	case OC_OSLFRAME: 
+	case OC_OLDOSLFRAME: 
+	case OC_RWFRAME:
+	case OC_QBFFRAME: 
+	case OC_GRFRAME: 
+	case OC_GBFFRAME:
+	case OC_HLPROC: 
+	case OC_OSLPROC:
+	case OC_DBPROC:
+		;
+	}
+}
+
+
+/*{
+** Name:	vq_FrTop	- find the top of the application tree
+**
+** Description:
+**	This routine goes through the appplication components looking for the
+**	top of the application and returns it if it is type of frame
+**	which can have menuitems.
+**	
+** Inputs:
+**
+** Outputs:
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	03/31/89 (tom) - created
+*/
+static APPL_COMP * 
+vq_FrTop()
+{
+	register APPL_COMP *comp;
+
+
+	/* if the application starts with a procedure then return null */ 
+	if (_appl->start_proc)
+	{
+		return ((APPL_COMP*)NULL);
+	}
+
+	/* go through all the application components */
+	for (	comp = (APPL_COMP*)_appl->comps;
+		comp != (APPL_COMP*)NULL; 
+		comp = comp->_next
+	    )
+	{
+		/* if it's one of the types compatible with an
+		   application flow diagram.. */
+		switch (comp->class)
+		{
+		case OC_MUFRAME: 
+		case OC_APPFRAME: 
+		case OC_UPDFRAME:
+		case OC_BRWFRAME: 
+			/* ..and the names are equal */
+			if (STequal(comp->name, _appl->start_name))
+			{
+				return (comp);
+			}
+		}
+	}
+
+	return ((APPL_COMP*)NULL);
+} 
+/*{
+** Name:	vq_FrList	- make a list of all the frames and procs
+**
+** Description:
+**	This routine makes a list of all of the frames and procs of the
+**	application. It allocates this list and returns a pointer to
+**	the resulting list. The caller is expected to free the list.
+**	
+** Inputs:
+**	i4 *count; - pointer to caller's counter to be updated.
+**
+** Outputs:
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	03/31/89 (tom) - created
+*/
+static APPL_COMP ** 
+vq_FrList(count)
+register i4  *count;
+{
+	register APPL_COMP *comp;
+	register i4  i;
+	APPL_COMP **array;
+
+
+	/* first go through the application components and count them */
+	comp = (APPL_COMP*)_appl->comps;
+	for (*count = 0; comp != (APPL_COMP*)NULL; comp = comp->_next)
+	{
+		switch (comp->class)
+		{
+		case OC_MUFRAME: 
+		case OC_APPFRAME: 
+		case OC_UPDFRAME:
+		case OC_BRWFRAME: 
+		case OC_OSLFRAME: 
+		case OC_OLDOSLFRAME: 
+		case OC_RWFRAME:
+		case OC_QBFFRAME: 
+		case OC_GRFRAME: 
+		case OC_GBFFRAME:
+		case OC_HLPROC: 
+		case OC_OSLPROC:
+		case OC_DBPROC:
+				(*count)++;
+		}
+	}
+
+	/* if there are no frames then return */
+	if (*count <= 0)
+	{
+		return ((APPL_COMP**)NULL);
+	}
+
+	/* allocate an array to contain the component list */
+	if ( (array = (APPL_COMP**) MEreqmem((u_i4)0, 
+			(u_i4)(*count * sizeof(PTR)), 
+			FALSE, (STATUS*)NULL)) == NULL)
+	{
+		return ((APPL_COMP**)NULL);
+	}
+
+	/* fill in the allocated array */
+	comp = (APPL_COMP*)_appl->comps;
+	for (i = 0; i < *count; comp = comp->_next)
+	{
+		switch (comp->class)
+		{
+		case OC_MUFRAME:
+		case OC_APPFRAME:
+		case OC_UPDFRAME:
+		case OC_BRWFRAME:
+		case OC_OSLFRAME:
+		case OC_OLDOSLFRAME:
+		case OC_RWFRAME:
+		case OC_QBFFRAME:
+		case OC_GRFRAME:
+		case OC_GBFFRAME:
+		case OC_HLPROC:
+		case OC_OSLPROC:
+		case OC_DBPROC:
+			array[i++] = comp; 
+		}
+	}
+
+	/* sort the array of frames */
+	IIUGqsort((char*) array, *count, sizeof(APPL_COMP*), 
+		IIVQfcsFrameCompSort);
+
+	return (array);
+} 
+
+
+/*{
+** Name:	vq_TreePrint  - Recursive descent print of tree
+**
+** Description:
+**	Recursively descend the tree printing the flow diagram.
+**
+** Inputs:
+**	char *mitem;		- menuitem from parent
+**	OO_OBJECT *cur;		- current node in tree
+**	i4 indent;		- indentation level
+**
+** Outputs:
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	11/25/89 (tom)	created
+*/
+static STATUS
+vq_TreePrint(mitem, cur, indent)
+char *mitem;
+OO_OBJECT *cur;
+i4  indent;
+{
+	i4 i;
+	METAFRAME *mf;
+	MFMENU **menu;
+	char *p;
+	/* note: the size of the buffer needed is calculated by the
+		indention (2 cols) * the max nesting (25 levels)
+		+ the length of the menuitem text (32)
+		+ the length of the frame name (32)
+		+ a little for the formating (15)
+		which amounts to less than 150 tops.. */ 
+	char buf[200];
+	
+
+	/* form indentation */
+	for (p = buf, i = indent; i--;)
+	{
+		*p++ = ERx(' ');
+		*p++ = ERx(' ');
+	}
+
+	/* form the line */
+	STprintf(p, afd_line, mitem, OOpclass(cur->class)->name, cur->name);
+
+	vq_Load(buf);
+
+	switch (cur->class)
+	{
+	case OC_MUFRAME:
+	case OC_APPFRAME:
+	case OC_UPDFRAME:
+	case OC_BRWFRAME:
+		mf = ((USER_FRAME*)cur)->mf;
+
+		for (menu = mf->menus, i = 0; i < mf->nummenus; menu++, i++)
+		{
+			vq_TreePrint((*menu)->text, (*menu)->apobj, indent + 1);
+		}
+	}
+}
+
+
+
+/*{
+** Name:	vq_BoxLine - Load a line, and put a box around it
+**
+** Description:
+**	Load a line into table field, and put a box around it.
+**
+** Inputs:
+**	char *line;	- the line to load
+**
+** Outputs:
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	11/25/89 (tom)	created
+*/
+static STATUS
+vq_BoxLine(line)
+char *line;
+{
+	char buf[100];
+	char *p;
+	char *q;
+
+	buf[0] = EOS;		/* a blank line */
+	vq_Load(buf);
+
+	for (p = line, q = buf; *p; p++, *q++ = '-') ;
+	*q = EOS;
+
+	vq_Load(buf);
+	vq_Load(line);
+	vq_Load(buf);
+
+	buf[0] = EOS;		/* a blank line */
+	vq_Load(buf);
+
+}
+
+
+/*{
+** Name:	vq_Load  - Load a line of the app report into table field
+**
+** Description:
+**	Load a line of the application report into the table field.
+**
+** Inputs:
+**	char *line;	- the line to load
+**
+** Outputs:
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	11/25/89 (tom)	created
+*/
+static STATUS
+vq_Load(line)
+## char *line;
+{
+##	loadtable _form _tf (_col = line)
+}

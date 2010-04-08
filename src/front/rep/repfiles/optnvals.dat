@@ -1,0 +1,42 @@
+C	collision_mode	            0	PassiveDetection	Detect simple collision: do not resolve		
+
+C	collision_mode	            1	ActiveDetection	Detect all collisions: do not resolve		
+
+C	collision_mode	            2	BenignResolution	Resolve benign collisions		
+
+C	collision_mode	            3	PriorityResolution	Resolve collision by priority lookup		
+
+C	collision_mode	            4	LastWriteWins	Resolve collisions by last timestamp		
+
+C	error_mode	            0	SkipTransaction	Continue replicating with the next transaction		
+
+C	error_mode	            1	SkipRow	Continue replicating with the next row		
+
+C	error_mode	            2	QuietCDDS	Quiet target CDDS		
+
+C	error_mode	            3	QuietDatabase	Quiet target database		
+
+C	error_mode	            4	QuietServer	Quiet server		
+
+D	is_quiet	            0	Active	Replication is active for this dataset	N	-NQT
+
+D	is_quiet	            1	Quiet	Replication is quieted for this dataset	N	-QIT
+
+D	log_level	            0	Silent	No error/informational logging	Y	-LGL
+
+D	log_level	            1	ErrorMessages	Send Error Messages	Y	-LGL
+
+D	log_level	            2	InformationMessages	Send Error and Informational Messages	Y	-LGL
+
+D	log_level	            3	WarningMessages	Send All Messages	Y	-LGL
+
+D	print_level	            0	Silent	Print no messages to standard screen output	Y	-PTL
+
+D	print_level	            1	Send Error Messages	Print error messages to standard screen output	Y	-PTL
+
+D	print_level	            2	Send errors and info	Sends error messages and informational messages	Y	-PTL
+
+D	print_level	            3	Error/info/warnings	Reports informational, warning and error messages in addition to a debug report to the standard screen output	Y	-PTL
+
+D	read_q_must	         5000	Absolute Memory	Queue Break Must.  This is the absolute number of records thatn can be read into memory.  Memory throttle.  Flag format -QBMnnnnnn. Default value is 5000.	Y	-QBM
+

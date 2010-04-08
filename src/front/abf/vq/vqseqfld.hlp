@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqseqfld.hlp, subtopic 'Sequenced fields' of subtopic 'Append frames' 
+/#-- behind the main VQ Editor help screen.
+/#-- 
+To make the system issue a unique, sequential number each time the user 
+calls the form, you can specify an integer column in the Master table
+as a sequenced field.  (For instance, you could use this to issue an
+order number on an order entry form.)  These rules apply:
+
+  * Only the Master table can have a sequenced field and you can sequence 
+    only one field.
+
+  * The column you specify as a sequenced field does not have to be displayed 
+    as a field on the form.
+
+To specify a sequenced field, type 'sequenced' in the "Assignment/Default" 
+field next to the name of the column.

@@ -1,0 +1,21 @@
+/#--  Copyright (c) 2004 Ingres Corporation 
+/#-- vqapinfo.hlp, subtopic which details application information in the
+/#-- application report.
+/#-- 
+In the application report, the application information section provides
+general information about the application:
+
+  Application Name      The name of the application.
+  Application Owner     The Ingres user that created the application.
+  Creation Date         The date/time that the application was created.
+  Last Modify Date      The date/time that the application was last changed.
+  Short Remark          A comment about the application.
+  Source Directory      The directory area where the source code resides.
+  Query Language        The query language used throughout (SQL or QUEL).
+  Default Start         The name of the frame/procedure that runs first.
+  Default Executable    The name of the file created when the application is
+                        imaged.
+  Link Options File     Flags and qualifiers used when the application is
+                        imaged.
+  Batch                 Indicates whether the application can run in batch
+                        mode.

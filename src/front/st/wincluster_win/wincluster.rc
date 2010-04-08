@@ -1,0 +1,352 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\wincluster.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\wincluster.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_WELCOMEDLG DIALOGEX 0, 0, 360, 204
+STYLE DS_ABSALIGN | DS_SETFONT | DS_SETFOREGROUND | DS_CENTER | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "Welcome to the Ingres Windows Cluster Setup Wizard.\n\nThe Setup Wizard presents a series of easy-to-use dialogs designed to simplify setup of the Ingres High Availability Option for Windows Cluster service.\n\nClick ""Next"" to continue.",
+                    IDC_STATIC,123,29,210,95
+    LTEXT           "200",IDC_IMAGE,7,7,94,187
+END
+
+IDD_INSTALLCODE DIALOGEX 0, 0, 360, 204
+STYLE DS_ABSALIGN | DS_SETFONT | DS_SETFOREGROUND | DS_CENTER | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    EDITTEXT        IDC_INSTALLATIONCODE,249,50,36,12,ES_UPPERCASE | 
+                    ES_AUTOHSCROLL | NOT WS_VISIBLE | NOT WS_TABSTOP
+    CONTROL         "List1",IDC_INSTALLEDLIST,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | 
+                    LVS_NOLABELWRAP | WS_BORDER | WS_TABSTOP,128,87,212,76
+    LTEXT           "200",IDC_IMAGE,7,7,94,189
+    LTEXT           "Please select an installation identifier.",IDC_STATIC,
+                    123,28,183,13
+    LTEXT           "List of existing Ingres Installations:",IDC_STATIC,128,
+                    74,107,8
+END
+
+IDD_WAIT_DIALOG DIALOG  0, 0, 218, 58
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Ingres Setup Wizard"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_CENTER | 
+                    ACS_TRANSPARENT | ACS_AUTOPLAY | WS_TABSTOP,7,7,30,29
+    LTEXT           "Static",IDC_TEXT,46,10,165,40
+END
+
+IDD_CLUSTERPROP DIALOGEX 0, 0, 360, 204
+STYLE DS_ABSALIGN | DS_SETFONT | DS_SETFOREGROUND | DS_CENTER | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "200",IDC_IMAGE,7,7,94,189
+    LTEXT           "Windows Cluster service properties\n\n\nDefine each of the following, then click Next.",
+                    IDC_STATIC,123,28,183,33
+    LTEXT           "Cluster name:",IDC_STATIC,130,82,44,8
+    LTEXT           "Cluster group name:",IDC_STATIC,130,108,64,8
+    LTEXT           "Ingres resource name:",IDC_STATIC,130,134,71,8
+    EDITTEXT        IDC_CLUSTERNAME_EDIT,205,80,115,14,ES_AUTOHSCROLL | 
+                    ES_READONLY | NOT WS_TABSTOP
+    COMBOBOX        IDC_GROUPNAME_COMBO,205,107,115,86,CBS_DROPDOWN | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_RESOURCENAME_COMBO,205,132,115,76,CBS_DROPDOWN | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_SERVICEPASSWORD_EDIT,205,157,115,12,ES_PASSWORD | 
+                    ES_AUTOHSCROLL
+    LTEXT           "Service password:",IDC_STATIC,130,159,59,8
+    LTEXT           "Confirm password:",IDC_STATIC,130,185,58,8
+    EDITTEXT        IDC_CONFIRMPASSWORD_EDIT,205,182,115,12,ES_PASSWORD | 
+                    ES_AUTOHSCROLL
+END
+
+IDD_DEPENDENCYPROP DIALOGEX 0, 0, 360, 204
+STYLE DS_ABSALIGN | DS_SETFONT | DS_SETFOREGROUND | DS_CENTER | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "200",IDC_IMAGE,7,7,94,189
+    LTEXT           "Windows Cluster resource dependencies\n\n\nAdd resource dependencies, then click Next.",
+                    IDC_STATIC,115,27,198,33
+    CONTROL         "",IDC_RESOURCE_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_SORTASCENDING | LVS_NOLABELWRAP | WS_BORDER | 
+                    WS_TABSTOP,115,87,103,109
+    CONTROL         "",IDC_DEPENDENCY_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_SORTASCENDING | LVS_NOLABELWRAP | WS_BORDER | 
+                    WS_TABSTOP,248,87,103,109
+    PUSHBUTTON      "-->",IDC_ADD_BUTTON,224,92,18,14
+    PUSHBUTTON      "<--",IDC_REMOVE_BUTTON,224,113,18,14
+    LTEXT           "Available resources:",IDC_STATIC,115,75,64,8
+    LTEXT           "Dependencies:",IDC_STATIC,248,75,49,8
+END
+
+IDD_FINALPROP DIALOGEX 0, 0, 360, 204
+STYLE DS_ABSALIGN | DS_SETFONT | DS_SETFOREGROUND | DS_CENTER | WS_CHILD
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "Click ""Finish"" to complete setup of the Ingres High Availability Option for Windows Cluster service.\n\nIf you want to review or change any of your cluster settings, click Back.\n\nIf you want to cancel setup and exit the wizard, click Cancel.",
+                    IDC_STATIC,123,29,196,95
+    LTEXT           "200",IDC_IMAGE,7,7,94,187
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_WELCOMEDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 352
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 194
+    END
+
+    IDD_INSTALLCODE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 351
+        VERTGUIDE, 123
+        VERTGUIDE, 128
+        VERTGUIDE, 340
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 196
+    END
+
+    IDD_WAIT_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 211
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 51
+    END
+
+    IDD_CLUSTERPROP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 351
+        VERTGUIDE, 130
+        VERTGUIDE, 205
+        VERTGUIDE, 320
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 196
+    END
+
+    IDD_DEPENDENCYPROP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 351
+        VERTGUIDE, 115
+        VERTGUIDE, 218
+        VERTGUIDE, 224
+        VERTGUIDE, 242
+        VERTGUIDE, 248
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 196
+    END
+
+    IDD_FINALPROP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 352
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 194
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+200                     BITMAP                  "res\\Block01.bmp"
+IDB_SPLASH256           BITMAP                  "res\\ingsplash.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_CLOCK_AVI           AVI                     "res\\clock.avi"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_TITLE               "Ingres High Availability Option Setup Wizard"
+    IDS_ALREADYRUNNING      "Ingres High Availability Option Setup Wizard is already running."
+    IDS_SUPPORTVERSION      "Ingres High Availability Option supports Windows 2000 Advanced Server and Windows Server 2003, Enterprise Edition."
+    IDS_INSTALLERUSAGE      "Ingres High Availability Option Setup Wizard Usage:\n\nwincluster.exe /c  --  To generate a template response file.\nwincluster.exe /r<response file> --  To run in unattended mode using a response file.\nwincluster.exe /l -- To generate a log file in %TEMP%\\ingmsi.log."
+    IDS_AREYOUSURE          "Are you sure you want to exit?"
+    IDS_CANNOTCREATEPROCESS "Launch Windows Installer Failed."
+    IDS_INVALIDINSTALLATIONCODE 
+                            "Select an installation identifier, then click Next."
+    IDS_RESOURCENAME        "Name"
+    IDS_INSTALLATIONID      "Installation ID"
+    IDS_INSTALLPATH         "Install Path (II_SYSTEM)"
+    IDS_RESOURCETYPE        "Resource Type"
+    IDS_NOT_INSTALLATION    "Cannot find the existing installation. This setup program must be run on the Windows Cluster node where Ingres is installed.\n\nSelect an existing installation, then click Next."
+    IDS_NEED_GROUPNAME      "Select an existing cluster group name from the list, or type a name for the new cluster group."
+    IDS_NOT_ADMIN           "You must have administrative rights to complete this setup."
+    IDS_CONFIRMPASSWORD     "The Service Password and Confirm Password do not match.\n"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_NEED_RESOURCENAME   "Select the existing Ingres Service resource from the list, or type a name for the new Ingres Service resource."
+    IDS_INGRESRUNNING       "Your Ingres is currently running. Would you like to shut it down now?"
+    IDS_CONTINUE_SETUP      "The installation will be set up with the High Availability Option for Clusters, and settings from the existing installation will be used. Before performing the setup, you must read and follow the instructions, ""Installing the High Availability Option for Windows Clusters,"" described in the System Reference Guide.\n\nDo you wish to continue?"
+    IDS_INGRESRUNNING2      "The Ingres installation is currently running. You must shut it down before proceeding."
+    IDS_COPYRIGHT           "Copyright © 2005-2010 Ingres Corporation. All Rights Reserved."
+    IDS_UNKNOWN             "unknown"
+    IDS_LICENSE_TO          "This product is licensed to:"
+    IDS_SITEID              "Site ID:"
+    IDS_SETUPCOMPLETE       "Setup completed successfully.\n\nIngres High Availability Option is now available on this cluster node."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_CLUSTEROPEN_ERR     "Cannot get access to the cluster information. %s\nThis setup program must be run on the Windows Cluster node where Ingres is installed, and the Windows Cluster Service must be running on the node."
+    IDS_CLUSTERENUMOPEN_ERR "Cannot get access to enumerate the cluster's group names and resource names. %s"
+    IDS_CLUSTERENUM_ERR     "Error while enumerating the cluster's group names and resource names. %s"
+    IDS_CREATECLUSTER_ERR   "Error while creating the cluster group ""%s"".\n\n%s"
+    IDS_CREATERESOURCE_ERR  "Error while creating the cluster resource ""%s"".\n\n%s"
+    IDS_OPENRESOURCE_ERR    "Cannot open cluster resource ""%s"".\n\n%s"
+    IDS_RESOURCEDEPENDENCY_ERR 
+                            "Error while adding resource dependency ""%s"".\n\n%s"
+    IDS_RESOURCEDEPENDENCYINVALID_ERR 
+                            "Cannot add resource dependency ""%s"".\n\nThe resource dependency must be within the group that contains the Ingres service."
+    IDS_RESOURCEPROPERTY_ERR 
+                            "Error while setting properties for the cluster resource ""%s"".\n\n%s"
+    IDS_RESOURCEPRIVPROPERTY_ERR 
+                            "Error while setting private properties for the cluster resource ""%s"".\n\n%s"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_RESOURCEREGISTRY_ERR 
+                            "Error while adding registry replication keys for the cluster resource ""%s"".\n\n%s"
+    IDS_RENAMEERROR         "Error while renaming %s.\n\n%s"
+    IDS_PMERROR             "Error accessing config.dat. %s"
+    IDS_OPENWERROR          "Unable to open %s for writing."
+    IDS_CONFIGWRITEERROR    "Unable to write config.dat in the ""files"" directory."
+    IDS_GETUSERNAME_ERR     "Error while trying to obtain the current user name."
+    IDS_SERVICEERROR        "Error from the Service Control Manager while creating the service ""%s"".\n\n%s"
+    IDS_ERROR_ACCESS_DENIED "This setup does not have the SC_MANAGER_CREATE_SERVICE access right."
+    IDS_ERROR_DUPLICATE_SERVICE_NAME 
+                            "The service display name ""%s"" already exists in the service control manager database either as a service name or as another display name."
+    IDS_ERROR_INVALID_NAME  "The specified service name ""%s"" is invalid."
+    IDS_ERROR_INVALID_SERVICE_ACCOUNT 
+                            "The user account name ""%s"" does not exist."
+    IDS_ERROR_SCM_ACCESS_DENIED 
+                            "Access to the Service Control Manager was denied.\n%s"
+    IDS_ERROR_SCM           "Error while opening the Service Control Manager.\n\n%s"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\wincluster.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

@@ -1,0 +1,59 @@
+<!--
+##
+## History:
+##    01-Jun-2001 (peeje01)
+##        Created
+##
+-->
+<HTML>
+<HEAD>
+<TITLE>
+            Building ICESAX.DLL
+</TITLE>
+<BODY>
+<H1>
+            Building ICESAX.DLL
+</H1>
+<H2>
+    Introduction:
+</H2>
+The decision has been made to rename the xerces dynamic link library so as
+to avoid possible conflicts with other SAX parsers in the field. It will also
+discourage people dropping other versions of the xerces library on top of
+the one supplied for ICE, we hope.
+
+<H2>
+    Building the ICE SAX DLL:
+</H2>
+<H3>
+    Getting the Apache Xerces C SAX Parser
+</H3>
+Visit <A HREF="http://www.apache.org">apache</A> web site and <A HREF="http://xml.apache.org/dist/xerces-c/stable/">download</A> the
+<I>source code</I> for the Xerces C++ SAX Parser. ICETranslate has been designed to
+work with <B>version 1.4.0</B> of the parser.
+<H3>
+    Special Build Instructions for the Xerces Parser
+</H3>
+To build the dll on in MS VC on NT you open the project xerces-all. 
+<UL>
+<LI>Go to <B>Project Settings</B>
+<LI>Ensure that '<B>All Configurations</B>' is selected in the drop
+down on the Left Hand Pane
+<LI>In the Right Hand Pane select Tab <B>Link</B>
+<LI>In the edit box '<B>Output File</B>' specify target name to be '<B>icesax.dll</B>'
+</UL>
+
+<H2>
+    Debugging Gotcha:
+</H2>
+<P>
+To avoid debugging woes click the tab <B>C++</B>, select <B>Code Generation</B> from the combo box. Then ensure that the '<B>Multithreaded DLL</B>' has been
+selected for '<B>All Configuration</B>' and '<B>Multithreaded debug DLL</B>' for '<B>Debug</B>'
+in Project Settings.
+</P>
+<P>
+Note that there are problems using a debug enabled ICETranslate with a
+non-debug library. If you need to debug the executable, you will need to get
+hold of the XERCES <A HREF="http://xml.apache.org/dist/xerces-c/stable/">source code</A> and build it for debug.
+</P>
+<BODY>

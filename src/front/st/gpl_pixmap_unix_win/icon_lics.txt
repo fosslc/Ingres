@@ -1,0 +1,58 @@
+File: icon_lics.txt
+
+Description:
+
+	List of "free" icons, their licenses and where they were obtained from,
+	to be used as replacement for the icons that CANNOT be distributed
+	with the Community version of Ingres under GPL.
+
+History:
+	26-July-2007 (hanje04)
+	    Created.
+	    History doesn't really need to be maintained, just adding comment
+	    for initial version.
+
+
+Downloaded icons list:
+
+ICONFINDER.COM
+personal.png - GPL
+user_male.png - LGPL
+kontact_date.png - GPL
+db_commit.png - LGPL
+database.png - LGPL
+folder.png - GPL (all sizes)
+camera_test.png - LGPL
+network_local.png - GPL
+server.png - LGPL
+server_full.png - GPL
+smserver.png - LGPL
+terminal.png - GPL
+config_toolbars.png - GPL
+trashcan_empty.png - GPL
+exec_wine.png - GPL
+tux.png - LGPL
+package_settings.png - LGPL
+wizard.png - LGPL
+xclock.png - LGPL
+browser.png - GPL
+kworldclock.png - LGPL
+network.png - LGPL
+messagebox_info.png - GPL
+cluster.png - LGPL
+configure.png - LGPL
+db_status.png - LGPL
+db_add.png - LGPL
+kuser.png - GPL
+kservices.png - LGPL
+kserv_single.png - LGPL
+reload_all_tabs.png - GPL
+net_con_man.png - LGPL
+ok.png - LGPL
+rebuild.png - LGPL
+
+tango.freedesktop.org
+preferences-desktop-font.png - GPL
+
+
+

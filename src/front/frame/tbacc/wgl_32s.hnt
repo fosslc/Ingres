@@ -1,0 +1,11 @@
+#
+# Copyright (c) 2004 Ingres Corporation
+#
+# wgl_32s.hnt file for  front\frame\tbacc
+#
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+objonly = tbdata.obj 
+

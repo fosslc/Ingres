@@ -1,0 +1,326 @@
+/*
+**		Copyright (c) 2004 Ingres Corporation
+**		All rights reserved.
+*/
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<er.h>
+# include	<dictutil.h>
+# include	<ui.h>
+# include       <ug.h>
+
+/**
+** Name:	chckdict.qsc - routines to check status of dictionary.
+**
+** Description:
+**	These are routines which check the status of the dictionary in the
+**	database.  IIUICheckDictVer is called by all front-end facilities
+**	to check that the dictionary will support the calling client.  Clients
+**	are responsible for knowing their name and version number.  For all
+**	front-end programs of release 6.1-6.3 the client name is 'INGRES'
+**	and the client version is 1.  Other currently supported clients include
+**	'VISIBUILD' version 1, 'INGRES/DBD' versions 1 and 2, and 'WINDOWS_4GL'
+**	versions 1 and 2.
+**	This file defines:
+**
+**	IIUIClientInstalled	- check if client is registered in dictionary.
+**	IIUICheckDictVer	- get a detailed status of dictionary client.
+**
+** History:
+**	May 1990 (rdesmond).
+**		first created.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+GLOBALREF PTR clienttable; /* hash table containing client details */
+
+
+/*{
+** Name:	IIUIClientInstalled
+**
+** Description:
+**	Determines if the specified client is installed or if it has been
+**	desupported.
+**
+** Inputs:
+**	client_name	Name of dictionary client to check support for.
+**	client_version	Version of dictionary client to check support for.
+**
+** Outputs:
+**
+** Returns:
+**	STATUS - 	OK - client dictionary installed.
+**			UI_NOTINSTALLED - client is not installed.
+**			UI_DESUPPORTED - client hsa been desupported.
+**			FAIL - processing error
+**
+** Exceptions:
+**	None
+**
+** Side Effects:
+**
+** History:
+**	2/8/89 	rdesmond	Initial revision.
+**	6/15/90 rdesmond	Now returns UI_NEEDS_UPGRADE instead of
+**				  UI_NOTINSTALLED when ii_dict_modules doesn't
+**				  exist.
+**	26-sep-1990 (pete)
+**		Print error message if get SELECT error.
+**	19-apr-1991 (pete)
+**		Don't always return UI_NEEDS_UPGRADE if ii_dict_modules doesn't
+**		exist. Check a bit further: if database has NO front-end
+**		catalogs, then upgrade can be done by front-end, so return
+**		UI_INSTALLABLE. Bug 37112.
+**	2-aug-1991 (pete)
+**		Add more comments.
+**	27-jul-1992 (rdrane)
+**		Change parameterization of call to FErelexists() to include
+**		owner (actually, we can get away with using (char *)NULL -
+**		users shouldn't have ii* tables).
+**	22-jul-1993 (rdrane)
+**		Effect case translation of catalog names prior to calling
+**		FErelexists() for FIPS support.
+*/
+STATUS
+IIUIClientInstalled(client_name, client_version)
+EXEC SQL BEGIN DECLARE SECTION;
+char	*client_name;
+i4	client_version;
+EXEC SQL END DECLARE SECTION;
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    i4		count1;
+    i4		count2;
+    i4		local_errno;
+    EXEC SQL END DECLARE SECTION;
+    char	table_buf[(FE_MAXNAME + 1)];
+
+    if (client_name == (char *)NULL)
+	return (FAIL);
+
+    /* check if dictionary is installed */
+    STcopy(ERx("ii_dict_modules"),&table_buf[0]);
+    IIUGdbo_dlmBEobject(&table_buf[0],FALSE);
+    if (FErelexists(&table_buf[0],NULL) != OK)
+    {
+	/* database has NOT been upgraded by upgradefe or upgradewin4gl */
+
+    	STcopy(ERx("ii_objects"),&table_buf[0]);
+	IIUGdbo_dlmBEobject(&table_buf[0],FALSE);
+	if (FErelexists(&table_buf[0],NULL) == OK)
+	{
+	    /* database has some front-end catalogs; upgrade required */
+	    return (UI_NEEDS_UPGRADE);
+	}
+	else
+	{
+	    /* database has NO front-end catalogs and it's ok for a front-end
+	    ** to create the catalogs (no concurrency issues).
+	    */
+	    return (UI_INSTALLABLE);
+	}
+    }
+
+    /* determine how many dictionary modules this system is dependent on. */
+    EXEC SQL
+	SELECT
+	    count(*)
+	INTO
+	    :count1
+	FROM
+	    ii_client_dep_mod
+	WHERE 
+	    client_name = :client_name
+	    AND
+	    client_version = :client_version;
+    EXEC SQL INQUIRE_INGRES (:local_errno = errorno);
+    if (local_errno != 0)
+    {
+        /* Any error above will print automatically. Just give the
+        ** context.
+        */
+        IIUGerr(E_UI0030_UI_DBMS_ERROR, UG_ERR_ERROR, 1,
+                ERget(F_UI0002_SELECT_CLIENT_DEPMOD));
+        return (FAIL);
+    }
+
+    /* if no dependencies then client is not installed */
+    if (count1 == 0)
+	return (UI_NOTINSTALLED);
+
+/* DEBUG - If nothing found above, check if a more recent version of
+** the client is installed. If so, see if it is upward compatible
+** with client_name/version we are checking for here.
+*/
+
+    /* determine how many dictionary modules it depends on are installed */
+    EXEC SQL
+	SELECT
+	    count(*)
+	INTO
+	    :count2
+	FROM
+	    ii_client_dep_mod, ii_dict_modules
+	WHERE 
+	    client_name = :client_name
+	    AND
+	    client_version = :client_version
+	    AND
+	    ii_client_dep_mod.module_name = ii_dict_modules.module_name
+	    AND
+	    ii_client_dep_mod.module_version = ii_dict_modules.module_version;
+    EXEC SQL INQUIRE_INGRES (:local_errno = errorno);
+    if (local_errno != 0)
+    {
+        /* Any error above will print automatically. Just give the context. */
+        IIUGerr(E_UI0030_UI_DBMS_ERROR, UG_ERR_ERROR, 1,
+                ERget(F_UI0003_SELECT_CLNT_MOD_JOIN));
+        return (FAIL);
+    }
+
+    return (count1 == count2 ? OK : UI_DESUPPORTED);
+}
+
+/*{
+** Name:	IIUICheckDictVer - Check if dictionary supports a client.
+**
+** Description:
+**	Determines if the installed dictionary will support the given
+**	client and version.	**called by FEningres()**
+**
+** Inputs:
+**	client_name	Name of dictionary client to check support for.
+**	client_version	Version of dictionary client to check support for.
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	STATUS - 	OK :
+**			    The dictionary modules for the client are installed.
+**			FAIL :
+**			    Non-specific processing error, probably BE error.
+**			UI_INSTALLABLE :
+**			    The dictionary modules for the client are not
+**			    installed but are installable.  The installation
+**			    would require only the creation of new modules
+**			    (no upgrades).
+**			UI_NEEDS_UPGRADE :
+**			    The dictionary modules for the client are not
+**			    installed but are installable.  The installation
+**			    would require upgrading at least one module.
+**			UI_UNINSTALLABLE :
+**			    The dictionary modules for the client are not
+**			    installed and are not installable.  This means that
+**			    a currently installed descendant of at least one of
+**			    the required modules is not backwardly compatible
+**			    with the required module.
+**			UI_DESUPPORTED :
+**			    The dictionary modules for the client were once
+**			    installed but the client has been desupported by
+**			    a non-backwardly compatible upgrade of at least one
+**			    module which it requires.  The modules for the
+**			    client are not installable.
+**
+** Exceptions:
+**	None
+**
+** Side Effects:
+**
+** History:
+**	2/8/89 	rdesmond	Initial revision.
+**	5/11/90 rdesmond	Modified completely and wonderfully.
+**	6/15/90 rdesmond	Now returns when IIUIClientInstalled() returns
+**				  status of UI_NOTINSTALLED.
+**      26-Sep-1990 (pete)
+**              Do CVupper on a local copy of "client_name". Bug 33536.
+**	1-nov-1990 (pete)
+**		Return UI_NO_CLIENT to caller if requested client isn't in the
+**		client table. (change NO_CLIENT to UI_NO_CLIENT).
+*/
+STATUS
+IIUICheckDictVer(client_name, client_version)
+EXEC SQL BEGIN DECLARE SECTION;
+char	*client_name;
+i4	client_version;
+EXEC SQL END DECLARE SECTION;
+{
+    STATUS	status;
+    CLIENTDESC	*thisclient;
+    CLIENTDESC	hashkey;
+    char	tmp_client_name[FE_MAXNAME+1];
+    bool	installable;
+    i4		index;
+
+    /* Null client name means no dictionary support is required */
+    if (client_name == (char *)NULL)
+	return (OK);
+
+    /* "client_name" may be a READONLY literal string, so we must make a
+    ** writeable copy of it so CVupper won't crash (esp. on VMS).
+    */
+    STcopy (client_name, tmp_client_name);
+    CVupper(tmp_client_name);
+
+    /* first check if client is registered.  If so then we're done. */
+    if ((status = IIUIClientInstalled(tmp_client_name, client_version)) == OK ||
+      status == FAIL || status == UI_DESUPPORTED || status == UI_NEEDS_UPGRADE)
+	return (status);
+
+    /* initialize module table from .cre files in dictionary path */
+    if (init_moduletable(NULL) != OK)
+	return (FAIL);
+
+    /* initialize client table from .cli files in dictionary path */
+    if (init_clienttable() != OK)
+	return (FAIL);
+
+    /* we need to call this for any client we want to check */
+    if ((status = enter_client(tmp_client_name, client_version)) != OK)
+	return (status);	/* FAIL or UI_NO_CLIENT */
+
+    /* set status for installed modules (those that exist in ii_dict_modules) */
+    if (mod_dict_status() != OK)
+	return (FAIL);
+
+    /* get the CLIENTDESC for the requested client */
+    STcopy(tmp_client_name, hashkey.cliname);
+    hashkey.cliversion = client_version;
+    if (IIUGhfHtabFind(clienttable, &hashkey, &thisclient) != OK)
+	return (FAIL);
+
+    status = UI_INSTALLABLE;
+    /* check the status of each module required by the client */
+    for (installable = TRUE, index = 0; 
+      installable && index < thisclient->numsupmods; index++)
+    {
+	MODULEDESC	*thismodule;
+	STATUS		modstatus;
+
+	thismodule = thisclient->supmods[index];
+	modstatus = modulestatus(thismodule);
+
+	if (modstatus == ANC_COMPAT || modstatus == ANC_INCOMPAT ||
+	  modstatus == UPGRADE_ABORT)
+	{
+	    status = UI_NEEDS_UPGRADE;
+	}
+	else if (modstatus == DESC_INCOMPAT)
+	{
+	    installable = FALSE;
+	}
+    }
+    if (!installable)
+	return (UI_UNINSTALLABLE);
+    else
+	return (status);
+}

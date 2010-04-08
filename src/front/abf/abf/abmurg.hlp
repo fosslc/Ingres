@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abmurg.hlp, help for confirmation popup about customized menu form.
+/#--
+You have customized your menu form and have also added or removed frames
+which are not reflected on your form.  Vision does not know how to
+reconcile your customizations with the menuitem changes that it needs
+to make.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        Select                  If Yes is selected, you will keep your 
+				customized menu form. You will be responsible 
+				for changing descriptions of menu selections 
+				if the frame's children change.
+
+                                If No is selected, a new menu form will be 
+				generated.  Vision will remain responsible 
+				for updating the form when the frame's 
+				children change.
+
+        Cancel                  Do not compile the frame.
+
+        Help                    Access the Ingres Help facility.

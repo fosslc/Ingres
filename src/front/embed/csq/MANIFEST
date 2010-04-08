@@ -1,0 +1,31 @@
+#
+# MAIFEST file for front!embed!csq
+#
+# History:
+#     29-Nov-2004 (hanje04)
+#	Created from Jamfile to handle different link requirements on 
+#	Windows and Linux
+#     20-Oct-2009 (hweho01)
+#       Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front embed csq ;
+
+IISUBSYS front embed csq ;
+
+IINOOPTIM csqscan.c : dg8_us5 ;
+
+IIBINEXE esqlc : csqmain.c ;
+IILIBRARY CSQLIB : csq.sy csqtoks.st csqscan.c csqgen.c ;
+
+if ! $(NT)
+{
+    IINEEDLIBS esqlc : CSQLIB CLIB EQUELLIB UGLIB FMTLIB AFELIB
+	ADFLIB COMPATLIB ;
+    IIUNDEFS esqlc : tok_optab yylex yyparse ;
+}
+else
+{
+    IINEEDLIBS esqlc : CSQLIB EQUELLIB UGLIB COMPATLIB ;
+    IINEEDOBJ esqlc : eqdata.c eqglobs.c cgcdata.c iiglobal.c ugdata.c cgen.c ;
+}
+

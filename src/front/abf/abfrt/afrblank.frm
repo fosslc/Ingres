@@ -1,0 +1,5 @@
+COPYFORM:	6.4	1992_12_04 00:58:23 GMT  
+FORM:	abfrblank		
+	80	23	0	0	0	0	0	6	0	0	0	0	0	0	0	0
+FIELD:
+TRIM:

@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2009 Ingres Corporation
+
+  This list specifies the names of databases which must be logged.
+  any attempt to use SET NOLOGGING will be rejected.

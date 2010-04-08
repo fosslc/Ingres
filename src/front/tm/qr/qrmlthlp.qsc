@@ -1,0 +1,807 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<adf.h>
+# include	<fmt.h>
+# include	<cm.h>
+# include	<me.h>
+# include	<ui.h>
+# include	<ug.h>
+# include	<qr.h>
+# include	<er.h>
+# include	"erqr.h"
+# include	"qrhelp.h"
+## include <uigdata.qsh>
+
+
+
+/**
+** Name:	qrmlthlp -	process help table, view, index, integrity,
+**				permit, procedure, register, rule,
+**				security_alarm,	sequence, synonym, and comment.
+**
+** Description:
+**	Contains routine to parse the command and farm out the actual work
+**	to the individual, specific help routines.
+**
+**	IIQRmdh_MultiDetailHelp		parse command and call help routines
+**
+** History:
+**	27-sep-88 (bruceb)	Written.
+**	01-dec-88 (bruceb)
+**		For performance, don't call IIQRtbo_TableOwner for the
+**		'help table X' case, since IIUIrel_help() would ignore this
+**		information anyway.
+**	03-23-89 (kathryn) 	Bug #4487
+**		Added Routine IIQR_relexists() and changed calls from 
+**		FErelexists to IIQR_relexists().
+**	19-apr-89 (teresal)
+**		Modified this routine so that the HELP object option will
+**		also look at iiindexes (for non-ingres only) if nothing can
+**		be found in iitables.  This is to fix the problem for gateways
+**		where "HELP indexname" was failing because indices information
+**		is only being stored in iiindexes.
+**	18-may-89 (teresal)
+**		Added help link command.
+**	18-sep-89 (teresal)
+**		Removed previous 'fix' where HELP object also looked at 
+**		iiindexes (non-ingres only) if nothing was found in iitables.
+**		LRC decided that only queryable objects should be shown with
+**		the HELP object command.  Therefore non-queryable indices, 
+**		i.e., indices will no entry in iitables, will not be displayed
+**		by the HELP object command.
+**	13-nov-89 (teresal)
+**		Add B1 HELP SECURITY_ALARM command.
+**	27-dec-89 (teresal)
+**		Add HELP SYNONYM, HELP COMMENT TABLE, and HELP COMMENT COLUMN.
+**	22-mar-91 (kathryn)
+**		Added HELP_PERM_EVENT and HELP_PERM_PROC for "help permit on
+**		event" and "help permit on procedure".
+**	9-jul-92 (rogerl)
+**		A HELP_PERM_{IDX,VIEW} error messages.
+**		Move IIQR_relexists() to qrutil.qsc, its now used in qrhelp.qsc.
+**		Farm switches from MultiDet to routines.
+**	11-dec-92 (rogerl)
+**		Add qrdiprintf EXTERN and ref for possibly quoted del id output
+**	21-jun-93 (rogerl)
+**		Need to pass help type all the way down to wildcard expanders
+**		to support security_alarm restrictions.  New code '#'
+**		implies security label viewing restriction in effect.
+**	05-oct-93 (rogerl)
+**		Primary object in 'comment column' may be delimited id; so scan
+**		it using routine expecting delimited ids (54549).
+**	11/03/93 (dkh) - Put back the good r65 version which was corrupted
+**			 by the merge of 63p and 65 codelines.
+**	17-mar-94 (geri)
+**		Changed declaration of pobjname used in help comment column
+**		to be long enough to handle owner.table type parameter (60244)
+**	28-oct-96 (nick)
+**	    Don't set transaction state here ; now done in dohelp().
+**      21-jan-1999 (hanch04)
+**          replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	17-apr-02 (inkdo01)
+**	    Added "help sequence".
+**      10-May-2006 (hanal04) Bug 116096
+**          Prototype loop_init_obj() to ensure we do not lose part of the
+**          pointer address returned and then SIGSEGV.
+**	20-Dec-2004 (kodse01)
+**	    BUG 113657
+**	    Added "help permit on sequence".
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for database objects.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes: update loop-init-obj prototype.
+**/
+
+/* # define's */
+
+/* GLOBALDEF's */
+/* extern's */
+FUNC_EXTERN	char	*qrscanstmt();
+FUNC_EXTERN	VOID	IIQRlhp_LogicalHelp();
+FUNC_EXTERN	VOID	IIQRthp_TableHelp();
+FUNC_EXTERN	VOID	qrviewhelp();
+FUNC_EXTERN	VOID	IIQRihp_IndexHelp();
+FUNC_EXTERN	VOID	IIQRcnh_ConstraintHelp();
+FUNC_EXTERN	VOID	qrintghelp();
+FUNC_EXTERN	VOID	qrpermhelp();
+FUNC_EXTERN	VOID	IIQRprh_ProcedureHelp();
+FUNC_EXTERN	VOID	IIQRlkh_LinkHelp();
+FUNC_EXTERN	VOID	IIQRrlh_RuleHelp();
+FUNC_EXTERN	VOID	IIQRsah_SecAlarmHelp();
+FUNC_EXTERN	VOID	IIQRseh_SequenceHelp();
+FUNC_EXTERN	VOID	IIQRsah_AlarmDbHelp();
+FUNC_EXTERN	VOID	IIQRsah_AlarmInsHelp();
+FUNC_EXTERN	VOID	IIQRsyh_SynonymHelp();
+FUNC_EXTERN	VOID	IIQRcth_CommTblHelp();
+FUNC_EXTERN	VOID	IIQRcch_CommColHelp();
+FUNC_EXTERN	STATUS	IIQRcle_ColumnExists();
+
+FUNC_EXTERN	VOID	IIQRono_ObjectNmOwner();
+FUNC_EXTERN	VOID	IIQRtno_TableNmOwner();
+FUNC_EXTERN	VOID	IIQRvno_ViewNmOwner();
+FUNC_EXTERN	VOID	IIQRino_IndexNmOwner();
+FUNC_EXTERN	VOID	IIQRlno_LinkNmOwner();
+FUNC_EXTERN	VOID	IIQRprn_ProcNmowner();
+FUNC_EXTERN	VOID	IIQRrno_RuleNmOwner();
+FUNC_EXTERN	VOID	IIQRsno_SequenceNmOwner();
+FUNC_EXTERN	VOID	IIQRsno_SynonymNmOwner();
+FUNC_EXTERN	VOID	IIQRcno_ColumnNmOwner();
+FUNC_EXTERN     VOID    IIQReno_EventNmOwner();
+FUNC_EXTERN     VOID    IIQRond_DatabaseNmOwner();
+FUNC_EXTERN     FE_RSLV_NAME  *loop_init_obj();
+
+static	char	pobjname[FE_UNRML_MAXNAME]; /* Used for help comment column */
+
+static	bool	qrisrighttype( QRB *qrb, i4  help_type, char *object );
+static	VOID	qrdethelp( QRB *qrb, char *object, char *owner, i4  help_type,
+		    char *column, char *type );
+static	VOID	qrendtrans( QRB *qrb );
+static	VOID	qrnoobjerr( QRB *qrb, i4  help_type, char *object );
+static	VOID	qrsetwldcrdfcn( VOID (**fcn)(), i4  help_type );
+VOID		qrlegsynterr( QRB *qrb, i4  help_type );
+FUNC_EXTERN     VOID            qrdiprintf( u_i4 nth, QRB *qrb, char *fmt,
+				... );
+
+/*{
+** Name:	IIQRmdh_MultiDetailHelp	- process help table, view, index,
+**				integrity, permit, procedure, register,
+**				rule, security_alarm, sequence, synonym, 
+**				and comment.
+**
+** Description:
+**	Process the command, create list of objects to generate help on,
+**	and call appropriate routine to generate that specific help.
+**
+** Inputs:
+**	qrb		the QRB
+**	s		object name string
+**	help_type	flag noting the type of object; e.g. table, register
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		none
+**
+** Side Effects:
+**	fills the qrb's output buffer with the results
+**
+** History:
+**	27-sep-88 (bruceb)	Written.
+**	18-may-89 (teresal)	Added help rule.
+**	13-nov-89 (teresal)	Added help security_alarm.
+**	27-dec-89 (teresal)	Added help synonym, help comment.
+**	22-mar-91 (kathryn)	Added help permit on [procedure,event].
+**	22-jul-91 (kathryn)	Bug 38746.
+**		For  HELP_PERM_EVENT and HELP_PERM_PROC.
+**		Always set objtype and pass objtype to IIQRphp_Permit_Help().
+**	13-jul-92 (rogerl)	Relegate ugly details to routines.
+**				Use wildcard expander function to make all
+**				name list entries; do perms chck in sql
+**	17-mar-94 (geri)
+**		For HELP COMMENT COLUMN, changed the parsing to use the
+**		routine which handles compound identifiers (bug 60244).
+**	28-oct-96 (nick)
+**	    endtrans is now set in the caller so don't do it here. #77798
+**	17-apr-02 (inkdo01)
+**	    Added help sequence.
+*/
+
+
+VOID
+IIQRmdh_MultiDetailHelp(qrb, s, help_type)
+QRB	*qrb;
+char	*s;
+i4	help_type;
+{
+    i4		token = 0;
+    i4		syntax_err;
+    STATUS	status;
+    IIQRlist	*node;
+    char	*owner;
+    char	objowner[DB_MAXNAME + 1];
+    char	*objname;
+    VOID	(*get_wldcrds)();
+    FE_GCI_IDENT deltoken;
+
+    if (qrb->step == 0)
+    {
+	pobjname[0] = EOS;
+
+	if (help_type != HELP_OBJECT &&
+	    help_type != HELP_ALARM_INST)
+	{
+	    /*
+	    ** Get the next token; we're pointing at the keyword (e.g. view,
+	    ** table, link) in a "help view viewname" statement.  Qrscanstmt
+	    ** will skip the keyword and point at the object name (since passed
+	    ** FALSE, an indication we're not yet looking at a list of objects.)
+	    ** If object name(s) are not provided, generate a syntax error and
+	    ** return.
+	    **
+	    ** Not done for logical help (HELP_OBJECT) since there is no
+	    ** intermediate 'noise' word, and we're already pointing at an
+	    ** object name.
+	    ** Note done for HELP SECURITY_ALARM ON CURRENT INSTALLATION
+	    ** since no objects.
+	    */
+
+	    s = qrscanstmt(s, &token, FALSE);  /* bypass noise word */
+	    if (*s == EOS)
+	    {
+		qrlegsynterr( qrb, help_type );
+
+		qrendtrans( qrb );
+
+		return;
+	    }
+
+	    if (help_type == HELP_COMMENT_COL)
+	    {	
+	     /*
+	     ** Get the next token for "HELP COMMENT COLUMN
+	     ** objectname columnname
+	     ** [, columnname]" command.  First save the primary
+	     ** objectname (i.e., the table, index or view name) we
+	     ** are currently pointing at, then scan to the list of
+	     ** column names.
+	     ** Since the tokens can be compound identifers use the
+	     ** IIUGgci_getcid routine for parsing.
+	     */
+
+		IIUGgci_getcid(s, &deltoken, TRUE);
+		STlcopy(deltoken.name, pobjname, FE_UNRML_MAXNAME); 
+		s += deltoken.b_oset;
+
+		while (*s != EOS && CMwhite(s))
+		    CMnext(s);
+
+		if (*s == EOS)
+		{
+		   qrlegsynterr( qrb, help_type );
+
+		   qrendtrans( qrb );
+
+		   return;
+		}
+	    }
+		
+	}
+
+	qrsetwldcrdfcn( & ( get_wldcrds ), help_type );
+
+	status = IIQRmnl_MakeNameList(qrb, s, pobjname, get_wldcrds,
+		&syntax_err, help_type);
+
+	if ((status != OK) && (syntax_err == TRUE))
+	{
+	        qrlegsynterr( qrb, help_type );
+
+	        qrendtrans( qrb );
+	}
+	else /* if status != OK, might still have processed some names */
+	{
+	        qrb->step = help_type;
+        }
+    }
+    else
+    {
+	if ((node = IIQRgnn_GetNextNode()) == NULL)
+	{
+	    qrb->step = 0;
+	    qrendtrans( qrb );
+	}
+	else
+	{
+	    IIQRgno_GetNameOwner(node, &objname, &owner);
+
+	    if (owner[0] == TOO_LONG)
+	    {
+		qrprintf(qrb, ERget(F_QR008D_name_too_long), objname,
+		    DB_MAXNAME);
+	    }
+	    else if (owner[0] == NONE_FOUND)
+	    {
+				/* check to see if there is an object
+				** with the name that the user gave, but
+				** with  different type.  if one exists,
+				** tell user.  otherwise, 'no object found'
+				** (only works for table, view, index)
+				*/
+		if ( ! qrisrighttype( qrb, help_type, objname ) )
+		    qrnoobjerr(qrb, help_type, objname);
+
+	    }
+	    else if (owner[0] == INSUF_PRIV)
+	    {
+		qrprintf(qrb, ERget(E_QR004F_NotAuthSL), objname);
+	    }
+	    else
+	    {
+		/*
+		** name and owner were pulled from the database,
+		** so are already OK.
+		*/
+
+		STcopy(owner, objowner);
+	
+                qrdethelp(qrb, objname, objowner, help_type, pobjname,
+								node->type);
+	    }
+
+	    qrprintf(qrb, ERx("\n"));
+
+	    IIQRznd_ZapNode(node);
+	}
+    }
+}
+
+/*{
+** Name:	qrlegsnterr	- put 'legal syntax is' error into qrb
+**
+** Inputs:
+**	qrb		qrb ptr
+**	help_type	i4
+**
+** Returns:
+**	VOID
+**
+** History:
+**	13-jul-92 (rogerl)	extracted from MultiDetail
+*/
+
+VOID
+qrlegsynterr( QRB *qrb, i4  help_type )
+{
+    qrprintf(qrb, ERx("\n"));
+    qrprintf(qrb, ERget(F_QR0006_Legal_Syntax_is));
+    switch (help_type)
+    {
+	case HELP_OBJECT:
+	    qrprintf(qrb, ERget(E_QR0049_HELP_object));
+	    break;
+	case HELP_TABLE:
+	    qrprintf(qrb, ERget(E_QR000E_HELP_tblname_tblname));
+	    break;
+	case HELP_VIEW:
+	    qrprintf(qrb, ERget(F_QR0007_HELP_VIEW_viewname));
+	    break;
+	case HELP_INDEX:
+	    qrprintf(qrb, ERget(E_QR0015_HELP_indexname));
+	    break;
+	case HELP_CONSTRAINT:
+	    qrprintf(qrb, ERget(E_QR0047_HELP_CONSTRAINT_obj));
+	    break;
+	case HELP_DEFAULT:
+	    qrprintf(qrb, ERget(E_QR004A_HELP_DEFAULT_obj));
+	    break;
+	case HELP_INTEGRITY:
+	    qrprintf(qrb, ERget(F_QR0045_HELP_INTEGRITY_tblnam));
+	    break;
+	case HELP_PERMIT:
+	    qrprintf(qrb, ERget(E_QR0046_HELP_perm_on));
+	    break;
+	case HELP_PROCEDURE:
+	    qrprintf(qrb, ERget(E_QR0016_HELP_procedure));
+	    break;
+	case HELP_LINK:
+	    qrprintf(qrb, ERget(E_QR0017_HELP_link));
+	    break;
+	case HELP_RULE:
+	    qrprintf(qrb, ERget(E_QR0029_HELP_rule));
+	    break;
+	case HELP_SECURITY_ALARM:
+	case HELP_ALARM_DB:
+	case HELP_ALARM_INST:
+	    qrprintf(qrb, ERget(E_QR004B_HELP_sec_alarm));
+	    break;
+	case HELP_SEQUENCE:
+	    qrprintf(qrb, ERget(E_QR0062_HELP_sequence));
+	    break;
+	case HELP_SYNONYM:
+	    qrprintf(qrb, ERget(E_QR0031_HELP_synonym));
+	    break;
+	case HELP_COMMENT_TBL:
+	case HELP_COMMENT_COL:
+	    qrprintf(qrb, ERget(E_QR0032_HELP_comment));
+	    break;
+	case HELP_PERM_EVENT:
+	    qrprintf(qrb, ERget(E_QR0041_HELP_perm_event));
+	    break;
+	case HELP_PERM_PROC:
+	    qrprintf(qrb, ERget(E_QR0045_HELP_perm_proc));
+	    break;
+	case HELP_PERM_VIEW:
+	    qrprintf(qrb, ERget(E_QR0050_HELP_perm_view));
+	    break;
+	case HELP_PERM_IDX:
+	    qrprintf(qrb, ERget(E_QR0051_HELP_perm_idx));
+	    break;
+	case HELP_PERM_SEQ:
+	    qrprintf(qrb, ERget(E_QR00B1_HELP_perm_seq));
+	    break;
+    }
+    if (qrb->lang == DB_SQL)
+    {
+	qrprintf(qrb, ERget(E_QR000C_end_stmt_with_semicln));
+    }
+    return;
+}
+
+/*{
+** Name:	qrsetwldcrdfcn	- point fcn ptr to fcn help_type
+**
+** Inputs:
+**	fcn		ptr to a fnc ptr
+**	help_type	i4
+**
+** Returns:
+**	VOID
+**
+** History:
+**	13-jul-92 (rogerl)	extracted from MultiDetail
+*/
+
+static VOID
+qrsetwldcrdfcn( VOID (**fcn)(), i4  help_type )
+{
+    switch (help_type)
+    {
+	case HELP_OBJECT:
+	    *fcn = IIQRono_ObjectNmOwner;
+	    break;
+	case HELP_TABLE:
+	    *fcn = IIQRtno_TableNmOwner;
+	    break;
+	case HELP_VIEW:
+	case HELP_PERM_VIEW:
+	    *fcn = IIQRvno_ViewNmOwner;
+	    break;
+	case HELP_INDEX:
+	case HELP_PERM_IDX:
+	    *fcn = IIQRino_IndexNmOwner;
+	    break;
+	case HELP_CONSTRAINT:
+	case HELP_DEFAULT:
+	case HELP_INTEGRITY:
+	    *fcn = IIQRono_ObjectNmOwner;
+	    break;
+	case HELP_PERMIT:
+	    *fcn = IIQRono_ObjectNmOwner;
+	    break;
+	case HELP_PROCEDURE:
+	    *fcn = IIQRprn_ProcNmowner;
+	    break;
+	case HELP_LINK:
+	    *fcn = IIQRlno_LinkNmOwner;
+	    break;
+	case HELP_RULE:
+	    *fcn = IIQRrno_RuleNmOwner;
+	    break;
+	case HELP_ALARM_DB:
+	case HELP_ALARM_INST:
+	    *fcn = IIQRond_DatabaseNmOwner;
+	    break;
+	case HELP_SECURITY_ALARM:
+	    *fcn = IIQRono_ObjectNmOwner;
+	    break;
+	case HELP_SEQUENCE:
+	    *fcn = IIQRsno_SequenceNmOwner;
+	    break;
+	case HELP_SYNONYM:
+	    *fcn = IIQRsno_SynonymNmOwner;
+	    break;
+	case HELP_COMMENT_TBL:
+	    *fcn = IIQRono_ObjectNmOwner;
+	    break;
+	case HELP_COMMENT_COL:
+	    *fcn = IIQRcno_ColumnNmOwner;
+	    break;
+	case HELP_PERM_EVENT:
+	    *fcn = IIQReno_EventNmOwner;
+	    break;
+        case HELP_PERM_PROC:
+	    *fcn = IIQRprn_ProcNmowner;
+	    break;
+	case HELP_PERM_SEQ:
+	    *fcn = IIQRsno_SequenceNmOwner;
+	    break;
+    }
+    return;
+}
+
+/*{
+** Name:	qrnoobjerr -  get 'object not exist' error for help_type
+**				into qrb
+**
+** Inputs:
+**	qrb		qrb
+**	help_type
+**	object		object name
+**
+** Returns:
+**	VOID
+**
+** History:
+**	13-jul-92 (rogerl)	extracted from MultiDetail
+**	22-apr-93 (rogerl)	add LINK specific error message
+*/
+
+static VOID
+qrnoobjerr( QRB *qrb, i4  help_type, char *object )
+{
+    switch (help_type)
+    {
+	case HELP_OBJECT:
+	case HELP_TABLE:
+	case HELP_CONSTRAINT:
+	case HELP_DEFAULT:
+	case HELP_INTEGRITY:
+	case HELP_PERMIT:
+	case HELP_SECURITY_ALARM:
+	case HELP_COMMENT_TBL:
+	    qrprintf(qrb, ERget(F_QR0089_no_tables), object);
+	    break;
+	case HELP_LINK:
+	    qrprintf(qrb, ERget(F_QR00A1_no_links), object);
+	    break;
+	case HELP_PERM_VIEW:
+	case HELP_VIEW:
+	    qrprintf(qrb, ERget(F_QR008A_no_views), object);
+	    break;
+	case HELP_PERM_IDX:
+	case HELP_INDEX:
+	    qrprintf(qrb, ERget(F_QR008B_no_indices), object);
+	    break;
+	case HELP_PROCEDURE:
+	    qrprintf(qrb, ERget(F_QR008C_no_procedures), object);
+	    break;
+	case HELP_RULE:
+	    qrprintf(qrb, ERget(F_QR0096_no_rules), object);
+	    break;
+	case HELP_SEQUENCE:
+	    qrprintf(qrb, ERget(F_QR00AE_no_sequences), object);
+	    break;
+	case HELP_SYNONYM:
+	    qrprintf(qrb, ERget(F_QR0100_no_synonyms), object);
+	    break;
+	case HELP_COMMENT_COL:
+	    qrprintf(qrb, ERget(F_QR0101_no_columns), object);
+	    break;
+	case HELP_PERM_EVENT:
+	    qrprintf(qrb, ERget(F_QR0113_no_events), object);
+	    break;
+	case HELP_PERM_PROC:
+	    qrprintf(qrb, ERget(F_QR008C_no_procedures), object);
+	    break;
+	case HELP_ALARM_DB:
+	    qrprintf(qrb, ERget(F_QR00A2_no_databases), object);
+	    break;
+	case HELP_ALARM_INST:
+		break;
+	case HELP_PERM_SEQ:
+	    qrprintf(qrb, ERget(F_QR00AE_no_sequences), object);
+	    break;
+    }
+    return;
+}
+
+/*{
+** Name:	qrendtrans	- issue COMMIT WORK if qrb->endtrans
+**
+** Inputs:
+**	qrb		qrb
+**
+** Returns:
+**	VOID
+**
+** History:
+**	13-jul-92 (rogerl)	extracted from MultiDetail
+*/
+
+static VOID
+qrendtrans( QRB *qrb )
+{
+    if (qrb->endtrans)
+    {
+	EXEC SQL COMMIT WORK;
+	qrb->endtrans = FALSE;
+    }
+
+    return;
+}
+
+
+
+/*{
+** Name:	qrdethelp		- call detailed help generator
+**
+** Description:
+**	Call detailed help generator func based on 'help_type'
+**
+** Inputs:
+**	qrb		qrb
+**	object		char str obj name
+**	help_type	flag noting the type of object; e.g. table, register
+**	column		column name (only help comment) NULL otherwise
+**
+** Returns:
+**	VOID
+**
+** Side Effects:
+**	fills the qrb's output buffer with the results
+**
+** History:
+**	13-jul-92 (rogerl)	extracted from MultiDetail
+**	10-dec-93 (robf)        add HELP_ALARM_DB/HELP_ALARM_INST
+*/
+
+static VOID
+qrdethelp( QRB *qrb, char *object, char *owner, i4  help_type, char *column,
+	char *type )
+{
+    switch (help_type)
+    {
+	case HELP_OBJECT:
+	    IIQRlhp_LogicalHelp(qrb, object, owner, type);
+	    break;
+	case HELP_TABLE:
+	    IIQRthp_TableHelp(qrb, object, owner);
+	    break;
+	case HELP_VIEW:
+	    qrviewhelp(qrb, object, owner);
+	    break;
+	case HELP_INDEX:
+	    IIQRihp_IndexHelp(qrb, object, owner);
+	    break;
+	case HELP_CONSTRAINT:
+	    IIQRcnh_ConstraintHelp(qrb, object, owner);
+	    break;
+	case HELP_DEFAULT:
+	    IIQRdfh_DefaultHelp(qrb, object, owner);
+	    break;
+	case HELP_INTEGRITY:
+	    qrintghelp(qrb, object, owner);
+	    break;
+	case HELP_PERMIT:
+	    qrpermhelp(qrb, object, owner);
+	    break;
+	case HELP_PROCEDURE:
+	    IIQRprh_ProcedureHelp(qrb, object, owner);
+	    break;
+	case HELP_LINK:
+	    IIQRlkh_LinkHelp(qrb, object, owner);
+	    break;
+	case HELP_RULE:
+	    IIQRrlh_RuleHelp(qrb, object, owner);
+	    break;
+	case HELP_SECURITY_ALARM:
+	    IIQRsah_SecAlarmHelp(qrb, object, owner);
+	    break;
+	case HELP_ALARM_DB:
+	    IIQRsah_AlarmDbHelp(qrb, object, owner);
+	    break;
+	case HELP_ALARM_INST:
+	    IIQRsah_AlarmInsHelp(qrb);
+	    break;
+	case HELP_SEQUENCE:
+	    IIQRseh_SequenceHelp(qrb, object, owner);
+	    break;
+	case HELP_SYNONYM:
+	    IIQRsyh_SynonymHelp(qrb, object, owner);
+	    break;
+	case HELP_COMMENT_TBL:
+	    IIQRcth_CommTblHelp(qrb, object, owner);
+	    break;
+	case HELP_COMMENT_COL:
+	    IIQRcch_CommColHelp(qrb, column, owner, object);
+	    break;
+	case HELP_PERM_VIEW:
+	case HELP_PERM_IDX:
+	case HELP_PERM_PROC:
+	case HELP_PERM_EVENT:
+	case HELP_PERM_SEQ:
+	    IIQRphp_Permit_Help(qrb, object, owner);
+	    break;
+    }
+    return;
+}
+
+/*{
+** Name:	qrisrighttype	- since object doesn't exist as 'help_type'
+**				attempt to find out what type it is, and issue
+**				message to user about the actual type
+**
+** Description:
+**	Return TRUE if found an alternate type of object with same name, and
+**	qrprintfs error; false if no object of that name found
+**
+** Inputs:
+**	qrb		qrb
+**	object		char str obj name
+**	help_type	flag noting the type of object; e.g. table, register
+**
+** Returns:
+**	bool
+**
+** Side Effects:
+**	fills the qrb's output buffer with the results
+**
+** History:
+**	13-jul-92 (rogerl)	extracted from MultiDetail, add new param to
+**				IIUIrel_help
+**	12-oct-92 (rogerl)	add argument to E_QR0025_err_ret_help_info
+**	22-jul-04 (wanfr01)	Bug 111105; INGSRV2556
+**			 	Need to split table name into name/owner pair
+**				or else long table names won't work	
+**	21-Aug-06 (wanfr01)	Bug 116522 - fix compiler error on AIX
+*/
+
+static bool
+qrisrighttype( QRB *qrb, i4  help_type, char *object )
+{
+UI_HELP_INFO	*help_struct;
+char		*ttype;
+char 		*etype;
+char        *ename1;        /* name1 extended by ' %' */
+char        *nname1;        /* normalized name */
+char        *suser;
+UIDBDATA    *uidbdata;
+char        *sdba;
+FE_RSLV_NAME  *objectp;
+
+
+    /* split object into a name/owner pair */
+    objectp = loop_init_obj(object, &ename1);
+    nname1 = objectp->name_dest;
+    uidbdata = IIUIdbdata();
+    qrsetobjowner( uidbdata, &suser, &sdba, objectp );
+
+    if ( IIUIrel_help( nname1, suser, &help_struct ) != OK )
+    {
+	qrprintf( qrb, ERget( E_QR0025_err_ret_help_info ), object );
+	return( FALSE );
+    }
+    else
+    {
+
+	if ( help_struct == NULL )
+	    return( FALSE );
+
+	ttype = help_struct->table_type;
+
+	switch (*ttype) 
+	{
+	    case 'V':
+		etype = ERget( F_QR0003_view );
+		break;
+	    case 'I':
+		etype = ERget( F_QR0004_index );
+		break;
+
+	    /* check these values for legality and create error message
+	    to complete */
+
+	    case 'P':
+	    case 'R':
+	    default:
+		return( FALSE );
+		break;
+	}
+
+	qrdiprintf( QRARG1, qrb, ERget( E_QR0021_not_a_table ), object, etype );
+
+	return( TRUE );
+    }
+}

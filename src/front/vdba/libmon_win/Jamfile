@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!libmon_win
+#
+
+SubDir ING_SRC front vdba libmon_win ;
+
+IISUBSYS front vdba libmon_win ;
+
+
+IISLN libmon.lib : libmon.sln ;

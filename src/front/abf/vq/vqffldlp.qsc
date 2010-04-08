@@ -1,0 +1,926 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include       <er.h>
+# include       <st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include       <ug.h>
+# include       <ft.h>
+# include       <fmt.h>
+# include       <adf.h>
+# include       <frame.h>
+# include 	<flddesc.h>
+## include      <abclass.qsh>
+## include      <metafrm.qsh>
+# include       "ervq.h"
+# include       "vqescinf.h"
+## include      "vqffldlp.qsh"
+
+
+/**
+** Name:	vqffldlp.qsc - Get field to edit escape code for
+**
+** Description:
+**	This file defines:
+**
+**	IIVQgffGetFormFields	-  Display listpick of form fields
+**	IIVQpfePurgeFieldEscapes - Purge escape code for nonexistent fields
+**	IIVQcdfCheckDerivedField - Check for a derived field
+**
+** History:
+**	8/4/89 (Mike S)	Initial version
+**	2/23/90 (kenl)
+**		Made into a generic routine (this file used to be called
+**		vqescfld.qsc).  The calling sequence has changed dramatically
+**		from the original routine IIVQgefGetEscapeField.
+**	07/21/90 (dkh) - Put in calls to FDsetparse() to bracket call
+**			 on FDwfrcreate() so we can correctly get a
+**			 form out of the DB and only build part of the
+**			 forms structures.
+**	8/90 (Mike S) - Abstract Dave's change into IIFGgfGetForm.
+**	10/90 (Mike S) - save field flags in hidden column in tablefield
+**	09/10/93 (kchin)
+**		Changed type of lp4 from i4 to PTR in create_lp_form(), since
+**		it holds pointer.  Also changed the cast of lpf_frame to
+**		PTR when assigns it to lp4.  Cast to i4 will result in
+**		truncation of 64-bit address.
+**      29-sep-96 (mcgem01)
+**              Global data moved to vqdata.c
+**	19-dec-96 (chech02)
+**		Removed READONLY attrib from GLOBALREFs.
+**	05-feb-1997 (hanch04)
+**		Changed GLOBALREFs to GLOBALCONSTREF.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**/
+
+/* # define's */
+static FLDHDR *dummy;
+# define FLDNAMSZ	(sizeof(dummy->fhdname))
+# define FLDACTNMSZ	(2 * FLDNAMSZ + sizeof(_dot))
+	/* Maximum size of a field activation name (tf.column) */
+
+typedef struct
+{
+	MFESC **escs;		/* Escape code pointers */
+	i4	start;		/* Index of first field escape */
+	i4	end;		/* Index of last field escape */
+	i4	validated;	/* numbor of escape codes validated */
+} FLDESCS;
+
+/* Field listpick form and its fields.  They are '##'ed in vqffldlp.qsh  */
+GLOBALCONSTREF char iivqLP0form[], iivqLP1tblfld[], iivqLP2actCol[],
+	iivqLP3flagsCol[], iivqLP4flags2Col[], iivqLP5fldTypeCol[];
+
+/* extern's */
+FUNC_EXTERN TAGID 	FEbegintag();
+FUNC_EXTERN TAGID 	FEendtag();
+FUNC_EXTERN i4  	FTspace();
+FUNC_EXTERN FRAME 	*IIFGgfGetForm();
+FUNC_EXTERN STATUS	IIFGmdf_makeDefaultFrame();
+FUNC_EXTERN i4		IIFRrlpRunListPick();
+FUNC_EXTERN i4		IIUGmllMaxLineLen();
+FUNC_EXTERN VOID	IIUGqsort();
+FUNC_EXTERN VOID	IIVQeecEditEscapeCode();
+FUNC_EXTERN bool	IIVQgcGenCheck();
+FUNC_EXTERN VOID	IIVQgelGetEscLimits();
+FUNC_EXTERN VOID	IIVQpfePurgeFieldEscapes();
+
+/* static's */
+static VOID	check_fld_escs();
+static i4	cmp_cols();
+static i4	cmp_field();
+static STATUS	create_lp_form();
+static VOID	for_all_activations();
+static VOID	get_lpf_width();
+static VOID	load_one_row();
+static VOID	load_tablefield();
+static TAGID 	read_frame();
+static VOID	set_field_indicators();
+static VOID	sort_frame();
+
+static const char	_all[] 	= ERx("ALL");
+static const char	_dot[] 	= ERx(".");
+
+/* Listpick form data */
+static const		
+##	 	char	ind_col[] 	= ERx("indicator"),
+##           		_space[] 	= ERx(" "),
+##           		_star[] 	= ERx("*");
+
+static          i4      lpf_width;      /* Widest activation name */
+static		FRAME 	*lpf_frame;
+
+static  FRAME	*frame;		/* Form for this frame */
+static	i4	numfldacts;	/* Number of activations */
+
+/*{
+** Name:	IIVQgefGetEscapeField  - Get field to edit escape code for
+**
+** Description:
+**	The user has chosen to edit escape code for a field.  We
+**	present him a list of fields to pick from.  In addition, we 
+**	take the opportunity to remove any escape code for non-existent
+**	fields.
+**
+**	The list of fields looks like this used for field exit and entry
+**	looks like this:
+**
+**	all -				Activate on all fields
+**	simple fields, if any		Alphabetized
+**	tablefield columns, if any	Alphabetized by tablefield name
+**					and column name.  For each tablefield,
+**					the first entry is "activate on all 
+**					columns.
+**
+**	A second list, used for field change, omits the "all" entries.
+**
+** Inputs:
+**		ftype			type of fields we are interested in
+**					(>0 indicates fields for escape code,
+**					<0 indicates just the form fields)
+**		flags			form and tablefield state
+**		apobj			OO_OBJECT of frame we're working with
+**		tag			used for memory allocation
+**		handler			handler to call when lp selection made
+**		data			data to be passed to handler
+**		hfile			help file for listpick
+**		htitle			title for help screen
+**		lphdr			header text to use for listpick
+**
+** Outputs:
+**		flags			form and tablefield state
+**		tag			tag used for form allocation
+**
+**	Returns:
+**		STATUS
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**		none
+**
+** History:
+**	8/4/89 (Mike S)	Initial version
+*/
+STATUS	
+IIVQgffGetFormFields(ftype,flags,apobj,tag,handler,data,hfile,htitle,lphdr)
+i4		ftype;
+u_i2		*flags;
+OO_OBJECT	*apobj;
+TAGID		*tag;
+i4		(*handler)();
+PTR		data;
+char		*hfile;
+char		*htitle;
+char		*lphdr;
+{
+	METAFRAME *metaframe;
+	char	*formname;
+	u_i4	load_flag;		/* Bit meaning tablefield is loaded */
+	OOID	frame_type;
+	ER_MSGID readerr;
+
+	/*
+	** If we haven't already loaded the form into memory, load it,
+	** and build the fieldname list.
+	*/
+	if ((*flags & VQESC_FL) == 0)
+	{
+		FORM_REF *formref;
+
+		frame_type = (*apobj).class;
+
+		switch (frame_type)
+		{
+		  /*
+		  ** If we are not dealing with an Emerald frame then we do
+		  ** not want to attempt any form generation.  Also, if the
+		  ** frame happens to be a report frame, the form may not
+		  ** even have been specified.
+		  */
+		  case OC_RWFRAME:
+		  case OC_OSLFRAME:
+			if (frame_type == OC_RWFRAME)
+			{
+				formref = ((REPORT_FRAME *)apobj)->form;
+			}
+			else
+			{
+				formref = ((USER_FRAME *)apobj)->form;
+			}
+			if (formref != NULL)
+				formname = formref->name;
+
+			if ((formref == NULL) || (formname == NULL) || 
+			    (*formname == EOS))
+			{
+				IIUGerr(E_VQ0098_No_Form_Defined, 0, 1,
+					apobj->name);
+				return (FAIL);
+			}
+
+			/* read the frame */
+			*tag = read_frame(formname);
+			if (frame == NULL)
+			{
+				return (FAIL);
+			}
+			break;
+
+		  default:
+			/* gen the frame first, if need be */
+			if (! IIVQgcGenCheck(apobj))
+			{
+				/* Error gen'ing form */
+				return (FAIL);
+			}
+
+			/* read the frame */
+			formname = ((USER_FRAME *)apobj)->form->name;
+			*tag = read_frame(formname, &readerr);
+			if (frame == NULL)
+			{
+				/* Display the error */
+				IIUGerr(E_VQ0061_FormReadErr, 0, 2, 
+						formname, (PTR)&readerr);
+				return (FAIL);
+			}
+		}
+
+
+		/* Sort the fields in the frame */
+		sort_frame();
+
+		/*
+		** Get size of largest activation name.  We'll use this to 
+		** build the lookup form.  We also need to insure that the 
+		** activation name column is wide enough so that default
+		** form generation won't widen the indicator column.  
+		** Also count activations.
+		*/
+		numfldacts = 0;
+		lpf_width = IIUGmllMaxLineLen(lphdr) - 2 - 2*FTspace();
+		for_all_activations(get_lpf_width, ftype > 0, (PTR)NULL);
+
+		*flags |= VQESC_FL;
+	}
+
+	/* Give up if there are no fields on the form */
+	if (frame->frfldno == 0)
+	{
+		IIUGerr(E_VQ005F_No_Fields_On_Form, 0, 1,
+			(PTR)((USER_FRAME *)apobj)->form->name);
+		return (FAIL);
+	}
+
+	/*	Create the listpick form, if we haven't already */
+	if ((*flags & VQESC_LF) == 0)
+	{
+		if (create_lp_form(ftype > 0, lphdr) != OK)
+			return (FAIL);
+
+		*flags |= VQESC_LF;
+	}
+
+	/*
+	** Load the tablefield if need be.  Omit "all" activations for 
+	** FLD_CHANGE.
+	*/
+	if (ftype == ESC_FLD_CHANGE || ftype < 0)
+		load_flag = VQESC_CL;
+	else
+		load_flag = VQESC_EL;
+
+	if ((*flags & load_flag) == 0)
+	{ 
+		load_tablefield((bool)(load_flag == VQESC_EL));
+		*flags &= ~VQESC_TF_MASK;
+		*flags |= load_flag;
+	}
+
+	/* 
+	** Set up the indicator column, which shows whether 
+	** such escape code exists.
+	*/
+	if (ftype > 0)
+	{
+		metaframe = ((USER_FRAME *)apobj)->mf;
+		set_field_indicators(metaframe, ftype);
+	}
+
+	/* Do the list pick.  */
+	_VOID_ IIFRrlpRunListPick(iivqLP0form, iivqLP1tblfld, -1, -1, 
+			          htitle, hfile, handler, data);
+	return (OK);
+}
+
+/*{
+** Name: IIVQpfePurgeFieldEscapes - 
+**		Remove field escape code for noexistent and derived fields
+**
+** Description:
+** Remove any escape code for non-existent fields.  Here we merely give it an
+** illegally large type value.  This causes it to be deleted before being saved
+** to the database.
+**
+** It is assumed that the escape codes are already loaded into memory.
+**
+** Inputs:
+**	metaframe	METAFRAME *	Metaframe to edit
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**		If anything was purged, the MF_P_ESC bit in the metaframe 
+**		update mask is set.
+**
+** History:
+**	14 aug 1989 (Mike S) Initial version
+*/
+VOID
+IIVQpfePurgeFieldEscapes(metaframe)
+METAFRAME	*metaframe;	/* Metaframe to edit */
+{
+	i4 	i;		/* Loop indices */
+	FLDESCS fldescs;	
+	USER_FRAME *apobj = ((USER_FRAME *)(metaframe->apobj));
+	char	*formname = apobj->form->name;
+	TAGID	frmtag;		/* Tag form was allocated on */
+	ER_MSGID readerr;
+
+	/* read the frame */
+	frmtag = read_frame(formname, &readerr);
+	if (frame == NULL)
+	{
+		/* We don't know what to purge with no form present */
+		return;
+	}
+
+	/* Sort the fields in the frame */
+	sort_frame();
+
+	/*
+	** Find the beginning and end of the field escape codes.
+	** This depends on the escape codes being sorted by type.
+	*/
+	fldescs.start = -1;
+	fldescs.end = metaframe->numescs - 1;
+	for (i = 0; i < metaframe->numescs; i++)
+	{
+		register MFESC *escptr = metaframe->escs[i];
+
+		if ((escptr->type == ESC_FLD_ENTRY) || 
+		    (escptr->type == ESC_FLD_CHANGE) ||
+		    (escptr->type == ESC_FLD_EXIT))
+		{
+			if (fldescs.start < 0)
+				fldescs.start = i;	/* First one */
+
+			/* Tentatively set it invalid */
+			escptr->type += NUMESCTYPES;
+		}
+		else
+		{
+			if (fldescs.start >= 0)
+			{
+				fldescs.end = i - 1;	/* Last one */
+				break;			/* Done looking */
+			}
+		}
+	}
+
+	/* If there is any escape code, validate it */
+	if (fldescs.start >= 0)
+	{
+		fldescs.escs = metaframe->escs;
+		fldescs.validated = 0;
+		for_all_activations(check_fld_escs, TRUE, (PTR)&fldescs);
+
+		/* Force a database update unless all were validated */
+		if (fldescs.validated != fldescs.end - fldescs.start + 1)
+			metaframe->updmask |= MF_P_ESC;
+	}
+
+	/* release form memory */
+	IIUGtagFree(frmtag);
+}
+
+/*
+** Sort form fields 
+*/
+static VOID
+sort_frame()
+{
+	register FIELD **frfld = frame->frfld;
+	i4 firsttf;
+	TBLFLD	*tf;
+	i4	i;
+
+	/*
+	** Sort field in frame with 
+	**	Major sort: tablefields at the bottom
+	**	Minor sort: alphabetically
+	*/
+	if (frame->frfldno > 1)
+		IIUGqsort((char *)frfld, frame->frfldno, 
+			  sizeof(FIELD *), cmp_field);
+
+	/* Sort the columns in each tablefield */
+	for (i = 0, firsttf = -1; i < frame->frfldno; i++)
+	{
+		if (frfld[i]->fltag == FTABLE)
+		{
+			firsttf = i;
+			break;
+		}
+	}
+	if (firsttf < 0)
+		return;
+
+	for (i = firsttf; i < frame->frfldno; i++)
+	{
+		tf = frfld[i]->fld_var.fltblfld;
+		if (tf->tfcols > 1)
+			IIUGqsort((char *)tf->tfflds, tf->tfcols, 
+			  	  sizeof(FLDCOL *), cmp_cols);
+	}
+
+}
+
+/*
+** Sort field in frame with 
+**	Major sort: tablefields at the bottom
+**	Minor sort: alphabetically
+*/
+static i4
+cmp_field(itm1, itm2)
+char  *itm1;
+char *itm2;
+{
+	FIELD *fld1 = *(FIELD **)itm1;
+	FIELD *fld2 = *(FIELD **)itm2;
+	i4 tagdiff = fld1->fltag - fld2->fltag; 
+	char *name1, *name2;
+
+	/* simplefields go before tablefields */
+	if (tagdiff != 0) return tagdiff;
+
+	/* If they're the same kind, alphabetize */
+	name1 = (fld1->fltag == FREGULAR) ? 
+		fld1->fld_var.flregfld->flhdr.fhdname :
+		fld1->fld_var.fltblfld->tfhdr.fhdname;
+	name2 = (fld2->fltag == FREGULAR) ? 
+		fld2->fld_var.flregfld->flhdr.fhdname :
+		fld2->fld_var.fltblfld->tfhdr.fhdname;
+	return (STcompare(name1, name2));
+}
+
+/*
+** Sort tablefield columns alphabetically.
+*/
+static i4
+cmp_cols(itm1, itm2)
+FLDCOL **itm1;
+FLDCOL **itm2;
+{
+	FLDCOL *col1 = *(FLDCOL **)itm1;
+	FLDCOL *col2 = *(FLDCOL **)itm2;
+
+	return (STcompare(col1->flhdr.fhdname, col2->flhdr.fhdname));
+}
+
+/*
+** Create the listpick form.
+*/
+static STATUS
+create_lp_form(esc_field, lphdr)
+bool	esc_field;
+char	*lphdr;
+{
+	FLD_DESC fd[2];		/* Column descriptors */
+	DB_DATA_VALUE dbv[2]; 	/* Data descriptors */
+	i4 numrows;		/* Rows in tablefield */
+##	PTR  lp4;		/* Form handle */
+	STATUS status;
+	i4 form_width;
+
+	/* Intialize descriptors */
+
+	/* Activation name column */
+	fd[0].name = iivqLP2actCol;
+	fd[0].type = dbv;
+	fd[0].maxwidth = 0;
+	dbv[0].db_length = lpf_width;
+	dbv[0].db_datatype = DB_CHA_TYPE;
+	dbv[0].db_prec = 0;
+
+	if (esc_field)
+	{
+        	/* Indicator column */
+        	fd[1].name = ind_col;
+        	fd[1].type = dbv + 1;
+        	fd[1].maxwidth = 0;
+        	dbv[1].db_length = 1;
+        	dbv[1].db_datatype = DB_CHA_TYPE;
+        	dbv[1].db_prec = 0;
+		form_width = 2;
+	}
+	else
+	{
+		form_width = 1;
+	}
+
+	/* 
+	** Calculate number of rows.  We will use the lower of 10 and
+	** the number of activations available.
+	*/
+	numrows = min(10, numfldacts);
+	
+	/* Make default form */
+	status = IIFRmdfMakeDefaultForm(
+			lphdr, iivqLP0form, FALSE, form_width, fd, 
+			numrows, &lpf_frame);
+	if (status != OK) 
+	{
+		IIUGerr(E_VQ0069_Cannot_Make_LP_Form, 0, 1, (PTR)&status);
+		return status;
+	}
+
+	/* Init form */
+	lp4 = (PTR)lpf_frame;
+##	ADDFORM lp4;
+
+	return (OK);
+}
+
+/*
+** Load the tablefield with field activation names.  Do or don't include
+** "all" activations acoording to the argument.
+*/
+static VOID
+load_tablefield(all)
+bool 		all;	/* Whether to include "all" activations */
+{
+
+##	INITTABLE iivqLP0form iivqLP1tblfld UPDATE 
+##		(iivqLP3flagsCol = i4, iivqLP4flags2Col = i4, 
+##		 iivqLP5fldTypeCol = i4)
+
+	/* Load all activations */
+	for_all_activations(load_one_row, all, (PTR)NULL);
+}
+
+/*
+**	Set indicators for escape code presence
+*/
+static VOID
+set_field_indicators(mf, esctype)
+METAFRAME	*mf;	/* Metaframe */
+i4		esctype; /* Escape type */
+{
+	MFESC	**escs = mf->escs;
+	i4	firstesc, lastesc;
+##	char	rowactnm[(2*FE_MAXNAME) + 2];
+	bool	matched;
+	i4	i;
+
+	/* Set indicator variables. First get limits for this escape type */
+	IIVQgelGetEscLimits(mf, esctype, &firstesc, &lastesc);
+
+	/* Now set the indicators */
+##	unloadtable iivqLP0form iivqLP1tblfld (rowactnm = iivqLP2actCol )
+##	{
+		matched = FALSE;
+		for (i = firstesc; i <= lastesc; i++)
+		{
+			if (STbcompare(escs[i]->item, 0, rowactnm, 0, TRUE) 
+				== 0)
+			{
+				matched = TRUE;
+				break;
+			}
+		}
+		if (matched)
+		{
+##			putrow iivqLP0form iivqLP1tblfld (ind_col = _star)
+		}
+		else
+		{
+##                      putrow iivqLP0form iivqLP1tblfld (ind_col= _space)
+		}
+##	}
+}
+
+/*
+**	Read a form into memory.
+**	We set a local error handler with IIseterr to trap any errors
+**	reading the form.
+*/
+static TAGID
+read_frame(formname, readerr)
+char	*formname;	/* Form to read from database */
+ER_MSGID *readerr;	/* Error number from read */
+{
+	i4		(*oldfunc)();		/* Previous error handler */
+	TAGID		frmtag;			/* Tag we allocate form on */
+
+	frmtag = FEbegintag();
+
+	/*
+	** Read form, ignoring syntax errors in validation/derivation
+	** strings.
+	*/
+	frame = IIFGgfGetForm(formname, TRUE, readerr);
+
+	_VOID_ FEendtag();
+	return (frmtag);
+}
+
+/*
+** Loop through all activations for the form, in the order
+**
+**	1. "all" fields activation.
+**	2. simplefield activations, which have been sorted alphabetically.
+**	3.  For each tablefield (which have been sorted):
+**		A. "all" columns activation
+**		B. each column activation.  These have also been sorted.
+**
+**	Activations 1 and 3A ("all") are optionally included.  
+**
+**	For each activation, we call the "func" argument:
+**		(*func)(actname, actno, all, data, field, type)
+**		char *actname;	/* Activation name
+**		i4 actno;	/* activation number, 0-based.
+**		bool all;	/* Is this an "all" activation 
+**		PTR data;	/* data passed through
+**		PTR field;	/* 1. NULL
+**				/* 2. REGFLD pointer
+**				/* 3A. TBLFLD pointer
+**				/* 3B. FLDCOL pointer
+**		i4 type;	/* 1. -1
+**				/* 2. FREGULAR
+**				/* 3A. FTABLE
+**				/* 3B. FCOLUMN
+*/
+static VOID
+for_all_activations(func, all, data)
+VOID 	(*func)();	/* Activation function */
+bool 	all;		/* Whether to include "all" activations */
+PTR	data;		/* Data to pass to activation function */
+{
+        i4  i, j;
+        i4  rowno = 0;
+        register FIELD **frfld;
+        char    actnm[FLDACTNMSZ];
+
+        if (all)
+        {
+                /* "all" activation */
+		(*func)(_all, rowno, TRUE, data, (PTR)NULL, -1);
+                rowno++;
+        }
+
+        /* Loop through field structures */
+        for (i = 0, frfld = frame->frfld; i < frame->frfldno; i++, frfld++)
+        {
+                if ((*frfld)->fltag == FREGULAR)
+                {
+			char 	*name;
+			REGFLD	*regfld = (*frfld)->fld_var.flregfld;
+
+                        /* Simple field activation */
+                        name = regfld->flhdr.fhdname;
+			/* Can't activate an a field named "all" */
+			if (STcompare(name, _all) == 0)
+				continue;
+			(*func)(name, rowno, FALSE, data, 
+				(PTR)regfld, FREGULAR);
+                        rowno++;
+                }
+                else
+                {
+                        register TBLFLD *tf;
+                        register FLDCOL **fldcol;
+                        char *tfname;
+
+                        tf = (*frfld)->fld_var.fltblfld;
+                        tfname = tf->tfhdr.fhdname;
+                        if (all)
+                        {
+                                STpolycat(3, tfname, _dot, _all, actnm);
+				(*func)(actnm, rowno, TRUE, data, (PTR)tf, 
+					FTABLE);
+                                rowno++;
+                        }
+                        for (j = 0, fldcol = tf->tfflds;
+                             j < tf->tfcols;
+                             j++, fldcol++)
+                        {
+				char *name = (*fldcol)->flhdr.fhdname;
+
+				/* Can't activate on a column named "all" */
+				if (STcompare(name, _all) == 0) continue;
+                                STpolycat(3, tfname, _dot, name, actnm);
+				(*func)(actnm, rowno, FALSE, data, *fldcol, 
+					FCOLUMN);
+                                rowno++;
+                        }
+                }
+        }
+}
+
+/*
+** Increase lpf_width, if the new activation is bigger.  Also count activations.
+*/
+/*ARGSUSED*/
+static VOID
+get_lpf_width(actnm, dummy, all, dummy2, dummy3, dummy4)
+char	*actnm;	/* Activation name */
+i4	dummy;	/* Ignored */
+bool	all;	/* Is this an "all" activation */
+PTR	dummy2;	/* Ignored */
+PTR	dummy3;	/* Ignored */
+i4	dummy4;	/* Ignored */
+{
+	lpf_width = max(lpf_width, STlength(actnm));
+	numfldacts++;
+}
+
+/*
+**	If this is a derived field or column, it can't have escape code.
+**	Otherwise, set field escapes valid, if they match. 
+*/
+/*ARGSUSED*/
+static VOID
+check_fld_escs(actnm, dummy, dummy2, data, fldptr, fldtype)
+char	*actnm;		/* Activation name */
+i4	dummy;		/* Ignored */
+bool	dummy2;		/* Ignored */
+PTR	data;		/* Field escape structure */
+PTR	fldptr;		/* FIeld structure pointer */
+i4	fldtype;	/* field type */
+{
+	i4 i;
+	FLDESCS *fldescs = (FLDESCS *)data;
+	REGFLD *regfld;
+	FLDCOL	*fldcol;
+
+	switch(fldtype)
+	{
+	    case FREGULAR:
+		regfld = (REGFLD *)fldptr;
+		if ((regfld->flhdr.fhd2flags & fdDERIVED) != 0)
+		{
+			/* A derived field */
+			return;
+		}
+		break;
+
+	    case FCOLUMN:
+		fldcol = (FLDCOL *)fldptr;
+		if ((fldcol->flhdr.fhd2flags & fdDERIVED) != 0) 
+		{
+			/* A derived column */
+			return;
+		}
+		break;
+	}
+
+	/* Mark any escape valid which matches the name */
+	for (i = fldescs->start; i <= fldescs->end; i++)
+	{
+		if (STbcompare(actnm, 0, fldescs->escs[i]->item, 0, TRUE)
+			== 0)
+		{
+			fldescs->escs[i]->type -= NUMESCTYPES;
+			fldescs->validated++;
+		}
+	}
+}
+
+/*
+** Load a single activation into the tablefield 
+*/
+/*ARGSUSED*/
+static VOID
+load_one_row(actnm, rowno, dummy, dummy2, fld, fldtype)
+## char	*actnm;	/* Activation name */
+## i4	rowno;	/* Row number */
+bool	dummy;	/* Ignored */
+PTR	dummy2;	/* Ignored */
+PTR	fld;	/* Field, column, or tablefield pointer */
+##i4	fldtype;	/* Pointer type */
+{
+##	i4 fieldflags;
+##	i4 fieldflags2;
+	REGFLD *regfld;
+	FLDCOL *fldcol;
+	TBLFLD *tblfld;
+
+	switch(fldtype)
+	{
+	    case FREGULAR:
+		regfld = (REGFLD *)fld;
+		fieldflags = regfld->flhdr.fhdflags;
+		fieldflags2 = regfld->flhdr.fhd2flags;
+		break;
+
+	    case FTABLE:
+		tblfld = (TBLFLD *)fld;
+		fieldflags = tblfld->tfhdr.fhdflags;
+		fieldflags2 = tblfld->tfhdr.fhd2flags;
+		break;
+
+	    case FCOLUMN:
+		fldcol = (FLDCOL *)fld;
+		fieldflags = fldcol->flhdr.fhdflags;
+		fieldflags2 = fldcol->flhdr.fhd2flags;
+		break;
+
+	    default:
+		fieldflags = fieldflags2 = 0;
+		break;
+	}
+
+
+		/* Load the tablefield */
+##		LOADTABLE iivqLP0form iivqLP1tblfld 
+##			(iivqLP2actCol = actnm, iivqLP3flagsCol = fieldflags, 
+##			 iivqLP4flags2Col = fieldflags2, 
+##			 iivqLP5fldTypeCol = fldtype)
+}
+
+/*{
+** Name:	IIVQcdfCheckDerivedField - check for a dervied field
+**
+** Description:
+**	In some contexts, a derived field isn't a valid choice.  These are
+**	1. For escape code.  An actviation cannot be placed on a derived field.
+**	2. As the target in parameter passing.
+**	If a derived field was chosen, we will issue an error message.
+**
+** Inputs:
+**	ffldname	char *	Field (or column) name
+**	ffldtype	i4	Field (or column) type
+**	fflags2		i4	Second flags word
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		TRUE	If it is a derived field (or column)
+**
+**	Exceptions:
+**
+** Side Effects:
+**	May issue a message
+**
+** History:
+**	10/90 (Mike S) Initial version
+*/
+bool
+IIVQcdfCheckDerivedField(ffldname, ffldtype, fflags2)
+char 	*ffldname;
+i4	ffldtype;
+i4	fflags2;
+{
+	char	*fldtypestring;
+
+	/* The "all" activations can't be derived fields */
+        if (ffldtype == FREGULAR || ffldtype == FCOLUMN)
+	{
+		if ((fflags2 & fdDERIVED) != 0)
+		{
+			/* A derived field or column */
+			fldtypestring = 
+				ERget((ffldtype == FREGULAR) ? 
+					F_VQ013A_field : F_VQ013B_column);
+			IIUGerr(E_VQ00E0_Is_Derived, 0, 2, 
+				ffldname, fldtypestring);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}

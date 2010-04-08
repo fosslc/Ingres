@@ -1,0 +1,528 @@
+/*
+**Copyright (c) 2007 Ingres Corporation
+*/
+
+/**
+** Name: upgradedb.QSH - Header file for 6.1 to 7.0 conversion program
+**
+** Description:
+**      Contains type references, defines, and typedefs for the 6.1 to
+**	7.0 conversion program.
+**
+** History: 
+**      09-jun-89 (ralph)
+**	    Initial creation from jrb's cv60to61.h.
+**	16-sep-89 (ralph)
+**	    Added SERVER_VERSION constant.
+**	22-sep-89 (ralph)
+**	    Renamed to UPGRADEDB.H.
+**	    Changed SERVER_VERSION constant from "7.0" to "6.3".
+**	    Added ALTERNATE_VERSION constant for testing.
+**	19-oct-89 (ralph)
+**	    Added locdump and areadump to delete dump config files.
+**	07-jun-90 (ralph)
+**	    Added be_convert, fe_convert flags to the dbname_node structure
+**	28-mar-91 (wolf)
+**	    Changed SERVER_VERSION constant from "6.3" to "6.4".
+**	22-jul-91 (teresa)
+**	    upgradedb redesign code enhancements.  Changed from .h to .qsh
+**	3-feb-94 (tomm)
+**	    Version number changed from 6.5 -> 1.0.  Changed SERVER_VERSION
+**	    to this number.   Hopefully, 2.0 is far away.
+**	20-Feb-1994 (jpk)
+**	    Version number changed from 1.0 -> 1.1.  Changed SERVER_VERSION
+**	    to this number.
+**      09-jun-1995 (chech02)
+**          changed SERVER_VERSION from "1.1" to "OpING 1.1"
+**      28-jun-1995 (chech02)
+**          changed SERVER_VERSION from "OpING 1.1" to "OpING 1.2"
+**	13-jun-96 (nick)
+**	    LINT directed changes.
+**	08-jun-96 (emmag)
+**	    Changed SERVER_VERSION from "OpING 1.2" to "OI 1.2"
+**	06-mar-96 (nanpr01)
+**          Added 606 for 2.0 upgradedb, ver 654. Variable Page Size Project.
+**	    Also changed the SERVER_VERSION to OpING 2.0 from OpING 1.2
+**	30-sep-1996 (canor01)
+**	    Return definition of DU_FILE to duvfiles.h where it belongs.
+**	09-may-97 (mcgem01)
+**	    Add V20TCP_LEVEL for the table cache priority project.
+**	11-jun-98 (mcgem01)
+**	    Changed the SERVER_VERSION to II 2.0
+**	04-feb-1998 (hanch04)
+**	    Added V25_LEVEL and updated VERSIONs for OI 2.5
+**	10-jul-1998 (somsa01)
+**	    Minor correction to previous submission to correctly have the
+**	    esqlc preprocessor compile it properly as well as to fix a 
+**	    "typo". The SERVER_VERSION define did not need to be in the
+**	    "EXEC SQL BEGIN DECLARE SECTION".
+**	
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      02-Mar-2001 (hanch04)
+**          Bumped release id to external "II 2.6" internal 860 or 8.6
+**      16-may-2001 (stial01)
+**          Added imadb_cvt and icedb_cvt to the DU_UPGRADE_CB (B104731) 
+**      09-jan-2002 (stial01)
+**          upgradedb changes for SIR 106745
+**      08-may-2002 (stial01)
+**          Added dbmsinfo_lp64
+**      07-Apr-2003 (hanch04)
+**          Bumped release id to external "II 2.65" internal 865 or 8.65
+**      13-Jan-2004 (sheco02)
+**          Bumped release id to external "II 3.0" internal 900 or 9.0
+**	11-mar-2004 (somsa01)
+**	    Added icesvr_cvt and icetutor_cvt to the DU_UPGRADE_CB.
+**	27-Aug-2004 (schka24)
+**	    Changes for upgrade to r3.
+**	21-Sep-2004 (schka24)
+**	    Add iidbconstants to list of Star catalogs to refresh.
+**	30-Dec-2004 (schka24)
+**	    Current level is now 0902 (3.0.2 release).
+**	15-Aug-2005 (thaju02)
+**	    Change SERVER_VERSION from 3.0.2 to 3.0.3.
+**      17-Jan-2006 (hweho01)
+**	    Current level is now 0904.    
+**      01-Feb-2006 (hweho01)
+**          Modified SERVER_VERSION string to "II 9.0.4", need to maintain
+**          the compatibility with the previous releases.
+**      02-Mar-2006 (stial01)
+**          Added tree_error to DBNAME_NODE
+**          the compatibility with current/previous releases.
+**      27-Apr-2006 (hweho01)
+**	    Change current level to 910 for new release.    
+**	03-May-2007 (drivi01)
+**	    Update server version to "II 9.2.0".
+**	14-Jun-2007 (bonro01)
+**	    Update server version to "II 9.3.0".
+**      16-jun-2008 (stial01)
+**          Write to debug log, unless -n (nolog) specified
+**	19-Nov-2008 (hweho01)
+**	    Fix the value for V930_LEVEL, it should be 930. 
+**	04-Jun-2009 (bonro01)
+**	    Update server version to "II 9.4.0".
+**	10-Jun-2009 (hweho01)
+**	    Update server version to "II 10.0.0".
+**	12-Nov-2009 (kschendel) SIR 122882
+**	    cmptlvl is now an integer.
+**/
+
+
+/* [@forward_type_references@] */
+
+
+/*
+**  Forward and/or External function references.
+*/
+i4	    set_cmptlvl(u_i4, i4);
+VOID	    handle_esqlerr();
+
+/* [@function_reference@]... */
+
+
+/*
+**  Defines of other constants.
+*/
+
+/* other house keeping constants */
+
+#define		DU_LOCDEFAULT	    "ii_database"
+#define		DU_AREADEFAULT	    "II_DATABASE"
+#define		DU_UPGRADEDB	    "UPGRADEDB"
+#define		DU_FAIL_EXIT	    -1		/* used to force PCexit(FAIL) */
+#define		DU_OK_EXIT	    -2		/* used to force PCexit(OK) */
+/*
+**	These are constants based on the lengths of the fields in catalogs
+**	(plus 1 for the null terminator in esqlc).
+*/
+#define		DU_STDCAT_NAMESIZE   32	   /* number of characters in a
+					    ** standard catalog name */
+
+/* SQL SPECIFIC CONSTANTS */
+EXEC SQL BEGIN DECLARE SECTION;
+    #define SQL_NUM_ROWS	2	    /* # tuples processed by delete,
+					    ** fetch, insert,select, update,
+					    ** copy, create .. as select */
+    #define SQL_MSG_BUF_LEN	500
+EXEC SQL END DECLARE SECTION;
+
+/*
+** Name: TABLE_IDS
+**
+** Description:
+**
+**	This section maps DM_IIxxxx (from dmf.h) into EQUEL/ESQL constants
+**	for use by DUF.  This will eventually be lifted from UPGRADEDB.QSH
+**	and put into a more general DUF header file, as this info is
+**	used by all of DUF.  This is being done to remove hard-wired constants
+**	and replace them with meaningful symbolic constants so that the code
+**	will be more maintainable.  The constants defined here MUST map to
+**	the same values as in dmf.h!
+**
+**	Mapping is as follows:
+**	    DM_B_XXXX_TAB_ID	--> DU_B_XXXX_TAB_ID  and must have same value
+**	    DM_I_XXXX_TAB_ID	--> DU_I_XXXX_TAB_ID  and must have same value
+**
+** History:
+**	07-aug-91 (teresa)
+**	    Initial creation.
+*/
+EXEC SQL BEGIN DECLARE SECTION;
+/* S_CONCUR SYSTEM TABLES */
+
+##define    DU_B_RELATION_TAB_ID         1
+##define    DU_I_RELATION_TAB_ID         0
+##define    DU_B_RIDX_TAB_ID             1
+##define    DU_I_RIDX_TAB_ID             2
+##define    DU_B_ATTRIBUTE_TAB_ID        3
+##define    DU_I_ATTRIBUTE_TAB_ID        0
+##define    DU_B_INDEX_TAB_ID            4
+##define    DU_I_INDEX_TAB_ID            0
+##define    DU_B_DEVICE_TAB_ID           8
+##define    DU_I_DEVICE_TAB_ID           0
+##define    DU_SCONCUR_MAX               9  /* SCONCUR max base table id. */
+
+/* DBMS MAPPED CATALOGS */
+
+##define    DU_B_QRYTEXT_TAB_ID          20
+##define    DU_I_QRYTEXT_TAB_ID          0
+##define    DU_B_TREE_TAB_ID             21
+##define    DU_I_TREE_TAB_ID             0
+##define    DU_B_PROTECT_TAB_ID          22
+##define    DU_I_PROTECT_TAB_ID          0
+##define    DU_B_INTEGRITY_TAB_ID        23
+##define    DU_I_INTEGRITY_TAB_ID        0
+##define    DU_B_DEPENDS_TAB_ID          24
+##define    DU_I_DEPENDS_TAB_ID          0
+##define    DU_B_STATISTICS_TAB_ID       25
+##define    DU_I_STATISTICS_TAB_ID       0
+##define    DU_B_HISTOGRAM_TAB_ID        26
+##define    DU_I_HISTOGRAM_TAB_ID        0
+##define    DU_B_DBP_TAB_ID		 27
+##define    DU_I_DBP_TAB_ID		 0
+##define    DU_B_XDEPENDS_TAB_ID         24
+##define    DU_I_XDEPENDS_TAB_ID         28
+##define    DU_B_RULE_TAB_ID             29    /* iirule */
+##define    DU_I_RULE_TAB_ID             0
+/* 30 reserved for 6.5 iidbloc */
+##define    DU_B_EVENT_TAB_ID		 31    /* iievent */
+##define    DU_I_EVENT_TAB_ID		 0
+##define    DU_1_EVENT_KEY		 1
+##define    DU_2_EVENT_KEY		 2
+ 
+
+/*  Database Database MAPPED CATALOGS */
+
+##define    DU_B_LOCATIONS_TAB_ID	40
+##define    DU_I_LOCATIONS_TAB_ID	0
+##define    DU_B_DATABASE_TAB_ID	41
+##define    DU_I_DATABASE_TAB_ID	0
+##define    DU_B_DBACCESS_TAB_ID	42
+##define    DU_I_DBACCESS_TAB_ID	0
+##define    DU_B_EXTEND_TAB_ID		43
+##define    DU_I_EXTEND_TAB_ID		0
+##define    DU_B_USER_TAB_ID		44
+##define    DU_I_USER_TAB_ID		0
+##define    DU_B_APLID_TAB_ID		45
+##define    DU_I_APLID_TAB_ID		0
+##define    DU_B_GRPID_TAB_ID		46
+##define    DU_I_GRPID_TAB_ID		0
+##define    DU_B_DBPRIV_TAB_ID          47
+##define    DU_I_DBPRIV_TAB_ID          0
+##define    DU_B_SECSTATE_TAB_ID        48
+##define    DU_I_SECSTATE_TAB_ID        0
+ 
+EXEC SQL END DECLARE SECTION;
+
+/*
+** Name: VERSIONS
+**
+** Description:
+**	This is a collection of version level constants for upgradedb.
+** History:
+**	07-aug-91 (teresa)
+**	    initial creation for upgradedb redesign.
+**	8-jul-94 (robf)
+**          Added 65ES for 1.1 ES upgradedb, version 652
+**	06-mar-96 (nanpr01)
+**          Added 606 for 2.0 upgradedb, ver 800. Variable Page Size Project.
+**	    Also changed the SERVER_VERSION to OpING 2.0 from OpING 1.2
+**	10-jul-1998 (somsa01)
+**	    Minor correction to previous submission to correctly have the
+**	    esqlc preprocessor compile it properly as well as to fix a 
+**	    "typo". The SERVER_VERSION define did not need to be in the
+**	    "EXEC SQL BEGIN DECLARE SECTION".
+**	31-Aug-1998 (merja01)
+**	    Move "#" for SERVER_VERSION to col 1 so it will compile on
+**	    axp_osf.
+*/
+
+/* The SERVER_VERSION constant defines the required server version
+** required to run the conversion utility.  It is compared against
+** the output of dbmsinfo('_version').
+*/
+# define SERVER_VERSION	"II 10.0.0"      /* The SERVER_VERSION constant defines 
+					** the required server version required
+					** to run the conversion utility.  It 
+					** is compared against the output of
+					** dbmsinfo('_version'). */
+
+EXEC SQL BEGIN DECLARE SECTION;
+
+    /* the following constants are internal representations for various 
+    ** 6.x releases 
+    */
+##define	UNKNOWN_LEVEL	0
+##define	V60_LEVEL	60
+##define	V61_LEVEL	61
+##define	V62_LEVEL       62
+##define	V63_LEVEL       63
+##define	V64_LEVEL	64
+##define	V65_LEVEL	65
+##define	V65ES_LEVEL	652
+##define	V12_LEVEL	653
+##define	V20_LEVEL	800
+##define	V20TCP_LEVEL	801
+##define	V25_LEVEL	850
+##define	V26_LEVEL	860
+##define	V30_LEVEL	900
+##define	V302_LEVEL	902
+##define	V904_LEVEL	904
+##define	V910_LEVEL	910
+##define	V920_LEVEL	920
+##define	V930_LEVEL	930
+##define	V940_LEVEL	940
+##define	V1000_LEVEL	1000
+##define	CURRENT_LEVEL   1000
+
+EXEC SQL END DECLARE SECTION;
+
+/*
+** Name: DBNAME_NODE - A node in the linked list of database names
+**
+** Description:
+**	We maintain a linked list of database names; this is the definition
+**	of a node in this list.
+**
+** History:
+**	05-aug-88 (jrb)
+**	    Initial creation.
+**	10-sep-88 (jrb)
+**	    Added "errors" field.
+**	04-nov-88 (jrb)
+**	    Added minorid to structure.
+**	05-nov-88 (jrb)
+**	    Added dba to structure.
+**	07-jun-89 (ralph)
+**	    Adapted for CV60TO70:
+**	    changed minorid to level; added access, locname, areaname
+**	19-oct-89 (ralph)
+**	    Added locdump and areadump to delete dump config files.
+**	07-jun-90 (ralph)
+**	    Added be_convert, fe_convert flags to the dbname_node structure
+**	03-May-91 (teresa)
+**	    add CDB/DDB support (ie, ddbname, cdbname, cdb_flag, ddb_flag)
+**	23-oct-91 (teresa)
+**	    move iidbcapabilities version constants to dudbms.qsh.
+**	21-aug-1997 (nanpr01)
+**	    Added FIPS flag for upgradedb of FIPS database.
+**	31-Aug-2004 (schka24)
+**	    Remove was-journaling, add did-bootstrap.
+*/
+
+typedef struct _dbname_node
+{
+    char	dbname[DB_MAXNAME+1];	    /* holds a database name */
+    char	ddbname[DB_MAXNAME+1];	    /* holds a DDB name */
+    char	cdbname[DB_MAXNAME+1];	    /* holds a CDB name */
+    char	dba[DB_MAXNAME+1];	    /* dba for database */
+    char	locname[DU_LOC_SIZE+4];	    /* Database location name */
+    char	areaname[DB_AREA_MAX+4];    /* Database area name */
+    char	locdump[DU_LOC_SIZE+4];	    /* Dump location name */
+    char	areadump[DB_AREA_MAX+4];    /* Dump area name */
+    i4		level;			    /* db's current level */
+    i4		access;			    /* db's access flags */
+    bool	errors;			    /* if errors converting */
+    bool	tree_error;		    /* if errors upgrading trees */
+    bool	be_convert;		    /* perform be conversion */
+    bool	fe_convert;		    /* perform fe conversion */
+    bool	tree_convert;		    /* convert trees */
+    bool	star_flag;		    /* true if db is a STAR db*/
+    bool	upcase;   		    /* true for FIPS db */
+    bool	did_bootstrap;		    /* Converted "bootstrap" catalogs */
+    bool	first_open;		    /* First-time flag for open msgs */
+    struct _dbname_node	*nextdb;	    /* link pointer */
+} DBNAME_NODE;
+
+/*}
+** Name: DU_UPGRADE_CB - Upgradedb control block
+**
+** Description:
+**      This control block is a centralized place to store infomration that
+**	upgradedb must know.
+**
+** History:
+**      22-jul-91 (teresa)
+**          initial creation.
+[@history_template@]...
+*/
+
+/* messge types */
+#define                 DU_ALWAYS	0  /* always output to stdout & log */
+#define                 DU_DEBUG	1  /* output only to stdout */
+#define                 DU_MODESENS	2  /* use mode to decide whether or
+					   ** not to output msg */
+#define                 DU_IO		3  /* output only if mode is
+					   ** RUNINTERACTIVE and prompt for
+					   ** yes/no response, otherwise
+					   ** generate msg that fix only allowed
+					   ** in interactive mode */
+#define			DU_ASK		4  /* Like mode sensitive, but also
+					   ** prompt for yes/no response */
+#define			DU_LEGAL	5  /* like DU_ASK, but use
+					   ** different prompt */
+#define			DU_ERR_FMTD	6  /* err msg formatted, just print */
+typedef struct _DU_UPGRADE_CB
+{
+
+    /*****************************************/
+    /** Command Line Parameters		    **/
+    /*****************************************/
+    i4              du_mode;		/* mode operator -- current default is
+					** run, but for 6.5 hope to allow other
+					** options */
+#define                 DU_RUN		1
+#define                 DU_SILENT	2
+#define                 DU_INTERACTIVE	3
+#define                 DU_REPORT	4
+    i4		    du_scope;		/* scope operator -- currently will be
+					** a single db name (DU_SPECIFY) or
+					** -all (DU_INSTLTN), but room here for
+					** 6.5 growth */
+#define                 DU_SPECIFY	1
+#define                 DU_DBA		2
+#define                 DU_INSTLTN	3
+    char	    **du_scopelst;	/* array of strings containing names
+					** of databases specified as part of
+					** the -sdbname parameter
+					*/
+    i4		    du_nscopes;		/* number of strings in array scopelist
+					*/
+    char	    du_user[DB_MAXNAME+1];/* user name if -u flag is selected -- 
+					** null if no -u specified on input line
+					*/
+    char	    du_dbname[DB_MAXNAME+1]; /* db name if onla a single db name
+					** is specified on the command line */
+    char	    du_logname[DB_MAXNAME+1]; /* alternate log file name if
+					** specified via the -l flag */
+    char	    du_dbgname[DB_MAXNAME+1]; /* debug output filename */
+    bool	    du_skiplog;		/* set to true by undocumented
+					** parameter of -nolog */
+    bool	    du_debug;		/* set to true by undocumented parameter
+					** of -d on verifydb input line */
+    bool	    du_simulate;	/* set to true when undocumented parameter
+					** of TEST_RUNI used.  This is for
+					** testing verifydb (simulates Yes
+					** answer from user when testing
+					** VERIFYDB.)  This should NEVER be used
+					** for real!!!
+					*/
+    i4		    du_dbmstype;	/* type of database */
+#define			DU_DBINGRES	0
+#define			DU_DBSTAR	1
+#define			DU_DBRMS	2
+
+    /*****************************************/
+    /** Housekeeping Information	    **/
+    /*****************************************/
+    char	    duowner[DB_MAXNAME+1];  /* name of verifydb task owner */
+    char	    du_opendb[DB_MAXNAME+1];/* name of any current open database */
+    char	    du_feclients[DU_MAX_CLIENT_NAME+1];	/* list of fe clients*/
+    i4		    du_fecnt;		/* count of clients in du_feclients */
+    bool            Connected;		/* indicates if we are connected to a db
+					** in the non iidbdb sesssion */
+    bool	    dbdb_open;		/* set to true if iidbdb is open */
+    bool	    dbdb_cvt;		/* set to true while converting iidbdb*/
+    bool	    imadb_cvt;          /* set true if need to convert imadb */
+    bool	    icedb_cvt;          /* set true if need to convert icedb */
+    bool	    icesvr_cvt;         /* set true if need to convert icesvr */
+    bool	    icetutor_cvt;       /* set true if need to convert icetutor */
+    bool	    du_trees;		/* true if need to convert trees */
+    char	    dbmsinfo_lp64;      /* dbmsinfo('lp64') = Y/N */
+    DU_ERROR	    *du_msg;		/* error control block */
+    DU_FILE	    du_log;		/* file descriptor for upgradedb log */
+    LOCATION	    log_dir_loc;	/* Location of log directory */
+    char	    log_dir_buf[MAX_LOC];/* buffer for log directory */
+    DU_FILE	    du_dbg;		/* file descriptor for debug log */
+    i4              du_ownstat;         /* owner status.  ie iiuser.status
+					** for duowner */
+    EX_CONTEXT      Context_ex;         /* exception handler context */
+    DBNAME_NODE     *Dbname_head;	/*list of all databases within the scope
+					** of upgradedb */
+    DBNAME_NODE     *Dbname_ptr;	/* for walking thru dbname list	*/
+    bool            Iidbdbok;		/* was iidbdb conversion error-free? */
+    bool            Ignore_errors;	/* Ignore esql/equel errors */
+
+
+    /*********************************************************/
+    /* --		UPGRADEDB TRACES		  -- */
+    /*							     */
+    /* These tracepoints are used mostly for testing.	     */
+    /*							     */
+    /* To set upgradedb trace points, define a logical named */
+    /* II_UPGRADEDB_TRACE to a single trace point or a series*/
+    /* of them.						     */
+    /*      EXAMPLE 1 : set trace ponit 17		     */
+    /*          define/job II_UPGRADEDB_TRACE "17"	     */
+    /*      EXAMPLE 2 : set trace points 01 and 11 and 12    */
+    /*		define/job II_UPGRADEDB_TRACE "1,11,12"	     */
+    /*********************************************************/
+#define	MAX_TRACE_PTS		30
+
+    i4		    this_trace;	    /* scratch pad to keep track of which
+				    ** trace point is being processed */
+    i4		    upgtrace[MAX_TRACE_PTS];
+
+#define UPG01_SKIP_UPGRADEFE    1   /* do not call upgradefe via ute.  HOwever,
+                                    ** do go ahead and try and connect to 
+                                    ** star server if DDB is being converted.
+                                    ** This is primarily for debug purposes.
+				    ** In most cases, you will want to use
+                                    ** trace point 3 to turn off FE conversion*/
+#define	UPG02_STAR_STDCATS	2   /* cause star standard catalogs to be
+				    ** created, even if the db is at the current
+				    ** level */
+#define UPG03_SKIP_FECVT        3   /* turn off FE upgrade, do only BE upgrade*/
+#define UPG04_SKIP_BECVT        4   /* turn off BE upgrade, do only FE upgrade*/
+#define UPG05_COMPATLVL         5   /* display compat level information */
+#define UPG06_DESTROYED		6   /* simulate a db being destroyed before
+				    ** upgradedb can operate on it. */
+#define UPG07_ABORT		7   /* causes upgradedb to abort in the middle*/
+}   DU_UPGRADE_CB;
+
+/*
+** One-to-one mapping of STAR level object name to local object name and type.
+*/
+typedef struct _DU_upg20_link_object_entry DU_upg20_link_object_entry;
+ 
+struct _DU_upg20_link_object_entry
+    {
+        char    *ii_name;           /* Link name -- ie, name in LDB cats */
+        char    *iidd_name;         /* OBJECT name -- ie, name CDB uses */
+        char    *obj_type;          /* OBJECT types */
+        char    *loc_type;          /* LOCAL types */
+        int     num_indexes;        /* number entries in DU_index_object_map -
+                                    ** indicates LDB secondary indexes to map*/
+    };
+
+static DU_upg20_link_object_entry DU_upg20_link_object_map[] = {
+        "iitables",        	"iidd_tables",     	"L", "T", 0,
+        "iiindexes",            "iidd_indexes",         "L", "T", 0,
+        "iiphysical_tables",    "iidd_physical_tables", "L", "V", 0,
+        "iidbconstants", 	"iidd_dbconstants",     "L", "V", 0,
+        "",                     "",                     "",  "",  0
+    };  /* OBJECTS names to LINKS names system catalog mapping */
+

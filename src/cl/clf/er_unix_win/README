@@ -1,0 +1,256 @@
+Below is the CL Committee proposal for CL_ERR_DESC.  It was approved
+subject to the provision of an example of the new ERlookup() calling syntax.
+That example is here in callexam.c.  There is also an example of how to
+use the Unix implementation of CL_ERR_DESC in codeexam.c.
+
+
+
+From:	BADGER::LLAMA::ROGER 19-JUL-1988 02:25
+To:	hyrax::cl
+Subj:	Proposed changes to CL_SYS_ERR, ERlookup
+
+    We have prototyped a scheme for reporting system-dependent errors
+on UNIX, the salient features of which are:
+ 
+    System error messages are augmented with detailed information
+    about the UNIX call that failed.
+ 
+    The error messages for documented CL routine error codes may be
+    parameterized with implementation-specific information.
+ 
+    Error messages for internal CL errors, that may be unique to a
+    particular CL, are supported.
+ 
+This has resulted in two CL interface changes: the CL_SYS_ERR datatype
+has been recast as CL_ERR_DESC (internal CL error descriptor), whose
+domain is a superset of the old datatype's; and ERlookup() may now be
+passed a CL_ERR_DESC along with a message to be looked up.  Some other
+changes or clarifications are also included.
+ 
+ 
+ARCHITECTURAL CHANGES
+ 
+    Description.
+ 
+        1. The CL_SYS_ERR type has been renamed CL_ERR_DESC.  The new
+           type may describe any system-specific error, not just an
+           operating system error; e.g., an internal CL routine failure
+           can be described.
+ 
+        2. The ERlookup semantics were specified.
+ 
+        3.
+            a) The ERlookup formal parameter `sys_err' was renamed `clerror'.
+            b) The formal parameter `flag' was renamed `flags'.
+ 
+        4. The ERlookup semantics were "changed" (although the previous
+           behavior was undocumented) as follows:
+ 
+            a) The `msg_number' and `clerror' parameters are not mutually
+               exclusive.  The CL_ERR_DESC set on CL routine failure
+               should always be passed to ERlookup when looking up a
+               CL error message.  A second, optional call to ERlookup with
+               a `msg_number' of zero can be made to obtain just the system-
+               specific messages; this has not changed except that now
+               the message may describe an internal CL error or an OS error.
+ 
+               The precise call format that this change affects is:
+ 
+                ERlookup(msg_number, &clerror, ...)
+ 
+               whose behavior was not previously defined, but which 
+               would have only returned the OS error message.  Now this
+               returns the text for `msg_number'.  The new semantics are
+               that ERlookup must always know if there was a system error
+               associated with a CL error.
+ 
+            b) If the `clerror' parameter is non-null, `param' is ignored.
+               This was already true in the existing implementations, but
+               is now specified.
+ 
+        5. A new formatting option, ER_TEXTONLY, was added to ERlookup.
+           (None of the flags were specified previously.)
+ 
+ 
+    Justification.
+ 
+        1. A simple CL routine will often fail after calling the OS.
+           The CL_SYS_ERR type allowed such routines to communicate
+           the reason for the failure to the error reporting system.
+           However, some CL modules have a complex inner structure,
+           with several private functions or calls to other CL services
+           It is appropriate to have a means of reporting internal CL
+           errors, and it is convenient to use the same mechanism as
+           for externally specified ones, i.e., define error codes to
+           be returned by internal functions.  Since these error codes
+           are not part of the CL's external interface, they must be
+           encapsulated in an abstract datatype; the CL_SYS_ERR was
+           conveniently available, but needs renaming.
+ 
+        2. The ERlookup specification was incomplete and incorrect.
+           See the interface change, below.
+ 
+        3.
+            a) This name change corresponds to CL_SYS_ERR -> CL_ERR_DESC.
+            b) More than one option may be encoded in this parameter.
+ 
+        4.
+            a) The CL_ERR_DESC set by a failed CL call may contain system-
+               dependent information that is useful in reporting the
+               CL failure.  Thus, it should be possible to pass the CL_ERR_DESC
+               when looking up an error returned from the CL.  Since the
+               client code cannot know whether this information is present,
+               the CL_ERR_DESC should be passed in all CL error cases.
+ 
+            b) The `clerror' argument should be passed only when looking up
+               a CL error, or when inquiring about a system error.  CL error
+               messages should not take parameters from client code, whose
+               behavior should not be known to the CL; system error messages
+               are not parameterized, since the OS supplies them.  Thus, the
+               `param' argument should not be examined when processing a
+               non-null clerror argument.
+ 
+               That is the official justification.  The change was really made
+               to allow parameterized UNIX CL error messages to be written,
+               whose actual parameters are passed in the CL_ERR_DESC structure.
+               This allows the error messages for the documented CL errors
+               to vary from one implementation to another, i.e., more or less
+               specific information about the cause of a CL routine failure
+               may be included.
+               
+ 
+        5. This option was needed for the UNIX implementation; it should
+           also prove useful elsewhere, e.g., there is code now that
+           manually skips past the message name/number.
+ 
+ 
+    Implementation.
+ 
+        1. This requires changing existing declarations of CL_SYS_ERR to
+           CL_ERR_DESC.  This should be at one time, before a CM handoff.
+           Until then, the name of the type can be changed in `compat.h'
+           and used in all new code, with a
+ 
+            # define CL_SYS_ERR CL_ERR_DESC
+ 
+           for backwards compatibility.  I feel strongly that the name
+           should change to reflect the future usage.  Related to this,
+           the CLERRV type, used only in:
+ 
+            abf/abfrt/abrtexe.c
+            frame/frame/frmindex.qsc
+            ut/utexe.c
+            vifred/vifred/vfcat.qsc
+ 
+           should be made obsolete, since it purports to provide a
+           similar function.
+ 
+        2. Documentation change.
+ 
+        3. Documentation change.
+ 
+        4.
+            a) This requires existing calls to ERlookup to be modified
+               to pass a CL_ERR_DESC along with a message number when
+               looking up CL errors.  The typical ERlookup() calling
+               convention now is:
+ 
+                ERlookup(msg_number, NULL, ...);
+                if (sys_err)
+                    ERlookup(0, sys_err, ...);
+ 
+               which becomes:
+ 
+                if (clerror)
+                {
+                    ERlookup(msg_number, clerror, ...);
+                    ERlookup(0, clerror, ...);
+                }
+                else
+                    ERlookup(msg_number, NULL, ...);
+ 
+               The following are the ERlookup() clients know to me:
+ 
+                   back!ulf!ule!uleformat.c
+                   front!utils!ug!ugerr.c
+                   front!utils!afe!aferror.c
+ 
+               The frontend routines do not make use of `clerror' at present.
+ 
+            b) Documentation change.
+ 
+        5. Since the ERlookup code was the same for VMS and UNIX before
+           this change, ER_TEXTONLY can be easily added.  I don't know
+           if IBM implementation differs from the VMS one, but I suspect
+           that it does not.  The actual change on UNIX consisted of adding
+           check for ER_TEXTONLY in two places, affecting only a few lines
+           of code.
+ 
+ 
+INTERFACE CHANGES
+ 
+    These changes are provided in differential format here.  I will provide
+the full headers for the CL specification.
+ 
+--------------------------------------------------------------------------------
+CL_ERR_DESC
+ 
+< ** Name: CL_SYS_ERR - This structure is used to return system errors.
+< **      For those CL routines that want to return the operating system
+< **      error to the caller so it can be logged, an structure for 
+< **      for returning this error was needed.  A structure was chosen
+< **      since each operating system can return errors in different ways
+< **      for example a 32 bit error code on VMS or several words on MVS.
+---
+> ** Name: CL_ERR_DESC - CL internal error descriptor.
+> **      This type describes errors that occur inside the Compatibility
+> **    Library.  All implementation-dependent error information should be
+> **    encapsulated here.  This includes operating system errors and errors
+> **    that are peculiar to a specific CL implementation.
+--------------------------------------------------------------------------------
+ERlookup
+ 
+< ERlookup(msg_number, sys_err, flag, msg_buf, msg_buf_size, 
+< CL_SYS_ERR        *sys_err;
+< nat               flag;
+< CL_SYS_ERR        *err_code;
+---
+> ERlookup(msg_number, clerror, flags, msg_buf, msg_buf_size, 
+> CL_ERR_DESC       *clerror;
+> nat               flags;
+> CL_ERR_DESC       *err_code;
+ 
+ 
+< **      Lookup text of message associated with error number that is passed 
+< **      in.  Open the error file the first time through and leave it open .
+---
+> **      Look up the text of the INGRES message associated with `msg_number',
+> **    substituting values passed in `param' for placeholders in the message
+> **    text.  If `clerror' is non-null, `param' is ignored.  If, in addition,
+> **    `msg_number' is 0, a system-dependent message about the CL error
+> **    described by `clerror' is retrieved instead of an INGRES message.
+> **    It is an error for both `msg_number' and `clerror' to be null.
+> **    The resulting message is returned in `msg_buf', which should point
+> **    to a buffer whose size is `msg_buf_size'.  The actual message size
+> **    is placed in `msg_length'.  `Language' specifies the desired message
+> **    language.
+> **
+> **    `Flags' can include:
+> **
+> **        ER_TIMESTAMP    Affix a time stamp to the message.
+> **        ER_TEXTONLY     Omit the message name/number from INGRES messages.
+> **
+> **
+ 
+< **    msg_number                      The message number to lookup.
+< **    sys_err                         pointer to system error block.
+< **    flag                            Either ZERO ot ER_SYSTEM_ERROR.
+< **    param                           List of values for substitution.
+< **    err_code                        VMS system error.
+---
+> **    msg_number                      The number of the message to look up.
+> **    clerror                         (Poss. null) ptr to CL error descriptor.
+> **    flags                           Formatting options.
+> **    param                           ER_ARGUMENT vector.
+> **    err_code                        CL error descriptor.
+--------------------------------------------------------------------------------

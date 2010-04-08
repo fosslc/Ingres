@@ -1,0 +1,65 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- tudtypes.hlp       Help on INGRES and Open SQL data types.
+Valid INGRES Data Types:
+
+  Data Type                         Storage Type
+  ---------                         ------------
+  char(1) - char(2000)              Fixed length string.
+  varchar(1) - varchar(2000)        Varying length string.
+  integer                           4 byte integer.
+  smallint                          2 byte integer.
+  integer1			    1 byte integer.
+  float                             8 byte floating point.
+  float4                            4 byte floating point.
+  float(1) - float(52)              Floating point, 1 - 52 bits of precision
+  date                              Date data type (12 bytes).
+  money                             Money data type (8 bytes).
+  decimal(1,0) - decimal(39,39)     Packed decimal
+  byte(1) - byte(2000)              Fixed length string of bytes.
+  byte varying(1) -
+        byte varying(2000)          Varying length string of bytes.
+  long byte                         String of bytes longer than 2000.
+  long varchar                      Varying string longer than 2000.
+
+  table_key with system_maintained
+  table_key not system_maintained   "Table_key" types are 8 byte quantities
+			            used for uniquely identifying rows in a
+			            table.
+
+  object_key with system_maintained
+  object_key not system_maintained  "Object_key" types are 16 byte quantities
+			            used for uniquely identifying rows
+			            (objects) across an installation.
+
+	For both "table_key" and "object_key" types, if
+	"with system_maintained" is specified, then:
+
+	  1. Values in that column will be unique and will be
+	     assigned by INGRES.
+	  2. You must specify "n" in the Nulls column ("not null") and "y"
+	     in the Defaults column ("with default") of the table field.
+
+	"Not system_maintained" is used to save the values of a
+	"with system_maintained" column from another table.
+
+The INGRES data types listed above are the recommended types. Other types
+are also supported for compatibility with previous INGRES versions. See
+your INGRES/SQL Reference Manual for details.
+
+Valid Open SQL Data Types:
+
+  Data Type                   Storage Type
+  ---------                   ------------
+  varchar(1) - varchar(2000)  Varying length string.
+  char(1) - char(254)         Fixed length string.
+  integer                     4 byte integer.
+  smallint                    2 byte integer.
+  float                       8 byte floating point.
+  date                        Date data type (not available on all
+				Gateways).
+
+When running an INGRES application against a specific gateway, additional
+data types may be supported. Additionally, the maximum length allowed for a
+specific gateway may be larger than is supported by Open SQL.
+Consult your gateway reference for the data type and lengths supported by
+the specific gateway you are using.

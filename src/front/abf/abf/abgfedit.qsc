@@ -1,0 +1,295 @@
+/*
+** Copyright (c) 1991, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+##include	<abclass.qsh>
+##include	<oocat.qsh>
+##include	"abclinfo.qsh"
+#include	"erab.h"
+
+/**
+** Name:	abgfedit.qc -	ABF Graph Frame Component Edit Module.
+**
+** Description:
+**	Contains the definition of the component class information structure
+**	for the graph frame component object.  Defines:
+**
+**	iiABgraphFrame	ABF graph frame component class edit information.
+**
+** History:
+**	Revision 6.4
+**	03/22/91 (emerson)
+**		Fix interoperability bug 36589:
+**		Change all calls to abexeprog to remove the 3rd parameter
+**		so that images generated in 6.3/02 will continue to work.
+**		(Generated C code may contain calls to abexeprog).
+**		This parameter was introduced in 6.3/03/00, but all calls
+**		to abexeprog specified it as TRUE.  See abfrt/abrtexe.c
+**		for further details.
+**
+**	11/16/92 (donc)
+**		Modified COMP_CLASS_INFO initialization to accomodate fix for bug 44162.
+**
+**	Revision 6.2  89/02  wong
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+STATUS	iiabPrint();
+STATUS	iiabVerifyType();
+
+static STATUS	_test();
+static STATUS	_edit();
+
+static VOID	_display();
+static STATUS	_save();
+
+/*:
+** Name:	iiABgraphFrame -	ABF Graph Frame Component Class Edit
+**						Information.
+** Description:
+**	Defines additional class information for the Graph frame component
+**	objects.
+*/
+
+#define _NewEditExpl	F_AB0052_NewEdit_expl
+#define _GoExpl		F_AB0053_Go_expl
+#define _EditExpl	F_AB0059_EditGr_expl
+#define _EmptyExpl	F_AB005E_Empty_expl
+#define _PrintExpl	F_AB005F_Print_expl
+
+static const
+##	char	_graph[]	= ERx("graph");
+
+GLOBALDEF const COMP_CLASS_INFO iiABgraphFrame = {
+	OC_GRFRAME,
+	ERx("abfgraphd"), ERx("abfgrafd.hlp"), ERx("abfgrami.hlp"), 1,
+	ER_OK,
+	F_AB0043_AGFDet_title,
+	0,	NULL,	/* no types legal */
+	{_graph,	NULL},	NULL,	NULL,	NULL, NULL, 	/* Fields */
+	/*{iiabNxtEdit,	AB_NewEdit,	_NewEditExpl,	0},	/* NextEdit */
+	{_test,		FE_Go,		_GoExpl,	4}, /* Go, FRSkey4 */
+	{_edit,		FE_Edit,	_EditExpl,	0},	/* Edit */
+	{NULL,		0,		_EmptyExpl,	0},	/* Compile */
+	{NULL,		0,		_EmptyExpl,	0},	/* FormEdit */
+	{iiabPrint,	FE_Print,	_PrintExpl,	0},	/* Print */
+	_display, _save, NULL, iiabVerifyType
+};
+
+/*
+** Name:	_edit() -	Edit Graph Frame Component Graph Object
+**					from a Form.
+** Description:
+**	Edits the graph object as specified on the component definition form
+**	for a graph frame component object.
+**
+** Inputs:
+**	app	{APPL *}  The application object.
+**	form	{char *}  The component definition form name.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+static STATUS
+##_edit ( app, dummy, form )
+register APPL	*app;
+OO_OBJECT *dummy;
+##char		*form;
+##{
+##	char	graph[FE_MAXNAME+1];
+
+##	getform form ( graph = _graph );
+
+	abexeprog(ERx("vigraph"), ERx("graph = %S"), 1, graph);
+##}
+
+/*
+** Name:	_display() -	Display a Graph Frame Component Definition.
+**
+** Description:
+**	Displays the attributes of a graph frame component on its component
+**	definition form.
+**
+** Inputs:
+**	frm	{QBF_FRAME *}  The graph frame component object.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+static VOID
+##_display ( frm )
+##register GRAPH_FRAME	*frm;
+##{
+##	char	*formname = iiABgraphFrame.form;
+
+##	putform formname (	_graph = frm->graph,
+##				_comline = frm->cmd_flags
+##	);
+##}
+
+/*
+** Name:	_save() -	Save Graph Frame Component Definition from
+**					the Form.
+** Description:
+**	Saves the attributes for a graph frame component object from the
+**	component definition form for this class.  This checks if any values
+**	changed before modifying the object's attributes and only then writing
+**	the object to the database.
+**
+**	The values that can be changed are the graph object name, the optional
+**	output file, and the optional Graph Writer command line.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**	frm	{GRAPH_FRAME *}  The graph frame component object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw)  Written.
+**	05/90 (jhw)  Added long remark check for save.
+*/
+
+static STATUS
+##_save ( app, frm )
+APPL			*app;
+register GRAPH_FRAME	*frm;
+##{
+##	register char	*formname = iiABgraphFrame.form;
+##	i4		gr_change;
+##	i4		cmd_change;
+##	i4		srem_change;
+
+	STATUS	IIAMwrGraphFrame();
+
+##	inquire_frs field formname (
+##			gr_change = change(_graph),
+##			cmd_change = change(_comline),
+##			srem_change = change(_short_remark)
+##	);
+
+	/* Fields should have been validated already. */
+
+	if ( gr_change )
+##	{
+##		char	graph[FE_MAXNAME+1];
+
+##		getform formname ( graph = _graph );
+		/* Graph is a required DB reference */
+		if ( !STequal(frm->graph, graph) )
+		{
+			frm->graph = FEtsalloc( frm->data.tag, graph );
+			frm->data.dirty = TRUE;
+		}
+##	}
+
+	if ( cmd_change )
+##	{
+##		char	cmdline[48+1];
+
+##		getform formname ( cmdline = _comline );
+		if ( !STequal(frm->cmd_flags, cmdline) )
+		{
+			frm->cmd_flags = FEtsalloc( frm->data.tag, cmdline );
+			frm->data.dirty = TRUE;
+		}
+##	}
+
+	if ( srem_change != 0 )
+##	{ /* short remark */
+		char	*cp;
+##		char	short_remark[OOSHORTREMSIZE+1];
+
+##		set_frs field formname ( change(_short_remark) = 0 );
+##		getform formname ( short_remark = _short_remark );
+		if ( ! STequal(frm->short_remark, short_remark)
+			&& (cp = FEtsalloc(frm->data.tag, short_remark))
+				!= NULL )
+		{
+			frm->short_remark = cp;
+			frm->data.dirty = TRUE;
+		}
+##	}
+
+	_VOID_ IIOOckLongRemark((OO_OBJECT *)frm);
+
+	return frm->data.dirty ? iiabSvComp((APPL_COMP *)frm, IIAMwrGraphFrame)
+				: OK;
+##}
+
+/*
+** Name:	_test() -	Test Graph Frame Component Object.
+**
+** Description:
+**	Runs the graph frame for testing purposes.  This simply creates a
+**	run-time frame structure from the frame definition and then runs it.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**	fclass	{COMP_CLASS_INFO *}  The graph frame component class edit
+**					information.
+**	frm	{GRAPH_FRAME *}  The graph frame component object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+static STATUS
+##_test ( app, fclass, frm )
+APPL		*app;
+COMP_CLASS_INFO	*fclass;
+GRAPH_FRAME	*frm;
+##{
+##	char		*form = iiABgraphFrame.form;
+##	char		graph[FE_MAXNAME+1];
+##	char		output[48+1];
+##	char		comline[ABCOMSIZE+1];
+
+	ABRTSFRM	rtsfrm;
+	ABRTSVAR	rtsvar;
+	ABRTSFO		rtsform;
+
+	/*
+	** Build an ABRTSFRM structure and pass it
+	** to the run-time routine 'IIARvgfGraph()'.
+	*/
+##	getform form (	graph = _graph,
+##			comline = _comline 
+##	);
+
+	rtsfrm.abrfrname = frm->name;
+	rtsfrm.abrfrtype = OC_GRFRAME;
+
+	rtsfrm.abrfrvar = &rtsvar;
+	STcopy(graph, rtsvar.abrfrvgbf.abrgfname);
+	STcopy(comline, rtsvar.abrfrvgbf.abrgfcomline);
+
+	rtsfrm.abrform = NULL;
+
+	IIARvgfGraph(&rtsfrm, (ABRTSPRM *)NULL);
+
+	return OK;
+##}

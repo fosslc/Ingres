@@ -1,0 +1,58 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for sigimp
+*/
+
+/*
+** History
+**	31-Mar-2004 (srisu02)
+**		Created for IMP sig directory 
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	17-Aug-2005 (bonro01)
+**	    Added imp to distribution.
+**	15-Mar-2006 (bonro01)
+**	    Remove imp from distribution.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+/*
+** Default directory: ingres/sig/imp
+*/
+
+PART  sigimp
+   BUILD_DIR (ING_BUILD)!sig!imp
+# ifdef conf_LSB_BUILD
+   DIRECTORY usr!share!ingres!sig!imp
+# else
+   DIRECTORY ingres!sig!imp
+# endif
+   FILE README.DOC
+   FILE imp.forms
+   FILE imp.h
+   FILE imp.sql
+   FILE imp_dmf.incl
+   FILE imp_gcn_info.incl
+   FILE impcommon.sc
+   FILE impdbcon.sc
+   FILE impdmf.sc
+   FILE impfrs.sc
+   FILE impgcn.sc
+   FILE impinter.sc
+   FILE impio.sc
+   FILE implocks.sc
+   FILE implog.sc
+   FILE impmain.sc
+   FILE impqsf.sc
+   FILE imprdf.sc
+   FILE impserver.sc
+   FILE impslave.sc
+   FILE impstart.sc
+   FILE impstatic.sc
+   FILE Makefile

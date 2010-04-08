@@ -1,0 +1,10 @@
+#
+# Jamfile file for testtool!lar!shell_win
+#
+
+SubDir ING_SRC testtool lar shell_win ;
+
+IISUBSYS testtool lar shell_win ;
+
+
+IITBIN ckpdbtst.bat lck1.bat lck2.bat lck3.bat ;

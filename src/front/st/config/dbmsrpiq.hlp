@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The rep_iq_lockmode resource defines the locking level to use for the
+  Replicator input queue table.  Valid values are "row", "page", "table",
+  or "user".  "User" means that the lock level should be inherited from
+  the user transaction that is inserting into the input queue.
+
+  Row locking requires that the input queue have a page size of
+  4K or larger.  If the input queue table uses the 2K page size,
+  a request for row-locking is silently ignored and page-locking is used
+  instead.
+
+  The default is "user".

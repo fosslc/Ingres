@@ -1,0 +1,27 @@
+#
+# Jamfile file for common!jdbc!jdbc
+#
+# History:
+#	11-feb-2005 (abbjo03)
+#	    On VMS, link iijdbc with the shared API library.
+
+SubDir ING_SRC common jdbc jdbc ;
+
+IISUBSYS common jdbc jdbc ;
+
+
+IIBINEXE iijdbc : iijdbc.c ;
+
+if $(VMS)
+{
+    IINEEDLIBS iijdbc : JDBCLIB GCFLIB COMPATLIB SHAPILIB ;
+}
+else
+{
+    IINEEDLIBS iijdbc : JDBCLIB APILIB ADFLIB GCFLIB CUFLIB
+	COMPATLIB INGNETLIB ;
+}
+
+IILIBRARY JDBCLIB : jdbcxact.c jdbcutil.c jdbcsess.c jdbcrqst.c
+	jdbcqury.c jdbcpool.c jdbcmsg.c jdbcgcc.c jdbcgca.c jdbccrsr.c
+	jdbcconn.c jdbcapi.c ;

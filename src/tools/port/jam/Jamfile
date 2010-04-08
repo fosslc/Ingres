@@ -1,0 +1,24 @@
+#
+# Jamfile file for tools!port!jam
+#
+# History:
+#	15-sep-2004 (abbjo03)
+#	    Replace shell script suffixes for portability.
+#	19-May-2005 (drivi01)
+#	    Add iijam wrapers to be copied to ING_TOOLS/bin.
+#	25-may-2005 (abbjo03)
+#	    Exclude iijam from VMS build since the tool has not been ported.
+
+SubDir ING_SRC tools port jam ;
+
+IISUBSYS tools port jam ;
+
+
+IITOOLSSH mkjam : mkjam$(SUFSH) ;
+IITOOLSSH mkjams : mkjams$(SUFSH) ;
+if ! $(VMS)
+{
+    IITOOLSSH iijam : iijam$(SUFSH) ;
+}
+
+IITOOLSBAT mkjam.bat mkjams.bat iijam.bat ;

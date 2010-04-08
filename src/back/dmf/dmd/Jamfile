@@ -1,0 +1,15 @@
+#
+# Jamfile file for back!dmf!dmd
+#
+#   20-Oct-2009 (hweho01)
+#     Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back dmf dmd ;
+
+IISUBSYS back dmf dmd ;
+
+IINOOPTIM dmdlock.c : dr6_us5 ;
+
+IILIBRARY DMFLIB : dmfdiag.c dmdtrace.c dmdlog.c dmdlock.c dmddlm.c
+	dmddata.c dmdcheck.c dmdcb.c dmdcall.c dmdbuffer.c ;
+

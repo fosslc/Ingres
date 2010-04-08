@@ -1,0 +1,17 @@
+#
+# Jamfile file for back!scf!sce
+#
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back scf sce ;
+
+IISUBSYS back scf sce ;
+
+IINOOPTIM sceshare.c : usl_us5 ;
+
+IIBINEXE iievutil : sceadmin.sc ;
+IINEEDLIBS iievutil : SHQLIB SHCOMPATLIB SHEMBEDLIB SHFRAMELIB ;
+	
+IILIBRARY SCFLIB : sceshare.c scenotify.c sce.c ;
+

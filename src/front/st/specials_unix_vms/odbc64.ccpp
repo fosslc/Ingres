@@ -1,0 +1,45 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for odbc64
+*/
+
+/*
+** History
+**	14-dec-2004 (Ralph.Loen@ca.com)
+**	    Created.
+**	30-dec-2004 (hweho01)
+**          For the 32/64 hybrid build on AIX, the shared libraries
+**          that require the library path to be loaded will have a
+**          suffix '64' and reside in $II_SYSTEM/ingres/lib directory.
+**          Because the alternate shared library path is not available.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+*/
+
+PART  odbc64
+
+/*
+** ingres!lib
+*/
+
+# if defined(any_aix)
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+   DIRECTORY (PROD2NAME)!LIB_TGT
+      {
+      EXECUTABLE lib(PROG1PRFX)odbc64.1.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)odbcdriver64.1.$SLSFX
+      PERMISSION s:re,o:rewd,g:re,w:re
+      }
+# else
+   BUILD_DIR (ING_BUILD)!LIB_BLD!lp64
+   DIRECTORY (PROD2NAME)!LIB_TGT!lp64
+      {
+      EXECUTABLE lib(PROG1PRFX)odbc.1.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)odbcdriver.1.$SLSFX
+      PERMISSION s:re,o:rewd,g:re,w:re
+      }
+# endif

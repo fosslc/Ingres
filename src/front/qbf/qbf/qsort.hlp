@@ -1,0 +1,26 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You can specify the sorting order for record retrieval.  This sorting order
+will stay in effect until it is changed or the execution phase is terminated.
+
+For those fields or columns you want sorted, place a sort sequence number in
+the corresponding data window.  The sequence number must be an integer
+between 1 and 300, optionally followed by an 'a' or 'd' for ascending or
+descending order, respectively. By default the fields are sorted in ascending 
+order.  When retrieving data in retrieve or update mode, the field with the
+lowest sequence number will be sorted first, the field with the succeeding
+sequence number will be sorted next, etc.
+
+If a master/detail joindef is the query target, the sequence numbers of the
+master fields must precede the sequence numbers of the detail fields.
+
+The Command Menu contains the following:
+
+        Command         Function
+        -------         --------
+
+        Blank           Clear all the fields of any sort sequences.
+        Cancel          Return to query mode without making any changes
+                        to the current sorting order.
+        Help            Print this message
+        End             Set the sorting order to what is specified in this
+                        form and return to query mode.

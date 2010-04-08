@@ -1,0 +1,14 @@
+#
+# Jamfile file for cl!clf!st_unix_win
+#
+# History:
+#	17-nov-2004 (abbjo03)
+#	    Created.
+
+SubDir ING_SRC cl clf st_unix_win ;
+
+IISUBSYS cl clf st_unix_win ;
+
+
+IILIBRARY COMPATLIB : stprintf.c ;
+

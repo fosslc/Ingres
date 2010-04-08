@@ -1,0 +1,12 @@
+#
+# wgl_32s.hnt file for gl/glf/sp
+#
+# Note: The wgl_32s.ini file contains a special case for this
+#	directory.  CFLAGS3 is used to compile this directory.
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+
+objonly = sptest.obj 
+

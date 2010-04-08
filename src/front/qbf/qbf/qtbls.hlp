@@ -1,0 +1,68 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+QUERY BY FORMS  -  JoinDef Definition
+
+     This form is used to define a Join Definition (JoinDef).  A JoinDef
+     is composed of tables, joins and update and delete rules.  The tables
+     for a JoinDef are specified by filling in the table field on this form.
+
+     For a Master/Master or single table Join Definition, it is unnecessary
+     to fill in entries under the "Role" column, as there is no distinction
+     among the roles of any tables involved.
+
+     For a Master/Detail Join Definition the entries under the "Role" column
+     specify the tables' roles in the JoinDef.  For Master tables enter
+     "Master" in the "Role" column or leave that column blank.  For Detail
+     tables enter "detail" (or "d").
+
+     Case is insignificant in specifying the "Role" entry and an initial
+     letter is sufficient to distinguish Master and Detail Roles.  If any
+     Detail tables are specified, it is required that at least one Master
+     table be given.
+
+     Abbreviations (to be used as QUEL range variables or SQL correlation
+     names) can also be specified for any or all tables, but are optional.  
+     The fields on this form are:
+
+        Field Name              Description
+        ----------               -----------
+        JoinDef Name            Name of the current JoinDef (optional).
+        Role                    Roles of tables in this JoinDef.
+        Table Name              Names of tables in this JoinDef.
+        Abbreviation            Optional abbreviations for tables in this
+                                this JoinDef.
+        Table Field Format      Indicates whether or not a table field
+                                should be used in building the default 
+                                form for this JoinDef.
+
+     The following commands are on the QBF Table Entry Form:
+
+        Command                 Function
+        --------                --------
+        Go                      Build the JoinDef with the information 
+                                filled in this form.  If no errors occur,
+                                proceed to the QBF Query Execution Phase.
+        Blank                   Clear all fields on the form so that a
+                                new JoinDef can be defined.
+        ChangeDisplay           Go to the Change Display Form. This allows
+                                you to change the displayed fields of the 
+                                current Join Definition.
+        Joins                   Go to the Join Specification Form.  This
+                                allows you to browse and modify the join
+                                information for the current JoinDef.
+        Rules                   Go to the Update and Delete Rules Form.
+                                This allows you to browse and modify the 
+                                rules for the current Join Definition.
+        Save                    Store the current Join Definition in the 
+                                QBF System Catalog.  This enables you to 
+                                later retrieve and run that JoinDef.  If an 
+                                invalid name is found in the "Name" field, 
+                                QBF asks you to specify a valid JoinDef name.
+        ListChoices             Displays a list of table names or list of
+                                valid roles if the cursor is on the "Table
+                                Name" or "Role" column of the table field,
+                                respectively.  Otherwise, information about
+                                the field the cursor is on is displayed.
+        Help                    Print this message.
+        End                     Stop work on this frame and return to the
+                                frame that called it.
+        Quit                    Leave QBF and return to the operating system.

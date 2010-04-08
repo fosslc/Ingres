@@ -1,0 +1,14 @@
+#
+# Jamfile file for front!ice!ICEStack
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC front ice ICEStack ;
+
+IISUBSYS front ice ICEStack ;
+
+if $(BUILD_ICE)
+{
+IILIBRARY ICECONFLIB : icegen.cpp stack.cpp ;
+}

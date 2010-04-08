@@ -1,0 +1,163 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+## History:
+##      24-Apr-2001 (fanra01)
+##          Bug 104537
+##          Update steps for registration.
+##      02-Apr-2004 (fanra01)
+##          Bug 112091
+##          Editorial changes from griel02.
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Register Your Location and Files
+</title>
+</head>
+<body>
+
+<h1>
+Register Your Location and Files
+</h1>
+Direct your browser to the HTTP location of your
+Admin Tool, log in, and perform the following
+steps.
+<ol class="level-1">
+<p><li><h2>Select Server</h2>
+In the Server section we create
+the Session Group.
+<h3>Create a new Session Group, play_group</h3>
+	<ol class="level-3">
+	<li>Click on the <u>Session Group</u> link.
+	<li>Fill in the name, "play_group".
+	<li>Click the <b>submit</b><image src="submit.gif" alt="submit">
+	button.
+	</ol>
+
+<p><li><h2>Register the directory location with
+the ICE server</h2>
+Remember, the location for our "play_unit" is the
+directory "plays" in your chosen directory on the
+local file system.
+	<ol class="level-3">
+	<li>Select the Server Link <image
+	src="server_anim.gif" alt="server">
+    <li>Click the <u>Locations</u> link
+	<li>Fill in the server name for the
+	location, "play_location".
+	<li>Select the ICE Location radio button
+    <li>Ensure that the "public" check box is
+	<b>not</b> selected.
+	<li>Fill in the <b>full</b> pathname of
+	your directory.
+	<li>For now we will leave the extensions
+	entry field empty.
+	<li>Submit the form.
+	</ol>
+<!-- <ul> -->
+<p><li><h2>Select Business Unit Environment</h2>
+In the Business Unit Envrionment section we create
+Business Units and assign locations and pages to the Business Units.
+<ul>
+<li>Click the menu icon in the top frame to return to the
+Administration Tool main menu.
+</ul>
+<p>
+This uses an expanding tree style navigation interface.
+You navigate to the section you need by clicking
+the <image src="plus.gif" alt="plus"> signs to expand the
+tree.  To create a new
+instance of the selected object you click
+the underlined section name. For example, to
+create a new business unit you click the
+<u>Business Units</u> link. Once you have
+sucessfully created the new unit you will see it
+listed under the <u>Business Unit</u> heading.
+<p><li><h2>Create a new Business Unit, play_unit</h2>
+	<ol class="level-3">
+	<li>Click on the <u>Business Units</u> link.
+	<li>Fill in the name, "play_unit".
+	<li>Click the <b>submit</b><image src="submit.gif" alt="submit">
+	button.
+	</ol>
+Notice that if you expand the Business
+Units the new play_unit appears.
+
+
+<p><li><h2>Register the Location for play_unit</h2>
+Remember, the location for our "play_unit" is the
+directory "plays" in your chosen directory on the
+local file system.
+	<ol class="level-3">
+        <li>Expand the Business Units sub-tree, if you haven't already.
+	<li>Expand the play_unit sub-tree.
+    <li>click <u>locations</u>.
+	</ol>
+
+<p><li><h2>Register the Files for play_unit</h2>
+	<ol class="level-3">
+	<li><u>Business Unit</u> select '<image src="plus.gif" alt="plus symbol">'
+	<li><u>plays</u> select '<image src="plus.gif" alt="plus symbol">'
+	<li><u>pages</u>
+	<li>Select the "take from the file system" storage type.
+	<li>Fill in the file name "select_plays.html".
+	<li>Fill in the ICE Document name "select_plays.html" <i>(we use the same name for simplicity)</i>.
+	<li>Select the "iceplays" location.
+	<li>Submit.
+	</ol>
+
+<p><li><h2>Create a database connection</h2>
+	<ol class="level-3">
+	<li>Security.
+	<li><u>Database Connections</u>.
+	<li>Name: play_database.
+	<li>Database name: icetutor.
+	<li>Database user: icedefdb.
+	<li>Comment:
+"Database dedicated to the works
+of the Bard of Complete upon Works".
+	<li>Submit.
+	</ol>
+
+
+<p><li><h2>Create a Role for AutoDeclare</h2>
+We need to create a role that can be assigned to
+the default user for when a user declares
+an account for themselves.
+	<ol class="level-3">
+	<li>Click the Security link.
+	<li>Click <u>Profiles</u>.
+	<li>Name: enter "play_tutor_profile".
+	<li>Timeout: 300
+	<li>Leave all other fields for now (you
+	can always modify them later by clicking
+	the <u>play_tutor_profile</u> profile.
+	<li>Submit the form.
+	</ol>
+
+<p><li><h2>Associate the new play role with the play
+profile</h2>
+	<ol class="level-3">
+	<li>Security.
+	<li>Profiles.
+	<li><u>roles</u>.
+    <li>Select "play_role" from the combo box.
+	<li>Submit.
+	</ol>
+	
+
+<p><li><h2>Associate the new play database connection with the play
+profile</h2>
+	<ol class="level-3">
+	<li>Security.
+	<li>Profiles.
+	<li><u>database connections</u>.
+	<li>select "play_database" from the combo box.
+	<li>Submit.
+	</ol>
+
+<hr>
+
+</body>
+</html>

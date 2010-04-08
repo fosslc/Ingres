@@ -1,0 +1,54 @@
+#
+# Manifest file for cl!clf!er_unix_win
+#
+# Dec-28-2004 (hweho01) 
+#      Corrected the IINOOPTIM list.      
+# 20-apr-2006 (drivi01)
+#      Updated hardcoded slashes for windows to $(DFS).
+#       
+
+SubDir ING_SRC cl clf er_unix_win ;
+
+IISUBSYS cl clf er_unix_win ;
+
+IINOOPTIM erintern.c : su4_u42 dr6_us5 ;
+IINOOPTIM ercomp.c : rs4_us5 dg8_us5 i64_aix ;
+
+IIBINEXE eritest : eritest.c ;
+IINEEDLIBS eritest : COMPATLIB MALLOCLIB ;
+
+if ! $(NT)
+{
+IIBINEXE ercodeexam : codeexam.c ;
+IINEEDLIBS ercodeexam : COMPAT MALLOCLIB ;
+
+
+IIBINEXE ercompile : ercomp.c ;
+IINEEDLIBS ercompile : COMPATLIB MALLOCLIB ;
+}
+else
+{
+IIBINEXE ercompile : ercomp.c ;
+IINEEDLIBS ercompile : COMPATLIB MALLOCLIB ;
+
+IICPEXE $(INGTOOLSWNTBIN)$(DFS)ercompile.exe : ercompile.exe ;
+}
+IIBINEXE ercallexam : callexam.c ;
+IINEEDLIBS ercallexam : COMPAT MALLOCLIB ;
+
+if ! $(NT)
+{
+IILIBRARY COMPATLIB : ernames.roc erreport.c erreleas.c
+	ermsghdr.c erlookup.c erlangst.c erlangcd.c erintern.c erinit.c
+	erget.c erexcep.c erdepend.c erdata.c erclose.c er.c ;
+
+}
+else
+{
+IILIBRARY COMPATLIB : erreport.c erreleas.c ermsghdr.c erlookup.c
+	erlangst.c erlangcd.c erintern.c erinit.c erget.c
+	erexcep.c erdepend.c erclose.c er.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : erdata.c ernames.roc ;
+}
+

@@ -1,0 +1,39 @@
+drop table nc\g
+create table nc (f nvarchar(10) not null,
+		 n  nvarchar(20),
+		 l nvarchar(12) not null)\p\g
+
+insert into nc values ('Kelly',NULL,'Park');
+insert into nc values ('Marilyn','Manute','Bohl');
+insert into nc values ('Fred','UDT','Carter');
+insert into nc values ('Cal','Bears','Collier');
+insert into nc values ('Peter',NULL,'Schmitz');
+insert into nc values ('Mike','hoops','Matrigali');
+insert into nc values ('David',NULL,'Hung');
+insert into nc values ('Carl','BRUCE','Lee');
+insert into nc values ('Shirley','Don''t call me Bruce','Lee');
+insert into nc values ('Dave',NULL,'Simonson');
+insert into nc values ('Jeff',NULL,'Fried');
+insert into nc values ('Bob',NULL,'Pasker');
+insert into nc values ('Jon',NULL,'Wong');
+insert into nc values ('Ed','buy some new pants','Seputis');
+insert into nc values ('Claire',NULL,'Leachman');
+insert into nc values ('Claire',NULL,'McGhee');
+insert into nc values ('Paul','Line Drive','Butterworth');
+insert into nc values ('Roger','NOT Montreal','Taranto');
+insert into nc values ('Marian',NULL,'Wong');
+insert into nc values ('Mike',NULL,'Winning');
+insert into nc values ('Steve',NULL,'Rees');
+insert into nc values ('Bill','black and','White');
+insert into nc values ('Rob','Corcky','McCord');
+insert into nc values ('John','back in','Black');
+insert into nc values ('Jennifer','backend','Lyerla');
+\g
+modify nc to btree on l;
+select l,f from nc\g
+select l,f from nc where f='Bob'\p\g
+select l,f from nc where f='bob'\p\g
+select f,l from nc where l='Wong'\p\g
+select l,f from nc where l >= 'QUIGLEY' and l <= 'taranto'\p\g
+select l,f from nc where l like 'p%'\p\g
+select nick_name = f+' "'+n+'" '+l from nc where n is not NULL\g

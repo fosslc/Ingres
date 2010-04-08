@@ -1,0 +1,28 @@
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_encodings_mod
+
+CREATE UNIQUE INDEX ii_encodings_mod
+    ON ii_encodings (encode_object, encode_sequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_longremarks_mod
+
+CREATE UNIQUE INDEX ii_longremarks_mod
+    ON ii_longremarks (object_id, remark_sequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_objects_mod
+
+CREATE INDEX ii_objects_mod ON ii_objects
+    (object_class, object_owner, object_name)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_objects_index
+
+CREATE UNIQUE INDEX ii_objects_index ON ii_objects
+    (object_id)
+

@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqnxtmas.hlp, help for the Frame Behavior pop-up for Next Master
+/#-- Menuitem
+/#-- 
+The Next Master Menuitem controls whether the Browse or Update frame expects 
+to retrieve and handle more than one master row from the query. A "Next" 
+menuitem is available or not available on the running frame accordingly.
+
+If you expect that the query qualifications (restrictions) specified in the 
+Visual Query and/or by the user will never retrieve more than one master 
+during the query, then set the Next Master Menuitem to "No".  The "Next" 
+menuitem will not be available on this frame as the application is run.
+
+If you expect that multiple master rows will be returned from the query, 
+then set the Next Master Menuitem to "Yes".  This will cause the "Next" 
+menuitem to be available on this frame as the application is run.
+
+Move the cursor to the desired option and choose "Select".

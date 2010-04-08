@@ -1,0 +1,20 @@
+#
+# Jamfile file for common!gcf!files
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#
+#       29-Jul-2004 (gusph01)
+#           Updated to build the xlt files correctly.
+
+SubDir ING_SRC common gcf files ;
+
+IISUBSYS common gcf files ;
+
+IIDFILES charsets : gcccset.nam wgl_32s.hrd ;
+
+IIGcfXlt charsets : gcccset.xlt ;
+
+IIDFILES name : iiname.all ;

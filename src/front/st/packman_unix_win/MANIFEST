@@ -1,0 +1,27 @@
+#
+# Name: MANIFEST
+#
+# Description:
+#	Custom JAM file for front!st!packman_unix_win
+#
+# History:
+#    17-Oct-2006 (hanje04)
+#	SIR 116877
+#	Created.
+#    24-Oct-2006 (hanje04)
+#	Change package manager executable name to ingpackman 
+#    20-Oct-2007 (hanje04)
+#       SIR 117044
+#       Only build if BUILD_GTK_GUI = TRUE (Jamdefs.abc_xyz)
+#
+
+SubDir ING_SRC front st packman_unix_win ;
+
+IISUBSYS front st packman_unix_win ;
+
+if $(BUILD_GTK_GUI) = "TRUE"
+{
+    IINoHbUtilExe ingpackman : iipackman.c ;
+    IINoHbNeedLibs ingpackman : GINSTALLLIB RFAPILIB COMPATLIB GTKLIBS ;
+}
+

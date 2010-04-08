@@ -1,0 +1,37 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+
+/*
+** Name: play_NewOrder.h
+**
+** Description:
+**      Defines the types used for the extension server functions
+**
+## History:
+##      19-May-99 (fanra01)
+##          Renamed SERVER_DLL_METHOD to SERVER_DLL_FUNCTION.
+##          Add mt_safe_malloc, mt_safe_free and MEMORY_P
+*/
+# include <windows.h>
+
+# define ICE_EXT_API __declspec(dllexport)
+
+/*
+** Define the systems multi threaded safe memory
+** allocater and return type
+*/
+# define mt_safe_malloc(size) HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, size)
+# define mt_safe_free(ptr)    HeapFree (GetProcessHeap(), 0, ptr)
+# define MEMORY_P char*
+
+typedef char*       ICE_STATUS;
+typedef ICE_STATUS  (*PFNEXTENSION) (char**, BOOL*, char **);
+
+typedef struct ice_function_table
+{
+    char*           pszName;
+    char**          pszParams;
+}SERVER_DLL_FUNCTION, *PSERVER_DLL_FUNCTION;
+
+typedef ICE_STATUS  (*PFNINITIALIZE)(PSERVER_DLL_FUNCTION*);

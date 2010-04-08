@@ -1,0 +1,15 @@
+#
+# Jamfile file for back!awsf!wsfcom
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC back awsf wsfcom ;
+
+IISUBSYS back awsf wsfcom ;
+
+if $(BUILD_ICE)
+{
+IILIBRARY AWSFLIB : wsfvar.c wsfparser.c wsfinit.c
+	servermeth.c ;
+}

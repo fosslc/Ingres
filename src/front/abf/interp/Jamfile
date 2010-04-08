@@ -1,0 +1,23 @@
+#
+# Jamfile file for front!abf!interp
+#
+
+SubDir ING_SRC front abf interp ;
+
+IISUBSYS front abf interp ;
+
+
+IIBINEXE iiinterp : ilmain.c ;
+IINEEDLIBS iiinterp :  SHINTERPLIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS iiinterp : II_copyright malloc ;
+
+IIFORM itieffo.frm ;
+IIFORM ititffo.frm ;
+
+IILIBRARY INTERPLIB : ilcall.sc iltab.roc ilsystab.roc
+	iltop.qsc iltmode.qsc iltief.qsc ilquery.qsc itilloop.c
+	itcstr.c iltrace.c ilpred.c ilpackge.c ilinit.c ilgtargs.c
+	ilftfld.c ilfetc.c ilfdisp.c ilexpr.c ilexhdlr.c ilerror.c
+	ildump.c ildisp.c ildb.c ilcntrl.c ilarray.c if.c ;
+

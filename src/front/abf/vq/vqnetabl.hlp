@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqnetabl.hlp, subtopic 'Tables' behind the popup asking for menuitem, 
+/#-- description, and tables when creating Append, Browse, or Update type 
+/#-- frames.
+/#-- 
+You must enter a table name in the Master field.  The Detail table is 
+optional.  You can enter any table you are authorized to use.
+
+  * If you know the name of the table you want to use, just type it in 
+    response to the prompt and select OK.
+
+  * If you don't remember the exact table name or spelling: 
+    - To display a list of all tables in the database, select ListChoices.  
+    - To display a reduced list of tables, enter a query restriction in the
+      Master or Detail field before you select ListChoices.  (For example, 
+      to display only the table names beginning with "c," enter "c*".) 
+    Once a list is displayed, move the cursor to a table name and select OK.
+
+  * If you need to create a new table, select ListChoices and then select 
+    Create.  The system call the Ingres Tables Utility.
+
+For more information about Master and Detail tables, please refer to the 
+"Using Ingres Through Forms and Menus" manual.

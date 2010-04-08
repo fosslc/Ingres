@@ -1,0 +1,604 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<er.h>
+#include	<erfe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	<st.h>
+#include        <generr.h>
+#include        <stdprmpt.h>
+#include	"eric.h"
+#include	"global.h"
+##include       "ictables.qsh"
+/*
+fool ming:
+#include        "ictables.h"
+*/
+
+/**
+** Name:	instacc.qsc	-	Access Grants
+**
+** Defines:
+**	IIICiaInstallationAccess	- Installation-Wide Access GRANTs.
+**
+** History:
+**	15-nov-1990 (pete)
+**		Initial Version.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototype for authid_init() & loadIAPrivs() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**/
+
+EXEC SQL INCLUDE SQLCA ;
+EXEC SQL WHENEVER SQLERROR CALL SQLPRINT ;
+
+## GLOBALREF char	F_Maxname[];
+GLOBALREF       bool    Mgr;
+GLOBALREF bool  IiicPrivSecurity; /* TRUE if user has SECURITY privilege */
+
+EXEC SQL BEGIN DECLARE SECTION ;
+## GLOBALREF IIDBPRIV Iidbpriv;
+EXEC SQL END DECLARE SECTION ;
+
+GLOBALREF char  *IC_PublicUser; /* "Public" */
+
+FUNC_EXTERN     STATUS  iiicspSelectDbpriv();
+
+FUNC_EXTERN	STATUS	iiicvaValidateAuthId();
+FUNC_EXTERN	STATUS	IIICiaInstallationAccess();
+FUNC_EXTERN     char    *IIICgtGetType();
+
+static		STATUS	authid_write();
+static		STATUS	authid_init();
+static		STATUS	loadIAPrivs();
+
+##static	char	Insacc_frm[]	= ERx("icinsacc"); /* Installation-Wide
+							   ** Access
+							   */
+##static	char	Authid_tbl[]	= ERx("authid_access"); /* tblfld */
+##static	bool	InsaccFormAdd = FALSE;
+
+##static	char	Object_name[FE_MAXNAME+1];	  /* work area */
+
+static  char    Empty[] = ERx("");
+
+/*{
+** Name:        IIICiaInstallationAccess() - Installation Wide Access Privs.
+**
+** Description:
+**	Maintain list of INSTALLATION grants on authorization identifiers.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+** Returns:
+**      FAIL    - if error occurs.
+**      OK      - if all goes ok.
+**
+** Side Effects:
+**
+** History:
+**	15-nov-1990 (pete)
+**		Initial Version.
+*/
+STATUS
+IIICiaInstallationAccess()
+## {
+    STATUS  err = OK;
+##  char    *save_menuitem;
+##  char    *delete_menuitem;
+##  char    *listchoices_menuitem;
+##  char    *type;	/* displayed access.type */
+##  i4	    work_nat;	/* working var */
+##  char    *mode;
+##  char    tmpname[FE_MAXNAME + 1];
+
+    if (!InsaccFormAdd)
+    {
+	if (IIUFgtfGetForm(IIUFlcfLocateForm(), Insacc_frm) != OK)
+	{
+	    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_ERROR, 0);
+	    return FAIL;
+	}
+	InsaccFormAdd = TRUE;
+    }
+
+    /* User can make changes if running Accessdb (as opposed to Catalogdb) &
+    ** has SECURITY Priv.
+    */
+    if (Mgr && IiicPrivSecurity)
+    {
+        save_menuitem = ERget(FE_Save);
+        delete_menuitem = ERget(FE_Delete);
+        listchoices_menuitem = ERget(FE_Lookup);
+	mode = ERx("update");
+    }
+    else
+    {
+	/* User is running Accessdb with only SYSTEM_ADMIN privilege. */
+        save_menuitem = Empty;
+        delete_menuitem = Empty;
+        listchoices_menuitem = Empty;
+	mode = ERx("read");
+    }
+
+##  DISPLAY Insacc_frm mode
+##  INITIALIZE
+##  {
+	if (authid_init() != OK)
+	{
+	    err = FAIL;
+##	    BREAKDISPLAY
+	}
+##  }
+
+##  ACTIVATE MENUITEM delete_menuitem
+##      (VALIDATE = 0, ACTIVATE = 0, EXPL = ERget(F_IC0018_RowDeleteExpl)):
+##  {
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+        if (STequal(Object_name, Authid_tbl))
+        {
+##          DELETEROW Insacc_frm Authid_tbl
+##          SET_FRS FORM (CHANGE(Insacc_frm) = 1)
+        }
+        else
+            IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+
+##  ACTIVATE MENUITEM save_menuitem
+##      (ACTIVATE = 1, EXPL = ERget(F_FE0117_SaveExpl)),
+##      FRSkey8 (ACTIVATE = 1):
+##  {
+        if (save_menuitem[0] == EOS)
+        {
+            /* this was selected via the FRSkey */
+            FTbell();
+##          RESUME
+        }
+
+##	VALIDATE
+	if (authid_write() != OK) {
+##	    RESUME FIELD Authid_tbl
+	}
+##	BREAKDISPLAY
+##  }
+
+##  ACTIVATE MENUITEM listchoices_menuitem (VALIDATE = 0, ACTIVATE = 0,
+##      EXPL = ERget(FE_LookupExpl)),
+##      FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##  {
+        if (listchoices_menuitem[0] == EOS)
+        {
+            /* this was selected via the FRSkey */
+            FTbell();
+##          RESUME
+        }
+##      INQUIRE_FRS FIELD "" (tmpname = NAME)
+        if (STequal(tmpname, Authid_tbl))
+        {
+            icListPicks(ERget(F_IC001B_UserType),
+                                ERx("iiusers"), ERx("user_name"), tmpname);
+            if (tmpname[0] != EOS)
+            {
+		/* This listpick really ought to handle groups and roles, too.*/
+##              PUTROW Insacc_frm Authid_tbl ( #identifier = tmpname,
+##					#type = ERget(F_IC0009_User) )
+##              SET_FRS FORM (CHANGE(Insacc_frm) = 1)
+##		RESUME COLUMN Authid_tbl #access
+            }
+        }
+        else
+            IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0101_ExplKeyHelp),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey1 (VALIDATE =0, ACTIVATE = 0):
+##  {
+        FEhelp(ERx("icinsacc.hlp"), ERget(S_IC0074_InstallationAccess));
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey3 (VALIDATE =0, ACTIVATE = 0):
+##  {
+        if (Mgr)
+        {
+            /* user is running Accessdb */
+##          i4      changed;
+
+##          INQUIRE_FRS FORM (changed = CHANGE)
+            if ( changed )
+            {
+                changed = CONFIRM(ERget(F_IC0022_InsAccGrants), Empty);
+                switch(changed)
+                {
+                case CONFCH_YES:
+##                  VALIDATE
+		    if (authid_write() != OK) {
+##	    		RESUME FIELD Authid_tbl
+		    }
+                    /* fall through */
+                case CONFCH_NO:
+##                  BREAKDISPLAY
+                default:
+                    break;
+                }
+
+##              RESUME;
+            }
+        }
+
+##      BREAKDISPLAY
+
+##  }
+
+##  ACTIVATE FRSkey7
+##          (EXPL = ERget(F_FE0104_ExplFind)) /* ERget(FE_Find) */
+##  {
+        FEtabfnd(Insacc_frm, Authid_tbl);
+##  }
+
+##  ACTIVATE FRSkey5
+##          (EXPL = ERget(F_FE0105_ExplTop))  /* ERget(FE_Top) */
+##  {
+##      SCROLL Insacc_frm Authid_tbl TO 1
+##  }
+
+##  ACTIVATE FRSkey6
+##          (EXPL = ERget(F_FE0106_ExplBottom)) /*ERget(FE_Bottom) */
+##  {
+##          SCROLL Insacc_frm Authid_tbl TO END
+##  }
+
+##  ACTIVATE COLUMN Authid_tbl #identifier:
+##  {
+	STATUS stat;
+
+##      INQUIRE_FRS ROW '' '' (work_nat = CHANGE)
+        if (work_nat == 1)
+        {
+            /* User changed the Authorization Identifier value.
+	    ** Validate it.
+	    */
+##          GETROW Insacc_frm Authid_tbl (Object_name = #identifier)
+
+# ifndef UNIX
+	    /* User, Group & Role names are case sensitive on UNIX only */
+            IIUGlbo_lowerBEobject(Object_name);
+# endif
+
+            /* Check type of & VALIDATE Authorization Identifier ("public"
+	    ** is also valid.
+	    */
+            if ((stat = iiicvaValidateAuthId(Object_name, &type, &work_nat))
+									!= OK)
+	    {
+		if (stat == IC_INVALID)
+		{
+                    /* no such authorization identifier */
+                    IIUGerr(E_IC006E_AuthId_DoesntExist, UG_ERR_ERROR, 1,
+                                                Object_name);
+		}
+##              RESUME
+            }
+
+##          PUTROW Insacc_frm Authid_tbl (#type = type, #int_type = work_nat)
+
+            /* mark column so won't be validated next time */
+##          SET_FRS ROW '' '' (CHANGE = 0)
+        }
+
+##      RESUME NEXT
+##  }
+
+##  finalize
+
+    return err;
+## }
+
+/*{
+** Name:	authid_init - initialize entries in authid_access tbl field.
+**
+** Description:
+**
+** Inputs:
+**
+** Outputs:
+**
+**	Returns:
+**		OK if all went well.
+**		FAIL otherwise.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	15-nov-90 (pete)
+**		Initial Version.
+**      19-Oct-98 (wanya01)
+**              Add dflag in iiicspSeleteDbpriv function call.
+*/
+static STATUS
+##authid_init ()
+##{
+##	char	*d_global;
+##	char	*tb_mode;
+##	char	u_name[FE_MAXNAME+1];
+##	char	*type;
+        int     dflag;
+
+	STATUS	loadIAPrivs();	/* function that loads privs into tbl field */
+
+##	MESSAGE ERget(S_IC0076_Retrieving_InsAcc);
+
+	/* create hidden versions of all displayed fields */
+##	INITTABLE Insacc_frm Authid_tbl ERx("fill") (
+##					    #identifier_orig = F_Maxname,
+##					    #int_type	   = i2,
+##					    #int_type_orig = i2,
+##					    #access_orig   = c3);
+
+	/* Select all "ON INSTALLATION" grants from iidbpriv (these grants
+	** are detected by iidbpriv.dbname='').
+	*/
+	_VOID_ iiicspSelectDbpriv(ERx(""), &Iidbpriv, loadIAPrivs,&dflag);
+
+	return OK;
+## }
+
+/*{
+** Name:	loadIAPrivs - load INSTALLATION access privs into table field.
+**
+** Description:
+**	Loadtable GRANT ACCESS ON INSTALLATION type rows from iidbpriv
+**	into a table field.
+**
+** Inputs:
+**	IIDBPRIV *iidbpriv	structure full of good stuff to put into
+**				table field.
+** Outputs:
+**
+**	Returns:
+**		OK if row loaded ok; FAIL otherwise.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	15-nov-1990 (pete)
+**		Initial Version.
+*/
+static STATUS
+## loadIAPrivs(iidbpriv)
+## IIDBPRIV *iidbpriv;
+## {
+##  char	*type;
+##  char	*access;
+
+    if ((iidbpriv->control & DB_ACCESS) != 0)
+	/* this tuple specifies a Database ACCESS privilege */
+	access = ((iidbpriv->flags & DB_ACCESS) != 0) ? Yes : No ;
+    else
+	return OK;	/* don't load this row. It probably specifies
+			** a DIO or CPU limit, or some other database
+			** priv. We only want Access privs.
+			*/
+
+    switch(iidbpriv->gtype)
+    {
+    case TYPE_USER:
+	type = ERget(F_IC001B_UserType);
+	break;
+    case TYPE_GROUP:
+	type = ERget(F_IC001C_GroupType);
+	break;
+    case TYPE_ROLE:
+	type = ERget(F_IC001D_RoleType);
+	break;
+    case TYPE_PUBLIC:
+	type = IC_PublicUser;
+	STcopy(IC_PublicUser, iidbpriv->grantee);
+	break;
+    default:
+	type = ERget(F_IC001F_UnknownType);
+	break;
+    }
+
+##  LOADTABLE Insacc_frm Authid_tbl
+##	(
+##	#identifier		= iidbpriv->grantee,
+##	#identifier_orig	= iidbpriv->grantee,
+##	#type			= type,
+##	#int_type		= iidbpriv->gtype,
+##	#int_type_orig		= iidbpriv->gtype,
+##	#access			= access,
+##	#access_orig		= access
+##	)
+
+    return OK;
+## }
+
+
+/*{	authid_write	Write changes about a database to dbdb
+**
+**	Unload table field and issue GRANT/REVOKE statements.
+**
+**	Returns:
+**		OK	database updated ok.
+**		FAIL	error updating database.
+**
+**	History:
+**	15-nov-1990 (pete)
+**		Initial version.
+*/
+static STATUS
+##authid_write ()
+##{
+    STATUS      uval = OK;
+##  char	name_orig[FE_MAXNAME+1];	/* original name from dbase */
+##  i4		int_type_orig;	/* internal type. original from database*/
+##  char	access_orig[3 +1];	/* original access from dbase */
+##  char	type[6 +1];	/* displayed type */
+##  i4		int_type;	/* internal type; equivalent to displayed
+				** type.
+				*/
+##  char	access[3 +1];	/* displayed access */
+
+##  char	u_name[FE_MAXNAME+1];
+##  i4  	u_state;
+##  i4  	u_record;
+    EXEC SQL BEGIN DECLARE SECTION ;
+    char        sbuffer[256];
+    EXEC SQL END DECLARE SECTION ;
+
+    /* NOTE: assume all displayed values in table field are valid */
+
+##  MESSAGE ERget(S_IC0079_UpdateInstAccGrnts);
+
+##  BEGIN TRANSACTION
+
+/* Process stDELETE rows first (UNLOADTABLE delivers them last!). */
+##  UNLOADTABLE Insacc_frm Authid_tbl (
+##				u_name		= #identifier,
+##				name_orig	= #identifier_orig,
+##				type		= #type,
+##				int_type_orig	= #int_type_orig,
+##				int_type	= #int_type,
+##				access		= #access,	
+##				access_orig	= #access_orig,	
+##				u_state		= _STATE,
+##				u_record	= _RECORD
+##				)
+##  {
+	switch (u_state)
+	{
+	  case stDELETE:
+
+	    if (int_type_orig != TYPE_PUBLIC)
+	    {
+	        STprintf(sbuffer,
+		   ERx("REVOKE %sACCESS ON INSTALLATION FROM %s '%s'"),
+                  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"),
+		   IIICgtGetType(int_type_orig),  /* User, Group or Role */
+	    	   name_orig);
+	    }
+	    else
+	    {
+	        STprintf(sbuffer,
+		   ERx("REVOKE %sACCESS ON INSTALLATION FROM PUBLIC"),
+                  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"));
+	    }
+
+	    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+            if (FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+            {
+                uval = FAIL;
+##              ENDLOOP
+            }
+	} 
+##  } 
+
+    if (uval == FAIL)
+	goto done;
+
+    /* process everything but stDELETE rows */
+##  UNLOADTABLE Insacc_frm Authid_tbl (
+##				u_name		= #identifier,
+##				name_orig	= #identifier_orig,
+##				type		= #type,
+##				int_type_orig	= #int_type_orig,
+##				int_type	= #int_type,
+##				access		= #access,	
+##				access_orig	= #access_orig,	
+##				u_state		= _STATE,
+##				u_record	= _RECORD
+##				)
+##  {
+
+# ifndef UNIX
+	/* User, Group & Role names are case sensitive on UNIX only */
+        IIUGlbo_lowerBEobject(u_name);
+# endif
+
+	switch (u_state)
+	{
+	  case stCHANGE:
+	    /*
+	    ** Delete old GRANT, and then add new one using Fall Thru...
+	    */
+	    if (int_type_orig != TYPE_PUBLIC)
+	    {
+	        STprintf(sbuffer,
+		   ERx("REVOKE %sACCESS ON INSTALLATION FROM %s '%s'"),
+                  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"),
+		   IIICgtGetType(int_type_orig),  /* User, Group or Role */
+	    	   name_orig);
+	    }
+	    else
+	    {
+	        STprintf(sbuffer,
+		   ERx("REVOKE %sACCESS ON INSTALLATION FROM PUBLIC"),
+                  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"));
+	    }
+	    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+            if (FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+            {
+                uval = FAIL;
+##              ENDLOOP
+            }
+
+	    /* stCHANGE, fall through ... */
+
+	  case stNEW:
+	    /* Add new user to database */
+	    if (int_type != TYPE_PUBLIC)
+	    {
+	        STprintf(sbuffer,
+	        	ERx("GRANT %sACCESS ON INSTALLATION TO %s '%s'"),
+                  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"),
+			IIICgtGetType(int_type),  /* User, Group or Role */
+	    		u_name);
+	    }
+	    else
+	    {
+	    	STprintf(sbuffer,
+			ERx("GRANT %sACCESS ON INSTALLATION TO PUBLIC"),
+                  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"));
+	    }
+
+	    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+            if (FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+            {
+                uval = FAIL;
+##              ENDLOOP
+            }
+	    break;
+	} 
+##  } 
+
+done:
+    if (uval == OK)
+	EXEC SQL COMMIT WORK;
+    else
+        EXEC SQL ROLLBACK;
+
+    return uval;
+## }

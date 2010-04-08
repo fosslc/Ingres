@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame is used to generate a graph.  Select the "Plot" menu command
+to run the graph, or the "End" menu command to return to the application.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Plot                    Generate the graph.
+
+        Help                    Print this message.
+
+        End                     Return to the previous frame.

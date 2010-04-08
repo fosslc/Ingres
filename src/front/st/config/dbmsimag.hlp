@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The image_name is the name of the dbms server executable file.
+
+
+ Default: iidbms for a standard dbms server.
+          iistar for a distributed dbms server.

@@ -1,0 +1,120 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.a64_sol -- Variable definitions for AMD 64 Solaris
+#
+#  Description:
+#       Platform specific variable definitions for AMD 64 Solaris.
+#	This is a hybrid capable platform.
+#
+# History:
+#	18-Nov-2004 (bonro01)
+#	    Initial creation
+#	31-May-2005 (schka24)
+#	    Use amd64, not generic64, for as so that cmpxchgq works.
+#	28-Sep-2005 (bonro01)
+#	    Add variables for readme file substitution
+#       16-Oct-2006 (hanal04) Bug 116866
+#          Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#          NOOPTIM does not strip this when explicitly set.
+#       05-May-2008 (clach04) Bug 119195
+#           Change for bug 117955 requires syntax only available in
+#           nawk. Set AWK to nawk.
+#       13-Aug-2008 (frima01) SIR 120420, SD issue 116370
+#           Added PAMLIB to resolve symbols defined in PAM library.
+#	05-May-2009 (bonro01)
+#	    Create server using iimerge.a
+#	22-Jun-2009 (kschendel) SIR 122138
+#	    Make hybrid capable, separate 32/64 symbols.
+#	    Invent optional compiler flag symbols for Studio 12 compiling.
+#	    Change pic flag to -KPIC because s12 CC barfs on -K PIC.
+#
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG = "" ;
+APACHE_API_FLAG	= "" ;
+VERS32		= "a64_sol" ;
+VERS64		= "a64_sol" ;
+AS32 = $(AS) ;
+AS64 = $(AS) ;
+LD32 = $(LD) ;
+LD64 = $(LD) ;
+CCLD32 = $(CCLD) ;
+CCLD64 = $(CCLD) ;
+ASMACH32	= "" ;
+ASMACH64	= "-xarch=amd64" ;
+CC 		?= "cc" ;
+CCDEBUG         = "-g" ;
+CPP 		?= "/lib/cpp" ;
+
+# If/when compiling with Studio 12 compilers, use -m32 and -m64
+# instead of the -xarch options.  Studio 12 complains, so allow community
+# builds to specify the studio-12 options in VERS, via CCSUN32 and CCSUN64
+# (for cc) and C++SUN32 and C++SUN64 (for CC, ie c++).
+CCSUN32	?= "-xarch=generic" ;
+CCSUN64	?= "-xarch=generic64" ;
+C++SUN32 ?= "-xarch=generic" ;
+C++SUN64 ?= "-xarch=generic64" ;
+
+CCMACH32	= "-DBUILD_ARCH32 $(CCSUN32) -mt -D_LARGEFILE64_SOURCE" ;
+CCMACH64 	= "-DBUILD_ARCH64 $(CCSUN64) -mt" ;
+CCLDMACH32	= "$(CCSUN32) -mt" ;
+CCLDMACH64 	= "$(CCSUN64) -mt" ;
+
+# Note that this LDORIGIN is used for various distributed binaries,
+# but *NOT* for the dbms server.  The DBMS server is linked with iilink,
+# which uses an LDSRVORIGIN variable defined via mkdefault.sh via iisysdep.
+# Server-shared-library servers need to use an rpath of just $ORIGIN
+# for set-uid reasons, so there are various hoops;  but iilink takes
+# care of all that.
+LDORIGIN = -R '$ORIGIN/../lib' ;
+LDORIGINLP32 = -R '$ORIGIN/../../lib/lp32' ;
+LDORIGINLP64 = -R '$ORIGIN/../../lib/lp64' ;
+
+CCLDSERVER32	= "" ;
+CCLDSERVER64	= "" ;
+CCPICFLAG 	= "-KPIC" ;
+SHLIBLD 	= "ld" ;
+CCSHLDMACH32	= "-G" ;
+CCSHLDMACH64	= "-G" ;
+SLSFX 		= "so" ;
+LIBSFX 		= "a" ;
+OBJSFX 		= "o" ;
+MWSLSFX 	= "so" ;
+CGISFX 		= "cgi" ;
+LDLIBPATH32	= "/usr/ccs/lib /lib /usr/lib" ;
+LDLIBPATH64 	= "/lib/64 /usr/lib/64" ;
+LIBMACH 	= "" ;
+LDLIBMACH32	= "-L/usr/lib -lsocket -lelf -lposix4 -ldl -lnsl -lm" ;
+LDLIBMACH64	= "-L/usr/lib/64 -lsocket -lelf -lposix4 -ldl -lnsl -lm" ; 
+LD_ICE_FLAGS 	= "" ;
+LONGLONG	= long long ;
+OPTIM           = "" ;
+IIOPTIM		?= "-xO2" ;
+NOOPTIM		?= "" ;
+SHELLHEADER 	= ""#!/bin/sh"" ;
+BSD42 		?= -DBSD42 ;
+AWK     = nawk ;
+LEX		= flex ;
+DIRENT 		?= -DDIRENT ;
+DIRFUNC 	?= -DDIRFUNC ;
+NO_DIRFUNC 	?= -DNO_DIRFUNC ;
+SYS5 		?= -DSYS5 ;
+C++		= "CC" ;
+C++FLAGS32	= "-DBUILD_ARCH32 $(C++SUN32) -mt" ;
+C++FLAGS64	= "-DBUILD_ARCH64 $(C++SUN64) -mt" ;
+UNDEFFLAG	= "-u " ;
+XERC_DEFS	= "-DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET" ;
+XERC_LIBS	= "/usr/lib/libc.so.1" ;
+DBMS_STACKSIZE	= 262144 ;
+platform_string = "Sun Solaris x86" ;
+extension_string = $(config_string) ;
+PAMLIB = TRUE ;
+#
+#ICE File extensions
+#
+ICE_EXT		= so ;
+CGI_EXT		= cgi ;

@@ -1,0 +1,8 @@
+;
+; History:
+;	17-Feb-2007 (drivi01)
+;	    Created.
+;
+;
+EXPORTS
+ingres_remove_from_includeandlib

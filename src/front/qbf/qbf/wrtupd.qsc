@@ -1,0 +1,466 @@
+/*
+** Copyright (c) 1984, 2005 Ingres Corporation
+**
+*/
+
+#include	<compat.h>
+#include	<cv.h>		/* 6-x_PC_80x86 */
+#include	<me.h>		/* 6-x_PC_80x86 */
+#include        <si.h>		/* 6-x_PC_80x86 */
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<ui.h>
+##include	"mqbf.qsh"
+#include	"mqeglobs.h"
+#include	"erqf.h"
+
+/**
+** Name:	wrtupd.qsc  -	Query Write Updates to DBMS Module.
+**
+** Description:
+**	Contains the routine that writes the updates to the DBMS.  It reads in
+**	the updates from the temporary file to which they were written during
+**	UPDATE mode.  If a deadlock error occurs the DBMS error message is
+**	printed and QBF now terminates the update without attempting to restart
+**	the transaction.
+**
+**	Defines:
+**
+**	IIqfWrtUpd()	write updates to DBMS.
+**
+**	This module is local to the "update.qsc" module, and the routine
+**	should be called from only within that module.
+**
+**	Written: 3/1/84 (nml)
+**
+** History:
+**	Revision 6.4
+**	03/09/91 (emerson)
+**		Integrated DESKTOP porting changes.
+**
+**	Revision 6.1  88/09  wong
+**	Modified for international support and merged duplicate error messages.
+**
+**	Revision 6.0
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh.  Changed all QUEL
+**			transaction statements to calls on routines that
+**			perform INGRES/Gateway SQL transaction code.  Replaced
+**			QUEL APPEND/REPLACE/DELETE with calls to routines
+**			that perform Dynamic SQL INSERT/UPDATE/DELETE.
+**		22-apr-88 (kenl)
+**			Added code for GATEWAY so that entire transaction
+**			is rolled back if any errors encountered.  INGRES
+**			will still use SAVEPOINTS.
+**		15-jun-88 (kenl)	bug 13581
+**			Added an if statement before the UPDATE statement
+**			to check for a target list before attempting to do
+**			the replace.
+**		17-aug-88 (kenl)
+**			Added check_for_change variable so that we will
+**			not do savepoints everytime a new master comes along.
+**			We must now encounter any record BUT a mqNOPREC
+**			before a savepoint will be set.
+**      09/17/93 (dkh) - Fixed up compiler warnings on prototype mismatches.
+**
+**	Revision 2.0  84/03/01  nadene
+**	Initial revision.
+**	22-jan-95 (emmag)
+**	   Binary files require special treatment on desktop platforms.
+**	10-sep-99 (toumi01)
+**		Test whether or not mq_tfile is open before closing it
+**		to avoid segv on Linux (lnx_us5).
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	14-Jul-2004 (schka24)
+**	    tids are now i8, fix here.
+**	07-sep-2005 (abbjo03)
+**	    Replace xxx_FILE constants by SI_xxx.
+**      23-Oct-2006 (wonca01) BUG 116667
+**          Check database catalog level before reading updated record 
+**          data from update temporary file.  Set the number of bytes to
+**          read based on whether the catalog level supports i8 data.
+**      06-feb-2009 (stial01)
+**          Define stack buffer big enough for mgrangevar in RELINFO
+**          Copy mqrangevar for sizeof(mqrangevar)
+*/
+
+# define    START_TRANSACTION	    FALSE
+# define    NO_OP_WHEN_GATEWAY	    TRUE
+# define    COMMIT_TRANSACTION	    TRUE
+# define    ROLLBACK_ENTIRE_XACT    TRUE
+# define    ROLLBACK_TO_SAVEPOINT   FALSE
+# define    ALL_BACKENDS	    FALSE	
+
+VOID	IIQFsda_sqlInsertDBDV();
+VOID	IIQFsdh_sqlUpdateDBDV();
+VOID	IIQFsdl_sqlDeleteDBDV();
+
+static char	_errprompt();
+
+STATUS
+IIqfWrtUpd ( qdef )
+MQQDEF	*qdef;
+{
+	i4		mattempt, dattempt;	/* attempted updates/deletes */
+	i4		msuccess, dsuccess;	/* successful updatees/deletes*/
+	char		*infoptr;
+	STATUS		status;
+	i4		bytcnt;
+	i4		skip;			/* should records be skipped */
+	bool		goterr;
+	bool		mytrans;
+	bool		check_for_change;
+	char		savpt[FE_MAXNAME + 1];
+	char		inforec[60 + sizeof(RELINFO)];
+	LOCATION	loc;
+	i4              numofbytes = 0;          /* number of bytes to read */
+	RELINFO		relinfo;
+
+	mattempt = 0;
+	dattempt = 0;
+	msuccess = 0;
+	dsuccess = 0;
+	goterr = FALSE;
+	check_for_change = FALSE;
+	skip = 0;
+
+#ifndef CMS
+	/*
+	**	Apparently this close is not needed; it actually causes
+	**	us to blow up under CMS
+	*/
+	if (SIisopen(mq_tfile))
+		SIclose(mq_tfile);
+#endif
+	if ( LOfroms(FILENAME & PATH, mqflnm, &loc) != OK )
+		return FALSE;
+#ifndef CMS
+#ifdef	DESKTOP						/* 6-x_PC_80x86 */
+	if ( SIfopen(&loc, ERx("r"), SI_VAR, 4096,	/* 6-x_PC_80x86 */
+			&mq_tfile) != OK )		/* 6-x_PC_80x86 */
+#else							/* 6-x_PC_80x86 */
+	if ( SIopen(&loc, ERx("r"), &mq_tfile) != OK )
+#endif							/* 6-x_PC_80x86 */
+#else
+	if ( SIfopen(&loc, ERx("r"), SI_VAR, 4096,
+			&mq_tfile) != OK )
+#endif
+		return FALSE;
+
+       if(STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_902) >=0)
+              numofbytes = sizeof(relinfo.mqrangevar) + sizeof(i8) + 2*sizeof(i4);
+       else
+              numofbytes = sizeof(relinfo.mqrangevar) + 3*sizeof(i4);
+
+	/* read records from file and write update */
+	while ( SIread(mq_tfile, numofbytes, &bytcnt,
+				inforec) == SUCCEED &&
+			bytcnt <= numofbytes )
+	{
+		register RELINFO	*tabl;
+		register i4		i;
+		i4			reclen;
+		i8			rectid;
+		i4			recstat;
+		i4			recfirst; /* is this first tbl of rec*/
+		bool			tfound = FALSE;
+                i4                      dataSize;
+
+		infoptr = inforec;
+
+		MEcopy(infoptr, sizeof(relinfo.mqrangevar), (PTR)&relinfo.mqrangevar);
+		STtrmwhite(relinfo.mqrangevar);
+		infoptr += (sizeof relinfo.mqrangevar);
+
+                if(STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_902) >=0)
+                        dataSize = sizeof(i8);
+                else 
+                        dataSize = sizeof(i4);
+		MEcopy(infoptr, dataSize, (PTR)&rectid);
+		infoptr += dataSize;
+
+		MEcopy(infoptr, sizeof(i4), (PTR)&recstat);
+		infoptr += sizeof(i4);
+
+		MEcopy(infoptr, sizeof(i4), (PTR)&recfirst);
+
+#ifdef DEBUG
+	if (mq_debug)
+	{
+		SIfprintf(mqoutf, ERx("WRITING UPDATE: rvar: %s\n"), 
+			relinfo.mqrangevar);
+		SIfprintf(mqoutf, ERx("rectid=%lld, recstat=%d, recfirst=%d\n"),
+			rectid, recstat, recfirst
+		);
+	}
+#endif
+
+		for ( i = 0 ; i < qdef->mqnumtabs ; ++i )
+		{
+			tabl = qdef->mqtabs[i];
+			if ( STequal(tabl->mqrangevar, relinfo.mqrangevar) )
+			{
+			/*	reclen = qdef->mqmrecl even in the	  */
+			/*	Detail/Detail casee because this is where */
+			/*	the length is stored in mqqdesc.c	  */
+				if ( tabl->mqtype == mqIN_MASTER ||
+						qdef_type == 1 )
+					reclen = qdef->mqmrecl;
+				else if ( tabl->mqtype == mqIN_DETAIL )
+					reclen = qdef->mqdrecl;
+				tfound = TRUE;
+				break;
+			}
+		}
+		if (tfound)
+		{
+			i4	rcnt;
+
+			if ( SIread(mq_tfile, reclen, &bytcnt,
+					tabl->mqtype == mqIN_MASTER
+						? mqumrec : mqudrec
+					) == SUCCEED )
+			{
+				if ( ( skip == 1 && recfirst != 1 ) ||
+						( skip == 2 && recfirst == 0 ))
+					continue;
+				else
+					skip = 0;
+
+				MEcopy((PTR) &rectid, dataSize, 
+					tabl->mqmtid.db_data
+				);
+
+				if ( recfirst != 0 )
+				{
+					if ( tabl->mqtype == mqIN_MASTER )
+					{
+						check_for_change = TRUE;
+						mattempt += 1;
+					}
+					else if ( tabl->mqtype == mqIN_DETAIL )
+					{
+						dattempt += 1;
+					}
+				}
+
+				if ( check_for_change && recstat != mqNOPREC )
+				{
+					check_for_change = FALSE;
+					/* returns TRUE if a COMMIT was done */
+					mytrans = IIUIesp_estabSP(savpt,
+						NO_OP_WHEN_GATEWAY
+					);
+				}
+
+				status = OK;
+				if ( recstat == mqUPDREC )
+				{
+					/* bug 13581
+					** Only do the replace if
+					** 'tabl->mquparam' is not empty.
+					*/
+					if ( tabl->mquparam[0] != EOS )
+					{
+						IIQFsdh_sqlUpdateDBDV(tabl);
+						status = FEinqerr();
+					}
+				}
+				else if (recstat == mqDELREC)
+				{
+					IIQFsdl_sqlDeleteDBDV(tabl);
+					status = FEinqerr();
+				}
+				else if (recstat == mqADDREC)
+				{
+					IIQFsda_sqlInsertDBDV(tabl);
+					status = FEinqerr();
+				}
+				if ( IIUIdeadlock(status) )
+					goto restartupd;
+				rcnt = FEinqrows();
+				if ( status != OK )
+				{
+					char	p;
+
+					p = _errprompt();
+
+					IIUIasp_abortSP(savpt, mytrans,
+						ROLLBACK_TO_SAVEPOINT
+					);
+
+					if ( p == 's' || p == 'c' )
+					{
+##						MESSAGE ERget(S_QF00C6_WritingData);
+						skip = 1;
+					}
+					else if ( p == 'q' )
+					{
+						SIclose(mq_tfile);
+						return FALSE;
+					}
+				}
+				else if ( recstat == mqNOPREC )
+				{
+					if ( recfirst != 0 )
+					{
+						if ( tabl->mqtype == mqIN_MASTER )
+							mattempt -= 1;
+						else if ( tabl->mqtype == mqIN_DETAIL )
+							dattempt -= 1;
+					}
+					rcnt = 0;
+					status = OK;
+				}
+				if ( rcnt > 0 && recfirst != 0 )
+				{
+					if ( tabl->mqtype == mqIN_MASTER )
+						msuccess += 1;
+					else if ( tabl->mqtype == mqIN_DETAIL )
+						dsuccess += 1;
+				}
+				if ( status != OK )
+				{
+					goterr = TRUE;
+				}
+			}
+			else
+			{
+				IIUGerr( E_QF00C7_ReadDataError, UG_ERR_ERROR, 0 );
+				SIclose(mq_tfile);
+				return FALSE;
+			}
+		}
+		else
+		{
+			IIUGerr( E_QF00C8_UnmatchedRngVar, UG_ERR_ERROR, 0 );
+			SIclose(mq_tfile);
+			return FALSE;
+		}
+	} /* end while */
+	SIclose(mq_tfile);
+
+/*
+**	Since we can't differentiate between an integrity violation
+**	and data not written due to no changes, the stats are not
+**	really accurate and so, not printed.
+**	(EXCEPT for the single table, one row at a time case).
+**
+**	if (qdef_type)
+**	{
+**		if ((mattempt == 0) && (dattempt != 0))
+**		{
+**			mattempt = dattempt;
+**			msuccess = dsuccess;
+**		}
+**		IIUGerr( E_QF00C9_SomeUpdated, UG_ERR_ERROR,
+**			2 ,(PTR)&msuccess,(PTR) &mattempt
+**		);
+**		sleep 3
+**	}
+**	else
+**	{
+**	message("%d of %d master and %d of %d detail records were updated/deleted",
+**		msuccess, mattempt, dsuccess, dattempt)
+**		sleep 3
+**	}
+*/
+	if ( ( onetbl || mqnummasters+mqnumdetails == 1) && !tblfield )
+	{
+		if ( mattempt == 0 && dattempt != 0 )
+		{
+			mattempt = dattempt;
+			msuccess = dsuccess;
+		}
+		if ( mattempt > msuccess )
+		{
+			IIUGerr( E_QF00C9_SomeUpdated, UG_ERR_ERROR,
+				2 ,(PTR)&msuccess,(PTR) &mattempt
+			);
+		}
+		else
+		{
+##			MESSAGE ERget(S_QF00CA_ChangesSaved);
+##			SLEEP 3
+		}
+	}
+	else if (goterr)
+	{
+		IIUGerr( E_QF00CB_NotAllUpdated, UG_ERR_ERROR, 0 );
+	}
+	else
+	{
+##		MESSAGE ERget(S_QF00CA_ChangesSaved);
+##		SLEEP 3
+	}
+	return TRUE;
+
+restartupd:
+/*
+**	bug 5740
+**		Don't restart transactions that have deadlocked.
+**		Just print a message and return.
+**		Keep the begin transaction because it ends when it
+**		returns (marian 1/9/86)
+**
+**	17-nov-87 (kenl)
+**		Remove BEGIN TRANSACTION.  Now that SQL is being emitted,
+**		a ROLLBACK is implicitly done when a deadlock is hit AND
+**		you do not start transactions in SQL, they are implicit.
+*/
+
+	IIUGerr( E_QF00CD_DeadLockAborts, UG_ERR_ERROR, 0 );
+	SIclose(mq_tfile);
+	return FALSE;
+}
+
+static char
+_errprompt ()
+##{
+	if ( IIUIdml() == UI_DML_GTWSQL )
+	{
+		IIUGerr( E_QF0149_ChangesNotSaved, UG_ERR_ERROR, 0 );
+		EXEC SQL ROLLBACK WORK;
+		return 'q';
+	}
+	else for (;;)
+##	{
+##		char	bufr[36];
+
+##		PROMPT (ERget(qdef_type == 0 ? S_QF00CE_SkipCurrentMasterQ
+##						: S_QF00CF_ContinueProcessQ),
+##			bufr
+##		);
+		CVlower(bufr);
+		if ( STtrmwhite(bufr) > 0 )
+		{
+			if ( STbcompare(bufr, 1, ERget(FE_Quit), 1, TRUE) == 0 )
+				return 'q';
+			else if ( qdef_type == 0 )
+			{
+				if ( STbcompare(bufr, 1,
+						ERget(F_QF0006_Skip), 1,
+						TRUE) == 0 )
+					return 's';
+			}
+			else if ( qdef_type == 1 )
+			{
+				if ( STbcompare(bufr, 1,
+						ERget(F_QF0007_Continue), 1,
+						TRUE) == 0 )
+					return 'c';
+			}
+		}
+		IIUGerr( E_QF00D0_InvalidAction, UG_ERR_ERROR, 0 );
+##	} /* end for */
+##}

@@ -1,0 +1,105 @@
+#
+# Jamfile file for front!report!rbf
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#	17-may-2005 (abbjo03)
+#	    Fix IINOOPTIM of sec_list.c: should be axm_vms instead of vax_vms.
+#        6-Nov-2006 (hanal04) SIR 117044
+#           Add int.rpl for Intel Rpath Linux build.
+
+SubDir ING_SRC front report rbf ;
+
+IISUBSYS front report rbf ;
+
+IINOOPTIM rfedtlay.qsc : int_lnx int_rpl ibm_lnx ;
+IINOOPTIM sec_list.c : axm_vms ;
+IINOOPTIM rjoindef.c : int_lnx int_rpl ibm_lnx ;
+
+IIBINEXE rbf : rbfmain.c ;
+IINEEDLIBS rbf :  RBFLIB RFVIFREDLIB COPYREPLIB SREPORTLIB
+	REPORTLIB QBFLIB TBLUTILLIB GNLIB SHFRAMELIB SHQLIB SHCOMPATLIB
+	;
+IINEEDLIBSW rbf : SHEMBEDLIB SHADFLIB ;
+IIUNDEFS rbf : rFcoptions rFeditlayout rFwrite rFroptions
+	VFfeature rFcols rFagg FDrngchk II_copyright s_readin malloc ;
+
+IIMSGHDR errf.msg ;
+
+IIFORM break.frm ;
+IIFORM coptions.frm ;
+IIFORM rbfabf.frm ;
+IIFORM rfadcols.frm ;
+IIFORM rfagg.frm ;
+IIFORM rfarchv.frm ;
+IIFORM rfbrkopt.frm ;
+IIFORM rfchcols.frm ;
+IIFORM rfcols.frm ;
+IIFORM rffile.frm ;
+IIFORM rfgetnm.frm ;
+IIFORM rfiidet.frm ;
+IIFORM rfiisave.frm ;
+IIFORM rfindop.frm ;
+IIFORM rfnwpag.frm ;
+IIFORM rfprint.frm ;
+IIFORM rfprompt.frm ;
+IIFORM rfvar.frm ;
+IIFORM rlayout.frm ;
+IIFORM roptions.frm ;
+
+File $(INGMSG)$(DFS)rbfcat.hlp : rbfcat.hlp ;
+File $(INGMSG)$(DFS)rbfcopt.hlp : rbfcopt.hlp ;
+File $(INGMSG)$(DFS)rbffile.hlp : rbffile.hlp ;
+File $(INGMSG)$(DFS)rbfprint.hlp : rbfprint.hlp ;
+File $(INGMSG)$(DFS)rbfprmt.hlp : rbfprmt.hlp ;
+File $(INGMSG)$(DFS)rbfrfmt.hlp : rbfrfmt.hlp ;
+File $(INGMSG)$(DFS)rbfropt.hlp : rbfropt.hlp ;
+File $(INGMSG)$(DFS)rbfutils.hlp : rbfutils.hlp ;
+File $(INGMSG)$(DFS)rbfvar.hlp : rbfvar.hlp ;
+File $(INGMSG)$(DFS)rfagg.hlp : rfagg.hlp ;
+File $(INGMSG)$(DFS)rfaggc.hlp : rfaggc.hlp ;
+File $(INGMSG)$(DFS)rfaggu.hlp : rfaggu.hlp ;
+File $(INGMSG)$(DFS)rfarchv.hlp : rfarchv.hlp ;
+File $(INGMSG)$(DFS)rfbrkopt.hlp : rfbrkopt.hlp ;
+File $(INGMSG)$(DFS)rfccadd.hlp : rfccadd.hlp ;
+File $(INGMSG)$(DFS)rfccmove.hlp : rfccmove.hlp ;
+File $(INGMSG)$(DFS)rfchcols.hlp : rfchcols.hlp ;
+File $(INGMSG)$(DFS)rfcols.hlp : rfcols.hlp ;
+File $(INGMSG)$(DFS)rfcrsect.hlp : rfcrsect.hlp ;
+File $(INGMSG)$(DFS)rfdest.hlp : rfdest.hlp ;
+File $(INGMSG)$(DFS)rfdetail.hlp : rfdetail.hlp ;
+File $(INGMSG)$(DFS)rffrmfd.hlp : rffrmfd.hlp ;
+File $(INGMSG)$(DFS)rfgtndup.hlp : rfgtndup.hlp ;
+File $(INGMSG)$(DFS)rfgtnjd.hlp : rfgtnjd.hlp ;
+File $(INGMSG)$(DFS)rfgtntbl.hlp : rfgtntbl.hlp ;
+File $(INGMSG)$(DFS)rfincl.hlp : rfincl.hlp ;
+File $(INGMSG)$(DFS)rfindbrk.hlp : rfindbrk.hlp ;
+File $(INGMSG)$(DFS)rfindop.hlp : rfindop.hlp ;
+File $(INGMSG)$(DFS)rflpjd.hlp : rflpjd.hlp ;
+File $(INGMSG)$(DFS)rflprpt.hlp : rflprpt.hlp ;
+File $(INGMSG)$(DFS)rfnwpag.hlp : rfnwpag.hlp ;
+File $(INGMSG)$(DFS)rfpghdr.hlp : rfpghdr.hlp ;
+File $(INGMSG)$(DFS)rfrstff.hlp : rfrstff.hlp ;
+File $(INGMSG)$(DFS)rfsave.hlp : rfsave.hlp ;
+File $(INGMSG)$(DFS)rfsect.hlp : rfsect.hlp ;
+File $(INGMSG)$(DFS)rfselvl.hlp : rfselvl.hlp ;
+File $(INGMSG)$(DFS)rfsource.hlp : rfsource.hlp ;
+File $(INGMSG)$(DFS)rfsrtdr.hlp : rfsrtdr.hlp ;
+File $(INGMSG)$(DFS)rfstruct.hlp : rfstruct.hlp ;
+File $(INGMSG)$(DFS)rfstyles.hlp : rfstyles.hlp ;
+File $(INGMSG)$(DFS)rfund.hlp : rfund.hlp ;
+File $(INGMSG)$(DFS)rfwidrep.hlp : rfwidrep.hlp ;
+
+IILIBRARY RBFLIB : rfwrite.qsc rfsave.qsc rfropt.qsc rfrbf.qsc
+	rfmrhead.qsc rflayout.qsc rfindopt.qsc rfgtfrms.qsc
+	rfedtlay.qsc rfedit.qsc rfdisp.qsc rfcopt.qsc rfcat.qsc
+	rfbreak.qsc rfagg.qsc sec_list.c rjoindef.c rfutils.c rfskip.c
+	rfscncol.c rfscan.c rfreset.c rfrep.c rfqurset.c rfnamfld.c
+	rfmstrct.c rfmsort.c rfmsec.c rfmrfoot.c rfmptop.c rfmpbot.c
+	rfmline.c rfmhead.c rfmfoot.c rfmdecl.c rfmdata.c rflocsec.c
+	rflabdet.c rfinit.c rfgtcopt.c rfgetcs.c rfget.c rfgdf.c
+	rfframe.c rffldrng.c rfcsrst.c rfcrack.c rfcols.c rfcmpcs.c
+	rfclcopt.c rfchkdat.c rfbrkscn.c rfatrim.c rfatdflt.c
+	rfagulst.c rfaginfo.c rfaggset.c rfafield.c rbfstyles.c ;
+

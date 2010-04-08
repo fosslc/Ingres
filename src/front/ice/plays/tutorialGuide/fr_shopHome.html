@@ -1,0 +1,493 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+##      24-Apr-2001 (fanra01)
+##          Bug 104537
+##          Update the code examples.
+##      02-Apr-2004 (fanra01)
+##          Bug 112091
+##          Editorial changes from griel02.
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Globe Shop Home Page
+</title>
+</head>
+<body>
+<h1>
+Globe Shop Home Page
+</h1>
+<h2>Introduction</h2>
+The aim of this example is to show how, using a
+few short files, a shopping application can be
+built rapidly using the rich and extendable
+feature set of the Web Deployment Option MACROS.
+<p>
+<h2>Application Storyboard</h2>
+The storyboard for our Globe shop tells us that the user
+will be presented with a list of the available
+items on the home page. From there, clicking on an
+item's number will take the user to a description
+page specifying price for example. 
+<p>
+The
+description page leads to either adding the item
+to the shopping bag or returning to the product
+list. If the user adds the item to their bag they
+can then view the contents of the bag or return to
+the product page. 
+<p>
+From the bag view page the user
+may either complete their purchase and move to the
+order confirmation page or return to add more
+items to their bag. The confirmation page should
+list all the articles in the bag, the total cost,
+and the unique order number. 
+<p>
+Finally, it should be
+possible from the bag view page for the user to
+empty their bag and start afresh.
+<h2>The Shop Home Page</h2>
+The home page for the Globe shop has two main jobs. It must
+list all the items for sale, which are listed in the table
+<tt>play_item</tt>.
+This is a standard type of select statement that we have seen
+before.
+<p>
+In addition, the home page must allocate an order number for
+the user (if one does not already exist) and this is
+achieved by invoking a user defined function extension to
+the ICE server (file play_neworder.sc). The function 
+invokes a database procedure that increments a count in a
+table (file: play_newOrder.sql). We will examine each of
+these files, starting with the procedure. For clarity,
+error checking code has been left out.
+<p>
+<b>Note:</b> This example assumes that the function is to be built
+for the windows platform.
+
+<p>
+The procedure new_order produces a new order number by
+updating the order number in the counters table. This should
+be executed in a transaction on its own and the order number
+used later as needed in another transaction. This is
+exactly what happens when the Web Deployment Option extension function, newOrder,
+executes it.
+<p>
+We also include a general shop action page. This activates those links
+set to Yes in the parameter list.
+<p> 
+To begin, we write the database procedure to
+generate monotonically increasing order numbers.
+<h3>File: play_NewOrder.sql</h3>
+<p><div class="boxCode"><tt><pre>
+/* Procedure new_order */
+create procedure new_order as
+declare
+next integer not null;
+begin
+    select value into :next from counters where name = 'order';
+    next = next + 1 ;
+    update counters set value = :next where name = 'order';
+    return :next;
+end;
+
+</pre></tt></div><p>
+
+The database procedure new_order is invoked on its own in a
+transaction by
+the server extension function newOrder, which returns the value as a
+string in the variable out_OrderNumber.
+<p>
+The file play_NewOrder.sc includes the file play_NewOrder.h,
+to define return types and the function description table
+<tt>ice_function_table</tt>.
+reproduced here.
+<h3>File: play_NewOrder.h</h3>
+<p>
+<div class="boxCode"><tt>
+<pre>
+
+# include <windows.h>
+
+# define ICE_EXT_API __declspec(dllexport)
+
+/*
+** Define the systems multi threaded safe memory
+** allocater and return type
+*/
+# define mt_safe_malloc(size) HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, size)
+# define mt_safe_free(ptr)    HeapFree (GetProcessHeap(), 0, ptr)
+# define MEMORY_P char*
+
+typedef char*       ICE_STATUS;
+typedef ICE_STATUS  (*PFNEXTENSION) (char**, BOOL*, char **);
+
+typedef struct <span class="hiy">ice_function_table</span>
+{
+    char*           pszName;
+    char**          pszParams;
+}SERVER_DLL_FUNCTION, *PSERVER_DLL_FUNCTION;
+
+typedef ICE_STATUS  (*PFNINITIALIZE)(PSERVER_DLL_FUNCTION*);
+
+</pre></tt></div><p>
+The ICE server defines an interface to which all extension
+functions must be written. This includes a defined entry
+point, which returns a structure describing the function and
+its parameters. This and the function are to be found in the
+file play_NewOrder.sc:
+<h3>File: play_NewOrder.sc</h3>
+<p>
+<div class="boxCode"><tt>
+<pre>
+/**
+** Name: play_NewOrderNr.sc
+**
+** Description:
+**     Returns a new order number from the counters table
+**     Uses a database procedure to get the latest number.
+**
+*/
+# include "play_NewOrder.h"
+
+# define    MAX_SIZE    20  /* size for an int */
+/*
+** Parameter name list.
+** A NULL pointer terminates the list.
+*/
+static char* pszNewOrderParams[] =
+    {"out_orderNumber", NULL};
+
+/*
+** Function Description
+*/
+static SERVER_DLL_FUNCTION FunctionTable[] =
+{
+	    { "newOrder", { pszNewOrderParams } },
+	    { NULL }
+};
+
+/*
+** Name: InitICEServerExtension
+**
+** Description:
+**     Mandatory function for providing function description to the server.
+**
+** Inputs:
+**     None.
+**
+** Outputs:
+**     ppServerDllFunction: pointer to the function description structure.
+**
+** Returns:
+**     pointer to error text
+**     NULL on success
+*/
+ICE_EXT_API ICE_STATUS
+<span class="hiy">InitICEServerExtension</span>(PSERVER_DLL_FUNCTION* ppServerDllFunction)
+{
+	ICE_STATUS status = NULL;
+	*ppServerDllFunction = FunctionTable;
+	return status;
+}
+
+/*
+** Name: newOrder
+**
+** Description:
+**     Return the next order number
+**
+** Inputs:
+**     None.
+**
+** Outputs:
+**     out_OrderNumber
+**
+** Return:
+**     pointer to error text
+**     NULL on success
+*/
+ICE_EXT_API ICE_STATUS
+<span class="hiy">newOrder</span>(char** out_OrderNumber, BOOL* print, MEMORY_P *context)
+{
+    ICE_STATUS  status = NULL;
+
+    *print = (char)FALSE;
+    /*
+    ** if first invocation allocate some memory for the result
+    */
+    if (*context == NULL)
+    {
+        exec sql begin declare section;
+        long x;
+        exec sql end declare section;
+
+        *context = mt_safe_malloc(MAX_SIZE);
+        if (*context == NULL)
+        {
+            return ("Memory error\n");
+        }
+
+        exec sql connect 'icetutor' identified by 'icedbuser';
+        exec sql execute procedure new_order into :x;
+
+        exec sql commit;
+        exec sql disconnect;
+
+        sprintf (*context, "%d", x);
+
+        *out_OrderNumber = *context;
+        *print = TRUE;
+    }
+    else
+    {
+        mt_safe_free (*context);
+        *context = NULL;
+        *out_OrderNumber = NULL;
+    }
+
+    return (status);
+}
+</pre></tt></div><p>
+<h4>Entry Point</h4>
+You must perform some "housekeeping" when
+writing an ICE server extension function. There must be a
+function <tt>InitICEServerExtension</tt> whose purpose is to
+return a structure describing the function. This structure
+contains the name of the function and its parameter list.
+In our case, the function is <tt>newOrder</tt> and it exports one
+value parameter, <tt>out_OrderNumber</tt>, and a context pointer to the memory
+location used, <tt>context</tt>.
+<p>
+<h4>Generate a New Order Number</h4>
+When <tt>newOrder</tt> is first invoked the context pointer is 
+set to NULL indicating that it
+must allocate some memory to hold the value to be returned.
+It returns a pointer to that
+memory in the <tt>context</tt> variable.  The next order
+number is returned in the parameter out_OrderNumber.
+<h4>Clean Up</h4>
+<tt>NewOrder</tt> must free context memory when
+the 
+it is invoked with a non null value for
+<tt>context</tt>.
+<h3>Building the Extension Function</h3>
+
+
+The extension function must be built as a dynamic link
+library (for the Windows platform) and installed in the
+files\dynamic directory in the
+ingres system area (addressed by the environment variable
+II_SYSTEM). 
+<h3>File: Makefile</h3>
+<p>
+<div class="boxCode"><tt>
+<pre>
+
+CFLAGS=-D_X86_=1 -DWINVER=0x0400 -DWIN32 -D_WIN32
+
+all: play_NewOrder.dll
+
+play_NewOrder.dll: play_NewOrder.obj
+    link -debug:mapped,full -debugtype:both /DLL /out:$@ $** ws2_32.lib \
+    $(II_SYSTEM)\ingres\lib\ingres.lib
+
+play_NewOrder.obj: play_NewOrder.c play_NewOrder.h
+    cl -c -Zi -MD $(CFLAGS) $*.c
+
+play_NewOrder.c: play_NewOrder.sc
+    esqlc $*.sc
+
+install: play_NewOrder.dll
+    copy play_NewOrder.dll $(II_SYSTEM)\ingres\files\dynamic\play_NewOrder.dll
+</pre></tt></div><p>
+The '<tt>install</tt>' target copies the library to the appropriate
+place after it has been successfully built (target '<tt>all</tt>').
+
+
+
+<h2>Using the Function play_NewOrder on the Web Page</h2>
+After the dynamic link library has been successfully built and
+installed, it can be used in a Web document. We chose to
+issue a unique order number to every visitor to the shop home page.
+In addition, we must ensure that
+an existing visitor who has confirmed an order is issued
+a <i>new</i> order number in case they wish to come
+back and order more items.
+<h3>File: play_shopHome.html</h3>
+<p>
+<div class="boxCode"><tt>
+<pre>
+
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Globe Boutique&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Globe Boutique&lt;/h1&gt;
+The Globe Boutique is where you can purchase all your favourite Globe
+memorabilia.
+&lt;p&gt;
+Visit often to find that gift for the person in your life that always seems to have everything
+&lt;p&gt;
+Genuine quality products and gifts with a unique cultural heritage
+&lt;p&gt;
+&lt;h2&gt;Instructions&lt;/h2&gt;
+<span class="macro">&lt;!-- #ICE REPEAT IF (DEFINED (e_shopTxn))
+        THEN=``
+	ELSE=`&lt;!-- #ICE DECLARE=``session.e_shopTxn=NOT-OPEN`` --&gt;`
+--&gt;
+
+&lt;!-- #ICE REPEAT IF (DEFINED (e_orderNumber) AND `:e_shopTxn` != `COMPLETE`)
+	THEN=``
+	ELSE=`&lt;!-- #ICE REPEAT FUNCTION=``play_NewOrder.newOrder``
+		HTML=``&lt;!-- #ICE
+			DECLARE=````session.e_orderNumber=:out_orderNumber````
+		--&gt;``
+	--&gt;`
+--&gt;</span>
+Select an item from the list below to view its description.
+&lt;!-- #ICE 
+          DATABASE = `icetutor` 
+          SQL=`set lockmode session where readlock = nolock;
+          select id, name from play_item` 
+          TRANSACTION=`Shoppe` 
+          CURSOR=`Keeper` 
+	  ROWS=`-1`
+          TYPE=`TABLE`
+          HEADERS=`id,Reference,name,Article` 
+          LINKS=`id,plays[play_shopDescribe.html]` 
+          --&gt;
+&lt;!-- #ICE COMMIT=`Shoppe` --&gt;
+
+&lt;!-- Standard Shop Actions: activate View bag only --&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]?View=Yes` --&gt;
+
+&lt;!-- Standard Session Control controls --&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre></tt></div><p>
+
+First, we check to see if the shop has been entered for the
+first time by checking for the existence of the variable
+<tt>e_shopTxn</tt>:
+<p><tt><pre>&lt;!-- #ICE REPEAT IF (DEFINED (e_shopTxn))
+        THEN=``
+	ELSE=`&lt;!-- #ICE DECLARE=``session.e_shopTxn=NOT-OPEN`` --&gt;`
+--&gt;
+</tt></pre><p>
+If the variable does not exist it is created and given the
+value NOT-OPEN to indicate that a (shopping) transaction
+has yet to be opened.
+<p>
+Next, we check to see if an order number exists,
+<tt>e_orderNumber</tt>, and if the transaction is complete. 
+<p><tt><pre>
+&lt;!-- #ICE REPEAT IF (DEFINED (e_orderNumber) AND `:e_shopTxn` != `COMPLETE`)
+</pre></tt><p>
+If no order number exists or the transaction is
+not complete, we need to issue a new order number
+using the function newOrder to be found in the library play_NewOrder.
+(<b>note:</b> Do not add the .dll or .so extension to the library name):
+<p><tt><pre>
+	&lt;!-- #ICE REPEAT FUNCTION=``play_NewOrder.newOrder``
+</pre></tt><p>
+Since the function invocation is part of another
+Web Deployment Option MACRO statement we must double up the grave quotes.
+<p>
+We then set a session variable to hold the order number and
+terminate the statement:
+<p><tt><pre>
+		HTML=``&lt;!-- #ICE
+			DECLARE=````session.e_orderNumber=:out_orderNumber````
+		--&gt;``
+	--&gt;`
+--&gt;
+</pre></tt><p>
+When we declare the variable <tt>e_orderNumber</tt> we are
+nested two levels down, and so need to double the grave
+quotes again. The number of grave quotes you need is easily
+calculated as 2
+raised to the power "level" where level is the nesting level, here 2
+because we start with level = 0 (2 raised to the
+power 0 is 1).
+
+<p>
+Having allocated the new order number we perform a select
+with links to create links on the item identifier to a page
+providing more detailed description of the item selected. The
+user can then decide <i>to buy or not to buy.</i>
+<p>
+At any time in the shop application it is possible
+for the user to move to any of the other pages.
+This is accomplished by including the file
+<tt>play_shopAction_h.html</tt> which takes the
+parameters in the following table:
+<p>
+<table border=1>
+<tr><td>Parameter:</td><td>Meaning:</td></tr>
+<tr><td>View</td><td>View contents of shopping bag</td></tr>
+<tr><td>Confirm</td><td>Confirm order</td></tr>
+<tr><td>Remove</td><td>Empty the shopping bag</td></tr>
+</table>
+<p>
+The file is included as follows:
+<p><tt><pre>
+&lt;!-- Standard Shop Actions: activate View bag only --&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]?View=Yes` --&gt;
+</pre></tt><p>
+Here we only activate the <tt>View</tt> option;
+the return to the product list option is always
+valid. The action file is as follows:
+
+<h3>File: play_shopHome.html</h3>
+<p>
+<div class="boxCode"><tt>
+<pre>
+&lt;!-- shopAction_h.html:
+    Activate links as appropriate. Link is active if the
+    variable of that name is set to Yes, else inactive
+    Return to Products is always active.
+--&gt;
+&lt;hr width="50%"&gt;
+&lt;table border=0 cellspacing=4&gt;
+&lt;tr&gt;
+&lt;td&gt;
+&lt;!-- #ICE IF (`:View` == `Yes`)
+    THEN=`&lt;a href="plays[play_shopView.html]"&gt;View Bag Contents&lt;/a&gt;`
+    ELSE=`View Bag Contents`
+--&gt;
+&lt;td&gt;
+&lt;a href="plays[play_shopHome.html]"&gt;Return to Products&lt;/a&gt;
+&lt;td&gt;
+&lt;!-- #ICE IF (`:Confirm` == `Yes`)
+    THEN=`&lt;a href="plays[play_shopConfirm.html]"&gt;Place Order&lt;/a&gt;`
+    ELSE=`Place Order`
+--&gt;
+&lt;td&gt;
+&lt;!-- #ICE IF (`:Remove` == `Yes`)
+    THEN=`&lt;a href="plays[play_shopRemove.html]"&gt;Empty Bag&lt;/a&gt;`
+    ELSE=`Empty Bag`
+--&gt;
+</table>
+</pre></tt></div><p>
+This file builds a table and sets the contents
+of each cell to be either an active link or an
+inactive link (normal text) depending on the
+values of the variables passed in.
+We next examine the item 
+<a href="fr_shopDescribe.html"target="page">
+description 
+</a>
+page.
+</body>
+</html>

@@ -1,0 +1,39 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The Tables Catalog screen displays the name and owner of all tables, views,
+and indexes accessible to you and all synonyms owned by you, in alphabetical
+order.  Each row corresponds to a table, view, synonym or index and indicates
+its owner and type.  If there are more rows than can be displayed in the table
+field, use the cursor control keys or the table field scrolling keys to scroll
+additional rows into view.
+
+Position the cursor on the appropriate row before selecting menuitem
+"Destroy", "Examine", "Query", or "Report".
+
+        Menu Command            Description
+        ------------            -----------
+
+        Create                  Create a new table in the database.
+
+        Destroy                 Drop the table, view, synonym or index on
+				which the cursor is currently positioned.
+				(verification will be requested.)
+
+	Examine			Display detailed information about the
+				table, view, synonym or index on which the
+				cursor is currently positioned.
+
+	Query			Run QBF on the table, view, synonym or index
+				on which the cursor is currently positioned.
+				QBF allows you to query and update data
+				in the table through a simple forms based
+				interface. (This item is not shown in all
+				cases.)
+
+	Report			Run the report writer on the table, view,
+				synonym or index on which the cursor is
+				currently positioned. (This item is not
+				shown in all cases.)
+
+        Help                    Access the INGRES Help facility.
+
+        End/Quit                Return to previous context.

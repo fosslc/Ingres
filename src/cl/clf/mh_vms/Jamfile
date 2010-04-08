@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!mh_vms
+#
+#       01-Dec-2009 (coomi01) b122980
+#           Add mhround.c to list
+
+SubDir ING_SRC cl clf mh_vms ;
+
+IISUBSYS cl clf mh_vms ;
+
+IILIBRARY COMPATLIB : mhpk.c mhint.c mh.c mhround.c ;

@@ -1,0 +1,150 @@
+/#-- Copyright (c) 2008 Ingres Corporation
+/#-- ODBC configuration screen help file 
+/#--
+You are looking at iiodbcadmin's Advanced Configuration Options Page.
+
+The iiodbcadmin screen consists of a single form with the
+following table fields:
+
+  FIELD           SYNOPSIS
+  -----           --------
+       
+  Cursor          A SELECT query generated via SQLExec, ExecDirect, or the 
+  or Select       Execute method creates result sets.  If multiple rows are 
+  Loops           to be fetched, the result set is traversed using a select 
+		  loop or cursor loop. 
+
+                  Select loops generally have the best performance, especially 
+		  for fetching a large number of rows.  However, only one 
+		  select loop can be active at a time.  Select loops may not 
+		  be nested.  In direct ODBC code, SQLFreeStmt must be called 
+		  before executing another select loop.
+
+                  Cursors may be slower then select loops, but cursors place 
+		  no limits on the number of active result sets.  Cursor loops 
+		  may be nested.  
+
+  Convert         Some applications fully qualify their column-name references 
+  3-part          as ownername.tablename.columnname references.  Older Ingres 
+  owner.table.-   6.4 based servers and gateways may not able to handle this 
+  column to       form of the SQL syntax.  Selecting this option will cause 
+  2-part          the ODBC driver to convert the ownername.tablename.columnname
+  owner.table     references to tablename.columnname references.
+
+  Include SYS*    By default, the ODBC driver filters out tables beginning 
+  or "sys*"       with "SYS*" when the SQLTables() query is executed, as 
+  SQLTables in    these are usually system (internal) tables.  Some users, 
+  result set      however, wish to have such tables included in the result 
+		  set, and therefore may select "Y" to enable the inclusion 
+		  of "SYS*" tables.
+
+  Return empty    By default, the ODBC driver returns the date value of 
+  string date	  9999-12-31 23:59:59 for empty date values.  Some 
+  values as       applications prefer to receive a more meaningful NULL value 
+  NULL            when displaying an empty string date.
+
+  Return DATE     Some MK (Manufacturing Knowledge) applications load their 
+  "1581-01-01"	  database with a "magic" date of 1582-01-01 to indicate a 
+  as NULL	  default beginning date.  However, this is meaningless to 
+		  other applications that use the same date.  Selecting
+		  "Y" means applications will receive a NULL value when 
+		  fetching such a date.  
+
+  Force separate  By default, the ODBC driver uses just one database session 
+  session for	  for all ODBC functions.  Older releases of the ODBC driver 
+  ODBC catalog	  used two sessions with a separate session for ODBC catalog 
+  functions	  functions (SQLTables, SQLColumns, SQLPrimaryKeys, etc.).  
+		  When selected, this option reverts to the older, less 
+		  efficient behavior.  Only needed for compatibility issues 
+		  where Select Loops were used and the application was 
+		  relying on the separation of interleaved main and catalog 
+		  function result sets.  Before using this option, try 
+		  selecting the Cursor Loops option first to solve any 
+		  compatibility issues.
+
+  Ignore arith-   By default, a numeric overflow, underflow, etc. condition 
+  metic errors    is an error.  When "IGNORE" is selected, the condition 
+  overflow,       is ignored.  Equivalent to the -numeric_overflow=ignore 
+  etc.		  command line flag.
+
+  Support         When "Y" is selected, ODBC applications will evaluate the 
+  II_DECIMAL      II_DECIMAL environment variable and use a comma if so 
+		  specified.  In all other cases, the the ODBC defaults to 
+		  a period character (".").
+
+  Allow update    If selected, the ODBC driver will allow applications to 
+  database	  execute database procedures that perform updates.  If the 
+  procedures	  box is not checked, the default behavior is to reject 
+  (Read-only	  execution of updating database procedures.  This applies 
+  driver)	  only to Ingres databases later than Ingres II.
+
+  Return NULL for This option causes the driver to return NULL for schema 
+  SCHEMA columns  (owner) names for the ODBC catalog functions. 
+  in result sets
+
+		  WARNING:
+		  
+		  The option is not safe if a user has table t1 and the 
+		  DBA also has a table t1 in the database.  There is no 
+		  problem if user1 has a table t1 and user2 also has a 
+		  table t1.  Table names returned are limited to those 
+		  owned by the current user or DBA.  This avoids problems 
+		  between user1 and user2, but not with the DBA.  Although 
+		  SQLTables would work OK, ambiguities between user and DBA 
+		  duplicate table names will cause failures on calls to 
+		  SQLColumns, SQLPrimaryKeys, SQLSpecialColumns, etc. when 
+		  this option is selected.
+
+  Send Date/Time  Tells the Ingres ODBC driver acts as if the connection 
+  as Ingres Date  target supports only Ingres dates; ANSI syntax for dates 
+                  and timestamps will be ignored.
+                  
+                  WARNING:
+
+                  This option must be specified if your application uses
+                  empty dates! Failure to check this option may result in data
+                  corruption or cause certain queries to return the wrong 
+                  result.
+
+                  Note: This option is intended primarily for customers
+                  migrating from Ingres 9.1 and later, who use ingresdates.
+                  This option will have no effect on Ingres releases prior to
+                  Ingres 9.1. If the target table includes ansidates, your
+                  query may not work if this option is enabled.
+
+                  If this option is selected:
+                      * All ODBC date and ODBC timestamp types are sent as 
+                        strings.
+                      * All ODBC date and ODBC timestamp escaped literals are 
+                        sent as strings in the Ingres date format 
+                        'YYYY_MM_DD 00:00:00' for dates and 
+                        'YYYY_MM_DD HH:MM:SS' for timestamps.
+
+                  If this option is not checked:
+                      * All ODBC Date types are sent as the DBMS type ansidate.
+                      * All ODBC Timestamp types are sent as DBMS type 
+                        timestamp.
+                      * All ODBC date escaped literals are sent as strings in 
+                        ANSI format: DATE 'YYYY-MM-DD'
+                      * All ODBC timestamp escaped literals are sent in
+                        ANSI format: TIMESTAMP 'YYYY-MM-DD HH:MM:SS.[FFFFFF]'.
+                 
+                  See Ingres Knowlege Base document 419363 for detailed
+                  information about the ODBC's treatment of date and
+                  timestamp sequence, including empty dates.
+
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Edit            Toggles to the opposite value for the selected
+            	        option.  
+
+	Save            A popup menu appears asking for confirmation on
+			whether the modified data should be saved.
+			Entering "Y" causes the data to be saved in the
+			corresponding configuration file.
+
+        Help            Displays this help screen.
+
+        End             Exit the Data Source Configuration Page.

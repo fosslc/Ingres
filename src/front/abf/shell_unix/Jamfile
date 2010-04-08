@@ -1,0 +1,14 @@
+#
+# Jamfile file for front!abf!shell_unix	
+#
+# History:
+#	25-jan-2005 (abbjo03)
+#	    Remove Vision tutorial.
+
+SubDir ING_SRC front abf shell_unix ;
+
+IISUBSYS front abf shell_unix ;
+
+IIBINSH abfdemo : abfdemo.sh ;
+IIBINSH deldemo : deldemo.sh ;
+

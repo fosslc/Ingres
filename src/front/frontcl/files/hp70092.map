@@ -1,0 +1,101 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* FRS mapping file for hp70092 or hp70094 with Function Keys.      */
+/*                                                                  */
+/* This file is also used with the hp70096 and hp70098 terminals    */
+/* that supercede the 700/92 and 700/94, respectively.              */
+
+/* Move left one space within a field */
+    leftchar = pf19 (Left Arrow)
+
+/* Move right one space within a field */
+    rightchar = pf18 (Right Arrow)
+
+/* Move down one line */
+    downline = pf17 (Down Arrow)
+
+/* Move up one line */
+    upline = pf16 (Up Arrow)
+
+/* Move cursor to previous field */
+        previousfield = pf20 (<Shift> Tab)
+
+/* Menu Key */
+        menu = pf1 (f1)
+
+/* Help facility */
+        frskey1 = pf2 (f2)
+
+/* Quit from program */
+        frskey2        = pf4 (f4)
+
+/* End current screen and return to previous screen */
+        frskey3        = pf3 (f3)
+
+/* Go or execute function */
+        frskey4 = pf8 (f8)
+
+/* Put cursor on top of form or table field */
+        frskey5 = pf15 (Prev)
+
+/* Put cursor on bottom of form or table field */
+        frskey6 = pf14 (Next)
+
+/* Find next occurrence of string in this column of table field */
+        frskey7        = controlF (^F)
+
+/* Save object in database */
+        frskey8 = pf5 (f5)
+
+/* Forget and Undo */
+        frskey9 = pf6 (f6)
+
+/* Previous screen or set of rows in table field */
+        scrolldown = pf13 (Scroll Down)
+
+/* Next screen or set of rows in table field */
+        scrollup = pf12 (Scroll Up)
+
+/* Move cursor to next field */
+        nextfield = controlI (Tab)
+
+/* Move up one word within field */
+        nextword = controlT (^T)
+
+/* Move back one word within field */
+        previousword = controlR (^R)
+
+/* Switch between insert and overstrike mode */
+        mode = pf11 (Insert Char)
+
+/* Redraw the screen */
+        redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+        deletechar = pf10 (Delete Char)
+
+/* Delete character immediately to left of cursor */
+        rubout = controlH (Backspace)
+
+/* Start default text editor on field */
+        editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+        newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+        clear = pf9 (Clear Line)
+
+/* Clear out the rest of the field, and move to next field */
+        clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+        duplicate = controlD (^D)
+
+/* Scroll left on a form */
+scrollleft = controlO (^O)
+
+/* Scroll right on a form */
+scrollright = controlU (^U)
+
+/* Write current screen to file */
+    printscreen = controlZ (^Z)

@@ -1,0 +1,6 @@
+#
+# wgl_32s.hnt file for front/misc/chinst
+#
+
+objonly =  main.obj
+

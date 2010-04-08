@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+ Ingstart syscheck.
+
+ The pref.cbf_syscheck parameter determines whether the syscheck
+ utility will be run prior to starting up the Configuration by
+ forms utility. 
+
+ Choices are:
+
+        ON    Indicating that the syscheck utility will be run before
+              starting CBF.
+
+        OFF   Indicating that the syscheck utility will not be run
+              before starting CBF.
+
+ Default: ON

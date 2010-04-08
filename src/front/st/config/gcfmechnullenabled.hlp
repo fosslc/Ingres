@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ Indicates whether the "null" security mechanism is enabled.  "True" means
+ the "null" security mechanism is enabled; "false" means the "null"
+ mechanism is disabled.
+
+ Use of the "null" security mechanism is strongly discouraged.  The "null"
+ security mechanism allows users to authenticate without providing passwords
+ or other types of authentication.

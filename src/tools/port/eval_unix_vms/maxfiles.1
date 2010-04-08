@@ -1,0 +1,24 @@
+.TH MAXFILES 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+maxfiles \- Find normal open file limit
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B maxfiles
+[ -v ]
+.SH DESCRIPTION
+.I Maxfiles
+prints out the number of files a process can open by default.  It does
+this by opening /etc/passwd over and over until the their is a failure. 
+.PP
+.B -v
+``verbose'' mode prints the program's name and indents output by one tab
+stop, shows the files as they are opened, and the decodes the 
+.I errno
+when the last fails.
+.PP
+.SH BUGS
+The system may have calls such as
+.I setdtablesize(1)
+to change the default, but the program makes no attempt at calling them.

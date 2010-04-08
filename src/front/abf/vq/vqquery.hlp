@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqquery.hlp, subtopic 'Query restrictions' of subtopic 'Update frames' 
+/#-- behind the main VQ Editor help screen.
+/#-- 
+To control which records the user can retrieve, you can specify restrictions 
+for as many columns in the Master or Detail tables as you like.  (For example, 
+you can specify that the user may only retrieve records for items with more 
+than 500 units in inventory.)
+
+To restrict a query, enter a restriction consistent with the column's datatype 
+in the "Query Restriction" field.  The restriction can have the form of any 
+valid expression.  See Subtopics for information about valid expressions.
+
+/#subtopic 'Valid expressions' vqexpres.hlp

@@ -1,0 +1,24 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/ingman.1,v 1.1 90/03/09 09:18:27 source Exp $
+.TH INGMAN 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History: 
+.\"     18-dec-1989 (boba) 
+.\"             Make name in title all caps like other porting tool man pages.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+ingman \- INGRES man wrapper
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B ingman
+title ...
+.SH DESCRIPTION
+.I ingman
+displays man pages for UNIX porting tools, INGRES executables,
+and local tools.
+This is useful on systems that do not recognise the BSD 4.3 convention
+of $MANPATH.
+.SH "SEE ALSO"
+man(1)
+.SH "BUGS"
+.I ingman
+assumes that \fInroff\fR is available on the system.

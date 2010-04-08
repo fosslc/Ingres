@@ -1,0 +1,7 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+
+LIBRARY IIICEAPAPI
+EXPORTS
+ice_module		@1	DATA			

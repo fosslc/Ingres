@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!stub_win
+#
+
+SubDir ING_SRC cl clf stub_win ;
+
+IISUBSYS cl clf stub_win ;
+
+
+IILIBRARY COMPATLIB : dllstub.c ;
+

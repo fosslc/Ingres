@@ -1,0 +1,131 @@
+/#-- Copyright (c) 2004 Ingres Corporation 
+/#-- vq4glfrm.hlp       Help on 4gl Forms Statements
+     CLEAR FIELD field1, field2;
+     CLEAR FIELD ALL;
+     CLEAR SCREEN;
+
+     CLEARROW tblfieldname[2] (col2, col5); /* clears col2 and col5 of row 2*/
+     
+     DELETEROW tblfieldname[2];             /* deletes row 2 of tblfieldname*/
+
+     DISPLAY SUBMENU    /* displays new menu & cursor can tab around form   */
+     BEGIN
+     'End', KEY frskey3 =
+     BEGIN
+         ENDLOOP;
+     END
+     END;
+
+     ENDLOOP;     /* exit from submenu, or select, unloadtable or while loop*/
+
+     HELP_FORMS (SUBJECT = 'Projects frame help file', 
+                 FILE = 'dua0:[help]projects.hlp');                  /* VMS */
+     HELP_FORMS (SUBJECT = 'Projects frame help file',
+                 FILE = '~/help/projects.hlp');                      /* UNIX*/
+
+     HELPFILE 'Projects frame help file' 'dua0:[help]projects.hlp';  /* VMS */
+     HELPFILE 'Projects frame help file' '~/help/projects.hlp';      /* UNIX*/
+
+     INITTABLE tblfieldname UPDATE;             /* FILL, UPDATE, READ, QUERY*/
+
+     INQUIRE_FORMS FIELD '' (fieldname = NAME); /* returns current fieldname*/
+     INQUIRE_FORMS FIELD '' (changed = CHANGE(parts));     /* returns 0 or 1*/
+     INQUIRE_FORMS FORM (formmode = MODE);      /* returns mode of the form */
+     INQUIRE_FORMS FORM (formname = NAME);      /* returns name of the form */
+     INQUIRE_FORMS FORM (integervar = CHANGE);  /* returns 0 or 1 (1=changd)*/
+     INQUIRE_FORMS FRS (aprev = ACTIVATE(PREVIOUSFIELD));  /* returns 0 or 1*/
+     INQUIRE_FORMS FRS (integervar = COMMAND);             /* returns 0 - 13*/
+     INQUIRE_FORMS FRS (vmenu = VALIDATE(MENUITEM));       /* returns 0 or 1*/
+     INQUIRE_FORMS FRS (fieldname = LABEL(frskey3));  /* returns name of the
+                                                      ** label for frskey3  
+                                                      */
+     INQUIRE_FORMS ROW (changed = CHANGE(col3));   /* returns 0 or 1        */
+     INQUIRE_FORMS TABLE '' (rowno = ROWNO);       /* returns number of disp-
+                                                   ** layed row cursor is on
+                                                   */
+     INQUIRE_FORMS TABLE '' (numrows = DATAROWS);  /* returns number of 
+                                                   ** rows in the data set
+                                                   */
+
+     INSERTROW tblfieldname;    /* inserts a blank row after the current row.
+                                ** inserted rows have a default _state of
+                                ** unchanged (2).
+                                */
+     INSERTROW tblfieldname[0] (col3 = 10);  /* inserts blank row at top of
+                                             ** table field with 10 in col3
+                                             */
+     INSERTROW tblfieldname (_STATE = 0);    /* inserts blank row after
+                                             ** current one with a _state
+                                             ** of undefined (0)
+                                             */
+     MESSAGE 'This is the text of a message';
+     SLEEP 3;
+     MESSAGE 'The employee number ' + varchar(:empno) + ' is invalid'
+              WITH STYLE=POPUP;
+
+     MODE 'UPDATE';                          /* FILL, UPDATE, READ, QUERY   */
+
+     PRINTSCREEN (FILE = 'PRINTER');   /* sends file to the printer         */
+     PRINTSCREEN (FILE = 'framecopy.out');      
+
+     psword := PROMPT NOECHO 'Please enter your password: ';
+
+     REDISPLAY;       /* repaints the screen to display current values      */
+
+     RESUME;                                         
+     RESUME NEXT;
+     RESUME FIELD tblfieldname.partcol;
+
+     RUN SUBMENU      /* displays new menu & cursor stays on menuline       */
+     BEGIN
+     'End', KEY frskey3 =
+     BEGIN
+         ENDLOOP;
+     END
+     END;
+
+     SCROLL tblfieldname TO END;      /* scrolls cursor to end of data set  */
+     SCROLL tblfieldname TO 5;        /* scrolls cursor to row 5 in data set*/
+
+     SET_FORMS COLUMN '' tblfieldname (INVISIBLE(col1) = 1);
+     SET_FORMS FIELD '' (BLINK(empno) = 1,      /* 1(On) or 0(Off)          */
+                         REVERSE(empname) = 0);  
+     SET_FORMS FORM (CHANGE = 0);               /* 1(On) or 0(Off)          */
+     SET_FORMS FORM (MODE = 'UPDATE');          /* FILL, UPDATE, READ, QUERY*/
+     SET_FORMS FRS (VALIDATE(NEXTFIELD) = 0,    /* 1(On) or 0(Off)          */
+                    ACTIVATE(MENUITEM) = 1); 
+     SET_FORMS FRS (TIMEOUT = 20);              /* timeout set to 20 seconds*/
+     SET_FORMS FRS (MAP(frskey16) = 'controlL');
+     SET_FORMS FRS (LABEL(frskey16) = '^L');
+
+     SLEEP 3;                             /* suspend operation for 3 seconds*/
+
+     UNLOADTABLE tblfieldname (rowstat = _STATE)
+     BEGIN
+           IF (rowstat = 1) THEN                           /* new row       */
+              INSERT INTO depttable (deptname)
+                 VALUES (:tblfieldname.deptname);
+           ELSEIF (rowstat = 2) THEN                       /* unchanged row */
+              MESSAGE 'Row unchanged';
+              SLEEP 2;
+           ELSEIF (rowstat = 3) THEN                       /* changed row   */
+              UPDATE depttable
+                 SET deptname = :tblfieldname.deptname
+                                /* h_olddept is a hidden table field column */
+                 WHERE deptname = :tblfieldname.h_olddept;
+           ELSEIF (rowstat = 4) THEN                       /* deleted row   */
+              DELETE FROM depttable
+                 WHERE deptname = :tblfieldname.h_olddept;
+           ENDIF;
+     END;
+
+     pattern := name + '%';
+     UNLOADTABLE tblfieldname (rownum = _RECORD)
+     BEGIN
+           IF tblfieldname.name LIKE pattern THEN
+              SCROLL tblfieldname TO rownum;
+           ENDIF;
+     END;
+
+     VALIDATE;                         /* validates every field on the form */
+     VALIDATE FIELD fieldname;

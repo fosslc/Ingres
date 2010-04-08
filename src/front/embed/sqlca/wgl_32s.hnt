@@ -1,0 +1,7 @@
+#
+# Copyright (c) 2004 Ingres Corporation
+# wgl_32s.hnt file for front/embed/csq
+#
+
+objonly = iisqlca.obj 
+

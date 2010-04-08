@@ -1,0 +1,97 @@
+@echo off
+REM	setup.template
+REM
+REM  This file contains commands that will set up your environment in order
+REM  to develop Ingres on NT.  Use it to create your setup.bat.
+REM
+REM  History:
+REM	22-jun-95 (tutto01)
+REM		Created.
+REM	10-dec-98 (abbjo03)
+REM		Updated for 2.5.  Added DOSKEY macros.
+REM
+REM
+REM  This setups Visual C++ environment variables.
+REM
+call "%MSVCDir%"\bin\vcvars32.bat
+REM
+REM  This sets ING_SRC to the root of the code on your machine.  This should 
+REM  also be reflected by your client map as the root of all code gotten.
+REM  This example shows that the code has been mapped to d:\ingres25.  You can
+REM  use any drive, and any name you like, but whatever you choose must match
+REM  your client map.
+REM
+SET ING_SRC=d:\ingres25
+REM
+REM  This will be where compiled executables will go. This line should be good
+REM  as is.
+REM
+SET ING_BUILD=%ING_SRC%\build
+REM
+REM  This tells the compiler what type of processor we are.  i386 is a generic
+REM  Intel flag, and the one you will likely use.
+REM
+SET CPU=i386
+REM
+REM  The MAPPATH variable points to your own copy of the client map for Piccolo.
+REM  If it is called something other than client.map, change this line.  Make
+REM  sure your copy of the map is the very latest! 
+REM
+SET MAPPATH=%ING_SRC%\client.map
+REM
+REM  The USER variable is used by Piccolo.  Put your ID here.
+REM
+SET USER=username
+REM
+REM  Your path should include the area where your executables are being stored.
+REM  This should be the first thing in your path, to give it preference over
+REM  executables found in any installation you might be using.  This line, too,
+REM  is generic enough that you can use it unmodified.  You also need to put
+REM  the Piccolo executable on your PC.  Here it is located in the "usual"
+REM  \usr\local\bin .
+REM
+SET PATH=d:\usr\local\bin;d:\mksnt;%II_SYSTEM%\ingres\bin;%II_SYSTEM%\ingres\utility;%II_SYSTEM%\ingres\vdba;%PATH%
+SET INCLUDE=%II_SYSTEM%\ingres\files;%INCLUDE%
+SET LIB=%II_SYSTEM%\ingres\lib;%LIB%
+REM
+REM  You should also set II_SYSTEM to point to a valid ingres install.  This
+REM  will allow the building of Ingres to go smoother, as the build itself
+REM  needs the files found in an installation!  This example points to the
+REM  "oping" install.
+REM
+SET II_SYSTEM=d:\ingresii
+REM
+REM  Some additional build environment variables.
+REM
+SET DBCS=SINGLEBYTE
+SET DEBUG=ON
+SET INGRESII=ON
+SET RC_SOURCE=RC_EXTERNAL
+REM
+REM  DOSKEY macros for common Piccolo commands.
+REM
+DOSKEY describe=p describe $*
+DOSKEY filelog=p filelog $*
+DOSKEY get=p get $*
+DOSKEY have=p have $*
+DOSKEY here=p here $*
+DOSKEY integrate=p integrate $*
+DOSKEY need=p need $*
+DOSKEY open=p open $*
+DOSKEY opened=p opened $*
+DOSKEY rcompare=p rcompare $*
+DOSKEY release=p release $*
+DOSKEY reserve=p reserve $*
+DOSKEY reserved=p reserved $*
+DOSKEY sc=p sc $*
+DOSKEY subscribe=p subscribe $*
+DOSKEY subscribed=p subscribed $*
+DOSKEY there=p there $*
+DOSKEY unsubscribe=p unsubscribe $*
+DOSKEY working=p working $*
+REM
+REM  nmake for dislexics
+REM
+DOSKEY namke=nmake $*
+REM
+Title Ingres II Version 2.5 Build Environment

@@ -1,0 +1,183 @@
+<TAG NAME="CF_IceSQL">
+	<EDITORLAYOUT WIDTH=540 LFWIDTH=714 HEIGHT=400 LFHEIGHT=496>
+	
+	<control type="Image" name="imgEditor" width="170" height="MAXIMUM" corner="NE" right=5 down=5 filepath="../IngresIce/Icons/ingresii.bmp"/>
+
+		<CONTAINER TYPE="Panel" NAME="pnlCommon" CAPTION=" Database Information: " WIDTH="MAXIMUM" HEIGHT=80 LFHEIGHT=142 MAXWIDTHPADDING=0 ANCHOR="imgEditor" CORNER="NE" RIGHT=10>
+			<!-- [DATABASE='database_name'] -->
+			<CONTROL TYPE="Label" NAME="lblDBName" WIDTH=60 LFWIDTH=72 CORNER="SW" RIGHT=10 DOWN=20 CAPTION="Name:" ALIGN="Left" VALIGN="Center"/>
+			<CONTROL TYPE="TextBox" NAME="txtDBName" WIDTH=170 LFWIDTH=204 ANCHOR="lblDBName" CORNER="NE"/>
+			
+			<!-- [USERID='user_name'] -->
+			<CONTROL TYPE="Label" NAME="lblUserID" WIDTH=60 LFWIDTH=72 CORNER="SW" RIGHT=10 DOWN=47 CAPTION="User ID:" ALIGN="Left" VALIGN="Center"/>
+			<CONTROL TYPE="TextBox" NAME="txtUserID" WIDTH=100 LFWIDTH=120 ANCHOR="lblUserID" CORNER="NE" DOWN=2/>
+
+			<!-- [PASSWORD='password'] -->
+			<CONTROL TYPE="Label" NAME="lblPassword" WIDTH="60" ANCHOR="txtUserID" CORNER="NE" RIGHT=10 CAPTION="Password:" ALIGN="Left" VALIGN="Center"/>
+			<CONTROL TYPE="TextBox" NAME="txtPassword" WIDTH=100 LFWIDTH=120 ANCHOR="lblPassword" CORNER="NE" DOWN=2 PASSWORDCHAR="*"/>
+
+		</CONTAINER>
+
+		<!-- Session Control -->
+		<CONTAINER TYPE="Panel" NAME="pnlSessionControl" CAPTION=" Session Control" WIDTH="MAXIMUM" HEIGHT="50" MAXWIDTHPADDING=0 MAXHEIGHTPADDING=5 ANCHOR="pnlCommon" CORNER="SW" DOWN=10>
+			<CONTROL TYPE="Label" NAME="lblTransaction" WIDTH=60 LFWIDTH=72 ANCHOR="txtUserID" CORNER="NE" RIGHT=10 DOWN=15 CAPTION="Transaction:" ALIGN="Left" VALIGN="Center"/>
+			<CONTROL TYPE="TextBox" NAME="txtTransaction" WIDTH=100 LFWIDTH=120 ANCHOR="lblTransaction" CORNER="NE" DOWN=2/>
+
+			<CONTROL TYPE="Label" NAME="lblCursor" WIDTH=60 LFWIDTH=72 ANCHOR="txtTransaction" CORNER="NE" RIGHT=10 CAPTION="Cursor:" ALIGN="Left" VALIGN="Center"/>
+			<CONTROL TYPE="TextBox" NAME="txtCursor" WIDTH=100 LFWIDTH=90 ANCHOR="lblCursor" CORNER="NE" DOWN=2/>
+		</CONTAINER>	
+
+		<CONTAINER TYPE="TabDialog" NAME="controlType" MULTILINE WIDTH="MAXIMUM" HEIGHT=180 MAXWIDTHPADDING=0 MAXHEIGHTPADDING=5 ANCHOR="pnlSessionControl" CORNER="SW" DOWN=10>
+			<!-- Format Tab -->
+			<CONTAINER TYPE="TabPage" NAME="FormatTab" CAPTION="Format Output">
+				<CONTAINER TYPE="Panel" NAME="pnlLabel" WIDTH="MAXIMUM" HEIGHT=140 LFHEIGHT=118 RIGHT=10 DOWN=5>
+		
+					<CONTROL TYPE="Label" NAME="lblLabelType" WIDTH=50 LFWIDTH=72 ANCHOR="lblLabelCaption" CORNER="NE" RIGHT=10 DOWN=20 CAPTION="Type:" ALIGN="Left" VALIGN="Center"/>
+					<CONTROL TYPE="DropDown" NAME="dropLabelType" WIDTH=120 LFWIDTH=144 ANCHOR="lblLabelType" CORNER="NE">
+						<ITEM VALUE="Table"			CAPTION="Table"/>
+						<ITEM VALUE="Selector"		CAPTION="Selector"/>
+						<ITEM VALUE="Plain"			CAPTION="Plain"/>
+						<ITEM VALUE="Unformatted"	CAPTION="Unformatted"/>
+					</CONTROL>
+
+					<CONTROL TYPE="Label" NAME="lblRows" WIDTH=50 LFWIDTH=72 ANCHOR="dropLabelType" RIGHT=140 CAPTION="Rows:"/>
+					<CONTROL TYPE="TextBox" NAME="txtRows" WIDTH=120 LFWIDTH=144 ANCHOR="lblRows" CORNER="NE"/>
+
+					<CONTROL TYPE="Label" NAME="lblAttr" WIDTH=50 LFWIDTH=72 RIGHT=10 DOWN=45 CAPTION="Attribute:"/>
+					<CONTROL TYPE="TextBox" NAME="txtAttr" WIDTH=120 LFWIDTH=144 ANCHOR="lblAttr" CORNER="NE"/>
+
+					<CONTROL TYPE="Label" NAME="lblExt" WIDTH=50 LFWIDTH=72 ANCHOR="txtAttr" RIGHT=140 CAPTION="Extension:"/>
+					<CONTROL TYPE="TextBox" NAME="txtExt" WIDTH=120 LFWIDTH=144 ANCHOR="lblExt" CORNER="NE"/>
+
+					<CONTROL TYPE="Label" NAME="lblNullvar" WIDTH=50 LFWIDTH=72 RIGHT=10 DOWN=70 CAPTION="Nullvar:"/>
+					<CONTROL TYPE="TextArea" NAME="txtNullvar" WIDTH=120 LFWIDTH=144 HEIGHT=40 LFHEIGHT=47 ANCHOR="lblNullvar" CORNER="NE" WRAP/>
+
+				</CONTAINER>
+			</CONTAINER>
+
+			<!-- Table Tab -->
+			<CONTAINER TYPE="TabPage" NAME="TableTab" CAPTION="Table Format">
+				<CONTAINER TYPE="Panel" NAME="pnlTextBox" WIDTH="MAXIMUM" HEIGHT=140 LFHEIGHT=165 MAXWIDTHPADDING=10 RIGHT=10 DOWN=5>
+
+					<CONTROL TYPE="Label" NAME="lblLinks" WIDTH=100 LFWIDTH=72 RIGHT=10 DOWN=20 CAPTION="Number of Links:"/>
+					<CONTROL TYPE="TextBox" NAME="txtNumLinks" WIDTH=120 LFWIDTH=144 ANCHOR="lblLinks" CORNER="NE"/>
+
+					
+					<CONTROL TYPE="Label" NAME="lblHeaders" WIDTH=100 LFWIDTH=72 RIGHT=10 DOWN=45 CAPTION="Number of Headers:"/>
+					<CONTROL TYPE="TextBox" NAME="txtNumHeaders" WIDTH=120 LFWIDTH=144 ANCHOR="lblHeaders" CORNER="NE"/>
+
+
+				</CONTAINER>
+			</CONTAINER>
+
+			<!-- Markup Tab -->
+			<CONTAINER TYPE="TabPage" NAME="MarkupTab" CAPTION="Markup">
+				<CONTAINER TYPE="Panel" NAME="pnlTextBox" WIDTH="MAXIMUM" HEIGHT=140 LFHEIGHT=165 MAXWIDTHPADDING=10 RIGHT=10 DOWN=5>
+					<CONTROL TYPE="Label" NAME="lblMarkup" WIDTH=90 LFWIDTH=108 HEIGHT="MAXIMUM" RIGHT=10 DOWN=20 CAPTION="HTML text:"/>
+					<CONTROL TYPE="TextArea" NAME="txtMarkup" WIDTH="MAXIMUM" HEIGHT="MAXIMUM" ANCHOR="lblMarkup" CORNER="NE" WRAP/>
+				</CONTAINER>
+			</CONTAINER>
+			
+			<!-- Query Tab -->
+			<CONTAINER TYPE="TabPage" NAME="QueryTab" CAPTION="Query">
+				<CONTAINER TYPE="Panel" NAME="pnlTextBox" WIDTH="MAXIMUM" HEIGHT=140 LFHEIGHT=165 MAXWIDTHPADDING=10 RIGHT=10 DOWN=5>
+					<CONTROL TYPE="Label" NAME="lblQuery" WIDTH=90 LFWIDTH=108 HEIGHT="MAXIMUM" RIGHT=10 DOWN=20 CAPTION="Query:"/>
+					<control type="SQLTextArea" name="txtQuery" width="MAXIMUM" height="MAXIMUM" anchor="lblQuery" corner="NE" wrap dsnamecontrol="LDSNC" querynamecontrol="LQNC"/>
+				</CONTAINER>
+			</CONTAINER>
+		</CONTAINER>
+				
+		<CONTAINER TYPE="Panel" NAME="pnlRepeat" WIDTH="MAXIMUM" HEIGHT="50" MAXWIDTHPADDING=0 MAXHEIGHTPADDING=5 ANCHOR="controlType" CORNER="SW" DOWN=10>			
+			<CONTROL TYPE="Label" NAME="lblRepeat" WIDTH=80 LFWIDTH=96 CORNER="NW" RIGHT=10 Down=20 CAPTION="Repeat:"/>
+			<CONTROL NAME="txtRepeat" TYPE="CheckBox" ANCHOR="lblRepeat" CORNER="NE"  WIDTH="MAXIMUM"/>			
+		</CONTAINER>
+
+		
+	</EDITORLAYOUT>
+
+   </EDITORLAYOUT>
+
+   <ATTRIBUTES>
+   </ATTRIBUTES>
+
+   <ATTRIBCATEGORIES>
+   </ATTRIBCATEGORIES>
+
+   <TAGLAYOUT>      
+   
+   <WIZIF OPTIONLOWERCASETAGS EQ 'TRUE'>
+			<WIZSET TIMEOUT	= 'TIMEOUT'>
+			<WIZSET MIMEATTACH = 'MIMEATTACH'>
+		<WIZELSE>
+			<WIZSET TIMEOUT	= 'TIMEOUT'>
+			<WIZSET MIMEATTACH = 'MIMEATTACH'>
+		</WIZIF>
+		
+		<WIZIF OPTIONLINEARLAYOUT EQ 'TRUE'>
+			<WIZSET VERTICALSPACINGGAP =  ' ' >
+		<WIZELSE>
+			<WIZSET VERTICALSPACINGGAP =  CHR(13) & CHR(10) & '        ' >
+		</WIZIF>
+
+		<WIZIF TXTREPEAT EQ 'TRUE'>
+			<WIZSET REPEATDEC = ' REPEAT ' >
+		<WIZELSE>
+			<WIZSET REPEATDEC = ' ' >
+		</WIZIF>
+
+  		<WIZSET EXCLAIM =  '!' >
+		
+<$${EXCLAIM}-- #ICE$${REPEATDEC}SQL=`$${txtQuery}`
+<WIZIF txtDBName NEQ ''>	$${DefaultCase('type')}=`$$dropLabelType`
+</WIZIF> 
+<WIZIF txtDBName NEQ ''>	$${DefaultCase('database')}=`$$txtDBName` 
+</WIZIF>
+<WIZIF txtTransaction NEQ ''>	$${DefaultCase('transaction')}=`$$txtTransaction`
+</WIZIF> 
+<WIZIF txtCursor NEQ ''>	$${DefaultCase('cursor')}=`$$txtCursor`
+</WIZIF> 
+<WIZIF txtRows NEQ ''>	$${DefaultCase('rows')}=`$$txtRows`
+</WIZIF> 
+<WIZIF txtNumLinks NEQ ''>
+	<WIZSET varIndent  = ' '>
+	<WIZIF txtNumLinks GT 0>
+	<WIZSET Tab = Chr(9)>
+	<WIZSET LoopNum = 1>
+	<WIZLOOP CONDITION = "LoopNum LTE txtNumLinks">
+	<WIZIF 1>	$${DefaultCase('links=')}`COLUMN$${LoopNum}, URL$${LoopNum}`
+</WIZIF>
+	<WIZSET LoopNum = LoopNum + 1>
+	</WIZLOOP>
+	</WIZIF>
+</WIZIF>
+<WIZIF txtNumHeaders NEQ ''>
+	<WIZSET varIndent  = ' '>
+	<WIZIF txtNumHeaders GT 0>
+	<WIZSET Tab = Chr(9)>
+	<WIZSET LoopNum = 1>
+	<WIZLOOP CONDITION = "LoopNum LTE txtNumHeaders">
+	<WIZIF 1>	$${DefaultCase('headers=')}`COLUMN$${LoopNum}, NAME$${LoopNum}`
+</WIZIF>
+	<WIZSET LoopNum = LoopNum + 1>
+	</WIZLOOP>
+	</WIZIF>
+</WIZIF>
+<WIZIF txtUserID NEQ ''>	$${DefaultCase('userID')}=`$$txtUserID`
+</WIZIF> 
+<WIZIF txtPassword NEQ ''>	$${DefaultCase('password')}=`$$txtPassword`
+</WIZIF> 
+<WIZIF txtAttr NEQ ''>	$${DefaultCase('attr')}=`$$txtAttr`
+</WIZIF> 
+<WIZIF txtExt NEQ ''>	$${DefaultCase('ext')}=`$$txtExt`
+</WIZIF> 
+<WIZIF txtNullvar NEQ ''>	$${DefaultCase('nullvar')}=`$$txtNullvar`
+</WIZIF> 
+<WIZIF txtMarkup NEQ ''>	$${DefaultCase('html')}=`$$txtMarkup`</WIZIF>
+-->
+</TAGLAYOUT>
+
+
+   <TAGDESCRIPTION HELPFILE="../../TagDefs/IngresIce/Docs/cfSQL.html"/>
+
+
+</TAG>

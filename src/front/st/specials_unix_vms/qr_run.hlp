@@ -1,0 +1,15 @@
+Query and Reporting Runtime
+
+Query-By-Forms (qbf) - An interactive, visually oriented, forms-based
+system for rapidly creating, querying, and manipulating database tables
+without using SQL.
+
+Report-By-Forms (rbf) - An interactive, visually oriented, forms-based
+system for rapidly creating and producing simple database reports without
+any programming.
+
+Report-Writer (rw) - A high-level programming system for creating and
+producing complex database reports without using a 3GL.
+
+INGRES/Menu (ingmenu) - A simple forms-based front-end to the Ingres
+Query and Reporting Tools and Database Administration Tools.

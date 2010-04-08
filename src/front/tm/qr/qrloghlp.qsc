@@ -1,0 +1,405 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<adf.h>
+# include	<afe.h>
+# include	<cm.h>
+# include	<qr.h>
+# include	<ui.h>
+# include	<ug.h>
+# include	<st.h>
+# include	<cv.h>
+# include	<er.h>
+# include	"erqr.h"
+# include	"qrhelp.h"
+## include	"qrcol.qsh"
+
+/**
+** Name:	qrloghlp.qsc -	Executes help <object> via dohelp
+**
+** Description:
+**	This file executes the help <object> statement, called
+**	via the dohelp routine. This file contains the routine:
+**
+**	IIQRlhp_LogicalHelp	does help <objectname> on single object
+**
+** History:
+**	25-aug-88 (bruceb)
+**		Written, with some code taken from qrtblhlp.
+**	05-oct-88 (bruceb)
+**		Use iilog_help catalog if running against INGRES.
+**	14-dec-88 (bruceb)
+**		Performance change.  First time here, set local statics
+**		to point to most of the fast ER strings.  Use those
+**		pointers instead of further ERget calls.
+**      19-may-89 (teresal)
+**              Squeezed out an extra space to display the new Terminator
+**              data type name "object_key" in the column information area.
+**              Increased the data type display from 9 to 10 characters while
+**              decreasing the data length display from 7 to 6 characters.
+**              This will have little visible effect.
+**	26-may-89 (teresal)
+**		Quick fix to display logical keys by using the internal data
+**		type column in iicolumns for dbms's that allow logical keys.
+**		When there is time, this should be rewritten to use 
+**		dynamic SQL.
+**      17-aug-89 (teresal)
+**              Made a change to distinguish logical keys and UDT from 'normal'
+**              datatypes.  Only logical keys and UDT's will display the
+**              internal datatype and length from iicolumns.
+**      24-sep-92 (rogerl)
+**		allow fetching of synonyms data if INGRES
+**	9-dec-1992 (rogerl)
+**		Change qrprintf's involving object/owner names to qrdiprintf()
+**		Which will ensure display of a delimited ident is quoted OK.
+**	06-may-96 (chech02)
+**		Cast function arguments to i4  in qrprintf(%d) calls.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for database objects.
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+
+/* extern's */
+
+FUNC_EXTERN	VOID		qrprintf();
+FUNC_EXTERN	char		*qrscanstmt();
+FUNC_EXTERN	VOID		qrtrimwhite( char *str );
+FUNC_EXTERN	VOID		qrdiprintf( u_i4 nth, QRB *qrb, char *fmt,
+				... );
+FUNC_EXTERN	VOID		IIQRdci_DoColumnInfo();
+FUNC_EXTERN	VOID		IIQRpci_PrintColumnInfo();
+
+/* static's */
+static	bool	set_fast_strings = FALSE;
+
+static	char	*s12_Name = NULL;
+static	char	*s13_Owner = NULL;
+static	char	*s15_Type = NULL;
+static	char	*s16_system_catalog = NULL;
+static	char	*s17_user_table = NULL;
+static	char	*s19_view = NULL;
+static	char	*s36_Column_Information = NULL;
+static	char	*s3B_yes_null = NULL;
+static	char	*s3C_no_null = NULL;
+static	char	*s3D_yes_default = NULL;
+static	char	*s3E_no_default = NULL;
+static	char	*s5B_topline_key = NULL;
+static	char	*s5C_mainline_coltitle = NULL;
+static	char	*s5D_mainline_dtype_name = NULL;
+static	char	*s5E_mainline_dtype_len = NULL;
+static	char	*s5F_mainline_nulls = NULL;
+static	char	*s60_mainline_defaults = NULL;
+static	char	*s61_mainline_seq = NULL;
+static	char	*s6E_secondary_index = NULL;
+static	char	*s6F_Version = NULL;
+static	char	*s70_Created = NULL;
+static	char	*s98_objkey_sm = NULL;
+static	char	*s99_objkeynosm = NULL;
+static	char	*s9A_tblkey_sm = NULL;
+static	char	*s9B_tblkeynosm = NULL;
+static	char	*sA9_user_table_part = NULL;
+
+
+
+/*{
+** Name:	IIQRlhp_LogicalHelp	- perform help <object> for one object
+**
+** Description:
+**	This routine performs logical help on a single object, either a
+**	table, view, index or link.  The information produced looks something
+**	like this:
+**
+**	Name:		employee
+**	Owner:		sam
+**	Created:	13-aug-1988 17:32:00
+**	Type:		user table
+**	Version:	ING6.0
+**
+**	Column Information:
+**								 Key
+**	Column Name		Type	Length	Nulls	Defaults Seq
+**	x			integer	     4	  no	   yes	   1
+**	y			date	      	  no	   yes
+**
+**
+** Inputs:
+**	qrb		ubiquitous qrb
+**	t		table name
+**	town		table owner
+**
+** Outputs:
+**	none
+**
+** Side Effects:
+**	puts the logical help info for an object into the qrb's output buffer
+**
+** History:
+**	25-aug-88 (bruceb)
+**		Written, with some code taken from qrtblhlp.
+**	13-mar-89 (kathryn) Bug #1464
+**		If language is SQL then print "vchar" not "text" for vchar
+**		data types.
+**	23-sep-92 (rogerl)
+**		STtrmwhite to qrtrimwhite, new field 'type' for printing
+**		type of synonyms
+**	2-Jun-2004 (schka24)
+**	    Help on partitioned tables
+*/
+VOID
+IIQRlhp_LogicalHelp(qrb, t, town, type)
+QRB	*qrb;
+EXEC SQL BEGIN DECLARE SECTION;
+char	*t;
+char	*town;
+EXEC SQL END DECLARE SECTION;
+char	*type;
+{
+EXEC SQL BEGIN DECLARE SECTION;
+	char	cdate[26];
+	char	ttype[9];
+	char	tstype[9];
+	char	tversion[9];
+	char	sysuse[2];
+	QR_COL_INFO	colinfo;
+	char	btabown[DB_MAXNAME + 1];
+	char	*oldt;
+	u_i2	phys_partitions;
+EXEC SQL END DECLARE SECTION;
+	i4		i;
+	bool	first_time = TRUE;
+	char	*oldo;
+
+
+	if (set_fast_strings == FALSE)
+	{
+	    s12_Name = ERget(F_QR0012_Name);
+	    s13_Owner = ERget(F_QR0013_Owner);
+	    s15_Type = ERget(F_QR0015_Type);
+	    s16_system_catalog = ERget(F_QR0016_system_catalog);
+	    s17_user_table = ERget(F_QR0017_user_table);
+	    s19_view = ERget(F_QR0019_view);
+	    s36_Column_Information = ERget(F_QR0036_Column_Information);
+	    s3B_yes_null = ERget(F_QR003B_yes_null);
+	    s3C_no_null = ERget(F_QR003C_no_null);
+	    s3D_yes_default = ERget(F_QR003D_yes_default);
+	    s3E_no_default = ERget(F_QR003E_no_default);
+	    s5B_topline_key = ERget(F_QR005B_topline_key);
+	    s5C_mainline_coltitle = ERget(F_QR005C_mainline_coltitle);
+	    s5D_mainline_dtype_name = ERget(F_QR005D_mainline_dtype_name);
+	    s5E_mainline_dtype_len = ERget(F_QR005E_mainline_dtype_len);
+	    s5F_mainline_nulls = ERget(F_QR005F_mainline_nulls);
+	    s60_mainline_defaults = ERget(F_QR0060_mainline_defaults);
+	    s61_mainline_seq = ERget(F_QR0061_mainline_seq);
+	    s6E_secondary_index = ERget(F_QR006E_secondary_index);
+	    s6F_Version = ERget(F_QR006F_Version);
+	    s70_Created = ERget(F_QR0070_Created);
+	    s98_objkey_sm = ERget(F_QR0098_objkey_sm);
+	    s99_objkeynosm = ERget(F_QR0099_objkeynosm);
+	    s9A_tblkey_sm = ERget(F_QR009A_tblkey_sm);
+	    s9B_tblkeynosm = ERget(F_QR009B_tblkeynosm);
+	    sA9_user_table_part = ERget(F_QR00A9_user_table_part);
+
+	    set_fast_strings = TRUE;
+	}
+
+	/* type is non-null then this is a synonym, and type contains the name
+	** of the underlying table (already gotten from iisynonyms)
+	** so, we just point 't' to that so the table info is retrieved, but
+	** note that the type is displayed at a synonym on table xxx
+	*/
+	if ( type != NULL )
+	{
+	    /* user town owns object t, but that might be
+	    ** different than the owner of the base table
+	    ** (type).  so, in order to get info on the base
+	    ** table, need to find the owner of the base table -
+	    ** if it's different than that found in town, need
+	    ** to overwrite town with owner of base table
+	    ** 'type' will be NULL in the cases where there are
+	    ** either no synonyms or there is not a synonyms
+	    ** catalog available, so no checking need be done
+	    ** here for those cases
+	    */
+
+	    oldt = t;
+	    t = type;
+
+	    EXEC SQL REPEATED SELECT table_owner
+	    	INTO :btabown
+	    	FROM iisynonyms
+	    	WHERE synonym_name = :oldt
+	    AND synonym_owner = :town;
+	    EXEC SQL BEGIN;
+	    EXEC SQL END;
+
+	    oldo = town;
+	    town = btabown;
+    	}
+
+	/*
+	** Dear reader... this used to access an undocumented and
+	** unsupported catalog iilog_help, which made things completely
+	** unmaintainable. Using 2 queries, one for table info, one for
+	** column info, considerably modularizes and cleanses the code 
+	*/
+
+	/* No stats for help <object> */
+	colinfo.maxstats = 0;
+
+	/* just one row per table info */
+	/* If r3-or-later catalog, pick up # partitions, else it's zero */
+
+	phys_partitions = 0;
+
+	if (STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_900) >= 0)
+	{
+	    EXEC SQL REPEATED 
+	    SELECT create_date, table_type, table_subtype, 
+			table_version, system_use, phys_partitions
+	    INTO :cdate, :ttype, :tstype, :tversion, :sysuse, :phys_partitions
+	    FROM iitables
+	    WHERE table_name = :t
+	    AND table_owner = :town;
+	}
+	else
+	{
+	    EXEC SQL REPEATED 
+	    SELECT create_date, table_type, table_subtype, 
+			table_version, system_use
+	    INTO :cdate, :ttype, :tstype, :tversion, :sysuse
+	    FROM iitables
+	    WHERE table_name = :t
+	    AND table_owner = :town;
+	}
+
+	if (FEinqerr())
+	{
+	    qrprintf(qrb, ERget(F_QR0044_ret_err_iitables));
+	    return;
+	}
+	if ( type != NULL )  /* synonym, print the syn name and owner*/
+	{
+	    qrdiprintf( QRARG1, qrb, s12_Name, oldt);
+	    qrdiprintf( QRARG1, qrb, s13_Owner, oldo);
+	}
+	else
+	{
+	    qrdiprintf( QRARG1, qrb, s12_Name, t );
+	    qrdiprintf( QRARG1, qrb, s13_Owner, town );
+	}
+	if (cdate[0] != ' ')
+	{
+	    if (IIQRgtl_GmtToLocal(cdate, cdate) == OK)
+		qrprintf(qrb, s70_Created, cdate);
+	}
+
+	/*
+	** For object type, give strings like:
+	**  "user table", "system catalog", "index on basetable",
+	**  "view", "link to index", "import of table", or, if no
+	**  type information exists and sub_type is not 'native'
+	**  "link" or "import".
+	*/
+	if (ttype[0] != ' ' || tstype[0] != 'N')
+	{
+	    qrprintf(qrb, s15_Type);
+	    if ( type != NULL ) /* then we've got a synonym */
+	    {
+		qrdiprintf( QRARG1, qrb, ERget( F_QR011B_user_synonym ), t );
+	    }
+	    else if (tstype[0] == 'L')
+	    {
+		if (ttype[0] == ' ')	/* object type is unknown */
+		{
+		    qrprintf(qrb, ERget(F_QR006A_link));
+		}
+		else	/* "link to <object>" */
+		{
+		    qrprintf(qrb, ERget(F_QR006B_link_to));
+		}
+	    }
+	    else if (tstype[0] == 'I')
+	    {
+		if (ttype[0] == ' ')	/* object type is unknown */
+		{
+		    qrprintf(qrb, ERget(F_QR006C_import));
+		}
+		else	/* "import of <object>" */
+		{
+		    qrprintf(qrb, ERget(F_QR006D_import_of));
+		}
+	    }
+
+	    /* Only print out 'system catalog' if a native object. */
+	    if ( type == NULL )  /* don't do this if synonym */
+	    {
+	        if (((sysuse[0] == 'S')
+		    || (STbcompare(t, 2, ERx("ii"), 2, TRUE) == 0))
+		&& (tstype[0] == 'N'))
+	        {
+		    qrprintf(qrb, s16_system_catalog);
+	        }
+	        else if (ttype[0] == 'T')
+	        {
+		    if (phys_partitions > 0)
+			qrprintf(qrb, sA9_user_table_part);
+		    else
+			qrprintf(qrb, s17_user_table);
+	        }
+	        else if (ttype[0] == 'I')
+	        {
+		    qrprintf(qrb, s6E_secondary_index);
+	        }
+	        else if (ttype[0] == 'V')
+	        {
+		    qrprintf(qrb, s19_view);
+	        }
+	        else	/* if table_type column contains bad information */
+	        {
+		    qrprintf(qrb, ERget(F_QR001A_unknown));
+	        }
+	    }
+	}
+	
+	qrprintf(qrb, s6F_Version, tversion);
+
+	qrprintf(qrb, ERx("\n"));
+	qrprintf(qrb, s36_Column_Information);
+	/*
+	** the size calculated immediately below is derived from the sizes
+	** used on the 'info_mainline' below.
+	*/
+	qrprintf(qrb, ERx("%*s"),
+	    (i4)((DB_MAXNAME + 1) + (10 + 1) + (6 + 1) + (5 + 1) + (8 + 1) + 3), 
+	    s5B_topline_key);
+
+	qrprintf(qrb, ERx("\n"));
+	qrprintf(qrb, ERx("%-*s %-10s %6s %s %s %s"), (i4)DB_MAXNAME, 
+	    s5C_mainline_coltitle, s5D_mainline_dtype_name,
+	    s5E_mainline_dtype_len, s5F_mainline_nulls,
+	    s60_mainline_defaults, s61_mainline_seq);
+	qrprintf(qrb, ERx("\n"));
+
+	/* Call procedure in qrtabhlp.qsc so this code is help ONLY once! */
+	IIQRdci_DoColumnInfo(qrb, NULL, (i4)0, t, town);
+
+	if (FEinqerr())
+	{
+	    qrprintf(qrb, ERget(F_QR0040_ret_err_iicolumns));
+	}
+
+	qrprintf(qrb, ERx("\n"));
+}

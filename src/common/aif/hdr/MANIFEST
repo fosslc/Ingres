@@ -1,0 +1,23 @@
+#
+# MANIFEST file for common!aif!hdr
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	29-Apr-2005 (hanje04)
+##	    Remove deleted files.
+
+
+IISUBSYS common aif hdr ;
+
+if $(NT)
+{
+IIDEFHDR iiapidep.h : iiapidep.wnt ;
+}
+else
+{
+IIAIFHDR iiapidep.h : iiapidep.ccpp ;
+
+IIFILE iiapidep.h : iiapidep.h ;
+}

@@ -1,0 +1,9 @@
+#
+# Jamfile file for front!ice!xerces
+#
+
+SubDir ING_SRC front ice xerces ;
+
+IISUBSYS front ice xerces ;
+
+

@@ -1,0 +1,1389 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+##include	<oosymbol.qsh>
+##include	<ooclass.qsh>
+#include	<oocollec.h>
+#include	<graf.h>
+#include	"grproc.h"
+
+/**
+** Name:	grclass.c -	Graph Class Object Initializations.
+**
+** Description:
+**	Generated automatically by classout.  Defines:
+**
+**	IIgrObjects[]	array of references to graph objects.
+**
+** History:
+**	Revision 6.0  87/01  peterk
+**	Generated.
+**
+**	88/12  wong  Hand modified to remove unused Class methods and common
+**	shared objects, and also renamed definition as 'IIgrObjects'.
+**	89/04/15  mikes  Removed local definiton of OO_aCOLLECTION
+**	Revision 6.2  89/07  wong
+**	Portability changes for Collection objects:  Changed collection to be
+**	an array pointer rather than an array (defining array elements after
+**	the structure is not portable.)  Also, replaced some class constants
+**	with their defines (those that were defined.)
+**
+**	12/19/89 (Mike S) Porting changes
+**	Calculate structure offsets portably.
+**	12/89 (Mike S)
+**	Use symbolic names for FE-related member sizes 
+**	24-jan-90 (mgw)
+**		Sequent compiler bug precludes pointer arithmetic in
+**		structure initializations so just use the real offsets
+**		in the Sequent case.
+**	29-jan-90 (mgw)
+**		New VMS compiler had same problem with structure initialization
+**		as the Sequent compiler did.
+**	8/90 (Mike S)
+**	Use CL_OFFSETOF macro for genuinely portable structure offset
+**	calcualtion.
+**      21-jan-93 (pghosh) 
+**		Modified _flush to ii_flush as this was modifed by fraser 
+**		in oosymbol.qsh file.
+**	26-Aug-2009 (kschendel) 121804
+**	    Need graf.h to satisfy gcc 4.3.
+**/
+
+/*
+**	Graph -- Class object initialization
+*/
+/* Graph methods array */
+static OO_METHOD	mO123[] = {
+    {141,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,123,
+		ERx("GRvigGraph"),GRvigGraph,2,1,0,1,0},
+    {157,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,123,
+		ERx("GRinitDb"),GRinitDb,2,1,0,0,0},
+    {196,{0x3},OC_METHOD,_decode,0,0,0,0,0,0,0,123,
+		ERx("GRdecode"),GRdecode,0,1,0,0,0},
+    {197,{0x3},OC_METHOD,_destroy,0,0,0,0,0,0,0,123,
+		ERx("GRdestroy"),(OOID (*)()) GRdestroy,0,1,0,1,0},
+    {166,{0x3},OC_METHOD,ii_flush,0,0,0,0,0,0,0,123,
+		ERx("GRflush"),GRflush,0,1,0,0,0},
+    {170,{0x3},OC_METHOD,_fetch,0,0,0,0,0,0,0,123,
+		ERx("GRfetch"),GRfetch,1,1,0,0,0},
+    {193,{0x3},OC_METHOD,_encode,0,0,0,0,0,0,0,123,
+		ERx("GRencode"),GRencode,0,1,0,1,0},
+    {153,{0x3},OC_METHOD,_nameOk,0,0,0,0,0,0,0,123,
+		ERx("GRnameOk"),(OOID (*)()) GRnameOk,1,1,0,0,1},
+    {158,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,123,
+		ERx("GRinit"),GRinit,3,1,0,0,0},
+};
+
+/* Graph methods collection */
+static OOID	xO_18[] = {
+	(OOID)141,
+	(OOID)157,
+	(OOID)196,
+	(OOID)197,
+	(OOID)166,
+	(OOID)170,
+	(OOID)193,
+	(OOID)153,
+	(OOID)158,
+};
+
+static OO_COLLECTION	O_18= {
+	-18, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	9,
+	0,
+	0,
+	xO_18,
+};
+
+/* Graph master references array */
+static OO_REFERENCE	rO123[] = {
+{
+	135, {0x3},
+	OC_REFERENCE,
+	ERx("components"),
+	0,_,1,_,_,_,_,
+	123,
+	1,
+	CL_OFFSETOF(OO_GRAPH, components),
+	ERx("graph"),
+	124,
+	0,
+	44,
+},
+};
+
+/* Graph master reference collection */
+static OOID	xO_19[] = {
+	(OOID)135,
+};
+
+static OO_COLLECTION	O_19= {
+	-19, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	1,
+	0,
+	0,
+	xO_19,
+};
+
+/* Graph attributes array */
+static OO_ATTRIB	aO_20[] = {
+	{ 2, ERx("viewname"), 32, FE_MAXTABNAME},
+	{ 3, ERx("indep"), 32, FE_MAXNAME},
+	{ 4, ERx("dep"), 32, FE_MAXNAME},
+	{ 5, ERx("series"), 32, FE_MAXNAME},
+	{ 6, ERx("label"), 32, FE_MAXNAME},
+	{ 7, ERx("flags"), 30, 4},
+	{ 8, ERx("sortstring"), 37, 122},
+	{ 9, ERx("grtype"), 32, 8},
+	{ 10, ERx("encgraph"), 30, 4},
+};
+
+/* Graph attributes collection */
+static OO_ATTRIB	*xO_20[] = {
+	&aO_20[0],
+	&aO_20[1],
+	&aO_20[2],
+	&aO_20[3],
+	&aO_20[4],
+	&aO_20[5],
+	&aO_20[6],
+	&aO_20[7],
+	&aO_20[8],
+};
+
+static OO_aCOLLECTION	O_20= {
+	-20, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	9,
+	0,
+	0,
+	xO_20,
+};
+
+/* Graph class structure */
+GLOBALDEF OO_CLASS	O123[1] = {
+	OC_GRAPH, {0x3},
+	OC_CLASS,
+	ERx("Graph"),
+	0,_,1,
+	ERx("VIGRAPH Graph Class"),
+	_,_,_,
+	ERx("iigraph"),
+	ERx("id"),
+	(OOID)1,
+	1,
+	0,
+	0,
+	sizeof(OO_GRAPH),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)-19,
+	(OOID)0,
+	(OOID)-18,
+	(OOID)-20,
+};
+
+/*
+**	GrComp -- Class object initialization
+*/
+/* GrComp methods array */
+static OO_METHOD	mO124[] = {
+    {142,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,124,
+		ERx("GRvigComp"),(OOID (*)()) GRvigComp,1,1,0,1,0},
+    {194,{0x3},OC_METHOD,_encode,0,0,0,0,0,0,0,124,
+		ERx("GRCencode"),GRCencode,0,1,0,1,0},
+    {159,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,124,
+		ERx("GRcinit"),GRcinit,3,1,0,0,0},
+    {167,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,124,
+		ERx("GRcinit"),GRcinit,3,1,0,0,0},
+};
+
+/* GrComp methods collection */
+static OOID	xO_21[] = {
+	(OOID)142,
+	(OOID)194,
+	(OOID)159,
+	(OOID)167,
+};
+
+static OO_COLLECTION	O_21= {
+	-21, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	4,
+	0,
+	0,
+	xO_21,
+};
+
+/* GrComp master references array */
+static OO_REFERENCE	rO124[] = {
+{
+	136, {0x3},
+	OC_REFERENCE,
+	ERx("legends"),
+	0,_,1,_,_,_,_,
+	124,
+	0,
+	CL_OFFSETOF(OO_GRCOMP, legends),
+	ERx("agrcomp"),
+	127,
+	0,
+	132,
+},
+{
+	137, {0x3},
+	3,
+	ERx("depdats"),
+	0,_,1,_,_,_,_,
+	124,
+	1,
+	CL_OFFSETOF(OO_GRCOMP, depdats),
+	ERx("agrcomp"),
+	129,
+	0,
+	44,
+},
+{
+	138, {0x3},
+	3,
+	ERx("axdats"),
+	0,_,1,_,_,_,_,
+	124,
+	1,
+	CL_OFFSETOF(OO_GRCOMP, axdats),
+	ERx("agrcomp"),
+	151,
+	0,
+	44,
+},
+};
+
+/* GrComp master reference collection */
+static OOID	xO_22[] = {
+	(OOID)136,
+	(OOID)137,
+	(OOID)138,
+};
+
+static OO_COLLECTION	O_22= {
+	-22, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_22,
+};
+
+/* GrComp detail refs collection (entries in a masterRefs array) */
+static OOID	xO_23[] = {
+	(OOID)135,
+};
+
+static OO_COLLECTION	O_23= {
+	-23, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	1,
+	0,
+	0,
+	xO_23,
+};
+
+/* GrComp attributes array */
+static OO_ATTRIB	aO_24[] = {
+	{ 2, ERx("graph"), 30, 4},
+	{ 3, ERx("seq"), 30, 2},
+	{ 4, ERx("mgleft"), 31, 8},
+	{ 5, ERx("mgright"), 31, 8},
+	{ 6, ERx("mgtop"), 31, 8},
+	{ 7, ERx("mgbottom"), 31, 8},
+	{ 8, ERx("xlow"), 31, 8},
+	{ 9, ERx("xhi"), 31, 8},
+	{ 10, ERx("ylow"), 31, 8},
+	{ 11, ERx("yhi"), 31, 8},
+	{ 12, ERx("bckcolor"), 30, 2},
+	{ 13, ERx("flags"), 30, 4},
+};
+
+/* GrComp attributes collection */
+static OO_ATTRIB	*xO_24[] = {
+	&aO_24[0],
+	&aO_24[1],
+	&aO_24[2],
+	&aO_24[3],
+	&aO_24[4],
+	&aO_24[5],
+	&aO_24[6],
+	&aO_24[7],
+	&aO_24[8],
+	&aO_24[9],
+	&aO_24[10],
+	&aO_24[11],
+};
+
+static OO_aCOLLECTION	O_24= {
+	-24, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	12,
+	0,
+	0,
+	xO_24,
+};
+
+/* GrComp class structure */
+GLOBALDEF OO_CLASS	O124[1] = {
+	OC_GRCOMP, {0x3},
+	OC_CLASS,
+	ERx("GrComp"),
+	0,_,1,
+	ERx("Graph component class"),
+	_,_,_,
+	ERx("iigrcomp"),
+	ERx("id"),
+	(OOID)1,
+	1,
+	0,
+	0,
+	sizeof(OO_GRCOMP),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)-22,
+	(OOID)-23,
+	(OOID)-21,
+	(OOID)-24,
+};
+
+/*
+**	GrAx -- Class object initialization
+*/
+/* GrAx attributes array */
+static OO_ATTRIB	aO_25[] = {
+	{ 2, ERx("baseline"), 31, 8},
+	{ 3, ERx("dsset"), 30, 2},
+	{ 4, ERx("chartval"), 30, 2},
+	{ 5, ERx("indep"), 32, 24},
+	{ 6, ERx("flag2"), 30, 4},
+};
+
+/* GrAx attributes collection */
+static OO_ATTRIB	*xO_25[] = {
+	&aO_25[0],
+	&aO_25[1],
+	&aO_25[2],
+	&aO_25[3],
+	&aO_25[4],
+};
+
+static OO_aCOLLECTION	O_25= {
+	-25, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	5,
+	0,
+	0,
+	xO_25,
+};
+
+/* GrAx class structure */
+GLOBALDEF OO_CLASS	O125[1] = {
+	OC_GRAX, {0x3},
+	OC_CLASS,
+	ERx("GrAx"),
+	0,_,1,
+	ERx("Axile graph component class"),
+	_,_,_,
+	ERx("iigrax"),
+	ERx("id"),
+	(OOID)124,
+	2,
+	0,
+	0,
+	sizeof(OO_GRAX),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)0,
+	(OOID)0,
+	(OOID)-25,
+};
+
+/*
+**	GrPie -- Class object initialization
+*/
+/* GrPie methods array */
+static OO_METHOD	mO126[] = {
+    {145,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,126,
+		ERx("GRvigPie"),(OOID (*)()) GRvigPie,0,1,0,2,0},
+    {163,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,126,
+		ERx("GRpinit"),GRpinit,2,1,0,0,0},
+    {173,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,126,
+		ERx("GRpinit"),GRpinit,2,1,0,0,0},
+};
+
+/* GrPie methods collection */
+static OOID	xO_26[] = {
+	(OOID)145,
+	(OOID)163,
+	(OOID)173,
+};
+
+static OO_COLLECTION	O_26= {
+	-26, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_26,
+};
+
+/* GrPie attributes array */
+static OO_ATTRIB	aO_27[] = {
+	{ 2, ERx("rotate"), 31, 8},
+	{ 3, ERx("explosion"), 31, 8},
+	{ 4, ERx("expfirst"), 30, 2},
+	{ 5, ERx("explast"), 30, 2},
+	{ 6, ERx("flag2"), 30, 4},
+	{ 7, ERx("slice"), 32, 48},
+};
+
+/* GrPie attributes collection */
+static OO_ATTRIB	*xO_27[] = {
+	&aO_27[0],
+	&aO_27[1],
+	&aO_27[2],
+	&aO_27[3],
+	&aO_27[4],
+	&aO_27[5],
+};
+
+static OO_aCOLLECTION	O_27= {
+	-27, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	6,
+	0,
+	0,
+	xO_27,
+};
+
+/* GrPie class structure */
+GLOBALDEF OO_CLASS	O126[1] = {
+	OC_GRPIE, {0x3},
+	OC_CLASS,
+	ERx("GrPie"),
+	0,_,1,
+	ERx("Piechart graph component class"),
+	_,_,_,
+	ERx("iigrpie"),
+	ERx("id"),
+	124,
+	2,
+	0,
+	0,
+	sizeof(OO_GRPIE),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)0,
+	(OOID)-26,
+	(OOID)-27,
+};
+
+/*
+**	GrLegend -- Class object initialization
+*/
+/* GrLegend methods array */
+static OO_METHOD	mO127[] = {
+    {149,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,127,
+		ERx("GRvigLegend"),(OOID (*)()) GRvigLegend,0,1,0,2,0},
+    {164,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,127,
+		ERx("GRleginit"),GRleginit,2,1,0,0,0},
+    {174,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,127,
+		ERx("GRleginit"),GRleginit,2,1,0,0,0},
+};
+
+/* GrLegend methods collection */
+static OOID	xO_28[] = {
+	(OOID)149,
+	(OOID)164,
+	(OOID)174,
+};
+
+static OO_COLLECTION	O_28= {
+	-28, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_28,
+};
+
+/* GrLegend detail refs collection (entries in a masterRefs array) */
+static OOID	xO_29[] = {
+	(OOID)136,
+};
+
+static OO_COLLECTION	O_29= {
+	-29, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	1,
+	0,
+	0,
+	xO_29,
+};
+
+/* GrLegend attributes array */
+static OO_ATTRIB	aO_30[] = {
+	{ 2, ERx("agrcomp"), 30, 4},
+	{ 3, ERx("tfont"), 30, 2},
+	{ 4, ERx("tcolor"), 30, 2},
+	{ 5, ERx("dfont"), 30, 2},
+	{ 6, ERx("dcolor"), 30, 2},
+	{ 7, ERx("flag2"), 30, 4},
+};
+
+/* GrLegend attributes collection */
+static OO_ATTRIB	*xO_30[] = {
+	&aO_30[0],
+	&aO_30[1],
+	&aO_30[2],
+	&aO_30[3],
+	&aO_30[4],
+	&aO_30[5],
+};
+
+static OO_aCOLLECTION	O_30= {
+	-30, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	6,
+	0,
+	0,
+	xO_30,
+};
+
+/* GrLegend class structure */
+GLOBALDEF OO_CLASS	O127[1] = {
+	OC_GRLEGEND, {0x3},
+	OC_CLASS,
+	ERx("GrLegend"),
+	0,_,1,
+	ERx("Legend graph component class"),
+	_,_,_,
+	ERx("iigrlegend"),
+	ERx("id"),
+	(OOID)124,
+	2,
+	0,
+	0,
+	sizeof(OO_GRLEGEND),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)-29,
+	(OOID)-28,
+	(OOID)-30,
+};
+
+/*
+**	GrText -- Class object initialization
+*/
+/* GrText methods array */
+static OO_METHOD	mO128[] = {
+    {150,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,128,
+		ERx("GRvigText"),(OOID (*)()) GRvigText,0,1,0,2,0},
+    {165,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,128,
+		ERx("GRtinit"),GRtinit,2,1,0,0,0},
+    {175,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,128,
+		ERx("GRtinit"),GRtinit,2,1,0,0,0},
+};
+
+/* GrText methods collection */
+static OOID	xO_31[] = {
+	(OOID)150,
+	(OOID)165,
+	(OOID)175,
+};
+
+static OO_COLLECTION	O_31= {
+	-31, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_31,
+};
+
+/* GrText attributes array */
+static OO_ATTRIB	aO_32[] = {
+	{ 2, ERx("font"), 30, 2},
+	{ 3, ERx("color"), 30, 2},
+	{ 4, ERx("colum"), 32, 24},
+	{ 5, ERx("flag2"), 30, 4},
+};
+
+/* GrText attributes collection */
+static OO_ATTRIB	*xO_32[] = {
+	&aO_32[0],
+	&aO_32[1],
+	&aO_32[2],
+	&aO_32[3],
+};
+
+static OO_aCOLLECTION	O_32= {
+	-32, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	4,
+	0,
+	0,
+	xO_32,
+};
+
+/* GrText class structure */
+GLOBALDEF OO_CLASS	O128[1] = {
+	OC_GRTEXT, {0x3},
+	OC_CLASS,
+	ERx("GrText"),
+	0,_,1,
+	ERx("Text (trim) graph component class"),
+	_,_,_,
+	ERx("iigrtext"),
+	ERx("id"),
+	(OOID)124,
+	2,
+	0,
+	0,
+	sizeof(OO_GRTEXT),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)0,
+	(OOID)-31,
+	(OOID)-32,
+};
+
+/*
+**	GrDepDat -- Class object initialization
+*/
+/* GrDepDat methods array */
+static OO_METHOD	mO129[] = {
+    {144,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,129,
+		ERx("GRvigDepdat"),GRvigDepdat,2,1,0,1,0},
+    {178,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,129,
+		ERx("GRdepinit"),GRdepinit,3,1,0,0,0},
+    {177,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,129,
+		ERx("GRdepinit"),GRdepinit,3,1,0,0,0},
+};
+
+/* GrDepDat methods collection */
+static OOID	xO_33[] = {
+	(OOID)144,
+	(OOID)178,
+	(OOID)177,
+};
+
+static OO_COLLECTION	O_33= {
+	-33, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_33,
+};
+
+/* GrDepDat detail refs collection (entries in a masterRefs array) */
+static OOID	xO_34[] = {
+	(OOID)137,
+};
+
+static OO_COLLECTION	O_34= {
+	-34, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	1,
+	0,
+	0,
+	xO_34,
+};
+
+/* GrDepDat attributes array */
+static OO_ATTRIB	aO_35[] = {
+	{ 2, ERx("agrcomp"), 30, 4},
+	{ 3, ERx("seq"), 30, 2},
+	{ 4, ERx("dfield"), 32, 24},
+	{ 5, ERx("dcolor"), 30, 2},
+	{ 6, ERx("fcolor"), 30, 2},
+	{ 7, ERx("mark"), 30, 1},
+	{ 8, ERx("dash"), 30, 1},
+	{ 9, ERx("cnct"), 30, 1},
+	{ 10, ERx("lcolor"), 30, 2},
+	{ 11, ERx("lfont"), 30, 2},
+	{ 12, ERx("lformat"), 37, 50},
+	{ 13, ERx("lfield"), 32, 24},
+	{ 14, ERx("flags"), 30, 4},
+};
+
+/* GrDepDat attributes collection */
+static OO_ATTRIB	*xO_35[] = {
+	&aO_35[0],
+	&aO_35[1],
+	&aO_35[2],
+	&aO_35[3],
+	&aO_35[4],
+	&aO_35[5],
+	&aO_35[6],
+	&aO_35[7],
+	&aO_35[8],
+	&aO_35[9],
+	&aO_35[10],
+	&aO_35[11],
+	&aO_35[12],
+};
+
+static OO_aCOLLECTION	O_35= {
+	-35, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	13,
+	0,
+	0,
+	xO_35,
+};
+
+/* GrDepDat class structure */
+GLOBALDEF OO_CLASS	O129[1] = {
+	OC_GRDEPDAT, {0x3},
+	OC_CLASS,
+	ERx("GrDepDat"),
+	0,_,1,
+	ERx("Dependent dataset descriptor class"),
+	_,_,_,
+	ERx("iigrdepdat"),
+	ERx("id"),
+	(OOID)1,
+	1,
+	0,
+	0,
+	sizeof(OO_GRDEPDAT),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)-34,
+	(OOID)-33,
+	(OOID)-35,
+};
+
+/*
+**	GrAxDt1 -- Class object initialization
+*/
+/* GrAxDt1 methods array */
+static OO_METHOD	mO130[] = {
+    {199,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,130,
+		ERx("GRvig1Axd"),GRvig1Axd,1,1,0,1,0},
+};
+
+/* GrAxDt1 methods collection */
+static OOID	xO_36[] = {
+	(OOID)199,
+};
+
+static OO_COLLECTION	O_36= {
+	-36, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	1,
+	0,
+	0,
+	xO_36,
+};
+
+/* GrAxDt1 attributes array */
+static OO_ATTRIB	aO_37[] = {
+	{ 2, ERx("agrcomp"), 30, 4},
+	{ 3, ERx("axindex"), 30, 2},
+	{ 4, ERx("ticks"), 30, 2},
+	{ 5, ERx("grids"), 30, 2},
+	{ 6, ERx("major"), 30, 2},
+	{ 7, ERx("rnglo"), 31, 8},
+	{ 8, ERx("rnghi"), 31, 8},
+	{ 9, ERx("margin"), 31, 8},
+	{ 10, ERx("header"), 37, 62},
+	{ 11, ERx("labsup"), 30, 2},
+	{ 12, ERx("datefmt"), 30, 2},
+	{ 13, ERx("numfmt"), 30, 2},
+	{ 14, ERx("hdjust"), 30, 2},
+	{ 15, ERx("tickloc"), 30, 2},
+	{ 16, ERx("dsidx"), 30, 2},
+	{ 17, ERx("hbcolor"), 30, 2},
+	{ 18, ERx("htcolor"), 30, 2},
+	{ 19, ERx("labcolor"), 30, 2},
+	{ 20, ERx("lincolor"), 30, 2},
+	{ 21, ERx("hfont"), 30, 2},
+	{ 22, ERx("lfont"), 30, 2},
+	{ 23, ERx("flags"), 30, 4},
+	{ 24, ERx("inc"), 31, 8},
+	{ 25, ERx("prec"), 30, 2},
+};
+
+/* GrAxDt1 attributes collection */
+static OO_ATTRIB	*xO_37[] = {
+	&aO_37[0],
+	&aO_37[1],
+	&aO_37[2],
+	&aO_37[3],
+	&aO_37[4],
+	&aO_37[5],
+	&aO_37[6],
+	&aO_37[7],
+	&aO_37[8],
+	&aO_37[9],
+	&aO_37[10],
+	&aO_37[11],
+	&aO_37[12],
+	&aO_37[13],
+	&aO_37[14],
+	&aO_37[15],
+	&aO_37[16],
+	&aO_37[17],
+	&aO_37[18],
+	&aO_37[19],
+	&aO_37[20],
+	&aO_37[21],
+	&aO_37[22],
+	&aO_37[23],
+};
+
+static OO_aCOLLECTION	O_37= {
+	-37, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	24,
+	0,
+	0,
+	xO_37,
+};
+
+/* GrAxDt1 class structure */
+GLOBALDEF OO_CLASS	O130[1] = {
+	OC_GRAXDT1, {0x3},
+	OC_CLASS,
+	ERx("GrAxDt1"),
+	0,_,1,
+	ERx("Old-style GrAxDats with integer grids ticks and unused major"),
+	_,_,_,
+	ERx("iigraxd1"),
+	ERx("id"),
+	(OOID)1,
+	1,
+	0,
+	0,
+	sizeof(OO_GRAXDT1),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)0,
+	(OOID)-36,
+	(OOID)-37,
+};
+
+/*
+**	GrOpt -- Class object initialization
+*/
+/* GrOpt methods array */
+static OO_METHOD	mO131[] = {
+    {198,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,131,
+		ERx("GRvigOpt"),GRvigOpt,0,1,0,1,0},
+    {190,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,131,
+		ERx("GRoptInit"),GRoptInit,2,1,0,0,0},
+    {191,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,131,
+		ERx("GRoptInit"),GRoptInit,2,1,0,0,0},
+};
+
+/* GrOpt methods collection */
+static OOID	xO_38[] = {
+	(OOID)198,
+	(OOID)190,
+	(OOID)191,
+};
+
+static OO_COLLECTION	O_38= {
+	-38, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_38,
+};
+
+/* GrOpt attributes array */
+/* 
+**	I changed all of the integer attribute lengths
+**	to 4, to match the way they are stored in the OO_GROPT
+**	data structure (a pointer to an i2 is not the same as
+**	an i4)
+*/
+static OO_ATTRIB	aO_39[] = {
+	{ 2, ERx("plotdev"), 37, 18},
+	{ 3, ERx("plotloc"), 37, 122},
+	{ 4, ERx("fc"), 32, 4},
+	{ 5, ERx("mainlevel"), 30, 4},
+	{ 6, ERx("editlevel"), 30, 4},
+	{ 7, ERx("layerlevel"), 30, 4},
+	{ 8, ERx("plotlevel"), 30, 4},
+	{ 9, ERx("dtrunc"), 30, 4},
+	{ 10, ERx("vig_flags"), 30, 4},
+};
+
+/* GrOpt attributes collection */
+static OO_ATTRIB	*xO_39[] = {
+	&aO_39[0],
+	&aO_39[1],
+	&aO_39[2],
+	&aO_39[3],
+	&aO_39[4],
+	&aO_39[5],
+	&aO_39[6],
+	&aO_39[7],
+	&aO_39[8],
+};
+
+static OO_aCOLLECTION	O_39= {
+	-39, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	9,
+	0,
+	0,
+	xO_39,
+};
+
+/* Gropt class structure */
+GLOBALDEF OO_CLASS	O131[1] = {
+	OC_GROPT, {0x3},
+	OC_CLASS,
+	ERx("GrOpt"),
+	0,_,1,
+	ERx("VIGRAPH Option Profile Class"),
+	_,_,_,
+	ERx("ii_gropts"),
+	ERx("object_id"),
+	(OOID)1,
+	1,
+	0,
+	0,
+	sizeof(OO_GROPT),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)0,
+	(OOID)-38,
+	(OOID)-39,
+};
+
+/*
+**	GrBar -- Class object initialization
+*/
+/* GrBar methods array */
+static OO_METHOD	mO132[] = {
+    {146,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,132,
+		ERx("GRvigBar"),(OOID (*)()) GRvigBar,0,1,0,3,0},
+    {160,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,132,
+		ERx("GRbinit"),GRbinit,2,1,0,0,0},
+    {171,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,132,
+		ERx("GRbinit"),GRbinit,2,1,0,0,0},
+};
+
+/* GrBar methods collection */
+static OOID	xO_40[] = {
+	(OOID)146,
+	(OOID)160,
+	(OOID)171,
+};
+
+static OO_COLLECTION	O_40= {
+	-40, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_40,
+};
+
+/* GrBar class structure */
+GLOBALDEF OO_CLASS	O132[1] = {
+	OC_GRBAR, {0x3},
+	OC_CLASS,
+	ERx("GrBar"),
+	0,_,1,
+	ERx("Bar chart graph component Class"),
+	_,_,_,
+	ERx(""),
+	ERx(""),
+	(OOID)125,
+	3,
+	0,
+	0,
+	sizeof(OO_GRBAR),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)0,
+	(OOID)-40,
+	(OOID)0,
+};
+
+/*
+**	GrLine -- Class object initialization
+*/
+/* GrLine methods array */
+static OO_METHOD	mO133[] = {
+    {147,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,133,
+		ERx("GRvigLine"),(OOID (*)()) GRvigLine,0,1,0,3,0},
+    {161,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,133,
+		ERx("GRlinit"),GRlinit,2,1,0,0,0},
+    {169,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,133,
+		ERx("GRlinit"),GRlinit,2,1,0,0,0},
+};
+
+/* GrLine methods collection */
+static OOID	xO_41[] = {
+	(OOID)147,
+	(OOID)161,
+	(OOID)169,
+};
+
+static OO_COLLECTION	O_41= {
+	-41, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_41,
+};
+
+/* GrLine class structure */
+GLOBALDEF OO_CLASS	O133[1] = {
+	OC_GRLINE, {0x3},
+	OC_CLASS,
+	ERx("GrLine"),
+	0,_,1,
+	ERx("Linechart graph component class"),
+	_,_,_,
+	ERx(""),
+	ERx(""),
+	(OOID)125,
+	3,
+	0,
+	0,
+	sizeof(OO_GRLINE),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)0,
+	(OOID)-41,
+	(OOID)0,
+};
+
+/*
+**	GrScat -- Class object initialization
+*/
+/* GrScat methods array */
+static OO_METHOD	mO134[] = {
+    {148,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,134,
+		ERx("GRvigScat"),(OOID (*)()) GRvigScat,0,1,0,3,0},
+    {162,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,134,
+		ERx("GRsinit"),GRsinit,2,1,0,0,0},
+    {172,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,134,
+		ERx("GRsinit"),GRsinit,2,1,0,0,0},
+};
+
+/* GrScat methods collection */
+static OOID	xO_42[] = {
+	(OOID)148,
+	(OOID)162,
+	(OOID)172,
+};
+
+static OO_COLLECTION	O_42= {
+	-42, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_42,
+};
+
+/* GrScat class structure */
+GLOBALDEF OO_CLASS	O134[1] = {
+	OC_GRSCAT, {0x3},
+	OC_CLASS,
+	ERx("GrScat"),
+	0,_,1,
+	ERx("Scatter chart graph component class"),
+	_,_,_,
+	ERx(""),
+	ERx(""),
+	(OOID)125,
+	3,
+	0,
+	0,
+	sizeof(OO_GRSCAT),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)0,
+	(OOID)-42,
+	(OOID)0,
+};
+
+/*
+**	GrAxDat -- Class object initialization
+*/
+/* GrAxDat methods array */
+static OO_METHOD	mO151[] = {
+    {143,{0x3},OC_METHOD,_vig,0,0,0,0,0,0,0,151,
+		ERx("GRvigAxdat"),GRvigAxdat,1,1,0,1,0},
+    {179,{0x3},OC_METHOD,_initDb,0,0,0,0,0,0,0,151,
+		ERx("GRaxinit"),GRaxinit,2,1,0,0,0},
+    {180,{0x3},OC_METHOD,_init,0,0,0,0,0,0,0,151,
+		ERx("GRaxinit"),GRaxinit,2,1,0,0,0},
+};
+
+/* GrAxDat methods collection */
+static OOID	xO_43[] = {
+	(OOID)143,
+	(OOID)179,
+	(OOID)180,
+};
+
+static OO_COLLECTION	O_43= {
+	-43, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	3,
+	0,
+	0,
+	xO_43,
+};
+
+/* GrAxDat detail refs collection (entries in a masterRefs array) */
+static OOID	xO_44[] = {
+	(OOID)138,
+};
+
+static OO_COLLECTION	O_44= {
+	-44, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	1,
+	0,
+	0,
+	xO_44,
+};
+
+/* GrAxDat attributes array */
+static OO_ATTRIB	aO_45[] = {
+	{ 2, ERx("agrcomp"), 30, 4},
+	{ 3, ERx("axindex"), 30, 2},
+	{ 4, ERx("ticks"), 31, 8},
+	{ 5, ERx("grids"), 31, 8},
+	{ 6, ERx("rnglo"), 31, 8},
+	{ 7, ERx("rnghi"), 31, 8},
+	{ 8, ERx("margin"), 31, 8},
+	{ 9, ERx("header"), 37, 62},
+	{ 10, ERx("labsup"), 30, 2},
+	{ 11, ERx("datefmt"), 30, 2},
+	{ 12, ERx("numfmt"), 30, 2},
+	{ 13, ERx("hdjust"), 30, 2},
+	{ 14, ERx("tickloc"), 30, 2},
+	{ 15, ERx("dsidx"), 30, 2},
+	{ 16, ERx("hbcolor"), 30, 2},
+	{ 17, ERx("htcolor"), 30, 2},
+	{ 18, ERx("labcolor"), 30, 2},
+	{ 19, ERx("lincolor"), 30, 2},
+	{ 20, ERx("hfont"), 30, 2},
+	{ 21, ERx("lfont"), 30, 2},
+	{ 22, ERx("flags"), 30, 4},
+	{ 23, ERx("inc"), 31, 8},
+	{ 24, ERx("prec"), 30, 2},
+};
+
+/* GrAxDat attributes collection */
+static OO_ATTRIB	*xO_45[] = {
+	&aO_45[0],
+	&aO_45[1],
+	&aO_45[2],
+	&aO_45[3],
+	&aO_45[4],
+	&aO_45[5],
+	&aO_45[6],
+	&aO_45[7],
+	&aO_45[8],
+	&aO_45[9],
+	&aO_45[10],
+	&aO_45[11],
+	&aO_45[12],
+	&aO_45[13],
+	&aO_45[14],
+	&aO_45[15],
+	&aO_45[16],
+	&aO_45[17],
+	&aO_45[18],
+	&aO_45[19],
+	&aO_45[20],
+	&aO_45[21],
+	&aO_45[22],
+};
+
+static OO_aCOLLECTION	O_45= {
+	-45, {0x3},
+	OC_COLLECTION,
+	_,0,_,1,_,_,_,_,
+	23,
+	0,
+	0,
+	xO_45,
+};
+
+/* GrAxDat class structure */
+GLOBALDEF OO_CLASS	O151[1] = {
+	OC_GRAXDAT, {0x3},
+	OC_CLASS,
+	ERx("GrAxDat"),
+	0,_,1,
+	ERx("Axis dataset descriptor class"),
+	_,_,_,
+	ERx("iigraxdat"),
+	ERx("id"),
+	(OOID)1,
+	1,
+	0,
+	0,
+	sizeof(OO_GRAXDAT),
+	(OOID)-1,
+	(OOID)-1,
+	(OOID)0,
+	(OOID)-44,
+	(OOID)-43,
+	(OOID)-45,
+};
+
+/*
+**	start-up object list
+*/
+
+GLOBALDEF OO_OBJECT	*IIgrObjects[] = {
+	(OO_OBJECT *)&mO123[0],
+	(OO_OBJECT *)&mO123[1],
+	(OO_OBJECT *)&mO123[2],
+	(OO_OBJECT *)&mO123[3],
+	(OO_OBJECT *)&mO123[4],
+	(OO_OBJECT *)&mO123[5],
+	(OO_OBJECT *)&mO123[6],
+	(OO_OBJECT *)&mO123[7],
+	(OO_OBJECT *)&mO123[8],
+	(OO_OBJECT *)&O_18,
+	(OO_OBJECT *)&rO123[0],
+	(OO_OBJECT *)&O_19,
+	(OO_OBJECT *)&O_20,
+	(OO_OBJECT *)O123,
+	(OO_OBJECT *)&mO124[0],
+	(OO_OBJECT *)&mO124[1],
+	(OO_OBJECT *)&mO124[2],
+	(OO_OBJECT *)&mO124[3],
+	(OO_OBJECT *)&O_21,
+	(OO_OBJECT *)&rO124[0],
+	(OO_OBJECT *)&rO124[1],
+	(OO_OBJECT *)&rO124[2],
+	(OO_OBJECT *)&O_22,
+	(OO_OBJECT *)&O_23,
+	(OO_OBJECT *)&O_24,
+	(OO_OBJECT *)O124,
+	(OO_OBJECT *)&O_25,
+	(OO_OBJECT *)O125,
+	(OO_OBJECT *)&mO126[0],
+	(OO_OBJECT *)&mO126[1],
+	(OO_OBJECT *)&mO126[2],
+	(OO_OBJECT *)&O_26,
+	(OO_OBJECT *)&O_27,
+	(OO_OBJECT *)O126,
+	(OO_OBJECT *)&mO127[0],
+	(OO_OBJECT *)&mO127[1],
+	(OO_OBJECT *)&mO127[2],
+	(OO_OBJECT *)&O_28,
+	(OO_OBJECT *)&O_29,
+	(OO_OBJECT *)&O_30,
+	(OO_OBJECT *)O127,
+	(OO_OBJECT *)&mO128[0],
+	(OO_OBJECT *)&mO128[1],
+	(OO_OBJECT *)&mO128[2],
+	(OO_OBJECT *)&O_31,
+	(OO_OBJECT *)&O_32,
+	(OO_OBJECT *)O128,
+	(OO_OBJECT *)&mO129[0],
+	(OO_OBJECT *)&mO129[1],
+	(OO_OBJECT *)&mO129[2],
+	(OO_OBJECT *)&O_33,
+	(OO_OBJECT *)&O_34,
+	(OO_OBJECT *)&O_35,
+	(OO_OBJECT *)O129,
+	(OO_OBJECT *)&mO130[0],
+	(OO_OBJECT *)&O_36,
+	(OO_OBJECT *)&O_37,
+	(OO_OBJECT *)O130,
+	(OO_OBJECT *)&mO131[0],
+	(OO_OBJECT *)&mO131[1],
+	(OO_OBJECT *)&mO131[2],
+	(OO_OBJECT *)&O_38,
+	(OO_OBJECT *)&O_39,
+	(OO_OBJECT *)O131,
+	(OO_OBJECT *)&mO132[0],
+	(OO_OBJECT *)&mO132[1],
+	(OO_OBJECT *)&mO132[2],
+	(OO_OBJECT *)&O_40,
+	(OO_OBJECT *)O132,
+	(OO_OBJECT *)&mO133[0],
+	(OO_OBJECT *)&mO133[1],
+	(OO_OBJECT *)&mO133[2],
+	(OO_OBJECT *)&O_41,
+	(OO_OBJECT *)O133,
+	(OO_OBJECT *)&mO134[0],
+	(OO_OBJECT *)&mO134[1],
+	(OO_OBJECT *)&mO134[2],
+	(OO_OBJECT *)&O_42,
+	(OO_OBJECT *)O134,
+	(OO_OBJECT *)&mO151[0],
+	(OO_OBJECT *)&mO151[1],
+	(OO_OBJECT *)&mO151[2],
+	(OO_OBJECT *)&O_43,
+	(OO_OBJECT *)&O_44,
+	(OO_OBJECT *)&O_45,
+	(OO_OBJECT *)O151,
+	0,
+};

@@ -1,0 +1,717 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+#include "rctools.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_IJAIMAGELIST        BITMAP                  "ijaimage.bmp"
+IDB_IJAIMAGELIST2       BITMAP                  "ijaimag2.bmp"
+IDB_HEADERORDER         BITMAP                  "headord.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "ija.ico"
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_IJACTRL             BITMAP                  "ijactrlc.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ABOUTDLL            ICON                    "ijactrl.ico"
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "#include ""rctools.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "1 TYPELIB ""ijactrl.tlb""\r\n"
+    "#include ""rctools.rc""         // custom controls \r\n"
+    "#ifndef MAINWIN\r\n"
+    "#include ""gv.rc""\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PROPPAGE_IJACTRL DIALOG  0, 0, 250, 110
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "Paint the Foreground Item of Transactionaction",
+                    IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,7,236,
+                    10
+END
+
+IDD_DATABASE DIALOG  0, 0, 400, 260
+STYLE DS_SETFONT | DS_MODALFRAME | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Filter",IDC_STATIC,7,2,358,44
+    LTEXT           "After:",IDC_STATIC,15,15,16,8
+    LTEXT           "Before:",IDC_STATIC,128,16,25,8
+    CONTROL         "After Checkpoint:",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,248,15,72,10
+    EDITTEXT        IDC_EDIT3,324,13,23,12,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Action Taken by User:",IDC_STATIC,195,30,73,8
+    COMBOBOX        IDC_COMBO1,272,28,42,65,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "Wait",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    324,29,30,10
+    PUSHBUTTON      "View",IDC_BUTTON1,83,51,27,14
+    CONTROL         "Group by Transaction",IDC_CHECK4,"Button",
+                    BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,115,53,89,
+                    10
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | NOT 
+                    WS_VISIBLE | WS_BORDER | WS_TABSTOP,7,70,386,80
+    LTEXT           "Detail for Transaction XXXXXXXX",IDC_STATIC_DETAIL4TX,7,
+                    159,176,8,NOT WS_VISIBLE
+    PUSHBUTTON      "Recover...",IDC_BUTTON2,292,153,50,14,NOT WS_VISIBLE
+    PUSHBUTTON      "Redo...",IDC_BUTTON3,343,153,50,14,NOT WS_VISIBLE
+    CONTROL         "List1",IDC_LIST2,"SysListView32",LVS_REPORT | 
+                    LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | NOT 
+                    WS_VISIBLE | WS_BORDER | WS_TABSTOP,7,170,386,80
+    PUSHBUTTON      "Select All",IDC_BUTTON4,213,51,46,14,NOT WS_VISIBLE
+    CONTROL         "Aborted Transactions",IDC_CHECK5,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,14,30,82,10
+    CONTROL         "Committed Transactions",IDC_CHECK6,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,101,30,90,10
+    CONTROL         "DateTimePicker1",IDC_DATETIMEPICKER1,"SysDateTimePick32",
+                    DTS_RIGHTALIGN | DTS_SHOWNONE | DTS_APPCANPARSE | 
+                    WS_TABSTOP,34,14,91,12
+    CONTROL         "DateTimePicker1",IDC_DATETIMEPICKER2,"SysDateTimePick32",
+                    DTS_RIGHTALIGN | DTS_SHOWNONE | DTS_APPCANPARSE | 
+                    WS_TABSTOP,154,14,91,12
+    PUSHBUTTON      "Move Log to Journals",IDC_BUTTON8,7,51,74,14
+    PUSHBUTTON      "...",IDC_CHECKPOINT_LIST_BUTTON,347,13,9,12
+END
+
+IDD_TABLE DIALOG  0, 0, 400, 260
+STYLE DS_SETFONT | DS_MODALFRAME | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Filter",IDC_STATIC,7,2,358,44
+    LTEXT           "After:",IDC_STATIC,15,15,16,8
+    LTEXT           "Before:",IDC_STATIC,128,16,25,8
+    CONTROL         "After Checkpoint:",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,248,15,70,10
+    EDITTEXT        IDC_EDIT3,324,13,23,12,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Action Taken by User:",IDC_STATIC,195,30,73,8
+    COMBOBOX        IDC_COMBO1,272,28,42,65,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "Wait",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    324,29,30,10
+    PUSHBUTTON      "View",IDC_BUTTON1,83,51,27,14
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_OWNERDRAWFIXED | NOT WS_VISIBLE | WS_BORDER | 
+                    WS_TABSTOP,7,70,386,162
+    PUSHBUTTON      "Recover...",IDC_BUTTON2,290,236,50,14,NOT WS_VISIBLE
+    PUSHBUTTON      "Redo...",IDC_BUTTON3,343,236,50,14,NOT WS_VISIBLE
+    PUSHBUTTON      "Select All",IDC_BUTTON4,133,51,50,14,NOT WS_VISIBLE
+    CONTROL         "Aborted Transactions",IDC_CHECK4,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,14,30,82,10
+    CONTROL         "Committed Transactions",IDC_CHECK5,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,101,30,90,10
+    CONTROL         "DateTimePicker1",IDC_DATETIMEPICKER1,"SysDateTimePick32",
+                    DTS_RIGHTALIGN | DTS_SHOWNONE | DTS_APPCANPARSE | 
+                    WS_TABSTOP,34,14,91,12
+    CONTROL         "DateTimePicker1",IDC_DATETIMEPICKER2,"SysDateTimePick32",
+                    DTS_RIGHTALIGN | DTS_SHOWNONE | DTS_APPCANPARSE | 
+                    WS_TABSTOP,154,14,91,12
+    PUSHBUTTON      "Move Log to Journals",IDC_BUTTON7,7,51,74,14
+    PUSHBUTTON      "...",IDC_BUTTON_CHECKPOINT_LIST,347,13,9,12
+END
+
+IDD_XRECOVER DIALOGEX 0, 0, 370, 300
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Recover"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Recover Now",IDOK,272,7,91,14
+    PUSHBUTTON      "Cancel",IDCANCEL,272,71,91,14
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,190,356,103
+    PUSHBUTTON      "Generate External Script",IDC_BUTTON1,272,47,91,14
+    GROUPBOX        "Recover",IDC_STATIC,7,3,115,48
+    CONTROL         "Whole Transaction(s)",IDC_RADIO1,"Button",
+                    BS_AUTORADIOBUTTON,16,15,86,10
+    CONTROL         "Individual Row Changes\n(for special situations)",
+                    IDC_RADIO2,"Button",BS_AUTORADIOBUTTON | BS_MULTILINE,16,
+                    26,99,22
+    CONTROL         "",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,
+                    15,8,10
+    CONTROL         "NO RULES Option",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,141,37,87,10
+    LTEXT           "Scan Journals to the end,\nchecking that involved rows\ndidn't change afterwards",
+                    IDC_STATIC_CHECK1,154,8,97,25
+    GROUPBOX        "Rules and Constraints  (double-click to view properties)",
+                    IDC_STATIC,7,54,245,112,0,WS_EX_TRANSPARENT
+    LTEXT           "Row Changes Detail of Involved Transactions",IDC_STATIC,
+                    7,175,149,8
+    PUSHBUTTON      "Up",IDC_BUTTON2,189,170,26,14
+    PUSHBUTTON      "Down",IDC_BUTTON3,218,170,33,14
+    PUSHBUTTON      "Initial Selection",IDC_BUTTON5,261,170,53,14
+    PUSHBUTTON      "Initial Order",IDC_BUTTON6,316,170,44,14
+    GROUPBOX        "Restore",IDC_STATIC,256,160,107,27
+    PUSHBUTTON      "View Recover Now Script",IDC_BUTTON9,272,23,91,14
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,13,66,233,96
+    CONTROL         "Impersonate user[s] of initial transaction[s]",
+                    IDC_CHECK3,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | 
+                    WS_TABSTOP,273,92,90,27
+    CONTROL         "Don't recover if >1 row is affected by an individual statement",
+                    IDC_CHECK7,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | 
+                    WS_TABSTOP,273,122,90,31
+END
+
+IDD_XREDO DIALOGEX 0, 0, 370, 300
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Redo"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Redo Now",IDOK,281,7,82,14
+    PUSHBUTTON      "Cancel",IDCANCEL,281,61,82,14
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,196,356,97
+    PUSHBUTTON      "Generate External Script",IDC_BUTTON1,281,42,82,14
+    GROUPBOX        "On",IDC_STATIC,134,7,133,47
+    COMBOBOX        IDC_COMBO1,181,17,80,54,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Node:",IDC_STATIC,141,19,34,8
+    COMBOBOX        IDC_COMBO2,181,34,80,54,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Database:",IDC_STATIC,141,36,36,8
+    GROUPBOX        "Redo",IDC_STATIC,7,7,119,47
+    CONTROL         "Whole Transaction(s)",IDC_RADIO1,"Button",
+                    BS_AUTORADIOBUTTON,18,19,93,10
+    CONTROL         "Individual Row Changes\n(for special situations)",
+                    IDC_RADIO2,"Button",BS_AUTORADIOBUTTON | BS_MULTILINE,18,
+                    32,101,17
+    CONTROL         "NO RULES option",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,273,82,70,10
+    LTEXT           "Row Changes Detail of Involved Transactions",IDC_STATIC,
+                    7,178,149,8
+    PUSHBUTTON      "Up",IDC_BUTTON2,190,173,26,14
+    PUSHBUTTON      "Down",IDC_BUTTON3,218,173,33,14
+    PUSHBUTTON      "Initial Selection",IDC_BUTTON5,259,173,55,14
+    PUSHBUTTON      "Initial Order",IDC_BUTTON6,316,173,42,14
+    GROUPBOX        "Rules and Constraints (double-click for opening the properties)",
+                    IDC_STATIC,7,61,260,99,0,WS_EX_TRANSPARENT
+    GROUPBOX        "Restore",IDC_STATIC,254,162,109,29
+    PUSHBUTTON      "View Redo Now Script",IDC_BUTTON9,281,23,82,14
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,13,72,249,83
+    CONTROL         "Impersonate user[s] of initial transaction[s]",
+                    IDC_CHECK7,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | 
+                    WS_TABSTOP,273,97,90,28
+    CONTROL         "Don't Redo if >1 row is affected by an individual statement",
+                    IDC_CHECK8,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | 
+                    WS_TABSTOP,273,130,90,26
+END
+
+IDD_XEDITTEXT DIALOG  0, 0, 340, 181
+STYLE DS_SETFONT | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU | 
+    WS_THICKFRAME
+CAPTION "Script"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    PUSHBUTTON      "Cancel",IDCANCEL,302,46,31,14
+    EDITTEXT        IDC_EDIT1,7,16,291,158,ES_MULTILINE | ES_READONLY | 
+                    ES_WANTRETURN | WS_VSCROLL
+    PUSHBUTTON      "Run",IDC_BUTTON1,302,16,31,14
+    CONTROL         "Edit Script",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,1,123,10
+    PUSHBUTTON      "Save",IDC_BUTTON2,302,31,31,14
+END
+
+IDD_XDATABASE DIALOG  0, 0, 187, 80
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Run External Redo Script"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,130,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,130,24,50,14
+    LTEXT           "Node:",IDC_STATIC,7,10,50,8
+    COMBOBOX        IDC_COMBO1,7,20,108,54,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Database:",IDC_STATIC,7,38,50,8
+    COMBOBOX        IDC_COMBO2,7,48,107,54,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_LISTHEADER DIALOG  0, 0, 187, 97
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | LVS_NOSORTHEADER | 
+                    WS_BORDER | WS_TABSTOP,7,7,173,83
+END
+
+IDD_TEXTDETAIL_PROPPAGE1 DIALOG  0, 0, 236, 103
+STYLE DS_SETFONT | WS_CHILD | WS_CAPTION
+CAPTION "Text"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,7,222,89,ES_MULTILINE | ES_READONLY | 
+                    ES_WANTRETURN | WS_VSCROLL
+END
+
+IDD_MESSAGE DIALOG  0, 0, 273, 147
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Warning"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,216,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,216,24,50,14
+    EDITTEXT        IDC_EDIT1,7,7,203,133,ES_MULTILINE | ES_READONLY | 
+                    ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+END
+
+IDD_XMESSAGEBOX DIALOG  0, 0, 295, 70
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "MessageBox"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,186,45,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,238,45,50,14
+    ICON            IDR_MAINFRAME,IDC_STATIC_IMAGE,7,13,20,20,SS_CENTERIMAGE | 
+                    SS_REALSIZEIMAGE
+    CONTROL         "0123456789012345678901234567890123456789012345678901234567890123456789\n888888888888888888888888888888888888888888888888888888888888888888888888",
+                    IDC_STATIC_01,"Static",SS_LEFTNOWORDWRAP | SS_NOPREFIX | 
+                    WS_GROUP,28,13,255,29
+    CONTROL         "Continue with this Message ",IDC_MFC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,46,46,119,10
+END
+
+IDD_CHECKPOINT_LIST DIALOG  0, 0, 419, 133
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CLIPCHILDREN | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Checkpoint History on %s::%s"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,362,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,362,24,50,14
+    CONTROL         "List1",IDC_LIST_CHECKPOINT,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,346,119
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_PROPPAGE_IJACTRL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 243
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 103
+    END
+
+    IDD_DATABASE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 393
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 253
+    END
+
+    IDD_TABLE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 393
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 253
+    END
+
+    IDD_XRECOVER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 363
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 293
+    END
+
+    IDD_XREDO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 363
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 293
+    END
+
+    IDD_XEDITTEXT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 333
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 174
+    END
+
+    IDD_XDATABASE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 73
+    END
+
+    IDD_LISTHEADER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 90
+    END
+
+    IDD_TEXTDETAIL_PROPPAGE1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 229
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 96
+    END
+
+    IDD_MESSAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 266
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 140
+    END
+
+    IDD_XMESSAGEBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 288
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 63
+    END
+
+    IDD_CHECKPOINT_LIST, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 412
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 126
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_IJACTRL             "IjaCtrl Control"
+    IDS_IJACTRL_PPG         "IjaCtrl Property Page"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_IJACTRL_PPG_CAPTION "General"
+    IDS_DETAIL_TRANSACTION1 "Detail for Transaction %1"
+    IDS_DETAIL_TRANSACTION2 "Detail for Selected Transactions:"
+    IDS_OWNERxITEM          "[%1].%2"
+    IDS_PLEASE_SELECTPANE   "Please select a Database or Table branch."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_HEADER_ACTION       "Action"
+    IDS_HEADER_TABLE        "Table"
+    IDS_HEADER_DATA         "Data"
+    IDS_HEADER_TRANSACTION  "Transaction"
+    IDS_HEADER_USER         "User"
+    IDS_HEADER_BEGIN        "Begin"
+    IDS_HEADER_DURATION     "Duration"
+    IDS_HEADER_INSERT       "Insert"
+    IDS_HEADER_DELETE       "Delete"
+    IDS_HEADER_UPDATE       "Update"
+    IDS_HEADER_TOTAL        "Total"
+    IDS_HEADER_DATE         "Date"
+    IDS_HEADER_OPERATION    "Operation"
+    IDS_HEADER_NAME         "<This column will be replaced with the real journaled data of the table>"
+    IDS_HEADER_END          "End"
+    IDS_HEADER_LSN          "LSN"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_HEADER_COMMITDATE   "Commit Date"
+    IDS_MSG_II_SYSTEM_NOT_DEFINED "II_SYSTEM is not defined"
+    IDS_RECOVER_SCRIPT      "External ""Recover"" Script"
+    IDS_RECOVERNOW_SCRIPT   "View ""Recover Now"" Script"
+    IDS_REDO_SCRIPT         "External ""Redo"" Script"
+    IDS_REDONOW_SCRIPT      "View ""Redo Now"" Script"
+    IDS_HEADER_RULE         "Rules"
+    IDS_HEADER_CONSTRAINT   "Constraints"
+    IDS_HEADER_RULENAME     "Rule Name"
+    IDS_HEADER_RULEOWNER    "Owner"
+    IDS_HEADER_RULEONTABLE  "Table"
+    IDS_HEADER_CONSTRAINTTYPE "Type"
+    IDS_HEADER_CONSTRAINTTTEXT "Text"
+    IDS_HEADER_CONSTRAINTONTABLE "Table"
+    IDS_PROPSHT_CAPTION     "Property for"
+    IDS_HEADER_CONSTRAINTNAME "Name"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_RECOVERREDO_IMPOSSIBLE 
+                            "The database is inconsistent.\nIt is impossible to recover or redo the transactions."
+    IDS_RUNSCRIPT_COMMIT_WARNING 
+                            "The run script command has issued the commit statement.\nYou should roll it back manually."
+    IDS_INSERTxUPDATE_NO_AFFECTROW_WARNING 
+                            "No existing row has been affected by the following %1 Statement:\n%2"
+    IDS_INSERTxUPDATE_AFFECTROWS_WARNING 
+                            "More than one row has been affected by the following %1 Statement:\n%2"
+    IDS_REDO                "Redo"
+    IDS_RECOVER             "Recover"
+    IDS_REDOxRECOVER_NORULExCONSTRAINT 
+                            "You have selected the ""NO RULES"" option.\n\nPlease note that this also disables the constraints checking (but not integrities checking), and there are constraint(s) on table(s) involved in your %1 operation.\n\nContinue ?"
+    IDS_HEADER_INTEGRITY    "Integrities"
+    IDS_HEADER_INTEGRITYTEXT "Text"
+    IDS_RECOVER_PATIAL      "Are you sure you want to recover only parts of transactions, and lose transaction integrity ?"
+    IDS_NOT_SELECT_ALLTRANS "You haven't selected the whole transactions corresponding to the initial selected lines. Continue ?"
+    IDS_ONLY_INSxUPDxDELxALLOWED_RECOVER 
+                            "Only insert, update, and delete statements can be recovered.\nThe selection includes some statements of a different type, which will be skipped in the recover operation.\n\n Continue ?"
+    IDS_RECOVER_NON_JOURNAL_TRANS 
+                            "You are asking to recover transactions involving non-journaled tables.\nThe non-journaled part of such transactions will not be recovered.\n\nContinue ?"
+    IDS_UNDO_ROLLBACK_TRANS "Changes of a transaction that has been rolled back cannot be 'undone'."
+    IDS_SCANTOTHEEND_MSG1   "Transactions involving non-journaled tables were committed later than the transaction you are trying to recover\nCannot detect whether the rows involved in the transaction to be undone were changed afterwards, nor if the corresponding tables were altered afterwards.\n\nContinue ?"
+    IDS_SCANTOTHEEND_MSG2   "row [ %s ] (TID %ld)\nfrom table %s.%s\nhas already been %s later than the transaction you are trying to recover\n\nContinue ? "
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Ingres Journal Analyzer"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_AxDROP              "DROPPED"
+    IDS_AxDELETE            "DELETED"
+    IDS_AxALTER             "ALTERED"
+    IDS_AxUPDATE            "UPDATED"
+    IDS_AxMORE              "\nIn particular, Rules or Constraints on that table may have changed"
+    IDS_RECOVERNOW_MSG1     "All Transactions to be recovered were NOT executed by the same user.\nYou have asked to impersonate the initial transaction users.\nAs a result, the executed script will include COMMIT statements between the transactions to be undone.\nIn case of failure of one of them, automatic recovery cannot be guaranteed\n\nContinue ?"
+    IDS_STRING454IDS_RECOVERNOW_MSG2 
+                            "Cannot Recover the Statements/Transactions.\n\n%s"
+    IDS_RECOVER_SUCCESSFUL  "The Recover (undo) operation has completed successfully."
+    IDS_RECOVER_GENSCRIPT_MSG1 
+                            "All Transactions to be recovered were NOT executed by the same user.\nYou have asked to impersonate the initial transaction users.\nAs a result, the generated script will include COMMIT statements between the transactions to be undone, which may be problematic in case of failure of one of them.\n\nContinue ?"
+    IDS_RECOVER_GENSCRIPT_MSG2 
+                            "The involved data includes data of a type that can't be displayed in a text script.\nThe script cannot be generated."
+    IDS_RECOVER_GENSCRIPT_MSG3 
+                            "The script contains a text representation of some data types that may lead to rounding errors, such as ""float"" or ""decimal"" data types.\n\nContinue anyway ?\n\n[ Note that the ""recover now"" functionality doesn't have this problem ]"
+    IDS_RECOVER_GENSCRIPT_MSG4 "Cannot Generate the External Script.\n\n%s"
+    IDS_REDO_PATIAL         "Are you sure you want to redo only parts of transactions, and lose transaction integrity ?"
+    IDS_ONLY_INSxUPDxDELxALLOWED_REDO 
+                            "Only insert, update, and delete statements can be redone.\nThe selection includes some statements of a different type, which will be skipped in the redo operation.\n\n Continue ?"
+    IDS_REDONOW_MSG1        "'Redoing' statements on a different node or database can be done only through the 'Generate External Script' Dialog.\n\nLaunch that dialog ?"
+    IDS_REDONOW_MSG2        "All Transactions to be redone were NOT executed by the same user.\nYou have asked to impersonate the initial transaction users.\nAs a result, the executed script will include COMMIT statements between the transactions to be redone.\nIn case of failure of one of them, the undo of the previously committed ones is not guaranteed.\n\nContinue ?"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_REDONOW_MSG3        " Cannot Redo the Statements/Transactions.\n\n%s"
+    IDS_REDONOW_SUCCESSFUL  "The Redo operation has completed successfully."
+    IDS_REDO_GENSCRIPT_MSG1 "All Transactions to be redone were NOT executed by the same user.\nYou have asked to impersonate the initial transaction users.\nAs a result, the generated script will include COMMIT statements between the transactions to be redone,\nwhich may be problematic in case of failure of one of them.\n\nContinue ?"
+    IDS_REDO_GENSCRIPT_MSG2 "The involved data includes data of a type that can't be displayed in a text script.\nThe script cannot be generated."
+    IDS_REDO_GENSCRIPT_MSG3 "The script contains a text representation of some data types that may lead to rounding errors, such as ""float"" or ""decimal"" data types.\n\nContinue anyway ?\n\n[ Note that the ""redo now"" functionality doesn't have this problem (but works only on the same node/database as the original transactions) ]"
+    IDS_REDO_GENSCRIPT_MSG4 "Cannot generate the External Script.\n\n%s"
+    IDS_REDONOW_SCRIPT_MSG1 "Cannot generate the ""Redo Now"" script.\n\n%s"
+    IDS_VIEW_DATABASE_INCONSISTENT 
+                            "The Database is inconsistent.\nContinue anyhow ?"
+    IDS_CANNOT_CONNECT_TO   "Cannot connect to <%s>"
+    IDS_FAIL_TO_GETSESSION  "Failed to get Session."
+    IDS_FAIL_TO_QUERY_RELATED_TRANS "Failed to query the related transactions"
+    IDS_NOTSET_II_DATE_CENTURY_BOUNDARY 
+                            "The environment variable II_DATE_CENTURY_BOUNDARY is not set.\nAnd the current date format is II_DATE_MULTINATIONAL, so the sort on this column will not work correctly.\n"
+    IDS_SELECT_B4xAFTER_UPDATE 
+                            "You cannot select a 'before update' or 'after update' row without also selecting the 'after update'\nor 'before update' row corresponding to the same LSN / row change."
+    IDS_RECOVERxREDO_ORDER_TRANS_CHANGED 
+                            "The order of individual row changes, within some transactions, has been changed.\nContinue ?"
+    IDS_FAIL_TO_QUERY_TABLE_COLUMNS 
+                            " Failed to query the list of table's columns."
+    IDS_AUDITDB_SYNTAX1     "In auditdb,\nthe number of specified tables must be equal to the number of specified files and at most equal to 64."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_EXECUTE_SCRIPT_ON   "Execute the Script on node %s, database %s ?"
+    IDS_EXECUTE_EXTERNALSCRIPT_ON 
+                            "Are you sure you want to execute the 'external script' (on node: %s, database: %s), rather than using the 'recover now' feature?"
+    IDS_FAILURE_ON_RUN_1    "\n\nBefore the failure, some ""redo"" transactions had been committed (because you have asked to redo more than one transaction, and to impersonate the initial users of the transactions).\nYou will need to cancel these manually (typically through IJA)."
+    IDS_FAILURE_ON_RUN_2    "\n\nBefore the failure, some ""recover"" transactions had been committed (because you have asked to recover more than one transaction, and to impersonate the initial users of the transactions).\nYou will need to cancel these manually (typically through IJA)"
+    IDS_RUN_REDO_SCRIPT_SUCCESSFULLY 
+                            "The 'Redo' script has been executed successfully."
+    IDS_RUN_RECOVER_SCRIPT_SUCCESSFULLY 
+                            "The 'Recover' script has been executed successfully."
+    IDS_FAILED_TO_GET_JOURNALED_TRANS 
+                            "Error while getting the journaled transactions list."
+    IDS_FAIL_TO_EXECUTE_AUDITDB 
+                            "Error While executing the AuditDB Command:\n\n%1"
+    IDS_FAIL_TO_GENERATE_TEMPFILE 
+                            "Error while generating a temporary file name."
+    IDS_AUDITDB_FAILS_TO_CREATE_FILE 
+                            "auditdb ...-file=<file name>, has failed to create file."
+    IDS_FAIL_TO_EXECUTE_ADBTOFST 
+                            "%1\n(This may be due to the existence of concurrent sessions connected to the remote database)"
+    IDS_PARSE_ERROR1        "%s\n\nContinue ?\n(This may lead to inconsistent information)"
+    IDS_PARSE_ERROR2        "Unexpected Message :\n%s\n\nContinue ?\n(This may lead to inconsistent information)"
+    IDS_LOWLEVEL_ERROR_INTERNAL "Internal Error"
+    IDS_LOWLEVEL_ERROR_TEMPFILE "Internal Error (with temporary table)\n"
+    IDS_LOWLEVEL_ERROR_1    "No existing row has been affected by the following Undo Statement:\n%s\n"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_LOWLEVEL_ERROR_2    "More than one row has been affected by the following Undo Statement:\n%s\n"
+    IDS_LOWLEVEL_ERROR_3    "No existing row has been affected by the following Redo Statement:\n%s\n"
+    IDS_LOWLEVEL_ERROR_4    "More than one row has been affected by the following Redo Statement:\n%s\n"
+    IDS_LOWLEVEL_ERROR_5    "\n\nWarning: some recover statements already have been committed (because you have asked to recover more than one transaction, and to impersonate the initial users of the transactions).\nYou will need to cancel these manually (typically with IJA), because right now there is a problem executing a query in this session, therefore IJA doesn't propose to try to do it automatically.\n"
+    IDS_LOWLEVEL_ERROR_6    "\n\nWarning: some redo statements already have been committed (because you have asked to redo more than one transaction, and to \n impersonate the initial users of the transactions).\nYou will need to cancel these manually (typically with IJA), because right now there is a problem executing a query in this session, therefore IJA doesn't propose to try to do it automatically.\n"
+    IDS_LOWLEVEL_ERROR_7    "\nError after some recover statements already have been committed (because you have asked to recover more than one transaction, and to impersonate the initial users of the transactions).\n\nDo you want to undo those recover statements that already have been committed ?\n\nIMPORTANT: this will be done with the same settings for the ""NORULES"", ""impersonate user[s] of initial transactions"", and ""management if >1 row is affected by a single statement"" options as what was used for the recover operation.\nPlease choose NO and use IJA manually if you want to use different settings."
+    IDS_LOWLEVEL_ERROR_8    "\nError after some redo statements already have been committed (because you have asked to redo more than one transaction, and to impersonate the initial users of the transactions).\n\nDo you want to undo those redo statements that already have been committed ?\n\nIMPORTANT: this will be done with the same settings for the ""NORULES"", ""impersonate user[s] of initial transactions, and ""management if >1 row is affected by a single statement"" options as what was used for the redo operation.\nPlease choose NO and use IJA manually if you want to use different settings."
+    IDS_LOWLEVEL_ERROR_9    "\n\nSome recover statements already have been committed (because you have asked to recover more than one transaction, and to impersonate the initial users of the transactions).\nYou have asked not to undo those statements."
+    IDS_LOWLEVEL_ERROR_10   "\n\nSome redo statements already have been committed (because you have asked to redo more than one transaction, and to impersonate the initial users of the transactions).\nYou have asked not to undo those statements."
+    IDS_LOWLEVEL_ERROR_11   "Failed to commit the undo of a transaction that had been committed before the initial error\n."
+    IDS_LOWLEVEL_ERROR_12   "\n\n[ Before the failure, some ""redo"" transactions had been committed (because you have asked to redo more than one transaction, and to impersonate the initial users of the transactions), but you have asked to undo them (using the same options as what was chosen for the redo operation), which has been successful. ]"
+    IDS_LOWLEVEL_ERROR_13   "\n\n[ Before the failure, some ""recover"" transactions had been committed (because you have asked to recover more than one transaction, and to impersonate the initial users of the transactions), but you have asked to undo them (using the same options as what was chosen for the recover operation), which has been successful. ]"
+    IDS_LOWLEVEL_ERROR_14   "\n\nBefore the failure, some ""redo"" transactions had been committed (because you have asked to redo more than one transaction, and to impersonate the initial users of the transactions).\nYou have asked to undo them (using the same options as what was chosen for the redo operation), and this has failed also."
+    IDS_LOWLEVEL_ERROR_15   "\n\nBefore the failure, some ""recover"" transactions had been committed (because you have asked to recover more than one transaction, and to impersonate the initial users of the transactions).\nYou have asked to undo them (using the same options as what was chosen for the recover operation), and this has failed also."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_SCANTOTHEEND_MSG3   "row [ %s ] (TID %ld)\nbelongs to table %s.%s, which has been %s later than the transaction you are trying to recover%s\n\nContinue ? "
+    IDS_RECOVERNOW_MSG2     "Cannot Recover the Statements/Transactions.\n\n%s"
+    IDS_RECOVERNOW_SCRIPT_MSG1 
+                            "Cannot generate the ""Recover Now"" script.\n\n%s"
+    IDS_PRODUCT_VERSION     "Version %s"
+    IDS_MSG_FAIL_2_LOCATEDLL "Failed to locate the DLL: '%1'."
+    IDS_TC_DATE             "Date"
+    IDS_TC_CKPSEQUENCE      "Ckp Sequence"
+    IDS_TC_FIRSTJNL         "First Jnl"
+    IDS_TC_LASTJNL          "Last Jnl"
+    IDS_TC_VALID            "Valid"
+    IDS_TC_MODE             "Mode"
+    IDS_FAIL_DROP_TEMP_TABLE "Cannot drop temporary generated table"
+    IDS_FAIL_TO_GENERATE_TEMPTABLE 
+                            "System error: fail to generate the syntax of temporary table"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_RMCMD_INTERNAL_ERROR "RMCMD Internal Error"
+    IDS_RMCMD_ACCESS_ERROR  "SQL error while accessing RMCMD objects"
+    IDS_RMCMD_COMMAND_NOT_ACCEPTED "Command Not Accepted by the RMCMD server"
+    IDS_RMCMD_NO_ANSWER     "no answer from RMCMD on the server. Continue?"
+    IDS_RMCMD_ACCESSING_OUTPOUT 
+                            "SQL error while accessing the RMCMD command output information"
+    IDS_RMCMD_MANUALLY      "Unable to remove the request from the rmcmd system tables.\nPlease do it manually."
+    IDS_TOOLSTIP_BUTTON_DOWN "Move Item Down"
+    IDS_TOOLSTIP_BUTTON_UP  "Move Item Up"
+    IDS_TOOLSTIP_BUTTON_SEL "Default Selection"
+    IDS_TOOLSTIP_BUTTON_ORDER "Default Order"
+END
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+1 TYPELIB "ijactrl.tlb"
+#include "rctools.rc"         // custom controls 
+#ifndef MAINWIN
+#include "gv.rc"
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

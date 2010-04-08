@@ -1,0 +1,45 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmedfile.hlp
+EDIT CONFIGURATION FILE
+
+This screen allows you to edit the configuration file ("runrepl.opt")
+for a Replicator Server.
+
+The box on the left shows the lines of the current file.  You can add
+parameters by simply typing them in on the left or by using the
+SelectFlag operation.
+
+The columns on the right are:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        Flag            A server startup parameter or flag.
+
+        Description     A short description of the startup parameter.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        WriteFile       Write the contents of the left box to the
+                        configuration file.
+
+        Default         Replace the contents of the left box with the
+                        set of default parameters appropriate for the
+                        current server.
+
+        SelectFlag      Add the currently highlighted flag to the end of
+                        the left box.  You may have to edit the flag
+                        further by adding parameter values.
+
+        DescribeFlag    Display a long description of the startup
+                        parameter and acceptable parameter values in a
+                        popup message box.
+
+        ListChoices     Display a list of acceptable values for those
+                        parameters having a fixed set of values.
+
+        Help            Access the Help facility.
+
+        End             Return to the Replication Monitor screen.

@@ -1,0 +1,7 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libinstall.olb/library, -
+II_FRAMELIB/share
+II_LIBQLIB/share
+II_COMPATLIB/share
+INGLIB:libcompat.olb/include=(gv,gver)

@@ -1,0 +1,660 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<erui.h>
+##include	<ooclass.qsh>
+##include	<oocat.qsh>
+##include	<oocatlog.qsh>
+#include	<oodefine.h>
+#include	<oosymbol.h>
+#include	<eqrun.h>
+#include	"eroo.h"
+
+/**
+** Name:	oodetail.qsc -	Generic details frame code
+**
+** Description:
+**	This file defines:
+**
+**	IIOOctMoreInfo()	visual object catalog detail method.
+**	iiooMenuItem()
+**	iiooMenuFrsKey()
+**
+** History:
+**	4/8/87 (peterk) -- created catalog details code in QBF
+**	20-jul-1988 (danielt)
+**		fixed jupbug 2991 (don't update catalog form if 
+**		detail has been saved, just return TRUE)
+**	22-aug-1988 (danielt) 
+**		put back update of catalog form.  Although it is
+**		up to the caller to reload the catalog frame
+**		if the DB has been updated, we still need to 
+**		update the catalog tablefield because of the
+**		Next and Previous functions.
+**	29-sept-1988 (danielt)
+**		don't read in the long remark from the long remarks
+**		catalog, and don't write it out if it is empty, if
+**		we are dealing with an object that is not in the database.
+**		(if it has a negative id)
+**	07-nov-88 (sylviap)
+**		Added the customized help screen parameter to OOdetail.
+**	01/89 (jhw) -- Test for non-existent object against 'row->id'.
+**		Previous test for 'is_new' was before 'row->id' may have been
+**		set.
+**	10-may-1990 (fredv)
+**		Added NO_OPTIM hint for ris_us5; the optimizer simply
+**		dies on this file.
+**      18-oct-1993 (kchin)
+**          	Since the return type of OOsnd() has been changed to PTR,
+**          	when being called in IIOOctMoreInfo(), its return
+**          	type needs to be cast to the proper datatype.
+**      06-dec-93 (smc)
+**		Bug #58882
+**          	Commented lint pointer truncation warning.
+**  17-mar-1995(angusm)
+**      If we change info on MoreDetails as user other than application
+**      owner, this causes displayed application owner on previous
+**      screen to be changed, giving the impression that a separate
+**      copy of the application has been created for this user.
+**      (bug 65898)
+**	02-jan-97 (mcgem01)
+**		lmenup should be an array not a pointer when GLOBALREF'ed.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	16-aug-2001 (toumi01)
+**	    speculative i64_aix NO_OPTIM change for beta xlc_r - FIXME !!!
+**	26-May-2009 (kschendel) b122041
+**	    Fix precedence problem in auth check that caused moreinfo
+**	    to go into fill/save mode when it should not have.
+**/
+/*
+NO_OPTIM=ris_us5 i64_aix
+*/
+
+VOID	iiooMenuItem();
+VOID	iiooMenuFrsKey();
+bool	IIUFcheckEnd();
+
+/*{
+** Name:	IIOOctMoreInfo() -	Invoke generic Catalog Details frame
+**
+** Description:
+**	Display Catalog Details Frame, invoking passed in
+**	application-specific functions as appropriate.
+**
+** Input params:
+**	self	{OO_CATALOG *}  The visual object catalog.
+**	row	{OO_CATREC *} 	Reference to row structure or NULL.
+**	detform	{char *} Catalog detail form name.
+**	title	{char *}  Detail frame title string.
+**	data	{PTR}  Reference to application data structure.
+**	STATUS	(*display)();	// application-specific display function
+**	STATUS	(*reinit)();	// application-specific reinitialize function
+**	STATUS	(*rename)();	// application-specific rename function
+**	STATUS	(*destroy)();	// application-specific destroy function
+**	STATUS	(*save)();	// application-specific save function
+**	MENUPARM menup[];	// dynamic menu specification array
+**
+** Returns:
+**	{bool}		// TRUE if any change in database
+**
+** Side Effects:
+**	display Catalog Details frame; objects may be modified and saved
+**	in database; catalog table field may be updated.
+**
+*/
+
+#define _Help_Expl	F_FE0100_ExplFrameHelp
+#define _End_Expl	F_FE0102_ExplEnd
+
+# define        MAXMENUPARAM    10
+##GLOBALREF MENUPARAM	lmenup[];
+
+bool
+IIOOctMoreInfo ( self, row, detfrm, title, data, display,
+				reinit, rename, destroy, save, menup, help_scr )
+##register OO_CATALOG	*self;
+##register OO_CATREC	*row;
+##char			*detfrm;
+##char			*title;
+PTR			data;
+STATUS			(*display)(), (*reinit)(), (*rename)(),
+			(*destroy)(), (*save)();
+MENUPARAM		*menup;
+char			*help_scr;
+##{
+	OO_CATREC	rowrec;
+	bool		dbchange = FALSE;
+	bool		cont = TRUE;
+
+	/* as a temporary measure for FE consistency, turn off
+	** Rename and Destroy menuitems in Details frame.
+	*/
+	rename = destroy = NULL;
+
+	/* set up dynamic menuitems before start of display loop */
+	iiooMenuItem( menup, lmenup );
+
+	if ( row == NULL )
+		row = &rowrec;
+
+	while (cont)
+##	{
+##	    char	*_Rename,
+##			*_Destroy,
+##			*_Save;
+##	    char	*_mode;
+	    bool	authorized;
+	    OO_OBJECT	object;
+
+	    if ( _send(catCheck, self)(self, row) != OK )
+		break;
+
+	    cont = FALSE;	/* Next, Prev will set to TRUE */
+
+	    /*
+	    ** check authorization to update object.
+	    IIOOobMake(&obj, row);
+	    */
+	    object.ooid = row->id;
+	    object.class = row->class;
+	    object.name = row->name;
+	    object.owner = row->owner;
+	    if ( (authorized = (bool)( OOsndSelf(&object, _authorized)) &&
+			save != NULL ) )
+	    { /* can update */
+		_Save = ERget(FE_Save);
+		_mode = ERx("fill");
+	    }
+	    else
+	    { /* no update, read only */
+		_Save = _;
+		_mode = ERx("read");
+	    }
+	    _Rename = (authorized && rename != NULL) ? ERget(FE_Rename) : _;
+	    _Destroy = (authorized && destroy != NULL) ? ERget(FE_Destroy) : _;
+
+##	    DISPLAY detfrm _mode
+##	    INITIALIZE
+##	    {
+		/* set up dynamic FRSKEY mappings */
+		iiooMenuFrsKey(menup, 5);
+
+		/*
+		** If "Save" is being turned off, de-activate FRSkey8
+		** as well (set last arg of IInfrskey to 0).
+		**
+		** Note:  The form should already be read only, but make
+		** the 'short_remark' and 'long_remark' fields DISPLAY ONLY.
+		** FIXME dangerous code here, should compare contents,
+		** not pointers.
+		*/
+		if (_Save == _)
+		{
+			IInfrskact(8, (char *)0, 2, 2, 0);
+##			SET_FRS FIELD detfrm (
+##				displayonly(_short_remark) = 1,
+##				displayonly(_long_remark) = 1
+##			);
+		}
+		else
+		{ /* turn them on ... */
+##			SET_FRS FIELD detfrm (
+##				displayonly(_short_remark) = 0,
+##				displayonly(_long_remark) = 0
+##			);
+		}
+
+		/* set mode of extra fields to be non-updateable */
+##		SET_FRS FIELD detfrm (
+##			displayonly(xfield1) = 1,
+##			displayonly(xfield2) = 1,
+##			displayonly(xfield3) = 1,
+##			displayonly(xfield4) = 1
+##		);
+
+##		PUTFORM (
+##			_title = title,
+##			_name = row->name,
+##			_owner = row->owner,
+##			_short_remark = row->short_remark,
+##			_create_date = row->create_date,
+##			_altr_date = row->alter_date
+##		);
+
+		/* retrieve long remarks and display them */
+		if ( row->id <= 0 )
+##			CLEAR FIELD _long_remark;
+		else
+		{
+			OOrd_seqText(row->id, row->long_remark,
+					_ii_longremarks, _long_remark
+			);
+			OOput_long_remark(detfrm, row->long_remark);
+		}
+
+		/* Object specific attributes */
+		if ( display != NULL && (*display)(row->id, data) != OK )
+		{
+##			BREAKDISPLAY;
+		}
+
+##	    }
+##	    ACTIVATE MENUITEM ERget(FE_Next):
+##	    {
+##		i4	record, maxrec;
+
+		/* check for form changes before going to different object */
+		if ( !IIUFcheckEnd() )
+##			RESUME;
+
+		/* scroll to next row of catform table field */
+
+##		GETROW self->c_form self->c_tfield ( record = _RECORD );
+##		INQUIRE_FRS TABLE self->c_form (
+##				maxrec = DATAROWS(self->c_tfield)
+##		);
+		if (++record > maxrec)
+			record = 1;
+##		SCROLL self->c_form self->c_tfield TO record;
+		if ( reinit == NULL  ||  (*reinit)(row->id, data) == OK )
+			cont = TRUE;
+##		BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM ERget(FE_Previous):
+##	    {
+##		i4	record, maxrec;
+
+		/* check for form changes before going to different object */
+		if ( !IIUFcheckEnd() )
+##			RESUME;
+
+		/* scroll to previous row of catform table field */
+##		GETROW self->c_form self->c_tfield ( record = _RECORD );
+##		INQUIRE_FRS TABLE self->c_form (
+##				maxrec = DATAROWS(self->c_tfield)
+##		)
+		if ( --record < 1 )
+			record = maxrec;
+##		SCROLL self->c_form self->c_tfield TO record;
+		if ( reinit == NULL  ||  (*reinit)(row->id, data) == OK )
+			cont = TRUE;
+##		BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM _Rename:
+##	    {
+# ifdef DGC_AOS
+		/*
+		** Until INGRES supports a readonly mode, DG will use the
+		** following code to avoid ugly error messages that occur
+		** when trying to write to the database when we are only
+		** connected for readonly access.
+		*/
+		if (IIUIcro_CheckReadOnly())
+		{
+			IIUGerr(E_UI0016_ReadOnly_err, 0, 0);
+##			resume
+		}
+# endif
+
+		if ( _send(catRename, self)(self, row, (char *)NULL) == OK  &&
+				(*rename)(row->id, data) == OK )
+		{
+			dbchange = TRUE;
+##			PUTFORM ( _name = row->name,
+##				_altr_date = row->alter_date
+##			);
+		}
+##	    }
+##	    ACTIVATE MENUITEM _Destroy:
+##	    {
+# ifdef DGC_AOS
+		/*
+		** Until INGRES supports a readonly mode, DG will use the
+		** following code to avoid ugly error messages that occur
+		** when trying to write to the database when we are only
+		** connected for readonly access.
+		*/
+		if (IIUIcro_CheckReadOnly())
+		{
+			IIUGerr(E_UI0016_ReadOnly_err, 0, 0);
+##			resume
+		}
+# endif
+
+		if ( _send(catDestroy, self)(self, row) == OK  &&
+				(*destroy)(row->id, data) == OK )
+		{
+			dbchange = TRUE;
+##			BREAKDISPLAY;
+		}
+##	    }
+##	    ACTIVATE MENUITEM _Save, FRSkey8:
+##	    {
+		OOID	newid;
+##		char	currname[FE_MAXNAME+1];
+##		i4	formchange;
+
+# ifdef DGC_AOS
+		/*
+		** Until INGRES supports a readonly mode, DG will use the
+		** following code to avoid ugly error messages that occur
+		** when trying to write to the database when we are only
+		** connected for readonly access.
+		*/
+		if (IIUIcro_CheckReadOnly())
+		{
+			IIUGerr(E_UI0016_ReadOnly_err, 0, 0);
+##			resume
+		}
+# endif
+
+		/* 
+		** check to see if the object is owned by the
+		** user.  If not, copy the object and give it
+		** a new ID.
+		*/
+
+##		GETFORM ( currname = _name );
+		if ( iiooCheckName(currname) != OK )
+##			RESUME FIELD _name;
+
+		/* Note:  If the name was changed and the save is confirmed,
+		** then the object needs to be saved as a new object (or
+		** overwrites an existing object.)  Check the ID returned by
+		** the confirmName method and get the long remarks, which will
+		** need to be saved as well even though they didn't change.
+		*/
+                /* Lint truncation warning if size of ptr > OOID,
+                ** but code valid. 
+                */
+		if ( (newid = (OOID)OOsnd(row->id, _confirmName, currname, FALSE)) 
+		    == nil )
+		{
+##			RESUME FIELD _name;
+		}
+
+		/* instantiate an object from the current row
+		** information plus any changes in the remarks;
+		*/
+##		GETFORM ( row->short_remark = _short_remark );
+		
+##		INQUIRE_FRS FIELD detfrm ( formchange = change(_long_remark) );
+		if ( formchange || newid != row->id )
+		{
+			OOget_long_remark(detfrm, row->long_remark);
+			if ( STtrmwhite(row->long_remark) <= 0 )
+			{
+				if ( row->id < 0 )
+					row->long_remark[0] = EOS;
+				else
+					STcopy(ERx(" "), row->long_remark);
+			}
+		}
+		else
+		{
+			row->long_remark[0] = EOS;	/* do not update */
+		}
+
+		row->id = newid;
+		if ( OOcatObject(self->c_class->class, row) != OK )
+		{
+			IIUGerr( E_OO0024_Cant_instantiate_obje,
+				UG_ERR_ERROR, 0 
+			);
+##			RESUME;
+		}
+
+		if ( IIOOsave(&row->id, data, save, (STATUS (*)())NULL) == OK )
+		{
+##			OO_OBJECT	*obj = OOp(row->id);
+
+ 			/* Update row on main catalog form:
+			** This is necessary for the Next and Previous menu-items,
+			** even if the catalog is re-read if the DBMS has been
+			** updated.
+			*/
+			if ( !STequal(currname, row->name) )
+			{ /* can't happen yet because name can't change */
+				_send(catInsertRow, self)( self, obj,
+ 						FEtbsins( self->c_form,
+							self->c_tfield,
+							currname, _name, TRUE
+						)
+ 				);
+			}
+			else
+##			{
+				_send(catPutRow, self)( self, obj, rowCURR );
+
+                /*
+                ** bug 65898 - this has the effect of changeing
+                ** the DISPLAYED application's owner in the
+                ** previous screen (although not the ACTUAL
+                ** application's pwner) if a user other than the owner
+                ** has changed fields in this screen. Reset
+                ** field directly.
+                */
+##              PUTROW  self->c_form self->c_tfield
+##              (_owner = row->owner);
+ 
+
+##			}
+
+			dbchange = TRUE;
+			/* set "form changed" to FALSE */
+##			SET_FRS FORM ( change = 0 );
+
+		}
+##	    }
+##	    ACTIVATE MENUITEM lmenup[0].mpstring:
+##	    {
+		if ((*lmenup[0].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM lmenup[1].mpstring:
+##	    {
+		if ((*lmenup[1].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM lmenup[2].mpstring:
+##	    {
+		if ((*lmenup[2].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM lmenup[3].mpstring:
+##	    {
+		if ((*lmenup[3].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM lmenup[4].mpstring:
+##	    {
+		if ((*lmenup[4].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM lmenup[5].mpstring:
+##	    {
+		if ((*lmenup[5].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM lmenup[6].mpstring:
+##	    {
+		if ((*lmenup[6].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM lmenup[7].mpstring:
+##	    {
+		if ((*lmenup[7].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM lmenup[8].mpstring:
+##	    {
+		if ((*lmenup[8].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM lmenup[9].mpstring:
+##	    {
+		if ((*lmenup[9].mpaction)(row->id, data) != OK)
+##		    BREAKDISPLAY;
+##	    }
+##	    ACTIVATE MENUITEM ERget(FE_Help)
+##				(expl = ERget(_Help_Expl), validate = 0),
+##			FRSkey1 (validate = 0)
+##	    {
+		FEhelp( ( help_scr == NULL || *help_scr == EOS )
+				? ERx("oodetail.hlp") : help_scr, title
+		);
+##	    }
+##	    ACTIVATE MENUITEM ERget(FE_End)
+##				(expl = ERget(_End_Expl), validate = 0),
+##			FRSkey3 (validate = 0):
+##	    {
+		/* check for form changes before ending */
+		if ( IIUFcheckEnd() )
+##			BREAKDISPLAY;
+		else
+##			RESUME;
+##	    }
+##	    FINALIZE()
+
+##	} /* end while (cont) */
+
+	return dbchange;
+##}
+
+
+/*{
+** Name:	iiooMenuItem() -	set up dynamic menuitems
+**
+** Description:
+**	Sets up dynamic menuitems, based
+**	on a source array of menuitem specifications, by loading
+**	a destination data structure used lexically in the calling
+**	routines to declare DISPLAY loop menuitems.   This routine
+**	should be called BEFORE the start of the DISPLAY loop.
+**
+**	The scrmenu array should be terminated by a MENUPARAM
+**	structure whose members are all NULL or 0;
+**
+**	A companion routine, 'iiooMenuFrsKey()', may be called AFTER
+**	the start of the DISPLAY loop (e.g. within the INITIALIZE
+**	block) in order to associate FRSkey mappings with the
+**	dynamic menuitems.
+**
+** Inputs:
+**	MENUPARAM	srcmenu[];	// array of input menuitem
+**					   specs.
+**			   .mpstring	// menuitme label (or NULL).
+**			   .mpfrskey	// FRSkey mapping.
+**			   .mpaction	// menuitem action routine.
+**
+**	MENUPARAM	destmenu[];	// array of menuitem specs
+**					   used lexically in DISPLAY.
+** Outputs:
+**	MENUPARAM	destmenu;	// loaded from srcmenu.
+**
+** Returns:
+**	VOID
+**
+** History:
+**	5/12/87 (peterk) - created for 'OOdetail()' and 'OOsave()';
+**	7/6/87 (peterk) - broke 'OOmenuparam()' into 2 routines,
+**		'OOmenuitem()' (this one), and 'OOmenufrskey()' (see below)
+**		since they need to be called in slightly different
+**		places w.r.t. the DISPLAY loop.
+**	sept-26-1988 (danielt)
+**		removed commits (performance changes)
+*/
+VOID
+iiooMenuItem ( srcmenu, destmenu )
+MENUPARAM	srcmenu[];	/* input menu array spec */
+MENUPARAM	destmenu[];	/* declared menu array in frame */
+{
+	register i4	i = 0;
+
+	/* set up dynamic menuitems and FRSKEY mappings */
+	if (srcmenu != NULL)
+	    for (i = 0; i < MAXMENUPARAM; i++)
+	    {
+		if (srcmenu[i].mpstring == NULL)
+		    break;
+		destmenu[i].mpstring = srcmenu[i].mpstring;
+		destmenu[i].mpaction = srcmenu[i].mpaction;
+	    }
+
+	for (; i < MAXMENUPARAM; i++)
+	{
+	    destmenu[i].mpstring = _;
+	}
+}
+
+/*{
+** Name:	iiooMenuFrsKey() -	set up dynamic FRSkey mappings
+**
+** Description:
+**	Sets up dynamic FRSkey mappings, based
+**	on a source array of menuitem specifications, by loading
+**	a destination data structure used lexically in the calling
+**	routines to declare DISPLAY loop menuitems.   This routine
+**	should be called at the start of the INITIALIZE block of
+**	the DISPLAY loop.  It is used in association with the
+**	companion routine 'iiooMenuItem()' (see above.)
+**
+**	The scrmenu array should be terminated by a MENUPARAM
+**	structure whose members are all NULL or 0;
+**
+** Inputs:
+**	MENUPARAM	srcmenu[];	// array of input menuitem
+**					   specs.
+**			   .mpstring	// menuitme label (or NULL).
+**			   .mpfrskey	// FRSkey mapping.
+**			   .mpaction	// menuitem action routine.
+**
+**	i4		after;		// number of fixed menuitems
+**					   in caller's DISPLAY loop
+**					   preceeding start of
+**					   dynamic items.
+**
+** Outputs:
+**	(none)
+**
+** Returns:
+**	VOID
+**
+** History:
+**	5/12/87 (peterk) - created for 'OOdetail()' and 'OOsave()';
+**	7/6/87 (peterk) - broke OOmenuparam into 2 routines,
+**		'OOmenuitem()' (see above), and 'OOmenufrskey()' (this one)
+**		since they need to be called in slightly different
+**		places w.r.t. the DISPLAY loop.
+*/
+VOID
+iiooMenuFrsKey ( srcmenu, after )
+MENUPARAM	srcmenu[];	/* input menu array spec */
+i4		after;		/* offset position of dynamic menuitems */
+{
+	register i4	i = 0;
+
+	/* set up dynamic FRSKEY mappings */
+	if (srcmenu != NULL)
+	    for (i = 0; i < MAXMENUPARAM; i++)
+	    {
+		if (srcmenu[i].mpstring == NULL)
+		    break;
+		if (srcmenu[i].mpfrskey > 0)
+		    IInfrskact(srcmenu[i].mpfrskey, (char *)0, 2, 2, i+1+after);
+	    }
+}

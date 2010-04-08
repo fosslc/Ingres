@@ -1,0 +1,374 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ui.h>
+#include	<ooclass.h>
+#include	<oodefine.h>
+# include	"ooldef.h"
+##include	<oocat.qsh>
+##include	<oocatlog.qsh>
+# include	<uigdata.h>
+
+/**
+** Name:	obcatfor.qc -	OBJECT Catalog Table Field Utilities.
+**
+** Description:
+**
+** History:
+**	Revision 40.105	 86/04/08  18:35:14  peterk
+**	changed range variables to use name of table to try to avoid
+**	collisions/confusions.
+**
+**	Revision 40.101	 86/03/10  17:22:02  wong
+**	Added parameter to initialize table acces in 'OBcatInit()'.
+**	Extracted catalog table field structure.
+**
+**	08/23/87 (dkh) - Increased size of variable "qual" to
+**				 500 so that buffer will not overflow
+**				 and trash things.  Fix for jup bug 665.
+**
+**	10/21/87 (danielt) - Changed OBcatForm() to be a cover for
+**			equivalent routines that use ESQL instead of EQUEL
+**			when SQL is to be emited to the backend.  I
+**			added these routines to this file (IIOOcfg_catForm()
+**			and IIOOcfd_catFormDynamic() ).  These new routines
+**			were written to duplicate the functionality
+**			of OBcatForm as it is currently being used: 
+**			in the general case, it fills in 
+**			a catalog form with objects.  In the QBFmap module
+**			of VIFRED, it wants to display only objects
+**			that are qbf names associated with a particular
+**			form name, which is passed to OBcatForm. 
+**	Revision 6.2  88/04/04  danielt
+**	4-april-1988 (danielt)
+**		removed tname and tshort variable declarations (not used)
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	12/12/88 (dkh) - Increased size of sort_spec buffer to 100 in
+**			 IIOOcfd_catFormDynamic().
+**	12/08/88 (dkh) - Fixed JupBug bug 4033.
+**	12/88 (jhw) - Modified query to select all objects for applications.
+**	12/19/89 (dkh) - VMS shared lib changes - Added include of ooldef.h
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**      22-oct-90 (sandyd)
+**          Fixed #include of local ooldef.h to use "" instead of <>.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+GLOBALREF C_OO_CATALOG	IIooCatClass;
+
+VOID IIOOcfd_catFormDynamic();
+
+VOID
+##OBcatForm ( self, form, tablefield, subClasses, pattern, lastname, qualif )
+OO_CLASS	*self;
+##char		*form;
+##char		*tablefield;
+bool		subClasses;
+char		*pattern, *lastname, *qualif;
+##{
+	i4		prevcursor = 0;
+##	OO_CATALOG	cat;
+
+	cat.class = &IIooCatClass;
+	cat.c_form = form;
+	cat.c_tfield = tablefield;
+	cat.c_class = self;
+
+	if (qualif == (char *)NULL)
+	{
+##		INQUIRE_FRS TABLE form ( cat.c_maxrow = MAXROW( tablefield ) );
+
+		IIOOctObjLoad(&cat, subClasses, pattern, IIUIdbdata()->user,
+			      lastname, &prevcursor);
+	}
+	else
+	{
+		IIOOcfd_catFormDynamic(&cat, subClasses, pattern, lastname,
+					qualif, ERx("ii_qbfnames"),
+					&prevcursor
+		);
+	}
+
+	/*
+	** attempt to put cursor back on object/row on which it was
+	** previously located and arrange to place it about 1/4 of
+	** the way from the top of the tablefield.
+	*/
+	if (prevcursor > 0)
+	{
+		FEtfscrl(form, tablefield, _name, prevcursor);
+	}
+##}
+
+/*{
+** Name:	IIOOcfd_catFormDynamic- add objects to a catalog form
+**
+** Description:
+**	This is an adaption of the OBcatForm procedure, to handle the
+**	case where only QBF names that are associated with a particular
+**	form are to be displayed in the catalog form. (this happens
+**	in VIFRED currently, but this was added to allow ABF to call this).
+** Inputs:
+**	OO_CATALOG	*self;
+**	bool		subClasses;
+**	char		*pattern; The name of the object to be queried
+**					for.
+**
+**	char		 *lastname;
+**	char		 *qual_clause;  The qualification
+**					clause to be used to build the
+**					select statement to further limit the
+**					objects to be put into the catalog.
+**					For instance, in the VIFRED QBFnames 
+**					frame one only wants to see the QBF
+**					names associated with the current form.
+**
+**	char		 *from_clause; The name(s) of the tables (in addition
+**					to ii_objects) to be used in the 
+**					qualification for the select statement.
+**
+** Outputs:
+**	i4		*prevcursor;
+**
+** History:
+**	10-22-1987 (danielt)
+**		Written (adapted from OBcatForm() )
+*/
+
+VOID
+IIOOcfd_catFormDynamic(self, subClasses, pattern,
+			lastname, qual_clause, from_clause, prevcursor)
+OO_CATALOG	*self;
+bool		subClasses;
+char		*pattern;
+char		*lastname;
+char		*qual_clause;
+char		*from_clause;
+i4		*prevcursor;
+{
+	OO_CATREC	cs[2], *csp[2], *ctmp, tmp_cats;
+	i2	tmp_iscurrent; /* can't interchange (i2 *) with (i4 *) on DG*/
+	char	pattern_buf[FE_MAXNAME*DB_MAX_COLS];
+	i4	high, low;
+	char	target_list[FE_MAXNAME*20];
+	char	qual[FE_MAXNAME*100];
+	DB_DATA_VALUE	*target_addr[9];
+	DB_DATA_VALUE	dbdv_list[9];
+	char	sort_spec[100];
+	char	tables[FE_MAXNAME*10];
+	char		*p;
+	i4		sql_wild;
+	register i4	i = 0, j;
+	i4		rows;
+
+	rows = 0;
+
+	if (subClasses)
+	{
+		low = self->c_class->ooid/100 * 100;
+		high  = low + 99;
+	}
+	else
+	{
+		high = low = self->c_class->ooid;
+	}
+	csp[0] = &cs[0];
+	csp[1] = &cs[1];
+
+	dbdv_list[0].db_data = (PTR) &(tmp_cats.id);
+	dbdv_list[0].db_datatype = DB_INT_TYPE;
+	dbdv_list[0].db_length = 4;
+	dbdv_list[0].db_prec = 0;
+
+	dbdv_list[1].db_data = (PTR) &(tmp_cats.class);
+	dbdv_list[1].db_datatype = DB_INT_TYPE;
+	dbdv_list[1].db_length = 4;
+	dbdv_list[1].db_prec = 0;
+
+	dbdv_list[2].db_data = (PTR) tmp_cats.name;
+	dbdv_list[2].db_datatype = DB_CHA_TYPE;
+	dbdv_list[2].db_length = FE_MAXNAME + 1;
+	dbdv_list[2].db_prec = 0;
+
+	dbdv_list[3].db_data = (PTR) &(tmp_cats.env);
+	dbdv_list[3].db_datatype = DB_INT_TYPE;
+	dbdv_list[3].db_length = 4;
+	dbdv_list[3].db_prec = 0;
+
+	dbdv_list[4].db_data = (PTR) tmp_cats.owner;
+	dbdv_list[4].db_datatype = DB_CHA_TYPE;
+	dbdv_list[4].db_length = FE_MAXNAME + 1;
+	dbdv_list[4].db_prec = 0;
+
+	dbdv_list[5].db_data = (PTR) &(tmp_iscurrent);
+	dbdv_list[5].db_datatype = DB_INT_TYPE;
+	dbdv_list[5].db_length = 2;
+	dbdv_list[5].db_prec = 0;
+
+	dbdv_list[6].db_data = (PTR) tmp_cats.short_remark;
+	dbdv_list[6].db_datatype = DB_CHA_TYPE;
+	dbdv_list[6].db_length = OOSHORTREMSIZE + 1;
+	dbdv_list[6].db_prec = 0;
+
+	dbdv_list[7].db_data = (PTR) tmp_cats.create_date;
+	dbdv_list[7].db_datatype = DB_CHA_TYPE;
+	dbdv_list[7].db_length = OODATESIZE + 1;
+	dbdv_list[7].db_prec = 0;
+
+	dbdv_list[8].db_data = (PTR) tmp_cats.alter_date;
+	dbdv_list[8].db_datatype = DB_CHA_TYPE;
+	dbdv_list[8].db_length = OODATESIZE + 1;
+	dbdv_list[8].db_prec = 0;
+
+	for (i= 0; i<=8; i++)
+		target_addr[i] = &dbdv_list[i];
+
+	STcopy("ii_objects.object_id, ii_objects.object_class", target_list);
+	STcat(target_list, ", ii_objects.object_name");
+	STcat(target_list,", ii_objects.object_env,ii_objects.object_owner");
+	STcat(target_list,", ii_objects.is_current,ii_objects.short_remark");
+	STcat(target_list, ", ii_objects.create_date, ii_objects.alter_date");
+
+	if (from_clause != (char *)NULL)
+	{
+		STprintf(tables,ERx("ii_objects, %s"), from_clause);
+	}
+	else
+	{
+		STcopy("ii_objects", tables);
+	}
+	STcopy(pattern, pattern_buf);
+	IIUGwildcard(pattern_buf,&sql_wild);
+	STprintf(qual,ERx("%s%s%s %s %s %d %s %d %s%s%s%s%s"),
+			ERx(" ii_objects.object_name LIKE '"),
+			pattern_buf,
+			ERx("' AND "),
+			qual_clause,
+			ERx(" AND ii_objects.object_class >= "),
+			low,
+			ERx(" AND ii_objects.object_class<= "),
+			high,
+			ERx(" AND (ii_objects.object_owner = '"),
+			IIUIdbdata()->user,
+			ERx("' OR ii_objects.object_owner = '"),
+			IIUIdbdata()->dba,
+			ERx("') "));
+	STcopy(ERx("ii_objects.object_name, ii_objects.object_owner"), 
+		sort_spec);
+
+	if (IIUIrao_relOpen(tables, target_list, target_addr,
+				qual, sort_spec, 9, (bool) TRUE) != OK)
+		return;
+	i = 0;
+	while(IIUIraf_relFetch() == OK)
+	{
+		csp[i]->id = tmp_cats.id;
+		csp[i]->class = tmp_cats.class;
+		STcopy(tmp_cats.name,csp[i]->name);
+		csp[i]->env = tmp_cats.env;
+		STcopy(tmp_cats.owner,csp[i]->owner);
+		csp[i]->is_current = tmp_iscurrent; 
+		STcopy(tmp_cats.short_remark,csp[i]->short_remark);
+		STcopy(tmp_cats.create_date,csp[i]->create_date);
+		STcopy(tmp_cats.alter_date,csp[i]->alter_date);
+
+		/* a hack to pick out user vs. dba objects */
+		if (!i)
+		i++;
+		else 
+		{
+			if (STcompare(cs[0].name, cs[1].name) == 0) 
+			{
+				i = 0;
+				j = IIuserIndex;
+			}
+			else 
+			{
+				ctmp = csp[0];
+				csp[0] = csp[1];
+				csp[1] = ctmp;
+				i = j = 1;
+			}
+			_send(catRowLoad, self)(self, csp[j]);
+			/* check whether this corresponds to the object/row on
+			** which the cursor was previously located...
+			*/
+			++rows;
+			if ( lastname != NULL && STequal(lastname, csp[j]->name) )
+			{
+				*prevcursor = rows;
+			}
+		}
+	}
+	IIUIrac_relClose();
+	if (i)
+	{
+		_send(catRowLoad, self)(self, csp[0]);
+		/* check whether this corresponds to the object/row on
+		** which the cursor was previously located...
+		*/
+		++rows;
+		if ( lastname != NULL && STequal(lastname, csp[0]->name) )
+		{
+			*prevcursor = rows;
+		}
+	}
+}
+
+VOID
+OBcatInit(self, form, tablefield, mode)
+OO_CLASS	*self;
+##char *form, *tablefield;
+char *mode;
+{
+	OO_CATALOG	cat;
+
+	/* Set-up interactive methods */
+	iiooInteractive();
+
+	cat.class = &IIooCatClass;
+	cat.c_form = form;
+	cat.c_tfield = tablefield;
+	cat.c_class = self;
+	_send(catTFldInit, &cat)(&cat, mode);
+
+	if (mode != NULL)
+##		LOADTABLE form tablefield ( _name = _iiOOempty );
+}
+
+VOID
+##OBinsertrow(self, frm, tfield, rowno)
+OO_OBJECT	*self;
+##char		*frm, *tfield;
+i4		rowno;
+##{
+##	OO_CATALOG	cat;
+
+	OO_CLASS	*OOpclass();
+
+	cat.class = &IIooCatClass;
+	cat.c_form = frm;
+	cat.c_tfield = tfield;
+	cat.c_class = OOpclass(self->class);
+
+##	INQUIRE_FRS TABLE frm ( cat.c_maxrow = MAXROW( tfield ) );
+
+	_send(catInsertRow, &cat)(&cat, self, rowno);
+##}

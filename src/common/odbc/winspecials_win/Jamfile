@@ -1,0 +1,15 @@
+#
+# Jamfile file for common!odbc!winspecials_win
+#
+
+SubDir ING_SRC common odbc winspecials_win ;
+
+IISUBSYS common odbc winspecials_win ;
+
+
+IILIBRARY ODBCLIB : xadtc.c xa.cpp ;
+
+IILIBOBJECT dllmai32.c ;
+
+IIRCTORES caiiodbc.rc ;
+IICPEXE $(INGLIB)/caiiodbc.res : caiiodbc.res ;

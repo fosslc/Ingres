@@ -1,0 +1,27 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlook.hlp, subtopic 'Lookup tables' behind the main VQ Editor help screen.
+/#-- 
+Use Lookup tables to validate a user's entries or to present the user with 
+a list of valid entries for a field. To link a lookup table to a field in the 
+Master or Detail table of your frame definition, use the AddTable menuitem.
+
+The following rules apply:
+  * Most lookup tables display as popup screens; very large lookup tables 
+    display as full screens.
+
+  * The user displays a lookup table by selecting ListChoices from the menu. 
+    When the user selects a record from the lookup table, the system inserts 
+    the value(s) into the form.
+
+  * The user cannot perform operations directly on the lookup table (for 
+    example, update or delete).
+
+  * You can let the user enter a query restriction to narrow the range of data 
+    the lookup table displays.  (For instance "ord*" would only display data 
+    that starts with the letters "ord".)
+/#subtopic 'Displaying' vqlkdisp.hlp
+/#subtopic 'Adding' vqlkadd.hlp
+/#subtopic 'Qualifications' vqlkqual.hlp
+/#subtopic 'Deleting' vqlkdel.hlp
+/#subtopic 'Rules' vqlkrule.hlp
+/#subtopic 'Specifying joins' vqlkjoin.hlp

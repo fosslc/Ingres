@@ -1,0 +1,32 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- tunulls.hlp	Subtopic help describing Keys, Nulls & Default values.
+You can elect to have a column participate in the primary key for the
+table by placing the sequence number of the column within the key in
+the column marked Key #.  This makes access to the data in the table,
+when qualified on the values of the keys, much more efficient.  The
+sequence numbers should start at 1 for the first column within the
+key, 2 for the second, and so forth.  A storage structure of
+Btree will be used to index the table.
+
+Some INGRES gateways do not use the Key # column.  In addition, INGRES
+gateways do not create a Btree index.
+
+By placing a value of 'y' in the column marked "Nulls," you can elect to
+allow null values in the data for the column.  No null values will be
+allowed if this is set to 'n'.
+
+If null values are NOT allowed, you may elect to have default values(**) for
+the column by placing a 'y' in the column marked Defaults.  This means that
+a 0 or blank value will be placed in the column if it is not specified when
+inserting data into the table.  If the Defaults column is set to 'n' an error
+will occur if an attempt is made to insert data without specifying a value
+for the column. The Defaults column can be set to 'null' if the "Nulls"
+column has value 'y'(es). This means a null is inserted if no value is
+specified for this column. It can be set to 'user' if the datatype is one
+of the character datatypes and is of length 32 or greater to indicate that
+the default value for this column should be the current (at insert time)
+user's user id. Defaults can be set to 'value' to indicate a default value
+of your own specification. You will be prompted to specify that value, or
+you can select the "EditDefaults" menuitem to specify one.
+
+** Default values are not supported by Open SQL.

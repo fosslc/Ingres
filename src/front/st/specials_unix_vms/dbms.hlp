@@ -1,0 +1,18 @@
+Ingres Intelligent DBMS 
+
+The Ingres Intelligent DBMS, the foundation of the Ingres
+product line, provides the power to manage today's critical information
+resources: data, knowledge, and objects.  Because of this unique
+ability, the Ingres Intelligent DBMS empowers organizations to
+model all aspects of their operations within the database engine
+itself, rather than within client application code.
+
+The Ingres Intelligent DBMS can support a wide range of
+applications, from ad hoc queries to large-scale, mission-critical
+production applications which require 24-hour-a-day, 7-day-a-week
+service.  The Ingres Intelligent DBMS features a threaded,
+multi-server architecture which can fully harness the power of today's
+scalable multiprocessors.  Other advanced features include the
+industry's most advanced statistically based query optimizer, compiled
+database procedures, on-line backup, and transparent two-phase commit.
+

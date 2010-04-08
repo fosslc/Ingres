@@ -1,0 +1,13 @@
+#
+# Jamfile file for gl!glf!mu
+#
+
+SubDir ING_SRC gl glf mu ;
+
+IISUBSYS gl glf mu ;
+
+
+IILIBRARY COMPATLIB : musem.c
+	mudef.c
+	mucs.c ;
+

@@ -1,0 +1,39 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Both the QBF RETRIEVE and UPDATE functions have a QUERY state.
+In this state you fill in a form to specify the query you wish
+to run on your current Join Definition.  Simply fill in the form 
+with the values of the data you are searching for.
+
+Valid query operators are =, !=, <, <=, >, and >=.  If no operator
+is specified, QBF assumes the operator is "=".   Multiple comparisons 
+within a field are possible using the logical operators "and", "or" and
+parentheses.  Wildcard characters for partial pattern matching are also
+supported.
+
+To run the query you have entered, depress the MENU KEY and select
+the "Go" menu command.  To display the values and query operators of
+the previous query, select the "LastQuery" command.  You may edit the
+form and then select "Go" to run the last query or some variant of it.
+
+"Blank" clears all the fields on your form so you can begin
+typing a new query.  
+
+"Order" places you in a mode to set the sorting order of retrieving
+data for the duration of the execution phase.
+
+To leave QBF and return to the operating system, select the "Quit" menu 
+command.
+
+To summarize, the commands for QUERY State are:
+
+    COMMAND             FUNCTION
+    -------             --------
+    Go                  Run the specified query and proceed to the
+                        GO State to browse or update data.
+    Blank               Clear all fields so a new query can be entered.
+    LastQuery           Redisplay the values and query operators from
+                        the previous query to run the last query or some
+                        variant of it.
+    Order               Set the sorting order of retrieving data.
+    Help                Print this message.
+    Quit                Leave QBF and return to the operating system.

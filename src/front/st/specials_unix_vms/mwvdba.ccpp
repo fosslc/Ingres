@@ -1,0 +1,143 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for mainwin runtime
+*/
+
+/*
+** History
+**	31-jan-2000 (hanch04)
+**		Created.
+**	18-feb-2000 (somsa01)
+**	    Changed location of shared library RSBs to the lib directory.
+**	    Also, properly named RSBs and added the VDBA help file.
+**	01-mar-2000 (somsa01)
+**	    Changed the name of the RSB files to match that of the shared
+**	    library name.
+**	08-mar-2000 (somsa01)
+**	    Added ingnet (the VNODE manager).
+**	16-mar-2000 (somsa01)
+**	    Added vdba.cnt .
+**	26-apr-2000 (somsa01)
+**	    Added support for other products.
+**	04-may-2000 (cucjo01)
+**	    Added ivm.cnt and ivm.hlp .
+**	10-Nov-2000 (hanch04)
+**	    Remove ingnet.cnt and ingnet.hlp
+**	22-Feb-2001 (ahaal01)
+**	    Changed "SLSFX" to "MWSLSFX" to accomodate platforms that do
+**	    not use the same file suffix for Ingres and MainWin files.
+**	09-May-2001 (hanje04)
+**	    Removed references to catobl, catostbx and ingract as these
+**	    libraries are no longer built.  
+**	02-Jul-2001 (hanje04)
+**	    Added liblkanimat. libsvriia, ija
+**	03-jul-2001 (somsa01)
+**	    Added ingres.dtd to $II_SYSTEM/ingres/files.
+**	27-Jul-2001 (hanje04)
+**	    Add missing rsb files, iia and removed libtreedll.so
+**	03-Aug-2001 (hanje04)
+**	    Added iia.hlp, ija.hlp and qrywiz.hlp
+**      07-Nov-2001 (loera01)
+**          For other products, leave <product>net.hlp and <product>net.cnt
+**	    in for now. Take this out later when <product>vdba.hlp is used.
+**	08-Nov-2001 (hanje04)
+**	   Added libtksplash.so and tksplash.rsb for new lic98 related 
+**	   splash screen.
+**      08-Jan-2002 (hweho01)
+**          Changed "SLSFX" to "MWSLSFX" for libcatolbox, libcatolist,
+**          libtkanimat, libtksplash and libsvriia libs, they are generated
+**          from MainWin build tools.
+**	11-Jun-2004 (somsa01)
+**	    Cleaned up code for Open Source.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+*/
+
+PART   mwvdba
+
+/*
+** ingres!files
+*/
+   DIRECTORY (PROD2NAME)!files
+   BUILD_DIR (ING_BUILD)!files
+      FILE ingres.dtd
+
+/*
+** ingres!lib
+*/
+
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+   DIRECTORY (PROD2NAME)!LIB_TGT
+      {
+#ifdef sparc_sol
+      EXECUTABLE libCrun.$MWSLSFX.1
+#endif
+      EXECUTABLE lib(PROG0PRFX)cato3cnt.$MWSLSFX
+      FILE (PROG0PRFX)cato3cnt.rsb
+      EXECUTABLE lib(PROG0PRFX)cato3dat.$MWSLSFX
+      FILE (PROG0PRFX)cato3dat.rsb
+      EXECUTABLE lib(PROG0PRFX)cato3msk.$MWSLSFX
+      FILE (PROG0PRFX)cato3msk.rsb
+      EXECUTABLE lib(PROG0PRFX)cato3nbr.$MWSLSFX
+      FILE (PROG0PRFX)cato3nbr.rsb
+      EXECUTABLE lib(PROG0PRFX)cato3spn.$MWSLSFX
+      FILE (PROG0PRFX)cato3spn.rsb
+      EXECUTABLE lib(PROG0PRFX)cato3tim.$MWSLSFX
+      FILE (PROG0PRFX)cato3tim.rsb
+      EXECUTABLE lib(PROG0PRFX)catolbox.$MWSLSFX
+      FILE (PROG0PRFX)catolbox.rsb
+      EXECUTABLE lib(PROG0PRFX)catolist.$MWSLSFX
+      FILE (PROG0PRFX)catolist.rsb
+      EXECUTABLE lib(PROG0PRFX)lbtreelp.$MWSLSFX
+      FILE (PROG0PRFX)lbtreelp.rsb
+      EXECUTABLE lib(PROG0PRFX)tkanimat.$MWSLSFX
+      FILE (PROG0PRFX)tkanimat.rsb
+      EXECUTABLE lib(PROG0PRFX)tksplash.$MWSLSFX
+      FILE (PROG0PRFX)tksplash.rsb
+      PERMISSION s:re,o:rwed,g:re,w:re
+      }
+
+/*
+** ingres!bin
+*/
+
+   DIRECTORY (PROD2NAME)!bin
+   BUILD_DIR (ING_BUILD)!bin
+      EXECUTABLE (PROG0PRFX)vdba
+      FILE (PROG0PRFX)vdba.cnt
+      FILE (PROG0PRFX)vdba.hlp
+      FILE (PROG0PRFX)vdba.rsb
+      EXECUTABLE (PROG0PRFX)vcbf
+      FILE (PROG0PRFX)vcbf.rsb
+      EXECUTABLE ivm
+      FILE ivm.cnt
+      FILE ivm.hlp
+      FILE ivm.rsb
+      EXECUTABLE winstart
+      FILE winstart.rsb
+      EXECUTABLE ija
+      FILE ija.rsb
+      FILE ija.hlp
+      FILE ija.cnt
+      EXECUTABLE iia
+      FILE iia.rsb
+      FILE iia.hlp
+      FILE iia.cnt
+      FILE qrywiz.hlp
+      EXECUTABLE (PROG2PRFX)net
+      FILE (PROG2PRFX)net.rsb
+
+/*
+** ingres!vdba
+*/
+
+    DIRECTORY (PROD2NAME)!vdba
+    BUILD_DIR (ING_BUILD)!vdba
+	EXECUTABLE lib(PROG0PRFX)svriia.$MWSLSFX
+	FILE (PROG0PRFX)svriia.rsb	
+	EXECUTABLE ijactrl.ocx
+	FILE ijactrl.rsb

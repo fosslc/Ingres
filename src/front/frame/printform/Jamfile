@@ -1,0 +1,18 @@
+#
+# Jamfile file for front!frame!printform
+#
+
+SubDir ING_SRC front frame printform ;
+
+IISUBSYS front frame printform ;
+
+
+IIBINEXE printform : prtform.c ;
+IINEEDLIBS printform :  PRINTFORMLIB MALLOCLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS printform : II_copyright malloc ;
+
+IIMSGHDR erpf.msg ;
+
+IILIBRARY PRINTFORMLIB : dumpform.qsc ;
+

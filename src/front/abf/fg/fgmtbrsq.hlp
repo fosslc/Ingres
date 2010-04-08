@@ -1,0 +1,74 @@
+/#-- Help File: fgmtbrsq.hlp
+/#-- Master in Table Field browse, query menu help. 
+/#subtopic	'Query Qualifications'	absrchql.hlp
+The table-field is currently in QUERY mode. To run a query, enter a query
+qualification by filling in table-field columns with a query operator
+and a value, and then select "Go" (for example, fill in a numeric column
+with  >10 and press "Go" to see rows with values for that field that are
+greater than 10). After you select "Go", the screen will change to
+Browse mode, and you can view the selected data.
+
+On a form in table-field format, the AND operator is implied when the
+query qualification is entered in the columns across one row of the
+table-field.
+
+For example, if the following values were entered in the table-field before
+pressing "Go", then Ingres would select data from the Project table with
+a Project Id of "Advertise" AND a Budget of more than $5,000:
+
+	+----------------------------------------+
+	|Projectid |Description		|Budget  |
+	+----------------------------------------+
+	|Advertise |			|>5000	 |
+	|	   |			|	 |
+	+----------------------------------------+
+
+Values in different rows of a table field are implicitly OR. For example,
+if the following values were entered in the table-field before
+pressing "Go", then Ingres would select data from the Project table with
+both a Project Id of "Advertise" AND a budget of $5,000, OR a Project Id
+of "Service":
+
+	+----------------------------------------+
+	|Projectid |Description		|Budget  |
+	+----------------------------------------+
+	|Advertise |			|>5000	 |
+	|Service   |			|	 |
+	+----------------------------------------+
+
+Valid query operators are:
+
+        Operator        Meaning
+        --------        -------
+        =               equal to
+        <>              not equal to (same as != )
+        >               greater than
+        >=              greater than or equal to
+        <               less than
+        <=              less than or equal to
+
+If no operator is specified and a value is entered in a field, then
+an "=" operator is assumed.
+
+In character fields, the value you enter may contain pattern match
+characters. Pattern match characters are "?", which matches any single
+character, and "*", which matches any number of characters (some
+installations elect to use "_" and "%", rather than "?" and "*").
+For example, enter  ?P*  in a field and press "Go", to see rows
+that have a capital "P" in the second column of the field.
+
+Select "SubTopics" to see examples of and more details about query
+qualifications.
+
+Commands available on this screen:
+
+  Go          Run the specified query, and proceed to the GO
+              State to browse or update data.
+  Clear       Clear every field on the screen.
+  ListChoices Show valid values for current field. 
+              (optional menuitem; may not appear)
+  Help        Get help about this frame.
+  TopFrame    Stop work on this frame and return to the top
+              frame in the application.
+  End         Stop work on this frame and return to the
+              frame that called it.

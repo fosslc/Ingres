@@ -1,0 +1,43 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: suspendaudit
+**
+** Description: Suspend security auditing
+**
+** History:
+**	17-feb-94 (robf)
+**	   Written
+*/
+
+procedure suspendaudit () = 
+declare
+	errno=integer4 not null;
+{
+	set session 
+	add privileges (maintain_audit);
+
+	inquire_sql (errno=errorno);
+	if(errno!=0)
+	then
+		message 'You lack appropriate privileges to perform this operation'
+		with style=popup;
+		return 0;
+	endif;
+	alter security_audit suspend;
+	inquire_sql (errno=errorno);
+	if(errno!=0)
+	then
+		message 'Unable to suspend security auditing.'
+		with style=popup;
+		return 0;
+	endif;
+	message 'Security auditing is suspended';
+	sleep 2;
+	/* NOTE: Do not drop maintain_audit privilege here otherwise you
+	** could suspend yourself.
+	*/
+	return 1;
+}
+		

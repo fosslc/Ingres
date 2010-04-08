@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+
+  The qef_memory resource records the maximum amount of memory which
+  can be allocated by the Query Execuation Facility (QEF) within DBMS 
+  servers and is derived from related resources qef_dsh_memory and
+  qef_sorthash_memory. 

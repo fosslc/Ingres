@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abchstrt.hlp, help for deciding whether to start interpreter execution
+/#-- with the current frame of the default starting frame
+You have chosen to run the application while a frame other than the 
+application's default starting frame is selected.  You can choose to
+start either with the currently selected frame or with the default
+starting frame.  You can also Cancel, to avoid running the application.
+ 
+  Select        Choose to start execution with the current frame or 
+                the application's default frame.
+  Cancel        Do not run the application.

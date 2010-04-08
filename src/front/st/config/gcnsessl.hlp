@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The session_limit is the maximum number of connections any Name server can 
+support.
+

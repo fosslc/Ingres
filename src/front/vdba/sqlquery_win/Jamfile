@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!sqlquery_win
+#
+
+SubDir ING_SRC front vdba sqlquery_win ;
+
+IISUBSYS front vdba sqlquery_win ;
+
+
+IISLN sqlquery.ocx : sqlquery.sln ;

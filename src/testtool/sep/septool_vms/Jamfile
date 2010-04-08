@@ -1,0 +1,25 @@
+#
+# Jamfile for testtool!sep!septool_vms
+#
+#       20-Aug-2009 (horda03)
+#          Identify targets built on VMS without a .LOT file
+#
+
+SubDir ING_SRC testtool sep septool_vms ;
+
+IISUBSYS testtool sep septool_vms ;
+
+VMS_NO_LOT echo ;
+IITOOLSEXE echo : echo.c ;
+
+IITOOLSEXE setuser : setuser.c ;
+IINEEDLIBS setuser : $(COMPATLIB) ;
+
+IITOOLSEXE qawtl : qawtl.c ;
+IINEEDLIBS qawtl : $(COMPATLIB) ;
+
+IITOOLSSH run : run$(SUFSH) ;
+IITOOLSSH sepcc : sepcc$(SUFSH) ;
+IITOOLSSH sepesqlc : sepesqlc$(SUFSH) ;
+IITOOLSSH seplib : seplib$(SUFSH) ;
+IITOOLSSH seplnk : seplnk$(SUFSH) ;

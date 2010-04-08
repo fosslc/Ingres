@@ -1,0 +1,55 @@
+	.title	TMstamp
+;
+;	16-sep-92 (walt)
+;		Adapted for Alpha.  .call_entry added where arguments needed to be
+;		homed.
+;	04-may-95 (albany)
+;	    Updated $code -> $code$ for AXP/VMS.
+;	16-may-95 (albany)
+;	    Updated psect attributes to be in line with other
+;	    CL psects.
+;
+	.psect	$code$	pic,con,rel,lcl,shr,exe,nord,nowrt,novec,4
+;	.entry	TMstamp,0
+TMstamp::
+	.call_entry max_args=6,home_args=true
+	callg	(ap),G^sys$gettim
+	ret
+
+	.entry	TMcmpstamp,^m<r2,r3>
+	movq	@4(ap),r0
+	movq	@8(ap),r2
+	subl2	r1,r3
+	sbwc	r0,r2
+	bleq	1$
+	bgtr	2$
+	movl	#1,r0
+	ret
+2$:
+	mcoml	#0,r0
+	ret
+1$:
+	clrl	r0
+	ret
+
+	.entry	TMstoa,0
+	pushl	8(ap)
+	pushl	#24
+	clrl	-(sp)
+	pushaq	@4(ap)
+	pushal	8(sp)
+	clrl	-(sp)
+	calls	#4,G^SYS$ASCTIM
+	addl3	#23,8(ap),r0
+	clrb	(r0)
+	ret
+
+	.entry	TMatos,0
+	locc	#0,#32,@4(ap)
+	pushl	4(ap)
+	pushl	r0
+	pushl	8(ap)
+	pushal	4(sp)
+	calls	#2,G^SYS$BINTIM
+	ret
+	.end

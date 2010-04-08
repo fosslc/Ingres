@@ -1,0 +1,108 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+/**
+** Name:	oocatlog.qh -	Visual Object Catalog Class Definition.
+**
+** Description:
+**	Defines the generic visual object catalog class:
+**
+**	OO_CATALOG	visual object catalog.
+**
+** History:
+**	Revision 6.4  90/04  wong
+**	Added put ('(*catPutRow)()') method.
+**
+**	Revision 6.2  89/01  wong
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+/*}
+** Name:	OO_CATALOG -	Visual Object Catalog.
+**
+** Description:
+**	Specifies a visual object catalog, which consists of a catalog form
+**	and table field through which lists of objects can be displayed.
+*/
+typedef struct {
+	VOID	(*catInit)();
+	VOID	(*catEmpty)();
+	STATUS	(*catCheck)();
+	VOID	(*catLoad)();
+	STATUS	(*catDestroy)();
+	STATUS	(*catRename)();
+	STATUS	(*catFetch)();
+	bool	(*catDetail)();
+	VOID	(*catTFldInit)();
+	VOID	(*catTFldLoad)();
+	VOID	(*catRowLoad)();
+	VOID	(*catInsertRow)();
+	VOID	(*catPutRow)();
+} C_OO_CATALOG;
+
+##typedef struct {
+	C_OO_CATALOG	*class;
+##	char		*c_form;	/* form name */
+##	char		*c_tfield;	/* table field name */
+	OO_CLASS	*c_class;	/* associated class */
+##	i4		c_maxrow;	/* maximum displayed rows of tbl fld */
+	bool		c_noload;	/* no automatic load of tbl fld */
+	/*:
+	** Basic:
+	** VOID Init( OO_CLASS *, char *, char *, bool )
+	**		- Initialize Visual Object Catalog.
+	** VOID Empty()
+	**		- Clear Visual Object Catalog.
+	** STATUS Check( OO_CATREC * )
+	**		- Check Object in Current Row.
+	** VOID Load( char *, char * )
+	**		- Load Visual Object Catalog.
+	** STATUS Destroy( OO_CATREC * )
+	**		- Destroy Object in Current Row.
+	** STATUS Rename( OO_CATREC *)
+	**		- Rename Object in Current Row.
+	** STATUS Fetch( OO_CATREC *)
+	**		- Fetch Object in Current Row from DB.
+	** bool	Detail( OO_CATREC *, char *, char *, PTR, ... )
+	**		- Run Detail Frame for Object in Current Row.
+	** SubClass Redefined, Internal:
+	** VOID TFldInit( char * )
+	**		- Initialize Visual Object Catalog Table Field.
+	** VOID TFldLoad( char *, char *, i4  * )
+	**		- Load Visual Object Catalog Table Field.
+	** VOID RowLoad( OO_CATREC * )
+	**		- Load Row into Visual Object Catalog Table Field.
+	** VOID InsertRow ( OO_CATREC *, OO_OBJECT *, i4  )
+	**		- Insert Row into Visual Object Catalog Table Field.
+	** VOID PutRow ( OO_CATREC *, OO_OBJECT *, i4  )
+	**		- Replace Row in Visual Object Catalog Table Field.
+	*/
+##} OO_CATALOG;
+
+#define _send(method, self) (*(self)->class->method)
+
+VOID IIOOct0Init (/* OO_CATALOG *, OO_CLASS *, char *, char *, bool */);
+VOID IIOOctEmpty (/* OO_CATALOG * */);
+STATUS IIOOctCheck (/* OO_CATALOG *, OO_CATREC * */);
+VOID IIOOctLoad (/* OO_CATALOG *, char *, char * */);
+STATUS IIOOctDestroy (/* OO_CATALOG *, OO_CATREC * */);
+STATUS IIOOctRename (/* OO_CATALOG *, OO_CATREC * */);
+STATUS IIOOctFetch (/* OO_CATALOG *, char *, OO_CATREC *, ... */);
+bool IIOOctMoreInfo (/* OO_CATALOG *, OO_CATREC *, char *, char *, PTR,
+	STATUS (*)(), STATUS (*)() STATUS (*)(), STATUS (*)() STATUS (*)(),
+	MENUPARAM [] */);
+
+VOID IIOOctTFldInit (/* OO_CATALOG *, char *mode */);
+VOID IIOOctxTFldLoad (/* OO_CATALOG *, char *, char *, i4  * */);
+VOID IIOOctRowLoad (/* OO_CATALOG *, OO_CATREC * */);
+VOID IIOOctInsertRow (/* OO_CATALOG *, OO_OBJECT *, i4  */);
+VOID IIOOctPutRow (/* OO_CATALOG *, OO_OBJECT *, i4  */);
+
+VOID IIOOctObjLoad (/* OO_CATALOG *, char *, char *, char * */);

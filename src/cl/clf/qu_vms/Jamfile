@@ -1,0 +1,9 @@
+#
+# Jamfile file for cl!clf!qu_vms
+#
+
+SubDir ING_SRC cl clf qu_vms ;
+
+IISUBSYS cl clf qu_vms ;
+
+IILIBRARY COMPATLIB : qu.c ;

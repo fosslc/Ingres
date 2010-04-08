@@ -1,0 +1,529 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+**
+**	mqbfmain.qsc -
+*/
+
+/*
+NO_OPTIM = nc4_us5
+*/
+
+# include	<compat.h>
+# include	<st.h>
+# include	<si.h>
+# include	<tm.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+## include	"mqsymbol.qsh"
+# include	<oosymbol.h>
+# include	<uigdata.h>
+# include	"erqf.h"
+# include	<ui.h>
+# include	<ug.h>
+# include	<uf.h>
+
+FUNC_EXTERN	bool	mq_args(i4, char **, MQQDEF *);
+FUNC_EXTERN	bool	mqcatfrm(void);
+FUNC_EXTERN	bool	mqcats(MQQDEF *);
+FUNC_EXTERN	bool	mqgetfname(MQQDEF *, bool);
+FUNC_EXTERN	bool	mqgetqname(MQQDEF *, bool);
+FUNC_EXTERN	bool	mqhelp(MQQDEF *);
+FUNC_EXTERN	bool	mqinitfrms(void);
+FUNC_EXTERN	DB_LANG	IIAFdsDmlSet();
+FUNC_EXTERN	VOID    mq_db_connect();
+FUNC_EXTERN	bool	qqbfnames(MQQDEF *);
+
+/* flag indicates whether SQL or Gateway SQL (GTWSQL) will be spoken */
+GLOBALDEF	i4	MQdblang = UI_DML_SQL;
+
+/* flag indicates whether DBMS has been started */
+GLOBALDEF	bool	MQingres = FALSE;
+
+/* temporarily, a global to contain object id of selected joindef */
+GLOBALDEF	i4	MQid = -1;
+
+/* indicates whether JoinDef changes have been saved */
+GLOBALDEF	i4	save_prompt = 0;
+
+GLOBALDEF	OOID	mq_joinid = -1;
+
+/*
+**	main entry point for MQBF
+**
+**	History:
+**	written 3/1/83 (nml)
+**	22-dec-1986 (peter)	Added FEforms call.
+**	06-jan-87 (marian)	bug 11214
+**		Do a set_frs frs (validate(previousfield) = 1) so
+**		vifred validations are done on control_p.
+**	6-aug-1987 (danielt) changed addforms  to IIUFgtfGetForm() call.
+**	10-aug-1987 (danielt) removed STcopy(UserName,User) call.
+**		This has been made obsolete by the new IIUIuser global.
+**	13-aug-1987 (danielt) FEmsg() -> IIUGerr() and FDgetyorn() -> IIUGver().
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh.  Added GLOBALDEF of MQdblang
+**		and the code to query iidbcapabilities to determine how it
+**		should be set.
+**	11-feb-1988 (peter)
+**		Add parameter to calls to mq_tbl_load.
+**	17-mar-88 (bruceb)
+**		Added call on FEendforms() if FEingres fails.  Needed
+**		to restore to non-forms mode on DG.
+**	31-may-88 (kenl)
+**		Added call to IIAFdsDmlSet() since the ADF_CB is currently
+**		set to DB_QUEL by default.
+**	19-aug-88 (kenl)
+**		Made the variable save_prompt a global.  Previously, this
+**		was only used in tables.qsc to determine if a prompt should
+**		be given when the use tries to exit before saving changes.
+**		Now it is also used in qexecute.qsc when a user tries to
+**		quit from the execution phase without having saved the JoinDef.
+**	19-dec-88 (kenl)
+**		Temporary (?) fix to offset FRS settings turned on in 6.2
+**		FEforms().  This fix occurs right after the call to FEforms().
+**	14-dec-89 (kenl)
+**		Added code to handle Group, Role and Password for DB connection.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	6-aug-91 (blaise)
+**		Added error handling for when IIUIroleID returns NULL, to
+**		make qbf behave in the same way as the terminal monitor and
+**		an imaged abf application when the user attempts to use the 
+**		now-disallowed syntax "-R<role_id>/<passwd>".
+**	08/26/91 (emerson)
+**		Fix a problem in the previous fix: the variable "role"
+**		was not being initialized unless a -R flag was specified.
+**      01/14/93 (connie)
+**              do a CLEAR SCREEN before BREAKDISPLAY on a quit
+**	18-dec-92 (sylviap)
+**		Added mq_nogo. 
+**      18-jan-93 (daver)
+**              Removed paramter to mq_tbl_load, nuked in 1989.
+**	20-aug-1993 (rdrane)
+**		Move all DB connection logic to the argument processing
+**		file, since proper interpretation of command line
+**		arguments depends upon knowing the connection
+**		catalog level.
+**	27-jun-95 (teresak)
+**		Added undocumented support for II_QBF_DISABLE_VIEW_CHECK
+**		to allow append, update, and deletes of single table views 
+**		(SIR 37839)
+**	16-Oct-1997(angusm)
+**		redo allow_view as boolean (bug 86168)
+**	26-Oct-1998 (matbe01)
+		Added NO_OPTIM for NCR (nc4_us5) to eliminate runtime error.
+**      02-Jul-1999 (hweho01)
+**              Included uf.h header file, it contains the function     
+**              prototype of IIUFlcfLocateForm(). Without the explicit
+**              declaration, the default int return value for a  
+**              function will truncate a 64-bit address on ris_u64 
+**              platform.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      06-feb-2009 (stial01)
+**          remove unused stack variables
+**	24-Aug-2009 (kschendel) 121804
+**	    Define bool imports for gcc 4.3.
+*/
+
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+
+mqbfmain(argc, argv)
+i4	argc;
+char	**argv;
+{
+	char		*pipe;
+	MQQDEF		*qdef;
+	char		err_buf[ER_MAX_LEN];
+	char		nam_buf[MAX_LOC+1];
+	STATUS		CLerror;
+	LOCATION	helploc;
+	char		*hfile;
+	LOCATION	loc;
+	bool		newoldflg;
+	i4		msecs;
+##	i4		frm;
+	STATUS		retstat;
+	char            *avptr;
+
+	/* Determine if single table views can be inserted/updated/deleted */
+	 
+	NMgtAt(ERx("II_QBF_DISABLE_VIEW_CHECK"),&avptr);
+	if (avptr && *avptr)
+	    allow_views = TRUE;
+
+	/* Set dml to DB_SQL since the ADF_CB is set to QUEL by default */
+	_VOID_ IIAFdsDmlSet(DB_SQL);
+
+	save_prompt = 0;
+
+	/* initialize the MQQDEF structure */
+	if ((qdef = mqistruct()) == NULL)
+	{
+		/* problem initializing MQQDEF sturcture */
+		IIUGerr(E_QF0071_Can_t_initialize_stru,0,0);
+		mqexit(-1);
+	}
+
+	if (!mq_args(argc, argv, qdef))
+	{
+		IIUGerr(E_QF0072_ERROR__Incorrect_comm,0,0);
+		mqexit(-1);
+	}
+
+# ifdef DEBUG
+	if (mq_debug)
+	{
+		char	filename[MAX_LOC + 1];
+
+		STcopy(ERx("mqbf.db"), filename);
+		LOfroms(FILENAME & PATH, filename, &loc);
+		SIopen(&loc, ERx("w"), &mqoutf);
+		msecs = TMcpu();
+		SIfprintf(mqoutf, ERx("MAIN: after getargs, msecs = %d\n"), msecs);
+	}
+# endif
+
+	if (mqztesting)
+	{
+		if (FEtest(mq_ztest) == FAIL)
+		mqexit(-1);
+	}
+
+	if (FEchkenv(FENV_TWRITE) != OK)
+	{
+		IIUGerr(E_QF0154_TempNoWrite, UG_ERR_FATAL, 0);
+	}
+
+	/* Bug 6181
+	**	Check to see if there are any errors starting up the forms
+	**	system before proceeding.  (marian 1/14/86)
+	**
+	**	Changed this to call FEforms. (peter 22-dec-1986)
+	*/
+
+	if (FEforms() != OK)
+	{
+		IIUGerr(E_QF0075_Could_not_start_forms,0,0);
+		mqexit(-1);
+	}
+
+	/* Unset that which was set in FEforms(). */
+
+##	set_frs frs (	activate(menuitem) = 0,
+##			activate(keys) = 0,
+##			validate(menuitem) = 0,
+##			validate(keys) = 0
+##	);
+
+	/* Capture control_p to process validations */
+
+##	set_frs frs (	activate(previousfield) = 1,
+##			validate(previousfield) = 1
+##	);
+
+	FEcopyright(ERx("QBF"), ERx("1981"));
+
+	mqtest();
+
+	MQingres = TRUE;
+	IIOOinit((OO_OBJECT **)NULL);
+
+	/* determine what language QBF should be emitting */
+	MQdblang = (IIUIdml() != UI_DML_GTWSQL) ? UI_DML_SQL : UI_DML_GTWSQL;
+
+# ifdef DEBUG
+	if (mq_debug)
+	{
+		msecs = TMcpu();
+		SIfprintf(mqoutf, ERx("MAIN: got user codes, msecs = %d\n"), msecs);
+	}
+# endif
+
+	/* initialize forms used in mqbf */
+	if ( !mqinitfrms() )
+	{
+		/* problem initializing internal mqbf forms - abort */
+		if (!mq_equel)
+			mqdbexit();
+		mqexit(-1);
+	}
+
+# ifdef DEBUG
+	if (mq_debug)
+	{
+		msecs = TMcpu();
+		SIfprintf(mqoutf, ERx("MAIN: after internal form inits, msecs = %d\n"), msecs);
+	}
+# endif
+
+# ifdef DEBUG
+	if (mq_debug)
+	{
+		msecs = TMcpu();
+		SIfprintf(mqoutf, ERx("MAIN: after structure inits, msecs = %d\n"), msecs);
+	}
+# endif
+
+	if (mq_name)
+	{
+		/*
+		** special processing for JoinDef or single table name
+		** specified on command line
+		*/
+		if (onetbl)
+		{
+			mq_tbl_load(qdef, FALSE, mqDEFINITION);
+			onetbl = FALSE;
+			mq_forms = FALSE;
+			goto notables;
+		}
+		else if ((mq_forms) || (mq_qflag))
+		{
+			if (mq_both)
+			{
+				if (mq_qflag)
+					onetbl = FALSE;
+				else
+					onetbl = TRUE;
+			}
+			if ((mq_forms) && (!mq_qflag) && (!mq_both))
+			{
+			    if ((mqgetfname(qdef, FALSE)) != TRUE)
+			    {
+				mq_forms = FALSE;
+				onetbl = FALSE;
+				mq_lookup = TRUE;
+				/* 
+				** Replace call to obsolete mqgettname()
+				** with call to IIqfChkRel().
+				*/
+				retstat = IIqfChkRel(qdef,qdef->mqcr.name,
+						     qdef->mqcr.owner,
+						     FALSE,
+						     (FE_REL_INFO *)NULL);
+				if (((mqgetqname(qdef,FALSE)) ||
+				     (retstat == OK)) &&
+				    (IIUFver(ERget(
+					S_QF0076_Do_you_want_to_use_th),0,0)))
+				{
+				    if (!mq_qflag)
+					onetbl = TRUE;
+				}
+				else
+				{
+				    *qdef->mqcr.name = EOS;
+				    mq_qflag = FALSE;
+				    goto notables;
+				}
+			    }
+			}
+			else
+			{
+				if ((mqgetqname(qdef, FALSE)) != TRUE)
+				{
+					/* don't reset if JoinDef editing */
+					if (!mq_editjoin)
+					{
+						*qdef->mqcr.name = EOS;
+						mq_forms = FALSE;
+						onetbl = FALSE;
+						mq_qflag = FALSE;
+					}
+					goto notables;
+				}
+			}
+			if (onetbl)
+			{
+				newoldflg = FALSE;
+			}
+			else
+			{
+				newoldflg = TRUE;
+			}
+
+			if (mq_editjoin)
+			{
+				/*
+				** We are editing an existing JoinDef.
+				** Several things need to happen here:
+				**  1. Save away the name passed in with the
+				**     -J.  We will copy it back to mqcr.name
+				**     after the duplicate has been loaded.
+				**  2. Initialize forms for creation options.
+				**  3. Fill in OO record for JoinDef.
+				**  4. If not owned by user, we will want to
+				**     load a -1 into the 'id' later on so OO
+				**     will save as a new object owned by user.
+				*/
+				STcopy(qdef->mqcr.name, mq_joindef);
+				if (mqcatfrm() != TRUE)
+				{
+					/* couldn't initialize catalog form */
+					FDerror(NOHELPFRMS, 0, ERx(""));
+				}
+	    			OOcatRecord(qdef->mqcr.id, &qdef->mqcr);
+
+				if (STequal(qdef->mqcr.owner,
+					    IIUIdbdata()->user))
+				{
+					mq_joinid = qdef->mqcr.id;
+				}
+				else
+				{
+					mq_joinid = -1;
+				}
+			}
+			mq_tbl_load(qdef, newoldflg, mqDEFINITION);
+			*qdef->mqcr.name = EOS;
+			mq_forms = FALSE;
+			mq_qflag = FALSE;
+
+			/* exit clean if editing a join */
+			mq_editjoin = FALSE;
+			mq_nogo = FALSE;
+		}
+		else if (mq_cfrm && mq_qflag)
+		{
+			mq_tbl_load(qdef, TRUE, mqDEFINITION);
+			*qdef->mqcr.name = EOS;
+			mq_cfrm = FALSE;
+			mq_qflag = FALSE;
+		}
+		else if (mq_lookup)
+		{
+			STcopy(qdef->mqcr.name, qbf_name);
+			if ((mqgetfname(qdef, FALSE)) == TRUE)
+			{
+				mq_forms = TRUE;
+				goto donelookup;
+			}
+			if ((mqgetqname(qdef, FALSE)) == TRUE)
+			{
+				mq_forms = FALSE;
+				goto donelookup;
+			}
+			onetbl = TRUE;
+		donelookup:
+			if (onetbl)
+			{
+				newoldflg = FALSE;
+			}
+			else
+			{
+				newoldflg = TRUE;
+			}
+			mq_tbl_load(qdef, newoldflg, mqDEFINITION);
+			mq_reinit(0, qdef);
+			goto notables;
+		}
+	notables:
+		if (mq_name)
+		{
+			goto endsmenu;
+		}
+		else	/* "Start" menu item selected from query phase */
+		{
+			mq_tflag = FALSE;
+			mq_qflag = FALSE;
+			mq_forms = FALSE;
+		}
+	}
+
+	IIUFgtfGetForm(IIUFlcfLocateForm(),ERx("mqstart"));
+##	DISPLAY mqstart READ
+##	INITIALIZE
+##	{
+		/* specified -t, -j, or -f without a corresponding name */
+		if (!mq_name)
+		{
+			if (mq_forms)
+				goto begqbfn;
+			else if (mq_qflag)
+				goto begcat;
+			else if (mq_tflag)
+				goto beghelp;
+		}
+##	}
+##	ACTIVATE MENUITEM ERget(FE_QBFNames)
+##	{
+	begqbfn:
+		if (mqcatfrm() != TRUE)
+		{
+			/* couldn't initialize catalog form */
+			FDerror(NOHELPFRMS, 0, ERx(""));
+		}
+		else if (!qqbfnames(qdef))
+		{
+##			CLEAR SCREEN
+##			BREAKDISPLAY
+		}
+##	}
+##	ACTIVATE MENUITEM ERget(S_QF00D3_JoinDefs)
+##	{
+	begcat:
+		if (mqcatfrm() != TRUE)
+		{
+			/* couldn't initialize catalog form */
+			FDerror(NOHELPFRMS, 0, ERx(""));
+		}
+		else if (!mqcats(qdef))
+		{
+##			CLEAR SCREEN
+##			BREAKDISPLAY
+		}
+##	}
+##	ACTIVATE MENUITEM ERget(S_QF00D4_Tables)
+##	{
+	beghelp:
+		if (mqcatfrm() != TRUE)
+		{
+			/* couldn't initialize catalog form */
+			FDerror(NOHELPFRMS, 0, ERx(""));
+		}
+		else if (!mqhelp(qdef))
+		{
+##			CLEAR SCREEN
+##			BREAKDISPLAY
+		}
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(_HelpExpl)), FRSkey1
+##	{
+		FEhelp(ERx("qmain.hlp"), ERget(S_QF0077_QBF_Start_Up_Frame));
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Quit), FRSkey2, FRSkey3
+##	{
+##		CLEAR SCREEN
+##		BREAKDISPLAY
+##	}
+
+endsmenu:
+	if (mq_editjoin)
+	{
+		/*
+		** At this point we are trying to edit a JoinDef that does
+		** not exist.  We will initialize the extra forms and then
+		** put up the list pick for the type of JoinDef to create
+		** (blank or duplicate).
+		*/
+		if (mqcatfrm() != TRUE)
+		{
+			/* couldn't initialize catalog form */
+			FDerror(NOHELPFRMS, 0, ERx(""));
+		}
+		IIQFjl_JoindefListpick(qdef, _mqcrjoin);
+	}
+	if (!mq_equel)
+		mqdbexit();
+	mqexit(OK);
+}

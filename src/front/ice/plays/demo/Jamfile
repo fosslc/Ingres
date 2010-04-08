@@ -1,0 +1,60 @@
+#
+# Jamfile file for front!ice!plays!demo
+#
+# History:
+#   15-sep-2004 (fanra01)
+#       Add grist's to make the image files unique.
+#   06-Oct-2004 (hanje04)
+#	Remove individual grists as all files are now gristed in IIICEFILE
+#	rule
+#   17-Dec-2004 (fanra01)
+#       Rplace grist for logout.gif only.
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+#	17-Dec-2009 (bonro01)
+#	    Replace unix specific path separators
+#
+
+SubDir ING_SRC front ice plays demo ;
+
+IISUBSYS front ice plays demo ;
+
+if $(BUILD_ICE)
+{
+
+IIICEFILE plays$(DFS)OldGlobe.gif : OldGlobe.gif ;
+IIICEFILE plays$(DFS)bgpaper.gif : bgpaper.gif ;
+IIICEFILE plays$(DFS)comedy.gif : comedy.gif ;
+IIICEFILE plays$(DFS)history.gif : history.gif ;
+IIICEFILE plays$(DFS)logout.gif : <front!ice!plays!demo>logout.gif ;
+IIICEFILE plays$(DFS)play_SessionControl_h.html : play_SessionControl_h.html ;
+IIICEFILE plays$(DFS)play_TxnCndCmt_h.html : play_TxnCndCmt_h.html ;
+IIICEFILE plays$(DFS)play_all.html : play_all.html ;
+IIICEFILE plays$(DFS)play_allWrap.html : play_allWrap.html ;
+IIICEFILE plays$(DFS)play_allWrapSub.html : play_allWrapSub.html ;
+IIICEFILE plays$(DFS)play_autoUser.html : play_autoUser.html ;
+IIICEFILE plays$(DFS)play_bground.jpg : play_bground.jpg ;
+IIICEFILE plays$(DFS)play_home.html : play_home.html ;
+IIICEFILE plays$(DFS)play_login.html : play_login.html ;
+IIICEFILE plays$(DFS)play_newProduct.html : play_newProduct.html ;
+IIICEFILE plays$(DFS)play_newProductInsert.html : play_newProductInsert.html ;
+IIICEFILE plays$(DFS)play_public.css : play_public.css ;
+IIICEFILE plays$(DFS)play_shopAction_h.html : play_shopAction_h.html ;
+IIICEFILE plays$(DFS)play_shopAdd.html : play_shopAdd.html ;
+IIICEFILE plays$(DFS)play_shopConfirm.html : play_shopConfirm.html ;
+IIICEFILE plays$(DFS)play_shopDescribe.html : play_shopDescribe.html ;
+IIICEFILE plays$(DFS)play_shopHome.html : play_shopHome.html ;
+IIICEFILE plays$(DFS)play_shopRemove.html : play_shopRemove.html ;
+IIICEFILE plays$(DFS)play_shopView.html : play_shopView.html ;
+IIICEFILE plays$(DFS)play_styleSheet.css : play_styleSheet.css ;
+IIICEFILE plays$(DFS)play_subSet.html : play_subSet.html ;
+IIICEFILE plays$(DFS)play_typeGLink.html : play_typeGLink.html ;
+IIICEFILE plays$(DFS)play_typeGSLink.html : play_typeGSLink.html ;
+IIICEFILE plays$(DFS)play_typeLink.html : play_typeLink.html ;
+IIICEFILE plays$(DFS)play_typeLinkSubSet.html : play_typeLinkSubSet.html ;
+IIICEFILE plays$(DFS)play_typeList.html : play_typeList.html ;
+IIICEFILE plays$(DFS)play_welcome.html : play_welcome.html ;
+IIICEFILE plays$(DFS)romance.gif : romance.gif ;
+IIICEFILE plays$(DFS)tragedy.gif : tragedy.gif ;
+
+}

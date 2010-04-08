@@ -1,0 +1,56 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icextfrm.hlp       Extend databases to alternate locations.
+/#--
+The "Database Extensions" frame allows you to extend databases to new 
+Locations. After a database is extended its tables can be moved to or 
+created on the new location.
+
+(Note: If you do not have the MAINTAIN_LOCATIONS user permission, then this
+frame will be displayed in read-only mode and you can only view existing
+databases and locations. The MAINTAIN_LOCATIONS user permission is required to
+extend databases to alternate locations)
+
+Extend a database to a new Location by specifying a Location Name in a row in 
+the table field. Then select the Save menuitem to perform the extension. When 
+the database is extended a directory (of the same name as the database) is 
+created in the Area corresponding to the Location Name.  New databases are 
+automatically extended to their default Location.
+
+The Location Name must exist.
+
+
+	FIELD NAME	SYNOPSIS
+	----------	--------
+	Database	Name of the database this frame describes.
+	
+	Owner           The Ingres user who owns this database.
+	
+	Table Field of database access privileges 
+	(see SubTopic Help for more info):
+	
+	Location Name   Location to extend the database to.
+	
+	Usage           Usage for the location.  Defaulted depending on the 
+			entry in the "Location Name" column.
+	
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Save            Extend the database and create the appropriate 
+			directory.
+	
+	Alter		Choose this menuitem to change a WORK location from
+			"Work" usage to "Auxiliary Work" and vice versa.
+
+
+	ListChoices     Display a list of existing locations which can be
+			chosen for this field.
+
+		(The above 3 menuitems will only appear if you have
+	        been GRANTed the MAINTAIN_LOCATIONS user permission)
+	
+	
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

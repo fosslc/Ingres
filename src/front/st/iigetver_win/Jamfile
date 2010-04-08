@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!st!iigetver_win
+#
+
+SubDir ING_SRC front st iigetver_win ;
+
+IISUBSYS front st iigetver_win ;
+
+IISLN iigetver.dll : iigetver.sln ;
+
+FILE $(INGFILES)/ii_ver.h : ii_ver.h ;

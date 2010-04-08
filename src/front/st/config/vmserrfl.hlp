@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  Defines an equivalence name string of 1 to 63 alphanumeric
+  characters for the logical device name SYS$ERROR. The logical
+  name and equivalence name are placed in the process logical name
+  table for the created process.

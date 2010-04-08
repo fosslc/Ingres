@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The gc_num_ticks resource gives the number of group-commit checks that
+  will be performed on a buffer before writing it.
+
+  When a log buffer write is being delayed for group-commit, the group-
+  commit thread wakes up periodically to check whether the buffer has
+  been written, or should be written.  If the buffer has not yet been
+  written after gc_num_ticks checks, the group-commit time expires and
+  the buffer is written.  (Each nap between checks is gc_interval milli-
+  seconds long.)
+
+  The default is 5 ticks.

@@ -1,0 +1,144 @@
+; History:
+;	03-Dec-1997 (wonst02)
+;	    Original.
+;	10-Jun-1998 (wonst02)
+;	    Add methods for internal "Frontier" interface.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2005 (drivi01)
+;	    Created using iiice.def. Consists of
+;	    ascf, ascs, and urs libraries, used
+;	    for linking ice.
+;	02-feb-2005 (abbjo03)
+;	    Remove USR functions.
+;	30-Oct-2008 (jonj)
+;	    SIR 120874: Removed sc0e_put, sc0e_0_put,
+;	    added sc0e_putAsFcn, sc0ePut, sc0ePutNV.
+;
+
+EXPORTS
+ascd_adf_printf		@1				
+ascd_initiate		@2				
+ascd_note		@3				
+ascd_terminate		@4				
+ascs_a_conn_get		@5				
+ascs_a_host_get		@6				
+ascs_a_pid_get		@7				
+ascs_a_tty_get		@8				
+ascs_a_user_get		@9				
+ascs_act_detail_get		@10				
+ascs_activity_get		@11				
+ascs_assoc_get		@12				
+ascs_attn		@13				
+ascs_avformat		@14				
+ascs_chk_priv		@15				
+ascs_clear		@16				
+ascs_crash_sess_set		@17				
+ascs_dblockmode_get		@18				
+ascs_declare		@19				
+ascs_description_get		@20				
+ascs_disable		@21				
+ascs_disassoc		@22				
+ascs_dispatch_query		@23				
+ascs_enable		@24				
+ascs_facility		@25				
+ascs_facility_name_get		@26				
+ascs_fhandler		@27				
+ascs_format		@28				
+ascs_format_ice_header		@29				
+ascs_format_ice_response		@30				
+ascs_format_response		@31				
+ascs_format_scanid		@32				
+ascs_format_tuple		@33				
+ascs_format_tuples		@34				
+ascs_gca_clear_outbuf		@35				
+ascs_gca_data_available		@36				
+ascs_gca_error		@37				
+ascs_gca_flush		@38				
+ascs_gca_flush_outbuf		@39				
+ascs_gca_get		@40				
+ascs_gca_outbuf		@41				
+ascs_gca_put		@42				
+ascs_gca_recv		@43				
+ascs_gca_send		@44				
+ascs_get_next_token		@45				
+ascs_gwinfo_subget		@46				
+ascs_i_interpret		@47				
+ascs_iformat		@48				
+ascs_initiate		@49				
+ascs_mo_init		@50				
+ascs_msequencer		@51				
+ascs_pid_get		@52				
+ascs_process_close		@53				
+ascs_process_fetch		@54				
+ascs_process_interrupt		@55				
+ascs_process_query		@56				
+ascs_process_request		@57				
+ascs_query_get		@58				
+ascs_remove_sess_set		@59				
+ascs_save_tdesc		@60				
+ascs_scb_attach		@61				
+ascs_scb_detach		@62				
+;ascs_seclabel_get		@63				
+ascs_self_get		@64				
+ascs_sequencer		@65				
+ascs_terminate		@66				
+ascs_tuple_len		@67				
+asct_flush_set		@68				
+asct_get_buf		@69				
+asct_initialize		@70				
+asct_logfile_set		@71				
+asct_logmsgsize_set		@72				
+asct_logsize_set		@73				
+asct_start_set		@74				
+asct_suspend_set		@75				
+asct_threshold_set		@76				
+asct_trace_event		@77				
+asct_trace_flg		@78				
+asct_tracemask_get		@79				
+asctfl_state_get		@80				
+;sc0e_0_put		@81				
+;sc0e_put		@82				
+sc0m_allocate		@83				
+sc0m_deallocate		@84				
+scc_recv		@85				
+scc_send		@86				
+scd_capabilities_get		@87				
+scd_close_set		@88				
+scd_crash_set		@89				
+scd_listen_get		@90				
+scd_open_set		@91				
+scd_pid_get		@92				
+scd_server_name_get		@93				
+scd_shut_set		@94				
+scd_shutdown_get		@95				
+scd_start_sampler_set		@96				
+scd_state_get		@97				
+scd_stop_sampler_set		@98				
+scd_stop_set		@99				
+scf_call		@100	
+WTSInitialize		@112				
+WTSExecute		@113				
+WTSTerminate		@114				
+WTSCleanup		@115				
+;wcs_loc_class		@116	DATA			
+;wcs_floc_index		@117	DATA			
+html		@120				
+post		@121				
+formatterTab		@122	
+cache_timeout_get	@123	
+cache_wps_counter_get	@124	
+cache_wps_exist_get	@125	
+cache_wps_loc_name_get	@126	
+cache_wps_name_get	@127	
+cache_wps_status_get	@128			
+usr_curs_owner_get	@129
+usr_curs_query_get	@130
+usr_timeout_get		@131
+usr_trans_owner_get	@132
+usr_name_get		@133
+ddc_dbtimeout_get	@134
+ddc_dbname_get		@135
+sc0ePutFcn              @136
+sc0ePutNV               @137
+sc0e_putAsFcn           @138

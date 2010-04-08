@@ -1,0 +1,9 @@
+COPYFORM:	6.4	2003_12_02 15:58:10 GMT  
+FORM:	imp_transaction_hexdump		
+	66	7	0	0	1	0	3	9	0	0	0	0	0	129	0	1
+FIELD:
+	0	lxb_dis_tran_id_hexdump	-21	353	0	378	7	55	0	11	54	0	1		0	0	0	0	0	0	0		c350.54			0	0
+TRIM:
+	0	0	Distributed	0	0	0	0
+	0	1	Transaction	0	0	0	0
+	0	2	Hex Dump:	0	0	0	0

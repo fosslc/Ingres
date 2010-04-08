@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqcompfr.hlp, subtopic 'Compiling and testing frames' of main AFD 
+/#-- help screen.
+/#-- 
+You can compile a frame without running it in order to generate the code and
+make sure that it compiles. You can also test a frame (by selecting 'Go'),
+which both compiles and runs the frame.
+
+  * When you Compile an area of the application, the system regenerates 
+    any code and forms you have changed since the last time you compiled.
+
+  * When you Test an area of the application, the system regenerates any 
+    code and forms you have changed since the last time you compiled, 
+    and then runs the application from the point of the current frame. 
+
+To Compile or Test a frame and any frames below it, move the cursor to the 
+frame and then select the appropriate operation from the menu.  If your 
+cursor is on the top frame, the entire application will be compiled or 
+tested.

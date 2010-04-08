@@ -1,0 +1,117 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* UNIX FRS mapping file for Sun type 5 keyboard with Function Keys */
+/* Designed to use the default key mappings for shelltool/commandtool windows */
+
+/* Menu Key */
+	menu = pf13 (Again)
+
+/* Help facility */
+	frskey1 = pf12 (F12)
+
+/* Exit the system */
+	frskey2 = pf17 (7)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf18 (1)
+
+/* Go or execute function */
+	frskey4 = pf21 (5)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = pf16 (/)
+
+/* Forget and Undo */
+	frskey9 = pf14 (Undo)
+
+/* Bring up List Choices */
+	frskey10 = pf15 (Props)
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlH (^H)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf19 (9)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf20 (3)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf1 (F1)
+
+/* Select second menu item */
+	menuitem2 = pf2 (F2)
+
+/* Select third menu item */
+	menuitem3 = pf3 (F3)
+
+/* Select fourth menu item */
+	menuitem4 = pf4 (F4)
+
+/* Select fifth menu item */
+	menuitem5 = pf5 (F5)
+
+/* Select sixth menu item */
+	menuitem6 = pf6 (F6)
+
+/* Select seventh menu item */
+	menuitem7 = pf7 (F7)
+
+/* Select eighth menu item */
+	menuitem8 = pf8 (F8)
+
+/* Select eighth menu item */
+	menuitem9 = pf9 (F9)
+
+/* Select eighth menu item */
+	menuitem10 = pf10 (F10)
+
+/* Select eighth menu item */
+	menuitem11 = pf11 (F11)
+
+/* Move cursor to next field - defined to controlI in frs.map */
+
+/* Move cursor to previous field - defined to controlP in frs.map */
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field - defined to controlR in frs.map */
+
+/* Switch between insert and overstrike mode - defined to controlE in frs.map */
+
+/* Redraw the screen - defined to controlW in frs.map */
+
+/* Delete the character under the cursor - defined to controlD in frs.map */
+
+/* Delete character immediately to left of cursor */
+/* defined to controlDEL in frs.map */
+
+/* Start default text editor on field - defined to controlV in frs.map */
+
+/* Move to first column of next row in table field */
+/* defined to controlN in frs.map */
+
+/* Clear the field - defined to controlX in frs.map */
+
+/* Clear out the rest of the field, and move to next field */
+/* defined to controlM in frs.map */
+
+/* Auto-duplicate value while in fill mode - defined to controlA in frs.map */
+
+/* Escape to shell */
+	shell = controlB (^B)

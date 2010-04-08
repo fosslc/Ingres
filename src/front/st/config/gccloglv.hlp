@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The log_level resource specifies the logging level for the Net Server. If 
+  a high value is set, then all appropriate messages for the currently set 
+  level, plus all of the messages provided by lower levels will also be 
+  reported.
+
+  The default level is 4.

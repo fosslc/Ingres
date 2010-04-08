@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may specify the sort direction for the current column.  
+The sort direction is used only for columns with a non-zero sort sequence.   
+
+To specify a sort direction, scroll to the desired direction, and choose the 
+Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Ascending	Sort the data based on this column in ascending order.
+	Descending	Sort the data based on this column in descending order.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select	        Sort the current column in the specified direction.
+			
+        Cancel          Return to the Column Options frame without selecting 
+			a sort direction.
+
+        Help            Print this message.

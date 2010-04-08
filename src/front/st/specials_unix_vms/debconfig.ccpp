@@ -1,0 +1,178 @@
+/*
+** Copyright (c) 2007, 2008 Ingres Corporation
+*/
+/*
+**
+** DEB Control file configuration
+**
+** Generate DEB control files from template spec files using the
+** options listed here.
+**
+*******
+** Referenced files:
+**  ${deb_basename}[-${deb_specname}].template
+**
+** Generated files:
+**  ${deb_basename}-${deb_version}[-${deb_specname}][-${deb_release}].spec
+**
+** Referenced files (generated spec files and their references) are
+** located under:
+**  BUILDROOT/${deb_prefix}/<ingres manifest file path+name>
+**
+** History:
+**	06-Jun-2007 (hanje04)
+**	    SIR 118420
+**	    Created.
+**	10-Mar-2008 (bonro01)
+**	    Include Spatial object package into standard ingbuild, RPM and DEB
+**	    install images instead of having a separate package.
+**      11-Aug-2008 (hweho01)
+**          Change product name from Ingres 2006 to Ingres.
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Hybrid add-on symbol changed, fix here.  Use BUILD_ICE.
+*/
+
+
+/* packaging tool info */
+$sub %summary_tag% <skip>
+$sub %priority_tag% Priority:
+$sub %pkgname_tag% Package:
+$sub %version_tag% Version:
+$sub %release_tag% <skip>
+$sub %license_tag% <skip>
+$sub %group_tag% Section:
+$sub %source_tag% <skip>
+$sub %patch_tag% <skip>
+$sub %maintainer_tag% Maintainer:
+$sub %url_tag% <skip>
+$sub %buildroot_tag% <skip>
+$sub %prefix_tag% <skip>
+$sub %rpmprereq_tag% <skip>
+$sub %autoreq_tag% <skip>
+$sub %define_tag% <skip>
+$sub %debprereq_tag% Pre-Depends:
+$sub %provides_tag% Provides:
+$sub %replaces_tag% Replaces:
+$sub %rpm_descrip_tag% <skip>
+$sub %deb_descrip_tag% Description:
+$sub %arch_tag% Architecture:
+/* dummy tag, value replaced with list */
+$sub %pkg_sulist% setuplist
+
+/* product info */
+$sub %product_name% (PROD1NAME)
+$sub %product_brandname% Ingres
+$sub %product_version% 9
+$sub %product_release% 3.0
+$sub %rpm_product% (PROD1NAME) Business Open Source Database
+$sub %rpm_basename% (PROD_PKGNAME)
+$sub %rpm_version% 9.3.0-110
+$sub %rpm_release% 110
+$sub %rpm_doc_prefix% /usr/share/doc
+$sub %rpm_vendor% Ingres Corporation <support@ingres.com>
+$sub %rpm_license% gpl
+$sub %rpm_copyright% Copyright © 2005-2008 Ingres Corporation. All Rights Reserved.
+$sub %rpm_group% Applications/Databases
+$esub %deb_arch% unamem
+
+/* package info */
+$spec
+$feature basic
+$feature setupsup
+$feature config
+$feature generr
+$feature formtool
+$feature tm
+$feature qr_run
+$feature esqlsup
+$feature esqlc
+$feature esqlcc
+# ifdef R_ADA
+$feature esqlada
+# endif /* R_ADA */
+# ifdef R_COBOL
+$feature esqlcob
+# endif /* R_COBOL */
+# ifdef R_FORTRAN
+$feature esqlfor
+# endif /* R_FORTRAN */
+# ifdef R_PASCAL
+$feature esqlpas
+# endif /* R_PASCAL */
+
+
+$spec i18n
+$feature i18n
+
+#ifdef R_EMBEDDED
+$spec EI
+$feature basic
+$feature setupsup
+$feature config
+$feature generr
+$feature formtool
+$feature tm
+$feature basic
+#endif
+
+$spec dbms
+$feature dbms
+$feature dbatools
+$feature demodb
+$feature montools
+$feature rmcmd
+$feature uadtsup
+$feature tuxedo
+# ifdef R_OME
+$feature ome
+# endif /* R_OME */
+$feature c2audit
+# ifdef R_SPATIAL
+$feature spatial
+# endif /* SPATIAL */
+
+$spec abf
+$feature abf
+$feature vision
+
+# ifdef R_NET
+$spec net
+$feature net
+$feature das
+# ifdef R_BRIDGE
+$feature bridge
+# endif /* R_BRIDGE */
+# endif /* R_NET */
+
+# ifdef R_STAR
+$spec star
+$feature star
+# endif /* R_STAR */
+
+# ifdef R_REPLIC
+$spec rep
+$feature rep
+# endif /* R_REPLIC */
+
+#if defined(conf_BUILD_ICE)
+$spec ice
+$feature ice
+#endif
+
+# ifdef R_ODBC
+$spec odbc
+$feature odbc
+# endif /* R_ODBC */
+
+$spec documentation
+$feature documentation
+
+# ifdef R_MDB
+$spec mdb
+$feature mdb
+# endif
+
+# ifdef conf_BUILD_ARCH_64_32
+$spec 32bit
+$feature supp32
+# endif

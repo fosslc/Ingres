@@ -1,0 +1,763 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<cv.h>		 
+# include	<lo.h>
+# include	<nm.h>
+# include	<si.h>
+# include	<st.h>
+# include	<ex.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ooclass.h>
+# include	<cu.h>
+# include	<ui.h>
+# include	<ug.h>
+# include	"ercu.h"
+# include	"cuesc.h"
+
+FUNC_EXTERN     STATUS  IIUICheckDictVer();
+
+char		*cu_gettok();
+CURECORD	*cu_recfor();
+STATUS		cu_conflict();
+STATUS		cu_addobj();
+STATUS		cu_gbfadd();
+STATUS		IICUidlInsertDetailLine();
+STATUS		cu_encadd();
+i4		(*IIseterr())();
+
+/*{
+** Name:	CU_RDOBJ - read in a file containing FE objects
+**
+** Description:
+**	Reads an intermediate file containing definitions for one or more FE
+**	objects and writes them to the open database.  Any memory allocated
+**	by this routine is allocated under the current tag.
+**
+** Input params:
+**	filename	name of file containing specs.
+**	hdrname		The name to write in the copyfile header.
+**	conflict	A CUCONFLICT containing the information about
+**			when to check for a conflict and the routine
+**			to call on a conflict.
+**	addfunc		the function to call before a new object is
+**			added.
+**
+** Returns:
+**	OK		completed successfully.
+**	FAIL		did not complete successfully.
+**
+** Side Effects:
+**	Allocates memory using the current tag.
+**
+** Pseudocode:
+**	open intermediate file.
+**	read first record of intermediate file.
+**	IF version incompatible
+**		close intermediate file.
+**		create new format intermediate file (cu_convto60).
+**		open new intermediate file.
+**		read first record of intermediate file.
+**	ENDIF
+**
+**	IF there is an object name clash
+**		resolve user overwrite intentions.
+**		IF overwrite not desired
+**			return.
+**		ENDIF
+**	ENDIF
+**
+**	WHILE not end of file
+**		read record.
+**		determine record type.
+**		write record to appropriate catalog.
+**
+**	END PROCEDURE
+**
+** History:
+**	8/2/83 (ps)	written.
+**	10/5/84 (agh)	Eliminated reference to fldummy field in fdfields 
+**			catalog.
+**	06/12/85 (jrc)	Modified to look for versions after the names of the 
+**			catalogs.  Currently only knows about version 3.0 or 
+**			no version present.  Only the QBFMAP is changed.
+**	06/12/85 (scl)	Restructured some stuff to make it easier for CMS to 
+**			massage the filenames. (Also changed the temp 
+**			filenames so they will not exceed 8 characters.)
+**	10/27/85 (prs)	Change cu_readln to SIgetrec.
+**	11/04/85 (prs)	Fix bugs with reading in files.
+**	17-Apr-87 (rld)	Modified to use new FE catalogs (ii_..); tuple must
+**			be placed in ii_objects for each form, qbfname and
+**			joindef to be copied.  Fixed to correctly resolve
+**			namespace for associated qbfnames and joindefs.
+**			(Previously qbfnames and joindefs were copied only
+**			if they has the same owner as the form).
+**	26-jun-1987 (Joe)
+**		Modified to by used by the copyutil directory.
+**	4-aug-1987 (Joe)
+**		Added conflict and addfunc.
+**	18-dec-1987 (Joe)
+**		Fixes for BUG 1599.  See below for details.
+**	3-mar-1988 (Joe)
+**		Changed how transactions are used.  Now, calls to add object
+**		routines will start a transaction at the appropriate
+**		time.  This routine will end it.
+**	03/16/88 (dkh) - Added EXdelete call to conform to coding spec.
+**	21-jun-1988 (danielt)
+**		Fix for jupbug #2785 only end transaction if there is
+**		one current.
+**	05-sep-88 (kenl)
+**		Changed QUEL to SQL.
+**	06/89 (jhw) -- Added check for valid record type.  JupBug #6466.
+**	03/90 (jhw) -- Added check for E_CU000A from 'iicuChkHdr()' to support
+**		minor version's backwards compatibility.
+**	19-jun-91 (blaise)
+**		Do not attempt to copy in a table which is (a) an extended
+**		system catalog, and therefore optional, and (b) does not exist
+**		in the destination database. Bug #37986.
+**	24-jun-91 (blaise)
+**		Enhancements to the above change; (i) only issue a single
+**		warning message; (ii) if the destination database doesn't
+**		support Vision, copy Vision frame types in as ABF user frames;
+**		(iii) rather than check the existence of each Vision-specific
+**		table in the destination database, make a single check to see
+**		whether the destination database's dictionary will support
+**		Vision.
+**      3-jul-91 (blaise)
+**              Added FUNC_EXTERN declaration for IIUICheckDictVer.
+**	17-aug-91 (leighb) 
+**		DeskTop Porting Change: added missing EXdelete()'s.
+**	27-jan-92 (davel) Bug 41002
+**		Move VISION check outside of the read loop.
+**	10/11/92 (dkh) - Removed readonly qualification on references
+**			 declaration to iiCUescExtSysCatalogs.  Alpha
+**			 cross compiler does not like the qualification
+**			 for globalrefs.
+**	7-jan-93 (blaise)
+**		From version 6.5 we no longer attempt to convert pre-6.0
+**		intermediate files: changed the code accordingly.
+**	15-mar-93 (fraser) - Desktop porting change
+**		Changed "errno" to "errnum" because "errno" is reserved
+*		and conflicts with Microsoft library.
+**      10-sep-93 (kchin)
+**              Make sure we check for the CURECORD return from cu_recfor()
+**              first (under "case CU_OBJECT", in cu_rdobj()) before we work 
+**		on other things, this can prevent error such as calling 
+**		STcopy() with a null pointer.  Fixed by rearranging the
+**		source codes to check objrec returned is NULL first.
+**	28-mar-95 (peeje01)
+**		Cross integration from doublebyte label 6500db_su4_us42:
+** **		17-feb-1994 (twai)
+** **		    If CUREC is equal to null, this means there is a bad
+** **		    record in file, should exit rather than continue as
+** **		    it may cause core in ther functions.
+**     24-jun-98 (hweho01) 
+**              For DG/UX, if CUREC returned from cu_recfor() is NULL       
+**              the subsequent referencing will cause SIGSEGV. The 
+**              process should exit immediately. 
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      13-Oct-2008 (hanal04) Bug 120290
+**          The first detail line of an OC_AFORMREF record contains the
+**          abf_source value. This was a generated value that matched the
+**          object_id. Set cuupdabfsrc to TRUE for these fields to ensure
+**          The written record has an updated abf_source to match it's new
+**          object_id.
+*/
+
+static STATUS	handstatus	= OK;
+static FILE	*handfp		= NULL;
+
+static i4	abortprotect();
+
+STATUS
+cu_rdobj(filename, hdrname, conflict, addfunc)
+char		*filename;
+char		*hdrname;
+CUCONFLICT	*conflict;
+STATUS		(*addfunc)();
+{
+	GLOBALREF CUESC	iiCUescExtSysCatalogs[];
+
+	bool		addobj = TRUE;
+	bool		novision = FALSE;
+	bool		goodfile;
+	char		inbuf[CU_LINEMAX];		/* character buffer */
+	char		objname[FE_MAXNAME+1];
+	OOID		class;
+	OOID		curr_id;
+	bool		goodcopy;
+	i4		(*savefunc)();
+	i4		majv;
+	i4		minv;
+	bool		swap;
+
+	LOCATION	loc_forms;
+	FILE		*fp;
+	char            loc_buf[MAX_LOC];
+	CURECORD	*curec;
+	CURECORD	*objrec;	/* CURECORD for object line */
+	IDSTACK		ids;
+	i4		level;
+	i4		currentlevel = -1;
+	STATUS		rval;
+	EX_CONTEXT	context;
+	CUESC		*opt_cat;	/* Extended system catalogs */
+
+	STATUS		cuhand();
+        bool		formsrc = FALSE;
+	
+	IIOOinit((OO_OBJECT **)NULL);
+	/* Open intermediate file */
+	if ( LOfroms(PATH & FILENAME, filename, &loc_forms) != OK  ||
+			SIopen(&loc_forms, ERx("r"), &fp) != OK )
+	{
+	    IIUGerr(E_CU0002_CANNOT_READ_FILE, 0, 1, (PTR) filename);
+	    return E_CU0002_CANNOT_READ_FILE;
+	}
+
+	/* get first record */
+	if (SIgetrec(inbuf, CU_LINEMAX, fp) == ENDFILE)
+	{
+		SIclose(fp);
+		return FAIL;
+	}
+
+	handstatus = FAIL;
+	handfp = fp;
+	if (EXdeclare(cuhand, &context) != OK)
+	{
+	    EXdelete();
+
+	    /*
+	    ** If the transaction was aborted by the dbms, then
+	    ** the abort statement will get an error.
+	    ** abortprotect ignores any error so it isn't printed.
+	    */
+	    savefunc = IIseterr(abortprotect);
+
+	    /* abort transaction */
+	    IIUIabortXaction();
+
+	    _VOID_ IIseterr(savefunc);
+	    iiuicw0_CatWriteOff();	/* In case it is turned on. */
+	    return handstatus;
+	}
+	/*
+	** Check if file is appropriate version.
+	*/
+	rval = iicuChkHdr(hdrname, inbuf, &majv, &minv);
+	switch(rval)
+	{
+	case CU_CMPAT:
+		/* compatible version */
+		rval = OK;
+		break;
+	case  CU_FAIL:
+		/* intermediate file has a bad first line */
+		IIUGerr(E_CU0013_BAD_FORMAT, UG_ERR_ERROR, 1, (PTR)filename);
+		return rval;
+	case CU_UPWD:
+		/* intermediate file version is newer than copyapp version */
+		IIUGerr(E_CU000A_NOT_COMPATIBLE, UG_ERR_ERROR, 1,
+			(PTR)filename);
+		return rval;
+	case CU_NOCNV:
+		/* intermediate file is pre-6.0; we no longer convert */
+		IIUGerr(E_CU0015_OLD_VERSION, UG_ERR_ERROR, 1, (PTR)filename);
+		return rval;
+	}
+
+	/* scan away first token (does this really matter ?) */
+	cu_gettok(inbuf);
+
+	IICUicsInitConflictState(conflict);
+	if ((rval = cu_conflict(filename, conflict)) != OK)
+	{
+	    EXdelete();				 
+	    return rval;
+	}
+
+	class = OC_UNDEFINED;
+	curec = NULL;
+	initid(&ids);
+
+	/*
+	** Check whether the destination database's dictionary will
+	** support Vision - this is used in 2 places inside the for loop below.
+	*/
+	if (IIUICheckDictVer(ERx("VISION"), FE_VISIONVER) != OK)
+	{
+		novision = TRUE;
+	}
+
+	for(;;)
+	{
+	    i4	rectype;
+	    i4	kindof;
+
+	    /* read until end of file reached */
+	    rectype = (SIgetrec(inbuf, CU_LINEMAX, fp) == ENDFILE) ? 
+	      CU_EOF : cu_rectype(inbuf);
+
+	    /*
+	    ** If vision not supported, we want to copy Vision-specific menu,
+	    ** browse, append and update frames in as ABF user frames.
+	    */
+	    if (novision)
+	    {
+		if (rectype == OC_MUFRAME || rectype == OC_APPFRAME ||
+			rectype == OC_UPDFRAME || rectype == OC_BRWFRAME)
+		{
+			rectype = OC_OSLFRAME;
+		}
+	    }
+	
+	    /*
+	    ** new object encountered (or EOF), write appropriate message
+	    ** for last object.
+	    */
+	    kindof = cu_kindof(rectype);
+	    if ((kindof == CU_OBJECT
+		 || kindof == CU_GBFSTYLE
+		 || kindof == CU_ENCODING
+		 || rectype == CU_EOF)
+		 && class != OC_UNDEFINED )
+	    {
+                if (rectype == OC_AFORMREF)
+                {
+                    formsrc = TRUE;
+                }
+                else
+                {
+                    formsrc = FALSE;
+                }
+
+		if (goodcopy)
+		{
+		    /*
+		    ** objrec is the CURECORD for the OBJECT line.
+		    ** At this point all the components for the object
+		    ** have been added, so if there is any post add function
+		    ** to call, call it.
+		    ** BUG 1599
+		    ** Only call it if the object was added.
+		    */
+		    if (addobj && objrec->cupostadd != NULL)
+		    {
+			(*objrec->cupostadd)(class, level, objname, &ids);
+		    }
+
+		    if (FEinMST())
+		    {
+		    	/* end transaction */
+		    	IIUIendXaction();
+		    }
+		}
+		else
+		{
+		    /*
+		    ** If the transaction was aborted by the dbms, then
+		    ** the abort statement will get an error.
+		    ** abortprotect ignores any error so it isn't printed.
+		    */
+		    savefunc = IIseterr(abortprotect);
+
+	    	    /* abort transaction */
+		    IIUIabortXaction();
+
+		    _VOID_ IIseterr(savefunc);
+		}
+		/*
+		** BUG 1599
+		** If the object wasn't added because of
+		** a conflict then we don't want to print a message.
+		** In this case, addobj will be FALSE.
+		** However, if goodcopy is FALSE, there was some sort of
+		** error while doing the copy.  In this case, I'll assume
+		** that the value in addobj is not valid so the check
+		** to see whether to print is slightly more complicated.
+		*/
+		if (!goodcopy || addobj)
+		    cu_msgptr(class, objname, goodcopy);
+	    }
+            else
+            {
+                if((rectype == OC_AFORMREF) && (class == OC_UNDEFINED))
+                {
+                    formsrc = TRUE;
+                }
+                else
+                {
+                    /* A new/1st object, continuation of existing */
+                    if(formsrc && curec && (kindof == CU_DETAIL))
+                    {
+                        curec->cuupdabfsrc = TRUE;
+                    }
+                    else
+                    {
+                        if(rectype != OC_AFORMREF)
+                        {
+                           formsrc = FALSE;
+                           if(curec != NULL)
+                               curec->cuupdabfsrc = FALSE;
+                        }
+                    }
+                }
+            }
+	
+	    if (rectype == CU_EOF)
+	    /* end of file */
+		break;
+
+	    /* add tuple to appropriate relation */
+	    switch (cu_kindof(rectype))
+	    {
+	      case CU_OBJECT:
+	      {
+		    char	*short_remark;
+		    char	*long_remark;
+
+		    objrec = curec = cu_recfor(rectype);
+
+		    if ( objrec == NULL )
+		    { /* bad record type */
+			i4	errparam;
+
+			errparam = class;
+			IIUGerr( E_CU0001_UNKNOWN_CLASS, 0,
+					2, (PTR) &errparam, (PTR)ERx("cu_rdobj")
+			);
+
+# if defined(dg8_us5) || defined(dgi_us5)
+
+			SIclose(fp);
+			iiuicw0_CatWriteOff();	/* In case it is turned on. */
+			EXdelete();				 
+			FEexits((char *)NULL);
+			PCexit(FAIL);
+# else
+
+# ifndef DOUBLEBYTE
+			goodcopy = FALSE;
+			break;
+# else
+
+			/*
+			** goodcopy = FALSE;
+			** break;
+			*/
+			/* 
+			** Should exit from the appliction rather than
+			** continue.
+			** Added the following lines. (twai)
+			*/
+
+			/* close intermediate file */
+			SIclose(fp);
+
+			iiuicw0_CatWriteOff();	/* In case it is turned on. */
+			EXdelete();				 
+			FEexits((char *)NULL);
+			PCexit(FAIL);
+# endif /* #ifndef DOUBLEBYTE */
+
+# endif  /* defined(dg8_us5) || defined(dgi_us5)  */
+		    }
+
+		    cu_gettok(inbuf);
+		    CVan(cu_gettok((char *)NULL), &level);
+		    STcopy(cu_gettok((char *)NULL), objname);
+		    class = rectype;
+		    short_remark = cu_gettok((char *)NULL);
+		    long_remark = cu_gettok((char *)NULL);
+
+		    if (cu_addobj(class, level, short_remark, long_remark,
+			addfunc, objname, &curr_id, conflict, &addobj) != OK)
+		    {
+			goodcopy = FALSE;
+			break;
+		    }
+		    goodcopy = TRUE;
+		    if (level == currentlevel)
+		    {
+			popid(&ids);
+			pushid(&ids, curr_id);
+		    }
+		    else if (level > currentlevel)
+		    {
+			if (currentlevel != level - 1)
+			{
+			    i4	errparam;
+
+			    iiuicw0_CatWriteOff();/* In case it is turned on. */
+			    errparam = class;
+			    IIUGerr(E_CU0008_OUT_OF_ORDER, 0, 2,
+					(PTR) objname, (PTR) &errparam);
+			    EXdelete();			 
+			    return E_CU0008_OUT_OF_ORDER;
+			}
+			pushid(&ids, curr_id);
+		    }
+		    else
+		    {
+			register i4	i;
+
+			for (i = 0; i <= currentlevel - level; i++)
+			    popid(&ids);
+			pushid(&ids, curr_id);
+		    }
+		    currentlevel = level;
+		    break;
+	      }
+	  
+	      case CU_GBFSTYLE:
+	      {
+		register i4	i;
+
+		level = 0;
+		for (i = 0; i < currentlevel - level; i++)
+		    popid(&ids);
+		currentlevel = 0;
+		cu_gettok(inbuf);
+		class = rectype;
+		STcopy(cu_gettok((char *)NULL), objname);
+		if (cu_gbfadd(rectype, addfunc, objname, cu_gettok((char *)NULL),
+		    conflict, &addobj) != OK)
+		{
+		    goodcopy = FALSE;
+		    break;
+		}
+		curec = cu_recfor(rectype);
+		objrec = curec;
+		break;
+	      }
+
+	      case CU_DETAIL:
+	      {
+		i4		table;
+		/*
+		** exist/nonexist: bit strings representing tables which are
+		** already known to exist/not to exist in the destination
+		** database
+		*/
+		static i4	exist = 0x0;
+		static i4	nonexist = 0x0;
+		static bool	issued_message = FALSE;
+		bool		ignore = FALSE;
+
+		/*
+		** search through iiCUescExtSysCatalogs to see whether the
+		** table we want to copy in is an extended system catalog and
+		** therefore doesn't have to exist in the destination database
+		*/
+		for (opt_cat = iiCUescExtSysCatalogs;
+			(table = opt_cat->cuescid) != CU_BADTYPE &&
+			STcompare(opt_cat->cuescname, curec->cutable) != 0;
+			++opt_cat)
+		{
+			;
+		}
+
+		/*
+		** if the table is optional and the destination database
+		** doesn't have the Vision catalogs then we don't want to
+		** attempt to copy it in.
+		*/
+		if (table != CU_BADTYPE && (novision))
+		{
+			ignore = TRUE;
+			if (!issued_message)
+			{
+				issued_message = TRUE;
+				IIUGerr(opt_cat->cuescmsg, 0, 1,
+						opt_cat->cuescname);
+			}
+		}
+		
+		/*
+		** If there is a special insert function
+		** for this then do it, otherwise use
+		** the generic one.
+		*/
+		if (addobj && goodcopy && !ignore)
+		{
+		    if (curec->cuinsert == NULL)
+		    {
+			if (IICUidlInsertDetailLine(curec, inbuf, &ids) != OK)
+			    goodcopy = FALSE;
+		    }
+		    else
+		    {
+			if ((*curec->cuinsert)(curec, inbuf, &ids) != OK)
+			    goodcopy = FALSE;
+		    }
+		}
+		break;
+	      }
+
+	      case CU_COMPONENT:
+		curec = cu_recfor(rectype);
+		break;
+	    
+	      case CU_ENCODING:
+	      {
+		register i4	i;
+		i4		size;
+
+		/*
+		** Encodings add a new object.
+		*/
+		level = 0;
+		for (i = 0; i < currentlevel - level; i++)
+		    popid(&ids);
+		currentlevel = 0;
+		cu_gettok(inbuf);
+		STcopy(cu_gettok((char *)NULL), objname);
+		CVal(cu_gettok((char *)NULL), &class);
+		CVan(cu_gettok((char *)NULL), &size);
+		curec = cu_recfor(rectype);
+		objrec = curec;
+		if (cu_encadd(class, size, addfunc, conflict, fp,
+				objname, &curr_id, &addobj) != OK)
+		{
+			goodcopy = FALSE;
+		}
+		break;
+	      }
+	    }
+	}
+
+	/* close intermediate file */
+	SIclose(fp);
+
+	iiuicw0_CatWriteOff();	/* In case it is turned on. */
+	EXdelete();				 
+	return (OK);
+}
+
+/*{
+** Name:	initid		- Initialize an IDSTACK
+**
+** Description:
+**	Initializes an IDSTACK by setting the top to -1.
+**
+** Inputs:
+**	ids		The IDSTACk.
+**
+** History:
+**	3-jul-1987 (Joe)
+**		Initial Version
+*/
+initid(ids)
+IDSTACK	*ids;
+{
+    ids->idtop = -1;
+}
+
+/*{
+** Name:	pushid		- Push an id on the id stack.
+**
+** Description:
+**	This pushes a new id on the id stack.
+**
+** Inputs:
+**	ids		The IDSTACK.
+**
+**	id		The id to push on the stack.
+**
+** History:
+**	3-jul-1987 (Joe)
+**		Initial Version
+*/
+pushid(ids, id)
+IDSTACK	*ids;
+OOID	id;
+{
+    if (ids->idtop == CU_LEVELMAX)
+    {
+	/* ??? */
+	return;
+    }
+    ids->idstk[++(ids->idtop)] = id;
+}
+
+/*{
+** Name:	popid		- Remove an item from an IDSTACK.
+**
+** Description:
+**	Removes an item from an IDSTACK.
+**
+** Inputs:
+**	ids		The IDSTACK.
+**
+** History:
+**	3-jul-1987 (Joe)
+*/
+popid(ids)
+IDSTACK	*ids;
+{
+    if (ids->idtop == -1)
+    {
+	/* ?? */
+	return;
+    }
+    ids->idtop--;
+}
+
+/*{
+** Name:	cuhand		- Handler for object utility
+**
+** Description:
+**	The handler for the object utility.
+**	The copy utility only issues a EXFEBUG of 1 argument.
+**	The argument values used are:
+**		CUQUIT
+**
+**	If the handler recognizes the argument it does a DECLARE
+**	which allows curdobj to return.  If it doesn't recognize
+**	if it RESIGNALs.
+**
+** Inputs:
+**	exarg		The exception arguments.
+**
+** Side Effects:
+**	Closes the file used by curdobj.
+**
+** History:
+**	6-aug-1987 (Joe)
+*/
+STATUS
+cuhand(exarg)
+EX_ARGS	*exarg;
+{
+    if (exarg->exarg_num == EX_UNWIND)
+	SIclose(handfp);
+    if (exarg->exarg_num == EXFEBUG && exarg->exarg_count == 1)
+    {
+	handstatus = (STATUS) exarg->exarg_array[0];
+	if (handstatus == CUQUIT)
+	{
+	    SIclose(handfp);
+	    return EXDECLARE;
+	}
+    }
+    return EXRESIGNAL;
+}
+
+static i4
+abortprotect(errnum)
+i4	errnum;
+{
+    return 0;
+}

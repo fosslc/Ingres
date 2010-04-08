@@ -1,0 +1,283 @@
+/*
+**  getrel.qsc
+**
+**  get the frame associated with a relation
+**  call john's routines  qbfinittbl and qfqbffrm
+**
+**  Copyright (c) 2004 Ingres Corporation
+**
+**  History:
+**	01/02/85 (drh)	Changed MEcalloc to FEcalloc
+**	3-oct-86 (bab)	fix for bugs 8491, 9065
+**		Prevent creation of forms with the number of
+**		display objects greater than MQ_MAXATTS (the size of
+**		a MQATTRIBS struct).
+**	14-oct-86 (bab)
+**		Prevent creation of forms with tablefields with
+**		the number of columns greater than DB_MAX_COLS	(said
+**		creation being accomplished via create/table/tablefields.)
+**	03/22/87 (dkh) - Added support for ADTs and changed vfqbf.h.
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	08/14/87 (dkh) - ER changes.
+**	03-dec-87 (bab)
+**		Changed from .c to .qsc file; include .qsh files
+**	01-feb-88 (sylviap)
+**		Fixed an error message.
+**	23-feb-88 (sylviap)
+**		When reading in a table, lower case the internal field names.
+**	29-feb-88 (sylviap)
+**		Lower case the frame name.
+**	20-jul-88 (kenl)
+**		Bug fix 2191.  The mandatory attribute is now set for
+**		fields whose underlying column is NOT NULL NOT DEFAULT.
+**		The field indicating this (vfqfmand in VFQFATT structure)
+**		is copied to its corresponding ATTRIBINFO structure.
+**	12/23/89 (dkh) - Added support for owner.table.
+**      06/12/90 (esd) - Make the member frmaxx in FRAME during vifred
+**                       include room for an attribute byte to the left
+**                       of the end marker, as well as the end marker.
+**                       (We won't always insert this attribute
+**                       before the end marker, but we always leave
+**                       room for it).
+**      10/08/90 (steveh) - Added missing third argument of 0 to STindex
+**			    call.  
+**	10/14/90 (emerson) - Added support for logical keys (bug 8593):
+**		Set lkeyinfo in ATTRIBINFO to indicate whether 
+**		column is a logical key, and, if so, whether it's
+**		system-maintained or user-maintained.
+**		Also initialize new fields join_att and join_seqno.
+**	09/20/92 (dkh) - Added support for owner.table.
+**	02/18/93 (dkh) - Fixed code to handle the case where all table
+**			 columns are based on unsupported datatypes.
+**	08/31/93 (dkh) - Fixed up compiler complaints due to prototyping.
+**	23-feb-1994 (rdrane)
+**		Use IIUGfnFeName() to derive the form name so that we can
+**		support tables whose names are delimited identifiers (b57666).
+**		This was overlooked for the call to mq_makefrm().
+**      15-jan-1996 (toumi01; from 1.1 axp_osf port)
+**              Added kchin's changes (from 6.4) for axp_osf
+**              10/15/93 (kchin)
+**              Cast argument to PTR when calling FEmsg(), this
+**              is due to the change of datatype of variable parameters
+**              to PTR in FEmsg() routine.  The change here is made in
+**              vfgetRelFrame().
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"decls.h"
+# include	<qg.h>
+## include	<mqtypes.qsh>
+# include	"vfqbf.h"
+# include	<er.h>
+# include	"ervf.h"
+# include	<st.h>
+# include	<ug.h>
+
+GLOBALREF	i4		tblfield;
+GLOBALREF	i4		qdef_type;
+GLOBALREF	char		mq_tbl[];
+
+FUNC_EXTERN	VOID		IIVFbtnBrkTblName();
+FUNC_EXTERN	FRAME		*mq_makefrm();
+
+
+FRAME *
+vfgetRelFrame(nlist, olist, num, istable)
+LIST	*nlist;
+LIST	*olist;
+i4	num;
+bool	istable;
+{
+	struct vfqftbl	**tblarr,
+			**tbl;
+	FRAME		*rval;
+	MQQDEF		qdef;
+	RELINFO		**rels;
+	ATTRIBINFO	**atts;
+	i4		numatts;
+	i4		tblwidth;
+	i4		i;
+	i4		j;
+	RELINFO		*rel;
+	VFQFTBL		*qrel;
+	ATTRIBINFO	*att;
+	VFQFATT		*qatt;
+	char		fename[FE_MAXNAME + 1];
+	bool		bad_dtype_found;
+	i4		total_fields = 0;
+
+	if ((tblarr = (struct vfqftbl **)FEreqmem((u_i4)0,
+	    (u_i4)(num * sizeof(struct vfqftbl *)),
+	    TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("vfgetRelFrame"));
+	}
+
+	bad_dtype_found = FALSE;
+
+	for (tbl = tblarr; nlist != NULL;
+		nlist = nlist->lt_next, olist = olist->lt_next)
+	{
+		/*
+		**  We are assuming that vfinittbl() and whoever
+		**  it calls, can handle table references of
+		**  the form "owner.table".
+		*/
+		*tbl = vfinittbl(nlist->lt_feat, olist->lt_feat);
+		if (*tbl == NULL)
+		{
+			return(NULL);
+		}
+		if ((*tbl)->vfqfflags & VFQF_BAD_DTYPE)
+		{
+			bad_dtype_found = TRUE;
+		}
+		total_fields += (*tbl)->vfqfldno;
+		tbl++;
+	}
+
+	if (bad_dtype_found)
+	{
+		if (total_fields == 0)
+		{
+			IIUGerr(E_VF0178_ALL_COLS_UNSUP, UG_ERR_ERROR, 0);
+			return(NULL);
+		}
+		else
+		{
+			IIUGerr(E_VF0172_BAD_DTYPE_FOUND, UG_ERR_ERROR, 0);
+		}
+	}
+
+	/* convert tblarr to rels & attribs */
+
+	rels = qdef.mqtabs;
+	atts = qdef.mqatts;
+	numatts = 0;
+	for (i = 0; i < num; i++)
+	{
+		qrel = tblarr[i];
+		if ((rels[i] = (RELINFO *)FEreqmem((u_i4)0,
+		    (u_i4)sizeof(RELINFO), TRUE, (STATUS *)NULL)) == NULL)
+		{
+			IIUGbmaBadMemoryAllocation(ERx("vfgetRelFrame"));
+		}
+
+		rel = rels[i];
+		STcopy(qrel->vfqfrel, rel->mqrelid);
+		STcopy(qrel->vfqfrel, rel->mqrangevar);
+		rel->mqtype = 0;
+		for (j = 0, qatt = qrel->vfqflds; j < qrel->vfqfldno;
+		     j++, qatt++, numatts++)
+		{
+			/* disallow creation of forms with too many fields */
+			if (numatts >= MQ_MAXATTS)
+			{
+				FEmsg(ERget(E_VF0079_Unable_to_create_form),
+					TRUE, (PTR)MQ_MAXATTS);
+				MEfree(tblarr);
+				for (i = 0; i < numatts; i++)
+					MEfree(atts[i]);
+				return((FRAME *)NULL);
+			}
+
+			if ((atts[numatts] = (ATTRIBINFO *)FEreqmem((u_i4)0,
+			    (u_i4)sizeof(ATTRIBINFO),
+			    TRUE, (STATUS *)NULL)) == NULL)
+			{
+			    IIUGbmaBadMemoryAllocation(ERx("vfgetRelFrame"));
+			}
+
+			att = atts[numatts];
+			STcopy(qrel->vfqfrel, att->rvar);
+			STcopy(qatt->vfqfname, att->col);
+			/*
+			**  Lower case the internal field names from the
+			**  column names because if running against a gateway,
+			**  it is possible to mave mixed case column names.
+			*/
+			
+			STcopy(qatt->vfqfname, att->formfield);
+			CVlower (att->formfield);
+
+			/* bug 8593
+			** copy logical key info from VFQFATT structure.
+			*/
+			att->lkeyinfo = qatt->lkeyinfo;
+
+			/* bug 2191
+			** copy mandatory indication from VFQFATT structure.
+			*/
+			att->mandfld = qatt->vfqfmand;
+
+			att->ttype = 0;
+			MEcopy((PTR) &(qatt->vfqfdbv),
+				(u_i2)sizeof(DB_DATA_VALUE), (PTR) &(att->dbv));
+			att->opupdate = 1;
+			att->jpart = -1;
+			att->join_att = att;
+			att->join_seqno = -1;
+			att->intbl = istable ? 1 : 0;
+		}
+	}
+
+	qdef.mqnumtabs = num;
+	qdef.mqnumatts = numatts;
+
+	qdef_type = 1;
+	tblfield = istable;
+	STcopy(qdef.mqtabs[0]->mqrelid, qdef.mqcr.name);
+	IIUGfnFeName(qdef.mqcr.name, mq_tbl);
+	/*
+	**  Set up qdef to pass to mq_makefrm and mqgetwidth.
+	**
+	**  We assume that the QBF structures handle owner.table
+	**  references directly.
+	*/
+	tblwidth = mqgetwidth(&qdef);
+	if ((rval = mq_makefrm(&qdef, tblwidth)) == NULL)
+	{
+		FEmsg(ERget(S_VF007A_Unable_to_build_form), TRUE);
+		return(NULL);
+	}
+	if (num > 1)
+	{
+		vforigintype = OT_BLANK;
+	}
+	else
+	{
+		/*
+		**  If we have a table reference of the form
+		**  "owner.table", then break things up into
+		**  their respective components for use at
+		**  save time.
+		**
+		**  We are of course, assuming that qbf can handle
+		**  "owner.table" references directly.
+		*/
+		vforigintype = OT_TABLE;
+	}
+
+	/*
+	**  We now make sure that the form name is an acceptable
+	**  FE name.
+	*/
+	IIUGfnFeName(rval->frname, fename);
+
+	CVlower(fename);
+	STcopy(fename, rval->frname);
+
+	(rval->frmaxx) += 2;
+	return(rval);
+}

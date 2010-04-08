@@ -1,0 +1,87 @@
+/*
+** This makefile has been generated automatically by mwgenmake.
+
+** You may define the following variables:
+** RUN.dir         : the directory where you want the executables to go
+** COMPILE_OPTION  : can have the values: debug, optimized
+** APP_CFLAGS      : additional compilation flags for C compiler
+**                   and Resource compiler
+** APP_CCPPFLAGS   : additional compilation flags for C++ compiler
+** APP_DLLFLAGS    : additional link flags
+** APP_RCFLAGS     : additional flags for resource compiler
+** MWINIT_DEFINES  : list of -D<symbols> used to initialize
+**                   Mainwin in certain specific ways 
+** MWLOCALES       : list of country codes corresponding to the
+**                   resources you have prepared in the res subdirectory
+** MIDL_IDL        : The IDL file to be compiled with MIDL
+** MIDL_IID        : The iid file from MIDL (default: <idl_name>_i.c)
+** MIDL_PROXY      : The proxy implementation from MIDL (default: <idl_name>_p.c)
+** MIDL_HEADER     : The header with the interfaces and GUIDs (default: <idl_name>.h)
+** MIDL_DLLDATA    : The dll data for the proxy from MIDL (default: dlldata.c)
+** MIDL_TLB        : The typelib information from MIDL (default: <idl_name>.tlb)
+**                   this will be created in the {RUN.dir} directory.
+** MESSAGES.file   : The .mc file to be used as input for the message compiler
+** MESSAGES.hdir   : The output directory for message compiler generated headers
+** MESSAGES.rdir   : The output directory for message compiler generated resources
+** MESSAGES.flags  : Additional flags for the message compiler
+**
+**	History:
+**	14-Feb-2000 (hanch04, somsa01)
+**	    Created.
+**	12-may-2000 (somsa01)
+**	    Added support for building EDBC.
+**      14-jun-2000 (hanch04)
+**          Added src include for baroque builds
+**	16-Feb-2001 (ahaal01)
+**	    Added "APP_DLLFLAGS = -lcatobal" for AIX (rs4_us5).
+*/
+
+APP_CFLAGS = -I$(ING_SRC)/front/vdba/$(ING_VERS)/hdr \
+		-I$(ING_SRC)/front/vdba/catobal/mainwin \
+		-I$(ING_SRC)/front/vdba/$(ING_VERS)/src/catobal/mainwin \
+		-DWIN32 -DDLL
+
+#if defined(rs4_us5)
+#ifdef EDBC
+WEDBC=edbc
+#else
+WEDBC=
+#endif
+APP_DLLFLAGS = -l${WEDBC}catobal
+#endif /* rs4_us5 */
+
+SOURCES =  \
+	nanbtn.c
+
+/*
+** Original Windows DLL name and target unix shared library
+*/
+#ifdef EDBC
+WDLL      = edbcingract
+#else
+WDLL      = ingract
+#endif /* EDBC */
+DLL       = lib${WDLL}.${MW_SHARED_LIBRARY_SUFFIX}
+
+CPP_OBJS  = ${SOURCES:%.C=%.o}
+CPP_OBJS := ${CPP_OBJS:%.cpp=%.o}
+CPP_OBJS := ${CPP_OBJS:%.cxx=%.o}
+DLLOBJS   = ${CPP_OBJS:%.c=%.o}
+SRCS      = ${SOURCES}
+
+WRESOURCE = ingract.rc   # Windows resource
+RRESOURCE = ${WDLL}.rsb   # program
+
+/*
+** COMPILE_OPTION can be one of the following: debug, optimized
+*/
+ifndef COMPILE_OPTION
+COMPILE_OPTION = optimized
+endif
+
+include $(MWHOME)/make.rules.simple
+
+ifeq (${MW_CLEARMAKE},no)
+include $(DEPEND_FILE)
+endif
+

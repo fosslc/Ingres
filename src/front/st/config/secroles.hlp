@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The roles parameter represents whether or not application roles are available
+ in the current installation.
+
+
+ Choices are: ON OFF
+
+ Default: ON
+

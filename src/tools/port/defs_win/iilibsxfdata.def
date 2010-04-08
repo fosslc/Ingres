@@ -1,0 +1,13 @@
+;
+;  History:
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	    Renamed iisxfdata.def to iilibsxfdata.def.
+
+EXPORTS
+Sxap_cb			@1	DATA			
+Sxapo_cb		@2	DATA			
+Sxap_itab		@3	DATA			
+Sxap_vector		@4	DATA			
+Sxf_svcb		@5	DATA			

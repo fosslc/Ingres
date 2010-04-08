@@ -1,0 +1,19 @@
+#
+# Jamfile file for front!st!patch_win
+#
+
+SubDir ING_SRC front st patch_win ;
+
+IISUBSYS front st patch_win ;
+
+
+
+IISHLIBRARYLCL IngresPatch.dll ;
+IINEEDLIBS IngresPatch.dll : PATCHLIB ;
+
+IIBINEXE iicksum : iicksum.c ;
+IINEEDLIBS iicksum : PATCHLIB ;
+
+IISLN PatchUpdate.exe : enterprise.sln ;
+
+IILIBRARY PATCHLIB : patchcl.c ;

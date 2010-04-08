@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The opf_old_cnf resource controls whether the optimizer will use old
+  style "conjunctive normal form" algorithms, compatible with Ingres 6.4.
+
+  If ON, boolean expressions composed of AND's inside OR's (such as
+  ((x1 AND y1) OR (x2 AND y2)) will always be converted to OR's
+  inside AND's.  This conversion can result in a exponentially larger
+  expression, and may cause an "expression too complex" error.
+
+  If OFF (the default), the OR-to-AND conversion is only attempted when
+  the resulting expression is not too large;  otherwise, the original
+  expression is used, even if it results in less efficient query
+  plans.

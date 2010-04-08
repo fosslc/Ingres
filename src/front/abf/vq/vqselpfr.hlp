@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqselpfr.hlp, behind the popup list of frames that can be inserted.
+/#-- 
+You can insert any frame in the list; all frames in the application are 
+listed. The following rules apply:
+
+  * When you insert a frame, you also insert all the frames below it in 
+    its tree.
+
+  * Because a frame cannot call itself, the frame you insert cannot already 
+    appear in the Application Flow Diagram above the point where you want 
+    to insert it.
+
+To insert an existing frame, move the cursor to the frame in the list and 
+choose Select.
+
+To insert a new frame, select Cancel and then Create a new frame.

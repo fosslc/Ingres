@@ -1,0 +1,31 @@
+	.title	TMconv
+;
+;
+;	TMconv -- change the 64 bit VMS time stat into a 32 bit
+;		  integer containing the number of seconds from 1/1/70 GMT
+;
+;	History:
+;	    25-sep-1992 (stevet)
+;		Removed the timezone adjustment from this routine.  Instead
+;		the calling routine will handle the timezone adjustments.
+;	    04-may-1995 (albany)
+;		Integrated markg's change from the 6.4 AXP/VMS CL:
+;		    17-nov-1994 (markg)
+;		    Changed the psect attributes so as not to conflict with other
+;		    $code$ psects.
+;	    16-may-95 (albany)
+;	        Updated psect attributes to be in line with other
+;	        CL psects.
+;
+
+
+	.psect	$code$	pic,con,rel,lcl,shr,exe,nord,nowrt,novec,4
+
+	.entry	TMconv,0
+	movq	@4(ap),r0
+	subl2	#1273708544,r0
+	sbwc	#8164711,r1
+	ediv	#10000000,r0,r0,r1
+	ret
+	
+	.end

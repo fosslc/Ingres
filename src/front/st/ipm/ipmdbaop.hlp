@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the DBA Operations screen.  This screen allows an Ingres 
+superuser to delete the session on which the cursor is placed.  If the Delete
+sub-menuitem is selected, that session will be removed from the server.
+Any uncommitted transaction the session had is rolled back.
+
+NOTE: Do NOT remove Ingres internal sessions (session names marked with
+angle brackets "<>" as shown).  If you do, your entire Ingres installation
+may stop and you may lose all uncommitted transactions.  For instance,
+if you remove the "<Fast Commit Thread>" session, all user sessions will
+stop, all uncommitted transactions will be lost, no new connections will
+be accepted, and you will have to take down your installation manually.

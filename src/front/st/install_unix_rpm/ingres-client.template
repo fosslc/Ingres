@@ -1,0 +1,101 @@
+%pre
+export II_SYSTEM=%{_libexec}
+export PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+if [ $1 -gt 1 ] ; then
+    runmode=upgrade
+else
+    runmode=install
+    export II_CONFIG=%{_datadir}/ingres/files
+    export II_ADMIN=%{_var}/lib/ingres/files
+    export user_created=false
+    export group_created=false
+fi
+
+stop_instance()
+{
+    inst_id=`ingprenv II_INSTALLATION`
+    ingsrv=ingres${inst_id}
+
+    #Check to see if instance is running and try to shut it down
+    #Abort the install is we can't
+    [ -f $II_ADMIN/config.dat ] && /sbin/service ${ingsrv} stop
+}
+
+# Must be new install
+if [ "$runmode" = "upgrade" ]
+then
+    stop_instance
+    # As it's an upgrade no more pre-checks are needed
+else
+    # Check for Ingres install group/user and create it if it's not present
+    crgroup=true
+    getent group ingres > /dev/null 2>&1
+    [ $? = 0 ] && crgroup=false
+
+    if $crgroup  ; then
+        /usr/sbin/groupadd ingres
+        export group_created=true
+    fi
+
+    # Check for user
+    cruser=true
+    getent passwd ingres > /dev/null 2>&1
+    [ $? = 0 ] && cruser=false
+
+    $cruser && /usr/sbin/useradd -g ingres -s /bin/bash \
+                -c 'Ingres Super User'  -d %{_var}/lib/ingres ingres
+fi
+
+exit 0
+
+%post
+#Setup environement
+. %{_datadir}/ingres/ingenv.bashrc || :
+
+# basic setup
+ldconfig %{_libdir}/ingres
+if [ $1 -gt 1 ] ; then
+    :
+else
+    # set initial config
+    runuser -m -c "touch $II_ADMIN/config.dat" ingres || :
+    runuser -m -c "ingsetenv II_INSTALLATION II" ingres || :
+    runuser -m -c "ingsetenv II_CONFIG %{_datadir}/ingres/files" ingres || :
+    runuser -m -c "ingsetenv II_HOSTNAME localhost" ingres || :
+    runuser -m -c "iisetres ii.localhost.setup.owner.user ingres" ingres || :
+    runuser -m -c "iisetres ii.localhost.setup.owner.group ingres" ingres || :
+    /sbin/chkconfig --add ingres || :
+fi
+
+runuser -m -c "$II_SYSTEM/ingres/utility/iisutm -rpm" ingres
+
+# Add setup to todo list
+sulist=%pkg_sulist%
+ifssave=$IFS
+IFS=:
+for script in ${sulist}
+do
+    echo $script >> %{_var}/lib/ingres/setup.todo
+done
+IFS=$ifssave
+
+exit 0
+
+%preun
+if [ $1 -eq 0 ] ; then
+    /sbin/chkconfig --del ingres
+fi
+
+exit 0
+
+%files
+%defattr(-,ingres,ingres,-)
+%dir %{_libexecdir}/ingres
+%dir %{_libdir}/ingres
+%dir %{_var}/log/ingres
+%dir %{_var}/lib/ingres/files/rcfiles
+%attr (-,root,root) %{_datadir}/ingres
+%attr (755,ingres,ingres) %{_var}/lib/ingres
+%attr (700,ingres,ingres) %{_var}/lib/ingres/files/name
+%attr (644,ingres,ingres) %{_var}/lib/ingres/files/name/iiname.all
+%attr (755,root,root) %{_sysconfdir}/rc.d/init.d/ingres

@@ -1,0 +1,328 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+*/
+
+/*
+**  Source   : sqlselec.scc
+**
+**  Project  : CA-OpenIngres
+**
+**  Author   : UK Sotheavut
+**
+**  Purpose  : SQL file, use cursor to retrieve data from the table or view.
+**
+**  History:
+**	16-oct-1998 (noifr01)  [comment inserted on 14-jan-1999 for bug 94867]
+**	    - disabled the code resulting in displaying "<Not Displayable>"
+**	    for columns containing special characters. This code had been
+**	    added because of a GPF happening after some particular statements
+**	    against gateways. However, it has been figured out later that
+**	    it was a side effect of another problem , fixed since VDBA 2.5
+**	    ( instances of classes (global variables) that were declared
+**	    before the instance of the CWinApp derived class, resulting in
+**	    memory area problems. The order of these variables has been
+**	    changed since VDBA 2.5)
+**	15-feb-2000 (cucjo01, hanch04, somsa01)
+**	    properly set up delete operator for MainWin.
+**  21-Mar-2001 (noifr01)
+**     (bug 99242) (DBCS) replaced usage of ambiguous function (in the
+**     DBCS context) lstrcpyn with fstrncpy
+**  21-Mar-2001 (noifr01)
+**    (sir 104270) removal of code for managing Ingres/Desktop
+**  11-Apr-2001 (schph01)
+**    bug 103635 Retrieve the columns decimal type like decimal instead
+**    of float type. Used the II_DECIMAL variable to display the columns
+**    decimal type.
+** 02-May-2001 (uk$so01)
+**    SIR #102678
+**    Support the composite histogram of base table and secondary index.
+**  09-May-2001 (hanje04)
+**    In CaCursor::Fetch, defined ii4 to be i4 and not long as it was
+**    causing compile errors when being used in a call to CVpka.
+**  28-may-2001 (schph01)
+**    BUG 104636 On Fetch() method for float column type, get the current
+**    float parameters 
+**    (defined in "SQL Test Preferences") and format the string with CVfa()
+**    function.
+**    For the column money type (retrieve like float) add the management to
+**    display this type with the format define in II_MONEY_FORMAT and
+**    II_MONEY_PREC and II_DECIMAL
+** 30-May-2001 (uk$so01)
+**    SIR #104736, Integrate IIA and Cleanup old code of populate.
+** 06-May-2001 (schph01)
+**    IISQ_BYTE_TYPE and IISQ_LBYTE_TYPE are mapped to IISQ_VBYTE_TYPE, where
+**    the 2-first bytes correspond to an integer containing the length of the
+**    data. The display is done accordingly
+**    For IISQ_LBYTE_TYPE only the 64 first characters are displayed (like
+**    what is done for long-varchars).
+** 07-Jun-2001 (noifr01)
+**    (SIR 103694) support of UNICODE datatypes in the result of a select
+**    statement
+** 21-Jun-2001 (schph01)
+**    (SIR 103694) (support of UNICODE datatypes) used definition in iicommon.h
+**    for unicode data type.
+** 27-Jun-2001 (noifr01)
+**    (SIR 103694) support of UNICODE constants in the where clause of a
+**    select statement
+** 04-Jun-2001 (noifr01)
+**    (SIR 103694) extended support of UNICODE datatypes in the result of a 
+**    select statement to long nvarchar (couldn't be tested previously)
+** 09-Aug-2001 (noifr01)
+**    (bug 105462) display 64 chars (instead of 31) for long nvarchar
+**    columns
+** 26-Nov-2001 (hanje04)
+**	Bug 106462
+**	Removed 'delete's of m_pBuffer and m_pBufferColumn because they are 
+**	causing a SEGV when freeing an already freed pointer on UNIX.
+** 20-Jun-2002 (schph01)
+**  Bug #107929 add function ManageNonPrintableChars() to display the rows of
+**  table (in right pane "Rows" or in "Sqltest") like Terminal monitor
+**  and Isql.
+** 23-Jul-2002 (schph01)
+**  Bug #108345 in ConstructCursor() function, get the sql error before
+**  return false.
+*/
+
+#define BUGNOTNULLABLE   // remove when bug is corrected at ingres level
+                         // Force to nullable whatever INGRES says.
+
+// compile:
+// esqlcc -fsqlselec.inc sqlselec.scc
+
+#include <stdlib.h>
+#include "dmlbase.h"
+#include "domseri.h"
+#include "sqlselec.h"
+
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+#define DATE_SIZE IISQ_DTE_LEN
+//
+// Declare the SQLCA structure and the SQLDA typedef
+//
+extern "C"
+{
+EXEC SQL INCLUDE SQLCA;
+EXEC SQL INCLUDE SQLDA;
+#include "dba.h"
+#include "nm.h"
+#include "cv.h"
+#include "er.h"
+#include "erug.h"
+#include "gl.h"
+#include "iicommon.h"
+BOOL ManageSqlError(void *psqlca);
+int  GetGWType();
+}
+
+#define LEAD_MONEY  0
+#define TRAIL_MONEY 1
+#define NONE_MONY   2
+#define MAX_MONEY_FORMAT 4*sizeof(TCHAR)
+
+static TCHAR DefaultDecSeparartor[]={_T(".")};
+static TCHAR bufIIDecimal[2];
+static BOOL bDecimalRead  = FALSE;
+static BOOL bErrorDecimalDisplay = TRUE;
+
+static BOOL bMoneyRead  = FALSE;
+static BOOL bErrorMoneyFormatDisplay = TRUE;
+static BOOL bErrorMoneyPrecision = TRUE;
+static int iIILeadOrTrail = LEAD_MONEY;
+static int iIIMoneyPrec = 2;
+static TCHAR tchDefaultMoneySymbol[]={_T("$"});
+static TCHAR tchIIMoneyFormat[MAX_MONEY_FORMAT+sizeof(TCHAR)];
+
+
+BOOL INGRESII_QuerySecurityState (CTypedPtrList<CObList, CaAuditEnabledLevel*>& listEnableLevel)
+{
+	int  iret= RES_SUCCESS; 
+	CaAuditEnabledLevel* pData = NULL;
+	CString strName, strState;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szName     [MAXOBJECTNAME];
+		char szState    [2];
+	EXEC SQL END DECLARE SECTION; 
+	
+	EXEC SQL WHENEVER SQLERROR GOTO INGRESII_QUERYSECURITYSTATE_ERROR;
+	EXEC SQL REPEATED SELECT DISTINCT
+			NAME,
+			STATE
+		INTO
+			:szName,
+			:szState
+		FROM 
+			IISECURITY_STATE;
+
+	EXEC SQL BEGIN;
+		strName = szName;
+		strState= szState;
+		strName.TrimRight();
+		strState.TrimRight();
+		//
+		// Exclude the items: ALL and DBEVENT:
+		if (strName.CompareNoCase (_T("ALL")) != 0 && strName.CompareNoCase (_T("INSTALLATION")) != 0)
+		{
+			pData = new CaAuditEnabledLevel (strName, (strState[0] == 'E' || strState[0] == 'e')? TRUE: FALSE);
+			listEnableLevel.AddTail (pData);
+		}
+	EXEC SQL END;
+	return TRUE;
+
+INGRESII_QUERYSECURITYSTATE_ERROR:
+	int nErr = sqlca.sqlcode;
+	while (!listEnableLevel.IsEmpty())
+		delete listEnableLevel.RemoveHead();
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[640];
+	EXEC SQL END DECLARE SECTION;
+	ManageSqlError(&sqlca);
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	throw CeSQLException ((LPCTSTR)(LPTSTR)error_buf, nErr);
+	return FALSE;
+}
+
+BOOL INGRESII_UpdateSecurityState(CTypedPtrList<CObList, CaAuditEnabledLevel*>& listEnableLevel)
+{
+	CaAuditEnabledLevel* pData = NULL;
+	CString strStatement;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* lpszStatement;
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL WHENEVER SQLERROR GOTO INGRESII_UPDATESECURITYSTATE_ERROR;
+
+	POSITION pos = listEnableLevel.GetHeadPosition();
+	while (pos != NULL)
+	{
+		pData = listEnableLevel.GetNext (pos);
+		strStatement.Format (
+			_T("%s SECURITY_AUDIT %s"), 
+			pData->m_bEnabled? _T("ENABLE"): _T("DISABLE"), 
+			pData->m_strAuditFlag);
+		lpszStatement = (char*)(LPCTSTR)strStatement;
+		EXEC SQL EXECUTE IMMEDIATE :lpszStatement;
+	}
+
+	return TRUE;
+
+INGRESII_UPDATESECURITYSTATE_ERROR:
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[640];
+	EXEC SQL END DECLARE SECTION;
+	ManageSqlError(&sqlca);
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	throw CeSQLException ((LPCTSTR)(LPTSTR)error_buf, nErr);
+	return FALSE;
+}
+
+
+BOOL INGRESII_llQueryIndex (CTypedPtrList< CObList, CaObjectChildofTable* >& listObject)
+{
+	CaObjectChildofTable* pItem   = NULL;
+	CString strObject;
+	CString strObjectOwner;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szIndexName [MAXOBJECTNAME];
+		char  szIndexOwner[MAXOBJECTNAME];
+		char  szBaseName  [MAXOBJECTNAME];
+		char  szBaseOwner [MAXOBJECTNAME];
+	EXEC SQL END DECLARE SECTION; 
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYINDEX_ERROR;
+	EXEC SQL SELECT  
+		INDEX_NAME,
+		INDEX_OWNER,
+		BASE_NAME,
+		BASE_OWNER
+	INTO 
+		:szIndexName, 
+		:szIndexOwner,
+		:szBaseName,
+		:szBaseOwner
+	FROM  IIINDEXES
+	ORDER BY INDEX_NAME;
+
+	EXEC SQL BEGIN;
+		strObject = szIndexName;
+		strObjectOwner = szIndexOwner;
+		strObject.TrimRight();
+		strObjectOwner.TrimRight();
+		if (!IsSystemObject (OT_INDEX, (LPUCHAR)(LPTSTR)(LPCTSTR)strObject, (LPUCHAR)(LPTSTR)(LPCTSTR)strObjectOwner))
+		{
+			pItem = new CaObjectChildofTable (szIndexName, szIndexOwner, szBaseName, szBaseOwner);
+			listObject.AddTail (pItem);
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYINDEX_ERROR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[255];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	throw CeSQLException ((LPCTSTR)(LPTSTR)error_buf);
+	return FALSE;
+}
+
+//
+// nOT must be OT_TABLE or OT_INDEX 
+// Then you must create your session first.
+int INGRESII_llHasCompositeHistogram (int nOT, LPCTSTR lpszObject, LPCTSTR lpszObjectOwner)
+{
+	USES_CONVERSION;
+	int nObjectCount = 0;
+	CString strStatement;
+	CString strFormat;
+	if (nOT == OT_TABLE)
+	{
+		strFormat = _T("select count(*) from iirelation a, iistatistics b where a.relid = '%s' ");
+		strFormat+= _T("and a.relowner = '%s' and a.reltid=b.stabbase and satno = -1");
+		strStatement.Format (strFormat, lpszObject, lpszObjectOwner);
+	}
+	else
+	if (nOT == OT_INDEX)
+	{
+		strFormat = _T("select count(*) from iirelation a, iistatistics b where a.relid = '%s' ");
+		strFormat+= _T("and a.relowner = '%s' and a.reltid = b.stabbase and a.reltidx=b.stabindex and satno = -1");
+		strStatement.Format (strFormat, lpszObject, lpszObjectOwner);
+	}
+	else
+	{
+		//
+		// nOT must be OT_TABLE or OT_INDEX
+		ASSERT (FALSE);
+		return 0;
+	}
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* rawStatement = T2A((LPTSTR)(LPCTSTR)strStatement);
+		int   nCount;
+	EXEC SQL END DECLARE SECTION;
+	nCount = 0;
+
+	EXEC SQL WHENEVER SQLERROR GOTO SELECTCOUNT_LERROR;
+	EXEC SQL EXECUTE IMMEDIATE :rawStatement INTO :nCount;
+	nObjectCount = nCount;
+	
+	return nObjectCount;
+
+SELECTCOUNT_LERROR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[255];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	throw CeSQLException ((LPCTSTR)(LPTSTR)error_buf);
+	return 0;
+}
+

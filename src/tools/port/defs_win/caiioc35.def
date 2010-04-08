@@ -1,0 +1,12 @@
+; Ingres configurator DEF file for Windows
+
+
+
+EXPORTS
+    ConfigDSN           @11
+    AboutProc           @20
+;   AtoeProc            @21
+;   DataSourceProc      @22
+;   OptionsProc         @26
+;   LogOptionsProc      @27
+;   ServerProc          @28

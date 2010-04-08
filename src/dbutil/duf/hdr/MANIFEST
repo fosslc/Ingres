@@ -1,0 +1,57 @@
+#
+# YAM MANIFEST file for dbutil!duf!hdr
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#	29-Dec-2004 (schka24)
+#	    Remove hdr for iixprotect.
+
+
+IISUBSYS dbutil duf hdr ;
+
+
+IIQSHHDR duddb.h : duddb.qsh ;
+IIQSHHDR duenv.h : duenv.qsh ;
+IIQSHHDR dustar.h : dustar.qsh ;
+IIQSHHDR upgradedb.h : upgradedb.qsh ;
+
+IIDUFSHHDR duveacc.h : duveacc.sh ;
+IIDUFSHHDR duvealm.h : duvealm.sh ;
+IIDUFSHHDR duveatt.h : duveatt.sh ;
+IIDUFSHHDR duvecdbs.h : duvecdbs.sh ;
+IIDUFSHHDR duvecdbx.h : duvecdbx.sh ;
+IIDUFSHHDR duvecmnt.h : duvecmnt.sh ;
+IIDUFSHHDR duvedb.h : duvedb.sh ;
+IIDUFSHHDR duvedbx.h : duvedbx.sh ;
+IIDUFSHHDR duvedef.h : duvedef.sh ;
+IIDUFSHHDR duvedev.h : duvedev.sh ;
+IIDUFSHHDR duvedpnd.h : duvedpnd.sh ;
+IIDUFSHHDR duveext.h : duveext.sh ;
+IIDUFSHHDR duvegwat.h : duvegwat.sh ;
+IIDUFSHHDR duvegwrl.h : duvegwrl.sh ;
+IIDUFSHHDR duvehist.h : duvehist.sh ;
+IIDUFSHHDR duveindex.h : duveindex.sh ;
+IIDUFSHHDR duveint.h : duveint.sh ;
+IIDUFSHHDR duvekey.h : duvekey.sh ;
+IIDUFSHHDR duveloc.h : duveloc.sh ;
+IIDUFSHHDR duvepriv.h : duvepriv.sh ;
+IIDUFSHHDR duvepro.h : duvepro.sh ;
+IIDUFSHHDR duveproc.h : duveproc.sh ;
+IIDUFSHHDR duveprof.h : duveprof.sh ;
+IIDUFSHHDR duveprv.h : duveprv.sh ;
+IIDUFSHHDR duveqry.h : duveqry.sh ;
+IIDUFSHHDR duverel.h : duverel.sh ;
+IIDUFSHHDR duveridx.h : duveridx.sh ;
+IIDUFSHHDR duverule.h : duverule.sh ;
+IIDUFSHHDR duvestat.h : duvestat.sh ;
+IIDUFSHHDR duvesyn.h : duvesyn.sh ;
+IIDUFSHHDR duvetree.h : duvetree.sh ;
+IIDUFSHHDR duveugrp.h : duveugrp.sh ;
+IIDUFSHHDR duveuser.h : duveuser.sh ;
+IIDUFSHHDR duvevent.h : duvevent.sh ;
+IIDUFSHHDR duvexdbp.h : duvexdbp.sh ;
+IIDUFSHHDR duvexdp.h : duvexdp.sh ;
+IIDUFSHHDR duvexev.h : duvexev.sh ;
+IIDUFSHHDR duvexprv.h : duvexprv.sh ;

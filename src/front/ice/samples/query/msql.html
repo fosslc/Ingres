@@ -1,0 +1,24 @@
+<!-- #ICE REPEAT IF (`:ii_rel_type` == `table`)
+THEN=`
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" Content="text/html; charset=utf-8"/>
+<TITLE>Ingres/ICE Demo</TITLE></HEAD>
+<BODY>
+<H1><CENTER>Query Results</CENTER></H1>
+<!-- #ICE SQL=``:ii_query_statement``
+    DATABASE=``:ii_database``
+    USER=``:ii_userid``
+    TYPE=``table``
+-->
+</BODY>
+</HTML>
+`
+ELSE=`
+<?xml: version='1.0' ?>
+<!-- #ICE SQL=``:ii_query_statement``
+    DATABASE=``:ii_database``
+    USER=``:ii_userid``
+    TYPE=``xml``
+-->
+`-->

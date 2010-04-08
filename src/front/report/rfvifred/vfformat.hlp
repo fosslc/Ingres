@@ -1,0 +1,128 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vfformat.hlp       VIFRED/RBF Help on Display Formats
+Display formats for CHARACTER data:
+
+  c30   Displays a field 30 characters long, on one line.
+
+        c30.15     Displays a field 30 characters long, with 15
+                   characters on each line.
+
+        cf30.15    Same as above except words will not be broken
+                   in the middle.
+                                
+        cj30.15    Same as above except justify both left and
+                   right margins (newspaper style).
+ 
+Display formats for NUMERIC data:
+
+  i6    Displays a numeric field in integer format in 6 character positions.
+        NOTE: money or float will round to nearest integer.
+
+  f6    Same as above.
+
+        f6.3    Displays a floating field in 6 character positions
+                with 3 decimal places (for example: '13.035'). 
+
+  e10   Displays a numeric field in exponential format with no 
+        decimal places shown (for example: '6755e+001', '-1200e-002').
+
+        e10.2   Displays a numeric field with 2 decimal places in
+                exponential format (for example: '6.76e+004', '-1.20e+001').
+
+Display formats and templates for DATES:
+
+  c25            Displays a date with the format 'dd-mmm-yyyy hh:mm:ss'.
+                 Equivalent to d"03-feb-1901 16:05:06", except the
+                 time-of-day portion is only displayed when present
+                 in the date value.
+
+  d"03-Feb-1901" Displays a date without time-of-day. Also, display
+                 first character of month name as UPPER case.
+
+                 d"03-Feb-1901 04:05:06 PM" Same as above with time-of-day
+                                            displayed in 12 hour format with
+                                            AM/PM.
+
+                 d"03-Feb-1901 04:05:06"    Same as above with AM/PM
+                                            truncated.
+
+                 d"03-Feb-1901 16:05:06"    Display date with time-of-day
+                                            in 24 hour format.
+
+  d"2/3/1"       Displays a date with the format 'mm/dd/yy' without
+                 leading zeros (for example: '4/23/90').
+
+                 d"02/03/01"     Displays a date with the format 'mm/dd/yy'
+                                with leading zeros (for example: '04/23/90').
+
+  d"3/2/1"       Displays a date with the format 'dd/mm/yy' without
+                 leading zeros (for example: '23/4/90').
+
+                 d"03/02/01"     Displays a date with the format 'dd/mm/yy'
+                                with leading zeros (for example: '23/04/90').
+
+  d"Sunday"      Displays a date as a day of the week.
+
+                 d"February"     Displays a date as a month of the year.
+
+  d"010203"      Displays a date in ISO format 'yymmdd'.
+
+  d"1901-02-03"  Displays a date in Sweden/Finland format 'yyyy-mm-dd'.
+
+        NOTE: These are examples of common date templates. Others are
+        described in the manual "Using Ingres Through Forms and Menus".
+
+Display templates for NUMERIC data:
+
+  "zzzzz"       Displays a numeric field padded with blanks if the
+                number does not fill the field (for example with the
+                template "zzzzz", on a form '123' results in '123  '
+                and in RBF '123' results in '  123').
+
+  "nnnnn"       Displays a numeric field padded with zeros if the
+                number does not fill the field (for example with the
+                template "nnnnn", on both forms and in RBF, '123'
+                results in '00123').
+
+  "zzzzz.nn"    Displays a numeric field padded with blanks if the
+                number does not fill the field and with decimal places
+                extended with zeros (for example, with the template
+                "zzzzz.nn", on a form '0' will result in '.00     ' and
+                '1.2' will result in '1.20    '; in RBF '0' will result
+                in '     .00' and '1.2' will result in '    1.20').
+
+  "$zzzzz.nn"   Displays a numeric field with the '$' placed on the
+                left and blank padded to the left (for example: '$  123.00').
+
+  "$$$$$$.nn"   Displays a numeric field with a floating '$' (for example:
+                '  $123.00')
+
+  Dashes, commas, and parenthesis, etc. can be displayed to make
+  formats for phone numbers, social security numbers, large numbers, etc.
+  Examples:
+
+  "nnn\-nn\-nnnn"       Displays dashes in a numeric value (for example:
+                        '557-90-3176').
+
+  "\(nnn\)\ nnn\-nnnn"  Displays a numeric value with an embedded dash,
+                        blank and parenthesis (for example:
+                        '(415) 769-1400').
+
+  "$$$$,$$$,$$n.nn"     Displays commas in a money value (for example:
+                        '$3,144.00').
+
+        NOTE: These are examples of common numeric templates. Others are
+        described in the manual "Using Ingres Through Forms and Menus".
+
+Justifying data to the left or right:
+
+        Precede the display format with a '-' to left justify data in the
+        field (for example -c5 would display 'abc' as 'abc  '). Precede
+        the display format with a '+' to right justify data in the field
+        (for example +c5 would display 'abc' as '  abc').
+        
+        Left justification is the default for all display formats on forms
+        (if a display format does not have a '-/+' justification character,
+        Vifred automatically precedes the format with a '-'). In RBF the
+        defaults are right justification for numeric display formats and
+        left justification for non-numeric display formats.

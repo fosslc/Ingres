@@ -1,0 +1,54 @@
+#
+# Jamfile file for testtool!sep!sep
+#
+# History:
+#	10-jan-2005 (abbjo03)
+#	    Don't build man files on VMS.
+#	07-feb-2005 (abbjo03)
+#	    On VMS, the sep executable is named septool. Build with individual
+#	    libraries instead of LIBINGRES.
+
+SubDir ING_SRC testtool sep sep ;
+
+IISUBSYS testtool sep sep ;
+
+if $(VMS)
+{
+    SEPTOOL = septool ;
+}
+else
+{
+    SEPTOOL = sep ;
+}
+
+IITOOLSEXE $(SEPTOOL) : septool.c ;
+IINEEDLIBS $(SEPTOOL) : SEPLIB SEPDIFFLIB SEPCLLIB ;
+IINEEDOBJ $(SEPTOOL) : termdr.c ;
+
+IITOOLSEXE peditor : peditor.c ;
+IINEEDLIBS peditor : SEPCLLIB ;
+IINEEDOBJ peditor : termdr.c ;
+
+if $(VMS)
+{
+    IINEEDLIBS $(SEPTOOL) : LIBQLIB COMPATLIB ;
+    IINEEDLIBS peditor : FTLIB UGLIB COMPATLIB ;
+}
+else
+{
+    IINEEDLIBS $(SEPTOOL) : LIBINGRES ;
+    IINEEDLIBS peditor : LIBINGRES ;
+}
+
+if $(UNIX)
+{
+    IITMANFILES sep.1 ;
+}
+
+IILIBRARY SEPLIB : testinfo.sc utility2.c utility.c trantok.c
+	testcase.c termcap.c stillcon.c shellcmd.c setstate.c sepparm.c
+	sepostcl.c sepfiles.c readtc.c procmmd.c opncomm.c nextrec.c
+	legalusr.c isitif.c getcmd.c getans.c funckeys.c evalif.c
+	displine.c diffing.c crestf.c crecanon.c comments.c classify.c
+	breakln.c assemble.c ;
+

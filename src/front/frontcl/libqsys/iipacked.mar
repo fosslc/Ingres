@@ -1,0 +1,70 @@
+; # ifdef VMS
+;  Copyright (c) 2004 Ingres Corporation
+	.title	IIpacked
+	.psect	ing_libq$text,quad,rd,nowrt,exe,lcl
+
+; 	Register Masks: 
+;		Based on VMS/Vax architecture handbook (after execution).
+;	r2 - 0
+;	r3 - address of byte containing most significant digit of destination
+;	     string.
+;
+; 	History:
+;		06-feb-1985 - 	Written for VMS Equel/Cobol packed decimal
+;				data types. (ncg)
+
+;
+;  IINTOP -- convert leading numeric separate to packed decimal
+;
+;	IIntop (str, slen, pack, plen)
+;
+;	Parameters:
+;		str  -- pointer to leading numeric separate string
+;		slen -- length of string
+;		pack -- pointer to buffer to hold packed decimal string
+;		plen -- length of packed decimal string
+;	Returns:
+;		pack
+;
+	.entry	IIntop, ^m<r2, r3>
+	cvtsp	8(ap),@4(ap),16(ap),@12(ap)
+	ret
+
+;
+;  IIPTON -- convert packed decimal to leading numeric separate
+;
+;	IIptod (pack, plwn, str, slen)
+;
+;	Parameters:
+;		pack -- pointer to buffer to hold packed decimal string
+;		plen -- length of packed decimal string
+;		str  -- pointer to leading numeric separate string
+;		slen -- length of string
+;	Returns:
+;		str
+;
+	.entry	IIpton, ^m<r2, r3>
+	cvtps	8(ap),@4(ap),16(ap),@12(ap)
+	ret
+
+;
+;  IIpscale -- scale a packed decimal number by power of ten
+;
+;	IIpscale (srcp, srcl, dstp, dstl,scale, round)
+;
+;	Parameters:
+;		srcp  -- packed decimal source string
+;		srcl  -- source string length
+;		dstp  -- packed decimal destination string
+;		dstl  -- destination string length
+;		scale -- powers of ten to scale by
+;		round -- rounding factor for negative scaling
+;
+	.entry	IIpscale, ^m<r2, r3>
+	ashp	20(ap),8(ap),@4(ap),24(ap),16(ap),@12(ap)
+	ret
+
+	.end
+
+; # endif VMS
+;

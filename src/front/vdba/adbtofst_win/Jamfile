@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!vdba!adbtofst_win
+#
+
+SubDir ING_SRC front vdba adbtofst_win ;
+
+IISUBSYS front vdba adbtofst_win ;
+
+
+IIBINEXE adbtofst : adbtofst.c ;
+IINEEDLIBS adbtofst : COMPATLIB ;

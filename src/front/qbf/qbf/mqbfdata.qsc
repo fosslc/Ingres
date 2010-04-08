@@ -1,0 +1,177 @@
+/*
+**	MQBFDATA.QSC  - Variable definitions for MQBF
+**
+**	This module defines the global C variables used by MQBF
+**
+**	NML - March 1, 1983
+**
+**	Modified to support to process scheme
+**	to contain variables only used by both qdef
+**	and qexec (12/11/84 - kira)
+**
+**	Copyright (c) 2004 Ingres Corporation
+**
+**	History:
+**		01-cot-1985 (peter)	Change prompt default to TRUE.
+**		20-mar-1986 (dkh)	Fix for BUG 8642.  Make mq_db
+**					bigger due to network node names.
+**		07-dec-87 (kenl)
+**					Turned module into a .QSC file in 
+**					order to incorporate
+**					the new header file: mqbf.qsh
+**		22-apr-88 (kenl)
+**			Added GLOBALDEF of allow_updates (used to indicate
+**			if any keys were found for tables).
+**		23-nov-88 (kenl)
+**			Added GLOBALDEF of allow_appends.  From IBM group (ham).
+**		03-mar-89 (kenl) bug #4876
+**			Changed length of mqflnm from MAXFLNM to MAX_LOC.
+**		26-may-89 (Mike S)
+**			Add mq_fgtype
+**		28-aug-89 (Mike S)
+**			Add mq_frmtitle
+**		05-dec-89 (kenl)
+**			Added mq_editjoin, mq_joindef, and mq_lastsaved.
+**		14-dec-89 (kenl)
+**			Added IIQFrfRoleFlag, IIQFpwPasswd, IIQFgidGroupID for
+**			role (-R), password (-P), and group (-G) flags.
+**		26-jan-90 (kenl)
+**			Added 1 to MAX_LOC for mqflnm.  Changed mq_otest from
+**			(char *) to an array.
+**		10/11/90 (esd)
+**			Replaced global variable allow_appends and allow_updates
+**			by IIQFnkaNoKeyForAppends and IIQFnkuNoKeyForUpdates
+**			(with opposite sense) because the names are misleading:
+**			we now have other reasons for disallowing appends
+**			(certain joins on logical keys), and we might have
+**			other reasons for disallowing appends or updates
+**			in the future.  Keeping separate flags allows us
+**			to give specific error messages.  (bug 8593).
+**		10/11/90 (emerson)
+**			Added global variables IIQFsmmSystemUserLkeyMM,
+**			IIQFsmdSystemUserLkeyMD, and IIQFsddSystemUserLkeyDD
+**			for logical key support (bug 8593).
+**		18-dec-92 (sylviap)
+**			Added mq_nogo
+**		16-aug-1993 (rdrane)
+**			Resize qbf_name to accomodate an unnormalized
+**			owner.tablename construct (we really should look
+**			into eliminating this global entirely!).
+**		27-jun-95 (teresak)
+**			Added undocumented support for II_QBF_DISABLE_VIEW_CHECK
+**			to allow append, update, and deletes of single table 
+**			views (SIR 37839)
+**		16-October-1997(angusm)
+**			redo allow_view as boolean (bug 86168)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	<er.h>
+# include	<trimtxt.h>
+# include 	"erqf.h"
+
+GLOBALDEF char	mq_db[100] = {0};			/* Database name*/
+GLOBALDEF char	*mquname = NULL;			/* username for -u flag */
+GLOBALDEF char  *IIQFrfRoleFlag = NULL;			/* roll if for -R */
+GLOBALDEF char  *IIQFpwPasswd = NULL;			/* password for -P */
+GLOBALDEF char  *IIQFgidGroupID = NULL;			/* group id for -G */
+
+GLOBALDEF i4	tblfield	= 1;			/* table field usage */
+GLOBALDEF i4	qdef_type	= -1;			/* master/detail or 1-1 qdef */
+GLOBALDEF i4	mq_fgtype	= MQFORM_QBF;		/* QBF or EMERALD form generation */
+GLOBALDEF       TRIMTXT         *mq_frmtitle = NULL;	/* Form title */
+GLOBALDEF i4	mq_input	= fdcmINSRT;		/* input mode */
+GLOBALDEF i4	mq_func		= mqNOFUNC;		/* command line function */
+GLOBALDEF i4	mq_terse	= FALSE;		/* terse output of err msgs */
+GLOBALDEF i4	mq_prompt	= TRUE;			/* prompt for command args */
+GLOBALDEF i4	mq_forms	= FALSE;		/* get forms from form catalogs */
+GLOBALDEF char	mq_frame[FE_MAXNAME + 1] = ERx("");
+GLOBALDEF char	mq_tbl[FE_MAXNAME + 1] = ERx("");
+GLOBALDEF char	mqflnm[MAX_LOC + 1] = {0};
+GLOBALDEF i4	mqfile		= 0;
+
+GLOBALDEF bool	mq_debug	= FALSE;
+GLOBALDEF bool	onetbl		= FALSE;
+GLOBALDEF bool	mq_tflag	= FALSE;
+GLOBALDEF bool	mq_equel	= FALSE;
+GLOBALDEF bool	mq_uflag	= FALSE;
+GLOBALDEF bool	mq_qflag	= FALSE;
+GLOBALDEF bool	mq_name		= FALSE;
+GLOBALDEF bool	mq_going	= FALSE;
+GLOBALDEF bool	mq_noload	= FALSE;
+GLOBALDEF bool	mq_nogo		= FALSE;
+GLOBALDEF bool	mq_editjoin	= FALSE;
+GLOBALDEF i4	mq_env[2]	= {0};
+GLOBALDEF i4	mq_status	= 0;
+
+GLOBALDEF char	*mq_xpipe	= NULL;
+
+GLOBALDEF char	*mq_itest	= NULL;
+GLOBALDEF char	mq_otest[MAX_LOC + 1] = {0};
+
+GLOBALDEF i4	any_views	= FALSE;
+/* 
+** NOTE: This variable is for interpreting the undocumented environment 
+** variable II_QBF_DISABLE_CHECK_VIEW which will allow inserts, deletes, and 
+** updates for views within QBF. 
+*/
+GLOBALDEF bool        allow_views = FALSE;
+ 
+
+GLOBALDEF i4	IIQFnkuNoKeyForUpdates = TRUE;
+GLOBALDEF i4	IIQFnkaNoKeyForAppends = TRUE;
+GLOBALDEF i4	IIQFsmmSystemUserLkeyMM = FALSE;
+GLOBALDEF i4	IIQFsmdSystemUserLkeyMD = FALSE;
+GLOBALDEF i4	IIQFsddSystemUserLkeyDD = FALSE;
+GLOBALDEF i4	any_cats	= FALSE;
+
+GLOBALDEF char	qbf_name[FE_MAXTABNAME]	= ERx("");
+GLOBALDEF char	mq_joindef[FE_MAXNAME + 1]	= ERx("");
+GLOBALDEF bool	mq_both		= FALSE;
+GLOBALDEF char	mq_lastsaved[FE_MAXNAME + 1]	= ERx("");
+/* NOTE:  THE FOLLOWING LINE IS NEEDED TO AVOID A COMPILER BUG ON VMS */
+/* PLEASE DO NOT REMOVE */
+GLOBALDEF i4	mqzztest	= 0;
+/* NOTE:  THE FOLLOWING LINE IS NEEDED TO AVOID A COMPILER BUG ON VMS */
+/* PLEASE DO NOT REMOVE */
+GLOBALDEF bool	mq_cfrm		= FALSE;
+
+GLOBALDEF i2	mqrowstat	= 0;
+
+GLOBALDEF i4	mqnummasters	= 0;
+GLOBALDEF i4	mqnumdetails	= 0;
+GLOBALDEF char	mq_qown[4]	= ERx("");
+GLOBALDEF bool	mq_lookup	= FALSE;
+
+GLOBALDEF bool	mqztesting	= FALSE;
+GLOBALDEF char	*mq_ztest	= NULL;
+
+# ifdef DEBUG
+	GLOBALDEF  FILE *mqoutf = NULL;
+# endif
+
+GLOBALDEF  FILE *mq_tfile	= NULL;
+
+GLOBALDEF bool	mq_qdframes	= FALSE;
+
+/* added by Azad for interrupt cleanup, keep track of files */
+GLOBALDEF i4	Upd_exists = 0;		/* update file exists */
+GLOBALDEF QDESC *QG_mqqry = NULL;	/* current qg query */
+
+/* are we in a transaction or unloadtable, so we can abort on an interrupt */
+GLOBALDEF bool		Mq_intransaction = FALSE;
+GLOBALDEF bool		Mq_inunloadtable = FALSE;
+
+/** added for modularization **/
+GLOBALDEF bool	mq_deffrm	= FALSE;
+GLOBALDEF i4	Qcode		= 1;

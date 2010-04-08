@@ -1,0 +1,22 @@
+COPYFORM:	6.4	1991_08_19 08:51:03 GMT  
+FORM:	fdisplgdb	dbs in logging system	
+	73	14	0	0	1	0	9	9	0	0	0	0	0	192	0	8
+FIELD:
+	0	dblist	0	10	0	7	12	73	2	0	1	1	0		1	1	0	1073758241	0	0	0					1	0
+	0	db_name	21	34	0	18	1	18	0	1	18	1	1	Database	1	-1	0	0	64	0	0		c18			2	1
+	1	db_s	21	42	0	15	1	15	0	20	15	1	20	Status	20	-1	0	0	64	0	0		c15			2	2
+	2	trans	30	4	0	6	1	6	0	36	6	1	36	TX Cnt	36	-1	0	0	0	0	0		+i6			2	3
+	3	begin	30	4	0	7	1	7	0	43	7	1	43	Begin	43	-1	0	0	0	0	0		+i7			2	4
+	4	end	30	4	0	7	1	7	0	51	7	1	51	End	51	-1	0	0	0	0	0		+i7			2	5
+	5	read	30	4	0	6	1	6	0	59	6	1	59	Read	59	-1	0	0	0	0	0		+i6			2	6
+	6	write	30	4	0	6	1	6	0	66	6	1	66	Write	66	-1	0	0	0	0	0		+i6			2	7
+TRIM:
+	0	0	3:73:0	1	0	0	0
+	1	0	Log Database Display	2048	0	0	0
+	1	1	DB Name	0	0	0	0
+	20	1	Status	0	0	0	0
+	36	1	TX Cnt	0	0	0	0
+	43	1	Begin	0	0	0	0
+	51	1	End	0	0	0	0
+	59	1	Read	0	0	0	0
+	66	1	Write	0	0	0	0

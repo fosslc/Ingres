@@ -1,0 +1,592 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<lo.h>
+# include	<pe.h>		/* 6-x_PC_80x86 */
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"copyappl.h"
+## include	<ooclass.qsh>
+# include	<abclass.h>
+
+/*
+**	insrcs.qc
+**
+**
+**	Defines
+**		copysrcs()
+**		fetch_sdir()
+**
+**	Parameters:
+**		newsrcdir	{char *}
+**			name of new source directory (must be full pathname)
+**
+**		applname	{char *}
+**			name of application
+**
+**		applowner	{char *}
+**			owner of application, or NULL if not wanted
+**
+**	Returns:
+**		OK, or calls errexit if fatal error.
+**
+**	Called by:
+**		copyappl()
+**		main() from abf!impexp!impmain.c
+**
+**	Side Effects:
+**		None
+**
+**	Trace Flags:
+**		None
+**
+**	Error Messages:
+**		If old or new directory does not exist, or file cannot
+**		be opened.
+**
+**	History:
+**		Written 11/15/83 (agh)
+**	25-aug-88 (kenl)
+**		Changed QUEL to SQL.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**
+**	2/90 (bobm) Fixes to -s option:
+**		prevent error message on form files which may
+**		not exist.
+**
+**		prevent loss of files when a directory is copied
+**		to itself.
+**
+**		(bugs 7718, 7433)
+**
+**	3/90 (bobm)
+**		Extensively hacked for emerald support.
+**	8-march-91 (blaise)
+**	  Integrated PC porting changes.
+**      11-oct-91 (davel)
+**              Fix bug 38745 in copysrcs() (do not include global constants
+**              in the list of sources).
+**	18-jan-93 (essi)
+**		Fixed bug 45937. Without -a or -s the `newsrcdir' will be
+**		empty. We were comparing to NULL only. Changed to compare 
+**		with EOS as well.
+**	02-aug-93 (daver)
+**		Added applowner parameter to fetch_sdir for iiimport.
+**		Pass in a (char *)NULL if not interested in the owner.
+**	02-sep-93 (connie) Bug #51678
+**		Lowercase the old and new source directory to make the
+**		comparsion succeed
+**	11-nov-93 (daver)
+** 		Use case-insensitive comparison to fix bug #51678
+** 		rather than CVlowering the two strings. Fixes bug 
+**		#56681, caused by the CVlowering.
+**	02-dec-93 (daver)
+**		Fix bug 57283; create return status for fetch_sdir,
+**		allowing iiimport to issue a less severe error message.
+**	06-dec-93 (connie)
+**		Initialize the flags by turning off any custom bit.
+**		This handles case when file transferring is not required
+**		but the copyapp file contains frame with the custom
+**		bit on. This fix can leave the frame marked as "new".
+**	15-may-97 (mcgem01)
+**		Add include of lo.h
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototypes for copy_it(), regen_check(), fop_err() & upd_srcdir()
+**	  to prevent compiler errors with GCC 4.0 due to conflict with
+**	  implicit declaration.
+*/
+ 
+/* local prototypes */
+static copy_it();
+static regen_check();
+static fop_err();
+static upd_srcdir();
+
+static LOCATION	Sfileloc;	/* file to copy to */
+static LOCATION	Dfileloc;	/* file to copy from */
+static LOCATION	Ifileloc;	/* intermediate file for copy */
+
+/*
+** Name: fetch_sdir
+**
+** Description:
+**	get old source directory, application id for post-processing.
+**
+** Parameters:
+**	applname - application name.
+**	sfilebuf - returned source directory.
+**	applid - returned application id.
+**	applowner - returned application owner if applowner is not NULL
+**
+** Returns:
+**	OK	all is well
+**	FAIL	if called with applowner non-null, to allow non-copyapp
+**		caller (i.e., iiimport) to issue its own error message
+** History:
+**	3/90 (bobm) abstracted from copysrcs()
+**	8/93 (daver) 
+**		Added applowner parameter for iiimport.
+**		Pass in a (char *)NULL if not interested in the owner.
+**	02-dec-93 (daver)
+**		Fix bug 57283; create return status for fetch_sdir,
+**		allowing iiimport to issue a less severe error message.
+*/
+STATUS
+fetch_sdir(applname, sfilebuf, applid, applowner)
+EXEC SQL BEGIN DECLARE SECTION;
+char *applname;
+char *sfilebuf;
+EXEC SQL END DECLARE SECTION;
+i4 *applid;
+char *applowner;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4 maxid;
+	char	object_owner[FE_MAXNAME + 1];
+	EXEC SQL END DECLARE SECTION;
+
+	/*
+	** Based on code in ABF, if more than one application
+	** is found, use the one with the highest id.
+	*/
+	maxid = -1;
+	EXEC SQL SELECT a.abf_source, o.object_id, o.object_owner 
+		 INTO :sfilebuf, :maxid, :object_owner
+		 FROM ii_abfobjects a, ii_objects o
+		 WHERE o.object_name = :applname 
+		 AND o.object_class = :OC_APPL
+		 AND o.object_id = a.object_id
+		 AND o.object_id = a.applid
+		 ORDER BY object_id;
+
+	if (maxid < 0)
+	{
+		/*
+		** No applications were found. This routine is currently
+		** called from copyapp and iiimport; only iiimport calls it
+		** with a non-null applowner. If this is the case, return
+		** FAIL and let iiimport issue its own error message.
+		*/
+		if (applowner != NULL)
+		{
+			return FAIL;
+		}
+		else
+		{
+			IIUGerr(E_CA0017_NO_APPL_REC, 0, 0);
+			errexit(FALSE);
+		}
+	}
+
+	*applid = maxid;
+
+	/* only iiimport will pass in a non-null applowner */
+	if (applowner != NULL)
+	{
+		STcopy(object_owner, applowner);
+	}
+
+	STtrmwhite(sfilebuf);
+
+	return (OK);
+}
+
+/*
+** Name: copysrcs
+**
+** Description:
+**	Handles the -l, -a, -s flags.  All of these require going through
+**	the list of sources in the application, so this is where we do it.
+**
+** Parameters:
+**	oldsrcdir - old source directory.
+**	newsrcdir - new source directory - this may be NULL if no -a or -s
+**		option was specified, and all we are doing is generating a
+**		list of files.
+**	applid - application id.
+**	xfer - TRUE if we are to actually transfer the files.
+**	lfile - list file, NULL of no -l option.
+**
+** History
+**	3/90 (bobm) Extensively reworked to support -a, -l, emerald stuff.
+**	10/90 (bobm) Fix regen_check to use proper LOCATION.
+**      11-oct-91 (davel)
+**              Fix bug 38745: filter out constants from list of sources
+**              in the application ( the constant's value happens to be
+**              kept in the abf_source column of ii_abfobjects).
+*/
+copysrcs(oldsrcdir, newsrcdir, applid, xfer, lfile)
+char	*oldsrcdir;
+char	*newsrcdir;
+EXEC SQL BEGIN DECLARE SECTION;
+i4	applid;
+EXEC SQL END DECLARE SECTION;
+bool	xfer;
+char	*lfile;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	    char		tempbuf[MAX_LOC];    /* buffer for temploc */
+	    i4			flags;
+	    i4			class;
+            i4                  c_class;
+	    i4			oid;
+	    i4			mfcount;
+	    char		oname[FE_MAXNAME+1];
+	EXEC SQL END DECLARE SECTION;
+
+	char		newsrcbuf[MAX_LOC+1];  /* buffer for newsrcloc */
+	char		sfilebuf[MAX_LOC+1];   /* buffer for Sfileloc */
+	char		dfilebuf[MAX_LOC+1];   /* buffer for Dfileloc */
+	char		ifilebuf[MAX_LOC+1];   /* buffer for Dfileloc */
+	char		lfilebuf[MAX_LOC+1];   /* buffer for lfileloc */
+	LOCATION	lfileloc;
+	LOCATION	newsrcloc;	/* directory to be copied to */
+	LOCATION	temploc;	/* for filename retrieved by LOlist */
+
+	char		tmpfrnam[MAX_LOC+1];	/* temp to hold form name */
+	char		*ptr;
+	char		*dstr;
+	char		*sstr;
+
+	FILE		*lfp;
+
+	struct mfchg
+	{
+		i4 id;
+		i4 flags;
+	} *mfnew, *mfn;
+
+
+	/*
+	** open list file if specified.
+	*/
+	if (lfile != NULL)
+	{
+		if (lfile == EOS)
+		{
+			lfp = stdout;
+		}
+		else
+		{
+			STlcopy(lfile,lfilebuf,MAX_LOC);
+			LOfroms(PATH&FILENAME, lfilebuf, &lfileloc);
+			if (SIopen(&lfileloc, ERx("w"), &lfp) != OK)
+			{
+				fop_err(&lfileloc, TRUE);
+				lfp = NULL;
+			}
+		}
+	}
+	else
+	{
+		lfp = NULL;
+	}
+
+	if (xfer)
+	{
+		SIfprintf(stdout, ERget(S_CA0006_Copying_source_files_));
+		SIflush(stdout);
+	}
+
+	/*
+	** if directory for new source files doesn't exist, create it
+	** if possible.  newsrcdir may be empty if the user specified
+	** a list option but not -a / -s.
+	**
+	** If xfer, newsrcdir is non-NULL.
+	*/
+	if (newsrcdir != NULL && *newsrcdir != EOS) 
+	{
+		STlcopy(newsrcdir, newsrcbuf, MAX_LOC);
+		LOfroms(PATH, newsrcbuf, &newsrcloc);
+
+		PEsave();
+		PEumask(ERx("rwxrwx"));
+
+		if (LOexist(&newsrcloc))
+		{
+			if (LOcreate(&newsrcloc))
+			{
+				IIUGerr(DIREXIST, 0, 1, newsrcbuf);
+				PEreset();
+				errexit(TRUE);
+			}
+		}
+
+		PEreset();
+	}
+
+	/*
+	** setup destination location
+	*/
+	if (newsrcdir != NULL && *newsrcdir != EOS)
+	{
+		STcopy(newsrcbuf, dfilebuf);
+		LOfroms(PATH, dfilebuf, &Dfileloc);
+	}
+
+	/*
+	** we only care about the status of the source file directory if
+	** we're really transferring stuff.
+	*/
+	if (xfer)
+	{
+		/*
+		** If our old directory and new directory are the same, we've
+		** "copied" everything without doing anything - simply return.
+		** Pass through LO to make this comparison so that we have
+		** some chance of resolving different string representations
+		** for the same directory to some canonical form which will
+		** compare equal.
+		*/
+		STlcopy(oldsrcdir, sfilebuf, MAX_LOC);
+		if (STlength(sfilebuf) <= 0)
+		{
+			IIUGerr(CANOSRCDIR, 0, 0);
+			upd_srcdir(applid,newsrcdir);
+			return;
+		}
+		LOfroms(PATH, sfilebuf, &Sfileloc);
+		if (LOexist(&Sfileloc) != OK)
+		{
+			IIUGerr(DIREXIST, 0, 1, sfilebuf);
+			upd_srcdir(applid,newsrcdir);
+			return;
+		}
+		LOtos(&Sfileloc,&sstr);
+		LOtos(&Dfileloc,&dstr);
+
+		/* 
+		** Use case-insensitive comparison to fix bug 51678
+		** rather than CVlowering the two strings
+		*/
+		if (STbcompare(dstr, 0, sstr, 0, TRUE) == 0)
+		{
+			IIUGerr(S_CA0019_NoCopy, 0, 0);
+			return;
+		}
+
+		STcopy(newsrcbuf, ifilebuf);
+		LOfroms(PATH, ifilebuf, &Ifileloc);
+		STcopy(ERx("iiCAsrcX.tmp"),tempbuf);
+		LOfroms(FILENAME, tempbuf, &temploc);
+		LOstfile(&temploc, &Ifileloc);
+	}
+
+	/*
+	** Allocate array for processing metaframes.
+	** we allocate quite a bit more than we need, but it
+	** shouldn't matter.
+	*/
+	EXEC SQL SELECT COUNT(*)
+			INTO :mfcount
+			FROM ii_abfobjects
+			WHERE applid = :applid;
+
+	++mfcount;
+	mfnew = (struct mfchg *)
+			MEreqmem(0, mfcount*sizeof(struct mfchg), FALSE, NULL);
+	mfn = mfnew;
+	mfcount = 0;
+	tempbuf[0] = '\0';
+
+	/*
+	** handle each source file
+	*/
+        c_class = OC_CONST;     /* filter out constants from returned rows */
+	EXEC SQL SELECT DISTINCT a.abf_source, a.abf_flags,
+				a.object_id, o.object_class,
+				o.object_name
+		INTO :tempbuf, :flags, :oid, :class, :oname
+		FROM ii_abfobjects a, ii_objects o
+		WHERE a.applid = :applid
+			AND a.object_id = o.object_id
+			AND a.object_id <> a.applid
+                        AND a.abf_source <> ''
+                        AND o.object_class <> :c_class;
+	EXEC SQL BEGIN;
+		switch(class)
+		{
+		case OC_BRWFRAME:
+		case OC_APPFRAME:
+		case OC_MUFRAME:
+		case OC_UPDFRAME:
+			/*
+			** For all the metaframe types, we simply flag
+			** them as new if they weren't customized.  Check
+			** target directory for existance of a file.  If we're
+			** not actually transferring, flag all of them as
+			** new.  If regenable, but a file exists, we SET
+			** the custom edit bit.
+			*/
+			if ((flags & CUSTOM_EDIT) != 0)
+				copy_it(tempbuf, class, xfer, lfp);
+			if (newsrcdir != NULL && *newsrcdir != EOS &&
+				((flags & CUSTOM_EDIT) == 0 || ! xfer))
+			{
+				/* initialize by turning off any custom bit */
+				flags &= ~CUSTOM_EDIT;
+				if (regen_check(tempbuf,oname) < 0)
+					flags |= CUSTOM_EDIT;
+				mfn->id = oid;
+				mfn->flags = flags;
+				++mfcount;
+				++mfn;
+			}
+			break;
+		case OC_AFORMREF:
+			/*
+			** make sure we the right extension on
+			** form files.
+			*/
+			STtrmwhite(tempbuf);
+			ptr = STindex(tempbuf,ERx("."),0);   /* 6-x_PC_80x86 */
+			if (ptr == NULL)
+				ptr = tempbuf+STlength(tempbuf);
+			else
+				++ptr;
+			STprintf(ptr,ERx(".%s"),FORM_EXT);
+			copy_it(tempbuf, OC_AFORMREF, xfer, NULL);
+			break;
+		default:
+			copy_it(tempbuf, class, xfer, lfp);
+			break;
+		}
+	EXEC SQL END;
+
+	if (newsrcdir != NULL && *newsrcdir != EOS)
+	{
+		/*
+		** flag all the regeneratable frames as new.
+		** This is a DB update, which is why we could not do
+		** it inside the select loop.
+		*/
+		for ( mfn = mfnew; mfcount > 0; --mfcount,++mfn)
+			IICA4nf4GLNewFrame(mfn->id, mfn->flags);
+		upd_srcdir(applid,newsrcdir);
+	}
+}
+
+/*
+** common routine for "copied" files.  List to list file, if there is
+** one, transfer if called for.  Yes, if -a was specified and -l was not
+** this doesn't do anything.
+*/
+static
+copy_it(name,class,xfer,lfp)
+char *name;
+i4 class;
+bool xfer;
+FILE *lfp;
+{
+	LOCATION	temploc;	/* for filename retrieved by LOlist */
+	FILE		*fptr;
+
+	if (lfp != NULL)
+		SIfprintf(lfp,ERx("%s\n"),name);
+
+	if (xfer)
+	{
+		LOfroms(FILENAME, name, &temploc);
+		LOstfile(&temploc, &Sfileloc);
+		LOstfile(&temploc, &Dfileloc);
+
+		/*
+		** We "copy" through a temp file so that
+		** we don't wipe out any copies of the
+		** target file which might exist until
+		** we've successfully copied.  This takes
+		** care of us if we are actually copying a
+		** directory onto itself in some way that
+		** the directory name check doesn't catch,
+		** such as scenarios involving symbolic
+		** links.
+		*/
+		if (SIopen(&Ifileloc, ERx("w"), &fptr))
+		{
+			fop_err(&Ifileloc, TRUE);
+		}
+		else if (SIcat(&Sfileloc, fptr))
+		{
+			/*
+			** don't bother with errors on
+			** form files.  they aren't
+			** neccesarily going to be there.
+			*/
+			if (class != OC_AFORMREF)
+				fop_err(&Sfileloc, FALSE);
+			SIclose(fptr);
+
+			/* delete the 0 length file */
+			LOdelete(&Ifileloc);
+		}
+		else
+		{
+			SIclose(fptr);
+			_VOID_ LOdelete(&Dfileloc);
+			LOrename(&Ifileloc,&Dfileloc);
+		}
+	}
+}
+
+/*
+** If a source file already exists for an apparently regeneratable
+** file, issue a warning.  return -1 if it exists, 0 otherwise.
+*/
+static
+regen_check(name,frm)
+char *name;
+char *frm;
+{
+	LOCATION temploc;
+
+	LOfroms(FILENAME, name, &temploc);
+	LOstfile(&temploc, &Dfileloc);
+
+	if (LOexist(&Dfileloc) == OK)
+	{
+		IIUGerr(E_CA0021_4GLExists, 0, 2, name, frm);
+		return -1;
+	}
+
+	return 0;
+}
+
+static
+fop_err(loc, create)
+LOCATION *loc;
+bool	create;
+{
+	char *sn;
+
+	LOtos(loc,&sn);
+	IIUGerr(((create) ? E_CA0028_FILECRE : FILEOPEN), 0, 1, sn);
+}
+
+static
+upd_srcdir(id,sdir)
+EXEC SQL BEGIN DECLARE SECTION;
+i4 id;
+char *sdir;
+EXEC SQL END DECLARE SECTION;
+{
+	iiuicw1_CatWriteOn();
+
+	EXEC SQL UPDATE ii_abfobjects a
+		SET abf_source = :sdir
+		WHERE a.object_id = :id AND a.applid = :id;
+
+	iiuicw0_CatWriteOff();
+}

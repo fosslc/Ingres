@@ -1,0 +1,20 @@
+#
+# Jamfile file for front!utils!copyutil
+#
+
+SubDir ING_SRC front utils copyutil ;
+
+IISUBSYS front utils copyutil ;
+
+
+IIMSGHDR ercu.msg ;
+
+IILIBRARY COPYUTILLIB : formadd.sc 
+	cuwrutil.qsc curepout.qsc curdobj.qsc cuqnmout.qsc
+	cuobjexi.qsc cujdout.qsc cuinsert.qsc cugbfout.qsc cufrmout.qsc
+	cuencode.qsc cudelete.qsc cuclsout.qsc cuaddobj.qsc abfadd.qsc
+	print.c cuvigout.c cuutils.c curecord.c cumsgptr.c cucnflic.c ;
+
+IILIBRARY IMPFRAMELIBDATA : cucabf.c curtc.roc cuntr.roc cuesc.roc 
+	cucclass.c cucenc.c cucform.c cucjoind.c cucgbf.c 
+	cucqbfnm.c cucrw.c cucvig.c ;

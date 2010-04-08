@@ -1,0 +1,15 @@
+Ingres Replicator
+
+The Ingres Replicator is an extension to the Ingres
+Intelligent DBMS server which allows data in multiple independent
+databases to be maintained in a synchronized manner as if contained
+in a single, centralized relational database.  In this way,
+Ingres Replicator provides client applications with almost
+transparent access to enterprise-wide data.
+
+In addition to supporting access to Ingres databases, Ingres
+Replicator can integrate data from other database systems, with
+the addition of Ingres Networking and Enterprise Access extensions.
+In combination, these Ingres products allow replication to
+a wide variety of database systems: IBM DB2, IBM IMS, IBM ISAM, IBM VSAM,
+and HP data in ALLBASE/SQL or TurboIMAGE/XL.

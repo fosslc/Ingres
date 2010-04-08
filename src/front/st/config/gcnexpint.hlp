@@ -1,0 +1,3 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Determines the interval at which the Name Server checks for expired
+ tickets.

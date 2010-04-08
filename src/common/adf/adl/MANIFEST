@@ -1,0 +1,25 @@
+#
+# Jamfile file for common!adf!adl
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	07-jan-2005 (abbjo03)
+#	    This cannot be built on VMS until Xerces C++ 2.5 is ported.
+
+
+SubDir ING_SRC common adf adl ;
+
+IISUBSYS common adf adl ;
+
+if ! $(VMS)
+{
+IIUTILEXE unimapcompile : UNIMapCompile.cpp UNIMapCompileHandlers.cpp ;
+IICppNeedLibs unimapcompile : SHXERCESLIB GNLIB SHFRAMELIB SHCOMPATLIB SHQLIB ;
+
+IIUTILEXE unialscompile : UNIAlsCompile.cpp UNIAlsCompileHandlers.cpp ;
+IICppNeedLibs unialscompile : SHXERCESLIB GNLIB SHFRAMELIB SHCOMPATLIB SHQLIB ;
+
+IIXERCLIB $(SHXERCESLIB) ;
+}

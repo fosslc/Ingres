@@ -1,0 +1,27 @@
+#
+# Jamfile file for front!ice!scripts
+#
+# History:
+#	08-dec-2004 (abbjo03)
+#	    Use DFS instead of slash for portability.
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC front ice scripts ;
+
+IISUBSYS front ice scripts ;
+
+if $(BUILD_ICE)
+{
+IIICEFILE scripts$(DFS)icedbusr.sql : icedbusr.sql ;
+IIICEFILE scripts$(DFS)icedemo.sql : icedemo.sql ;
+IIICEFILE scripts$(DFS)icefiles.dat : icefiles.dat ;
+IIICEFILE scripts$(DFS)iceinit.sql : iceinit.sql ;
+IIICEFILE scripts$(DFS)iceload.dat : iceload.dat ;
+IIICEFILE scripts$(DFS)iceplays.sql : iceplays.sql ;
+IIICEFILE scripts$(DFS)icesample.sql : icesample.sql ;
+IIICEFILE scripts$(DFS)icetool.sql : icetool.sql ;
+IIICEFILE scripts$(DFS)icetutor.sql : icetutor.sql ;
+IIICEFILE scripts$(DFS)iceuser.sql : iceuser.sql ;
+IIICEFILE scripts$(DFS)icinit92.sql : icinit92.sql ;
+}

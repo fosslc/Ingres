@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Item Description Page</title>
+</head>
+<body>
+<center>
+<h1>Item Description Page</h1>
+</center>
+
+<!-- To Do:
+	    Add the select statement:
+            "select * from plays where type = ':type'"
+	    - the variable :type is passed to this
+	      document by the invoker.
+
+            Specify output to be table
+
+	    Use the session variable :play_txn to
+	    define the name of the transaction in
+	    the SQL statement. HINT: You will need to
+	    use the REPEAT keyword.
+
+	    Commit the transaction at once (using
+	    the :play_txn variable).
+-->
+
+<!-- #ICE REPEAT
+          DATABASE = `icetutor` 
+          SQL=`select id, name, cost from play_item where id = :id` 
+          TYPE=`UNFORMATTED`
+	  HTML=`<p>You have selected: <br><b>:name</b>@ :cost Silver Crown<!-- #ICE IF ( ``1`` != ``:cost``)
+                      THEN=``s`` -->
+                <br><a href="plays[play_shopAdd.html]?id=:id">Add to Shopping Bag</a>`
+-->
+<p>
+
+<!-- Standard Shop Action -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]` -->
+<!-- Standard Session Control -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

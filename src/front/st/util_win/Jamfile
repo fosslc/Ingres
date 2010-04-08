@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!st!util_win
+#
+
+SubDir ING_SRC front st util_win ;
+
+IISUBSYS front st util_win ;
+
+
+IIUTILEXE ingstop : ingstop.c ;
+IINEEDLIBS ingstop : COMPATLIB UTILLIB ;
+

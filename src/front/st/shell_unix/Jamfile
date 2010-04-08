@@ -1,0 +1,67 @@
+#
+# Jamfile file for front!st!shell_unix
+#
+
+SubDir ING_SRC front st shell_unix ;
+
+IISUBSYS front st shell_unix ;
+
+
+IIUTILSH iiask4it : iiask4it.sh ;
+IIUTILSH iichkraw : iichkraw.sh ;
+IIUTILSH iicnffiles : iicnffiles.sh ;
+IIUTILSH iidsfree : iidsfree.sh ;
+IIUTILSH iiecholg : iiecholg.sh ;
+IIUTILSH iiechonn : iiechonn.sh ;
+IIUTILSH iifilsiz : iifilsiz.sh ;
+IIUTILSH iigcfid : iigcfid.sh ;
+IIUTILSH iircpseg : iircpseg.sh ;
+IIUTILSH iirsh : iirsh.sh ;
+IIUTILSH iishlib : iishlib.sh ;
+IIUTILSH iistartup : iistartup.sh ;
+IIUTILSH iisuabf : iisuabf.sh ;
+IIUTILSH iisuapi : iisuapi.sh ;
+IIUTILSH iisubr : iisubr.sh ;
+IIUTILSH iisuc2 : iisuc2.sh ;
+IIUTILSH iisudas : iisudas.sh ;
+IIUTILSH iisudb2udb : iisudb2udb.sh ;
+IIUTILSH iisudbms64 : iisudbms64.sh ;
+IIUTILSH iisudbms : iisudbms.sh ;
+IIUTILSH iisuice : iisuice.sh ;
+IIUTILSH iisukerberos : iisukerberos.sh ;
+IIUTILSH iisulib : iisulib.sh ;
+IIUTILSH iisumdb : iisumdb.sh ;
+IIUTILSH iisunet : iisunet.sh ;
+IIUTILSH iisunode : iisunode.sh ;
+IIUTILSH iisuodbc : iisuodbc.sh ;
+IIUTILSH iisuoracle : iisuoracle.sh ;
+IIUTILSH iisurep : iisurep.sh ;
+IIUTILSH iisuscha : iisuscha.sh ;
+IIUTILSH iisuspat64 : iisuspat64.sh ;
+IIUTILSH iisuspat : iisuspat.sh ;
+IIUTILSH iisustar : iisustar.sh ;
+IIUTILSH iisusupp32 : iisusupp32.sh ;
+IIUTILSH iisutm : iisutm.sh ;
+IIUTILSH iisutux : iisutux.sh ;
+IIUTILSH iisuvdba : iisuvdba.sh ;
+IIUTILSH iisyslim : iisyslim.sh ;
+IIUTILSH iiunloadfix : iiunloadfix.sh ;
+IIUTILSH ingmknfs : ingmknfs.sh ;
+IIUTILSH ingstatus : ingstatus.sh ;
+IIUTILSH ingstop : ingstop.sh ;
+IIUTILSH install : install.sh ;
+IIUTILSH ipcclean : ipcclean.sh ;
+IIUTILSH mkimadb : mkimadb.sh ;
+IIUTILSH mkimage : mkimage.sh ;
+IIUTILSH mkrc : mkrc.sh ;
+IIUTILSH setingreslanguage : setingreslanguage.sh ;
+IIUTILSH iigenpreinst : iigenpreinst.sh ;
+IIUTILSH iigenpostinst : iigenpostinst.sh ;
+IIUTILSH iigenpreun : iigenpreun.sh ;
+IIUTILSH iicorepostinst : iicorepostinst.sh ;
+IIUTILSH iicorepreun : iicorepreun.sh ;
+IIUTILSH iidbmspreinst : iidbmspreinst.sh ;
+IIUTILSH iiapplcfg : iiapplcfg.sh ;
+IIUTILSH setupingres : setupingres.sh ;
+
+

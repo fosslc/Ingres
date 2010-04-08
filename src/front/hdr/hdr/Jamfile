@@ -1,0 +1,22 @@
+#
+# Jamfile file for front!hdr!hdr
+#
+
+SubDir ING_SRC front hdr hdr ;
+
+IISUBSYS front hdr hdr ;
+
+
+IIMSGHDR eraf.msg ercx.msg erde.msg erdg.msg ereq.msg erfe.msg erfm.msg
+	erg4.msg ergr.msg erlq.msg erqg.msg erug.msg erui.msg ;
+
+IIQSHHDR cu.h : cu.qsh ;
+IIQSHHDR dictutil.h : dictutil.qsh ;
+IIQSHHDR mqtypes.h : mqtypes.qsh ;
+IIQSHHDR oocat.h : oocat.qsh ;
+IIQSHHDR oocatlog.h : oocatlog.qsh ;
+IIQSHHDR ooclass.h : ooclass.qsh ;
+IIQSHHDR oosymbol.h : oosymbol.qsh ;
+IIQSHHDR ui.h : ui.qsh ;
+IIQSHHDR uigdata.h : uigdata.qsh ;
+

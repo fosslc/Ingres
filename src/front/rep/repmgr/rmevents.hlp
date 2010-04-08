@@ -1,0 +1,36 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmevents.hlp
+SEND DATABASE EVENT
+
+This screen is used to send database events to one or more of the
+servers that are currently running against the local database.
+
+The majority of events are designed to modify one of the server
+parameters and thus affect the run-time behavior of the servers.
+
+The columns on the list are:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        Event           The name of the database event.
+
+        Server Flag     For dd_set_server events, this is a server
+                        parameter that can be modified at run-time.
+                        This may include a pre-defined parameter value.
+
+        Description     A description of the database event.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Send            Send the currently highlighted event.  A list of
+                        servers will be displayed to allow selection.
+
+        Description     Display the description field for the currently
+                        highlighted event in a popup box.
+
+        Help            Access the Help facility.
+
+        End             Return to the Replication Monitor screen.

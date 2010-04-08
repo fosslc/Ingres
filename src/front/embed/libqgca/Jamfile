@@ -1,0 +1,15 @@
+#
+# Jamfile file for front!embed!libqgca
+#
+
+SubDir ING_SRC front embed libqgca ;
+
+IISUBSYS front embed libqgca ;
+
+IILIBRARY LIBQGCALIB : cgcwrite.c cgcutils.c cgctrace.c
+        cgcread.c cgccopy.c cgcassoc.c cgcaltrd.c ;
+
+IILIBRARY IMPEMBEDLIBDATA : cgcdata.c ;
+
+IILIBOBJECT cgcdata.c ;
+

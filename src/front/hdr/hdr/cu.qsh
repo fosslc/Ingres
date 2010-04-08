@@ -1,0 +1,686 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+EXEC SQL INCLUDE SQLDA;
+
+/**
+** Name:	CU.qsh	   -   Global header for copy utility.
+**
+** Description:
+**	This contains definitions
+**		rectypes handled by copy utility.
+**		IDSTACK
+**		CURECORD
+**		CUTLIST
+**		CUDELLIST
+**		IICUMAJOR
+**		IICUMINOR
+**		CUCONFLICT
+**
+** History:
+**	3-jul-1987 (Joe)
+**	17-oct-88 (kenl)
+**		Added include of SQLDA.  Turned header into a .qsh.
+**	3-sep-92 (blaise)
+**		Extensive changes to comments to give a more detailed and
+**		up to date description of the contents of the copyapp
+**		intermediate file.
+**	6-jan-93 (blaise)
+**		Incremented IICUMINOR
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	28-Mar-2005 (lakvi01)
+**	    Include prototypes for CU functions.
+**/
+
+/*
+** These are the current major and minor version numbers of the copy utility.
+**
+** The major version number IICUMAJOR should only be changed when the
+** files of this version are incompatible with files of the previous
+** version and a conversion must be done.
+**
+** The minor version should be changed whenever a new type is added.
+** The files are incompatible, but a file written with a newer minor version
+** cannot be read by a copy utility with an older minor version.
+*/
+
+# define	IICUMAJOR	6
+# define	IICUMINOR	5
+
+/*
+** Record types (rectypes) are used throughout the copy utility.
+** Each line of a copy file is of a particular rectype.  There
+** are the following kinds of rectypes.
+**
+**	CU_OBJECT	This line is the start of an object to
+**			be placed in the database.  It is known
+**			as the current object. 
+**			Object lines have a level number.  The level
+**			number tells whether an object is a child
+**			of a previous object.  A level of 0 is a
+**			parent object.  levels > 0 but equal are
+**			siblings.  Levels > 0 are children of
+**			the closest previous object line of level-1.
+**
+**			When an object is inserted into the database,
+**			its id is saved for its detail lines and its
+**			children.
+**
+**			Subsequent lines in the file up to the next
+**			CU_OBJECT line with the same level
+**			will belong to this object or its children.
+**	
+**	CU_COMPONENT	This line signifies the start of components
+**			for the current object.  For example, FIELDS
+**			are a component of a form object.  They are
+**			not objects themselves, but belong to a FORM
+**			object.
+**
+**	CU_DETAIL	This type of line contains detail information for
+**			the closest previous object or object component.
+**			These type of lines begin with '\t'.
+**
+**	CU_ENCODING	This is the start an encoded object.  It starts
+**			a new object definition.  The line contains
+**			the name of the object, the class and
+**			the maximum size of the subsequent lines which
+**			make up the encoding.
+**
+**	CU_GBFSTYLE	This is a line that starts a GBF graph defintion.
+**			These are old style objects, that aren't fully
+**			supported any longer.  These means that tables
+**			for them might not exist.  They are handled
+**			specially.
+*/
+
+/*
+** rectypes are defined as follows.
+** if they are positive, then they are of kind CU_OBJECT.  The
+** value of this rectype is the same as the class of the object.
+** This means that class ids are used as rectypes.
+** Negative rectypes are defined here.
+*/
+
+# define	CU_OBJECT	0x100
+# define	CU_DETAIL	0x200
+# define	CU_COMPONENT	0x300
+# define	CU_ENCODING	0x400
+# define	CU_EOF		0x500
+# define	CU_BADTYPE	0x600
+# define	CU_GBFSTYLE	0x700
+# define	CU_MASK		0xf00
+
+/*
+** Known component rectypes.
+**	CUC_AODEPEND	Start of dependencies for an ABFOBJECT.
+**	CUC_FIELD	Start of fields of form.
+**	CUC_TRIM	Start of trim of form.
+**	CUC_RCOMMANDS	Start of rcommands for report.
+**	CUC_GCOMMANDS	Start of gcommands for GBF graph.
+**	CUC_ADEPEND	Start of dependencies for an application.
+**
+** Known component rectypes which apply to Vision applications only.
+**	CUC_VQJOIN	Start of visual query joins
+**	CUC_VQTAB	Start of tables in the visual query
+**	CUC_VQTCOL	Start of table columns in the visual query
+**	CUC_MENUARG	Start of parameters passed from current frame
+**	CUC_FRMVAR	Start of local variables
+**	CUC_ESCAPE	Start of escape code
+*/
+
+# define	CUC_AODEPEND	-(CU_COMPONENT|0x1)
+# define	CUC_FIELD	-(CU_COMPONENT|0x2)
+# define	CUC_TRIM	-(CU_COMPONENT|0x3)
+# define	CUC_RCOMMANDS	-(CU_COMPONENT|0x4)
+# define	CUC_GCOMMANDS	-(CU_COMPONENT|0x5)
+# define	CUC_ADEPEND	-(CU_COMPONENT|0x6)
+# define	CUC_VQJOIN	-(CU_COMPONENT|0x7)
+# define	CUC_VQTAB	-(CU_COMPONENT|0x8)
+# define	CUC_VQTCOL	-(CU_COMPONENT|0x9)
+# define	CUC_MENUARG	-(CU_COMPONENT|0xa)
+# define	CUC_FRMVAR	-(CU_COMPONENT|0xb)
+# define	CUC_ESCAPE	-(CU_COMPONENT|0xc)
+
+/*
+** Known encodings.
+*/
+# define	CUE_GRAPH	-(CU_ENCODING|0x1)
+
+/*
+** Detail lines are all the same.
+*/
+# define	CUD_LINE	-(CU_DETAIL|0x1)
+
+/*
+** Old style objects.
+*/
+# define	CUO_GBF		-(CU_GBFSTYLE|0x1)
+
+/*
+** The following is the format of the lines in a file for the different
+** rectypes (\t is a tab - any tabs in the data should be escaped with a
+** \- and \n is a newline).
+**
+** For a record of type CU_OBJECT, the line format is:
+**
+** OC_XXXX\tlevel#\tname\tshort_remark\tlong_remark\n
+**
+**     where    OC_XXXX is the class name for the object found in
+**		ooclass.qh.
+**
+**		level# is the level number for this object relative
+**		to the other objects in the file.
+**
+**		name is the name of the object.
+**		
+**		short_remark is the short remark to store for the object.
+**
+**		long_remark is the long remark to store for the object.
+**
+** For a record of type CU_COMPONENT the line format is:
+**
+** CUC_XXXXX\n
+**
+**	where  CUC_XXXXX is one of the component names above.
+**
+** For a record of type CU_ENCODING the line format is:
+**
+** CUE_XXXXX\tname\tclass\tsize\n
+**
+**	where   CUE_XXXXX is one of the encodings names above.
+**		
+**		name is the name of the object given by the encoding.
+**		class is the class of the object given by the encoding.
+**	      	size is the maximum line length of the subsequent lines
+**		containing encoded data.
+**	
+**		The encoding does contain
+**		the name and class, but they are duplicated
+**		on this line so that the copy utility knows
+**		the name and class of the object being added.
+**		The subsequent lines are lines of data each ending
+**		in a newline.  The newline belongs to the encoding
+**		if the number of characters in the line, including
+**		the newline is <= the size given on the line unless
+**		it is the last newline.
+**		The group of lines ends with an END marker.
+**
+**
+** For a record of type CU_GBFSTYLE the line format is:
+**
+** CUO_XXXXXX\tname\towner\n
+**
+** For a record of type CU_DETAIL, the line format is:
+**
+** \ttoken1\ttoken2\t...\ttokenN\n
+**
+**	token1 through tokenN are string representations of the data
+**	  to be placed in the detail table this line is for.  The order
+**	  for each detail table is given below.
+**
+** details for OC_APPL, OC_HLPROC, OC_OSLPROC, OC_OSLFRAME, OC_RWFRAME,
+**		OC_QBFFRAME, OC_GRFRAME, OC_GBFFRAME, OC_UNFRAME,
+**		OC_AFORMREF, OC_MUFRAME, OC_APPFRAME, OC_BRWFRAME,
+**		OC_UPDFRAME, OC_RECORD, OC_GLOBAL, OC_CONST go into table
+**		ii_abfobjects in the following order:
+**
+**	token1 <-> abf_source
+**	token2 <-> abf_symbol
+**	token3 <-> retadf_type
+**	token4 <-> rettype
+**	token5 <-> retlength
+**	token6 <-> retscale
+**	token7 <-> abf_version
+**	token8 <-> abf_arg1
+**	token9 <-> abf_arg2
+**	token10 <-> abf_arg3
+**	token11 <-> abf_arg4
+**	token12 <-> abf_arg5
+**	token13 <-> abf_arg6
+**	token14 <-> abf_flags
+**
+** details for CUC_AODEPEND go into ii_abfdependencies
+** details for CUC_ADEPEND to into ii_abfdependencies
+**
+**	token1 <-> abfdef_name
+**	token2 <-> abfdef_owner
+**	token3 <-> object_class
+**	token4 <-> abfdef_deptype
+**
+** details for OC_QBFNAME go into ii_qbfnames:
+**
+**	token1 <-> relname
+**	token2 <-> frname
+**	token3 <-> qbftype
+**
+** details for OC_JOINDEF go into ii_joindefs:
+**
+**	token1 <-> qtype
+**	token2 <-> qinfo1
+**	token3 <-> qinfo2
+**	token4 <-> qinfo3
+**	token5 <-> qinfo4
+**
+** details for OC_FORM go into ii_forms:
+**
+**	token1 <-> frmaxcol
+**	token2 <-> frmaxlin
+**	token3 <-> frposx
+**	token4 <-> frposy
+**	token5 <-> frfldno
+**	token6 <-> frnsno
+**	token7 <-> frtrimno
+**	token8 <-> frversion
+**	token9 <-> frscrtype
+**	token10 <-> frscrmaxx
+**	token11 <-> frscrmaxy
+**	token12 <-> frscrdpix
+**	token13 <-> frscrdpiy
+**	token14 <-> frflags
+**	token15 <-> fr2flags
+**	token16 <-> frtotflds
+**
+** details for CUC_FIELD go into ii_fields:
+**
+**	token1 <-> flseq
+**	token2 <-> fldname
+**	token3 <-> fldatatype
+**	token4 <-> fllength
+**	token5 <-> flprec
+**	token6 <-> flwidth
+**	token7 <-> flmaxlin
+**	token8 <-> flmaxcol
+**	token9 <-> flposy
+**	token10 <-> flposx
+**	token11 <-> fldatawidth
+**	token12 <-> fldatalin
+**	token13 <-> fldatacol
+**	token14 <-> fltitle
+**	token15 <-> fltitcol
+**	token16 <-> fltitlin
+**	token17 <-> flintrp
+**	token18 <-> fldflags
+**	token19 <-> fld2flags
+**	token20 <-> fldfont
+**	token21 <-> fldptsz
+**	token22 <-> fldefault
+**	token23 <-> flformat
+**	token24 <-> flvalmsg
+**	token25 <-> flvalchk
+**	token26 <-> fltype
+**	token27 <-> flsubseq
+**
+** Details for CUC_TRIM go into ii_trim:
+**
+**	token1 <-> trim_col
+**	token2 <-> trim_lin
+**	token3 <-> trim_trim
+**	token4 <-> trim_flags
+**	token5 <-> trim2_flags
+**	token6 <-> trim_font
+**	token7 <-> trim_ptsz
+**
+** Details for OC_REPORT, OC_RWREP and OC_RBFREP go into ii_reports:
+**
+**	token1 <-> reptype
+**	token2 <-> repacount
+**	token3 <-> repscount
+**	token4 <-> repqcount
+**
+** Details for CUC_RCOMMANDS go into ii_rcommands:
+**
+**	token1 <-> rcotype
+**	token2 <-> rcosequence
+**	token3 <-> rcosection
+**	token4 <-> rcoattid
+**	token5 <-> rcocommand
+**	token6 <-> rcotext
+**
+** Details for CUO_GBF go into graphs:
+**
+**	token1 <-> graphid
+**	token2 <-> gowner
+**	token3 <-> gdate
+**	token4 <-> gtupcnt
+**	token5 <-> gvalcnt
+**	token6 <-> gseries
+**	token7 <-> gserlen
+**	token8 <-> glabels
+**	token9 <-> glbllen
+**	token10 <-> xtype
+**	token11 <-> ytype
+**	token12 <-> ztype
+**
+** Details for CUC_GCOMMANDS go into gcommands:
+**
+**	token1 <-> graphid
+**	token2 <-> gowner
+**	token3 <-> gseqno
+**	token4 <-> gcontinue
+**	token5 <-> gmodule
+**	token6 <-> gcommand
+**	token7 <-> gint
+**	token8 <-> gflt
+**	token9 <-> gstr
+**
+** Details for CUC_VQJOIN go into ii_vqjoins:
+**
+**	token1 <-> vq_seq
+**	token2 <-> join_type
+**	token3 <-> join_tab1
+**	token4 <-> join_tab2
+**	token5 <-> join_col1
+**	token6 <-> join_col2
+**
+** Details for CUC_VQTAB go into ii_vqtables:
+**
+**	token1 <-> vq_seq
+**	token2 <-> vq_mode
+**	token3 <-> tab_name
+**	token4 <-> tab_owner
+**	token5 <-> tab_section
+**	token6 <-> tab_usage
+**	token7 <-> tab_flags
+**
+** Details for CUC_VQTCOL go into ii_vqtabcols:
+**
+**	token1 <-> vq_seq
+**	token2 <-> tvq_seq
+**	token3 <-> col_name
+**	token4 <-> ref_name
+**	token5 <-> adf_type
+**	token6 <-> adf_length
+**	token7 <-> adf_scale
+**	token8 <-> col_flags
+**	token9 <-> col_sortorder
+**	token10 <-> col_info
+**
+** Details for CUC_MENUARG go into ii_menuargs:
+**
+**	token1 <-> mu_text
+**	token2 <-> mu_field
+**	token3 <-> mu_column
+**	token4 <-> mu_expr
+**	token5 <-> mu_seq
+**
+** Details for CUC_FRMVAR go into ii_framevars:
+**
+**	token1 <-> fr_seq
+**	token2 <-> var_field
+**	token3 <-> var_column
+**	token4 <-> var_datatype
+**	token5 <-> var_comment
+**
+** Details for CUC_ESCAPE go into ii_encodings:
+**
+**	token1 <-> encode_sequence
+**	token2 <-> encode_estring
+**
+** Details for OC_RECMEM go into ii_abfclasses:
+**
+**	token1 <-> class
+**	token2 <-> adf_type
+**	token3 <-> type_name
+**	token4 <-> adf_length
+**	token5 <-> adf_scale
+*/
+
+/*
+** Maximum size of file line
+*/
+# define	CU_LINEMAX	4800
+
+/*
+** Maximum number of tokens in line
+** FDfields is the biggest.
+*/
+# define	CU_TOKMAX	27
+
+/*}
+** Name:	CUTLIST		- target list elements
+**
+** Description:
+**	This structure describes the target list elements for
+**	the insert and retrieve statements for a table needed
+**	by a copy object.
+**
+**	An array of these structures is pointed to by a CURECORD.
+**
+**	On an insert, a line of the copy file will be read and
+**	broken up into values.  These values will be used for
+**	the insert.  Also, the object id for the record and any
+**	of its parent's object ids will also be values for the insert.
+**	The CURECORD contains the file values and the ids as two
+**	separate arrays.  For each target list element, the field
+**	cuinssrc tells whether it gets it values from the file
+**	values or the ids.  
+**
+** History:
+**	25-jun-1987 (Joe)
+**		Initial Version
+*/
+typedef struct
+{
+    i4			cuinssrc;   /* Where values comes from on insert */
+# define		CUFILE	  1 /* Values is from from */
+# define		CUID	  2 /* Values is from parent ids */
+# define		CUNAME	  3 /* Value is the object's name. */
+# define		CUOWNER	  4 /* Value is the object's owner. */
+# define		CUOFILE   5 /* optional token from file */
+    i4			cuoffset;   /*
+				    ** Offset to value in either file values
+				    ** or parent ids
+				    ** starts at 1.
+				    */
+    char		*cuname;    /* The name of the element */
+    DB_DATA_VALUE	cudbv;	    /* The element's type and length */
+} CUTLIST;
+
+/*}
+** Name:	CUDELLIST	- Table/column pairs for deletes
+**
+** Description:
+**	This structure contains a table name, and the column within
+**	that table to use to delete the records from that table for a 
+**	particular object.
+**
+**	The column is assumed to be the column containing the object id.
+**	A generic delete function travels through an array of these (
+**	last element contains a NULL cutable field) doing a
+**
+**		range of cutable is cutable
+**		delete cutable where cutable.cucolumn = id
+**
+** History:
+**	3-aug-1987 (Joe)
+**		Initial Version
+*/
+typedef struct
+{
+    char	*cutable;
+    char	*cucolumn;
+} CUDELLIST;
+
+/*}
+** Name:	CURECORD	- A record for a type of object.
+**
+** Description:
+**	This is the information needed to insert the detail lines
+**	for a particular record type.
+**	All record types have a table that contains the detailed
+**	information about the record type. 
+**
+**	When a line is read from the copy file it is read as
+**	a string.  The string is broken up into values.
+**	These are converted into the appropriate type for the
+**	column they will be appended to.
+**	The reason
+**	this conversion is done in the FE and not during the insert
+**	is that on the gateway, the DB statements might not be able
+**	to use functions.
+**
+**	The arrays for the field cuargv is not initialized until
+**	it is first needed.
+**
+** History:
+**	25-jun-1987 (Joe)
+**		Initial Version
+**	17-oct-88 (kenl)
+**		Changed cuargv from a (char **) to an (IISQLDA *).
+**      13-Oct-2008 (hanal04) Bug 120290
+**              Added cuupdabfsrc to CURECORD. During a copyapp in abf_source
+**              values that are generated need to be regenerated to avoid
+**              duplicate abf_source values in the future.
+*/
+typedef struct
+{
+    i4		    cunoelms;	/* number of tlist elements for this rectype */
+    CUTLIST	    *cutlist;	/* array of tlist elements for this rectype */
+    char	    *cutable;	/* detail table for this rectype */
+    bool	    cuinit;	/* whether this record has been initialized */
+    bool            cuupdabfsrc;      /* True is abf_source needs parent oid */
+    STATUS	    (*cupostadd)();   /* function to call after insert */
+    STATUS	    (*cuinsert)();    /* function to call to do insert */
+    STATUS	    (*cudelete)();    /* function to do delete */
+    CUDELLIST	    *cudeltab;	/* Array of table column pairs on delete */
+    STATUS	    (*cuoutfunc)();   /* function to do copy out */
+    IISQLDA	    *cuargv;	/* argv array for param statements */
+    char	    *cuinsstr;	/* param string for SQL insert */
+} CURECORD;
+/*
+** Only things with levels are frame with go to 2 levels.
+*/
+
+# define CU_LEVELMAX		3
+
+/*}
+** Name:	IDSTACK		- Stack of ids.
+**
+** Description:
+**	This structure keeps a stack of ids.
+**
+** History:
+**	3-jul-1987 (Joe)
+**		Initial Version
+*/
+typedef struct
+{
+    i4		idtop;		/* points to top id */
+    OOID	idstk[CU_LEVELMAX];
+} IDSTACK;
+
+/*}
+** Name:	CUCONFLICT      - Conflict structure.
+**
+** Description:
+**	This structure controls how the copy utility deals with
+**	conflicts.  A conflict is a case were an object in a copy
+**	input file already exists in the database.
+**
+**	Depending on the settings in this structure, the copy utility will
+**	check for conflicts before it processes any object by prereading
+**	the input file, or it will check for conflicts as it processes
+**	each item.  If a conflict is found, a user supplied routine
+**	is called to determine how to handle the conflict.  The user
+**	routine can tell the copy utility to quit, replace the object
+**	in the db with the one in the file, or leave the object
+**	in the db.  For the last two options, the routine can also tell
+**	the copy utility to do the same for any other conflicts encountered.
+**
+**	This should permit a lot of flexibility in how users of the copy
+**	utility deal with conflicts.
+**
+**	The user routine pointed to by cuconflict must be declared
+**	as follows:
+**	
+**	i4
+**	userconflict(class, name)
+**	i4	class;
+**	char	*name;
+**
+**	class is the class of the object that conflicts,
+**	name is the name of the object.
+**
+**	The routine must return a value which is a bit mask of
+**	the constants:
+**		CUREPLACE
+**		CUALL
+**		CUQUIT
+**
+**	if the return value has CUQUIT set, then the copy utility
+**	will quit process the current input file.
+**
+**	if the return value has CUREPLACE set, then the object in
+**	the database will be replaced
+**	if the return value does not have CUREPLACE set, then the object
+**	in the database is unchanged.
+**
+**	if the return value has CUALL set, then for any future conflicts,
+**	the user routine will not be called, and the action taken on
+**	all subsequent conflicts will be that given by the current
+**	setting of the CUREPLACE bit in the return value.
+**
+**	
+**
+** History:
+**	5-aug-1987 (joe)
+**		Initial Version
+*/
+typedef struct
+{
+    i4		cuwhen;		/* When to check for conflicts */
+				/*
+				** CUFOREACH means as each object is
+				** encountered.
+				** CUATSTART means before any objects are
+				** processed.
+				*/
+# define	CUFOREACH	1
+# define	CUATSTART	2
+    i4		(*cuconflict)(); /* User's conflict routine */
+# define	CUREPLACE	0x1
+# define	CUALL		0x2
+# define	CUQUIT		0x4
+    bool	cucheck;	/* Whether to call user routine on conflict */
+    bool	cureplace;	/* Whether to replace objects */
+} CUCONFLICT;
+
+/*
+** mark characters to allow source to be transferred in copyapp temp
+** file.  A line starting with CUMRK is an EOF as far as the copy utilities
+** are concerned.
+*/
+
+#define CUMRK '@'
+#define CUMRK_EOF '!'
+#define CUMRK_FILE '/'
+
+/*
+** Return status values for iicuChkHdr
+*/
+#define CU_CMPAT	0	/* Success - intermediate file will work */
+#define CU_FAIL		1	/* Not a valid copyapp intermediate file */
+#define CU_CONV		2	/* Versions don't match - need to convert */
+#define CU_NOCNV	3	/* Versions don't match and we won't convert
+				   (e.g. for versions > 6.5 we won't convert an 
+				   intermediate file created in 5.0) */
+#define CU_UPWD		4	/* User is trying to copy in a file from a
+				   later release */
+/*
+** Function prototypes
+*/
+FUNC_EXTERN bool	cu_objexist(i4, char *, i4 *);
+FUNC_EXTERN i4		cu_rectype(char *);
+FUNC_EXTERN STATUS	iicuChkHdr(char *, char *, i4 *, i4 *);
+FUNC_EXTERN char *	IICUrtoRectypeToObjname(OOID);
+FUNC_EXTERN char *	IICUrtnRectypeToName(OOID);
+FUNC_EXTERN VOID	cu_filtoks(char *, char **);
+FUNC_EXTERN char *	cu_gettok(char *);
+FUNC_EXTERN bool	cu_inarray(char *[], i4);
+FUNC_EXTERN VOID	IICUbsdBSDecode(char *);
+FUNC_EXTERN VOID	IICUbseBSEncode(char *, char *);

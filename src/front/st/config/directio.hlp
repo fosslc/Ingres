@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2005 Ingres Corporation
+
+  The direct_io resource controls whether the server will use direct
+  I/O instead of normal filesystem I/O.  Direct I/O uses the filesystem,
+  unlike raw I/O, but bypasses most of the OS caching and buffering.
+  Direct I/O is not available on all platforms, or all filesystems.
+  If direct I/O is turned ON but is not supported by the OS, regular
+  filesystem I/O will be used instead.
+
+  The default is OFF.

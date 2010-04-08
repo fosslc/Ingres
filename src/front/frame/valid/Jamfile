@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!frame!valid
+#
+
+SubDir ING_SRC front frame valid ;
+
+IISUBSYS front frame valid ;
+
+
+IIMSGHDR erfv.msg ;
+
+IILIBRARY FDLIB : grammar.yf dgrammar.yf getlist.qsc vinit.c
+	type.c parerror.c mklist.c mkcoltre.c
+	mkatrtre.c maketree.c lex.c except.c evaltree.c drveval.c
+	dnode.c dlex.c dinit.c coltree.c chklist.c ;
+
+IILIBRARY IMPFRAMELIBDATA : valid.c vdata.c ;

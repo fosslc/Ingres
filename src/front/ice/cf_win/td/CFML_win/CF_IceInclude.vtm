@@ -1,0 +1,93 @@
+
+<TAG NAME="CF_IceInclude">
+    <EDITORLAYOUT HEIGHT="330" LFHEIGHT="330">
+
+	<control type="Image" name="imgEditor" width="170" height="MAXIMUM" corner="NE" right=5 down=5 filepath="../IngresIce/Icons/ingresii.bmp"/>
+
+		<CONTAINER TYPE="Panel" NAME="pnlCommon" CAPTION="" WIDTH="MAXIMUM" HEIGHT=140 LFHEIGHT=142 MAXWIDTHPADDING=0 ANCHOR="imgEditor" CORNER="NE" RIGHT=10>
+		    <CONTROL NAME="lblBusiness" TYPE="Label" CAPTION="Business Unit:" DOWN="20" RIGHT="10" WIDTH="80"/>
+            <CONTROL NAME="txtBusiness" TYPE="TextBox" ANCHOR="lblBusiness" CORNER="NE" WIDTH="MAXIMUM"/>
+
+			<CONTROL NAME="lblValue" TYPE="Label" CAPTION="Document:" DOWN="45" ANCHOR="txtValue" CORNER="NE" RIGHT="10" WIDTH="80"/>
+            <control type="FileBrowser" name="txtDocument" width="MAXIMUM" maxwidthpadding=10 anchor="lblValue" corner="NE" filter="*.*" filenameonly horizresize="BODY"/>
+
+		    <CONTROL NAME="lblVariable" TYPE="Label" CAPTION="Number of Variable:" DOWN="70" RIGHT="10" WIDTH="110"/>
+            <CONTROL NAME="txtNumVari" TYPE="TextBox" ANCHOR="lblVariable" CORNER="NE" WIDTH="MAXIMUM"/>
+
+            <CONTROL NAME="lblType" TYPE="Label" CAPTION="Type:" DOWN="95" RIGHT="10" WIDTH="80"/>
+            <CONTROL NAME="txtType" TYPE="DropDown" EDITABLE="Yes" ANCHOR="lblType" CORNER="NE"  WIDTH="100">
+               <ITEM CAPTION="HTML" VALUE="HTML" SELECTED="Yes"/>
+               <ITEM CAPTION="MULTI" VALUE="MULTI"/>
+               <ITEM CAPTION="REPORT" VALUE="REPORT"/>
+               <ITEM CAPTION="EXE" VALUE="EXE"/>
+			</CONTROL>
+		</CONTAINER>
+					
+		<CONTAINER TYPE="Panel" NAME="pnlRepeat" WIDTH="MAXIMUM" HEIGHT="50" MAXWIDTHPADDING=0 MAXHEIGHTPADDING=5 ANCHOR="pnlCommon" CORNER="SW" DOWN=10>			
+			<CONTROL TYPE="Label" NAME="lblRepeat" WIDTH=60 LFWIDTH=96 CORNER="NW" RIGHT=10 Down=20 CAPTION="Repeat:"/>
+			<CONTROL NAME="txtRepeat" TYPE="CheckBox" ANCHOR="lblRepeat" CORNER="NE"  WIDTH="MAXIMUM"/>			
+		</CONTAINER>
+      </CONTAINER>
+
+
+   </EDITORLAYOUT>
+
+   <ATTRIBUTES>
+   </ATTRIBUTES>
+
+   <ATTRIBCATEGORIES>
+   </ATTRIBCATEGORIES>
+
+   <TAGLAYOUT>      
+   
+   <WIZIF OPTIONLowerCaseTags EQ 'true'>
+			<WIZSET TIMEOUT	= 'timeout'>
+			<WIZSET MIMEATTACH = 'mimeattach'>
+		<WIZELSE>
+			<WIZSET TIMEOUT	= 'TIMEOUT'>
+			<WIZSET MIMEATTACH = 'MIMEATTACH'>
+		</WIZIF>
+		
+		<WIZIF OPTIONLinearLayout EQ 'true'>
+			<WIZSET verticalSpacingGap =  ' ' >
+		<WIZELSE>
+			<WIZSET verticalSpacingGap =  Chr(13) & Chr(10) & '        ' >
+		</WIZIF>
+
+		<WIZIF txtRepeat EQ 'true'>
+			<WIZSET repeatDec = ' REPEAT ' >
+		<WIZELSE>
+			<WIZSET repeatDec = ' ' >
+		</WIZIF>
+
+  		<WIZSET Exclaim =  '!' >
+  		<WIZSET Amp =  '&' >
+		<WIZIF txtNumVari NEQ ''>
+			<WIZSET closechr = '?' >
+		<WIZELSE>
+			<WIZSET closechr = '`' >
+		</WIZIF>
+<$${Exclaim}-- #ICE$${repeatDec}INCLUDE=`$${txtBusiness}[$${txtDocument}]$${closechr}
+<WIZIF txtNumVari NEQ ''>
+	<WIZSET varIndent  = ' '>
+	<WIZIF txtNumVari GT 0>
+	<WIZSET Tab = Chr(9)>
+	<WIZSET LoopNum = 1>
+	<WIZLOOP CONDITION = "LoopNum LTE txtNumVari">
+	<WIZIF 1>	VARIABLE_NAME$${LoopNum}=VALUE$${LoopNum}<WIZIF LoopNum NEQ txtNumVari>$${Amp}
+</WIZIF>
+</WIZIF>
+	<WIZSET LoopNum = LoopNum + 1>
+	</WIZLOOP>`</WIZIF>
+</WIZIF>
+<WIZIF txtType NEQ ''>
+	$${DefaultCase('TYPE=')}`$${txtType}`</WIZIF>
+-->
+   </TAGLAYOUT>
+
+
+   <TAGDESCRIPTION HELPFILE="../../TagDefs/IngresIce/Docs/cfInclude.html"/>
+
+
+</TAG>
+

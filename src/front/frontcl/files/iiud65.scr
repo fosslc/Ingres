@@ -1,0 +1,19 @@
+/* Copyright (c) 2004 Ingres Corporation */
+
+/* QUEL script iiud65.scr */
+\quel
+\macro
+
+/* Make sure that we're allowed to destroy/create standard catalogs. */
+retrieve (user_name=user) where lowercase(user)="$ingres"
+\go
+/* If the user isn't $ingres, leave now. */
+\branch ?{ifgt;@{tuplecount};0;1;0}=0 NotIngres
+\branch IsIngres
+\mark NotIngres
+{type E_UD0010 Frontend catalogs are owned by the user '$ingres'. }\v
+{type You must be the '$ingres' user in order to reload the catalogs.}\v
+{type }\v
+\quit
+\mark IsIngres
+\nomacro

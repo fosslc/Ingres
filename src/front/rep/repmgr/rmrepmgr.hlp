@@ -1,0 +1,35 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmrepmgr.hlp
+REPLICATOR MANAGER MAIN MENU
+
+This menu is used to select a task to manage Ingres Replicator.  The
+screen shows the database name and database number accessed with
+Replicator Manager, in the upper right-hand corner.  It also displays
+the Replicator version identifier.
+
+The following choices are available:
+
+        SELECTION       ALLOWS YOU TO
+        ---------       -------------
+        Configuration   Access the Configuration Menu which contains
+                        selections required to configure Replicator.
+
+        Monitor         Start and stop the Replicator Servers, monitor
+                        replication activities occurring on this
+                        database, and send database events to servers
+                        running against this database.
+
+        Resolver        Access the Resolver Reports Menu to produce
+                        reports to aid in troubleshooting, collision
+                        resolution, and configuring Replicator.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Select          Choose the currently highlighted option.
+
+        Help            Access the Help facility.
+
+        Quit            Exit Replicator Manager.

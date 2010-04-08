@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2009 Ingres Corporation
+ The resource cardinality_check can be used to disable WHERE clause
+ singleton subselect query cardinality checking.
+
+

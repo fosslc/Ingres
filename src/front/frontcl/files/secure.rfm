@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2004 Ingres Corporation
+#
+# The configuration rule specifications listed in this file are used
+# to generate the default configuration for INGRES/Net during its 
+# setup procedure.  Note that the named files are assumed to exist
+# in the "files" directory.
+#
+
+rulefile.01:	dbms.crs
+rulefile.02:	secure.crs
+rulefile.03:	all.crs
+rulefile.04:	tz.crs

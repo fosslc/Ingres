@@ -1,0 +1,434 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>		/* 6-x_PC_80x86 */
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ui.h>
+#include	"erqf.h"
+##include	"mqbf.qsh"
+##include	"mqsymbol.qsh"
+#include	<oodefine.h>
+
+/**
+**	CATALOG.QSC  -  This module contains the routines to
+**		       display the MQBF Catalogs and perform
+**		       various tasks on stored query definitions.
+**
+**	Routines:
+**	    mqcheck()
+**	    mqcats()
+**
+**	History:
+**	Written: 11/10/83 (nml)
+**		10/20/86 (KY)  -- Changed CH.h to CM.h.
+**		11/18/86 (KY)  -- changed STindex,STrindex for 
+**				Double Bytes characters.
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh.  Replaced QUEL
+**			transaction statements with SQL statements.  Replaced
+**			QUEL DELETE on table ii_joindefs with SQL DELETE.
+**		29-jan-1988 (peter)
+**			Use repeat delete.
+**		11-feb-1988 (peter)
+**			Add parameter to mq_tbl_load to avoid refreshing
+**			the catalog unless needed.
+**		18-feb-1988 (peter)
+**			Fix bad syntax for scroll command, discovered in
+**			/06 testing.
+**		22-apr-88 (kenl)
+**			Added COMMIT TRANSACTION.
+**		30-aug-1988 (danielt)
+**			Changed to use new (QUEL style) transaction routines.
+**		09-nov-88 (marian)
+**			Modified column names for extended catalogs to allow 
+**			them to work with gateways.
+**		09-nov-88 (sylviap)
+**			Added a NULL parameter when calling OOdetail.
+**	09/12/90 (dkh) - Removed menuitems "Top", "Bottom" and "Find"
+**			 per FRC decision.  Also put in explanation
+**			 for the corresponding frskeys.
+**		29-mar-1994 (rdrane)
+**			Check for mq_noload (expert mode) when in DESTROY
+**			option.  b58515
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+extern	char	Lastname[];
+
+FUNC_EXTERN	STATUS do_go();
+FUNC_EXTERN	mq_reinit();
+FUNC_EXTERN	STATUS do_nothing();
+FUNC_EXTERN	STATUS do_destroy();
+FUNC_EXTERN	STATUS mqwritetodb();
+
+GLOBALDEF MENUPARAM	Mq_menup[] = {
+	{ "Go", 4,	do_go},
+	{ NULL, 0,	NULL},
+};
+
+/*	Forward Declaration */
+static	VOID	mqmvintbl();
+
+cat_reload()
+{
+	/*
+	**	This routine is the help the overlay loader
+	**	reload the catalogs after calling mq_tables
+	*/
+}
+
+mqnoldcat()
+{
+	OOcatEmpty(OC_JOINDEF, _iicatalog, _cattable);
+
+##/*
+-------------------------  old code ---------------------------------
+##	INITTABLE _iicatalog _cattable UPDATE
+##	LOADTABLE _iicatalog _cattable (_name = "", _owner = "")
+##	SET_FRS COLUMN _iicatalog _cattable (mode(_owner) = READ)
+##	SET_FRS FORM (mode = UPDATE)
+-------------------------  old code ---------------------------------
+##*/
+
+}
+
+
+/*{
+** Name:	mqcats
+**
+** History:
+**	Jan. - Jul. 87 (peterk) - re-worked to utilize 6.0 OO
+**		and new catalog frame designs.
+**	11-feb-1988 (peter)
+**		Add parameter to mq_tbl_load, called lastsaved.  This
+**		will be filled in by the underlying routine by the
+**		name of the last joindef saved, if one was saved.  If
+**		none were saved, it will be blank or the NULL string.
+**		Only if one were saved do we need to refresh the catalogs --
+**		otherwise they will be up to date (and a refresh is expensive).
+**		Also, make sure to position the cursor on the last
+**		saved joindef name (this is bug 2016).
+**	05-dec-89 (kenl)
+**		Replaced parameter lastsaved with the global mq_lastsaved.
+**		This was required by the new calling sequences needed for
+**		support of the -J flag.
+*/
+bool
+mqcats(qdef)
+MQQDEF	*qdef;
+##{
+##	char	*enditem;
+	bool	retval = TRUE;
+
+##	CLEAR SCREEN
+
+	enditem = (mq_qflag && !mq_name)? ERx(""): ERget(FE_End);
+
+##	DISPLAY _iicatalog READ
+##	INITIALIZE
+##	{
+##	    PUTFORM _iicatalog (
+##		title = ERget(F_QF001F_QBF__JoinDefs_Catalog)
+##	    )
+	    if (mq_noload)
+	    {
+		mqnoldcat();
+	    }
+	    else
+	    {
+##		MESSAGE ERget(S_QF0023_Retrieving_JoinDefs_c)
+		mqcatinit(ERx("*"));
+	    }
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Create)
+##	{
+	    mqqdefinit(qdef);
+	    mq_lastsaved[0] = EOS;
+	    IIQFjl_JoindefListpick(qdef, _mqnewjoin);
+	    if (mq_noload)
+	    {
+		mqnoldcat();
+	    }
+	    else 
+	    {
+		if (STlength(mq_lastsaved) > 0)
+		{	/* Something was saved.  Refresh catalogs */
+		mqcatinit(ERx("*"));
+		    mqmvintbl(_iicatalog, _cattable, _name, mq_lastsaved); 
+	    }
+	    }
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Destroy)
+##	{
+
+	    _VOID_ IIUIbeginXaction();
+	    if (OOcatDestroy(OC_JOINDEF, _iicatalog, _cattable, &qdef->mqcr,
+		mq_noload) == OK)
+	    {
+		if (do_destroy(qdef->mqcr.id, qdef) == OK)
+		{
+		    _VOID_ IIUIendXaction();
+		    if (mq_noload)
+		    {
+			mqnoldcat();
+		    }
+		    else
+		    {
+			mqcatinit(ERx("*"));
+		    }
+		}
+		else
+		{
+		    _VOID_ IIUIabortXaction();
+		}
+	    }
+	    else
+	    {
+		_VOID_ IIUIabortXaction();
+	    }
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Edit)
+##	{
+	    mqqdefinit(qdef);
+	    if (OOcatCheck(OC_JOINDEF, _iicatalog, _cattable, &qdef->mqcr)
+		== OK)
+	    {
+
+		do_edit(qdef->mqcr.id, qdef);
+
+		if (mq_noload)
+		{
+		    mqnoldcat();
+		}
+		else 
+		{
+		    if (STlength(mq_lastsaved) > 0)
+		    {	/* Something was saved.  Refresh catalogs */
+		    mqcatinit(ERx("*"));
+		        mqmvintbl(_iicatalog, _cattable, _name, mq_lastsaved); 
+		}
+	    }
+	    }
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Rename)
+##	{
+	    OOcatRename(OC_JOINDEF, _iicatalog, _cattable, &qdef->mqcr,
+		mq_noload);
+##	}
+##	ACTIVATE MENUITEM ERget(FE_MoreInfo)
+##	{
+	    mqqdefinit(qdef);
+	    if (OOdetail(OC_JOINDEF, _iicatalog, _cattable,
+		&qdef->mqcr, _iidetail, ERget(S_QF0025_QBF___JoinDef_Details),
+		qdef, NULL, mq_reinit, do_nothing, do_destroy,
+		do_nothing, Mq_menup, NULL))
+	    {
+
+		/* if any info changed, re-retrieve catalog */
+		if (mq_noload)
+		{
+		    mqnoldcat();
+		}
+		else
+		{
+		    mqcatinit(ERx("*"));
+		    mqmvintbl(_iicatalog, _cattable, _name, qdef->mqcr.name); 
+		}
+	    }
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Go), FRSkey4
+##	{
+	    mqqdefinit(qdef);
+	    if (OOcatCheck(OC_JOINDEF, _iicatalog, _cattable, &qdef->mqcr)==OK)
+	    {
+		do_go(qdef->mqcr.id, qdef);
+
+		if (mq_noload)
+		{
+		    mqnoldcat();
+		}
+		}
+##	}
+##	ACTIVATE FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+	    FEtabfnd(_iicatalog, _cattable);
+##	}
+##	ACTIVATE FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##	    SCROLL _iicatalog _cattable to 1
+##	}
+##	ACTIVATE FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##	    SCROLL _iicatalog _cattable to end
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Help), FRSkey1 (validate = 0)
+##	{
+	    FEhelp(ERx("qcatlg.hlp"),ERget(F_QF001F_QBF__JoinDefs_Catalog));
+##	}
+##	ACTIVATE MENUITEM enditem, FRSkey3 (validate = 0)
+##	{
+	    if (enditem[0] != 'E')
+	    {
+		retval = FALSE;
+	    }
+##	    BREAKDISPLAY
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Quit), FRSkey2 (validate = 0)
+##	{
+	    retval = FALSE;
+##	    BREAKDISPLAY
+##	}
+##	FINALIZE()
+	return(retval);
+## }
+
+/*{
+** Name:	mqcatinit
+**
+** History:
+**	30-sep-1986 (sandyd)
+**		Changed range variable to use full table name.
+*/
+
+mqcatinit(qual)
+char	*qual;
+{
+	OOcatTableLoad(OC_JOINDEF, _iicatalog, _cattable, FALSE, qual, Lastname,
+		NULL);
+}
+
+mqnoqdefs()
+{
+	IIUGerr(E_QF0026_No_JoinDefs_found, 0, 0);
+}
+
+/*
+**	do_nothing - stub so a null function can be passed
+*/
+STATUS
+do_nothing(id, qdef)
+OOID	id;
+MQQDEF	*qdef;
+{
+    return OK;
+}
+
+STATUS
+do_go(id, qdef)
+OOID	id;
+MQQDEF	*qdef;
+{
+	mq_qflag = TRUE;
+	mq_going = TRUE;
+
+	/* Lastsaved set to NULL, as no changes will be made */
+	mq_tbl_load(qdef, TRUE, mqCATALOGS);
+	mq_lastsaved[0] = EOS;
+
+	mq_qflag = FALSE;
+	mq_going = FALSE;
+	return OK;
+}
+
+do_edit(id, qdef)
+OOID	id;
+MQQDEF	*qdef;
+{
+	mqLast(qdef->mqcr.name);
+	mq_qflag = TRUE;
+
+	mq_lastsaved[0] = EOS;
+	mq_tbl_load(qdef, TRUE, mqCATALOGS);
+
+	mq_qflag = FALSE;
+}
+
+
+STATUS
+do_destroy(id, qdef)
+EXEC SQL BEGIN DECLARE SECTION;
+OOID		id;
+EXEC SQL END DECLARE SECTION;
+MQQDEF	*qdef;
+{
+	iiuicw1_CatWriteOn();
+
+	EXEC SQL REPEATED DELETE FROM ii_joindefs
+	    WHERE object_id = :id;
+
+	iiuicw0_CatWriteOff();
+	if (FEinqerr())
+	{
+		return FAIL;
+	}
+	return OK;
+}
+
+/**
+** Name:	mqmvintbl	Move cursor to position in table
+**
+** Description:
+**	Move the row cursor to the position in the table field shown 
+**	that corresponds to a name.  This searches the table field
+**	column for a match, and then scrolls the form to that 
+**	row.  If it is not found, it scrolls to the top, without
+**	error message.
+**
+**	The current field must be the table field.  The match will
+**	be an exact match check. 
+**
+** Parameters:
+**	form		name of form.
+**	tab		name of table field.
+**	col		name of column to search.  (must be character type,
+**			less than 100 characters in length)
+**	match		string to match.  
+**
+** History:
+**	11-feb-1988 (peter)
+**		Written.
+**	18-feb-1988 (peter)
+**		Fix bad syntax for scroll command, discovered in
+**		/06 testing.
+*/
+static
+VOID
+mqmvintbl(form, tab, col, match)
+##char	*form;
+##char	*tab;
+##char	*col;
+char	*match;
+##{
+##	i4	currec, matchrec, state;
+##	char	cval[101];
+
+	matchrec = 1;
+##	UNLOADTABLE form tab (cval = col, currec = _RECORD,
+##				state =  _STATE)
+##	{
+		if ((state != 1) && (state != 2) && (state != 3))
+		{	/* Row is no good */
+			continue;
+		}
+		if (STcompare(cval, match) == 0)
+		{	/* This is the match */
+			matchrec = currec;
+##			ENDLOOP
+		}
+##	}
+
+##	SCROLL form tab TO matchrec
+	return;
+##}

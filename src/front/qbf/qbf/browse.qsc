@@ -1,0 +1,335 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+##include	"mqbf.qsh"
+#include	<ug.h>
+#include	"erqf.h"
+
+/**
+** Name:	browse.qc -	Query Browse Module.
+**
+** Description:
+**	This module constitutes the data browsing portion of MQBF.  It is
+**	called after all the query strings, param args, etc. have been set up.
+**
+**	Routines:
+**		IIqfBrowse()
+**
+**	Returns:
+**		1 = Done browsing, have calling routine show form in QUERY mode.
+**		0 = Error occurred in BROWSE mode.
+**
+** History:
+**	Revision 6.4
+**		10/11/90 (emerson)
+**			Replaced global variable allow_appends and allow_updates
+**			by IIQFnkaNoKeyForAppends and IIQFnkuNoKeyForUpdates
+**			(with opposite sense) because the names are misleading:
+**			we now have other reasons for disallowing appends
+**			(certain joins on logical keys), and we might have
+**			other reasons for disallowing appends or updates
+**			in the future.  Keeping separate flags allows us
+**			to give specific error messages.  (bug 8593).
+**	Revision 6.1
+**		88/09  wong  Modified for international support of menuitems.
+**
+**	Revision 6.0
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**		11-dec-87
+**			Removed the addition of 'newrow' to the list of hidden
+**			hidden columns.  This is taken care of in MQQDESC.QSC.
+**		15-dec-1987 (peter)
+**			Integrate bug fix 12221 in 6.0.
+**		24-feb-88 (marian)
+**			Make bug 9826 work correctly.  Took out ifdef FT3270.
+**			The forms system will print out the message, but the
+**			activate on the scroll will repeatedly get called
+**			and cause the message to be printed several times, so
+**			handle this the same way FT3270 does.
+**		22-apr-88 (kenl)
+**			Removed GLOBALREF to allow_updates.  This is now
+**			in mqglobs.h
+**
+**	Revision 5.0
+**		16-jun-86 (mgw)		bug # 9582
+**			Catch bad QG_alloc in QG_qbf properly and return error
+**			message.
+**		11-sep-86 (marian)	bug # 9878
+**			Don't print "out of data below" message for non FT3270
+**			machines.  The forms system takes care of this.	 Changed
+**			the ifndef FT3270 to ifdef FT3270 and took out the line
+**			to print the message for non FT3270 machines.
+**		23-jan87 (marian)
+**			Call qg_generate with QI_USTART if not onetbl.
+**		21-apr-87 (marian) 	bug # 12221
+**			Changed IIqfBrowse() so it now checks the return
+**			from qg_generate() to determine if the temporary file
+**			was created successfully.
+**
+**	Revision 3.0
+**		 06/4/85 (drh)	Initialize mqrowstat in mqnxtmaster and
+**				mqgetscroll
+**				- can't rely on mqretinit being called first.
+**
+**	Revision 2.0  84/01/16  nadene
+**	Written: 1/16/84 (nml)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+#define	_HelpExpl		F_FE0100_ExplFrameHelp
+#define	_EndExpl		F_FE0102_ExplEnd
+
+##extern char	mq_frame[];
+##extern char	mq_tbl[];
+##extern char	mq_tids[];
+
+i4
+IIqfBrowse ( mq_qdef )
+MQQDEF	*mq_qdef;
+##{
+##	char	*nextitem;
+##	char	*scrollitem;
+##	char	*exititem;
+
+	register QDESC	*mqqry;
+	i4		output;
+	i4		rtncode;
+	i4		numrows;
+	STATUS		retcode;
+	bool		outofdatamsg = FALSE;
+
+	mqqry = mq_qdef->mqqdesc;
+	rtncode = 1;
+# ifdef DEBUG
+	if (mq_debug)
+	{
+		SIfprintf(mqoutf,ERx("MQBROWSE: qdef_type = %d\n"), qdef_type);
+		SIfprintf(mqoutf,ERx("MQBROWSE: tblfield = %d\n"), tblfield);
+	}
+# endif
+
+	if ( (retcode = IIQG_qbf(mqqry, mqmrec, mq_qdef->mqmrecl)) != OK )
+	{
+		FDerror(ERRALLOC, 0, ERx(""));
+		return 0;
+	}
+
+	/*	You want to call QG_generate with QI_USTART if more than
+	**	one table is involved.
+	*/
+
+	if ( (retcode = IIQG_generate(mqqry, onetbl ? QI_START : QI_USTART,
+					 &output)) != OK )
+	{
+		return 1;	/*OK*/
+	}
+
+	QG_mqqry = mqqry;	/* save for interrupt cleanup */
+
+	if (output == QO_QDONE)
+	{
+		/* no rows retrieved */
+##		message ERget(S_QF001C_NoRowsForQuery);
+##		sleep 3
+		return 1;	/*OK*/
+	}
+
+	/* got data - redisplay the form in READ mode */
+	exititem = ( mq_func == mqBROWSE ) ? ERget(FE_Quit) : ERget(FE_End);
+
+	nextitem = scrollitem = ERx("");
+	if (tblfield)
+	{
+		if (!IIQFnkaNoKeyForAppends)
+		{
+##			INITTABLE mq_frame mq_tbl READ (mq_tids);
+		}
+		else
+		{
+##			INITTABLE mq_frame mq_tbl READ;
+		}
+
+		if ( qdef_type == 0 )
+			nextitem = ERget(F_QF0001_NextMaster);
+	}
+	else
+	{
+		if (qdef_type == 0)
+		{
+			nextitem = ERget(F_QF0001_NextMaster);
+			scrollitem = ERget(F_QF0002_NxtDetail);
+		}
+		else
+		{
+			nextitem = ERget(FE_Next);
+		}
+	}
+
+	numrows = 0;
+
+##	display mq_frame READ
+##	initialize
+##	{
+		if ( (retcode = mqretinit(mq_qdef, &output, &numrows)) != OK )
+		{
+			IIUGerr(E_QF001D_FormInitError,0,0);
+			_VOID_ IIQG_generate(mqqry, QI_BREAK, &output);
+			QG_mqqry = NULL;
+			rtncode = 0;
+##			breakdisplay
+		}
+##	}
+
+##	activate menuitem nextitem, FRSkey4
+##	{
+		if ( nextitem[0] == EOS )
+		{
+			FTbell();
+##			resume
+		}
+		if (qdef_type == 0)
+		{
+##			message ERget(S_QF001E_Retrieving);
+			if ((mqgetmaster(mq_qdef, &output, &numrows)) != OK)
+##				breakdisplay
+		}
+		else
+		{
+			if ((mqgetrecord(mq_qdef, &output)) != OK)
+##				breakdisplay
+		}
+##	}
+
+##	activate menuitem ERget(FE_Query) (validate = 0)
+##	{
+##		message ERget(S_QF001F_BackToQuery);
+		if ( (retcode = IIQG_generate(mqqry, QI_BREAK, &output)) != OK )
+		{
+			rtncode = 0;
+		}
+		QG_mqqry = NULL;
+##		clear field all
+##		breakdisplay
+##	}
+
+##	activate menuitem scrollitem
+##	{
+		if ((mqgetdtl(mq_qdef, &output)) != OK)
+##			breakdisplay
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl), validate=0),
+##		FRSkey1 (validate = 0)
+##	{
+		char	*help_file;
+
+		if (qdef_type == 0)
+		{
+			if (tblfield)
+			{
+				help_file = (mq_func == mqBROWSE)
+						? ERx("qretmdtx.hlp")
+						: ERx("qretmdtn.hlp");
+			}
+			else
+			{
+				help_file = (mq_func == mqBROWSE)
+						? ERx("qretmdox.hlp")
+						: ERx("qretootx.hlp");
+			}
+		}
+		else
+		{
+			if (tblfield)
+			{
+				help_file = (mq_func == mqBROWSE)
+						? ERx("qretootx.hlp")
+						: ERx("qretootn.hlp");
+			}
+			else
+			{
+				help_file = (mq_func == mqBROWSE)
+						? ERx("qretooox.hlp")
+						: ERx("qretooon.hlp");
+			}
+		}
+		FEhelp( help_file, ERget(S_QF001B_QBF_Retrieve_Function) );
+##	}
+
+##	activate FRSkey2 (validate = 0)
+##	{
+		if ( mq_func != mqBROWSE )
+			FTbell();	/* quit key not allowed */
+		else
+			goto endit;	/* OK */
+##	}
+##	activate menuitem exititem (expl = ERget(_EndExpl), validate = 0),
+##		FRSkey3 (validate = 0)
+##	{
+endit:
+##		message ERget(S_QF0020_EndBrowse);
+		_VOID_ IIQG_generate(mqqry, QI_BREAK, &output);
+		QG_mqqry = NULL;
+##		clear field all
+		rtncode = 0;
+##		breakdisplay
+##	}
+
+##	activate SCROLLUP mq_tbl
+##	{
+##		i4	botrow;
+
+##		GETROW mq_frame mq_tbl (botrow = _RECORD);
+/*
+**	The 'outofdatamsg' flag is used by CMS to prevent the "Out of Data
+**	Below" message from being issued more than once when scrolling
+**	more than 1 record past the end of the table field. This same
+**	problem occurs on DEC systems as well if the user tries to issue
+**	"13j" or something like that. Unfortunately on CMS the user is
+**	much more likely to get into this state (because of the way
+**	FT/3270's "table field scroll" works), and the multiple error
+**	messages are more likely to appear. The flag is "reset" if
+**	the user scrolls back up and then down for a second time.
+*/
+		if ( botrow == numrows && ( output == QO_QDONE ||
+						 output == QO_DDONE ) )
+		{
+			if (!outofdatamsg)
+			{
+				outofdatamsg = TRUE;
+				winerr(ERget(E_QF0021_OutOfData));
+			}
+##			resume
+		}
+		else if ( botrow != numrows )
+		{
+			outofdatamsg = FALSE;
+		}
+
+		if (botrow >= numrows)
+		{
+##			message ERget(S_QF0022_RetrieveMore)
+			if ((mqgetscroll(mq_qdef, &output, &numrows)) != OK)
+##				breakdisplay
+		}
+
+##		SCROLL mq_frame mq_tbl UP;
+##	}
+##	finalize
+
+	return rtncode;
+##}

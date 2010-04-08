@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqinsdir.hlp, behind the popup that asks for direction to place a newly 
+/#-- created frame.
+The system is asking you where, in relation to the current frame, you want to 
+place the new frame. (The current frame is the one your cursor was on when 
+you selected Create.)
+
+  * To place the new frame as a peer frame, select Right or Left.
+
+  * To place the new frame as a child frame, select Down if there are no 
+    other child frames.  If other child frames already exist, you must place 
+    the new frame as the peer of one of them. To do this:
+    - Cancel this operation.
+    - Move the cursor to one of the child frames.
+    - Select Create.
+    - Select Right or Left.
+    (Note:  The 'Down' menuitem is only available for the Append, Update, 
+     Browse, and Menu frame types.)
+	   
+  * To select a different current frame, use Cancel to end this operation, 
+    then move the cursor to the desired frame and select Create again.

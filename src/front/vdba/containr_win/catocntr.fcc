@@ -1,0 +1,199 @@
+'*********************************************************************************
+'**   Name:        CATOCNTR.FCC
+'**
+'**   Description: CA-FORMDEV Container FCC file
+'**
+'**   Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+'**
+'*********************************************************************************
+
+AddSys(_MacroDir, "c:\pluswdev\rlzincl")
+
+IF NOT QVAR(%%FCCCUST_RLZ, _Defined) THEN
+  RUN "fcccust"
+END IF
+
+IF NOT QVAR(%%CATOCNTR_RLZ, _Defined) THEN
+  RUN "catocntr"
+END IF
+
+IF NOT QVAR(%%CNTMACRO_RLZ, _Defined) THEN
+  RUN "cntmacro"
+END IF
+
+CCInfo.bitmap         = QSys(_ProgDir) + "catocntr"
+CCInfo.DLL            = CNTDLL
+CCInfo.Name           = "_Container"
+CCInfo.TextName       = "CA-Container"
+CCInfo.FDOptionsFunc  = "FDOptionsFuncContainer"
+CCInfo.FDGenerateFunc = "FDGenerateFuncContainer"
+CCInfo.FDReadFunc     = "FDReadFuncContainer"
+CCInfo.Val1           = WS_BORDER + CTS_SINGLESEL
+CCInfo.Val2           = 0 'Border
+CCinfo.Str            = ""
+FormdevInstallControl(CCInfo)
+
+
+FUNC FDOptionsFuncContainer(fam)
+     LOCAL font2
+
+     font2 = FontQUnique
+     FontNew(font2; "MS Sans Serif", 8, _Bold)
+
+     f.val1 = fam.val1
+     f.val2 = fam.val2
+     f.str = fam.str
+
+     AssignNamescacnt ()
+
+     formcacnt = FormQUnique
+     FormNew(formcacnt; "CA-Container Control Styles", _Close + _Title)
+     FormSetColor(_LightGray; _Background)
+     FormControl(_Size; 125 pxl, 20 pxl, 267 pxl, 310 pxl)
+     FormSetColor(_LightGray; _Field)
+     FormSetObject(cacntobjs.ID_CANCEL, _Button, "Cancel", font2, 189 pxl, 258 pxl, _Default, _Default)
+     FormSetObject(cacntobjs.GroupBox_240, _GroupBox, "Container Styles", font2, 6 pxl, 4 pxl, 253 pxl, 93 pxl)
+     FormSetObject(cacntobjs.GroupBox_250, _GroupBox, "Selection Style", font2, 6 pxl, 102 pxl, 253 pxl, 97 pxl)
+     FormSetObject(cacntobjs.GroupBox_270, _GroupBox, "Optional Controls", font2, 6 pxl, 201 pxl, 253 pxl, 46 pxl)
+     FormSetObject(cacntobjs.Read_Only, _CheckBox, "Read Only", font2, 12 pxl, 24 pxl, _Default, _Default; 0, 1)
+     FormSetObject(cacntobjs.Split_Bar, _CheckBox, "Split Bar", font2, 12 pxl, 48 pxl, _Default, _Default; 0, 2)
+     FormSetObject(cacntobjs.Integral_width, _CheckBox, "Integral Width", font2, 132 pxl, 24 pxl, _Default, _Default; 0, 3)
+     FormSetObject(cacntobjs.Integral_height, _CheckBox, "Integral Height", font2, 132 pxl, 48 pxl, _Default, _Default; 0, 4)
+     FormSetObject(cacntobjs.Expand_last_field, _CheckBox, "Expand Last Field", font2, 132 pxl, 72 pxl, _Default, _Default; 0, 5)
+     FormSetObject(cacntobjs.Single_Select, _OptionButton, "Single Select", font2, 12 pxl, 120 pxl, _Default, _Default; 1, 6)
+     FormSetObject(cacntobjs.Multiple_Select, _OptionButton, "Multiple Select", font2, 12 pxl, 144 pxl, _Default, _Default; 0, 6)
+     FormSetObject(cacntobjs.Extended_Select, _OptionButton, "Extended Select", font2, 132 pxl, 120 pxl, _Default, _Default; 0, 6)
+     FormSetObject(cacntobjs.Block_Select, _OptionButton, "Block Select", font2, 132 pxl, 144 pxl, _Default, _Default; 0, 6)
+     FormSetObject(cacntobjs.no_select, _OptionButton, "No Selection", font2, 132 pxl, 168 pxl, _Default, _Default; 0, 6)
+     FormSetObject(cacntobjs.Vert_Scroll, _CheckBox, "Vert. Scroll Bar", font2, 12 pxl, 222 pxl, _Default, _Default; 0, 7)
+     FormSetObject(cacntobjs.Horz_Scroll, _CheckBox, "Horz. Scroll Bar", font2, 132 pxl, 222 pxl, _Default, _Default; 0, 8)
+     FormSetObject(cacntobjs.ID_OK, _Button, "OK", font2, 6 pxl, 258 pxl, _Default, _Default)
+     FormSetColor(_White; _Field)
+
+     FormSetColor(_White; _Field)
+
+     FormModifyObject(cacntobjs.no_select, _Normal; 1)
+
+     IF BitAnd(f.val1, CTS_SINGLESEL)      : FormModifyObject(cacntobjs.Single_Select,_Normal;1)     : END IF
+     IF BitAnd(f.val1, CTS_EXTENDEDSEL)    : FormModifyObject(cacntobjs.Extended_Select,_Normal;1)   : END IF
+     IF BitAnd(f.val1, CTS_MULTIPLESEL)    : FormModifyObject(cacntobjs.Multiple_Select,_Normal;1)   : END IF
+     IF BitAnd(f.val1, CTS_BLOCKSEL)       : FormModifyObject(cacntobjs.Block_Select,_Normal;1)      : END IF
+     IF BitAnd(f.val1, CTS_SPLITBAR)       : FormModifyObject(cacntobjs.Split_Bar,_Normal;1)         : END IF
+     IF BitAnd(f.val1, CTS_READONLY)       : FormModifyObject(cacntobjs.Read_Only,_Normal;1)         : END IF
+     IF BitAnd(f.val1, CTS_VERTSCROLL)     : FormModifyObject(cacntobjs.Vert_Scroll,_Normal;1)       : END IF
+     IF BitAnd(f.val1, CTS_HORZSCROLL)     : FormModifyObject(cacntobjs.Horz_Scroll,_Normal;1)       : END IF
+     IF BitAnd(f.val1, CTS_INTEGRALWIDTH)  : FormModifyObject(cacntobjs.Integral_Width,_Normal;1)    : END IF
+     IF BitAnd(f.val1, CTS_INTEGRALHEIGHT) : FormModifyObject(cacntobjs.Integral_Height,_Normal;1)   : END IF
+     IF BitAnd(f.val1, CTS_EXPANDLASTFLD)  : FormModifyObject(cacntobjs.Expand_last_field,_Normal;1) : END IF
+
+     LOOP
+       SELECT CASE FormWait
+         CASE cacntobjs.ID_OK
+           f.val1 = 0
+           f.val2 = 0
+           IF FormQNum(cacntobjs.Single_Select)     : f.val1 = BitOr(f.val1, CTS_SINGLESEL)      : END IF
+           IF FormQNum(cacntobjs.Extended_Select)   : f.val1 = BitOr(f.val1, CTS_EXTENDEDSEL)    : END IF
+           IF FormQNum(cacntobjs.Multiple_Select)   : f.val1 = BitOr(f.val1, CTS_MULTIPLESEL)    : END IF
+           IF FormQNum(cacntobjs.Block_Select)      : f.val1 = BitOr(f.val1, CTS_BLOCKSEL)       : END IF
+           IF FormQNum(cacntobjs.Split_Bar)         : f.val1 = BitOr(f.val1, CTS_SPLITBAR)       : END IF
+           IF FormQNum(cacntobjs.Read_Only)         : f.val1 = BitOr(f.val1, CTS_READONLY)       : END IF
+           IF FormQNum(cacntobjs.Vert_Scroll)       : f.val1 = BitOr(f.val1, CTS_VERTSCROLL)     : END IF
+           IF FormQNum(cacntobjs.Horz_Scroll)       : f.val1 = BitOr(f.val1, CTS_HORZSCROLL)     : END IF
+           IF FormQNum(cacntobjs.Integral_Width)    : f.val1 = BitOr(f.val1, CTS_INTEGRALWIDTH)  : END IF
+           IF FormQNum(cacntobjs.Integral_Height)   : f.val1 = BitOr(f.val1, CTS_INTEGRALHEIGHT) : END IF
+           IF FormQNum(cacntobjs.Expand_last_field) : f.val1 = BitOr(f.val1, CTS_EXPANDLASTFLD)  : END IF
+
+           'Close the fonts
+           FontSelect(font2)
+           FontControl(_Close)
+           FormControl(_Close)
+           RETURN f
+
+         CASE cacntobjs.ID_CANCEL
+           'Close the fonts
+           FontSelect(font2)
+           FontControl(_Close)
+           FormControl(_Close)
+           RETURN fam
+       END SELECT
+     END LOOP
+END FUNC
+
+
+PROC AssignNamescacnt ()
+     cacntobjs.ID_CANCEL = 10
+     cacntobjs.GroupBox_240 = 20
+     cacntobjs.GroupBox_250 = 30
+     cacntobjs.GroupBox_270 = 50
+     cacntobjs.Read_Only = 60
+     cacntobjs.Split_Bar = 70
+     cacntobjs.Integral_width = 250
+     cacntobjs.Integral_height = 260
+     cacntobjs.Expand_last_field = 270
+     cacntobjs.Single_Select = 100
+     cacntobjs.Multiple_Select = 110
+     cacntobjs.Extended_Select = 120
+     cacntobjs.Block_Select = 130
+     cacntobjs.no_select = 140
+     cacntobjs.Vert_Scroll = 220
+     cacntobjs.Horz_Scroll = 230
+     cacntobjs.ID_OK = 240
+END PROC
+
+
+FUNC FDGenerateFuncContainer(fam)
+     LOCAL s
+     'Styles first, the flags
+
+     s = "WS_BORDER + CTS_ASYNCNOTIFY "
+
+     IF BitAnd(fam.val1, CTS_SINGLESEL)      : s=s + "+ CTS_SINGLESEL "      : END IF
+     IF BitAnd(fam.val1, CTS_EXTENDEDSEL)    : s=s + "+ CTS_EXTENDEDSEL "    : END IF
+     IF BitAnd(fam.val1, CTS_MULTIPLESEL)    : s=s + "+ CTS_MULTIPLESEL "    : END IF
+     IF BitAnd(fam.val1, CTS_BLOCKSEL)       : s=s + "+ CTS_BLOCKSEL "       : END IF
+     IF BitAnd(fam.val1, CTS_SPLITBAR)       : s=s + "+ CTS_SPLITBAR "       : END IF
+     IF BitAnd(fam.val1, CTS_READONLY)       : s=s + "+ CTS_READONLY "       : END IF
+     IF BitAnd(fam.val1, CTS_VERTSCROLL)     : s=s + "+ CTS_VERTSCROLL "     : END IF
+     IF BitAnd(fam.val1, CTS_HORZSCROLL)     : s=s + "+ CTS_HORZSCROLL "     : END IF
+     IF BitAnd(fam.val1, CTS_INTEGRALWIDTH)  : s=s + "+ CTS_INTEGRALWIDTH "  : END IF
+     IF BitAnd(fam.val1, CTS_INTEGRALHEIGHT) : s=s + "+ CTS_INTEGRALHEIGHT " : END IF
+     IF BitAnd(fam.val1, CTS_EXPANDLASTFLD)  : s=s + "+ CTS_EXPANDLASTFLD "  : END IF
+     s = s + ", "
+
+     s = s + "w.IF_.ALLKEYS + w.IF_.MOSTKEYS + w.IF_.CUSTOM + w.IF_.NOTIFIES + w.IF_.TABSTOP"
+
+     RETURN s
+END FUNC
+
+
+FUNC GetCntModVal( StrMod )
+     LOCAL IntMod, Stmnt
+
+     IntMod = 0
+
+     IF Left$( StrMod, 3 ) = "CTS" OR Left$( StrMod, 3 ) = "WS_" THEN
+       Stmnt = "IntMod = " + StrMod
+       EXECUTE Stmnt
+     END IF
+
+     RETURN IntMod
+END FUNC
+
+
+FUNC FDReadFuncContainer(str)
+     LOCAL fam, commapos, i
+
+     fam.val1 = 0
+
+     commapos = FirstMatch( str, "," )
+
+     IF commapos > 0 THEN
+       FOR i = 1 to commapos
+         fam.val1 = BitOr(fam.val1, GetCntModVal( str[i] ) )
+       NEXT i
+     END IF
+
+     fam.val2 = 0
+     fam.str = ""
+     RETURN fam
+END FUNC

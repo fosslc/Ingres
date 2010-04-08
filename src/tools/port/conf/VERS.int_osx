@@ -1,0 +1,21 @@
+# Intel Mac OS X
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+#set: config int_osx
+#set: option DBL
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;		#set: option SVR_AR
+BUILD_ICE = "" ;		##set: option BUILD_ICE (off)
+
+PLATFORM_JAMDEFS = int_osx ;
+# Default build is 32bit. To enable 64bit set jam var to "TRUE"
+# and uncomment (1 #) the vers option
+64BIT = "" ; 		##set: option 64BIT

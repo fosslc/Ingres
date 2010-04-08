@@ -1,0 +1,48 @@
+/#-- Help File: fgmdupdq.hlp
+/#-- Master detail update, query menu help. 
+/#subtopic	'Query Qualifications'	absrchql.hlp
+This screen is currently in QUERY mode. To run a query, enter a query
+qualification by filling in fields with a query operator and a value,
+and then select "Go" (for example, fill in a numeric field with  >10
+and press "Go" to see rows with values for that field that are greater
+than 10).  After you select "Go", the screen will change to Update mode,
+and you can change the selected data.
+
+Valid query operators are:
+
+        Operator        Meaning
+        --------        -------
+        =               equal to
+        <>              not equal to (same as != )
+        >               greater than
+        >=              greater than or equal to
+        <               less than
+        <=              less than or equal to
+
+If no operator is specified and a value is entered in a field, then
+an "=" operator is assumed.
+
+In character fields, the value you enter may contain pattern match
+characters. Pattern match characters are "?", which matches any single
+character, and "*", which matches any number of characters (some
+installations elect to use "_" and "%", rather than "?" and "*").
+For example, enter  ?P*  in a field and press "Go", to see rows
+that have a capital "P" in the second column of the field.
+
+Select "SubTopics" to see examples of and more details about query
+qualifications.
+
+Commands available on this screen:
+
+  Go          Run the specified query, and proceed to the GO
+              State to browse or update data.
+  AppendMode  Display a submenu for Appending new data to the
+              database.  (optional menuitem; may not appear)
+  Clear       Clear every field on the screen.
+  ListChoices Show valid values for current field. 
+              (optional menuitem; may not appear)
+  Help        Get help about this frame.
+  TopFrame    Stop work on this frame and return to the top
+              frame in the application.
+  End         Stop work on this frame and return to the
+              frame that called it.

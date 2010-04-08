@@ -1,0 +1,23 @@
+#
+# Jamfile file for common!odbc!config_win
+#
+
+SubDir ING_SRC common odbc config_win ;
+
+IISUBSYS common odbc config_win ;
+
+
+
+IILIBRARY ODBCCFGLIB : confgdsn.c
+	caiioc32.c ;
+
+IILIBOBJECT caiioc32.c ;
+
+IISHLIBRARY $(SHODBCCFGLIB) :  $(ODBCCFGLIB) $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(ODBCLIBS) $(GDILIB) $(HTMLHELPLIB) $(IMPAPILIB) ;
+IINEEDOBJ $(SHODBCCFGLIB) : encrypt.c caiioc32.c ;
+IINEEDRES $(SHODBCCFGLIB) : caiioc32.res ;
+
+IIRCTORES caiioc32.rc ;
+IICPEXE $(INGLIB)/caiioc32.res : caiioc32.res ;
+
+FILE $(INGBIN)$(DFS)caiiocfg.chm : caiiocfg.bin ;

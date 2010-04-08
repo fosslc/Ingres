@@ -1,0 +1,106 @@
+; History:
+;       09-Jun-98 (fanra01)
+;           Add DDFStatusFree and DDSGetUserTimeout.
+;	19-jul-98 (marol01)
+;	    Add DDSGetDBUserPassword and DBRemove
+;		and DBBrowse
+;      14-Dec-1998 (fanra01)
+;           Add the DDSGetDBUserInfo function
+;      08-May-2000 (fanra01)
+;           Bug 101346.
+;           Add export of DDSCheckRightRef.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+EXPORTS
+DDFInitialize		@1				
+DDFTerminate		@2				
+DriverLoad		@3				
+DDFGetDriver		@4				
+DDFStatusFree		@5				
+DDGInitialize		@6				
+DDGTerminate		@7				
+DDGConnect		@8				
+DDGCommit		@9				
+DDGRollback		@10				
+DDGDisconnect		@11				
+DDGInsert		@12				
+DDGUpdate		@13				
+DDGDelete		@14				
+DDGSelectAll		@15				
+DDGKeySelect		@16				
+DDGExecute		@17				
+DDGProperties		@18				
+DDGNext		@19				
+DDGClose		@20				
+DDSInitialize		@21				
+DDSTerminate		@22				
+DDSCheckUser		@23				
+DDSCheckUserFlag		@24				
+DDSRequestUser		@25				
+DDSReleaseUser		@26				
+DDSCheckRight		@27				
+DDSCheckRightRef		@28				
+DDSCreateDBUser		@29				
+DDSUpdateDBUser		@30				
+DDSDeleteDBUser		@31				
+DDSOpenDBUser		@32				
+DDSRetrieveDBUser		@33				
+DDSGetDBUser		@34				
+DDSCloseDBUser		@35				
+DDSGetDBForUser		@36				
+DDSCreateRole		@37				
+DDSUpdateRole		@38				
+DDSDeleteRole		@39				
+DDSOpenRole		@40				
+DDSRetrieveRole		@41				
+DDSGetRole		@42				
+DDSCloseRole		@43				
+DDSCreateAssUserRole		@44				
+DDSDeleteAssUserRole		@45				
+DDSAssignRoleRight		@46				
+DDSCreateUser		@47				
+DDSUpdateUser		@48				
+DDSDeleteUser		@49				
+DDSOpenUser		@50				
+DDSRetrieveUser		@51				
+DDSGetUser		@52				
+DDSCloseUser		@53				
+DDSAssignUserRight		@54				
+DDSCreateDB		@55				
+DDSUpdateDB		@56				
+DDSDeleteDB		@57				
+DDSOpenDB		@58				
+DDSRetrieveDB		@59				
+DDSGetDB		@60				
+DDSCloseDB		@61				
+DDSCreateAssUserDB		@62				
+DDSDeleteAssUserDB		@63				
+DDSOpenUserDB		@64				
+DDSGetUserDB		@65				
+DDSCloseUserDB		@66				
+DDSOpenUserRole		@67				
+DDSGetUserRole		@68				
+DDSCloseUserRole		@69				
+DDSDeleteRoleRight		@70				
+DDSDeleteUserRight		@71				
+DDSCloseRoleResource		@72				
+DDSGetRoleResource		@73				
+DDSOpenRoleResource		@74				
+DDSCloseUserResource		@75				
+DDSGetUserResource		@76				
+DDSOpenUserResource		@77				
+DDSGetDBUserName		@78				
+DDSGetDBName		@79				
+DDSGetUserName		@80				
+DDSGetRoleName		@81				
+DDSDeleteResource		@82				
+DDSGetUserTimeout		@83				
+DBCachedConnect		@84				
+DBCachedDisconnect		@85				
+DBCleanTimeout		@86				
+DDSGetDBUserPassword		@87				
+DDSGetDBUserInfo		@88				
+DBRemove		@89				
+DBBrowse		@90				
+	
+	

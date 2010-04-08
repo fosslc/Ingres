@@ -1,0 +1,105 @@
+.TH SEPPERUSE 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History
+.\"	17-jan-1990 (rog)
+.\"		Written.
+.\"	24-jan-1990 (boba)
+.\"		Add -a, -d and -o options and multiple .cfg files.  
+.\"		Add scanning for DIFF and how to get to top.
+.\"		Move menu options from OPTIONS to DESCRIPTION.
+.\"	02-dec-1991 (boba)
+.\"		Change "delete" menu option to "ok".  Fix references
+.\"		to diff files (should be log files).
+.\"	27-dec-1991 (boba)
+.\"		General audit tool man page cleanup.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+sepperuse \- Examine SEP test log files for tests with differences.
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B sepperuse
+[
+.B -a ] [
+.B -d ] [
+.B -o
+.I outdir
+] [ 
+.I LISTEXEC-config-file\fB.cfg\fP ...
+]
+.SH DESCRIPTION
+.I Sepperuse
+displays each of the SEP test log files from the specified LISTEXEC
+configuration file(s) that contain differences.
+.PP
+If no \fB.cfg\fP file is specified, \fIsepperuse\fP
+will check all of the \fB*.out\fP files
+in the \fB$ING_TST/output\fP directory for tests with differences and display
+the \fB*.log\fP files from those tests.
+.PP
+If the
+.B -a
+option is specified, then all \fB*.log\fP files will be displayed,
+regardless of the \fB.cfg\fP or \fB*.out\fP files.
+.PP
+The
+.B -o
+option may be used to override the default output directory,
+\fB$ING_TST/output\fP.  Alternatively, if the environment variable
+\fB$tst_output\fP is set, this will be used instead of \fB$ING_TST/output\fP.
+.PP
+Each SEP log file is displayed via \fImore\fP, or via \fIpg\fP if 
+\fImore\fP is not available.
+After a file has been displayed, the user is given a menu of the following
+options:
+.TP
+.B h)elp
+Print this message.
+.TP
+.B n)ext
+Go to next log file, leaving this for later perusal.
+.TP
+.B r)epeat
+Show this log file again.
+.TP
+.B p)rint
+Print the log file with
+.B lpr -p.
+.TP
+.B o)k
+Mark log file as OK in \fB$ING_TST/output/SEPOK\fP so it won't be seen again.
+.TP
+.B s)hell
+Launch a \fB$SHELL\fP, \fIcsh\fP default.
+.TP
+.B b)ye
+Exit \fIsepperuse\fP.
+.PP
+If the
+.B -d
+option is specified,
+the \fImore\fP or \fIpg\fP command is set up to scan for
+the first occurance of "DIFF" (display by \fIsep\fP of a difference).
+With \fImore\fP, you can go back to the top of the file by entering
+"'" or continue to the next "DIFF" by entering "n".
+With \fIpg\fP, you can go back to the top of the file by entering
+"?Test Name?^CR" or continue to the next "DIFF" by entering "/^CR".
+.SH OPTIONS
+.TP
+.B -a
+display all \fB*.log\fP files whether they are mentioned
+in a corresponding \fB*.out\fP file or not.
+.TP
+.B -d
+scan for first occurence of "DIFF" in \fB*.log\fP file.
+.TP
+.B -o \fIoutdir\fP
+search for \fB*.out\fP and \fB*.log\fP files in \fIoutdir\fP rather than the
+default \fB$ING_TST/output\fP.
+.SH FILES
+.SH "SEE ALSO"
+.BR sep(1),
+.BR listexec(1),
+.BR updperuse(1)
+.SH BUGS
+.I Sepperuse
+requires that \fB$ING_TST\fP and \fB$TST_LISTEXEC\fP be set.

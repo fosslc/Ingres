@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ This is the main Configuration-by-Forms (CBF) screen. The list you see 
+ displays the main components (System Components) of the current Ingres 
+ installation.
+
+ To modify any system component settings, use your arrow keys to scroll to the
+ component to modify and choose "Configure" to change the settings. 
+
+ The Configuration Name is a unique string that identifies the instance of
+ a component type for multiple, named components.
+
+ The startup count represents the number of instances of the corresponding 
+ component that will be automatically activated when the current Ingres 
+ installation has been started. In the case of Internet Communication, the 
+ startup count represents the number of communication instances that will
+ be activated per World Wide Web client.

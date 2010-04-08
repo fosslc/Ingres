@@ -1,0 +1,39 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of a Record Attribute.  You may change
+the definition of the attribute on the form and through some of the menu
+operations.  
+
+Fill in the Data Type field with the datatype of the attribute.
+
+Legal types are any Ingres datatype or any record type that has already been
+defined for the application (through the "Edit a Record Type Definition"
+frame.)  Legal Ingres data types can be listed and specified through the
+ListChoices menu operation for this frame.  An Ingres datatype may also be
+Nullable, which can be specified in the Nullable field.  An attribute that
+is a record type may also be a dynamic array, which can be specified in the
+Array field.
+
+Record type attributes cannot be Nullable, and Ingres datatypes cannot be
+dynamic arrays.
+
+You cannot change the name of the record attribute at this screen. To do
+this, select End (or Cancel if you made no changes to this screen), then
+select Rename at the Edit a Record Type Definition screen.
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+
+        LongRemark              Display and allow editing of the long remarks.
+
+	ListChoices		Show and select legal values for the current
+				field.  (In the Data Type field, User-defined
+				record types are not included in the list.)
+
+        Print                   Print the definition for the record attribute.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to the Edit Record Definition catalog 
+                                frame.

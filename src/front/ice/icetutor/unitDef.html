@@ -1,0 +1,32 @@
+<!--
+##{
+## History:
+##    04-May-1999 (peeje01)
+##        Replaced .dll with #ext#
+##        Replaced .exe with #cgi# for platform independance
+##}
+-->
+<!-- #ICE REPEAT IF (`:secured` != ``)
+		 THEN=`<!-- #ICE DECLARE=``session.secured=:secured`` -->`
+-->
+
+<!-- #ICE REPEAT IF (`:stored` != ``)
+		 THEN=`<!-- #ICE DECLARE=``session.stored=:stored`` -->`
+-->
+
+<!-- #ICE REPEAT IF (`:api` == `api`)
+THEN=`<!-- #ICE DECLARE=``session.dll=/ice-bin/oiice.#ext#`` -->`
+ELSE=`<!-- #ICE DECLARE=``session.dll=/ice-bin/oiice.#cgi#`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Business Units (Definition)&previous=intro.html&next=unitCreation.html` -->
+A business unit is a logical grouping of related web resources with defined control of access. 
+<P>
+The objectives of defining business units are
+<UL>
+<LI>To improve <u>management</u> of your resources
+<LI>To <u>secure</U> your web site
+<LI>To simplify <u>administration</U> and <U>access</U> definition
+</UL>
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->    

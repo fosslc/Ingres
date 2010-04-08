@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The lock_limit resource specifies the maximum number of locks which can
+  be allocated by the locking system.
+
+  If configuring lock_limit for cluster operation, or if using DMCM or
+  cache sharing, the default lock limit may be insufficient.  These
+  configurations require page cache locks that persist beyond a given
+  transaction.  In those cases, you should consider increasing
+  lock_limit by the number of cache pages defined for the node.

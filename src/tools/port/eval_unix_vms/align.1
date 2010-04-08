@@ -1,0 +1,59 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/align.1,v 1.1 90/03/09 09:17:29 source Exp $
+.TH ALIGN 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+align \- Reveals hardware enforced alignment restrictions
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B align
+[ double ][ float ][ int ][ long ][ ptr ][ short ][ -v ]
+.SH DESCRIPTION
+.I align
+shows the alignment restrictions for the requested types.  If no type is
+specified, the alignment for all types are displayed.  It does this by
+catching signals and doing assignments to data aligned from 0
+to sizeof(double).  This is the default output on a Pyramid:
+.br
+.nf
+
+	short align type: short
+	int align type: int
+	long align type: int
+	float align type: int
+	double align type: int
+	ptr align type: int
+.fi
+.PP
+Specifying a particular type will produce output for only that type:
+.br
+.nf
+
+.B "	$ align short"
+	short align type: short
+.fi
+.PP
+.B -v
+``verbose'' output shows in detail what's happening:
+.br
+.nf
+
+.B "	$ align -v"
+	align:
+		Alignment for type char:
+		0 alignment errors for type char
+	
+		Alignment for type short:
+			Bus error: short aligned 1 (0x70e5)
+			Bus error: short aligned 3 (0x70e7)
+			Bus error: short aligned 5 (0x70e9)
+			Bus error: short aligned 7 (0x70eb)
+		4 alignment errors for type short
+	
+		short align type: short
+.fi
+.I etc.
+.SH BUGS
+.I Align
+assumes that it will receive SIGBUS, SIGILL or SIGSEGV when it violates
+some alignment restriction.

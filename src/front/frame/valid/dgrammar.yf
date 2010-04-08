@@ -1,0 +1,656 @@
+%{
+/*
+**	dgrammar.y
+**
+**	Copyright (c) 1989 Ingres Corporation
+**	All rights reserved.
+*/
+
+/* # include's */
+
+# include	<compat.h>
+# include	<gl.h>
+# include       <me.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	"dnode.h"
+# include	"derive.h"
+# include	<si.h>
+# include	<er.h>
+# include	<erfi.h>
+
+#if defined(hp3_us5) || defined (any_hpux) || defined (hp9_mpe)
+#define __YYSCLASS
+#endif /* hp3_us5 || hpux || hp9_mpe */
+
+/**
+**  Name:	dgrammar.y  -  Grammar Describing the Derivation Strings
+**
+**  Description:
+**	This is the grammar used for parsing the derivation strings.
+**	The grammar is initialized by calling IIFVdinit() in lex.c
+**	(also called by IIFVvinit()) and called as IIFVdpParse().
+**
+**	This file defines:
+**
+**	IIFVdpParse	Derivation formula parser.
+**
+**  History:
+**	06/05/89 (dkh) - Initial version.
+**	06/20/89 (dkh) - Put in some more semantics checking.
+**	10/02/89 (dkh) - Changed IIFVdcDeriveCheck() to IIFVcdChkDerive(),
+**			 IIFVdchk to IIFVdck and IIFVdeError() to IIFVdError().
+**	10/02/89 (dkh) - Changed IIFVderrflag to IIFVdeflag.
+**	19-oct-1990 (mgw)
+**		Fixed #include of local derive.h and dnode.h to use ""
+**		instead of <>
+**	06/02/01 (johnr)
+**		Put in flag and added define yymaxdepth for hp3_us5.
+**      02-Oct-91 (Sanjive)
+**            Define yys as IIFVdyys for dra_us5 and dr6_us5 to stop multiple 
+**	      defines problem due to duplicate definition of yys in grammar.y
+**	03/01/92 (dkh) - Changed above fix to be more generic so that
+**			 there is no possibility that either grammars in
+**			 the forms system will conflict with a user's grammar.
+**    04/21/92(kevinm) (jillb/jroy--DGC)
+**            Undefine MIN and MAX before its definition in the grammar.
+**	09-Jun-92 (fredb)
+**		Added hp9_mpe to defines that solve multiple definition
+**		problem in linker due to dgrammar and grammar in the same lib.
+**	06/23/92 (dkh) - Added support for decimal.
+**	23-Jun-92 (fredb)
+**		Added hp9_mpe to code to define __YYSCLASS.
+**	27-jul-1992 (thomasm) add hp8 to hp3 specific changes.
+**      06-jul-92 (sweeney)
+**              Apollo loader beefs about multiple global definitions.
+**	09-sep-1992 (ricka)
+**		VMS compiler cannot handle lines extended by using a
+**		" \ ".
+**	29-jan-93 (sweeney)
+**		undef abs() for usl_us5 - its yacc generates a #include
+**		of stdlib.h, which contains a forward reference for
+**		abs() which is getting macroexpanded into garbage.
+**	25-mar-93 (sweeney)
+**		#define yy_yyv to be IIFVd_yyv, else it clashes with
+**		the yacc'ed yy_yyv in front!st!install. I may be fixing this
+**		in the wrong place, but it can't hurt. Plus a layout change.
+**     03-jun-93 (pauland)
+**              Added change as suggested by Tony sweeney.
+**              undef abs() for usl_us5 - its yacc generates a #include
+**              of stdlib.h, which contains a forward reference for
+**              abs() which is getting macroexpanded into garbage.
+**      20-nov-1994 (andyw)
+**              Solaris 2.4/Compiler 3.00 failed with macroexpand referenced
+**              function abs. changed as per Tony's previous change to usl_us5
+**              Solaris 2.4/Compiler 3.00 problems
+**	22-jun-95 (allmi01)
+**		Added dgi_us5 support for DG-UX on Intel based platforms following dg8_us5.
+**	29-jul-1997 (walro03)
+**		Undefine abs() for Tandem NonStop (ts2_us5), like other
+**		platforms.
+##      28-aug-1997 (musro02)
+##          Undef abs for sqs_ptx
+**	10-may-1999 (walro03)
+**	    Remove obsolete version string apl_us5.
+**	10-nov-1999 (kitch01)
+**		Bug 98227. Cannot use a comma in a derived field formula.
+**		Added COMMA to the list of valid tokens.
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	20-aug-1999 (popri01)
+**	    Eliminate "undef abs" for Unixware (usl_us5).
+**	    It's now done in compat hdr.
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+*/
+
+
+/* extern's */
+FUNC_EXTERN	DNODE	*IIFVmnMakeNode();
+FUNC_EXTERN	DNODE	*IIFVmsMathSetup();
+FUNC_EXTERN	VOID	IIFVagAggSetup();
+FUNC_EXTERN	VOID	IIFVcdChkDerive();
+FUNC_EXTERN	void	IIFVndNegateDecimal();
+
+GLOBALREF	FLDTYPE	*vl_curtype;
+GLOBALREF	bool	IIFVddpDebugPrint;
+
+/*
+** yacc on usl_us5 is about to spit out a #include for <stdlib.h>
+** which has a prototyped forward reference for abs(int).
+** Because we define abs as a macro in compat.h, this forward
+** ref gets macroexpanded into "extern int ((int) > 0? (int) : -(int))"
+** which is clearly garbage, and won't compile, so stomp on the macro
+*/
+# ifdef sqs_ptx
+# undef abs
+# endif
+
+# ifdef sparc_sol
+# undef abs
+# endif
+
+# ifdef ts2_us5
+# undef abs
+# endif
+
+/* # define's */
+# define	yyparse		IIFVdpParse
+# define	yyerror		IIFVdError
+# define	yylex		IIFVdlex
+# define	yylval		IIFVdlval
+# define	yyval		IIFVdval
+# define	YYSTYPE		IIFVdstype
+# define	yychar		IIFVdchar
+# define	yyerrflag	IIFVdeflag
+# define	yyexca		IIFVdexca
+# define	yyact		IIFVdact
+# define	yypact		IIFVdpact
+# define	yypgo		IIFVdpgo
+# define	yyr1		IIFVdr1
+# define	yyr2		IIFVdr2
+# define	yychk		IIFVdck
+# define	yydef		IIFVd1def
+# define	yydebug		IIFVd2debug
+# define	yynerrs		IIFVdnerrs
+# define	yyv		IIFVdv
+# define	yypvt		IIFVdpvt
+# define	yys		IIFVds
+# define	yy_yyv		IIFVd_yyv
+# if defined(hp3_us5) || defined (any_hpux) || defined (hp9_mpe)
+# define	yymaxdepth	IIFVdmaxdepth
+# endif /* hp3_us5, hp8_us5, hp9_mpe */
+
+# if defined(dg8_us5) || defined(dgi_us5)
+# ifdef MAX
+# undef MAX
+# endif /* MAX */
+# ifdef MIN
+# undef MIN
+# endif /* MIN */
+# endif /* dg8_us5 dgi_us5 */
+
+/* static's */
+
+%}
+
+%start	stmt
+
+%token	LPAREN	RPAREN	PERIOD	COMMA SUM	MAX	MIN	AVERAGE	COUNT
+%token	EXP	PLUS	MINUS	TIMES	DIV	SCONST
+%token	LBRAK	RBRAK
+%token	<node_type>	NAME
+%token	<string_type>	SVCONST
+%token	<I4_type>	I4CONST
+%token	<F8_type>	F8CONST
+%token	<dec_type>	DECCONST
+
+%left	PLUS MINUS
+%left	TIMES DIV
+%left	EXP
+%left	<type_type>	UMINUS
+
+%type	<type_type>	allcols
+%type	<I4_type>	inum
+%type	<F8_type>	fnum
+%type	<dec_type>	dnum
+%type	<node_type>	agg	attrib	colagg	expr	value
+
+%%
+stmt	:	expr
+	{
+		/*
+		**  Need to do datatype compatibility checking of node
+		**  and field.  Do coercion processing if necessary.
+		**  Assign $1 to TREE pointer.
+		*/
+		IIFVcdChkDerive($1);
+		vl_curtype->ftvalchk = (VTREE *) $1;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+			    ERx("Successfully parsed a derivation string.\n"));
+		}
+	}
+	|	error
+	{
+		vl_curtype->ftvalchk = NULL;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Error parsing a derivation string.\n"));
+		}
+	}
+	;
+
+expr	:	LPAREN	expr	RPAREN
+	{
+		/*
+		**  Do $$ = $2 assignment.
+		*/
+		$$ = $2;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("LPAREN expr RPAREN reduction.\n"));
+		}
+	}
+	|	expr	PLUS	expr
+	{
+		/*
+		**  Create new node, do datatype compatibility
+		**  checking and any necessary coercions.
+		*/
+		$$ = IIFVmsMathSetup(PLUS_NODE, $1, $3);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("expr + expr.\n"));
+		}
+	}
+	|	expr MINUS	expr
+	{
+		/*
+		**  Create new node, do datatype compatibility
+		**  checking and any necessary coercions.
+		*/
+		$$ = IIFVmsMathSetup(MINUS_NODE, $1, $3);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("expr - expr.\n"));
+		}
+	}
+	|	expr TIMES	expr
+	{
+		/*
+		**  Create new node, do datatype compatibility
+		**  checking and any necessary coercions.
+		*/
+		$$ = IIFVmsMathSetup(MULT_NODE, $1, $3);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("expr * expr.\n"));
+		}
+	}
+	|	expr DIV	expr
+	{
+		/*
+		**  Create new node, do datatype compatibility
+		**  checking and any necessary coercions.
+		*/
+		$$ = IIFVmsMathSetup(DIV_NODE, $1, $3);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("expr / expr.\n"));
+		}
+	}
+	|	expr EXP	expr	%prec EXP
+	{
+		/*
+		**  Create new node, do datatype compatibility
+		**  checking and any necessary coercions.
+		*/
+		$$ = IIFVmsMathSetup(EXP_NODE, $1, $3);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("expr ** expr.\n"));
+		}
+	}
+	|	MINUS	expr	%prec UMINUS
+	{
+		/*
+		**  Create new node, and create coercion function.
+		*/
+		$$ = IIFVmsMathSetup(UMINUS_NODE, $2, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("minus expr.\n"));
+		}
+	}
+	|	value
+	{
+		/*
+		**  Just assign $$ = $1.
+		*/
+		$$ = $1;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("A value reduction.\n"));
+		}
+	}
+	;
+
+value	:	attrib
+	{
+		/*
+		**  Just assign $$ = $1.
+		*/
+		$$ = $1;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("An attrib reduction.\n"));
+		}
+	}
+	|	SVCONST
+	{
+		/*
+		**  Create node, assign datatype and assign
+		**  $$ from nodemaker.
+		*/
+		$$ = IIFVmnMakeNode(SCONST_NODE, (YYSTYPE *)&$1, NULL, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("A v_string constant.\n"));
+		}
+	}
+	|	inum
+	{
+		/*
+		**  Just assign $$ = $1.
+		*/
+		$$ = IIFVmnMakeNode(ICONST_NODE, (YYSTYPE *)&$1, NULL, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("An inum constant.\n"));
+		}
+	}
+	|	fnum
+	{
+		/*
+		**  Just assign $$ = $1.
+		*/
+		$$ = IIFVmnMakeNode(FCONST_NODE, (YYSTYPE *)&$1, NULL, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("A fnum constant.\n"));
+		}
+	}
+	|	dnum
+	{
+		$$ = IIFVmnMakeNode(DCONST_NODE, (YYSTYPE *)&$1, NULL, NULL);
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("A dnum constant.\n"));
+		}
+	}
+	|	colagg
+	{
+		/*
+		**  Just assign $$ = $1.
+		*/
+		$$ = $1;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Column aggregate to value reduction.\n"));
+		}
+	}
+	;
+
+/*
+** a regular field used as a value
+** or a column of a table field
+*/
+attrib :  NAME
+	{
+		/*
+		**  Check for field existence.
+		**  If this derviation string is for a tf column,
+		**  disallow it.
+		**  Create node for name, just various attributes
+		**  such as datatype.  Assign $$ from nodemaker.
+		*/
+		$$ = IIFVmnMakeNode(SFLD_NODE, NULL, $1, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("Got a single name.\n"));
+		}
+	}
+	|	NAME PERIOD NAME
+	{
+		/*
+		**  check for column existence.
+		**  If this derivation string is for a simple
+		**  field, disallow it.
+		**  Create node for tf column, set various
+		**  attributes such as datatype.  Assign
+		**  $$ from nodemaker.
+		*/
+		$$ = IIFVmnMakeNode(TCOL_NODE, NULL, $1, $3);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("Got a tf column name.\n"));
+		}
+	}
+	;
+
+colagg	:	agg	LPAREN	NAME	allcols	NAME	RPAREN
+	{
+		/*
+		**  check for existence of tf column.  If this
+		**  derivation string is for a tf column, then
+		**  disallow it.  Use node created from agg
+		**  and set various attrbutes.
+		**  Assign $$ from $1.
+		*/
+		IIFVasAggSetup($1, $3, $5);
+		$$ = $1;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(ERx("Got a column aggregate.\n"));
+		}
+	}
+	;
+
+allcols	:	LBRAK	TIMES	RBRAK	PERIOD
+	{
+		/*
+		**  Nothing to do.  Assign $$ value of zero.
+		*/
+		$$ = 0;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Got the all columns piece.\n"));
+		}
+	}
+	;
+
+agg	:	SUM
+	{
+		/*
+		**  Create SUM node.  Assing $$ from nodemaker.
+		*/
+		$$ = IIFVmnMakeNode(SUM_NODE, NULL, NULL, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Got aggregate keyword SUM.\n"));
+		}
+	}
+	|	MAX
+	{
+		/*
+		**  Create MAX node.  Assign $$ from nodemaker.
+		*/
+		$$ = IIFVmnMakeNode(MAX_NODE, NULL, NULL, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Got aggregate keyword MAX.\n"));
+		}
+	}
+	|	MIN
+	{
+		/*
+		**  Create MIN node.  Assign $$ from nodemaker.
+		*/
+		$$ = IIFVmnMakeNode(MIN_NODE, NULL, NULL, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Got aggregate keyword MIN.\n"));
+		}
+	}
+	|	AVERAGE
+	{
+		/*
+		**  Create AVERAGE node.  Assign $$ from nodemaker.
+		*/
+		$$ = IIFVmnMakeNode(AVG_NODE, NULL, NULL, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Got aggregate keyword AVERAGE.\n"));
+		}
+	}
+	|	COUNT
+	{
+		/*
+		**  Create COUNT node.  Assign $$ from nodemaker.
+		*/
+		$$ = IIFVmnMakeNode(CNT_NODE, NULL, NULL, NULL);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Got aggregate keyword COUNT.\n"));
+		}
+	}
+	;
+
+inum	:	I4CONST
+	{
+		/*
+		**  Create node and setup DBV constant.
+		**  Assing $$ from nodemaker.
+		*/
+		$$ = $1;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Reducing I4CONST to inum.\n"));
+		}
+	}
+	|	UMINUS	I4CONST
+	{
+		/*
+		**  Create node and setup DBV constant.
+		**  Assign $$ from nodemaker.  Do uminus operation.
+		*/
+		$$ = - ($2);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Reducing - I4CONST to inum.\n"));
+		}
+	}
+	;
+
+fnum	:	F8CONST
+	{
+		/*
+		**  Create node and setup DBV constant.
+		**  Assign $$ from nodemaker.
+		*/
+		$$ = $1;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Reducing F8CONST to fnum.\n"));
+		}
+	}
+	|	UMINUS	F8CONST
+	{
+		/*
+		**  Create node and setup DBV constant.
+		**  Assign $$ from nodemaker.  Do uminus operation.
+		*/
+		$$ = - ($2);
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Reducing - F8CONST to fnum.\n"));
+		}
+	}
+	;
+
+dnum	:	DECCONST
+	{
+		/*
+		**  Create node and setup DBV constant.
+		**  Assign $$ from nodemaker.
+		*/
+		$$ = $1;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Reducing DECCONST to dnum.\n"));
+		}
+	}
+	|	UMINUS	DECCONST
+	{
+		/*
+		**  Create node and setup DBV constant.
+		**  Assign $$ from nodemaker.  Do uminus operation.
+		*/
+		IIFVndNegateDecimal($2, (i4) FALSE);
+		$$ = $2;
+
+		if (IIFVddpDebugPrint)
+		{
+			IIFVdtpDrvTracePrint(
+				ERx("Reducing - DECCONST to dnum.\n"));
+		}
+	}
+	;
+
+%%
+
+# include	"dtokens.h"
+
+/*
+**   YYERROR -- the routine which error routine yacc calls
+*/
+
+yyerror(errmessage)
+char	*errmessage;
+{
+	IIFVdeErr(E_FI20D2_8402, 0);
+}

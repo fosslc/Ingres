@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The default_journaling option specifies whether or not tables that are 
+ created in a database are automatically journaled.
+
+
+ Default: ON

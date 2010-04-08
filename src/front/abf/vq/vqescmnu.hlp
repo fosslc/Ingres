@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescmnu.hlp, help for the "Select the Menuitem to Edit Escape code for"
+/#-- popup in the escape code editor.
+/#-- 
+From this menu, you can pick the menuitem for which you want to edit escape 
+code.  Only menuitems for the child frames are available.
+
+If escape code is currently present for a particular menuitem, it is 
+indicated by an asterisk in the right-hand column of this menu.
+
+The menuitems are:
+
+  Select        Edit the escape code for the currently selected menuitem.
+  Cancel        Cancel the edit request.
+  Help          Display this help text.

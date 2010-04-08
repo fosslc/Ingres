@@ -1,0 +1,453 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 28-June-2005 (zhahu02)
+##    Updated due to a typo (INGICE112/b114742) .
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+## 13-Feb-2006 (fanra01)
+##     Bug 115751
+##     Minor editorial change.
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Page to Run a Simple the Select Statement
+</title>
+</head>
+<body>
+
+<h1>
+Page to Run a Simple the Select Statement
+</h1>
+
+One of the simplest things we can do is to select a set of
+rows from a table. (The full contents of the  plays table
+are <a href="fr_playList.html">available</a>). We will go
+through the process of creating the Web Deployment Option macro to generate
+the required code by using the Web Deployment Option Design Tool step by step for
+this file. Once we have generated the macro code we will cut
+and paste it into the file <b><tt>play_all.html</tt></b>.
+<p>
+
+<h2>Paint the Select Macro</h2>
+
+	<ol class="level-A">
+	<li> Open the ICE Design tool
+	<li>Select the <image src="plus.gif" alt="plus symbol">
+	next to the "Macro Commands" option in the menu tree
+	to expand the structure.
+	<li>Select the <image src="plus.gif" alt="plus symbol"> next to the "SQL statement"
+	<li> Select <u>Database</u>
+	<ol class="level-1">
+	    <li> Ensure "icetutor" is the selected database.
+	    <li> Press 'next' <image src="arrow_next.gif" alt="Next">
+        to move to
+<h5 class="eg">Statement</h5>
+	    <li> Ensure the SQL query is
+	    <tt>
+	    <span class="hiy">
+	    select * from plays
+	    </span>
+	    </tt>
+	    <li> Press 'next' <image src="arrow_next.gif" alt="Next">
+        to move to
+<h5 class="eg">Transaction</h5>
+	    <li>Ensure the transaction name is
+	    <tt>
+	    <span class="hiy">
+	    "Complete"
+	    </span>
+	    </tt>
+	    <li> Press 'next' <image src="arrow_next.gif" alt="Next">
+        to move to
+<h5 class="eg">Cursors</h5>
+	    <li>Ensure the cursor name is
+	    <tt>
+	    <span class="hiy">
+	    "Works"
+	    </span>
+	    </tt>
+	    <li> Press 'next' <image src="arrow_next.gif" alt="Next">
+        to move to
+<h5 class="eg">Rows</h5>
+	    <li>Ensure the number of rows is set to
+	    <tt>
+	    <span class="hiy">
+	    "5"
+	    </span>
+	    </tt>
+	    <li> Press 'next' <image src="arrow_next.gif" alt="Next">
+        to move to
+<h5 class="eg">Formatting the Layout</h5>
+	    <li>Ensure that the radio button
+	    <tt>
+	    <span class="hiy">
+	    "Table"
+	    </span>
+	    </tt>
+	    is selected.
+	</ol>
+</ol>
+<hr>
+<p>You should see the following macro command displayed:</p>
+
+<span CLASS="macro">
+&lt;!-- #ICE <BR>
+DATABASE = `icetutor` <BR>
+SQL=`select * from plays` <BR>
+TRANSACTION=`Complete` <BR>
+CURSOR=`Works` <BR>
+ROWS=`5` <BR>
+TYPE=`TABLE`<BR>
+--&gt;<BR><BR>
+
+</span>
+<hr>
+	    <p>And following that you should see the sample
+	    output:
+<hr>
+<TABLE border cellspacing=2 ><TR><TH>comporder</TH><TH>title</TH><TH>playwright</TH><TH>performed</TH><TH>acts</TH><TH>type</TH></TR>
+<TR><TD>1</TD><TD>Two Gentlemen of Verona</TD><TD>Shakespeare</TD><TD>1598</TD><TD>5</TD><TD>comedy</TD></TR>
+<TR><TD>2</TD><TD>Taming of The Shrew</TD><TD>Shakespeare</TD><TD></TD><TD>5</TD><TD>comedy</TD></TR>
+<TR><TD>3</TD><TD>Henry VI part 1</TD><TD>Shakespeare</TD><TD>1591</TD><TD>5</TD><TD>history</TD></TR>
+<TR><TD>4</TD><TD>Henry VI part 3</TD><TD>Shakespeare</TD><TD>1595</TD><TD>5</TD><TD>history</TD></TR>
+<TR><TD>5</TD><TD>Titus Andronicus</TD><TD>Shakespeare</TD><TD></TD><TD>5</TD><TD>tragedy</TD></TR>
+</TABLE>
+
+
+<p>ii_rowcount = 5
+</ol>
+<h2>Cut & Paste Macro</h2>
+We are happy (for now) with this output, so cut
+and paste the red macro text into your
+"play_all.html" file. The result should be as follows:
+
+<h3>File: play_all.html (initial)</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shakespeare's Plays&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Shakespeare's Plays&lt;/h1&gt;
+
+<span class="macro">
+	  &lt;!-- #ICE
+          DATABASE = `icetutor`
+          SQL=`select * from plays`
+          TRANSACTION=`Complete`
+          CURSOR=`Works`
+          ROWS=`5`
+          TYPE=`TABLE`
+          --&gt;
+</span>
+
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+<p>
+If you have already registered the file you can now view it
+in the administration tool or by loging on to your site and
+specifying its URL.
+<p>
+Notice that the only way or retrieving the next set of rows
+is by reloading the page. (Press the Refresh button on your
+browser.)
+
+<h2>Add a More Button</h2>
+We now need a way of retrieving the next set of 5 plays.
+Since we have opened both a transaction (<tt>Complete</tt>)
+and a cursor (<tt>Works</tt>) and the action of the cursor
+is to retrieve the next set of rows, we simply need to re-load
+the document. You might like to try this with your
+document.
+Although this will work, it is not quite as
+user friendly as we would like! We would much prefer to add
+a <i>Buton</i> to get more plays. The action of the button
+is to revisit the document. We know from the HTML
+Primer that a button exists on a form,
+so we need a form whose action is the URL of the
+<u>current</u>
+document. The button type that submits the form to the Web
+server is <i>SUBMIT</i>.  The end result of all this is that
+the Submit button acts just like the Refresh button on your
+browser. We assign a meaningful name to the
+button, say, "More". We are now ready to present the
+document with our new More button:
+
+
+<h3>File: play_all.html (with MORE button)</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shakespeare's Plays&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Shakespeare's Plays&lt;/h1&gt;
+
+&lt;!-- #ICE
+          DATABASE = `icetutor`
+          SQL=`select * from plays`
+          TRANSACTION=`Complete`
+          CURSOR=`Works`
+          ROWS=`5`
+          TYPE=`TABLE`
+          --&gt;
+
+&lt;p&gt;
+
+<span class="macro">
+&lt;FORM ACTION="/ice-bin/oiice.dll/playgroup/plays[play_all.html]"
+	METHOD="POST"&gt;
+&lt;INPUT TYPE="submit" NAME="More" VALUE="More" ALT="Show more plays"&gt;
+&lt;/FORM&gt;
+</span>
+
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+
+<h2>Include Generic Session Control</h2>
+We would obviously like to give the user some way of
+returning to the home page, or logging out. We can easily do
+this with the following macro statements:
+
+<div class="boxCode"><tt>
+<pre>
+&lt;hr width="50%" &gt;
+&lt;h2&gt;Where would you like to go now:&lt;/h2&gt;
+&lt;table border=0 cellspacing=3&gt;
+&lt;tr&gt;
+&lt;td&gt;
+&lt;A HREF="/ice-bin/oiice.dll/plays[play_home.html]"&gt;Globe Home Page:&lt;/A&gt;
+&lt;td&gt;
+&lt;A HREF="/ice-bin/oiice.dll/plays[play_home.html]"&gt;
+    &lt;img src="OldGlobe.gif" alt="Return to Globe Home Page"
+&lt;/A&gt;
+&lt;tr&gt;
+&lt;td&gt;
+&lt;p&gt;
+&lt;A HREF="/ice-bin/oiice.dll/plays[play_login.html]?ii_action=disconnect"&gt;logout:&lt;A&gt;
+&lt;td&gt;
+&lt;A HREF="/ice-bin/oiice.dll/plays[play_login.html]?ii_action=disconnect"&gt;
+    logout GIF
+&lt;/A&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+</pre>
+</tt></div>
+<p>
+Clearly we could insert this directly into our file. And
+then every other one that we create. And then re-visit every
+file whenever we wish to change something. You get the idea. 
+It would be much easier 
+to have one version of this in a separate file and
+<tt>INCLUDE</tt> it as needed. To do this, save the code in the file
+<tt>play_SessionControl_h.html</tt> and add the include line
+to the file <tt>play_all.html</tt>.
+<p>Note: Any include
+files need to be registered with the ICE server.</p>
+
+<h3>File: play_all.html (include session control file)</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shakespeare's Plays&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Shakespeare's Plays&lt;/h1&gt;
+
+&lt;!-- #ICE
+          DATABASE = `icetutor`
+          SQL=`select * from plays`
+          TRANSACTION=`Complete`
+          CURSOR=`Works`
+          ROWS=`5`
+          TYPE=`TABLE`
+          --&gt;
+
+&lt;p&gt;
+
+&lt;FORM ACTION="/ice-bin/oiice.dll/playgroup/plays[play_all.html]"
+	METHOD="POST"&gt;
+&lt;INPUT TYPE="submit" NAME="More" VALUE="More" ALT="Show more plays"&gt;
+&lt;/FORM&gt;
+
+<span class="macro">
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+</span>
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+<h2>Add Transaction Control</h2>
+
+The document, as it stands, opens a transaction
+<tt>'Complete'</tt> but never closes it with a
+<tt>commit</tt> or <tt>rollback</tt>. We obviously cannot
+commit the transaction on the same page because then we
+would only ever retrieve the first result subset. We could
+create an extra page that we visit for the sole purpose of
+committing the transaction but we effectively already have
+such a page, our home page. A good time to commit the
+transaction would be when we transfer to the home page.
+There could be many transactions that use this mechanism, so
+we choose a variable to contain the name of the transaction
+to be committed and a further variable to record the fact
+that the transaction is either available to be committed or
+has already been committed (since it is the nature of
+HTML and HTTP that we have no control over
+how the user arrives at the home page or how often).
+<h3>File: play_all.html final version (with Transaction control information)</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shakespeare's Plays&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Shakespeare's Plays&lt;/h1&gt;
+
+&lt;!-- #ICE
+          DATABASE = `icetutor`
+          SQL=`select * from plays`
+          TRANSACTION=`Complete`
+          CURSOR=`Works`
+          ROWS=`5`
+          TYPE=`TABLE`
+          --&gt;
+
+<span class="macro">
+&lt;!-- #ICE DECLARE=`session.e_playTxn=Complete` --&gt;
+&lt;!-- #ICE DECLARE=`session.e_playTxnCommitted=FALSE` --&gt;
+</span>
+&lt;p&gt;
+
+&lt;FORM ACTION="/ice-bin/oiice.dll/playgroup/plays[play_all.html]"
+	METHOD="POST"&gt;
+&lt;INPUT TYPE="submit" NAME="More" VALUE="More" ALT="Show more plays"&gt;
+&lt;/FORM&gt;
+
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+<a name="variable"> </a>
+<p>
+<h3>Variable Naming Convention</h3>
+There are various variable scopes available to us:
+<b>server</b>,
+<b>session</b>, and
+<b>page</b>. The naming convention used in this tutorial is
+<i>scope</i>_name where <i>scope</i> is one of the
+following:
+<table border=1>
+<tr><td>Prefix</td><td>Scope Level</td></tr>
+<tr><td>s</td><td><u>S</u>erver</td></tr>
+<tr><td>e</td><td>s<u>E</u>ssion</td></tr>
+<tr><td>p</td><td><u>P</u>age</td></tr>
+</table>
+This means that the variable <tt>e_playTxnCommitted</tt> is
+a <i>session</i> level variable.
+<p>
+We now need some code to use these variables to commit the
+transaction at the appropriate time. The code that achieves
+this conditional transaction commital appears below:
+
+<h3>File: play_TxnCndCmt_h.html</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;!-- #ICE REPEAT IF (DEFINED (e_playTxnCommitted))
+	THEN=``
+	ELSE=`&lt;!-- #ICE DECLARE=``session.e_playTxnCommitted=TRUE`` --&gt;`
+--&gt;
+&lt;!-- #ICE REPEAT IF (DEFINED(e_playTxn) AND (`:e_playTxnCommitted` != `TRUE`))
+	THEN=`&lt;!-- #ICE COMMIT=``:e_playTxn`` --&gt;&lt;!-- #ICE DECLARE=``session.e_playTxnCommitted=TRUE`` --&gt;`
+--&gt;
+</pre>
+</tt></div>
+<p>
+We add an <tt>ICE IF</tt> statement to our next document.
+Suffice it to say for now that
+the first part of this code tests if the variable
+<tt>e_playTxnCommitted</tt> exists; if it does not then it
+is created and set to the value TRUE. We need to do this
+because the first time we visit the home page, no variables
+will be set.
+<p>
+Then, if the variable <tt>e_playTxn</tt> exists and the
+transaction has <i>not</i> yet been committed, it
+is committed. We need to perform these checks because it is an
+error to commit a nonexistent transaction.
+<p>
+It only remains to include this file in our home page,
+<tt>play_home.html</tt> as follows:
+<h3>File: play_home.html</h3>
+
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shakespeare's Plays Home Page&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;center&gt;
+&lt;h1&gt;Shakespeare's Plays Home Page&lt;/h1&gt;
+&lt;/center&gt;
+This is the home page for Shakespeare's plays hosted on the server &lt;b&gt;globe&lt;/b&gt;
+&lt;h2&gt;
+View Shakespeare's Plays
+&lt;/h2&gt;
+<span class="macro">
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_TxnCndCmt_h.html]` --&gt;
+</span>
+
+&lt;ol&gt;
+&lt;li&gt; &lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_all.html]"&gt;All&lt;/a&gt;
+&lt;/ol&gt;
+Please
+&lt;A HREF="/ice-bin/oiice.dll/plays[play_login.html]?ii_action=disconnect"&gt;logout&lt;/A&gt;,
+don't time out!
+&lt;!-- // #ICE REPEAT FUNCTION=`play_NewOrder.newOrder`
+	HTML=`&lt;hr&gt;test: next order number is :out_orderNumber&lt;hr&gt;`
+--&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+<h2>Summary</h2>
+<p>
+In this example we showed how to create a macro statement
+with the design tool. We embedded the macro into a simple
+Web Deployment Option document.
+<p>
+We took advantage of the <u>cursor</u> feature to add a
+<u>More</u> button to the document, enabling us to view the
+sequence of plays by subset.
+<p>
+Finally we arranged to commit the transaction upon returning
+to the home page. This code was placed in a separate file
+and <u>INCLUDE</u>d into the home page and the play_all.html
+document.  Communication of the transaction name was
+achieved with web Deployment Option<u>session variables</u>
+
+<p>
+The next page illustrates the use of the
+<a href="fr_if.html"
+target="page">if</a> keywords.
+</body>
+</html>

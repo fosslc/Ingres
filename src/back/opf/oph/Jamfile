@@ -1,0 +1,18 @@
+#
+# Jamfile file for back!opf!oph
+#
+#   20-Oct-2009 (hweho01)
+#     Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back opf oph ;
+
+IISUBSYS back opf oph ;
+
+IINOOPTIM ophhistos.c : sos_us5 i64_aix ;
+IINOOPTIM ophcreate.c : sos_us5 i64_aix ;
+
+IILIBRARY OPFLIB : ophupdate.c ophtcomp.c ophrelse.c ophpdf.c
+	ophminptr.c ophmemory.c ophmaxptr.c ophjselect.c ophinter.c
+	ophhistos.c ophdmemory.c ophdccme.c ophdcbme.c ophcreate.c
+	ophccmem.c ophcbmem.c ;
+

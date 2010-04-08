@@ -1,0 +1,17 @@
+LIBRARY   INGRSWIN
+
+EXETYPE   WINDOWS
+
+CODE      MOVEABLE DISCARDABLE
+DATA      MOVEABLE SINGLE
+
+HEAPSIZE  0
+
+EXPORTS
+	WEP                           @1 RESIDENTNAME
+	SelWinDlgProc                 @2
+	CallBack                      @3
+	EnumMDIChild                  @4
+	MdiSelWinBox                  @5
+	MdiSelWinInit                 @6
+	MdiSelWinEnd                  @7

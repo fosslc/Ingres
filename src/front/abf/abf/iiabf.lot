@@ -1,0 +1,24 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/include=(gver), -  ! for II_copyright
+INGLIB:libabf.olb/library, -
+INGLIB:libabfimage.olb/library, -
+INGLIB:libcompfrm.olb/library, -
+INGLIB:libvq.olb/library, -
+INGLIB:libosl.olb/library, -
+INGLIB:libsql.olb/library, -
+INGLIB:libfg.olb/library, -
+INGLIB:libcopyform.olb/library, -
+INGLIB:libgn.olb/library, -
+INGLIB:libiaom.olb/library, -
+INGLIB:libioi.olb/library, -
+INGLIB:libingmenu.olb/library, -
+INGLIB:liboo.olb/library, -
+INGLIB:libvifred.olb/library, -
+INGLIB:libprintform.olb/library, -
+INGLIB:libqbf.olb/library, -
+INGLIB:libtblutil.olb/library, -
+INGLIB:libcompat.olb/include=(dsnat,dsi4,dsf8,dschar,dsstring,ollang), -
+II_FRAMELIB/share
+II_LIBQLIB/share
+II_COMPATLIB/share

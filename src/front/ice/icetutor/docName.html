@@ -1,0 +1,136 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<SCRIPT language="JavaScript">
+		var size
+		var position = 0
+		var sorted = -1
+		var column = 2
+		var head = '<STYLE>\nBODY {Arial;color:white;font-size="10pt";}\nA:link	{color: black;}\n</STYLE>\n'
+		var bodyProperties = 'bgcolor="#FFFFFF"'
+
+		function makeArray(n) {
+			this.length = n
+			for (var i = 1; i <= n; i++) {
+				this[i] = 0
+			}
+			return this
+		}
+
+		function declareFiles (size) {
+			position = 0
+			files = new makeArray(size)
+		}
+
+		function createFile(icon, name, suffix) 
+		{
+			this.name = name
+			this.suffix = suffix
+			this.icon = icon
+			this.next = -1
+		}
+	
+		function add(icon, name, suffix) 
+		{
+			var sort = sorted
+			var previous = -1
+
+			files[position] = new createFile(icon, name, suffix)
+
+			while (sort != -1 &&
+						 name.toLowerCase() > files[sort].name.toLowerCase())
+			{
+					previous = sort
+					sort = files[sort].next
+			}
+
+			if (previous == -1)
+			{
+				files[position].next = sorted
+				sorted = position
+			}
+			else 
+			{
+				files[previous].next = position
+				files[position].next = sort
+			}
+			position++
+		}
+
+		function setFile(name, suffix) 
+		{
+			document.forms[0].prefix.value = name
+			document.forms[0].suffix.value = suffix
+		}
+
+		function displayFiles() 
+		{
+			var first = sorted
+			var count = 0
+
+			document.write('<HTML>\n<HEAD>\n')
+			document.write(head);
+			document.write('</HEAD>\n<BODY ' + bodyProperties + '>\n')
+
+			document.write('<table WIDTH="100%" CELLPADDING=0 CELLSPACING=0>\n')
+			while (first != -1) 
+			{
+				if (count == 0)
+					document.write('<tr>');
+
+				document.write('<td VALIGN=MIDDLE><A HREF="javascript:setFile(\'' + 
+							 files[first].name + '\', \'' +
+							 files[first].suffix + '\')"><IMG BORDER=0 SRC="' + 
+							 files[first].icon + '">' +
+							 files[first].name + '.' +
+							 files[first].suffix + '<A></td>\n')
+				first = files[first].next
+
+				if (count == column)
+				{
+					document.write('</tr>');
+					count = 0;
+				}
+				else
+					count  = count + 1
+			}
+
+			if (position > 0)
+				setFile(files[sorted].name, files[sorted].suffix)
+
+			document.write('</table>\n')
+			document.write('</BODY>\n</HTML>\n')
+		}
+
+		function getFiles() {
+			var icon
+			<!-- #ICE REPEAT FUNCTION=`document?action=select`
+			HTML=`<!-- #ICE REPEAT IF (``:doc_type`` == ``page`` and
+																 ``:doc_unit_id`` == ``:doc_unit`` and 
+																 ``:doc_type`` == ``:filter``)
+				THEN=``add('<!-- #ICE INCLUDE=````icon_page.gif```` -->', ':doc_name',':doc_suffix')
+				``
+				--><!-- #ICE REPEAT IF (``:doc_type`` == ``facet`` and
+																``:doc_unit_id`` == ``:doc_unit`` and 
+																``:doc_type`` == ``:filter``)
+				THEN=``add('<!-- #ICE INCLUDE=````icon_multi.gif```` -->', ':doc_name',':doc_suffix')
+				``
+				-->`
+			-->
+		}
+		declareFiles(<!-- #ICE VAR=`:ii_rowcount` -->);
+		getFiles();
+</SCRIPT>
+
+
+<INPUT ALIGN="RIGHT" MAXLENGTH="32" SIZE="20" NAME="prefix">.<INPUT MAXLENGTH="4" SIZE="4" NAME="suffix">
+<p>
+<SCRIPT language="JavaScript">
+	displayFiles();
+</SCRIPT>
+##
+## (DO NOT REMOVE)

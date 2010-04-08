@@ -1,0 +1,6 @@
+<?xml: version='1.0' ?>
+<!-- #ICE SQL=`:ii_query_statement`
+    DATABASE=`:ii_database`
+    USER=`:ii_userid`
+    TYPE=`xml`
+-->

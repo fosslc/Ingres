@@ -1,0 +1,1513 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+# include	<cv.h>		 
+#include	<me.h>
+#include	<cm.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#define NOT_YET
+#include	<fe.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<abqual.h>
+#include	<erar.h>
+#include	<erit.h>
+#include	"keyparam.h"
+#include        <ft.h>
+#include        <fmt.h>
+#include        <frame.h>
+#include	<flddesc.h>
+#include	"rts.h"
+
+/**
+** Name:	abrtlkup.qsc -	ABF Run-time Lookup Frame.
+**
+** Description:
+**	Contains the routine that implements the lookup system frame for the
+**	ABF run-time system.  Defines:
+**
+**	IIARlookup()	lookup value
+**
+** History:
+**	Revision 6.3/03/00
+**	89/07  wong
+**		Initial revision.
+**
+**	Revision 6.4
+**	03/22/91 (emerson)
+**		Major revisions for array support.
+**	03/23/91 (emerson)
+**		Changed references to qr_argv in the QRY structure;
+**		Its declaration in abfosl.h has been changed to reflect
+**		its true type (QRY_ARGV *).
+**	03/25/91 (emerson)
+**		Fixed bug in findAttr.
+**
+**	24-apr-91 (davel)
+**		Fixed bug 34519 in _getDesc. Must allocate and use a copy
+**		of the target list (qg_tlist) to correctly handle 
+**		the "dot_all" QRY_SPEC's (e.g. '*' or 'table.*').
+**	12-aug-91 (davel)
+**		Fixed bug 38012 in IIARlookup() to disallow query parameters
+**		in QUEL frames, essentially disallowing lookup() calls from 
+**		QUEL.
+**
+**	Revision 6.4/03
+**	09/20/92 (emerson)
+**		Clear the QR_0_ROWS_OK bit before calling IIARgn1RtsgenV1
+**		(part of fix for bug 39582).
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	23-Aug-2009 (kschendel) 121804
+**	    Update some of the function declarations to fix gcc 4.3 problems.
+*/
+
+STATUS	IIARrpgRtsPredGen();
+STATUS	iiarRiRecordInfo();
+FUNC_EXTERN bool IIARgn1RtsgenV1();
+
+/*{
+** Name:	IIARlookup() -	Allow Users to Look up Values.
+**
+** Description:
+**	Allows users to look up and select values based on a query.  This will
+**	optionally qualify the query and build all the relevant forms to do
+**	this.
+**
+** Inputs:
+**	prm	{ABRTSPRM *}  The parameter structure for the call.
+**	name	{char *}  The lookup frame name, "lookup".
+**	frm	{ABRTSFRM *}  The frame object.
+**
+** Returns:
+**	{PTR}  NULL always.
+**
+** History:
+**	07/89 (jhw) -- Written.
+**	03/22/91 (emerson)
+**		Major revisions for array support.
+**		Also made some cosmetic revisions.
+**		Also changed to call IIUGbmaBadMemoryAllocation if FEreqmem
+**		fails, instead of quietly returning.
+**		Also fixed a couple of bugs:
+**		(1) Memory was corrupted if ii_field[_title]n specified
+**		an n <= 0 or an n > the number of columns in the query.
+**		(2) ii_field_titlen didn't override the default title
+**		derived from the column name if ii_fieldn came after
+**		ii_field_titlen in the parameter list.
+**	04-mar-92 (leighb) DeskTop Porting Change:
+**		Moved function declaration outside of calling function.
+**		This is so function prototypes will work.
+*/
+
+#define _UnknownCol	E_AR002B_UnknownColumn
+#define _NoColDesc	E_AR002C_MissingColumn
+#define _NoColumns	E_AR002D_NoColumns
+#define _NotByRef	E_AR002E_NotByReference
+#define _NoReturns	E_AR002F_NoValuesReturned
+#define _NotInQUEL	E_AR0038_NoLookupinQUEL
+#define _BothQryArray	E_AR0039_BothQueryAndArray
+#define _NoQryArray	E_AR003A_NoQueryOrArray
+#define _UnknownAttr	E_AR003B_UnknownAttr
+#define _BothQualArray	E_AR003C_BothQualifyAndArray
+#define _NotArray	E_AR003D_NotArray
+#define _BadColNum	E_AR003E_BadColNum
+#define _DupCols	E_AR003F_DuplicateCols
+
+#define MAXTITLE	128
+
+static const char	_Name[]		= ERx("look_up"),
+			_routine[]	= ERx("IIARlookup"),
+			_ii_query[]	= ERx("ii_query"),
+			_ii_field[]	= ERx("ii_field"),
+			_ii_fldtitle[]	= ERx("ii_field_title");
+static const
+##	char	_ii_qualify[]	= ERx("ii_qualify");
+
+static const
+##	char	_ii_lookup[]	= ERx("ii_lookup");
+
+static u_i4	tag = 0;
+
+static i4	_getDesc();
+static i4	findArgv();
+static i4	findAttr();
+static i4	_chkFldDesc();
+static char	*_bldQualForm();
+static STATUS	_qualify();
+static STATUS	_bldLookupForm();
+static i4	_lookup_query();
+static i4	_lookup_array();
+
+PTR
+IIARlookup ( prm, name, frm )
+ABRTSPRM	*prm;
+char		*name;
+ABRTSFRM	*frm;
+{
+	register char  		**fp;	/* pointer to formal name */
+	register ABRTSPV	*ap;	/* pointer to actuals */
+	register FLD_DESC	*flds;	/* field descriptor array */
+	register i4		cnt;	/* parameter counter */
+	register QRY		*qry;	/* query */
+
+	register ADF_CB	*cb;
+	STATUS		rval = OK;
+	i4		row = 0;		/* selected row */
+	char		*qual_form = NULL;	/* qualification form */
+	char		*title = NULL;		/* title for look-up form */
+	char		*msg = NULL;		/* fetch message */
+	i4		ncols = 0;		/* no. of query columns */
+	i4		ndisp = 0;		/* no. of displayed columns */
+	i4		rows = 0;		/* no. of displayed rows */
+	i4		startrow = -1;		/* screen row for display */
+	i4		startcolumn = -1;	/* screen column for display */
+	bool		titles = FALSE;		/* display column titles? */
+	bool		values = FALSE;		/* values returned by ref? */
+	char		title_buf[MAXTITLE+1];	/* title buffer */
+	char		message[MAXTITLE+1];	/* message buffer */
+	QDESC		query;			/* local copies for query */
+	QRY		aquery;			/*	... and runtime query */
+	char		qualify_form[FE_MAXNAME+1];
+	KEYWORD_PRM	prm_desc;
+	ABRT_QUAL	IIqual;		/* qualification */
+	QSGEN		IIqgen;		/* query generator for qualification */
+	DB_DATA_VALUE	retvalue;
+
+	DB_DATA_VALUE	*array_dbv = NULL;	/* DBV of ii_array parameter */
+	ABRTSTYPE	*array_type = NULL;	/* record type of ii_array */
+	ABRTSATTR	*attrs = NULL;		/* array of attrs for record */
+
+	/*
+	** The following two arrays map either:
+	** (1) a column in the query (if II_QUERY specified), or
+	** (2) an attribute in the array (if II_ARRAY specified)
+	** into the following:
+	** (1) the positive number n, if II_FIELDn specified
+	**     for the column or attribute, or 0;
+	** (2) a pointer to the ABRTSPV structure representing the actual
+	**     parameter for the field (if any) into which the contents
+	**     of the column [or attribute] in the selected row
+	**     are to be returned (because columnname = BYREF(fieldname)
+	**     was specified on the CALLFRAME LOOK_UP),
+	**     or NULL (if columnname = BYREF(fieldname) was not specified
+	**     for the column).
+	** The arrays parallel the array of QRY_ARGV's for the query
+	** or the array of ABRTSATTR's for the array's record type.
+	*/
+	i4		*col_field_num;
+	ABRTSPV		**col_ap;
+
+	retvalue.db_data = (PTR)&row;
+	retvalue.db_datatype = DB_INT_TYPE;
+	retvalue.db_length = sizeof(row);
+	IIARrvlReturnVal( &retvalue, prm, name, ERget(F_AR0005_frame) );
+
+	if (prm == NULL)
+		return NULL;
+
+	/* assert(prm->pr_version > 1);	calling frame >= 6.0 */
+
+	/*
+	** Look for ii_array parameter.  If found, verify that it specifies
+	** an array, and save its DBV and underlying record type.
+	** Note: if more than one ii_array is specified, we quietly accept
+	** the last one.  This seems to be consistent with the way
+	** other parameters are treated.
+	*/
+	for ( fp = prm->pr_formals, cnt = prm->pr_argcnt ; --cnt >= 0 ; ++fp )
+	{
+		if ( STbcompare(*fp, 0, ERx("ii_array"), 0, TRUE) == 0 )
+		{
+			PTR		dummy_ptr;
+			i4		dummy_i4;
+
+			array_dbv = (DB_DATA_VALUE *)
+			    prm->pr_actuals[ fp - prm->pr_formals ].abpvvalue;
+
+			if ( ! iiarIarIsArray( array_dbv ) )
+			{ /* ii_array parameter is not an array */
+				iiarUsrErr( _NotArray, 0 );
+				return NULL;
+			}
+			(VOID)iiarRiRecordInfo( array_dbv, &array_type,
+					&dummy_ptr, &dummy_i4 );
+			ncols = array_type->abrtcnt;
+			attrs = array_type->abrtflds;
+		}
+	}
+
+	if ( (qry = prm->pr_oldprm->pr_qry) == NULL )
+	{ /* no query parameter */
+		if ( array_dbv == (DB_DATA_VALUE *)NULL )
+		{ /* no query or array parameter */
+			iiarUsrErr( _NoQryArray, 0 );
+			return NULL;
+		}
+		tag = FEbegintag();
+	}
+	else
+	{ /* query parameter */
+		if ( array_dbv != (DB_DATA_VALUE *)NULL )
+		{ /* both query and array parameter */
+			iiarUsrErr( _BothQryArray, 0 );
+			return NULL;
+		}
+		if ( STbcompare(qry->qr_form, 0, _ii_query, 0, TRUE) != 0 )
+		{ /* query form required to be "ii_query" */
+			iiarUsrErr( _NoQryForm,
+					3, _Name, qry->qr_form, _ii_query
+			);
+			return NULL;
+		}
+		if ( qry->qr_table != NULL && *qry->qr_table != EOS )
+		{ /* table field not allowed */
+			iiarUsrErr( _NoQryTbl,
+					3, _Name, _ii_query, qry->qr_table
+			);
+			return NULL;
+		}
+		if ( qry->qr_qdesc->qg_dml == DB_QUEL )
+		{ /* lookup not supported in QUEL: note we only catch
+		  ** this if query parameter is passed; a different
+		  ** error will occur if the query parameter is omitted.
+		  */
+			iiarUsrErr( _NotInQUEL, 0 );
+			return NULL;
+		}
+		tag = FEbegintag();
+
+		/*
+		** Since this function will modify both the run-time query
+		** and the query description use a local copy of both.
+		*/
+		MEcopy((PTR)qry, sizeof(aquery), (PTR)&aquery);
+		qry = &aquery;
+		MEcopy((PTR)qry->qr_qdesc, sizeof(query), (PTR)&query);
+		qry->qr_qdesc = &query;
+
+		/* Get query description */
+		if ( (ncols = _getDesc(qry->qr_qdesc)) <= 0 )
+		{
+			_VOID_ FEendtag();
+			IIUGtagFree(tag);
+			return NULL;
+		}
+		qry->qr_argv = (QRY_ARGV *)qry->qr_qdesc->qg_argv;
+
+		msg = ERget(F_AR0014_Rtrving);	/* default message */
+	}
+
+	/*
+	** Allocate field descriptors and arrays mapping columns
+	** into field numbers and actual parameters of BYREF fields
+	*/
+	flds = (FLD_DESC *)FEreqmem( tag, ncols * sizeof(FLD_DESC),
+					TRUE, (STATUS *)NULL );
+	if ( flds == (FLD_DESC *)NULL )
+	{
+		IIUGbmaBadMemoryAllocation( _routine );
+	}
+	col_field_num = (i4 *)FEreqmem( tag, ncols * sizeof(i4),
+					TRUE, (STATUS *)NULL );
+	if ( col_field_num == (i4 *)NULL )
+	{
+		IIUGbmaBadMemoryAllocation( _routine );
+	}
+	col_ap = (ABRTSPV **)FEreqmem( tag, ncols * sizeof(ABRTSPV *),
+					TRUE, (STATUS *)NULL );
+	if ( col_ap == (ABRTSPV **)NULL )
+	{
+		IIUGbmaBadMemoryAllocation( _routine );
+	}
+
+	cb = FEadfcb();
+
+	/* Get parameters */
+	prm_desc.parent = name;
+	prm_desc.pclass = F_AR0005_frame;
+	for ( fp = prm->pr_formals, ap = prm->pr_actuals, cnt = prm->pr_argcnt ;
+			--cnt >= 0 ; ++fp, ++ap )
+	{
+		STATUS  stat = OK;
+		char	prm_name[FE_MAXNAME+1];
+
+		if ( *fp == NULL )
+		{ /* parameters must be passed by keyword */
+			iiarUsrErr( rval = E_AR0004_POSTOOSL,
+					1, ERget(F_AR0005_frame)
+			);
+			break;	/* will return */
+		}
+		prm_desc.name = *fp;
+		prm_desc.value = (DB_DATA_VALUE *)ap->abpvvalue;
+		STlcopy(*fp, prm_name, (u_i4)sizeof(prm_name) - 1);
+		CVlower(prm_name);
+		if ( STequal(prm_name, ERx("ii_title")) )
+		{ /* look-up form title */
+			stat = iiarGetValue( &prm_desc,
+					(PTR)(title = title_buf), DB_CHR_TYPE,
+					sizeof(title_buf) - 1
+			);
+		}
+		else if ( STequal(prm_name, _ii_qualify) )
+		{ /* whether to qualify the query */
+			if ( array_dbv != (DB_DATA_VALUE *)NULL )
+			{ /* both qualify and array parameter */
+				iiarUsrErr( stat = _BothQualArray, 0 );
+			}
+			else
+			{
+				stat = iiarGetValue( &prm_desc,
+					(PTR)(qual_form = qualify_form),
+					DB_CHR_TYPE, sizeof(qualify_form) - 1
+				);
+			}
+		}
+		else if ( STequal(prm_name, ERx("ii_titles")) )
+		{ /* force column titles */
+			titles = TRUE;
+		}
+		else if ( STequal(prm_name, ERx("ii_message")) )
+		{ /* before fetch message */
+			stat = iiarGetValue( &prm_desc,
+					(PTR)(msg = message), DB_CHR_TYPE,
+					sizeof(message) - 1
+			);
+		}
+		else if ( STequal(prm_name, ERx("ii_rows")) )
+		{ /* displayed rows for look-up table field */
+			stat = iiarGetValue( &prm_desc,
+				(PTR)&rows, DB_INT_TYPE, sizeof(rows)
+			);
+		}
+		else if ( STequal(prm_name, ERx("ii_startrow")) )
+		{ /* screen row at which to display look-up form */
+			stat = iiarGetValue( &prm_desc,
+				(PTR)&startrow, DB_INT_TYPE, sizeof(startrow)
+			);
+		}
+		else if ( STequal(prm_name, ERx("ii_startcolumn")) )
+		{ /* screen column at which to display look-up form */
+			stat = iiarGetValue( &prm_desc,
+				(PTR)&startcolumn, DB_INT_TYPE,
+				sizeof(startcolumn)
+			);
+		}
+		/* note:  "ii_field_title" must be checked before "ii_field"
+		** to match correctly since prefix comparison is being done.
+		*/
+		else if ( STbcompare(_ii_fldtitle, sizeof(_ii_fldtitle) - 1,
+					*fp, 0, TRUE) == 0
+				&& STlength(*fp) >= sizeof(_ii_fldtitle) )
+		{ /* a displayed column title */
+			i4	n;
+			char	title[MAXTITLE+1];
+			char	*np = *fp + sizeof(_ii_fldtitle) - 1;
+
+			if ( (CVan(np, &n) != OK) || n <= 0 || n > ncols )
+			{
+				stat = _BadColNum;
+				iiarUsrErr( stat , 3, np, *fp, _ii_fldtitle );
+			}
+			else if ( (stat = iiarGetValue( &prm_desc,
+							(PTR)title, DB_CHR_TYPE,
+							sizeof(title) - 1
+					)) == OK )
+			{ /* got display title for column n */
+				flds[n - 1].title = FEtsalloc(tag, title);
+				titles = TRUE;
+			}
+		}
+		else if ( STbcompare(_ii_field, sizeof(_ii_field) - 1, *fp, 0,
+					TRUE) == 0
+				&& STlength(*fp) >= sizeof(_ii_field) )
+		{ /* a displayed column name */
+			i4	i;
+			char	column[FE_MAXNAME+1];
+			char	*ip = *fp + sizeof(_ii_field) - 1;
+
+			if ( (CVan(ip, &i) != OK) || i <= 0 || i > ncols )
+			{
+				stat = _BadColNum;
+				iiarUsrErr( stat , 3, ip, *fp, _ii_field );
+			}
+			else if ( (stat = iiarGetValue( &prm_desc,
+							(PTR)column,
+							DB_CHR_TYPE,
+							sizeof(column) - 1
+					)) == OK )
+			{ /* got value, look for column */
+				char		*col_name;
+				DB_DATA_VALUE	*col_type;
+				i4		col_num;
+
+				if ( qry != NULL ) /* query */
+				{
+					col_num = findArgv( column, qry );
+					if ( col_num >= 0 )
+					{
+						register QRY_ARGV	*argv;
+
+						argv = &qry->qr_argv[ col_num ];
+						col_name = argv->qv_name;
+						col_type = argv->qv_dbval;
+					}
+					else
+					{
+						stat = _UnknownCol;
+					}
+				}
+				else	/*array */
+				{
+					col_num = findAttr( column,
+							    array_type );
+					if ( col_num >= 0 )
+					{
+						register ABRTSATTR	*attr;
+
+						attr = &attrs[ col_num ];
+						col_name = attr->abraname;
+						col_type = &attr->abradattype;
+					}
+					else
+					{
+						stat = _UnknownAttr;
+					}
+				}
+				if ( col_num < 0 )
+				{ /* not found among columns or attrs */
+					iiarUsrErr( stat, 2, *fp, column );
+				}
+				else if ( col_field_num[ col_num ] != 0 )
+				{ /* duplicate display column */
+					i4 d0 = i;
+					i4 d1 = col_field_num[ col_num ];
+
+					stat = _DupCols;
+					iiarUsrErr( stat, 3, &d0, &d1,
+						col_name );
+				}
+				else
+				{
+					register FLD_DESC	*fp;
+				
+					col_field_num[ col_num ] = i;
+
+					/*
+					** Fill in the FLD_DESC for the field.
+					** Note that the title is specified by
+					** the last II_FIELD_TITLEi, if any,
+					** or else by the last II_FIELDi.
+					** We must not override any title
+					** that was put there by an
+					** II_FIELD_TITLEi.
+					*/
+					fp = &flds[ i - 1 ];
+					if ( fp->title == fp->name )
+					{
+						fp->title = col_name;
+					}
+					fp->name = col_name;
+					fp->type = col_type;
+					fp->maxwidth = -1;
+				}
+			}
+		}
+		else if ( ! STequal(prm_name, ERx("ii_array")) )
+		{ /* by reference column value */
+			i4		col_num;
+			DB_DATA_VALUE	*dbv = (DB_DATA_VALUE*)NULL;
+			DB_DATA_VALUE	*actual = (DB_DATA_VALUE*)ap->abpvvalue;
+
+			/* Check for reference in columns. */
+			if ( qry != NULL )
+			{
+				col_num = findArgv( *fp, qry );
+				if ( col_num >= 0 )
+				{
+					dbv = qry->qr_argv[ col_num ].qv_dbval;
+				}
+			}
+			else /* array */
+			{
+				col_num = findAttr( *fp, array_type );
+				if ( col_num >= 0 )
+				{
+					dbv = &attrs[ col_num ].abradattype;
+				}
+			}
+			if ( dbv == (DB_DATA_VALUE*)NULL )
+			{ /* not found */
+				iiarUsrErr( stat = _UnknownPrm,
+					3, *fp, _Name, ERget(F_AR0005_frame)
+				);
+			}
+			else if ( ap->abpvtype > 0 )
+			{ /* must be by reference */
+				iiarUsrErr( stat = _NotByRef, 1, *fp );
+			}
+			/* ... and check for data type compatibility */
+			else if ( AFE_NULLABLE(dbv->db_datatype)
+					&& !AFE_NULLABLE(actual->db_datatype) )
+			{ /* possible Nullable ==> non-Nullable */
+				iiarUsrErr( stat = _NullByRef,
+						2, *fp, ERget(F_AR0005_frame)
+				);
+			}
+			else if ( !afe_tycoerce(cb, dbv->db_datatype,
+						actual->db_datatype) )
+			{ /* incompatible */
+				DB_USER_TYPE	stype;
+				DB_USER_TYPE	dtype;
+
+				IIARtyoTypeOutput(actual, &stype);
+				IIARtyoTypeOutput(dbv, &dtype);
+				iiarUsrErr( stat = _BadPrmType,
+					5, _Name, ERget(F_AR0005_frame), *fp,
+					dtype.dbut_name, stype.dbut_name
+				);
+			}
+			else
+			{ /* OK */
+				values = TRUE;
+				col_ap[ col_num ] = ap;
+			}
+		}
+		if ( stat != OK )
+		{
+			rval = stat;
+		}
+	} /* end for */
+
+	if ( rval == OK )
+	{
+		ndisp = _chkFldDesc( flds, ncols );
+		if ( ndisp <= 0 )
+		{
+			rval = FAIL;
+		}
+		if ( !values  && qry != NULL )
+		{
+			iiarUsrErr( _NoReturns, 0 );
+			rval = FAIL;
+		}
+	}
+	if ( rval != OK )
+	{ /* parameter error */
+    		_VOID_ FEendtag();
+		IIUGtagFree(tag);
+		return NULL;
+	}
+
+	if ( qual_form != NULL )
+	{ /* qualify query */
+		IIqgen.qsg_value = (PTR)&IIqual;
+		IIqgen.qsg_gen = IIARrpgRtsPredGen;
+
+		rval = _qualify( qry->qr_qdesc,
+				*qual_form == EOS
+					? _bldQualForm(qry->qr_argv, ncols,
+							flds, ndisp)
+					: qual_form,
+				/* qry->qr_argv, ncols, */
+				flds, ndisp,
+				&IIqgen
+		);
+	}
+
+	row = 0;
+	if ( rval == OK )
+	{ /* look-up */
+		bool		gen_hidden = FALSE;
+
+		if ( qry != NULL && ncols > ndisp )
+		{
+			gen_hidden = TRUE;
+		}
+		rval = _bldLookupForm( gen_hidden, qry, ncols, col_field_num,
+					flds, ndisp, title, titles, rows );
+		if ( rval == OK )
+		{
+			if ( qry != NULL )
+			{
+				row = _lookup_query( qry,
+						startrow, startcolumn, msg );
+			}
+			else /* array */
+			{
+				row = _lookup_array( array_dbv,
+						startrow, startcolumn,
+						col_field_num, flds, ndisp );
+			}
+		}
+		IIdelfrm(_ii_lookup);	/* free form */
+
+		/* Only free qualification form
+		** after running query for look-up.
+		*/
+		if ( qual_form != NULL && *qual_form == EOS )
+			IIdelfrm(_ii_qualify);	/* free form */
+	}
+	if ( row > 0  && values )
+	{ /* row fetched or selected; return values by reference */
+		DB_DATA_VALUE	row_dbv;
+		PTR		row_data;
+		ABRTSTYPE	*dummy_type;
+		i4		dummy_i4;
+		DB_DATA_VALUE	attr_dbv;
+		DB_DATA_VALUE	*dbv;
+		i4		col_num;
+
+		if ( qry == NULL ) /*array */
+		{
+			STRUCT_ASSIGN_MACRO( *array_dbv, row_dbv );
+			(VOID)IIARarrArrayRef( array_dbv, (i4)row,
+						&row_dbv, (bool)FALSE );
+			(VOID)iiarRiRecordInfo( &row_dbv, &dummy_type,
+					&row_data, &dummy_i4 );
+		}
+		for ( col_num = 0; col_num < ncols; ++col_num )
+		{ 
+			ap = col_ap[ col_num ];
+			if ( ap == (ABRTSPV *)NULL )
+			{
+				continue;
+			}
+			if ( qry != NULL )
+			{
+				dbv = qry->qr_argv[ col_num ].qv_dbval;
+			}
+			else /* array */
+			{
+				dbv = &attrs[ col_num ].abradattype;
+				STRUCT_ASSIGN_MACRO( *dbv, attr_dbv );
+				attr_dbv.db_data = row_data +
+					attrs[ col_num ].abraoff;
+				dbv = &attr_dbv;
+			}
+			/* Return by reference ... */
+			if ( afe_cvinto( cb, dbv,
+				(DB_DATA_VALUE *)ap->abpvvalue ) != OK )
+			{
+				/* assert:
+				**  cb->adf_errcb.ad_errcode ==
+				**	E_AD1012_NULL_TO_NONNULL
+				**
+				** Other type incompatibilities
+				** were reported above on input.
+				*/
+				FEafeerr(cb);
+			}
+		}
+	}
+	_VOID_ FEendtag();
+	IIUGtagFree(tag);
+
+	IIARrvlReturnVal( &retvalue, prm, name, ERget(F_AR0005_frame) );
+
+	return NULL;
+}
+
+/*
+** Name:	_getDesc() -	Get Data Descriptors for Query.
+**
+** Description:
+**	Sends a message to a query description to describe itself and allocate
+**	the data values and the argument vectors for the fetched values.
+**
+** Input:
+**	qdesc	{QDESC *}  The query descriptor.
+**		    .qg_tlist	{QRY_SPEC *}  Target list query specification.
+**
+** Output:
+**	qdesc	{QDESC *}  The query descriptor.
+**		    .qg_argv	{QRY_ARGV *}  The argument vectors for the query
+**						data values as allocated by
+**						'IIQG_generate()'.
+**
+** Returns:
+**	{nat}  The number of columns fetched by the query or zero on error.
+**
+** History:
+**	08/89 (jhw) -- Written.
+**
+**	24-apr-91 (davel)
+**		Fixed bug 34519. Must allocate and use a copy of the
+**		target list (qg_tlist) to correctly handle the "dot_all"
+**		QRY_SPEC's (e.g. '*' or 'table.*').
+**
+*/
+
+static i4
+_getDesc ( qdesc )
+register QDESC	*qdesc;
+{
+	register QRY_ARGV	*argv;
+	register i4		cnt;
+	register QRY_SPEC	*specs;
+	QRY_SPEC		*sblock; /* mem allocated for QRY_SPEC array */
+	STATUS			rval;
+
+	QRY_SPEC	*iiarNxtDotAllSpec();
+
+	/* Handle '*' and 'table.*' query specifications - the so-called
+	** "dot_all" QRY_SPEC's.
+	**
+	** Note:  If a "dot_all" query is encountered, then clear the argument
+	** vector so that the QG module will allocate one based on the query
+	** description; otherwise the argument vector already represents the
+	** target list and will simply be set to the allocated data values.
+	** Note also:  iiarNxtDotAllSpec searches for the next QRY_SPEC
+	** whose qs_var string contains the characters "%A".  _getDesc()
+	** will translate these string to either "*" or "relation.*" before
+	** passing the qdesc to IIQG_generate.  Subsequent calls to _getDesc()
+	** will need to retain these special strings; hence we need to allocate
+	** and use a copy of the qg_tlist here (see bug 34519).
+	*/
+
+	{
+	    /* Allocate an array of QRY_SPECs to hold the qg_tlist
+	    ** (Remember to include one for the terminating QRY_SPEC.)
+	    */
+
+	    register i4	n_specs;
+	    STATUS		stat;
+
+	    n_specs = 1;
+	    for (specs = (QRY_SPEC *)qdesc->qg_tlist ;
+	 	 specs->qs_type != QS_END ; ++specs)
+	    		++n_specs;
+
+	    sblock = (QRY_SPEC *)FEreqmem( tag, n_specs * sizeof(*specs), 
+					   TRUE, (STATUS *)NULL );
+	
+	    if ( sblock == (QRY_SPEC *) NULL)
+	    {
+		IIUGbmaBadMemoryAllocation( _routine );
+	    }
+
+	    MEcopy((PTR)qdesc->qg_tlist, (n_specs * sizeof(*specs)), 
+		   (PTR)sblock);
+	}
+
+	qdesc->qg_tlist = (QRY_SPEC (*)[])sblock;
+
+	/*  Now translate all of the special "dot_all" strings - strip
+	**  away the "%A" before passing the qdesc to IIQG_generate.
+	**  Also force regeneration of the qdesc->qg_argv if one of
+	**  these "dot_all" QRY_SPECs are present.
+	*/
+
+	for ( specs = sblock ;
+		(specs = iiarNxtDotAllSpec(specs)) != NULL ; ++specs )
+	{
+		register char	*relname;
+		char		buf[2*FE_MAXNAME+1];
+
+		relname = (char *)specs->qs_var + (sizeof(ERx("%A")) - 1);
+
+		specs->qs_var = ( *relname == '*' )
+				? ERx("*")
+				: STalloc(STprintf(buf, ERx("%s.*"), relname));
+		qdesc->qg_argv = NULL;	/* force regen of argument vector */
+	}
+
+	/* Describe query */
+	if ( IIQG_generate(qdesc, QI_DESCRIBE, &rval) != OK )
+		return 0;
+
+	/* Count returned columns */
+	cnt = 0;
+	for ( argv = (QRY_ARGV *)qdesc->qg_argv ;
+			argv->qv_name != NULL ; ++argv )
+		++cnt;
+
+	return cnt;
+}
+
+/*
+** Name:	findArgv() -	Find Argument Vector for Named Column.
+**
+** Description:
+**	Searches a query description argument vector for the one
+**	corresponding to the named column.
+**
+** Inputs:
+**	name	{char *}  The column name.
+**	qry	{QRY  *}  The query containing the argument vector.
+**
+** Returns:
+**	{nat}   The index of argument vector for the named column;
+**		      -1 if not found.
+**
+** History:
+**	08/89 (jhw) -- Written.
+**	03/22/91 (emerson)
+**		Changed to take QRY instead of QRY_ARGV as input,
+**		and to return an index instead of a pointer.
+*/
+static i4
+findArgv ( name, qry )
+char		*name;
+QRY		*qry;
+{
+	QRY_ARGV	*argv;
+
+	for ( argv = qry->qr_argv; argv->qv_name != NULL ; ++argv )
+	{
+		if ( CMcmpnocase(name, argv->qv_name) == 0
+			&& STbcompare(name, 0, argv->qv_name, 0, TRUE) == 0 )
+		{ /* found it */
+			return argv - qry->qr_argv;
+		}
+	}
+	return -1;
+}
+
+/*
+** Name:	findAttr() -	Find Attribute Descriptor for Named Column.
+**
+** Description:
+**	Searches record attribute descriptors for a simple attribute
+**	corresponding to the named column.
+**
+** Inputs:
+**	name		{char *}  The column name.
+**	rec_type	{ABRTSTYPE *}  The ABRTSTYPE structure describing
+**			the type of the record.
+**
+** Returns:
+**	{nat}   The index of record attribute descriptor for the named column;
+**		      -1 if not found.
+**
+** History:
+**	03/22/91 (emerson)
+**		Written.
+**	03/25/91 (emerson)
+**		Changed to ignore attributes of complex type
+**		(because they aren't eligible to be displayed in lookup frame).
+*/
+static i4
+findAttr ( name, rec_type )
+char		*name;
+ABRTSTYPE	*rec_type;
+{
+	i4		i;
+	ABRTSATTR	*attrs;
+	i4		nattrs;
+	char		*attrname;
+
+	attrs = rec_type->abrtflds;
+	nattrs = rec_type->abrtcnt;
+	for ( i = 0; i < nattrs; i++ )
+	{
+		if ( attrs[ i ].abradattype.db_datatype == DB_DMY_TYPE )
+		{
+			continue;
+		}
+		attrname = attrs[ i ].abraname;
+		if ( CMcmpnocase( name, attrname ) == 0
+			&& STbcompare( name, 0, attrname, 0, TRUE ) == 0 )
+		{ /* found it */
+			return i;
+		}
+	}
+	return -1;
+}
+
+/*
+** Name:	_chkFldDesc() -	Check User Specified Field Descriptors.
+**
+** Description:
+**	Checks that the display columns and titles that were specified
+**	are contiguous.  Specifying them non-contiguously is nonsensical.
+**
+** Inputs:
+**	flds	{FLD_DESC *}  The field descriptors allocated for the query.
+**	nflds	{nat}  The number of columns for the query.
+**
+** Returns:
+**	{nat}  The number of columns to be displayed; zero on error.
+**
+** Errors:
+**	E_AR002C_MissingColumn	missing display column.
+**	E_AR002D_NoColumns	no display columns were specified.
+**
+** History:
+**	07/89 (jhw) -- Written.
+*/
+static i4
+_chkFldDesc ( flds, nflds )
+register FLD_DESC	*flds;
+register i4		nflds;
+{
+	register i4	i;
+	register i4	end = -1;
+
+	/* assert:  nflds > 0 */
+	for ( i = 0 ; i < nflds ; ++i )
+	{
+		register FLD_DESC	*fld;
+
+		fld = &flds[i];
+		if ( fld->name != NULL )
+		{
+			if ( end > 0 )
+			{ /* Missing display column */
+				i4	indx = end + 1;
+
+				iiarUsrErr(_NoColDesc, 1, (PTR)&indx);
+				return 0;
+			}
+		}
+		else if ( end < 0 )
+		{
+			end = i;	/* note:  i == 0 ==> an error */
+		}
+
+		if ( fld->title != NULL )
+		{
+			if ( fld->name == NULL || *fld->name == EOS )
+			{ /* Missing display column */
+				i4	indx = i + 1;
+
+				iiarUsrErr(_NoColDesc, 1, (PTR)&indx);
+				return 0;
+			}
+		}
+	} /* end for */
+
+	if ( end == 0 )
+	{ /* Requires at least one displayed column! */
+		iiarUsrErr(_NoColumns, 0);
+	}
+
+	/* end < 0 ==> all the columns are displayed */
+
+	return ( end < 0 ) ? nflds : end;
+}
+
+/*{
+** Name:	_bldQualForm() -	Build Qualification Form for Query.
+**
+** Description:
+**	Given the column descriptors for the look-up frame, build a form to
+**	qualify the query for the look-up.  This includes initializing it within
+**	the FRS.  Note that this could build a form to qualify a query argument
+**	vector from the vector alone, but does not.
+**
+** Inputs:
+**	cols	{QRY_ARGV *}  The argument vector for a query.
+**	ncols	{nat}  The number of argument vectors.
+**	flds	{FLD_DESC *}  The field descriptors.
+**	ndesc	{nat}  The number of field descriptors.
+**
+** Returns:
+**	{char *}  A reference to the generated form name.
+**
+** History:
+**	07/89 (jhw) -- Written.
+**	03/22/91 (emerson)
+**		Removed ifdef'd logic to build a form that allows user
+**		to qualify on any field in the query (not just the ones
+**		displayed in the look_up frame).  This logic was generated
+**		only if _FullQualification was defined; _FullQualification
+**		wasn't defined in this file or any header file that I could see.
+**		Our documentation of look_up says that we don't allow the user
+**		to qualify on hidden fields.
+*/
+#define _QualifyTitle	F_AR0010_QualTitle
+
+static char *
+_bldQualForm ( cols, ncols, flds, ndesc )
+QRY_ARGV	*cols;
+i4		ncols;
+FLD_DESC	*flds;
+i4		ndesc;
+##{
+##	PTR			frm;
+
+	if ( IIFRmdfMakeDefaultForm( ERget(_QualifyTitle),
+				_ii_qualify, TRUE, ndesc, flds, 0, (FRAME **) &frm
+		) != OK )
+	{
+		return (char *)NULL;
+	}
+	else
+	{
+##		addform frm;
+		return _ii_qualify;
+	}
+##}
+
+/*
+** Name:	_qualify() -	Qualification Frame for Look-up.
+**
+** Description:
+**	This is the qualification frame for the look-up function.  It uses
+**	the form generated for the query displayed in query mode and then
+**	allows the user to select Go to execute the query further qualified
+**	by the values entered on the form.
+**
+**	Note:  The form will be referenced by the query when it is run (to
+**	get the qualifications) so it cannot be deleted as this point.
+**
+** Inputs:
+**	qry	{QDESC *}  The query (description) to be qualified further.
+**	form	{char *}  The qualification form.
+**	qflds	{QRY_ARGV *}  The argument vector for the query, which also
+**				describes the qualification fields.
+**	nflds	{nat}  The number of argument vectors.
+**	qualgen	{QSGEN *}  The query generator for the qualification.
+**
+** Outputs:
+**	qry	{QDESC *}  The further qualified query.
+**		    .qg_where	{QRY_SPEC *}  New query specification
+**						including the additional
+**							qualification.
+**	qualgen	{QSGEN *}  The query generator for the qualification.
+**			.qsg_value	{PTR = ABRT_QUAL *}  Set up for the
+**								qualification.
+** Returns:
+**	{STATUS}  OK if query is to be run.
+**		  FAIL otherwise.
+** History:
+**	07/89 (jhw) -- Written.
+*/
+#define _QualifyExpl	F_AR0011_QualSelectExpl
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+#define _ForgetExpl	F_FE0109_ExplForget
+
+static STATUS
+##_qualify ( qry, form, qflds, nflds, qualgen )
+QDESC			*qry;
+##char			*form;
+register FLD_DESC	*qflds;
+register i4		nflds;
+QSGEN			*qualgen;
+{
+	STATUS	rval = OK;
+
+	if ( form == NULL || *form == EOS )
+		return FAIL;
+
+	/* Note:  No validations should be present for the form. */
+##	display form QUERY
+##	activate menuitem ERget(FE_Go) (expl = ERget(_QualifyExpl)), frskey4:
+##	{
+		register QRY_SPEC	*qryd;
+		register ABRT_QFLD	*qualfld;
+		u_i4			nspecs;
+		ABRT_QUAL		*qual = (ABRT_QUAL *)qualgen->qsg_value;
+
+		/* Add qualification */
+
+		if ( qry->qg_where == NULL )
+		{
+			qryd = NULL;
+			nspecs = 0;
+		}
+		else
+		{ /* count query WHERE specifications */
+
+			for ( qryd = (QRY_SPEC *)qry->qg_where ;
+					qryd->qs_type != QS_END ; ++qryd )
+				/* count current specs */;
+			nspecs = qryd - (QRY_SPEC *)qry->qg_where;
+		}
+
+		/* Allocate new query specs and qualification field array */
+		if ( (qryd = (QRY_SPEC *)FEreqmem(tag,
+						(nspecs + 3) * sizeof(*qryd),
+						TRUE, &rval)) == NULL
+			|| (qualfld = (ABRT_QFLD *)FEreqmem(tag,
+						(u_i4)(nflds + 1)
+						       * sizeof(*qualfld),
+						TRUE, &rval)) == NULL )
+		{
+##			breakdisplay;
+		}
+
+		/* Set up qualification */
+		qual->qu_type = ABQ_FLD;
+		qual->qu_form = form;
+		qual->qu_count = nflds;
+		qual->qu_elms = qualfld;
+
+		/* Set-up qualification field array */
+		for ( qualfld = qual->qu_elms ; --nflds >= 0 ; ++qualfld )
+		{
+			qualfld->qf_field = qualfld->qf_expr = qflds->name;
+			++qflds;
+		}
+		qualfld->qf_field = qualfld->qf_expr = NULL;
+
+		/* Set up new query specs. */
+		if ( nspecs > 0 )
+		{
+			MEcopy( (PTR)qry->qg_where, nspecs * sizeof(*qryd),
+				(PTR)qryd
+			);
+		}
+		qry->qg_where = (QRY_SPEC (*)[])qryd;	/* new query specs. */
+
+		qryd += nspecs;
+		qryd->qs_var = ( nspecs == 0 ) ? (PTR)" WHERE " : (PTR)" AND ";
+		qryd->qs_type = QS_TEXT;
+		++qryd;
+		qryd->qs_var = (PTR)qualgen;
+		qryd->qs_type = QS_VALGEN;
+		++qryd;
+		qryd->qs_var = NULL;
+		qryd->qs_type = QS_END;
+
+		rval = OK;
+
+##		breakdisplay;
+##	}
+##	activate menuitem ERget(FE_Forget) (expl = ERget(_ForgetExpl)),
+##		frskey9:
+##	{
+		rval = FAIL;
+##		breakdisplay;
+##	}
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl)), frskey1:
+##	{
+		FEhelp(ERx("abrtlkql.hlp"), ERget(F_AR0012_QualHelp));
+##	}
+
+	/* DO NOT delete qualification form here! */
+
+	return rval;
+}
+
+/*{
+** Name:	_bldLookupForm() -	Build Look-up Form for Query.
+**
+** Description:
+**	Given a query argument vector and field descriptors build a form and
+**	table field to display any rows fetched by the query.  This includes
+**	initializing it in the FRS and initializing the table field too.  The
+**	latter includes specifying the hidden columns, if requested.
+**
+** Inputs:
+**	gen_hidden	{bool}  Generate hidden columns in the table field.
+**			May be specified only for a query (not for an array).
+**	qry		{QRY *}  The query from which column info will be
+**			extracted.  Relevant only if gen_hidden specified.
+**	ncols		{nat}  The number of query argument vectors.
+**			Relevant only if gen_hidden specified.
+**	col_field_num	{nat *}  An array that maps query column numbers into
+**			positive field numbers, or zero for hidden columns.
+**			Relevant only if gen_hidden specified.
+**	flds		{FLD_DESC *}  The field descriptors.
+**	ndesc		{nat}  The number of field descriptors.
+**	title		{char *}  The optional form title.
+**	col_titles	{bool}  Whether to include column titles.
+**	rows		{nat}  The number of display rows in the table field.
+**
+** Returns:
+**	{STATUS}  OK or FAIL.
+**
+** History:
+**	07/89 (jhw) -- Written.
+**	03/20/91 (emerson)
+**		Changed calling sequence; extensive cosmetic revisions.
+*/
+
+static STATUS
+_bldLookupForm ( gen_hidden, qry, ncols, col_field_num, flds, ndesc,
+		 title, col_titles, rows )
+bool		gen_hidden;
+QRY		*qry;
+i4		ncols;
+i4		*col_field_num;
+FLD_DESC	*flds;
+i4		ndesc;
+char		*title;
+bool		col_titles;
+i4		rows;
+##{
+##	PTR	frm;
+	i4	col_num;
+
+	if ( rows <= 0 )
+		rows = 4;
+
+	if ( IIFRmdfMakeDefaultForm( title, _ii_lookup, col_titles,
+					ndesc, flds, rows, (FRAME **)&frm) != OK )
+	{
+		return FAIL;
+	}
+	/* initialize form and table field */
+##	addform frm;
+	if ( IItbinit(_ii_lookup, _ii_lookup, ERx("r")) != 0 )
+	{ /* start initialization */
+		if ( gen_hidden )
+		{ /* add hidden columns */
+			for ( col_num = 0; col_num < ncols; ++col_num )
+			{
+				if ( col_field_num[ col_num ] == 0 )
+				{ /* not a visible column */
+					QRY_ARGV	*cp;
+					DB_USER_TYPE	type;
+
+					cp = &qry->qr_argv[ col_num ];
+					IIARtyoTypeOutput(cp->qv_dbval, &type);
+					IIthidecol(cp->qv_name, type.dbut_name);
+				}
+			}
+		}
+		IItfill();
+	}
+	return OK;
+##}
+
+/*
+** Name:	_lookup_query() - Load and Run the Look-up Frame for a query.
+**
+** Description:
+**	Executes the query and loads the table field on the look-up form with
+**	the fetched rows.  If more than one row is returned, the frame is run
+**	by the list pick function.
+**
+**	If one row is returned or a row was selected from the frame, then the
+**	values in the current row of the table field (assumed to be the one
+**	selected) are unloaded into the data values for the query.
+**
+** Inputs:
+**	qry	{QRY *}  The query to fetch the look-up values.
+**	srow	{nat}  The screen row at which to display the form.
+**	srow	{nat}  The screen column at which to display the form.
+**	msg	{char *}  Message to display before querying.
+**
+** Returns:
+**	{nat}  The data set row of the selected value;
+**	       0 if no row was fetched or selected.
+**
+** History:
+**	07/89 (jhw) -- Written.
+**	09/90 (jhw) -- Added message parameter.
+**	03/20/91 (emerson)
+**		Changed calling sequence; extensive cosmetic revisions.
+**	09/20/92 (emerson)
+**		Clear the QR_0_ROWS_OK bit before calling IIARgn1RtsgenV1
+**		(part of fix for bug 39582).
+*/
+
+#define _LookupHelp	F_AR0013_LookupHelp
+
+static i4
+##_lookup_query ( qry, srow, scol, msg )
+QRY	*qry;
+i4	srow;
+i4	scol;
+##char	*msg;
+##{
+##	i4	row;
+	register QRY_ARGV	*cols;
+
+	qry->qr_form = _ii_lookup;
+	qry->qr_table = _ii_lookup;
+	/* Load the table field; no need to run in map mode */
+##	message msg;
+	qry->qr_qdesc->qg_mode &= ~QM_MAP;
+
+	qry->qr_version &= ~QR_0_ROWS_OK;
+	if ( !IIARgn1RtsgenV1(qry, QI_START) )
+	{ /* no rows fetched */
+##		message ERget(S_IT001C_No_rows_retrieved);
+##		sleep 3;
+		return 0;
+	}
+##	inquire_frs table _ii_lookup ( row = datarows(_ii_lookup) );
+	if ( row > 1 )
+	{
+		row = 1 + IIFRrlpRunListPick( _ii_lookup, _ii_lookup,
+					srow, scol,
+					ERget(_LookupHelp),
+					ERx("abrtlkup.hlp"),
+					(STATUS (*)())NULL, (PTR)NULL );
+	}
+	if ( row <= 0 )
+	{
+		return 0;
+	}
+	/* get row values */
+
+	/* Note:  Should be current row. */
+	for ( cols = qry->qr_argv; cols->qv_name != NULL ; ++cols )
+##	{
+##		register char		*name;
+##		register DB_DATA_VALUE	*value;
+
+		name = cols->qv_name;
+		value = cols->qv_dbval;
+##		getrow _ii_lookup _ii_lookup ( *value = name );
+##	}
+	return row;
+##}
+
+/*
+** Name:	_lookup_array() - Load and Run the Look-up Frame for an array.
+**
+** Description:
+**	Loads the table field on the look-up form from the array.
+**	If there's more than one row in the array, the frame is run
+**	by the list pick function.
+**
+** Inputs:
+**	array_dbv	{DB_DATA_VALUE *}  The DBV describing the array
+**			containing the look-up values.
+**	srow		{nat}  The screen row at which to display the form.
+**	srow		{nat}  The screen column at which to display the form.
+**	col_field_num	{nat *}  An array that maps array attribute numbers
+**			into positive field numbers, or zero for hidden attrs.
+**	flds		{FLD_DESC *}  The field descriptors.
+**	nflds		{nat}  The number of field descriptors.
+**
+** Returns:
+**	{nat}  The data set row of the selected value;
+**	       0 if the array was empty or no row was selected.
+**
+** History:
+**	03/22/91 (emerson)
+**		Written.
+*/
+
+static i4
+##_lookup_array ( array_dbv, srow, scol, col_field_num, flds, nflds )
+DB_DATA_VALUE	*array_dbv;
+i4		srow;
+i4		scol;
+i4		*col_field_num;
+FLD_DESC	*flds;
+i4		nflds;
+##{
+##	i4		row;
+	i4		i, n, x;
+##	i4		status;
+	i4		row_num;
+	PTR		row_data;
+	ABRTSTYPE	*array_type;	/* record type of ii_array */
+	ABRTSATTR	*attrs;		/* array of attrs for record */
+	i4		nattrs;		/* number of attributes for record */
+
+	char		*template;	/* a template for a QUEL param */
+	DB_DATA_VALUE	**dbv_ptrs;	/* an array of DBV pointers for param */
+	DB_DATA_VALUE	*dbvs;		/* the DBVs the above array points to */
+	i4		*offs;		/* a parallel array of data offsets */
+
+	char		*tp;
+	DB_DATA_VALUE	row_dbv;
+
+	(VOID)iiarRiRecordInfo( array_dbv, &array_type, &row_data, &row_num );
+	nattrs = array_type->abrtcnt;
+	attrs = array_type->abrtflds;
+	STRUCT_ASSIGN_MACRO( *array_dbv, row_dbv );
+
+	for ( i = 0, x = 0; i < nflds; i++ )
+	{
+		x += STlength( flds[ i ].name ) + sizeof( ERx("=%a,") ) - 1;
+	}
+	template = (char *)FEreqmem( tag, x, TRUE, (STATUS *)NULL );
+	if ( template == (char *)NULL )
+	{
+		IIUGbmaBadMemoryAllocation( _routine );
+	}
+
+	dbvs = (DB_DATA_VALUE *)FEreqmem( tag, nflds * sizeof(DB_DATA_VALUE),
+						TRUE, (STATUS *)NULL );
+	if ( dbvs == (DB_DATA_VALUE *)NULL )
+	{
+		IIUGbmaBadMemoryAllocation( _routine );
+	}
+
+	dbv_ptrs = (DB_DATA_VALUE **)FEreqmem( tag, nflds
+						* sizeof(DB_DATA_VALUE *),
+						TRUE, (STATUS *)NULL );
+	if ( dbv_ptrs == (DB_DATA_VALUE **)NULL )
+	{
+		IIUGbmaBadMemoryAllocation( _routine );
+	}
+
+	offs = (i4 *)FEreqmem( tag, nflds * sizeof(i4),
+						TRUE, (STATUS *)NULL );
+	if ( offs == (i4 *)NULL )
+	{
+		IIUGbmaBadMemoryAllocation( _routine );
+	}
+
+	for ( i = 0, tp = template; i < nflds; i++ )
+	{
+		STRUCT_ASSIGN_MACRO( *flds[ i ].type, dbvs[ i ] );
+		dbv_ptrs[ i ] = &dbvs[ i ];
+		x = STlength( flds[ i ].name );
+		MEcopy( flds[ i ].name, (u_i2)x, tp );
+		tp += x;
+		MEcopy( ERx("=%a,"), (u_i2)( sizeof( ERx("=%a,") ) - 1 ), tp );
+		tp += sizeof( ERx("=%a,") ) - 1;
+	}
+	*( tp - 1 ) = EOS;
+
+	for ( i = 0; i < nattrs; i++ ) 
+	{
+		n = col_field_num[ i ];
+		if ( n > 0 )
+		{
+			offs[ n - 1 ] = attrs[ i ].abraoff;
+		}
+	}
+
+	(VOID)IIARaruArrayUnload( array_dbv, &row_dbv ); /* start unloading */
+
+	for ( row = 0; ; row++ )
+	{
+		status = IIARarnArrayNext( &row_dbv );
+		if ( status != OK )
+		{
+			break;	/* no more records to unload */
+		}
+		(VOID)iiarRiRecordInfo( &row_dbv,
+					&array_type, &row_data, &row_num );
+		if ( row_num <= 0 )
+		{
+			break;	/* skip deleted records at end of unload */
+		}
+		for ( i = 0; i < nflds; i++ )
+		{
+			dbvs[ i ].db_data = row_data + offs[ i ];
+		}
+##		loadtable _ii_lookup _ii_lookup ( param( template, dbv_ptrs ) );
+	}
+
+	if ( row > 1 )
+	{
+		row = 1 + IIFRrlpRunListPick( _ii_lookup, _ii_lookup,
+					srow, scol,
+					ERget(_LookupHelp),
+					ERx("abrtlkup.hlp"),
+					(STATUS (*)())NULL, (PTR)NULL );
+	}
+	return row;
+##}

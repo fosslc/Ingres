@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqnewmi.hlp, behind the popup asking for menuitem when inserting 
+/#-- a frame.
+/#-- 
+The new menuitem text can be the same as the original menuitem text as long
+as this frame is not a peer of the original frame.  Remember that the 
+system uses the first 12 legal characters of the menuitem text to name the 
+frame.  The menuitem text:
+
+  * Must be no longer than 32 characters.
+  * Can contain any combination of alphanumeric and special characters.  
+    (Only the special characters  _  #  $  @  carry over into the frame name;
+    other special characters are dropped out.)
+  * Appears in upper and lower case as you enter it.
+  * Can contain blanks, but make sure it doesn't look like two menuitems.
+  * Must be unique among the frame's peers, but can be the same as menuitem 
+    text for frames at other levels.  The system appends a sequence number 
+    to create unique frame names if necessary.
+  * Can be changed later by using the Edit operation from the Application 
+    Flow Diagram menu.

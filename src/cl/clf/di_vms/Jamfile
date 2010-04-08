@@ -1,0 +1,9 @@
+#
+# Jamfile file for cl!clf!di_vms
+#
+
+SubDir ING_SRC cl clf di_vms ;
+
+IISUBSYS cl clf di_vms ;
+
+IILIBRARY COMPATLIB : di.c digather.c ;

@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!misc!xferdb
+#
+
+SubDir ING_SRC front misc xferdb ;
+
+IISUBSYS front misc xferdb ;
+
+
+IIMSGHDR erxf.msg ;
+
+IILIBRARY XFERDBLIB : xfwith.sc xfview.sc xfsecalm.sc
+	xfrules.sc xfregstr.sc xfproc.sc xfphys.sc xfpermit.sc
+	xfinteg.sc xfgetatt.sc xfgenxml.sc xffilobj.sc xfcomm.sc
+	xfchkcap.sc xfwrscrp.c xfwrap.c xffileio.c xferdata.c xfcopy.c
+	xfcnvuni.c ;
+

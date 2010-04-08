@@ -1,0 +1,35 @@
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_acl_mod
+
+CREATE UNIQUE INDEX ii_dbd_acl_mod
+	ON ii_dbd_acl (folder_id, entity_id, acl_sequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_identif_mod
+
+CREATE UNIQUE INDEX ii_dbd_identif_mod
+	ON ii_dbd_identifiers (folder_id, entity_id, identifier_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_locatio_mod
+
+CREATE UNIQUE INDEX ii_dbd_locatio_mod
+	ON ii_dbd_locations (folder_id, entity_id, sequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_rightsl_mod
+
+CREATE UNIQUE INDEX ii_dbd_rightsl_mod ON ii_dbd_rightslist
+	(folder_id, entity_id, rightslist_id, identifier_id, rl_sequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_table_c_mod
+
+CREATE UNIQUE INDEX ii_dbd_table_c_mod
+	ON ii_dbd_table_char (folder_id, entity_id)
+

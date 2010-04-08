@@ -1,0 +1,8 @@
+WindowView
+
+WindowView is an interface between Ingres and your windowing software
+that provides mouse support in the UNIX and VMS environments.  With 
+WindowView, you can use a mouse to move between fields, scroll tables and
+forms, and select options from the menu line.  You can also run different
+functions in different windows, and easily switch between them.
+

@@ -1,0 +1,12 @@
+#
+# Jamfile file for testtool!achilles!achilles_unix
+#
+
+SubDir ING_SRC testtool achilles achilles_unix ;
+
+IISUBSYS testtool achilles achilles_unix ;
+
+
+IILIBRARY ACHILLESLIB : readfile.c logentry.c alarmit.c
+	accompat.c ;
+

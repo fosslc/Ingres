@@ -1,0 +1,4 @@
+STACK = 200
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/library

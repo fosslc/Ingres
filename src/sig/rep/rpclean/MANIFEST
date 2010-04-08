@@ -1,0 +1,36 @@
+#
+# MANIFEST file for sig!rep!rpclean
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	25-Aug-2005 (drivi01)
+#	    Modified rpclean needlibs to compile on windows.
+#	7-Aug-2004 (drivi01)
+#	    Modified LOCATE on rpclean to work on windows also.
+#       27-Oct-2004 (hanje04)
+#         Replace COMPATLIB with SHCOMPATLIB where apropriate
+#	25-jan-2005 (abbjo03)
+#	    Remove build.com. Respecify rpclean as IISIGEXE.
+#	11-feb-2005 (abbjo03)
+#	    On Unix and VMS, link with the shared OpenAPI library.
+
+SubDir ING_SRC sig rep rpclean ;
+
+IISUBSYS sig rep rpclean ;
+
+IISIGEXE rpclean rpclean : rpclean.c dblib.c ;
+
+if ! $(NT)
+{
+IINEEDLIBS rpclean : SHAPILIB SHCOMPATLIB SHFRAMELIB SHQLIB ;
+}
+else
+{
+IINEEDLIBS rpclean : APILIB SHCOMPATLIB SHFRAMELIB SHQLIB ADFLIB GCFLIB
+	CUFLIB SIGLIB ;
+}
+
+
+IISIGFILES rpclean : dblib.c dblib.h readme.txt
+	rpclean.c ;

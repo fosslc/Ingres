@@ -1,0 +1,21 @@
+%summary_tag% License Agreement for %rpm_product%
+%pkgname_tag% %rpm_basename%-license-%rpm_license%
+%version_tag% %rpm_version%
+%release_tag% %rpm_release%
+%license_tag% %rpm_license%
+%group_tag% %rpm_group%
+%arch_tag% %deb_arch%
+%source_tag% none
+%patch_tag% none
+%maintainer_tag% %rpm_vendor%
+%url_tag% %rpm_url%
+%buildroot_tag% %rpm_buildroot%
+%prefix_tag% %rpm_prefix%
+%autoreq_tag% %rpm_autoreq_off%
+%define_tag% %rpm_unpack_term_off%
+%define_tag% %rpm_missing_doc_term_off%
+%define_tag% %rpm_spec_install_post%
+%rpm_descrip_tag%
+%deb_descrip_tag% License Agreement for Ingres
+Having this package installed indicates the %rpm_license% license has been
+viewed and accepted.

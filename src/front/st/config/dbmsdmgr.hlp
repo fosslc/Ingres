@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The dmf_group_count resource is the number of group buffers (readahead
+  buffers) in the buffer manager.  Group buffers are used for table scans
+  and other situations where the buffer manager expects I/O to be
+  largely sequential.

@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!sr_unix_win
+#
+
+SubDir ING_SRC cl clf sr_unix_win ;
+
+IISUBSYS cl clf sr_unix_win ;
+
+
+IILIBRARY COMPATLIB : sr.c ;
+

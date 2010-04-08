@@ -1,0 +1,217 @@
+;    History:
+;	27-feb-97 (mcgem01)
+;	    Added IIGCa_setWaitCursor for OpenROAD compatability. 
+;	01-Jun-97 (mcgem01)
+;	    Add an entry point for IIGCa_cb_call.
+;	01-Apr-98 (rajus01)
+;	    Added entry points for gcx_tdump, IIgcs_call, gcu_words,
+;	    gcu_encode, gcu_get_str, gcu_put_str, gcu_get_int, gcu_put_int,
+;	    gca_trace_log, gcu_msglog.
+;	    Deleted entry points for gcn_encrypt, gcn_errhdl, gcn_get_int,
+;	    gcn_get_str, gcn_put_int, gcn_put_str, gcn_words, gcc_get_obj,
+;	    gcc_rel_obj. 
+;	13-may-1998 (canor01)
+;	    Add gcx_classes and gcc_encrypt_mode.
+;	27-may-1998 (rajus01)
+;	    Add gcs_mech_id.
+;	23-sep-1998 (rajus01)
+;	    Renamed gcn_bchk_addr to gcn_bchk_next. Added gcc_tl_registry.
+;	30-mar-2000 (somsa01)
+;	    Added gcu_lookup() and gcu_hexdump().
+;	15-may-2000 (mcgem01)
+;	    Jasmine uses the gcn_encrypt function when browsing Ingres
+;	13-jul-2001 (somsa01)
+;	    Removed gcx_classes, gcx_init, and added gcd_init.
+;	03-aug-2001 (somsa01)
+;	    Added gcu_alloc_str.
+;	07-Mar-2003 (wansh01)
+;	    Renamed gcd_init to gco_init.
+;	    Added gcd_xxxx() 
+;   	28-Jan-2004 (fanra01)
+;           Added functions gcd_dam_service gcd_jdbc_service gcc_init_registry
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	29-Jun-2004 (drivi01)
+;	    Removed duplicate exports gcd_dam_service, and gcd_jdbc_service.
+;       24-Aug-2004 (drivi01)
+;           Renamed iigcfnt.def to iilibgcf.def
+;           due to new build procedure.
+;	24-Aug-2004 (drivi01)
+;	    Removed gcn_decrypt function due to B1 security code removal.
+;       18-Nov-2004 (Gordon.Thorpe@ca.com and Ralph.Loen@ca.com)
+;           Removed GCD and GCC functions intended for the private use of
+;           GCD and GCC.
+;       18-Nov-2004 (drivi01)
+;           Added II_GCNapi_ModifyNode, II_GCNapi_TestNode and II_GCNapi_Node_Exists.
+;	01-May-2006 (drivi01)
+;	    Added a few gcadm defines.
+;	03-Oct-2006 (clach04)
+;	    Removed "ists"
+;	    Took gcu_restore from iigcfnt.def
+;	19-Feb-2010 (bonro01)
+;	    Add functions for change 503021 bug 123289.
+;
+EXPORTS
+gca_add_acb		@1				
+gca_del_acb		@2				
+gca_find_acb		@3				
+gca_free_acbs		@4				
+gca_next_acb		@5				
+gca_trace_log		@6				
+gca_rs_acb		@7				
+IIGCa_call		@8				
+gca_resume		@9				
+gca_complete		@10				
+gcm_deliver		@11				
+gcm_get_int		@12				
+gcm_get_long		@13				
+gcm_get_str		@14				
+gcm_put_int		@15				
+gcm_put_long		@16				
+gcm_put_str		@17				
+gcm_reg_trap		@18				
+gcm_response		@19				
+gcm_set_delivery		@20				
+gcm_unreg_trap		@21				
+gca_initiate		@22				
+gca_chk_priv		@23				
+gca_restore		@24				
+gca_save		@25				
+gca_is_eog		@26				
+gca_terminate		@27				
+gca_alloc		@28				
+gca_free		@29				
+;gcc_al		@30				
+;gcc_alinit		@31				
+;gcc_alterm		@32				
+;gcc_cnf_av		@33				
+;gcc_encrypt_mode		@34				
+;gcc_ind_av		@35				
+;gcc_init_cset		@36				
+;gcc_init		@37				
+;gcc_call		@38				
+;gcc_term		@39				
+;gcc_rqst_av		@40				
+;gcc_rsp_av		@41				
+;gcc_pb		@42				
+;gcc_pbinit		@43				
+;gcc_pbterm		@44				
+;GCnaddlong		@45				
+;GCnaddnat		@46				
+;GCnadds		@47				
+;GCngetlong		@48				
+;GCngetnat		@49				
+;GCngets		@50				
+;gcc_pl		@51				
+;gcc_plinit		@52				
+;gcc_plterm		@53				
+;gcc_sl		@54				
+;gcc_slinit		@55				
+;gcc_slterm		@56				
+;gcc_tl		@57				
+;gcc_tlinit		@58				
+;gcc_tl_registry		@59				
+;gcc_tlterm		@60				
+;gcc_add_ccb		@61				
+;gcc_alloc		@62				
+;gcc_del_ccb		@63				
+;gcc_er_close		@64				
+;gcc_er_init		@65				
+;gcc_er_log		@66				
+;gcc_er_open		@67				
+;gcc_free		@68				
+gco_init		@69				
+gcx_look		@70				
+gcx_tdump		@71				
+IIGCn_call		@72				
+;gcn_decrypt		@73				
+gcn_checkerr		@74				
+gcn_seterr_func		@75				
+;gcn_bchk_next		@76				
+;gcn_bchk_all		@77				
+;gcn_bchk_check		@78				
+;gcn_bchk_class		@79				
+gcn_fastselect		@80				
+gcn_getflag		@81				
+gcn_recv		@82				
+gcn_release		@83				
+gcn_request		@84				
+gcn_send		@85				
+gcn_testaddr		@86				
+IIgcn_initiate		@87				
+IIgcn_terminate		@88				
+IIgcn_oper		@89				
+IIgcn_check		@90				
+gcn_bedcheck		@91				
+gcn_copy_str		@92				
+gcn_get_tup		@93				
+gcn_put_tup		@94				
+;gcd_gca_term		@95				
+;gcd_api_term		@96				
+;gcd_gcc_term		@97				
+;gcd_pool_term		@98				
+;gcd_gca_init		@99				
+;gcd_api_init		@100				
+;gcd_gcc_init		@101				
+;gcd_pool_init		@102				
+;gcd_init_rcb		@103				
+;gcd_del_rcb		@104				
+;gcd_new_rcb		@105				
+;gcd_dmtl_service		@106				
+;gcd_jctl_service		@107				
+;gcd_dam_service		@108				
+;gcd_jdbc_service		@109				
+gcs_mech_id		@110				
+gcu_alloc_str		@111				
+gcu_erfmt		@112				
+gcu_erinit		@113				
+gcu_erlog		@114				
+gcu_hexdump		@115				
+gcu_lookup		@116				
+gcu_msglog		@117				
+gcu_get_tracesym		@118				
+gcu_words		@119				
+gcu_encode		@120				
+gcu_get_str		@121				
+gcu_get_int		@122				
+gcu_put_int		@123				
+gcu_put_str		@124				
+gcu_read_cset		@125				
+;gcb_alinit		@126				
+;gcb_alterm		@127				
+IIGCa_setWaitCursor		@128				
+IIGCa_cb_call		@129				
+IIgcs_call		@130				
+gcn_encrypt		@131											
+;gcc_init_registry		@134				
+gco_convert		@135
+gco_comp_tod		@136
+;gco_do_16src		@137
+;gcn_srv_term		@138
+;gcn_server		@139
+;gcn_srv_load		@140
+gcs_default_mech	@141
+;gcn_register		@142
+;gcn_init_mask		@143
+;gcn_ir_init		@144
+;gcn_srv_init		@145
+;gcn_get_server		@146
+;gcn_pwd_auth		@147
+;gcn_use_lticket		@148
+II_GCNapi_ModifyNode  @149
+II_GCNapi_TestNode    @150
+II_GCNapi_Node_Exists @151
+gcx_getGCAMsgMap        @152
+gcadm_session		@153
+gcadm_command		@154
+gcadm_keyword		@155
+gcadm_rqst_rslt		@156
+gcadm_rqst_error	@157
+gcadm_rqst_rsltlst	@158
+gcadm_rqst_done		@159
+gcadm_init		@160
+gcadm_term		@161
+gcu_restore		@162
+gco_xlt_sb		@163
+gco_xlt_db		@164
+gco_xlt_ident		@165

@@ -1,0 +1,988 @@
+/*
+** cursor.qsc
+**
+** contains all routines which move around the screen
+**
+** Copyright (c) 2004 Ingres Corporation
+**
+** History:
+**	13-mar-87 (mgw) Bug #11897
+**		initialize all the undo command variables from undo.c to
+**		prevent AV in the following scenario: edit frame, add field,
+**		undo, exit frame without saving, re-edit frame, immediately
+**		hit undo key.
+**	05/06/87 (dkh) - Changed for generic catalogs.
+**	06/09/87 (dkh) - Deleted references to VfDict and VfDstab.
+**	08/14/87 (dkh) - ER changes.
+**	10/02/87 (dkh) - Help file changes.
+**	10/25/87 (dkh) - Error message cleanup.
+**	11/11/87 (dkh) - Code cleanup.
+**	11-jan-88 (sylviap)
+**		Created the .qsc file.
+**	02/01/88 (dkh) - Removed ref to IIisvrfr().
+**	02/02/88 (dkh) - Add call to help facility hook so submenus will
+**			 work in layout/edit phase.
+**	05/27/88 (dkh) - Changed to use different forms system shutdown
+**			 command to work with ATEX fixes.
+**	07/21/88 (dkh) - Added new hooks to make "help" work.
+**	08/11/88 (tom) - Added call to check that the newly loaded form
+**			 can be a popup on the current (possibly smaller) 
+**			 screen dimensions (assuming it was a popup before).
+**	10/28/88 (dkh) - Performance changes.
+**	02/18/89 (dkh) - Yet more changes for performance.
+**	24-apr-89 (bruceb)
+**		Zapped def of tnumns; no longer any nonseq fields.
+**	31-may-89 (bruceb)
+**		Free additional frame memory on 'QUIT' (end).
+**		Open up the IIVFmtMiscTag tag group at start of vfcursor().
+**		Tag group is free'd up at 'QUIT' or in iivifred.c.
+**	07-sep-89 (bruceb)
+**		Call VTputstring with trim attributes now, instead of 0.
+**	10/02/89 (dkh) - Changed to not exit immediately after a "Save"
+**			 if we are called from ABF.
+**	01-sep-89 (cmr)- Added case for new layout menu option and changed
+**			 the order menu option to columnoptions.
+**	11-oct-89 (bruceb)
+**		When 'quit'ing (EXIT), if linked with ABF then don't call
+**		vfexit() but instead return up through fdcats().  This
+**		allows for resetting the FRS keys and performing a breakdisplay
+**		out of the catalog form.
+**	16-oct-89 (cmr)- Reset the move level and clear the lines array.
+**	30-nov-89 (bruceb)
+**		Change to use standard confirmation prompt mechanism when
+**		ending/quiting without saving the form/report.
+**	12/05/89 (dkh) - Changed interface to VTcursor() so VTLIB could
+**			 be moved in ii_framelib shared lib.
+**	01/24/90 (dkh) - Moved include of er.h ahead of uf.h due to changes
+**			 in uf.h.
+**	24-jan-90 (cmr)  Make undo a NOP for RBF section creation/deletion
+**			 (LAYOUT menu option).
+**	01/27/90 (dkh) - Removed duplicate include of er.h as a result
+**			 of integration.
+**	01/27/90 (dkh) - Changed line 302 from "undoCom = unNone;" to
+**			 "setGlobUn(unNONE, (POS *)NULL, (i4 *)NULL);".
+**	01-feb-90 (cmr)- Use unVarInit() not setGlobUn().
+**	06-feb-90 (bruceb)
+**		RBF's report options (PROFILE) now part of the switch
+**		statement to allow for setting noChanges boolean.
+**	28-feb-90 (bruceb)
+**		New parameter (bypass_submenu) to vfToFrm() that is
+**		passed down to OOsaveSequence().  Indicates whether or
+**		not the 'EditInfo  Save' submenu is displayed or bypassed.
+**	04-mar-90 (cmr)
+**		Pass parameter (bypass_submenu) to rFwrite() for RBF.
+**	07-mar-90 (bruceb)
+**		Lint:  Add 5th param to FTaddfrs() calls.
+**	30-mar-90 (bruceb)
+**		Force Vifred menu display back to first menuitem.
+**	05-apr-90 (bruceb)
+**		When clearing the field symbol table, also clear out the
+**		table field symbol table.
+**	19-apr-90 (bruceb)
+**		Removed use of lowLimit, upLimit; no longer needed by
+**		nextFeat or prevFeat.
+**	09-may-90 (bruceb)
+**		Call VTcursor() with new arg indicating whether there is
+**		'not' a menu associated with this call.
+**      06/09/90 (esd) - Set IIVFsfaSpaceForAttr from fdFRMSTRTCHD bit.
+**      06/12/90 (esd) - Tighten up the meaning of the global variable
+**                       endxFrm.  In the past, it was usually (but
+**                       not always) assumed that in a 3270 environment,
+**                       the form included a blank column on the right,
+**                       so that endxFrm was the 0-relative column
+**                       number of that blank column at the right edge.
+**                       I am removing that assumption:  endxFrm will
+**                       now typically be the 0-relative column number
+**                       of the rightmost column containing a feature.
+**      06/12/90 (esd) - Add extra parm to VTputstring to indicate
+**                       whether form reserves space for attribute bytes
+**	07/04/90 (dkh) - Put in changes so layout does not change for
+**			 RBF when popups are displayed.
+**	16-jul-90 (bruceb)
+**		If VIFRED linked into ABF, use different menu (w/o 'quit').
+**	20-jul-90 (cmr) fix for bug 31473
+**		pass bool noUndo to rFcoptions() in case Report Layout changes;
+**		if TRUE make Undo a NOP.
+**	21-jul-90 (cmr) fix for bug 31759
+**		LAYOUT - move resetMoveLevel and clearLine to a lower level
+**		(in case user does an End w/o creating/deleting any sections)
+**      08/22/90 (esd) - Turn off the fdFRMSTRTCHD bit if the form was
+**                       last updated by an old version of vifred that
+**                       doesn't know about stretched forms.
+**	27-aug-90 (sylviap) fix for bug 32701
+**		Added parameter to rFwrite to pass the right margin when saving
+**		a report.
+**	09/19/90 (dkh) - Fixed bug 33133.
+**	11/09/90 (dkh) - Changed save sequence code to properly handle
+**			 error conditions.  This will prevent Vifred
+**			 from crashing if the save was selected while
+**			 the layout screen was scrolled vertically.
+**	12/05/90 (dkh) - Fixed code to handle screen updates correctly
+**			 if an error occurs during save sequence.
+**	06/27/92 (dkh) - Added support for naming a component in the
+**			 detail section of rbf layout.
+**	06/28/92 (dkh) - Added support for rulers in vifred/rbf.
+**	04/15/93 (dkh) - Fixed bug 50633.  Made sure that the cross hair
+**			 pointers are cleared out when exiting the layout
+**			 frame for RBF.
+**	11-jan-1996 (toumi01; from 1.1 axp_osf port)
+**		Cast (long) 3rd... EXsignal args to avoid truncation.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	21-jan-03 (hayke02)
+**	    Remove local prototyping of IIUFccConfirmChoice() - this is now
+**	    done in fe.h.
+**	21-Aug-2009 (kschendel) 121804
+**	    Need frame.h to satisfy gcc 4.3.
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+# include	<compat.h>
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"decls.h"
+# include	<ug.h>
+# include	"vfunique.h"
+# include	<si.h>
+# include	<vt.h>
+# include	<ut.h>
+# include	<ds.h>
+# include	<er.h>
+# include	<feds.h>
+# include	<uf.h>
+# include	<stdprmpt.h>
+# include	<st.h>
+# include	"ervf.h"
+# include	<erui.h>
+# include	"vfhlp.h"
+# include	<frame.h>
+# include	<runtime.h>
+
+# ifdef FORRBF
+# include	<ex.h>
+# include	<rcons.h>
+
+GLOBALREF	i4	Rbf_ortype;
+
+FUNC_EXTERN	Sec_node	*whichSec();
+FUNC_EXTERN	void	IIVFgetname();
+FUNC_EXTERN	bool	rFeditlayout(void);
+# endif
+
+GLOBALREF	bool	vfuchkon;
+GLOBALREF	bool	vfdupfound;
+
+static	bool	prchkmsg = TRUE;
+
+/* has ruler control from been allocated */
+static	bool	vfrulerform_allocated = FALSE;
+
+GLOBALREF	FILE	*vfdfile;
+
+GLOBALDEF	i4	tnumfld = 0;
+GLOBALDEF	i4	vfrealx = 0;
+
+GLOBALDEF	FT_TERMINFO	IIVFterminfo = {0};
+
+# ifndef FORRBF
+FUNC_EXTERN	i4	buildst();
+# endif
+FUNC_EXTERN	STATUS	IImumatch();
+FUNC_EXTERN	VOID	FTfrminvis();
+FUNC_EXTERN	VOID	FTfrmvis();
+FUNC_EXTERN	VOID	IIVTdfDelFrame();
+FUNC_EXTERN	i4	VFfeature();
+FUNC_EXTERN	VOID	IIVTlf();
+# ifndef FORRBF
+FUNC_EXTERN	void	IIVFgmGroupMove();
+# endif
+FUNC_EXTERN	void	IIVFrcRulersControl();
+FUNC_EXTERN	void	IIVFcross_hair();
+
+
+VOID
+vfchkmsg(mode)
+bool	mode;
+{
+	prchkmsg = mode;
+}
+
+/*
+** enter cursor mode
+*/
+VOID
+vfcursor(first, checknms)
+bool	first;
+bool	checknms;
+{
+	MENU	mu;
+	i4	poscount;
+	i4	menu_val;
+	FLD_POS *posarray = NULL;
+	FRS_EVCB evcb;
+	i4	choice;
+	char	*obj_type;
+	char	*help_subject;
+	char	*help_file;
+# ifndef FORRBF
+	bool	vfchknames;
+	bool	dupnames;
+# else
+	bool	noUndo = FALSE;
+# endif
+
+	FTfrminvis();
+
+	/*
+	**  Use special help facility hook so that submenus in the
+	**  layout/edit phase will work.
+	*/
+	IIishelp(TRUE);
+
+	if ( vfendfrmtag == TRUE && vffrmtag != 0 )
+	{
+		vffrmtag = FEendtag();	/* end frame tag begun in init_menu */
+		vfendfrmtag = FALSE;
+	}
+	MEfill(sizeof(FRS_EVCB), '\0', &evcb);
+	FTclear();
+
+	/* bug 11897 - clear UNDO.C's variables for undoing commands */
+	unVarInit();
+
+	vfuchkon = checknms;
+	if (first)
+	{
+		vflinetag = FEbegintag();	/* start line table tag */
+
+		/*
+		** If form was last updated by a version of VIFRED
+		** that doesn't support the fdFRMSTRTCHD bit,
+		** then turn off that bit.
+		**
+		** This guards against the case where a form was
+		** created or updated on a new version of VIFRED
+		** with space left for attribute bytes (and with the
+		** fdFRMSTRTCHD bit set), but was subsequently updated
+		** by an old version of VIFRED on a non-IBM platform
+		** that rearranged or added fields without leaving
+		** room for attribute bytes (and without clearing
+		** the fdFRMSTRTCHD bit).
+		*/
+		if (frame->frversion < FRMSTRTCHD_VERSION)
+		{
+		    frame->frmflags &= ~fdFRMSTRTCHD;
+		}
+# ifndef FORRBF
+		IIVFsfaSpaceForAttr =
+		    ((frame->frmflags & fdFRMSTRTCHD) != 0);
+# endif
+		buildLines(frame, &Sections, Cs_top, Cs_length);
+		frame->frmode = fdcmINSRT;
+		vflinetag = FEendtag();		/* end line table tag */
+	}
+
+	IIVFmtMiscTag = FEbegintag();	/* start misc. memory tag group */
+
+# ifndef FORRBF
+	if (checknms)
+	{
+		vfchknames = TRUE;
+		vfstdel(AFIELD);
+		vfstdel(ATBLFD);
+		if (buildst(first) != 0)
+		{
+			dupnames = TRUE;
+		}
+		else
+		{
+			dupnames = FALSE;
+		}
+	}
+	else
+	{
+		vfchknames = FALSE;
+		dupnames = FALSE;
+	}
+# endif
+
+	noChanges = TRUE;
+# ifdef FORRBF
+	if (Rbf_ortype != OT_EDIT)
+		noChanges = FALSE;
+# else
+	if (vforigintype != OT_EDIT)
+		noChanges = FALSE;
+# endif
+
+	globx = 0;
+# ifdef FORRBF
+	mu = rbfCursor;
+	globy = 1;
+# else
+	if (Vfeqlcall)
+	    mu = IIVFcmCursorMenu;
+	else
+	    mu = cursor;
+	globy = 0;
+# endif
+
+# ifndef FORRBF
+	if (dupnames)
+	{
+		IIUGerr(E_VF002C_Warning_Duplicates, UG_ERR_ERROR, 0);
+	}
+# endif
+
+	/* since the form we are about to edit may have been created
+	on a different sized terminal, (or window) we must check the
+	popup state at this time because it may be too large to be
+	a popup on the current screen. */
+	vfChkPopup();
+
+	/* Force the next FTputmenu() call to re-construct the menu. */
+	mu->mu_flags |= MU_NEW;
+
+	for(;;)
+	{
+		vfTrigUpd();
+		vfUpdate(globy, globx, TRUE); 
+
+# ifndef	FORRBF
+		vfdupfound = FALSE;
+# endif
+		FTclrfrsk();
+		FTaddfrs(9, UNDO, NULL, 0, 0);
+		FTaddfrs(8, wrWRITE, NULL, 0, 0);
+		FTaddfrs(1, HELP, NULL, 0, 0);
+		FTaddfrs(3, QUIT, NULL, 0, 0);
+		if (!Vfeqlcall)
+		    FTaddfrs(2, EXIT, NULL, 0, 0);
+		vfmu_put(mu);
+
+		vfposarray(&poscount, &posarray);
+		evcb.event = fdNOCODE;
+		if (VTcursor(frame, &globy, &globx, endFrame,
+			endxFrm + 1 + IIVFsfaSpaceForAttr,
+			poscount, posarray, &evcb, VFfeature,
+			RBF, TRUE, FALSE, FALSE, FALSE) 
+			== fdopSCRLT)
+		{
+			vfwider(frame, IIVFterminfo.cols/4);
+			continue;
+		}
+		vfrealx = globx;
+		if (globx > endxFrm)
+		{
+			globx = endxFrm;
+		}
+		VTdumpset(vfdfile);
+
+		if (evcb.event == fdopFRSK)
+		{
+			menu_val = evcb.intr_val;
+		}
+		else if (evcb.event == fdopMUITEM)
+		{
+			if (IImumatch(mu, &evcb, &menu_val) != OK)
+			{
+				continue;
+			}
+		}
+		else
+		{
+			/*
+			**  Fix for BUG 7123. (dkh)
+			*/
+			menu_val = FTgetmenu(mu, &evcb);
+			if (evcb.event == fdopFRSK)
+			{
+				menu_val = evcb.intr_val;
+			}
+		}
+
+		VTdumpset(NULL);
+		switch (menu_val)
+		{
+		case UNDO:
+			undoCom();
+			continue;
+
+# ifndef FORRBF
+		case GRPMOVE:
+			IIVFgmGroupMove();
+			continue;
+# endif
+
+		case ALIGN:
+			IIVTlf(frame, TRUE, FALSE);
+			IIVFrcRulersControl();
+##			redisplay
+			IIVTlf(frame, FALSE, FALSE);
+			vfTrigUpd();
+			vfUpdate(globy, globx, TRUE);
+			continue;
+# ifdef FORRBF
+		case NAMING:
+			IIVFgetname();
+			continue;
+
+		case LAYOUT:
+			/* call to IIVTlf() needed before displaying a popup */
+			IIVTlf( frame, TRUE, TRUE );
+			noUndo = rFeditlayout(); 
+			noChanges &= !noUndo;
+			/* undo of a section deletion/creation is a NOP */
+			if (noUndo)
+			{
+				unVarInit();
+				noUndo = FALSE;
+			}
+##			redisplay
+			IIVTlf( frame, FALSE, FALSE );
+			continue;
+
+		case COLOPTS:
+			/* noUndo is TRUE only if Report Layout changed */
+			noChanges &= (bool) !rFcoptions(&noUndo);
+			if (noUndo)
+			{
+				unVarInit();
+				noUndo = FALSE;
+			}
+			FTclear();
+			continue;
+		
+		case PROFILE:
+			noChanges &= (bool) !rFroptions();
+			FTclear();
+			continue;
+
+# endif
+		case wrWRITE:
+# ifdef DGC_AOS
+			/*
+			** Until INGRES supports a readonly mode, DG will use 
+			** the following code to avoid ugly error messages 
+			** that occur when trying to write to the database 
+			** when we are only connected for readonly access.
+			*/
+			if (IIUIcro_CheckReadOnly())
+			{
+				IIUGerr(E_UI0016_ReadOnly_err, 0, 0);
+				continue;
+			}
+# endif
+
+			IIVTlf(frame, TRUE, FALSE);
+# ifdef FORRBF
+			vfToFrm((bool)FALSE);
+			vftorbf();
+			noChanges |= (bool) rFwrite(FALSE, endxFrm);
+# else
+			if (vfchknames && dupnames)
+			{
+				vfstdel(AFIELD);
+				vfstdel(ATBLFD);
+				if (buildst(TRUE) != 0)
+				{
+					vfdupfound = TRUE;
+				}
+			}
+			if (vfdupfound)
+			{
+				IIUGerr(E_VF002D_Cannot_save_form_beca,
+					UG_ERR_ERROR, 0);
+			}
+			else if (frame != NULL)
+			{
+				_VOID_ vfToFrm((bool)FALSE);
+			}
+
+			/*
+			**  Call FTfrminvis() again in case it got
+			**  cleared by error recovery.
+			*/
+			FTfrminvis();
+# endif
+			IIVTlf(frame, FALSE, FALSE);
+
+			continue;
+
+		case QUIT:
+			if (!noChanges)
+			{
+# ifdef FORRBF
+			    obj_type = ERget(FE_report);
+			    help_subject
+				= STalloc(ERget(S_VF015B_Save_Report_End));
+			    help_file = RFH_SVEND;
+# else
+			    obj_type = ERget(FE_form);
+			    help_subject
+				= STalloc(ERget(S_VF015A_Save_Form_End));
+			    help_file = VFH_SVEND;
+# endif
+			    IIVTlf(frame, TRUE, FALSE);
+			    choice = IIUFccConfirmChoice(CONF_END,
+				NULL, obj_type, help_subject, help_file);
+
+##			    redisplay
+			    IIVTlf(frame, FALSE, FALSE);
+
+			    if (choice == CONFCH_YES)
+			    {
+				/* Save, then end. */
+# ifdef FORRBF
+				vfToFrm((bool)TRUE);
+				vftorbf();
+				noChanges |= (bool) rFwrite(TRUE, endxFrm);
+# else
+				if (vfchknames && dupnames)
+				{
+					vfstdel(AFIELD);
+					vfstdel(ATBLFD);
+					if (buildst(TRUE) != 0)
+					{
+						vfdupfound = TRUE;
+					}
+				}
+				if (vfdupfound)
+				{
+					IIUGerr(E_VF002D_Cannot_save_form_beca,
+						UG_ERR_ERROR, 0);
+					continue;
+				}
+				if (frame != NULL)
+				{
+					if (!vfToFrm((bool)TRUE))
+					{
+						continue;
+					}
+				}
+# endif
+			    }
+			    else if (choice == CONFCH_CANCEL)
+			    {
+				/* Return to editing. */
+				continue;
+			    }
+			}
+# ifndef FORRBF
+			if (vfchknames && dupnames)
+			{
+				vfstdel(AFIELD);
+				vfstdel(ATBLFD);
+			}
+
+			IIUGtagFree(IIVFmtMiscTag);
+			IIVFmtMiscTag = 0;
+			IIVTdfDelFrame(&frame);
+			FEfree(vffrmtag);
+			FEfree(vflinetag);
+			vflinetag = 0;
+			linit();
+			ndinit();
+			vffrmtag = FEbegintag();
+			vfendfrmtag = TRUE;
+# endif
+			/**
+			**  Need  to reset the cross hair
+			**  pointers  since they got trashed
+			**  when  FEfree(vflinetag) was executed.
+			**
+			**  For RBF, vflinetag memory will be freed by
+			**  RBF later on, so we just clean things up here.
+			**/
+			IIVFvcross = NULL;
+			IIVFhcross = NULL;
+
+			break;
+
+		case HELP:
+# ifdef FORRBF
+			vfhelpsub(RFH_LAYOUT,
+				ERget(S_VF002F_Report_Layout_Frame), mu);
+# else
+			vfhelpsub(VFH_CURSOR,
+				ERget(S_VF0030_Form_Layout_Frame), mu);
+# endif
+			continue;
+
+		case EXIT:
+			if (!noChanges)
+			{
+# ifdef FORRBF
+			    obj_type = ERget(FE_report);
+			    help_subject
+				= STalloc(ERget(S_VF015D_Save_Report_Quit));
+			    help_file = RFH_SVQUIT;
+# else
+			    obj_type = ERget(FE_form);
+			    help_subject
+				= STalloc(ERget(S_VF015C_Save_Form_Quit));
+			    help_file = VFH_SVQUIT;
+# endif
+			    IIVTlf(frame, TRUE, FALSE);
+			    choice = IIUFccConfirmChoice(CONF_QUIT,
+				NULL, obj_type, help_subject, help_file);
+
+##			    redisplay
+			    IIVTlf(frame, FALSE, FALSE);
+
+			    if (choice == CONFCH_YES)
+			    {
+				/* Save, then exit. */
+# ifdef FORRBF
+				vfToFrm((bool)TRUE);
+				vftorbf();
+				noChanges |= (bool) rFwrite(TRUE, endxFrm);
+# else
+				if (vfchknames && dupnames)
+				{
+					vfstdel(AFIELD);
+					vfstdel(ATBLFD);
+					if (buildst(TRUE) != 0)
+					{
+						vfdupfound = TRUE;
+					}
+				}
+				if (vfdupfound)
+				{
+					IIUGerr(E_VF002D_Cannot_save_form_beca,
+						UG_ERR_ERROR, 0);
+					continue;
+				}
+				if (frame != NULL)
+				{
+					if (!vfToFrm((bool)TRUE))
+					{
+						continue;
+					}
+				}
+# endif
+			    }
+			    else if (choice == CONFCH_CANCEL)
+			    {
+				/* Return to editing. */
+				continue;
+			    }
+			}
+			FTclear();
+# ifdef FORRBF
+##			endforms
+			EXsignal(EXEXIT, 2, (long)0, (long)NOABORT);
+# else
+			if (!Vfeqlcall)
+			{
+##				endforms
+				enddb();
+				vfexit(OK);
+			}
+			else	/* Linked with ABF. */
+			{
+				break;	/* Return up through fdcats(). */
+			}
+# endif
+
+		default:
+			continue;
+		}
+		FTclear();
+		break;
+	}
+	IIresfrsk();
+	prchkmsg = TRUE;
+	MEfree(posarray);
+
+	/*
+	**  Turn off special hook for submenus to work in VIFRED.
+	*/
+	IIishelp(FALSE);
+
+	FTfrmvis();
+}
+
+/*
+** blink the current feature
+*/
+VOID
+vfdisplay(ps, type, hilight)
+POS	*ps;
+i4	type;
+bool	hilight;
+{
+	TRIM	*trm;
+	REGFLD	*fld;
+	TBLFLD	*tbl;
+	POS	*column_list;
+
+	switch (type)
+	{
+	case PTRIM:
+		trm = (TRIM *) ps->ps_feat;
+		VTputstring(frame, trm->trmy, trm->trmx, trm->trmstr,
+			trm->trmflags, hilight, IIVFsfaSpaceForAttr);
+		break;
+
+	case PBOX:
+		vfBoxDisp(ps, hilight);
+		break;
+
+	case PFIELD:
+		fld = ((FIELD *)ps->ps_feat)->fld_var.flregfld;
+		vfdispData(fld, hilight);
+# ifndef FORRBF
+		vfFldBox(&fld->flhdr, hilight);
+# endif
+		vfTitledisp(&fld->flhdr, hilight);
+		break;
+
+	case PTITLE:
+		fld = ((FIELD *)ps->ps_feat)->fld_var.flregfld;
+		vfdispData(fld, FALSE);
+# ifndef FORRBF
+		vfFldBox(&fld->flhdr, FALSE);
+# endif
+		vfTitledisp(&fld->flhdr, hilight);
+		break;
+
+	case PDATA:
+		fld = ((FIELD *)ps->ps_feat)->fld_var.flregfld;
+		vfdispData(fld, hilight);
+# ifndef FORRBF
+		vfFldBox(&fld->flhdr, FALSE);
+# endif
+		vfTitledisp(&fld->flhdr, FALSE);
+		break;
+
+# ifndef FORRBF
+	case PTABLE:
+		tbl = ((FIELD *)ps->ps_feat)->fld_var.fltblfld;
+		vfTabdisp(tbl, hilight);
+		break;
+# endif
+
+# ifdef FORRBF
+	case PCOLUMN:
+		column_list = ps;
+		do
+		{
+			if (column_list->ps_name == PFIELD)
+			{
+				fld = ((FIELD *)column_list->ps_feat)->fld_var.flregfld;
+				vfdispData(fld, hilight);
+				vfTitledisp(&fld->flhdr, hilight);
+			}
+			else if (column_list->ps_name == PTRIM)
+			{
+				trm = (TRIM *) column_list->ps_feat;
+				VTputstring(frame, trm->trmy, trm->trmx,
+					trm->trmstr, trm->trmflags, hilight,
+					IIVFsfaSpaceForAttr);
+			}
+			column_list = column_list->ps_column;
+		} while (column_list != ps);
+		break;
+# endif
+	}
+
+	vfUpdate(globy, globx, TRUE);
+}
+
+
+# ifdef FORRBF
+void
+IIVFgetname()
+{
+	POS	*ps;
+	FIELD	*fld;
+	char	buf[300];
+
+/*
+	if ((whichSec(globy, &Sections))->sec_type != SEC_DETAIL)
+	{
+		IIUGerr(E_VF0167_not_in_detail, UG_ERR_ERROR, 0);
+		return;
+	}
+*/
+
+	ps = onPos(globy, globx);
+	if (ps == NULL)
+	{
+		IIUGerr(E_VF0166_no_obj_for_name, UG_ERR_ERROR, 0);
+		return;
+	}
+
+	if (ps->ps_name != PFIELD)
+	{
+		IIUGerr(E_VF0168_not_a_field, UG_ERR_ERROR, 0);
+		return;
+	}
+
+	fld = (FIELD *) ps->ps_feat;
+
+	STprintf(buf, ERget(S_VF0169_name_is),
+		fld->fld_var.flregfld->flhdr.fhdname);
+	FEmsg(buf, TRUE);
+}
+# endif /* FORRBF */
+
+
+/*{
+** Name:	IIVFrcRulersControl - Control display of rulers/straight edges
+**
+** Description:
+**	This routine provides the interface that allows users to control
+**	the display of rulers and straight edges in vifred/rbf.
+**
+** Inputs:
+**	None.
+**
+** Outputs:
+**
+**	Returns:
+**		None.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	None.
+**
+** History:
+**	09/18/92 (dkh) - Initial version.
+*/
+void
+IIVFrcRulersControl()
+{
+##	char	ruler_val[10];
+##	char	sedge_val[10];
+	bool	cancelled = FALSE;
+	char	*frmname = ERx("vfrulfrm");
+
+	if (!vfrulerform_allocated)
+	{
+		FDsetparse(FALSE);
+
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), frmname) != OK)
+		{
+			syserr(ERget(S_VF0001_Can_not_access_form), frmname);
+		}
+
+		FDsetparse(TRUE);
+	}
+
+##	display vfrulfrm
+##	initialize
+##	{
+		if (IIVFxh_disp)
+		{
+			STcopy(IIVF_yes1, sedge_val);
+		}
+		else
+		{
+			STcopy(IIVF_no1, sedge_val);
+		}
+
+		if (IIVFru_disp)
+		{
+			STcopy(IIVF_yes1, ruler_val);
+		}
+		else
+		{
+			STcopy(IIVF_no1, ruler_val);
+		}
+
+##		putform (ruler = ruler_val)
+##		putform (sedge = sedge_val)
+##	}
+##	activate menuitem ERget(FE_Cancel) (expl = ERget(F_FE0103_ExplCancel),
+##		validate = 0), frskey9 (validate = 0)
+##	{
+		cancelled = TRUE;
+##		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##		validate = 0), frskey1 (validate = 0)
+##	{
+		FEhelp(VFH_RUCTRL, ERget(S_VF016F_RULER_CTRL));
+##	}
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		frskey3
+##	{
+##		enddisplay
+##	}
+
+	if (cancelled)
+	{
+		return;
+	}
+
+##	getform vfrulfrm (ruler_val = ruler)
+##	getform vfrulfrm (sedge_val = sedge)
+
+	if (ruler_val[0] == IIVF_yes1[0])
+	{
+		/*
+		**  User wants to display the rulers.
+		**  Only do work if this a change from
+		**  current settings.
+		*/
+		if (!IIVFru_disp)
+		{
+			IIVFru_disp = TRUE;
+			spcRbld();
+			spcVTrim();
+		}
+	}
+	else
+	{
+		/*
+		**  User wants to turn off display of rulers.
+		**  Only do work if this is a change from current settings.
+		*/
+		if (IIVFru_disp)
+		{
+			IIVFru_disp = FALSE;
+			spcRbld();
+			spcVTrim();
+		}
+	}
+
+	if (sedge_val[0] == IIVF_yes1[0])
+	{
+		/*
+		**  User wants to display the straight edges.
+		**  Only do work if this a change from
+		**  current settings.
+		*/
+		if (!IIVFxh_disp)
+		{
+			IIVFxh_disp = TRUE;
+			IIVFcross_hair();
+		}
+	}
+	else
+	{
+		/*
+		**  User wants to turn off display of straight edges.
+		**  Only do work if this is a change from current settings.
+		*/
+		if (IIVFxh_disp)
+		{
+			IIVFxh_disp = FALSE;
+			vfersPos(IIVFvcross);
+			unLinkPos(IIVFvcross);
+			vfersPos(IIVFhcross);
+			unLinkPos(IIVFhcross);
+		}
+	}
+}

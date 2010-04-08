@@ -1,0 +1,12 @@
+#
+# Jamfile file for common!aif!saw
+#
+
+SubDir ING_SRC common aif saw ;
+
+IISUBSYS common aif saw ;
+
+
+IILIBRARY SAWLIB : apitran.c apisupp.c apiquery.c apiproc.c
+	apievent.c apiconn.c ;
+

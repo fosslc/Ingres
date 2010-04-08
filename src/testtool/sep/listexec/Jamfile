@@ -1,0 +1,33 @@
+#
+# Jamfile file for testtool!sep!listexec
+#
+# History:
+#	07-feb-2005 (abbjo03)
+#	    On VMS, build with individual libraries instead of LIBINGRES.
+
+
+SubDir ING_SRC testtool sep listexec ;
+
+IISUBSYS testtool sep listexec ;
+
+IITOOLSEXE listexec : listexec.c ;
+IINEEDLIBS listexec : SEPLIB SEPDIFFLIB LISTEXECLIB SEPCLLIB ;
+IINEEDLIBSW listexec : FRAMELIBDATA ;
+
+IITOOLSEXE executor : executor.c ;
+IINEEDLIBS executor : SEPLIB SEPDIFFLIB LISTEXECLIB SEPCLLIB ;
+IINEEDLIBSW executor : FRAMELIBDATA ;
+
+if $(VMS)
+{
+    IINEEDLIBS listexec : RUNTIMELIB LIBQLIB COMPATLIB ;
+    IINEEDLIBS executor : RUNTIMELIB LIBQLIB COMPATLIB ;
+}
+else
+{
+    IINEEDLIBS listexec : LIBINGRES ;
+    IINEEDLIBS executor : LIBINGRES ;
+}
+
+IILIBRARY LISTEXECLIB : testparams.c runtests.c ;
+

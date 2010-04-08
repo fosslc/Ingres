@@ -1,0 +1,257 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <cm.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <stdprmpt.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	dbaddloc.qsc - define local database
+**
+** Description:
+**	Defines
+**		db_add_local	- define the local database
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on crtinstl.osq in replicator library.
+**	14-nov-97 (joea)
+**		Correct call to IIUGerr.
+**	10-jul-98 (padni01) #90732
+**		Allow initial numeric character in vnode name.
+**	15-jul-98 (padni01) #90732
+**		Include cm.h
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+static const
+##char	*form_name = ERx("rmlocal_db_detail");
+static bool	form_initd;
+static const
+##char	*fdb_no = ERx("database_no"),
+##	*fvnode_name = ERx("vnode_name"),
+##	*fdb_name = ERx("database_name"),
+##	*fdb_owner = ERx("database_owner"),
+##	*fdbms_type = ERx("dbms_type"),
+##	*fremark = ERx("remark");
+
+
+/*{
+** Name:	db_add_local - define the local database
+**
+** Description:
+**	Creates the local database.
+**
+** Inputs:
+**	db_name		- database name
+**	db_owner	- database owner
+**
+** Outputs:
+**	db_no		- database number
+**
+** Returns:
+**	OK	- changes were made and saved
+**	FAIL	- no changes were made
+** History:
+**      05-Oct-2009 (coomi01) b90678
+**          Repmgr may be called with fully qualified dbname. 
+**      20-Nov-2009 (coomi01) b122933
+**          Use more relaxed RPvalid_vnode() to test valid vnode names.
+*/
+STATUS
+db_add_local(
+char	*db_name,
+char	*db_owner,
+i2	*database_no)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+##char	*db_name;
+##char	*db_owner;
+EXEC SQL END DECLARE SECTION;
+# endif
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i2	db_no = 0;
+##	char	vnode_name[DB_MAXNAME+1];
+##	char	dbms_type[9];
+##	char	remark[81];
+	EXEC SQL END DECLARE SECTION;
+  	i4      count;
+        char   *dbBaseName;
+  	char   *vnodeName;
+  	char    dbase_name[2*DB_MAXNAME+3];
+##	i4	chng;
+	bool	must_save = TRUE;
+	STATUS	retval = FAIL;
+	DBEC_ERR_INFO	errinfo;
+
+	EXEC SQL SELECT LOWERCASE(cap_value)
+		INTO	:dbms_type
+		FROM	iidbcapabilities
+		WHERE	cap_capability = 'DBMS_TYPE';
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return (FAIL);
+		}
+		form_initd = TRUE;
+	}
+
+	/* 
+	** Copy the name given at the command line, which may be a fully
+	** name with vnode, into our working array. Then call RPgetDbNodeName
+	** to inspect it, and break it in two if required.
+	*/
+	STcopy(db_name, dbase_name);
+	count = 0;
+	
+	if ( OK == RPgetDbNodeName(dbase_name, &count, &dbBaseName, &vnodeName) && 
+	      2 == count)
+	{
+	    /*
+	    ** It was a qualified name
+	    ** - Note the parts.
+	    */
+	    STcopy(vnodeName, vnode_name); 
+	    db_name = dbBaseName;
+	}
+	else
+	{
+	    /*
+	    ** Make sure vnode is empty
+	    ** - The form is now outputing the initial content, previously it did not.
+	    */
+            STcopy("", vnode_name);	
+	}
+
+##	display form_name fill
+##	initialize (fdb_name = db_name, fdb_owner = db_owner, fvnode_name = vnode_name,
+##		fdbms_type = dbms_type)
+##	activate field fdb_no
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+##			getform (db_no = fdb_no)
+			if (db_no < 1 || db_no > 32767)
+			{
+				IIUGerr(E_RM0007_Invalid_db_no, UG_ERR_ERROR,
+					0);
+##				resume
+			}
+		}
+##		resume next
+##	}
+
+##	activate field fvnode_name
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+##			getform (vnode_name = fvnode_name)
+			STtrmwhite(vnode_name);
+			if (!RPvalid_vnode(vnode_name) && !CMdigit(vnode_name))
+			{
+				IIUGerr(E_RM0008_Invalid_vnode_name,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+		}
+##		resume next
+##	}
+
+##	activate menuitem ERget(FE_Save) (expl = ERget(F_FE0117_SaveExpl)),
+##		FRSkey8
+##	{
+##		validate
+
+##		getform (db_no = fdb_no, vnode_name = fvnode_name,
+##			remark = fremark)
+		IIUGmsg(ERget(F_RM0009_Saving), FALSE, 0);
+		EXEC SQL REPEATED INSERT INTO dd_databases (
+				database_no, vnode_name, database_name,
+				database_owner, local_db, dbms_type,
+				config_changed, remark)
+			VALUES	(:db_no, :vnode_name, :db_name,
+				:db_owner, 1, :dbms_type,
+				DATE('now'), :remark);
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			FTbell();
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM0009_Error_saving, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+		EXEC SQL COMMIT;
+		if (RPdb_error_check(0, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(ERget(E_RM000A_Error_committing), UG_ERR_ERROR,
+				0);
+##			resume
+		}
+
+		*database_no = db_no;
+		retval = OK;
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(F_RM000A_Clear) (activate = 0, validate = 0,
+##		expl = ERget(F_RM000B_Clear_expl)), FRSkey16 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs form (chng = change)
+		if (chng && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM000B_Clear_form, S_RM000C_Yes_clear,
+			S_RM000D_No_clear, ERx(""), TRUE) != CONFCH_YES)
+##			resume
+
+##		clear field fdb_no, fvnode_name, fremark
+##		set_frs form (change = 0)
+##		resume field fdb_no
+##	}
+
+##	activate menuitem ERget(FE_Help) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1 (activate = 0,
+##		validate = 0)
+##	{
+		FEhelp(ERx("rmcrtins.hlp"), ERget(F_RM000C_Define_local_db));
+##	}
+
+##	activate menuitem ERget(FE_End) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0102_ExplEnd)), FRSkey3 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs form (chng = change)
+		if (chng && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM000E_End_no_save, S_RM000F_Yes_end,
+			S_RM0010_No_end, ERx(""), TRUE) != CONFCH_YES)
+##			resume
+
+		if (must_save)
+		{
+			IIUGerr(S_RM0011_Save_local_info, 0, 0);
+			must_save = FALSE;
+##			resume
+		}
+##		breakdisplay
+##	}
+
+	return (retval);
+##}

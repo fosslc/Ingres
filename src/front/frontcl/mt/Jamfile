@@ -1,0 +1,14 @@
+#
+# Jamfile file for front!frontcl!mt
+#
+
+SubDir ING_SRC front frontcl mt ;
+
+IISUBSYS front frontcl mt ;
+
+
+IIMSGHDR ermt.msg ;
+
+IILIBRARY MTLIB : mtview.c mtinit.c mtdraw.c ;
+
+IILIBRARY IMPFRAMELIBDATA : mtdata.c ;

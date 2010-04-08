@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescqs.hlp                Query-Start escape code examples.
+The Query-Start escape executes just before the main SELECT query in
+Update and Browse frames.
+
+Example:
+
+    To SELECT information to fields on the form:
+
+        formname := SELECT name = e.name, status = e.status
+        FROM employees e
+        WHERE e.empno = :empno ;

@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The cp_interval resource specifies the interval between consistency 
+  points taken by the logging system.  More precisely, cp_interval
+  is the percentage of the transaction log(s) which must be full
+  before a checkpoint is taken.
+
+  This resource is deprecated;  the cp_interval_mb resource should be
+  used instead.  If both are defined, cp_interval is ignored else 
+  cp_interval may take values in the range of 1 to 100.
+

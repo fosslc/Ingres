@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Help Plug-in
+Bundle-SymbolicName: com.ingres.demoapp.help; singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Vendor: INGRES
+Bundle-Localization: plugin
+Eclipse-LazyStart: true

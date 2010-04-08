@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+The clob_len parameter specifies the length passed to db2 udb when  
+the Gateway translates the Open SQL LONG VARCHAR data type to the 
+CLOB data type in create table statements.  For example, 
+if clob_len were set to 1M, the following translation would occur:
+
+create table lb_test (lb long varchar);
+
+/* is translated to */
+
+create table lb_test (lb clob(1M));
+
+Default for clob_len is 1G.  Note that lengths for the clob 
+data type may be specified in kilobytes (K), megabytes (M), or 
+gigabytes (G).
+

@@ -1,0 +1,27 @@
+#
+# MANIFEST file for front!misc!chinst
+#
+# History:
+#       11-Mar-2008 (hanal04) Bug 119979
+#           chset_install needs SHADFLIBDATA and SHGCFLIB on Windows.
+#
+
+SubDir ING_SRC front misc chinst ;
+
+IISUBSYS front misc chinst ;
+
+
+IIBINEXE chset_install : main.c ;
+if ! $(NT)
+{
+IINEEDLIBS chset_install : UGLIB COMPATLIB ;
+}
+else
+{
+IINEEDLIBS chset_install : COMPATLIB SHEMBEDLIB SHADFLIBDATA SHGCFLIB ;
+
+IIBINEXE chinst : main.c ;
+IINEEDLIBS chinst : COMPATLIB SHEMBEDLIB SHADFLIBDATA SHGCFLIB ;
+
+}
+

@@ -1,0 +1,61 @@
+;
+;  History:
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	    Renamed iitpfdata.def to iilibtpfdata.def.
+
+EXPORTS
+Tpf_svcb_p		@1	DATA			
+IITP_00_tpf_p		@43				
+IITP_01_secure_p		@44				
+IITP_02_commit_p		@45				
+IITP_03_abort_p		@46				
+IITP_04_unknown_p		@47				
+IITP_05_reader_p		@48				
+IITP_06_updater_p		@49				
+IITP_07_tracing_p		@50				
+IITP_08_erred_calling_p		@51				
+IITP_09_3dots_p		@52				
+IITP_10_savepoint_p		@53				
+IITP_11_abort_to_p		@54				
+IITP_12_rollback_to_p		@55				
+IITP_13_allowed_in_dx_p		@56				
+IITP_14_aborting_p		@57				
+IITP_15_committing_p		@58				
+IITP_16_securing_p		@59				
+IITP_17_failed_with_err_p		@60				
+IITP_18_fails_p		@61				
+IITP_19_succeeds_p		@62				
+IITP_20_2pc_recovery_p		@63				
+IITP_21_2pc_cats_p		@64				
+IITP_22_aborted_ok_p		@65				
+IITP_23_committed_ok_p		@66				
+IITP_24_ends_ok_p		@67				
+IITP_25_78_dashes_p		@68				
+IITP_26_completes_p		@69				
+IITP_27_begins_p		@70				
+IITP_28_unrecognized_p		@71				
+IITP_29_state_p		@72				
+IITP_30_error_p		@73				
+IITP_31_phase_1_p		@74				
+IITP_32_phase_2_p		@75				
+IITP_33_unknown_rqfid_p		@76				
+IITP_34_unknown_tpfid_p		@77				
+IITP_35_qry_info_p		@78				
+IITP_36_qry_text_p		@79				
+IITP_37_target_ldb_p		@80				
+IITP_38_null_ptr_p		@81				
+IITP_39_ddb_name_p		@82				
+IITP_40_ddb_owner_p		@83				
+IITP_41_cdb_name_p		@84				
+IITP_42_cdb_node_p		@85				
+IITP_43_cdb_dbms_p		@86				
+IITP_44_node_p		@87				
+IITP_45_ldb_p		@88				
+IITP_46_dbms_p		@89				
+IITP_47_cdb_assoc_p		@90				
+IITP_48_reg_assoc_p		@91				
+IITP_50_rqf_call_tab		@92				
+IITP_51_tpf_call_tab		@93				
+IITP_52_dx_state_tab		@94	

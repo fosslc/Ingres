@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abcustrg.hlp, help for the confirmation pop-up compiling the frame
+/#-- definition when the code has been customized
+/#-- 
+The 4GL source code for this frame has been customized by being edited 
+directly.  You are being asked whether to regenerate the code before 
+compiling.  If you choose to regenerate the code, your customizations will
+be overwritten and lost.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        Select                  If Yes is selected, do not regenerate, and
+                                compile the existing code.
+
+                                If No is selected, regenerate the code,
+                                overwriting the customizations, and compile.
+
+        Cancel                  Do not compile the frame.
+
+        Help                    Access the Ingres Help facility.

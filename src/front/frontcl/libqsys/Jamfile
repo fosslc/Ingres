@@ -1,0 +1,27 @@
+#
+# Jamfile file for front!frontcl!libqsys
+#
+# History:
+#	04-jan-2005 (abbjo03)
+#	    Add iipacked.mar for VMS.
+#       22-dec-2008 (stegr01)
+#           Replace .mar with .c
+
+SubDir ING_SRC front frontcl libqsys ;
+
+IISUBSYS front frontcl libqsys ;
+
+
+IIMSGHDR erls.msg ;
+
+IILIBRARY LIBQSYSLIB : iiwlibq.c iiw32str.c iivmsstr.c
+	iivlibq.c iiufutlU.c iiufutlM.c iiufutlL.c iiufutil.c
+	iiufsqlU.c iiufsqlM.c iiufsqlL.c iiufsql.c iiuflibq.c
+	iiuflbqU.c iiuflbqM.c iiuflbqL.c iimflibq.c iimfdata.c
+	iilbqpar.c iidgflbq.c iidgclbq.c iidesc.c iicvpack.c iicbwrit.c
+	iicbcomp.c iiaclibq.c ;
+
+if $(VMS)
+{
+    IILIBRARY LIBQSYSLIB : iipacked.c ;
+}

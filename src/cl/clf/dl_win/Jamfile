@@ -1,0 +1,16 @@
+#
+# Jamfile file for cl!clf!dl_win
+#
+
+SubDir ING_SRC cl clf dl_win ;
+
+IISUBSYS cl clf dl_win ;
+
+
+IIBINEXE dltest : dltest.c ;
+IINEEDLIBS dltest : COMPAT ;
+
+IILIBRARY COMPATLIB : dltstmod1.c
+	dltstmod.c
+	dl.c ;
+

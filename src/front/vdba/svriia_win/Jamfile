@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!svriia_win
+#
+
+SubDir ING_SRC front vdba svriia_win ;
+
+IISUBSYS front vdba svriia_win ;
+
+
+IISLN svriia.dll : svriia.sln ;

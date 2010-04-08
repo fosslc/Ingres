@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 1998 Ingres Corporation --> 
+<!--
+##{
+## History:
+##    04-May-1999 (peeje01)
+##        Replaced .dll with #ext#
+##}
+-->
+<HTML>
+<HEAD>
+<TABLE BORDER=0 WIDTH="100%">
+	<TD><IMG SRC="/iceimages/ingreslogo.gif"></TD>
+	<TD ALIGN=RIGHT><IMG SRC="/iceimages/ice.gif"></TD>
+</TABLE>
+<HR>
+</HEAD>
+
+<BODY bgcolor="#FFFFFF" topmargin="0" leftmargin="0">
+ 	<FORM ACTION="/ice-bin/oiice.#ext#/iceTools/iceTools[menu.html]" METHOD="POST">
+		<INPUT TYPE=hidden NAME="ii_action" value="connect">
+		<CENTER>
+		<IMG SRC="/iceimages/welcome.gif"><BR>
+		<TABLE BORDER=0 ALIGN=CENTER VALIGN=CENTER>
+			<TR>
+				<TD>Please enter your profile:</TD>
+			</TR>
+			<TR>
+				<TD>Name: </TD>
+				<TD><INPUT SIZE=32 NAME="ii_userid"></TD>
+			</TR>
+			<TR>
+				<TD>Password: </TD>
+				<TD><INPUT SIZE=32 TYPE=PASSWORD NAME="ii_password"></TD>
+			</TR>
+		</TABLE>
+		<HR>
+		<INPUT TYPE="IMAGE" BORDER=0 NAME="connect" SRC="/iceimages/logout.gif" ALT="Connect">
+
+		</CENTER>
+	</FORM>
+</BODY>
+</HTML>

@@ -1,0 +1,19 @@
+#
+# Jamfile file for back!dmf!dmve
+#
+
+SubDir ING_SRC back dmf dmve ;
+
+IISUBSYS back dmf dmve ;
+
+
+IILIBRARY DMFLIB : dmveutil.c dmveupdo.c dmveundo.c dmvesplt.c
+	dmvesm2.c dmvesm1.c dmvesm0.c dmvesetbof.c dmvertrp.c
+	dmvertpt.c dmvertdl.c dmverep.c dmvereloc.c dmveredo.c
+	dmveput.c dmveovfl.c dmvenofu.c dmvemodify.c dmveloc.c
+	dmveload.c dmvejnleof.c dmveindex.c dmvefren.c dmvefmap.c dmveufmap.c
+	dmvefcre.c dmveext.c dmvedmu.c dmvedis.c dmvedest.c dmvedel.c
+	dmvedall.c dmvecrvf.c dmvecreate.c dmvecrdb.c dmvebtpt.c
+	dmvebtov.c dmvebtfr.c dmvebtdl.c dmvebi.c dmveass.c dmvealt.c
+	dmveall.c dmveai.c ;
+

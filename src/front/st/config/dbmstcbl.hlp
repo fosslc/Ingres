@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2009 Ingres Corporation
+  The dmf_tcb_limit resource is the maximum number of Table Control Blocks
+  (TCB's) that the Data Manipulation Facility will allow in memory at one
+  time.  Every table active in a query requires a TCB.  Building a TCB is
+  a relatively expensive operation, so DMF attempts to retain them in
+  memory even if the table is not currently in use.  When dmf_tcb_limit
+  is reached, DMF will replace the oldest unused TCBs to make room for
+  new ones.
+
+  The limit includes base tables, physical partitions, and secondary
+  indexes in any database. The limit must be set high enough to allow
+  for all TCB's actively needed by all active queries, or one or more
+  queries will fail with errors.
+
+  An excessively low limit will cause extra runtime overhead as TCB's
+  are rebuilt over and over.  An excessively high limit wastes DMF memory,
+  possibly at the expense of other DBMS server facilities.
+
+  The default is 10000 TCB's.

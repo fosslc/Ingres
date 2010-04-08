@@ -1,0 +1,27 @@
+#
+# Jamfile file for front!abf!impexp
+#
+
+SubDir ING_SRC front abf impexp ;
+
+IISUBSYS front abf impexp ;
+
+
+IIBINEXE iiimport : ieimain.c ;
+IINEEDLIBS iiimport :  IMPEXPLIB COPYAPPLIB CAUTILLIB
+	COPYUTILLIB COPYFORMLIB SHINTERPLIB SHFRAMELIB 
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS iiimport : II_copyright malloc ;
+
+IIBINEXE iiexport : ieemain.c ;
+IINEEDLIBS iiexport :  IMPEXPLIB COPYAPPLIB CAUTILLIB
+	COPYUTILLIB COPYFORMLIB SHINTERPLIB SHFRAMELIB 
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS iiexport : II_copyright malloc ;
+
+IIMSGHDR erie.msg ;
+
+IILIBRARY IMPEXPLIB : iewdetal.sc iewcomps.sc ieutils.sc
+	ierecord.sc ieiiobjs.sc ieexport.sc iedcomps.sc iecpysrc.sc
+	ieobjdet.c ieimport.c iedocomp.c ;
+

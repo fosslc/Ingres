@@ -1,0 +1,1058 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<cm.h>
+#include	<st.h>
+#include	<cv.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ui.h>
+exec sql include	<uigdata.sh>;
+
+/**
+** Name:	uidbcap.sc -    DBMS Capabilities Utilities Module.
+**
+** Description:
+**	Contains the utilities for initializing and querying the capabilities
+**	defined for the DBMS.  Defines:
+**
+**	IIUIdci_initcap  -initializes static capabilities variables.  If
+**			there is a backend error accessing the iidbcapabilities
+**			catalog, it prints an error message and
+**			returns the sqlca.sqlcode, otherwise it
+**			returns OK.  It should be called before any of
+**			the other functions in this module, in order
+**			to catch the error code.  It is assumed that the
+**			caller cannot continue if there is an error in
+**			accessing the catalogs, but it is left up to the
+**			caller to handle the error.
+**
+**	iiuiDcapSave()		save capabilities in character buffer.
+**	iiuiDcRestoreCap()	restore capabilities from buffer.
+**
+**	IIUIdcq_quelLevel -returns QUEL capability level of the backend
+**			(either UI_DML_QUEL or UI_DML_NOLEVEL)
+**
+**	IIUIdcs_sqlLevel -returns SQL capability level of the backend
+**			(either UI_DML_SQL, UI_DML_GTWSQL, or UI_DML_NOLEVEL)
+**
+**	IIUIdcd_dist    - returns BOOL TRUE value if the database
+**			is distributed, FALSE otherwise.
+**
+**	IIUIcase	- returns UI_LOWERCASE, UI_UPPERCASE or
+**			UI_MIXEDCASE, depending on whether the DBMS stores
+**			object names in lower, upper or mixed case.
+**
+**	IIUIdlmcase - Returns UI_MIXEDCASE if the DBMS service supports case
+**			sensitivity for	delimited identifiers.	Returns UI_LOWERCASE or
+**			UI_UPPERCASE if delimited identifiers are not case sensitive, and
+**			the return value indicates in which case the DBMS stores backend
+**			objects referenced by delimited identifiers.  Returns UI_UNDEFCASE
+**			if the server does not support delimited identifiers.
+**
+**	IIUIdcn_ingres  - returns BOOL TRUE value if the DBMS supports
+**			100%, in all respects, INGRES release 6. TRUE
+**			means that a row exists in the iidbcapabilities
+**			catalog, where cap_capability="INGRES" and
+**			cap_value="Y"; if no row with these values exists,
+**			then returns FALSE.
+**
+**	IIUIdck_req	- returns UI_KEY_Y, UI_KEY_N or UI_KEY_U,
+**			depending on whether the DBMS requires unique keys,
+**			does not require unique keys, or does not support
+**			unique keys.
+**
+**	IIUIdct_use_iitables() - Returns TRUE if DBMS provides physical table
+**			information in iitables.
+**
+**	IIUIdcu_rules	- returns TRUE if DBMS supports RULES, FALSE otherwise
+**
+**	IIUIdcl_logkeys - returns TRUE if DBMS supports Logical Keys, FALSE
+**			  otherwise
+**
+**	IIUIdcy_udt	- returns TRUE if DBMS supports User Defined Data
+**			  types, FALSE otherwise
+**
+**	IIUIdcg_group	- returns TRUE if DBMS supports Group level
+**			  authorizations, FALSE otherwise
+**
+**	IIUIdco_role	- returns TRUE if DBMS supports Role (application)
+**			  level authorizations, FALSE otherwise
+**
+**	IIUIdce_escape	- returns TRUE if DBMS supports SQL ESCAPE CLAUSE's,
+**			  FALSE otherwise.
+**
+** History:
+**	Revision 6.4  91/05/05  wong
+**	Added saves for version levels 'ingsql_level', etc.
+**	8-may-1991 (pete)
+**	    Add new routines related to rows in iidbcapabilities:
+**	    IIUIisl_IngresSQLLevel(), IIUIcsl_CommonSQLLevel(),
+**	    IIUIscl_StdCatLevel(), IIUIiql_IngresQuelLevel(). Bug #36993.
+**	18-jun-1991  wong  Corrected 'sql_level' default to be UI_DML_GTWSQL.
+**
+**	Revision 6.0  87/07/29  danielt
+**	29-jul-1987  (danielt) created
+**	01-oct-1987  (danielt) initial modification
+**	19-aug-1988 (peter)
+**		Update catalog column names for 6.1.
+**	7-Oct-1988   (pete) add IIUIdcn_ingres
+**	13-jan-1989  (wolf) update comments, check for COMMON/SQL_LEVEL,
+**			and add IIUIdck(), which checks for UNIQUE_KEY_REQ.
+**	16-mar-89 (kenl)
+**		Let INGRES/SQL_LEVEL take priority over COMMON/SQL_LEVEL.
+**		That is, if sql_level is already set, don't reset it if
+**		we come across COMMON/SQL_LEVEL.
+**	25-may-89 (mgw)
+**		Add checks for capabilities INGRES_RULES, INGRES_LOGICAL_KEYS,
+**		INGRES_UDT, INGRES_AUTH_GROUP, INGRES_AUTH_ROLE and ESCAPE.
+**		Also discovered from talking with Peter S. that since
+**		iidbcapabilities (system catalog) is in English, we don't
+**		need to be messing with CM calls, just ERx'ing strings
+**		so I updated that.
+**	31-jul-89 (teresal)
+**		Changed INGRES_LOGICAL_KEYS to INGRES_LOGICAL_KEY.
+**	20-apr-1990 (wong)  Changed default 'is_Ingres' to FALSE.  Bug #21299.
+**	16-aug-1990 (Joe)
+**	    Changed to put capabilities into the UIDBDATA structure and
+**	    changed to get the structure for the current session by
+**	    calling IIUIdbdata().
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Aug-2009 (kschendel) 121804
+**	    Update some of the function declarations to fix gcc 4.3 problems.
+**/
+
+/*{
+** Name:	IIUIdci_initcap() -	initialize static capability variables
+**
+** Description:
+**	Selects all the capabilities from the "iidbcapabilities" table using
+**	Open/SQL as the database query language.  It sets the global DBMS
+**	capabilities values appropriately.  It returns the sqlca.sqlcode and
+**	prints an error message if the DBMS could not access "iidbcapabilities"
+**	(which should never happen).  This routine should be run before any
+**	other function in this module is called.
+**
+**	There is a clear assumption that the caller should NOT proceed if an
+**	error is returned from this routine, on the grounds that if there are
+**	problems accessing one system catalog, there very well might be
+**	problems with others.  But, it is left to the caller to decide what to
+**	do in case of an error.
+**
+** Returns:
+**	the sqlca.sqlerror if there was a database access error
+**	else OK
+**
+** Side Effects:
+**	Sets the values for all static db capability variables in this
+**	module.
+**
+** History:
+**	29-jul-1987  (danielt)  created
+**	19-aug-1988 (peter)
+**		update names of catalog columns for 6.1.
+**	3-jan-1989 (danielt)
+**		reintroduced name case changes.
+**	16-aug-1990 (Joe)
+**	    Changed to put capabilities into the UIDBDATA structure and
+**	    changed to get the structure for the current session by
+**	    calling IIUIdbdata().
+**	05-may-1991 (jhw)  Added saves for version levels 'ingsql_level', etc.
+**	    Bug #36993.
+**	18-jun-1991 (jhw)  Corrected 'sql_level' default to be UI_DML_GTWSQL.
+**	10-jun-92 (rdrane)
+**		Add defaulting/setting of dlm_Case (delimited identifier casing).
+**	07-oct-93 (rogerl)
+**		Change expected dbcapability literal value of
+**		'db_delimited_case' from incorrect 'dlm_name_case'. 
+**		(54955,54956)
+**	31-dec-93 (rdrane)
+**	    Change defaulting of delimited identifier casing to "undefined".
+**	5-jan-94 (rdrane)
+**		If OPEN/SQL_LEVEL capability exists, use that value for
+**		uidbdata->opensql_level, and don't let any COMMON/SQL_LEVEL
+**		capability overwrite it!
+**	05-feb-1997 (sandyd)
+**		Added check for new MAX_CATALOG_COLUMN_WIDTH iidbcapability
+**		row, and setting of uidbdata->max_cat_col_wid to that value.
+*/
+DB_STATUS
+IIUIdci_initcap()
+{
+	register UIDBDATA	*uidbdata;
+	STATUS			error_code;
+	EXEC SQL BEGIN DECLARE SECTION;
+	    char    	value[FE_MAXNAME+1];
+	    char    	capability[FE_MAXNAME+1];
+	EXEC SQL END DECLARE SECTION;
+
+	uidbdata = IIUIdbdata();
+	if ( uidbdata->is_init )
+	    return OK;
+	/*
+	** The default values set here are based on the static variables that
+	** used to be set to TRUE in the previous implementation of this
+	** routine.  I don't know why these defaults are set but I'm just
+	** following the old code.  (joe)
+	*/
+	uidbdata->sql_level = UI_DML_GTWSQL;	/* default is lowest common
+						**	denominator; Open/SQL.
+						**	(jhw)
+						*/
+	uidbdata->quel_level = UI_DML_NOLEVEL;	/* default is none (jhw) */
+	uidbdata->name_Case = UI_LOWERCASE;
+	uidbdata->dlm_Case = UI_UNDEFCASE;
+	uidbdata->key_req = UI_KEY_N;
+	uidbdata->max_cat_col_wid = 0;
+	uidbdata->useIItables = TRUE;
+	uidbdata->hasEscape = TRUE;
+
+	STcopy(UI_LEVEL_60, uidbdata->opensql_level);
+	STcopy(UI_LEVEL_62, uidbdata->catalog_level);
+
+	STcopy(UI_LEVEL_NONE, uidbdata->ingsql_level);
+	STcopy(UI_LEVEL_NONE, uidbdata->ingquel_level);
+
+	EXEC SQL SELECT cap_value, cap_capability
+			INTO :value, :capability
+		FROM iidbcapabilities;
+	EXEC SQL BEGIN;
+		/* Trim and lower, here, since DBMS may not support this. */
+		if ( STtrmwhite(capability) > 0 )
+			CVlower(capability);
+		if ( STtrmwhite(value) > 0 )
+			CVlower(value);
+		if( STequal(capability, ERx("ingres/quel_level") ) )
+		{ /* INGRES/QUEL LEVEL */
+			STcopy(value, uidbdata->ingquel_level);
+			if ( !STequal(value, UI_LEVEL_NONE ) )
+			{
+				uidbdata->quel_level = UI_DML_QUEL;
+			}
+		}
+		else if ( STequal(capability, ERx("ingres/sql_level") ) )
+		{ /* INGRES/SQL LEVEL */
+			STcopy(value, uidbdata->ingsql_level);
+			if ( !STequal(value, UI_LEVEL_NONE ) )
+			{ /* ... override default (UI_DML_GTWSQL) */
+				uidbdata->sql_level = UI_DML_SQL;
+			}
+		}
+		else if ( STequal(capability, ERx("common/sql_level") ) )
+		{ /* COMMON/SQL LEVEL; don't overwrite 6.5 OPEN/SQL_LEVEL */
+			if  (STcompare(value,uidbdata->opensql_level) > 0)
+			{
+				STcopy(value, uidbdata->opensql_level);
+			}
+			if ( uidbdata->sql_level == UI_DML_NOLEVEL )
+			{ /* shouldn't happen! default is UI_DML_GTWSQL */
+			    /* assert: !STequal(value, UI_LEVEL_NONE ) */
+			    uidbdata->sql_level = UI_DML_GTWSQL;
+			}
+		}
+		else if (STequal(capability,ERx("open/sql_level")))
+		{ /* OPEN/SQL LEVEL  - 6.5 Capability */
+			STcopy(value, uidbdata->opensql_level);
+		}
+		else if ( STequal(capability, ERx("standard_catalog_level") ) )
+		{ /* COMMON/CATALOG LEVEL */
+			STcopy(value, uidbdata->catalog_level);
+		}
+		else if ( STequal(capability, ERx("distributed") ) )
+		{
+		    uidbdata->isDistributed = (value[0] == 'y' ? 1 : 0);
+		}
+		else if ( STequal(capability, ERx("db_name_case") ) )
+		{
+			if (value[0] == 'u')
+				uidbdata->name_Case = UI_UPPERCASE;
+			else if (value[0] == 'm')
+				uidbdata->name_Case = UI_MIXEDCASE;
+			else
+				uidbdata->name_Case = UI_LOWERCASE;
+		}
+		else if ( STequal(capability, ERx("db_delimited_case") ) )
+		{
+			if (value[0] == 'u')
+				uidbdata->dlm_Case = UI_UPPERCASE;
+			else if (value[0] == 'm')
+				uidbdata->dlm_Case = UI_MIXEDCASE;
+			else
+				uidbdata->dlm_Case = UI_LOWERCASE;
+		}
+		else if ( STequal(capability, ERx("ingres") ) )
+		{
+		    uidbdata->isIngres = (value[0] == 'y' ? 1 : 0);
+		}
+		else if ( STequal(capability, ERx("physical_source") ) )
+		{
+		    uidbdata->useIItables = (value[0] == 't' ? 1 : 0);
+		}
+		else if ( STequal(capability, ERx("unique_key_req") ) )
+		{
+			if (value[0] == 'u')
+				uidbdata->key_req = UI_KEY_U;
+			else if (value[0] == 'y')
+				uidbdata->key_req = UI_KEY_Y;
+			else
+				uidbdata->key_req = UI_KEY_N;
+		}
+		else if ( STequal(capability, ERx("ingres_rules") ) )
+		{
+		    uidbdata->hasRules = (value[0] == 'y' ? 1 : 0);
+		}
+		else if ( STequal(capability, ERx("ingres_logical_key") ) )
+		{
+		    uidbdata->hasLogKeys = (value[0] == 'y' ? 1 : 0);
+		}
+		else if ( STequal(capability, ERx("ingres_udt") ) )
+		{
+		    uidbdata->hasUADT = (value[0] == 'y' ? 1 : 0);
+		}
+		else if ( STequal(capability, ERx("ingres_auth_group") ) )
+		{
+		    uidbdata->hasGroups = (value[0] == 'y' ? 1 : 0);
+		}
+		else if ( STequal(capability, ERx("ingres_auth_role") ) )
+		{
+		    uidbdata->hasRoles = (value[0] == 'y' ? 1 : 0);
+		}
+		else if ( STequal(capability, ERx("escape") ) )
+		{
+		    uidbdata->hasEscape = (value[0] == 'y' ? 1 : 0);
+		}
+		else if ( STequal(capability, ERx("max_catalog_column_width")) )
+		{
+		    CVan(value, &uidbdata->max_cat_col_wid);
+		}
+	EXEC SQL END;
+
+	error_code = FEinqerr();;
+	if (error_code < 0) /* DBMS error */
+	{
+		IIUGerr( E_UI0004_INIT_ERR, 0, 0 );
+		return (DB_STATUS)error_code;
+	}
+	else
+	{
+		_VOID_ IIUIdml();	/* This sets dmldef. */
+		uidbdata->is_init = TRUE;
+		return OK;
+	}
+	/*NOTREACHED*/
+}
+
+/*{
+** Name:	iiuiDcapSave() -	Save Capabilities in Buffer.
+**
+** Description:
+**	Saves a string representation of the capabilities in the input buffer.
+**	The capabilities are assumed to have been read from the DBMS, and the
+**	buffer is assumed to be large enough.
+**
+**	NOTE:  The format of the string must match exactly the format expected
+**	by 'iiuiDcRestoreCap()' below.
+**
+**	NOTE: You can not add new capabilities to this string!  See the
+**	comment in uidatset.qsc to understand what you must do to add
+**	new capabilities that are to be saved and restored.
+**
+** Outputs:
+**	buf	{char *}  The buffer that will contain the string represenation.
+**
+** History:
+**	03/89 (jhw) -- Written.
+**	16-aug-1990 (Joe)
+**	    Changed to put capabilities into the UIDBDATA structure and
+**	    changed to get the structure for the current session by
+**	    calling IIUIdbdata().
+*/
+VOID
+iiuiDcapSave ( buf )
+char	*buf;
+{
+	UIDBDATA	*uidbdata;
+
+	uidbdata = IIUIdbdata();
+	_VOID_ STprintf( buf, ERx("%c%c%c%c%c%c%c%c%c%d%d%d%d"),
+				(uidbdata->hasRules ? 'y' : 'n'),
+				(uidbdata->hasLogKeys ? 'y' : 'n'),
+				(uidbdata->hasUADT ? 'y' : 'n'),
+				(uidbdata->hasGroups ? 'y' : 'n'),
+				(uidbdata->hasRoles ? 'y' : 'n'),
+				(uidbdata->hasEscape ? 'y' : 'n'),
+				(uidbdata->isDistributed ? 'y' : 'n'),
+				(uidbdata->isIngres ? 'y' : 'n'),
+				(uidbdata->useIItables ? 'y':'n'),
+				uidbdata->sql_level,
+				uidbdata->quel_level,
+				uidbdata->key_req,
+				uidbdata->name_Case
+	);
+}
+
+/*{
+** Name:	iiuiDcRestoreCap() -	Restore Capabilities from Buffer.
+**
+** Description:
+**	Restores the DBMS capabilities from a string representation in the
+**	input buffer.
+**
+**	NOTE:  The format of the string must match exactly the format created
+**	by 'iiuiDcapSave()' above.
+**
+** Inputs:
+**	buf	{char *}  The buffer that contains the string represenation.
+**
+** Side Effects:
+**	Sets the values for all static DBMS capability variables in this module.
+**
+** History:
+**	03/89 (jhw) -- Written.
+**	16-aug-1990 (Joe)
+**	    Changed to put capabilities into the UIDBDATA structure and
+**	    changed to get the structure for the current session by
+**	    calling IIUIdbdata().
+*/
+VOID
+iiuiDcRestoreCap ( buf )
+char	*buf;
+{
+	UIDBDATA	*uidbdata;
+
+	uidbdata = IIUIdbdata();
+	if ( !(uidbdata->is_init) )
+	{
+		char	tmp[2];
+
+		tmp[1] = EOS;
+
+		/* Rules */
+		uidbdata->hasRules = (buf[0] == 'y' ? 1 : 0);
+		/* Logical Keys */
+		uidbdata->hasLogKeys = (buf[1] == 'y' ? 1 : 0);
+		/* User defined data types */
+		uidbdata->hasUADT = (buf[2] == 'y' ? 1 : 0);
+		/* Groups */
+		uidbdata->hasGroups = (buf[3] == 'y' ? 1 : 0);
+		/* Roles */
+		uidbdata->hasRoles = (buf[4] == 'y' ? 1 : 0);
+		/* Escapes */
+		uidbdata->hasEscape = (buf[5] == 'y' ? 1 : 0);
+		uidbdata->isDistributed = (buf[6] == 'y' ? 1 : 0);
+		uidbdata->isIngres = (buf[7] == 'y' ? 1 : 0);
+		uidbdata->useIItables = (buf[8] == 'y' ? 1 : 0);
+		/* SQL Level */
+		tmp[0] = buf[9];
+		CVan(tmp, &(uidbdata->sql_level));
+		/* QUEL Level */
+		tmp[0] = buf[10];
+		CVan(tmp, &(uidbdata->quel_level));
+		/* Requires Unique Key */
+		tmp[0] = buf[11];
+		CVan(tmp, &(uidbdata->key_req));
+		/* Case sensetive table names? */
+		CVan(&buf[12], &(uidbdata->name_Case));
+
+		_VOID_ IIUIdml();	/* This sets dmldef. */
+		uidbdata->is_init = TRUE;
+	}
+}
+
+/*{
+** Name:	IIUIdcs_sqlLevel
+**
+** Description:
+**	Returns the level of SQL capability in the backend, as
+**	indicated in the iidbcapabilities catalog.  This capability
+**	can be gateway SQL, RT/SQL, or no SQL capacity.
+**
+** Returns:
+**	{nat}   UI_DML_SQL	-Backend has RT/SQL capability
+**		UI_DML_QUEL	-Backend has gateway SQL capability
+**		UI_DML_NOLEVEL  -Backend has no SQL capability
+**
+** Assumptions:
+**	This function assumes that IIUIdci_init() has previously
+**	been called, in that it makes no attempt to inform
+**	the caller of any error in accessing the iidbcapabilities
+**	catalog.  It will call IIUIdci_init() if it has not previously
+**	been called, but it ignores the return value.
+**
+** Side Effects:
+**	If the static capability variables have not
+**	been initialized, IIUIdci_init() will be called, and
+**	it will initialize all of them.
+** History:
+**	29-jul-1987 (danielt)  created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+i4
+IIUIdcs_sqlLevel()
+{
+	return IIUIdbdata()->sql_level;
+}
+
+/*{
+** Name:	IIUIdcq_quelLevel
+**
+** Description:
+**	Returns the level of QUEL capability in the backend, as
+**	indicated in the iidbcapabilities catalog.  This capability
+**	can be either QUEL or no QUEL capacity.
+**
+** Returns:
+**	{nat}   UI_DML_QUEL	-Backend has QUEL capability
+**		UI_DML_NOLEVEL  -Backend has no QUEL capability
+**
+** Assumptions:
+**	This function assumes that IIUIdci_init() has previously
+**	been called, in that it makes no attempt to inform
+**	the caller of any error in accessing the iidbcapabilities
+**	catalog.  It will call IIUIdci_init() if it has not previously
+**	been called, but it ignores the return value.
+**
+** Side Effects:
+**	If the static capability variables have not
+**	been initialized, IIUIdci_init() will be called, and
+**	it will initialize all of them.
+** History:
+**		29-jul-1987 (danielt)  created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+i4
+IIUIdcq_quelLevel()
+{
+	return IIUIdbdata()->quel_level;
+}
+
+/*{
+** Name:	IIUIdcd_dist
+**
+** Description:
+**	Boolean function returns TRUE if the backend has
+**	has a distributed capability, according to the
+**	iidbcapabilities catalog, FALSE otherwise.
+**
+** Returns:
+**	{bool}	TRUE if backend has distributed capability, otherwise FALSE.
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**	29-jul-1987 (danielt)  created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+bool
+IIUIdcd_dist(void)
+{
+    return (bool) IIUIdbdata()->isDistributed;
+}
+
+/*{
+** Name:	IIUIcase
+**
+** Description:
+**	returns UI_LOWERCASE, UI_UPPERCASE, UI_MIXEDCASE,
+**	depending on whether the DBMS service stores backend
+**	object names in lower, upper, or mixed case.
+**
+** Returns:
+**	{nat}	UI_LOWERCASE
+**		UI_UPPERCASE
+**		UI_MIXEDCASE
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**		29-jul-1987 (danielt)  created
+**		3-jan-1989 (danielt)
+**		reintroduced mixed case changes
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+i4
+IIUIcase()
+{
+	return IIUIdbdata()->name_Case;
+}
+
+/*
+** Name:	IIUIdlmcase
+**
+** Description:
+**	Returns UI_MIXEDCASE if the DBMS service supports case sensitivity for
+**	delimited identifiers.  Returns UI_LOWERCASE or UI_UPPERCASE if delimited
+**	identifiers are not case sensitive, and the return value indicates in
+**	which case the DBMS stores backend objects referenced by delimited
+**	identifiers.  Returns UI_UNDEFCASE if the server does not support
+**	delimited identifiers.
+**
+** Returns:
+**	{nat}	UI_LOWERCASE
+**			UI_UPPERCASE
+**			UI_MIXEDCASE
+**			UI_UNDEFCASE
+**
+** Side Effects:
+**	If the static capability variables have not been initialized,
+**	IIUIdci_init() will be called, and it will initialize all of them.
+**
+** History:
+**	10-jun-92 (rdrane)  created
+**
+**	31-dec-1993 (rdrane)
+**		Use dlm_Case capability directly to determine if
+**		delimited identifiers are suppported.
+*/
+
+i4
+IIUIdlmcase()
+{
+    return(IIUIdbdata()->dlm_Case);
+}
+
+/*{
+** Name:	IIUIdcn_ingres
+**
+** Description:
+**	Boolean function returns TRUE if the DBMS supports
+**	100%, in all respects, INGRES release 6. TRUE
+**	means that a row exists in the iidbcapabilities
+**	catalog, where cap_capability="INGRES" and
+**	cap_value="Y"; if no row with these values exists,
+**	then returns FALSE.
+**
+** Sample call:
+**	bool    IIUIdcn_ingres();
+**	if (IIUIdcn_ingres())
+**	    ;   !your FE is talking to INGRES
+**
+** Returns:
+**	{bool}	TRUE if supports INGRES release 6, otherwise FALSE.
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**	7-Oct-1988 (pete)  created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+bool
+IIUIdcn_ingres(void)
+{
+    return (bool) IIUIdbdata()->isIngres;
+}
+
+/*{
+** Name:	IIUIdck_req
+**
+** Description:
+**	Nat function returns value of UI_KEY_REQ indicating
+**	whether the backend requires keys or not , or if the
+**	backend doesn't support keys, set in iidbcapabilities catalog.
+**
+** Returns:
+**	{nat}	UI_KEY_Y if backend requires keys
+**		UI_KEY_N if backend doesn't urequire keys
+**		UI_KEY_U if backend doesn't support keys
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**	12-nov-1988 (ham)  created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+i4
+IIUIdck_req()
+{
+	return IIUIdbdata()->key_req;
+}
+
+/*{
+** Name:	IIUIdct_use_iitables
+**
+** Description:
+**	Boolean function returns TRUE if the DBMS provides
+**	physical table information in iitables.
+**
+** Sample call:
+**	bool    IIUIdct_use_iitables();
+**	if (IIUIdct_use_iitables())
+**	    ;   use ii_tables
+**
+** Returns:
+**	{bool}	TRUE if the DBMS provides physical table information
+**			in iitables.
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**	24-mar-1989 (danielt)
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+bool
+IIUIdct_use_iitables(void)
+{
+    return (bool) IIUIdbdata()->useIItables;
+}
+
+/*{
+** Name:	IIUIdcu_rules()
+**
+** Description:
+**	Boolean function returns TRUE if the DBMS supports rules
+**	(INGRES_RULES is set in iidbcapabilities system catalog),
+**	FALSE otherwise.
+**
+** Returns:
+**	TRUE	- the DBMS supports rules
+**	FALSE	- it doesn't
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**	25-may-89 (mgw)
+**		created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+bool
+IIUIdcu_rules(void)
+{
+    return (bool) IIUIdbdata()->hasRules;
+}
+
+/*{
+** Name:	IIUIdcl_logkeys()
+**
+** Description:
+**	Boolean function returns TRUE if the DBMS supports logical keys
+**	(INGRES_LOGICAL_KEY is set in iidbcapabilities system catalog),
+**	FALSE otherwise.
+**
+** Returns:
+**	TRUE	- the DBMS supports logical keys
+**	FALSE	- it doesn't
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**	25-may-89 (mgw)
+**		created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+bool
+IIUIdcl_logkeys(void)
+{
+    return (bool) IIUIdbdata()->hasLogKeys;
+}
+
+/*{
+** Name:	IIUIdcy_udt()
+**
+** Description:
+**	Boolean function returns TRUE if the DBMS supports user defined
+**	data types (INGRES_UDT is set in iidbcapabilities system catalog),
+**	FALSE otherwise.
+**
+** Returns:
+**	TRUE	- the DBMS supports user defined data types
+**	FALSE	- it doesn't
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**	25-may-89 (mgw)
+**		created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+bool
+IIUIdcy_udt(void)
+{
+    return (bool) IIUIdbdata()->hasUADT;
+}
+
+/*{
+** Name:	IIUIdcg_group()
+**
+** Description:
+**	Boolean function returns TRUE if the DBMS supports groups
+**	(INGRES_AUTH_GROUP is set in iidbcapabilities system catalog),
+**	FALSE otherwise.
+**
+** Returns:
+**	TRUE	- the DBMS supports groups
+**	FALSE	- it doesn't
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**	25-may-89 (mgw)
+**		created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+bool
+IIUIdcg_group(void)
+{
+    return (bool) IIUIdbdata()->hasGroups;
+}
+
+/*{
+** Name:	IIUIdco_role()
+**
+** Description:
+**	Boolean function returns TRUE if the DBMS supports roles
+**	(INGRES_AUTH_ROLE is set in iidbcapabilities system catalog),
+**	FALSE otherwise.
+**
+** Returns:
+**	TRUE	- the DBMS supports roles
+**	FALSE	- it doesn't
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdci_init() will be called, and
+**		it will initialize all of them.
+** History:
+**	25-may-89 (mgw)
+**		created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+bool
+IIUIdco_role(void)
+{
+    return (bool) IIUIdbdata()->hasRoles;
+}
+
+/*{
+** Name:	IIUIdce_escape()
+**
+** Description:
+**	Boolean function returns TRUE if the DBMS supports SQL ESCAPE CLAUSES,
+**	(ESCAPE is set in iidbcapabilities system catalog), FALSE otherwise.
+**
+** Returns:
+**	TRUE	- the DBMS supports SQL ESCAPE CLAUSES
+**	FALSE	- it doesn't
+**
+** Side Effects:
+**		If the static capability variables have not
+**		been initialized, IIUIdce_escape() will be called, and
+**		it will initialize all of them.
+** History:
+**	25-may-89 (mgw & danielt)
+**		created
+**	16-aug-1990 (Joe)
+**	    Changed to call IIUIdbdata to get the capability value
+**	    from the structure.  Note, IIUIdbdata will caused the
+**	    capabilities to get initialized if they haven't been.
+*/
+bool
+IIUIdce_escape(void)
+{
+    return (bool) IIUIdbdata()->hasEscape;
+}
+
+/*{
+** Name:	IIUIisl_IngresSQLLevel() - get INGRES/SQL_LEVEL row value.
+**
+** Description:
+**	Returns a pointer to a string containing the cap_level value from
+**	iidbcapabilities for the row:  INGRES/SQL_LEVEL.
+**	If there is no row for this capability, then returns UI_LEVEL_NONE.
+**
+** Sample call:
+**
+**	char	*IIUIisl_IngresSQLLevel();
+**
+**	if (STcompare(IIUIisl_IngresSQLLevel(), UI_LEVEL_64) >= 0)
+**		; 	** INGRES/SQL Level at, or above 6.4 level **
+**	else
+**		;	** below 6.4, or has no level **
+**
+** Exceptions:
+**	When checking for <0 or <=0, watch out for rows that have a value of
+**	"00000", which means INGRES/SQL is not supported (i.e., the DBMS is a
+**	Gateway). For example:
+**		(STcompare(IIUI..., UI_LEVEL_64) < 0)
+**	will be TRUE for "00603", "00602" and "00000".
+**	Some DBMS may have no defined value for a capability;
+**	that is usually (check your Standard Catalog spec to be sure)
+**	equivalent to having a row with the value "00000".
+**
+** Returns:
+**	char *
+**
+** History:
+**	6-may-91 (pete)
+**		Initial version.
+*/
+char *
+IIUIisl_IngresSQLLevel()
+{
+    return IIUIdbdata()->ingsql_level;
+}
+
+/*{
+** Name:	IIUIcsl_CommonSQLLevel() - get COMMON/SQL_LEVEL row value.
+**
+** Description:
+**	Returns a pointer to a string containing the cap_level value from
+**	iidbcapabilities for the row:  COMMON/SQL_LEVEL.
+**	If there is no row for this capability, then returns "00600".
+**	Note that "00000" is not a legal value for this row.
+**
+** Sample call:
+**
+**	char	*IIUIcsl_CommonSQLLevel();
+**
+**	if (STcompare(IIUIcsl_CommonSQLLevel, UI_LEVEL_64) >= 0)
+**		; 	** COMMON/SQL level at, or above 6.4 level **
+**	else
+**		;	** below 6.4	**
+**
+** Returns:
+**	char *
+**
+** History:
+**	6-may-91 (pete)
+**		Initial version.
+*/
+char *
+IIUIcsl_CommonSQLLevel()
+{
+    return IIUIdbdata()->opensql_level;
+}
+
+/*{
+** Name:	IIUIscl_StdCatLevel() - get STANDARD_CATALOG_LEVEL row value.
+**
+** Description:
+**	Returns a pointer to a string containing the cap_level value from
+**	iidbcapabilities for the row:  STANDARD_CATALOG_LEVEL.
+**	If there is no row for this capability, then returns "00602".
+**	Note that "00000" is not a legal value for this row.
+**
+** Sample call:
+**
+**	char *IIUIscl_StdCatLevel();
+**
+**	if (STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_64) >= 0)
+**		; 	** Standard Catalogs at, or above 6.4 level **
+**	else
+**		;	** below 6.4	**
+**
+** Returns:
+**	char *
+**
+** History:
+**	6-may-91 (pete)
+**		Initial version.
+*/
+char *
+IIUIscl_StdCatLevel()
+{
+    return IIUIdbdata()->catalog_level;
+}
+
+/*{
+** Name:	IIUIiql_IngresQuelLevel() - get INGRES QUEL Level.
+**
+** Description:
+**	Returns a pointer to a string containing the cap_level value from
+**	iidbcapabilities for the row:  INGRES/QUEL_LEVEL.
+**	If there is no row for this capability, then returns "00000".
+**
+** Sample call:
+**
+**	char *IIUIiql_IngresQuelLevel();
+**
+**	if (STcompare(IIUIiql_IngresQuelLevel(), UI_LEVEL_64) >= 0)
+**		; 	** INGRES QUEL level at, or above 6.4 level **
+**	else
+**		;	** below 6.4 or no level	**
+**
+** Returns:
+**	char *
+**
+** Exceptions:
+**	When checking for <0 or <=0, watch out for rows that have a value of
+**	"00000", which means INGRES/QUEL is not supported (i.e., the DBMS is a
+**	Gateway). For example:
+**		(STcompare(IIUI..., UI_LEVEL_64) < 0)
+**	will be TRUE for "00603", "00602" AND "00000".
+**	Some DBMS may have no defined value for a capability;
+**	that is usually (check your Standard Catalog spec to be sure)
+**	equivalent to having a row with the value "00000".
+**
+** History:
+**	6-may-91 (pete)
+**		Initial version.
+*/
+char *
+IIUIiql_IngresQuelLevel()
+{
+    return IIUIdbdata()->ingquel_level;
+}
+

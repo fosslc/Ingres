@@ -1,0 +1,18 @@
+#
+# Jamfile file for front!frontcl!files_nt
+#
+
+SubDir ING_SRC front frontcl files_nt_win ;
+
+IISUBSYS front frontcl files_nt_win ;
+
+IIFILES abfdyn.opt
+	abfdyn64.opt
+	abflnk.opt
+	abflnk64.opt
+	dayfile
+	dayfile.dst
+	oslhdr.h
+	oslhdr64.h
+	startsql
+	startup ;

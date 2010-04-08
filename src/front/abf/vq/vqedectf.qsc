@@ -1,0 +1,706 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<cv.h>
+# include	<er.h>
+# include	<st.h>
+# include	<me.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include	<stdprmpt.h>
+## include      <abclass.qsh>
+## include      <metafrm.qsh>
+# include       "ervq.h"
+# include       "vqescinf.h"	
+
+/**
+** Name:	vqedectf.qsc - Edit escape code in tablefield
+**
+** Description:
+**	This file defines:
+**
+**	IIVQeecEditEscapeCode - Edit escape code in tablefield
+**
+** History:
+**	8/9/89 (Mike S)	Initial version
+**	25-aug-92 (blaise)
+**		Added support for local procedure escape code (not really
+**		escape code, but local procedure source code is edited and
+**		stored like escape code).
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ug.h to satisfy gcc 4.3.
+**/
+
+/* # define's */
+# define UNDEFINED 0
+# define NEW	   1
+# define UNCHANGED 2
+# define CHANGED   3
+# define DELETED   4
+
+## define BUFFERSZ 254
+
+/* GLOBALDEF's */
+/* GLOBALREF's */
+GLOBALREF   APPL	*IIVQappl; /* argument of frame flow entry, the current
+			     	   application we are editing in abf */
+
+/* extern's */
+FUNC_EXTERN STATUS	FEtabfnd();
+FUNC_EXTERN VOID	IIUFsifSetIntFmt();
+FUNC_EXTERN VOID	IIUFsnfSetNormFmt();
+FUNC_EXTERN VOID	IIUFtfdTblFldDelete();
+FUNC_EXTERN STATUS	IIUFtfeTblFldEdit();
+FUNC_EXTERN VOID	IIUFtfiTblFldInsert();
+FUNC_EXTERN STATUS	IIUFtflTblFldLoad();
+FUNC_EXTERN STATUS	IIUFtfsTblFldString();
+FUNC_EXTERN STATUS	IIUFtfuTblFldUnload();
+FUNC_EXTERN VOID        IIUGbmaBadMemoryAllocation();
+FUNC_EXTERN STATUS	IIVQsecSaveEscCode();
+FUNC_EXTERN VOID	IIVQlgLocGlobEdit();
+
+extern ESCTYPE  vqescs[];               /* Escape type descriptors */
+
+/* static's */
+static bool esc_matches();
+static MFESC *find_escape_code();
+static MFESC *get_escape_code();
+static VOID save_escape_code();
+
+static	const 
+##	char _form[] = 		ERx("vqedectf"),	/* Form name */
+##	     _header[] = 	ERx("header"),		/* Form header field */
+##	     _tf[] =   		ERx("vqedectf"),	/* Tablefield name */
+##	     _tfcol[] = 	ERx("vqedectf");	/* column name */
+
+static const	char _empty[] 	= ERx("");
+static const	char _nl[] 	= ERx("\n");
+
+static const	char routine[] 	= ERx("IIVQeecEditEscapeCode");
+
+static bool init_vqedectf = FALSE;	/* Have we init'ed this form */
+
+/*{
+** Name:	IIVQeecEditEscapeCode  - Edit escape code in tablefield
+**
+** Description:
+**	The display loop for editing escape code in a tablefield.
+**
+** Inputs:
+**	escinfo		ESCINFO	*	Decription of escape code to edit
+**		metaframe		metaframe to edit
+**		esctype			type of escape code to edit
+**		item			field activation or menuitem name
+**
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**	Escape code may be added, deleted, or modified in the metaframe.
+**
+** History:
+**	8/9/89 (Mike S)	Initial version
+**	14-jan-93 (blaise)
+**		Added help for ESC_LOC_PROC escape type; since local procedure
+**		source isn't really escape code it needs its own help files.
+**	29-jan-93 (blaise)
+**		Added a differenct "end without saving changes?..." prompt
+**		for local procedures; again the standard one doesn't work
+**		because it refers to escape code.
+*/
+VOID
+IIVQeecEditEscapeCode(escinfo)
+ESCINFO *escinfo;
+{
+	MFESC	*mfesc;		/* Escape code structure */
+	bool	new;		/* Is this a new piece of escape code */
+##	char	buffer[BUFFERSZ];
+##	char	*msg;
+
+	/* 
+	** Find the existing escape code (if any).
+	*/
+	if ((MFESC *)NULL == (mfesc = get_escape_code(escinfo, &new)))
+		return; 
+
+
+	/* Bring up the form */
+	if (!init_vqedectf)
+	{
+		IIARiaForm(_form);
+		init_vqedectf = TRUE;
+	}
+## 	display	_form UPDATE
+##	initialize
+##	{
+##		i4 startline;
+##		i4 numlines;
+
+##		inittable _form _tf FILL
+		/* Format header line */
+		_VOID_ IIUGfmt(buffer, BUFFERSZ, 
+			       ERget(vqescs[escinfo->esctype].hdr_name),
+			       2, ERget(vqescs[escinfo->esctype].esc_name),
+			       escinfo->item);
+##		putform ( _header = buffer )
+
+		/* Load the tablefield, if there's anything to load */
+		if ((mfesc->text != NULL) && (*mfesc->text != EOS))
+			_VOID_ IIUFtfsTblFldString(mfesc->text, _form, _tf, 
+						   _tfcol);
+		else if (escinfo->esctype == ESC_LOC_PROC)
+		{
+			/*
+			** Local procedure escape code: if no code exists, we
+			** display the skeleton of the procedure.
+			*/
+			STprintf(buffer, "PROCEDURE %s() =\nBEGIN\nEND",
+					escinfo->item);
+			IIUFtfsTblFldString(buffer, _form, _tf, _tfcol);
+		}
+
+
+		/* Scroll the tablefield to the start line */
+		if ((startline = escinfo->line) > 1)
+		{
+##			inquire_frs table _form (numlines = datarows(_tf))
+			if (startline <= numlines)
+##			scroll _form _tf to startline
+		}
+
+		/* Turn off the change bit */
+##		set_frs form (change(_form) = 0)
+
+		/* Use internal format for wrapping */
+		IIUFsifSetIntFmt();
+##	}
+
+##	/* Call the system editor to edit the text */
+##	activate menuitem ERget(FE_Edit) (expl = ERget(F_FE0115_EditExpl))
+##	{
+		if (IIUFtfeTblFldEdit(_form, _tf, _tfcol, &msg) != OK)
+		{
+## 			message msg
+##			sleep 2
+		}
+
+		/* Turn on the change bit */
+##		set_frs form (change(_form) = 1)
+
+	/* 
+	** ----WORKAROUND ----
+	** we need the redisplay to get the whole stack of active forms to
+	** be displayed.  If the forms system is fixed, we can remove it.
+	*/
+##		redisplay
+##	}
+
+##      activate menuitem ERget(FE_File) (expl = ERget(F_FE010C_FileExpl))
+##      {
+ 
+                for (;;)
+                {
+##                      submenu
+##			activate menuitem ERget(FE_ReadFile) 
+##					  (expl = ERget(F_FE010D_ReadExpl))
+##			{
+				if (IIUFtflTblFldLoad(_form, _tf, _tfcol, &msg)
+					 != OK)
+				{
+## 					message msg
+##					sleep 2
+				}
+				/* Turn on the change bit */
+##				set_frs form (change(_form) = 1)
+
+				break;
+##			}
+##			activate menuitem ERget(FE_WriteFile)
+##                        (expl = ERget(F_FE010E_WriteExpl))
+##			{
+				bool	dummy;
+
+				if (IIUFtfuTblFldUnload(_form, _tf, _tfcol, 
+							&msg, &dummy) != OK)
+				{
+## 					message msg
+##					sleep 2
+				}
+				break;
+##			}
+##                      activate menuitem ERget(FE_Help) 
+##				(expl = ERget(F_FE0101_ExplKeyHelp)),
+##                                      FRSkey1
+##                      {
+				if (escinfo->esctype == ESC_LOC_PROC)
+                                	FEhelp(ERx("vqlpfil.hlp"),
+                                        ERget(S_VQ00F2_lpEditFileHelpBanner));
+				else
+                                	FEhelp(ERx("vqescfil.hlp"),
+                                        ERget(S_VQ000D_EscEditFileHelpBanner));
+                                continue;
+##                      }
+##                      activate menuitem ERget(FE_End) 
+##					(expl = ERget(F_FE0102_ExplEnd)),
+##                                      FRSkey3
+##                      {
+                                break;
+##                      }
+                }
+##	}
+
+
+##	/* Blank the tablefield */
+##	activate menuitem ERget(FE_Blank)(expl = ERget(F_FE0114_BlankExpl))
+##      {
+##              inittable _form _tf FILL
+		/* Turn on the change bit */
+##		set_frs form (change(_form) = 1)
+
+##      }
+	
+##	activate menuitem ERget(FE_LineEdit)
+##			(expl = ERget(F_FE010F_LineEditExpl))
+##	{
+		for (;;)
+		{	
+##			submenu
+##			activate menuitem ERget(FE_InsLine)
+##                        (expl = ERget(F_FE0110_InsertExpl))
+##			{
+				IIUFtfiTblFldInsert(_form, _tf);
+				/* Turn on the change bit */
+##				set_frs form (change(_form) = 1)
+
+				break;
+##			}
+
+##			activate menuitem ERget(FE_DelLine)
+##                        (expl = ERget(F_FE0111_DeleteExpl))
+##      		{
+				IIUFtfdTblFldDelete(_form, _tf); 
+				/* Turn on the change bit */
+##				set_frs form (change(_form) = 1)
+
+				break;
+##      		}   
+
+##			activate menuitem ERget(FE_SplitLine)
+##                        (expl = ERget(F_FE0113_SplitExpl))
+##      		{
+				IIUFtfbTblFldBreak(_form, _tf, _tfcol); 
+				/* Turn on the change bit */
+##				set_frs form (change(_form) = 1)
+
+				break;
+##      		}   
+
+##			activate menuitem ERget(FE_JoinLines)
+##                        (expl = ERget(F_FE0112_JoinExpl))
+##      		{
+				IIUFtfjTblFldJoin(_form, _tf, _tfcol); 
+				/* Turn on the change bit */
+##				set_frs form (change(_form) = 1)
+
+				break;
+##      		}   
+
+##                      activate menuitem ERget(FE_Help) 
+##				(expl = ERget(F_FE0101_ExplKeyHelp)),
+##                                      FRSkey1
+##                      {
+				if (escinfo->esctype == ESC_LOC_PROC)
+                                	FEhelp(ERx("vqesclin.hlp"),
+                                        ERget(S_VQ00F3_lpEditLineHelpBanner));
+				else
+                                	FEhelp(ERx("vqesclin.hlp"),
+                                        ERget(S_VQ000E_EscEditLineHelpBanner));
+                                continue;
+##                      }
+##                      activate menuitem ERget(FE_End) 
+##					(expl = ERget(F_FE0102_ExplEnd)),
+##                                      FRSkey3
+##                      {
+                                break;
+##                      }
+                }
+##	}
+
+##      activate menuitem ERget(F_VQ00A8_vqloc_glob_menu)
+##              (expl = ERget(F_VQ00A9_vqloc_glob_expl),
+##		validate = 0, activate = 0)
+##	{ 
+		IIVQlgLocGlobEdit(IIVQappl, NULL, escinfo->metaframe->apobj);
+##	} 
+
+##	/* Top of tablefield */
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll _form _tf to 1
+##	}
+
+##	/* Bottom of tablefield */
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll _form _tf to end
+##	}
+
+##	/* Find a matching pattern in escape code */
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(_form, _tf);
+##	}
+
+##	/* Save */
+##      activate menuitem ERget(FE_Save) (expl = ERget(FE_SaveExpl)),
+##			FRSkey8
+##	{
+		/* Save it, and mark that it's now unchanged */
+		save_escape_code(escinfo, mfesc, &new);
+##	}
+
+##	/* Display Help */
+##      activate menuitem ERget(FE_Help) (expl = ERget(F_FE0101_ExplKeyHelp)), 
+##			  FRSkey1
+##      {
+		if (escinfo->esctype == ESC_LOC_PROC)
+			FEhelp(ERx("vqedlptf.hlp"),
+				ERget(S_VQ00F1_lpEditSrcHelpBanner));
+		else
+			FEhelp(ERx("vqedectf.hlp"),
+				ERget(S_VQ0007_EscEditHelpBanner));
+##      }   
+
+##	/* End */
+##      activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##			  FRSkey3
+##	{
+##		i4 cbit;
+		i4 choice;
+
+		/* See if it has changed */
+##		inquire_frs form (cbit = change(_form))
+		if (1 == cbit)
+		{
+			/* See what the user want to do */
+			if (escinfo->esctype == ESC_LOC_PROC)
+			{
+				choice = IIUFccConfirmChoice(
+					CONF_END, (char *)NULL, 
+					ERget(F_VQ0151_eop_locprc), 
+					ERget(F_VQ0168_EndLocProcEdit), 
+					ERx("vqlpeend.hlp"));
+			}
+			else
+			{
+				choice = IIUFccConfirmChoice(
+					CONF_END, (char *)NULL, 
+					ERget(F_VQ00B0_eop_esccod), 
+					ERget(F_VQ00F3_EndEscEdit), 
+					ERx("vqeceend.hlp"));
+			}
+			switch (choice)
+			{
+			    case CONFCH_YES:
+				/* Save, then end */
+				save_escape_code(escinfo, mfesc, &new);
+				break;
+
+			    case CONFCH_NO:
+				/* Just end */
+				break;
+
+			    case CONFCH_CANCEL:
+				/* Don't do anything */
+##				resume
+			}
+		}
+
+		/* End */
+##		clear field _tf
+##		breakdisplay
+##	}
+
+	/* Revert to normal wrap format */
+	IIUFsnfSetNormFmt();
+}
+
+/*
+**	Check whether an escape code structure matches the
+**	one in the escape code editing structure.
+*/
+static bool 
+esc_matches(escinfo, mfesc)
+ESCINFO	*escinfo;	/* Escape code editing info */
+MFESC	*mfesc;		/* Escape code struct */
+{
+	if (mfesc->type == escinfo->esctype)
+	{
+		switch (escinfo->esctype)
+		{
+		    /* These require a further match */
+		    case ESC_MENU_START:
+		    case ESC_MENU_END:
+		    case ESC_LOC_PROC:
+			if (STcompare(mfesc->item, escinfo->item) == 0)
+				return (TRUE);
+			break;
+
+		    /*
+		    ** These require a case-insensitive match, since we 
+		    ** uppercase the "ALL" activation names in escinfo.
+		    */
+		    case ESC_FLD_ENTRY:
+		    case ESC_FLD_CHANGE:
+		    case ESC_FLD_EXIT:
+			if (STbcompare(mfesc->item, 0, escinfo->item, 0, TRUE)
+				== 0)
+				return (TRUE);
+			break;
+
+		     default:
+			/* These don't  require an item match */
+			return(TRUE);
+			break;
+		}
+	}
+	return (FALSE);
+}
+
+/* Save escape code to the database */
+static VOID
+save_escape_code(escinfo, mfesc, new)
+ESCINFO		*escinfo;/* Escape code information */
+MFESC		*mfesc;	/* Escape code structure */
+bool		*new;	/* (in/out) 
+			** in: Must this be added to metaframe 
+			** out: Is this in the metaframe after the save
+			*/
+##{
+	METAFRAME *mf = escinfo->metaframe;	/* Metaframe we're saving */
+##	char	buffer[BUFFERSZ];
+	bool nonempty;
+	i4 size = 0;
+	i4 blanks;
+##	i4 state;		
+	char *ptr;
+##	i4  cbit;
+	i4  i;
+
+	/* 
+	** Calculate size of escape code.  We will delete leading 
+	** and trailing blank lines.
+	*/
+##	inquire_frs form (cbit = change(_form))
+	{
+		/* If it changed, read the string */
+		blanks = 0;
+		nonempty = FALSE;
+##		UNLOADTABLE _form _tf (buffer = _tfcol, state = _state)
+##		{
+			switch (state)
+			{
+			    /* An empty row */
+			    case UNDEFINED:
+				if (nonempty) blanks++;
+				break;
+	
+			    case NEW:
+			    case UNCHANGED:
+			    case CHANGED:
+				STtrmwhite(buffer);
+				if (*buffer == EOS)
+				{
+					if (nonempty) blanks++;
+				}
+				else
+				{
+					size += STlength(buffer) + 1 + blanks;
+					blanks = 0;
+					nonempty = TRUE;
+				}
+				break;
+				}
+##		}
+		size++;
+
+		/* Allocate new string space, if we have to */
+		if (size > STlength(mfesc->text))
+		{
+			mfesc->text = (char *)FEreqmem(
+						mf->ptag[MF_PT_ESC],
+						(u_i4)size,
+						FALSE, NULL);
+			if (mfesc->text == NULL)
+			{
+				IIUGbmaBadMemoryAllocation(routine);
+			}
+		}
+
+		/* Copy into the text string */
+		ptr = mfesc->text;
+		nonempty = FALSE;
+		blanks = 0;
+##		UNLOADTABLE _form _tf (buffer = _tfcol, state = _state)
+##		{
+			switch (state)
+			{
+			    /* An empty row */
+			    case UNDEFINED:
+				if (nonempty) blanks++;
+				break;
+
+			    case NEW:
+			    case UNCHANGED:
+			    case CHANGED:
+				STtrmwhite(buffer);
+				if (*buffer == EOS)
+				{
+					if (nonempty) blanks++;
+				}
+				else
+				{
+					for (i = 0; i < blanks; i++)
+					{
+						STcopy(_nl, ptr);
+						ptr += sizeof(_nl) - 1;
+					}
+					STpolycat(2, buffer, _nl, ptr);
+					ptr += STlength(ptr);
+					blanks = 0;
+					nonempty = TRUE;
+				}
+				break;
+			}
+##		}
+		*ptr = EOS;
+	}
+
+	/* Insert it, if need be */
+	if (*new)
+	{
+		/* 
+		** We checked above that this fits in the "escs" array.
+		** Currently, this array is always created at its maximum
+		** size.  If this changes, we'll have to allocate a new
+		** pointer array here.
+		*/
+		mf->escs[mf->numescs++] = mfesc;
+	}
+
+	/* Save them */
+	mf->updmask |= MF_P_ESC;
+	_VOID_ IIVQsecSaveEscCode(mf, FALSE);
+
+	/* Reset change bit */
+##	set_frs form (change(_form) = 0)
+
+	/* 
+	** Now try to find it again.  We may have added it, deleted it, or
+	** neither.  The mfesc structure is still valid, in any case.
+	*/
+	*new = (NULL == find_escape_code(escinfo));	
+##}
+
+/*
+**	Find the escape code we want to edit, or create a new piece.
+**	
+**	Returns		NULL	If it couldn't be created
+**			Pointer to escape code structure
+*/
+static MFESC *
+get_escape_code(escinfo, new)
+ESCINFO	*escinfo;	/* Description of escape code we're looking for */
+bool	*new;		/* (output) TRUE if we had to create it */
+{
+	STATUS	status;
+	MFESC	*mfesc;
+	METAFRAME *metaframe = escinfo->metaframe;
+
+	/* Try to find it */
+	if (NULL != (mfesc = find_escape_code(escinfo)))
+	{
+		*new = FALSE;
+		return (mfesc);
+	}
+
+	/* If we didn't find it, try to create a new MFESC */
+	if (metaframe->numescs >= MF_MAXESCS)
+	{
+		IIUGerr(E_VQ005D_TooManyEscapes, 0, 1, 
+			&metaframe->numescs);
+		return(NULL);
+	}
+
+	mfesc = (MFESC *)FEreqmem(metaframe->ptag[MF_PT_ESC],
+				       (u_i4)sizeof(MFESC), 
+				       FALSE, &status);
+	if (mfesc == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(routine);
+	}
+	mfesc->type = escinfo->esctype;
+	if (*escinfo->item != EOS)
+	{
+		mfesc->item = STtalloc(metaframe->ptag[MF_PT_ESC], 
+				       escinfo->item);
+
+		/* Make field activation names lower case */
+		if ((mfesc->type == ESC_FLD_ENTRY) ||
+		    (mfesc->type == ESC_FLD_CHANGE) ||
+		    (mfesc->type == ESC_FLD_EXIT))
+			CVlower(mfesc->item);
+	}
+	else
+	{
+		mfesc->item = _empty;
+	}
+	mfesc->text = _empty;
+	*new = TRUE;
+	return (mfesc);
+}
+
+/* 
+** See if the escape code is currently in the metaframe
+*/
+static MFESC *
+find_escape_code(escinfo)
+ESCINFO	*escinfo;
+{
+	i4	i;
+	MFESC	*mfesc;
+	METAFRAME *metaframe = escinfo->metaframe;
+	register MFESC	**escs = metaframe->escs;
+
+	/* Try to find it */
+	for (i = 0; i < metaframe->numescs; i++)
+	{
+		if (esc_matches(escinfo, escs[i]))
+		{
+			mfesc = escs[i];
+			return (mfesc);
+		}
+	}
+	
+	/* It's not there */
+	return (NULL);
+}

@@ -1,0 +1,16 @@
+#
+# wgl_32s.hnt file for front\st\install
+#
+# History:
+#	22-jan-07 (wridu01)
+#		Created for front\st\install to keep mknmake away from
+#		ipmain.sc.  Based on the review of the JAM MANIFEST this
+#		file should not be processed on windows.  It is a UNIX
+#		only file
+#
+#		There is no need to process ipbatch.c or ipfile.c either.
+#
+
+ignore = ipmain.sc ipbatch.c ipfile.sc
+
+

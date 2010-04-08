@@ -1,0 +1,106 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<adf.h>
+#include	<feconfig.h>
+#include	<abfcnsts.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<rtsdata.h>
+
+/**
+** Name:	abrtgbf.qc -	ABF Run-Time System Run a Gbf Frame.
+**
+** Description:
+**	Contains the runtime code that runs a Gbf frame.  Defines:
+**
+**	IIARgbfGraph()	run a Gbf frame.
+**
+** History:
+**	Revision 5.1  86/08/14  joe
+**	Extracted from "abfrts.qc" for PC overlay work.
+**
+**	Revision 2.0  82/10/29  joe
+**	Initial revision.
+*/
+
+# ifndef NOGBF
+/*{
+** Name:	IIARgbfGraph() -	Run a GBF Frame.
+**
+** Description:
+**	Run a GBF frame.  This just amounts to calling Graph.
+**
+** Input:
+**	frm	{ABRTSFRM *}  The run-time frame structure.
+**	param	{ABRTSPRM *}  Any parameters passed to the frame; ignored.
+**
+** Called by:
+**	abrtscall()
+**
+** History:
+**	Written 10/29/82 (jrc)
+*/
+#define _Draw_Expl	F_AR000D_DrawExpl
+
+#define _Help_Expl	F_FE0100_ExplFrameHelp
+#define _End_Expl	F_FE0102_ExplEnd
+
+VOID
+IIARgbfGraph (frm, param)
+ABRTSFRM	*frm;
+ABRTSPRM	*param;
+{
+##{
+	register ABRTSGBF	*gbffrm = &(frm->abrfrgbf);
+	bool				end;
+
+	for (end = FALSE ; !end ;)
+	{
+##		char *blankname;
+		FUNC_EXTERN char *iiar_blankform();
+
+		blankname = iiar_blankform();
+
+##		clear screen
+##		display blankname fill
+##		activate menuitem ERget(FE_Graph) (expl = ERget(_Draw_Expl))
+##		{
+##			clear screen
+			abgbfgraf(IIarDbname, gbffrm->abrgfname, (char *)NULL, (char*)NULL);
+			/*
+			** Graph waits for the user to push a
+			** key before quiting
+			*/
+##			clear screen
+##		}
+
+##		activate menuitem ERget(FE_Help) (expl = ERget(_Help_Expl), validate=0),
+##				  FRSkey1 (validate = 0)
+##		{
+			FEhelp(hlpGBFMU, ERget(S_AR0024_RunGraphHelpTitle));
+##		}
+
+##		activate menuitem ERget(FE_End) (expl = ERget(_End_Expl), validate = 0),
+##				  FRSkey3 (validate = 0)
+##		{
+			end = TRUE;
+##			breakdisplay
+##		}
+
+##		finalize
+	}
+	return;
+##}
+}
+# else
+static	int	_junk = 0;	/* To shut up the librarian */
+# endif /* NOGBF */

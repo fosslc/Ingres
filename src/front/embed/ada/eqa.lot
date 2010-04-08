@@ -1,0 +1,7 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/library/include=(gver), -	! for II_copyright
+INGLIB:libada.olb/library/include=(ada,adatoks), -
+INGLIB:libequel.olb/library, -
+II_LIBQLIB/share
+II_COMPATLIB/share

@@ -1,0 +1,41 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+/#-- ODBC configuration screen help file 
+/#--
+You are looking at iiodbcadmin's Installed Drivers Page.
+
+The iiodbcadmin screen consists of a single form with a table
+listing the installed Ingres drivers found in the configuration path 
+definition.  Non-Ingres ODBC drivers are not listed.
+
+Note that new driver definitions may not be added in iiodbcadmin.  
+Use the iiodbcinst utility to add new driver definitions.
+
+The Path field lists the default path for the ODBC configuration files.
+If the Ingres ODBC driver was installed with a path other than the
+default, the Path field will display as "ALTERNATE".  Otherwise, the
+default path is "SYSTEM".  
+
+The Tracing field indicated whether or not ODBC tracing is enabled.
+
+The Trace Path field indicates the current path and file used for ODBC
+tracing.  You may edit this field to select a new path and file name.
+
+All menu items apply to whichever tablefield contains the cursor when the 
+item is activated.  The menu operations are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Tracing         Toggles the Tracing field to "OFF" or "ON".
+
+        Files           Displays a menu pop-up for selecting system 
+			or alternate driver configuration paths.
+
+	Details         Lists the actual data contained in the
+	                configuration file for the table field
+			containing the cursor.  Displays the Driver
+			Configuration Details Page.
+
+        Help            Displays this help screen.
+
+        End             Exit iiodbcadmin.

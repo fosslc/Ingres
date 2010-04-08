@@ -1,0 +1,98 @@
+/*
+** Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+*/
+
+/*
+** Generic part file for RDB Gateway
+** History
+**	18-Jun-1999 (kinte01)
+**	    Created.
+**      25-mar-2002 (chash01)
+**          Add iigwrdb.lnk 
+**	27-feb-2002 (chash01)
+**	    Add RPC files that need to be distributed
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART rdb
+    capability CI_RDB_GATEWAY
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+
+   BUILD_DIR (jpt_rdb_bin)
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwrdbd
+   }
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwrdb
+   }
+
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY ingres!utility
+#endif
+   BUILD_DIR (front_path)!install!'front_vers'!utility
+   SCRIPT iigwrdb_sysinput
+   SCRIPT SETUP iisurdb
+   BUILD_DIR (jpt_rdb_bin)
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwcatrdb
+   }
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+   BUILD_DIR (front_path)!install!'front_vers'!files
+   FILE rdb.crs
+   FILE rdb.rfm
+   FILE rpctable.sql
+   FILE gwrdb_rpc_template.sc
+   FILE iiuserproc.c
+   FILE gwlproto.h
+   FILE iigwrdb.lnk
+/*
+** rdb specific obj and olb
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY ingres!LIB_TGT
+#endif
+   BUILD_DIR (jpt_rdb_lib)
+      BUILD_FILE iigwsql.obj_ndb
+      FILE iigwsql.obj
+      BUILD_FILE gwg.olb_ndb
+      FILE gwg.olb
+      BUILD_FILE gwrdbsql.olb_ndb
+      FILE gwrdbsql.olb
+   BUILD_DIR (jpt_gwr_lib)
+      BUILD_FILE gwu.olb_ndb
+      FILE gwu.olb

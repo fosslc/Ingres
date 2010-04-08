@@ -1,0 +1,114 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>		/* 6-x_PC_80x86 */
+#include	<si.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<adf.h>
+#include	<ft.h>
+#include	<fmt.h> 
+#include	<frame.h> 
+#include	<qg.h>
+#include	<mqtypes.h>
+#include 	"mqrtns.h"
+#include	"erqf.h"
+
+/**
+** Name:	vfmqbf.qc  - This file contains MQBF routines used
+**		      in Vifred to set up the default form for
+**		      a pre-defined qdef.
+**
+**	Routines:
+**	     vfmqbf()  - main routine that will call all
+**			 other mqbf routines.
+**
+**	Written: 2/28/84 (nml)
+**		08/23/87 (dkh) - Fixed jup bug 686.
+**      07/14/89 (martym)  - Modified the interface to accomidate other
+**                       clients such as RBF. To return the joindef 
+**                       as well as the frame.
+**	09-mar-93 (connie) Bug #46785
+**		Check for return value from vfmqbldquery
+**	24-Aug-2009 (kschendel) 121804
+**	    Add bool externs for gcc 4.3.
+*/
+
+FUNC_EXTERN bool mqgetqname(MQQDEF *, bool);
+
+bool vfmqbf(joindefname, RetJD, JoinDef, RetFrame, frame)
+char *joindefname;
+bool RetJD;
+MQQDEF **JoinDef;
+bool RetFrame;
+FRAME **frame;
+{
+	register MQQDEF	*qdef;
+	register FRAME	*vffrm;
+
+	FRAME	*vfmqbldquery();
+
+	if ( (qdef = mqistruct()) == NULL)
+	{ 
+		/* problem initializing MQQDEF structure */
+		IIUGerr(E_QF00C0_Can_t_initialize_stru, 0, 0);
+		return(FALSE);
+	}
+	if ( joindefname == NULL )
+	{
+		if ( !mqgetqname(qdef, TRUE) )
+			return(FALSE);
+	}
+	else
+	{
+		OOID	classid = OC_JOINDEF;
+
+		STcopy(joindefname, qdef->mqcr.name);
+		qdef->mqcr.id = -1;
+		if ( IIOOidCheck(&classid, &qdef->mqcr.id,
+					qdef->mqcr.name, (char *)NULL) != OK )
+		{
+			IIUGerr(E_QF00C2_Can_t_retrieve_QBF_Jo, 0, 0);
+			return(FALSE);
+		}
+	}
+
+##	message ERget(S_QF00C1_Retrieving_QBF_Join_D);
+	if ( !mqgetdefined(qdef) )
+	{ 
+	    /* problem reading in MQBF qdef from catalog */
+	    IIUGerr(E_QF00C2_Can_t_retrieve_QBF_Jo, 0, 0);
+	    return(FALSE);
+	}
+
+	/*
+	** If the client is interested in the joindef, copy the qdef into 
+	** the client's address space:
+	*/
+	if (RetJD)
+	{
+		*JoinDef = qdef;
+	}
+		
+	/* 
+	* once qdef is read in ready to build form if client requested:
+	*/
+	if (RetFrame)
+	{
+		FEmsg(ERget(S_QF00C3_Creating_default_form), FALSE, qdef->mqcr.name);
+		if ((vffrm = vfmqbldquery(qdef)) == NULL ) return(FALSE);
+		*frame = vffrm;
+	}
+
+	/* Don't free it, it should be freed by the client.
+	mq_free(qdef);
+	*/
+	return(TRUE);
+
+}

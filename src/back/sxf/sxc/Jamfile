@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!sxf!sxc
+#
+
+SubDir ING_SRC back sxf sxc ;
+
+IISUBSYS back sxf sxc ;
+
+
+IILIBRARY SXFLIB : sxcstop.c sxcstart.c sxcmo.c sxcend.c
+	sxcdb.c sxcbegin.c sxcalter.c ;
+

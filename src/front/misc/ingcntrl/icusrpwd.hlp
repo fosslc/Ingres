@@ -1,0 +1,41 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icusrpwd.hlp       Catalogdb's "Change User Password" frame.
+/#--
+The "Change User Password" frame allows you to change the password for
+an Ingres user account. Ingres user passwords provide an additional 
+level of authentication when connecting to an Ingres DBMS. 
+Passwords may be authenticated directly by the Ingres DBMS, or by an 
+external authentication mechanism.
+
+Any user may change their own password, if using DBMS authentication.
+Privileged users may change the passwords of other users, or change the
+password method (DBMS/external/none)
+
+	FIELD NAME	SYNOPSIS
+	----------	--------
+	User Name       The name of the user account whose password is
+			being changed. This field is provided for 
+			informational purposes and may not be changed.
+
+	Assign Password If set to "yes" indicates the indicated Ingres user 
+			account will have a password.
+
+	Use External    If set to "yes" indicates the user password will
+	Authentication  be authenticated by an external authentication
+			mechanism. If set to "no" DBMS authentication will
+			be used.
+
+        Password/       These fields are used to enter the user password
+	Repeat Password when external authentication is not used. The same
+			value must be entered in both fields, so reducing
+			the possibility of typing errors.
+
+The menu commands are:
+	
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Save		Save the updated user password information.
+
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

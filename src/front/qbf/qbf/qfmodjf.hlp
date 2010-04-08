@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may enable or disable modification of the current
+join field in UPDATE mode.
+
+To enable modification of the join field, scroll to the desired option, 
+and choose the Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Yes		Enable modification of this field in UPDATE mode.
+	No		Disable modification of this field in UPDATE mode.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select	        Enable or disable modification of the current field
+			in UPDATE mode.
+			
+        Cancel          Return to the JoinDef Update & Delete Rules form 
+			without registering any selections.
+
+        Help            Print this message.

@@ -1,0 +1,1001 @@
+ // optimize rc include fetch time
+#ifndef _INC_WINDOWS
+#include "windows.h"
+#endif
+
+#include "dlgs.h"
+#include "oidtrc.h"
+#include "catover.h"
+#include "catospin.h"
+#include "catolist.h"
+#include "catocntr.h"
+#include "msghandl.h"
+
+#ifndef CONTAINER_CLASS
+#ifdef WIN32
+#define CONTAINER_CLASS   "CA_Container32"
+#else
+#define CONTAINER_CLASS   "CA_Container"
+#endif
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+IDD_OIDTCREATETABLE DIALOG DISCARDABLE  0, 0, 331, 145
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Create Table on "
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_TABLE,56,7,99,12,ES_UPPERCASE | ES_AUTOHSCROLL
+    EDITTEXT        IDC_COLNAME,56,32,71,14,ES_UPPERCASE | ES_AUTOHSCROLL
+    PUSHBUTTON      "&Add",IDC_ADD,129,32,43,14
+    PUSHBUTTON      "Remo&ve",IDC_DROP,176,32,43,14
+    CONTROL         "",IDC_CONTAINER,CONTAINER_CLASS,WS_BORDER | WS_GROUP | 
+                    WS_TABSTOP | 0x8200,10,52,250,81
+    PUSHBUTTON      "OK",IDOK,270,7,55,14
+    PUSHBUTTON      "Cancel",IDCANCEL,270,23,55,14
+    PUSHBUTTON      "&References...",IDC_REFERENCES,270,39,55,14
+    LTEXT           "Table Name:",IDC_STATIC,7,8,46,8
+    LTEXT           "Name:",IDC_STATIC_NAME,14,33,36,9
+    GROUPBOX        "Columns",IDC_STATIC_COLUMNS,7,21,256,117
+    PUSHBUTTON      "Assistant...",IDC_BUTTON_ASSISTANT,270,124,55,14,NOT 
+                    WS_VISIBLE
+    CONTROL         "Create Table As Select",IDC_CHECKASSELECT,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,167,8,87,10
+    EDITTEXT        IDC_EDITCOLUMNHEADER,7,36,254,32,ES_MULTILINE | 
+                    ES_WANTRETURN | NOT WS_VISIBLE | WS_VSCROLL | WS_HSCROLL
+    EDITTEXT        IDC_EDITSQL,7,77,254,61,ES_MULTILINE | ES_WANTRETURN | 
+                    NOT WS_VISIBLE | WS_VSCROLL | WS_HSCROLL
+    LTEXT           "Optional Column Names:",IDC_STATIC_COLHEADER,7,25,85,8,
+                    NOT WS_VISIBLE
+    LTEXT           "Select Statement:",IDC_STATIC_SQL,8,68,81,8,NOT 
+                    WS_VISIBLE
+    LTEXT           "PCTFREE:",IDC_STATICSIZE,270,109,34,8
+    EDITTEXT        IDC_EDITPCTFREE,270,120,55,12,ES_AUTOHSCROLL | ES_NUMBER
+END
+
+
+IDD_OIDTFOREIGNKEY DIALOG DISCARDABLE  0, 0, 259, 148
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Table References"
+FONT 8, "MS Sans Serif"
+BEGIN
+    COMBOBOX        IDC_COMBOCONSTRAINTNAME,75,11,110,39,CBS_DROPDOWN | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LISTBOX         IDC_LISTCOLUMNS,11,39,103,39,LBS_MULTIPLESEL | 
+                    LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL | 
+                    WS_TABSTOP
+    LISTBOX         IDC_LISTREFERENCINGCOLUMN,11,89,102,34,WS_VSCROLL | 
+                    WS_TABSTOP
+    PUSHBUTTON      "Up",IDC_BUTTONUP,12,123,49,14
+    PUSHBUTTON      "Down",IDC_BUTTONDOWN,64,123,48,14
+    COMBOBOX        IDC_COMBODELETERULE,128,40,77,54,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_COMBOREFERENCED,131,68,116,46,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_EDITREFERENCEDPKEY,131,84,116,53,ES_MULTILINE | 
+                    ES_READONLY | WS_VSCROLL
+    PUSHBUTTON      "Add",IDC_ADD,207,7,45,14
+    DEFPUSHBUTTON   "Close",IDOK,207,23,45,14
+    PUSHBUTTON      "Delete",IDC_DROP,207,39,45,14
+    LTEXT           "Constraint Name:",IDC_STATIC,7,12,63,8
+    GROUPBOX        "Foreign Key",IDC_STATIC,7,79,110,61
+    GROUPBOX        "Parent Table",IDC_STATIC,127,58,125,83
+    GROUPBOX        "Referencing Table Columns",IDC_STATIC,7,28,111,51
+    LTEXT           "On &Delete Parent:",IDC_STATIC,128,30,54,8
+END
+
+IDD_OIDTCREATEINDEX DIALOG DISCARDABLE  0, 0, 297, 111
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Create Index"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Index &Name:",IDC_STATIC,7,8,43,8
+    EDITTEXT        IDC_EDITINDEXNAME,52,7,103,12,ES_UPPERCASE | 
+                    ES_AUTOHSCROLL
+    LTEXT           "PCTFREE:",IDC_STATIC,7,26,39,8
+    EDITTEXT        IDC_EDITPCTFREE,52,25,19,12,ES_AUTOHSCROLL
+    LTEXT           "Size:",IDC_STATICSIZE,75,26,16,8
+    EDITTEXT        IDC_EDITSIZE,93,25,20,12,ES_AUTOHSCROLL
+    COMBOBOX        IDC_COMBOROWBUCKET,117,25,38,43,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Unique",IDC_CHECKUNIQUE,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,166,12,38,10
+    CONTROL         "Cluster Hashed",IDC_CHECKCLUSTER,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,166,23,62,10
+    LISTBOX         IDC_LISTCOLUMNS,11,50,62,55,LBS_MULTIPLESEL | 
+                    LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "",IDC_CONTAINER,CONTAINER_CLASS,WS_BORDER | WS_GROUP | 
+                    WS_TABSTOP | 0x8200,77,51,210,49
+    DEFPUSHBUTTON   "OK",IDOK,240,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,240,24,50,14
+    GROUPBOX        "Indexed Columns",IDC_STATIC,7,39,283,65
+    GROUPBOX        "",IDC_STATIC,160,3,71,34
+END
+
+IDD_OIDTGTRANTTABLE DIALOG DISCARDABLE  0, 0, 288, 113
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Grant Table On"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Users",IDC_RADIOUSERS,"Button",BS_AUTORADIOBUTTON,12,12,
+                    32,10
+    CONTROL         "Public",IDC_RADIOPUBLIC,"Button",BS_AUTORADIOBUTTON,48,
+                    12,35,10
+    LISTBOX         IDC_LISTUSERS,12,25,94,35,LBS_SORT | LBS_MULTIPLESEL | 
+                    LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL | 
+                    WS_TABSTOP
+    LISTBOX         IDC_LISTTABLES,12,70,94,33, LBS_MULTIPLESEL | 
+                    LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "Select",IDC_CHECKSELECT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,119,12,46,10
+    CONTROL         "Insert",IDC_CHECKINSERT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,119,22,46,10
+    CONTROL         "Delete",IDC_CHECKDELETE,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,119,32,46,10
+    CONTROL         "Index",IDC_CHECKINDEX,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,170,12,46,10
+    CONTROL         "Alter",IDC_CHECKALTER,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,170,22,46,10
+    CONTROL         "Update",IDC_CHECKUPDATE,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,170,32,46,10
+    CONTROL         "Specify Columns (Update)",IDC_CHECKPARTIALCOLUMNS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,120,58,101,10
+    LISTBOX         IDC_LISTPARTIALCOLUMNS,119,70,103,36,LBS_SORT | 
+                    LBS_MULTIPLESEL | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | 
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,231,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,231,24,50,14
+    GROUPBOX        "Grantees",IDC_STATIC,7,3,103,57
+    GROUPBOX        "Privileges",IDC_STATIC,114,3,114,45
+    GROUPBOX        "",IDC_STATIC,114,49,114,56
+    GROUPBOX        "Tables",IDC_STATICTABLE,7,61,103,44
+END
+
+//IDD_OIDTGRANTCONNECTTO DIALOG DISCARDABLE  0, 0, 209, 57
+//STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+//CAPTION "Grant Connect To"
+//FONT 8, "MS Sans Serif"
+//BEGIN
+//    EDITTEXT        IDC_EDITUSERNAME,74,7,74,14,ES_UPPERCASE | 
+//                    ES_AUTOHSCROLL
+//    EDITTEXT        IDC_EDITPASSWORD,74,22,74,14,ES_PASSWORD | 
+//                    ES_AUTOHSCROLL
+//    EDITTEXT        IDC_EDITCPASSWORD,74,36,74,14,ES_PASSWORD | 
+//                    ES_AUTOHSCROLL
+//    DEFPUSHBUTTON   "OK",IDOK,152,7,50,14
+//    PUSHBUTTON      "Cancel",IDCANCEL,152,23,50,14
+//    LTEXT           "User Name:",IDC_STATIC,7,8,63,8
+//    LTEXT           "Password:",IDC_STATIC,7,23,64,8
+//    LTEXT           "Confirm Password:",IDC_STATIC,7,38,66,8
+//END
+
+// modified without password fields
+IDD_OIDTGRANTCONNECTTO DIALOG DISCARDABLE  0, 0, 209, 44
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Grant Connect To"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_EDITUSERNAME,57,7,91,14,ES_UPPERCASE | 
+                    ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITPASSWORD,74,22,74,14,ES_PASSWORD | 
+                    ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITCPASSWORD,74,36,74,14,ES_PASSWORD | 
+                    ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,152,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,152,23,50,14
+    LTEXT           "User Name:",IDC_STATIC,7,8,46,8
+    //LTEXT           "Password:",IDC_STATIC,7,23,64,8
+    //LTEXT           "Confirm Password:",IDC_STATIC,7,38,66,8
+END
+
+IDD_OIDTGRANTDBARESOURCE DIALOG DISCARDABLE  0, 0, 178, 63
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Grant DBA To"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,121,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,121,23,50,14
+    LISTBOX         IDC_LISTUSERS,7,7,107,49,LBS_SORT | LBS_MULTIPLESEL | 
+                    LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL | 
+                    WS_TABSTOP
+END
+
+IDD_OIDTTRIGGER DIALOG DISCARDABLE  0, 0, 254, 172
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Create Trigger On"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_EDITTRIGGERNAME,57,7,131,12,ES_UPPERCASE | 
+                    ES_AUTOHSCROLL
+    GROUPBOX        "",IDC_STATIC,7,21,44,32,WS_GROUP
+    CONTROL         "Before",IDC_RADIOBEFORE,"Button",BS_AUTORADIOBUTTON,10,
+                    28,36,10
+    CONTROL         "After",IDC_RADIOAFTER,"Button",BS_AUTORADIOBUTTON,10,39,
+                    30,10
+    GROUPBOX        "",IDC_STATIC,58,21,129,50,WS_GROUP
+    CONTROL         "Update",IDC_RADIOUPDATE,"Button",BS_AUTORADIOBUTTON,61,
+                    28,39,10
+    CONTROL         "Delete",IDC_RADIODELETE,"Button",BS_AUTORADIOBUTTON,61,
+                    40,36,10
+    CONTROL         "Insert",IDC_RADIOINSERT,"Button",BS_AUTORADIOBUTTON,61,
+                    52,32,10
+    LISTBOX         IDC_LISTCOLUMNS,102,28,83,39,LBS_MULTIPLESEL | 
+                    LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "Use Referencing",IDC_CHECKREFERENCING,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,10,73,69,10
+    PUSHBUTTON      "...",IDC_BUTTONREFERENCING,82,72,15,12
+    GROUPBOX        "Execute Static Procedure",IDC_STATIC,7,86,240,79,
+                    WS_GROUP
+    EDITTEXT        IDC_EDITPARAMETER,64,94,179,12,ES_UPPERCASE | 
+                    ES_AUTOHSCROLL
+    CONTROL         "Stored",IDC_RADIOPROCEDURE,"Button",BS_AUTORADIOBUTTON,
+                    10,112,49,10
+    CONTROL         "Inline",IDC_RADIOINLINE,"Button",BS_AUTORADIOBUTTON,10,
+                    125,47,10
+    COMBOBOX        IDC_COMBOPROCEDURES,64,110,99,42,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_EDITINLINETEXT,64,127,179,38,ES_MULTILINE | 
+                    ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+    GROUPBOX        "For Each",IDC_STATIC,193,39,54,32,WS_GROUP
+    CONTROL         "Statement",IDC_RADIOSTATEMENT,"Button",
+                    BS_AUTORADIOBUTTON,196,48,46,10
+    CONTROL         "Row",IDC_RADIOROW,"Button",BS_AUTORADIOBUTTON,196,59,43,
+                    10
+    DEFPUSHBUTTON   "OK",IDOK,193,7,54,14
+    PUSHBUTTON      "Cancel",IDCANCEL,193,22,54,14
+    LTEXT           "Trigger Name:",IDC_STATIC,7,8,50,8
+    LTEXT           "Parameters:",IDC_STATICPARAMETERS,11,96,50,8
+    PUSHBUTTON      "&Assistant...",IDC_BUTTONTEXT,12,140,50,14
+END
+
+IDD_OIDTEDIT DIALOG DISCARDABLE  0, 0, 270, 105
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Text Editor"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,213,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,213,22,50,14
+    EDITTEXT        IDC_EDITTEXT,7,7,202,91,ES_MULTILINE | ES_WANTRETURN | 
+                    WS_VSCROLL | WS_HSCROLL
+END
+
+/* old 
+IDD_OIDTTRIGGERREF DIALOG DISCARDABLE  0, 0, 281, 97
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Use Referencing"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,224,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,224,23,50,14
+    CONTROL         "Old As",IDC_RADIOOLD,"Button",BS_AUTORADIOBUTTON,12,14,
+                    59,10
+    CONTROL         "New As",IDC_RADIONEW,"Button",BS_AUTORADIOBUTTON,12,50,
+                    53,10
+    LTEXT           "Old Values Table Name:",IDC_STATICOVTN,23,25,84,8
+    LTEXT           "New Values Table Name:",IDC_STATIC2NVTN,23,38,84,8
+    LTEXT           "New Values Table Name:",IDC_STATICNVTN,23,62,84,8
+    LTEXT           "Old Values Table Name:",IDC_STATIC2OVTN,23,75,84,8
+    GROUPBOX        "Referencing",IDC_STATIC,7,3,213,87
+    EDITTEXT        IDC_EDITOVTN,112,24,104,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT2NVTN,112,37,104,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITNVTN,112,61,104,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT2OVTN,112,74,104,12,ES_AUTOHSCROLL
+END
+*/
+/* replacement */
+IDD_OIDTTRIGGERREF DIALOG DISCARDABLE  0, 0, 281, 97
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Use Referencing"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Referencing",IDC_STATIC,7,3,213,87
+
+    CONTROL         "Old As",IDC_RADIOOLD,"Button",BS_AUTOCHECKBOX | WS_TABSTOP, 12,14,59,10
+    LTEXT           "Old Values Table Name:",IDC_STATICOVTN,23,25,84,8
+    //LTEXT           "New Values Table Name:",IDC_STATIC2NVTN,23,38,84,8
+    EDITTEXT        IDC_EDITOVTN,112,24,104,12,ES_AUTOHSCROLL
+    //EDITTEXT        IDC_EDIT2NVTN,112,37,104,12,ES_AUTOHSCROLL
+
+    CONTROL         "New As",IDC_RADIONEW,"Button",BS_AUTOCHECKBOX | WS_TABSTOP, 12,50,53,10
+    LTEXT           "New Values Table Name:",IDC_STATICNVTN,23,62,84,8
+    //LTEXT           "Old Values Table Name:",IDC_STATIC2OVTN,23,75,84,8
+    EDITTEXT        IDC_EDITNVTN,112,61,104,12,ES_AUTOHSCROLL
+    //EDITTEXT        IDC_EDIT2OVTN,112,74,104,12,ES_AUTOHSCROLL
+
+    DEFPUSHBUTTON   "OK",IDOK,224,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,224,23,50,14
+END
+
+IDD_OIDTREVOKETABLE DIALOG DISCARDABLE  0, 0, 288, 113
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Revoke Table On"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Users",IDC_RADIOUSERS,"Button",BS_AUTORADIOBUTTON,12,12,
+                    32,10
+    CONTROL         "Public",IDC_RADIOPUBLIC,"Button",BS_AUTORADIOBUTTON,48,
+                    12,35,10
+    LISTBOX         IDC_LISTUSERS,12,25,94,35,LBS_SORT | LBS_MULTIPLESEL | 
+                    LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL | 
+                    WS_TABSTOP
+    LISTBOX         IDC_LISTTABLES,12,70,94,33,LBS_SORT | LBS_MULTIPLESEL | 
+                    LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "Select",IDC_CHECKSELECT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,119,12,46,10
+    CONTROL         "Insert",IDC_CHECKINSERT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,119,22,46,10
+    CONTROL         "Delete",IDC_CHECKDELETE,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,119,32,46,10
+    CONTROL         "Index",IDC_CHECKINDEX,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,170,12,46,10
+    CONTROL         "Alter",IDC_CHECKALTER,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,170,22,46,10
+    CONTROL         "Update",IDC_CHECKUPDATE,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,170,32,46,10
+    LISTBOX         IDC_LISTPARTIALCOLUMNS,119,70,103,33,LBS_SORT | 
+                    LBS_MULTIPLESEL | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | 
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,231,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,231,24,50,14
+    GROUPBOX        "Grantees",IDC_STATIC,7,3,103,57
+    GROUPBOX        "Privileges",IDC_STATIC,114,3,114,45
+    GROUPBOX        "Update Columns",IDC_STATIC,114,52,114,54
+    GROUPBOX        "Tables",IDC_STATICTABLE,7,61,103,44
+END
+
+IDD_OIDTINDEXFUNCTION DIALOG DISCARDABLE  0, 0, 154, 42
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Function"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Function:",IDC_STATIC,1,3,32,8
+    COMBOBOX        IDC_COMBOFUNCTION,41,1,66,40,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Length:",IDC_STATICFARG1,1,17,38,8
+    EDITTEXT        IDC_EDITARG1,41,16,40,12,ES_AUTOHSCROLL
+    LTEXT           "Xyz:",IDC_STATICFARG2,1,31,37,8
+    EDITTEXT        IDC_EDITARG2,41,29,40,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "OK",IDOK,113,1,40,12
+    PUSHBUTTON      "Cancel",IDCANCEL,113,16,40,12
+END
+
+IDD_OIDTGRANTEXECUTE DIALOG DISCARDABLE  0, 0, 248, 85
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Grant Execute %s On [%s] %d"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,191,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,191,23,50,14
+    GROUPBOX        "",IDC_STATIC,6,3,181,75
+    CONTROL         "Users",IDC_RADIOUSERS,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,10,12,34,10
+    CONTROL         "Public",IDC_RADIOPUBLIC,"Button",BS_AUTORADIOBUTTON,51,
+                    12,35,10
+    LISTBOX         IDC_LISTUSERS,11,24,80,52,LBS_SORT | LBS_MULTIPLESEL | 
+                    LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL | 
+                    WS_TABSTOP 
+    LISTBOX         IDC_LISTPROCEDURES,95,24,88,52,LBS_SORT | 
+                    LBS_MULTIPLESEL | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Privilege:",IDC_STATICPRIVILEGE,96,12,30,8
+    COMBOBOX        IDC_COMBOPRIV,126,10,57,37,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+END
+
+//
+// EMB Dialog Box Section: (beginning)
+// 
+
+// Emb May 31, 96
+IDD_OIDTDBAREA DIALOG DISCARDABLE  0, 0, 183, 102
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Create DBArea"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Name:",IDC_STATIC,13,8,70,8
+    EDITTEXT        IDC_OIDTDBAREA_NAME,13,18,102,14,ES_AUTOHSCROLL
+    LTEXT           "&File name / raw device name:",IDC_STATIC,13,36,98,8
+    EDITTEXT        IDC_OIDTDBAREA_FILE,13,47,103,14,ES_AUTOHSCROLL
+    LTEXT           "&Size in Megabytes:",IDC_STATIC,13,68,98,8
+    EDITTEXT        IDC_OIDTDBAREA_SIZE,13,79,103,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,126,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,126,24,50,14
+END
+
+// Emb May 31, 96
+IDD_OIDTSTOGROUP DIALOG DISCARDABLE  0, 0, 183, 102
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Create Stogroup"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Name:",-1,13,8,70,8
+    EDITTEXT        IDC_OIDTSTOGROUP_NAME,13,18,102,14,ES_AUTOHSCROLL
+    LTEXT           "&DbAreas:",-1,13,36,30,8
+    CONTROL         "",IDC_OIDTSTOGROUP_DBAREAS,"CATOLIST" ,WS_GROUP | 
+                    WS_TABSTOP | 0x2,15,49,100,46
+    DEFPUSHBUTTON   "OK",IDOK,126,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,126,24,50,14
+END
+
+// Emb 23/05/96 - adapted from IDD_PROC_SUBADD in dbadlg1.rc
+IDD_OIDTPROC_SUBADD DIALOG DISCARDABLE 0, 0, 160, 70
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Add"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Name :", -1, 8, 6, 30, 12
+    EDITTEXT        IDC_OIDTPROC_SUBADD_NAME, 40, 6, 60, 12,
+                    ES_AUTOHSCROLL | WS_TABSTOP
+    LTEXT           "&Type :", -1, 8, 22, 30, 12
+    COMBOBOX        IDC_OIDTPROC_SUBADD_TYPE, 40, 22, 60, 60,
+                    CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "&Input Only", IDC_OIDTPROC_SUBADD_INPUT, "Button", 
+                    BS_AUTORADIOBUTTON | WS_TABSTOP, 8, 38, 70, 12
+    CONTROL         "Input &And Output", IDC_OIDTPROC_SUBADD_INOUT, "Button", 
+                    BS_AUTORADIOBUTTON, 8, 54, 70, 12
+    PUSHBUTTON      "OK", IDOK, 110, 6, 40, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 110, 24, 40, 14
+END
+
+// Emb 24/05/96 : Desktop Event - revized July 1, 96
+// revized July 9, 96
+IDD_OIDTEVENT DIALOG DISCARDABLE  0, 0, 257, 183
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Event"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Event &Name:",IDC_STATIC,7,8,45,8
+    EDITTEXT        IDC_OIDTEVENT_NAME,55,7,131,12,ES_AUTOHSCROLL
+    GROUPBOX        "Start time / Periodicity",IDC_STATIC,7,36,242,51,
+                    WS_GROUP
+    CONTROL         "&Raise At",IDC_OIDTEVENT_RAISEAT,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,17,51,44,10
+    EDITTEXT        IDC_OIDTEVENT_RAISEAT_EDIT,71,50,173,12,ES_AUTOHSCROLL
+    CONTROL         "&Every",IDC_OIDTEVENT_EVERY,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,18,69,39,10
+    EDITTEXT        IDC_OIDTEVENT_EVERY_EDIT,71,68,43,12,ES_AUTOHSCROLL
+    COMBOBOX        IDC_OIDTEVENT_EVERY_COMBO,123,68,121,41,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Execute Static Procedure",IDC_STATIC,9,95,240,82,WS_GROUP
+    LTEXT           "Parameters:",IDC_STATICPARAMETERS,13,105,50,8
+    EDITTEXT        IDC_EDITPARAMETER,66,103,179,12,ES_UPPERCASE | 
+                    ES_AUTOHSCROLL
+    CONTROL         "Stored",IDC_RADIOPROCEDURE,"Button",
+                    BS_AUTORADIOBUTTON,12,121,49,10
+    CONTROL         "Inline",IDC_RADIOINLINE,"Button",BS_AUTORADIOBUTTON,12,
+                    134,47,10
+    COMBOBOX        IDC_COMBOPROCEDURES,66,119,99,42,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Assistant...",IDC_BUTTONTEXT,12,148,50,14
+    EDITTEXT        IDC_EDITINLINETEXT,66,135,179,38,ES_MULTILINE | 
+                    ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,200,5,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,200,22,50,14
+END
+
+// Emb 06/06/96: Desktop Database
+// Sept. 11, 97: added Front end catalogs option
+// Sept. 12, 97: revized controls placement with Fnn
+// Jan 22, 99  : removed Front end catalogs option...
+IDD_OIDTDATABASE DIALOG DISCARDABLE  0, 0, 182, 60
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Create Database"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Name:",IDC_STATIC,9,10,23,8
+    EDITTEXT        IDC_OIDTDATABASE_NAME,38,8,77,14,ES_AUTOHSCROLL
+    LTEXT           "&Database DBA:",IDC_STATIC,9,30,82,8
+    COMBOBOX        IDC_OIDTDATABASE_IN,9,39,106,130,CBS_DROPDOWN | 
+                    CBS_SORT | WS_VSCROLL | WS_GROUP | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,126,8,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,126,26,50,14
+END
+
+// Emb 11/06/96: Desktop Table Statistics
+IDD_OIDT_TSTAT DIALOG DISCARDABLE  0, 0, 219, 86
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Update Statistics on Table %s"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "&RowCount:",IDC_OIDT_TSTAT2_ROWCK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,10,8,51,10
+    EDITTEXT        IDC_OIDT_TSTAT2_ROWVAL,81,7,53,14,ES_AUTOHSCROLL
+    CONTROL         "&PageCount:",IDC_OIDT_TSTAT2_PGCK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,10,27,53,10
+    EDITTEXT        IDC_OIDT_TSTAT2_PGVAL,81,26,53,14,ES_AUTOHSCROLL
+    CONTROL         "&RowPageCount:",IDC_OIDT_TSTAT2_ROWPGCK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,10,47,68,10
+    EDITTEXT        IDC_OIDT_TSTAT2_ROWPGVAL,81,45,53,14,ES_AUTOHSCROLL
+    CONTROL         "&LongPageCount:",IDC_OIDT_TSTAT2_LONGPGCK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,10,66,69,10
+    EDITTEXT        IDC_OIDT_TSTAT2_LONGPGVAL,81,64,53,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,164,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,164,24,50,14
+END
+
+// Emb 11/06/96: Desktop Index Statistics
+IDD_OIDT_ISTAT DIALOG DISCARDABLE  0, 0, 313, 139
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Update Statistics on Index %s"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Set &Values",IDC_STATIC,4,4,162,131
+    CONTROL         "&Height:",IDC_OIDT_ISTAT_HCK,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,16,18,51,10
+    EDITTEXT        IDC_OIDT_ISTAT_HVAL,102,17,53,14,ES_AUTOHSCROLL
+    CONTROL         "&LeafCount:",IDC_OIDT_ISTAT_LEAFCK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,16,38,53,10
+    EDITTEXT        IDC_OIDT_ISTAT_LEAFVAL,102,36,53,14,ES_AUTOHSCROLL
+    CONTROL         "&ClusterCount:",IDC_OIDT_ISTAT_CLUSTCK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,16,57,68,10
+    EDITTEXT        IDC_OIDT_ISTAT_CLUSTVAL,102,55,53,14,ES_AUTOHSCROLL
+    CONTROL         "&PrimaryPageCount:",IDC_OIDT_ISTAT_PRIMCK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,16,76,75,10
+    EDITTEXT        IDC_OIDT_ISTAT_PRIMVAL,102,74,53,14,ES_AUTOHSCROLL
+    CONTROL         "&OverflowPageCount:",IDC_OIDT_ISTAT_OVFLCK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,16,95,79,10
+    EDITTEXT        IDC_OIDT_ISTAT_OVFLVAL,102,93,53,14,ES_AUTOHSCROLL
+    CONTROL         "&IndexPageCount:",IDC_OIDT_ISTAT_IDXCK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,16,114,69,10
+    EDITTEXT        IDC_OIDT_ISTAT_IDXVAL,102,113,53,14,ES_AUTOHSCROLL
+    GROUPBOX        "Set &Distinct count",IDC_STATIC,171,44,137,91
+    LISTBOX         IDC_OIDT_ISTAT_DISTLIST,178,60,123,42,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Add...",IDC_OIDT_ISTAT_DISTADD,179,109,35,14
+    PUSHBUTTON      "&Modify...",IDC_OIDT_ISTAT_DISTMOD,222,109,36,14
+    PUSHBUTTON      "&Delete",IDC_OIDT_ISTAT_DISTDEL,265,109,36,14
+    DEFPUSHBUTTON   "OK",IDOK,243,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,243,24,50,14
+END
+
+// Emb 11/06/96: Desktop Index Statistics - Sub Box
+IDD_OIDT_ISTAT2 DIALOG DISCARDABLE  0, 0, 213, 93
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Index Statistics Set Distinct Count"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Columns:",IDC_STATIC,7,8,32,8
+    CONTROL         "",IDC_OIDT_ISTAT2_COLUMNS, "CATOLIST", WS_GROUP | 
+                    WS_TABSTOP | 0x2,7,20,94,66
+    LTEXT           "&Value:",IDC_STATIC,109,9,33,8
+    EDITTEXT        IDC_OIDT_ISTAT2_VAL,109,23,41,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,159,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,159,24,50,14
+END
+
+// Emb started 18/6/96 : Desktop Unload Database
+IDD_OIDT_UNLOAD DIALOG DISCARDABLE  0, 0, 316, 135
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Unload Database %s"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "&Unload",IDC_STATIC,7,2,242,55
+// masqued "Entire Database" and "DDL" Dec. 12, 96
+//    CONTROL         "Entire Data&base",IDC_OIDT_UNLOAD_DB,"Button",
+//                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,15,15,88,10
+//    CONTROL         "Data Definition &Language",IDC_OIDT_UNLOAD_DDL,"Button",
+//                    BS_AUTORADIOBUTTON,114,15,98,10
+//    CONTROL         "&All Tables Data",IDC_OIDT_UNLOAD_ALLDATA,"Button",
+//                    BS_AUTORADIOBUTTON,15,27,90,10
+//    CONTROL         "All Tables Data a&nd Definition",IDC_OIDT_UNLOAD_ALL,
+//                    "Button",BS_AUTORADIOBUTTON,114,27,107,10
+//    CONTROL         "Table(s) &Data",IDC_OIDT_UNLOAD_TBLDATA,"Button",
+//                    BS_AUTORADIOBUTTON,15,40,87,10
+//    CONTROL         "&Table(s) Data and Definition",IDC_OIDT_UNLOAD_TBL,
+//                    "Button",BS_AUTORADIOBUTTON,114,40,107,10
+    CONTROL         "&All Owned Tables Data",IDC_OIDT_UNLOAD_ALLDATA,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,15,18,87,10
+    CONTROL         "All Owned Tables Data a&nd Definition",
+                    IDC_OIDT_UNLOAD_ALL,"Button",BS_AUTORADIOBUTTON,109,18,
+                    135,10
+    CONTROL         "Specified Table(s) &Data",IDC_OIDT_UNLOAD_TBLDATA,
+                    "Button",BS_AUTORADIOBUTTON,15,35,89,10
+    CONTROL         "Specified &Table(s) Data and Definition",
+                    IDC_OIDT_UNLOAD_TBL,"Button",BS_AUTORADIOBUTTON,109,35,
+                    134,10
+    GROUPBOX        "&Storage",IDC_STATIC,7,60,129,68,WS_GROUP
+    CONTROL         "&Single File",IDC_OIDT_UNLOAD_FILE,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,15,74,44,10
+    CONTROL         "&Control File",IDC_OIDT_UNLOAD_CTRLFILE,"Button",
+                    BS_AUTORADIOBUTTON,66,74,55,10
+    LTEXT           "&Name:",IDC_STATIC,17,91,23,8
+    EDITTEXT        IDC_OIDT_UNLOAD_FILENAME,46,88,83,16,ES_AUTOHSCROLL | 
+                    WS_GROUP
+    CONTROL         "&Overwrite",IDC_OIDT_UNLOAD_OVER,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,16,110,49,10
+    CONTROL         "&Compressed",IDC_OIDT_UNLOAD_COMPRESS,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,70,110,54,10
+    GROUPBOX        "&Format",IDC_STATIC,146,60,52,68,WS_GROUP
+    CONTROL         "S&QL",IDC_OIDT_UNLOAD_SQL,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP | WS_TABSTOP,154,77,37,10
+    CONTROL         "A&scii",IDC_OIDT_UNLOAD_ASCII,"Button",
+                    BS_AUTORADIOBUTTON,154,92,38,10
+    CONTROL         "Di&f",IDC_OIDT_UNLOAD_DIF,"Button",BS_AUTORADIOBUTTON,
+                    154,108,36,10
+    LTEXT           "&Log:",IDC_STATIC,209,65,20,8
+    EDITTEXT        IDC_OIDT_UNLOAD_LOGNAME,233,62,76,16,ES_AUTOHSCROLL | 
+                    WS_GROUP
+    LTEXT           "Owned &Table(s):",IDC_STATIC,209,82,68,8
+    COMBOBOX        IDC_OIDT_UNLOAD_SINGLETBL,209,92,100,43,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "",IDC_OIDT_UNLOAD_MULTTBL,"CATOLIST",WS_TABSTOP,209,94,
+                    104,37
+    DEFPUSHBUTTON   "OK",IDOK,258,6,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,258,23,50,14,WS_GROUP
+END
+
+// Emb started 18/6/96 : Desktop Load Database
+IDD_OIDT_LOAD DIALOG DISCARDABLE  0, 0, 263, 143
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Load Database %s"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "&Source File",IDC_STATIC,5,4,96,84,WS_GROUP
+    CONTROL         "&Single File",IDC_OIDT_LOAD_FILE,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,13,18,54,10
+    CONTROL         "&Control File",IDC_OIDT_LOAD_CTRLFILE,"Button",
+                    BS_AUTORADIOBUTTON,13,34,55,10
+    LTEXT           "&Name:",IDC_STATIC,14,51,23,8
+    EDITTEXT        IDC_OIDT_LOAD_FILENAME,14,63,78,16,ES_AUTOHSCROLL | 
+                    WS_GROUP
+    GROUPBOX        "&Format",IDC_STATIC,109,4,90,84,WS_GROUP
+    CONTROL         "S&QL",IDC_OIDT_LOAD_SQL,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP | WS_TABSTOP,117,17,37,10
+    CONTROL         "&Compressed SQL",IDC_OIDT_LOAD_SQLCOMP,"Button",
+                    BS_AUTORADIOBUTTON,117,30,71,10
+    CONTROL         "A&scii",IDC_OIDT_LOAD_ASCII,"Button",BS_AUTORADIOBUTTON,
+                    117,43,36,10
+    CONTROL         "Di&f",IDC_OIDT_LOAD_DIF,"Button",BS_AUTORADIOBUTTON,
+                    117,57,36,10
+    LTEXT           "Start &At:",IDC_STATIC,117,72,27,8
+    EDITTEXT        IDC_OIDT_LOAD_STARTAT,149,68,43,16,ES_AUTOHSCROLL | 
+                    WS_GROUP
+    GROUPBOX        "&Output",IDC_STATIC,6,92,193,45
+    LTEXT           "&Destination Table:",IDC_STATIC,14,106,65,8
+    COMBOBOX        IDC_OIDT_LOAD_SINGLETBL,13,117,86,43,CBS_DROPDOWN | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Log To:",IDC_STATIC,114,102,29,8
+    EDITTEXT        IDC_OIDT_LOAD_LOGNAME,113,114,79,16,ES_AUTOHSCROLL | 
+                    WS_GROUP
+    DEFPUSHBUTTON   "OK",IDOK,207,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,207,23,50,14,WS_GROUP
+END
+
+
+// Emb Started July 12, 96: IICOPY - download
+// Intensively revized starting from 23/07/97 for 3 steps feature
+IDD_OIDT_DOWNLOAD DIALOG DISCARDABLE  0, 0, 367, 191
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Download from Ingres Database"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Source",IDC_STATIC,8,3,188,120
+    LTEXT           "&Node Name:",IDC_STATIC,12,16,41,8
+    COMBOBOX        IDC_OIDT_DOWNLOAD_CBNODE,87,14,100,40,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Database Name:",IDC_STATIC,12,36,57,8
+    COMBOBOX        IDC_OIDT_DOWNLOAD_CBDATABASE,87,33,100,40,
+                    CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_GROUP | 
+                    WS_TABSTOP
+    CONTROL         "&All Tables/Views",IDC_OIDT_DOWNLOAD_RADALL,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,12,55,75,10
+    CONTROL         "&Selected Tbl/Views",IDC_OIDT_DOWNLOAD_RADSEL,"Button",
+                    BS_AUTORADIOBUTTON,12,75,75,10
+    CONTROL         "",IDC_OIDT_DOWNLOAD_LISTSEL,"CATOLIST",WS_GROUP | 
+                    WS_TABSTOP | 0x1,90,51,100,47
+    CONTROL         "Selected &Columns",IDC_OIDT_DOWNLOAD_CHKSELCOLUMNS,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,13,106,
+                    80,10
+    PUSHBUTTON      "Select Co&lumns...",IDC_OIDT_DOWNLOAD_BNCOLUMNS,109,104,
+                    63,14,WS_GROUP
+    GROUPBOX        "Options",IDC_STATIC,203,38,156,85
+    CONTROL         "Execute &Source Script (Step 2)",
+                    IDC_OIDT_DOWNLOAD_ACT_CPIN,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,209,55,133,10
+    CONTROL         "Execute &Target Script(s) (Step 3)",
+                    IDC_OIDT_DOWNLOAD_ACT_CPOUT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,209,71,134,10
+    CONTROL         "&Pause After Each Step",IDC_OIDT_DOWNLOAD_OPT_PAUSE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,209,88,127,10
+    CONTROL         "Generate &Recovery Off in Source Script",
+                    IDC_OIDT_DOWNLOAD_OPT_RECOVOFF,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,209,105,143,10
+    GROUPBOX        "Create And Copy Scripts",IDC_STATIC,8,127,351,57,
+                    WS_GROUP
+    LTEXT           "Storage &Path:",IDC_STATIC,13,141,58,8,NOT WS_GROUP
+    EDITTEXT        IDC_OIDT_DOWNLOAD_PATH,87,138,100,14,ES_AUTOHSCROLL
+    CONTROL         "&Generate Copy Scripts",
+                    IDC_OIDT_DOWNLOAD_SCRIPTS_GENCOPY,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,209,136,143,10
+    CONTROL         "&Execute Target Copy Script",
+                    IDC_OIDT_DOWNLOAD_SCRIPTS_EXECCOPY,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,209,150,144,10
+    CONTROL         "Keep Schema &Qualifiers",
+                    IDC_OIDT_DOWNLOAD_SCRIPTS_KEEPSCHEMA,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,209,165,109,10
+    CONTROL         "Convert &Money and Integer1 Data",
+                    IDC_OIDT_DOWNLOAD_SCRIPTS_CONVERT,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,163,175,10
+    DEFPUSHBUTTON   "OK",IDOK,309,4,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,309,23,50,14
+END
+
+// Emb Started July 12, 96: IICOPY - run scripts
+// Intensively revized starting from 23/07/97 for 3 steps feature
+// Revized Sept. 8, 97 since "Set Recovery Off" already in scripts
+IDD_OIDT_RUNSCRIPTS DIALOG DISCARDABLE  0, 0, 355, 140
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Run Download from Ingres Database Scripts"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Source Scripts",IDC_STATIC,8,3,188,129
+    LTEXT           "&Directory:",IDC_STATIC,13,19,58,8,NOT WS_GROUP
+    EDITTEXT        IDC_OIDT_RUNSCRIPTS_PATH,87,16,100,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "&Update List",IDC_OIDT_RUNSCRIPTS_BNPATH,87,36,60,14
+    LTEXT           "&Scripts on Directory:",IDC_STATIC,13,58,65,8
+    LISTBOX         IDC_OIDT_RUNSCRIPTS_LBSCRIPT,87,58,99,65,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_GROUP | 
+                    WS_TABSTOP
+    GROUPBOX        "Actions",IDC_STATIC,203,38,145,94,WS_GROUP
+    CONTROL         "Execute &Source Script",IDC_OIDT_RUNSCRIPTS_ACT_CPIN,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,209,51,117,10
+    CONTROL         "Execute &Target Create Script",
+                    IDC_OIDT_RUNSCRIPTS_ACT_CPOUT_CREATE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,209,65,118,10
+    CONTROL         "Execute &Target Copy Script",
+                    IDC_OIDT_RUNSCRIPTS_ACT_CPOUT_CPY,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,209,80,119,10
+    CONTROL         "&Pause Before Execute Target Script(s)",
+                    IDC_OIDT_RUNSCRIPTS_OPT_PAUSE,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,209,95,135,10
+    CONTROL         "&Check Node and Database Exist",
+                    IDC_OIDT_RUNSCRIPTS_SCRIPTS_CHECKEXIST,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,209,111,119,10
+    DEFPUSHBUTTON   "OK",IDOK,298,4,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,298,22,50,14
+END
+
+// Emb Started July 17, 96: IICOPY - View Log
+IDD_OIDT_VIEWLOG DIALOG DISCARDABLE  0, 0, 449, 197
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "IICOPY : View Log"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_OIDT_VIEWLOG_LOG,7,7,378,180,ES_MULTILINE | 
+                    ES_READONLY | WS_VSCROLL | WS_HSCROLL
+    DEFPUSHBUTTON   "Run Script(s)",IDOK,393,6,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,393,23,50,14
+    DEFPUSHBUTTON   "Editor",IDC_OIDT_VIEWLOG_EDITOR,393,41,50,14
+    PUSHBUTTON      "Config...",IDC_OIDT_VIEWLOG_CONFIG,393,59,50,14
+END
+
+// Emb Started July 17, 96: IICOPY - View Log External Editor Configuration
+IDD_OIDT_EDITOR DIALOG 64, 53, 206, 42
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Editor Preference"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Text Editor Command Line:", 101, 6, 9, 86, 8
+    EDITTEXT        IDC_OIDT_EDITOR_CMDLINE, 8, 20, 144, 12, ES_AUTOHSCROLL
+    PUSHBUTTON      "OK", IDOK, 158, 3, 40, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 158, 19, 40, 14
+END
+
+// Emb Started 23/07/97 for IICOPY columns new feature
+IDD_OIDT_DOWNLOAD_COLUMNS DIALOG DISCARDABLE  0, 0, 183, 92
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Select Columns"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Columns:",IDC_STATIC,6,9,49,8
+    CONTROL         "",IDC_OIDT_DOWNLOAD_LISTCOL,"CATOLIST",WS_GROUP | 
+                    WS_TABSTOP,8,24,109,62
+    DEFPUSHBUTTON   "OK",IDOK,126,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,126,24,50,14
+END
+
+IDD_OIDT_DOMFILTER DIALOG DISCARDABLE  0, 0, 210, 50
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Set Filter on Current DOM"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Owner for &All Objects", -1, 5, 13, 70, 8
+    COMBOBOX        IDD_DOMFILTER_OTHER, 80, 11, 80, 50,
+                    CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "OK", IDOK, 165, 10, 40, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 165, 30, 40, 14
+END
+
+//
+// EMB Dialog Box Section: (end)
+// 
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_OIDTBITMAPLIST      BITMAP  DISCARDABLE     "oidtbitm.bmp"
+IDB_CACHKNT             BITMAP  DISCARDABLE     "NTCheck.bmp"
+IDB_OIDTCNTBITMAP       BITMAP  DISCARDABLE     "cntimage.bmp"
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_OIDTTYPE_CHAR       "CHAR"
+    IDS_OIDTTYPE_VARCHAR    "VARCHAR"
+    IDS_OIDTTYPE_DECIMAL    "DECIMAL"
+    IDS_OIDTTYPE_FLOAT      "FLOAT"
+    IDS_OIDTTYPE_INTEGER    "INTEGER"
+    IDS_OIDTTYPE_LONGVARCHAR "LONG VARCHAR"
+    IDS_OIDTTYPE_NUMBER     "NUMBER"
+    IDS_OIDTTYPE_SMALLINT   "SMALLINT"
+    IDS_OIDTTYPE_DATE       "DATE"
+    IDS_OIDTTYPE_DATETIME   "DATETIME"
+    IDS_OIDTTYPE_TIME       "TIME"
+    IDS_OIDTTYPE_TIMESTAMP  "TIMESTAMP"
+    IDS_OIDTNODELETERULE    "No Rule"
+    IDS_OIDTRESTRICT        "Restrict"
+    IDS_OIDTCASCADE         "Cascade"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_OIDTSETNULL         "Set Null"
+    IDS_OIDTVIEWS           "Views"
+    IDS_OIDTTABLES          "Tables"
+    IDS_OIDTGTABLETITLE     "Grant Table Privileges On [%s::%s]"
+    IDS_OIDTGVIEWTITLE      "Grant View Privileges On [%s::%s]"
+    IDS_OIDTGDBATITLE       "Grant DBA On [%s::%s]"
+    IDS_OIDTGRESOURCETITLE  "Grant Resource On [%s::%s]"
+    IDS_OIDTGCONNECTTOTITLE "Grant Connect To [%s::%s]"
+    IDS_OIDTCREATETRIGGERTITLE "Create Trigger on [%s::%s]%s"
+    IDS_OIDTCREATETABLETITLE "Create Table On [%s::%s]"
+    IDS_OIDTCREATEINDEXTITLE "Create Index On [%s::%s]%s"
+    IDS_OIDTALTERTABLETITLE "Alter Table On [%s::%s]"
+    IDS_OIDTCREATETABLEFAILED "Create table failed."
+    IDS_OIDTALTERTABLEFAILED "Alter table failed."
+    IDS_OIDTCREATEINDEXFAILED "Create index failed."
+    IDS_OIDTCREATETRIGGERFAILED "Create trigger failed."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_OIDTGRANTTABLEFAILED "Grant table privileges failed."
+    IDS_OIDTGRANTRESOURCEFAILED "Grant Resource failed."
+    IDS_OIDTGRANTDBAFAILED  "Grant DBA failed."
+    IDS_OIDTGRANTCONNECTTOFAILED "Grant Connect to Database failed."
+    IDS_OIDTGRANTVIEWFAILED "Grant view privileges failed."
+    IDS_OIDTSAMETABLE       "<Same Table>"
+    IDS_OIDTSELECT          "Select"
+    IDS_OIDTINSERT          "Insert"
+    IDS_OIDTDELETE          "Delete"
+    IDS_OIDTINDEX           "Index"
+    IDS_OIDTALTER           "Alter"
+    IDS_OIDTUPDATE          "Update"
+    IDS_OIDTREVOKETABLE     "Revoke Table Privilege.\n"
+    IDS_OIDTREVOKEVIEW      "Revoke View Privilege.\n"
+    IDS_OIDTREVOKEDBAUTH    "Revoke Database Authority.\n"
+    IDS_OIDTREVOKEPRIVILEGE "Do you want to revoke %s privilege\nfrom %s ? "
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_OIDTREVOKEDBAFAILED "Revoke DBA privilege failed."
+    IDS_OIDTREVOKERESOURCEFAILED "Revoke Resoure privilege failed."
+    IDS_OIDTREVOKECONNECTFAILED "Revoke Connect privilege failed."
+    IDS_OIDTREVOKETABLEFAILED "Revoke Table privileges failed."
+    IDS_OIDTREVOKEVIEWFAILED "Revoke View privileges failed."
+    IDS_OIDTPROPNAME        "Name"
+    IDS_OIDTPROPCREATOR     "Creator"
+    IDS_OIDTPROPNUMROWS     "Number of Rows"
+    IDS_OIDTPROPNUMCOLS     "Number of Columns"
+    IDS_OIDTPROPPRIMARY     "Primary Key"
+    IDS_OIDTPROPFOREIGNKEY  "Foreign Key Name (List of Columns)"
+    IDS_OIDTPROPCOLS        "Column Name / Type (Length)"
+    IDS_OIDTPROPNULLABLE    "Nullability"
+    IDS_OIDTPROPREFON       "Referencing On"
+    IDS_OIDTSCALE           "Scale:"
+    IDS_OIDTLENGTH          "Length:"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_OIDTSTARTPOS        "Start Pos:"
+    IDS_OIDTPROPONTABLE     "On Table"
+    IDS_OIDTPROPACTION      "Action"
+    IDS_OIDTPROPFREQUENCY   "Frequency"
+    IDS_OIDTPROPEACHROW     "For Each Row"
+    IDS_OIDTPROPEACHSTATEMENT "For Each Statement"
+    IDS_OIDTPROPOLDVALUE    "Old Value Name"
+    IDS_OIDTPROPNEWVALUE    "New Value Name"
+    IDS_OIDTPROPEXECUTE     "Execute Procedure"
+    IDS_OIDTPROPTRIGTITLE   "Property of Trigger [%s::%s::%s] %s"
+    IDS_OIDTGRANTEXECUTETITLE "Grant Execute On [%s] %s"
+    IDS_OIDTREVOKEEXECUTETITLE "Revoke Execute On [%s] %s"
+    IDS_OIDTGRANTEXECFAILED "Grant Execute Procedure Failed."
+    IDS_OIDTREVOKEEXECFAILED "Revoke Execute Procedure Failed."
+    IDS_OIDTREVOKEEXEC      "Revoke Execute Privileges\n"
+END
+
+
+//
+// EMB String Table Section (start)
+//
+
+
+// Emb for procedure parameters and declare section
+// can be translated
+STRINGTABLE DISCARDABLE 
+BEGIN
+  IDS_OIDT_PROCTYPE_BOOLEAN      "Boolean"
+  IDS_OIDT_PROCTYPE_DATETIME     "Date/Time"
+  IDS_OIDT_PROCTYPE_NUMBER       "Number"
+  IDS_OIDT_PROCTYPE_STRING       "String"
+  IDS_OIDT_PROCTYPE_SQLHANDLE    "Sql Handle"
+END
+
+//Emb : for the IDD_OIDTEVENT
+STRINGTABLE DISCARDABLE 
+BEGIN
+  IDS_OIDTEVENT_CREATECAPT  "Create Event on %s::%s"
+  IDS_OIDTEVENT_ALTERCAPT   "Alter Event on %s::%s"
+  // can be translated - displayed in the periodicity combobox
+  IDS_OIDTEVENT_SECOND      "Second"
+  IDS_OIDTEVENT_MINUTE      "Minute"
+  IDS_OIDTEVENT_HOUR        "Hour"
+  IDS_OIDTEVENT_DAY         "Day"
+END
+
+//Emb : for the IDD_OIDTDBAREA
+STRINGTABLE DISCARDABLE 
+BEGIN
+  IDS_OIDTDBAREA_CREATECAPT  "Create Dbarea on %s"
+  IDS_OIDTDBAREA_ALTERCAPT   "Alter Dbarea on %s"
+  IDS_E_CREATE_DBAREA_FAILED "Create Dbarea failed"
+  IDS_E_ALTER_DBAREA_FAILED  "Alter Dbarea failed"
+END
+
+//Emb : for the IDD_OIDTSTOGROUP
+STRINGTABLE DISCARDABLE 
+BEGIN
+  IDS_OIDTSTOGROUP_CREATECAPT  "Create Stogroup on %s"
+  IDS_OIDTSTOGROUP_ALTERCAPT   "Alter Stogroup on %s"
+  IDS_E_CREATE_STOGROUP_FAILED "Create Stogroup failed"
+  IDS_E_ALTER_STOGROUP_FAILED  "Alter Stogroup failed"
+END
+
+//Emb : for the IDD_OIDTDATABASE
+STRINGTABLE DISCARDABLE 
+BEGIN
+  IDS_OIDTDATABASE_CREATECAPT       "Create Database on %s"
+  IDS_OIDTDATABASE_ALTERCAPT        "Alter Database on %s"
+  IDS_E_CREATE_OIDTDATABASE_FAILED  "Create Database failed"
+  IDS_E_ALTER_OIDTDATABASE_FAILED   "Alter Database failed"
+END
+
+//
+// EMB String Table Section (end)
+//

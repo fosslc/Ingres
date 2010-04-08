@@ -1,0 +1,17 @@
+/#-- Copyright 2010, Ingres Corporation
+
+  The fallocate parameter controls the use of the fallocate() system
+  call, on systems that implement it.  If ON, when a table is being
+  loaded, table allocations (extends) will use fallocate to pre-
+  allocate disk space for the total amount of the extension.
+  This may slow down the load somewhat, but will usually result in
+  better disk layout of the table, especially under highly concurrent
+  loads, or when the table is partitioned.
+
+  Fallocate is usually left OFF for interactive or OLTP usage.  It can
+  be useful to turn fallocate ON for concurrent or partitioned data
+  warehouse or data archiving usage.  If the platform or filesystem
+  does not support fallocate(), turning the parameter ON will have no
+  effect.
+
+  The default is OFF.

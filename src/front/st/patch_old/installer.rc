@@ -1,0 +1,333 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
+#include "dlgs.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+WINCAP                  ICON    DISCARDABLE     "INSTALLER.ICO"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+BACKUP_LOC_DLG DIALOGEX 0, 0, 246, 205
+STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE
+CAPTION "Patch Backup Location"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "C&ontinue",IDOK,165,180,66,14,WS_GROUP
+    PUSHBUTTON      "&Cancel",IDCANCEL,15,180,66,14
+    EDITTEXT        IDC_EDIT1,15,35,216,12,ES_AUTOHSCROLL
+    LTEXT           "&Path:",IDC_STATIC,15,26,19,8
+    LTEXT           "&Directories:",IDC_STATIC,15,55,41,9
+    LISTBOX         IDC_LIST1,15,65,110,107,LBS_SORT | LBS_OWNERDRAWFIXED | 
+                    LBS_HASSTRINGS | LBS_DISABLENOSCROLL | WS_VSCROLL | 
+                    WS_TABSTOP
+    LISTBOX         1120,135,104,96,12,LBS_SORT | LBS_OWNERDRAWFIXED | 
+                    LBS_HASSTRINGS | LBS_DISABLENOSCROLL | NOT WS_VISIBLE | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Dri&ves:",IDC_STATIC,135,55,30,8
+    COMBOBOX        IDC_COMBO1,135,65,96,75,CBS_DROPDOWNLIST | 
+                    CBS_OWNERDRAWFIXED | CBS_AUTOHSCROLL | CBS_SORT | 
+                    CBS_HASSTRINGS | WS_BORDER | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Please select the backup location:",IDC_STATIC,15,8,205,
+                    9
+    GROUPBOX        "Disk Space Available",IDC_STATIC,135,141,96,25
+    LTEXT           "Space",IDC_AVAIL_SPACE,141,152,84,8
+END
+
+INSTALLIIDLGBOX DIALOGEX 72, 4, 321, 196
+STYLE DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_APPWINDOW
+CAPTION "Ingres Patch Installer"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "Patch Number",IDC_STATIC,130,9,60,24
+    CTEXT           "Static",ID_PATCH,134,20,51,8
+    PUSHBUTTON      "&Install Patch",ID_INSTALL,12,170,59,14
+    PUSHBUTTON      "&Exit Installation",IDC_BUTTON_EXIT,249,170,59,14
+    GROUPBOX        "Ingres Installation Location",IDC_STATIC,80,51,160,
+                    24
+    LTEXT           "Static",EB_LOCATION,85,62,149,8
+    CONTROL         "Backup files to be replaced in the installation",
+                    IDC_CHECK_BACKUP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    12,101,220,10
+    PUSHBUTTON      "&Set Directory",IDC_BUTTON_SETDIR,12,119,62,20,
+                    BS_CENTER
+    GROUPBOX        "Backup Directory",IDC_STATIC_BACKUP,80,115,160,24
+    LTEXT           "Static",ID_BACKUPLOC,85,126,149,8
+    PUSHBUTTON      "&View Patch Notes",IDC_BUTTON_PATCHNOTES,127,170,65,14
+    GROUPBOX        "Space Required",IDC_STATIC_SPACE,246,115,62,24
+    LTEXT           "Static",IDC_BACKUP_SIZE,250,126,55,8
+    CONTROL         "Force execution of patch install even if cdimage verification fails",
+                    IDC_CHECK_FORCE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,
+                    84,220,10
+END
+
+INSTALLDLGBOX DIALOGEX 72, 4, 321, 196
+STYLE DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_APPWINDOW
+CAPTION "OpenIngres Patch Installer"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "Patch Number",IDC_STATIC,130,9,60,24
+    CTEXT           "Static",ID_PATCH,134,20,51,8
+    PUSHBUTTON      "&Install Patch",ID_INSTALL,12,170,59,14
+    PUSHBUTTON      "&Exit Installation",IDC_BUTTON_EXIT,249,170,59,14
+    GROUPBOX        "OpenIngres Installation Location",IDC_STATIC,80,51,160,
+                    24
+    LTEXT           "Static",EB_LOCATION,85,62,149,8
+    CONTROL         "Backup files to be replaced in the installation",
+                    IDC_CHECK_BACKUP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    12,101,220,10
+    PUSHBUTTON      "&Set Directory",IDC_BUTTON_SETDIR,12,119,62,20,
+                    BS_CENTER
+    GROUPBOX        "Backup Directory",IDC_STATIC_BACKUP,80,115,160,24
+    LTEXT           "Static",ID_BACKUPLOC,85,126,149,8
+    PUSHBUTTON      "&View Patch Notes",IDC_BUTTON_PATCHNOTES,127,170,65,14
+    GROUPBOX        "Space Required",IDC_STATIC_SPACE,246,115,62,24
+    LTEXT           "Static",IDC_BACKUP_SIZE,250,126,55,8
+    CONTROL         "Force execution of patch install even if cdimage verification fails",
+                    IDC_CHECK_FORCE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,
+                    84,220,10
+END
+
+IDD_WAIT_DIALOG DIALOGEX 0, 0, 225, 58
+STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_APPWINDOW
+CAPTION "OpenIngres Patch Installer"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "Animate1",IDC_ANIMATE1,"SysAnimate32",WS_TABSTOP,19,18,
+                    26,24,WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE
+    LTEXT           "Preparing to install patch ...",IDC_TEXT_WAIT,59,24,155,
+                    8
+END
+
+IDD_WAITII_DIALOG DIALOGEX 0, 0, 225, 58
+STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_APPWINDOW
+CAPTION "Ingres Patch Installer"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "Animate1",IDC_ANIMATE1,"SysAnimate32",WS_TABSTOP,19,18,
+                    26,24,WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE
+    LTEXT           "Preparing to install patch ...",IDC_TEXT_WAIT,59,24,155,
+                    8
+END
+
+IDD_WAIT2_DIALOG DIALOGEX 0, 0, 225, 58
+STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_APPWINDOW
+CAPTION "OpenIngres Patch Installer"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "Animate1",IDC_ANIMATE1,"SysAnimate32",WS_TABSTOP,19,18,
+                    26,24,WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE
+    LTEXT           "Recording information on files installed ...",
+                    IDC_TEXT_WAIT,59,24,155,8
+END
+
+IDD_WAIT2II_DIALOG DIALOGEX 0, 0, 225, 58
+STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_APPWINDOW
+CAPTION "Ingres Patch Installer"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "Animate1",IDC_ANIMATE1,"SysAnimate32",WS_TABSTOP,19,18,
+                    26,24,WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE
+    LTEXT           "Recording information on files installed ...",
+                    IDC_TEXT_WAIT,59,24,155,8
+END
+
+MULTIPLEIIBACKUP DIALOGEX 0, 0, 225, 123
+STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE
+CAPTION "Ingres Patch Installer"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "&Yes",IDOK,12,103,50,14
+    PUSHBUTTON      "&No",IDNO,87,103,50,14
+    CONTROL         "List1",IDC_LIST_BACKUP,"SysListView32",LVS_REPORT | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,12,17,202,58,
+                    WS_EX_CLIENTEDGE
+    LTEXT           "There is at least one backup which was found for this patch.",
+                    IDC_STATIC,12,5,200,8
+    LTEXT           "Do you still wish to backup files which will be replaced by the patch installer?",
+                    IDC_STATIC,12,81,201,16
+    PUSHBUTTON      "&Exit Installation",IDCANCEL,163,103,50,14
+END
+
+MULTIPLEBACKUP DIALOGEX 0, 0, 225, 123
+STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE
+CAPTION "Ingres Patch Installer"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "&Yes",IDOK,12,103,50,14
+    PUSHBUTTON      "&No",IDNO,87,103,50,14
+    CONTROL         "List1",IDC_LIST_BACKUP,"SysListView32",LVS_REPORT | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,12,17,202,58,
+                    WS_EX_CLIENTEDGE
+    LTEXT           "There is at least one backup which was found for this patch.",
+                    IDC_STATIC,12,5,200,8
+    LTEXT           "Do you still wish to backup files which will be replaced by the patch installer?",
+                    IDC_STATIC,12,81,201,16
+    PUSHBUTTON      "&Exit Installation",IDCANCEL,163,103,50,14
+END
+
+IDD_WAIT3II_DIALOG DIALOGEX 0, 0, 225, 58
+STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_APPWINDOW
+CAPTION "Ingres Patch Installer"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Animate1",IDC_ANIMATE1,"SysAnimate32",WS_TABSTOP,19,18,
+                    26,24,WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE
+    LTEXT           "Determining files which will be installed ...",
+                    IDC_TEXT_WAIT,59,24,155,8
+END
+
+IDD_WAIT3_DIALOG DIALOGEX 0, 0, 225, 58
+STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_APPWINDOW
+CAPTION "OpenIngres Patch Installer"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Animate1",IDC_ANIMATE1,"SysAnimate32",WS_TABSTOP,19,18,
+                    26,24,WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE
+    LTEXT           "Determining files which will be installed ...",
+                    IDC_TEXT_WAIT,59,24,155,8
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""dlgs.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_AVI1                AVI     DISCARDABLE     "clock.avi"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_DIALOGFAILURE       "Failure to create file dialog box."
+    IDS_STRUCTSIZE          "The lStructSize member of the initialization structure for the corresponding file dialog box is invalid."
+    IDS_INITIALIZATION      "The common dialog box function failed during initialization."
+    IDS_NOTEMPLATE          "The ENABLETEMPLATE flag was set in the Flags member of the initialization structure for the corresponding file dialog box, but  a corresponding template was not provided."
+    IDS_NOHINSTANCE         "The ENABLETEMPLATE flag was set in the Flags member of the initialization structure for the corresponding file dialog box, but  a corresponding instance handle was not provided."
+    IDS_LOADSTRFAILURE      "The file dialog box function failed to load a specified string."
+    IDS_FINDRESFAILURE      "The file dialog box function failed to find a specified resource."
+    IDS_LOADRESFAILURE      "The file dialog box function failed to load a specified string."
+    IDS_LOCKRESFAILURE      "The file dialog box function failed to lock a specified resource."
+    IDS_MEMALLOCFAILURE     "The file dialog box function was unable to allocate memory for internal structures."
+    IDS_MEMLOCKFAILURE      "The file dialog box function was unable to lock the memory associated with a handle."
+    IDS_NOHOOK              "The ENABLEHOOK flag was set in the Flags member of the initialization structure for the corresponding file dialog box, but  a pointer to a corresponding hook procedure was not provided."
+    IDS_SETUPFAILURE        "The PrintDlg function failed to load the required resources."
+    IDS_PARSEFAILURE        "The PrintDlg function failed to parse the strings in the [devices] section of the WIN.INI file."
+    IDS_RETDEFFAILURE       "The PD_RETURNDEFAULT flag was specified in the Flags member of the PRINTDLG structure, but the hDevMode or hDevNames member was not NULL."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_LOADDRVFAILURE      "The PrintDlg function failed to load the device driver for the specified printer."
+    IDS_GETDEVMODEFAIL      "The printer driver failed to initialize a DEVMODE structure."
+    IDS_INITFAILURE         "The PrintDlg function failed during initialization, and there is no more specific extended error code to describe the failure."
+    IDS_NODEVICES           "No printer drivers were found."
+    IDS_NODEFAULTPRN        "A default printer does not exist."
+    IDS_DNDMMISMATCH        "The data in the DEVMODE and DEVNAMES structures describes two different printers."
+    IDS_CREATEICFAILURE     "The PrintDlg function failed when it attempted to create an information context."
+    IDS_PRINTERNOTFOUND     "The [devices] section of the WIN.INI file did not contain an entry for the requested printer."
+    IDS_NOFONTS             "No fonts exist."
+    IDS_SUBCLASSFAILURE     "An attempt to subclass a list box failed because sufficient memory was not available."
+    IDS_INVALIDFILENAME     "A file name is invalid."
+    IDS_BUFFERTOOSMALL      "The buffer pointed to by the lpstrFile member of the OPENFILENAME structure is too small for the file name specified by the user."
+    IDS_UNKNOWNERROR        "An unknown error occurred while starting up the file dialog box."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

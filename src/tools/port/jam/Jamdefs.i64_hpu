@@ -1,0 +1,90 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.i64_hpu -- Variable definitions for HP-UX Itanium Hybrid
+#
+#  Description:
+#       Platform specific variable definitions for HP-UX Itanium Hybrid
+#
+# History:
+#       15-Dec-2004 (shaha03)
+#           Created.
+#	28-Mar-1005 (shaha03)
+#	    Updated for reverse hybrid build.	
+#       16-Oct-2006 (hanal04) Bug 116866
+#           Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#           NOOPTIM does not strip this when explicitly set.
+#	10-Oct-2007 (wanfr01) Bug 119280
+#	    IIOPTIM should use ?= so you can override it via environment
+#	    variables.
+#       25-Jun-2008 (rajus01) SIR 120420, SD issue 116370
+#           Added PAMLIB to resolve symbols defined in PAM library.
+#       05-May-2009 (bonro01)
+#           Create server using iimerge.a
+#	24-Jun-2009 (kschendel) SIR 122138
+#	    Hybridization scheme changed, update here.
+#
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG 	= "-DNET_SSL -DHPUX -DXP_UNIX +z" ;
+APACHE_API_FLAG 	= "-DHPUX11 +z" ;
+VERS64 	= "i64_hpu" ;
+VERS32	= "i64_hpu" ;
+AS32 = $(AS) ;
+AS64 = $(AS) ;
+LD32 = $(LD) ;
+LD64 = $(LD) ;
+CCLD32 = $(CCLD) ;
+CCLD64 = $(CCLD) ;
+CC 	default = "c89" ;
+CCDEBUG = "-g" ;
+SHLIBLD = "ld" ;
+CPP 	default = "/lib/cpp" ;
+ASMACH64 = "+E64" ;
+ASMACH32 = "+E32" ;
+CCMACH64 = "-DBUILD_ARCH64 +e -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DD64 +M2 +DSblended -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
+CCMACH32 = "-DBUILD_ARCH32 +e -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DSblended -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
+CCLDMACH64 	= "+DD64 -Wl,-E -Wl,+s -Wl,+n" ;
+CCLDMACH32	= "+DD32 -Wl,-E -Wl,+s -Wl,+n" ;
+CCPICFLAG 	= "+Z" ;
+SLSFX 	= "sl" ;
+MWSLSFX 	= "sl" ;
+CGISFX 	= "cgi" ;
+LIBSFX = "a" ;
+OBJSFX = "o" ;
+EXESFX = ;
+LDLIBPATH64 	= "/lib /usr/lib /usr/local/lib" ;
+LDLIBPATH32 	= "/lib /usr/lib /usr/local/lib" ;
+LIBMACH 	= "" ;
+LDLIBMACH64 	= "-lpthread -lm -lrt -lcl" ;
+LDLIBMACH32 	= "-lpthread -lm -lrt -lcl" ;
+CCSHLDMACH64	= "+s -b -B immediate" ;
+CCSHLDMACH32	= "+s -b -B immediate" ;
+LD_ICE_FLAGS 	= "" ;
+ICE_EXT         = sl ;
+CGI_EXT         = cgi ;
+LEVEL1_OPTIM 	= "+O1" ;
+OPTIM 		= "" ;
+IIOPTIM 	?= "-O" ; 
+NOOPTIM 	= "" ;
+LONGLONG	= long long ;
+SHELLHEADER 	= ""#!/bin/sh"" ;
+BSD42 default = -DBSD42 ;
+DIRENT default = -DDIRENT ;
+DIRFUNC default = -DDIRFUNC ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 default = -DSYS5 ;
+C++	= "aCC" ;
+C++FLAGS64	= "-DBUILD_ARCH64 +DD64 -D_HP_UX -DHPaCC -DHPUX11 +Z" ;
+C++FLAGS32	= "-DBUILD_ARCH32 -D_HP_UX -DHPaCC -DHPUX11 +Z" ;
+UNDEFFLAG	= "-u " ;
+XERC_DEFS	= "-DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET" ;
+XERC_LIBS	= "/usr/lib/libc.sl" ;
+DBMS_STACKSIZE = 131072 ;
+LEX = flex ;
+platform_string = "HP-UX Itanium" ;
+extension_string = $(config_string) ;
+PAMLIB 	= TRUE ;

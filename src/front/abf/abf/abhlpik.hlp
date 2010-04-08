@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abhlpik.hlp, help for the "Select the Language" popup for creating a
+/#-- 3GL procedure from the Application Flow Diagram.
+/#-- 
+From this menu you may pick the language of the 3GL frame you wish to 
+create.  The choices are based on which language options you purchased.
+If you wish to create a 3GL procedure that does not contain any embedded
+statements but is not part of the purchased language options, choose
+the 'OtherLanguages' menuitem.
+
+Move the cursor to the desired language and choose 'Select'.
+
+  Select         Choose the language indicated by the cursor position.
+  OtherLanguages Display a list of languages supported for your machine. 
+  Cancel         Cancel the edit request.
+  Help           Display this help text.

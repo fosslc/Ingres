@@ -1,0 +1,78 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+
+/**
+** Name:    fetrunc.qc -	support truncated text on forms.
+**
+** Description:
+**	Contains routines to deal with truncation and expanded display
+**	of character strings on FE program forms.
+**
+** Routines:
+**	FEtrunc()
+**	FExpand()
+**
+** History:
+**	Revision 6.0  87/02  peterk
+**	Initial revision.
+**
+**	07/24/93 (dkh) - Removed FExpand as no one is using it and
+**			 it is not part of the shared library interface
+**			 so user apps can not be using it either.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+/*{
+** Name:	FEtrunc() -	return truncated string for display
+**
+** Description:
+**	Returns a truncated copy of a string, in a standard form for
+**	FE programs.  If characters of the string are truncated to fit
+**	in the desired length, the last character of the truncated copy
+**	will be set to the TRUNCATION INDICATOR CHARACTER, '>'.
+**
+** Input params:
+**	char	*text;	// input text string
+**	char	*len;	// length of available field
+**
+** Returns:
+**	(char	*)	// truncated display copy of input text
+**
+** History:
+**	2/87 (peterk) - created
+*/
+
+static char	trunctext[100];
+
+char *
+FEtrunc(text, len)
+char	*text;
+i4	len;
+{
+   register char	*t = text,
+			*tt = trunctext;
+
+    while (*t != EOS && t - text < len)
+	*tt++ = *t++;
+    if (*t != EOS)
+    {
+	tt[-1] = '>';
+    }
+    *tt = EOS;
+
+    return trunctext;
+}

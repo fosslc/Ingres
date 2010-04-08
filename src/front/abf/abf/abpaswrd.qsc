@@ -1,0 +1,196 @@
+/*
+** Copyright (c) 1990, 2008 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include       <stdprmpt.h>
+# include	"erab.h"
+
+
+/**
+** Name:	abpaswrd.qsc -- Get password for a role
+**
+** Description:
+**	This file defines:
+**
+**	IIABgrpGetRolePwd	-	Get password for a role
+**
+** History:
+**	8/90 (Mike S) Initial version
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ug.h to satisfy gcc 4.3.
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+/* extern's */
+
+/* static's */
+static const
+## char	_form[] 	= ERx("abf_role_password"),
+##	_title[] 	= ERx("title"),
+##	_password[] 	= ERx("password");
+static	bool init_done = FALSE;
+
+/*{
+** Name:	IIABgrpGetRolePwd       -       Get password for a role
+**
+** Description:
+**	Put up a popup to get the password for a role.  We will force the
+**	user to enter it twice, since it isn't echoed.
+**
+**	There is, unfortunately, no way to verify the password's correctness.
+**	When there is, we should do it here.
+**
+** Inputs:
+**	roleid		char *		Role whose password we're getting
+**	prev_pwd	char *		Previous password (NULL if none)
+**
+** Outputs:
+**	password	char *		Role password 
+**
+**	Returns:
+**			OK	Password was entered and verified
+**			FAIL	User Cancelled
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	8/90 (Mike S) Initial Version
+*/
+STATUS
+IIABgrpGetRolePwd(roleid, prev_pwd, password)
+char	*roleid;
+char	*prev_pwd;
+##char	*password;
+{
+##	char pbuf[FE_MAXNAME+1];
+##	char e_title[80];
+##	char v_title[80];
+	i4 pass = 1;
+	STATUS	status;
+
+	if (roleid == NULL || *roleid == EOS)
+		return FAIL;		/* Shouldn't happen */
+
+	if (prev_pwd != NULL)
+	{
+		STATUS conf_status;
+
+		/* See if previous password is OK */
+		conf_status = IIUFccConfirmChoice(CONF_GENERIC,
+				roleid, ERx(""),
+				ERget(F_AB02A3_PrevPwdHelp), 
+				ERx("abprvpwd.hlp"),
+				F_AB02A4_PrevPwdTitle,
+				F_AB02A5_PrevPwdYes,
+				F_AB02A6_PrevPwdNo,
+				ERx(""), TRUE);
+	      	switch (conf_status)
+	      	{
+		    case CONFCH_YES:
+			/* Use previous password */
+			STcopy(prev_pwd, password);
+			return OK;
+
+		    case CONFCH_CANCEL:
+			/* Don't enter a password at all */
+			return FAIL;
+		}
+
+		/* If we got this far, user wants to enter a new password */
+	}
+
+	/* Get password from user */
+	if (!init_done)
+	{
+		IIARiaForm(_form);
+		init_done = TRUE;
+	}
+
+##	display _form
+##	initialize
+##	{
+		_VOID_ IIUGfmt(e_title, sizeof(e_title), 
+			ERget(F_AB02A0_EnterPassword), 1, roleid);
+		_VOID_ IIUGfmt(v_title, sizeof(v_title), 
+			ERget(F_AB02A1_VerifyPassword), 1, roleid);
+##		putform _form (_title = e_title);
+##		clear field _password
+##	}
+
+##	activate menuitem ERget(FE_OK) (expl = ERget(F_AB02A2_PwdOKexpl)), 
+##			frskey4
+##	{
+		if (pass == 1)
+		{
+			/* Get password to verify */
+##			getform _form (pbuf = _password)
+
+			/* Prompt for password verification */
+##			putform _form (_title = v_title);
+##			clear field _password
+			pass = 2;
+		}
+		else
+		{
+			/* Check verification */
+##			getform _form (password = _password)
+			if (!STequal(pbuf, password))
+			{
+				IIUGerr(E_AB02A1_PwdBadVerify, 0, 0);
+##				putform _form (_title = e_title);
+##				clear field _password
+				pass = 1;
+			}
+			else
+			{
+				status = OK;
+##				breakdisplay
+			}
+		}	
+##	}
+
+##      activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), frskey9
+##	{
+		if (pass == 1)
+		{
+			/* Cancel whole operation */
+			status = FAIL;
+##			breakdisplay
+		}
+		else
+		{
+			/* Cancel verification */
+##			putform _form (_title = e_title);
+##			clear field _password
+			pass = 1;
+		}
+##	}
+
+##      activate menuitem ERget(FE_Help) 
+##			(expl = ERget(F_FE0101_ExplKeyHelp)), FRSkey1
+##	{
+                FEhelp(ERx("abpaswrd.hlp"), ERget(S_AB02A0_PwdHelpBanner));
+##	}
+
+	return status;
+}

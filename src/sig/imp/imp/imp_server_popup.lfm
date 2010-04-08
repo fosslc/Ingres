@@ -1,0 +1,20 @@
+COPYFORM:	6.4	2002_06_28 07:26:16 GMT  
+FORM:	imp_server_popup		
+	32	13	0	0	5	0	10	9	0	0	0	0	0	129	0	5
+FIELD:
+	0	current_sessions	30	4	0	4	1	4	4	16	4	0	0		0	0	0	0	0	0	0		-i4			0	0
+	1	max_sessions	-30	5	0	4	1	4	4	24	4	0	0		0	0	0	0	0	0	0		-i4			0	1
+	2	server_type	-21	23	0	20	1	26	8	0	20	0	6	Type:	0	0	0	0	0	0	0		c20			0	2
+	3	server_dblist	-21	33	0	30	1	30	11	0	30	0	0		0	0	0	0	0	0	0		c30			0	3
+	4	server_name	-21	13	0	10	1	16	7	0	10	0	6	Name:	0	0	0	0	0	0	0		c10			0	4
+TRIM:
+	0	0	Server Detail	0	0	0	0
+	0	10	Connecting to:	0	0	0	0
+	4	1	5:26:0	1	0	0	0
+	4	3	1:26:3	1	0	0	0
+	5	2	Sessions	0	0	0	0
+	5	4	Total	0	0	0	0
+	14	1	5:1:1	1	0	0	0
+	15	2	Current	0	0	0	0
+	23	1	5:1:2	1	0	0	0
+	24	2	Max	0	0	0	0

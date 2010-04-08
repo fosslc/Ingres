@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The ticket cache size is used to configure the number of tickets which are
+maintained in the Name Server's cache.  Tickets are used to validate 
+installation passwords.  One to ten tickets may be specified.
+
+The Name Server only uses this value if a user has configured a vnode
+with an installation password.

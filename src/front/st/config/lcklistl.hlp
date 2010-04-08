@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The list_limit resource specifies the maximum number of lock lists which
+  can be allocated by the locking system.

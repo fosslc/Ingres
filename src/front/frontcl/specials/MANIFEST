@@ -1,0 +1,36 @@
+#
+# MANIFEST for front!frontcl!specials
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#	01-dec-2004 (abbjo03)
+#	    Use DFS as a directory-file separator.
+#	20-Jun_2008 (hweho01)
+#	    Added eqdef64.f and eqsqlda64.f for 64-bit Fortran support on 
+#	    hybrid platforms. 
+
+
+IISUBSYS front frontcl specials ;
+
+if ! $(NT)
+{
+    IICCPPFILE $(INGFILES)$(DFS)eqdef.h : eqdef.pp ;
+    IICCPPFILE $(INGFILES)$(DFS)eqdef.f : eqdef_f.pp ;
+    IICCPPFILE $(INGFILES)$(DFS)eqdefc.h : eqdefc.pp ;
+    IICCPPFILE $(INGFILES)$(DFS)eqdefcc.h : eqdefcc.pp ;
+    IICCPPFILE $(INGFILES)$(DFS)eqmsqlda.cbl : eqmsqlda_cbl.pp ;
+    IICCPPFILE $(INGFILES)$(DFS)eqsqlda.f : eqsqlda_f.pp ;
+    if $(VERS64)	
+    {
+       IICCPPFILE $(INGFILES)$(DFS)eqdef64.f : eqdef_f_64.pp ;
+       IICCPPFILE $(INGFILES)$(DFS)eqsqlda64.f : eqsqlda_f_64.pp ;
+    }
+}
+else
+{
+IIEQDEF eqdef.pp eqdefc.pp eqdefcc.pp ;
+IIPPTOF eqdef_f.pp eqsqlda_f.pp ;
+IIPPTOCBL2 eqmsqlda.cbl : eqmsqlda_cbl.pp ;
+}

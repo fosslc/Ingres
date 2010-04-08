@@ -1,0 +1,14 @@
+<!-- #ICE REPEAT 
+IF (`:name` != ``)
+THEN=`
+		<!-- #ICE REPEAT IF (``:links`` == ````)
+		THEN=``<!-- #ICE DECLARE=````session.links=:name,:value```` -->``
+		ELSE=``<!-- #ICE DECLARE=````session.links=:links,:name,:value```` -->``
+		-->`
+-->
+
+<!-- #ICE REPEAT
+IF (`:name` != ``)
+THEN=`<!-- #ICE REPEAT INCLUDE=``links.html`` -->`
+ELSE=`<!-- #ICE REPEAT INCLUDE=``attr.html`` -->`
+-->

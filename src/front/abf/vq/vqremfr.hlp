@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqremfr.hlp, behind popup that asks user whether they're sure they want 
+/#-- to remove a frame from the AFD.
+/#-- 
+Removing a frame is different from Destroying a frame. 
+
+  * When you Remove a frame, it is not destroyed.  
+    - The menuitem that calls the frame is deleted from the parent frame.
+    - Lower-level frames in the family are removed along with the frame.
+    - All the removed frames can be inserted again later.
+
+  * When you Destroy a frame, it is deleted from the application. You cannot 
+    insert it again later.  
+    - Lower-level frames in the family are removed but not destroyed.  Since 
+      they are not destroyed, they are available and can be inserted again 
+      later. 

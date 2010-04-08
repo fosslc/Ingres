@@ -1,0 +1,36 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for w4gl
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+/*
+** Default directory: ingres/lib
+*/
+
+PART   w4gl
+
+# ifdef VMS
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY ingres!LIB_TGT
+#endif
+      FILE w4gl05sq.o
+# endif /* VMS */

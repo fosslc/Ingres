@@ -1,0 +1,1145 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<cm.h>
+# include	<cv.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<abclass.qsh>
+# include	<adf.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<frame.h>
+# include	<runtime.h>
+## include	<oocat.qsh>
+# include	<ooclass.h>
+# include	<oosymbol.h>
+# include	<oodefine.h>
+# include	<stdprmpt.h>
+# include	<afe.h>
+# include	<ug.h>
+# include	<ui.h>
+# include	<uf.h>
+
+# include	<metafrm.h>
+
+# include	"ervq.h"
+
+/*
+NO_OPTIM = nc4_us5
+*/
+
+/**
+** Name:	vqlocals.qc -	User interface for local variable handling
+**
+** Description:
+**	This file has routines to display existing local variables for the
+**	current frame, allows the user to create, delete, rename and edit
+**	local variables	and saves the variables back into the database.
+**
+**	This file defines:
+**
+**	IIVQlocals		Displays and edits local variables
+**	_create_edit_var	FRS code for create/edit popup
+**	_check_ing_type		Determines if datatype is derived or DBDV
+**	_extract_var_info	Break apart datatype field for display in popup
+**	_fe_name_check		Checks char string for a valid INGRES name
+**	_save_var		Sticks local variable in main table field
+**	_set_disp_only		Set display mode for nullable/isarray fields
+**	_check_unique		Checks table field for already existing name
+**	loc_alloc		String allocation routine
+**
+** History:
+**	14-oct-89 (kenl) - created
+**	27-feb-90 (kenl)  Added IIUFhlpType() to handle ListChoices help for
+*8		datatype selection.
+**	03/28/91 (dkh) - Replaced old inquire_frs syntax with new.
+**	29-jul-92 (blaise)
+**		Small change to description above: changed function names to
+**		match what's really here.
+**	08/24/92 (gautam) - fixed problem causing stack corruption
+**		in vision and vigraph.
+**	09/16/92 (deannaw)
+**		Backed out previous fix by Gautam.  Stack corruption problems
+**		corrected when new "refresher" compiler installed on AIX port.
+**	17-sep-92 (blaise)
+**		Reinstated some history backed out in previous change.
+**	25-aug-92 (blaise)
+**	    Made changes to deal with the fact that the vars structure can now
+**	    contain local procedures as well as local variables.
+**	22-apr-93 (blaise)
+**	    Give an error if the user enters a datatype which isn't an ingres
+**	    datatype or an existing record. Also check for a valid front end
+**	    datatype; this will give an error for long varchar, which isn't
+**	    supported in the front ends. (bug #51167, 51170)
+**	9-jul-93 (blaise)
+**	    Don't give error for variables of type TYPE OF TABLE, etc.
+**	    (bug #52053)
+**	15-nov-93 (robf)
+**          Add security label (DB_SEC_TYPE) to list of types
+**	09-July-1998 (thaal01) Bug 88637
+**	    Creating local variables within Vision causes SIGSEGV 
+**	    (sometimes) when saving new local variables. This is
+**	    X-Int of 436428 from oping12 	
+**	28-oct-1998 (matbe01)
+**	    Added NO_OPTIM for NCR (nc4_us5) to avoid SIGSEGV that
+**	    results when displaying local variables.
+**    25-Oct-2005 (hanje04)
+**        Add prototypes for _create_edit_var(), _extract_var_info(),
+**	  _check_ing_type(), _fe_name_check(), _save_var(), _set_disp_only() &
+**	  _check_unique() to prevent compiler errors with GCC 4.0 due to
+**	  conflict with implicit declaration.
+**	11-sep-2006 (gupsh01)
+**	    Added support for ANSI date/time types.
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	23-Aug-2009 (kschendel) 121804
+**	    Need oodefine.h to satisfy gcc 4.3.
+**/
+
+# define _yes	1
+# define _no	0
+# define _unset -1
+# define _localv_prmpt		(ERget(F_VQ0108_localv_prmpt))
+
+# define STGETWORDS_MAX		53
+# define MAX_DATATYPE_STRING	105
+
+/* GLOBALDEF's */
+
+GLOBALREF APPL *IIVQappl; /* argument of frame flow entry, the current
+			   application we are editing in abf */
+GLOBALREF char *IIabExename;	/* Executable name */
+
+/* extern's */
+
+FUNC_EXTERN VOID IIVQgeGlobalEdit();
+FUNC_EXTERN STATUS IIAMmpMetaPopulate();
+
+/* static's */
+
+static PTR	loc_alloc();
+static i4 _create_edit_var();
+static i4 _extract_var_info();
+static STATUS _check_ing_type();
+static STATUS _fe_name_check();
+static i4 _save_var();
+static i4 _set_disp_only();
+static STATUS _check_unique();
+
+
+static const
+##	char	vqlocals_form[]		= ERx("vqlocals"),
+##		vqlocals_table[]	= ERx("locals"),
+##		vqcreate_form[]		= ERx("vqlocalcreate"),
+##		_data_type[]		= ERx("data_type"),
+##		_nullable[]		= ERx("nullable"),
+##		_isarray[]		= ERx("isarray");
+
+##static char	*_n_a;
+static bool	first_call = TRUE;
+static bool	save_vars = FALSE;
+static ADF_CB	*adf_cb;
+
+static const
+	DB_DT_ID	_types[] = { DB_INT_TYPE, DB_FLT_TYPE, DB_DEC_TYPE,
+				     DB_CHA_TYPE, DB_VCH_TYPE, DB_TXT_TYPE,
+				     DB_CHR_TYPE, DB_DTE_TYPE, DB_MNY_TYPE,
+				     DB_ADTE_TYPE, DB_TMWO_TYPE, DB_TMW_TYPE,
+				     DB_TME_TYPE, DB_TSWO_TYPE, DB_TSW_TYPE,
+				     DB_TSTMP_TYPE, DB_INDS_TYPE, DB_INYM_TYPE
+};
+
+/*{
+** Name:	IIVQlocals() -  Visual Query Frame Interface to Local Variables.
+**
+** Description:
+**	This routine implements the visual query frame local variable frame,
+**	which allows local variables to be created, edited, deleted and
+**	renamed for the input visual query frame.
+**
+** Inputs:
+**	OO_OBJECT *apobj;	- ptr to user frame to define/edit variables
+**
+** History:
+**	14-oct-89  (kenl)  - initial version
+**	20-dec-90 (blaise)
+**	    Stopped "not a legal ingres name" error from occurring when a
+**	    local variable is renamed and the new name contains a ".".
+**	    Bug #34835.
+**      23-feb-93 (connie) Bug #43375
+**          Prevent the user from creating more than MF_MAXVAR local variables
+**          per frame with an error message
+*/
+VOID
+##IIVQlocals(apobj)
+##OO_OBJECT	*apobj;
+##{
+	METAFRAME	*pmf;
+	MFVAR		**frame_vars;
+	MFVAR		**frame_procs;
+	MFVAR		*fp;
+	TAGID		tag;
+	TAGID		fp_tag;
+	i4		vartotal;
+	i4		lvarcount = 0;
+	i4		lproccount = 0;
+	i4		i;
+	i4		j;
+	i4		ix;
+	i4 		jx;
+##	char		fe_name[FE_MAXNAME + 1];
+##	char		db_temp[MAX_DATATYPE_STRING + 1];
+##	char		remarks[OOSHORTREMSIZE+1];
+
+	/* only allow local variable editing for standard Visual Query frames */
+	switch ( (*apobj).class )
+	{
+	  case OC_MUFRAME:
+	  case OC_APPFRAME:
+	  case OC_UPDFRAME:
+	  case OC_BRWFRAME:
+		break;
+
+	  case OC_HLPROC:
+	  case OC_QBFFRAME:
+	  case OC_OSLFRAME:
+	  case OC_RWFRAME:
+	  case OC_OSLPROC:
+	  case OC_DBPROC:
+	  case OC_GRFRAME:
+	  case OC_GBFFRAME:
+	  default:
+		IIUGerr(E_VQ008C_No_Locals_Allowed, UG_ERR_ERROR, 0);
+		return;
+	} /* end switch */
+
+	save_vars = FALSE;
+	pmf = ((USER_FRAME *)apobj)->mf;
+	adf_cb = FEadfcb();
+
+	/* initialize forms used for local variables */
+	if (first_call)
+	{
+		first_call = FALSE;
+		IIARiaForm(vqlocals_form);
+		IIARiaForm(vqcreate_form);
+##		inittable vqlocals_form vqlocals_table READ;
+		_n_a = ERget(F_VQ010D_n_a);
+	}
+
+	if (IIAMmpMetaPopulate(pmf, MF_P_FLD) != OK)
+	{
+		return;
+	}
+
+	frame_vars = pmf->vars;
+	tag = (pmf->ptag)[MF_PT_FLD];
+	vartotal = pmf->numvars;
+
+	/*
+	** Allocate memory for frame_procs, a temporary array to hold the 
+	** local procedures in the metaframe.
+	*/
+	fp_tag = FEgettag();
+	frame_procs = (MFVAR **) loc_alloc(fp_tag, sizeof(MFVAR *) * MF_MAXVARS,
+			NULL);
+
+##	display vqlocals_form
+##	initialize()
+##	{
+		register i4	i;
+##		char titl[80];
+
+		IIUGfmt(titl, sizeof(titl), ERget(F_VQ0078_EditLocalVars), 
+			1, IIabExename);
+##		putform ( _name = apobj->name, _title = titl );
+		/* load up the main tablefield on the form */
+		for ( i = 0 ; i < vartotal ; ++i )
+##		{
+			register MFVAR	*cvar;
+##			char		*vname;
+##			char		*vtype;
+##			char		*vcomment;
+
+			cvar = frame_vars[i];
+			/*
+			** local variables come first in the metaframe.
+			*/
+			if (cvar->vartype == VAR_LVAR)
+##			{
+				vname = cvar->name;
+				vtype = cvar->dtype;
+				vcomment = cvar->comment;
+				lvarcount++;
+
+##				loadtable vqlocals_form vqlocals_table (
+##					_name = vname,
+##					_data_type = vtype,
+##					_short_remark = vcomment
+##				)
+##			}
+			else
+			/* Local procedure. Copy into the temporary array. */
+			{
+				fp = (MFVAR *) loc_alloc(fp_tag, sizeof(MFVAR),
+					NULL);
+				frame_procs[lproccount++] = fp;
+				fp->name = loc_alloc(fp_tag,0,cvar->name);
+				fp->dtype = loc_alloc(fp_tag,0,cvar->dtype);
+				fp->comment = loc_alloc(fp_tag,0,cvar->comment);
+			}
+##		}
+
+##	}
+##	activate menuitem ERget(FE_Create)
+##			(expl = ERget(F_VQ0109_CreateLV_expl))
+##	{
+		if (lvarcount >= MF_MAXVARS )
+		{
+			i4	maxlocal;
+			maxlocal = MF_MAXVARS;
+			IIUGerr( S_VQ00D7_Max_Local_Var, UG_ERR_ERROR, 2, 
+				(PTR)&maxlocal, (PTR)&maxlocal );
+		}
+		else
+			_create_edit_var(pmf, TRUE, &lvarcount);
+##	}
+##	activate menuitem ERget(FE_Destroy)
+##			(expl = ERget(F_VQ010A_DeleteLV_expl))
+##	{
+		if (lvarcount == 0)
+		{
+			IIUGerr(S_VQ008E_None_in_table, UG_ERR_ERROR, 0);
+		}
+		else
+		{
+##			getrow vqlocals_form vqlocals_table ( fe_name = _name );
+			if (IIUFccConfirmChoice (CONF_DESTROY, fe_name,
+				ERget(F_VQ0137_Local_Variable),
+				ERget(F_VQ0136_Confirm_LV_Destroy),
+				ERx("vqlvdest.hlp")) == CONFCH_YES)
+			{
+##				DELETEROW vqlocals_form vqlocals_table
+				--lvarcount;
+				save_vars = TRUE;
+			}
+	    	}
+##	}
+
+##	activate menuitem ERget(FE_Edit)
+##			(expl = ERget(F_VQ010B_EditLV_expl))
+##	{
+		if (lvarcount == 0)
+		{
+			IIUGerr(S_VQ008E_None_in_table, UG_ERR_ERROR, 0);
+##			resume
+		}
+		_create_edit_var(pmf, FALSE, &lvarcount);
+##	}
+##	activate menuitem ERget(FE_Rename)
+##			(expl = ERget(F_VQ010C_RenameLV_expl))
+##	{
+	    if (lvarcount == 0)
+	    {
+		IIUGerr(S_VQ008E_None_in_table, UG_ERR_ERROR, 0);
+	    }
+	    else
+	    {
+		IIUFask( ERget(S_VQ0090_Enter_new_name_Prompt),
+					FALSE, db_temp, 0);
+		if (db_temp[0] != EOS)
+##		{
+##			i4	item;
+##			char	*strptr;
+##			char	db_type[MAX_DATATYPE_STRING + 1];
+##			char	db_temp_copy[MAX_DATATYPE_STRING + 1];
+
+			CVlower(db_temp);
+			STcopy(db_temp, db_temp_copy);
+
+			/*
+			** If there isn't a "." in the name, check the name
+			** is valid
+			*/
+			if ((strptr = STindex(db_temp_copy, ERx("."), 0)) ==
+									NULL)
+			{
+				if ((_fe_name_check(db_temp) != OK)
+					|| (_check_unique(pmf, db_temp) != OK))
+				{
+##					resume;
+				}
+			}
+			else
+			/*
+			** Check each half of the name (separated by the ".")
+			** individually. Bug #34835.
+			*/
+			{
+				*strptr = EOS;
+				CMnext(strptr);
+				if ((_fe_name_check(db_temp_copy) != OK)
+					|| (_fe_name_check(strptr) != OK)
+					|| (_check_unique(pmf, db_temp) != OK))
+				{
+##					resume;
+				}
+			}
+
+##			getrow vqlocals_form vqlocals_table (
+##				fe_name = _name,
+##				db_type = _data_type,
+##				remarks = _short_remark
+##			);
+
+##			DELETEROW vqlocals_form vqlocals_table
+			item = FEtbsins(vqlocals_form, vqlocals_table, db_temp,
+				_name, TRUE);
+##			insertrow vqlocals_form vqlocals_table item (
+##				_name = db_temp,
+##				_data_type = db_type,
+##				_short_remark = remarks
+##			);
+			save_vars = TRUE;
+##		}
+	    }
+##	}
+
+##	activate menuitem ERget(F_VQ0157_LocalProcs)
+##			(expl = ERget(F_VQ0158_Procs_expl))
+##	{
+		IIVQlprocs(apobj);
+##	}
+
+##	activate menuitem ERget(F_VQ010F_Globals)
+##			(expl = ERget(F_VQ0110_Globals_expl))
+##	{
+		IIVQgeGlobalEdit(IIVQappl, FALSE);
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(vqlocals_form, vqlocals_table);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll vqlocals_form vqlocals_table to 1;
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll vqlocals_form vqlocals_table to end;
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##			(expl = ERget(F_FE0100_ExplFrameHelp),
+##			validate = 0, activate = 0),
+##		FRSkey1 (validate = 0, activate = 0)
+##	{
+		FEhelp(ERx("vqlocal.hlp"), _localv_prmpt);
+##	}
+
+##	activate menuitem ERget(FE_End)	(expl = ERget(F_FE0102_ExplEnd)),
+##			FRSkey3
+##	{
+	    if (save_vars)
+##	    {
+##		i4	state;
+
+		i = 0;
+##		unloadtable vqlocals_form vqlocals_table (
+##			fe_name = _name,
+##			db_temp = _data_type,
+##			remarks = _short_remark,
+##			state = _STATE
+##		)
+##		{
+		    if (state != stDELETE)
+		    {
+			register MFVAR	*cvar;
+
+			cvar = (MFVAR *) loc_alloc(tag, sizeof(MFVAR),NULL);
+			cvar->name = loc_alloc(tag,0,fe_name);
+			cvar->vartype = VAR_LVAR;
+			cvar->dtype = loc_alloc(tag,0,db_temp);
+			cvar->comment = loc_alloc(tag,0,remarks);
+			frame_vars[i++] = cvar;
+		    }
+##		}
+ 		lvarcount = i;
+		vartotal = lvarcount + lproccount;
+
+		/*
+		** Now copy the local procedures back into the metaframe and
+		** free memory allocated for frame_procs[]
+		*/
+		ix = 0 ;
+		jx = lvarcount ;
+		while ( ix <  lproccount )
+		{
+			register MFVAR	*cvar;
+
+			cvar = (MFVAR *) loc_alloc(tag, sizeof(MFVAR),NULL);
+			cvar->name = loc_alloc(tag, 0, frame_procs[ix]->name);
+			cvar->vartype = VAR_LPROC;
+			cvar->dtype = loc_alloc(tag, 0, frame_procs[ix]->dtype);
+			cvar->comment = loc_alloc(tag, 0,
+						frame_procs[ix]->comment);
+			frame_vars[jx] = cvar;
+			ix++ ; jx++ ;
+
+		}
+		if (fp_tag != 0)
+			FEfree(fp_tag);
+
+		/* set the metaframe state flag to indicate that a regen
+		   is required because the local vars have changed. */
+		pmf->state |= MFST_DOGEN;
+		/* update the disk with the change. */
+		IIAMufqUserFrameQuick(pmf->apobj);
+
+		pmf->numvars = vartotal;
+
+		/* update the disk with the local variables */
+		IIAMmuMetaUpdate(pmf, MF_P_FLD);
+##	    }
+	    IIAMmfMetaFree(pmf, MF_P_FLD);
+##	    clear field vqlocals_table;
+##	    breakdisplay
+##	}
+##	finalize
+##}
+
+/*{
+** Name:	_create_edit_var	- create/edit a local variable
+**
+** Description:
+**	This routine handles the popup for creating/editing local variables.
+**
+** Inputs:
+**	bool create_op;		- TRUE to create, FALSE to edit a variable
+**	i4 *lvarcount		- ptr to i4  indicating no. of local variables
+**
+** Outputs:
+**	lvarcount is set to the updated number of local variables
+**
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	01-dec-89  (kenl)  - initial version
+**	31-jul-91 (blaise)
+**		Remove activation of frskey3; it wasn't listed as a menu item
+**		but if hit inadvertently would end without any opportunity
+**		for saving changes. Bug #37647.
+*/
+
+static
+_create_edit_var(mf, create_op, lvarcount)
+METAFRAME	*mf;
+bool		create_op;
+i4		*lvarcount;
+{
+	i4	is_ingres;
+##	char	var_name[2 * FE_MAXNAME + 1];
+
+##	display vqcreate_form with style = popup
+##	initialize()
+##	{
+##		clear field all
+##		putform vqcreate_form ( _isarray = _n_a, _nullable = _n_a );
+		if (create_op)
+		{
+##			char titl[80];
+
+			_VOID_ IIUGfmt(titl, sizeof(titl), 
+				ERget(F_VQ0075_CreateLocal), 1, IIabExename);
+##			putform vqcreate_form (title = titl)
+##			set_frs field vqcreate_form ( displayonly(_name) = 0 );
+			/* make the n/a fields display only */
+			_set_disp_only(_yes, _yes);
+			is_ingres = _unset;
+		}
+		else
+		{
+			_extract_var_info(&is_ingres);
+		}
+##	}
+
+##	activate field _name
+##	{
+		char	*strptr;
+		char	var_copy[2 * FE_MAXNAME + 1];
+
+##		getform vqcreate_form ( var_name = _name );
+		STcopy(var_name, var_copy);
+		if ((strptr = STindex(var_copy, ERx("."), 0)) == NULL)
+		{
+			if (_fe_name_check(var_name) == OK)
+			{
+##				resume next
+			}
+		}
+		else
+		{
+			*strptr = EOS;
+			CMnext(strptr);
+			if ((_fe_name_check(var_copy) == OK)
+					&& (_fe_name_check(strptr) == OK))
+			{
+##				resume next
+			}
+		}
+##		resume;	/* error */
+##	}
+
+##	activate field _data_type
+##	{
+		if (_check_ing_type(&is_ingres) == OK)
+		{
+##			resume next
+		}
+##		resume;	/* error */
+##	}
+
+##	activate menuitem ERget(FE_OK), FRSkey4
+##	{
+##		validate field _data_type
+
+		if (create_op)
+		{
+			/* check to see if the name already exists */
+##			getform vqcreate_form ( var_name = _name );
+			if (_check_unique(mf, var_name) != OK)
+			{
+##				resume
+			}
+		}
+		_save_var(is_ingres);
+		if (create_op)
+		{
+			++(*lvarcount);
+		}
+		save_vars = TRUE;
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(FE_Cancel)
+##		(expl = ERget(F_FE0109_ExplForget), validate = 0, activate = 0),
+##		FRSkey9 (validate = 0, activate = 0)
+##	{
+##		breakdisplay;
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##			EXPL = ERget(FE_LookupExpl)),
+##			FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##	{
+##		char		fname[FE_MAXNAME+1];
+		FLD_VALUE	fv;
+
+		fv._form = vqcreate_form;
+		fv._field = fname;
+		fv._column = NULL;
+
+##		inquire_frs form ( fname = field(vqcreate_form) );
+		if (STequal(fname, _data_type))
+		{
+			IIUFhlpType( _types, sizeof(_types)/sizeof(_types[0]),
+					TRUE, &fv
+			);
+		}
+		else
+		{
+			IIUFfldHelp(&fv);
+		}
+##		resume next
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp), validate = 0,
+##			activate = 0),
+##		FRSkey1 (validate = 0, activate = 0)
+##	{
+		if (create_op)
+		{
+			FEhelp(ERx("vqlvcre.hlp"), ERget(F_VQ010E_localv_create));
+		}
+		else
+		{
+			FEhelp(ERx("vqlvedit.hlp"), _localv_prmpt);
+		}
+##	}
+}
+
+
+/*{
+** Name:	_extract_var_info	- break apart datatype field
+**
+** Description:
+**	The datatype, as the user sees it, on the main Local Variable
+**	table field needs to be broken up into several pieces before it is
+**	displayed on the create/edit popup.  This routine does that pulling
+**	apart.
+**
+** Inputs:
+**	i4 *is_ingres		- ptr to i4  for type of datatype (derived,etc)
+**
+** Outputs:
+**	is_ingres is set to indicate type of datatype (derived, standard, etc.)
+**
+** History:
+**	01-dec-89  (kenl)  - initial version
+*/
+
+static
+_extract_var_info(is_ingres)
+i4	*is_ingres;
+{
+##	char		new_type[MAX_DATATYPE_STRING + 1];
+##	char		old_type[MAX_DATATYPE_STRING + 1];
+##	char		*vtype;
+##	char		*null_yorn;
+##	char		*array_yorn;
+##	char		old_remark[OOSHORTREMSIZE+1];
+##	char		fe_name[FE_MAXNAME + 1];
+	i4		count;
+	i4		start;
+	char		*wordarray[STGETWORDS_MAX];
+	register i4	i;
+##	char titl[80];
+
+	_VOID_ IIUGfmt(titl, sizeof(titl), ERget(F_VQ0076_EditLocal), 
+			1, IIabExename);
+
+##	putform vqcreate_form (title = titl)
+	null_yorn = array_yorn = _n_a;
+##	getrow vqlocals_form vqlocals_table (
+##			fe_name = _name,
+##			old_type = _data_type,
+##			old_remark = _short_remark
+##	)
+##	set_frs field vqcreate_form ( displayonly(_name) = 1 )
+	count = STGETWORDS_MAX;
+	_VOID_ STgetwords(old_type, &count, wordarray);
+	start = 0;
+	if (STequal(wordarray[0], ERx("ARRAY")))
+	{
+		array_yorn = ERget(F_UG0002_Yes2);
+		start = 2;
+		*is_ingres = _no;
+	}
+	else if ((count >= 3) && (STequal(wordarray[2], ERx("NULL"))))
+	{
+		null_yorn = (STequal(wordarray[1], ERx("WITH"))) ?
+			ERget(F_UG0002_Yes2) : ERget(F_UG0007_No2);
+		count = 1;
+		*is_ingres = _yes;
+	}
+	else
+	{
+		*is_ingres = _no;
+		array_yorn = ERget(F_UG0007_No2);
+	}
+
+	for (i = start, vtype = new_type; i < count; i++)
+	{
+		vtype += STlcopy (wordarray[i], vtype, 255);
+		*vtype++ = ' ';
+	}
+	*vtype = EOS;
+
+	if (*is_ingres == _yes)
+	{
+		_set_disp_only(_yes, _no);
+	}
+	else
+	{
+		_set_disp_only(_no, _yes);
+	}
+##	putform vqcreate_form (
+##				_name = fe_name,
+##				_data_type = new_type,
+##				_nullable = null_yorn,
+##				_isarray = array_yorn,
+##				_short_remark = old_remark
+##	);
+
+}
+
+
+
+/*{
+** Name:	_check_ing_type	- validate user entered datatype
+**
+** Description:
+**	This routine determines if the datatype entered by the user is
+**	either a valid INGRES DB_DATA_VALUE datatype (float, integer, etc.)
+**	or a derived datatype (class).
+**
+** Inputs:
+**	i4 *is_ingres		- ptr to i4  for type of datatype (derived,etc)
+**
+** Outputs:
+**	is_ingres is set to indicate type of datatype (derived, standard, etc.)
+**
+**	Returns:
+**		STATUS	- OK if datatype is valid, FAIL otherwise
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	01-dec-89  (kenl)  - initial version
+**	16-oct-2006 (gupsh01)
+**	      Fix date key word to refer to ingresdate or ansidate.
+**	10-Jul-2007 (kibro01)
+**	    Remove IIAMdateAlias since its functionality is in adi_tyid
+*/
+
+static STATUS
+_check_ing_type(is_ingres)
+i4	*is_ingres;
+{
+	i4	len;
+##	char	db_type[MAX_DATATYPE_STRING + 1];
+	char	tmpbuf[MAX_DATATYPE_STRING + 1];
+	DB_USER_TYPE	utype;
+	DB_DATA_VALUE	dbv;
+##	i4		changed;
+##	char		*strptr;
+	char		type_of[] = ERx("type of");
+        char            dtemp[11];
+        char            *dp = dtemp;
+
+##	inquire_frs field vqcreate_form	(changed = change(_data_type))
+	if (changed == 0)
+	{
+		return(OK);
+	}
+
+##	set_frs field vqcreate_form ( change(_data_type) = 0 );
+##	getform vqcreate_form ( db_type = _data_type );
+
+	/* Check whether this is this a valid ingres datatype */
+	if ((len = STzapblank(db_type, tmpbuf)) < DB_TYPE_SIZE)
+	{
+		if (len == 0)
+		{
+			return(FAIL);
+		}
+		STlcopy(db_type, utype.dbut_name, DB_TYPE_SIZE);
+		if (afe_tychk(adf_cb, &utype, &dbv) == OK &&
+			IIAFfedatatype(&dbv) == TRUE)
+		{
+##			putform vqcreate_form ( _data_type = db_type );
+			_set_disp_only(_yes, _no);
+			if (*is_ingres != _yes)
+			{
+##				putform vqcreate_form (
+##						_isarray = _n_a,
+##						_nullable = ERget(F_UG0007_No2)
+##				);
+				*is_ingres = _yes;
+			}
+			return(OK);
+		}
+	}
+
+	/*
+	** We don't have a valid ingres datatype; check whether its type is
+	** TYPE OF .... or an existing record type.
+	*/
+	if (STbcompare(db_type, 0, type_of, STlength(type_of), TRUE) != 0 &&
+		OOsnd(OC_RECORD, _withName, db_type, (char*)NULL,
+			IIVQappl->ooid) == 0)
+	{
+		/* Error - it isn't TYPE OF ... or an existing record type */
+		IIUGerr(E_VQ00F5_Bad_Data_Type, UG_ERR_ERROR, 1, db_type);
+		return(FAIL);
+	}
+	_set_disp_only(_no, _yes);
+	if (*is_ingres != _no)
+	{
+##		putform vqcreate_form (
+##				_nullable = _n_a,
+##				_isarray = ERget(F_UG0007_No2)
+##		);
+		*is_ingres = _no;
+	}
+	strptr = db_type;
+	if (CMspace(strptr))
+	{
+		while (CMspace(strptr))
+		{
+			CMnext(strptr);
+		}
+##		putform vqcreate_form (_data_type = strptr)
+	}
+	return(OK);
+}
+
+
+/*{
+** Name:	_fe_name_check	- check char string for valid FE object name
+**
+** Description:
+**	This routine determines if the passed in character string points to
+**	a valid name for a frontend object.
+**
+** Inputs:
+**	char *fe_name		- ptr to character string for FE name
+**
+** Outputs:
+**	Returns:
+**		STATUS	- OK for valid name, FAIL otherwise
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	01-dec-89  (kenl)  - initial version
+*/
+
+static STATUS
+_fe_name_check(fe_name)
+char	*fe_name;
+{
+	if (STtrmwhite(fe_name) > 0 && FEchkname(fe_name) != OK)
+	{
+		IIUGerr(E_UG000E_BadName, UG_ERR_ERROR, 1, fe_name);
+		return(FAIL);
+	}
+	return(OK);
+}
+
+
+/*{
+** Name:	_save_var	- update main table field with local variable
+**
+** Description:
+**	This routine updates the table field on the main Local Variables
+**	form after a variable has been created or edited.
+**
+** Inputs:
+**	i4 is_ingres		- indicates type of datatype (derived,etc)
+**
+** Outputs:
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	01-dec-89  (kenl)  - initial version
+*/
+
+static
+_save_var(is_ingres)
+i4	is_ingres;
+{
+##	char	fname[FE_MAXNAME + 1];
+##	char	dtype[MAX_DATATYPE_STRING + 1];
+##	char	db_temp[MAX_DATATYPE_STRING + 1];
+##	char	remarks[OOSHORTREMSIZE+1];
+##	char	is_array[15+1];
+##	char	is_nullable[15+1];
+##	i4	item;
+
+##	getform vqcreate_form ( fname = _name,
+##				dtype = _data_type,
+##				remarks = _short_remark
+##	);
+	STcopy(dtype, db_temp);
+	if (is_ingres == _yes)
+	{
+##		getform vqcreate_form ( is_nullable = _nullable );
+		if (IIUGyn(is_nullable, (STATUS *)NULL))
+		{
+			STpolycat(2, dtype, ERx(" WITH NULL"), db_temp);
+		}
+		else
+		{
+			STpolycat(2, dtype, ERx(" NOT NULL"), db_temp);
+		}
+	}
+	else
+	{
+##		getform vqcreate_form ( is_array = _isarray );
+		if (IIUGyn(is_array, (STATUS *)NULL))
+		{
+			STpolycat(2, ERx("ARRAY OF "), dtype, db_temp);
+		}
+	}
+
+	item = FEtbsins(vqlocals_form, vqlocals_table, fname, _name, TRUE);
+##	insertrow vqlocals_form vqlocals_table item (
+##			_name = fname,
+##			_data_type = db_temp,
+##			_short_remark = remarks
+##	);
+}
+
+
+/*{
+** Name:	_set_disp_only	- set displayonly attributes
+**
+** Description:
+**	This routine sets the displayonly attributes for the fields
+**	'isarray' and 'nullable' on the create/edit popup.
+**
+** Inputs:
+**	i4 x;			- _yes (1) for displayonly, _no (0) otherwise
+**	i4 y;			- _yes (1) for displayonly, _no (0) otherwise
+**
+** History:
+**	01-dec-89  (kenl)  - initial version
+*/
+
+static
+_set_disp_only(x, y)
+##i4	x;
+##i4	y;
+{
+##	set_frs field vqcreate_form (
+##		displayonly(_isarray) = x,
+##		displayonly(_nullable) = y
+##	);
+}
+
+
+/*{
+** Name:	_check_unique	- check main table field for new variable name
+**
+** Description:
+**	This routine checks the table field on the main Local Variables form
+**	to see if the variable that was created or renamed already exists
+**	as a local variable for this frame.
+**
+** Inputs:
+**	char *new_name		- ptr to char string containing new name
+**
+** Outputs:
+**	Returns:
+**		STATUS	- OK if new name is acceptable, FAIL otherwise
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	01-dec-89  (kenl)  - initial version
+*/
+
+static STATUS
+_check_unique(mf, new_name)
+METAFRAME	*mf;
+char		*new_name;
+{
+	MFVAR	*mf_var;
+##	char	existing_name[FE_MAXNAME + 1];
+##	i4	name_state;
+	i4	i;
+	STATUS	rstat = OK;
+
+	/*
+	** First check the table field of local variables to see if the name
+	** already exists.
+	*/
+
+##	unloadtable vqlocals_form vqlocals_table (
+##		existing_name = _name,
+##		name_state = _STATE
+##	)
+##	{
+		if (name_state != stDELETE && STequal(new_name, existing_name))
+		{
+			rstat = FAIL;
+##			endloop
+		}
+##	}
+
+	/*
+	** Now check the names of existing local variables in the metaframe,
+	** since these don't appear in the table field.
+	*/
+	if (rstat == OK)
+	{
+		for (i = 0; i < mf->numvars; i++)
+		{
+			mf_var = mf->vars[i];
+			if (mf_var->vartype != VAR_LVAR &&
+				STequal(mf_var->name, new_name))
+			rstat = FAIL;
+		}
+	}
+
+	if (rstat == FAIL)
+	{
+		IIUGerr(E_VQ008D_duplicate_local, UG_ERR_ERROR, 1, new_name);
+	}
+	return(rstat);
+}
+
+
+
+/*{
+** Name:	loc_alloc	- allocate memory for a string variable
+**
+** Description:
+**	This routine allocates memory for a string variable.  If the
+**	character pointer passed in is NULL, the string allocated will
+**	be 'size' in length, otherwise it will be the length of 'str' plus
+**	one and 'str' will be copied to the allocated memory.
+**
+** Inputs:
+**	TAGID tag;		- tag to use for allocated memory
+**	i4 size		- size of allocated memory if 'str' is NULL
+**	char *str		- ptr to char string to copy
+**
+** Returns:
+**	{PTR}	- pointer to allocated memory which is a copy of
+**			  'str' if 'str' was not NULL
+** History:
+**	01-dec-89  (kenl)  - initial version
+*/
+
+static PTR
+loc_alloc(tag,size,str)
+TAGID   tag;
+i4	size;
+char    *str;
+{
+	PTR mem;
+
+	if (str != NULL)
+		size = STlength(str)+1;
+
+	mem = FEreqmem((u_i4)tag, (u_i4)size, FALSE, (STATUS *)NULL);
+	if (mem == NULL)
+	{
+		return (NULL);
+	}
+
+	if (str != NULL)
+		STcopy(str,(char *) mem);
+
+	return (mem);
+}

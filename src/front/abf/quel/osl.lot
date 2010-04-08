@@ -1,0 +1,17 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/include=(gver,dsnat,ollang), -  ! for II_copyright
+INGLIB:libquel.olb/library, -
+INGLIB:libosl.olb/library, -
+INGLIB:libilg.olb/library, -
+INGLIB:libcodegen.olb/library, -
+INGLIB:libinterp.olb/library, -
+INGLIB:libilrf.olb/library, -
+INGLIB:libiaom.olb/library, -
+INGLIB:liboo.olb/library, -
+INGLIB:libioi.olb/library, -
+INGLIB:libequel.olb/library, -
+INGLIB:libfeds.olb/library, -
+II_FRAMELIB/share
+II_LIBQLIB/share
+II_COMPATLIB/share

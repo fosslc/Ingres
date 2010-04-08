@@ -1,0 +1,294 @@
+
+/*
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+/*
+** includes and defines
+*/
+#include <compat.h>
+#include <si.h>
+#include <cs.h>
+#include <st.h>
+#include <dbms.h>
+#include <fe.h>
+#include <pc.h>
+#include <lg.h>
+#include <lk.h>
+#include <er.h>
+#include        <adf.h>
+#include        <ft.h>
+#include        <fmt.h>
+#include        <frame.h>
+#include "lists.h"
+#include "msgs.h" 
+#include "dba.h"
+
+/*
+**  File: dsplogpr.qc
+**
+**  Purpose - this file contains the routines which display the active processes
+**	(in logging system) information form.  
+**
+**  This file contains:
+**	displgpr() - displays a list of processes in the logging system form. 
+**	printlgpr() - gets, formats and outputs logging system process information.
+**	get_logpid() - given an internal id, returns the PID for a given process
+**
+**  History
+**	8/29/89		tomt	created
+**	9/2/89		tomt	added code to display data
+**	9/6/89		tomt	added get_logpid()
+**	9/19/89		tomt	do addforms here
+**	10/1/89		tomt	integrated 6.3 changes
+**	3/21/91		tomt	changed title on form to trim.  Removed
+**                              variable used to hold title.
+**      5/26/93 (vijay)
+**              include pc.h
+**	26-Aug-1993 (fredv)
+**		Included <st.h>.
+**      21-Sep-1993 (smc)
+**              Added <cs.h> for CS_SID.
+**	 1-Nov-1995 (nick)
+**		Remove unused variable.
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	18-sep-2003 (abbjo03)
+**	    Include pc.h ahead of lg.h.
+*/
+
+/*
+** forward and external declarations
+*/
+VOID printlgpr();
+VOID get_lklgstats();
+VOID stat_decode();
+VOID tablefield_find();
+VOID get_logpid();
+
+/*
+** Declare file wide vars
+*/
+## static char Fdisplgproc[] = "fdisplgproc";
+
+static char Lgprstat[] = "RECOVERY,ARCHIV,FCTDBMS,RUNAWAY,DBMS,CKPDB,VOID,\
+SHR_BM,IDLE,DEAD,DYING";
+
+/*
+** Routine: displgpr()  displays a list of processes in the logging
+**		system on a popup form
+**
+** Inputs: none
+**
+** Outputs: displays a form
+**
+** Side effects: assumes the forms system is active
+*/
+VOID
+displgpr()
+{
+    bool	e_xit = FALSE;
+##  int		list_count;
+##  char	colname[FE_MAXNAME + 1];
+    static bool	forms_added = FALSE;
+
+##  char	*Procinfo =
+#ifdef VMS 
+			"Process_Info";
+#else
+			"";
+#endif
+
+##  GLOBALREF int *fdisplgproc;
+
+    /*
+    **  Determine if forms are added, if not addform them.  Also
+    **  don't add forms if output is being directed to a file
+    */
+    if (!forms_added)
+    {
+##	ADDFORM fdisplgproc
+	forms_added = TRUE;
+    }
+
+    /* Display the form and get the information */
+##  DISPLAY Fdisplgproc READ WITH STYLE = popup (BORDER = none,
+##	STARTCOLUMN = 2, STARTROW = 2)
+##  INITIALIZE
+##  {
+	/* Put the info in the tablefield */
+##	INITTABLE Fdisplgproc #logprocess READ
+	printlgpr();
+
+	/* get number of processes */
+##	INQUIRE_FRS TABLE Fdisplgproc (list_count = DATAROWS(#logprocess))
+##  }
+##  ACTIVATE MENUITEM "Refresh":
+##  {
+	/* Put the info in the tablefield */
+##	MESSAGE "Loading logging information..."
+##	CLEAR FIELD #logprocess
+        get_lklgstats(GET_LOGPROCESS, (PTR) 0);
+	printlgpr();	/* put info in tablefield */
+
+	/* get number of processes */
+##	INQUIRE_FRS TABLE Fdisplgproc (list_count = DATAROWS(#logprocess))
+
+##  }
+##  ACTIVATE MENUITEM Procinfo
+##  {
+#ifdef VMS 
+##  	char	cpid[11];
+
+	if (list_count == 0) 
+	{
+	    POP_MSG("There are no processes to get information on");
+##	    RESUME
+	}
+##	GETROW Fdisplgproc #logprocess (cpid = #pr_pid)
+	showproc(cpid);
+#else
+	POP_MSG("Process_Info (logging system) is available only on VMS");
+##	RESUME
+#endif 
+##  }
+##  ACTIVATE MENUITEM "Find", frskey7:
+##  {
+	if (list_count == 0) {
+	    POP_MSG("There is nothing to find");
+##	    RESUME
+	}
+##      INQUIRE_FRS COLUMN Fdisplgproc #logprocess (colname = name)
+	tablefield_find();
+##	RESUME COLUMN #logprocess colname
+##  }
+##  ACTIVATE MENUITEM "Help", frskey1:
+##  {
+	my_help("ipmdplgp.hlp", "Log Process");
+##  }
+##  ACTIVATE MENUITEM "End", frskey3:
+##  {
+##	BREAKDISPLAY
+##  }
+##  ACTIVATE MENUITEM "Quit", frskey2:
+##  {
+	e_xit = TRUE;		/* user wants to leave */
+##	MESSAGE " "		/* force cursor to bottom of screen */
+##	BREAKDISPLAY
+##  }
+
+    if (e_xit) {		/* user wants to leave */
+	terminate(OK);
+    }
+    return;
+}
+
+/*
+** printlgpr() - this routine gets, formats and outputs the logging system
+**	database information.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	formatted logging process information to screen or file
+**
+** Returns:
+**	none
+**
+** History:
+**	8/27/89		tomt	written
+**	9/2/89		tomt	added code to display logging process info
+**	10/1/89		tomt	integrated 6.3 changes
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+*/
+VOID
+printlgpr()
+{
+    bool	reset = TRUE;	/* always start at beginning of list */
+##  char	pr_id[HEXID_SIZE + 1], pr_pid[HEXID_SIZE + 1], pr_type[20];
+    LG_PROCESS	*lpb;
+##  i4	pr_stat_database;
+##  i4	pr_stat_write;
+##  i4	pr_stat_force;
+##  i4	pr_stat_wait;
+##  i4	pr_stat_begin;
+##  i4	pr_stat_end;
+
+    while ((lpb = (LG_PROCESS *)l_retrieve(LOGPROCINFO, 0, &reset)) != NULL) 
+    {
+	/*
+	**    do formatting for display
+	*/
+	STprintf(pr_id, "%x", lpb->pr_id);
+	STprintf(pr_pid, "%x", lpb->pr_pid);
+	stat_decode(pr_type, Lgprstat, (u_i4) lpb->pr_type);
+
+	if (lpb->pr_type == 0)	/* just in case, make it clear on scr */
+	    STcopy("<none>", pr_type);
+
+	pr_stat_database = lpb->pr_stat.database;
+	pr_stat_write = lpb->pr_stat.write;
+	pr_stat_force = lpb->pr_stat.force;
+	pr_stat_wait = lpb->pr_stat.wait;
+	pr_stat_begin = lpb->pr_stat.begin;
+	pr_stat_end = lpb->pr_stat.end;
+
+##	LOADTABLE Fdisplgproc #logprocess (#pr_id = pr_id, #pr_pid = pr_pid,
+##	    #pr_type = pr_type, #pr_open = pr_stat_database,
+##	    #pr_write = pr_stat_write, #pr_force = pr_stat_force,
+##	    #pr_wait = pr_stat_wait, #pr_begin = pr_stat_begin,
+##	    #pr_end = pr_stat_end)
+    }
+    return;
+}
+
+/*
+** get_logpid - this routine gets the PID for a specified process given
+**	an external PID.
+**
+** Inputs:
+**	external_pid - pointer to a buffer to place the PID
+**	internal_pid - the internal process id
+**
+** Outputs:
+**	value placed into buffer pointed to by external_id
+**
+** Returns:
+**	none
+**
+** History:
+**	9/6/89		tomt	written
+*/
+VOID
+get_logpid(external_pid, internal_pid)
+PTR external_pid;
+i4 internal_pid;
+{
+    bool	reset = TRUE;	/* start at beginning of linked list */
+    bool	found = FALSE;
+    LG_PROCESS	*lpb;
+
+    while ((lpb = (LG_PROCESS *)l_retrieve(LOGPROCINFO, 0, &reset)) != NULL)
+    {
+	/*
+	**    determine if internal pids match
+	*/
+	if (lpb->pr_id == internal_pid)
+	{
+	    STprintf(external_pid, "%x", lpb->pr_pid);
+	    found = TRUE;
+	    break;	/* done */
+	}
+    }
+    if (!found)
+	STcopy("<none>", external_pid);
+    return;
+}

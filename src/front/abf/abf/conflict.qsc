@@ -1,0 +1,108 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<adf.h>
+#include	<afe.h>
+##include	<ooclass.qsh>
+##include	<oocat.qsh>
+
+/**
+** Name:	conflict.qc -	Report Conflicts with System Function Names.
+**
+** Description:
+**	Display procedure names that conflict with system function names.
+**	Defines:
+**
+**	iiabReportConflicts()	report conflicts with system function names.
+**
+** History:
+**	Revision 6.2  89/02  wong
+**	Renamed from 'absysconflict()' and modified to read names from a
+**	table field and to check them directly.
+**
+**	Revision 6.0  87/04  bobm
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	23-Aug-2009 (kschendel) 121804
+**	    Need afe.h to satisfy gcc 4.3.
+*/
+
+/*{
+** Name:	iiabReportConflicts() -	Report Conflicts with System Names.
+**
+** Description:
+**	Display procedure names that conflict with system function names.  The
+**	names are read from the input table field, checked for conflict with
+**	the system names, and then displayed on the "abfconflict" form in a
+**	table field.
+**
+** Input:
+**	form	{char *}  The form name containing the names table field.
+**	tblfld	{char *}  The table field containing the names to be checked.
+**
+** History:
+**	1987 (bobm)  Written.
+**	02/89 (jhw)  Rewritten to read names from the table field.
+*/
+
+static const
+##	char	_Form[]		= ERx("abfconflict"),
+##		_NamesFld[]	= ERx("names");
+
+##static i4	_maxRows = 0;	/* no. of displayed rows */
+
+#define _EndExpl	F_FE0102_ExplEnd
+
+VOID
+iiabReportConflicts ( form, tblfld )
+##char	*form;
+##char	*tblfld;
+{
+	if ( _maxRows == 0 )
+	{
+		IIARiaForm(_Form);
+##		inittable _Form _NamesFld;
+##		inquire_frs table _Form ( _maxRows = maxrow(_NamesFld) );
+	}
+
+##	display _Form READ
+##	initialize ()
+##	{
+		register i4	rows = 0;
+##		char		name[FE_MAXNAME+1];
+
+##		clear field _NamesFld;
+##		redisplay;
+##		unloadtable form tblfld ( name = _name )
+##		{
+			if ( IIAFckFuncName(name) )
+			{
+##				loadtable _Form _NamesFld
+##				(
+##					#procname = name
+##				);
+				if ( ++rows == _maxRows )
+##					redisplay;	/* user feedback */
+			}
+##		}
+##	}
+##	activate menuitem ERget(FE_End) (expl = ERget(_EndExpl)),
+##		FRSkey3
+##	{
+##		breakdisplay;
+##	}
+}

@@ -1,0 +1,11 @@
+#
+# MANIFEST file for front!st!gtkinstall_pixmap_unix_win
+#
+
+SubDir ING_SRC front st gtkinstall_pixmap_unix_win ;
+
+IISUBSYS front st gtkinstall_pixmap_unix_win ;
+
+IIDFILES pixmaps : check3.png enterprise.ico Ingres_Logo_WordMark_Trim.gif
+	tux.png wabi.png BI_48.png cm_48.png ingres_48.png txn_48.png ;
+

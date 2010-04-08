@@ -1,0 +1,486 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word 9">
+<meta name=Originator content="Microsoft Word 9">
+<link rel=File-List href="./cfInclude_files/filelist.xml">
+<title>INCLUDE Keyword</title>
+<!--[if gte mso 9]><xml>
+ <o:DocumentProperties>
+  <o:Author>Kawing Chiu</o:Author>
+  <o:LastAuthor>Kawing Chiu</o:LastAuthor>
+  <o:Revision>1</o:Revision>
+  <o:TotalTime>0</o:TotalTime>
+  <o:Created>1999-12-16T17:08:00Z</o:Created>
+  <o:LastSaved>1999-12-16T17:09:00Z</o:LastSaved>
+  <o:Pages>1</o:Pages>
+  <o:Words>281</o:Words>
+  <o:Characters>1603</o:Characters>
+  <o:Company>Ingres Corporation</o:Company>
+  <o:Lines>13</o:Lines>
+  <o:Paragraphs>3</o:Paragraphs>
+  <o:CharactersWithSpaces>1968</o:CharactersWithSpaces>
+  <o:Version>9.2720</o:Version>
+ </o:DocumentProperties>
+</xml><![endif]-->
+<style>
+<!--
+ /* Font Definitions */
+@font-face
+	{font-family:Courier;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:modern;
+	mso-font-format:other;
+	mso-font-pitch:fixed;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:AvantGarde;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:swiss;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:ZapfDingbats;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:2;
+	mso-generic-font-family:decorative;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:0 268435456 0 0 -2147483648 0;}
+@font-face
+	{font-family:Palatino;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-alt:"Book Antiqua";
+	mso-font-charset:0;
+	mso-generic-font-family:roman;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+ /* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{mso-style-parent:"";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	font-family:"Times New Roman";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+h1
+	{mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:1;
+	font-size:16.0pt;
+	font-family:Arial;
+	mso-font-kerning:16.0pt;}
+h2
+	{mso-style-parent:"Heading 1";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:14.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:2;
+	tab-stops:48.0pt;
+	font-size:12.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+h3
+	{mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:3;
+	font-size:13.0pt;
+	font-family:Arial;}
+h4
+	{mso-style-parent:"Heading 3";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:4;
+	tab-stops:48.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+p.MsoNormalIndent, li.MsoNormalIndent, div.MsoNormalIndent
+	{margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.75in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalLeadin, li.NormalLeadin, div.NormalLeadin
+	{mso-style-name:NormalLeadin;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalLeft, li.NormalLeft, div.NormalLeft
+	{mso-style-name:NormalLeft;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	text-indent:-1.5in;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.extraspace, li.extraspace, div.extraspace
+	{mso-style-name:"extra space";
+	mso-style-next:Normal;
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.codefirst, li.codefirst, div.codefirst
+	{mso-style-name:codefirst;
+	mso-style-next:Normal;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.code, li.code, div.code
+	{mso-style-name:code;
+	mso-style-parent:codefirst;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecolhdright, li.tablecolhdright, div.tablecolhdright
+	{mso-style-name:"table colhd \(right\)";
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecolhdleft, li.tablecolhdleft, div.tablecolhdleft
+	{mso-style-name:"table colhd \(left\)";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tableright, li.tableright, div.tableright
+	{mso-style-name:"table \(right\)";
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tableleft, li.tableleft, div.tableleft
+	{mso-style-name:"table \(left\)";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+@page Section1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.25in 1.0in 1.25in;
+	mso-header-margin:.5in;
+	mso-footer-margin:.5in;
+	mso-paper-source:0;}
+div.Section1
+	{page:Section1;}
+ /* List Definitions */
+@list l0
+	{mso-list-id:166676375;
+	mso-list-type:simple;
+	mso-list-template-ids:617744848;}
+@list l0:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:.25in;
+	mso-level-number-position:left;
+	margin-left:.25in;
+	text-indent:-.25in;
+	mso-ansi-font-size:6.0pt;
+	font-family:ZapfDingbats;}
+ol
+	{margin-bottom:0in;}
+ul
+	{margin-bottom:0in;}
+-->
+</style>
+</head>
+
+<body lang=EN-US style='tab-interval:.5in'>
+
+<div class=Section1>
+
+<h2>INCLUDE Keyword<!--[if supportFields]><span style='mso-element:field-begin'></span>
+tc &quot;<br clear=all style='page-break-before:always'>
+INCLUDE Keyword&quot; \L 3 <![endif]--><!--[if supportFields]><span
+style='mso-element:field-end'></span><![endif]--></h2>
+
+<h4>Purpose</h4>
+
+<p class=NormalLeadin style='margin-top:12.0pt;mso-outline-level:1'>Includes an
+Ingres/ICE HTML or macro document document into the current document.</p>
+
+<h4>Syntax</h4>
+
+<p class=MsoNormal><b style='mso-bidi-font-weight:normal'>&lt;!-- #ICE</b> [<b
+style='mso-bidi-font-weight:normal'>REPEAT</b>] <b style='mso-bidi-font-weight:
+normal'>INCLUDE=</b><b style='mso-bidi-font-weight:normal'><span
+style='font-family:Courier'>`</span></b>[<i style='mso-bidi-font-style:normal'>business_unit_name<br>
+<span style='mso-tab-count:1'>            </span></i><b style='mso-bidi-font-weight:
+normal'>'</b>[<b style='mso-bidi-font-weight:normal'>'</b>]<i style='mso-bidi-font-style:
+normal'>document_name</i>[<b style='mso-bidi-font-weight:normal'>'</b>]<b
+style='mso-bidi-font-weight:normal'>'</b>]<b style='mso-bidi-font-weight:normal'>?</b>{<i
+style='mso-bidi-font-style:normal'>variable_name</i><b style='mso-bidi-font-weight:
+normal'>=</b><i style='mso-bidi-font-style:normal'>value</i>}[<b
+style='mso-bidi-font-weight:normal'>&amp;</b>...]<b style='mso-bidi-font-weight:
+normal'><span style='font-family:Courier'>`</span></b><br>
+<span style='mso-tab-count:1'>            </span>[<b style='mso-bidi-font-weight:
+normal'>TYPE=</b><b style='mso-bidi-font-weight:normal'><span style='font-family:
+Courier'>`</span>HTML</b>|<b style='mso-bidi-font-weight:normal'>MULTI</b>|<b
+style='mso-bidi-font-weight:normal'>REPORT</b>|<b style='mso-bidi-font-weight:
+normal'>EXE</b><b style='mso-bidi-font-weight:normal'><span style='font-family:
+Courier'>`</span></b>]<br>
+<b style='mso-bidi-font-weight:normal'>--&gt;</b></p>
+
+<b style='mso-bidi-font-weight:normal'><span style='font-size:10.0pt;
+font-family:AvantGarde;mso-fareast-font-family:"Times New Roman";mso-bidi-font-family:
+"Times New Roman";mso-ansi-language:EN-US;mso-fareast-language:EN-US;
+mso-bidi-language:AR-SA'><br clear=all style='page-break-before:always'>
+</span></b>
+
+<h4>Description</h4>
+
+<p class=NormalLeft><span style='font-size:9.0pt;mso-bidi-font-size:10.0pt;
+font-family:AvantGarde'>Parameters</span><span style='mso-tab-count:1'>                          </span>The
+following table lists the parameters used with the INCLUDE keyword:</p>
+
+<p class=extraspace><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></p>
+
+<table border=0 cellspacing=0 cellpadding=0 style='margin-left:108.4pt;
+ border-collapse:collapse;mso-padding-alt:0in 0in 0in 0in'>
+ <thead>
+  <tr>
+   <td width=120 valign=top style='width:1.25in;border:none;border-top:solid windowtext 1.5pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tablecolhdleft>Parameter</p>
+   </td>
+   <td width=264 valign=top style='width:2.75in;border:none;border-top:solid windowtext 1.5pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tablecolhdright>Description</p>
+   </td>
+  </tr>
+ </thead>
+ <tr>
+  <td width=120 valign=top style='width:1.25in;border:none;border-top:solid windowtext 1.5pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableleft><i style='mso-bidi-font-style:normal'>business_unit_name<o:p></o:p></i></p>
+  </td>
+  <td width=264 valign=top style='width:2.75in;border:none;border-top:solid windowtext 1.5pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableright>The name of the business unit containing the document to
+  be included.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=120 valign=top style='width:1.25in;border-top:solid windowtext .75pt;
+  border-left:none;border-bottom:solid windowtext .75pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tableleft><i style='mso-bidi-font-style:normal'>document_name<o:p></o:p></i></p>
+  </td>
+  <td width=264 valign=top style='width:2.75in;border-top:solid windowtext .75pt;
+  border-left:none;border-bottom:solid windowtext .75pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tableright>The name of the document to be included.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=120 valign=top style='width:1.25in;border:none;mso-border-top-alt:
+  solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><i style='mso-bidi-font-style:normal'>variable_name<o:p></o:p></i></p>
+  </td>
+  <td width=264 valign=top style='width:2.75in;border:none;mso-border-top-alt:
+  solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>The name of the variable.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=120 valign=top style='width:1.25in;border-top:solid windowtext .75pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tableleft><i style='mso-bidi-font-style:normal'>value<o:p></o:p></i></p>
+  </td>
+  <td width=264 valign=top style='width:2.75in;border-top:solid windowtext .75pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tableright>The value assigned to the variable.</p>
+  </td>
+ </tr>
+</table>
+
+<p class=NormalLeft><span style='font-size:9.0pt;mso-bidi-font-size:10.0pt;
+font-family:AvantGarde'>TYPE Option</span><span style='mso-tab-count:1'>                         </span>The
+TYPE option is used to distinguish the action the Ingres/ICE server should take
+when processing the included file.<span style="mso-spacerun: yes">  </span>This
+allows reuse of common component documents.</p>
+
+<p class=MsoNormal>There are four selections when using the TYPE option with the
+INCLUDE keyword:</p>
+
+<p class=MsoNormalIndent style='margin-left:.25in;mso-list:l0 level1 lfo1;
+tab-stops:list .25in left 240.0pt'><![if !supportLists]><span style='font-size:
+6.0pt;mso-bidi-font-size:10.0pt;font-family:ZapfDingbats'>n<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><![endif]>HTML (pages)</p>
+
+<p class=MsoNormalIndent><span style='mso-tab-count:1'>        </span>This is
+the default option.<span style="mso-spacerun: yes">  </span>When you include a
+page, the document can access every page variable defined in the current
+page.<span style="mso-spacerun: yes">  </span>You can add new parameters in the
+include call.<span style="mso-spacerun: yes">  </span>If you include a page
+with no REPEAT, the user must be granted read permission for this
+document.<span style="mso-spacerun: yes">  </span>If you include a page with a
+REPEAT, the user must be granted execute and read permissions for this
+document.</p>
+
+<p class=MsoNormalIndent style='margin-left:.25in;mso-list:l0 level1 lfo1;
+tab-stops:list .25in left 240.0pt'><![if !supportLists]><span style='font-size:
+6.0pt;mso-bidi-font-size:10.0pt;font-family:ZapfDingbats'>n<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><![endif]>MULTI (facets)</p>
+
+<p class=MsoNormalIndent style='text-indent:0in'>To include a facet, the user
+must be granted the execute permission for the document.</p>
+
+<p class=MsoNormalIndent style='margin-left:.25in;mso-list:l0 level1 lfo1;
+tab-stops:list .25in left 240.0pt'><![if !supportLists]><span style='font-size:
+6.0pt;mso-bidi-font-size:10.0pt;font-family:ZapfDingbats'>n<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><![endif]>REPORT (reports)</p>
+
+<p class=MsoNormalIndent style='margin-left:.25in;mso-list:l0 level1 lfo1;
+tab-stops:list .25in left 240.0pt'><![if !supportLists]><span style='font-size:
+6.0pt;mso-bidi-font-size:10.0pt;font-family:ZapfDingbats'>n<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><![endif]>EXE (applications)</p>
+
+<p class=NormalLeft><span style='font-size:9.0pt;mso-bidi-font-size:10.0pt;
+font-family:AvantGarde'>REPEAT Option</span><span style='mso-tab-count:1'>                   </span>See
+the FUNCTION keyword for information on the REPEAT option.</p>
+
+<h4>Examples</h4>
+
+<p class=MsoNormal>This example shows the cascading style sheet file that is
+included in most of the documents within the plays business unit:</p>
+
+<p class=codefirst>&lt;!-- #ICE INCLUDE=`plays[play_styleSheet.css]`</p>
+
+<p class=code><span style='mso-tab-count:1'>   </span>TYPE=`MULTI` --&gt;</p>
+
+<p class=MsoNormal>The following code sample is included in most of the Globe
+Shop documents.<span style="mso-spacerun: yes">  </span>It displays an action
+bar that has various parts activated under parameter (variable) control:</p>
+
+<p class=MsoNormal>&lt;!-- #ICE REPEAT INCLUDE=<br>
+<span style='mso-tab-count:1'>            </span>`plays[play_shopAction-h.html]?View=Yes`--&gt;</p>
+
+</div>
+
+</body>
+
+</html>

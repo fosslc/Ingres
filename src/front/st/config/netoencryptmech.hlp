@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Specifies the desired outbound encryption mechanism.  Only one mechanism 
+ is allowed.  If an asterisk ("*") is specified, the Net Server mechanism
+ list is used.
+

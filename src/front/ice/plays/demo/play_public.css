@@ -1,0 +1,8 @@
+A:link { color: maroon; border-style: none }
+A:visited { color: maroon; border-style: none  }
+A:active { color: fuchsia; border-style: none  }
+A IMG { border: none }
+H1 {text-align: center }
+BODY { background-repeat: repeat; background: url(/ice/images/bgpaper.gif); color: rgb(150,75,0)}
+img { border: none; }
+table { color: rgb(150,75,0) }

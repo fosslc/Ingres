@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqfvars.hlp, help for the "Local/Global Components" popup in the frame
+/#-- parameter passing editor.
+/#-- 
+From this menu you can pick the type of component that will serve as the
+source or destination for parameter passing.  If the cursor is on the left 
+side of the screen, then the choices are for the parent (source) frame.  If 
+the cursor is on the right side of the screen, then the choices are for the 
+current (destination) frame.  The component type choices are:
+
+  Form Fields           Names of fields in the parent or current frame.
+  Local Variables       Names of declared local variables in the parent
+                        or current frame.
+  Global Variables      Names of declared global variables.
+  Global Constants      Names of declared global constants (not available
+                        as an option for the destination).
+
+When you choose an item from the list, it will replace whatever is on the
+screen for the parameter expression. The menuitems are: 
+  Select        Choose the current component type.
+  Cancel        Cancel the ListChoices request.
+  Help          Display this help text.

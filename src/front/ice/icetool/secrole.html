@@ -1,0 +1,28 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Role&submit=actRole.html` -->
+		<TABLE BORDER=0>
+			<!-- #ICE FUNCTION=`role?action=retrieve&role_id=:role`
+					 HTML=`
+			<TR>
+				<INPUT TYPE="HIDDEN" NAME="id" VALUE=":role_id">
+				<TD>Name </TD>
+				<TD><INPUT SIZE="32" NAME="name" VALUE=":role_name"></TD>
+			</TR>
+			<TR>
+				<TD>comment </TD>
+				<TD><TEXTAREA NAME="com" COLS=32 ROWS=5>:role_comment</TEXTAREA></TD>
+			</TR>`
+		-->
+
+		<!-- #ICE REPEAT INCLUDE=`action.html` -->
+		</TABLE>
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

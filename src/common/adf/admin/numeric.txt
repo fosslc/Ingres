@@ -1,0 +1,361 @@
+
+
+Introduction
+============
+
+A new packed numeric (PNUM) datatype has been added to the sample set of User
+Defined Datatype (UDT) under the ingres/demo directory.  This packed
+numeric datatype is sometimes referred to as fixed point decimal or packed
+decimal.  Contrary to the floating point datatype, the PNUM
+datatype is an exact numeric datatype capable of handling numbers 
+up to 31 significant digits.  
+
+The PNUM datatype is defined in terms of its precision and scale.
+Precision is the total number of significant decimal digits which can 
+be represented; scale is the number of decimal digits to the right of
+the decimal point.  
+
+The maximum allowable precision of a PNUM column is 31.  The
+maximum allowable scale is less than or equal to the precision.  The
+minimum allowable precision is 1 and the minimum allowable scale is
+zero.  Allowable values for a PNUM column which is defined with a
+precision of 5 and scale of 2 have a range of -999.99 to +999.99.
+
+
+
+
+Specifications
+==============
+
+1. Creating a Table
+
+To create a new PNUM column, enter
+    
+    	pnum(prec)
+
+where prec is the precision of the column with value between 1 and 31.
+This implementation only supports a fixed value for scale, with the default
+value equal to 2.  Hence, pnum(5) column will have a range of -999.99 
+to +999.99.  A user can customize the value of scale for this datatype
+by resetting the II_SCALE value in numeric.c, recompiling numeric.c and
+then rebuilding the INGRES DBMS.
+
+The PNUM datatype is a variable length datatype with internal length 
+equal to int(prec/2 + 1).  
+
+
+
+
+2. Implicit Conversions
+
+
+Implicit conversions (coercions) are performed during datatype
+resolution.  For example, if a PNUM operand is added to a FLOAT
+operand, datatype resolution will cause the FLOAT operand to be
+converted to PNUM before the addition is performed.
+
+Implicit conversion from C, CHAR, VARCHAR, TEXT, FLOAT and INTEGER to
+PNUM are supported.  The resulting precision of these conversions
+is always 31, which is the maximum allowable precision.  The support
+of text datatypes (C, CHAR, VARCHAR, and TEXT) is necessary since
+INGRES native numeric datatypes, i.e. FLOAT and INTEGER, can only
+allow entry of number up to 14-16 significant digits depending on the 
+Operating Environment.
+
+
+
+
+3. Comparisons
+
+
+Comparisons may be done between values of C, CHAR, VARCHAR, TEXT,
+LONGTEXT, FLOAT, INTEGER and the PNUM data.  Any datatype compare with
+PNUM datatype will be converted to PNUM for the comparison. 
+
+Comparison operations of equal ('='), not equal ('!='), greater than ('>'),
+greater than or equal to ('>='), less than ('<') and less than or
+equal to ('<=') are supported.
+
+
+
+
+4. Arithmetic Operations
+
+
+The usual arithmetic operations: addition ('+'), subtraction ('-'), 
+multiplication ('*') and division ('/') are available on PNUM data.
+Arithmetic operations may be performed between PNUM and other
+datatypes that can be implicitly coerced to PNUM.  Other datatypes
+will be coerced to PNUM before the arithmetic operations taking place. 
+The precision of the resulting datatype of these arithmetic
+operations is always equal to the larger precision values of the two
+operands. 
+
+
+
+
+5. Export datatype
+
+
+A string in II_CHAR type will be returned to the INGRES FE when a user
+selects from a PNUM column, this string will be left justified.  The
+length of the resulting string will equal to 2 X length of the PNUM
+column.  The resulting length increases by one if either the scale is
+greater than zero or the scale is equal to 2 X length of the PNUM 
+column.
+
+The resulting length can be calculated using the following formula,
+
+    export_len = db_len * 2 	+ 
+
+    	    	 if (scale > 0) 
+    	    	    then 1
+    	    	    else 0  	+ 
+    	
+    	    	 if (scale == db_len * 2) 
+    	    	    then 1
+    	    	    else 0;
+
+    
+
+
+6. The currency() Function
+
+
+This function is defined as,
+
+     currency( arg1[, arg2]) 
+
+where arg1 is the numeric data in PNUM type and arg2 is the
+optional formatting string that describes the output format.   The 
+return value of currency() is going to be a left-justified string in 
+II_CHAR type.
+
+User can customize the return output format for this function when
+only one argument is specified, i.e. currency( arg1).  To implement a 
+customized default format string, first replace the empty string in 
+usnum_currency_1arg() routine with a default format string using the 
+formatting options described below.  Then recompiling pnum.c and 
+rebuilding the INGRES DBMS.  
+
+The currency() function is useful for reporting as well as supporting
+currency entry fields in an ABF application.  To create a
+currency entry field in an ABF application:
+
+    1. Create a FORM field in character format sufficient to hold the 
+       currency output.  This field probably should be right-justified for
+       aesthetic reasons (i.e. '+c20').
+
+    2. Use the currency() function to convert numeric data retrieved
+       from database or entered by the user to the currency format
+       and then place it into the FORM field.
+
+    3. When currency values need to be store in the database,
+       use the pnum() function to convert the currency values to
+       their numeric values before inserting into the database.
+
+
+
+Each format option has to be blank separated.  The formatting options 
+for currency() are:
+
+    -d<decimal>
+    	<decimal> is the character that represents the decimal
+    	separator, which defaults to '.'.
+
+
+    -t<thousand>
+    	<thousand> is the character that represents the thousands
+    	separator, which defaults to ','.  If the value '-t ' is 
+        specified, then the thousands separator is suppressed.
+
+    -c[-]<currency>
+    	<string> is the string that represents the currency sign.  The
+    	currency sign can be up to 5 characters long.  In addition, the 
+    	currency sign can appear at the end of the string by using
+    	the -c-<currency> option.
+
+    -s<scale>
+    	<scale> is the number of digits represented after the decimal 
+    	point.  If the value of '-s' is less than the scale of
+    	the pnum value, then the extra digits will be truncated.  If
+    	the value of '-s' is more than the scale of the pnum value,
+        then the return value will be padded with zeros.
+    
+Examples,
+
+    1. currency( 123456789.12) returns the string  
+       '$123,456,789.12'.
+
+    2. currency( 123456789.12, '-cUS$') returns the string  
+       'US$123,456,789.12'.
+
+    3. currency( 123456789.12, '-c-F -t. -d,') returns the string
+       in French currency format '123.456.789,12F'.
+
+    4. currency( 123456789.00, '-cY -s0') returns the string in
+       Japanese currency format 'Y123,456,789'.
+
+
+
+
+7. The fraction() Function
+
+
+This function is defined as,
+
+     fraction( arg1[, arg2]) 
+
+where arg1 is the numeric data in PNUM type and arg2 is the
+optional formatting string that describes the fraction format.   The 
+return value of fraction() is going to be a left-justified string in 
+II_CHAR type.
+
+The fraction() function is useful for reporting as well as supporting
+fraction entry field in an ABF application.  To create a fraction
+entry field in an ABF application:
+
+    1. Create a FORM field in character format which is sufficient to
+       hold the fraction() output.  
+
+    2. Use the fraction() function to convert numeric data retrieved
+       from database to fraction and then place it to the FORM field.
+
+    3. When fraction values need to be moved to the database,
+       use the pnum() function to convert the fraction values to
+       their numeric values.
+
+Each format option has to be blank separated.  The formatting options 
+for fraction() are:
+
+    -d<decimal>
+    	<decimal> is the character that represents the decimal
+    	separator, which defaults to ' '.
+
+    -f<fraction>
+    	<fraction> is the character that represents the separator 
+    	between the numerator and the denominator of a fraction.
+    	
+Examples,
+
+    1. fraction( 17.25) returns the string '17 1/4'.
+
+    2. fraction( 17.25, '-d-') returns the string '17-1/4'.
+
+    3. Adding two fractions 17-1/2 and 1-3/4, 
+         fraction( pnum('17-1/2', '-f/ -d-') + pnum('1-3/4','-f/ -d-'))
+       returns the string '19 1/4'.
+     
+
+
+
+8. The pnum() Function
+
+
+This function is defined as,
+
+     pnum(arg1[, arg2]) 
+
+where arg1 is the numeric data in II_CHAR type and arg2 is the
+optional formatting string that describes the format of arg1.   The 
+return value of pnum() is going to be in PNUM type.  
+
+The pnum() function is intended to support the explicit conversion 
+of a currency string or fraction string into PNUM data value.  
+
+Each format option has to be blank separated.  The formatting options 
+for pnum() are:
+
+    -d<decimal>
+    	<decimal> is the character that represents the decimal
+    	separator, which defaults to '.'.
+
+    -f<fraction>
+    	<fraction> is the character that represents the separator
+    	between the numerator and the denominator of a fraction.
+    	When this option used, pnum() assumes the input value to be in
+    	fraction format.
+
+    -t<thousand>
+    	<thousand> is the character that represents the thousand
+    	separator, which defaults to ','.  If the value '-t ' is 
+        specified, then the thousand separator is suppressed.
+
+    -c[-]<currency>
+    	<string> is the string that represents the currency sign.  The
+    	currency sign can be up to 5 characters long.  In addition, 
+    	the currency sign can appear at the end of the string by using
+    	the -c-<currency> option.    
+    
+    	
+Examples,
+
+    1. pnum( '12345678901234567890.12') returns the PNUM data value
+       12345678901234567890.12.
+
+    2. pnum( '123.456,78F', '-c-F -t. -d,') convert the string in 
+       French currency format to the PNUM value of 123456.78.
+
+    3. pnum( '17-1/4', '-f/ -d-') convert the fraction to the  
+       PNUM value of 17.25.
+
+
+
+
+Source
+======
+
+The following files were added/changed to support the PNUM datatype:
+
+iicvpk.c    - This new file contains low level routines to support
+    	      conversion of PNUM data values to other data types.
+
+iimhpk.c    - This new file contains low level routines to support
+    	      the manipulations of packed numeric data.
+
+iipk.h      - New header file to be used by iicvpk.c and iimhpk.c. 
+    
+numeric.c   - This is a new file which contains all the require routines
+    	      to support PNUM datatypes and the three new functions:
+    	      currency(), fraction() and pnum().
+
+numeric.txt - Functional specification for the PNUM datatype.
+
+pnum_test.qry - This is a new SQL test script that combines all the DDL
+       	        and DML tests for PNUM as well as tests for the three
+    	        new functions.
+
+pnum_test.log - This new file contains the expected result from numeric.qry.
+
+op.c	    - This file was modified to add entries to function instance
+    	      table and related symbols to support PNUM datatype and 
+    	      the new functions.
+
+udt.h	    - This file was changed to add the PNUM datatype.
+
+
+
+Test
+====    
+
+The test script, pnum_test.qry, covers the following three main
+areas:
+
+        - CREATE TABLE, CREATE VIEW, CREATE PROCEDURE,
+          CREATE INDEX and MODIFY using PNUM datatype.
+
+        - Insert/update/select/delete DML operations.
+          Comparisons using PNUM key columns and non-key columns.
+          Arithmetic expressions using PNUM.  Test DML
+          operations for PNUM in HASH structure.  Test joins
+          on PNUM column.
+
+        - currency(), fraction() and pnum() function testings.
+
+The results of these tests can be found in pnum_test.log file.
+
+
+
+   
+
+

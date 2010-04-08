@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!embed!pascalsq
+#
+
+SubDir ING_SRC front embed pascalsq ;
+
+IISUBSYS front embed pascalsq ;
+
+IIBINEXE esqlp : psqmain.c ;
+IINEEDLIBS esqlp : PASCALSQLIB PASCALLIB EQUELLIB SHQLIB SHCOMPATLIB ;
+
+IILIBRARY PASCALSQLIB : pascalsq.sy psqtoks.st psqscan.c passqgen.c ;

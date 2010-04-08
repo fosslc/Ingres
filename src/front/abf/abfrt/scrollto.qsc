@@ -1,0 +1,79 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+
+/**
+** Name:	scrollto.qc	-	ABF Run-Time System Scroll Table Field Routine.
+**
+** Description:
+**	Contains a routine used to scroll a table field to a particular row.
+**	This routine can be called by users from OSL.  Defines:
+**
+**	IIscrollto()	scroll to row of table field.
+**
+** History:
+**	Revision 6.1  87/11/20  wong
+**	Initial revision.
+*/
+
+/*{
+** Name:	IIscrollto() -	Scroll to Row of Table Field.
+**
+** Description:
+**	Scrolls the input table field of the input form (or the current of
+**	either if NULL or empty) to the input row.  Rows are positive except
+**	for the last row, which can be specified by -1.
+**
+** Input:
+**	form	{char *}  Name of form (possibly NULL or empty.)
+**	table	{char *}  Name of table field (possibly NULL or empty.)
+**	row	{nat}  Row number to which to scroll the table field.
+**
+** Side Effects:
+**	Will scroll the current or input table field.
+**
+** History:
+**	11/87 (jhw) -- Written.
+*/
+VOID
+##IIscrollto (form, table, row)
+##char	*form;
+##char	*table;
+##int	row;
+##{
+##	char	formname[FE_MAXNAME+1];
+##	char	tablename[FE_MAXNAME+1];
+
+	/* Get current form if not specified */
+	if (form == NULL || *form == EOS || STtrmwhite(form) <= 0)
+	{
+##		inquire_frs "form" (formname = name)
+		form = formname;
+		if (*form == EOS)
+			return;	/* no form */
+	}
+
+	/* Get current table field if not specified */
+	if (table == NULL || *table == EOS || STtrmwhite(table) <= 0)
+##	{
+##		int	is_table;
+
+##		inquire_frs "form" (tablename = field)
+		table = tablename;
+		if (*table == EOS)
+			return;	/* no table field */
+##		inquire_frs field form (is_table = table(tablename))
+		if (is_table != 1)
+			return;	/* no table field */
+##	}
+
+##	scroll form table to row
+##}

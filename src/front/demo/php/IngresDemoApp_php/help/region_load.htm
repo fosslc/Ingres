@@ -1,0 +1,41 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How the Region Select Box Is Loaded </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="SELECT statement, UTF-8, xajax">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body  onload="if (isTOCLoaded()) {expand('3327');expand('3326');expand('3319');highlight('3313')}">
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="country_load.htm" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="airport_load.htm" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How the Region Select Box Is Loaded</h4>
+<p class="bodytext">All Country select boxes declare the xajax function fillRegion in <a href="showSource.php?file=airportAJAX" target="_blank">airport.ajax.php</a> as their onChange event handler. </p>
+<p class="bodytext">The fillRegion function calls getRegionSelect and passes the country code of the country for which the region select should be generated.</p>
+<p class="bodytext">This country code is passed to the method getRegionByCountry of the <a href="showSource.php?file=RoutesModel" target="_blank">RoutesModel</a> class.</p>
+<p class="bodytext">The following query is executed and the result is fetched as an array:</p>
+<p class="codefirst">SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_ccode='&quot;.$ct_code.&quot;' ORDER BY ap_place</p>
+<p class="bodytext">All values in this array are converted from UTF-16LE to UTF-8.</p>
+<p class="bodytext">The HTML code of the region select generated in getRegionSelect makes the function showAirports the onChange eventHandler.</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2007 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

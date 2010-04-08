@@ -1,0 +1,399 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<cv.h>
+# include	<me.h>
+# include	<gl.h>
+# include	<cm.h>
+# include	<si.h>	/* Debug purposes only	*/
+# include	<st.h>
+# include	<er.h>
+# include	<iicommon.h>
+# include	<iirowdsc.h>
+# include	<fe.h>
+# include	<adf.h>
+# include	<fmt.h>
+# include	<afe.h>
+# include	<ug.h>
+# include	<rtype.h>
+# include	<rglob.h>
+
+	EXEC SQL INCLUDE SQLDA;
+	EXEC SQL DECLARE rso_statement STATEMENT;
+
+	static	IISQLDA	*rso_sqlda = (IISQLDA *)NULL;
+
+/*
+** Name:	rorderby.qsc	Determine ordinal of result column in target
+**				list
+** Description:
+**
+**	r_starg_order	Allocate an SQLDA and effect a PREPARE on the main
+**			RW query.  This returns the result column names and
+**			their implied ordinal position within the target list.
+**
+**	r_gtarg_order	Given a result column name, return a string
+**			representation of its ordinal position within the
+**			target list.  r_starg_order() must have been previously
+**			called.
+**
+**	r_gord_targ	Return the ordinal of the first result column which
+**			is of a datatype supported by the Front End Tools.
+**			r_starg_order() must have been previously called.
+**
+**	r_ctarg_order	Clean up any allocated SQLDA.
+**
+**	The expectation is that these routines will be invoked at send query
+**	time if and only if the DML is SQL and there is a .SORT statement
+**	-OR- this is a default report.
+**
+**	r_starg_order will be called once to create the populated SQLDA of
+**	result column names and implied ordinal positions.
+**
+**	r_gtarg_order will be called for each .SORT attribute and will return
+**	the corresponding ordinal for use in building the ORDER BY clause.  All
+**	variable substitutions are expected to have been completed prior to this
+**	call!
+**
+**	r_gord_targ will be called once if this is a default report.
+**
+**	r_ctarg_order will be called once at the completion of building the
+**	ORDER BY clause to de-allocate the SQLDA.
+**
+**	If a failure occurs in r_starg_order(), then rso_sqlda will be left as
+**	NULL.  Thus, subsequent calls to r_gtarg_order() will return indication
+**	of "sort attribute not found", and r_ctarg_order() will be a effective
+**	no-op.
+**
+** History:
+**	13-oct-92 (rdrane)	Created.
+**		This approach to effecting ORDER BY by ordinal number rather
+**		than result column name is a direct result of addressing bugs
+**		35335, 41861, and 41871.
+**	3-feb-1993 (rdrane)
+**		Add r_gord_targ() routine.  Re-tab source file to 8.
+**      08-30-93 (huffman)
+**              add <me.h>
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	23-Aug-2009 (kschendel) 121804
+**	    Need afe.h to satisfy gcc 4.3.
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+/*
+** Name:	r_starg_order
+**
+** Description:
+**	Dynamically allocate an SQLDA sufficient to hold IISQ_MAX_COLS and
+**	issue a PREPARE on the RW main query.  For our purposes, we need
+**	only use the En_tar_list, En_sql_from, and En_remainder portions -
+**	DISTINCT and any WHERE clauses are irrelevant.  If we have a .DATA,
+**	then assume "*" for the value of En_tar_list.
+**
+** Input params:
+**	None.
+**
+** Output params:
+**	None.
+**
+** Returns:
+**	Nothing.
+**
+** History:
+**	13-oct-92 (rdrane)	Created.
+**	26-feb-1993 (rdrane)
+**		Include the En_remainder in the PREPARE in case the target
+**		list contains any aggregates.  SQL requires that a target list
+**		containing an aggregate include a GROUP BY clause which
+**		specifically mentions all non-aggregate targets in the list.
+**		Note, then, that it is the user's responsibility to have
+**		included the GROUP BY in the first place.  This addresses
+**		bug 49881.  
+**	15-aug-97 (kitch01)
+**		Bug 83486. The above assumption that En_q_qual is not required
+**		is wrong. With certain complex queries this is required else the
+**		'prepare ... into ...' fails with a syntax error. I have amended
+**		this routine to include the En_q_qual if present.
+*/
+
+
+VOID
+r_starg_order()
+{
+#define	RSO_SEL_TXT	ERx("select ")
+#define	RSO_STAR_TXT	ERx(" * ")
+#define	RSO_FROM_TXT	ERx(" from ")
+#define RSO_WHERE_TXT ERx(" where ")
+		i4	i,j,k;
+		STATUS	alloc_status;
+		IISQLVAR *rso_sqlvar;
+
+EXEC SQL BEGIN DECLARE SECTION;
+		char	*statement_buf;
+EXEC SQL END DECLARE SECTION;
+
+
+	j = STlength(RSO_SEL_TXT) + STlength(RSO_FROM_TXT);
+	k = STlength(En_ferslv.name);
+	if  (k > 0)
+	{
+		/*
+		** .DATA or default report specified instead of .QUERY
+		*/
+		i = k + STlength(RSO_STAR_TXT) + j + 1;
+		statement_buf = MEreqmem(0,i,TRUE,&alloc_status);
+		if  (statement_buf == NULL)
+		{
+			IIUGbmaBadMemoryAllocation(
+				ERx("r_starg_order - statement_buf(*)"));
+			return;
+		}
+		STpolycat(4,
+			  RSO_SEL_TXT,RSO_STAR_TXT,RSO_FROM_TXT,En_ferslv.name,
+			  statement_buf);
+	}
+	else
+	{
+		i = j + STlength(En_tar_list) + STlength(En_sql_from) + 1;
+		/* if there is an En_q_qual then include it */
+		if (En_q_qual != NULL)
+		{
+			i += STlength(En_q_qual) + STlength(RSO_WHERE_TXT) + 1;
+		}
+		if  (En_remainder != NULL)
+		{
+			i += STlength(En_remainder) + 1;
+		}
+		statement_buf = MEreqmem(0,i,TRUE,&alloc_status);
+		if  (statement_buf == NULL)
+		{
+			IIUGbmaBadMemoryAllocation(
+					ERx("r_starg_order - statement_buf"));
+			return;
+		}
+		/* Always include the En_tar_list and En_sql_from */
+		STpolycat(4, RSO_SEL_TXT,En_tar_list,
+				  RSO_FROM_TXT,En_sql_from,
+			  	  statement_buf);
+		/* Only include the En_q_qual and En_remainder if present. If
+		** they are present the En_q_qual comes first.
+		*/
+		if (En_q_qual != NULL)
+		{
+			/* This will concat statement_buf, RSO_WHERE_TXT and En_q_qual
+			** and place the result back into statement_buf.
+			*/
+			STpolycat(3, statement_buf, RSO_WHERE_TXT, En_q_qual, statement_buf);
+		}
+
+		if (En_remainder != NULL)
+		{
+			statement_buf = STcat(statement_buf, En_remainder);
+		}
+
+	}
+
+/*
+	SIprintf(ERx("|%s|\n"),statement_buf);
+	SIflush(stdout);
+*/
+
+	rso_sqlda = (IISQLDA *)MEreqmem(0,
+					(IISQDA_HEAD_SIZE +
+					(IISQ_MAX_COLS * IISQDA_VAR_SIZE)),
+					TRUE,&alloc_status);
+	if  (rso_sqlda == (IISQLDA *)NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("r_starg_order - SQLDA"));
+		return;
+	}
+
+	rso_sqlda->sqln = IISQ_MAX_COLS;
+
+	EXEC SQL PREPARE rso_statement INTO :rso_sqlda FROM :statement_buf;
+	if  (rso_sqlda->sqld == 0)
+	{
+		_VOID_ MEfree((PTR)rso_sqlda);
+		rso_sqlda = (IISQLDA *)NULL;
+		return;
+	}
+
+	_VOID_ MEfree((PTR)statement_buf);
+
+	/*
+	** Save some work for the look-up routine by NULL terminating
+	** the returned names.
+	*/
+	rso_sqlvar = &rso_sqlda->sqlvar[0];
+	i = rso_sqlda->sqld;
+	j = 1;
+	while (--i >= 0)
+	{
+		rso_sqlvar->sqlname.sqlnamec[rso_sqlvar->sqlname.sqlnamel] =
+									 EOS;
+/*
+		SIprintf(ERx("|%s|\n"),&rso_sqlvar->sqlname.sqlnamec[0]);
+		SIflush(stdout);
+*/
+		rso_sqlvar++;
+	}
+
+	return;
+}
+
+
+
+/*
+** Name:	r_gtarg_order
+**
+** Description:
+**	Given a result column name, return its ordinal position
+**	within the target list.
+**
+** Input params:
+**	sort_attr -	pointer to a string containing the name of the sort
+**			attribute to match on.  This is assumed to have already
+**			been normalized.
+**
+** Output params:
+**	None.
+**
+** Returns:
+**	If found, pointer to string representation of ordinal of sort_attr
+**	in target list.  This is in a static area, and so must be used before
+**	any subsequent call.  If not found, NULL;
+**
+** History:
+**	13-oct-92 (rdrane)	Created.
+*/
+
+
+char *
+r_gtarg_order(sort_attr)
+		char	*sort_attr;
+{
+		i4	i,j;
+		IISQLVAR *rso_sqlvar;
+	static	char	sort_ordinal[8];
+
+
+	if  (rso_sqlda == (IISQLDA *)NULL)
+	{
+		return(NULL);
+	}
+
+	rso_sqlvar = &rso_sqlda->sqlvar[0];
+	i = rso_sqlda->sqld;
+	j = 1;
+	while (--i >= 0)
+	{
+		if  (STcompare(&rso_sqlvar->sqlname.sqlnamec[0],sort_attr) == 0)
+		{
+			STprintf(&sort_ordinal[0],"%d",j);
+			return(&sort_ordinal[0]);
+		}
+		rso_sqlvar++;
+		j++;
+	}
+
+	return(NULL);
+}
+
+/*
+** Name:	r_gord_targ
+**
+** Description:
+**	Search the SQLDA and return the ordinal of the first column whose
+**	datatype is supported by the Front End Tools.
+**
+** Input params:
+**	None.
+**
+** Output params:
+**	None.
+**
+** Returns:
+**	The ordinal of the first supported column, or zero if no supported
+**	columns exist.
+**
+** History:
+**	3-feb-1993 (rdrane)	Created.
+*/
+
+i4
+r_gord_targ()
+{
+		i4	i,j;
+		IISQLVAR *rso_sqlvar;
+		DB_DATA_VALUE tmp_dbdv;	
+
+
+	if  (rso_sqlda == (IISQLDA *)NULL)
+	{
+		return(0);
+	}
+
+	rso_sqlvar = &rso_sqlda->sqlvar[0];
+	i = rso_sqlda->sqld;
+ 	j = 1;
+	while (--i >= 0)
+	{
+
+		tmp_dbdv.db_datatype = rso_sqlvar->sqltype;
+		if  (IIAFfedatatype(&tmp_dbdv))
+		{
+			return(j);
+		}
+		rso_sqlvar++;
+		j++;
+	}
+
+	return(0);
+}
+
+
+
+/*
+** Name:	r_ctarg_order
+**
+** Description:
+**	Clean up any SQLDA structure containing the result column descriptions.
+**
+** Input params:
+**	None.
+**
+** Output params:
+**	None.
+**
+** Returns:
+**	Nothing.
+**
+** History:
+**	13-oct-92 (rdrane)	Created.)
+**	3-feb-1993 (rdrane)
+**		Re-init rso_sqlda to (IISQLDA *)NULL just in case
+**		we get called again ...
+*/
+
+
+VOID
+r_ctarg_order()
+{
+
+	if (rso_sqlda != (IISQLDA *)NULL)
+	{
+		_VOID_ MEfree((PTR)rso_sqlda);
+		rso_sqlda = (IISQLDA *)NULL;
+	}
+
+	return;
+}
+

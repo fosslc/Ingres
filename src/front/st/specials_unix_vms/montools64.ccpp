@@ -1,0 +1,21 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for montools64
+*/
+
+/*
+** History
+**	06-sep-2002 (somsa01)
+**	    Created from 32-bit version.
+*/
+
+PART  montools64
+
+/*
+** ingres!bin!lp64
+*/
+   BUILD_DIR (ING_BUILD)!bin!lp64
+   DIRECTORY ingres!bin!lp64
+      EXECUTABLE ipm

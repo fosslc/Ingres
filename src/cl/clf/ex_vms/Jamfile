@@ -1,0 +1,23 @@
+#
+# Jamfile file for cl!clf!ex_vms
+#
+# 22-dec-2008 (stegr01)
+#   exgetctx.m64 replaced with exgetctc.c
+
+SubDir ING_SRC cl clf ex_vms ;
+
+IISUBSYS cl clf ex_vms ;
+
+IILIBRARY COMPATLIB : symbol.c exsysrep.c exstack.c
+        exsignal.c exsetup.c exmatch.c exintr.c exdump.c
+        evset.c excatch.c exunsave.c excore.c  ;
+
+if $(VERS) = axm_vms
+{
+   IILIBRARY COMPATLIB : exgetctx.m64 ;
+}
+else
+{
+   IILIBRARY COMPATLIB : exgetctx.c ;
+}
+

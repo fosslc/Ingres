@@ -1,0 +1,56 @@
+#
+# Jamfile file for front!report!report
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front report report ;
+
+IISUBSYS front report report ;
+
+
+IIBINEXE report : main.c ;
+IINEEDLIBS report :  REPORTLIB SREPORTLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW report : SHEMBEDLIB SHADFLIB ;
+IIUNDEFS report : II_copyright malloc ;
+
+File $(INGMSG)$(DFS)rwoutput.hlp : rwoutput.hlp ;
+
+IILIBRARY REPORTLIB : rscqry.qsc rrcoset.qsc rorderby.qsc
+	ropendb.qsc rexit.qsc rchkrep.qsc rxwithin.c rxtfmt.c
+	rxtcmd.c rxtab.c rxswidth.c rxspos.c rxsfmt.c rxrm.c rxprint.c
+	rxprel.c rxpl.c rxpc.c rxnpage.c rxnewln.c rxneed.c rxlm.c
+	rxewthin.c rxend.c rxeblock.c rxctrl.c rxbpos.c rxatt.c
+	rxadjust.c rwriteln.c rwrite.c rwiend.c rwibegin.c rtrace.c
+	rtcmdset.c rsyserr.c rswitch.c rstpadjs.c rstadflt.c rsortset.c
+	rsetdflt.c rsendqry.c rscntcmd.c rrunerr.c rrsrvd.c rrngadd.c
+	rretwid.c rretacc.c rreset.c rrepset.c rreport.c rrepld.c
+	rrepdo.c rreadln.c rqurset.c rpwithin.c rpwidth.c rpvpnum.c
+	rpvar.c rpusnum.c rpulc.c rptparam.c rptext.c rpstr.c rpsnum.c
+	rprsget.c rprompt.c rppos.c rpparam.c rplet.c rpif.c rpfunct.c
+	rpformat.c rpflag.c rpewthin.c rpeprint.c rpend.c rpeflag.c ;
+
+IILIBRARY REPORTLIB :
+	rpcset.c rpblock.c rpbegin.c rpatt.c rpartype.c rparreq.c
+	rparput.c rparget.c rparfind.c rparclip.c rpagg.c ropadd.c
+	rnxtwi.c rnxtset.c rnxtrow.c rnxtacc.c rnfmt.c rnewtcmd.c
+	rmtchatt.c rmsort.c rmrtitle.c rmrprt.c rmrhead.c rmptop.c
+	rmpbot.c rmovdat.c rmlabels.c rmdsort.c rmcolumn.c rmchead.c
+	rmblock.c rmaktree.c rmakcum.c rmakagg.c rmaction.c rlnkagg.c
+	rlnclr.c rinit.c ringerr.c rgtwcode.c rgtvcode.c rgtfunct.c
+	rgset.c rgroup.c rgltype.c rglog.c rgident.c rghex.c rgformat.c
+	rgexpr.c rgetrow.c rgetln.c rgetcode.c rgetcagg.c rgetatt.c
+	rgeskip.c rges.c rgdouble.c rfrms.c rfrctype.c rfopen.c
+	rfndsort.c rfmtdflt.c rfixparl.c rfindbrk.c rfdelete.c
+	rfcreate.c rfclose.c rfbstcpy.c revalpos.c restack.c rerror.c ;
+
+IILIBRARY REPORTLIB :
+	repar.c renvset.c rendtype.c reitem.c reblexpr.c rdopage.c
+	rdohdr.c rdofoter.c rdclset.c rcrkpar.c rcrack.c rconvdbv.c
+	rcntlns.c rcmdskp.c rclrline.c rclradd.c rchkdat.c rbstack.c
+	rbrkset.c rbrkfind.c rattdflt.c raops.c radvance.c racum.c
+	ractset.c raccmake.c raccget.c racaccs.c raacc.c iirep.c
+	getspace.c ;
+

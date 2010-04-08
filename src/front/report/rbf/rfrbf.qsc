@@ -1,0 +1,193 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include       "rbftype.h"
+# include       "rbfglob.h"
+# include       <rglob.h>
+# include	 <ex.h>
+
+/*
+**   RFRBF - main routine for Report by Forms.
+**	This is called by the rbfmain (main program of RBF)
+**	to control the overall logic of RBF.
+**
+**	In either case, the calling sequence for RBF
+**	is a command line which looks like:
+**
+**	RBF dbname repname [flags]
+**		where	dbname	is the name of the database,
+**				used only if called as standalone.
+**			repname is the report name.
+**			flags	are optional flags.
+**
+**	Parameters:
+**		argc	count of number of parameters.
+**		argv	addresses of parameters.
+**
+**	Returns:
+**		Err_type, either ABORT or NOABORT.
+**
+**	Called by:
+**		rbfmain.
+**
+**	Trace Flags:
+**		0.0, 200, 201.
+**
+**	History:
+**		2/10/82 (ps)	written.
+**		8/11/83 (gac)	fixed bug 903 -- now uses report instead of
+**				table by default.
+**		12/8/83 (gac)	fixed bug 966 -- errors in command line now
+**				give form messages with return.
+**		2/7/84	(gac)	fixed bug 2059 -- prompting db now works.
+**		2/22/84 (gac)	added multi-statement transactions.
+**		4/5/84	(gac)	added -Z test i/o filenames.
+**		5/16/84 (gac)	fixed bug 2323 -- exiting edit of report from
+**				catalog exits instead of going to top menu.
+**		6/28/84 (gac)	fixed bug 2327 -- default line maximum is width
+**				of terminal unless -l or -f is specified.
+**		7/17/85 (scl)	(CMS only) if user specifies maxline
+**				width (-l) then assume terminal is that
+**				wide; let user edit with horiz. scrling.
+**		23-dec-1986 (peter)	Changed to call FEforms/FEcopyright.
+**		13-mar-1987 (peter)
+**			Took out call to rFmforms and change to call
+**			rFrmrcatalog.
+**		26-May-1987 (rdesmond) - remove call to rFrmrcatalog.
+**      9/22/89 (elein) UG changes ingresug change #90045
+**	changed <rbftype.h> & <rbfglob.h> to "rbftype.h" & "rbfglob.h"
+**	12/19/89 (dkh) - VMS shared lib changes.
+**	12-jul-1993 (rdrane)
+**		Rework the initiation/termination of the Forms System so that
+**		we can better control the appearance of our messages.
+**	19-jun-1995 (harpa06)
+**		Do the proper conversion of delimited identifiers specified on
+**		the command line by calling IIUGdlm_ChkdlmBEobject().
+**	11-jan-1996 (toumi01; from 1.1 axp_osf port)
+**		Cast (long) 3rd... EXsignal args to avoid truncation.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+
+FUNC_EXTERN	VOID	FTterminfo();
+
+i4
+rFrbf(argc,argv)
+i4	argc;
+char	*argv[];
+{
+	/* external declarations */
+
+	FUNC_EXTERN	i4	errproc();
+	FUNC_EXTERN	i4	r_exit();	/* GAC -- added cast */
+
+	/* internal declarations */
+
+	i4		COLS;
+	i4		LINES;
+
+	FT_TERMINFO	terminfo;
+
+	EX_CONTEXT	context;
+
+	char 		temp[FE_MAXNAME + 1];
+
+	/* start of MAIN routine */
+
+	if (EXdeclare(r_exit, &context))
+	{
+		EXdelete();
+		return(Err_type);	/* ALL EXITS COME HERE */
+	}
+
+	rFinit(argv);			/* set up tracers, links, etc. */
+
+	rFcrack_cmd(argc,argv);		/* crack the command line */
+
+	/*
+	** Initialize the forms system, and just terminate
+	** if it doesn't all work out ...
+	*/
+	if  (r_init_frms() != OK)
+	{
+		EXsignal(EXEXIT,2,(long)0,(long)NOABORT);
+	}
+
+	FTterminfo(&terminfo);
+
+#ifdef FT3270
+	/*
+	**    If the MAXLINE parm was specified (-ln; max line length of
+	**    a default report) then pretend we have a terminal that
+	**    wide. This allows use to use RBF to edit reports which
+	**    will be sent to a line printer.
+	*/
+	if ( (St_lspec) && (En_lmax>79) && (En_lmax<256) )
+	     terminfo.cols = En_lmax;
+	/*
+	**    If the MAXLINE parm was *not* specified (or if it was
+	**    specified but was invalid) then look for the logical
+	**    symbols II_RBF_COLS. If it is set to a number from
+	**    80 to 255 then set the max report width to that.
+	*/
+	else
+	    {
+	    char *value;
+	    i4	 mxcols;
+
+	    NMgtAt(ERx("II_RBF_COLS"),&value);
+	    if (value && *value)
+	       {
+	       if (!STscanf(value,ERx("%d"),&mxcols)) mxcols=0;
+	       if ( (mxcols>79) && (mxcols<256) )
+		  terminfo.cols = mxcols;
+	       }
+	    }
+#endif
+	COLS = terminfo.cols;
+	LINES = terminfo.lines;
+
+	En_cols = COLS;
+	En_lines = LINES;
+
+	FEcopyright(ERget(F_RF0023_RBF), ERx("1982"));
+
+	r_open_db();			/* will abort on error */
+
+	/* get the proper BE representation of the the table name passed on
+	** the command line.
+        /*
+        _VOID_ IIUGdlm_ChkdlmBEobject(En_report,temp,TRUE);
+	STcopy(temp,En_report);
+ 
+	IIseterr(errproc);
+
+	/* some inititialization for vifred */
+	IIVFlninit();
+	IIVFstrinit();
+	IIVFgetmu();
+
+	/* load forms */
+	if (rFgetforms() == OK)
+	    /* run catalog frame */
+	    rFcatalog();
+
+	r_end_frms();
+
+	EXsignal(EXEXIT, 2, (long)0, (long)NOABORT);	/* terminate quietly */
+	/* NOTREACHED */
+	EXdelete();
+}

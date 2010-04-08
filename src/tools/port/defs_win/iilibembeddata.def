@@ -1,0 +1,97 @@
+; History:
+;	09-jan-98 (mcgem01)
+;	    Add support for multi threaded libq.
+;	13-mar-1998 (wonst02)
+;	    Move sqlca into oiembdnt.dll for backward compatibility with 2.0.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	29-Jun-2004 (drivi01)
+;	    Removed duplicate eq_private.
+;	25-Aug-2004 (drivi01)
+;	    Renamed from iiembddata.def to iilibembeddata.def
+;	    and contains all data present in the directories
+;	    that are being rolled into iilibembed.def, for
+;	    full explanation on this file please refer to
+;	    comment in iilibembed.def.
+;	7-Aug-2004 (drivi01)
+;	    Took out sqlca.
+;	16-Nov-2004 (komve01)
+;	    Added cont_line, for copy.in to work correctly for
+;		views. Bug 113498.
+;	30-Nov-2004 (komve01)
+;	    Undo change#473469 for Bug#113498.
+;	22-Mar-2005 (lakvi01)
+;	    Removed _IILIBQgdata symbol as its not required.
+;	19-Jun-2006 (drivi01)
+;	    As per change #481600 bug #115704
+;	    Removed F_inquote
+;
+EXPORTS
+IILIBQgdata		@1	DATA			
+IIglbcb		@2	DATA			
+sIILIBQgdata		@3	DATA			
+IIgca_cb		@4	DATA			
+frs		@5	DATA			
+_eq		@6	DATA			
+_dml		@7	DATA			
+dml		@8	DATA			
+sc_hostvar		@9	DATA			
+eq_private		@10	DATA			
+max_attribs		@11	DATA			
+esqlca_store		@12	DATA			
+esl_strtable		@13	DATA			
+sc_saveptr		@14	DATA			
+lbl_index		@15	DATA			
+lbl_labels		@16	DATA			
+out_default		@17	DATA			
+out_cur		@18	DATA			
+inc_pass2		@19	DATA			
+sc_linecont		@20	DATA			
+sc_linebuf		@21	DATA			
+SC_PTR		@22	DATA			
+lex_is_newline		@23	DATA			
+lex_need_input		@24	DATA			
+_db_debug		@25	DATA			
+syHashtab		@26	DATA			
+syNamtab		@27	DATA			
+symHint		@28	DATA			
+sym_forward		@29	DATA			
+sym_separator		@30	DATA			
+sym_adjval		@31	DATA			
+sy_qdfreelist		@32	DATA			
+sym_delval		@33	DATA			
+sym_prbtyp		@34	DATA			
+sym_prtval		@35	DATA
+
+IIugefa_err_function	@36	DATA
+IIugmfa_msg_function	@37	DATA
+yyreswd			@38	DATA
+FE_allocsize		@39	DATA
+F_Abbrdow		@40	DATA			
+F_Abbrmon		@41	DATA			
+F_Abbrpm		@42	DATA			
+F_Abdow		@43	DATA			
+F_Fulldow		@44	DATA			
+F_Fullmon		@45	DATA			
+F_Fullpm		@46	DATA			
+F_Fullunit		@47	DATA			
+F_Keywords		@48	DATA			
+F_Ordinal		@49	DATA			
+F_SFullunit		@50	DATA			
+F_dowlen		@51	DATA			
+F_dowmax		@52	DATA			
+F_monlen		@53	DATA			
+F_monmax		@54	DATA			
+F_pmlen		@55	DATA	
+
+iiUGcurTag		@57	DATA			
+iiUGempty		@58	DATA			
+iiUGfirstTag		@59	DATA			
+IIugPfa_prompt_func		@60	DATA			
+IIUGecbExprCallBack		@61	DATA			
+monsize			@65	DATA	
+IIprecision		@66	DATA			
+IIscale		@67	DATA		
+;_IILIBQgdata		@68	DATA
+Afe_agtab		@69	DATA	
+;sqlca				@97	DATA

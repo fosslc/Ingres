@@ -1,0 +1,27 @@
+! DELETE_FILES.DAT - VMS-only list of files to delete after installation.
+!   The KITINSTAL.COM will parse this file and issue a VMI$CALLBACK DELETE_FILE
+!   for each file listed.  This is done after the savesets are unloaded and
+!   after the RENAMED.LST renamings are done, but before any IVPs are run.
+!
+!   Do NOT specify file versions; the DELETE_FILE callback will not accept
+!   them; all versions are deleted.
+!
+! (Notice that comment lines beginning with "!" are ignored.)
+! History:
+!	03-feb-1997 (boama01)
+!	    Added description and history comments; removed obsolete line for
+!	    [ingres.utility]iibuild.com; added lines to delete Install-time
+!	    files in [ingres.install].
+!	26-oct-2001 (kinte01)
+!	    Add additional files
+!	05-dec-2002 (abbjo03)
+!	    Remove readme.txt-syncapiw and op.obj-demo since these files are
+!	    renamed and don't need to be deleted.
+!	05-may-2005 (abbjo03)
+!	    Remove spcirf.h-files.
+!	08-apr-2008 (upake01) 120230
+!	    Remove iiapi.olb-library since this file is renamed to iiapi.olb
+!           and does not need to be deleted.
+[ingres.install]*.hlp
+[ingres.install]*.mnx
+[ingres.install]iimaninf.exe     !(duplicate supplied in [ingres.utility])

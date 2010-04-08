@@ -1,0 +1,57 @@
+/*
+** Create a table op with a field of type ordered pair
+*/
+drop table op \g
+create table op (name char(10) not null, point ord_pair not null);
+help op;
+insert into op values('origin', ord_pair(0,0));
+insert into op values ('(1,1)', ord_pair(1,1));
+insert into op values ('(-1,-1)', ord_pair(-1,-1));
+insert into op values ('(-1,-100)', ord_pair(-1,-100));
+insert into op values ('(-1, 100)', ord_pair(-1, 100));
+insert into op values ('(-2, 3)', ord_pair(-2, 3  ));
+insert into op values ('(2,-3)', ord_pair(2,-3  ));
+select * from op;\p\g
+
+/*
+**	Modify to btree, perform selects.
+**	The table is now sorted in ordered pair order,
+**	(which is x coord value, y coord value).
+*/
+
+modify op to btree on point;
+select name, point = c(point) from op;
+select name, point from op where point > ord_pair(0,0);
+select name, point from op where point >= ord_pair(0,0);
+select name, point from op where point = ord_pair(0,0);
+select name, point from op where point <= ord_pair(0,0);
+select name, point from op where point != ord_pair(0,0);\p\g
+
+/*
+** Create a second ordered pair table with which we can join
+*/
+
+drop table op1 \g
+create table op1 (name char(10) not null, point ord_pair);\p\g
+/*
+** Have the system determine and perform the translations from 
+** character strings to ordered pairs.
+*/
+
+insert into op1 values('origin', '(0,0)');
+insert into op1 values ('(1,1)', '(1,1)');
+insert into op1 values ('(-1,1)', '(-1,1)');
+insert into op1 values ('(-1, 100)', '(-1, 100)');
+insert into op1 values ('(2,-3)', '(2,-3  )');
+insert into op1 (name) values ('null');\p\g
+
+/* Show results */
+modify op1 to hash on point;
+select name, point from op1;\p\g
+
+/* Perform a join, finding all rows which have points in both tables */
+
+select op.point, op1.point from op, op1
+	where op1.point = op.point;\p\g
+
+

@@ -1,0 +1,130 @@
+/*
+** mqjoincat.qsc - Routine to concatenate the current join info
+**	           onto the where param string.
+**
+**	History:
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**
+**	Copyright (c) 2004 Ingres Corporation
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ui.h to satisfy gcc 4.3.
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ui.qsh>
+## include	"mqbf.qsh"
+# include	<er.h>
+# include	"erqf.h"
+
+static VOID
+mqjcat();
+
+mqjoincat(tag, nqspec, qspecs, currj, code)
+i2		tag;
+i4		*nqspec;
+QRY_SPEC	*qspecs;
+JOININFO	*currj;
+i2		code;
+{
+	char	buf[200];
+
+	mqjcat(currj, buf, code);
+	qs_text(tag, nqspec, qspecs, buf);
+}
+
+/*{
+** Name:	mq_s_joincat	- Like above, but send the query spec to a func.
+**
+** Description:
+**	This is like mqjoincat, but it does an qs_s_text to the join clause.
+**
+** Inputs:
+**	qgfunc		The function to pass to qs_s_text.
+**
+**	qgvalue		The value for the function.
+**
+**	currj		The join information.
+**
+**	code		If 0, then put the full join in, otherwise
+**			only put the detail table's column in.
+**
+**	Returns:
+**		Status of qs_s_text.
+**
+** History:
+**	14-may-1987 (Joe)
+**		Added by spliting mqjoincat.
+*/
+STATUS
+mq_s_joincat(qgfunc, qgvalue, currj, code)
+STATUS		(*qgfunc)();
+PTR		qgvalue;
+JOININFO	*currj;
+i2		code;
+{
+	char	buf[200];
+
+	mqjcat(currj, buf, code);
+	return qs_s_text(buf, qgfunc, qgvalue);
+}
+
+/*
+** Name:	mqjcat -	Do the actual work of stringing the join info
+**				into the working buffer.
+**	28-dec-93 (rdrane)
+**		Ensure that the working buffer is generated using
+**		unnormalized identifiers.  This corrects bug 58006.
+*/
+
+static VOID
+mqjcat(currj, buf, code)
+JOININFO	*currj;
+char	*buf;
+i2	code;
+{
+	char	r1_unrml_buf[FE_UNRML_MAXNAME+1] = "";
+	char	r2_unrml_buf[FE_UNRML_MAXNAME+1] = "";
+	char	c1_unrml_buf[FE_UNRML_MAXNAME+1] = "";
+	char	c2_unrml_buf[FE_UNRML_MAXNAME+1] = "";
+
+
+	IIUGxri_id(currj->rv1,&r1_unrml_buf[0]);
+	IIUGxri_id(currj->rv2,&r2_unrml_buf[0]);
+	IIUGxri_id(currj->col1,&c1_unrml_buf[0]);
+	IIUGxri_id(currj->col2,&c2_unrml_buf[0]);
+
+	if (code == 0)
+	{
+		/* straight copy with no args to worry about */
+		STprintf(buf, ERx("%s.%s=%s.%s"),
+			 &r1_unrml_buf[0], &c1_unrml_buf[0],
+			 &r2_unrml_buf[0], &c2_unrml_buf[0]);
+	}
+	else
+	{
+		if ((STcompare(currj->jcode, ERx("MD"))) == 0)
+		{
+			STprintf(buf, ERx("%s.%s="),
+				&r2_unrml_buf[0], &c2_unrml_buf[0]);
+		}
+		else
+		{
+			STprintf(buf, ERx("%s.%s="),
+				&r1_unrml_buf[0], &c1_unrml_buf[0]);
+		}
+	}
+
+	return;
+}

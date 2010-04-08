@@ -1,0 +1,97 @@
+;
+; History:
+;	17-sep-97 (mcgem01)
+;	    ulm_spalloc has been removed.
+;	30-aug-98 (mcgem01)
+;	    ule_format has been renamed to ule_doformat.
+;	17-oct-2000 (somsa01)
+;	    Added ulm_trace.
+;	21-feb-2002 (somsa01)
+;	    Added ulm_pad_bytes_init().
+;	02-may-2002 (penga03)
+;	    Added ulm_print_pool and ulm_print_mem.
+;	14-may-2003 (penga03)
+;	    Removed ulm_print_mem.
+;	13-feb-2004 (penga03)
+;	    Added uld_qef_actstr and uld_psq_modestr.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2005 (drivi01)
+;	    Renamed iiulfnt.def to iilibulf.def.
+;	15-dec-2005 (drivi01)
+;	    Added new function uld_struct_xlate via change
+;	    480264.
+;	30-Oct-2008 (jonj)
+;	    SIR 120874: Removed ule_doformat, added uleFormatFcn,
+;	    uleFormatNV, ule_formatNV
+;	12-Dec-2008 (bonro01)
+;	    Add functions for change 495132 bug 120571
+;	02-Jun-2009 (bonro01)
+;	    Bug 122119: Add uld_mathex_xlate.
+;	09-Sep-2009 (bonro01)
+;	    Bug 122509: Add uld_prtree_x and ult_trace_qep
+;
+
+EXPORTS
+ulb_rev_bits		@1				
+ulc_bld_descriptor	@2				
+uld_prnode		@3				
+uld_prtree		@4				
+uld_tr_callback		@5				
+uld_msignal		@6				
+uld_tree_to_text	@7				
+;ule_doformat		@8				
+ule_initiate		@9				
+ulh_access		@10				
+ulh_clean		@11				
+ulh_close		@12				
+ulh_cre_class		@13				
+ulh_create		@14				
+ulh_define_alias	@15				
+ulh_dest_class		@16				
+ulh_destroy		@17				
+ulh_getalias		@18				
+ulh_getmember		@19				
+ulh_info		@20				
+ulh_init		@21				
+ulh_release		@22				
+ulh_rename		@23				
+ulm_chunk_init		@24				
+ulm_closestream		@25				
+ulm_mappool		@26				
+ulm_mark		@27				
+ulm_openstream		@28				
+ulm_pad_bytes_init	@29				
+ulm_palloc		@30				
+ulm_reclaim		@31				
+ulm_shutdown		@32				
+ulm_startup		@33				
+ulm_trace		@34				
+ulm_xcleanup		@35				
+ulm_copy		@36				
+uls_ownname		@37				
+ult_clrval		@38				
+ult_getval		@39				
+ult_putval		@40				
+ulx_exception		@41				
+ulx_rverror		@42				
+ulx_sccerror		@43				
+ulx_format_query	@44				
+ulm_print_pool		@45				
+uld_qef_actstr		@46				
+uld_psq_modestr		@47				
+uld_struct_xlate	@48
+uleFormatFcn		@49
+uleFormatNV		@50
+ule_formatNV		@51
+ult_set_always_trace	@52
+ult_close_tracefile	@53
+ult_print_tracefile	@54
+ult_open_tracefile	@55
+ult_always_trace	@56
+ult_set_tracefile	@57
+uld_mathex_xlate	@58
+uld_prtree_x		@59
+ult_trace_qep		@60
+ult_set_trace_qep	@61
+

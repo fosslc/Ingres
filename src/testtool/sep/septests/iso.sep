@@ -1,0 +1,168 @@
+/*
+	Test Name: newtest.sep
+	Time: Mon Feb 10 16:53:32 1992
+	User Name: testenv
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename:
+	Purpose	:
+	Input Files  :
+	Output Files :
+	Database     :
+	Tables       :
+	Synopsis     :
+
+ History: 10-Feb-1992	(Author)	Created
+          31-Jan-1996	(somsa01)	Added NT_GENERIC canons.
+*/
+? sql septools 
+<<
+INGRES SunOS Version 6.4/01 (su4.u42/00) login Mon Feb 10 17:01:10 1992
+continue
+* 
+>>
+<< IF (NT_GENERIC) 
+OpenIngres Microsoft Windows NT Version OpING 1.2/00 (int.wnt/02) login
+Wed Jan 31 14:05:44 1996
+continue
+* 
+>>
+* drop table iso;\g
+<<
+Executing . . .
+
+continue
+* 
+>>
+<<
+Executing . . .
+
+E_US0AC1 DROP: 'iso' does not exist or is not owned by you.
+    (10-FEB-1992 17:15:15)
+
+continue
+* 
+>>
+* create table iso (iso_data varchar(95));\g
+<<
+Executing . . .
+
+continue
+* 
+>>
+* insert into iso (iso_data) values ('¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏ-
+ĞÑÒÓÔÕÖ×ØÙÚÛÜİŞßàáâãäåæçèéêëìíîïğñòóôõö÷øùúûüış');\p\g
+<<
+Non-printing character 037777777644 converted to blank
+Non-printing character 037777777646 converted to blank
+Non-printing character 037777777654 converted to blank
+Non-printing character 037777777656 converted to blank
+Non-printing character 037777777657 converted to blank
+Non-printing character 037777777664 converted to blank
+Non-printing character 037777777670 converted to blank
+Non-printing character 037777777676 converted to blank
+Non-printing character 037777777720 converted to blank
+Non-printing character 037777777736 converted to blank
+Non-printing character 037777777760 converted to blank
+Non-printing character 037777777776 converted to blank
+ insert into iso (iso_data) values ('¡¢£ ¥ §¨©ª«   °±²³ µ¶· ¹º»¼½ ¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏ -
+ÑÒÓÔÕÖ×ØÙÚÛÜİ ßàáâãäåæçèéêëìíîï ñòóôõö÷øùúûüı ');
+Executing . . .
+
+(1 row)
+continue
+* 
+>>
+<< IF (NT_GENERIC) 
+Non-printing character 037777777660 converted to blank
+Non-printing character 037777777661 converted to blank
+Non-printing character 037777777662 converted to blank
+Non-printing character 037777777663 converted to blank
+Non-printing character 037777777664 converted to blank
+Non-printing character 037777777671 converted to blank
+Non-printing character 037777777672 converted to blank
+Non-printing character 037777777673 converted to blank
+Non-printing character 037777777674 converted to blank
+Non-printing character 037777777677 converted to blank
+Non-printing character 037777777700 converted to blank
+Non-printing character 037777777701 converted to blank
+Non-printing character 037777777702 converted to blank
+Non-printing character 037777777703 converted to blank
+Non-printing character 037777777704 converted to blank
+Non-printing character 037777777705 converted to blank
+Non-printing character 037777777710 converted to blank
+Non-printing character 037777777711 converted to blank
+Non-printing character 037777777712 converted to blank
+Non-printing character 037777777713 converted to blank
+Non-printing character 037777777714 converted to blank
+Non-printing character 037777777715 converted to blank
+Non-printing character 037777777716 converted to blank
+Non-printing character 037777777731 converted to blank
+Non-printing character 037777777732 converted to blank
+Non-printing character 037777777733 converted to blank
+Non-printing character 037777777734 converted to blank
+Non-printing character 037777777737 converted to blank
+Non-printing character 037777777776 converted to blank
+ insert into iso (iso_data) values ('¡¢£¤¥¦§¨©ª«¬®¯     µ¶·¸    ½¾       ÆÇ       ÏĞ-
+ÑÒÓÔÕÖ×Ø    İŞ àáâãäåæçèéêëìíîïğñòóôõö÷øùúûüı ');
+Executing . . .
+
+(1 row)
+continue
+* 
+>>
+* select iso_data from iso;\g
+<<
+Executing . . .
+
+
++------------------------------------------------------------------------------------
+------------+
+|iso_data                                                                           -
+            |
++------------------------------------------------------------------------------------
+------------+
+|¡¢£ ¥ §¨©ª«   °±²³ µ¶· ¹º»¼½ ¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏ ÑÒÓÔÕÖ×ØÙÚÛÜİ ßàáâãäåæçèéêëìíîï ñòóô-
+õö÷øùúûüı   |
++------------------------------------------------------------------------------------
+------------+
+(1 row)
+continue
+* 
+>>
+<< IF (NT_GENERIC) 
+Executing . . .
+
+
++------------------------------------------------------------------------------------
+------------+
+|iso_data                                                                           -
+            |
++------------------------------------------------------------------------------------
+------------+
+|¡¢£¤¥¦§¨©ª«¬®¯     µ¶·¸    ½¾       ÆÇ       ÏĞÑÒÓÔÕÖ×Ø    İŞ àáâãäåæçèéêëìíîïğñòóô-
+õö÷øùúûüı   |
++------------------------------------------------------------------------------------
+------------+
+(1 row)
+continue
+* 
+>>
+* \q 
+<<
+Your SQL statement(s) have been committed.
+
+INGRES Version 6.4/01 (vax.vms/01) logout
+10-FEB-1992 17:19:39
+>>
+<< IF (NT_GENERIC) 
+Your SQL statement(s) have been committed.
+
+OpenIngres Version OpING 1.2/00 (int.wnt/02) logout
+Wed Jan 31 14:06:18 1996
+>>
+
+
+Ending at: Wed Jan 31 14:06:30 1996

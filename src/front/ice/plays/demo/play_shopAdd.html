@@ -1,0 +1,61 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Add to Bag: Confirmation</title>
+</head>
+<body>
+<h1>Add to Bag: Confirmation</h1>
+<!-- To Do:
+        Insert user name, order number and product id 
+	into the play_orders table
+
+	Select the record to show it has been added
+
+	Add an 'ok' for confirmation, which should return
+	the user to the play_shopHome page.
+-->
+
+<!-- #ICE
+    DATABASE=`icetutor`
+    SQL=`insert into play_order
+    (order_nr, user_id, product_id, status)
+    values (:e_orderNumber, ':ii_userid', :id, 1)`
+    TRANSACTION=`t_shopAdd`
+-->
+<!-- Flag the transaction as open; we have now added something to the bag -->
+<!-- #ICE DECLARE=`session.e_shopTxn=OPEN` -->
+<table border=0>
+<tr>
+<td bgcolor="lime">
+The item, 
+<!-- #ICE REPEAT
+    DATABASE=`icetutor`
+    SQL=`
+	set lockmode session where readlock = nolock;
+	select name, cost
+	from play_item
+	where id = 
+	    (select product_id from play_order
+	    where order_nr = :e_orderNumber 
+	    and user_id = ':ii_userid'
+	    and product_id = :id)`
+    TRANSACTION=`t_shopAddConfirm`
+    TYPE=`UNFORMATTED`
+    HTML=`<b>:name</b> @<i>:cost Silver Crown<!-- #ICE IF ( ``1`` != ``:cost``)
+                      THEN=``s`` -->
+        </i>`
+-->
+<!-- #ICE COMMIT=`t_shopAddConfirm` -->
+has been added to your shopping bag.
+</td></tr></table>
+
+<!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]?View=Yes&Confirm=Yes` -->
+<!-- Standard Session Control -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+
+
+</body>
+</html>

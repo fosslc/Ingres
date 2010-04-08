@@ -1,0 +1,14 @@
+#
+# Jamfile file for front!embed!hdr
+#
+
+SubDir ING_SRC front embed hdr ;
+
+IISUBSYS front embed hdr ;
+
+
+IIMSGHDR erco.msg ere0.msg ere1.msg ere2.msg ere3.msg ere4.msg ere6.msg
+	erlc.msg ;
+
+IIFILES iixa.h ;
+

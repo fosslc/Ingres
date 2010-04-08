@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!frontcl!shell_vms
+#
+# History:
+#	21-jan-2005 (srisu02)
+#	    Added invocations to install cc, dcc scripts
+
+SubDir ING_SRC front frontcl shell_vms ;
+
+IISUBSYS front frontcl shell_vms ;
+
+IIFILESSH cc$(SUFXSH) : cc$(SUFSH) ;
+IIFILESSH dcc$(SUFXSH) : dcc$(SUFSH) ;

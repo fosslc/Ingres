@@ -1,0 +1,80 @@
+APPLICATION_DEVELOPMENT_2 1 'Windows 4GL FCS'
+END
+CREATE TABLE ii_applications
+    (
+        entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        database_name	varchar(256) NOT NULL,
+        proc_start	varchar(32) NOT NULL,
+        command_line	varchar(256) NOT NULL,
+        init_procedure	varchar(32) NOT NULL,
+        exit_procedure	varchar(32) NOT NULL,
+        timeout_procedure	varchar(32) NOT NULL,
+        timeout_seconds	integer NOT NULL,
+        major_version	integer NOT NULL,
+        minor_version	integer NOT NULL
+    )
+
+CREATE TABLE ii_components
+    (
+        entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        data_type	varchar(65) NOT NULL,
+        is_nullable	char(1) NOT NULL,
+        current_make	integer NOT NULL,
+        change_type	integer NOT NULL,
+        value_type	char(6) NOT NULL,
+        value_string	varchar(256) NOT NULL,
+        read_only	char(1) NOT NULL,
+        is_array	char(1) NOT NULL
+    )
+
+CREATE TABLE ii_dependencies
+    (
+        src_entity_id	integer NOT NULL,
+        src_entity_type	varchar(32) NOT NULL,
+        rel_class_type	varchar(32) NOT NULL,
+        dest_entity_id	integer NOT NULL,
+        dest_app_name	varchar(32) NOT NULL,
+        dest_comp_name	varchar(32) NOT NULL,
+        qualified_ref	char(1) NOT NULL,
+        dependency_origin	varchar(32) NOT NULL
+    )
+
+CREATE TABLE ii_incl_apps
+    (
+        app_id	integer NOT NULL,
+        incl_name	varchar(32) NOT NULL,
+        incl_version	integer NOT NULL,
+        incl_filename	varchar(256) NOT NULL,
+        incl_sequence	integer NOT NULL
+    )
+
+CREATE TABLE ii_srcobj_encoded
+    (
+        entity_id	integer NOT NULL,
+        sub_type	smallint NOT NULL,
+        sequence_no	smallint NOT NULL,
+        text_string	varchar(1790) NOT NULL
+    )
+
+CREATE TABLE ii_stored_bitmaps
+    (
+        picture_id	integer  NOT NULL,
+        row_sequence	integer  NOT NULL,
+        text_total	integer  NOT NULL,
+        text_value	varchar(1786) NOT NULL
+    )
+
+CREATE TABLE ii_stored_strings
+    (
+        string_id	integer  NOT NULL,
+        row_sequence	integer  NOT NULL,
+        text_total	integer  NOT NULL,
+        text_value	varchar(1786) NOT NULL
+    )
+

@@ -1,0 +1,48 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You may specify print options for a break column in the detail section.  You
+can decide when to print the break column and whether or not a pagefeed should
+be generated when the break value changes.  The fields on this form accept
+a value of "yes" or "no".  You do not need to spell out the full word.  Type
+in enough of the word to make it distinct.
+
+The options are:
+
+        OPTION          DESCRIPTION
+        ------          -----------
+       	Always 		If the value of this field is "yes" then the break
+			column will always be printed; duplicate values will 
+			not be suppressed.  If you choose this option then
+			the next two options, On breaks and On Page breaks 
+			will be "no".
+			
+	On breaks	If the value of this field is "yes" then the break 
+			column will be printed only when the value changes; 
+			duplicate values will be suppressed.  A header for
+			the break column will be created if one does not
+			already exist.
+
+	On Page breaks  If the value of this field is "yes" then the break
+			column will be printed whenever there is a new page.
+			A page header will be created if one does not already
+			exist.
+
+	New Page	If the value of this field is "yes" then a pagefeed
+			will be a generated whenever the break value changes.
+			A footer for the break column will be created if one
+			does not already exist.
+
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	OK		Submit the options specified and return to the 
+			main menu.
+
+	Cancel		Return to the main menu and do not record any 
+			options specified.
+
+	ListChoices	List all possible values for the current field.
+			
+        Help            Print this message.
+

@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icrlocfm.hlp       View Locations.
+/#--
+The Information About a Location frame allows you to examine 
+LocationName - Area mappings.
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Help            Access the Ingres help facility.
+
+	End             Return to the previous frame.

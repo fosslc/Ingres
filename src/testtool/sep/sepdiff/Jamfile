@@ -1,0 +1,13 @@
+#
+# Jamfile file for testtool!sep!sepdiff
+#
+
+SubDir ING_SRC testtool sep sepdiff ;
+
+IISUBSYS testtool sep sepdiff ;
+
+IILIBRARY SEPDIFFLIB : grammar.lex qadiff.c output.c miller.c
+	memory.c ;
+
+IINOOPTIM qadiff.c : int_lnx int_rpl ibm_lnx sqs_ptx i64_aix i64_lnx su9_us5 
+	a64_lnx mg5_osx int_osx ppc_lnx ;

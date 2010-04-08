@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqdelrul.hlp, help for the Frame Behavior pop-up for Delete Integrity
+/#-- Rule
+/#-- 
+The Delete Integrity Rule controls whether the master row can be deleted 
+if any detail rows exist. The selections are described below:  
+
+  CASCADE -  Deleting the master will cause any details that exist to be 
+	     deleted as well.  
+
+  RESTRICT - The master cannot be deleted if any details exist.
+
+  DBMS     - Vision assumes that there are DBMS rules and procedures to 
+	     handle the deletion of detail rows. This option does not create 
+	     the DBMS rules and procedures, it only supports the existence 
+	     of them by not generating code to delete the detail rows.
+
+Move the cursor to the desired option and choose "Select".

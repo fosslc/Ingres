@@ -1,0 +1,241 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "rctools.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_LAYOUTCTRLCOMBO DIALOG  0, 0, 74, 15
+STYLE WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN
+FONT 8, "MS Shell Dlg"
+BEGIN
+    COMBOBOX        IDC_RCT_COMBO1,1,1,56,49,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    COMBOBOX        IDC_RCT_COMBO2,12,1,58,49,CBS_DROPDOWN | NOT WS_VISIBLE | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_LAYOUTCTRLEDIT DIALOG  0, 0, 159, 15
+STYLE WS_CHILD | WS_BORDER
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_RCT_EDIT1,1,1,136,13,ES_AUTOHSCROLL
+    PUSHBUTTON      ">>",IDC_BUTTON_ASSIST,137,1,11,13
+END
+
+IDD_LAYOUTCTRLSPIN DIALOG  0, 0, 80, 18
+STYLE WS_CHILD | WS_BORDER
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_RCT_EDIT1,7,3,53,12,ES_AUTOHSCROLL
+    CONTROL         "Spin1",IDC_RCT_SPIN1,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,60,2,8,14
+END
+
+IDD_RCT_PROPPAGE1_TEXT DIALOGEX 0, 0, 187, 101
+STYLE WS_CHILD | WS_CAPTION
+CAPTION "Text"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_RCT_EDIT1,7,7,173,87,ES_MULTILINE | ES_READONLY | 
+                    NOT WS_BORDER | WS_VSCROLL | WS_HSCROLL,WS_EX_CLIENTEDGE
+END
+
+IDD_RCT_INPUTPASSWORD DIALOGEX 0, 0, 272, 49
+STYLE DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Enter Your Password"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_RCT_EDIT1,7,16,159,14,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,215,16,50,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_LAYOUTCTRLCOMBO, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 72
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 14
+    END
+
+    IDD_LAYOUTCTRLEDIT, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 157
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 14
+    END
+
+    IDD_LAYOUTCTRLSPIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 73
+        TOPMARGIN, 2
+        BOTTOMMARGIN, 16
+    END
+
+    IDD_RCT_PROPPAGE1_TEXT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 94
+    END
+
+    IDD_RCT_INPUTPASSWORD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 265
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 42
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_IMPORTAS_1          BITMAP                  "import1.bmp"
+IDB_IMPORTAS_2          BITMAP                  "import2.bmp"
+IDB_IMPORTAS_3          BITMAP                  "import3.bmp"
+IDB_CHECK4LISTCTRL      BITMAP                  "check4ls.bmp"
+IDB_INGRESOBJECT16x16   BITMAP                  "ingresob.bmp"
+IDB_CHECKMARKINFO       BITMAP                  "schkmark.bmp"
+IDB_CHECKLISTBOX_95     BITMAP                  "95check.bmp"
+IDB_STATEICONS          BITMAP                  "stateico.bmp"
+IDB_SERVER_INGRES       BITMAP                  "svringre.bmp"
+IDB_SERVER_ICE          BITMAP                  "svrice.bmp"
+IDB_SERVER_JDBC         BITMAP                  "svrjdbc.bmp"
+IDB_SERVER_NAME         BITMAP                  "svrname.bmp"
+IDB_SERVER_NET          BITMAP                  "svrnet.bmp"
+IDB_SERVER_OTHER        BITMAP                  "svrother.bmp"
+IDB_SERVER_RECOVERY     BITMAP                  "svrrecov.bmp"
+IDB_SERVER_RMCMD        BITMAP                  "svrrmcmd.bmp"
+IDB_SERVER_STAR         BITMAP                  "svrstar.bmp"
+IDB_DATABASE            BITMAP                  "database.bmp"
+IDB_TABLE               BITMAP                  "table.bmp"
+IDB_PAGE                BITMAP                  "page.bmp"
+IDB_USER                BITMAP                  "user.bmp"
+IDB_SESSION             BITMAP                  "session.bmp"
+IDB_LOCK                BITMAP                  "lock.bmp"
+IDB_LOCKS               BITMAP                  "locks.bmp"
+IDB_FOLDER_CLOSED       BITMAP                  "fldclose.bmp"
+IDB_SESSION_BLOCKED     BITMAP                  "sesblock.bmp"
+IDB_LOCKS_BLOCKED       BITMAP                  "blocking.bmp"
+IDB_DATABASE_DISTRIBUTED BITMAP                  "dbdistri.bmp"
+IDB_DATABASE_COORDINATOR BITMAP                  "dbcoordi.bmp"
+IDB_DATABASE_ERROR      BITMAP                  "dberror.bmp"
+IDB_ORIENTATION         BITMAP                  "orientat.bmp"
+IDB_CHECK4LISTCTRL_NOFRAME BITMAP                  "chknofrm.bmp"
+IDB_TRANSACTION         BITMAP                  "transact.bmp"
+IDB_NODES               BITMAP                  "nodes.bmp"
+IDB_VIEW                BITMAP                  "view.bmp"
+IDB_INGRESOBJECT2_16x16 BITMAP                  "ingobj2.bmp"
+IDB_INGRESOBJECT3_16x16 BITMAP                  "ingobj3.bmp"
+IDB_INGRESOBJECT16x16GRANTEE BITMAP                  "grantees.bmp"
+IDB_INGRESOBJECT16x16ALARM BITMAP                  "alarms.bmp"
+IDB_PROCEDURE           BITMAP                  "procedur.bmp"
+IDB_INDEX               BITMAP                  "index.bmp"
+IDB_SESSION2            BITMAP                  "session2.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_OPEN                ICON                    "open.ico"
+IDI_SAVE                ICON                    "save.ico"
+IDI_ASSISTANT_SQL       ICON                    "astsql.ico"
+IDI_NODE                ICON                    "node.ico"
+IDI_REFRESH             ICON                    "refresh.ico"
+IDI_SETTING             ICON                    "setting.ico"
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "rctools.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

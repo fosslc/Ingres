@@ -1,0 +1,11 @@
+#
+# Jamfile file for testtool!mts!shell_unix
+#
+
+SubDir ING_SRC testtool mts shell_unix ;
+
+IISUBSYS testtool mts shell_unix ;
+
+
+IITOOLSSH mts : mts.sh ;
+

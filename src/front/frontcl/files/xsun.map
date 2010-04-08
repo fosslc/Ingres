@@ -1,0 +1,90 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* Menu Key */
+	menu = pf1 (R4)
+
+/* Help facility */
+	frskey1 = pf2 (Help)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (R5)
+
+/* Exit the system */
+	frskey2 = pf4 (R6)
+
+/* Put cursor on top of form or table field */
+	frskey5 = pf12 (-)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= pf8 (+)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Go or execute function */
+	frskey4 = pf18 (Enter)
+
+/* Save object in database */
+	frskey8 = pf16 (0)
+
+/* Forget and Undo */
+	frskey9 = pf17 (.)
+
+/* Bring up List Choices */
+	frskey10 = pf7 (R9)
+
+/* Select menu items */
+	menuitem1 = pf13 (R13)
+	menuitem2 = pf14 (R14)
+	menuitem3 = pf15 (R15)
+	menuitem4 = pf9 (R10)
+	menuitem5 = pf10 (R11)
+	menuitem6 = pf11 (R12)
+	menuitem7 = pf5 (R7)
+	menuitem8 = pf6 (R8)
+
+/* Move cursor to next field - defined to controlI in frs.map */
+
+/* Move cursor to previous field - defined to controlP in frs.map */
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field - defined to controlR in frs.map */
+
+/* Switch between insert and overstrike mode - defined to controlE in frs.map */
+
+/* Redraw the screen */
+	redraw = controlL (^L)
+
+/* Delete the character under the cursor - defined to controlD in frs.map */
+
+/* Delete character immediately to left of cursor */
+/* defined to controlDEL in frs.map */
+
+/* Start default text editor on field - defined to controlV in frs.map */
+
+/* Move to first column of next row in table field */
+/* defined to controlN in frs.map */
+
+/* Clear the field - defined to controlX in frs.map */
+
+/* Clear out the rest of the field, and move to next field */
+/* defined to controlM in frs.map */
+
+/* Scroll up on the form */
+	scrollup = controlG (^G)
+
+/* Scroll down on the form */
+	scrolldown = controlB (^B)
+
+/* Scroll left on a form */
+	scrollleft = controlH (^H)
+
+/* Scroll right on a form */
+	scrollright = control] (^])
+
+/* Auto-duplicate value while in fill mode - defined to controlA in frs.map */
+
+/* Escape to shell */
+	shell = controlW (^W)
+

@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are editing an existing piece of trim.  You may change the text of the
+trim or edit the attributes of the trim.
+
+If you selected EDIT by mistake, select the "End" menu command to return
+to the Form Layout frame.
+
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Trim                    Edit the text of the trim.
+
+        Attributes              Edit the attributes for the trim.  This puts
+                                you in the trim attributes form for detailed
+                                editing.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to Form Layout menu, without doing
+                                any editing.

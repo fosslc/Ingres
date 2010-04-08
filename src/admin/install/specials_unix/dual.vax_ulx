@@ -1,0 +1,71 @@
+:
+# dual -- Install Ultrix System V libraries if user wants them.
+#
+# Copyright (c) 2004 Ingres Corporation
+#
+# History:
+#	5-24-1989 (boba)
+#		Created.
+
+CMD="dual"
+
+#
+# May be a pure BSD release - check for $II_SYSTEM/ingres/.att
+#
+
+if [ ! -d $II_SYSTEM/ingres/.att ]
+then
+	exit
+fi
+
+cat  << !
+
+$CMD: INFORMATION--------------------------------
+
+This installation will work with either the regular ULTRIX system
+libraries or the special System V compatible libraries (libcV.a and
+libmV.a), but not both.
+
+If you want to use this installation with the regular ULTRIX system
+libraries, enter 'regular' below.
+
+If you want to use this installation with the special System V
+compatible libraries, enter 'sysv' below.  This will require that all
+ESQL, EQUEL, and ABF applications be compiled with either the special
+"-Y" flag or the enviornment variable PROG_ENV set to "SYSTEM_FIVE",
+forcing use of System V compatible system data structures, symbol
+definitions, and libraries.
+
+!
+while :
+do
+	echo "Do you wish to use the regular ULTRIX system libraries or the System V"
+	echon "compatible libraries with this INGRES installation?  (regular/sysv) "
+	read answer junk
+	case $answer in
+	regular|Regular)   
+		break
+		;;
+	sysv|Sysv|SysV)	
+		(cd $II_SYSTEM/ingres/.att
+		for f in */*
+		do
+			rm -f $II_SYSTEM/ingres/$f
+			mv $f $II_SYSTEM/ingres/$f
+		done
+		cd $II_SYSTEM/ingres/lib
+		for f in *lib
+		do
+			base=`basename $f lib`
+			libx=lib$base
+			rm $II_SYSTEM/ingres/lib/$libx.a
+			ln $f $II_SYSTEM/ingres/lib/$libx.a
+		done)
+		break
+		;;
+	*)	echo "Please enter 'regular' or 'sysv'."
+		;;
+	esac
+done
+
+rm -rf $II_SYSTEM/ingres/.att

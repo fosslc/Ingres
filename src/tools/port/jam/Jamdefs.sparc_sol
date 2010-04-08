@@ -1,0 +1,154 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.sparc_sol -- Variable definitions for Sparc Solaris
+#
+#  Description:
+#       Platform specific variable definitions for Sparc Solaris,
+#	hybrid capable platform.
+#
+# History:
+#	17-aug-2004 (stephenb)
+#	    Initial creation
+#	27-sep-2004 (gupsh01)
+#	    Added lpthread to link with thread library.
+#	05-oct-2004 (hanch04)
+#	    Updated CCLDMACH, CCLDMACH64.
+#	15-oct-2004 (sheco02)
+#	    Add LIBSFX, OBJSFX and ICE file extension.
+#	27-Oct-2004 (hanje04)
+#	    Add SHLIBLD and CCSHLDMACH for building UDT library.
+#	    Fix XERC_DEF
+#	22-Dec-2004 (sheco02)
+#	    Modify the OPTIM and add IINOOPTIM.
+#	14-Jan-2005 (sheco02)
+#	    Change IINOOPTIM to NOOPTIM to sync with other platforms.
+#	15-Oct-2004 (schka24)
+#	    Added lib, obj suffix vars for Win build integration.
+#	18-Mar-2005 (hanje04)
+#	    Define CCSHLDMACH64.
+#	29-Sep-2005 (sheco02)
+#	    Define platform_string & extension_string for bug 115262.
+#       16-Oct-2006 (hanal04) Bug 116866
+#           Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#           NOOPTIM does not strip this when explicitly set.
+#	13-Feb-2007 (hweho01)
+#           NOOPTIM should be set to "", optimizer will not be turned off 
+#           by option "-O0". Compiler version : Forte 6.0 Update 2 C 5.3. 
+#	5-Sep-2007 (bonro01)
+#	    Use nawk on Solaris instead of awk because of change 488095
+#	    for bug 117955 which changed fi_defn.awk syntax which was
+#	    invalid for the Solaris version of awk.
+#       25-Jun-2008 (rajus01) SIR 120420, SD issue 116370
+#           Added PAMLIB to resolve symbols defined in PAM library.
+#       05-May-2009 (bonro01)
+#           Create server using iimerge.a
+#	22-Jun-2009 (kschendel) SIR 122138
+#	    Combine su4 and su9 into hybrid capable platform jamdefs.
+#	    Define option variants for Sun Studio 12 compilers, which
+#	    introduced -m32 and -m64 (fine), and also issue garish
+#	    warnings when the old options are used!  Also, Studio 12 CC
+#	    takes exception to -K PIC, use -KPIC which ought to work
+#	    for any version.
+#           
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG 	= "-DXP_UNIX" ;
+APACHE_API_FLAG 	= "-DLINUX=2" ;
+VERS32 	= "su4_us5" ;
+VERS64	= "su9_us5" ;
+AS32	= $(AS) ;
+AS64	= $(AS) ;
+LD32	= $(LD) ;
+LD64	= $(LD) ;
+CCLD32	= $(CCLD) ;
+CCLD64	= $(CCLD) ;
+ASMACH32 = "-xarch=v8plus" ;
+ASMACH64 = "-xarch=v9" ;
+CC 	default = "cc" ;
+CCDEBUG = "-g" ;
+CPP 	default = "/lib/cpp" ;
+# If/when compiling with Studio 12 compilers, use -m32 and -m64
+# instead of the -xarch options.  Studio 12 complains, so allow community
+# builds to specify the studio-12 options in VERS, via CCSUN32 and CCSUN64
+# (for cc) and C++SUN32 and C++SUN64 (for CC, ie c++).
+CCSUN32	?= "-xarch=v8plus" ;
+CCSUN64	?= "-xarch=v9" ;
+C++SUN32 ?= "-xarch=v8plus" ;
+C++SUN64 ?= "-xarch=v9" ;
+
+CCMACH32	= "-DBUILD_ARCH32 $(CCSUN32) -DSVR4 -D_SVID_GETTOD -mt" ;
+CCMACH64 	= "-DBUILD_ARCH64 $(CCSUN64) -DSVR4 -D_SVID_GETTOD -mt" ;
+CCLDMACH32	= "$(CCSUN32) -mt" ;
+CCLDMACH64 	= "$(CCSUN64) -mt" ;
+
+# Note that this LDORIGIN is used for various distributed binaries,
+# but *NOT* for the dbms server.  The DBMS server is linked with iilink,
+# which uses an LDSRVORIGIN variable defined via mkdefault.sh via iisysdep.
+# Server-shared-library servers need to use an rpath of just $ORIGIN
+# for set-uid reasons, so there are various hoops;  but iilink takes
+# care of all that.
+LDORIGIN = -R '$ORIGIN/../lib' ;
+LDORIGINLP32 = -R '$ORIGIN/../../lib/lp32' ;
+LDORIGINLP64 = -R '$ORIGIN/../../lib/lp64' ;
+
+CCLDSERVER32	= "" ;
+CCLDSERVER64	= "" ;
+CCPICFLAG 	= "-KPIC" ;
+SHLIBLD 	= "ld" ;
+CCSHLDMACH32	= "-G" ;
+CCSHLDMACH64	= "-G" ; 
+SLSFX 		= "so" ;
+LIBSFX 		= "a" ;
+OBJSFX 		= "o" ;
+MWSLSFX 	= "so" ;
+CGISFX 		= "cgi" ;
+LDLIBPATH32	= "/opt/SUNWspro/lib /usr/ccs/lib /usr/lib" ;
+LDLIBPATH64 	= "/opt/SUNWspro/lib/v9 /usr/ccs/lib/sparcv9 /usr/lib/sparcv9" ;
+LIBMACH 	= "" ;
+LDLIBMACH32	= "-L/usr/lib -lsocket -lelf -lposix4 -ldl -lnsl -lm -lpthread" ;
+LDLIBMACH64	= "-L/usr/lib/sparcv9 -lsocket -lelf -lposix4 -ldl -lnsl -lm -lpthread" ; 
+LD_ICE_FLAGS 	= "" ;
+LEVEL1_OPTIM 	= "-O1" ;
+LONGLONG	= long long ;
+#OPTIM 	default = "-O" ;
+OPTIM		= "" ;
+IIOPTIM		?= "-O" ;
+NOOPTIM 	?= "" ;
+SHELLHEADER 	= ""#!/bin/sh"" ;
+BSD42 default = -DBSD42 ;
+AWK     = nawk ;
+LEX = flex ;
+DIRENT default = -DDIRENT ;
+DIRFUNC default = -DDIRFUNC ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 default = -DSYS5 ;
+C++	= "CC" ;
+C++FLAGS32 = "-DBUILD_ARCH32 -DSOLARIS -DSVR4 -D_SVID_GETTOD -mt -w $(C++SUN32)" ;
+C++FLAGS64 = "-DBUILD_ARCH64 -DSOLARIS -DSVR4 -D_SVID_GETTOD -mt -w $(C++SUN64)" ;
+CXX	= "CC" ;
+CXX_DEFS	= "-DSOLARIS -DSVR4 -D_SVID_GETTOD -mt -w" ;
+UNDEFFLAG  = "-u " ;
+XERC_DEFS	= "-DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET" ;
+XERC_LIBS	= "/usr/lib/libc.so.1" ;
+AWK	= nawk ;
+#
+#ICE File extensions
+#
+ICE_EXT = so ;
+CGI_EXT = cgi ;
+if $(BUILD_ARCH) = "32" || $(BUILD_ARCH) = "32+64"
+{
+    DBMS_STACKSIZE = 131072 ;
+    platform_string = "Sun Solaris SPARC" ;
+}
+else
+{
+    DBMS_STACKSIZE = 262144 ;
+    platform_string = "Sun Solaris UltraSPARC" ;
+}
+extension_string = $(config_string) ;
+PAMLIB 	= TRUE ;

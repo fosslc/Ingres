@@ -1,0 +1,27 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescum.hlp		Table-Field-Menuitems escape code help
+The Table-Field-Menuitems (previously called User-Menuitem) escape is used in
+ListChoices-style Menu frames.  You can add additional choices to the
+tablefield in your Form-Start escape code.  If the user Selects one, no child
+frame will match it, so your User-Menuitem escape code will be called with the
+variable 'IIchoice' set to the user's choice.  This escape code can take the
+appropriate action, based on the value of 'IIchoice'.  It should set
+'IIfound' to 1, so that the user won't be told that their choice was
+unrecognized.
+
+Example:
+
+    In Form-Start:
+
+        /* Put a new command into the table field */
+        LOADTABLE iitf 
+                (command = 'Message', explanation = 'Display message');
+
+    In Table-Field-Menuitems:
+
+        /* Check for the 'Message' command */
+        IF IIchoice = 'Message' THEN
+            MESSAGE 'You have chosen the ''Message'' command.'
+            WITH STYLE = POPUP;
+            IIfound = 1;
+        ENDIF

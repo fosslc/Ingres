@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Query By Forms (QBF) is an interactive, visually oriented forms interface
+package for adding, deleting, changing and viewing data in your tables.
+
+Below is a list of functions you can execute from the main menu of QBF's
+Query Execution Phase.  To enter a function just type the name of the
+function followed by a carriage return.  Each function has its own menu which
+you may call by depressing the MENU KEY.  From these menus you can receive
+help by typing the "Help" command or return to the main query execution menu
+by typing the "End" command.
+
+        FUNCTION        DESCRIPTION
+        --------        -----------
+        Append          The DATA ENTRY portion of QBF.
+        Retrieve        The function of QBF for browsing rows.
+        Update          The function of QBF for changing and deleting rows.
+        NewQueryTarget  Run QBF on a different QBFName, JoinDef or table.
+                        You will be prompted for the name of the Query Target
+                        you want to run.  QBF searches first for a QBFName,
+                        then a JoinDef, and finally a table with the specified
+                        name.
+        Start           Go to the QBF Main Start-Up Frame.
+        Help            Print this message.
+        Quit            Leave QBF and return to the operating system.

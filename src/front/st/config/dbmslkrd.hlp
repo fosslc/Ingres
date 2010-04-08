@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The system_readlock resource specifies the default system setting used
+  to determine what locking mode (strength) will be used when data is
+  read without update intent.
+ 
+  This default setting is only used if no SET LOCKMODE READLOCK statement
+  was issued, or if one has been issued with the READLOCK=SYSTEM parameter.
+ 
+  Possible values are NOLOCK, SHARED, and EXCLUSIVE. The default is SHARED.

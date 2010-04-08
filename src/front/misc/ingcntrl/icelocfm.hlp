@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icelocfm.hlp       Update Locations.
+/#--
+The "Edit a Location" frame allows you to examine or modify
+LocationName - Area mappings.
+
+(Note: If you do not have the MAINTAIN_LOCATIONS user permission, then you
+cannot ALTER existing locations and this frame will be displayed in
+read-only mode)
+
+Once a LocationName has been created, the Area that the LocationName 
+refers to cannot be changed.  You can modify the availability 
+of the LocationName for data, journals, checkpoints, work, or online backup
+dumps even after the LocationName has been created. The modifications
+will apply to all future usage of the LocationName.
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Save            Save the changes made regarding the location.
+	
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

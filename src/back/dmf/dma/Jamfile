@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!dmf!dma
+#
+
+SubDir ING_SRC back dmf dma ;
+
+IISUBSYS back dmf dma ;
+
+
+IILIBRARY DMFLIB : dmawrite.c
+	dmatblac.c
+	dmarowac.c ;
+

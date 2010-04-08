@@ -1,0 +1,6 @@
+/#-- Help File: fgmdbnqp.hlp
+/#-- Master detail browse frame, no Next, user Qual, primary help file.
+This screen allows you to view data.
+
+  Help        Get help about this screen.
+  End         Stop viewing data and enter a new query.

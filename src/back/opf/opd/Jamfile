@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!opf!opd
+#
+
+SubDir ING_SRC back opf opd ;
+
+IISUBSYS back opf opd ;
+
+
+IILIBRARY OPFLIB : opdcost.c ;
+

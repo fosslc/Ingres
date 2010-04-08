@@ -1,0 +1,41 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at a catalog of all global constants in the application.
+The table field lists the names of all the constants along with their
+data type, nullability, and a short remark.
+
+To create a new constant, use the Create menu operation.  To perform
+one of the menu operations on an existing constant, first position the
+cursor on the row containing the name of the constant of interest by
+using the cursor keys or the table field scrolling keys.  After the cursor
+has been positioned on the row containing the constant of interest,
+select the desired menu operation.
+
+The menu options are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Create          Create a definition of a new constant.  If the
+                        constant does not exist, it will be created and
+                        you will be placed in the definition frame for that
+                        constant.
+
+        Destroy         Destroy the constant you have selected.
+                        You will be asked to confirm this decision.  You may
+			only destroy a constant that you are authorized
+			to modify.
+
+        Edit            Edit the selected constant.  This goes to an
+                        Edit Definition frame for the selected constant where
+                        you can change its definition.
+
+        Rename          Change the name of the constant you have
+                        selected.  You are prompted for the new name of the
+                        constant.  If you immediately press the
+                        RETURN key without entering a name, the command is
+                        cancelled and the cursor returns to the table field.  
+			If you enter a legal name, the name of the component 
+			is changed in the database.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the application catalog frame.

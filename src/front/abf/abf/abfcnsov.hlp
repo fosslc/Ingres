@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abfcnsov.hlp, help for confirmation popup about constant overflow
+/#--
+You have entered a constant value that doesn't fit in the datatype you
+entered. You are being asked to either extend the datatype to fit the
+constant value or truncate the constant value to fit the datatype.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        Select                  If Yes is selected, the datatype will be
+                                expanded to fit the constant value.
+
+                                If No is selected, the constant value will
+                                be truncated to fit the datatype.
+
+        Cancel                  No action, exit this popup back to the
+                                Create an Application Constant frame.
+
+        Help                    Access the Ingres Help facility.
+

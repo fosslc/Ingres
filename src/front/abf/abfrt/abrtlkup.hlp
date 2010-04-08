@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abrtlkup.hlp, help for listchoices on selection popup for Vision/abf
+/#-- applications.
+/#--
+This screen allows you to choose an item from the database.  Move the cursor
+to the desired item and then use the 'Select' menuitem to choose it.  If you
+do not wish to make a choice, select the 'Cancel' menuitem.
+
+  Select        Chooses an item.
+  Cancel        Terminates the ListChoices operation without making a choice.
+  Help          Displays this help screen.

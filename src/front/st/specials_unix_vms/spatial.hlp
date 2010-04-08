@@ -1,0 +1,20 @@
+Ingres Spatial Object Library
+
+The Ingres Spatial Object Library extends the Ingres
+Intelligent DBMS to support six spatial object data types which can be
+used to implement Graphical Information Systems (GIS): point, line,
+line segment, circle, box, and polygon.  Ingres support for GIS
+objects includes SQL access to the following graphical operators and
+functions: inside(), intersect(), area(), distance(), length(), perimeter().
+
+A typical problem which can be easily solved using Ingres GIS
+technology is determining whether a point lies inside a complex
+polygon or circle.  In practical terms, this might translate to an
+SQL query which seeks to find the emergency response vehicle closest 
+to an accident site, within a fixed geographic area.
+
+The Ingres Spatial Object Library is targeted at developers of
+Geographical Information Systems (GIS), including enterprises from all
+major sectors of the global economy: aerospace, banking, biotechnology,
+chemicals, environmental research, finance, government administration,
+municipal utilities, pharmaceuticals, national defense, and shipping.

@@ -1,0 +1,8 @@
+(PROD1NAME) ODBC Driver
+
+The (PROD1NAME) ODBC driver requires a third-party ODBC driver manager.  The 
+(PROD1NAME) ODBC driver connects to local or remote databases to
+fetch or modify information.
+
+The (PROG1PRFX)odbcadmn utility allows Linux, Unix or VMS users to
+configure ODBC data source information.

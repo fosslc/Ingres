@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlvclas.hlp, subtopic 'Using record types' of main help screen for 
+/#-- Create a local variable.
+/#-- 
+A record combines related kinds of data (attributes) so that the application 
+can treat them as one value (for instance, columns named street, city, state, 
+and zip code might be attributes of a record called "address"). Record 
+attributes can be of three types:
+  * An Ingres datatype
+  * An array
+  * Another, separately defined record
+
+When you create a local variable, you must specify:
+  * The names of the form, table, and/or table fields you are using
+  * Whether the record is an array
+
+To specify a record in a local variable definition, the record does not have
+to be created yet. However, you will not actually be able to use the record 
+until you create it. To Create the record, select Global Objects, Record 
+Types, then Create, in that order from the Edit Local Variables screen.
+
+For more details, see Help for Creating and Editing record type definitions.

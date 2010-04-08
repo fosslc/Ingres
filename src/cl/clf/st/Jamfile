@@ -1,0 +1,18 @@
+#
+# Jamfile file for cl!clf!st
+#
+# History:
+#	16-nov-2004 (abbjo03)
+#	    Make this directory generic.
+
+SubDir ING_SRC cl clf st ;
+
+IISUBSYS cl clf st ;
+
+
+IILIBRARY COMPATLIB : stzapblnk.c stxcompar.c sttrmwhit.c stpolycat.c 
+	sttrmnwhi.c sttalloc.c ststridx.c stskip.c stscompar.c
+	strstrix.c strskip.c strindex.c stpolycat.c stmove.c
+	stlpolycat.c stlength.c stlcopy.c stindex.c stgetwrds.c
+	stcopy.c stcompare.c stcat.c stbcompar.c stalloc.c stlpolycat.c ;
+

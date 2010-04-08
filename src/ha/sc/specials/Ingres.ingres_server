@@ -1,0 +1,197 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Registration information and Paramtable for the 
+#  Ingres DBMS Data Service type for Sun Cluster
+#
+## History:
+##      01-Jan-2004 (hanch04)
+##          Created for SUN HA cluster support.
+##	27-Jan-2006 (bonro01)
+##	    Rename company to Ingres
+
+RESOURCE_TYPE = "ingres_server";
+VENDOR_ID = Ingres;
+RT_DESCRIPTION = "Ingres DBMS Data Service type for Sun HA Cluster";
+
+RT_VERSION ="1.0"; 
+API_VERSION = 2;	 
+FAILOVER = TRUE;
+
+RT_BASEDIR=(INSTALL_DIRECTORY) ;
+
+START                           =       bin/ingres_server_start;
+STOP                            =       bin/ingres_server_stop;
+
+VALIDATE                        =       bin/ingres_validate;
+UPDATE                          =       bin/ingres_update;
+
+MONITOR_START                   =       bin/ingres_monitor_start;
+MONITOR_STOP                    =       bin/ingres_monitor_stop;
+MONITOR_CHECK                   =       bin/ingres_monitor_check;
+
+# The paramtable is a list of bracketed resource property declarations 
+# that come after the resource-type declarations
+# The property-name declaration must be the first attribute
+# after the open curly of a paramtable entry
+#
+# The following are the system defined properties. Each of the system defined
+# properties have a default value set for each of the attributes. Look at 
+# man rt_reg(4) for a detailed explanation.
+#
+{ PROPERTY = Start_timeout; MIN = 5; DEFAULT = 300; }
+{ PROPERTY = Stop_timeout; MIN = 5; DEFAULT = 300; }
+{ PROPERTY = Validate_timeout; MIN = 5; DEFAULT = 120; }
+{ PROPERTY = Update_timeout; MIN = 5; DEFAULT = 120; }
+{ PROPERTY = Monitor_Start_timeout; MIN = 5; DEFAULT = 120; }
+{ PROPERTY = Monitor_Stop_timeout; MIN = 5; DEFAULT = 120; }
+{ PROPERTY = Monitor_Check_timeout; MIN = 60; DEFAULT = 300; }
+{ PROPERTY = FailOver_Mode; DEFAULT = SOFT; TUNABLE = ANYTIME; }
+{ PROPERTY = Network_resources_used; TUNABLE = WHEN_DISABLED; DEFAULT = ""; }
+{ PROPERTY = Thorough_Probe_Interval; MAX = 3600; DEFAULT = 60; TUNABLE = ANYTIME; }
+{ PROPERTY = Retry_Count; MAX = 10; DEFAULT = 2; TUNABLE = ANYTIME; }
+{ PROPERTY = Retry_Interval; MAX = 3600; DEFAULT = 300; TUNABLE = ANYTIME; }
+
+#
+# Extension Properties
+#
+
+# Time out value for the probe
+{
+        PROPERTY = Probe_timeout;
+        EXTENSION;
+        INT;
+        MIN = 1;
+        MAX = 99999;
+        DEFAULT = 60;
+        TUNABLE = ANYTIME;
+        DESCRIPTION = "Time out value for the probe (seconds)";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+	Property = II_SYSTEM;
+	Extension;
+	string;
+	minlength = 1;
+	Tunable = WHEN_DISABLED;
+	Description = "Ingres System Directory (II_SYSTEM)";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+        Property = II_OWNER;
+        Extension;
+        string;
+        minlength = 1;
+        Tunable = WHEN_DISABLED;
+        Description = "Ingres System Owner (II_OWNER)";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+        Property = II_HOSTNAME;
+        Extension;
+        string;
+        minlength = 0;
+        Default = "";
+        Tunable = WHEN_DISABLED;
+        Description = "Virtual Host (II_HOSTNAME)";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+        Property = User;
+        Extension;
+        string;
+        minlength = 0;
+        Default = "";
+        Tunable = WHEN_DISABLED;
+        Description = "Secondary Monitoring: User";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+        Property = Pword;
+        Extension;
+        string;
+        minlength = 0;
+        Default = "";
+        Tunable = WHEN_DISABLED;
+        Description = "Secondary Monitoring: Password";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+        Property = Database;
+        Extension;
+        string;
+        minlength = 0;
+        Default = "";
+        Tunable = WHEN_DISABLED;
+        Description = "Secondary Monitoring: Database";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+        Property = Table;
+        Extension;
+        string;
+        minlength = 0;
+        Default = "";
+        Tunable = WHEN_DISABLED;
+        Description = "Secondary Monitoring: Table";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+        Property = EnvFile;
+        Extension;
+        string;
+        minlength = 0;
+        Default = "";
+        Tunable = WHEN_DISABLED;
+        Description = "File containing environment variables to be sourced";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+        Property = II_SCHA_TRACE;
+        Extension;
+        string;
+        minlength = 0;
+        Default = "";
+        Tunable = ANYTIME;
+        Description = "Debugging trace level 0-9";
+}
+
+{
+#
+#  Tunable property. Cannot change this if resource is ON-LINE
+#
+        Property = II_SCHA_LOG;
+        Extension;
+        string;
+        minlength = 0;
+        Default = "";
+        Tunable = ANYTIME;
+        Description = "Debugging trace log file.";
+}

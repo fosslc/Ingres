@@ -1,0 +1,209 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\IngClean.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_INGCLEAN_DIALOG DIALOGEX 0, 0, 287, 207
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "Ingres Clean Up"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "&Clean up",IDUNINSTALL,167,188,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,219,188,50,14
+    LTEXT           "This program will clean up Ingres [ %s ] from your machine.",
+                    IDC_TEXT,11,11,258,17,NOT WS_GROUP
+    GROUPBOX        "Status:",IDC_STATIC,11,35,258,129
+    LTEXT           "Copyright © %d Ingres Corporation. All Rights Reserved.",
+                    IDC_COPYRIGHT,11,168,258,13,NOT WS_GROUP
+    LTEXT           "",IDC_OUTPUT,28,54,235,103,NOT WS_GROUP
+    CONTROL         "",IDC_STATIC,"Static",SS_BLACKFRAME | SS_SUNKEN,11,183,
+                    258,1,WS_EX_TRANSPARENT
+END
+
+IDD_WAIT_DIALOG DIALOG  0, 0, 222, 58
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Ingres Clean Up"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Animate2",IDC_AVI,"SysAnimate32",ACS_CENTER | 
+                    ACS_TRANSPARENT | ACS_AUTOPLAY,8,8,31,30
+    LTEXT           "Static",IDC_TEXT,48,11,161,34,NOT WS_GROUP
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_INGCLEAN_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 282
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_WAIT_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 215
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 51
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\enterprise.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_CLOCK_AVI           AVI                     "res\\clock.avi"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_TITLE               "Ingres Clean Up"
+    IDS_INVALIDID           "Invalid installation identifier : ""%s""!\nInstallation identifier must be 2 characters, beginning with a non-numeric character."
+    IDS_INGRESRUNNING       "Your Ingres instance is currently running.  You must exit any running Ingres applications and stop Ingres before continuing.  Would you like to stop Ingres now?  Press ""Yes"" to stop Ingres, or press ""No"" to exit."
+    IDS_NOIISYSTEM          "Ingres [ %s ] is not installed on your machine (environment variable 'II_SYSTEM' is missing)!"
+    IDS_SUCCEEDED           "Ingres [ %s ] successfully cleaned up."
+    IDS_NOMSIDB             "Can not find the MSI database!"
+    IDS_NOPRODUCT           "Ingres [ %s ] is not installed on your machine (product information is missing)!"
+    IDS_TEXT                "This program will clean up Ingres [ %s ] from your machine."
+    IDS_COPYRIGHT           "Copyright © %d Ingres Corporation. All Rights Reserved."
+    IDS_REMOVEPERFMONCOUNTERS "Removing perfmon counters......"
+    IDS_FAILED              "Failed\n"
+    IDS_DONE                "Done\n"
+    IDS_NOTSUCCESSFULL      "Some errors occurred during uninstallation!"
+    IDS_RESET_II_SYSTEM     """Note: If you have multiple versions of Ingres on your system, please be advised that the environmental setting of II_SYSTEM has been removed. You MUST reset II_SYSTEM to your primary Ingres installation in order for it to be used by products such as ODBC."""
+    IDS_PREPAREUNINSTALL    "Preparing uninstall......"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_UNPUBLISHCOMPONENTS "Unpublishing components......"
+    IDS_UNPUBLISHPRODUCT    "Unpublishing product information......"
+    IDS_DELETESERVICES      "Deleting services......"
+    IDS_UNREGISTERINGCONTROLS "Unregistering ActiveX Controls......"
+    IDS_REMOVEREGISTRYVALUES "Unregistering product......"
+    IDS_REMOVESHORTCUTS     "Removing shortcuts......"
+    IDS_UPDATEENVIRONMENTSTRINGS "Updating environment strings......"
+    IDS_REMOVEFILES         "Removing files......"
+    IDS_REMOVEFOLDERS       "Removing folders......"
+    IDS_AREYOUSURE          "Are you sure you want to exit?"
+    IDS_TRY01               "MsiExec is trying to remove the Ingres. This may take several minutes. Please wait..."
+    IDS_TRY02               "MsiExec is trying to remove the Ingres. This may take several minutes. Please wait..."
+    IDS_INGCLEANUSAGE       "Incorrect command line parameters.\n\nUsage:\tingclean [/q] [/t] /id installation_identifier\n\n/q\tno user interface\n/t\ttry msiexec before cleaning up"
+    IDS_DELETEFILEASSOCIATIONS "Deleting file associations......"
+    IDS_TRY03               "IngClean is trying to remove the Ingres. This may take several minutes. Please wait..."
+    IDS_ALREADYRUNNING      "An instance of ""Ingres Clean Up"" is alreay running."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\IngClean.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

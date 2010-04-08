@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!abf!sql
+#
+
+SubDir ING_SRC front abf sql ;
+
+IISUBSYS front abf sql ;
+
+
+IIBINEXE oslsql : oslsmain.c ;
+IINEEDLIBS oslsql :  SQLLIB OSLLIB CODEGENLIB ILGLIB
+	SHINTERPLIB SHFRAMELIB SHQLIB SHCOMPATLIB EQUELLIB ;
+IINEEDLIBSW oslsql : SHEMBEDLIB SHADFLIB ;
+IIUNDEFS oslsql : II_copyright malloc ;
+
+IILIBRARY SQLLIB : sql.sy sqlkw.roc ;
+

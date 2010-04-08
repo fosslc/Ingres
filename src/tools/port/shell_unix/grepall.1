@@ -1,0 +1,19 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/grepall.1,v 1.1 90/03/09 09:18:25 source Exp $
+.TH GREPALL 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+grepall \- egrep source in subdirectories
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B grepall
+pattern
+.SH DESCRIPTION
+.I Grepall
+executes 
+.I egrep(1)
+on all source files in all of the directories below the current directory.
+
+.nf
+	grepall 'string1|string2|string3'
+.fi

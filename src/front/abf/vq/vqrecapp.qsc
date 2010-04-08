@@ -1,0 +1,522 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<er.h>
+# include	<st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include 	<abclass.qsh>
+## include 	<metafrm.qsh>
+#include      	"vqaclist.h"
+#include	<ug.h>
+#include        <erug.h>
+#include        "ervq.h"
+
+/**
+** Name:	vqrecapp.qsc - Reconcile Visual Queries with database
+**
+** Description:
+**	This allows the visual queries in an application to be reconciled
+**	with the current database contents.
+**
+**	IIVQraReconcileApp	Reconcile visual queries with database.
+**
+** History:
+**	12/12/89 (Mike S)	Initial Version
+**	19-oct-1990 (mgw)
+**		Fixed #include of local vqaclist.h to use "" instead of <>
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ug.h to satisfy gcc 4.3.
+**/
+
+
+/* GLOBALDEF's */
+/* extern's */
+FUNC_EXTERN STATUS	IIABcelCheckEditLock();
+FUNC_EXTERN STATUS	IIABrlRemLock();
+FUNC_EXTERN STATUS	IIAMufqUserFrameQuick();
+FUNC_EXTERN VOID	IIUGerr();
+FUNC_EXTERN VOID	IIUGmsg();
+FUNC_EXTERN STATUS	IIVQcacChooseApplComp();
+FUNC_EXTERN VOID	IIVQgnmGetNewMF();
+FUNC_EXTERN VOID	IIVQgomGetOldMF();
+FUNC_EXTERN STATUS	IIVQradReconcileAppDiscreps();
+FUNC_EXTERN bool	IIVQrfdReconcileFrameDiscreps();
+FUNC_EXTERN bool	IIVQsvfSelVQFrames();
+FUNC_EXTERN VOID	IIVQvqsVqShow();
+FUNC_EXTERN char	*IIVQntlNowToLocal();
+
+/* static's */
+static bool		init_done = FALSE;
+static APPL		*cur_app;	/* Current application */
+static USER_FRAME	*cur_frame;	/* Current frame */
+static i4		cur_index;	/* Current frame's index */
+static AC_LIST		*ac_frames;	/* Frames in application */
+static i4		no_ac_frames;	/* Number of frames */
+static 
+##	i4		tf_rows;	/* Rows in report tablefield */
+
+static const
+##  char _form[]= 	ERx("vqrecapp"), 
+##  	 _appname[]= 	ERx("appname"), 
+##  	 _prompt[]= 	ERx("prompt") , 
+##  	 _tf[]=		ERx("report"), 
+##  	 _tfcol[]= 	ERx("report"),
+##	 _blank[] = 	ERx("");
+
+static bool	do_next_frame();
+static VOID	view_final_report();
+
+/*{
+** Name:  IIVQraReconcileApp      Reconcile visual queries with database
+**
+** Description:
+**	This is the main routine for reconciling the visual queries in an 
+**	application with the database.
+**
+** Inputs:
+**	app	APPL *	The current application.  The application components
+**			have been loaded, including the metaframes, but not
+**			the VQs.
+**
+**	framecat bool	Whether we were called from frame catalog.  If not, 
+**			we were called from the application catalog.  In
+**			the former case, we've already got a lock on 
+**			the application.
+** Outputs:
+**	none
+**
+**	Returns:
+**		STATUS
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	12/12/89 (Mike S)	Initial version
+*/
+STATUS
+IIVQraReconcileApp(app, framecat)
+##APPL	*app;
+bool framecat;
+{
+	bool any;
+
+	/* Get a list of frames to reconcile */
+	_VOID_ IIVQcacChooseApplComp(app, IIVQradReconcileAppDiscreps, 
+		IIVQsvfSelVQFrames, TRUE, ERget(F_VQ012F_MarkFrames), 
+		"vqmarkfm.hlp", ERget(F_VQ012F_MarkFrames), (PTR)&framecat,
+		&any);
+
+
+	/* Give up if there are none */
+	if (!any)
+	{
+		IIUGerr(E_VQ009E_No_VQ_Frames, 0, 1, app->name);
+		return;
+	}
+
+}
+
+/*{
+** Name:	IIVQradReconcileAppDiscreps - Reconcile desired frames 
+**
+** Description:
+**	The user has chosen the frames he wants to reconcile.  We 
+**	lock them, reconcile them, let the user examine them, and let
+**	him decide whether to accept the results.
+**
+** Inputs:
+**	app		APPL *		Aplication
+**	frames  	AC_LIST *	list of frames
+**	no_frames	i4		size of list
+**	data		PTR		Whether we were called from frame
+**					catalog
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		OK
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	1/7/90 (Mike S)	Initial version	
+*/
+STATUS	IIVQradReconcileAppDiscreps(app, frames, no_frames, data)
+APPL *app;
+AC_LIST *frames;
+i4  	no_frames;
+PTR	data;
+{
+	i4 count;	/* Number of frames actally used */
+	bool *framecat = (bool *)data;	
+			/* Were we called from the frame catalog */
+	i4 i;
+
+	/* Lock the application, if need be, and all the frames chosen */
+	if (!*framecat)
+		if (IIABcelCheckEditLock((APPL_COMP *)app) != OK)
+			return (FAIL);
+
+	/*
+	** Make the utility pointer NULL if we're not going to do
+	** this one due to locking 
+	*/
+	for (i = 0, count = 0; i < no_frames; i++)
+	{
+		if (frames[i].used)
+		{
+			if (IIABcelCheckEditLock(frames[i].comp) != OK)
+			{
+				frames[i].utility = (PTR)NULL;
+			}
+			else
+			{
+				frames[i].utility = (PTR)(frames + i);
+				count++;
+			}
+		}
+	}
+
+	/* Give up if there are no frames left */
+	if (count == 0)
+	{      
+		IIUGerr(E_VQ00A0_No_Frames, 0, 1, app->name);
+		return (OK);
+	}
+
+	/* Reconcile each frame.  First display the form */
+	if (!init_done)
+	{
+		IIARiaForm(_form);
+		init_done = TRUE;
+	}
+
+##	display _form READ
+##	initialize
+##	{
+##		char	title_buf[80];
+
+##		inittable _form _tf READ
+		_VOID_ IIUGfmt(title_buf, sizeof(title_buf), 
+				ERget(S_VQ00A6_Reconcile_Report), 1, app->name);
+##		loadtable _form _tf (_tfcol = title_buf);
+		_VOID_ IIUGfmt(title_buf, sizeof(title_buf), 
+				ERget(S_VQ00A7_Reconcile_Begun), 1, 
+				IIVQntlNowToLocal());
+##		loadtable _form _tf (_tfcol = title_buf);
+##		loadtable _form _tf (_tfcol = _blank);
+
+		/* Set up application name */
+##		putform _form (_appname = app->name)
+##		putform _form (_prompt = _blank)
+
+##		redisplay
+
+		/* Get number of rows in report tablefield */
+##		inquire_frs table _form (tf_rows = maxrow(_tf))
+
+		/* Reconcile frames util we need user input */
+		cur_index = -1;
+		cur_app = app;
+		ac_frames = frames;
+		no_ac_frames = no_frames;
+		if (!do_next_frame())
+		{
+			view_final_report();
+##			breakdisplay
+		}
+## 	}
+
+##	activate menuitem ERget(FE_OK) (expl = ERget(F_VQ0132_Reconcile_OK)),
+##		frskey4
+##	{
+##		char accept[80];
+
+		/* Use the reconciled metaframe */
+		IIVQgnmGetNewMF(cur_frame->mf);
+
+		/* Write changes to database */	
+		if ((cur_frame->mf->updmask & MF_P_ESC) != 0)
+			IIVQsecSaveEscCode(cur_frame->mf, TRUE);
+		IIAMmuMetaUpdate(cur_frame->mf, cur_frame->mf->updmask);
+		IIAMmfMetaFree(cur_frame->mf, cur_frame->mf->popmask);
+		IIVQfvtFreeVqTag();
+		cur_frame->mf->state |= (MFST_DOGEN|MFST_DOFORM);
+		IIAMufqUserFrameQuick((OO_OBJECT *)cur_frame);
+
+		/* Put notice in report */
+		_VOID_ IIUGfmt(accept, sizeof(accept), 
+			ERget(S_VQ00C0_Changes_Accepted), 1, cur_frame->name);
+##		loadtable _form _tf (_tfcol = accept)
+##		loadtable _form _tf (_tfcol = _blank)
+
+		/* Reconcile frames util we need user input */
+		if (!do_next_frame())
+		{
+			view_final_report();
+##			breakdisplay
+		}
+##	}
+
+##	activate menuitem ERget(FE_Cancel) 
+##		(expl = ERget(F_VQ0133_Reconcile_Cancel)), frskey9
+##	{
+##		char reject[80];
+
+		/* Free VQ from memory */
+		IIAMmfMetaFree(cur_frame->mf, cur_frame->mf->popmask);
+		IIVQfvtFreeVqTag();
+
+		/* Put notice in report */
+		_VOID_ IIUGfmt(reject, sizeof(reject), 
+			ERget(S_VQ00C1_Changes_Rejected), 1, cur_frame->name);
+##		loadtable _form _tf (_tfcol = reject)
+##		loadtable _form _tf (_tfcol = _blank)
+
+		/* Reconcile frames util we need user input */
+		if (!do_next_frame())
+		{
+			view_final_report();
+##                      breakdisplay
+		}
+##      }
+
+##      activate menuitem ERget(F_VQ0130_ExamineOld) 
+##		(expl = ERget(F_VQ0135_Examine_OldVQ))
+##	{
+		/* Use the old metaframe */
+		IIVQgomGetOldMF(cur_frame->mf);
+
+		/* Examine VQ */
+		IIVQvqsVqShow(cur_frame->mf);
+##	}
+
+##      activate menuitem ERget(F_VQ0131_ExamineNew) 
+##		(expl = ERget(F_VQ0134_Examine_NewVQ))
+##	{
+		/* Use the new metaframe */
+		IIVQgnmGetNewMF(cur_frame->mf);
+
+		/* Examine VQ */
+		IIVQvqsVqShow(cur_frame->mf);
+##	}
+
+##      activate menuitem ERget(FE_WriteFile) (expl = ERget(F_FE010E_WriteExpl))
+##	{
+##          char *msg;
+	    bool dummy;
+
+		if (IIUFtfuTblFldUnload(_form, _tf, _tfcol, &msg, &dummy) != OK)
+		{
+##			message msg
+##			sleep 2
+		}
+##	}
+
+
+##	activate menuitem ERget(FE_Help) 
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), frskey1
+##	{
+		FEhelp(ERx("vqrecapp.hlp"), ERget(S_VQ009A_Reconcile_Banner));
+##	}
+
+##      /* Top of tablefield */
+##      activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##      {  
+##              scroll _form _tf to 1
+##      }
+
+##      /* Bottom of tablefield */
+##      activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##      {  
+##              scroll _form _tf to end
+##      }
+ 
+##      /* Find a matching pattern in escape code */
+##      activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##      {  
+                FEtabfnd(_form, _tf);
+##      }
+ 
+	/* Release all our locks.  This is easy if we were called from the 
+	** application catalog; we can release all of them.  If we were called 
+	** from the frame catalog, we have to keep the application lock, and 
+	** release all the frame locks separately. 
+	*/
+	if (!*framecat)
+	{
+		_VOID_ IIABrlRemLock(OC_UNDEFINED);
+	}
+	else
+	{
+		for (i = 0; i < no_frames; i++)
+			if (frames[i].used && 
+			    (frames[i].utility != (PTR)NULL))
+				_VOID_ IIABrlRemLock(frames[i].comp->ooid);
+	}
+
+	return OK;
+}
+
+/*
+**	do_next_frame()
+**
+**	Reconcile  frames until we need user input, i.e. until a change occurs.
+**
+**	Returns 	TRUE if there is a next frame
+**			FALSE if we're done.
+*/
+static bool
+do_next_frame()
+{
+	bool	changes;	/* Were changes required */
+##	i4 toprow;		/* Top row in report */
+##	char	out_buf[80];	/* Prompt string */
+	bool	locked;		/* Was frame locked */
+
+	/* Erase prompt */
+##	putform _form (_prompt = _blank)
+##	redisplay
+
+	for (cur_index++; cur_index < no_ac_frames; cur_index++)
+	{
+		if (ac_frames[cur_index].used)
+		{
+			cur_frame = (USER_FRAME *)ac_frames[cur_index].comp;
+			IIUGmsg(ERget(S_VQ009B_Reconciling), FALSE, 1, 
+				cur_frame->name);
+##			inquire_frs table _form (toprow = datarows(_tf))
+			toprow++;
+			locked = ((PTR)NULL == ac_frames[cur_index].utility);
+			changes = IIVQrfdReconcileFrameDiscreps(
+					cur_frame, locked);
+
+			/* Scroll to this frame's report */
+##			scroll _form _tf to end
+##			scroll _form _tf to toprow
+
+			if (changes)
+			{
+				/* Output the prompt string */
+				FTbell();
+				_VOID_ IIUGfmt(out_buf, sizeof(out_buf), 
+					ERget(S_VQ00C5_Accept_Changes),
+					2, ERget(FE_OK), (PTR)cur_frame->name);
+##				putform _form (_prompt = out_buf)
+##				redisplay
+				return TRUE;
+			}
+			else
+			{
+##				scroll _form _tf to toprow
+##				redisplay
+			}
+		}	
+	}
+
+	/* No frames left */
+	IIUGmsg(ERget(S_VQ009C_Reconcile_Done), TRUE, 0);
+
+	/* Print trailing message */
+##	loadtable _form _tf (_tfcol = _blank);
+	_VOID_ IIUGfmt(out_buf, sizeof(out_buf), 
+			ERget(S_VQ00A8_Reconcile_Ended), 1, 
+			IIVQntlNowToLocal());
+##	loadtable _form _tf (_tfcol = out_buf);
+##	redisplay
+
+	return (FALSE);
+}
+
+
+/*
+**	Give the user one last chance to write out the report
+*/
+static VOID
+view_final_report()
+{
+##	char pr_buf[80];
+
+	/* Initialize -- scroll report to top, and change prompt */
+##	scroll _form _tf to 1
+	_VOID_ IIUGfmt(pr_buf, sizeof(pr_buf), 
+			       ERget(S_VQ00C6_End_Reconcile),
+			       1, ERget(FE_End));
+##	putform _form (_prompt = pr_buf);
+##	redisplay
+
+	/* A simple submenu -- let the user:
+	**	Write the report to disk
+	**	Get help
+	**	End
+	**	Move around the report
+	*/
+
+##      display submenu
+
+##      activate menuitem ERget(FE_WriteFile) 
+##		(expl = ERget(F_FE010E_WriteExpl))
+##      {
+##  	       	char *msg;
+		bool dummy;
+
+       	       	if (IIUFtfuTblFldUnload(_form, _tf, _tfcol, &msg, &dummy) != OK)
+       	       	{
+##                	message msg
+##                     	sleep 2
+		}
+					
+##     	}
+
+##      activate menuitem ERget(FE_Help)
+##       	(expl = ERget(F_FE0100_ExplFrameHelp)), frskey1
+##      {
+               	FEhelp(ERx("vqrecapd.hlp"), ERget(S_VQ009A_Reconcile_Banner));
+##      }
+
+##      activate menuitem ERget(FE_End) 
+##			(expl = ERget(F_FE0102_ExplEnd)), FRSkey3
+##      {
+
+##      	clear field _tf
+##	       	breakdisplay
+##      }
+
+##      /* Top of tablefield */
+##      activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##      {
+##             	scroll _form _tf to 1
+##      }
+ 
+##      /* Bottom of tablefield */
+##      activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##      {
+##             	scroll _form _tf to end
+##      }
+ 
+##      /* Find a matching pattern in the report */
+##      activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##      {
+               	FEtabfnd(_form, _tf);
+##      }
+}
+

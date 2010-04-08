@@ -1,0 +1,926 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<cm.h>
+# include	<qr.h>
+# include	<er.h>
+# include	<ui.h>
+# include	<ug.h>
+## include      <uigdata.qsh>
+# include	"erqr.h"
+# include	"qrhelp.h"
+
+/**
+** Name:	qrhelp.qsc -	Executes help via dohelp
+**
+** Description:
+**	This file executes the help statment, via the dohelp routine.
+**	This file contains the public routine dohelp, and the
+**	private routines qrjusthelp.
+**
+**	dohelp		perform the help
+**	qrjusthelp	does the help\g case
+**
+** History:
+**	17-jul-87 (daver)	First Written.
+**	03-jun-88 (bruceb)
+**		Changed code to SQL.  Removed ability to call
+**		help permit or integrity if running against a
+**		gateway.
+**	22-jun-88 (bruceb)
+**		Since for gateways, no guarantee that system catalogs,
+**		both ours and underlying db's, won't be owned by the
+**		dba, add additional clauses to select stmt for help.
+**	04-aug-88 (bruceb)
+**		Rewrote dohelp() to jump directly into qrtblhelp() and
+**		qrviphelp() routines if qrb->step is set appropriately.
+**		This is so that those help routines can process tables
+**		one at a time rather than all at once, and thereby
+**		decrease the required buffer size.
+**	10-aug-88 (bruceb)
+**		Rewrote qrallhelp() to eliminate cursor.  Now creates
+**		list of names up front.
+**	12-aug-88 (bruceb)
+**		Added 'putfunc' function pointer use, as means of printing
+**		the help output more frequently, thus avoiding huge
+**		buffer sizes.
+**	27-sep-88 (bruceb)
+**		Removed help all (qrallhelp), and made major changes to dohelp
+**		on route to adding logical help and modifying other help syntax.
+**	18-may-89 (teresal)
+**		Added call to help rule routine.
+**	27-sep-89 (teresal)
+**		Added a new function qrtokend which determines if a token is
+**		the only word left in a statement.
+**	08-nov-89 (teresal)
+**		Added B1 HELP SECURITY_ALARM command.
+**	27-dec-89 (teresal)
+**		Add HELP SYNONYM, HELP COMMENT TABLE, and HELP COMMENT COLUMN.
+**	22-mar-1991 (kathryn)
+**		Distinguish between help on registered objects and help on the
+**		register event syntax.
+**	18-jun-1992 (rogerl)
+**		65 maint: 1) SQL keyword required for help on SQL statements
+**		2) delete obsolete FUNC_EXTERNS 3) change algorithm in 
+**		qrtokend to ignore trailing blanks (e.g. 'help sql  \g'
+**		is equivalent to 'help sql\g') and make sure 'token' is
+**		really in string.  Check for existence of supporting relation
+**		on some peculiar statements here (was in MultiDet).  Return
+**		list of synonyms as well on 'help\g'.  CHeck for synonym
+**		presence before any queries which should include synon info
+**		by default, set a global flag as to existence.
+**	14-oct-92 (daver)
+**		Re-wrote qrjusthelp() to use FErel_open() and FErel_fetch(),
+**		to work the same way as the Table Utility does to display 
+**		a listpick of available tables
+**	11-dec-92 (rogerl)
+**		Change refs to qrprintf that handle possibly delimited idents
+**		into calls to qrdiprintf that will requote idents for display
+**		if they contain 'del id' chars.
+**      20-apr-1994 (timt) bug 55911
+**          Whenever there is a DIRECT CONNECT/DIRECT DISCONNECT/
+**          SET USER AUTHORIZATION, i.e. GCA_NEW_EFF_USER_MASK bit
+**          flag is set on, the global variable connect_chgd wil be
+**          set to TRUE.   When a HELP stmt is issued, 
+**          qrhlep.qsc will check the catalog
+**          tables before issuing select stmt for help.
+**	    qrhelp.qsc will also reset connect_chgd to FALSE.
+**          Side effect: since GCA_NEW_EFF_USER_MASK bit flag is also
+**                       set on when SET USER AUTHORIZATION is issued,
+**                       this will cause unnecessary checking
+**                       of catalog tables in qrhelp.qsc.  This won't
+**                       have any adverse effect except slowing down
+**                       the help stmt a little bit after  SET USER
+**                       AUTHORIZATION.
+**          Search for b55911 to see all the changes.
+**      6-3-95 (inkdo01)
+**          Add message (QR0038) for attempt to help security_alarm 
+**          with database/current installation options on non-iidbdb
+**          database
+**	22-march-1995 (markg)
+**	    Modified above fix by inkdo01 to use message QR004C. This message
+**	    gives more information to the user (b67536).
+**	06-may-1996 (chech02)
+**	    cast arguments to i4  in qrprintf and qrdiprintf calls 
+**	    for windows 3.1 port.
+**      25-sep-96 (mcgem01)
+**          Global data moved to qrdata.c
+**	28-oct-96 (nick)
+**	    Need to set transaction state higher than we we did before ; 
+**	    calling qrrelok() will begin a txn for us and hence we then
+**	    think we don't need to commit. #77798
+**      21-jan-1999 (hanch04)
+**          replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	17-apr-02 (inkdo01)
+**	    Add "help sequence".
+**	20-Dec-2004 (kodse01)
+**	    BUG 113657
+**	    Added "help permit on sequence".
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for db objects, DB_IITYPE_LEN for iitypename() result
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**/
+
+/* # define's */
+
+/* GLOBALDEF's */
+
+/* extern's */
+
+FUNC_EXTERN	VOID	qrprintf();
+FUNC_EXTERN	bool	findsqlhelp();
+FUNC_EXTERN	char	*qrscanstmt();
+FUNC_EXTERN	VOID	qrlegsynterr( QRB *qrb, i4  help_type );
+FUNC_EXTERN	VOID	qrtrimwhite( char *str );
+FUNC_EXTERN	VOID	qrrelok( QRB *qrb, char *relation, ER_MSGID errid,
+			    bool *chkd, bool *truth );
+FUNC_EXTERN	VOID	qrdiprintf( u_i4 nth, QRB *qrb, char *fmt,
+			... );
+
+FUNC_EXTERN	VOID	IIQRsah_AlarmInsHelp (QRB *qrb);
+/* static's */
+static	VOID	qrjusthelp(); 
+
+    /* relation existence retention */
+static	bool	integ_yes = FALSE;
+static	bool	constraints_yes = FALSE;
+static	bool	defaults_yes = FALSE;
+static	bool	permit_yes = FALSE;
+static	bool	dbproc_yes = FALSE;
+static	bool	reg_yes = FALSE;
+static	bool	rule_yes = FALSE;
+static	bool	sequence_yes = FALSE;
+static	bool	sec_alarm_yes = FALSE;
+    /* note that synonym_yes is global, need to know whether or not the
+    ** iisynonym catalog exists in lower layers
+    */
+GLOBALREF bool	synonym_yes;
+static	bool	commtbl_yes = FALSE;
+static	bool	commcol_yes = FALSE;
+static  bool	event_yes = FALSE;
+static  bool    database_yes = FALSE;
+
+    /* for storing whether existence of corresponding relation was
+    ** already verified
+    */
+static	bool	integ_chkd = FALSE;
+static	bool	constraints_chkd = FALSE;
+static	bool	defaults_chkd = FALSE;
+static	bool	permit_chkd = FALSE;
+static	bool	dbproc_chkd = FALSE;
+static	bool	reg_chkd = FALSE;
+static	bool	rule_chkd = FALSE;
+static	bool	sequence_chkd = FALSE;
+static	bool	sec_alarm_chkd = FALSE;
+static	bool	synonym_chkd = FALSE;
+static	bool	commtbl_chkd = FALSE;
+static	bool	commcol_chkd = FALSE;
+static  bool	event_chkd = FALSE;
+static  bool	database_chkd = FALSE;
+
+/*{
+** Name:	dohelp - send a HELP statement to BE.
+**
+** Description:
+**	Send a HELP statement to the BE and format results.
+**
+**	In 6.0 the HELP statement will be turned into an equivalent
+**	set of RETRIEVE's on system catalogs, and doretsel() will
+**	be called.  The exact interface to be supported by the 6.0
+**	BE has not yet been determined at this time
+**
+**	For now, in 4.0, we just send the HELP statement, as is,
+**	to the BE.
+**
+** Inputs:
+**	QRB *qrb	- QueryRunner control block.
+**
+** Outputs:
+**	QRB *qrb	- QueryRunner control block (updated).
+**
+** Returns:
+**	VOID
+**
+** Side effects:
+**	A query or queries are sent to the BE, and results are fetched.
+**	Formatted results are added to the output buffer of the
+**	active QRB.
+**
+** History:
+**	8-21-86 (peterk) - created.
+**	15-jul-87 (daver) Written for 6.0.
+**	12-feb-1988 (neil) - Now calls IItm_dml to switch languages.
+**			     Removed some unreachable code.
+**	15-nov-1990 (kathryn) 
+**		Check for "help comment " for help on sql statement, as
+**		well as the "help comment table | column".
+**	22-mar-1991 (kathryn)
+**		Added check for HELP PERMIT ON PROCEDURE and HELP PERMIT ON
+**		EVENT.
+**	10-jul-1991 (kathryn)
+**		Changed "HELP PERMIT ON EVENT" to "HELP PERMIT ON DBEVENT"
+**		for new 6.4 FCS syntax. Generate Error message for user input
+**		of "help permit on" with no object_type and object_name.
+**	19-jun-1992 (rogerl)
+**		move check for SQL keyword to first compare to implement
+**		required SQL noiseword and avoid special casing it in register
+**		event.  Checks for existence of supporting relations mvd here. 
+**	22-oct-1992 (rogerl)
+**		Misspelled relation 'iiintegrities' caused always 'no exist'
+**	22-oct-1992 (rogerl)
+**		Wrong relations iicomments, iisubcomments replaced by real
+**		iidb_comment, iidb_subcomments
+**	10-dec-93 (robf)
+**	        Add new HELP SECURITY_ALARM requests, may now be ON DATABASE
+**		or ON CURRENT INSTALLATION
+**      6-3-95 (inkdo01)
+**          Add message (QR0038) for attempt to help security_alarm 
+**          with database/current installation options on non-iidbdb
+**          database
+**	22-march-1995 (markg)
+**	    Modified above fix by inkdo01 to use message QR004C. This message
+**	    gives more information to the user (b67536).
+**	28-oct-96 (nick)
+**	    Set endtrans here before we potentially begin a txn as a side
+**	    effect of calling qrrelok().
+**      13-feb-03 (chash01) x-integrate change#461908
+**          initialize s = NULL;compiler comaplains about uninitialized
+**          variable.  This may still have run time problem.
+**      27-oct-2004 (huazh01)
+**          update 'qrb->help_stmt' so that caller function knows that
+**          user runs a 'help' statement. 
+**          b64679, INGCBT545.
+*/
+
+VOID
+dohelp(qrb)
+register QRB	*qrb;
+{
+        GLOBALREF bool  connect_chgd;			/* b55911 */
+	register char	*s = NULL;
+	char		*t;
+	i4		token = 0;
+
+	qrb->norowmsg = TRUE;
+        qrb->help_stmt = TRUE; 
+
+	if (qrb->step <= 0)
+	{
+	    /* set all *_chkd flag to false whenever there is a change
+ 	    ** in connection (DIRECT [DIS]CONNECT).        
+	    ** also reset connect_chgd.			   b55911
+	    */   
+	    if (connect_chgd)				
+	    {
+      	    	integ_chkd = FALSE;
+      	    	constraints_chkd = FALSE;
+      	    	defaults_chkd = FALSE;
+      	    	permit_chkd = FALSE;
+      	    	dbproc_chkd = FALSE;
+      	    	reg_chkd = FALSE;
+      	    	rule_chkd = FALSE;
+      	    	sec_alarm_chkd = FALSE;
+      	    	sequence_chkd = FALSE;
+      	    	synonym_chkd = FALSE;
+      	    	commtbl_chkd = FALSE;
+      	    	commcol_chkd = FALSE;
+      	    	event_chkd = FALSE;
+ 
+      	    	connect_chgd = FALSE;
+	    }
+	    if (qrb->step == 0)
+	    {
+		s = qrb->stmt;
+		if (FEinMST())
+		    qrb->endtrans = FALSE;
+		else
+		    qrb->endtrans = TRUE;
+	    }
+	    else
+	    {
+		qrb->step = 0;
+		s = qrb->s;
+	    }
+
+	    /* FALSE indicates this isn't a comma separated list */
+	    s = qrscanstmt(s, &token, FALSE);
+
+	    if (*s == EOS)
+	    {
+		/* hit EOF on statement */
+		if (token == 0)
+		{
+		    /* no more tokens were read,
+		    ** i.e. we just skipped any extra white space
+		    ** or comments at end of statement --
+		    ** just set step to 0 and return.
+		    */
+		    qrb->step = 0;
+		    return;
+		}
+		else
+		{
+		    /* THIS IS THE help\g CASE */
+
+		    /* set global synonym_yes, so's we can check it down
+		    ** in the help queries (include synoyms by default if
+		    ** they're supported - if it doesn't exist, we still
+		    ** want to generate the table help (just minus syns)
+		    */
+		    qrrelok( qrb, ERx("iisynonyms"), (ER_MSGID) 0,
+			    &synonym_chkd, &synonym_yes );
+
+		    qrjusthelp(qrb);
+		    qrb->step = 0;
+		    return;
+		}
+	    }		/* if *s == EOS */
+
+	    /*
+	    ** Test for existence of:
+	    ** iipermits, iiintegrities, iiprocedures, iiregistrations,
+	    ** iirules, iisecurity_alarms, iisequences, iidb_comments, or
+	    ** iidb_subcomments
+	    ** before going further
+	    **
+	    ** Those catalogs are at best ingres-only and might
+	    ** not be STAR available. 
+	    ** If relation not avail, commit trans if in MST
+	    */
+
+	    if ( qrtokcompare( s, ERx( "sql" ) ) )
+	    {
+		if ( qrtokend( s, ERx( "sql" ) ) )
+		{
+			/* this error check won't work right until errors
+			** are propagatedup from qrsqhelp at text access errors
+			*/
+		    if ( ! findsqlhelp( qrb, s ) )
+		    {
+			qrprintf( qrb, ERx( "\n" ) );
+			qrprintf( qrb, ERget( E_QR0035_err_ret ), ERx( "qrhlpsql.hlp" ) ); 
+		    }
+		    qrb->step = 0;
+		    return;
+		}
+
+		/* might (!) have a valid help sql <sqlstatment>
+		*/
+				/* eliminate the 'sql' token */
+		s = qrscanstmt( s, &token, FALSE );
+
+		if ( ! findsqlhelp( qrb, s ) )
+		{
+		    qrprintf( qrb, ERx( "\n" ) );
+		    qrprintf( qrb, ERget( E_QR0048_bad_sql_stmt ), s ); 
+		    qrb->step = 0;
+		    return;
+		}
+	    }
+	    else if (qrtokcompare(s, ERx("table")))
+	    {
+		/* set global synonym_yes, so's we can check it down
+		** in the help queries (include synoyms by default if
+		** they're supported - if it doesn't exist, we still
+		** want to generate the table help (just minus syns)
+		*/
+		qrrelok( qrb, ERx("iisynonyms"), (ER_MSGID) 0,
+			&synonym_chkd, &synonym_yes );
+
+		IIQRmdh_MultiDetailHelp(qrb, s, HELP_TABLE);
+	    }
+	    else if (qrtokcompare(s, ERx("view")))
+	    {
+		IIQRmdh_MultiDetailHelp(qrb, s, HELP_VIEW);
+	    }
+	    else if (qrtokcompare(s, ERx("index")))
+	    {
+		IIQRmdh_MultiDetailHelp(qrb, s, HELP_INDEX);
+	    }
+	    else if (qrtokcompare(s, ERx("integrity")))
+	    {
+		qrrelok( qrb, ERx("iiintegrities"), E_QR0013_no_help_integ,
+			&integ_chkd, &integ_yes );
+
+		if ( integ_yes )
+		    IIQRmdh_MultiDetailHelp(qrb, s, HELP_INTEGRITY);
+	    }
+	    else if (qrtokcompare(s, ERx("constraint")))
+	    {
+		qrrelok( qrb, ERx("iiconstraints"), E_QR003B_no_help_constraint,
+			&constraints_chkd, &constraints_yes );
+
+		if ( constraints_yes )
+		{
+		    IIQRmdh_MultiDetailHelp(qrb, s, HELP_CONSTRAINT);
+		}
+	    }
+	    else if (qrtokcompare(s, ERx("default")))
+	    {
+		qrrelok( qrb, ERx("iidefault"), E_QR003C_no_help_default,
+			&defaults_chkd, &defaults_yes );
+
+		if ( defaults_yes )
+		{
+		    IIQRmdh_MultiDetailHelp(qrb, s, HELP_DEFAULT);
+		}
+	    }
+	    else if (qrtokcompare(s, ERx("permit")))
+	    {
+		/* set global synonym_yes, so's we can check it down
+		** in the help queries (include synoyms by default if
+		** they're supported - if it doesn't exist, we still
+		** want to generate the table help (just minus syns)
+		*/
+		qrrelok( qrb, ERx("iisynonyms"), (ER_MSGID) 0,
+			&synonym_chkd, &synonym_yes );
+		qrrelok( qrb, ERx("iipermits"), E_QR0012_no_help_permit,
+			&permit_chkd, &permit_yes );
+
+		if ( permit_yes )
+		{
+
+		t = s;
+		t = qrscanstmt(t, &token, FALSE); /* bypass 'permit' */
+
+		if (qrtokcompare(t, ERx("on")))
+		{
+		    t = qrscanstmt(t, &token, FALSE);  /* bypass 'ON' */
+
+		    if (qrtokcompare(t, ERx("procedure")))
+		    {
+			qrrelok( qrb, ERx("iiprocedures"),
+				E_QR0018_no_help_dbproc, &dbproc_chkd,
+				&dbproc_yes );
+
+			if ( dbproc_yes )
+			    IIQRmdh_MultiDetailHelp(qrb, t, HELP_PERM_PROC);
+		    }
+		    else if (qrtokcompare(t, ERx("dbevent")))
+		    {
+			qrrelok( qrb, ERx("iievents"), E_QR0040_no_help_event,
+				&event_chkd, &event_yes );
+			if ( event_yes )
+			    IIQRmdh_MultiDetailHelp(qrb, t, HELP_PERM_EVENT);
+		    }
+		    else if (qrtokcompare(t, ERx("table")))
+		    {
+			/* old help permit says 'table' */
+			/* this'll pick up general database objects */
+
+			IIQRmdh_MultiDetailHelp(qrb, t, HELP_PERMIT);
+		    }
+		    else if (qrtokcompare(t, ERx("view")))
+		    {
+			IIQRmdh_MultiDetailHelp(qrb, t, HELP_PERM_VIEW);
+		    }
+		    else if (qrtokcompare(t, ERx("index")))
+		    {
+			IIQRmdh_MultiDetailHelp(qrb, t, HELP_PERM_IDX);
+		    }
+		    else if (qrtokcompare(t, ERx("sequence")))
+		    {
+		        qrrelok( qrb, ERx("iisequences"), 
+		            E_QR0060_no_help_sequence, &sequence_chkd, 
+		            &sequence_yes );
+
+		        if ( sequence_yes )
+		            IIQRmdh_MultiDetailHelp(qrb, t, HELP_PERM_SEQ);
+		    }
+		    else
+		    {
+			qrlegsynterr( qrb, HELP_PERMIT );
+			qrb->step = 0;
+			return;
+		    }
+
+		}
+		else 				/* left out the 'ON' */
+		{
+			/* @6.5 let this get by as backwards compatability
+			** note that we're using 's' now, to avoid
+			** changing mdh routine (it bypasses tokens
+			** unless we've got HELP_OBJECT), and s hasn't
+			** had the ptr advanced yet
+			*/
+			IIQRmdh_MultiDetailHelp(qrb, s, HELP_PERMIT);
+		}
+		} /* iipermit exists */
+	    }
+	    else if (qrtokcompare(s, ERx("procedure")))
+	    {
+		qrrelok( qrb, ERx("iiprocedures"), E_QR0018_no_help_dbproc,
+			&dbproc_chkd, &dbproc_yes );
+
+		if ( dbproc_yes )
+		    IIQRmdh_MultiDetailHelp(qrb, s, HELP_PROCEDURE);
+	    }
+	    else if (qrtokcompare(s, ERx("register")))
+	    {
+		qrrelok( qrb, ERx("iiregistrations"), E_QR001B_no_help_link,
+			&reg_chkd, &reg_yes );
+
+		if ( reg_yes )
+		    IIQRmdh_MultiDetailHelp(qrb, s, HELP_LINK);
+	    }
+	    else if (qrtokcompare(s, ERx("rule")))
+	    {
+		qrrelok( qrb, ERx("iirules"), E_QR0027_no_help_rule,
+			&rule_chkd, &rule_yes );
+
+		if ( rule_yes )
+		    IIQRmdh_MultiDetailHelp(qrb, s, HELP_RULE);
+	    }
+	    else if (qrtokcompare(s, ERx("sequence")))
+	    {
+		qrrelok( qrb, ERx("iisequences"), E_QR0060_no_help_sequence,
+			&sequence_chkd, &sequence_yes );
+
+		if ( sequence_yes )
+		    IIQRmdh_MultiDetailHelp(qrb, s, HELP_SEQUENCE);
+	    }
+	    else if (qrtokcompare(s, ERx("security_alarm")))
+	    {
+		qrrelok( qrb, ERx("iisecurity_alarms"),
+			E_QR0038_no_help_sec_alarm,
+			&sec_alarm_chkd, &sec_alarm_yes );
+
+		if ( sec_alarm_yes )
+		{
+
+		t = s ;
+		t = qrscanstmt(t, &token, FALSE); /* bypass 'security_alarm' */
+
+		if (qrtokcompare(t, ERx("on")))
+		{
+		    s=t;
+		    t = qrscanstmt(t, &token, FALSE);  /* bypass 'ON' */
+
+		    if (qrtokcompare(t, ERx("database")))
+		    {
+		       qrrelok( qrb, ERx("iidatabase_info"), (ER_MSGID)
+			     E_QR004C_help_sec_alarm_iidbdb,
+			     &database_chkd, &database_yes );
+		       if(database_yes)
+			       IIQRmdh_MultiDetailHelp(qrb, t, HELP_ALARM_DB);
+		    }
+		    else if (qrtokcompare(t, ERx("table")))
+		    {
+		        IIQRmdh_MultiDetailHelp(qrb, t, HELP_SECURITY_ALARM);
+		    }
+		    else if (qrtokcompare(t, ERx("current")))
+		    {
+			/*
+			** Should be "current installation"
+			*/
+		        t = qrscanstmt(t, &token, FALSE); /* bypass 'current' */
+		        if (qrtokcompare(t, ERx("installation")))
+			{
+		            qrrelok( qrb, ERx("iidatabase_info"), (ER_MSGID)
+			         E_QR004C_help_sec_alarm_iidbdb,
+			         &database_chkd, &database_yes );
+		       	    if(database_yes)
+			    {
+				/* No names for installation */
+				IIQRsah_AlarmInsHelp(qrb);
+			    }
+			}
+			else
+			{
+			    qrlegsynterr( qrb, HELP_SECURITY_ALARM );
+			    qrb->step = 0;
+			    return;
+			}
+		    }
+		    else
+		    {
+			/*
+			** Assume its a table name
+			*/
+		        IIQRmdh_MultiDetailHelp(qrb, s, HELP_SECURITY_ALARM);
+		    }
+		}
+		else 				/* left out the 'ON' */
+		{
+			/* @6.5 let this get by as backwards compatability
+			** note that we're using 's' now, to avoid
+			** changing mdh routine (it bypasses tokens
+			** unless we've got HELP_OBJECT), and s hasn't
+			** had the ptr advanced yet
+			*/
+			IIQRmdh_MultiDetailHelp(qrb, s, HELP_SECURITY_ALARM);
+		}
+		} /* iisecurity_alarms exists */
+	    }
+	    else if (qrtokcompare(s, ERx("synonym")))
+	    {
+		qrrelok( qrb, ERx("iisynonyms"), E_QR0030_no_help_synonym,
+			&synonym_chkd, &synonym_yes );
+
+		if ( synonym_yes );
+		    IIQRmdh_MultiDetailHelp(qrb, s, HELP_SYNONYM);
+	    }
+	    else if (qrtokcompare(s, ERx("comment")) && !qrtokend(s, ERx("comment")))
+	    {
+	    	s = qrscanstmt(s, &token, FALSE);
+
+		if (qrtokcompare(s, ERx("table")))
+		{
+		    qrrelok( qrb, ERx("iidb_comments"),
+		    	E_QR0034_no_help_comment, &commtbl_chkd, &commtbl_yes );
+
+		    if ( commtbl_yes )
+			IIQRmdh_MultiDetailHelp(qrb, s, HELP_COMMENT_TBL);
+		}
+		else if (qrtokcompare(s, ERx("column")))
+		{
+		    qrrelok( qrb, ERx("iidb_subcomments"),
+			E_QR0034_no_help_comment, &commcol_chkd,
+			&commcol_yes );
+
+		    if ( commcol_yes )
+			IIQRmdh_MultiDetailHelp(qrb, s, HELP_COMMENT_COL);
+		}
+		else
+		{
+		    /* Illegal HELP COMMENT command */
+		    qrlegsynterr( qrb, HELP_COMMENT_COL );
+		    qrb->step = 0;
+		    return;
+		}
+	    }
+	    else if ( qrtokcompare( s, ERx( "help" ) ) )
+	    {
+			/* help help - shouldn't fail, text lookup */
+		 if ( ! findsqlhelp( qrb, s ) )
+		 {
+		     qrprintf( qrb, ERx( "\n" ) );
+		     qrprintf( qrb, ERget( E_QR0035_err_ret ), ERx( "qrhlpsql.hlp" ) );
+		     qrb->step = 0;
+		     return;
+		 }
+	    }
+	    else   /* no noise words, assume help <object> */
+	    {
+		/* set global synonym_yes, so's we can check it down
+		** in the help queries (include synonyms by default if
+		** they're supported - if it doesn't exist, we still
+		** want to generate the table help (just minus syns)
+		*/
+		qrrelok( qrb, ERx("iisynonyms"), (ER_MSGID) 0,
+			&synonym_chkd, &synonym_yes );
+		IIQRmdh_MultiDetailHelp(qrb, s, HELP_OBJECT);
+	    }
+	}    /* end if step <= 0 */
+	else if ((qrb->step >= HELP_OBJECT) && 
+		 (qrb->step <=  HELP_MAX_VALUE))
+        {   /* Check qrlist.h for ordering of legal 'special' step values */
+
+	    /* set global synonym_yes, so's we can check it down
+	    ** in the help queries (include synoyms by default if
+	    ** they're supported - if it doesn't exist, we still
+	    ** want to generate the table help (just minus syns)
+	    */
+	    qrrelok( qrb, ERx("iisynonyms"), (ER_MSGID)0,
+		    &synonym_chkd, &synonym_yes );
+	    IIQRmdh_MultiDetailHelp(qrb, s, qrb->step);
+	}
+	else
+	{
+	    /* Generate error message on bad 'step', but TM continues */
+	    qrprintf(qrb, ERget(E_QR0011_Internal_help_error), qrb->step);
+	    IIQRznl_ZapNameList();
+	    qrb->step = 0;
+	}
+}
+
+
+/*{
+** Name:	qrjusthelp	- just do the help\g stuff.
+**
+** Description:
+**	This takes care of the "help\g" case. We get the tablenames,
+**	owner, and table type info out of the database and format it
+**	nicely. This places the entire output, seperated by newlines
+**	in the qrb->outbuf, the output buffer.
+**
+** Inputs:
+**	qrb		The all purpose QRB.
+**
+** Outputs:
+**	qrb->outbuf	Filled in with the lines of output.
+**
+**	Returns:
+**		none.
+**
+** History:
+**	21-jul-87 (daver) First Written.
+**	24-mar-89 (kathryn)	Bug #4816
+**		Need continue function to print number of rows for "help\g"
+**		command.  Need to execute this before a COMMIT if one needs to
+**		be issued.  COMMIT is now issued in go.qsc AFTER the continue
+**		function executed in qrrun() has been executed.
+**	10-may-89 (kathryn)	Bug #5382
+**		Changed select to repeated select.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	19-jul-1992 (rogerl)
+**	    Return info on synonyms as well.  STtrmwhite changed 
+**	    to qrtrimwhite.
+**	14-oct-92 (daver)
+**	    Re-wrote qrjusthelp() to use FErel_open() and FErel_fetch(),
+**	    to work the same way as the Table Utility does to display 
+**	    a listpick of available tables
+**	18-may-93 (rogerl)
+**	    Increase display widths by 2 to accomodate closing " in big id's.
+*/
+static VOID
+qrjusthelp(qrb)
+register QRB *qrb;
+{
+	FE_REL_QBLK rel_block;
+	FE_REL_INFO rel_info;
+	DB_STATUS   rval;
+	char	    type[DB_IITYPE_LEN+1];    /* DB object type:e.g, tbl,view */
+
+        qrb->norowmsg = FALSE;          /* Bug 4816 */
+
+	/*
+	** The following printf format must match the current value
+	** for DB_MAXNAME for both 'name' and 'owner'.
+	*/
+	qrprintf(qrb, ERx("%-*s %-*s %-s\n"),
+		(i4)(DB_MAXNAME + 2), ERget(F_QR0053_name),
+		(i4)(DB_MAXNAME + 2), ERget(F_QR0054_owner), ERget(F_QR0055_type));
+	qrprintf(qrb, ERx("\n"));
+
+	/*
+	** Changed dets_wanted param to FALSE... we don't care about
+	** catalog shme like creation date, just the object name, owner and
+	** type (table, view, index, synonym)
+	*/
+	if ((rval = FErel_open(&rel_block, ERx("%"), ERx(""), 
+				FALSE, FALSE)) == OK)
+	{
+		while (FErel_fetch(&rel_block, &rel_info) == OK)
+		{
+			/* 
+			** Previous versions called qrtrimwhite on both the 
+			** owner and table names; however, FErel_access()
+			** does this for us, which is called by FErel_fetch().
+			** This is important since for 6.5, there can actually
+			** be object names consisting of a single space.
+			** The ANSI standard says so. 
+			*/
+			switch (rel_info.type)
+			{
+			    case ICTABLE:
+			    	STcopy(ERget(F_QR0002_table), type);
+			    	break;
+			    case ICVIEW:
+			    	STcopy(ERget(F_QR0003_view), type);
+			    	break;
+			    case ICINDEX:
+			    	STcopy(ERget(F_QR0004_index), type);
+			    	break;
+			    case ICSYNONYM:
+		    		STcopy(ERget(F_QR011C_synonym), type );
+				break;
+			    default:
+			    	STcopy(ERget(F_QR0005_unknown), type);
+			    	break;
+			}
+
+			/* throw the mess into the qrb */
+		    	qrdiprintf( QRARG2 | QRARG4, qrb,
+			    ERx("%-*s %-*s %-s\n"), (i4)(DB_MAXNAME + 2),
+			    rel_info.name, (i4)(DB_MAXNAME + 2),
+			    rel_info.owner, type );
+		    	/*
+		    	** If putfunc 'flush' function has been set, then
+		    	** call it for every line of output.  This prevents
+		    	** a help on a DB with 1000 tables from generating
+		    	** 50+K worth of data before getting to flush.
+		    	*/
+		    	if (qrb->putfunc != NULL)
+		    	{
+				(*qrb->putfunc)(qrb);
+		    	}
+		}
+
+		FErel_close(&rel_block);
+	}
+	else
+	{
+		IIUGerr(E_QR0039_Error_in_FErelopen, UG_ERR_ERROR,
+		(i4) 1, (PTR) &rval);
+	}
+}
+
+
+/*{
+** Name:	qrtokcompare	- compare for token equality
+**
+** Description:
+**	Compare character string (not necessarily null-terminated)
+**	with an alphnumeric token for "token" equality.  The initial
+**	chars in the string must match the token exactly and be followed
+**	immediately by a token "break" character (i.e. white space)
+**
+** Inputs:
+**	char *s;	char pointer to input string
+**	char *token;	null-terminated token string
+**
+** Outputs:
+**
+**	Returns:
+**		bool	TRUE	input string matches token
+**			FALSE	input string does not match token
+**
+** History:
+**	10/18/87 (peterk) - created
+**	12/7/87 (peterk) - use STbcompare to ignore case.
+**	09/27/89 (teresal) - Fixed bug 6320.  Check that the token is followed
+**			     by white space.
+**	07/10/91 (kathryn) - Return FALSE when comparing non-null token to EOS.
+**		
+*/
+bool
+qrtokcompare(char *s, char *token)
+{
+	i4	token_length = STlength(token);
+	char	*t = &s[token_length];
+
+	if (*s == EOS && token_length > 0) 
+		return(FALSE);
+	else
+	    return (STbcompare(s, token_length, token, token_length, TRUE) == 0
+		   && CMwhite(t));
+}
+
+/*{
+** Name:	qrtokend	- determine if token is only word in statement.
+**
+** Description:
+**	This is called after qrtokcompare to determine if the token given
+**	is the only word in the statement.  It is assumed that qrtokcompare has
+**	already determined that the first part of the string matches the token.
+**
+** Inputs:
+**	char *s;	char pointer to input string
+**	char *token;	null-terminated token string
+**
+** Outputs:
+**
+**	Returns:
+**		bool	TRUE	token is the only word in the statement
+**			FALSE	token is not the only word in the statement
+**
+** History:
+**	09/27/89 (teresal) - Written.
+**	24-6-1992 (rogerl) - regard as equal if only diff is blanks at the
+**				end of s; ignore casing diffs; make sure tokens
+**				are really equal
+**	24-6-1992 (rogerl) - rewritten to regard as equal if only diff is
+**			     blanks at the end of s; ignore casing diffs;
+**			     make sure tokens are really equal
+**	2-18-1993 (rogerl) - use CMwhite instead of CMspace
+**	6-11-2006 (kiria01)- b117042 Conform CMxxxxx macro calls to relaxed bool form
+*/
+
+bool
+qrtokend(char *s, char *token)
+{
+		/* ensure equality of object token */
+
+	while( ( *token && *s ) && CMcmpnocase( token, s ) == 0 )
+	{
+	     CMnext( token );
+	     CMnext( s );
+	}
+		/* eat any white or newlines trailing on 's' */
+
+	while( CMwhite( s ) )
+	    CMnext( s );
+
+		/* last char(s) must be 'EOS' or '\nEOS'; or they're
+		** different or it's not the ending token
+		*/
+
+	if ( ( *s == '\n' ) || ( *s == EOS ) )
+	    return( TRUE );
+
+	return( FALSE );
+}

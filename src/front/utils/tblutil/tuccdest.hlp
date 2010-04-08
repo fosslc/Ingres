@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You pressed "Destroy" for a Table, View or Synonym. This screen allows you
+to confirm whether you really want the Destroy to take place (in case
+you accidentally pressed "Destroy").  Position the cursor on the row
+with the desired response and press "Select". The response options are:
+
+        Yes             Destroy the Table, View or Synonym
+        No              Do not destroy the Table, View or Synonym
+
+The menu commands are:
+
+        MENU COMMAND    DESCRIPTION
+        ------------    -----------
+        Select          Choose the option indicated by the current line of
+                        the table field.
+
+        Cancel          Cancel this operation and return to where you were
+			before you pressed Destroy. Do not Destroy anything.
+
+        Help            Access the INGRES Help facility.

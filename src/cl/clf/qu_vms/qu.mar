@@ -1,0 +1,56 @@
+	.TITLE	QU
+;
+;   Copyright (c) 1985, Ingres Corporation
+;
+
+;
+;   NAME: ME.MAR	- Basic ME primitives that work on queues.
+;
+;   Description:
+;	These are the basic queue manipulation routines.  They are
+;	implemented in VAX MACRO32 because of they are hardware interlocked.
+;	This allows for inserting or deleteing from a queue by mulitple
+;	threads.  The sequeue of C instructions that implements the
+;	equivalent function is faster to code in-line if there is no worrys
+;	about multi-thread contention.
+;
+;	This file implements:
+;
+;	    QUinsert - Insert a item onto a queue.
+;	    QUremove - REmove and item from the queue.
+;
+;   History:
+;	07-dec-1985 (derek)
+;	    Written.
+;	04-may-1995 (albany)
+;	    Integrated markg's change from 6.4 AXP/VMS CL:
+;		16-nov-1994 (markg)
+;	    	Changed psect attributes so as not to conflict with other
+;	    	$code$ psects.
+;	16-may-95 (albany)
+;	    Really updated psect attributes to be in line with other
+;	    CL psects.
+;
+	.psect	$code$	pic,con,rel,lcl,shr,exe,nord,nowrt,novec,4
+	.PAGE
+	.SBTTL	QUinit
+	.entry	QUinit,^m<>
+	movl	4(ap),r0
+	movl	4(ap),(r0)
+	movl	4(ap),4(r0)
+	ret
+	.PAGE
+	.SBTTL	QUinsert
+	.entry	QUinsert,^m<>
+	insque	@4(ap),@8(ap)
+	movl	4(ap),r0
+	ret
+	.PAGE
+	.SBTTL	QUremove
+	.entry	QUremove,^m<>
+	remque	@4(ap),r0
+	bvc	0$
+	clrl	r0
+0$:
+	ret
+	.end

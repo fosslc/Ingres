@@ -1,0 +1,14 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+**
+** timer_on.osq : Sets a timeout period, causing execution of the timeout
+**                block every 'secs' seconds.
+*/
+
+procedure timer_on (secs=i2) =
+begin
+	set_forms frs (timeout=secs);
+end

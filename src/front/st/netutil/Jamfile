@@ -1,0 +1,37 @@
+#
+# Jamfile file for front!st!netutil
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front st netutil ;
+
+IISUBSYS front st netutil ;
+
+
+IIBINEXE netutil : numain.sc ;
+IINEEDLIBS netutil : NETUTILLIB INSTALLLIB SHCOMPATLIB SHQLIB SHFRAMELIB ;
+IINEEDLIBSW netutil : SHGCFLIB SHEMBEDLIB ;
+IIUNDEFS netutil : II_copyright ;
+
+IIFORM attribedit.frm ;
+IIFORM attribform.frm ;
+IIFORM connedit.frm ;
+IIFORM loginform.frm ;
+IIFORM logpassedit.frm ;
+IIFORM nusvrcntrl.frm ;
+
+File $(INGMSG)$(DFS)connedit.hlp : connedit.hlp ;
+File $(INGMSG)$(DFS)logpass.hlp : logpass.hlp ;
+File $(INGMSG)$(DFS)nuattr.hlp : nuattr.hlp ;
+File $(INGMSG)$(DFS)nuattrib.hlp : nuattrib.hlp ;
+File $(INGMSG)$(DFS)nucomsvr.hlp : nucomsvr.hlp ;
+File $(INGMSG)$(DFS)nuconn.hlp : nuconn.hlp ;
+File $(INGMSG)$(DFS)nucursor.hlp : nucursor.hlp ;
+File $(INGMSG)$(DFS)nulogin.hlp : nulogin.hlp ;
+File $(INGMSG)$(DFS)numain.hlp : numain.hlp ;
+File $(INGMSG)$(DFS)nuvnode.hlp : nuvnode.hlp ;
+
+IILIBRARY NETUTILLIB : nuedit.sc nufile.c nudata.c nuaccess.c ;
+

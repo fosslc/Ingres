@@ -1,0 +1,14 @@
+%summary_tag% %rpm_product% - Application Development
+%pkgname_tag% %rpm_basename%%rpm_specname%
+%version_tag% %rpm_version%
+%release_tag% %rpm_release%
+%license_tag% %rpm_license%
+%group_tag% %rpm_group%
+%arch_tag% %deb_arch%
+%maintainer_tag% %rpm_vendor%
+%url_tag% %rpm_url%
+%buildroot_tag% %rpm_buildroot%
+%rpmprereq_tag% %rpm_basename%-client = %rpm_version%-%rpm_release%
+%debprereq_tag% %rpm_basename% (= %rpm_version%)
+%rpm_descrip_tag%
+%deb_descrip_tag% Application Development

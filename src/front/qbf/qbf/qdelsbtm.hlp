@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have selected the Delete command in the QBF Update function.  Now it 
+is necessary that you specify which component(s) of the displayed record
+are to be deleted.
+
+Commands available are:
+
+        Command                 Function
+        -------                 --------
+
+        Master                  Delete the currently displayed Master
+                                record and its detail records.
+        AllDetailRows           Delete all rows in the table field for
+                                the Detail table(s).
+        DetailRow               Delete the Detail row on which the cursor
+                                currently rests.
+        Help                    Print this message.
+        End                     Stop working on the frame and return to the
+                                frame that called it.

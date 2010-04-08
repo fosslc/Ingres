@@ -1,0 +1,56 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/salign.1,v 1.1 90/03/09 09:17:36 source Exp $
+.TH SALIGN 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+salign \- Show structure alignment and padding
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B salign
+[ char ][ double ][ float ][ int ][ long ][ ptr ][ short ][ -v ]
+.SH DESCRIPTION
+.I Salign
+shows how much padding the compiler uses to force alignment of
+structures containing the selected types.  If no types are picked,
+.I salign
+shows the values for all the possible types.
+.PP
+The program creates a structure type like this:
+.nf
+
+	typedef struct
+	{
+		char	a;
+		`type'	b;
+	} s_`type';
+
+.fi
+for each of the selected types.  It then prints out the sizeof() the
+structure, and the amount of padding between the char member `a' and the
+typed member `b.'  The pad is computed as sizeof(s_type) - sizeof(char)
+- sizeof(type).  The default output on a Pyramid is:
+.br
+.nf
+
+	char: sizeof_struct 4, pad 2
+	short: sizeof_struct 4, pad 1
+	int: sizeof_struct 8, pad 3
+	long: sizeof_struct 8, pad 3
+	float: sizeof_struct 8, pad 3
+	double: sizeof_struct 12, pad 3
+	ptr: sizeof_struct 8, pad 3
+.fi
+.PP
+.B -v
+``verbose'' mode prints the program's name and indents the output one
+tab stop.
+.PP
+Note that the alignment imposed by the compiler is completely
+independent of any hardware enforced restrictions.  In particular, many
+IBM-targeted compilers (like UTS) force 8-byte alignment of doubles even
+though there is no hardware restriction.
+.PP
+\fBAlignment of doubles affects the database templates; this is not
+currently well documented or flagged.\fP
+.SH "SEE ALSO"
+\fIalign(1)\fP

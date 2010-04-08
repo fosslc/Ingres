@@ -1,0 +1,42 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for Ingres demonstration databases
+*/
+
+/*
+** History:
+**	26-Feb-2007 (hanje04)
+**	    SIR 117784
+**	    Created.
+**	02-Feb-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART   demodb
+
+/*
+** ingres!demo!data
+*/
+# ifdef conf_LSB_BUILD
+   DIRECTORY usr!share!ingres!demo!data
+# else
+   DIRECTORY ingres!demo!data
+# endif
+   BUILD_DIR (ING_BUILD)!demo!data
+	FILE copy.in
+	FILE copy.out
+	FILE drop.sql
+	FILE airline.ingres
+	FILE airport.csv
+	FILE airport.ingres
+	FILE country.ingres
+	FILE flight_day.ingres
+	FILE route.ingres
+	FILE tz.ingres
+	FILE user_profile.bin
+	FILE version.ingres

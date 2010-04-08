@@ -1,0 +1,26 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Web Deployment Option Variables (Definition)&previous=out.html&next=varset.html` -->
+
+Ingres Web Deployment Option allows developers to embed variables in their web pages, and use these variables in other pages. 
+
+<!-- #ICE REPEAT IF (`:secured` == `yes`)
+THEN=`Web Deployment Option provides the following types of variables:<p>
+			<table WIDTH="80%"><TR><TD><b>Session</b>: </TD><TD></TD></TR>
+<TR><TD></TD><TD>Variables can be used until the end of the session. This is only available for secured web sites.
+		</TD></TR>`
+ELSE=`Web Deployment Option provides the following type of variable.<p><table>`
+
+-->
+
+<TR><TD><b>Page</b>: </TD><TD></TD></TR>
+<TR><TD></TD><TD>Variables can only be used in the current page. There are two ways to set the value of this type
+of variable.
+<UL>
+<LI>By including name/value pairs at the end of the URL string.<br> For example, 
+"<!-- #ICE VAR=`:dll` -->/foo.html?name=john". This 
+will allow the developer to use the variable "name" in the page "foo.html".
+<LI>Using a macro command. An explanation follows.
+</UL>
+</TD></TR>
+</TABLE>
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

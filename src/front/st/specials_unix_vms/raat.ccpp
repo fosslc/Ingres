@@ -1,0 +1,39 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for Embedded C. 
+*/
+
+/*
+** History
+**
+**	15-may-1995 (hanch04)
+**		created.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART  raat
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+
+# ifdef R_RAAT
+# ifdef VMS
+   BUILD_DIR (jpt_cmn_hdr)
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!files
+# endif /* VMS */
+      FILE raat.h
+# endif

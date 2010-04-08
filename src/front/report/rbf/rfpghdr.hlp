@@ -1,0 +1,27 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may specify if the page header should be included
+with the report header on the first page of the report.  Otherwise, only 
+the report header will be printed on the first page.
+
+To select a response, scroll to the desired option, and choose the 
+Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Yes		Include the page header on the first page of 
+			the report
+	No		Do not include the page header on the first page of
+			the report
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select		If Yes, the first page will include the page header.
+			If No, then the first page will not include the 
+			page header
+
+        Cancel          Return to the Report Options frame without selecting 
+			a response.
+
+        Help            Print this message.

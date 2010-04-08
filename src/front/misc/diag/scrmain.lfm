@@ -1,0 +1,9 @@
+COPYFORM:	6.4	1993_11_18 17:07:21 GMT  
+FORM:	main_screen		
+	85	26	0	0	1	0	2	9	0	0	0	0	0	0	0	2
+FIELD:
+	0	data	0	17	0	1	19	80	4	0	1	1	0		1	1	0	1073758241	0	0	0					1	0
+	0	data	-21	81	0	78	1	78	0	1	78	0	1	data	1	-1	0	0	0	0	0		c78			2	1
+TRIM:
+	18	2	Select evidence set and then select an option	0	0	0	0
+	21	0	INGRES EVIDENCE SET MANAGEMENT UTILITY	0	0	0	0

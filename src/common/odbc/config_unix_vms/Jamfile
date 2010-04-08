@@ -1,0 +1,18 @@
+#
+# Jamfile file for common!odbc!config_unix_vms
+#
+# History:
+#	26-jan-2005 (abbjo03)
+#	    Remap to config_unix_vms until we submit mid-level Jamfiles.
+
+SubDir ING_SRC common odbc config_unix_vms ;
+
+IISUBSYS common odbc config_unix_vms ;
+
+
+IIUTILEXE iiodbcinst : iiodbcinst.c ;
+IINEEDLIBS iiodbcinst : ODBCCFGLIB APILIB COMPATLIB CUFLIB
+	GCFLIB ADFLIB MALLOCLIB ;
+
+IILIBRARY ODBCCFGLIB : util.c config.c ;
+

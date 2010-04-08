@@ -1,0 +1,311 @@
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<int.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<oframe.h>
+# include	<frserrno.h>
+# include	<st.h>
+# include	"fdfuncs.h"
+# include	<er.h>
+
+/*
+**	crfrm.c
+**
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+**	create a frame that has been pre-compiled by compfrm
+*/
+
+/**
+** Name:	crfrm.c - Make a compiled form runnable.
+**
+** Description:
+**	File contains routines that turns a compiled form (C or macro)
+**	into an object that can be used in a display loop.
+**	Routines defined here are:
+**	- FDcrfrm - Entry point to make compiled form usable.
+**	- FDcrfld - Allocate neccessary strucutres for fields.
+**	- FDcrfmt - Allocate FMT structures for fields.
+**
+** History:
+**	xx/xx/82 (jrc) - First written.
+**      07/14/86 (scl) Removed FTmxcol wide form support; no
+**              longer required for CMS in 5.0
+**	02/04/87 (dkh) - Put in support for ADTs.
+**	04/04/87 (dkh) - Changed format handling in FDcrfmt().
+**	19-jun-87 (bruceb)	Code cleanup.
+**	13-jul-87 (bruceb)	Changed memory allocation to use [FM]Ereqmem.
+**	08/14/87 (dkh) - ER changes.
+**	08/26/87 (dkh) - Changes for 8000 series error numbers.
+**	10/22/88 (dkh) - Added check to "commit" if not in a transaction.
+**	04/07/89 (dkh) - Changed error CFFLSQ to E_FI1F52_8018.
+**	17-apr-90 (bruceb)
+**		Lint changes; removed args from calls on FDflalloc,
+**		FDtblalloc and FDcolalloc.
+**	19-feb-92 (leighb) DeskTop Porting Change:
+**		IIbreak() has no arguments; deleted bogus ones.
+**	12/12/92 (dkh) - Fixed trigraph warnings from acc.
+**	12/12/92 (dkh) - Added support for edit masks.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**/
+
+
+# define	hostC		0
+
+FUNC_EXTERN	i4	FDsfldtrv();
+FUNC_EXTERN	FRAME	*FDcvto60();
+FUNC_EXTERN	STATUS	fmt_areasize();
+FUNC_EXTERN	STATUS	fmt_setfmt();
+FUNC_EXTERN	i4	afe_dplen();
+FUNC_EXTERN	i4	FDcrfmt();
+FUNC_EXTERN	i4	IIFDemask();
+FUNC_EXTERN	i4	FDparse();
+FUNC_EXTERN	bool	IIFDggvGetGetlistVar();
+
+GLOBALREF	FRAME	*frcurfrm;
+
+
+/*{
+** Name:	FDcrfrm - Make a compiled form usable.
+**
+** Description:
+**	Entry point to make a compiled form usable.  Allocation
+**	for data storage area, display buffer, validation structures
+**	and FMT structures must be made for each field in the
+**	form before the form is usable in a display loop.
+**
+**	For 6.0, a dynamic runtime conversion from 5.0 to 6.0 must
+**	also be done.  A 5.0 format is identified by a non NULL
+**	blank byte in the FRAME structure for the form.
+**
+** Inputs:
+**	frm	Address of a FRAME structure pointer.
+**
+** Outputs:
+**	frm	If a conversion is done, set to point to a converted
+**		copy of the passed in form.
+**
+**	Returns:
+**		TRUE	If form was made usable.
+**		FALSE	If inconsisten form/field information was found
+**			or no more memory can be allocated.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	None.
+**
+** History:
+**	02/04/87 (dkh) - Added support for ADTs.
+*/
+i4
+FDcrfrm(afrm)
+register FRAME	**afrm;
+{
+	register i4	i;
+	register FIELD	**fd;
+	register FRAME	*frm;
+	i4		lang;
+	char		oldname[FE_MAXNAME + 1];
+	i4		retval;
+EXEC SQL BEGIN DECLARE SECTION;
+	i4		was_inxaction;
+EXEC SQL END DECLARE SECTION;
+
+	frm = *afrm;
+
+	lang = IIlang(hostC);
+
+	/*
+	**  Do conversion to 6.0 format if necessary.
+	*/
+	if (frm->frfiller[0] != '\0')
+	{
+		STcopy(frm->frfiller, oldname);
+		if ((frm = FDcvto60((OFRAME *) frm)) == NULL)
+		{
+			IIFDerror(FDNOCVT60, 1, oldname);
+			return(FALSE);
+		}
+		for (i = 0, fd = frm->frfld; i < frm->frfldno; i++, fd++)
+		{
+			if (!FDsfldtrv(*fd, (natfunction) FDcrfmt, FDTOPROW))
+			{
+				IIlang(lang);
+				return(FALSE);
+			}
+		}
+		for (i = 0, fd = frm->frnsfld; i < frm->frnsno; i++, fd++)
+		{
+			if (!FDsfldtrv(*fd, (natfunction) FDcrfmt, FDTOPROW))
+			{
+				IIlang(lang);
+				return(FALSE);
+			}
+		}
+	}
+	else
+	{
+		for (i = 0, fd = frm->frfld; i < frm->frfldno; i++, fd++)
+		{
+			if (FDcrfld(frm, *fd) == FALSE)
+			{
+				IIlang(lang);
+				return(FALSE);
+			}
+		}
+		for (i = 0, fd = frm->frnsfld; i < frm->frnsno; i++, fd++)
+		{
+			if (FDcrfld(frm, *fd) == FALSE)
+			{
+				IIlang(lang);
+				return(FALSE);
+			}
+		}
+	}
+
+	EXEC SQL inquire_ingres (:was_inxaction = transaction);
+
+	/*
+	**  Need to create validation trees now.
+	*/
+	retval = FDparse(frm);
+
+	if (IIFDggvGetGetlistVar() && !was_inxaction)
+	{
+		EXEC SQL COMMIT WORK;
+	}
+
+	if (retval)
+	{
+		IIlang(lang);
+		return(FALSE);
+	}
+
+	frm->frmode = fdcmINSRT;
+
+	/*
+	**  Call added due to new FT interface.
+	*/
+
+	FTnewfrm(frm);
+
+	IIlang(lang);
+
+	*afrm = frm;
+
+	return(TRUE);
+}
+
+FDcrfld(frm, fld)
+register FRAME	*frm;
+register FIELD	*fld;
+{
+	register FLDHDR	*hdr;
+	register FLDCOL	**cols;
+	register TBLFLD	*tbl;
+	register i4	i;
+
+	if (fld->fltag == FTABLE)
+	{
+		tbl = fld->fld_var.fltblfld;
+		hdr = &(tbl->tfhdr);
+		cols = tbl->tfflds;
+		if (FDtblalloc(tbl) == FALSE)
+		{
+			IIFDerror(CFTBAL, 2, frm->frname, hdr->fhdname);
+			return(FALSE);
+		}
+		tbl->tfflds = cols;	/* cols used below */
+		for (i = 0; i < tbl->tfcols; i++, cols++)
+		{
+			if (FDcolalloc(tbl, *cols) == FALSE)
+			{
+				IIFDerror(CFCLAL, 1, frm->frname);
+				return(FALSE);
+			}
+		}
+	}
+	else
+	{
+		hdr = &(fld->fld_var.flregfld->flhdr);
+		if (FDflalloc(fld) == FALSE)
+		{
+			IIFDerror(CFFLAL, (i4)2, frm->frname, hdr->fhdname);
+			return(FALSE);
+		}
+	}
+	FDsfldtrv(fld, (natfunction)FDcrfmt, FDTOPROW);
+	FDsfldtrv(fld, (natfunction)IIFDemask, FDTOPROW);
+	return(TRUE);
+}
+
+
+
+i4
+FDcrfmt(hdr, type)
+FLDHDR	*hdr;
+FLDTYPE	*type;
+{
+	ADF_CB	*ladfcb;
+	char	*name;
+	char	*fmtstr;
+	i4	fmtsize;
+	i4	fmtlen;
+	PTR	blk;
+
+	/*
+	**  It is an error if there is no format string
+	**  at this time.
+	*/
+	if (type->ftfmtstr != NULL)
+	{
+		ladfcb = FEadfcb();
+
+		/*
+		**  Don't do anything special to the format string
+		**  since everything should we synced up by the
+		**  time we get here.
+		*/
+		fmtstr = type->ftfmtstr;
+
+		/*
+		**  Only reason to use FEreqmem due to code in
+		**  FDchgfmt().
+		*/
+		if ((fmt_areasize(ladfcb, fmtstr, &fmtsize) == OK) &&
+			((blk = FEreqmem((u_i4)0, (u_i4)fmtsize, TRUE,
+			    (STATUS *)NULL)) != NULL) &&
+			(fmt_setfmt(ladfcb, fmtstr, blk, &(type->ftfmt),
+				&fmtlen) == OK))
+		{
+			;
+		}
+		else
+		{
+			if (frcurfrm == NULL)
+				name = ERx("");
+			else
+				name = frcurfrm->frname;
+			FEafeerr(ladfcb);
+			IIFDerror(E_FI1F52_8018, (i4)2, name, hdr->fhdname);
+# ifndef	PCINGRES
+			IIbreak();
+# endif		/* PCINGRES */
+			return(FALSE);
+		}
+	}
+	return(TRUE);
+}

@@ -1,0 +1,49 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;		Added ordinals.
+;	25-Aug-2004 (drivi01)
+;		Renamed iiadfdata.def to iilibadfdata.def
+;		due to modified build procedure.
+;       31-Oct-2007 (kibro01) b119318
+;               Added Adu_date_format_list
+;	18-Mar-2010 (kschendel) SIR 123275
+;		remove old date-format template refs.
+
+
+EXPORTS
+Adi_1RO_datatypes	@1	DATA			
+Adi_dts_size		@2	DATA			
+Adi_fi_lkup		@3	DATA			
+Adi_fil_size		@4	DATA			
+Adi_fis			@5	DATA			
+Adi_fis_size		@6	DATA			
+Adf_globs		@7	DATA			
+Adi_2RO_operations	@8	DATA			
+Adi_ops_size		@9	DATA			
+Bit_max			@10	DATA			
+Bit_min			@11	DATA			
+Cha_max			@12	DATA			
+Cha_min			@13	DATA			
+Chr_max			@14	DATA			
+Chr_min			@15	DATA			
+Lke_max			@16	DATA			
+Lke_min			@17	DATA			
+Txt_max			@18	DATA			
+Vch_max			@19	DATA			
+Vch_min			@20	DATA			
+Adu_ii_dmsize		@21	DATA			
+Adf_outarg_default	@22	DATA			
+Adu_dt_size		@23	DATA			
+;Adu_0us			@24	DATA			
+;Adu_1multi		@25	DATA			
+;Adu_2finland		@26	DATA			
+;Adu_3iso		@27	DATA			
+;Adu_4german		@28	DATA			
+;Adu_5ymd		@29	DATA			
+;Adu_6mdy		@30	DATA			
+;Adu_7dmy		@31	DATA			
+Adu_datename		@32	DATA			
+Adu_monthtab		@33	DATA			
+;Adu_multi_tmplts	@34	DATA			
+Adu_weekdays		@35	DATA			
+Adu_date_format_list	@36	DATA			

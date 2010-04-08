@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The qsf_memory resource specifies the maximum amount of memory which
+  can be allocated by the Query Storage Facility (QSF) within DBMS servers
+  created with this definition.  Query Storage memory is used to hold
+  information about queries being parsed, optimized, and executed.
+  It is also used for long-term storage of REPEATED query plans and
+  database procedures.

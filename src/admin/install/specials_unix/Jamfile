@@ -1,0 +1,11 @@
+#
+# Jamfile file for admin!install!specials_unix
+#
+
+SubDir ING_SRC admin install specials_unix ;
+
+IISUBSYS admin install specials_unix ;
+
+
+IICCPPFILE $(INGFILES)/w4mfest.def : w4mfest.ccpp ;
+

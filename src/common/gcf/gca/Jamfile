@@ -1,0 +1,14 @@
+#
+# Jamfile file for common!gcf!gca
+#
+
+SubDir ING_SRC common gcf gca ;
+
+IISUBSYS common gcf gca ;
+
+
+IILIBRARY GCFLIB : gcautil.c gcaterm.c gcasave.c gcarstor.c gcapriv.c
+	gcans.c gcainit.c gcagcm.c gcacmpt.c gcacall.c gcaauth.c
+	gcaasync.c gcaacbmg.c ;
+
+IILIBRARY IMPGCFLIBDATA : gcastitc.c ;

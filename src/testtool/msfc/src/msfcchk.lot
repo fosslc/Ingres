@@ -1,0 +1,10 @@
+MAINOBJ.obj
+INGLIB:libruntime.olb/library
+INGLIB:libq.olb/library
+INGLIB:libafe.olb/library
+INGLIB:libqgca.olb/library
+INGLIB:libgcf.olb/library
+INGLIB:libug.olb/library
+INGLIB:libadf.olb/library
+INGLIB:libcuf.olb/library
+INGLIB:libcompat.olb/library

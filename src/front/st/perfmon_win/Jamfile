@@ -1,0 +1,25 @@
+#
+# Jamfile file for front!st!perfmon_win
+#
+
+SubDir ING_SRC front st perfmon_win ;
+
+IISUBSYS front st perfmon_win ;
+
+
+IIMCTOH $(SEARCH_SOURCE)/pfctrmsg.h : pfctrmsg.mc ;
+
+IILIBRARY PERFMONLIB : pfutil.c
+	pfdata.c
+	pfctrs.c
+	pfapi.c ;
+
+FILE $(INGFILES)/ingcache.pmw : ingcache.pmw ;
+FILE $(INGFILES)/oipfctrs.ini : oipfctrs.ini ;
+FILE $(INGFILES)/oipfctrs.reg : oipfctrs.reg ;
+FILE $(INGFILES)/oipfctrs.h : oipfctrs.h ;
+
+IISHLIBRARY $(SHPERFMONLIB) : $(PERFMONLIB) $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA)
+	$(IMPAPILIB) $(SAWLIB) ;
+IINEEDLIBS $(SHPERFMONLIB) : NETAPILIB GDILIB MORELIB RPCLIB ;
+IINEEDRES $(SHPERFMONLIB) : pfctrmsg.res ;

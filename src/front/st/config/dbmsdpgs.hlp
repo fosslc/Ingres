@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The default page size of the dbms parameter is used in create table /
+  modify table or create index statement if with page_size clause is 
+  omitted. The values for this parameter are 2048(2K), 4096(4K), 
+  8192(8K), 16384(16K), 32768(32K)  and 65536(64K). The 64K choice is
+  not available for the RMS gateway.  You must configure the 
+  corresponding cache in the dbms if you choose a different value other
+  than the default.
+
+  The default is 2048 bytes(2K).

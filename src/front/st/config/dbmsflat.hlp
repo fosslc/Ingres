@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The query_flattening resource specifies whether query flattening is
+  enabled for DBMS servers created with this definition.
+
+  Related Resources
+  -----------------
+  qflatten_aggregate can be used to disable flattening for aggregate
+  subselect queries.
+
+  qflatten_singleton can be used to disable flattening for singleton
+  subselect queries.
+
+  cardinality_check can be used to determine whether WHERE clause
+  singleton subselect queries should enforce the cardinality check
+  which may be disabled by query flattening.

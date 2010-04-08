@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  Specifies the base priority at which the created process executes.
+
+  The value of the parameter n is a decimal number from 0 to 31,
+  where 31 is the highest priority and zero is the lowest. Normal
+  priorities range from 0 to 15.

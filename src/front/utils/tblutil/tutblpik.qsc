@@ -1,0 +1,723 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+**
+**	History:
+**
+**      25-sep-96 (mcgem01)
+**              Global data moved to tbldata.c
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	21-jan-03 (hayke02)
+**	    Remove local prototyping of IIUFccConfirmChoice() - this is now
+**	    done in fe.h.
+**      11-Jun-2004 (hanch04)
+**          Removed reference to CI for the open source release.
+**    25-Oct-2005 (hanje04)
+**        Add prototype for get_form_ready() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**	23-Aug-2009 (kschendel) 121804
+**	    IIFRmdfMakeDefaultForm is STATUS not bool, use frame.h.
+*/
+
+# include	<compat.h>
+# include	<ci.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<adf.h>
+# include	<fe.h>
+# include	<er.h>
+# include	<ft.h>
+# include	<st.h>
+# include	<fmt.h>
+# include	<frame.h>
+# include	<flddesc.h>
+##include	<ui.qsh>
+#include	<uigdata.h>	/* IIUIgdata */
+/*
+  tell ming about ui.qsh
+# include	<ui.h>
+*/
+# include	<tu.h>
+# include	<ug.h>
+# include       <stdprmpt.h>
+# include	"ertu.h"
+# include	"tuconst.h"
+
+FUNC_EXTERN     DB_STATUS  FErel_open();
+FUNC_EXTERN     DB_STATUS  FErel_fetch();
+FUNC_EXTERN     DB_STATUS  FErel_close();
+FUNC_EXTERN	i4	IIFRclpCallListPick();
+FUNC_EXTERN	VOID	IITUtbiTableinfo();
+FUNC_EXTERN	i4	IITUtsTblfldSearch();
+		i4	IITUlpWrapper();
+
+static		i4	load_tbllist();
+static		VOID	set_defaults();
+static 		STATUS	get_form_ready();
+
+##static	char	Table_name[FE_MAXTABNAME+1];	/* table name
+							** selected by user
+							*/
+GLOBALREF 	bool	IituMainform;		/* TRUE when Mainform should
+						** be displayed. FALSE when
+						** Subform should be displayed.
+						** Set to FALSE to suppress the
+						** Create and Details menuitems.
+						** Set to FALSE in create and
+						** examine-a-table.
+						*/
+/*	info about the dynamically created form and table field: */
+static
+##      char    *Form;		/* Name of form & table field. Set below to
+				** either Mainform or Subform.
+				*/
+static
+##      char    Mainform[] = ERx("iitutbllstpik");	/* name of main form */
+static
+##      char    Subform[]  = ERx("iitutbllstpik2");	/* name of sub form */
+static
+##	char	Col[]= ERx("table_name");	/* Table field column name.
+						** Same one in main and subform.
+						*/
+static
+##	char	Own[]= ERx("table_owner");	/* Table field column name.
+						** Same one in main and subform.
+						*/
+
+#define NMBR_TBLFLD_ROWS	16	/*nmbr of rows in list-pick tbl field*/
+static	DB_DATA_VALUE	dbd[] = { {NULL, 32, DB_CHA_TYPE, 0},
+			          {NULL, 32, DB_CHA_TYPE, 0} };
+
+/* structure that describes popup table field screen to be built dynamically.
+** there is only one column, so array only has one row. */
+static	FLD_DESC	Fds[] = { {Col,	  	/*name of field or col*/
+				   ERx("Table"),  /* field/col title */
+				   &dbd[0],	  /* data type */
+				   24},		  /* displayed field width.
+						     Note that this value is <
+						     32 (see dbd), so this will
+						     be a scrolling column */
+				   {Own, ERx("Owner"), &dbd[1], 8}
+				};
+static  bool	Lp_formready = FALSE;
+static  bool	Lp_subformready = FALSE;
+
+/*	Communication between ListPick handler (IITUlpWrapper) and tutblpik */
+static  i4	Tu_lp_state;
+#define TU_LP_START		1
+#define TU_LP_DONE		2
+#define	TU_LP_SCROLL		3
+#define	TU_LP_SCROLL_RELOAD	4
+
+/*	structure describing menuitems for ListPick Mainmenu */
+static LISTMENU Lp_menu[] =
+{
+    { FE_Select, F_FE0108_ExplSelect, LPB_CRSELECT, 4 },
+    { FE_Cancel, F_FE0103_ExplCancel, LPB_QUIT, 9 },
+	/* next two are custom menuitems for this frame */
+    { F_TU0042_Details, F_TU0043_Details_Expl, LPB_SELECT, 0},
+    { F_TU0044_Create, F_TU0045_Create_Expl, LPB_SELECT, 0},
+
+    { FE_Empty, F_FE0104_ExplFind, LPB_FIND, 7 },
+    { FE_Empty, F_FE0105_ExplTop, LPB_TOP, 5 },
+    { FE_Empty, F_FE0106_ExplBottom, LPB_BOTTOM, 6 },
+    { FE_Help, F_FE0101_ExplKeyHelp, LPB_HELP, 1}
+};
+
+/*	structure describing menuitems for ListPick Submenu*/
+static LISTMENU Lp_smenu[] =
+{
+    { FE_Select, F_FE0108_ExplSelect, LPB_CRSELECT, 4 },
+    { FE_Cancel, F_FE0103_ExplCancel, LPB_QUIT, 9 },
+    { FE_Empty, F_FE0104_ExplFind, LPB_FIND, 7 },
+    { FE_Empty, F_FE0105_ExplTop, LPB_TOP, 5 },
+    { FE_Empty, F_FE0106_ExplBottom, LPB_BOTTOM, 6 },
+    { FE_Help, F_FE0101_ExplKeyHelp, LPB_HELP, 1}
+};
+
+/*	RUNTIME INGRES: structure describing menuitems for ListPick Mainmenu */
+static LISTMENU Lp_rtmenu[] =
+{
+    { FE_Select, F_FE0108_ExplSelect, LPB_CRSELECT, 4 },
+    { FE_Cancel, F_FE0103_ExplCancel, LPB_QUIT, 9 },
+	/* next one is custom menuitem for this frame */
+    { F_TU0042_Details, F_TU0043_Details_Expl, LPB_SELECT, 0},
+
+    { FE_Empty, F_FE0104_ExplFind, LPB_FIND, 7 },
+    { FE_Empty, F_FE0105_ExplTop, LPB_TOP, 5 },
+    { FE_Empty, F_FE0106_ExplBottom, LPB_BOTTOM, 6 },
+    { FE_Help, F_FE0101_ExplKeyHelp, LPB_HELP, 1}
+};
+
+/*{
+** Name:	IITUtpTblPik - ListPick a table name from a popup.
+**
+** Description:
+**	This routine uses the ListPick and dynamic form building routines
+**	to display in a popup, a list of table names for the user to choose
+**	from. It returns to the caller, the table name selected by the user.
+**
+**	This routine can be called from an outside program, or from within
+**	Create-a-Table (menuitem "GetTableDef") and Examine-a-Table
+**	(menuitem "NewTable") in the Tables Utility. When
+**	called from these 2 places in Tblutil, the behavior must be slightly
+**	different: the menuitems "Create" and "Details" must NOT appear, because
+**	that could create a nested form display; also, a different popup form 
+**	must be displayed, again to avoid a nested form display error. These
+**	2 forms of behavior are handled by a boolean (IituMainform), which
+**	tells whether to display the "Main" form (when called from outside) or
+**	"Sub" form (when called from Tblutil). Set the global to FALSE to
+**	suppress the menuitem.
+**
+**	It is possible for this routine to be called recursively -- but only
+**	once. The following call stack can happen:
+**		IITUtpTblPik
+**		    IIFRclpCallListPick
+**			IITUlpWrapper (menuitem "Details" or "Destroy")
+**			    IITUtbiTableinfo ("Details" = examine-a-table)
+**	recurse:		IITUprTablePrompt (menuitem "NewTable")
+**				    IITUtpTblPik (menuitem "ListChoices")
+**					IIFRclpCallListPick
+**					    IITUlpWrapper (no "Details"
+**							 or "Destroy" menuitems)
+**
+** Example call:
+**
+**	char *p_tbl;	** tablename selected by user
+**	p_tbl = IITUtpTblPik( NULL, ERx("VISION"));
+**	if ((p_tbl != NULL) && (*p_tbl != EOS))
+**		; ** user selected a table
+**
+** Inputs:
+**	char	*qual		optional qualification on table_name for query.
+**				If this is non-NULL, then it will be used
+**				as a qualifier for the table name in the query
+**				that Selects tables. If Null of if points to EOS
+**				then all tables will be loaded. (tables are
+**				loaded by FErel... routines).
+**	char	*title_prefix;	prefix for Tables Utility screen titles
+**
+** Outputs:
+**	Returns:
+**		Pointer to table name Selected by user, or NULL if
+**		Cancel was chosen.
+**
+**	Exceptions:
+**		NONE
+** Side Effects:
+**	Dynamically builds and then ADDFORMs a form.
+**
+** History:
+**	8/25/89	(pete)	Initial Version.
+**	27-dec-1989 (pete)	Remove use of "qual" argument for optional table
+**				qualification.
+**	8-jan-1990  (pete)	Remove border from listpick popup by
+**				not setting lp.flags = LPK_BORDER.
+**      2/28-90     (pete)	Change empty database confirmation if want to
+**				Create table to use IIUFccConfirmChoice, rather
+**				than popup PROMPT.
+**	14-aug-1992 (mgw)	Changed table_name list pick popup to display
+**				table.owner info by adding a new column to the
+**				popup for owner.
+**	16-mar-1993 (rogerl)	Special case " " table name so it can be
+**				chosen from the ListChoices menu.
+**	22-mar-1994 (donc)	Replace CI_XXXX_RUNTIME check for 
+**				CI_CREATE_TABLE
+*/
+char *
+IITUtpTblPik(qual, title_prefix)
+char	*qual;		/* optional qualification on table_name for query */
+char	*title_prefix;	/* prefix for Tables Utility screen titles */
+{
+	LISTPICK lp;
+##      i4	sel_row;
+	i4	rows;	/* number of rows selected into table field */
+	i4	menu_cnt;	/* number of menuitems */
+##	char	own_name[FE_MAXNAME+1];
+##	char	tbl_name[FE_MAXNAME+1];
+	i4	idtyp;
+
+	Tu_lp_state = TU_LP_START;
+
+	set_defaults (&Form, &(lp.menuitems), &(lp.nomenitems));
+
+	if ( get_form_ready() != OK)	/* build and then ADDFORM */
+	    return NULL;
+
+	/* If qual is empty, turn it into a QUEL wildcard character.
+	** The FErelopen routine, used to load the table
+	** names, calls IIUGwildcard to convert this to SQL, if necessary.
+	**	if ((qual == NULL) || (*qual == EOS))
+	**  	    STcopy (_Wildcard, tblname_wildcard);
+	**	else
+	**	    STcopy (qual, tblname_wildcard);
+	*/
+	/* Remove above code so "qual" argument is ignored; always
+	** get all tables.
+	*/
+
+	/* Set up structure used by ListPick. Note: "lp.menuitems" and 
+	** "lp.nomenitems" are set in routine "set_defaults()"
+	*/
+	lp.form = Form;	/* name of ListPick form */
+	lp.tf = Form;	/* name of ListPick table field */
+	lp.srow = LPGR_FLOAT;  /* Floating popup */
+	lp.scol = LPGR_FLOAT;  /* " " (same as above, but for starting column)*/
+	lp.lineno = 0;  /* scroll to this record in tblfld dataset. 0=default */
+	lp.hfile = ERx("tutblpik.hlp");			/* help file name */
+	lp.htitle = ERget(F_TU0047_LP_Help_Title);	/* help screen title */
+	lp.handler = IITUlpWrapper;	/*call this when user selects menuitem*/
+	lp.data = (PTR) title_prefix;	/*pass this to IITUlpWrapper */
+	lp.flags = 0;		/* LPK_BORDER == box the popup */
+
+	/* Run this loop until the IITUlpWrapper routine, which calls the Tables
+	** Utility routines, sets the global to TU_LP_DONE. That means
+	** the user has chosen either menuitem Select or Cancel.
+	*/
+	while (Tu_lp_state != TU_LP_DONE)
+	{
+
+	    if ((Tu_lp_state == TU_LP_START)
+	     || (Tu_lp_state == TU_LP_SCROLL_RELOAD))
+	    {
+##		MESSAGE ERget(F_TU0049_Selecting_Names)
+##		INITTABLE Form Form READ (owner=varchar(32)) /* 32=FE_MAXNAME */
+
+	        /* form all ready. Load it with table & view names */
+		rows = load_tbllist(Form, Form);
+
+	        if (rows == 0)	/* no tables in database */
+	        {
+		    if (IituMainform)
+		    {
+		    	    /* Check if user wants to create a table.*/
+			    char  *help_subject;
+			    help_subject = STalloc(ERget(S_TU0054_HelpSubject));
+
+                    	    if (IIUFccConfirmChoice (CONF_GENERIC,
+				(char *)NULL, (char *)NULL,
+				help_subject, ERx("tucccrt.hlp"), 
+                        	S_TU0050_EmptyDB_Prompt,
+				S_TU0055_YesText,
+				S_TU0056_NoText,
+				ERx(""),
+				TRUE) == CONFCH_YES)
+		    	    {
+
+                	        /* User wants to create a new table.
+			        ** Call Tables Utility Create-a-Table.
+                	        */
+
+                	        newtable(tbl_name, title_prefix);
+
+                	        if (tbl_name[0] != EOS)
+                	        {
+                    	            /* User CREATEd a new table.
+			            ** Reload all tables in dbase into table
+				    ** field and scroll to row with newly
+				    ** created table.
+                    	            */
+                    	            Tu_lp_state = TU_LP_SCROLL_RELOAD;
+				    /* we want to scroll here */
+                    	            STcopy (tbl_name, Table_name);
+				    /* now jump back to top of while() loop*/
+			            continue;  
+			        }
+		            }
+		    }
+		    else
+		    {
+			    /* we are in Subform and database is empty.
+			    ** We can't offer the user the option to
+			    ** call Create-a-Table, cause of possible
+			    ** problems with a nested display. Issue
+			    ** message and return.
+			    */
+##			    MESSAGE ERget(S_TU0052_EmptyDB_Msg) WITH STYLE=POPUP
+		    }
+
+		    /* assertion: user wants to return to caller */
+		    sel_row = -1;	/* to skip the SCROLL & GETROW after
+					** we break out of this while()
+					*/
+		    break;		/* branch below while() loop */
+	        }
+	    }
+
+	    if ((Tu_lp_state == TU_LP_SCROLL)
+	     || (Tu_lp_state == TU_LP_SCROLL_RELOAD))
+	    {
+		i4 row;
+
+		/* unload table field looking for table */
+
+		if ( (row = IITUtsTblfldSearch(Form, Form,
+						Col, Table_name)) > 0)
+		{
+		    lp.lineno = row;
+		}
+
+	    }
+
+	    sel_row = IIFRclpCallListPick(
+			&lp,
+			(i4 *)NULL	/* menuitem selected by user */
+			);
+
+	}	/* while() */
+
+	/* for some strange reason, IIFRclp.. returns the table field row
+	** number -1. Increment it back to a row number, and then test if
+	** user Selected a table.
+	*/
+	if (++sel_row > 0)
+	{
+		/* get name of Table user Selected */
+		own_name[0] = EOS;
+##	    	SCROLL Form Form TO sel_row
+##	    	GETROW Form Form (tbl_name=Col, own_name=Own)
+
+		/* get owner.table into Table_name for output */
+
+		/* if owner is current user, then just return table name */
+
+		if (STcompare(own_name, IIUIdbdata()->suser) == 0)
+		{
+				/* special case blank named table */
+			if ( STtrmwhite( tbl_name ) == 0 )
+			{
+				/* user chose table name " " */
+			    tbl_name[0] = ERx(' ');
+			    tbl_name[1] = EOS;
+				/* force requote */
+			    idtyp = UI_DELIM_ID;
+			}
+			else
+			{
+			    idtyp = IIUGdlm_ChkdlmBEobject( tbl_name,
+			    				tbl_name, TRUE );
+			}
+
+			if (idtyp == UI_DELIM_ID)
+				IIUGrqd_Requote_dlm(tbl_name, Table_name);
+			else /* UI_REG_ID */
+				STcopy(tbl_name, Table_name);
+		}
+		else	/* return owner.table */
+		{
+			if (!IIUIxrt_tbl(own_name, tbl_name, Table_name))
+			{
+				/*
+				** This is bad. Either own_name or tbl_name
+				** was determined to be a UI_BOGUS_ID, which
+				** shouldn't have happened because we're
+				** selecting these values from a list we
+				** got out of FErel_fetch() in load_tbllist()
+				** below. THIS SHOULD NEVER HAPPEN! On the
+				** off chance that it does, just fake it and
+				** let it break further on down the line.
+				*/
+				STpolycat(3, own_name, ERx("."), tbl_name,
+						Table_name);
+			}
+		}
+	}
+	else
+	{
+		/* user selected Cancel. don't return a table name */
+	    *Table_name = EOS;
+	}
+
+##	INITTABLE Form Form READ  /* release dataset memory back to FRS */
+
+	/* Before return, always restore Form name, etc to Mainform
+	** to handle case where this is a nested call to TutpTblPik, and
+	** routines above this one are assuming that Form still is set
+	** to name of Mainform.
+	** TutpTblPik always calls set_defaults() to set Form name, etc
+	** correctly at startup, according to what caller sets IituMainform to.
+	*/
+	if (!IituMainform)
+	{
+	    IituMainform = TRUE;
+	    set_defaults (&Form, &(lp.menuitems), &(lp.nomenitems));
+	}
+
+        return (Table_name);
+}
+
+/* set some defaults that vary depending on whether we were called from
+** outside, or from inside Tables Utility.
+*/
+static VOID
+set_defaults (form, menuitems, nomenitems)
+char 	**form;		/* form to use */
+LISTMENU **menuitems;	/* menuitem structure to use */
+i4	*nomenitems;	/* menuitem count */
+{
+	*form = (IituMainform) ? Mainform : Subform ;	/* set form name */
+
+        /* Users running Embedded (RUNTIME) INGRES, can't Create
+        ** tables. Check authorization string for Runtime INGRES
+	** and if set, use different menuitem structure.
+        */
+	if (IituMainform)
+	{
+		/* regular Ingres */
+	        *menuitems = Lp_menu;
+		*nomenitems = (sizeof(Lp_menu)/sizeof(LISTMENU));
+	}
+	else
+	{
+		/* Subform; doesn't have a "Create" menuitem, so no need
+		** to check for Runtime Ingres.
+		*/
+	        *menuitems = Lp_smenu;
+		*nomenitems = (sizeof(Lp_smenu)/sizeof(LISTMENU));
+	}
+}
+
+/* get form ready (first time only) */
+
+/*
+** History:
+**	10-sep-1993 (kchin)
+**		Changed type of lfaddr to PTR in get_form_ready(), since it
+**		is holding pointer.  Also changed the cast of lf to PTR when
+**		assigning it to lfaddr, cast of i4 in this case would result
+**		in address being truncated if it is 64-bit long.
+**	9-dec-1993 (mgw) Bug #54953
+**		Take the "Table Name" header out of the table name ListChoices
+**		popup so there's only one header line ("Table" | "Owner").
+**		Do this by simply changing the F_TU0048_LP_Tblfld_Title
+**		argument to IIFRmdfMakeDefaultForm() to NULL.
+*/
+static STATUS
+get_form_ready()
+{
+	FRAME	*lf;
+##	PTR	lfaddr;
+##	i4	err = 0;
+
+	if (IituMainform)
+	{
+	    /* we were called from outside */
+	    if (!Lp_formready)
+	    {
+	        /* build a popup table field form */
+	        if (IIFRmdfMakeDefaultForm((char *) NULL, Mainform, TRUE,
+				(sizeof(Fds)/sizeof(FLD_DESC)),
+				Fds, NMBR_TBLFLD_ROWS, &lf) != OK)
+	    	    return FAIL;
+	    
+	        Lp_formready = TRUE;
+
+		lfaddr = (PTR) lf;
+##		ADDFORM lfaddr;
+##		INQUIRE_FRS FRS (err = errorno)
+	    }
+	}
+	else
+	{
+	    /* we were called from Tables Utility */
+	    if (!Lp_subformready)
+	    {
+	        /* build same popup table field form as above, under new name */
+	        if (IIFRmdfMakeDefaultForm((char *) NULL, Subform, TRUE,
+				(sizeof(Fds)/sizeof(FLD_DESC)),
+				Fds, NMBR_TBLFLD_ROWS, &lf) != OK)
+	    	    return FAIL;
+	    
+	        Lp_subformready = TRUE;
+
+		lfaddr = (PTR) lf;
+##		ADDFORM lfaddr;
+##		INQUIRE_FRS FRS (err = errorno)
+	    }
+	}
+
+	return ((err == 0) ? OK : FAIL);
+}
+
+/*{
+** Name:	IITUlpWrapper - Called by ListPick when user chooses a menuitem.
+**
+** Description:
+**	This routine is called by CallListPick when the user selects menuitem
+**	Select, Cancel, Details or Create.
+**
+** Inputs:
+**	PTR	p_struct    Ptr to title prefix for tables util screen titles.
+**	i4	row	    (RECORD_number -1) of tblfld row that cursor was on
+**			    when user selected a menuitem.
+**	bool	*res_bool   This is set to TRUE if ListPick display should
+**			    resume to table field when this returns. Set to
+**			    False if ListPick should return back to
+**			    IITUtpTblPik().
+**	i4	menuitem    Tells which menuitem in the Lp_menu array
+**			    was selected by the user in ListPick.
+**
+** Outputs:
+**
+**	Returns:
+**		Row ListPick table field was scrolled to.
+**		Writes a value to parameter 'res_bool'.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	8/25/89	(pete)	Initial Version.
+*/
+i4
+IITUlpWrapper(p_title, row, res_bool, menuitem)
+PTR	p_title;
+i4	row;	    /* RECORD-1 of tblfld cursor was on when selected menuitem*/
+bool	*res_bool;	/* Set to TRUE if ListPick display should resume
+			   when this returns. Set to False if ListPick
+			   should return. */
+i4	menuitem;	/* number of menuitem selected in list pick */
+{
+
+##	char	table_name[FE_MAXNAME+1];
+##	char	table_name_prev[FE_MAXNAME+1];
+##	char	table_owner[FE_MAXNAME+1];
+	char *title = (char *)p_title;	/*cast to correct type*/
+	ER_MSGID mu ;	/* menuitem selected by user */
+
+	*res_bool = TRUE;	/* default = ListPick should RESUME */
+	Tu_lp_state = TU_LP_DONE;
+
+	mu = (IituMainform) ? Lp_menu[menuitem].title
+			    : Lp_smenu[menuitem].title;
+
+	/* use 'if/else' cause not supposed to switch on an i4 */
+	if ((mu == FE_Cancel) || ( mu == FE_Select))
+	{
+		*res_bool = FALSE;	/*for these 2, ListPick should return */
+	}
+	else if (mu == F_TU0042_Details)
+	{
+		/* user wants more details about current table */
+##	    	GETROW Form Form (table_name=Col, table_owner=Own)
+		STcopy (table_name, table_name_prev);
+
+		/* Tables Utility Examine-a-Table. Note that it sets
+		** 'table_name' to the name of the last table Examined.
+		** Third argument is name of column in table to scroll to
+		** in table field (not used here).
+		*/
+		IITUtbiTableinfo(table_name, table_owner, title, NULL);
+
+		if (!STequal(table_name, table_name_prev))
+		{
+		    /* User Examined another table (Menuitem NewTable).
+		    ** Return to IITUtpTblPik
+		    ** and have it call ListPick again, after scrolling
+		    ** the table field to the row matching "Table_name".
+		    */
+		    Tu_lp_state = TU_LP_SCROLL;
+		    STcopy (table_name, Table_name);
+		    *res_bool = FALSE;	/* ListPick should return */
+		}
+	}
+	else if (mu == F_TU0044_Create)
+	{
+		/* User wants to create a new table. Call Tables Utility
+		** Create-a-Table.
+		*/
+	  	newtable(table_name, title);
+
+		if (table_name[0] != EOS)
+		{
+		    /* User CREATEd a new table.
+		    ** Return to IITUtpTblPik and have it call ListPick
+		    ** again, after reloading table field and scrolling
+		    ** to row with newly created table name.
+		    */
+		    Tu_lp_state = TU_LP_SCROLL_RELOAD;
+		    STcopy (table_name, Table_name);
+		    *res_bool = FALSE;	/* ListPick should return */
+		}
+	}
+	else
+		;	/* ListPick should not return */
+
+	return row;
+}
+
+/* Load the ListPick table field with table name and owner (hidden col) info
+** returned from FErel.. routines. Returns number of rows loaded.
+**
+** History:
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	18-jun-1992 (mgw)
+**	    Added support for indexes and synonyms in the list.
+*/
+static i4
+load_tbllist(form,table)
+##	char	*form;
+##	char	*table;
+{
+##  FE_REL_QBLK rel_block;
+##  FE_REL_INFO rel_info;
+    DB_STATUS	rval;
+    i4		i =0;
+##  char	rown[FE_MAXNAME+1];	/* "DBA" or user name */
+
+    if ((rval = FErel_open(&rel_block, ERx("%"), ERx(""), FEecats(), FALSE))
+	== OK)
+    {
+	while (FErel_fetch(&rel_block, &rel_info) == OK)
+	{
+		if ( (rel_info.type == ICTABLE)
+		  || (rel_info.type == ICVIEW)
+		  /*
+		  ** We DON'T want to show indexes!
+		  || (rel_info.type == ICINDEX)
+		  */
+		  || (rel_info.type == ICSYNONYM))
+		{
+		    STcopy(rel_info.owner, rown);
+		/*    if (STequal(rel_info.owner, IIUIdbdata()->suser))
+		**   	STcopy(rel_info.owner, rown);
+		**    else
+		**   	STcopy(ERget(F_TU001A_DBA), rown);
+		*/
+
+##                  LOADTABLE form table (Col=rel_info.name, Own=rown)
+		    i++;
+		}
+	}
+
+	FErel_close(&rel_block);
+    }
+    else
+    {
+	IIUGerr(E_TU0034_Error_in_FErelopen, UG_ERR_ERROR,
+		(i4) 1, (PTR) &rval);
+    }
+    return i;
+}
+
+/*
+**	Set Global Variable 'IituMainform'		6.4_PC_80x86
+**	(resolve cross facility data references)	6.4_PC_80x86
+**	17-aug-91 (leighb) DeskTop Porting Change: Created.
+*/
+
+VOID							 
+set_IituMainform(b)					 
+bool	b;						 
+{							 
+	IituMainform = b;				 
+}							 

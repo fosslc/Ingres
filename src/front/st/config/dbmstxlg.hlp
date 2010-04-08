@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  This form allows you to perform various operations on the transaction
+  log.
+
+  The log file can be distributed over multiple partitions (locations) by
+  adding locations.  When multiple partitions are used Ingres treats the 
+  files as one logical file.
+
+  NOTE: In order to make modifications to any transaction log file, the
+  logging system MUST be offline.
+
+ 

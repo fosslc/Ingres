@@ -1,0 +1,9 @@
+C
+C	Copyright (c) 2004 Ingres Corporation	
+C	eqdef.in
+C		-- External INGRES integer functions for DG/AOS F77 FORTRAN
+C 		-- Utility calls for user
+C
+
+      external IISD, IISLEN
+      integer IISD, IISLEN

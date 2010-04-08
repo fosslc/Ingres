@@ -1,0 +1,4839 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.		       
+*/
+
+/*
+** Source   : detaidml.scc 
+** Project  : Com Server/Library
+** Author   : UK Sotheavut (uk$so01) 
+** Purpose  : SQL file, use for querying detail object, Query Ingres Objects Information
+**
+
+** History:
+**
+** 06-Oct-2000 (uk$so01)
+**    created
+** 23-Oct-2001 (uk$so01)
+**    SIR #106057 (sqltest as ActiveX & Sql Assistant as In-Process COM Server)
+** 17-Dec-2002 (uk$so01)
+**    SIR #109220, Enhance the library.
+** 27-Feb-2003 (schph01)
+**    SIR #109220 Manage compare locations in VDDA
+**                Add functions QueryDetailTableStar() and QueryDetailIndexStar()
+** 22-Apr-2003 (schph01)
+**    SIR 107523 Add SQL code for sequence Object
+** 17-Jul-2003 (uk$so01)
+**    SIR #106648, Vdba-Split, ensure that the ingres sessions 
+**    have the descriptions.
+** 05-Sep-2003 (uk$so01)
+**    SIR #106648, Integrate libraries libwctrl.lib, libingll.lib in Ija
+** 10-Sep-2003 (schph01)
+**    SIR 107523 Add function QueryDetailSequenceGrantee() for sequence Object
+** 10-Sep-2004 (uk$so01)
+**    BUG #113002 / ISSUE #13671785 & 13671608, Removal of B1 Security
+**    from the back-end implies the removal of some equivalent functionalities
+**    from VDBA.
+** 20-Sep-2004 (schph01)
+**    BUG #113119 Add REPEATED, removed DISTINCT and LOWERCASE in select
+**    SQL statement.
+** 29-Sep-2004 (uk$so01)
+**    BUG #113119, Add readlock mode in the session management and
+**    optimize some sql statement, primarily in QueryDetailTable()
+** 29-Sep-2004 (schph01)
+**   BUG #113002, Add Function QueryDetailDatabaseOpenSource(), change
+**   prototype for QueryDetailDatabase().
+** 21-Oct-2004 (uk$so01)
+**    BUG #113280 / ISSUE 13742473 (VDDA should minimize the number of DBMS connections)
+** 02-Nov-2004 (uk$so01)
+**    Additional change for 
+**    BUG #113280 / ISSUE 13742473 (VDDA should minimize the number of DBMS connections)
+** 17-Nov-2004 (uk$so01)
+**    BUG #113119, Remove the unnecessary statements.
+** 20-Aug-2008 (whiro01)
+**    Remove redundant <afx...> includes (already in stdafx.h)
+*/
+
+#include "constdef.h"
+#include "ingobdml.h"
+#include "dmlgrant.h"
+#include "dmlalarm.h"
+#include "dmlseq.h"
+
+
+// compile:
+// esqlcc -multi -fdetaidml.inc detaidml.scc
+//
+// Declare the SQLCA structure and the SQLDA typedef
+//
+extern "C"
+{
+EXEC SQL INCLUDE SQLCA;
+EXEC SQL INCLUDE SQLDA;
+}
+
+static BOOL QueryDetailUser      (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CaUser* pObject);
+static BOOL QueryDetailGroup     (CaLLQueryInfo* pQueryInfo, CaGroup* pObject);
+static BOOL QueryDetailProfile   (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CaProfile* pObject);
+static BOOL QueryDetailRole      (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CaRole* pObject);
+static BOOL QueryDetailLocation  (CaLLQueryInfo* pQueryInfo, CaLocation* pObject);
+static BOOL QueryDetailProcedure (CaLLQueryInfo* pQueryInfo, CaProcedure* pObject);
+static BOOL QueryDetailSequence  (CaLLQueryInfo* pQueryInfo, CaSequence* pObject);
+static BOOL QueryDetailDatabase  (CaLLQueryInfo* pQueryInfo, CaDatabase* pObject, CaSessionManager* pSessionManager, CaSession* pSession);
+static BOOL QueryDetailTable     (CaLLQueryInfo* pQueryInfo, CaTable* pObject, CaSessionManager* pSessionManager, CaSession* pSession);
+static BOOL QueryDetailTableStar (CaLLQueryInfo* pQueryInfo, CaTable* pObject, CaSessionManager* pSessionManager, CaSession* pSession);
+static BOOL QueryDetailView      (CaLLQueryInfo* pQueryInfo, CaView* pObject, CaSessionManager* pSessionManager, CaSession* pSession);
+static BOOL QueryDetailIndex     (CaLLQueryInfo* pQueryInfo, CaIndex* pObject);
+static BOOL QueryDetailIndexStar (CaLLQueryInfo* pQueryInfo, CaIndex* pObject);
+
+static BOOL QueryDetailRule      (CaLLQueryInfo* pQueryInfo, CaRule* pObject);
+static BOOL QueryDetailIntegrity (CaLLQueryInfo* pQueryInfo, CaIntegrity* pObject);
+static BOOL QueryDetailAlarm     (CaLLQueryInfo* pQueryInfo, CaAlarm* pObject);
+static BOOL QueryDetailTableCol  (CaLLQueryInfo* pQueryInfo, CaColumn* pObject);
+static BOOL QueryDetailDBEvent   (CaLLQueryInfo* pQueryInfo, CaDBEvent* pObject);
+static BOOL QueryDetailSynonym   (CaLLQueryInfo* pQueryInfo, CaSynonym* pObject);
+static BOOL QueryDetailGrantee   (CaLLQueryInfo* pQueryInfo, CaGrantee* pObject, CaSessionManager* pMgr, CaSession* pSession=NULL);
+static BOOL QueryDetailAlarm     (CaLLQueryInfo* pQueryInfo, CaAlarm* pObject);
+
+
+static BOOL GetIndexEnforcement  (CaIndexOption& indexOption, LPCTSTR lpszConstraint);
+static BOOL GetPrimaryKeyInfo    (CaPrimaryKey* pKey);
+static BOOL GetUniqueKeyInfo     (LPCTSTR lpszTable, LPCTSTR lpszOwner, CTypedPtrList < CObList, CaUniqueKey* >& listObject);
+static BOOL GetForeignKeyInfo    (LPCTSTR lpszTable, LPCTSTR lpszOwner, CTypedPtrList < CObList, CaForeignKey* >& listObject);
+static BOOL GetCheckKeyInfo      (LPCTSTR lpszTable, LPCTSTR lpszOwner, CTypedPtrList < CObList, CaCheckKey* >& listObject);
+static BOOL GetTableKeysInfo     (LPCTSTR lpszTable, LPCTSTR lpszOwner, CaTableDetail* pDetail);
+
+
+
+static LPSTR TrimRight (LPSTR lpszChar)
+{
+	CString str = lpszChar;
+	str.TrimRight();
+	LPSTR lpnew = T2A((LPTSTR)(LPCTSTR)str);
+
+	if (strlen (lpnew) < strlen(lpszChar))
+		strcpy (lpszChar, lpnew);
+	return lpszChar;
+}
+
+static void ExceptionError()
+{
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	throw CeSqlException (A2T(error_buf), nErr);
+}
+
+
+
+BOOL INGRESII_llQueryDetailObject (CaLLQueryInfo* pQueryInfo, CaDBObject* pObject, CaSessionManager* pSessionManager)
+{
+	BOOL bOk = FALSE;
+	ASSERT (pQueryInfo);
+	if (!pQueryInfo)
+		return bOk;
+	CaSession session ((CaConnectInfo*)pQueryInfo);
+	int nObjectType = pQueryInfo->GetObjectType();
+	int nSubObjectType = pQueryInfo->GetSubObjectType();
+	switch (nObjectType)
+	{
+	case OBT_DATABASE:
+	case OBT_PROFILE:
+	case OBT_USER:
+	case OBT_GROUP:
+	case OBT_ROLE:
+	case OBT_LOCATION:
+		session.SetDatabase(_T("iidbdb"));
+		break;
+	case OBT_GRANTEE:
+	case OBT_ALARM:
+		ASSERT(nSubObjectType != -1);
+		if (nSubObjectType != -1 && (nSubObjectType == OBT_DATABASE || nSubObjectType == OBT_INSTALLATION))
+		{
+			//
+			// For security alarms of database, we must connect to database named IIDBDB:
+			session.SetDatabase(_T("iidbdb"));
+		}
+		break;
+	default:
+		break;
+	}
+
+	CaSessionUsage* pUseSession = NULL;
+	try
+	{
+		CaSession* pSession = NULL;
+		if (pSessionManager)
+		{
+			session.SetDescription(pSessionManager->GetDescription());
+			pUseSession = new CaSessionUsage (pSessionManager, &session);
+			pSession = pUseSession->GetCurrentSession();
+		}
+		else
+		{
+			session.SetIndependent(TRUE);
+			session.Connect();
+			pSession = &session;
+		}
+
+		switch (pQueryInfo->m_nTypeObject)
+		{
+		case OBT_DATABASE: 
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaDatabaseDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaDatabaseDetail)))
+				bOk = QueryDetailDatabase (pQueryInfo, (CaDatabase*)pObject, pSessionManager, pSession);
+			break;
+		case OBT_PROFILE:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaProfileDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaProfileDetail)))
+				bOk = QueryDetailProfile (pQueryInfo, pSession, (CaProfile*)pObject);
+			break;
+		case OBT_USER:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaUserDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaUserDetail)))
+				bOk = QueryDetailUser (pQueryInfo, pSession, (CaUser*)pObject);
+			break;
+		case OBT_GROUP:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaGroupDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaGroupDetail)))
+				bOk = QueryDetailGroup(pQueryInfo, (CaGroup*)pObject);
+			break;
+		case OBT_ROLE:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaRoleDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaRoleDetail)))
+				bOk =QueryDetailRole(pQueryInfo, pSession, (CaRole*)pObject);
+			break;
+		case OBT_LOCATION:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaLocationDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaLocationDetail)))
+				bOk = QueryDetailLocation(pQueryInfo, (CaLocation*)pObject);
+			break;
+		case OBT_DBAREA:   // OI Desktop
+		case OBT_STOGROUP: // OI Desktop
+			ASSERT(FALSE);
+			break;
+		case OBT_PROCEDURE:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaProcedureDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaProcedureDetail)))
+				bOk = QueryDetailProcedure(pQueryInfo, (CaProcedure*)pObject);
+			break;
+		case OBT_SEQUENCE:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaSequenceDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaSequenceDetail)))
+				bOk = QueryDetailSequence(pQueryInfo, (CaSequence*)pObject);
+			break;
+		case OBT_GROUPUSER:
+			ASSERT(FALSE);
+			break;
+		case OBT_TABLE:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaTableDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaTableDetail)))
+				bOk = QueryDetailTable(pQueryInfo, (CaTable*)pObject, pSessionManager, pSession);
+			break;
+		case OBT_VIEW:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaViewDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaViewDetail)))
+				bOk = QueryDetailView(pQueryInfo, (CaView*)pObject, pSessionManager, pSession);
+			break;
+		case OBT_INDEX:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaIndexDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaIndexDetail)))
+				bOk = QueryDetailIndex(pQueryInfo, (CaIndex*)pObject);
+			break;
+		case OBT_RULE:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaRuleDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaRuleDetail)))
+				bOk = QueryDetailRule(pQueryInfo, (CaRule*)pObject);
+			break;
+		case OBT_INTEGRITY:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaIntegrity)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaIntegrity)))
+				bOk = QueryDetailIntegrity(pQueryInfo, (CaIntegrity*)pObject);
+			break;
+		case OBT_TABLELOCATION:
+			ASSERT(FALSE);
+			break;
+		case OBT_TABLECOLUMN:
+		case OBT_VIEWCOLUMN:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaColumn)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaColumn)))
+				bOk = QueryDetailTableCol(pQueryInfo, (CaColumn*)pObject);
+			break;
+		case OBT_SYNONYM:
+		case OBT_SYNONYMOBJECT:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaSynonymDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaSynonymDetail)))
+				bOk = QueryDetailSynonym (pQueryInfo, (CaSynonym*)pObject);
+			break;
+		case OBT_DBEVENT:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaDBEventDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaDBEventDetail)))
+				bOk = QueryDetailDBEvent(pQueryInfo, (CaDBEvent*)pObject);
+			break;
+		case OBT_GRANTEE:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaGrantee)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaGrantee)))
+				bOk = QueryDetailGrantee(pQueryInfo, (CaGrantee*)pObject, pSessionManager, pSession);
+			break;
+		case OBT_ALARM:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaAlarm)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaAlarm)))
+				bOk = QueryDetailAlarm(pQueryInfo, (CaAlarm*)pObject);
+			break;
+		default:
+			ASSERT(FALSE);
+			break;
+		}
+
+		if (pSessionManager && pUseSession)
+		{
+			pUseSession->Release(SESSION_COMMIT);
+			delete pUseSession;
+		}
+		else
+		{
+			session.Disconnect();
+		}
+	}
+	catch (CeSqlException e)
+	{
+		if (pUseSession)
+		{
+			pUseSession->Release(SESSION_ROLLBACK);
+			delete pUseSession;
+		}
+		throw CeSqlException (e.GetReason(), e.GetErrorCode());
+	}
+	catch (...)
+	{
+		if (pUseSession)
+		{
+			pUseSession->Release(SESSION_ROLLBACK);
+			delete pUseSession;
+		}
+		throw CeSqlException (_T("System error: unknown error while accessing ingres's database"));
+	}
+
+	return bOk;
+}
+
+
+
+BOOL INGRESII_llQueryDetailObject2 (CaLLQueryInfo* pQueryInfo, CaDBObject* pObject, CaSession* pSession)
+{
+	BOOL bOk = FALSE;
+	ASSERT (pQueryInfo);
+	if (!pQueryInfo)
+		return bOk;
+
+	int nObjectType = pQueryInfo->GetObjectType();
+	int nSubObjectType = pQueryInfo->GetSubObjectType();
+	try
+	{
+		switch (pQueryInfo->m_nTypeObject)
+		{
+		case OBT_DATABASE: 
+		case OBT_PROFILE:
+		case OBT_USER:
+		case OBT_GROUP:
+		case OBT_ROLE:
+		case OBT_LOCATION:
+		case OBT_SEQUENCE:
+		case OBT_GROUPUSER:
+		case OBT_TABLE:
+		case OBT_VIEW:
+		case OBT_INDEX:
+		case OBT_TABLELOCATION:
+		case OBT_TABLECOLUMN:
+		case OBT_VIEWCOLUMN:
+		case OBT_SYNONYM:
+		case OBT_SYNONYMOBJECT:
+		case OBT_DBEVENT:
+		case OBT_GRANTEE:
+		case OBT_ALARM:
+			ASSERT(FALSE); // TODO (not implemented)
+			break;
+
+		case OBT_PROCEDURE:
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaProcedureDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaProcedureDetail)))
+				bOk = QueryDetailProcedure(pQueryInfo, (CaProcedure*)pObject);
+			break;
+		case OBT_RULE:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaRuleDetail)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaRuleDetail)))
+				bOk = QueryDetailRule(pQueryInfo, (CaRule*)pObject);
+			break;
+		case OBT_INTEGRITY:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			ASSERT (pObject->IsKindOf(RUNTIME_CLASS(CaIntegrity)));
+			if (pObject->IsKindOf(RUNTIME_CLASS(CaIntegrity)))
+				bOk = QueryDetailIntegrity(pQueryInfo, (CaIntegrity*)pObject);
+			break;
+		default:
+			ASSERT(FALSE);
+			break;
+		}
+	}
+	catch (CeSqlException e)
+	{
+		throw CeSqlException (e.GetReason(), e.GetErrorCode());
+	}
+	catch (...)
+	{
+		throw CeSqlException (_T("System error: unknown error while accessing ingres's database"));
+	}
+
+	return bOk;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        // ***************************
+                        // LOCAL STATIC FUNCTION
+                        // ***************************
+static BOOL QueryDetailUserOpenSource (CaLLQueryInfo* pQueryInfo, CaUser* pObject)
+{
+	USES_CONVERSION;
+	
+	CString strUser = pObject->GetName();
+	//strUser.MakeLower();
+	CaUserDetail* pDetail = (CaUserDetail*)pObject;
+	pDetail->Init();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char Default_group[DBOBJECTLEN];
+		char Profile_name [DBOBJECTLEN];
+		char Expire_date  [MAXDATELEN];
+		char*usrname= T2A((LPTSTR)(LPCTSTR)strUser);
+		char Creatdb[2], Trace[2], Audit_all[2], Security[2],
+		Maintain_locations[2], Operator[2], Maintain_users[2],
+		Maintain_audit[2], Auditor[2], Audit_query_text[2];
+
+		char szWriteDown[2];
+		char szWriteFixed[2];
+		char szWriteUp[2];
+		char szInsertDown[2];
+		char szInsertUp[2];
+		char szSessionSecurityLabel[2];
+		long InternFlag;
+
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILUSER_OP_ERROR;
+	EXEC SQL REPEATED SELECT
+		DEFAULT_GROUP,
+		CREATEDB,
+		TRACE,
+		SECURITY,
+		MAINTAIN_LOCATIONS,
+		OPERATOR,
+		MAINTAIN_USERS,
+		MAINTAIN_AUDIT,
+		AUDITOR,
+		AUDIT_ALL,
+		AUDIT_QUERY_TEXT,
+		EXPIRE_DATE,
+		PROFILE_NAME,
+		INTERNAL_FLAGS,
+		char(charextract('NRY', mod((internal_status/  131072),2)+  mod((internal_def_priv/  131072),2)+1)),
+		char(charextract('NRY', mod((internal_status/ 8388608),2)+  mod((internal_def_priv/ 8388608),2)+1)),
+		char(charextract('NRY', mod((internal_status/  524288),2)+  mod((internal_def_priv/  524288),2)+1)),
+		char(charextract('NRY', mod((internal_status/  262144),2)+  mod((internal_def_priv/  262144),2)+1)),
+		char(charextract('NRY', mod((internal_status/ 1048576),2)+  mod((internal_def_priv/ 1048576),2)+1)),
+		char(charextract('NRY', mod((internal_status/ 4194304),2)+  mod((internal_def_priv/ 4194304),2)+1))
+	INTO
+		:Default_group, 
+		:Creatdb,
+		:Trace,
+		:Security,
+		:Maintain_locations,
+		:Operator,
+		:Maintain_users,
+		:Maintain_audit,
+		:Auditor,
+		:Audit_all,
+		:Audit_query_text,
+		:Expire_date,
+		:Profile_name,
+		:InternFlag,
+		:szWriteDown,
+		:szWriteFixed,
+		:szWriteUp,
+		:szInsertDown,
+		:szInsertUp,
+		:szSessionSecurityLabel
+	FROM IIUSERS
+	WHERE USER_NAME=:usrname;
+
+	EXEC SQL BEGIN;
+		CString strItem;
+		BOOL bSet = (InternFlag & 131072L)? TRUE: FALSE;
+		pDetail->SetExternalPassword (bSet);
+
+		// CREATE DATABASE:
+		if (toupper(Creatdb[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_CREATE_DATABASE);
+			pDetail->SetDefaultPrivilege(URP_CREATE_DATABASE);
+		}
+		else 
+		if (toupper(Creatdb[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_CREATE_DATABASE);
+		}
+
+		// TRACE:
+		if (toupper(Trace[0])=='Y') 
+		{
+			pDetail->SetPrivilege(URP_TRACE);
+			pDetail->SetDefaultPrivilege(URP_TRACE);
+		}
+		else
+		if (toupper(Trace[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_TRACE);
+		}
+
+		// SECURITY:
+		if (toupper(Security[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_SECURITY);
+			pDetail->SetDefaultPrivilege(URP_SECURITY);
+		}
+		else
+		if (toupper(Security[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_SECURITY);
+		}
+
+		// MAINTAIN LOCATION:
+		if (toupper(Maintain_locations[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+			pDetail->SetDefaultPrivilege(URP_MAINTAIN_LOCATION);
+		}
+		else
+		if (toupper(Maintain_locations[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+		}
+
+		// OPERATOR:
+		if (toupper(Operator[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_OPERATOR);
+			pDetail->SetDefaultPrivilege(URP_OPERATOR);
+		}
+		else
+		if (toupper(Operator[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_OPERATOR);
+		}
+
+		// MAINTAIN USER:
+		if (toupper(Maintain_users[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_USER);
+			pDetail->SetDefaultPrivilege(URP_MAINTAIN_USER);
+		}
+		else
+		if (toupper(Maintain_users[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_USER);
+		}
+
+		// MAINTAIN AUDIT:
+		if (toupper(Maintain_audit[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+			pDetail->SetDefaultPrivilege(URP_MAINTAIN_AUDIT);
+		}
+		else 
+		if (toupper(Maintain_audit[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+		}
+
+		// AUDITOR:
+		if (toupper(Auditor[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_AUDITOR);
+			pDetail->SetDefaultPrivilege(URP_AUDITOR);
+		}
+		else 
+		if (toupper(Auditor[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_AUDITOR);
+		}
+
+		//
+		// MAC: write_down:
+		if (toupper(szWriteDown[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_WRITEDOWN);
+			pDetail->SetDefaultPrivilege(URP_WRITEDOWN);
+		}
+		else
+		if (toupper(szWriteDown[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_WRITEDOWN);
+		}
+
+		//
+		// MAC: write_fixed:
+		if (toupper(szWriteFixed[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_WRITEFIXED);
+			pDetail->SetDefaultPrivilege(URP_WRITEFIXED);
+		}
+		else
+		if (toupper(szWriteFixed[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_WRITEFIXED);
+		}
+
+		//
+		// MAC: write_up:
+		if (toupper(szWriteUp[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_WRITEUP);
+			pDetail->SetDefaultPrivilege(URP_WRITEUP);
+		}
+		else
+		if (toupper(szWriteUp[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_WRITEUP);
+		}
+
+		//
+		// MAC: insert_down:
+		if (toupper(szInsertDown[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_INSERTDOWN);
+			pDetail->SetDefaultPrivilege(URP_INSERTDOWN);
+		}
+		else
+		if (toupper(szInsertDown[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_INSERTDOWN);
+		}
+
+		//
+		// MAC: insert_up:
+		if (toupper(szInsertUp[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_INSERTUP);
+			pDetail->SetDefaultPrivilege(URP_INSERTUP);
+		}
+		else
+		if (toupper(szInsertUp[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_INSERTUP);
+		}
+
+		//
+		// MAC: session_security_label:
+		if (toupper(szSessionSecurityLabel[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+			pDetail->SetDefaultPrivilege(URP_INSERTUP);
+		}
+		else
+		if (toupper(szSessionSecurityLabel[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+		}
+
+		// Audit_All
+		bSet = (toupper(Audit_all[0])=='Y');
+		pDetail->SetSecurityAuditAllEvent(bSet);
+		// Audit Query_text
+		bSet = (toupper(Audit_query_text[0])=='Y');
+		pDetail->SetSecurityAuditQueryText(bSet);
+
+		// Default Group:
+		strItem = Default_group;
+		strItem.TrimRight();
+		pDetail->SetDefaultGroup(strItem);
+
+		// Expire Date:
+		strItem = Expire_date;
+		strItem.TrimRight();
+		pDetail->SetExpireDate(strItem);
+
+		// Default Profile:
+		strItem = Profile_name;
+		strItem.TrimRight();
+		pDetail->SetDefaultProfile(strItem);
+
+	EXEC SQL END;
+	return TRUE;
+
+QUERYDETAILUSER_OP_ERROR:
+	pDetail->Init();
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailUser (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CaUser* pObject)
+{
+	USES_CONVERSION;
+	if (pSession && pSession->GetVersion() >= INGRESVERS_30)
+		return QueryDetailUserOpenSource(pQueryInfo, pObject);
+	
+	CString strUser = pObject->GetName();
+	//strUser.MakeLower();
+	CaUserDetail* pDetail = (CaUserDetail*)pObject;
+	pDetail->Init();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		short sNullInd;
+		char Default_group[DBOBJECTLEN];
+		char Profile_name [DBOBJECTLEN];
+		char Expire_date  [MAXDATELEN];
+		char*usrname= T2A((LPTSTR)(LPCTSTR)strUser);
+		char Lim_sec_label[128+1];
+		char Creatdb[2], Trace[2], Audit_all[2], Security[2],
+		Maintain_locations[2], Operator[2], Maintain_users[2],
+		Maintain_audit[2], Auditor[2], Audit_query_text[2];
+
+		char szWriteDown[2];
+		char szWriteFixed[2];
+		char szWriteUp[2];
+		char szInsertDown[2];
+		char szInsertUp[2];
+		char szSessionSecurityLabel[2];
+		long InternFlag;
+
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILUSER_ERROR;
+	EXEC SQL REPEATED SELECT
+		DEFAULT_GROUP,
+		CREATEDB,
+		TRACE,
+		SECURITY,
+		MAINTAIN_LOCATIONS,
+		OPERATOR,
+		MAINTAIN_USERS,
+		MAINTAIN_AUDIT,
+		AUDITOR,
+		AUDIT_ALL,
+		AUDIT_QUERY_TEXT,
+		EXPIRE_DATE,
+		PROFILE_NAME,
+		LIM_SEC_LABEL, 
+		INTERNAL_FLAGS,
+		char(charextract('NRY', mod((internal_status/  131072),2)+  mod((internal_def_priv/  131072),2)+1)),
+		char(charextract('NRY', mod((internal_status/ 8388608),2)+  mod((internal_def_priv/ 8388608),2)+1)),
+		char(charextract('NRY', mod((internal_status/  524288),2)+  mod((internal_def_priv/  524288),2)+1)),
+		char(charextract('NRY', mod((internal_status/  262144),2)+  mod((internal_def_priv/  262144),2)+1)),
+		char(charextract('NRY', mod((internal_status/ 1048576),2)+  mod((internal_def_priv/ 1048576),2)+1)),
+		char(charextract('NRY', mod((internal_status/ 4194304),2)+  mod((internal_def_priv/ 4194304),2)+1))
+	INTO
+		:Default_group, 
+		:Creatdb,
+		:Trace,
+		:Security,
+		:Maintain_locations,
+		:Operator,
+		:Maintain_users,
+		:Maintain_audit,
+		:Auditor,
+		:Audit_all,
+		:Audit_query_text,
+		:Expire_date,
+		:Profile_name,
+		:Lim_sec_label:sNullInd,
+		:InternFlag,
+		:szWriteDown,
+		:szWriteFixed,
+		:szWriteUp,
+		:szInsertDown,
+		:szInsertUp,
+		:szSessionSecurityLabel
+	FROM IIUSERS
+	WHERE USER_NAME=:usrname;
+
+	EXEC SQL BEGIN;
+		CString strItem;
+		BOOL bSet = (InternFlag & 131072L)? TRUE: FALSE;
+		pDetail->SetExternalPassword (bSet);
+
+		// CREATE DATABASE:
+		if (toupper(Creatdb[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_CREATE_DATABASE);
+			pDetail->SetDefaultPrivilege(URP_CREATE_DATABASE);
+		}
+		else 
+		if (toupper(Creatdb[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_CREATE_DATABASE);
+		}
+
+		// TRACE:
+		if (toupper(Trace[0])=='Y') 
+		{
+			pDetail->SetPrivilege(URP_TRACE);
+			pDetail->SetDefaultPrivilege(URP_TRACE);
+		}
+		else
+		if (toupper(Trace[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_TRACE);
+		}
+
+		// SECURITY:
+		if (toupper(Security[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_SECURITY);
+			pDetail->SetDefaultPrivilege(URP_SECURITY);
+		}
+		else
+		if (toupper(Security[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_SECURITY);
+		}
+
+		// MAINTAIN LOCATION:
+		if (toupper(Maintain_locations[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+			pDetail->SetDefaultPrivilege(URP_MAINTAIN_LOCATION);
+		}
+		else
+		if (toupper(Maintain_locations[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+		}
+
+		// OPERATOR:
+		if (toupper(Operator[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_OPERATOR);
+			pDetail->SetDefaultPrivilege(URP_OPERATOR);
+		}
+		else
+		if (toupper(Operator[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_OPERATOR);
+		}
+
+		// MAINTAIN USER:
+		if (toupper(Maintain_users[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_USER);
+			pDetail->SetDefaultPrivilege(URP_MAINTAIN_USER);
+		}
+		else
+		if (toupper(Maintain_users[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_USER);
+		}
+
+		// MAINTAIN AUDIT:
+		if (toupper(Maintain_audit[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+			pDetail->SetDefaultPrivilege(URP_MAINTAIN_AUDIT);
+		}
+		else 
+		if (toupper(Maintain_audit[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+		}
+
+		// AUDITOR:
+		if (toupper(Auditor[0])=='Y')
+		{
+			pDetail->SetPrivilege(URP_AUDITOR);
+			pDetail->SetDefaultPrivilege(URP_AUDITOR);
+		}
+		else 
+		if (toupper(Auditor[0])=='R')
+		{
+			pDetail->SetPrivilege(URP_AUDITOR);
+		}
+
+		//
+		// MAC: write_down:
+		if (toupper(szWriteDown[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_WRITEDOWN);
+			pDetail->SetDefaultPrivilege(URP_WRITEDOWN);
+		}
+		else
+		if (toupper(szWriteDown[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_WRITEDOWN);
+		}
+
+		//
+		// MAC: write_fixed:
+		if (toupper(szWriteFixed[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_WRITEFIXED);
+			pDetail->SetDefaultPrivilege(URP_WRITEFIXED);
+		}
+		else
+		if (toupper(szWriteFixed[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_WRITEFIXED);
+		}
+
+		//
+		// MAC: write_up:
+		if (toupper(szWriteUp[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_WRITEUP);
+			pDetail->SetDefaultPrivilege(URP_WRITEUP);
+		}
+		else
+		if (toupper(szWriteUp[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_WRITEUP);
+		}
+
+		//
+		// MAC: insert_down:
+		if (toupper(szInsertDown[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_INSERTDOWN);
+			pDetail->SetDefaultPrivilege(URP_INSERTDOWN);
+		}
+		else
+		if (toupper(szInsertDown[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_INSERTDOWN);
+		}
+
+		//
+		// MAC: insert_up:
+		if (toupper(szInsertUp[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_INSERTUP);
+			pDetail->SetDefaultPrivilege(URP_INSERTUP);
+		}
+		else
+		if (toupper(szInsertUp[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_INSERTUP);
+		}
+
+		//
+		// MAC: session_security_label:
+		if (toupper(szSessionSecurityLabel[0])  == 'Y')
+		{
+			pDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+			pDetail->SetDefaultPrivilege(URP_INSERTUP);
+		}
+		else
+		if (toupper(szSessionSecurityLabel[0])  == 'R')
+		{
+			pDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+		}
+
+		// Audit_All
+		bSet = (toupper(Audit_all[0])=='Y');
+		pDetail->SetSecurityAuditAllEvent(bSet);
+		// Audit Query_text
+		bSet = (toupper(Audit_query_text[0])=='Y');
+		pDetail->SetSecurityAuditQueryText(bSet);
+		//
+		// Limit Security Label:
+		if (sNullInd==0) 
+		{
+			strItem = Lim_sec_label;
+			strItem.TrimRight();
+			pDetail->SetLimitSecurityLabel(strItem);
+		}
+
+		// Default Group:
+		strItem = Default_group;
+		strItem.TrimRight();
+		pDetail->SetDefaultGroup(strItem);
+
+		// Expire Date:
+		strItem = Expire_date;
+		strItem.TrimRight();
+		pDetail->SetExpireDate(strItem);
+
+		// Default Profile:
+		strItem = Profile_name;
+		strItem.TrimRight();
+		pDetail->SetDefaultProfile(strItem);
+
+	EXEC SQL END;
+	return TRUE;
+
+QUERYDETAILUSER_ERROR:
+	pDetail->Init();
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailGroup (CaLLQueryInfo* pQueryInfo, CaGroup* pObject)
+{
+	USES_CONVERSION;
+	CString strObjectName = pObject->GetName();
+	//strObjectName.MakeLower();
+	CaGroupDetail* pObjectDetail = (CaGroupDetail*)pObject;
+	CStringList& listMember = pObjectDetail->GetListMember();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szMember [128];
+		char* name = T2A((LPTSTR)(LPCTSTR)strObjectName);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILGROUP_ERROR;
+	EXEC SQL REPEATED SELECT
+		GROUPMEM
+	INTO
+		:szMember
+	FROM IIUSERGROUP
+	WHERE GROUPID= :name;
+
+	EXEC SQL BEGIN;
+		TrimRight(szMember);
+		CString strItem = A2T(szMember);
+		strItem.TrimLeft();
+		strItem.TrimRight();
+		if (!strItem.IsEmpty())
+		{
+			listMember.AddTail(strItem);
+		}
+
+	EXEC SQL END;
+	return TRUE;
+
+QUERYDETAILGROUP_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailProfileOpenSource (CaLLQueryInfo* pQueryInfo, CaProfile* pObject)
+{
+	USES_CONVERSION;
+	
+	CString strObjectName = pObject->GetName();
+	//strObjectName.MakeLower();
+	CaProfileDetail* pObjectDetail = (CaProfileDetail*)pObject;
+	pObjectDetail->Init();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		long l1;
+		char Default_group[DBOBJECTLEN];
+		char Expire_date[MAXDATELEN];
+		char*profname= T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char Creatdb[2], Trace[2], Audit_all[2], Security[2];
+		char Maintain_locations[2], Operator[2], Maintain_users[2];
+		char Maintain_audit[2], Auditor[2], Audit_query_text[2];
+
+		char szWriteDown[2];
+		char szWriteFixed[2];
+		char szWriteUp[2];
+		char szInsertDown[2];
+		char szInsertUp[2];
+		char szSessionSecurityLabel[2];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILPROFILE_ERROR;
+	EXEC SQL REPEATED SELECT
+		DEFAULT_GROUP,
+		char(charextract('NRY', mod((p.status), 2)       +mod((p.default_priv), 2) +1)),        /* createdb */
+		char(charextract('NRY', mod((p.status/16), 2)    +mod((p.default_priv/16), 2) +1)),     /*trace*/
+		char(charextract('NRY', mod((p.status/32768), 2) +mod((p.default_priv/32768), 2) +1)),  /*security*/
+		char(charextract('NRY', mod((p.status/2048), 2)  +mod((p.default_priv/2048), 2) +1)),   /* maintain_locations*/
+		char(charextract('NRY', mod((p.status/512), 2)   +mod((p.default_priv/512), 2) +1)),    /* operator */
+		char(charextract('NRY', mod((p.status/65536), 2) +mod((p.default_priv/65536), 2) +1)),  /* maintain users*/
+		char(charextract('NRY', mod((p.status/16384), 2) +mod((p.default_priv/16384), 2) +1)),  /* maintain_audit */
+		char(charextract('NRY', mod((p.status/8192), 2)  +mod((p.default_priv/8192), 2) +1)),   /* auditor */
+		char(charextract('NY',  mod((p.status/1024), 2) +1)),                                   /*audit_all */
+		char(charextract('NY',  mod((p.status/16777216), 2) +1)),                               /* audit_query_text */
+
+		char(charextract('NRY', mod((p.status/131072),2) +mod((default_priv/131072),2)+1)),
+		char(charextract('NRY', mod((p.status/8388608),2)+mod((default_priv/8388608),2)+1)),
+		char(charextract('NRY', mod((p.status/524288),2) +mod((default_priv/524288),2)+1)),
+		char(charextract('NRY', mod((p.status/262144),2) +mod((default_priv/262144),2)+1)),
+		char(charextract('NRY', mod((p.status/1048576),2)+mod((default_priv/1048576),2)+1)),
+		char(charextract('NRY', mod((p.status/4194304),2)+mod((default_priv/4194304),2)+1)),
+		EXPIRE_DATE, 
+		STATUS
+	INTO
+		:Default_group,
+		:Creatdb,
+		:Trace,
+		:Security,
+		:Maintain_locations,
+		:Operator, 
+		:Maintain_users,
+		:Maintain_audit,
+		:Auditor,
+		:Audit_all,
+		:Audit_query_text, 
+		:szWriteDown,
+		:szWriteFixed,
+		:szWriteUp,
+		:szInsertDown,
+		:szInsertUp,
+		:szSessionSecurityLabel,
+		:Expire_date, 
+		:l1
+	FROM IIPROFILE p
+	WHERE NAME=:profname;
+
+	EXEC SQL BEGIN;
+		BOOL bSet = FALSE;
+		CString strItem;
+
+		// CREATE DATABASE:
+		if (toupper(Creatdb[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_CREATE_DATABASE);
+			pObjectDetail->SetDefaultPrivilege(URP_CREATE_DATABASE);
+		}
+		else 
+		if (toupper(Creatdb[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_CREATE_DATABASE);
+		}
+
+		// TRACE:
+		if (toupper(Trace[0])=='Y') 
+		{
+			pObjectDetail->SetPrivilege(URP_TRACE);
+			pObjectDetail->SetDefaultPrivilege(URP_TRACE);
+		}
+		else
+		if (toupper(Trace[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_TRACE);
+		}
+
+		// SECURITY:
+		if (toupper(Security[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_SECURITY);
+			pObjectDetail->SetDefaultPrivilege(URP_SECURITY);
+		}
+		else
+		if (toupper(Security[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_SECURITY);
+		}
+
+		// MAINTAIN LOCATION:
+		if (toupper(Maintain_locations[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+			pObjectDetail->SetDefaultPrivilege(URP_MAINTAIN_LOCATION);
+		}
+		else
+		if (toupper(Maintain_locations[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+		}
+
+		// OPERATOR:
+		if (toupper(Operator[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_OPERATOR);
+			pObjectDetail->SetDefaultPrivilege(URP_OPERATOR);
+		}
+		else
+		if (toupper(Operator[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_OPERATOR);
+		}
+
+		// MAINTAIN USER:
+		if (toupper(Maintain_users[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_USER);
+			pObjectDetail->SetDefaultPrivilege(URP_MAINTAIN_USER);
+		}
+		else
+		if (toupper(Maintain_users[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_USER);
+		}
+
+		// MAINTAIN AUDIT:
+		if (toupper(Maintain_audit[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+			pObjectDetail->SetDefaultPrivilege(URP_MAINTAIN_AUDIT);
+		}
+		else 
+		if (toupper(Maintain_audit[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+		}
+
+		// AUDITOR:
+		if (toupper(Auditor[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_AUDITOR);
+			pObjectDetail->SetDefaultPrivilege(URP_AUDITOR);
+		}
+		else 
+		if (toupper(Auditor[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_AUDITOR);
+		}
+
+		//
+		// MAC: write_down:
+		if (toupper(szWriteDown[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEDOWN);
+			pObjectDetail->SetDefaultPrivilege(URP_WRITEDOWN);
+		}
+		else
+		if (toupper(szWriteDown[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEDOWN);
+		}
+
+		//
+		// MAC: write_fixed:
+		if (toupper(szWriteFixed[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEFIXED);
+			pObjectDetail->SetDefaultPrivilege(URP_WRITEFIXED);
+		}
+		else
+		if (toupper(szWriteFixed[0]))
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEFIXED);
+		}
+
+		//
+		// MAC: write_up:
+		if (toupper(szWriteUp[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEUP);
+			pObjectDetail->SetDefaultPrivilege(URP_WRITEUP);
+		}
+		else
+		if (toupper(szWriteUp[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEUP);
+		}
+
+		//
+		// MAC: insert_down:
+		if (toupper(szInsertDown[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTDOWN);
+			pObjectDetail->SetDefaultPrivilege(URP_INSERTDOWN);
+		}
+		else
+		if (toupper(szInsertDown[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTDOWN);
+		}
+
+		//
+		// MAC: insert_up:
+		if (toupper(szInsertUp[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTUP);
+			pObjectDetail->SetDefaultPrivilege(URP_INSERTUP);
+		}
+		else
+		if (toupper(szInsertUp[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTUP);
+		}
+
+		//
+		// MAC: session_security_label:
+		if (toupper(szSessionSecurityLabel[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+			pObjectDetail->SetDefaultPrivilege(URP_INSERTUP);
+		}
+		else
+		if (toupper(szSessionSecurityLabel[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+		}
+
+		// Audit_All
+		bSet = (toupper(Audit_all[0])=='Y');
+		pObjectDetail->SetSecurityAuditAllEvent(bSet);
+		// Audit Query_text
+		bSet = (toupper(Audit_query_text[0])=='Y');
+		pObjectDetail->SetSecurityAuditQueryText(bSet);
+
+		// Default Group:
+		strItem = Default_group;
+		strItem.TrimRight();
+		pObjectDetail->SetDefaultGroup(strItem);
+
+		// Expire Date:
+		strItem = Expire_date;
+		strItem.TrimRight();
+		pObjectDetail->SetExpireDate(strItem);
+
+	EXEC SQL END;
+	return TRUE;
+
+QUERYDETAILPROFILE_ERROR:
+	pObjectDetail->Init();
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailProfile (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CaProfile* pObject)
+{
+	USES_CONVERSION;
+	if (pSession && pSession->GetVersion() >= INGRESVERS_30)
+		return QueryDetailProfileOpenSource(pQueryInfo, pObject);
+	
+	CString strObjectName = pObject->GetName();
+	//strObjectName.MakeLower();
+	CaProfileDetail* pObjectDetail = (CaProfileDetail*)pObject;
+	pObjectDetail->Init();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		short sNullInd;
+		long l1;
+		char Default_group[DBOBJECTLEN];
+		char Expire_date[MAXDATELEN];
+		char*profname= T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char Lim_sec_label[128+1];
+		char Creatdb[2], Trace[2], Audit_all[2], Security[2];
+		char Maintain_locations[2], Operator[2], Maintain_users[2];
+		char Maintain_audit[2], Auditor[2], Audit_query_text[2];
+
+		char szWriteDown[2];
+		char szWriteFixed[2];
+		char szWriteUp[2];
+		char szInsertDown[2];
+		char szInsertUp[2];
+		char szSessionSecurityLabel[2];
+	EXEC SQL END DECLARE SECTION;
+
+	/*
+	x_strcpy(profname,profprm->ObjectName);
+	if (!x_strcmp(profname,lpdefprofiledispstring())) {
+		x_strcpy(profname,"");
+		profprm->bDefProfile=TRUE;
+	}
+	*/
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILPROFILE_ERROR;
+	EXEC SQL REPEATED SELECT
+		DEFAULT_GROUP,
+		char(charextract('NRY', mod((p.status), 2)       +mod((p.default_priv), 2) +1)),        /* createdb */
+		char(charextract('NRY', mod((p.status/16), 2)    +mod((p.default_priv/16), 2) +1)),     /*trace*/
+		char(charextract('NRY', mod((p.status/32768), 2) +mod((p.default_priv/32768), 2) +1)),  /*security*/
+		char(charextract('NRY', mod((p.status/2048), 2)  +mod((p.default_priv/2048), 2) +1)),   /* maintain_locations*/
+		char(charextract('NRY', mod((p.status/512), 2)   +mod((p.default_priv/512), 2) +1)),    /* operator */
+		char(charextract('NRY', mod((p.status/65536), 2) +mod((p.default_priv/65536), 2) +1)),  /* maintain users*/
+		char(charextract('NRY', mod((p.status/16384), 2) +mod((p.default_priv/16384), 2) +1)),  /* maintain_audit */
+		char(charextract('NRY', mod((p.status/8192), 2)  +mod((p.default_priv/8192), 2) +1)),   /* auditor */
+		char(charextract('NY',  mod((p.status/1024), 2) +1)),                                   /*audit_all */
+		char(charextract('NY',  mod((p.status/16777216), 2) +1)),                               /* audit_query_text */
+
+		char(charextract('NRY', mod((p.status/131072),2) +mod((default_priv/131072),2)+1)),
+		char(charextract('NRY', mod((p.status/8388608),2)+mod((default_priv/8388608),2)+1)),
+		char(charextract('NRY', mod((p.status/524288),2) +mod((default_priv/524288),2)+1)),
+		char(charextract('NRY', mod((p.status/262144),2) +mod((default_priv/262144),2)+1)),
+		char(charextract('NRY', mod((p.status/1048576),2)+mod((default_priv/1048576),2)+1)),
+		char(charextract('NRY', mod((p.status/4194304),2)+mod((default_priv/4194304),2)+1)),
+		EXPIRE_DATE, 
+		LIM_SECID,
+		STATUS
+	INTO
+		:Default_group,
+		:Creatdb,
+		:Trace,
+		:Security,
+		:Maintain_locations,
+		:Operator, 
+		:Maintain_users,
+		:Maintain_audit,
+		:Auditor,
+		:Audit_all,
+		:Audit_query_text, 
+		:szWriteDown,
+		:szWriteFixed,
+		:szWriteUp,
+		:szInsertDown,
+		:szInsertUp,
+		:szSessionSecurityLabel,
+		:Expire_date, :Lim_sec_label:sNullInd,:l1
+	FROM IIPROFILE p
+	WHERE NAME=:profname;
+
+	EXEC SQL BEGIN;
+		BOOL bSet = FALSE;
+		CString strItem;
+
+		// CREATE DATABASE:
+		if (toupper(Creatdb[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_CREATE_DATABASE);
+			pObjectDetail->SetDefaultPrivilege(URP_CREATE_DATABASE);
+		}
+		else 
+		if (toupper(Creatdb[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_CREATE_DATABASE);
+		}
+
+		// TRACE:
+		if (toupper(Trace[0])=='Y') 
+		{
+			pObjectDetail->SetPrivilege(URP_TRACE);
+			pObjectDetail->SetDefaultPrivilege(URP_TRACE);
+		}
+		else
+		if (toupper(Trace[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_TRACE);
+		}
+
+		// SECURITY:
+		if (toupper(Security[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_SECURITY);
+			pObjectDetail->SetDefaultPrivilege(URP_SECURITY);
+		}
+		else
+		if (toupper(Security[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_SECURITY);
+		}
+
+		// MAINTAIN LOCATION:
+		if (toupper(Maintain_locations[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+			pObjectDetail->SetDefaultPrivilege(URP_MAINTAIN_LOCATION);
+		}
+		else
+		if (toupper(Maintain_locations[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+		}
+
+		// OPERATOR:
+		if (toupper(Operator[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_OPERATOR);
+			pObjectDetail->SetDefaultPrivilege(URP_OPERATOR);
+		}
+		else
+		if (toupper(Operator[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_OPERATOR);
+		}
+
+		// MAINTAIN USER:
+		if (toupper(Maintain_users[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_USER);
+			pObjectDetail->SetDefaultPrivilege(URP_MAINTAIN_USER);
+		}
+		else
+		if (toupper(Maintain_users[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_USER);
+		}
+
+		// MAINTAIN AUDIT:
+		if (toupper(Maintain_audit[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+			pObjectDetail->SetDefaultPrivilege(URP_MAINTAIN_AUDIT);
+		}
+		else 
+		if (toupper(Maintain_audit[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+		}
+
+		// AUDITOR:
+		if (toupper(Auditor[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_AUDITOR);
+			pObjectDetail->SetDefaultPrivilege(URP_AUDITOR);
+		}
+		else 
+		if (toupper(Auditor[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_AUDITOR);
+		}
+
+		//
+		// MAC: write_down:
+		if (toupper(szWriteDown[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEDOWN);
+			pObjectDetail->SetDefaultPrivilege(URP_WRITEDOWN);
+		}
+		else
+		if (toupper(szWriteDown[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEDOWN);
+		}
+
+		//
+		// MAC: write_fixed:
+		if (toupper(szWriteFixed[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEFIXED);
+			pObjectDetail->SetDefaultPrivilege(URP_WRITEFIXED);
+		}
+		else
+		if (toupper(szWriteFixed[0]))
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEFIXED);
+		}
+
+		//
+		// MAC: write_up:
+		if (toupper(szWriteUp[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEUP);
+			pObjectDetail->SetDefaultPrivilege(URP_WRITEUP);
+		}
+		else
+		if (toupper(szWriteUp[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEUP);
+		}
+
+		//
+		// MAC: insert_down:
+		if (toupper(szInsertDown[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTDOWN);
+			pObjectDetail->SetDefaultPrivilege(URP_INSERTDOWN);
+		}
+		else
+		if (toupper(szInsertDown[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTDOWN);
+		}
+
+		//
+		// MAC: insert_up:
+		if (toupper(szInsertUp[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTUP);
+			pObjectDetail->SetDefaultPrivilege(URP_INSERTUP);
+		}
+		else
+		if (toupper(szInsertUp[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTUP);
+		}
+
+		//
+		// MAC: session_security_label:
+		if (toupper(szSessionSecurityLabel[0])  == 'Y')
+		{
+			pObjectDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+			pObjectDetail->SetDefaultPrivilege(URP_INSERTUP);
+		}
+		else
+		if (toupper(szSessionSecurityLabel[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+		}
+
+		// Audit_All
+		bSet = (toupper(Audit_all[0])=='Y');
+		pObjectDetail->SetSecurityAuditAllEvent(bSet);
+		// Audit Query_text
+		bSet = (toupper(Audit_query_text[0])=='Y');
+		pObjectDetail->SetSecurityAuditQueryText(bSet);
+		//
+		// Limit Security Label:
+		if (sNullInd==0) 
+		{
+			strItem = Lim_sec_label;
+			strItem.TrimRight();
+			pObjectDetail->SetLimitSecurityLabel(strItem);
+		}
+
+		// Default Group:
+		strItem = Default_group;
+		strItem.TrimRight();
+		pObjectDetail->SetDefaultGroup(strItem);
+
+		// Expire Date:
+		strItem = Expire_date;
+		strItem.TrimRight();
+		pObjectDetail->SetExpireDate(strItem);
+
+	EXEC SQL END;
+	return TRUE;
+
+QUERYDETAILPROFILE_ERROR:
+	pObjectDetail->Init();
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailRoleOpenSource (CaLLQueryInfo* pQueryInfo, CaRole* pObject)
+{
+	USES_CONVERSION;
+
+	CString strObjectName = pObject->GetName();
+	//strObjectName.MakeLower();
+	CaRoleDetail* pObjectDetail = (CaRoleDetail*)pObject;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		long lInternpasswd;
+		char*rolname=T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char Creatdb[2], Trace[2], Audit_all[2], Security[2];
+		char Maintain_locations[2], Operator[2], Maintain_users[2];
+		char Maintain_audit[2], Auditor[2], Audit_query_text[2];
+
+		char szWriteDown[2];
+		char szWriteFixed[2];
+		char szWriteUp[2];
+		char szInsertDown[2];
+		char szInsertUp[2];
+		char szSessionSecurityLabel[2];
+
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILROLE_OP_ERROR;
+	EXEC SQL REPEATED SELECT
+		CREATEDB,
+		TRACE,
+		SECURITY,
+		MAINTAIN_LOCATIONS,
+		OPERATOR,
+		MAINTAIN_USERS,
+		MAINTAIN_AUDIT,
+		AUDITOR,
+		AUDIT_ALL,
+		AUDIT_QUERY_TEXT,
+		INTERNAL_FLAGS,
+		char(charextract('NRY', mod((internal_status/   131072),2) +mod((internal_flags/  131072),2)+1)),
+		char(charextract('NRY', mod((internal_status/  8388608),2) +mod((internal_flags/ 8388608),2)+1)),
+		char(charextract('NRY', mod((internal_status/   524288),2) +mod((internal_flags/  524288),2)+1)),
+		char(charextract('NRY', mod((internal_status/   262144),2) +mod((internal_flags/  262144),2)+1)),
+		char(charextract('NRY', mod((internal_status/  1048576),2) +mod((internal_flags/ 1048576),2)+1)),
+		char(charextract('NRY', mod((internal_status/  4194304),2) +mod((internal_flags/ 4194304),2)+1))
+	INTO
+		:Creatdb,
+		:Trace, 
+		:Security,
+		:Maintain_locations,
+		:Operator,
+		:Maintain_users,
+		:Maintain_audit,
+		:Auditor,
+		:Audit_all, 
+		:Audit_query_text,
+		:lInternpasswd,
+		:szWriteDown,
+		:szWriteFixed,
+		:szWriteUp,
+		:szInsertDown,
+		:szInsertUp,
+		:szSessionSecurityLabel
+	FROM IIROLES
+	WHERE ROLE_NAME= :rolname;
+
+	EXEC SQL BEGIN;
+
+		CString strItem;
+		BOOL bSet = (lInternpasswd & 131072L)? TRUE: FALSE;
+		pObjectDetail->SetExternalPassword (bSet);
+
+		// CREATE DATABASE:
+		if (toupper(Creatdb[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_CREATE_DATABASE);
+		}
+		else 
+		if (toupper(Creatdb[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_CREATE_DATABASE);
+		}
+
+		// TRACE:
+		if (toupper(Trace[0])=='Y') 
+		{
+			pObjectDetail->SetPrivilege(URP_TRACE);
+		}
+		else
+		if (toupper(Trace[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_TRACE);
+		}
+
+		// SECURITY:
+		if (toupper(Security[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_SECURITY);
+		}
+		else
+		if (toupper(Security[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_SECURITY);
+		}
+
+		// MAINTAIN LOCATION:
+		if (toupper(Maintain_locations[0])=='Y' || toupper(Maintain_locations[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+		}
+
+		// OPERATOR:
+		if (toupper(Operator[0])=='Y' || toupper(Operator[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_OPERATOR);
+		}
+
+		// MAINTAIN USER:
+		if (toupper(Maintain_users[0])=='Y' || toupper(Maintain_users[0])== 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_USER);
+		}
+
+		// MAINTAIN AUDIT:
+		if (toupper(Maintain_audit[0])=='Y' || toupper(Maintain_audit[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+		}
+
+		// AUDITOR:
+		if (toupper(Auditor[0])=='Y' || toupper(Auditor[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_AUDITOR);
+		}
+
+		//
+		// MAC: write_down:
+		if (toupper(szWriteDown[0])  == 'Y' || toupper(szWriteDown[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEDOWN);
+		}
+
+		//
+		// MAC: write_fixed:
+		if (toupper(szWriteFixed[0])  == 'Y' || toupper(szWriteFixed[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEFIXED);
+		}
+
+		//
+		// MAC: write_up:
+		if (toupper(szWriteUp[0])  == 'Y' || toupper(szWriteUp[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEUP);
+		}
+
+		//
+		// MAC: insert_down:
+		if (toupper(szInsertDown[0])  == 'Y' || toupper(szInsertDown[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTDOWN);
+		}
+
+		//
+		// MAC: insert_up:
+		if (toupper(szInsertUp[0])  == 'Y' || toupper(szInsertUp[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTUP);
+		}
+
+		//
+		// MAC: session_security_label:
+		if (toupper(szSessionSecurityLabel[0])  == 'Y' || toupper(szSessionSecurityLabel[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+		}
+
+		// Audit_All
+		bSet = (toupper(Audit_all[0])=='Y');
+		pObjectDetail->SetSecurityAuditAllEvent(bSet);
+		// Audit Query_text
+		bSet = (toupper(Audit_query_text[0])=='Y');
+		pObjectDetail->SetSecurityAuditQueryText(bSet);
+
+	EXEC SQL END;
+	return TRUE;
+
+QUERYDETAILROLE_OP_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailRole (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CaRole* pObject)
+{
+	USES_CONVERSION;
+	if (pSession && pSession->GetVersion() >= INGRESVERS_30)
+		return QueryDetailRoleOpenSource(pQueryInfo, pObject);
+
+	CString strObjectName = pObject->GetName();
+	//strObjectName.MakeLower();
+	CaRoleDetail* pObjectDetail = (CaRoleDetail*)pObject;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		long lInternpasswd;
+		short sNullInd;
+		char*rolname=T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char Lim_sec_label[128+1];
+		char Creatdb[2], Trace[2], Audit_all[2], Security[2];
+		char Maintain_locations[2], Operator[2], Maintain_users[2];
+		char Maintain_audit[2], Auditor[2], Audit_query_text[2];
+
+		char szWriteDown[2];
+		char szWriteFixed[2];
+		char szWriteUp[2];
+		char szInsertDown[2];
+		char szInsertUp[2];
+		char szSessionSecurityLabel[2];
+
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILROLE_ERROR;
+	EXEC SQL REPEATED SELECT
+		CREATEDB,
+		TRACE,
+		SECURITY,
+		MAINTAIN_LOCATIONS,
+		OPERATOR,
+		MAINTAIN_USERS,
+		MAINTAIN_AUDIT,
+		AUDITOR,
+		AUDIT_ALL,
+		AUDIT_QUERY_TEXT,
+		LIM_SEC_LABEL,
+		INTERNAL_FLAGS,
+		char(charextract('NRY', mod((internal_status/   131072),2) +mod((internal_flags/  131072),2)+1)),
+		char(charextract('NRY', mod((internal_status/  8388608),2) +mod((internal_flags/ 8388608),2)+1)),
+		char(charextract('NRY', mod((internal_status/   524288),2) +mod((internal_flags/  524288),2)+1)),
+		char(charextract('NRY', mod((internal_status/   262144),2) +mod((internal_flags/  262144),2)+1)),
+		char(charextract('NRY', mod((internal_status/  1048576),2) +mod((internal_flags/ 1048576),2)+1)),
+		char(charextract('NRY', mod((internal_status/  4194304),2) +mod((internal_flags/ 4194304),2)+1))
+	INTO
+		:Creatdb,
+		:Trace, 
+		:Security,
+		:Maintain_locations,
+		:Operator,
+		:Maintain_users,
+		:Maintain_audit,
+		:Auditor,
+		:Audit_all, 
+		:Audit_query_text,
+		:Lim_sec_label:sNullInd,
+		:lInternpasswd,
+		:szWriteDown,
+		:szWriteFixed,
+		:szWriteUp,
+		:szInsertDown,
+		:szInsertUp,
+		:szSessionSecurityLabel
+	FROM IIROLES
+	WHERE ROLE_NAME= :rolname;
+
+	EXEC SQL BEGIN;
+
+		CString strItem;
+		BOOL bSet = (lInternpasswd & 131072L)? TRUE: FALSE;
+		pObjectDetail->SetExternalPassword (bSet);
+
+		// CREATE DATABASE:
+		if (toupper(Creatdb[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_CREATE_DATABASE);
+		}
+		else 
+		if (toupper(Creatdb[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_CREATE_DATABASE);
+		}
+
+		// TRACE:
+		if (toupper(Trace[0])=='Y') 
+		{
+			pObjectDetail->SetPrivilege(URP_TRACE);
+		}
+		else
+		if (toupper(Trace[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_TRACE);
+		}
+
+		// SECURITY:
+		if (toupper(Security[0])=='Y')
+		{
+			pObjectDetail->SetPrivilege(URP_SECURITY);
+		}
+		else
+		if (toupper(Security[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_SECURITY);
+		}
+
+		// MAINTAIN LOCATION:
+		if (toupper(Maintain_locations[0])=='Y' || toupper(Maintain_locations[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_LOCATION);
+		}
+
+		// OPERATOR:
+		if (toupper(Operator[0])=='Y' || toupper(Operator[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_OPERATOR);
+		}
+
+		// MAINTAIN USER:
+		if (toupper(Maintain_users[0])=='Y' || toupper(Maintain_users[0])== 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_USER);
+		}
+
+		// MAINTAIN AUDIT:
+		if (toupper(Maintain_audit[0])=='Y' || toupper(Maintain_audit[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_MAINTAIN_AUDIT);
+		}
+
+		// AUDITOR:
+		if (toupper(Auditor[0])=='Y' || toupper(Auditor[0])=='R')
+		{
+			pObjectDetail->SetPrivilege(URP_AUDITOR);
+		}
+
+		//
+		// MAC: write_down:
+		if (toupper(szWriteDown[0])  == 'Y' || toupper(szWriteDown[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEDOWN);
+		}
+
+		//
+		// MAC: write_fixed:
+		if (toupper(szWriteFixed[0])  == 'Y' || toupper(szWriteFixed[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEFIXED);
+		}
+
+		//
+		// MAC: write_up:
+		if (toupper(szWriteUp[0])  == 'Y' || toupper(szWriteUp[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_WRITEUP);
+		}
+
+		//
+		// MAC: insert_down:
+		if (toupper(szInsertDown[0])  == 'Y' || toupper(szInsertDown[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTDOWN);
+		}
+
+		//
+		// MAC: insert_up:
+		if (toupper(szInsertUp[0])  == 'Y' || toupper(szInsertUp[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_INSERTUP);
+		}
+
+		//
+		// MAC: session_security_label:
+		if (toupper(szSessionSecurityLabel[0])  == 'Y' || toupper(szSessionSecurityLabel[0])  == 'R')
+		{
+			pObjectDetail->SetPrivilege(URP_SESSIONSECURITYLABEL);
+		}
+
+		// Audit_All
+		bSet = (toupper(Audit_all[0])=='Y');
+		pObjectDetail->SetSecurityAuditAllEvent(bSet);
+		// Audit Query_text
+		bSet = (toupper(Audit_query_text[0])=='Y');
+		pObjectDetail->SetSecurityAuditQueryText(bSet);
+		//
+		// Limit Security Label:
+		if (sNullInd==0) 
+		{
+			strItem = Lim_sec_label;
+			strItem.TrimRight();
+			pObjectDetail->SetLimitSecurityLabel(strItem);
+		}
+
+	EXEC SQL END;
+	return TRUE;
+
+QUERYDETAILROLE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailLocation  (CaLLQueryInfo* pQueryInfo, CaLocation* pObject)
+{
+	USES_CONVERSION;
+	CString strObjectName = pObject->GetName();
+	//strObjectName.MakeLower();
+	CaLocationDetail* pObjectDetail = (CaLocationDetail*)pObject;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char dataUsage[2];
+		char journalUsage[2];
+		char checkPointUsage[2];
+		char workUsage[2];
+		char dumpUsage[2];
+		char locArea[256];
+		char* name = T2A((LPTSTR)(LPCTSTR)strObjectName);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILLOCATION_ERROR;
+	EXEC SQL REPEATED SELECT
+		data_usage, 
+		jrnl_usage, 
+		ckpt_usage, 
+		work_usage, 
+		dump_usage, 
+		location_area
+	INTO 
+		:dataUsage, 
+		:journalUsage, 
+		:checkPointUsage, 
+		:workUsage, 
+		:dumpUsage, 
+		:locArea
+	FROM
+		IILOCATION_INFO
+	WHERE
+		LOCATION_NAME = :name;
+
+	EXEC SQL BEGIN;
+		TrimRight(locArea);
+		CString strItem = A2T(locArea);
+		strItem.TrimLeft();
+		strItem.TrimRight();
+		if (!strItem.IsEmpty())
+			pObjectDetail->SetLocationArea(strItem);
+		pObjectDetail->SetDataUsage(toupper(dataUsage[0]));
+		pObjectDetail->SetJournalUsage(toupper(journalUsage[0]));
+		pObjectDetail->SetCheckPointUsage(toupper(checkPointUsage[0]));
+		pObjectDetail->SetWorkUsage(toupper(workUsage[0]));
+		pObjectDetail->SetDumpUsage(toupper(dumpUsage[0]));
+
+	EXEC SQL END;
+	return TRUE;
+
+QUERYDETAILLOCATION_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailProcedure (CaLLQueryInfo* pQueryInfo, CaProcedure* pObject)
+{
+	USES_CONVERSION;
+	CString strStatement = _T("");
+	CString strObjectName = pObject->GetName();
+	CString strObjectOwner = pObject->GetOwner();
+	//strObjectName.MakeLower();
+	//strObjectOwner.MakeLower();
+	CaProcedureDetail* pDetail = (CaProcedureDetail*)pObject;
+	//
+	// Host Variable Declarations
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szStatement[256];
+		int   nTextSequence;
+		char* objectName     = T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char* objectOwner= T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAILPROC_ERROR; 
+	EXEC SQL REPEATED SELECT
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE
+	INTO
+		:szStatement,
+		:nTextSequence
+	FROM 
+		IIPROCEDURES
+	WHERE
+		PROCEDURE_NAME = :objectName AND PROCEDURE_OWNER = :objectOwner
+	ORDER BY TEXT_SEQUENCE;
+
+	EXEC SQL BEGIN;
+		if(nTextSequence == 1)
+		{
+			strStatement += A2T(szStatement);
+			pDetail->SetDetailText(strStatement);
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			strStatement = pDetail->GetDetailText();
+			strStatement += A2T(szStatement);
+			pDetail->SetDetailText(strStatement);
+		}
+	EXEC SQL END;
+	return TRUE;
+QUERY_DETAILPROC_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailSequence (CaLLQueryInfo* pQueryInfo, CaSequence* pObject)
+{
+	USES_CONVERSION;
+	CString strStatement = _T("");
+	CString strObjectName = pObject->GetName();
+	CString strObjectOwner = pObject->GetOwner();
+	//strObjectName.MakeLower();
+	//strObjectOwner.MakeLower();
+	CaSequenceDetail* pDetail = (CaSequenceDetail*)pObject;
+	//
+	// Host Variable Declarations
+	EXEC SQL BEGIN DECLARE SECTION;
+		char data_type[8];
+		char seq_precision[50];
+		char start_value[50];
+		char increment_value[50];
+		char next_value[50];
+		char min_value [50];
+		char max_value [50];
+		char cache_size[50];
+		char cycle_flag[2];
+		char order_flag[2];
+		char* objectName  = T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char* objectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAILSEQ_ERROR; 
+	EXEC SQL REPEATED SELECT 
+		DATA_TYPE,
+		CHAR(SEQ_PRECISION),
+		CHAR(START_VALUE),
+		CHAR(INCREMENT_VALUE),
+		CHAR(NEXT_VALUE),
+		CHAR(MIN_VALUE),
+		CHAR(MAX_VALUE),
+		CHAR(CACHE_SIZE),
+		CYCLE_FLAG,
+		ORDER_FLAG
+	INTO
+		:data_type,
+		:seq_precision,
+		:start_value,
+		:increment_value,
+		:next_value,
+		:min_value,
+		:max_value,
+		:cache_size,
+		:cycle_flag,
+		:order_flag
+	FROM IISEQUENCES
+	WHERE SEQ_NAME = :objectName AND SEQ_OWNER = :objectOwner;
+	EXEC SQL BEGIN;
+
+		TrimRight(data_type);
+		TrimRight(seq_precision);
+		TrimRight(start_value);
+		TrimRight(increment_value);
+		TrimRight(next_value);
+		TrimRight(min_value);
+		TrimRight(max_value);
+		TrimRight(cache_size);
+		TrimRight(cycle_flag);
+		TrimRight(order_flag);
+
+		if (lstrcmp(data_type, "integer") == 0)
+			pDetail->SetDecimalType(FALSE);
+		else
+			pDetail->SetDecimalType(TRUE);
+
+		if (cycle_flag[0] == 'Y' || cycle_flag[0] == 'y' )
+			pDetail->SetCycle(TRUE);
+		else
+			pDetail->SetCycle(FALSE);
+
+		if (order_flag[0] == 'Y' || order_flag[0] == 'y')
+			pDetail->SetOrder(TRUE);
+		else
+			pDetail->SetOrder(FALSE);
+
+		pDetail->SetMaxValue(A2T(max_value));
+		pDetail->SetMinValue(A2T(min_value));
+		pDetail->SetStartWith(A2T(start_value));
+		pDetail->SetIncrementBy(A2T(increment_value));
+		pDetail->SetNextValue(A2T(next_value));
+		pDetail->SetCacheSize(A2T(cache_size));
+		pDetail->SetDecimalPrecision(A2T(seq_precision));
+
+	EXEC SQL END;
+	return TRUE;
+QUERY_DETAILSEQ_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static void QueryUnicodeFlag(CaDatabaseDetail* pDetail, CaLLQueryInfo* pQueryInfo, CaSessionManager* pSessionManager)
+{
+	CaSession session ((CaConnectInfo*)pQueryInfo);
+	session.SetDatabase(pDetail->GetName());
+	CaSessionUsage usesession (pSessionManager, &session);
+
+	CString strV = INGRESII_llDBMSInfo(_T("unicode_level"));
+	if (!strV.IsEmpty() && strV[0] != _T('0'))
+		pDetail->SetUnicodeEnable(TRUE);
+}
+static BOOL QueryDetailDatabaseOpenSource (CaLLQueryInfo* pQueryInfo, CaDatabase* pObject, CaSessionManager* pSessionManager, CaSession* pSession)
+{
+	BOOL bOK = FALSE;
+	BOOL bGenericGateway = TRUE;
+	CString strDatabase = pObject->GetName();
+	CaDatabaseDetail* pDetail = (CaDatabaseDetail*)pObject;
+	//strDatabase.MakeLower();
+
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* lpObjectName = T2A((LPTSTR)(LPCTSTR)strDatabase);
+		char szOwner       [DBOBJECTLEN];
+		char szDbDev       [DBOBJECTLEN]; // default location of database
+		char szChkpDev     [DBOBJECTLEN]; // default location of checkpoint
+		char szJrnlDev     [DBOBJECTLEN]; // default location of journal
+		char szDmpDev      [DBOBJECTLEN]; // default location of dump
+		char szWorkDev     [DBOBJECTLEN]; // default location of work
+		char LocName       [512];
+		char szCompatLevel [8];
+		long lAccess;
+		long lDbService;
+	EXEC SQL END DECLARE SECTION;
+	LocName[0] = '\0';
+	//
+	// Set up the gateway here !
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILDATABASE_OP_ERROR;
+	EXEC SQL REPEATED SELECT
+		DATABASE_OWNER, 
+		DATA_LOCATION, 
+		CKP_LOCATION,
+		WORK_LOCATION, 
+		JNL_LOCATION, 
+		DUMP_LOCATION,
+		COMPAT_LEVEL, 
+		DATABASE_SERVICE,
+		ACCESS
+	INTO
+		:szOwner, 
+		:szDbDev, 
+		:szChkpDev, 
+		:szWorkDev,
+		:szJrnlDev, 
+		:szDmpDev, 
+		:szCompatLevel,
+		:lDbService,
+		:lAccess
+	FROM IIDATABASE_INFO
+	WHERE DATABASE_NAME = :lpObjectName;
+
+	EXEC SQL BEGIN;
+		TrimRight(szOwner);
+		TrimRight(szDbDev);
+		TrimRight(szJrnlDev);
+		TrimRight(szWorkDev);
+		TrimRight(szChkpDev);
+		TrimRight(szDmpDev);
+		TrimRight(szCompatLevel);
+
+		pDetail->SetOwner(A2T(szOwner));
+		pDetail->SetFlag(lAccess);
+		pDetail->SetDBService(lDbService);
+		pDetail->SetLocationDatabase (A2T(szDbDev));
+		pDetail->SetLocationJournal (A2T(szJrnlDev));
+		pDetail->SetLocationWork (A2T(szWorkDev));
+		pDetail->SetLocationCheckPoint (A2T(szChkpDev));
+		pDetail->SetLocationDump (A2T(szDmpDev));
+
+		pDetail->SetCompatLevel(A2T(szCompatLevel));
+		bOK = TRUE;
+	EXEC SQL END;
+	if (pSession)
+		pSession->Release(SESSION_COMMIT);
+	if (bOK)
+		QueryUnicodeFlag(pDetail, pQueryInfo, pSessionManager);
+
+	return TRUE;
+
+QUERYDETAILDATABASE_OP_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailDatabase  (CaLLQueryInfo* pQueryInfo, CaDatabase* pObject, CaSessionManager* pSessionManager, CaSession* pSession)
+{
+	USES_CONVERSION;
+	if (pSession && pSession->GetVersion() >= INGRESVERS_30)
+		return QueryDetailDatabaseOpenSource(pQueryInfo, pObject,pSessionManager, pSession);
+
+	BOOL bOK = FALSE;
+	BOOL bGenericGateway = TRUE;
+	CString strDatabase = pObject->GetName();
+	CaDatabaseDetail* pDetail = (CaDatabaseDetail*)pObject;
+	//strDatabase.MakeLower();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* lpObjectName = T2A((LPTSTR)(LPCTSTR)strDatabase);
+		char szOwner       [DBOBJECTLEN];
+		char szDbDev       [DBOBJECTLEN]; // default location of database
+		char szChkpDev     [DBOBJECTLEN]; // default location of checkpoint
+		char szJrnlDev     [DBOBJECTLEN]; // default location of journal
+		char szDmpDev      [DBOBJECTLEN]; // default location of dump
+		char szWorkDev     [DBOBJECTLEN]; // default location of work
+		char LocName       [512];
+		char szCompatLevel [8];
+		long lAccess;
+		long lDbService;
+		char szSecurity[256];
+	EXEC SQL END DECLARE SECTION;
+	LocName[0] = '\0';
+	//
+	// Set up the gateway here !
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILDATABASE_ERROR;
+	EXEC SQL REPEATED SELECT
+		DATABASE_OWNER, 
+		DATA_LOCATION, 
+		CKP_LOCATION,
+		WORK_LOCATION, 
+		JNL_LOCATION, 
+		DUMP_LOCATION,
+		COMPAT_LEVEL, 
+		DATABASE_SERVICE,
+		SECURITY_LABEL,
+		ACCESS
+	INTO
+		:szOwner, 
+		:szDbDev, 
+		:szChkpDev, 
+		:szWorkDev,
+		:szJrnlDev, 
+		:szDmpDev, 
+		:szCompatLevel,
+		:lDbService,
+		:szSecurity,
+		:lAccess
+	FROM IIDATABASE_INFO
+	WHERE DATABASE_NAME = :lpObjectName;
+
+	EXEC SQL BEGIN;
+		TrimRight(szOwner);
+		TrimRight(szDbDev);
+		TrimRight(szJrnlDev);
+		TrimRight(szWorkDev);
+		TrimRight(szChkpDev);
+		TrimRight(szDmpDev);
+		TrimRight(szCompatLevel);
+		TrimRight(szSecurity);
+
+		pDetail->SetOwner(A2T(szOwner));
+		pDetail->SetFlag(lAccess);
+		pDetail->SetDBService(lDbService);
+		pDetail->SetLocationDatabase (A2T(szDbDev));
+		pDetail->SetLocationJournal (A2T(szJrnlDev));
+		pDetail->SetLocationWork (A2T(szWorkDev));
+		pDetail->SetLocationCheckPoint (A2T(szChkpDev));
+		pDetail->SetLocationDump (A2T(szDmpDev));
+
+		pDetail->SetCompatLevel(A2T(szCompatLevel));
+		pDetail->SetSecurityLabel(A2T(szSecurity));
+		bOK = TRUE;
+	EXEC SQL END;
+	if (pSession)
+		pSession->Release(SESSION_COMMIT);
+	if (bOK)
+		QueryUnicodeFlag(pDetail, pQueryInfo, pSessionManager);
+
+	return TRUE;
+
+QUERYDETAILDATABASE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailTableStar (CaLLQueryInfo* pQueryInfo, CaTable* pObject, CaSessionManager* pSessionManager, CaSession* pSession)
+{
+	USES_CONVERSION;
+	BOOL bGenericGateway = TRUE;
+	CString strTable = pObject->GetName();
+	CString strTableOwner = pObject->GetOwner();
+	strTable.MakeLower();
+	strTableOwner.MakeLower();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* lpszTable = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* lpszTableOwner = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+
+		char chJournaling [2];
+		char chDuplicates [2];
+		int  nFillFactor;
+		int  nLeafFill;
+		int  nNonLeafFill;
+		char chStructure[17];
+		int  nNumRows;
+		int  lPage_size;
+		char chCompressed[2];
+		int  nExpireDate;
+		char chExpireDate[64];
+		char chIsReadonly[2];
+		int nMinPages;
+		int nMaxPages;
+		char chUniqueRule[2];
+		char chMultiLoc[2];
+		char chLocName[33];
+
+	EXEC SQL END DECLARE SECTION;
+
+	CaTableDetail* pDetail = (CaTableDetail*)pObject;
+	CaStorageStructure& stg = pDetail->GetStorageStructure();
+	CStringList& listLocation = pDetail->GetListLocation();
+
+	UINT nQueryFlag = pDetail->GetQueryFlag();
+	if (nQueryFlag & DTQUERY_PROPERTY)
+	{
+		EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILTABLESTAR_ERROR;
+		EXEC SQL REPEATED SELECT
+			IS_JOURNALLED,
+			DUPLICATE_ROWS,
+			TABLE_DFILLPCT, 
+			TABLE_LFILLPCT, 
+			TABLE_IFILLPCT, 
+			STORAGE_STRUCTURE,
+			NUM_ROWS, 
+			TABLE_PAGESIZE,
+			IS_COMPRESSED,
+			EXPIRE_DATE,
+			CHAR(_DATE(EXPIRE_DATE))+CHAR('   ')+CHAR(_TIME(EXPIRE_DATE)),
+			IS_READONLY,
+			TABLE_MINPAGES,
+			TABLE_MAXPAGES,
+			UNIQUE_RULE,
+			MULTI_LOCATIONS,
+			LOCATION_NAME
+		INTO 
+			:chJournaling, 
+			:chDuplicates,
+			:nFillFactor, 
+			:nLeafFill, 
+			:nNonLeafFill, 
+			:chStructure,
+			:nNumRows, 
+			:lPage_size,
+			:chCompressed,
+			:nExpireDate,
+			:chExpireDate,
+			:chIsReadonly,
+			:nMinPages,
+			:nMaxPages,
+			:chUniqueRule,
+			:chMultiLoc,
+			:chLocName
+		FROM  IITABLES
+		WHERE LOWERCASE(TABLE_NAME) = :lpszTable and LOWERCASE(TABLE_OWNER) =:lpszTableOwner;
+
+		EXEC SQL BEGIN;
+			pDetail->SetJournaling(toupper(chJournaling[0]));
+			pDetail->SetReadOnly(toupper(chIsReadonly[0]));
+
+			stg.SetStructure(A2T(chStructure));
+			stg.SetPageSize(lPage_size);
+			stg.SetFillFactor(nFillFactor);
+			stg.SetMinPage(nMinPages);
+			stg.SetMaxPage(nMaxPages);
+			stg.SetLeafFill(nLeafFill);
+			stg.SetNonLeafFill(nNonLeafFill);
+
+			stg.SetCompress(toupper(chCompressed[0]));
+			stg.SetUniqueRule(toupper(chUniqueRule[0]));
+			if (chLocName[0])
+			{
+				TrimRight (chLocName);
+				listLocation.AddTail (A2T(chLocName));
+			}
+
+		EXEC SQL END;
+	}
+
+	//
+	// retrieve Multi-Location
+	if (chMultiLoc[0] && toupper(chMultiLoc[0]) == _T('Y'))
+	{
+		EXEC SQL REPEATED SELECT location_name
+			INTO     :chLocName
+			FROM     iimulti_locations
+			WHERE    LOWERCASE(TABLE_NAME) =:lpszTable
+			AND      LOWERCASE(TABLE_OWNER) =:lpszTableOwner
+			ORDER BY loc_sequence desc;
+		EXEC SQL BEGIN;
+			TrimRight (chLocName);
+			listLocation.AddTail (A2T(chLocName));
+		EXEC SQL END;
+	}
+
+	if (pSession)
+		pSession->Release(SESSION_COMMIT);
+	//
+	// Need to query columns ?
+	if (nQueryFlag & DTQUERY_COLUMNS)
+	{
+		CaLLQueryInfo qry (*pQueryInfo);
+		qry.SetItem2(strTable, strTableOwner);
+		qry.SetObjectType(OBT_TABLECOLUMN);
+		CTypedPtrList< CObList, CaColumn* >& listColumns = pDetail->GetListColumns();
+		CTypedPtrList< CObList, CaDBObject* > ls;
+		INGRESII_llQueryObject (&qry, ls, pSessionManager);
+		while (!ls.IsEmpty())
+		{
+			CaColumn* pCol = (CaColumn*)ls.RemoveHead();
+			listColumns.AddTail(pCol);
+		}
+	}
+	return TRUE;
+
+QUERYDETAILTABLESTAR_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailTable (CaLLQueryInfo* pQueryInfo, CaTable* pObject, CaSessionManager* pSessionManager, CaSession* pSession)
+{
+	USES_CONVERSION;
+	BOOL bGenericGateway = TRUE;
+	CString strTable = pObject->GetName();
+	CString strTableOwner = pObject->GetOwner();
+	//strTable.MakeLower();
+	//strTableOwner.MakeLower();
+
+	if ( pQueryInfo->GetFlag() & DBFLAG_STARNATIVE )
+		return QueryDetailTableStar(pQueryInfo, pObject, pSessionManager, pSession);
+
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* lpszTable = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* lpszTableOwner = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+
+		char chJournaling [2];
+		char chDuplicates [2];
+		int  nFillFactor;
+		int  nLeafFill;
+		int  nNonLeafFill;
+		int  lAllocation;
+		int  lExtend;
+		char chStructure[17];
+		int  nNumRows;
+		int  lPage_size;
+		char chCompressed[2];
+		char chKey_isCompressed[2];
+		int  lAllocatedPages;
+		int  nExpireDate;
+		char chExpireDate[64];
+		char chIsReadonly[2];
+		int nMinPages;
+		int nMaxPages;
+		char chUniqueScope[2];
+		char chUniqueRule[2];
+		char chMultiLoc[2];
+		char chLocName[33];
+		long  lTable_Corrupt;
+		int nCachePriority;
+
+	EXEC SQL END DECLARE SECTION;
+
+	CaTableDetail* pDetail = (CaTableDetail*)pObject;
+	CaStorageStructure& stg = pDetail->GetStorageStructure();
+	CStringList& listLocation = pDetail->GetListLocation();
+
+	//
+	// Set up the gateway here !
+	/*
+		MULTI_LOCATIONS, 
+		LOCATION_NAME, 
+		LABEL_GRANULARITY,
+		ROW_SECURITY_AUDIT,
+		TABLE_INDEXES,
+	*/
+	UINT nQueryFlag = pDetail->GetQueryFlag();
+	if (nQueryFlag & DTQUERY_PROPERTY)
+	{
+		EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILTABLE_ERROR;
+		EXEC SQL REPEATED SELECT
+			IS_JOURNALLED,
+			DUPLICATE_ROWS,
+			TABLE_DFILLPCT, 
+			TABLE_LFILLPCT, 
+			TABLE_IFILLPCT, 
+			ALLOCATION_SIZE,
+			EXTEND_SIZE, 
+			STORAGE_STRUCTURE,
+			NUM_ROWS, 
+			TABLE_PAGESIZE,
+			IS_COMPRESSED,
+			KEY_IS_COMPRESSED,
+			ALLOCATED_PAGES,
+			EXPIRE_DATE,
+			CHAR(_DATE(EXPIRE_DATE))+CHAR('   ')+CHAR(_TIME(EXPIRE_DATE)),
+			IS_READONLY,
+			TABLE_MINPAGES,
+			TABLE_MAXPAGES,
+			UNIQUE_SCOPE,
+			UNIQUE_RULE,
+			MULTI_LOCATIONS,
+			LOCATION_NAME,
+			TABLE_RELTCPRI
+		INTO 
+			:chJournaling, 
+			:chDuplicates,
+			:nFillFactor, 
+			:nLeafFill, 
+			:nNonLeafFill, 
+			:lAllocation,
+			:lExtend, 
+			:chStructure,
+			:nNumRows, 
+			:lPage_size,
+			:chCompressed,
+			:chKey_isCompressed,
+			:lAllocatedPages,
+			:nExpireDate,
+			:chExpireDate,
+			:chIsReadonly,
+			:nMinPages,
+			:nMaxPages,
+			:chUniqueScope,
+			:chUniqueRule,
+			:chMultiLoc,
+			:chLocName,
+			:nCachePriority
+		FROM  IITABLES
+		WHERE TABLE_NAME = :lpszTable and TABLE_OWNER =:lpszTableOwner;
+
+		EXEC SQL BEGIN;
+			pDetail->SetJournaling(toupper(chJournaling[0]));
+			pDetail->SetReadOnly(toupper(chIsReadonly[0]));
+
+			stg.SetStructure(A2T(chStructure));
+			stg.SetPageSize(lPage_size);
+			stg.SetFillFactor(nFillFactor);
+			stg.SetMinPage(nMinPages);
+			stg.SetMaxPage(nMaxPages);
+			stg.SetLeafFill(nLeafFill);
+			stg.SetNonLeafFill(nNonLeafFill);
+			stg.SetPriorityCache(nCachePriority);
+
+			stg.SetUniqueScope(toupper(chUniqueScope[0]));
+			stg.SetCompress(toupper(chCompressed[0]));
+			stg.SetKeyCompress(toupper(chKey_isCompressed[0]));
+			stg.SetAllocation(lAllocation);
+			stg.SetExtend(lExtend);
+			stg.SetAllocatedPage(lAllocatedPages);
+			stg.SetUniqueRule(toupper(chUniqueRule[0]));
+			if (chLocName[0])
+			{
+				TrimRight (chLocName);
+				listLocation.AddTail (A2T(chLocName));
+			}
+
+		EXEC SQL END;
+	}
+
+	//
+	// retrieve Multi-Location
+	if (chMultiLoc[0] && toupper(chMultiLoc[0]) == _T('Y'))
+	{
+		EXEC SQL REPEATED SELECT location_name
+			INTO     :chLocName
+			FROM     iimulti_locations
+			WHERE    TABLE_NAME =:lpszTable
+			AND      TABLE_OWNER =:lpszTableOwner
+			ORDER BY loc_sequence desc;
+		EXEC SQL BEGIN;
+			TrimRight (chLocName);
+			listLocation.AddTail (A2T(chLocName));
+		EXEC SQL END;
+	}
+
+	//
+	// retrieve table consistence flags
+		EXEC SQL REPEATED SELECT relstat2
+			INTO :lTable_Corrupt
+			FROM iirelation
+			WHERE relid = :lpszTable
+			AND relowner = :lpszTableOwner;
+		EXEC SQL BEGIN;
+			if (lTable_Corrupt&TBL_FLAG_PHYS_INCONSISTENT)
+				pDetail->SetTablePhysInConsistent(TRUE);
+			if (lTable_Corrupt&TBL_FLAG_LOG_INCONSISTENT)
+				pDetail->SetTableLogInConsistent(TRUE);
+			if (lTable_Corrupt&TBL_FLAG_RECOVERY_DISALLOWED)
+				pDetail->SetTableRecoveryDisallowed(TRUE);
+		EXEC SQL END;
+
+	if (pSession)
+		pSession->Release(SESSION_COMMIT);
+	//
+	// Need to query columns ?
+	if (nQueryFlag & DTQUERY_COLUMNS)
+	{
+		CaLLQueryInfo qry (*pQueryInfo);
+		qry.SetItem2(strTable, strTableOwner);
+		qry.SetObjectType(OBT_TABLECOLUMN);
+		CTypedPtrList< CObList, CaColumn* >& listColumns = pDetail->GetListColumns();
+		CTypedPtrList< CObList, CaDBObject* > ls;
+		INGRESII_llQueryObject (&qry, ls, pSessionManager);
+		while (!ls.IsEmpty())
+		{
+			CaColumn* pCol = (CaColumn*)ls.RemoveHead();
+			listColumns.AddTail(pCol);
+		}
+	}
+
+	if (nQueryFlag > DTQUERY_COLUMNS)
+	{
+		CaSession session (pQueryInfo);
+
+		CaSessionUsage* pUseSession = NULL;
+		CaSessionUsage useSession (pSessionManager, &session);
+
+		GetTableKeysInfo  (strTable, strTableOwner, pDetail);
+		/* ****This block is replaced by the call of 'GetTableKeysInfo' above *****
+		if (nQueryFlag & DTQUERY_PRIMARYKEY)
+		{
+			CaPrimaryKey& pk = pDetail->GetPrimaryKey();
+			pk.SetTable(strTable, strTableOwner);
+			GetPrimaryKeyInfo (&pk);
+		}
+		if (nQueryFlag & DTQUERY_UNIQUEKEY)
+		{
+			CTypedPtrList < CObList, CaUniqueKey* >& lu = pDetail->GetUniqueKeys();
+			GetUniqueKeyInfo  (strTable, strTableOwner, lu);
+		}
+
+		if (nQueryFlag & DTQUERY_CHECKKEY)
+		{
+			CTypedPtrList < CObList, CaCheckKey* >& lc = pDetail->GetCheckKeys();
+			GetCheckKeyInfo  (strTable, strTableOwner, lc);
+		}
+
+		if (nQueryFlag & DTQUERY_FOREIGNKEY)
+		{
+			CTypedPtrList < CObList, CaForeignKey* >& lfk = pDetail->GetForeignKeys();
+			GetForeignKeyInfo (strTable, strTableOwner,lfk);
+		}
+		*/
+		useSession.Release(SESSION_NONE);
+	}
+	return TRUE;
+
+QUERYDETAILTABLE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailView (CaLLQueryInfo* pQueryInfo, CaView* pObject, CaSessionManager* pSessionManager, CaSession* pSession)
+{
+	USES_CONVERSION;
+	CString strStatement = _T("");
+	CString strObjectName = pObject->GetName();
+	CString strObjectOwner = pObject->GetOwner();
+	//strObjectName.MakeLower();
+	//strObjectOwner.MakeLower();
+	CaViewDetail* pDetail = (CaViewDetail*)pObject;
+
+	CTypedPtrList< CObList, CaDBObject* > lc;
+	CTypedPtrList< CObList, CaColumn* >& listColumns = pDetail->GetListColumns();
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_VIEWCOLUMN);
+	qinfo.SetItem2(strObjectName, strObjectOwner);
+
+	//
+	// Host Variable Declarations
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szStatement[256];
+		int   nTextSequence;
+		char* objectName     = T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char* objectOwner= T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+		char check_option[2];
+		char view_dml[2];
+
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAILVIEW_ERROR; 
+	EXEC SQL REPEATED SELECT
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE,
+		CHECK_OPTION,
+		VIEW_DML
+	INTO
+		:szStatement,
+		:nTextSequence,
+		:check_option,
+		:view_dml
+	FROM 
+		IIVIEWS
+	WHERE
+		TABLE_NAME = :objectName AND TABLE_OWNER = :objectOwner
+	ORDER BY TEXT_SEQUENCE;
+
+	EXEC SQL BEGIN;
+		if(nTextSequence == 1)
+		{
+			strStatement += A2T(szStatement);
+			pDetail->SetDetailText(strStatement);
+			check_option[1] = _T('\0');
+			view_dml[1] = _T('\0');
+			pDetail->SetCheckOption(check_option);
+			pDetail->SetLanguageType(view_dml);
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			strStatement = pDetail->GetDetailText();
+			strStatement += A2T(szStatement);
+			pDetail->SetDetailText(strStatement);
+		}
+	EXEC SQL END;
+	//
+	// Query Columns:
+	INGRESII_llQueryObject (&qinfo, lc, pSessionManager, pSession);
+	while (!lc.IsEmpty())
+	{
+		CaColumn* pCol = (CaColumn*)lc.RemoveHead();
+		listColumns.AddTail(pCol);
+	}
+
+	return TRUE;
+QUERY_DETAILVIEW_ERROR:
+	while (!lc.IsEmpty())
+	{
+		delete lc.RemoveHead();
+	}
+	ExceptionError();
+	return FALSE;
+}
+
+static void QueryIndexColumn(CaIndexDetail* pDetail, CTypedPtrList < CObList, CaColumnKey* >& lc)
+{
+	USES_CONVERSION;
+	CString strTable = pDetail->GetBaseTable();
+	CString strTableOwner = pDetail->GetBaseTableOwner();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szColName      [DBOBJECTLEN];
+		char idxName        [DBOBJECTLEN];
+		char idxCreator     [DBOBJECTLEN];
+		int  nKeySequence;
+		int  nColumnSeq;
+		char* baseTable = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* baseOwner = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+	EXEC SQL END DECLARE SECTION; 
+
+	strcpy (idxName, T2A((LPTSTR)(LPCTSTR)pDetail->GetName()));
+	strcpy (idxCreator, T2A((LPTSTR)(LPCTSTR)pDetail->GetOwner()));
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_IDXCOLUMN_ERROR;
+	EXEC SQL REPEATED SELECT
+		A.COLUMN_NAME,
+		A.KEY_SEQUENCE,
+		A.COLUMN_SEQUENCE
+	INTO
+		:szColName,
+		:nKeySequence,
+		:nColumnSeq
+	FROM IICOLUMNS A
+	WHERE 
+		A.TABLE_NAME = :idxName AND A.TABLE_OWNER = :idxCreator 
+		ORDER BY A.COLUMN_SEQUENCE;
+
+	EXEC SQL BEGIN;
+		TrimRight (szColName);
+		CaColumnKey* pCol = new CaColumnKey(szColName, _T(""), -1);
+		pCol->SetKeyOrder(nKeySequence);
+		lc.AddTail(pCol);
+	EXEC SQL END;
+	return;
+QUERY_IDXCOLUMN_ERROR:
+	while (!lc.IsEmpty())
+		delete lc.RemoveHead();
+	ExceptionError();
+}
+
+static BOOL QueryDetailIndexStar (CaLLQueryInfo* pQueryInfo, CaIndex* pObject)
+{
+	USES_CONVERSION;
+	CString strTable = pQueryInfo->GetItem2();
+	CString strTableOwner = pQueryInfo->GetItem2Owner();
+	//strTable.MakeLower();
+	//strTableOwner.MakeLower();
+	CaIndexDetail* pDetail = (CaIndexDetail*)pObject;
+	CaStorageStructure& stg = pDetail->GetStorageStructure();
+	CTypedPtrList < CObList, CaColumnKey* >& lcolumn = pDetail->GetListColumns();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char idxName        [DBOBJECTLEN];
+		char idxCreator     [DBOBJECTLEN];
+		char szCreateDate   [DBOBJECTLEN];
+		char szbaseName     [DBOBJECTLEN];
+		char szbaseOwner    [DBOBJECTLEN];
+		char chUniqueRule[2];
+
+		int  nFillFactor;
+		int  nLeafFill;
+		int  nNonLeafFill;
+		char chStructure[17];
+		int  lPage_size;
+		char chCompressed[2];
+		int  nMinPages;
+		int  nMaxPages;
+		char szMultiLocation[DBOBJECTLEN];
+		char szLocation[DBOBJECTLEN];
+
+		char* baseTable = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* baseOwner = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	strcpy (idxName, T2A((LPTSTR)(LPCTSTR)pObject->GetName()));
+	strcpy (idxCreator, T2A((LPTSTR)(LPCTSTR)pObject->GetOwner()));
+
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAIL_INDEXSTAR_ERROR; 
+	EXEC SQL REPEATED SELECT
+		BASE_NAME,
+		BASE_OWNER,
+		CREATE_DATE,
+		STORAGE_STRUCTURE, 
+		IS_COMPRESSED, 
+		UNIQUE_RULE,
+		INDEX_PAGESIZE
+	INTO
+		:szbaseName,
+		:szbaseOwner,
+		:szCreateDate,
+		:chStructure,
+		:chCompressed, 
+		:chUniqueRule,
+		:lPage_size
+	FROM IIINDEXES
+	WHERE 
+		INDEX_NAME = :idxName AND INDEX_OWNER = :idxCreator;
+
+	TrimRight(szCreateDate);
+	TrimRight(szbaseName);
+	TrimRight(szbaseOwner);
+	pDetail->SetBaseTable(A2T(szbaseName), A2T(szbaseOwner));
+	pDetail->SetCreateDate(A2T(szCreateDate));
+
+	stg.SetStructure(A2T(chStructure));
+	stg.SetPageSize(lPage_size);
+	stg.SetCompress(toupper(chCompressed[0]));
+	stg.SetUniqueRule(toupper(chUniqueRule[0]));
+
+	//
+	// GetExtra info from iitables
+	EXEC SQL REPEATED SELECT
+		TABLE_DFILLPCT, 
+		TABLE_MINPAGES, 
+		TABLE_MAXPAGES,
+		TABLE_LFILLPCT, 
+		TABLE_IFILLPCT, 
+		MULTI_LOCATIONS, 
+		LOCATION_NAME
+	INTO
+		:nFillFactor, 
+		:nMinPages, 
+		:nMaxPages,
+		:nLeafFill, 
+		:nNonLeafFill, 
+		:szMultiLocation,
+		:szLocation
+	FROM 
+		IITABLES
+	WHERE 
+		LOWERCASE(TABLE_NAME) = LOWERCASE(:idxName)  AND LOWERCASE(table_owner) = LOWERCASE(:idxCreator);
+
+	stg.SetFillFactor(nFillFactor);
+	stg.SetMinPage(nMinPages);
+	stg.SetMaxPage(nMaxPages);
+	stg.SetLeafFill(nLeafFill);
+	stg.SetNonLeafFill(nNonLeafFill);
+
+	//
+	// Query Index columns (if nKeySequence > 0 then the column is part of key):
+	QueryIndexColumn (pDetail, lcolumn);
+
+	return TRUE;
+QUERY_DETAIL_INDEXSTAR_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+//
+// Index is a table in iitables with table_type = 'I'.
+static BOOL QueryDetailIndex (CaLLQueryInfo* pQueryInfo, CaIndex* pObject)
+{
+	USES_CONVERSION;
+	if ( pQueryInfo->GetFlag() & DBFLAG_STARNATIVE )
+		return QueryDetailIndexStar(pQueryInfo, pObject);
+
+	CString strTable = pQueryInfo->GetItem2();
+	CString strTableOwner = pQueryInfo->GetItem2Owner();
+	strTable.MakeLower();
+	strTableOwner.MakeLower();
+	CaIndexDetail* pDetail = (CaIndexDetail*)pObject;
+	CaStorageStructure& stg = pDetail->GetStorageStructure();
+	CTypedPtrList < CObList, CaColumnKey* >& lcolumn = pDetail->GetListColumns();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char idxName        [DBOBJECTLEN];
+		char idxCreator     [DBOBJECTLEN];
+		char szCreateDate   [DBOBJECTLEN];
+		char szbaseName     [DBOBJECTLEN];
+		char szbaseOwner    [DBOBJECTLEN];
+		char chUniqueScope[2];
+		char chUniqueRule[2];
+		char chPersistent[2];
+
+		int  nFillFactor;
+		int  nLeafFill;
+		int  nNonLeafFill;
+		int  lAllocation;
+		int  lExtend;
+		char chStructure[17];
+		int  lPage_size;
+		char chCompressed[2];
+		char chKey_isCompressed[2];
+		int  lAllocatedPages;
+		int  nMinPages;
+		int  nMaxPages;
+		char szMultiLocation[DBOBJECTLEN];
+		char szLocation[DBOBJECTLEN];
+
+		char* baseTable = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* baseOwner = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+		int nCachePriority;
+	EXEC SQL END DECLARE SECTION;
+
+	strcpy (idxName, T2A((LPTSTR)(LPCTSTR)pObject->GetName()));
+	strcpy (idxCreator, T2A((LPTSTR)(LPCTSTR)pObject->GetOwner()));
+
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAIL_INDEX_ERROR; 
+	EXEC SQL REPEATED SELECT
+		BASE_NAME,
+		BASE_OWNER,
+		CREATE_DATE,
+		STORAGE_STRUCTURE, 
+		KEY_IS_COMPRESSED, 
+		IS_COMPRESSED, 
+		PERSISTENT,
+		UNIQUE_SCOPE,
+		UNIQUE_RULE,
+		INDEX_PAGESIZE
+	INTO
+		:szbaseName,
+		:szbaseOwner,
+		:szCreateDate,
+		:chStructure,
+		:chCompressed, 
+		:chKey_isCompressed, 
+		:chPersistent,
+		:chUniqueScope,
+		:chUniqueRule,
+		:lPage_size
+	FROM IIINDEXES
+	WHERE 
+		INDEX_NAME = :idxName AND INDEX_OWNER = :idxCreator;
+
+	TrimRight(szCreateDate);
+	TrimRight(szbaseName);
+	TrimRight(szbaseOwner);
+	pDetail->SetBaseTable(A2T(szbaseName), A2T(szbaseOwner));
+	pDetail->SetPersistent(toupper(chPersistent[0]));
+	pDetail->SetCreateDate(A2T(szCreateDate));
+
+	stg.SetStructure(A2T(chStructure));
+	stg.SetPageSize(lPage_size);
+	stg.SetCompress(toupper(chCompressed[0]));
+	stg.SetKeyCompress(toupper(chKey_isCompressed[0]));
+	stg.SetUniqueRule(toupper(chUniqueRule[0]));
+	stg.SetUniqueScope(toupper(chUniqueScope[0]));
+
+	//
+	// GetExtra info from iitables
+	EXEC SQL REPEATED SELECT
+		TABLE_DFILLPCT, 
+		TABLE_MINPAGES, 
+		TABLE_MAXPAGES,
+		TABLE_LFILLPCT, 
+		TABLE_IFILLPCT, 
+		ALLOCATION_SIZE,
+		EXTEND_SIZE, 
+		MULTI_LOCATIONS, 
+		LOCATION_NAME,
+		ALLOCATED_PAGES,
+		TABLE_RELTCPRI
+	INTO
+		:nFillFactor, 
+		:nMinPages, 
+		:nMaxPages,
+		:nLeafFill, 
+		:nNonLeafFill, 
+		:lAllocation,
+		:lExtend, 
+		:szMultiLocation,
+		:szLocation,
+		:lAllocatedPages,
+		:nCachePriority
+	FROM 
+		IITABLES
+	WHERE 
+		TABLE_NAME = :idxName AND table_owner = :idxCreator;
+
+	stg.SetFillFactor(nFillFactor);
+	stg.SetMinPage(nMinPages);
+	stg.SetMaxPage(nMaxPages);
+	stg.SetLeafFill(nLeafFill);
+	stg.SetNonLeafFill(nNonLeafFill);
+	stg.SetAllocation(lAllocation);
+	stg.SetExtend(lExtend);
+	stg.SetAllocatedPage(lAllocatedPages);
+	stg.SetPriorityCache(nCachePriority);
+
+	//
+	// Query Index columns (if nKeySequence > 0 then the column is part of key):
+	QueryIndexColumn (pDetail, lcolumn);
+
+	return TRUE;
+QUERY_DETAIL_INDEX_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailRule(CaLLQueryInfo* pQueryInfo, CaRule* pObject)
+{
+	USES_CONVERSION;
+	CString strStatement = _T("");
+	CString strObjectName = pObject->GetName();
+	CString strObjectOwner = pObject->GetOwner();
+	//strObjectName.MakeLower();
+	//strObjectOwner.MakeLower();
+	CaRuleDetail* pDetail = (CaRuleDetail*)pObject;
+	//
+	// Host Variable Declarations
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szStatement[256];
+		int   nTextSequence;
+		char* objectName     = T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char* objectOwner= T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAILRULE_ERROR; 
+	EXEC SQL REPEATED SELECT
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE
+	INTO
+		:szStatement,
+		:nTextSequence
+	FROM 
+		IIRULES
+	WHERE
+		RULE_NAME = :objectName AND RULE_OWNER = :objectOwner
+	ORDER BY TEXT_SEQUENCE;
+
+	EXEC SQL BEGIN;
+		if(nTextSequence == 1)
+		{
+			strStatement = A2T(szStatement);
+			pDetail->SetDetailText(strStatement);
+			pDetail->SetBaseTable(strObjectName, strObjectOwner);
+
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			strStatement = pDetail->GetDetailText();
+			strStatement += A2T(szStatement);
+			pDetail->SetDetailText(strStatement);
+		}
+	EXEC SQL END;
+	return TRUE;
+QUERY_DETAILRULE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailIntegrity(CaLLQueryInfo* pQueryInfo, CaIntegrity* pObject)
+{
+	USES_CONVERSION;
+	CString strStatement = _T("");
+	CString strObjectName = pObject->GetName();
+	CString strObjectOwner = pObject->GetOwner();
+	//strObjectName.MakeLower();
+	//strObjectOwner.MakeLower();
+	CaIntegrityDetail* pDetail = (CaIntegrityDetail*)pObject;
+	//
+	// Host Variable Declarations
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szStatement[256];
+		int   nTextSequence;
+		int   nNumber        = pObject->GetNumber();
+		char* objectName     = T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char* objectOwner= T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAILINTEGRITY_ERROR; 
+	EXEC SQL REPEATED SELECT
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE
+	INTO
+		:szStatement,
+		:nTextSequence
+	FROM 
+		IIINTEGRITIES
+	WHERE
+		TABLE_NAME = :objectName AND TABLE_OWNER = :objectOwner AND 
+		INTEGRITY_NUMBER = :nNumber
+	ORDER BY TEXT_SEQUENCE;
+
+	EXEC SQL BEGIN;
+		if(nTextSequence == 1)
+		{
+			strStatement = A2T(szStatement);
+			pDetail->SetOwner (strObjectOwner); // Same as Table's owner ?
+			pDetail->SetDetailText(strStatement);
+			pDetail->SetBaseTable(strObjectName, strObjectOwner);
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			strStatement = pDetail->GetDetailText();
+			strStatement += A2T(szStatement);
+			pDetail->SetDetailText(strStatement);
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERY_DETAILINTEGRITY_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailTableCol(CaLLQueryInfo* pQueryInfo, CaColumn* pObject)
+{
+	ASSERT(FALSE);
+	return FALSE;
+}
+
+static BOOL QueryDetailDBEvent (CaLLQueryInfo* pQueryInfo, CaDBEvent* pObject)
+{
+	USES_CONVERSION;
+	CString strStatement = _T("");
+	CString strObjectName = pObject->GetName();
+	CString strObjectOwner = pObject->GetOwner();
+	//strObjectName.MakeLower();
+	//strObjectOwner.MakeLower();
+	CaDBEventDetail* pDetail = (CaDBEventDetail*)pObject;
+	//
+	// Host Variable Declarations
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szStatement[256];
+		int   nTextSequence;
+		char* objectName     = T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char* objectOwner= T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAILDBEVENT_ERROR; 
+	EXEC SQL REPEATED SELECT
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE
+	INTO
+		:szStatement,
+		:nTextSequence
+	FROM 
+		IIEVENTS
+	WHERE
+		EVENT_NAME = :objectName AND EVENT_OWNER = :objectOwner
+	ORDER BY TEXT_SEQUENCE;
+
+	EXEC SQL BEGIN;
+		if(nTextSequence == 1)
+		{
+			strStatement += A2T(szStatement);
+			pDetail->SetDetailText(strStatement);
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			strStatement = pDetail->GetDetailText();
+			strStatement += A2T(szStatement);
+			pDetail->SetDetailText(strStatement);
+		}
+	EXEC SQL END;
+	return TRUE;
+QUERY_DETAILDBEVENT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailSynonym (CaLLQueryInfo* pQueryInfo, CaSynonym* pObject)
+{
+	USES_CONVERSION;
+	CString strStatement = _T("");
+	CString strObjectName = pObject->GetName();
+	CString strObjectOwner = pObject->GetOwner();
+	//strObjectName.MakeLower();
+	//strObjectOwner.MakeLower();
+	CaSynonymDetail* pDetail = (CaSynonymDetail*)pObject;
+	//
+	// Host Variable Declarations
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szOnObject     [DBOBJECTLEN];
+		char  szOnObjectOwner[DBOBJECTLEN];
+		char  cOnType[2];
+		char* objectName     = T2A((LPTSTR)(LPCTSTR)strObjectName);
+		char* objectOwner= T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAILSYNONYM_ERROR; 
+	EXEC SQL REPEATED SELECT
+		TABLE_NAME,
+		TABLE_OWNER
+	INTO
+		:szOnObject,
+		:szOnObjectOwner
+	FROM 
+		IISYNONYMS
+	WHERE
+		SYNONYM_NAME = :objectName AND SYNONYM_OWNER = :objectOwner;
+
+	EXEC SQL BEGIN;
+		TrimRight(szOnObject);
+		TrimRight(szOnObjectOwner);
+		pDetail->SetOnObject(A2T(szOnObject));
+		pDetail->SetOnObjectOwner(A2T(szOnObjectOwner));
+	EXEC SQL END;
+
+	if (!pDetail->GetOnObject().IsEmpty())
+	{
+		objectName  = T2A((LPTSTR)(LPCTSTR)pDetail->GetOnObject());
+		objectOwner = T2A((LPTSTR)(LPCTSTR)pDetail->GetOnObjectOwner());
+
+		EXEC SQL REPEATED SELECT
+			TABLE_NAME,
+			TABLE_OWNER,
+			TABLE_TYPE
+		INTO
+			:szOnObject,
+			:szOnObjectOwner,
+			:cOnType
+		FROM 
+			IITABLES
+		WHERE
+			TABLE_NAME = :objectName AND TABLE_OWNER = :objectOwner;
+		EXEC SQL BEGIN;
+			pDetail->SetOnType(toupper(cOnType[0]));
+		EXEC SQL END;
+	}
+
+	return TRUE;
+QUERY_DETAILSYNONYM_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailDatabaseGrantee (CaLLQueryInfo* pQueryInfo, CaGrantee* pGrantee, CaSessionManager* pMgr, CaSession* pSession)
+{
+	USES_CONVERSION;
+	const int max_priv = 17;
+	enum
+	{
+		DB_ACCESS = 0,
+		CR_PROC,
+		CR_TABLE,
+		DB_ADMIN,
+		LK_MODE,
+		QRY_IO,
+		QRY_ROW,
+		UP_SYSCAT,
+		SEL_SYSCATS,
+		TBL_STATS,
+		IDLE_TIME,
+		CONN_TIME,
+		SESS_PRIO,
+		QRY_CPU,
+		QRY_COST,
+		QRY_PAGE,
+		CR_SEQ
+	};
+
+	TCHAR  tchszArrayPriv[max_priv][32]=
+	{
+		_T("database access"),
+		_T("create procedure"),
+		_T("create table"),
+		_T("database admin"),
+		_T("lock mode"),
+		_T("query io limit"),
+		_T("query row limit"),
+		_T("update syscat"),
+		_T("select syscat"),
+		_T("table statistics"),
+		_T("idle time limit"),
+		_T("connect time limit"),
+		_T("session priority"),
+		_T("query cpu limit"),
+		_T("query cost limit"),
+		_T("query page limit"),
+		_T("create sequence")
+	};
+	int i;
+	CTypedPtrList< CObList, CaDBObject* > lGroup;
+	CString strGrantee = pGrantee->GetName();
+	CString strDatabase = pQueryInfo->GetDatabase();
+	CStringList listGroup;
+	//strGrantee.MakeLower();
+	//strDatabase.MakeLower();
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_GROUP);
+	qinfo.SetDatabase(_T("iidbdb"));
+	if (pQueryInfo->GetSubObjectType() == OBT_INSTALLATION)
+		strDatabase = _T("");
+	if (strGrantee.IsEmpty() && pGrantee->GetIdentity() == -1)
+	{
+		//
+		// Special handler for IIDBPRIV. The grantee name = "public" if a database is granted
+		// to public. BUT for other objects (Table, View, Procedure), the grantee name = '' for
+		// public !!!
+		strGrantee = _T("public");
+	}
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szArrayPriv[max_priv][2];
+		int   nLimit[max_priv];
+		char  szGrantee[DBOBJECTLEN];
+		char* lpObject = T2A((LPTSTR)(LPCTSTR)strDatabase);
+		char* lpGrantee = T2A((LPTSTR)(LPCTSTR)strGrantee);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAIL_DBGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		GRANTEE,
+		DB_ACCESS     = char(charextract('UNY',(mod((control/  2048),(2))+mod((flags/  2048),(2))+1))),
+		CR_PROC       = char(charextract('UNY',(mod((control/   512),(2))+mod((flags/   512),(2))+1))),
+		CR_TAB        = char(charextract('UNY',(mod((control/   256),(2))+mod((flags/   256),(2))+1))),
+		DB_ADMIN      = char(charextract('UNY',(mod((control/  8192),(2))+mod((flags/  8192),(2))+1))),
+		LK_MODE       = char(charextract('UNY',(mod((control/  1024),(2))+mod((flags/  1024),(2))+1))),
+		QRY_IO        = char(charextract('UNY',(mod((control/     2),(2))+mod((flags/     2),(2))+1))),
+		QRY_IO_LIM    = qdio_limit,
+		QRY_ROW       = char(charextract('UNY',(mod((control       ),(2))+mod((flags       ),(2))+1))),
+		QRY_ROW_LIM   = qrow_limit,
+		UP_SYSCAT     = char(charextract('UNY',(mod((control/  4096),(2))+mod((flags/  4096),(2))+1))),
+		SEL_SYSCAT    = char(charextract('UNY',(mod((control/ 32768),(2))+mod((flags/ 32768),(2))+1))),
+		TBL_STATS     = char(charextract('UNY',(mod((control/ 65536),(2))+mod((flags/ 65536),(2))+1))),
+		IDLE_TIME     = char(charextract('UNY',(mod((control/131072),(2))+mod((flags/131072),(2))+1))),
+		IDLE_TIME_LIM = idle_time_limit,
+		CONN_TIME     = char(charextract('UNY',(mod((control/262144),(2))+mod((flags/262144),(2))+1))),
+		CONN_TIME_LIM = connect_time_limit,
+		SESS_PRIO     = char(charextract('UNY',(mod((control/524288),(2))+mod((flags/524288),(2))+1))),
+		SESS_PRIO_LIM = priority_limit,
+		QRY_CPU       = char(charextract('UNY',(mod((control/     4),(2))+mod((flags/     4),(2))+1))),
+		QRY_CPU_MIMIT = qcpu_limit,
+		QRY_COST      = char(charextract('UNY',(mod((control/    16),(2))+mod((flags/    16),(2))+1))),
+		QRY_COST_LIMIT= qcost_limit,
+		QRY_PAGE      = char(charextract('UNY',(mod((control/     8),(2))+mod((flags/     8),(2))+1))),
+		QRY_PAGE_LIMIT= qpage_limit,
+		CR_SEQ        = char(charextract('UNY',(mod((control/1048576),(2))+mod((flags/1048576    ),(2))+1)))
+	INTO
+		:szGrantee,
+		:szArrayPriv[DB_ACCESS],
+		:szArrayPriv[CR_PROC],
+		:szArrayPriv[CR_TABLE],
+		:szArrayPriv[DB_ADMIN],
+		:szArrayPriv[LK_MODE],
+		:szArrayPriv[QRY_IO],
+		:nLimit[QRY_IO],
+		:szArrayPriv[QRY_ROW],
+		:nLimit[QRY_ROW],
+		:szArrayPriv[UP_SYSCAT],
+		:szArrayPriv[SEL_SYSCATS],
+		:szArrayPriv[TBL_STATS],
+		:szArrayPriv[IDLE_TIME],
+		:nLimit[IDLE_TIME],
+		:szArrayPriv[CONN_TIME],
+		:nLimit[CONN_TIME],
+		:szArrayPriv[SESS_PRIO],
+		:nLimit[SESS_PRIO],
+		:szArrayPriv[QRY_CPU],
+		:nLimit[QRY_CPU],
+		:szArrayPriv[QRY_COST],
+		:nLimit[QRY_COST],
+		:szArrayPriv[QRY_PAGE],
+		:nLimit[QRY_PAGE],
+		:szArrayPriv[CR_SEQ]
+	FROM IIDBPRIV
+	WHERE 
+		DBNAME = :lpObject AND GRANTEE = :lpGrantee;
+
+	EXEC SQL BEGIN;
+		TrimRight(szGrantee);
+		for (i=0; i<max_priv; i++)
+		{
+			szArrayPriv[i][0] = toupper(szArrayPriv[i][0]);
+			if (szArrayPriv[i][0] == 'Y')
+			{
+				switch (i)
+				{
+				case QRY_IO:
+				case QRY_ROW:
+				case IDLE_TIME:
+				case CONN_TIME:
+				case SESS_PRIO:
+				case QRY_CPU:
+				case QRY_COST:
+				case QRY_PAGE:
+					pGrantee->SetPrivilege2(tchszArrayPriv[i], nLimit[i]);
+					break;
+				default:
+					pGrantee->SetPrivilege(tchszArrayPriv[i]);
+					break;
+				}
+			}
+			else
+			if (szArrayPriv[i][0] == 'N')
+			{
+				pGrantee->SetPrivilege(tchszArrayPriv[i], FALSE);
+			}
+		}
+	EXEC SQL END;
+/*
+	try
+	{
+		INGRESII_llQueryObject (&qinfo, lGroup, pMgr, pSession);
+		while (!lGroup.IsEmpty())
+		{
+			CaDBObject* pObj = lGroup.RemoveHead();
+			CString strGroup = pObj->GetName();
+			strGroup.MakeLower();
+			listGroup.AddTail(strGroup);
+			delete pObj;
+		}
+	}
+	catch (...)
+	{
+		TRACE0("QueryDatabaseGrantee: failed to identify grantee\n");
+	}
+	if (!strGrantee.IsEmpty() && pGrantee->GetIdentity() != -1)
+	{
+		if (listGroup.Find(strGrantee) != NULL)
+			pGrantee->SetIdentity(OBT_GROUP);
+	}
+*/
+	return TRUE;
+
+QUERYDETAIL_DBGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailTVIGrantee (CaLLQueryInfo* pQueryInfo, CaGrantee* pGrantee, char cType, CaSessionManager* pMgr, CaSession* pSession)
+{
+	USES_CONVERSION;
+	CString strGrantee = pGrantee->GetName();
+	CString strObject = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+	CTypedPtrList< CObList, CaDBObject* > lGroup;
+	CStringList listGroup;
+	//strObject.MakeLower();
+	//strObjectOwner.MakeLower();
+	//strGrantee.MakeLower();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szPermitUser[48];
+		char  szPermitType[128];
+		char  chType[2];
+		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+		char* lpGrantee = T2A((LPTSTR)(LPCTSTR)strGrantee);
+	EXEC SQL END DECLARE SECTION;
+
+	chType[0] = cType;
+	chType[1] = '\0';
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_GROUP);
+	qinfo.SetDatabase(_T("iidbdb"));
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAIL_TVIGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		PERMIT_USER,
+		PERMIT_TYPE
+	INTO
+		:szPermitUser,
+		:szPermitType
+	FROM IIACCESS
+	WHERE 
+		TABLE_NAME = :lpObject AND TABLE_OWNER = :lpObjectOwner AND 
+		TABLE_TYPE = :chType AND PERMIT_USER = :lpGrantee;
+
+	EXEC SQL BEGIN;
+		TrimRight(szPermitUser);
+		TrimRight(szPermitType);
+		pGrantee->SetPrivilege(szPermitType);
+	EXEC SQL END;
+/* not requiered for now:
+	try
+	{
+		INGRESII_llQueryObject (&qinfo, lGroup, pMgr);
+		while (!lGroup.IsEmpty())
+		{
+			CaDBObject* pObj = lGroup.RemoveHead();
+			CString strGroup = pObj->GetName();
+			strGroup.MakeLower();
+			listGroup.AddTail(strGroup);
+			delete pObj;
+		}
+	}
+	catch (...)
+	{
+		TRACE0("QueryTVIGrantee: failed to identify grantee\n");
+	}
+
+	if (listGroup.Find(strGrantee) != NULL)
+		pGrantee->SetIdentity(OBT_GROUP);
+*/
+	return TRUE;
+
+QUERYDETAIL_TVIGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailProcedureGrantee (CaLLQueryInfo* pQueryInfo, CaGrantee* pGrantee, CaSessionManager* pMgr, CaSession* pSession)
+{
+	USES_CONVERSION;
+	CString strText;
+	CString strGrantee = pGrantee->GetName();
+	CString strObject = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+
+	CTypedPtrList< CObList, CaDBObject* > lGroup;
+	CStringList listGroup;
+	//strObject.MakeLower();
+	//strObjectOwner.MakeLower();
+	//strGrantee.MakeLower();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nTextSequence;
+		char  szPermitUser[48];
+		char  szText[260];
+		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+		char* lpGrantee = T2A((LPTSTR)(LPCTSTR)strGrantee);
+	EXEC SQL END DECLARE SECTION;
+
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_GROUP);
+	qinfo.SetDatabase(_T("iidbdb"));
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAIL_PROCEDUREGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		PERMIT_USER,
+		TEXT_SEQUENCE,
+		TEXT_SEGMENT
+	INTO
+		:szPermitUser,
+		:nTextSequence,
+		:szText
+	FROM IIPROC_ACCESS
+	WHERE 
+		OBJECT_NAME = :lpObject AND OBJECT_OWNER = :lpObjectOwner AND OBJECT_TYPE = 'P' AND
+		PERMIT_USER = :lpGrantee;
+
+	EXEC SQL BEGIN;
+		if (nTextSequence == 1)
+		{
+			TrimRight(szPermitUser);
+			strText = A2T(szText);
+			strText.MakeLower();
+			if (strText.Find (_T("grant execute")) != -1)
+			{
+				pGrantee->SetPrivilege(_T("execute"));
+			}
+		}
+	EXEC SQL END;
+/* not required for now:
+	try
+	{
+		INGRESII_llQueryObject (&qinfo, lGroup, pMgr);
+		while (!lGroup.IsEmpty())
+		{
+			CaDBObject* pObj = lGroup.RemoveHead();
+			CString strGroup = pObj->GetName();
+			strGroup.MakeLower();
+			listGroup.AddTail(strGroup);
+			delete pObj;
+		}
+	}
+	catch (...)
+	{
+		TRACE0("QueryProcedureGrantee: failed to identify grantee\n");
+	}
+	if (listGroup.Find(strGrantee) != NULL)
+		pGrantee->SetIdentity(OBT_GROUP);
+*/
+	return TRUE;
+
+QUERYDETAIL_PROCEDUREGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailSequenceGrantee (CaLLQueryInfo* pQueryInfo, CaGrantee* pGrantee, CaSessionManager* pMgr, CaSession* pSession)
+{
+	USES_CONVERSION;
+	CString strText;
+	CString strGrantee     = pGrantee->GetName();
+	CString strObject      = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+
+	CTypedPtrList< CObList, CaDBObject* > lGroup;
+	CStringList listGroup;
+	//strObject.MakeLower();
+	//strObjectOwner.MakeLower();
+	//strGrantee.MakeLower();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nTextSequence;
+		char  szPermitUser[48];
+		char  szAllText[260];
+		char* lpObject      = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+		char* lpGrantee     = T2A((LPTSTR)(LPCTSTR)strGrantee);
+	EXEC SQL END DECLARE SECTION;
+	
+	szAllText[0]=_T('\0');
+
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_GROUP);
+	qinfo.SetDatabase(pQueryInfo->GetDatabase());
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAILSEQUENCEGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		PERMIT_USER,
+		TEXT_SEQUENCE,
+		TEXT_SEGMENT
+	INTO
+		:szPermitUser,
+		:nTextSequence,
+		:szAllText
+	FROM IIPERMITS
+	WHERE OBJECT_TYPE = 'S' AND OBJECT_NAME = :lpObject AND OBJECT_OWNER = :lpObjectOwner AND
+		PERMIT_USER = :lpGrantee;
+	
+	EXEC SQL BEGIN;
+		if (nTextSequence == 1)
+		{
+			TrimRight(szPermitUser);
+			strText = A2T(szAllText);
+			strText.MakeLower();
+			
+			if (strText.Find (_T("next on sequence")) != -1)
+			{
+				pGrantee->SetPrivilege(_T("next on sequence"));
+			}
+		}
+	EXEC SQL END;
+
+    /*try
+	{
+		INGRESII_llQueryObject (&qinfo, lGroup, pMgr, pSession);
+		while (!lGroup.IsEmpty())
+		{
+			CaDBObject* pObj = lGroup.RemoveHead();
+			CString strGroup = pObj->GetName();
+			strGroup.MakeLower();
+			listGroup.AddTail(strGroup);
+			delete pObj;
+		}
+	}
+	catch (...)
+	{
+		TRACE0("QuerySequenceGrantee: failed to identify grantee\n");
+	}
+	if (listGroup.Find(strGrantee) != NULL)
+		pGrantee->SetIdentity(OBT_GROUP);
+    */
+	return TRUE;
+
+QUERYDETAILSEQUENCEGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDetailDBEventGrantee (CaLLQueryInfo* pQueryInfo, CaGrantee* pGrantee, CaSessionManager* pMgr, CaSession* pSession)
+{
+	USES_CONVERSION;
+	CString strText;
+	CString strGrantee = pGrantee->GetName();
+	CString strObject = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+
+	CTypedPtrList< CObList, CaDBObject* > lGroup;
+	CStringList listGroup;
+	//strObject.MakeLower();
+	//strObjectOwner.MakeLower();
+	//strGrantee.MakeLower();
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nTextSequence;
+		char  szPermitUser[48];
+		char  szText[260];
+		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+		char* lpGrantee = T2A((LPTSTR)(LPCTSTR)strGrantee);
+	EXEC SQL END DECLARE SECTION;
+		szText[0]=_T('\0');
+
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_GROUP);
+	qinfo.SetDatabase(_T("iidbdb"));
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDETAIL_DBEVENTGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		PERMIT_USER,
+		TEXT_SEQUENCE,
+		TEXT_SEGMENT
+	INTO
+		:szPermitUser,
+		:nTextSequence,
+		:szText
+	FROM IIPERMITS
+	WHERE 
+		OBJECT_TYPE = 'E' AND OBJECT_NAME = :lpObject AND OBJECT_OWNER = :lpObjectOwner AND
+		PERMIT_USER = :lpGrantee;
+
+	EXEC SQL BEGIN;
+		if (nTextSequence == 1)
+		{
+			TrimRight(szPermitUser);
+			strText = A2T(szText);
+			strText.MakeLower();
+
+			if (strText.Find (_T("grant raise")) != -1)
+			{
+				pGrantee->SetPrivilege(_T("raise"));
+			}
+			else
+			if (strText.Find (_T("grant register")) != -1)
+			{
+				pGrantee->SetPrivilege(_T("register"));
+			}
+		}
+	EXEC SQL END;
+/* not required for now:
+	try
+	{
+		INGRESII_llQueryObject (&qinfo, lGroup, pMgr, pSession);
+		while (!lGroup.IsEmpty())
+		{
+			CaDBObject* pObj = lGroup.RemoveHead();
+			CString strGroup = pObj->GetName();
+			strGroup.MakeLower();
+			listGroup.AddTail(strGroup);
+			delete pObj;
+		}
+	}
+	catch (...)
+	{
+		TRACE0("QueryDBEventGrantee: failed to identify grantee\n");
+	}
+	if (listGroup.Find(strGrantee) != NULL)
+		pGrantee->SetIdentity(OBT_GROUP);
+*/
+	return TRUE;
+
+QUERYDETAIL_DBEVENTGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDetailGrantee (CaLLQueryInfo* pQueryInfo, CaGrantee* pGrantee, CaSessionManager* pMgr, CaSession* pSession)
+{
+	int nSubObjectType = pQueryInfo->GetSubObjectType();
+	switch (nSubObjectType)
+	{
+	case OBT_INSTALLATION:
+	case OBT_DATABASE:
+		QueryDetailDatabaseGrantee (pQueryInfo, pGrantee, pMgr, pSession);
+		break;
+	case OBT_TABLE:
+		QueryDetailTVIGrantee (pQueryInfo, pGrantee, 'T', pMgr, pSession);
+		break;
+	case OBT_VIEW:
+		QueryDetailTVIGrantee (pQueryInfo, pGrantee, 'V', pMgr, pSession);
+		break;
+	case OBT_INDEX:
+		QueryDetailTVIGrantee (pQueryInfo, pGrantee, 'I', pMgr, pSession);
+		break;
+	case OBT_PROCEDURE:
+		QueryDetailProcedureGrantee (pQueryInfo, pGrantee, pMgr, pSession);
+		break;
+	case OBT_DBEVENT:
+		QueryDetailDBEventGrantee (pQueryInfo, pGrantee, pMgr, pSession);
+		break;
+	case OBT_SEQUENCE:
+		QueryDetailSequenceGrantee (pQueryInfo, pGrantee, pMgr, pSession);
+		break;
+	default:
+		ASSERT(FALSE); // Need more implementation ?
+		break;
+	}
+
+	return TRUE;
+}
+
+
+static BOOL QueryDetailAlarm (CaLLQueryInfo* pQueryInfo, CaAlarm* pObject)
+{
+	USES_CONVERSION;
+	CString strText;
+	CString strObject;
+	CString strObjectOwner;
+	CString strName = pObject->GetName();
+	int nSubObjectType = pQueryInfo->GetSubObjectType();
+	POSITION pos = NULL;
+	BOOL bTakeIt = FALSE;
+
+	strName.MakeLower();
+	EXEC SQL BEGIN DECLARE SECTION;
+		short nullIndicator1, nullIndicator2;
+		int   nTextSequence;
+		int   nSecurityNumber;
+		char  chType[2];
+		char  szAlarmName[DBOBJECTLEN];
+		char  szSubjectType[2];
+		char  szSecurityUser[DBOBJECTLEN];
+		char  szObjectOwner[DBOBJECTLEN];
+		char  szDBevent[DBOBJECTLEN];
+		char  szDBeventOwner[DBOBJECTLEN];
+		char  szText[260];
+		char* lpObject = NULL;
+		char* lpName = T2A((LPTSTR)(LPCTSTR)strName);
+		int   nRequestNumber = pObject->GetSecurityNumber();
+	EXEC SQL END DECLARE SECTION;
+
+	switch (nSubObjectType)
+	{
+	case OBT_INSTALLATION:
+		chType[0] = 'I';
+		strObject = _T("");
+		break;
+	case OBT_DATABASE:
+		chType[0] = 'D';
+		strObject = pQueryInfo->GetDatabase();
+		break;
+	case OBT_TABLE:
+		chType[0] = 'T';
+		strObject = pQueryInfo->GetItem2();
+		break;
+	default:
+		ASSERT(FALSE); // New type ?
+		chType[0] = 'T';
+		break;
+	}
+	chType[1] = '\0';
+	//strObject.MakeLower();
+	lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_DETAIL_SECURITYALARM_ERROR;
+	EXEC SQL REPEATED SELECT 
+		OBJECT_OWNER,
+		SECURITY_USER,
+		SECURITY_NUMBER,
+		TEXT_SEQUENCE,
+		TEXT_SEGMENT,
+		ALARM_NAME,
+		SUBJECT_TYPE,
+		DBEVENT_NAME,
+		DBEVENT_OWNER
+	INTO
+		:szObjectOwner,
+		:szSecurityUser,
+		:nSecurityNumber,
+		:nTextSequence,
+		:szText,
+		:szAlarmName,
+		:szSubjectType,
+		:szDBevent:nullIndicator1,
+		:szDBeventOwner:nullIndicator2
+	FROM IISECURITY_ALARMS
+	WHERE 
+		OBJECT_TYPE = :chType AND OBJECT_NAME = :lpObject AND 
+		SECURITY_NUMBER = :nRequestNumber;
+
+	EXEC SQL BEGIN;
+		if (nTextSequence == 1)
+		{
+			bTakeIt = TRUE;
+			TrimRight(szObjectOwner);
+			strObjectOwner = szObjectOwner;
+			if (nSubObjectType == OBT_TABLE && !strObjectOwner.IsEmpty())
+			{
+				CString strFetchedOwner = A2T(szObjectOwner);
+				if (strObjectOwner.CompareNoCase(strFetchedOwner) != 0)
+					bTakeIt = FALSE;
+			}
+
+			if (bTakeIt)
+			{
+				TrimRight(szSecurityUser);
+				TrimRight(szAlarmName);
+				szSubjectType[0] = toupper(szSubjectType[0]);
+				szSubjectType[1] = '\0';
+				pObject->SetSubjectType(szSubjectType[0]);
+				pObject->SetSecurityUser(A2T(szSecurityUser));
+				strText = A2T(szText);
+				strText.MakeLower();
+				pObject->SetDetailText(strText);
+				if (nullIndicator1 != -1 && nullIndicator2 != -1)
+				{
+					TrimRight(szDBevent);
+					TrimRight(szDBeventOwner);
+					pObject->SetDBEvent(A2T(szDBevent), A2T(szDBeventOwner));
+				}
+			}
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			ASSERT(pObject);
+			if (pObject)
+			{
+				pObject->AppendDetailText(strText);
+			}
+		}
+	EXEC SQL END;
+
+	if (bTakeIt)
+		pObject->ParseSecurityAlarmFlags();
+	return TRUE;
+
+QUERY_DETAIL_SECURITYALARM_ERROR:
+	ExceptionError();
+	return TRUE;
+}
+
+
+static BOOL GetListKeyInfo (LPCTSTR lpszTable, LPCTSTR lpszOwner, LPCTSTR lpszConstr, CTypedPtrList < CObList, CaColumnKey* >& listColumn)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szColName      [DBOBJECTLEN];
+		char tbName         [DBOBJECTLEN];
+		char tbCreator      [DBOBJECTLEN];
+		char szConstraint   [DBOBJECTLEN];
+		char szDataType     [DBOBJECTLEN];
+		int  nColNo;
+		int  iDataType;
+		int  iDataLen; 
+		int  iScale;
+	EXEC SQL END DECLARE SECTION; 
+
+	strcpy (szConstraint, T2A((LPTSTR)lpszConstr));
+	strcpy (tbName, T2A((LPTSTR)lpszTable));
+	strcpy (tbCreator, T2A((LPTSTR)lpszOwner));
+
+	//
+	// Query the key columns from TABLE IIKEYS and IICOLUMNS
+	EXEC SQL WHENEVER SQLERROR GOTO QUERY_KEY_INFO_ERROR; 
+	EXEC SQL REPEATED SELECT 
+		A.COLUMN_NAME,
+		A.KEY_POSITION,
+		B.COLUMN_INGDATATYPE,
+		B.COLUMN_DATATYPE,
+		B.COLUMN_LENGTH,
+		B.COLUMN_SCALE
+	INTO    
+		:szColName, 
+		:nColNo,
+		:iDataType,
+		:szDataType,
+		:iDataLen,
+		:iScale
+	FROM 
+		IIKEYS A, IICOLUMNS B
+	WHERE
+		A.TABLE_NAME = :tbName and A.SCHEMA_NAME = :tbCreator AND 
+		B.TABLE_NAME = :tbName and B.TABLE_OWNER = :tbCreator AND
+		A.COLUMN_NAME= B.COLUMN_NAME                          AND
+		A.CONSTRAINT_NAME = :szConstraint
+	ORDER BY 
+		A.KEY_POSITION;
+
+	EXEC SQL BEGIN;
+		TrimRight (szColName);
+		TrimRight (szDataType);
+		CaColumnKey* pCol = new CaColumnKey(szColName, szDataType, iDataType);
+		pCol->SetLength(iDataLen);
+		pCol->SetScale(iScale);
+		pCol->SetKeyOrder(nColNo);
+		listColumn.AddTail(pCol);
+	EXEC SQL END;
+	return TRUE;
+
+QUERY_KEY_INFO_ERROR:
+	while (!listColumn.IsEmpty())
+		delete listColumn.RemoveHead();
+	ExceptionError();
+	return FALSE;
+}
+
+
+
+static BOOL GetPrimaryKeyInfo (CaPrimaryKey* pKey)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szTbName       [DBOBJECTLEN];
+		char szTbCreator    [DBOBJECTLEN];
+		char tbName         [DBOBJECTLEN];
+		char tbCreator      [DBOBJECTLEN];
+		char szConstraint   [DBOBJECTLEN];
+		char szTextSegment  [512];
+		int  nTextSequence;
+	EXEC SQL END DECLARE SECTION; 
+
+	strcpy (tbName, T2A((LPTSTR)(LPCTSTR)pKey->GetName()));
+	strcpy (tbCreator, T2A((LPTSTR)(LPCTSTR)pKey->GetOwner()));
+	CTypedPtrList < CObList, CaColumnKey* >& lc = pKey->GetListColumn();
+	//
+	// Query the primary key constraint from TABLE IICONSTRAINTS
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYPRIMARYKEYINFO_ERROR; 
+	EXEC SQL REPEATED SELECT
+		SCHEMA_NAME,
+		TABLE_NAME,
+		CONSTRAINT_NAME,
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE
+	INTO
+		:szTbCreator,
+		:szTbName, 
+		:szConstraint,
+		:szTextSegment,
+		:nTextSequence
+	FROM
+		IICONSTRAINTS
+	WHERE
+		TABLE_NAME = :tbName and SCHEMA_NAME = :tbCreator AND CONSTRAINT_TYPE = 'P'
+	ORDER BY TEXT_SEQUENCE;
+
+	EXEC SQL BEGIN;
+		TrimRight (szTextSegment);
+		if (nTextSequence == 1)
+		{
+			TrimRight (szConstraint);
+			pKey->SetConstraintName(A2T(szConstraint));
+			pKey->SetTable(pKey->GetName(), pKey->GetOwner());
+			pKey->ConcatStatement(A2T(szTextSegment));
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			pKey->ConcatStatement(A2T(szTextSegment));
+		}
+	EXEC SQL END;
+
+	if (!pKey->GetConstraintName().IsEmpty())
+	{
+		GetListKeyInfo (pKey->GetName(), pKey->GetOwner(), pKey->GetConstraintName(), lc);
+		GetIndexEnforcement (pKey->GetWithClause(), pKey->GetConstraintName());
+	}
+	return TRUE;
+
+QUERYPRIMARYKEYINFO_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL GetUniqueKeyInfo  (LPCTSTR lpszTable, LPCTSTR lpszOwner, CTypedPtrList < CObList, CaUniqueKey* >& listObject)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szTbName       [DBOBJECTLEN];
+		char szTbCreator    [DBOBJECTLEN];
+		char tbName         [DBOBJECTLEN];
+		char tbCreator      [DBOBJECTLEN];
+		char szConstraint   [DBOBJECTLEN];
+		char szTextSegment  [512];
+		int  nTextSequence;
+	EXEC SQL END DECLARE SECTION; 
+
+	POSITION pos = NULL;
+	strcpy (tbName, T2A((LPTSTR)(LPCTSTR)lpszTable));
+	strcpy (tbCreator, T2A((LPTSTR)(LPCTSTR)lpszOwner));
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYUNIQUEKEYINFO_ERROR; 
+	//
+	// Query the unique key constraint from TABLE IIKEYS and IICONSTRAINTS
+	// JOIN : EQUI-JOIN (FULL JOIN)
+	EXEC SQL REPEATED SELECT
+		SCHEMA_NAME,
+		TABLE_NAME,
+		CONSTRAINT_NAME,
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE
+	INTO
+		:szTbCreator,
+		:szTbName, 
+		:szConstraint,
+		:szTextSegment,
+		:nTextSequence
+	FROM
+		IICONSTRAINTS
+	WHERE
+		TABLE_NAME = :tbName and SCHEMA_NAME = :tbCreator AND CONSTRAINT_TYPE = 'U'
+	ORDER BY TEXT_SEQUENCE;
+
+	EXEC SQL BEGIN;
+		TrimRight (szTextSegment);
+		if (nTextSequence == 1)
+		{
+			TrimRight (szConstraint);
+			CaUniqueKey* pKey = new CaUniqueKey(A2T(szConstraint));
+			pKey->SetTable(lpszTable, lpszOwner);
+			pKey->ConcatStatement(A2T(szTextSegment));
+			listObject.AddTail(pKey);
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			CaUniqueKey* pKey = listObject.GetTail();
+			if (pKey)
+				pKey->ConcatStatement(A2T(szTextSegment));
+		}
+	EXEC SQL END;
+
+	pos = listObject.GetHeadPosition();
+	while (pos != NULL)
+	{
+		CaUniqueKey* pKey = listObject.GetNext (pos);
+		CTypedPtrList < CObList, CaColumnKey* >& lc = pKey->GetListColumn();
+		GetListKeyInfo (lpszTable, lpszOwner, pKey->GetConstraintName(), lc);
+		GetIndexEnforcement (pKey->GetWithClause(), pKey->GetConstraintName());
+	}
+
+	return TRUE;
+QUERYUNIQUEKEYINFO_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+
+// For the REFERENCEPARAMS
+// Select from IICONSTRAINTS:
+//      - Constraint name,
+//      - Table name
+//      - Table owner
+// Select from IIREF_CONSTRAINTS:
+//      - Parent table owner
+//      - Parent table name
+// Select from IIKEYS with 
+// equal-join (IIREF_CONSTRAINTS.UNIQUE_CONSTRAINT_NAME = IIKEYS.CONSTRAINT_NAME)
+//      - List of referencing columns
+//      - List of referenced columns (due to the doc, primary key or unique keys) 
+// ------------------------------------------------------------------------------
+static BOOL GetForeignKeyInfo (LPCTSTR lpszTable, LPCTSTR lpszOwner, CTypedPtrList < CObList, CaForeignKey* >& listObject)
+{
+	USES_CONVERSION;
+	//
+	// Host Variable Declarations
+	//
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szTbName       [DBOBJECTLEN];
+		char szTbCreator    [DBOBJECTLEN];
+		char tbName         [DBOBJECTLEN];
+		char tbCreator      [DBOBJECTLEN];
+		char szConstraint   [DBOBJECTLEN];
+		char szRefedTbParent[DBOBJECTLEN];
+		char szRefedTb      [DBOBJECTLEN];
+		char szReferedConstr[DBOBJECTLEN];
+		char szTextSegment  [512];
+		int  nTextSequence;
+	EXEC SQL END DECLARE SECTION; 
+
+	POSITION pos = NULL;
+	strcpy (tbName, T2A((LPTSTR)lpszTable));
+	strcpy (tbCreator, T2A((LPTSTR)lpszOwner));
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYFOREIGNKEYINFO_ERROR; 
+	//
+	// Query the primary key constraint from TABLE IICONSTRAINTS and IIREF_CONSTRAINTS
+	// JOIN : EQUI-JOIN (FULL JOIN)
+	EXEC SQL REPEATED SELECT  
+		A.SCHEMA_NAME,
+		A.TABLE_NAME,
+		A.CONSTRAINT_NAME,
+		A.TEXT_SEGMENT,
+		A.TEXT_SEQUENCE,
+		B.UNIQUE_SCHEMA_NAME,
+		B.UNIQUE_TABLE_NAME,
+		B.UNIQUE_CONSTRAINT_NAME
+	INTO 
+		:szTbCreator, 
+		:szTbName, 
+		:szConstraint,
+		:szTextSegment,
+		:nTextSequence,
+		:szRefedTbParent,
+		:szRefedTb,
+		:szReferedConstr
+	FROM 
+		IICONSTRAINTS A, IIREF_CONSTRAINTS B
+	WHERE   
+		A.TABLE_NAME = :tbName and A.SCHEMA_NAME = :tbCreator                   AND 
+		A.TABLE_NAME = B.REF_TABLE_NAME and A.SCHEMA_NAME = B.REF_SCHEMA_NAME   AND
+		A.CONSTRAINT_NAME = B.REF_CONSTRAINT_NAME                               AND
+		A.CONSTRAINT_TYPE = 'R'
+	ORDER BY A.TEXT_SEQUENCE;
+
+	EXEC SQL BEGIN;
+		TrimRight (szTextSegment);
+		if (nTextSequence == 1)
+		{
+			TrimRight (szConstraint);
+			TrimRight (szRefedTbParent);
+			TrimRight (szRefedTb);
+			TrimRight (szReferedConstr);
+
+			CaForeignKey* pKey = new CaForeignKey(A2T(szConstraint), A2T(szReferedConstr));
+			pKey->SetTable (lpszTable, lpszOwner);
+			pKey->SetReferedTable (A2T(szRefedTb), A2T(szRefedTbParent));
+			pKey->ConcatStatement(A2T(szTextSegment));
+			listObject.AddTail(pKey);
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			CaForeignKey* pKey = listObject.GetTail();
+			if (pKey)
+				pKey->ConcatStatement(A2T(szTextSegment));
+		}
+	EXEC SQL END;
+
+	pos = listObject.GetHeadPosition();
+	while (pos != NULL)
+	{
+		CaForeignKey* pKey = listObject.GetNext (pos);
+		CTypedPtrList < CObList, CaColumnKey* >& lcs = pKey->GetListColumn();
+		CTypedPtrList < CObList, CaColumnKey* >& lct = pKey->GetReferedListColumn();
+		GetListKeyInfo (lpszTable, lpszOwner, pKey->GetConstraintName(), lcs);
+		GetListKeyInfo (pKey->GetReferedTable(), pKey->GetReferedTableOwner(), pKey->GetReferedConstraintName(), lct);
+		GetIndexEnforcement (pKey->GetWithClause(), A2T(szConstraint));
+	}
+	return TRUE;
+QUERYFOREIGNKEYINFO_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+// For the CHECKPARAMS
+//
+// Select from IICONSTRAINTS:
+//      - Constraint name,
+//      - Table name
+//      - Table owner
+//      - The check expression.
+// ------------------------------------------------------------------------------
+static BOOL GetCheckKeyInfo  (LPCTSTR lpszTable, LPCTSTR lpszOwner, CTypedPtrList < CObList, CaCheckKey* >& listObject)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szTbName       [DBOBJECTLEN];
+		char szTbCreator    [DBOBJECTLEN];
+		char tbName         [DBOBJECTLEN];
+		char tbCreator      [DBOBJECTLEN];
+		char szConstraint   [DBOBJECTLEN];
+		char szExpr         [256];
+		int  textsequence;
+	EXEC SQL END DECLARE SECTION; 
+
+	POSITION pos = NULL;
+	CaCheckKey* pKey = NULL;
+	strcpy (tbName, T2A((LPTSTR)lpszTable));
+	strcpy (tbCreator, T2A((LPTSTR)lpszOwner));
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYCHECKKEYINFO_ERROR; 
+	EXEC SQL REPEATED SELECT 
+		SCHEMA_NAME,
+		TABLE_NAME,
+		CONSTRAINT_NAME,
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE
+	INTO
+		:szTbCreator, 
+		:szTbName, 
+		:szConstraint,
+		:szExpr,
+		:textsequence
+	FROM
+		IICONSTRAINTS
+	WHERE
+		TABLE_NAME = :tbName and SCHEMA_NAME = :tbCreator AND CONSTRAINT_TYPE = 'C';
+
+	EXEC SQL BEGIN;
+		TrimRight (szConstraint);
+		TrimRight (szExpr);
+		if (textsequence == 1)
+		{
+			pKey = new CaCheckKey(A2T(szConstraint));
+			pKey->ConcatStatement(A2T(szExpr));
+			listObject.AddTail(pKey);
+		}
+		else
+		if (textsequence > 1)
+		{
+			pKey = listObject.GetTail();
+			ASSERT(pKey);
+			if (pKey)
+				pKey->ConcatStatement(A2T(szExpr));
+		}
+	EXEC SQL END;
+
+	pos = listObject.GetHeadPosition();
+	while (pos != NULL)
+	{
+		CaCheckKey* pObj = listObject.GetNext(pos);
+		GetIndexEnforcement (pObj->GetWithClause(), pObj->GetConstraintName());
+	}
+
+	return TRUE;
+
+QUERYCHECKKEYINFO_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL GetTableKeysInfo (LPCTSTR lpszTable, LPCTSTR lpszOwner, CaTableDetail* pDetail)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szTbName       [DBOBJECTLEN];
+		char szTbCreator    [DBOBJECTLEN];
+		char tbName         [DBOBJECTLEN];
+		char tbCreator      [DBOBJECTLEN];
+		char szConstraint   [DBOBJECTLEN];
+		char szExpr         [256];
+		char szConstraintType[8];
+		int  nTextSequence;
+	EXEC SQL END DECLARE SECTION; 
+
+	UINT nQueryFlag = pDetail->GetQueryFlag();
+	POSITION pos = NULL;
+	CTypedPtrList < CObList, CaCheckKey* >& lc = pDetail->GetCheckKeys();
+	CTypedPtrList < CObList, CaUniqueKey* >& lu = pDetail->GetUniqueKeys();
+	CTypedPtrList < CObList, CaForeignKey* >& lfk = pDetail->GetForeignKeys();
+
+	CaPrimaryKey& pk = pDetail->GetPrimaryKey();
+	strcpy (tbName, T2A((LPTSTR)lpszTable));
+	strcpy (tbCreator, T2A((LPTSTR)lpszOwner));
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYTABLEKEYSINFO_ERROR; 
+	EXEC SQL REPEATED SELECT 
+		SCHEMA_NAME,
+		TABLE_NAME,
+		CONSTRAINT_NAME,
+		CONSTRAINT_TYPE,
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE
+	INTO
+		:szTbCreator, 
+		:szTbName, 
+		:szConstraint,
+		:szConstraintType,
+		:szExpr,
+		:nTextSequence
+	FROM
+		IICONSTRAINTS
+	WHERE
+		TABLE_NAME = :tbName and SCHEMA_NAME = :tbCreator;
+
+	EXEC SQL BEGIN;
+		TrimRight (szConstraint);
+		TrimRight (szExpr);
+		if (szConstraintType[0])
+		{
+			if (szConstraintType[0] == 'P' && (nQueryFlag & DTQUERY_PRIMARYKEY))
+			{
+				pk.SetTable(lpszTable, lpszOwner);
+				if (nTextSequence == 1)
+				{
+					pk.SetConstraintName(A2T(szConstraint));
+					pk.ConcatStatement(A2T(szExpr));
+				}
+				else
+				if (nTextSequence > 1)
+				{
+					pk.ConcatStatement(A2T(szExpr));
+				}
+			}
+			else
+			if (szConstraintType[0] == 'C' && (nQueryFlag & DTQUERY_CHECKKEY))
+			{
+				if (nTextSequence == 1)
+				{
+					CaCheckKey* pKey = new CaCheckKey(A2T(szConstraint));
+					pKey->ConcatStatement(A2T(szExpr));
+					lc.AddTail(pKey);
+				}
+				else
+				if (nTextSequence > 1)
+				{
+					CaCheckKey* pKey = lc.GetTail();
+					ASSERT(pKey);
+					if (pKey)
+						pKey->ConcatStatement(A2T(szExpr));
+				}
+			}
+			else
+			if (szConstraintType[0] == 'U' && (nQueryFlag & DTQUERY_UNIQUEKEY))
+			{
+				if (nTextSequence == 1)
+				{
+					TrimRight (szConstraint);
+					CaUniqueKey* pKey = new CaUniqueKey(A2T(szConstraint));
+					pKey->SetTable(lpszTable, lpszOwner);
+					pKey->ConcatStatement(A2T(szExpr));
+					lu.AddTail(pKey);
+				}
+				else
+				if (nTextSequence > 1)
+				{
+					CaUniqueKey* pKey = lu.GetTail();
+					if (pKey)
+						pKey->ConcatStatement(A2T(szExpr));
+				}
+			}
+			else
+			if (szConstraintType[0] == 'R' && (nQueryFlag & DTQUERY_FOREIGNKEY))
+			{
+				if (nTextSequence == 1)
+				{
+					TrimRight (szConstraint);
+					CaForeignKey* pKey = new CaForeignKey(A2T(szConstraint), _T(""));
+					pKey->SetTable (lpszTable, lpszOwner);
+					//pKey->SetReferedTable (A2T(szRefedTb), A2T(szRefedTbParent));
+					pKey->ConcatStatement(A2T(szExpr));
+					lfk.AddTail(pKey);
+				}
+				else
+				if (nTextSequence > 1)
+				{
+					CaForeignKey* pKey = lfk.GetTail();
+					if (pKey)
+						pKey->ConcatStatement(A2T(szExpr));
+				}
+			}
+		}
+	EXEC SQL END;
+	/* No need! if the index constraint is not default, it will appear in the text segment of the constraint:
+	if (nQueryFlag & DTQUERY_PRIMARYKEY)
+	{
+		GetIndexEnforcement (pk.GetWithClause(), pk.GetConstraintName());
+	}
+	
+	if (nQueryFlag & DTQUERY_CHECKKEY)
+	{
+		pos = lc.GetHeadPosition();
+		while (pos != NULL)
+		{
+			CaCheckKey* pObj = lc.GetNext(pos);
+			GetIndexEnforcement (pObj->GetWithClause(), pObj->GetConstraintName());
+		}
+	}
+	
+	if (nQueryFlag & DTQUERY_UNIQUEKEY)
+	{
+		pos = lu.GetHeadPosition();
+		while (pos != NULL)
+		{
+			CaUniqueKey* pObj = lu.GetNext(pos);
+			GetIndexEnforcement (pObj->GetWithClause(), pObj->GetConstraintName());
+		}
+	}
+	*/
+	return TRUE;
+QUERYTABLEKEYSINFO_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+//
+// lpIndex : pointer to the index structure to receive information about index:
+// lpszConstraint: The constraint name.
+static BOOL GetIndexEnforcement (CaIndexOption& indexOption, LPCTSTR lpszConstraint)
+{
+	USES_CONVERSION;
+	CString strConstr = lpszConstraint;
+	//
+	// Host Variable Declarations
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szConstraintIn  [DBOBJECTLEN];
+		
+		//char szConstraint    [DBOBJECTLEN];
+		char szSchema        [DBOBJECTLEN];
+		char szIndex         [DBOBJECTLEN];
+		
+		char szTable         [DBOBJECTLEN];
+		char szTableOwner    [DBOBJECTLEN];
+		char szLocation      [DBOBJECTLEN];
+		char szStructure     [DBOBJECTLEN];
+		char szMultiLocations[16];
+		int  nFillfactor;
+		int  nLeaffill;
+		int  nNonleaffill;
+		long nAllocation;
+		long nExtend;
+		long nMinPages;
+		long nMaxPages;
+		int  ilocseq;
+	EXEC SQL END DECLARE SECTION; 
+	strcpy (szConstraintIn, T2A((LPTSTR)(LPCTSTR)strConstr));
+	szMultiLocations[0]=_T('\0');
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYINDEX_ENFORCEMENT_ERROR; 
+	EXEC SQL REPEATED SELECT 
+		SCHEMA_NAME,
+		INDEX_NAME
+	INTO
+		:szSchema, 
+		:szIndex
+	FROM 
+		IICONSTRAINT_INDEXES
+	WHERE
+		CONSTRAINT_NAME = :szConstraintIn;
+	EXEC SQL BEGIN;
+		TrimRight (szSchema);
+		TrimRight (szIndex);
+	EXEC SQL END;
+	
+	
+	EXEC SQL REPEATED SELECT 
+		TABLE_NAME,
+		TABLE_OWNER,
+		TABLE_DFILLPCT,
+		TABLE_LFILLPCT,
+		TABLE_IFILLPCT,
+		ALLOCATION_SIZE,
+		EXTEND_SIZE,
+		TABLE_MINPAGES,
+		TABLE_MAXPAGES,
+		STORAGE_STRUCTURE,
+		LOCATION_NAME,
+		MULTI_LOCATIONS
+	INTO
+		:szTable,
+		:szTableOwner,
+		:nFillfactor,
+		:nLeaffill,
+		:nNonleaffill,
+		:nAllocation,
+		:nExtend,
+		:nMinPages,
+		:nMaxPages,
+		:szStructure,
+		:szLocation,
+		:szMultiLocations
+	FROM 
+		IITABLES
+	WHERE
+		TABLE_OWNER  = :szSchema AND
+		TABLE_NAME   = :szIndex;
+	EXEC SQL BEGIN;
+		TrimRight (szTable);
+		TrimRight (szTableOwner);
+		TrimRight (szLocation);
+		TrimRight (szMultiLocations);
+		TrimRight (szStructure);
+
+		indexOption.SetIndexName(A2T(szIndex));
+		indexOption.SetStructure(A2T(szStructure));
+
+		if (indexOption.GetStructure().CompareNoCase("BTREE") == 0)
+		{
+			indexOption.SetLeafFill(nLeaffill);
+			indexOption.SetNonLeafFill(nNonleaffill);
+		}
+		if (indexOption.GetStructure().CompareNoCase("HASH") == 0)
+		{
+			indexOption.SetMinPage(nMinPages);
+			indexOption.SetMaxPage(nMaxPages);
+		}
+
+		indexOption.SetFillFactor(nFillfactor);
+		indexOption.SetAllocation(nAllocation);
+		indexOption.SetExtend(nExtend);
+
+		if (szLocation[0])
+		{
+			CStringList& listLocation = indexOption.GetListLocation();
+			listLocation.AddTail (A2T(szLocation));
+		}
+	EXEC SQL END;
+			
+
+	
+	/*
+	EXEC SQL REPEATED SELECT DISTINCT
+		A.CONSTRAINT_NAME,
+		A.SCHEMA_NAME,
+		A.INDEX_NAME,
+		B.TABLE_NAME,
+		B.TABLE_OWNER,
+		B.TABLE_DFILLPCT,
+		B.TABLE_LFILLPCT,
+		B.TABLE_IFILLPCT,
+		B.ALLOCATION_SIZE,
+		B.EXTEND_SIZE,
+		B.TABLE_MINPAGES,
+		B.TABLE_MAXPAGES,
+		B.STORAGE_STRUCTURE,
+		B.LOCATION_NAME,
+		B.MULTI_LOCATIONS
+	INTO
+		:szConstraint, 
+		:szSchema, 
+		:szIndex,
+		:szTable,
+		:szTableOwner,
+		:nFillfactor,
+		:nLeaffill,
+		:nNonleaffill,
+		:nAllocation,
+		:nExtend,
+		:nMinPages,
+		:nMaxPages,
+		:szStructure,
+		:szLocation,
+		:szMultiLocations
+	FROM 
+		IICONSTRAINT_INDEXES A, 
+		IITABLES B
+	WHERE
+		A.CONSTRAINT_NAME = :szConstraintIn AND 
+		A.SCHEMA_NAME     = B.TABLE_OWNER   AND
+		A.INDEX_NAME      = B.TABLE_NAME;
+	*/
+	
+		
+	//
+	// Get the multi-locations:
+	if (szMultiLocations[0] && toupper (szMultiLocations[0]) == 'Y')
+	{
+		EXEC SQL repeated SELECT
+			LOCATION_NAME,
+			LOC_SEQUENCE 
+		INTO
+			:szLocation,
+			:ilocseq
+		FROM
+			IIMULTI_LOCATIONS
+		WHERE
+			TABLE_NAME  = :szIndex AND TABLE_OWNER = :szSchema
+		ORDER BY 
+			LOC_SEQUENCE DESC;
+		EXEC SQL BEGIN;
+			TrimRight(szLocation);
+			if (szLocation[0]) 
+			{
+				CStringList& listLocation = indexOption.GetListLocation();
+				listLocation.AddTail (A2T(szLocation));
+			}
+		EXEC SQL END;
+	}
+
+	return TRUE;
+
+QUERYINDEX_ENFORCEMENT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+int INGRESII_llGetTypeDatabase(LPCTSTR lpszDbName, CaLLQueryInfo* pQueryInfo, CaSessionManager* pSessionManager)
+{
+	USES_CONVERSION;
+	ASSERT(pSessionManager);
+	if (!pSessionManager)
+		return OBJTYPE_NOTSTAR;
+	CaSession session ((CaConnectInfo*)pQueryInfo);
+	if (pQueryInfo->GetDatabase().IsEmpty())
+		session.SetDatabase(_T("iidbdb"));
+	CaSessionUsage* pUseSession = NULL;
+	CaSessionUsage sessionUsage(pSessionManager, &session);
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* criteria1 =   T2A((LPTSTR)lpszDbName);
+		int   nDBService;
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYTYPEDATABASE_ERROR;
+	EXEC SQL REPEATED SELECT 
+		DBSERVICE
+	INTO
+		:nDBService
+	FROM IIDATABASE
+	WHERE LOWERCASE(NAME) = LOWERCASE(:criteria1);
+	
+	EXEC SQL BEGIN;
+		nDBService &= 3L; // distrib db info in 2 first bits
+		if (nDBService != OBJTYPE_NOTSTAR && nDBService != OBJTYPE_STARNATIVE && nDBService != OBJTYPE_STARLINK)
+			nDBService = OBJTYPE_NOTSTAR;
+	EXEC SQL END;
+	return nDBService;
+
+QUERYTYPEDATABASE_ERROR:
+	ExceptionError();
+	return OBJTYPE_NOTSTAR;
+}

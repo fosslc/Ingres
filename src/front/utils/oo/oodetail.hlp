@@ -1,0 +1,40 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This form provides additional information about a selected object.
+The entire form is display-only, except possibly for the Short and Long 
+Remarks fields; if you are authorized to edit this object, they may be 
+updated. A "Save" command is provided on the menu to store any updated 
+information in the database.  "Next" ("Previous") will show the Details 
+frame for the object which appears after (before) the current object in 
+the catalog table field.  "Next" will advance to the top object of the 
+catalog table field if the current object is the last one, and similarly 
+for "Previous".
+
+	Field Name              Description
+	----------               -----------
+	Name                    Name of the current object.
+	Owner                   Owner of the current object.
+	Created                 Date on which this object was first created.
+	Modified                Date on which this object was last altered.
+	Short Remark            One-line description of current object.
+	Long Remark             Longer description of current object.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        --------                --------
+        Go                      Execute the current object.  This only appears
+				if it makes sense to do so.
+
+	Next                    Show MoreInfo frame for next object in the
+                                catalog table field.
+
+	Previous                Show MoreInfo frame for previous object in the
+                                catalog table field.
+
+        Save                    Store the current object definitions in the 
+				System Catalogs.  
+
+        Help                    Access the INGRES Help facility.
+
+        End                     Stop work on this frame and return to the
+                                frame that called it.

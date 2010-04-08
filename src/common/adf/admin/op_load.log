@@ -1,0 +1,176 @@
+INGRES TERMINAL MONITOR -- Copyright (c) 1981, 1992 Ingres Corporation
+E_US0AC1 DROP: 'op' does not exist or is not owned by you.
+    (Thu Feb 27 11:54:53 1992)
+
+create table op (name char(10) not null, point ord_pair not null);
+help op;
+insert into op values('origin', ord_pair(0,0));
+insert into op values ('(1,1)', ord_pair(1,1));
+insert into op values ('(-1,-1)', ord_pair(-1,-1));
+insert into op values ('(-1,-100)', ord_pair(-1,-100));
+insert into op values ('(-1, 100)', ord_pair(-1, 100));
+insert into op values ('(-2, 3)', ord_pair(-2, 3  ));
+insert into op values ('(2,-3)', ord_pair(2,-3  ));
+select * from op;
+Name:                 op
+Owner:                ingres
+Created:              27-feb-1992 11:54:00     
+Type:                 user table
+Version:              ING6.0  
+
+Column Information:
+                                                                  Key
+Column Name                      Type       Length Nulls Defaults Seq
+name                             char           10   no      no   
+point                            ord_pair            no      no   
+
+
+
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+
++----------+--------------------------+
+|name      |point                     |
++----------+--------------------------+
+|origin    |(      0.000,       0.000)|
+|(1,1)     |(      1.000,       1.000)|
+|(-1,-1)   |(     -1.000,      -1.000)|
+|(-1,-100) |(     -1.000,    -100.000)|
+|(-1, 100) |(     -1.000,     100.000)|
+|(-2, 3)   |(     -2.000,       3.000)|
+|(2,-3)    |(      2.000,      -3.000)|
++----------+--------------------------+
+(7 rows)
+
+/*
+**	Modify to btree, perform selects.
+**	The table is now sorted in ordered pair order,
+**	(which is x coord value, y coord value).
+*/
+
+modify op to btree on point;
+select name, point = c(point) from op;
+select name, point from op where point > ord_pair(0,0);
+select name, point from op where point >= ord_pair(0,0);
+select name, point from op where point = ord_pair(0,0);
+select name, point from op where point <= ord_pair(0,0);
+select name, point from op where point != ord_pair(0,0);
+(7 rows)
+
++----------+--------------------------+
+|name      |point                     |
++----------+--------------------------+
+|(-2, 3)   |(     -2.000,       3.000)|
+|(-1,-100) |(     -1.000,    -100.000)|
+|(-1,-1)   |(     -1.000,      -1.000)|
+|(-1, 100) |(     -1.000,     100.000)|
+|origin    |(      0.000,       0.000)|
+|(1,1)     |(      1.000,       1.000)|
+|(2,-3)    |(      2.000,      -3.000)|
++----------+--------------------------+
+(7 rows)
+
++----------+--------------------------+
+|name      |point                     |
++----------+--------------------------+
+|(1,1)     |(      1.000,       1.000)|
+|(2,-3)    |(      2.000,      -3.000)|
++----------+--------------------------+
+(2 rows)
+
++----------+--------------------------+
+|name      |point                     |
++----------+--------------------------+
+|origin    |(      0.000,       0.000)|
+|(1,1)     |(      1.000,       1.000)|
+|(2,-3)    |(      2.000,      -3.000)|
++----------+--------------------------+
+(3 rows)
+
++----------+--------------------------+
+|name      |point                     |
++----------+--------------------------+
+|origin    |(      0.000,       0.000)|
++----------+--------------------------+
+(1 row)
+
++----------+--------------------------+
+|name      |point                     |
++----------+--------------------------+
+|(-2, 3)   |(     -2.000,       3.000)|
+|(-1,-100) |(     -1.000,    -100.000)|
+|(-1,-1)   |(     -1.000,      -1.000)|
+|(-1, 100) |(     -1.000,     100.000)|
+|origin    |(      0.000,       0.000)|
++----------+--------------------------+
+(5 rows)
+
++----------+--------------------------+
+|name      |point                     |
++----------+--------------------------+
+|(-2, 3)   |(     -2.000,       3.000)|
+|(-1,-100) |(     -1.000,    -100.000)|
+|(-1,-1)   |(     -1.000,      -1.000)|
+|(-1, 100) |(     -1.000,     100.000)|
+|(1,1)     |(      1.000,       1.000)|
+|(2,-3)    |(      2.000,      -3.000)|
++----------+--------------------------+
+(6 rows)
+E_US0AC1 DROP: 'op1' does not exist or is not owned by you.
+    (Thu Feb 27 11:54:56 1992)
+
+create table op1 (name char(10) not null, point ord_pair);
+/*
+** Have the system determine and perform the translations from 
+** character strings to ordered pairs.
+*/
+
+insert into op1 values('origin', '(0,0)');
+insert into op1 values ('(1,1)', '(1,1)');
+insert into op1 values ('(-1,1)', '(-1,1)');
+insert into op1 values ('(-1, 100)', '(-1, 100)');
+insert into op1 values ('(2,-3)', '(2,-3  )');
+insert into op1 (name) values ('null');
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+
+/* Show results */
+modify op1 to hash on point;
+select name, point from op1;
+(6 rows)
+
++----------+--------------------------+
+|name      |point                     |
++----------+--------------------------+
+|(2,-3)    |(      2.000,      -3.000)|
+|null      |                          |
+|(-1,1)    |(     -1.000,       1.000)|
+|(-1, 100) |(     -1.000,     100.000)|
+|origin    |(      0.000,       0.000)|
+|(1,1)     |(      1.000,       1.000)|
++----------+--------------------------+
+(6 rows)
+
+/* Perform a join, finding all rows which have points in both tables */
+
+select op.point, op1.point from op, op1
+	where op1.point = op.point;
+
++--------------------------+--------------------------+
+|point                     |point                     |
++--------------------------+--------------------------+
+|(     -1.000,     100.000)|(     -1.000,     100.000)|
+|(      0.000,       0.000)|(      0.000,       0.000)|
+|(      1.000,       1.000)|(      1.000,       1.000)|
+|(      2.000,      -3.000)|(      2.000,      -3.000)|
++--------------------------+--------------------------+
+(4 rows)

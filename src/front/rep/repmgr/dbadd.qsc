@@ -1,0 +1,346 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <cm.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <uigdata.h>
+# include <stdprmpt.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	dbadd.qsc - add a replicated database
+**
+** Description:
+**	Defines
+**		db_add		- add a database
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on dbadd.osq in replicator library.
+**	14-nov-97 (joea)
+**		Correct call to IIUGerr.
+**	17-mar-98 (joea)
+**		Support gateways that allow '@' as first character.
+**	04-may-98 (joea) bug 90732
+**		Allow initial numeric character in vnode name.
+**	24-nov-98 (abbjo03)
+**		Initialize the database owner field with the local DBA.
+**	07-dec-98 (abbjo03)
+**		Correct 24-nov-98 change: STcopy the local DBA info.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**      01-Dec-2009 (coomi01) b122980
+**          Check vnode with less restrictive RPvalid_vnode() procedure.
+**/
+
+GLOBALREF
+##char	RMdb_display[];
+
+static const
+##char	*form_name = ERx("rmdb_detail");
+static bool	form_initd;
+static const
+##char	*fdb_no = ERx("database_no"),
+##	*fvnode_name = ERx("vnode_name"),
+##	*fdb_name = ERx("database_name"),
+##	*fdb_owner = ERx("database_owner"),
+##	*fdbms_type = ERx("dbms_type"),
+##	*fdbms_descr = ERx("short_description"),
+##	*fremark = ERx("remark");
+
+
+FUNC_EXTERN STATUS valid_dbms_type(char *dbms_type, char *dbms_descr);
+FUNC_EXTERN void dbms_type_lookup(void);
+
+
+/*{
+** Name:	db_add - edit a database
+**
+** Description:
+**	Allows the user to add a replicated database.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	database_no	- database number
+**	vnode_name	- virtual node name
+**	db_name		- database name
+**	db_owner	- database owner
+**	dbms_type	- DBMS type
+**	remark		- remark
+**
+** Returns:
+**	0	- no changes were made
+**	1	- changes were made and saved
+*/
+STATUS
+db_add(
+i2	*database_no,
+char	*vnode_name,
+char	*db_name,
+char	*db_owner,
+char	*dbms_type,
+char	*remark)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+##char	*vnode_name;
+##char	*db_name;
+##char	*db_owner;
+##char	*dbms_type;
+##char	*remark;
+EXEC SQL END DECLARE SECTION;
+# endif
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4	db_no_exist;
+##	i2	db_no;
+	EXEC SQL END DECLARE SECTION;
+##	i4	chng;
+##	char	objname[FE_MAXNAME+1];
+##	char	dbms_descr[21];
+	STATUS	retval;
+	DBEC_ERR_INFO	errinfo;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+	STcopy(IIUIdbdata()->suser, db_owner);
+##	display form_name fill
+##	initialize (db = RMdb_display,  fdb_owner = db_owner)
+##	activate field fdb_no
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+##			getform (db_no = fdb_no)
+			if (db_no < 1 || db_no > 32767)
+			{
+				IIUGerr(E_RM0007_Invalid_db_no, UG_ERR_ERROR,
+					0);
+##				resume
+			}
+
+			EXEC SQL SELECT	COUNT(*)
+				INTO	:db_no_exist
+				FROM	dd_databases
+				WHERE	database_no = :db_no;
+			if (db_no_exist)
+			{
+				i4	pdb_no = db_no;
+
+				IIUGerr(E_RM0016_Db_no_in_use, UG_ERR_ERROR, 1,
+					&pdb_no);
+##				resume
+			}
+		}
+##		resume next
+##	}
+
+##	activate field fvnode_name
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+##			getform (vnode_name = fvnode_name)
+			STtrmwhite(vnode_name);
+			if (!RPvalid_vnode(vnode_name) && !CMdigit(vnode_name))
+			{
+				IIUGerr(E_RM0008_Invalid_vnode_name,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+		}
+##		resume next
+##	}
+
+##	activate field fdb_name
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+##			getform (db_name = fdb_name)
+			STtrmwhite(db_name);
+			if (!RPvalid_name(db_name) &&
+				CMcmpcase(db_name, ERx("@")) != 0)
+			{
+				IIUGerr(E_RM0017_Invalid_db_name, UG_ERR_ERROR,
+					0);
+##				resume
+			}
+		}
+##		resume next
+##	}
+
+##	activate field fdbms_type
+##	{
+##		inquire_frs field form_name (chng = change)
+##		getform (dbms_descr = fdbms_descr)
+		if (chng || *dbms_descr == EOS)
+		{
+			STATUS	valid;
+
+##			getform (dbms_type = fdbms_type)
+			STtrmwhite(dbms_type);
+			valid = valid_dbms_type(dbms_type, dbms_descr);
+			if (valid == -1)
+			{
+##				message "Error validating DBMS type..."
+##					with style = popup
+##				resume
+			}
+			else if (!valid)
+			{
+				IIUGerr(E_RM0018_Invalid_dbms_type,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+		}
+##		putform (fdbms_descr = dbms_descr)
+##		resume next
+##	}
+
+##	activate menuitem ERget(FE_Save) (expl = ERget(F_FE0117_SaveExpl)),
+##		FRSkey8
+##	{
+##		validate
+##		getform (db_name = fdb_name, vnode_name = fvnode_name,
+##			db_owner = fdb_owner, dbms_type = fdbms_type,
+##			remark = fremark)
+
+		/* Make sure that vnode::dbname is unique */
+		EXEC SQL SELECT	database_no
+			INTO	:db_no
+			FROM	dd_databases
+			WHERE	database_name = :db_name
+			AND	vnode_name = :vnode_name;
+		EXEC SQL BEGIN;
+		EXEC SQL END;
+		if (RPdb_error_check(DBEC_ZERO_ROWS_OK, &errinfo) != OK)
+		{
+			IIUGerr(E_RM0019_Error_check_vnode_db, UG_ERR_ERROR,
+				0);
+##			resume
+		}
+		if (errinfo.rowcount > 0)
+		{
+			char	full_db_name[DB_MAXNAME*2+3];
+			i4	pdb_no = db_no;
+
+			STprintf(full_db_name, ERx("%s::%s"), vnode_name,
+				db_name);
+			IIUGerr(E_RM001A_Db_already_defined, UG_ERR_ERROR, 2,
+				full_db_name, &pdb_no);
+##			resume
+		}
+
+##		getform (db_no = fdb_no)
+		IIUGmsg(ERget(F_RM0009_Saving), FALSE, 0);
+		retval = 0;
+		EXEC SQL REPEATED INSERT INTO dd_databases (
+				database_no, vnode_name, database_name,
+				database_owner, local_db, dbms_type, remark)
+			VALUES	(:db_no, :vnode_name, :db_name,
+				:db_owner, 0, :dbms_type, :remark);
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			retval = -1;
+		}
+		else if (db_config_changed(0) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			retval = -1;
+		}
+
+		if (retval)
+		{
+			FTbell();
+			IIUGerr(E_RM0009_Error_saving, UG_ERR_ERROR, 0);
+##			resume
+		}
+		EXEC SQL COMMIT;
+		if (RPdb_error_check(0, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM000A_Error_committing, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+		*database_no = db_no;
+		retval = 1;
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(F_RM000A_Clear) (activate = 0, validate = 0,
+##		expl = ERget(F_RM000B_Clear_expl)), FRSkey16 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs form (chng = change)
+		if (chng && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM000B_Clear_form, S_RM000C_Yes_clear,
+			S_RM000D_No_clear, ERx(""), TRUE) != CONFCH_YES)
+##			resume
+
+##		clear field all
+##		set_frs form (change = 0)
+##		putform (db = RMdb_display)
+##		resume field fdb_no
+##	}
+
+##	activate menuitem ERget(FE_Lookup) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0116_LookupExpl)), FRSkey10 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs field form_name (objname = name)
+		if (STequal(objname, fdbms_type))
+			dbms_type_lookup();
+		else
+			IIUFfieldHelp();
+##	}
+
+##	activate menuitem ERget(FE_Help) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1 (activate = 0,
+##		validate = 0)
+##	{
+		FEhelp(ERx("rmdbadd.hlp"), ERget(F_RM0026_Add_replic_db));
+##	}
+
+##	activate menuitem ERget(FE_End) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0102_ExplEnd)), FRSkey3 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs form (chng = change)
+		if (chng && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM000E_End_no_save, S_RM000F_Yes_end,
+			S_RM0010_No_end, ERx(""), TRUE) != CONFCH_YES)
+##			resume
+
+		retval = 0;
+##		breakdisplay
+##	}
+
+	return (retval);
+##}

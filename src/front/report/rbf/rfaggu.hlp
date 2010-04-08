@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Currently this column is a sort column.  All sort columns are also break 
+columns.  Changing the sort sequence of this column to zero will make this 
+column a non-break column.  Unique aggregates can only be used against
+break columns.  RBF has detected the fact that there are unique aggregates
+on this break column.  You may decide what action to take on these aggregates.
+The options are listed below.
+
+To specify which action to take, scroll to the desired selection, and choose 
+the Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Delete		Delete all unique aggregates on this break column.
+	Change		Change all unique aggregates so that they are no
+			longer unique.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select	        If Delete is selected then all unique aggregates
+			on this break column will be deleted.  They will
+			no longer appear on the Report Layout or the report
+			when it is run.  If Change is selected then all
+			unique aggregates on this break column will be
+			made non-unique.  In the Report Layout, the heading 
+			for the aggregates will be updated to reflect this.
+			
+        Cancel          Return to the Column Options frame.  The sort sequence
+			of this column will be unchanged.
+
+        Help            Print this message.

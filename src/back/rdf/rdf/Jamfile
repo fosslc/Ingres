@@ -1,0 +1,21 @@
+#
+# Jamfile file for back!rdf!rdf
+#
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back rdf rdf ;
+
+IISUBSYS back rdf rdf ;
+
+IINOOPTIM rdfupdate.c : ris_us5 su4_cmw su4_u42 hp8_bls rs4_us5 nc4_us5 i64_aix ;
+IINOOPTIM rdfunfix.c : nc4_us5 ;
+IINOOPTIM rdfgetinfo.c : nc4_us5 ;
+
+IILIBRARY RDFLIB : rdfutil.c rdfupdate.c rdfunfix.c rdftrace.c
+	rdfterm.c rdfstart.c rdfshut.c rdfqtpak.c rdfpart.c
+	rdfmo.c rdfinvalid.c rdfinit.c rdfgetobj.c rdfgetinfo.c
+	rdfgetdesc.c rdfend.c rdfddb.c rdfcall.c rdfbegin.c
+	rdefault.c ;
+
+IILIBRARY IMPRDFLIBDATA : rdfdata.c rdfcon.roc ;

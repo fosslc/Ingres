@@ -1,0 +1,31 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This screen lists information about a table, view, synonym or index in the
+database.
+
+Information about the table, view, synonym or index (these four will be
+referred to below as simply "table"), for example its name and owner, is
+displayed at the top of the screen.
+
+The table field lists the columns within the table, along with their
+data type, whether they participate in the primary key of the table,
+and whether Nulls and/or default values are allowed for the column.
+If there are more columns in the table than show in the table
+field, you can view them by using the table field scrolling keys or
+cursor control keys.
+
+        Menu Command            Description
+        ------------            -----------
+
+        NewTable                Obtain information on another table
+				without first returning to the Tables
+				Catalog screen.  You will be prompted for
+				the name of the new table.
+
+	ViewDefault		If the "Defaults" field for this column
+				says "value", this will display the user
+				defined default value associated with this
+				field.
+
+        Help                    Access the INGRES Help facility.
+
+        End                     Return to previous screen.

@@ -1,0 +1,64 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How the Query Is Executed and the Result Set DataGridView Loaded </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body>
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="dev_airportcode.html" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="1583.html" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How the Query Is Executed and the Result Set DataGridView Loaded</h4>
+<p class="bodytext">This section describes how to execute a SELECT query using the choices taken from the Route Form as query parameter values.</p>
+<p class="bodytext">The query returns the routes that fit the route selection criteria and optionally, depending on the roundtrip flag, includes an additional OR clause for return journeys.</p>
+<p class="bodytext">The queries that are used to return the route result set are:</p>
+<ul class="normalterm"><li class="normalterm">One way routes<p class="codefirst">SELECT route.rt_airline, airline.al_iatacode,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;airline.al_name, route.rt_flight_num,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;route.rt_depart_from, route.rt_arrive_to,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;route.rt_depart_at, route.rt_arrive_at,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;route.rt_arrive_offset, route.rt_flight_day</p>
+<p class="code">&nbsp;FROM route, airline</p>
+<p class="code">&nbsp;WHERE ((rt_depart_from = ? AND route.rt_arrive_to = ?))</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;AND route.rt_flight_day LIKE ? AND</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;route.rt_airline = airline.al_icaocode</p>
+<p class="code">&nbsp;ORDER BY route.rt_airline, route.rt_depart_from,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;route.rt_flight_num</p>
+</li><li class="normalterm">Return routes<p class="codefirst">SELECT route.rt_airline, airline.al_iatacode,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;airline.al_name, route.rt_flight_num,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;route.rt_depart_from, route.rt_arrive_to,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;route.rt_depart_at, route.rt_arrive_at,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;route.rt_arrive_offset, route.rt_flight_day</p>
+<p class="code">&nbsp;FROM route, airline</p>
+<p class="code">&nbsp;WHERE ((rt_depart_from = ? AND route.rt_arrive_to = ?)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;OR (route.rt_depart_from = ?</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;AND route.rt_arrive_to = ?))</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;AND route.rt_flight_day LIKE ?</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;AND route.rt_airline = airline.al_icaocode</p>
+<p class="code">&nbsp;ORDER BY route.rt_airline, route.rt_depart_from,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;route.rt_flight_num</p>
+</li></ul><p class="bodytext">Clicking the Go button triggers the execution of the routeGoButton_Click event handler.</p>
+<p class="bodytext">The event handler performs the following actions:</p>
+<ul class="listbullet"><li class="listbullet">Extracts the required parameter values from the Windows Form controls.</li><li class="listbullet">Initializes the DataGridView control that will receive the query results.</li><li class="listbullet">Binds the data set to the DataGridView.</li><li class="listbullet">Executes the select query that populates the data set.</li></ul>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2006 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

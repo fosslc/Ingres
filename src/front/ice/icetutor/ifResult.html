@@ -1,0 +1,32 @@
+<!-- #ICE DECLARE=`session.ifElse=:ifElse` -->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Conditions&previous=else.html&next=database.html` -->
+
+The resulting Web Deployment Option macro statement is:
+<H4 CLASS="macro">
+<!-- #ICE REPEAT IF (`:ifElse` != ``)
+THEN=`&lt;!-- #ICE IF (:ifCond)<BR>
+THEN=``<!-- #ICE REPEAT FUNCTION=``TagToString?tags=:ifThen`` HTML=``:string`` -->``<BR>
+ELSE=``<!-- #ICE REPEAT FUNCTION=``TagToString?tags=:ifElse`` HTML=``:string`` -->``<BR>--&gt;`
+ELSE=`&lt;!-- #ICE IF (:ifCond)<BR>
+THEN=``<!-- #ICE REPEAT FUNCTION=``TagToString?tags=:ifThen`` HTML=``:string`` -->``<BR>--&gt;`
+-->
+</H4>
+
+<!-- #ICE REPEAT IF (`:ifElse` != ``)
+THEN=`<!-- #ICE IF (:ifCond) THEN=``:ifThen`` ELSE=``:ifElse``-->`
+ELSE=`<!-- #ICE IF (:ifCond) THEN=``:ifThen`` -->`
+-->
+<p>
+<!-- #ICE REPEAT IF (`:ii_status_number` != `0`) 
+THEN=`The statement is incorrect.
+			<!-- #ICE IF (``:ii_status_number`` == ``6619248``)
+					 THEN=``The expression has incorrect parenthesis``
+			--><!-- #ICE IF (``:ii_status_number`` == ``6619137``)
+					 THEN=``The expression is invalid``
+			-->. Click <A HREF="/ice-bin/oiice.:http_api_ext/iceTutorial/if1.html">here</A> to change it.
+			<!-- #ICE DECLARE=``session.ifCond=`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+

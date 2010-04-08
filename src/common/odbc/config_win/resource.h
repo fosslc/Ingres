@@ -1,0 +1,146 @@
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++ generated include file.
+// Used by caiioc32.rc
+//
+//#define ICON_IDMS_BACH                  1
+#define IDU_IDMS                        1
+/*
+#define ICON_IDMS_BAC2                  2
+#define IDU_IDMSUNIX                    2
+#define ICON_IDMS_BAC3                  3
+#define IDU_CADB                        3
+#define ICON_IDMS_BAC4                  4
+*/
+#define IDU_CADBUNIX                    4
+#define IDU_DATACOM                     5
+#define IDS_MSG_DESCRIPTION             9
+#define IDS_MSG_VNODE                   9
+#define IDS_MSG_SERVERTYPE              13
+#define IDC_GATEWAY_OPTION              101
+#define IDC_GATEWAY_OPTION_TEXT         102
+#define IDB_INGRES                      108
+#define DLG_ABOUT                       200
+#define DLG_DATASOURCE                  201
+#define DLG_ADVANCED                    202
+#define DLG_ADVANCED_READ_ONLY          203
+#define IDC_ABOUT                       230
+#define IDC_ADD                         231
+#define IDC_BROWSE_CECP                 232
+#define IDC_BROWSE_DBCS                 233
+#define IDC_CECP                        234
+#define IDC_CLOSE                       235
+#define IDC_CONFIG                      236
+#define IDC_DBCS                        237
+#define IDC_DEFAULT                     238
+#define IDC_DELETE                      239
+#define IDC_EDIT                        240
+#define IDC_TEST                        241
+#define RT_DRIVERS                      256
+#define IDC_DBNAME_TEXT                 261
+#define IDC_DICTNAME                    263
+#define IDC_DICTNODE                    264
+#define IDC_ICONLIST                    265
+#define IDC_NAME                        267
+#define IDC_NODE                        268
+#define IDC_PATH                        269
+#define IDC_RESOURCE                    270
+#define IDC_SERVER                      271
+#define IDC_TASK                        272
+#define IDC_TYPE                        273
+#define IDC_TIMEOUT                     274
+#define IDC_KATAKANA                    276
+#define IDC_DEF_ACCESS                  320
+#define IDC_DEF_ACCESSIBLE              321
+#define IDC_DEF_ACCT_PROMPT             322
+#define IDC_DEF_CACHE_TABLES            323
+#define IDC_DEF_COMMIT_BEHAVIOR         324
+#define IDC_DEF_ENABLE_ENSURE           325
+#define IDC_DEF_DOUBLE                  326
+#define IDC_DEF_ISOLATION               327
+#define IDC_DEF_ROWS                    328
+#define IDC_DEF_VIEW                    329
+#define IDC_TRACE_APPEND                360
+#define IDC_TRACE_CLOSE                 361
+#define IDC_TRACE_CM                    362
+#define IDC_TRACE_CM_BE                 363
+#define IDC_TRACE_DISABLE               364
+#define IDC_TRACE_DTS                   365
+#define IDC_TRACE_DTS_BE                366
+#define IDC_TRACE_ENABLE                367
+#define IDC_TRACE_FDE                   368
+#define IDC_TRACE_FDE_GEN               369
+#define IDC_TRACE_LOGCAPTION            370
+#define IDC_TRACE_LOGFILE               371
+#define IDC_TRACE_MESSAGE               372
+#define IDC_TRACE_NDL                   373
+#define IDC_TRACE_NDL_BE                374
+#define IDC_TRACE_ODBC                  375
+#define IDC_TRACE_SQL                   376
+#define IDC_TRACE_SQL_BE                377
+#define IDC_TRACE_UTIL                  378
+#define IDC_DRIVER                      400
+#define IDC_PRODUCT                     401
+#define IDC_VERSION                     402
+#define IDC_BOX_CECP                    410
+#define IDC_BOX_DBCS                    411
+#define IDC_CAP_NAME                    412
+#define IDC_CAP_PATH                    413
+#define IDC_CAP_SERVER                  414
+#define IDC_CAP_TYPE                    415
+#define IDC_CAP_VIEW                    416
+#define IDC_DS_ADMIN                    417
+#define IDC_COPYRIGHT                   418
+#define IDC_CA                          419
+#define IDC_COPYRIGHT2                  420
+#define IDC_INGRES                      421
+#define IDC_SELECT_CURSOR               422
+#define IDC_DS                          423
+#define IDC_DESCRIPTION_TEXT            424
+#define IDC_VNODE_TEXT                  425
+#define IDC_DATABASE                    426
+#define IDC_CONN_OPTS                   427
+#define IDC_ROLENAME_TEXT               428
+#define IDC_ROLEPWD_TEXT                429
+#define IDC_GROUP_TEXT                  430
+#define IDC_DESCRIPTION                 1002
+#define IDC_VNODE                       1003
+#define IDC_DBNAME                      1004
+#define IDC_SERVERTYPE                  1005
+#define IDC_SERVER_GROUP                1006
+#define IDC_PROMPTUIDPWD                1010
+#define IDC_READ_ONLY                   1011
+#define IDC_SUPPORT_II_DECIMAL          1014
+#define IDC_EDIT1                       1015
+#define IDC_MULTIBYTE_FILL_CHAR         1016
+#define IDC_ALLOWUPDATE                 1017
+#define IDC_DEFAULT_TO_CHAR             1018
+#define IDC_ROLENAME                    1019
+#define IDC_INGRESDATE                  1020
+#define IDC_ROLEPWD                     1021
+#define IDC_STRINGTRUNCATION            1022
+#define IDC_GROUP                       1023
+#define IDC_SELECT_LOOPS                1024
+#define IDC_CURSORS                     1025
+#define IDC_3_PART_NAMES                1026
+#define IDC_SYSTABLES                   1027
+#define IDC_BITMAPLOCATION              1028
+#define IDC_BLANKDATE                   1039
+#define IDC_DATE1582                    1040
+#define IDC_CATCONNECT                  1041
+#define IDC_NUMOVERFLOW                 1042
+#define IDC_CATSCHEMANULL               1043
+#define IDC_UNDERSCORESEARCH            1044
+#define IDC_ALLOWPROCEDUREUPDATE        1045
+#define IDC_CONVERTINT8TOINT4           1046
+#define IDC_STATIC                      -1
+
+// Next default values for new objects
+// 
+#ifdef APSTUDIO_INVOKED
+#ifndef APSTUDIO_READONLY_SYMBOLS
+#define _APS_NEXT_RESOURCE_VALUE        111
+#define _APS_NEXT_COMMAND_VALUE         40001
+#define _APS_NEXT_CONTROL_VALUE         1047
+#define _APS_NEXT_SYMED_VALUE           103
+#endif
+#endif

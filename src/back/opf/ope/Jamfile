@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!opf!ope
+#
+
+SubDir ING_SRC back opf ope ;
+
+IISUBSYS back opf ope ;
+
+
+IILIBRARY OPFLIB : opetype.c opetwidth.c openeweq.c opemerge.c
+	opefindj.c opecreate.c opeaseqcls.c opeaddeq.c ;
+

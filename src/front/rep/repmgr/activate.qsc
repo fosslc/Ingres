@@ -1,0 +1,496 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	activate.qsc - activate Change Recorder
+**
+** Description:
+**	Defines
+**		chgrec_activate	- activate Change Recorder
+**		CheckReturnCode	- check return code
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on activate.osq in replicator library.
+**	01-oct-98 (abbjo03)
+**		Add FRSkey4 (Go) to the Activate options.
+**	10-dec-98 (abbjo03)
+**		Change turn_recorder's 3rd parameter into a bool. Remove extra
+**		FRSkey4 in Database/Deactivate.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+# define NOT_CALLED		(-2)
+# define NO_ACTION_YET		(-1)
+# define TBL_ACTIVATE		0
+# define TBL_DEACT		1
+
+
+GLOBALREF
+##char	RMdb_display[];
+
+
+FUNC_EXTERN STATUS turn_recorder(char *dbname, i2 cdds_no, bool activate);
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmactivate"),
+##	*tf_name = ERx("iitf"),
+##	*fcdds_no = ERx("cdds_no"),
+##	*fcdds_name = ERx("cdds_name"),
+##	*fdb_no = ERx("db_no"),
+##	*ffull_db_name = ERx("db_name"),
+##	*fstatus = ERx("status"),
+##	*blank = ERx("");
+
+
+static void CheckReturnCode(i4 what, i4  retval);
+
+
+/*{
+** Name:	chgrec_activate	- activate Change Recorder
+**
+** Description:
+**	Activate the selected target databases or CDDSs.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+chgrec_activate()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i2	cdds_no;
+##	char	cdds_name[DB_MAXNAME+1];
+##	i2	db_no;
+##	char	full_db_name[DB_MAXNAME*2+3];
+##	i2	curr_db;
+##	i2	curr_cdds;
+##	char	status[5];
+	EXEC SQL END DECLARE SECTION;
+	i4	retval;
+	i4	what;
+	DBEC_ERR_INFO	errinfo;
+##	char	*done = ERget(F_RM0062_done);
+##	char	*err = ERget(F_RM003E_err);
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name read
+	IIUGmsg(ERget(F_RM001C_Selecting_data), FALSE, 0);
+	EXEC SQL SELECT dc.cdds_no, cdds_name, dc.database_no,
+			TRIM(vnode_name) + '::' + TRIM(database_name)
+		INTO	:cdds_no, :cdds_name, :db_no,
+			:full_db_name
+		FROM	dd_db_cdds dc, dd_databases d, dd_cdds c
+		WHERE	dc.database_no = d.database_no
+		AND	d.dbms_type = 'ingres'
+		AND	dc.cdds_no = c.cdds_no
+		AND	dc.target_type = 1
+		ORDER	BY cdds_no, database_no;
+	EXEC SQL BEGIN;
+		STtrmwhite(cdds_name);
+##		loadtable form_name tf_name (fcdds_no = cdds_no,
+##			fcdds_name = cdds_name, fdb_no = db_no,
+##			ffull_db_name = full_db_name)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0013_No_data_found, UG_ERR_ERROR, 0);
+		return;
+	}
+	EXEC SQL COMMIT;
+
+##	display form_name read
+##	initialize (db = RMdb_display)
+##	activate menuitem ERget(F_RM005F_ThisRow)
+##		(expl = ERget(F_RM0060_ThisRow_expl)), FRSkey4
+##	{
+		retval = NOT_CALLED;
+		what = NO_ACTION_YET;
+##		set_frs column form_name tf_name (invisible(fstatus) = 0)
+
+##		display submenu
+##		initialize
+##		{
+##			resume menu
+##		}
+##		activate menuitem ERget(F_RM0017_Activate)
+##			(expl = ERget(F_RM0061_Activ_cdds_db_expl)), FRSkey4
+##		{
+			what = TBL_ACTIVATE;
+##			clear screen
+##			getrow form_name tf_name (cdds_no = fcdds_no,
+##				full_db_name = ffull_db_name, status = fstatus)
+			if (!STequal(status, done))
+				retval = turn_recorder(full_db_name, cdds_no,
+					TRUE);
+			if (retval == 0 || retval == -1)
+##				putrow form_name tf_name (fstatus = done)
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(F_RM004D_DeActivate)
+##			(expl = ERget(F_RM0063_Deactiv_cdds_db_expl))
+##		{
+			what = TBL_DEACT;
+##			clear screen
+##			getrow form_name tf_name (cdds_no = fcdds_no,
+##				full_db_name = ffull_db_name)
+			retval = turn_recorder(full_db_name, cdds_no, FALSE);
+			if (retval == 0 || retval == -1)
+##				putrow form_name tf_name (fstatus = blank)
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+
+		CheckReturnCode(what, retval);
+##	}
+
+##	activate menuitem ERget(F_RM000F_CDDS)
+##		(expl = ERget(F_RM0064_Cdds_expl))
+##	{
+		retval = NOT_CALLED;
+		what = NO_ACTION_YET;
+##		set_frs column form_name tf_name (invisible(fstatus) = 0)
+
+##		display submenu
+##		initialize
+##		{
+##			resume menu
+##		}
+##		activate menuitem ERget(F_RM0017_Activate)
+##			(expl = ERget(F_RM0065_Activ_cdds_expl)), FRSkey4
+##		{
+			what = TBL_ACTIVATE;
+##			clear screen
+##			getrow form_name tf_name (curr_cdds = fcdds_no)
+##			unloadtable form_name tf_name (cdds_no = fcdds_no,
+##				full_db_name = ffull_db_name, status = fstatus)
+##			{
+				if (curr_cdds == cdds_no &&
+					!STequal(status, done))
+				{
+					retval = turn_recorder(full_db_name,
+						cdds_no, TRUE);
+					if (retval > 0)
+					{
+##						putrow form_name tf_name (
+##							fstatus = err)
+##						endloop
+					}
+##					putrow form_name tf_name (
+##						fstatus = done)
+				}
+##			}
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(F_RM004D_DeActivate)
+##			(expl = ERget(F_RM0066_Deactiv_cdds_expl))
+##		{
+			what = TBL_DEACT;
+##			clear screen
+##			getrow form_name tf_name (curr_cdds = fcdds_no)
+##			unloadtable form_name tf_name (cdds_no = fcdds_no,
+##				full_db_name = ffull_db_name)
+##			{
+				if (curr_cdds == cdds_no)
+				{
+					retval = turn_recorder(full_db_name,
+						cdds_no, FALSE);
+					if (retval > 0)
+					{
+##						putrow form_name tf_name (
+##							fstatus = err)
+##						endloop
+					}
+##					putrow form_name tf_name (
+##						fstatus = blank)
+				}
+##			}
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+
+		CheckReturnCode(what, retval);
+##	}
+
+##	activate menuitem ERget(F_RM0067_Database)
+##		(expl = ERget(F_RM0068_Database_expl))
+##	{
+		retval = NOT_CALLED;
+		what = NO_ACTION_YET;
+##		set_frs column form_name tf_name (invisible(fstatus) = 0)
+
+##		display submenu
+##		initialize
+##		{
+##			resume menu
+##		}
+##		activate menuitem ERget(F_RM0017_Activate)
+##			(expl = ERget(F_RM0069_Activ_db_expl)), FRSkey4
+##		{
+			what = TBL_ACTIVATE;
+##			clear screen
+			retval = OK;
+##			getrow form_name tf_name (curr_db = fdb_no)
+##			unloadtable form_name tf_name (cdds_no = fcdds_no,
+##				full_db_name = ffull_db_name, db_no = fdb_no,
+##				status = fstatus)
+##			{
+				if (curr_db == db_no &&
+					!STequal(status, done))
+				{
+					retval = turn_recorder(full_db_name,
+						cdds_no, TRUE);
+					if (retval > 0)
+					{
+##						putrow form_name tf_name (
+##							fstatus = err)
+##							endloop
+					}
+##					putrow form_name tf_name (
+##						fstatus = done)
+				}
+##			}
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(F_RM004D_DeActivate)
+##			(expl = ERget(F_RM006A_Deactiv_db_expl))
+##		{
+			what = TBL_DEACT;
+##			clear screen
+##			getrow form_name tf_name (curr_db = fdb_no)
+##			unloadtable form_name tf_name (cdds_no = fcdds_no,
+##				full_db_name = ffull_db_name, db_no = fdb_no)
+##			{
+				if (curr_db == db_no)
+				{
+					retval = turn_recorder(full_db_name,
+						cdds_no, FALSE);
+					if (retval > 0)
+					{
+##						putrow form_name tf_name (
+##							fstatus = err)
+##						endloop
+					}
+##					putrow form_name tf_name (
+##						fstatus = blank)
+				}
+##			}
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+
+		CheckReturnCode(what, retval);
+##	}
+
+##	activate menuitem ERget(F_RM006B_All) (expl = ERget(F_RM006C_All_expl))
+##	{
+		retval = NOT_CALLED;
+		what = NO_ACTION_YET;
+##		set_frs column form_name tf_name (invisible(fstatus) = 0)
+
+##		display submenu
+##		initialize
+##		{
+##			resume menu
+##		}
+##		activate menuitem ERget(F_RM0017_Activate)
+##			(expl = ERget(F_RM006D_Activ_all_expl)), FRSkey4
+##		{
+			what = TBL_ACTIVATE;
+##			clear screen
+##			unloadtable form_name tf_name (cdds_no = fcdds_no,
+##				full_db_name = ffull_db_name, status = fstatus)
+##			{
+				if (!STequal(status, done))
+				{
+					retval = turn_recorder(full_db_name,
+						cdds_no, TRUE);
+					if (retval > 0)
+					{
+##						putrow form_name tf_name (
+##							fstatus = err)
+##						endloop
+					}
+##					putrow form_name tf_name (
+##						fstatus = done)
+				}
+##			}
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(F_RM004D_DeActivate)
+##			(expl = ERget(F_RM006E_Deactiv_all_expl))
+##		{
+			what = TBL_DEACT;
+##			clear screen
+##			unloadtable form_name tf_name (cdds_no = fcdds_no,
+##				full_db_name = ffull_db_name)
+##			{
+				retval = turn_recorder(full_db_name, cdds_no,
+					FALSE);
+				if (retval > 0)
+				{
+##					putrow form_name tf_name (
+##						fstatus = err)
+##					endloop
+				}
+##				putrow form_name tf_name (fstatus = blank)
+##			}
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+
+		CheckReturnCode(what, retval);
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmactchg.hlp"), ERget(F_RM006F_Activ_change_rec));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		set_frs column form_name tf_name (invisible(fstatus) = 1)
+##		breakdisplay
+##	}
+##}
+
+
+/*{
+** Name:	CheckReturnCode	- check return code
+**
+** Description:
+**	Check the return value from turn_recorder and issue an appropriate
+**	message in case of error.
+**
+** Inputs:
+**	what	- activation or deactivation
+**	retval	- return value from turn_recorder
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+static void
+CheckReturnCode(
+i4	act_type,
+i4	retval)
+##{
+##	char	cdds_name[DB_MAXNAME+1];
+##	char	full_db_name[DB_MAXNAME*2+3];
+
+	if (retval > 0)
+	{
+##		getrow form_name tf_name (cdds_name = fcdds_name,
+##			full_db_name = ffull_db_name)
+		if (act_type == TBL_DEACT)
+			IIUGerr(E_RM0054_Error_deactiv_cdds_db, UG_ERR_ERROR,
+				2, cdds_name, full_db_name);
+		else
+			IIUGerr(E_RM0055_Error_activ_cdds_db, UG_ERR_ERROR,
+				2, cdds_name, full_db_name);
+	}
+##}

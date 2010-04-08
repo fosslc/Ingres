@@ -1,0 +1,792 @@
+!
+! History:
+!       25.Aug-95 (Paul Stratton)
+!           Added jacket module to include list for compatlib
+!           Added procedures ADU_14STRTODATE, ADU_1DEC_COERCE, ADU_NUMTOMONY
+!           to end of SYMBOL_VECTOR list.
+!       27-May-98 (kinte01)
+!	    Add IIugprompt so it is visible in the shared lib. Needed for 
+!	    Replicator.
+!	02-Jul-98 (kinte01)
+!	    Add IILQprvprocgttparm
+!	12-Jan-99 (kinte01)
+!	    Add GCsignal_startup. Needed by new rmcmd.
+!	12-Jan-99 (kinte01)
+!	    add ADU_BIT_ADD, ADU_BIT_AND, ADU_BIT_NOT, ADU_BIT_OR,
+!	    ADU_BIT_XOR, ADU_INTEXTRACT,ADU_IPADDR for change 439696
+!       07-Jan-1999 (horda03)
+!           Added ADU_1FLT_COERCE, ADU_1INT_COERCE, ADU_1STRTOSTR and 
+!	    ADU_2STRTOMNY needed as a result of change 439119.
+!	13-Feb-2001 (kinte01)
+!	    Remove old GCN routines & add new GCU counterparts
+!	    Add new GCS routines
+!	    Add new ADU routines
+!	19-Mar-2001 (kinte01)
+!	    Add GCusername, gcu_erlog & IIGCa_cb_call for RMCMD
+!	19-jun-2001 (kinte01)
+!	    Add support for multiple product build
+!	17-Sep-2001 (kinte01)
+!	    o Add new unicode ADU routines
+!	    o Removed some ADU routines previously added.  Normally their
+!	      locations would be replaced by spares to be compatible with
+!	      prior releases but since there has not yet been a release
+!	      with these routines I'm just removing them completely
+!	19-Sep-2001 (kinte01)
+!	    Add iiuglcd_langcode as it is needed by Replicator
+!	16-Oct-2001 (kinte01)
+!	    Remove adu_nvchr_size. 
+!	28-Oct-2001 (kinte01)
+!	    Add adu_cpmnytostr
+!       01-Apr-2002 (loera01)
+!           Removed static references to compatlib and added some missing
+!           ADF and CUF routines.
+!	08-may-2003 (abbjo03)
+!	    Build with the Unix GV CL, increment major/minor ID to 126,0 for
+!	    2.6. Clean up unused and commented entries.
+!	20-feb-2004 (abbjo03)
+!	    Add IIsqlca for multithreaded ESQL.
+!	19-may-2004 (abbjo03)
+!	    Add functions for Unicode coercion.
+!	21-jun-2004 (abbjo03)
+!	    Remove CA licensing for open source.
+!	06-jan-2005 (abbjo03)
+!	    Changes to build with Jam and mkshlibs.
+!	11-jan-2005 (abbjo03)
+!	    Add IIUIpd_PartitionDesc.
+!	18-jan-2005 (abbjo03)
+!	    Add IIUIdcg_group, IIUIdcs_sqlLevel, IIUIfcFindClient,
+!	    IIUIfmsFindModuleStatus and IIUIClientInstalled.
+!	03-aug-2005 (horda03) Bug 114980/INGCBT574
+!	    The change for this bug 64679/INGCBT545 added a new routine
+!	    to LIBQ IIhelp. This is used within ISQL so needs
+!	    to be a defined interface to II_LIBQLIB.
+!	7-Jun-2006 (kschendel)
+!	    Add describe input.
+!	02-feb-2007 (upake01)
+!	    Added adu_21ansi_strtodt.
+!       23-Mar-2007 (Ralph Loen) SIR 118032
+!           Added II_sqlca() to support multi-threading on embedded Ada
+!           applications.
+!	24-Apr-2007 (kiria01) b118184
+!	    Renamed IIhelp to IIhelptoggle to avoid naming conflict
+!	    runsys routines.
+!	31-Oct-2007 (kibro01) b119318
+!	    Added Adu_date_format_list
+!	07-nov-2007 (joea)
+!	    Add IItm_adfucolset.
+!	14-nov-2007 (joea)
+!	    Add IIcsRetScroll.
+!	12-May-2008 (kiria01) b119410
+!	    Added adu_numeric_norm
+!       08-Jul-2008 (horda03) b120429
+!           Add adu_hrtimetodate
+!	04-aug-2008 (joea)
+!	    Add adu_date_string and adu_hrtimetodate.
+!	12-Aug-2008 (kiria01) SIR120473
+!	    Add adu_like_all
+!	24-Oct-2008 (jonj)
+!	    SIR 120874 Replace adu_error with aduErrorFcn
+!	    add adu_errorNV.
+!	11-Feb-2009 (kiria01) SIR120473
+!	    Added adu_patcomp_summary
+!	    Also added missing adu_valuetomystr, adu_0parsedate
+!	11-Mar-2009 (kiria01) b121781
+!	    Added adu_decprec()
+!	21-Mar-2009 (kiria01) SIR121788
+!	    Added adu_long_coerce
+!       22-Mar-2008 (stegr01)
+!           Remove GChostname, GCsignal_startup and GCusername from symbol vector
+!           you can't export another shareable images symbols
+!	09-jul-2009 (joea)
+!	    Add IILQucolinit.
+!	15-Jan-2010 (maspa05) bug 123141
+!	    Removed FEset_null, FEset_decimal, FEset_money_prec, 
+!            FEset_money_format and FEset_date_format
+!	    Added FEapply_null, FEapply_decimal, FEapply_money_prec, 
+!            FEapply_money_format and FEapply_date_format
+!
+IDENT=libqlib
+GSMATCH=LEQUAL,126,0
+SYMBOL_VECTOR=(IIbreak=PROCEDURE,-
+               IIconvert=PROCEDURE,-
+               IIdesc=PROCEDURE,-
+               IIeqinq=PROCEDURE,-
+               IIeqset=PROCEDURE,-
+               IIerrtest=PROCEDURE,-
+               IIexit=PROCEDURE,-
+               IIflush=PROCEDURE,-
+               IIingopen=PROCEDURE,-
+               IIlang=PROCEDURE,-
+               IImdesc=PROCEDURE,-
+               IInexec=PROCEDURE,-
+               IInextget=PROCEDURE,-
+               IInotrim=PROCEDURE,-
+               IIparret=PROCEDURE,-
+               IIparset=PROCEDURE,-
+               IIresync=PROCEDURE,-
+               IIretdom=PROCEDURE,-
+               IIretinit=PROCEDURE,-
+               IIsetdom=PROCEDURE,-
+               IIseterr=PROCEDURE,-
+               IIsexec=PROCEDURE,-
+               IIsyncup=PROCEDURE,-
+               IItest_err=PROCEDURE,-
+               IItupget=PROCEDURE,-
+               IItuples=PROCEDURE,-
+               IIwritedb=PROCEDURE,-
+               IIxeqinq=PROCEDURE,-
+               IIxintrans=PROCEDURE,-
+               IIxouttrans=PROCEDURE,-
+               IIxparret=PROCEDURE,-
+               IIxparset=PROCEDURE,-
+               IIcbwrite=PROCEDURE,-
+               IIcmptof8=PROCEDURE,-
+               IIf8tocmp=PROCEDURE,-
+               IIf8topk=PROCEDURE,-
+               IIpktof8=PROCEDURE,-
+               IIsd=PROCEDURE,-
+               IIsd_no=PROCEDURE,-
+               IIsqConnect=PROCEDURE,-
+               IIsqFlush=PROCEDURE,-
+               IIsqStop=PROCEDURE,-
+               IIsqInit=PROCEDURE,-
+               IIsqUser=PROCEDURE,-
+               IIutsys=PROCEDURE,-
+               IIxretdom=PROCEDURE,-
+               IIputdomio=PROCEDURE,-
+               IIgetdomio=PROCEDURE,-
+               IIwritio=PROCEDURE,-
+               IIxact=PROCEDURE,-
+               IIvarstrio=PROCEDURE,-
+               IIeqiqio=PROCEDURE,-
+               IIeqstio=PROCEDURE,-
+               IIexExec=PROCEDURE,-
+               IIexDefine=PROCEDURE,-
+               IIcsRetrieve=PROCEDURE,-
+               IIcsOpen=PROCEDURE,-
+               IIcsQuery=PROCEDURE,-
+               IIcsGetio=PROCEDURE,-
+               IIcsClose=PROCEDURE,-
+               IIcsDelete=PROCEDURE,-
+               IIcsReplace=PROCEDURE,-
+               IIcsERetrieve=PROCEDURE,-
+               IIcsParGet=PROCEDURE,-
+               IIcsERplace=PROCEDURE,-
+               IIcsRdO=PROCEDURE,-
+               IIcsDaGet=PROCEDURE,-
+               IIsqDisconnect=PROCEDURE,-
+               IIsqPrint=PROCEDURE,-
+               IIsqExImmed=PROCEDURE,-
+               IIsqExStmt=PROCEDURE,-
+               IIsqDaIn=PROCEDURE,-
+               IIsqPrepare=PROCEDURE,-
+               IIsqDescribe=PROCEDURE,-
+               IIxnotrimio=PROCEDURE,-
+               IIxputdomio=PROCEDURE,-
+               IIxgetdomio=PROCEDURE,-
+               IIxwritio=PROCEDURE,-
+               IIxvarstrio=PROCEDURE,-
+               IIxeqiqio=PROCEDURE,-
+               IIxeqstio=PROCEDURE,-
+               IIxcsGetio=PROCEDURE,-
+               IIsqMods=PROCEDURE,-
+               IIsqParms=PROCEDURE,-
+               IILQpriProcInit=PROCEDURE,-
+               IILQprvProcValio=PROCEDURE,-
+               IIxLQprvProcValio=PROCEDURE,-
+               IILQprsProcStatus=PROCEDURE,-
+               IIputctrl=PROCEDURE,-
+               IILQdtDbvTrim=PROCEDURE,-
+               IILQsidSessID=PROCEDURE,-
+               IIsqTPC=PROCEDURE,-
+               IILQesEvStat=PROCEDURE,-
+               ADC_COMPARE=PROCEDURE,-
+               ADC_CVINTO=PROCEDURE,-
+               ADC_GETEMPTY=PROCEDURE,-
+               ADC_ISNULL=PROCEDURE,-
+               ADC_LENCHK=PROCEDURE,-
+               ADC_TMCVT=PROCEDURE,-
+               ADC_TMLEN=PROCEDURE,-
+               ADE_BGN_COMP=PROCEDURE,-
+               ADE_CX_SPACE=PROCEDURE,-
+               ADE_END_COMP=PROCEDURE,-
+               ADE_EXECUTE_CX=PROCEDURE,-
+               ADE_INSTR_GEN=PROCEDURE,-
+               ADI_FITAB=PROCEDURE,-
+	       SPARE,-	!adu_error
+               ADH_DBCVTEV=PROCEDURE,-
+               ADH_DBTOEV=PROCEDURE,-
+               ADH_EVCVTDB=PROCEDURE,-
+               AFE_AGNAMES=PROCEDURE,-
+               AFE_CANCOERCE=PROCEDURE,-
+               AFE_CLINSTD=PROCEDURE,-
+               AFE_CTYCHK=PROCEDURE,-
+               AFE_CVINTO=PROCEDURE,-
+               AFE_DTRIMLEN=PROCEDURE,-
+               AFE_ERROR=PROCEDURE,-
+               AFE_ERRTOSTR=PROCEDURE,-
+               AFE_FDESC=PROCEDURE,-
+               AFE_FICOERCE=PROCEDURE,-
+               AFE_NUMAGGS=PROCEDURE,-
+               AFE_OPID=PROCEDURE,-
+               AFE_PAD=PROCEDURE,-
+               AFE_SQLTRANS=PROCEDURE,-
+               AFE_TYCHK=PROCEDURE,-
+               AFE_TYCOERCE=PROCEDURE,-
+               AFE_TYOUTPUT=PROCEDURE,-
+               AFE_VCHCONST=PROCEDURE,-
+               AFE_VTYCHK=PROCEDURE,-
+               AFE_VTYOUTPUT=PROCEDURE,-
+               ADI_FICOERCE=PROCEDURE,-
+               AFC_CXINFO=PROCEDURE,-
+               AFC_CXHEAD_INIT=PROCEDURE,-
+               AFC_EXECUTE_CX=PROCEDURE,-
+               AFC_BGN_COMP=PROCEDURE,-
+               AFC_CX_SPACE=PROCEDURE,-
+               AFC_END_COMP=PROCEDURE,-
+               AFC_INFORM_SPACE=PROCEDURE,-
+               AFC_INSTR_GEN=PROCEDURE,-
+               FCVT_SQL=PROCEDURE,-
+               FEADFCB=PROCEDURE,-
+               FEAFEERR=PROCEDURE,-
+               FEATT_CLOSE=PROCEDURE,-
+               FEATT_DBDATA=PROCEDURE,-
+               FEATT_FETCH=PROCEDURE,-
+               FEATT_FFETCH=PROCEDURE,-
+               FEATT_FOPEN=PROCEDURE,-
+               FEATT_OPEN=PROCEDURE,-
+               FEBEGINTAG=PROCEDURE,-
+               FECHKERR=PROCEDURE,-
+               FECHKNAME=PROCEDURE,-
+		SPARE, -		! FEcichk
+		SPARE, -		! FEcinfchk
+               FECLR_EXIT=PROCEDURE,-
+               FECOPYRIGHT=PROCEDURE,-
+               FEDBPIPES=PROCEDURE,-
+               FEDML=PROCEDURE,-
+               FEENDTAG=PROCEDURE,-
+               FEEXITS=PROCEDURE,-
+               FEFREE=PROCEDURE,-
+               FEGETTAG=PROCEDURE,-
+               FEGETVM=PROCEDURE,-
+               FEINGRES=PROCEDURE,-
+               FEING_EXIT=PROCEDURE,-
+               FEING_CLEANUP=PROCEDURE,-
+               FEINMST=PROCEDURE,-
+               FEINQERR=PROCEDURE,-
+               FEINQROWS=PROCEDURE,-
+               FEJMP_HANDLER=PROCEDURE,-
+               FELPCREATE=PROCEDURE,-
+               FELPDESTROY=PROCEDURE,-
+               FELPGET=PROCEDURE,-
+               FELPRET=PROCEDURE,-
+               FEMSG=PROCEDURE,-
+               FENETNAME=PROCEDURE,-
+               FENUMATTS=PROCEDURE,-
+               FEPREFIX=PROCEDURE,-
+               FEPRESEARCH=PROCEDURE,-
+               FEPROMPT=PROCEDURE,-
+               FERELEXISTS=PROCEDURE,-
+               FEREQMEM=PROCEDURE,-
+               FEREQLNG=PROCEDURE,-
+               FESALLOC=PROCEDURE,-
+               FESET_EXIT=PROCEDURE,-
+               FETAGLOCKED=PROCEDURE,-
+               FETEMPNAME=PROCEDURE,-
+               FETSALLOC=PROCEDURE,-
+               FET_OPEN_BIN=PROCEDURE,-
+               FEUTACLOSE=PROCEDURE,-
+               FEUTAERR=PROCEDURE,-
+               FEUTAGET=PROCEDURE,-
+               FEUTAOPEN=PROCEDURE,-
+               FEABORTSP=PROCEDURE,-
+               FECLEARSP=PROCEDURE,-
+               FEESTABSP=PROCEDURE,-
+               FMT_AREASIZE=PROCEDURE,-
+               FMT_CVT=PROCEDURE,-
+               FMT_DEFFMT=PROCEDURE,-
+               FMT_FORMAT=PROCEDURE,-
+               FMT_FTOT=PROCEDURE,-
+               FMT_ISVALID=PROCEDURE,-
+               FMT_JUSTIFY=PROCEDURE,-
+               FMT_MULTI=PROCEDURE,-
+               FMT_SETFMT=PROCEDURE,-
+               FMT_SDEFFMT=PROCEDURE,-
+               FMT_SIZE=PROCEDURE,-
+               FMT_WORKSPACE=PROCEDURE,-
+               FMT_VFVALID=PROCEDURE,-
+               F_REVRSBUF=PROCEDURE,-
+               F_FMTDATE=PROCEDURE,-
+               F_SETFMT=PROCEDURE,-
+               F_STRCTR=PROCEDURE,-
+               IIAFCVWILDCARD=PROCEDURE,-
+               IIAFDSDMLSET=PROCEDURE,-
+               IIAFCKFUNCNAME=PROCEDURE,-
+               IIAFDDCDETERMINEDATATYPECLASS=PROCEDURE,-
+               IIAFFIFCONV=PROCEDURE,-
+               IIAFFPCFINDPATTERNCHARS=PROCEDURE,-
+               IIAFGTM_GTWTYPEMAP=PROCEDURE,-
+               IIAFPMENCODE=PROCEDURE,-
+               IIERRNUM=PROCEDURE,-
+               IIFTRIM=PROCEDURE,-
+               IINO_ERR=PROCEDURE,-
+               IIPARPROC=PROCEDURE,-
+               IIQRY_START=PROCEDURE,-
+               IISQDSETSQLVAR=PROCEDURE,-
+               IISQ_RDDESC=PROCEDURE,-
+               IIUGATOI=PROCEDURE,-
+               IIUGBER=PROCEDURE,-
+               IIUGBMABADMEMORYALLOCATION=PROCEDURE,-
+               IIUGDADIFFARCH=PROCEDURE,-
+               IIUGDMLSTR=PROCEDURE,-
+               IIUGDFSDATEFROMSYS=PROCEDURE,-
+               IIUGDTSDATETOSYS=PROCEDURE,-
+               IIUGEPPERRORPRETTYPRINT=PROCEDURE,-
+               IIUGERR=PROCEDURE,-
+               IIUGFEMFORMATERRORMESSAGE=PROCEDURE,-
+               IIUGFER=PROCEDURE,-
+               IIUGFMT=PROCEDURE,-
+               IIUGITOA=PROCEDURE,-
+               IIUGMSG=PROCEDURE,-
+               IIUGYN=PROCEDURE,-
+               IIUGBMA_BADMEMORYALLOCATION=PROCEDURE,-
+               IIUGFRS_SETTING=PROCEDURE,-
+               IIUGHDHTABDEL=PROCEDURE,-
+               IIUGHEHTABENTER=PROCEDURE,-
+               IIUGHLPNAME=PROCEDURE,-
+               IIUGHFHTABFIND=PROCEDURE,-
+               IIUGHIHTABINIT=PROCEDURE,-
+               IIUGHRHTABRELEASE=PROCEDURE,-
+               IIUGLBO_LOWERBEOBJECT=PROCEDURE,-
+               IIUGOPREP=PROCEDURE,-
+               IIUGQSORT=PROCEDURE,-
+               IIUGSTRDML=PROCEDURE,-
+               IIUGWILDCARD=PROCEDURE,-
+               IIUGNPNEXTPRIME=PROCEDURE,-
+               IIUGTAGFREE=PROCEDURE,-
+               UGDT_NOW=PROCEDURE,-
+               IIUIABORTXACTION=PROCEDURE,-
+               IIUIASP_ABORTSP=PROCEDURE,-
+               IIUIAUTOCOMMIT=PROCEDURE,-
+               IIUIBEGINXACTION=PROCEDURE,-
+               IIUICAC_CATCLOSE=PROCEDURE,-
+               IIUICAF_CATFETCH=PROCEDURE,-
+               IIUICAO_CATOPEN=PROCEDURE,-
+               IIUICASE=PROCEDURE,-
+               IIUICK1STAUTOCOM=PROCEDURE,-
+               IIUICNB_CATNOLOCKBEGIN=PROCEDURE,-
+               IIUICNE_CATNOLOCKEND=PROCEDURE,-
+               IIUICSP_CLEARSP=PROCEDURE,-
+               IIUIDCD_DIST=PROCEDURE,-
+               IIUIDCE_ESCAPE=PROCEDURE,-
+               IIUIDCK_REQ=PROCEDURE,-
+               IIUIDCL_LOGKEYS=PROCEDURE,-
+               IIUIDCN_INGRES=PROCEDURE,-
+               IIUIDCO_ROLE=PROCEDURE,-
+               IIUIDCQ_QUELLEVEL=PROCEDURE,-
+               IIUIDCU_RULES=PROCEDURE,-
+               IIUIDEADLOCK=PROCEDURE,-
+               IIUIENDXACTION=PROCEDURE,-
+               IIUIDCI_INITCAP=PROCEDURE,-
+               IIUIDML=PROCEDURE,-
+               IIUIESP_ESTABSP=PROCEDURE,-
+               IIUIGETDATA=PROCEDURE,-
+               IIUISHAREDDATA=PROCEDURE,-
+               IIUISWC_SETWITHCLAUSE=PROCEDURE,-
+               IIUIINXACTION=PROCEDURE,-
+               IIUIINSERT=PROCEDURE,-
+               IIUIRAC_RELCLOSE=PROCEDURE,-
+               IIUIRAF_RELFETCH=PROCEDURE,-
+               IIUIRAO_RELOPEN=PROCEDURE,-
+               IIUIREL_HELP=PROCEDURE,-
+               IIUISETDATA=PROCEDURE,-
+               IIUIUPDATE=PROCEDURE,-
+               IIUIXC0_XCONNOFF=PROCEDURE,-
+               IIUIXC1_XCONNON=PROCEDURE,-
+               IIUICR0_CATREADOFF=PROCEDURE,-
+               IIUICR1_CATREADON=PROCEDURE,-
+               IIUGUAPPARSE=PROCEDURE,-
+               IIUIPASSWORD=PROCEDURE,-
+               IIUIROLEID=PROCEDURE,-
+               IImain=PROCEDURE,-
+               IIret_err=PROCEDURE,-
+               IIsd_undo=PROCEDURE,-
+               IIsd_convert=PROCEDURE,-
+               IIsd_fill=PROCEDURE,-
+               IIsd_lenptr=PROCEDURE,-
+               IIstrconv=PROCEDURE,-
+               IIxflag=PROCEDURE,-
+               syserr=PROCEDURE,-
+               IIDML=PROCEDURE,-
+               IIMSGUTIL=PROCEDURE,-
+               IIfeddb=PROCEDURE,-
+               IIfePrepare=PROCEDURE,-
+               IIfeDescribe=PROCEDURE,-
+               IIUIcw1_CatWriteOn=PROCEDURE,-
+               IIUIcw0_CatWriteOff=PROCEDURE,-
+               ADC_MINMAXDV=PROCEDURE,-
+               ADF_AGBEGIN=PROCEDURE,-
+               ADF_AGEND=PROCEDURE,-
+               ADF_AGNEXT=PROCEDURE,-
+               ADG_SHUTDOWN=PROCEDURE,-
+               ADI_FIDESC=PROCEDURE,-
+               ADI_OPID=PROCEDURE,-
+               ADI_TYID=PROCEDURE,-
+               ADI_TYNAME=PROCEDURE,-
+               ADX_CHKWARN=PROCEDURE,-
+               ADX_HANDLER=PROCEDURE,-
+               AFE_AGFIND=PROCEDURE,-
+               AFE_DPLEN=PROCEDURE,-
+               AFE_DPVALUE=PROCEDURE,-
+               AFE_FITYPE=PROCEDURE,-
+               AFE_NULLSTRING=PROCEDURE,-
+               AFE_PREFTYPE=PROCEDURE,-
+               FEATT_UTYPE=PROCEDURE,-
+               FECHKENV=PROCEDURE,-
+               FEHANDLER=PROCEDURE,-
+               FEREL_CLOSE=PROCEDURE,-
+               FEREL_FETCH=PROCEDURE,-
+               FEREL_FFETCH=PROCEDURE,-
+               FEREL_OPEN=PROCEDURE,-
+               FMT_DISPINFO=PROCEDURE,-
+               FMT_FMTSTR=PROCEDURE,-
+               FMT_KIND=PROCEDURE,-
+               FMT_ISREVERSED=PROCEDURE,-
+               IITM=PROCEDURE,-
+               IITM_DML=PROCEDURE,-
+               IITM_RETDESC=PROCEDURE,-
+               IITM_STATUS=PROCEDURE,-
+               IITM_TRACE=PROCEDURE,-
+               IIDBCONNECT=PROCEDURE,-
+               UGCAT_NOW=PROCEDURE,-
+               UGCAT_TO_DT=PROCEDURE,-
+               UGDT_TO_CAT=PROCEDURE,-
+               IILQFRSERROR=PROCEDURE,-
+               IIUGMLLMAXLINELEN=PROCEDURE,-
+               IIUIDGDELETEGARBAGE=PROCEDURE,-
+               FENINGRES=PROCEDURE,-
+               IIUGAFAPPENDFILE=PROCEDURE,-
+               IIUGISSQLKEYWORD=PROCEDURE,-
+               IIUILXBLABELXACTBEGIN=PROCEDURE,-
+               IIUILXELABELXACTEND=PROCEDURE,-
+               IIUIfedata=PROCEDURE,-
+               IIUIdbdata=PROCEDURE,-
+               IIUISSDSTORESESSIONDATA=PROCEDURE,-
+               IIUIPSDPARTIALSESSIONDATA=PROCEDURE,-
+               IIUIADAADDDEPAPPL=PROCEDURE,-
+               IIUGINIT=PROCEDURE,-
+               IILQgdata=PROCEDURE,-
+               IIUGdp_DateParts=PROCEDURE,-
+               IILQint=PROCEDURE,-
+               IILQdbl=PROCEDURE,-
+               IILQstpSvrTracePrint=PROCEDURE,-
+               IILQssSetSqlio=PROCEDURE,-
+               IILQisInqSqlio=PROCEDURE,-
+               IILQshSetHandler=PROCEDURE,-
+               IIUIdcy_udt=PROCEDURE,-
+               IIxLQssSetSqlio=PROCEDURE,-
+               IIxLQisInqSqlio=PROCEDURE,-
+               IIUIscl_StdCatLevel=PROCEDURE,-
+               ade_inform_space=PROCEDURE,-
+               IIUICheckDictVer=PROCEDURE,-
+	       IIfmt_init=PROCEDURE,-
+	       IIUGCLCOPYLONG=PROCEDURE,-
+               AFE_DEC_INFO=PROCEDURE,-
+               FE_DECOMPOSE=PROCEDURE,-
+               FE_RESOLVE=PROCEDURE,-
+               IIAFFEDATATYPE=PROCEDURE,-
+               IIUGCVNCHECKVARNAME=PROCEDURE,-
+               IIUGDBO_DLMBEOBJECT=PROCEDURE,-
+               IIUGDLM_CHKDLMBEOBJECT=PROCEDURE,-
+               IIUGECEEVALCHAREXPR=PROCEDURE,-
+               IIUGFNFENAME=PROCEDURE,-
+               IIUGREFREGISTEREXPFNS=PROCEDURE,-
+               IIUGRQD_REQUOTE_DLM=PROCEDURE,-
+               IIUGSCANWILDCARD=PROCEDURE,-
+               IIUICDDCHECKDBDATA=PROCEDURE,-
+               SS_2_GE=PROCEDURE,-
+               SS_DECODE=PROCEDURE,-
+               IILQLDH_LODATAHANDLER=PROCEDURE,-
+               IILQLED_LOENDDATA=PROCEDURE,-
+               IILQLGD_LOGETDATA=PROCEDURE,-
+               IIUIXRT_TBL=PROCEDURE,-
+               FE_FULLRESOLVE=PROCEDURE,-
+               FE_UNRESOLVE=PROCEDURE,-
+               IISQLCDINIT=PROCEDURE,-
+               IISQGDINIT=PROCEDURE,-
+               IILQlpd_LoPutData=PROCEDURE,-
+               IIxLQlpd_LoPutData=PROCEDURE,-
+               IIxLQlgd_LoGetData=PROCEDURE,-
+               FMT_NTMODIFY=PROCEDURE,-
+               FMT_NTPOSITION=PROCEDURE,-
+               FMT_STPOSITION=PROCEDURE,-
+               FMT_STVALID=PROCEDURE,-
+               IILQNCSNOCURSESSION=PROCEDURE,-
+               IIUGXRI_ID=PROCEDURE,-
+               IIUIGDT_GETDEFAULTTYPE=PROCEDURE,-
+               ADH_EVTODB=PROCEDURE,-
+               IIUGHSHTABSCAN=PROCEDURE,-
+               SPARE, - !GCHOSTNAME=PROCEDURE,-
+               IIXSQGDINIT=PROCEDURE,-
+               IIUGVFVERIFYFILE=PROCEDURE,-
+               GCN_ENCRYPT=PROCEDURE,-
+               GCN_FASTSELECT=PROCEDURE,-
+               IILQcnConName=PROCEDURE,-
+               ENTER_CLIENT=PROCEDURE,-
+               IIUIATTRINFO=PROCEDURE,-
+               INIT_CLIENTTABLE=PROCEDURE,-
+               INIT_MODULETABLE=PROCEDURE,-
+               MODULESTATUS=PROCEDURE,-
+               MOD_DICT_STATUS=PROCEDURE,-
+               IIUGGCI_GETCID=PROCEDURE,-
+               IIUGihdIntHtabDel=PROCEDURE,-
+               IIUGiheIntHtabEnter=PROCEDURE,-
+               IIUGihfIntHtabFind=PROCEDURE,-
+               IIUGihiIntHtabInit=PROCEDURE,-
+               IIUGihsIntHtabScan=PROCEDURE,-
+               IIUIsequence_value=PROCEDURE,-
+               gcn_seterr_func=PROCEDURE,-
+               gcn_testaddr=PROCEDURE,-
+               IIUIdlmcase=PROCEDURE,-
+               IIUIcsl_CommonSQLLevel=PROCEDURE,-
+               IIUIea_escapos=PROCEDURE,-
+               IIUIuea_unescapos=PROCEDURE,-
+               IIlq_Protect=PROCEDURE,-
+               IIpbreak=PROCEDURE,-
+               IIpcsClose=PROCEDURE,-
+               IIpcsDaGet=PROCEDURE,-
+               IIpcsDelete=PROCEDURE,-
+               IIpcsERetrieve=PROCEDURE,-
+               IIpcsERplace=PROCEDURE,-
+               IIpcsGetio=PROCEDURE,-
+               IIpcsOpen=PROCEDURE,-
+               IIpcsParGet=PROCEDURE,-
+               IIpcsQuery=PROCEDURE,-
+               IIpcsRdO=PROCEDURE,-
+               IIpcsReplace=PROCEDURE,-
+               IIpcsRetrieve=PROCEDURE,-
+               IIpeqiqio=PROCEDURE,-
+               IIpeqstio=PROCEDURE,-
+               IIperrtest=PROCEDURE,-
+               IIpexDefine=PROCEDURE,-
+               IIpexExec=PROCEDURE,-
+               IIpexit=PROCEDURE,-
+               IIpflush=PROCEDURE,-
+               IIpgetdomio=PROCEDURE,-
+               IIpingopen=PROCEDURE,-
+               IIpLQcnConName=PROCEDURE,-
+               IIpLQdbl=PROCEDURE,-
+               IIpLQesEvStat=PROCEDURE,-
+               IIpLQint=PROCEDURE,-
+               IIpLQisInqSqlio=PROCEDURE,-
+               IIpLQldh_LoDataHandler=PROCEDURE,-
+               IIpLQled_LoEndData=PROCEDURE,-
+               IIpLQlgd_LoGetData=PROCEDURE,-
+               IIpLQlpd_LoPutData=PROCEDURE,-
+               IIpLQpriProcInit=PROCEDURE,-
+               IIpLQprsProcStatus=PROCEDURE,-
+               IIpLQprvProcValio=PROCEDURE,-
+               IIpLQshSetHandler=PROCEDURE,-
+               IIpLQsidSessID=PROCEDURE,-
+               IIpLQssSetSqlio=PROCEDURE,-
+               IIpnexec=PROCEDURE,-
+               IIpnextget=PROCEDURE,-
+               IIpparret=PROCEDURE,-
+               IIpparset=PROCEDURE,-
+               IIpputctrl=PROCEDURE,-
+               IIpputdomio=PROCEDURE,-
+               IIpretinit=PROCEDURE,-
+               IIpseterr=PROCEDURE,-
+               IIpsexec=PROCEDURE,-
+               IIpsqConnect=PROCEDURE,-
+               IIpsqDaIn=PROCEDURE,-
+               IIpsqDescribe=PROCEDURE,-
+               IIpsqDisconnect=PROCEDURE,-
+               IIpsqExImmed=PROCEDURE,-
+               IIpsqExStmt=PROCEDURE,-
+               IIpsqFlush=PROCEDURE,-
+               IIpsqGdInit=PROCEDURE,-
+               IIpsqInit=PROCEDURE,-
+               IIpsqMods=PROCEDURE,-
+               IIpsqParms=PROCEDURE,-
+               IIpsqPrepare=PROCEDURE,-
+               IIpsqPrint=PROCEDURE,-
+               IIpsqStop=PROCEDURE,-
+               IIpsqTPC=PROCEDURE,-
+               IIpsqUser=PROCEDURE,-
+               IIpsqlcdInit=PROCEDURE,-
+               IIpsyncup=PROCEDURE,-
+               IIptupget=PROCEDURE,-
+               IIputsys=PROCEDURE,-
+               IIpvarstrio=PROCEDURE,-
+               IIpwritio=PROCEDURE,-
+               IIpxact=PROCEDURE,-
+               IIGCn_call=PROCEDURE,-
+	       IIraat_session_start=PROCEDURE,-
+	       IIraat_session_end=PROCEDURE,-
+	       IIraat_tx_begin=PROCEDURE,-
+	       IIraat_tx_commit=PROCEDURE,-
+	       IIraat_tx_abort=PROCEDURE,-
+	       IIraat_table_open=PROCEDURE,-
+	       IIraat_table_lock=PROCEDURE,-
+	       IIraat_table_close=PROCEDURE,-
+	       IIraat_record_get=PROCEDURE,-
+	       IIraat_record_put=PROCEDURE,-
+	       IIraat_record_position=PROCEDURE,-
+	       IIraat_record_delete=PROCEDURE,-
+	       IIraat_record_replace=PROCEDURE,-
+	       IIcraat_blob_put=PROCEDURE,-
+	       IIcraat_blob_get=PROCEDURE,-
+	       IIcraat_strtodate=PROCEDURE,-
+	       IIcraat_datetostr=PROCEDURE,-
+	       IIcraat_moneytostr=PROCEDURE,-
+	       IIcraat_strtomoney=PROCEDURE,-
+	       IIcraat_init=PROCEDURE,-
+	       IIcraat_end=PROCEDURE,-
+	       IIUGlocal_decimal=PROCEDURE,-
+               ADU_14STRTODATE=PROCEDURE,-   !these following added by Paul
+               ADU_1DEC_COERCE=PROCEDURE,-   !Stratton (25-8-95)
+               ADU_NUMTOMNY=PROCEDURE,-
+	       IIgcn_check=PROCEDURE,-
+	       IIugprompt=PROCEDURE,-
+	       IILQprvprocgttparm=PROCEDURE, -
+	       SPARE, - !GCsignal_startup=PROCEDURE,-
+	       ADU_BIT_ADD=PROCEDURE,-
+	       ADU_BIT_AND=PROCEDURE,-
+	       ADU_BIT_NOT=PROCEDURE,-
+	       ADU_BIT_OR=PROCEDURE,-
+	       ADU_BIT_XOR=PROCEDURE,-
+	       ADU_INTEXTRACT=PROCEDURE,-
+	       ADU_IPADDR=PROCEDURE,-
+	       ADU_1FLT_COERCE=PROCEDURE,-
+	       ADU_1INT_COERCE=PROCEDURE,-
+	       ADU_1STRTOSTR=PROCEDURE,-
+	       ADU_2STRTOMNY=PROCEDURE,-
+	       GCU_WORDS=PROCEDURE,-
+	       GCU_PUT_INT=PROCEDURE,-
+	       GCU_GET_INT=PROCEDURE,-
+	       GCU_PUT_STR=PROCEDURE,-
+	       GCU_GET_STR=PROCEDURE,-
+	       GCU_ENCODE=PROCEDURE,-
+	       IIGCS_CALL=PROCEDURE,-
+	       GCS_MECH_ID=PROCEDURE,-
+	       ADU_HASH=PROCEDURE,-
+	       ADU_RANDOM=PROCEDURE,-
+	       ADU_RANDOMF=PROCEDURE,-
+	       ADU_RANDOMF_RANGE=PROCEDURE,-
+	       ADU_RANDOMF_RANGEF=PROCEDURE,-
+	       ADU_UUID_CREATE=PROCEDURE,-
+	       ADU_UUID_TO_CHAR=PROCEDURE,-
+	       ADU_UUID_FROM_CHAR=PROCEDURE,-
+	       ADU_UUID_COMPARE=PROCEDURE,-
+	       ADU_N7A_CORRR2=PROCEDURE,-
+	       ADU_N8A_COVSXY=PROCEDURE,-
+	       ADU_E8A_CPOP=PROCEDURE,-
+	       ADU_E9A_CSAMP=PROCEDURE,-
+	       ADU_N9A_RAVGX=PROCEDURE,-
+	       ADU_E10A_RAVGX=PROCEDURE,-
+	       ADU_N10A_RAVGY=PROCEDURE,-
+	       ADU_E11A_RAVGY=PROCEDURE,-
+	       ADU_N11A_RCNT=PROCEDURE,-
+	       ADU_E12A_RCNT=PROCEDURE,-
+	       ADU_N13A_RSXX=PROCEDURE,-
+	       ADU_E14A_RR2=PROCEDURE,-
+	       ADU_N14A_RSYY=PROCEDURE,-
+	       ADU_N12A_RINTSL=PROCEDURE,-
+	       ADU_E15A_RSLOPE=PROCEDURE,-
+	       ADU_E16A_RSXX=PROCEDURE,-
+	       ADU_E17A_RSXY=PROCEDURE,-
+	       ADU_E18A_RSYY=PROCEDURE,-
+	       gcu_erlog=PROCEDURE,-
+	       IIGCa_cb_call=PROCEDURE,-
+	       SPARE, - !GCusername=PROCEDURE,-
+	       aduucmp=PROCEDURE,-
+	       adu_nvchrcomp=PROCEDURE,-
+	       adu_nvchbld_key=PROCEDURE,-
+	       adu_nvchr_charextract=PROCEDURE,-
+	       adu_nvchr_coerce=PROCEDURE,-
+	       adu_nvchr_concat=PROCEDURE,-
+	       adu_nvchr_convert=PROCEDURE,-
+	       adu_nvchr_dbtoev=PROCEDURE,-
+	       adu_nvchr_left=PROCEDURE,-
+	       adu_nvchr_length=PROCEDURE,-
+	       adu_nvchr_locate=PROCEDURE,-
+	       adu_nvchr_pad=PROCEDURE,-
+	       adu_nvchr_right=PROCEDURE,-
+	       adu_nvchr_shift=PROCEDURE,-
+	       adu_nvchr_squeezewhite=PROCEDURE,-
+	       adu_nvchr_substr1=PROCEDURE,-
+	       adu_nvchr_substr2=PROCEDURE,-
+	       adu_nvchr_trim=PROCEDURE,-
+	       adu_ulike=PROCEDURE,-
+	       adu_unorm=PROCEDURE,-
+	       aducolinit=PROCEDURE,-
+	       iiuglcd_langcode=PROCEDURE,-
+	       adu_cpmnytostr=PROCEDURE,-
+               adg_release=PROCEDURE,-
+               adg_init=PROCEDURE,-
+               adg_startup=PROCEDURE,-
+               adg_srv_size=PROCEDURE,-
+               ss_encode=PROCEDURE,-
+		IIsqlca=PROCEDURE,-
+		adu_deletemap=PROCEDURE,-
+		adu_getconverter=PROCEDURE,-
+		adu_map_check_validity=PROCEDURE,-
+		adu_map_get_chartouni=PROCEDURE,-
+		adu_readmap=PROCEDURE,-
+		aduucolinit=PROCEDURE,-
+		adu_nvchr_toutf8=PROCEDURE, -
+		IIUIpd_PartitionDesc=PROCEDURE,-
+		IIUIdcg_group=PROCEDURE,-
+		IIUIdcs_sqlLevel=PROCEDURE,-
+		IIUIfcFindClient=PROCEDURE,-
+		IIUIfmsFindModuleStatus=PROCEDURE,-
+		IIUIClientInstalled=PROCEDURE,-
+		IIhelptoggle=PROCEDURE,-
+		IIsqDescInput=PROCEDURE,-
+		adu_21ansi_strtodt=PROCEDURE,-
+                II_sqlca=PROCEDURE,-
+		adu_date_format=PROCEDURE,-
+		IItm_adfucolset=PROCEDURE,-
+                SPARE, - !FEset_null=PROCEDURE,-
+                SPARE, - !FEset_decimal=PROCEDURE,-
+                SPARE, - !FEset_money_prec=PROCEDURE,-
+                SPARE, - !FEset_money_format=PROCEDURE,-
+                SPARE, - !FEset_date_format=PROCEDURE,-
+		IIcsRetScroll=PROCEDURE,-
+		adu_numeric_norm=PROCEDURE,-
+		adu_date_string=PROCEDURE,-
+		adu_hrtimetodate=PROCEDURE,-
+		adu_like_all=PROCEDURE,-
+		aduErrorFcn=PROCEDURE,-
+		adu_errorNV=PROCEDURE,-
+		adu_valuetomystr=PROCEDURE,-
+		adu_0parsedate=PROCEDURE,-
+		adu_patcomp_summary=PROCEDURE,-
+		adu_decprec=PROCEDURE,-
+		adu_long_coerce=PROCEDURE,-
+		IILQucolinit=PROCEDURE,-
+                IILQasGetThrAdfcb=PROCEDURE,-
+                FEapply_null=PROCEDURE,-
+                FEapply_decimal=PROCEDURE,-
+                FEapply_money_prec=PROCEDURE,-
+                FEapply_money_format=PROCEDURE,-
+                FEapply_date_format=PROCEDURE)
+INGLIB:libui/library, -
+INGLIB:libqsys/library, -
+INGLIB:libq/library, -
+INGLIB:libqgca/library,- 
+INGLIB:libcuf/library, -
+INGLIB:libraat/library, -
+INGLIB:libgcf/library, -
+INGLIB:libug/library,- 
+INGLIB:libfmt/library, -
+INGLIB:libafe/library, -
+INGLIB:libadf/library, -
+INGLIB:libabfrt/include=(g4xfer), -
+INGLIB:libcompat/include=(gv,gver,gcatrace), -
+II_COMPATLIB/share
+psect_attr=ii_address_data,nowrt,shr,lcl
+cluster=ii_address_data
+collect=ii_address_data,ii_address_data
+psect_attr=sqlca,noshr,lcl

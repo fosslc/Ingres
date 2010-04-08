@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The name_service resource specifies whether DBMS servers created with
+  this definition will be registered with the Name Server. 
+
+  ON:  DBMS servers created will be registered with the Name Server.
+  OFF: DBMS servers created will NOT be registered with the Name Server.

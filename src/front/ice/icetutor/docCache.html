@@ -1,0 +1,26 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Documents (Cache)&previous=docDef.html&next=docCreation.html` -->
+When documents are stored in the database, extracting them on each client request 
+can greatly increase response time to the browser.  
+This time lag increases as the size of the document to be extracted increases.  
+<P>
+To improve performance, Web Deployment Option utilizes a caching system to reduce the number of extractions 
+from the data source. Three different levels of cache can be set for any individual document by that document's owner.
+These include:
+<p>
+<TABLE>
+<TR><TD><b>Pre-cache</b>: </TD><TD></TD></TR>
+<TR><TD></TD><TD>When the ICE Server is started up, the document is cached <br>until the server is shut down.
+		</TD></TR>
+<TR><TD><b>Permanent cache</b>: </TD><TD></TD></TR>
+<TR><TD></TD><TD>The first time a document is requested by a client, the document <br>
+becomes "permanently" cached until the server is shut down.
+</TD></TR>
+<TR><TD><b>Session cache</b>: </TD><TD></TD></TR>
+<TR><TD></TD><TD>A document is only cached during a client session. 
+<br>As soon as the session is terminated, the document is erased 
+<br>from the cache if it has not been requested by another client.
+</TD></TR>
+</TABLE>
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+    

@@ -1,0 +1,63 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.int_rpl -- Variable definitions for Intel Rpath Linux
+#
+#  Description:
+#       Platform specific variable definitions for Intel Rpath Linux
+#
+# History:
+#        6-Nov-2006 (hanal04) SIR 117044
+#           Created for int.rpl for Intel Rpath Linux build.
+#       14-Nov-2006 (hanal04) SIR 117044
+##          Added missing close quote in VERS.
+#        8-Oct-2007 (hanal04) Bug 119262
+#           Added archive iimerge.a alternative to shared library server.
+#	17-Apr-2008 (hanje04)
+#	    Bug 117044
+#	    Remove -fwritable-strings, deprecated
+##	08-Jan-2008 (hanje04)
+##	    BUG 115457
+##	    Remove depricated compiler flag
+##	13-Feb-2008 (hanje04)
+##	    SIR 117044
+##	    Add -lrt (realtime) library to link line
+##	18-Nov-2008 (hanje04)
+##	    BUG 121243
+##	    Derive Jamdefs from int_lnx as 90% of the setting are the same.
+##	    This should prevent breakages to the rpl build when things are add
+##	    to int_lnx but not int_rpl
+##	22-Jun-2009 (kschendel) SIR 122138
+##	    Rework for new hybrid scheme
+#
+#####
+
+# rPath Linux is a derivative of the generic linux build. Source int_lnx
+# first and then chnage what we need, which includes de-hybridizing
+# the results.
+
+include $(ING_JAM)Jamdefs.hyb86_lnx ;
+
+VERS = "int_rpl" ;
+VERS32 =  ;
+VERS64 =  ;
+BUILD_ARCH =  ;
+BUILD_GTK_INST = FALSE ;
+BUILD_GTK_GUI = FALSE ;
+# may not want ICE either but it has to be turned off in VERS.int_rpl,
+# since there's a #set option that goes with it.
+
+platform_string = "NPTL Linux x86 for rPath" ;
+
+# More de-hybridization...
+AS = $(AS32) ;
+LD = $(LD32) ;
+CCLD = $(CCLD32) ;
+ASMACH = $(ASMACH32) ;
+CCMACH = $(CCMACH32) ;
+CCLDMACH = $(CCLDMACH32) $(LDORIGIN) ;
+LDLIBPATH = $(LDLIBPATH32) ;
+LDLIBMACH = $(LDLIBMACH32) ;
+CCLDSERVER = $(CCLDSERVER32) ;
+CCSHLDMACH = $(CCSHLDMACH32) ;
+ASCPPFLAGS = $(ASCPPFLAGS32) ;

@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescafe.hlp               After-Field-Exit escape code examples.
+Each form field and table field column can have a After-Field-Exit escape.
+The After-Field-Exit escape executes when the cursor leaves a field
+or column.
+
+Any After-Field-Change escape defined on the field will execute before the 
+After-Field-Exit escape. Also, for lookup join fields, the value in the 
+field will be validated against the lookup table before the After-Field-Exit 
+escape runs.
+
+After-Field-Exit escape code example:
+
+    To control cursor movement to the next field:
+
+        IF (priority = 'high') THEN
+            RESUME FIELD remarks;
+        ELSE
+            RESUME NEXT;
+        ENDIF;

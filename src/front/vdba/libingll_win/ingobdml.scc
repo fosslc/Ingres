@@ -1,0 +1,3286 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.		       
+*/
+
+/*
+** Source   : ingobdml.scc 
+** Project  : Com Server/Library
+** Author   : UK Sotheavut (uk$so01) 
+** Purpose  : SQL file, use for the ADD, ALTER, DROP object, Query Ingres Objects
+**
+
+** History:
+**
+** 04-Sep-1997 (uk$so01)
+**    created
+** 23-Oct-2001 (uk$so01)
+**    SIR #106057 (sqltest as ActiveX & Sql Assistant as In-Process COM Server)
+** 28-Dec-2001 (uk$so01)
+**    SIR #106648, Split vdba into the small component ActiveX/COM 
+**    Handle autocommit ON/OFF
+** 21-Oct-2002 (uk$so01)
+**    BUG/SIR #106156 Manually integrate the change #453850 into ingres30
+** 17-Dec-2002 (uk$so01)
+**    SIR #109220, Enhance the library.
+** 28-Feb-2003 (schph01)
+**    SIR #109220, Manage compare "User-Defined Data Types" in VDDA
+**                 Add functions QueryTableStar(), QueryIndexStar() and
+**                 QueryTableColStar()
+** 22-Apr-2003 (schph01)
+**    SIR 107523 Add SQL code for sequence Object
+** 17-Jul-2003 (uk$so01)
+**    SIR #106648, Vdba-Split, ensure that the ingres sessions 
+**    have the descriptions.
+** 05-Sep-2003 (uk$so01)
+**    SIR #106648, Integrate libraries libwctrl.lib, libingll.lib in Ija
+** 03-Oct-2003 (uk$so01)
+**    SIR #106648, Vdba-Split, Additional fix for GATEWAY Enhancement 
+** 23-Jan-2004 (schph01)
+**    (sir 104378) detect version 3 of Ingres, for managing
+**    new features provided in this version. replaced references
+**    to 2.65 with refereces to 3  in #define definitions for
+**    better readability in the future
+** 13-May-2004 (schph01)
+**    SIR #111507 Add management for new column type bigint
+** 20-Sep-2004 (schph01)
+**    BUG #113119 Add REPEATED, removed DISTINCT and LOWERCASE in select
+**    SQL statement.
+** 29-Sep-2004 (uk$so01)
+**    BUG #113119, Add readlock mode in the session management
+** 21-Oct-2004 (uk$so01)
+**    BUG #113280 / ISSUE 13742473 (VDDA should minimize the number of DBMS connections)
+** 17-Nov-2004 (uk$so01)
+**    BUG #113119, Remove the unnecessary statements.
+** 26-Nov-2004 (schph01)
+**    BUG #113536 DISTINCT is necessary for the QueryGroup function.
+** 04-Dec-2007 (kira01) b119555
+**    Added missing code for ANSI date type support and corrected behaviour
+**    of conversion code when presented with unknown datatypes.
+** 20-Aug-2008 (whiro01)
+**    Replace private <afx...> include with "stdafx.h"
+** 12-Mar-2009 (drivi01)
+**    In efforts to port to Visual Studio 2008 compiler, update return
+**    type from functions QuerySynonymAll and QuerySynonymRestrict.
+**/
+
+#include "stdafx.h"
+#include "sessimgr.h"
+#include "tlsfunct.h"
+
+#include "dmluser.h"
+#include "dmlgroup.h"
+#include "dmlprofi.h"
+#include "dmlrole.h"
+#include "dmllocat.h"
+#include "dmldbase.h"
+#include "dmltable.h"
+#include "dmlview.h"
+#include "dmlproc.h"
+#include "dmldbeve.h"
+#include "dmlsynon.h"
+#include "dmlrule.h"
+#include "dmlindex.h"
+#include "dmlinteg.h"
+#include "dmlcolum.h"
+#include "dmlgrant.h"
+#include "dmlalarm.h"
+#include "dmlseq.h"
+#include "mgterr.h"
+
+
+
+// compile:
+// esqlcc -multi -fingobdml.inc ingobdml.scc
+//
+// Declare the SQLCA structure and the SQLDA typedef
+//
+extern "C"
+{
+#include <compat.h>
+#include <cm.h>
+#include <st.h>
+
+EXEC SQL INCLUDE SQLCA;
+EXEC SQL INCLUDE SQLDA;
+}
+
+static BOOL QueryUser      (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryGroup     (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryProfile   (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryRole      (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryLocation  (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryProcedure (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QuerySequence  (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryDatabase  (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryTable     (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject, char cType = 'T');
+static BOOL QueryIndex     (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+
+static BOOL QueryRule      (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryIntegrity (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryAlarm     (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+
+static BOOL QueryTableCol  (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QueryDBEvent   (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+static BOOL QuerySynonym   (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject);
+
+static BOOL QueryGrantee (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject, CaSessionManager* pMgr, CaSession* pSession = NULL);
+static BOOL QuerySecurityAlarm (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject, CaSessionManager* pMgr);
+
+
+static LPSTR TrimRight (LPSTR lpszChar)
+{
+	CString str = lpszChar;
+	str.TrimRight();
+	LPSTR lpnew = T2A((LPTSTR)(LPCTSTR)str);
+
+	if (strlen (lpnew) < strlen(lpszChar))
+		strcpy (lpszChar, lpnew);
+	return lpszChar;
+}
+
+
+static void ExceptionError()
+{
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+
+	INGRESII_ManageErrorInLogFiles( error_buf,"",nErr);
+
+	throw CeSqlException (A2T(error_buf), nErr);
+}
+
+
+static int INGRESII_llGetSession(LPCTSTR lpsessionname)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* connection;
+	EXEC SQL END DECLARE SECTION;
+
+	CString csstr = lpsessionname;
+	CString csLocal = _T("(local)");
+	csLocal +=_T("::");
+	if (csstr.Find(csLocal)==0)
+		lpsessionname +=csLocal.GetLength();
+	connection = (char *) lpsessionname;
+	EXEC SQL WHENEVER SQLERROR GOTO CONNECT_ERROR;
+	EXEC SQL CONNECT :connection;
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	return 1;
+CONNECT_ERROR:
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	EXEC SQL DISCONNECT;
+	throw CeSqlException (A2T(error_buf), nErr);
+	return -1;
+
+}
+
+
+//
+// Handle the Ingres Specific Unicode Implementation ==> (begin)
+// ************************************************************************************************
+#if defined (_INGRES_DATA_UNICODE)
+#define MAXUNICODECONSTANTLEN 2000
+extern BOOL GetNextUniConstant(char* pc,wchar_t * bufuni,char** ppcstartuni, char** ppcafteruni);
+static BOOL UnicodeMngmtNeeded(LPTSTR lpszStatement)
+{
+	USES_CONVERSION;
+	TCHAR* pc = lpszStatement;
+	TCHAR* stmtInsert = _T("insert");
+	TCHAR* stmtUpdate = _T("update");
+	TCHAR* stmtCreate = _T("create");
+
+	char* pcstartuni = NULL; // dummy
+	char* pcafteruni = NULL; // dummy
+
+	wchar_t bufuni[MAXUNICODECONSTANTLEN+1];
+
+	while (*pc==_T(' '))
+		pc++; /* skip leading spaces */
+
+	while (TRUE) {
+		if (_tcsnicmp(pc, stmtInsert,_tcslen(stmtInsert))==0){
+			pc += _tcslen(stmtInsert);
+			break;
+		}
+		return FALSE;
+	}
+	return GetNextUniConstant(T2A(pc), bufuni, &pcstartuni, &pcafteruni);
+}
+
+BOOL ExecSQLImmediateWithUnicode(char* lprequest, long* lAffectedRows)
+{
+	USES_CONVERSION;
+	wchar_t bufuni[MAXUNICODECONSTANTLEN+1];
+	char* pbuftemp;
+	char* pc = lprequest;
+
+	char* pcstartuni;
+	char* pcafteruni;
+	
+	long lret;
+	BOOL not_fnd=FALSE;
+
+	pbuftemp = new char [strlen(lprequest)+1];
+	IIsqInit(&sqlca);
+
+	while (*pc) {
+		BOOL bres = GetNextUniConstant(pc, bufuni,&pcstartuni, &pcafteruni);
+		if (!bres)  {
+			IIwritio(0,(short *)0,1,32,0, pc);
+			break;
+		}
+		_fstrncpy(pbuftemp,pc,(pcstartuni-pc)+1);
+		IIwritio(0,(short *)0,1,32,0,pbuftemp);
+		IIputdomio((short *)0,1,26,0,bufuni);
+		pc=pcafteruni;
+	}
+	IIsyncup((char *)0,0);
+
+	delete pbuftemp;
+	lret=sqlca.sqlcode;
+	if (lAffectedRows)
+		*lAffectedRows = (long) sqlca.sqlerrd[2];
+	if (lret<0)
+		return FALSE;
+	if (lret ==100L) /* success with warning */
+		not_fnd=TRUE; // RES_ENDOFDATA
+
+	return TRUE;
+}
+#endif
+
+//
+// <== Handle the Ingres Specific Unicode Implementation (end)
+// ************************************************************************************************
+
+
+//
+//  Function: INGRESII_llExecuteImmediate
+//
+//  Summary:  Execute the SQL statement.
+//  Args:     pExecParam: contains the Node, Database, ..., statement to be executed.
+//            pSessionManager: If this paramerter is NULL then the caller must manage
+//                             the session itself (connect, disconnect, rollback or commit)
+//                             If this parameter is not NULL, the session is committed after
+//                             executing the statement or rollback if an error occured.
+//  Returns:  BOOL
+//            TRUE if success; FALSE if not.
+//  The function might raise the exception class "CeSqlException"
+//  ***********************************************************************************************
+BOOL INGRESII_llExecuteImmediate (CaLLAddAlterDrop* pExecParam, CaSessionManager* pSessionManager)
+{
+	USES_CONVERSION;
+	CString strStatement = pExecParam->GetStatement();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* statement = T2A((LPTSTR)(LPCTSTR)strStatement);
+	EXEC SQL END DECLARE SECTION;
+
+	long lAffectedRows = -1;
+	CaSessionUsage* pUseSession = NULL;
+	CaSession session ((CaConnectInfo*)pExecParam);
+
+	if (pSessionManager)
+	{
+		session.SetDescription(pSessionManager->GetDescription());
+		pUseSession = new CaSessionUsage (pSessionManager, &session, SESSION_NONE);
+	}
+
+	EXEC SQL WHENEVER SQLERROR GOTO EXECUTEIMMEDIATE_LERROR;
+	//
+	// Special handle the unicode data type (INGRES Implementation Specific)
+#if defined (_INGRES_DATA_UNICODE)
+	if (UnicodeMngmtNeeded((LPTSTR)(LPCTSTR)strStatement))
+	{
+		ExecSQLImmediateWithUnicode(T2A((LPTSTR)(LPCTSTR)strStatement), &lAffectedRows);
+	}
+	else
+	{
+		EXEC SQL EXECUTE IMMEDIATE :statement;
+		lAffectedRows = (long) sqlca.sqlerrd[2];
+	}
+#else
+		EXEC SQL EXECUTE IMMEDIATE :statement;
+		lAffectedRows = (long) sqlca.sqlerrd[2];
+#endif
+	if (pSessionManager && pUseSession)
+	{
+		//
+		// Commit the statement:
+		if (pExecParam->GetCommitInfo())
+			pUseSession->Release(SESSION_COMMIT);
+		delete pUseSession;
+	}
+
+	pExecParam->SetAffectedRows(lAffectedRows);
+	return TRUE;
+
+EXECUTEIMMEDIATE_LERROR:
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	try
+	{
+		if (pSessionManager && pUseSession)
+		{
+			pUseSession->Release(SESSION_ROLLBACK);
+			delete pUseSession;
+		}
+	}
+	catch(...)
+	{
+		TRACE0 ("RAISE EXCEPTION AT EXECUTEIMMEDIATE_LERROR:\n");
+	}
+
+	INGRESII_ManageErrorInLogFiles( error_buf,statement,nErr);
+
+	throw CeSqlException (A2T(error_buf), nErr);
+	return FALSE;
+}
+
+
+BOOL INGRESII_llQueryObject (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObj, void* pOpaque, CaSession* pCurrentSession)
+{
+	BOOL bOk = FALSE;
+	ASSERT (pQueryInfo);
+	if (!pQueryInfo)
+		return bOk;
+
+	CaSessionManager* pSessionMgr = (CaSessionManager*)pOpaque;
+	CaSession session ((CaConnectInfo*)pQueryInfo);
+
+	CaSessionUsage* pUseSession = NULL;
+	try
+	{
+		CaSession* pSession = NULL;
+		int nObjectType = pQueryInfo->GetObjectType();
+		int nSubObjectType = pQueryInfo->GetSubObjectType();
+		switch (nObjectType)
+		{
+		case OBT_DATABASE:
+		case OBT_PROFILE:
+		case OBT_USER:
+		case OBT_GROUP:
+		case OBT_ROLE:
+		case OBT_LOCATION:
+			session.SetDatabase(_T("iidbdb"));
+			break;
+		case OBT_GRANTEE:
+		case OBT_ALARM:
+			ASSERT(nSubObjectType != -1);
+			if (nSubObjectType != -1 && (nSubObjectType == OBT_DATABASE || nSubObjectType == OBT_INSTALLATION))
+			{
+				//
+				// For security alarms of database, we must connect to database named IIDBDB:
+				session.SetDatabase(_T("iidbdb"));
+			}
+			break;
+		default:
+			break;
+		}
+
+		if (pCurrentSession == NULL)
+		{
+			if (pOpaque)
+			{
+				session.SetDescription(pSessionMgr->GetDescription());
+				pUseSession = new CaSessionUsage (pSessionMgr, &session);
+				pSession = pUseSession->GetCurrentSession();
+			}
+			else
+			{
+				session.SetIndependent(TRUE);
+				session.Connect();
+				pSession = &session;
+			}
+		}
+		else
+		{
+			pSession = pCurrentSession;
+		}
+
+		switch (nObjectType)
+		{
+		case OBT_DATABASE: 
+			bOk = QueryDatabase (pQueryInfo, pSession, listObj);
+			break;
+		case OBT_PROFILE:
+			bOk = QueryProfile (pQueryInfo, pSession, listObj);
+			break;
+		case OBT_USER:
+			bOk = QueryUser (pQueryInfo, listObj);
+			break;
+		case OBT_GROUP:
+			bOk = QueryGroup(pQueryInfo, listObj);
+			break;
+		case OBT_ROLE:
+			bOk = QueryRole(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_LOCATION:
+			bOk = QueryLocation(pQueryInfo, pSession, listObj);
+			break;
+
+		case OBT_DBAREA:   // OI Desktop
+		case OBT_STOGROUP: // OI Desktop
+			ASSERT(FALSE);
+			break;
+		case OBT_PROCEDURE:
+			bOk = QueryProcedure(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_SEQUENCE:
+			bOk = QuerySequence(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_GROUPUSER:
+			ASSERT(FALSE);
+			break;
+		case OBT_TABLE:
+			bOk = QueryTable(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_VIEW:
+			bOk = QueryTable(pQueryInfo, pSession, listObj, 'V');
+			break;
+		case OBT_INDEX:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QueryIndex(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_RULE:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QueryRule(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_INTEGRITY:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QueryIntegrity(pQueryInfo, pSession, listObj);
+			break;
+
+		case OBT_TABLELOCATION:
+			ASSERT(FALSE);
+			break;
+		case OBT_TABLECOLUMN:
+		case OBT_VIEWCOLUMN:
+			bOk = QueryTableCol(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_SYNONYM:
+			ASSERT (pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QuerySynonym (pQueryInfo, pSession, listObj);
+			break;
+		case OBT_SYNONYMOBJECT:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QuerySynonym (pQueryInfo, pSession, listObj);
+			break;
+		case OBT_DBEVENT:
+			bOk = QueryDBEvent(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_GRANTEE:
+			ASSERT(nSubObjectType != -1); // Should be OBT_INSTALLATION, OBT_DATABASE, ...
+			bOk = QueryGrantee (pQueryInfo, listObj, pSessionMgr, pSession);
+			break;
+		case OBT_ALARM:
+			ASSERT(nSubObjectType != -1); // Should be OBT_INSTALLATION, OBT_DATABASE, ...
+			bOk = QuerySecurityAlarm (pQueryInfo, listObj, pSessionMgr);
+			break;
+		default:
+			ASSERT(FALSE);
+			break;
+		}
+
+		if (pOpaque && pUseSession)
+		{
+			pUseSession->Release(SESSION_COMMIT);
+			delete pUseSession;
+		}
+		else
+		if (!pCurrentSession)
+		{
+			session.Disconnect();
+		}
+	}
+	catch (CeSqlException e)
+	{
+		if (pUseSession)
+			delete pUseSession;
+		throw CeSqlException (e.GetReason(), e.GetErrorCode());
+	}
+	catch (...)
+	{
+		if (pUseSession)
+			delete pUseSession;
+		throw CeSqlException (_T("INGRESII_llQueryObject(): unknown error while accessing ingres's database"));
+	}
+
+	return bOk;
+}
+
+BOOL INGRESII_llQueryObject2 (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObj, CaSession* pSession)
+{
+	BOOL bOk = FALSE;
+	ASSERT (pQueryInfo);
+	if (!pQueryInfo)
+		return bOk;
+
+	try
+	{
+		int nObjectType = pQueryInfo->GetObjectType();
+		int nSubObjectType = pQueryInfo->GetSubObjectType();
+
+		switch (nObjectType)
+		{
+		case OBT_DATABASE: 
+			bOk = QueryDatabase (pQueryInfo, pSession, listObj);
+			break;
+		case OBT_PROFILE:
+			bOk = QueryProfile (pQueryInfo, pSession, listObj);
+			break;
+		case OBT_USER:
+			bOk = QueryUser (pQueryInfo, listObj);
+			break;
+		case OBT_GROUP:
+			bOk = QueryGroup(pQueryInfo, listObj);
+			break;
+		case OBT_ROLE:
+			bOk = QueryRole(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_LOCATION:
+			bOk = QueryLocation(pQueryInfo, pSession, listObj);
+			break;
+
+		case OBT_DBAREA:   // OI Desktop
+		case OBT_STOGROUP: // OI Desktop
+			ASSERT(FALSE);
+			break;
+		case OBT_PROCEDURE:
+			bOk = QueryProcedure(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_SEQUENCE:
+			bOk = QuerySequence(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_GROUPUSER:
+			ASSERT(FALSE);
+			break;
+		case OBT_TABLE:
+			bOk = QueryTable(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_VIEW:
+			bOk = QueryTable(pQueryInfo, pSession, listObj, 'V');
+			break;
+		case OBT_INDEX:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QueryIndex(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_RULE:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QueryRule(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_INTEGRITY:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QueryIntegrity(pQueryInfo, pSession, listObj);
+			break;
+
+		case OBT_TABLELOCATION:
+			ASSERT(FALSE);
+			break;
+		case OBT_TABLECOLUMN:
+		case OBT_VIEWCOLUMN:
+			bOk = QueryTableCol(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_SYNONYM:
+			ASSERT (pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QuerySynonym (pQueryInfo, pSession, listObj);
+			break;
+		case OBT_SYNONYMOBJECT:
+			ASSERT (!pQueryInfo->m_strItem2.IsEmpty());
+			ASSERT (!pQueryInfo->m_strItem2Owner.IsEmpty());
+			bOk = QuerySynonym (pQueryInfo, pSession, listObj);
+			break;
+		case OBT_DBEVENT:
+			bOk = QueryDBEvent(pQueryInfo, pSession, listObj);
+			break;
+		case OBT_GRANTEE:
+		case OBT_ALARM:
+			ASSERT(FALSE); // TODO (not implemented)
+			// Should be OBT_INSTALLATION, OBT_DATABASE, ...
+			bOk = FALSE;
+			break;
+		default:
+			ASSERT(FALSE);
+			break;
+		}
+	}
+	catch (CeSqlException e)
+	{
+		throw CeSqlException (e.GetReason(), e.GetErrorCode());
+	}
+	catch (...)
+	{
+		throw CeSqlException (_T("INGRESII_llQueryObject2(): unknown error while accessing ingres's database"));
+	}
+
+	return bOk;
+}
+
+
+
+
+                        // ***************************
+                        // LOCAL STATIC FUNCTION
+                        // ***************************
+
+static BOOL QueryUser (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	CaUser* pItem = NULL;
+	BOOL bSystem = FALSE;
+	int iMode  = pQueryInfo->GetFetchObjects();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szUserName      [DBOBJECTLEN];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYUSER_ERROR;
+	EXEC SQL REPEATED SELECT
+		USER_NAME
+	INTO
+		:szUserName
+	FROM  IIUSERS
+	ORDER BY USER_NAME;
+	
+	EXEC SQL BEGIN;
+		bSystem = INGRESII_llIsSystemObject(A2T(szUserName), NULL);
+		if ((iMode == CaLLQueryInfo::FETCH_ALL) ||
+			(iMode == CaLLQueryInfo::FETCH_USER && !bSystem) ||
+			(iMode == CaLLQueryInfo::FETCH_SYSTEM && bSystem))
+		{
+			pItem = new CaUser (A2T(szUserName));
+			listObject.AddTail (pItem);
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYUSER_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryGroup(CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	CaGroup* pItem = NULL;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szGoupID [DBOBJECTLEN];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYGROUP_ERROR;
+	EXEC SQL REPEATED SELECT DISTINCT
+		GROUPID
+	INTO
+		:szGoupID
+	FROM  IIUSERGROUP
+	ORDER BY GROUPID;
+	
+	EXEC SQL BEGIN;
+		pItem = new CaGroup (A2T(szGoupID));
+		listObject.AddTail (pItem);
+	EXEC SQL END;
+	return TRUE;
+
+QUERYGROUP_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryProfile (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	CaDBObject* pItem = NULL;
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szProfileName      [DBOBJECTLEN];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYPROFILE_ERROR;
+	EXEC SQL REPEATED SELECT
+		PROFILE_NAME
+	INTO
+		:szProfileName
+	FROM  IIPROFILES
+	ORDER BY PROFILE_NAME;
+	
+	EXEC SQL BEGIN;
+		pItem = new CaProfile (A2T(szProfileName));
+		listObject.AddTail (pItem);
+	EXEC SQL END;
+	return TRUE;
+
+QUERYPROFILE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryRole (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	CaRole* pItem = NULL;
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szRoleID      [DBOBJECTLEN];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYROLE_ERROR;
+	EXEC SQL REPEATED SELECT
+		ROLEID
+	INTO
+		:szRoleID
+	FROM  IIROLE
+	ORDER BY ROLEID;
+	
+	EXEC SQL BEGIN;
+		pItem = new CaRole (A2T(szRoleID));
+		listObject.AddTail (pItem);
+	EXEC SQL END;
+	return TRUE;
+
+QUERYROLE_ERROR:
+	ExceptionError();
+	return FALSE;
+
+}
+
+static BOOL QueryLocation  (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	CaLocation* pItem = NULL;
+	BOOL bSystem = FALSE;
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szLocationName      [DBOBJECTLEN];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYLOCATION_ERROR;
+	EXEC SQL REPEATED SELECT
+		LNAME
+	INTO
+		:szLocationName
+	FROM  IILOCATIONS
+	ORDER BY LNAME;
+	
+	EXEC SQL BEGIN;
+		bSystem = INGRESII_llIsSystemObject (A2T(szLocationName), _T(""), OBT_LOCATION);
+		if (!pQueryInfo->GetIncludeSystemObjects() && bSystem)
+		{
+		}
+		else
+		{
+			pItem = new CaLocation (A2T(szLocationName));
+			listObject.AddTail (pItem);
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYLOCATION_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryProcedure (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	BOOL bTakeIt = FALSE;
+	int  nFetchMode = 0;
+	BOOL bSystem = FALSE;
+	CaProcedure* pItem = NULL;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nTextSequence;
+		char  szProcedureName  [DBOBJECTLEN];
+		char  szProcedureOwner [DBOBJECTLEN];
+		char* criteria1 = NULL;
+		char  chSubType[2];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYPROCEDURE_ERROR;
+	EXEC SQL REPEATED SELECT
+		PROCEDURE_NAME,
+		PROCEDURE_OWNER,
+		TEXT_SEQUENCE,
+		PROC_SUBTYPE
+	INTO
+		:szProcedureName,
+		:szProcedureOwner,
+		:nTextSequence,
+		:chSubType
+	FROM  IIPROCEDURES
+	ORDER BY PROCEDURE_NAME;
+	
+	EXEC SQL BEGIN;
+		bSystem = INGRESII_llIsSystemObject(A2T(szProcedureName), A2T(szProcedureOwner));
+		bTakeIt = FALSE;
+		nFetchMode = pQueryInfo->GetFetchObjects();
+		switch (nFetchMode)
+		{
+		case CaLLQueryInfo::FETCH_SYSTEM:
+			if (bSystem)
+				bTakeIt = TRUE;
+			break;
+		case CaLLQueryInfo::FETCH_USER:
+			if (!bSystem)
+				bTakeIt = TRUE;
+			break;
+		case CaLLQueryInfo::FETCH_ALL:
+			bTakeIt = TRUE;
+			break;
+		default:
+			bTakeIt = TRUE;
+			break;
+		}
+		if (bTakeIt && nTextSequence == 1)
+		{
+			pItem = new CaProcedure (A2T(szProcedureName), A2T(szProcedureOwner), bSystem);
+			if (pQueryInfo->GetFlag() & DBFLAG_STARNATIVE)
+			{
+				if (chSubType[0]=='N' || chSubType[0]=='n')
+					pItem->SetFlag(OBJTYPE_STARNATIVE);
+				if (chSubType[0]=='L' || chSubType[0]=='l')
+					pItem->SetFlag(OBJTYPE_STARLINK);
+			}
+			else
+				pItem->SetFlag(OBJTYPE_NOTSTAR);
+
+			listObject.AddTail (pItem);
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYPROCEDURE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QuerySequence (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	BOOL bTakeIt = FALSE;
+	int  nFetchMode = 0;
+	BOOL bSystem = FALSE;
+	CaSequence* pItem = NULL;
+
+	if (pSession && pSession->GetVersion() >= INGRESVERS_30)
+	{
+		EXEC SQL BEGIN DECLARE SECTION;
+			char  szSequenceName  [DBOBJECTLEN];
+			char  szSequenceOwner [DBOBJECTLEN];
+			char* criteria1 = NULL;
+		EXEC SQL END DECLARE SECTION;
+
+		EXEC SQL WHENEVER SQLERROR GOTO QUERYSEQUENCE_ERROR;
+
+		EXEC SQL REPEATED SELECT
+			SEQ_NAME,
+			SEQ_OWNER
+		INTO
+			:szSequenceName,
+			:szSequenceOwner
+		FROM  IISEQUENCES
+		ORDER BY SEQ_NAME;
+		
+		EXEC SQL BEGIN;
+			bSystem = INGRESII_llIsSystemObject(A2T(szSequenceName), A2T(szSequenceOwner));
+			bTakeIt = FALSE;
+			nFetchMode = pQueryInfo->GetFetchObjects();
+			switch (nFetchMode)
+			{
+			case CaLLQueryInfo::FETCH_SYSTEM:
+				if (bSystem)
+					bTakeIt = TRUE;
+				break;
+			case CaLLQueryInfo::FETCH_USER:
+				if (!bSystem)
+					bTakeIt = TRUE;
+				break;
+			case CaLLQueryInfo::FETCH_ALL:
+				bTakeIt = TRUE;
+				break;
+			default:
+				bTakeIt = TRUE;
+				break;
+			}
+			if (bTakeIt)
+			{
+				pItem = new CaSequence (A2T(szSequenceName), A2T(szSequenceOwner), bSystem);
+
+				listObject.AddTail (pItem);
+			}
+		EXEC SQL END;
+	}
+	return TRUE;
+
+QUERYSEQUENCE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL GATEWAY_QueryDatabase  (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	//   *
+	//  *!*    NOTE: The upper case like FROM  IIDATABASE; does not work
+	// * ! *         with the gateway DATACOM !!!
+	//*******
+	CaDatabase* pItem = NULL;
+	exec sql begin declare section;
+		char  szDBName      [DBOBJECTLEN];
+	exec sql end declare section;
+
+	exec sql whenever sqlerror goto querydatabase_gateway_error;
+	szDBName[0] = '\0';
+	exec sql repeated select
+		name
+	into
+		:szDBName
+	from  iidatabase;
+
+	exec sql begin;
+		pItem = new CaDatabase (A2T(szDBName), _T(""));
+		pItem->SetFlag (-1);
+		pItem->SetDBService (-1);
+		listObject.AddTail (pItem);
+	exec sql end;
+	return TRUE;
+querydatabase_gateway_error:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDatabase  (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	CaDatabase* pItem = NULL;
+	CString strOwner;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szDBName      [DBOBJECTLEN];
+		char  szDBOwner     [DBOBJECTLEN];
+		long  lAccess = -1;
+		long  lService = -1;
+		char* criteria1 = NULL;
+	EXEC SQL END DECLARE SECTION;
+	if (pSession->GetVersion() == INGRESVERS_NOTOI)
+		return GATEWAY_QueryDatabase(pQueryInfo, pSession, listObject);
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDATABASE_ERROR;
+	EXEC SQL REPEATED SELECT
+		NAME,
+		OWN,
+		ACCESS,
+		DBSERVICE
+	INTO
+		:szDBName,
+		:szDBOwner,
+		:lAccess,
+		:lService
+	FROM  IIDATABASE
+	ORDER BY NAME;
+	
+	EXEC SQL BEGIN;
+		strOwner = A2T(szDBOwner);
+		strOwner.TrimRight();
+		if (!pQueryInfo->GetIncludeSystemObjects() && strOwner.CompareNoCase (_T("$ingres")) == 0)
+		{
+			//
+			// Nothing to do:
+		}
+		else
+		{
+			pItem = new CaDatabase (A2T(szDBName), strOwner);
+			pItem->SetFlag (lAccess);
+			pItem->SetDBService (lService);
+			listObject.AddTail (pItem);
+		}
+	EXEC SQL END;
+	return TRUE;
+QUERYDATABASE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryTableStar (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject, char cType)
+{
+	USES_CONVERSION;
+	BOOL bResult = FALSE;
+	BOOL bSystem = FALSE;
+	CaTable* pTable = NULL;
+	CaView*  pView = NULL;
+	int iMode  = pQueryInfo->GetFetchObjects();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szObject      [DBOBJECTLEN];
+		char  szObCreator   [DBOBJECTLEN];
+		char  szSystemUsed  [DBOBJECTLEN];
+		char  szCriteria2   [4] = {'%','T','%', '\0'};
+		char chSubType[2];
+	EXEC SQL END DECLARE SECTION; 
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYTABLESTAR_ERROR;
+
+	switch (cType)
+	{
+	case 'T':
+	case 't':
+		szCriteria2 [0] = '%';
+		szCriteria2 [1] = 'T';
+		szCriteria2 [2] = '%';
+		szCriteria2 [3] = '\0';
+		break;
+	case 'V':
+	case 'v':
+		szCriteria2 [0] = '%';
+		szCriteria2 [1] = 'V';
+		szCriteria2 [2] = '%';
+		szCriteria2 [3] = '\0';
+		break;
+	default:
+		break;
+	}
+
+	EXEC SQL SELECT  
+		TABLE_OWNER, 
+		TABLE_NAME, 
+		SYSTEM_USE,
+		TABLE_SUBTYPE
+	INTO
+		:szObCreator, 
+		:szObject, 
+		:szSystemUsed,
+		:chSubType
+	FROM  IITABLES
+	WHERE table_type LIKE :szCriteria2 
+	ORDER BY TABLE_OWNER, TABLE_NAME;
+
+	EXEC SQL BEGIN;
+		bSystem = INGRESII_llIsSystemObject(A2T(szObject), A2T(szObCreator));
+		if ((iMode == CaLLQueryInfo::FETCH_ALL) ||
+			(iMode == CaLLQueryInfo::FETCH_USER && !bSystem) ||
+			(iMode == CaLLQueryInfo::FETCH_SYSTEM && bSystem))
+		{
+			if (cType == _T('T') || cType == _T('t'))
+			{
+				pTable = new CaTable(A2T(szObject), A2T(szObCreator), bSystem);
+				if (chSubType[0]=='N' || chSubType[0]=='n')
+					pTable->SetFlag(OBJTYPE_STARNATIVE);
+				if (chSubType[0]=='L' || chSubType[0]=='l')
+					pTable->SetFlag(OBJTYPE_STARLINK);
+				listObject.AddTail (pTable);
+			}
+			else
+			if (cType == _T('V') || cType == _T('v'))
+			{
+				pView = new CaView(A2T(szObject), A2T(szObCreator), bSystem);
+				if (chSubType[0]=='N' || chSubType[0]=='n')
+					pView->SetFlag(OBJTYPE_STARNATIVE);
+				if (chSubType[0]=='L' || chSubType[0]=='l')
+					pView->SetFlag(OBJTYPE_STARLINK);
+				listObject.AddTail (pView);
+			}
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYTABLESTAR_ERROR:
+	ExceptionError();
+	return FALSE;
+
+}
+
+// Retrieve all tables from the database name 'lpszDBName'.
+// The result is store in the list 'listTable'.
+// RETURN: TRUE if successful otherwise FALSE.
+// iMode = CaLLQueryInfo::FETCH_ALL     -> All tables.
+// iMode = CaLLQueryInfo::FETCH_USER    -> All tables (exclude system table)
+// iMode = CaLLQueryInfo::FETCH_SYSTEM  -> Only system tables.
+//
+// cType = 'T' -> Tables.
+// cType = 'V' -> Views
+// --------------------------------------------------------
+static BOOL QueryTable (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject, char cType)
+{
+	USES_CONVERSION;
+	BOOL bResult = FALSE;
+	BOOL bSystem = FALSE;
+	CaTable* pTable = NULL;
+	CaView*  pView = NULL;
+	int iMode  = pQueryInfo->GetFetchObjects();
+
+	if ( pQueryInfo->GetFlag() & DBFLAG_STARNATIVE )
+		return QueryTableStar(pQueryInfo, pSession, listObject, cType);
+
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szObject      [DBOBJECTLEN];
+		char  szObCreator   [DBOBJECTLEN];
+		char  szSystemUsed  [DBOBJECTLEN];
+		char  szCriteria1   [2] = {'%', '\0'};
+		char  szCriteria2   [2] = {'T', '\0'};
+	EXEC SQL END DECLARE SECTION; 
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYTABLE_ERROR;
+
+	switch (cType)
+	{
+	case 'T':
+	case 't':
+		szCriteria2 [0] = 'T';
+		szCriteria2 [1] = '\0';
+		break;
+	case 'V':
+	case 'v':
+		szCriteria2 [0] = 'V';
+		szCriteria2 [1] = '\0';
+		break;
+	default:
+		break;
+	}
+
+	EXEC SQL REPEATED SELECT
+		TABLE_OWNER, 
+		TABLE_NAME, 
+		SYSTEM_USE
+	INTO
+		:szObCreator, 
+		:szObject, 
+		:szSystemUsed
+	FROM  IITABLES
+	WHERE table_type = :szCriteria2 
+	ORDER BY TABLE_OWNER, TABLE_NAME;
+
+	EXEC SQL BEGIN;
+		bSystem = INGRESII_llIsSystemObject(A2T(szObject), A2T(szObCreator));
+		if ((iMode == CaLLQueryInfo::FETCH_ALL) ||
+			(iMode == CaLLQueryInfo::FETCH_USER && !bSystem) ||
+			(iMode == CaLLQueryInfo::FETCH_SYSTEM && bSystem))
+		{
+			if (cType == _T('T') || cType == _T('t'))
+			{
+				pTable = new CaTable(A2T(szObject), A2T(szObCreator), bSystem);
+				listObject.AddTail (pTable);
+			}
+			else
+			if (cType == _T('V') || cType == _T('v'))
+			{
+				pView = new CaView(A2T(szObject), A2T(szObCreator), bSystem);
+				listObject.AddTail (pView);
+			}
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYTABLE_ERROR:
+	ExceptionError();
+	return FALSE;
+
+}
+
+static BOOL QueryIndexStar (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	BOOL bTakeIt = FALSE;
+	int  nFetchMode = pQueryInfo->GetFetchObjects();
+	BOOL bSystem = FALSE;
+	CaIndex* pItem   = NULL;
+	CString strTable = pQueryInfo->GetItem2();
+	CString strTableOwner = pQueryInfo->GetItem2Owner();
+	strTable.MakeLower();
+	strTableOwner.MakeLower();
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* criteria1 = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* criteria2 = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+		char  szIndexName [DBOBJECTLEN];
+		char  szIndexOwner[DBOBJECTLEN];
+	EXEC SQL END DECLARE SECTION; 
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYINDEXSTAR_ERROR;
+	EXEC SQL SELECT  
+		INDEX_NAME,
+		INDEX_OWNER
+	INTO    
+		:szIndexName, 
+		:szIndexOwner
+	FROM  IIINDEXES
+	WHERE LOWERCASE (BASE_NAME) = :criteria1 AND LOWERCASE(INDEX_OWNER) = :criteria2
+	ORDER BY INDEX_NAME;
+
+	EXEC SQL BEGIN;
+		bTakeIt = FALSE;
+		bSystem = INGRESII_llIsSystemObject(A2T(szIndexName), A2T(szIndexOwner));
+		switch (nFetchMode)
+		{
+		case CaLLQueryInfo::FETCH_SYSTEM:
+			if (bSystem)
+				bTakeIt = TRUE;
+			break;
+		case CaLLQueryInfo::FETCH_USER:
+			if (!bSystem)
+				bTakeIt = TRUE;
+			break;
+		case CaLLQueryInfo::FETCH_ALL:
+			bTakeIt = TRUE;
+			break;
+		default:
+			bTakeIt = TRUE;
+			break;
+		}
+
+		if (bTakeIt)
+		{
+			pItem = new CaIndex (A2T(szIndexName), A2T(szIndexOwner), bSystem);
+			pItem->SetFlag(OBJTYPE_STARLINK);
+			listObject.AddTail (pItem);
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYINDEXSTAR_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryIndex (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	BOOL bTakeIt = FALSE;
+	int  nFetchMode = pQueryInfo->GetFetchObjects();
+	BOOL bSystem = FALSE;
+	CaIndex* pItem   = NULL;
+	CString strTable = pQueryInfo->GetItem2();
+	CString strTableOwner = pQueryInfo->GetItem2Owner();
+	//strTable.MakeLower();
+	//strTableOwner.MakeLower();
+
+	if ( pQueryInfo->GetFlag() & DBFLAG_STARNATIVE )
+		return QueryIndexStar(pQueryInfo, pSession, listObject);
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* criteria1 = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* criteria2 = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+		char  szIndexName [DBOBJECTLEN];
+		char  szIndexOwner[DBOBJECTLEN];
+		char  szSystemUsed[8];
+	EXEC SQL END DECLARE SECTION; 
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYINDEX_ERROR;
+	EXEC SQL REPEATED SELECT 
+		INDEX_NAME,
+		INDEX_OWNER,
+		SYSTEM_USE
+	INTO    
+		:szIndexName, 
+		:szIndexOwner,
+		:szSystemUsed
+	FROM  IIINDEXES
+	WHERE BASE_NAME = :criteria1 AND INDEX_OWNER = :criteria2
+	ORDER BY INDEX_NAME;
+
+	EXEC SQL BEGIN;
+		bTakeIt = FALSE;
+		bSystem = INGRESII_llIsSystemObject(A2T(szIndexName), A2T(szIndexOwner));
+		switch (nFetchMode)
+		{
+		case CaLLQueryInfo::FETCH_SYSTEM:
+			if (bSystem)
+				bTakeIt = TRUE;
+			break;
+		case CaLLQueryInfo::FETCH_USER:
+			if (!bSystem)
+				bTakeIt = TRUE;
+			break;
+		case CaLLQueryInfo::FETCH_ALL:
+			bTakeIt = TRUE;
+			break;
+		default:
+			bTakeIt = TRUE;
+			break;
+		}
+
+		if (bTakeIt)
+		{
+			pItem = new CaIndex (A2T(szIndexName), A2T(szIndexOwner), bSystem);
+			listObject.AddTail (pItem);
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYINDEX_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryRule(CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	BOOL bSystem = FALSE;
+	CaRule* pItem   = NULL;
+	CString strTable = pQueryInfo->GetItem2();
+	CString strTableOwner = pQueryInfo->GetItem2Owner();
+	int iMode  = pQueryInfo->GetFetchObjects();
+	//
+	// NOTE: Owner of rule is also owner of table !
+	//       You must be owner of table in order to create rule.
+	EXEC SQL BEGIN DECLARE SECTION;
+		int nTextSequence;
+		char  szObjectName  [DBOBJECTLEN];
+		char  szObjectOwner [DBOBJECTLEN];
+		char* criteria1 = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* criteria2 = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYRULE_ERROR;
+	EXEC SQL REPEATED SELECT
+		RULE_NAME,
+		RULE_OWNER,
+		TEXT_SEQUENCE
+	INTO
+		:szObjectName,
+		:szObjectOwner,
+		:nTextSequence
+	FROM  IIRULES
+	WHERE TABLE_NAME = :criteria1 and RULE_OWNER = :criteria2
+	ORDER BY RULE_NAME;
+	
+	EXEC SQL BEGIN;
+		bSystem = INGRESII_llIsSystemObject(A2T(szObjectName), A2T(szObjectOwner));
+		if ((iMode == CaLLQueryInfo::FETCH_ALL) ||
+			(iMode == CaLLQueryInfo::FETCH_USER && !bSystem) ||
+			(iMode == CaLLQueryInfo::FETCH_SYSTEM && bSystem))
+		{
+			if (nTextSequence == 1)
+			{
+				pItem = new CaRule (A2T(szObjectName), A2T(szObjectOwner));
+				listObject.AddTail (pItem);
+			}
+			else
+			if (nTextSequence > 1 && pItem != NULL)
+			{
+
+			}
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYRULE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryIntegrity(CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	BOOL bSystem = FALSE;
+	CaIntegrity* pItem   = NULL;
+	CString strTable = pQueryInfo->GetItem2();
+	CString strTableOwner = pQueryInfo->GetItem2Owner();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nTextSequence;
+		int   nIntegrityNumber;
+		char  szObjectName  [DBOBJECTLEN];
+		char* criteria1 = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* criteria2 = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYINTEGRITY_ERROR;
+	EXEC SQL REPEATED SELECT
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE,
+		INTEGRITY_NUMBER
+	INTO
+		:szObjectName,
+		:nTextSequence,
+		:nIntegrityNumber
+	FROM IIINTEGRITIES
+	WHERE TABLE_NAME = :criteria1 and TABLE_OWNER = :criteria2;
+	
+	EXEC SQL BEGIN;
+		TrimRight(szObjectName);
+		if (nTextSequence == 1)
+		{
+			pItem = new CaIntegrity (A2T(szObjectName), A2T(criteria2));
+			pItem->SetNumber(nIntegrityNumber);
+			listObject.AddTail (pItem);
+		}
+		else
+		{
+			CString strText = pItem->GetName();
+			strText+= A2T(szObjectName);
+			pItem->SetItem(strText);
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYINTEGRITY_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryAlarm(CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	ASSERT (FALSE);
+	return FALSE;
+
+}
+
+static BOOL QueryTableColStar(CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	int niiabsoluteType = -1;
+	BOOL bSystem = FALSE;
+	CaColumn* pColumn = NULL;
+	CString strTable = pQueryInfo->GetItem2();
+	CString strTableOwner = pQueryInfo->GetItem2Owner();
+
+	if (!pQueryInfo)
+		return FALSE;
+
+	CString strColName;
+	CString strType;
+	CString strInternalType;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* criteria1 = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* criteria2 = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+		char  szColumnName [DBOBJECTLEN];
+		char  szColumnType [DBOBJECTLEN];
+		int   nColumnIType;
+		int   nKeySequence;
+		int   nColumnSequence;
+		int   nLength;
+		int   nScale;
+		char  szColumnNulls[8];
+		char  szColumnDefaults[8];
+	EXEC SQL END DECLARE SECTION; 
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYCOLUMNSTAR_ERROR;
+	EXEC SQL SELECT  
+			COLUMN_NAME,
+			COLUMN_DATATYPE,
+			COLUMN_LENGTH,
+			COLUMN_SCALE,
+			COLUMN_NULLS,
+			COLUMN_DEFAULTS,
+			COLUMN_INGDATATYPE,
+			KEY_SEQUENCE,
+			COLUMN_SEQUENCE
+		INTO
+			:szColumnName, 
+			:szColumnType,
+			:nLength,
+			:nScale,
+			:szColumnNulls,
+			:szColumnDefaults,
+			:nColumnIType,
+			:nKeySequence,
+			:nColumnSequence
+		FROM  IICOLUMNS
+		WHERE LOWERCASE (TABLE_NAME) = LOWERCASE (:criteria1) AND LOWERCASE (TABLE_OWNER) = LOWERCASE (:criteria2)
+		ORDER BY COLUMN_SEQUENCE;
+	EXEC SQL BEGIN;
+		strColName = szColumnName;
+		strColName.TrimRight();
+		strType = szColumnType;
+		strType.TrimRight();
+		strType.MakeLower();
+
+		pColumn = new CaColumn (strColName, strType, nColumnIType);
+		pColumn->SetTypeStr (strType);
+		pColumn->SetLength (nLength);
+		pColumn->SetScale (nScale);
+		pColumn->SetNullable(szColumnNulls[0] == 'y'|| szColumnNulls[0] == 'Y');
+		pColumn->SetDefault (szColumnDefaults[0] == 'y'|| szColumnDefaults[0] == 'Y');
+		pColumn->SetKeySequence(nKeySequence);
+
+		pColumn->SetDefaultDescription (0);
+
+		niiabsoluteType = abs(nColumnIType);
+		switch (niiabsoluteType)
+		{
+		case IISQ_INT_TYPE:
+			pColumn->SetColumnText(FALSE);
+			if (nLength == 1)
+				pColumn->SetTypeStr(_T("int1"));
+			if (nLength == 2)
+				pColumn->SetTypeStr(_T("smallint"));
+			if (nLength == 8)
+				pColumn->SetTypeStr(_T("bigint"));
+			break;
+		case IISQ_FLT_TYPE:
+			pColumn->SetColumnText(FALSE);
+			if (nLength == 4)
+				pColumn->SetTypeStr(_T("float4"));
+			break;
+
+		case IISQ_DTE_TYPE:
+		case IISQ_MNY_TYPE:
+		case IISQ_DEC_TYPE:
+		case IISQ_LBIT_TYPE:
+			pColumn->SetColumnText(FALSE);
+			break;
+		default:
+			break;
+		}
+		listObject.AddTail (pColumn);
+	EXEC SQL END;
+
+	return TRUE;
+
+QUERYCOLUMNSTAR_ERROR:
+	ExceptionError();
+	return FALSE;
+	
+}
+
+static BOOL QueryTableCol(CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	int niiabsoluteType = -1;
+	BOOL bSystem = FALSE;
+	CaColumn* pColumn = NULL;
+	CString strTable = pQueryInfo->GetItem2();
+	CString strTableOwner = pQueryInfo->GetItem2Owner();
+
+	if (!pQueryInfo)
+		return FALSE;
+
+	if ( pQueryInfo->GetFlag() & DBFLAG_STARNATIVE )
+		return QueryTableColStar(pQueryInfo, pSession, listObject);
+
+	CString strColName;
+	CString strType;
+	CString strInternalType;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* criteria1 = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* criteria2 = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+		char  szColumnName [DBOBJECTLEN];
+		char  szColumnType [DBOBJECTLEN];
+		int   nColumnIType;
+		int   nKeySequence;
+		int   nColumnSequence;
+		int   nLength;
+		int   nScale;
+		char  szColumnNulls[8];
+		char  szColumnDefaults[8];
+		char  szColumnHasDefault[8];
+		char  szDefaultValue[1501];
+		short nDefIndicator = -1;
+		char szInternalDataType[32+1];
+		char szSystemMaintained[2];
+	EXEC SQL END DECLARE SECTION; 
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYCOLUMN_ERROR;
+	if (pSession && pSession->GetVersion() == INGRESVERS_NOTOI)
+	{
+		EXEC SQL SELECT 
+				COLUMN_NAME, 
+				COLUMN_DATATYPE, 
+				COLUMN_LENGTH,
+				COLUMN_SCALE,
+				COLUMN_NULLS, 
+				COLUMN_DEFAULTS, 
+				COLUMN_INGDATATYPE,
+				COLUMN_SEQUENCE
+			INTO
+				:szColumnName, 
+				:szColumnType,
+				:nLength,
+				:nScale,
+				:szColumnNulls,
+				:szColumnDefaults,
+				:nColumnIType,
+				:nColumnSequence
+			FROM  IICOLUMNS
+			WHERE TABLE_NAME = :criteria1 AND TABLE_OWNER = :criteria2
+			ORDER BY COLUMN_SEQUENCE;
+
+		EXEC SQL BEGIN;
+			strColName = szColumnName;
+			strColName.TrimRight();
+			strType = szColumnType;
+			strType.TrimRight();
+			strType.MakeLower();
+
+			pColumn = new CaColumn (strColName, strType, nColumnIType);
+			pColumn->SetTypeStr (strType);
+			pColumn->SetLength (nLength);
+			pColumn->SetScale (nScale);
+			pColumn->SetNullable(szColumnNulls[0] == 'y'|| szColumnNulls[0] == 'Y');
+			pColumn->SetDefault (szColumnDefaults[0] == 'y'|| szColumnDefaults[0] == 'Y');
+
+			niiabsoluteType = abs(nColumnIType);
+			switch (niiabsoluteType)
+			{
+			case IISQ_INT_TYPE:
+				pColumn->SetColumnText(FALSE);
+				if (nLength == 1)
+					pColumn->SetTypeStr(_T("int1"));
+				if (nLength == 2)
+					pColumn->SetTypeStr(_T("smallint"));
+				if (nLength == 8)
+					pColumn->SetTypeStr(_T("bigint"));
+				break;
+			case IISQ_FLT_TYPE:
+				pColumn->SetColumnText(FALSE);
+				if (nLength == 4)
+					pColumn->SetTypeStr(_T("float4"));
+				break;
+
+			case IISQ_DTE_TYPE:
+			case IISQ_MNY_TYPE:
+			case IISQ_DEC_TYPE:
+			case IISQ_LBIT_TYPE:
+				pColumn->SetColumnText(FALSE);
+				break;
+			default:
+				break;
+			}
+			listObject.AddTail (pColumn);
+		EXEC SQL END;
+	}
+	else
+	{
+		EXEC SQL REPEATED SELECT 
+				COLUMN_NAME,
+				COLUMN_DATATYPE,
+				COLUMN_LENGTH,
+				COLUMN_SCALE,
+				COLUMN_NULLS,
+				COLUMN_DEFAULTS,
+				COLUMN_HAS_DEFAULT,
+				COLUMN_DEFAULT_VAL,
+				COLUMN_INGDATATYPE,
+				KEY_SEQUENCE,
+				COLUMN_SEQUENCE,
+				COLUMN_INTERNAL_DATATYPE,
+				COLUMN_SYSTEM_MAINTAINED
+			INTO
+				:szColumnName, 
+				:szColumnType,
+				:nLength,
+				:nScale,
+				:szColumnNulls,
+				:szColumnDefaults,
+				:szColumnHasDefault,
+				:szDefaultValue:nDefIndicator,
+				:nColumnIType,
+				:nKeySequence,
+				:nColumnSequence,
+				:szInternalDataType,
+				:szSystemMaintained
+			FROM  IICOLUMNS
+			WHERE TABLE_NAME = :criteria1 AND TABLE_OWNER = :criteria2
+			ORDER BY COLUMN_SEQUENCE;
+		EXEC SQL BEGIN;
+			strColName = szColumnName;
+			strColName.TrimRight();
+			strType = szColumnType;
+			strType.TrimRight();
+			strType.MakeLower();
+
+			strInternalType = szInternalDataType;
+			strInternalType.TrimRight();
+			strInternalType.MakeLower();
+
+			pColumn = new CaColumn (strColName, strType, nColumnIType);
+			pColumn->SetTypeStr (strType);
+			pColumn->SetLength (nLength);
+			pColumn->SetScale (nScale);
+			pColumn->SetNullable(szColumnNulls[0] == 'y'|| szColumnNulls[0] == 'Y');
+			pColumn->SetDefault (szColumnDefaults[0] == 'y'|| szColumnDefaults[0] == 'Y');
+			pColumn->SetKeySequence(nKeySequence);
+			pColumn->SetSystemMaintained (szSystemMaintained[0] == 'y'|| szSystemMaintained[0] == 'Y');
+			pColumn->SetInternalTypeStr(strInternalType);
+
+			if (szColumnHasDefault[0] == 'y' || szColumnHasDefault[0] == 'Y')
+				pColumn->SetDefaultDescription(1);
+			else
+			if (szColumnHasDefault[0] == 'n' || szColumnHasDefault[0] == 'N')
+				pColumn->SetDefaultDescription(2);
+			else
+				pColumn->SetDefaultDescription (0);
+			if (nDefIndicator==0)
+				pColumn->SetDefaultValue(A2T(szDefaultValue));
+			niiabsoluteType = abs(nColumnIType);
+			switch (niiabsoluteType)
+			{
+			case IISQ_INT_TYPE:
+				pColumn->SetColumnText(FALSE);
+				if (nLength == 1)
+					pColumn->SetTypeStr(_T("int1"));
+				if (nLength == 2)
+					pColumn->SetTypeStr(_T("smallint"));
+				if (nLength == 8)
+					pColumn->SetTypeStr(_T("bigint"));
+				break;
+			case IISQ_FLT_TYPE:
+				pColumn->SetColumnText(FALSE);
+				if (nLength == 4)
+					pColumn->SetTypeStr(_T("float4"));
+				break;
+
+			case IISQ_DTE_TYPE:
+			case IISQ_MNY_TYPE:
+			case IISQ_DEC_TYPE:
+			case IISQ_LBIT_TYPE:
+				pColumn->SetColumnText(FALSE);
+				break;
+			default:
+				break;
+			}
+			listObject.AddTail (pColumn);
+		EXEC SQL END;
+	}
+
+	return TRUE;
+
+QUERYCOLUMN_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QueryDBEvent (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	BOOL bSystem = FALSE;
+	CaDBEvent* pItem = NULL;
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szObjectName  [DBOBJECTLEN];
+		char  szObjectOwner [DBOBJECTLEN];
+		char* criteria1 = NULL;
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYEVENT_ERROR;
+	EXEC SQL REPEATED SELECT
+		EVENT_NAME,
+		EVENT_OWNER
+	INTO
+		:szObjectName,
+		:szObjectOwner
+	FROM  IIEVENT
+	ORDER BY EVENT_NAME;
+	
+	EXEC SQL BEGIN;
+		pItem = new CaDBEvent (A2T(szObjectName), A2T(szObjectOwner));
+		listObject.AddTail (pItem);
+	EXEC SQL END;
+	return TRUE;
+
+QUERYEVENT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QuerySynonymAll(CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	CaSynonym* pItem = NULL;
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szObjectName  [DBOBJECTLEN];
+		char  szObjectOwner [DBOBJECTLEN];
+	EXEC SQL END DECLARE SECTION;
+	
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYSYNONYMALL_ERROR;
+	EXEC SQL REPEATED SELECT
+		SYNONYM_NAME,
+		SYNONYM_OWNER
+	INTO
+		:szObjectName,
+		:szObjectOwner
+	FROM  IISYNONYMS
+	ORDER BY SYNONYM_NAME;
+	
+	EXEC SQL BEGIN;
+		pItem = new CaSynonym (A2T(szObjectName), A2T(szObjectOwner));
+		listObject.AddTail (pItem);
+	EXEC SQL END;
+	return TRUE;
+
+QUERYSYNONYMALL_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QuerySynonymRestrict(CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	CaSynonym* pItem = NULL;
+	CString strObject = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szObjectName  [DBOBJECTLEN];
+		char  szObjectOwner [DBOBJECTLEN];
+		char* criteria1 = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* criteria2 = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+	
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYSYNONYMRESTRICT_ERROR;
+	EXEC SQL REPEATED SELECT
+		SYNONYM_NAME,
+		SYNONYM_OWNER
+	INTO
+		:szObjectName,
+		:szObjectOwner
+	FROM  IISYNONYMS
+	WHERE TABLE_NAME = :criteria1 AND TABLE_OWNER = :criteria2
+	ORDER BY SYNONYM_NAME;
+	
+	EXEC SQL BEGIN;
+		pItem = new CaSynonym (A2T(szObjectName), A2T(szObjectOwner));
+		listObject.AddTail (pItem);
+	EXEC SQL END;
+	return TRUE;
+
+QUERYSYNONYMRESTRICT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QuerySynonym (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	if (!(pQueryInfo->m_strItem2.IsEmpty() || pQueryInfo->m_strItem2Owner.IsEmpty()))
+		QuerySynonymRestrict (pQueryInfo, pSession, listObject);
+	else
+		QuerySynonymAll (pQueryInfo, pSession, listObject);
+
+	return TRUE;
+}
+
+
+
+static BOOL QueryDatabaseGrantee (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject, CaSessionManager* pMgr)
+{
+	USES_CONVERSION;
+	const int max_priv = 17;
+	enum
+	{
+		DB_ACCESS = 0,
+		CR_PROC,
+		CR_TABLE,
+		DB_ADMIN,
+		LK_MODE,
+		QRY_IO,
+		QRY_ROW,
+		UP_SYSCAT,
+		SEL_SYSCATS,
+		TBL_STATS,
+		IDLE_TIME,
+		CONN_TIME,
+		SESS_PRIO,
+		QRY_CPU,
+		QRY_COST,
+		QRY_PAGE,
+		CR_SEQ
+	};
+
+	TCHAR  tchszArrayPriv[max_priv][32]=
+	{
+		_T("database access"),
+		_T("create procedure"),
+		_T("create table"),
+		_T("database admin"),
+		_T("lock mode"),
+		_T("query io limit"),
+		_T("query row limit"),
+		_T("update syscat"),
+		_T("select syscat"),
+		_T("table statistics"),
+		_T("idle time limit"),
+		_T("connect time limit"),
+		_T("session priority"),
+		_T("query cpu limit"),
+		_T("query cost limit"),
+		_T("query page limit"),
+		_T("create sequence")
+	};
+	int i;
+	CString strDatabase = pQueryInfo->GetDatabase();
+	//strDatabase.MakeLower();
+	CaGrantee* pGrantee = NULL;
+
+	if (pQueryInfo->GetSubObjectType() == OBT_INSTALLATION)
+		strDatabase = _T("");
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szArrayPriv[max_priv][2];
+		int   nLimit[max_priv];
+		char  szGrantee[DBOBJECTLEN];
+		char* lpObject = T2A((LPTSTR)(LPCTSTR)strDatabase);
+		int iGtType;
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDBGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		GRANTEE,
+		DB_ACCESS     = char(charextract('UNY',(mod((control/  2048),(2))+mod((flags/  2048),(2))+1))),
+		CR_PROC       = char(charextract('UNY',(mod((control/   512),(2))+mod((flags/   512),(2))+1))),
+		CR_TAB        = char(charextract('UNY',(mod((control/   256),(2))+mod((flags/   256),(2))+1))),
+		DB_ADMIN      = char(charextract('UNY',(mod((control/  8192),(2))+mod((flags/  8192),(2))+1))),
+		LK_MODE       = char(charextract('UNY',(mod((control/  1024),(2))+mod((flags/  1024),(2))+1))),
+		QRY_IO        = char(charextract('UNY',(mod((control/     2),(2))+mod((flags/     2),(2))+1))),
+		QRY_IO_LIM    = qdio_limit,
+		QRY_ROW       = char(charextract('UNY',(mod((control       ),(2))+mod((flags       ),(2))+1))),
+		QRY_ROW_LIM   = qrow_limit,
+		UP_SYSCAT     = char(charextract('UNY',(mod((control/  4096),(2))+mod((flags/  4096),(2))+1))),
+		SEL_SYSCAT    = char(charextract('UNY',(mod((control/ 32768),(2))+mod((flags/ 32768),(2))+1))),
+		TBL_STATS     = char(charextract('UNY',(mod((control/ 65536),(2))+mod((flags/ 65536),(2))+1))),
+		IDLE_TIME     = char(charextract('UNY',(mod((control/131072),(2))+mod((flags/131072),(2))+1))),
+		IDLE_TIME_LIM = idle_time_limit,
+		CONN_TIME     = char(charextract('UNY',(mod((control/262144),(2))+mod((flags/262144),(2))+1))),
+		CONN_TIME_LIM = connect_time_limit,
+		SESS_PRIO     = char(charextract('UNY',(mod((control/524288),(2))+mod((flags/524288),(2))+1))),
+		SESS_PRIO_LIM = priority_limit,
+		QRY_CPU       = char(charextract('UNY',(mod((control/     4),(2))+mod((flags/     4),(2))+1))),
+		QRY_CPU_MIMIT = qcpu_limit,
+		QRY_COST      = char(charextract('UNY',(mod((control/    16),(2))+mod((flags/    16),(2))+1))),
+		QRY_COST_LIMIT= qcost_limit,
+		QRY_PAGE      = char(charextract('UNY',(mod((control/     8),(2))+mod((flags/     8),(2))+1))),
+		QRY_PAGE_LIMIT= qpage_limit,
+		GTYPE,
+		CR_SEQ        = char(charextract('UNY',(mod((control/1048576),(2))+mod((flags/1048576    ),(2))+1)))
+
+	INTO
+		:szGrantee,
+		:szArrayPriv[DB_ACCESS],
+		:szArrayPriv[CR_PROC],
+		:szArrayPriv[CR_TABLE],
+		:szArrayPriv[DB_ADMIN],
+		:szArrayPriv[LK_MODE],
+		:szArrayPriv[QRY_IO],
+		:nLimit[QRY_IO],
+		:szArrayPriv[QRY_ROW],
+		:nLimit[QRY_ROW],
+		:szArrayPriv[UP_SYSCAT],
+		:szArrayPriv[SEL_SYSCATS],
+		:szArrayPriv[TBL_STATS],
+		:szArrayPriv[IDLE_TIME],
+		:nLimit[IDLE_TIME],
+		:szArrayPriv[CONN_TIME],
+		:nLimit[CONN_TIME],
+		:szArrayPriv[SESS_PRIO],
+		:nLimit[SESS_PRIO],
+		:szArrayPriv[QRY_CPU],
+		:nLimit[QRY_CPU],
+		:szArrayPriv[QRY_COST],
+		:nLimit[QRY_COST],
+		:szArrayPriv[QRY_PAGE],
+		:nLimit[QRY_PAGE],
+		:iGtType,
+		:szArrayPriv[CR_SEQ]
+	FROM IIDBPRIV
+	WHERE DBNAME = :lpObject;
+
+	EXEC SQL BEGIN;
+		TrimRight(szGrantee);
+		pGrantee = new CaGrantee(A2T(szGrantee));
+		switch(iGtType)
+		{
+		case 0:
+			pGrantee->SetIdentity(OBT_USER);
+			break;
+		case 1:
+			pGrantee->SetIdentity(OBT_GROUP);
+			break;
+		case 2:
+			pGrantee->SetIdentity(OBT_ROLE);
+			break;
+		case 3:
+			pGrantee->SetItem(_T(""));
+			pGrantee->SetIdentity(-1);
+			break;
+		default:
+			pGrantee->SetIdentity(OBT_USER);
+			break;
+		}
+		listObject.AddTail(pGrantee);
+		for (i=0; i<max_priv; i++)
+		{
+			szArrayPriv[i][0] = toupper(szArrayPriv[i][0]);
+			if (szArrayPriv[i][0] == 'Y')
+			{
+				switch (i)
+				{
+				case QRY_IO:
+				case QRY_ROW:
+				case IDLE_TIME:
+				case CONN_TIME:
+				case SESS_PRIO:
+				case QRY_CPU:
+				case QRY_COST:
+				case QRY_PAGE:
+					pGrantee->SetPrivilege2(tchszArrayPriv[i], nLimit[i]);
+					break;
+				default:
+					pGrantee->SetPrivilege(tchszArrayPriv[i]);
+					break;
+				}
+			}
+			else
+			if (szArrayPriv[i][0] == 'N')
+			{
+				pGrantee->SetPrivilege(tchszArrayPriv[i], FALSE);
+			}
+		}
+	EXEC SQL END;
+
+	return TRUE;
+
+QUERYDBGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryTVIGrantee (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject, char cType, CaSessionManager* pMgr, CaSession* pSession)
+{
+	USES_CONVERSION;
+	CString strObject = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+
+	CaGrantee* pExist = NULL;
+	CTypedPtrList< CObList, CaDBObject* > lIdentity;
+	//strObject.MakeLower();
+	//strObjectOwner.MakeLower();
+
+	CaGrantee* pGrantee = NULL;
+	POSITION pos = NULL;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szPermitUser[48];
+		char  szPermitType[128];
+		char  chType[2];
+		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	chType[0] = cType;
+	chType[1] = '\0';
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_GROUP);
+	qinfo.SetDatabase(_T("iidbdb"));
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYTVIGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		PERMIT_USER,
+		PERMIT_TYPE
+	INTO
+		:szPermitUser,
+		:szPermitType
+	FROM IIACCESS
+	WHERE TABLE_NAME = :lpObject AND TABLE_OWNER = :lpObjectOwner AND TABLE_TYPE = :chType
+	ORDER BY PERMIT_USER;
+
+	EXEC SQL BEGIN;
+		TrimRight(szPermitUser);
+		TrimRight(szPermitType);
+		pExist = (CaGrantee*)CaDBObject::FindDBObject(A2T(szPermitUser), listObject);
+		if (pExist)
+		{
+			pExist->SetPrivilege(szPermitType);
+		}
+		else
+		{
+			pGrantee = new CaGrantee(A2T(szPermitUser));
+			if (pGrantee->GetName().IsEmpty())
+				pGrantee->SetIdentity(-1);
+			listObject.AddTail(pGrantee);
+			pGrantee->SetPrivilege(szPermitType);
+		}
+	EXEC SQL END;
+/* not required for now:
+	try
+	{
+		qinfo.SetObjectType(OBT_GROUP);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+		qinfo.SetObjectType(OBT_USER);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+		qinfo.SetObjectType(OBT_ROLE);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+	}
+	catch (...)
+	{
+		TRACE0("QueryTVIGrantee: failed to identify grantee\n");
+	}
+
+	pos = listObject.GetHeadPosition();
+	while (pos != NULL)
+	{
+		CaGrantee* pObj = (CaGrantee*)listObject.GetNext(pos);
+		CString strGrantee = pObj->GetName();
+		POSITION p = lIdentity.GetHeadPosition();
+		while (p != NULL)
+		{
+			CaDBObject* pId = lIdentity.GetNext(p);
+			if (!strGrantee.IsEmpty() && strGrantee.CompareNoCase(pId->GetName()) == 0)
+			{
+				pObj->SetIdentity(pId->GetObjectID());
+				break;
+			}
+		}
+	}
+	while (!lIdentity.IsEmpty())
+	{
+		delete lIdentity.RemoveHead();
+	}
+*/
+	return TRUE;
+
+QUERYTVIGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryProcedureGrantee (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject, CaSessionManager* pMgr, CaSession* pSession)
+{
+	USES_CONVERSION;
+	CString strText;
+	CString strObject = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+
+	CTypedPtrList< CObList, CaDBObject* > lIdentity;
+	strObject.MakeLower();
+	strObjectOwner.MakeLower();
+	
+	CaGrantee* pGrantee = NULL;
+	POSITION pos = NULL;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nTextSequence;
+		char  szPermitUser[48];
+		char  szText[260];
+		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_GROUP);
+	qinfo.SetDatabase(_T("iidbdb"));
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYPROCEDUREGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		PERMIT_USER,
+		TEXT_SEQUENCE,
+		TEXT_SEGMENT
+	INTO
+		:szPermitUser,
+		:nTextSequence,
+		:szText
+	FROM IIPROC_ACCESS
+	WHERE LOWERCASE(OBJECT_NAME) = :lpObject AND LOWERCASE(OBJECT_OWNER) = :lpObjectOwner AND OBJECT_TYPE = 'P'
+	ORDER BY PERMIT_USER;
+
+	EXEC SQL BEGIN;
+		if (nTextSequence == 1)
+		{
+			TrimRight(szPermitUser);
+			strText = A2T(szText);
+			strText.MakeLower();
+			if (strText.Find (_T("grant execute")) != -1)
+			{
+				pGrantee = new CaGrantee(A2T(szPermitUser));
+				if (pGrantee->GetName().IsEmpty())
+					pGrantee->SetIdentity(-1);
+				listObject.AddTail(pGrantee);
+				pGrantee->SetPrivilege(_T("execute"));
+			}
+		}
+	EXEC SQL END;
+/*
+	try
+	{
+		qinfo.SetObjectType(OBT_GROUP);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+		qinfo.SetObjectType(OBT_USER);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+		qinfo.SetObjectType(OBT_ROLE);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+	}
+	catch (...)
+	{
+		TRACE0("QueryProcedureGrantee: failed to identify grantee\n");
+	}
+	pos = listObject.GetHeadPosition();
+	while (pos != NULL)
+	{
+		CaGrantee* pObj = (CaGrantee*)listObject.GetNext(pos);
+		CString strGrantee = pObj->GetName();
+		POSITION p = lIdentity.GetHeadPosition();
+		while (p != NULL)
+		{
+			CaDBObject* pId = lIdentity.GetNext(p);
+			if (!strGrantee.IsEmpty() && strGrantee.CompareNoCase(pId->GetName()) == 0)
+			{
+				pObj->SetIdentity(pId->GetObjectID());
+				break;
+			}
+		}
+	}
+	while (!lIdentity.IsEmpty())
+	{
+		delete lIdentity.RemoveHead();
+	}
+*/
+	return TRUE;
+
+QUERYPROCEDUREGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryDBEventGrantee (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject, CaSessionManager* pMgr, CaSession* pSession)
+{
+	USES_CONVERSION;
+	CString strText;
+	CString strObject = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+
+	CTypedPtrList< CObList, CaDBObject* > lIdentity;
+	strObject.MakeLower();
+	strObjectOwner.MakeLower();
+	
+	CaGrantee* pExist = NULL;
+	CaGrantee* pGrantee = NULL;
+	POSITION pos = NULL;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nTextSequence;
+		char  szPermitUser[48];
+		char  szText[260];
+		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_GROUP);
+	qinfo.SetDatabase(_T("iidbdb"));
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYDBEVENTGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		PERMIT_USER,
+		TEXT_SEQUENCE,
+		TEXT_SEGMENT
+	INTO
+		:szPermitUser,
+		:nTextSequence,
+		:szText
+	FROM IIPERMITS
+	WHERE OBJECT_TYPE = 'E' AND LOWERCASE(OBJECT_NAME) = :lpObject AND LOWERCASE(OBJECT_OWNER) = :lpObjectOwner
+	ORDER BY PERMIT_USER;
+
+	EXEC SQL BEGIN;
+		if (nTextSequence == 1)
+		{
+			TrimRight(szPermitUser);
+			strText = A2T(szText);
+			strText.MakeLower();
+			pExist = (CaGrantee*)CaDBObject::FindDBObject(A2T(szPermitUser), listObject);
+
+			if (strText.Find (_T("grant raise")) != -1)
+			{
+				if (pExist)
+				{
+					pExist->SetPrivilege(_T("raise"));
+				}
+				else
+				{
+					pGrantee = new CaGrantee(A2T(szPermitUser));
+					if (pGrantee->GetName().IsEmpty())
+						pGrantee->SetIdentity(-1);
+					listObject.AddTail(pGrantee);
+					pGrantee->SetPrivilege(_T("raise"));
+				}
+			}
+			else
+			if (strText.Find (_T("grant register")) != -1)
+			{
+				if (pExist)
+				{
+					pGrantee->SetPrivilege(_T("register"));
+				}
+				else
+				{
+					pGrantee = new CaGrantee(A2T(szPermitUser));
+					if (pGrantee->GetName().IsEmpty())
+						pGrantee->SetIdentity(-1);
+					listObject.AddTail(pGrantee);
+					pGrantee->SetPrivilege(_T("register"));
+				}
+			}
+		}
+	EXEC SQL END;
+/*
+	try
+	{
+		qinfo.SetObjectType(OBT_GROUP);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+		qinfo.SetObjectType(OBT_USER);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+		qinfo.SetObjectType(OBT_ROLE);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+	}
+	catch (...)
+	{
+		TRACE0("QueryDBEventGrantee: failed to identify grantee\n");
+	}
+	pos = listObject.GetHeadPosition();
+	while (pos != NULL)
+	{
+		CaGrantee* pObj = (CaGrantee*)listObject.GetNext(pos);
+		CString strGrantee = pObj->GetName();
+		POSITION p = lIdentity.GetHeadPosition();
+		while (p != NULL)
+		{
+			CaDBObject* pId = lIdentity.GetNext(p);
+			if (!strGrantee.IsEmpty() && strGrantee.CompareNoCase(pId->GetName()) == 0)
+			{
+				pObj->SetIdentity(pId->GetObjectID());
+				break;
+			}
+		}
+	}
+	while (!lIdentity.IsEmpty())
+	{
+		delete lIdentity.RemoveHead();
+	}
+*/
+	return TRUE;
+
+QUERYDBEVENTGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+static BOOL QuerySequenceGrantee (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject, CaSessionManager* pMgr, CaSession* pSession)
+{
+	USES_CONVERSION;
+	CString strText;
+	CString strObject = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+
+	CTypedPtrList< CObList, CaDBObject* > lIdentity;
+	strObject.MakeLower();
+	strObjectOwner.MakeLower();
+	
+	CaGrantee* pExist = NULL;
+	CaGrantee* pGrantee = NULL;
+	POSITION pos = NULL;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nTextSequence;
+		char  szPermitUser[48];
+		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	CaLLQueryInfo qinfo (*pQueryInfo);
+	qinfo.SetObjectType(OBT_GROUP);
+	qinfo.SetDatabase(pQueryInfo->GetDatabase());
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYSEQUENCEGRANT_ERROR;
+	EXEC SQL REPEATED SELECT 
+		PERMIT_USER,
+		TEXT_SEQUENCE
+	INTO
+		:szPermitUser,
+		:nTextSequence
+	FROM IIPERMITS
+	WHERE OBJECT_TYPE = 'S' AND LOWERCASE(OBJECT_NAME) = :lpObject AND LOWERCASE(OBJECT_OWNER) = :lpObjectOwner
+	ORDER BY PERMIT_USER;
+
+	EXEC SQL BEGIN;
+		if (nTextSequence == 1)
+		{
+			TrimRight(szPermitUser);
+			pExist = (CaGrantee*)CaDBObject::FindDBObject(A2T(szPermitUser), listObject);
+
+			if (pExist)
+			{
+				pExist->SetPrivilege(_T("next on sequence"));
+			}
+			else
+			{
+				pGrantee = new CaGrantee(A2T(szPermitUser));
+				if (pGrantee->GetName().IsEmpty())
+					pGrantee->SetIdentity(-1);
+				listObject.AddTail(pGrantee);
+				pGrantee->SetPrivilege(_T("next on sequence"));
+			}
+		}
+	EXEC SQL END;
+/*
+	try
+	{
+		qinfo.SetObjectType(OBT_GROUP);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+		qinfo.SetObjectType(OBT_USER);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+		qinfo.SetObjectType(OBT_ROLE);
+		INGRESII_llQueryObject (&qinfo, lIdentity, pMgr);
+	}
+	catch (...)
+	{
+		TRACE0("QueryDBEventGrantee: failed to identify grantee\n");
+	}
+	pos = listObject.GetHeadPosition();
+	while (pos != NULL)
+	{
+		CaGrantee* pObj = (CaGrantee*)listObject.GetNext(pos);
+		CString strGrantee = pObj->GetName();
+		POSITION p = lIdentity.GetHeadPosition();
+		while (p != NULL)
+		{
+			CaDBObject* pId = lIdentity.GetNext(p);
+			if (!strGrantee.IsEmpty() && strGrantee.CompareNoCase(pId->GetName()) == 0)
+			{
+				pObj->SetIdentity(pId->GetObjectID());
+				break;
+			}
+		}
+	}
+	while (!lIdentity.IsEmpty())
+	{
+		delete lIdentity.RemoveHead();
+	}
+*/
+	return TRUE;
+
+QUERYSEQUENCEGRANT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+static BOOL QueryGrantee (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject, CaSessionManager* pMgr, CaSession* pSession)
+{
+	int nSubObjectType = pQueryInfo->GetSubObjectType();
+	switch (nSubObjectType)
+	{
+	case OBT_INSTALLATION:
+	case OBT_DATABASE:
+		QueryDatabaseGrantee (pQueryInfo, listObject, pMgr);
+		break;
+	case OBT_TABLE:
+		QueryTVIGrantee (pQueryInfo, listObject, 'T', pMgr, pSession);
+		break;
+	case OBT_VIEW:
+		QueryTVIGrantee (pQueryInfo, listObject, 'V', pMgr, pSession);
+		break;
+	case OBT_INDEX:
+		QueryTVIGrantee (pQueryInfo, listObject, 'I', pMgr, pSession);
+		break;
+	case OBT_SEQUENCE:
+		QuerySequenceGrantee (pQueryInfo, listObject, pMgr, pSession);
+		break;
+	case OBT_PROCEDURE:
+		QueryProcedureGrantee (pQueryInfo, listObject, pMgr, pSession);
+		break;
+	case OBT_DBEVENT:
+		QueryDBEventGrantee (pQueryInfo, listObject, pMgr, pSession);
+		break;
+	default:
+		ASSERT(FALSE); // Need more implementation ?
+		break;
+	}
+
+	return TRUE;
+}
+
+
+static BOOL QuerySecurityAlarm (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject, CaSessionManager* pMgr)
+{
+	USES_CONVERSION;
+	CString strText;
+	CString strObject;
+	CString strObjectOwner;
+	int nSubObjectType = pQueryInfo->GetSubObjectType();
+	CaAlarm* pObject = NULL;
+	POSITION pos = NULL;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		short nullIndicator1, nullIndicator2;
+		int   nTextSequence;
+		int   nSecurityNumber;
+		char  chType[2];
+		char  szAlarmName[DBOBJECTLEN];
+		char  szSubjectType[2];
+		char  szSecurityUser[DBOBJECTLEN];
+		char  szObjectOwner[DBOBJECTLEN];
+		char  szDBevent[DBOBJECTLEN];
+		char  szDBeventOwner[DBOBJECTLEN];
+		char  szText[260];
+		char* lpObject = NULL;
+	EXEC SQL END DECLARE SECTION;
+
+	switch (nSubObjectType)
+	{
+	case OBT_INSTALLATION:
+		chType[0] = 'I';
+		strObject = _T("");
+		break;
+	case OBT_DATABASE:
+		chType[0] = 'D';
+		strObject = pQueryInfo->GetDatabase();
+		break;
+	case OBT_TABLE:
+		chType[0] = 'T';
+		strObject = pQueryInfo->GetItem2();
+		break;
+	default:
+		ASSERT(FALSE); // New type ?
+		chType[0] = 'T';
+		break;
+	}
+	chType[1] = '\0';
+	strObject.MakeLower();
+	lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYSECURITYALARM_ERROR;
+	EXEC SQL REPEATED SELECT 
+		OBJECT_OWNER,
+		SECURITY_USER,
+		SECURITY_NUMBER,
+		TEXT_SEQUENCE,
+		TEXT_SEGMENT,
+		ALARM_NAME,
+		SUBJECT_TYPE,
+		DBEVENT_NAME,
+		DBEVENT_OWNER
+	INTO
+		:szObjectOwner,
+		:szSecurityUser,
+		:nSecurityNumber,
+		:nTextSequence,
+		:szText,
+		:szAlarmName,
+		:szSubjectType,
+		:szDBevent:nullIndicator1,
+		:szDBeventOwner:nullIndicator2
+	FROM IISECURITY_ALARMS
+	WHERE OBJECT_TYPE = :chType AND LOWERCASE(OBJECT_NAME) = :lpObject;
+
+	EXEC SQL BEGIN;
+		if (nTextSequence == 1)
+		{
+			BOOL bTakeIt = TRUE;
+			TrimRight(szObjectOwner);
+			strObjectOwner = szObjectOwner;
+			if (nSubObjectType == OBT_TABLE && !strObjectOwner.IsEmpty())
+			{
+				CString strFetchedOwner = A2T(szObjectOwner);
+				if (strObjectOwner.CompareNoCase(strFetchedOwner) != 0)
+					bTakeIt = FALSE;
+			}
+
+			if (bTakeIt)
+			{
+				TrimRight(szSecurityUser);
+				TrimRight(szAlarmName);
+				szSubjectType[0] = toupper(szSubjectType[0]);
+				szSubjectType[1] = '\0';
+				CString strName = A2T(szAlarmName);
+				if(INGRESII_llIsSystemObject(strName, _T("")))
+					strName = _T("");
+				pObject = new CaAlarm(strName, nSecurityNumber);
+				listObject.AddTail(pObject);
+				pObject->SetSubjectType(szSubjectType[0]);
+				pObject->SetSecurityUser(A2T(szSecurityUser));
+				strText = A2T(szText);
+				strText.MakeLower();
+				pObject->SetDetailText(strText);
+				if (nullIndicator1 != -1 && nullIndicator2 != -1)
+				{
+					TrimRight(szDBevent);
+					TrimRight(szDBeventOwner);
+					pObject->SetDBEvent(A2T(szDBevent), A2T(szDBeventOwner));
+				}
+			}
+		}
+		else
+		if (nTextSequence > 1)
+		{
+			ASSERT(pObject);
+			if (pObject)
+			{
+				pObject->AppendDetailText(strText);
+			}
+		}
+	EXEC SQL END;
+
+	pos = listObject.GetHeadPosition();
+	while (pos != NULL)
+	{
+		pObject = (CaAlarm*)listObject.GetNext(pos);
+		pObject->ParseSecurityAlarmFlags();
+	}
+
+	return TRUE;
+
+QUERYSECURITYALARM_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+//
+// If session manager 'pSessionManager' is NULL, 
+// Then you must create your session first.
+BOOL INGRESII_llSelectCount (int& nObjectCount, CaLLQueryInfo* pQueryInfo, CaSessionManager* pSessionManager)
+{
+	USES_CONVERSION;
+	nObjectCount = 0;
+	CString strStatement;
+	strStatement.Format (_T("SELECT COUNT(*) FROM \"%s\".%s"), (LPCTSTR)pQueryInfo->GetItem2Owner(), (LPCTSTR)pQueryInfo->GetItem2());
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* rawStatement = T2A((LPTSTR)(LPCTSTR)strStatement);
+		int   nCount;
+	EXEC SQL END DECLARE SECTION;
+	nCount = 0;
+
+	CaSession session ((CaConnectInfo*)pQueryInfo);
+	CaSessionUsage* pUseSession = NULL;
+
+	if (pSessionManager)
+	{
+		session.SetDescription(pSessionManager->GetDescription());
+		pUseSession = new CaSessionUsage (pSessionManager, &session);
+	}
+	else
+	{
+		session.SetIndependent(TRUE);
+		session.Connect();
+	}
+
+	EXEC SQL WHENEVER SQLERROR GOTO SELECTCOUNT_LERROR;
+	EXEC SQL EXECUTE IMMEDIATE :rawStatement INTO :nCount;
+	nObjectCount = nCount;
+	
+	if (pSessionManager && pUseSession)
+	{
+		pUseSession->Release(SESSION_NONE);
+		delete pUseSession;
+	}
+	else
+	{
+		session.Disconnect();
+	}
+	return TRUE;
+
+SELECTCOUNT_LERROR:
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	if (pSessionManager && pUseSession)
+		delete pUseSession;
+	throw CeSqlException (A2T(error_buf), nErr);
+	return FALSE;
+}
+
+//
+// Return:
+// 0: Length is not required
+// 1: Length is required
+// 2: Precision is required
+// 3: Precision and scale are required
+int INGRESII_llNeedLength(int iIngresDataType)
+{
+	int nType = abs(iIngresDataType);
+	switch (nType)
+	{
+	case IISQ_CHA_TYPE:
+	case IISQ_VCH_TYPE:
+	case IISQ_BYTE_TYPE:
+	case IISQ_VBYTE_TYPE:
+	case IISQ_CHR_TYPE:
+	case IISQ_TXT_TYPE:
+	case IISQ_NCHR_TYPE:
+	case IISQ_NVCHR_TYPE:
+		return 1;
+	case IISQ_FLT_TYPE:
+    case IISQ_TMWO_TYPE:
+    case IISQ_TMW_TYPE:
+    case IISQ_TME_TYPE:
+    case IISQ_TSWO_TYPE:
+    case IISQ_TSW_TYPE:
+    case IISQ_TSTMP_TYPE:
+		return 2;
+	case IISQ_DEC_TYPE:
+		return 3;
+	default:
+		return 0;
+	}
+	return 0;
+}
+
+//
+// used by IJA
+BOOL CaColumn::CanBeInWhereClause() 
+{
+	switch (m_iDataType) {
+		case IISQ_LVCH_TYPE:
+		case IISQ_LBYTE_TYPE:
+		case IISQ_LNVCHR_TYPE:
+			return FALSE;
+		default:
+			break;
+	}
+	return TRUE;
+}
+
+//
+// used by IJA
+BOOL CaColumn::RoundingErrorsPossibleInText() 
+{
+	int i = abs(m_iDataType);
+	switch (i) {
+		case IISQ_DEC_TYPE:
+		case IISQ_FLT_TYPE:
+		case IISQ_MNY_TYPE:
+			return TRUE;
+		default:
+			break;
+	}
+	return FALSE;
+}
+
+//
+// Convert the ingres column type name to the equivalent ingres numeric value:
+// Ex: lpszColType = "char". return 20.
+//
+// col Type         output type length
+// a8  integer1,    integer      1
+// a9  integer2,    integer      2
+// b1  integer,     integer      4
+// b2  float,       float        8
+// b3  float4,      float        4
+// b4  smallint,    integer      2
+int INGRESII_llIngresColumnType2i(LPCTSTR lpszColType, int nLen)
+{
+	CString strName = lpszColType;
+	if (strName.CompareNoCase(_T("char")) == 0)
+		return IISQ_CHA_TYPE;
+	if (strName.CompareNoCase(_T("varchar")) == 0)
+		return IISQ_VCH_TYPE;
+	if (strName.CompareNoCase(_T("nchar")) == 0)
+		return IISQ_NCHR_TYPE;
+	if (strName.CompareNoCase(_T("nvarchar")) == 0)
+		return IISQ_NVCHR_TYPE;
+	if (strName.CompareNoCase(_T("byte")) == 0)
+		return IISQ_BYTE_TYPE;
+	if (strName.CompareNoCase(_T("byte varying")) == 0)
+		return IISQ_VBYTE_TYPE;
+	if (strName.CompareNoCase(_T("c")) == 0)
+		return IISQ_CHR_TYPE;
+	if (strName.CompareNoCase(_T("text")) == 0)
+		return IISQ_TXT_TYPE;
+	if (strName.CompareNoCase(_T("money")) == 0)
+		return IISQ_MNY_TYPE;
+	if (strName.CompareNoCase(_T("long varchar")) == 0)
+		return IISQ_LVCH_TYPE;
+	if (strName.CompareNoCase(_T("long nvarchar")) == 0)
+		return IISQ_LNVCHR_TYPE;
+	if (strName.CompareNoCase(_T("long byte")) == 0)
+		return IISQ_LBYTE_TYPE;
+	if (strName.CompareNoCase(_T("decimal")) == 0)
+		return IISQ_DEC_TYPE;
+	if (strName.CompareNoCase(_T("integer" )) == 0 ||
+	    strName.CompareNoCase(_T("integer1")) == 0 ||
+	    strName.CompareNoCase(_T("integer2")) == 0 ||
+	    strName.CompareNoCase(_T("smallint")) == 0 ||
+	    strName.CompareNoCase(_T("bigint"))   == 0 )
+		return IISQ_INT_TYPE;
+	if (strName.CompareNoCase(_T("float" )) == 0 ||
+	    strName.CompareNoCase(_T("float4")) == 0 )
+		return IISQ_FLT_TYPE;
+	if (strName.CompareNoCase(_T("ansidate")) == 0)
+		return IISQ_ADTE_TYPE;
+	if (strName.CompareNoCase(_T("ingresdate")) == 0)
+		return IISQ_DTE_TYPE;
+	if (strName.CompareNoCase(_T("interval day to second")) == 0)
+		return IISQ_INDS_TYPE;
+	if (strName.CompareNoCase(_T("interval year to month")) == 0)
+		return IISQ_INYM_TYPE;
+	if (strName.CompareNoCase(_T("time with local time zone")) == 0)
+		return IISQ_TME_TYPE;
+	if (strName.CompareNoCase(_T("time")) == 0)
+		return IISQ_TMWO_TYPE;
+	if (strName.CompareNoCase(_T("time with time zone")) == 0)
+		return IISQ_TMW_TYPE;
+	if (strName.CompareNoCase(_T("timestamp with local time zone")) == 0)
+		return IISQ_TSTMP_TYPE;
+	if (strName.CompareNoCase(_T("timestamp")) == 0)
+		return IISQ_TSWO_TYPE;
+	if (strName.CompareNoCase(_T("timestamp with time zone")) == 0)
+		return IISQ_TSW_TYPE;
+	return -1;
+}
+
+//
+// Convert the ingres column numeric value type to the equivalent ingres name value:
+// Ex: iColType = +/-20: return "char".
+//
+//
+// col Type         output type length
+// a8  integer1,    integer      1
+// a9  integer2,    integer      2
+// b1  integer,     integer      4
+// b2  float,       float        8
+// b3  float4,      float        4
+// b4  smallint,    integer      2
+CString INGRESII_llIngresColumnType2Str(int iColType, int nLen)
+{
+	int nType = abs(iColType);
+	switch (nType)
+	{
+	case IISQ_CHA_TYPE:
+		return _T("char");
+	case IISQ_VCH_TYPE:
+		return _T("varchar");
+	case IISQ_NCHR_TYPE:
+		return _T("nchar");
+	case IISQ_NVCHR_TYPE:
+		return _T("nvarchar");
+	case IISQ_BYTE_TYPE:
+		return _T("byte");
+	case IISQ_VBYTE_TYPE:
+		return _T("byte varying");
+	case IISQ_CHR_TYPE:
+		return _T("c");
+	case IISQ_TXT_TYPE:
+		return _T("text");
+	case IISQ_MNY_TYPE:
+		return _T("money");
+	case IISQ_LVCH_TYPE:
+		return _T("long varchar");
+	case IISQ_LNVCHR_TYPE:
+		return _T("long nvarchar");
+	case IISQ_LBYTE_TYPE:
+		return _T("long byte");
+	case IISQ_DEC_TYPE:
+		return _T("decimal");
+	case IISQ_INT_TYPE:
+		if (nLen == 1)
+			return _T("integer1");
+		if (nLen == 2)
+			return _T("integer2");
+		if (nLen == 8)
+			return _T("bigint");
+		return _T("integer");
+	case IISQ_FLT_TYPE:
+		if (nLen == 4)
+			return _T("float4");
+		return _T("float");
+	case IISQ_ADTE_TYPE:
+		return _T("ansidate");
+	case IISQ_DTE_TYPE:
+		return _T("date");
+	case IISQ_INDS_TYPE:
+		return _T("interval day to second");
+	case IISQ_INYM_TYPE:
+		return _T("interval year to month");
+	case IISQ_TME_TYPE:
+		return _T("time with local time zone");
+	case IISQ_TMWO_TYPE:
+		return _T("time");
+	case IISQ_TMW_TYPE:
+		return _T("time with time zone");
+	case IISQ_TSTMP_TYPE:
+		return _T("timestamp with local time zone");
+	case IISQ_TSWO_TYPE:
+		return _T("timestamp");
+	case IISQ_TSW_TYPE:
+		return _T("timestamp with time zone");
+
+	default:
+		// TODO if such a need:
+		ASSERT(FALSE);
+		return _T("");
+	}
+	return _T("");
+}
+
+
+int INGRESII_llIngresColumnType2AppType(CaColumn* pCol)
+{
+	int nType = abs(pCol->GetType());
+	int nLen  = pCol->GetLength();
+
+	switch (nType)
+	{
+	case IISQ_CHA_TYPE:
+		return INGTYPE_CHAR;
+	case IISQ_VCH_TYPE:
+		return INGTYPE_VARCHAR;
+	case IISQ_NCHR_TYPE:
+		return INGTYPE_UNICODE_NCHR;
+	case IISQ_NVCHR_TYPE:
+		return INGTYPE_UNICODE_NVCHR;
+	case IISQ_BYTE_TYPE:
+		return INGTYPE_BYTE;
+	case IISQ_VBYTE_TYPE:
+		return INGTYPE_BYTEVAR;
+	case IISQ_CHR_TYPE:
+		return INGTYPE_C;
+	case IISQ_TXT_TYPE:
+		return INGTYPE_TEXT;
+	case IISQ_LVCH_TYPE:
+		return INGTYPE_LONGVARCHAR;
+	case IISQ_LNVCHR_TYPE:
+		return INGTYPE_UNICODE_LNVCHR;
+	case IISQ_LBYTE_TYPE:
+		return INGTYPE_LONGBYTE;
+	case IISQ_DEC_TYPE:
+		return INGTYPE_DECIMAL;
+	case IISQ_MNY_TYPE:
+		return INGTYPE_MONEY;
+	case IISQ_INT_TYPE:
+		if (nLen == 1)
+			return INGTYPE_INT1;
+		if (nLen == 2)
+			return INGTYPE_INT2;
+		if (nLen == 8)
+			return INGTYPE_INT8;
+		return INGTYPE_INTEGER;
+	case IISQ_FLT_TYPE:
+		if (nLen == 4)
+			return INGTYPE_FLOAT4;
+		if (nLen == 8)
+			return INGTYPE_FLOAT8;
+		return INGTYPE_FLOAT;
+	case IISQ_DTE_TYPE:
+		return INGTYPE_DATE;
+	case IISQ_ADTE_TYPE:
+		return INGTYPE_ADTE;
+	case IISQ_TMWO_TYPE:
+		return INGTYPE_TMWO;
+	case IISQ_TMW_TYPE:
+		return INGTYPE_TMW;
+	case IISQ_TME_TYPE:
+		return INGTYPE_TME;
+	case IISQ_TSWO_TYPE:
+		return INGTYPE_TSWO;
+	case IISQ_TSW_TYPE:
+		return INGTYPE_TSW;
+	case IISQ_TSTMP_TYPE:
+		return INGTYPE_TSTMP;
+	case IISQ_INYM_TYPE:
+		return INGTYPE_INYM;
+	case IISQ_INDS_TYPE:
+		return INGTYPE_INDS;
+
+	default:
+		// TODO if such a need:
+		ASSERT(FALSE);
+		return INGTYPE_CHAR;
+	}
+	return INGTYPE_CHAR;
+}
+
+
+//
+// Table name and owner are required in pQueryInfo.
+BOOL INGRESII_llIsTableEmpty(CaLLQueryInfo* pQueryInfo, CaSessionManager* pSessionManager)
+{
+	USES_CONVERSION;
+	CString strObject = pQueryInfo->GetItem2();
+	CString strObjectOwner = pQueryInfo->GetItem2Owner();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		int nRelTups;
+		char* szTableName  = T2A((LPTSTR)(LPCTSTR)strObject);
+		char* szTableOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
+		char* rawStatement = NULL;
+	EXEC SQL END DECLARE SECTION;
+
+	int nRowCount = 0;
+	CString strStatement;
+	CaSessionUsage* pUseSession = NULL;
+	CaSession session ((CaConnectInfo*)pQueryInfo);
+
+	ASSERT (pSessionManager);
+	if (!pSessionManager)
+		return FALSE;
+	session.SetDescription(pSessionManager->GetDescription());
+	pUseSession = new CaSessionUsage (pSessionManager, &session);
+
+	EXEC SQL WHENEVER SQLERROR GOTO ISTABLEEMPTY_LERROR;
+	EXEC SQL SELECT
+		RELTUPS
+	INTO
+		:nRelTups
+	FROM IIRELATION
+	WHERE LOWERCASE (RELID) = LOWERCASE (:szTableName) AND LOWERCASE (RELOWNER) = LOWERCASE (:szTableOwner);
+	
+	EXEC SQL BEGIN;
+		nRowCount = nRelTups;
+		EXEC SQL ENDSELECT;
+	EXEC SQL END;
+
+	if (nRowCount > 0)
+	{
+		if (pSessionManager && pUseSession)
+		{
+			pUseSession->Release(SESSION_NONE);
+			delete pUseSession;
+		}
+		return FALSE;
+	}
+
+	BOOL bres;
+	bres = TRUE; /* needs a separate statement otherwise seem to hit a problem with the compiler ... */
+	strStatement.Format (
+		_T("select 1 from %s.%s"), 
+		(LPCTSTR)INGRESII_llQuoteIfNeeded(pQueryInfo->GetItem2Owner()), 
+		(LPCTSTR)INGRESII_llQuoteIfNeeded(pQueryInfo->GetItem2()));
+	rawStatement = T2A((LPTSTR)(LPCTSTR)strStatement);
+	EXEC SQL EXECUTE IMMEDIATE :rawStatement INTO :nRelTups;
+	EXEC SQL BEGIN;
+		bres = FALSE; /* FALSE means "not empty" */
+		EXEC SQL ENDSELECT;
+	EXEC SQL END;
+	
+	if (pSessionManager && pUseSession)
+	{
+		pUseSession->Release(SESSION_NONE);
+		delete pUseSession;
+	}
+
+	return bres;
+
+ISTABLEEMPTY_LERROR:
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	try
+	{
+		if (pSessionManager && pUseSession)
+		{
+			pUseSession->Release(SESSION_NONE);
+			delete pUseSession;
+		}
+	}
+	catch(...)
+	{
+		TRACE0 ("RAISE EXCEPTION AT ISTABLEEMPTY_LERROR:\n");
+	}
+	throw CeSqlException (A2T(error_buf), nErr);
+	return FALSE;
+}
+
+
+void INGRESII_llSetCopyHandler(PfnIISQLHandler handler)
+{
+	EXEC SQL WHENEVER SQLERROR GOTO SETCOPYHANDLER_LERROR;
+	EXEC SQL SET_SQL (COPYHANDLER = handler);
+}
+
+void INGRESII_llDisableSession()
+{
+	EXEC SQL SET_SQL (SESSION = 0);
+}
+
+
+//
+// Table name and owner are required in pQueryInfo.
+BOOL INGRESII_llIsDatabaseGateway(CaLLQueryInfo* pQueryInfo, CaSessionManager* pSessionManager)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szResult [64];
+	EXEC SQL END DECLARE SECTION;
+
+	const int nGW = 4;
+	TCHAR tchszIngresGW[nGW][16]= {_T("oi"), _T("oping"), _T("ingres"), _T("ii")};
+
+	BOOL bGateway = TRUE;
+	CaSessionUsage* pUseSession = NULL;
+	CaSession session ((CaConnectInfo*)pQueryInfo);
+
+	ASSERT (pSessionManager);
+	if (!pSessionManager)
+		return FALSE;
+	session.SetDescription(pSessionManager->GetDescription());
+	pUseSession = new CaSessionUsage (pSessionManager, &session);
+
+	EXEC SQL WHENEVER SQLERROR GOTO ISDATABASEGATEWAY_LERROR;
+	EXEC SQL SELECT DBMSINFO('_version') INTO :szResult;
+
+	EXEC SQL BEGIN;
+		CString strResult = szResult;
+		strResult.MakeLower();
+		for (int i=0; i<nGW; i++)
+		{
+			if (strResult.Find(tchszIngresGW[i]) == 0)
+			{
+				bGateway = FALSE;
+				break;
+			}
+		}
+		EXEC SQL ENDSELECT;
+	EXEC SQL END;
+
+	if (pSessionManager && pUseSession)
+	{
+		pUseSession->Release(SESSION_NONE);
+		delete pUseSession;
+	}
+
+	return bGateway;
+
+ISDATABASEGATEWAY_LERROR:
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	try
+	{
+		if (pSessionManager && pUseSession)
+		{
+			pUseSession->Release(SESSION_NONE);
+			delete pUseSession;
+		}
+	}
+	catch(...)
+	{
+		TRACE0 ("RAISE EXCEPTION AT ISDATABASEGATEWAY_LERROR:\n");
+	}
+	throw CeSqlException (A2T(error_buf), nErr);
+	return FALSE;
+}
+
+
+//
+// SELECT DBMSINFO
+CString INGRESII_llDBMSInfo(LPCTSTR lpszConstName)
+{
+	USES_CONVERSION;
+	CString strResult = _T("");
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szResult [64];
+		char* szConst = T2A((LPTSTR)lpszConstName);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO DBMSINFO_LERROR;
+	EXEC SQL SELECT DBMSINFO(:szConst) INTO :szResult;
+
+	EXEC SQL BEGIN;
+		strResult = szResult;
+		strResult.TrimRight();
+		EXEC SQL ENDSELECT;
+	EXEC SQL END;
+
+	return strResult;
+
+DBMSINFO_LERROR:
+	ExceptionError();
+	return _T("");
+}
+
+//
+// Query the procedure name executed by the rule 'pRule':
+// Must be called within an opened session:
+BOOL INGRESII_llDBProcedureOfRule (CaLLQueryInfo* pQueryInfo, CaDBObject* pRule, CaProcedure& procedure)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szProcedureName  [DBOBJECTLEN];
+		char  szProcedureOwner [DBOBJECTLEN];
+		char* criteria1 = T2A((LPTSTR)(LPCTSTR)pRule->GetItem());
+		char* criteria2 = T2A((LPTSTR)(LPCTSTR)pRule->GetOwner());
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYRULEPROCEDURE_ERROR;
+	EXEC SQL SELECT
+		RULE_DBP_NAME,
+		RULE_DBP_OWNER
+	INTO
+		:szProcedureName,
+		:szProcedureOwner
+	FROM  IIRULE
+	WHERE LOWERCASE (RULE_NAME) = LOWERCASE (:criteria1) AND LOWERCASE (RULE_OWNER )=LOWERCASE (:criteria2);
+	
+	EXEC SQL BEGIN;
+		procedure.SetItem (A2T(szProcedureName), A2T(szProcedureOwner));
+	EXEC SQL END;
+	if (!procedure.GetName().IsEmpty() && !procedure.GetOwner().IsEmpty())
+		return TRUE;
+	return FALSE;
+
+QUERYRULEPROCEDURE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+BOOL INGRESII_llGetDbevent(LPCTSTR lpszEName, LPCTSTR lpszEOwner, int nWait, CString& strEventText)
+{
+	CString strName;
+	CString strOwner;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char e_name [DBOBJECTLEN];
+		char e_text [512];
+		char e_owner[DBOBJECTLEN];
+		int  nsec = nWait;
+	EXEC SQL END DECLARE SECTION;
+
+	strEventText = _T("");
+	EXEC SQL WHENEVER SQLERROR GOTO GETDBEVENT_ERROR;
+	if (nsec > 0)
+		EXEC SQL GET DBEVENT WITH WAIT=:nsec;
+	else
+		EXEC SQL GET DBEVENT WITH NOWAIT;
+
+	EXEC SQL INQUIRE_SQL(:e_name = dbeventname, :e_owner = dbeventowner, :e_text = dbeventtext);
+	strName = e_name;
+	strOwner= e_owner;
+	strName.TrimLeft();
+	strName.TrimRight();
+	strOwner.TrimLeft();
+	strOwner.TrimRight();
+	if (strName.CompareNoCase(lpszEName) == 0 && strOwner.CompareNoCase(lpszEOwner) == 0)
+	{
+		strEventText = e_text;
+		return TRUE;
+	}
+
+	return FALSE;
+GETDBEVENT_ERROR:
+	ExceptionError();
+	return FALSE;
+}

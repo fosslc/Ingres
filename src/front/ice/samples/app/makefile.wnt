@@ -1,0 +1,40 @@
+#
+# Name: makefile
+#
+# Description:
+#       Builds iceapp
+#
+##  History:
+##      05-Jun-2000 (fanra01)
+##          Bug 101731
+##          Created.
+##	18-Sep-2001 (somsa01)
+##	    Adjusted for IA64 platforms.
+
+CC          = cl -c
+TARGETDIR   = "$(II_SYSTEM)\ingres\ice\bin"
+INC         = "$(II_SYSTEM)\ingres\files"
+
+!IF "$(CPU)" == "i386"
+CCFLAGS= /G4 -Di386=1 -D_X86_  /nologo -MD -I.\ -I$(INC)
+MACH= /MACHINE:i386
+!ELSEIF "$(CPU)" == "IA64"
+CCFLAGS= /Wp64 -G4 -D_IA64_=1 -DWIN64 -D_WIN64 /nologo -MD -I.\ -I$(INC)
+MACH= /MACHINE:IA64
+!ENDIF
+
+TARGETEXE   = iceapp.exe
+LIBS        = msvcrt.lib
+	
+OBJS        = iceapp.obj
+LINK        = link
+LINKFLAGS   = /NOLOGO $(MACH)
+
+all: $(OBJS) $(TARGETEXE)
+
+$(OBJS): $*.c
+    $(CC) $(CCFLAGS) $**
+
+$(TARGETEXE):
+    $(LINK) $(LINKFLAGS) /OUT:$@ $(OBJS) $(EXTRAOBJS) $(LIBS)
+    copy $@ $(TARGETDIR)

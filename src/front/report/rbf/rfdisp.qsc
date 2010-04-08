@@ -1,0 +1,164 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+
+/*	static	char	Sccsid[] = "@(#)rfdisplay.qc	30.1	11/14/84";	*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include       "rbftype.h"
+# include       "rbfglob.h"
+# include	<ds.h>
+# include	<ut.h>
+# include	<ug.h>
+# include	<feds.h>
+# include	<uf.h>
+
+
+/*
+**   RFDISPLAY - controlling routine for displaying the
+**	report frames.	This puts up the main menu for a report
+**	in RBF, and then calls underlying routines to display
+**	the different forms, after setting up the forms for
+**	this report.
+**
+**	Parameters:
+**		none.
+**
+**	Returns:
+**		TRUE if successful and FALSE otherwise.
+**
+**	Called by:
+**		rFrbf.
+**
+**	Side Effects:
+**		many.  This changes, indirectly, all of the forms
+**		and the report.
+**
+**	Trace Flags:
+**		230, 232, 204.
+**
+**	Error messages:
+**		SYSERR on bad report.
+**
+**	History:
+**		6/2/82 (ps)	written.
+**		10/31/82 (ps)	change menu to form.
+**		1/19/83 (gac)	fixed "Editing Report:<blank>" bug.
+**		1/21/83 (gac)	clear screen after editing layout of report.
+**		1/85	(ac)	Added codes for modularization.
+**		2/85	(ac)	FEfile() as an argument to UTexe to handle
+**				I/O test files, recovery and frame dump
+**				file in a multi-process environment.
+**		7/15/85 (drh)	added En_qlang copy.
+**		24-nov-1987 (rdesmond)
+**			renamed rFag_set as rFagset to resolve name
+**			conflict with rFag_sel for MVS.
+**		20-dec-88 (sylviap)
+**			Performance changes - reads in roptions.frm.
+**      9/22/89 (elein) UG changes ingresug change #90045
+**	changed <rbftype.h> & <rbfglob.h> to "rbftype.h" & "rbfglob.h"
+**		9/25/89 (martym)
+**			(GARNET) Changed so that Fstructure form is not set up 
+**			and the query for the report is not proceessed
+**			if the source of report is a JoinDef.
+**		16-oct-89 (cmr)	deleted call to rFbrk_scn() and do
+**			call to rFmstruct() before calling rFmlayout().
+**		22-nov-89 (cmr)	removed called to rFagset().
+**		12/14/89 (elein)
+**			Replaced references to SourceIsJD with En_SrcTyp
+**			Replaced rbfstyle.h with rcons.h
+**		1/23/90 (martym)
+**			Changed the type of rFdisplay() from VOID to bool.
+** 		2/5/90 (martym)
+**			Changed so that rFqur_set is called all the time.
+**		06-jun-90 (cmr) Put back in call to rFbrk_scn().
+**		9-oct-1992 (rdrane)
+**			Use new constants in (r/rbf)_reset invocations.
+**              02-Jul-1999 (hweho01)
+**                      Included uf.h header file, it contains the function     
+**                      prototype of IIUFlcfLocateForm(). Without the explicit
+**                      declaration, the default int return value for a  
+**                      function will truncate a 64-bit address on ris_u64 
+**                      platform.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/		
+
+
+
+/* extern's */
+GLOBALREF       char    *Nroptions;
+GLOBALREF       bool    alloc_ropts;
+
+bool
+rFdisplay()
+{
+	/* external declarations */
+
+	FUNC_EXTERN	bool	rf_call_edit();
+
+
+	/* internal declarations */
+
+	i4	ntrims;
+	i4	nfields;
+      	char    *form;
+
+
+
+	/* start of routine */
+
+#	ifdef	CFEVMSTAT
+
+	/*	Get virtual memory statistics */
+
+	FEgetvm(ERx("rFdisplay:	 Start of Edit Phase"));
+
+#	endif
+
+	/* See if the roptions frame has already been initialized */
+	if (!alloc_ropts)
+	{
+		Nroptions = F_ROPTIONS;
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(),(form = Nroptions))!=OK)
+		{
+		    	IIUGerr(E_RF002D_Cannot_locate_form, 0, 1, form);
+			return(FALSE);
+		}
+		alloc_ropts = TRUE;
+	}
+
+	/* Initialize global variables */
+
+	rFreset(RP_RESET_REPORT,RP_RESET_LIST_END);
+
+#	ifdef CFEVMSTAT
+	FEgetvm(ERx("rFdisplay:	 After rFreset(RP_RESET_REPORT,RP_RESET_LIST_END)"));
+#	endif
+
+	rFmstruct();		/* set up the Fstructure form */
+	
+	/* set up the underlying forms */
+	rFmlayout(&ntrims, &nfields);
+
+#	ifdef CFEVMSTAT
+		FEgetvm(ERx("rFdisplay:	 After rFmlayout"));
+#	endif
+
+	rFqur_set();		/* Process the query for the report */
+
+	if (!rFbrk_scn())
+		IIUGerr(E_RF0026_rFdisplay___Error_pro, UG_ERR_FATAL, 0);
+
+	r_reset(RP_RESET_TCMD, RP_RESET_LIST_END);
+
+	return(rfedit(ntrims, nfields));
+
+}

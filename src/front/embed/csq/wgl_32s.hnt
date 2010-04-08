@@ -1,0 +1,14 @@
+#
+# wgl_32s.hnt file for front/embed/csq
+#
+# History:
+#	12-oct-2004 (dansa02)
+#	    Adapted for flat-linking instead of IngresII DLL structure.
+#	    Removed congui subsys (which was a vestige of Win3.1 ugliness).
+#	30-Jan-2007 (wridu01)
+#	    Added objonly = csqmain to accomodate Ingres 2006 r2 build
+
+subsys = console
+
+main = csqmain.c
+objonly = csqmain.obj

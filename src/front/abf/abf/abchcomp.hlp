@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abchcomp.hlp, help for the confirmation pop-up allowing existing
+/#-- frames to be changed to the new compiled forms/ database forms default.
+/#-- 
+You have just entered a new default behavior for 4GL and Report frames:
+either to use compiled forms, or to fetch their forms from the database at 
+run-time.  If you wish all existing frames to be changed to the new 
+behavior, select "Yes"; if you wish existing frames to keep their current
+behavior, select "No".

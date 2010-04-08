@@ -1,0 +1,1449 @@
+/*
+** Copyright (c) 1985, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<cv.h>		 
+# include	<me.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ui.qsh>
+# include	<erfe.h>
+# include	<ug.h>
+# include	<iisqlda.h>		 
+# include	"ertu.h"
+# include	"tuconst.h"
+##include	<uigdata.qsh>
+# include       <lo.h>
+# include       <uf.h>
+/* this tells MING about uigdata.qsh dependency.
+#include        <uigdata.h>
+*/
+
+/**
+** Name:	creattbl.qsc -	Create table screen of Tables Utility.
+**
+** Description:
+**	This module is called when the "Create" menu item is selected.
+**	This file defines:
+**
+**	newtable()	routine used to drive "Create" table screen.
+**
+** History:
+**	6/04/85		(prs)	Fix bug 5190.  Lowercase table names.
+**	1/15/86		(prs)	Add refs to SQL help file.
+**	25-mar-1987	(daver) Modified for Tables Utility use.
+**	22-oct-1987 (peter)
+**		Change 'y' and 'n' and change FEmsg to IIUGerr.
+**	1-dec-1987 (peter)
+**		Change call to tugetattr.
+**	6/88 (bobm)	pass in title of form.
+**	11/2/88 (pete)	changed to use new IIUIrel_help, rather than tutabbas.
+**	2-feb-1989 (danielt)
+**		tok out calls to IIUIxconn*() (not needed by DG anymore)
+**	07-dec-1989 (seng)
+**		Need to compile without optimization for PS/2. Symptoms
+**		are dumping core upon exit of the "tables" utility form.
+**      12-dec-1989     (pete)  Remove menuitems Top, Bottom and Find;
+**			Add (validate=0, activate=0) to Help, End and Quit.
+**	29-dec-1989	(pete)  Add Lookup menuitem for help on Datatypes.
+**			Also, change the unique keys popup to use ListPick.
+**			(and remove need for file "tukeys.frm")
+**	1/8/90	(pete)	Set Defaultability and Nullability values to correct
+**			default values when user creates a Logical key.
+**	3/2/90	(pete)	Changed menuitems from Save/End to End/Cancel.
+**	9/11/90 (owen)	Fix bug where cursor did not resume to top of table
+**			form after selecting the save option. Fix taken from
+**			Pyramid port. No change number (yet)...
+**	31-oct-1990 (pete)
+**		Fix bug 34244 - ListPick for datatypes doesn't work on
+**		Gateways.
+**	11/07/90 (emerson)
+**		If table name is an SQL keyword, put out an error message
+**		instead sending the back-end a messed-up CREATE TABLE
+**		(bug 33846).
+**	17-aug-91 (leighb) DeskTop Porting Change: include iisqlda.h
+**	15-nov-91 (leighb) DeskTop Porting Change: 
+**		added comment where HiC compiler generates bad code.
+**	17-sep-1992 (mgw)
+**		Took out tuprmptlst() - not used. Also Added new Defaults
+**		handling.
+**	12-jan-1993 (rogerl)
+**		tblname might be del id, size now reflects; change \0 to EOS
+**		Delete IIUGIsSQLKeyWord cruft.
+**	21-jan-1993 (mgw)
+**		Report the proper error when an illegal table name is given
+**		to the GetTableDef prompt.
+**	06-apr-1993 (rogerl)
+**		Add hidden column defaults_lkey for keying defaults values in
+**		defaults list.  Each row with defaults entry has a unique
+**		value for that key which corresponds to the 'key' field in
+**		TU_DLE.
+**	16-apr-1993 (rogerl)
+**		Check for running >= 6.5 && not gateways before putting up
+**		new defaults listchoices goodies. (51040)
+**	16-apr-1993 (rogerl)
+**		Properly word error message if EditDefaults is chosen while
+**		the cursor is not on the table field. (50751)
+**	19-apr-1993 (rogerl)
+**		Defaults 'suggestions' need to start out with NULLs == yes
+**		and DEFAULT == null (49208).  'nullable' is now passed to
+**		setdefstate as a ER_MSGID instead of char *.  Delete QUEL
+**		anachronisms.
+**	20-apr-1993 (rogerl)
+**		Backward compatability: don't create 6.5 only (defaults value)
+**		SQL syntax if connected to 6.4 or lower (50137).  Also, want
+**		'defaults' to show 'n/a' if connected to 6.4, and make defaults
+**		field read-only.  delete setdefstate().  Close logic hole
+**		where attempt to create NOT NULL DEFAULT NULL would be sent to
+**		DBMS in some cases.
+**	23-apr-1993 (rogerl)
+**		Also disable EditDefaults if connected to 6.4 DBMS.
+**	7-jun-1993 (rogerl)
+**		If user 'returns' out of the defaults field it is normally
+**		replaced with its initial value.  Check to see if the user had
+**		put 'no' for Nulls, and if so, emit error message if user
+**		doesn't change the Defaults field to something other than
+**		'null', and place them back on the field (52487).
+**	27-aug-1993 (mgw) Bug #54557
+**		Added error message E_TU000F_Bad_Defaultability to explain
+**		about proper defaultability values when user enters an illegal
+**		value in the Defaults column.
+**	20-sep-1993 (mgw)
+**		Add Datatypes BYTE, BYTE VARYING, LONG BYTE, and LONG VARCHAR
+**		to the datatypes listpick. Also, the previous change for bug
+**		54557 made it so user had to type over the previous value of
+**		the defaultability indicator in order to get to the next row.
+**		This fixes it so a carriage return in the defaultability
+**		column just restores the previous defaultability and continues.
+**	6-oct-1993 (rogerl)
+**		lp_buf was used to store uniq key as well as defaults values.
+**		If both had been 'loaded', then we really didn't know which
+**		the buffer contained; confusion reigned.  Spend a couple'o
+**		bytes for a separate ptr.  (54558)
+**	08-oct-1993 (rogerl)
+**		User may type owner specification (owner.table) into popup;
+**		to ensure correct casing etc., ChkDlm must be applied as to
+**		any other identifier. (54943)
+**	08-oct-1993 (rogerl/rdrane)
+**		Richard points out that identifier buffers may be overrun;
+**		make sure they're as big as can be.
+**	5-jan-1994 (mgw) Bug #58340
+**		Be sure to RESUME after error E_TU0010 when user tries to
+**		EditDefaults from the table name field (not on a column).
+**	10-feb-1994 (mgw) Bug #59596
+**		Can't have null default on a column with no nulls specified
+**		so change the default defaultability to yes in that case.
+**	08-apr-1994 (mgw) Bug #62186
+**		Make Key columns default to 'no' Nullability and 'no'
+**		Defaultability.
+**      21-mar-94 (smc) Bug #60829
+**              Added #include header(s) required to define types passed
+**              in prototyped external function calls.
+**	20-may-1997 (canor01)
+**	    Cleaned up compiler warnings from CL prototypes.
+**	10-may-1999 (walro03)
+**		Remove obsolete version string ps2_us5.
+**      02-Jul-1999 (hweho01)
+**              Included uf.h header file, it contains the function     
+**              prototype of IIUFlcfLocateForm(). Without the explicit
+**              declaration, the default int return value for a  
+**              function will truncate a 64-bit address on ris_u64 
+**              platform.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	24-Aug-2009 (kschendel) 121804
+**	    Update some of the function declarations to fix gcc 4.3 problems.
+**/
+
+FUNC_EXTERN	i4	FEinqerr();
+FUNC_EXTERN	DB_STATUS  IIUIrel_help();
+FUNC_EXTERN	i4	tugetattr();
+FUNC_EXTERN	STATUS	parsecreate();
+FUNC_EXTERN	STATUS	tuchkname();
+FUNC_EXTERN	i4	IIUIdml();
+FUNC_EXTERN	VOID	FEdml() ;
+FUNC_EXTERN     char    *IITUprTablePrompt();
+FUNC_EXTERN     i4      IITUclkCheckLogKey();
+FUNC_EXTERN	VOID	IITUcdlClearDefaultList();
+FUNC_EXTERN	ER_MSGID   IITUvunValueUserNull(char *response);
+
+static bool	crtformready = FALSE;
+static bool	keyformready = FALSE;
+static bool	dfltformready = FALSE;
+static char	*uniq_buf ;	/* buffer of unique key 
+				** string for ListPick
+				*/
+static char	*defl_buf ;	/* buffer of default
+				** string for ListPick
+				*/
+static char 	*load_lptypes();
+static char	*load_lp();
+static char	*tugetDtype();
+
+static const
+##      char    _Form[]		= ERx("tucreatefr"),
+##	/* Fields: */
+##              _Table[]	= ERx("table"),
+##              _Name[]		= ERx("name"),
+##	/* Table field: */
+##              _Tblfld[]	= ERx("attributes"),
+##	/*   Columns: */
+##		_Key[]		= ERx("key"),
+##              _Nullable[]	= ERx("nullable"),
+##              _Defable[]	= ERx("defable"),
+##              _KeysSet[]	= ERx("keys_set"),
+##              _Deflkey[]	= ERx("default_lkey"),
+##              _DataFmt[]	= ERx("datafmt"),
+##	/* Other */
+##		_Blank[]	= ERx("");
+
+static LISTVALS ukeys[] = {
+	{F_TU0034_Row1_Col1,	F_TU0035_Row1_Col2},
+	{F_TU0036_Row2_Col1,	F_TU0037_Row2_Col2},
+};
+#define uk_cnt (sizeof(ukeys)/sizeof(LISTVALS))
+
+static DTYPE datatypes[] = {
+	/* datatype,          OPEN/SQL? */
+	{F_TU005A_Varchar,	TRUE},
+	{F_TU005B_Char,		TRUE},
+	{F_TU005C_Integer,	TRUE},
+	{F_TU005D_Smallint,	TRUE},
+	{F_TU0067_Integer1,	FALSE},
+	{F_TU005E_Float,	TRUE},
+	{F_TU0068_Float4,	FALSE},
+	{F_TU005F_Date,		TRUE},
+	{F_TU0060_Money,	FALSE},
+	{F_TU0009_Decimal,	FALSE},
+	{F_TU0086_Byte,		FALSE},
+	{F_TU0087_ByteVarying,	FALSE},
+	{F_TU0088_LongByte,	FALSE},
+	{F_TU0089_LongVarchar,	FALSE},
+	{F_TU0061_TblKeySysMnt, FALSE},
+	{F_TU0062_TblKeyNoSysMnt,FALSE},
+	{F_TU0065_ObjKeySysMnt, FALSE},
+	{F_TU0066_ObjKeyNoSysMnt,FALSE}
+};
+#define dt_cnt (sizeof(datatypes)/sizeof(DTYPE))
+
+static LISTVALS dfltlist[] = {
+	{F_UG0007_No2,		F_TU0080_No_Desc},
+	{F_UG0002_Yes2,		F_TU0081_Yes_Desc},
+	{F_TU0079_User2,	F_TU0082_User_Desc},
+	{F_TU007D_Null2,	F_TU0083_Null_Desc},
+	{F_TU0074_Value2,	F_TU0084_Value_Desc}
+};
+#define dflt_cnt (sizeof(dfltlist)/sizeof(LISTVALS))
+
+static char *lp_dtbuf ;	/* buffer of data types for ListPick */
+static bool lpTypesReady = FALSE;	/* Has ListPick list of datatypes
+					** been built yet?
+					*/
+
+VOID
+## newtable(lasttable, title_prefix)
+char	*lasttable;	/* set to name of successfully created table */
+char	*title_prefix;	/* optional prefix for screen title */
+## {
+	ER_MSGID	nulldef;
+##	char		*defdef;
+##      char    title[TU_TITLE_SIZE +1];
+
+##	i4	state;
+##	i4	keys_set;
+##	char	objname[FE_MAXNAME + 1];
+##	char	mvformat[50];	/* max size for name of data format */
+##	char	mvnullable[6];
+##	char	mvdefault[7];	/* n/a, yes, no, user, or value */
+##	char	startdefault[7];  /* n/a, yes, no, user, or value */
+##	char	keyno[5];
+	char	*defval;
+
+	if ( !crtformready )
+	{
+		if ( IIUFgtfGetForm(IIUFlcfLocateForm(), _Form) != OK )
+		{
+			IIUGerr( E_TU0041_Get_Form_Failed, UG_ERR_ERROR,
+					1, _Form
+			);
+			return;
+		}
+		crtformready = TRUE;
+
+	}
+
+##	display _Form fill
+##	initialize
+##	{
+		lasttable[0] = EOS;
+
+		IITUcdlClearDefaultList();
+
+		nulldef = F_UG0002_Yes2;
+
+			/* n/a is only allowable response for < 6.5 */
+			/* or gateways */
+    		if ( ( STcompare( IIUIscl_StdCatLevel(), UI_LEVEL_65 ) >= 0 )
+		   && ( IIUIdml() != UI_DML_GTWSQL ) )
+		    defdef = ERget(F_TU007D_Null2);
+		else
+		    defdef = ERget(F_TU0001_n_a);
+
+		/* note that defaults_lkey field is populated with
+		** values from calls to tugetattr()
+		*/
+
+##		inittable _Form _Tblfld fill ( _KeysSet = i4,
+##					_Deflkey = integer );
+
+       		IITUstlSetTitle (title_prefix, ERget(F_TU0031_Create), title);
+##		putform _Form (utitle = title)
+
+		if ( ( IIUIdml() == UI_DML_GTWSQL )
+		   ||
+		   ( STcompare( IIUIscl_StdCatLevel(), UI_LEVEL_65 ) < 0 ) )
+		{ /* in gateway SQL, default value info is not valid, so
+		     don't allow user to enter it (ditto < 6.5) */
+##			set_frs column _Form _Tblfld ( mode(_Defable) = READ );
+		}
+##		resume field _Table;
+##	}
+
+##	activate column _Tblfld _Name:
+##	{
+##		getrow _Form _Tblfld (	state = _STATE,
+##					mvformat = _DataFmt,
+##					keyno = _Key,
+##					mvnullable = _Nullable,
+##					mvdefault = _Defable
+##		);
+
+		/*
+		** Display the default nullable/defaultable settings if
+		** we've added a new row, or if we've just inserted a row.
+		*/
+		if ( (state == stNEW &&
+			mvnullable[0] == EOS && mvdefault[0] == EOS) ||
+		     (mvformat[0] == EOS && keyno[0] == EOS &&
+			mvnullable[0] == EOS && mvdefault[0] == EOS) )
+		{
+##			putrow _Form _Tblfld
+##				(_Nullable = ERget(nulldef), _Defable = defdef)
+		}
+
+##		resume next
+##	}
+
+##      activate column _Tblfld _DataFmt:
+##      {
+            if (IIUIdml() != UI_DML_GTWSQL)
+            {
+                /* Assertion: we're running against Ingres */
+
+                /* check if user entered a Logical key data type WITH
+                ** system_maintained. If so, set Nullability and Defaultability
+                ** for the column to required values.
+                */
+##              getrow _Form _Tblfld (  mvformat = _DataFmt,
+##                                      keys_set = _KeysSet,
+##                                      state    = _STATE
+##                                      )
+                if ( state != 2 && keys_set != 1 )
+                {
+                    /* changed or new row that we haven't yet set the
+                    ** Null, Default info for.
+                    */
+
+                    char dmy[22+1];  /*sizeof("with system_maintained")+1*/
+
+                    if (IITUclkCheckLogKey(mvformat, dmy) == TU_LOGKEY_WITH)
+                    {
+                        /* Assertion: Valid logical key
+                        ** "WITH system_maintained".  Set Null to "No"
+                        ** and Defaults to "Yes" -- these are required for
+                        ** "WITH system_maintained" logical keys.
+                        */
+                        STcopy(ERget(F_UG0007_No2),  mvnullable);
+                        STcopy(ERget(F_UG0002_Yes2), mvdefault);
+
+##                      putrow _Form _Tblfld (
+##                                      _Nullable = mvnullable,
+##                                      _Defable = mvdefault,
+##                                      _KeysSet = 1
+##                                      );
+                    }
+                }
+            }
+
+##          resume next
+##      }
+
+##	activate column _Tblfld _Key:
+##	{
+##		getrow _Form _Tblfld (	keyno = _Key,
+##					keys_set = _KeysSet,
+##					mvdefault = _Defable,
+##					state = _STATE
+##		);
+
+		if (keyno[0] != EOS)	/* is keyno NULL ? */
+		{
+		    STATUS	rval;
+		    i4		knum;
+
+		    rval = CVan(keyno,&knum);	/* not necessary if NULLABLE */
+		    if (rval != OK || knum <= 0)
+		    {
+			IIUGerr(E_TU0001_Bad_Key_Number, UG_ERR_ERROR,
+				(i4) 1, (PTR) keyno);
+##			resume
+		    }
+		    CVna(knum,keyno);
+
+		    if ( state != 2 && keys_set != 1 )
+		    {
+			/* Only run this block for changed rows and only
+		     	** run it one time for each row ("_KeysSet" indicates
+			** if it has been run before).
+			**
+		        ** If key column, then reset default Nullability
+		        ** to be "no" (CJDate says keys shouldn't take on Null
+			** values; User can override if they insist on
+			** bad design!)
+			*/
+		        STcopy(ERget(F_UG0007_No2),mvnullable);
+
+			/* Bug 62186 - make key column 'no' NULLS, 'no' Dflt */
+			if ( !STequal(mvdefault, ERget(F_UG0007_No2))
+				&& IIUIdml() != UI_DML_GTWSQL )
+			{
+		            STcopy(ERget(F_UG0007_No2),mvdefault);
+			}
+			   
+##		        putrow _Form _Tblfld (
+##					_Nullable = mvnullable,
+##					_Defable = mvdefault,
+##					_KeysSet = 1
+##			);
+		    }
+		}
+
+##		resume next
+##	}
+
+##	activate column _Tblfld _Nullable
+##	{
+		ER_MSGID	nullable;
+		STATUS		retstat;
+
+##		getrow _Form _Tblfld (
+##				keyno = _Key,
+##				mvnullable = _Nullable,
+##				mvdefault = _Defable
+##		);
+		_VOID_ IIUGyn(mvnullable, &retstat);
+		if (retstat == E_UG0004_Yes_Response)
+		{
+			nullable = F_UG0002_Yes2;
+		}
+		else if (retstat == E_UG0005_No_Response)
+		{
+			nullable = F_UG0007_No2;
+			/*
+			** Fix bug #59596 - can't have null default on a
+			** column with no nulls so change default to yes here.
+			*/
+			if (STequal(mvdefault, ERget(F_TU007D_Null2)))
+			{
+				STcopy(ERget(F_UG0002_Yes2), mvdefault);
+			}
+		}
+		else
+		{
+			/* Nullable != (Yes or No). Probably empty. */
+
+			i4	knum;
+			_VOID_ CVan(keyno, &knum);
+
+			/* bug 4011: if blank out Null column by hitting Return,
+			** then set to "No" if Key column is set (i.e. don't
+			** always set based on Query language default:
+			** "nulldef").
+			*/
+			nullable = (knum > 0) ? F_UG0007_No2 : nulldef;
+		}
+
+##		putrow _Form _Tblfld
+##			( _Nullable = ERget(nullable), _Defable = mvdefault );
+
+##		resume next
+##	}
+
+##	activate before column _Tblfld _Defable
+##	{
+##		getrow _Form _Tblfld (startdefault = _Defable);
+		STtrmwhite(startdefault);
+##		resume
+##	}
+
+##	activate after column _Tblfld _Defable:
+##	{
+		STATUS	  retstat;
+		ER_MSGID  rspns;
+##		i4	  dkey = 0;  /* hidden row value; index into deflist */
+
+##		getrow _Form _Tblfld (	mvnullable	= _Nullable,
+##					mvdefault	= _Defable,
+##					dkey		= _Deflkey
+##		);
+			/* if running gateways or < ingres6.5, don't allow
+			** user defined defaults (no WITH DEFAULT, NOT DEFAULT)
+			*/
+		if ( (IIUIdml() == UI_DML_GTWSQL)
+		  || 
+    		  ( STcompare( IIUIscl_StdCatLevel(), UI_LEVEL_65 ) < 0 ) )
+		{
+			STcopy(ERget(F_TU0001_n_a), mvdefault);
+##			putrow _Form _Tblfld ( _Defable = mvdefault );
+##			resume next
+		}
+
+		rspns = IITUvunValueUserNull(mvdefault);
+
+		if (rspns == (ER_MSGID) 0)	/* not value, user, or null */
+		{				/*    look for yes or no    */
+
+			_VOID_ IIUGyn(mvdefault, &retstat);
+			if (retstat == E_UG0005_No_Response)	/* No */
+			{
+				STcopy(ERget(F_UG0007_No2), mvdefault);
+			}
+			else if (retstat == E_UG0004_Yes_Response) /* Yes */
+			{
+				STcopy(ERget(F_UG0002_Yes2), mvdefault);
+			}
+			else	/* Illegal defaultability */
+			{
+			    if (mvdefault[0] == EOS)
+			    {
+				/* Must've been a carriage return */
+				/* restore previous value here    */
+				STcopy(startdefault, mvdefault);
+			    }
+			    else
+			    {
+				/* Bogus defaultability */
+				IIUGerr(E_TU000F_Bad_Defaultability,
+				    	UG_ERR_ERROR, 1, mvdefault);
+##				resume column _Tblfld _Defable
+			    }
+			}
+		}
+		else if (rspns == F_TU0074_Value2)
+		{
+			if (!STequal(startdefault, ERget(F_TU0074_Value2)))
+			{
+				/* pick up defaults list key in case this
+				** is a change and not a new row.
+				** if dkey is 0, this is a new defaults
+				** value.  if a defaults value is added,
+				** the value for the key must be put into
+				** the hidden column
+				*/
+				if (!IITUedEditDefault( &dkey ))
+				{
+					STcopy(startdefault, mvdefault);
+				}
+				else
+				{
+						/* dkey is 0 and TRUE return
+						** from EditDefault implies
+						** user has left default field
+						** blank, so no default value
+						*/
+					if ( dkey == 0 )
+					    STcopy(ERget(F_UG0007_No2),
+					    			mvdefault);
+					else
+					    STcopy(ERget(F_TU0074_Value2),
+								mvdefault);
+				}
+			}
+			else
+			{
+				/* restore starting value so tabbing
+				** through doesn't change field value
+				*/
+				STcopy( startdefault, mvdefault );
+			}
+		}
+		else if (rspns == F_TU007D_Null2)
+		{
+			if (IIUGyn(mvnullable, &retstat))
+			{
+				STcopy(ERget(rspns), mvdefault);
+			}
+			else
+			{
+				IIUGerr(E_TU000B_Null_Default, UG_ERR_ERROR, 0);
+				STcopy(startdefault, mvdefault);
+##				putrow _Form _Tblfld ( _Defable = mvdefault );
+##				resume column _Tblfld _Nullable
+			}
+		}
+		else/* ( rspns == F_TU0079_User2 ) */
+		{
+			STcopy(ERget(rspns), mvdefault);
+		}
+			/* dkey or mvdefault may have changed
+			*/
+##		putrow _Form _Tblfld ( _Defable = mvdefault, _Deflkey = dkey );
+
+##		resume next
+##	}
+
+##	activate menuitem ERget(FE_Insert)
+##		(EXPL = ERget(F_TU004E_ExplInsert))
+##	{
+##		i4	ontable;
+##		i4	curcol;
+
+##		inquire_frs field _Form (ontable = table)
+		if (ontable == 0)
+		{
+			IIUGerr(E_TU0002_Must_be_on_table_fiel, UG_ERR_ERROR,
+				(i4) 0);
+##			resume
+		}
+
+##		inquire_frs table _Form (curcol = rowno(_Tblfld))
+		--curcol;
+##		insertrow _Form _Tblfld curcol
+##		set_frs form (change = 1)
+##	}
+##	activate menuitem ERget(FE_Delete)
+##		(EXPL = ERget(F_TU004F_ExplDelete))
+##	{
+##		i4	ontable;
+##		i4	dkey = 0;
+
+##		inquire_frs field _Form (ontable = table)
+		if (ontable == 0)
+		{
+			IIUGerr(E_TU0003_Must_be_on_table_fiel, UG_ERR_ERROR,
+				(i4) 0);
+##			resume
+		}
+			/* get key into defaults list for this row  */
+
+##		getrow _Form _Tblfld ( dkey = _Deflkey );
+
+			/* delete the defaults list entry if one exists */
+		IITUdndDefaultNodeDelete( dkey );
+
+##		deleterow _Form _Tblfld
+##		set_frs form (change = 1)
+##	}
+##	activate menuitem ERget(FE_Blank) (validate = 0,
+##		EXPL = ERget(F_TU0050_ExplBlank))
+##	{
+##		clear field _Tblfld
+##		putform (table = _Blank);
+##		set_frs form (change = 0)
+			/* throw away any defaults values list */
+		IITUcdlClearDefaultList();
+##		resume field _Table;
+##	}
+##	activate menuitem ERget(FE_Move)
+##		(EXPL = ERget(F_TU0051_ExplMove))
+##	{
+##		i4	ontable;
+##		i4	currow;
+##		i4	moverec;
+##		i4	dkey;
+
+##		inquire_frs field _Form (ontable = table)
+		if (ontable)
+		{
+##			getrow _Form _Tblfld (state = _STATE)
+			if (state == stUNDEF || state == stDELETE)
+			{
+				IIUGerr(E_TU0004_Cannot_Move_Empty_Col, 
+					UG_ERR_ERROR, (i4) 0);
+##				resume
+			}
+			else
+			{
+##				inquire_frs table _Form
+##					(currow = rowno(_Tblfld))
+##				getrow _Form _Tblfld currow
+##					(moverec = _RECORD)
+			}
+		}
+		else
+		{
+			IIUGerr(E_TU0005_Must_be_on_table_fiel, UG_ERR_ERROR,
+				(i4) 0);
+##			resume
+		}
+
+##		display submenu
+##		activate menuitem ERget(FE_Place)
+##			(EXPL = ERget(F_TU0052_ExplPlace))
+##		{
+##			inquire_frs field _Form (ontable = table)
+			if (!ontable)
+			{
+				IIUGerr(E_TU0006_Dest_Must_Be_Column, 
+					UG_ERR_ERROR, (i4) 0);
+			}
+			else
+##			{
+##				i4	destrec;
+
+##				inquire_frs table _Form
+##					(currow = rowno(_Tblfld))
+##				getrow _Form _Tblfld currow (destrec = _RECORD);
+				if (destrec == moverec)
+				{
+##					breakdisplay;
+				}
+##				scroll _Form _Tblfld to moverec
+##				getrow _Form _Tblfld (	objname = _Name,
+##						 	mvformat = _DataFmt,
+##							keyno = _Key,
+##							mvnullable = _Nullable,
+##							mvdefault = _Defable,
+##							dkey = _Deflkey
+##				);
+##				deleterow _Form _Tblfld
+				if (moverec < destrec)
+				{
+					--destrec;
+				}
+##				scroll _Form _Tblfld to destrec
+##				inquire_frs table _Form
+##					(currow = rowno(_Tblfld))
+				--currow;
+##				insertrow _Form _Tblfld currow (
+##					_Name = objname,
+##					_DataFmt = mvformat,
+##					_Key = keyno,
+##					_Nullable = mvnullable,
+##					_Defable = mvdefault,
+##					_Deflkey = dkey
+##				);
+##				set_frs form (change = 1)
+##			}
+##			breakdisplay;
+##		}
+##      	ACTIVATE MENUITEM ERget(FE_Help) (validate=0, activate=0,
+##              	EXPL = ERget(F_FE0100_ExplFrameHelp)),
+##              	FRSkey1 (validate = 0, activate=0)
+##		{
+			FEhelp(ERx("tumovesm.hlp"), 
+				ERget(F_TU0027_Move_Column_Submenu));
+##		}
+##		ACTIVATE MENUITEM ERget(FE_End) (validate=0, activate=0,
+##              	EXPL = ERget(F_FE0102_ExplEnd)),
+##			FRSkey3 (validate = 0, activate=0)
+##		{
+##			breakdisplay;
+##		}
+##	}					/* end menuitem "Move" */
+##	activate menuitem ERget(FE_GetTableDef)
+##		(EXPL = ERget(F_TU004D_ExplGetTblDef))
+##	{
+	    UI_HELP_INFO	*rel_info;
+	    char		ldtblwidth[20];
+##          char		*p_tbl = (char *)NULL;
+	    DB_STATUS		rval;
+	    FE_RSLV_NAME	rname;
+	    char		get_own[FE_UNRML_MAXNAME + 1];
+	    char		get_name[FE_UNRML_MAXNAME + 1];
+
+            while (1)   /* loop till good table name is entered */
+            {
+                p_tbl = IITUprTablePrompt(p_tbl); /* prompt user for table name
+						  ** with popup Help available
+						  */
+                if ( (p_tbl == NULL) || (*p_tbl == EOS))
+##		    RESUME	/* user selected Cancel */
+                else
+                {
+		    rname.name = p_tbl;
+		    rname.owner_dest = get_own;
+		    rname.name_dest = get_name;
+		    rname.is_nrml = FALSE;
+
+		    /* FE_fullresolve(&rname); ??? */
+		    FE_decompose(&rname);
+
+		    if (IIUGdlm_ChkdlmBEobject(get_name, get_name, FALSE) ==
+			UI_BOGUS_ID)
+		    {
+			IIUGerr(E_TU0037_Name_contain_bad_char, UG_ERR_ERROR,
+				(i4) 1, get_name);
+			continue;
+		    }
+
+		    if (rname.owner_spec == FALSE)
+		    {
+		    	STcopy(IIUIdbdata()->suser, get_own);
+		    }	
+			  /* ensure correct casing etc of owner which may
+			  ** depend upon the 'kind' of database we's
+			  ** connected to; if suser is used this isn't
+			  ** necessary since it is assumed to be proper already
+			  */
+		    else if (IIUGdlm_ChkdlmBEobject(get_own, get_own, FALSE)
+			== UI_BOGUS_ID)
+		    {
+			  IIUGerr(E_TU0009_Owner_name_illegal,
+			      UG_ERR_ERROR, (i4) 1, get_own);
+			  continue;
+												    }
+			
+	    	    rval = IIUIrel_help(&get_name, &get_own, &rel_info);
+	    	    if (rval != OK)
+	    	    {
+			IIUGerr(E_TU004D_Error_in_IIUIrel_help, UG_ERR_ERROR,
+				(i4) 1, (PTR) &rval);
+                        continue;       /* Internal error. prompt again. */
+	    	    }
+	    	    else if (rel_info == NULL)
+		    {
+			IIUGerr(E_TU000E_Own_dot_Tab_notexist, UG_ERR_ERROR,
+				(i4) 2, (PTR) get_name, (PTR) get_own);
+                        continue;       /* no such table. prompt again. */
+	    	    }
+		}
+
+                break;              /* exit while() loop */
+            }
+
+	    /* note that any user-defined defaults associated with
+	    ** the columns in the table being gotten are added (cumulative)
+	    ** to the defaults list.  the defaults list is only cleared
+	    ** upon entry to this routine, because a user may repetitively
+	    ** GetTableDef - rows are added to those already on the screen
+	    ** possibly from previous GetTableDef's, possibly to rows which
+	    ** the user just created on the table field
+	    */
+	    /* assertion: table specified above exists */
+	    if (tugetattr(rel_info, _Form, _Tblfld, ldtblwidth) == 0)
+	    {
+		IIUGerr(E_TU0015_No_attributes_found, UG_ERR_ERROR,
+			(i4) 1, (PTR) p_tbl);
+	    }
+	    else
+	    {
+##		set_frs form (change = 1)
+##		resume field _Tblfld
+	    }
+##	}
+
+##	activate menuitem ERget(F_TU0017_EditDefaults)
+##		(EXPL = ERget(F_TU0070_ExplEdtDflt))
+##	{
+##		i4	ontab;	/* 1 if currently on the tblfld, 0 if not */
+##		i4	dkey;	/* hidden column/key value */
+
+			/* user defined defaults not avail in GW's or < 6.5 */
+    		if ( ( STcompare( IIUIscl_StdCatLevel(), UI_LEVEL_65 ) < 0 )
+		   || ( IIUIdml() == UI_DML_GTWSQL ) )
+		{
+			IIUGerr(E_TU000A_NA_Defaults, UG_ERR_ERROR, (i4) 0);
+##			resume
+		}
+
+##		inquire_frs field _Form (ontab = TABLE);
+		if (ontab == 0)
+		{
+			IIUGerr(E_TU0010_Must_be_on_table_fiel, UG_ERR_ERROR,
+					(i4) 0);
+##			resume
+		}
+
+		/* pick up the key to the defaults list */
+##		getrow _Form _Tblfld ( dkey = _Deflkey );
+
+		/* note that 
+		** 1) EditDefault will install a value if one didn't
+		**	already exist (dkey will be 0 in that case).
+		**	dkey contains new value upon return.
+		** 2) EditDefault will change an existing value if
+		**	that value already exists; retaining key.
+		** 3) If dkey is 0 upon return, the defaults value
+		**	was left blank, so user wants to delete it.
+		*/
+
+		if (IITUedEditDefault( &dkey ))
+		{
+			/* TRUE from EditDefault with 0 key indicates
+			** deleted defaults value; restart with 'no'
+			*/
+			if ( dkey == 0 )
+			    STcopy(ERget(F_UG0007_No2), mvdefault);
+			else
+			    STcopy(ERget(F_TU0074_Value2), mvdefault);
+
+			/*
+			** Reset entry value of 'Defaults' field in case
+			** we're currently on that field.
+			*/
+
+			STcopy(mvdefault, startdefault);
+
+##			putrow _Form _Tblfld ( _Defable = mvdefault,
+##					_Deflkey = dkey );
+		}
+
+##	}
+
+##	activate FRSkey7
+##		(EXPL = ERget(F_FE0104_ExplFind)) /* ERget(FE_Find) */
+##	{
+		FEtabfnd(_Form, _Tblfld);
+##	}
+##	activate FRSkey5
+##		(EXPL = ERget(F_FE0105_ExplTop))  /* ERget(FE_Top) */
+##	{
+##		scroll _Form _Tblfld to 1
+##	}
+##	activate FRSkey6
+##		(EXPL = ERget(F_FE0106_ExplBottom)) /*ERget(FE_Bottom) */
+##	{
+##		scroll _Form _Tblfld to end
+##	}
+
+
+##      activate menuitem ERget(FE_Lookup) (validate = 0, activate = 0),
+##              FRSkey10 (validate = 0, activate = 0)
+##      {	/* ListChoices */
+##		i4 item;
+##              char name[FE_MAXNAME+1];
+##	        char *chosen;
+
+##              INQUIRE_FRS FIELD _Form (item = TABLE, name = NAME)
+		if (item == 1)	/* cursor is in table field */
+##		    INQUIRE_FRS COLUMN _Form _Tblfld (objname = NAME)
+		else
+		    objname[0] = EOS;
+
+                if ((item == 1) && STequal(objname, _DataFmt))
+                {
+		    /* Put up ListChoices for "Data Type" field */
+
+		    if (!lpTypesReady)
+		    {
+			if ((lp_dtbuf = load_lptypes(datatypes,dt_cnt)) == NULL)
+##			    RESUME
+			else
+			    lpTypesReady = TRUE;
+		    }
+
+                    item = IIFDlpListPick(ERget(F_TU0063_DtypeTitle),
+			lp_dtbuf, 0, -1, -1,
+                        ERget(F_TU0064_HlpTitle),
+			ERx("tudtypes.hlp"), NULL, NULL);
+
+                    if (item >= 0)	/* user chose a row */
+                    {
+			chosen = tugetDtype(item);
+##		        PUTROW _Form _Tblfld (_DataFmt = chosen)
+##			SET_FRS FORM (CHANGE = 1)
+                    }
+        	}
+		else if ( ( (item == 1) && STequal(objname, _Defable) )
+
+		    &&  /* running 6.5 or above */
+
+		    ( STcompare( IIUIscl_StdCatLevel(), UI_LEVEL_65 ) >= 0 )
+
+		    &&  /* not gateway */
+
+		    ( IIUIdml() != UI_DML_GTWSQL ) )
+		{
+		    /* Put up ListChoices for "Defaults" field */
+
+		    if (!dfltformready)
+                    {
+                        if ((defl_buf = load_lp(dfltlist, dflt_cnt)) == NULL)
+			{
+##				resume
+			}
+                        else
+			    dfltformready = TRUE ;
+		    }
+
+                    item = IIFDlpListPick(ERget(F_TU007F_Select_Defaultability),
+                        	defl_buf, 0, -1, -1,
+                        	ERget(F_TU0085_Default_Val),
+                        	ERx("tudefaults.hlp"), NULL, NULL);
+
+		    switch (item)
+		    {
+		      case 0:
+			chosen = ERget(F_UG0007_No2);
+			break;
+		      case 1:
+			chosen = ERget(F_UG0002_Yes2);
+			break;
+		      case 2:
+			chosen = ERget(F_TU0079_User2);
+			break;
+		      case 3:
+			chosen = ERget(F_TU007D_Null2);
+			break;
+		      case 4:
+			chosen = ERget(F_TU0074_Value2);
+			break;
+		      default:
+##			resume
+		    }
+
+##		    PUTROW _Form _Tblfld (_Defable = chosen)
+##		    SET_FRS FORM (CHANGE = 1)
+		}
+                else
+                {
+                    /* lookups not supported on current field */
+		    IIUGerr( E_TU0053_No_Lookup, UG_ERR_ERROR,
+					1, ERget(FE_Lookup));
+                }
+
+##      }
+
+##	activate menuitem ERget(FE_Help) (validate=0, activate=0,
+##              EXPL = ERget(F_FE0100_ExplFrameHelp)),
+##		FRSkey1 (validate = 0, activate=0)
+##	{
+		FEhelp(ERx("tucreate.hlp"), 
+			ERget(F_TU0028_New_Table));
+##	}
+
+##	activate menuitem ERget(FE_Cancel) (validate=0, activate=0,
+##              EXPL = ERget(F_FE0103_ExplCancel)),
+##		FRSkey9 (validate = 0, activate=0)
+##	{
+		IITUcdlClearDefaultList();
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(FE_End)
+##		(activate=1, EXPL = ERget(F_TU004C_ExplSave)),
+##		FRSkey3 (activate=1)
+##	{
+		bool	key_unique;
+##		i4	errcol = 0;
+##		char	tblname[ FE_UNRML_MAXNAME + 1 ];
+
+		char	*attrs;
+		char	*modcols;
+		EXEC SQL BEGIN DECLARE SECTION;
+		char	*sql_buf;
+		EXEC SQL END DECLARE SECTION;
+
+##		inquire_frs form (state = change)
+		if (state == 0)
+		{
+			/* pressing End without making changes just returns */
+##			breakdisplay
+		}
+##		redisplay	/* activate=1 may cause screen changes */
+
+		if ( (sql_buf = (char *)MEreqmem((u_i4)0,
+		   (u_i4) FE_MAXNAME * DB_GW2_MAX_COLS + 2 * ( TUBUFSIZE + 1 ),
+					FALSE, (STATUS *)NULL)) == (char *)NULL)
+		{
+			IIUGerr(E_TU0033_tunmadd_bad_mem_alloc, UG_ERR_ERROR,0);
+##			resume;
+		}
+		attrs = sql_buf + FE_MAXNAME*DB_GW2_MAX_COLS;
+		modcols = attrs + TUBUFSIZE + 1;
+
+# ifdef DGC_AOS
+		/*
+		** Until INGRES supports a readonly mode, DG will use the
+		** following code to avoid ugly error messages that occur
+		** when trying to write to the database when we are only
+		** connected for readonly access.
+		*/
+		if (IIUIcro_CheckReadOnly())
+		{
+			IIUGerr(E_UI0016_ReadOnly_err, 0, 0);
+##			resume
+		}
+# endif
+
+##		getform ( tblname = _Table );
+		if (tuchkname(tblname) != OK)
+		{	/* Errors will be given by tuchkname */
+			goto _resumeTblfld;
+		}
+
+		modcols[0] = EOS;
+		if (parsecreate(attrs, TUBUFSIZE, modcols, TUBUFSIZE, &errcol)
+			!= OK)
+		{
+			if (errcol != 0)
+			{
+##				scroll _Form _Tblfld to errcol
+			}
+			goto _resume;
+		}
+		if ( modcols[0] != EOS && IIUIdcn_ingres() )
+		{
+		    /* keys specified on ingres dbms. see if key unique */
+		    i4	row;
+
+		    if (!keyformready)
+                    {
+                        if ((uniq_buf = load_lp(ukeys, uk_cnt)) == NULL)
+			    goto _resume;	/* error */
+                        else
+			    keyformready = TRUE ;
+		    }
+
+                    row = IIFDlpListPick(ERget(F_TU0069_Title),
+                        	uniq_buf, 0, -1, -1,
+                        	ERget(F_TU0033_Unique_Keys),
+                        	ERx("tukeys.hlp"), NULL, NULL);
+
+		    if (row == 0)
+			key_unique = TRUE ;
+		    else if (row == 1)
+			key_unique = FALSE ;
+		    else
+		    {
+			goto _resume;
+		    }	
+		}
+		if ( modcols[0] != EOS && ! IIUIdcn_ingres() )
+		{
+			/*
+			** Keys specified, and dbms != ingres.
+			*/
+			STprintf( sql_buf,
+				ERx(IIUIdck_req() == UI_KEY_Y
+				    ? "CREATE TABLE %s ( %s ) WITH KEY = (%s)"
+			    	    : "CREATE TABLE %s ( %s )"
+				),
+				tblname, attrs, modcols
+			);
+		}
+		else
+		{
+			STprintf(sql_buf,ERx("CREATE TABLE %s ( %s )"),
+							tblname, attrs);
+		}
+
+		IIUGmsg(ERget(F_TU003B_Creating_table), FALSE, 1, (PTR)tblname);
+		EXEC SQL PREPARE tutc_s1 from :sql_buf;
+		/* fix for bug 3131 -- if use keywords for object names,
+		** then PREPARE can return an error. check for it.
+		*/
+		if ( FEinqerr() != OK )
+		{	/* Error messages will come from the server */
+			goto _resume;
+		}
+
+		EXEC SQL EXECUTE tutc_s1;
+
+		if ( FEinqerr() != OK )
+		{	/* Errors will come from the server */
+			goto _resume;
+		}
+		else
+		{
+			IIUGmsg( ERget(F_TU003C_Table_created), FALSE,
+					1, (PTR)tblname
+			);
+##			sleep 2
+
+			STcopy(tblname, lasttable);
+			if ( modcols[0] != EOS && IIUIdcn_ingres() )
+			{
+				_VOID_ STprintf(sql_buf,
+					ERx(key_unique
+					    ? "MODIFY %s TO btree UNIQUE ON %s"
+					    : "MODIFY %s TO btree ON %s"
+					),
+					tblname, modcols
+				);
+
+				EXEC SQL EXECUTE IMMEDIATE :sql_buf;
+				if ( FEinqerr() != OK )
+				{
+					/* jupbug 4196 -- if modify failed,
+					then table should be dropped to give
+					user chance to fix up table def'n --
+					probably char key column is too long */
+
+					STprintf(sql_buf,
+					    ERx("DROP TABLE %s"), tblname);
+					EXEC SQL EXECUTE IMMEDIATE :sql_buf;
+
+					IIUGerr(E_TU0011_Error_modifying_table,
+						UG_ERR_ERROR, (i4) 1,
+						(PTR) tblname);
+
+					goto _resume;
+				}
+				else
+				{
+					IIUGmsg(ERget(F_TU0040_Table_modified),
+						FALSE, 2, (PTR) tblname,
+						(PTR) modcols) ;
+##					sleep 2
+				}
+			}
+		}
+
+		/* Assertion: CREATE TABLE was successful.
+		** Free memory, and return to caller.
+		*/
+		MEfree(sql_buf);
+##		breakdisplay
+
+_resumeTblfld:
+		MEfree(sql_buf);
+##		resume field _Table
+
+_resume:
+		MEfree(sql_buf);
+##	}
+##	finalize()
+
+	return;
+## }	/* 6.4_PC_80x86 Warning: HiC compiler screws up here! */
+
+/*{
+** Name:	load_lp - build character array for ListPick.
+**
+** Description:
+**	Load listpick unique key or default info into a character array.
+**
+** Inputs:
+**	LISTVALS   *lstvals	array of unique key descriptions
+**	i4        cnt		number of items in above array
+**
+** Outputs:
+**
+**	Returns:
+**		Pointer to character string, all set for ListPick's use.
+**		If error, returns NULL.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**	Allocates memory.
+**
+** History:
+**	12/29/89	(pete)	Initial Version.
+*/
+static char *
+load_lp (lstvals, cnt)
+LISTVALS  *lstvals;	/* array of unique key descriptions */
+i4	  cnt;		/* number of items in above array */	
+{
+	i4 size, i;
+	char *buf;
+	LISTVALS *p_uk = lstvals;
+	char *nl = ERx("\n");
+	char *separate = ERx(";");
+	i4 nl_size, sep_size;
+
+	nl_size = STlength(nl);
+	sep_size = STlength(separate);
+
+	for (i=0, size=0; i < cnt; i++, p_uk++)
+	{
+	    size += (STlength(ERget(p_uk->abbrev)) + sep_size);
+	    size += (STlength(ERget(p_uk->descrip)) + nl_size);
+	}
+
+	if ( (buf = (char *)MEreqmem((u_i4)0, (u_i4) (size +1),
+		FALSE, (STATUS *)NULL)) == NULL)
+	{
+    	    IIUGerr(E_TU0033_tunmadd_bad_mem_alloc, UG_ERR_ERROR, 0);
+	    return (char *)NULL;
+	}
+
+	*buf = EOS;
+	p_uk = lstvals;
+
+	for (i=0; i < cnt; i++, p_uk++)
+	{
+	    STcat (buf, ERget(p_uk->abbrev));
+	    STcat (buf, separate);
+	    STcat (buf, ERget(p_uk->descrip));
+	    STcat (buf, nl);
+	}
+
+	return buf;
+}
+
+/*{
+** Name:	load_lptypes - build character array for ListPick of data types.
+**
+** Description:
+**	Load listpick data types into a character array.
+**
+** Inputs:
+**	DTYPE *datatypes	array of data type descriptions
+**	i4	cnt		number of items in above array
+**
+** Outputs:
+**
+**	Returns:
+**		Pointer to character string, all set for ListPick's use.
+**		If error, returns NULL.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**	Allocates memory.
+**
+** History:
+**	12/29/89	(pete)	Initial Version.
+*/
+static char *
+load_lptypes (datatypes, cnt)
+DTYPE *datatypes;	/* array of data type descriptions */
+i4	cnt;		/* number of items in above array */	
+{
+	i4 size, i;
+	char *buf;
+	DTYPE *p_dt = datatypes;
+	char *nl = ERx("\n");
+	i4 nl_size;
+
+	nl_size = STlength(nl);
+
+	for (i=0, size=0; i < cnt; i++, p_dt++)
+	{
+		if (IIUIdcn_ingres())
+		{
+		    /* Ingres: include all data types */
+	            size += (STlength(ERget(p_dt->type)) + nl_size);
+		}
+		else
+		{
+		    /* Not INGRES; only include Open SQL data types */
+
+		    if (p_dt->openSql)
+	                size += (STlength(ERget(p_dt->type)) + nl_size);
+		}
+	}
+
+	if ( (buf = (char *)MEreqmem((u_i4)0, (u_i4) (size +1),
+		FALSE, (STATUS *)NULL)) == NULL)
+	{
+    	    IIUGerr(E_TU0033_tunmadd_bad_mem_alloc, UG_ERR_ERROR, 0);
+	    return (char *)NULL;
+	}
+
+	*buf = EOS;
+	p_dt = datatypes;
+
+	for (i=0; i < cnt; i++, p_dt++)
+	{
+		if (IIUIdcn_ingres())
+		{
+		    /* Ingres: include all data types */
+	    	    STcat (buf, ERget(p_dt->type));
+	    	    STcat (buf, nl);
+		}
+		else
+		{
+		    /* Not INGRES; only include Open SQL data types */
+
+		    if (p_dt->openSql)
+		    {
+	    	        STcat (buf, ERget(p_dt->type));
+	    	        STcat (buf, nl);
+		    }
+		}
+	}
+
+	return buf;
+}
+
+/*{
+** Name:	tugetDtype - get data type name picked from list.
+**
+** Description:
+**	return the string name of the data type the user picked from ListPick.
+**
+** Inputs:
+**	item	i4		item picked by user in table field.
+**
+** Outputs:
+**
+**	Returns:
+**		Pointer to name of data type.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**	NONE
+**
+** History:
+**	10-oct-1990 (pete)
+**		Initial version (for bug 34244)
+*/
+static char *
+tugetDtype (item)
+i4	item;
+{
+	char *typename = ERx("");
+
+	if (IIUIdcn_ingres())
+	{
+	    /* Ingres: all data types were loaded */
+	    typename = ERget(datatypes[item].type);
+	}
+	else
+	{
+	    i4  i = 0;
+	    i4  gtw_item = 0;
+	    DTYPE *p_dt = datatypes;
+
+	    /* Gateway: not all data types were loaded. Loop thru the array of
+	    ** types looking for the "item"th one loaded.
+	    */
+	    for (i=0; i < dt_cnt; i++, p_dt++)
+	    {
+		if (p_dt->openSql)
+		{
+		    /* this one was loaded into ListPick for Gateway */
+
+		    if (gtw_item == item)
+		    {
+			typename = ERget(datatypes[i].type);
+			break;
+		    }
+		    gtw_item++;
+		}
+	    }
+	}
+	return typename;
+}

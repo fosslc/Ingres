@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The per_tx_limit specifies the maximum number of locks per transaction
+  which can be supported by the locking system.  If a transaction
+  requires additional locks, Ingres will attempt to stay under the
+  per_tx_limit by escalating row or page locks to table locks.  If no
+  more escalation is possible, the transaction will be aborted.
+
+  The default is 750 locks per transaction.

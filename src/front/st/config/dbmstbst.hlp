@@ -1,0 +1,15 @@
+
+
+  The table_auto_structure indicates whether base table structure 
+  will be heap or will be chosen based on constraints defined with
+  the table.
+
+  If the auto structure option is selected and there is at least one
+  primary key, unique or foreign key constraint defined in the CREATE
+  TABLE statement, the table will be created with base table strcture
+  BTREE on the constrained columns. If more than one constraint is
+  defined, the base table structure will be based on a primary key 
+  constraint before a unique constraint, and a unique constraint before
+  a foreign key constraint.
+
+  The default is OFF.

@@ -1,0 +1,82 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=ENCTYPE="multipart/form-data"&title=Unit Archive Copy&submit=actbuCopy.html` -->
+
+<SCRIPT language="JavaScript">
+<!--
+function refresh(selaction)
+{
+    <!-- #ICE VAR=`
+    top.Main.Info.document.location = '/ice-bin/oiice.:http_api_ext/iceTools/buCopy.html?unit=:unit&action=' + selaction
+    ` -->
+}
+//-->
+</SCRIPT>
+
+<TABLE>
+<TR>
+<TD>
+You are about to
+</TD>
+<TD>
+<SELECT NAME="action" onChange="refresh(action.options[action.selectedIndex].value)">
+<OPTION VALUE="out" <!-- #ICE IF (`:action` == `out`) THEN=`SELECTED` -->>archive
+<OPTION VALUE="in"  <!-- #ICE IF (`:action` == `in`) THEN=`SELECTED` -->>load into
+</SELECT>
+</TD><TD><!-- #ICE FUNCTION=`unit?action=retrieve&unit_id=:unit`
+HTML=`the business unit <STRONG>:unit_name</STRONG>.
+<INPUT TYPE="HIDDEN" NAME="unit" VALUE=":unit">
+<INPUT TYPE="HIDDEN" NAME="name" VALUE=":unit_name">` -->
+</TD>
+</TR>
+</TABLE>
+
+<SCRIPT language="JavaScript">
+		var page = 0
+		var facet = 0
+		var internal = 0
+		var external = 0
+
+    var selected = document.forms[0].action.selectedIndex;
+    if(document.forms[0].action.options[selected].value == 'out')
+    {
+document.writeln('This unit is currently composed of:');
+document.writeln('<UL>');
+<!-- #ICE REPEAT FUNCTION=`document?action=select`
+HTML=`
+<!-- #ICE REPEAT IF (``:doc_unit_id`` == ``:unit``)
+    THEN=``
+           <!-- #ICE IF (````:doc_type```` == ````page````)
+           THEN=````page = page + 1````-->
+           <!-- #ICE IF (````:doc_type```` == ````facet````)
+           THEN=````facet = facet + 1```` -->
+           <!-- #ICE REPEAT IF (````:doc_type```` != ````````)
+           THEN=````
+           <!-- #ICE IF (````````:doc_ext_file```````` == ````````````````)
+           THEN=````````internal = internal + 1````````
+           ELSE=````````external = external + 1```````` -->```` -->``
+-->
+`
+-->
+document.writeln('<LI>' + page + ' pages');
+document.writeln('<LI>' + facet + ' facets');
+document.writeln('<LI>' + internal + ' documents stored inside the repository');
+document.writeln('<LI>' + external + ' documents stored on you server file system');
+document.writeln('</UL>');
+document.writeln('<P>The Business Unit is about to be extracted from the repository into a single archive file in the specified location.<BR>');
+document.writeln('<P><TABLE><TR>');
+document.writeln('<TD>Please select the target location for the archive file:</TD>');
+    }
+    else
+    {
+        document.writeln('<P>Please enter the path and filename of the Business Unit archive to load into the repository<BR>');
+        document.writeln('<INPUT TYPE="FILE" NAME="path" VALUE="">');
+        document.writeln('<P><TABLE><TR>');
+        document.writeln('<TD>Please select the target Business Unit location for the pages:</TD>');
+    }
+</SCRIPT>
+<TD>
+<SELECT NAME="default">
+<!-- #ICE REPEAT FUNCTION=`unit_location?action=select&ul_unit_id=:unit`
+HTML=`<OPTION VALUE=":ul_location_name">:ul_location_name` -->
+</SELECT>
+</TD></TR></TABLE>
+

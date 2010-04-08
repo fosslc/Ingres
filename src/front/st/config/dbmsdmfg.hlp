@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The dmf_group_size resource represents the size of the group buffers used 
+  in any read-ahead operations.
+
+  The default is 8 pages.

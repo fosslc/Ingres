@@ -1,0 +1,63 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+/*
+ *	Brief file of sql queries to demonstrate use of complex numbers,
+ *	a user-defined data type.
+ *
+ *	NOTE:  Assumes the existence of tables "op" and "op1" created by the
+ *	       orderd pair demo (file "op_load.qry")
+ *
+ *	Create a table called "cpx" with 2 columns, both of type complex
+ *	insert 8 rows into table "cpx"
+ */
+
+drop table cpx\g
+create table cpx (z1 complex, z2 complex);
+help cpx\g
+insert into cpx values ( complex(1,0), complex(-1,0) );
+insert into cpx values ( complex(0,0), complex(0,-1) );
+insert into cpx values ( complex(3,-2), complex(3,2) );
+insert into cpx values ( '[-1,-1]', '[5,2]' );
+insert into cpx values ( '[4,0]', '[0,-4]' );
+insert into cpx values ( complex( sqrt(2)/2.0,sqrt(2)/2.0 ), complex(3,2) );
+insert into cpx values ( complex(-sqrt(3)/2.0,-0.5), 
+  complex(-sqrt(3)/2.0,0.5) );
+insert into cpx values ( complex(2,2), complex(2,2) )\g
+
+/*	Perform some standard complex arithmetic, ie. addition, sub-
+ *	traction, multiplication, division
+ */
+
+modify cpx to btree on z1;
+select * from cpx\g
+select z1,z2,z1_plus_z2=z1+z2 from cpx;
+select z1,z2,z1_minus_z2=z1-z2 from cpx;
+select z1,z2,z1_times_z2=z1*z2 from cpx;
+select z1,z2,z1_over_z2=z1/z2 from cpx;
+select z1,negative_z1=-z1 from cpx\g
+
+/*
+ *	Utilize some standard complex funtions, ie. find real part,
+ *	find imaginary part, calculate absolute value and conjugate value
+ *	Show that some comparison operators cannot be used with complex 
+ *	numbers
+ */
+
+select z=z2,real=re(z2),imaginary=im(z2) from cpx;
+select z=z1,r=abs(z1),z_bar=conj(z1) from cpx\g
+select z=z1 from cpx where z1 <= complex(4,5) or z2 >= '[0,4]'\p\g
+select z=z1 from cpx where z1 != complex(3,-2) and z2 = complex(3,2)\p\g
+
+/*
+ *	Show the use of functions which take as arguments ordered pairs and
+ *	return complex numbers ("re_im"), and take as arguments complex numbers
+ *	and return ordered pairs ("xy","polar")
+ */
+
+drop table op_z\g
+create table op_z (name, z) as select name,re_im(point) from op\p\g
+modify op_z to btree on z;
+select name, z=c(z) from op_z\g
+select op1.point,op_z.z,polar_coords=polar(op_z.z) from op1,op_z where
+  op1.point = xy(op_z.z)\p\g

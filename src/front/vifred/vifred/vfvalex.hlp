@@ -1,0 +1,88 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vfvalex.hlp      Subtopic Help for Vifred "Field Validation Examples"
+Examples of Field Validations:
+
+    Numeric fields:
+
+        salary > 0
+        salary IS NOT NULL
+        salary <= 20000 OR (grade >= 7 AND salary <= 30000)
+
+    Character fields:
+
+        dept != "sales"
+        emps.loc = "NE"
+        manager = "Jones" OR manager = "Ortega"
+
+        Pattern match (see footnote below):
+            code = "Q[0-9][A-Z]"
+            batchno = "B[0-9]?-[STPMBK]*"
+
+        LIKE operator (Note single quotes; see footnote below):
+            ident LIKE 'I_9%'
+            area LIKE '%ne%'
+
+    Date fields:
+
+        entry_date > "1-jan-1997"
+        projects.confirm_date < "today"
+
+    Money fields:       (the money data type is not part of Open SQL)
+
+        projects.budget > "$10,000"
+
+    Compare with other fields:
+
+        field > otherfield
+        field IS NOT NULL AND otherfield IS NULL
+
+    Compare to a list of values:
+
+        number_field IN [25, 30, 35]
+        tblfld.number IN [1000, 2000]
+
+        status IN ["O", "C", "X"]
+        code IN ["O??", "ER?", "*9*"]
+
+    Compare with values in a Lookup table:
+
+        field IN table.column
+        field = "" OR field IN table.column
+
+        tablefield.column IN table.column
+        tablefield.column = "" OR tablefield.column IN table.column
+
+Syntax of a validation clause:
+
+        fieldname comparisonOperator [otherfield | constant]
+        fieldname [IS | IS NOT] NULL
+        fieldname IN [list | table.column]
+
+        Where the "fieldname" is the internal name of the field or 
+        tableFieldName.columnName for table field columns; the
+        comparisonOperator is one of:
+
+                =, <>, !=, >, >=, <, <=, LIKE
+
+        and items in square brackets ("[]") require that you choose one.
+
+        Validation clauses may be connected by the boolean operators
+        AND, OR, and NOT. For example:   age >= 18 AND age <= 65
+
+        Validation clauses may be grouped by enclosing them in
+        parenthesis.      For example:  (age IS NULL) OR (age >= 18)
+
+Footnotes:
+
+    Pattern Match:
+        "?" matches any single character.
+        "*" matches any number of characters.
+        [...] matches characters between the brackets including ranges
+                (for example, "[ABC]*" equals any string that begins with
+                A, B or C; "_[N-Z]" equals any two character string where
+                the second character is a letter of the alphabet between
+                N and Z).
+
+    LIKE (note that single quotes are used with the LIKE operator):
+        '_' matches any single character.
+        '%' matches any number of characters.

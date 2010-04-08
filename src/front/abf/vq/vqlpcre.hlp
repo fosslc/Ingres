@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlpcre.hlp, help behind Create a Local Procedure
+/#-- 
+Here are the steps for creating a local procedure:
+
+  * Name it.
+  * Specify a return type. This must be a simple data type, such as an integer
+    or varchar; local procedures cannot return complex data types such as
+    arrays. Select ListChoices for a list of return types.
+  * Enter a short description or comment if you want one.
+  * Select EditSource to add source code for the procedure.

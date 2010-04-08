@@ -1,0 +1,20 @@
+#
+# Jamfile file for cl!clf!gc_unix
+#
+
+SubDir ING_SRC cl clf gc_unix ;
+
+IISUBSYS cl clf gc_unix ;
+
+
+IIBINEXE gctest : gctest.c ;
+IINEEDLIBS gctest : COMPAT MALLOCLIB  ;
+
+IIBINEXE gcctest : gcctest.c ;
+IINEEDLIBS gcctest : COMPAT MALLOCLIB INGNETLIB  ;
+
+IILIBRARY COMPATLIB : gcsunlu62.c gcrslu62.c gcpport.c
+	gchplu62.c gcexec.c gccptbl.c gcccl.c gccbs.c gcblsio.c
+	gcblpgb.c gcblpack.c gcblcrc.c gcblast.c gcatrace.c gcarw.c
+	gcapwd.c gcaptbl.c gcagcn.c gcaconn.c gcaclsv.c gcacl.c ;
+

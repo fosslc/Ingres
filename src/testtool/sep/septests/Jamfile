@@ -1,0 +1,9 @@
+#
+# Jamfile file for testtool!sep!septests
+#
+
+SubDir ING_SRC testtool sep septests ;
+
+IISUBSYS testtool sep septests ;
+
+

@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The psf_memory resource controls the maximum amount of memory available
+  to the Parser Facility (PSF).  A related resource is qsf_memory;  the
+  Parser Facility uses Query Storage memory as well as Parser memory.

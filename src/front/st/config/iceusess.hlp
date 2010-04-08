@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The user_session_table resource specifies the number of buckets in the
+  user session hash table.  This table maintains a list of sessions that
+  have not timed out or have not been disconnected and context information is
+  still available.
+  Modifying the size of this value will affect the speed of lookup.
+
+  Default: 50

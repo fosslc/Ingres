@@ -1,0 +1,9 @@
+#
+# Jamfile file for common!jdbc!util
+#
+
+SubDir ING_SRC common jdbc util ;
+
+IISUBSYS common jdbc util ;
+
+

@@ -1,0 +1,72 @@
+#
+# MANIFEST file for back!scf!scd
+#
+# History:
+#	07-dec-2004 (abbjo03)
+#	   Split out scdmain and scfdiag from library on VMS.
+#	22-feb-2005 (abbjo03)
+#	   Build the RMS Gateway on VMS.
+#       4-apr-2008  (bolke01) 120219
+#          Jamfile was not in sync with the .lot files
+#	01-May-2009 (drivi01)
+#	     Add IIAdminManifest for iidbms, iistar and dmfrcp.
+#	     This will ensure that all binaries have built-in manifests
+#	     with elevated privileges.
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+#       18-Feb-2010 (horda03)
+#          Build scfdiag.c on VMS too.
+
+SubDir ING_SRC back scf scd ;
+
+IISUBSYS back scf scd ;
+
+IINOOPTIM scdopt.c : dr6_us5 ;
+IINOOPTIM scdmain.c : dr6_us5 ;
+IINOOPTIM scdinit.c : dr6_us5 ;
+IINOOPTIM scddbfcn.c : dr6_us5 ;
+
+if $(NT)
+{
+
+IIBINEXE iidbms : scdmain.c ;
+IINEEDLIBS iidbms : COMPATLIB DMFLIB CUFLIB GCFLIB  
+	SCFLIB ULFLIB ;
+IIAdminManifest iidbms ;
+
+IIBINEXE iistar : scdmain.c ;
+IINEEDLIBS iistar : COMPATLIB DMFLIB CUFLIB GCFLIB 
+	SCFLIB ULFLIB ;
+IIAdminManifest iistar ;
+
+IIBINEXE dmfrcp : scdmain.c ;
+IINEEDLIBS dmfrcp : COMPATLIB DMFLIB CUFLIB GCFLIB
+	SCFLIB ULFLIB ;
+IIAdminManifest dmfrcp ;
+
+IILIBRARY SCFLIB : scfdiag.c scdopt.c scdnote.c scdmo.c
+	scdinit.c scddbfcn.c ;
+
+IILIBRARY IMPSCFLIBDATA : scddata.c ;
+}
+else
+{
+    IILIBRARY SCFLIB : scfdiag.c scdopt.c scdnote.c scdmo.c
+	scdinit.c scddbfcn.c scddata.c ; 
+
+    if ! $(VMS)
+    {
+        IILIBRARY SCFLIB : scdmain.c ;
+    }
+    else
+    {
+        IIBINEXE iidbms : scdmain.c ;
+        IINEEDLIBS iidbms : SCFLIB QEFLIB DMFLIB OPFLIB PSFLIB QSFLIB RDFLIB GWFLIB 
+                            SXFLIB ADFLIB ULFLIB GCLIB CUFLIB QRFLIB TPFLIB COMPATLIB ;
+
+        IIBINEXE iirms : scdmain.c ;
+        IINEEDLIBS iirms : SCFLIB QEFLIB DMFLIB OPFLIB PSFLIB QSFLIB RDFLIB GWRMSLIB 
+                           GWFLIB SXFLIB ADFLIB LFLIB GCFLIB CUFLIB RQFLIB TPFLIB COMPATLIB ;
+    }
+}
+

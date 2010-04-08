@@ -1,0 +1,43 @@
+COPYFORM:	6.4	2002_06_28 07:26:00 GMT  
+FORM:	ima_qsf_cache_stats		
+	80	30	0	0	24	0	14	9	0	0	0	0	0	0	0	24
+FIELD:
+	0	server	21	32	0	30	1	63	0	1	30	0	33	QSF Cache Statistics for Server:	0	0	0	65536	512	0	0		c30			0	0
+	1	qsr_bkts_used	30	4	0	13	1	32	8	38	13	0	19	Buckets in use   :	0	0	0	65536	512	0	0		-f13			0	1
+	2	qsr_bmaxobjs	30	4	0	13	1	38	10	38	13	0	25	Most ever in any bucket:	0	0	0	65536	512	0	0		-f13			0	2
+	3	qsr_decay_factor	30	4	0	13	1	30	21	1	13	0	17	Decay Factor   :	0	0	0	65536	512	0	0		-f13			0	3
+	4	qsr_memleft	30	4	0	13	1	40	3	1	13	0	27	Memory (remaining/total) :	0	0	0	65536	512	0	0		-f13			0	4
+	5	qsr_memtot	30	4	0	13	1	16	3	41	13	0	3	/	0	0	0	65536	512	0	0		-f13			0	5
+	6	qsr_mx_index	30	4	0	13	1	30	15	1	13	0	17	Indexed Objects:	0	0	0	65536	512	0	0		-f13			0	6
+	7	qsr_mx_named	30	4	0	13	1	30	14	1	13	0	17	Named Objects  :	0	0	0	65536	512	0	0		-f13			0	7
+	8	qsr_mx_rsize	30	4	0	13	1	27	20	38	13	0	14	Qsr Mx Rsize:	0	0	0	65536	512	0	0		-f13			0	8
+	9	qsr_mx_size	30	4	0	13	1	28	19	38	13	0	15	Qsr Mx Size:	0	0	0	65536	512	0	0		-f13			0	9
+	10	qsr_mx_unnamed	30	4	0	13	1	30	13	1	13	0	17	Unnamed Objects:	0	0	0	65536	512	0	0		-f13			0	10
+	11	qsr_mxbkts_used	30	4	0	13	1	32	9	38	13	0	19	Peak buckets used:	0	0	0	65536	512	0	0		-f13			0	11
+	12	qsr_mxobjs	30	4	0	13	1	30	16	1	13	0	17	Total Objects  :	0	0	0	65536	512	0	0		-f13			0	12
+	13	qsr_mxsess	30	4	0	13	1	32	14	38	13	0	19	Peak Sessions    :	0	0	0	65536	512	0	0		-f13			0	13
+	14	qsr_named_requests	30	4	0	13	1	30	19	1	13	0	17	Object Requests:	0	0	0	65536	512	0	0		-f13			0	14
+	15	qsr_nbuckets	30	4	0	13	1	32	7	38	13	0	19	Hash Buckets     :	0	0	0	65536	512	0	0		-f13			0	15
+	16	qsr_no_destroyed	30	4	0	13	1	30	20	1	13	0	17	Objs Destroyed :	0	0	0	65536	512	0	0		-f13			0	16
+	17	qsr_no_index	30	4	0	13	1	30	9	1	13	0	17	Indexed Objects:	0	0	0	65536	512	0	0		-f13			0	17
+	18	qsr_no_named	30	4	0	13	1	30	8	1	13	0	17	Named Objects  :	0	0	0	65536	512	0	0		-f13			0	18
+	19	qsr_no_unnamed	30	4	0	13	1	30	7	1	13	0	17	Unnamed Objects:	0	0	0	65536	512	0	0		-f13			0	19
+	20	qsr_nobjs	30	4	0	13	1	30	10	1	13	0	17	Total Objects  :	0	0	0	65536	512	0	0		-f13			0	20
+	21	qsr_nsess	30	4	0	13	1	32	13	38	13	0	19	Current Sessions :	0	0	0	65536	512	0	0		-f13			0	21
+	22	pct_used	31	4	0	6	1	23	4	1	6	0	17	Percentage used:	0	0	0	0	512	0	0		-f6.2			0	22
+	23	bar_chart	21	52	0	50	1	50	4	26	50	0	0		0	0	0	1024	512	0	0		c50			0	23
+TRIM:
+	0	2	4:78:0	1	0	0	0
+	0	6	6:33:1	1	0	0	0
+	0	12	6:33:3	1	0	0	0
+	0	18	5:33:5	1	0	0	0
+	1	2	QSF Pool Information:	0	0	0	0
+	1	6	QSF Object Information:	0	0	0	0
+	1	12	QSF Peak Object Information:	0	0	0	0
+	1	18	QSF LRU Information:	0	0	0	0
+	37	6	6:40:2	1	0	0	0
+	37	12	4:34:4	1	0	0	0
+	37	18	4:31:6	1	0	0	0
+	38	6	QSF Bucket Information:	0	0	0	0
+	38	12	QSF Session Information:	0	0	0	0
+	38	18	Misc Statistics:	0	0	0	0

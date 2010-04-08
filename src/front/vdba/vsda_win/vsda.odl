@@ -1,0 +1,104 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+*/
+
+/*
+**    Source   : vsda.odl : type library source for ActiveX Control project
+**    Project  : INGRES II/ Visual Schema Diff Control (vsda.ocx).
+**    Author   : UK Sotheavut (uk$so01)
+**    Purpose  : This file will be processed by the Make Type Library (mktyplib) tool to
+**               produce the type library (vsda.tlb) that will become a resource in vsda.ocx.
+**
+** History:
+**
+** 26-Aug-2002 (uk$so01)
+**    SIR #109220, Initalial version of vsda.ocx.
+**    Created
+** 17-Jul-2003 (uk$so01)
+**    SIR #106648, Vdba-Split, ensure that the ingres sessions 
+**    have the descriptions.
+** 17-Nov-2004 (uk$so01)
+**    SIR #113475 (Add new functionality to allow user to save the results 
+**    of a comparison into a CSV file.
+*/
+
+
+#include <olectl.h>
+#include <idispids.h>
+
+[ uuid(CC2DA2B3-B8F1-11D6-87D8-00C04F1F754A), version(1.0),
+  helpfile("vsda.hlp"),
+  helpstring("vsda ActiveX Control module"),
+  control ]
+library VSDALib
+{
+	importlib(STDOLE_TLB);
+	importlib(STDTYPE_TLB);
+
+	//  Primary dispatch interface for CuSdaCtrl
+
+	[ uuid(CC2DA2B4-B8F1-11D6-87D8-00C04F1F754A),
+	  helpstring("Dispatch interface for Vsda Control"), hidden ]
+	dispinterface _DVsda
+	{
+		properties:
+			// NOTE - ClassWizard will maintain property information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_PROP(CuSdaCtrl)
+			//}}AFX_ODL_PROP
+
+		methods:
+			// NOTE - ClassWizard will maintain method information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_METHOD(CuSdaCtrl)
+			[id(1)] void SetSchema1Param(BSTR lpszNode, BSTR lpszDatabase, BSTR lpszUser);
+			[id(2)] void SetSchema2Param(BSTR lpszNode, BSTR lpszDatabase, BSTR lpszUser);
+			[id(3)] void StoreSchema(BSTR lpszNode, BSTR lpszDatabase, BSTR lpszUser, BSTR lpszFile);
+			[id(4)] void LoadSchema1Param(BSTR lpszFile);
+			[id(5)] void LoadSchema2Param(BSTR lpszFile);
+			[id(6)] void DoCompare(short nMode);
+			[id(7)] void UpdateDisplayFilter(BSTR lpszFilter);
+			[id(8)] boolean IsEnableDiscard();
+			[id(9)] void DiscardItem();
+			[id(10)] boolean IsEnableUndiscard();
+			[id(11)] void UndiscardItem();
+			[id(12)] void HideFrame(short nShow);
+			[id(13)] boolean IsEnableAccessVdba();
+			[id(14)] void AccessVdba();
+			[id(15)] void SetSessionStart(long nStart);
+			[id(16)] void SetSessionDescription(BSTR lpszDescription);
+			[id(17)] boolean IsResultFrameVisible();
+			[id(18)] void DoWriteFile();
+			//}}AFX_ODL_METHOD
+	};
+
+	//  Event dispatch interface for CuSdaCtrl
+
+	[ uuid(CC2DA2B5-B8F1-11D6-87D8-00C04F1F754A),
+	  helpstring("Event interface for Vsda Control") ]
+	dispinterface _DVsdaEvents
+	{
+		properties:
+			//  Event interface has no properties
+
+		methods:
+			// NOTE - ClassWizard will maintain event information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_EVENT(CuSdaCtrl)
+			//}}AFX_ODL_EVENT
+	};
+
+	//  Class information for CuSdaCtrl
+
+	[ uuid(CC2DA2B6-B8F1-11D6-87D8-00C04F1F754A),
+	  helpstring("Vsda Control"), control ]
+	coclass Vsda
+	{
+		[default] dispinterface _DVsda;
+		[default, source] dispinterface _DVsdaEvents;
+	};
+
+
+	//{{AFX_APPEND_ODL}}
+	//}}AFX_APPEND_ODL}}
+};

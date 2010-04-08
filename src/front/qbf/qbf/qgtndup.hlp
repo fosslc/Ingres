@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to use an existing QBF JoinDef to create the new JoinDef.  
+This 'default' can then be edited to create a saved JoinDef in the database.  
+This form allows you to specify the name of the existing JoinDef to use.
+
+
+The menu commands are:
+
+     MENU COMMANDS   SYNOPSIS
+     -------------   --------
+     OK              Create a new JoinDef initially identical to an
+                     existing JoinDef.
+
+     Cancel          Return to the previous form without creating a new
+                     JoinDef.
+
+     ListChoices     Produce a list of the existing QBF JoinDefs from which
+                     to create a new JoinDef.
+
+     Help            Prints this message

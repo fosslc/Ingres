@@ -1,0 +1,165 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Log Transaction Display screen.  This screen contains an
+entry for each transaction in the logging system.  By monitoring this
+screen, you may observe the activity of each transaction and pinpoint
+those which are generating much logging system activity.  The status of
+each transaction is also displayed.  By using the "Find" menuitem, you may
+search for FORCE_ABORT transactions by tabbing to the "Status" column and
+selecting the "Find" menuitem.  The different status values are listed below.
+
+On VMS, the Process_Info menuitem allows monitoring of the process that the
+selected transaction belongs to.  For instance, in multiserver installations,
+it is not necessary to determine what server a transaction belongs to.  Just
+place the cursor on the desired transaction and select the "Process_Info"
+menuitem.  The Detailed Process Information screen is displayed.
+
+Note that once a transaction is committed, it no longer is in the logging
+system and when this screen is refreshed, will disappear from the display
+if it has committed between the last screen refresh and the current time.
+Transactions which have been committed and not yet journaled (and when
+fast commit is on) may still appear with a status of INACTIVE.  By default,
+INACTIVE transactions are not displayed.  The "-i" option or the "Display
+inactive transactions" field on the Options Display screen can be set to
+"y" to force display of inactive transactions.
+
+Columns of interest on the Log Transaction Display screen include:
+
+    External TX    The Transaction ID.  This column corresponds to the
+    ID             "Transaction ID" field on the More Info popup screen for
+                   the Lock List display.
+
+    Database       The name of the database that this transaction is running
+                   in.
+
+    Session        The session name running this transaction.  Session
+                   names beginning with "$" are internal transactions.
+
+    Status         The status of the transaction.  Valid statuses include:
+
+                   INACTIVE       Not Active.  Ingres internal transactions
+                                  are usually in this state.
+
+                   ACTIVE         Active - user transactions are usually in
+                                  this state.  No COMMIT has been issued.
+
+                   PROTECT        Indicates that this transaction must be
+                                  recoverable.  User transactions always have
+                                  this status.
+
+                   NOABORT        Indicates that this transaction can't be
+                                  aborted due to FORCE_ABORT or LOG_FILE_FULL.
+                                  Distributed transactions have this status.
+
+                   RECOVER        This transaction has been taken over by the
+                                  recovery process.
+
+                   FORCE_ABORT    This transaction is being rolled out because
+                                  the log file reached the FORCE_ABORT limit.
+
+                   SESSION_ABORT  This transaction is being rolled out because
+                                  the session owning this transaction has
+                                  requested the abort.
+
+                   SERVER_ABORT   The server that this transaction belongs to
+                                  is aborting that transaction.
+
+                   DISTRIBUTED    Indicates that this transaction is a slave
+                                  transaction of a larger distributed
+                                  transaction.
+
+                   WILLING_COMMIT Indicates that this transaction is ready
+                                  to commit.  This applies to distributed
+                                  transactions only.
+
+                   RE-ASSOC       Indicates that this transaction's connection
+                                  to the master coordinating application has
+                                  been lost and the transaction is awaiting
+                                  reconnection in order to close the
+                                  transaction.
+
+                   MAN_ABORT      Indicates that this distributed transaction
+                                  was manually rolled out.
+
+                   MAN_COMMIT     Indicates that this distributed transaction
+                                  was manually committed.
+
+    Write          The number of log file write I/O requests made by this
+                   transaction.
+
+    Split          The number of times a write to the log file needed to be
+                   split across more than one log file page and there was not
+                   a free buffer.  If this occurs frequently, the number or
+                   size of the log buffers should be increased to prevent
+                   throughput problems to the log file.
+
+When the "More_Info" menuitem is selected, a popup containing additional
+fields for the specified transaction is displayed.  The additional
+fields are:
+
+    Internal TX    The internal transaction ID used by the logging
+    ID             system.
+
+    Dis TX ID      The distributed transaction ID that this transaction
+                   belongs to.
+
+    Session ID     The session ID of the session that owns this transaction.
+                   This ID corresponds to the "ID" column on the Session List
+                   screen.
+
+    DB ID          The internal database ID used by the logging system.  This
+                   field corresponds to the "ID" field on the More Info popup
+                   screen for the Log Database display.
+
+    Force          The number of times this transaction has caused a log
+                   buffer to be forced to the log file.
+
+    Wait           Displays the number of times this transaction had to wait
+                   to use the logging system.
+
+    Internal PID   The internal PID used by the logging system for the process
+                   that this transaction belongs to.  This field corresponds
+                   to the "ID" column on the Log Process Display screen.
+
+    PID            The operating system process ID for the process that this
+                   transaction belongs to.  This field corresponds to the
+                   "PID" column on the Log Process Display screen.
+
+    First          The log file address for the begin transaction marker
+                   for this transaction.  You may determine the oldest
+                   transaction by viewing the middle number of this field.
+
+    Last           The log file address for the last record written to the
+                   log file.
+
+    CP             Indicates when a consistency point is taken.
+
+The menuitems available on this screen include:
+
+    Refresh        Queries the Ingres logging system for logging 
+                   information.  Process, database and transaction information 
+                   are obtained together to ensure a consistent snapshot of 
+                   the logging system.
+
+    More_Info      Place the cursor on the desired transaction and select this
+                   menuitem.  Additional information for that transaction
+                   is displayed on a popup screen (including the first
+                   and last page address in the log file for this
+                   transaction).  
+
+    Process_Info   Place the cursor on the desired transaction and select this
+                   menuitem.  A screen is displayed which shows various
+                   job-process information for the process that the
+                   transaction belongs to.  Such information includes CPU
+                   time, Direct I/O, Buffered I/O, Enqueue limit, etc.
+                   This display automatically refreshes.  This menuitem
+                   is available on VMS only.
+
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurrences wherever they are in the column.
+
+    Help           Displays Ingres help screens.
+
+    End            Returns to the Log Info Menu screen.
+
+    Quit           Exit IPM.

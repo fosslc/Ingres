@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The lgk_memory_lock resource determines whether or not the locking and
+  logging memory area should be locked into physical memory.  This will
+  prevent locking/logging data pages from being paged out by the operating
+  system when memory shortages occur.  An "ON" setting should be used with
+  caution, as physical memory shortages affect the entire system, not just
+  the locking/logging segment.
+
+
+  Default: OFF 
+
+

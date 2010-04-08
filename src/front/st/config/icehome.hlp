@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The html_home resource specifies an operating system level directory path
+  to the HTTP server's root document directory.

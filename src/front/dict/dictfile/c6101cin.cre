@@ -1,0 +1,57 @@
+CORE_61 1 'Front-end catalogs for release 6.1-6.3'
+END
+
+IGNORE_NEXT_ERROR ALL
+
+CREATE TABLE ii_encoded_forms  
+    (
+        object_id	integer NOT NULL,
+        cfseq	smallint NOT NULL,
+        cfdatsize	integer NOT NULL,
+        cftotdat	integer NOT NULL,
+        cfdata	varchar(1960) NOT NULL
+    )
+    WITH SECURITY_AUDIT=(TABLE,NOROW)
+
+IGNORE_NEXT_ERROR ALL
+
+CREATE TABLE ii_encoded_forms  
+    (
+        object_id	integer NOT NULL,
+        cfseq	smallint NOT NULL,
+        cfdatsize	integer NOT NULL,
+        cftotdat	integer NOT NULL,
+        cfdata	varchar(1960) NOT NULL
+    )
+
+CREATE TABLE ii_id
+    (
+        object_id	integer NOT NULL
+    )
+
+INSERT INTO ii_id (object_id) VALUES (10000)
+
+CREATE TABLE ii_longremarks
+    (
+        object_id	integer NOT NULL,
+        remark_sequence	integer NOT NULL,
+        long_remark	varchar(600) NOT NULL,
+        remark_language	integer NOT NULL
+    )
+
+CREATE TABLE ii_objects
+    (
+        object_id	integer NOT NULL,
+        object_class	integer NOT NULL,
+        object_name	varchar(32) NOT NULL,
+        object_owner	varchar(32) NOT NULL,
+        object_env	integer NOT NULL,
+        is_current	smallint NOT NULL,
+        short_remark	varchar(60) NOT NULL,
+        object_language	smallint NOT NULL,
+        create_date 	char(25) NOT NULL,
+        alter_date 	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        last_altered_by varchar(32) NOT NULL
+    )
+

@@ -1,0 +1,12 @@
+#
+# OpenROAD makefile generation hints for cl\clf\cx
+#
+# History:
+#	29-jan-07 (wridu01)
+#		Ignore cxppptest.c, cxtest.c and cxmsgtest.c
+#
+ignore = cxppptest.c
+ignore = cxtest.c
+ignore = cxmsgtest.c
+
+

@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+#	/**********************************************************
+#	* Complex RC script for starting and stopping INGRES on   *
+#       * DG/UX startup and shutdown.                             *
+#	**********************************************************/
+#
+#   We comment the run level id as 420 in this sample script.  To prevent
+#   confusion, you should change 420 in the next comment if you assign a 
+#   different sequence number.
+#
+# /usr/sbin/init.d/rc.ingres   420
+#
+# start/stop INGRES
+
+PATH=/sbin:/usr/sbin:/usr/bin
+
+#   Change directory_name to the top level directory name that you chose for
+#   your INGRES installation.  For example, if you installed INGRES in 
+#   /install/r6/ingres, your top level directory name would be /install/r6.
+#   If on the other hand, you installed INGRES in /install/ingres/r6/ingres,
+#   your top level directory name would be /install/ingres/r6.
+
+II_SYSTEM=directory_name; export II_SYSTEM
+PATH=$II_SYSTEM/ingres/utility:$II_SYSTEM/ingres/bin:$PATH; export PATH
+
+OPT=$1
+
+if [ -f /etc/dgux.params ] ; then
+   . /etc/dgux.params
+fi
+
+case  $OPT in
+  start) 
+         if [ "$ingres_START" = "false" ] ; then
+            exit 0
+         fi
+
+         echo "\n    Starting rc.ingres:      Running iistartup"
+
+         chmod 777 /dev/kmem
+
+#	 If you are using a raw log device for INGRES, remove the comment
+#	 character from the chown statement below and substitute the name
+#        of your raw log device.  If you switch back to a regular log file,
+#        be sure to re-add the comment character to the chown statement.
+
+#        chown ingres /dev/rdsk/raw_device_name
+
+         su ingres -c "$II_SYSTEM/ingres/utility/iistartup -s" > /dev/console
+         ;;
+
+  stop)  
+         echo "\n    Stopping rc.ingres:      Running iishutdown"
+         su ingres -c "$II_SYSTEM/ingres/utility/iishutdown -s" > /dev/console
+         ;;
+
+     *)  echo "usage: $0 (start | stop)"
+         ;;
+esac

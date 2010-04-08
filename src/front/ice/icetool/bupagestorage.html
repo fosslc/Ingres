@@ -1,0 +1,49 @@
+<SCRIPT language="JavaScript">
+		function changeFiles(location) 
+		{
+<!-- #ICE VAR=`
+			top.Main.Info.files.document.location = '/ice-bin/oiice.:http_api_ext/iceTools/dirfiles.html?id=' + location
+` -->
+		}
+</SCRIPT>
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=&cancel=&submit=` -->
+<FORM>
+<!-- #ICE REPEAT IF (`:system` == `internal`)
+THEN=`<TABLE>
+			<TR><TD WIDTH="150">location:</TD>
+			<TD><SELECT NAME="ext_loc" onChange="changeFiles(this.form.ext_loc.options[this.form.ext_loc.selectedIndex].value)">
+			<OPTION VALUE="none">none
+			<!-- #ICE REPEAT FUNCTION=``unit_location?action=select&ul_unit_id=:unit``
+					 HTML=``<OPTION VALUE=":ul_location_id">:ul_location_name</OPTION>`` 
+			-->
+			</SELECT></TD>
+			</TR><TR><TD>file name: </TD>
+			<TD><INPUT ALIGN="RIGHT" MAXLENGTH="32" SIZE="20" NAME="ext_file">.<INPUT MAXLENGTH="4" SIZE="4" NAME="ext_suffix"></TD>
+			</TR></TABLE>
+` -->
+
+<!-- #ICE REPEAT IF (`:system` == `external`)
+THEN=`<TABLE>
+			<TR>
+				<TD>Cache : </TD>
+				<TD>
+						<INPUT TYPE="RADIO" NAME="cache"	VALUE="pre_cache">Pre-cache<BR>
+						<INPUT TYPE="RADIO" NAME="cache"	VALUE="perm_cache">Permanent cache<BR>
+						<INPUT TYPE="RADIO" NAME="cache"	VALUE="session_cache" checked>Session cache<BR>
+				</TD>
+			</TR>
+			<TR>
+				<TD>path: </TD>
+				<TD><INPUT NAME="file" TYPE="file"></TD>
+			</TR>
+			<TR>
+				<TD></TD>
+			</TR>
+			<TR>
+				<TD></TD>
+		</TABLE>`
+-->
+
+</FORM>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

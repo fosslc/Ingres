@@ -1,0 +1,11 @@
+;
+; History:
+;	25-Aug-2004 (drivi01)
+;	     Created due to new build procedures.  
+;	     Constains data symbols for iilibinterp.
+;
+
+EXPORTS
+	iiam30Depcat	@1	DATA
+	iiam31Aocat	@2	DATA
+	iiam36Longcat	@3	DATA

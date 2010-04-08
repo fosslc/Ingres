@@ -1,0 +1,73 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmerrmod.hlp
+ERROR HANDLING
+
+Error handling is specified at the CDDS level; when defining your CDDS
+you must specify which error mode you want to use.  The method the
+servers use to handle an error detected while transmitting information
+depends on the error mode.
+
+For all error modes, when a server detects an error it does the
+following:
+
+  -  Logs the error, thereby increasing the error count
+
+  -  Issues e-mail messages to the users on the mail notification list.
+
+
+Further server behavior for each error mode is described in the
+following list:
+
+o  SkipTransaction (0)
+
+   This is the default setting.  The Replicator Server:
+
+    -  Rolls back the current replication transaction
+
+    -  Processes the next transaction
+
+    -  Retries the transaction in error during the processing of the
+       next replication cycle in the distribution queue
+
+
+o  SkipRow (1)
+
+   The Replicator Server continues from the error with no rollback
+   performed.  The record in error is skipped and processing proceeds to
+   the next record.  The record in error remains on the queue.
+
+   Note:  This setting disables transaction consistency, therefore data
+          integrity may have to be maintained manually.
+
+
+o  QuietCDDS (2)
+
+   The Replicator Server rolls back the current replication transaction.
+   During the rollback of the transaction in error, the Replicator
+   Server quiets the CDDS for the database where the transaction error
+   occurred.
+
+   The Replicator Server continues processing the remaining replicated
+   transactions for other CDDS's.
+
+
+o  QuietDatabase (3)
+
+   The Replicator Server rolls back the current replication transaction.
+   During the rollback of the transaction in error, the Replicator
+   Server quiets the database where the transaction error occurred.
+
+   The Replicator Server continues processing the remaining replicated
+   transactions for other databases.
+
+
+o  QuietServer (4)
+
+   The Replicator Server:
+
+    -  Rolls back the current replication transaction
+
+    -  Stops processing of the remaining batch of replicated
+       transactions
+
+    -  Changes its status from active to quiet mode.

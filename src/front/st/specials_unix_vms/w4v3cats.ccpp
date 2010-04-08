@@ -1,0 +1,26 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for w4v3cats
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+*/
+
+/*
+** Default directory: ingres/sig/w4v3cats
+*/
+
+PART   w4v3cats
+
+# ifdef VMS
+   BUILD_DIR (sig_path)!w4v3cats!w4v3cats
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!sig!w4v3cats
+# endif /* VMS */
+   DIRECTORY ingres!sig!w4v3cats
+      FILE w4v3cats.scr

@@ -1,0 +1,1417 @@
+%{
+/*
+**	Copyright (c) 1986, 2004, 2008 Ingres Corporation
+*/
+
+#include        <oslgram.my>    /* dependency for MING */
+/* %L merge "oslgram.my" */
+#if defined(hp3_us5)
+#pragma OPT_LEVEL 1
+#endif /* hp3_us5 */
+/**
+** Name:    quel.y -	OSL/QUEL Interpreted Frame Object Translator Grammar.
+**
+** Description:
+**	Contains the YACC grammar for the QUEL dependent part of the OSL/QUEL
+**	interpreted frame object translator.
+**
+** History:
+**	Revision 5.1  86/10/17	wong
+**	Initial revision.
+**
+**	Revision 6.0  87/06  wong
+**	Added 6.0 extensions and separated out as DML-dependent grammar
+**	from "osl/oslgram.y".
+**
+**	Revision 6.x
+**	13-feb-1990 (Joe)
+**		Added calls to IIOSgqsGenQryStmt for repeatable DBMS statements.
+**		This generates the new IL_QID statement if the statement is
+**		repeatable. JupBug #10015
+**	11/24/90 (emerson)
+**		Changed calling sequence for ostlqryall (for bug 34590).
+**	08/15/91 (emerson)
+**		Fixes for bug 35468: Added "disallow_repeat" after
+**		"WHERE OSLvalue" in whereclause production.
+**		Also changed the append, delete, and replace productions
+**		to reflect the fact that RepeatState may now change
+**		during the parse of the query.
+**		Also moved the "RepeatState = FALSE;" for "replace".
+**		It was being done at entry to a non-repeat replace;
+**		instead, it should be done at exit from replace
+**		(because it's now necessary that RepeatState always
+**		be FALSE outside of repeated queries).
+**		This was already being done for "append", "delete", and "qry".
+**	09/20/92 (emerson)
+**		Very minor changes for bugs 39582 and 34846:
+**		The interface to osqryidchk has changed slightly.
+**	28-nov-95 (abowler)
+**		Changed production for DMLprimary to pick up nulls through
+**		'null_or_constant' as 'constant' no longer includes null.
+**	30-oct-98 (i4jo01)
+**		Minor change to the create index production. We
+**		need to put in the correct syntax for the unique
+**		qualification. Also use the dbnames production
+**		so that we get the columns in the correct order.
+**		b94049.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	21-Jan-2008 (kiria01) b119806
+**	    Extended grammar for postfix operators beyond IS NULL
+**	    removes the need for th NULLOP node which is replaced
+**	    by the ability of the RELOP nodes to support monadic
+**	    operators as well as dyadic.
+*/
+
+/* %L Configuration begin */
+#define yyparse quel
+/* %L Configuration end */
+%}
+/*
+**	Yacc grammar and semantic rules for OSL/QUEL.
+**
+**	The grammar is organized in the following manner:
+**
+**		a) query structure
+**		b) quel statements
+**		c) quel expressions
+**
+**	Within a single classification, objects may be grouped with major
+**	objects ordered alphabetically within groups, and minor objects grouped
+**	with the major object to which they belong.
+*/
+
+/* %L Statics begin */
+VOID	IIOSgqsGenQryStmt();
+/* %L Statics end */
+
+/*
+** Name:    TOKENS -	QUEL Tokens.
+**
+** Description:
+**	These are the tokens recognized by the OSL grammar for QUEL.
+*/
+/* %L tokens begin - QUEL tokens to import into G (OSL) */
+	/* QUEL statement keywords */
+%token	ABORT
+	APPEND
+	BEGINTRANSACTION
+	COPY
+	CREATE
+	DEFINE
+	DELETE
+	DESTROY
+	ENDTRANSACTION
+	INDEX
+	INTEGRITY
+	MODIFY
+	PERMIT
+	RANGE
+	RELOCATE
+	REPLACE
+	RETRIEVE
+	SAVE
+	SAVEPOINT
+	SET
+	VIEW
+
+
+	/* QUEL auxilary (possibly noise) keywords */
+%token	ALL
+	BY
+	AT
+	AS
+	FROM
+	INTO
+	IS
+	OF
+	ON
+	ONLY
+	ORDER
+	SORT
+	TO
+	WHERE
+	WITH
+	UNIQUE
+	UNTIL
+/* %L tokens end */
+
+	/* identifiers */
+%token	COLID
+	DEREFERENCE
+	ID
+
+	/* constants */
+%token	FCONST
+	ICONST
+	SCONST
+
+	/* operators */
+%token	AND
+	EXP
+	GTE
+	LTE
+	NOT
+	NOTEQ
+	OR
+
+%token	LSQBRK
+	RSQBRK
+
+	/* define ascending precedence for operators */
+%left	AND OR	LBOP
+%left	'<' '>' '=' NOTEQ GTE LTE ROP
+%left	'+' '-' BOP
+%left	'*' '/' BOPH
+%left	EXP
+%nonassoc	NOT UOP
+
+/*
+** Name:    YACC Types
+*/
+%union {
+	char		*st_name;
+	OSSYM		*st_sym;
+	OSNODE		*st_node;
+	OSTLIST		*st_tlist;
+	OSSRTNODE	*st_srtlist;
+	OSRETNODE	*st_qry;
+	i4		st_nat;
+};
+
+/* %L types begin - QUEL grammar token/rule types */
+%type	<st_name>	INTO		FROM		TO		ALL
+			RETRIEVE	APPEND		DELETE		REPLACE
+			ONLY
+			permit_type	agg_func_id	attrib	attr_clause
+
+%type	<st_node>	DMLexpr		DMLprimary	DMLcondition
+			agg_list	agg_head
+			by_clause	by_list		by_ele
+			tl_ing_name	whereclause
+			range_name
+			permits		permit_list	perm_cols	perm_who
+			perm_term	perm_time	perm_time_elm	perm_day
+			var_fld		var_tbl		var_attr
+
+%type	<st_tlist>	col_spec_list	column_spec
+			range_list	range_elm
+			ret_targlist	
+			target_list	target_listelm
+
+%type	<st_srtlist>	key_list	srtkey		sortclause
+
+%type	<st_nat>	append_key	delete_key	replace_key
+			destroy_object
+
+/* %L types end */
+
+%type	<st_name>	ID	COLID	DEREFERENCE
+			SCONST	FCONST	ICONST
+			NOT	AND	OR
+			boph	bop	lbop	relop	EXP
+			null_clause	default_clause
+
+%type	<st_node>	ingres_name	ingres_int	ingres_ref
+			ing_name_list	ing_int_list	int_list_all
+			OSLintexpr	OSLstrexpr	OSLstrvalue
+			row_number	constant
+			qualification	location_name
+			qry_body
+
+%type	<st_nat>	unique_clause
+
+%%
+/* QUEL Grammar Test Driver */
+driver:		qry_body
+	|	db_stmt
+;
+
+/* %L rules begin - QUEL dependent grammar */
+/*
+** Name:    qry_retrieve -	Query RETRIEVE Components.
+**
+** Description:
+**	Components of the query retrieve statement for QUEL.
+**
+** Syntax:
+**	RETRIEVE [ UNIQUE ] '(' <ret_targlist> ')'
+**	   [ WHERE <OSLname>|<DMLcondition> ]
+**	   [ SORT|ORDER [ BY ] <ingres_name> [ ':' <ingres_name> ] [ ',' ... ] ]
+*/
+qry_body:	query_key unique_clause '(' ret_targlist ')' whereclause sortclause
+		{
+			$$ = osmkqry(DB_QUEL, osmkquery(tkQUERY,
+							$2 ? ERx("unique"):NULL,
+							(PTR)$4, (PTR)$6,
+							(OSNODE *)NULL
+						),
+					$7);
+		}
+;
+query_key:	RETRIEVE
+		{
+			if ( !CallState && FormObj == NULL )
+			{ /* Bug check:  (for JupBug #9133.) */
+				oscerr(OSBUG, 1, ERx("quel(missing query object)"));
+			}
+			else if ( FormObj != NULL  &&  FormObj != FormSym
+				&&  FormObj->s_kind != OSTABLE
+				&&  ( FormObj->s_kind != OSVAR
+				  || (FormObj->s_flags & (FDF_RECORD|FDF_ARRAY))
+						== 0 ) )
+			{
+				if ( FormObj->s_kind == OSUNDEF )
+					oscerr( OSNOQRYOBJ, 2, FormObj->s_name,
+						FormSym->s_name
+					);
+				else if ( FormObj->s_parent->s_kind != OSFORM )
+					oscerr( OSNOTCUR, 2,
+						FormObj->s_parent->s_name,
+						FormSym->s_name
+					);
+				else
+					oscerr( OSNOQRYOBJ, 2, FormObj->s_name,
+						FormObj->s_parent->s_name
+					);
+
+				FormObj = NULL;
+			}
+			QryState = TRUE;
+		}
+;
+
+/**-
+** Miscelleneous QUEL Query Statement Productions.
+**
+** Includes:
+**	ret_targlist
+**	target_list	whereclause	sortclause
+**	key_list	srtkey
+*/
+/*
+** Name:    ret_targlist -	Target List for a retrieve
+*/
+ret_targlist:	target_list
+		{
+			$$ = $1;
+			QryState = FALSE;
+		}
+;
+
+/*
+** Name:    target_list -	Target List for QUEL Statements.
+*/
+target_list:	target_listelm
+		{
+		    $$ = $1;
+		}
+	|	target_list ',' target_listelm
+		{
+		    $$ = osaddtlist($1, $3);
+		}
+;
+target_listelm: tl_ing_name '=' DMLexpr
+		{
+		    $$ = ($1 != NULL) ? osmaketle($1, $3, (OSNODE*)NULL) : NULL;
+		}
+	|	ID opt_row_number '.' attrib
+		{
+		    register OSNODE	*symn;
+		    register bool	all;
+
+		    all = osw_compare(_All, $4);
+		    if (QryState)
+		    {
+			if ($2 != NULL)
+			    oscerr(OSQRYTFALL, 1, ERx(".all"));
+			if (all)
+			{ /* generate target list */
+			    if (($$ = ostlqryall(QryTarget, FormObj, $1)) == NULL)
+				oscerr(OSBADQRYALL, 2, ERx(".all"),
+						FormSym->s_name
+				);
+			}
+			else
+			{
+			    register OSNODE	*attr;
+
+			    u_ptr[0].u_cp = $1;
+			    u_ptr[1].u_cp = $4;
+			    attr =
+			     osmknode(ATTR, &u_ptr[0], &u_ptr[1], (U_ARG*)NULL);
+			    if (FormObj == NULL)
+			    {
+				$$ =
+				  osmaketle(attr, (OSNODE*)NULL, (OSNODE*)NULL);
+			    }
+			    else
+			    {
+				u_ptr[0].u_symp = osqryidchk(FormObj, $4);
+				$$ = osmaketle( osmknode(VALUE, &u_ptr[0],
+						    (U_ARG*)NULL, (U_ARG*)NULL
+						),
+						attr, (OSNODE *)NULL
+				);
+			    }
+			}
+		    }
+		    else
+		    { /* non-retrieve DML QUEL statement. */
+			if (all && RetInState && $2 == NULL)
+			{ /* retrieve into */
+			    u_ptr[0].u_cp = $1;
+			    u_ptr[1].u_cp = $4;
+			    $$ = osmaketle( osmknode(ATTR, &u_ptr[0], &u_ptr[1],
+							(U_ARG*)NULL
+					    ),
+				  	    (OSNODE *)NULL, (OSNODE *)NULL
+			    );
+			}
+			else if ($2 != NULL || ossymlook($1, FormSym) != NULL)
+			{ /* assume it's a table field */
+			    if (all)
+			    {	/* generate target list and get column values */
+				$$ = ostlall(ostabfall(FormSym, $1, $2));
+			    }
+			    else
+			    {
+				symn = ostvalnode(FormSym, $1,(OSNODE*)NULL,$4);
+				if (symn->n_tfref->s_parent->s_kind == OSTABLE)
+				    ostfval(symn);
+			    }
+			}
+			else if (STbcompare(FormSym->s_name,0, $1,0, TRUE) == 0)
+			{ /* form . field reference */
+			    if (all)
+			    {	/* generate target list and get values */
+				if (($$ = ostlall(osformall(FormSym))) == NULL)
+				    oscerr(OSBADQRYALL, 2, ERx(".all"),
+						FormSym->s_name
+				    );
+			    }
+			    else
+			    {
+				symn = osvalnode(FormSym, $4);
+				if (symn->n_token == VALUE &&
+					(symn->n_sym->s_kind == OSFIELD ||
+						symn->n_sym->s_kind == OSVAR) )
+				    osfldval(symn);
+			    }
+			}
+			else
+			{ /* assume it's a relation (or range) */
+			    u_ptr[0].u_cp = $1;
+			    u_ptr[1].u_cp = $4;
+			    symn = osmknode(ATTR, &u_ptr[0], &u_ptr[1],
+					(U_ARG*)NULL
+				);
+			    if (all)
+				$$ =
+				  osmaketle(symn, (OSNODE*)NULL, (OSNODE*)NULL);
+			}
+			if (!all)
+			{
+			    u_ptr[0].u_cp = $4;
+			    $$ = osmaketle(osmkident($4, (OSNODE *) NULL), symn,
+					(OSNODE *)NULL
+				);
+			}
+		    } /* end non-retrieve DML target list element */
+		}
+;
+tl_ing_name:	ingres_name
+		{
+		    if (!QryState)
+		    {
+			$$ = $1;
+		    }
+		    else
+		    { /* target list in query retrieve */
+			if ($1->n_token == VALUE)
+			{
+			    oscerr(OSDYNQRY, 0);
+			    $$ = $1;
+			}
+			else
+			{
+			    if (FormObj == NULL)
+			    {
+				$$ = $1;
+			    }
+			    else
+			    {
+				u_ptr[0].u_symp =
+					    osqryidchk(FormObj, $1->n_value);
+				$$ = osmknode(VALUE, &u_ptr[0],
+					    (U_ARG *)NULL, (U_ARG *)NULL
+				);
+				ostrfree($1);
+			    }
+			}
+		    }
+		}
+;
+attrib:		ID
+		{
+		    $$ = $1;
+		}
+	|	ALL
+		{
+		    $$ = $1;
+		}
+;
+
+/*
+** Name:    whereclause -	Qualification Clause for QUEL Statements
+*/
+whereclause:	WHERE DMLcondition
+		{
+		    $$ = $2;
+		}
+	|	WHERE OSLvalue disallow_repeat
+		{
+		    if ($2->n_type != DB_NODT && !oschkstr($2->n_type))
+			oscerr(OSNOTSTRX, 0);
+		    $$ = $2;
+		}
+	|	/* empty */
+		{
+		    $$ = NULL;
+		}
+;
+
+/*
+** Name:    sortclause -	Sort Clause for QUEL Statements.
+*/
+sortclause:	SORT sort_noise key_list
+		{
+		    $3->srt_type = SRT_SORT;
+		    $$ = $3;
+		}
+	|	ORDER sort_noise key_list
+		{
+		    $3->srt_type = SRT_ORDER;
+		    $$ = $3;
+		}
+	|	/* empty */
+		{
+		    $$ = NULL;
+		}
+;
+sort_noise:	BY	/* QUEL noise */
+	|	/* empty */
+;
+
+key_list:	srtkey
+		{
+		    $$ = $1;
+		}
+	|	key_list ',' srtkey
+		{
+		    /* Maintain sort list as circular linked list */
+		    $3->srt_next = $1->srt_next;
+		    $1->srt_next = $3;
+		    $$ = $3;
+		}
+;
+/*
+** Name:    srtkey -	QUEL Sort Key Specification Production.
+**
+** Description:
+**	QUEL DDL and DML syntax for sort or key specification (which is
+**	identical to DML syntax for create relation specification,
+**	"location : relation" for CREATE, CREATE INDEX and RETRIEVE INTO,
+**	but specified separately since it is shared with SQL DML syntax.)
+*/
+srtkey:		ingres_name
+		{
+		    $$ = osmksrtnode($1, (OSNODE *)NULL);
+		}
+	|	ingres_name ':' ingres_name
+		{
+		    $$ = osmksrtnode($1, $3);
+		}
+	|	ingres_name COLID
+		{
+		    $$ = osmksrtnode($1, osmkident($2, (OSNODE *) NULL));
+		}
+;
+
+/**:
+** Name:    db_stmt -	OSL Database Statements.
+**
+** Generates:
+**		ILSTHD line_no
+**		[ code for any evaluations ]
+**		database command
+**		[ ILDBCONST | ILDBVAR reference ... ]
+**		ILENDLIST
+*/
+db_stmt:	abort		/* shared */
+	|	append
+	|	copy		/* shared */
+	|	create
+	|	delete
+	|	destroy
+	|	direct_connect 	/* STAR */
+	|	direct_disconnect /* STAR */
+	|	direct_execute 	/* STAR */
+	|	index
+	|	integrity
+	|	modify		/* shared */
+	|	permit
+	|	range
+	|	register	/* STAR */
+	|	remove		/* STAR */
+	|	relocate	/* shared */
+	|	replace
+	|	retrieve
+	|	save		/* shared */
+	|	savepoint	/* shared */
+	|	set		/* shared */
+	|	transaction	/* shared */
+	|	view
+;
+/**-
+** Database Query Statements.
+**
+** Includes:
+**	append		delete		replace		retrieve
+*/
+/*::
+** Name:    append -	QUEL APPEND Statement.
+**
+** Syntax:
+**	APPEND [ TO ] <ingres_name> '(' <target_list> ')'
+**		[ WHERE <DMLcondition> ]
+*/
+append:		append_key apkword ingres_name '(' target_list ')' whereclause
+		{
+		    IIOSgqsGenQryStmt(IL_APPEND, RepeatState);
+		    osdbeval($3);
+		    osdbstr(ERx("("));
+		    osevaltlist($5, osdbqtle);
+		    osdbstr(ERx(")"));
+		    if ($7 != NULL)
+		    { /* append qualification */
+			osqwhere($7);
+		    }
+		    RepeatState = FALSE;
+		}
+;
+append_key:	APPEND
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		    $$ = FALSE;
+		}
+	|	REPEAT APPEND
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		    RepeatState = TRUE;
+		    $$ = TRUE;
+		}
+;
+apkword:	TO		/* QUEL noise */
+	|	/* empty */
+/* OSL/QUEL noise (no longer supported)
+	|	INTO
+	|	ONTO
+	|	ON
+*/
+;
+
+/*::
+** Name:    delete -	QUEL DELETE Statement.
+**
+** Syntax:
+**	DELETE [ FROM ] <ingres_name> [ WHERE <DMLcondition> ]
+*/
+delete:		delete_key delete_noise ingres_name whereclause
+		{
+		    IIOSgqsGenQryStmt(IL_DELETE, RepeatState);
+		    osdbeval($3);
+		    if ($4 != NULL)
+		    { /* delete qualification */
+			osqwhere($4);
+		    }
+		    RepeatState = FALSE;
+		}
+;
+delete_key:	DELETE
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		    $$ = FALSE;
+		}
+	|	REPEAT DELETE
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		    RepeatState = TRUE;
+		    $$ = TRUE;
+		}
+;
+delete_noise:	FROM	/* QUEL noise */
+	|	/* empty */
+/* OSL/QUEL noise (no longer supported)
+	|	IN
+	|	ON
+*/
+;
+
+/*::
+** Name:    replace -	QUEL REPLACE Statement.
+**
+** Syntax:
+**	REPLACE <ingres_name> '(' <target_list> ')' [ WHERE <DMLcondition> ]
+*/
+replace:	replace_key ingres_name '(' target_list ')' whereclause
+		{
+		    IIOSgqsGenQryStmt(IL_REPLACE, RepeatState);
+		    osdbeval($2);
+		    osdbstr(ERx("("));
+		    osevaltlist($4, osdbqtle);
+		    osdbstr(ERx(")"));
+		    if ($6 != NULL)
+		    { /* replace qualification */
+			osqwhere($6);
+		    }
+		    RepeatState = FALSE;
+		}
+;
+replace_key:	REPLACE
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		    $$ = FALSE;
+		}
+	|	REPEAT REPLACE
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		    RepeatState = TRUE;
+		    $$ = TRUE;
+		}
+;
+/* OSL/QUEL noise (no longer supported)
+repkword:	INTO
+	|	IN
+	|	ON
+	|	/* empty */
+
+/*::
+** Name:    retrieve -	QUEL RETRIEVE INTO Statement.
+**
+** Syntax:
+**	RETRIEVE [ INTO | TO ] [ <ingres_name> ':' ] <ingres_name>
+**		'(' <target_list> ')'
+**		[ WHERE <DMLcondition> ]
+**		[ SORT|ORDER [ BY ] <ingres_name> [ ':' <ingres_name> ] ... ]
+**		[ WITH ID ]
+*/
+retrieve:	retrieve_key ret_noise location_name '(' target_list ')'
+			whereclause sortclause with_clause
+		{
+		    IGgenStmt(IL_RETINTO, (IGSID *)NULL, 0);
+		    osdbeval($3);
+		    osdbstr(ERx("("));
+		    osevaltlist($5, osdbqtle);
+		    osdbstr(ERx(")"));
+		    if ($7 != NULL)
+		    { /* retrieve qualification */
+			osqwhere($7);
+		    }
+		    if ($8 != NULL)
+		    { /* retrieve sort specification */
+			osdbstr($8->srt_type == SRT_SORT
+					? ERx(" sort by ") : ERx(" order by ")
+			);
+			osevalsklist($8, osdbsrtkey, osldml);
+		    }
+		    osdbwith($9);	/* optional retrieve into with clause */
+		    RetInState = FALSE;
+		}
+;
+retrieve_key:	RETRIEVE
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		    RetInState = TRUE;
+		}
+;
+ret_noise:	INTO	/* QUEL noise */
+	|	TO	/* QUEL noise */
+	|	/* empty */
+;
+
+/**-
+** Database Object Creation/Destroy Statements.
+**
+** Includes:
+**	create	index	destroy
+*/
+/*::
+** Name:    create -	QUEL CREATE Statement.
+**
+** Syntax:
+**	CREATE [ <ingres_name> ':' ] <ingres_name> '(' [ <col_spec_list> ] ')'
+**		[ WITH ID ]
+*/
+create:		create_key location_name '(' col_spec_list ')' with_clause
+		{
+		    IGgenStmt(IL_CREATE, (IGSID *)NULL, 0);
+		    osdbeval($2);
+		    osdbstr(ERx("("));
+		    osevaltlist($4, osdbtle); /* create target list */
+		    osdbstr(ERx(")"));
+		    osdbwith($6);	/* optional create with clause */
+		}
+;
+create_key:	CREATE
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+col_spec_list:	column_spec
+		{
+		    $$ = $1;
+		}
+	|	col_spec_list ',' column_spec
+		{
+		    $$ = osaddtlist($1, $3);
+		}
+;
+column_spec:
+		ingres_name '=' format attr_clause
+		{
+		    $$ = osmaketle( $1, $3, osmkident($4, (OSNODE *)NULL) );
+		}
+	|	ingres_name '=' format
+		{
+		    $$ = osmaketle($1, $3, (OSNODE*)NULL);
+		}
+;
+attr_clause:	null_clause
+		{
+			$$ = $1;
+		}
+	|	default_clause
+		{
+			$$ = $1;
+		}
+;
+
+/*::
+** Name:	destroy -	QUEL DESTROY Statements.
+**
+** Syntax:
+**	DESTROY <ingres_name> [ ',' <ingres_name> ] ...
+**	DESTROY INTEGRITY | PERMIT <ingres_name>
+**		ALL | <ingres_int> [ ',' <ingres_int> ] ...
+*/
+destroy:	destroy_key ing_name_list
+		{
+		    IGgenStmt(IL_DESTROY, (IGSID *)NULL, 0);
+		    osevallist($2, osdblist);
+		}
+	|	destroy_key destroy_object ingres_name int_list_all
+		{
+		    IGgenStmt($2, (IGSID *)NULL, 0);
+		    osdbeval($3);
+		    if ($4 == NULL)
+			osdbstr(ERx(" all"));
+		    else
+		    {
+			osdbstr(ERx(" "));
+			osevallist($4, osdblist);
+		    }
+		}
+;
+destroy_key:	DESTROY
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+destroy_object: INTEGRITY
+		{
+		    $$ = IL_DESINTEG;
+		}
+	|	PERMIT
+		{
+		    $$ = IL_DESPERM;
+		}
+;
+
+/*::
+** Name:    index -		QUEL INDEX Statement.
+**
+** Syntax:
+**	INDEX [UNIQUE] ON <ingres_name> IS <key> '(' <ingres_name> [ ',' ... ] ')'
+**		[ WITH ... ]
+*/
+index:		index_key unique_clause ON ingres_name IS location_name
+			'(' column_list ')' with_clause
+		{
+		    IGgenStmt(IL_INDEX, (IGSID *)NULL, 0);
+		    if ($2)
+			osdbstr(ERx(" unique "));
+		    osdbstr(ERx(" on "));
+		    osdbeval($4);
+		    osdbstr(ERx(" is "));
+		    osdbeval($6);
+		    osdbstr(ERx("("));
+		    osdbeval($8);
+		    osdbstr(ERx(")"));
+		    osdbwith($10);	/* optional index with clause */
+		}
+;
+index_key:	INDEX
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+
+/**-
+** Database Miscelleneous Statements.
+**
+** Includes:
+**	range
+*/
+/*::
+** Name:    range -		QUEL RANGE Statement.
+**
+** Syntax:
+**	RANGE [ OF ] <ingres_name> '=' <ingres_name>
+**			[ ',' <ingres_name> '=' <ingres_name> ] ...
+*/
+range:		range_key of_noise range_list
+		{
+		    IGgenStmt(IL_RANGE, (IGSID *)NULL, 0);
+		    osevaltlist($3, osdbtle);
+		}
+;
+range_key:	RANGE
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+of_noise:	OF	/* QUEL noise */
+	|	/* empty */
+;
+range_list:	range_elm
+		{
+		    $$ = $1;
+		}
+	|	range_list ',' range_elm
+		{
+		    $$ = osaddtlist($1, $3);
+		}
+;
+range_elm:	range_name range_assign ingres_name
+		{
+		    $$ = osmaketle($1, $3, (OSNODE *)NULL);
+		}
+;
+range_name:	ingres_name
+		{
+		    /*
+		    ** Check that the range variable name
+		    ** is not the same as a field name.
+		    */
+		    if ($1->n_token == tkID &&
+			    ossymlook($1->n_value, FormSym) != NULL)
+			oscerr(OSRNGFLD, 1, $1->n_value);
+		    $$ = $1;
+		}
+;
+range_assign:	'='
+	|	IS
+;
+
+/**-
+** Database Define Object Statements.
+**
+** Includes:
+**	integrity	permit		view
+*/
+define_key:	DEFINE
+		{
+		    IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+/*::
+** Name:    integrity - QUEL DEFINE INTEGRITY Statement.
+**
+** Syntax:
+**	DEFINE INTEGRITY [ ON ] <ingres_name> [ IS ] <DMLcondition>
+*/
+integrity:	define_key INTEGRITY integnoise ingres_name isnoise DMLcondition
+		{
+		    IGgenStmt(IL_INTEGRITY, (IGSID *)NULL, 0);
+		    osdbeval($4);
+		    osqtraverse($6);
+		}
+;
+integnoise:	ON	/* QUEL noise */
+	|	/* empty */
+/* OSL/QUEL noise (no longer supported)
+	|	ONTO
+	|	IN
+	|	OF
+*/
+;
+isnoise:	IS	/* QUEL noise */
+	|	/* empty */
+;
+
+/*::
+** Name:    permit -	QUEL PERMIT Statement.
+**
+** Syntax:
+**	DEFINE PERMIT RETRIEVE | APPEND | DELETE | REPLACE | ALL [ ',' ... ]
+**	 ON | OF | TO <ingres_name> [ '(' <ingres_name> [ ',' ... ] ')' ]
+**	 TO <ingres_name> | ALL [ AT <ingres_name> | ALL ]
+**	 [ FROM <ingres_int> ':' <ingres_int> TO <ingres_int> ':' <ingres_int> ]
+**	 [ ON <ingres_name> TO <ingres_name> ] [ WHERE <DMLcondition> ]
+*/
+permit:		define_key PERMIT permits on_of_to ingres_name perm_cols
+			 perm_who perm_term perm_time perm_day whereclause
+		{
+		    IGgenStmt(IL_PERMIT, (IGSID *)NULL, 0);
+		    osevallist($3, osdblist);	/* permit list */
+		    osdbstr(ERx(" on "));
+		    osdbeval($5);	/* relation name */
+		    if ($6 != NULL)
+		    { /* permit columns */
+			osdbstr(ERx("("));
+			osevallist($6, osdblist);
+			osdbstr(ERx(")"));
+		    }
+		    /* permit who */
+		    osdbstr(ERx(" to "));
+		    osdbeval($7);
+
+		    if ($8 != NULL)
+		    { /* permit terminal */
+			osdbstr(ERx(" at "));
+			osdbeval($8);
+		    }
+		    if ($9 != NULL)
+		    { /* permit time */
+			osdbstr(ERx(" from "));
+			osdbeval($9);
+		    }
+		    if ($10 != NULL)
+		    { /* permit day */
+			osdbstr(ERx(" on "));
+			osdbeval($10);
+		    }
+		    if ($11 != NULL)
+		    { /* permit qualification */
+			osqwhere($11);
+		    }
+		}
+;
+permits:	permit_list
+		{
+		    $$ = $1;
+		}
+	|	ALL
+		{
+		    u_ptr[0].u_nodep = osmkident($1, (OSNODE *) NULL);
+		    u_ptr[1].u_nodep = NULL;
+		    u_ptr[2].u_nodep = NULL;
+		    $$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+permit_list:	permit_type
+		{
+		    u_ptr[0].u_nodep = osmkident($1, (OSNODE *) NULL);
+		    u_ptr[1].u_nodep = NULL;
+		    u_ptr[2].u_nodep = NULL;
+		    $$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	permit_list ',' permit_type
+		{
+		    u_ptr[0].u_nodep = osmkident($3, (OSNODE *) NULL);
+		    u_ptr[1].u_nodep = $1;
+		    u_ptr[2].u_nodep = NULL;
+		    $$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+permit_type:	RETRIEVE
+		{
+		    $$ = $1;
+		}
+	|	APPEND
+		{
+		    $$ = $1;
+		}
+	|	DELETE
+		{
+		    $$ = $1;
+		}
+	|	REPLACE
+		{
+		    $$ = $1;
+		}
+;
+on_of_to:	ON	/* QUEL keyword */
+	|	OF	/* QUEL keyword */
+	|	TO	/* QUEL keyword */
+;
+perm_cols:	'(' ing_name_list ')'
+		{
+		    $$ = $2;
+		}
+	|	/* empty */
+		{
+		    $$ = NULL;
+		}
+;
+perm_who:	TO ingres_name
+		{
+		    $$ = $2;
+		}
+	|	TO ALL
+		{
+		    $$ = osmkident($2, (OSNODE *) NULL);
+		}
+;
+perm_term:	AT ingres_name
+		{
+		    $$ = $2;
+		}
+	|	AT ALL
+		{
+		    $$ = osmkident($2, (OSNODE *) NULL);
+		}
+	|	/* empty */
+		{
+		    $$ = NULL;
+		}
+;
+perm_time:	FROM perm_time_elm TO perm_time_elm
+		{
+		    u_ptr[0].u_cp = $3;
+		    u_ptr[1].u_nodep = $2;
+		    u_ptr[2].u_nodep = $4;
+		    $$ = osmknode(ASSOCOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	/* empty */
+		{
+		    $$ = NULL;
+		}
+;
+perm_time_elm:	ingres_int ':' ingres_int
+		{
+		    u_ptr[0].u_cp = ERx(":");
+		    u_ptr[1].u_nodep = $1;
+		    u_ptr[2].u_nodep = $3;
+		    $$ = osmknode(ASSOCOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+perm_day:	ON ingres_name TO ingres_name
+		{
+		    u_ptr[0].u_cp = $3;
+		    u_ptr[1].u_nodep = $2;
+		    u_ptr[2].u_nodep = $4;
+		    $$ = osmknode(ASSOCOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	/* empty */
+		{
+		    $$ = NULL;
+		}
+;
+
+/*::
+** Name:    view -		QUEL DEFINE VIEW Statement.
+**
+** Syntax:
+**	DEFINE VIEW <ingres_name> '(' <target_list> ')' [ WHERE <DMLcondition> ]
+*/
+view:		define_key VIEW ingres_name '(' target_list ')' whereclause
+		{
+		    IGgenStmt(IL_VIEW, (IGSID *)NULL, 0);
+		    osdbeval($3);
+		    osdbstr(ERx("("));
+		    osevaltlist($5, osdbqtle);
+		    osdbstr(ERx(")"));
+		    if ($7 != NULL)
+		    { /* view qualification */
+			osqwhere($7);
+		    }
+		}
+;
+
+/*::
+** Name:	DMLexpr -	QUEL Expressions.
+**
+** Description:
+**	Expressions as recognized by QUEL, including aggregates and functions.
+*/
+DMLexpr:	DMLexpr boph DMLexpr	%prec BOPH
+		{
+		    u_ptr[0].u_cp = $2;
+		    u_ptr[1].u_nodep = $1;
+		    u_ptr[2].u_nodep = $3;
+		    $$ = osmknode(DML|OP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	DMLexpr bop DMLexpr	%prec BOP
+		{
+		    u_ptr[0].u_cp = $2;
+		    u_ptr[1].u_nodep = $1;
+		    u_ptr[2].u_nodep = $3;
+		    $$ = osmknode(DML|OP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	DMLexpr EXP DMLexpr
+		{
+		    u_ptr[0].u_cp = _Exp;
+		    u_ptr[1].u_nodep = $1;
+		    u_ptr[2].u_nodep = $3;
+		    $$ = osmknode(DML|OP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	'(' DMLexpr ')'
+		{
+		    u_ptr[0].u_nodep = $2;
+		    $$ = osmknode(PARENS, (U_ARG *) NULL,
+						&u_ptr[0], (U_ARG *) NULL);
+		}
+	|	'-' DMLexpr	%prec UOP
+		{
+		    u_ptr[0].u_cp = _Minus;
+		    u_ptr[1].u_nodep = $2;
+		    $$ = osmknode(DML|UNARYOP, &u_ptr[0], &u_ptr[1],
+						(U_ARG *) NULL);
+		}
+	|	DMLprimary
+		{
+		    $$ = $1;
+		}
+;
+
+DMLprimary:	constant_or_null
+		{
+		    $$ = $1;
+		}
+	|	DEREFERENCE
+		{
+		    $$ = osmkident($1, (OSNODE *)NULL);
+		}
+	|	ID
+		{
+		    /* QUEL expressions may have relation references
+		    ** either directly or through range variables.
+		    ** So check that a identifier is undefined first,
+		    ** and then assume it's a relation reference.
+		    */
+		    if (ossymlook($1, FormSym) != NULL)
+		    { /* it's a field */
+			$$ = osvalnode(FormSym, $1);
+			if ($$->n_sym->s_kind == OSFIELD)
+			    osfldval($$);
+		    }
+		    else
+		    { /* treat it as a relation (or range variable) */
+			$$ = osmkident($1, (OSNODE *)NULL);
+		    }
+		}
+	|	var_fld
+		{
+		    if ($1->n_sym->s_kind == OSFIELD)
+			osfldval($1);
+		    $$ = $1;
+		}
+	|	ID LSQBRK OSLintexpr RSQBRK '.' ID
+		/* Unambiguous table field reference -- cannot use <row_number>
+		** in the rule, "ID <row_number> '.' ID" because of a
+		** "shift/reduce" conflict with "ID '.' ALL" (from <by_ele>.)
+		*/
+		{
+		    $$ = ostvalnode(FormSym, $1, $3, $6);
+		    if ($$->n_tfref->s_parent->s_kind == OSTABLE)
+			ostfval($$);
+		}
+	|	ID '.' ID
+		{
+		    if (ossymlook($1, FormSym) != NULL)
+		    { /* assume it's a table field */
+			$$ = ostvalnode(FormSym, $1, (OSNODE *)NULL, $3);
+			if ($$->n_tfref->s_parent->s_kind == OSTABLE)
+			    ostfval($$);
+		    }
+		    else
+		    { /* relation.column reference */
+			u_ptr[0].u_cp = $1;
+			u_ptr[1].u_cp = $3;
+			$$ = osmknode(ATTR, &u_ptr[0], &u_ptr[1],
+					(U_ARG *)NULL
+			);
+		    }
+		}
+	|	var_tbl
+		{
+		    if ($1->n_tfref->s_parent->s_kind == OSTABLE)
+			ostfval($1);
+		    $$ = $1;
+		}
+	|	var_attr
+		{
+		    if ($1->n_tfref->s_parent->s_kind == OSTABLE)
+			ostfval($1);
+		    $$ = $1;
+		}
+	/* Aggregate/Function Syntax */
+	|	agg_func_id '(' agg_list ')'
+		{
+		    u_ptr[0].u_nodep = $3;
+		    $$ = osmkident($1,  osmknode(PARENS, (U_ARG *)NULL,
+						&u_ptr[0], (U_ARG *)NULL
+					)
+			);
+		}
+;
+agg_func_id:	ID
+		{
+		    $$ = $1;
+		}
+;
+agg_list:	agg_head by_clause whereclause
+		{
+		    u_ptr[0].u_nodep = $1;
+		    u_ptr[1].u_nodep = $2;
+		    u_ptr[2].u_nodep = $3;
+		    $$ = osmknode(AGGLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	agg_head by_clause ONLY whereclause
+		{
+		    u_ptr[0].u_nodep = $1;
+		    u_ptr[1].u_nodep = $2;
+		    u_ptr[2].u_nodep = osmkident($3, $4);
+		    $$ = osmknode(AGGLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	DMLexpr ',' DMLexpr
+		{
+		    u_ptr[0].u_nodep = $1;
+		    u_ptr[1].u_nodep = $3;
+		    $$ = osmknode(COMMA, (U_ARG *)NULL, &u_ptr[0], &u_ptr[1]);
+		}
+	|	/* empty */
+		{
+		    $$ = NULL;
+		}
+;
+agg_head:	DMLexpr
+		{
+		    $$ = $1;
+		}
+	/* Added for SQL support */
+	|	ID '.' ALL
+		{
+		    u_ptr[0].u_cp = $1;
+		    u_ptr[1].u_cp = $3;
+		    $$ = osmknode(ATTR, &u_ptr[0], &u_ptr[1], (U_ARG *)NULL);
+		}
+;
+by_clause:	BY by_list
+		{
+		    $$ = $2;
+		}
+	|	/* empty */
+		{
+		    $$ = NULL;
+		}
+;
+by_list:	by_ele
+		{
+		    $$ = $1;
+		}
+	|	by_list ',' by_ele
+		{
+		    u_ptr[0].u_nodep = $1;
+		    u_ptr[1].u_nodep = $3;
+		    $$ = osmknode(COMMA, (U_ARG *)NULL,
+						&u_ptr[0], &u_ptr[1]);
+		}
+;
+by_ele:		DMLexpr
+		{
+		    $$ = $1;
+		}
+	|
+		ID '.' ALL
+		{
+		    u_ptr[0].u_cp = $1;
+		    u_ptr[1].u_cp = $3;
+		    $$ = osmknode(ATTR, &u_ptr[0], &u_ptr[1], (U_ARG *)NULL);
+		}
+;
+
+var_fld:        COLID
+		{
+			$$ = osvalnode(FormSym, $1);
+		}
+;
+var_attr:       COLID '.' ID
+		{
+			$$ = ostvalnode(FormSym, $1, (OSNODE *)NULL, $3);
+		}
+;
+var_tbl:        COLID LSQBRK OSLintexpr RSQBRK '.' ID
+		{
+			$$ = ostvalnode(FormSym, $1, $3, $6);
+		}
+;
+
+
+/*::
+** Name:    DMLcondition -	QUEL Logical Expressions.
+**
+** Description:
+**	Logical expressions as recognized by QUEL, but with the addition
+**	of predicate clauses (QUALIFICATIONs.)
+*/
+DMLcondition:	'(' DMLcondition ')'
+		{
+		    u_ptr[0].u_nodep = $2;
+		    $$ =
+		      osmknode(PARENS, (U_ARG*)NULL, &u_ptr[0], (U_ARG*)NULL);
+		}
+	|	DMLcondition lbop DMLcondition	%prec LBOP
+		{
+		    u_ptr[0].u_cp = $2;
+		    u_ptr[1].u_nodep = $1;
+		    u_ptr[2].u_nodep = $3;
+		    $$ = osmknode(DML|LOGOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	NOT DMLcondition		%prec UOP
+		{
+		    u_ptr[0].u_cp = $1;
+		    u_ptr[1].u_nodep = $2;
+		    u_ptr[2].u_nodep = NULL;
+		    $$ = osmknode(DML|LOGOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	DMLexpr relop DMLexpr		%prec ROP
+		{
+		    u_ptr[0].u_cp = $2;
+		    u_ptr[1].u_nodep = $1;
+		    u_ptr[2].u_nodep = $3;
+		    $$ = osmknode(DML|RELOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	DMLexpr is_postfix_op
+		{
+		    u_ptr[0].u_cp = $2;
+		    u_ptr[1].u_nodep = $1;
+		    u_ptr[2].u_nodep = NULL;
+		    $$ = osmknode(DML|RELOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	qualification
+		{
+		    $$ = $1;
+		}
+;
+/* %L rules end */
+
+%%
+/* %L Routines begin */
+/* %L Routines end */

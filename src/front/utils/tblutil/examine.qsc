@@ -1,0 +1,611 @@
+/*
+** Copyright (c) 1985, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include	<uf.h>
+## include	<ui.qsh>
+## include	<uigdata.qsh>
+/*
+	this tells MING about ui.qsh and uigdata.qsh dependencies.
+#include        <ui.h>
+#include        <uigdata.h>
+*/
+# include	<erfe.h>
+# include       <lo.h>
+# include	"ertu.h"
+# include	"tuconst.h"
+##include       "tutblinf.qsh"
+/*
+	this tells MING about tutblinf.qsh dependency.
+#include        "tutblinf.h"
+*/
+
+
+/**
+** Name:	examine.qsc -	The "Examine" frame for the Tables Utility.
+**
+** Description:
+**	This is the Examine frame for the Tables Utility. The IITUtbiTableinfo
+**	routine contains the menuitem activations for this frame, while
+**	fillinfo is used to load the table field with information.
+**
+**	This file defines:
+**	IITUtbiTableinfo  interface to the top frame, contains the menuitems.
+**	fillinfo	for loading the table field with column info.
+**
+** History:
+**	6/4/85 (prs)	Fix for bug 5190.
+**	11/26/85 (prs)	Fix for bug 7033.
+**	27-mar-1987	(daver) Extracted from tblutils.qc.
+**	22-oct-1987 (peter)
+**		Change FEmsg to IIUGerr.
+**	6/88 (bobm)	pass in title of form.
+**	9/89 (pete)	Fix so can be called directly (for Emerald).
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**	29-may-1997 (canor01)
+**	    Cleaned up compiler warnings from CL prototypes.
+**      02-Jul-1999 (hweho01)
+**              Included uf.h header file, it contains the function     
+**              prototype of IIUFlcfLocateForm(). Without the explicit
+**              declaration, the default int return value for a  
+**              function will truncate a 64-bit address on ris_u64 
+**              platform.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF bool    IituMainform;	/* used by tutblpik.qsc */
+/* # define's */
+# define	MAX_RETRIES	3
+/* extern's */
+/* static's */
+static		bool	formready = FALSE;
+
+##static char IITUtblname[FE_MAXTABNAME] ZERO_FILL;
+
+static bool	Tblprmptformready = FALSE;
+
+static STATUS	fillinfo();
+
+/* following could be put in .roc file */
+static const
+##      char    _Form[]         = ERx("tuexaminefr"),
+##              _Tblfld[]       = ERx("attributes"),
+##              _Deflkey[]      = ERx("default_lkey"),
+##		_Col_name[]	= ERx("name");	/* "Column Name" in
+						** tuexaminefr.attributes
+						*/
+i4		tugetattr();
+DB_STATUS	IIUIrel_help();
+STATUS		tuchkname();
+VOID		IITUstlSetTitle();
+i4		IITUtsTblfldSearch();
+char		*IITUtpTblPik();
+char		*IITUprTablePrompt();
+
+
+/*{
+** Name:	 IITUtbiTableinfo - Driver for the "Examine" frame
+**
+** Description:
+**	This routine is used to gather all of the table information and display
+**	it on the "Examine" frame.
+**
+**	IITUtbiTableinfo() can be called directly by anyone who wants
+**	a display of detailed table info.
+**
+** Sample call:
+**	    IITUtbiTableinfo(ERx("myDBtable"), ERx("VISION"),
+**				ERx("column_name_to_scrollto"));
+**
+** Inputs:
+**	tblname		table whose information is to be displayed.
+**	title_prefix	prefix the screen title with this.
+** 	scrollto_col	After loading table field with info on every column in
+**			the table, scroll to row with this column-name.
+**
+** Outputs:
+**	usually none, but will change the 'tblname' argument if
+**	a new table is selected in the course of running this frame.
+**
+** History:
+**	27-mar-1987	(daver)		Extracted from tblutils.qc.
+**	21-jul-1987	(danielt) changed DB_MAXNAME to FE_MAXNAME
+**	8/89		(pete)	changed name from tableinfo to IITUtbiTableinfo.
+**				Removed table-owner as second argument.
+**				Added call to IITUstlSetTitle to build title.
+**				Added third argument: scrollto_col.
+**				Document how can be called directly.
+**	27-dec-1989	(pete)	Don't show menuitems Top, Bottom, Find; add
+**				(validate=0, activate=0) to Help and End.
+**	17-jan-1993	(rogerl) Straighten out delim ident handling.
+**	21-jan-1993	(mgw)	Don't ignore IIUGdlm_ChkdlmBEobject() return
+**				value in NewTable case. Use it to print the
+**				appropriate error message.
+**	5-apr-1993	(rogerl) Move defaults list clearing to fillinfo() -
+**				user might view consecutive tables.
+*/
+#define	_FindExpl	F_FE0104_ExplFind
+#define	_TopExpl	F_FE0105_ExplTop
+#define	_BottomExpl	F_FE0106_ExplBottom
+#define	_CancelExpl	F_FE0103_ExplCancel
+#define	_HelpExpl	F_FE0100_ExplFrameHelp
+#define _EndExpl	F_FE0102_ExplEnd
+
+VOID
+IITUtbiTableinfo ( tblname, owner, title_prefix, scrollto_col )
+char	tblname[DB_GW1_MAXNAME+1];	/* Name of table to examine. If user
+			** examines another table, via menuitem "NewTable",
+			** then this param gets reset to the
+			** name of new table. (caller might want to
+			** Scroll to row with this table name)
+			*/
+char	*owner;
+##char	*title_prefix;	/* optional prefix for screen title */
+char	*scrollto_col;	/* if set, scroll to table field row matching
+			** this table column-name.
+			*/
+##{
+##	char	title[TU_TITLE_SIZE +1];
+
+	if (!formready)
+	{
+		if ( IIUFgtfGetForm(IIUFlcfLocateForm(), _Form) != OK )
+		{
+			IIUGerr( E_TU0041_Get_Form_Failed, UG_ERR_ERROR,
+					1, _Form
+			);
+			return;
+		}
+		formready = TRUE ;
+	}
+
+##	DISPLAY _Form READ
+##	INITIALIZE
+##	{
+		if (*tblname != EOS)
+		{
+			/* load form and table field with info on this table */
+			if (fillinfo(tblname, owner) != OK)
+##				BREAKDISPLAY
+
+			if ( scrollto_col != NULL && *scrollto_col != EOS )
+			{
+			    /* caller wants us to scroll to row with table
+			    ** column-name matching the 'scrollto_col' param. 
+			    */
+##			    i4  row;
+
+			    if ( (row = IITUtsTblfldSearch(_Form, _Tblfld,
+					_Col_name, scrollto_col)) > 0)
+##			        SCROLL _Form _Tblfld TO row
+			}
+		}
+
+		/* build title for this screen */
+		IITUstlSetTitle(title_prefix, ERget(F_TU0030_Examine), title);
+##		PUTFORM _Form (utitle = title)
+
+##	}
+##	ACTIVATE MENUITEM ERget(F_TU0026_NewTable)
+##		(EXPL = ERget(F_TU004B_ExplNewTable))
+##	{
+##	    char		*p_tbl = (char *)NULL;
+	    FE_RSLV_NAME	rname;
+	    char		get_own[FE_UNRML_MAXNAME + 1];
+	    char		get_name[FE_UNRML_MAXNAME + 1];
+
+	    for (;;)	/* loop till good table name is entered */
+	    {
+		p_tbl = IITUprTablePrompt(p_tbl); /* prompt user for table name
+						  ** with popup Help available
+						  */
+		if ( p_tbl == NULL || *p_tbl == EOS )
+		{
+		    break;	/* user selected Cancel */
+		}
+		else
+		{
+		    /* separate out owner.table syntax */
+		    get_own[0] = get_name[0] = EOS;
+		    rname.name = p_tbl;
+		    rname.owner_dest = get_own;
+		    rname.name_dest = get_name;
+		    rname.is_nrml = FALSE;
+		    FE_decompose(&rname);
+
+		    /* strip the quotes */
+		    if (IIUGdlm_ChkdlmBEobject(get_name, get_name, FALSE) ==
+			UI_BOGUS_ID)
+		    {
+			IIUGerr(E_TU0037_Name_contain_bad_char, UG_ERR_ERROR,
+				(i4) 1, get_name);
+			continue;
+		    }
+		    if (get_own[0] != EOS && IIUGdlm_ChkdlmBEobject(get_own,
+						get_own, FALSE) == UI_BOGUS_ID)
+		    {
+			IIUGerr(E_TU0009_Owner_name_illegal, UG_ERR_ERROR,
+				(i4) 1, get_own);
+			continue;
+		    }
+
+		    if (fillinfo(get_name, get_own) != OK)
+			continue;	/* no such table. prompt again. */
+
+		    STcopy(get_name, tblname);	/* save good table name */
+		    STcopy(get_own, owner);	/* save good owner name */
+		    break;			/* exit while() loop */
+		}
+	    }
+##	}
+
+##	ACTIVATE MENUITEM ERget(F_TU006F_ViewDefaults)
+##		(EXPL = ERget(F_TU0071_ExplViewDflt))
+##	{
+##		i4	ontab;	/* 1 if currently on the tblfld, 0 if not */
+##		i4	dkey;	/* key for defaults value in 'deflist'*/
+##		char	defval[7]; /* col's defaultability; value, user... */
+##		char	colname[FE_MAXNAME+1]; /* column name */
+
+##		inquire_frs field _Form (ontab = TABLE);
+		if (ontab == 0)
+		{
+			IIUGerr(E_TU0002_Must_be_on_table_fiel, UG_ERR_ERROR,
+					(i4) 0);
+##			resume;
+		}
+
+##		getrow _Form _Tblfld (colname = _Col_name,
+##					defval = ERx("defable"),
+##					dkey = _Deflkey )
+
+		if (!STequal(defval, ERget(F_TU0074_Value2)))
+		{
+			IIUGerr(E_TU000C_Not_User_Def, UG_ERR_ERROR, (i4) 2,
+				colname, defval);
+##			resume;
+		}
+
+		/* get the default value into the popup */
+		IITUpdPutDefault( dkey );
+##	}
+
+##	ACTIVATE FRSkey7
+##              (EXPL = ERget(F_FE0104_ExplFind)) /* ERget(FE_Find) */
+##	{
+		FEtabfnd(_Form, _Tblfld);
+##	}
+##	ACTIVATE FRSkey5
+##		(EXPL = ERget(F_FE0105_ExplTop))  /* ERget(FE_Top) */
+##	{
+##		SCROLL _Form _Tblfld TO 1
+##	}
+##	ACTIVATE FRSkey6
+##		(EXPL = ERget(F_FE0106_ExplBottom)) /*ERget(FE_Bottom) */
+##	{
+##		SCROLL _Form _Tblfld TO END
+##	}
+##      activate menuitem ERget(FE_Help) (validate=0, activate=0,
+##              EXPL = ERget(F_FE0100_ExplFrameHelp)),
+##              FRSkey1 (validate = 0, activate=0)
+##	{
+		FEhelp(ERx("tutblinf.hlp"), ERget(F_TU0029_Table_Information));
+##	}
+##      activate menuitem ERget(FE_End) (validate=0, activate=0,
+##              EXPL = ERget(F_FE0102_ExplEnd)),
+##              FRSkey3 (validate = 0, activate=0)
+##	{
+		IITUcdlClearDefaultList();
+##		ENDDISPLAY
+##	}
+	return ;
+##}
+
+
+/*{
+** Name:	fillinfo - display information on the tablefield.
+**
+** Description:
+**	Fill in examine and create table field.  Creates defaults list and
+**	populates the hidden column _Deflkey.
+**
+** Inputs:
+**	tablename	name of table to fill info for.
+**	owner		owner of that table
+**
+** Outputs:
+**	Returns:
+**		STATUS 	OK if filled, FAIL if anything wrong.
+**
+** Side Effects:
+**
+** History:
+**	1-mar-1987 (daver)
+**		Written.
+**	1-dec-1987 (peter)
+**		Rewritten.
+**	8/89	(pete)	Made static.
+**	18-jan-93 (rogerl)  Don't tuchkname.  Name is already OK, since it was
+**		lifted from a form.
+**	19-jan-93 (rogerl)  Check return value of FE_resolve.
+**	21-jan-1993 (mgw)   FE_resolve() failure means table doesn't exist,
+**			    not that it's an illegal name. Report it as such.
+**	5-apr-1993 (rogerl) Destroy and create defaults list.  Add hidden
+**		column default_lkey, and populate that column (via call to
+**		tugetattr()).
+**      3-mar-2004 (rodjo04) INGCBT514 (bug 111902) Table names could be in 
+**              the form owner.tablename. If this is the case then we know 
+**              the owner. FE_resolve() will not work with owner.table for
+**              tablename. 
+*/
+static STATUS
+##fillinfo(tablename, owner)
+## char		*tablename;
+## char		*owner;
+##{
+	i4	attrcount;
+##	char	tupwidth[15];
+##	UI_HELP_INFO	*rel_info = NULL;
+##	UI_HELP_INFO	*tab_info = NULL;
+	UI_HELP_INFO	syn_info;
+	DB_STATUS  rval;
+	TBLINFO *p_tblinfo;	/* pointer to array of TBLINFO structs */
+	i4	tblinfo_cnt;	/* number of rows in array p_tblinfo pts to */
+	i4	deadlock_retries = 0;
+	FE_RSLV_NAME	rname;
+	char		get_own[FE_UNRML_MAXNAME + 1];
+	char		get_name[FE_UNRML_MAXNAME + 1];
+	char		temp_name[FE_UNRML_MAXNAME + 1];
+      
+##	message ERget(F_TU0032_Working_dot_dot_dot)
+
+				/* hidden column default_lkey is for 
+				** correspondence between defaults list and
+				** columns on the screen
+				*/
+##	INITTABLE _Form _Tblfld UPDATE (default_lkey = integer)
+
+	IITUcdlClearDefaultList();
+
+	get_own[0] = get_name[0] = temp_name[0] = EOS;
+	rname.owner_dest = get_own;
+	rname.name_dest = get_name;
+        rname.name = temp_name;
+        rname.is_nrml = TRUE;
+  
+        STcopy(tablename, rname.name);
+        FE_decompose(&rname);
+        if (rname.owner_spec)
+          {
+            tablename  = &rname.name_dest[0];
+            owner = &rname.owner_dest[0];
+          }
+
+
+	if ( FE_resolve(&rname, tablename, owner) == FALSE )
+	{
+	    if (*owner == EOS)
+	    {
+		IIUGerr(E_TU0016_Table_doesnt_exist, UG_ERR_ERROR,
+				(i4) 1, (PTR) tablename);
+	    }
+	    else
+	    {
+		IIUGerr(E_TU000E_Own_dot_Tab_notexist, UG_ERR_ERROR,
+				(i4) 2, (PTR) tablename, (PTR) owner);
+	    }
+	    return(FAIL);
+	}
+	if (rname.is_syn)
+	{
+		/* Fill in some synonym info */
+
+		STcopy(tablename, syn_info.table_name);
+		if (owner[0] == EOS)
+		{	/* Assume current user if owner is null */
+			STcopy(IIUIdbdata()->suser, syn_info.table_owner);
+		}
+		else
+		{
+			STcopy(owner, syn_info.table_owner);
+		}
+		STcopy(ERx("S"), syn_info.table_type);
+		syn_info.system_use[0] = EOS;
+	}
+
+rel_help:
+	rval = IIUIrel_help(get_name, get_own, &tab_info);
+
+	if (IIUIdeadlock ((i4) rval))
+	{
+		/* deadlock occurred. retry. */
+		if (deadlock_retries < MAX_RETRIES)
+		{
+##		    message ERget(S_TU0058_DoingDeadlockRetry)
+		    deadlock_retries++;
+		    goto rel_help;
+		}
+		else
+		{   
+		    IIUGerr(E_TU0057_TooManyDeadlockTries, UG_ERR_ERROR,
+			(i4) 2, (PTR) &deadlock_retries, (PTR) tablename);
+		    return (FAIL);
+		}
+	}
+	else if (rval != OK)
+	{
+		/* other error */
+		IIUGerr(E_TU004D_Error_in_IIUIrel_help, UG_ERR_ERROR,
+			(i4) 1, (PTR) &rval);
+		return(FAIL);
+	}
+	else if (tab_info == NULL)
+	{
+		/* this should no longer occur, since FE_resolve says
+		** says this name resolved into something
+		*/
+		/* no error, but nothing selected */
+		IIUGerr(E_TU0016_Table_doesnt_exist, UG_ERR_ERROR,
+			(i4) 1, (PTR) get_name);
+		return(FAIL);
+	}
+	else
+	{
+		attrcount = tugetattr(tab_info, _Form, _Tblfld, tupwidth);
+		if (attrcount == 0)
+		{
+		    IIUGerr(E_TU0015_No_attributes_found,  UG_ERR_ERROR,
+				(i4) 1, (PTR) tablename);
+		    return(FAIL);
+		}
+		if (rname.is_syn)
+		{
+			rel_info = &syn_info;
+	        	tutabdet(rel_info, &rname, attrcount, tupwidth,
+					&p_tblinfo, &tblinfo_cnt);
+		}
+		else
+		{
+			rel_info = tab_info;
+	        	tutabdet(rel_info, (FE_RSLV_NAME *)NULL, attrcount,
+					tupwidth, &p_tblinfo, &tblinfo_cnt);
+		}
+		/*
+		** Set up table info to display in simple fields
+		** above table field.
+		*/
+
+		/* write info to simple fields above table field. */
+		IITUputform (p_tblinfo, tblinfo_cnt, _Form);
+	}
+	return(OK);
+##}
+
+/*{
+** Name:	IITUprTablePrompt - prompt user for table name.
+**
+** Description:
+**	Display a popup screen to ask user for name of a table. Popup
+**	help available via the Choices menuitem.
+**
+**	This routine is called by both Examine and Create-a-Table.
+**
+** Inputs:
+**	char *tbl	Initial table name to display, or NULL.
+**
+** Outputs:
+**	Returns:
+**		Pointer to table name selected.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	10/10/89 (pete)	Initial Version.
+**	3/14/90  (pete) Fixed to accept an initial table name.
+**	3-18-93  (rogerl) Preserve what user typed before cancel of
+**		ListChoices by checking for EOS - in which case
+**		nothing was chosen, it's not a " " named table.  Bug 49411.
+*/
+char *
+IITUprTablePrompt(tbl)
+## char *tbl;	/* initial table name to display */
+## {
+##	char *promptform = ERx("tutableprompt");
+
+        if (!Tblprmptformready)
+	{
+            if ( IIUFgtfGetForm(IIUFlcfLocateForm(), promptform) != OK )
+	    {
+                IIUGerr (E_TU0041_Get_Form_Failed, UG_ERR_ERROR, 1,
+				                         promptform);
+                return (char *)NULL;
+            }
+
+            Tblprmptformready = TRUE;
+        }
+
+##      DISPLAY promptform
+##	INITIALIZE
+##	{
+		if (tbl != (char *)NULL)
+		
+##                  PUTFORM (#tablename = tbl)
+##	}
+##      ACTIVATE MENUITEM ERget(FE_OK) (EXPL = ERget(F_TU0059_ExplGetOk)),
+##		FRSkey4
+##	{
+##              GETFORM (IITUtblname = #tablename)
+
+                if (IITUtblname[0] == EOS)     /* if it's a null name */
+                    IIUGerr(E_TU0051_No_Table_Entered, UG_ERR_ERROR,
+			    2, (PTR) ERget(FE_OK), (PTR) ERget(FE_Cancel));
+		else
+##                  BREAKDISPLAY
+
+##	}
+##      ACTIVATE MENUITEM ERget(FE_Cancel)
+##	  (validate=0, EXPL = ERget(F_FE0103_ExplCancel)), FRSKEY9 (validate=0)
+##      {
+		IITUtblname[0] = EOS;
+##              BREAKDISPLAY
+##	}
+##      ACTIVATE MENUITEM ERget(FE_Lookup)
+##	  (validate=0, EXPL = ERget(F_FE0116_LookupExpl)), FRSkey10 (validate=0)
+##      {
+##              char *p_tbl;
+##              char tblname[FE_MAXNAME+1];
+
+##              GETFORM (tblname = #tablename)
+
+                /* IITUtpTblPik treats 'tblname' as a wildcard, by tacking
+                ** a wildcard character onto it before running the query.
+                */
+		IituMainform = FALSE;	/* signal that Create & Destroy
+					** menuitems should not be displayed.
+					*/
+                p_tbl = IITUtpTblPik(tblname, (char *)NULL );
+
+                if ( p_tbl != NULL && *p_tbl != EOS )
+                { /* user Selected a row. */
+##                  PUTFORM (#tablename = p_tbl)
+                }
+		else if ( p_tbl != NULL && *p_tbl != EOS
+				&& ( STtrmwhite( p_tbl ) == 0 ) )
+		{ /* special case " " table name */
+		    p_tbl[0] = ERx('"');
+		    p_tbl[1] = ERx(' ');
+		    p_tbl[2] = ERx('"');
+##                  PUTFORM (#tablename = p_tbl)
+		}
+		/* else, leave what, if any, user typed already */
+##      }
+##      ACTIVATE MENUITEM ERget(FE_Help)
+##		(validate=0, EXPL = ERget(F_FE0100_ExplFrameHelp)),
+##		FRSKEY1 (validate=0)
+##      {
+                FEhelp(ERx("tutblprm.hlp"), ERget(F_TU004A_Help_Table_Prompt));
+##      }
+##	FINALIZE
+
+	return IITUtblname;
+## }

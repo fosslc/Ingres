@@ -1,0 +1,215 @@
+<HTML>
+<HEAD>
+<!-- Created with DOC2HTML, v610 (12/21/2006) -->
+<title>Ingres® 10.0 for Linux on x86_64 Using Native POSIX Threading Library (NPTL) (a64.lnx)</title>
+<META HTTP-EQUIV="Content-Type" Content="text-html; charset=utf-8">
+<style>
+<!--
+A:link                       { text-decoration: underline; font-weight: bold; color: #336699  }
+A:visited                    { text-decoration: underline; font-weight: bold; color: #336699  }
+BODY                         { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-size: 80%; font-weight: normal; color: 00000  }
+TABLE                        { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-size: 100%; color: 000000; }
+P                            { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-weight: normal; color: #000000  }
+H1                           { font-size: 180%; font-weight: bold; color: #336699  }
+H2                           { font-size: 155%; font-weight: normal; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; color: #336699  }
+H3                           { font-size: 130%; font-weight: bold; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; color: #336699  }
+H4                           { font-size: 130%; font-weight: bold; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; color: #336699  }
+ol, ul ol, ul ul ol          { list-style-type: decimal; list-style-image : none; }
+ol ol, ul ol ol, ol ul ol    { list-style-type: lower-alpha; list-style-image: none; }
+ul, ol ul, ol ol ul          { list-style-type: disc; list-style-image: none; }
+ul ul, ol ul ul, ul ol ul    { list-style-type: circle; list-style-image: none;}
+ul ul ul                     { list-style-type: square; list-style-image: none; }
+ol ol ol                     { list-style-type: upper-roman; list-style-image: none; }
+B                            { font-weight: bold  }
+STRONG                       { font-weight: bold  }
+I                            { font-style: italic  }
+EM                           { font-style: italic  }
+INPUT                        { color: #336699; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-size: 90%; } /* Special */
+TEXTAREA                     { color: #336699; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-size: 90%; } /* Special */
+BLOCKQUOTE                   { font-size: 80%; }
+PRE                          { font-family: "courier new", courier, monospace; font-size: 100%  }
+table, td                    { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-weight: normal; color: #000000; vertical-align: top; border: 1px solid #EBEBEB; border-collapse: collapse; font-size: 12px; padding: 2px;}
+table.invis, td.invis        { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-weight: normal; color: #000000; vertical-align: middle; border: 0px; border-collapse: collapse; font-size: 12px; padding: 2px;}
+th                           { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-weight: bold; color: #000000; vertical-align: top; border: 1px solid #FFFFFF; background-color: #006699; color:#FFFFFF; text-align: left; padding: 2px;}
+tr.alt                       { background-color : #F1F5FA;}
+.computerassoc               { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; color: #FFFFFF; text-decoration: none; background-color: #336699; font-size: 130%; font-weight: bold; }
+hr                           { color: #CCCCCC; height:1px; }
+-->
+</style>
+</HEAD>
+<BODY>
+<table width="100%"  border="0" cellspacing="0" cellpadding="0"><tr><td class="computerassoc">Ingres Corporation</td></tr></table>
+<h1><a name="ingres_10_0_for_linux_on_x86_64_using_native_posix_threading_library_nptl_a64_lnx">Ingres<sup>®</sup> 10.0 for Linux on x86_64 Using Native POSIX Threading Library (NPTL) (a64.lnx)</a></h1>
+<p>
+<hr>
+<nobr>
+<p><b><a href="#welcome">1.0  Welcome</a></b>
+<p><b><a href="#operating_system_support">2.0  Operating System Support</a></b>
+<br><a href="#preprocessor_and_compiler_support">2.1  Preprocessor and Compiler Support</a>
+<p><b><a href="#system_requirements">3.0  System Requirements</a></b>
+<p><b><a href="#installation_considerations">4.0  Installation Considerations</a></b>
+<br><a href="#rpm_support">4.1  RPM Support</a>
+<br><a href="#installing_ingres">4.2  Installing Ingres</a>
+<br><a href="#how_to_upgrade_using_rpm">4.3  How to Upgrade Using RPM</a>
+<br><a href="#post_installation">4.4  Post Installation</a>
+<br><a href="#documentation">4.5  Documentation</a>
+<br><a href="#visual_tools">4.6  Visual Tools</a>
+<br><a href="#protocols_supported">4.7  Protocols Supported</a>
+<br><a href="#raw_transaction_log_files_and_raw_database_locations_not_supported_on_64_bit_linux">4.8  Raw Transaction Log Files and Raw Database Locations Not Supported on 64-bit Linux</a>
+<br><a href="#oracle_tuxedo_support">4.9  Oracle Tuxedo Support</a>
+</nobr>
+<p>
+<hr>
+<h2><a name="welcome">1.0  Welcome</a></h2>
+<p>This readme contains information specific to Ingres running
+under 64-bit x86_64 Linux with NPTL support.  
+<p>
+<hr>
+<h2><a name="operating_system_support">2.0  Operating System Support</a></h2>
+<p>The following operating systems are supported (as of the
+publishing of this document):
+<p>
+<b>Red Hat Enterprise Linux 5 (64-bit)
+<p>
+Red Hat Enterprise Linux 4 (64-bit)</b>
+<p>
+<b>Red</b> <b>Hat Enterprise</b> <b>Linux</b> <b>3</b> <b>(64-bit)</b>
+<p>
+<b>SUSE Linux Enterprise Server</b> <b>11.x (64-bit)
+<p>
+SUSE Linux Enterprise Server 10.x (64-bit)</b>
+<p>
+<b>SUSE Linux Enterprise Server 9.x</b> <b>(64-bit)</b>
+<p>Kernel and glibc requirements:
+<ul>
+<p><li><b>64-bit</b> <b>Linux Kernel 2.4.21-20EL</b> and up with <b>glibc</b> <b>2.3-95</b>
+C-language libraries and up with NPTL support.
+<p><li><b>64-bit</b> <b>Linux Kernel 2.6</b> with <b>glibc 2.3</b> C-language libraries
+with NPTL support.
+</ul>
+<p>The Ingres product support life cycle policy determines the
+duration of support for Ingres on these operating systems
+unless the operating system's manufacturer drops support on
+a prior date. For the latest information about supported
+operating systems, visit <a href="http://www.ingres.com/support" target="_blank">http://www.ingres.com/support</a>.
+<p>
+<hr>
+<h3><a name="preprocessor_and_compiler_support">2.1  Preprocessor and Compiler Support</a></h3>
+<p>
+GCC 3.3.3 to 4.3.3 (C, C++, and Fortran)  
+<p>
+Micro Focus Server Express COBOL 5.0
+<p>
+<hr>
+<h2><a name="system_requirements">3.0  System Requirements</a></h2>
+<p>Disk space requirements are as follows:  
+<p><table border>
+<tr>
+<th align=left valign=top>
+System Configuration
+</th>
+<th align=left valign=top>
+Space Required
+</th>
+</tr>
+<tr>
+<td>Client Only (Ingres Net) Install
+</td>
+<td>56 MB
+</td>
+</tr>
+<tr class="alt">
+<td>DBMS Server with Ingres Net Install
+</td>
+<td>118 MB
+</td>
+</tr>
+<tr>
+<td>Full installation plus documentation
+</td>
+<td>401 MB
+</td>
+</tr>
+</table>
+<p>
+<hr>
+<h2><a name="installation_considerations">4.0  Installation Considerations</a></h2>
+<p>
+<hr>
+<h3><a name="rpm_support">4.1  RPM Support</a></h3>
+<p>RPM 4.1.1 or later
+<p>
+<hr>
+<h3><a name="installing_ingres">4.2  Installing Ingres</a></h3>
+<p>To install Ingres using the new graphical installation
+wizard, run the script <b>ingres_install</b> found in the
+directory created when the saveset is extracted.
+<p>
+<hr>
+<h3><a name="how_to_upgrade_using_rpm">4.3  How to Upgrade Using RPM</a></h3>
+<p>Due to problems observed during upgrade of Ingres RPMs,
+please consult the instructions in the Ingres for Linux
+<i>Installation</i> guide before upgrading.  
+<ul>
+<p><li>BUG 115822—Upgrading an RPM installation that has been
+installed in a location other than the default can result
+in all installed files (except data files and generated
+configuration files) being removed. This is caused by a bug
+in RPM version 4.1.1.
+</ul>
+<p>
+<hr>
+<h3><a name="post_installation">4.4  Post Installation</a></h3>
+<p>The only supported method for backing out patches installed
+against Ingres 10.0 is to reinstall the RPM from the base
+release. Therefore, make sure you keep the RPM used for
+your most recent install so that a patch can be backed out,
+if necessary.
+<p>
+<hr>
+<h3><a name="documentation">4.5  Documentation</a></h3>
+<p>Ingres documentation can be installed on Linux systems by
+installing the documentation RPM file that can be
+downloaded separately.  
+<p>
+<hr>
+<h3><a name="visual_tools">4.6  Visual Tools</a></h3>
+<p>The Visual DBA suite is not included as part of the Ingres
+10.0 for x86_64 Linux. However, these tools are included in
+Ingres 10.0 for Windows client and can be installed on a
+Windows PC to administer Ingres 10.0 for x86_64 Linux
+remotely.
+<p>The Visual DBA suite is also available separately as the
+Community Ingres DBA Tools package and is available for
+download from <a href="http://esd.ingres.com/" target="_blank">esd.ingres.com</a>.
+<p>The Ingres Database Workbench (IDW) is available for Linux
+and lets you browse your database objects such as tables,
+views, procedures, and rules. You can also issue SQL
+statements using the SQL scrapbook editor, edit the
+contents of your tables, and edit your procedures and
+rules.&nbsp;IDW is available for download from <a href="http://esd.ingres.com/" target="_blank">esd.ingres.com</a>.
+<p>
+<hr>
+<h3><a name="protocols_supported">4.7  Protocols Supported</a></h3>
+<p>TCP/IP Native
+<p>
+<hr>
+<h3><a name="raw_transaction_log_files_and_raw_database_locations_not_supported_on_64_bit_linux">4.8  Raw Transaction Log Files and Raw Database Locations Not Supported on 64-bit Linux</a></h3>
+<p>Research has shown that raw transaction log files and raw
+database locations on 64-bit Linux do not provide
+performance benefits. To simplify administration, this
+feature is not supported on Ingres 10.0 for 64-bit Linux.
+<p>
+<hr>
+<h3><a name="oracle_tuxedo_support">4.9  Oracle Tuxedo Support</a></h3>
+<p>Oracle Tuxedo 10.0 is supported with this version of
+Ingres. Visit
+<a href="http://www.oracle.com/products/middleware/bea.html" target="_blank">http://www.oracle.com/products/middleware/bea.html</a>  for
+more information.
+<p>
+<hr>
+<font size=-2>
+Copyright © 2010 Ingres Corporation. All rights reserved.
+</font>
+</BODY>
+</HTML>

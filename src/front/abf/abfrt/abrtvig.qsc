@@ -1,0 +1,145 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<er.h> 
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<adf.h>
+#include	<feconfig.h>
+#include	<abfcnsts.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+
+/**
+** Name:    abrtvig.qc -	ABF Run-Time System Run a Vigraph Frame.
+**
+** Description:
+**	Contains the runtime code that runs a Vigraph frame.  Defines:
+**
+**	IIARvgfGraph()		run a Vigraph frame.
+**
+** History:
+**	Revision 6.4
+**	03/22/91 (emerson)
+**		Fix interoperability bug 36589:
+**		Change all calls to abexeprog to remove the 3rd parameter
+**		so that images generated in 6.3/02 will continue to work.
+**		(Generated C code may contain calls to abexeprog).
+**		This parameter was introduced in 6.3/03/00, but all calls
+**		to abexeprog specified it as TRUE.  See abfrt/abrtexe.c
+**		for further details.
+**
+**	Revision 5.1  86/08/14  joe
+**	Extracted from "abfrts.qc" for PC overlay work.
+**
+**	Revision 4.0  86/02/10  peter
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# ifndef NOVIGRAPH
+/*{
+** Name:    IIARvgfGraph() -	Run a Vigraph Frame.
+**
+** Description:
+**	Run a Vigraph frame.  This just amounts to calling Rungraph.
+**
+** Input:
+**	frm	{ABRTSFRM *}  The run-time frame structure.
+**	param	{ABRTSPRM *}  Any parameters passed to the frame; ignored.
+**
+** Called by:
+**	abrtscall()
+**
+** History:
+**	Written 02/10/86 (prs)
+**	
+**	26-may-89 (kenl)
+**		Added code to conditionaly build the FLAGS part of the
+**		VIGRAPH command line string.
+*/
+#define _Draw_Expl	F_AR000D_DrawExpl
+
+#define _Help_Expl	F_FE0100_ExplFrameHelp
+#define _End_Expl	F_FE0102_ExplEnd
+
+VOID
+IIARvgfGraph (frm, param)
+ABRTSFRM	*frm;
+ABRTSPRM	*param;
+{
+##{
+    register ABRTSGBF	*gbffrm = &(frm->abrfrgbf);
+    bool		end;
+    i4			argcnt;
+    char		*args[2];
+    char		abexestr[256];
+    char		combuf[ABCOMSIZE+1];
+
+    for (end = FALSE ; !end ;)
+    {
+
+##	char *blankname;
+	FUNC_EXTERN char *iiar_blankform();
+
+	blankname = iiar_blankform();
+
+##	clear screen
+##	display blankname fill
+
+##	activate menuitem ERget(FE_Plot) (expl = ERget(_Draw_Expl)),
+##			  FRSkey4
+##	{
+##	    clear screen
+
+	    argcnt = 0;
+	    args[argcnt] = gbffrm->abrgfname;
+	    STcopy(ERx("graph = %S"), abexestr);
+
+	    if (gbffrm->abrgfcomline != NULL && *(gbffrm->abrgfcomline) != EOS)
+	    {
+		STcopy(gbffrm->abrgfcomline, combuf);
+		argcnt++;
+		args[argcnt] = combuf;
+		STcat(abexestr, ERx(", flags = %S"));
+	    }
+
+	    abexeprog(ERx("rungraph"), abexestr,
+				++argcnt, args[0], args[1]);
+	    /*
+	    ** RunGraph waits for the user to push a key before quitting.
+	    */
+##	    clear screen
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(_Help_Expl), validate=0),
+##		    	  FRSkey1 (validate = 0)
+##	{
+	    FEhelp(hlpVIGMU, ERget(S_AR0024_RunGraphHelpTitle));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(_End_Expl)),
+##		    	  FRSkey3 (validate = 0)
+##	{
+	    end = TRUE;
+##	    breakdisplay
+##	}
+
+##	finalize
+    }
+    return;
+##}
+}
+# else
+static	int	_junk = 0;	/* To shut up the librarian */
+# endif /* NOVIGRAPH */

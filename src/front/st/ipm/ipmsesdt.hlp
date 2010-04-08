@@ -1,0 +1,102 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Session Detail screen.  This screen displays a variety of
+information about the indicated user session.  Session ID, Session Name,
+Terminal, Database, and Server Facility are the same as on the Session
+List screen.  State is replaced by the expanded state and mask; this
+information is mainly of use to consultants.
+
+Other fields on the session detail screen include:
+
+Real User,     Usually these are identical.  If the session was started
+Apparent User  with the -u flag to impersonate another user, the apparent
+               user is the user who is being impersonated.  For instance,
+               if user ted used his Ingres superuser privileges to start a
+               session with "sql -u bill dbname", then the apparent user would
+               be bill, the real user would be ted.
+
+DBA            The owner of the database (Database Administrator) that the
+               session is connected to.
+
+Group ID,      The group and role ID (part of the optional Knowledge
+Role ID        Management Extension package), if any, are displayed for the
+               current session.
+
+Query          If the user running IPM is an Ingres superuser, the first
+               128 characters of the query currently running are displayed.
+               The query is only shown if it is current.  A current query
+               is one being processed by the DBMS, not a query that has
+               returned results and finished executing, even though the
+               user has not committed.
+
+Client PID     On VMS only, if the session is being run from a front end
+               which is local and interactive (as opposed to batch), the
+               front end's Process ID (PID) is displayed.  Using the
+               "Process_Info" menuitem, the front end Job and Process (JPI)
+               parameters can be observed using the IPM Detailed Process
+               Information screen.
+
+Log records    When the session is backing out the transaction due to any
+processed,     cause, the number of log records processed and the log
+Current log    address being processed in the process of the rollout will
+address        be displayed.  This allows visual confirmation that the
+               server is indeed doing work on the rollout.  Periodic
+               refreshes gives a measure of the progress in performing the
+               rollout.  A session which is being rolled out should never
+               be removed nor should the server containing that session be
+               terminated in any way.  Causes of backing out include the
+               ROLLBACK statement in SQL, the session being removed, running
+               out of logfile space, and deadlock.
+
+Activity       The Activity field indicates the various states a session
+               may be in.  The possible states include:
+
+               Aborting
+                    A normal abort is being performed (i.e. user issued a
+                    ROLLBACK, deadlock, etc).
+
+               Performing force abort processing
+                    An abort of an old transaction is underway.
+
+               Aborting on behalf of an interrupt
+                    An abort is taking place due to an interrupt (Control-C).
+
+               Aborting on behalf of a terminating session
+                    An abort is taking place for a session which is
+                    terminating ungracefully.
+
+               Terminating session
+                    A session is terminating normally.
+
+               Fetching IIDBDB information
+                    A session that is starting up is retrieving IIDBDB
+                    information.  This can show up for extended periods due
+                    to locks on the IIDBDB or the logging system is full.
+
+               Optimizing query
+                    The optimizer is at work.
+
+               Waiting on event lock signal (LKevent)
+                    The Event Thread is usually in this state.
+
+The following menuitems are available:
+
+Refresh        Queries the specified Ingres server for new session detail
+               for the specified session and refreshes the display.  If the
+               server and/or session no longer exists, a message is
+               displayed.
+
+Process_Info   Displays a screen which shows various job-process
+               information for the front end which is being examined.  The
+               front end must be local and interactive (not in batch) in
+               order for this option to work: a PID can't be obtained for a
+               session's front end unless the front end is "tied to" a
+               terminal.  Information displayed includes CPU time, Direct
+               I/O, Buffered I/O, Enqueue limit, etc.  This display
+               automatically refreshes.  This menuitem is available on
+               VMS only.
+
+Help           Displays this screen.
+
+End            Returns to the Session List screen.
+
+Quit           Exits IPM.

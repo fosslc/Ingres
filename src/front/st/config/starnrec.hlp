@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The distributed_recovery resource specifies whether Star servers
+  created with this definition will attempt to recover distributed
+  transactions at startup time.

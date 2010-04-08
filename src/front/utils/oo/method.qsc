@@ -1,0 +1,89 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<oodefine.h>
+# include	"ooldef.h"
+## include	<oosymbol.qsh>
+# include	"eroo.h"
+#include        <ercl.h>
+
+/**
+** History:
+**      22-oct-90 (sandyd)
+**              Fixed #include of local ooldef.h to use "" instead of <>.
+**      18-oct-1993 (kchin)
+**          	Since the return type of OOsndSelf() has been changed to PTR,
+**          	when being called in MinitDb(), its return type needs to be 
+**		cast to the proper datatype.
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**/
+
+OOID
+## MinitDb(self, name, rem, mclass, proc, argcount, perm, keep, flevel)
+   OO_METHOD	*self;
+EXEC SQL BEGIN DECLARE SECTION;
+## char		*name, *rem;
+## OOID		mclass;
+EXEC SQL END DECLARE SECTION;
+   char		*proc;
+   i4		argcount, perm, keep, flevel;
+## {
+##	i4	tnum, anyOther;
+##	char	*O1table = O1->table_name;
+##	char	*O4table = O4->table_name;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4	tmpid;
+	EXEC SQL END DECLARE SECTION;
+
+    	EXEC SQL REPEATED SELECT iimethod.id
+		INTO :tmpid
+		FROM iimethod, ii_objects
+		WHERE iimethod.mclass = :mclass
+		    AND   ii_objects.object_name = :name
+		    AND   ii_objects.object_id = iimethod.id;
+    	EXEC SQL BEGIN;
+	    anyOther = 1;
+	    EXEC SQL ENDSELECT;
+	EXEC SQL END;
+	if (anyOther) {
+		err(E_OO001E_Method_already_exists, name,
+			OOsnd(mclass, _name));
+		return 0;
+	}
+	return ((OOID)OOsndSelf(self, _init, name, rem, mclass, proc, argcount, 
+				perm, keep, flevel));
+## }
+
+OOID
+Minit(self, name, rem, mclass, proc, argcount, perm, keep, flevel)
+OO_METHOD *self;
+char	*name, *rem;
+OOID	mclass;
+char	*proc;
+i4	argcount, perm, keep, flevel;
+{
+	OOsndSuper(self, _init, name, 0, "", 1, rem, NULL, NULL, NULL);
+	self->mclass = mclass;
+	self->procname = proc;
+	self->argcount = argcount;
+	self->defaultperm = perm;
+	self->keepstatus = keep;
+	self->fetchlevel = flevel;
+	return self->ooid;
+}

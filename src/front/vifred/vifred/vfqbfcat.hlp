@@ -1,0 +1,52 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame lists all of the QBFNames associated with the form shown 
+at the top of this frame.  A QBFname provides a mapping between the 
+form and either a table or a JoinDef (created in QBF).  A JoinDef 
+defines a query and its semantics for use by QBF.  Please consult 
+the Ingres Character-based Querying and Reporting Tools User Guide
+for more information.
+
+You may create new QBFNames to associate with this form by selecting 
+the "Create" menu command.
+
+You may perform other menu operations on the QBFNames by positioning
+the cursor over the QBFName of interest by using the cursor keys or
+the table field scrolling keys.  After positioning the cursor on the
+name of interest, select the appropriate menu command.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Create          Create a new QBFName associated with this form.
+                        You will be prompted for the new QBFName, and 
+                        then presented with a submenu to specify whether
+                        to associate the form with a table or joindef.
+
+        Destroy         Destroy the selected QBFName.  You will be
+                        asked to confirm this decision.
+
+        Edit            Edit the selected QBFName.  This will bring
+                        up a new frame to allow you to edit the form,
+                        table or Joindef name associated with the
+                        selected QBFName.  In addition, you may also edit
+                        the short and long descriptions for the QBFName
+                        at this time.
+
+        Rename          Rename the selected QBFName.  You will be prompted
+                        for the new name.
+
+        MoreInfo        Obtain more information on the selected QBFName.
+                        A new frame is displayed to show the creation/last
+                        modification time, the short and long descriptions
+                        and the form and table/Joindef name associated
+                        with the selected QBFName.  You may change and save
+                        the short and long descriptions for the selected
+                        QBFName while in the new frame.
+
+        Go              Invoke QBF on the selected QBFName.  VIFRED will
+                        start up QBF with the selected QBFName.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Forms Catalog frame.

@@ -1,0 +1,35 @@
+#
+# YAM MANIFEST file for front!misc!chsfiles
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#        06-Sep-2005 (drivi01)
+#           Updated list of character sets with new once from change
+#           #478292.
+
+
+IISUBSYS front misc chsfiles ;
+
+if ! $(NT)
+{
+IICHARSET alt.chs arabic.chs chineses.chs chineset.chs chtbig5.chs chteuc.chs
+	chthp.chs csgb2312.chs csgbk.chs cw.chs decmulti.chs dosasmo.chs
+	elot437.chs greek.chs hebrew.chs hproman8.chs ibmpc437.chs 
+	ibmpc850.chs ibmpc866.chs is885915.chs iso88591.chs iso88592.chs
+	iso88595.chs iso88597.chs iso88599.chs kanjieuc.chs koi8.chs korean.chs 
+	pc737.chs pc857.chs pchebrew.chs shiftjis.chs slav852.chs thai.chs 
+	utf8.chs warabic.chs whebrew.chs win1250.chs win1252.chs win1253.chs 
+	wthai.chs ;
+}
+else
+{
+IICHARSET alt.chs arabic.chs chineses.chs chineset.chs chtbig5.chs chteuc.chs chthp.chs
+csgb2312.chs csgbk.chs cw.chs decmulti.chs dosasmo.chs elot437.chs greek.chs
+hebrew.chs hproman8.chs ibmpc437.chs ibmpc850.chs ibmpc866.chs inst1252.chs
+is885915.chs iso88591.chs iso88592.chs iso88595.chs iso88597.chs iso88599.chs 
+kanjieuc.chs koi8.chs korean.chs pc737.chs pc857.chs pchebrew.chs shiftjis.chs slav852.chs 
+thai.chs utf8.chs warabic.chs whebrew.chs win1250.chs win1252.chs win1253.chs wthai.chs ;
+
+}

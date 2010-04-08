@@ -1,0 +1,354 @@
+/*
+**	MQGETBRWS.QSC  - This module constitutes the data
+**		      browsing support routines of MQBF. It is
+**		      called after all the query strings,
+**		      param args, etc. have been set up.
+**
+**	Routines:
+**
+**	Copyright (c) 2004 Ingres Corporation
+**
+**	History:
+**		29-sep-86 (marian)	bug # 10423
+**			Check to see if *output = QO_QDONE (or Q0_DDONE)
+**			before loadtable.
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh.  Added code to copy
+**			DB Data Values (using routine IIQFcdb_CopyDBDVs) from
+**			SELECTed table columns into hidden columns.  This is
+**			necessary to remember columns values required for keys.
+**			Technical note: the hidden column information MUST map
+**			to the mqu[md]rec arrays to insure that the information
+**			will get passed along to WRTUPD for updates.
+**			IIQFcdb_CopyDBDVs must be called prior to each 
+**			PUTFORM or LOADTABLE.
+**		20-jul-88 (kenl)
+**			Added messages to inform user that no details were
+**			retrieved for a M/D JoinDef when the JoinDef is all
+**			in SimpleField form.
+**		11/23/90 (emerson)
+**			Changed calling sequence for IIQFcdb_CopyDBDVs
+**			(bug 8593).
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	"mqeglobs.h"
+# include	<er.h>
+# include	"erqf.h"
+
+FUNC_EXTERN VOID    IIQFcdb_CopyDBDVs();
+
+/*
+** mqgetmaster	-Get next master for a Master/Detail qdef.
+**
+**	Returns	  0:	  if OK
+**		 -1:	  if no more masters
+**		 errnum:  INGRES error occurred on retrieve
+*/
+
+i4
+mqgetmaster(qdef, output, numrows)
+MQQDEF	*qdef;
+i4	*output;
+i4	*numrows;
+##{
+	i4	rcode;
+	QDESC	*mqqry;
+##	char	*fname;
+##	char	*tfld;
+
+	mqqry = qdef->mqqdesc;
+	fname = mq_frame;
+	tfld = mq_tbl;
+	rcode = 0;
+
+	if (*output == QO_QDONE)
+	{
+##		message ERget(S_QF0078_No_more_masters)
+##		sleep 3
+		rcode = -1;
+		return(rcode);
+	}
+	if (*output == QO_DDONE)
+	{
+		if ((rcode = IIQG_generate(mqqry, QI_GET, output)) != OK)
+			return(rcode);
+	}
+	else
+	{
+		if ((rcode = IIQG_generate(mqqry, QI_NMASTER, output)) != OK)
+			return(rcode);
+	}
+	if (*output == QO_QDONE)
+	{
+##		message ERget(S_QF0078_No_more_masters)
+##		sleep 3
+		/*
+		**mqresetwhere(mqqry);
+		*/
+		rcode = -1;
+	}
+	else
+	{
+		IIQFcdb_CopyDBDVs(qdef, mqIN_MASTER);
+##		clear field all
+##		PUTFORM fname (param(qdef->mqmpform, qdef->mqmpargv))
+
+		if (tblfield)
+		{
+			(*numrows) = 1;
+			mqrowstat = 0;	/* init to no rows added by user */
+			while ((*output != QO_DDONE) && ((*numrows) < mqmaxrows))
+			{
+				IIQFcdb_CopyDBDVs(qdef, mqIN_DETAIL);
+##				LOADTABLE fname tfld
+##				 (param(qdef->mqdpform, qdef->mqdpargv))
+				if ((rcode = IIQG_generate(mqqry, QI_GET, output)) != OK)
+				{
+					*numrows = 0;
+					return(rcode);
+				}
+				(*numrows)++;
+			}
+			if (*output != QO_DDONE)
+			{
+				IIQFcdb_CopyDBDVs(qdef, mqIN_DETAIL);
+##				LOADTABLE fname tfld
+##				 (param(qdef->mqdpform, qdef->mqdpargv))
+			}
+			else
+			{
+				(*numrows)--;
+			}
+		}
+		else
+		{
+# ifdef DEBUG
+			if (mq_debug)
+			{
+				SIfprintf(mqoutf, ERx("MQGETMASTER: output is %d\n"), *output);
+			}
+# endif
+
+			if (*output != QO_DDONE)
+			{
+				IIQFcdb_CopyDBDVs(qdef, mqIN_DETAIL);
+##				PUTFORM fname
+##				 (param(qdef->mqdpform, qdef->mqdpargv))
+			}
+			else
+			{
+##			    	MESSAGE ERget(S_QF0151_no_details_found)
+##			    	SLEEP 3
+			}
+		}
+	}
+	return(rcode);
+##}
+
+
+i4
+mqgetrecord(qdef, output)
+MQQDEF	*qdef;
+i4	*output;
+##{
+##	char	*fname;
+	QDESC	*mqqry;
+	i4	rcode;
+
+	fname = mq_frame;
+	mqqry = qdef->mqqdesc;
+	rcode = 0;
+
+	if (*output == QO_QDONE)
+	{
+##		message ERget(S_QF0079_No_more_rows_in_query)
+##		sleep 3
+		rcode = -1;
+		return(rcode);
+	}
+	if ((rcode = IIQG_generate(mqqry, QI_GET, output)) != OK)
+		return(rcode);
+
+	if (*output == QO_QIN)
+	{
+		IIQFcdb_CopyDBDVs(qdef, mqIN_MASTER);
+##		clear field all
+##		PUTFORM fname (param(qdef->mqmpform, qdef->mqmpargv))
+	}
+	else
+	{
+##		message ERget(S_QF0079_No_more_rows_in_query)
+##		sleep 3
+		/*
+		**mqresetwhere(mqqry);
+		*/
+		rcode = -1;
+	}
+	return(rcode);
+##}
+
+
+i4
+mqgetdtl(qdef, output)
+MQQDEF	*qdef;
+i4	*output;
+##{
+##	char	*fname;
+	QDESC	*mqqry;
+	i4	rcode;
+
+	rcode = 0;
+	mqqry = qdef->mqqdesc;
+	fname = mq_frame;
+
+	if (*output == QO_QDONE)
+	{
+##		message ERget(S_QF007A_No_more_records)
+##		sleep 3
+		rcode = -1;
+		return(rcode);
+	}
+	if (*output == QO_DDONE)
+	{
+		goto nmaster;
+	}
+	if ((rcode = IIQG_generate(mqqry, QI_GET, output)) != OK)
+		return(rcode);
+
+	if (*output == QO_QDONE)
+	{
+##		message ERget(S_QF007A_No_more_records)
+##		sleep 3
+		/*
+		**mqresetwhere(mqqry);
+		*/
+		rcode = -1;
+		return(rcode);
+	}
+	else if (*output == QO_DDONE)
+	{
+	nmaster:
+##		message ERget(S_QF007B_No_more_details_for_t)
+		if ((rcode = IIQG_generate(mqqry, QI_GET, output)) != OK)
+			return(rcode);
+		if (*output != QO_QDONE)
+		{
+			IIQFcdb_CopyDBDVs(qdef, mqIN_MASTER);
+##			clear field all
+##			PUTFORM fname (param(qdef->mqmpform, qdef->mqmpargv))
+			if (*output == QO_DDONE)
+			{
+##			    MESSAGE ERget(S_QF0151_no_details_found)
+##			    SLEEP 3
+			}
+		}
+		else
+		{
+##			message ERget(S_QF007A_No_more_records)
+##			sleep 3
+			/*
+			**mqresetwhere(mqqry);
+			*/
+			rcode = -1;
+			return(rcode);
+		}
+	}
+# ifdef DEBUG
+	if (mq_debug)
+	{
+		SIfprintf(mqoutf, ERx("MQGETDTL: output is %d\n"), *output);
+	}
+# endif
+
+	if (*output != QO_DDONE)
+	{
+		IIQFcdb_CopyDBDVs(qdef, mqIN_DETAIL);
+##		PUTFORM fname (param(qdef->mqdpform, qdef->mqdpargv))
+	}
+	return(rcode);
+##}
+
+
+i4
+mqgetscroll(qdef, output, numrows)
+MQQDEF	*qdef;
+i4	*output;
+i4	*numrows;
+##{
+	QDESC	*mqqry;
+	i4	i;
+	i4	rcode;
+##	char	*fname;
+##	char	*tfld;
+
+	mqqry = qdef->mqqdesc;
+	fname = mq_frame;
+	tfld = mq_tbl;
+	rcode = 0;
+
+	if (*output == QO_QDONE)
+	{
+		return(rcode);
+	}
+	if (qdef_type == 0)
+	{
+		for (i=0; ((i<10) && (*output != QO_DDONE)); i++)
+		{
+			if ((rcode = IIQG_generate(mqqry, QI_GET, output)) != OK)
+			{
+				return(rcode);
+			}
+
+			/* bug 10423
+			**	Check to see if you are done before loading.
+			*/
+
+			if (*output == QO_DDONE)
+			{
+				return(rcode);
+			}
+			mqrowstat = 0;
+			IIQFcdb_CopyDBDVs(qdef, mqIN_DETAIL);
+##			LOADTABLE fname tfld
+##			 (param(qdef->mqdpform, qdef->mqdpargv))
+			(*numrows)++;
+		}
+	}
+	else
+	{
+		for (i=0; ((i<10) && (*output != QO_QDONE)); i++)
+		{
+			if ((rcode = IIQG_generate(mqqry, QI_GET, output)) != OK)
+			{
+				return(rcode);
+			}
+
+			/* bug 10423
+			**	Check to see if you are done before loading.
+			*/
+
+			if (*output == QO_QDONE)
+			{
+				return(rcode);
+			}
+			mqrowstat = 0;
+			IIQFcdb_CopyDBDVs(qdef, mqIN_MASTER);
+##			LOADTABLE fname tfld
+##			 (param(qdef->mqmpform, qdef->mqmpargv))
+			(*numrows)++;
+		}
+	}
+	return(rcode);
+##}

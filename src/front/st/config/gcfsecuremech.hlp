@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Default authentication mechanism for registration with the local Name 
+ Server.  You may specify a static or dynamic mechanism.  Only one 
+ mechanism is allowed.  The default is the Ingres security mechanism.
+

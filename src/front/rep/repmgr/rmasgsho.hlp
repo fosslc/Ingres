@@ -1,0 +1,32 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmasgsho.hlp
+SERVER ASSIGNMENTS
+
+This screen displays the database and CDDS assignments for a Replicator
+Server.
+
+The columns on the list are:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        DB No           The number of a database to which the server
+                        transmits.
+
+        Database Name   The database's virtual node and name.
+
+        CDDS            The CDDS number on the database to which the
+                        server transmits.
+
+        CDDS Name       The CDDS name.
+
+        Target Type     The target type for the CDDS at the given
+                        database.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Help            Access the Help facility.
+
+        End             Return to the Replication Monitor screen.

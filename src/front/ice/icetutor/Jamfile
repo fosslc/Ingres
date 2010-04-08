@@ -1,0 +1,123 @@
+#
+# Jamfile file for front!ice!icetutor
+#
+# History:
+#   15-Sep-2004 (fanra01)
+#       Add grist's to make the image files unique.
+#   22-Sep-2004 (fanra01)
+#       Add yet more grists to ensure unique files.
+#   06-Oct-2004 (hanje04)
+#	Remove individual grists, grist is now set in IIICEFILE rule
+#	08-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC front ice icetutor ;
+
+IISUBSYS front ice icetutor ;
+
+if $(BUILD_ICE)
+{
+
+IIICEFILE icetutor$(DFS)Title.html : Title.html ;
+IIICEFILE icetutor$(DFS)attr.html : attr.html ;
+IIICEFILE icetutor$(DFS)autodeclare.html : autodeclare.html ;
+IIICEFILE icetutor$(DFS)begin.html : begin.html ;
+IIICEFILE icetutor$(DFS)capbuaccess.gif : capbuaccess.gif ;
+IIICEFILE icetutor$(DFS)capbucreate.gif : capbucreate.gif ;
+IIICEFILE icetutor$(DFS)capbuloc.gif : capbuloc.gif ;
+IIICEFILE icetutor$(DFS)capdocaccess.gif : capdocaccess.gif ;
+IIICEFILE icetutor$(DFS)capdoccreate.gif : capdoccreate.gif ;
+IIICEFILE icetutor$(DFS)checkSQL.html : checkSQL.html ;
+IIICEFILE icetutor$(DFS)closed.gif : closed.gif ;
+IIICEFILE icetutor$(DFS)commit.html : commit.html ;
+IIICEFILE icetutor$(DFS)content.html : content.html ;
+IIICEFILE icetutor$(DFS)cursor.html : cursor.html ;
+IIICEFILE icetutor$(DFS)database.html : database.html ;
+IIICEFILE icetutor$(DFS)docAccess.html : docAccess.html ;
+IIICEFILE icetutor$(DFS)docCache.html : docCache.html ;
+IIICEFILE icetutor$(DFS)docCall.html : docCall.html ;
+IIICEFILE icetutor$(DFS)docCall2.html : docCall2.html ;
+IIICEFILE icetutor$(DFS)docCall3.html : docCall3.html ;
+IIICEFILE icetutor$(DFS)docCreation.html : docCreation.html ;
+IIICEFILE icetutor$(DFS)docDef.html : docDef.html ;
+IIICEFILE icetutor$(DFS)docLabel.html : docLabel.html ;
+IIICEFILE icetutor$(DFS)docName.html : docName.html ;
+IIICEFILE icetutor$(DFS)docOwner.html : docOwner.html ;
+IIICEFILE icetutor$(DFS)download.html : download.html ;
+IIICEFILE icetutor$(DFS)else.html : else.html ;
+IIICEFILE icetutor$(DFS)empty.gif : empty.gif ;
+IIICEFILE icetutor$(DFS)end.html : end.html ;
+IIICEFILE icetutor$(DFS)error.html : error.html ;
+IIICEFILE icetutor$(DFS)extension.html : extension.html ;
+IIICEFILE icetutor$(DFS)format.html : format.html ;
+IIICEFILE icetutor$(DFS)format2.html : format2.html ;
+IIICEFILE icetutor$(DFS)formatHtml.html : formatHtml.html ;
+IIICEFILE icetutor$(DFS)genIlogin.html : genIlogin.html ;
+IIICEFILE icetutor$(DFS)header.html : header.html ;
+IIICEFILE icetutor$(DFS)header2.html : header2.html ;
+IIICEFILE icetutor$(DFS)icon_book.gif : icon_book.gif ;
+IIICEFILE icetutor$(DFS)icon_chap.gif : icon_chap.gif ;
+IIICEFILE icetutor$(DFS)icon_multi.gif : icon_multi.gif ;
+IIICEFILE icetutor$(DFS)icon_page.gif : icon_page.gif ;
+IIICEFILE icetutor$(DFS)if.html : if.html ;
+IIICEFILE icetutor$(DFS)if1.html : if1.html ;
+IIICEFILE icetutor$(DFS)if2.html : if2.html ;
+IIICEFILE icetutor$(DFS)if3.html : if3.html ;
+IIICEFILE icetutor$(DFS)if4.html : if4.html ;
+IIICEFILE icetutor$(DFS)ifResult.html : ifResult.html ;
+IIICEFILE icetutor$(DFS)in.html : in.html ;
+IIICEFILE icetutor$(DFS)in2.html : in2.html ;
+IIICEFILE icetutor$(DFS)in3.html : in3.html ;
+IIICEFILE icetutor$(DFS)include.html : include.html ;
+IIICEFILE icetutor$(DFS)include2.html : include2.html ;
+IIICEFILE icetutor$(DFS)include3.html : include3.html ;
+IIICEFILE icetutor$(DFS)include32.html : include32.html ;
+IIICEFILE icetutor$(DFS)include4.html : include4.html ;
+IIICEFILE icetutor$(DFS)include5.html : include5.html ;
+IIICEFILE icetutor$(DFS)intro.html : intro.html ;
+IIICEFILE icetutor$(DFS)jasmenu.html : jasmenu.html ;
+IIICEFILE icetutor$(DFS)lastclosed.gif : lastclosed.gif ;
+IIICEFILE icetutor$(DFS)lastleaf.gif : lastleaf.gif ;
+IIICEFILE icetutor$(DFS)lastopened.gif : lastopened.gif ;
+IIICEFILE icetutor$(DFS)leaf.gif : leaf.gif ;
+IIICEFILE icetutor$(DFS)links.html : links.html ;
+IIICEFILE icetutor$(DFS)links2.html : links2.html ;
+IIICEFILE icetutor$(DFS)login.html : login.html ;
+IIICEFILE icetutor$(DFS)logout.gif : logout.gif ;
+IIICEFILE icetutor$(DFS)main.html : main.html ;
+IIICEFILE icetutor$(DFS)menProp.html : menProp.html ;
+IIICEFILE icetutor$(DFS)menu.html : menu.html ;
+IIICEFILE icetutor$(DFS)next.gif : next.gif ;
+IIICEFILE icetutor$(DFS)nobranch.gif : nobranch.gif ;
+IIICEFILE icetutor$(DFS)nullvar.html : nullvar.html ;
+IIICEFILE icetutor$(DFS)opened.gif : opened.gif ;
+IIICEFILE icetutor$(DFS)out.html : out.html ;
+IIICEFILE icetutor$(DFS)out2.html : out2.html ;
+IIICEFILE icetutor$(DFS)previous.gif : previous.gif ;
+IIICEFILE icetutor$(DFS)recursive.html : recursive.html ;
+IIICEFILE icetutor$(DFS)repeat.html : repeat.html ;
+IIICEFILE icetutor$(DFS)rollback.html : rollback.html ;
+IIICEFILE icetutor$(DFS)rows.html : rows.html ;
+IIICEFILE icetutor$(DFS)server.html : server.html ;
+IIICEFILE icetutor$(DFS)sqlFinal.html : sqlFinal.html ;
+IIICEFILE icetutor$(DFS)sqlResult.html : sqlResult.html ;
+IIICEFILE icetutor$(DFS)statement.html : statement.html ;
+IIICEFILE icetutor$(DFS)then.html : then.html ;
+IIICEFILE icetutor$(DFS)transResult.html : transResult.html ;
+IIICEFILE icetutor$(DFS)transaction.html : transaction.html ;
+IIICEFILE icetutor$(DFS)unitAccess.html : unitAccess.html ;
+IIICEFILE icetutor$(DFS)unitConf.html : unitConf.html ;
+IIICEFILE icetutor$(DFS)unitCreation.html : unitCreation.html ;
+IIICEFILE icetutor$(DFS)unitDef.html : unitDef.html ;
+IIICEFILE icetutor$(DFS)unitOwner.html : unitOwner.html ;
+IIICEFILE icetutor$(DFS)upload.html : upload.html ;
+IIICEFILE icetutor$(DFS)vardef.html : vardef.html ;
+IIICEFILE icetutor$(DFS)varget.html : varget.html ;
+IIICEFILE icetutor$(DFS)varset.html : varset.html ;
+IIICEFILE icetutor$(DFS)varset2.html : varset2.html ;
+
+IIICECAZIP icetutor$(DFS)icetutor.caz ;
+
+}

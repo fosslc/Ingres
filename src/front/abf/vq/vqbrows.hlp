@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqbrows.hlp, subtopic 'Editing Browse frames' behind the main VQ Editor 
+/#-- help.
+/#-- 
+Browse frames let the user retrieve records from the Master table and any 
+associated records from the Detail table (if a Detail table is used).
+
+You can specify a query restriction to control which records a user 
+can retrieve.  You can also specify the sort order for retrieved records.
+ 
+Select Subtopics from the menu for more information about these features.
+/#subtopic 'Query restrictions' vqquery.hlp
+/#subtopic 'Sort order' vqsort.hlp

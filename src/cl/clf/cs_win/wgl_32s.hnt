@@ -1,0 +1,20 @@
+#
+# OpenROAD makefile generation hints for cl\clf\cs_win
+#
+# History:
+#	21-feb-2007 (wridu01)
+#		Ignore all unneeded files for OpenROAD
+#	25-sep-2007 (wridu01)
+#		Ignore setper.c for OpenROAD Builds
+#
+ignore = servproc.c
+ignore = ingmsg.mc
+ignore = opingsvc.c
+ignore = opingclnt.c
+ignore = oi12svc.c
+ignore = iirunnt.c
+ignore = iirunicent.c
+ignore = iirundbmsnt.c
+ignore = csphil.c
+ignore = clntproc.c
+ignore = setperm.c

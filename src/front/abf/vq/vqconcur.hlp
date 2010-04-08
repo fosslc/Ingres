@@ -1,0 +1,29 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqconcur.hlp, help for the Frame Behavior pop-up for Holding Locks
+/#-- on Displayed Data
+/#-- 
+/#subtopic "Using Optimistic Locking" vqolcols.hlp
+This frame behavior is only an issue if more than one user will be using the
+application at the same time.
+
+When Locks Held on Displayed Data is set to "None", the locks are released
+immediately after the data is retrieved.  When set to "Dbms", the locks are
+held until after the user has finished updating the data, and the data cannot
+be accessed by anyone else until the locks are released. When set to
+"Optimistic", no locks are held, but a user cannot save a record (the change
+will be lost) if another user has updated it since the first user retrieved
+the record from the database.
+
+General guidelines for setting this behavior are as follows:
+  * Select "None" if only one user will update the data at a time, while 
+    other users will only display the data and won't mind if the data 
+    might be out of date.
+  * Select "Dbms" if you do not want any user to see data that might be out
+    of date because a second user has updated it while the first user is
+    still displaying it.
+  * Select "Optimistic" if more than one person might try to update the same
+    data at the same time.
+
+Enter the frame behavior setting, or select ListChoices for a selection list.
+The "Column Type" table field is ignored unless the behavior is set to
+Optimistic.

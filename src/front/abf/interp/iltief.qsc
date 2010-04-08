@@ -1,0 +1,210 @@
+/*
+**Copyright (c) 1987, 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<lo.h>
+# include	<me.h>
+# include	<si.h>
+# include	<er.h>
+# include	<uf.h>
+# include	<ifid.h>
+# include	<iltypes.h>
+# include	<ilops.h>
+# include	"ilargs.h"
+# include	"il.h"
+
+
+/**
+** Name:	iltief.qsc	-   Routines to edit iltab at runtime
+**
+** Description:
+**
+**	IIITiteIlTabEdit	A debugging/test mode routine to
+**				allow editing the iltab.
+**
+** History:
+**	20-oct-1988 (Joe)
+**		First Written
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+/* extern's */
+GLOBALREF IL_OPTAB	IIILtab[];
+FUNC_EXTERN i4		IIOgeGenericExec();
+
+/* static's */
+
+/*{
+** Name:	IIITiteIlTabEdit	- Routine to allow editing of iltab.
+**
+** Description:
+**	This routine displays a table field which shows the list of
+**	il operators contained in the iltab.  The user can "edit" the
+**	iltab by turning on and off different operators.  For example
+**	if the user wants the interpreter to run, but to ignore RESUME
+**	statements, he just has to mark the table field rows for the RESUME
+**	operators.  This routine is intended to be used in test mode.
+**
+**	It displays the form IIITiefIltabEditForm.  This form contains
+**	a table field whose rows represent the il operators in iltab.
+**	The row contains the statement the il operator implements, and
+**	a mark column that can contain an X or a blank.  If it contains
+**	an X, then that il operator will be executed by the interpreter
+**	during this session.  If it contains a blank, then the interpreter
+**	will effectively ignore this operator.
+**
+**	The main work of this routine is to update the ilfunc element
+**	of the iltab table.  As you probably know, each il operator has
+**	an entry in iltab.  The entry includes a field call ilfunc which
+**	is the function in the interpreter which executes the particular
+**	il operator.
+**
+**	In this routine, if the user marks a row of the table field as
+**	being off, then the ilfunc element for the il operator represented
+**	by the table field row is set to IIOgeGenericExec.  This routine
+**	is essentially a noop routine.  If the user sets the row to on,
+**	then the correct function for the il operator is put back into iltab.
+**
+** Inputs:
+**
+** Outputs:
+**	Returns:
+**
+** Side Effects:
+**	Allocates some memory to hold a copy of the iltab at the
+**	point the routine was first invoked.  This allows it to
+**	save the function pointers for the operators in case they need
+**	to be restored later.
+**
+** History:
+**	20-oct-1988 (Joe)
+**		First Written
+*/
+static bool	run_before = FALSE;
+static i4	(**original_il_funcs)();
+
+##VOID
+##IIITiteIlTabEdit()
+##{
+    register IL_OPTAB	*ilp;
+    register i4	(**fp)();
+##  i4			il_token;
+##  char		il_on[2];
+##  char		*il_name;
+
+    if (!run_before)
+    {
+	LOCATION	*loc;
+	i4		num_ops;
+
+	if ((loc = IIUFlcfLocateForm()) == NULL)
+	{
+	    SIfprintf(stderr, "\r\nIIUFlcfLocateForm returns NULL\n");
+	    return;
+	}
+	if (IIUFgtfGetForm(loc, "IIITiefIltabEditForm") != OK)
+	{
+	    SIfprintf(stderr, "\r\nCan't get form IIITiefIltabEditForm\n");
+	    return;
+	}
+	run_before = TRUE;
+	num_ops = 0;
+	for (ilp = IIILtab; ilp->il_name != NULL; ilp++)
+	    num_ops++;
+	original_il_funcs = (i4 (**)())MEreqmem(0, 
+		    (u_i2) num_ops*(sizeof(i4 (*)())), TRUE, (STATUS *) NULL);
+	for (ilp = IIILtab, fp = original_il_funcs;
+	     ilp->il_name != NULL; ilp++, fp++)
+	{
+	    *fp = ilp->il_func;
+	}
+    }
+##  display IIITiefIltabEditForm
+##  initialize
+##  {
+##	inittable "IIITiefIltabEditForm" "iltab" "read"
+##	(
+##	    token = i4
+##	)
+	il_on[1] = EOS;
+	for (ilp = IIILtab, fp = original_il_funcs;
+	     ilp->il_name != NULL; ilp++, fp++)
+	{
+	    il_name = ilp->il_name;
+	    il_token = ilp->il_token;
+	    /*
+	    ** Cases:
+	    ** 1) Function in table is not the same as original function
+	    **	   then put blank in table field.
+	    ** 2) Original function in table is IIOgeGenericExec.
+	    **	   then put '=' in table field.
+	    ** 3) Function in table is the original function
+	    **	   then put 'X' in table field.
+	    */
+	    il_on[0] = ilp->il_func != *fp ? ' ' :
+				(*fp == IIOgeGenericExec ? '=' : 'X');
+##	    loadtable "IIITiefIltabEditForm" "iltab"
+##	    (
+##		name = il_name,
+##		is_on =  il_on,
+##		token = il_token
+##	    )
+	}
+##  }
+##  activate menuitem "Find"
+##  {
+	FEtabfnd("iiitiefiltabeditform", "iltab");
+##  }
+##  activate menuitem "Switch"
+##  {
+##	getrow "IIITiefIltabEditForm" "iltab"
+##      (
+##	    il_on = "is_on"
+##      )
+	if (il_on[0] == '=')
+##		resume
+	il_on[0] = il_on[0] != 'X' ? 'X' : ' ';
+##	putrow "IIITiefIltabEditForm" "iltab"
+##      (
+##	    is_on = il_on
+##      )
+##  }
+##  activate menuitem "Forget", FRSkey9
+##  {
+##	enddisplay
+##  }
+##  activate menuitem "Save", FRSkey8
+##  {
+##	i4	changed;
+
+##	unloadtable "IIITiefIltabEditForm" "iltab"
+##	(
+##	    il_on = is_on,
+##          il_token = token,
+##          changed = _STATE
+##	)
+##	{
+		if (changed == 3)
+		{
+		    IIILtab[il_token].il_func = (il_on[0] != 'X' ?
+						   IIOgeGenericExec :
+						   original_il_funcs[il_token]);
+		}
+##	}
+##	enddisplay
+##  }
+##  finalize ()
+##  {
+##  }
+##}

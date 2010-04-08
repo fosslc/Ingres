@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  When set to ON, the opf_old_subsel resource causes OPF to bypass the
+  subelect to outer join transform.
+
+  The default value for opf_old_subsel is OFF.

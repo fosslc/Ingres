@@ -1,0 +1,155 @@
+This note has two purposes:
+
+	- it explains how the error numbers that you see are constructed
+	  in CA-Open INGRES and beyond
+
+	- it describes a tool named ERRHELP which you can use to see the
+	  text for a given error, translate decimal error numbers to the 
+	  E_FFnnnn format, and so forth
+
+This information only applies to INGRES errors and not to generic errors.
+See the release notes for information about the way generic errors will be
+returned to your programs.
+
+HOW ERROR NUMBERS ARE BUILT
+---------------------------
+
+An error name has the following format:
+
+	E_FFnnnn
+	  | |
+          | +-- a hexadecimal number
+          +---- a two-letter code, called a "facility code" (different parts
+			of INGRES are known as facilities - the optimizer
+			facility, the parser facility, etc.)
+
+Each facility code corresponds to an arbitrary code number.  For instance, the
+optimizer facility code is OP, and its code number is 4.  A list of these
+facility codes and their corresponding code numbers is in the file FACCODE.TXT
+in this directory.
+
+An error number is constructed as follows:
+
+	0x00FFnnnn  (the '0x' indicates that this is a HEXADECIMAL number)
+            | |
+            | +- an error number within the facility
+            +--- the code number for the facility code
+                        
+
+So if you know your error is E_AB0042, you would 
+
+	1) find the code for AB - it's 40, or 28 in hexadecimal
+	2) find the decimal equivalent of 0x00280042 - it's 2621506
+
+To reverse this, going from error number to error name, let's say you had an
+error number of 6165395 and wanted know the name of the error.  You would:
+
+	1) translate the number to hex - in this case, 5E1393.  On VMS, a 
+		simple way to do this translation is to assign the number 
+		to a symbol and then type 'show symbol symbolname'. VMS
+		will show you the value of the symbol in decimal, hex and
+		octal:
+			$ x = 6165395
+			$ sho sym x
+ 			    X = 6165395   Hex = 005E1393  Octal = 00027411623
+
+	2) The first two digits of the hex value are the code number for
+	   the facility code, so you need to find which facility code that
+	   is.  In this case, the code number is 5E - 94 in decimal - and
+	   the corresponding facility code is RW.
+
+	3) Put the error name together from the facility code and the last
+	   four hex digits of the number: E_RW1393.
+
+Most DBMS errors will be mapped to the facility code US, regardless of where
+they originated.  US has a code number of 0.  This is done so that important
+errors will continue to return the same error number to your programs that they
+have done in previous releases - 4700 for deadlock, for instance.
+
+One note which may save you quite a bit of work: the first word of the text
+returned by INQUIRE_INGRES (:string_var = ERRORTEXT) is the name of the error.
+if you are writing routines to log errors, it may be simpler to extract this
+from the error text than to translate the error number during or after logging.
+
+
+HOW TO USE ERRHELP
+------------------
+
+ERRHELP is a tool to simplify the translation and construction of error names
+and numbers.  It can translate error names to decimal error numbers, facility 
+codes to code numbers, code numbers to facility codes and decimal error 
+numbers to error names.
+
+You will need to define a symbol for ERRHELP to use it.  You can copy or
+reference the SYMBOLDEF.COM file in this directory to do this.
+
+The syntax for using ERRHELP is as follows:
+
+usage:						examples:
+
+ERRHELP <error-name>                    	ERRHELP E_RW1001
+ERRHELP -f<facility-code>              		ERRHELP -fRW
+ERRHELP -n<decimal-facility-code-number> 	ERRHELP -n97
+ERRHELP -x<hex-facility-code>           	ERRHELP -x61
+ERRHELP -d<decimal-error-number>        	ERRHELP -d6164481
+
+Here are examples of the different ways to use ERRHELP and their output.
+
+1) ERRHELP <error-name>
+
+This will return the decimal error number for the error name and the text
+associated with the error.
+
+	$ ERRHELP e_RW1001
+	  (6164481)
+	  RW1001 Bad parameters specified at or near '%0c'
+	  Correct usage of REPORT command is:
+	         REPORT dbname [[-m..] table | [-r] report | -i..]
+ 	       [-f..] [-qn] [-ln] [-wn] [-vn] [-t|+t] [-b|+b] [-5] [-h] [-s]
+ 	       [-cn] [-uuser] [({param=val})]
+	  Processing stops.
+
+2) ERRHELP -f<facility-code>
+3) ERRHELP -n<decimal-facility-code-number> 	ERRHELP -n97
+4) ERRHELP -x<hex-facility-code>           	ERRHELP -x61
+
+These all produce the same output: the facility code and code number in
+decimal and hex.
+
+	$ ERRHELP -fRW
+	  Facility RW = 94 (x5e)
+
+	$ ERRHELP -n97
+	  Facility 97 (x61) = MF
+
+	$ ERRHELP -x61
+	  Facility 97 (x61) = MF
+
+
+5) ERRHELP -d<decimal-error-number>        	ERRHELP -d6164481
+
+This produces the error name  and associated text for the given error number.
+
+	$ ERRHELP -d6164481
+	 (6164481)
+	 RW1001 Bad parameters specified at or near '%0c'
+	 Correct usage of REPORT command is:
+	         REPORT dbname [[-m..] table | [-r] report | -i..]
+ 	       [-f..] [-qn] [-ln] [-wn] [-vn] [-t|+t] [-b|+b] [-5] [-h] [-s]
+ 	       [-cn] [-uuser] [({param=val})]
+	 Processing stops.
+
+
+Your INGRES installation does not have to be up and running to use the
+ERRHELP utility, but you do need to run it in a Release 6 installation
+environment.  The utility reads the error text out of the external error
+files found in the II_SYSTEM:[ingres...] path.  If you are trying to translate
+an error number you read in the text of an error telling you that the proper
+error message could not be found, and you get a similar error from ERRHELP,
+it may be that your environment is not set up correctly.  Check your logical
+names, file protections, disk quotas, and resource limits for problems.
+
+Although this utility is not part of the supported INGRES product set, we are
+interested in hearing your suggestions and comments.  Please feel free to pass
+them on to any representative of Ingres Corporation.
+

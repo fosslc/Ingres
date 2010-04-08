@@ -1,0 +1,36 @@
+#
+# Jam MANIFEST file for front!st!crsfiles
+#
+# History:
+#	02-feb-2005 (abbjo03)
+#	    This is a generic directory that is used by both Unix and VMS.
+#	18-Apr-2005 (drivi01)
+#	    SIR: 114339
+#	    Windows crsfiles were merged with generic.
+#	12-May-2005 (drivi01)
+#	    Added kerberos.crs to be built on windows.
+#	12-Feb-2007 (bonro01)
+#	    Remove JDBC package.
+#       10-Aug-2007 (Ralph Loen) SIR 118898
+#           Remove kerberos.crs.  Kerberos information moved to all.crs.
+#	15-Aug-2007 (drivi01)
+#	    Remove kerberos.crs from windows section.
+
+SubDir ING_SRC front st crsfiles ;
+
+IISUBSYS front st crsfiles ;
+
+if ! $(NT)
+{
+IICRS all.crs bridge.crs das.crs db2udb.crs dbms.crs ice.crs icesvr.crs
+	informix.crs net.crs oracle.crs rdb.crs rms.crs
+	secure.crs star.crs sybase.crs tng.crs tz.crs ;
+}
+else
+{
+IICRSW all.crs dbms.crs net.crs secure.crs star.crs
+	tz.crs bridge.crs oracle.crs informix.crs sybase.crs
+	mssql.crs odbc.crs icesvr.crs tng.crs db2udb.crs 
+	das.crs ;
+}
+

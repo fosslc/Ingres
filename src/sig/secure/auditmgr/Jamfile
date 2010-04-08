@@ -1,0 +1,20 @@
+#
+# Jamfile file for sig!secure!auditmgr
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC sig secure auditmgr ;
+
+IISUBSYS sig secure auditmgr ;
+
+IISIGFILES auditmgr : README auditmasks.osq auditmgr.osq
+	audrecdetail.osq changelog.osq detail.osq extract.osq
+	manageaudit.osq queries.osq rbfreports.osq registerlogs.osq 
+	remove1.osq removelogs.osq restartauditing.osq resumeauditing.osq 
+	setfilter.osq stopauditing.osq suspendaudit.osq view_via_qbf.osq 
+	viewlogs0.osq viewrecords.osq	;
+
+File $(INGSIGAUDIT)$(DFS)readme.txt : README ;
+File $(INGSIG)$(DFS)iicopyapp.tmp : <sig!secure!auditmgr>iicopyapp.tmp ;

@@ -1,0 +1,373 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for vigraph
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	03-nov-1993 (kellyp)
+**		Removed support map files in VOLUME E.
+**      03-nov-1993 (huffman) 
+**              There is no vigraph on AXP VMS
+**      30-jan-1995 (forky01) 
+**              There is vigraph on AXP VMS, add it back.(bug 65725)
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+/*
+** Default directory: ingres/bin
+*/
+
+PART   vigraph
+   capability CI_NEW_GBF
+
+# ifdef VMS
+   BUILD_DIR (front_path)!install!'front_vers'!share
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!bin
+# endif /* VMS */
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+      EXECUTABLE copygraph
+      EXECUTABLE rungraph
+      EXECUTABLE vigraph
+  {
+# ifdef VMS
+   BUILD_DIR (front_path)!frontcl!'front_vers'!src!files
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!files
+# endif /* VMS */
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+      FILE bar1.gr
+      FILE bar2.gr
+      FILE bar3.gr
+      FILE line1.gr
+      FILE pie1.gr
+      FILE scat1.gr
+  }
+  {
+# ifdef VMS
+   BUILD_DIR (front_path)!install!'front_vers'!files!english
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!files!english
+# endif /* VMS */
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY ingres!files!english
+#endif
+      FILE vgahsty.hlp
+      FILE vgalab.hlp
+      FILE vgasty.hlp
+      FILE vgatax.hlp
+      FILE vgatbar.hlp
+      FILE vgatcax.hlp
+      FILE vgatfld.hlp
+      FILE vgatleg.hlp
+      FILE vgatline.hlp
+      FILE vgatpie.hlp
+      FILE vgatscat.hlp
+      FILE vgattrim.hlp
+      FILE vgbar.hlp
+      FILE vgbarnew.hlp
+      FILE vgbordr.hlp
+      FILE vgcat.hlp
+      FILE vgcatpro.hlp
+      FILE vgcolor.hlp
+      FILE vgcrax.hlp
+      FILE vgesf.hlp
+      FILE vgesfnoc.hlp
+      FILE vgfield.hlp
+      FILE vgflcol.hlp
+      FILE vgfont.hlp
+      FILE vggrfnam.hlp
+      FILE vggrpnam.hlp
+      FILE vggrpsrc.hlp
+      FILE vghatch.hlp
+      FILE vglabel.hlp
+      FILE vglaycr.hlp
+      FILE vglayer.hlp
+      FILE vglegcl.hlp
+      FILE vglegfnt.hlp
+      FILE vglegnd.hlp
+      FILE vgline.hlp
+      FILE vgliscol.hlp
+      FILE vglnnew.hlp
+      FILE vglsave.hlp
+      FILE vgmap.hlp
+      FILE vgmnlay.hlp
+      FILE vgmove.hlp
+      FILE vgmovec.hlp
+      FILE vgpie.hlp
+      FILE vgscat.hlp
+      FILE vgscnew.hlp
+      FILE vgsize.hlp
+      FILE vgstyle.hlp
+      FILE vgtrcol.hlp
+      FILE vgtrim.hlp
+  }
+  {
+# ifdef VMS
+   BUILD_DIR (vec_path)!usr!vec!data!gks
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!vec!data!gks
+# endif /* VMS */
+   DIRECTORY ingres!vec!data!gks
+      FILE errors.gks
+  }
+  {
+# ifdef VMS
+   BUILD_DIR (vec_path)!usr!vec!data!gks!ws
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!vec!data!gks!ws
+# endif /* VMS */
+   DIRECTORY ingres!vec!data!gks!ws
+      FILE alpha.ws
+      FILE ansi.ws
+      FILE ansi32.ws
+      FILE calcomp.ws
+      FILE centbig.ws
+      FILE centlbig.ws
+      FILE centlo.ws
+      FILE centron.ws
+      FILE cit.ws
+      FILE cit414a.ws
+      FILE cit467.ws
+      FILE citbw.ws
+      FILE decbig.ws
+      FILE declsr.ws
+      FILE decprnt.ws
+      FILE diablo.ws
+      FILE dottest.ws
+      FILE env215.ws
+      FILE env220.ws
+      FILE epson.ws
+      FILE fx120.ws
+      FILE fx240.ws
+      FILE fx60.ws
+      FILE graphon.ws
+      FILE h19.ws
+      FILE hds200.ws
+      FILE hp150.ws
+      FILE hp300.ws
+      FILE hp300sm.ws
+      FILE hp7221c.ws
+      FILE hp7221cs.ws
+      FILE hp7221t.ws
+      FILE hp7221tr.ws
+      FILE hp7221ts.ws
+      FILE hp7370.ws
+      FILE hp7375.ws
+      FILE hp7440.ws
+      FILE hp7440tr.ws
+      FILE hp7470.ws
+      FILE hp7475a.ws
+      FILE hp7475b.ws
+      FILE hp7550a.ws
+      FILE hplj.ws
+      FILE imag240l.ws
+      FILE imag240p.ws
+      FILE imag24l.ws
+      FILE imag24p.ws
+      FILE imagen8l.ws
+      FILE imagen8p.ws
+      FILE matpcr.ws
+      FILE metain.ws
+      FILE metaout.ws
+      FILE ngansi.ws
+      FILE nonws.ws
+      FILE postscrp.ws
+      FILE printer.ws
+      FILE pstscrpl.ws
+      FILE qms1200l.ws
+      FILE qms1200p.ws
+      FILE qume.ws
+      FILE qume211.ws
+      FILE qume311.ws
+      FILE qume511.ws
+      FILE raster80.ws
+      FILE rasterfc.ws
+      FILE regis340.ws
+      FILE regisbw.ws
+      FILE retro.ws
+      FILE selanar.ws
+      FILE tek4010.ws
+      FILE tek4010x.ws
+      FILE tek4014.ws
+      FILE tek4027.ws
+      FILE tek4105.ws
+      FILE tek4105a.ws
+      FILE tek4106.ws
+      FILE tek4106a.ws
+      FILE tek4107.ws
+      FILE tek4107a.ws
+      FILE tek4107g.ws
+      FILE tek4109.ws
+      FILE tek4111.ws
+      FILE tek4208.ws
+      FILE tek4208m.ws
+      FILE tek4510.ws
+      FILE tgraf05.ws
+      FILE tgraf07.ws
+      FILE vis241.ws
+      FILE vt241.ws
+      FILE wiss.ws
+      FILE zeta8.ws
+      FILE zeta8r.ws
+      FILE zsprint.ws
+      FILE zvuhcopy.ws
+      FILE zvuslide.ws
+      FILE VaxX128c.ws
+      FILE VaxX256c.ws
+      FILE VaxX64c.ws
+      FILE VaxX8c.ws
+      FILE VaxXg.ws
+      FILE VaxXm.ws
+  }
+  {
+# ifdef VMS
+   BUILD_DIR (vec_path)!usr!vec!data!vdi!drv
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!vec!data!vdi!drv
+# endif /* VMS */
+   DIRECTORY ingres!vec!data!vdi!drv
+      FILE alpha.drv
+      FILE ansi.drv
+      FILE ansi32.drv
+      FILE calcomp.drv
+      FILE centbig.drv
+      FILE centlbig.drv
+      FILE centlo.drv
+      FILE centron.drv
+      FILE cit.drv
+      FILE cit414a.drv
+      FILE cit467.drv
+      FILE citbw.drv
+      FILE decbig.drv
+      FILE declsr.drv
+      FILE decprnt.drv
+      FILE diablo.drv
+      FILE dottest.drv
+      FILE env215.drv
+      FILE env220.drv
+      FILE epson.drv
+      FILE fx120.drv
+      FILE fx240.drv
+      FILE fx60.drv
+      FILE graphon.drv
+      FILE h19.drv
+      FILE hds200.drv
+      FILE hp150.drv
+      FILE hp300.drv
+      FILE hp300sm.drv
+      FILE hp7221c.drv
+      FILE hp7221cs.drv
+      FILE hp7221t.drv
+      FILE hp7221tr.drv
+      FILE hp7221ts.drv
+      FILE hp7370.drv
+      FILE hp7375.drv
+      FILE hp7440.drv
+      FILE hp7440tr.drv
+      FILE hp7470.drv
+      FILE hp7475a.drv
+      FILE hp7475b.drv
+      FILE hp7550a.drv
+      FILE hplj.drv
+      FILE imag240l.drv
+      FILE imag240p.drv
+      FILE imag24l.drv
+      FILE imag24p.drv
+      FILE imagen8l.drv
+      FILE imagen8p.drv
+      FILE matpcr.drv
+      FILE metain.drv
+      FILE metaout.drv
+      FILE ngansi.drv
+      FILE nonws.drv
+      FILE postscrp.drv
+      FILE printer.drv
+      FILE pstscrpl.drv
+      FILE qms1200l.drv
+      FILE qms1200p.drv
+      FILE qume.drv
+      FILE qume211.drv
+      FILE qume311.drv
+      FILE qume511.drv
+      FILE raster80.drv
+      FILE rasterfc.drv
+      FILE regis340.drv
+      FILE regisbw.drv
+      FILE retro.drv
+      FILE selanar.drv
+      FILE tek4010.drv
+      FILE tek4010x.drv
+      FILE tek4014.drv
+      FILE tek4027.drv
+      FILE tek4105.drv
+      FILE tek4105a.drv
+      FILE tek4106.drv
+      FILE tek4106a.drv
+      FILE tek4107.drv
+      FILE tek4107a.drv
+      FILE tek4107g.drv
+      FILE tek4109.drv
+      FILE tek4111.drv
+      FILE tek4208.drv
+      FILE tek4208m.drv
+      FILE tek4510.drv
+      FILE tgraf05.drv
+      FILE tgraf07.drv
+      FILE vis241.drv
+      FILE vt241.drv
+      FILE wiss.drv
+      FILE zeta8.drv
+      FILE zeta8r.drv
+      FILE zsprint.drv
+      FILE zvuhcopy.drv
+      FILE zvuslide.drv
+      FILE VaxX128c.drv
+      FILE VaxX256c.drv
+      FILE VaxX64c.drv
+      FILE VaxX8c.drv
+      FILE VaxXg.drv
+      FILE VaxXm.drv
+  }
+# ifdef VMS
+  {
+   DIRECTORY ingres!debug
+      FILE copygraph.stb
+      FILE rungraph.stb
+      FILE vigraph.stb
+  }
+  {
+   BUILD_DIR (vec_path)!usr!vec!data!vdi
+   DIRECTORY ingres!vec!data!vdi
+      FILE devices.dat
+      FILE fonts.dat
+      FILE wslist.dat
+  }
+# else /* VMS */
+  {
+   BUILD_DIR (ING_BUILD)!vec!data!vdi
+   DIRECTORY ingres!vec!data!vdi
+      FILE fonts
+      FILE devices
+      FILE wslist
+  }
+# endif /* VMS */

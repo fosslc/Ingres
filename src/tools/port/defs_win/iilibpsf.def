@@ -1,0 +1,54 @@
+;
+; History:
+;	25-Aug-2005 (drivi01)
+;	     Created.  Contains functions for psf.
+;	11-Jan-2005 (drivi01)
+;	     Due to inconsistency in opf, the ways symbols
+;	     are being exported in psf had been modified resulting
+;	     in a need of some additional symbols to be exported.
+;	30-Oct-2008 (jonj)
+;	    SIR 120874: Add psfErrorFcn, psf_errorNV
+;
+
+EXPORTS
+	pslparse	@1
+	psl1iftn	@2
+	psl2iftn	@3
+	psl3iftn	@4
+	psl4iftn	@5
+	psl5iftn	@6
+	psl6iftn	@7
+	psl7iftn	@8
+	psl7iftn	@9
+	psl8iftn	@10
+	psl10iftn	@11
+	psl11iftn	@12
+	psl12iftn	@13
+	psl13iftn	@14
+	pslsparse	@15
+	sconvert 	@16
+	psl_rptqry_tblids	@17	
+	qdata_cvt	@18	
+	getfacil	@19	
+;	psy_default_label	@20	
+;	psy_mac_access		@21
+;	psy_label_id		@22
+	pslsfunc		@23
+	pslspgo			@24
+	pslsr1			@25
+	pslsr2			@26
+	pslsexca		@27
+	pslsdef			@28
+	pslschk			@29
+	pslsact			@30
+	pslspact		@31
+	pst_resolve		@32
+	pst_1prmdump		@33
+	pst_1ftype		@34
+	pst_1fidop		@35
+	pst_prmdump		@36
+	psq_call		@37
+ 	psf_debug		@38
+ 	psy_call		@39
+ 	psfErrorFcn		@40
+ 	psf_errorNV		@41

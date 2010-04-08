@@ -1,0 +1,5 @@
+MAINOBJ.obj
+INGTOOLSLIB:libsepcl.olb/library
+INGLIB:libft.olb/library
+INGLIB:libug.olb/library
+INGLIB:libcompat.olb/library

@@ -1,0 +1,53 @@
+//362@0001 MS 04/12/94
+//363@0002 MS 04/19/94  
+//364@0005 MS 04/27/94 add IDS_MENU
+//364@0004 MS 04/30/94 no help available message
+//366@0005 MS 05/13/94 add IDS_ENTITYLIST
+#include <windows.h>
+#include "resource.h"
+
+ID_SYSMENU_BITMAP bitmap sysmenu.bmp
+ID_ARROW_CURSOR   bitmap cursor.bmp
+IDC_CURSORDRAG    cursor drag.cur
+
+5000 DIALOG 58, 29, 131, 117
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU |DS_LOCALEDIT
+CAPTION "Select Window"
+FONT 8, "Helv"
+BEGIN
+    PUSHBUTTON      "Tile &Vert", 10    , 2,  68, 41, 15
+    PUSHBUTTON      "Tile &Horz", 16    , 45, 68, 41, 15
+    PUSHBUTTON      "Ca&scade", 11      , 88, 68, 41, 15
+    PUSHBUTTON      "&Iconize All", 13  , 2,  84 , 41, 15
+    PUSHBUTTON      "&Restore All", 14  , 45, 84, 41, 15
+    PUSHBUTTON      "C&lose All", 15    , 88, 84, 41, 15
+    PUSHBUTTON      "&Arrange", 12      , 2,  100, 41, 15
+    DEFPUSHBUTTON   "Switch &To", IDOK  , 45, 100,41, 15
+    PUSHBUTTON      "Cancel", IDCANCEL  , 88, 100,41, 15
+    LISTBOX         100                 , 2 , 3, 127, 65, WS_VSCROLL | WS_TABSTOP|LBS_SORT
+END
+//362@0001 MS 04/12/94
+STRINGTABLE
+{
+    IDS_DBSERVER "&DB Server Editor"
+    IDS_SQLSERVER "&SQL Editor"
+    IDS_FIELDSPEC "&FieldSpec Editor"
+    IDS_WINDOWEDITOR "&Window Editor"
+    IDS_ICONEDITOR "&Icon Editor" //367@0007 MS 05/27/94
+//363@0002 MS 04/19/94  
+    IDS_PRINTMODULE "Printing module list"
+    IDS_PRINTAPP "Printing application list"
+    IDS_PRINTENT "Printing Entities"
+    IDS_CLASS "Class"
+    IDS_CLASSES "Classes"
+    IDS_MEMBERS "Members"
+    IDS_ERRORS "Errors"
+    IDS_MENU "Menu"  //364@0003 MS 04/27/94
+    IDS_NOHELP "No Help is available" //364@0004 MS 04/30/94
+    IDS_ENTITYLIST "Printing entity list" //366@0005 MS 05/13/94
+//366@0006 MS 05/20/94  
+    IDS_SQL "SQL"
+    IDS_FS "FieldSpec"
+    IDS_DB "DB Server"
+    IDS_IN " in "
+}       

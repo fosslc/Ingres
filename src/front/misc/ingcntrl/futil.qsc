@@ -1,0 +1,89 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+**
+** History:
+**	10-nov-88 (kathryn)	Sir# 3214
+**		Allow $ and numeric digits as first character of user names.
+**	04-dec-92 (billc) undo Sir.  Let them use CREATE USER.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+#include	<compat.h>
+#include	<er.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<cm.h>
+#include	"global.h"
+#include	"eric.h"
+
+/*{
+** Name:	fchkuname - check for valid username.
+**
+** Description:
+**	Check for a valid username by checking if every character in the
+**	name is a valid CMnmchar().
+**
+** Inputs:
+**	char *s;	username to check validity of.
+**
+** Outputs:
+**
+**	Returns:
+**		OK if new name is ok; FAIL otherwise.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	11-apr-1990 (pete)
+**		Change FE_MAXNAME to DB_MAXNAME. Usernames are limited
+**		by DB_MAXNAME, not FE_MAXNAME.
+*/
+
+/* can't pass a #define to IIUGerr, so we pass this instead. */
+static i4	Maxn = DB_MAXNAME;
+
+STATUS
+fchkuname (s)
+char	*s;
+{
+	register char    *cp = s;
+
+	if (CMnmstart(cp))
+	{
+	    do 
+	    {
+	        CMnext(cp);
+	    } while (*cp != EOS && CMnmchar(cp));
+	}
+
+	if (*cp != EOS || (cp - s) > DB_MAXNAME || (cp - s) == 0)
+	{
+	    IIUGerr(E_IC002D_bad_username,0 , 2, (PTR) s, (PTR)&Maxn);
+	    return FAIL;
+	}
+
+	return OK;
+}
+
+STATUS
+fchkdbname (s)
+char	*s;
+{
+    if (chkdbname(s) != OK)
+    {
+	IIUGerr(E_IC002E_bad_name, 0, 2, (PTR) s, (PTR)&Maxn);
+	return FAIL;
+    }
+    return OK;
+}
+

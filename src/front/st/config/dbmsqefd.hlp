@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The qef_qep_mem resource specifies the maximum amount of memory which
+  can be allocated by the Query Execution Facility (QEF) for building 
+  data segment headers within DBMS servers created with this definition.
+
+  This resource is deprecated;  the qef_dsh_memory resource should be
+  defined in its place.  If both are defined, qef_qep_mem is ignored.

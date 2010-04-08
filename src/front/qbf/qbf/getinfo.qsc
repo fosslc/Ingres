@@ -1,0 +1,926 @@
+/*
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+#include        <compat.h>
+#include        <cv.h>           
+#include        <me.h>           
+#include        <cm.h>
+#include        <st.h>
+#include        <er.h>
+# include       <gl.h>
+# include       <sl.h>
+# include       <iicommon.h>
+#include        <fe.h>
+#include        <ug.h>
+#include        <ui.h>
+# include       <uigdata.h>
+##include       "mqbf.qsh"
+##include       "mqsymbol.qsh"
+#include        "erqf.h"
+
+/**
+** Name:        getinfo.qc -    Get QDEF Information Module.
+**
+** Description:
+**      Reads in QDEF information from either the Table Entry form or
+**      directly from the system catalogs.
+**
+**      Routines:
+**              IIqfGetInfo() - This module reads the Table Entry
+**                                Form in MQBF and builds the qdef
+**                                structures needed.
+**
+**              IIqfBldInfo() - This routine is called when a single
+**                                table is specified on the command
+**                                line to start up MQBF.  It reads the
+**                                relation and attribute tables to
+**                                get the info to build the qdef
+**                                structures.
+**
+** History:
+**      Revision 6.5
+**              13-aug-1993 (rdrane)
+**                      Remove obsolete static routine _tabident.
+**
+**      Revision 6.4
+**              19-feb-92 (leighb) DeskTop Porting Change:
+**                      FEchkname() has only 1 arg, bogus 2nd one deleted.
+**              10/13/90 (emerson)
+**                      Added force_rebuild parameter to IIqfGetInfo.
+**                      (bug 33914).
+**              10/13/90 (emerson)
+**                      Check for errors E_QF015E and E_QF015F
+**                      in IIqfGetInfo (bug 32075).
+**
+**      Revision 6.1  88/09  wong
+**              Merged duplicate messages.  Moved 'mqgetrstat()' as
+**              'IIqfChkRel()', and 'mqgettnames()' to "getnames.qsc".
+**              Rename 'mqgetinfo()' and 'mqbldinfo()'.
+**              20-dec-88 (kenl)
+**                      Changed call on mqgetattrib() in the single table
+**                      case so that we don't try to find join fields.
+**              20-apr-89 (kenl)        bug 5323
+**                      borntabs was not being initialized properly.  QBF was
+**                      not keeping track of all of the tables in a JoinDef.
+**
+**      Revision 6.0
+**              07-dec-87 (kenl)
+**                      Turned module into a .QSC file in order to incorporate
+**                      the new header file: mqbf.qsh.  Added code to case-
+**                      handle sensitive names.  Calls are made to the routine
+**                      IIUGlbo_lowerBEobject to determine if an object
+**                      name should be lowercased or left alone (such as
+**                      table name, column name, etc.)
+**              28-jan-1988 (peter)
+**                      Make performance changes.
+**              20-apr-1988 (danielt)
+**                      Added check for range variable name (call to FEchkname)
+**              22-apr-88 (kenl)
+**                      Major changes made to fix many bugs with JoinDefs.
+**              17-may-88 (kenl)
+**                      Fixed bug with second unloadtable where a blank
+**                      row was making its way into the check for table
+**                      existence.
+**
+**      Revision 5.0
+**              24-feb-87 (marian)      bug 10993
+**                      Changed mqgetinfo() by creating a new array tabused
+**                      that will determine which tables have been used before.
+**                      Also stole the retrieve qry from mqgetnames() to create
+**                      mqgetrstat() to retrieve the relstat for the specified
+**                      table.
+**
+**      Revision 2.0  83/08  nadene
+**      written 8/8/83 (nml)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototypes for _compact() & _sw_getinfo() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**      06-feb-2009 (stial01)
+**        Define stack buffer with define, not constant
+*/
+
+i4      mqfindatt();
+VOID    mq_resetatt();
+STATUS  IIqfGetRelInfo(/* MQQDEF *, char *, char *, i4  */);
+STATUS  IIqfChkRel(/* MQQDEF *, char *, char *, bool, FE_REL_INFO * */);
+
+FUNC_EXTERN     bool    IIqfRvarUnique(/* MQQDEF *, char * */);
+
+static VOID     _tfldchng();
+static VOID     _reset();
+static VOID     _delete();
+static i4       _compact();
+static STATUS   _sw_getinfo();
+
+/*{
+**  Name:       IIqfGetInfo()
+**
+**  History:
+**              6/15/87 (peterk) - moved call to _tfldchng() here,
+**                      as well as calling _sw_getinfo to streamline
+**                      code in mq_tables().  Code for _sw_getinfo
+**                      was moved here.
+**              22-dec-1987 (peter)
+**                      Move call to mqchgintbl further down to fix
+**                      bug 10298, in which changing from m-d to d-d
+**                      or vice versa, was not done correctly.
+**              28-aug-1990 (Joe)
+**                      Changed references to IIUIgdata to UIDBDATA structure
+**                      returned from IIUIdbdata().
+**              10/13/90 (emerson)
+**                      Added force_rebuild parameter to IIqfGetInfo.
+**                      (bug 33914).
+**              10/13/90 (emerson)
+**                      Check for errors E_QF015E and E_QF015F (bug 32075).
+**              16-aug-1993 (rdrane)
+**                      Expand t_tbl, t_owner, and t_ident to handle
+**                      unnormalized strings.  Include t_owner in all these
+**                      proceedings.  This addresses all/part of
+**                      b54048, b51773, b51756, and b52570.
+**              2-sep-1993 (rdrane)
+**                      Clear t_result in case there's no owner specification.
+**                      t_owner was being set with the tablename!
+**                      Conditionalize execution of statements in the
+**                      main UNLOADTABLE loop in case it's an empty row.  The
+**                      initial 6.5 changes un-did kenl's 17-may-88 fix, and
+**                      this resolves regression bug 54583.
+**              30-sep-1993 (rdrane)
+**                      We forgot to normalize t_owner after the second
+**                      UNLOADTABLE.  This omission showed up while testing
+**                      the fix for RBF bug 54949.
+**              3-nov-1993 (rdrane)
+**                      Don't check the abbreviation name in the initial
+**                      table unload (b55903)!  Also, when we normalized
+**                      t_owner in the initial UNLOADTABLE, we forgot to
+**                      allow for $ingres.
+**             21-oct-1994 (slawrence)
+**                      If abbreviation is omitted use the millisecond
+**                      value returned from TMget_stamp concatenated with
+**                      the string 'qbf' to create a unique abbreviation.
+**             17-jan-1995 (forky01)
+**                      Backout the fix for bug 60504 which caused new bug
+**                      66070.  The fix above which is dated 21-oct-1994
+**                      would indiscriminately provide a garbled looking
+**                      13-char string as an "abbreviation" alias for all
+**                      table entries if none were provided.  The new fix
+**			is to create an owner.tablename abbreviation
+**			when the owner of the table is not the same as
+**			the owner of the joindef.  A typical user query
+**			against their own tables will now be unaffected.
+**			The qbf generated abbrev takes the normalized 
+**			owner name . normalized table name which is 
+**			truncated to FE_MAXNAME to fit in abbreviation
+**			string space.  Also, added the table_owner parm
+**			to mqfindtbl.  This makes qbf correctly check
+**			abbreviation uniqueness when you edit an existing
+**			joindef.  The owner.table abbrev is useful during
+**			the joins edit screen, to see which columns are
+**			joining and from which table.
+**		27-nov-1995 (abowler)
+**			Bug fix for 71682 - corrected 3/11/93 change above to
+**			correctly check for $ingres, but not wipe out the
+**			owner name anyway, when normalizing during an unload.
+**
+**<== Ensure that if pre-6.5, we either make the owner field non-modifiable
+**<== or verify that only user and DBA can be entered.
+**
+*/
+
+STATUS
+IIqfGetInfo ( qdef, res_field, goto_joins, force_rebuild )
+register MQQDEF *qdef;
+char            *res_field;
+bool            goto_joins; /* is the destination the Join Def Screen? */
+bool            force_rebuild;  /* rebuild everything: table, 
+                                ** attribute, and join info */
+##{
+##      i4      t_state;
+##      i4      t_rec;
+##      char    t_tbl[(FE_UNRML_MAXNAME + 1)];
+##      char    t_owner[(FE_UNRML_MAXNAME + 1)];
+##      char    t_ident[(FE_UNRML_MAXNAME + 1)];
+##      char    t_role[10 + 1];
+##      char    currname[FE_MAXNAME + 1];
+        char    t_result[FE_MAXNAME + 1];       /* delim id normalized */
+
+        register i4     i;
+        STATUS          status = OK;
+        bool            newname = FALSE;
+        bool            delete_joins = force_rebuild;
+        bool            using_abbreviation;
+
+        bool    borntabs[2][MQ_MAXRELS+1];
+        bool    tabused[2][MQ_MAXRELS+1]; /* determines if table is used */
+
+        status = OK;
+
+##      MESSAGE ERget(S_QF0032_RetrieveTblEntryInfo);
+##      GETFORM _mqbftbls (currname = name)
+
+        STtrmwhite(currname);
+        /* ALWAYS lowercase frontend object names - this is a JoinDef */
+        CVlower(currname);
+
+        /* check validity of name - to be added later */
+        if ( !STequal(currname, qdef->mqcr.name) )
+        {
+                /* new name supplied by user for this QDEF */
+                if (FEchkname(currname) != OK)           
+                {
+                        IIUGerr( status = E_QF0033_BadJoinDefName, 0, 0 );
+                        goto infoexit;
+                }
+                STcopy(currname, qdef->mqcr.name);
+                newname = TRUE;
+        }
+
+        /* check if this may a new object */
+        if ( newname || !STequal(IIUIdbdata()->user, qdef->mqcr.owner) )
+        {
+                /* reset object id */
+                qdef->mqcr.id = -1;
+
+                /* null out dates no dates show on save frame */
+                *qdef->mqcr.create_date = *qdef->mqcr.alter_date = EOS;
+        }
+
+        for ( i = 0 ; i < MQ_MAXRELS ; ++i )
+        {
+                qdef->mqdeadtabs[i] = TRUE;
+                /* bug fix 5323
+                ** Unload of tablefield starts at offset 1.  We don't care
+                ** about location 0.
+                */
+                borntabs[mqIN_MASTER][i + 1] = FALSE;
+                borntabs[mqIN_DETAIL][i + 1] = FALSE;
+                /* bug 10993
+                **      Initialize tabused array.
+                */
+                tabused[mqIN_MASTER][i + 1] = FALSE;
+                tabused[mqIN_DETAIL][i + 1] = FALSE;
+        }
+
+        if (force_rebuild)
+        {
+                _delete(qdef, TRUE);
+        }
+
+        i = 0;
+
+##      UNLOADTABLE _mqbftbls _tables (
+##              t_tbl = _table,
+##              t_owner = _owner,
+##              t_ident = _abbr,
+##              t_role = _role,
+##              t_state = _STATE,
+##              t_rec = _RECORD
+##      )
+##      {
+##              register i4     t_type;
+                char            *_detail;
+                bool            empty_tbl_row;
+
+                empty_tbl_row = FALSE;
+                if  (t_tbl[0] == EOS)
+                {
+                        if  ((t_role[0] != EOS) ||
+                             (t_owner[0] != EOS) ||
+                             (t_ident[0] != EOS))
+                        {
+                                IIUGerr(status = E_QF014B_BadTblName,
+                                        0, 1, t_tbl);
+##                              SCROLL _mqbftbls _tables TO t_rec;
+##                              ENDLOOP;
+                        };
+                        empty_tbl_row = TRUE;
+                }
+
+                if  (!empty_tbl_row)
+                {
+                        _detail = ERget(F_QF0016_detail);
+                        t_type = CMcmpnocase(t_role, _detail) == 0
+                                        ? mqIN_DETAIL : mqIN_MASTER;
+                        /* Code fragment originally from _tabident,
+                        ** so it remains
+                        */
+                        STcopy(ERget(t_type == 
+                            mqIN_MASTER ? F_QF0015_MASTER : F_QF0016_detail),
+                            t_role);
+                }
+
+                /*
+                ** First check the table. If it has illegal characters,
+                ** stop here. It may be a delimited identifier; if so,
+                ** t_result will be different ("normalized") from t_tbl.
+                ** If isn't bogus, man, move the result back into t_tbl 
+                ** and continue. If it is a bogus name, we'll want to report
+                ** the original name in the error message to the user, not the
+                ** "normalized" name.  Note that we need to default
+                ** t_result in case t_tbl is empty (empty_tbl_row is TRUE)
+                */
+                t_result[0] = EOS;
+                if  ((!empty_tbl_row) &&
+                     (IIUGdlm_ChkdlmBEobject(t_tbl,t_result,FALSE))
+                                         == UI_BOGUS_ID )
+                {
+                        IIUGerr(status = E_QF014B_BadTblName, 0, 1, t_tbl);
+##                      SCROLL _mqbftbls _tables TO t_rec;
+##                      ENDLOOP;
+                }
+                STcopy(t_result, t_tbl);
+
+                /*
+                ** Ditto for any owner.  There shouldn't really be one
+                ** for pre-6.5 connections.  Note that we need to default
+                ** t_result in case t_owner is empty!
+		** Note also that t_owner = $ingres is allowed.
+                */
+		if (STbcompare(t_owner,0,UI_FE_CAT_ID_65,0,TRUE) != 0)
+		{
+                	t_result[0] = EOS;
+                	if ((!empty_tbl_row) && (STtrmwhite(t_owner) != 0) &&
+                     	    (IIUGdlm_ChkdlmBEobject(t_owner,t_result,FALSE) 
+                            == UI_BOGUS_ID))
+                	{
+                        	IIUGerr(status = E_QF0187_BadOwnName, 0, 1, 
+				    t_owner);
+##                      	SCROLL _mqbftbls _tables TO t_rec;
+##                      	ENDLOOP;
+                	}
+                    	STcopy(t_result, t_owner);
+		}
+
+                /*
+                ** Now check to see if there *is* an abbreviation being used,
+                ** held in t_ident. If not, use the table name in t_tbl.
+                ** If there is, make sure it contains legal characters,
+                ** and normalize it.  Don't check it for uniqness - it will
+                ** fail on subsequent edits!
+                */
+                if  (!empty_tbl_row)
+                {
+                        if  (STtrmwhite(t_ident) == 0)
+                        {
+                                STcopy(t_tbl, t_ident);
+                        }
+                        else
+                        {
+                                /* this can be done in place now */
+                                if  (IIUGdlm_ChkdlmBEobject(t_ident,
+                                         t_result,FALSE) == UI_BOGUS_ID )
+                                {
+                                        IIUGerr(status = E_QF0147_BadAbbrv, 
+                                                0, 1, t_ident);
+##                                      SCROLL _mqbftbls _tables TO t_rec;
+##                                      ENDLOOP;
+                                }
+                                STcopy(t_result, t_ident);
+                        }
+                }
+
+/* 
+** Removed calls to IIUGIsSQLKeyWord on both t_ident and t_tbl. Since
+** keywords are now allowed (as delimited identifiers), and t_ident is a
+** correlation name, and can be represented by a delimited identfiers.
+*/
+
+                if  (!empty_tbl_row)
+                {
+                        i4      place;
+
+                        if (++i > MQ_MAXRELS)
+                        {
+##                              SCROLL _mqbftbls _tables TO t_rec;
+                                status = REL_OVERFLOW;
+##                              ENDLOOP;
+                        }
+                        /* We've ensured that t_ident is unique here, and so
+                        ** we do not need to include owner to disambiguate
+                        ** table references - that's what correlation names
+                        ** are for.
+                        */
+                        place = mqfindtbl(qdef, t_tbl, t_ident, t_owner);
+                        if ( place < 0 ||
+                                        qdef->mqtabs[place]->mqtype != t_type )
+                        {
+                                borntabs[t_type][t_rec] = TRUE;
+                                delete_joins = TRUE;
+                        }
+                        else
+                        {
+                                qdef->mqdeadtabs[place] = FALSE;
+                                /* bug 10993
+                                **      Set tabused to true when table
+                                **      is being referenced again.
+                                */
+                                tabused[t_type][t_rec] = TRUE;
+                        }
+                }
+##      } /* end unloadtable */
+
+        if ( status == REL_OVERFLOW )
+        { /* too many tables */
+                char    maxrelstr[20];
+
+                _VOID_ CVna( MQ_MAXRELS, maxrelstr );
+                FDerror(status, 1, maxrelstr);
+        }
+        else if ( status == OK )
+        { /* did not get bad/non-unique table abbreviation */
+                i4      numdetails;             /* number of detail tables */
+                i4      nummasters;             /* number of master tables */
+                i4      relstart;
+
+                /* remove tables that no longer appear in the table fields */
+                /* that is, delete them from the qdef struct */
+
+                for ( i = 0 ; !delete_joins && i < qdef->mqnumtabs ; ++i )
+                {
+                        if ( qdef->mqdeadtabs[i] )
+                        {
+                                delete_joins = TRUE;
+                        }
+                }
+
+                _delete(qdef, delete_joins);
+                /* where to begin getting attributes */
+                relstart = qdef->mqnumtabs;
+
+                any_cats = FALSE;       /* Fixes bug 6984 */
+                any_views = FALSE;
+
+                /* Unload list of tables from tables table field */
+                nummasters = numdetails = 0;
+
+##              UNLOADTABLE _mqbftbls _tables (
+##                      t_tbl = _table,
+##                      t_owner = _owner,
+##                      t_ident = _abbr,
+##                      t_role = _role,
+##                      t_state = _STATE,
+##                      t_rec = _RECORD
+##              )
+##              {
+##                      register i4     t_type;
+                        char            *_detail;
+                        STATUS          always_ok;
+
+                        /* Note: Column should have MASTER/detail validation */
+                        _detail = ERget(F_QF0016_detail);
+                        if ( (t_type = CMcmpnocase(t_role, _detail) == 0
+                                ? mqIN_DETAIL : mqIN_MASTER) == mqIN_DETAIL )
+                        { /* detail table */
+                                ++numdetails;
+                        }
+                        else
+                        { /* default is MASTER */
+                                ++nummasters;
+                        }
+
+                        /*
+                        ** not sure why this is needed; historical code
+                        ** fragment from old routine _tabident
+                        */
+                        STcopy(ERget(t_type == 
+                               mqIN_MASTER ? F_QF0015_MASTER : F_QF0016_detail),
+                               t_role);
+
+                        /*
+                        ** At this point, we need to pull the table and
+                        ** ident (abbreviation) columns off the table field
+                        ** again. In our first pass through this unloadtable, 
+                        ** we checked them for legal characters -- so we know
+                        ** they're ok. We still have to pass them through the
+                        ** delimited identifier routines to "normalize" (remove
+                        ** outer quotes, collapse embedded ones, etc). If
+                        ** there no abbreviation is in use, use the table name.
+                        **
+                        ** Since we know the names are OK, we can make the 
+                        ** IIUGdlm... routine convert tbl, owner, and ident
+                        ** in place
+                        */
+
+                        always_ok = IIUGdlm_ChkdlmBEobject(t_tbl, t_tbl,
+                                                                FALSE);
+                        always_ok = IIUGdlm_ChkdlmBEobject(t_owner, t_owner,
+                                                                FALSE);
+
+                        if ( STtrmwhite(t_ident) == 0 )  
+                        {
+                            if (( t_owner[0] != EOS ) &&
+                                (!STequal(qdef->mqcr.owner, t_owner) ))
+                            {
+                                char    t_talias[(FE_UNRML_MAXNAME + 1)];
+                                char    t_tname[(FE_MAXNAME + 1)];
+                                i4      t_talias_len;
+ 
+				t_talias_len = 
+				    STlcopy(t_owner, t_talias, FE_MAXNAME);
+
+				/* add one for '.' in owner.tablename */
+				t_talias_len++;
+                                if ( t_talias_len > FE_MAXNAME ) 
+				{
+				    t_talias[FE_MAXNAME+1] = EOS;
+				}
+				else
+				{
+				    STcat(t_talias, ERx("."));
+                                    STlcopy(t_tbl, t_tname,
+					    FE_MAXNAME - t_talias_len);
+				    STcat(t_talias, t_tname);
+                                }
+                                STcopy(t_talias, t_ident);
+                            }
+                            else
+                            {
+                                STcopy(t_tbl, t_ident);
+                            }
+                        }
+                        else
+                        {
+                                always_ok = 
+                                        IIUGdlm_ChkdlmBEobject( t_ident, 
+                                                                t_ident, FALSE);
+                        }
+
+
+                        /* bug 10993
+                        **      Check to see if tabused is TRUE, if so
+                        **      retrieve status from the relation table.
+                        */
+
+                        /*
+                        ** Changed calls to IIqfChkRel and IIqfGetRelInfo to 
+                        ** include new t_owner parameter. 
+                        */
+                        if ( t_tbl[0] != EOS )
+                        {
+                                if ( ( tabused[t_type][t_rec] &&
+                                        IIqfChkRel(qdef, t_tbl, t_owner, 
+                                                   TRUE, (FE_REL_INFO *)NULL
+                                                   ) != OK 
+                                     ) 
+                                     ||
+                                     ( borntabs[t_type][t_rec] &&
+                                        IIqfGetRelInfo(qdef, t_tbl, t_owner,
+                                                        t_ident, t_type) 
+                                                        != OK 
+                                     ) 
+                                   )
+                                { /* bad table name found */
+                                        _reset(qdef, relstart);
+##                                      SCROLL _mqbftbls _tables TO t_rec;
+                                        status = t_type == mqIN_MASTER ? -1:-2;
+##                                      ENDLOOP;
+                                }
+                        }
+##              }
+
+                if ( status == OK )
+                { /* check for valid number of relations before continuing */
+                        if ( qdef->mqnumtabs == 0 )
+                        { /* no relations specified for qdef */
+                                IIUGerr( status = E_QF0034_JoinDefProcErr,
+                                                UG_ERR_ERROR, 0
+                                );
+                        }
+                        else
+                        {
+##                              CLEAR FIELD _tables;
+                                mdtablefield(qdef, _mqbftbls, _tables);
+                                /* determine if current QDEF is m/d or 1-1 */
+                                if ( qdef->mqnumtabs != 0 )
+                                {
+                                        if ( nummasters > 0 && numdetails > 0 )
+                                        { /* master/detail case */
+                                                qdef_type = 0;
+                                                mqnummasters = nummasters;
+                                                mqnumdetails = numdetails;
+                                                onetbl = FALSE;
+                                        }
+                                        else
+                                        { /* 1-1 case */
+                                                qdef_type = 1;
+                                                mqnummasters =
+                                                    max(nummasters, numdetails);
+                                                mqnumdetails = 0;
+                                                onetbl = ( mqnummasters == 1 );
+                                        }
+                                }
+                                status = mqgetattrib(qdef, relstart,
+                                        delete_joins, goto_joins);
+                                if ( status != OK && ( status != -10 ||
+                                                                !goto_joins ) )
+                                {
+                                        if ( status != -6 )
+                                                _reset(qdef, relstart);
+                                }
+                                else
+                                {
+                                        _tfldchng(qdef);
+
+                                        if ( status != -10 )
+                                        {
+                                                status = OK;
+                                        }
+                                }
+                        }
+                }
+        }
+
+infoexit:
+        return _sw_getinfo(status, res_field);
+##}
+
+/*
+** Name:        _sw_getinfo()
+**
+** History:
+**      6/15/87 (peterk)
+**              Return code as return value so caller of IIqfGetInfo knows
+**              whether to RESUME or continue menuitem.
+**      10/13/90 (emerson)
+**              Handle errors E_QF015E and E_QF015F (bug 32075).
+**      17-aug-1993 (rdrane)
+**              Add E_QF003B_NonUniqueAbbrv "status" and remove obsolete
+**              ...IsSQLKeyword "statuses".
+**      15-sep-1993 (rdrane)
+**              Add E_QF014B_BadTblName and E_QF0187_BadOwnName "status" so
+**              we don't fall into the default case when the user forgets
+**              to properly delimit owner and table names.  This addresses
+**              bug 54945.
+*/
+static STATUS
+_sw_getinfo ( code, resfield )
+i4      code;
+char    *resfield;
+{
+        resfield[0] = EOS;
+        switch (code)
+        {
+          case OK:
+                /* IIqfGetInfo was successful */
+                break;
+
+          case E_QF0033_BadJoinDefName:
+          case E_QF0034_JoinDefProcErr:
+                /* no relations specified */
+                STcopy(ERget(S_QF00A4_name), resfield);
+                break;
+
+          case -6: /* too many joins */
+          case -1: /* problem with master tables info */
+          case -2: /* problem with detail tables info */
+          case REL_OVERFLOW: /* too many relations */
+          case -5: /* too many attributes */
+          case -7: /* allocation problem */
+          case -9: /* problem with retrieving external length */
+          case -10: /* datatypes do not coerce to each other */
+          case E_QF003B_NonUniqueAbbrv: /* non-unique table abbreviation name */
+          case E_QF0147_BadAbbrv: /* bad table abbreviation name */
+          case -12: /* column names for a table differ only in case */
+          case E_QF014B_BadTblName:
+          case E_QF0187_BadOwnName:
+                STcopy(_tables, resfield);
+                break;
+
+          default:
+                /* unknown return code */
+                IIUGerr( E_QF0035_BadStatus, UG_ERR_ERROR, 0 );
+        }
+        return code;
+}
+
+static VOID
+_reset ( qdef, relstart )
+register MQQDEF *qdef;
+i4              relstart;
+{
+        register i4     i;
+
+        for ( i = relstart ; i < MQ_MAXRELS ; ++i )
+        {
+                register RELINFO        *rel;
+
+                if ( (rel = qdef->mqtabs[i]) != NULL )
+                {
+                        MEfree(rel);
+                        qdef->mqtabs[i] = NULL;
+                }
+        }
+        qdef->mqnumtabs = relstart;
+}
+
+static VOID
+_delete ( qdef, delete_joins )
+register MQQDEF *qdef;
+bool            delete_joins;
+{
+        register i4             i;
+        register ATTRIBINFO     **atts = qdef->mqatts;
+
+        /* delete join definitions? */
+        if ( delete_joins )
+        {
+                register JOININFO       **joins = qdef->mqjoins;
+
+                for ( i = 0 ; i < MQ_MAXJOINS ; ++i )
+                {
+                        register JOININFO       *join = joins[i];
+
+                        if ( join != NULL )
+                        {
+                                i4      j1, j2;
+
+                                j1 = mqfindatt(qdef, join->rv1, join->col1);
+                                j2 = mqfindatt(qdef, join->rv2, join->col2);
+                                mq_resetatt(qdef, j1);
+                                mq_resetatt(qdef, j2);
+
+                                MEfree(join);
+                                joins[i] = NULL;
+                        }
+                }
+                qdef->mqnumjoins = 0;
+        }
+
+        for ( i = 0 ; i < qdef->mqnumtabs ; ++i )
+        {
+                if ( qdef->mqdeadtabs[i] )
+                {
+                        register i4     j;
+                        register char   *cur_ident_var =
+                                                qdef->mqtabs[i]->mqrangevar;
+
+                        /* delete attributes of dead relation */
+                        for ( j = 0 ; j < MQ_MAXATTS ; ++j )
+                        {
+                                register ATTRIBINFO     *att;
+
+                                att = atts[j];
+                                if ( (att = atts[j]) != NULL &&
+                                        STequal(att->rvar, cur_ident_var) )
+                                {
+                                        MEfree(att);
+                                        atts[j] = NULL;
+                                }
+                        }
+
+                        /* delete the dead relation */
+                        MEfree(qdef->mqtabs[i]);
+                        qdef->mqtabs[i] = NULL;
+                }
+        }
+
+        /* compact the join, attribute and table arrays */
+
+        qdef->mqnumtabs = _compact(qdef->mqtabs, qdef->mqnumtabs);
+        qdef->mqnumatts = _compact(atts, MQ_MAXATTS);
+}
+
+static i4
+_compact ( mqarray, bound )
+register char   *mqarray[];
+register i4     bound;
+{
+        register i4     open = 0;
+        register i4     current = 0;
+
+        while (current < bound)
+        {
+                if (mqarray[current] != NULL)
+                {
+                        if (open < current)
+                        {
+                                mqarray[open] = mqarray[current];
+                                mqarray[current] = NULL;
+                        }
+                        ++open;
+                }
+                ++current;
+        }
+        return open;
+}
+
+
+
+
+/*
+** Name:        _tfldchng() -   check to see if table field needed
+**
+** Description:
+**      See if a YES (or null) specified for the tablefield field
+**      in the table entries form of the joindef.  This calls
+**      mqchgintbl to set, for each table, whether it is associated
+**      with a table field, or regular fields.
+**
+** Inputs:
+**      qdef    - for this joindef.
+**
+** Outputs:
+**      VOID
+**
+** History:
+**      22-dec-1987 (peter)
+**              Moved from tables.qc and comments added.
+*/
+
+static VOID
+_tfldchng ( qdef )
+MQQDEF  *qdef;
+##{
+        STATUS          ynstat;
+        ER_MSGID        resp;
+##      char            tblfld[FE_MAXNAME + 1];
+
+##      GETFORM _mqbftbls (tblfld = tablefield)
+
+        /* Note:  Field should have YES/NO validation */
+        if ( IIUGyn(tblfld, &ynstat) || ynstat == E_UG0006_NULL_Response )
+        { /* changed from NO to YES */
+                mqchgintbl(qdef, TRUE);
+                tblfield = TRUE;
+                resp = F_UG0002_Yes2;
+        }
+        else
+        { /* changed from YES to NO */
+                mqchgintbl(qdef, FALSE);
+                mq_tbl[0] = EOS;
+                tblfield = FALSE;
+                resp = F_UG0007_No2;
+        }
+        STlcopy( ERget(resp), tblfld, (u_i4)sizeof(tblfld)-1 );
+        CVupper( tblfld );
+##      PUTFORM _mqbftbls (tablefield = tblfld);
+##}
+
+
+
+/*
+** Name:        IIqfBldInfo() - build info on table name from command line
+**
+** Description:
+**      This routine is called once, as of 9/92, from mq_tables(), in the
+**      initialize section of the JoinDef specification form. IIqfBldInfo
+**      is called "when a single table is specified on the command line",
+**      according to comments in mq_tables(). For the 6.5 FIPS effort, we now
+**      need to specially process tablenames -- for delimited identifiers and
+**      owner.table syntax. FE_fullresolve() is called to isolate the
+**      owner/schema name from the table name; both are then passed to
+**      IIqfGetRelInfo, which will place relation information on the target
+**      table into the qdef.
+**
+**      Turns out that this is also the routine that gets called when
+**      the table name comes in via the Tables Utility, which for 6.5 will
+**      graciously send table names in the owner.tablename format.
+**      The Tables Utility calls mq_tables() via mq_tbl_load() and
+**      mq_hlpgo(), et al with the single table name selected.
+**
+** Inputs:
+**      qdef    - for this joindef (or single table via Tables Utility)
+**
+** Outputs:
+**      FAIL -- table not accessable (either invalid name or no permissions)
+**      returns from mqgetattrib
+**
+** History:
+**      15-sep-1992 (daver)
+**              First documented -- added calls to FE_fullresolve()
+**      16-aug-1993 (rdrane)
+**              Replace all of the previous 6.5 modifications.  For this
+**              routine, the qdef mqcr fields are expected to be valid and
+**              fully normalized.  We expressly do NOT resolve the table
+**              reference since it's important that QBF "hide" synonyms.
+**              We may still have a problem with non-unique range variables ...
+*/
+STATUS
+IIqfBldInfo ( qdef )
+register MQQDEF *qdef;
+{
+
+        qdef->mqnumtabs = 0;
+##      MESSAGE ERget(S_QF0036_RetrieveTableInfo);
+
+        /* qdef name is same as name of table */
+
+        /*
+        ** Use this call to IIqfGetRelInfo instead:
+        */
+        if ( IIqfGetRelInfo(qdef, qdef->mqcr.name, qdef->mqcr.owner, 
+                            qdef->mqcr.name, mqIN_MASTER) != OK )
+        { /* bad table name found */
+                return FAIL;
+        }
+
+        qdef_type = 1;
+
+        return mqgetattrib(qdef, 0, FALSE, FALSE);
+}

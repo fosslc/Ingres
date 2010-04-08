@@ -1,0 +1,27 @@
+#
+# Jamfile file for front!misc!copydb
+#
+
+SubDir ING_SRC front misc copydb ;
+
+IISUBSYS front misc copydb ;
+
+
+IIBINEXE copydb : cdmain.sc ;
+IINEEDLIBS copydb :  XFERDBLIB GNLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IINEEDLIBSW copydb : SHADFLIB ;
+IIUNDEFS copydb : II_copyright malloc ;
+
+IIBINEXE usermod : usermod.c ;
+IINEEDLIBS usermod :  XFERDBLIB GNLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS usermod : II_copyright malloc ;
+
+if $(VERS) = rs4_us5 || $(VERS) = r64_us5
+{
+  IILDFLAGS copydb usermod : CCLDBMAX ;
+}
+
+IIMSGHDR ercd.msg ;
+

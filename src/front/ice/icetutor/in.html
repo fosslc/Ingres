@@ -1,0 +1,33 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Connection mode&previous=docCall.html&next=in2.html` -->
+
+In order to access a secured web application, a user must first open a connection to the ICE server. 
+As soon as the connection is opened, the ICE server generates a unique key which allows the server 
+to recognize the remote client. That key is sent back to the client as a cookie.
+<p>
+An example of the connection syntax follows. <p>
+<H4 class="question">
+Ingres ICE provides two types of connection strategies. Please choose one:<p>
+</H4>
+<p>
+<H4 class="choice">
+<INPUT TYPE="RADIO" NAME="basic" VALUE="yes" <!-- #ICE IF (`:basic` == `yes`) THEN=`checked` -->>
+ICE supports the HTTP basic authentication protocol and uses the encrypted user name and password posted by 
+your favorite browser.<p>
+<INPUT TYPE="RADIO" NAME="basic" VALUE="no" <!-- #ICE IF (`:basic` != `yes`) THEN=`checked` -->>
+ICE offers an unencrypted authentication protocol which allows you to request a user name and password through 
+an HTML page.
+</H4>
+<p>
+The entry point of your secured web application must be an external HTML "Home" page 
+which initializes one of these protocols and requests a document.
+<p>
+Please select the business unit of the document which will be 
+called by the "Home" page. 
+<SELECT NAME="doc_unit">
+<!-- #ICE FUNCTION=`unit?action=select`
+		 HTML=`<OPTION VALUE=":unit_id">:unit_name</OPTION>`
+-->
+</SELECT>
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+ 

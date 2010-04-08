@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ Mechanism for server authentication.  A value of "default" loads the 
+ installation (default) security mechanism.  A value of "none" disables server
+ authentication.
+
+

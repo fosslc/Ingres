@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+
+  The qef_no_dependency_chk specifies whether a dependency check
+  should be performed when user runs a modify statement. 
+
+  If set to ON, not performing dependency check will cause some 
+  constraints to be dropped by the modify statement. For example, 
+  a constraint defined as using the base table structure will be 
+  dropped. 
+
+  If set to ON, it is the user's responsibility to rebuild the 
+  desired constraints after the modify statement has been run.  
+
+  The default is OFF.

@@ -1,0 +1,29 @@
+#
+# MANIFEST file for common!odbc!manager
+#
+# History:
+#       26-Apr-2005 (loera01)
+#           Added IISHLIBRARY rule for VMS.
+#       19-June-2006 (Ralph Loen) SIR 115708
+#           Added link rules for Windows.
+#       26-Feb-1007 (Ralph Loen) 
+#           For NT, removed reference to ODBCLIB (MS ODBC Driver Manager).
+
+SubDir ING_SRC common odbc manager ;
+
+IISUBSYS common odbc manager ;
+
+IILIBRARY ODBCMGRLIB : unicode.c transact.c trace.c results.c
+	prepare.c options.c manager.c info.c execute.c error.c
+	descript.c cursor.c connect.c catalog.c ;
+
+if $(VMS)
+{
+    IISHLIBRARY $(SHODBCMGRLIB) : $(ODBCMGRLIB) $(IMPAPILIB) ; 
+}
+
+if $(NT)
+{
+IISHLIBRARY $(SHODBCMGRLIB) : $(ODBCMGRLIB)
+    $(IMPGCFLIB) $(IMPAPILIB) $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) ;
+}

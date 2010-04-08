@@ -1,0 +1,15 @@
+#
+# Jamfile file for back!scf!scf
+#
+
+SubDir ING_SRC back scf scf ;
+
+IISUBSYS back scf scf ;
+
+
+IILIBRARY SCFLIB : scftest.c
+	scfinitdbg.c
+	scfcall.c ;
+
+IILIBRARY IMPSCFLIBDATA : scfmaincb.c ;
+

@@ -1,0 +1,473 @@
+/*
+** Copyright (c) 1992, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<si.h>
+#include	<lo.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+# include       <ut.h>
+# include       <ft.h>
+##include	<abclass.qsh>
+/*
+#include	<abclass.h>
+*/
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<abfcnsts.h>
+#include	<abfcompl.h>
+#include	"erab.h"
+
+/*
+** Name:	abgconsf.qsc -	ABF Global Constant File Specification screen.
+**
+** Description:
+**	Contains the frame for the link image frame of ABF.  Defines:
+**
+**	IIABgcfGlobalConstantFile()	Global Constant File spec. frame.
+**	IIABscfSetConstantFile()	Set Global Constant File specification
+**	IIABqcfQueryConstantFile()	Query Global Constant File specification
+**	IIABccfCreateConstantFile()	Create and load Global Constant File.
+**	IIABgceGlobalConstantEdit()	Edit Global Constant File.
+**
+** History:
+**	Revision 6.5
+**	13-oct-92 (davel)
+**		First written.
+**	19-oct-92 (davel)
+**		Added IIABscfSetConstantFile() and IIABqcfQueryConstantFile().
+**	20-oct-92 (essi)
+**		Added IIABccfCreateConstantFile() and 
+**	       	IIABgceGlobalConstantEdit().
+**	12-nov-92 (davel)
+**		Added <si.h> for VMS.
+**	14-dec-92 (essi)
+**		Cleaned up code and initialized the form with the
+**		global constant of previous 'form entry' or blank.
+**	16-dec-92 (essi)
+**		Fixed minor bug and cleaned up the code.
+**	12-jan-93 (essi)
+**		Fixed Cancel, End and Help options.
+**	22-jan-93 (davel)
+**		add terminating \n in IIABccfCreateConstantFile.
+**	25-jan-93 (davel)
+**		initialize filename value from IIABqcfQueryConstantFile.
+**	02-feb-93 (essi)
+**		Changed IIABvfValidFile	to IIUGvfVerifyFile. Made 
+**		IIUGvfVerifyFile a generic utility and placed under ug
+**		in ugvf.c.
+**	10-mar-93 (essi)
+**		Added this history line for my previous fix to bug 49718.
+**	18-oct-93 (daver)
+**		Made fe.h appear before ug.h to avoid prototype related
+**		compiler failures in ug.h.
+**      03-may-1999 (hanch04)
+**          SIputrec returns EOF on error.
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+*/
+
+GLOBALREF	char *IIabExename;
+
+#define _CreateExpl	F_AB00E3_Create_ConsFile_expl
+#define _EditExpl	F_AB00E4_Edit_ConsFile_expl
+#define _CancelExpl	F_FE0103_ExplCancel
+#define _EndExpl	F_AB00E5_End_ConsFile_expl
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+static const
+##		char	_GlobForm[]	= ERx("globconsfile");
+##      	char    filebuf[MAX_LOC+1];     /* File name buffer */
+##		i2	null_able;
+VOID 	IIABscfSetConstantFile();
+char	*IIABqcfQueryConstantFile();
+
+static void init_form(char *fname);
+
+/*{
+** Name:	IIABgcfGlobalConstantFile() -	Global Constant File frame.
+**
+** Description:
+**	Allow a user to build an executable image for an application.
+**	The resulting executable is a stand alone program that the user
+**	can run outside of ABF.
+**
+** Input:
+**	app	{APPL *}  The application object to be linked; may not
+**				be instantiated (i.e., ID is OC_UNDEFINED.)
+**	appname	{char *} The application to be linked.
+**	id	{OOID}  The application object ID.
+**
+** History:
+**	13-oct-92 (davel)
+**		First written.
+*/
+
+VOID
+IIABgcfGlobalConstantFile(gcapp, gcappname)
+##APPL	*gcapp;
+##char	*gcappname;
+{
+	char    *filename;
+##	char		appnam[FE_MAXNAME+1];
+	init_form(_GlobForm);
+
+##	display	_GlobForm	/* default: FILL */
+
+##	initialize
+##	{
+##		char titlebuf[80];
+		
+		IIUGfmt(titlebuf, sizeof(titlebuf), 
+			ERget(F_AB00E0_ConsFile_title), 
+			1, IIabExename);
+		STcopy(gcappname,appnam);
+
+		filename = IIABqcfQueryConstantFile();
+		if (filename != NULL)
+		    STcopy(filename, filebuf);
+		else
+		    filebuf[0] = EOS;
+
+##		putform _GlobForm (#title = titlebuf,#app_name = appnam,
+##			#gc_fname = filebuf)
+##	}
+
+##	activate menuitem ERget(FE_Create) (expl = ERget(_CreateExpl))
+##	{
+		if (IIABccfCreateConstantFile() != OK)
+##			resume field gc_fname;
+		EXEC FRS MESSAGE 'File successfully written.';
+		EXEC FRS SLEEP 1;
+##		resume field gc_fname;
+##	}
+
+##	activate menuitem ERget(FE_Edit) (expl = ERget(_EditExpl))
+##	{
+##              getform _GlobForm ( filebuf:null_able = gc_fname );
+                if ( null_able == DB_EMB_NULL || STlength(filebuf) == 0)
+		{
+			IIABscfSetConstantFile( (char *)NULL );
+			filebuf[0] = EOS;
+		}
+		if ( IIUGvfVerifyFile ( filebuf, UG_IsExistingFile, FALSE, 
+			TRUE, UG_ERR_ERROR ) == OK )
+		{
+			IIABgceGlobalConstantEdit( filebuf );
+		}
+##              resume field gc_fname;
+##	}
+
+##	activate menuitem ERget(FE_Cancel) 
+##			  (expl = ERget(_CancelExpl), validate = 0),
+##			  FRSkey9 (validate = 0)
+##	{
+##		breakdisplay;
+##	}
+
+##	activate menuitem ERget(FE_End) ( expl = ERget(_EndExpl) ), FRSkey3
+##	{
+		/* validate the file entry, and then save/clear using the
+		** "specified global files" interface.
+		*/
+		LOCATION	loc;
+##		getform _GlobForm ( filebuf:null_able = gc_fname );
+                if ( null_able == DB_EMB_NULL || STlength(filebuf) == 0)
+		{
+			IIABscfSetConstantFile( (char *)NULL );
+			filebuf[0] = EOS;
+##                      breakdisplay;
+		}
+		if ( IIUGvfVerifyFile ( filebuf, UG_IsExistingFile, FALSE, 
+			TRUE, UG_ERR_ERROR ) == OK )
+		{
+			IIABscfSetConstantFile( filebuf );
+##                      breakdisplay;
+		}
+##              resume field gc_fname;
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl), validate=0),
+##			  FRSkey1 (validate = 0)
+##	{
+		FEhelp(ERx("abgconsf.hlp"), ERget(F_AB002F_ConstFileHlp));
+##	}
+
+}
+
+/*
+** Cache initialization of this form.
+*/
+static bool form_is_init = FALSE;
+
+static void
+init_form(fname)
+char *fname;
+{
+	if (!form_is_init)
+	{
+		form_is_init = TRUE;
+		IIARiaForm(fname);
+	}
+}
+
+/*{
+** Name:	IIABscfSetConstantFile() & IIABqcfQueryConstantFile()
+**
+** Description:
+**	Store and retrieve the setting of the Global Constant File, which
+**	is specified to be used as part of "image" or "go" operation.  The
+**	value is set within the IIABgcfGlobalConstantFile() frame (in this 
+**	source file), and also cleared from the top Application catalog screen.
+**	This file specification is queried upon in abftab.c as part of the 
+**	"image" and "go" operations.
+**
+** Inputs: (for IIABscfSetConstantFile)
+**	cons_file {char *}	Specified constant file.
+**
+** Returns: (for IIABqcfQueryConstantFile)
+**	{char *}	the specified constant file; NULL is none specified.
+**
+** History:
+**	19-oct-92 (davel)
+**		First written.
+*/
+static char     saved_cons_file[MAX_LOC + 1] = {EOS};
+
+VOID
+IIABscfSetConstantFile(char *cons_file)
+{
+	if (cons_file == NULL || *cons_file == EOS)
+	{
+		/* clear the constant file spec. */
+		saved_cons_file[0] = EOS;
+	}
+	else
+	{
+		(void) STlcopy(cons_file, saved_cons_file, MAX_LOC);
+	}
+}
+char *
+IIABqcfQueryConstantFile()
+{
+	return (saved_cons_file[0] == EOS ? NULL : saved_cons_file);
+}
+
+/*{
+** Name:	IIABccfGlobalConstantFile() -Global Constant File load module.
+**
+** Description:
+**	Create a file of global constants for the application. The names
+**	and values are extracted from catalogs and placed in a file. The 
+**	file is neatly formatted as follows:
+**
+**	<name 32 pos>='<value 28 pos>' # comments start at pos 65
+**
+**	If the value is longer that 28 position, it is broken into pieces in
+**	consecutive lines.
+**
+** Input:
+**	loc	{LOCATION}	User defined filename.
+**
+** History:
+**	19-oct-92 (essi)
+**		First written.
+**	26-jul-93 (blaise)
+**		Preparing for internationalization: replaced string literals
+**		written to global constants file with messages.
+*/
+STATUS
+IIABccfCreateConstantFile()
+{
+	i4		flagword,i;
+	LOINFORMATION	loinf;
+	LOCATION	loc;
+	FILE		*ccfp,*tmpfp;
+	char		ccfbuf[180+FE_MAXNAME+1]; /*180 is sizeof abf_source*/
+	char		langbrk[FE_MAXNAME+1];
+	bool		firstrecord;
+	char 		*vp;
+	STATUS		status;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char	ccname[FE_MAXNAME+1];
+		char	ccvalue[180+1]; 	  /*180 is sizeof abf_source*/
+##		char	aname[FE_MAXNAME+1];
+		char	cclang[FE_MAXNAME+1];
+		char	cctype[FE_MAXNAME+1];
+		OOID	apid;
+	EXEC SQL END DECLARE SECTION;
+
+##	getform _GlobForm ( filebuf:null_able = gc_fname );
+        if ( null_able == DB_EMB_NULL || STlength(filebuf) == 0 )
+	{
+		filebuf[0] = EOS;
+	}
+        status = IIUGvfVerifyFile ( filebuf, UG_IsNonExistingFile, FALSE, 
+		TRUE, UG_ERR_ERROR );
+	if ( status != OK )
+		return ( FAIL );
+
+##	getform _GlobForm ( aname:null_able = app_name ); 
+        if ( null_able == DB_EMB_NULL )
+	{
+		IIUGerr( E_AB0309_BadAppName, 0, 0 );
+		return ( FAIL );
+	}
+	LOfroms( PATH&FILENAME, filebuf, &loc ); 
+	if ( SIfopen( &loc,"w",SI_TXT,0,&ccfp ) != OK )
+	{
+		IIUGerr( E_AB0307_CantOpenForWrite, 0, 0 );
+		return ( FAIL );
+	}
+	STcopy( ERget(F_AB00EB_ConsFile_Str1), ccfbuf );
+	if ( SIputrec( ccfbuf,ccfp ) == EOF )
+	{
+		IIUGerr( E_AB0308_CantWrite, 0, 0 );
+		return ( FAIL );
+	}
+	if ( SIputrec( "#\n",ccfp ) == EOF )
+	{
+		IIUGerr( E_AB0308_CantWrite, 0, 0 );
+		return ( FAIL );
+	}
+	STprintf( ccfbuf,"%s %-s\n#\n", ERget(F_AB00EC_ConsFile_Str2), aname );
+	if ( SIputrec( ccfbuf,ccfp ) == EOF )
+	{
+		IIUGerr( E_AB0308_CantWrite, 0, 0 );
+		return ( FAIL );
+	}
+	/*
+	** The next 'select' must be a singleton since application names
+	** are unique per database. An error here may mean catalog 
+	** corruption. 
+	*/
+	EXEC SQL REPEATED
+		SELECT	object_id
+		INTO	:apid
+		FROM	ii_objects
+		WHERE	object_name = :aname and object_class = :OC_APPL;
+	if ( FEinqerr() != OK )
+	{
+		IIUGerr( E_AB0310_BadObjectCat, 0, 0 );
+		return ( FAIL );
+	}
+
+	langbrk[0] = EOS;
+	firstrecord = TRUE;
+
+	EXEC SQL REPEATED
+		SELECT	object_name,abf_source,abf_arg1,rettype
+		INTO	:ccname,:ccvalue,:cclang,:cctype
+		FROM	ii_objects, ii_abfobjects
+		WHERE	ii_objects.object_class = :OC_CONST AND
+			ii_objects.object_id = ii_abfobjects.object_id AND
+			ii_abfobjects.applid = :apid
+		ORDER BY
+			ii_abfobjects.abf_arg1, object_name;
+
+	EXEC SQL BEGIN;
+	{
+		/* 
+		** Break the value into 28 character pieces if needed.
+		*/
+		if ( STcompare(langbrk,cclang) != 0 )
+		{
+			if (firstrecord)
+			{
+				firstrecord = FALSE;
+			}
+			else	
+			{
+				STprintf( ccfbuf,"\n%s %s\n",
+					ERget(F_AB00EF_ConsFile_End), langbrk);
+				SIputrec( ccfbuf,ccfp );
+			}
+			STprintf( ccfbuf,"\n%s %s",
+				ERget(F_AB00EE_ConsFile_Begin), cclang);
+			SIputrec( ccfbuf,ccfp );
+		}
+		STcopy(cclang, langbrk);
+		STprintf( ccfbuf,"\n%-32s=",ccname );
+		SIputrec( ccfbuf,ccfp );
+		vp = ccvalue;
+		i = -1;
+		while ( *vp != EOS )
+		{
+			i++;
+			/* handle the case where the ' is at the start */
+			if ( *vp == '\'' )
+			{
+				if ( i == 0 )
+				{
+					SIputc( '\'',ccfp );
+					SIputc( '\\',ccfp );
+					i++;
+				}
+				else
+				{
+					SIputc( '\\',ccfp );
+					i++;
+				}
+			}
+			if ( i == 0 ) 
+			{
+				SIputc( '\'',ccfp );
+				SIputc( *vp,ccfp );
+			}
+			else if ( i == 27 )
+			{
+				i = 0;
+				SIputrec( "'\n                                 '",ccfp );
+				SIputc( *vp,ccfp );
+			}
+			else
+				SIputc( *vp,ccfp );
+			*++vp;
+		}
+		SIputc( '\'',ccfp );
+
+		/* Advance to position 65 to place constants' type name */
+		i = 28 - i;
+		while ( i > 0 )
+		{
+			SIputc( ' ',ccfp );
+			i--;
+		}
+		STprintf( ccfbuf,"# %s",cctype );
+		SIputrec( ccfbuf,ccfp );
+	}
+	EXEC SQL END;
+	if ( FEinqerr() != OK )
+	{
+		IIUGerr( E_AB0311_AbfObjJoinFail, 0, 0 );
+	  	return ( FAIL );
+	}
+	STprintf( ccfbuf,"\n%s %s\n", ERget(F_AB00EF_ConsFile_End), langbrk);
+	SIputrec( ccfbuf,ccfp );
+	STprintf( ccfbuf,"\n%s %d\n", ERget(F_AB00ED_ConsFile_Str3),
+			FEinqrows() );
+	SIputrec( ccfbuf,ccfp );
+	if ( SIclose( ccfp ) != OK )
+		return ( FAIL );
+	return ( OK );
+}
+
+STATUS
+IIABgceGlobalConstantEdit( char *filename )
+{
+	LOCATION	loc;
+
+	LOfroms( PATH&FILENAME, filename, &loc );
+        FTclear();
+	FTrestore(FT_NORMAL);
+	UTedit(NULL, &loc);
+	FTrestore(FT_FORMS);
+	FTclear();
+}

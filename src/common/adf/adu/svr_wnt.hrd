@@ -1,0 +1,153 @@
+###
+### makefile generated automatically by mknmake (3.02) for WNT.
+###	 date: Thu Dec 09 15:08:24 1993
+###	 path: D:\rplus\common\adf\adu
+###
+
+##
+## Start of extra control macros for the make.ini file.
+##
+
+# Set to sub system type, (windows, console, posix).
+!IF "$(SUBSYS)" == ""
+SUBSYS = windows
+!ENDIF
+
+# Set to true for proto typing.
+!IF "$(PROTO_TYPE)" == ""
+PROTO_TYPE = false
+!ENDIF
+
+# Local flags for the compiler.
+!IF "$(LCL_CFLAGS)" == ""
+LCL_CFLAGS =
+!ENDIF
+
+# Ingres path structure.
+PART = common
+FACILITY = adf
+SUBSYSTEM = adu
+LCLPATH = common\adf\adu
+
+# DOS file system type.
+FS_FAT = 1
+FS_CASE = 0
+
+##
+## End of extra control macros for the make.ini file.
+##
+
+!include "$(ING_SRC)\tools\port\nmake\make.ini"
+!include "deps.mak"
+
+QSHFILES = 
+
+MSGFILES = 
+
+QHFILES = 
+
+SHFILES = 
+
+QSCFILES = 
+
+SCFILES = 
+
+QCFILES = 
+
+SYFILES = 
+
+STFILES = 
+
+LFILES = 
+
+YFILES = 
+
+YIFILES = 
+
+OBJFILES = adumontab.obj aduoutarg.obj adutabdate.obj aduagcommon.obj  \
+	aduagdate.obj aduagdec.obj aduagflt.obj aduagint.obj  \
+	aduaglgk.obj aduagmny.obj aduagsec.obj aduagstr.obj  \
+	aduascii.obj adubits.obj aduchkmonth.obj aducmp.obj  \
+	aducoerce.obj aducompatstr.obj aducpnify.obj  \
+	aducvtime.obj adudates.obj adudbmsinfo.obj adudec.obj  \
+	aduerror.obj aduextdt.obj adufexi.obj aduhex.obj aduifnull.obj  \
+	aduiftru.obj aduintpow.obj adukey.obj adulcs.obj adulldates.obj  \
+	adulllgk.obj adullmoney.obj adulvch.obj adumoney.obj  \
+	adupatcmp.obj aduprint.obj aduredeem.obj aduseclb.obj  \
+	adustrcmp.obj adustring.obj adustrutil.obj adutabid.obj  \
+	adutypename.obj aduuserlen.obj 
+
+PROFILES = 
+
+PCFILES = 
+
+ADULIB = $(LIBNAME) 
+
+EXEFILES = aducompile.exe
+
+
+OBJONLY =
+
+
+$(OBJFILES): $(QSCFILES) $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) \
+	 $(LFILES) $(YFILES) $(YIFILES)
+
+
+all: hdr prh pc lib exe
+hdr: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES)
+prh:
+pc:
+lib: $(ADULIB) $(OBJONLY)
+exe:
+
+derive: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES) $(QSCFILES) \
+	 $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) $(LFILES) \
+	 $(YFILES) $(YIFILES)
+
+archive: atouch lib
+atouch:
+	$(TOUCH) $(OBJFILES)
+	$(SLEEP) 2
+
+
+##
+## Local .lib rule.
+##
+$(ADULIB): $(OBJFILES)
+!IF [$(TEST) -f $(ADULIB)] == 0
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS) $@
+$(OBJFILES)
+<<KEEP
+!ELSE
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS)
+$(OBJFILES)
+<<KEEP
+!ENDIF
+	$(LIB_CMD) @lib.rf6 > lib.er6 2>&1
+
+
+##
+## Custom .exe rule.
+##
+aducompile_deps = \
+	aducompile.obj
+
+aducompile.exe: $(aducompile_deps)
+	@echo >nul @<<aducompile.rf7
+$(LFLAGS) /OUT:aducompile.exe
+(aducompile_deps)
+$(IICOMPATLIB)
+$(ADFLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @aducompile.rf7 > aducompile.er7 2>&1
+
+
+##
+## Local install rule.
+##
+install:
+

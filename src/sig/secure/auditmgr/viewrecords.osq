@@ -1,0 +1,56 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: viewrecords 
+**
+** Description: View a set of audit records in a tablefield
+**
+** History:
+**	21-mar-94 (robf)
+**	    Created
+*/
+initialize () = 
+declare
+	var=integer4 not null;
+	disprows=integer4 not null;
+	datarows=integer4 not null;
+{
+	set_forms form (mode='read');
+	inquire_forms table '' (disprows=lastrow(audit_records),
+			      datarows=datarows(audit_records));
+
+	total_rows=datarows;
+}
+'End', key frskey3 = {
+	return;
+}
+'MoreInfo' = {
+	var= 1;
+	while  var!=0
+	do
+		var=callframe audrecdetail(audrecdetail=audit_records[].all);
+		if var=-1
+		then
+			scroll audit_records to audit_records._record-1;
+		elseif var= 1
+		then
+			scroll audit_records to audit_records._record+1;
+		elseif var=-2
+		then
+			scroll audit_records to 1;
+		elseif var=2
+		then
+			scroll audit_records to end;
+		endif;
+	endwhile;
+}
+'Top' = {
+	scroll audit_records to 1;
+}
+'Bottom' = {
+	scroll audit_records to end;
+}
+'Extract' = {
+	callframe extract();
+}

@@ -1,0 +1,134 @@
+/*
+**Copyright (c) 2004 Ingres Corporation
+*/
+
+#include    <compat.h>
+#include    <gl.h>
+#include    <sl.h>
+#include    <iicommon.h>
+#include    <dbdbms.h>
+#include    <duf.h>
+#include    <er.h>
+#include    <duerr.h>
+#include    <duucatdef.h>
+
+/**
+**
+**  Name: DUIFEMOD.QSC -CREATEDB support routines that are 
+**			owned by the frontend group.
+**
+**  Description:
+**	The routine in this module is owned by the FE group.
+**	It contains the "modify" commands needed after creation of the
+**	FE catalogs in CREATEDB.
+**
+**          dui_femod() -	modify the system catalogs that are used by and
+**				under the control of the frontend group.
+**	    dui_scmod() -	modify the standard catalogs.
+**
+**
+**  History:
+**	20-apr-1987 (sandyd)
+**	    Initial creation.
+**	24-apr-1987 (sandyd)
+**	    Fixed typos in ii_fields and ii_dependencies key lists.
+**	18-may-1987 (sandyd)
+**	    Fixed unique key for ii_fields. "flsubseq" is unique, not "flseq".
+**	28-may-1987 (sandyd)
+**	    replaced ii_dependencies with ii_abfdependencies.
+**	09-aug-1988 (greg)
+**	    modify ii_joindefs to cbtree unique on id,qtype
+**	24-sep-88 (dkh)
+**	    Removed "unique" from modify on ii_trim.
+**	19-nov-88 (jrb)
+**	    Re-written to use array of modify commands in Dui_21fecat_defs.
+**	26-Jun-89 (teg)
+**	    removed references to sysmod, as sysmod has a different routine
+**	    to modify fecats, but uses same command lookup table 
+**	    Dui_21fecat_defs
+**	24-jul=90 (teresa)
+**	    renamed from duifemod.qc to duifemod.qsc
+**	12-jul-90 (pete)
+**	    remove routine dui_femod() (no longer called in duicrdb.qsc);
+**	    add dui_scmod().
+**	
+[@history_template@]...
+**		8-aug-93 (ed)
+**			unnest dbms.h
+**/
+
+/*
+[@forward_type_references@]
+[@forward_function_references@]
+[@#defines_of_other_constants@]
+[@type_definitions@]
+[@global_variable_definitions@]
+[@static_variable_or_function_definitions@]
+*/
+
+
+/*{
+** Name: dui_scmod()    - modify standard catalogs.
+**
+** Description:
+**      This routine issues the "modify" commands needed to set the
+**      storage structures and indexes on standard catalogs after they are
+**      created in CREATEDB. It assumes that the database has already
+**      been opened with the appropriate privileges, and that the dbms
+**      system catalogs have already been made.
+**
+** Inputs:
+**      duc_errcb                       Ptr to DUF error-handling control block.
+**
+** History:
+**	12-jul-90 (pete)
+**	    Initial version. Prior to this, Createdb did not modify the standard
+**	    catalogs -- only Sysmod modified them. Cloned from 6.2 version
+**	    of dui_femod().
+[@history_template@]...
+*/
+DU_STATUS
+##  dui_scmod(duc_errcb)
+    DU_ERROR            *duc_errcb;
+##  {
+##      char    *cp;
+        char    **cp_arr;
+        DUU_CATDEF      *catdef_p;
+        i4              j;
+
+        /*      Modify syntax:
+        **          modify tablename | indexname to storage_structure [unique]
+        **              [on columnname [:sortorder] {, columnname [:sortorder]}]
+        **              [where [fillfactor=n] [, minpages=n] [, maxpages=n]
+        **              [, indexfill=n] [, maxindexfill=n]
+        */
+
+        /* read quel commands into global array */
+        _VOID_ dui_scicats_def();
+
+        for (catdef_p = &Dui_51scicat_defs[0];
+                 catdef_p->du_relname;
+                 catdef_p++
+                )
+        {
+	    if (catdef_p->du_modify == NULL)
+		continue;
+
+            cp  = catdef_p->du_modify;
+##          IIstatement cp
+
+
+            if (catdef_p->du_index_cnt > 0)
+            {
+                for (j = 1, cp_arr = catdef_p->du_index;
+                     j <= catdef_p->du_index_cnt; j++, cp_arr++
+                    )
+                {
+                    cp  = *cp_arr;
+##                  IIstatement cp
+                }
+            }
+        }
+
+        return(E_DU_OK);
+##  }

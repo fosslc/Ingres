@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+You have selected the Delete command in the QBF Update function.
+
+Now you must specify which component(s) of the displayed record are to
+be deleted, by selecting the appropriate command.
+
+Commands available are:
+
+        Command                 Function
+        -------                 ________
+
+        Master                  Delete the currently displayed Master.
+        Detail                  Delete the currently displayed Detail.
+        Help                    Print this message.
+        End                     Stop work on this frame and return to the
+                                frame that called it.
+

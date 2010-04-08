@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcdddef.hlp
+CONSISTENT DISTRIBUTED DATA SET (CDDS)
+
+The CDDS defines what data is replicated and where it resides.
+
+The CDDS is a subset of data which is kept consistent (identical) across
+all databases taking part in the replication.  A CDDS provides a method
+of defining and grouping data so that an entire database or parts of
+databases can be replicated to different target sites.  The CDDS gives
+the Distributed DBA the ability to replicate information according to
+the needs of the business.  Data can be replicated precisely when, where
+and how the company requires.  Changes to data in a CDDS must only be
+permitted to take place in Full Peer mode.  This is not strictly
+enforced by Replicator, but will result in collisions if not adhered to.
+
+A CDDS can consist of:
+
+  -  An entire database
+
+  -  A subset of tables
+
+  -  A subset of columns (vertical partitioning)
+
+  -  A subset of rows based on values (horizontal partitioning)

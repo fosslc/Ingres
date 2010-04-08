@@ -1,0 +1,160 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for odbc
+*/
+
+/*
+** History
+**	26-jul-2001 (somsa01)
+**	    Created.
+**	10-apr-2002 (kinte01)
+**	    Update for VMS support of ODBC
+**	26-Mar-2003 (loera01) SIR 109643
+**	   Created.
+**	28-Oct-2003 (ahaal01)
+**	   Add ODBC driver to lib directory.
+**	06-Nov-2003 (ahaal01)
+**	   Backed of 28-Oct-2003 change which was cross-integration of
+**	   change 465782 from ingres25 code line.
+**      21-jan-2004 (loera01)
+**         Added ODBC administrator and help pages.
+**      28-jan-2004 (loera01)
+**         Corrected build directory for iisuodbc on VMS.
+**      29-jan-2004 (loera01)
+**         Removed ocsdnname.hlp.
+**	07-feb-2004 (kinte01)
+**	   Corrected location of build directory for iisuodbc.com
+**	   and location of iiodbcinst.exe on VMS
+**      19-Apr-2004 (loera01)
+**         Added ODBC CLI shared library.
+**      21-Apr-2004 (loera01)
+**         Added install directory for sql.h and sqlext.h.
+**      29-Jun-=2004 (loera01)
+**         Added ODBC tracing library.
+**	30-Jul-2004 (hanje04)
+**	   Remove ODBC tracing library for Open Source as code cannot
+**	   be released as open source.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**      02-may-2005 (loera01)
+**          Added read-only driver to Unix/Linux, VMS and CLI to VMS. 
+**      12-oct-2007 (Ralph Loen) Bug 119296
+**          Changed "iiodbcadmn" to "iiodbcadmin" to match the Ingres
+**          documentation.
+**      10-dec-2007 (Ralph Loen) Bug 119329
+**          Added octimeout.hlp.
+**      08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory 
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART  odbc
+
+/*
+** ingres!lib
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY (PROD2NAME)!LIB_TGT
+#endif
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+# ifdef VMS
+      {
+      EXECUTABLE odbcfelib
+      EXECUTABLE odbcrofelib
+      EXECUTABLE odbcclifelib
+      PERMISSION s:re,o:rwed,g:re,w:re
+      }
+#else
+      {
+# ifdef conf_LSB_BUILD
+      EXECUTABLE lib(PROG1PRFX)odbc.${slvers}.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)odbcdriver.${slvers}.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)odbcdriverro.${slvers}.$SLSFX
+      LINK lib(PROG1PRFX)odbc.1.$SLSFX
+      LINK lib(PROG1PRFX)odbcdriver.1.$SLSFX
+      LINK lib(PROG1PRFX)odbcdriverro.1.$SLSFX
+# else
+      EXECUTABLE lib(PROG1PRFX)odbc.1.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)odbcdriver.1.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)odbcdriverro.1.$SLSFX
+# endif
+      PERMISSION s:re,o:rewd,g:re,w:re
+      }
+#endif
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY (PROD2NAME)!bin
+#endif
+   BUILD_DIR (ING_BUILD)!bin
+      EXECUTABLE (PROG1PRFX)odbcadmin
+
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY (PROD2NAME)!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT SETUP (PROG1PRFX)suodbc
+      EXECUTABLE (PROG1PRFX)odbcinst
+/*
+** ingres!install
+*/
+
+#ifndef conf_LSB_BUILD
+    DIRECTORY (PROD2NAME)!install
+#endif
+
+   BUILD_DIR (ING_BUILD)!manifest
+      FILE ocfginfo.dat
+
+/*
+** ingres!files
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY (PROD2NAME)!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+      FILE sql.h
+      FILE sqlext.h
+
+/*
+** ingres!files!english
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY (PROD2NAME)!files!english
+#endif
+   BUILD_DIR (ING_BUILD)!files!english
+        FILE ocadvname.hlp
+        FILE ocaltdrvp.hlp
+        FILE ocaltdsnp.hlp
+        FILE ocdrvdetails.hlp
+        FILE ocdsncfg.hlp
+        FILE ocdsndetails.hlp
+        FILE ocdsnname.hlp
+        FILE ocfgmm.hlp
+        FILE ocinstdrvr.hlp
+        FILE octrace.hlp
+        FILE octimeout.hlp

@@ -1,0 +1,34 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Create Form
+
+     This form is used when creating a new object with Short and Long Remarks.
+     This form has the same appearance as the Catalog Details form and Catalog
+     Save form, although the command menu is slightly different.  The Name
+     field on this form should be specified, which will be the name of the new
+     object.
+
+     If an object of the same type, with the specified name, owned by
+     either the current user or the DBA, already exists in the database,
+     you will be asked to confirm your intention to save before proceeding.
+
+        Field Name              Description
+        ----------               -----------
+        Name                    Name of the current object.
+        Owner                   Owner of the current object.
+        Created                 Date on which this object was first created.
+        Modified                Date on which this object was last altered.
+        Short Remark            One-line description of current object.
+        Long Remark             Longer description of current object.
+
+     The following commands are available on the Create Form:
+
+        Command                 Function
+        --------                --------
+        Create                  Store the new object in the System
+                                Catalogs.  A valid name must be specified
+                                in the "Name" field.  After a successful
+                                create, this frame is exited.
+        Cancel                  Cancel the current create and any changes made
+                                on this form and return to the previous
+                                frame.
+        Help                    Print this message.

@@ -1,0 +1,17 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/arc_lock.1,v 1.1 90/03/09 09:18:19 source Exp $
+.TH ARC_LOCK 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+arc_lock \- lock an archive
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B arc_lock archive_name
+.SH DESCRIPTION
+.I arc_lock
+attempts to lock an archive.
+If the archive is already locked,
+.I arc_lock
+waits until the lock is removed.
+Once it finds that no lock exists for the archive, it creates
+a new lock on the archive.

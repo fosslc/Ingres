@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!abf!codegen
+#
+
+SubDir ING_SRC front abf codegen ;
+
+IISUBSYS front abf codegen ;
+
+
+IIMSGHDR ercg.msg ;
+
+IILIBRARY CODEGENLIB : cgtab.roc cgstrs.roc cgquery.c cgpkg.c
+	cgovar.c cgout.c cgostruc.c cgocall.c cgmain.c cglabel.c
+	cginit.c cgftfld.c cgfrmget.c cgfiltop.c cgfetc.c cgfdisp.c
+	cgexpr.c cgexhdlr.c cgerror.c cgdisp.c cgdb.c cgctrl.c cgcall.c
+	cgarray.c ;
+

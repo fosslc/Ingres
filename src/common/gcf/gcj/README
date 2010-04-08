@@ -1,0 +1,15 @@
+Driver archive mappings:
+========================
+The driver package names in the Java ARchive and the equivalent source directories are:
+
+Driver package names 				Driver Source directory
+====================				=======================
+com/ingres/jdbc					common!gcf!gcj!ingres
+com/ingres/gcf/jdbc				common!gcf!gcj!jdbc
+com/ingres/gcf/util				common!gcf!gcj!util
+com/ingres/gcf/dam				common!gcf!gcj!dam
+META-INF/services/java.sql.Driver		common!gcf!gcj!java.sql.Driver
+
+Command to create driver Java ARchive
+=====================================
+jar cvf iijdbc.jar com/ingres/jdbc/*.class com/ingres/gcf/dam/*.class com/ingres/gcf/jdbc/*.class com/ingres/gcf/util/*.class META-INF/services/java.sql.Driver

@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The resource rdf_cache_ddbs is the number of distinct distributed
+  databases allowed for in the Relation Definition Facility (RDF).
+
+  This resource, together with the rdf_avg_ldbs resource, is used to
+  size RDF's Star local database cache.  The cache holds rdf_avg_ldbs
+  times rdf_cache_ddbs entries.
+
+  The default is one per connected session.

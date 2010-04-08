@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescas.hlp                Append-Start escape code examples.
+The Append-Start escape executes just before the INSERT query(ies) in:
+
+     1)  Append frames 
+     
+     2)  Update frames that allow the insertion of new masters.
+
+Example:
+
+    To generate a new sequenced field value in an Update frame with Insert 
+    allowed on the master table, where the master table key is a sequenced 
+    field:
+
+        sequence_key = CALLPROC sequence_value
+            (table_name  = 'orders',
+             column_name = 'order_no',
+             increment   = 1,
+             start_value = 1
+            );
+	COMMIT WORK;
+
+    ("sequence_key" is the name of the field on the form that corresponds
+    to the sequenced field in the database.)

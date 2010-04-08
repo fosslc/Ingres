@@ -1,0 +1,34 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are moving a column, aggregate or heading to a new location, independently
+of any associated components.  Move the cursor to the new location and then use
+the "Place" menu command to put the component there. 
+
+To move a column or aggregate together with its associated headings, select 
+the "Column" menu command, move the cursor to the new position, and then use 
+"Place" or "Shift" to select the new location.  
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Place           Place the component alone at the current position.
+
+        Left            Move the component alone to the left border of the 
+                        report.
+
+        Center          Center the component within the report.
+
+        Right           Move the component alone to the right border of the 
+                        report.
+
+        Shift           Place the component alone at the current position,
+                        shifting all components which are to the right.
+
+        Column          Prepare to move the column or aggregate and all 
+			headings associated with that component.  You will 
+			be presented with a submenu for this selection.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Report Layout menu, without changing
+                        the location of the component.

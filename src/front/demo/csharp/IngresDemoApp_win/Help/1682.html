@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How a Profile Is Changed </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="Profile function, UPDATE statement">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body>
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="1681.html" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="1683.html" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How a Profile Is Changed</h4>
+<p class="bodytext">Clicking the Change button in the application triggers the execution of the profileChangeButton_Click event handler.</p>
+<p class="bodytext"><strong class="bold">Note:</strong> This example uses the ingresUpdateCommand6, which was created when the ingresDataAdapter6 was created.</p>
+<p class="bodytext">The queries used are as follows:</p>
+<p class="proceduresubheading">UPDATE With Image</p>
+<p class="codefirst">UPDATE user_profile</p>
+<p class="code">SET up_last = ?, up_first = ?, up_email = ?, up_airport = ?, up_image = ? WHERE up_email = ?</p>
+<p class="proceduresubheading">UPDATE Without Image</p>
+<p class="codefirst">UPDATE user_profile</p>
+<p class="code">SET up_last = ?, up_first = ?, up_email = ?, up_airport = ? WHERE up_email = ?</p>
+<p class="bodytext">You can write this query using the Query Designer for the IngresCommand by changing the CommandText property, or assign them directly to the IngresCommand CommandText property as a string.</p>
+<p class="bodytext">The UPDATE performs the following tasks:</p>
+<ul class="listbullet"><li class="listbullet">Retrieves the profile for the selected email address.</li><li class="listbullet">Extracts values from the Profile form for use as parameters.</li><li class="listbullet">Updates the DataSet with the new values.</li></ul><p class="bodytext">Use the updated DataSet for updating the user_profile table.</p>
+<p class="bodytext">Each data row maintains a version of its changes after it is updated, but before the AcceptChanges method is called.</p>
+<p class="bodytext">The DataSet values are used as parameters in the UPDATE query and each parameter is associated with the respective column.</p>
+<p class="bodytext">The values from the previous version of the row are used as the parameters to the WHERE clause.</p>
+<p class="bodytext">Using the DataSet, the UPDATE can be run.</p>
+<p class="codefirst">private int ProfileChange(ProfileDataSet dataSet, String lastName,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;String firstName, String email, String airport, String photoFile)</p>
+<p class="code">{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;int resAffected = 0;</p>
+<p class="code">    try</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Clear the command parameter list</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.UpdateCommand.Parameters.Clear();</p>
+<p class="code"></p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Associate the data row columns with the data set columns.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.UpdateCommand.Parameters.Add(&quot;@up_last&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.NVarChar, &quot;up_last&quot;);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.UpdateCommand.Parameters.Add(&quot;@up_first&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.NVarChar, &quot;up_first&quot;);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.UpdateCommand.Parameters.Add(&quot;@up_email&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.NVarChar, &quot;up_email&quot;);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.UpdateCommand.Parameters.Add(&quot;@up_airport&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.NChar, &quot;up_airport&quot;);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// If a path to an image is specified convert it into a Byte</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// array value and assign it to the up_image column.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// If there is no path do not specify up_image as a parameter.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (photoFile.Length &gt; 0)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MemoryStream stream = new MemoryStream();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Image photo = System.Drawing.Image.FromFile(photoFile);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DataTable dataTable = dataSet.Tables[&quot;user_profile&quot;];</p>
+<p class="code"></p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;photo.Save(stream, photo.RawFormat);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.UpdateCommand.Parameters.Add(&quot;@up_image&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.LongVarBinary, &quot;up_image&quot;);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dataTable.Rows[0][&quot;up_image&quot;] = stream.ToArray();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stream.Close();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.UpdateCommand.CommandText =</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String.Format(rm.GetString(&quot;ProfileUpdateQuery&quot;),</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rm.GetString(&quot;ImageAttribute&quot;));</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.UpdateCommand.CommandText =</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String.Format(rm.GetString(&quot;ProfileUpdateQuery&quot;), &quot;&quot;);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Specify the previous value of email for the row as the</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// identity of the row for update in the WHERE clause.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.UpdateCommand.Parameters.Add(&quot;@up_email&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IngresType.NChar, &quot;up_email&quot;).SourceVersion = </p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DataRowVersion.Original;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Assign the values into the data set table.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dataSet.Tables[&quot;user_profile&quot;].Rows[0][&quot;up_last&quot;] = lastName;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dataSet.Tables[&quot;user_profile&quot;].Rows[0][&quot;up_first&quot;] = firstName;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dataSet.Tables[&quot;user_profile&quot;].Rows[0][&quot;up_email&quot;] = email;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dataSet.Tables[&quot;user_profile&quot;].Rows[0][&quot;up_airport&quot;] = airport;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Perform the update.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resAffected = ingresDataAdapter6.Update(dataSet);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;catch (IngresException ex)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DialogResult result = DisplayError(ex);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;return (resAffected);</p>
+<p class="code">}</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2006 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

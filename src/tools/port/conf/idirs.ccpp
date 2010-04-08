@@ -1,0 +1,513 @@
+/*
+** idirs.ccpp - list of directories in $ING_BUILD and $ING_SRC that
+**		must be created in order to build the base product
+**
+** You can run this list thru ccpp with the following symbols set:
+**
+** DIR_INSTALL: 	gets the list of $ING_BUILD directories
+** DIR_SRC:     	gets the list of $ING_SRC directories
+**
+** DIR_OINSTALL: 	gets the list of obsolete $ING_BUILD directories
+** DIR_OSRC:		gets the list of obsolete $ING_SRC directories
+**
+**
+** History
+**	02-dec-1992 (lauraw)
+**		Created from mkidir.sh.
+**	05-mar-1992 (lauraw)
+**		Moved dbtmplt to obsolete section -- not needed for 6.5.
+**	27-sep-1993 (www)
+**		Added intermediate vec directories. mkidir can't create
+**		the end directory if it hasn't created them.
+**	1-oct-1993 (seiwald)
+**		Added ./install and ./files/iipwd.
+**	11-nov-1993 (tyler)
+**		Changed ./install to ./manifest.
+**	26-nov-1993 (tyler)
+**		We still need ./install in the build environment.
+**	10-jan-1994 (dianeh)
+**		Don't #ifdef iipwd -- everybody needs it in ING_BUILD, just not
+**		everybody delivers it.
+**	16-apr-94 (peterk)
+**		make ./vec31 before making subdirectories of ./vec31
+**	12-apr-94 (swm)
+**		Added ./files/deffiles. Needed by cl/clf/deffiles.
+**	26-apr-94 (peterk)
+**		back out 16-apr-94 change, $ING_SRC/vec31 is a source
+**		directory that would have been made by piccolo if vigraph
+**		is being built.
+**	13-Jan-95 (hanch04)
+**		added ./sig/auditmgr
+**      2-Feb-95 (tutto01)
+**              added ./vec31/usr/lib
+**	14-apr-95 (hanch04)
+**		added charset directories for chthp,chteuc and chtbig5
+**		needed for doublebyte
+**	02-May-95 (rajus01)
+**		added ./demo/api
+**		      ./demo/api/syc
+**		      ./demo/api/asc
+**	3-may-95 (wadag01)
+**		'Really' added chtbig5 (was misspelled 'chtbig').
+**	8-May-95 (johna)
+**		added ./sig/ima
+**	17-nov-95 (hanch04)
+**		added webdemo
+**	6-dec-1995 (angusm)
+**		added ./files/charsets/iso88595 
+**		      ./files/charsets/iso88599 
+**		      ./files/charsets/win1250 
+**		      ./files/charsets/ibmpc437 
+**		      ./files/charsets/ibmpc850 
+**	9-jan-1996 (angusm)
+**		added ./files/charsets/cw
+**			  ./files/charsets/koi
+**			  ./files/charsets/alt
+**			  ./files/charsets/pc857
+**	(corrected path in previous comment)
+**		added ./files/iso88595 
+**		      ./files/iso88599 
+**		      ./files/win1250 
+**		      ./files/ibmpc437 
+**		      ./files/ibmpc850 
+**	25-Mar-96 (rcs)
+**		added ./files/charsets/wthai
+**		      ./files/charsets/whebrew
+**		      ./files/charsets/warabic
+**		      ./files/charsets/pchebrew
+**		      ./files/charsets/dosasmo
+**	22-may-1996 (angusm)
+**		added ./sig/tz
+**	9-jul-1996 (angusm)
+**		added ./files/charsets/ibmpc866 
+**		added ./files/charsets/koi8
+**		deleted ./files/charsets/koi
+**	06-aug-1996 (hanch04)
+**		added ./ice directories
+**	22-aug-96 (joea)
+**		Added ./files/rep.
+**	01-apr-97 (harpa06)
+**		Added ./ice/tutorials/dsql and ./ice/tutorials/macro and removed
+**		./ice/tutorial.
+**	06-Nov-1997 (hanch04)
+**	    Added ./vdba
+**	01-Jun-1998 (hanch04)
+**	    Added ./files/license
+**	16-apr-1998 (canor01)
+**	    Add informix_blobs for Informix Gateway
+**	11-jan-1999 (mcgem01)
+**	    Added ./files/charsets/csgb2312 and ./files/charsets/csgbk
+**	25-Mar-1999 (peeje01)
+**	    Added ./files/charsets/utf8
+**	25-Mar-1999 (peeje01)
+**	    Added:
+**            ICE demo dirs: ice/{icetool,icetutor,images,plays,public}
+**            ICE demo plays dirs: ice/plays/{demo,src,tutorialGuide}
+**            ICE demo samples (2.0) dirs: ice/samples/{app,dbproc,query,report}
+**	08-Apr-1999 (peeje01)
+**	    Added ice/bin
+**	20-Apr-1999 (peeje01)
+**	    Added files/dynamic
+**	21-Jan-2000 (somsa01)
+**	    added ice/bin/netscape and ice/bin/apache.
+**	31-jan-2000 (hanch04)
+**	    Added Mainwin Runtime
+**	26-apr-2000 (hanch04)
+**	    Added sig/syncapiw
+**	06-apr-2001 (abbjo03)
+**	    Add sig/rpclean.
+**	17-aug-2001 (somsa01)
+**	    Added ice/DTD.
+**	17-sep-2001 (abbjo03)
+**	    Add files/charsets/is885915 and files/charsets/win1252. Remove
+**	    duplicate files/charsets/iso88591.
+**	30-Apr-2002 (hanje04)
+**	    Add dorectories for Fortunoff demo
+**	08-apr-2002 (somsa01)
+**	    Added bin/lp64, utility/lp64, lib/lp64, and zoneinfo/lp64 for
+**	    the 64-bit binaries.
+**	12-jul-2002 (hanch04)
+**	    Added udadts/lp64
+**	05-sep-2002 (somsa01)
+**	    Added english/lp64.
+**	10-Sep-2002 (hanch04)
+**	    Added files/collation/lp64
+**	30-Sep-2002 (hanch04)
+**	    Added the lp64 dirs for ice
+**	19-Feb-2003 (hanje04)
+**	    Added gssapi to common/gcf/hdr for Kerberos stuff.
+**	02-Feb-2004 (gupsh01)
+**	    Added directory files/ucharmaps.
+**	04-Feb-2004 (hanje04)
+**	    Added directory for RPM spec files.
+**      09-feb-2004 (hanch04)
+**          Added R_SUN_HACLUSTER and R_VERITAS_HACLUSTER
+**	20-Feb-2004 (gupsh01)
+**	    Added directory files/ucharmaps/lp64.
+**	3-Mar-2004 (bonro01)
+**	    Add directories for documentation PACKAGE
+**	12-Mar-2004 (hanje04)
+**	    SIR 111952
+**	    Add files/rcfiles for RC template files.
+**	06-Apr-2004 (drivi01)
+**	    Added directories ./files/utmtemplates and
+**                            ./files/english/vtmhelp
+**	05-May-2004 (hanje04)
+**	    Add sig/imp and files/rpmtemplates
+**	06-Jun-2004 (hanje04)
+**	    Add files/mdb
+**	21-Jan-2004 (hanje04)
+**	    Add message file directories for german, spanish, french, italian,
+**	    japanese, brazillian portugues and simplified chinese.
+**	25-jan-2005 (abbjo03)
+**	    Remove Vision tutorial.
+**	18-feb-2005 (abbjo03)
+**	    Add debug, files/checkpoint and sig/setuser for VMS use. demo/api
+**	    subdirectories are obsolete.
+**	01-Mar-2005 (hanje04)
+**	    SIR 114034
+**	    Add support for reverse hybrid builds!
+**	24-May-2005 (sheco02)
+**	    Bug 14567, add new pdf files directories in ./files/english/INDEX. 
+**	21-Sep-2005 (sheco02)
+**	    Bug 114739. Add new directories for change 478292.
+**	    ./files/charsets/iso88597
+**	    ./files/charsets/pc737
+**	    ./files/charsets/win1253
+**      03-Oct-2005 (bonro01)
+**          AdvantageIngres renamed to Ingres
+**	02-Feb-2005 (drivi01)
+**   	    Documentation structure has changed, ing302 is replaced with
+**	    ingres and indexes do not require as many directories.
+** 	03-Feb-2006 (drivi01)
+**	    Updated desintation directory for embeded index to lower
+**	    case index instead of INDEX.	    
+**	23-Feb-2007 (hanje04)
+**          SIR 117784
+**          Add demodb.ccpp for setup and creation of demo database
+**	01-Jun-2007 (drivi01)
+**	    Add new directory sig/netu
+**      12-feb-2008 (bolke01) 119936 
+**          Bring VMS inline with UNIX and build into install directory
+**          Change the lib dir to library for VMS
+**	15-apr-2009 (joea)
+**	    Remove the sig/setuser directory.
+**	15-apr-2009 (joea)
+**	    Remove sig/syncapiw.
+**	19-Jun-2009 (kschendel) SIR 122138
+**	    New names for hybrid symbols; use new conf_BUILD_ICE symbol
+**	30-oct-2009 (maspa05)
+**	    Added sig/inglogs
+**	04-Mar-2010 (hanje04)
+**	    SIR 123296
+**	    Add files/srpmflists for source RPM file lists.
+**
+** NOTE: When deleting directories, please move them to either the
+**       DIR_OINSTALL or DIR_OSRC list at the end of the file.
+*/
+
+# if defined(DIR_INSTALL)
+755 .
+777 ./abf
+755 ./advisor
+755 ./bin
+# if defined(conf_BUILD_ARCH_32_64)
+755 ./bin/lp64
+# endif
+# if defined(conf_BUILD_ARCH_64_32)
+755 ./bin/lp32
+# endif
+700 ./ckp
+777 ./ckp/default
+700 ./data
+777 ./data/default
+# if defined(VMS)
+755 ./debug
+# endif
+755 ./demo
+755 ./demo/udadts
+# if defined(conf_BUILD_ARCH_32_64)
+755 ./demo/udadts/lp64
+# endif
+# if defined(conf_BUILD_ARCH_64_32)
+755 ./demo/udadts/lp32
+# endif
+755 ./demo/api
+755 ./demo/data
+700 ./dmp
+777 ./dmp/default
+755 ./files
+755 ./files/charsets
+755 ./files/charsets/alt
+755 ./files/charsets/arabic
+755 ./files/charsets/warabic
+755 ./files/charsets/chthp
+755 ./files/charsets/chteuc
+755 ./files/charsets/chtbig5
+755 ./files/charsets/chineses
+755 ./files/charsets/chineset
+755 ./files/charsets/csgb2312
+755 ./files/charsets/csgbk
+755 ./files/charsets/cw
+755 ./files/charsets/decmulti
+755 ./files/charsets/dosasmo
+755 ./files/charsets/greek
+755 ./files/charsets/elot437
+755 ./files/charsets/hebrew
+755 ./files/charsets/hproman8
+755 ./files/charsets/ibmpc437
+755 ./files/charsets/ibmpc850
+755 ./files/charsets/ibmpc866
+755 ./files/charsets/is885915
+755 ./files/charsets/iso88591
+755 ./files/charsets/iso88592
+755 ./files/charsets/iso88595
+755 ./files/charsets/iso88597
+755 ./files/charsets/iso88599
+755 ./files/charsets/kanjieuc
+755 ./files/charsets/koi8
+755 ./files/charsets/korean
+755 ./files/charsets/pc857
+755 ./files/charsets/shiftjis
+755 ./files/charsets/slav852
+755 ./files/charsets/hebrew
+755 ./files/charsets/pc737
+755 ./files/charsets/pchebrew
+755 ./files/charsets/whebrew
+755 ./files/charsets/hproman8
+755 ./files/charsets/thai
+755 ./files/charsets/utf8
+755 ./files/charsets/wthai
+755 ./files/charsets/win1250
+755 ./files/charsets/win1252
+755 ./files/charsets/win1253
+755 ./files/checkpoint
+755 ./files/collation
+755 ./files/ucharmaps
+755 ./files/utmtemplates
+# if defined(conf_BUILD_ARCH_32_64)
+755 ./files/collation/lp64
+755 ./files/ucharmaps/lp64
+755 ./files/utmtemplates
+# endif
+# if defined(conf_BUILD_ARCH_64_32)
+755 ./files/collation/lp32
+755 ./files/ucharmaps/lp32
+755 ./files/utmtemplates
+# endif
+755 ./files/deffiles
+755 ./files/dynamic
+755 ./files/english
+# if defined(conf_BUILD_ARCH_32_64)
+755 ./files/dynamic/lp64
+755 ./files/english/lp64
+# endif
+# if defined(conf_BUILD_ARCH_64_32)
+755 ./files/dynamic/lp32
+755 ./files/english/lp32
+# endif
+755 ./files/english/index
+755 ./files/english/messages
+755 ./files/english/ingres
+755 ./files/english/vtmhelp
+755 ./files/deu
+755 ./files/esn
+755 ./files/fra
+755 ./files/ita
+755 ./files/jpn
+755 ./files/ptb
+755 ./files/sch
+755 ./files/iipwd
+700 ./files/memory
+755 ./files/mdb
+700 ./files/name
+755 ./files/abfdemo
+755 ./files/dictfiles
+755 ./files/rep
+755 ./files/zoneinfo
+# if defined(conf_BUILD_ARCH_32_64)
+755 ./files/zoneinfo/lp64
+# endif
+# if defined(conf_BUILD_ARCH_64_32)
+755 ./files/zoneinfo/lp32
+# endif
+755 ./files/license
+777 ./files/FIFODIR
+755 ./files/rpmspecfiles
+755 ./files/rpmtemplates
+755 ./files/srpmflists
+755 ./files/rcfiles
+# if defined(conf_BUILD_ICE)
+755 ./ice
+755 ./ice/DTD
+755 ./ice/bin
+755 ./ice/bin/apache
+755 ./ice/bin/netscape
+# if defined(conf_BUILD_ARCH_32_64)
+755 ./ice/bin/lp64
+755 ./ice/bin/apache/lp64
+755 ./ice/bin/netscape/lp64
+# endif
+# if defined(conf_BUILD_ARCH_64_32)
+755 ./ice/bin/lp32
+755 ./ice/bin/apache/lp32
+755 ./ice/bin/netscape/lp32
+# endif
+755 ./ice/icetool
+755 ./ice/icetutor
+755 ./ice/images
+755 ./ice/plays
+755 ./ice/plays/demo
+755 ./ice/plays/src
+755 ./ice/plays/tutorialGuide
+755 ./ice/public
+755 ./ice/samples
+755 ./ice/samples/app
+755 ./ice/samples/dbproc
+755 ./ice/samples/query
+755 ./ice/samples/report
+755 ./ice/spyglass
+755 ./ice/scripts
+755 ./ice/fortunoff
+755 ./ice/fortunoff/fortunoff_cfg
+755 ./ice/fortunoff/fortunoff_image
+755 ./ice/fortunoff/fortunoff_html
+#endif /* BUILD_ICE */
+777 ./install
+700 ./jnl
+777 ./jnl/default
+#if defined(LIB_BLD)
+755 ./LIB_BLD
+# if defined(conf_BUILD_ARCH_32_64)
+755 ./LIB_BLD/lp64
+# endif
+# if defined(conf_BUILD_ARCH_64_32)
+755 ./LIB_BLD/lp32
+# endif
+# else
+755 ./lib
+# if defined(conf_BUILD_ARCH_32_64)
+755 ./lib/lp64
+# endif
+# if defined(conf_BUILD_ARCH_64_32)
+755 ./lib/lp32
+# endif
+# endif
+700 ./log
+755 ./mwrun
+755 ./man1
+777 ./manifest
+# if defined(R_SUN_HACLUSTER)
+755 ./opt
+755 ./opt/CA
+755 ./opt/CA/IngresSCAgent
+755 ./opt/CA/IngresSCAgent/bin
+755 ./opt/CA/IngresSCAgent/etc
+# endif
+# if defined(R_VERITAS_HACLUSTER)
+755 ./etc
+755 ./etc/VRTSvcs
+755 ./etc/VRTSvcs/Templates
+755 ./etc/VRTSvcs/conf
+755 ./etc/VRTSvcs/conf/config
+755 ./etc/VRTSvcs/conf/sample_ingres
+755 ./opt
+755 ./opt/VRTSvcs
+755 ./opt/VRTSvcs/bin
+755 ./opt/VRTSvcs/bin/Ingres
+# endif
+755 ./utility
+700 ./utility/iistream
+# if defined(conf_BUILD_ARCH_32_64)
+755 ./utility/lp64
+# endif
+# if defined(conf_BUILD_ARCH_64_32)
+755 ./utility/lp32
+# endif
+755 ./vdba
+700 ./work
+777 ./work/default
+755 ./sig
+755 ./sig/abf_patch
+755 ./sig/auditmgr
+755 ./sig/cachelock
+755 ./sig/errhelp
+755 ./sig/iievutil
+755 ./sig/ima
+755 ./sig/netu
+755 ./sig/rpclean
+755 ./sig/schemadef
+755 ./sig/sqltm
+755 ./sig/star
+755 ./sig/tz
+755 ./sig/w4glipc
+755 ./sig/w4v3cats
+755 ./sig/imp
+755 ./sig/inglogs
+
+# if defined(R_VIGRAPH)
+755 ./vec
+777 ./vec/data
+777 ./vec/data/gks
+777 ./vec/data/gks/ws
+777 ./vec/data/vdi
+777 ./vec/data/vdi/drv
+# endif /* R_VIGRAPH */
+
+# if defined(R_INFORMIX)
+755 ./informix_blobs
+# endif /* R_INFORMIX */
+
+# endif /* DIR_INSTALL */
+
+# if defined(DIR_SRC)
+
+775 .
+775 ./bin
+# if defined(LIB_BLD)
+775 ./LIB_BLD
+# else
+775 ./lib
+# endif
+775 ./man1
+775 ./files
+
+# if defined(R_VIGRAPH)
+755 ./vec31/bin
+755 ./vec31/usr
+755 ./vec31/usr/include
+755 ./vec31/usr/lib
+755 ./vec31/usr/vec
+755 ./vec31/usr/vec/data
+755 ./vec31/usr/vec/data/gks
+755 ./vec31/usr/vec/data/gks/ws
+755 ./vec31/usr/vec/data/vdi
+755 ./vec31/usr/vec/data/vdi/drv
+# endif /* R_VIGRAPH */
+
+# ifdef R_KERBEROS
+755 ./common/gcf/hdr/gssapi
+# endif
+
+# endif /* DIR_SRC */
+
+
+
+/* If a directory becomes obsolete, move it into DIR_OINSTALL or DIR_OSRC
+** below.
+*/
+
+# if defined(DIR_OINSTALL)
+700 ./dbtmplt
+755 ./files/tutorial
+755 ./demo/api/syc
+755 ./demo/api/asc
+# endif /* DIR_OINSTALL */
+
+# if defined(DIR_OSRC)
+755 ./files/charsets/koi
+755 ./ice/tutorials
+755 ./ice/tutorials/dsql
+755 ./ice/tutorials/macro
+# endif /* DIR_OSRC */
+

@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!handy_win
+#
+
+SubDir ING_SRC cl clf handy_win ;
+
+IISUBSYS cl clf handy_win ;
+
+
+IILIBRARY COMPATLIB : bsshmio.c ;
+

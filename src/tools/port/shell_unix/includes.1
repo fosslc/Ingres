@@ -1,0 +1,15 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/includes.1,v 1.1 90/03/09 09:18:26 source Exp $
+.TH INCLUDES 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+includes \- Show what header files a source file includes.
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B includes
+source.c
+.SH DESCRIPTION
+.I Includes
+uses ming(1) and awk(1) to determine what header files a source file
+includes, and displays the file names, using tabs to show the level of 
+nesting.

@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlvedit.hlp, help for editing local variables.
+/#-- 
+On this screen, you can change the entries in these fields:
+
+  * Data Type
+  * Array
+  * Nullable
+  * Short Remark
+
+You cannot change the name of the local variable on this screen. 
+To change a local variable name:
+     1. Select Cancel.
+     2. Select Rename at the Edit Local Variables screen.
+
+When you are finished making changes on this screen, select OK to save them.

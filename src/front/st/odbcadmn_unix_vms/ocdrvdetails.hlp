@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+/#-- ODBC configuration screen help file 
+/#--
+You are looking at iiodbcadmin's Driver Configuration Details Page.
+
+The iiodbcadmin screen consists of a single form with a table
+listing the source data from the ODBC driver file.  The table display
+may be scrolled.
+
+The Path field lists the default path for the ODBC driver files.
+
+All menu items apply to whichever tablefield contains the cursor when the 
+item is activated.  The menu operations are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Help            Displays this help screen.
+
+        End             Exit iiodbcadmin.

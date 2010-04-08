@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqsort.hlp, subtopic 'Sort order' of subtopic 'Update frames' behind main 
+/#-- VQ Editor help screen.
+/#-- 
+The system retrieves records from the database in the order the columns 
+appear in the table.  (For example, if "customer number" is the first column 
+in a table, records are retrieved in order by customer number.)
+
+  * To specify a different sort order, move the cursor to the name of the 
+    column by which you want the records sorted.  Tab to the first "Sort" 
+    column and enter the number '1'.  Tab to the second "Sort" column and 
+    specify ascending (smallest to largest or "a" to "z") or descending order 
+    by entering an 'a' or a 'd'.
+
+  * Repeat these steps for each additional column on which you want to sort, 
+    entering the appropriate number and the ascending/descending indicator.

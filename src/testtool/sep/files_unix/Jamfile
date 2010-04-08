@@ -1,0 +1,28 @@
+#
+# Jamfile file for testtool!sep!files
+#
+
+SubDir ING_SRC testtool sep files_unix ;
+
+IISUBSYS testtool sep files_unix ;
+
+
+FILE $(INGFILES)/zaaunix.cfg : zaaunix.cfg ;
+FILE $(INGFILES)/zaavms.cfg : zaavms.cfg ;
+FILE $(INGTOOLSFILES)/be.subs : be.subs ;
+FILE $(INGTOOLSFILES)/equel.subs : equel.subs ;
+FILE $(INGTOOLSFILES)/esql.subs : esql.subs ;
+FILE $(INGTOOLSFILES)/fe.subs : fe.subs ;
+FILE $(INGTOOLSFILES)/ingreslvl.lis : ingreslvl.lis ;
+FILE $(INGTOOLSFILES)/ingresprt.lis : ingresprt.lis ;
+FILE $(INGTOOLSFILES)/ingrestyp.lis : ingrestyp.lis ;
+FILE $(INGTOOLSFILES)/sep.subs : sep.subs ;
+FILE $(INGTOOLSFILES)/sepset.cmd : sepset.cmd ;
+FILE $(INGTOOLSFILES)/sepset.sed : sepset.sed ;
+FILE $(INGTOOLSFILES)/star.subs : star.subs ;
+File $(INGTOOLSFILES)/termcap.sep : termcap.sep ;
+FILE $(INGTOOLSFILES)/zaa.lis : zaa.lis ;
+FILE $(INGTOOLSFILES)/zaasetup.com : zaasetup.com ;
+FILE $(INGTOOLSFILES)/zaaunix.cfg : zaaunix.cfg ;
+FILE $(INGTOOLSFILES)/zaavms.cfg : zaavms.cfg ;
+

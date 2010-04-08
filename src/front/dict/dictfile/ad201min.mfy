@@ -1,0 +1,26 @@
+modify ii_applications to btree unique on entity_id
+
+modify ii_components to btree unique on entity_id
+
+modify ii_dependencies to btree
+    on src_entity_id, dependency_origin
+
+CREATE INDEX ii_dependencies_index
+  on ii_dependencies (dest_entity_id)
+    with structure=btree
+
+CREATE INDEX ii_dependencies_index2
+  on ii_dependencies (dest_app_name, qualified_ref)
+  with structure=btree
+
+modify ii_incl_apps to btree on app_id
+
+modify ii_srcobj_encoded to btree unique
+    on entity_id, sub_type, sequence_no
+
+modify ii_stored_bitmaps to btree unique
+    on picture_id, row_sequence
+
+modify ii_stored_strings to btree unique
+    on string_id, row_sequence
+

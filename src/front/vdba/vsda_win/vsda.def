@@ -1,0 +1,25 @@
+;
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+;
+
+;    Source   : vsda.def : 
+;    Project  : INGRES II/ Visual Schema Diff Control (vsda.ocx).
+;    Author   : UK Sotheavut (uk$so01)
+;    Purpose  : Declares the module parameters.
+;
+; History:
+;
+; 03-Sep-2002 (uk$so01)
+;    SIR #109220, Initalial version of vsda.ocx.
+;    Created
+; 17-May-2004 (uk$so01)
+;    SIR #109220, (Eliminate the warnings)
+
+
+LIBRARY      "VSDA.OCX"
+
+EXPORTS
+	DllCanUnloadNow      PRIVATE
+	DllGetClassObject    PRIVATE
+	DllRegisterServer    PRIVATE
+	DllUnregisterServer  PRIVATE

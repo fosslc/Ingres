@@ -1,0 +1,65 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Globe Boutique</title>
+</head>
+<body>
+<h1>Globe Boutique</h1>
+The Globe Boutique is where you can purchase all your favourite Globe
+memorabilia.
+<p>
+Visit often to find that gift for the person in your life that always seems to have everything
+<p>
+Genuine quality products and gifts with a unique cultural heritage
+<p>
+<h2>Instructions</h2>
+Select an item from the list below to view its description.
+<!-- To Do
+    Add macro statement to link to items description from play_item
+	- Use the LINK keyword to link to play_shopDescribe.html
+	- pass id as the variable
+    The user will be able to add the item to their
+    shopping bag or return to this page on the
+    Describe page
+-->
+<!-- #ICE REPEAT IF (DEFINED (e_shopTxn))
+        THEN=``
+	ELSE=`<!-- #ICE DECLARE=``session.e_shopTxn=NOT-OPEN`` -->`
+-->
+
+<!-- #ICE REPEAT IF (DEFINED (e_orderNumber) AND `:e_shopTxn` != `COMPLETE`)
+	THEN=``
+	ELSE=`<!-- #ICE REPEAT FUNCTION=``play_NewOrder.newOrder``
+		HTML=``<!-- #ICE
+			DECLARE=````session.e_orderNumber=:out_orderNumber````
+		-->``
+	-->`
+-->
+<!-- //enable to see order nr ICE VAR=`<p>DEBUG: Order nr is :e_orderNumber` -->
+<!-- #ICE 
+          DATABASE = `icetutor` 
+          SQL=`set lockmode session where readlock = nolock;
+          select id, name from play_item` 
+          TRANSACTION=`Shoppe` 
+          CURSOR=`Keeper` 
+	  ROWS=`-1`
+          TYPE=`TABLE`
+          HEADERS=`id,Reference,name,Article` 
+          LINKS=`id,plays[play_shopDescribe.html]` 
+          -->
+<!-- #ICE COMMIT=`Shoppe` -->
+
+<hr>
+<h2> For administrators only</h2>
+<!-- #ICE VAR=`
+<a href="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_newProduct.html]">Add a product</a>
+` -->
+<!-- Standard Shop Actions -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]?View=Yes` -->
+<!-- Standard Session Control -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

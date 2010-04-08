@@ -1,0 +1,54 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for collation
+*/
+
+/*
+** History
+**	10-Sep-2002 (hanch04)
+**	    Created from collaiton.ccpp
+**	12-Sep-2002 (hanch04)
+**	    Changed collation to collation64
+**	11-Jun-2004 (somsa01)
+**	    Cleaned up code for Open Source.
+**	12-mar-2007 (gupsh01)
+**	    Added specialcasing.txt file.
+**	31-aug-2007 (gupsh01)
+**	    Added unicode_french collation file.
+*/
+
+PART   collation64
+
+/*
+** ingres!files!collation
+*/
+
+   DIRECTORY (PROD2NAME)!files!collation!lp64
+# ifdef VMS
+   BUILD_DIR (front_path)!install!'front_vers'!files!collation
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!files!collation!lp64
+# endif /* VMS */
+      FILE multi
+      FILE spanish
+      FILE multi.dsc
+      FILE spanish.dsc
+      FILE udefault.uce
+      FILE udefault
+      FILE unicode_french.uce
+      FILE unicode_french
+      FILE udata.ucd
+      FILE specialcasing.txt
+/*
+** ingres!utility
+*/
+
+   DIRECTORY (PROD2NAME)!utility!lp64
+# ifdef VMS
+   BUILD_DIR (jpt_adf_bin)
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!utility!lp64
+# endif /* VMS */
+      EXECUTABLE aducompile

@@ -1,0 +1,6 @@
+/#-- Copyright 2009 Ingres Corporation
+  The qef_hash_rbsize resource controls the size of the buffer used
+  to read back spilled rows during large hash joins or hash aggregations.
+  A larger buffer may reduce I/O operations at the expense of memory.
+
+  The default is 128 Kb.  The minimum size is 8 Kb.

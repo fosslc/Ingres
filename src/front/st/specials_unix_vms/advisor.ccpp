@@ -1,0 +1,53 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for advisor
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	xx-xxx-1993 (tyler)
+**		Cleaned up.
+*/
+
+PART   advisor
+
+/*
+** ingres!advisor
+*/
+
+   DIRECTORY ingres!advisor
+# ifdef VMS
+   BUILD_DIR (notes_path)!info!advisor
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!advisor
+# endif /* VMS */
+      FILE read.me
+      FILE titles.all
+      FILE us_13229.doc
+      FILE us_13231.doc
+      FILE us_13233.doc
+      FILE us_13254.doc
+      FILE us_13255.doc
+      FILE us_13262.doc
+      FILE us_13264.doc
+      FILE us_13265.doc
+      FILE us_13268.doc
+      FILE us_13269.doc
+      FILE us_13270.doc
+      FILE us_13271.doc
+      FILE us_13272.doc
+      FILE us_13273.doc
+      FILE us_13941.doc
+      FILE us_14577.doc
+      FILE us_17326.doc
+      FILE us_18622.doc
+      FILE us_25156.doc
+      FILE us_38697.doc
+      FILE us_38732.doc
+      FILE us_38901.doc
+      FILE us_39363.doc
+      FILE us_54302.doc

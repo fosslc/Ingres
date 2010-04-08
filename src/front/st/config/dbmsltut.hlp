@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The log_esc_lpt_ut option controls the logging of lock escalations
+  messages when the maximum number of locks per transaction is exceeded,
+  with this resource being a user table.
+
+  During escalation, two lock messages get generated:  the first provides
+  information about the lock list status, lock request flags, current
+  lock count, and maximum locks allowed; the second provides details as 
+  to which table and database the escalation will occur on.  This option 
+  controls the logging of the second message.
+
+  The default is "OFF"; if the user wishes to see these escalation
+  messages in the errlog.log, set the value to "ON".
+  

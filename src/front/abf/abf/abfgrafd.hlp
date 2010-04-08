@@ -1,0 +1,37 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of a Graph frame.  You may change the
+definition of the frame on the form and through some of the menu operations.
+Within the running application, this frame will call RUNGRAPH to produce the
+graph named in the Graph Name field.
+
+Use the Edit operation to create or edit the definition of the graph named
+in the Graph Name field.
+
+Use the Command Line field to specify any special flags to use for the 
+RUNGRAPH command when the frame is run.
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        NewEdit                 Get or create the definition of a different
+                                application component object.  You will be
+                                prompted for the type and name of the object
+                                you wish to define.
+
+        Go                      Test the Graph frame by drawing the graph
+				named in the Graph Name field.
+
+        Edit                    Call VIGRAPH to create or modify the graph.
+
+        LongRemark              Display and allow editing of the long remarks.
+
+        Print                   Print the definition for the frame.
+
+        Help                    Access the Ingres Help facility.
+
+        Cancel                  Ignore any changes and return to the Edit 
+                                Application catalog frame.
+
+        End                     Save any changes and return to the Edit 
+                                Application catalog frame.

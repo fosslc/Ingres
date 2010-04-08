@@ -1,0 +1,76 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+**
+** top.osq: Main frame for the projmgmt application.
+*/
+
+initialize =
+begin
+	message 'Starting the ABF Demonstration Application. . .';
+	today = date('today');
+	callproc startup; 
+	callproc timer_on(secs=2);
+end
+
+on timeout = 
+begin
+	current_time=date('now');
+end
+
+Database = 
+begin
+	callframe database;
+end
+
+Employee_Tasks = 
+begin
+	set_forms field '' (invisible(current_time)=1);
+	redisplay;
+	callframe emptasks;
+	set_forms field '' (invisible(current_time)=0);
+end
+
+Dependents =
+begin
+	callproc timer_off;
+	callframe empdep;
+	callproc timer_on(secs=2);
+end
+
+Experience = 
+begin
+	callproc timer_off;
+	callframe experience;
+	callproc timer_on(secs=2);
+end
+
+Mail = 
+begin
+	call system 'mail';
+end
+
+
+'4GL', key frskey16 = 
+begin
+	callproc timer_off;
+	helpfile 'Top Frame 4GL' 
+		'II_SYSTEM:[INGRES.FILES.ABFDEMO]top.osq';
+	callproc timer_on(secs=2);
+end
+
+'Help', key frskey1 = 
+begin
+	callproc timer_off;
+	help_forms (subject = 'Top Frame Help Information',
+		file = 'II_SYSTEM:[INGRES.FILES.ABFDEMO]top.hlp');
+	callproc timer_on(secs=2);
+end
+
+'Quit', key frskey2, key frskey3 = 
+begin
+	exit;
+end
+

@@ -1,0 +1,41 @@
+#
+# Jamfile file for tools!port!shell_vms
+#
+#	24-nov-2004 (abbjo03)
+#	    Add inglink script.
+#	25-feb-2005 (abbjo03)
+#	    Add mksaveset script.
+#	01-mar-2005 (abbjo03)
+#	    Add rendupfil script.
+#	15-mar-2005 (abbjo03)
+#	    Add mktoolsaveset script.
+#	30-apr-2007 (upake01)
+#	    Add mkkitinstal script.
+#       29-apr-2008 (horda03)
+#           Use IITOOLSDcl for INGLINK
+
+SubDir ING_SRC tools port shell_vms ;
+
+IISUBSYS tools port shell_vms ;
+
+File $(INGTOOLSLIB)sedccpp.sed : <tools!port!shell_vms>sedccpp.sed ;
+
+IITOOLSSH ccpp : ccpp$(SUFSH) ;
+IITOOLSSH rendupfil : rendupfil$(SUFSH) ;
+IITOOLSSH genrelid : genrelid$(SUFSH) ;
+IITOOLSDcl inglink : inglink$(SUFSH) ;
+IITOOLSSH mkbzarch : mkbzarch$(SUFSH) ;
+IITOOLSSH mkdefault : mkdefault$(SUFSH) ;
+IITOOLSSH mkfecat : mkfecat$(SUFSH) ;
+IITOOLSSH mkgeneric : mkgeneric$(SUFSH) ;
+IITOOLSSH mkgv : mkgv$(SUFSH) ;
+IITOOLSSH mkidir : mkidir$(SUFSH) ;
+IITOOLSSH mksaveset : mksaveset$(SUFSH) ;
+IITOOLSSH mksecret : mksecret$(SUFSH) ;
+IIUTILSH mkshlibs : mkshlibs$(SUFSH) ;
+IITOOLSSH mktoolsaveset : mktoolsaveset$(SUFSH) ;
+IITOOLSSH readvers : readvers$(SUFSH) ;
+IIUTILSH shlibinfo : shlibinfo$(SUFSH) ;
+IITOOLSSH whatunix : whatunix$(SUFSH) ;
+IITOOLSSH yypp : yypp$(SUFSH) ;
+IITOOLSSH mkkitinstal : mkkitinstal$(SUFSH) ;

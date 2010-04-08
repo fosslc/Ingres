@@ -1,0 +1,15 @@
+#
+# Jamfile file for front!abf!ilrf
+#
+
+SubDir ING_SRC front abf ilrf ;
+
+IISUBSYS front abf ilrf ;
+
+
+IIMSGHDR eror.msg ;
+
+IILIBRARY ILRFLIB : irsess.c irmem.c irlistul.c irlist.c
+	irglob.c irfwrt.c irfreeil.c irfload.c irfile.c irfget.c
+	irff.c irdump.c ircqry.c irchadr.c ;
+

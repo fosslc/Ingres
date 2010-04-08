@@ -1,0 +1,42 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icdbpacc.hlp       Accessdb's help on Databases with Public Access.
+/#subtopic "Authorization Hierarchy" icauthhi.hlp
+/#--
+This frame displays Databases With Public Access and allows you to
+update the list (you must have the SECURITY user privilege to make updates).
+
+  	COLUMN NAME	SYNOPSIS
+	-----------     --------
+	Database        Database name which has been GRANTed either ACCESS or
+                	NOACCESS to PUBLIC. To grant public access or noaccess
+                	to all databases in an installation, enter the database
+                	name "all databases".
+	
+	Access          "yes" means Public is granted ACCESS to the database;
+                	"no" means Public is granted NOACCESS to the database.
+
+GRANT public ACCESS or NOACCESS to a database by adding a new row at the
+bottom; change existing Public access to a database by changing or
+"Delete"ing that row in the table field.
+
+Once the table field contains the correct entries, select "Save".
+
+See SubTopic Help for more info.
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Delete		Change existing Public access to a database.
+	
+	Save            Save updates to public grants and return to previous 
+			menu.
+	
+	ListChoices     Display a list of choices for the current field.
+	
+		(The above 3 menuitems will only appear if you have been 
+		GRANTed the SECURITY user permission)
+	
+	Help            Access the Ingres help facility.
+	
+	End             Return to previous frame.

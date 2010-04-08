@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+TEST LDB
+
+This command is used to test the accessibility of local databases. Use
+the SINGLELDB command to test the accessibility of the local database that
+is currently highlighted. Use the ALLLDBS command to test the accessibility 
+of all local databases of the current distributed database. 
+The NEWLDB command can be used to test accessibility to a node or local
+database that is not a part of the current distributed database. The NEWLDB
+command prompts for a node and local database name. The SINGLELDB, ALLLDBS,
+and NEWLDB commands return automatically to the Nodes and Local 
+Databases menu when they have completed. The SINGLELDB, and ALLLDBS commands 
+change the Stat field of the Nodes/Local Databases table from '?' to up/down 
+if a local database is accessible or inaccessible.  The NEWLDB command displays
+the accessibility of a local database in a separate popup dialogue box.  
+The HELP command displays this screen, and the END command returns to the 
+Nodes and Local Databases menu without performing any tests.
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	SingleLDB	Test accessibility of the highlighted LDB.
+
+	AllLDBs		Test accessibility of all LDBs of the current
+			distributed database.
+
+	NewLDB		Test accessibility of a specified LDB.
+
+	Help		Display this screen.
+
+	End		Exit to the Nodes and Local Databases menu.
+

@@ -1,0 +1,15 @@
+#
+# Jamfile file for back!psf!pst
+#
+
+SubDir ING_SRC back psf pst ;
+
+IISUBSYS back psf pst ;
+
+
+IILIBRARY PSFLIB : pstwindup.c psttrefix.c psttrdup.c
+	psttprpnd.c pstsort.c pstshwtab.c pstrules.c pstrslvtbl.c
+	pstrslv.c pstrserr.c pstrngfcn.c pstprmdmp.c pstnorml.c
+	pstnode.c psthshnam.c pstheader.c pstdsql.c pstddl.c
+	pstcoldsc.c pstclrrng.c pstadrsdm.c pstadparm.c ;
+

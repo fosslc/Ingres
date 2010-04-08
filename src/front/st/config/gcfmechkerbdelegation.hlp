@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+Delegation provides an alternate method of acquiring and forwarding 
+authentication.  When delegation is configured, the Name Server generates 
+authentication certificates as if it were the client.  This method requires 
+Kerberos to be configured as both the local and remote authentication 
+mechanism.  The client process generates an authentication certificate for the 
+local Name Server.  The local Name Server, in turn, uses its delegation 
+capabilities to generate an authentication certificate, and forwards the 
+certificate on behalf of the client to the remote Name Server.
+ 
+If delegation is not enabled, or Kerberos is not configured as the local 
+authentication mechanism, then the Name Server cannot generate the remote 
+authentication certificate. Instead, the client acquires the authentication 
+certificate prior making the remote connection.  The client then forwards the 
+credentials directly to the remote Name Server.  Either method is valid for 
+making secure connections via Kerberos. 

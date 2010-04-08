@@ -1,0 +1,89 @@
+--
+--  Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+--
+--  This file contains the configuration rules for the DB2 UDB Gateway.
+--
+--# History:
+--#	10-jun-02 (mofja02)
+--#		Created. 
+--#	11-nov-02 (mofja02)
+--#		Added load_table_qualifier and empty_date_return. 
+--#     07-Dec-04 (mofja02)
+--#             SIR 113276
+--#             Rules didn't really work for blob_data, now they should.
+--#     14-Jan-04 (mofja02)
+--#           BUG 113751
+--#           Now that gateways are in default.rfm
+--#             empty date return is wrong.
+--#     18-Mar-2005 (clach04)
+--#             Merged Windows CRS file entries/changes.
+--#             This is new for gateways and allows us to use a single
+--#             CRS file for EACH platform. Because Ingres for Windows
+--#             does not yet share crs files the shared gateway crs files
+--#             must be fmap'd into the Windows area. Windows gateway crs files
+--#             will be removed (there is no need for the Ingres product to
+--#             ship gateway crs files so the Ingres client map need not change).
+--#             This file should be fmapped into the ...!st!crsfiles directory
+--#             the Windows gateway build script needs updating to ensure that
+--#             crs files are pre-processed using front_st_crsfiles makefile.
+--#
+--#             Removed connect_max / connect_limit.
+--#             Neither connect_max or connect_limit setting have any impact
+--#             the limit code does not check the correct config.dat entries.
+--#             The check code is present but currently assumes -1 (unlimited).
+--#
+--#             connect_limit is the limit of sessions for a server.
+--#             connect_max in the maximum connect_limit for a server type.
+--#             (e.g. have two DBMS servers one with connect_limit of 1
+--#             the other with 99, then connect_max is 99 as that is the
+--#             biggest of the two).
+--#
+--#             Added trace flags so that they appear in CBF.
+--#             VMS path uses II_SYSTEM instead of II_CONFIG for safety.
+--#             Added Windows path info. At this time the Windows crs files
+--#             still exist, this change does not chaneg that.
+--#             The Windows crs files will be removed at a later time
+--#             and shared crs files will be fmapped into wnt!front!st!crsfiles
+--#             area on windows build machines.
+--#     31-Aug-05 (mofja02)
+--#           BUG 115138
+--#           As part of an Oracle LOB bug related to handling multiple
+--#		LOB types, it was decided to change the default
+--#		for blob_data from memory to file for all gateways.
+--#     07-Feb-08 (wansh02)
+--#           Bug 119883 - added typecast_strlen.  
+--#
+
+
+ii.$.ingstart.$.db2udb:		1, MAX = 1;
+
+
+-- protocol port status initialization
+ii.$.gateway.db2udb.sqlda_size:       128, MIN = 50, MAX = 256;
+ii.$.gateway.db2udb.pst_max:          128, MIN = 50, MAX = 256;
+ii.$.gateway.db2udb.empty_date:       "01-jan-1900 00:00:00";
+ii.$.gateway.db2udb.empty_date_return: "OFF", VALID = {
+                                        "OFF","EMPTY"
+                                        };
+ii.$.gateway.db2udb.load_table_qualifier: "USER";
+ii.$.gateway.db2udb.varchar_comp:     OFF;
+ii.$.gateway.db2udb.blob_data:		"file", VALID = 
+					{ "memory","file" };
+ii.$.gateway.db2udb.blob_len:		"1G";
+ii.$.gateway.db2udb.clob_len:		"1G";
+ii.$.gateway.db2udb.squeeze_len:	30, MIN = 0;
+ii.$.gateway.db2udb.typecast_strlen:  30, MIN = 1, SIGNED_INT;
+
+-- trace settings
+ii.$.gateway.db2udb.trace_init:       "OFF";
+ii.$.gateway.db2udb.trace_full:       "false", VALID = { "true", "false" };
+# ifdef UNIX
+ii.$.gateway.db2udb.trace_file:       "`gwecho $II_SYSTEM/ingres/files/gwdb2udb.log`";
+# endif /* UNIX */
+# ifdef NT_GENERIC
+ii.$.gateway.db2udb.trace_file:       "`iiconcat -s(II_SYSTEM) -s\ingres\files\gwdb2udb.log`";
+# endif /* NT_GENERIC */
+# ifdef VMS
+ii.$.gateway.db2udb.trace_file:       "ii_system:[ingres.files]gwdb2udb.log";
+# endif /* VMS */
+

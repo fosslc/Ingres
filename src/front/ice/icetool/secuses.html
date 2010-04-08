@@ -1,0 +1,51 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=WEB User&submit=actUser.html` -->
+		<INPUT TYPE="HIDDEN" NAME="action" VALUE="insert">
+		<TABLE BORDER=0>
+			<TR>
+				<TD  colspan=2>Please fill following information :</TD>
+			</TR>
+			<TR>
+				<TD>Name: </TD>
+				<TD><INPUT SIZE="32" NAME="name"></TD>
+			</TR>
+			<TR>
+				<TD>password: </TD>
+				<TD><INPUT TYPE="PASSWORD" SIZE="32" NAME="pass1"></TD>
+			</TR>
+			<TR>
+				<TD>confirmation: </TD>
+				<TD><INPUT TYPE="PASSWORD" SIZE="32" NAME="pass2"></TD>
+			</TR>
+			<TR>
+				<TD>Default database user: </TD>
+				<TD><SELECT NAME="dbuser">
+			<!-- #ICE FUNCTION=`dbuser?action=select`
+					 HTML=`
+					 <OPTION VALUE=":dbuser_id">:dbuser_alias</OPTION>`
+			-->
+				</SELECT></TD>
+			</TR>
+			<TR>
+				<TD>comment: </TD>
+				<TD><TEXTAREA NAME="com" COLS=32 ROWS=5></TEXTAREA></TD>
+			</TR>
+			<TR>
+				<TD>profile: </TD>
+				<TD>
+						<INPUT TYPE="CHECKBOX" NAME="fadm" VALUE="checked">administrator<BR>
+						<INPUT TYPE="CHECKBOX" NAME="fsec" VALUE="checked">security administrator<BR>
+						<INPUT TYPE="CHECKBOX" NAME="funit" VALUE="checked">unit manager<BR>
+						<INPUT TYPE="CHECKBOX" NAME="fmonitor" VALUE="checked">monitoring<BR>
+				</TD>
+			</TR>
+			<TR>
+				<TD>timeout: </TD>
+				<TD><INPUT SIZE="6" NAME="timeout"> s</TD>
+			</TR>
+			<TR>
+				<TD>Authentication method: </TD>
+				<TD><INPUT TYPE="RADIO" NAME="authtype" VALUE="ICE" CHECKED>ICE</TD>
+				<TD><INPUT TYPE="RADIO" NAME="authtype" VALUE="OS">OS</TD>
+			</TR>`
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

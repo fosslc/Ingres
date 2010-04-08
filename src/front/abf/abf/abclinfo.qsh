@@ -1,0 +1,100 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+/**
+** Name:	abclinfo.qsh -	Application Component Object Class Information.
+**
+** Description:
+**	Defines the application component edit object class.  This includes
+**	class specified information used to edit an application object.
+**	Conceptually this is a sub-class of the application component class.
+**
+** History:
+**	Revision 6.2  89/02  wong
+**	Initial revision.
+**
+**	Revision 6.3/03/00  90/04  wong
+**	Added 'nextedit' menu-item, 'title' ID, and replaced 'fld_help' method
+**	with legal types array.
+**      
+**      11/16/92 - Fix for bug 44162.  Need to validate the "symbol" field for
+**	3GL procedures.  (DonC)
+**
+**	Revision 6.5
+**	02-dec-92 (davel)
+**		Added GLOBALREF for _passdec (field on procedure edit form 
+**		specifies the type decimal values are passed to 3GL procs).
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+typedef struct
+{
+	STATUS		(*func)();	/* function implementing action */
+	ER_MSGID	menu;		/* menuitem message ID */
+	ER_MSGID	expl;		/* menuitem explanation ID */
+	i4		frskey;		/* frskey number or 0 */
+} MENUS;
+
+/*}
+** Name:	COMP_CLASS_INFO -	Application Component Object Class
+**						Edit Frame Information.
+** Description:
+**	Defines the structures that will contain the variant frame information
+**	for the edit frame of each application object.
+*/
+
+##typedef struct {
+	OOID		class;
+##	char		form[FE_MAXNAME+1];	/* Edit Form */
+##	char		*help_file;	/* Edit Help File */
+##	char		*mi_help_file;	/* MoreInfo Help File */
+	i4		nsubobj;	/* Number of Sub-Objects */
+	ER_MSGID	title;		/* edit title ID */
+	ER_MSGID	detail;		/* detail title ID */
+	i4		ntypes;		/* size of type array */
+	DB_DT_ID	*types;		/* array of legal types */
+	/* Field Activations */
+##	char		*name_check[2];	/* INGRES name fields */
+##	char		*type_check;	/* return type field */
+##	char		*file_check;	/* source-code file field */
+##	char		*library_check;	/* library field */
+##      char		*symbol_check;  /* Symbol name field, Bug 44162 (DonC) */
+	/* Menu Items for Edit Frame */
+	/*MENUS		nextedit;*/
+	MENUS		go;
+	MENUS		edit;
+	MENUS		compile;
+	MENUS		formedit;
+	MENUS		print;
+	/* `Methods' */
+	VOID		(*display)();	/* display function */
+	STATUS		(*save)();	/* save function */
+	VOID		(*destroy)();	/* destroy function */
+	STATUS		(*type_valid)();/* type validation */
+##} COMP_CLASS_INFO;
+
+/*
+** Definition Form Field Names:
+*/
+##GLOBALREF	char	_srcfile[];
+##GLOBALREF	char	_formname[];
+##GLOBALREF	char	_return_type[];
+##GLOBALREF	char	_data_type[];
+##GLOBALREF	char	_nullable[];
+##GLOBALREF	char	_fstatic[];
+##GLOBALREF	char	_outfile[];
+##GLOBALREF	char	_comline[];
+##GLOBALREF	char	_language[];
+##GLOBALREF	char	_warning[];
+##GLOBALREF	char	_symbol[];
+##GLOBALREF	char	_yn_field_title[];
+##GLOBALREF	char	_library[];
+##GLOBALREF	char	_value[];
+##GLOBALREF	char	_type[];
+##GLOBALREF	char	_passdec[];

@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqupdat.hlp, subtopic 'Editing Update frames' behind main VQ Editor help 
+/#-- screen.
+/#-- 
+Update frames let the user retrieve records from tables and then update the 
+retrieved data.  The default settings (which you can change) allow the user 
+to:
+
+  * Insert Detail table records.
+  * Delete Detail table records when the corresponding Master table record 
+    is deleted.
+
+By specifying a query restriction, you can control which records the user 
+may retrieve.  You can also specify the sort order for retrieved records.
+ 
+Select Subtopics from the menu to see more information about each of these 
+features.
+/#subtopic 'Insert and delete rules' vqinsdel.hlp
+/#subtopic 'Query restrictions' vqquery.hlp
+/#subtopic 'Sort order' vqsort.hlp

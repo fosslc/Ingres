@@ -1,0 +1,53 @@
+#
+# MANIFEST file for tools!port!shell_win
+#
+# History:
+#	13-Jan-2005 (drivi01)
+#	   Added mkpreinstallAPI.bat and mkthinclient.bat to be
+#	   copied to %ING_ROOT%/bat
+#	27-Jan-2005 (drivi01)
+#	   Added another file to setup thinclient setclient.bat.
+#	26-Apr-2005 (drivi01)
+#	   Added another bat file to create pdbs directory.
+#	27-Dec-2005 (drivi01)
+#	   Added buildpatch.bat to the MANIFEST.
+#	25-Sep-2006 (drivi01) SIR 116656
+#          Added compileDotNet.bat to compilation list.
+#	08-Nov-2006 (drivi01) SIR 116833
+#	   Removed compileDotNet.bat module specific to
+#	   .NET Data Provider 2.0 and replaced it with
+#	   more generic module compileVS2005proj.bat which
+#	   will be used to compile Visual Studio 2005 projects.
+#	11-Apr-2008 (drivi01)
+#	   Add script for building DBA Tools image.
+#	15-Jul-2008 (drivi01)
+#	   Add iisign.bat to the list of files built.
+#	09-Feb-2009 (drivi01)
+#	   Add binaddr.txt to be built into %ING_SRC%\bin.
+#
+
+SubDir ING_SRC tools port shell_win ;
+
+IISUBSYS tools port shell_win ;
+
+IITOOLSBAT bang.bat buildrel.bat purge.bat dirlist.lst
+	genrelid.bat mkbzarch.bat mkgv.bat mkfecat.bat ccpp.bat
+	readvers.bat grepall.bat grepall2.bat ts.bat where.bat
+	mkwherelist.bat blastdb.bat copyhlp.bat copyvdba.bat gd.bat 
+	mkidir.bat fasti.bat fixcfg.bat iirebase.bat users.sql tartools.bat
+	mkpreinstallAPI.bat mkthinclient.bat mkembedextras.bat
+	mkpdbdir.bat buildpatch.bat buildsol.bat compileVS2005proj.bat 
+	builddba.bat iisign.bat binaddr.txt ;
+
+IIBINBAT ingres.bat abfimage.bat mkingusr.bat query.bat
+	ckcopyd.bat ckcopyt.bat abfdemo.bat deldemo.bat imageapp.bat
+	setclient.bat ;
+
+IIUTILBAT deltutor.bat deltutor.bat visiontutor.bat ;
+
+IISIGSTARBAT  makestdcat.bat makestdcat.inp iirunschd.bat iirunschd.inp ;
+
+IIFASTI config.dat ;
+
+IITOOLSDIR INGTOOLSLIB ;
+

@@ -1,0 +1,49 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmdbedit.hlp
+EDIT A REPLICATED DATABASE
+
+This form is used to define a database that is part of your replication
+scheme.
+
+To make a change, use the Tab key to move to the desired field and enter
+the new value.  To save the changed definition, select the Save
+operation.
+
+The fields on the form are:
+
+        FIELD NAME              DESCRIPTION
+        ----------              -----------
+        Database Number         This is a unique system-wide identifier
+                                assigned previously.  It cannot be
+                                changed.
+
+        Virtual Node Name       A mandatory field to specify the virtual
+                                node (vnode) name, as defined in the
+                                Ingres/Net netutil utility, used
+                                to connect to the database.
+
+        Database Name           The name of the database.  If this is
+                                local database, this cannot be changed.
+
+        Database Owner          The owner (DBA) of the database.
+
+        DBMS Type               The type of DBMS, for example,
+                                Ingres or CA-Datacom.  Use
+                                ListChoices to view acceptable values.
+
+        Remarks                 A short comment.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Save            Save the definition and return to the Database
+                        Summary screen.
+
+        ListChoices     Display a list of acceptable values for the
+                        current field.
+
+        Help            Access the Help facility.
+
+        End             Return to the Database Summary screen.

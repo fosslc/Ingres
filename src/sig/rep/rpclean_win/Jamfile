@@ -1,0 +1,10 @@
+#
+# Jamfile file for sig!rep!rpclean_win
+#
+
+SubDir ING_SRC sig rep rpclean_win ;
+
+IISUBSYS sig rep rpclean_win ;
+
+IILIBRARY SIGLIB : getopt.c ;
+

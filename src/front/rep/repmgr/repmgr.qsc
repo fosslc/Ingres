@@ -1,0 +1,292 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <ex.h>
+# include <me.h>
+# include <pc.h>
+# include <nm.h>
+# include <lo.h>
+# include <ci.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <adf.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <uigdata.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	repmgr.qsc - Replicator Manager main
+**
+** Description:
+**	Defines
+**		main	- Replicator Manager main
+**
+** History:
+**	30-dec-96 (joea)
+**		Created based on repmgr.osq in replicator library.
+**	23-jan-97 (joea)
+**		Call FEendforms after an error in RMget_server_dir.
+**	07-oct-97 (joea)
+**		Commit after selecting the local database, to prevent a
+**		MoveConfig to this database from being blocked by the unreleased
+**		dd_databases lock.
+**	27-mar-98 (joea)
+**		Discontinue use of RPing_ver_ok.
+**	03-jun-98 (abbjo03)
+**		Don't call RMget_server_dir here.
+**	23-nov-98 (abbjo03)
+**		Use IIUIdbdata()->suser instead of IIuiDBA because under SQL92
+**		the former provides the uppercase user name.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      11-Jun-2004 (hanch04)
+**          Removed reference to CI for the open source release.
+**	29-Sep-2004 (drivi01)
+**	    Updated NEEDLIBS to link dynamic library SHQLIB and SHFRAMELIB
+**	    to replace its static libraries.  Added NEEDLIBSW hint which is 
+**	    used for compiling on windows and compliments NEEDLIBS.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+/*
+PROGRAM =	repmgr
+
+NEEDLIBS =	REPMGRLIB REPCOMNLIB SHFRAMELIB SHQLIB SHCOMPATLIB
+
+NEEDLIBSW = 	SHEMBEDLIB SHADFLIB
+
+UNDEFS =	II_copyright
+*/
+
+GLOBALDEF
+##char	RMdb_display[37];
+GLOBALDEF
+EXEC SQL BEGIN DECLARE SECTION;
+i2	RMlocal_db_no;
+EXEC SQL END DECLARE SECTION;
+GLOBALDEF ADF_CB	*RMadf_cb;
+
+
+static	bool	form_initd;
+static const
+##char	*form_name = ERx("rmmain_menu"),
+##	*tf_name = ERx("iitf"),
+##	*fcmd = ERx("cmd"),
+##	*fexpl = ERx("explanation");
+
+static	char	*db_name = NULL;
+static	char	*user_name = ERx("");
+
+static	ARG_DESC args[] =
+{
+	/* required */
+	{ERx("database"), DB_CHR_TYPE, FARG_PROMPT, (PTR)&db_name},
+	/* optional */
+	{ERx("user"), DB_CHR_TYPE, FARG_FAIL, (PTR)&user_name},
+	NULL
+};
+
+
+FUNC_EXTERN STATUS db_add_local(char *db_name, char *db_owner, i2 *db_no);
+FUNC_EXTERN STATUS cfg_menu(void);
+FUNC_EXTERN STATUS FEhandler(EX_ARGS *ex);
+FUNC_EXTERN ADF_CB *FEadfcb(void);
+
+
+/*{
+** Name:	main	- Replicator Manager main
+**
+** Description:
+**	Replicator Manager (RepMgr) main menu.  It can be invoked as:
+**
+**		repmgr dbname [-uuser]
+**
+**	where:
+**		dbname	- database name, which may include a vnode.  If not
+**			  specified, the user will be prompted.
+**		user	- alternate username.
+**
+** Inputs:
+**	argc	- number of arguments on the command line
+**	argv	- argument vector, from command line
+**
+** Returns:
+**	OK	- everything went OK
+**	FAIL	- something went wrong
+*/
+i4
+main(
+i4	argc,
+char	*argv[])
+##{
+##	char	menu_choice[81];
+	EX_CONTEXT	context;
+	DBEC_ERR_INFO	errinfo;
+
+	/* Tell EX this is an INGRES tool */
+	(void)EXsetclient(EX_INGRES_TOOL);
+
+	/* Use the INGRES memory allocator */
+	(void)MEadvise(ME_INGRES_ALLOC);
+
+	/* Initialize character set attribute table */
+	if (IIUGinit() != OK)
+		PCexit(FAIL);
+
+	/* Parse the command line arguments */
+	if (IIUGuapParse(argc, argv, ERx("repmgr"), args) != OK)
+		PCexit(FAIL);
+
+	/* Set up the generic exception handler */
+	if (EXdeclare(FEhandler, &context) != OK)
+	{
+		EXdelete();
+		PCexit(FAIL);
+	}
+
+	/* Start the forms system and display the copyright message */
+	if (FEforms() != OK)
+	{
+		EXdelete();
+		PCexit(FAIL);
+	}
+	FEcopyright(ERx("REPMGR"), ERx("1993"));
+
+	RMadf_cb = FEadfcb();
+
+	/* Open the database */
+	if (FEningres(NULL, (i4)0, db_name, user_name, NULL) != OK)
+	{
+		FEendforms();
+		EXdelete();
+		PCexit(FAIL);
+	}
+	EXEC SQL SET AUTOCOMMIT OFF;
+	EXEC SQL SET_SQL (ERRORTYPE = 'genericerror');
+
+	if (!IIuiIsDBA)
+	{
+		EXdelete();
+		IIUGerr(E_RM0002_Must_be_DBA, UG_ERR_FATAL, 0);
+	}
+
+	if (!RMcheck_cat_level())
+	{
+		EXdelete();
+		IIUGerr(E_RM0003_No_rep_catalogs, UG_ERR_FATAL, 0);
+	}
+
+	EXEC SQL SELECT	database_no
+		INTO	:RMlocal_db_no
+		FROM	dd_databases
+		WHERE	local_db = 1;
+	EXEC SQL BEGIN;
+	EXEC SQL END;
+	(void)RPdb_error_check(DBEC_ZERO_ROWS_OK, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXdelete();
+		IIUGerr(E_RM0004_Error_get_local_db, UG_ERR_FATAL, 0);
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		if (db_add_local(IIuiDatabase, IIUIdbdata()->suser,
+			&RMlocal_db_no) != OK)
+		{
+			FEendforms();
+			FEing_exit();
+			EXdelete();
+			PCexit(FAIL);
+		}
+	}
+	else if (errinfo.rowcount > 1)
+	{
+		EXdelete();
+		IIUGerr(E_RM0005_Too_many_local_db, UG_ERR_FATAL, 0);
+	}
+	STprintf(RMdb_display, ERx("%s %d"), IIuiDatabase, RMlocal_db_no);
+	EXEC SQL COMMIT;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_FATAL, 1,
+				form_name);
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name read
+##	loadtable form_name tf_name (fcmd = ERget(F_RM0001_Configuration),
+##		fexpl = ERget(F_RM0002_Configuration_expl))
+##	loadtable form_name tf_name (fcmd = ERget(F_RM0003_Monitor),
+##		fexpl = ERget(F_RM0004_Monitor_expl))
+##	loadtable form_name tf_name (fcmd = ERget(F_RM0005_Reports),
+##		fexpl = ERget(F_RM0006_Reports_expl))
+##	scroll form_name tf_name to 1
+
+##	display form_name read
+##	initialize (db = RMdb_display)
+##	activate menuitem ERget(FE_Select)
+##		(expl = ERget(F_FE0108_ExplSelect)), FRSkey4
+##	{
+##		getrow form_name tf_name (menu_choice = fcmd)
+		if (STequal(menu_choice, ERget(F_RM0001_Configuration)))
+		{
+			if (cfg_menu() == 1)
+##				breakdisplay
+		}
+		else if (STequal(menu_choice, ERget(F_RM0003_Monitor)))
+		{
+			rep_monitor();
+		}
+		else if (STequal(menu_choice, ERget(F_RM0005_Reports)))
+		{
+			if (reports() == 1)
+##				breakdisplay
+		}
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmrepmgr.hlp"), ERget(F_RM0007_Repmgr_main_menu));
+##	}
+
+##	activate menuitem ERget(FE_Quit) (expl = ERget(F_RM0008_Quit_expl)),
+##		FRSkey2, FRSkey3
+##	{
+##		breakdisplay
+##	}
+
+	FEendforms();
+	FEing_exit();
+
+	EXdelete();
+	PCexit(OK);
+##}

@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The cp_timer resource specifies the elapsed time between signaling
+  consistency points.
+
+  ( Consistency points will still be triggered by transaction log
+    file space usage, if the usage interval is reached before the cp_timer
+    expires ).
+
+  The minimum, and the default, is 0.
+  
+  Specifying 0 means that no thread will be started in the 
+  Recovery Server to perform this task;  all consistency points will be
+  signalled based on Mb of transaction log used.
+

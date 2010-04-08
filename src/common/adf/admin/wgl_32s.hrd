@@ -1,0 +1,72 @@
+#
+#   NMAKE makefile
+#
+#  History:
+#	15-jan-96 (tutto01)
+#	    Created.
+#	24-jan-96 (tutto01)
+#	    Added missing header files.
+#	25-jan-96(tutto01)
+#	    Seperate the obj files which were accidentally getting "grep'd".
+#	07-mar-1996 (canor01)
+#	    Compile iicvpk.c and iimhpk.c, but don't copy to installation.
+#	22-nov-96 (donc)
+#	    Ported to adhere to the OpenROAD-style build
+#
+
+# Build Environment
+CONFIG = wgl_32s
+SDK = $(W32_SDK)
+PATH = $(SDK)\bin;$(ING_BUILD)\bin;$(PATH)
+
+!include  "$(ING_SRC)\tools\port\nmake\$(CONFIG).ini"
+
+CC          = cl -c
+DLL         = $(II_SYSTEM)\ingres\bin
+INC         = $(II_SYSTEM)\ingres\files
+CCFLAGS= -G4 -Di386=1 -D_X86_ -Dint_wnt -Od -D_DLL -D_MT /nologo -MD -I.\ -I$(INC)
+
+DEMOFILES = common.c cpx.c cpx.log cpx.qry iiudtnt.def \
+	intlist.c intlist.log intlist.qry numeric.c op.c op_load.log \
+	op_load.qry op_test.log op_test.qry pnum_test.log pnum_test.qry \
+	udttest.bat zchar.c zchar.log zchar.qry iiadd.h iipk.h udt.h
+
+OBJFILES = iicvpk.obj iimhpk.obj
+
+
+all install: maked getdef $(OBJFILES) $(DEMOFILES) demomake 
+
+initial:
+
+objfiles:
+
+derive:
+
+prh:
+
+hdr:
+
+pc:
+
+exe:
+
+lib:
+
+maked:
+	if not exist $(ING_BUILD)\demo\udadts mkdir $(ING_BUILD)\demo\udadts
+
+getdef:
+	$(COPY) $(ING_SRC)\tools\port\defs\iiudtnt.def
+
+objs:
+	nmake -f makeor.wnt
+
+$(DEMOFILES):
+	grep -v "^##" $@ > $(ING_BUILD)\demo\udadts\$@
+
+demomake:
+	COPY makefile.wnt $(ING_BUILD)\demo\udadts\makefile
+
+$(OBJFILES): iicvpk.c iimhpk.c
+    $(CC) $(CCFLAGS) $**
+    $(COPY) $@ $(ING_BUILD)\demo\udadts

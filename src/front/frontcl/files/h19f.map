@@ -1,0 +1,116 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* FRS mapping file for H19 with Function Keys and Alternate Keypad */
+
+/* Menu Key */
+	menu = pf6 (Blue)
+
+/* Help facility */
+	frskey1 = pf7 (Red)
+
+/* Exit the system */
+	frskey2 = pf9 (Erase)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf8 (White)
+
+/* Go or execute function */
+	frskey4 = pf21 (Enter)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = pf11 (0)
+
+/* Forget and Undo */
+	frskey9 = pf10 (.)
+
+/* Bring up List Choices */
+	frskey10 = pf20 (9)
+
+/* Scroll page or form left */
+	scrollleft = pf17 (6)
+
+/* Scroll page or form right */
+	scrollright = pf15 (4)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf19 (8)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf13 (2)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf1 (f1)
+
+/* Select second menu item */
+	menuitem2 = pf2 (f2)
+
+/* Select third menu item */
+	menuitem3 = pf3 (f3)
+
+/* Select fourth menu item */
+	menuitem4 = pf4 (f4)
+
+/* Select fifth menu item */
+	menuitem5 = pf5 (f5)
+
+/* Select sixth menu item */
+	menuitem6 = pf12 (1)
+
+/* Select seventh menu item */
+	menuitem7 = pf14 (3)
+
+/* Select eighth menu item */
+	menuitem8 = pf16 (5)
+
+/* Select ninth menu item */
+	menuitem9 = pf18 (7)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlDEL (Delete)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)

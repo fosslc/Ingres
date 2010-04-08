@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vq4glafl.hlp       Help on Application flow control statements.
+     CALLFRAME newframe (name := currentname; status := BYREF(currentstatus))
+        WITH STYLE=POPUP;
+
+     status := CALLFRAME newframe;         /* value returned by newframe
+                                           ** is assigned to status
+                                           */
+     CALLPROC addtax (tax = taxpercent, total = BYREF(price));
+     CALLPROC beep();                      /* 4GL built-in procedure      */
+
+     CALL APPLICATION (NAME = 'newappname', FRAME = 'topframe');
+
+     CALL QBF (TABLE = 'department', MODE = 'append');
+ 
+     paramstring = 'name = "' + empname + '"';
+     CALL REPORT (REPORT = 'deptrep', FILE = 'deptrep.out', 
+                  PARAM = paramstring);    /* report writer code will use
+                                           ** name as a query parameter
+                                           */
+     CALL RUNGRAPH (GRAPH = 'deptgraph', DEVICE = 'postscript',
+                    FILE = 'deptgraph.out', TABLE = 'depttable');
+
+     CALL SYSTEM 'mail';
+     CALL SYSTEM '@filename.com';          /* VMS                          */
+     CALL SYSTEM 'filename';               /* UNIX; filename is executable */
+
+     EXIT;                                 /* exit from the application    */

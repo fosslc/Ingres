@@ -1,0 +1,37 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "enterprise", "enterprise.vcproj", "{808D7E73-681F-47A6-9495-C9F2477CC17D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Default = Debug|Default
+		Debug64|Default = Debug64|Default
+		DebugAMD64|Default = DebugAMD64|Default
+		DebugIA64|Default = DebugIA64|Default
+		Release|Default = Release|Default
+		Release64|Default = Release64|Default
+		ReleaseAMD64|Default = ReleaseAMD64|Default
+		ReleaseIA64|Default = ReleaseIA64|Default
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.Debug|Default.ActiveCfg = Debug|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.Debug|Default.Build.0 = Debug|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.Debug64|Default.ActiveCfg = Debug64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.Debug64|Default.Build.0 = Debug64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.DebugAMD64|Default.ActiveCfg = DebugAMD64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.DebugAMD64|Default.Build.0 = DebugAMD64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.DebugIA64|Default.ActiveCfg = DebugIA64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.DebugIA64|Default.Build.0 = DebugIA64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.Release|Default.ActiveCfg = Release|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.Release|Default.Build.0 = Release|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.Release64|Default.ActiveCfg = Release64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.Release64|Default.Build.0 = Release64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.ReleaseAMD64|Default.ActiveCfg = ReleaseAMD64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.ReleaseAMD64|Default.Build.0 = ReleaseAMD64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.ReleaseIA64|Default.ActiveCfg = ReleaseIA64|Win32
+		{808D7E73-681F-47A6-9495-C9F2477CC17D}.ReleaseIA64|Default.Build.0 = ReleaseIA64|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

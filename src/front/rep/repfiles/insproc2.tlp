@@ -1,0 +1,61 @@
+/*
+** Copyright (c) 1996, 2009 Ingres Corporation
+**
+** Name:	insproc2.tlp - create insert database procedure for type 2
+**
+** Description:
+**	Procedure in remote database to replicate an INSERT to a Protected
+**	Read Only target.
+##
+## History:
+##	16-dec-96 (joea)
+##		Created based on insproc2.tlp in replicator library.
+##	03-oct-97 (joea) bug 83087
+##		Correct datatypes for sourcedb, old_sourcedb and table_no.
+##	21-apr-98 (joea)
+##		Change MESSAGE x; RETURN to RETURN x.
+##	13-oct-99 (nanpr01/abbjo03)
+##		Implement optimistic collision resolution: if we get error 4500
+##		(E_US1194 Duplicate key on INSERT detected) return a specific
+##		value (114) to signal an insert collision.
+##	22-apr-2009 (joea)
+##	    Add $oiv macro to support identity columns.
+**/
+CREATE PROCEDURE $rip (
+	$ddl,
+	sourcedb		SMALLINT	NOT NULL,
+	transaction_id		INTEGER		NOT NULL,
+	sequence_no		INTEGER		NOT NULL,
+	table_no		INTEGER		NOT NULL,
+	old_sourcedb		SMALLINT	NOT NULL,
+	old_transaction_id	INTEGER		NOT NULL,
+	old_sequence_no		INTEGER		NOT NULL,
+	cdds_no			SMALLINT	NOT NULL,
+	dd_priority		SMALLINT	NOT NULL,
+	trans_time		DATE		NOT NULL,
+	trans_type		SMALLINT	NOT NULL,
+	target_type		SMALLINT	NOT NULL) =
+BEGIN
+	INSERT	INTO $odt ($col)
+	$oiv
+		VALUES	($col(:));
+	IF IIerrornumber != 0 OR IIrowcount != 1 THEN
+	    IF IIerrornumber = 4500 THEN
+		RETURN 114;
+	    ELSE
+		RETURN 1134;
+	    ENDIF;
+	ENDIF;
+
+	INSERT	INTO $sha ($key,
+		sourcedb, transaction_id, sequence_no, cdds_no,
+		dd_priority, trans_time, trans_type, distribution_time,
+		in_archive)
+	VALUES	($key(:),
+		:sourcedb, :transaction_id, :sequence_no, :cdds_no,
+		:dd_priority, :trans_time, :trans_type, 'now',
+		0);
+	IF IIerrornumber != 0 OR IIrowcount != 1 THEN
+		RETURN 1136;
+	ENDIF;
+END

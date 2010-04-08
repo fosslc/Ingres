@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+Determines whether the server keeps a cache of session stacks for
+sessions to use and re-use.  If this option is OFF, stacks are
+created by the operating system as needed and destroyed when the
+session ends.  If the option is ON, the server manages a cache
+of stacks for sessions to use.  Setting this option ON can 
+improve session start-up time, but will require more memory for
+the server.

@@ -1,0 +1,23 @@
+#
+# Jamfile file for front!utils!ug
+#
+
+SubDir ING_SRC front utils ug ;
+
+IISUBSYS front utils ug ;
+
+
+IILIBRARY UGLIB : ugyn.c ugvf.c ugqsort.c ugpx.c ugprime.c
+        ugoprep.c ugmxlen.c ugmsg.c uglcd.c ugitoa.c ugihash.c
+        ugident.c ughlpnm.c ughash.c ugfrs.c ugfrmgen.c ugfmt.c
+        ugexpr.c ugerr.c ugdmlstr.c ugdate.c ugcpylng.c
+        ugbma.c ugatoi.c ugappfil.c iiftrim.c fevmstat.c feutapar.c
+        feuta.c fetsallo.c fetopen.c fetag.c fesalloc.c fereq.c
+        feprompt.c feprefix.c femsg.c felpret.c felpget.c felpdest.c
+        felpcre.c feihdlr.c fefree.c feexits.c fedoreq.c
+        fedml.c fecprite.c feclinit.c fechknm.c fechkenv.c feafeerr.c 
+	feadfcb.c ;
+
+IILIBRARY IMPEMBEDLIBDATA : ugdata.c fe.c ;
+
+IILIBOBJECT ugdata.c fe.c ;

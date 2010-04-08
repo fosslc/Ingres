@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+Enabling Distributed Multi-Cache Management (DMCM), provides fast commit when 
+running in a multi-cache environment. It will provide a performance benefit 
+when compared to a standard multi-cache installation. It should not be used as
+a replacement for those installations that currently use shared-cache and fast
+commit.

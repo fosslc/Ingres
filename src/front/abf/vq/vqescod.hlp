@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescod.hlp	On-Dbevent escape code help
+On-Dbevent escape code runs when a registered database event is raised.
+
+To use a database event, you must CREATE it in the DBMS server, and RAISE it
+in the sending application. See the Ingres/4GL Reference manual for details
+of database event handling.
+
+Vision generates the beginning and end of the activation block; you do not
+have to enter an ON DBEVENT statement, or BEGIN and END statements around
+your code block. You must also add a REGISTER DBEVENT statement, probably as
+Form-Start escape code, to register the event.
+
+Example: On-Dbevent code to order parts when the "part_low" event is raised.
+
+In Form-Start escape code:
+	/* Register the event */
+	REGISTER DB_EVENT part_low;
+
+In On-Timeout escape code:
+	/* Retrieve information about the event which has been raised */
+	INQUIRE_INGRES (ename = DBEVENTNAME, etime = DBEVENTTIME);
+	IF ename = 'part_low' THEN
+		CALLPROC part_order;
+	ENDIF;

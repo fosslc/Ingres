@@ -1,0 +1,437 @@
+%pre
+# RPM install option for PIF
+# PIF_RPM_UPDATE_OPTION= --nodeps --replacefiles --replacepkgs
+#set environment from RPM info
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+II_SYSTEM=$RPM_INSTALL_PREFIX
+PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+export II_SYSTEM PATH LD_LIBRARY_PATH
+unset BASH_ENV
+export user_created=false
+export group_created=false
+if [ $1 -gt 1 ] ; then
+    runmode=upgrade
+else
+    runmode=install
+fi
+rc=0
+
+stop_instance()
+{
+    inst_id=`ingprenv II_INSTALLATION`
+    rcfile=$ETCRCFILES/ingres${inst_id}
+    if which invoke-rc.d > /dev/null 2>&1 ; then
+	rccmd="invoke-rc.d ingres${inst_id}"
+    else
+	rccmd=$rcfile
+    fi
+    inst_log="2>&1 | cat >> $II_SYSTEM/ingres/files/install.log"
+
+    #Check to see if instance is running and try to shut it down
+    #Abort the install is we can't
+    [ -x $rcfile ] && [ -f $II_SYSTEM/ingres/files/config.dat ] &&
+    {
+	eval ${rccmd} status >> /dev/null 2>&1
+	if [ $? = 0 ]
+	then
+	    eval ${rccmd} stop $inst_log
+	    if [ $? != 0 ] ; then
+		rc=2
+		cat << EOF
+${relname} installation $inst_id is running and could not be cleanly shutdown.
+Aborting installation...
+EOF
+		exit $rc
+	    fi
+	fi
+    }
+}
+
+fail_cleanup()
+{
+# Remove anything we have created if the pre-install failed
+    $user_created && userdel -r $II_USERID
+    $group_created && groupdel $II_GROUPID
+    exit 1
+}
+
+iiread_response()
+{
+   value=""
+   [ "$2" ] && [ -f "$2" ] &&
+   {
+      cut -d= -f1 $2 | grep $1 >> /dev/null &&
+      {
+         value=`grep $1 $2 | cut -d= -f2`
+      }
+   }
+   echo $value
+}
+
+## main body of script starts here
+[ -x "${II_SYSTEM}/ingres/utility/iisysdep" ] &&
+{
+    . iisysdep
+    stop_instance
+}
+
+[ "$II_RESPONSE_FILE" ] && [ ! -f "$II_RESPONSE_FILE" ] &&
+{
+    cat << !
+WARNING! Cannot locate response file, using defaults
+
+        II_RESPONSE_FILE=$II_RESPONSE_FILE
+!
+    unset II_RESPONSE_FILE
+
+}
+
+# Must be new install
+if [ "$runmode" = "upgrade" ]
+then
+    # As it's an upgrade no more pre-checks are needed
+    exit 0
+fi
+
+# Setup mesg cmds.
+ECHO=true
+CAT=true
+
+# Check II_INSTALLATION is valid if it's set
+[ -r "$II_RESPONSE_FILE" ] && \
+    instid=`iiread_response II_INSTALLATION $II_RESPONSE_FILE`
+[ -z "$instid" ] && [ "$II_INSTALLATION" ] && instid=$II_INSTALLATION
+[ "$instid" ] &&
+{
+     case "$instid" in
+        [[:alpha:]][[:alnum:]])
+                true # value OK, do nothing
+                ;;
+        *)
+                rc=3 # bad value, error and exit
+                cat << !
+
+${instid} is NOT a valid value for II_INSTALLATION
+
+II_INSTALLATION must be a 2 character string. The first character must be a
+letter, the second character can be a letter or a number.
+
+!
+                exit $rc
+                ;;
+        esac
+}
+
+# Keep silent unless explicitly told not to
+[ -x $II_SYSTEM/ingres/utility/iiread_response ] && \
+        [ -r "$II_RESPONSE_FILE" ] &&
+{
+    silent=`iiread_response SILENT_INSTALL $II_RESPONSE_FILE`
+    case "$silent" in
+        [Oo][No]|\
+        [Yy][Ee][Ss])
+            ECHO=echo
+            CAT=cat
+                ;;
+    esac
+}
+export ECHO CAT
+
+#Check for install userid, groupid; default to ingres
+iiuser=`iiread_response II_USERID $II_RESPONSE_FILE`
+II_USERID=${iiuser:-ingres}
+iigroup=`iiread_response II_GROUPID $II_RESPONSE_FILE`
+II_GROUPID=${iigroup:-ingres}
+
+# Check for Ingres install group/user and create it if it's not present
+crgroup=true
+getent group "$II_GROUPID" > /dev/null 2>&1
+[ $? = 0 ] && crgroup=false
+
+if $crgroup  ; then
+    /usr/sbin/groupadd $II_GROUPID
+    # Failed?
+    [ $? != 0 ] && {
+    rc=4
+    $ECHO "Failed to create group '$II_GROUPID'"
+    exit $rc
+    }
+    export group_created=true
+fi
+
+# Check for user
+cruser=true
+getent passwd "$II_USERID" > /dev/null 2>&1
+[ $? = 0 ] && cruser=false
+
+$cruser &&
+{
+    # find default location for user home directories
+    dflt_hdir=`/usr/sbin/useradd -D | grep ^HOME | cut -d= -f2`
+
+    # if it's writable use it otherwise use II_SYSTEM
+    if [ -w "$dflt_hdir" ]
+    then
+        # Check if the home directory already exists for some reason
+        # If it does don't use -m
+        if [ -d "$dflt_hdir/$II_USERID/.fonts" ] || \
+            [ -d "$dflt_hdir/$II_USERID/.xemacs" ] || \
+            [ -d "$dflt_hdir/$II_USERID/bin" ] || \
+            [ -d "$dflt_hdir/$II_USERID/Documents" ] || \
+            [ -d "$dflt_hdir/$II_USERID/public_html" ]
+        then
+            /usr/sbin/useradd -g $II_GROUPID -s /bin/bash \
+                -c 'Ingres Super User' $II_USERID
+            # Ensure new user owns it's home directory
+            runuser -m -c "test -O ~$II_USERID" $II_USERID || chown -R $II_USERID "$dflt_hdir/$II_USERID"
+        else
+            /usr/sbin/useradd -g $II_GROUPID -s /bin/bash \
+                -c 'Ingres Super User' -m $II_USERID
+        fi
+    else
+        mkdir -p $II_SYSTEM
+        /usr/sbin/useradd -g $II_GROUPID -s /bin/bash \
+                -c 'Ingres Super User'  -d $II_SYSTEM -m $II_USERID
+    fi
+    # Failed?
+    [ $? != 0 ] && {
+    rc=5 
+    $ECHO "Failed to create user '$II_USERID'"
+    exit $rc 
+    }
+    
+# Using SMB authenication?
+    [ "`grep ^'auth required' /etc/pam.d/login | grep pam_smb_auth`" ] &&
+    {
+        $CAT << EOF
+Your system appears to be using SMB authentication. Please run:
+    
+         smbpasswd -a $II_USERID
+
+to enable login.
+EOF
+    }
+
+    $CAT << EOF
+System user $II_USERID has been created but no password has been set.
+Please set the password to enable login for this user.
+    
+EOF 
+    export user_created=true
+
+}   
+# II_USERID doesn't exist
+
+[ "$II_RESPONSE_FILE" ] && {
+
+# Check response file is readable by specified installation owner.
+# If not abort the install before it starts. 
+    if runuser -m -c "[ ! -r \"$II_RESPONSE_FILE\" ]" $II_USERID ; then
+        rc=6
+        $CAT << !
+Response file is not readable by user $II_USERID
+
+        II_RESPONSE_FILE=$II_RESPONSE_FILE
+If user $II_USERID does not exist, the response file should be
+globally readable.
+!
+        exit $rc
+    fi
+}
+
+# Need to make sure II_SYSTEM and every where up the tree is readable by
+# $II_USERID. If it isn't we abort the install.
+inst_path=$II_SYSTEM
+while [ "$inst_path" != "/" ]
+do
+    [ -d "$inst_path" ] &&
+    {
+        if runuser  -m -c "[ ! -r \"$inst_path\" ]" $II_USERID ; then
+            rc=7
+            $CAT << !
+The following location is not completely readable by user $II_USERID
+
+        $inst_path
+
+II_SYSTEM must be completely readable by user $II_USERID for the
+installation to proceed.
+
+        II_SYSTEM=$II_SYSTEM
+!
+            exit $rc
+        fi
+
+        if runuser -m -c "[ ! -x \"$inst_path\" ]" $II_USERID ; then
+            rc=8
+            $CAT << !
+User $II_USERID does NOT have execute permission for following location
+
+        $inst_path
+
+User $II_USERID must have execute permission in II_SYSTEM for installation
+to continue.
+
+        II_SYSTEM=$II_SYSTEM
+!
+            exit $rc
+        fi
+    }
+    inst_path="`dirname $inst_path`"
+done
+
+
+# If we're not installing in the default location we must create link back
+# to it to prevent RPM from removing all the files during upgrade!
+# See issues 14247459 and 13865355
+[ "$II_SYSTEM" != "%rpm_prefix%" ] &&
+{
+    basedir="`dirname %rpm_prefix%`"
+    mkdir -p "$basedir" && [ ! -d %rpm_prefix% ] && \
+        ln -sf "$II_SYSTEM" "%rpm_prefix%" ||
+    {
+        $CAT << !
+Warning!
+Unable to create link under $basedir
+This may result in problems when upgrading this installation.
+Please create the following link in order to address this.
+
+	%rpm_prefix%->$II_SYSTEM
+
+!
+    }
+}
+
+exit $rc
+
+%post
+#Set environment
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+export II_SYSTEM=$RPM_INSTALL_PREFIX
+export II_INSTALLATION=II # set default value so the iirpmrename can change it
+rc=0 # initialize return code
+
+$II_SYSTEM/ingres/utility/iicorepostinst -r %rpm_basename% \
+    -v %rpm_version% | :
+
+exit 0
+
+%preun
+#Setup environement
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+export II_SYSTEM=$RPM_INSTALL_PREFIX
+rc=0
+
+if [ $1 = 0 ] ; then
+    $II_SYSTEM/ingres/utility/iicorepreun -r %rpm_basename% \
+        -v %rpm_version%
+    rc=$?
+    #
+    # remove link from default install location see comment in %post
+    [ -L "%rpm_prefix%" ] && rm -f "%rpm_prefix%"
+else
+    $II_SYSTEM/ingres/utility/iicorepreun -r %rpm_basename% \
+        -v %rpm_version% -u
+    rc=$?
+fi
+
+exit $rc
+
+%posttrans
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+export II_SYSTEM=$RPM_INSTALL_PREFIX
+PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+export II_SYSTEM PATH LD_LIBRARY_PATH
+instid=`ingprenv II_INSTALLATION`
+ingvalidpw=`ingprenv II_SHADOW_PWD`
+CONFIG_HOST=`iipmhost`
+II_USERID=`iigetres "ii.${CONFIG_HOST}.setup.owner.user"`
+II_GROUPID=`iigetres "ii.${CONFIG_HOST}.setup.owner.group"`
+
+# correct dir ownership
+chown $II_USERID:$II_GROUPID ${II_SYSTEM}/ingres/.
+for dir in bin demo files ice install lib sig utility vdba
+do
+    [ -d "${II_SYSTEM}/ingres/${dir}/." ] && \
+         chown -R $II_USERID:$II_GROUPID ${II_SYSTEM}/ingres/${dir}/.
+done
+chown $II_USERID:$II_GROUPID ${II_SYSTEM}/ingres/version.rel
+[ -f "$ingvalidpw" ] &&
+{
+    chown root:root $ingvalidpw
+    chmod 4755 $ingvalidpw
+}
+
+[ $instid ] &&
+    /sbin/service ingres${instid} configure $II_RESPONSE_FILE || :
+exit 0
+
+%triggerin -- %rpm_basename%-documentation >= 3.0
+#When documentation is installed create link to it
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+II_SYSTEM=$RPM_INSTALL_PREFIX
+PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+export II_SYSTEM PATH LD_LIBRARY_PATH
+
+[ -L "$II_SYSTEM/ingres/doc" ] && rm -f "$II_SYSTEM/ingres/doc"
+ln -s /usr/share/doc/%rpm_basename%-%rpm_version% $II_SYSTEM/ingres/doc
+
+exit 0
+
+%triggerun -- %rpm_basename%-documentation >= 3.0
+# Only run during uninstall not upgrade
+[ $2 = 0 ] || exit 0
+
+#When documentation is uninstalled remove link
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+II_SYSTEM=$RPM_INSTALL_PREFIX
+PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+export II_SYSTEM PATH LD_LIBRARY_PATH
+
+rm -f $II_SYSTEM/ingres/doc
+
+exit 0
+
+%triggerin -- ca-cs-utils
+. /etc/profile.CA
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+II_SYSTEM=$RPM_INSTALL_PREFIX
+PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+export II_SYSTEM PATH LD_LIBRARY_PATH
+inst_id=`ingprenv II_INSTALLATION`
+
+# No need for link if II_SYSTEM is CASHCOMP
+[ "$II_SYSTEM" != "$CASHCOMP" ] &&
+{
+    # Remove old link
+    [ -L "$CASHCOMP/%product_brandname%${inst_id}" ] && \
+	rm $CASHCOMP/%product_brandname%${inst_id}
+
+    # Create link to CASHCOMP
+    [ ! -d "$CASHCOMP/%product_brandname%${inst_id}" ] && \
+	ln -s $II_SYSTEM $CASHCOMP/%product_brandname%${inst_id}
+}
+
+exit 0
+
+%triggerun -- ca-cs-utils
+# Only run during uninstall not upgrade
+[ $2 = 0 ] || exit 0
+
+. /etc/profile.CA
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+II_SYSTEM=$RPM_INSTALL_PREFIX
+PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+export II_SYSTEM PATH LD_LIBRARY_PATH
+inst_id=`ingprenv II_INSTALLATION`
+
+# Remove link to CASHCOMP
+[ -L "$CASHCOMP/%product_brandname%${inst_id}" ] && \
+	rm $CASHCOMP/%product_brandname%${inst_id}
+
+%files

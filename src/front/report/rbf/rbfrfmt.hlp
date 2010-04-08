@@ -1,0 +1,74 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Both the Date and Time components accept a date (including time) 
+format or a character format.  The character format cannot be a multi-line
+format, such as 'c30.5', 'cj30.15' or 'cf30.6'.  Date formats include a
+date portion and a time portion.  ('Date' and 'Time' actually contain the 
+exact same data value, but are named as such to represent the values
+in a default report.)  You may include both or either portion
+in your format.  If you would like to display the time in the upper left 
+corner and the date in the upper right, enter d'16:05:06' for Date and 
+d'03-feb-1901' for Time.
+
+The Page component accepts a numeric format or template.  Characters
+such as dashes or parentheses, can be included, but must be 'escaped' by
+preceding the character with a backslash '\'.
+	
+Display formats and templates for DATE and/or TIME components:
+
+   c25            Displays a date with the format 'dd-mmm-yyyy hh:mm:ss'.       
+                  Equivalent to d'03-feb-1901 16:05:06'.
+                                                                                
+   d'03-Feb-1901' Displays a date without time-of-day. Also, display            
+                  first character of month name as UPPER case.                  
+                                                                                
+                  d'03-Feb-1901 04:05:06 PM' Same as above with time-of-day     
+                                             displayed in 12 hour format with   
+                                             AM/PM.                             
+                                                                                
+                  d'03-Feb-1901 04:05:06'    Same as above with AM/PM           
+                                             truncated.                         
+                                                                                
+                  d'03-Feb-1901 16:05:06'    Display date with time-of-day      
+                                             in 24 hour format.                 
+                                                                                
+   d'2/3/1'       Displays a date with the format 'mm/dd/yy' without            
+                  leading zeros (for example: '4/23/90').                       
+                                                                                
+                  d'02/03/01'     Displays a date with the format 'mm/dd/yy'    
+                                  with leading zeros (for example: '04/23/90').
+                                                                                
+   d'3/2/1'       Displays a date with the format 'dd/mm/yy' without            
+                  leading zeros (for example: '23/4/90').                       
+                                                                                
+                  d'03/02/01'     Displays a date with the format 'dd/mm/yy'    
+                                  with leading zeros (for example: '23/04/90').
+                                                                                
+   d'Sunday'      Displays a date as a day of the week.                         
+                                                                                
+   d'February'    Displays a date as a month of the year.
+                                                                             
+   d'010203'      Displays a date in ISO format 'yymmdd'.                       
+                                                                                
+   d'1901-02-03'  Displays a date in Sweden/Finland format 'yyyy-mm-dd'.        
+                                                                                
+         NOTE: These are examples of common date templates. Others are          
+         described in the manual 'Using INGRES Through Forms and Menus'.
+ 
+ 
+Display formats and templates for PAGE component:
+                                                                                
+   f4            Displays a numeric field padded with blanks and right 
+ 		 justified.
+ 
+   'zzzzz'       Displays a numeric field padded with blanks if the             
+                 number does not fill the field (for example with the           
+                 template 'zzzzz', '123' results in '  123').
+                                                                                
+   'nnnnn'       Displays a numeric field padded with zeros if the              
+                 number does not fill the field (for example with the           
+                 template 'nnnnn', '123' results in '00123').
+ 
+   '\P\a\g\e zz' Displays '9' as 'Page  9'.
+ 
+ 	NOTE: These are examples of common numeric templates. Others are      
+        described in the manual "Using INGRES Through Forms and Menus".

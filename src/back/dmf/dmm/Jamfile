@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!dmf!dmm
+#
+
+SubDir ING_SRC back dmf dmm ;
+
+IISUBSYS back dmf dmm ;
+
+
+IILIBRARY DMFLIB : dmmlist.c dmmfind.c dmmdes.c dmmdelloc.c
+	dmmdelete.c dmmcre.c dmmalter.c dmmadloc.c ;
+
+IILIBRARY IMPDMFLIBDATA : dmmdata.c ;

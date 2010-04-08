@@ -1,0 +1,453 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+##include	<ooclass.qsh>
+#include	<oodefine.h>
+##include	<oosymbol.qsh>
+#include	"eroo.h"
+
+/**
+** Name:	ooidutil.qc -	OC_OBJECT Manager ID Interface Utilities.
+**
+** Description:
+**	Contains routines that operates on objects either by name or by ID,
+**	returning the ID.  This file defines:
+**
+**	IIOOidCheck()	fetch if necessary, check owner authorization
+**	IIOOidFetch()	invoke specialized OO method to retrieve object
+**	IIOOidWrite()	write out object to database
+**	IIOOidDestroy()	delete object from database, if authorized.
+**	IIOOidRename()	rename object in database, if authorized.
+**	IIOOidObject()	initialize (or create) object from attributes.
+**
+** History:
+**	Revision 4.0  86/01  peterk
+**	Initial revision.
+**	Revision 6.2  89/02  wong
+**	Modifed 'IIOOidCheck()' to use '_authorized' method to check
+**	for privelege.
+**	8-feb-93 (blaise)
+**		Changed _flush, etc. to ii_flush because of conflict with
+**		Microsoft C library.
+**	27-jan-93 (blaise)
+**		The previous change changed all tabs in this file to spaces;
+**		changed back to tabs again.
+**      10-sep-93 (kchin)
+**              Change type of varargs: a1-a8 of routine IIOOidWrite()
+**              from i4  to PTR.  Since these varags will be used to hold
+**		pointers.  Used of i4  in this case will truncate addresses
+**		if they are 64-bit long.
+**              Also, for routines IIOOidObject(), and IIOOidFetch().
+**      18-oct-1993 (kchin)
+**          	Since the return type of OOsnd() has been changed to PTR,
+**          	when being called in IIOOidCheck(), IIOOidObject() and 
+**		IIOOidWrite(), its return type needs to be cast to the 
+**		proper datatype.
+**      06-dec-93 (smc)
+**		Bug #58882
+**              Commented lint pointer truncation warning.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+/*{
+** Name:	IIOOidCheck() -	check id; if necessary fetch object
+**				from database; if requested check for
+**				ownership by current user.
+**
+** Description:
+**	This small routine performs several tasks fitted to different
+**	circumstances in which it may be called.
+**
+**	Checks whether *id is a valid permanent object id (*id > 0).
+**	If it is not then attempt to fetch object with given 'name'
+**	from database.	If 'owner' is non-null restrict search to that
+**	owner, otherwise allow for owner to be current user or DBA.
+**
+**	If 'owner' is non-null the returned STATUS indicates whether
+**	'owner' is same as current user name.
+**
+**	From the browsing mode catalog frame, id should point to
+**	an existing valid object id, and 'owner' to the object's
+**	ownername string, if ownership validation should be checked.
+**	In this case, 'class' and 'name' are unused.
+**
+**	For expert-mode, where the user fills in the catalog form
+**	with a name only, *id should be set to UNKNOWN (-1), and class
+**	set to the object class id of interest (e.g. OC_JOINDEF).
+**	'Owner' should be set to equal the current user name, if
+**	ownership authorization is required (e.g. to destroy an
+**	object) or to NULL if it is not required (e.g. to edit a
+**	copy of an object.)
+**
+**	On return with a return value of OK, *id will always
+**	contain a valid (possibly temporary) object id; *class will
+**	contain the class id of the validated object -- in expert mode
+**	the returned class may be different from the requested class if
+**	the object is found in a sub-class of the class requested.
+**	For example, a request for an object of class OC_REPORT may
+**	return an object of class OC_RWREP or OC_RBFREP.
+**
+**	Return value of FAIL can be interpreted as "Object does
+**	not exist or is not owned by current user."
+**
+** Input params:
+**	OOID	*class;		// ptr to object class id
+**	OOID	*id;		// ptr to object id
+**	char	*name;		// object name
+**	char	*owner;		// object owner name 
+**	i4 a1;		// optional argument for _withName.
+**
+** Output params:
+**	OOID	*class;		// will point to class id of returned object.
+**	OOID	*id;		// will point to returned object id
+**
+**				   if function returns OK.
+**
+** Returns:
+**	STATUS
+**	    OK		// valid object id resolved
+**	    FAIL	// object does not exist or not owned by user
+**
+** History:
+**	04/87 (peterk)  Written.
+**	02/89 (jhw)  Use '_authorized' to check for priveleges.
+**	03/90 (jhw) -- Added optional parameter for _withName (application
+**		components will pass in the application ID.)
+*/
+STATUS
+IIOOidCheck ( class, id, name, owner, a1 )
+OOID	*class, *id;
+char	*name;
+char	*owner;		/* owner code */
+i4	a1;
+{
+	OO_OBJECT	object;
+
+	if (*id <= 0)
+	{
+		register OOID	obj;
+
+    		/* lint truncation warning if size of ptr > OOID, 
+		   but code valid */
+		if ((obj = (OOID)OOsnd(*class, _withName, name, owner, a1)) == nil)
+			return FAIL;
+		*id = obj;
+
+    		/* lint truncation warning if size of ptr > OOID, 
+		   but code valid */
+		*class = (OOID)OOsnd(obj, _class);
+		return OK;
+	}
+	else if ( owner == NULL )
+		return OK;
+	object.ooid = *id;
+	object.class = *class;
+	object.name = name;
+	object.owner = owner;
+        /* lint truncation warning if size of ptr > OOID, but code valid */
+	return ( (bool)OOsndSelf(&object, _authorized) ) ? OK : FAIL;
+}
+
+/*{
+** Name:	IIOOidObject() -	Initialize (or create) object from
+**						attributes.
+** Description:
+**	If *id is not a valid permanent object id then
+**	allocate a new object structure initialized from
+**	list of arbitrary arguments;
+**	else re-initialize existing object from arguments.
+**
+**	The object is NOT written to the database;
+**
+**	On return with STATUS of OK, *id contains permanent id
+**	of written object.
+**
+**	Initialization is performed by invoking the _init
+**	method of the object's class.
+**	The standard sequence of arguments for the _init method
+**	of class Object is:
+**		char	*name;
+**		i4	env;		/* ignored: set to 0
+**		char	*owner;
+**		i4	is_current;	/* ignored: set to 1
+**		char	*short_remark;
+**		char	*create_date;	/* if NULL, don't update
+**		char	*alter_date;	/* if NULL, use "now"
+**		char	*long_remark;
+**
+** Input params:
+**	OOID	class;		// object class id
+**	OOID	*id;		// PTR to object id
+**	i4	a0,a1,a2,a3,a4,a5,a6,a7,a8;  // arbitrary args
+**
+** Output params:
+**	OOID	*id;		// will point to valid object id
+**				   if function returns OK.
+** Returns:
+**	STATUS
+**	    OK		// operation performed successfully
+**	    FAIL	// operation failed (error message
+**			   will be output.)
+*/
+STATUS
+IIOOidObject(class, id, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9)
+OOID	class;
+OOID	*id;
+PTR	a0, a1, a2, a3, a4, a5, a6, a7, a8, a9;
+{
+	register OOID	obj = *id;
+	if (obj <= 0)
+            /* lint truncation warning if size of ptr > OOID, but code valid */
+	    obj = (OOID)OOsnd(class, _newDb, FALSE, a0,a1,a2,a3,a4,a5,a6,a7,a8,a9);
+	else
+	{
+	    if ( OOhash(obj, (OO_OBJECT *)NULL) == 0 )
+		/* lint truncation warning if size of ptr > OOID, 
+		   but code valid */
+		obj = (OOID)OOsnd(class, _alloc, *id, a0,a1,a2,a3,a4,a5,a6,a7,a8,a9);
+	    if (obj != nil)
+		OOsnd(obj, _initDb, a0,a1,a2,a3,a4,a5,a6,a7,a8,a9);
+	}
+
+	if (obj == nil)
+	    return FAIL;
+	*id = obj;
+	return OK;
+}
+
+/*{
+** Name:	IIOOidDestroy() -	Delete object from DB, if authorized.
+**
+** Description:
+**	Performs an 'IIOOidCheck()' (c.f.) using passed owner;
+**	If a valid object id results then invoke OO _destroy
+**	method on object.
+**
+** Input params:
+**	OOID	*class;		// ptr to object class id
+**	OOID	*id;		// PTR to object id
+**	char	*name;		// object name
+**	char	*owner;		// object owner
+**
+** Output params:
+**	OOID	*class;		// will point to class id of returned object.
+**	OOID	*id;		// will point to valid object id
+**				   if function returns OK.
+** Returns:
+**	STATUS
+**	    OK		// operation performed successfully
+**	    FAIL	// operation failed (error message
+**			   will be output.)
+*/
+STATUS
+IIOOidDestroy (class, id, name, owner)
+OOID	*class, *id;
+char	*name;
+char	*owner;		/* object owner code */
+{
+	if ( IIOOidCheck(class, id, name, owner) == FAIL )
+	{
+		IIUGerr( E_OO0026_NotOwner, UG_ERR_ERROR,
+				2, OOsnd(*class, _name), name
+		);
+		return FAIL;
+	}
+
+	return OOsnd(*id, _destroy) != nil ? OK : FAIL;
+}
+
+
+/*{
+** Name:	IIOOidRename() -	Rename object in DB, if authorized.
+**
+** Description:
+**	Performs an 'IIOOidCheck()' (c.f.) with owner = NULL;
+**	If a valid object id results then invoke OO _rename method
+**	on object.
+**
+** Input params:
+**	OOID	*class;		// ptr to object class id
+**	OOID	*id;		// PTR to object id
+**	char	*name;		// object name
+**	char	*owner;		// object owner name
+**	char	*new;		// new object name
+**	i4 a1;		// optional argument for _withName.
+**
+** Output params:
+**	OOID	*class;		// will point to class id of returned object.
+**	OOID	*id;		// will point to valid object id
+**				   if function returns OK.
+** Returns:
+**	STATUS
+**	    OK		// operation performed successfully
+**	    FAIL	// operation failed (error message
+**			   will be output.)
+** History:
+**	01/90 (jhw) -- Added optional parameter for _withName (application
+**		components will pass in the application ID.)
+**	8/90  (Mike S) -- Check for the ABF classes which share a namespace
+*/
+STATUS
+IIOOidRename ( class, id, name, owner, new, a1 )
+OOID	*class, *id;
+char	*name;
+char	*owner; /* owner code */
+char	*new;	/* new object name */
+i4	a1;
+{
+	if ( IIOOidCheck(class, id, name, owner, a1) == FAIL )
+	{
+		IIUGerr( E_OO0026_NotOwner, UG_ERR_ERROR,
+				2, OOsnd(*class, _name), name
+		);
+		return FAIL;
+	}
+
+	if (OOsnd(*id, _confirmName, new, TRUE) == nil)
+		return FAIL;	/* Invalid name */
+
+	if (OOsnd(*class, _withName, new, owner, a1) != nil)
+	{
+		register OOID classno = *class;
+		char *classname;
+
+		if ((OC_APPLPROC <= classno && classno <= OC_AMAXPROC) ||
+		    (OC_APPLFRAME <= classno && classno <= OC_AMAXFRAME && 
+		                              classno != OC_QBFNAME) ||
+		    (OC_GLOBAL == classno) ||
+		    (OC_CONST == classno)
+		   )
+			classname = ERget(F_OO0009_ApplComp);
+		else
+			classname = (char *)OOsnd(classno,_name);
+
+		IIUGerr( E_OO0027_NameAlreadyExists, UG_ERR_ERROR,
+				2, classname, new
+		);
+		return FAIL;
+	}
+
+	return OOsnd(*id, _rename, new) != 0 ? OK : FAIL;
+}
+
+/*{
+** Name:	IIOOidFetch() -	Invoke passed OO method to retrieve object.
+**
+** Description:
+**	Performs an 'IIOOidCheck()' (c.f.) with owner = NULL;
+**	If a valid object id results then invoke named OO method on
+**	object.
+**
+** Input params:
+**	OOID	*class;		// ptr to object class id
+**	OOID	*id;		// ptr to object id
+**	char	*name;		// object name
+**	char	*sym;		// method selector
+**	i4	a0,a1,a2,a3,a4,a5,a6;  // arbitrary args
+**
+** Output params:
+**	OOID	*class;		// will point to class id of returned object.
+**	OOID	*id;		// will point to valid object id
+**				   if function returns OK.
+** Returns:
+**	STATUS
+**	    OK		// operation performed successfully
+**	    FAIL	// operation failed (error message
+**			   will be output.)
+*/
+STATUS
+IIOOidFetch (class, id, name, sym, a0, a1, a2, a3, a4, a5, a6)
+OOID	*class, *id;
+char	*name;
+char	sym[];
+PTR	a0,a1,a2,a3,a4,a5,a6;
+{
+	if ( IIOOidCheck(class, id, name, NULL) == FAIL )
+		return FAIL;
+
+	OOsnd(*id, sym, a0, a1, a2, a3, a4, a5, a6);
+	return OK;
+}
+
+
+/*{
+** Name:	IIOOidWrite() -	Write out object to database.
+**
+** Description:
+**	If *id is not a valid permanent object id then
+**	allocate a new object structure initialized from
+**	list of arbitrary arguments;
+**	else re-initialize existing object from arguments.
+**
+**	Then write out object to database;
+**
+**	On return with STATUS of OK, *id contains permanent id
+**	of written object.
+**
+**	Initialization is performed by invoking the _init
+**	method of the object's class.
+**	The standard sequence of arguments for the _init method
+**	of class Object is:
+**		char	*name;
+**		i4	env;		/* ignored: set to 0
+**		char	*owner;
+**		i4	is_current;	/* ignored: set to 1
+**		char	*short_remark;
+**		char	*create_date;	/* if NULL, don't update
+**		char	*alter_date;	/* if NULL, use "now"
+**		char	*long_remark;
+**
+** Input params:
+**	OOID	class;		// object class id
+**	OOID	*id;		// PTR to object id
+**	i4	a0,a1,a2,a3,a4,a5,a6,a7,a8;  // arbitrary args
+**
+** Output params:
+**	OOID	*id;		// will point to valid object id
+**				   if function returns OK.
+** Returns:
+**	STATUS
+**	    OK		// operation performed successfully
+**	    FAIL	// operation failed (error message
+**			   will be output.)
+** Edit History:
+**	20-May-2009 (kschendel) b122041
+**	    Redo very confusing looking code.
+*/
+STATUS
+IIOOidWrite (class, id, a0, a1, a2, a3, a4, a5, a6, a7, a8)
+OOID	class;
+OOID	*id;
+PTR	a0,a1,a2,a3,a4,a5,a6,a7,a8;
+{
+	register OOID		obj;
+
+	if (*id <= 0)
+	    obj = (OOID)OOsnd(class, _newDb, FALSE, a0,a1,a2,a3,a4,a5,a6,a7,a8)
+;
+	else
+	    obj = (OOID)OOsnd(*id, _init, a0,a1,a2,a3,a4,a5,a6,a7,a8);
+	if (obj != nil)
+	    obj = (OOID)OOsnd(obj, ii_flushAll);
+	if (obj == nil)
+	    return FAIL;
+	*id = obj;
+	return OK;
+}
+

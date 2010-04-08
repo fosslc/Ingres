@@ -1,0 +1,62 @@
+/*
+**  imvql.qc
+**
+**  Copyright (c) 2004 Ingres Corporation 
+**
+**	History:
+**	Revision 1.2  87/02/03	14:39:17  john
+**	swspawn now handles error messages.
+**
+**	Revision 1.1  87/01/14	12:23:20  john
+**	Initial revision
+**
+**	Revision 1.2  86/10/20	15:03:40  john
+**	Set up for new Ingres/Menu.  No more intermediate forms.
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<st.h>
+# include	<nm.h>
+# include	<er.h>
+# include	"imconst.h"
+# include	"imextern.h"
+
+VOID
+vqlstart()
+{
+	char	*sp;
+	char	buffer[80];
+	char	*sysname = ERx("vql");
+	char	*args[10];
+	char	**argp = args;
+	i4	argcount = 0;
+
+	argp = args;
+	argcount = 0;
+	buffer[0] = EOS;
+
+	NMgtAt(ERx("II_VQL_CONFIG"), &sp);
+	if (sp != NULL && *sp)
+	{
+		STcopy(ERx("file = %S"), buffer);
+		*argp++ = STalloc(sp);
+		argcount++;
+	}
+
+	if (swspawn(sysname, buffer, argcount, args) != OK)
+	{
+		starterr(sysname);
+	}
+##	clear screen
+}

@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescae.hlp                Append-End escape code examples.
+The Append-End escape executes just after the INSERT query(ies) finish
+executing in:
+
+     1)  Append frames
+     
+     2)  Update frames that allow insertion of new master data.
+
+It executes before the COMMIT WORK statement.

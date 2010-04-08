@@ -1,0 +1,62 @@
+#
+# MANIFEST file for back!dmf!lg
+# 
+# History :
+#	07-Oct-2004 (drivi01)
+#		Removed SDLIB from being linked in on Windows.
+#	10-dec-2004 (abbjo03)
+#	    Don't include rcpstat and lgdmsvcb in DMFLIB on VMS.
+#	06-jan-2005 (abbjo03)
+#	    Remove lgfabrab.c and lgdmsvcb.c which are no longer needed
+#	    anywhere.
+#	16-Sep-2005 (hweho01)
+#	    Remove IINOOPTIM for the files that are no longer needed on 
+#           AIX.
+#        6-Nov-2006 (hanal04) SIR 117044
+#           Add int.rpl for Intel Rpath Linux build.
+#       31-Dec-2009 (horda03)
+#            Correct VMS library dependancies.
+
+SubDir ING_SRC back dmf lg ;
+
+IISUBSYS back dmf lg ;
+
+IINOOPTIM lgwrite.c : dgi_us5 int_lnx int_rpl ris_u64 i64_aix ;
+IINOOPTIM lgend.c : r64_us5 rs4_us5 ;
+IINOOPTIM lgbegin.c : rs4_us5 r64_us5 ;
+
+IIBINEXE lgtpoint : lgtpoint.c ;
+IINEEDLIBS lgtpoint : SCFLIB UDTLIB QEFLIB DMFLIB CUFLIB GCFLIB
+	SXFLIB GWFLIB OPFLIB QSFLIB RDFLIB TPFLIB RQFLIB PSFLIB 
+	ADFLIB ULFLIB COMPATLIB ;
+IIUNDEFS lgtpoint : scf_call ;
+
+if $(NT)
+{
+
+IIBINEXE ntrcpst : rcpstat.c ;
+IINEEDLIBS ntrcpst : COMPATLIB DMFLIB ULFLIB SCFLIB ;
+
+}
+
+IILIBRARY DMFLIB : lgwrttst.c lgwrite.c lgsize.c
+	lgshow.c lgreserve.c lgremove.c lgread.c lgposn.c
+	lgopen.c lgmutex.c lgmo.c lgmisc.c lglsn.c
+	lginit.c lgforce.c lgevent.c lgerase.c
+	lgend.c lgcopy.c lgclustr.c lgclose.c lgcbmem.c
+	lgbegin.c lgalter.c lgadd.c ;
+
+IILIBRARY IMPDMFLIBDATA : lgdata.c ; 
+
+if $(VMS)
+{
+    IIBINEXE rcpstat : rcpstat.c ;
+    IINEEDLIBS rcpstat : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB 
+                         QSFLIB RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+}
+
+if ! $(VMS)
+{
+    IILIBRARY DMFLIB : rcpstat.c ;
+
+}

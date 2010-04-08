@@ -1,0 +1,43 @@
+#
+# Jamfile file for front!vdba!rmcmd
+#
+
+SubDir ING_SRC front vdba rmcmd ;
+
+IISUBSYS front vdba rmcmd ;
+
+
+IIBINEXE rmcmdstp : rmcmdstp.sc ;
+IINEEDLIBS rmcmdstp :  SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS rmcmdstp :  malloc ;
+
+IIUTILEXE rmcmdrmv : rmcmdrmv.sc ;
+IINEEDLIBS rmcmdrmv :  SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS rmcmdrmv :  malloc ;
+
+IIBINEXE rmcmdout : rmcmdout.sc ;
+IINEEDLIBS rmcmdout :  SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS rmcmdout :  malloc ;
+
+IIBINEXE rmcmdin : rmcmdin.sc ;
+IINEEDLIBS rmcmdin :  SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS rmcmdin :  malloc ;
+
+IIUTILEXE rmcmdgen : rmcmdgen.sc ;
+IINEEDLIBS rmcmdgen :  SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS rmcmdgen :  malloc ;
+
+IIBINEXE rmcmd : rmcmd.sc ;
+IINEEDLIBS rmcmd :  SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IINEEDLIBSW rmcmd : SHGCFLIB ;
+IIUNDEFS rmcmd : II_copyright malloc ;
+IIAdminManifest rmcmd ;
+
+IIBINEXE rmcmdv : rmcmdv.c ;
+IINEEDLIBS rmcmdv :  SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;	
+IIUNDEFS rmcmdv :  malloc ;
+
+IIMSGHDR erre.msg ;
+
+IILIBRARY RMCMDLIB : rmcmdprv.c ;
+

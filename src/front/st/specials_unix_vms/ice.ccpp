@@ -1,0 +1,813 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for ice
+*/
+
+/*
+** History
+**
+**	17-nov-95 (hanch04)
+**		Created.
+**	08-dec-95 (harpa06)
+**		Added iiwebinst - Web installation program
+**	09-jan-96 (dougb)
+**		Move Web executables to correct directory on VMS.
+**		Add VMS-specific script, IIWEB.COM.
+**	06-mar-96 (harpa06)
+**		Renamed iiwebinst and iiweb to iceinst and ice.
+**		Removed old sample files and replaced them with new ones.
+**	25-apr-96 (harpa06)
+**		Added ice.crs, ice.rfm and iisuice.sh shell script.
+**	04-jun-96 (rosga02)
+**		Added delete.txt
+**              Added iisuice.com for VMS.
+**	24-jun-96 (rosga02)
+**		Changed to point to correct directory for VMS for ice.crs
+**              and ice.rfm 
+**	12-jun-96 (harpa06)
+**		Added iiinvdpr.txt
+**	09-jul-96 (hanch04)
+**		branched from web, renamed ice
+**	06-aug-96 (hanch04)
+**		Added Spyglass server binaries
+**	06-aug-96 (harpa06)
+**		Added readme.txt for the Spyglass binaries
+**	12-aug-96 (hanch04)
+**		Spyglass server binaries are per platform
+**	16-aug-96 (harpa06)
+**		Added missing tutorial files. Bug #78311
+**	17-sep-96 (rosga02)
+**		Spyglass server is not for VMS
+**	25-sep-96 (rosga02)
+**		Replaced BUILD_DIR (front_path)!web!'front_vers'!src!webdemo
+**		with BUILD_DIR (front_path)!install!'front_vers'!ice!tutorial  
+**	28-Oct-96 (merja01)
+**              Change axp_us5 to axp_osf so spyglass tar file will get
+**              delivered on OSF.
+**	27-mar-1997 (harpa06)
+**		Updated distribution list for Spyglass binaries.
+**		Added macro processor tutorial.
+**		Updated dynamic SQL tutorial.
+**              Added blobstor binary.
+**	22-apr-97 (harpa06)
+**		Added admin.tar.Z and install for Spyglass administration files.
+**	01-may-97 (harpa06)
+**		renamed shell script "install" to "sginstall" to avoid conflict
+**		with UNIX OS "install" program. Also changed the shell script
+**		type from FILE to SCRIPT.
+**
+**		Added missing admin tar file.
+**      03-jun-97 (harpa06)
+**              Added gateway edition of macro processor tutorial files.
+**      28-jul-97 (harpa06)
+**              Added support for gateway installation of DSQL tutorial.
+**              Bug #83593
+**      29-jul-97 (harpa06)
+**              Added SOS413U1.tar.Z
+**      27-oct-97 (harpa06)
+**              Added db2rdme.txt, db2icesm.prc, dcomrdme.txt, dcmicesm.prc,
+**              icedb2.sql, icedcom.sql, booksdcm.sql, readme.txt, dcmrdme.txt
+**
+**              Removed icegw.sql
+**      04-nov-97 (harpa06)
+**              Added iceidms.sql and files related to gateways installations
+**              not accepting the OpenIngres EXECUTE PROCEDURE statement. 
+**              Removed icesample.prc since it's been renamed to dcmicesm.prc.
+**      19-nov-97 (harpa06)
+**              Added abreadme.txt for dynamic SQL and macro tutorials, 
+**              icealbse.sql
+**      28-jan-1998 (hanch04)
+**          Added ifdef FULL_RELEASE.  This will not be defined
+**          for the black box release of Ingres.
+**	23-dec-1997 (hanch04)
+**		Remove icesampl.prc
+**	28-may-1998 (kinte01)
+**	    Modified the location for iisuice on VMS to pick up SED 
+**	    stripped version
+**	11-Sep-1998 (merja01)
+**	    Don't deliver spyglass files for axp_osf.  Spyglass does not
+**	    support DIgital Unix 4.0b and above.
+**      17-Feb-1999 (fanra01)
+**          Update deliverables for ice server and client.
+**      09-Apr-1999 (peeje01)
+**          Update deliverable list for icesvr and tutorials
+**          Remove old 2.0 tutorial files.
+**      21-Apr-1999 (peeje01)
+**          Add ice_c_api.h in files
+**          Move hlp files to files!english
+**          Some file name corrections
+**          Add libplay_NewOrder.so.2.0 in files!dynamic
+**      30-Apr-1999 (peeje01)
+**          Rename oiiceapi.a liboiicecapi.a
+**          Correct permissions on libplay_NewOrder.so.2.0
+**	13-May-1999 (muhpa01)
+**	    Use $SLSFX to set shared lib extension for neworder & oiice
+**	    shared libs.
+**      19-May-1999 (peeje01)
+**          Add public files public!{ice_index.html,ice.css},
+**          plays!{play_public.css,play_styleSheet.css,logout.gif},
+**          plays!tutorialGuide!tutorial.css
+**          and iirunice
+**	27-jul-1999 (muhpa01)
+**	    Added liboiddi, needed with ICE.
+**	14-Sep-1999 (hanch04)
+**	    Corrected the extension for liboiddi.$SLSFX.2.0
+**	13-Jan-2000 (somsa01)
+**	    Added ice.1.$SLSFX, ice, icesvrloc and icedbuser.
+**	21-Jan-2000 (somsa01)
+**	    oiice.1.$SLSFX for Netscape now lives in the ice/bin/netscape
+**	    directory, while oiice.1.$SLSFX for Apache lives in the
+**	    ice/bin/apache directory.
+**	14-Mar-2000 (hanch04)
+**	    Removed spyglass
+**	22-Jun-2000 (fanra01)
+**	    Bug 101731
+**	    Add iceapp.cgi and iceapp.c.
+**      27-Nov-2000 (fanra01)
+**          Bug 102194
+**          Add reportfr1.html to install package.
+**	09-May-2001 (hanje04)
+**	    Added regdocs and deregdocs
+**	06-Jun-2001 (peeje01)
+**	    Added files for ICETranslate
+**	06-Jun-2001 (hanje04)
+**	    At QA's request, make the inclusion of Apache and Netscape
+**	    ice shared libraries conditional on platform support
+**      15-Jun-2001 (fanra01)
+**          Sir 103821
+**          Add ingres.dtd to ice distribution
+**	28-Jun-2001 (hanje04)
+**	    Added libxerces-c1_4
+**      29-mar-2002 (xu$we01)
+**              Add use of R_XERCES to control inclusion of XML utilities.
+**      08-Mar-2002 (hweho01)
+**          Added soft link to oiice (netscape) library for rs4_us5.    
+**          Added server_anim.gif and submit.gif to tutorialGuide   
+**          directory, fix the missing links. 
+**	06-jun-2002 (somsa01)
+**	    Added icinit92.sql.
+**      23-Jul-2002 (xu$we01)
+**          Excluded "EXECUTABLE libxerces-c1_4.$SLSFX" if the platform
+**          undefined R_XERCES.
+**	03-Sep-2002 (hanje04 for fanra01)
+**	    Added msql.html and help.html to samples/query directory.
+**	27-Nov-2002 (somsa01)
+**	    Added msql.xml to samples/query directory.
+**	10-Feb-2004 (hanje04)
+**	    SIR 110765
+**	    Move libxercesc-1_4.so to sharedlibs package to resolve
+**	    RPM package dependencies.
+**	01-Aug-2004 (hanje04)
+**	    Only include ice.1.so with R_NETSCAPE
+**	20-Nov-2004 (hanje04)
+**	    Move blobstor to dbsupport
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	05-Jul-2005 (hanje04)
+**	    Move ice.conf template here from fortunoff.ccpp
+**      30-Jan-2007 (wonca01) BUG 117504
+**          Move ice help files from config.ccpp and accessdb.ccpp to here.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART   ice
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+	FILE icesvr.crs
+	FILE ice.rfm
+	FILE ice_c_api.h
+
+/*
+** ingres!files!dynamic
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!dynamic
+#else
+	DIRECTORY ingres!files!dynamic
+#endif
+   BUILD_DIR (ING_BUILD)!files!dynamic
+	EXECUTABLE libplay_NewOrder.$SLSFX.2.0
+
+/*
+** ingres!files!english
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY ingres!files!english
+#endif
+   BUILD_DIR (ING_BUILD)!files!english
+	FILE ddfclass.hlp
+	FILE ddfddi.hlp
+	FILE ddfname.hlp
+	FILE ddfnode.hlp
+	FILE iceappdr.hlp
+	FILE iceapps.hlp
+	FILE iceblkct.hlp
+	FILE iceblksz.hlp
+	FILE icecbref.hlp
+	FILE icecfloc.hlp
+        FILE icecfws.hlp
+        FILE icecgibn.hlp
+	FILE iceclass.hlp
+	FILE icecli.hlp
+	FILE iceconnt.hlp
+	FILE icedbovr.hlp
+	FILE icedbtmo.hlp
+	FILE icedbusr.hlp
+	FILE icedefdb.hlp
+	FILE icedefid.hlp
+	FILE icedocs.hlp
+	FILE icedsess.hlp
+	FILE icedsql.hlp
+	FILE iceexe.hlp
+	FILE iceexts.hlp
+	FILE icefiles.hlp
+	FILE icehome.hlp
+	FILE icehthom.hlp
+	FILE iceimage.hlp
+        FILE icelocfm.hlp
+	FILE icelocs.hlp
+        FILE icelstfr.hlp
+	FILE iceright.hlp
+	FILE icerqtmo.hlp
+	FILE icesesto.hlp
+	FILE icesrver.hlp
+	FILE icesysad.hlp
+	FILE icesytmo.hlp
+	FILE iceunits.hlp
+	FILE iceusers.hlp
+	FILE iceusess.hlp
+        FILE iceusrfr.hlp
+	FILE icevars.hlp
+        FILE icext.hlp
+        FILE icextfrm.hlp
+
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY ingres!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT iirunice
+      SCRIPT SETUP iisuice
+
+/*
+** ingres!lib
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY ingres!LIB_TGT
+#endif
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+      FILE liboiicecapi.a
+      EXECUTABLE liboiddi.$SLSFX.2.0
+
+# ifdef FULL_RELEASE
+
+/*
+** ingres!ice!DTD
+*/
+   DIRECTORY ingres!ice!DTD
+   BUILD_DIR (ING_BUILD)!ice!DTD
+	FILE icelang_frag.dtd
+        FILE xhtml-lat1.ent
+        FILE xhtml-special.ent
+        FILE xhtml-symbol.ent
+        FILE xhtml1-transitional.dtd 
+	FILE ingres.dtd
+
+/*
+** ingres!ice!icetool
+*/
+   DIRECTORY ingres!ice!icetool
+   BUILD_DIR (ING_BUILD)!ice!icetool
+	FILE act_sess.html
+	FILE actapp.html
+	FILE actbucopy.html
+	FILE actbuloc.html
+	FILE actburole.html
+	FILE actbuuser.html
+	FILE actcache.html
+	FILE actconn.html
+	FILE actcursor.html
+	FILE actdb.html
+	FILE actdbuser.html
+	FILE actdoc.html
+	FILE actdocrole.html
+	FILE actdocuser.html
+	FILE action.html
+	FILE actloc.html
+	FILE actprofconn.html
+	FILE actprofile.html
+	FILE actprofrole.html
+	FILE actrole.html
+	FILE acttrans.html
+	FILE actunit.html
+	FILE actuser.html
+	FILE actuserconn.html
+	FILE actuserrole.html
+	FILE actusersess.html
+	FILE actvar.html
+	FILE authorized.html
+	FILE begin.html
+	FILE buLocs.html
+	FILE bucopy.html
+	FILE budright.html
+	FILE buloc.html
+	FILE bumain.html
+	FILE bumenu.html
+	FILE bumocs.html
+	FILE bupages.html
+	FILE bupagesInfo.html
+	FILE bupagestorage.html
+	FILE bupcode.html
+	FILE bupdelete.html
+	FILE bupmenu.html
+	FILE buprop.html
+	FILE bupupdate.html
+	FILE bupview.html
+	FILE buright.html
+	FILE buunit.html
+	FILE buunits.html
+	FILE buwelcome.html
+	FILE cache.html
+	FILE connection.html
+	FILE cursor.html
+	FILE dirfiles.html
+	FILE end.html
+	FILE filetable.html
+	FILE fill.html
+	FILE jasmenu.html
+	FILE login.html
+	FILE main.html
+	FILE menprop.html
+	FILE mentitle.html
+	FILE menu.html
+	FILE result.html
+	FILE secdb.html
+	FILE secdbs.html
+	FILE secdbu.html
+	FILE secdbuprop.html
+	FILE secdbus.html
+	FILE secmenu.html
+	FILE secprofconn.html
+	FILE secprofconns.html
+	FILE secprofile.html
+	FILE secprofiles.html
+	FILE secprofrole.html
+	FILE secprofroles.html
+	FILE secrole.html
+	FILE secrols.html
+	FILE section.html
+	FILE secuser.html
+	FILE secuserConn.html
+	FILE secuserConns.html
+	FILE secuserRole.html
+	FILE secuserRoles.html
+	FILE secuses.html
+	FILE secwelcome.html
+	FILE serapp.html
+	FILE serapps.html
+	FILE serloc.html
+	FILE serlocs.html
+	FILE sermenu.html
+	FILE servar.html
+	FILE servars.html
+	FILE serwelcome.html
+	FILE submit.html
+	FILE title.html
+	FILE transaction.html
+	FILE upload.html
+	FILE usr_sess.html
+	FILE access.gif
+	FILE cancel.gif
+	FILE closed.gif
+	FILE code.gif
+	FILE delete.gif
+	FILE download.gif
+	FILE empty.gif
+	FILE icon_access.gif
+	FILE icon_act_sess.gif
+	FILE icon_app.gif
+	FILE icon_apps.gif
+	FILE icon_cache.gif
+	FILE icon_copy.gif
+	FILE icon_curs.gif
+	FILE icon_db.gif
+	FILE icon_dbs.gif
+	FILE icon_dbu.gif
+	FILE icon_dbus.gif
+	FILE icon_loc.gif
+	FILE icon_locs.gif
+	FILE icon_monit.gif
+	FILE icon_multi.gif
+	FILE icon_multis.gif
+	FILE icon_page.gif
+	FILE icon_pages.gif
+	FILE icon_profile.gif
+	FILE icon_profiles.gif
+	FILE icon_rmulti.gif
+	FILE icon_role.gif
+	FILE icon_roles.gif
+	FILE icon_rpage.gif
+	FILE icon_trans.gif
+	FILE icon_unit.gif
+	FILE icon_units.gif
+	FILE icon_user.gif
+	FILE icon_users.gif
+	FILE icon_var.gif
+	FILE icon_vars.gif
+	FILE iipe_anim.gif
+	FILE lastclosed.gif
+	FILE lastleaf.gif
+	FILE lastopened.gif
+	FILE leaf.gif
+	FILE logout.gif
+	FILE menu.gif
+	FILE nobranch.gif
+	FILE opened.gif
+	FILE security_anim.gif
+	FILE server_anim.gif
+	FILE submit.gif
+	FILE update.gif
+	FILE view.gif
+
+/*
+** ingres!ice!icetutor
+*/
+   DIRECTORY ingres!ice!icetutor
+   BUILD_DIR (ING_BUILD)!ice!icetutor
+	FILE attr.html
+	FILE autodeclare.html
+	FILE begin.html
+	FILE checkSQL.html
+	FILE commit.html
+	FILE content.html
+	FILE cursor.html
+	FILE database.html
+	FILE docAccess.html
+	FILE docCache.html
+	FILE docCall.html
+	FILE docCall2.html
+	FILE docCall3.html
+	FILE docCreation.html
+	FILE docDef.html
+	FILE docLabel.html
+	FILE docName.html
+	FILE docOwner.html
+	FILE download.html
+	FILE else.html
+	FILE end.html
+	FILE error.html
+	FILE extension.html
+	FILE format.html
+	FILE format2.html
+	FILE formatHtml.html
+	FILE genIlogin.html
+	FILE header.html
+	FILE header2.html
+	FILE if.html
+	FILE if1.html
+	FILE if2.html
+	FILE if3.html
+	FILE if4.html
+	FILE ifResult.html
+	FILE in.html
+	FILE in2.html
+	FILE in3.html
+	FILE include.html
+	FILE include2.html
+	FILE include3.html
+	FILE include32.html
+	FILE include4.html
+	FILE include5.html
+	FILE intro.html
+	FILE jasmenu.html
+	FILE links.html
+	FILE links2.html
+	FILE login.html
+	FILE main.html
+	FILE menProp.html
+	FILE menu.html
+	FILE nullvar.html
+	FILE out.html
+	FILE out2.html
+	FILE recursive.html
+	FILE repeat.html
+	FILE rollback.html
+	FILE rows.html
+	FILE server.html
+	FILE sqlFinal.html
+	FILE sqlResult.html
+	FILE statement.html
+	FILE then.html
+	FILE Title.html
+	FILE transResult.html
+	FILE transaction.html
+	FILE unitAccess.html
+	FILE unitConf.html
+	FILE unitCreation.html
+	FILE unitDef.html
+	FILE unitOwner.html
+	FILE upload.html
+	FILE vardef.html
+	FILE varget.html
+	FILE varset.html
+	FILE varset2.html
+	FILE capbuaccess.gif
+	FILE capbucreate.gif
+	FILE capbuloc.gif
+	FILE capdocaccess.gif
+	FILE capdoccreate.gif
+	FILE closed.gif
+	FILE empty.gif
+	FILE icon_book.gif
+	FILE icon_chap.gif
+	FILE icon_multi.gif
+	FILE icon_page.gif
+	FILE lastclosed.gif
+	FILE lastleaf.gif
+	FILE lastopened.gif
+	FILE leaf.gif
+	FILE logout.gif
+	FILE next.gif
+	FILE nobranch.gif
+	FILE opened.gif
+	FILE previous.gif
+
+/*
+** ingres!ice!public
+*/
+
+   DIRECTORY ingres!ice!public
+   BUILD_DIR (ING_BUILD)!ice!public
+	FILE ice_index.html
+	FILE ice.css
+
+/*
+** ingres!ice!scripts
+*/
+
+   DIRECTORY ingres!ice!scripts
+   BUILD_DIR (ING_BUILD)!ice!scripts
+	FILE icedbusr.sql
+	FILE icedemo.sql
+	FILE icefiles.dat
+	FILE iceinit.sql
+	FILE icinit92.sql
+	FILE iceload.dat
+	FILE iceplays.sql
+	FILE icesample.sql
+	FILE icetool.sql
+	FILE icetutor.sql
+	FILE iceuser.sql
+
+/*
+** ingres!ice!images
+*/
+
+   DIRECTORY ingres!ice!images
+   BUILD_DIR (ING_BUILD)!ice!images
+	FILE bullet1.gif
+	FILE ice.gif
+	FILE ingreslogo.gif
+	FILE logout.gif
+	FILE rbf.gif
+	FILE welcome.gif
+
+/*
+** ingres!ice!samples!app
+*/
+
+   DIRECTORY ingres!ice!samples!app
+   BUILD_DIR (ING_BUILD)!ice!samples!app
+	FILE app.html
+	FILE iceapp.c
+	FILE Makefile
+
+/*
+** ingres!ice!samples!dbproc
+*/
+
+   DIRECTORY ingres!ice!samples!dbproc
+   BUILD_DIR (ING_BUILD)!ice!samples!dbproc
+	FILE proc.html
+	FILE result.html
+	FILE proc.sql
+
+/*
+** ingres!ice!samples!query
+*/
+
+   DIRECTORY ingres!ice!samples!query
+   BUILD_DIR (ING_BUILD)!ice!samples!query
+	FILE dsql.html
+	FILE isql.html
+	FILE blank.html
+	FILE msql.html
+	FILE help.html
+	FILE msql.xml
+
+/*
+** ingres!ice!samples!report
+*/
+
+   DIRECTORY ingres!ice!samples!report
+   BUILD_DIR (ING_BUILD)!ice!samples!report
+	FILE blank.html
+	FILE existing.rw
+	FILE htmlrbf.rw
+	FILE htmlwrite.rw
+	FILE htmlwvar.rw
+	FILE report.html
+	FILE report1.html
+	FILE report2.html
+	FILE report3.html
+	FILE reportfr1.html
+	FILE reportfrm.html
+	FILE reporthdr.html
+
+/*
+** ingres!ice!plays
+*/
+
+   DIRECTORY ingres!ice!plays
+   BUILD_DIR (ING_BUILD)!ice!plays
+	FILE play_SessionControl_h.html
+	FILE play_TxnCndCmt_h.html
+	FILE play_all.html
+	FILE play_allWrap.html
+	FILE play_allWrapSub.html
+	FILE play_autoUser.html
+	FILE play_home.html
+	FILE play_login.html
+	FILE play_public.css
+	FILE play_newProduct.html
+	FILE play_newProductInsert.html
+	FILE play_shopAction_h.html
+	FILE play_shopAdd.html
+	FILE play_shopConfirm.html
+	FILE play_shopDescribe.html
+	FILE play_shopHome.html
+	FILE play_shopRemove.html
+	FILE play_shopView.html
+	FILE play_subSet.html
+	FILE play_styleSheet.css
+	FILE play_typeGLink.html
+	FILE play_typeGSLink.html
+	FILE play_typeLink.html
+	FILE play_typeLinkSubSet.html
+	FILE play_typeList.html
+	FILE play_welcome.html
+	FILE OldGlobe.gif
+	FILE logout.gif
+	FILE bgpaper.gif
+	FILE comedy.gif
+	FILE history.gif
+	FILE tragedy.gif
+
+/*
+** ingres!ice!plays!src
+*/
+
+   DIRECTORY ingres!ice!plays!src
+   BUILD_DIR (ING_BUILD)!ice!plays!src
+	FILE Makefile
+	FILE play_NewOrder.h
+	FILE play_NewOrder.sc
+
+/*
+** ingres!ice!plays!tutorialGuide
+*/
+
+   DIRECTORY ingres!ice!plays!tutorialGuide
+   BUILD_DIR (ING_BUILD)!ice!plays!tutorialGuide
+	FILE fr_account.html
+	FILE fr_before.html
+	FILE fr_blank.html
+	FILE fr_browser.html
+	FILE fr_combo.html
+	FILE fr_contents.html
+	FILE fr_design.html
+	FILE fr_directory.html
+	FILE fr_example.html
+	FILE fr_home.html
+	FILE fr_if.html
+	FILE fr_imageLink.html
+	FILE fr_imageSwitchLink.html
+	FILE fr_introduction.html
+	FILE fr_linkSubSet.html
+	FILE fr_login.html
+	FILE fr_playList.html
+	FILE fr_register.html
+	FILE fr_select.html
+	FILE fr_shopAdd.html
+	FILE fr_shopCommit.html
+	FILE fr_shopDescribe.html
+	FILE fr_shopHome.html
+	FILE fr_shopRemove.html
+	FILE fr_shopView.html
+	FILE fr_skeleton.html
+	FILE fr_subSet.html
+	FILE fr_template.html
+	FILE fr_textLink.html
+	FILE frameSet.html
+	FILE index.html
+	FILE arrow_next.gif
+	FILE plus.gif
+        FILE submit.gif
+        FILE server_anim.gif
+	FILE tutorial.css
+
+# endif /* FULL_RELEASE */
+
+/*
+** ingres!ice!bin
+*/
+
+   DIRECTORY ingres!ice!bin
+   BUILD_DIR (ING_BUILD)!ice!bin
+      EXECUTABLE ice
+# ifdef R_NETSCAPE
+      EXECUTABLE ice.1.$SLSFX
+# endif
+      EXECUTABLE iceapp.cgi
+
+/*
+** ingres!ice!bin!apache
+*/
+
+# ifdef R_APACHE
+   DIRECTORY ingres!ice!bin!apache
+   BUILD_DIR (ING_BUILD)!ice!bin!apache
+      EXECUTABLE oiice.cgi
+      EXECUTABLE oiice.1.$SLSFX
+      FILE ice.conf
+# endif /* Apache Support */
+
+/*
+** ingres!ice!bin!netscape
+*/
+
+# ifdef R_NETSCAPE
+   DIRECTORY ingres!ice!bin!netscape
+   BUILD_DIR (ING_BUILD)!ice!bin!netscape
+      EXECUTABLE oiice.cgi
+#if defined(any_aix)
+      EXECUTABLE oiice.1.$SLSFX
+      LINK oiice.1.so
+#else
+      EXECUTABLE oiice.1.$SLSFX
+#endif   /* aix */
+# endif /* Netscape Support */
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+   BUILD_DIR (ING_BUILD)!bin
+# ifdef VMS
+      SCRIPT ice
+# endif /* VMS */
+      EXECUTABLE deregdocs
+      EXECUTABLE icesvr
+      EXECUTABLE icesvrloc
+      EXECUTABLE icedbuser
+      EXECUTABLE regdocs
+      EXECUTABLE makeid
+# ifdef R_XERCES
+      EXECUTABLE ICETranslate
+# endif

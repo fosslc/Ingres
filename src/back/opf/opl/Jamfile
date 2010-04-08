@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!opf!opl
+#
+
+SubDir ING_SRC back opf opl ;
+
+IISUBSYS back opf opl ;
+
+
+IILIBRARY OPFLIB : oplojoin.c oplinit.c ;
+

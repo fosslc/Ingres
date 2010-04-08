@@ -1,0 +1,9 @@
+#
+# Jamfile file for common!ddf!hdr
+#
+
+SubDir ING_SRC common ddf hdr ;
+
+IISUBSYS common ddf hdr ;
+
+

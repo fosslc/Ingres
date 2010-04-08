@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Remove Contents of Bag
+</title>
+</head>
+<body>
+<h1>
+Remove Contents of Bag
+</h1>
+If the user decides not to buy the
+products that have been placed in the bag, they
+follow the link to this page, where the
+transaction is rolled back. The transaction is not
+flagged as being completed, because the
+user may simply wish to start afresh. If this is
+the case, we do not wish to generate a new order
+number; we can continue with the one already
+issued.
+<p>
+As a confirmation that the order has been rolled
+back, we display the empty table and the total cost
+of the order. (This is not
+something that one would do in reality; it is
+present as an artifact of our example). 
+<h3>File: play_shopHome.html</h3>
+<p>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Empty Bag&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Empty Bag&lt;/h1&gt;
+<span class="macro">&lt;!-- #ICE ROLLBACK=`t_shopAdd` --&gt;</span>
+
+&lt;p&gt;Your shopping bag now contains:
+&lt;!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+	select name, cost
+	from play_item, play_order
+	where id = product_id and
+            (order_nr = :e_orderNumber and user_id = ':ii_userid')`
+    TYPE=`TABLE`
+--&gt;
+
+&lt;!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+        select sum(cost) as Total
+	    from play_item
+	    where id = 
+		    (select product_id from play_order
+		    where order_nr = :e_orderNumber 
+		    and user_id = ':ii_userid')`
+    TYPE=`TABLE`
+--&gt;
+&lt;!-- Standard Shop Action --&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]` --&gt;
+&lt;!-- Standard Session Control --&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre></tt></div><p>
+This page demonstrates the use of the rollback
+keyword and this appears as the first active
+element in the file:
+<p><tt><pre>
+&lt;!-- #ICE ROLLBACK=`t_shopAdd` --&gt;
+</pre></tt><p>
+The other features have already been examined. We
+note that the session variable e_shopTxn</tt> has
+not been updated. This means that should the user
+wish to start afresh they will not be issued with
+a new order number by the shop home page. 
+Since they have just rolled back
+their transaction, the order number is effectively
+unused and still valid.
+</body>
+</html>

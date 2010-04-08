@@ -1,0 +1,12 @@
+#
+# Jamfile for gl!glf!handy
+#
+# History:
+#	30-dec-2005 (abbjo03)
+#	    Created.
+
+SubDir ING_SRC gl glf handy ;
+
+IISUBSYS gl glf handy ;
+
+IILIBRARY COMPATLIB : machconf.c ;

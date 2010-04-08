@@ -1,0 +1,14 @@
+#
+# Jamfile file for testtool!achilles!shell_unix
+#
+
+SubDir ING_SRC testtool achilles shell_unix ;
+
+IISUBSYS testtool achilles shell_unix ;
+
+
+IITOOLSSH acconfig : acconfig.sh ;
+IITOOLSSH acreport : acreport.sh ;
+IITOOLSSH acstart : acstart.sh ;
+IITOOLSSH acstop : acstop.sh ;
+

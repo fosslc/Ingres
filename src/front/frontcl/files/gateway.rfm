@@ -1,0 +1,15 @@
+#
+# Copyright (c) 2006 Ingres Corporation. All Rights Reserved.
+#
+# The configuration rule specifications listed in this file are used
+# to generate the default configuration for Ingres Enterprise Access 
+# gateways during their setup procedure.  Note that the named files 
+# are assumed to exist in the "files" directory.
+#
+
+rulefile.01:	net.crs
+rulefile.02:	all.crs
+rulefile.03:	tz.crs
+rulefile.04:	mssql.crs
+rulefile.05:	oracle.crs
+rulefile.06:	db2udb.crs

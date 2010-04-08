@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This screen shows a list of databases.  You can either use the "Select"
+menuitem to choose a database name or select the "Forget" menuitem to
+return to the previous screen.
+
+This list is obtained when IPM starts up.  Therefore any databases added
+since IPM was started will not be visible in this list of databases.
+
+    Select           select the database name that the cursor is placed
+                     on and return to the previous screen.
+
+    Forget           return to the previous screen without selecting a
+                     database name.
+
+    Help             displays this screen

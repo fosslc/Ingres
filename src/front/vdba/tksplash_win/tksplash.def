@@ -1,0 +1,89 @@
+;
+;  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+;
+
+;
+;    Source   : tksplash.def : Declares the module parameters for the DLL.
+;    Project  : DLL (About Box). 
+;    Author   : Sotheavut UK (uk$so01)
+;
+;
+; History:
+;
+; 06-Nov-2001 (uk$so01)
+;    created
+; 19-Dec-2001 (uk$so01)
+;    SIR #106648, Split vdba into the small component ActiveX/COM
+; 11-Jan-2002 (schph01 for uk$so01)
+;   (SIR 106290) allow the caller to pass the bitmap
+; 30-Jul-2004 (uk$so01)
+;    SIR #112708, Change the AboutBox due to UI Standard.
+; 05-Oct-2004 (uk$so01)
+;    BUG #113185
+;    Manage the Prompt for password for the Ingres DBMS user that 
+;    has been created with the password when connecting to the DBMS.
+; 19-Jan-2005 (komve01)
+;    BUG #113768 / ISSUE 13913697: 
+;	  GUI tools display incorrect year in the Copyright Information.
+;
+
+
+LIBRARY      "tksplash"
+DESCRIPTION  'tksplash Windows Dynamic Link Library'
+
+EXPORTS
+	; Explicit exports can go here
+	;
+	; Prototype of AboutBox:
+	; void PASCAL EXPORT AboutBox
+	;   (
+	;      LPCTSTR lpszTitle, 
+	;      LPCTSTR lpszProductVersion, 
+	;      short nYear,
+	;      UINT nSHowMask
+	;   )
+	; Caller sets the aplication title. Ex: lpszTitle = Ingres Visual DBA
+	;        Then the result title will be "About Ingres Visual DBA"
+	; Caller sets the Product Version and Year. 
+	;        Ex: lpszProductVersion = Version: 1.0
+	;            nYear = 2005
+	;        Then the result Product Version will be:
+	;        "Ingres Visual DBA"
+	;        "Version: 1.0"
+	;        "This product is licenced to: "XXXX"
+	;        "SiteID: YYYYY"
+	;
+	;        "Copyright 2005-2006 Ingres Corporation. All rights reserved."
+	; Caller must set nSHowMask to 0 or can be the combination of one or more values
+	; 0x00000001 : Show Licensed to, Site ID
+	; 0x00000002 : Show Copyright
+	; 0x00000004 : Show End-User License Aggreement
+	; 0x00000008 : Show the WARNING law
+	; 0x00000010 : Show the Third Party Notices Button
+	; 0x00000020 : Show System Info Button
+	; 0x00000040 : Show Tech Support Button
+	AboutBox; 
+
+
+	;
+	; Prototype of AboutBox2:
+	; void PASCAL EXPORT AboutBox
+	;   (
+	;      LPCTSTR lpszTitle, 
+	;      LPCTSTR lpszProductVersion, 
+	;      short nYear, 
+	;      HINSTANCE hExternalInstance,  
+	;      UINT nBitmap,
+	;      UINT nSHowMask
+	;   )
+	; The first 3 parameters are identical as AboutBox.
+	; Caller must pass bitmap ID <nBitmap> along with its instance handle <hExternalInstance>
+	; nSHowMask see the AboutBox
+	AboutBox2;
+
+
+	;
+	; Prototype of INGRESII_llSetPrompt:
+	; void PASCAL EXPORT INGRESII_llSetPrompt()
+	INGRESII_llSetPrompt;
+	

@@ -1,0 +1,323 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<ol.h>
+#include	<er.h>
+#include	<tm.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+##include	<abclass.qsh>
+##include	<oocat.qsh>
+#include	<dmchecks.h>
+##include	"abclinfo.qsh"
+#include	"abfglobs.h"
+#include	"erab.h"
+
+/**
+** Name:	abdpedit.qc - ABF Database Procedure Component Edit Module.
+**
+** Description:
+**	Contains the definition of the component class edit information
+**	structure for the application database procedure component objects.
+**	Defines:
+**
+**	iiABDBProc	ABF database procedure component class edit information.
+**
+** History:
+**	Revision 6.2  89/02  wong
+**	Initial revision.
+**
+**	02-dec-91 (leighb) DeskTop Porting Change:
+**		Added routines to pass data across ABF/IAOM boundary.
+**	6-feb-92 (blaise)
+**		Added include abfglobs.h.
+**
+**	Revision 6.5
+**
+**	26-aug-92 (davel)
+**		Simplified _test to reflect changed interface to IIARdbProcCall.
+**	16-Nov-92 (donc)
+**		Modified COMP_CLASS_INFO initialization to accomodate fix for
+**		bug 44162.
+**	04-dec-92 (davel)
+**		In _display(), make new _passdec field invisible.
+**      08-dec-95 (toumi01; from 1.1 axp_osf port)
+**		Added kchin's change (6.4) for axp_osf
+**              07-Feb-94 (kchin) bug# 62079
+**              Added argument declaration for parameter 'desc' of routine
+**              _type_valid(), since it is a char *.  On 64-bit platform, the
+**              default int data type for 'desc' not declared explicitly will
+**              truncate an address which is 64-bit long.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**/
+
+char	*IIUGdmlStr();
+
+STATUS	iiabPrint();
+
+static VOID	_display();
+static STATUS	_save();
+static STATUS	_test();
+static STATUS	_type_valid();
+
+static const DB_DT_ID	_types[] = { DB_NODT, DB_INT_TYPE };
+
+/*:
+** Name:	iiABDBProc -	ABF Database Procedure Component Class
+**					Edit Information.
+** Description:
+**	Defines additional class information for the database procedure
+**	component objects for editing.
+*/
+
+#define _NewEditExpl	F_AB0052_NewEdit_expl
+#define _GoExpl		F_AB0054_GoProc_expl
+#define _EmptyExpl	F_AB005E_Empty_expl
+#define _PrintExpl	F_AB005F_Print_expl
+
+GLOBALDEF const COMP_CLASS_INFO iiABDBProc = {
+	OC_DBPROC,
+	ERx("abfprocd"), ERx("abdbproc.hlp"), ERx("abdbprmi.hlp"), 1,
+	F_AB0061_ADBDef_title,
+	F_AB0045_ADBDet_title,
+	sizeof(_types)/sizeof(_types[0]), _types,	/* legal types */
+	{NULL,	NULL},	_return_type,	NULL,	_library, NULL,	/* Fields */
+	/*{iiabNxtEdit,	AB_NewEdit,	_NewEditExpl,	0},	/* NextEdit */
+	{_test,		FE_Go,		_GoExpl,	4},    /* Go, FRSkey4 */
+	{NULL,		0,		_EmptyExpl,	0},	/* Edit */
+	{NULL,		0,		_EmptyExpl,	0},	/* Compile */
+	{NULL,		0,		_EmptyExpl,	0},	/* FormEdit */
+	{iiabPrint,	FE_Print,	_PrintExpl,	0},	/* Print */
+	_display, _save, NULL, _type_valid
+};
+
+/*
+** Name:	_display() -	Display DB Procedure Component Definition.
+**
+** Description:
+**	Displays the attributes for a DB procedure component object on the
+**	edit/definition form for this class.
+**
+**	Note:  Also sets the relevant field display attributes ("displayonly",
+**	"invisible") since the form is shared with the 4GL and host-language
+**	procedure component classes.
+**
+** Input:
+**	proc	{DBPROC *}  The DB procedure component object.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+static VOID
+##_display ( proc )
+##register DBPROC	*proc;
+##{
+##	char	*formname = iiABDBProc.form;
+##	i4	notnullable;
+##	i4	warning;
+##	char	title[63+1];
+
+	GLOBALREF char	*IIabExename;
+
+	/* Turn off 'symbol' and 'srcfile' and turn on 'library' as
+	** display-only.  Also, turn off 'nullable' field for return type
+	** "none," but make it enterable since host-language procedures
+	** may have turned it off.  Turn off "pass decimal as what type"
+	** field.  Finally, toggle 'warning' depending on
+	** whether function name conflicts with system names.
+	*/
+	notnullable = ( proc->return_type.db_datatype == DB_NODT );
+	warning = !IIAFckFuncName(proc->name);
+##	set_frs field formname (
+##			invisible(_symbol) = 1,
+##			invisible(_srcfile) = 1,
+##			invisible(_library) = 1,
+##			invisible(_nullable) = notnullable,
+##			displayonly(_nullable) = 0,
+##			underline(_nullable) = 1,
+##			invisible(_passdec) = 1,
+##			invisible(_warning) = warning
+##	);
+
+	IIUGfmt(title, sizeof(title)-1, ERget(iiABDBProc.title), 1, IIabExename);
+
+##	putform formname (
+##			_title = title,
+##			_language = ERx(IIUGdmlStr(DB_SQL)),
+##			_return_type = proc->return_type.db_data,
+##			_nullable = ERget(
+##				    AFE_NULLABLE(proc->return_type.db_datatype)
+##					? F_UG0002_Yes2 : F_UG0007_No2
+##			),
+##			/* turn off validations! */
+##			_srcfile = ERx("!"),
+##			_symbol = ERx("!")
+##	);
+
+##}
+
+/*
+** Name:	_save() -	Save DB Procedure Component Definition from
+**					the Form.
+** Description:
+**	Saves the attributes for a database procedure component object from the
+**	component definition form for this class.  This calls 'iiabGetRetType()'
+**	to check if the return type was changed and to modify the object's
+**	return type attributes.  Only then will it write the object to the
+**	database.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**	proc	{DBPROC *}  The DB procedure component object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw)  Written.
+**	05/90 (jhw)  Added long remark check for save.
+*/
+
+static STATUS
+_save ( app, proc )
+APPL		*app;
+register DBPROC	*proc;
+##{
+##	char	*formname = iiABDBProc.form;
+##	i4	srem_change;
+
+	STATUS	IIAMwrDBProc();
+
+##	inquire_frs field formname ( srem_change = change(_short_remark) );
+
+	/* Fields should have been validated already. */
+
+	if ( iiabGetRetType( iiABDBProc.form, proc->data.tag,
+				&proc->return_type ) )
+	{
+		/* Invalidate our callers */ 
+		IIAMxdsDepSearch((APPL_COMP *)proc, IIAM_zccCompChange,
+				 (PTR)NULL);
+		proc->data.dirty = TRUE;
+	}
+
+	if ( srem_change != 0 )
+##	{ /* short remark */
+		char	*cp;
+##		char	short_remark[OOSHORTREMSIZE+1];
+
+##		set_frs field formname ( change(_short_remark) = 0 );
+##		getform formname ( short_remark = _short_remark );
+		if ( ! STequal(proc->short_remark, short_remark)
+			&& (cp = FEtsalloc(proc->data.tag, short_remark))
+				!= NULL )
+		{
+			proc->short_remark = cp;
+			proc->data.dirty = TRUE;
+		}
+##	}
+
+	_VOID_ IIOOckLongRemark((OO_OBJECT *)proc);
+
+	return proc->data.dirty ? iiabSvComp((APPL_COMP *)proc, IIAMwrDBProc )
+				: OK;
+##}
+
+/*
+** Name:	_type_valid() -	Validate Return Type for Database Procedure.
+**
+** Description:
+**	Validates the entered data type for the return value of a database
+**	procedure.
+**
+** Inputs:
+**      comp            {APPL_COMP *}  The object checking the type.
+**      desc            {char *}        A string describing the type.
+**
+** Outputs:
+**      dbv            (DB_DATA_TYPE*} A dbv to represent the description.
+**
+** Returns:
+**	{STATUS}  OK, if the data type is valid for database procedures.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+static STATUS
+_type_valid ( comp, desc, dbv )
+##APPL_COMP	*comp;
+char            *desc;
+register DB_DATA_VALUE	*dbv;
+{
+##      i4  n_inviz = 0;
+	STATUS iiabCkTypeSpec();
+
+	if (iiabCkTypeSpec(desc, TRUE, dbv) != OK
+	  || ( dbv->db_datatype != DB_NODT 
+	      && dbv->db_datatype != DB_INT_TYPE 
+	      && dbv->db_datatype != -DB_INT_TYPE )
+	    )
+	{
+		iiabTypeError(desc, E_AB026C_Not_int_type);
+		return FAIL;
+	}
+
+	/* If user entered 'none', turn off the 'nullable' field.  */
+	if (dbv->db_datatype == DB_NODT)
+		n_inviz = 1;
+##      set_frs field ERx("") ( invisible(_nullable) = n_inviz );
+
+	return OK;
+}
+
+/*
+** Name:	_test() -	Test DB Proc Component Object.
+**
+** Description:
+**	Runs the DB Proc for testing purposes.  This simply calls
+**	the proper ABFRT module to run the DB Proc; no parameters
+**	are passed.
+**
+** Input:
+**	app	{APPL *}  		The application object <not used>
+**	class	{COMP_CLASS_INFO *}	<not used>
+**	proc	{DBPROC *}		The DB Proc component object.
+**
+** Returns:
+**	{STATUS}  OK (all the time)
+**
+** History:
+**	02/89 (jhw)  Written.
+**	26-aug-92 (davel)
+**		Fixed comments and simplified to reflect changed
+**		calling interface for IIARdbProcCall().
+*/
+static STATUS
+_test ( app, class, proc )
+APPL		*app;
+COMP_CLASS_INFO	*class;
+DBPROC		*proc;
+{
+	/* Evenutally, compile the source if necessary */
+	IIARdbProcCall(proc->name, (ABRTSPRM *)NULL);
+	return OK;
+}

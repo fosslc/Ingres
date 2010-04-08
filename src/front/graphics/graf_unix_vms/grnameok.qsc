@@ -1,0 +1,89 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ergr.h>
+# include	<er.h>
+## include	<ooclass.qsh>
+# include	<oodefine.h>
+# include	<uigdata.h>
+
+/**
+** Name:
+**	grnameok.qc	- validate graph name
+**
+** Description:
+**	Determines whether a given string is a valid graph name
+**	by checking the format for being a legal Ingres name
+**	checking the database to see if a graph of that name
+**	currently exists.
+**
+**	This file defines:
+**
+**	GRnameOk(graphClass, name)
+**
+** Called:
+**	via object utility Send.
+**
+** Returns:
+**	bool:	TRUE if name is valid and useable.
+**		FALSE if name is invalid or conflicts with existing
+**			graph.
+**
+** History:
+**	8-aug-1988 (danielt)
+**		changed to just check for the ii_objects catalog
+**		for an object of type OC_GRAPH with the given owner
+**		and name.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+bool
+GRnameOk(graphClass, name)
+EXEC SQL BEGIN DECLARE SECTION;
+OO_CLASS	*graphClass;
+char		*name;
+EXEC SQL END DECLARE SECTION;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4	dummy_id;
+	char	*user = IIuiUser;
+	EXEC SQL END DECLARE SECTION;
+	bool	found = FALSE;
+
+	if (FEchkname(name, FALSE) != OK) 
+	{
+		IIUGmsg(ERget(E_GR000A_invalid_name), TRUE, 1, name);
+		return (FALSE);
+	}
+	EXEC SQL SELECT object_id
+		INTO :dummy_id
+		FROM ii_objects
+		WHERE 	object_name = :name
+			AND object_owner = :user
+			AND object_class = OC_GRAPH;
+	EXEC SQL BEGIN;
+		found = TRUE;
+		EXEC SQL ENDSELECT;
+	EXEC SQL END;
+	if (found) 
+	{
+		IIUGmsg(ERget(E_GR000B_already_exists),TRUE,2,name,
+			IIuiUser);
+		return (FALSE);
+	}
+	return (TRUE);
+}

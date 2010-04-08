@@ -1,0 +1,124 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for OpenROAD runtime
+*/
+
+/*
+** History
+**	02-nov-1998 (dansa02)
+**		Created.
+**	20-nov-1998 (dansa02)
+**		More trial-and-error adjustments to the deliverables lists.
+**	22-mar-1999 (dansa02)
+**		Added or4glnt.rx* resource files, and removed obsolete
+**		repedit.img, repmdi.img.
+**	21-may-1999 (dansa02) Bug 97048
+**		Added libreporter.rxb, libreporter.rxt resource files.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+*/
+
+PART   orrun
+   capability CI_WINDOWS4GL_RUNTIME
+
+/*
+** ingres
+*/
+   DIRECTORY ingres
+   BUILD_DIR (ING_BUILD)
+      FILE w4glrun.rel
+
+/*
+** ingres!bin
+*/
+   DIRECTORY ingres!bin
+   BUILD_DIR (ING_BUILD)!bin
+      EXECUTABLE repprint
+      FILE repprint.rxt
+      SCRIPT runimage
+      EXECUTABLE w4glrun
+      FILE w4glrun.rxb
+      FILE w4glrun.rxt
+
+/*
+** ingres!lib
+*/
+   DIRECTORY ingres!LIB_TGT
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+      EXECUTABLE libor4glnt.$SLSFX
+      EXECUTABLE libreporter.$SLSFX
+      FILE or4glnt.rxb
+      FILE or4glnt.rxt
+      FILE libreporter.rxb
+      FILE libreporter.rxt
+
+/*
+** ingres!files
+*/
+   DIRECTORY ingres!files
+   BUILD_DIR (ING_BUILD)!files
+      FILE aixw.ff
+      FILE apped.ctb
+      FILE apped2.ff
+      FILE appedtt.ff
+      FILE appedtt2.ff
+      FILE at101key.kbd
+      FILE connect.gif
+      FILE decw.ff
+      FILE depth4.ctb
+      FILE depth4_05.ctb
+      FILE depth8.ctb
+      FILE depth8_05.ctb
+      FILE graphon.ff
+      FILE graphon.kbd
+      FILE hp46021a.kbd
+      FILE ibmxst.ff
+      FILE ncdn97.kbd
+      FILE orsplash.gif
+      FILE suntype3.kbd
+      FILE suntype4.kbd
+      FILE suntype5.kbd
+      FILE tifftbls.dat
+      FILE vt220.kbd
+      FILE vt220u.kbd
+      FILE w4gl2acc.kbd
+      FILE w4gl3acc.kbd
+      FILE wdepth4.ctb
+      FILE wdepth8.ctb
+
+/*
+** ingres!files!deffiles
+*/
+   DIRECTORY ingres!files!deffiles
+   BUILD_DIR (ING_BUILD)!files!deffiles
+      FILE runimage.def
+
+/*
+** ingres!files!english
+*/
+   DIRECTORY ingres!files!english
+   BUILD_DIR (ING_BUILD)!files!english
+      FILE fw4gv4.mnx
+      FILE sw4gv4.mnx
+
+/*
+** ingres!w4glapps
+*/
+   DIRECTORY ingres!w4glapps
+   BUILD_DIR (ING_BUILD)!w4glapps
+      FILE core.plb
+      FILE finance.pkg
+      FILE iiscred.img
+      FILE iiutil.img
+      FILE mastdetl.pkg
+      FILE misc.pkg
+      FILE repcomp.img
+      FILE repgen.img
+      FILE repopen.img
+      FILE reporprint.img
+      FILE reporter.img
+      FILE repquery.img
+      FILE repsetup.img
+      FILE stat.pkg

@@ -1,0 +1,29 @@
+# int_rpl is a pure 32-bit int_lnx with special packaging options.
+
+# We'll fudge it up in the platform Jamdefs to not be a hybrid capable build.
+# (not that it really matters all that much.)
+# Note, probably could be re-done as int-lnx with a param RELID, a new
+# set-option, and arch set to 32 bits.  Might be an interesting exercise
+# in using the "new" build controls...
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+
+#set: config int_rpl
+#set: option libc6
+#set: option DBL
+#set: option B64
+#set: option CAS_ENABLED
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
+BUILD_ICE = "" ; 	##set: option BUILD_ICE (off)
+
+PAX_CHECK = TRUE ;
+PLATFORM_JAMDEFS = int_rpl ;

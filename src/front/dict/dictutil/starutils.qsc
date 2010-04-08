@@ -1,0 +1,654 @@
+/*
+**		Copyright (c) 2004 Ingres Corporation
+**		All rights reserved.
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<cv.h>
+# include	<er.h>
+# include	<ug.h>
+# include	<si.h>
+# include	<st.h>
+# include	<generr.h>
+# include	<ui.h>
+# include	<uigdata.h>
+## include	<dictutil.qsh>
+# include	"erdu.h"
+EXEC SQL INCLUDE SQLCA;
+
+/*
+** FOOL MING
+**
+#include "dictutil.h"
+*/
+
+/**
+** Name:	starutil.qsc - support routines for Ingres/Star.
+**
+** Description:
+**
+**	This file defines:
+**
+**	saveStarStmt		- Save info on a CREATE, DROP, MODIFY stmt.
+**	finishStarStmts		- execute statements on Star.
+**	initStarStmts		- initialize for saving Star statements.
+**	loadStarStmts		- copy DD_DRIVE array to STARSTMT array.
+**	IIDDidIsDistributed	- check if DBMS is distributed.
+**	IIDDigIsGateway		- check if DBMS is an Ingres/Gateway.
+**	IIDDccCdbConnect	- Direct connect to CDB.
+**	IIDDcdCdbDisconnect	- Direct Disconnect from CDB back to Star.
+**	IIDDcd2CdbDisconnect2	- Simpler Disconnect from CDB back to Star.
+**
+** History:
+**	3-jan-1991 (pete)
+**		Initial version.
+**	8-jan-1993 (jpk)
+**		maintained FErelexists, added second parameter
+**		for owner of table (FIPS support)
+**	22-july-1993 (jpk)
+**		replaced call to FErelexists with call to cat_exists
+**      20-sep-93 (huffman)
+**              Readonly memory is passed to CVlower function, causing
+**              Access Violation on AXP VMS.
+**	9-nov-1993 (jpk)
+**		Fixing my oversight in cat_exists() removes need for
+**		previous change; cat_exists now supplies the storage
+**		so callers don't have to.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+FUNC_EXTERN	STATUS	FErelexists(char *fetable, char *feowner);
+FUNC_EXTERN	STATUS	cat_exists(char *catname, char *dummy);
+bool	IIDDidIsDistributed();
+bool	IIDDigIsGateway();
+
+static bool	checkDupStarStmt();
+
+typedef struct {
+	char	table_name[FE_MAXNAME+1];
+	i4	stmt_type;
+} STARSTMT;
+
+#define DD_MAX_STAR_STMTS	75
+static STARSTMT Starstmts[DD_MAX_STAR_STMTS];
+static i4  Starstmt_cnt = 0;
+
+static  bool    Id_flag = FALSE;
+static  bool    IsDistributed = FALSE;
+
+/*{
+** Name:	loadStarStmts - create STARSTMT array from DD_DRIVE array.
+**
+** Description:
+**	Copy information from array used by upgrade executables into
+**	form expected by other routines herein which issue REGISTER
+**	and REMOVE statements on Star.
+**
+** Inputs:
+**	i4	 drive_cnt		number of rows in drive_array.
+**	DD_DRIVE *drive_array	array of info on work done during upgrade.
+**
+** Outputs:
+**
+**	Returns:
+**		Number of statements copied.
+**
+** History:
+**	4-jan-1991 (pete)
+**		Initial version.
+**	20-jun-1991 (pete)
+**		Remove unused variable at Saber C's suggestion.
+*/
+i4
+loadStarStmts(drive_cnt, drive_array)
+i4	 drive_cnt;
+DD_DRIVE *drive_array;
+{
+	i4 i;
+
+	Starstmt_cnt = 0;
+
+	for (i=0; i < drive_cnt; i++, drive_array++)
+	{
+	    /* We load the array whether drive_array->did_upgrade is
+	    ** TRUE or FALSE (originally the following was only done if
+	    ** drive_array->did_upgrade == TRUE).
+	    ** Always try to register the table with Star, in case the
+	    ** upgrade was originally done on the CDB; in that case
+	    ** we will see here that did_upgrade == FALSE,
+	    ** but table still needs to be registered with Star.
+	    */
+
+	    STcopy(drive_array->tab, Starstmts[Starstmt_cnt].table_name);
+	    Starstmts[Starstmt_cnt].stmt_type = drive_array->upgrade_type;
+	    Starstmt_cnt++;
+	}
+
+	return (Starstmt_cnt);
+}
+
+/*{
+** Name:	saveStarStmt - Save info on a CREATE, DROP, MODIFY TABLE stmt.
+**
+** Description:
+**	Save info on one of the following statements:
+**	MODIFY <tablename>
+**	CREATE TABLE <tablename>
+**	DROP TABLE <tablename>
+**
+** Inputs:
+**	i4	stmt_type	type of statement.
+**	char	*stmt[]		tokens in statement.
+**
+** Outputs:
+**
+**	Returns:
+**		OK if info saved into array ok. FAIL if couldn't save
+**		because Array was full.
+**
+** History:
+**	2-jan-1991 (pete)
+**		Initial version.
+*/
+STATUS
+saveStarStmt(stmt_type, stmt)
+i4	stmt_type;
+char	*stmt[];
+{
+	char *table_name;
+
+	table_name = (stmt_type == DD_MODIFY_TABLE) ? stmt[1] : stmt[2];
+
+	/* check if info about this stmt needs to be added to the array */
+	if (checkDupStarStmt(stmt_type, table_name))
+	{
+	    /* duplicate. no need to add info on this statement to array. */
+	    return (OK);
+	}
+
+	if (Starstmt_cnt == DD_MAX_STAR_STMTS)
+	{
+	    /* beyond end of array */
+	    IIUGerr(E_DD0022_TOO_MANY_STAR_STMTS, UG_ERR_ERROR, 2,
+		(PTR) table_name, (PTR) &Starstmt_cnt);
+	    return (FAIL);
+	}
+
+	Starstmts[Starstmt_cnt].stmt_type = stmt_type;
+	STcopy (table_name, Starstmts[Starstmt_cnt].table_name);
+
+#ifdef DD_DEBUG
+	if (!executestmt)
+	{
+	    SIfprintf(stderr,
+	        ERx("\nStar: New stmt, type %d, table %c, array offset %d.",
+	        Starstmts[Starstmt_cnt].stmt_type,
+		Starstmts[Starstmt_cnt].table_name,
+		Starstmt_cnt);
+	}
+#endif
+
+	Starstmt_cnt++;
+
+	return (OK);
+}
+
+/*{
+** Name:	checkDupStarStmt - check if statement not needed in array.
+**
+** Description:
+**	Check if the current statement need not be added to the array
+**	of Star information.
+**	Currently this checks if a MODIFY is being done on a table for 
+**	which a CREATE was already done. IF so, then info about the MODIFY
+**	need not be saved in the array (One Star REGISTER statement will
+**	take care of both). Will also minimize array-size requirements.
+**
+** Inputs:
+**	i4	stmt_type	statement type.
+**	char	*table_name	name of table.
+**
+** Outputs:
+**
+**	Returns:
+**		TRUE if info on this statement already exists in array and this
+**		     one need not be added.
+**
+**		FALSE if this statement should be added to array.
+**
+** History:
+**	2-jan-1991 (pete)
+**		Initial version.
+*/
+static bool
+checkDupStarStmt(stmt_type, table_name)
+i4	stmt_type;
+char	*table_name;
+{
+    i4  i;
+
+    if (stmt_type == DD_MODIFY_TABLE)
+    {
+	/* loop thru and see if CREATE TABLE has been done for same table */
+	for (i=0; i < Starstmt_cnt; i++)
+	{
+	    if ((Starstmts[i].stmt_type == DD_CREATE_TABLE) &&
+	         STequal(Starstmts[i].table_name, table_name))
+		 return (TRUE);		/* duplicate statement */
+	}
+    }
+
+    return (FALSE);
+}
+
+/*{
+** Name:	initStarStmts - initialize for saving Star stmts.
+**
+** Description:
+**	get things set up for a fresh set of star statements to save.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		VOID
+**
+** History:
+**	2-jan-1991 (pete)
+**		Initial version.
+*/
+VOID
+initStarStmts()
+{
+	Starstmt_cnt = 0;
+}
+
+/*{
+** Name:	finishStarStmts - finish off star stmts run against CDB.
+**
+** Description:
+**	Run statements against Star. Info on which statements to run
+**	was saved in a global array while .cre or .mfy files were being
+**	processed. This routine assumes the current connection is to Star,
+**	rather than to the CDB.
+**
+** Inputs:
+**	NONE,  but reads Globals: Starstmt_cnt & Starstmts[].
+**
+** Outputs:
+**
+**	Returns:
+**		VOID
+**
+** History:
+**	2-jan-1991 (pete)
+**		Initial version.
+*/
+STATUS
+finishStarStmts()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    i4		local_errno;
+    char	errtext[257];
+    EXEC SQL END DECLARE SECTION;
+    char	tempbuf1[100];
+    char	tempbuf2[100];
+    char	*tempbuf[2];
+    i4		tempbuf_cnt = 0;
+    bool	executestmt = TRUE;
+    STATUS	stat = OK;
+    i4		i, j;
+
+    tempbuf[0] = tempbuf1;
+    tempbuf[1] = tempbuf2;
+
+    IIDDbnxBeginNestedXact();
+    IIDDnw1NestedWriteOn();
+
+    for (i=0; i < Starstmt_cnt; i++)
+    {
+	if (Starstmts[i].stmt_type == DD_CREATE_TABLE)
+	{
+	    tempbuf_cnt = 1;
+	    STcopy(ERx("register table "), tempbuf[0]);
+	    STcat(tempbuf[0], Starstmts[i].table_name);
+	    STcat(tempbuf[0], ERx(" as link"));
+	}
+	else if (Starstmts[i].stmt_type == DD_DROP_TABLE)
+	{
+	    tempbuf_cnt = 1;
+	    STcopy(ERx("remove table "), tempbuf[0]);
+	    STcat(tempbuf[0], Starstmts[i].table_name);
+	}
+	else if (Starstmts[i].stmt_type == DD_MODIFY_TABLE ||
+		 Starstmts[i].stmt_type == DD_ALTER_TABLE)
+	{
+	    tempbuf_cnt = 2;
+	    STcopy(ERx("remove table "), tempbuf[0]);
+	    STcat(tempbuf[0], Starstmts[i].table_name);
+	    STcopy(ERx("register table "), tempbuf[1]);
+	    STcat(tempbuf[1], Starstmts[i].table_name);
+	    STcat(tempbuf[1], ERx(" as link"));
+	}
+	else
+	    executestmt = FALSE;	/* no Star work to do for this stmt */
+
+	if (executestmt)
+	{
+	    for (j=0; j < tempbuf_cnt; j++)
+	    {
+	        IIsqInit(&sqlca);
+	        IIwritio(TRUE, (i2 *)0, TRUE, DB_CHR_TYPE, 0, tempbuf[j]);
+	        IIsyncup((char *)0, 0);
+	        EXEC SQL INQUIRE_INGRES(:local_errno = errorno,
+					:errtext = errortext);
+	        if (local_errno != 0)
+	        {
+		    /* Check local errors too in case "genericerror"
+		    ** turned off.
+		    */
+	            if ((local_errno == E_GE75F8_DEF_RESOURCE)	||
+	                (local_errno == E_GE7594_TABLE_NOT_FOUND) ||
+			(local_errno == E_GE7D00_QUERY_ERROR)	||
+			(local_errno == 2010) ||	/* US07DA */
+			(local_errno == 2753) ||	/* US0AC1 */
+			(local_errno == 2009)		/* US07D9 */
+			)
+	                ;	/* not an error */
+	            else
+		    {
+	                stat = FAIL;
+			goto done;
+		    }
+	        }
+	    }
+	}
+
+#ifdef DD_DEBUG
+	if (executestmt)
+	{
+	    SIfprintf(stdout,
+	        ERx("\nStar statement. Type: %d, table = %c.\n",
+	        Starstmts[i].stmt_type, Starstmts[i].table_name);
+	}
+	else
+	{
+	    SIfprintf(stdout,
+	        ERx("\nDD_OTHER_STMT run on Star. Type: %d, table = %c.\n",
+	        Starstmts[i].stmt_type, Starstmts[i].table_name);
+	}
+#endif
+
+    }
+
+done:
+    if (stat == OK)
+    {
+	IIDDnw0NestedWriteOff();
+	IIDDenxEndNestedXact();
+    }
+    else
+    {
+	IIDDnw0NestedWriteOff();
+	IIDDanxAbortNestedXact();
+        IIUGerr(E_DD001F_DBMS_ERROR2, UG_ERR_ERROR,
+		2, errtext, tempbuf[j]);
+    }
+
+    return (stat);
+}
+
+/*{
+** Name:	IIDDigIsGateway - check if DBMS is an Ingres/Gateway.
+**
+** Description:
+**	Check if the current DBMS is an Ingres Gateway.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		TRUE if DBMS is an Ingres/Gateway,
+**		FALSE otherwise (Ingres or Ingres/Star).
+**
+**		Also sets globals: IsDistributed and Id_flag.
+**
+** History:
+**	26-feb-1991 (pete)
+**		Initial version.
+*/
+bool
+IIDDigIsGateway()
+{
+	if ((IIUIdcs_sqlLevel() == UI_DML_GTWSQL) && (IIUIdcd_dist() == FALSE))
+	    return (TRUE);
+	else
+	    return (FALSE);
+}
+
+/*{
+** Name:	IIDDidIsDistributed - check if DBMS is distributed (Star).
+**
+** Description:
+**	This is equivalent to IIUIdbdata()->isDistributed, but it only
+**	executes the first time. This will guard against getting a different
+**	value after a DIRECT CONNECT statement (currently you get same value).
+**	Call after CONNECT.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		TRUE if DBMS is distributed, FALSE otherwise.
+**
+**		Also sets globals: IsDistributed and Id_flag.
+**
+** History:
+**	2-jan-1991 (pete)
+**		Initial version.
+*/
+bool
+IIDDidIsDistributed()
+{
+    if (!Id_flag)
+    {
+        /* haven't checked yet */
+
+        IsDistributed = (bool) IIUIdbdata()->isDistributed;
+
+	Id_flag = TRUE;
+    }
+    return (IsDistributed);
+}
+
+/*{
+** Name:	IIDDicIsCDB - Check if Database is a CDB.
+**
+** Description:
+**	This routine tells you if the dbms you are connected to is a
+**	Coordinator Database for Star (CDB).
+**	Only call this after successfully connecting.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		TRUE if DBMS is a CDB, FALSE otherwise.
+**
+** History:
+**	15-jan-1991 (pete)
+**		Initial version.
+**	8-jan-1993 (jpk)
+**		maintained FErelexists, added second parameter
+**		for owner of table (FIPS support)
+**	22-july-1993 (jpk)
+**		replaced call to FErelexists with call to cat_exists
+**	9-nov-1993 (jpk)
+**		Fixing my oversight in cat_exists() removes need for
+**		previous change; cat_exists now supplies the storage
+**		so callers don't have to.
+*/
+bool
+IIDDicIsCDB()
+{
+	bool cdb = FALSE;
+
+	if (IIDDidIsDistributed() != TRUE)
+	{
+	    /* Local Database (as opposed to a Star database) */
+
+	    if (cat_exists(ERx("iidd_dbcapabilities"), "") == OK)
+		cdb = TRUE;	/* only a CDB has the above table */
+	}
+
+	return (cdb);
+}
+
+/*{
+** Name:	IIDDccCdbConnect - DIRECT CONNECT to CDB.
+**
+** Description:
+**	Connect to the CDB via DIRECT CONNECT statement. This should only
+**	be called when connected to Star DBMS.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		OK if connect went ok; FAIL otherwise.
+**
+** Side Effects:
+**	does a COMMIT;
+**	sets CatWriteOn.
+**
+** History:
+**	4-jan-1991 (pete)
+**		Initial version.
+*/
+STATUS
+IIDDccCdbConnect()
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4          local_errno;
+	EXEC SQL END DECLARE SECTION;
+
+        initStarStmts();        /* initialize info about changes to CDB tables*/
+
+        EXEC SQL COMMIT;        /* DIRECT CONNECT fails if open tran. */
+
+        EXEC SQL WHENEVER SQLERROR CALL SQLPRINT;
+        EXEC SQL DIRECT CONNECT;        /* connect to CDB */
+	/*
+	** Direct Connect session gets AUTOCOMMIT OFF, regardless of how its
+	** set for Star session. That's NOT what we want.
+	*/
+        EXEC SQL COMMIT;
+	EXEC SQL SET AUTOCOMMIT ON;
+
+        EXEC SQL WHENEVER SQLERROR CONTINUE;    /* restore default */
+
+	EXEC SQL INQUIRE_INGRES(:local_errno = errorno);
+	if (local_errno != 0)
+	{
+	    return (FAIL);
+	}
+
+        iiuicw1_CatWriteOn();           /* turn it on for CDB session */
+
+	return (OK);
+}
+
+/*{
+** Name:	IIDDcdCdbDisconnect - DIRECT DISCONNECT from CDB.
+**
+** Description:
+**	Disconnect from CDB back to Star via DIRECT DISCONNECT statement.
+**	Then run REGISTER statements.
+**	This should only be called after a successful call to IIDDccCdbConnect.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		OK if disconnect went ok; FAIL otherwise.
+**
+** Side Effects:
+**	does a COMMIT;
+**	sets CatWriteOff before returning.
+**
+** History:
+**	4-jan-1991 (pete)
+**		Initial version.
+*/
+STATUS
+IIDDcdCdbDisconnect()
+{
+	STATUS stat = OK;
+
+        EXEC SQL WHENEVER SQLERROR CALL SQLPRINT;
+        EXEC SQL DIRECT DISCONNECT;     /* Back to Star. *This does a COMMIT* */
+        EXEC SQL WHENEVER SQLERROR CONTINUE;    /* restore default */
+
+	/* No need to restore an autocommit state; we automatically
+	** switch back to autocommit state of Star Session.
+	*/
+
+        iiuicw1_CatWriteOn();           /* make sure it's on for Star session */
+
+        /* register/remove in Star, changes made to tables in CDB. */
+        stat = finishStarStmts();
+
+        iiuicw0_CatWriteOff();
+
+	return (stat);
+}
+
+/*{
+** Name:	IIDDcd2CdbDisconnect2 - DIRECT DISCONNECT from CDB.
+**
+** Description:
+**	Disconnect from CDB back to Star via DIRECT DISCONNECT statement.
+**	Ignore errors. Don't do REGISTER/REMOVE statements like
+**	IIDDcd2CdbDisconnect does.
+**	This should only be called after a successful call to IIDDccCdbConnect.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		VOID
+**
+** Side Effects:
+**	does a COMMIT;
+**
+** History:
+**	21-feb-1991 (pete)
+**		Initial version.
+*/
+VOID
+IIDDcd2CdbDisconnect2()
+{
+        EXEC SQL WHENEVER SQLERROR CONTINUE;	/* ignore errors */
+        EXEC SQL DIRECT DISCONNECT;     /* Back to Star. *This does a COMMIT* */
+}

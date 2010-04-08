@@ -1,0 +1,13 @@
+#
+# OpenROAD makefile generation hints for front\embed\c
+#
+# History:
+#       01-aug-2002 (dansa02)
+#           Adapted to Ingres 2.6 build.
+#	12-oct-2004 (dansa02)
+#	    Adapted for flat-linking instead of IngresII DLL structure.
+#	    Removed congui subsys (which was a vestige of Win3.1 ugliness).
+#
+subsys = console
+
+main = cmain.c

@@ -1,0 +1,130 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include        <adf.h>
+# include        <ade.h>
+# include        <er.h>
+
+/**
+** Name:	abrtgetf.qsc	-  ABF runtime support for getform and getrow
+**
+** Description:
+**	This file defines:
+**
+**	IIARgfGetFldIO	ABF runtime version of IIgetfldio
+**	IIARgtcTcoGetIO	ABF runtime version of IItcogetio
+**
+**	These return default DB_DATA_VALUES on FRS failure.
+**
+** History:
+**	9/90 (Mike S) Initial Version
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+/* extern's */
+FUNC_EXTERN i4		IIgetfldio();
+FUNC_EXTERN i4  	IItcogetio();
+FUNC_EXTERN ADF_CB	*FEadfcb();
+/* static's */
+
+/*{
+** Name:	IIARgfGetFldIO - ABF runtime version of IIgetfldio
+**
+** Description:
+**	If IIgetfldio fails, return a default DB_DATA_VALUE.
+**
+** Inputs:
+**      name    char *		  	Name of field to get value from
+**      data    DB_DATA_VALUE *        	Area to receive the data value
+**
+**
+** Outputs:
+**      Data will be updated to contain the field's value.
+**
+**	Returns:
+**		none
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	9/90 (Mike S) Initial version
+*/
+VOID 
+IIARgfGetFldIO(name, data)
+char		*name;
+DB_DATA_VALUE	*data;
+##{
+	ADF_CB	*cb;
+##	i4	frserror;
+
+	IIsetferr(0);
+	_VOID_ IIgetfldio((i2 *) NULL, 1, DB_DBV_TYPE, 0, (PTR)data,
+			name, DB_CHR_TYPE);
+
+##	INQUIRE_FRS FRS (frserror = errorno)
+	if (frserror != 0)
+	{
+		/* It failed; make a default value */
+                cb = FEadfcb();
+                adc_getempty(cb, data);
+	}
+##}
+
+/*{
+** Name:	IIARgtcTcoGetIO  - ABF runtime version of IItcogetio
+**
+** Description:
+**	If IItcogetio fails, return a default DB_DATA_VALUE.
+**
+** Inputs:
+**      name    char *		  	Name of field to get value from
+**      data    DB_DATA_VALUE *        	Area to receive the data value
+**
+** Outputs:
+**      Data will be updated to contain the field's value.
+**
+**	Returns:
+**		none
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	9/90 (Mike S) Initial value
+*/
+VOID
+IIARgtcTcoGetIO(name, data)
+char		*name;
+DB_DATA_VALUE	*data;
+##{
+	ADF_CB	*cb;
+##	i4	frserror;
+
+	IIsetferr(0);
+	IItcogetio((i2 *) NULL, 1, DB_DBV_TYPE, 0, (PTR)data, name);
+
+##	INQUIRE_FRS FRS (frserror = errorno)
+	if (frserror != 0)
+	{
+        	cb = FEadfcb();
+                adc_getempty(cb, data);
+	}
+##}

@@ -1,0 +1,27 @@
+COPYFORM:	6.4	2002_06_28 07:26:05 GMT  
+FORM:	imp_lg_header		
+	80	23	0	0	18	0	4	9	0	0	0	0	0	0	0	18
+FIELD:
+	0	vnode	-21	23	0	20	1	58	0	0	20	0	38	IMP Logging System Monitor for vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	block_count	-30	5	0	8	1	21	3	3	8	0	13	Block Count:	0	0	0	0	512	0	0		+i8			0	1
+	2	logfull_interval	-30	5	0	8	1	26	3	26	8	0	18	Logfull Interval:	0	0	0	256	512	0	0		+i8			0	2
+	3	reserved	-30	5	0	8	1	18	3	59	8	0	10	Reserved:	0	0	0	256	512	0	0		+i8			0	3
+	4	block_size	-30	5	0	8	1	20	4	4	8	0	12	Block Size:	0	0	0	0	512	0	0		+i8			0	4
+	5	abort_interval	-30	5	0	8	1	24	4	28	8	0	16	Abort Interval:	0	0	0	256	512	0	0		+i8			0	5
+	6	in_use	-30	5	0	8	1	16	4	61	8	0	8	In Use:	0	0	0	256	512	0	0		+i8			0	6
+	7	buffer_count	-30	5	0	8	1	22	5	2	8	0	14	Buffer Count:	0	0	0	0	512	0	0		+i8			0	7
+	8	cp_interval	-30	5	0	8	1	21	5	31	8	0	13	CP Interval:	0	0	0	256	512	0	0		+i8			0	8
+	9	available	-30	5	0	8	1	19	5	58	8	0	11	Available:	0	0	0	256	512	0	0		+i8			0	9
+	10	bof	-30	5	0	8	1	21	7	3	8	0	13	Begin (BOF):	0	0	0	0	512	0	0		+i8			0	10
+	11	previous_cp	-30	5	0	8	1	21	7	31	8	0	13	Previous CP:	0	0	0	0	512	0	0		+i8			0	11
+	12	eof	-30	5	0	8	1	19	8	5	8	0	11	End (EOF):	0	0	0	0	512	0	0		+i8			0	12
+	13	next_cp	-30	5	0	8	1	26	8	26	8	0	18	Expected Next CP:	0	0	0	256	512	0	0		+i8			0	13
+	14	emergency_status	-21	18	0	15	3	17	9	58	15	1	1		1	1	0	16777473	512	0	0		c15			0	14
+	15	status	-21	43	0	40	1	48	10	8	40	0	8	Status:	0	0	0	0	512	0	0		c40			0	15
+	16	log_pct	-30	5	0	3	1	44	13	18	3	0	41	Log File Diagram (% in use or reserved):	0	0	0	0	512	0	0		+i3			0	16
+	17	barchart	-21	73	0	70	1	70	14	4	70	0	0		0	0	0	0	512	0	0		c70			0	17
+TRIM:
+	3	13	3:72:1	1	0	0	0
+	56	2	5:22:0	1	0	0	0
+	62	13	)	0	0	0	0
+	63	2	Blocks	0	0	0	0

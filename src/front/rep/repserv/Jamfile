@@ -1,0 +1,36 @@
+#
+# Jamfile file for front!rep!repserv
+#
+# History:
+#	11-feb-2005 (abbjo03)
+#	    On VMS, link repserv with the shared API library.
+
+SubDir ING_SRC front rep repserv ;
+
+IISUBSYS front rep repserv ;
+
+IIBINEXE rsstatd : rsstatd.c ;
+IINEEDLIBS rsstatd :  REPSERVLIB REPCOMNLIB SAWLIB APILIB
+	MALLOCLIB SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS rsstatd : II_copyright malloc ;
+
+IIBINEXE repserv : replicat.c ;
+if $(VMS)
+{
+    IINEEDLIBS repserv : REPSERVLIB REPCOMNLIB UGLIB ADFLIB SHAPILIB
+        SHCOMPATLIB ;
+}
+else
+{
+    IINEEDLIBS repserv :  REPSERVLIB REPCOMNLIB SAWLIB APILIB
+	SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+}
+IIUNDEFS repserv : II_copyright malloc ;
+
+IILIBRARY REPSERVLIB : xmitsupp.c wordwrap.c transmit.c
+	tpcommit.c rsupdate.c rsstats.c rsmemmgr.c rsinsert.c
+	rsdelete.c recovlog.c readq.c rdfsupp.c rdfstart.c rdfgdesc.c
+	pidfile.c monitor.c message.c maillist.c list.c keysuniq.c
+	getrdata.c flags.c event.c errhndl.c distqapi.c dbquiet.c
+	dbopen.c crkeycls.c conn.c commtlog.c collisn.c cdds.c
+	blobsupp.c ;

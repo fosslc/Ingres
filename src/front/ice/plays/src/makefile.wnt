@@ -1,0 +1,39 @@
+#
+# Copyright (c) 2004 Ingres Corporation 
+# Name: makefile
+#
+# Description:
+#       Builds the extension server function DLL for the play tutorial and
+#       copies it the the %II_SYSTEM%\ingres\files\dynamic directory.
+#
+!IF "$(DEBUG)" != ""
+CDEBUG=/Z7
+LDEBUG=-debug:mapped,full  -debugtype:cv
+!ENDIF
+
+!IF "$(CPU)" == "IA64"
+CFLAGS=/Wp64 -c $(CDEBUG) -MD -D_IA64_=1 -DWINVER=0x0400 -DWIN64 -D_WIN64 -DWIN32 -D_WIN32
+LIBSUFFIX=64
+!ELSEIF "$(CPU)" == "AMD64"
+CFLAGS=/Wp64 -c $(CDEBUG) -MD -D_AMD64_=1 -DWINVER=0x0400 -DWIN64 -D_WIN64 -DWIN32 -D_WIN32
+LIBSUFFIX=64
+!ELSE
+CFLAGS=-c $(CDEBUG) -MD -D_X86_=1 -DWINVER=0x0400 -DWIN32 -D_WIN32
+LIBSUFFIX=
+!ENDIF
+LFLAGS=/DLL $(LDEBUG)
+
+all: play_NewOrder.dll
+
+play_NewOrder.dll: play_NewOrder.obj
+    link $(LFLAGS) /out:$@ $** ws2_32.lib \
+    $(II_SYSTEM)\ingres\lib\libingres$(LIBSUFFIX).lib
+
+play_NewOrder.obj: play_NewOrder.c play_NewOrder.h
+    cl $(CFLAGS) $*.c
+
+play_NewOrder.c: play_NewOrder.sc
+    esqlc $*.sc
+
+install: play_NewOrder.dll
+    copy play_NewOrder.dll "$(II_SYSTEM)\ingres\files\dynamic\play_NewOrder.dll"

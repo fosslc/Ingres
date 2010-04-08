@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The scf_rows resource is used by the System Control Facility (SCF)
+  to determine how many rows to expect on the first pass of a select
+  or retrieve query within DBMS servers created with this definition.
+
+  The default is 20.

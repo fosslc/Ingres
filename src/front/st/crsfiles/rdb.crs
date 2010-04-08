@@ -1,0 +1,58 @@
+--
+--  Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+--
+--  This file contains the configuration rules for the RDB Gateway.
+--
+--# History:
+--#	18-jun-99 (kinte01)
+--#		Created.
+--#     14-feb-02 (chash01)
+--#             Add cmkrnl privilege in the privilege list. 
+--#	15-may-02 (kinte01)
+--#		Cross integrate change 439134 made to wnt!front!st!crsfiles
+--#		so it can be reflected in the unix/vms crsfiles.  Using a
+--#		head revision of cbf will now be possible as it looks for
+--#		the gateway parameters in one form while unix/vms still
+--#		input data in the old form
+--#		Change parameter naming scheme to match the gateway
+--#		interpretation.   Increase the sqlda_size and pst_max
+--#		to a default value of 128.  
+--#		Add empty_date and empty_date_return (bug 107843)
+--#	10-jun-02 (clach04)
+--#		Bug 107991
+--#		Added load_table_qualifier to crs.
+--#     18-oct-2002 (horda03) Bug 108966
+--#             Added NETMBX privilege.
+
+ii.$.ingstart.$.rdb:		1, MAX = 1;
+
+-- maximum connections of all RDB Gateways configured for start-up
+ii.$.gateway.rdb.connect_max:           1,
+					REQUIRES ii.$.ingstart.%.rdb;
+
+-- protocol port status initialization
+ii.$.gateway.rdb.sqlda_size:       128, MIN = 50, MAX = 256;
+ii.$.gateway.rdb.pst_max:          128, MIN = 50, MAX = 256;
+ii.$.gateway.rdb.empty_date:       "01-jan-1900 00:00:00";
+ii.$.gateway.rdb.empty_date_return: EMPTY;
+ii.$.gateway.rdb.load_table_qualifier: "USER";
+ii.$.gateway.rdb.varchar_comp:     OFF;
+# ifdef VMS
+ii.$.gateway.rdb.vms_ast_limit:	   20, MIN = 20;
+ii.$.gateway.rdb.vms_buffer_limit: 66384;
+ii.$.gateway.rdb.vms_error:	   "ii_system:[ingres.files]iigwrdbd.error";
+ii.$.gateway.rdb.vms_extent:	   `iigetsyi wsmax`;	
+ii.$.gateway.rdb.vms_file_limit:   50;
+ii.$.gateway.rdb.vms_io_buffered:  20;
+ii.$.gateway.rdb.vms_io_direct:	   20;
+ii.$.gateway.rdb.vms_page_file:    100000, MIN = 50000;
+ii.$.gateway.rdb.vms_priority:	   4, MIN = 0, MAX = 31;
+ii.$.gateway.rdb.vms_enqueue_limit: UNDEFINED;
+ii.$.gateway.rdb.vms_image:	   "ii_system:[ingres.bin]iigwrdbd.exe";
+ii.$.gateway.rdb.vms_maximum_working_set: 2000; 
+ii.$.gateway.rdb.vms_privileges:   "(cmkrnl,prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx)";
+ii.$.gateway.rdb.vms_working_set:  1000;
+ii.$.gateway.rdb.vms_quantum:      "00:00:01";
+ii.$.gateway.rdb.vms_queue_limit:  20;
+ii.$.gateway.rdb.vms_stack_size:   64K;
+# endif /* VMS */

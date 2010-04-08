@@ -1,0 +1,131 @@
+--
+--  Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+--
+--  This file contains the configuration rules for the Oracle Gateway.
+--
+--# History:
+--#	26-mar-98 (mcgem01)
+--#		Created. 
+--#     13-may-99 (chash01)
+--#             make it work(?) for oracle gateway listener.
+--#	15-may-02 (kinte01)
+--#		Cross integrate change 439134 made to wnt!front!st!crsfiles
+--#		so it can be reflected in the unix/vms crsfiles.  Using a
+--#		head revision of cbf will now be possible as it looks for
+--#		the gateway parameters in one form while unix/vms still
+--#		input data in the old form
+--#		Change parameter naming scheme to match the gateway
+--#		interpretation.   Increase the sqlda_size and pst_max
+--#		to a default value of 128.   Add an empty_date and 
+--#		empty_date_return. (bug 107843)
+--#	10-jun-02 (clach04)
+--#		Bug 107991
+--#		Added load_table_qualifier to crs.
+--#	22-aug-02 (clach04)
+--#		Added nls_date_format, default is original ANSI format.
+--#     18-oct-2002 (horda03) Bug 108966
+--#             Added NETMBX privilege.
+--#     26-nov-03 (mofja02)
+--#             Added dbevent_poll_rate to crs.
+--#     17-nov-04 (wansh02)
+--#             Changed pst_max to 100.
+--#     29-Nov-04 (mofja02)
+--#             SIR 113276
+--#             Added blob_data.
+--#     14-Jan-05 (mofja02)
+--#           BUG 113751
+--#           Now that gateways are in default.rfm,
+--#           empty date return and dbevent poll rate are wrong.
+--#     02-Mar-05 (mofja02)
+--#           Bad cross integration.  Removing >>>>YOUR VERSION
+--#	18-Mar-2005 (clach04)
+--#		Merged Windows CRS file entries/changes.
+--#		This is new for gateways and allows us to use a single
+--#		CRS file for EACH platform. Because Ingres for Windows
+--#		does not yet share crs files the shared gateway crs files
+--#		must be fmap'd into the Windows area. Windows gateway crs files
+--#		will be removed (there is no need for the Ingres product to
+--#		ship gateway crs files so the Ingres client map need not change).
+--#		This file should be fmapped into the ...!st!crsfiles directory
+--#		the Windows gateway build script needs updating to ensure that
+--#		crs files are pre-processed using front_st_crsfiles makefile.
+--#
+--#		Removed connect_max / connect_limit.
+--#		Neither connect_max or connect_limit setting have any impact
+--#		the limit code does not check the correct config.dat entries.
+--#		The check code is present but currently assumes -1 (unlimited).
+--#		
+--#		connect_limit is the limit of sessions for a server.
+--#		connect_max in the maximum connect_limit for a server type.
+--#		(e.g. have two DBMS servers one with connect_limit of 1 
+--#		the other with 99, then connect_max is 99 as that is the 
+--#		biggest of the two).
+--#
+--#		Added trace flags so that they appear in CBF.
+--#		VMS path uses II_SYSTEM instead of II_CONFIG for safety.
+--#		Added Windows path info. At this time the Windows crs files
+--#		still exist, this change does not chaneg that.
+--#		The Windows crs files will be removed at a later time
+--#		and shared crs files will be fmapped into wnt!front!st!crsfiles
+--#		area on windows build machines.
+--#     31-Aug-05 (mofja02)
+--#           BUG 115138
+--#           As part of an Oracle LOB bug related to handling multiple
+--#             LOB types, it was decided to change the default
+--#             for blob_data from memory to file for all gateways.
+--#     07-May-2007 (clach04)
+--#         SIR 118263
+--#         New gateway "string type cast length" help file added
+--#         It is number of characters and max value is (in theory)
+--#         max i4 value, in practice max Oracle string length is the ceiling.
+--#
+ii.$.ingstart.$.oracle:		1, MAX = 1;
+
+-- protocol port status initialization
+ii.$.gateway.oracle.sqlda_size:       128, MIN = 50, MAX = 256;
+ii.$.gateway.oracle.pst_max:          100, MIN = 50, MAX = 100;
+ii.$.gateway.oracle.empty_date:       "01-jan-1900 00:00:00";
+ii.$.gateway.oracle.empty_date_return: "OFF", VALID = {
+                                      "OFF","EMPTY"
+                                      };
+ii.$.gateway.oracle.load_table_qualifier: "USER";
+ii.$.gateway.oracle.varchar_comp:     OFF;
+ii.$.gateway.oracle.nls_date_format:  "YYYY-MM-DD HH24:MI:SS";
+ii.$.gateway.oracle.dbevent_poll_rate: 0, MIN = 0, MAX = 1000000000;
+ii.$.gateway.oracle.blob_data:        "FILE", VALID = { "MEMORY","FILE" };
+ii.$.gateway.oracle.typecast_strlen:  30, MIN = 1, SIGNED_INT;
+
+-- trace settings
+ii.$.gateway.oracle.trace_init:       "OFF";
+ii.$.gateway.oracle.trace_full:       "false", VALID = { "true", "false" };
+# ifdef UNIX
+ii.$.gateway.oracle.trace_file:       "`gwecho $II_SYSTEM/ingres/files/gworacle.log`";
+# endif /* UNIX */
+# ifdef NT_GENERIC
+ii.$.gateway.oracle.trace_file:       "`iiconcat -s(II_SYSTEM) -s\ingres\files\gworacle.log`";
+# endif /* NT_GENERIC */
+# ifdef VMS
+ii.$.gateway.oracle.trace_file:       "ii_system:[ingres.files]gworacle.log";
+# endif /* VMS */
+
+
+# ifdef VMS
+ii.$.gateway.oracle.vms_ast_limit:	20, MIN = 20;
+ii.$.gateway.oracle.vms_buffer_limit:	66384;
+ii.$.gateway.oracle.vms_error:		"ii_system:[ingres.files]iigworad.error";
+ii.$.gateway.oracle.vms_extent:		`iigetsyi wsmax`;	
+ii.$.gateway.oracle.vms_file_limit:	50;
+ii.$.gateway.oracle.vms_io_buffered:	20;
+ii.$.gateway.oracle.vms_io_direct:	20;
+ii.$.gateway.oracle.vms_page_file:	100000, MIN = 50000;
+ii.$.gateway.oracle.vms_priority:	4, MIN = 0, MAX = 31;
+ii.$.gateway.oracle.vms_enqueue_limit:	UNDEFINED;
+ii.$.gateway.oracle.vms_image:		"ii_system:[ingres.bin]iigworad.exe";
+ii.$.gateway.oracle.vms_maximum_working_set: 2000; 
+ii.$.gateway.oracle.vms_privileges:	"(prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx)";
+ii.$.gateway.oracle.vms_working_set:	1000;
+ii.$.gateway.oracle.vms_quantum:	"00:00:01";
+ii.$.gateway.oracle.vms_queue_limit:	20;
+ii.$.gateway.oracle.vms_stack_size:	64K;
+# endif /* VMS */
+

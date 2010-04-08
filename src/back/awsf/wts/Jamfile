@@ -1,0 +1,14 @@
+#
+# Jamfile file for back!awsf!wts
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC back awsf wts ;
+
+IISUBSYS back awsf wts ;
+
+if $(BUILD_ICE)
+{
+IILIBRARY AWSFLIB : wtsupld.c wts.c ;
+}

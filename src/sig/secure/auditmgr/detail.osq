@@ -1,0 +1,146 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+**  Frame:         detail
+**  Form:          detail
+**  Description:   View detail of audit log
+**
+**  Source File:   detail.osq
+**  Frame Type:    Browse
+**  Template File: msbrowse.tf, Version: 1.4
+*/
+INITIALIZE =
+DECLARE
+
+    /* working variables needed by template file */
+    IIerrorno   = INTEGER(4),           /* holds DBMS statement error nmbr */
+    IIint       = INTEGER(4),           /* general purpose integer */
+    IIint2      = INTEGER(4),           /* general purpose integer */
+    IIobjname   = CHAR(32) NOT NULL,    /* holds an object name */
+    IIrowcount  = INTEGER(4),           /* holds DBMS statement row count */
+    IIrowsfound = CHAR(1)               /* tells if query selected >0 rows */
+
+BEGIN
+    IIretval = 1;       /* Success. This built-in global is used for
+                        ** communication between frames.
+                        */
+    SET_FORMS FRS (VALIDATE(NEXTFIELD) = 1, VALIDATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(NEXTFIELD) = 1, ACTIVATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(MENUITEM) = 1,  ACTIVATE(KEYS) = 1,
+        GETMESSAGES = 0);
+    /* form must be in query MODE for qualification() function */
+    SET_FORMS FORM (MODE = 'query');
+    SET_FORMS FRS (TIMEOUT = 0);
+
+    IIrowsfound = 'n';
+
+    REDISPLAY;          /* show form and passed in parameters */
+
+    MESSAGE 'Selecting data . . .';
+
+
+    IIloop0: WHILE (1=1) DO      /* dummy loop for branching */
+
+						    /*# BEGIN Select\Master */
+    detail := SELECT
+    table_name = m.table_name, table_owner = m.table_owner, 
+      audit_log = m.audit_log, register_date = m.register_date 
+    FROM iiaudittables m 
+    WHERE
+    ( ( m.table_name =  table_name ) )  AND 
+    ( ( m.table_owner =  table_owner ) )  
+    AND
+    QUALIFICATION(m.table_name = table_name, m.table_owner = table_owner, 
+      m.audit_log = audit_log, m.register_date = register_date) 
+
+						      /*# END Select\Master */
+
+    BEGIN
+    INITIALIZE =
+    BEGIN
+        INQUIRE_SQL (IIerrorno = ERRORNO);
+        IF (IIerrorno != 0) THEN
+            ROLLBACK WORK;
+            IIretval = -1;
+            CALLPROC beep();/* 4gl built-in procedure */
+            MESSAGE 'Error occurred SELECTing master data. Details about'
+                  + ' the error were described by the message immediately'
+                  + ' preceding this one.'
+                  + ' Returning to previous frame . . .'
+                  WITH STYLE = POPUP;
+            ENDLOOP IIloop0;
+        ENDIF;
+        COMMIT WORK;		/* release locks */
+        SET_FORMS FORM (MODE = 'read');
+        IIrowsfound = 'y';    /* indicate that >0 rows qualified */
+    END
+    
+
+    'Next' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Display next row of selected data'),
+        KEY FRSKEY4 (VALIDATE = 0, ACTIVATE = 0) =
+    BEGIN 
+        NEXT;
+        COMMIT WORK;    /* Release any locks acquired while selecting data
+                        ** for the "NEXT" statement.
+                        */
+    END
+
+    'Help' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Display help for this frame'),
+        KEY FRSKEY1 (VALIDATE = 0, ACTIVATE = 0) =
+    BEGIN
+        HELPFILE 'View detail of audit log'
+        	'';
+    END
+
+    'TopFrame' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Return to top frame in application'),
+        KEY FRSKEY17 (VALIDATE = 0, ACTIVATE = 0) =
+    BEGIN
+        IIretval = 2;           /* return to top frame */
+        ENDLOOP IIloop0;         /* exit WHILE loop */
+    END
+
+    'End' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Leave Browse mode to enter new query'),
+        KEY FRSKEY3 (VALIDATE = 0, ACTIVATE = 0) =
+    BEGIN
+        ENDLOOP IIloop0;         /* exit WHILE loop */
+    END
+    END;        /* END of submenu in Initialize block */
+    ENDLOOP IIloop0;             /* exit WHILE loop */
+
+    ENDWHILE;   /* end of loop:  "IIloop0: WHILE (1=1) DO" */
+
+    /* User exited above submenu via either: Zero rows retrieved; NEXT past
+    ** last selected master; TopFrame or End menuitem; Error
+    ** happened selecting data (and hence Zero rows retrieved);
+    ** Escape code issued "ENDLOOP IIloop0;".
+    */
+    INQUIRE_SQL (IIerrorno = ERRORNO);
+    COMMIT WORK;
+
+    IF (IIrowsfound = 'n') THEN         /* no rows retrieved above */
+        IF (IIerrorno > 0) THEN
+            IIretval = -1;
+        ENDIF;
+    ENDIF;
+
+    RETURN ;
+END     /* End of INITIALIZE section */
+
+
+'End (Error: check for RESUME stmt in Escape Code)'
+        (VALIDATE = 0, ACTIVATE = 0),
+        KEY FRSKEY3 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    /* This menuitem is only needed to eliminate the compile errors
+    ** that happen when all a frame's code is in the INITIALIZE block.
+    ** This menuitem is not displayed unless a RESUME was issued in
+    ** a FORM-START, or QUERY-START escape (which is an error).
+    */
+    RETURN ;
+END
+

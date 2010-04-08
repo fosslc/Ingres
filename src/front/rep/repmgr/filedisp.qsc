@@ -1,0 +1,125 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <cm.h>
+# include <st.h>
+# include <lo.h>
+# include <er.h>
+# include <si.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include "errm.h"
+
+/**
+** Name:	filedisp.qsc - file display
+**
+** Description:
+**	Defines
+**		file_display	- file display
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on cdisplay.sc and loadtbl.sc in replicator
+**		library.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+# define BUF_SZ		256
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmdisplayer"),
+##	*tf_name = ERx("tblfield"),
+##	*fline = ERx("line");
+
+
+/*{
+** Name:	file_display	- file display
+**
+** Description:
+**	Display a report file.
+**
+** Inputs:
+**	file_name	- name of file to display
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+file_display(
+char	*file_name)
+# if 0
+##char	*file_name;
+# endif
+##{
+##	char	buff[SI_MAX_TXT_REC+1];
+	FILE	*filptr;
+	char	open_file[MAX_LOC+1];
+	LOCATION	loc;
+	bool	found;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name read
+	STcopy(file_name, open_file);
+	LOfroms(PATH & FILENAME, open_file, &loc);
+	if (SIfopen(&loc, ERx("r"), SI_TXT, SI_MAX_TXT_REC, &filptr) != OK)
+	{
+		IIUGerr(E_RM0074_Error_open_file_read, UG_ERR_ERROR, 1,
+			file_name);
+		return;
+	}
+
+	while (SIgetrec(buff, (i4)sizeof(buff), filptr) != ENDFILE)
+##		loadtable form_name tf_name (fline = buff)
+
+	SIclose(filptr);
+
+##	display form_name read
+##	initialize (filename = file_name)
+##	activate menuitem ERget(FE_Find) (expl = ERget(F_FE0104_ExplFind)),
+##		FRSkey7
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##}

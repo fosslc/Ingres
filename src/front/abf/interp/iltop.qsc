@@ -1,0 +1,548 @@
+/*
+**Copyright (c) 1986, 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<pc.h>		 
+#include	<me.h>
+#include	<ex.h>
+#include	<ci.h>
+#include	<lo.h>
+#include	<si.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+## include	<ui.qsh>
+#include	<adf.h>
+#include	<ade.h>
+#include	<frmalign.h>
+#include	<feconfig.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<iltypes.h>
+#include	<ioi.h>
+#include	<ifid.h>
+#include	<ilrf.h>
+#include	<ilrffrm.h>
+#include	<ilerror.h>
+#include	<ooclass.h>
+#include	<eqlang.h>
+#include	<uigdata.h>
+#include	"il.h"
+#include	"if.h"
+#include	"ilgvars.h"
+#include	"ilargs.h"
+
+/**
+** Name:	iltop.c	-	4GL Interpreter Main Line Routine.
+**
+** Description:
+**	Contains main line for the interpreter.
+**
+** History:
+**	Revision 5.1  86/05/15  arthur
+**	Initial revision.
+**
+**	Revision 6.2  88/09/29  joe
+**	Changed the call to IIORsoSessOpen to account
+**	for the new interface in 6.0.
+**	89/03  wong  Modified to get host-language procedure table as
+**		parameter for VMS shared libraries.
+**
+**	Revision 6.3  89/11  wong
+**	Enhanced to open separate sessions for interpreter and user.
+**	JupBug #8364.
+**
+**	Revision 6.4
+**	03/13/91 (emerson)
+**		Modified IIOtop in support of new system procedure
+**		CommandLineParameters (for the Topaz project).
+**		This involved adding the new function ParmTextFunc,
+**		which needed to do a prompt, so I changed this source file
+**		from sc to qsc.
+**      03/29/91 (emerson)
+**              Changed IIOtop to call iiARsptSetParmText instead of setting
+**              a global variable (for VMS shared segments).
+**	04/07/91 (emerson)
+**		Modifications for local procedures: modified IIOtop.
+**	08/16/91 (emerson)
+**		Fix for bug 37878 in IIOtop.
+**	08/17/91 (emerson)
+**		Added missing #include <me.h>.
+**	08/17/91 (emerson)
+**		Removed inadvertently duplicated #include <ex.h>.
+**
+**	Revision 6.5
+**	06-nov-92 (davel)
+**		Use IIARrsiRestoreSessID() to switch back to user session,
+**		which will also handle the case where no session was current.
+**	12-feb-93 (davel)
+**		set "programquit" libq setting to 0, so that applications don't
+**		quit (by default) on errors such as query outside of active 
+**		session, etc.  (bug 49554).
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      11-Jun-2004 (hanch04)
+**          Removed reference to CI for the open source release.
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ui.qsh for gcc 4.3.
+*/
+
+static VOID	func_pointers();
+static DB_TEXT_STRING *ParmTextFunc();
+
+GLOBALREF ILARGS	IIITARGS;
+
+FUNC_EXTERN VOID	iiARsptSetParmText();
+FUNC_EXTERN VOID	IIARrsiRestoreSessID();
+
+/*{
+** Name:	IIOtop() -	Main Line for the 4GL Interpreter.
+**
+** Description:
+**	Main routine for the interpreter
+**
+**	run4gl [flags] DatabaseName ExecutableFile FrameName
+**
+**	Arguments:
+**		Normal FE args:
+**			-I
+**			-D
+**			-Z
+**			-[Kk]
+**			-X
+**			-[Uu]
+**
+**		-[Aa]Application_Name
+**
+**		-[d]Database_Name
+**			Give the database name with a flag rather than
+**			positionally.
+**
+**		-[Ee]Executable_File
+**			Give the name of the executable file by flag rather
+**			than positionally.
+**
+**		-[Ff]Frame_Name
+**			Give the frame name with a flag rather than
+**			positionally.
+**
+**		-[Ll][filename]
+**			Turns on debugging.  This causes each IL statement
+**			to be printed as it is encountered.
+**
+**		-R
+**			Turn on trace flags.
+**			Currently none are supported.
+**
+**		-Mmode
+**			If given, sets the execution mode for
+**			the interpreter.  The interpreter
+**			currently has the following modes:
+**			
+**				Normal -  Execute in the normal
+**				      way.  This is the default
+**				    	  and how users run it.
+**
+**				Test  -   In this mode, before
+**					  execution a form comes
+**					  up that allows parameters
+**					  to be set and run various
+**				      tests.
+**
+**		-TTraceFileName
+**			Set the name of the trace output file.
+**
+** Inputs:
+**	argc	{nat}  The number of command-line arguments.
+**	argv	{char **}  Address of the array of command-line arguments.
+**	hl_proc	{ABRTSFUNCS *}  The host-language procedure table.
+**
+** History:
+**	15-May-1986 (agh)
+**		First written
+**	29-sep-1988 (Joe)
+**		Changed the call to IIORsoSessOpen to account
+**		for the new interface in 6.0.
+**	19-mar-1990 (jhw)  Modified to look-up if neither start frame nor start
+**		procedure was specified.
+**	06/90 (jhw) -- Added code to set DML when starting up user's DBMS
+**		session and to switch between interpreter and user's sessions
+**		when fetching for interpreter.  Bugs #8364, #21669.
+**		Also, add call to new 'IIARformGet()' to put fetch of form
+**		in interpreter's session.
+**	07/90 (jhw) -- Set user flag for user session.  Bug #32173.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	03/13/91 (emerson)
+**		Added logic to prompt user for application-specific
+**		command-line parameters on first call to CommandLineParameters.
+**      03/29/91 (emerson)
+**              Changed to call iiARsptSetParmText instead of setting
+**              a global variable (for VMS shared segments).
+**	04/07/91 (emerson)
+**		Modifications for local procedures:
+**		Change calling sequence of IIORsoSessOpen.
+**	08/16/91 (emerson)
+**		Fix for bug 37878: Set WITH clause on both connections
+**		if IIITparseArgs found a +c flag.
+**		(ABF now passes iiinterp the +c flag
+**		that was originally passed to ABF).
+**
+**		Also, on second connection, pass the -u flag
+**		that IIITparseArgs derived from the -u flag (if any) 
+**		on the iiinterp commandline; pass an empty -u flag
+**		if there was no -u flag on the iiinterp commandline.
+**		(ABF now passes iiinterp the -u flag
+**		that was originally passed to ABF).
+**		Previously, a non-empty -u flag
+**		(derived from IIUIdbdata if necessary)
+**		was always specified on the second connection,
+**		but some gateways don't recognize the -u flag.
+**	9/91 (bobm)
+**		register il_irblk to runtime system.
+*/
+static	TAGID	basetag = 0;
+
+VOID
+IIOtop( argc, argv, hl_proc )
+i4		argc;
+char		**argv;
+ABRTSFUNCS	*hl_proc;
+{
+    ABRTSOBJ	*rtstab;
+    STATUS	rval;
+EXEC SQL BEGIN DECLARE SECTION;
+    i4		saved_id;
+EXEC SQL END DECLARE SECTION;
+    EX_CONTEXT	ilcontext;
+    char	uname[FE_MAXNAME + 2 + 1];	/* "-u<uname>" */
+
+    EX			FEhandler();
+    EX			IIOehExitHandler();
+    bool		IIARisProc();
+
+    /*
+    ** Get a tag for memory that will persist for the life of the interpreter.
+    */
+    basetag = FEgettag();
+
+    /*
+    ** Specify callback routine to be called on first call
+    ** to the system procedure CommandLineParameters.
+    */
+    iiARsptSetParmText( (DB_TEXT_STRING *)NULL, ParmTextFunc );
+
+    IIITparseArgs(argc, argv, &IIITARGS);
+
+    if (EXdeclare(IIOehExitHandler, &ilcontext) != OK)
+    {
+	EXdelete();
+	PCexit(FAIL);
+    }
+
+    /*
+    ** If IIITparseArgs found a +c flag,
+    ** set the WITH clause for both database connections.
+    ** Note that IIITparseArgs saved the flag *without* the leading +c.
+    */
+    if ( *IIITARGS.ilconnect != EOS )
+    {
+	IIUIswc_SetWithClause(IIITARGS.ilconnect);
+	IIARswc_SetWithClause(IIITARGS.ilconnect);
+    }
+
+    /* Connect Interpreter DBMS Session */
+
+    if ( FEingres( IIITARGS.ildatabase, IIITARGS.ilxflag, IIITARGS.iluname,
+			(char *)NULL ) != OK )
+    {
+	EXdelete();
+	FEing_exit();
+	PCexit(FAIL);
+    }
+
+    /* set programquit to 0 - FEningres sets it to 1, which is wrong for
+    ** user applications.
+    */
+    exec sql set_ingres (programquit = 0);
+
+    if ( IIUIdcn_ingres() )
+    { /* for INGRES only ... */
+	exec sql set lockmode on ii_encodings where readlock = nolock;
+    }
+
+    IIARfrsInit( TRUE );
+
+    /*
+    ** Open ILRF session.
+    */
+    if ((rval = IIORsoSessOpen(&il_irblk, IORI_IMAGE, (PTR) IIITARGS.ilinfile, 
+		(FID *) NULL, &rtstab)) != OK)
+    {
+	IIOerError( ILE_FATAL, (ER_MSGID) rval, 
+					IIITARGS.ilinfile, (char *) NULL
+	);
+	IIOexExitInterp(rval);
+    }
+
+    /* register IRBLK to runtime system */
+    iiarRegisterIR(&il_irblk);				 
+
+    /* Connect User DBMS Session */
+    _VOID_ IIAFdsDmlSet(rtstab->abdml);	/* set run-time DML */
+    IIARdbConnect( IIITARGS.ildatabase, IIITARGS.iluname, (char *)NULL,
+			rtstab->abroleid, rtstab->abpassword, (char *)NULL 
+    );
+
+    /* Save user's session ID */
+    EXEC SQL INQUIRE_INGRES ( :saved_id = SESSION );
+    /* Switch to Interpreter/Front-End Session */
+    EXEC SQL SET_INGRES ( SESSION = :UI_SESSION );
+
+    /*
+    ** There are two ways to execute.
+    ** The normal way, the user provides a frame to call,  we
+    ** initialize ABF's runtime system, and then call the frame.
+    **
+    ** The other way is used for testing. In it, a form is displayed
+    ** that the user can fill in to execute a single frame, or
+    ** different things.
+    */
+
+    /*
+    ** Set up ABF RTS frame and procedure tables, and initialize the
+    ** forms needed by the ABF RTS.  Then set up the routines
+    ** to be called within the interpreter from the ABF RTS.
+    */
+    func_pointers(rtstab, hl_proc);
+    IIARstart(rtstab);
+
+    if (IIITARGS.ilrunmode == ILNRMNORMALRUNMODE)
+    {
+	/*
+	** Call dummy routines to pull in modules in overlays.
+	** These calls are required since the runtime execution
+	** routines are actually called through a table.
+	*/
+	IIOdnDumpNoop();
+	IIOqpQryNoop();
+
+	/*
+	** Run first frame / procedure in application.
+	*/
+	if ( !rtstab->batch && !IIITARGS.ilstartframe && !IIITARGS.ilstartproc )
+	{
+		/* Note:  If not found, default is still start frame */
+		IIITARGS.ilstartframe =
+		    ! (IIITARGS.ilstartproc = IIARisProc(IIITARGS.ilstartname));
+	}
+
+	if ( rtstab->batch || IIITARGS.ilstartproc )
+	{
+		/* Switch to (saved) User/Application Session */
+		IIARrsiRestoreSessID(saved_id);
+
+		IIARprocCall(IIITARGS.ilstartname, (ABRTSPRM *) NULL);
+	}
+	else
+	{
+		/* initialize form ... may fetch form from DB */
+		IIARformGet(IIITARGS.ilstartname);
+
+		/* Switch to (saved) User/Application Session */
+		IIARrsiRestoreSessID(saved_id);
+
+		IIARfrmCall(IIITARGS.ilstartname, (ABRTSPRM *) NULL);
+	}
+    }
+    else
+    {
+	IIITtrmTestRunMode(&IIITARGS);
+    }
+
+    IIORscSessClose(&il_irblk);
+    FEendforms();
+    IIARdbExit();
+    FEing_exit();
+    EXdelete();	/* IIOehExitHandler */
+    PCexit(OK);
+}
+
+/*
+** Name:	ParmTextFunc() -	Prompt for Command Line Parameters
+**
+** Description:
+**	This function is a callback routine which will be called
+**	on the first call to the system procedure CommandLineParameters.
+**	It will prompt the user for application-specific command line parameters
+**	and will return a pointer to a DB_TEXT_STRING containing a copy 
+**	of the response.  Note that the user response is limited to one line
+**	(74 characters on most terminals), and it's not processed by the
+**	system (e.g. there's no expansion of wilcard caharacters as is done
+**	by most UNIX shells when parameters are entered on a command line).
+**
+** History:
+**	03/13/91 (emerson)
+**		Written for Topaz release.
+**	31-aug-1993 (mgw)
+**		Fix casting for prototyping of MEcopy() call.
+*/
+static
+DB_TEXT_STRING *
+ParmTextFunc( )
+##{
+	i4		size;
+	DB_TEXT_STRING	*ParmTextString;
+##	char		ParmBuf[ 256 ];
+
+##	prompt ( ERget( S_IT0021_Enter_app_parms ), ParmBuf )
+##		with style=popup (rows=5)
+
+	size = STlength( ParmBuf );
+
+	ParmTextString = (DB_TEXT_STRING *)FEreqmem( basetag,
+		size + sizeof(DB_TEXT_STRING) -
+		sizeof(ParmTextString->db_t_text),
+		(bool)FALSE, (STATUS *)NULL );
+
+	if ( ParmTextString == (DB_TEXT_STRING *)NULL )
+	{
+		IIUGbmaBadMemoryAllocation( ERx("iltop.qsc") );
+	}
+	ParmTextString->db_t_count = size;
+	MEcopy( (PTR)ParmBuf, (u_i2)size, (PTR)ParmTextString->db_t_text );
+
+	return ParmTextString;
+##}
+
+/*
+** Name:	func_pointers() -	Set up Function References in Tables.
+**
+** Description:
+**	routine to set up appropriate function pointers in runtime table.
+**	This routine replaces all the function pointers for 4GL frames
+**	and procedures with the appropriate interpreter calls, and links up
+**	Host language procedures with the appropriate addresses.
+**
+** History:
+**	1/89 (bobm)	written
+**	9/89 (jhw)  Added system function support.
+*/
+
+#define HASHSIZE 400
+
+typedef VOID	(*VFUNCPTR)();
+typedef i4	*(*NFUNCPTR)();
+
+GLOBALREF ABRTSFUNCS	iiITsyProcs[];
+GLOBALREF ABRTSFUNCS	iiITsyFrames[];
+
+static VOID
+func_pointers ( rts, hlptr )
+ABRTSFUNCS	*hlptr;
+ABRTSOBJ	*rts;
+{
+    register ABRTSPRO	*pro;
+    register ABRTSFRM	*frm;
+    register i4	i;
+    register ABRTSFUNCS	*funcs;
+
+    PTR	hashtab;
+
+    /*
+    ** Hash the procedures.  With no 'alloc_fail' routine, there is no fail
+    ** return in the hash table init & enter routines.
+    */
+    IIUGhiHtabInit( HASHSIZE,
+		(STATUS (*)())NULL, (i4 (*)())NULL, (i4 (*)())NULL, &hashtab
+    );
+
+    /* Enter system procedures first, so they can be
+    ** overridden by user-defined procedures (if any.)
+    */
+    for ( funcs = iiITsyProcs ; funcs->name != NULL ; ++funcs )
+	IIUGheHtabEnter(hashtab, funcs->name, funcs->addr);
+
+    if ( hlptr != NULL && hlptr->name != NULL )
+    { /* enter user 3GL procedures */
+	for ( funcs = hlptr ; funcs->name != NULL ; ++funcs )
+	    IIUGheHtabEnter(hashtab, funcs->name, funcs->addr);
+    }
+
+    /*
+    ** Fill in procedure addresses.  If OSL and not a system procedure
+    ** (the IL frame ID will be defined,) simply set to 'IIOrpRunProc()',
+    ** otherwise look up address, and set to NULL if not found.
+    */
+    pro = rts->abroptab;
+    for ( i = rts->abropcnt ; --i >= 0 ; ++pro )
+    {
+	PTR	dat;
+	
+	if ( pro->abrplang == hostOSL && pro->abrpfid != OC_UNDEFINED )
+	{ /* a user 4GL procedure */
+		pro->abrpfunc = (VFUNCPTR) IIOrpRunProc;
+	}
+	else if ( IIUGhfHtabFind(hashtab, pro->abrpname, &dat) == OK )
+	{ /* either a user 3GL procedure or a system function */
+		/* assert:  pro->abrplang != hostDML */
+		/* lint doesn't like this, but what's to be done? */
+		pro->abrpfunc = (VFUNCPTR) dat;
+	}
+	else
+	{ /* a DB procedure */
+		pro->abrpfunc = NULL;
+	}
+    }
+    IIUGhrHtabRelease(hashtab);
+
+    /*
+    ** Hash the system frames.  With no 'alloc_fail' routine, FAIL
+    ** is not returned from the hash table init & enter routines.
+    */
+    IIUGhiHtabInit( HASHSIZE,
+		(STATUS (*)())NULL, (i4 (*)())NULL, (i4 (*)())NULL, &hashtab
+    );
+
+    /* Enter system frames. */
+    for ( funcs = iiITsyFrames ; funcs->name != NULL ; ++funcs )
+	IIUGheHtabEnter(hashtab, funcs->name, funcs->addr);
+
+    /*
+    ** Fill in frame addresses.  If a user frame and not a system frame
+    ** (the IL frame ID will be defined,) simply set to 'IIOrfRunFrame()',
+    ** otherwise look up address, and set to NULL if not found.
+    */
+    frm = rts->abroftab;
+    for ( i = rts->abrofcnt ; --i >= 0 ; ++frm )
+    {
+	PTR	dat;
+	
+	if ( frm->abrfrtype == OC_OSLFRAME )
+	{ /* 4GL frames only, which includes menu and VQ frames ... */
+		if ( frm->abrfrnuser.abrfid != OC_UNDEFINED )
+		{ /* a user frame (which calls the interpreter) */
+			frm->abrfrnuser.abrfunc = (NFUNCPTR) IIOrfRunFrame;
+		}
+		else if ( IIUGhfHtabFind(hashtab, frm->abrfrname, &dat) == OK )
+		{ /* a system function */
+			/* lint doesn't like this, but what's to be done? */
+			frm->abrfrnuser.abrfunc = (NFUNCPTR) dat;
+		}
+		else
+		{
+			frm->abrfrnuser.abrfunc = NULL;
+		}
+	}
+    }
+
+    IIUGhrHtabRelease(hashtab);
+}

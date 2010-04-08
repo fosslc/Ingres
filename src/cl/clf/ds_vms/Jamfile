@@ -1,0 +1,10 @@
+#
+# Jamfile file for cl!clf!ds_vms
+#
+
+SubDir ING_SRC cl clf ds_vms ;
+
+IISUBSYS cl clf ds_vms ;
+
+IILIBRARY COMPATLIB : dsnat.c dsencode.c dsdecode.c dsclose.c
+        ds.c dsbool.c dschar.c dsf8.c dsi4.c dsmisc.c dsstring.c ;

@@ -1,0 +1,26 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmdppdef.hlp
+DATA PROPAGATION PATH (DPP)
+
+The DPP defines what route the data takes to reach target databases
+within a CDDS.
+
+Replicator moves information from one database to another according to
+the Data Propagation Path for that CDDS.  In a Data Propagation Path, a
+database can be one of three types:  originator, local or target.  Each
+of these types is defines as follows:
+
+Originator      The database where a user made a change to a replicated
+                table.
+
+Local           The database that propagates the change to the target.
+                This is the last database that the change goes through
+                before reaching the target.  The local database can be
+                the same as the originator database.  A local database
+                must be a target database in another path (it must
+                receive the data as a target) before it can propagate
+                the data as a local database.
+
+Target          The database that receives the change.  Every database
+                in the CDDS must be a target.  The target and the
+                originator database cannot be the same in a given path.

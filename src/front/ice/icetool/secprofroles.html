@@ -1,0 +1,30 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Profile/Role association&submit=actProfRole.html` -->
+		<INPUT TYPE="HIDDEN" NAME="action" VALUE="insert">
+		<INPUT TYPE="HIDDEN" NAME="profile_id" VALUE="<!-- #ICE VAR=`:profile` -->">
+		<TABLE BORDER=0>
+			<TR>
+				<TD  colspan=2>Please select the role you want to associate to 
+				<!-- #ICE REPEAT FUNCTION=`profile?action=retrieve&profile_id=:profile` 
+				HTML=`:profile_name <INPUT TYPE="HIDDEN" NAME="name" VALUE=":profile_name">` -->:
+				</TD>
+			</TR>
+			<TR>
+				<TD>Role: </TD>
+				<TD><SELECT NAME="role_id">
+			<!-- #ICE FUNCTION=`role?action=select`
+					 HTML=`
+					 <OPTION VALUE=":role_id">:role_name</OPTION>`
+			-->
+				</SELECT></TD>
+			</TR>
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

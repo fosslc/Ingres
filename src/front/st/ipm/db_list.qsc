@@ -1,0 +1,293 @@
+/*
+**      Copyright (c) 2007 Ingres Corporation
+**      All rights reserved.
+*/
+
+/* statics and includes */
+#include <compat.h>
+#include <cs.h>
+#include <dbms.h>
+#include <pc.h>
+#include <lg.h>
+#include <st.h>
+#include <lk.h>
+#include <me.h>
+#include <fe.h>
+#include <er.h>
+#include <id.h>
+#include "lists.h"
+#include "dba.h"
+
+
+/*
+** File: db_list.qc - contain routines to get dbnames from iidbdb and
+**	place them in a linked list.  Also contains routine for getting info
+**	from the linked list.
+**
+** Contains routines:
+**	get_db_id()
+**	get_db_name()
+**	read_iidbdb()
+**	get_nextdb()
+**
+*/
+
+/*
+** Forward or external references
+*/
+VOID open_db();
+VOID close_db();
+VOID getingpriv();
+i4  get_db_id();
+i4  get_db_name();
+VOID read_iidbdb();
+i4  get_nextdb();
+
+
+/*	read_iidbdb
+**	
+**	Sets up linked list of dbname, db_id pairs, read in from the
+**	iidbdb.  This avoids constantly opening and closing db's 
+**	later on.
+**
+**	History
+**	9/1/88 		tomt	Created
+**	1/18/89 	tomt	Added new logical to allow internal lockinfo
+**				files to be placed in alternate areas
+**      1/25/89  	tomt	converted for use in R6 lockinfo
+**	2/21/89  	tomt	converted to use linked list routines
+**	9/21/89		tomt	added return codes to get_db_name()
+**      5/26/93 (vijay)
+**              include pc.h
+**	26-Aug-1993 (fredv)
+**		Included <st.h>.
+**      21-Sep-1993 (smc)
+**   		Added <cs.h> for CS_SID.
+**	22-Jan-1994 (fredv)
+**		Must change the IPM_VER to 1.0; otherwise, the version check
+**		will fail to compare 6.5 to 1.0.		
+**	22-Jan-1994 (jpk)
+**		Now must change the IPM_VER to 1.1.
+**      08-Dec-94 (liibi01)
+**              Cross integration from 6.4, removed unintentional trigraph.
+**      28-Apr-95 (dilma04)
+**              Changed the IPM_VER from "1.1" to "2.0" 
+**      8-jun-95 (hanch04)
+**		VERSion is OpING 1.2 for now
+**      25-aug-95 (tutto01)
+**		VERSion is OpING 1.1 for now, for Windows NT
+**	05-sep-95 (emmag)
+**		Version back to OpING 1.2 for now, for Windows NT.
+**	2-nov-95 (nick)
+**		Remove string literal.
+**	5-jul-96 (kch)
+**		The prefix for the release id has changed to OI to
+**		facilitate the TOPS system.
+**	13-jun-1996 (thaju02)
+**	        Changed the IPM_VER from "OpING 1.2" to "OpING 2.0"
+**	04-dec-1997 (hanch04)
+**	        Changed the IPM_VER from "OI 2.0" to "OI 2.5"
+**	22-apr-1998 (hanch04)
+**	        Changed the IPM_VER from "OI 2.5" to "2.5"
+**	11-jun-98 (mcgem01)
+**		Changed the IPM_VER to II 2.0 for Ingres II.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      02-Mar-2001 (hanch04)
+**          Bumped release id to external "II 2.6" internal 860 or 8.6
+**      07-Apr-2003 (hanch04)
+**          Bumped release id to external "II 2.65" internal 865 or 8.65
+**	18-sep-2003 (abbjo03)
+**	    Include pc.h ahead of lg.h.
+**      13-Jan-2004 (sheco02)
+**          Bumped release id to external "II 3.0" internal 900 or 9.0 
+**	17-Jan-2006 (hweho01)
+**	    Changed the IPM_VER string from "II 3.0" to "ING 9.0". 
+**      01-Feb-2006 (hweho01)
+**          Modified IPM_VER string to "II 9.0", need to maintain the
+**          compatibility with current/previous releases.
+**	27-Apr-2006 (hweho01)
+**	    Changed the IPM_VER string from "II 9.0" to "II 9.1" for 
+**          new release.
+**	07-May-2007 (drivi01)
+**	    Changed the IPM_VER string from "II9.1" to "II 9.2" for
+**	    new release.
+**	14-Jun-2007 (bonro01)
+**	    Changed the IPM_VER string from "II9.2" to "II 9.3" for
+**	    new release.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	04-Jun-2009 (bonro01)
+**	    Changed the IPM_VER string to "II 9.4" for new release.
+**	10-Jun-2009 (hweho01)
+**	    Changed the IPM_VER string to "II 10.0" for new release.
+**	24-Nov-2009 (frima01) Bug 122490
+**	    Added include of id.h to eliminate gcc 4.3 warnings.
+*/
+
+#define	IPM_VER	"II 10.0"
+
+VOID
+read_iidbdb()
+{
+##  char	dn[FE_MAXNAME + 1];
+##  int		db_id;
+    DB_INFO	*dbptr;
+    char	userbuf[16];
+    char	*user = userbuf;
+    STATUS	status, version_check();
+
+    /* calls to read_iidbdb() shouldn't happen, but defensive code */
+    if (flag_standalone)
+	return;
+
+    /* Free memory if any - OK to call before building list */
+    l_free(DBINFO, 0);
+
+    open_db("iidbdb");	/* open the database database */
+    if (version_check(IPM_VER) != OK)
+	terminate(FAIL, "version check error: must run against %s", IPM_VER);
+    IDname(&user);
+    getingpriv(user);	/* get the user's INGRES permission mask */
+
+    /* get dbnames/db_ids from the iidbdb */
+##  retrieve(dn = trim(iidatabase.name), db_id = iidatabase.#db_id)
+##  {
+	if ((dbptr = (DB_INFO *)MEreqmem((u_i4)0, (u_i4)sizeof(DB_INFO), 
+			FALSE, &status)) == NULL) 
+	{
+	    terminate(FAIL, "read_iidbdb: error allocating memory");
+	}
+
+	STcopy(dn, dbptr->dbname);
+	dbptr->db_id = db_id;
+	l_add(DBINFO, 0, 0, (PTR) dbptr);	/* add to dblist */
+##  }
+    close_db();	/* close the database database */
+    return;
+}
+
+/*
+**	get_db_name
+**
+**	Given a db_id, look up the database name in the linked list
+**	of db_ids,dbnames created in read_iidbdb.
+**	Result is put into dbname.
+**
+** Returns:
+**	OK - if db name was found
+**	FAIL - if not
+*/
+STATUS
+get_db_name(dbname, db_id)
+PTR dbname;
+i4  db_id;
+{
+    DB_INFO	*db_ptr;
+    /* tells l_retrieve() to start at top of list */
+    bool	reset_flag = TRUE;
+
+    /* short circuit for special case */
+    if (db_id == 1)
+    {
+	STcopy("iidbdb", dbname);
+	return OK;
+    }
+
+    if (flag_standalone)
+    {
+	STprintf(dbname, "<%d>", db_id);
+	return OK;
+    }
+    for (db_ptr = (DB_INFO *)l_retrieve(DBINFO, 0, &reset_flag); db_ptr != NULL;
+	db_ptr = (DB_INFO *)l_retrieve(DBINFO, 0, (bool *)0))
+    {
+	if (db_ptr->db_id == db_id)
+	{
+	    STcopy(db_ptr->dbname, dbname);
+	    return OK;
+	}
+    }
+    STprintf(dbname, "%s%d", KEY_UNKNOWN, db_id);
+    return FAIL;
+}
+
+/*
+**	get_db_id
+**
+**	Given a db_name, look up the database id in the linked list
+**	of db_ids,dbnames created in read_iidbdb.
+**	Result is returned.
+**
+** Inputs:
+**	db_name - pointer to the database name to find the dbid for
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	dbid - if db id was found
+**	-1  - if not
+*/
+i4
+get_db_id(db_name)
+PTR db_name;
+{
+    DB_INFO	*db_ptr;
+    i4		db_id = -1;
+    PTR 	name;
+    /* tells l_retrieve() to start at top of list */
+    bool	reset_flag = TRUE;
+
+    if (flag_standalone)
+	return 0;
+    /*
+    ** R6 nicety - it insists on passing some dbnames padded.  We must find
+    ** the first blank and put a null there...
+    */
+    name = db_name;
+    STzapblank(name, name);
+    
+    /* Search for the db_id of ptr_dbname */
+    for (db_ptr = (DB_INFO *)l_retrieve(DBINFO, 0, &reset_flag); db_ptr != NULL;
+	db_ptr = (DB_INFO *)l_retrieve(DBINFO, 0, (bool *)0))
+    {
+	if (! (STcompare(db_ptr->dbname, db_name) ))
+	{
+	    return db_ptr->db_id;
+	}
+    }			
+    return db_id;
+}
+
+/*
+**
+** get_nextdb(db_name)
+**
+** This routine returns database names from the linked list.
+** On each call, the next database name is returned.
+** When the end of the list is encountered, 0 is returned.
+*/
+i4
+get_nextdb(db_name)
+PTR db_name;
+{
+    DB_INFO	*db_ptr;
+    /* tells l_retrieve() to start at top of list */
+    static bool	reset_flag = TRUE;
+
+    if (flag_standalone)
+	return 0;
+
+    db_ptr = (DB_INFO *)l_retrieve(DBINFO, 0, &reset_flag);
+    if (db_ptr == NULL) {
+        reset_flag = TRUE;
+	return 0;
+    } else {
+	STcopy(db_ptr->dbname, db_name);
+    }
+    return 1;
+}	

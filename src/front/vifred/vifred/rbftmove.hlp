@@ -1,0 +1,26 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are moving a piece of trim to a new location.  Move the cursor to 
+the new location and then use the "Place" menu command to put the trim 
+there.  You can also use the other menu commands for optional placement 
+of the trim.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Place           Place the trim at the current cursor position.
+
+        Left            Move the trim to the left border of the report.
+
+        Center          Center the trim on the report.
+
+        Right           Move the trim to the right border of the report.
+
+        Shift           Move the current trim to a position specified by
+                        the cursor, shifting other components to the right,
+                        preserving the spacing.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Report Layout menu without changing 
+                        the location of the trim.

@@ -1,0 +1,10 @@
+#
+# OpenROAD makefile generation hints for common\gcf\drivers\krb5
+#
+# History:
+#	10-Jul-2007 (wridu01)
+#		Ignore all unneeded files for OpenROAD
+#
+ignore = gcskrb.c
+ignore = gssapi_krb5.c
+ignore = libgcskrb.lot

@@ -1,0 +1,46 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of an SQL database procedure.  You can change
+the definition on the form and through some of the menu operations.  Within
+the running application this procedure will execute whenever it is invoked
+by any executing 4GL code.
+
+If the name you have chosen for the procedure conflicts with the name of
+an Ingres system function, a reverse-video warning will be displayed on this
+form (unless the "-w" flag was specified when you started up.)  You may
+continue to use the name for the procedure, but you will not be able to call
+the corresponding system function from 4GL in this application.
+
+A database procedure can only be specified as being a library procedure so
+the Library field contains a display-only value of "Yes."  Database library
+procedures are maintained externally and do not have any source file
+associated with them.
+
+Fill in the Return Type field with the data type of the value that will be
+returned by this procedure, if any.   Legal return types are any integer
+data type or "none."  Legal return types are listed and may be specified by
+selecting the Field menu item of the Help operation.  An integer data type
+may also be Nullable, which can be specified in the Nullable field.
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        NewEdit                 Get or create the definition of a different
+                                application component object.  You will be
+                                prompted for the type and name of the object
+                                you wish to define.
+
+        Go                      Test the database procedure.
+
+        LongRemark              Display and allow editing of the long remarks.
+
+        Print                   Print this definition for the procedure not
+                                including the text of the procedure.
+
+        Help                    Access the Ingres Help facility.
+
+        Cancel                  Ignore any changes and return to the Edit 
+                                Application catalog frame.
+
+        End                     Save any changes and return to the Edit 
+                                Application catalog frame.

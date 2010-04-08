@@ -1,0 +1,17 @@
+#
+# Jamfile file for testtool!achilles!acstart_win
+#
+
+SubDir ING_SRC testtool achilles acstart_win ;
+
+IISUBSYS testtool achilles acstart_win ;
+
+
+IILIBRARY ACHILLESLIB : routines.c
+	acstart.c ;
+
+IIRCTORES acstart.rc ;
+
+IITOOLSEXE acstart : acstart.c routines.c ;
+IINEEDLIBS acstart : LIBINGRES ;
+IINEEDRES acstart : acstart.res ;

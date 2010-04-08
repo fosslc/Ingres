@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The on_error parameter contains the type of action to take when a non-fatal
+ error within the auditing system has occurred. Valid actions are the following:
+
+       SHUTDOWN  - Shut down the Ingres DBMS server. New DBMS servers will 
+                   NOT start until problem with the security audit log has been
+		   resolved.
+
+       STOPAUDIT - This allows the Ingres installation to continue running
+		   but shuts down auditing. Auditing will restart automatically
+		   once the current audit log is once again available for 
+		   writing.

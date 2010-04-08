@@ -1,0 +1,19 @@
+;
+; History:
+;	27-apr-2001 (somsa01)
+;	    Created
+;	03-Aug-2001 (penga03)
+;	    Added ingres_rollback_net.
+;	21-Aug-2001 (penga03)
+;	    Added ingres_unset_net_reg_entries.
+;	18-Sep-2008 (drivi01)
+;	    Add ingres_store_vnode and 
+;	    ingres_add_vnode_to_reg
+;
+EXPORTS
+    ingres_remove_net_files
+    ingres_set_net_reg_entries
+    ingres_rollback_net
+    ingres_unset_net_reg_entries
+    ingres_store_vnode
+    ingres_add_vnode_to_reg

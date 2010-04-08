@@ -1,0 +1,113 @@
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_atttype_mod
+
+CREATE UNIQUE INDEX ii_atttype_mod
+    ON ii_atttype (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_databases_mod
+
+CREATE UNIQUE INDEX ii_databases_mod
+    ON ii_databases (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_acl_mod
+
+CREATE UNIQUE INDEX ii_dbd_acl_mod
+    ON ii_dbd_acl (folder_id, entity_id, acl_sequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_identif_mod
+
+CREATE UNIQUE INDEX ii_dbd_identif_mod
+    ON ii_dbd_identifiers (folder_id, entity_id, identifier_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_locatio_mod
+
+CREATE UNIQUE INDEX ii_dbd_locatio_mod
+    ON ii_dbd_locations (folder_id, entity_id, sequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_rightsl_mod
+
+CREATE UNIQUE INDEX ii_dbd_rightsl_mod
+    ON ii_dbd_rightslist (folder_id, entity_id, rightslist_id,
+			  identifier_id, rl_sequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dbd_table_c_mod
+
+CREATE UNIQUE INDEX ii_dbd_table_c_mod
+    ON ii_dbd_table_char (folder_id, entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_domains_mod
+
+CREATE UNIQUE INDEX ii_domains_mod
+    ON ii_domains (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_enttype_mod
+
+CREATE UNIQUE INDEX ii_enttype_mod
+    ON ii_enttype (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_joinspecs_mod
+
+CREATE UNIQUE INDEX ii_joinspecs_mod
+    ON ii_joinspecs (entity_id, join_group, enttype_position)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_key_info_mod
+
+CREATE UNIQUE INDEX ii_key_info_mod
+    ON ii_key_info (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_key_map_mod
+
+CREATE UNIQUE INDEX ii_key_map_mod
+    ON ii_key_map (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_rel_cncts_e_mod
+
+CREATE UNIQUE INDEX ii_rel_cncts_e_mod
+    ON ii_rel_cncts_ent (rel_id, entity_id, enttype_position)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_reltype_mod
+
+CREATE UNIQUE INDEX ii_reltype_mod
+    ON ii_reltype (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_sqlatts_mod
+
+CREATE UNIQUE INDEX ii_sqlatts_mod
+    ON ii_sqlatts (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_sqltables_mod
+
+CREATE UNIQUE INDEX ii_sqltables_mod
+    ON ii_sqltables (entity_id)
+

@@ -1,0 +1,39 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Hyper Link to Shakespeare's Plays by type</title>
+</head>
+<body>
+<h1>Hyper Link to Shakespeare's Plays by type</h1>
+
+<!-- to do: fill in with select from tool, use type LINK
+            to build hypertext links to this address:
+            /ice-bin/oiice.<ext>/playgroup/plays[play_typeLinkSubSet.html.html]
+	    use the http_api_ext variable for platform independence (dll on 
+	    Windows NT, 1.so on Solaris)
+            pass the type of the play as the variable to this page
+-->
+
+<!-- #ICE REPEAT INCLUDE=`plays[play_TxnCndCmt_h.html]` -->
+<!-- #ICE REPEAT
+    VAR=`
+<!-- #ICE 
+          DATABASE = ``icetutor``
+          SQL=``select distinct type from plays``
+          TRANSACTION=``t_type``
+          CURSOR=``c_type``
+          ROWS=``10``
+          TYPE=``PLAIN``
+          LINKS=``type,/ice-bin/oiice.:http_api_ext/playgroup/plays[play_typeLinkSubSet.html]``
+          -->`
+-->
+<!-- #ICE COMMIT=`t_type` -->
+
+<!-- #ICE DECLARE=`session.e_return=play_typeLink.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

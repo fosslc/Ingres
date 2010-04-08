@@ -1,0 +1,127 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.i64_lnx -- Variable definitions for Itanium Linux
+#
+#  Description:
+#       Platform specific variable definitions for Itanium Linux
+#	This is a hybrid-capable platform, wherein the 32-bit build
+#	is just int_lnx. (!!)
+#
+# History:
+#       08-Nov-2004 (kodse01)
+#           Created. Derived from Jamdefs.int_lnx, mkdefault.sh and
+#           mkgeneric.sh
+#	15-May-2005 (hanje04)
+#	    Updated for reverse hybrid build.
+#	10-Oct-2005 (hanje04)
+#	    Add README defines for Itanium Linux
+#	26-Oct-2005 (hanje04)
+#	    Remove -fwritable-strings from compiler flags. Not supported in
+#	    GCC 4.0
+#	21-Sep-2006 (toumi01)
+#	   Define C++ like CXX to invoke g++ so that this file includes
+#	   all the settings needed to override the compiler version.
+#       22-Sep-2006 (hweho01)
+#           NPTL is now the default Itanium Linux build.
+#       16-Oct-2006 (hanal04) Bug 116866
+#           Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#           NOOPTIM does not strip this when explicitly set.
+#        8-Oct-2007 (hanal04) Bug 119262
+#           Added archive iimerge.a alternative to shared library server.
+#       07-Dec-2007 (kiria01) b119773
+#           Hires timers need -lrt
+#       26-Mar-2008 (macem01)
+#           Bug 116911
+#           Define BUILD_GTK_GUI and BUILD_GTK_INST so they are correctly
+#           built on this platform. They are now excluded by default.
+#       25-Jun-2008 (rajus01) SIR 120420, SD issue 116370
+#           Added PAMLIB to resolve symbols defined in PAM library.
+#	22-Jun-2009 (kschendel) SIR 122138
+#	    Add 32-bit symbols for new hybrid scheme.
+#
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG = -DXP_UNIX ;
+APACHE_API_FLAG = -DLINUX=2 ;
+VERS32    = "int_lnx" ;
+VERS64    = "i64_lnx" ;
+AS32	= "i686-unknown-linux-gnu-as" ;
+AS64	= $(AS) ;
+LD32	= $(LD) ;
+LD64	= $(LD) ;
+CCLD32	= "i686-unknown-linux-gnu-gcc" ;
+CCLD64	= $(CCLD) ;
+ASMACH32 = "--32" ;
+ASMACH64  = "" ;
+CD      = "cd" ;
+CC      default = "cc" ;
+CCDEBUG = "-g" ;
+CPP     default = "/lib/cpp" ;
+CCMACH32 = -DBUILD_ARCH32 -b i686-unknown-linux-gnu -V 3.2.3 -m32 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
+CCMACH64 = -DBUILD_ARCH64 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
+CCLDMACH32 = -b i686-unknown-linux-gnu -V 3.2.3 -rdynamic ;
+CCLDMACH64 = -rdynamic ;
+
+# Note that this LDORIGIN is used for various distributed binaries,
+# but *NOT* for the dbms server.  The DBMS server is linked with iilink,
+# which uses an LDSRVORIGIN variable defined via mkdefault.sh via iisysdep.
+# Server-shared-library servers need to use an rpath of just $ORIGIN
+# for set-uid reasons, so there are various hoops;  but iilink takes
+# care of all that.
+LDORIGIN = -Wl,-rpath,'$ORIGIN/../lib' ;
+LDORIGINLP32 = -Wl,-rpath,'$ORIGIN/../../lib/lp32' ;
+LDORIGINLP64 = -Wl,-rpath,'$ORIGIN/../../lib/lp64' ;
+
+CCSHLDMACH32      = "-b i686-unknown-linux-gnu -V 3.2.3 -shared" ;
+CCSHLDMACH64      = "-shared" ;
+CCLDSERVER32    = "-b i686-unknown-linux-gnu -V 3.2.3" ;
+CCLDSERVER64	= "" ;
+CCPICFLAG = -fPIC ;
+SLSFX = so ;
+LIBSFX = a ;
+OBJSFX = o ;
+MWSLSFX = so ;
+CGISFX = cgi ;
+LDLIBPATH32 = /lib /usr/lib /usr/local/lib ;
+LDLIBPATH64 = /lib /usr/lib /usr/local/lib ;
+LIBMACH = ;
+LDLIBMACH32 = -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s ;
+LDLIBMACH64 = -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s ;
+LD_ICE_FLAGS = ;
+ICE_EXT               = so ;
+CGI_EXT               = cgi ;
+OPTIM           = "" ;
+IIOPTIM         ?= "-O" ;
+NOOPTIM       ?= "-O0" ;
+IIL1OPTIM       ?= "-O1" ;
+SHELLHEADER = "#!/bin/bash" ;
+LEX = flex ;
+BSD42 default = -DBSD42 ;
+DIRENT default = -DDIRENT ;
+DIRFUNC default = -DDIRFUNC ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 default = -DSYS5 ;
+SYSGRAPHLIB = ;
+SYMLINK = test -h ;
+CXX = g++ ;
+C++ = g++ ;
+UNDEFFLAG  = "-u " ;
+CXX_DEFS = ;
+XERC_DEFS = -O -DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET ;
+DBMS_STACKSIZE = 262144 ;
+if $(BUILD_ARCH) = "64" || $(BUILD_ARCH) = "64+32"
+{
+    platform_string = "NPTL Linux on Itanium" ;
+}
+else
+{
+    platform_string = "NPTL Intel Linux" ;
+}
+extension_string = $(config_string)_nptl ;
+BUILD_GTK_INST ?= TRUE ;
+BUILD_GTK_GUI ?= TRUE ;
+PAMLIB        = TRUE ;

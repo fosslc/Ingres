@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The cache_name parameter specifies the name of the shared buffer cache to be 
+  used by the server. A default cache name will be used if none specified. A 
+  valid cache name cannot exceed more than eight (8) characters.
+

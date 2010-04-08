@@ -1,0 +1,33 @@
+# Copyright (c) 2004 Ingres Corporation
+# Name: icefiles.dat
+#
+# Description: Datafile for the copy_files function in iisuice
+#
+# Colon (':') seperated fields specify source and target file
+#     Source File Paths are relative to $II_SYSTEM/ingres/ice
+#     Target Directory Paths are relative to $II_HTML_ROOT
+#     Target File Names may differ from source file names or be '.'
+#
+# File format:
+#     DemoPart:SourceFilePath:TargetDirectoryPath:TargetFileName
+#
+## History:
+##    16-Apr-1999 (peeje01)
+##        Created
+##
+#
+icetool:icetool/login.html:ice:ialogin.html
+icetutor:icetutor/login.html:ice:itlogin.html
+plays:plays/play_welcome.html:ice:.
+plays:plays/tutorialGuide/*:ice/tutorialGuide:.
+plays:plays/play_public.css:ice/styles:.
+plays:plays/bgpaper.gif:ice/images:.
+plays:plays/OldGlobe.gif:ice/images:.
+global:public/ice_index.html::.
+global:public/ice.css:ice/styles:.
+global::ice/tmp:
+samples:samples/app/*:ice/samples/app:.
+samples:samples/dbproc/*:ice/samples/dbproc:.
+samples:samples/query/*:ice/samples/query:.
+samples:samples/report/*:ice/samples/report:.
+

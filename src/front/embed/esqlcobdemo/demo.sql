@@ -1,0 +1,11 @@
+DROP TABLE DEMO_PERSONNEL;
+CREATE TABLE DEMO_PERSONNEL  (
+    NUMBER int      NOT NULL,
+    NAME   char(24) NOT NULL,
+    STREET char(24) NOT NULL,
+    CITY   char(15) NOT NULL,
+    STATE  char(2)  NOT NULL,
+    ZIP    char(5)  NOT NULL,
+    SSN    char(9)  NOT NULL );
+COPY DEMO_PERSONNEL() FROM 'DEMO.DATA';
+\g

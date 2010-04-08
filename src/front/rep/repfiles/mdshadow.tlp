@@ -1,0 +1,14 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+**
+** Name:	mdshadow.tlp - modify shadow template
+**
+** Description:
+**	Used to modify the storage structure of the shadow table.
+##
+## History:
+##	16-dec-96 (joea)
+##		Created based on mdshadow.tlp in replicator library.
+**/
+
+MODIFY $sha TO BTREE ON transaction_id, sourcedb, sequence_no

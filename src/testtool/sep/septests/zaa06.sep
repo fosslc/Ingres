@@ -1,0 +1,837 @@
+/*
+	Test Name: zaa06.sep
+	Time: 18-AUG-1991 12:17:07
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa06.sep
+	Purpose	: Test SEP functionality
+	Input Files  : none
+	Output Files : none
+	Database     : Septools, created by zaa01.sep.
+	Tables       :
+	Synopsis     :	Tests forms compilation aspects of SEP functionality.
+
+	History: 18-AUG-1991	Created				DONJ
+          16-Jan-1992   (DonJ)
+                Fix any unix discrepencies in canons.
+          29-Jan-1992	(DonJ)
+		Changed final canon for content of trace1.stf
+           6-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+          25-Feb-1992	(DonJ)
+		Redo canons for UNIX. Also check for new functions.
+           6-Apr-1992	(DonJ)
+		Update UNIX canons for SEP V3.2b.
+           4-NOV-1992	(DonJ)
+		Changed tokenizer slightly so token tables come out slightly
+		different than they did before.
+          31-aug-1993   (DonJ)
+		Chanaged Username from donj to testenv
+	  12-oct-1993	(DonJ)
+		Added ABORT canons for catching "(GCA_REQUEST) failures"
+	  29-Jan-1996	(somsa01)
+		Added NT_GENERIC canons.
+*/
+.if !SEPPARAMDB 
+? setenv SEPPARAMDB septools 
+<<
+environment variable was defined
+>>
+.endif 
+? vision -e SEPPARAMDB 
+<<
+
+%%     
+%% INGRES Vision -- Copyright (c) 1982, 1991 Ingres Corporation
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+>>
+<<
+
+%%     
+%% INGRES Vision -- Copyright (c) 1982, 1991 Ingres Corporation
+%% 
+DISPLAYING ERROR MESSAGE VIA IIFDERROR.
+
+%% 
+SHORT ERROR MESSAGE IS:
+
+%% GCA protocol service (GCA_REQUEST) failure.  ... 
+
+%% 
+END OF SHORT ERROR MESSAGE.
+>> ABORT
+<< IF (NT_GENERIC) 
+
+%%     
+%% INGRES Vision Copyright (c) 1982, 1991 Computer Associates Intl, Inc.
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+>>
+^^ `ESC'
+<<
+
+%% MENU KEY selected
+>>
+^^ create`CR'junk`ESC'
+<<
+
+%% MENU RESPONSE: Create
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "Create"
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: _                                        Created: 21-aug-1993 21:35:15   |
+|                                                                                |
+| Owner: testenv                                 Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: /taco/ingres65/src/65/02/testtool/sep/septests               |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+
+%% CHANGED FIELD Name:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: junk_                                    Created: 21-aug-1993 21:35:15   |
+|                                                                                |
+| Owner: testenv                                 Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: /taco/ingres65/src/65/02/testtool/sep/septests               |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: Create
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "Create"
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: _                                        Created: 29-jan-1996 17:02:18   |
+|                                                                                |
+| Owner: ingres                                 Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: D:\sep\wnt\testtool\sep\septests                             |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|                                                                                |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+
+%% CHANGED FIELD Name:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: junk_                                    Created: 29-jan-1996 17:02:18   |
+|                                                                                |
+| Owner: ingres                                 Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: D:\sep\wnt\testtool\sep\septests                             |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|                                                                                |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+>>
+^^ ok`CR'compile`CR'end`CR'`ESC'
+<<
+
+%% MENU RESPONSE: OK
+%% MENU:   OK  Cancel  ListChoices  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "OK"
+
+%% Saving Application 'junk' . . .
+%% Retrieving Application catalogs . . .
+%% Saving Menu Frame 'junk' . . .
+%% Saving Application 'junk' . . .
+%% Retrieving Application catalogs . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: junk                +-----------New+                                   |
+|                             |     junk     |                                   |
+|                             +--------<Menu>+_                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: Compile
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `3' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `3' is "Compile"
+
+%% Creating form for 'junk' . . .
+%% Generating 4GL code for 'junk' . . .
+%% Compiling 'junk.osq' . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: junk                +--------------_+                                   |
+|                             |     junk     |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: End
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `11' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `11' is "End"
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |                        |        |                                          | |
+| |_junk                    |testenv  |                                          | -
+|
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: OK
+%% MENU:   OK  Cancel  ListChoices  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "OK"
+
+%% Saving Application 'junk' . . .
+%% Retrieving Application catalogs . . .
+%% Saving Menu Frame 'junk' . . .
+%% Saving Application 'junk' . . .
+%% Retrieving Application catalogs . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: junk                +-----------New+                                   |
+|                             |     junk     |                                   |
+|                             +--------<Menu>+_                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: Compile
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `3' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `3' is "Compile"
+
+%% Creating form for 'junk' . . .
+%% Generating 4GL code for 'junk' . . .
+%% Compiling 'junk.osq' . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: junk                +--------------_+                                   |
+|                             |     junk     |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: End
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `11' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `11' is "End"
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |                        |        |                                          | |
+| |_junk                    |ingres  |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ end`CR'
+<<
+
+%% MENU RESPONSE: End
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `8' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `8' is "End"
+>>
+? delete junk.osq 
+<<
+file was deleted
+>>
+? delete junk.hlp 
+<<
+file was deleted
+>>
+? compform SEPPARAMDB junk junk.form 
+<<
+INGRES COMPFORM -- Copyright (c) 1986, 1991 Ingres Corporation
+Writing compiled version of form "junk" to file "junk.form" . . .
+Compiled version of form "junk" successfully written to file "junk.form".
+>>
+<< IF (NT_GENERIC) 
+INGRES COMPFORM Copyright (c) 1986, 1991 Computer Associates Intl, Inc.
+Writing compiled version of form "junk" to file "junk.form" . . .
+Compiled version of form "junk" successfully written to file "junk.form".
+>>
+? sepcc junk.form 
+<<
+>>
+<< IF (NT_GENERIC) 
+junk.form.c
+>>
+.if VMS 
+? delete junk.obj
+<<
+file was deleted
+>>
+.endif 
+.if UNIX 
+? delete junk.form.o
+<<
+file was deleted
+>>
+.endif 
+.if NT_GENERIC 
+? delete junk.form.obj 
+<<
+file was deleted
+>>
+.endif 
+? delete junk.form 
+<<
+file was deleted
+>>
+? vision SEPPARAMDB 
+<<
+
+%%     
+%% INGRES Vision -- Copyright (c) 1982, 1991 Ingres Corporation
+%% Retrieving Application catalogs . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_junk                    |testenv  |                                          | -
+|
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+>>
+<<
+
+%%
+%% INGRES Vision -- Copyright (c) 1982, 1991 Ingres Corporation
+%%
+DISPLAYING ERROR MESSAGE VIA IIFDERROR.
+
+%%
+SHORT ERROR MESSAGE IS:
+
+%% GCA protocol service (GCA_REQUEST) failure.  ...
+
+%%
+END OF SHORT ERROR MESSAGE.
+>> ABORT
+<< IF (NT_GENERIC) 
+
+%%     
+%% INGRES Vision Copyright (c) 1982, 1991 Computer Associates Intl, Inc.
+%% Retrieving Application catalogs . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_junk                    |ingres  |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+>>
+^^ `ESC'
+<<
+
+%% MENU KEY selected
+>>
+^^ destroy`CR'y`ESC'
+<<
+
+%% MENU RESPONSE: Destroy
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `1' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `1' is "Destroy"
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |junk                    |testenv  |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                    +----------------------------------+                    | |
+| |                    |                                  |                    | |
+| |                    |Really destroy Application 'junk'?|                    | |
+| |                    |                                  |                    | |
+| |                    |----------------------------------|                    | |
+| |                    |_No   |Do not destroy application  |                    | |
+| |                    |Yes  |Destroy application         |                    | |
+| |                    +----------------------------------+                    | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |junk                    |testenv  |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                    +----------------------------------+                    | |
+| |                    |                                  |                    | |
+| |                    |Really destroy Application 'junk'?|                    | |
+| |                    |                                  |                    | |
+| |                    |----------------------------------|                    | |
+| |                    |No   |Do not destroy application  |                    | |
+| |                    |_Yes  |Destroy application         |                    | |
+| |                    +----------------------------------+                    | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ select`CR'`ESC'
+<<
+
+%% MENU RESPONSE: Select
+%% MENU:   Select  Cancel  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "Select"
+
+%% Destroying Application 'junk' . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: Select
+%% MENU:   Select  Cancel  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "Select"
+
+%% Destroying Application 'junk' . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ end`CR'
+<<
+
+%% MENU RESPONSE: End
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `8' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `8' is "End"
+>>
+
+
+Ending at: Mon Jan 29 17:05:40 1996

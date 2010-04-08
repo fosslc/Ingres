@@ -1,0 +1,25 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vsda", "vsda.vcproj", "{ABE6FD31-687B-474B-95EA-C32271D42C15}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+		Unicode Debug|Win32 = Unicode Debug|Win32
+		Unicode Release|Win32 = Unicode Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ABE6FD31-687B-474B-95EA-C32271D42C15}.Debug|Win32.ActiveCfg = Debug|Win32
+		{ABE6FD31-687B-474B-95EA-C32271D42C15}.Debug|Win32.Build.0 = Debug|Win32
+		{ABE6FD31-687B-474B-95EA-C32271D42C15}.Release|Win32.ActiveCfg = Release|Win32
+		{ABE6FD31-687B-474B-95EA-C32271D42C15}.Release|Win32.Build.0 = Release|Win32
+		{ABE6FD31-687B-474B-95EA-C32271D42C15}.Unicode Debug|Win32.ActiveCfg = Unicode Debug|Win32
+		{ABE6FD31-687B-474B-95EA-C32271D42C15}.Unicode Debug|Win32.Build.0 = Unicode Debug|Win32
+		{ABE6FD31-687B-474B-95EA-C32271D42C15}.Unicode Release|Win32.ActiveCfg = Unicode Release|Win32
+		{ABE6FD31-687B-474B-95EA-C32271D42C15}.Unicode Release|Win32.Build.0 = Unicode Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

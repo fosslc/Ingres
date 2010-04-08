@@ -1,0 +1,7 @@
+<!-- #ICE REPEAT IF (DEFINED (e_playTxnCommitted))
+	THEN=``
+	ELSE=`<!-- #ICE DECLARE=``session.e_playTxnCommitted=TRUE`` -->`
+-->
+<!-- #ICE REPEAT IF (DEFINED(e_playTxn) AND (`:e_playTxnCommitted` != `TRUE`))
+	THEN=`<!-- #ICE COMMIT=``:e_playTxn`` --><!-- #ICE DECLARE=``session.e_playTxnCommitted=TRUE`` -->`
+-->

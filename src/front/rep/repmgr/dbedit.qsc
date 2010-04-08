@@ -1,0 +1,373 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <cm.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <stdprmpt.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	dbedit.qsc - edit a replicated database
+**
+** Description:
+**	Defines
+**		db_edit		- edit a database
+**		valid_dbms_type	- validate a DBMS type
+**		dbms_type_lookup - list choices for DBMS type
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on dbedit.osq in replicator library.
+**	14-nov-97 (joea)
+**		Correct call to IIUGerr.
+**	17-mar-98 (joea)
+**		Support gateways that allow '@' as first character.
+**	04-may-98 (joea) bug 90732
+**		Allow initial numeric character in vnode name.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF
+##char	RMdb_display[];
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmdb_detail"),
+##	*fdb_no = ERx("database_no"),
+##	*fvnode_name = ERx("vnode_name"),
+##	*fdb_name = ERx("database_name"),
+##	*fdb_owner = ERx("database_owner"),
+##	*fdbms_type = ERx("dbms_type"),
+##	*fdbms_descr = ERx("short_description"),
+##	*fremark = ERx("remark");
+
+
+STATUS valid_dbms_type(char *dbms_type, char *short_descr);
+void dbms_type_lookup(void);
+
+
+/*{
+** Name:	db_edit - edit a database
+**
+** Description:
+**	Allows the user to edit a replicated database information.
+**
+** Inputs:
+**	db_no		- database number
+**	local_db	- is this the local database
+**	vnode_name	- virtual node name
+**	db_name		- database name
+**	db_owner	- database owner
+**	dbms_type	- DBMS type
+**	remark		- remark
+**
+** Outputs:
+**	vnode_name	- virtual node name
+**	db_name		- database name
+**	db_owner	- database owner
+**	dbms_type	- DBMS type
+**	remark		- remark
+**
+** Returns:
+**	0	- no changes were made
+**	1	- changes were made and saved
+** History:
+**      01-Dec-2009 (coomi01) b122980
+**          Check vnode with less restrictive RPvalid_vnode() procedure.
+*/
+STATUS
+db_edit(
+i2	db_no,
+i2	local_db,
+char	*vnode_name,
+char	*db_name,
+char	*db_owner,
+char	*dbms_type,
+char	*remark)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+##i2	db_no;
+##char	*vnode_name;
+##char	*db_name;
+##char	*db_owner;
+##char	*dbms_type;
+##char	*remark;
+EXEC SQL END DECLARE SECTION;
+# endif
+##{
+##	i4	chng;
+##	char	objname[FE_MAXNAME+1];
+##	char	short_descr[21];
+	STATUS	retval;
+	STATUS	valid;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+	if ((valid = valid_dbms_type(dbms_type, short_descr)) == -1)
+	{
+##		message "Error validating DBMS type..." with style = popup
+		*short_descr = EOS;
+	}
+	else if (valid == 0)
+	{
+		IIUGerr(E_RM0018_Invalid_dbms_type, UG_ERR_ERROR, 0);
+		*short_descr = EOS;
+	}
+
+##	display form_name update
+##	initialize (db = RMdb_display, fdb_no = db_no,
+##		fvnode_name = vnode_name, fdb_name = db_name,
+##		fdb_owner = db_owner, fdbms_type = dbms_type,
+##		fdbms_descr = short_descr, fremark = remark)
+##	{
+		if (local_db)
+##			set_frs field form_name (displayonly(fdb_name) = 1)
+		else
+##			set_frs field form_name (displayonly(fdb_name) = 0)
+##	}
+##	activate field fvnode_name
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+##			getform (vnode_name = fvnode_name)
+			STtrmwhite(vnode_name);
+			if (!RPvalid_vnode(vnode_name) && !CMdigit(vnode_name))
+			{
+				IIUGerr(E_RM0008_Invalid_vnode_name,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+		}
+##		resume next
+##	}
+
+##	activate field fdb_name
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+##			getform (db_name = fdb_name)
+			STtrmwhite(db_name);
+			if (!RPvalid_name(db_name) &&
+				CMcmpcase(db_name, ERx("@")) != 0)
+			{
+				IIUGerr(E_RM0017_Invalid_db_name, UG_ERR_ERROR,
+					0);
+##				resume
+			}
+		}
+##		resume next
+##	}
+
+##	activate field fdbms_type
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+##			getform (dbms_type = fdbms_type)
+			STtrmwhite(dbms_type);
+			valid = valid_dbms_type(dbms_type, short_descr);
+			if (valid == -1)
+			{
+##				message "Error validating DBMS type..."
+##					with style = popup
+##				resume
+			}
+			else if (!valid)
+			{
+				IIUGerr(E_RM0018_Invalid_dbms_type, UG_ERR_ERROR, 0);
+##				resume
+			}
+		}
+##		putform (fdbms_descr = short_descr)
+##		resume next
+##	}
+
+##	activate menuitem ERget(FE_Save) (expl = ERget(F_FE0117_SaveExpl)),
+##		FRSkey8
+##	{
+##		inquire_frs form (chng = change)
+		if (!chng)
+		{
+			IIUGerr(E_RM0029_No_changes_to_save, 0, 0);
+##			resume
+		}
+
+##		validate
+##		getform (db_name = fdb_name, vnode_name = fvnode_name,
+##			db_owner = fdb_owner, dbms_type = fdbms_type,
+##			remark = fremark)
+
+		IIUGmsg(ERget(F_RM0009_Saving), FALSE, 0);
+		retval = 0;
+		EXEC SQL REPEATED UPDATE dd_databases
+			SET	database_name = :db_name,
+				vnode_name = :vnode_name,
+				database_owner = :db_owner,
+				dbms_type = :dbms_type, remark = :remark
+			WHERE	database_no = :db_no;
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			retval = -1;
+		}
+		else if (db_config_changed(0) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			retval = -1;
+		}
+
+		if (retval)
+		{
+			FTbell();
+			IIUGerr(E_RM0009_Error_saving, UG_ERR_ERROR, 0);
+##			resume
+		}
+		EXEC SQL COMMIT;
+		if (RPdb_error_check(0, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM000A_Error_committing, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+##		set_frs field form_name (displayonly(fdb_name) = 0)
+		retval = 1;
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(FE_Lookup) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0116_LookupExpl)), FRSkey10 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs field form_name (objname = name)
+		if (STequal(objname, fdbms_type))
+			dbms_type_lookup();
+		else
+			IIUFfieldHelp();
+##	}
+
+##	activate menuitem ERget(FE_Help) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1 (activate = 0,
+##		validate = 0)
+##	{
+		FEhelp(ERx("rmdbedit.hlp"), ERget(F_RM0027_Edit_replic_db));
+##	}
+
+##	activate menuitem ERget(FE_End) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0102_ExplEnd)), FRSkey3 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs form (chng = change)
+		if (chng && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM000E_End_no_save, S_RM000F_Yes_end,
+			S_RM0010_No_end, ERx(""), TRUE) != CONFCH_YES)
+##			resume
+
+##		set_frs field form_name (displayonly(fdb_name) = 0)
+		retval = 0;
+##		breakdisplay
+##	}
+
+	return (retval);
+##}
+
+
+STATUS
+valid_dbms_type(
+char	*dbms_type,
+char	*short_descr)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+char	*dbms_type;
+char	*short_descr;
+EXEC SQL END DECLARE SECTION;
+# endif
+{
+	DBEC_ERR_INFO	errinfo;
+
+	EXEC SQL REPEATED SELECT short_description
+		INTO	:short_descr
+		FROM	dd_dbms_types
+		WHERE	dbms_type = :dbms_type;
+	RPdb_error_check(DBEC_ZERO_ROWS_OK, &errinfo);
+	EXEC SQL COMMIT;
+	if (errinfo.errorno)
+		return (-1);
+	else if (errinfo.rowcount == 0)
+		return (0);
+	return (1);
+}
+
+
+void
+dbms_type_lookup()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	char	dbms_type[9];
+##	char	short_descr[21];
+	EXEC SQL END DECLARE SECTION;
+	i4	i;
+	i4	row;
+	char	*p1, *p2, *pend;
+	char	list_row[36];
+	char	list_rows[2048];
+
+	*list_rows = EOS;
+	EXEC SQL SELECT dbms_type, short_description
+		INTO	:dbms_type, :short_descr
+		FROM	dd_dbms_types
+		ORDER	BY dbms_type;
+	EXEC SQL BEGIN;
+		STtrmwhite(dbms_type);
+		STprintf(list_row, ERx("%s;%s\n"), dbms_type, short_descr);
+		STcat(list_rows, list_row);
+	EXEC SQL END;
+	EXEC SQL COMMIT;
+	row = IIFDlpListPick(NULL, list_rows, 5, -1, -1, NULL, NULL, NULL,
+		NULL);
+	if (row >= 0)
+	{
+		p1 = list_rows;
+		pend = STindex(p1, ERx("\n"), 0);
+		for (i = 0; i < row; ++i)
+		{
+			p1 = CMnext(pend);
+			pend = STindex(p1, ERx("\n"), 0);
+		}
+		*pend = EOS;
+		p2 = pend = STindex(p1, ERx(";"), 0);
+		CMnext(pend);
+		STcopy(pend, short_descr);
+		*p2 = EOS;
+		STcopy(p1, dbms_type);
+##		putform form_name (fdbms_type = dbms_type,
+##			fdbms_descr = short_descr)
+##		set_frs form (change = 1)
+	}
+##}

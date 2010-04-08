@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2009 Ingres Corporation
+
+  The parameter image_data_segments allows users to adjust the number of  
+  data segments, that is used in the linker flag to build the 32-bit dbms 
+  server image. 
+
+  The default value is 4, the valid entries are :  
+  3, 4, 5, 6, 7 and 8. 
+
+  The unit is in segments (256Mb). 

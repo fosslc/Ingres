@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The psort_rows resource sets the threshold in rows for doing a parallel
+  sort.  Disk-based (DMF) sorts of fewer than psort_rows rows will not
+  consider a parallel sort.
+
+  The default is 10000 rows.

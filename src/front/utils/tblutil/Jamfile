@@ -1,0 +1,48 @@
+#
+# Jamfile file for front!utils!tblutil
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front utils tblutil ;
+
+IISUBSYS front utils tblutil ;
+
+
+IIMSGHDR ertu.msg ;
+
+IIQSHHDR tutblinf.h : tutblinf.qsh ;
+
+IIFORM tucreate.frm ;
+IIFORM tudefprm.frm ;
+IIFORM tuexam.frm ;
+IIFORM tutblprm.frm ;
+IIFORM tutopfr.frm ;
+
+File $(INGMSG)$(DFS)tucccrt.hlp : tucccrt.hlp ;
+File $(INGMSG)$(DFS)tuccdest.hlp : tuccdest.hlp ;
+File $(INGMSG)$(DFS)tucreate.hlp : tucreate.hlp ;
+File $(INGMSG)$(DFS)tudefaults.hlp : tudefaults.hlp ;
+File $(INGMSG)$(DFS)tudflprm.hlp : tudflprm.hlp ;
+File $(INGMSG)$(DFS)tudtypes.hlp : tudtypes.hlp ;
+File $(INGMSG)$(DFS)tukeys.hlp : tukeys.hlp ;
+File $(INGMSG)$(DFS)tumovesm.hlp : tumovesm.hlp ;
+File $(INGMSG)$(DFS)tunames.hlp : tunames.hlp ;
+File $(INGMSG)$(DFS)tunulls.hlp : tunulls.hlp ;
+File $(INGMSG)$(DFS)tutblinf.hlp : tutblinf.hlp ;
+File $(INGMSG)$(DFS)tutbllst.hlp : tutbllst.hlp ;
+File $(INGMSG)$(DFS)tutblpik.hlp : tutblpik.hlp ;
+File $(INGMSG)$(DFS)tutblprm.hlp : tutblprm.hlp ;
+File $(INGMSG)$(DFS)tutblqbf.hlp : tutblqbf.hlp ;
+File $(INGMSG)$(DFS)tutblrep.hlp : tutblrep.hlp ;
+
+
+IILIBRARY TBLUTILLIB : util.qsc tutblpik.qsc
+        tutabinf.qsc tumain.qsc tudefault.qsc report.qsc prscreat.qsc
+        mqbf.qsc helptbl.qsc fespawn.qsc examine.qsc creattbl.qsc
+        tuunique.c fespnvar.c ;
+
+IILIBRARY IMPFRAMELIBDATA : tbldata.c tu.roc ;
+
+

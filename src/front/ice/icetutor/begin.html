@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<HEAD>
+<STYLE TYPE="text/css">
+<!-- 
+	BODY				{margin-right: 3cm; margin-left: 1cm; text-align: justify}
+	H1					{font-size: 30pt; color: blue}
+	H4.question	{margin-left: 1cm; font-weight: bold; text-align: left}
+	H4.choice		{margin-left: 1cm; font-weight: normal; text-align: left}
+	H4.explain	{margin-left: 1cm; font-weight: normal; text-align: left}
+	H4.macro		{margin-left: 1cm; font-weight: bold,italic; text-align: left; color: red}
+	UL    			{line-height: 2}
+-->
+</STYLE>
+</HEAD>
+
+<HTML>
+<BODY bgcolor="#FFFFFF" topmargin="0" leftmargin="0">
+<!-- #ICE VAR=`<FORM ACTION="/ice-bin/oiice.:http_api_ext/iceTutorial/:next" METHOD="POST">` -->
+<CENTER>
+<TABLE>
+	<TR>
+	<TD ALIGN="LEFT" WIDTH="95%"><H1><!-- #ICE VAR=`:title` --></H1></TD>
+	<!-- #ICE REPEAT IF (`:previous` != ``)
+			 THEN=`<TD><A HREF="/ice-bin/oiice.:http_api_ext/iceTutorial/:previous" ALT="previous page"><IMG BORDER="0" SRC="<!-- #ICE INCLUDE=``previous.gif`` -->"></A></TD>`
+			 ELSE=`<TD WIDTH="10"></TD>`
+	-->
+	<!-- #ICE REPEAT IF (`:next` != ``)
+			 THEN=`<TD><INPUT TYPE=image NAME="next page" BORDER=0 SRC="<!-- #ICE INCLUDE=``next.gif`` -->"></A></TD>`
+			 ELSE=`<TD WIDTH="10"></TD>`
+	-->
+	</TR>
+</TABLE>
+</CENTER>

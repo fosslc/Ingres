@@ -1,0 +1,20 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Profile/Database association&submit=actProfConn.html` -->
+		<INPUT TYPE="HIDDEN" NAME="action" VALUE="insert">
+		<INPUT TYPE="HIDDEN" NAME="profile" VALUE="<!-- #ICE VAR=`:profile` -->">
+		<TABLE BORDER=0>
+			<TR>
+				<TD  colspan=2>Please select the database connection you want to associate to
+				<!-- #ICE REPEAT FUNCTION=`profile?action=retrieve&profile_id=:profile` 
+				HTML=`:profile_name <INPUT TYPE="HIDDEN" NAME="name" VALUE=":profile_name">` -->:
+				</TD>
+			</TR>
+			<TR>
+				<TD>Database Connection: </TD>
+				<TD><SELECT NAME="db">
+			<!-- #ICE FUNCTION=`database?action=select`
+					 HTML=`
+					 <OPTION VALUE=":db_id">:db_name</OPTION>`
+			-->
+				</SELECT></TD>
+			</TR>
+		</TABLE>

@@ -1,0 +1,480 @@
+/*
+**	 Copyright (c) 2004 Ingres Corporation
+**	 All rights reserved.
+*/
+ 
+# include	<compat.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ui.h>
+# include	<adf.h>
+# include	<afe.h>
+ 
+/**
+** Name:	featt.c -   Front-End Utiltiy Attribute Access Module.
+**
+** Description:
+**	Contains routines that comprise the interface used to access attribute
+**	information that is to be used by most front end facilities.
+**
+**	These routines use a protocol which is very similar to a cursor
+**	model of interaction.  First you "open" and identify what you
+**	intend to retrieve.  Then you call "fetch" as many times as
+**	necessary to retrieve all the items.  Finally you call "close"
+**	to terminate the interaction.
+**
+**	First, FEatt_open() or FEatt_fopen is called.
+**	If the caller has a valid FE_REL_INFO struct, from a call to
+**	FErel_fetch, FEatt_fopen should be called for higher performance.
+**	If the caller does not have a valid FE_REL_INFO struct, then
+**	FEatt_open, which takes the relation name as a parameter, should be
+**	used.  FEatt_open will fetch the appropriate FE_REL_INFO struct,
+**	which slows performance a bit.  These routines initialize the
+**	FE_ATT_QBLK which is passed on to the "fetch" and the "close"
+**	routines to identify this loop and the current state of the
+**	"fetch" requests.
+**
+**	To obtain information on the attributes of this relation, you call
+**	FEatt_fetch() as many times as necessary.  Each call takes an
+**	FE_ATT_INFO structure and fills it in with all the details of a
+**	particular column.  FEatt_fetch() will return a code to indicate
+**	that there are no more columns to describe.
+**
+**	If you intend to set up DB_DATA_VALUE structures based on the column
+**	attributes returned in the FE_ATT_INFO structure, do not access the
+**	elements of the FE_ATT_INFO structure directly.  The routine
+**	FEatt_dbdata() is provided to fill in a DB_DATA_VALUE directly from
+**	an FE_ATT_INFO.  The reason for avoiding the direct access is to
+**	insulate your code from the changes which will take place when packed
+**	decimal data types are added.
+**
+**	Similarly, if you intend to set up a DB_USER_TYPE for displaying
+**	type information, use FEatt_utype(), which will load a DB_USER_TYPE
+**	from information in the FE_ATT_INFO.
+**
+**	Finally, FEatt_close() is called to terminate the loop.
+**
+**	This file defines six procedures.
+**	The following five procedures are external entries:
+**		FEatt_open	Initialize access to attribute information,
+**					without supplying REL_INFO as input.
+**		FEatt_fopen	Initialize access to attribute information,
+**					supplying REL_INFO as input.
+**		FEatt_fetch	Retrieve information about next attribute.
+**		FEatt_close	Terminate access of attribute information.
+**		FEatt_dbdata	Fill a DB_DATA_VALUE from an FE_ATT_INFO.
+**		FEatt_utype	Fill a DB_USER_TYPE from an FE_ATT_INFO.
+**		FEatt_ffetch	Get information about one attribute, when owner,
+**					table name and attribute name are known.
+**
+** History:
+**	26-mar-1987 (rdesmond) first created for Jupiter release.
+**	22-apr-1987 (daver) added FEatt_utype routine.
+**	8-jun-1987 (rdesmond) added hackfor50 in FEatt_open; uses iiattribute.
+**	23-jun-1987 (rdesmond) removed hackfor50 in FEatt_open; uses iicolumns.
+**				added hackfor50 in FEatt_dbdata.
+**	28-jul-1987 (rdesmond) convert relname in FEatt_open to lower case.
+**	30-nov-1987 (rdesmond)
+**		rewrote FEatt_fopen to use new routine FEatt_access().
+**		replaced calls to FErel_access() with call to FEatt_access().
+**	01-jan-1988 (rdesmond)
+**		changed FEatt_open to call FErel_ffetch() instead of
+**		FErel_open() and FErel_fetch().
+**	14-apr-1988 (danielt)
+**		added FEatt_ffetch().
+**	18-aug-1988 (peter)
+**		update catalog column names for 6.1.
+**	03-aug-1989	(mgw)
+**		fixed for adc_lenchk() interface change.
+**	18-apr-1990 (jhw)  Renamed 'FEatt_access()' as 'iiuiAttrInfo()' and
+**		move 'FEatt_trnslt()' functionality there.
+**	 22-jul-1992 (rdrane)
+**		Redefine interface to FEatt_open to support 6.5 owner.tablename
+**		and delimited identifiers.
+**/
+ 
+
+/*{
+** Name:	FEatt_open() -	Initialize access of relation information.
+**
+** Description:
+**	 This function initializes the FE_ATT_QBLK which must be passed
+**	 on to FEatt_fetch() and FEatt_close() to identify this loop and
+**	 the current state of the "fetch" requests.  You specify as input
+**	 which relation you are interested in.  If this function is
+**	 called while a block is currently open, the open block will
+**	 be quietly closed and the query restarted.
+**
+** Inputs:
+**	 qblkptr	A pointer to an allocated FE_ATT_QBLK.
+**
+**	 relname	Name of the relation you want the attributes of.
+**			This is expected to be in normalized form.
+**	 relowner	Name of the owner of the relation you want the
+**			attributes of.  This is also expected to be in
+**			normalized form.  However, it may also be specified
+**			as NULL or an empty string for pre-6.5 compatibility
+**			or when the true owner is unknown or unimportant.
+**
+** Outputs:
+**	 qblkptr	Will be initialized for subsequent use in
+**			an FEatt_fetch() and FEatt_close().
+**
+** Returns:
+**	{STATUS}  OK	successful
+**		  other	DBMS error returned, usually relation not found
+**
+** History:
+**	 29-mar-1987 (rdesmond) first created for Jupiter release.
+**	 05-may-1987 (rdesmond) modified to sort by attid (sequence in create
+**				table); previously had been sorted by attname.
+**	 8-jun-1987 (rdesmond) added hackfor50; uses iiattribute.
+**	 23-jun-1987 (rdesmond) removed hackfor50; uses iicolumns.
+**	 28-jul-1987 (rdesmond) convert relname to lower case.
+**	 05-oct-1987 (rdesmond) now only calls FErel...to retrieve FE_REL_INFO
+**				and then calls FEatt_fopen to get FE_ATT_INFO.
+**	 01-jan-1988 (rdesmond)
+**		 changed to call FErel_ffetch() instead of FErel_open()
+**		 and FErel_fetch().
+**	 05-jan-1988 (rdesmond)
+**		 optimized owner resolution if user is DBA, using FErelexists().
+**	 19-aug-1988 (peter)
+**		 Change column names in catalogs for 6.1.
+**	 22-jul-1992 (rdrane)
+**		Add 6.5 support for owner.tablename, delimited identifiers,
+**		and synonyms.  Change parameterization to include owner.
+**		Indicate that both relname and relowner are expected to be
+**		normalized.  Pass relname and relowner directly to
+**		FErel_ffetch() (relowner only used if 6.5, and can be NULL
+**		or an empty string).  So, remove the rname local variable and
+**		the call to IIUGlbo_lowerBEobject().
+*/
+DB_STATUS
+FEatt_open(qblkptr, relname, relowner)
+FE_ATT_QBLK	*qblkptr;
+char		*relname;
+char		*relowner;
+{
+    DB_STATUS	ret_value;
+    FE_REL_INFO	relinfo;
+    FE_REL_QBLK	relqblk;
+ 
+ 
+    /* first we must resolve owner */
+    ret_value = FErel_ffetch(relname, relowner, &relinfo);
+ 
+    switch (ret_value)
+    {
+	case OK:
+		/* execute query to return FE_ATT_INFO */
+		return (FEatt_fopen(qblkptr, &relinfo));
+	case E_UI0002_EOS:
+		/* relation doesn't exist */
+		qblkptr->status = STATUS_DONE;
+		return (OK);
+	default:
+		/* dbms error */
+		return (ret_value);
+    }
+}
+
+/*{
+** Name:	FEatt_fopen() -	Initialize access of relation information.
+**
+** Description:
+**	 This function initializes the FE_ATT_QBLK which must be passed
+**	 on to FEatt_fetch() and FEatt_close() to identify this loop and
+**	 the current state of the "fetch" requests.  You specify as input
+**	 a valid FE_REL_INFO structure, which was filled in by FErel_fetch.
+**	 If this function is called while a block is currently open,
+**	 the open block will be quietly closed and the query restarted.
+**
+** Inputs:
+**	 qblkptr	A pointer to an allocated FE_ATT_QBLK.
+**	 relinfo	ptr to a FE_REL_INFO struct with valid data, i.e.
+**			FErel_open, FErel_fetch and FErel_close must have
+**			been called prior to calling this function.
+**
+** Outputs:
+**	 qblkptr	Will be initialized for subsequent use in
+**			an FEatt_fetch() and FEatt_close().
+**
+** Returns:
+**	{STATUS}  OK	successful
+**		  other	DBMS error returned
+**
+** Function and Argument Declarations:
+**
+**	 qblkptr	Block will be initialized for subsequent use in
+**			an FEatt_fetch() and FEatt_close().
+**
+** Returns:
+**	{STATUS}  OK	successful
+**		  other	DBMS error returned
+**
+**	 Exceptions:
+**		 none
+**
+** Side Effects:
+**
+** History:
+**	 05-oct-1987 (rdesmond) first written for Jupiter.
+**	 30-nov-1987 (rdesmond) rewritten to use new FEatt_access().
+*/
+DB_STATUS
+FEatt_fopen(qblkptr, relinfo)
+register FE_ATT_QBLK	*qblkptr;
+register FE_REL_INFO	*relinfo;
+{
+    DB_STATUS	ret_value;
+ 
+    /* open query and fetch first tuple */
+    ret_value = iiuiAttrInfo( qblkptr, MODE_OPEN,
+				relinfo->name, relinfo->owner, (char *)NULL
+	);
+ 
+    /* set this flag to indicate tuple already in FE_REL_QBLK */
+    qblkptr->current_status = ret_value == OK ? CURR_VALID : CURR_INVALID;
+ 
+    if ( ret_value == E_UI0002_EOS )
+    { /* relation doesn't exist */
+	return (OK);
+    }
+    return (ret_value);
+}
+
+/*{
+** Name:	FEatt_fetch() -	Retrieve next attribute.
+**
+** Description:
+**	 This function retreives a block of attribute information describing
+**	 the next column in the relation specified by the FEatt_open() which
+**	 was used to initialize the FE_ATT_QBLK.
+**
+**	 The attributes are returned in column order.
+**
+** Inputs:
+**	 qblkptr	A pointer to the FE_ATT_QBLK control block which
+**			was initialized by a call to FEatt_open().
+**
+**	 attinfoptr	A pointer to an allocated FE_ATT_INFO structure
+**			which will be filled in by this routine.
+**
+** Outputs:
+**	 attinfoptr	FE_ATT_INFO structure will be filled in.
+**
+** Returns:
+**	{STATUS}  OK			successful
+**		  E_UI0001_BLOCK_CLOSED	query block is currently closed
+**		  E_UI0002_EOS		no more attributes to return
+**		  other			DBMS error returned
+**
+** History:
+**	 29-mar-1987 (rdesmond)
+**		 first created for Jupiter release.
+**	 28-jun-1987 (danielt) cast NULL arguments for FErel_access
+**		 to proper type.
+**	 05-oct-1987 (rdesmond)
+**		 cleaned up.
+**	 30-nov-1987 (rdesmond)
+**		 replaced call to FErel_access() with call to FEatt_access().
+*/
+DB_STATUS
+FEatt_fetch (qblkptr, attinfoptr)
+register FE_ATT_QBLK	*qblkptr;
+register FE_ATT_INFO	*attinfoptr;
+{
+    DB_STATUS	ret_value;
+ 
+    if (qblkptr->status == STATUS_DONE)
+	return (E_UI0002_EOS);
+    if (qblkptr->status != STATUS_OPEN)
+	return (E_UI0001_BLOCK_CLOSED);
+ 
+    /* if first call to FEatt_fetch after FEatt_open then tuple is in qblk */
+    if (qblkptr->current_status == CURR_VALID)
+    {
+	qblkptr->current_status = CURR_INVALID;
+    }
+    else
+    {
+	/* fetch next tuple */
+	ret_value = iiuiAttrInfo( qblkptr, MODE_FETCH,
+					(char*)NULL, (char*)NULL, (char *)NULL
+	);
+ 
+	/* if no more tuples or dbms error then return error */
+	if (ret_value != OK)
+	    return (ret_value);
+    }
+ 
+    /* translate tuple into output structure */
+    STRUCT_ASSIGN_MACRO(qblkptr->current_rec, *attinfoptr);
+ 
+    return (OK);
+}
+
+/*{
+** Name:	FEatt_close() -	Terminate access of attribute information.
+**
+** Description:
+**	 This routine terminates the retrieval of attribute information.
+**
+** Inputs:
+**	 qblkptr	 A pointer to the active FE_ATT_QBLK.
+**
+** Outputs:
+**	 qblkptr	 block will be internally marked as inactive.
+**
+** Returns:
+**	{STATUS}  OK	successful
+**		  other	DBMS error returned
+**
+** History:
+**	 29-mar-1987 (rdesmond)
+**		 first created for Jupiter release.
+**	 28-jun-1987 (danielt) cast NULL arguments for FErel_access
+**		 to proper type
+**	 30-nov-1987 (rdesmond)
+**		 replaced call to FErel_access() with call to FEatt_access().
+*/
+DB_STATUS
+FEatt_close (qblkptr)
+FE_ATT_QBLK	*qblkptr;
+{
+	return iiuiAttrInfo( qblkptr, MODE_CLOSE,
+				(char *)NULL, (char *)NULL, (char *)NULL
+	);
+}
+
+/*{
+** Name:	FEatt_dbdata() -	Fill a DB_DATA_VALUE from an FE_ATT_INFO.
+**
+** Description:
+**	 This function takes the information contained in an FE_ATT_INFO
+**	 and fills in a DB_DATA_VALUE based on that information.
+**
+** Inputs:
+**	 att_info	Pointer to a valid FE_ATT_INFO containing
+**			the info on this column.
+**
+**	 dbvalue	Pointer to a DB_DATA_VALUE structure.
+**
+** Outputs:
+**	 dbvalue	DB_DATA_VALUE is filled in.
+**
+** History:
+**	 2-Apr-1987 (rdesmond) first created for Jupiter release.
+**	oct-1990 (jhw) - Added decimal support.
+*/
+VOID
+FEatt_dbdata (att_info, dbvalue)
+FE_ATT_INFO	*att_info;
+DB_DATA_VALUE	*dbvalue;
+{
+    dbvalue->db_length = att_info->intern_length;
+    dbvalue->db_datatype = (DB_DT_ID) att_info->adf_type;
+    dbvalue->db_prec = att_info->intern_prec;
+}
+/*{
+** Name:	FEatt_utype() -	Fill a DB_USER_TYPE from an FE_ATT_INFO.
+**
+** Description:
+**	 This function takes the information contained in an FE_ATT_INFO
+**	 and fills in a DB_USER_TYPE based on that information.
+**
+** Inputs:
+**	 att_info	Pointer to a valid FE_ATT_INFO containing
+**			the info on this column.
+**
+**	 utype		Pointer to a DB_USER_TYPE structure.
+**
+** Outputs:
+**	 utype		DB_USER_TYPE is filled in.
+**
+** History:
+**	 21-apr-1987 (daver) Modified from FEatt_dbvalue.
+**	 23-Jun-1987 (rdesmond) replaced assignments to dbvalue with call to
+**			FEatt_dbdata; nulls and defaults are now 'Y' or 'N'.
+*/
+VOID
+FEatt_utype (att_info, utype)
+FE_ATT_INFO	*att_info;
+DB_USER_TYPE	*utype;
+{
+    STATUS		rval;
+    DB_DATA_VALUE	dbvalue;
+
+    ADF_CB	*FEadfcb();
+ 
+    FEatt_dbdata(att_info, &dbvalue);
+ 
+    if ( afe_tyoutput(FEadfcb(), &dbvalue, utype) != OK )
+    {
+	FEafeerr(FEadfcb());
+	return;
+    }
+ 
+    if (att_info->nulls)
+    {
+	utype->dbut_kind = DB_UT_NULL;
+    }
+    else if (att_info->defaults)
+    {
+	utype->dbut_kind = DB_UT_DEF;
+    }
+    else
+    {
+	utype->dbut_kind = DB_UT_NOTNULL;
+    }
+}
+
+/*{
+** Name:	FEatt_ffetch() - Fetch information about single attribute
+**			 when owner and relation are known.
+**
+** Description:
+**
+** Inputs:
+**	 relinfo	ptr to a FE_REL_INFO struct with valid data, i.e.
+**			FErel_open, FErel_fetch and FErel_close must have
+**			been called prior to calling this function.
+**
+** Outputs:
+**	 attinfo
+**
+** Returns:
+**	{STATUS}  OK	successful
+**		  other	DBMS error returned
+**
+** History:
+**	14-apr-1988 (danielt) written
+**	19-aug-1988 (peter)
+**		 Change column names in catalogs for 6.1.
+**	01-mar-1989 (wolf)
+**		 Add column_nulls to SELECT
+**	18-apr-1990 (jhw)  Rewrote to call 'iiuiAttrInfo()'.
+*/
+DB_STATUS
+FEatt_ffetch ( relinfo, att_name, attinfo )
+register FE_REL_INFO	*relinfo;
+register char		*att_name;
+register FE_ATT_INFO	*attinfo;
+{
+	DB_STATUS	ret_value;
+	FE_ATT_QBLK	attr;
+
+	ret_value = iiuiAttrInfo( &attr, MODE_OPEN,
+				relinfo->name, relinfo->owner, att_name
+	);
+	if ( ret_value == OK )
+	{
+		STRUCT_ASSIGN_MACRO(attr.current_rec, *attinfo);
+		ret_value = iiuiAttrInfo( &attr, MODE_CLOSE );
+	}
+	return ret_value;
+}

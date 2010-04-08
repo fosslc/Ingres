@@ -1,0 +1,46 @@
+/*
+** mqrstwhr.qsc   - reset end of where clause so only the join 
+**		    info is in the where clause.  This readies 
+**		    the QDESC for a new query the user enters.
+**
+**	History:
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	<me.h>
+# include	<st.h>
+
+mqresetwhere(qdef, mqqry)
+MQQDEF	*qdef;
+QDESC	*mqqry;
+{
+	char	*wptr;
+
+	if (mqqry->qg_where != NULL)
+	{
+	    if (mq_mwhereend == 0)
+	    {
+		mqqry->qg_where = NULL;
+	    }
+	    else
+	    {
+		/* terminate master qg_where QRY_SPEC list */
+		qs_end(qdef->mqtag, mq_mwhereend, mqqry->qg_where);
+	    }
+	}
+	if (qdef_type == 0)
+	{
+	    /* terminate detail qg_where QRY_SPEC list */
+	    qs_end(qdef->mqtag, mq_dwhereend, mqqry->qg_child->qg_where);
+	}
+}

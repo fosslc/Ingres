@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!ipm_win
+#
+
+SubDir ING_SRC front vdba ipm_win ;
+
+IISUBSYS front vdba ipm_win ;
+
+
+IISLN ipm.ocx : ipm.sln ;

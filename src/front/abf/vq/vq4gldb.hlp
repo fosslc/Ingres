@@ -1,0 +1,65 @@
+/#-- Copyright (c) 2004 Ingres Corporation 
+/#-- vq4gldb.hlp        Help on 4GL Database Statements.
+     DELETE FROM emptable
+        WHERE name = :empname;
+
+     REPEATED DELETE FROM taskstable t
+        WHERE t.name = :empname;
+
+     INQUIRE_INGRES (rows = ROWCOUNT,          /* returns the number of rows,
+                     errnumber = ERRORNO,      ** the error number, and the
+                     errtext = ERRORTEXT);     ** error text resulting from
+                                               ** the last query
+                                               */
+     IF (errnumber != 0) THEN
+        MESSAGE 'Error occurred on delete: ' + errtext WITH STYLE=POPUP;
+     ELSEIF (rows = 0) THEN
+        MESSAGE 'No records with that employee name';
+        SLEEP 3;
+     ELSE
+        COMMIT WORK;              /* commit the changes and release locks */
+     ENDIF;
+
+     INSERT INTO emptable (name, salary)
+        VALUES (:empname, :emptblfield.salary);
+
+     NEXT;                            /* displays subsequent rows of data */
+
+     formname := REPEATED SELECT name = e.name, manager = e.manager
+     FROM employees e
+     WHERE e.empno = :empno                    /* no semicolon            */
+     BEGIN                                     /* attached menu           */
+        INITIALIZE =
+        BEGIN
+           COMMIT WORK;                        /* release shared locks    */
+        END
+        'Next' =
+        BEGIN
+           NEXT;
+        END
+        'End' =
+        BEGIN
+           ENDLOOP;
+        END
+     END;
+
+     /* load names of 10 highest paid employees into array "emps"         */
+     cnt = 1;
+     formname := SELECT emps[cnt].name = name, emps[cnt].salary = salary
+     FROM employees
+     ORDER BY salary desc
+     BEGIN                                     /* select loop             */
+        IF (cnt >= 10) THEN
+           ENDLOOP;                            /* exit the select loop    */
+        ENDIF;
+        cnt = cnt + 1;
+     END;
+
+     formname.tblfieldname := SELECT dname = d.dname, floor = d.floor
+     FROM department d
+     WHERE d.bldg = :bldg;
+     COMMIT WORK;
+
+     REPEATED UPDATE personnel
+     SET salary = :sal, manager = :manager
+     WHERE empno = :empno;

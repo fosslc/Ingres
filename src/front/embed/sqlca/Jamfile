@@ -1,0 +1,20 @@
+#
+# Jamfile file for front!embed!sqlca
+#
+# History:
+#	10-jan-2005 (abbjo03)
+#	    On VMS, the sqlca is delivered as a standalone object.
+#	04-feb-2005 (abbjo03)
+#	    Although the sqlca is a standalone object on VMS, for the time
+#	    being we'll continue to build the SQLCALIB (even though it is
+#	    unused on VMS) because all the executables that link with the
+#	    sqlca use SQLCALIB as their dependency (but the VMS linker options
+#	    template files will continue to link with the standalone object).
+
+SubDir ING_SRC front embed sqlca ;
+
+IISUBSYS front embed sqlca ;
+
+IILIBRARY SQLCALIB : iisqlca.c ;
+
+IILIBOBJECT iisqlca.c ;

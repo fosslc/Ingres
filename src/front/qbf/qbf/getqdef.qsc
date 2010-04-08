@@ -1,0 +1,932 @@
+/*
+**	GETQDEF.QSC  -  This routine gets the query defn.
+**			(QDEF) that the user wishes to retrieve
+**			from the mqbf catalogs.
+**
+**	Routines:
+**	     mqgetdefined  -read mqbf catalog to get information
+**			    for the desired qdef.
+**	     mqgettypes	   -find types and lengths for attributes
+**			    used in this qdef.
+**
+**	Written: 11/21/83 (nml)
+** 	History:
+**	23-feb-87 (marian)	bug 10328
+**			Changed mqgetdefined() so it now initializes
+**			att->found to 0 so it can later
+**			be used in mqgettypes() to check for invalid columns
+**			referenced in a joindef.
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	05-jan-87 (marian) bug 14072, 12969
+**			Make sure att->mdtype is initialized in mqgettypes().
+**			This value will be used in update.qsc to determine
+**			when updates should be performed.
+**	07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh.  Added code to call
+**			routine IIQFsqj_sqlKeyCheck to check for what type
+**			of key to use on a particular table (primary, TID,
+**			alternate, whole row, or nothing).  Added code to set
+**			flag in ATTRIBINFO structure to indicate if a column
+**			is part of the key.  Changed QUEL
+**			RETRIEVE to SQL SELECT.
+**	11-dec-87 (kenl)
+**			Removed FUNC_EXTERNs from local static routines
+**			mqgettypes, mqgetjoins, mqgetjcode.
+**
+**	14-apr-1988 (danielt)
+**			added commits after calls to FErel* and FEatt*
+**	20-jul-88 (kenl)
+**		Bug fix #2191.  Initialize field 'mandfld' in ATTRIBINFO
+**		structure depending on whether underlying column in table
+**		is NOT NULL NOT DEFAULT.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	23-nov-88 (kenl)
+**		Added handling of global allow_appends.  This fix comes from
+**		the IBM group (ham).
+**	5-oct-89 (kenl)	bug 8236
+**		Now we call IIUGlbo_lowerBEobject() on all column and table
+**		information when reading in a joindef from ii_joindefs.
+**	09/27/90 (emerson)
+**		Set lkeyinfo in ATTRIBINFO to indicate whether column
+**		is a logical key, and (if so) whether it's
+**		system-maintained or user-maintained (bug 8593).
+**	10/11/90 (emerson)
+**		Replaced global variable allow_appends and allow_updates
+**		by IIQFnkaNoKeyForAppends and IIQFnkuNoKeyForUpdates
+**		(with opposite sense) because the names are misleading:
+**		we now have other reasons for disallowing appends
+**		(certain joins on logical keys), and we might have
+**		other reasons for disallowing appends or updates
+**		in the future.  Keeping separate flags allows us
+**		to give specific error messages.  (bug 8593).
+**	08-jun-92 (leighb) DeskTop Porting Change:
+**		Changed 'errno' to 'errnum' cuz 'errno' is a macro in WIN/NT
+**	29-sep-92 (daver)
+**		Changed calls to IIUGlbo_lowerBEobject to a local static
+**		routine which then calls IIUGdlm_ChkdlmBEobject. Done to
+**		preseve kenl's bugfix for 8236, above, for 6.5 support.
+**	18-aug-1993 (rdrane)
+**		Rework handling of table owner (qinfo5) column so that
+**		it is properly recognized.  Remove STtrmwhite() calls -
+**		all strings are SELECT'd into varchar's, and the STtrmwhite()
+**		invalidate the delimited identifier " " (one space).
+**	27-jun-95 (teresak)
+**		Added undocumented support for II_QBF_DISABLE_VIEW_CHECK
+**		to allow append, update, and deletes of single table views 
+**		(SIR 37839)
+**	15-Oct-1997(angusm)
+**		Redo allow_views as bool (bug 86168)
+**	Copyright (c) 2004 Ingres Corporation
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      06-feb-2009 (stial01)
+**          Use DB_MAXNAME for database objects
+*/
+
+# include	<compat.h>
+# include	<cv.h>		 
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ui.h>
+## include	"mqsymbol.qsh"
+## include	"mqbf.qsh"
+# include	<me.h>
+# include	<st.h>
+# include	<er.h>
+# include	<ug.h>
+# include	<uigdata.h>
+# include	"erqf.h"
+
+FUNC_EXTERN 	i4	IIQFsqj_sqlKeyCheck();
+FUNC_EXTERN     STATUS  FErel_ffetch();
+FUNC_EXTERN	VOID	IIQFmauMarkAllUnjoined();
+FUNC_EXTERN	bool	IIQFmjMarkJoined();
+FUNC_EXTERN	bool	IIQFfjaFixJoinedAttributes();
+
+static	mqgettypes();
+static	mqgetjoins();
+static	mqgetjcode();
+static	STATUS	check_and_assign();	/* used to replace IIUGlbo calls */
+
+/*{
+** Name:	mqgetdefined()
+**
+** History:
+**	30-sep-86 (sandyd)
+**		Changed range variable to use full table name.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	29-sep-92 (daver)
+**		Changed calls to IIUGlbo_lowerBEobject to a local static
+**		routine which then calls IIUGdlm_ChkdlmBEobject. Done to
+**		preseve kenl's bugfix for 8236, above, for 6.5 support.
+**		Also began to utilize qinfo5, adding a "fifth" variable
+**		to represent values in the column (used to hold the
+**		username for more 6.5 owner.table support)
+**	18nov-1993 (rdrane)
+**		Allow for $ingres when checking the table owner.  The
+**		check_and_assign routine will FAIL it since it is
+**		technically UI_BOGUS_ID.
+*/
+mqgetdefined(qdef)
+EXEC SQL BEGIN DECLARE SECTION;
+    MQQDEF	*qdef;
+EXEC SQL END DECLARE SECTION;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	    char		first[FE_MAXNAME + 1];
+	    char		second[FE_MAXNAME + 1];
+	    char		third[FE_MAXNAME + 1];
+	    char		fourth[FE_MAXNAME + 1];
+	    char		fifth[FE_MAXNAME + 1];
+	    i2			nulli;
+	    i4			qtype;
+	EXEC SQL END DECLARE SECTION;
+	i2		rtype;
+	i2		rseq;
+	i4		errnum;		 
+	i4		rcount;
+	i4		masters, details;
+	i4		i;
+	i2		offset;
+	STATUS		loop_status;
+
+	qdef->mqnumtabs = qdef->mqnumjoins = qdef->mqnumatts = 0;
+	masters = details = 0;
+	loop_status = OK;
+
+	/* read in JoinDef info from catalog */
+	EXEC SQL SELECT qtype, qinfo1, qinfo2, qinfo3, qinfo4, qinfo5
+	     INTO :qtype, :first, :second, :third, :fourth, :fifth:nulli
+	     FROM ii_joindefs
+	     WHERE ii_joindefs.object_id = :qdef->mqcr.id
+	     ORDER BY qtype;
+        EXEC SQL BEGIN;
+	    offset = SEQ_OFFSET;
+	    rtype = qtype % offset;
+	    rseq = qtype / offset;
+
+	    /* qinfo5, for some reason, is nullable. */
+	    if  (nulli == DB_EMB_NULL)
+	    {
+		fifth[0] = EOS;
+	    }
+
+	    switch(rtype)
+	    {
+	      case 0:
+		    if (STcompare(first, ERx("n")) == 0)
+			tblfield = 0;
+		    else
+			tblfield = 1;
+		    break;
+
+	      case 1:
+	      {
+	    	    register i4      numr = qdef->mqnumtabs;
+		    register RELINFO *rel;
+
+		    if ((qdef->mqtabs[numr] = (RELINFO *)MEreqmem((u_i4)0,
+			(u_i4)sizeof(RELINFO),
+			TRUE, (STATUS *)NULL)) == NULL)
+		    {
+			FDerror(ERRALLOC, 0, ERx(""));
+			loop_status = FAIL;
+			EXEC SQL ENDSELECT;
+		    }
+
+		    rel = qdef->mqtabs[numr];
+
+		    /*
+		    ** first of many calls to check_and_assign(), which 
+		    ** will verify that the first argument is a valid
+		    ** identifier, put it in the proper case, and assign it
+		    ** to the second argument if all is well. This retains
+		    ** bugfix 8236: copyform-ing a lowercase Ingres
+		    ** JoinDef into an upper case DB2 database requires
+		    ** case translation at some point, so we check the case
+		    ** when the JoinDef is first extracted out of the
+		    ** database just to be sure. 
+		    **
+		    ** If the first argument is NOT a valid identifier, an
+		    ** error is issued within the check_and_assign, it
+		    ** returns FAIL, which will make us exit the routine
+		    ** after the loop
+		    */
+		    if ( (loop_status = check_and_assign(first,
+					rel->mqrelid,FALSE)) == FAIL)
+			EXEC SQL ENDSELECT;
+
+		    if (STcompare(second, ERx("0")) == 0)
+		    {
+			masters++;
+			rel->mqtype = 0;
+		    }
+		    else
+		    {
+			details++;
+			rel->mqtype = 1;
+		    }
+
+		    if ((loop_status = check_and_assign(third,
+					rel->mqrangevar,FALSE)) == FAIL)
+			EXEC SQL ENDSELECT;
+
+		    if (STcompare(fourth, ERx("0")) == 0)
+			rel->opdelete = 0;
+		    else
+			rel->opdelete = 1;
+
+		    /*
+		    ** This should only be relevant for BE's from 6.5
+		    ** onward; previous versions shouldn't care what the
+		    ** owner is, and including it (i.e., select ... from
+		    ** owner.table) might break a 6.4 or earlier parser
+		    **
+		    ** So, assume that we don't have a specification.  If
+		    ** the resultant string is empty (column was NULL),
+		    ** then, don't bother with the check.
+		    */
+		    rel->mqrelown[0] = EOS;
+		    if  (fifth[0] != EOS)
+		    {
+		    	if  ((loop_status = check_and_assign(&fifth[0],
+						&rel->mqrelown[0],
+						TRUE)) == FAIL)
+			{
+		     		if  (STbcompare(&fifth[0],0,
+						UI_FE_CAT_ID_65,0,TRUE) != 0)
+				{
+					EXEC SQL ENDSELECT;
+				}
+				else
+				{
+					STcopy(&fifth[0],&rel->mqrelown[0]);
+				}
+			}
+		    }
+
+		    qdef->mqnumtabs++;
+		    break;
+	      }
+
+	      case 2:
+	      {
+		    register i4	numa = qdef->mqnumatts;
+		    ATTRIBINFO	*att;
+
+		    if ((qdef->mqatts[numa] =
+			(ATTRIBINFO *)MEreqmem((u_i4)0,
+			(u_i4)sizeof(ATTRIBINFO),
+			TRUE, (STATUS *)NULL)) == NULL)
+		    {
+			FDerror(ERRALLOC, 0, ERx(""));
+			loop_status = FAIL;
+			EXEC SQL ENDSELECT;
+		    }
+		    att = qdef->mqatts[numa];
+		    if ( (loop_status = check_and_assign(first,
+					 att->rvar,FALSE)) == FAIL)
+			EXEC SQL ENDSELECT;
+
+		    if ( (loop_status = check_and_assign(second,
+					 att->col,FALSE)) == FAIL)
+			EXEC SQL ENDSELECT;
+
+		    /*
+		    ** We don't call check_and_assign for this att->formfield
+		    ** since its the form's internal name for this column.
+		    ** The form's name is a FE object, and FE objects are always
+		    ** lowercased (BE objects, columns, have conditional casing)
+		    */
+		    STcopy(third, att->formfield);
+		    CVlower(att->formfield);
+
+		    if (fourth[0] == '0')
+	    		att->opupdate = 0;
+		    else
+	    		att->opupdate = 1;
+		    if (fourth[1] == '0')
+		    {
+    			att->jpart = -1;
+		    }
+		    else if (fourth[2] == '0')
+		    {
+    			att->jpart = 0;
+		    }
+		    else
+		    {
+    			att->jpart = 1;
+		    }
+		    att->found = 0;
+		    qdef->mqnumatts++;
+		    break;
+	      }
+
+	      case 3:
+	      {
+		    register i4	numj = qdef->mqnumjoins;
+		    JOININFO	*join;
+
+		    if ((qdef->mqjoins[numj] =
+			(JOININFO *)MEreqmem((u_i4)0,
+			(u_i4)sizeof(JOININFO),
+			TRUE, (STATUS *)NULL)) == NULL)
+		    {
+    			FDerror(ERRALLOC, 0, ERx(""));
+			loop_status = FAIL;
+			EXEC SQL ENDSELECT;
+		    }
+		    join = qdef->mqjoins[numj];
+
+
+		    if ( (loop_status = check_and_assign(first,
+					 join->rv1,FALSE)) == FAIL)
+			EXEC SQL ENDSELECT;
+
+		    if ( (loop_status = check_and_assign(second,
+					 join->col1,FALSE)) == FAIL)
+			EXEC SQL ENDSELECT;
+
+		    if ( (loop_status = check_and_assign(third,
+					 join->rv2,FALSE)) == FAIL)
+			EXEC SQL ENDSELECT;
+
+		    if ( (loop_status = check_and_assign(fourth,
+					 join->col2,FALSE)) == FAIL)
+			EXEC SQL ENDSELECT;
+
+		    qdef->mqnumjoins++;
+		    break;
+	      }
+
+	      default:
+		    FDerror(BADRECTYPE, 0, ERx(""));
+		    loop_status = FAIL;
+		    EXEC SQL ENDSELECT;
+		    break;
+
+	    }
+	EXEC SQL END;
+
+	if (loop_status == FAIL)
+	{
+    		return(FALSE);
+	}
+
+	rcount = FEinqrows();
+	errnum = FEinqerr();
+	if (errnum > 0)
+	{
+		IIUGerr(E_QF003E_Can_t_retrieve_named_, 0, 0);
+		return(FALSE);
+	}
+	if (rcount < 1)
+	{
+		FDerror(NOQUERYD, 1, qdef->mqcr.name);
+		return(FALSE);
+	}
+	if (masters == 0 || details == 0)
+	{
+		/* 1-1 case */
+		qdef_type = 1;
+		mqnummasters = max(masters, details);
+		mqnumdetails = 0;
+		onetbl = mqnummasters == 1? TRUE : FALSE;
+	}
+	else
+	{
+		/* master/detail case */
+		qdef_type = 0;
+		mqnummasters = masters;
+		mqnumdetails = details;
+		onetbl = FALSE;
+	}
+	if (mqgettypes(qdef) != TRUE)
+	{
+		return(FALSE);
+	}
+	if (qdef->mqnumtabs > 1)
+	{
+		/* if no joins were found in the _ii_joindefs catalog
+		** (record type = 3), then determine
+		** the joins from the attributes (the old way). (gac)
+		*/
+		if (qdef->mqnumjoins == 0 && !mqgetjoins(qdef))
+		{
+			/* problem building joins */
+			IIUGerr(E_QF003F_Problem_building_join,0,0);
+			return(FALSE);
+		}
+
+		if (!mqgetjcode(qdef))
+		{
+			return(FALSE);
+		}
+	}
+	else
+	{
+		IIQFmauMarkAllUnjoined(qdef, FALSE);
+	}
+	if (STcompare(qdef->mqcr.owner, IIUIdbdata()->user) != 0)
+	{
+		STcopy(IIUIdbdata()->user, qdef->mqcr.owner);
+		qdef->mqcr.id = -1;
+	}
+	return(TRUE);
+}
+
+
+
+/*{
+** Name:	check_and_assign()
+**
+** Description:
+**	Sorta modularizes the call to IIUGdlm_ChkdlmBEobject(); if the
+**	first argument contains invalid characters, we issue an error. 
+**	Saves us from using the same gosh darn error call all over 
+**	the code. No big whup.
+**
+** Inputs:
+**	from	{char *} identifier to be checked
+**	to	{char *} place to put result
+**	ingres_ok
+**		bool indicating if $ingres should be considered valid.
+**
+** Outputs:
+**	to	{char *} gets filled in, case-corrected, if id is valid
+** 
+** Returns:
+**	OK	We are happy campers
+**	FAIL	IIUGdlm_ChkdlmBEobject() didn't like our id
+**
+** History:
+**	1-oct-92 (daver)
+**		First Written.
+**	18-nov-1993 (rdrane)
+**		Add parameter to (dis)allow '$ingres', and if not
+**		disallowed, ensure that we return it ok.
+*/
+static STATUS
+check_and_assign(from, to, ingres_ok)
+char	*from;
+char	*to;
+bool	ingres_ok;
+{
+
+	/*
+	** joindef info is stored "normalized"
+	** so 3rd param is TRUE
+	*/
+	if ( IIUGdlm_ChkdlmBEobject( from, to, TRUE ) != UI_BOGUS_ID )
+	{
+		return OK;
+	}
+
+	if  ((!ingres_ok) ||
+	     (STbcompare(from,0,UI_FE_CAT_ID_65,0,TRUE) != 0))
+	{
+		IIUGerr(E_QF014C_BadJoinDefObj, 0, 1, from);
+		return FAIL;
+	}
+
+	/*
+	** If we got this far, it must be '$ingres' and allowable
+	** in this instance.
+	*/
+	STcopy(from,to);
+
+	return OK;
+}
+
+
+
+
+/*{
+** Name:	mqgettypes()
+**
+** History:
+**	30-sep-1986 (sandyd)
+**		Saturn Changes.	 Added call to FEconnect to connect to proper
+**		local database before retrieving from "relation" or "attribute".
+**	7/87 (peterk) changed accesses to "relation" and "attribute" to
+**		calls on FErel_* and FEatt_* routines.
+**	17-dec-1987 (prs)
+**		Integrate bug fix 10328.
+**	29-apr-88 (kenl)
+**		Added code to ensure that all keys are represented with the
+**		ATTRIBINFO structure.  Before the use of primary keys, this
+**		was not a concern.
+**	23-sep-92 (daver)
+**		Changed call to FErel_ffetch to include owner name,
+**		taken right out of the existing relinfo structure. Done for 
+**		6.5 owner.table (FIPS) support.
+**	31-jan-1994 (rdrane)
+**		Set mqappendok to TRUE, since JoinDefs can't contain
+**		references to unsupported datatypes. B57552.
+**	15-Oct-1998(angusm)
+**		bug 86168 - SEGV on access of allow_views
+*/
+static
+mqgettypes(qdef)
+MQQDEF	*qdef;
+{
+	register RELINFO	*rel;
+	register ATTRIBINFO	*att;
+	register i4		numrels = qdef->mqnumtabs;
+	register i4		numatts = qdef->mqnumatts;
+	char	*rname;
+	char	*rowner;
+	i4	i, j, k;
+	FE_REL_INFO	relinfo;
+	FE_ATT_QBLK	aqblk;
+	FE_ATT_INFO	attinfo;
+	STATUS		rstat;
+	char		tbl_keys[MQ_MAXCOLS][DB_MAXNAME + 1];
+	bool	badcolfnd = FALSE;	/* determines if a bad col was found */
+	bool		found;
+	i4		newatts;
+	ATTRIBINFO	*unused[MQ_MAXCOLS];
+	i4		ucount;
+	i4		kfound;
+	bool		new_keys;
+
+	IIQFnkuNoKeyForUpdates = FALSE;
+	IIQFnkaNoKeyForAppends = FALSE;
+	qdef->mqappendok = TRUE;
+	for (i = 0; i < qdef->mqnumtabs; i++)
+    	{
+		rel = qdef->mqtabs[i];
+		rname = rel->mqrelid;
+		rowner = rel->mqrelown;
+
+		if ((rstat = FErel_ffetch(rname, rowner, &relinfo)) == OK)
+		{
+		    if (!any_cats)
+			any_cats = relinfo.catalog;
+		    if (!any_views && !allow_views)
+			any_views = relinfo.type == ICVIEW;
+		}
+
+		if (rstat != OK)
+		{
+		    FDerror(NOTABLE, 1, rname);
+		    return (FALSE);
+		}
+
+		_VOID_ STcopy(relinfo.owner, rel->mqrelown);
+
+		ucount = 0;
+		new_keys = FALSE;
+		newatts = 0;
+		kfound = 0;
+
+		if ((rstat = FEatt_fopen(&aqblk, &relinfo)) == OK)
+		{
+		    while (FEatt_fetch(&aqblk, &attinfo) == OK)
+		    {
+			found = FALSE;
+			for (j = 0; j < numatts; j++)
+			{
+			    att = qdef->mqatts[j];
+			    if ((STcompare(att->rvar, rel->mqrangevar) == 0)
+				&& (STcompare(att->col, attinfo.column_name) == 0))
+			    {
+				found = TRUE;
+				break;
+			    }
+			}
+
+			if (!found)
+			{
+		            if ((unused[ucount] =
+				(ATTRIBINFO *)MEreqmem((u_i4)0,
+			    	(u_i4)sizeof(ATTRIBINFO),
+			    	TRUE, (STATUS *)NULL)) == NULL)
+		            {
+			    	FDerror(ERRALLOC, 0, ERx(""));
+			    	return(FALSE);
+		            }
+		            att = unused[ucount];
+		            STcopy(rel->mqrangevar, att->rvar);
+		            STcopy(attinfo.column_name, att->col);
+	
+		            att->formfield[0] = EOS;
+	    		    att->opupdate = 0;
+    			    att->jpart = -1;
+
+			    ucount++;
+    
+			    if ((attinfo.keyseq != 0) && (relinfo.unique_keys))
+			    {
+			    	new_keys = TRUE;
+			    }
+			}
+
+			if ((attinfo.keyseq != 0) && (relinfo.unique_keys))
+			{
+			    kfound++;
+			    att->keyinfo = mqISKEY;
+			}
+			else
+			{
+			    att->keyinfo = mqISNOTKEY;
+			}
+
+			att->rdbv = NULL;
+			att->ttype = rel->mqtype;
+    
+			/* bug 14072, 12969
+			** initialize mdtype
+			*/
+			att->mdtype = rel->mqtype;
+
+			/*
+			** Set lkeyinfo to indicate whether column
+			** is a logical key, and, if so, whether it's
+			** system-maintained or user-maintained.
+			** (bug 8593).
+			*/
+			att->lkeyinfo = 0;
+			if (STequal(attinfo.column_internal_datatype,
+			    ERx("OBJECT_KEY")))
+			{
+			    att->lkeyinfo = mqOBJECT_KEY;
+			}
+			if (STequal(attinfo.column_internal_datatype,
+			    ERx("TABLE_KEY")))
+			{
+			    att->lkeyinfo = mqTABLE_KEY;
+			}
+			if (att->lkeyinfo != 0 &&
+			    STequal(attinfo.column_system_maintained, ERx("Y")))
+			{
+			    att->lkeyinfo |= mqSYSTEM_MAINT;
+			}
+
+			/* bug 2191
+			** initialize mandfld
+			*/
+			if (!attinfo.nulls && !attinfo.defaults)
+			{
+			    att->mandfld = 1;
+			}
+			else
+			{
+			    att->mandfld = 0;
+			}
+
+			FEatt_dbdata(&attinfo, &att->dbv);
+			att->found = 1;
+			if (qdef_type)
+			{
+			    att->intbl = tblfield? 1: 0;
+			}
+			else
+			{
+			    att->intbl = tblfield && rel->mqtype? 1: 0;
+			}
+		    }	/* end of processing all attributes from FEatt_fetch */
+
+		    if (new_keys)
+		    {
+			/* copy new keys into main ATTRIBINFO structure */
+			for (j = 0; j < ucount; j++)
+			{
+			    att = unused[j];
+			    if (att->keyinfo == mqISKEY)
+			    {
+				qdef->mqatts[numatts + newatts] = att;
+				unused[j] = (ATTRIBINFO *)NULL;
+				newatts++;
+			    }
+			}
+			rel->keytype = kfound + newatts;
+		    }
+		    else if (kfound > 0)
+		    {
+			rel->keytype = kfound;
+		    }
+		    else
+		    {
+			rel->keytype = IIQFsqj_sqlKeyCheck(rel->mqrelid,
+				rel->mqrelown, tbl_keys);
+
+			/*
+			**  If no valid key type was located (primary, TID,
+			**  alternate, whole row) then do not allow updates.
+			*/
+			if (rel->keytype == mqNOUPDATE)
+			{
+				IIQFnkuNoKeyForUpdates = TRUE;
+			}
+			else if (rel->keytype == mqNOAPPEND)
+			{
+				IIQFnkuNoKeyForUpdates = TRUE;
+				IIQFnkaNoKeyForAppends = TRUE;
+			}
+			else if (rel->keytype > 0)
+			{
+			    /* find keys wherever and move to main structure */
+			    for (k = 0; k < rel->keytype; k++)
+			    {
+				found = FALSE;
+				for (j = 0; j < numatts; j++)
+				{
+				    att = qdef->mqatts[j];
+				    if (STequal(att->rvar, rel->mqrangevar)
+					&& STequal(att->col, tbl_keys[k]))
+				    {
+					found = TRUE;
+					att->keyinfo = mqISKEY;
+					break;
+				    }
+				}
+
+				if (!found)
+				{
+				    for (j = 0; j < ucount; j++)
+				    {
+					att = unused[j];
+					if (att != (ATTRIBINFO *)NULL)
+					{
+				            if (STequal(att->col, tbl_keys[k]))
+				            {
+					        found = TRUE;
+					        att->keyinfo = mqISKEY;
+						qdef->mqatts[numatts + newatts]
+							= att;
+						unused[j] = (ATTRIBINFO *)NULL;
+						newatts++;
+					        break;
+				            }
+					}
+				    }
+				}
+			    }
+			}
+			else if (rel->keytype == mqUSEROW)
+			{
+			    /* mark all columns and move to main structure */
+			    for (j = 0; j < numatts; j++)
+			    {
+				att = qdef->mqatts[j];
+				if (STequal(att->rvar, rel->mqrangevar))
+				{
+					att->keyinfo = mqISKEY;
+				}
+			    }
+
+			    for (j = 0; j < ucount; j++)
+			    {
+				att = unused[j];
+			        att->keyinfo = mqISKEY;
+				qdef->mqatts[numatts + newatts] = att;
+				unused[j] = (ATTRIBINFO *)NULL;
+				newatts++;
+			    }
+			}
+		    }
+		    qdef->mqnumatts = numatts + newatts;
+
+		    /* release memory for unused keys */
+		    for (k = 0; k < ucount; k++)
+		    {
+			if (unused[k] != (ATTRIBINFO *)NULL)
+			{
+			    MEfree(unused[k]);
+			}
+		    }
+
+		    _VOID_ FEatt_close(&aqblk);
+		}    /* end of FEatt_open */
+	}    /* end of processing each table */
+
+	/* 
+	**	Check to see that all the columns referenced in the joindef
+	**	were found in the retrieve from the attribute table.
+	*/
+
+	for (j = 0; j < numatts; j++)
+	{
+		att = qdef->mqatts[j];
+		if (att->found == 0)
+		{
+			IIUGerr(E_QF0142_Bad_Joindef_Column, UG_ERR_ERROR,
+				(i4) 2, (PTR) att->rvar, (PTR) att->col);
+			badcolfnd = TRUE;
+		}
+	}
+	if (badcolfnd)
+	{
+		return(FALSE);
+	}	
+	return(TRUE);
+}
+
+
+/*
+** MQGETJOINS  - set up the join structure info for the
+**		named qdef being set up.
+**
+*/
+static
+mqgetjoins(qdef)
+MQQDEF	*qdef;
+{
+	register ATTRIBINFO	*att;
+	int		i, j;
+
+	for (i = 0; i < qdef->mqnumatts; i++)
+	{
+		att = qdef->mqatts[i];
+		if (att->jpart == 1)
+		{
+		    for (j = 0; j < qdef->mqnumatts; j++)
+		    {
+			if (j != i)
+			{
+			    if (STcompare(att->formfield, qdef->mqatts[j]->formfield) == 0)
+			    {
+				mqaddjoin(qdef, i, j);
+				qdef->mqnumjoins++;
+			    }
+			}
+		    }
+		}
+	}
+
+	if (qdef->mqnumjoins == 0)
+		return(FALSE);
+
+	return(TRUE);
+}
+
+/*
+**	MQGETJCODE
+**
+**	(1) set up the join code (MM, MD, DM, or DD) for each join.
+**	(2) Fix attributes' join_att, jpart, mdtype, and formfield
+**	    as required.  (Normally, jpart, mdtype, and formfield
+**	    will already have their correct values.  However, previous
+**	    bugs, such as 33795, may have caused incorrect stuff to be
+**	    written to ii_joindefs).
+*/
+
+static
+mqgetjcode(qdef)
+MQQDEF	*qdef;
+{
+	register ATTRIBINFO	*att0, *att1;
+	register JOININFO	*join;
+	register i4		numatts = qdef->mqnumatts;
+	register i4		numjoins = qdef->mqnumjoins;
+	i4	j;
+	i4	ai;
+
+	IIQFmauMarkAllUnjoined(qdef, FALSE);
+
+	for (j = 0; j < numjoins; j++)
+	{
+		join = qdef->mqjoins[j];
+
+		ai = mqfindatt(qdef, join->rv1, join->col1);
+		if (ai < 0)
+		{
+			IIUGerr(E_QF0040_Range_variable___s__a, 0, 2,
+				join->rv1, join->col1);
+			IIQFmauMarkAllUnjoined(qdef, FALSE);
+			return (FALSE);
+		}
+		att0 = qdef->mqatts[ai];
+
+		ai = mqfindatt(qdef, join->rv2, join->col2);
+		if (ai < 0)
+		{
+			IIUGerr(E_QF0040_Range_variable___s__a, 0, 2,
+				join->rv1, join->col1);
+			IIQFmauMarkAllUnjoined(qdef, FALSE);
+			return (FALSE);
+		}
+		att1 = qdef->mqatts[ai];
+
+		join->jcode[0] = (att0->ttype == 0 ? 'M' : 'D');
+		join->jcode[1] = (att1->ttype == 0 ? 'M' : 'D');
+		join->jcode[2] = EOS;
+
+		(VOID) IIQFmjMarkJoined(att0, att1);
+	}
+	return (IIQFfjaFixJoinedAttributes(qdef, FALSE));
+}

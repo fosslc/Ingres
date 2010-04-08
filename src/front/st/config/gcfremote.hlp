@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Defines the action to be taken when the remote (distributed) 
+ authorization mechanism fails.  Valid settings are "ignore" and 
+ "fail".  Set "fail" to reject the connection if remote authentication 
+ fails.  Set "ignore" if the remote mechanism fails, but the user has 
+ successfully connected with a login/password definition for the 
+ target dbms.   

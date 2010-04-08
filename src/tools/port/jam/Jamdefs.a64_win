@@ -1,0 +1,340 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.a64_win -- Variable definitions for AMD64 Windows
+#
+#  Description:
+#       Platform specific variable definitions for AMD64 Windows
+#
+# History:
+#	10-Nov-2004 (lakvi01)
+#	   Created by modifying Jamdefs.int_w32.
+#       02-May-2005 (drivi01)
+#          Added two more flags to DLLFLAGS variable as part of
+#          effort in generating pdb files in non-debug environment.
+#	12-May-2005 (lakvi01)
+#	   Updating the name of ApacheCore.lib to ApacheCoreAMD64.lib.
+#	13-May-2005 (lakvi01)
+#	   Added KRB5_SYSTYPES to this file. Change 476512 introduced
+#	   it in Jamdefs.int_w32 and it should be in this file too.
+#   	01-Aug-2005 (fanra01)
+#          Bug 90455
+#          Add SHELLHEADER for platform.
+#	25-Sep-2006 (drivi01) SIR 116656
+#	   Moved .NET Data Provider libraries to generic Jamdefs.
+#	8-Feb-2007 (bonro01)
+#	   Updated Kerberos5 headers to r1.6
+#	   Eliminated need for -DKRB5_SYSTYPES__
+#	15-Oct-2008 (whiro01)
+#	    Added /nologo to linker flags; took off /PDB:none and /WARN.
+#
+#VARS
+#
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+MISCFLAGS	default = "/nologo" ;
+THREADS		= "-D_DLL -D_MT" ;
+RUNTIME		default = "/MD" ;
+ERR_LVL		default = "-W3" ;
+PREPROCESS 	default = $(PREP) ;
+BUILDTYPE	default = DYNAMIC ;
+VERSINFO	default = \"$(ING_SRC)/cl/clf/gv_win/gv.res\"  ;
+VERSINFORC	default = \"$(ING_SRC)/cl/clf/gv_win/gv.rc\" ;
+C_LIB		default = msvcrt.lib ;
+SYSLIBS		default = $(C_LIB) kernel32.lib ;
+ADVAPILIB	default = advapi32.lib ;
+NETAPILIB 	default = netapi32.lib ;
+USERLIB 	default = user32.lib ;
+GDILIB 		default = gdi32.lib ;
+MORELIB		default = ws2_32.lib shell32.lib imagehlp.lib winmm.lib ;
+MORELIB2	default = Msi.lib ole32.lib shlwapi.lib Comdlg32.lib ;
+RPCLIB		default = RpcRT4.lib ;
+CLUSAPI  	default = clusapi.lib ;
+ODBC32LIB	default = odbccp32.lib ;
+ODBCLIBS	default = odbc32.lib odbccp32.lib comctl32.lib ;
+VERSIONLIB	default = version.lib ;
+BUFFERLIB	default = bufferoverflowu.lib ;
+GV     		default = \"$(ING_SRC)/cl/clf/gv/gver.obj\" ;
+APACHECORE	default = $(ING_SRC)/front/ice/lib/ApacheCoreAMD64.lib ;
+#TERMDR		default = $(ING_SRC)/front/frontcl/termdr/termdr.obj ;
+OO		default = $(ING_SRC)/front/utils/oo/oosymbol.obj ;
+PORTREF		= "-DREFERENCE_IN_DLL" ;
+PORTIMP		= "-DIMPORT_DLL_DATA" ;
+EHFLAG		= "/EHsc" ;
+NOARSCAN 	= true ;
+CD		= "cd /d" ;
+CP		= "cp -f" ;
+RM		= "rm -f" ;
+CHMOD		= chmod ;
+FLEX		= flex ;
+LEX 		= flex ;
+AWK		= $(AWK_CMD) ;
+REBASE		= rebase ;
+
+
+#
+#ODBC object files
+#
+#ODBCOBJ1 = \"$(ING_SRC)/common/odbc/winspecials_win/dllmai32.obj\" ;
+#ODBCOBJ2 = \"$(ING_SRC)/common/odbc/driver/getrw.obj\" ;
+#ODBCOBJ3 = \"$(ING_SRC)/common/odbc/driver/encrypt.obj\" ;
+#ODBCOBJ4 = \"$(ING_SRC)/common/odbc/config_win/caiioc32.obj\" ;
+#ODBCRES = caiiodbc.res ;
+#ODBCRES2 = caiioc32.res ;
+
+#
+#TESTS res files
+#
+#ACSRES = acstart.res ;
+
+#
+#EMBED OBJECTS
+#
+#EQDATA = eqdata.obj ;
+#EQGLOBS = eqglobs.obj ;
+#CGCDATA = cgcdata.obj ;
+#IIGLOBAL = iiglobal.obj ;
+
+#
+#TNGRES = \"$(ING_SRC)/front/st/tngapi_win/tngmsg.res\" ;
+#PFCRES = \"$(ING_SRC)/front/st/perfmon_win/pfctrmsg.res\" ;
+#
+#set CPUFLAGS
+#
+if $(CPU) = i386
+{
+CPUFLAGS	default = "/G7 -Di386=1 -D_X86_" ;
+}
+
+#
+#set OPTIM
+#
+if ( $(CPU) = IA64 || $(CPU) = AMD64 ) && $(DEBUG) != ON
+{
+OPTIM = "/O2" ;
+}
+else
+{
+OPTIM = "/Od" ;
+}
+
+#
+#set DEBUG
+#
+if $(DEBUG) = ON
+{
+#lakvi01 (changed from /Z7 to /Zi)
+CDEBUG	default = "/Zi" ;
+IYACCFLAGS	default = "-Xa" ;
+}
+else
+{
+CDEBUG 	default = "" ;
+IYACCFLAGS	default = "" ;
+}
+
+#
+#set PLATFORM
+#
+if $(CPU) = i386
+{
+PLATFORM 	default = "-DNT_INTEL" ;
+LIBSUFFIX	default = "" ;
+}
+if $(CPU) = IA64 
+{
+PLATFORM	default = "/G2 /Wp64 - DNT_IA64 -D_IA64_=1 -DWIN64 -D_WIN64 -DWIN32 -D_WIN32" ;
+LIBSUFFIX	default = "64" ;
+}
+if $(CPU) = AMD64
+{
+LIBSUFFIX	default = "64" ;
+PLATFORM	default = "/Wp64 -DNT_AMD64 -D_AMD64_=1 -DWIN64 -D_WIN64  -DWIN32 -D_WIN32" ;
+# PLATFORM	default = "/Wp64 -DNT_AMD64 -D_AMD64_=1 -DWIN32 -D_WIN32" ;
+}
+if $(CPU) = ALPHA
+{
+PLATFORM	default = "-DNT_ALPHA" ;
+LIBSUFFIX	default = "" ;
+}
+if $(CPU) = MIPS
+{
+LIBSUFFIX	default = "" ;
+PLATFORM	default = "-DNT_MIPS" ;
+}
+if $(CPU) = PPC
+{
+LIBSUFFIX	default = "" ;
+PLATFORM	default = "-DNT_PPC" ;
+}
+else
+{
+LIBSUFFIX	default = "" ;
+PLATFORM	default = "" ;
+}
+
+#
+#set DBLFLAG
+#
+if $(DOUBLEBYTE) = ""
+{
+DBFLAG	default = "-DDOUBLEBYTE" ;
+}
+
+#
+#set EDFLAG
+#
+if $(DEVELOPER_EDITION) = ""
+{
+DEVELOPER_EDITION 	default = "OFF" ;
+}
+else
+{
+DEVELOPER_EDITION 	default = "ON" ;
+EDFLAG 		default = "-DEVELOPER_EDITION" ;
+}
+
+#
+#set DECFLAG
+#
+if $(DECBUILD) != ""
+{
+DECFLAG 	default = "-DDNET_USE_WINSOCK" ;
+}
+
+#
+#set DEVFLAGS
+#
+if $(DEBUG) = ON
+{
+DEVFLAGS 	default = "-DIIDEV_TEST -DIIDEV_DEBUG" ;
+}
+
+#
+#set MACH
+#
+if $(CPU) = i386 
+{
+	MACH 	default = /MACHINE:X86 ;
+}
+
+if $(CPU) = IA64
+{
+	MACH 	default = /MACHINE:IA64 ;
+}
+
+if $(CPU) = AMD64
+{
+	MACH 	default = /MACHINE:AMD64 ;
+}
+
+if $(CPU) = ALPHA
+{
+	MACH 	default = -machine:alpha ;
+}
+
+#
+#set DLLFLAGS
+#
+DLLFLAGSNV = /DEBUG:FULL /DEBUGTYPE:CV /MAP $(MACH) ;
+if $(DEBUG) = ON
+{
+	if $(CPU) = IA64 || $(CPU) = AMD64
+	{
+		DLLFLAGS 	default = /DEBUG:FULL /DEBUGTYPE:CV /MAP $(MACH) /LARGEADDRESSWARE 
+					  $(VERSINFO) ;
+	}
+	else
+	{
+		DLLFLAGS 	default = /DEBUG:FULL /DEBUGTYPE:CV /MAP $(MACH) 					  $(VERSINFO) ;
+	}
+}
+else
+{
+	DLLFLAGS = /MAP /DEBUG /INCREMENTAL:NO $(MACH) $(VERSINFO) ;
+}
+
+if $(DEBUG) != ON
+{
+	if $(CPU) = IA64
+	{
+		MSDEV_CONFIG = "Release64" ;
+		DEVENVFLAGS  = "/nologo /useenv" ;	
+	}
+	if $(CPU) = AMD64
+	{
+		MSDEV_CONFIG = "ReleaseAMD64" ;
+		DEVENVFLAGS  = "/nologo /useenv" ;	
+	}
+	if $(CPU) != IA64 && $(CPU) != AMD64
+	{
+		MSDEV_CONFIG = "Release" ;
+		DEVENVFLAGS  = "/nologo" ;
+	}
+}
+else
+{
+	if $(CPU) = IA64
+	{
+		MSDEV_CONFIG = "Debug64" ;
+		DEVENVFLAGS  = "/nologo /useenv" ;
+	}
+	if $(CPU) = AMD64 
+	{
+		MSDEV_CONFIG = "DebugAMD64" ;
+		DEVENVFLAGS  = "/nologo /useenv" ;
+	}
+	if $(CPU) != IA64 && $(CPU) != AMD64
+	{
+		MSDEV_CONFIG = "Debug" ;
+		DEVENVFLAGS  = "/nologo" ;
+	}
+
+}
+
+#
+#Variables
+#
+VERS	default = "a64_win" ;
+CCMACH	default = $(CPUFLAGS) $(CDEBUG) $(RUNTIME) $(ERR_LVL) $(PLATFORM) $(PREPROCESS) -DDESKTOP -DDEVIL -DWIN32 -DINCLUDE_ALL_CL_PROTOS -DNT_GENERIC -DSEP -DSEPDEBUG -DDOUBLEBYTE -DxCL_NO_AUTH_STRING_EXISTS -DINGRESII $(DBFLAG) $(EDFLAG) $(DECFLAG) $(DEVFLAGS) $(THREADS) ;
+WINNT	default = -D_WIN32_WINNT=0x0500 ;
+# CC	default = "CC" ;
+JAMSHELL = cmd /C % ;
+VISUALC  = "C:/Program Files (x86)/Microsoft Visual Studio .NET 2003/VC7" ;
+PSDK     = "C:/Program Files/Microsoft Platform SDK" ;
+# C++ 	 = \"$(VISUALC)/bin/cl.exe\" ;
+# LINK 	 = \"$(VISUALC)/bin/link.exe\" ;
+# AR 	 = \"$(VISUALC)/bin/lib.exe\" ;
+LDLIBMACH = /nologo $(DLLFLAGS) ;
+LINKFLAGS = /nologo $(DLLFLAGS) ;
+CCLDMACH  = /nologo $(DLLFLAGS) ;
+
+#LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(GV) ;
+LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(BUFFERLIB) $(GV) ;
+STDHDRS  = \"$(PSDK)\\include\\crt\" ;
+KEEPOBJ = true ;
+SHELLHEADER = "" ;
+AR = "lib /MACHINE:AMD64" ;
+
+#
+# File suffixes
+#
+LIBSFX	default = lib ;
+SLSFX	default = dll ;
+DEFSFX	default = def ;
+EXESFX	default = exe ;
+OBJSFX	default = obj ;
+PDBSFX	default = pdb ;
+
+#
+#ICE File extensions
+#
+ICE_EXT = dll ;
+CGI_EXT = exe ;
+
+
+#
+# Visual Studio rebuild flag
+#
+BUILD = /rebuild ;

@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!st!setupdriver_win
+#
+
+SubDir ING_SRC front st setupdriver_win ;
+
+IISUBSYS front st setupdriver_win ;
+
+
+IISLN SetupDriver.exe : SetupDriver.sln ;
+

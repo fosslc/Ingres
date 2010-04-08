@@ -1,0 +1,88 @@
+The program in this directory serves as an example of using Ingres and 
+the Ingres Management Architecture (IMA) to provide a monitoring utility for
+threads in each of the servers in the installation.
+
+This code is provided as an example only. It is an unsupported example 
+provided by Ingres Corporation to help customers who wish to use the IMA 
+facilities in Ingres. The code in this directory is Copyright (c) 1995 
+Ingres Corporation. 
+
+Ingres Corporation accepts no responsibility for any damage or action 
+arising from the use of this code.
+
+For a discussion of IMA - see the Ingres System Reference Manual and 
+Advisor doc US-126867
+
+The program is written in embedded SQL with FRS calls. It makes use of 
+two IMA registered tables 'ima_server_sessions' and 'ima_unix_sessions' to
+get information about the relative I/O rates of sessions within the INGRES
+server processes. In addition - it makes use of an Ingres 'DBMS global 
+temporary' table.
+
+Files in this directory:
+
+Makefile		Makefile for the utility - this file will need to 
+			be edited to add the relevant libraries for each 
+			platform. Change the LIBS line to contain the library 
+			list specified in the LDLIBMACH variable in the file:
+
+				$II_SYSTEM/ingres/utility/iisysdep 
+
+iomon.form		Copyform output of the form used in the application
+
+iomon.sc		The source code for the utility
+
+iomon.sql		SQL script to register the required tables
+
+To setup the utility, as privileged INGRES user, create a database as the 
+'$ingres' user, then register the IMA tables and procedures.
+
+% createdb -u\$ingres imadb
+% make register
+
+Copy the form in, then get a compiled version:
+
+% make copyform
+% make compform
+
+Build the application:
+
+% make
+
+To run the application, use
+
+% iomon [database] [-rTIMEOUT_SECONDS]
+
+Where:
+
+database		is the name of the database containing the IMA tables.
+TIMEOUT_SECONDS		is the number of seconds for the refresh interval.
+
+The screen output is as follows:
+
+________________________________________________________________________________
+DIO Monitor for Vnode: wraith                                                   
+                                                                                
++---------------+------------+--------+---------------+--------------------+---+
+|Server         |Session     |Terminal|User           |                    |I/O|
+|---------------+------------+--------+---------------+--------------------+---|
+|wraith::/@3720 |00009926016 |ttyp9   |johna          |%%%%%%%%%%%%%%%%%%%%|37 |
+|wraith::/@3720 |00006027040 |NONE    | <Log Writer>  |%%%%%%%%            |16 |
+|wraith::/@3720 |00010526784 |ttypa   |ingres         |%%%%%               |11 |
+|               |            |        |               |                    |   |
+|               |            |        |               |                    |   |
++---------------+------------+--------+---------------+--------------------+---+
+________________________________________________________________________________
+
+Where:
+
+Server		is the server process containing the session performing I/O
+Session		is the decimal representation of the session ID
+Terminal 	is the local terminal identifier
+User		is the username of the owner of the session
+I/O		is the number of disk I/O operations in this refresh cycle
+
+The barchart represents relative I/O rates. The most resource intensive session
+completely fills the available space, all other sessions being shown relative
+to this one.
+

@@ -1,0 +1,15 @@
+#
+# Jamfile file for back!psf!psq
+#
+
+SubDir ING_SRC back psf psq ;
+
+IISUBSYS back psf psq ;
+
+
+IILIBRARY PSFLIB : psqmonth.roc psqcvtdw.roc psqxlate.c
+	psqvers.c psqtxtmod.c psqstrt.c psqsrvdmp.c psqshtdwn.c
+	psqsesdmp.c psqrecr.c psqprmdmp.c psqparse.c psqmscdmp.c
+	psqendses.c psqdelrng.c psqdelcsr.c psqcurhsh.c psqcurdmp.c
+	psqclscrs.c psqbgnses.c psqalter.c ;
+

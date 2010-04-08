@@ -1,0 +1,19 @@
+Ingres Networked DBMS server w/STAR
+
+The Ingres Intelligent DBMS, the foundation of the Ingres
+product line, provides the power to manage today's critical information
+resources: data, knowledge, and objects.  Because of this unique
+ability, the Ingres Intelligent DBMS empowers organizations to
+model all aspects of their operations within the database engine
+itself, rather than within client application code.
+ 
+The Ingres Networking extension enables communication between
+Ingres installations in a heterogeneous, networked environment.
+Ingres Networking supports several major protocols, including
+TCP/IP and DECnet.
+
+The Ingres Star Distributed DBMS is a distributed extension to
+the Ingres Intelligent DBMS server which allows data from multiple
+independent databases to be accessed as if contained in a single,
+centralized relational database.  In this way, Ingres Star provides
+client applications with transparent access to enterprise-wide data.

@@ -1,0 +1,53 @@
+<!-- Copyright (c) 1998 Ingres Corporation --> 
+<SCRIPT language="JavaScript">
+		var size
+		var position = 0
+		var head = '<STYLE>\nBODY {Arial;color:white;font-size="10pt";}\nA:link	{color: black;}\n</STYLE>\n'
+		var bodyProperties = 'bgcolor="#FFFFFF"'
+
+		function makeArray(n) {
+			this.length = n
+			for (var i = 1; i <= n; i++) {
+				this[i] = 0
+			}
+			return this
+		}
+
+		function declareMenu (size) {
+			position = 0
+			files = new makeArray(size)
+		}
+
+		function createFile(icon, name) 
+		{
+			this.name = name
+			this.icon = icon
+		}
+	
+		function add(icon, name) 
+		{
+			files[position] = createFile(icon, name)
+			position++
+		}
+
+		function displayFiles() 
+		{
+			var first = 0
+
+			write('<HTML>\n<HEAD>\n')
+			write(head);
+			write('</HEAD>\n<BODY ' + bodyProperties + '>\n')
+
+			write('<table CELLPADDING=0 CELLSPACING=0>\n')
+			while (first < position) 
+			{
+				write('<td WIDTH=15><IMG ALIGN=CENTER WIDTH="100%" HEIGHT="100%" BORDER=0 SRC="' + 
+							 files[first].icon + '">' +
+							 files[first].name' + '</td>\n')
+				first = first + 1
+			}
+			write('</table>\n')
+			write('</BODY>\n</HTML>\n')
+		}
+
+</script>

@@ -1,0 +1,16 @@
+#
+# Jamfile file for front!abf!osl
+#
+
+SubDir ING_SRC front abf osl ;
+
+IISUBSYS front abf osl ;
+
+
+IILIBRARY OSLLIB : osrecord.sc osfrdecl.sc oskeyw.roc scan.c
+	ostree.c ostmpall.c ostlist.c ossymnd.c ossymlab.c ossymchk.c
+	ossym.c ossubsys.c osstrsem.c ossrt.c osrep.c osreffrm.c
+	osquery.c osquel.c osqtrav.c osqrys.c osobjini.c osobject.c
+	osl.c osfrsopt.c osfrs.c osfrrefs.c osexpr.c oserr.c osdbgen.c
+	osdata.c oscktype.c oscall.c osblock.c keyword.c getargs.c ;
+

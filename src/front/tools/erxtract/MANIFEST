@@ -1,0 +1,22 @@
+#
+# YAM MANIFEST file for front!tools!erxtract
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#	31-dec-2004 (abbjo03
+#	    Use FECATMSG instead of fe.cat.msg for portability.
+
+
+IISUBSYS front tools erxtract ;
+
+IIMSGDOC messages.readme ;
+
+IIMSGTXT messages.txt : eradf.msg eraif.msg erclf.msg erddf.msg erdmf.msg
+	erdo.msg erduf.msg ereo.msg ergcf.msg erglf.msg ergwf.msg erjdbc.msg
+	erodbc.msg erom.msg eropf.msg erpsf.msg erpw.msg erqef.msg erqsf.msg
+	errdf.msg errqf.msg erscf.msg erse.msg ersm.msg ersxf.msg ertpf.msg
+	erulf.msg erurs.msg erusf.msg erw4.msg erwc.msg erwn.msg erwr.msg
+	erwsf.msg $(FECATMSG) ;
+

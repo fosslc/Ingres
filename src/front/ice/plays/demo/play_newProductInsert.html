@@ -1,0 +1,37 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>New Product Insert</title>
+</head>
+<body>
+<h1>New Product Inserted</h1>
+<!-- To Do:
+	Add the specified product to the play_item
+	table.
+	List the item.
+
+-->
+
+<!-- #ICE
+    DATABASE=`icetutor`
+    SQL=`execute procedure newProduct (name=':name', cost=:cost,
+             stock=:stock, insertor=':insertor')`
+-->
+
+<!-- Show the new product entry: -->
+<p>
+The new entry is as follows:
+<br>
+<!-- #ICE
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+         select * from play_item
+	 order by id DESC`
+    TYPE=`TABLE`
+-->
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

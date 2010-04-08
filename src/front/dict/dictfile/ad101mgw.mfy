@@ -1,0 +1,67 @@
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_abfdependen_mod
+
+CREATE INDEX ii_abfdependen_mod ON ii_abfdependencies (object_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_abfobjects_mod
+
+CREATE UNIQUE INDEX ii_abfobjects_mod ON ii_abfobjects (applid, object_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_encoded_for_mod
+
+CREATE UNIQUE INDEX ii_encoded_for_mod ON ii_encoded_forms (object_id, cfseq)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_fields_mod
+
+CREATE UNIQUE INDEX ii_fields_mod ON ii_fields (object_id, flsubseq)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_forms_mod
+
+CREATE UNIQUE INDEX ii_forms_mod ON ii_forms (object_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_gropts_mod
+
+CREATE UNIQUE INDEX ii_gropts_mod ON ii_gropts (object_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_joindefs_mod
+
+CREATE UNIQUE INDEX ii_joindefs_mod ON ii_joindefs (object_id, qtype)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_qbfnames_mod
+
+CREATE UNIQUE INDEX ii_qbfnames_mod ON ii_qbfnames (object_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_rcommands_mod
+
+CREATE UNIQUE INDEX ii_rcommands_mod
+	ON ii_rcommands (object_id, rcotype, rcosequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_reports_mod
+
+CREATE UNIQUE INDEX ii_reports_mod ON ii_reports (object_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_trim_mod
+
+CREATE INDEX ii_trim_mod ON ii_trim (object_id, trim_col, trim_lin)
+

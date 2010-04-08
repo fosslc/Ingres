@@ -1,0 +1,15 @@
+#
+# Jamfile file for dbutil!duf!dub
+#
+# History:
+#	19-jan-2005 (abbjo03)
+#	    Remove dubhack.c since it's no longer needed.
+
+SubDir ING_SRC dbutil duf dub ;
+
+IISUBSYS dbutil duf dub ;
+
+
+IILIBRARY DBUTILLIB : dubdsdb.c dubdbmsmod.c
+	dubdata.c dubcrdb.c ;
+

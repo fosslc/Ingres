@@ -1,0 +1,116 @@
+;
+;   History:
+;	18-oct-1999 (somsa01)
+;	    Removed tp2_u13_log.
+;       26-sep-2002 (rigka01) bug 108805
+;           Remove tpd_u2_err_internal due to change 459495
+;	11-oct-2001 (somsa01)
+;	    Removed tpd_u2_err_internal, as it is now a macro.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	    Renamed iitpfnt.def to iilibtpf.def.
+;
+
+EXPORTS
+tp2_c0_log_lx		@1				
+tp2_c1_log_dx		@2				
+tp2_c2_log_dx_state		@3				
+tp2_c3_delete_dx		@4				
+tp2_c4_loop_to_log_dx_state		@5				
+tp2_c5_loop_to_delete_dx		@6				
+tp2_d0_crash		@7				
+tp2_d1_suspend		@8				
+tp2_m0_commit_dx		@9				
+tp2_m1_end_1pc		@10				
+tp2_m2_end_2pc		@11				
+tp2_m3_p0_commit_read_lxs		@12				
+tp2_m4_p1_secure_write_lxs		@13				
+tp2_m5_p2_close_all_lxs		@14				
+tp2_m6_p3_loop_to_close_lxs		@15				
+tp2_m7_restart_and_close_lxs		@16				
+tp2_r0_recover		@17				
+tp2_r10_get_dx_cnts		@18				
+tp2_r11_bld_srch_list		@19				
+tp2_r12_set_ddb_recovered		@20				
+tp2_r13_resecure_all_ldbs		@21				
+tp2_r1_recover_all_ddbs		@22				
+tp2_r2_recover_1_ddb		@23				
+tp2_r3_bld_cdb_list		@24				
+tp2_r4_bld_odx_list		@25				
+tp2_r5_bld_lx_list		@26				
+tp2_r6_close_odx		@27				
+tp2_r7_close_all_lxs		@28				
+tp2_r8_p1_recover		@29				
+tp2_r9_p2_recover		@30				
+tp2_u10_loop_to_restart_cdb		@31				
+tp2_u11_loop_to_send_msg		@32				
+tp2_u12_term_all_ldbs		@33				
+tp2_u1_restart_1_ldb		@34				
+tp2_u2_msg_to_ldb		@35				
+tp2_u3_msg_to_cdb		@36				
+tp2_u4_init_odx_sess		@37				
+tp2_u5_term_odx_sess		@38				
+tp2_u6_cdcb_to_ldb		@39				
+tp2_u7_term_lm_cb		@40				
+tp2_u8_restart_all_ldbs		@41				
+tp2_u9_loop_to_restart_all_ldbs		@42					
+tpd_m10_is_ddb_open		@95				
+tpd_m11_is_ddb_open		@96				
+tpd_m1_set_dx_id		@97				
+tpd_m2_init_dx_cb		@98				
+tpd_m3_term_dx_cb		@99				
+tpd_m4_ok_ldb_for_dx		@100				
+tpd_m5_ok_write_ldbs		@101				
+tpd_m6_register_ldb		@102				
+tpd_m7_srch_ldb		@103				
+tpd_m8_new_dx_mode		@104				
+tpd_m9_ldb_to_lxcb		@105				
+tpd_p1_prt_gmtnow		@106				
+tpd_p2_prt_rqferr		@107				
+tpd_p3_prt_dx_state		@108				
+tpd_p4_prt_tpfcall		@109				
+tpd_p5_prt_tpfqry		@110				
+tpd_p6_prt_qrytxt		@111				
+tpd_p8_prt_ddbdesc		@112				
+tpd_p9_prt_ldbdesc		@113				
+tpd_s1_srch_sp		@114				
+tpd_s2_clear_all_sps		@115				
+tpd_s3_send_sps_to_ldb		@116				
+tpd_s4_abort_to_svpt		@117				
+tpd_u0_trimtail		@118				
+tpd_u10_fatal		@119				
+tpd_u11_term_assoc		@120				
+tpd_u12_trim_cdbstrs		@121				
+tpd_u13_trim_ddbstrs		@122				
+tpd_u14_log_rqferr		@123				
+tpd_u1_error		@124				
+tpd_u3_trap		@125				
+tpd_u4_rqf_call		@126				
+tpd_u5_gmt_now		@127				
+tpd_u6_new_cb		@128				
+tpd_u7_term_any_cb		@129				
+tpd_u8_close_streams		@130				
+tpd_u9_2pc_ldb_status		@131				
+tpf_call		@132				
+tpf_m1_process		@133				
+tpf_m2_trace		@134				
+tpf_m3_abort_to_svpt		@135				
+tpf_m4_savepoint		@136				
+tpf_m5_startup_svr		@137				
+tpf_m6_shutdown_svr		@138				
+tpf_m7_init_sess		@139				
+tpf_m8_term_sess		@140				
+tpf_m9_transition_ok		@141				
+tpf_u0_tprintf		@142				
+tpf_u1_p_sema4		@143				
+tpf_u2_v_sema4		@144				
+tpf_u3_msg_to_ldb		@145				
+tpq_d1_delete		@146				
+tpq_i1_insert		@147				
+tpq_i2_query		@148				
+tpq_s1_select		@149				
+tpq_s2_fetch		@150				
+tpq_s3_flush		@151				
+tpq_s4_prepare		@152				
+tpq_u1_update		@153				

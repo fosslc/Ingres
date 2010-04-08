@@ -1,0 +1,60 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmmovcfg.hlp
+MOVE CONFIGURATION DATA
+
+This screen is used to move core information (database definitions,
+CDDS and path definitions, and table configurations including support
+objects) from the local database to its assigned targets.  This ensures
+that all the replicated databases contain identical information.
+
+The database targets displayed on this screen are those that have at
+least one Full Peer or Protected Read-Only CDDS.  Databases that only
+have Unprotected Read-Only CDDS's, as well as the local database, are
+not shown.
+
+You are required to move configuration information from the local
+database to its targets whenever you:
+
+  -  Complete the initial registration of tables
+
+  -  Reconfigure Replicator by adding databases, CDDS's or paths, or
+     change the existing ones
+
+  -  Register new tables for replication or change the registration
+     (e.g., columns, keys, lookup tables) of existing ones
+
+Prior to moving the configuration for the first time, you should have
+created the Replicator catalogs by running 'repcat' against the target
+database.  In addition, in order for horizontally partitioned tables
+to be configured correctly at the target databases, the respective
+lookup tables should exist at the targets and be populated with all the
+required rows.
+
+The columns on the list are:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        No.             The database number.  This is a unique
+                        system-wide identifier assigned by the user.
+
+        Database        The virtual node name plus the database name.
+
+        DBMS Type       The type of database, for example, Ingres
+                        or CA-Datacom.
+
+        Remarks         A short comment.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        ThisDatabase    Move the configuration to the currently
+                        highlighted database.
+
+        AllDatabases    Move the configuration to all the databases
+                        displayed on the list.
+
+        Help            Access the Help facility.
+
+        End             Return to the Configuration Menu.

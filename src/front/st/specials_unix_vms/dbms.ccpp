@@ -1,0 +1,337 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for dbms
+*/
+
+/*
+** History
+**	29-jan-1993 (jonb)
+**		Created.
+**	11-feb-1993 (jonb)
+**		Changes.
+**	16-mar-1993 (dianeh)
+**		Corrections; added History.
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	14-jul-1993 (tyler)
+**		Moved Unix EXECUTABLE iimerge so that it appears before
+**		the LINK specifications which reference it.  Removed
+**		superfluous braces.
+**	15-jul-1993 (tyler)
+**		Changed iislave file type identifier to EXECUTABLE from
+**		LINK on Unix systems. 
+**	16-jul-1993 (tyler)
+**		Fixed curly braces which caused the iimerge EXECUTABLE
+**		to be out of scope for its LINK declarations.
+**	03-aug-1993 (dianeh)
+**		Fixed file-type for acpexit.def.
+**	03-aug-1993 (dianeh)
+**		Added history comment for previous fix.
+**	04-aug-1993 (ricka)
+**		Changed acpexit.def file type to FILE, since SCRIPT
+**		doesn't work on VMS.
+**	04-aug-1993 (tyler)
+**		Cleaned up and added contents of now defunct sudbms part
+**		file.
+**	05-aug-1993 (tyler)
+**		Added missing SCRIPT iisudbms.  Moved iimklog EXECUTABLE
+**		from setupsup.  Added iirundbms and related files not
+**		moved from sudbms part file.
+**	05-aug-1993 (tyler)
+**		Added missing History comment and set correct permissions
+**		on acpexit.def.
+**	06-aug-1993 (tyler)
+**		Added mkrawlog SCRIPT for Unix platforms.
+**	06-aug-1993 (tyler)
+**		Added FILE declarations for dbms.crs and dbms.rfm.
+**	27-aug-1993 (ricka)
+**		VMS, iisudbms.com needs to end up in [ingres]
+**	10-sep-1993 (ricka)
+**		Backed out previous change.
+**	19-sep-1993 (kellyp)
+**		Modified for the new way in which SETUP workds
+**	20-sep-1993 (kellyp)
+**		SETUP is now a file option and not a file attribute
+**		which means the keywords will appear after the file name.
+**	24-sep-1993 (tyler)
+**		Moved SETUP keyword to SCRIPT declaration.  Added
+**		missing History removed by ricka.
+**	25-oct-1993 (ricka)
+**		jpt_clf_src:[cs]iirundbms.cld deleted by change #406257
+**	26-oct-1993 (dianeh)
+**		Changed iirundbms from executable to script.
+**	03-nov-1993 (kellyp)
+**		Removed support map files in VOLUME E.
+**      04-nov-1993 (huffman)
+**              Remove dmfrcp.exe on vms.  (no longer delivered)
+**	22-feb-1994 (tyler)
+**		Make acpexit.def customizable.
+**	14-apr-1994 (joplin)
+**		Added Read permission for executables.
+**	01-may-1995 (wolf) 
+**		acpexit.def permissions modified to (s:rwed), like all
+**		other scripts just were.  Let ingdefdev permissions revert
+**		to defaults.
+**	13-aug-1996 (kch)
+**		Add dbms diagnostic files (mkexcept, idbg, iiexcept) for UNIX
+**		platforms only.
+**	19-dec-97 (stephenb)
+**		Add repstat to list of deliverables.
+**	25-mar-1998 (canor01)
+**		Remove requirement for CI_RMS_GATEWAY.
+**	14-apr-1998 (loera01) Bug 78907
+**		For VMS, moved iirundbms.exe and iirundbms.stb to 
+**		setupsupp.ccpp, so that client-only installations have access 
+**		to this executable.
+**	28-may-1998 (kinte01)
+**          	Modified the location for iisudbms on VMS to pick up SED 
+**	    	stripped version
+**	11-jun-1998 (kinte01)
+**	    Cross integrate change 435890 from oping12
+**          19-may-1998 (horda03)
+**              Porting Evidence Sets to VMS. Adding MKEXCEPTS, IIEXCEPT and
+**              IDBG
+**	02-May-2001 (hanje04)
+**	    Added mkraware for UNIX platforms.
+**	18-Sept-2001 (hanje04)
+**	    Removed idbg, mkexcept and iiexcept from deliverables as
+**	    funtionality no longer exists in the server.
+**	19-sep-2001 (somsa01)
+**	    'mkraware' should be 'mkrawarea'.
+**	02-Nov-2001 (hanje04)
+**	    Include iimerge.o and iilink with dbms package
+**	13-Feb-2002 (devjo01)
+**	    Include iisunode for UNIX cluster support.
+**      11-apr-2002 (kinte01)
+**          Only provide cluster related files if R_CLUSTER is defined.
+**          This prevents providing the executables before we are truly
+**          ready to support clustered Ingres
+**	03-Jul-2002 (devjo01)
+**	    Include iimkcluster & iiuncluster.
+**	02-oct-2002 (devjo01)
+**	    Add iinumainfo.
+**	21-nov-2002 (abbjo03)
+**	    Reinstate idbg, mkexcept and iiexcept since the functionality is
+**	    still present on VMS.
+**      08-may-2003 (horda03) Bug 110208
+**          Include BLOBSTOR.EXE for VMS release. This is currently
+**	    built/supplied in the ICE package, but ICE isn't delivered
+**	    on VMS. BLOBSTOR.EXE is required by QA for BLOB testing.
+**	24-oct-2003 (kinte01)
+**	    Remove references to dmfcsp as the Cluster Server is no longer
+**	    a separate process
+**	30-Oct-2003 (kinte01)
+**	    Wrap iisunode, iimkcluster, iiuncluster in an R_CLUSTER 
+**	    define since they are Cluster specific
+**	04-Jun-2004 (hanje04)
+**	    Add files/mdb/mdbusers.sql files/mdb/mdbadmin.sql
+**	21-Jun-2004 (gupsh01)
+**	    Added files /mdb/mdbimaadt.sql
+**	17-Jul-2004 (hanje04)
+**	    Move mdb stuff to EI rpm package.
+**	20-Nov-2004 (hanje04)
+** 	    Move blobstor to dbsupport.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	10-Mar-2005 (hanje04)
+**	    Move server shared libraries here from sharelib.ccpp
+**	29-Jun-2005 (hanje04)
+**	    Remove iirundbms from dbms package, it is already in setupsup.
+**      18-Aug-2006 (wonca01) BUG 116510
+**          Add check for Linux platforms to remove mkrawlog from package.
+**       8-Oct-2007 (hanal04) Bug 119262
+**          Added archive iimerge.a alternative to shared library server.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	24-Jun-2009 (kschendel) SIR 122138
+**	    Move server shared libraries to $II_SYSTEM/ingres/bin.
+**	    (See mksvrshlibs for why.)
+**	10-Jul-2009 (hanje04)
+**	    SIR 122309
+**	    Add iiapplcfg script for applying predifined configuration sets.
+**	17-Sep-2009 (hanje04)
+**	    SIR 122309
+**	    Only include iiapplcfg on UNIX
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART   dbms
+   capability CI_BACKEND
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+   BUILD_DIR (ING_BUILD)!bin
+# ifdef VMS
+      EXECUTABLE cacheutil
+      EXECUTABLE dmfacp
+      EXECUTABLE dmfjsp
+      EXECUTABLE iishowres
+      EXECUTABLE lartool
+      EXECUTABLE lockstat
+      EXECUTABLE logdump
+      EXECUTABLE logstat
+      EXECUTABLE rcpconfig
+      EXECUTABLE rcpstat
+      EXECUTABLE repstat
+      EXECUTABLE iidbms
+# else /* VMS */
+   {
+   PERMISSION s:rwed,o:rwed,g:re,w:re,setuid
+      EXECUTABLE iimerge
+      LINK cacheutil
+      LINK dmfacp
+      LINK dmfjsp
+      LINK dmfrcp
+      LINK iidbms
+      LINK iishowres
+      LINK iistar
+      LINK lartool
+      LINK lockstat
+      LINK logdump
+      LINK logstat
+      LINK rcpconfig
+      LINK rcpstat
+      LINK repstat
+   }
+      EXECUTABLE iislave
+# ifdef conf_SVR_SHL
+	/* Server-shared-libraries go in bin, not lib */
+      EXECUTABLE lib(PROG0PRFX)becompat.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)scf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)opf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)rdf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)qef.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)psf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)qsf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)dbutil.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)dmf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)gwf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)adf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)ulf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)tpf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)rqf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)gcf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)sxf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)cuf.1.$SLSFX
+# endif /* conf_SVR_SHL */
+
+# endif /* VMS */
+
+#ifdef VMS
+	EXECUTABLE mkexcept
+	EXECUTABLE idbg
+	EXECUTABLE iiexcept
+#endif
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+   {
+   PERMISSION s:rwed,o:rwed,g:re,w:re # needs SCRIPT permissions
+      FILE acpexit.def
+         CUSTOM
+   }
+      FILE dbms.rfm
+      FILE dbms.crs
+
+/*
+** ingres!utility
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY ingres!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+# ifdef VMS
+      SCRIPT ingdefdev
+# else /* VMS */
+# ifndef LNX 
+      SCRIPT mkrawlog
+# endif /* NOT LINUX */
+      SCRIPT mkrawarea
+      SCRIPT iilink
+      EXECUTABLE iinumainfo
+# endif /* VMS */
+      SCRIPT SETUP iisudbms
+# ifdef R_CLUSTER
+      SCRIPT iisunode
+      SCRIPT iimkcluster
+      SCRIPT iiuncluster
+# endif
+      EXECUTABLE iimklog
+# ifdef UNIX
+      SCRIPT iiapplcfg
+# endif
+
+#ifndef VMS
+/*
+** ingres!lib
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY ingres!LIB_TGT
+#endif
+    BUILD_DIR (ING_BUILD)!LIB_BLD
+	FILE iimerge.o
+
+# ifdef conf_SVR_AR
+
+   BUILD_DIR (ING_BUILD)!lib
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY (PROD2NAME)!lib
+#endif
+     {
+      FILE iimerge.a
+      }
+
+# endif /* conf_SVR_AR */
+
+#endif /* !VMS */
+
+# ifdef VMS
+/*
+** ingres!debug
+*/
+
+   DIRECTORY ingres!debug
+   BUILD_DIR (ING_BUILD)!debug
+      FILE iidbms.stb
+      FILE cacheutil.stb
+      FILE dmfacp.stb
+      FILE dmfjsp.stb
+      FILE iishowres.stb
+      FILE lartool.stb
+      FILE lockstat.stb
+      FILE logdump.stb
+      FILE logstat.stb
+      FILE rcpconfig.stb
+      FILE rcpstat.stb
+      FILE repstat.stb
+      FILE iimklog.stb
+
+# endif /* VMS */

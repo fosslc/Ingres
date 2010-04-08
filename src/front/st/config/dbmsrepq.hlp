@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The rep_qman_threads resource specifies the number of replication queue
+  management threads used by DBMS servers created with this definition.
+
+  Default: 1

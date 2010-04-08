@@ -1,0 +1,347 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<lo.h>
+#include	<si.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+##include	<abclass.qsh>
+##include	<oocat.qsh>
+#include	<oosymbol.h>
+#include	<oodefine.h>
+#include	<dmchecks.h>
+##include	"abclinfo.qsh"
+#include	"abfglobs.h"
+#include	"gncode.h"
+#include	"erab.h"
+
+/**
+** Name:	abraedit.qc -	ABF Record Attribute Component Edit Module.
+**
+** Description:
+**	Contains the definition of the component class edit information
+**	structure for the record attribute component objects.  Defines:
+**
+**	iiABratts	ABF record attribute component class edit information.
+**
+** History:
+**	Revision 6.3/03/00  89/06  billc
+**	Initial revision.
+**
+**	02-dec-91 (leighb) DeskTop Porting Change:
+**		Added routines to pass data across ABF/IAOM boundary.
+** 6-Feb-92 (blaise)
+**	Added include abfglobs.h.
+** 16-Nov-92 (donc) 
+**	Modified COMP_CLASS_INFO initialization for bug 44162 fix.
+** 15-nov-93 (robf)
+**      Add DB_SEC_TYPE to list of valid datatypes.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	11-sep-2006 (gupsh01)
+**	    Added ANSI date/time support.
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	26-Aug-2009 (kschendel) 121804
+**	    Need oodefine.h to satisfy gcc 4.3.
+**/
+
+STATUS	iiabPrint();
+
+
+static VOID	_ra_display();
+static STATUS	_ra_save();
+static VOID	_ra_destroy();
+static VOID	_ra_type_help();
+static STATUS	_ra_verifyType();
+
+static const
+	DB_DT_ID	_types[] = { DB_INT_TYPE, DB_FLT_TYPE,
+				DB_CHR_TYPE, DB_TXT_TYPE, DB_CHA_TYPE,
+				DB_VCH_TYPE, DB_DTE_TYPE, DB_MNY_TYPE,
+				DB_DEC_TYPE, DB_ADTE_TYPE, DB_TMWO_TYPE,
+				DB_TMW_TYPE, DB_TME_TYPE, DB_TSWO_TYPE,
+				DB_TSW_TYPE, DB_TSTMP_TYPE, DB_INDS_TYPE,
+				DB_INYM_TYPE
+};
+
+/*:
+** Name:	iiABratts -	ABF record attribute Class Edit Information.
+**
+** Description:
+**	Defines additional class information for the record att. component
+**	objects for use in editing.
+*/
+
+#define _EditExpl	F_AB0055_Edit4GL_expl
+#define _PrintExpl	F_AB0380_ObjPrint_expl
+#define _EmptyExpl 	F_AB005E_Empty_expl
+
+GLOBALDEF const COMP_CLASS_INFO iiABratts = {
+	OC_RECMEM,
+	ERx("abfpartcreate"), ERx("abfratts.hlp"), ERx(""), 2,
+	F_AB006B_ARADef_title,
+	ER_OK,
+	sizeof(_types)/sizeof(_types[0]), _types,	/* legal types */
+	{NULL,	NULL},	_data_type,	NULL, NULL, NULL,	/* Fields */
+	{NULL,		0,		_EmptyExpl,	0}, 	/* Go */
+	{NULL,		0,		_EmptyExpl,	0},	/* Edit */
+	{NULL,		0,		_EmptyExpl,	0}, 	/* Compile */
+	{NULL,		0,		_EmptyExpl,	0}, 	/* FormEdit */
+	{iiabPrint,	FE_Print,	_PrintExpl,	0},	/* Print */
+	_ra_display, _ra_save, _ra_destroy, _ra_verifyType
+};
+
+/*
+** Name:	_ra_display() -	Display a Class Component Attribute Definition.
+**
+** Description:
+**	Displays the attributes of a record component attribute on its component
+**	definition form.
+**
+** Inputs:
+**	ratt	{RECMEM *}  The class component attribute.
+**
+** History:
+**	06/89 (billc)  Written.
+*/
+
+static VOID
+##_ra_display ( ratt )
+##register RECMEM	*ratt; 
+##{
+##	char		*formname = iiABratts.form;
+	DB_DATA_DESC	*dbdv = &ratt->data_type;
+## 	char	 	title[63+1];
+
+	GLOBALREF char	*IIabExename;
+
+	IIUGfmt(title, sizeof(title)-1, ERget(iiABratts.title), 1, IIabExename);
+
+##	PUTFORM formname (	
+##		_title = title,
+##		name = ratt->name
+##	);
+
+	iiabTD_TypeDisplay(formname, dbdv, (i4) ratt->appl->dml);
+
+	/*
+	** When editing, user can't twiddle the objects' name.  Also, we
+	** may have set some fields invisible (we use this form for creation
+	** as well as editing) so set them visible, just in case.
+	*/
+##	SET_FRS FIELD formname (
+##			displayonly(name) = 1,
+##			underline(name) = 0,
+##			invisible(_owner) = 0,
+##			invisible(_create_date) = 0,
+##			invisible(_altr_date) = 0,
+##			invisible(_last_altered_by) = 0
+##	);
+
+##}
+
+/*
+** Name:	_ra_save() -	Save Record Attribute Component Definition from
+**					the Form.
+** Description:
+**	Saves the attributes for a record att. component object from the
+**	component definition form for this class.  This checks if any values
+**	changed before modifying the object's attributes and only then writing
+**	the object to the database.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**	obj	{RECMEM *}  The record att. component object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	07/89 (billc)  Written.
+**	05/90 (jhw)  Added long remark check for save.
+*/
+static STATUS
+##_ra_save ( app, obj )
+APPL			*app;
+register APPL_COMP	*obj;
+##{
+##	i4		sremark_change;
+##	char		*formname;
+##	DB_DATA_DESC	*dbdv;
+
+	dbdv = &((RECMEM *) obj)->data_type;
+	formname = iiABratts.form;
+
+##	INQUIRE_FRS FIELD formname (
+##			sremark_change = change(_short_remark)
+##	);
+
+	if ( iiabTG_TypeGet( obj, formname, dbdv ) )
+		obj->data.dirty = TRUE;
+
+	if ( sremark_change != 0 )
+##	{
+		char	*cp;
+##		char	short_remark[OOSHORTREMSIZE+1];
+
+##		GETFORM formname ( short_remark = _short_remark );
+##		SET_FRS FIELD formname ( change(_short_remark) = 0 );
+
+		if ( ! STequal(obj->short_remark, short_remark)
+		  && (cp = FEtsalloc(obj->data.tag, short_remark)) != NULL )
+		{
+			obj->short_remark = cp;
+			obj->data.dirty = TRUE;
+		}
+##	}
+
+	_VOID_ IIOOckLongRemark((OO_OBJECT *)obj);
+
+	if ( obj->data.dirty )
+	{
+		STATUS IIAMwaWriteAtt();
+
+		return iiabSvComp(obj, IIAMwaWriteAtt );
+	}
+	return OK;
+##}
+
+/*
+** Name:	_ra_destroy() -	Destroy a record attribute Component Object.
+**
+** Description:
+**	record att. destroy just removes the att from the record def's list.
+**	we'll write out a new set of attributes each time we write the 
+**	record def.
+**
+** Input:
+**	obj	{APPL_COMP *}  The record attribute component.
+**
+** History:
+**	08/89 (billc)  Written.
+*/
+static VOID
+_ra_destroy ( obj )
+APPL_COMP	*obj;
+{
+	RECDEF		*parent;
+	RECMEM	*tmp;
+	RECMEM	dummy;
+
+	parent = (RECDEF *) ((RECMEM *)obj)->parent;
+
+	/* remove this sucker from the parent's list of atts. */
+	dummy.name = ERx("");
+	dummy.next_mem = parent->recmems;
+	for (tmp = &dummy; tmp != NULL; tmp = tmp->next_mem)
+	{
+		RECMEM *next = tmp->next_mem;
+
+		if (next != NULL && STequal(next->name, obj->name))
+		{
+			tmp->next_mem = next->next_mem;
+			((RECMEM *) obj)->next_mem = NULL;
+			break;
+		}
+	}
+	parent->recmems = dummy.next_mem;
+
+	_VOID_ IIAMdaDeleteAtt((RECMEM*)obj);
+}
+
+/*
+** Name:	_ra_verifyType() -		Verify Data Type on Form.
+**
+** Description:
+**	Reads the data type specifiction (type only) from the form and
+**	verifies that it's legit.
+**
+** Inputs:
+**	comp	{APPL_COMP *}  The object checking the type.
+**	desc	{char *}  A string describing the type.
+**
+** Outputs:
+**	dbdv	{DB_DATA_TYPE*} A dbv to represent the description.
+**
+** Returns:
+**	{STATUS}  OK if datatype is valid, FAIL otherwise.
+**
+** Side Effects:
+**	Turns the 'nullable' field invisible if the datatype is a record,
+**	turns the 'array' field invisible if the datatype is an ingres type.
+**
+** History:
+**	07/89 (billc)  Written.
+*/
+
+static STATUS
+_ra_verifyType ( comp, desc, dbdv )
+##APPL_COMP	*comp;
+char		*desc;
+DB_DATA_VALUE   *dbdv;
+##{
+##	char	*formname = iiABratts.form;
+##	RECMEM	*ra = (RECMEM *)comp;
+
+	/* if we got a component, allow record definitions here. */
+	if ( ra != NULL && STequal(desc, ra->parent->name) )
+	{
+		IIUGerr(E_AB0267_RecAttr, UG_ERR_ERROR, 0);
+		return FAIL;
+	}
+	else if ( ra != NULL
+		  && OOsnd( OC_RECORD, _withName, desc, (char*)NULL, 
+				ra->appl->ooid ) != nil 
+		)
+	{
+		DM_RACHECK_ARG racheck;
+
+		/* Check for recursion */
+		racheck.attr_type = desc;
+		racheck.self = FALSE;
+		IIAMxdsDepSearch((APPL_COMP *)ra->parent, IIAM_zraRecAttCheck, 
+				 (PTR)&racheck);
+		if (racheck.self)
+		{
+			IIUGerr(E_AB0263_RecRecursion, UG_ERR_ERROR, 2, 
+				desc, ra->parent->name);
+			return FAIL;
+		}
+		dbdv->db_datatype = DB_DMY_TYPE;
+		dbdv->db_length = dbdv->db_prec = 0;
+	}
+	/* Note: 'Nullability' here is not the "true" value, but the default
+	** to be used when the type field is toggled between a complex type and
+	** an INGRES type.
+	*/
+	else if ( iiabCkTypeSpec(desc, (bool)(comp->appl->dml == DB_SQL), dbdv)
+			!= OK
+		  || dbdv->db_datatype == DB_NODT )
+	{ /* invalid data type */
+		iiabTypeError(desc, E_AB0269_Data_type);
+		return FAIL;
+	}
+
+	dbdv->db_data = (PTR) desc;
+	iiabTD_TypeDisplay(formname, (DB_DATA_DESC*)dbdv, DB_NODT);
+##	SET_FRS FIELD formname ( change(_data_type) = 1 );
+
+	return OK;
+##}

@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How You Add a Table for Updating the Route Table </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="Routes table">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body>
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="1586.html" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="1668.html" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How You Add a Table for Updating the Route Table</h4>
+<p class="bodytext">The query for returning routes that match the search criteria involves an SQL join between the route table and the airline table. The resulting DataGridView contains columns taken from both tables.</p>
+<p class="bodytext">A number of methods can be used to extract the data from the DataGridView row before calling an adapter command (see <a id="h1592" class="jumptemplate" title="IngresDataAdapter5" href="1591.html" target="_self">IngresDataAdapter5</a>). The addition of the updateRoute table in the RouteDataSet is illustrated here.</p>
+<p class="picture"><img src="1636.png" alt="Add Data Table" vspace="0" hspace="0" align="bottom" border="0"></p>
+<p class="bodytext">Rename the newly created data table in the Properties panel from DataTable to updateRoute. </p>
+<p class="bodytext">Add the following columns:</p>
+<p class="beforetable"></p>
+<table width="420" cellpadding="2" cellspacing="0" border="0" style="border-collapse:collapse">
+<tr align="left" valign="top">
+<th style = "border-top:2px solid #010101;border-bottom:2px solid #010101;" width="144"><p class="tableheading">Column Name</p>
+</th>
+<th style = "border-top:2px solid #010101;border-bottom:2px solid #010101;" width="174"><p class="tableheading">Type</p>
+</th>
+<th style = "border-top:2px solid #010101;border-bottom:2px solid #010101;" width="102"><p class="tableheading">Key field</p>
+</th>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:1px solid #010101;" width="144"><p class="tablebodytext">rt_airline</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="174"><p class="tablebodytext">System.String</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="102"><p class="tablebodytext">Y</p>
+</td>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:1px solid #010101;" width="144"><p class="tablebodytext">rt_flight_num</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="174"><p class="tablebodytext">System.Int32</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="102"><p class="tablebodytext">Y</p>
+</td>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:1px solid #010101;" width="144"><p class="tablebodytext">rt_depart_from</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="174"><p class="tablebodytext">System.String</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="102"><p class="tablebodytext">N</p>
+</td>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:1px solid #010101;" width="144"><p class="tablebodytext">rt_arrive_to</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="174"><p class="tablebodytext">System.String</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="102"><p class="tablebodytext">N</p>
+</td>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:1px solid #010101;" width="144"><p class="tablebodytext">rt_depart_at</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="174"><p class="tablebodytext">System.DateTime</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="102"><p class="tablebodytext">N</p>
+</td>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:1px solid #010101;" width="144"><p class="tablebodytext">rt_arrive_at</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="174"><p class="tablebodytext">System.DateTime</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="102"><p class="tablebodytext">N</p>
+</td>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:1px solid #010101;" width="144"><p class="tablebodytext">rt_arrive_offset</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="174"><p class="tablebodytext">System.Sbyte</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="102"><p class="tablebodytext">N</p>
+</td>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:2px solid #010101;" width="144"><p class="tablebodytext">rt_flight_day</p>
+</td>
+<td style = "border-bottom:2px solid #010101;" width="174"><p class="tablebodytext">System.String</p>
+</td>
+<td style = "border-bottom:2px solid #010101;" width="102"><p class="tablebodytext">Y</p>
+</td>
+</tr>
+
+</table>
+<p class="picture"><img src="1637.png" alt="Update Route" vspace="0" hspace="0" align="bottom" border="0"></p>
+<p class="bodytext">The RouteDataSet now contains two definitions for tables, route and updateRoute.</p>
+<p class="picture"><img src="1638.png" alt="Route DataSet" vspace="0" hspace="0" align="bottom" border="0"></p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2006 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

@@ -1,0 +1,17 @@
+/#-- Copyright 2009 Ingres Corporation
+  The qef_hashjoin_min resource sets the minimum amount of memory to be
+  reserved by any one hash join operation.
+
+  Normally, memory is reserved based on the optimizer row estimates, the
+  number of hash join and aggregation operations in the query, and the
+  qef_hash_mem setting.  If the optimizer row estimate is too low, a
+  hash join may be under-reserved, causing spillage and poor performance.
+  If under-estimation is common for some reason, the qef_hashjoin_min
+  resource can be used to set a minimum reservation per hash join.
+  A zero value means "no specific minimum".
+
+  Excessive values of qef_hashjoin_min (more than a few megabytes) can
+  unbalance the reservation algorithms and cause poor performance, excessive
+  memory usage, or "QEF out of memory" errors.
+
+  The default is zero, no guaranteed minimum.

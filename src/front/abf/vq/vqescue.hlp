@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescue.hlp                Update-End escape code examples.
+The Update-End escape executes in Update frames, just after the UPDATE 
+query(ies) and before the COMMIT WORK statement.

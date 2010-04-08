@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The INGRES/MENU Queries screen allows you to select either SQL or
+QUEL to enter database commands directly, or select QBF to use the full
+Query-By-Forms facilities to access data in the database. To make a
+selection, place the cursor on the desired row and press "Select"
+on the command menu.
+
+The selections are:
+
+	SQL		Use Interactive SQL to enter SQL commands directly
+			to the database.
+
+	QUEL		Use Interactive QUEL to enter QUEL commands directly
+			to the database.
+
+	QBF		Use Query-By-Forms to query or update data.
+
+(If you are not authorized to run one of the above selections, then it will
+not appear in your menu.)
+
+The following additional menu items are available:
+
+	Select		Selects the row the cursor is currently on.
+
+	Cancel		Return to the main INGRES/MENU screen.
+
+	Shell/Spawn	Escape to the operating system. To return
+			to INGRES/MENU from an operating system shell,
+			type "logout" or "exit".
+			(this menu item will be "Shell" on some systems
+			and "Spawn" or "CLI" on others)
+
+	Help		Show this help text.

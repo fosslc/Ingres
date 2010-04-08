@@ -1,0 +1,449 @@
+
+/* SQL script created by COPYDB, version II 9.0.4 (int.w32/105). */
+
+\sql
+set autocommit on
+\p\g
+set nojournaling
+\p\g
+\sql
+set session with privileges=all
+\p\g
+
+	/* TABLES */
+\nocontinue
+create table airline(
+	al_id integer not null not default,
+	al_iatacode nchar(2) not null not default,
+	al_icaocode nchar(3) not null not default,
+	al_name nvarchar(60) not null not default,
+	al_ccode nchar(2) not null not default
+)
+with duplicates,
+nojournaling,
+	page_size = 8192,
+location = (ii_database),
+security_audit=(table,norow)
+;
+modify airline to hash unique on
+	al_icaocode
+with fillfactor = 50,
+	extend = 16,
+	page_size = 8192
+\p\g
+copy airline(
+	al_id= c0tab,
+	al_iatacode= nchar(0)tab,
+	al_icaocode= nchar(0)tab,
+	al_name= nvarchar(0)tab,
+	al_ccode= nchar(0)nl,
+	nl= d0nl)
+from 'airline.ingres'
+with minpages = 10,
+	allocation = 4,
+	row_estimate = 42
+\p\g
+set journaling on airline
+\p\g
+create table airport(
+	ap_id integer not null not default,
+	ap_iatacode nchar(3) not null not default,
+	ap_place nvarchar(30),
+	ap_name nvarchar(50),
+	ap_ccode nchar(2)
+)
+with duplicates,
+nojournaling,
+	page_size = 8192,
+location = (ii_database),
+security_audit=(table,norow)
+;
+modify airport to btree unique on
+	ap_iatacode
+with nonleaffill = 80,
+	leaffill = 70,
+	fillfactor = 80,
+	extend = 16,
+	page_size = 8192
+\p\g
+copy airport(
+	ap_id= c0tab,
+	ap_iatacode= nchar(0)tab,
+	ap_place= nvarchar(0)tab with null(']^NULL^['),
+	ap_name= nvarchar(0)tab with null(']^NULL^['),
+	ap_ccode= nchar(0)nl with null(']^NULL^['),
+	nl= d0nl)
+from 'airport.ingres'
+with allocation = 4,
+	row_estimate = 56
+\p\g
+set journaling on airport
+\p\g
+create table country(
+	ct_id integer not null not default,
+	ct_code nchar(2) not null not default,
+	ct_name nvarchar(50)
+)
+with duplicates,
+nojournaling,
+	page_size = 8192,
+location = (ii_database),
+security_audit=(table,norow)
+;
+modify country to hash unique on
+	ct_code
+with fillfactor = 50,
+	extend = 16,
+	page_size = 8192
+\p\g
+copy country(
+	ct_id= c0tab,
+	ct_code= nchar(0)tab,
+	ct_name= nvarchar(0)nl with null(']^NULL^['),
+	nl= d0nl)
+from 'country.ingres'
+with minpages = 10,
+	allocation = 4,
+	row_estimate = 18
+\p\g
+set journaling on country
+\p\g
+create table flight_day(
+	day_mask nchar(7) not null,
+	day_code smallint not null,
+	day_name nchar(9) not null
+)
+with duplicates,
+nojournaling,
+	page_size = 8192,
+location = (ii_database),
+security_audit=(table,norow)
+;
+modify flight_day to btree unique on
+	day_mask,
+	day_code
+with nonleaffill = 80,
+	leaffill = 70,
+	fillfactor = 80,
+	extend = 16,
+	page_size = 8192
+\p\g
+copy flight_day(
+	day_mask= nchar(0)tab,
+	day_code= c0tab,
+	day_name= nchar(0)nl,
+	nl= d0nl)
+from 'flight_day.ingres'
+with allocation = 4,
+	row_estimate = 448
+\p\g
+set journaling on flight_day
+\p\g
+create table route(
+	rt_id integer not null not default,
+	rt_airline nchar(3) not null not default,
+	rt_flight_num integer not null not default,
+	rt_depart_from nchar(3) not null not default,
+	rt_arrive_to nchar(3) not null not default,
+	rt_depart_at ingresdate not null not default,
+	rt_arrive_at ingresdate not null not default,
+	rt_arrive_offset i1 not null not default,
+	rt_flight_day nchar(7) not null not default
+)
+with duplicates,
+nojournaling,
+	page_size = 8192,
+location = (ii_database),
+security_audit=(table,norow)
+;
+modify route to btree unique on
+	rt_airline,
+	rt_flight_num,
+	rt_flight_day
+with nonleaffill = 80,
+	leaffill = 70,
+	fillfactor = 80,
+	extend = 16,
+	page_size = 8192
+\p\g
+copy route(
+	rt_id= c0tab,
+	rt_airline= nchar(0)tab,
+	rt_flight_num= c0tab,
+	rt_depart_from= nchar(0)tab,
+	rt_arrive_to= nchar(0)tab,
+	rt_depart_at= c0tab,
+	rt_arrive_at= c0tab,
+	rt_arrive_offset= c0tab,
+	rt_flight_day= nchar(0)nl,
+	nl= d0nl)
+from 'route.ingres'
+with allocation = 4,
+	row_estimate = 6160
+\p\g
+set journaling on route
+\p\g
+create table tz(
+	tz_id integer not null,
+	tz_code nchar(5),
+	tz_name nchar(40),
+	tz_utc_offset decimal(5,2)
+)
+with duplicates,
+nojournaling,
+	page_size = 8192,
+location = (ii_database),
+security_audit=(table,norow)
+;
+modify tz to hash on
+	tz_code
+with fillfactor = 50,
+	extend = 16,
+	page_size = 8192
+\p\g
+copy tz(
+	tz_id= c0tab,
+	tz_code= nchar(0)tab with null(']^NULL^['),
+	tz_name= nchar(0)tab with null(']^NULL^['),
+	tz_utc_offset= varchar(0)nl with null(']^NULL^['),
+	nl= d0nl)
+from 'tz.ingres'
+with minpages = 10,
+	allocation = 4,
+	row_estimate = 82
+\p\g
+set journaling on tz
+\p\g
+create table user_profile(
+	up_id integer not null not default,
+	up_last nvarchar(30) not null not default,
+	up_first nvarchar(30) not null not default,
+	up_email nvarchar(100) not null not default,
+	up_airport nchar(3),
+	up_image long byte
+)
+with duplicates,
+nojournaling,
+	page_size = 8192,
+location = (ii_database),
+security_audit=(table,norow)
+;
+modify user_profile to hash unique on
+	up_email
+with fillfactor = 50,
+	extend = 16,
+	page_size = 8192
+\p\g
+copy user_profile(
+	up_id= c0tab,
+	up_last= nvarchar(0)tab,
+	up_first= nvarchar(0)tab,
+	up_email= nvarchar(0)tab,
+	up_airport= nchar(0)tab with null(']^NULL^['),
+	up_image= long byte(0)nl with null(']^NULL^['),
+	nl= d0nl)
+from 'user_profile.bin'
+with minpages = 10,
+	allocation = 4,
+	row_estimate = 5
+\p\g
+set journaling on user_profile
+\p\g
+create table version(
+	ver_id integer not null not default,
+	ver_major integer not null not default,
+	ver_minor integer not null not default,
+	ver_release integer not null not default,
+	ver_date ingresdate not null not default,
+	ver_install ingresdate not null not default
+)
+with duplicates,
+nojournaling,
+	page_size = 8192,
+location = (ii_database),
+security_audit=(table,norow)
+;
+modify version to heap
+with extend = 16,
+	allocation = 4,
+	page_size = 8192
+\p\g
+copy version(
+	ver_id= c0tab,
+	ver_major= c0tab,
+	ver_minor= c0tab,
+	ver_release= c0tab,
+	ver_date= c0tab,
+	ver_install= c0nl,
+	nl= d0nl)
+from 'version.ingres'
+with row_estimate = 1
+\p\g
+set journaling on version
+\p\g
+
+	/* SEQUENCES */
+create sequence al_id as integer
+    start with 1 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 50 no cycle no order
+\p\g
+create sequence al_tmp as integer
+    start with 406 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 20 no cycle no order
+\p\g
+create sequence ap_id as integer
+    start with 9501 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 50 no cycle no order
+\p\g
+create sequence ct_id as integer
+    start with 251 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 50 no cycle no order
+\p\g
+create sequence fl_id as integer
+    start with 6305 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 50 no cycle no order
+\p\g
+create sequence ia_id as integer
+    start with 989 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 50 no cycle no order
+\p\g
+create sequence rt_id as integer
+    start with 6300 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 50 no cycle no order
+\p\g
+create sequence tz_id as integer
+    start with 101 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 50 no cycle no order
+\p\g
+create sequence up_id as integer
+    start with 101 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 50 no cycle no order
+\p\g
+create sequence ver_id as integer
+    start with 2 increment by 1
+    minvalue 1 maxvalue 2147483647
+    cache 50 no cycle no order
+\p\g
+
+
+	/* VIEWS */
+create view  full_route as select rt_airline, al_iatacode, 
+rt_flight_num, rt_depart_from, rt_arrive_to, rt_depart_at, 
+rt_arrive_at, rt_arrive_offset, rt_flight_day, al_name, al_ccode from 
+route rt, airline al where rt_airline = 
+al_icaocode
+\p\g
+
+	/* PROCEDURES */
+create procedure get_airlines as begin return; end
+\p\g
+grant execute on procedure get_airlines to public
+\p\g
+create procedure get_airports as begin return; end
+\p\g
+grant execute on procedure get_airports to public
+\p\g
+create procedure get_my_airlines as begin return; end
+\p\g
+grant execute on procedure get_my_airlines to public
+\p\g
+create procedure get_my_airports as begin return; end
+\p\g
+grant execute on procedure get_my_airports to public
+\p\g
+create procedure search_route as begin return; end
+\p\g
+grant execute on procedure search_route to public
+\p\g
+drop procedure get_airlines
+\p\g
+create procedure  get_airlines result row( nchar(3) not null, nchar(3)
+not null, nvarchar(60) not null) as declare iatacode nchar(3); 
+icaocode nchar(3); name nvarchar(60); begin for select al_iatacode, 
+al_icaocode, al_name into :iatacode, :icaocode, :name from airline do return row (:iatacode, :icaocode, :name); endfor; end
+\p\g
+drop procedure get_airports
+\p\g
+create procedure  get_airports result row( nchar(3) not null, 
+nvarchar(30) not null, nvarchar(50) not null) as declare iatacode 
+nchar(3); place nvarchar(30); name nvarchar(50); begin for select 
+ap_iatacode, ap_place, ap_name into :iatacode, :place, :name from 
+airport do return row (:iatacode, :place, :name); endfor; 
+end
+\p\g
+drop procedure get_my_airlines
+\p\g
+create procedure  get_my_airlines( alname nvarchar(60) ) result row( 
+nchar(3) not null, nchar(3) not null, nvarchar(60) not null) as 
+declare iatacode nchar(3); icaocode nchar(3); name nvarchar(60); begin
+for select al_iatacode, al_icaocode, al_name into :iatacode, 
+:icaocode, :name from airline where al_name like :alname do 
+return row (:iatacode, :icaocode, :name); endfor; end
+\p\g
+drop procedure get_my_airports
+\p\g
+create procedure  get_my_airports( ccode nchar(2) not null not 
+default, area nvarchar(30) not null not default ) result row( nchar(3)
+not null, nvarchar(30) not null, nvarchar(50) not null) as declare 
+iatacode nchar(3); place nvarchar(30); name nvarchar(50); mstring 
+nvarchar(100) not null; begin for select ap_iatacode, ap_place, 
+ap_name into :iatacode, :place, :name from airport where 
+ap_ccode like :ccode and ap_place like :area order by ap_iatacode do 
+return row (:iatacode, :place, :name); endfor; end
+\p\g
+drop procedure search_route
+\p\g
+create procedure  search_route( depart_from nchar(3) not null not 
+default, arrive_to nchar(3) not null not default, flight_day nchar(7) 
+not null not default) result row( nchar(3) not null, integer not null,
+nchar(3) not null, nchar(3) not null, ingresdate not null, ingresdate not null, 
+nchar(7) not null) as declare o_airline nchar(3) not null; 
+o_flight_num integer not null; o_depart_from nchar(3) not null; 
+o_arrive_to nchar(3) not null; o_depart_at ingresdate not null; o_arrive_at 
+ingresdate not null; o_flight_day nchar(7) not null; begin for select 
+rt_airline, rt_flight_num, rt_depart_from, rt_arrive_to, rt_depart_at,
+rt_arrive_at, rt_flight_day into :o_airline, :o_flight_num, 
+:o_depart_from, :o_arrive_to, :o_depart_at, :o_arrive_at, 
+:o_flight_day from route where rt_depart_from = depart_from 
+and rt_arrive_to = arrive_to and rt_flight_day like flight_day order 
+by rt_airline, rt_flight_num do return row(:o_airline, :o_flight_num, 
+:o_depart_from, :o_arrive_to, :o_depart_at, :o_arrive_at, 
+:o_flight_day); endfor; end
+\p\g
+
+	/* CONSTRAINTS */
+alter table country add  PRIMARY KEY(ct_code)
+\p\g
+alter table airline add  PRIMARY KEY(al_icaocode)
+\p\g
+alter table airline add  FOREIGN KEY (al_ccode) REFERENCES country(ct_code)
+\p\g
+alter table airport add  PRIMARY KEY(ap_iatacode)
+\p\g
+alter table airport add  FOREIGN KEY (ap_ccode) REFERENCES country(ct_code)
+\p\g
+alter table route add  PRIMARY KEY(rt_airline, rt_flight_num, 
+rt_flight_day)
+\p\g
+alter table route add  FOREIGN KEY (rt_airline) REFERENCES airline(al_icaocode)
+\p\g
+alter table route add  FOREIGN KEY (rt_depart_from) REFERENCES airport(ap_iatacode)
+\p\g
+alter table route add  FOREIGN KEY (rt_arrive_to) REFERENCES airport(ap_iatacode)
+\p\g
+alter table route add constraint chkroute CHECK (rt_depart_from != 
+rt_arrive_to)
+\p\g
+alter table user_profile add  PRIMARY KEY(up_email)
+\p\g
+alter table user_profile add  FOREIGN KEY (up_airport) REFERENCES airport(ap_iatacode)
+\p\g

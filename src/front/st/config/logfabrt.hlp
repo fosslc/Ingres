@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The force_abort_limit resource specifies the percentage of the
+  transaction log(s) which must be full before the oldest pending
+  transaction is aborted.  Other transactions may still proceed.
+  The force_abort_limit must always be less than the full_limit.

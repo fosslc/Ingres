@@ -1,0 +1,123 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for utm
+*/
+
+/*
+** History
+**	04-feb-2004 (drivi01)
+**		Created.
+**	23-apr-2004 (somsa01)
+**	    Fixed up for other platforms.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART utm
+
+/*
+** ingres!bin 
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+    	BUILD_DIR (ING_BUILD)!bin
+	    SCRIPT ingsql
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+	BUILD_DIR (ING_BUILD)!files
+	{
+		FILE utmwords.cfg
+		FILE utmtypes.cfg
+		FILE aquathemepack11.zip
+	}
+	
+     DIRECTORY ingres!files!utmtemplates
+	BUILD_DIR (ING_BUILD)!files!utmtemplates
+	{
+		FILE alter_table.tpl
+		FILE create_alarm.tpl
+		FILE create_procedure.tpl
+		FILE create_role.tpl
+		FILE create_rule.tpl
+		FILE create_schema.tpl
+		FILE create_synonym.tpl
+		FILE create_table.tpl
+		FILE create_table_as.tpl
+		FILE create_user.tpl
+		FILE create_view.tpl	
+		FILE drop_object.tpl
+		FILE execute_procedure.tpl
+		FILE grant_privilege.tpl
+		FILE grant_role.tpl
+		FILE insert.tpl
+		FILE revoke.tpl
+		FILE select.tpl
+		FILE set.tpl
+		FILE update.tpl
+	}
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english!vtmhelp
+#else
+	DIRECTORY ingres!files!english!vtmhelp
+#endif
+	BUILD_DIR (ING_BUILD)!files!english!vtmhelp
+	{
+		FILE blank.gif
+		FILE blank2.gif
+		FILE blank3.gif
+		FILE blank4.gif
+		FILE blank5.gif
+		FILE blank6.gif
+		FILE block.gif
+		FILE ca.css
+		FILE ca.js
+		FILE contents.html
+		FILE contents_1.html
+		FILE contents_1_1.html
+		FILE contents_1_2.html
+		FILE diamond.gif
+		FILE empty.html
+		FILE hyphen.gif
+		FILE index.html
+		FILE minus.gif
+		FILE plus.gif
+		FILE vtm.html
+		FILE vtm.ids
+		FILE vtmcmd.html
+		FILE vtmproc.html
+	}
+
+
+/*
+** ingres!lib
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY ingres!LIB_TGT
+#endif
+	BUILD_DIR (ING_BUILD)!LIB_BLD
+		FILE UTMProject.jar
+	    	EXECUTABLE  liboinodesmgr.$SLSFX
+	    	EXECUTABLE  liboijniquery.$SLSFX
+

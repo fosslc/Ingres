@@ -1,0 +1,9 @@
+#
+# Jamfile file for front!embed!mgram
+#
+
+SubDir ING_SRC front embed mgram ;
+
+IISUBSYS front embed mgram ;
+
+

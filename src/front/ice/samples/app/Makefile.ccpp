@@ -1,0 +1,147 @@
+#ifdef HISTORY
+/*
+** Makefile.ccpp is the Makefile for various .o's in icedemo.  Makefile is a 
+**	deliverable and is shipped to users.
+**
+**
+** History:
+**	22-Jun-2000 (fanra01)
+**	    Created.
+**       6-Nov-2006 (hanal04) SIR 117044
+**          Add int.rpl for Intel Rpath Linux build.
+*/
+#endif
+
+#ifdef axp_osf
+#define GOT_IT
+CCFLAGS=-signed -Daxp_osf -O
+CC=cc
+#endif
+
+#ifdef ris_us5
+#define GOT_IT
+CCFLAGS=-Dris_us5 -D_ALL_SOURCE -qchars=signed
+CC=c89
+#endif
+
+#ifdef rs4_us5
+#define GOT_IT
+CCFLAGS=-Drs4_us5 -D_ALL_SOURCE -qchars=signed -O
+CC=c89
+#endif
+
+#ifdef ris_u64
+#define GOT_IT
+CCFLAGS=-Dris_u64 -D_ALL_SOURCE -q64 -qchars=signed -O
+CC=c89
+#endif
+
+#ifdef dg8_us5
+#define GOT_IT
+CCFLAGS=-O2
+CC=cc
+#endif
+
+#ifdef  hp8_us5
+#ifdef  hpb_us5
+CCFLAGS=-O +DAportable +DS2.0a
+#else
+CCFLAGS=-O
+#endif /* hpb_us5 */
+#define GOT_IT
+CC=c89
+#endif
+
+#ifdef su4_u42
+#define GOT_IT
+CCFLAGS=-O2
+CC=acc
+#endif
+
+#ifdef rmx_us5
+#define GOT_IT
+CCFLAGS=-Drmx_us5 -O -K signed
+CC=cc
+#endif
+
+#ifdef pym_us5
+#define GOT_IT
+CCFLAGS=-Dpym_us5 -O -K signed
+CC=cc
+#endif
+
+#ifdef sgi_us5
+#define GOT_IT
+CCFLAGS=-mips3 -n32 -O -signed -Dsgi_us5
+CC=cc
+#endif
+
+#ifdef sos_us5
+#define GOT_IT
+CCFLAGS=-Dsos_us5 -O
+CC=cc
+#endif
+
+#ifdef usl_us5
+#define GOT_IT
+CCFLAGS=-Dusl_us5 -O
+CC=cc
+#endif
+
+#ifdef sui_us5
+#define GOT_IT
+CCFLAGS=-Dsui_us5 -O
+CC=cc
+#endif
+
+#ifdef su4_us5
+#define GOT_IT
+CCFLAGS=-Dsu4_us5 -O
+CC=cc
+#endif
+
+#ifdef rmx_us5
+#define GOT_IT
+CCFLAGS=-Drmx_us5 -O -K signed
+CC=cc
+#endif
+
+#ifdef dgi_us5
+#define GOT_IT
+CCFLAGS=-Ddgi_us5 -O
+CC=cc
+#endif
+
+#ifdef dg8_us5
+#define GOT_IT
+CCFLAGS=-Ddg8_us5 -O
+CC=cc
+#endif
+
+#ifdef int_lnx
+#define GOT_IT
+CCFLAGS=-Dint_lnx -O
+CC=cc
+#endif
+
+#ifdef int_rpl
+#define GOT_IT
+CCFLAGS=-Dint_rpl -O
+CC=cc
+#endif
+
+#ifndef GOT_IT
+CCFLAGS=-O
+CC=cc
+#endif
+
+MESG="This source file is not delivered in the INGRES distribution."
+SHELL=/bin/sh
+INC=$(II_SYSTEM)/ingres/files
+CFLAGS=$(CCFLAGS) -I$(INC)
+
+OBJS        = iceapp.o
+
+iceapp.cgi :	$(OBJS)
+	$(CC) $(CFLAGS) -o$@ $(OBJS) -L$II_SYSTEM/ingres/lib -lingres LDLIB
+

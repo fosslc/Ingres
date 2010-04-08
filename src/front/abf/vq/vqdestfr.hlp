@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqdestfr.hlp, subtopic 'Destroying and removing frames' of main AFD 
+/#-- help screen.
+/#-- 
+Destroying a frame is not the same as Removing a frame.
+
+  * When you Destroy a frame, it is deleted from the application. You 
+    cannot insert it again later.  
+    - Lower-level frames in the family are removed but not destroyed.  Since 
+      they are not destroyed, they are available for inserting again later. 
+
+  * When you Remove a frame, it is not destroyed.  
+    - The menuitem that calls the frame is deleted from the parent frame.
+    - Lower-level frames in the family are removed along with the frame.
+    - All the frames that have been removed can be inserted again later.
+
+If you are not sure you want to Destroy a frame, use Remove instead.  (Be 
+aware that you may end up storing unused frames.)  
+
+To Destroy or Remove a frame, select the appropriate menu operation and 
+then type 'y' at the prompt.

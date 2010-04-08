@@ -1,0 +1,68 @@
+#
+# MANIFEST file for front!st!install
+#
+# History:
+#	24-jan-2005 (abbjo03)
+#	    ingbuild and iichksum are only delivered on Unix.
+
+SubDir ING_SRC front st install ;
+
+IISUBSYS front st install ;
+
+if $(UNIX)
+{
+IIUTILEXE ingbuild : ipmain.sc ;
+
+IINEEDLIBS ingbuild : INSTALLLIB UFLIB RUNSYSLIB RUNTIMELIB
+	FDLIB FTLIB FEDSLIB UILIB LIBQSYSLIB LIBQLIB UGLIB FMTLIB
+	AFELIB LIBQGCALIB SQLCALIB GCFLIB ADFLIB CUFLIB SQLCALIB
+	COMPATLIB ;
+IIUNDEFS ingbuild : II_copyright ;
+}
+
+if ! $(NT)
+{
+IIUTILEXE iisubset : iisubset.c ;
+
+IINEEDLIBS iisubset : INSTALLLIB UFLIB RUNSYSLIB RUNTIMELIB
+	FDLIB FTLIB FEDSLIB UILIB LIBQSYSLIB LIBQLIB UGLIB FMTLIB
+	AFELIB LIBQGCALIB SQLCALIB GCFLIB ADFLIB CUFLIB SQLCALIB
+	COMPATLIB GVLIB ;
+
+IIUNDEFS iisubset : II_copyright ;
+
+IIUTILEXE iimaninf : iimaninf.c ;
+IINEEDLIBS iimaninf : INSTALLLIB UFLIB RUNSYSLIB RUNTIMELIB
+	FDLIB FTLIB FEDSLIB UILIB LIBQSYSLIB LIBQLIB UGLIB FMTLIB
+	AFELIB LIBQGCALIB SQLCALIB GCFLIB ADFLIB CUFLIB SQLCALIB
+	COMPATLIB GVLIB ;
+IIUNDEFS iimaninf : II_copyright ;
+
+if $(UNIX)
+{
+IIUTILEXE iichksum : iichksum.c ;
+IINEEDLIBS iichksum : INSTALLLIB UFLIB RUNSYSLIB RUNTIMELIB
+	FDLIB FTLIB FEDSLIB UILIB LIBQSYSLIB LIBQLIB UGLIB FMTLIB
+	AFELIB LIBQGCALIB SQLCALIB GCFLIB ADFLIB CUFLIB SQLCALIB
+	COMPATLIB ;
+IIUNDEFS iichksum : II_copyright ;
+}
+
+IILIBRARY INSTALLLIB : ipparse.yf ipfile.sc ipenv.sc waitf.lfm
+	ipmainf1.lfm ipmainf.lfm installf.lfm customf.lfm currform.lfm
+	iplist.c iphash.c ipbatch.c ;
+
+}
+else
+{
+IILIBRARY INSTALLLIB : ipparse.yf ipfile.sc ipenv.sc waitf.lfm 
+	ipmainf1.lfm ipmainf.lfm installf.lfm customf.lfm currform.lfm
+	iplist.c iphash.c ipbatch.c ;	
+}
+
+if $(NT)
+{
+FILE $(INGFILES)/mdb/mdbimaadt.sql : mdbimaadt.sql ;
+FILE $(INGFILES)/mdb/mdbusers.sql : mdbusers.sql ;
+FILE $(INGFILES)/mdb/mdbadmin.sql : mdbadmin.sql ;
+}

@@ -1,0 +1,55 @@
+#
+# MANIFEST file for front!ice!plays!src
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	19-Jul-2004 (hanje04)
+#	    Use CCROFIX to generate play_NewOrder.h instead of FILE
+#	19-Aug-2004 (drivi01)
+#	    Modified Makefile to makefile for windows.
+#	25-Aug-2004 (drivi01)
+#	    Added a rule to copy play_NewOrder.dll to 
+#	    II_SYSTEM/ingres/files/dynamic
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+#	17-Dec-2009 (bonro01)
+#	    Replace unix specific path separators.
+#
+
+
+
+SubDir ING_SRC front ice plays src ;
+
+IISUBSYS front ice plays src ;
+
+if $(BUILD_ICE)
+{
+IIICEFILE plays$(DFS)src$(DFS)play_NewOrder.sc : play_NewOrder.sc ;
+
+if $(UNIX)
+{
+    IIICEFILE plays/src/Makefile : Makefile.Unix ;
+    CCROFIX play_NewOrder.h : play_NewOrder_h.Unix ;
+} 
+else if $(NT)
+{
+    IIICEFILE plays$(DFS)src$(DFS)makefile : makefile.wnt ;
+    CCROFIX play_NewOrder.h : play_NewOrder_h.wnt ;
+}
+
+IIICEFILE plays$(DFS)src$(DFS)play_NewOrder.h : play_NewOrder.h ;
+
+IILIBRARY NEWORDERLIB : play_NewOrder.sc ;
+
+
+IISHLIBRARY $(SHNEWORDERLIB) ;
+IINEEDLIBS $(SHNEWORDERLIB) : NEWORDERLIB ;
+
+if $(NT)
+{
+IICPDLL $(INGFILES)/dynamic/$(SHNEWORDERLIB) : $(SHNEWORDERLIB) ;
+}
+
+}

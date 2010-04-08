@@ -1,0 +1,14 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+**
+** timer_off.osq : Sets timeout to zero, stopping execution of the timeout
+**                 block.
+*/
+
+procedure timer_off =
+begin
+	set_forms frs (timeout=0);
+end

@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!cuf!cui
+#
+
+SubDir ING_SRC common cuf cui ;
+
+IISUBSYS common cuf cui ;
+
+
+IILIBRARY CUFLIB : custring.c cuid.c ;
+

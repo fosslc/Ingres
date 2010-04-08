@@ -1,0 +1,54 @@
+<HTML>
+<HEAD>
+<TITLE></TITLE>
+</HEAD>
+<BODY BGCOLOR=ffffff>
+<TABLE BORDER=2>
+<TR><TD align=CENTER colspan=6><h2>Products in shopping Cart</h2></TD></TR>
+<TR>
+	<TD>Amount</TD>
+	<TD>Code</TD>
+	<TD>Item</TD>
+	<TD>Unit Price</TD>
+	<TD>Price</TD>
+	<TD></TD>
+<TR>
+<!-- #ICE
+SQL=`select '<TR>
+				<TD>', b.amount, '</TD>
+			    <TD>', b.code, '</TD>
+				<TD>', a.item, '</TD>
+				<TD align=right>$', a.price, '</TD>
+				<TD align=right>$', a.price*b.amount, '</TD>
+				<TD align=center><A HREF="/ice-bin/oiice.#ext#/fortunoff/update.html?session=:session&prodId=', b.code, '" target="Article"><IMG BORDER=0 SRC="', c.image, '" ALT="Update"></A></TD>
+			 </TR>' from articles a, commands b, images c where a.productcode=b.code and b.sess=':session' and c.name='update.gif'`
+ TYPE=`UNFORMATTED`
+-->
+</TR>
+<TR>
+<TD colspan=4>
+Orders shipped to continental USA only. Orders shipped N.Y. and N.J. are subject to sales tax. This amount will be added to your order when shipped.
+</TD>
+<TD align=right>
+Sub<br>
+Total
+</TD>
+<TD align=right><h2>$<!-- #ICE SQL=`select SUM(a.price*b.amount) from articles a, commands b where a.productcode=b.code and b.sess=':session'` TYPE=`UNFORMATTED`-->
+</h2>
+</TD>
+</TR>
+<TR>
+<TD colspan=5 align=right>Shipping and Handling Per Order</TD>
+<TD align=right>$10</TD>
+</TR>
+<TR>
+<TD colspan=5 align=right>Total Cost</TD>
+<TD align=right><h2>$<!-- #ICE SQL=`select SUM(a.price*b.amount)+10 from articles a, commands b where a.productcode=b.code and b.sess=':session'` TYPE=`UNFORMATTED`-->
+</h2>
+</TD>
+</TR>
+
+</TABLE>
+
+</BODY>
+</HTML>

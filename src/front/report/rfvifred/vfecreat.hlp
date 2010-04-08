@@ -1,0 +1,45 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to create a new component at the current cursor position.
+You can create new trim (simple text on the screen), boxes/lines (box
+graphic trim), fields (input/output windows on the screen), tablefields 
+(row and column blocks of fields) or lines, (blank lines between components.)
+
+Select the menu command corresponding to the type of the component you
+wish to create, and follow the submenus displayed (if any.)
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Trim            Create a piece of trim at this location.  The
+                        cursor will resume at the location you had
+                        selected and you can enter up to 150 characters
+                        of text to be displayed on the form.  Depress
+                        the MENU KEY to indicate the end of the text.
+
+        Field           Create a new input/output field at this location.
+                        A submenu will be displayed showing the subcomponents
+                        of a field that you will need to enter (title,
+                        display format and attributes.)
+
+        TableField      Create a new table field at this location.  You
+                        will be placed in the table field creation frame,
+                        where you can list the columns to use in the table
+                        field.
+
+        NewLine         Create a blank line above this location.
+        
+        Box/Line        Create a Box/Line component at this location. 
+			A line component is a box which only has 
+			one row, or one column, a one dimensional box.
+			Note: Boxes are different from other components in
+			that they are allowed to overlap other boxes. When
+			Box/Line components overlap the appropriate T's and
+			Crosses are displayed.  When a Box/Line component
+			is overlapped by any other type of component
+			the Box/Line will be obscured.
+			
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Form Layout frame without creating
+                        a new component.

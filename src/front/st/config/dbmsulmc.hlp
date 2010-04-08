@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The ulm_chunk_size resource controls the memory increment allocated by
+  the Utility Memory (ULM) facility.  Whenever a memory pool runs out of
+  space, at least ulm_chunk_size bytes of additional memory will be
+  added to the pool (up to the memory pool limit).
+
+  Larger values can speed up memory allocation.  Excessive values may cause
+  premature exhaustion of memory pools, or even prevent the server from
+  starting.
+
+  Default: 512 Kbytes.

@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The log_readnolock resource specifies if readlock = nolock errors
+  should be logged. Specifically, if readlock = nolock and the isolation 
+  level is not READ UNCOMMITTED, Ingres will still follow the lock 
+  protocols defined by your current isolation level, however the transaction 
+  isolation level is actually READ UNCOMMITTED if you open a readonly cursor 
+  which will scan the table without any locks.
+
+  This resource specifies if an error should be logged if the 
+  readlock=nolock REDUCES the transaction isolation level to READ UNCOMMITTED.
+  The default is log_readnolock = OFF.

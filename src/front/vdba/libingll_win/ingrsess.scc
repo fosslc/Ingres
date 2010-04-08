@@ -1,0 +1,780 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.		       
+*/
+
+/*
+** Source   : ingrsess.scc 
+** Project  : Com Server/Library
+** Author   : UK Sotheavut (uk$so01) 
+** Purpose  : SQL Session
+**
+
+** History:
+**
+** 12-Oct-2000 (uk$so01)
+**    created
+** 19-Sep-2001 (uk$so01)
+**    BUG #105759 (Win98 only). Exit iia in the Step 2, the Disconnect
+**    session did not return.
+** 10-Oct-2001 (uk$so01)
+**    SIR #106000. CaSessionManager::Cleanup() should not call 
+**    m_listObject.RemoveAll(), because it removes the entry of sessions.
+** 23-Oct-2001 (uk$so01)
+**    SIR #106057 (sqltest as ActiveX & Sql Assistant as In-Process COM Server)
+** 23-Oct-2001 (noifr01)
+**    (sir 106120) manage session description
+** 23-Oct-2001 (noifr01)
+**    (sir 106120) (additional fix) manage cases where the command is quoted
+**    like when invoked by ingwrap, and can have arguments after the quoted
+**    command
+** 28-Dec-2001 (uk$so01)
+**    SIR #106648, Split vdba into the small component ActiveX/COM 
+**    Handle autocommit ON/OFF
+** 17-Dec-2002 (uk$so01)
+**    SIR #109220, Enhance the library.
+** 29-Apr-2003 (uk$so01)
+**    SIR #106648, Split vdba into the small component ActiveX/COM 
+**    Handle new Ingres Version 2.65
+** 17-Jul-2003 (uk$so01)
+**    SIR #106648, Vdba-Split, ensure that the ingres sessions 
+**    have the descriptions.
+** 05-Sep-2003 (uk$so01)
+**    SIR #106648, Integrate libraries libwctrl.lib, libingll.lib in Ija
+** 23-Jan-2004 (schph01)
+**    (sir 104378) detect version 3 of Ingres, for managing
+**    new features provided in this version. replaced references
+**    to 2.65 with refereces to 3  in #define definitions for
+**    better readability in the future
+** 29-Sep-2004 (uk$so01)
+**    BUG #113119, Add readlock mode in the session management
+** 05-Oct-2004 (uk$so01)
+**    BUG #113185
+**    Manage the Prompt for password for the Ingres DBMS user that 
+**    has been created with the password when connecting to the DBMS.
+** 03-Nov-2004 (uk$so01)
+**    IIA BUG #113364 / ISSUE #13765089 
+**    When disconnect the session, if the session is not to be committed
+**    then the rollback must be performed.
+** 01-Mar-2005 (nansa02)
+**    BUG # 113989
+**    When windows objects are compared with HP-UX objects results in errors
+**    due to incorrect value of nIngresVersion.Care should be taken
+**    while adding support for future verions of ingres. 
+** 05-Dec-2005 (fanra01)
+**    Bug 115604
+**    Add a test for the national language database capability.  If enabled
+**    continue to retrieve for normalization form and initialize memory copies
+**    of normalization and collation tables.  Uninitialized tables will cause
+**    unpredictable results.
+** 02-Feb-2006 (drivi01)
+**    BUG 115691
+**    Keep VDBA tools at the same version as DBMS server.  Update VDBA
+**    to 9.0 level versioning. Make sure that 9.0 version string is
+**    correctly interpreted by visual tools and VDBA internal version
+**    is set properly upon that interpretation.
+** 16-Aug-2006 (drivi01)
+**    BUG 116502
+**    Added a commit statement at the end of INGRESII_llConnectSession
+**    b/c this function puts session in transaction which creates problems
+**    for tools that try to set exclusive lock.  i.e. ija.
+** 11-Jul-2007 (smeke01)
+**    BUG 117661
+**    Added double quotes around username when used in the connect 
+**    statement so that delimited usernames (ie usernames containing 
+**    spaces and/or beginning with a numeric) are handled OK by the 
+**    server. 
+** 14-Dec-2007 (kiria01) b119671
+**    Tightened up the version parsing to ensure 9.1.0 and 9.2.0 did not
+**    get recognised as 1.2 and 2.0 respectively and allow for future 9.x
+**    to at least have 9.1 capabilities.
+** 20-Aug-2008 (whiro01)
+**    Replace private <afx...> include with "stdafx.h"
+** 07-Aug-2009 (drivi01)
+**    Add pragma to disable warning 4996 about deprecated POSIX functions
+**    because it is a bug.
+**/
+/* Turn off POSIX warning for this file until Microsoft fixes this bug */
+#pragma warning(disable: 4996)
+
+#include "stdafx.h"
+#include "ingrsess.h"
+#include "cmdargs.h"
+
+#include "mgterr.h"
+
+
+// compile:
+// esqlcc -multi -fingrsess.inc ingrsess.scc
+//
+// Declare the SQLCA structure and the SQLDA typedef
+//
+extern "C"
+{
+EXEC SQL INCLUDE SQLCA;
+EXEC SQL INCLUDE SQLDA;
+extern int IILQucolinit( int );
+}
+
+
+static void ExceptionError()
+{
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+	error_buf[0] = '\0';
+
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+
+	INGRESII_ManageErrorInLogFiles( error_buf,"",nErr);
+
+	throw CeSqlException (A2T(error_buf), nErr);
+}
+
+BOOL INGRESII_llConnectSession(CaSession* pInfo)
+{
+	USES_CONVERSION;
+	ASSERT(pInfo);
+	if (!pInfo)
+		return FALSE;
+	TCHAR*  szIngPrefixes[]= {_T("oi"), _T("oping"), _T("ingres"), _T("ii")};
+	CString strConnection = pInfo->GetConnection();
+	CString strOptions = pInfo->GetOptions();
+	CString strUser;
+	int  i, nIngresVersion = INGRESVERS_NOTOI;
+	BOOL bIsIngres = FALSE;
+	
+	strUser = _T("\"");
+	strUser += pInfo->GetUser();
+	strUser += _T("\"");
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szIngresVersion[200];
+		char* connection = T2A((LPTSTR)(LPCTSTR)strConnection);
+		char* user = T2A((LPTSTR)(LPCTSTR)strUser);
+		char* lpszOptions = T2A((LPTSTR)(LPCTSTR)strOptions);
+		int   nSession = pInfo->GetSessionNum();
+		char* pSessionDescription;
+		char* o[12]; 
+	EXEC SQL END DECLARE SECTION;
+
+	CStringArray arrayToken;
+	if (!strOptions.IsEmpty())
+	{
+		CaArgumentLine::MakeListTokens(strOptions, arrayToken, _T(","));
+		int nSize = arrayToken.GetSize();
+		for (i=0; i<12; i++)
+		{
+			if (i < nSize)
+			{
+				o[i] = T2A((LPTSTR)(LPCTSTR)arrayToken[i]);
+			}
+			else
+			{
+				o[i] = NULL;
+			}
+		}
+	}
+
+	EXEC SQL WHENEVER SQLERROR GOTO CONNECT_ERROR;
+	EXEC SQL SET CONNECTION NONE;
+	EXEC SQL SET_SQL( SESSION = NONE );
+
+	if (pInfo->GetUser().IsEmpty())
+	{
+		if (nSession > 0)
+		{
+			if (pInfo->GetOptions().IsEmpty())
+				EXEC SQL CONNECT :connection SESSION :nSession;
+			else
+				EXEC SQL CONNECT :connection SESSION :nSession 
+				     OPTIONS = :o[0], :o[1], :o[2], :o[3], :o[4], :o[5], :o[6], :o[7], :o[8], :o[9], :o[10], :o[11];
+		}
+		else
+		{
+			if (pInfo->GetOptions().IsEmpty())
+				EXEC SQL CONNECT :connection;
+			else
+				EXEC SQL CONNECT :connection 
+				     OPTIONS = :o[0], :o[1], :o[2], :o[3], :o[4], :o[5], :o[6], :o[7], :o[8], :o[9], :o[10], :o[11];
+		}
+	}
+	else
+	{
+		if (nSession > 0)
+		{
+			if (pInfo->GetOptions().IsEmpty())
+				EXEC SQL CONNECT :connection SESSION :nSession IDENTIFIED BY :user;
+			else
+				EXEC SQL CONNECT :connection SESSION :nSession IDENTIFIED BY :user 
+				     OPTIONS = :o[0], :o[1], :o[2], :o[3], :o[4], :o[5], :o[6], :o[7], :o[8], :o[9], :o[10], :o[11];
+		}
+		else
+		{
+			if (pInfo->GetOptions().IsEmpty())
+				EXEC SQL CONNECT :connection IDENTIFIED BY :user;
+			else
+				EXEC SQL CONNECT :connection IDENTIFIED BY :user 
+				     OPTIONS = :o[0], :o[1], :o[2], :o[3], :o[4], :o[5], :o[6], :o[7], :o[8], :o[9], :o[10], :o[11];
+		}
+	}
+
+	//
+	// Check the ingres version info:
+	EXEC SQL SELECT DBMSINFO('_version') INTO :szIngresVersion;
+	for (i=0; i < sizeof(szIngPrefixes)/sizeof(TCHAR *); i++)
+	{
+		if (_tcsnicmp(A2T(szIngresVersion), szIngPrefixes[i], _tcslen(szIngPrefixes[i])) == 0)
+		{
+			bIsIngres = TRUE;
+			break;
+		}
+	}
+	if (bIsIngres)
+	{
+		if (pInfo->GetLockMode() != 0)
+		{
+			SETLOCKMODE lockmode;
+			memset (&lockmode, 0, sizeof(lockmode));
+			lockmode.nReadLock = pInfo->GetLockMode();
+			INGRESII_llSetLockMode (pInfo, &lockmode);
+		}
+
+		CString strVersion = szIngresVersion;
+		strVersion.MakeLower();
+		int pos;
+
+		if ((pos = strVersion.Find(_T("9."))) == 0 ||
+				pos > 0 && strVersion[pos-1] == ' ')
+		{
+			switch (strVersion[pos+2])
+			{
+			default:
+				//FALLTHROUGH
+			case '0': nIngresVersion = INGRESVERS_90;
+				break;
+			}
+		}
+		else if ((pos = strVersion.Find(_T("3."))) == 0 ||
+				pos > 0 && strVersion[pos-1] == ' ')	
+		{
+			nIngresVersion = INGRESVERS_30;
+		}
+		else if ((pos = strVersion.Find(_T("2."))) == 0 ||
+				pos > 0 && strVersion[pos-1] == ' ') 
+		{
+			switch (strVersion[pos+2])
+			{
+			case '5': nIngresVersion = INGRESVERS_25;
+				break;
+			case '6': nIngresVersion = INGRESVERS_26;
+				break;
+			default: nIngresVersion = INGRESVERS_20;
+			}
+		}
+		else if ((pos = strVersion.Find(_T("1."))) == 0 ||
+				pos > 0 && strVersion[pos-1] == ' ' )
+			nIngresVersion = INGRESVERS_12;
+
+		if (strVersion.Find(_T("ii")) == 0) 
+			pInfo->SetDbmsType(DBMS_INGRESII);
+
+		CString strDescription = pInfo->GetDescription();
+		if (!strDescription.IsEmpty())
+		{
+			pSessionDescription = T2A((LPTSTR)(LPCTSTR)strDescription);
+			EXEC SQL SET SESSION WITH DESCRIPTION = :pSessionDescription;
+			EXEC SQL COMMIT;
+		}
+	}
+	pInfo->SetVersion(nIngresVersion);
+        /*
+        ** Test target database for national character support
+        */
+        *szIngresVersion = '\0';
+        EXEC SQL SELECT cap_value INTO :szIngresVersion FROM iidbcapabilities
+            WHERE cap_capability = 'NATIONAL_CHARACTER_SET';
+        if (*szIngresVersion == 'Y')
+        {
+            /*
+            ** If Unicode enabled database retrieve normalization form.
+            */
+            EXEC SQL SELECT dbmsinfo('UNICODE_NORMALIZATION') INTO :szIngresVersion;
+            if (strlen(szIngresVersion) >= 3)
+            {
+                if (strnicmp( szIngresVersion, "NFC", 3) == 0)
+                { 
+                    IILQucolinit(1);
+                }
+                else if (strnicmp( szIngresVersion, "NFD", 3) == 0)
+                {
+                    IILQucolinit(0);
+                }
+                else
+                {
+                    /*
+                    ** Unrecognised normalization form.
+                    */
+                    ExceptionError();
+                    return FALSE;
+                }
+            }
+        }
+        EXEC SQL COMMIT;
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	return TRUE;
+
+CONNECT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+BOOL INGRESII_llDisconnectSession(CaSession* pInfo, SessionReleaseMode nReleaseMode)
+{
+	USES_CONVERSION;
+	BOOL bCommit= (nReleaseMode==SESSION_COMMIT)?TRUE: FALSE;
+	EXEC SQL BEGIN DECLARE SECTION;
+		int nSession2Disconnect = pInfo->GetSessionNum();
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO DISCONNECTSESSION_ERROR;
+	//
+	// Disconnect the session:
+	if (nSession2Disconnect > 0)
+	{
+		INGRESII_llActivateSession (pInfo);
+		if(bCommit)
+		{
+			EXEC SQL COMMIT;
+		}
+		else
+		{
+			EXEC SQL ROLLBACK;
+		}
+		EXEC SQL DISCONNECT;
+	}
+	else
+	{
+		if(bCommit)
+		{
+			EXEC SQL COMMIT;
+		}
+		else
+		{
+			EXEC SQL ROLLBACK;
+		}
+		EXEC SQL DISCONNECT;
+	}
+	EXEC SQL SET CONNECTION NONE;
+	EXEC SQL SET_SQL( SESSION = NONE );
+
+	return TRUE;
+
+DISCONNECTSESSION_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+// return FALSE if SQL error
+BOOL INGRESII_llReleaseSession(CaSession* pInfo, SessionReleaseMode nReleaseMode)
+{
+	USES_CONVERSION;
+	ASSERT(pInfo);
+	if (!pInfo)
+		return FALSE;
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nSession = pInfo->GetSessionNum();
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO RELEASESESSION_ERROR;
+	EXEC SQL SET_SQL (SESSION = NONE);
+	EXEC SQL SET_SQL (SESSION = :nSession);
+
+	switch (nReleaseMode)
+	{
+	case SESSION_COMMIT:
+		EXEC SQL COMMIT;
+		break;
+	case SESSION_ROLLBACK:
+		EXEC SQL ROLLBACK;
+		break;
+	default:
+		EXEC SQL SET_SQL (SESSION = NONE);
+		break;
+	}
+	
+	if (pInfo->GetIndependent())
+	{
+		EXEC SQL DISCONNECT;
+	}
+	else
+	{
+		EXEC SQL SET_SQL(SESSION = NONE);
+	}
+	return TRUE;
+
+RELEASESESSION_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+BOOL INGRESII_llActivateSession (CaSession* pInfo)
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		int nSession = pInfo->GetSessionNum();
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO ACTIVATE_ERROR;
+	//
+	// Activate the session:
+	EXEC SQL SET_SQL(SESSION =:nSession);
+	return TRUE;
+}
+
+BOOL INGRESII_llQueryUserInCurrentSession (CString &username)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szUserName  [64];
+	EXEC SQL END DECLARE SECTION;
+
+	//
+	// no session to open, this function gets the user of the current (already opened) one
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYUSERNAME_ERROR;
+	EXEC SQL SELECT
+		dbmsinfo('session_user')
+	INTO
+		:szUserName;
+
+	username = A2T(szUserName);
+	username.TrimLeft();
+	username.TrimRight();
+	return TRUE;
+QUERYUSERNAME_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+CString INGRESII_llQueryRolePassword (LPCTSTR lpszRoleName, CaLLQueryInfo* pQueryInfo, CaSessionManager* pSessionManager)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* lpRoleID  = T2A((LPTSTR)lpszRoleName);
+		char  szRolePass [256]; 
+	EXEC SQL END DECLARE SECTION;
+
+	ASSERT(pSessionManager);
+	if (!pSessionManager)
+		return _T("");
+	CString strRolePass = _T("");
+	CaSession session ((CaConnectInfo*)pQueryInfo);
+
+	szRolePass[0] = '\0';
+	CaSessionUsage UseSession(pSessionManager, &session);
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYROLE_PASSWORD_ERROR;
+	EXEC SQL REPEATED SELECT
+		ROLEPASS
+	INTO
+		:szRolePass
+	FROM IIROLE
+	WHERE LOWERCASE (ROLEID)= :lpRoleID;
+
+	EXEC SQL BEGIN;
+		if (szRolePass[0]) 
+			strRolePass = szRolePass;
+	EXEC SQL END;
+	strRolePass.TrimLeft();
+	strRolePass.TrimRight();
+	return strRolePass;
+
+QUERYROLE_PASSWORD_ERROR:
+	ExceptionError();
+	return _T("");
+}
+
+BOOL INGRESII_llSetSessionNone(CaSession* pInfo)
+{
+	ASSERT(pInfo);
+	if (!pInfo)
+		return FALSE;
+	
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nSession = pInfo->GetSessionNum();
+		int   nCurrSession = 0;
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL SET_SQL (SESSION = NONE);
+	return TRUE;
+}
+
+
+
+BOOL INGRESII_llSetLockMode (CaSession* pInfo, SETLOCKMODE* pLockModeInfo)
+{
+	USES_CONVERSION;
+	CString strStatement = _T("set lockmode ");
+	EXEC SQL BEGIN DECLARE SECTION;
+		int nSession = pInfo->GetSessionNum();
+		char* statement = NULL;
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO SETLOCKMODE_ERROR;
+	EXEC SQL SET_SQL(SESSION =:nSession);
+
+	//
+	// set lockmode {session | on table_name} where
+	if (pLockModeInfo->tchszTable[0])
+	{
+		strStatement += _T("on ");
+		strStatement += pLockModeInfo->tchszTable;
+		strStatement += _T(" where ");
+	}
+	else
+	{
+		strStatement += _T("session where ");
+	}
+
+	BOOL bSet = TRUE;
+	//
+	// ...[level = page|table|session|system|row]
+	switch (pLockModeInfo->nLevel)
+	{
+	case LM_PAGE:
+		strStatement += _T("level=page");
+		break;
+	case LM_TABLE:
+		strStatement += _T("level=table");
+		break;
+	case LM_SESSION:
+		strStatement += _T("level=session");
+		break;
+	case LM_SYSTEM:
+		strStatement += _T("level=system");
+		break;
+	case LM_ROW:
+		strStatement += _T("level=row");
+		break;
+	default:
+		bSet = FALSE;
+	}
+
+	//
+	// ...[,readlock = nolock|shared|exclusive|session|system]
+	CString strText = _T("");
+	if (bSet)
+		strText = _T(", ");
+	switch (pLockModeInfo->nReadLock)
+	{
+	case LM_NOLOCK:
+		strText += _T("readlock=nolock");
+		break;
+	case LM_SHARED:
+		strText += _T("readlock=shared");
+		break;
+	case LM_EXCLUSIVE:
+		strText += _T("readlock=exclusive");
+		break;
+	case LM_SESSION:
+		strText += _T("readlock=session");
+		break;
+	case LM_SYSTEM:
+		strText += _T("readlock=system");
+		break;
+	default:
+		strText = _T("");
+		break;
+	}
+	if (!strText.IsEmpty() && strText != _T(", "))
+	{
+		strStatement += strText;
+		bSet = TRUE;
+	}
+
+	//
+	// ...[, maxlocks = n|session|system]
+	strText = _T("");
+	if (bSet)
+		strText = _T(", ");
+	switch (pLockModeInfo->nMaxLock)
+	{
+	case LM_SESSION:
+		strText += _T("maxlocks=session");
+		break;
+	case LM_SYSTEM:
+		strText += _T("maxlocks=system");
+		break;
+	default:
+		if (pLockModeInfo->nMaxLock > 0)
+		{
+			CString strNum;
+			strNum.Format(_T("maxlocks=%d"), pLockModeInfo->nMaxLock);
+			strText += strNum;
+		}
+		break;
+	}
+	if (!strText.IsEmpty() && strText != _T(", "))
+	{
+		strStatement += strText;
+		bSet = TRUE;
+	}
+
+	//
+	// ...[, timeout = n|session|system]
+	strText = _T("");
+	if (bSet)
+		strText = _T(", ");
+	switch (pLockModeInfo->nTimeOut)
+	{
+	case LM_SESSION:
+		strText += _T("timeout=session");
+		break;
+	case LM_SYSTEM:
+		strText += _T("timeout=system");
+		break;
+	default:
+		if (pLockModeInfo->nTimeOut > 0)
+		{
+			CString strNum;
+			strNum.Format(_T("timeout=%d"), pLockModeInfo->nTimeOut);
+			strText += strNum;
+		}
+		break;
+	}
+	if (!strText.IsEmpty() && strText != _T(", "))
+	{
+		strStatement += strText;
+		bSet = TRUE;
+	}
+
+	statement = T2A((LPTSTR)(LPCTSTR)strStatement);
+	EXEC SQL COMMIT;
+	EXEC SQL EXECUTE IMMEDIATE :statement;
+
+	return TRUE;
+
+SETLOCKMODE_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+BOOL INGRESII_llSetSql(CaSession* pInfo, int nSetWhat, BOOL bSet)
+{
+	USES_CONVERSION;
+	ASSERT(pInfo->IsConnected());
+	if (!pInfo->IsConnected())
+		return FALSE;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nSession = pInfo->GetSessionNum();
+		char* szDescription = T2A((LPTSTR)(LPCTSTR)pInfo->GetDescription());
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO SETSQL_ERROR;
+	EXEC SQL SET_SQL(SESSION =:nSession);
+	switch (nSetWhat)
+	{
+	case SET_AUTOCOMMIT:
+		if (bSet)
+			EXEC SQL SET AUTOCOMMIT ON;
+		else
+			EXEC SQL SET AUTOCOMMIT OFF;
+		break;
+	case SET_OPTIMIZEONLY:
+		if (bSet)
+			EXEC SQL SET OPTIMIZEONLY;
+		else
+			EXEC SQL SET NOOPTIMIZEONLY;
+		break;
+	case SET_QEP:
+		if (bSet)
+			EXEC SQL SET QEP;
+		else
+			EXEC SQL SET NOQEP;
+		break;
+	case SET_DESCRIPTION:
+		if (!pInfo->GetDescription().IsEmpty())
+			EXEC SQL SET SESSION WITH DESCRIPTION = :szDescription;
+		break;
+	default:
+		break;
+	}
+	return TRUE;
+SETSQL_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+//
+// bCommit = TRUE-> Commit, FALSE -> Rollback
+BOOL INGRESII_llCommitSession (CaSession* pInfo, BOOL bCommit)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		int nSession = pInfo->GetSessionNum();
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO COMMITSESSION_ERROR;
+	if (nSession > 0)
+	{
+		INGRESII_llActivateSession (pInfo);
+		if(bCommit)
+		{
+			EXEC SQL COMMIT;
+		}
+		else
+		{
+			EXEC SQL ROLLBACK;
+		}
+	}
+	else
+	{
+		if(bCommit)
+		{
+			EXEC SQL COMMIT;
+		}
+		else
+		{
+			EXEC SQL ROLLBACK;
+		}
+	}
+
+	return TRUE;
+
+COMMITSESSION_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+
+BOOL INGRESII_llGetAutoCommit (CaSession* pInfo)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  szResult [64];
+		int nSession = pInfo->GetSessionNum();
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO GETAUTOCOMMIT_ERROR;
+	if (nSession > 0)
+		INGRESII_llActivateSession (pInfo);
+	EXEC SQL SELECT DBMSINFO('autocommit_state') INTO :szResult;
+
+	if (szResult[0] && szResult[0] == '1')
+		return TRUE;
+	return FALSE;
+
+GETAUTOCOMMIT_ERROR:
+	ExceptionError();
+	return FALSE;
+}
+
+void INGRESII_llSetPasswordPromptHandler(PfnIISQLHandler handler)
+{
+	EXEC SQL SET_SQL (DBPROMPTHANDLER = handler);
+}

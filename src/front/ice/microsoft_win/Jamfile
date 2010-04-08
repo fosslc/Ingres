@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!ice!microsoft
+#
+
+SubDir ING_SRC front ice microsoft_win ;
+
+IISUBSYS front ice microsoft_win ;
+
+
+IILIBRARY MICROSOFTLIB : isapi.c ;
+
+IISHICEMS $(SHICEMSLIB) : $(MICROSOFTLIB) $(IMPGCFLIB) $(IMPGCFLIBDATA) 
+	$(IMPCOMPATLIB)	$(IMPCOMPATLIBDATA) $(DDFLIB) $(ICECLILIB) ;

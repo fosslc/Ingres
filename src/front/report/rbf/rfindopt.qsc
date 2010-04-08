@@ -1,0 +1,433 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"rbftype.h"
+# include	"rbfglob.h"
+# include	<rglob.h>
+# include	<ug.h>
+# include	<si.h>
+# include	<cm.h>
+# include	<te.h>
+# include	<st.h>
+# include       <flddesc.h>
+# include       <uf.h>
+
+
+/*
+**   R_INDOPTS - display and control the INDENTOPTS form to select
+**	the break columns for the an Indented Style report.
+**
+**	Note: that this fills in the fields of the "rfindop" form
+**		  from the current COPT structure, which should be up to date.
+**
+**	Parameters:
+**		none.
+**
+**	Returns:
+**		TRUE if successful, FALSE if not successful.
+**
+**	Side Effects:
+**		Fields in the COPT structure.
+**
+**	Called By:
+**		r_IndentedSetUp.
+**
+**	Trace Flags:
+**		None.
+**
+**	Error Messages:
+**		none.
+**
+**	History:
+**		1/2/90 (martym) (garnet) Derived from "rFcoptions()" for RBF.
+**		1/10/90 (martym) Added check to make sure that default break 
+**			column is gotten rid of if the user turns off the 
+**			break on it.
+**		1/13/90 (martym) 
+**			Increased the size of tmp_buf [].
+**		1/23/90 (martym)
+**			Took out the "clear screen" since the form is now 
+**			a popup.
+**		22-feb-90 (sylviap)
+**			Took out abbreviations for entering 'yes/no'.
+**		4/24/90 (martym)
+**			Added initializations for the new fields (sec_brkseq, 
+**			and sec_brkord) of the Sec_node struct.
+**		25-apr-90 (elein)
+**			Dont display form "with style=popup." We specified this
+**			as a popup in vifred--we don't have to and shouldnt
+**			do it here
+**		04-sep-90 (elein)
+**			Added explanations to the activate menuitems. #32699
+**		19-sep-90 (sylviap)
+**			Change break columns pop-up to accept numbers.
+**			Added routine IIRFdso_DupSortOrder.
+**		30-oct-1992 (rdrane)
+**			Ensure that unsupported datatype fields cannot be
+**			selected.  Remove declaration of r_gt_att() since
+**			already declared in included hdr files.
+**	12/09/92 (dkh) - Added Choose Columns support for rbf.
+**              02-Jul-1999 (hweho01)
+**                      Included uf.h header file, it contains the function     
+**                      prototype of IIUFlcfLocateForm(). Without the explicit
+**                      declaration, the default int return value for a  
+**                      function will truncate a 64-bit address on ris_u64 
+**                      platform.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-Aug-2009 (kschendel) b121804
+**	    Bool prototypes to keep gcc 4.3 happy.
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+FUNC_EXTERN bool IIRFdso_DupSortOrder();
+FUNC_EXTERN VOID AdjustSections();
+
+#define MAXSEQNUM       DB_GW2_MAX_COLS + 1
+
+/* array to return sorted by sort sequence */
+bool r_IndOpts(i4 sort_array[])
+{
+	/* 
+	** external declarations:
+	*/
+##	GLOBALREF	char	*Nindtopts;	/* STRUCTURE frame name */
+##	GLOBALREF	bool	alloc_indopts;
+
+	/* 
+	** internal declarations:
+	*/
+	register i4  i;				/* fast i4  counter */
+	register COPT *copt;			/* COPT structure */
+	register CS	*cs;
+
+##	char 	attbuf[FE_MAXNAME + 1];		/* attribute name */
+##	i4	sort_sequence;			/* sort sequence */
+##	i4	j;				/* i4  counter */
+##	i4	attord;				/* attribute ordinal */
+##	char 	*attname;			/* attribute name */
+##	char 	*form;
+	ATT	*att;
+	i4 	NextSeq = 1;
+	Sec_node *n;
+	char 	tmp_buf[(FE_MAXNAME * 2) + 1];
+	bool 	AtLeastOne = FALSE;
+	bool 	Selected = TRUE;
+	i4     srt_ord[MAXSEQNUM + 1]; 	/* used to get sort order */
+##      char 	*choices;
+##      char 	*help_scr;
+##      char 	*strtbl;                		
+##      char 	*sortseq;                		
+##      char 	*colname;                		
+
+
+
+	/* 
+	** Start of routine.  Set up field names of frame rfindopt.frm.
+	*/
+
+	strtbl = F_STRTBL;
+	sortseq = F_SRTSEQ;
+	colname = F_COLNM;
+	Nindtopts = F_INDTOPTS;
+
+	sort_sequence = 0;
+
+	for (i=0; i <= MAXSEQNUM; i++)
+	{
+		srt_ord[i] = 0;
+
+	}
+
+	if (!alloc_indopts)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form = Nindtopts) != OK)
+		{
+			IIUGerr(E_RF002D_Cannot_locate_form, 0, 1, form);
+			return(FALSE);
+		}
+		alloc_indopts = TRUE;
+	}
+
+##	display Nindtopts update 
+##		with style = popup
+##		(border = none)
+##	initialize()
+##	{
+
+##		inittable Nindtopts strtbl update
+
+		/* 
+		** First fill in the fields from the copt structure:
+		*/
+		for (i = 1; i <= En_n_attribs; i++)
+		{
+			cs = rFgt_cs(i);
+			if (!cs)
+				continue;
+
+			/*
+			** Guard against unsupported datatype.
+			*/
+			if  (((att = r_gt_att(i)) == (ATT *)NULL) ||
+				att->pre_deleted)
+			{
+				continue;
+			}
+			attname = att->att_name;
+			copt = rFgt_copt(i);
+			sort_sequence = copt->copt_sequence;
+
+			/*	
+			** Load a row of the tablefield:
+			*/
+##			loadtable Nindtopts strtbl
+##				(colname = attname,
+##				 sortseq = sort_sequence)
+		}
+
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop), validate = 0)
+##	{
+##		scroll Nindtopts strtbl to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom), validate = 0)
+##	{
+##		scroll Nindtopts strtbl to end
+##	}
+
+##	activate menuitem ERget(FE_OK)(expl = ERget(F_RF0075_indented_cols)), 
+##		FRSkey4
+##	{
+##		validate
+##              unloadtable Nindtopts strtbl
+##                         (attord = _RECORD,
+##			    sort_sequence = sortseq)
+##              {
+			/* 
+			** Save in sort sequence. Will create the break headers
+			** in this order.
+			*/
+			srt_ord[sort_sequence] = attord;
+##		}
+
+		/* 
+		** Check for duplicate sort order and at least one break column
+		** is selected.
+		*/
+		if (!IIRFdso_DupSortOrder(TRUE, &attord))
+		{
+##               	scroll Nindtopts strtbl to attord
+##                      resume column strtbl sortseq
+		}
+
+##		enddisplay
+##	}
+
+##	activate menuitem ERget(FE_Cancel)(expl = ERget(F_FE0103_ExplCancel),
+##              validate = 0, activate = 0), FRSkey9 (validate = 0,activate = 0)
+##	{
+		Selected = FALSE;
+##		breakdisplay
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##			EXPL = ERget(FE_LookupExpl)), 
+##			FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##	{
+		/* Display popup witht he valid sort sequences. */
+		choices   = ERget(S_RF006F_sort_seq);
+##              message choices with style = popup
+
+	
+##	}
+
+##	activate menuitem ERget(FE_Help)(expl=ERget(F_FE0100_ExplFrameHelp),
+##              validate=0), FRSkey1 (validate = 0)
+##	{
+		FEhelp(H_INDOPT, ERget(F_RF0062_Break_Columns));
+##	}
+
+##	activate column strtbl sortseq
+##	{
+		/*	
+		** Get the info from the current row:
+		*/
+##		getrow Nindtopts strtbl
+##			(attord = _RECORD,
+##			 attbuf = colname,
+##			 sort_sequence = sortseq)
+
+		 /*
+		 ** If this attribute is a break column,
+		 ** make sure attribute name is not a reserved word:
+		 */
+		 if (sort_sequence != 0)
+		 {
+			 if (STcompare(attbuf, NAM_PAGE) == 0 ||
+			     STcompare(attbuf, NAM_REPORT) == 0 ||
+			     STcompare(attbuf, NAM_DETAIL) == 0)
+			 {
+				IIUGerr(E_RF0043_This_column_name_is_a, 0, 0);
+				sort_sequence = 0;
+##                              putrow Nindtopts strtbl
+##                              	(sortseq= sort_sequence)
+##                              resume column rfsrttbl srtseq
+			 }
+		}
+		copt = rFgt_copt(attord);
+
+		/*	
+		** Update the COPT:
+		*/
+		copt->copt_sequence = sort_sequence;
+		if (sort_sequence == 0)
+			copt->copt_break = 'n';
+		else
+			copt->copt_break = 'y';
+
+##		resume next
+##	}
+
+##	finalize
+
+
+	if (Selected)
+	{
+		NextSeq = 0;
+		for (i = 1; i <= MAXSEQNUM; i++)
+		{
+			/*
+			** Now build the break headers in the order of the
+			** sort column.  srt_ord is sorted with the indices
+			** of the columns.
+			*/
+			if ((j=srt_ord[i]) != 0)
+			{
+				copt = rFgt_copt(j);
+				NextSeq++;
+				if (!(n = sec_list_find(SEC_BRKHDR, 
+					NextSeq, &Sections)))
+            			{
+            				n=sec_node_alloc(SEC_BRKHDR, NextSeq,0);
+					attname = (r_gt_att(j))->att_name;
+            				STcopy(attname, tmp_buf);
+					_VOID_ CMtoupper(tmp_buf, tmp_buf);
+            				STcat(tmp_buf, 
+					     ERget(F_RF003E_Break_Header));
+            				n->sec_name = STalloc(tmp_buf);
+					n->sec_brkseq = NextSeq;
+					n->sec_brkord = r_mtch_att(attname);
+            				sec_list_insert(n, &Sections);
+					sort_array[NextSeq] = j;
+            			}
+				copt->copt_order = 'a'; 
+				copt->copt_brkhdr = 'y'; 
+				copt->copt_brkftr = 'n';
+				copt->copt_sequence = NextSeq;
+			}
+		}
+	}
+
+	
+	return(Selected);
+}
+
+
+
+/*
+**   Name: IIRFdso_DupSortOrder
+**
+**	Description:
+**		Checks the COPT (column option structure) if any duplicate
+**		sort sequences has been specified.  
+**
+**	Called by:
+**		rFcoptions  
+**		r_IndOpts
+**	
+**	Returns:
+**		if need_one is TRUE:
+**		   TRUE - no duplicate sequences are specifed AND at least
+**			  one sort sequence is specified
+**		   FALSE - if otherwise
+**		if need_one is FALSE:
+**		   TRUE - no duplicate sequences are specifed 
+**		   FALSE - if otherwise
+**
+**		if duplicate sort: row = the offending row
+**		if no sort is set: row = 1 
+**
+**	Parameters:
+**		need_one = TRUE if need to check if at least one sort is set
+*/
+
+bool
+IIRFdso_DupSortOrder(need_one, row)
+bool 	need_one;	/* TRUE = check for at least one break */
+i4	*row;		/* offending row */
+{
+	bool  	seqarray[MAXSEQNUM]; 	/* used to check for */
+					/* duplicate seq #'s */
+	i4	attord;			/* attribute ordinal */
+	bool	found_break = FALSE;
+	i4	i;
+	register COPT *copt;		/* COPT structure */
+	
+
+	for ( i = 0; i < MAXSEQNUM; i++ )
+		seqarray[i] = FALSE;
+
+	/* check for duplicates */
+	for ( attord = 1; attord <= En_n_attribs; attord++ )
+	{
+		*row = attord;
+		copt = rFgt_copt(attord);
+
+		/* no sort set */
+		if ( copt->copt_sequence == 0 )
+			continue;
+
+		/* if seqarray = FALSE, then this is first sort*/
+		if (seqarray[copt->copt_sequence] == FALSE )
+		{
+			seqarray[copt->copt_sequence] = TRUE;
+			found_break = TRUE;
+		}
+		else
+		/* if seqarray = TRUE, then there is a duplicate */
+		{
+			/*
+			** Bad... Have a duplicate.
+			** Output a warning and let calling routine scroll
+			** to the offending row.
+			*/
+			IIUGerr(E_RF0042_Duplicate_sort_sequen, 0, 0);
+			return (FALSE);
+		}
+	}
+	/* Was there at least one sort set? */
+	if (need_one && !found_break)
+	{
+		IIUGerr(E_RF0071_Must_select_a_field, 0, 0);
+		*row = 1;
+		return (FALSE);
+	}
+	else
+	{
+		return (TRUE);
+	}
+}

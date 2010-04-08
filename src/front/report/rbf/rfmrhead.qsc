@@ -1,0 +1,359 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+
+/* static char	Sccsid[] = "@(#)rfmrhead.qc	30.1	11/14/84"; */
+
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include       "rbftype.h"
+# include       "rbfglob.h"
+
+/*
+**   RFM_RHEAD - set up the report header setup commands, which
+**	are the nonprinting commands at the start of the report,
+**	such as .FORMAT, .POSITION, and .WIDTH, .PL ,.FF and .ULCHAR.
+**
+**	Parameters:
+**		none.
+**
+**	Returns:
+**		STATUS. OK   -- If successful.
+**			FAIL -- If not successful.
+**			(status passed back by SREPORTLIB)
+**
+**	Side Effects:
+**		none.
+**
+**	Called by:
+**		rFsave.
+**
+**	Trace Flags:
+**		180, 183.
+**
+**	History:
+**	4/6/82 (ps)	written.
+**	5/21/84 (gac)	fixed bug 1907 -- now saves pagelength < 10.
+**	1/29/87 (rld)	replaced call to f_fmtstr with reference to ATT.fmtstr
+**      9/22/89 (elein) UG changes ingresug change #90045
+**	changed <rbftype.h> & <rbfglob.h> to "rbftype.h" & "rbfglob.h"
+**	12/4/89 (martym)  Added r_LabelsHead() to support labels style reports.
+**	31-jan-90 (cmr)	Use the Opt struct instead of getform
+**			for report options.
+**	2/7/90 (martym)  Coding standards cleanup.
+**	2/20/90 (martym) Changed to return STATUS passed back by the
+**			SREPORTLIB routines.
+**	4/26/90 (martym) Changed to save the source of data name and type 
+**			(i.e. JOINDEF, FOO) in the report if the source of 
+**			data is not a single table.
+**	06-aug-90 (sylviap)
+**		Added initialization of the variable "in_block" (LABST_IN_BLK)
+**		for label reports. (#32085)
+**	23-aug-90 (sylviap)
+**		When saving the label variables, uses Seq_declare in case
+**		any selection criteria variables are also saved. (#32780)
+**	29-aug-90 (sylviap)
+**		Added right_margin as a parameter. #32701
+**	25-sep-90 (sylviap)
+**		Does not generate a .POSITION for label reports.
+**	 2-jan-91 (steveh)
+**		Correctly parenthesized `if' expressions.
+**	13-mar-91 (steveh)
+**		Modified #ifdef code to perform run-time check for formfeed
+**		code.  This allows code to properly compile on MS/DOS where
+**		#ifdef code incorrectly compiles because of definition of
+**		FALSE.
+**	9-oct-1992 (rdrane)
+**		Replace En_relation with reference to global
+**		FE_RSLV_NAME En_ferslv.name.
+**	30-oct-1992 (rdrane)
+**		Remove all FUNCT_EXTERN's since they're already declared
+**		in included hdr files.  Declare r_LabelsHead() as static to
+**		this module.  Ensure that we ignore unsupported datatypes
+**		(of which there shouldn't be any).  Ensure attribute names
+**		passed to s_w_action() in unnormalized form.  Ensure that all
+**		string constants are generated with single, not double quotes.
+**	22-jun-1993 (rdrane)
+**		Add support for suppression of initial formfeed.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      06-Mar-2003 (hanje04)
+**          Cast last '0' in calls to s_w_action() with (char *) so that
+**          the pointer is completely nulled out on 64bit platforms.
+*/
+
+
+
+static	STATUS	r_LabelsHead();
+
+
+STATUS rFm_rhead(right_margin)
+i4	right_margin;
+{
+	/* internal declarations */
+
+	register ATT	*att;		/* ATT structure for column */
+	register i4	i;		/* counter */
+	char		ibuf[20];	/* holds number for CVna */
+	char		ibuf2[20];	/* holds number for CVna */
+					/* temp holder of strings */
+##	char		tstr[(FE_UNRML_MAXNAME + 1)];
+##	char		*froptions;	/* name of ROPTIONS form */
+	char		fmtstr[MAX_FMTSTR];
+	STATUS 		stat = OK;	/* Status returned by r_LabelsHead() */
+	static bool	ff_default = FFDFLTB; /* default formfeed usage */
+
+	/* start of routine */
+
+#	ifdef	xRTR1
+	if (TRgettrace(180,0) || TRgettrace(183,0))
+	{
+		SIprintf(ERx("rFm_rhead: entry.\r\n"));
+	}
+#	endif
+
+	froptions = Nroptions;		/* name of ROPTIONS form */
+
+	if (En_SrcTyp == JDRepSrc)
+	{
+		CVna((i4)JDRepSrc, ibuf); 
+		RF_STAT_CHK(s_w_action(ERx("begin"), ERx("rbfsetup"), 
+			ERx(","), ibuf, ERx(","), En_ferslv.name, (char *)0));
+	}
+	else
+	{
+		RF_STAT_CHK(s_w_action(ERx("begin"), ERx("rbfsetup"), (char *)0));
+	}
+
+	/* Put in the page length, etc. from ROPTIONS form */
+
+	STcopy(Opt.rpl, tstr);
+	STtrmwhite(tstr);
+	if (STlength(tstr) > 0)
+	{
+		RF_STAT_CHK(s_w_action(ERx("pagelength"),tstr,(char *)0));
+	}
+
+	STprintf(tstr, ERx("%c"), Opt.rulchar);
+	if ((*tstr != ' ') && (*tstr != '\0'))
+	{
+		tstr[1] = '\0';
+		RF_STAT_CHK(s_w_action(ERx("ulcharacter"), ERx("\'"), 
+				tstr, ERx("\'"), (char *)0));
+	}
+
+	STprintf(tstr, ERx("%s"), Opt.rnulstr);
+	if (*tstr != '\0')
+	{
+		RF_STAT_CHK(s_w_action(ERx("nullstring"), ERx("\'"), 
+			tstr, ERx("\'"), (char *)0));
+	}
+
+	/* The use of form feeds is defaulted on each operating
+	   system (as defined in rcons.h).  This code only emits
+	   a form feed command if it differs from the operating
+	   system default.					*/
+	STprintf(tstr, ERx("%c"), Opt.rffs);
+	if (ff_default == TRUE)
+	{
+		/* Formfeed default is on */
+
+		if (!IIUGyn(tstr, (STATUS *)NULL))
+		{
+			RF_STAT_CHK(s_w_action(ERx("noformfeeds"),(char *)0));
+		}
+	}
+	else
+	{
+		/* Formfeed default is off */
+
+		if (IIUGyn(tstr, (STATUS *)NULL))
+		{
+			RF_STAT_CHK(s_w_action(ERx("formfeeds"),(char *)0));
+		}
+	}
+
+	/*
+	** Check for suppression of initial formfeed.  This is independent
+	** of the formfeed option above, as the report may be moved/executed
+	** to/from a system where the FF default is different!
+	*/
+	STprintf(tstr, ERx("%c"), Opt.no1stff);
+	if (IIUGyn(tstr, (STATUS *)NULL))
+	{
+		RF_STAT_CHK(s_w_action(ERx("nofirstff"),(char *)0));
+	}
+
+	/* Put in the format and position command for each column */
+
+	for (i=1; i<=En_n_attribs; i++)
+	{
+		att = r_gt_att(i);
+		if ((att != (ATT *)NULL) && (att->att_format != NULL))
+		{	/* only for atts which will be printed */
+			if (fmt_fmtstr(FEadfcb(), att->att_format, fmtstr)
+				!= OK)
+			{
+			    IIUGerr(E_RF0038_rFm_rhead_Can_t_get_f, 
+			      UG_ERR_FATAL, 0);
+			}
+			_VOID_ IIUGxri_id(att->att_name,&tstr[0]);
+			RF_STAT_CHK(s_w_action(ERx("format"), 
+			  	&tstr[0], ERx("("),
+			  	fmtstr, ERx(")"), (char *)0));
+		}
+
+		if (St_style != RS_LABELS)	
+		{
+		    if ((att != (ATT *)NULL) &&
+			(att->att_width > 0))
+		    {	/* if width > 0, att is specified */
+			CVna((i4)att->att_position,ibuf);  /* GAC - fixed */
+			CVna((i4)att->att_width,ibuf2);
+			_VOID_ IIUGxri_id(att->att_name,&tstr[0]);
+			RF_STAT_CHK(s_w_action(ERx("position"), 
+				&tstr[0], ERx("("),
+				ibuf, ERx(","), ibuf2, ERx(")"), (char *)0));
+		    }
+		}
+	}
+
+	/*
+	** If it is a Labels style report, generate additional commands 
+	** for the report header section:
+	*/
+	if (St_style == RS_LABELS)
+	{
+		if ((stat = r_LabelsHead(right_margin)) != OK)
+			return(stat);
+	}
+	else
+	{
+		CVna((i4)right_margin, ibuf);
+		RF_STAT_CHK(s_w_action(ERx("rm"), ibuf, NULL));
+	}
+
+	RF_STAT_CHK(s_w_action(ERx("end"), ERx("rbfsetup"), (char *)0));
+
+#	ifdef xRTR3
+	if (TRgettrace(183,0))
+	{
+		SIprintf(ERx("	At end of r_m_rhead.\r\n"));
+	}
+#	endif
+
+	return(OK);
+}
+
+
+
+
+/*
+** Name:   r_LabelsHead - Set up the additional header setup commands 
+**			needed for labels.
+**
+** Description:
+**         This module will set up the additional header commands 
+**         for label style reports.
+**
+** History:
+**
+**	30-oct-1992 (rdrane)
+**		Change over references to IIUGlbo_lowerBEobject(), which
+**		is now obsolete.  All of the atributes referenced in this
+**		routine are guaranteed to be REGULAR identifiers.
+**/
+static
+STATUS
+r_LabelsHead(right_margin)
+i4	right_margin;
+{
+
+	char ibuf [20];
+	STATUS stat = OK;
+
+	/*
+	** Save the environment since we need to declare variables:
+	*/
+	save_em();
+
+	/* 
+	** For label reports, it is possible RBF has already saved some 
+	** selection criteria variables.  Don't want to save over them.
+	** Start sequence after the last selection criteria variable. (#32780) 
+	*/
+
+	if (St_style == RS_LABELS)
+		Csequence = Seq_declare;
+	else
+		Csequence = 0;
+
+	_VOID_ STcopy(NAM_DECLARE, Ctype);
+	_VOID_ STcopy(ERx(" "), Csection);
+	_VOID_ STcopy(ERx(" "), Ccommand);
+	_VOID_ STcopy(ERx("int"), Ctext);
+
+	_VOID_ STcopy(ERx(LABST_LINECNT), Cattid);
+	_VOID_ IIUGdbo_dlmBEobject(Cattid,FALSE);
+
+	RF_STAT_CHK(s_w_row());
+
+	_VOID_ STcopy(ERx(LABST_MAXFLDSIZ), Cattid);
+	_VOID_ IIUGdbo_dlmBEobject(Cattid,FALSE);
+
+	RF_STAT_CHK(s_w_row());
+
+	_VOID_ STcopy(ERx(LABST_MAXPERLIN), Cattid);
+	_VOID_ IIUGdbo_dlmBEobject(Cattid,FALSE);
+
+	RF_STAT_CHK(s_w_row());
+
+	/* declare the variable "in_block" as a c3 */
+	_VOID_ STcopy(ERx("c3"), Ctext);
+
+	_VOID_ STcopy(ERx(LABST_IN_BLK), Cattid);
+	_VOID_ IIUGdbo_dlmBEobject(Cattid,FALSE);
+
+	RF_STAT_CHK(s_w_row());
+
+	/*
+	** Reset the environment:
+	*/
+	get_em();
+
+	CVna((i4)right_margin, ibuf);
+	RF_STAT_CHK(s_w_action(ERx("rm"), ibuf, NULL));
+
+	RF_STAT_CHK(s_w_action(ERx("lm"), ERx("0"), NULL));
+
+	CVna(LabelInfo. LineCnt, ibuf);
+	RF_STAT_CHK(s_w_action(ERx("let"), ERx(LABST_LINECNT), 
+		ERx("="), ibuf, NULL));
+	RF_STAT_CHK(s_w_action(ERx("endlet"), NULL));
+
+	CVna(LabelInfo. MaxFldSiz, ibuf);
+	RF_STAT_CHK(s_w_action(ERx("let"), ERx(LABST_MAXFLDSIZ), 
+		ERx("="), ibuf, NULL));
+	RF_STAT_CHK(s_w_action(ERx("endlet"), NULL));
+
+	CVna(LabelInfo. MaxPerLin, ibuf);
+	RF_STAT_CHK(s_w_action(ERx("let"), ERx(LABST_MAXPERLIN), 
+		ERx("="), ibuf, NULL));
+	RF_STAT_CHK(s_w_action(ERx("endlet"), NULL));
+
+	RF_STAT_CHK(s_w_action(ERx("let"), ERx(LABST_IN_BLK), 
+		ERx("='no'"), NULL));
+	RF_STAT_CHK(s_w_action(ERx("endlet"), NULL));
+
+	return(OK);
+
+}

@@ -1,0 +1,242 @@
+! Xdefaults	lastmod 20 Jan 93  boba
+!			created  5 Nov 90  KH
+!
+! copyright:	(c) 1990-1992 Programming Research Ltd
+! version:	@(#)Xdefaults	1.12
+! date:		92/06/01
+!
+! purpose:	example X defaults file template for .Xdefaults
+!
+! history:
+!	20 Jan 93  boba Customize for Ingres Coding Standards
+!	21 May 92  SAC  Added line styles (CR940)
+!	21 May 92  SAC  Final adjustment of font sizes (CR955)
+!	20 May 92  SAC  Colour change and tidy up (CR944)
+!				 Changed warning font to be consistent (CR945)
+!	19 May 92  SAC  Added Visualise metrics (CR897)
+!	 8 May 92  SAC  Added COCOMO cost model (CR898)
+!	 8 May 92  SAC  Renamed lib to callpacks (CR878)
+!	 7 May 92  SAC  Fixed qac/qac_end problem (CR894)
+!	19 Feb 92  SAC  Added many more resources (CR698)
+!	 5 Nov 90  KH   Initial version
+
+!
+!	example .Xdefaults for client xqa_c
+!
+
+! Startup directory for QA C:
+xqa_c*dir:					.
+! Directory in which to find help files:
+xqa_c*helpdir:					/usr/local/QAC/bin
+! Directory in which to find library callpacks:
+xqa_c*callpacks:				/usr/local/QAC/callpacks
+! Directory in which to find Demographic Quality Analysis database files:
+xqa_c*demodir:					/usr/local/QAC/DQA
+! Default file selection(s):
+xqa_c*c_end:					*.c
+! Default output file suffix:
+xqa_c*qac_end:					.qac
+! Template for temporary files: temp_dir/temp_pfxNNNN
+xqa_c*temp_dir:				/tmp
+xqa_c*temp_pfx:				xc
+
+! Default settings for toggle buttons on startup:
+xqa_c*opt0:					off
+xqa_c*opt1:					off
+xqa_c*opt2:					off
+xqa_c*opt3:					off
+xqa_c*opt4:					on
+xqa_c*opt5:					off
+xqa_c*opt6:					off
+xqa_c*opt7:					off
+xqa_c*opt8:					off
+xqa_c*opt9:					off
+
+! Default text of programming standards button:
+xqa_c*standardsButton.label:		Ingres REQ (4)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! It is recommended that you do not change resources in this section:
+!
+! Button texts:
+xqa_c*level0Button.label:		Information (0)
+xqa_c*level1Button.label:		Minor problems (1)
+xqa_c*level2Button.label:		Maintenance (2)
+xqa_c*level3Button.label:		Major problems (3)
+! level4Button is actually standardsButton specified above
+xqa_c*level5Button.label:		Ingres CNV (5)
+xqa_c*level6Button.label:		Portability (6)
+xqa_c*level7Button.label:		Complexity (7)
+xqa_c*level8Button.label:		ANSI specific (8)
+xqa_c*level9Button.label:		Syntax errors (9)
+xqa_c*executeButton.label:		Run QA C
+xqa_c*specOpt1.label:			Show warnings in header files
+xqa_c*specOpt2.label:			Include header files in metrics
+xqa_c*specOpt3.label:			Enable C extensions
+xqa_c*specOpt4.label:			Give ANSI/Plum Hall references with warnings
+xqa_c*specOpt5.label:			Check for strict ANSI conformance
+xqa_c*specOpt6.label:			Make external names significant to 22 chars
+xqa_c*specOpt7.label:			Make external names case significant
+xqa_c*specOpt8.label:			Perform close name analysis only
+xqa_c*specOpt9.label:			Show external name cross reference table
+xqa_c*specOpt10.label:			Show identifier declarations by file and line
+xqa_c*packUsage.label:			Externs and identifier usage...
+xqa_c*packUnVars.label:			Show uninitialised variables
+xqa_c*packPrepro.label:			Show #include file nesting
+xqa_c*packSummary.label:			Show QA C summary
+xqa_c*usageUnused.label:			Show globally unused externs
+xqa_c*usageBadDef.label:			Show incorrectly defined externs
+xqa_c*usageSymTab.label:			Show identifier declarations
+xqa_c*usageRefTree.label:		Show externs referenced by each routine
+xqa_c*usageRefByTree.label:		Show routines that refer to each extern
+xqa_c*utilStruct.label:			Show structure synopsis
+xqa_c*utilExpand.label:			Expand header files
+xqa_c*utilOptions.label:			Edit command line options
+xqa_c*utilClean.label:			Remove database files
+xqa_c*utilEdit.label:			Edit code
+xqa_c*utilList.label:			List code
+xqa_c*dqaVis.label:				Visualise metrics (Xgobi)
+xqa_c*dqaCocomo.label:			COCOMO cost model
+
+
+! Overall colors:
+xqa_c*Foreground:				#0000e0
+xqa_c*Background:				#f8f8f8
+
+! Overall fonts:
+xqa_c*Command.font:				-*-courier-bold-r-normal-*-14-*
+xqa_c*Label.font:				-*-courier-bold-r-normal-*-14-*
+
+! Output text window fonts:
+xqa_c*Label*font:				-*-courier-bold-r-normal-*-14-*
+xqa_c*HelpFile*font:			-*-courier-bold-r-normal-*-14-*
+xqa_c*OutputText*font:			-*-courier-bold-r-normal-*-14-*
+
+! Background gray for main panels:
+xqa_c*Grip.foreground:			#e0e0e8
+
+! Background gray for creating bitmask for grayed out buttons:
+xqa_c*Form.background:			#f8f8f8
+
+! Labels...
+xqa_c*Label.foreground:			#000000
+
+! Buttons...
+xqa_c*Command.background:		#ffffff
+
+! Logo / Title fonts and colours:
+xqa_c*MainTitle*font:			-adobe-times-medium-r-normal--24-*
+xqa_c*MainTitle*foreground:		black
+xqa_c*MainTitle*background:		red
+xqa_c*SubTitle*font:			-adobe-times-medium-r-normal--24-*
+xqa_c*SubTitle*foreground:		black
+xqa_c*SubTitle*background:		red
+ 
+! Warning popup font and colors:
+xqa_c*Warning*Command*foreground:	#cd2626
+xqa_c*Warning*Command*background:	#fff5ee
+xqa_c*Warning*font:				-*-courier-bold-r-normal-*-14-*
+xqa_c*Warning*foreground:		#473c8b
+xqa_c*Warning*background:		#f0ffff
+
+! Graphical calling tree colours and line styles:
+xqa_c*Graph.recurseColor:		#cc0055
+xqa_c*Graph.parentColor:			#00aa55
+xqa_c*Graph.childColor:			#e400e4
+xqa_c*Graph.recurseStyle:		63
+xqa_c*Graph.parentStyle:			44
+xqa_c*Graph.childStyle:			36
+
+! General X resources:
+xqa_c*IconGeometry:				-350+0
+xqa_c*Command.cursor:			plus
+xqa_c*Scrollbar.thickness:		20
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! Example defaults for xterm, xclock, xmessage, xman:
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+xterm*MenuBorder:			4
+xterm*MenuFont:              		9x15
+xterm*MenuPad:               		4
+
+xterm*Geometry:              		90x50
+xterm*BorderWidth:           		5
+xterm*InternalBorder:   		5
+xterm*ScrollBar:  	           	on
+xterm*ReverseWrap:	           	on
+xterm*SaveLines:  	           	100
+xterm*Font:       	           	6x13
+xtermbig*Font:    	           	9x15
+xtermnormal*Font:            		6x13
+xtermsmall*Font:  	           	6x10
+
+xtermright*Title:        	        QAC:Right
+xtermright*IconName:            	QAC:Right
+xtermright*Font:                  	6x13
+xtermright*Geometry:         		89x64-0+0
+xtermright*IconGeometry:     		-208+0
+
+console*Title:          		<<Console>>
+console*IconName:       		<<Console>>
+console*Font:           		*-courier-bold-o-normal--14-*
+console*Geometry:       		89x49+0-0
+console*IconGeometry:   		-140+0
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! xclock defaults
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+xclock*analog:        			on
+xclock*chime:         			on
+xclock*geometry:      			64x64-0+0
+xclock*update:        			60
+xclock*borderWidth:   			2
+xclock*padding:       			2
+xclock*reverseVideo:  			off
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! xmessage defaults
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+xmessage*font:                 		*-courier-bold-o-normal--18-*
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! xman defaults
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+xman*topBox*foreground:        		red
+xman*topBox*background:        		white
+xman*Command.font:        		*-courier-bold-o-normal--12-*
+xman*Command.foreground:    		red
+
+xman*SimpleMenu.font:            	*-courier-bold-o-normal--12-*
+xman*SimpleMenu.foreground:    		red
+xman*SimpleMenu.background:    		white
+
+xman*SmeBSB.font:        		*-courier-bold-o-normal--12-*
+xman*SmeBSB.background:        		white
+xman*SmeBSB.foreground:        		red
+
+xman*ScrollByLine.background:    	white
+xman*ScrollByLine.foreground:    	navy
+xman*ScrollByLine.border:    		red
+
+xman*Label.font:        		*-courier-bold-o-normal--12-*
+xman*Label.foreground:        		navy
+xman*Label.background:        		white
+
+xman*manualFontNormal:          	*-courier-medium-r-normal--12-*
+xman*manualFontBold:            	*-courier-bold-r-normal--12-*
+xman*manualFontItalic:          	*-courier-medium-r-normal--10-*
+xman*directoryFontNormal:       	*-courier-bold-r-normal--12-*

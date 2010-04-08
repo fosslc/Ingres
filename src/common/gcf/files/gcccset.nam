@@ -1,0 +1,156 @@
+#
+# Name: GCCCSET.NAM - map between character set names and their ID's
+#
+# Format:
+#              # comments
+#              <name> <id>
+#
+# 	where <name> is the (case insensitive) name of the character set,
+# 	and id is a unsigned 16 bit integer in hex.
+#
+## History:
+##	7-Mar-1991 (seiwald)
+##	    Created.
+##	15-Aug-1991 (seiwald)
+##	    Renumbered and added a few character sets in anticipation
+##	    of 6.4 FCS.
+##	23-Aug-1991 (gillnh2o/philiph)
+##	    Changed character set names to reflect 8-character limit imposed
+##	    by chset_install
+##	28-Oct-1991 (kima/philiph/fredv)
+##	    Added HP Roman8 character set.
+##	03-Apr-1992 (philiph)
+##	    Added IBM PC Slavic 852 character set. 
+##	    Added ELOT-437-GREEK character set.
+##	    Added ARABIC character set (missing from 6.4/01)
+##	14-Apr-1992 (philiph)
+##	    Removed illegal "_" from character set names.
+##	20-apr-92 (kirke)
+##	    Added Asian language character sets.
+##      1-nov-92 (fraser)
+##          Changed IBMPC_ASCII_US to IBMPC437.
+##          Added IBMPC850
+##	14-mar-1995 (peeje01)
+##	    Cross integration from 6500db_su4_us42:
+##	    CHINESET commented out; CHTBIG5,CHTEUC and CHTHP added
+##	6-dec-1995 (angusm)
+##		Cross integration from 6.4 of ISO 8859-5, ISO 8859-9
+##		IBM PC 437, IBM PC 850, WIN1250 plus CW, ALT, PC857
+##	9-jan-1996 (angusm)
+##		Added charset KOI for RUSSIA 
+##	22-Mar-96 (surli01)
+##		Integrate from OR PCHEBREW/WHEBREW/DOSASMO/WARABIC/WTHAI
+##	20-june-1996 (angusm)
+##		Add IBM PC 866 (another flavour of Cyrillic for DOS)
+##		rename KOI->KOI8
+##	11-Mar-1999 (peeje01)
+##		Add Universal Character Set (Unicode) related names
+##	17-sep-2001 (abbjo03)
+##	    Add ISO 8859-15 Latin 9 and Windows 1252 Latin 1.
+## 	19-jul-2005 (rigka01) bug 114739, INGNET173
+##	    Add ISO 8859-7, Windows 1253, and IBM PC codepage 737.
+#
+
+
+# NSCS:
+#
+# NSCS is the default network standard character set, used during 
+# connection initiation, in conversations with pre-VRSN_HET Comm Servers, 
+# and as a last recourse if the two Comm Servers in a connection can find 
+# no better common character set.  NSCS is essentially DEC Multinational, 
+# with a few characters from ISO 8859/1 added.
+#
+# Pre-VRSN_HET and other unconfigured Comm Servers will identify themselves 
+# as speaking NSCS, even though no known terminal properly displays the
+# full NSCS.  Users of these Comm Servers are basically taking their chances
+# with the untainted essentially 8-bit data being passed through.
+#
+
+NSCS		0000	#
+
+# ASCII:
+#
+# The follow are the flavors of ASCII supported.  They map pretty easily
+# into NSCS.
+
+ISO88591	0001	# ISO 8859/1 (Latin)
+ISO88592	0002	# ISO 8859/2 (Latin + some Greek)
+ISO88595    0005    # ISO 8859/5 (Latin + Cyrillic)
+ISO88597	0007	# ISO 8859/7 (Latin + Greek) 
+ISO88599    0009    # ISO 8859/9 (Latin + some Turkish) CP 920
+IS885915	000F	# ISO 8859/15 (Latin + Euro sign)
+
+IBMPC_ASCII_INT	0010	# PC international ASCII
+IBMPC_ASCII		0010	# alias for IBMPC_ASCII_INT
+IBMPC437        0011    # IBM PC Code Page 437 (US and English)
+ELOT437			0012	# Greek for PC/RS6000/SCO-UNIX
+SLAV852         0013    # IBM PC Code Page 852 (Slavic)
+IBMPC850        0014    # IBM PC Code Page 850 (Multilingual)
+CW              0015    # Cyrillic on Windows 3.1
+ALT             0016    # Support of Cyrillic on DOS
+PC857           0017    # IBM PC Code page 857 - Turkish
+WIN1250         0018    # Eastern Europe: Windows page 1250
+KOI8			0019	# KOI 8-bit (ISO 6937/8), Russia
+IBMPC866		001B	# IBM PC 866 (Cyrillic for DOS)
+WIN1252		001C	# Windows code page 1252 - Latin 1 (Western Europe)
+WIN1253		001D	# Windows code page 1253 - Greek
+PC737		001E	# IBM PC Code page 737 (DOS Greek) 
+
+ASCII		0020	# Plain 7 bit ASCII
+
+DECMULTI	0030	# DEC Multinational
+HEBREW		0031	# DEC Hebrew
+THAI		0032	# DEC Thai Tis
+GREEK		0033	# DEC Greek Elot
+
+HPROMAN8	0040	# HP Roman8
+
+ARABIC		0050	# Arabic-449-Plus
+
+WHEBREW		0060	# Microsoft Windows Hebrew
+PCHEBREW	0061	# IBM PC / MSDOS Hebrew
+WARABIC		0062	# Microsoft Windows Arabic
+DOSASMO		0063	# IBM DOS ASMO Arabic (cp708)
+WTHAI		0064	# IBM/Windows Thai (cp874)
+
+# EBCDIC:
+#
+# EBCDIC_C is the same character set as EBCDIC_USA, but uses different 
+# mappings to better support the literals from the C language.  EBCDIC
+# is an alias for EBCDIC_USA.
+
+EBCDIC_C	0100	# USA EBCDIC with mappings for C lang support
+EBCDIC_ICL	0101	# ICL's version of EBCDIC for international chars
+EBCDIC_USA	0102	# USA EBCDIC with mappings for text support
+EBCDIC		0102	# Alias for EBCDIC_USA
+
+# DOUBLE BYTE:
+#
+# Asian languages (Chinese, Japanese, Korean) which require more than
+# one byte to represent a single character.
+#
+
+CHINESES	0200	# Simplified Chinese - PRC
+KOREAN		0201	# Korean
+KANJIEUC	0202	# EUC Japanese
+SHIFTJIS	0203	# Shift-JIS Japanese
+# CHINESET	0204	# Traditional Chinese - Taiwan
+CHTBIG5		0205	# Traditional Chinese - Taiwan, BIG5
+CHTEUC		0206	# Traditional Chinese - Taiwan, EUC
+CHTHP			0207	# Traditional Chinese - Taiwan, HP ROC15
+CSGBK		0208	# Simplified Chinese - GBK
+CSGB2312	0209	# Simplified Chinese - GB2312
+ANY		0210 	# Treat all characters as printable
+
+# UNIVERSAL:
+#
+# Universal Character set. This requires a new data type or a 
+# transformation format for 7 or 8 bit systems
+# UCS2 is Unicode or ISO 10646 BMP (Basic Multilingual Plane)
+# UCS4 is ISO 10646 complete
+#
+
+UCS2		0300	# Universal Character Set, requires 2 octets or 16 bits
+UCS4		0301	# Universal Character Set, requires 4 octets or 32 bits
+UTF7		0310	# UTF-7, 7 bit UCS2 Transformation Format
+UTF8		0311	# UTF-8, 8 bit UCS2 Transformation Format

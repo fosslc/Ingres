@@ -1,0 +1,26 @@
+COPYFORM:	6.4	1991_08_19 08:51:06 GMT  
+FORM:	fdisplgproc	Logging Process Info	
+	79	9	0	0	1	0	11	9	0	0	0	0	0	192	0	10
+FIELD:
+	0	logprocess	0	5	0	9	7	79	2	0	1	1	0		1	1	0	1073758241	0	0	0					1	0
+	0	pr_id	21	10	0	8	1	8	0	1	8	1	1	ID	1	-1	0	0	0	0	0		+c8			2	1
+	1	pr_pid	21	10	0	8	1	8	0	10	8	1	10	PID	10	-1	0	0	0	0	0		+c8			2	2
+	2	pr_type	21	22	0	7	1	7	0	19	7	1	19	Type	19	-1	0	0	64	0	0		c7			2	3
+	3	pr_open	30	4	0	5	1	6	0	27	5	1	27	OpenDB	27	-1	0	0	0	0	0		+i5			2	4
+	4	pr_write	30	4	0	8	1	8	0	34	8	1	34	Write	34	-1	0	0	0	0	0		-i8			2	5
+	5	pr_force	30	4	0	8	1	8	0	43	8	1	43	Force	43	-1	0	0	0	0	0		-i8			2	6
+	6	pr_wait	30	4	0	8	1	8	0	52	8	1	52	Wait	52	-1	0	0	0	0	0		-i8			2	7
+	7	pr_begin	30	4	0	8	1	8	0	61	8	1	61	Begin	61	-1	0	0	0	0	0		-i8			2	8
+	8	pr_end	30	4	0	8	1	8	0	70	8	1	70	End	70	-1	0	0	0	0	0		-i8			2	9
+TRIM:
+	0	0	3:79:0	1	0	0	0
+	1	0	Log Process Display	2048	0	0	0
+	1	1	ID	0	0	0	0
+	10	1	PID	0	0	0	0
+	19	1	Type	0	0	0	0
+	27	1	OpenDB	0	0	0	0
+	34	1	Write	0	0	0	0
+	43	1	Force	0	0	0	0
+	52	1	Wait	0	0	0	0
+	61	1	Begin	0	0	0	0
+	70	1	End	0	0	0	0

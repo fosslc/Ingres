@@ -1,0 +1,246 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\enterprise.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\enterprise.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_WELCOMEDLG DIALOG  0, 0, 320, 204
+STYLE DS_ABSALIGN | DS_SETFONT | DS_SETFOREGROUND | DS_CENTER | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Welcome to the Ingres Patch Setup Wizard.\n\nThe Setup Wizard presents a series of easy-to-use dialogs designed to simplify the installation of the Ingres patch.\n\nClick ""Next"" to continue.",
+                    IDC_STATIC,123,29,179,95
+    LTEXT           "200",IDC_IMAGE,7,7,94,187
+END
+
+IDD_INSTALLCODE DIALOG  0, 0, 320, 204
+STYLE DS_ABSALIGN | DS_SETFONT | DS_SETFOREGROUND | DS_CENTER | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Installation Identifier:",IDC_STATIC,123,50,119,12,
+                    SS_CENTERIMAGE
+    EDITTEXT        IDC_INSTALLATIONCODE,249,50,36,12,ES_UPPERCASE | 
+                    ES_AUTOHSCROLL
+    GROUPBOX        "List of Existing Ingres Installations",IDC_STATIC,123,
+                    78,186,90
+    CONTROL         "List1",IDC_INSTALLEDLIST,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | 
+                    LVS_NOLABELWRAP | WS_BORDER | WS_TABSTOP,128,94,176,69
+    LTEXT           "200",IDC_IMAGE,7,7,94,189
+    LTEXT           "Please provide an installation identifier:",IDC_STATIC,
+                    123,28,183,13
+END
+
+IDD_WAIT_DIALOG DIALOG  0, 0, 218, 58
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Ingres Setup Wizard"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_CENTER | 
+                    ACS_TRANSPARENT | ACS_AUTOPLAY | WS_TABSTOP,7,7,30,29
+    LTEXT           "Static",IDC_TEXT,46,10,165,40
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_WELCOMEDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 312
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 194
+    END
+
+    IDD_INSTALLCODE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 311
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 196
+    END
+
+    IDD_WAIT_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 211
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 51
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+200                     BITMAP                  "res\\Block01.bmp"
+IDB_SPLASH256           BITMAP                  "res\\ingsplash.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_CLOCK_AVI           AVI                     "res\\clock.avi"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_TITLE               "Ingres Patch Setup Wizard"
+    IDS_ALREADYRUNNING      "Ingres Patch Setup Wizard is already running."
+    IDS_SUPPORTVERSION      "Ingres supports Windows 98, Windows ME, Windows NT and Windows 2000."
+    IDS_INSTALLERUSAGE      "Ingres Patch Setup Wizard Usage:\n\nPatchUpdate.exe /id<installation_id> --  To specify installation id for patching.\nPatchUpdate.exe /silent -- For silent install. This parameter requires /id flag and installation id.\nPatchUpdate.exe /l -- To generate a log file in %TEMP%\\patchmsi.log."
+    IDS_AREYOUSURE          "Are you sure you want to exit?"
+    IDS_CREATINGRSPFILE     "This installation program is running in ""Response File"" mode.  It will only generate a response file intended for use with unattended installs. To use the response file, you must run this program with a /R<ResponseFileName> parameter.   After you have made your choices in this wizard, you will be prompted for a location and file name of the response file to be generated.\n\n  ***  No Ingres files will be installed at this time.  ***"
+    IDS_INVALIDINSTALLATIONCODE 
+                            "Invalid installation identifier : '%s'\nInstallation identifier must be 2 characters, beginning with a non-numeric character."
+    IDS_CANNOTCREATEPROCESS "Failed execute '%s'!"
+    IDS_CANNOTCOPYMSIFILE   "Copy 'Ingres Patch.msi' to '%s' failed."
+    IDS_CANNOTUPDATEWIDB    "Update Windows Installer Database failed."
+    IDS_RESPONSEFILEDOESNOTEXIST 
+                            "Response file '%s' does not exist... exiting."
+    IDS_INVALIDINSTALLATIONPATH 
+                            "Please provide a valid II_SYSTEM, such as, 'C: \\IngresII'."
+    IDS_INVALIDINSTANCE     "There already exists an Ingres instance '%s' installed in '%s', you can NOT install another instance '%s' in the same directory!"
+    IDS_RSPMISSINGINSTALLCODE 
+                            " You must supply a value for ""installationcode"" in the [Ingres Configuration] section of the response file."
+    IDS_NOENOUGHSPACE       "There is no enough space to copy Data1.cab to your temp directory. The file size of Data1.cab is %s, the amount of free space on the disk %s is %s."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_CANNOTCOPYCABFILE   "Copy '%s' to '%s' failed. GetLastError() returns: %s."
+    IDS_NOTEMPPATH          "Please create a temp directory for copying both MSI file and CAB file (Data1.Cab) temporarily.\n\nNote that: The CAB file  is very large (near 100MB), you need have enough space."
+    IDS_WAITDLGTEXT         "Ingres Setup is preparing the InstallShield Wizard which will guide you through the program setup process.  This may take several minutes."
+    IDS_INSTALLWIFAILED     "Windows Installer was unsuccessfully installed."
+    IDS_NOTADMINISTRATOR    "In Windows NT 4.0 and 2000, you must have administrative rights to complete this installation."
+    IDS_MUSTUPGRADEVER25    "The Ingres [ %s ] installation is currently accessable via the global machine environment. If you do not upgrade this installation, you will not be able to globally access it after installing a secondary Ingres installation. Do you want continue anyway?"
+    IDS_INGRESRUNNING       "Your Ingres is currently running. Would you like to shut it down now?"
+    IDS_UPGRADE             "The installation will be treated as an upgrade, and settings from this existing installation will be used.  Before performing the upgrade, you should review the README file for important information to help you with your installation and use of the product.\n\nDo you wish to continue?"
+    IDS_INGRESRUNNING2      "Your Ingres is currently running. You must first shut it down."
+    IDS_COPYRIGHT           "Copyright 2006-2010 Ingres Corporation. All Rights Reserved"
+    IDS_UNKNOWN             "unknown"
+    IDS_LICENSE_TO          "This product is licensed to:"
+    IDS_SITEID              "Site ID:"
+    IDS_FINISH_TEXT         "Next >"
+    IDS_DATEFORMAT          "\r\nMDB installation started on: %A, %B %d, %Y - %H:%M:%S\r\n"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_DATEFORMATS         "\r\nMDB installation completed on: %A, %B %d, %Y - %H:%M:%S"
+    IDS_DATEFORMATF         "\r\nMDB installation failed on: %A, %B %d, %Y - %H:%M:%S"
+    IDS_SEPARATOR           "\r\n******************************************************************************\r\n"
+    IDS_DATE                "\r\nPatch Installation started on: %A, %B %d, %Y - %H:%M:%S\r\n"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\enterprise.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "gv.rc"
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

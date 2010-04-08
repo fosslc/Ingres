@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqqualpr.hlp, help for the Frame Behavior pop-up for Qualification
+/#-- Processing
+/#-- 
+Qualification Processing controls whether the Browse or Update frame displays 
+a blank screen to allow users to enter custom query qualifications (restric-
+tions) before the query runs.  If user entered qualifications are present, 
+they are added to the restrictions specified in the frame's Visual Query.
+
+If you want to allow users to enter additional query qualifications 
+(restrictions), then set the Qualification Processing to "Yes."  When the 
+application is run, the user will be presented with a blank screen for 
+entering additional query qualifications.  The user then selects the "Go" 
+menuitem to begin the query.
+
+If want to allow only the query qualifications (restrictions) placed in the 
+Visual Query for this frame, then set the Qualification Processing to "No."  
+When the application is run, the blank screen for entering additional 
+qualifications will not appear - instead, the query will be executed as the 
+frame is displayed and the data will be displayed immediately.
+
+Move the cursor to the desired option and choose "Select".

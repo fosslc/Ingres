@@ -1,0 +1,245 @@
+# include	<compat.h>
+# include	<pc.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<adf.h>
+# include	<tm.h>
+# include	<ex.h>
+# include	<er.h>
+# include	<ug.h>
+# include	"ermo.h"
+# include	"monitor.h"
+
+#ifdef SEP
+
+# include <tc.h>
+
+GLOBALREF TCFILE *IITMincomm;
+GLOBALREF TCFILE *IITMoutcomm;
+
+#endif /* SEP */
+
+/*
+** quit.qsc
+**
+** Copyright (c) 2004 Ingres Corporation
+**
+**  QUIT INGRES
+**
+**	This routine starts the death of the other processes.  It
+**	then prints out the logout message, and then waits for the
+**	rest of the system to die.  Note, however, that no relations
+**	are removed; this must be done using the PURGE command.
+**
+**	Uses trace flag 1
+**
+**	History:
+**
+**	3/2/79 (eric) -- Changed to close Trapfile.
+**	9/10/80 (djf)	 modified for 2 process vms version.
+**	08/06/84 (Mike Berrow) -- Brought over 2.1 UNIX Updates
+**	08/10/85 (gb) -- Added nasty System V hack.  Was looping
+**			 forever between quit-ing_cleanup-pb_prime-
+**			 pb_read-mon_exhandler when the backend
+**			 died abnormally.  Problem is that
+**			 ing_cleanup() counts on INintrpt() failing
+**			 if the backend is gone.  Unfortunately
+**			 the kill() system call doesn't
+**			 know the backend is gone as long as the
+**			 parent is alive.  So until the SV bug is fixed,
+**			 simply exit upon the second instantiation
+**			 of quit().
+**	86/07/14  19:11:29  perform
+**		zap Mon_star_[intro,exit], handle through control string.
+**	86/07/23  16:50:11  peterk
+**		6.0 baseline from dragon:/40/back/rplus
+**	86/10/14  15:00:41  peterk
+**		working version 2.
+**		eliminated BE include files.
+**		added check for pending MST at \quit.
+**	86/10/14  15:31:04  peterk
+**		added an output message when TM is \quit with a pending MST
+**		and the transaction is aborted.
+**	87/03/18  16:44:42  peterk
+**		removed cutesy "goodbye -- come again" message on exit.
+**	87/04/10  13:02:02  peterk
+**		added #include {compat,dbms,fe}.h
+**	30-sep-1987 (peter)
+**		Take out abort if not in a transaction.
+**	25-may-88 (bruceb)
+**		Changed to use SQL commit and rollback.
+**      10-may-89 (Eduardo)
+**              Added interface to SEP tool
+**	30-sep-89 (teresal)
+**		Added IBM porting change.  Made Version[] READONLY.
+**      13-mar-90 (teresal)
+**              Fix for bug 9141.  Only put out SQL committed msg when
+**              COMMIT was sucessful.
+**	14-mar-90 (teresal)
+**		Put out warning if Terminal Monitor is exiting (input file EOF
+**		has been reached) but there is still an open quoted string.
+**	20-dec-1990 (kathryn)  Bug 34938
+**		If "-s" flag was given suppress message:
+**		"Your SQL statement(s) have been committed."
+**	20-apr-1991 (kathryn)
+**		Reset Nodayfile to Userdflag in case "\q" was executed from an
+**		include() "\i" file. The Nodayfile flag gets reset by include()
+**		The Userdflag is the value that the user actually specified.
+**	21-apr-92 (seg)
+**		"errno" is reserved by ANSI C and causes a problem on OS/2.
+**	11/07/92 (dkh) - Alpha porting change.  READONLY qualifier for
+**			 GLOBALREF is not supported on alpha.
+**	14-sep-1995 (sweeney)
+**		WECOV purge -- it seems to have been SYSV on VAX (?).
+**	27-apr-1999 (mcgem01)
+**		The procuct name is no longer hard-coded in the logout
+**		banner.
+**	07-jun-1999 (somsa01)
+**		Took out above change. We now append to the banner
+**		variables the product name in tmmain.qsc .
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	06-May-2005 (toumi01)
+**		Return non-zero OS RC if /nocontinue and we get an error.
+**	06-May-2005 (toumi01)
+**		Minor change for VMS: return OK or FAIL, not arbitrary err.
+**      01-May-2008 (ashco01) Bug: 120300
+**              Closing the output "\script" file before writing the TM
+**              exit (date/version) message caused sigsegv and subsequent
+**              E_MO003C. Moved SIclose() of output script file to a point
+**              following the final write. 
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ug.h to satisfy gcc 4.3.
+**	29-Sep-2009 (frima01) 122490
+**	    Add return type for quit() to avoid gcc 4.3 warnings.
+*/
+
+
+GLOBALREF	char	Version[];	/* INGRES version number */
+GLOBALREF	char	Mon_exit_msg[];
+GLOBALREF	bool	Dingres;
+GLOBALREF	ADF_CB	*Tm_adfscb;
+GLOBALREF	i4	Moninquote;
+
+/* list of fatal signals */
+
+i4
+quit( err )
+STATUS	err;
+{
+	char		buf[100];
+	SYSTIME		time;
+EXEC SQL BEGIN DECLARE SECTION;
+	i4		errnum;
+EXEC SQL END DECLARE SECTION;
+
+	Nodayfile = Userdflag;
+
+
+#	ifdef xMTR1
+	if (tTf(1, -1))
+		putprintf(ERx("entered quit\n"));
+#	endif
+
+	/* INTERCEPT ALL FURTHER INTERRUPTS */
+
+		EXinterrupt((i4)EX_OFF);
+
+
+		/* Check if a MST is pending */
+		{
+		    register char	*answer;
+		    STATUS		stat;
+		    char		*getfilenm();
+
+		    /* Check if input is still in an open quoted string */
+		    if (Moninquote)
+			putprintf(ERget(F_MO0042_Warn_missing_quote));
+
+		    if (FEinMST())
+		    {
+			if (Tm_adfscb->adf_qlang == DB_QUEL)
+			{
+			    putprintf(ERget(F_MO002C_In_a_trans_Wanna_quit));
+
+			    /* use getfilenm to read one line of input */
+			    answer = getfilenm();
+			    Peekch = '\n';
+			    if (!IIUGyn(answer, &stat))
+			    {
+				/* No confirmation -- don't quit */
+				return 0;
+			    }
+
+			    /* put out a message that the transaction
+			    ** has been aborted... (especially if TM
+			    ** was run from a script and inadvertantly
+			    ** quit with an abort, so there's some
+			    ** output about it.)
+			    */
+			    EXEC SQL ROLLBACK WORK;
+			    putprintf(ERget(F_MO002D_Pending_trans_aborted));
+			}
+			else	/* assume SQL */
+			{
+			    EXEC SQL COMMIT WORK;
+
+			    /*
+			    ** Make sure commit was successful before
+			    ** displaying "Your SQL statement(s) have been
+			    ** committed." message. (bug 9141)
+			    */
+			    EXEC SQL INQUIRE_INGRES(:errnum = ERRORNO);
+			    if ((errnum == 0) && (Nodayfile >= 0))
+			       putprintf(ERget(F_MO0040_SQL_stmt_committed));
+			}
+		    }		/* end if FEinMST */
+		}
+
+		/* PRINT LOGOUT CUE ? */
+		if (Nodayfile >= 0)
+		{
+			TMnow(&time);
+			TMstr(&time, buf);
+			putprintf(Mon_exit_msg,
+				Dingres ? ERget(F_MO002E__STAR) : ERx(""),
+				Version, buf);
+		}
+
+		if (Script != NULL)
+			SIclose(Script); 
+
+		/* A new flush from 2.1 UNIX version -- MMB */
+
+		/* This flush was added because in some cases the last
+		** rowcount would not be printed.  It seemed to be a
+		** timing problem because the exact same query file would
+		** print the rowcount if the output came to the screen,
+		** but if the output was directed to a file the rowcount
+		** would not make it to the file.  This would only happen
+		** if you were running with the -s flag.
+		*/
+
+#ifdef SEP
+		if (IITMincomm != NULL)
+		{
+			TCclose(IITMincomm);
+			TCclose(IITMoutcomm);
+			IITMincomm = NULL;
+			IITMoutcomm = NULL;
+		}
+		else
+#endif /* SEP */
+			SIflush(stdout);
+
+		FEing_exit();
+		if (err)
+			PCexit(FAIL);
+		else
+			PCexit(OK);
+}

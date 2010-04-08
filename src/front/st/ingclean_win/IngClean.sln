@@ -1,0 +1,31 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IngClean", "IngClean.vcproj", "{13D95D5D-0524-45F1-ADCE-687B5F158A1D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		DebugAMD64|Win32 = DebugAMD64|Win32
+		DebugIA64|Win32 = DebugIA64|Win32
+		Release|Win32 = Release|Win32
+		ReleaseAMD64|Win32 = ReleaseAMD64|Win32
+		ReleaseIA64|Win32 = ReleaseIA64|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.Debug|Win32.Build.0 = Debug|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.DebugAMD64|Win32.ActiveCfg = DebugAMD64|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.DebugAMD64|Win32.Build.0 = DebugAMD64|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.DebugIA64|Win32.ActiveCfg = DebugIA64|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.DebugIA64|Win32.Build.0 = DebugIA64|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.Release|Win32.ActiveCfg = Release|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.Release|Win32.Build.0 = Release|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.ReleaseAMD64|Win32.ActiveCfg = ReleaseAMD64|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.ReleaseAMD64|Win32.Build.0 = ReleaseAMD64|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.ReleaseIA64|Win32.ActiveCfg = ReleaseIA64|Win32
+		{13D95D5D-0524-45F1-ADCE-687B5F158A1D}.ReleaseIA64|Win32.Build.0 = ReleaseIA64|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

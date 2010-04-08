@@ -1,0 +1,50 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Empty Bag</title>
+</head>
+<body>
+<h1>Empty Bag</h1>
+<!-- To Do:
+	Remove contents of bag
+	rollback the t_shopAdd transaction,
+
+	display the bag contents
+
+	Actions: OK (return to home)
+-->
+<!-- #ICE ROLLBACK=`t_shopAdd` -->
+
+<p>Your shopping bag now contains:
+<!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+	select name, cost
+	from play_item
+	where id = 
+	(select product_id from play_order
+	where order_nr = :e_orderNumber 
+	and user_id = ':ii_userid')`
+    TYPE=`TABLE`
+-->
+
+<!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+        select sum(cost) as Total
+	    from play_item
+	    where id = 
+		    (select product_id from play_order
+		    where order_nr = :e_orderNumber 
+		    and user_id = ':ii_userid')`
+    TYPE=`TABLE`
+-->
+<!-- Standard Shop Action -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]` -->
+<!-- Standard Session Control -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

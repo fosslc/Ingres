@@ -1,0 +1,50 @@
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_app_cntns_c_mod
+
+CREATE INDEX ii_app_cntns_c_mod
+    ON ii_app_cntns_comp (app_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_app_cntns_index
+
+CREATE INDEX ii_app_cntns_index
+    ON ii_app_cntns_comp (comp_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_client_depm_mod
+
+CREATE UNIQUE INDEX ii_client_depm_mod
+    ON ii_client_dep_mod
+    (client_name, client_version, module_name, module_version)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dict_module_mod
+
+CREATE UNIQUE INDEX ii_dict_module_mod
+    ON ii_dict_modules (module_name, module_version)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_entities_mod
+
+CREATE UNIQUE INDEX ii_entities_mod on ii_entities (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_entities_index
+
+CREATE UNIQUE INDEX ii_entities_index on ii_entities
+  (folder_id, entity_type, entity_name, branch_name,
+  version_number)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_locks_mod
+
+CREATE UNIQUE INDEX ii_locks_mod
+    ON ii_locks (entity_id, session_id)
+

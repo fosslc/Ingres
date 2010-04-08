@@ -1,0 +1,29 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmtargty.hlp
+CDDS Target Types
+
+CDDS Target Type refers to the level of replication support for a CDDS
+at a given database.  Target types are defined for each CDDS in a
+database.  Therefore, a database can have more than one Target Type if
+it contains more than one CDDS.
+
+The following CDDS Target Types are supported:
+
+Full Peer               A full peer target is required for production
+                        CDDS's where data is first manipulated by
+                        interactive users or other processes.  It
+                        allows changes to be made as well as received,
+                        with collision detection or resolution.
+
+Protected read-only     A protected read-only target is used to receive
+                        information from a Full Peer database.  The term
+                        protected means that this database contains
+                        sufficient information to detect collisions
+                        against the source copy of the data.
+
+Unprotected read-only   In unprotected mode, there is no protection
+                        against any change that is made to a replicated
+                        table from another source database.  Hence, use
+                        unprotected read-only target only if one full
+                        peer database sends information to the read-only
+                        database.

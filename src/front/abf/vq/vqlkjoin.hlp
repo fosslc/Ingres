@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlkjoin.hlp, subtopic 'Specifying joins' of subtopic 'Lookup tables' 
+/#-- behind the main VQ Editor help screen.
+/#--
+Columns that share the same name and datatype are considered "natural" joins, 
+even though they might contain different information (for instance, a 
+building address in a Master table and an employee address in a Detail table).
+
+  * Lookup tables are joined to their associated Master or Detail table on 
+    the first natural join.  
+    - To change the join:
+           1. Use DelJoin to delete the default join.  
+	   2. Use AddJoin to specify the new join.

@@ -1,0 +1,791 @@
+/*
+**	Copyright (c) 2007 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<si.h>
+#include	<st.h>
+#include	<lo.h>
+#include	<me.h>
+#include	<ex.h>
+#include	<er.h>
+#include	<ci.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<cm.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<uf.h>
+#include	<ug.h>
+#include	<ui.h>
+#include	<uigdata.h>
+#include	<pm.h>
+#include	"eric.h"
+#include	"global.h"
+##include	"ictables.qsh"
+/*
+fool ming:
+#include	"ictables.h"
+*/
+
+/**
+** Name:	ingcntrl.c -	INGRES Control Program Source.
+**
+** Description:
+**
+** History:
+**	85/08/08  13:08:47  daveb
+**	remove fedlib ref.
+**
+**	85/10/23  15:57:33  shelby
+**	changed usage to pass catalogdb or
+**	accessdb for printing out which one
+**	invoke ingcntrl.
+**
+**	85/10/30  15:55:40  peterk
+**	integrated Y-line porting changes
+**
+**	86/06/26  14:15:14  daveb
+**	remove hint for COMPAT
+**
+**	86/11/14 (mgw)
+**	Renamed Dba to IngDba to prevent conflict with the Dba in
+**	feutils!feingres.qc.
+**
+**      86/07/02 (png) set CMS run time stack size to 240k.
+**
+**	14-jan-1987 (peter)	Add 6.0 MKMFIN Hints.
+**
+**	16-Aug-1988 (pete)	Add support for Star. Titan project.
+**				Remove join with iiuser when getting database
+**				catalog (looked like waste of cpu).
+**				Fix so Accessdb will only run against an
+**				INGRES iidbdb: check iidbcapabilities (DaveS
+**				says it should try & run on a gateway).
+**	18-may-89 (mgw)
+**		put string in ERx() call for internationalization
+**	11/89 (jhw) Added disable of Shell and Editor keys.
+**	11-apr-1990 (pete)
+**		Declare "mgrform()" as a VOID.
+**	24-apr-1990 (pete)	Changed to call FEningres and pass in a client
+**				name of NULL, which bypasses the FE catalog
+**				check.
+**	16-may-1990 (pete)	Add support for -P flag.
+**	18-jun-1990 (pete)	don't allow accessdb to start if version > 6.4
+**				(before was not starting if version >= 6.4).
+**	29-aug-1990 (pete)	Add (working!) support for -P flag.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**      1-oct-1990 (stevet)
+**          Add call to IIUGinit().
+**      19-oct-1990 (pete)
+**              Merge in changes done by Jennifer Lyerla in 9/89 for B1 proj.
+**	6-nov-1990 (pete)
+**		Check what privs user has at startup & set globals.
+**	17-dec-1990 (pete)
+**		Check user authorization based on Ingres privileges of
+**		the real user. Real user (returned from IDname()) can be
+**		different from the DBMS user (which is set from the Effective
+**		user) for a setuid program (like Accessdb).
+**	8-may-1991 (pete)
+**	    Changed to use new IIUIisl_IngresSQLLevel() function to check
+**	    dbms functionality level.
+**	13-Nov-1991 (pete)
+**		Moved IIUIisl_IngresSQLLevel() check above icSetGlobals(), since
+**		icSetGlobals() selects columns that may not exist in older
+**		databases. Changed message IC006B to IC007B cause picked up
+**		another 006B during integration with r63p code line.
+**		Also add UNDOCUMENTED -d flag for cases in testing when need
+**		to connect to an iidbdb over the net (rabbit::iidbdb, etc).
+**	2-dec-1991 (pete)
+**		Comment out the 6.5 compatibility check; the iidbdb I am
+**		connecting to still says it is 6.4.
+**      16-nov-1992 (larrym)
+**          Added CUFLIB to NEEDLIBS.  CUF is the new common utility facility.
+**	11-mar-1993 (billc)
+**	    Major rewrite to use all-SQL, remove setuid sneaks, upgrade
+**	    the interface, etc.
+**	25-aug-1993 (kellyp)
+**	    Picklist now shows up with no border around the frame.
+**	20-sep-93 (robf)
+**          Add finer granularity checks for operations allowed
+**	    Set session privileges to allow for defaults
+**	24-jan-1994 (michael)
+**	    Added call to IIUGdlm_ChkdlmBEobject() to normalize user name.
+**	03/25/94 (dkh) - Added call to EXsetclient().
+**    	7-apr-94 (stephenb)
+**	    Altered value of C2_MODE to coincide with new PM variable.
+**	21-jul-94 (robf)
+**          Allow for maintain_users privilege when checking whether or
+**	    not Mgr can be executed.
+**      26-Jun-95 (tutto01)
+**          Added redirection of main to windows main to initialise the windows
+**          code first.
+**	24-sep-95 (tutto01)
+**	    Restored main, run as console app on NT.
+**	06-mar-96 (harpa06)
+**	    Changed UI_LEVEL_65 to UI_LEVEL_66 for VPS project.
+**      25-sep-96 (mcgem01)
+**              Global data moved to ingdata.c
+**	29-jan-1997 (hanch04)
+**	    Changed UI_LEVEL_66 back to UI_LEVEL_65 
+**      25-mar-97 (i4jo01)
+**          Add double quotes to user id to handle delimited identifiers.
+**          bug 81048.
+**	13-nov-1997 (somsa01)
+**	    Ammendment to above change for bug #81048; we should only delimit
+**	    the userid if it contains embedded spaces.
+**      13-feb-1992 (mgw) Bug #39703 X-int 264949 nanpr01
+**          Move the call to FDrcvalloc() in the -I case, FDdmpinit() in the
+**          -D case, and FEtest() in the -Z case down to after the FEforms()
+**          call. Problem was that in an error case (like giving no filename
+**          for -I) an error in FT tried to call an error routine that hadn't
+**          been set up yet. That error routine will be set up by a call to
+**          FTprocinit() which is called indirectly from FEforms().
+**	02-feb-1998 (somsa01) X-integration of 433072 from oping12 (somsa01)
+**	    Ammendment to above change for bug #81048; we should only delimit
+**	    the userid if it contains embedded spaces.
+**	07-apr-1998 (somsa01)
+**	    Yet another amendment to fix for bug #81048; we should also
+**	    delimit the userid if it starts with a numeric character.
+**	16-Apr-1997 (merja01)
+**		Remove Global reference for uname as it is not needed.       
+**		Real_username contains the address of uname, which has
+**		been renamed to ii_uname to correct bug 90041.
+**	09-nov-1998 (mcgem01)
+**	    Changed "OI2.0" to "II2.5"
+**      07-Jan-1999 (hanal04)
+**         Store the user's maintain_audit privilege in the global variable
+**         IiicPrivMntAudit. b81618. 
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      02-Mar-2001 (hanch04)
+**          Bumped release id to external "II 2.6" internal 860 or 8.6
+**      07-Apr-2003 (hanch04)
+**          Bumped release id to external "II 2.65" internal 865 or 8.65
+**      13-Jan-2004 (sheco02)
+**          Bumped release id to external "II 3.0" internal 900 or 9.0
+**      27-Apr-2004 (hanal04) Bug 111896 INGCBT513
+**          During investigation of bug 111896 we found that the deletion
+**          of a user with an authorised database list would report 
+**          unexpected errors if errortype was defined to dbmserror
+**          in the user or system environment via II_EMBED_SET. Ensure
+**          errortype=genericerror to prevent these unexpected errors.
+**      11-Jun-2004 (hanch04)
+**          Removed reference to CI for the open source release.
+**	16-Nov-2004 (bonro01)
+**	    Allow Ingres to be installed as a user other than "ingres"
+**	    Prevent install userid from being deleted.
+**	22-Nov-2004 (bonro01)
+**	    Previous change breaks Windows build because windows does not
+**	    have function IDsetsys().
+**      23-feb-2005 (stial01)
+**         Explicitly set isolation level after connect
+**      31-Mar-2005 (kodse01)
+**	    Changed 0 to NULL in IDsetsys call.
+**      17-Jan-2006 (hweho01)
+**          Changed version number from II3.0 to ING9.0.
+**      01-Feb-2006 (hweho01)
+**          Modified version string to "II9.0", need to maintain the
+**          compatibility with current/previous releases.
+**      27-Apr-2006 (hweho01)
+**          Changed version number to II9.1 for new release. 
+**	07-May-2007 (drivi01)
+**	    Updated version number to II9.2.0.
+**	14-Jun-2007 (bonro01)
+**	    Updated version number to II9.3.0.
+**	04-Jun-2009 (bonro01)
+**	    Updated version number to II9.4.0.
+**	10-Jun-2009 (hweho01)
+**	    Updated version number to II10.0.0.
+*/
+
+# ifdef CMS
+i4	_stksiz = 240*1024; /* run time stack size */
+# endif
+
+FUNC_EXTERN	bool	IIUIdcn_ingres();	
+FUNC_EXTERN	VOID	mgrform();	
+FUNC_EXTERN     char    *IIUIpassword();
+FUNC_EXTERN     STATUS  iiicsuSelectUser();
+FUNC_EXTERN	STATUS	icSetGlobals();
+FUNC_EXTERN char        *IIUIscl_StdCatLevel();
+
+GLOBALREF bool	Mgr;
+GLOBALREF char	*Uover;
+GLOBALREF char	*Pswd;
+GLOBALREF char  *IC_allDBs;
+GLOBALREF char  *IC_PublicUser;
+
+GLOBALREF char	*Yes;
+GLOBALREF char	*No;
+GLOBALREF char	*Request;
+
+GLOBALREF bool	IiicPrivSysadmin; /* TRUE if user has SYSTEM_ADMIN privilege */
+GLOBALREF bool	IiicPrivSecurity;  /* TRUE if user has SECURITY privilege */
+GLOBALREF bool	IiicPrivMaintUser; /* TRUE if user has MAINTAIN_USERS priv*/
+GLOBALREF bool	IiicC2Security;	   /* TRUE if installation has C2 Security. */
+/* b81618 */
+GLOBALREF bool	IiicPrivMntAudit;  /* TRUE if user has MAINTAIN_AUDIT priv */
+
+/* format to use for dbname hidden columns in tablefields. */
+## GLOBALREF char   F_Maxname[];
+
+static	  char	*Db = ERx("iidbdb");
+GLOBALREF char	*Real_username;
+
+EXEC SQL BEGIN DECLARE SECTION;
+GLOBALREF IIUSER Iiuser;
+EXEC SQL END DECLARE SECTION;
+
+static VOID	usage();
+
+/*
+**	MKMFIN Hints
+**
+PROGRAM =	ingcntrl
+
+NEEDLIBS =	INGCNTRLLIB \
+		UFLIB RUNSYSLIB RUNTIMELIB FDLIB FTLIB FEDSLIB \
+		UILIB LIBQSYSLIB LIBQLIB UGLIB FMTLIB AFELIB \
+		LIBQGCALIB CUFLIB SQLCALIB GCFLIB ADFLIB \
+		SQLCALIB COMPATLIB MALLOCLIB
+
+UNDEFS =	II_copyright
+*/
+
+#define        IS_NORMAL		     1
+#define        NOT_NORMAL		     0
+
+i4
+main(argc,argv)
+i4	argc;
+char	**argv;
+## {
+    register char	**avp;
+    register i4	i;
+    STATUS		errnum;
+    i4			argerr = 0;
+    /* Variables for automatic testing */
+    char		*Ifilename = NULL;
+    FILE		*Dfilefd = NULL;
+    EX_CONTEXT		context;
+    char		dmpbuf[MAX_LOC+1];
+    UIDBDATA		*uidbdata;
+    char		dbnamebuf[(2 * DB_MAXNAME)+3]; /* for vnode::db */
+    static    char	Ingres_uname[FE_MAXNAME+1];
+    char		temp_name[FE_MAXNAME+1];
+    char		*Ztest = NULL;
+#ifdef UNIX
+    char		*adminuser=NULL;
+#endif /* UNIX */
+
+    EX	FEhandler();
+
+    /* Tell EX this is an ingres tool. */
+    (void) EXsetclient(EX_INGRES_TOOL);
+
+    MEadvise( ME_INGRES_ALLOC );	/* use ME allocation */
+
+    if (EXdeclare(FEhandler, &context) != OK)
+    {
+	EXdelete();
+	PCexit(FAIL);
+    }
+
+    /* Add call to IIUGinit to initialize character set table and others */
+
+    if ( IIUGinit() != OK)
+	PCexit(FAIL);
+
+#ifdef UNIX
+    /*
+    **  Initialise Paramater Management interface
+    */
+    PMinit();
+
+    PMload((LOCATION *)NULL, (PM_ERR_FUNC *)NULL );
+    PMsetDefault(1,PMhost());
+    if( PMget("ii.$.setup.owner.user", &adminuser ) == OK)
+	IDsetsys(NULL,NULL,NULL,NULL,NULL,NULL,NULL, adminuser,NULL);
+#endif /* UNIX */
+
+
+    for (i = argc, avp = argv; --i > 0; )
+    {
+	register char	*p;
+
+	switch( (p = *++avp)[0])
+	{
+	   case '-':
+		if ( p[1] == 'm' )
+		{
+			Mgr = TRUE;
+			continue;
+		}
+		else if ( p[1] == 'u' )
+		{
+			Uover = p;
+			continue;
+		}
+		else if ( p[1] == 'd' )		/* database name */
+		{
+			/* E.G. "hare::iidbdb". Over-rides default "iidbdb" */
+			Db = &p[2];
+			continue;
+		}
+		else if ( p[1] == 'P' )		/* password */
+		{
+			Pswd = p;
+			continue;
+		}
+		else if ( p[1] == 'I')		/* Save Input */
+		{
+			Ifilename = &p[2];
+			continue;
+		}
+		else if ( p[1] == 'D')		/* Dump forms */
+		{
+			LOCATION	loc;
+
+			STcopy (&p[2], dmpbuf);
+			if ( LOfroms(PATH & FILENAME, dmpbuf, &loc) != OK
+				|| SIopen(&loc, ERx("w"), &Dfilefd) != OK )
+			{
+				IIUGerr( E_IC0030_Cannot_open_Dump_file, 
+					UG_ERR_FATAL, (i4) 1, (PTR) &p[2]);
+				/*NOTREACHED*/
+			}
+			continue;
+		}
+		else if ( p[1] == 'X')		/* Xtra Ingres level ignored */
+		{
+			continue;
+		}
+		else if ( p[1] == 'Z')		/* In/Out files */
+		{
+			Ztest = &p[2];
+			continue;
+		}
+		else if (STlength(&p[1]) > 7 
+		    && STbcompare(&p[1], 6, ERx("vnode="), 6, TRUE) == 0 )
+		{
+			/* remote access */
+			STlcopy(&p[7], dbnamebuf, DB_MAXNAME);
+			STcat(dbnamebuf, ERx("::iidbdb"));
+			Db = dbnamebuf;
+			continue;
+		}
+		argerr++;
+		IIUGerr(E_IC0032_Bad_flag, UG_ERR_ERROR, (i4) 1, (PTR) p );
+		break;
+
+	   default:
+		IIUGerr(E_IC0033_Bad_argument, UG_ERR_ERROR, (i4) 1, (PTR) p);
+		argerr++;
+		break;
+	}
+
+    }
+
+
+    if (argerr > 0)
+    {
+# ifdef VMS
+	usage(ERget(S_IC0034_accessdb_catalogdb));
+# else
+	usage(argv[0]);
+# endif
+    }
+
+
+    if (*Pswd != EOS)
+    {
+	/* -P was specified on command line */
+	Pswd = IIUIpassword(ERx("-P"));
+	Pswd = (Pswd != (char *) NULL) ? Pswd : ERx("");
+    }
+
+    /* 14-nov-90 removed 4th argument: ERx("-$") (pete) */
+    errnum = FEningres(NULL, (i4) 0, Db, Uover, Pswd, (char *)NULL);
+    if (errnum != OK)
+    {
+	if (errnum == 1)
+	{
+		IIUGerr(E_IC0035_Cannot_start_INGRES, UG_ERR_FATAL, 0);
+		/*NOTREACHED*/
+	}
+	else if (errnum == 2)
+	{
+		IIUGerr(E_IC0036_no_authority, UG_ERR_FATAL, 0);
+		/*NOTREACHED*/
+	}
+	else
+	{
+		IIUGerr(E_IC0061_Other_startup_err, UG_ERR_FATAL, 1,
+			(PTR) &errnum );
+		/*NOTREACHED*/
+	}
+    }
+
+    uidbdata = IIUIdbdata();
+
+    if ( ! IIUIdcn_ingres() )
+    {
+	IIUGerr(E_IC0060_Not_INGRES_DBMS, UG_ERR_FATAL, 0);
+	/*NOTREACHED*/
+    }
+
+    /* Back-end Version Compatability check */
+    if (STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_65) < 0)
+    {
+	IIUGerr(E_IC0067_BadIngresVersion, UG_ERR_FATAL, 2,
+			(PTR) ERx("II10.0"), (PTR) IIUIscl_StdCatLevel());
+	/* NOTREACHED */
+    }
+
+    /* Accessdb allows -u flag, so the DBMS might think that the username
+    ** is the Effective user (rather than the Real user). So, must find
+    ** Real user and check what privs they have. 
+    */
+    IDname(&Real_username);	/* find Real user */
+    /*
+    ** Make sure we have privileges from default set active
+    */
+    exec sql set session with privileges=all;
+
+    exec sql set session isolation level serializable;
+
+    exec sql set_sql(errortype='genericerror');
+
+    /*
+    ** Set up to handle delimited user id's, but only if it contains
+    ** embedded spaces or starts with a numeric character.
+    */  
+
+    if ((STindex(Real_username, ERx(" "), 0) != NULL) ||
+	(CMdigit(Real_username)))
+    {
+	STpolycat(3, ERx("\""), Real_username, ERx("\""), temp_name);
+	STcopy(temp_name, Real_username);
+    }
+
+    /*
+     * in order to make sure correct username is looked for in any db tables
+     * (correctly based on iidbcapabilities), "normalize" Real_username to
+     * "editable" format.
+     */
+    
+    i = IIUGdlm_ChkdlmBEobject( Real_username, Ingres_uname, NOT_NORMAL );
+
+    if (i == UI_BOGUS_ID)
+    {
+	IIUGerr (E_IC0111_Format_Username_Error, UG_ERR_FATAL, 1, Real_username);
+	/* NOTREACHED */
+    }
+
+    /* set globals: IiicPrivSysadmin, IiicPrivSecurity & IiicC2Security */
+    if (icSetGlobals(Ingres_uname, &Iiuser) != OK)
+    {
+	IIUGerr(E_IC0073_GetPrivsError, UG_ERR_FATAL, 0);
+	/* NOTREACHED */
+    }
+
+    if ( Mgr && !IiicPrivSysadmin && !IiicPrivSecurity && !IiicPrivMaintUser)
+    {
+	/* user is trying to run Accessdb but doesn't have enough priv */
+
+	FEing_exit();
+
+	IIUGerr(E_IC007B_Insufficient_Privs, UG_ERR_FATAL, 1, Real_username);
+	/*NOTREACHED*/
+    }
+
+    IC_allDBs     = ERget(F_IC0027_AllDatabases);	/* "all databases" */
+    IC_PublicUser = ERget(F_IC001E_PublicType);		/* "Public" */
+
+    /* Start Forms system */
+    if (FEforms() != OK)
+    {
+	FEing_exit();
+	SIflush(stderr);
+	PCexit(FAIL);
+    }
+
+    if (Ifilename != NULL)      /* if -I (Save Input) requested */
+    {
+	FDrcvalloc(Ifilename);  /* set up 'save input' file */
+    }
+
+    if (Dfilefd != NULL)        /* if -D (Dump Forms) requested */
+    {
+	FDdmpinit(Dfilefd);
+    }
+
+    if (Ztest != NULL)          /* if In/Output files requested */
+    {
+	if (FEtest(Ztest) == FAIL)
+	{
+		IIUGerr(E_IC0031_Cannot_do_Z_test, UG_ERR_FATAL,
+			(i4) 1, (PTR) Ztest);
+		/*NOT REACHED*/
+	}
+    }
+
+    /* Disable Shell and Editor Keys for Security.
+    ** Set proper Tab and Back-Tab behavior.
+    ** Turn off implicit validation errors.
+    */
+##  SET_FRS FRS (SHELL = 0, EDITOR = 0, OUTOFDATAMESSAGE = 0,
+##		 VALIDATE(NEXTFIELD) = 1, VALIDATE(PREVIOUSFIELD) = 1,
+##               ACTIVATE(NEXTFIELD) = 1, ACTIVATE(PREVIOUSFIELD) = 1,
+##               ACTIVATE(MENUITEM)  = 1, ACTIVATE(KEYS)          = 1,
+##               GETMESSAGES = 0)
+
+    /*
+    ** Set up some shared string "constants"
+    */
+    Yes = ERget(F_UG0002_Yes2);
+    No  = ERget(F_UG0007_No2);
+    Request = ERx("r");
+
+##  CLEAR SCREEN
+##  MESSAGE ERget(S_IC0038_Accessing_Databases)
+
+    if ( Mgr )
+    { 
+	/* AccessDB */
+	mgrform();
+    }
+    else
+    { 
+	/* CatalogDB */
+	infoform(uidbdata->suser);
+    }
+##  CLEAR SCREEN;
+
+    FEendforms();
+
+    FEing_exit();
+
+    /* End automatic testing */
+    if (Ifilename != NULL)
+	FDrcvclose(FALSE);
+    if ( Dfilefd != NULL )
+	SIclose(Dfilefd);
+
+    EXdelete();
+
+    PCexit(OK);
+    /*NOTREACHED*/
+##}
+
+static VOID
+usage (prog)
+char	*prog;
+{
+    IIUGerr(S_IC003B_Usage_statement, UG_ERR_FATAL, (i4) 1, (PTR) prog);
+    /*NOTREACHED*/
+}
+
+/**
+** Name:	icSetGlobals - set globals for this user & installation.
+**
+** Description:
+**	Determine the database privileges the current user has & if the
+**	installation has purchased the AUDIT_ALL feature. Set globals to
+**	indicate this.
+**
+** Inputs:
+**	char	*user		name of user to set privs for.
+**	IIUSER	*iiuser		structure to select user info into.
+**
+** Returns:	OK if all went ok; FAIL if error occured selecting user privs.
+**
+** History:
+**	6-nov-1990 (pete)
+**		Initial Version.
+**	15-nov-1990 (pete)
+**		Changed to return status if get error on select.
+**	15-nov-1991 (pete)
+**		Changed to not be static so can be called from user.qsc.
+**	6-apr-94 (robf)
+**             Mainline bug: C2 audit mode is security_auditing, not mode.
+**    	7-apr-94 (stephenb)
+**	    Altered value of C2_MODE to coincide with new PM variable.
+*/
+
+/*
+**  Definitions for querying the PM database for the C2 security mode...
+*/
+
+# define        C2_MODE                      ERx("II.*.C2.SECURITY_AUDITING")
+# define        C2_MODE_ON                   ERx("ON")
+
+STATUS
+icSetGlobals(user, iiuser)
+char	*user;
+IIUSER	*iiuser;
+{
+	STATUS stat;
+	char *c2_mode;
+
+	/* select user info into the 'iiuser' structure */
+	if (((stat = iiicsuSelectUser(user, iiuser)) == OK) &&
+		(FEinqrows() > 0))
+	{
+	    IiicPrivSysadmin = ((iiuser->status & U_SYSADMIN) != 0);
+	    IiicPrivSecurity = ((iiuser->status & U_SECURITY) != 0);
+	    IiicPrivMaintUser = ((iiuser->status & U_MAINTAIN_USER) != 0);
+            /* b81618 */
+            IiicPrivMntAudit = ((iiuser->status & U_ALTER_AUDIT) != 0);
+	}
+	else
+        {
+	    IiicPrivSysadmin = IiicPrivMaintUser = IiicPrivSecurity = FALSE;
+            IiicPrivMntAudit = FALSE;
+        }
+
+	/* Check for C2 Security option (turns on various audit privilege &
+	** options for users
+	*/
+	IiicC2Security = ( PMget(C2_MODE, &c2_mode) == OK 
+		&& STbcompare(c2_mode, 0, C2_MODE_ON, 0, TRUE) == 0);
+	return stat;
+}
+
+/*
+** Handle listpicks
+*/
+
+static	bool	F_add = FALSE;
+static STATUS pickinit();
+
+## static       char    ListPickFrm[]     = ERx("lpickfrm");
+## static       char    ListPickTbl[]     = ERx("picktbl");
+## static	char	*ListTitle = NULL;
+
+icListPicks(type, catname, catcol, buf)
+char	*type;
+char	*catname;
+char	*catcol;
+char	*buf;
+{
+	char	qbuf[512];
+
+	STprintf(qbuf, ERx("SELECT DISTINCT %s FROM %s ORDER BY %s"), 
+			catcol, catname, catcol);
+	icQryListPicks(type, qbuf, buf);
+}
+
+icQryListPicks(type, qry, buf)
+char	*type;
+char	*qry;
+##char	*buf;
+## {
+##	char	titlebuf[128];
+
+	buf[0] = EOS;
+
+	if (!F_add)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), ListPickFrm) != OK)
+		{
+			IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_FATAL, 0);
+			/* NOTREACHED */
+		}
+		ListTitle = ERget(F_IC0090_Listpick_Title);
+		F_add = TRUE;
+	}
+
+	(VOID) IIUGfmt(titlebuf, sizeof(titlebuf) - 1, ListTitle, 1, type);
+
+	if (pickinit(type, qry) != OK)
+		return;
+
+##	DISPLAY ListPickFrm READ WITH STYLE = POPUP (border=none)
+##	INITIALIZE (#title = titlebuf)
+
+##      ACTIVATE MENUITEM ERget(FE_Select), FRSkey4
+##      {
+##             	GETROW ListPickFrm ListPickTbl (buf = choice);
+                STtrmwhite(buf);
+##          	BREAKDISPLAY
+##      }
+
+##	ACTIVATE MENUITEM ERget(FE_Cancel) (expl = ERget(F_FE0102_ExplEnd),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey9 (VALIDATE =0, ACTIVATE = 0):
+##	{
+##		BREAKDISPLAY
+##	}
+
+##      ACTIVATE FRSkey7
+##          (EXPL = ERget(F_FE0104_ExplFind))
+##      {
+            	FEtabfnd(ListPickFrm, ListPickTbl);
+##      }
+
+##      ACTIVATE FRSkey5
+##          (EXPL = ERget(F_FE0105_ExplTop))  
+##      {
+##          SCROLL ListPickFrm ListPickTbl TO 1
+##      }
+
+##      ACTIVATE FRSkey6
+##          (EXPL = ERget(F_FE0106_ExplBottom)) 
+##      {
+##          SCROLL ListPickFrm ListPickTbl TO END
+##      }
+
+##	ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0101_ExplKeyHelp),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey1 (VALIDATE =0, ACTIVATE = 0):
+##	{
+		FEhelp(ERx("iclpick.hlp"), ERget(S_IC0121_ListPick));
+##	}
+
+##	FINALIZE
+## }
+
+static STATUS
+pickinit(type, qry)
+char	*type;
+EXEC SQL BEGIN DECLARE SECTION;
+char	*qry;
+EXEC SQL END DECLARE SECTION;
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	char	listitem[FE_MAXNAME + 1];
+	EXEC SQL END DECLARE SECTION;
+
+##	INITTABLE ListPickFrm ListPickTbl READ
+
+	EXEC SQL EXECUTE IMMEDIATE :qry INTO :listitem;
+	EXEC SQL BEGIN;
+	{
+##		LOADTABLE ListPickFrm ListPickTbl (#choice    = listitem)
+	}
+	EXEC SQL END;
+	if (FEinqrows() <= 0)
+	{
+	    IIUGerr(E_IC0110_ListPick_Empty, UG_ERR_ERROR, 1, type);
+	    return FAIL;
+	}
+	return OK;
+##}
+
+ictrace(buf, a1, a2, a3, a4, a5)
+char    *buf;
+char    *a1, *a2, *a3, *a4, *a5;
+{
+##      char    dummy[3];
+##      char lbuf[512];
+
+	STprintf(lbuf, buf, a1, a2, a3, a4, a5);
+	STcat(lbuf, ":");
+##      PROMPT (lbuf, dummy) WITH STYLE=POPUP
+}

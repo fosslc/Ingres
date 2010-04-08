@@ -1,0 +1,50 @@
+/*
+** Copyright (c) 2005 Ingres Corporation
+*/
+/*
+** Generic part file for collation
+*/
+
+/*
+** History
+**	07-Mar-2005
+**	    Created.
+**	12-mar-2007 (gupsh01)
+**	    Added specialcasing.txt file.
+**	31-aug-2007 (gupsh01)
+**	    Added unicode_french collation.
+*/
+
+PART   collation32
+
+/*
+** ingres!files!collation!lp32
+*/
+
+   DIRECTORY (PROD2NAME)!files!collation!lp32
+# ifdef VMS
+   BUILD_DIR (front_path)!install!'front_vers'!files!collation
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!files!collation!lp32
+# endif /* VMS */
+      FILE multi
+      FILE spanish
+      FILE multi.dsc
+      FILE spanish.dsc
+      FILE udefault.uce
+      FILE udefault
+      FILE unicode_french.uce
+      FILE unicode_french
+      FILE udata.ucd
+      FILE specialcasing.txt
+/*
+** ingres!utility!lp32
+*/
+
+   DIRECTORY (PROD2NAME)!utility!lp32
+# ifdef VMS
+   BUILD_DIR (jpt_adf_bin)
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!utility!lp32
+# endif /* VMS */
+      EXECUTABLE aducompile

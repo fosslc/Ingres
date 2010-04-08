@@ -1,0 +1,83 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for proto-bridge
+*/
+
+/*
+** History
+**	29-Feb-1996 (rajus01)
+**	 	Added protocol bridge as a separate product.
+**	30-Sep-1997 (kinte01)
+**		VMSize so the correct files will be distributed on VMS
+**      28-jan-1998 (hanch04)
+**          Added ifdef FULL_RELEASE.  This will not be defined
+**          for the black box release of Ingres.
+**	28-may-1998 (kinte01)
+**          	Modified the location for iisubr on VMS to pick up SED 
+**	    	stripped version
+**	12-may-2000 (somsa01)
+**	    Added support for multiple product builds.
+**	13-jun-2000 (somsa01)
+**	    netutil is now part of all product builds.
+**	13-nov-2000 (hanch04)
+**	    Remove files that are part of net.
+**	09-mar-2001 (kinte01)
+**	    Fix location of iigcb.stb
+**	19-jun-2001 (kinte01)
+**	    Add VMS updates for other product builds.
+**	11-Jun-2004 (somsa01)
+**	    Cleaned up code for Open Source.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART bridge
+    capability CI_INGRES_BRIDGE
+
+/*
+** ingres!bin
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!bin
+#else
+	DIRECTORY (PROD2NAME)!bin
+#endif
+   BUILD_DIR (ING_BUILD)!bin
+   EXECUTABLE (PROG1PRFX)gcb
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY (PROD2NAME)!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT SETUP (PROG1PRFX)subr
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY (PROD2NAME)!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+      FILE bridge.crs
+      FILE bridge.rfm
+
+# ifdef VMS
+   DIRECTORY (PROD2NAME)!debug
+   BUILD_DIR (ING_BUILD)!debug
+      FILE (PROG1PRFX)gcb.stb
+# endif /* VMS */

@@ -1,0 +1,187 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for sharelib
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	3-aug-1993 (tyler)
+**		Cleaned up.
+**	03-nov-1993 (kellyp)
+**		Removed support map files in VOLUME E.
+**	03-feb-94 (vijay)
+**		Moved unix shared libraries to here.
+**	09-mar-94 (joplin)
+**		Added iiuseradt.
+**	30-mar-94 (joplin)
+**		Fixed directory location of iiuseradt.
+**	07-apr-94 (vijay)
+**		change 555 permission on unix shared libs to allow upgrades to
+**		be copied over.
+**	15-Nov-94 (GordonW)
+**		Removed PERMISSIONS on shared libs. wan't working.
+**	1-june-95 (hanch04)
+**		shared libs should be executables.
+**	24-Jul-95 (gordy)
+**		Added API shared library.
+**	13-Aug-96 (kch)
+**		Added ICE/Spyglass shared library (icesgadi.1.so).
+**	12-mar-96 (hanch04)
+**		Added new ice libs.
+**	23-feb-98 (kinte01)
+**		Reapply change 422591 as it was lost
+**  11-Jan-96 (loera01)
+**            Added API shared library for VMS.
+**	11-Sep-1998 (merja01)
+**		Don't deliver icesgadi.1.so on axp_osf.  Spyglass does not
+**		support Digital Unix 4.0b and above.
+**	26-Apr-1999 (rosga02)
+**		Don't deliver icensapii.1.so on sui_us5. 
+**	17-May-1999 (hanch04)
+**		Removed ice shared libs.
+**	26-apr-2000 (somsa01)
+**		Added support for other products.
+**	28-mar-2000 (kitch01)
+**		bug 100916. Remove spyglass server.
+**	21-Sep-2000 (hanje04)
+**		Added Server Shared Libraries for Alpha Linux.
+**		Will be made conditional on 'SHARED_SERVER' at 
+**		later date.
+**	19-Jun-2001 (kinte01)
+**		Add VMS updates for other product support
+**	02-May-2002 (kinte01)
+**		Update location of .stb files. New location not accounted
+**		for in prior change
+**	22-Aug-2002 (hanje04)
+**		Removed duplicate entry of libpsf.1.so
+**      10-Feb-2004 (hanje04)
+**	    SIR 110765
+**          Moved libxercesc-1_4.so to sharedlibs package to resolve
+**          RPM package dependencies.
+**	15-Mar-2004 (gupsh01)
+**	    Modified libxercesc-1_4.so to libxerces.so and create links 
+**	    to it, for complience to the Xerces release 2.3.
+**	11-Jun-2004 (somsa01)
+**	    Cleaned up code for Open Source.
+**	01-Jul-2004 (sheco02)
+**	    Modified to use Xerces C++ release 2.5 from 2.3.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	10-Mar-20o05 (hanje04)
+**	    Move server shared libraries to dbms package.
+**	03-Oct-2005 (hanje04)
+**	    Xerces library on Mac OSX has slightly different name.
+**	31-May-2007 (hanje04)
+**	    SIR 118425
+**	    Bump Xerces version to 2.7 and tokenize version with $XERCVERS
+**	    which is defined in .
+**	12-Feb-2008 (hanje04)
+**	    SIR S119978
+**	    Replace mg5_osx with generic OSX
+**      08-jan-2008 (bolke01) 
+**          Bring VMS inline with UNIX and build into install directory.
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	22-Sep-2009 (hanje04)
+**	    Use XERCLIB on OSX to define xerces library name. Needed to 
+**	    support Xerces 3.0 for 64bit builds.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	24-Mar-2010 (hanje04)
+**	    SIR 123296
+**	    Only exclude Xerces for LSB builds.
+*/
+
+/*
+** The naming of these .stb and .map files is a bit screwy; would be
+** nice to make the build names match the deliverable names someday.
+*/
+
+PART  sharelib
+
+# ifdef VMS
+/*
+** ingres!library
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY (PROD2NAME)!LIB_TGT
+#endif
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+      EXECUTABLE clfelib
+      EXECUTABLE framefelib
+      EXECUTABLE interpfelib
+      EXECUTABLE libqfelib
+      EXECUTABLE apifelib
+      EXECUTABLE iiuseradt
+
+/*
+** ingres!debug
+*/
+
+   DIRECTORY (PROD2NAME)!debug
+   BUILD_DIR (ING_BUILD)!debug
+      FILE clfelib.stb
+      FILE framefelib.stb
+      FILE interpfelib.stb
+      FILE libqfelib.stb
+      FILE apifelib.stb
+
+# else /* VMS */
+# ifdef R_SHLIBS
+   PRELOAD delshlib
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+      {
+      EXECUTABLE lib(PROG0PRFX)compat.${slvers}.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)frame.${slvers}.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)interp.${slvers}.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)q.${slvers}.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)api.${slvers}.$SLSFX
+      LINK lib(PROG0PRFX)compat.1.$SLSFX
+      LINK lib(PROG0PRFX)frame.1.$SLSFX
+      LINK lib(PROG0PRFX)interp.1.$SLSFX
+      LINK lib(PROG0PRFX)q.1.$SLSFX
+      LINK lib(PROG1PRFX)api.1.$SLSFX
+      PERMISSION s:re,o:rwed,g:re,w:re
+      }
+#else
+	DIRECTORY (PROD2NAME)!LIB_TGT
+      {
+      EXECUTABLE lib(PROG0PRFX)compat.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)frame.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)interp.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)q.1.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)api.1.$SLSFX
+# ifdef R_XERCES /* R_XERCES */ 
+# ifdef any_aix
+      EXECUTABLE libxerces-c$XERCVERS.0.$SLSFX
+      LINK libxerces-c.$SLSFX.$XERCVERS
+      LINK libxerces-c.$SLSFX
+# elif defined(OSX)
+      EXECUTABLE $XERCLIB$XERCVERS.$SLSFX
+      LINK $XERCLIB$SLSFX.$XERCVERS
+      LINK $XERCLIB$SLSFX
+# elif ! defined(conf_LSB_BUILD)
+      EXECUTABLE libxerces-c.$SLSFX.$XERCVERS.0
+      LINK libxerces-c.$SLSFX.$XERCVERS
+      LINK libxerces-c.$SLSFX
+# endif
+# endif /* xerces */
+      PERMISSION s:re,o:rwed,g:re,w:re
+      }
+#endif
+# endif /* R_SHLIBS */
+
+# endif /* VMS */
+

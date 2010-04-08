@@ -1,0 +1,17 @@
+ /#-- Copyright (c) 2007 Ingres Corporation.
+ For MS SQL Server, usage of multiple open cursors can lead to 
+ performance problems with the gateway. If you do not need to use 
+ multiple open cursors in your application, set this parameter to OFF. 
+ This option should be used with caution as it requires an in-depth 
+ understanding of the application and the effects of setting this 
+ parameter on the specific application.
+
+ Valid values are:
+
+ ON -- Multiple open cursors are supported. (This is the default.)
+
+ OFF -- Disables support for multiple open cursors for performance; valid 
+ only if applications connecting to the gateway do not make use of 
+ multiple open cursors.
+
+

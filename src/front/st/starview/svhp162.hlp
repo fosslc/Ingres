@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+REGISTER
+
+To register a local database object into the current distributed database
+use the CREATE command. The register name, local object name, dbms type,
+node name and local database name can all be modified by moving the cursor
+to the appropriate field and changing it.  The HELP command displays
+this screen, and the END command returns to the Browse Objects form without
+registering the local object.
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	Create		Register a local object into the current distributed
+			database.
+
+	Help		Display this screen.
+
+	End		Exit to the Browse Objects form.
+

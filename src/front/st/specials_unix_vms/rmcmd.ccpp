@@ -1,0 +1,105 @@
+/*
+** Copyright (c) 1995, 2008 Ingres Corporation
+*/
+/*
+** Generic part file for vdba
+*/
+
+/*
+** History
+**
+**	21-nov-95 (hanch04)
+**		Created.
+**	11-jan-96 (dougb)
+**		Move executables to correct directory on VMS.
+**	17-jul-96 (boama01 and rosga02)
+**		Added rmcmdv executable and rmcmd script
+**	19-jun-97 (hanch04)
+**		Removed insw31.zip
+**	06-Nov-1997 (hanch04)
+**	    Added SQL scripts
+**      10-Nov-1997 (kinte01)
+**          Corrected location of SQL scripts for VMS, only shared executables
+**          should be in !share
+**	17-Nov-1997 (hanch04)
+**	    Added iisuvdba
+**	19-Nov-1997 (kinte01)
+**	    Fixed location of iisuvdba for VMS
+**	04-Dec-1997 (kinte01)
+**	    Added new SQL script for VMS 
+**      28-jan-1998 (hanch04)
+**          Added ifdef FULL_RELEASE.  This will not be defined
+**          for the black box release of Ingres.
+**	28-may-1998 (kinte01)
+**          Modified the location for iisuvdba on VMS to pick up SED 
+**	    stripped version
+**	26-Aug-1998 (hanch04)
+**	    rmcmd is separate from vdba
+**	16-Sep-1998 (kinte01)
+**	    Added script file iirunrmcmd.com for VMS
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	04-jun-2008 (joea)
+**	    Render unto VMS what is VMS's and unto Unix what is Unix's.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	09-Mar-2010 (hanje04)
+**	    SIR 123296
+**	    rmcmd binaries should be under /usr/libexec/ingres for LSB builds
+*/
+
+PART   rmcmd
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+   BUILD_DIR (ING_BUILD)!bin
+# ifdef VMS
+      SCRIPT rmcmd
+      EXECUTABLE rmcmdv
+# endif /* VMS */
+      EXECUTABLE rmcmd
+      EXECUTABLE rmcmdin
+      EXECUTABLE rmcmdout
+      EXECUTABLE rmcmdstp
+
+/*
+** ingres!utility
+*/
+ 
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY ingres!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+# ifdef VMS
+      SCRIPT iirunrmcmd
+# endif /* VMS */
+      EXECUTABLE rmcmdrmv
+      EXECUTABLE rmcmdgen
+
+/*
+** ingres!vdba
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!vdba
+#else
+	DIRECTORY ingres!vdba
+#endif
+   BUILD_DIR (ING_BUILD)!vdba
+# ifdef VMS
+      FILE makimav.sql
+# else
+      FILE makimau.sql
+# endif

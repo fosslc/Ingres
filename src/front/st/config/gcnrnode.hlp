@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2008 Ingres Corporation
+By default, Ingres applications use the syntax "vnode::database" to connect 
+to remote installations.  The "remote_vnode" configuration option allows 
+applications to bypass this syntax.
+
+If remote_vnode is defined, and matches the name of a vnode name in the 
+netutil database, the "vnode::" portion of the connection string can be 
+omitted, and only the database name is required.  Applications will connect 
+remotely, but the connection string appears to be a local connection.

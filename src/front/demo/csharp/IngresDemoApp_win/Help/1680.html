@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How the Picture Box Control Is Loaded </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="picture box control">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body>
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="1679.html" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="1681.html" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How the Picture Box Control Is Loaded</h4>
+<p class="bodytext">The column up_image in the table user_profile is defined as the data type long byte. The long byte data type maps the LongVarBinary type in the Ingres Data Adapter, which in turn maps to the System Byte array.</p>
+<p class="bodytext">A System Byte array can be converted to other types using the MemoryStream class.</p>
+<p class="codefirst">DataRow resultRow;</p>
+<p class="code">DataColumnCollection columnCollection;</p>
+<p class="code">MemoryStream memoryStream;</p>
+<p class="code">Image photo;</p>
+<p class="code">&nbsp;</p>
+<p class="code">resultRow = profileDataSet.Tables[&quot;user_profile&quot;].Rows[0];</p>
+<p class="code">columnCollection = resultRow.Table.Columns;</p>
+<p class="code">&nbsp;</p>
+<p class="code">memoryStream = new MemoryStream(</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;(byte[])resultRow.ItemArray[columnsCollection[&quot;up_image&quot;].Ordinal]</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;);</p>
+<p class="code">// Read the BLOB stream into an image object.</p>
+<p class="code">photo = Image.FromStream(memoryStream);</p>
+<p class="code">&nbsp;</p>
+<p class="code">// Set the image into an image box.</p>
+<p class="code">profilePictureBox.Image = photo;</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2006 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

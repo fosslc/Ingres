@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!dbadlg1_win
+#
+
+SubDir ING_SRC front vdba dbadlg1_win ;
+
+IISUBSYS front vdba dbadlg1_win ;
+
+
+IISLN dbadlg1.lib : dbadlg1.sln ;

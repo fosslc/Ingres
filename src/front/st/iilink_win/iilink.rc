@@ -1,0 +1,287 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\iilink.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#include ""gv.rc"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\iilink.ico"
+IDI_ICON_EXCL           ICON                    "res\\excl.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_MAIN_PAGE DIALOGEX 0, 0, 340, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres User Defined Data Type Linker"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "main description",IDC_MAIN_DESC,122,22,217,16
+    CONTROL         "static",IDC_CHECK_BACKUP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,122,94,170,10
+    EDITTEXT        IDC_EDIT_EXTENSION,294,93,42,12,ES_AUTOHSCROLL
+    LTEXT           "101",IDC_IMAGE,0,0,106,209,NOT WS_VISIBLE
+    LTEXT           "Static",IDC_BACKUP_DESC,122,66,217,24
+    CONTROL         "static",IDC_CHECK_RESTORE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,122,160,170,10
+    LTEXT           "Static",IDC_RESTORE_TXT,122,140,217,16
+END
+
+IDD_FINAL_PAGE DIALOGEX 0, 0, 340, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres User Defined Data Type Linker"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "Static",IDC_COMPILE_MSG,120,44,210,8
+    EDITTEXT        IDC_EDIT_COMPILE,120,54,210,65,ES_MULTILINE | WS_VSCROLL
+    LTEXT           "Static",IDC_LINK_MSG,120,126,210,8
+    EDITTEXT        IDC_EDIT_LINK,120,136,210,65,ES_MULTILINE | WS_VSCROLL
+    LTEXT           "101",IDC_IMAGE,0,12,106,192,NOT WS_VISIBLE
+    LTEXT           "Static",IDC_FINAL_HEADING,120,12,210,24
+END
+
+IDD_USERUDT_PAGE DIALOGEX 0, 0, 340, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres User Defined Data Type Linker"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT           "Static",IDC_USERUDT_TXT,115,12,162,8
+    CONTROL         "List1",IDC_LIST_FILES,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_OWNERDRAWFIXED | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,115,25,100,176,WS_EX_CLIENTEDGE | WS_EX_STATICEDGE
+    PUSHBUTTON      "Button1",IDC_BUTTON_SELECT,228,25,55,14
+    PUSHBUTTON      "Button2",IDC_BUTTON_DESELECT,228,46,55,14
+    LTEXT           "101",IDC_IMAGE,0,12,106,192,NOT WS_VISIBLE
+    PUSHBUTTON      "Button3",IDC_BUTTON_VIEWSRC,228,187,55,14
+END
+
+IDD_CHOOSEDIRS DIALOGEX 0, 0, 292, 221
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "Tree1",IDC_TREE1,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_DISABLEDRAGDROP | TVS_SHOWSELALWAYS | WS_TABSTOP,5,5,222,172,WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE
+    GROUPBOX        "Static",IDC_CHOOSEDIR_TXT,5,179,222,34
+    EDITTEXT        IDC_EDIT1,10,193,211,13,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,236,6,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,236,25,50,14
+END
+
+IDD_WAIT_DIALOG DIALOGEX 0, 0, 200, 58
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Ingres User Defined Data Type Linker"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_TRANSPARENT | ACS_AUTOPLAY,5,17,43,20
+    LTEXT           "Static",IDC_WAIT_HEADING,59,23,137,23
+END
+
+IDD_FAIL_DIALOG DIALOG  0, 0, 200, 58
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Ingres User Defined Data Type Linker"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "button1",IDOK,38,36,55,14
+    PUSHBUTTON      "button2",IDC_BUTTON_SEE_ERRS,135,36,55,14
+    LTEXT           "static",IDC_FAIL_HEADING,38,9,152,18
+    ICON            IDI_ICON_EXCL,IDC_STATIC,9,9,20,20
+END
+
+IDD_OPTIONS_PAGE DIALOGEX 0, 0, 340, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres User Defined Data Type Linker"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "spatial description",IDC_SPATIAL_DESC,121,12,218,34
+    CONTROL         "static",IDC_CHECK_SPATIAL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,121,49,150,10
+    LTEXT           "Static",IDC_DEMO_UDT_DESC,121,81,218,26
+    CONTROL         "static",IDC_CHECK_DEMOS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,121,110,150,10
+    CONTROL         "static",IDC_CHECK_USER_UDT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,121,163,150,10
+    LTEXT           "location",IDC_PERSONAL_LOC,133,176,150,8
+    EDITTEXT        IDC_EDIT_LOCATION,133,187,150,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "text",IDC_BUTTON_LOC,288,187,50,14
+    LTEXT           "101",IDC_IMAGE,0,12,106,192,NOT WS_VISIBLE
+    LTEXT           "Static",IDC_USER_UDT_DESC,121,142,218,18
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_SPLASH256           BITMAP                  "res\\Splash01.bmp"
+101                     BITMAP                  "res\\Block01.bmp"
+IDB_CHOOSEDIR           BITMAP                  "res\\choosedi.bmp"
+IDB_LV_STATEIMAGE       BITMAP                  "res\\LV_StateImage.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_CLOCK_AVI           AVI                     "res\\clock.avi"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_SPATIAL_DESC        "Ingres Spatial Objects consist of a number of spatial data types and their associated functions. These objects will allow you to execute spatial queries (e.g., selecting points that are within a given area). Please check the box below to add them to the Ingres DBMS Server."
+    IDS_MAIN_DESC           "This wizard will help you add Spatial Objects and User Defined Data Types to the Ingres DBMS Server."
+    IDS_CHECK_SPATIAL       "Include &Spatial Objects"
+    IDS_CHECK_DEMOS         "Include &Demo User Defined Data Types"
+    IDS_USER_UDT_DESC       "If you wish to add your own User Defined Data Types to the Ingres DBMS Server, please check the box below."
+    IDS_CHECK_USER_UDT      "Include &Personal User Defined Data Types"
+    IDS_PERSONAL_LOC        "&Location of Source Code:"
+    IDS_BUTTON_LOC          "&Browse..."
+    IDS_CHOOSEDIR_TXT       "&Source Directory"
+    IDS_OK                  "&OK"
+    IDS_CANCEL              "&Cancel"
+    IDS_TITLE               "Ingres User Defined Data Type Linker"
+    IDS_USERUDT_TXT         "&Please select the source files you wish to include:"
+    IDS_BUTTON_SELECT_ALL   "&Select All"
+    IDS_BUTTON_DESELECT_ALL "&Deselect All"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_NOSRC_DIR           "The source directory does not exist.\nPlease choose an existing source directory."
+    IDS_NOSRC_DIR2          "You must provide a source code directory."
+    IDS_SRCDIR_INVALID      "You must provide a valid source code directory."
+    IDS_SRCDIR_NOSOURCE     "The source directory provided does not contain any source code\n files, object files or libraries. Please provide a valid source\ndirectory."
+    IDS_COMPILE_MSG         "&Compile Command:"
+    IDS_LINK_MSG            "&Link Command:"
+    IDS_FINAL_HEADING       "The commands below will add the data type options chosen to the Ingres DBMS Server. Any changes made to the following commands will be used."
+    IDS_NON_CHOSEN          "You must choose at least one source file, object file, or library."
+    IDS_WAIT_HEADING        "Executing compile and link commands..."
+    IDS_SUCCESS             "The data types have been successfully loaded into the Ingres DBMS Server.\nPlease restart your Ingres installation and test the data types that you have added."
+    IDS_FAIL_HEADING        "There were errors while loading the data types into the Ingres DBMS Server."
+    IDS_BUTTON_SEE_ERRS     "&View Errors..."
+    IDS_BUTTON_VIEWSRC      "&View Source..."
+    IDS_NOSAVE_CHANGES      "You have made changes to one or both of the commands. Your changes\nwill be discarded. Are you sure you want to perform this operation?"
+    IDS_NO_IISYSTEM         "The II_SYSTEM environment variable is not set."
+    IDS_NO_COMPILER         "The Microsoft Visual C++ compiler cannot be found\nin the path. It is required in order to use this program."
+
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INGRES_RUNNING      "Your Ingres installation is running. Therefore, any changes which are made\nwill not be moved into the Ingres installation, and must be done so manually\nafter the Ingres installation has been shut down. Do you wish to continue?"
+    IDS_CHECK_BACKUP        "B&ackup existing IILIBUDT.DLL with extension:"
+    IDS_NEED_EXTENSION      "You must provide an extension with which to backup the existing IILIBUDT.DLL file."
+    IDS_SUCCESS_INGUP       "The IILIBUDT.DLL file has successfully been made, but has NOT been moved into the Ingres installation. It has been saved in '%s\\ingres\\demo\\udadts'. Please shutdown the installation, copy the IILIBUDT.DLL file from this directory into '%s\\ingres\\bin' (backing up the old IILIBUDT.DLL file if so desired). Then, restart the Ingres installation and test the data types that you have added."
+    IDS_BACKUP_DESC         "The result will be a new version of the IILIBUDT.DLL file. If you wish to backup the existing IILIBUDT.DLL file, please check the box below."
+    IDS_DEMO_UDT_DESC       "Ingres provides samples of User Defined Data Types and their associated functions. Please check the box below to add them to the Ingres DBMS Server."
+    IDS_BACKUP_EXISTS       "A file called 'IILIBUDT.%s' already exists in\n'%s\\ingres\\bin'. Do you want to overwrite this file?"
+    IDS_CHECK_RESTORE       "&Restore IILIBUDT.DLL to shipped version"
+    IDS_RESTORE_TXT         "If you wish to restore the IILIBUDT.DLL file to the version which was shipped with Ingres, please check the box below."
+    IDS_SUCCESS_RESTORE     "The IILIBUDT.DLL file has been successfully restored to the shipped version."
+    IDS_FAIL_INGUP          "The Ingres installation is running. Therefore, it is not possible to restore the\nIILIBUDT.DLL file to the shipped version. Please shutdown the Ingres\ninstallation and re-run this program."
+    IDS_FAIL_BACKUP         "Unable to backup existing IILIBUDT.DLL.\n"
+    IDS_FAIL_REPLACE        "Unable to replace IILIBUDT.DLL.\n"
+    IDS_FAIL_RESTORE        "Unable to restore IILIBUDT.DLL.\n"
+    IDS_CHECK_SOMETHING     "You must select at least one option."
+    IDS_FAIL_VERS           "Unable to retrieve compiler version information.\n"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_VERSION_INCORRECT   "The version of the Microsoft Visual C++ compiler is %d.%d.\n Microsoft Visual C++ Version 8.0 or 9.0 is required."
+    IDS_COPYRIGHT           "Copyright © 2005-2010 Ingres Corporation. All Rights Reserved."
+    IDS_UNKNOWN             "unknown"
+    IDS_LICENSE_TO          "This product is licensed to:"
+    IDS_SITEID              "Site ID:"
+    IDS_VC9_EXISTS          "Visual Studio 2008 is installed on this machine. Would you like to use this compiler as the default compiler?"
+    IDS_NO_SDK6		    "Could not locate Windows SDK 6.0A.  Ingres User Defined Data Type Linker may have trouble finding all the libraries for the link operation."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\iilink.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "gv.rc"
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

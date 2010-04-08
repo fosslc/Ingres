@@ -1,0 +1,13 @@
+#
+# Jamfile file for cl!clf!pe_unix
+#
+
+SubDir ING_SRC cl clf pe_unix ;
+
+IISUBSYS cl clf pe_unix ;
+
+
+IIFILE peerr.def : peerr.def ;
+
+IILIBRARY COMPATLIB : pe.c ;
+

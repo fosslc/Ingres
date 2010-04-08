@@ -1,0 +1,17 @@
+<!-- #ICE REPEAT IF (`:rows` != ``)
+		 THEN=`<!-- #ICE DECLARE=``session.rows=:rows`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Multimedia Extensions?&previous=rows.html&next=format.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`checkSQL.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`Multimedia objects are stored in the Ingres database as BLOBS, or "Binary Large Objects". In order for Web Deployment Option to 
+know the type of the multimedia object, the developer must specify the type using the "EXT" keyword.
+
+
+<!-- #ICE VAR=``<INPUT SIZE="32" NAME="ext" VALUE=":ext">`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

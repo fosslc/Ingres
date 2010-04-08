@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The log_writer option specifies the number of threads to use when writing
+ entries into the log file.
+
+ If additional log buffers are used, more logwriter threads may be
+ beneficial.  If dual logging is in use, each log buffer must be written
+ to two places, so the number of logwriter threads should be doubled.
+ All DBMS servers participate in log-writing, so the logwriter threads
+ can be distributed across all the DBMS servers in the installation.
+
+ Default: 1/5 the number of log buffers

@@ -1,0 +1,146 @@
+/*
+**	Copyright (c) 1989, 2004 Ingres Corporation
+*/
+## include <abclass.qsh>
+/**
+** Name:	iamdmtyp.qsh - Types used by the dependency manager
+**
+** Description:
+**	This file defines the following types	
+**
+**	DM_ENT		Entity - Dependers and dependees 
+**	DM_REL		Relation - Dependency
+** 	DM_CHECK 	Describe a check that the DM must make.
+**
+** History:
+**	7/21/90 (Mike S) Initial verison
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+/*}
+** Name:	DM_ENT	- Entity - Dependers and dependees
+**
+** Description:
+**	The dependers and dependees are represented by this structure.
+**	ABF components create this structure when they are instantiated.
+**	
+**	The chain of free DM_ENTs is linked through p_first, which must, of
+**	course, be cast to (DM_ENT *).
+**
+** History:
+**	7/20/90 (Mike S) Initial version
+*/
+EXEC SQL BEGIN DECLARE SECTION;
+typedef struct dm_ent
+{
+        OOID            class;          /* Component generic class */
+        char            name[FE_MAXNAME+1];     /* Component name */
+EXEC SQL BEGIN EXCLUDE SECTION;
+        APPL_COMP       *comp;          /* Component pointer -- may be NULL */
+        struct dm_rel   *p_first;       /* Pointer to first relation in which
+                                           this entity is the primary member */
+        struct dm_rel   *s_first;       /* Pointer to first relation in which
+                                           this entity is the secondary member*/
+        struct dm_rel   *p_last;       	/* Pointer to last relation in which
+                                           this entity is the primary member */
+        struct dm_rel   *s_last;      	/* Pointer to last relation in which
+                                           this entity is the secondary member*/
+        i4		visit_number;	/* Used to avoid multiple visits */
+EXEC SQL END EXCLUDE SECTION;
+} DM_ENT;
+EXEC SQL END DECLARE SECTION;
+
+/*}
+** Name:	DM_REL          Relation - Dependency
+**
+** Description:
+**	Each dependency is represented by this structure.  We don't use the
+**	words "depender" and "dependee", since they can mislead.  The 
+**	primary entity is the one represented by "object_id" in 
+**	ii_abfdependencies; the secondary one is represented by 
+**	"abfdef_name" and "object_class".
+**
+**	The chain of free DM_RELs is linked through the p_next pointer.
+**
+**	Note that a call dependency (primary calls secondary) can be one
+**	of three types:
+**
+**		RC_MENU		Primary is the parent of secondary in the 
+**				Emerald AFD.  This is based on an OC_DTMREF 
+**				dependency.  The compiler will not create an 
+**				OC_DTCALL dependency if the child is called 
+**				without expecting a return value.  It will 
+**				create an OC_DTRCALL if a return value is 
+**				expected (from an escape code callframe).
+**
+**		RC_CALL		Primary calls secondary; the two are not 
+**				parent-child in the AFD.  Primary doesn't
+**				expect a return value.
+**
+**		RC_RCALL	Primary calls secondary; Primary expects a
+**				return value.
+**
+** History:
+**	7/20/90 (Mike S) Initial version 
+*/
+EXEC SQL BEGIN DECLARE SECTION;
+typedef struct dm_rel
+{
+EXEC SQL BEGIN EXCLUDE SECTION;
+        struct dm_ent   *p_ent;         /* Primary entity in relation */
+        struct dm_ent   *s_ent;         /* Secondary entity in relation */
+        struct dm_rel   *p_next;        /* Next relation with the same
+                                           primary entity */
+        struct dm_rel   *p_prev;        /* Previous relation with the same
+                                           primary entity */
+        struct dm_rel   *s_next;        /* Next relation with the same
+                                           secondary entity */
+        struct dm_rel   *s_prev;        /* Previous relation with the same
+                                           secondary entity */
+        i4               rel_class;     /* Relation class */
+# define RC_CALL        0       /* Primary calls secondary */
+# define RC_MENU     	1       /* Primary frame is AFD parent of secondary */
+# define RC_RCALL       2       /* Primary calls secondary, with a return */
+# define RC_GLOB        3       /* Primary frame uses secondary global */
+# define RC_GLOBREC     4       /* Primary global is of type secondary record */
+# define RC_RECREC      5       /* Primary record contains secondary record */
+# define RC_REC         6       /* Primary frame uses secondary record */
+# define RC_FORMTYPE    7       /* Primary frame uses type of secondary form */
+# define RC_TABTYPE     8       /* Primary frame uses type of secondary table */
+# define NO_RC_TYPES	9
+# define RC_OTHER       -1      /* No special handling */
+ 
+EXEC SQL END EXCLUDE SECTION;
+        i4               deptype;       /* Dependency type (from database) */
+        char             linkname[FE_MAXNAME+1];
+                                        /* Link name (for menu dependencies) */
+        i4               deporder;      /* Dependency order (from database) */
+} DM_REL;
+EXEC SQL END DECLARE SECTION;
+
+/*}
+** Name:	DM_CHECK
+**
+** Description:
+**	Describe a check that the DM must make.
+**
+** History:
+**	7/20/90 (Mike S) Initial version
+*/
+typedef struct
+{
+	i4	direction;	/* Which direction to check */
+# define DM_NO_TRAVERSE -1	/* Don't check either direction */
+# define DM_P_TRAVERSE 0	/* Traverse relations for which component 
+				   is primary entity */
+# define DM_S_TRAVERSE 1	/* Traverse relations for which component 
+				   is secondary entity */
+
+	STATUS (*check_rtn)();  /* Routine to call */
+	i4 arg;            /* Argument to pass to check_rtn */
+	bool	recursive;	/* Whether it's a recursive check */
+} DM_CHECK;

@@ -1,0 +1,50 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to create a new component at the current cursor position.
+You can create new trim (simple text on the screen), columns (mappings to
+data columns in your base table), aggregates (set functions on data columns
+such as sum(), count(), avg(), etc.), headings (trim associated with a column
+or aggregate) or lines (blank lines between components).
+
+Select the menu command corresponding to the type of the component you
+wish to create, and follow the submenus displayed (if any).
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Trim            Create a piece of trim at this location.  The
+                        cursor will resume at the location you had
+                        selected and you can enter up to 150 characters
+                        of text to be displayed on the form.  Depress
+                        the MENU KEY to indicate the end of the text.
+
+        Column          Create a new mapping to a column in the table.  You 
+                        may only create new report columns for columns that 
+                        are not yet mapped to the report, or for columns whose 
+                        mapping has been deleted previously.  You can create
+                        new columns in any section of the report.  You
+                        will be prompted for the name of the data column
+			to map (use ListChoices to get a list of choices).
+
+        Aggregate       Create a new aggregate using a set function on a
+			data column.  Unique aggregates and cumulative 
+			aggregates are allowed.  You will be prompted
+			for the data column to be aggregated and then
+			a popup with a list of available aggregates for
+			the column will be displayed so that you can 
+			select one.  Aggregates can only occur in footer
+			sections.
+
+        Heading         Create a new heading to associate with a column
+			or an aggregate.  The cursor must be positioned 
+			on an existing column or aggregate, or a heading 
+			for a column or aggregate.  The cursor will resume 
+			in the appropriate section, where you can type in 
+			the new associated heading.
+
+        Line            Create a blank line above this location.
+        
+        Help            Print this message.
+
+        End             Return to the Report Layout frame without creating
+                        a new component.

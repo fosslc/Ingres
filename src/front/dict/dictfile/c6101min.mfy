@@ -1,0 +1,11 @@
+modify ii_encodings to cbtree unique on encode_object, encode_sequence
+
+modify ii_id to heap
+
+modify ii_longremarks to cbtree unique on object_id, remark_sequence
+
+modify ii_objects to btree on object_class,object_owner,object_name
+
+CREATE UNIQUE INDEX ii_objects_index ON ii_objects
+    (object_id) with structure=hash, minpages=16
+

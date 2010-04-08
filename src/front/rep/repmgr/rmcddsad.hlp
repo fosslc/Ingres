@@ -1,0 +1,58 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcddsad.hlp
+/#subtopic "Consistent Distributed Data Set" rmcdddef.hlp
+/#subtopic "Collision Modes" rmcolmod.hlp
+/#subtopic "Error Modes" rmerrmod.hlp
+ADD A CONSISTENT DISTRIBUTED DATA SET
+
+This form is used to add a Consistent Distributed Data Sets (CDDS) to
+your replication scheme.
+
+To complete this screen, enter the appropriate values for the desired
+CDDS.  Use the Tab key to move from one field to the next. If you
+make an error, you can use the Clear operation to reset the entire form.
+To save the definition, select the Save operation.
+
+The fields on the form are:
+
+        FIELD NAME      DESCRIPTION
+        ----------      -----------
+        CDDS Number     A mandatory field to specify a unique number
+                        within the whole replication system.  The
+                        default value is 0 (which is created when you
+                        install the Replicator catalogs).  By default,
+                        CDDS 0 is assigned initially to any table you
+                        register for replication.  Therefore, unless you
+                        want all tables in CDDS 0, you should create
+                        other CDDS's (with a number between 1 and
+                        32,767).
+
+        CDDS Name       A descriptive name for the CDDS.
+
+        Collision Mode  The manner in which replication collisions
+                        should be detected or resolved.  Select the
+                        Subtopics menuitem for more information.  Use
+                        ListChoices to list acceptable values.
+
+        Error Mode      The manner in which errors should be handled (if
+                        they cannot be resolved).  Select the Subtopics
+                        menuitem for more information.  Use ListChoices
+                        to list acceptable values.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Save            Save the definition and return to the CDDS
+                        Summary screen.
+
+        Clear           Reset the values entered.  You will be asked to
+                        confirm before the form is cleared.
+
+        ListChoices     Display a list of acceptable values for the
+                        current field.
+
+        Help            Access the Help facility.
+
+        End             Return to the CDDS Summary screen.

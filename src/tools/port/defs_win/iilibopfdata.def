@@ -1,0 +1,54 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	29-Jun-2004 (drivi01)
+;	    Removed duplicate opq_global.
+;	25-Aug-2004 (drivi01)
+;	    Renamed from iiopfdata.def to iilibopfdata.def
+;	    due to new build procedures.
+;       25-Jul-2007 (wonca01) Bug 117405
+;           Add nosetstats introduced by bug fix.
+;
+
+EXPORTS
+_sqlda		@1	DATA			
+er_args		@2	DATA			
+opq_date		@3	DATA			
+opq_exit		@4	DATA			
+opq_excstat		@5	DATA			
+opq_global		@6	DATA			
+opq_retry		@7	DATA			
+opf_sjtyps_tab		@8	DATA			
+opq_sbuf		@10	DATA			
+usage		@11	DATA			
+rellist		@12	DATA			
+sample		@13	DATA			
+Opg_cb		@14	DATA
+opf_sjtyps_tab		@15	DATA
+_sqlda			@16	DATA
+attlist			@17	DATA
+bound_length		@18	DATA
+deleteflag		@19	DATA
+er_args			@20	DATA
+histoprint		@21	DATA
+key_attsplus		@22	DATA
+keyatts			@23	DATA
+minmaxonly		@24	DATA
+opq_cflag		@25	DATA
+opq_date		@26	DATA
+opq_excstat		@27	DATA
+opq_exit		@28	DATA
+opq_global		@29	DATA
+opq_retry		@30	DATA
+opq_sbuf		@31	DATA
+pgupdate		@32	DATA
+quiet			@33	DATA
+regcells		@34	DATA
+rellist			@35	DATA
+sample			@36	DATA
+supress_nostats		@37	DATA
+uniquecells		@38	DATA
+usage			@39	DATA
+verbose			@40	DATA
+nosetstats              @41     DATA
+

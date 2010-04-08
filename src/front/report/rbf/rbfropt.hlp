@@ -1,0 +1,85 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#subtopic "Page Component Display Format Examples" rbfrfmt.hlp
+You may select options affecting the entire report.  For fields with a
+choice of answers, ('yes/no', 'none/all/last'), you do not need to spell
+out the full word.  Type in enough of the word to make it distinct from all 
+the other choices.  
+
+The options are:
+
+        OPTION          DESCRIPTION
+        ------          -----------
+        Page Length     If left blank, the report writer will select an
+                        appropriate default each time the report is run.
+                        If you fill this in with a non-zero value, that
+                        page length will be used each time the report 
+			is executed.  A page length of 0 will suppress 
+			all pagination in the report.
+
+        Underline       If left blank, the report writer will select a
+        Character       character appropriate for the device: underscore
+                        (_) when reporting to a file or to a printer;
+			dash (-) when reporting to a terminal.  If 
+			you enter in a character, that character will 
+			always be used.
+
+	Print Page 	A yes/no response.  If you would like the 
+ 	Header on	information in the page header to also appear in 
+	First Page	the report header then set this field to 'yes'.  
+			This is useful if you want the top of every report 
+			page to print the same information.  Otherwise 
+			when set to 'no', the first page will only print 
+			the contents of the report header.  The default is 
+			'yes'.
+
+        Null String     For the field titled 'Display Null Values as:'
+                        enter the string which is to be displayed for each
+                        output value that is null.  The default is a
+                        blank string.
+
+        Formfeeds       A yes/no response.  If 'no', formfeeds are 
+			not automatically generated when the report is 
+			executed.  If 'yes', formfeed characters are 
+			inserted in the report at the end of each page.
+
+        First           A yes/no response.  If 'no', the formfeed before
+	Formfeed	the first page of the report will not be generated 
+			when the report is executed.  If 'yes', the 
+			first formfeed will be inserted in the report.
+			The default is 'yes'.
+
+        Underlining     For each of the sections, specify the underlining
+                        style to use.  If 'all', then all lines in the 
+			section will be underlined.  If 'last', then only 
+			the last line in the section will be underlined, and 
+			if 'none' then no underlining will be performed.
+	
+        Page            For 'Date', 'Time' and 'Page', enter a yes/no
+        Component       response to indicate if it should be included in
+                        the report.  If included, the components will appear
+                        on each page:
+                             Date - top left corner
+                             Time - top right corner
+                             Page - centered at the bottom of the page
+
+                        If 'yes', you may then edit the format to your
+                        preference.  The components expect the following
+                        types of formats:
+                             Date - date and/or time format or a character
+                                    format
+                             Time - date and/or time format or a character
+                                    format
+                             Page - numeric format
+                        For more information on formats, please select
+                        'SubTopics.'
+
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	ListChoices	List all possible values for the current field.
+			
+        Help            Print this message.
+
+        End             Return to main menu.

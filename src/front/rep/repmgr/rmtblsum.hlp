@@ -1,0 +1,121 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmtblcat.hlp
+/#subtopic "Consistent Distributed Data Set" rmcdddef.hlp
+TABLE REGISTRATION SUMMARY
+
+This screen contains a list of all tables in the database and their
+replication configuration status.  By default, each table is initially
+shown as assigned to CDDS 0.  Replicator can only detect changes in
+tables that are fully registered and configured for replication.
+
+The columns of the list are:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        Table Name      The name of the table.
+
+        Owner           The owner of the table.
+
+        CDDS Name       The name of the CDDS under which the table is
+                        registered.  The default name is "Default CDDS".
+
+        Reg             Indicates whether columns in the table have been
+                        registered.  Values for this column are "yes"
+                        and "E".  An "E" indicates an error occurred
+                        when registration was attempted.
+
+        Sup             Indicates whether the table has had its support
+                        objects generated.  Values for this column are
+                        "yes" and "E".  An "E" indicates an error
+                        occurred when creation of support objects was
+                        attempted.
+
+        Act             Indicates whether change recording is enabled for
+                        this table.  Values for this column are "yes" and
+                        "E".  An "E" indicates an error occurred when
+                        change recording activation was attempted.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Register        Perform the default registration for the
+                        currently highlighted table or all valid tables
+                        in the list.  A sub-menu is displayed to allow
+                        you to choose between a single table or all
+                        tables.  To be registered a table must have a
+                        unique primary storage structure or a unique
+                        secondary index.
+
+        DeRegister      Remove the registration for the currently
+                        highlighted table or all registered tables.  Any
+                        existing support objects (shadow table, archive
+                        table, database procedures) are dropped first.
+                        A sub-menu is displayed to allow you to choose
+                        between a single table or all tables.
+
+        Edit            Edit the registration information for the
+                        currently highlighted table, including
+                        deregistering specific columns, changing the
+                        CDDS assignment, and assigning lookup tables for
+                        horizontal partitioning and priority collision
+                        resolution.
+
+        Support         Create support objects for the currently
+                        highlighted table or all valid tables in the
+                        list.  A sub-menu is displayed to allow you to
+                        choose between a single table or all tables.  To
+                        create support objects a table must have been
+                        successfully registered.
+
+                        If the table is assigned to a CDDS that is Full
+                        Peer in the local database, a shadow table, an
+                        archive table and remote replication procedures
+                        are created.  If the table is assigned to a CDDS
+                        that is Protected Read-Only in the local database,
+                        a shadow table and remote replication procedures
+                        are created.  If the table is assigned to a
+                        CDDS that is Unprotected Read-Only in the local
+                        database, no support objects are necessary.
+
+                        For support objects to be created, the
+                        relationship between the CDDS assigned to the
+                        table and the local database must have been
+                        defined.  In addition, in order to correctly
+                        configure horizontally partitioned tables, the
+                        CDDS lookup table must exist and be populated
+                        with the required rows.
+
+        Activation      Enable or disable change recording for the
+                        currently highlighted table.  A sub-menu is
+                        displayed to allow you to choose between
+                        activating (enabling recording) or
+                        deactivating (disabling recording).
+
+                        To be activated, a table's support objects must
+                        have been created.  Change recording is only
+                        necessary if the table is assigned to a CDDS
+                        that is Full Peer in the local database.
+
+        CreateKeys      Create initial rows in the shadow table, and
+                        optionally in the input queue, for the currently
+                        highlighted table or all registered tables.  A
+                        sub-menu is displayed to allow you to choose
+                        between a single table or all tables.  A second
+                        sub-menu is then presented to allow you to
+                        choose between populating only the shadow table
+                        or adding to both the shadow and the input
+                        queue.
+
+                        Creating initial rows in the shadow table is
+                        suggested for tables that already have data in
+                        them.  Adding rows to the input queue allows you
+                        to populate an empty table in a target database
+                        using the Replication Server.  Note, however,
+                        that it may be faster to user 'copydb' or
+                        similar utilities.
+
+        Help            Access the Help facility.
+
+        End             Return to the Configuration Menu.

@@ -1,0 +1,20 @@
+# Note, VMS vers files are limited in format compared to
+# unix vers files.  See readvers.dcl.  (June 2009)
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+
+#set: config i64_vms
+#set: build 00
+#set: option CAS_ENABLED
+#set: option CLUSTER_BUILD
+#set: option DBL
+
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+PLATFORM_JAMDEFS = i64_vms ;

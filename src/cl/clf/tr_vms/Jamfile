@@ -1,0 +1,9 @@
+#
+# Jamfile file for cl!clf!tr_vms
+#
+
+SubDir ING_SRC cl clf tr_vms ;
+
+IISUBSYS cl clf tr_vms ;
+
+IILIBRARY COMPATLIB : tr.c ;

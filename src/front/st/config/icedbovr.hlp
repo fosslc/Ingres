@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The allow_dbover resource enables or diables the changing of the target
+  database from the default.  This parameter is provided for compatibility
+  with previous versions of ICE and applies to non-macro pages only.
+
+  Default: ON

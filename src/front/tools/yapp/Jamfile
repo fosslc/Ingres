@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!tools!yapp
+#
+
+SubDir ING_SRC front tools yapp ;
+
+IISUBSYS front tools yapp ;
+
+
+IIBINEXE yapp : yapp.c ;
+IINEEDLIBS yapp : COMPATLIB ;
+IIUNDEFS yapp : II_copyright ;
+

@@ -1,0 +1,26 @@
+#
+# Jamfile file for front!embed!equel
+#
+#     20-Oct-2009 (hweho01)
+#       Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front embed equel ;
+
+IISUBSYS front embed equel ;
+
+IINOOPTIM esqyylex.c : dg8_us5 ;
+
+
+IILIBRARY EQUELLIB : sytree.c syscope.c syq.c sypl1sym.c symutils.c
+	syfield.c syeucsym.c sydec.c sydebug.c sycopy.c strman.c
+	scyylex.c scword.c scutil.c scstring.c scrdline.c scop.c
+	scnumber.c scinc.c schex.c scgetkey.c scequlex.c sceat.c
+	sccmnt.c retrieve.c repeat.c qman.c out.c label.c ideq.c
+	esqyylex.c esqsel.c esqmisc.c esqlca.c errna.c err.c
+	eqtarget.c eqrecord.c eqqryid.c eqmisc.c eqmain.c eqgentl.c
+	eqgenfrs.c eqg4.c eqfwgen.c eqfw.c eqfrs.c eqdump.c
+	eqcursor.c eqckfips.c dbquel.c argman.c activate.c ;
+
+IILIBRARY IMPEMBEDLIBDATA : eqglobs.c eqdata.c ;
+
+IILIBOBJECT eqdata.c eqglobs.c eqmain.c ;

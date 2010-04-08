@@ -1,0 +1,10 @@
+COPYFORM:	6.4	2001_07_20 14:47:04 GMT  
+FORM:	fmorelklock	more info for lock detail	
+	56	5	0	0	3	0	2	9	0	0	0	0	0	128	0	3
+FIELD:
+	0	rsb	21	10	0	8	1	26	1	2	8	0	18	Resource List ID:	0	0	0	0	0	0	0		c8			0	0
+	1	lock_id	21	19	0	17	1	30	2	7	17	0	13	DLM Lock ID:	0	0	0	0	0	0	0		c17			0	1
+	2	value	21	37	0	35	1	54	3	1	35	0	19	   DLM Lock Value:	0	0	0	0	0	0	0		c35			0	2
+TRIM:
+	0	0	5:56:0	2049	0	0	0
+	1	0	More Info	2048	0	0	0

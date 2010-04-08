@@ -1,0 +1,32 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Part file for VMS install messages used during KITINSTAL (actually used
+** by IIMANINF.EXE).
+** This is a copy of MESSAGES.CCPP, the generic message part, but with some
+** files missing which are unnecessary for the VMS installation process.
+**
+** This file should be built for VMS ONLY (which is why it is missing from
+** MANIFEST and MINGH), but we "ifdef" it for VMS just in case.
+*/
+
+/*
+** History
+**	04-feb-1997 (boama01)
+**		Adapted from messages.ccpp.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+*/
+
+PART  kitinstal-msgs
+
+/*
+** DIRECTORY specified in release.ccpp 
+*/
+
+# ifdef VMS
+   BUILD_DIR (ING_BUILD)!files!english
+      FILE fast_v4.mnx
+      FILE slow_v4.mnx
+# endif /* VMS */

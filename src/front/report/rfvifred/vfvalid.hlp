@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vfvalid.hlp       Help for the Vifred "Field Validation" screen.
+/#subtopic "Field Validation Examples" vfvalex.hlp
+The Field Validation frame allows you to change the validation string and
+validation error message for the field.  These fields contain the same
+values as do fields of the same name on the Field Attributes frame.  The
+only difference is that in this frame the fields are not scrollable, and
+all the text may be viewed at one time.
+
+
+The field descriptions are:
+
+        FIELD NAME              SYNOPSIS
+        ----------              --------
+        Validation Check        This check is performed whenever users enter 
+                                new or updated data into the field.
+
+        Validation Message      This is displayed if the validation check
+                                fails.
+
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to the main Field Attributes frame.

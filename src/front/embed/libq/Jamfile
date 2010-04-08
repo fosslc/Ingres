@@ -1,0 +1,29 @@
+#
+# Jamfile file for front!embed!libq
+#
+#    20-Oct-2009 (hweho01)
+#      Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front embed libq ;
+
+IISUBSYS front embed libq ;
+
+IINOOPTIM iiqry.c : nc4_us5 ;
+IINOOPTIM iilqsess.c : rs4_us5 ;
+IINOOPTIM iidbg.c : sos_us5 ;
+
+IILIBRARY LIBQLIB : iixact.c iiwrite.c iivarstr.c iiutsys.c
+        iitm.c iisyserr.c iisync.c iistrutl.c iisqparm.c iisqdvar.c
+        iisqdrun.c iisqcrun.c iisndlog.c iiseterr.c iisetdom.c
+        iirowdsc.c iiretini.c iiretdom.c iiqry.c iiqid.c iiparset.c
+        iiparret.c iiparam.c iinext.c iimain.c iilqthr.c iilqstrc.c
+        iilqsess.c iilqevt.c iilqadr.c iiloput.c iiloget.c iilang.c
+        iiinqset.c iiingres.c iigettup.c iigetdat.c
+        iigcatrc.c iigcahdl.c iiflush.c iife.c iiexit.c iiexec.c
+        iierror.c iidml.c iidbproc.c iidbprmt.c iidbg.c iidathdl.c
+        iida.c iicvt.c iicsrun.c iibreak.c iiauth.c iiadfcb.c
+        adhembed.c ;
+
+IILIBRARY IMPEMBEDLIBDATA : iiglobal.c ;
+
+IILIBOBJECT iiglobal.c ;

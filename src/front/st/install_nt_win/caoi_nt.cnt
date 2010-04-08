@@ -1,0 +1,18 @@
+:Base caoi_nt.hlp
+:Title CA-OpenIngres Online Documentation
+:Index CA-OpenIngres Online Documentation=caoi_nt.hlp
+:Index CA-OpenIngres Database Adminstrator's Guide=oidba.hlp
+:Index CA-OpenIngres Embedded SQL Companion Guide for C=esql.hlp
+:Index CA-OpenIngres/Net User Guide=oinet.hlp
+:Index CA-OpenIngres OpenAPI User Guide=openapi.hlp
+:Index CA-OpenIngres Report-Writer Reference Guide=oirwref.hlp
+:Index CA-OpenIngres SQL Reference Guide=sqlref.hlp
+:Index CA-OpenIngres System Reference Guide=oisysref.hlp
+1 About CA-OpenIngres Online Documentation=TOPLEVEL00000
+:Include oidba.cnt
+:Include esql.cnt
+:Include oinet.cnt
+:Include openapi.cnt
+:Include oirwref.cnt
+:Include sqlref.cnt
+:Include oisysref.cnt

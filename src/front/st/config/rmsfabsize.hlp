@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+II_RMS_FAB_SIZE defines the resource to cache RMS file information. Set this 
+value to some estimate of the largest number of RMS files that will be open 
+concurrently by the gateway.

@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The resource_hash resource specifies the size of the resource hash
+  table.
+
+  A "resource" is defined as any system object (e.g. page, table,
+  database) which can be locked by the Ingres locking system.

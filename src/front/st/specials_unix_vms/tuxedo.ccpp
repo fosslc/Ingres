@@ -1,0 +1,66 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for DTP for TUXEDO
+*/
+
+/*
+** History
+**	24-nov-1993 (tyler)
+**		Created.
+**	04-mar-1994 (larrym)
+**		added utility and files directory
+**	21-apr-1994 (larrym)
+**		added iisutux to create tuxedo directory under files.
+**	10-may-1995 (forky01)
+**		added CI_XA_TUXEDO bit check for licensing
+**	28-dec-1995 (hanch04)
+**		remove no longer needed files.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART tuxedo
+   capability CI_XA_TUXEDO
+
+/*
+** ingres!lib
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY ingres!LIB_TGT
+#endif
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+      FILE libiitux.a
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY ingres!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT SETUP iisutux
+      SCRIPT iimktms
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+      FILE iitxxa.h

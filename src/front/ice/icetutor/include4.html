@@ -1,0 +1,54 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT IF (`:incParName` != ``)
+THEN=`
+<!-- #ICE REPEAT IF (``:incParNvar`` == ``yes``) THEN=``<!-- #ICE DECLARE=````page.incParName=:::incParName```` -->`` -->
+<!-- #ICE REPEAT IF (``:incParVvar`` == ``yes``) THEN=``<!-- #ICE DECLARE=````page.incParValue=:::incParValue```` -->`` -->`
+-->
+
+<!-- #ICE REPEAT IF (`:incParName` != ``)
+THEN=`
+<!-- #ICE REPEAT IF (``:incVar`` != ````)	
+			THEN=``<!-- #ICE DECLARE=````session.incVar=:incVar&:incParName=:incParValue```` -->``
+			ELSE=``<!-- #ICE DECLARE=````session.incVar=:incParName=:incParValue```` -->`` 
+-->`
+-->
+
+<!-- #ICE REPEAT IF (`:first` != `yes` and `:incParName` == ``)
+THEN=`<!-- #ICE REPEAT INCLUDE=``include5.html`` -->`
+ELSE=`
+<!-- #ICE REPEAT INCLUDE=``begin.html?title=Include&previous=include3.html&next=include4.html`` -->
+<INPUT TYPE="HIDDEN" NAME="first" VALUE="no">
+<INPUT TYPE="HIDDEN" NAME="doc_unit" VALUE=":doc_unit">
+<INPUT TYPE="HIDDEN" NAME="prefix" VALUE=":prefix">
+<INPUT TYPE="HIDDEN" NAME="suffix" VALUE=":suffix">
+
+The included document can access all the page variables of the parent document. It is possible to create additional 
+page variables in the included document by sending name/value pairs to it in the "INCLUDE" statement.<p>
+An example of this follows:
+<p>
+<H4 CLASS="question">
+Please enter the name and the value of a variable you want to send to the included document (leave blank if none):
+</H4>
+<H4 CLASS="choice">
+Name: <INPUT NAME="incParName" VALUE=""><br> 
+Does this variable have a hardcoded name, or is it set to the name of another variable?<Br>
+<INPUT TYPE="RADIO" NAME="incParNvar" VALUE="no" CHECKED>Hardcoded<br>
+<INPUT TYPE="RADIO" NAME="incParNvar" VALUE="yes">Set to another variable
+<p>
+Value: <INPUT NAME="incParValue" VALUE=""><Br>
+Is the value hardcoded, or is this another variable name?<br>
+<INPUT TYPE="RADIO" NAME="incParVvar" VALUE="no" CHECKED>Hardcoded<br>
+<INPUT TYPE="RADIO" NAME="incParVvar" VALUE="yes">Another variable
+</H4>
+<p>The current parameter list is: ``<!-- #ICE VAR=``:incVar`` -->``
+
+<!-- #ICE REPEAT INCLUDE=``end.html`` -->`
+-->
+##
+## (DO NOT REMOVE)

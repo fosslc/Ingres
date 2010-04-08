@@ -1,0 +1,13 @@
+/#-- Copyright 2009 Ingres Corporation
+  The qef_hash_wbsize resource controls the size of the buffers used
+  to write spilled rows during large hash joins or hash aggregations.
+  Hash join uses these write buffers for bucketing and hash table space
+  as well.  Larger buffers may reduce I/O operations and reduce spill file
+  fragmentation, at the expense of using more memory.  Very large buffers
+  may also impede the ability of hash join to tune itself for varying
+  sizes of input.
+
+  Write buffer sizes should range between 16Kb and 256Kb for most
+  general use situations.
+
+  The default is 16 Kb.  The minimum size is 8 Kb.

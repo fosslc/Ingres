@@ -1,0 +1,153 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include	<rcons.h>
+# include	"rbftype.h"
+# include	"rbfglob.h"
+# include	<rcons.h>
+
+/*
+**   RFEDIT - controlling routine for displaying the
+**	report frames.	This puts up the main menu for a report
+**	in RBF, and then calls underlying routines to display
+**	the different forms, after setting up the forms for
+**	this report.
+**	This also sets up the fields in the main ROPTIONS.
+**
+**	Parameters:
+**		none.
+**
+**	Returns:
+**		TRUE is successful, FALSE if not.
+**
+**	Called by:
+**		rFdisplay.
+**
+**	Side Effects:
+**		many.  This changes, indirectly, all of the forms
+**		and the report.
+**		Set the starting values in the fields
+**		of the ROPTIONS frame.
+**
+**	Trace Flags:
+**		230, 232, 204.
+**
+**	Error messages:
+**		SYSERR on bad report.
+**
+**	History:
+**		6/2/82 (ps)	written.
+**		10/31/82 (ps)	change menu to form.
+**		1/19/83 (gac)	fixed "Editing Report:<blank>" bug.
+**		1/21/83 (gac)	clear screen after editing layout of report.
+**		1/85	(ac)	Created from codes in rfdisplay.qc.
+**				Added codes for modularization.
+**		06/10/87 (rdesmond)	remove call to rFrmrsave.
+**		08/04/87 (rdesmond)	remove call to set up forms.
+**      9/22/89 (elein) UG changes ingresug change #90045
+**	changed <rbftype.h> & <rbfglob.h> to "rbftype.h" & "rbfglob.h"
+**		15-aug-89 (cmr)
+**			support for new field in rFroptions form which
+**			controls the inclusion of the page hdr in the
+**			report hdr.
+**		11/27/89 (martym) - Added support for RBF report template 
+**			styles.
+**              12/14/89 (elein)
+**                      Replaced references to SourceIsJD with En_SrcTyp
+**                      Replaced rbfstyle.h with rcons.h
+**		1/10/90 (martym)
+**			Added code to check the status of style routines to detect 
+**			cases where En_lmax has been exceeded.
+**		1/23/90 (martym)
+**			Changed the type of rfedit() to bool from VOID.
+**		30-jan-89 (cmr)
+**			get rid of call to putopt(); the ReportOptions form
+**			gets initialized when you choose that menu item.
+**		2/7/90 (martym)
+**			Coding standards cleanup.
+**		4/30/90 (martym) Added call to "IIRFFmtTitles()".
+**		9-oct-1992 (rdrane)
+**			Use new constants in (s/r)_reset invocations.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+FUNC_EXTERN 	bool	r_IndentedSetUp();
+FUNC_EXTERN 	bool 	r_LabelsSetUp();
+FUNC_EXTERN	bool	r_JDMasterDetailSetUp();
+FUNC_EXTERN	VOID	IIRFFmtTitles();	
+
+bool
+rfedit(ntrims, nfields)
+i4	ntrims;
+i4	nfields;
+{
+	r_reset(RP_RESET_RELMEM5,RP_RESET_LIST_END);
+	s_reset(RP_RESET_REPORT,RP_RESET_LIST_END);
+
+	/*
+	** Call style set up routine:
+	*/
+	if ((En_SrcTyp == JDRepSrc) && St_style == RS_MASTER_DETAIL)
+	{
+		if (!r_JDMasterDetailSetUp())
+			return(FALSE);
+	}
+	else
+	if (St_style == RS_INDENTED)
+	{
+		if (!r_IndentedSetUp())
+			return(FALSE);
+	}
+	else
+	if (St_style == RS_LABELS)
+	{
+		_VOID_ r_LabelsSetUp();
+	}
+
+	if (St_style != RS_NULL && St_style != RS_LABELS)
+		_VOID_ IIRFFmtTitles();
+
+	switch (rfframe(ntrims, nfields))
+	{
+		case LAYOUTERR:
+			/* set up the main layout form */
+			IIUGerr(E_RF0028_rFdisplay___Error_set, 
+			    UG_ERR_FATAL, 0);
+			break;
+
+		case LAYOUTOK:
+			break;
+
+		case LAYOUTWIDE:
+			return(FALSE);
+			break;
+	}
+
+	rFcmp_cs();		/* If any empty CS structs, compress Cs_ list */
+
+#ifdef	CFEVMSTAT
+	FEgetvm(ERx("Rfedit:  Before vfrbfinit (Vifred initialization)"));
+#endif
+
+	vfrbfinit(Rbf_frame);	/* initialize frame for VIFRED */
+
+#ifdef	CFEVMSTAT
+	FEgetvm(ERx("Rfedit:  After vfrbfinit"));
+#endif
+
+	
+	vfrbf();
+
+	return(TRUE);
+
+}

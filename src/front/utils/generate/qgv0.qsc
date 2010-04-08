@@ -1,0 +1,906 @@
+/*
+** Copyright (c) 1985, 2005 Ingres Corporation
+**
+*/
+
+#include	<compat.h>
+#include	<cv.h>
+#include	<st.h>
+#include	<lo.h> 
+#include	<si.h> 
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<adf.h>
+#include	<fe.h>
+#include	<qg.h> 
+#include	<qgv0.h>
+#include	"qgi.h"
+#include	<me.h>
+
+/**
+** Name:    qgv0.qc -	Query Generation Module, Version 0.
+**
+** Description:
+**	QG is the module for the query generators used in MQBF and OSL.
+**	It runs the query that is passed in in a QDV0.  The important
+**	feature of a generator is that it produces one tuple at a time
+**	each time it is called.  This means that a query does not have
+**	to be run in a loop.
+*/
+
+static VOID	QG_where();
+static VOID	QG_tlist();
+static STATUS	QG_buf();
+static STATUS	QG_map();
+static STATUS	QG_loc();
+static VOID	QG_tupcnt();
+
+/*
+** QG_generate
+**	The generate procedure.  It is called to start and run a query.
+**	The query can be a master or detail
+**	The query is run according to the input parameter.  It can have
+**	four possible values:
+**		QI_START	Starts the query and gets the first record.
+**		QI_USTART	Starts the query uniquely and gets the first record.
+**				This is used by QBF so all joined queries are unique.
+**		QI_OSL		Force all queries into a file.
+**		QI_GET		Gets the next record from the query.
+**		QI_BREAK	Breaks out of the query.
+**		QI_NMASTER	Breaks out of the detail query and gets the
+**				next master record.
+**		QI_UOSL		Like QI_OSL, but unique.
+**
+** PARAMETERS
+**	qry		{QDV0 *}
+**		The query to run.
+**
+**	input		{nat}
+**		The mode to run the query.
+**
+**	output		{nat *}
+**		The mode the query ended in.
+**
+** RETURNS
+**	OK or
+**	1-99	A specific error code for QG.
+**	>100	An ingres error.
+**
+** History:
+**		09/06/85 (scl) Fixed bug in CMS; temp file must be
+**			       opened for input as 'binary' file
+**		16-jun-86 (mgw) Bug # 9582
+**			Made QG_alloc() return NULL on bad memory allocation
+**			and made QG_generate() understand that state of affairs
+**			even if called recursively.
+**		09-apr-86 (marian)	bug 11867
+**			Added a call to QG_tupcnt() to reset the tuple count
+**			in case a query was done inside the submenu.
+**		21-aug-87 (marian)	bug 12651
+**			When a QI_BREAK is being done, check to see if more
+**			than one row is being retrieved before doing an
+**			'endretrieve'.  If only one row, do an IIflush() 
+**			instead.  NOTE:  Not needed for 6.0!!! (jhw)
+**		13-jul-87 (bab)	Changed memory allocation to use [FM]Ereqmem.
+**	        01-sep-93 (smc)
+**			Bug #58882
+**         	 	Commented lint pointer truncation warning.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	07-sep-2005 (abbjo03)
+**	    Replace xxx_FILE constants by SI_xxx.
+**	18-May-2009 (kschendel) b122041
+**	    Replace very roundabout size alignment with what it really does,
+**	    which is simply align to ALIGN_RESTRICT.
+*/
+STATUS
+QG_generate(qry, input, output)
+register QDV0	*qry;		/* The query to run. */
+i4		input;		/* The mode to run the query in. */
+i4		*output;	/* The state of the query. */
+{
+	register QSTRUCT	*qstr = qry->qg_internal;
+##	char			wclause[8192];
+##	char			tlist[8192];
+##	char			**argv;
+	LOCATION		loc;
+	i4			rval = OK;
+	i4			cnt;
+
+	if (input == QI_START || input == QI_USTART
+		|| input == QI_OSL || input == QI_UOSL)
+	{
+		if (qstr == NULL)
+		{
+			if ((qry->qg_internal = IIQG_alloc()) == NULL)
+				return QE_MEM;
+			qstr = qry->qg_internal;
+			/*
+			** QS_MAP turned on here; may be turned off
+			** later if not a master-detail query and
+			** state is QI_START.
+			*/
+			qstr->qg_state = (QS_INIT|QS_MAP);
+		}
+		else
+		{
+			qstr->qg_state &= ~(QS_IN|QS_INDETAIL);
+			qstr->qg_state |= QS_INIT;
+		}
+		qstr->qg_tupcnt = 0;
+		if (input == QI_USTART || input == QI_UOSL)
+			qstr->qg_state |= QS_UNIQUE;
+		if (input == QI_OSL || input == QI_UOSL)
+			qstr->qg_state |= QS_OSL;
+	}
+	if (qstr == NULL)
+		return QE_NOINTERNAL;
+	/*
+	** At this point, we are ready to generate a new value.
+	*/
+	if (qry->qg_child == NULL && !(qstr->qg_state & QS_OSL))
+	{
+		switch (input)
+		{
+		  case QI_BREAK:
+			/*
+			** If the query is already over, don't
+			** do the break.
+			*/
+			if (!(qstr->qg_state & QS_IN))
+			{
+				*output = QO_QDONE;
+				return OK;
+			}
+			goto brk_qry;
+
+		  case QI_GET:
+		  case QI_NMASTER:
+			goto next_qry;
+
+		  case QI_USTART:
+		  case QI_START:
+			qstr->qg_state &= (~QS_MAP);
+			break;
+		}
+		/*
+		** Build the where clause for this query.
+		*/
+		QG_where(qry->qg_wparam, qry->qg_wargv,
+			 qry->qg_sortlist, qry->qg_sortdir, wclause);
+		QG_tlist(qry->qg_param, qry->qg_tlargv, tlist);
+		argv = qry->qg_argv;
+		if (input == QI_USTART || input == QI_UOSL)
+		{
+##			retrieve unique (param(tlist, argv)) where wclause
+##			{
+				goto ret_value;
+##			}
+		}
+		else
+		{
+##			retrieve (param(tlist, argv)) where wclause
+##			{
+				goto ret_value;
+	brk_qry:
+				/* Note:  For 6.0 if no more rows are in the
+				** pipe, this is a no-op so no special code is
+				** required to save sending a break to the DBMS
+				** (which was reported as bug #12651.)
+				*/
+##				endretrieve
+	next_qry:
+				rval = OK;
+##			}
+		}
+		qstr->qg_state &= (~QS_IN);
+		qstr->qg_state &= ~QS_UNIQUE;
+		*output = QO_QDONE;
+		if ((rval = FEinqerr()) == OK)
+			QG_tupcnt(qstr->qg_tupcnt);
+		qstr->qg_tupcnt = 0;
+		return rval;
+	ret_value:
+		qstr->qg_tupcnt++;
+		qstr->qg_state |= QS_IN;
+		*output = QO_QIN;
+		return OK;
+	}
+	/*
+	** At this point, the query is a master detail query.
+	** Or a single query from OSL.
+	** This means the master query gets run into a file and
+	** then tuples are retrieved from the file.
+	*/
+	switch (input)
+	{
+	  case QI_BREAK:
+		if (qstr->qg_state & QS_IN)
+		{
+			SIclose(qstr->qg_file);
+			LOdelete(&(qstr->qg_loc));
+		}
+		if (qry->qg_child && qstr->qg_state & QS_INDETAIL)
+		{
+			if (rval = QG_generate(qry->qg_child, QI_BREAK, output))
+				return rval;
+		}
+		QG_tupcnt(qstr->qg_tupcnt);
+		qstr->qg_tupcnt = 0;
+		qstr->qg_state &= ~QS_IN;
+		qstr->qg_state &= ~QS_UNIQUE;
+		*output = QO_QDONE;
+		return OK;
+	
+	  case QI_GET:
+		input = QI_GET;
+		if (qry->qg_child && qstr->qg_state & QS_INDETAIL)
+			goto get_next;
+		break;
+
+	  case QI_OSL:
+	  case QI_START:
+	  case QI_UOSL:
+	  case QI_USTART:
+		/*
+		** BUG 3778
+		** Call FEt_open_bin instead of NMt_open so that
+		** the file is a variable length no attribute file.
+		*/
+		if (FEt_open_bin(ERx("w"), ERx("qg"), ERx(""), &loc, &(qstr->qg_file)))
+			return QE_TFILE;
+		if ( QG_loc(qstr, &loc) != OK )
+			return QE_MEM;
+		if ( QG_buf(qry) != OK )
+			return QE_MEM;
+		QG_where(qry->qg_wparam, qry->qg_wargv,
+			 qry->qg_sortlist, qry->qg_sortdir, wclause);
+		QG_tlist(qry->qg_param, qry->qg_tlargv, tlist);
+		argv = qry->qg_argv;
+		if (input == QI_USTART || input == QI_UOSL)
+		{
+##			retrieve unique (param(tlist, argv)) where wclause
+##			{
+				SIwrite(qstr->qg_bsize, qstr->qg_buffer, &cnt,
+					qstr->qg_file);
+				SIflush(qstr->qg_file);
+##			}
+		}
+		else
+		{
+##			retrieve (param(tlist, argv)) where wclause
+##			{
+				SIwrite(qstr->qg_bsize, qstr->qg_buffer, &cnt,
+					qstr->qg_file);
+				SIflush(qstr->qg_file);
+##			}
+		}
+		SIclose(qstr->qg_file);
+		/*
+		** BUG 4102
+		**
+		** Must check if there was an error in the retrieve.
+		*/
+		rval = FEinqerr();
+		if (rval != OK)
+		{
+			LOdelete(&(qstr->qg_loc));
+			return rval;
+		}
+#ifndef CMS
+		if ( SIopen(&loc, ERx("r"), &(qstr->qg_file)) != OK )
+			return QE_TFILE;
+#else
+		/*
+		**   Since this file was created as a 'binary' file
+		**   (using FEt_open_bin) it should be read as a binary
+		**   file. Reading it as a 'text' file causes problems
+		**   (Truncation of blanks on the end of records and
+		**   misinterpretation of 'newline' or end-of-record)
+		*/
+		if ( SIfopen(&loc, ERx("r"), SI_VAR, 0, &(qstr->qg_file)) != OK )
+			return QE_TFILE;
+#endif
+		break;
+
+	  case QI_NMASTER:
+		if (!(qstr->qg_state & QS_IN))
+		{
+			*output = QO_QDONE;
+			return QE_NOSTART;
+		}
+		if (qry->qg_child &&
+			(rval = QG_generate(qry->qg_child, QI_BREAK, output)))
+		{
+			qstr->qg_state &= ~QS_IN;
+			qstr->qg_state &= ~QS_UNIQUE;
+			*output = QO_QDONE;
+			return rval;
+		}
+		break;
+	}
+	while (!(SIread(qstr->qg_file, qstr->qg_bsize, &cnt, qstr->qg_buffer)))
+	{
+		qstr->qg_tupcnt++;
+		if (cnt < qstr->qg_bsize)
+		{
+			/*
+			** Since we always read one last byte 
+			** after last record, if we didn't
+			** read the requested number of bytes, 
+			** assume we're out of records.  
+			** NOTE: this can be taken out once we use SIfopen
+			** for our file manipulation instead of NMt_open
+			*/
+			break;
+		}
+		QG_map(qry);
+		input = (qstr->qg_state & QS_UNIQUE) ? QI_USTART : QI_START;
+		qstr->qg_state |= (QS_INDETAIL|QS_IN);
+ get_next:
+		if (qry->qg_child &&
+			(rval = QG_generate(qry->qg_child, input, output)))
+		{
+			break;
+		}
+		if (*output == QO_QDONE)
+		{
+			qstr->qg_state &= ~QS_INDETAIL;
+			*output = QO_DDONE;
+			return OK;
+		}
+		*output = QO_QIN;
+		return OK;
+	}
+	/* bug 11867
+	**	Reset the tuple count.
+	*/
+	QG_tupcnt(qstr->qg_tupcnt);
+	SIclose(qstr->qg_file);
+	LOdelete(&(qstr->qg_loc));
+	qstr->qg_state &= ~QS_IN;
+	qstr->qg_state &= ~QS_UNIQUE;
+	*output = QO_QDONE;
+	return rval;
+}
+
+/*
+** QG_where
+**	Build a where clause from the param and argv list.
+*/
+static VOID	QG_wescape();
+
+static VOID
+QG_where(param, argv, slist, sdir, wclause)
+char		*param;
+register char	**argv;
+register char	**slist;
+register char	**sdir;
+char		*wclause;
+{
+	register char	*in;
+	register char	*out;
+	bool		first = TRUE;
+
+	ADF_CB	*FEadfcb();
+
+	out = wclause;
+	in = param;
+	if (in == NULL || *in == EOS)
+	{
+		STcopy(ERx("1 = 1"), wclause);
+		out += 5; /* Length of "1 = 1" */
+	}
+	else while ( *in != EOS )
+	{
+		switch (*in)
+		{
+		  case '%':
+			/*
+			**	Don't convert arg strings if
+			**	there are no args. - mgw 8/19/85
+			**	Fixes BUG 6240
+			*/
+			if (argv == NULL)
+			{
+				*out++ = *in++;
+				break;
+			}
+			switch (*++in)
+			{
+			  case 'c':
+				in++;
+				*out++ = '\"';
+				QG_wescape(*argv++, out); /* fix for bug # 6143 */
+				out += STtrmwhite(out);
+				*out++ = '\"';
+				break;
+
+			  case 'i':
+			  {
+				i4	i;
+
+				in++;
+				IIconvert(*argv++, &i,
+						DB_INT_TYPE, (*in++ - '0'),
+						DB_INT_TYPE, sizeof(i)
+				);
+				CVla(i, out);
+				out += STlength(out);
+				break;
+			  }
+
+			  case 'f':
+			  {
+				f8	f;
+				i2	len;
+
+				in++;
+				IIconvert(*argv++, &f,
+						DB_FLT_TYPE, (*in++ - '0'),
+						DB_FLT_TYPE, sizeof(f)
+				);
+				/*
+				** BUG 4997
+				**
+				** Pass last argument to CVfa as ptr to
+				** i2 rather than nat.  Otherwise, using
+				** a float in a qualification clause
+				** causes an access violation.
+				*/
+				CVfa(f, 28, 10, 'e',
+					FEadfcb()->adf_decimal.db_decimal,
+					out, &len
+				);
+				out = out + len;
+				break;
+			  }
+
+			  default:
+				*out++ = '%';
+				*out++ = *in++;
+				break;
+			}
+			break;
+		
+		  default:
+			*out++ = *in++;
+			break;
+		} /* end switch */
+	} /* end else while */
+	/*
+	** Add a EOS but don't increment so that if there is
+	** a sort clause it will overwrite the EOS.
+	*/
+	*out = EOS;
+	for (; slist != NULL && *slist != EOS ; slist++, sdir++)
+	{
+		if (!first)
+		{
+			*out++ = ',';
+		}
+		else
+		{
+			STcopy(ERx(" sort by "), out);
+			out += 9;	/* Length of " sort by " */
+			first = FALSE;
+		}
+		out += STlength(
+			STprintf(out, ERx("RET_VAR%s:%s"), *slist, *sdir)
+		);
+	}
+	*out = EOS;
+	return;
+}
+
+/*
+** QG_tlist
+**	Build a target list for a param retrieve from the param and argv list.
+*/
+static VOID	QG_escape();
+
+static VOID
+QG_tlist(param, argv, tlist)
+char		*param;
+register char	**argv;
+char		*tlist;
+{
+	register char	*in;
+	register char	*out;
+
+	ADF_CB	*FEadfcb();
+
+	out = tlist;
+	in = param;
+	if (in == NULL || *in == EOS)
+		return;
+	else while ( *in != EOS )
+	{
+		switch (*in)
+		{
+		  case '$':
+			switch (*++in)
+			{
+			  case 'c':
+				in++;
+				*out++ = '\"';
+				QG_escape(*argv++, out);
+				out += STtrmwhite(out);
+				*out++ = '\"';
+				break;
+
+			  case 'i':
+			  {
+				i4	i;
+
+				in++;
+				IIconvert(*argv++, &i,
+						DB_INT_TYPE, (*in++ - '0'),
+						DB_INT_TYPE, sizeof(i)
+				);
+				CVla(i, out);
+				out += STlength(out);
+				break;
+			  }
+
+			  case 'f':
+			  {
+				f8	f;
+				i2	len;
+
+				in++;
+				IIconvert(*argv++, &f,
+						DB_FLT_TYPE, (*in++ - '0'),
+						DB_FLT_TYPE, sizeof(f)
+				);
+				/*
+				** BUG 4997
+				*/
+				CVfa(f, 28, 10, 'e',
+					FEadfcb()->adf_decimal.db_decimal,
+					out, &len
+				);
+				out = out + len;
+				break;
+			  }
+
+			  default:
+				*out++ = '$';
+				*out++ = *in++;
+				break;
+			}
+			break;
+		
+		  default:
+			*out++ = *in++;
+			break;
+		} /* end switch */
+	} /* end else while */
+	*out = EOS;
+	return;
+}
+
+/*
+** QG_buf
+**
+** History:
+**	9-jun-1987 (Joe)
+**		Added code to handle %a in target list.
+**		All elements of target list must be %a.
+*/
+
+static STATUS
+QG_buf(qry)
+QDV0	*qry;
+{
+	QSTRUCT		*qstr;
+	i4		*size, *dsize;
+	char		**argv;
+	char		**margv;
+	char		*cp;
+	SCALARP		alloc;
+	i4		mcnt;
+	i4		percent_a_cnt;
+	DB_DATA_VALUE	*dbv;
+
+	if ((qstr = qry->qg_internal) == NULL)
+		return QE_NOINTERNAL;
+	if (!(qstr->qg_state & QS_MAP))
+		return OK;
+	for (cp = qry->qg_param, size = qry->qg_sizelist, argv = qry->qg_argv,
+	     mcnt = 0, percent_a_cnt = 0, alloc = 0; *cp; cp++)
+	{
+		if (*cp != '%')
+			continue;
+		mcnt++;
+		switch (*++cp)
+		{
+		  case 'c':
+			alloc += (*size++) + 1;
+			break;
+
+		  case 'i':
+		  case 'f':
+		  {
+			DB_DATA_VALUE	dbv;
+
+			dbv.db_length = *size++;
+			dbv.db_datatype =
+				(*cp == 'i' ? DB_INT_TYPE : DB_FLT_TYPE);
+			cp++;
+			alloc = DB_ALIGN_MACRO(alloc);
+			alloc += *size++;
+			break;
+		  }
+		  
+		  case 'a':
+			/*
+			** In this case, the argv points at a DB_DATA_VALUE.
+			*/
+			percent_a_cnt++;
+			dbv = (DB_DATA_VALUE *) *argv++;
+			alloc = DB_ALIGN_MACRO(alloc);
+			alloc += dbv->db_length;
+			break;
+		}
+	}
+	/*
+	** If we got a %a, but not all of target list was a %a then
+	** it is an error.
+	*/
+	if (percent_a_cnt != 0)
+	{
+	    if (percent_a_cnt != mcnt)
+	    {
+		return QG_NOTALLA;
+	    }
+	    else if ((qstr->qg_dbvs = (DB_DATA_VALUE *)MEreqmem((u_i4)0,
+		(u_i4)(mcnt * sizeof(*(qstr->qg_dbvs))),
+		FALSE, (STATUS *)NULL)) == NULL)
+	    {
+		return QE_MEM;
+	    }
+	}
+	qstr->qg_mcnt = mcnt;
+
+	qstr->qg_bsize = alloc;
+
+	if ((qstr->qg_buffer = (char *)MEreqmem((u_i4)0, (SIZE_TYPE)alloc, FALSE,
+	    (STATUS *)NULL)) == NULL)
+	{
+		return QE_MEM;
+	}
+	if ((qstr->qg_msize = (i4 *)MEreqmem((u_i4)0,
+	    (u_i4)(mcnt * sizeof(i4)), FALSE, (STATUS *)NULL)) == NULL)
+	{
+		return QE_MEM;
+	}
+	qstr->qg_margv = qry->qg_argv;
+	if ((qry->qg_argv = (char **)MEreqmem((u_i4)0,
+	    (u_i4)(mcnt * sizeof(char *)), FALSE, (STATUS *)NULL)) == NULL)
+	{
+		return QE_MEM;
+	}
+	for (cp = qry->qg_param, alloc = (SCALARP) qstr->qg_buffer,
+	     dbv = qstr->qg_dbvs, margv = qstr->qg_margv,
+	     size = qry->qg_sizelist, dsize = qstr->qg_msize,
+	     argv = qry->qg_argv; *cp; cp++)
+	{
+		if (*cp != '%')
+			continue;
+		mcnt++;
+		switch (*++cp)
+		{
+		  case 'c':
+			*argv++ = (char *) alloc;
+			*dsize++ = (*size) + 1;
+			alloc += (*size++) + 1;
+			break;
+
+		  case 'i':
+		  case 'f':
+		  {
+			DB_DATA_VALUE	dbv;
+
+			dbv.db_length = *size++;
+			dbv.db_datatype =
+				(*cp == 'i' ? DB_INT_TYPE : DB_FLT_TYPE);
+			cp++;
+			alloc = DB_ALIGN_MACRO(alloc);
+			*argv++ = (char *) alloc;
+			*dsize++ = *size;
+			alloc += *size++;
+			break;
+		  }
+		
+		  case 'a':
+			*argv = (char *) dbv;
+			STRUCT_ASSIGN_MACRO(*((DB_DATA_VALUE *) *margv), *dbv);
+			alloc = DB_ALIGN_MACRO(alloc);
+			dbv->db_data = (PTR) alloc;
+			alloc += dbv->db_length;
+			argv++;
+			dbv++;
+			margv++;
+			break;
+		}
+	}
+	return OK;
+}
+
+/*
+** QG_map
+**	Map from the buffer to the variables given in the original
+**	argv.  This is just a series of MEcopys from one argv
+**	to the next argv.
+**
+** PARAMETERS
+**	qry		{QDV0 *}
+**		The query to do the move for.
+*/
+static STATUS
+QG_map(qry)
+QDV0	*qry;
+{
+	QSTRUCT		*qstr;
+	register char	**sargv;
+	register char	**dargv;
+	register i4	*size;
+	i4		i;
+
+	if ((qstr = qry->qg_internal) == NULL)
+		return QE_NOINTERNAL;
+	if (!(qstr->qg_state & QS_MAP))
+		return OK;
+	/*
+	** If dbvs is not empty, then the target list contained
+	** only %a.  This means the argvs point to DB_DATA_VALUES.
+	** Therefore having copy what the DB_DATA_VALUEs point to.
+	*/
+	if (qstr->qg_dbvs != NULL)
+	{
+	    DB_DATA_VALUE	*sdbv;
+	    DB_DATA_VALUE	*ddbv;
+
+	    for (i = 0, sargv = qry->qg_argv, dargv = qstr->qg_margv;
+		 i < qstr->qg_mcnt;
+		 i++, sargv++, dargv++)
+	    {
+		sdbv = (DB_DATA_VALUE *) *sargv;
+		ddbv = (DB_DATA_VALUE *) *dargv;
+		MEcopy(sdbv->db_data, sdbv->db_length, ddbv->db_data);
+	    }
+	}
+	else
+	{
+	    for (i = 0, sargv = qry->qg_argv, dargv = qstr->qg_margv,
+		 size = qstr->qg_msize; i < qstr->qg_mcnt;
+		 i++, sargv++, size++, dargv++)
+	    {
+		    MEcopy(*sargv, *size, *dargv);
+	    }
+	}
+	return OK;
+}
+
+/*
+** QG_loc
+**	Build a location for the QDV0 from the past location.
+*/
+static STATUS
+QG_loc(qstr, loc)
+QSTRUCT		*qstr;
+LOCATION	*loc;
+{
+	char	*cp;
+
+	LOtos(loc, &cp);
+	if ((qstr->qg_lbuf = (char *)MEreqmem((u_i4)0,
+	    (u_i4)(STlength(cp) + 1), TRUE, (STATUS *)NULL)) == NULL)
+	{
+		return QE_MEM;
+	}
+	LOcopy(loc, qstr->qg_lbuf, &(qstr->qg_loc));
+	return OK;
+}
+
+/*
+** Name:	QG_escape() -	Escape Target List String Parameter Characters.
+**
+** Description:
+**	This is a simple routine to be used on character string parameters in
+**	the query target list.  It copies the string into the output buffer,
+**	character by character, looking for percents, double quotes and
+**	backslashes.  When one of these is found, it escapes it in the output
+**	buffer by doubling it if it is a percent, or by inserting a backslash
+**	before it otherwise.
+**
+** Inputs:
+**	instr	{ char * }  The string to be copied with characters escaped.
+**	outstr	{ char * }  The buffer to hold the copied string, with escape
+**				characters  inserted where necessary.
+**
+** History:
+**	05/88 (jhw) -- Added code to escape percents (%) as well.
+*/
+
+static VOID
+QG_escape ( instr, outstr )
+register char	*instr;
+register char	*outstr;
+{
+	while ( *instr != EOS )
+	{
+		if ( *instr == '"' || *instr == '\\' )
+			*outstr++ = '\\';
+		else if ( *instr == '%' )
+			*outstr++ = '%';
+		*outstr++ = *instr++;
+	}
+	*outstr = EOS;
+}
+
+/*
+**  QG_wescape
+**
+**	This routine is similar to QG_escape but does not replace \ with \\.
+**
+**  PARAMETERS
+**
+**	instr		{ char * }
+**		The string to be copied.
+**
+**	outstr		{ char * }
+**		The buffer to hold the copied string, with escape characters
+**		inserted where necessary.
+**
+**  CALLED BY - QG_where
+**
+**  HISTORY - 
+**		9/12/85		(marian)	bug # 6143
+**				took out || statement from the if statement 
+**
+*/
+
+static VOID
+QG_wescape( instr, outstr )
+register char	*instr;
+register char	*outstr;
+{
+	while ( *instr != EOS )
+	{
+		if ( *instr == '"' )
+			*outstr++ = '\\';
+		*outstr++ = *instr++;
+	}
+	*outstr = EOS;
+}
+
+/*{
+** Name:	QG_tupcnt	-	Set the tuple count.
+**
+** Description:
+**	Set the tuple count.  This is called at the end of running a
+**	query, and it sets it to the value of tuples returned.
+**
+** Inputs:
+**	tcnt		The number of tuples to set row count to.
+**
+** History
+**	16-jan-1986 (joe)
+**		First Written
+*/
+static VOID
+##QG_tupcnt(tcnt)
+## i4	tcnt;
+##{
+##	{
+
+##		set_equel (rowcount = tcnt)
+##	};
+##}

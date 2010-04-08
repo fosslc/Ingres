@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescfld.hlp, help for the "Select the Field to Edit Escape code for"
+/#-- popup in the escape code editor.
+/#-- 
+From this menu, you pick the field for which you want to edit escape code.  
+Note that fields for a detail table all begin with 'iitf'.
+
+There are two special field indicators on this menu: 'ALL' and 'iitf.ALL'.
+'ALL' is a universal indicator that refers to all simple fields on the
+form.  If you define escape code for 'ALL,' then it will be executed for
+all simple fields.  If you define escape code for a specific simple field,
+it will override whatever is defined for 'ALL.'  The 'iitf.ALL' symbol
+refers to all the column in the table field.  If you define escape code for
+a specific column in the table field, it will override whatever is defined 
+for 'iitf.ALL'.
+
+If escape code is currently present for a particular field, it is indicated 
+by an asterisk in the right-hand column of this menu. The menuitems are:
+
+  Select        Edit the escape code for the currently selected field.
+  Cancel        Cancel the edit request.
+  Help          Display this help text.

@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlpedit.hlp, help for editing local procedures.
+/#-- 
+On this screen, you can change the Return Type or Short Remark of a local
+procedure, or you can select EditSource to edit the local procedure's source
+code.
+
+You cannot change the name of the local procedure on this screen. 
+To change a local procedure name:
+     1. Select Cancel.
+     2. Select Rename at the Edit Local Procedures screen.
+
+When you are finished making changes on this screen, select OK to save them.

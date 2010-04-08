@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The size_io_buf resource controls the size of the buffer used to pass
+  data between the DBMS server and the I/O slaves.  If I/O slaves are
+  not being used (OS threaded modes, for instance), this resource has
+  no effect.
+
+  If the DBMS server(s) are using cache_sharing, the I/O slave can
+  transfer directly into the buffer cache, and no intermediate buffer
+  is needed.
+
+  The default is 32 Kbytes.

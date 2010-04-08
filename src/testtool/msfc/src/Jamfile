@@ -1,0 +1,63 @@
+#
+# Jamfile file for testtool!msfc!src
+#
+# History:
+#	09-feb-2005 (abbjo03)
+#	    Modifications to build on VMS.
+
+SubDir ING_SRC testtool msfc src ;
+
+IISUBSYS testtool msfc src ;
+
+if $(VMS)
+{
+    MSFCLIBS = LIBQLIB AFELIB LIBQGCALIB GCFLIB UGLIB ADFLIB CUFLIB COMPATLIB ;
+}
+else
+{
+    MSFCLIBS = LIBINGRES ;
+}
+
+
+IITOOLSEXE rolltest : rolltest.qc ;
+IINEEDLIBS rolltest : $(MSFCLIBS) ;
+
+IITOOLSEXE rollsync : rollsync.qc ;
+IINEEDLIBS rollsync : $(MSFCLIBS) ;
+
+IITOOLSEXE rolldrv : rolldrv.sc ;
+IINEEDLIBS rolldrv : $(MSFCLIBS) ;
+
+IITOOLSEXE rollcrea : rollcrea.qc ;
+IINEEDLIBS rollcrea : $(MSFCLIBS) ;
+
+IITOOLSEXE rollclup : rollclup.qc ;
+IINEEDLIBS rollclup : $(MSFCLIBS) ;
+
+IITOOLSEXE rollcldb : rollcldb.qc ;
+IINEEDLIBS rollcldb : $(MSFCLIBS) ;
+
+IITOOLSEXE rollchk : rollchk.qc ;
+IINEEDLIBS rollchk : $(MSFCLIBS) ;
+
+IITOOLSEXE msfctest : msfctest.qc ;
+IINEEDLIBS msfctest : $(MSFCLIBS) ;
+
+IITOOLSEXE msfcsync : msfcsync.qc ;
+IINEEDLIBS msfcsync : $(MSFCLIBS) ;
+
+IITOOLSEXE msfcdrv : msfcdrv.sc ;
+IINEEDLIBS msfcdrv : $(MSFCLIBS) ;
+
+IITOOLSEXE msfccrea : msfccrea.qc ;
+IINEEDLIBS msfccrea : $(MSFCLIBS) ;
+
+IITOOLSEXE msfcclup : msfcclup.qc ;
+IINEEDLIBS msfcclup : $(MSFCLIBS) ;
+
+IITOOLSEXE msfccldb : msfccldb.qc ;
+IINEEDLIBS msfccldb : $(MSFCLIBS) ;
+
+IITOOLSEXE msfcchk : msfcchk.qc ;
+IINEEDLIBS msfcchk : $(MSFCLIBS) ;
+

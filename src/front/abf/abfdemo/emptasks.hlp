@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+	The Employee Tasks Assignments Frame demonstrates how 4GL is
+	used to retrieve, manipulate, and update data in the database.
+	The main initial menu operation, GetEmployee, queries the
+	database based on values entered into fields on the form by
+	the user and then displays a submenu of operations to
+	manipulate the retrieved data.
+
+	Once employee data has been retrieved, the operations available
+	from the submenu are:
+
+	    Next       - retrieves the next employee record.
+
+	    DeleteEmp  - deletes an employee record.
+
+	    RemoveTask - removes an assigned task from an employee.
+
+	    UpdateEmp  - updates the database with all changes which
+			 have been made to the employee information.
+

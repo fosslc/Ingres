@@ -1,0 +1,27 @@
+;
+;  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+;
+
+;
+;    Source   : TkAnimat.def : Declares the module parameters for the DLL.
+;    Project  : Extension DLL (Task Animation).
+;    Author   : Sotheavut UK (uk$so01)
+;
+;    Purpose  : Dialog to show the progression of Task (Interruptible)
+;
+;  History:
+;  07-Feb-1999 (uk$so01)
+;     created
+;  16-Mar-2001 (uk$so01)
+;     Changed to be an Extension DLL
+;
+;
+
+; TkAnimat.def : Declares the module parameters for the DLL.
+
+LIBRARY      "TkAnimat"
+DESCRIPTION  'TkAnimat Windows Dynamic Link Library'
+
+EXPORTS
+	; Explicit exports can go here
+	TaskAnimateInitialize;

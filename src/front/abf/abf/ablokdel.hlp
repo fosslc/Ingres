@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- ablokdel.hlp, help on deciding whether or not to delete a lock on a 
+/#-- particular application component.
+/#-- 
+Before you delete a lock, make sure your cursor is on the right session.
+
+Details concerning the lock are available using the LockStatus utility.

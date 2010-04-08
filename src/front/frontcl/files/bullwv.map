@@ -1,0 +1,131 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/*****************************************************************************/
+/* BULL WindowView FRS mapping file for NCD xterm with func. keys F1-F12     */
+/* and Sh+F1-Sh+F12.                                                         */
+/*     Last update:  16 May 1991                                             */
+/* Function key layout is as follows:                                        */
+/*  pf1     (F1)            = Menu                                           */
+/*  pf2     (F2)            = frskey1 (Help)                                 */
+/*  pf3     (F3)            = frskey3 (End)                                  */
+/*  pf4     (F4)            = frskey2 (Quit)                                 */
+/*  pf5     (F5)            = frskey4 (Go)                                   */
+/*  pf6-7   (F6-F7)         = menuitems 1-2                                  */
+/*  pf8     (F8)            = frskey7 (Find)                                 */
+/*  pf9     (F9)            = frskey8 (Save)                                 */
+/*  pf10    (F10)           = frskey9 (Forget)                               */
+/*  pf11-12 (F11-F12)       = menuitems 3-4                                  */
+/*  pf13-24 (Sh+F1-Sh+F812) = menuitems 5-12                                 */
+/*  pf25    (Ins)           = mode                                           */
+/*  pf26    (End)           = frskey6 (Bottom)                               */
+/*  pf27    (PgDn)          = scrollup                                       */
+/*  pf28    (Home)          = frskey5 (Top)                                  */
+/*  pf29    (PgUp)          = scrolldown                                     */
+/*****************************************************************************/
+
+/* Menu Key */
+	menu = pf1 (F1)
+
+/* Help Facility */
+	frskey1 = pf2 (F2)
+
+/* Exit the system */
+	frskey2 = pf4 (F4)
+
+/* Exit the frame, returning to previous frame */
+	frskey3 = pf3 (F3)
+
+/* Execute function */
+	frskey4 = pf5(F5)
+
+/* Move to top of table field */
+	frskey5 = pf28 (Home)
+
+/* Move to bottom of table field */
+	frskey6 = pf26 (End)
+
+/* Search table field for specified string */
+	frskey7 = pf8 (F8)
+
+/* Save object in database */
+	frskey8 = pf9 (F9)
+
+/* Undo last action or forget changes made in frame */
+	frskey9 = pf10 (F10)
+
+/* Scroll left on a form */
+	scrollleft = controlL (^L)
+
+/* Scroll right on a form */
+	scrollright = controlU (^U)
+
+/* Move up one word within field */
+	nextword = controlB (^B)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf27 (PgDn)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf29 (PgUp)
+
+/* Print contents of current screen to file */
+	printscreen = controlG (^G)
+
+/* Select menu items */
+	menuitem1 = pf6 (F6)
+	menuitem2 = pf7 (F7)
+	menuitem3 = pf11 (F11)
+	menuitem4 = pf12 (F12)
+	menuitem5 = pf13 (Sh+F1)
+	menuitem6 = pf14 (Sh+F2)
+	menuitem7 = pf15 (Sh+F3)
+	menuitem8 = pf16 (Sh+F4)
+	menuitem9 = pf17 (Sh+F5)
+	menuitem10 = pf18 (Sh+F6)
+	menuitem11 = pf19 (Sh+F7)
+	menuitem12 = pf20 (Sh+F8)
+	menuitem13 = pf21 (Sh+F9)
+	menuitem14 = pf22 (Sh+F10)
+	menuitem15 = pf23 (Sh+F11)
+	menuitem16 = pf24 (Sh+F12)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Switch between insert and overstrike mode */
+	mode = pf25 (Ins)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlH (Backspace)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear the field */
+	clear = controlX (^X)
+
+/* Move to next field */
+	nextitem = controlM (Return)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlE (^E)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)
+
+	controlJ = off
+	controlK = off

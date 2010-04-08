@@ -1,0 +1,108 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ui.qsh>
+
+/**
+** Name:    iiuicw.qc -		Front-End DBMS Catalog Write Control Module.
+**
+** Description:
+**	Contains routines that enable and disable updates to the FE catalogs.
+**	The 6.0 DBMS prevents Frontend catalogs from being updated (or created
+**	or destroyed) unless 'iiuicw1_CatWriteOn()' has been called.
+**
+**	This file defines:
+**
+**	iiuicw1_CatWriteOn()	Turn on catalog writing capability.
+**	iiuicw0_CatWriteOff()	Turn off catalog writing capability.
+**
+**	(the mnemonic is based on the 1/0 labels of hardware on/off switches)
+**
+** History:
+**	15-apr-1987 (sandyd)
+**		Initial stubbed version created.
+**	21-apr-1987 (sandyd)
+**		Implemented with call to LIBQ function.
+**	18-dec-1987 (danielt)
+**		Made a no-op against a gateway
+**	26-feb-1991 (pete)
+**		Made it NOT a no-op against Star (which speaks UI_DML_GTWSQL).
+**/
+
+# ifndef HACKFOR50
+VOID	IIlq_Protect();
+# endif
+
+
+/*{
+** Name:    iiuicw1_CatWriteOn() - Turn on FE catalog writing capability
+**
+** Description:
+**	This routine sends a special signal to the DBMS to enable updates
+**	to the FE catalogs.  (When this mode is on, new FE catalogs can
+**	also be created.)
+**
+** Side Effects:
+**	Turns on FE catalog write permissions.
+**
+** History:
+**	15-apr-1987 (sandyd)
+**		Initial stubbed version created.
+**	21-apr-1987 (sandyd)
+**		Implemented with call to LIBQ function.
+**	18-dec-1987 (danielt)
+**		Made a no-op against a gateway
+**	26-feb-1991 (pete)
+**		Made it NOT a no-op against Star (which speaks UI_DML_GTWSQL).
+*/
+VOID
+iiuicw1_CatWriteOn()
+{
+# ifndef HACKFOR50
+    if ((IIUIdml() != UI_DML_GTWSQL) || (IIUIdcd_dist() == TRUE))
+    {
+	/* INGRES or Star */
+    	IIlq_Protect(TRUE);
+    }
+# endif
+}
+
+/*{
+** Name:	iiuicw1_CatWriteOff() - Turn off FE catalog writing capability
+**
+** Description:
+**	This routine sends a special signal to the DBMS to disable updates
+**	to the FE catalogs.  This restores them to protected mode so that
+**	user programs cannot trash the contents of the FE catalogs.
+**
+** Side Effects:
+**	Turns off FE catalog write permissions.
+**
+** History:
+**	15-apr-1987 (sandyd)
+**		Initial stubbed version created.
+**	21-apr-1987 (sandyd)
+**		Implemented with call to LIBQ function.
+**	18-dec-1987 (danielt)
+**		Made a no-op against a gateway
+**	26-feb-1991 (pete)
+**		Made it NOT a no-op against Star (which speaks UI_DML_GTWSQL).
+*/
+VOID
+iiuicw0_CatWriteOff()
+{
+# ifndef HACKFOR50
+    if ((IIUIdml() != UI_DML_GTWSQL) || (IIUIdcd_dist() == TRUE))
+    {
+	/* INGRES or Star */
+    	IIlq_Protect(FALSE);
+    }
+# endif
+}

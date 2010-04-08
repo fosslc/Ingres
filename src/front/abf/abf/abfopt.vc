@@ -1,0 +1,79 @@
+:dcl machine,system,att
+:if 0 = 1
+
+	This creates variant "abf.opt" file to be installed in ING_FILES.
+
+	the vc control variables are:
+
+	machine		::= {vax | mc68k | mc68000 | u3b5 | etc.}
+
+	Create the right version via:
+
+		vc < abfopt.vc > abf.opt machine=`machine` system=`whatunix`
+
+**		Revision 30.8  86/06/30  15:56:33  boba
+**		Sequent shouldn't use -lld.
+**		
+**		Revision 30.6  86/02/26  17:48:46  roger
+**		Renamed 3B5 curses libray.
+**		
+**		Revision 30.5  86/02/13  12:11:30  daveb
+**		simplify libraries on system V by adding new vc variable "att"
+**		if this is an at&t machine
+**		
+**		Revision 30.4  85/12/03  17:03:01  seiwald
+**		Check for sys5 restricted to certain machines.
+**		
+**		Revision 30.3  85/12/03  15:26:30  cgd
+**		Took out '& :machine: = vax' so library names get output 
+**		for SYS5
+**		
+**		Revision 30.2  85/08/27  15:04:57  bruceb
+**		changed 3b5 to u3b5, added '-lld' for system v, broke system
+**		V into 2 parts, for vax customers, and for 3b's (AT&T only?);
+**		for the 3b's, use e.g. -lframe instead of /path/framelib, 
+**		and -lingcurses.
+**
+**		Revision 30.1  85/08/14  19:30:31  source
+**		llama code freeze 08/14/85
+**
+
+:end
+:asg att=false
+:if :machine: = u3b | :machine: = u3b2 | :machine: = u3b5 | :machine: = u3b15
+:asg att=true
+:end
+:if :system: = BSD41 | :system: = BSD42
+/ingres/lib/abflib
+/ingres/lib/gbflib
+/ingres/lib/framelib
+/ingres/lib/termdrlib
+/ingres/lib/fmtlib
+/ingres/lib/libqlib
+/ingres/lib/compatlib
+:end
+:if :system: = BSD41
+-ljobs
+:end
+:if :system: = SYS5 & :att: = false
+/ingres/lib/abflib
+/ingres/lib/gbflib
+/ingres/lib/framelib
+/ingres/lib/termdrlib
+/ingres/lib/fmtlib
+/ingres/lib/libqlib
+/ingres/lib/compatlib
+:end
+:if :system: = SYS5 & :att: = true
+-labf
+-lgbf
+-lframe
+-ltermdr
+-lfmt
+-llibq
+-lcompat
+-licurses
+:end
+:if :system: = SYS5 & :machine: != ns32000
+-lld
+:end

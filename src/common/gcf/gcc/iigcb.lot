@@ -1,0 +1,5 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libiigcc.olb/library, -
+INGLIB:libgcf.olb/library, -
+INGLIB:libcompat.olb/library

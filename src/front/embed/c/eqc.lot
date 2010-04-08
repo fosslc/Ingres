@@ -1,0 +1,6 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libembedc.olb/library/include=(c,ctokens), -
+INGLIB:libequel.olb/lib, INGLIB:libug.olb/lib, -
+INGLIB:libfmt.olb/lib, INGLIB:libafe.olb/lib, -
+INGLIB:libadf.olb/lib, INGLIB:libcompat.olb/lib

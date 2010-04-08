@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescbl.hlp	Before-Lookup escape code help
+Before-Lookup escape code runs before the CALLFRAME lookup() in the
+"ListChoices" menuitem.

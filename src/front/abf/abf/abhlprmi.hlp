@@ -1,0 +1,53 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of a host-language procedure.  You can
+change the definition on the form and through some of the menu operations.
+Within the running application this procedure will execute whenever it is
+invoked by any executing 4GL or host-language code.
+
+If the name you have chosen for the procedure conflicts with the name of
+an Ingres system function, a reverse-video warning will be displayed on this
+form (unless the "-w" flag was specified when you started up.)  You may
+continue to use the name for the procedure, but you will not be able to call
+the corresponding system function from 4GL in this application.
+
+A host-language procedure may be specified as being a library procedure if
+the Library field says "Yes."  Library procedures will be linked into an
+application through the link options file. 
+Their source code is maintained externally , so library procedures cannot
+have a source code file specified as shown by the value of "<none>" in the
+Source File field.
+
+The Symbol field specifies the host link name associated with the procedure.
+That is, the name the host operating system linker uses to call the procedure.
+Usually this is the same as the name of the procedure, but can be
+different if required.  This field should always have a value.
+
+The Source File field specifies the file in which the host-language source
+code for this procedure may be found, if any.  (Library procedures cannot
+have a source code file.)  This will be set initially when the procedure
+is created, but may be modified.
+
+Fill in the Return Type field with the data type of the value that will be
+returned by this procedure, if any.  Legal return types are any of the
+integer, floating point or character data types, "string," or "none."  Legal
+return types are listed and may be specified by selecting the Field menu item
+of the Help operation.  Host-language procedures cannot return Nullable
+values, which is why the Nullable field contains a display-only value of "No."
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Rename                  Give the procedure a new name.
+
+        LongRemark              Display and allow editing of the long remarks.
+
+	ListChoices             Display choices for the current field.
+
+        Cancel                  Ignore any changes and return to the previous 
+                                frame.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Save any changes and return to the previous 
+                                frame.

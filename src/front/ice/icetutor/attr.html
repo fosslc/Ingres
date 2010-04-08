@@ -1,0 +1,22 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Attributes&previous=links.html&next=header.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`checkSQL.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`
+The ATTR keyword allows the user to change the appearance of the page by specifying HTML attributes which will be applied to the generated HTML.
+Ingres Web Deployment Option does not parse the value, it simply passes it through to the output page. Valid values for the ATTR keyword include any HTML which 
+is legal in the context of the specified output type.<p>
+For TYPE=``TABLE``, the ATTR keyword can be used to specify the table border width, color, cell spacing, alignment, 
+or any of the other HTML table attributes. <p>
+
+For TYPE=``SELECTOR``, the ATTR keyword should be used to specify the name of the HTML variable into which the 
+browser will place the selected value.<p>
+For TYPE=``PLAIN``, the ATTR keyword can be used to specify the attributes for image output.<p>
+For TYPE=``UNFORMATTED``, the ATTR keyword is not used.<p>
+
+<!-- #ICE VAR=``<INPUT SIZE="32" NAME="attr" VALUE=":attr">`` -->
+			<!-- #ICE REPEAT INCLUDE=``sqlResult.html`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

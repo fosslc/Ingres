@@ -1,0 +1,47 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icdbfrm.hlp        Help on Accessdb's Info about a Database frame.
+/#--
+This frame displays information about a database.
+
+	FIELD NAME	SYNOPSIS
+	----------	--------
+	Database        Name of the database this frame describes.
+	
+	Owner           The Ingres user who owns this database.
+	
+	Database
+	  Location      Location name where database is stored.
+	
+	Checkpoint
+	  Location      Location name where database checkpoints are stored.
+	
+	Journal
+	  Location      Location name where database journals are stored.
+	
+	Work
+	  Location      Location name where database works are stored.
+
+	Dump
+	  Location      Location name where dump log files used for on-line 
+			backup are stored.
+	
+	Database Type   Type of Database.
+			The field is displayed only if the database is
+			an Ingres/Star distributed database.
+
+	CDB Name	Name of the Coordinator Database (CDB)
+			This field is displayed only if the database is
+			an Ingres/Star distributed database.
+
+	CDB Node	Node of the Coordinator Database (CDB)
+			This field is displayed only if the database is
+			an Ingres/Star distributed database.
+
+	
+The menu commands are:
+	
+	MENU COMMANDS	SYNOPSIS
+	-------------	-----------
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

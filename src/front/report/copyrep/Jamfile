@@ -1,0 +1,18 @@
+#
+# Jamfile file for front!report!copyrep
+#
+
+SubDir ING_SRC front report copyrep ;
+
+IISUBSYS front report copyrep ;
+
+
+IIBINEXE copyrep : copyrep.c ;
+IINEEDLIBS copyrep :  COPYREPLIB SREPORTLIB REPORTLIB ADFLIB
+	SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS copyrep : s_readin malloc ;
+
+IIMSGHDR errc.msg ;
+
+IILIBRARY COPYREPLIB : crwrtrep.c crdmprep.c crcrack.c ;
+

@@ -1,0 +1,13 @@
+#
+# Jamfile file for testtool!sep!sepcl_unix_win
+#
+
+SubDir ING_SRC testtool sep sepcl_unix_win ;
+
+IISUBSYS testtool sep sepcl_unix_win ;
+
+
+IILIBRARY SEPCLLIB : termstuff.c sighandler.c septrace.c
+	sepst.c sepspawn.c sepnm.c seplo.c sepcm.c sepalloc.c
+	nmsetenv.c getloc.c ;
+

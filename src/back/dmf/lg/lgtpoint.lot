@@ -1,0 +1,20 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libdmf.olb/library, -
+INGLIB:libulf.olb/library, -
+INGLIB:libscf.olb/library, -
+INGLIB:libqef.olb/library, -
+INGLIB:libqsf.olb/library, -
+INGLIB:libopf.olb/library, -
+INGLIB:libpsf.olb/library, -
+INGLIB:librdf.olb/library, -
+INGLIB:libgwf.olb/library, -
+INGLIB:libsxf.olb/library, -
+INGLIB:libgcf.olb/library, -
+INGLIB:libdmf.olb/library, -
+INGLIB:libulf.olb/library, -
+INGLIB:libadf.olb/library, -
+INGLIB:libtpf.olb/library, -
+INGLIB:librqf.olb/library, -
+INGLIB:libcuf.olb/library, -
+INGLIB:libcompat.olb/library

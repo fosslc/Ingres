@@ -1,0 +1,63 @@
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_application_mod
+
+CREATE UNIQUE INDEX ii_application_mod
+    ON ii_applications (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_components_mod
+
+CREATE UNIQUE INDEX ii_components_mod
+    ON ii_components (entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dependencie_mod
+
+CREATE INDEX ii_dependencie_mod
+  on ii_dependencies (src_entity_id, dependency_origin)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dependenc_index
+
+CREATE INDEX ii_dependenc_index
+  on ii_dependencies (dest_entity_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_dependen_index2
+
+CREATE INDEX ii_dependen_index2
+  on ii_dependencies (dest_app_name, qualified_ref)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_incl_apps_mod
+
+CREATE INDEX ii_incl_apps_mod
+    ON ii_incl_apps (app_id)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_srcobj_enco_mod
+
+CREATE UNIQUE INDEX ii_srcobj_enco_mod ON ii_srcobj_encoded
+    (entity_id, sub_type, sequence_no)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_stored_bitm_mod
+
+CREATE UNIQUE INDEX ii_stored_bitm_mod ON ii_stored_bitmaps
+    (picture_id, row_sequence)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_stored_stri_mod
+
+CREATE UNIQUE INDEX ii_stored_stri_mod ON ii_stored_strings
+    (string_id, row_sequence)
+

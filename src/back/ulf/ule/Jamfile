@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!ulf!ule
+#
+
+SubDir ING_SRC back ulf ule ;
+
+IISUBSYS back ulf ule ;
+
+
+IILIBRARY ULFLIB : uleformat.c ;
+
+IILIBRARY IMPULFLIBDATA : uledata.c ;

@@ -1,0 +1,12 @@
+#
+# Jamfile file for gl!glf!megl
+#
+
+SubDir ING_SRC gl glf megl ;
+
+IISUBSYS gl glf megl ;
+
+
+IILIBRARY COMPATLIB : metag.c
+	megltls.c ;
+

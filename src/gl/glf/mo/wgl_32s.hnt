@@ -1,0 +1,18 @@
+#
+# wgl_32s.hnt file for gl/glf/mo
+#
+# Note: The wgl_32s.ini file contains a special case for this
+#	directory.  CFLAGS3 is used to compile this directory.
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+#	29-jan-07 (wridu01)
+#		Removed modata.obj from objonly list
+#
+
+objonly = motest.obj 
+objonly = motest2.obj 
+objonly = motest3.obj 
+
+

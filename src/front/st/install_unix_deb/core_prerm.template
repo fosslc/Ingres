@@ -1,0 +1,31 @@
+#
+## Copyright Ingres Corporation 2007. All Rights Reserved.
+##
+## Name: core_prerm.template
+##
+## Description:
+##	Template file for DEB prerm script for core package. Not intended to
+##	be manually runnable
+##
+## History:
+##	12-Jul-2007 (hanje04)
+##	    SIR 118420
+##	    Created.
+##
+export II_SYSTEM=%rpm_prefix%
+rc=0
+
+if [ "$1" = "remove" ] ; then
+    $II_SYSTEM/ingres/utility/iicorepreun -r %rpm_basename% \
+        -v %rpm_version%
+    rc=$?
+elif [ "$1" = "upgrade" ] ; then
+    $II_SYSTEM/ingres/utility/iicorepreun -r %rpm_basename% \
+        -v %rpm_version% -u
+    rc=$?
+
+fi
+
+
+exit $rc
+

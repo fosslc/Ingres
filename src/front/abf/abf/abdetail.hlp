@@ -1,0 +1,39 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Applications Catalog Details Form
+
+     This form provides additional details about a selected application.
+     All fields are display-only except for the Short and Long Remarks
+     fields, which may be updated.  A "Save" command is provided on the
+     menu to store any updated information in the database.  "Next"
+     ("Previous") will show the Details frame for the application which
+     appears after (before) the current application in the main catalog
+     table field.  "Next" will advance to the top application of the
+     catalog table field if the current application is the last one, and
+     similarly for "Previous".
+
+        Field Name              Description
+        ----------               -----------
+        Name                    Name of the application.
+        Owner                   Owner of the application.
+        Created                 Date when this application was first
+				created.
+        Modified                Date when this application was last
+				altered.
+        Short Remark            One-line description of the application.
+        Long Remark             Longer description of current application.
+
+     The following commands are available on the Catalog Details Form:
+
+        Command                 Function
+        --------                --------
+	Next                    Show Details frame for next application in
+                                the main catalog table field.
+	Previous                Show Details frame for previous application
+                                in the main catalog table field.
+        Save                    Store the current application in the System
+                                Catalogs.  A valid name must be specified
+                                in the "Name" field.
+	Defaults                Edit the application's build parameters.
+        Help                    Print this message.
+        End                     Stop work on this frame and return to the
+                                frame that called it.

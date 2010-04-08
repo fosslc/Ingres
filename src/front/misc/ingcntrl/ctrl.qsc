@@ -1,0 +1,439 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+#include	<compat.h>
+#include	<er.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<st.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	<erfe.h>
+#include	<uigdata.h>
+#include	"eric.h"
+#include	"global.h"
+
+GLOBALREF       bool    Mgr;
+GLOBALREF bool  IiicPrivSysadmin;  /* TRUE if user has SYSTEM_ADMIN privilege */
+GLOBALREF bool  IiicPrivSecurity;
+
+static bool	Dbcat_added = FALSE;
+
+## static   char    Dbtblfrm[]      = ERx("dbtblfrm");
+static VOID init_dbtbl();
+static VOID dbcatalog();
+
+#define POLICY_MESSAGE_LENGTH 72+1
+#define MAX_CAP_VALUE_LENGTH  6+1
+#define MAX_CAPABILITY_LENGTH 22+1
+
+/*{
+** Name:	mgrform - display the main Accessdb menu.
+**
+** Description:
+**	Display the main Accessdb screen & menu.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	11-apr-1990 (pete)
+**		Added this module description + declare mgrform as a VOID +
+**		allow users to enter too-long a username & database name.
+**      23-apr-1990 (pete)
+**              fix 6.3 bug 21342 with bad explanations for Help & End.
+**      15-jun-1993 (kellyp)
+**              replaced QUIT menuitem with END menuitem in the Database
+**		Catalog frame.
+**      21-jun-1993 (kellyp)
+**		Removed ACCESSGRANT menuitem. It's too buggy and everything
+**		done through this menuitem can be done directly in SQL, so
+**		no functionality is denied.
+**	26-Aug-1993 (fredv)
+**		included <st.h>.
+**	26-Jan-1994 (michael)
+**		Added function to INITIALIZE block to display alpha case policy
+**		statement.
+**	30-Nov-1994 (nanpr01)
+**		Fixed Bug # 60935. Cursor now waits in the menu line
+**		rather than case sensitive field. 
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+VOID
+mgrform()
+## {
+##	char	db_name[(2*DB_MAXNAME)+1];/* allow longer names & catch errors */
+##	char	*accessgrants_menuitem = ERx("");
+##	char	casePolicyMsg[POLICY_MESSAGE_LENGTH];
+EXEC SQL BEGIN DECLARE SECTION;
+##	char 	username[FE_MAXNAME+1];
+EXEC SQL END DECLARE SECTION;
+	void	fmtCaseMsg();
+
+	if ( IIUFgtfGetForm(IIUFlcfLocateForm(), ERx("ctrlmenu")) != OK )
+	{
+	    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_FATAL, 0);
+	}
+
+	EXEC SQL SELECT name
+	INTO :username
+	FROM iiuser
+	WHERE name = user;
+
+	fmtCaseMsg( casePolicyMsg );
+##	DISPLAY ctrlmenu READ
+##	INITIALIZE ( case_policy = casePolicyMsg, openingres_uname = username )
+##	{
+##		PUTFORM "ctrlmenu" (case_policy = casePolicyMsg ,
+##				    openingres_uname = username)
+##		RESUME MENU
+##	}
+
+##	ACTIVATE MENUITEM ERget(F_IC0001_Databases):
+##	{
+		dbcatalog(ERx(""));
+##		RESUME MENU
+##	}
+##	ACTIVATE MENUITEM ERget(F_IC0005_Locations):
+##	{
+		loclst_form();
+##		RESUME MENU
+##	}
+##	ACTIVATE MENUITEM ERget(F_IC0006_Users):
+##	{
+		usrtbl_form();
+##		RESUME MENU
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##      VALIDATE = 0), FRSkey1 (VALIDATE =0):
+##	{
+		FEhelp(ERx("icmgr.hlp"), ERget(S_IC001B_Manager_Menu_Form));
+##		RESUME MENU
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Quit), FRSkey2, FRSkey3 (VALIDATE = 0):
+##	{
+##		BREAKDISPLAY
+##	}
+## }
+
+
+/*{
+** Name:        fmtCaseMsg - Format message for displaying on form.
+**
+** Description:
+**      Format a message describing the case sensitivity policy for displaying
+**      on Form.
+**
+** Inputs:
+**      char pointer to place message into.
+**
+** Outputs:
+**
+**      Returns:
+**              VOID
+**
+**      Exceptions:
+**              NONE
+**
+** Side Effects:
+**
+** History:
+**      25-jan-1994 (michael)
+**              created this function to format message describing case
+**              sensitivity/insensitivity policy for displaying on the screen.
+*/
+
+void 
+fmtCaseMsg( msg )
+
+char *msg;
+
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char cap_capability[MAX_CAPABILITY_LENGTH];   /* here to keep SQL happy */
+    char cap_value[MAX_CAP_VALUE_LENGTH];
+    EXEC SQL END DECLARE SECTION;
+    char tmpMsg[POLICY_MESSAGE_LENGTH];
+
+    /* get capabilities that describe case policy from iidbdb */
+    EXEC SQL SELECT cap_capability, cap_value
+	     INTO :cap_capability, :cap_value
+	     FROM iidbcapabilities
+	     WHERE cap_capability = 'DB_DELIMITED_CASE';
+
+    STtrmwhite( cap_value );
+
+    /* format policy string */
+    if (STequal( cap_value, "MIXED" ))
+    {
+	STprintf( tmpMsg, "case sensitive" );
+    } else {
+	STprintf( tmpMsg, "case insensitive" );
+    }
+
+    /* little rear cover here */
+    if (msg == (char *)NULL)
+    {
+	msg = STalloc( tmpMsg );
+    } else {
+	STcopy(tmpMsg, msg);
+    }
+}
+
+
+/*{
+** Name:	dbcatalog - display the databases.
+**
+** Description:
+**	Display the databases.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	11-apr-1990 (pete)
+**		Added this module description + declare mgrform as a VOID +
+**		allow users to enter too-long a username & database name.
+**      23-apr-1990 (pete)
+**              fix 6.3 bug 21342 with bad explanations for Help & End.
+*/
+
+static VOID
+dbcatalog(username)
+char	*username;
+## {
+##	char	dbname[DB_MAXNAME+1];
+##      char	*extend_menuitem;
+##	char	*dbcat_title;
+##	char	*accessgrants_menuitem = ERx("");
+
+
+	if (!Dbcat_added)
+	{
+	    if ( IIUFgtfGetForm(IIUFlcfLocateForm(), Dbtblfrm) != OK )
+	    {
+		IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_FATAL, 0);
+	    }
+	    Dbcat_added = TRUE;
+	}
+
+	if (Mgr && IiicPrivSecurity)
+        {
+	    dbcat_title = ERget(F_IC0002_Acc_Database_Catalog);
+            extend_menuitem = ERget(F_IC0007_ExtendDB);
+        }
+        else
+        {
+            /* User is either running Catalogdb, or Accessdb & with only
+            ** SYSTEM_ADMIN privilege.
+            */
+	    dbcat_title = ERget(F_IC0003_Cat_Database_Catalog);
+            extend_menuitem = ERget(F_IC000B_DbExtensions);
+        }
+
+##	DISPLAY Dbtblfrm READ
+##	INITIALIZE
+##	{
+		init_dbtbl(username);
+##	}
+
+##  	ACTIVATE MENUITEM ERget(F_IC0024_AccessGrants):
+##	{
+##              GETROW Dbtblfrm db_table (dbname = db_name);
+		if ( STtrmwhite(dbname) > 0 && dbname[0] != EOS )
+			(VOID) dbaccform(dbname);
+##	}
+
+##  	ACTIVATE MENUITEM extend_menuitem
+##	{
+##              GETROW Dbtblfrm db_table (dbname = db_name);
+		if ( STtrmwhite(dbname) > 0 && dbname[0] != EOS )
+			(VOID) extendform(dbname);
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_MoreInfo):
+##	{
+##              GETROW Dbtblfrm db_table (dbname = db_name);
+		if ( STtrmwhite(dbname) > 0 && dbname[0] != EOS )
+			(VOID) dbform(dbname);
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##      VALIDATE = 0), FRSkey1 (VALIDATE =0):
+##	{
+		FEhelp(ERx("icdblst.hlp"), ERget(S_IC001B_Manager_Menu_Form));
+##	}
+##      ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey3 (VALIDATE =0, ACTIVATE = 0):
+##      {
+##              BREAKDISPLAY
+##      }
+## }
+
+/*{
+** Name:	infoform - display the main Catalogdb menu.
+**
+** Description:
+**	Display the main Catalogdb screen & menu.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	7-nov-1990 (pete)
+**		Added this module description & changed rouserform() call to
+**		userform(). Remove queries that RETRIEVE the username
+**		and replace with IIUIgdata() call. Also changed rodbform()
+**		to dbform().
+**	14-oct-1993 (kellyp)
+**		CATALOGDB now has it's own top menu frame.
+**	14-oct-1993 (kellyp)
+**		Changed the name of the top menu frame from cctrlmeu
+**		to catamenu ( for portability restriction ).
+*/
+infoform(uc)
+char	*uc;
+## {
+
+	if (IIUFgtfGetForm(IIUFlcfLocateForm(), ERx("catamenu")) != OK)
+	    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_FATAL, 0);
+
+##	DISPLAY catamenu
+##	INITIALIZE
+
+##	ACTIVATE MENUITEM ERget(F_IC0001_Databases):
+##	{
+		dbcatalog(uc);
+##	}
+##	ACTIVATE MENUITEM ERget(F_IC0009_User):
+##	{
+		(VOID) userform(IIUIdbdata()->suser);
+##	}
+##	ACTIVATE MENUITEM ERget(F_IC0005_Locations):
+##	{
+		loclst_form();
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##	VALIDATE = 0), FRSkey1 (VALIDATE =0):
+##	{
+		FEhelp(ERx("icusr.hlp"), ERget(S_IC001C_User_Menu_Form));
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Quit), FRSkey2, FRSkey3 (VALIDATE = 0):
+##	{
+##		BREAKDISPLAY
+##	}
+##	FINALIZE
+## }
+
+/*{
+** Name:	init_dbtbl - display the main Database menus.
+**
+** Description:
+**	Display the main Database screen & menus.
+**
+** Inputs:
+**	uname
+**
+** Outputs:
+**
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	12-jul-1993 (kellyp)
+**		Added this module description.
+**	20-sep-1993 (robf)
+**              Query standard catalog (iidatabase_info) not internal catalog
+**	        (iidatabases). This allows users without QUERY_SYSCAT priv
+**	        to use accessdb/catalogdb
+*/
+
+static VOID
+init_dbtbl(uname)
+EXEC SQL BEGIN DECLARE SECTION;
+char	*uname;
+EXEC SQL END DECLARE SECTION;
+##{
+EXEC SQL BEGIN DECLARE SECTION;
+##	char	owner[FE_MAXNAME+1];
+##	char	name[DB_MAXNAME+1];
+	u_i4  dbservice;
+EXEC SQL END DECLARE SECTION;
+
+	/* Initialize read table field */
+##      INITTABLE Dbtblfrm db_table READ
+##	MESSAGE (ERget(S_IC0026_Retrieving_db_names))
+
+	/* Retrieve database info ... */
+	EXEC SQL SELECT database_name, database_owner, database_service 
+	    INTO	:name, :owner, :dbservice
+	    FROM iidatabase_info
+	    WHERE database_owner = :uname OR '' = :uname -- old trick, per-user or all.
+	    ORDER BY database_name;
+	EXEC SQL BEGIN;
+	{
+		if ( dbservice & DB_DISTRIBUTED )
+		{
+##			LOADTABLE Dbtblfrm db_table (db_name = name,
+##                      db_owner = owner, 
+##			db_type = ERget(F_IC0010_Distributed))
+		}
+		else if ( dbservice & DB_STAR_CDB )
+		{
+##			LOADTABLE Dbtblfrm db_table (db_name = name,
+##			db_owner = owner,
+##			db_type = ERget(F_IC0012_Star_CDB))
+		}
+		else
+		{
+##			LOADTABLE Dbtblfrm db_table (db_name = name,
+##                      db_owner = owner,
+##			db_type = ERget(F_IC0011_Local))
+		}
+	}
+	EXEC SQL END;
+##}
+

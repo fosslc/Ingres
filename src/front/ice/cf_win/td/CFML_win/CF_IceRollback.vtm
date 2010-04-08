@@ -1,0 +1,58 @@
+
+<TAG NAME="CF_IceRollback">
+    <EDITORLAYOUT HEIGHT="330" LFHEIGHT="330">
+
+	<control type="Image" name="imgEditor" width="170" height="MAXIMUM" corner="NE" right=5 down=5 filepath="../IngresIce/Icons/ingresii.bmp"/>
+
+		<CONTAINER TYPE="Panel" NAME="pnlCommon" CAPTION="" WIDTH="MAXIMUM" HEIGHT=80 LFHEIGHT=142 MAXWIDTHPADDING=0 ANCHOR="imgEditor" CORNER="NE" RIGHT=10>
+			<CONTROL NAME="lblValue" TYPE="Label" CAPTION="Transaction Name:" DOWN="20" ANCHOR="txtValue" CORNER="NE" RIGHT="10" WIDTH="100"/>
+            <control type="TextArea" name="txtValue" width="MAXIMUM" height="MAXIMUM" maxwidthpadding=10 anchor="lblValue" corner="NE" wrap horizresize="BODY"/>
+		</CONTAINER>
+					
+		<CONTAINER TYPE="Panel" NAME="pnlRepeat" WIDTH="MAXIMUM" HEIGHT="50" MAXWIDTHPADDING=0 MAXHEIGHTPADDING=5 ANCHOR="pnlCommon" CORNER="SW" DOWN=10>			
+			<CONTROL TYPE="Label" NAME="lblRepeat" WIDTH=60 LFWIDTH=96 CORNER="NW" RIGHT=10 Down=20 CAPTION="Repeat:"/>
+			<CONTROL NAME="txtRepeat" TYPE="CheckBox" ANCHOR="lblRepeat" CORNER="NE"  WIDTH="MAXIMUM"/>			
+		</CONTAINER>
+      </CONTAINER>
+
+   </EDITORLAYOUT>
+
+   <ATTRIBUTES>
+   </ATTRIBUTES>
+
+   <ATTRIBCATEGORIES>
+   </ATTRIBCATEGORIES>
+
+   <TAGLAYOUT>      
+   
+   <WIZIF OPTIONLowerCaseTags EQ 'true'>
+			<WIZSET TIMEOUT	= 'timeout'>
+			<WIZSET MIMEATTACH = 'mimeattach'>
+		<WIZELSE>
+			<WIZSET TIMEOUT	= 'TIMEOUT'>
+			<WIZSET MIMEATTACH = 'MIMEATTACH'>
+		</WIZIF>
+		
+		<WIZIF OPTIONLinearLayout EQ 'true'>
+			<WIZSET verticalSpacingGap =  ' ' >
+		<WIZELSE>
+			<WIZSET verticalSpacingGap =  Chr(13) & Chr(10) & '        ' >
+		</WIZIF>
+
+		<WIZIF txtRepeat EQ 'true'>
+			<WIZSET repeatDec = ' REPEAT ' >
+		<WIZELSE>
+			<WIZSET repeatDec = ' ' >
+		</WIZIF>
+
+  		<WIZSET Exclaim =  '!' >
+		
+<$${Exclaim}-- #ICE$${repeatDec}ROLLBACK=`$${txtValue}` -->
+   </TAGLAYOUT>
+
+
+   <TAGDESCRIPTION HELPFILE="../../TagDefs/IngresIce/Docs/cfRollback.html"/>
+
+
+</TAG>
+

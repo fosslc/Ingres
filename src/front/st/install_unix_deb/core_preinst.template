@@ -1,0 +1,296 @@
+#
+## Copyright Ingres Corporation 2007. All Rights Reserved.
+##
+## Name: precore.template
+##
+## Description:
+##	Template file for preinst script for core DEB package. Not intended
+##	to be run manually.
+##
+## History:
+##	10-Jul-2007 (hanje04)
+##	    SIR 118420
+##	    Created.
+##
+. /usr/share/debconf/confmodule
+
+if [ -n "$DEBIAN_SCRIPT_DEBUG" ]; then set -v -x; DEBIAN_SCRIPT_TRACE=1; fi
+${DEBIAN_SCRIPT_TRACE:+ echo "#42#DEBUG# RUNNING $0 $*" 1>&2 }
+
+export II_SYSTEM=%rpm_prefix%
+PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+export II_SYSTEM PATH LD_LIBRARY_PATH
+unset BASH_ENV
+runmode=$1
+export user_created=false
+export group_created=false
+rc=0
+
+stop_instance()
+{
+    inst_id=`ingprenv II_INSTALLATION`
+    rcfile=$ETCRCFILES/ingres${inst_id}
+    if which invoke-rc.d > /dev/null 2>&1 ; then
+	rccmd="invoke-rc.d ingres${inst_id}"
+    else
+	rccmd=$rcfile
+    fi
+    inst_log="2>&1 | cat >> $II_SYSTEM/ingres/files/install.log"
+
+    #Check to see if instance is running and try to shut it down
+    #Abort the install is we can't
+    [ -x $rcfile ] && [ -f $II_SYSTEM/ingres/files/config.dat ] &&
+    {
+	eval ${rccmd} status >> /dev/null 2>&1
+	if [ $? = 0 ]
+	then
+	    eval ${rccmd} stop $inst_log
+	    if [ $? != 0 ] ; then
+		rc=2
+		cat << EOF
+${relname} installation $inst_id is running and could not be cleanly shutdown.
+Aborting installation...
+EOF
+		exit $rc
+	    fi
+	fi
+    }
+}
+
+fail_cleanup()
+{
+# Remove anything we have created if the pre-install failed
+    $user_created && userdel -r $II_USERID
+    $group_created && groupdel $II_GROUPID
+    exit 1
+}
+
+iiread_response()
+{
+   value=""
+   [ "$2" ] && [ -f "$2" ] &&
+   {
+      cut -d= -f1 $2 | grep $1 >> /dev/null &&
+      {
+         value=`grep $1 $2 | cut -d= -f2`
+      }
+   }
+   echo $value
+}
+
+## main body of script starts here
+[ -x "${II_SYSTEM}/ingres/utility/iisysdep" ] &&
+{
+    . iisysdep
+    stop_instance
+}
+
+# Warn and bail if response file is set but invalid
+[ "$II_RESPONSE_FILE" ] && [ ! -f "$II_RESPONSE_FILE" ] &&
+{
+    rc=2
+    cat << !
+Cannot locate response file.
+
+        II_RESPONSE_FILE=$II_RESPONSE_FILE
+!
+
+   exit $rc
+}
+
+# Must be new install
+if [ "$runmode" = "upgrade" ]
+then
+    # As it's an upgrade no more pre-checks are needed
+    exit 0
+fi
+
+# Setup mesg cmds.
+ECHO=true
+CAT=true
+
+# Check II_INSTALLATION is valid if it's set
+[ -r "$II_RESPONSE_FILE" ] && \
+    instid=`iiread_response II_INSTALLATION $II_RESPONSE_FILE`
+[ -z "$instid" ] && [ "$II_INSTALLATION" ] && instid=$II_INSTALLATION
+[ "$instid" ] &&
+{
+     case "$instid" in
+        [[:alpha:]][[:alnum:]])
+                true # value OK, do nothing
+                ;;
+        *)
+                rc=3 # bad value, error and exit
+                cat << !
+
+${instid} is NOT a valid value for II_INSTALLATION
+
+II_INSTALLATION must be a 2 character string. The first character must be a
+letter, the second character can be a letter or a number.
+
+!
+                exit $rc
+                ;;
+        esac
+}
+
+# Keep silent unless explicitly told not to
+[ -x $II_SYSTEM/ingres/utility/iiread_response ] && \
+        [ -r "$II_RESPONSE_FILE" ] &&
+{
+    silent=`iiread_response SILENT_INSTALL $II_RESPONSE_FILE`
+    case "$silent" in
+        [Oo][No]|\
+        [Yy][Ee][Ss])
+            ECHO=echo
+            CAT=cat
+                ;;
+    esac
+}
+export ECHO CAT
+
+#Check for install userid, groupid; default to ingres
+iiuser=`iiread_response II_USERID $II_RESPONSE_FILE`
+II_USERID=${iiuser:-ingres}
+iigroup=`iiread_response II_GROUPID $II_RESPONSE_FILE`
+II_GROUPID=${iigroup:-ingres}
+
+# Check for Ingres install group/user and create it if it's not present
+crgroup=true
+getent group "$II_GROUPID" > /dev/null 2>&1
+[ $? = 0 ] && crgroup=false
+
+if $crgroup  ; then
+    /usr/sbin/groupadd $II_GROUPID
+    # Failed?
+    [ $? != 0 ] && {
+    rc=4
+    $ECHO "Failed to create group '$II_GROUPID'"
+    exit $rc
+    }
+    export group_created=true
+fi
+
+# Check for user
+cruser=true
+getent passwd "$II_USERID" > /dev/null 2>&1
+[ $? = 0 ] && cruser=false
+
+$cruser &&
+{
+    # find default location for user home directories
+    dflt_hdir=`/usr/sbin/useradd -D | grep ^HOME | cut -d= -f2`
+
+    # if it's writable use it otherwise use II_SYSTEM
+    if [ -w "$dflt_hdir" ]
+    then
+        # Check if the home directory already exists for some reason
+        # If it does don't use -m
+        if [ -d "$dflt_hdir/$II_USERID/.fonts" ] || \
+            [ -d "$dflt_hdir/$II_USERID/.xemacs" ] || \
+            [ -d "$dflt_hdir/$II_USERID/bin" ] || \
+            [ -d "$dflt_hdir/$II_USERID/Documents" ] || \
+            [ -d "$dflt_hdir/$II_USERID/public_html" ]
+        then
+            /usr/sbin/useradd -g $II_GROUPID -s /bin/bash \
+                -c 'Ingres Super User' $II_USERID
+            # Ensure new user owns it's home directory
+            su $II_USERID -c "test -O ~" || chown -R $II_USERID "$dflt_hdir/$II_USERID"
+        else
+            /usr/sbin/useradd -g $II_GROUPID -s /bin/bash \
+                -c 'Ingres Super User' -m $II_USERID
+        fi
+    else
+        mkdir -p $II_SYSTEM
+        /usr/sbin/useradd -g $II_GROUPID -s /bin/bash \
+                -c 'Ingres Super User'  -d $II_SYSTEM -m $II_USERID
+    fi
+    # Failed?
+    [ $? != 0 ] && {
+    rc=5 
+    $ECHO "Failed to create user '$II_USERID'"
+    exit $rc 
+    }
+    
+# Using SMB authenication?
+    [ "`grep ^'auth required' /etc/pam.d/login | grep pam_smb_auth`" ] &&
+    {
+        $CAT << EOF
+Your system appears to be using SMB authentication. Please run:
+    
+         smbpasswd -a $II_USERID
+
+to enable login.
+EOF
+    }
+
+    $CAT << EOF
+System user $II_USERID has been created but no password has been set.
+Please set the password to enable login for this user.
+    
+EOF 
+    export user_created=true
+
+}   
+# II_USERID doesn't exist
+
+[ "$II_RESPONSE_FILE" ] && {
+
+# Check response file is readable by specified installation owner.
+# If not abort the install before it starts. 
+    if su -c "[ ! -r \"$II_RESPONSE_FILE\" ]" $II_USERID ; then
+        rc=6
+        $CAT << !
+Response file is not readable by user $II_USERID
+
+        II_RESPONSE_FILE=$II_RESPONSE_FILE
+If user $II_USERID does not exist, the response file should be
+globally readable.
+!
+        exit $rc
+    fi
+}
+
+# Need to make sure II_SYSTEM and every where up the tree is readable by
+# $II_USERID. If it isn't we abort the install.
+inst_path=$II_SYSTEM
+while [ "$inst_path" != "/" ]
+do
+    [ -d "$inst_path" ] &&
+    {
+        if su -c "[ ! -r \"$inst_path\" ]" $II_USERID ; then
+            rc=7
+            $CAT << !
+The following location is not completely readable by user $II_USERID
+
+        $inst_path
+
+II_SYSTEM must be completely readable by user $II_USERID for the
+installation to proceed.
+
+        II_SYSTEM=$II_SYSTEM
+!
+            exit $rc
+        fi
+
+        if su -c "[ ! -x \"$inst_path\" ]" $II_USERID ; then
+            rc=8
+            $CAT << !
+User $II_USERID does NOT have execute permission for following location
+
+        $inst_path
+
+User $II_USERID must have execute permission in II_SYSTEM for installation
+to continue.
+
+        II_SYSTEM=$II_SYSTEM
+!
+            exit $rc
+        fi
+    }
+    inst_path="`dirname $inst_path`"
+done
+
+exit $rc
+

@@ -1,0 +1,20 @@
+#
+# Jamfile file for back!opf!opc
+#
+#   16-oct-2009 (hweho01)
+#     Remove IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back opf opc ;
+
+IISUBSYS back opf opc ;
+
+IINOOPTIM opcran.c : sos_us5 ;
+IINOOPTIM opcqtxt.c : i64_aix ;
+IINOOPTIM opcagg.c : rs4_us5 ;
+
+IILIBRARY OPFLIB : optftoc.c optcomp.c opctuple.c opctrutl.c
+	opctrtxt.c opcsorts.c opcsejoin.c opcran.c opcqual.c opcqtxt.c
+	opcqtree.c opcqp.c opcqen.c opcprtree.c opcorig.c opckey.c
+	opcjoins.c opcjcommon.c opcexch.c opcentry.c opcdqp.c
+	opcdqcmp.c opcahd.c opcagg.c opcadf.c ;
+

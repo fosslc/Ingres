@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmevents.hlp
+SELECT SERVER NUMBER TO RECEIVE EVENT
+
+This screen is used to raise the database event selected in the Send
+Database Event screen to one or all of the servers that are currently
+running against the local database.
+
+The column on the list is:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        Server Number   The number of a server to receive the event.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Send            Send the event to the currently highlighted
+                        server number.
+
+        All             Send the event to all the currently running
+                        servers.
+
+        Help            Access the Help facility.
+
+        End             Return to the Send Database Event screen.

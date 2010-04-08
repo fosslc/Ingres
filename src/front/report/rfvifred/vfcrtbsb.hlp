@@ -1,0 +1,31 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to use an existing table to create a default form.  The
+default form can then be edited to create a saved form in the database.  
+This form allows you to specify the table to use, and whether to create a
+form containing simple fields or a table field.
+
+Specifying simple fields creates a default form with simple fields placed
+across the form.  As many lines on the form as are needed are used to provide
+a field for each column in the base table.
+
+Specifying a table field creates a default form containing a table field
+with a column in the table field for each column in the base table.  Note
+that the table field may be wider than the screen.
+
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        OK              Create a default form for the specified table
+                        using either simple fields or a table field as
+                        requested.
+
+        Cancel          Return to the previous form without creating a new
+                        form.
+
+        ListChoices     If the current field is the 'Table Name' field,
+                        produce a list of the available tables from which
+                        to create a new form.
+
+        Help            Access the Ingres Help facility.

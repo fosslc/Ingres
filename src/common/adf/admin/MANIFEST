@@ -1,0 +1,77 @@
+#
+# YAM MANIFEST file for common!adf!admin
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#	7-Aug-2004 (drivi01)
+#	    Modified this file to copy a def file to the demo directory.
+#	26-Aug-2004 (bonro01)
+#	    Update to build 64-bit version for Hybrid build.
+#	24-Sep-2004 (hanje04)
+#	    BUG 113127
+#	    Replace UDT objects (.o's) with shared library and replace
+#	    IIUDTOBJECT with IIUdtShLib to make it happen.
+#	31-dec-2004 (abbjo03)
+#	    Split common files out of platform-specific code. Add VMS-specific
+#	    section.
+#	21-jan-2005 (srisu02)
+#	    Add invocations to install build and ccvms scripts.
+#	06-Aug-2005 (hweho01)
+#	    Make UDT archive library for axp_osf platform, because UDT 
+#           shared library can't be loaded from iimerge/dmfjsp/fastload (SUID) 
+#           if user is not ingres.
+#	20-Jun-2009 (kschendel) SIR 122138
+#	    Update test for hybrid.
+
+
+IISUBSYS common adf admin ;
+
+IIUDTFILES common.c cpx.c cpx.log cpx.qry iipk.h depend.h intlist.c intlist.log
+    intlist.qry numeric.c numeric.txt op.c op_load.log op_load.qry op_test.log
+    op_test.qry pnum_test.log pnum_test.qry udt.h zchar.c zchar.log zchar.qry 
+    nvarchar.c nvarchar.log nvarchar.qry ;
+
+IIUDTIIADD iiadd.h ;
+
+if $(UNIX)
+{
+    IIUDTPPFILE Makefile : Makefile.ccpp ;
+    # Only check for hybrid, at present reverse hybrid doesn't do lp32 server
+    if $(BUILD_ARCH) = "32+64" { IIUDTPPFILE Makefile64 : Makefile64.ccpp ; }
+
+  if $(VERS) = axp_osf
+  {
+    IIUdtArLib ARDEMOUDTLIB : common.c cpx.c iicvpk.c iimhpk.c intlist.c
+	numeric.c op.c zchar.c nvarchar.c ;
+  }
+  else
+  {
+    IIUdtShLib SHDEMOUDTLIB : common.c cpx.c iicvpk.c iimhpk.c intlist.c
+	numeric.c op.c zchar.c nvarchar.c ;
+  }
+
+     IIUDTSHELL udttest : udttest.sh ;
+}
+
+else if $(NT)
+{
+     IIUDTFILE makefile : <common!adf!admin>makefile.wnt ;
+
+     IIUDTOBJECT common.c cpx.c iicvpk.c iimhpk.c intlist.c numeric.c op.c 
+     	zchar.c nvarchar.c ;
+
+    IIUDTBAT udttest.bat ;
+
+    IIUDTDEF iilibudt.def : iilibudt.def ;
+}
+
+else if $(VMS)
+{
+    IIUDTOBJECT common.c cpx.c iicvpk.c iimhpk.c intlist.c numeric.c op.c 
+	zchar.c nvarchar.c ;
+
+    IIUDTSHELL build : build$(SUFSH) ;
+    IIUDTSHELL ccvms : ccvms$(SUFSH) ;
+}

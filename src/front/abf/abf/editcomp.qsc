@@ -1,0 +1,943 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<ol.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	<adf.h>
+##include	<abclass.qsh>
+##include	<oocatlog.qsh>
+#include	<oodefine.h>
+##include	<oocat.qsh>
+##include     	<uigdata.qsh>
+##include	"abclinfo.qsh"
+#include	"abcatrow.h"
+#include	<abfglobs.h>
+#include	"erab.h"
+
+/*
+fool ming:
+#include        <abclass.h>
+#include        <oocatlog.h>
+#include        <oocat.h>
+#include        "abclinfo.h"
+*/
+
+/**
+** Name:	editcomp.qc -	ABF Application Edit Component Object Frame.
+**
+** Description:
+**	Contains the routine the implements the edit frames for the application
+**	component objects.  Defines:
+**
+**	iiabGetComp()	return an application component by ID.
+**	IIABedtComp()	ABF application edit component frame.
+**
+** History:
+**	Revision 6.2  89/02  wong
+**	Initial revision.
+**
+**	Revision 6.2  89/09  wong
+**		Allow identical source files for different components.  
+**		JupBug #8106.
+**	11-march-91 (blaise)
+**	    Integrated desktop porting changes.
+**
+**	Revision 6.5
+**	30-nov-92 (davel)
+**		Modified _type_check() to conditionally set the nullable field 
+**		based on the component type (e.g. Global Constants don't have
+**		have this field).
+**		
+**	19-Feb-1993 (fredv)
+**	    Completed the bug fix for #44162. Added return OK to _symbol_check
+**		if the symbol name is not changed or is a valid symbol.
+**	11-feb-93 (davel)
+**		Fix bug 49494: handle pass_dec field correctly when called from
+**		VISION.
+**	22-feb-93 (davel)
+**		Fix bug 49635 & 49720: do not prompt for length on ListChoices 
+**		on the datatype (49635); raise an error when illegal values
+**		in "pass decimal parameters as" field are entered (49720).
+**	25-feb-93 (connie) Bug #40884
+**		Check for pathname in the source file field & give error
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototypes for _getMenuitem(), _name_check(), _symbol_check(),
+**	  _type_check(), _passdec_check(), _src_check() & _library_check() to
+**	  prevent compiler errors with GCC 4.0 due to conflict with implicit
+**	  declaration.
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	23-Aug-2009 (kschendel) 121804
+**	    Need abfglobs.h to satisfy gcc 4.3.
+*/
+
+APPL_COMP *
+iiabGetComp ( appl, id )
+APPL	*appl;
+OOID	id;
+{
+	if ( IIAMapFetch( appl, id, TRUE ) != OK )
+		return NULL;
+	return (APPL_COMP *)OOp(id);
+}
+
+/*{
+** Name:	IIABedtComp() - ABF Application Edit Component Object Frame.
+**
+** Description:
+**	Allows users to edit ABF application objects through their respective
+**	ABF Edit Object Definition Frames.  The variant frame information comes
+**	from static structures that are mapped.
+**
+** Input:
+**	appl	{APPL *}  The application object.
+**	comp	{APPL_COMP *}  The application component object to be edited.
+**	cat	{OO_CATALOG *}  The application component object visual catalog.
+**
+** History:
+**	02/89 (jhw)  Written.
+**	11/89 (jhw)  Added legal file name check.  JupBug #8627.
+**	30-nov-1989 (wolf)
+**		Accept CMS-format file ID "fn ft" and convert to "fn.ft".
+**	03/90 (jhw) -- Ignore unsupported host-languages.  JupBug #20907.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**      16-Nov-1992 (donc)
+**          Extraordinary effort to fix a simple bug 44162 - disallow blanks in symbol names.
+**	19-Feb-1993 (fredv)
+**	    Completed the bug fix for #44162. Added return OK to _symbol_check
+**		if the symbol name is not changed or is a valid symbol.
+*/
+
+APPL_COMP	*iiabNxtEdit();
+COMP_CLASS_INFO	*iiabApCompClass();
+
+typedef struct {	/* Sub-Object Existence Structure */
+	bool	_src;		/* source file existence */
+	bool	_form;		/* form existence */
+	bool	_report;	/* report existence */
+	bool	_graph;		/* graph existence */
+	bool	_table;		/* table existence */
+	bool	_qdef;		/* query (join) definition existence */
+} SOBJ_EXISTS;
+
+#define _NewEditExpl	F_AB0052_NewEdit_expl
+#define _RenameExpl	F_AB0018_RenameObj_expl
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+#define _LongRemExpl	F_FE0118_LngRemExpl
+#define _EndExpl	F_FE0102_ExplEnd
+
+static char  *_getMenuitem();
+static STATUS _name_check();
+static STATUS _symbol_check();
+static STATUS _type_check();
+static STATUS _passdec_check();
+static STATUS _src_check();
+static STATUS _library_check();
+
+static const DB_DT_ID _passdec_types[] = { DB_DEC_TYPE, DB_FLT_TYPE }; 
+static const i4	_passdec_ntypes = 
+			sizeof(_passdec_types)/sizeof(_passdec_types[0]);
+
+VOID
+IIABedtComp ( appl, comp, cat )
+APPL		*appl;
+##APPL_COMP	*comp;
+##OO_CATALOG	*cat;
+##{
+##	UIDBDATA	*uidbdata;
+
+	uidbdata = IIUIdbdata();
+	while ( comp != NULL )
+	{
+##		char	*_edit;
+##		char	*_compile;
+##		char	*_formedit;
+##		char	*_newedit;
+##		char	*_go;
+##		char	*_print;
+##		char	*passdec_fld;
+##		register COMP_CLASS_INFO	*cp;
+
+		if ( comp->class == OC_HLPROC
+				&& ((HLPROC *)comp)->ol_lang < OLC )
+		{ /* unsupported host-language cannot be edited */
+			IIUGerr(E_AB0139_UnsupportedLang, UG_ERR_ERROR, 
+					1, comp->name
+			);
+			return;
+		}
+
+		cp = iiabApCompClass(comp->class, TRUE /* form init */);
+		if ( cp == NULL )
+			return;
+
+		_edit = _getMenuitem( &(cp->edit) );
+		_compile = _getMenuitem( &(cp->compile) );
+		_formedit = _getMenuitem( &(cp->formedit) );
+		_go = _getMenuitem( &(cp->go) );
+		_print = _getMenuitem( &(cp->print) );
+		passdec_fld = (comp->class == OC_HLPROC) ? _passdec : NULL;
+		/* perhaps arbitrary, but no go implies no newedit. */
+		_newedit = ( _go != NULL ) ? ERget(AB_NewEdit) : NULL;
+
+##		display cp->form		/* default:  FILL */
+
+##		initialize (	_name = comp->name,
+##				_short_remark = comp->short_remark,
+##				_create_date = comp->create_date,
+##				_owner = comp->owner,
+##				_altr_date = comp->alter_date,
+##				_last_altered_by = comp->altered_by
+##			)
+##		{
+			(*cp->display)( comp );
+##		}
+
+##		activate field cp->name_check[0], field cp->name_check[1]
+##		{ /* Validate an INGRES name. */
+			if ( _name_check(cp) == FAIL )
+##				resume;
+##			resume next;	/* OK */
+##		}
+
+##		activate field cp->type_check
+##		{ /* Validate a Return Type */
+			if ( _type_check(cp, comp) == FAIL )
+			{ /* invalid Type */
+##				resume field cp->type_check;
+			}
+##			resume next;	/* OK */
+##		}
+
+##		activate field cp->file_check
+##		{ /* Validate a Source-Code File Name */
+			if ( _src_check(cp, appl, comp) == FAIL )
+##				resume field _srcfile;
+##			resume next;	/* OK */
+##		}
+
+##		activate field cp->library_check
+##		{ /* Toggle the Source-Code File Name field */
+			if ( _library_check(cp, comp) == FAIL )
+##				resume field _srcfile;
+##			resume next;	/* OK */
+##		}
+
+##		activate field cp->symbol_check
+##		{ /* Bug 44162 (donc) Validate a Symbol Name field */
+			if ( _symbol_check(cp) == FAIL )
+##				resume field cp->symbol_check;
+##			resume next;	/* OK */
+##		}
+
+##		activate field passdec_fld
+##		{ /* "pass decimals as what type" field */
+			if ( _passdec_check(cp, comp) == FAIL )
+##				resume field passdec_fld;
+##			resume next;	/* OK */
+##		}
+
+##		activate menuitem _newedit (expl = ERget(_NewEditExpl))
+##		{
+			APPL_COMP	*new;
+##			i4		change;
+
+##			inquire_frs form ( change = change );
+			if ( change != 0 && cp->save != NULL &&
+					(*cp->save)( appl, comp ) == OK )
+			{ /* update catalog */
+##				putrow cat->c_form cat->c_tfield (
+##					_short_remark = comp->short_remark,
+##					_altr_date = comp->alter_date,
+##					_last_altered_by = uidbdata->user
+##				);
+			}
+			if ( (new = (APPL_COMP*)iiabNxtEdit(appl,cat)) != NULL )
+			{
+				comp = new;
+##				enddisplay;
+			}
+##		}
+
+##		activate menuitem _go (expl = ERget(cp->go.expl)), FRSkey4
+##		{
+			if ( cp->go.func != NULL )
+				(*cp->go.func)( appl, cp, comp );
+##		}
+
+##		activate menuitem _edit ( expl = ERget(cp->edit.expl) )
+##		{
+			if ( cp->edit.func != NULL )
+				_VOID_ (*cp->edit.func)(appl, comp, cp->form);
+##		}
+
+##		activate menuitem _compile ( expl = ERget(cp->compile.expl) )
+##		{
+			if ( cp->compile.func != NULL )
+				_VOID_ (*cp->compile.func)(appl, cp, comp);
+##		}
+
+##		activate menuitem _formedit ( expl = ERget(cp->formedit.expl) )
+##		{
+			if ( cp->formedit.func != NULL )
+				_VOID_ (*cp->formedit.func)(appl, cp, comp);
+##		}
+
+##		activate menuitem ERget(FE_LongRemark)
+##					( expl = ERget(_LongRemExpl) )
+##		{
+			IIOOedLongRemark( comp, TRUE );
+##		}
+
+##		activate menuitem _print (expl = ERget(cp->print.expl))
+##		{
+			if ( cp->print.func != NULL )
+				_VOID_ (*cp->print.func)(appl, comp);
+##		}
+
+##		ACTIVATE MENUITEM ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##			EXPL = ERget(FE_LookupExpl)), 
+##			FRSkey10 (VALIDATE = 0, ACTIVATE = 0) 
+##		{
+##			char		fld[FE_MAXNAME+1];
+			FLD_VALUE	fv;
+
+			fv._form = cp->form;
+			fv._field = fld;
+			fv._column = NULL;
+
+##			inquire_frs form ( fld = field );
+			if ( cp->type_check != NULL
+					&& STequal(fld, cp->type_check) )
+			{
+				bool lenp = (comp->class == OC_CONST) 
+							? FALSE : TRUE;
+				IIUFhlpType( cp->types, cp->ntypes, lenp, &fv );
+			}
+			else if ( STequal(fld, _passdec) )
+			{
+				IIUFhlpType( _passdec_types, _passdec_ntypes, 
+							FALSE, &fv );
+			}
+			else
+			{
+				IIUFfldHelp(&fv);
+			}
+##		}
+
+##              activate menuitem ERget(FE_Cancel) 
+##                            (expl = ERget(F_FE0103_ExplCancel), 
+##                             validate = 0, activate = 0 ),
+##                      FRSkey9 ( validate = 0, activate = 0 )
+##            	{
+			comp = NULL;
+##			breakdisplay;
+##            	}
+ 
+##		activate menuitem ERget(FE_Help) ( expl = ERget(_HelpExpl),
+##					validate = 0, activate = 0 ),
+##			FRSkey1 ( validate = 0, activate = 0 )
+##		{
+##			char	title[63+1];
+
+##			getform ( title = _title );
+			FEhelp( cp->help_file, title );
+##		}
+
+##		activate menuitem ERget(FE_End) (expl = ERget(_EndExpl)),
+##			FRSkey3
+##		{
+##			i4	change;
+
+##			inquire_frs form ( change = change );
+			if ( change == 0 || cp->save == NULL )
+			{
+				comp = NULL;
+##				breakdisplay;
+			}
+			else if ( (*cp->save)( appl, comp ) == OK )
+			{ /* update catalog */
+##				putrow cat->c_form cat->c_tfield (
+##					_short_remark = comp->short_remark,
+##					_altr_date = comp->alter_date,
+##					_last_altered_by = uidbdata->user
+##				);
+				comp = NULL;
+##				breakdisplay;
+			}
+##		}
+	} /* end while */
+##}
+
+/*
+** _getMenuitem -- get a menuitem, based on whether we're in VISION.
+**
+** NOTE -- VISION has no effect now -- this thing could even be a macro --
+**	but sooner or later this routine may have to handle some oddball
+**	logic.
+*/
+
+static char *
+_getMenuitem(mu)
+MENUS	*mu;
+{
+	return ( mu->func == NULL ? NULL : ERget(mu->menu) ); 
+}
+
+/* Validate an INGRES name. */
+static STATUS
+##_name_check ( cp )
+##register COMP_CLASS_INFO	*cp;
+##{
+##	i4	change;
+##	char	_fld[FE_MAXNAME+1];
+
+##	inquire_frs form ( _fld = field );
+##	inquire_frs field _iiOOempty ( change = change(_fld) );
+	if ( change != 0 )
+##	{
+##		char	name[FE_MAXNAME+1];
+
+##		getform cp->form ( name = _fld );
+		/* Mandatory fields will be caught by the FRS */
+		if ( STtrmwhite(name) > 0 && FEchkname(name) != OK )
+		{
+			IIUGerr(E_UG000E_BadName, UG_ERR_ERROR, 1, name);
+			return FAIL;
+		}
+##	}
+	return OK;
+##}
+
+/* Validate a symbol name. */
+static STATUS
+##_symbol_check ( cp )
+##register COMP_CLASS_INFO	*cp;
+##{
+##	i4	change;
+##	char	sym[FE_MAXNAME+1];
+        char    *blanks;
+
+##	inquire_frs field _iiOOempty ( change = change(cp->symbol_check) );
+	if ( change != 0 )
+##	{
+##		getform cp->form ( sym = cp->symbol_check);
+		/* Mandatory fields will be caught by the FRS */
+		if ( (blanks = STindex( sym, " ", 0 )) != NULL )
+		{
+			IIUGerr(E_AB036B_Bad_SymbolName, UG_ERR_ERROR, 1, sym );
+			return FAIL;
+		}
+##	}
+	return OK;
+##}
+
+/* Validate a Return Type */
+static STATUS
+##_type_check ( cp, comp )
+##register COMP_CLASS_INFO	*cp;
+##APPL_COMP			*comp;
+##{
+##	i4	change;
+
+##	inquire_frs field _iiOOempty ( change = change(cp->type_check) );
+	if ( change != 0 && cp->type_valid != NULL )
+##	{
+##		i4		notnullable;
+##		char		desc[FE_MAXNAME+1];
+		DB_DATA_VALUE	temp;
+
+		/* Note:  The Nullable field relies on an internal validation
+		** and is not relevant when validating the Return Type.
+		*/
+##		getform cp->form ( desc = cp->type_check );
+		if ( STtrmwhite(desc) <= 0
+				|| (*cp->type_valid)(comp, desc, &temp) != OK )
+		{ /* invalid Type */
+			return FAIL;
+		}
+		if ( comp->class != OC_CONST )
+		{
+			notnullable = ( temp.db_datatype == DB_NODT );
+##			set_frs field _iiOOempty ( 
+##				invisible(_nullable) = notnullable );
+		}
+##	}
+	return OK;
+##}
+
+/* Validate a Type for passing decimal values */
+static STATUS
+##_passdec_check ( cp, comp )
+##register COMP_CLASS_INFO	*cp;
+##APPL_COMP			*comp;
+##{
+##	i4	change;
+
+##	inquire_frs field _iiOOempty ( change = change(_passdec) );
+	if ( change != 0 )
+##	{
+##		char		desc[FE_MAXNAME+1];
+		DB_DATA_VALUE	temp;
+
+##		getform cp->form ( desc = _passdec );
+		if ( STtrmwhite(desc) <= 0 
+		  || iiabCkTypeSpec(desc, FALSE, &temp) != OK
+		   )
+		{ 
+			/* invalid syntax for a type */
+			IIUGerr(E_AB036A_Bad_PassDecimal, UG_ERR_ERROR, 1,desc);
+			return FAIL;
+		}
+		else
+		{
+			register i4  i;
+
+			for ( i = _passdec_ntypes; --i >= 0 ; )
+			{
+				if ( _passdec_types[i] == temp.db_datatype )
+				{
+					return OK;
+				}
+			}
+			/* not one of the valid types for passing decimals */
+			IIUGerr(E_AB036A_Bad_PassDecimal, UG_ERR_ERROR, 1,desc);
+			return FAIL;
+		}
+##	}
+	return OK;
+##}
+
+/* Validate a Source-Code File Name */
+static STATUS
+##_src_check( cp, appl, comp )
+APPL				*appl;
+##register APPL_COMP		*comp;
+##register COMP_CLASS_INFO	*cp;
+##{
+##	i4	change;
+
+##	inquire_frs field _iiOOempty ( change = change(_srcfile) );
+	if ( change != 0 )
+##	{
+		i4	lang;
+		char	*source;
+##		char	srcfile[48+1];
+
+##		getform cp->form ( srcfile = _srcfile );
+#ifdef CMS
+		/* accept fn ft; convert to fn.ft */
+		TOwscnme(srcfile);
+##		putform cp->form ( _srcfile = srcfile );
+##              set_frs field _iiOOempty ( change(_srcfile) = 1 );
+#endif
+		if ( comp->class == OC_DBPROC )
+		{
+			lang = OLSQL;
+		/* NOT YET
+			source = ((DBPROC *)comp)->source;
+		*/
+		}
+		else if ( comp->class == OC_HLPROC )
+		{
+			lang = ((HLPROC *)comp)->ol_lang;
+			source = ((HLPROC *)comp)->source;
+		}
+		else
+		{
+			lang = OLOSL;
+			source = ((_4GLPROC *)comp)->source;
+		}
+
+		/* Check for pathname
+		** Check for valid extension and object-code ** name.  Note if
+		** the file name is identical to another, it is allowed so skip
+		** the object-code name check.  JupBug #8106.
+		*/
+		if ( !iiabCkSrcFile(appl->source, srcfile)
+		    || IIABcpnCheckPathName(appl->source, srcfile)
+		    || !iiabCkExtension(srcfile, lang)
+			    || ( iiabCkFileName(srcfile)
+				       && !iiabCkObjectName(source, srcfile) ) )
+		{
+			return FAIL;
+		}
+##	}
+
+	return OK;
+##}
+
+/* Toggle the Source-Code File Name field */
+static STATUS
+##_library_check ( cp, comp )
+##register COMP_CLASS_INFO	*cp;
+##register APPL_COMP		*comp;
+##{
+##	i4	change;
+
+##	inquire_frs field _iiOOempty ( change = change(_library) );
+	if ( change != 0 )
+##	{
+##		char	library[10];
+
+##		getform cp->form ( library = _library );
+		/* Note:  The Library field relies on an internal validation
+		** and need not be validated here.
+		*/
+		if ( IIUGyn(library, (STATUS *)NULL) )
+		{
+##			set_frs field _iiOOempty (
+##				displayonly(_srcfile) = 1,
+##				underline(_srcfile) = 0
+##			);
+##			putform cp->form ( _srcfile = ERx("<none>") );
+		}
+		else
+##		{ /* ... no longer a library, requires Source */
+##			register char	*source;
+##			i4 		nosrc;
+
+##			inquire_frs field _iiOOempty 
+##				(nosrc = displayonly(_srcfile))
+			/* 
+			** If source was display only, 
+			** library just changed to 'No'.
+			*/
+			if (nosrc != 0)
+			{
+				source = ( comp->class == OC_RWFRAME )
+					? ((REPORT_FRAME *)comp)->source
+					: ((HLPROC *)comp)->source;
+
+##				set_frs field _iiOOempty (
+##					displayonly(_srcfile) = 0,
+##					underline(_srcfile) = 1
+##				);
+##				putform cp->form ( _srcfile = source );
+				return FAIL;
+			}
+##		}
+##	}
+	return OK;
+##}
+
+/*{
+** Name - IIABucvUpdCompVision
+**
+** Description:
+**	Entry to update component from INGRES/VISION
+**
+** Inputs:
+**	appl - application.
+**	comp - component.
+**	ctx - context pointer given to frame flow entry.
+**		or NULL for calls from iiabCompile via "go" or "image".
+**
+** Returns:
+**	{STATUS}
+*/
+STATUS
+IIABucvUpdCompVision( appl, comp, ctx)
+APPL		*appl;
+OO_OBJECT	*comp;
+PTR		*ctx;
+{
+	register COMP_CLASS_INFO	*cp;
+
+	cp = iiabApCompClass(comp->class, TRUE /* form init */);
+	if ( cp == NULL )
+		return FAIL;
+
+	IIABnsrNewShortRemark(appl, comp, ctx);
+
+	(*(cp->display))(comp);
+
+	comp->data.dirty = TRUE;
+
+	return (*(cp->save))(appl,comp);
+}
+
+/* Titles for MoreInfo of HLprocs */
+static const ER_MSGID
+        _infoTitles[] = {
+                        F_AB0046_ACPDet_title,  /* C */
+                        F_AB0047_AFPDet_title,  /* FORTRAN */
+                        F_AB0048_APPDet_title,  /* Pascal */
+                        F_AB004A_ABPDet_title,  /* BASIC */
+                        F_AB0049_AcPDet_title,  /* COBOL */
+                        F_AB004C_A1PDet_title,  /* PL/1 */
+                        F_AB004B_AAPDet_title,  /* Ada */
+                        0
+};
+
+/*{
+** Name - IIABecvEditCompVision
+**
+** Description:
+**	Entry to component edit from INGRES/VISION
+**
+** Inputs:
+**	appl - application.
+**	comp - component.
+**	ctx - context pointer given to frame flow entry.
+**
+** History:
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+*/
+VOID
+##IIABecvEditCompVision ( appl, comp, ctx )
+APPL		*appl;
+##APPL_COMP	*comp;
+PTR		ctx;
+##{
+##	register COMP_CLASS_INFO	*cp;
+##	OO_CATALOG			*cat = (OO_CATALOG *)ctx;
+##	char				*_look_up;
+##	char				*_mode;
+##	char				title[63+1];
+##	char				*passdec_fld;
+	ER_MSGID			msgid;
+
+	GLOBALREF char	*IIabExename;
+	GLOBALREF bool	IIabAbf;
+
+	cp = iiabApCompClass(comp->class, TRUE /* form init */);
+	if ( cp == NULL )
+		return;
+
+	passdec_fld = (comp->class == OC_HLPROC) ? _passdec : NULL;
+	if (comp->class == OC_HLPROC)
+		msgid = _infoTitles[((HLPROC *)comp)->ol_lang];
+	else
+		msgid = cp->detail;
+	_VOID_ STprintf(title, ERget(msgid), IIabExename);
+
+	if ( IIabAbf )
+	{
+		_mode = "f";	/* default:  FILL */
+		_look_up = ERget(FE_Lookup);
+	}
+	else
+	{
+		_mode = "r";	/* READ */
+		_look_up = NULL;
+	}
+
+##	display cp->form _mode
+
+##	initialize (	
+##			_name = comp->name,
+##			_short_remark = comp->short_remark,
+##			_create_date = comp->create_date,
+##			_owner = comp->owner,
+##			_altr_date = comp->alter_date,
+##			_last_altered_by = comp->altered_by
+##		)
+##	{
+		(*cp->display)( comp );
+
+		/* We nned to override the title from the display routine */
+##		putform cp->form (_title = title);
+##	}
+
+##	activate field cp->name_check[0], field cp->name_check[1]
+##	{ /* Validate an INGRES name. */
+		if ( _name_check(cp) == FAIL )
+##			resume;
+##		resume next;	/* OK */
+##	}
+
+##	activate field cp->type_check
+##	{ /* Validate a Return Type */
+		if ( _type_check(cp, comp) == FAIL )
+		{ /* invalid Type */
+##			resume field cp->type_check;
+		}
+##		resume next;	/* OK */
+##	}
+
+##	activate field cp->file_check
+##	{ /* Validate a Source-Code File Name */
+		if ( _src_check(cp, appl, comp) == FAIL )
+##			resume field _srcfile;
+##		resume next;	/* OK */
+##	}
+
+##	activate field cp->library_check
+##	{ /* Toggle the Source-Code File Name field */
+		if ( _library_check(cp, comp) == FAIL )
+##			resume field _srcfile;
+##		resume next;	/* OK */
+##	}
+
+##	activate field passdec_fld
+##	{ /* "pass decimals as what type" field */
+		if ( _passdec_check(cp, comp) == FAIL )
+##			resume field passdec_fld;
+##		resume next;	/* OK */
+##	}
+
+##	activate menuitem ERget(FE_Rename) (expl = ERget(_RenameExpl))
+##	{
+		if ( iiabCtFindComp(cat, comp->name, comp->class) > 0 )
+		{
+			iiabCtRenameComp(cat, appl);
+##			PUTFORM ( _name = comp->name );
+		}
+##	}
+
+##	activate menuitem ERget(FE_LongRemark) ( expl = ERget(_LongRemExpl) )
+##	{
+		IIOOedLongRemark( comp, IIabAbf );
+##	}
+
+##	ACTIVATE MENUITEM _look_up ( expl = ERget(FE_LookupExpl), 
+##						validate = 0, activate = 0 ),
+##		FRSkey10 ( validate = 0, activate = 0 ) 
+##	{
+##		char		fld[FE_MAXNAME+1];
+		FLD_VALUE	fv;
+
+		fv._form = cp->form;
+		fv._field = fld;
+		fv._column = NULL;
+
+##		inquire_frs form ( fld = field );
+		if ( cp->type_check != NULL && STequal(fld, cp->type_check) )
+		{
+			IIUFhlpType( cp->types, cp->ntypes, TRUE, &fv );
+		}
+		else if ( STequal(fld, _passdec) )
+		{
+			IIUFhlpType( _passdec_types, _passdec_ntypes, 
+					FALSE, &fv );
+		}
+		else
+		{
+			IIUFfldHelp(&fv);
+		}
+##	}
+
+##              activate menuitem ERget(FE_Cancel) 
+##                            (expl = ERget(F_FE0103_ExplCancel), 
+##                             validate = 0, activate = 0 ),
+##                      FRSkey9 ( validate = 0, activate = 0 )
+##            	{
+##			breakdisplay;
+##            	}
+ 
+##	activate menuitem ERget(FE_Help) ( expl = ERget(_HelpExpl),
+##						validate = 0, activate = 0 ),
+##		FRSkey1 (validate = 0, activate = 0)
+##	{
+##		char	title[63+1];
+
+##		getform ( title = _title );
+		FEhelp( cp->mi_help_file, title );
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(_EndExpl)), FRSkey3
+##	{
+##		i4		change;
+##		UIDBDATA	*uidbdata;
+
+##		inquire_frs form ( change = change );
+		if ( change != 0 && cp->save != NULL
+				&& (*cp->save)( appl, comp ) == OK )
+		{ /* update catalog */
+			uidbdata = IIUIdbdata();
+##			putrow cat->c_form cat->c_tfield (
+##				_short_remark = comp->short_remark,
+##				_altr_date = comp->alter_date,
+##				_last_altered_by = uidbdata->user
+##			);
+		}
+##		breakdisplay;
+##	}
+##}
+
+/*{
+** Name - IIABgfvGoCompVision
+**
+** Description:
+**	Entry to do a test execution for a specific component
+**	from Vision.
+**
+** Inputs:
+**	appl - application.
+**	comp - component.
+**	ctx - context pointer given to frame flow entry.
+**
+** Outputs:
+**	None.
+*/
+VOID
+IIABgcvGoCompVision( appl, comp, ctx)
+APPL		*appl;
+OO_OBJECT	*comp;
+PTR		*ctx;
+{
+	register COMP_CLASS_INFO	*cp;
+
+	cp = iiabApCompClass(comp->class, TRUE /* form init */);
+	if ( cp == NULL )
+		return;
+
+	(*(cp->display))(comp);
+
+	if ( cp->go.func != NULL )
+		(*cp->go.func)( appl, cp, comp );
+}
+
+
+#ifdef JUNK
+/*
+** set_exists() -- Set existence flags for sub-objects
+**
+**	This routine sets the existence flags for sub-objects of an application
+**	object depending on the type of the object.
+*/
+
+static VOID
+set_exists (object_type, edit_object, exists)
+    register int		object_type;
+    register struct edit_object	*edit_object;
+    register SOBJ_EXISTS	*exists;
+{
+	if (object_type == ABFRGBF)
+		exists->_graph = graph_status(edit_object->graph);
+	else
+	{	/* Procedures & ABFRUSER: ABFRNUSER: ABFRQBF: ABFRQDEF: ABFRRW: */
+		exists->_form = form_status(edit_object->form);
+		if (object_type == ABFRQBF)
+			exists->_table = table_status(edit_object->table);
+		else if (object_type == ABFRQDEF)
+			exists->_qdef = qdef_status(edit_object->table);
+		else
+		{
+			exists->_src = src_status(edit_object->srcfile);
+			if (object_type == ABFRRW)
+				exists->_report = report_status(edit_object->report);
+		}
+	}
+}
+#endif

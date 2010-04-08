@@ -1,0 +1,4 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libodbccfg.olb/library, -
+II_COMPATLIB/share

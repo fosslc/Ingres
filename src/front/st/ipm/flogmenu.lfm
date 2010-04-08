@@ -1,0 +1,11 @@
+COPYFORM:	6.4	1991_08_19 08:51:23 GMT  
+FORM:	flogmenu	choices for logging	
+	81	23	0	0	2	0	2	9	0	0	0	0	0	0	0	4
+FIELD:
+	0	options	0	6	0	2	8	68	6	8	1	1	0		1	1	0	1073758241	0	0	0					1	0
+	0	option	21	16	0	14	1	14	0	1	14	1	1	Option	1	-1	0	0	512	0	0		c14			2	1
+	1	description	-21	54	0	51	1	51	0	16	51	1	16	Description	16	-1	0	0	512	0	0		c51			2	2
+	1	autorefresh	-21	25	0	22	1	35	0	44	22	0	13	Autorefresh:	0	0	0	16777216	512	0	0		c22			0	3
+TRIM:
+	0	0	IPM -- Logging System Monitor	2048	0	0	0
+	8	18	Place the cursor on your choice and press "Select"	0	0	0	0

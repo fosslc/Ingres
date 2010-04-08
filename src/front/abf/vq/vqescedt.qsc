@@ -1,0 +1,934 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<er.h>
+# include	<st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include       <adf.h>
+# include       <afe.h>
+# include       <ft.h>
+# include       <fmt.h>
+# include       <frame.h>
+## include	<abclass.qsh>
+## include	<metafrm.qsh>
+# include	<flddesc.h>
+# include	"ervq.h"
+# include	"vqescinf.h"
+## include	"vqffldlp.qsh"
+
+/**
+** Name:	vqescedt.c -	Edit escape code for a visual query
+**
+** Description:
+**	This file defines:
+**
+**	IIVQefeEditFrameEscapes		Edit escape code for a frame
+**	IIVQescEditSpecificEscape	Edit a specified piece of escape code
+**	IIVQpecPurgeEscapeCode		Purge invalid escape code
+**	IIVQsecSaveEscCode		Save escape code to database
+**	IIVQgelGetEscLimits		Get index limit for an escape type
+**
+**	The first three are generally available entries into escape code
+**	processing.  They make no assumptions about the absence or presence of
+**	escape code.  The last is the only allowed way to save escape code 
+**	to the database, except for the simple case in vqrenesc.c .
+**	It assumes escape code is in memory.
+**
+** History:
+**	8/3/89 (Mike S)	Initial Version
+**	2/23/90 (kenl)
+**		Change IIVQgefGetEscapeField() call to a call to the more
+**		generic and new routine IIVQgffGetFormFields().  The 
+**		calling sequence of the new routine is significantly
+**		different.  Also, moved listpick handler from the old
+**		routine to this module.
+**	10/90 (Mike S) Check for derived field activations.
+**	08/31/93 (kchin)
+**		Changed type of lp4 to PTR in create_listpick_form(),
+**		since it holds pointer.  Also changed the cast of frame to
+**		PTR when assigns it to lp4.  Cast to i4 will result in
+**              truncation of 64-bit address.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**/
+
+/* # define's */
+static FLDHDR *dummy;
+# define FLDNAMSZ       (sizeof(dummy->fhdname))
+# define FLDACTNMSZ     (2 * FLDNAMSZ + sizeof(ERx(".")))
+	/* Maximum size of a field activation name (tf.column) */
+
+/* GLOBALDEF's */
+/* extern's */
+FUNC_EXTERN i4       	FTspace();
+FUNC_EXTERN STATUS      IIAMmfMetaFree();
+FUNC_EXTERN STATUS      IIAMmpMetaPopulate();
+FUNC_EXTERN STATUS      IIAMmuMetaUpdate();
+FUNC_EXTERN i4		IIFRclpCallListPick();
+FUNC_EXTERN i4	        IIUGmllMaxLineLen();
+FUNC_EXTERN VOID        IIUGqsort();
+FUNC_EXTERN VOID	IIVQeecEditEscapeCode();
+FUNC_EXTERN VOID	IIVQelpEscapeListpickHandler();
+FUNC_EXTERN VOID	IIVQgffGetFormFields();
+FUNC_EXTERN VOID	IIVQgemGetEscapeMenuitem();
+FUNC_EXTERN i4		IIVQotObjectType();
+FUNC_EXTERN VOID	IIVQpfePurgeFieldEscapes();
+FUNC_EXTERN VOID	IIVQpmePurgeMenuitemEscapes();
+FUNC_EXTERN STATUS	IIVQsecSaveEscCode();
+
+GLOBALREF ESCTYPE 	vqescs[];		/* Escape type descriptors */
+GLOBALREF i4		vqnumesc;		/* Number of above */
+
+/* static's */
+static STATUS	create_listpick_form();
+static VOID	efe_lphandler();
+static VOID	gef_lphandler();
+static i4	esc_sort();
+static bool	check_esc_type();
+static VOID 	set_type_indicators();
+
+static  char    *helptitle = NULL;     /* Help screen title */
+
+static const char _empty[] = ERx("");
+static const 
+##	char formname[] =	ERx("vqesctyp"),
+##	     indcol[] = 	ERx("col1"),
+##	     namecol[] = 	ERx("col2"),
+##	     numcol[] = 	ERx("col3"),
+##           help_file[] =	ERx("vqescfld.hlp"),
+##	     _space[] = 	ERx(" "),
+##	     _star[] =		ERx("*");
+
+/* Listpick descriptors */
+static	const LISTMENU lpitems[] = 
+{
+	{FE_Select, F_FE0108_ExplSelect, 	LPB_CRSELECT, 4},
+	{FE_Empty,  F_FE0104_ExplFind, 		LPB_FIND,   7},
+	{FE_Empty,  F_FE0105_ExplTop, 		LPB_TOP,    5},
+	{FE_Empty,  F_FE0106_ExplBottom, 	LPB_BOTTOM, 6},
+	{FE_Help,   F_FE0101_ExplKeyHelp, 	LPB_HELP,   1},
+	{FE_End,    F_FE0102_ExplEnd, 		LPB_QUIT,   3} 
+};
+
+static LISTPICK listpick =
+{
+	ERx("vqesctyp"),	/* Form name */
+	ERx("vqesctyp"), 	/* Tablefield name */
+	-1, -1,			/* Screen position */
+	0,			/* Line number */
+	NULL,			/* Help title */
+	ERx("vqesctyp.hlp"),	/* Help file */
+	sizeof(lpitems)/sizeof(LISTMENU),
+				/* Number of menuitems */
+	lpitems,		/* Menu items */
+	(i4 (*)())efe_lphandler,
+				/* Handler function */
+	NULL,			/* Handler data */
+	0			/* Flags word */
+};
+
+
+/*{
+** Name:	IIVQefeEditFrameEscapes - edit escape code for a frame
+**
+** Description:
+**	Let the user edit all the escape code for the current frame.
+**
+** Inputs:
+**	metaframe	METAFRAME *	Current frame
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		STATUS		OK	if everything succeeded
+**				FAIL	otherwise
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**      The memory for the escape code structures is freed.  They were
+**      probably not in memory in the first place.
+**
+** History:
+**	8/3/89 (Mike S)		Initial version
+*/
+STATUS
+IIVQefeEditFrameEscapes(metaframe)
+METAFRAME	*metaframe;
+{
+	ESCINFO	escinfo;		/* Data passed to editing routines */
+	STATUS	status = OK;		/* Assume success */
+	bool	vqwasinmem;		/* Was VQ loaded into memory */
+	i4 	dummy;
+
+	/* Load the escape code, if need be */
+	if ((metaframe->popmask & MF_P_ESC) == 0)
+		if (IIAMmpMetaPopulate(metaframe, MF_P_ESC) != OK)
+			return FAIL;
+
+	/* Load the VQ code, if need be */
+	vqwasinmem = (metaframe->popmask & MF_P_VQ) != 0;
+	if (!vqwasinmem)
+	{
+		if (IIAMmpMetaPopulate(metaframe, MF_P_VQ) != OK)
+			return FAIL;
+	}
+
+	/* Create escape code structure */
+	escinfo.metaframe = metaframe;
+	escinfo.item = _empty;
+	escinfo.flags = 0;
+	escinfo.line = 1;
+
+	/* Get escape type from user */
+	if ((status = create_listpick_form(metaframe)) == OK)
+	{
+		if (listpick.htitle == NULL)
+			listpick.htitle = 
+				STalloc(ERget(S_VQ0002_Select_Esc_Type));
+		listpick.data = (PTR)&escinfo;
+
+		/* Load indicator column */
+		set_type_indicators(metaframe);
+		_VOID_ IIFRclpCallListPick(&listpick, &dummy);
+
+		/* Delete Field listpick form */
+		if ((escinfo.flags & VQESC_LF) != 0)
+			IIdelfrm(iivqLP0form);	
+		IIdelfrm(formname);
+
+		/* Free frame's form */
+		if ((escinfo.flags & VQESC_FL) != 0)
+			IIUGtagFree(escinfo.frmtag);
+	}
+
+	/* Restore VQ to former status */
+	if (!vqwasinmem)
+	{
+		if ((metaframe->updmask & MF_P_VQ) != 0)
+			_VOID_ IIAMmuMetaUpdate(metaframe, MF_P_VQ);
+		IIAMmfMetaFree(metaframe, MF_P_VQ);
+	}
+	IIAMmfMetaFree(metaframe, MF_P_ESC);	
+	return (status);
+}
+
+
+/*{
+** Name:	IIVQeseEditSpecificEscape
+**
+** Description:
+**	Edit a specific piece of escape code. This is intended for error
+**	handling, when we want to point the user to the specific line 
+**	on which an error occurred.
+**
+** Inputs:
+**	metaframe	METAFRAME *	The metaframe to edit
+**	esctype		i4		The escape code type
+**	item		char *		The menuitem or field name
+**	line		i4		The line number to scroll to
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**      The memory for the escape code structures is freed.  They were
+**      probably not in memory in the first place.
+**
+** History:
+**	8/16/89 (Mike S)	Initial version
+*/
+VOID
+IIVQeseEditSpecificEscape(metaframe, esctype, item, line)
+METAFRAME	*metaframe;
+i4		esctype;
+char		*item;
+i4		line;
+{
+	ESCINFO	ese_inf; 
+
+	/* Load the escape code, if need be */
+	if ((metaframe->popmask & MF_P_ESC) == 0)
+		if (IIAMmpMetaPopulate(metaframe, MF_P_ESC) != OK)
+			return;
+	
+	/* Initialize the escape information structure */
+	ese_inf.metaframe = metaframe;
+	ese_inf.esctype = esctype;
+	ese_inf.item = item;
+	ese_inf.line = line;
+	ese_inf.flags = 0;
+	ese_inf.frmtag = 0;
+
+	/* Edit the escape code */
+	IIVQeecEditEscapeCode(&ese_inf);
+
+	/* Free it from memory */
+	IIAMmfMetaFree(metaframe, MF_P_ESC);	
+
+	return;
+}
+
+
+/*{
+** Name:	IIVQpecPurgeEscapeCode -- Purge invalid escape code
+**
+** Description:
+**	Purge escape code for noexistent menuitems or fields
+**
+** Inputs:
+**	metaframe	METAFRAME *	metaframe to purge
+**	in_gen		bool		Are we currently generating code
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		STATUS	OK
+**			FAIL 	If database operations fail
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**	The escape code is saved to the database if it changed.
+**
+** History:
+**	8/16/89 (Mike S) Initial version
+*/
+STATUS
+IIVQpecPurgeEscapeCode(metaframe, in_gen)
+METAFRAME *metaframe;
+bool	in_gen;
+{
+	STATUS retval;
+	bool	vqwasinmem;		/* Was VQ loaded into memory */
+	bool	escwasinmem;		/* Was escape code loaded into memory */
+
+	/* Load the escape code, if need be */
+	escwasinmem = (metaframe->popmask & MF_P_ESC) != 0;
+	if (!escwasinmem)
+	{
+		if (IIAMmpMetaPopulate(metaframe, MF_P_ESC) != OK)
+			return FAIL;
+	}
+
+	/* Load the VQ code, if need be */
+	vqwasinmem = (metaframe->popmask & MF_P_VQ) != 0;
+	if (!vqwasinmem)
+	{
+		if (IIAMmpMetaPopulate(metaframe, MF_P_VQ) != OK)
+			return FAIL;
+	}
+
+
+	/* Purge escape code */
+	IIVQpfePurgeFieldEscapes(metaframe);
+	IIVQpmePurgeMenuitemEscapes(metaframe);
+
+	/* Save any changes */
+	if ((metaframe->updmask & MF_P_ESC) != 0)
+		retval = IIVQsecSaveEscCode(metaframe, in_gen);
+
+	/* Restore VQ and escape code to former status */
+	if (!vqwasinmem)
+	{
+		if ((metaframe->updmask & MF_P_VQ) != 0)
+			_VOID_ IIAMmuMetaUpdate(metaframe, MF_P_VQ);
+		IIAMmfMetaFree(metaframe, MF_P_VQ);
+	}
+
+	if (!escwasinmem)
+	{
+		IIAMmfMetaFree(metaframe, MF_P_ESC);
+	}
+	return(retval);
+}
+
+
+/*{
+** Name:	IIVQsecSaveEscCode - save escape code back to database
+**
+** Description:
+**	Remove any purged escape code, and save the rest to the database
+**
+** Inputs:
+**	metaframe	METAFRAME *	metaframe to save
+**	in_gen		bool		Are we currently generating code
+**
+** Outputs:
+**	none	
+**
+**	Returns:
+**		STATUS	OK
+**			FAIL if database save fails
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**	The escape code is updated in the database.
+**
+** History:
+**	8/16/89 (Mike S)	Initial version
+**	7/91 (Mike S)		Remove escape code with invalid type.  Bug
+**				37207
+*/
+STATUS
+IIVQsecSaveEscCode(metaframe, in_gen)
+METAFRAME	*metaframe;
+bool		in_gen;
+{
+	i4		i;
+	STATUS		status;
+
+	/* 
+	** Bug 37207 may have created escape code with invalid types
+	** most likely zero.  Remove it.
+	*/
+	for (i = 0; i < metaframe->numescs; i++)
+	{
+		if (metaframe->escs[i]->type <= 0)
+			metaframe->escs[i]->type = NUMESCTYPES+1;
+	}
+
+        /* Sort the escape code */
+        if (metaframe->numescs > 1)
+         	IIUGqsort((char *)metaframe->escs, metaframe->numescs,
+                          sizeof(MFESC *), esc_sort);
+
+        /* Get rid of any with no text, or overly large types */
+        for (i = metaframe->numescs - 1; i >= 0; i--)
+	{
+        	if ((*metaframe->escs[i]->text == EOS) ||
+                    (metaframe->escs[i]->type > NUMESCTYPES))
+                	metaframe->numescs = i;
+             	else    
+                	break;
+	}
+
+        /* Save them into the database */
+        status = IIAMmuMetaUpdate(metaframe, MF_P_ESC);
+
+	if (!in_gen)
+	{
+		/* Force a regen, since escape code has changed */
+		metaframe->state |= MFST_DOGEN;
+
+		/* write the flags to the database */
+		IIAMufqUserFrameQuick(metaframe->apobj);
+	}
+
+	return (status);
+}
+
+/*{
+** Name:	efe_lphandler - Handle escape-type listpick
+**
+** Description:
+**	If we need more information (i.e if we've just chosen a menuitem or
+**	field escape type ) we do the next listpick; otherwise we go directly 
+**	to escape code editing.  
+**
+** Inputs:
+**	data		PTR	escape editing information
+**	choice		i4	The user's choice number.
+**	index		i4	the menuitem number
+**
+** Outputs:
+**	resume		bool *	Whether to resume listpick
+**
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**		none
+**
+** History:
+**	8/4/89 (Mike S)	Initial version
+*/
+/*ARGSUSED*/
+static VOID
+efe_lphandler(data, choice, resume, index)
+PTR	data;
+i4	choice;
+bool	*resume;
+i4	index;
+{
+	ESCINFO	*escinfo = (ESCINFO *)data;	/* cast this to original type*/
+##	i4	esctype;
+
+	if (choice < 0)
+	{
+		*resume = FALSE;	/* Leave the listpick */
+		return;
+	}
+
+	*resume = TRUE;		/* Stay in listpick */
+
+##	getrow formname formname (esctype = numcol)
+	switch(escinfo->esctype = esctype)
+	{
+	    case ESC_FLD_ENTRY:
+	    case ESC_FLD_CHANGE:
+	    case ESC_FLD_EXIT:
+		if (NULL == helptitle)
+			helptitle = STalloc(ERget(S_VQ0006_Select_Esc_Fld));
+		/* We need a field name */
+		_VOID_ IIVQgffGetFormFields(escinfo->esctype, &escinfo->flags,
+			escinfo->metaframe->apobj, &escinfo->frmtag,
+			gef_lphandler, (PTR)escinfo, help_file, helptitle,
+			ERget(F_VQ00EB_Select_Esc_Fld));
+		break;
+	
+	    case ESC_MENU_START:
+	    case ESC_MENU_END:
+		/* We need a menuitem name */
+		IIVQgemGetEscapeMenuitem(escinfo);
+		break;
+	
+	    default:	
+		/* Edit escape code */
+		IIVQeecEditEscapeCode(escinfo);
+	}
+
+	/* Reload indicator column */
+	set_type_indicators(escinfo->metaframe);
+}
+
+/*{
+** Name:        gef_lphandler - Handle field listpick
+**
+** Description:
+**      If we got a field name, go edit escape code.
+**
+** Inputs:
+**      choice          i4      The user's choice number.
+**
+** Outputs:
+**      data            PTR     escape editing information
+**      resume          bool *  Whether to resume listpick
+**
+**      Returns:
+**              none
+**
+**      Exceptions:
+**              none
+**
+** Side Effects:
+**              none
+**
+** History:
+**      8/4/89 (Mike S) Initial version
+*/
+static VOID
+gef_lphandler(data, choice, resume)
+
+PTR     data;
+i4      choice;
+bool    *resume;
+{
+	ESCINFO *escinfo = (ESCINFO *)data;     /* cast this to oringinal type*/
+##      char actname[FLDACTNMSZ];
+##	i4 fld2flags;
+##	i4 acttype;
+
+	*resume = FALSE;        /* Leave the listpick */
+	if (choice < 0)
+		return;
+
+	/* Point to activation name */
+##      getrow iivqLP0form iivqLP1tblfld 
+##		(actname = iivqLP2actCol, fld2flags = iivqLP4flags2Col,
+##		 acttype = iivqLP5fldTypeCol)
+
+	/* Check for a dervied field */
+	if (IIVQcdfCheckDerivedField(actname, acttype, fld2flags))
+	{
+		*resume = TRUE;
+		return;
+	}
+
+	escinfo->item = actname;
+
+	/* Edit escape code */
+	IIVQeecEditEscapeCode(escinfo);
+}
+
+/*
+** Sort the escape code thus:
+**	1. Blank text goes to the bottom, so it can be purged out.
+**	2. If the types differ, sort by type.
+**	3. Otherwise, sort by item name.
+*/
+static i4
+esc_sort(itm1, itm2)
+char *itm1;
+char *itm2;
+{
+	MFESC *esc1 = *(MFESC **)itm1;
+	MFESC *esc2 = *(MFESC **)itm2;
+
+	/*
+	** Sort according to the rules above.  If the types are the same, the
+	** item names should never be NULL, but we check to avoid crashing here.	*/
+	if (*esc1->text == EOS)
+		return 1;
+	else if (*esc2->text == EOS)
+		return -1;
+	else if (esc1->type != esc2->type)
+		return (esc1->type - esc2->type);
+	else if ((esc1->item == NULL) || (esc2->item == NULL))
+		return 0;
+	else
+		return STcompare(esc1->item, esc2->item);
+}
+
+/*{
+** Name:	create_listpick_form
+**
+** Description:
+**	Create the form for listpicking escape type.  This is a tablefield
+**	with one column -- the escape type.  It will be as wide as the largest 
+**	escape type, and as long as the number of escape types.
+**
+** Inputs:
+**	metaframe	METAFRAME *	metaframe
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		OK	If form is created and populated
+**		FAIL	If there's a problem
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**	A dynamic form is created
+**
+** History:
+**	8/23/89 (Mike S)	Initial version
+**	1/25/89 (Mike S)	Add indicator field to form
+*/
+static STATUS
+create_listpick_form(metaframe)
+METAFRAME	*metaframe;
+{
+	FLD_DESC fd[2];	/* Column descriptors */
+	DB_DATA_VALUE dbv[2];	/* Data descriptors */
+	i4	width;	/* Type-column width */
+	i4	height;	/* Tablefield height */
+	i4	type;	/* Frame type */
+	FRAME	*frame;	/* Listpick frame pointer */
+	char	*title;	/* Form title */
+	i4	title_width;	/* Width of longest line in title */
+##	char	*escname;
+##	i4	i;
+	STATUS	status;
+##	PTR	lp4;
+	
+	/* Get frame type */
+	type = IIVQotObjectType(metaframe->apobj);
+
+	/* Get width and height of tablefield*/
+        for (width = height = 0, i = 1; i < vqnumesc; i++)
+        {
+                if ((vqescs[i].frame_mask & (1 << type)) != 0)
+                {
+			if (check_esc_type(metaframe, i) == FALSE)
+			{
+				continue;
+			}
+                        width = max(width, STlength(ERget(vqescs[i].esc_name)));
+			height++;
+                }
+        }
+
+	/* 
+	** If the form title is wider than the data, default form generation 
+	** will widen the tablefield columns to make things match.  We
+	** want to ensure that the indiactor column is only one character width.
+	** We will widen the escape-type column, if need be.
+	*/
+	title = ERget(F_VQ00E9_Select_Esc_Type);
+	title_width = IIUGmllMaxLineLen(title);
+	width = max(width, title_width - 2 - 2*FTspace());
+	
+	/* Create form */
+
+	/* Escape type column */
+	fd[0].name = namecol;
+	fd[0].type = dbv;
+	fd[0].maxwidth = 0;
+	dbv[0].db_length = width;
+	dbv[0].db_datatype = DB_CHA_TYPE;
+	dbv[0].db_prec = 0;
+
+	/* Indicator column */
+	fd[1].name = indcol;
+	fd[1].type = dbv + 1;
+	fd[1].maxwidth = 0;
+	dbv[1].db_length = 1;
+	dbv[1].db_datatype = DB_CHA_TYPE;
+	dbv[1].db_prec = 0;
+
+	status = IIFRmdfMakeDefaultForm(title, formname, FALSE, 2, 
+					fd, height, &frame);
+	if (status != OK)
+	{
+		IIUGerr(E_VQ0069_Cannot_Make_LP_Form, 0, 1, (PTR)&status);
+			return status;
+	}
+
+	/* Add form */
+	lp4 = (PTR)frame;
+##	ADDFORM lp4;
+
+	/* Load tablefield */ 
+##	inittable formname formname (numcol = i4)
+	for (i = 0; i < vqnumesc; i++)
+	{
+ 
+                if ((vqescs[i].frame_mask & (1 << type)) != 0)
+                {
+			if (check_esc_type(metaframe, i) == FALSE)
+			{
+				continue;
+			}
+			escname = ERget(vqescs[i].esc_name);
+##			LOADTABLE formname formname 
+##			    (indcol = _space, namecol = escname, numcol = i)
+		}
+        }
+	return (OK);
+}
+
+
+
+/*{
+** Name:	check_esc_type
+**
+** Description:
+**	Return TRUE or FALSE depending on whether a give metaframe
+**	should allow editing of a given escape type.
+**
+** Inputs:
+**	METAFRAME *	mf	- metaframe to consider
+**	i4		esc_type - the type of escape code
+**	
+** Outputs:
+**	none
+**
+**	Returns:
+**		bool	- TRUE if the escape type is compatible with the frame
+**			  else FAIL
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	8/23/89 (Mike S)	Initial version
+**	30-apr-91 (blaise)
+**		Corrected the test in case ESC_USR_MNUITM; it was the reverse
+**		of what it should have been.
+**	24-jul-92 (blaise)
+**		Added checks for new escape code types: before-lookup and
+**		after-lookup (valid for any frames with lookup tables);
+**		on-timeout, on-dbevent and menuline-menuitems (valid for all
+**		frames). User-menuitems has been replaced by table-field-
+**		menuitems; changed ESC_USR_MNUITM to ESC_TF_MNUITM.
+*/
+static bool 
+check_esc_type(mf, esc_type)
+METAFRAME *mf;
+i4  esc_type;
+{
+	i4	i;
+
+	switch (esc_type)
+	{
+
+	/* 
+	** only allowed for append frames, or if the master table in an update 
+	** allows insertion 
+	*/
+	case ESC_APP_START:
+	case ESC_APP_END:
+		if (mf->tabs[0]->usage == TAB_APPEND)
+			return (TRUE);
+		else if ((mf->tabs[0]->flags & TAB_INSFLG) == 0)
+			return (FALSE);
+		break;
+
+	/* only allowed if the master table allows deletion */
+	case ESC_DEL_START:
+	case ESC_DEL_END:
+		if ((mf->tabs[0]->flags & TAB_DELFLG) == 0)
+			return (FALSE);
+		break;
+
+	/* leave out the menuitem escapes if no menuitems */
+	case ESC_MENU_START:
+	case ESC_MENU_END:
+		if (mf->nummenus == 0)
+			return (FALSE);
+		break;
+
+	case ESC_QRY_NEW_DATA:
+		if ( (mf->mode & MFMODE) == MF_MASTAB)
+		{
+			return (FALSE);
+		}
+		break;
+
+	case ESC_TF_MNUITM:
+		if ((((USER_FRAME *)mf->apobj)->flags&APC_MS_MASK) != APC_MSTAB)
+			return FALSE;
+		break;
+	case ESC_BEF_LOOKUP:
+	case ESC_AFT_LOOKUP:
+	/* Only allowed if the frame has lookup table(s) */
+		for (i = 0; i < mf->numtabs; i++)
+		{
+			if (mf->tabs[i]->usage == TAB_LOOKUP)
+				return(TRUE);
+		}
+		return(FALSE);
+		break;
+	case ESC_ON_TIMEOUT:
+	case ESC_ON_DBEVENT:
+	case ESC_ML_MNUITM:
+	/* Allowed for all frame types */
+		break;
+	}
+	return (TRUE);
+}
+
+/*
+**	Set type indicators in escape-type listpick. A space if there is escape
+**	code of this type, a space otherwise.
+*/
+static VOID
+set_type_indicators(metaframe)
+METAFRAME	*metaframe;
+##{
+##	i4	esctype;	/* Escape type */
+	MFESC	**escs = metaframe->escs;
+	bool	matched;
+	i4	i;
+
+	/* 
+	** The escape code is sorted by type.  We use this fact to
+	** optimize the loop below.
+	*/
+##	unloadtable formname formname (esctype = numcol)
+##	{
+		/* See if we have one of this type */
+		matched = FALSE;
+		for (i = 0; i < metaframe->numescs; i++)
+		{
+			if (escs[i]->type == esctype)
+			{
+				/* A match */
+				matched = TRUE;
+				break;
+			}
+			else if (escs[i]->type > esctype)
+			{
+				/* We've already gone too far */
+				break;
+			}
+		}
+		if (matched)
+		{
+##			putrow formname formname (indcol = _star)
+		}
+		else
+		{
+##			putrow formname formname (indcol = _space)
+		}
+##	}
+##}
+
+/*{
+** Name:	IIVQgelGetEscLimits - Get index limits for an escape type
+**
+** Description:
+**	Return the first and last indices which have this escape type.
+**	We assume that escape code is sorted by type, as it always is after
+**	being loaded or saved.  If there is no escape code of this type,
+**	we return FIRST > LAST, so a for loop based on them won't do anything.
+**
+** Inputs:
+**	mf		METAFRAME *	Metaframe which contains escape code
+**	type		i4		Escape type to look for
+**	
+** Outputs:
+**	first		i4 *		First index for this type
+**	last		i4 *		Last index for this type
+**
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	1/25/90 (Mike S)	First version
+*/
+VOID
+IIVQgelGetEscLimits(mf, type, first, last)
+METAFRAME	*mf;
+i4		type;
+i4		*first;
+i4		*last;
+{
+        MFESC   **escs = mf->escs;
+	i4	i;
+
+        *first = -1;
+        *last = -2;
+        for (i = 0; i < mf->numescs; i++)
+        {
+                if (escs[i]->type == type)
+                {
+			/* A match. set "first" if it wasn't set previously */
+                        if (*first < 0)
+                                *first = i;
+                        *last = i;
+                }
+                else if (escs[i]->type > type)
+                {
+                        break;
+                }
+        }
+}

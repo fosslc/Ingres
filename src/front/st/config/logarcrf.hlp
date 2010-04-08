@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The archiver_refresh resource controls the duration of an archiver
+  cycle.  If the archiver has processed archiver_refresh percent of
+  the transaction log file, and there is still more to do, it will
+  "refresh" -- close the current cycle and start a new one, thus
+  updating the log file pointer, checking for new journals, and so on.
+
+  The default is 10 (10%).

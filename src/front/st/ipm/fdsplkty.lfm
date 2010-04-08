@@ -1,0 +1,7 @@
+COPYFORM:	6.4	1991_08_19 08:51:15 GMT  
+FORM:	fdisplktype	listpick for lock types	
+	13	12	0	0	1	0	0	9	0	0	0	0	0	128	0	2
+FIELD:
+	0	locklist	0	10	0	1	12	13	0	0	1	1	0		1	1	0	1073758241	0	0	0					1	0
+	0	lock_name	21	13	0	11	1	11	0	1	11	1	1	lock_name	1	-1	0	0	0	0	0		c11			2	1
+TRIM:

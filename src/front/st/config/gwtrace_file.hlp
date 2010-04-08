@@ -1,0 +1,29 @@
+ /#-- Copyright (c) 2007 Ingres Corporation.
+ The trace_file parameter specifies the name and full path of the
+ trace output file. If the name contains the string %p, this generates
+ one trace file for each connected session. The gateway slave process id
+ (PID) replaces the %p.
+
+ The value for this parameter needs to be the full pathname to the
+ trace file. For example:
+
+
+      UNIX:
+                 /tmp/my_trace_file.log
+
+      Windows:
+                 C:\\tmp\\my_trace_file.log
+
+      VMS:
+                MY_TMP:my_trace_file.log
+
+ Windows NOTE: The directory separator must be escaped.
+ 
+
+ If no trace output file is specified, the gateway writes the trace data  
+ to a default file based on server class as shown below:
+
+     mssql  - gwmssql.log
+     oracle - gworacle.log
+     db2udb - gwdb2udb.log
+

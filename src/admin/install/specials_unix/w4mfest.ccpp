@@ -1,0 +1,1869 @@
+/*
+**Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** List of deliverable files for INGRES Windows4GL releases.
+**
+** Conditional deliverables are #ifdef'd by functionality 
+** History:
+**	10-jun-91 (kimman)
+**		Removing "w4glext.o" from list of deliverables from
+**		all other platforms except su4_u42, as "w4glext.o"
+**		is being shipped for su4_u42.
+**	18-jun-91 (jab)
+**		We've decided that "w4gl.rel" won't be delivered. Alas.
+**	19-jun-91 (vijay)
+**		Need default 3gl shared library libuser3gl.so.1.0 for ris_us5.
+**	21-jun-91 (vijay)
+**		Added aixw.ff, the fonts file for ris_us5 X server.
+**	21-jun-91 (vijay)
+**		Need sph_to_3gl.exp and sph_fr_3gl.exp files for RS/6000.
+**		didn't they need it for sun ?
+**	23-jul-91 (kimman)
+**		Adding for ds3_ulx ULTRIX/SQL deliverables used for
+**		OR-ing the incremental authorization strings.
+**	25-jul-91 (jab)
+**		Adding DL support for enc_us5, and changing the files for
+**		the HP 9000/700 so that we use a slightly updated DL mechanism.
+**	25-jul-91 (vijay)
+**		Add ibmxst.ff, used for IBM X stations.
+**      24-jul-91 (kimman)
+**              Adding 'QUEL startup file' for ds3_ulx so that ULTRIX/SQL
+**              can run w4gldemo without warning which uses QUEL.
+**	7-Aug-91  (jeromes)
+**		Added the required file for DRS[36]000 dynamic 3gl library
+**		support. This is the delivered dynamic library libuser3gl.so
+**	16-sep-91 (jefff)
+**		Added support for en8_us5
+**  20-sep-91 (Farzin Barazandeh)
+**		Added support for dg8_us5
+**  25-oct-91 (jab)
+**		Added the 6.4 files for the HP 9000/300.
+**  19-feb-92 (jab)
+**		Added the W4GL II apped image files; w4ingver.rel;
+**	    this file; setw4gl; DL support files.
+**  26-feb-92 (jab)
+**		Changed the DL-specific stuff and the XErrorDB/XKeysymDB
+**		stuff to depend on symbols from the CONFIG file: R_HAS_DL and
+**		R_INGRES_XLIB
+**  27-feb-92 (jab)
+**		The proper way to use the two symbols above is (now)
+**			#ifdef R_HAS_DL
+**			#endif
+** 28-feb-92 (jab)
+**		Mike Evans points out that the external event demo needs
+**		to be delivered as C source (to stare at) and object files
+**		for those people who might have some non-C compiler. So
+**		*THAT'S WHY* it was delivered on the Sun in W4GL05(!).
+** 1-mar-92 (jab)
+**		Added the Sun x11 binaries and (for all machines that use *OUR* Xlib)
+**		header files.
+** 12-mar-92 (jab)
+**		Renamed the Sun x11 binaries (per LRC recommendations) and added the
+**		PIC version of libqsys.a.
+** 17-mar-92 (jab)
+**		Changing the image files and X11 header files so that "xxx.sv" is
+**		delivered instead of "xxx" --- the install script "makes it okay"
+**		and it is easier for mode 444 (no-write) files that are installed.
+** 29-mar-92 (jab)
+**		For X-hacker support, since we deliver our own header files, we need
+**		to deliver "xbzarch.h" which the header files include.
+** 7-apr-92 (jab)
+**		In conjunction with change #265639, changing "monitorimage" to
+**		"monimage".
+** 9-apr-92 (jab)
+**		Changing names of saved files to end in "SV" instead of ".sv".
+** 14-apr-92 (jab)
+**		Added the "FOREST" and renamed the "SLIDESW" application (to
+**		"BITMAPVW"). (Sorry about the CAPS.)
+** 29-apr-92 (jab)
+**		Adding Raj's broken poker application as a debugger exercise.
+** 20-apr-92 (szeng)
+**		took out the ULTRIX/SQL bundler files since we don't need
+**		them any more. Also added dnet_stub.o as a deliverable for
+**		ds3_ulx.
+** 20-may-92 (jab)
+**		Changing Sun X-client programs so that they're not
+**		copied directly into place, to preserve the integrity
+**		of any programs running while we're installing.
+** 20-may-92 (jab)
+**		Correcting a couple of [embarrassing] typos.
+** 08-jun-92 (thomasm)
+**		Bumped up library from libuser3gl.so.1.0 ->2.0 for RS/6000
+** 27-jul-92 (jab)
+**		Deleting that debugger exercise.
+** 27-jul-92 (szeng)
+**		Added and depth4_05.ctb and depth8_05.ctb which are
+**		the color table files used for W4GL05 in OSG platforms. 
+**		So customers can have old color appearance if they
+**		choose to.
+** 21-aug-92 (jab)
+**		Changed in two ways: the RS/6000 now has DL, so the place
+**		where the RS/6000-specific ".exp" files is given needs to
+**		move to the DL part; also, made "./lib/user3gl.o" the default
+**		if you don't have DL.
+** 20-oct-92 (seng)
+**		Add new font file (x11aix.ff) for IBM RS/6000.  Helvetica 
+**		fonts are not appearing on the IBM console.  Resort to using
+**		different helvetica fonts.  Problem seems to stem from using 
+**		the long name of a font.  Remove once problem is fixed.
+** 03-nov-92 (jab)
+**		Modified so that OpenLook port doesn't deliver files
+**		that the Sun Motif port does, like X header files.
+** 05-nov-92 (jab)
+**		Added the Sun type 3/4/5 (OpenLook) keyboard files and the Suntype5
+**		keyboard file.
+** 10-nov-92 (seng)
+**		Add new font file (x11hp3.ff) for HP 9000/300 and HP 9000/400.
+**		Large fonts are corrupted on some of the newer machines.
+**		This is not a Windows4GL problem, since 'xfd' also displays
+**		a corrupted font.  Remove once problem is fixed.
+** 10-nov-92 (vijay)
+**              motorola needs exports.so for making symbols visible from sphmerge.
+** 17-nov-92 (gmcquary)
+**              Added pym_us5 specific branch to copy over 3gl files.
+**
+**
+** 01-feb-93 (sheppard)
+**		additions for the desktop objects under ODT 2.0 (alias
+**		sco 3.2.4).  These files are the bitmaps for the desktop
+**		icons for INGRES and Windows4GL (ingres32.px ingres63.px
+**		windows4gl32.px windows4gl64.px), trigger files to invoke
+**		the 'application' upon double clicking the 
+**		icon (ingres.s1trigger windows4gl.s1trigger) and a shell script
+**		which is called by the windows4gl trigger and itself invokes
+**		windows4gl.
+**
+** 22-Oct-92 (Farzin Barazandeh)
+**              Added option to includes .lib/user3gl.o in dg8_us5 option.
+** 04-Mar-93 (gillnh2o)
+**		The submission (revision 1.29) wiped out the previous
+**		submission of 1.28. What I did was get -r28 and redo
+**		the changes I wanted to make from that revision level. 
+**		Revision 1.29 should not ever be used. 
+**
+**		What I did was add ifdef conf_X11R5 around a set of files
+**		to be delivered for R5. I also added ifdef conf_X11R4 
+**		for those X11R4 include files. The X11R5 deliverables
+**		do not include X11/[copyright, Xlibos, Xstreams, 
+**		and Quarks].h and X11/Xaw/[Scroll and Vpaned].h. 
+** 15-Mar-93 (jab)
+**		The ODT submission seemed to assume everyone would deliver those
+**		stupid ODT files - bad assumption. Changed the ODT changes to
+**		rely on "conf_ODT" for the next ODT port. Also, made "libdnet"
+**		for the Ultrix port depend on conf_DNET instead of "ds3_ulx".
+**
+** FROM THIS POINT ON, "#ifdef xxx_yyy" shouldn't be used in this file.
+** Use the conf_blah MECHANISMS!
+**
+** 30-mar-93 (jab)
+**		A few X11R5 header files were missing(?) from the list.
+** 30-mar-93 (jab)
+**		There were some submission problems in the prior submission.
+**		Also, including XErrorDB and XKeysymDB in the X11R5/files
+**		directory, per bruceb's request.
+** 07-apr-93 (dwilson)
+**		Added X11R5 nls files.
+** 15-apr-93 (dwilson) 
+**		Made ./files/w4gldemo/External/*.c become ...*.cSV 
+** 19-apr-93 (dwilson)
+**		We want to put XKeysymDB and XErrorDB in X11R5/files for
+**		*all* platforms, not just su4_u42.  Also, we *don't* want
+**		to put them in ingres/files.
+** 23-apr-93 (gillnh2o)
+**		Deleting files from nls that we do not want to deliver.
+** 27-apr-93 (jab)
+**		Adding the X11R4 (old) server for the Sun platforms 
+** 3-may-93 (jab)
+**		Per mikeg's suggestion, including some PEX files for the X11R5
+**		server we're delivering.
+** 3-may-93 (dwilson)
+**		Moved .../X11R5/lib/X11/nls/Xsi/* to .../X11R5/lib/X11/nls/* 
+**		since that is where the code expects the stuff to be (this 
+**		should correspond to change 401939 in the ingres library.
+** 9-may-93 (jab)
+**		Adding the 'mwm' for the Ultrix platform.
+** 26-jul-93 (gillnh2o)
+**		Since no one had updated this file since a snapshot was
+**		taken when establishing the build tools in the "ingres"
+**		library to update this file, I simply copied the latest 
+**		revision of "w4mfest.ccpp" from the "ingres63p" library.
+**
+*/
+./w4glapps/apped.imgSV
+./w4glapps/iidebug1.imgSV
+./w4glapps/iiforst1.imgSV
+./w4glapps/iioutln1.imgSV
+./w4glapps/iiscred1.imgSV
+./w4glapps/iiutil1.imgSV
+./utility/iibuildw4gl
+./utility/iiw4sysdep
+./utility/w4mfest
+./utility/setw4gl
+./lib/w4glext.o
+./lib/libw4olang.a
+./lib/u3resproc.o
+# ifdef ris_us5
+./files/sph_to_3gl.exp
+# endif
+# ifdef m88_us5
+./lib/exports.so
+# endif
+#ifdef pym_us5
+./lib/libuser3gl.so.2.0
+#endif
+#ifdef conf_DNET
+./lib/dnet_stub.o
+#endif	/* DNET */
+#ifdef ds3_ulx
+./files/startup
+#endif /* ds3_ulx */
+#ifndef R_HAS_DL
+./lib/user3gl.o	/* Default if you don't have DL: user3gl.o is included */
+#endif 
+./files/xnews.ff
+./files/x11r4.ff
+./files/x11r3.ff
+./files/w4gldemo/Bitmaps/s21.xbm
+./files/w4gldemo/Bitmaps/s22.xbm
+./files/w4gldemo/Bitmaps/s23.xbm
+./files/w4gldemo/Bitmaps/s24.xbm
+./files/w4gldemo/Bitmaps/s37188.xbm
+./files/w4gldemo/Bitmaps/s37701.xbm
+./files/w4gldemo/Bitmaps/s37910.xbm
+./files/w4gldemo/Bitmaps/s39511.xbm
+./files/w4gldemo/Bitmaps/s46022.xbm
+./files/w4gldemo/Bitmaps/s47824.xbm
+./files/w4gldemo/Bitmaps/s56673.xbm
+./files/w4gldemo/Bitmaps/s57123.xbm
+./files/w4gldemo/Bitmaps/s59256.xbm
+./files/w4gldemo/Bitmaps/s64409.xbm
+./files/w4gldemo/Bitmaps/s64833.xbm
+./files/w4gldemo/Bitmaps/s65625.xbm
+./files/w4gldemo/Bitmaps/sb21.xbm
+./files/w4gldemo/Bitmaps/sb22.xbm
+./files/w4gldemo/Bitmaps/sb23.xbm
+./files/w4gldemo/Bitmaps/sb24.xbm
+./files/w4gldemo/Bitmaps/sb37188.xbm
+./files/w4gldemo/Bitmaps/sb37701.xbm
+./files/w4gldemo/Bitmaps/sb37910.xbm
+./files/w4gldemo/Bitmaps/sb39511.xbm
+./files/w4gldemo/Bitmaps/sb46022.xbm
+./files/w4gldemo/Bitmaps/sb47824.xbm
+./files/w4gldemo/Bitmaps/sb56673.xbm
+./files/w4gldemo/Bitmaps/sb57123.xbm
+./files/w4gldemo/Bitmaps/sb59256.xbm
+./files/w4gldemo/Bitmaps/sb64409.xbm
+./files/w4gldemo/Bitmaps/sb64833.xbm
+./files/w4gldemo/Bitmaps/sb65625.xbm
+./files/w4gldemo/External/Makefile
+./files/w4gldemo/External/extevent
+./files/w4gldemo/External/extevent.cSV
+./files/w4gldemo/External/w4glext.cSV
+./files/w4gldemo/Strings/v18.f
+./files/w4gldemo/Strings/v27.f
+./files/w4gldemo/Strings/v6.f
+./files/w4gldemo/Strings/v72.f
+./files/w4gldemo/Strings/v81.f
+./files/w4gldemo/bitmap.exp
+./files/w4gldemo/bitmapvw.exp
+./files/w4gldemo/calc.exp
+./files/w4gldemo/card_ima.dat
+./files/w4gldemo/cards.dat
+./files/w4gldemo/chessm.exp
+./files/w4gldemo/contact.dat
+./files/w4gldemo/cursor.exp
+./files/w4gldemo/draw.exp
+./files/w4gldemo/drawpokr.exp
+./files/w4gldemo/duckhunt.exp
+./files/w4gldemo/dynamic.exp
+./files/w4gldemo/forest.exp
+./files/w4gldemo/guess.exp
+./files/w4gldemo/i_store0.dat
+./files/w4gldemo/i_stored.dat
+./files/w4gldemo/line.exp
+./files/w4gldemo/loaddata.scr
+./files/w4gldemo/motion.exp
+./files/w4gldemo/multi.exp
+./files/w4gldemo/office.exp
+./files/w4gldemo/other.exp
+./files/w4gldemo/part.dat
+./files/w4gldemo/partinfo.exp
+./files/w4gldemo/pathsys.dat
+./files/w4gldemo/podetail.dat
+./files/w4gldemo/pohistor.dat
+./files/w4gldemo/priceinf.dat
+./files/w4gldemo/purchord.exp
+./files/w4gldemo/reload.scr
+./files/w4gldemo/remember.exp
+./files/w4gldemo/sales.exp
+./files/w4gldemo/sales_he.dat
+./files/w4gldemo/salesman.dat
+./files/w4gldemo/stackem.exp
+./files/w4gldemo/string.exp
+./files/w4gldemo/strings0.dat
+./files/w4gldemo/table.exp
+./files/w4gldemo/updquel.scr
+./files/w4gldemo/v_charge.dat
+./files/w4gldemo/v_checko.dat
+./files/w4gldemo/v_custom.dat
+./files/w4gldemo/v_paymen.dat
+./files/w4gldemo/v_plot_d.dat
+./files/w4gldemo/v_store.dat
+./files/w4gldemo/v_tapes.dat
+./files/w4gldemo/v_vendor.dat
+./files/w4gldemo/v_vid_gr.dat
+./files/w4gldemo/v_video.dat
+./files/w4gldemo/vendor.dat
+./files/w4gldemo/vendori.exp
+./files/w4gldemo/vendorp.exp
+./files/w4gldemo/videos.exp
+./files/vt220u.kbd
+./files/vt220.kbd
+./files/deffiles/backupap.def
+./files/deffiles/compilea.def
+./files/deffiles/createap.def
+./files/deffiles/destroya.def
+./files/deffiles/document.def
+./files/deffiles/make3glt.def
+./files/deffiles/makeimag.def
+./files/deffiles/purgeapp.def
+./files/deffiles/rundbapp.def
+./files/deffiles/runimage.def
+./files/deffiles/versiona.def
+./files/utcom.w4g
+./files/u3gl.h
+./files/w4glext.h
+#if defined(conf_ODT)
+./files/README.odt
+./files/windows4gl.s1trigger
+./files/windows4gl32.px
+./files/windows4gl64.px
+./files/ingres.s1trigger
+./files/ingres32.px
+./files/ingres64.px
+#endif
+/*
+** Note that these were added beginning with the OpenLook beta release
+** in 11/92 and you might run into the situation (if you have filled from
+** a label and have the top version of this file) where the suntype5.kbd
+** and all the *_ol.kbd files aren't found when you run "w4prerls". Go get
+** 'em from generic!front!w4gl --- they'll be backwards compatible with the
+** W4GL II base label.
+**	-jab
+*/
+./files/suntype5.kbd
+./files/suntype4.kbd
+./files/suntype3.kbd
+#if defined(conf_OL)
+./files/suntype3_ol.kbd
+./files/suntype4_ol.kbd
+./files/suntype5_ol.kbd
+#endif	/* conf_OL */
+./files/ncdn97.kbd
+./files/modw4gl.scr
+./files/hp46021a.kbd
+./files/graphon.kbd
+./files/graphon.ff
+./files/english/fw4gv3.mnx
+./files/english/sw4gv3.mnx
+./files/dictfiles/w4gl1.cli
+./files/dictfiles/ad201cin.cre
+./files/dictfiles/ad201mgw.mfy
+./files/dictfiles/ad201min.mfy
+./files/dictfiles/ad201mst.mfy
+./files/depth8.ctb
+./files/depth4.ctb
+./files/depth8_05.ctb
+./files/depth4_05.ctb
+./files/decw.ff
+./files/aixw.ff
+./files/ibmxst.ff
+./files/x11aix.ff
+./files/x11hp3.ff
+./files/at101key.kbd
+./bin/windows4glSV
+./bin/w4gldemoSV
+./bin/versionappSV
+./bin/sphmergeSV
+./bin/runimageSV
+./bin/monimageSV
+./bin/rundbappSV
+./bin/purgeappSV
+./bin/makeimageSV
+./bin/make3gltabSV
+./bin/make3gllibSV
+./bin/importappSV
+./bin/exportappSV
+./bin/documentappSV
+./bin/destroyappSV
+./bin/createappSV
+./bin/compileappSV
+./bin/backupappSV
+#if defined(conf_MWMWORKAROUND)
+./X11R4/bin/mwmSV
+#endif	/* conf_MWMWORKAROUND */
+#if defined(conf_ODT)
+./bin/w4gl2_on_odtSV
+#endif	/* conf_ODT */
+#ifdef  R_INGRES_XLIB
+#if defined(conf_X11R5) || defined(conf_ALLXHEADERS)
+./X11R5/files/XKeysymDBSV
+./X11R5/files/XErrorDBSV
+./X11R5/include/X11/Composite.hSV
+./X11R5/include/X11/CompositeP.hSV
+./X11R5/include/X11/ConstrainP.hSV
+./X11R5/include/X11/Constraint.hSV
+./X11R5/include/X11/Core.hSV
+./X11R5/include/X11/CoreP.hSV
+./X11R5/include/X11/DECkeysym.hSV
+./X11R5/include/X11/Intrinsic.hSV
+./X11R5/include/X11/IntrinsicP.hSV
+./X11R5/include/X11/Object.hSV
+./X11R5/include/X11/ObjectP.hSV
+./X11R5/include/X11/RectObj.hSV
+./X11R5/include/X11/RectObjP.hSV
+./X11R5/include/X11/Shell.hSV
+./X11R5/include/X11/ShellP.hSV
+./X11R5/include/X11/StringDefs.hSV
+./X11R5/include/X11/Sunkeysym.hSV
+./X11R5/include/X11/Vendor.hSV
+./X11R5/include/X11/VendorP.hSV
+./X11R5/include/X11/Wrap.hSV
+./X11R5/include/X11/X.hSV
+./X11R5/include/X11/X10.hSV
+./X11R5/include/X11/XWDFile.hSV
+./X11R5/include/X11/Xatom.hSV
+./X11R5/include/X11/Xauth.hSV
+./X11R5/include/X11/Xaw/AllWidgets.hSV
+./X11R5/include/X11/Xaw/AsciiSink.hSV
+./X11R5/include/X11/Xaw/AsciiSinkP.hSV
+./X11R5/include/X11/Xaw/AsciiSrc.hSV
+./X11R5/include/X11/Xaw/AsciiSrcP.hSV
+./X11R5/include/X11/Xaw/AsciiText.hSV
+./X11R5/include/X11/Xaw/AsciiTextP.hSV
+./X11R5/include/X11/Xaw/Box.hSV
+./X11R5/include/X11/Xaw/BoxP.hSV
+./X11R5/include/X11/Xaw/Cardinals.hSV
+./X11R5/include/X11/Xaw/Clock.hSV
+./X11R5/include/X11/Xaw/ClockP.hSV
+./X11R5/include/X11/Xaw/Command.hSV
+./X11R5/include/X11/Xaw/CommandP.hSV
+./X11R5/include/X11/Xaw/Dialog.hSV
+./X11R5/include/X11/Xaw/DialogP.hSV
+./X11R5/include/X11/Xaw/Form.hSV
+./X11R5/include/X11/Xaw/FormP.hSV
+./X11R5/include/X11/Xaw/Grip.hSV
+./X11R5/include/X11/Xaw/GripP.hSV
+./X11R5/include/X11/Xaw/Label.hSV
+./X11R5/include/X11/Xaw/LabelP.hSV
+./X11R5/include/X11/Xaw/List.hSV
+./X11R5/include/X11/Xaw/ListP.hSV
+./X11R5/include/X11/Xaw/Logo.hSV
+./X11R5/include/X11/Xaw/LogoP.hSV
+./X11R5/include/X11/Xaw/Mailbox.hSV
+./X11R5/include/X11/Xaw/MailboxP.hSV
+./X11R5/include/X11/Xaw/MenuButtoP.hSV
+./X11R5/include/X11/Xaw/MenuButton.hSV
+./X11R5/include/X11/Xaw/Paned.hSV
+./X11R5/include/X11/Xaw/PanedP.hSV
+./X11R5/include/X11/Xaw/Panner.hSV
+./X11R5/include/X11/Xaw/PannerP.hSV
+./X11R5/include/X11/Xaw/Porthole.hSV
+./X11R5/include/X11/Xaw/PortholeP.hSV
+./X11R5/include/X11/Xaw/Repeater.hSV
+./X11R5/include/X11/Xaw/RepeaterP.hSV
+./X11R5/include/X11/Xaw/Reports.hSV
+./X11R5/include/X11/Xaw/Scrollbar.hSV
+./X11R5/include/X11/Xaw/ScrollbarP.hSV
+./X11R5/include/X11/Xaw/Simple.hSV
+./X11R5/include/X11/Xaw/SimpleMenP.hSV
+./X11R5/include/X11/Xaw/SimpleMenu.hSV
+./X11R5/include/X11/Xaw/SimpleP.hSV
+./X11R5/include/X11/Xaw/Sme.hSV
+./X11R5/include/X11/Xaw/SmeBSB.hSV
+./X11R5/include/X11/Xaw/SmeBSBP.hSV
+./X11R5/include/X11/Xaw/SmeLine.hSV
+./X11R5/include/X11/Xaw/SmeLineP.hSV
+./X11R5/include/X11/Xaw/SmeP.hSV
+./X11R5/include/X11/Xaw/StripCharP.hSV
+./X11R5/include/X11/Xaw/StripChart.hSV
+./X11R5/include/X11/Xaw/Template.cSV
+./X11R5/include/X11/Xaw/Template.hSV
+./X11R5/include/X11/Xaw/TemplateP.hSV
+./X11R5/include/X11/Xaw/Text.hSV
+./X11R5/include/X11/Xaw/TextP.hSV
+./X11R5/include/X11/Xaw/TextSink.hSV
+./X11R5/include/X11/Xaw/TextSinkP.hSV
+./X11R5/include/X11/Xaw/TextSrc.hSV
+./X11R5/include/X11/Xaw/TextSrcP.hSV
+./X11R5/include/X11/Xaw/Toggle.hSV
+./X11R5/include/X11/Xaw/ToggleP.hSV
+./X11R5/include/X11/Xaw/Tree.hSV
+./X11R5/include/X11/Xaw/TreeP.hSV
+./X11R5/include/X11/Xaw/Viewport.hSV
+./X11R5/include/X11/Xaw/ViewportP.hSV
+./X11R5/include/X11/Xaw/XawInit.hSV
+./X11R5/include/X11/Xcms.hSV
+./X11R5/include/X11/Xdmcp.hSV
+./X11R5/include/X11/Xfuncproto.hSV
+./X11R5/include/X11/Xfuncs.hSV
+./X11R5/include/X11/Xlib.hSV
+./X11R5/include/X11/Xlibint.hSV
+./X11R5/include/X11/Xlocale.hSV
+./X11R5/include/X11/Xmd.hSV
+./X11R5/include/X11/Xmu/Atoms.hSV
+./X11R5/include/X11/Xmu/CharSet.hSV
+./X11R5/include/X11/Xmu/CloseHook.hSV
+./X11R5/include/X11/Xmu/Converters.hSV
+./X11R5/include/X11/Xmu/CurUtil.hSV
+./X11R5/include/X11/Xmu/CvtCache.hSV
+./X11R5/include/X11/Xmu/DisplayQue.hSV
+./X11R5/include/X11/Xmu/Drawing.hSV
+./X11R5/include/X11/Xmu/Editres.hSV
+./X11R5/include/X11/Xmu/EditresP.hSV
+./X11R5/include/X11/Xmu/Error.hSV
+./X11R5/include/X11/Xmu/Initer.hSV
+./X11R5/include/X11/Xmu/Misc.hSV
+./X11R5/include/X11/Xmu/StdCmap.hSV
+./X11R5/include/X11/Xmu/StdSel.hSV
+./X11R5/include/X11/Xmu/SysUtil.hSV
+./X11R5/include/X11/Xmu/WhitePoint.hSV
+./X11R5/include/X11/Xmu/WidgetNode.hSV
+./X11R5/include/X11/Xmu/WinUtil.hSV
+./X11R5/include/X11/Xmu/Xct.hSV
+./X11R5/include/X11/Xmu/Xmu.hSV
+./X11R5/include/X11/Xos.hSV
+./X11R5/include/X11/Xosdefs.hSV
+./X11R5/include/X11/Xproto.hSV
+./X11R5/include/X11/Xprotostr.hSV
+./X11R5/include/X11/Xresource.hSV
+./X11R5/include/X11/Xutil.hSV
+./X11R5/include/X11/ap_keysym.hSV
+./X11R5/include/X11/bitmaps/1x1SV
+./X11R5/include/X11/bitmaps/2x2SV
+./X11R5/include/X11/bitmaps/DashesSV
+./X11R5/include/X11/bitmaps/DownSV
+./X11R5/include/X11/bitmaps/ExclSV
+./X11R5/include/X11/bitmaps/FlipHorizSV
+./X11R5/include/X11/bitmaps/FlipVertSV
+./X11R5/include/X11/bitmaps/FoldSV
+./X11R5/include/X11/bitmaps/LeftSV
+./X11R5/include/X11/bitmaps/RightSV
+./X11R5/include/X11/bitmaps/RotateLeftSV
+./X11R5/include/X11/bitmaps/RotateRightSV
+./X11R5/include/X11/bitmaps/StippleSV
+./X11R5/include/X11/bitmaps/TermSV
+./X11R5/include/X11/bitmaps/UpSV
+./X11R5/include/X11/bitmaps/blackSV
+./X11R5/include/X11/bitmaps/black6SV
+./X11R5/include/X11/bitmaps/box6SV
+./X11R5/include/X11/bitmaps/boxesSV
+./X11R5/include/X11/bitmaps/calculatorSV
+./X11R5/include/X11/bitmaps/cntr_ptrSV
+./X11R5/include/X11/bitmaps/cntr_ptrmskSV
+./X11R5/include/X11/bitmaps/cross_weaveSV
+./X11R5/include/X11/bitmaps/dimple1SV
+./X11R5/include/X11/bitmaps/dimple3SV
+./X11R5/include/X11/bitmaps/dotSV
+./X11R5/include/X11/bitmaps/dropbar7SV
+./X11R5/include/X11/bitmaps/dropbar8SV
+./X11R5/include/X11/bitmaps/escherknotSV
+./X11R5/include/X11/bitmaps/flagdownSV
+./X11R5/include/X11/bitmaps/flagupSV
+./X11R5/include/X11/bitmaps/flipped_graySV
+./X11R5/include/X11/bitmaps/graySV
+./X11R5/include/X11/bitmaps/gray1SV
+./X11R5/include/X11/bitmaps/gray3SV
+./X11R5/include/X11/bitmaps/grid16SV
+./X11R5/include/X11/bitmaps/grid2SV
+./X11R5/include/X11/bitmaps/grid4SV
+./X11R5/include/X11/bitmaps/grid8SV
+./X11R5/include/X11/bitmaps/hlines2SV
+./X11R5/include/X11/bitmaps/hlines3SV
+./X11R5/include/X11/bitmaps/iconSV
+./X11R5/include/X11/bitmaps/keyboard16SV
+./X11R5/include/X11/bitmaps/ldblarrowSV
+./X11R5/include/X11/bitmaps/left_ptrSV
+./X11R5/include/X11/bitmaps/left_ptrmskSV
+./X11R5/include/X11/bitmaps/lettersSV
+./X11R5/include/X11/bitmaps/light_graySV
+./X11R5/include/X11/bitmaps/mailemptySV
+./X11R5/include/X11/bitmaps/mailemptymskSV
+./X11R5/include/X11/bitmaps/mailfullSV
+./X11R5/include/X11/bitmaps/mailfullmskSV
+./X11R5/include/X11/bitmaps/mensetmanusSV
+./X11R5/include/X11/bitmaps/menu10SV
+./X11R5/include/X11/bitmaps/menu12SV
+./X11R5/include/X11/bitmaps/menu16SV
+./X11R5/include/X11/bitmaps/menu6SV
+./X11R5/include/X11/bitmaps/menu8SV
+./X11R5/include/X11/bitmaps/nolettersSV
+./X11R5/include/X11/bitmaps/opendotSV
+./X11R5/include/X11/bitmaps/opendotMaskSV
+./X11R5/include/X11/bitmaps/plaidSV
+./X11R5/include/X11/bitmaps/rdblarrowSV
+./X11R5/include/X11/bitmaps/right_ptrSV
+./X11R5/include/X11/bitmaps/right_ptrmskSV
+./X11R5/include/X11/bitmaps/root_weaveSV
+./X11R5/include/X11/bitmaps/scalesSV
+./X11R5/include/X11/bitmaps/sipbSV
+./X11R5/include/X11/bitmaps/starSV
+./X11R5/include/X11/bitmaps/starMaskSV
+./X11R5/include/X11/bitmaps/stippleSV
+./X11R5/include/X11/bitmaps/targetSV
+./X11R5/include/X11/bitmaps/terminalSV
+./X11R5/include/X11/bitmaps/tie_fighterSV
+./X11R5/include/X11/bitmaps/vlines2SV
+./X11R5/include/X11/bitmaps/vlines3SV
+./X11R5/include/X11/bitmaps/weird_sizeSV
+./X11R5/include/X11/bitmaps/wide_weaveSV
+./X11R5/include/X11/bitmaps/wingdogsSV
+./X11R5/include/X11/bitmaps/xfd_iconSV
+./X11R5/include/X11/bitmaps/xlogo11SV
+./X11R5/include/X11/bitmaps/xlogo16SV
+./X11R5/include/X11/bitmaps/xlogo32SV
+./X11R5/include/X11/bitmaps/xlogo64SV
+./X11R5/include/X11/bitmaps/xm_errorSV
+./X11R5/include/X11/bitmaps/xm_hour16SV
+./X11R5/include/X11/bitmaps/xm_hour16mSV
+./X11R5/include/X11/bitmaps/xm_hour32SV
+./X11R5/include/X11/bitmaps/xm_hour32mSV
+./X11R5/include/X11/bitmaps/xm_informationSV
+./X11R5/include/X11/bitmaps/xm_noenter16SV
+./X11R5/include/X11/bitmaps/xm_noenter16mSV
+./X11R5/include/X11/bitmaps/xm_noenter32SV
+./X11R5/include/X11/bitmaps/xm_noenter32mSV
+./X11R5/include/X11/bitmaps/xm_questionSV
+./X11R5/include/X11/bitmaps/xm_warningSV
+./X11R5/include/X11/bitmaps/xm_workingSV
+./X11R5/include/X11/cursorfont.hSV
+./X11R5/include/X11/extensions/MITMisc.hSV
+./X11R5/include/X11/extensions/PEX.hSV
+./X11R5/include/X11/extensions/PEXErr.hSV
+./X11R5/include/X11/extensions/PEXproto.hSV
+./X11R5/include/X11/extensions/PEXprotost.hSV
+./X11R5/include/X11/extensions/XI.hSV
+./X11R5/include/X11/extensions/XInput.hSV
+./X11R5/include/X11/extensions/XIproto.hSV
+./X11R5/include/X11/extensions/XShm.hSV
+./X11R5/include/X11/extensions/Xext.hSV
+./X11R5/include/X11/extensions/multibuf.hSV
+./X11R5/include/X11/extensions/shape.hSV
+./X11R5/include/X11/extensions/xtestext1.hSV
+./X11R5/include/X11/keysym.hSV
+./X11R5/include/X11/keysymdef.hSV
+./X11R5/include/xbzarch.hSV
+./X11R5/lib/X11/nls/CSV
+./X11R5/lib/X11/nls/READMESV
+./X11R5/lib/X11/nls/ja_JP.jis7SV
+./X11R5/lib/X11/nls/ja_JP.jis8SV
+./X11R5/lib/X11/nls/ja_JP.mscodeSV
+./X11R5/lib/X11/nls/ja_JP.pjisSV
+./X11R5/lib/X11/nls/ja_JP.ujisSV
+./X11R5/lib/X11/nls/ko_KR.eucSV
+./X11R5/lib/X11/nls/lt_LN.bit7SV
+./X11R5/lib/X11/nls/lt_LN.bit8SV
+./X11R5/lib/X11/nls/nls.aliasSV
+./X11R5/lib/X11/nls/nls.dirSV
+./X11R5/lib/X11/nls/wr_WR.ctSV
+./X11R5/lib/X11/nls/zh_CN.ugbSV
+./X11R5/lib/X11/nls/zh_TW.big5SV
+./X11R5/lib/X11/nls/local_im_tbl/lt_LN.bit7SV
+./X11R5/lib/X11/nls/local_im_tbl/lt_LN.bit8SV
+#endif /* conf_X11R5 */
+#if defined(conf_X11R4) || defined(conf_ALLXHEADERS)
+./X11R4/include/xbzarch.hSV
+./X11R4/include/X11/DECkeysym.hSV
+./X11R4/include/X11/X.hSV
+./X11R4/include/X11/XWDFile.hSV
+./X11R4/include/X11/Xatom.hSV
+./X11R4/include/X11/Xmd.hSV
+./X11R4/include/X11/Xos.hSV
+./X11R4/include/X11/Xproto.hSV
+./X11R4/include/X11/Xprotostr.hSV
+./X11R4/include/X11/ap_keysym.hSV
+./X11R4/include/X11/copyright.hSV
+./X11R4/include/X11/keysym.hSV
+./X11R4/include/X11/keysymdef.hSV
+./X11R4/include/X11/bitmaps/1x1SV
+./X11R4/include/X11/bitmaps/2x2SV
+./X11R4/include/X11/bitmaps/blackSV
+./X11R4/include/X11/bitmaps/boxesSV
+./X11R4/include/X11/bitmaps/calculatorSV
+./X11R4/include/X11/bitmaps/cntr_ptrSV
+./X11R4/include/X11/bitmaps/cntr_ptrmskSV
+./X11R4/include/X11/bitmaps/cross_weaveSV
+./X11R4/include/X11/bitmaps/dimple1SV
+./X11R4/include/X11/bitmaps/dimple3SV
+./X11R4/include/X11/bitmaps/dotSV
+./X11R4/include/X11/bitmaps/dropbar7SV
+./X11R4/include/X11/bitmaps/dropbar8SV
+./X11R4/include/X11/bitmaps/escherknotSV
+./X11R4/include/X11/bitmaps/flagdownSV
+./X11R4/include/X11/bitmaps/flagupSV
+./X11R4/include/X11/bitmaps/flipped_graySV
+./X11R4/include/X11/bitmaps/graySV
+./X11R4/include/X11/bitmaps/gray1SV
+./X11R4/include/X11/bitmaps/gray3SV
+./X11R4/include/X11/bitmaps/hlines2SV
+./X11R4/include/X11/bitmaps/hlines3SV
+./X11R4/include/X11/bitmaps/iconSV
+./X11R4/include/X11/bitmaps/keyboard16SV
+./X11R4/include/X11/bitmaps/left_ptrSV
+./X11R4/include/X11/bitmaps/left_ptrmskSV
+./X11R4/include/X11/bitmaps/lettersSV
+./X11R4/include/X11/bitmaps/menu8SV
+./X11R4/include/X11/bitmaps/light_graySV
+./X11R4/include/X11/bitmaps/mailemptySV
+./X11R4/include/X11/bitmaps/mailemptymskSV
+./X11R4/include/X11/bitmaps/mailfullSV
+./X11R4/include/X11/bitmaps/mailfullmskSV
+./X11R4/include/X11/bitmaps/mensetmanusSV
+./X11R4/include/X11/bitmaps/menu10SV
+./X11R4/include/X11/bitmaps/menu12SV
+./X11R4/include/X11/bitmaps/menu16SV
+./X11R4/include/X11/bitmaps/nolettersSV
+./X11R4/include/X11/bitmaps/opendotSV
+./X11R4/include/X11/bitmaps/opendotMaskSV
+./X11R4/include/X11/bitmaps/plaidSV
+./X11R4/include/X11/bitmaps/right_ptrSV
+./X11R4/include/X11/bitmaps/right_ptrmskSV
+./X11R4/include/X11/bitmaps/root_weaveSV
+./X11R4/include/X11/bitmaps/scalesSV
+./X11R4/include/X11/bitmaps/sipbSV
+./X11R4/include/X11/bitmaps/starSV
+./X11R4/include/X11/bitmaps/starMaskSV
+./X11R4/include/X11/bitmaps/stippleSV
+./X11R4/include/X11/bitmaps/targetSV
+./X11R4/include/X11/bitmaps/terminalSV
+./X11R4/include/X11/bitmaps/tie_fighterSV
+./X11R4/include/X11/bitmaps/vlines2SV
+./X11R4/include/X11/bitmaps/vlines3SV
+./X11R4/include/X11/bitmaps/weird_sizeSV
+./X11R4/include/X11/bitmaps/wide_weaveSV
+./X11R4/include/X11/bitmaps/wingdogsSV
+./X11R4/include/X11/bitmaps/xfd_iconSV
+./X11R4/include/X11/bitmaps/xlogo11SV
+./X11R4/include/X11/bitmaps/xlogo16SV
+./X11R4/include/X11/bitmaps/xlogo32SV
+./X11R4/include/X11/bitmaps/xlogo64SV
+./X11R4/include/X11/Xauth.hSV
+./X11R4/include/X11/Xlib.hSV
+./X11R4/include/X11/Xresource.hSV
+./X11R4/include/X11/Xutil.hSV
+./X11R4/include/X11/cursorfont.hSV
+./X11R4/include/X11/Xlibint.hSV
+./X11R4/include/X11/Xlibos.hSV
+./X11R4/include/X11/Xstreams.hSV
+./X11R4/include/X11/X10.hSV
+./X11R4/include/X11/Composite.hSV
+./X11R4/include/X11/CompositeP.hSV
+./X11R4/include/X11/Constraint.hSV
+./X11R4/include/X11/Core.hSV
+./X11R4/include/X11/ConstrainP.hSV
+./X11R4/include/X11/CoreP.hSV
+./X11R4/include/X11/Intrinsic.hSV
+./X11R4/include/X11/IntrinsicP.hSV
+./X11R4/include/X11/Object.hSV
+./X11R4/include/X11/ObjectP.hSV
+./X11R4/include/X11/Quarks.hSV
+./X11R4/include/X11/RectObj.hSV
+./X11R4/include/X11/RectObjP.hSV
+./X11R4/include/X11/Shell.hSV
+./X11R4/include/X11/ShellP.hSV
+./X11R4/include/X11/StringDefs.hSV
+./X11R4/include/X11/Vendor.hSV
+./X11R4/include/X11/VendorP.hSV
+./X11R4/include/X11/Xmu/Xmu.hSV
+./X11R4/include/X11/Xmu/Atoms.hSV
+./X11R4/include/X11/Xmu/CharSet.hSV
+./X11R4/include/X11/Xmu/CloseHook.hSV
+./X11R4/include/X11/Xmu/Converters.hSV
+./X11R4/include/X11/Xmu/CurUtil.hSV
+./X11R4/include/X11/Xmu/CvtCache.hSV
+./X11R4/include/X11/Xmu/DisplayQue.hSV
+./X11R4/include/X11/Xmu/Drawing.hSV
+./X11R4/include/X11/Xmu/Error.hSV
+./X11R4/include/X11/Xmu/Initer.hSV
+./X11R4/include/X11/Xmu/Misc.hSV
+./X11R4/include/X11/Xmu/StdSel.hSV
+./X11R4/include/X11/Xmu/StdCmap.hSV
+./X11R4/include/X11/Xmu/SysUtil.hSV
+./X11R4/include/X11/Xmu/WinUtil.hSV
+./X11R4/include/X11/Xmu/Xct.hSV
+./X11R4/include/X11/Xaw/AsciiSink.hSV
+./X11R4/include/X11/Xaw/AsciiSinkP.hSV
+./X11R4/include/X11/Xaw/AsciiSrc.hSV
+./X11R4/include/X11/Xaw/AsciiSrcP.hSV
+./X11R4/include/X11/Xaw/AsciiText.hSV
+./X11R4/include/X11/Xaw/AsciiTextP.hSV
+./X11R4/include/X11/Xaw/Box.hSV
+./X11R4/include/X11/Xaw/BoxP.hSV
+./X11R4/include/X11/Xaw/Cardinals.hSV
+./X11R4/include/X11/Xaw/Clock.hSV
+./X11R4/include/X11/Xaw/ClockP.hSV
+./X11R4/include/X11/Xaw/Command.hSV
+./X11R4/include/X11/Xaw/CommandP.hSV
+./X11R4/include/X11/Xaw/Dialog.hSV
+./X11R4/include/X11/Xaw/DialogP.hSV
+./X11R4/include/X11/Xaw/Form.hSV
+./X11R4/include/X11/Xaw/FormP.hSV
+./X11R4/include/X11/Xaw/Grip.hSV
+./X11R4/include/X11/Xaw/GripP.hSV
+./X11R4/include/X11/Xaw/Label.hSV
+./X11R4/include/X11/Xaw/LabelP.hSV
+./X11R4/include/X11/Xaw/List.hSV
+./X11R4/include/X11/Xaw/ListP.hSV
+./X11R4/include/X11/Xaw/Logo.hSV
+./X11R4/include/X11/Xaw/LogoP.hSV
+./X11R4/include/X11/Xaw/Mailbox.hSV
+./X11R4/include/X11/Xaw/MailboxP.hSV
+./X11R4/include/X11/Xaw/MenuButton.hSV
+./X11R4/include/X11/Xaw/MenuButtoP.hSV
+./X11R4/include/X11/Xaw/Paned.hSV
+./X11R4/include/X11/Xaw/PanedP.hSV
+./X11R4/include/X11/Xaw/Scroll.hSV
+./X11R4/include/X11/Xaw/Scrollbar.hSV
+./X11R4/include/X11/Xaw/ScrollbarP.hSV
+./X11R4/include/X11/Xaw/Simple.hSV
+./X11R4/include/X11/Xaw/SimpleP.hSV
+./X11R4/include/X11/Xaw/SimpleMenu.hSV
+./X11R4/include/X11/Xaw/SimpleMenP.hSV
+./X11R4/include/X11/Xaw/Sme.hSV
+./X11R4/include/X11/Xaw/SmeP.hSV
+./X11R4/include/X11/Xaw/SmeBSB.hSV
+./X11R4/include/X11/Xaw/SmeBSBP.hSV
+./X11R4/include/X11/Xaw/SmeLine.hSV
+./X11R4/include/X11/Xaw/SmeLineP.hSV
+./X11R4/include/X11/Xaw/StripChart.hSV
+./X11R4/include/X11/Xaw/StripCharP.hSV
+./X11R4/include/X11/Xaw/Template.cSV
+./X11R4/include/X11/Xaw/Template.hSV
+./X11R4/include/X11/Xaw/TemplateP.hSV
+./X11R4/include/X11/Xaw/Text.hSV
+./X11R4/include/X11/Xaw/TextP.hSV
+./X11R4/include/X11/Xaw/TextSink.hSV
+./X11R4/include/X11/Xaw/TextSinkP.hSV
+./X11R4/include/X11/Xaw/TextSrc.hSV
+./X11R4/include/X11/Xaw/TextSrcP.hSV
+./X11R4/include/X11/Xaw/Toggle.hSV
+./X11R4/include/X11/Xaw/ToggleP.hSV
+./X11R4/include/X11/Xaw/Viewport.hSV
+./X11R4/include/X11/Xaw/ViewportP.hSV
+./X11R4/include/X11/Xaw/VPaned.hSV
+./X11R4/include/X11/Xaw/XawInit.hSV
+./X11R4/include/X11/Xdmcp.hSV
+./X11R4/include/X11/extensions/Xext.hSV
+./X11R4/include/X11/extensions/multibuf.hSV
+./X11R4/include/X11/extensions/shape.hSV
+./X11R4/include/X11/extensions/XShm.hSV
+./X11R4/include/X11/extensions/MITMisc.hSV
+./X11R4/include/X11/extensions/XI.hSV
+./X11R4/include/X11/extensions/XInput.hSV
+./X11R4/include/X11/extensions/XIproto.hSV
+./X11R4/include/X11/extensions/xtestext1.hSV
+#endif /* conf_X11R4 */
+/* Even more things get delivered ONLY ON THE SUN(!) */
+#if defined(su4_u42) && (defined(conf_X11R4) || defined(conf_X11R5))
+./X11R4/bin/XSV
+./X11R4/bin/X11R4SV
+./X11R4/bin/X11R4goinitSV
+./X11R4/bin/X11R4initSV
+./X11R4/bin/XgoSV
+./X11R4/bin/appresSV
+./X11R4/bin/atobmSV
+./X11R4/bin/bdftosnfSV
+./X11R4/bin/bitmapSV
+./X11R4/bin/bmtoaSV
+./X11R4/bin/brushtopbmSV
+./X11R4/bin/clr2graySV
+./X11R4/bin/cmuwmtopbmSV
+./X11R4/bin/constypeSV
+./X11R4/bin/fbcatSV
+./X11R4/bin/fbcleanSV
+./X11R4/bin/fbedgeSV
+./X11R4/bin/fbextSV
+./X11R4/bin/fbhalfSV
+./X11R4/bin/fbhamSV
+./X11R4/bin/fbhistSV
+./X11R4/bin/fbinfoSV
+./X11R4/bin/fbm2podSV
+./X11R4/bin/fbm2tgaSV
+./X11R4/bin/fbmaskSV
+./X11R4/bin/fbnormSV
+./X11R4/bin/fbpsSV
+./X11R4/bin/fbquantSV
+./X11R4/bin/fbrotSV
+./X11R4/bin/fbsampleSV
+./X11R4/bin/fbsharpSV
+./X11R4/bin/fitstopgmSV
+./X11R4/bin/fstopgmSV
+./X11R4/bin/g3topbmSV
+./X11R4/bin/gemtopbmSV
+./X11R4/bin/giftoppmSV
+./X11R4/bin/golddigSV
+./X11R4/bin/gray2clrSV
+./X11R4/bin/hexcalcSV
+./X11R4/bin/hipstopgmSV
+./X11R4/bin/icoSV
+./X11R4/bin/icontopbmSV
+./X11R4/bin/idiffSV
+./X11R4/bin/ilbmtoppmSV
+./X11R4/bin/imakeSV
+./X11R4/bin/imgtoppmSV
+./X11R4/bin/kbd_modeSV
+./X11R4/bin/listresSV
+./X11R4/bin/lndirSV
+./X11R4/bin/macptopbmSV
+./X11R4/bin/makedependSV
+./X11R4/bin/makelevSV
+./X11R4/bin/mazeSV
+./X11R4/bin/mazewarSV
+./X11R4/bin/mgrtopbmSV
+./X11R4/bin/mkdirhierSV
+./X11R4/bin/mwmSV
+./X11R4/bin/muncherSV
+./X11R4/bin/mkfontdirSV
+./X11R4/bin/mtvtoppmSV
+./X11R4/bin/oclockSV
+./X11R4/bin/pbm2psSV
+./X11R4/bin/pbmlifeSV
+./X11R4/bin/pbmmakeSV
+./X11R4/bin/pbmmaskSV
+./X11R4/bin/pbmpasteSV
+./X11R4/bin/pbmreduceSV
+./X11R4/bin/pbmtitleSV
+./X11R4/bin/pbmtoasciiSV
+./X11R4/bin/pbmtobbnbgSV
+./X11R4/bin/pbmtocmuwmSV
+./X11R4/bin/pbmtog3SV
+./X11R4/bin/pbmtogoSV
+./X11R4/bin/pbmtoiconSV
+./X11R4/bin/pbmtoljSV
+./X11R4/bin/pbmtomacpSV
+./X11R4/bin/pbmtomgrSV
+./X11R4/bin/pbmtoptxSV
+./X11R4/bin/pbmtorastSV
+./X11R4/bin/pbmtox10bmSV
+./X11R4/bin/pbmtoxbmSV
+./X11R4/bin/pbmtoxwdSV
+./X11R4/bin/pbmupcSV
+./X11R4/bin/pcxtopbmSV
+./X11R4/bin/twmSV
+./X11R4/bin/pgmhistSV
+./X11R4/bin/pgmenhanceSV
+./X11R4/bin/pgmnormSV
+./X11R4/bin/pgmtofitsSV
+./X11R4/bin/pgmtopbmSV
+./X11R4/bin/pgmtopsSV
+./X11R4/bin/pic2fbmSV
+./X11R4/bin/picttopbmSV
+./X11R4/bin/plaidSV
+./X11R4/bin/pnmcatSV
+./X11R4/bin/pnmcropSV
+./X11R4/bin/pnmcutSV
+./X11R4/bin/pnmenlargeSV
+./X11R4/bin/pnmflipSV
+./X11R4/bin/pnminvertSV
+./X11R4/bin/pnmpasteSV
+./X11R4/bin/pnmtileSV
+./X11R4/bin/ppmarithSV
+./X11R4/bin/ppmconvolSV
+./X11R4/bin/ppmcscaleSV
+./X11R4/bin/ppmhistSV
+./X11R4/bin/ppmpatSV
+./X11R4/bin/ppmquantSV
+./X11R4/bin/ppmrotateSV
+./X11R4/bin/ppmscaleSV
+./X11R4/bin/ppmshearSV
+./X11R4/bin/ppmsmoothSV
+./X11R4/bin/ppmtogifSV
+./X11R4/bin/ppmtopsSV
+./X11R4/bin/ppmtoilbmSV
+./X11R4/bin/ppmtopgmSV
+./X11R4/bin/ppmtorastSV
+./X11R4/bin/ppmtoxwdSV
+./X11R4/bin/psidtopgmSV
+./X11R4/bin/puzzleSV
+./X11R4/bin/qrt2fbmSV
+./X11R4/bin/qrttoppmSV
+./X11R4/bin/rasttopbmSV
+./X11R4/bin/rasttoppmSV
+./X11R4/bin/raw2fbmSV
+./X11R4/bin/rawtopgmSV
+./X11R4/bin/rcmdSV
+./X11R4/bin/resizeSV
+./X11R4/bin/roidsSV
+./X11R4/bin/showrgbSV
+./X11R4/bin/showsnfSV
+./X11R4/bin/startxSV
+./X11R4/bin/tga2fbmSV
+./X11R4/bin/tgatoppmSV
+./X11R4/bin/tifftopgmSV
+./X11R4/bin/udiffSV
+./X11R4/bin/unmapSV
+./X11R4/bin/X11R4xrdbSV
+./X11R4/bin/xauthSV
+./X11R4/bin/xbgsunSV
+./X11R4/bin/xbiffSV
+./X11R4/bin/xbmtopbmSV
+./X11R4/bin/xdmSV
+./X11R4/bin/xcalcSV
+./X11R4/bin/xcalendarSV
+./X11R4/bin/xclipboardSV
+./X11R4/bin/xclockSV
+./X11R4/bin/xcolorsSV
+./X11R4/bin/xcpustateSV
+./X11R4/bin/xcutselSV
+./X11R4/bin/xdbxSV
+./X11R4/bin/xditviewSV
+./X11R4/bin/xdprSV
+./X11R4/bin/xdpyinfoSV
+./X11R4/bin/xeditSV
+./X11R4/bin/xevSV
+./X11R4/bin/xeyesSV
+./X11R4/bin/xfdSV
+./X11R4/bin/xfigSV
+./X11R4/bin/xfontselSV
+./X11R4/bin/xgcSV
+./X11R4/bin/xgoinitSV
+./X11R4/bin/xhostSV
+./X11R4/bin/xinitSV
+./X11R4/bin/xkillSV
+./X11R4/bin/xlessSV
+./X11R4/bin/xloadSV
+./X11R4/bin/xloadimageSV
+./X11R4/bin/xlockSV
+./X11R4/bin/xlogoSV
+./X11R4/bin/xlsatomsSV
+./X11R4/bin/xmhSV
+./X11R4/bin/xlsclientsSV
+./X11R4/bin/xprSV
+./X11R4/bin/xlsfontsSV
+./X11R4/bin/xlswinsSV
+./X11R4/bin/xmagSV
+./X11R4/bin/xmanSV
+./X11R4/bin/xmkmfSV
+./X11R4/bin/xmodmapSV
+./X11R4/bin/xperfmonSV
+./X11R4/bin/xplacesSV
+./X11R4/bin/xpostitSV
+./X11R4/bin/xpropSV
+./X11R4/bin/xrdbSV
+./X11R4/bin/xrefreshSV
+./X11R4/bin/xscopeSV
+./X11R4/bin/xsetSV
+./X11R4/bin/xsetrootSV
+./X11R4/bin/xsnapSV
+./X11R4/bin/xstdcmapSV
+./X11R4/bin/xtermSV
+./X11R4/bin/xtetrisSV
+./X11R4/bin/xtrekSV
+./X11R4/bin/xtrekdSV
+./X11R4/bin/xviewsunSV
+./X11R4/bin/xwatchSV
+./X11R4/bin/xwdSV
+./X11R4/bin/xwdtopbmSV
+./X11R4/bin/xwdtoppmSV
+./X11R4/bin/xwininfoSV
+./X11R4/bin/xwudSV
+./X11R4/bin/XgraphonSV
+./X11R4/bin/xwaitSV
+./X11R4/bin/xpostSV
+./X11R4/bin/XsunSV
+./X11R4/bin/XsunR4SV
+./X11R4/lib/X11/fonts/PEX/Roman.phontSV
+./X11R4/lib/X11/fonts/PEX/Roman_M.phontSV
+./X11R4/lib/X11/fonts/misc/5x8.snfSV
+./X11R4/lib/X11/fonts/misc/6x9.snfSV
+./X11R4/lib/X11/fonts/misc/6x10.snfSV
+./X11R4/lib/X11/fonts/misc/6x12.snfSV
+./X11R4/lib/X11/fonts/misc/6x13.snfSV
+./X11R4/lib/X11/fonts/misc/6x13B.snfSV
+./X11R4/lib/X11/fonts/misc/7x13.snfSV
+./X11R4/lib/X11/fonts/misc/7x13B.snfSV
+./X11R4/lib/X11/fonts/misc/8x13.snfSV
+./X11R4/lib/X11/fonts/misc/8x13B.snfSV
+./X11R4/lib/X11/fonts/misc/9x15.snfSV
+./X11R4/lib/X11/fonts/misc/9x15B.snfSV
+./X11R4/lib/X11/fonts/misc/10x20.snfSV
+./X11R4/lib/X11/fonts/misc/cursor.snfSV
+./X11R4/lib/X11/fonts/misc/deccurs.snfSV
+./X11R4/lib/X11/fonts/misc/decsess.snfSV
+./X11R4/lib/X11/fonts/misc/olcursor.snfSV
+./X11R4/lib/X11/fonts/misc/olgl10.snfSV
+./X11R4/lib/X11/fonts/misc/olgl12.snfSV
+./X11R4/lib/X11/fonts/misc/olgl14.snfSV
+./X11R4/lib/X11/fonts/misc/olgl19.snfSV
+./X11R4/lib/X11/fonts/misc/nil2.snfSV
+./X11R4/lib/X11/fonts/misc/clB6x10.snfSV
+./X11R4/lib/X11/fonts/misc/clB6x12.snfSV
+./X11R4/lib/X11/fonts/misc/clB8x10.snfSV
+./X11R4/lib/X11/fonts/misc/clB8x12.snfSV
+./X11R4/lib/X11/fonts/misc/clB8x13.snfSV
+./X11R4/lib/X11/fonts/misc/clB8x14.snfSV
+./X11R4/lib/X11/fonts/misc/clB8x16.snfSV
+./X11R4/lib/X11/fonts/misc/clB8x8.snfSV
+./X11R4/lib/X11/fonts/misc/clB9x15.snfSV
+./X11R4/lib/X11/fonts/misc/clI6x12.snfSV
+./X11R4/lib/X11/fonts/misc/clI8x8.snfSV
+./X11R4/lib/X11/fonts/misc/clR4x6.snfSV
+./X11R4/lib/X11/fonts/misc/clR5x10.snfSV
+./X11R4/lib/X11/fonts/misc/clR5x6.snfSV
+./X11R4/lib/X11/fonts/misc/clR5x8.snfSV
+./X11R4/lib/X11/fonts/misc/clR6x10.snfSV
+./X11R4/lib/X11/fonts/misc/clR6x12.snfSV
+./X11R4/lib/X11/fonts/misc/clR6x13.snfSV
+./X11R4/lib/X11/fonts/misc/clR6x6.snfSV
+./X11R4/lib/X11/fonts/misc/clR6x8.snfSV
+./X11R4/lib/X11/fonts/misc/clR7x10.snfSV
+./X11R4/lib/X11/fonts/misc/clR7x12.snfSV
+./X11R4/lib/X11/fonts/misc/clR7x14.snfSV
+./X11R4/lib/X11/fonts/misc/clR7x8.snfSV
+./X11R4/lib/X11/fonts/misc/clR8x10.snfSV
+./X11R4/lib/X11/fonts/misc/clR8x12.snfSV
+./X11R4/lib/X11/fonts/misc/clR8x13.snfSV
+./X11R4/lib/X11/fonts/misc/clR8x14.snfSV
+./X11R4/lib/X11/fonts/misc/clR8x16.snfSV
+./X11R4/lib/X11/fonts/misc/clR8x8.snfSV
+./X11R4/lib/X11/fonts/misc/clR9x15.snfSV
+./X11R4/lib/X11/fonts/misc/k14.snfSV
+./X11R4/lib/X11/fonts/misc/7x14.snfSV
+./X11R4/lib/X11/fonts/misc/7x14rk.snfSV
+./X11R4/lib/X11/fonts/misc/12x24.snfSV
+./X11R4/lib/X11/fonts/misc/12x24rk.snfSV
+./X11R4/lib/X11/fonts/misc/8x16.snfSV
+./X11R4/lib/X11/fonts/misc/8x16rk.snfSV
+./X11R4/lib/X11/fonts/misc/fonts.dirSV
+./X11R4/lib/X11/fonts/misc/fonts.aliasSV
+./X11R4/lib/X11/fonts/misc/xtrek.snfSV
+./X11R4/lib/X11/fonts/misc/fonts.alias.newSV
+./X11R4/lib/X11/fonts/75dpi/courB08.snfSV
+./X11R4/lib/X11/fonts/75dpi/courB10.snfSV
+./X11R4/lib/X11/fonts/75dpi/courB12.snfSV
+./X11R4/lib/X11/fonts/75dpi/courB14.snfSV
+./X11R4/lib/X11/fonts/75dpi/courB18.snfSV
+./X11R4/lib/X11/fonts/75dpi/courB24.snfSV
+./X11R4/lib/X11/fonts/75dpi/courBO08.snfSV
+./X11R4/lib/X11/fonts/75dpi/courBO10.snfSV
+./X11R4/lib/X11/fonts/75dpi/courBO12.snfSV
+./X11R4/lib/X11/fonts/75dpi/courBO14.snfSV
+./X11R4/lib/X11/fonts/75dpi/courBO18.snfSV
+./X11R4/lib/X11/fonts/75dpi/courBO24.snfSV
+./X11R4/lib/X11/fonts/75dpi/courO08.snfSV
+./X11R4/lib/X11/fonts/75dpi/courO10.snfSV
+./X11R4/lib/X11/fonts/75dpi/courO12.snfSV
+./X11R4/lib/X11/fonts/75dpi/courO14.snfSV
+./X11R4/lib/X11/fonts/75dpi/courO18.snfSV
+./X11R4/lib/X11/fonts/75dpi/courO24.snfSV
+./X11R4/lib/X11/fonts/75dpi/courR08.snfSV
+./X11R4/lib/X11/fonts/75dpi/courR10.snfSV
+./X11R4/lib/X11/fonts/75dpi/courR12.snfSV
+./X11R4/lib/X11/fonts/75dpi/courR14.snfSV
+./X11R4/lib/X11/fonts/75dpi/courR18.snfSV
+./X11R4/lib/X11/fonts/75dpi/courR24.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvB08.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvB10.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvB12.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvB14.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvB18.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvB24.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvBO08.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvBO10.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvBO12.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvBO14.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvBO18.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvBO24.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvO08.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvO10.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvO12.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvO14.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvO18.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvO24.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvR08.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvR10.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvR12.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvR14.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvR18.snfSV
+./X11R4/lib/X11/fonts/75dpi/helvR24.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenB08.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenB10.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenB12.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenB14.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenB18.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenB24.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenBI08.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenBI10.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenBI12.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenBI14.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenBI18.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenBI24.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenI08.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenI10.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenI12.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenI14.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenI18.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenI24.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenR08.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenR10.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenR12.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenR14.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenR18.snfSV
+./X11R4/lib/X11/fonts/75dpi/ncenR24.snfSV
+./X11R4/lib/X11/fonts/75dpi/symb08.snfSV
+./X11R4/lib/X11/fonts/75dpi/symb10.snfSV
+./X11R4/lib/X11/fonts/75dpi/symb12.snfSV
+./X11R4/lib/X11/fonts/75dpi/symb14.snfSV
+./X11R4/lib/X11/fonts/75dpi/symb18.snfSV
+./X11R4/lib/X11/fonts/75dpi/symb24.snfSV
+./X11R4/lib/X11/fonts/75dpi/timB08.snfSV
+./X11R4/lib/X11/fonts/75dpi/timB10.snfSV
+./X11R4/lib/X11/fonts/75dpi/timB12.snfSV
+./X11R4/lib/X11/fonts/75dpi/timB14.snfSV
+./X11R4/lib/X11/fonts/75dpi/timB18.snfSV
+./X11R4/lib/X11/fonts/75dpi/timB24.snfSV
+./X11R4/lib/X11/fonts/75dpi/timBI08.snfSV
+./X11R4/lib/X11/fonts/75dpi/timBI10.snfSV
+./X11R4/lib/X11/fonts/75dpi/timBI12.snfSV
+./X11R4/lib/X11/fonts/75dpi/timBI14.snfSV
+./X11R4/lib/X11/fonts/75dpi/timBI18.snfSV
+./X11R4/lib/X11/fonts/75dpi/timBI24.snfSV
+./X11R4/lib/X11/fonts/75dpi/timI08.snfSV
+./X11R4/lib/X11/fonts/75dpi/timI10.snfSV
+./X11R4/lib/X11/fonts/75dpi/timI12.snfSV
+./X11R4/lib/X11/fonts/75dpi/timI14.snfSV
+./X11R4/lib/X11/fonts/75dpi/timI18.snfSV
+./X11R4/lib/X11/fonts/75dpi/timI24.snfSV
+./X11R4/lib/X11/fonts/75dpi/timR08.snfSV
+./X11R4/lib/X11/fonts/75dpi/timR10.snfSV
+./X11R4/lib/X11/fonts/75dpi/timR12.snfSV
+./X11R4/lib/X11/fonts/75dpi/timR14.snfSV
+./X11R4/lib/X11/fonts/75dpi/timR18.snfSV
+./X11R4/lib/X11/fonts/75dpi/timR24.snfSV
+./X11R4/lib/X11/fonts/75dpi/charB08.snfSV
+./X11R4/lib/X11/fonts/75dpi/charB10.snfSV
+./X11R4/lib/X11/fonts/75dpi/charB12.snfSV
+./X11R4/lib/X11/fonts/75dpi/charB14.snfSV
+./X11R4/lib/X11/fonts/75dpi/charB18.snfSV
+./X11R4/lib/X11/fonts/75dpi/charB24.snfSV
+./X11R4/lib/X11/fonts/75dpi/charBI08.snfSV
+./X11R4/lib/X11/fonts/75dpi/charBI10.snfSV
+./X11R4/lib/X11/fonts/75dpi/charBI12.snfSV
+./X11R4/lib/X11/fonts/75dpi/charBI14.snfSV
+./X11R4/lib/X11/fonts/75dpi/charBI18.snfSV
+./X11R4/lib/X11/fonts/75dpi/charBI24.snfSV
+./X11R4/lib/X11/fonts/75dpi/charI08.snfSV
+./X11R4/lib/X11/fonts/75dpi/charI10.snfSV
+./X11R4/lib/X11/fonts/75dpi/charI12.snfSV
+./X11R4/lib/X11/fonts/75dpi/charI14.snfSV
+./X11R4/lib/X11/fonts/75dpi/charI18.snfSV
+./X11R4/lib/X11/fonts/75dpi/charI24.snfSV
+./X11R4/lib/X11/fonts/75dpi/charR08.snfSV
+./X11R4/lib/X11/fonts/75dpi/charR10.snfSV
+./X11R4/lib/X11/fonts/75dpi/charR12.snfSV
+./X11R4/lib/X11/fonts/75dpi/charR14.snfSV
+./X11R4/lib/X11/fonts/75dpi/charR18.snfSV
+./X11R4/lib/X11/fonts/75dpi/charR24.snfSV
+./X11R4/lib/X11/fonts/75dpi/tech14.snfSV
+./X11R4/lib/X11/fonts/75dpi/techB14.snfSV
+./X11R4/lib/X11/fonts/75dpi/term14.snfSV
+./X11R4/lib/X11/fonts/75dpi/termB14.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBIS08.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBIS10.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBIS12.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBIS14.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBIS18.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBIS24.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBS08.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBS10.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBS12.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBS14.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBS18.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBS24.snfSV
+./X11R4/lib/X11/fonts/75dpi/luIS08.snfSV
+./X11R4/lib/X11/fonts/75dpi/luIS10.snfSV
+./X11R4/lib/X11/fonts/75dpi/luIS12.snfSV
+./X11R4/lib/X11/fonts/75dpi/luIS14.snfSV
+./X11R4/lib/X11/fonts/75dpi/luIS18.snfSV
+./X11R4/lib/X11/fonts/75dpi/luIS24.snfSV
+./X11R4/lib/X11/fonts/75dpi/luRS08.snfSV
+./X11R4/lib/X11/fonts/75dpi/luRS10.snfSV
+./X11R4/lib/X11/fonts/75dpi/luRS12.snfSV
+./X11R4/lib/X11/fonts/75dpi/luRS14.snfSV
+./X11R4/lib/X11/fonts/75dpi/luRS18.snfSV
+./X11R4/lib/X11/fonts/75dpi/luRS24.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubB08.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubB10.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubB12.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubB14.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubB18.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubB24.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubBI08.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubBI10.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubBI12.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubBI14.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubBI18.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubBI24.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubI08.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubI10.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubI12.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubI14.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubI18.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubI24.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubR08.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubR10.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubR12.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubR14.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubR18.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubR24.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutBS08.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutBS10.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutBS12.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutBS14.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutBS18.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutBS24.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutRS08.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutRS10.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutRS12.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutRS14.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutRS18.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutRS24.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBIS19.snfSV
+./X11R4/lib/X11/fonts/75dpi/luBS19.snfSV
+./X11R4/lib/X11/fonts/75dpi/luIS19.snfSV
+./X11R4/lib/X11/fonts/75dpi/luRS19.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubB19.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubBI19.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubI19.snfSV
+./X11R4/lib/X11/fonts/75dpi/lubR19.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutBS19.snfSV
+./X11R4/lib/X11/fonts/75dpi/lutRS19.snfSV
+./X11R4/lib/X11/fonts/75dpi/fonts.dirSV
+./X11R4/lib/X11/fonts/75dpi/fonts.aliasSV
+./X11R4/lib/X11/fonts/100dpi/courB08.snfSV
+./X11R4/lib/X11/fonts/100dpi/courB10.snfSV
+./X11R4/lib/X11/fonts/100dpi/courB12.snfSV
+./X11R4/lib/X11/fonts/100dpi/courB14.snfSV
+./X11R4/lib/X11/fonts/100dpi/courB18.snfSV
+./X11R4/lib/X11/fonts/100dpi/courB24.snfSV
+./X11R4/lib/X11/fonts/100dpi/courBO08.snfSV
+./X11R4/lib/X11/fonts/100dpi/courBO10.snfSV
+./X11R4/lib/X11/fonts/100dpi/courBO12.snfSV
+./X11R4/lib/X11/fonts/100dpi/courBO14.snfSV
+./X11R4/lib/X11/fonts/100dpi/courBO18.snfSV
+./X11R4/lib/X11/fonts/100dpi/courBO24.snfSV
+./X11R4/lib/X11/fonts/100dpi/courO08.snfSV
+./X11R4/lib/X11/fonts/100dpi/courO10.snfSV
+./X11R4/lib/X11/fonts/100dpi/courO12.snfSV
+./X11R4/lib/X11/fonts/100dpi/courO14.snfSV
+./X11R4/lib/X11/fonts/100dpi/courO18.snfSV
+./X11R4/lib/X11/fonts/100dpi/courO24.snfSV
+./X11R4/lib/X11/fonts/100dpi/courR08.snfSV
+./X11R4/lib/X11/fonts/100dpi/courR10.snfSV
+./X11R4/lib/X11/fonts/100dpi/courR12.snfSV
+./X11R4/lib/X11/fonts/100dpi/courR14.snfSV
+./X11R4/lib/X11/fonts/100dpi/courR18.snfSV
+./X11R4/lib/X11/fonts/100dpi/courR24.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvB08.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvB10.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvB12.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvB14.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvB18.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvB24.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvBO08.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvBO10.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvBO12.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvBO14.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvBO18.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvBO24.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvO08.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvO10.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvO12.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvO14.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvO18.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvO24.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvR08.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvR10.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvR12.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvR14.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvR18.snfSV
+./X11R4/lib/X11/fonts/100dpi/helvR24.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenB08.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenB10.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenB12.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenB14.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenB18.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenB24.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenBI08.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenBI10.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenBI12.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenBI14.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenBI18.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenBI24.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenI08.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenI10.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenI12.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenI14.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenI18.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenI24.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenR08.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenR10.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenR12.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenR14.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenR18.snfSV
+./X11R4/lib/X11/fonts/100dpi/ncenR24.snfSV
+./X11R4/lib/X11/fonts/100dpi/symb08.snfSV
+./X11R4/lib/X11/fonts/100dpi/symb10.snfSV
+./X11R4/lib/X11/fonts/100dpi/symb12.snfSV
+./X11R4/lib/X11/fonts/100dpi/symb14.snfSV
+./X11R4/lib/X11/fonts/100dpi/symb18.snfSV
+./X11R4/lib/X11/fonts/100dpi/symb24.snfSV
+./X11R4/lib/X11/fonts/100dpi/timB08.snfSV
+./X11R4/lib/X11/fonts/100dpi/timB10.snfSV
+./X11R4/lib/X11/fonts/100dpi/timB12.snfSV
+./X11R4/lib/X11/fonts/100dpi/timB14.snfSV
+./X11R4/lib/X11/fonts/100dpi/timB18.snfSV
+./X11R4/lib/X11/fonts/100dpi/timB24.snfSV
+./X11R4/lib/X11/fonts/100dpi/timBI08.snfSV
+./X11R4/lib/X11/fonts/100dpi/timBI10.snfSV
+./X11R4/lib/X11/fonts/100dpi/timBI12.snfSV
+./X11R4/lib/X11/fonts/100dpi/timBI14.snfSV
+./X11R4/lib/X11/fonts/100dpi/timBI18.snfSV
+./X11R4/lib/X11/fonts/100dpi/timBI24.snfSV
+./X11R4/lib/X11/fonts/100dpi/timI08.snfSV
+./X11R4/lib/X11/fonts/100dpi/timI10.snfSV
+./X11R4/lib/X11/fonts/100dpi/timI12.snfSV
+./X11R4/lib/X11/fonts/100dpi/timI14.snfSV
+./X11R4/lib/X11/fonts/100dpi/timI18.snfSV
+./X11R4/lib/X11/fonts/100dpi/timI24.snfSV
+./X11R4/lib/X11/fonts/100dpi/timR08.snfSV
+./X11R4/lib/X11/fonts/100dpi/timR10.snfSV
+./X11R4/lib/X11/fonts/100dpi/timR12.snfSV
+./X11R4/lib/X11/fonts/100dpi/timR14.snfSV
+./X11R4/lib/X11/fonts/100dpi/timR18.snfSV
+./X11R4/lib/X11/fonts/100dpi/timR24.snfSV
+./X11R4/lib/X11/fonts/100dpi/charB08.snfSV
+./X11R4/lib/X11/fonts/100dpi/charB10.snfSV
+./X11R4/lib/X11/fonts/100dpi/charB12.snfSV
+./X11R4/lib/X11/fonts/100dpi/charB14.snfSV
+./X11R4/lib/X11/fonts/100dpi/charB18.snfSV
+./X11R4/lib/X11/fonts/100dpi/charB24.snfSV
+./X11R4/lib/X11/fonts/100dpi/charBI08.snfSV
+./X11R4/lib/X11/fonts/100dpi/charBI10.snfSV
+./X11R4/lib/X11/fonts/100dpi/charBI12.snfSV
+./X11R4/lib/X11/fonts/100dpi/charBI14.snfSV
+./X11R4/lib/X11/fonts/100dpi/charBI18.snfSV
+./X11R4/lib/X11/fonts/100dpi/charBI24.snfSV
+./X11R4/lib/X11/fonts/100dpi/charI08.snfSV
+./X11R4/lib/X11/fonts/100dpi/charI10.snfSV
+./X11R4/lib/X11/fonts/100dpi/charI12.snfSV
+./X11R4/lib/X11/fonts/100dpi/charI14.snfSV
+./X11R4/lib/X11/fonts/100dpi/charI18.snfSV
+./X11R4/lib/X11/fonts/100dpi/charI24.snfSV
+./X11R4/lib/X11/fonts/100dpi/charR08.snfSV
+./X11R4/lib/X11/fonts/100dpi/charR10.snfSV
+./X11R4/lib/X11/fonts/100dpi/charR12.snfSV
+./X11R4/lib/X11/fonts/100dpi/charR14.snfSV
+./X11R4/lib/X11/fonts/100dpi/charR18.snfSV
+./X11R4/lib/X11/fonts/100dpi/charR24.snfSV
+./X11R4/lib/X11/fonts/100dpi/tech14.snfSV
+./X11R4/lib/X11/fonts/100dpi/techB14.snfSV
+./X11R4/lib/X11/fonts/100dpi/term14.snfSV
+./X11R4/lib/X11/fonts/100dpi/termB14.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBIS08.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBIS10.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBIS12.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBIS14.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBIS18.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBIS24.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBS08.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBS10.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBS12.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBS14.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBS18.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBS24.snfSV
+./X11R4/lib/X11/fonts/100dpi/luIS08.snfSV
+./X11R4/lib/X11/fonts/100dpi/luIS10.snfSV
+./X11R4/lib/X11/fonts/100dpi/luIS12.snfSV
+./X11R4/lib/X11/fonts/100dpi/luIS14.snfSV
+./X11R4/lib/X11/fonts/100dpi/luIS18.snfSV
+./X11R4/lib/X11/fonts/100dpi/luIS24.snfSV
+./X11R4/lib/X11/fonts/100dpi/luRS08.snfSV
+./X11R4/lib/X11/fonts/100dpi/luRS10.snfSV
+./X11R4/lib/X11/fonts/100dpi/luRS12.snfSV
+./X11R4/lib/X11/fonts/100dpi/luRS14.snfSV
+./X11R4/lib/X11/fonts/100dpi/luRS18.snfSV
+./X11R4/lib/X11/fonts/100dpi/luRS24.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubB08.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubB10.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubB12.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubB14.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubB18.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubB24.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubBI08.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubBI10.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubBI12.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubBI14.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubBI18.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubBI24.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubI08.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubI10.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubI12.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubI14.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubI18.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubI24.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubR08.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubR10.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubR12.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubR14.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubR18.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubR24.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutBS08.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutBS10.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutBS12.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutBS14.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutBS18.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutBS24.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutRS08.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutRS10.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutRS12.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutRS14.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutRS18.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutRS24.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBIS19.snfSV
+./X11R4/lib/X11/fonts/100dpi/luBS19.snfSV
+./X11R4/lib/X11/fonts/100dpi/luIS19.snfSV
+./X11R4/lib/X11/fonts/100dpi/luRS19.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubB19.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubBI19.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubI19.snfSV
+./X11R4/lib/X11/fonts/100dpi/lubR19.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutBS19.snfSV
+./X11R4/lib/X11/fonts/100dpi/lutRS19.snfSV
+./X11R4/lib/X11/fonts/100dpi/fonts.dirSV
+./X11R4/lib/X11/fonts/100dpi/fonts.aliasSV
+/*
+** The following is necessary because of the following filenames. We need to
+** use "ccpp" for this, but unfortunately, we get "#define sun" when it's run
+** on the Sun, "#define ultrix" on Ultrix, and so on. That gets old really fast.
+**
+** And, it screws up filenames like "sun.cf" (which look like "1.cf" on the sun.)
+*/
+#undef apollo
+#undef att
+#undef bsd
+#undef cray
+#undef generic
+#undef hp
+#undef sgi
+#undef site
+#undef sony
+#undef sun
+#undef ultrix
+./X11R4/lib/X11/config/imakemdep.hSV
+./X11R4/lib/X11/config/Imake.rulesSV
+./X11R4/lib/X11/config/Imake.tmplSV
+./X11R4/lib/X11/config/Project.tmplSV
+./X11R4/lib/X11/config/site.defSV
+./X11R4/lib/X11/config/rtcchack.bacSV
+./X11R4/lib/X11/config/Orig.sun.cfSV
+./X11R4/lib/X11/config/apollo.cfSV
+./X11R4/lib/X11/config/att.cfSV
+./X11R4/lib/X11/config/bsd.cfSV
+./X11R4/lib/X11/config/cray.cfSV
+./X11R4/lib/X11/config/generic.cfSV
+./X11R4/lib/X11/config/hp.cfSV
+./X11R4/lib/X11/config/ibm.cfSV
+./X11R4/lib/X11/config/macII.cfSV
+./X11R4/lib/X11/config/pegasus.cfSV
+./X11R4/lib/X11/config/sgi.cfSV
+./X11R4/lib/X11/config/sony.cfSV
+./X11R4/lib/X11/config/sun.cfSV
+./X11R4/lib/X11/config/ultrix.cfSV
+./X11R4/lib/X11/app-defaults/XCalcSV
+./X11R4/lib/X11/app-defaults/XClipboardSV
+./X11R4/lib/X11/app-defaults/XClockSV
+./X11R4/lib/X11/app-defaults/XditviewSV
+./X11R4/lib/X11/app-defaults/XeditSV
+./X11R4/lib/X11/app-defaults/XfdSV
+./X11R4/lib/X11/app-defaults/XLoadSV
+./X11R4/lib/X11/app-defaults/XLogoSV
+./X11R4/lib/X11/app-defaults/XmanSV
+./X11R4/lib/X11/app-defaults/XmhSV
+./X11R4/lib/X11/app-defaults/XFontSelSV
+./X11R4/lib/X11/app-defaults/XTermSV
+./X11R4/lib/X11/app-defaults/XgcSV
+./X11R4/lib/X11/app-defaults/XlessSV
+./X11R4/lib/X11/app-defaults/MwmSV
+./X11R4/lib/X11/app-defaults/XDbxSV
+./X11R4/lib/X11/app-defaults/XTetrisSV
+./X11R4/lib/X11/app-defaults/XCalendarSV
+./X11R4/lib/X11/XErrorDBSV
+./X11R4/lib/X11/rgb.pagSV
+./X11R4/lib/X11/rgb.dirSV
+./X11R4/lib/X11/rgb.txtSV
+./X11R4/lib/X11/xman.helpSV
+./X11R4/lib/X11/xless.helpSV
+./X11R4/lib/X11/xtrek/default.configSV
+./X11R4/lib/X11/xtrek/fed.configSV
+./X11R4/lib/X11/xtrek/goony.configSV
+./X11R4/lib/golddig/scoresSV
+./X11R4/lib/golddig/goldlev001SV
+./X11R4/lib/golddig/goldlev002SV
+./X11R4/lib/golddig/goldlev003SV
+./X11R4/lib/golddig/goldlev004SV
+./X11R4/lib/golddig/goldlev005SV
+./X11R4/lib/golddig/goldlev006SV
+./X11R4/lib/golddig/goldlev007SV
+./X11R4/lib/golddig/goldlev008SV
+./X11R4/lib/golddig/goldlev009SV
+./X11R4/lib/golddig/goldlev010SV
+./X11R4/lib/golddig/goldlev011SV
+./X11R4/lib/golddig/goldlev012SV
+./X11R4/lib/golddig/goldlev013SV
+./X11R4/lib/golddig/goldlev014SV
+./X11R4/lib/golddig/goldlev015SV
+./X11R4/lib/golddig/goldlev016SV
+./X11R4/lib/golddig/goldlev017SV
+./X11R4/lib/golddig/goldlev018SV
+./X11R4/lib/golddig/defaultSV
+./X11R4/lib/libX11.aSV
+./X11R4/lib/libX11.so.4.2SV
+./X11R4/lib/libXau.aSV
+./X11R4/lib/libXaw.aSV
+./X11R4/lib/libXaw.so.4.0SV
+./X11R4/lib/libXdmcp.aSV
+./X11R4/lib/libXext.aSV
+./X11R4/lib/libXinput.aSV
+./X11R4/lib/libXmu.aSV
+./X11R4/lib/libXmu.sa.4.0SV
+./X11R4/lib/libXmu.so.4.0SV
+./X11R4/lib/libXt.aSV
+./X11R4/lib/libXt.sa.4.0SV
+./X11R4/lib/libXt.so.4.0SV
+./X11R4/lib/liboldX.aSV
+./X11R4/lib/liboldX.so.4.0SV
+./X11R4/files/mwmrcSV
+./X11R4/files/.iitermcapSV
+./X11R4/files/XdefaultsSV
+./X11R4/files/GraphonDefaultsSV
+./X11R4/files/.iimapSV
+./X11R4/files/XKeysymDBSV
+./X11R4/files/XErrorDBSV
+./X11R4/man/catn/X.nSV
+./X11R4/man/catn/xman.nSV
+./X11R4/man/man1/brushtopbm.1SV
+./X11R4/man/man1/cmuwmtopbm.1SV
+./X11R4/man/man1/fitstopgm.1SV
+./X11R4/man/man1/fstopgm.1SV
+./X11R4/man/man1/g3topbm.1SV
+./X11R4/man/man1/gemtopbm.1SV
+./X11R4/man/man1/giftoppm.1SV
+./X11R4/man/man1/hipstopgm.1SV
+./X11R4/man/man1/icontopbm.1SV
+./X11R4/man/man1/ilbmtoppm.1SV
+./X11R4/man/man1/imgtoppm.1SV
+./X11R4/man/man1/macptopbm.1SV
+./X11R4/man/man1/mgrtopbm.1SV
+./X11R4/man/man1/mtvtoppm.1SV
+./X11R4/man/man1/pbmlife.1SV
+./X11R4/man/man1/pbmmake.1SV
+./X11R4/man/man1/pbmmask.1SV
+./X11R4/man/man1/pbmpaste.1SV
+./X11R4/man/man1/pbmreduce.1SV
+./X11R4/man/man1/pbmtoascii.1SV
+./X11R4/man/man1/pbmtobbnbg.1SV
+./X11R4/man/man1/pbmtocmuwm.1SV
+./X11R4/man/man1/pbmtog3.1SV
+./X11R4/man/man1/pbmtogo.1SV
+./X11R4/man/man1/pbmtoicon.1SV
+./X11R4/man/man1/pbmtolj.1SV
+./X11R4/man/man1/pbmtomacp.1SV
+./X11R4/man/man1/pbmtomgr.1SV
+./X11R4/man/man1/pbmtoptx.1SV
+./X11R4/man/man1/pbmtorast.1SV
+./X11R4/man/man1/pbmtox10bm.1SV
+./X11R4/man/man1/pbmtoxbm.1SV
+./X11R4/man/man1/pbmtoxwd.1SV
+./X11R4/man/man1/pbmupc.1SV
+./X11R4/man/man1/pcxtopbm.1SV
+./X11R4/man/man1/pgmenhance.1SV
+./X11R4/man/man1/pgmhist.1SV
+./X11R4/man/man1/pgmnorm.1SV
+./X11R4/man/man1/pgmtofits.1SV
+./X11R4/man/man1/pgmtopbm.1SV
+./X11R4/man/man1/pgmtops.1SV
+./X11R4/man/man1/picttopbm.1SV
+./X11R4/man/man1/pnmcat.1SV
+./X11R4/man/man1/pnmcrop.1SV
+./X11R4/man/man1/pnmcut.1SV
+./X11R4/man/man1/pnmenlarge.1SV
+./X11R4/man/man1/pnmflip.1SV
+./X11R4/man/man1/pnminvert.1SV
+./X11R4/man/man1/pnmpaste.1SV
+./X11R4/man/man1/pnmtile.1SV
+./X11R4/man/man1/ppmarith.1SV
+./X11R4/man/man1/ppmconvol.1SV
+./X11R4/man/man1/ppmcscale.1SV
+./X11R4/man/man1/ppmhist.1SV
+./X11R4/man/man1/ppmpat.1SV
+./X11R4/man/man1/ppmquant.1SV
+./X11R4/man/man1/ppmrotate.1SV
+./X11R4/man/man1/ppmscale.1SV
+./X11R4/man/man1/ppmshear.1SV
+./X11R4/man/man1/ppmtogif.1SV
+./X11R4/man/man1/ppmtoilbm.1SV
+./X11R4/man/man1/ppmtopgm.1SV
+./X11R4/man/man1/ppmtops.1SV
+./X11R4/man/man1/ppmtorast.1SV
+./X11R4/man/man1/ppmtoxwd.1SV
+./X11R4/man/man1/psidtopgm.1SV
+./X11R4/man/man1/qrttoppm.1SV
+./X11R4/man/man1/rasttopbm.1SV
+./X11R4/man/man1/rasttoppm.1SV
+./X11R4/man/man1/rawtopgm.1SV
+./X11R4/man/man1/tgatoppm.1SV
+./X11R4/man/man1/tifftopgm.1SV
+./X11R4/man/man1/xbmtopbm.1SV
+./X11R4/man/man1/xwdtopbm.1SV
+./X11R4/man/man1/xwdtoppm.1SV
+./X11R4/man/man1/clr2gray.1SV
+./X11R4/man/man1/fbcat.1SV
+./X11R4/man/man1/fbclean.1SV
+./X11R4/man/man1/fbedge.1SV
+./X11R4/man/man1/fbext.1SV
+./X11R4/man/man1/fbhalf.1SV
+./X11R4/man/man1/fbham.1SV
+./X11R4/man/man1/fbhist.1SV
+./X11R4/man/man1/fbinfo.1SV
+./X11R4/man/man1/fbm.1SV
+./X11R4/man/man1/fbm2pod.1SV
+./X11R4/man/man1/fbmask.1SV
+./X11R4/man/man1/fbnorm.1SV
+./X11R4/man/man1/fbps.1SV
+./X11R4/man/man1/fbquant.1SV
+./X11R4/man/man1/fbrot.1SV
+./X11R4/man/man1/fbsample.1SV
+./X11R4/man/man1/fbsharp.1SV
+./X11R4/man/man1/gray2clr.1SV
+./X11R4/man/man1/idiff.1SV
+./X11R4/man/man1/pbm2ps.1SV
+./X11R4/man/man1/pbmtitle.1SV
+./X11R4/man/man1/qrt2fbm.1SV
+./X11R4/man/man1/raw2fbm.1SV
+./X11R4/man/man3/libpbm.3SV
+./X11R4/man/man3/libpgm.3SV
+./X11R4/man/man3/libpnm.3SV
+./X11R4/man/man3/libppm.3SV
+./X11R4/man/man5/pbm.5SV
+./X11R4/man/man5/pgm.5SV
+./X11R4/man/man5/pnm.5SV
+./X11R4/man/man5/ppm.5SV
+./X11R4/man/man6/xtrek.6SV
+./X11R4/man/man6/xtrekd.6SV
+./X11R4/man/mann/X.nSV
+./X11R4/man/mann/XConsortium.nSV
+./X11R4/man/mann/XStandards.nSV
+./X11R4/man/mann/imake.nSV
+./X11R4/man/mann/Xau.nSV
+./X11R4/man/mann/Xserver.nSV
+./X11R4/man/mann/kbd_mode.nSV
+./X11R4/man/mann/constype.nSV
+./X11R4/man/mann/Xsun.nSV
+./X11R4/man/mann/bdftosnf.nSV
+./X11R4/man/mann/showsnf.nSV
+./X11R4/man/mann/mkfontdir.nSV
+./X11R4/man/mann/appres.nSV
+./X11R4/man/mann/bitmap.nSV
+./X11R4/man/mann/listres.nSV
+./X11R4/man/mann/oclock.nSV
+./X11R4/man/mann/twm.nSV
+./X11R4/man/mann/xauth.nSV
+./X11R4/man/mann/xbiff.nSV
+./X11R4/man/mann/xcalc.nSV
+./X11R4/man/mann/xclipboard.nSV
+./X11R4/man/mann/xcutsel.nSV
+./X11R4/man/mann/xclock.nSV
+./X11R4/man/mann/xditview.nSV
+./X11R4/man/mann/xdpyinfo.nSV
+./X11R4/man/mann/xedit.nSV
+./X11R4/man/mann/xfd.nSV
+./X11R4/man/mann/xinit.nSV
+./X11R4/man/mann/xkill.nSV
+./X11R4/man/mann/xload.nSV
+./X11R4/man/mann/xlogo.nSV
+./X11R4/man/mann/xlsatoms.nSV
+./X11R4/man/mann/xlsclients.nSV
+./X11R4/man/mann/xlsfonts.nSV
+./X11R4/man/mann/xlswins.nSV
+./X11R4/man/mann/xmag.nSV
+./X11R4/man/mann/xman.nSV
+./X11R4/man/mann/xmh.nSV
+./X11R4/man/mann/xmodmap.nSV
+./X11R4/man/mann/xpr.nSV
+./X11R4/man/mann/xdpr.nSV
+./X11R4/man/mann/xprop.nSV
+./X11R4/man/mann/xrdb.nSV
+./X11R4/man/mann/xrefresh.nSV
+./X11R4/man/mann/xfontsel.nSV
+./X11R4/man/mann/xdm.nSV
+./X11R4/man/mann/xhost.nSV
+./X11R4/man/mann/xset.nSV
+./X11R4/man/mann/xsetroot.nSV
+./X11R4/man/mann/xstdcmap.nSV
+./X11R4/man/mann/xterm.nSV
+./X11R4/man/mann/resize.nSV
+./X11R4/man/mann/xwd.nSV
+./X11R4/man/mann/xwininfo.nSV
+./X11R4/man/mann/xwud.nSV
+./X11R4/man/mann/ico.nSV
+./X11R4/man/mann/maze.nSV
+./X11R4/man/mann/muncher.nSV
+./X11R4/man/mann/plaid.nSV
+./X11R4/man/mann/puzzle.nSV
+./X11R4/man/mann/xeyes.nSV
+./X11R4/man/mann/xev.nSV
+./X11R4/man/mann/xgc.nSV
+./X11R4/man/mann/hexcalc.nSV
+./X11R4/man/mann/xcolors.nSV
+./X11R4/man/mann/golddig.nSV
+./X11R4/man/mann/lndir.nSV
+./X11R4/man/mann/xlock.nSV
+./X11R4/man/mann/xless.nSV
+./X11R4/man/mann/xscope.nSV
+./X11R4/man/mann/xplaces.nSV
+./X11R4/man/mann/rcmd.nSV
+./X11R4/man/mann/mazewar.nSV
+./X11R4/man/mann/xlife.nSV
+./X11R4/man/mann/xloadimage.nSV
+./X11R4/man/mann/xfig.nSV
+./X11R4/man/mann/xbgsun.nSV
+./X11R4/man/mann/xviewsun.nSV
+./X11R4/man/mann/xcpustate.nSV
+./X11R4/man/mann/xrooms.nSV
+./X11R4/man/mann/xtetris.nSV
+./X11R4/man/mann/roids.nSV
+./X11R4/man/mann/xdbx.nSV
+./X11R4/man/mann/xpostit.nSV
+./X11R4/man/mann/mwm.nSV
+./X11R4/man/mann/gnuplot.nSV
+./X11R4/man/mann/xperfmon.nSV
+./X11R4/man/mann/xwait.nSV
+./X11R4/man/mann/xpost.nSV
+./X11R4/man/mann/xsnap.nSV
+#endif	/* su4_u42 */
+#endif	/* R_INGRES_XLIB */
+/*
+** 20-mar-92 (jab)
+** The following two files need to be at the end of the list.
+**		w4ingver.rel	w4gl.doc
+** The reason is that for the HP platforms, we actually tell people
+** in the documentation that the last file is "w4gl.doc", because the
+** tape installation (under 'csh') outputs a weird error that makes
+** it look like the tape wasn't installed after all.
+**
+*/
+./w4ingver.rel
+./w4gl.doc
+

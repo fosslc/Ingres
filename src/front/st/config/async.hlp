@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The Asynchronous I/O resource indicates whether or not the server
+  will use real asynchronous I/O rather than use the slave processes.

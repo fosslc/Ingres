@@ -1,0 +1,2715 @@
+%{
+
+
+/* %L merge <eqgram.my> -- get the master grammar */
+/* %L fake begin */
+# include <eqgram.my>		-- fake out MING
+/* %L fake end */
+
+/* %L language begin 
+** Define EQ_X_LANG where X is the EUC or PL1 for the symbol table
+*/
+# define	EQ_EUC_LANG
+/* %L language end */
+
+# include 	<compat.h>
+# include	<er.h>
+# include	<si.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<equel.h>
+# include	<eqlang.h>
+# include	<equtils.h>
+# include	<eqsym.h>
+# include	<eqgen.h>
+# include	<eqstmt.h>
+# include	<eqscan.h>
+# include	<eqgr.h>
+# include	<ereq.h>
+# include	<ere2.h>
+
+%}
+
+/*
+**  Equel_Lang( PASCAL )
+**
+**  Language dependent grammar for the PASCAL statements that can be embedded
+**  in Equel.
+**  Basically parses Declarations and Usages of variables and constants.
+**
+**  Conflicts:  22 
+**	1,2.	Random BEGINs cause a shift/reduce conflict with the optional
+**		BEGIN/END block in RETRIEVE loops and INITIALIZE blocks.
+**		We allow it for ADA and C programmers so they can flag the
+**		## proc-begin-end lines; this looks better.
+**	3.	Pdec_name can follow LABEL as part of a label declaration
+**		or as the beginning of a non-label declaration, so we get a
+**		conflict from  FIRST(Pdec_name) == {tPDECNAME}.
+**	4.	The optional trailing semicolon on label declarations causes
+**		a shift/reduce conflict.  Too bad 3.0 forces us to allow this
+**		monstrosity.
+**	5,6,7.	The ambiguity in detecting the end of a CONST section (could
+**		be a TYPE decl with "TYPE" missing) causes a shift/reduce
+**		conflict on each of FIRST(Pconst_decl_elem) =
+**		{tHOSTCODE, tSEMICOL, tPDECNAME}.
+**	8.	The optional trailing semicolon on WITH ... DO BEGIN ... END
+**		causes a shift/reduce conflict with the ';' of an empty
+**		top-level statment.
+**	9,10.	The (optional) trailing array index on hostvars (structured and
+**	11,12	non-scalar) causes a shift/reduce conflict with the optional
+**		attribute list at the beginning of a compilation unit.
+**	13,14,	The WITH statement causes a shift/reduce conflict with the
+**	15,16,	{CREATE, RETRIEVE INTO, COPY, MODIFY, and INDEX} [WITH clause]
+**	17.	statements.  Because of this, we will require that if the WITH
+**		statement immediately follows a non-WITH CREATE, RETRIEVE INTO,
+**		COPY, or MODIFY statement, then the CREATE (etc) statement
+**		must be terminated with a semicolon.
+**	18,19.	The WITH statement also causes a shift/reduce conflict with
+**		two versions of the SET ... [WITH with-clause] statement.
+**		We make the same requirement as in the above case: a WITH-less
+**		SET statement may not be followed by a WITH statement without
+**		either an intervening semicolon or another intervening
+**		statement.
+**	20,21.	[MVS only]  The trailing '@'s (pointer dereferences) of vars
+**		causes a shift/reduce conflict with the (illegal) leading '@'
+**		of the qualification (integ_qual, as ql_expr) in the
+**		"DEFINE INTEGRITY [ON] tablename [IS] qualification" statement.
+**	22,23,  The WITH statement in the optional forms with clause 
+**      24.	also causes a shift/reduce conflict with the {MESSAGE, 
+**		PROMPT, DISPLAY} [WITH clause] statements.
+**		Because of this, we will require, in this case as well as 
+**		those stated above, that if the WITH statement immediately 
+**		follows a non-WITH MESSAGE, PROMPT, or DISPLAY 
+**		statement, then the MESSAGE (etc) statement must be 
+**		terminated with a semicolon.
+**	25,26	The WITH statement causes a shift/reduce conflict with the
+**	27,28	optional with_clause on the {DIRECT CONNECT,REGISTER,
+**		REGISTER INDEX and DEFINE LINK} statements.  Because of
+**	  	this, we will require that if the WITH statement immediately
+**		follows a non-WITH DIRECT, REGISTER, REGISTER INDEX or
+**		DEFINE LINK statement, then the DIRECT, etc. statement
+**		must be terminated with a semicolon.
+**  Notes:
+**	1. We try to support most types. Any type built up from a type or
+**	   regular declaration we can support. We parse but do not support
+**	   casts.
+**	2. Indirection in the middle of structure references is not checked, 
+**	   only the indirection of the last member.
+**	3. The grammar closely follows (or tries to, anyway) the syntax
+**	   diagrams in Appendix B of "Programming in VAX PASCAL".
+**	4. WARNING!! "gr->P_val" is a "nat", but is stored in the "st_value"
+**	   field of the symbol table, which is a "nat *".  This will work
+**	   since:
+**		(1) We use only 1 byte of it (and pointers are guaranteed
+**		    to be at least that big!).
+**		(2) We don't care which byte we get; since we always read
+**		    it the same way we write it, we'll always get the same
+**		    byte, whatever it is.
+**	   We should make "st_value" be a union, but until we do this will work.
+**	   We haven't changed it yet since it would cause source-code changes
+**	   in all the compilers that use it, and we don't have time just now.
+**
+** Copyright (C) 1985, 2001 Ingres Corporation
+**
+** History:	10-oct-1985	- Written (mrw)
+**		22-jun-1990	- Added Decimal support (teresal)
+**	12-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**	15-feb-2001	(kinte01)
+**	    Bug 103393 - removed nat, longnat, u_nat, & u_longnat
+**	    from VMS CL as the use is no longer allowed
+**
+*/
+
+/* Fake Ingres words reserved for testing */
+/* Equality operator */
+%token	tEQOP		tDEFINE
+
+/* Keywords and Constants defined in G but used here */
+%token	tNAME		tSCONST		tINTCONST	tFLTCONST
+  	tDEREF		tOF		tSET		tWITH
+  	tINCLUDE	/* Include filename - or Eof of file */
+	tDECCONST	/* Decimal constant */
+
+/* Punctuation from G */
+%token	tLPAREN		tRPAREN		tCOMMA		tPERIOD		tCOLON
+
+/* Arithmetic binary operator from G - '*' or '**' */
+%token	tMULOP tEXPOP
+
+/* Extra L tokens defined for G */
+%token	tPARAM
+	tMESSAGE	/* Extra C printf syntax */
+
+/* Special L tokens required by G and scanner to fill tok_special */
+%token  tHOSTCODE	/* Host language */
+	tCOMMENT	/* Comment token to trigger skipping comments */
+	tQUOTE		/* Triggers reading strings */
+	tTERMINATE	/* Statement terminators */
+
+/* Special L tokens required by G and scanner to fill tok_ahead */
+%token	tBEGIN 		tBEGIN_XACT	/* Begin and End Transaction */
+	tEND 		tEND_XACT
+
+/* %L tokens begin - PASCAL tokens to import into G */
+
+/* Extra PASCAL punctuation */
+%token	tBEGIN 		tLBRKT 		tRBRKT 	  	tSEMICOL
+
+/* Special PASCAL tokens - Some are returned explicitly by gr_mechanism() */
+%token	tPARRAY		/* ARRAY */
+	tPASSIGN	/* := */
+	tPCARET		/* ^ */
+	tPCASE		/* CASE */
+	tPCAST		/* :: */
+	tPCONST		/* CONST */
+	tPDECLARE	/* DECLARE */
+	tPDECNAME	/* Random name declaration ... */
+	tPDO		/* DO */
+	tPDOTDOT	/* .. */
+	tPEXTERN	/* EXTERN storage class (forward declaration) */
+	tPFILE		/* FILE */
+	tPFORTRAN	/* FORTRAN */
+	tPFORWARD	/* FORWARD */
+	tPFUNCTION	/* FUNCTION */
+	tPIMMED		/* IMMED */
+	tPLABEL		/* LABEL */
+	tPMODULE	/* MODULE */
+	tPOTHERWISE	/* OTHERWISE */
+	tPPACKED	/* PACKED */
+	tPPERCENT	/* % */
+	tPPROCEDURE	/* PROCEDURE */
+	tPPROGRAM	/* PROGRAM */
+  	tPRECORD	/* RECORD x BEGIN ... END */
+  	tPRECRD_VAR	/* For C and Pascal solution to struct.member */
+	tPSTRCT_VAR	/* A record variable usage */
+	tPTYPEDEF	/* TYPE */
+	tPVAR		/* VAR */
+	tPVARYING	/* VARYING */
+
+/* %L tokens end */
+
+%{
+
+/* %L locals begin - Local variables and gr structure for PASCAL */
+# include	<eqpas.h>
+# include	<ere2.h>
+
+struct	gr_state {
+	/* Members known to both G and L */
+	SYM	*gr_sym;
+	char	*gr_id;		/* Last full name used */
+	i4	gr_type;
+	i4	gr_flag;	/* Certain state information */
+	i4	gr_func;	/* I/O Function constant */
+	i4	gr_mode;	/* Mode of statement before entering block */
+	i4	gr_adjective;	/* Block modifier */
+	SYM	*gr_nlsym;	/* Symtab pointer to indicator var */
+	char	*gr_nlid;	/* Id of indicator var */
+	i4	gr_nltype;	/* Type of indicator var */
+	SYM	*gr_null;	/* Generic null symbol (for "= null" assgnmts */
+
+	/* Add L (PASCAL) dependent members after this statement */
+	i4	P_usedec;	/* Seen ## declare yet? */
+	i4	P_blk;		/* PASCAL block level */
+	i4	P_rec;		/* PASCAL record level */
+	i4	P_size;		/* Size of declaration */
+	i4	P_dims;		/* number of array dimensions */
+	i4	P_indir;	/* Indirection of variables */
+	i4	P_savindir;	/* Saved P_indir during conformant schemas */
+	i4	P_savdims;	/* Saved P_dims during conformant schemas */
+	i4	P_var;		/* In decl (PvarDEC) or usage (PvarUSE) */
+	i4	P_mode;		/* LABEL, CONST, TYPE, or MODE section */
+	i4	P_val;		/* Flags in st_value (really a i4 *) */
+	i4	P_savval;	/* Saved P_val during conformant schemas */
+#ifdef	MVS
+	i4	P_lobounds;	/* Subrange lower bound */
+	i4	P_hibounds;	/* Subrange upper bound */
+	i4	P_temp;		/* Temporary value of Pint_const */
+#endif
+	char	*P_procname;	/* Current proc, mod, or prog name */
+	SYM	*P_record;	/* Special pointer for references to structs */
+	SYM	*P_bytesy;	/* points to 1-byte integer entry (internal) */
+	SYM	*P_shrtsy;	/* points to 2-byte integer entry (internal) */
+	SYM	*P_undefsy;	/* points to "Undefined" entry (internal) */
+	SYM	*P_intsy;	/* points to "integer" entry, for convenience */
+	SYM	*P_fltsy;	/* points to "real" entry, for convenience */
+	SYM	*P_dblsy;	/* points to "double" entry, for convenience */
+	SYM	*P_chrsy;	/* points to "char" entry, for convenience */
+	SYM	*P_strsy;	/* points to "string" entry, for convenience */
+#ifdef	MVS
+	SYM	*P_realsy;	/* points to "shortreal" entry, convenience */
+	SYM	*P_alfasy;	/* points to "alfa" entry, for convenience */
+	SYM	*P_alphasy;	/* points to "alpha" entry, for convenience */
+	SYM	*P_ptrsy;	/* points to "stringptr" entry, convenience */
+#endif
+};
+
+GLOBALDEF struct gr_state _gr_local ZERO_FILL;
+GLOBALDEF struct gr_state *gr = &_gr_local;
+SYM	*pas_set_sym();
+SYM	*pas_undeclared();
+SYM	*pas_isdecl();
+char	**pas_pop();
+
+/* Enter a declaration */
+# define   PAS_DECLARE( count, type_bits, the_type ) \
+    pas_declare( count, type_bits, the_type, gr->P_indir, gr->P_rec,\
+	gr->P_blk, gr->P_dims, gr->P_val );
+
+/* Ensure that a name is declared */
+# define   PAS_ISDECL( name, sy_flags )\
+    pas_isdecl( name, sy_flags, gr->P_intsy, gr->P_rec, gr->P_blk,\
+	gr->P_undefsy, &gr->gr_type, &gr->P_size )
+
+/* Complain about an undeclared name, and declare it */
+# define   PAS_UNDECLARED( name, l_flags, r_flags, count, dfltsy )\
+    pas_undeclared( name, l_flags, r_flags, count, dfltsy, gr->P_rec,\
+	gr->P_blk, gr->P_undefsy )
+
+/* %L locals end */
+
+%}
+
+%start host_declare
+
+%%
+
+/*
+** PASCAL dependent grammar 
+*/
+
+/*
+** Connecting rules between a usage of PASCAL variables, names and string
+** constants and equivalent Equel objects.
+**
+** Objects that must be defined by the L grammar for use by G:
+**
+** block_open and block_close - Block control syntax.
+** ql_in_param, ql_out_param, fm_in_param and fm_out_param Param target lists.
+** extra rules that may have alternative syntaxes for L.
+** host_code - Host code recognised, set L flags and print code.
+** host_declare - Host language declarations.
+** host_var - Host language variable.
+** host_name_var - Host language name or variable.
+** Note:
+**     Both host_var, and host_name_var must set gr->gr_sym, gr->gr_type and
+** gr->gr_id after freeing the current id space.  Callers above should be able 
+** to access gr->gr_sym, gr->gr_type, and gr->gr_id when wanting the variable.
+** The type of gr->gr_type should be the equivalent Equel type (C) not the 
+** host language type.
+*/
+
+/* %L rules begin - PASCAL dependent grammar */
+
+/* 
+** G rules that must defined by L because of differences between
+** languages and systems.
+*/
+
+/* Equel block delimiters */
+
+block_open:	tBEGIN		/* C uses tLBRACE */
+;
+
+block_close:	tEND		/* C uses tRBRACE */
+		{
+		    gr->gr_flag &= ~GR_HOSTCODE;
+		}
+;
+
+/*
+** Param target lists.
+**
+** Syntax:	PARAM ( format, argvec )
+**
+** Generates:
+**		For Out lists:
+**		    IIoutfunc( targetlist, argvector );
+**		For In lists:
+**		    IIinfunc( targetlist, argvector );
+** Note:
+**    1. C and Fortran store raw user arguments for historical reasons. 
+**    2. Others should parse: tPARAM tLPAREN string tCOMMA host_var tRPAREN
+**	 Remember to set GR_NOINDIR before parsing host_var.
+*/
+
+/* Quel Param target lists */
+
+ql_in_param:	ql_param_parens		/* Input param */
+		{
+		    gen_call( IIPARSET );
+		}
+;
+ql_out_param:	ql_param_parens		/* Output param */
+		{
+		    gen_call( IIPARRET );
+		}
+;
+ql_param_parens: tPARAM tLPAREN		/* args tRPAREN */
+		{
+		    db_send();
+		    sc_eat( id_add, SC_STRIP|SC_NEST|SC_SEEN, ERx(")"),
+								    '(', ')' );
+		    id_free();
+		    er_write( E_E20015_hpPARAM, EQ_ERROR, 0 );
+		}
+;
+
+/*
+** Form param target lists.
+*/
+
+fm_out_param:	fm_param_parens		/* Output param */
+		{
+		    gen_call( IIPARRET );
+		}
+;
+fm_in_param:	fm_param_parens		/* Input param */
+		{
+		    gen_call( IIPARSET );
+		}
+;
+fm_param_parens: tPARAM tLPAREN		/* args tRPAREN */
+		{
+		    sc_eat( id_add, SC_STRIP|SC_NEST|SC_SEEN, ERx(")"),
+								    '(', ')' );
+		    id_free();
+		    er_write( E_E20015_hpPARAM, EQ_ERROR, 0);
+		}
+;
+
+/*
+** Must allow some of our reserved words in these places for the
+** upper grammar (for FRS stuff)
+*/
+
+/* We must allow "type" and "label" here. (inquire_frs) */
+frs_constname:	tPTYPEDEF
+		{
+		    $$.s = $1.s;
+		}
+	|	tPLABEL
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/* Similarly, we must allow "file" here. (helpfile) */
+hf_elm:		tPFILE tEQOP fm_string
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/* Similarly, here too. (printscreen) */
+prnscr_nm:	tPFILE
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/* And here too. (call subsystem) */
+call_left:	tPFILE
+		{
+		    arg_str_add(ARG_CHAR, $1.s);
+		}
+;
+
+/*
+** Nested BEGIN/END blocks have meaning only to WITH.
+** Compilation units use COMPILATION-HEAD ... END.
+*/
+
+statement:	Pwith_stmnt		/* ## WITH var_list DO BEGIN ... END */
+	|	Pcompile      /* ## compilation unit, procedure, or function */
+	|	tBEGIN			/* random BEGIN */
+		{
+		    gen_do_indent( G_IND_PIN );
+		    gen_host( G_H_KEY|G_H_NEWLINE|G_H_INDENT, $1.s );
+		    gr->P_var = PvarUSE;
+		    /*
+		    ** Be generous -- code looks nicer with ## proc-begin-end
+		    */
+		}
+;
+
+Pblock:		/* EMPTY */
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+	|	Pblock statement
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+;
+
+/* Host code production
+**
+** The scanner has passed the full line of host language
+** code, as an argument.  The newline is included.
+*/
+host_code:	tHOSTCODE 
+		{
+		    if ((gr->gr_flag & GR_HOSTCODE) == 0)
+		    {
+			gen_line( ERx("host code") );
+			gr->gr_flag |= GR_HOSTCODE;
+		    }
+		    gen_host( G_H_CODE, $1.s );
+		    gr->P_var = PvarDEC;	/* Maybe dec's to follow */
+		}
+	|	tSEMICOL			/* Allow random ';' */
+;
+		
+/*
+** PASCAL declarations
+**
+** In order to allow hostcode, etc, anywhere in a declaration,
+** we just note what kind of a section we're in when we get the
+** keyword.  We look at each declaration to see what kind it is
+** and complain if we haven't seen the correct keyword lately.
+** In case of an error in which we can't determine which kind it is
+** we believe the last keyword.
+** This also allows the user to give us
+**	## LABEL
+**	## TYPE
+**	## ...
+** that is, an empty label section.  This is useful since the user
+** probably doesn't need any labels himself, but needs to declare
+** a label section for us.
+**
++* DeclPart:	{DeclElem} ;
+** DeclElem:	LABEL [ LabelVal {',' LabelVal} [';'] ]
+**	|	CONST {ConstStmt ';'}+
+**	|	TYPE  {TypeStmt ';'}+
+**	|	VAR   {VarStmt ';'}+ ;
+** LabelVal:	decimal_digits | ident ;
+** ConstStmt:	ident '=' const_expr ;
+** TypeStmt:	ident '=' Type ;
+** VarStmt:	IdentList ':' Type [':=' expr] ;
+*/
+
+host_declare:	Ptype_key		/* in TYPE section */
+	|	Plabel_declaration	/* LABEL declarations */
+	|	Pconst_declaration	/* CONST declarations */
+	|	Pdeclare		/* ## declare */
+	|	Pvar_keyword		/* in VAR section */
+		{
+		    gen_do_indent( G_IND_PIN );
+		    gen_host( G_H_KEY|G_H_NEWLINE|G_H_INDENT, $1.s );
+		    gr->P_mode = PmodVAR;
+		    gr->P_var = PvarDEC;
+		}
+	|	Pdeclaration		/* A declaration proper */
+		{
+		    gen_host( G_H_NEWLINE, NULL );
+		    gr->P_dims = gr->P_indir = gr->P_val = gr->gr_type = 0;
+		    
+		}
+;
+
+Pdeclare:	tPDECLARE
+		{
+		    if (gr->P_usedec)
+			er_write( E_E20016_hpREDECLARE, EQ_ERROR, 0 );
+		    else {
+			gr->P_usedec++;
+			gen_declare( (char *)0 );
+		    }
+		    gr->gr_flag |= GR_HOSTCODE;
+		}
+;
+
+/*
+** Allow type- and constant-names (on the RHS) to be undeclared names;
+** issue an error message and declare them.  This is to give better
+** error handling than ["Syntax error" and eating tokens].
+*/
+Pdeclaration:	Pdec_name_list Pcolon_key Ptype Popt_value Psemi_key   /* var */
+		{
+		    PAS_DECLARE( $1.i, syFisVAR, $3.v );
+		    if (gr->P_mode != PmodVAR)
+		    {
+			er_write( E_E2000D_hpMISSING, EQ_ERROR, 1, ERx("VAR") );
+			gr->P_mode = PmodVAR;
+		    }
+		}
+	|	Pdec_name Pis_key Ptype Psemi_key		/* type decl */
+		{
+		    PAS_DECLARE( 1, syFisTYPE, $3.v );
+		    if (gr->P_mode != PmodTYPE)
+		    {
+			er_write(E_E2000D_hpMISSING, EQ_ERROR, 1, ERx("TYPE"));
+			gr->P_mode = PmodTYPE;
+		    }
+		}
+;
+
+/* returns the number of names pushed */
+Pdec_name_list:	Pdec_name
+		{
+		    $$.i = 1;
+		}
+	|	Pdec_name_list Pcomma_key Pdec_name
+		{
+		    $$.i = $1.i + 1;
+		}
+;
+
+Pdec_name:	Pdec_xname
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    pas_push( $1.s );
+		}
+;
+
+Pdec_xname:	tPDECNAME		/* { $$.s = $1.s; } */
+;
+
+/*
+** CONST declarations -- the CONST must be present.  If type defs follow,
+**	the TYPE must also be present so that we can recognize the end
+**	of the list.
+*/
+
+Pconst_declaration:
+		Pconst_key Pconst_decl_list
+		{
+		    gr->P_mode = PmodNONE;
+		}
+;
+
+Pconst_decl_list:
+		Pconst_decl_elem
+	|	Pconst_decl_list Pconst_decl_elem
+;
+
+Pconst_decl_elem:
+		Pdec_name Pis_key Pconst_expr Psemi_key
+		{
+		    PAS_DECLARE( 1, syFisCONST, $3.v );
+		    if (gr->P_mode != PmodCONST)
+		    {
+			er_write(E_E2000D_hpMISSING, EQ_ERROR, 1, ERx("CONST"));
+			gr->P_mode = PmodCONST;
+		    }
+		    gen_host( G_H_NEWLINE, NULL );
+		}
+	|	Phost_code
+;
+
+Phost_code:	tHOSTCODE 
+		{
+		    gen_host( G_H_CODE, $1.s );
+		}
+	|	tSEMICOL			/* Allow random ';' */
+;
+
+/*
+** LABEL declarations -- no host code allowed!
+*/
+
+Plabel_declaration: Plabel_key Pxlabel_decl
+;
+
+Pxlabel_decl:	/* EMPTY */
+	|	Plabel_dec_list Popt_semi_key
+		{
+		    gr->P_mode = PmodNONE;    /* only one list per LABEL decl */
+		    gen_host( G_H_NEWLINE, NULL );
+		}
+;
+
+/*
+** The garbage with "Plabel_first" is to avoid emitting "label" if there
+** are no user labels to emit (pass2 will spit out its own "label" statement
+** if it needs it).  Once inside "Plabel_first" we know there are labels,
+** so we emit the "label".
+*/
+Plabel_dec_list:
+		Plabel_first
+	|	Plabel_first Pcomma_key Pxlabel_dec_list
+;
+
+Plabel_first:	Pxlabel_first
+		{
+		    gen_do_indent( G_IND_PIN );
+		    gen_host( G_H_KEY|G_H_NEWLINE|G_H_INDENT, ERx("label") );
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Pxlabel_first:	Pdec_xname		/* { $$.s = $1.s; } */
+	|	tINTCONST		/* { $$.s = $1.s; } */
+;
+
+Pxlabel_dec_list:
+		Plabel_decl
+	|	Pxlabel_dec_list Pcomma_key Plabel_decl
+;
+
+Popt_semi_key:	/* EMPTY */
+		{
+		    gen_host( G_H_OP, ERx(";") );
+		    er_write( E_E20017_hpSEMIMISS, EQ_WARN, 0 );
+		}
+	|	Psemi_key
+;
+
+Plabel_decl:	Plab_int_const
+	|	Plab_dec_name
+;
+
+Popt_value:	/* EMPTY */
+	|	Passign_key
+		{
+		    sc_eat( gen_code, SC_NEST|SC_BACK, ERx(";"), '(', ')' );
+		}
+;
+
+/*
+** Ptype is expected to set gr->gr_type to the correct base type
+** and gr->P_dims and gr->P_indir to the correct values and to return a
+** pointer to the appropriate symbol table entry.
+**
++* Type:	[attribs] TypeBody ;
+** TypeBody:	SimpleType
+**	|	'^' [attribs] TypeIdentOrForward
+**	|	VARYING '[' const_expr ']' OF [attribs] type_ident
+**	|	[PACKED] PackedBody ;
+** PackedBody:	ARRAY '[' DimsList ']' OF Type
+**	|	FILE OF Type
+**	|	RECORD FieldList END
+**	|	SET OF [attribs] SimpleType ;
+** SimpleType:	type_ident
+**	|	'(' IdentList ')'
+**	|	const_expr '..' const_expr ;
+** DimsList:	[attribs] SimpleType {',' [attribs] SimpleType} ;
+** TypeIdentOrForward:
+**		"The previously-declared name of a type, or a new type-name,
+**		which is a forward declaration of the name of a type".
+*/
+Ptype:		Popt_attrib Ptype_base
+		{
+		    $$.v = $2.v;
+		}
+;
+
+Ptype_base:	Ptype_unpacked			/* { $$.v = $1.v; } */
+	|	Ptype_packed			/* { $$.v = $1.v; } */
+	|	Ppacked_key Ptype_packed
+		{
+		    $$.v = $2.v;
+		}
+;
+
+/* returns the type of the declaration */
+Ptype_unpacked:	Psimple_type			/* { $$.v = $1.v; } */
+	|	Pcaret_key Pcaret_attrib Ptype_forward_key
+		{
+		    gr->P_indir++;
+		    $$.v = $3.v;
+		}
+	|	Pvarying_key Parray_dim Pof_key Popt_attrib Ptype_name_key
+		{
+		    gr->P_dims++;
+		    $$.v = $5.v;
+		}
+;
+
+Pcaret_attrib:	/* EMPTY */
+	|	Pblank_attrib
+;
+
+Pblank_attrib:	Pattrib
+		{
+		  /* Print a blank after the attribute; "G_H_OP" cheats */
+		    gen_host( G_H_OP, ERx(" ") );
+		}
+;
+
+/*
+** The illegal type SET issues an error at the first use.
+** It's allowed here so that we don't need to allow host code
+** in record declarations.
+*/
+Ptype_packed:	Parray_key Parray_dim Pof_key Ptype
+		{
+		    gr->P_dims++;		/* indir of Ptype plus array */
+		    $$.v = $4.v;
+		}
+	|	Pfile_key Pof_key Ptype
+		{
+		  /* treat as "POINTER TO type" -- it works! */
+		    gr->P_indir++;
+		    $$.v = $3.v;
+		}
+	|	Precord_key Popt_field_list Pend_key	/* { $$.v = $1.v; } */
+		{
+		    gr->P_rec--;
+		    gr->gr_type = T_STRUCT;
+		}
+	|	Pset_key Pof_key Popt_attrib Psimple_type	/* illegal */
+		{
+		  /* treat as "type"; error if ever used */
+		    $$.v = $4.v;
+		}
+	|	Prange_key Psubrange		/* MVS only */
+		{
+#ifndef	MVS
+		    er_write( E_EQ0244_yySYNWRD, EQ_ERROR, 1, $1.s );
+#endif
+		    $$.v = $2.v;
+		}
+	|	Psubrange
+		{
+		    $$.v = $1.v;
+		}
+;
+
+Psimple_type:	Ptype_name_key			/* { $$.v = $1.v; } */
+	|	Plparen_key Penum_name_list Prparen_key
+		{
+		    /*
+		    ** Enumerated lists on VMS fit in one byte unless
+		    ** there are more than 256 of them, in which case
+		    ** they take 2 bytes. The limit is 65,535 items.
+		    ** The literals themselves are 4-byte ints.
+		    */
+		    if ($2.i > 256)
+			$$.v = gr->P_shrtsy;
+		    else
+			$$.v = gr->P_bytesy;
+		    gr->gr_type = T_INT;
+		}
+;
+
+Psubrange:	Plo_const_expr Pdotdot_key Phi_const_expr
+		{
+		    if (sym_g_btype($1.v) != sym_g_btype($3.v))
+			er_write( E_E20002_hpBADSUBRANG, EQ_ERROR, 0 );
+		    if (sym_g_btype($3.v) == T_FLOAT)
+			er_write( E_E20002_hpBADSUBRANG, EQ_ERROR, 0 );
+		    /*
+		    ** We take the type of the second "Pconst_expr",
+		    ** even if they don't both have the same type.
+		    ** Integer subranges on VMS are always integer-sized.
+		    **
+		    ** On MVS they get compacted if they are PACKED.
+		    ** Note that the range 0 .. 2^24 (-2^23 .. 2^23-1)
+		    ** takes 3 bytes if PACKED, which EQUEL doesn't support,
+		    ** so this range is illegal (we'll treat it as i4).
+		    ** Also, CONST names are treated as i4 as we don't know
+		    ** the true value.
+		    */
+		    $$.v = $3.v;
+#ifdef	MVS
+		    if ((gr->P_val & PvalPACKED) && ($$.v == gr->P_intsy))
+		    {
+			i4	x = gr->P_lobounds;
+			i4	y = gr->P_hibounds;
+
+			if ((x >= 0 && y <= 255) || (x >= -128 && y <= 127))
+			    $$.v = gr->P_bytesy;
+			else if ((x >= 0 && y <= 65535L) ||
+				(x >= -32768L && y <= 32767L))
+			    $$.v = gr->P_shrtsy;
+			/* else must be i4; i3 range is illegal with EQUEL */
+		    }
+#endif
+		}
+;
+Plo_const_expr:	Pconst_expr		/* MVS only */
+		{
+#ifdef	MVS
+		    gr->P_lobounds = gr->P_temp;
+#endif
+		}
+;
+Phi_const_expr:	Pconst_expr		/* MVS only */
+		{
+#ifdef	MVS
+		    gr->P_hibounds = gr->P_temp;
+#endif
+		}
+;
+
+/* returns the number of names pushed */
+Penum_name_list:
+		Penum_name
+		{
+		    $$.i = 1;
+		}
+	|	Penum_name_list Pcomma_key Penum_name
+		{
+		    $$.i = $1.i + 1;
+		}
+;
+
+Penum_name:	tPDECNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    pas_push( $1.s );
+		    /*
+		    ** Enumerated literals are always 4-byte ints
+		    ** They should be visible as unqualified names
+		    ** so we add in the ORPHAN bit.
+		    ** We don't use the PAS_DECLARE macro because we
+		    ** need to fudge the record-level.
+		    */
+		    pas_declare( 1, syFisORPHAN|syFisCONST, gr->P_intsy,
+			    gr->P_indir, 0, gr->P_blk, gr->P_dims, gr->P_val );
+		}
+;
+
+Popt_attrib: /* EMPTY */
+		{
+		    $$.i = 0;
+		}
+	|	Pattrib
+		{
+		    $$.i = 1;
+		}
+;
+
+Pattrib:	tLBRKT
+		{
+		    i4		pas_text();
+
+		    sc_eat( pas_text, SC_SEEN|SC_NEST, ERx("]"), '[', ']' );
+		    gr->P_val |= pas_attrib( FALSE );
+		}
+;
+
+Parray_dim:	tLBRKT
+		{
+		  /* eat up the dimension(s); we've seen it, and they nest */
+		    sc_eat( gen_code, SC_SEEN|SC_NEST, ERx("]"), '[', ']' );
+		}
+;
+
+Popt_field_list: /* EMPTY */
+	|	Pfield_list
+		{
+		    gen_host( G_H_OP|G_H_NEWLINE, ERx(";") );
+		}
+;
+
+/* like Popt_field_list, but w/o terminating newline */
+Pxopt_field_list: /* EMPTY */
+	|	Pfield_list
+;
+
+/*
+** VMS PASCAL allows an optional semicolon at the end of a field list;
+** this causes problems on semicolons (is it a separator or the optional
+** terminator?).  Our somewhat ugly solution is to make the semicolon
+** a field-element TERMINATOR, not SEPARATOR, but supply the last one
+** ourselves if it's missing.  Of course the last one might be after the
+** last field-element proper, or it might be after the optional ELSE clause.
+** This requires that the scanner and parser be synched up here (true)
+** and that the user not put anything but whitespace before the final optional
+** semicolon.  Too bad -- can't DEC ever leave well enough alone?.
+**
+** Host code is not allowed in records (nor in their variant parts) because
+** of the semicolon problem.  We explicitly eat up multiple semicolons
+** inside of record declarations so they won't look like host code.
+**
++* FieldList:	[FieldElem {';' FieldElem}] [CaseElem] [';'] ;
+** FieldElem:	IdentList ':' Type ;
+** CaseElem:	CASE [ident ':'] [attribs] type_ident OF CaseBody ;
+** CaseBody:	CaseElms [CaseElse] | CaseElse ;
+** CaseElms:	CaseElement {';' CaseElement} ;
+** CaseElement:	ConstList ':' '(' FieldList ')' ;
+** CaseElse:	OTHERWISE '(' FieldList ')' ;
+** ConstList:	const_expr {',' const_expr} ;
+*/
+
+Pfield_list:	Pfld_elm_list Popt_semi_list
+	|	Pfld_elm_list Psemi_list Pgen_semi Pgen_newline Pfield_case
+	|	Pfield_case
+;
+
+Popt_semi_list:	/* EMPTY */
+	|	Psemi_list
+;
+
+/*
+** Psemi_list eats up semis.
+** Don't output any (may be done later in Pgen_semi);
+** complain if more than one.
+*/
+Psemi_list:	tSEMICOL
+	|	Psemi_list tSEMICOL
+		{
+		    er_write( E_E20006_hpEXTRASEMI, EQ_WARN, 0 );
+		}
+;
+
+Pgen_semi:	/* EMPTY */
+		{
+		    gen_host( G_H_OP, ERx(";") );
+		}
+;
+
+Pfld_elm_list:	Pfield_elm
+	|	Pfld_elm_list Psemi_list Pgen_semi Pxfield_elm
+;
+
+Pfield_elm:	Pdec_name_list Pcolon_key Ptype
+		{
+		    PAS_DECLARE( $1.i, syFisVAR, $3.v );
+		    gr->P_dims = gr->P_indir = 0;
+		    gr->P_val = 0;
+		}
+;
+
+/* Just like Pfield_elm, but spits out a newline first, w/o a null-generator */
+Pxfield_elm:	Pxdec_name_list Pcolon_key Ptype
+		{
+		    PAS_DECLARE( $1.i, syFisVAR, $3.v );
+		    gr->P_dims = gr->P_indir = 0;
+		    gr->P_val = 0;
+		}
+;
+
+Pxdec_name_list:
+		Pisdec_name
+		{
+		    $$.i = 1;
+		}
+	|	Pisdec_name Pcomma_key Pdec_name_list
+		{
+		    $$.i = $3.i + 1;
+		}
+;
+
+Pisdec_name:	Pdec_xname
+		{
+		    gen_host( G_H_NEWLINE, NULL );
+		    gen_host( G_H_KEY, $1.s );
+		    pas_push( $1.s );
+		}
+;
+
+Pfield_case:	Pfld_case_lbl Pfld_case_list
+;
+
+Pfld_case_lbl:	Pcase_key Ptype_name_key
+	|	Pcase_key Pattrib Ptype_name_key
+	|	Pcase_key Pcase_name Pcolon_key Popt_attrib Ptype_name_key
+		{
+		  /* declare the case label */
+		    PAS_DECLARE( 1, syFisVAR, $5.v );
+		    gr->P_val = 0;
+		}
+;
+
+Pfld_case_list:	Pof_key
+		{
+		    gen_host( G_H_NEWLINE|G_H_INDENT, NULL );
+		}
+		Pcase_list
+		{
+		    gen_host( G_H_OUTDENT, NULL );
+		}
+;
+
+Pcase_list:	Pcase_elm Popt_semi_list
+	|	Pcase_list Pgen_semi Pgen_newline Pcase_elm Popt_semi_list
+;
+    
+Pgen_newline:	/* EMPTY */
+		{
+		    gen_host( G_H_NEWLINE, NULL );
+		}
+;
+
+Pcase_name:	Pcase_xname
+		{
+		    register SYM	*sy;
+
+		    gen_host( G_H_KEY, $1.s );
+		    pas_push( $1.s );
+		}
+;
+
+Pcase_xname:	tPDECNAME		/* { $$.s = $1.s; } */
+;
+
+Pcase_elm:	Pxcase_elm
+	|	Pcase_else
+;
+
+Pxcase_elm:	Pconst_list Pcolon_key Pfield_lparen Pxopt_field_list
+			Pfield_rparen
+;
+
+/* Extra indent looks better here */
+Pfield_lparen:	Plparen_key
+		{
+		    gen_host( G_H_INDENT, NULL );
+		}
+;
+
+Pfield_rparen:	Prparen_key
+		{
+		    gen_host( G_H_OUTDENT, NULL );
+		}
+;
+
+Pcase_else:	Potherwise_key Plparen_key Pxopt_field_list Prparen_key
+;
+
+Pconst_list:	Pconst_expr
+	|	Pconst_list Pcomma_key Pconst_expr
+;
+
+/*
+** Declaration of compilation units
+** (ie, Subroutine, Function, Program, and Module prologues)
+**
++* CompileUnit:	[attribs] (Program | Module | Routine) ;
+** Program:	PROGRAM ident ['(' IdentList ')'] ';' Block '.' ;
+** Module:	MODULE  ident ['(' IdentList ')'] ';' DeclPart END '.' ;
+** Routine:	(ProcHead | FuncHead) ';' (Block|EXTERNAL|FORTRAN|FORWARD) ';' ;
+** ProcHead:	PROCEDURE ident [FormalParamList] ;
+** FuncHead:	FUNCTION ident [FormalParamList] ':' [attribs] type_ident ;
+** FormalParamList:
+**		'(' FormalParamSection {';' FormalParamSection} ')' ;
+** FormalParamSection:
+**		(FormalVar | FormalRoutine) [':=' [Mechanism] init_val] ;
+** FormalVar:	[Mechanism|VAR] IdentList ':' [attribs] (type_ident|schema) ;
+** FormalRoutine:
+**		[Mechanism] (ProcHead | FuncHead) ;
+** IdentList:	ident {',' ident} ;
+** Mechanism:	%REF | %IMMED | %DESCR | %STDESCR ;
+-*
+** Notes:	The attributes on a compilation-unit may also be
+**		"[INHERIT('EQUEL')]", which we interpret as a directive
+**		to inherit the pre-compiled EQUEL header.
+*/
+
+/* Can't use Popt_attrib here -- no NULL rules at the head of a statement! */
+Pcompile:	Punit_decl
+	|	Punit_attrib Punit_decl
+;
+
+Punit_attrib:	tLBRKT
+		{
+		    i4		pas_text();
+
+		    sc_eat( pas_text, SC_SEEN|SC_NEST, ERx("]"), '[', ']' );
+		    gr->P_val |= pas_attrib( TRUE );
+		    gen_host( G_H_OP, ERx(" ") );
+
+		  /* EQUEL attribute INHERITs the EQUEL environment */
+		    if ((gr->P_val & PvalINHQUEL) == PvalINHQUEL)
+		    {
+			if (gr->P_usedec)
+			    er_write( E_E20016_hpREDECLARE, EQ_ERROR, 0 );
+			else
+			    gr->P_usedec++;
+		    }
+		}
+;
+
+Punit_decl:	Pprogram_key Punit_body
+	|	Pmodule_key Punit_body
+	|	Proutine
+;
+
+/* Starts a new scope via "Punit_head" and ends it via "Proutine_body" */
+Punit_body:	Punit_head Proutine_body
+;
+
+/* Starts a new scope */
+Punit_head:	Pname_key Popt_prog_list Psemi_key
+		{
+		    gr_block( TRUE );
+		  /* On PASCAL block entry -- expect declares */
+		    gr->P_var = PvarDEC;
+		    gr->P_procname = $1.s;
+		}
+;
+
+Popt_prog_list:	/* EMPTY */
+	|	Pprog_list
+;
+
+Pprog_list:	Plparen_key Pname_list Prparen_key
+;
+
+Pname_list:	Pname_key
+	|	Pname_list Pcomma_key Pname_key
+;
+
+/*
+** Subroutine, and Function prologues
+*/
+
+/* Starts a new scope via "Pheader" and ends it via "Prout_body" */
+Proutine:	Pheader Psemi_key Prout_body
+;
+
+/* Ends a scope, either via "Proutine_body" or directly */
+Prout_body:	Proutine_body
+	|	Pqualifier
+		{
+		    gr_block( FALSE );
+		    gen_host( G_H_NEWLINE, NULL );
+		  /* Declarations can follow a procedure definition */
+		    gr->P_var = PvarDEC;
+		    gr->P_mode = PmodNONE;
+		}
+;
+
+/* Ends a scope */
+Proutine_body:	Prout_gen Pblock tEND Proutine_end
+		{
+		    gr_block( FALSE );
+		    gen_host( G_H_KEY|G_H_OUTDENT, $3.s );
+		    gen_host( G_H_OP|G_H_NEWLINE, $4.s );
+		    pasWthExit();	/* clean up unclosed WITH blocks */
+		    pasLbProc( gr->P_procname, FALSE, 0 );
+		  /* Declarations can follow a procedure definition */
+		    gr->P_var = PvarDEC;
+		    gr->P_mode = PmodNONE;
+		}
+;
+
+Proutine_end:	tSEMICOL		/* { $$.s = $1.s; } */
+	|	tPERIOD			/* { $$.s = $1.s; } */
+;
+
+Prout_gen:	/* EMPTY */
+		{
+		    gen_host( G_H_NEWLINE|G_H_INDENT, NULL );
+		    pasLbProc( gr->P_procname, TRUE, gr->P_blk );
+		  /* On PASCAL block entry -- expect declares */
+		    gr->P_var = PvarDEC;
+		    gr->P_mode = PmodNONE;
+		}
+;
+
+/* Starts a new scope */
+Pheader:	Pproc_hdr
+		{
+		    gr->P_mode = PmodNONE;
+		}
+	|	Pfunc_hdr
+		{
+		    gr->P_mode = PmodNONE;
+		}
+;
+
+Pproc_hdr:	Pproc_key Prout_name Popt_param_list
+;
+
+Pfunc_hdr:	Pfunc_key Prout_name Popt_param_list Pcolon_key
+			Popt_attrib Pname_key
+;
+
+Prout_name:	Pname_key
+		{
+		    gr_block( TRUE );
+		    gr->P_procname = $1.s;
+		  /* PASCAL arguments follow -- expect declares */
+		    gr->P_var = PvarDEC;
+		    gr->P_mode = PmodVAR;
+		}
+;
+
+Popt_param_list:
+		Plparen_key Pparam_list Prparen_key
+	|	/* EMPTY */
+;
+
+Pparam_list:	Pparam_section
+		{
+		    gr->P_var = PvarDEC;
+		    gr->P_mode = PmodVAR;
+		}
+	|	Pparam_list Psemi_key Pparam_section
+		{
+		    gr->P_var = PvarDEC;
+		    gr->P_mode = PmodVAR;
+		}
+;
+
+Pparam_section:	Pvar_key Pvar_body
+	|	Popt_mech_spec Pvar_body
+	|	Popt_mech_spec Pformal_hdr Popt_initial
+;
+
+/* Starts a new scope via "Pheader" and ends it directly */
+Pformal_hdr:	Pheader
+		{
+		    gr_block( FALSE );
+		}
+;
+
+Pvar_body:	Pdec_name_list Pcolon_key Popt_attrib Ptype_or_schema
+		    Popt_initial
+		{
+		    PAS_DECLARE( $1.i, syFisVAR, $4.v );
+		    gr->P_dims = gr->P_indir = 0;
+		    gr->P_val = 0;
+		}
+;
+
+Popt_initial:	/* EMPTY */
+	|	Passign_key
+		{
+		    sc_eat( gen_code, SC_BACK, ERx(";)"), '(', ')' );
+		}
+;
+
+Popt_mech_spec:	/* EMPTY */
+	|	Pmech_spec
+;
+
+Pmech_spec:	Ppercent_key Pname_key
+;
+
+Pqualifier:	Pxqualifier Psemi_key
+;
+
+Pxqualifier:	Pextern_key
+	|	Pfortran_key
+	|	Pforward_key
+;
+
+Ptype_or_schema:
+		Ptype_name_key			/* { $$.v = $1.v; } */
+	|	Pconformant_schema		/* { $$.v = $1.v; } */
+;
+
+/*
+** Conformant schemas -- only in formal argument lists
+**
++* Schema:	VARYING '[' ident ']' OF [attribs] type_ident
+**	|	PACKED ARRAY '[' SchemaDim|scalar_type_ident ']' OF SchemaType
+**	|	ARRAY '[' SchemaDims ']' OF SchemaType ;
+** SchemaDim:	ident '..' ident ':' [attribs] scalar_type_ident ;
+** SchemaDims:	SchemaDim {';' SchemaDim} ;
+** SchemaType:	[attribs] (Schema|type_ident) ;
+*/
+
+Pconformant_schema:
+		Pvarying_head Pvarying_tail
+		{
+		    $$.v = $2.v;
+		}
+	|	Ppacked_key Parray_key Pschema_lbrkt Pbounds_elm_type
+		    Pschema_rbrkt Pof_key Popt_attrib Ptype_name_key
+		{
+		    $$.v = $8.v;
+		}
+	|	Parray_key Pschema_lbrkt Pbounds_list Pschema_rbrkt Pof_key
+		    Popt_attrib Ptype_or_schema
+		{
+		    $$.v = $7.v;
+		}
+	    /*
+  	    ** Try to catch all schema errors here.
+	    ** FOLLOW(Pconformant_schema) == {tPASSIGN, tRPAREN, tSEMICOL}
+	    ** so it's fairly safe to have a plain error rule here.
+	    */
+	|	error
+		{
+		    $$.v = gr->P_intsy;
+		}
+;
+
+Pvarying_head:	Pvarying_key Pschema_lbrkt Pdec_name
+		{
+		    PAS_DECLARE( 1, syFisVAR, gr->P_intsy );
+		}
+;
+
+Pvarying_tail:	Pschema_rbrkt Pof_key Popt_attrib Ptype_name_key
+		{
+		    $$.v = $4.v;
+		}
+;
+
+Pschema_lbrkt:	Plbrkt_key
+		{
+		    gr->P_dims++;		/* remember we're in an array */
+		    gr->P_savindir = gr->P_indir;
+		    gr->P_savdims = gr->P_dims;
+		    gr->P_savval = gr->P_val;
+		    gr->P_val = gr->P_dims = gr->P_indir = 0;
+		}
+;
+
+Pschema_rbrkt:	Prbrkt_key
+		{
+		    gr->P_indir = gr->P_savindir;
+		    gr->P_dims = gr->P_savdims;
+		    gr->P_val = gr->P_savval;
+		    gr->P_savval = gr->P_savdims = gr->P_savindir = 0;
+		}
+;
+
+Pbounds_list:	Pbounds_elm
+	|	Pbounds_list Psemi_key Pbounds_elm
+;
+
+Pbounds_elm:	Pbounds_head Pbounds_tail
+		{
+		    PAS_DECLARE( 2, syFisVAR, $2.v );
+		    gr->P_dims = gr->P_indir = 0;
+		    gr->P_val = 0;
+		}
+;
+
+Pbounds_head:	Pdec_name Pdotdot_key Pdec_name Pcolon_key
+;
+
+Pbounds_tail:	Popt_attrib Ptype_scalar_key
+		{
+		    $$.v = $2.v;
+		}
+;
+
+/*
+** Pbounds_elm_type - Allow a real schema (Pbounds_elm), or a simple scalar
+** type (Ptype_scalar_key).  Old VMS PASCAL allows:
+**	"packed array [integer] of char"
+** as a parameter.  It is documented to be unsupported soon, but EQUEL used
+** to support it. Note that ESQL should NOT support this feature. (ncg)
+*/
+Pbounds_elm_type:
+		Pbounds_elm
+	|	Ptype_scalar_key
+		{
+		    /* Do not declare anything */
+		    gr->P_dims = gr->P_indir = 0;
+		    gr->P_val = 0;
+		}
+;
+
+/*
+** WITH statement
+**
++* WithStmt:	WITH var_expr {',' var_expr} DO BEGIN StatementList END [;] ;
+-*
+** NOTES:
+**		We require the BEGIN/END!
+**
+**		The "var_expr"s are evaluated as seen, in the context
+**		of any previous "var_expr"s.  Thus
+**			WITH var_a, var_b DO BEGIN ... END
+**		is exactly equivalent to
+**			WITH var_a DO
+**			BEGIN
+**				WITH var_b DO
+**				BEGIN
+**					...
+**				END
+**			END
+**		Thus this example will work even if "var_b" is a member of
+**		"var_a".  If it is *also* the name of a normal variable, the
+**		member is used.  That is, inside of a WITH block, it is exactly
+**		as if the "real" declaration has been opened in this new block;
+**		the member names are now declared in a more nested block, and
+**		so any conflicts resolve in their favor.
+**
+** Examples:
+**		{
+**		| TYPE str = VARYING[20] OF CHAR;
+**		|      name = RECORD first, last : str; END;
+**		|      emp_rec = RECORD fullName : name; age : INTEGER ;END;
+**		|      tbl_rec = RECORD who : str; bdate : integer; END;
+**		| VAR  emp : emp_rec; tbl_ptr : ^tbl_rec;
+**		}
+**
+**		WITH emp.fullName, tbl_ptr^ DO BEGIN who := first; END;
+**		WITH emp, fullName DO BEGIN first := 'Mark'; END;
+*/
+
+Pwith_stmnt:	Pwith_head Pwith_body
+;
+
+Pwith_head:	Pwith_key Pwith_gen Phost_with_list Pdo_key
+		{
+		    gen_host( G_H_NEWLINE, NULL );
+		}
+;
+
+Pwith_body:	Pwith_begin Pblock Pwith_end
+		{
+		    pasWith( FALSE );
+		}
+;
+
+Pwith_begin:	Pbegin_key 
+		{
+		    gr->P_mode = PmodNONE;
+		    gr->P_var = PvarUSE;
+		    gen_host( G_H_NEWLINE, NULL );
+		}
+;
+
+Pwith_end:	Pend_key Pwith_semi_key
+		{
+		    gr->P_var = PvarUSE;
+		    gen_host( G_H_NEWLINE, NULL );
+		}
+;
+
+Pwith_semi_key:	/* EMPTY */
+	|	Psemi_key
+;
+
+Phost_with_list:
+		Phost_with
+	|	Phost_with_list Pcomma_key Phost_with
+;
+
+/*
+** We use "host_var" to parse the var expression, and let pasWthAdd check
+** that this is a struct reference.
+**
+** HostWithVar:	structName WithModList {'.' structName WithModList}
+**			['.' memberName WithModList]
+** WithModList:	{'^'|'[]'|'::' type_ident} ;
+*/
+
+Phost_with:	Phost_xwith Pwith_gen
+;
+
+Phost_xwith:	Phost_xxwith
+		{
+		    register SYM	*sy;
+
+		    gr->gr_sym = sy = $1.v;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+
+		    if (!sy)
+		    {
+			if (gr->P_dims)
+			{
+			  /* Indexing but no var */
+			    er_write( E_E20010_hpNOSUBSCR, EQ_ERROR, 1,
+								    gr->gr_id );
+			  /* Inhibit "NOVAR" message down below */
+			    gr->gr_type = T_UNDEF;
+			} else if (gr->P_indir)
+			{
+			  /* Indirection but no var */
+			    er_write( E_E2000F_hpNOINDIR, EQ_ERROR, 1,
+								    gr->gr_id );
+			  /* Inhibit "NOVAR" message down below */
+			    gr->gr_type = T_UNDEF;
+			}
+		    } else if (sym_g_btype(sy) != T_UNDEF)
+		    {
+		      /* check the indirection and dimension usage */
+			pas_badindir(sy, gr->gr_id, gr->P_dims, gr->P_indir);
+		    }
+		    if (!sy)		/* enter undefined */
+		    {
+			if (gr->gr_type != T_UNDEF)	/* already complained */
+			{
+			    er_write( E_EQ0502_hNOVAR, EQ_ERROR, 2,
+						    ERx("PASCAL"), gr->gr_id );
+			  /* don't declare anything but bare names */
+			    if ((gr->P_dims+gr->P_indir) == 0 &&
+				gr->gr_type != T_STRUCT)
+			    {
+				sy = symDcEuc(gr->gr_id, 0, gr->P_blk,
+					syFisVAR, P_CLOSURE, SY_NORMAL );
+				if (sy)
+				    sym_s_btype( sy, T_UNDEF );
+			    }
+			}
+			gr->gr_type = T_UNDEF;
+		    } else
+		    {
+			pasWthAdd( sy, gr->gr_id );
+			gr->gr_type = sym_g_btype(sy);
+		    }
+		    gen_host( G_H_KEY, gr->gr_id );
+		}
+;
+
+Pwith_gen:	/* EMPTY */
+		{
+		    gr->P_record = (SYM *)0;
+		    gr->P_indir = gr->P_dims = 0;
+		    gr->gr_type = T_NONE;
+		}
+;
+
+Phost_xxwith:	Pwith_name_mod				/* { $$.v = $1.v; } */
+	|	Phost_xxwith Pperiod_key Pwith_name_mod
+		{
+		    gr->gr_type = T_STRUCT;
+		    $$.v = $3.v;
+		}
+;
+
+Pwith_name_mod:	Pwith_name Puv_opt_modifier_list	/* { $$.v = $1.v; } */
+		{
+		    gr->P_dims = $2.i;
+		}
+;
+
+/*
+** Only the first alternative is legal, but we accept the other
+** in order to give better error messages.
+** After accepting tNAME, gr->P_record will be NULL,
+** so we'll start over looking for a parent next time.
+*/
+Pwith_name:	Pstruct_varkey
+		{
+		    gr->P_indir = 0;		/* So only Puv_mod_list adds */
+		    $$.v = gr->P_record;
+		}
+	|	tNAME			/* Semantics just like Pstruct_varkey */
+		{
+		    id_add( $1.s );
+		    if (gr->P_record)
+			gr->P_record = sym_resolve( gr->P_record, $1.s,
+					P_CLOSURE, syFisVAR );
+		    else
+			gr->P_record = pasWthLookup($1.s, P_CLOSURE, syFisVAR);
+		    $$.v = gr->P_record;
+		    gr->P_record = (SYM *)0;
+		    gr->P_indir = 0;		/* So only Puv_mod_list adds */
+		}
+;
+
+/*
+** keywords
+*/
+
+Parray_key:	tPARRAY
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Passign_key:	tPASSIGN
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Pbegin_key:	tBEGIN
+		{
+		    gen_host( G_H_OP|G_H_INDENT, $1.s );
+		}
+;
+Pcaret_key:	tPCARET
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+	|	tATSIGN		/* MVS only */
+		{
+#ifndef	MVS
+		    er_write( E_EQ0244_yySYNWRD, EQ_ERROR, 1, $1.s );
+#endif
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Pcase_key:	tPCASE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Pcolon_key:	tCOLON
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Pcomma_key:	tCOMMA
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Pconst_key:	tPCONST
+		{
+		    gen_do_indent( G_IND_PIN );
+		    gen_host( G_H_KEY|G_H_NEWLINE|G_H_INDENT, $1.s );
+		    gr->P_mode = PmodCONST;
+		    gr->P_var = PvarDEC;
+		}
+;
+Pdo_key:	tPDO
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Pdotdot_key:	tPDOTDOT
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Pend_key:	tEND
+		{
+		    gen_host( G_H_OP|G_H_OUTDENT, $1.s );
+		}
+;
+Pextern_key:	tPEXTERN
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Pfile_key:	tPFILE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Pfortran_key:	tPFORTRAN
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Pforward_key:	tPFORWARD
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Pfunc_key:	tPFUNCTION
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->P_var = PvarDEC;
+		}
+;
+Pis_key:	tEQOP
+		{
+		    gen_host( G_H_OP, ERx("=") );
+		}
+;
+Plabel_key:	tPLABEL
+		{
+		    if (gr->P_blk == 1)
+			pasLbProc( ERx("Subroutine"), TRUE, gr->P_blk );
+		    gr->P_mode = PmodLABEL;
+		    gr->P_var = PvarDEC;
+		  /* don't emit it here; higher up does it */
+		}
+;
+Plbrkt_key:	tLBRKT
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+/* We indent here because EVERYONE wants to indent after a left paren! */
+Plparen_key:	tLPAREN
+		{
+		    gen_host( G_H_OP|G_H_INDENT, $1.s );
+		}
+;
+Pmodule_key:	tPMODULE
+		{
+		    if (gr->P_blk > 1)
+			er_write( E_E2000E_hpNESTUNIT, EQ_ERROR, 0 );
+		    gen_host( G_H_KEY, $1.s );
+		    gr->P_var = PvarDEC;
+		}
+;
+Pname_key:	tPDECNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		 /* $$.s = $1.s; */
+		}
+;
+Pof_key:	tOF
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Potherwise_key:	tPOTHERWISE
+		{
+		  /* G_H_OP to avoid an extra space -- then reset to G_H_KEY */
+		    gen_host( G_H_OP, $1.s );
+		    gen_host( G_H_KEY, ERx(" ") );
+		}
+;
+Ppacked_key:	tPPACKED
+		{
+		    gr->P_val |= PvalPACKED;
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Ppercent_key:	tPPERCENT
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Pperiod_key:	tPERIOD
+		{
+		    id_add( $1.s );
+		}
+;
+Pproc_key:	tPPROCEDURE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->P_var = PvarDEC;
+		}
+;
+Pprogram_key:	tPPROGRAM
+		{
+		    if (gr->P_blk > 1)
+			er_write( E_E2000E_hpNESTUNIT, EQ_ERROR, 0 );
+		    gen_host( G_H_KEY, $1.s );
+		    gr->P_var = PvarDEC;
+		}
+;
+Prange_key:	tRANGE			/* MVS only */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Prbrkt_key:	tRBRKT
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Precord_key:	tPRECORD
+		{
+		    register SYM	*sy;
+
+		    gen_host( G_H_KEY|G_H_NEWLINE|G_H_INDENT, $1.s );
+		    sy = $$.v = symDcEuc( ERx(""), gr->P_rec, gr->P_blk,
+				syFisTYPE, P_CLOSURE, SY_NORMAL );
+		    gr->P_rec++;
+		  /* inside a record we get "var" names */
+		    if (sy)
+			sym_s_btype( sy, T_STRUCT );
+		    gr->P_val = 0;
+		}
+;
+Prparen_key:	tRPAREN
+		{
+		    gen_host( G_H_OP|G_H_OUTDENT, $1.s );
+		}
+;
+Psemi_key:	tSEMICOL
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Pset_key:	tSET
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->P_val |= PvalUNSUPP;	/* not allowed at first use */
+		}
+;
+
+/* An already known type name or an implicit forward type declaration */
+Ptype_forward_key:
+		tPDECNAME
+		{
+		    register SYM	*sy;
+
+		    gen_host( G_H_KEY, $1.s );
+		    sy = sym_resolve( (SYM *)0, $1.s, P_CLOSURE, syFisTYPE );
+		    if (sy)		/* known type */
+		    {
+			if (gr->P_size == 2*sizeof(double))	/* QUADRUPLE */
+			{
+			    sy = gr->P_dblsy;
+			    gr->gr_type = sym_g_btype(sy);
+			    gr->P_size = sym_g_dsize(sy);
+			    gr->P_val |= PvalUNSUPP;	/* error on first use */
+			}
+			gr->P_var = PvarDEC;
+		    } else		/* forward ref */
+		    {
+			/*
+			** We haven't seen this name as a type before,
+			** so declare it with the FORWARD bit on;
+			** real declaration later will override this,
+			** clearing the FORWARD bit.
+			** Set the base type to FORWARD so that we know to
+			** propagate basetype info at VAR declaration time.
+			** Forward stuff is always at record level 0.
+			*/
+			gr->P_var = PvarDEC;
+			sy = symDcEuc( $1.s, 0, gr->P_blk,
+				syFisTYPE|syFisFORWARD, P_CLOSURE, SY_NORMAL );
+			gr->gr_type = T_FORWARD;
+			if (sy)
+			    sym_s_btype( sy, T_FORWARD );
+		    }
+		    $$.v = sy;
+		}
+;
+Ptype_key:	tPTYPEDEF
+		{
+		    gen_do_indent( G_IND_PIN );
+		    gen_host( G_H_KEY|G_H_NEWLINE|G_H_INDENT, $1.s );
+		    gr->P_mode = PmodTYPE;
+		    gr->P_var = PvarDEC;
+		}
+;
+Ptype_name_key:	Pname_key Popt_string_len
+		{
+		    register SYM	*sy;
+
+		    sy = PAS_ISDECL( $1.s, syFisTYPE );
+		    if ((gr->gr_type == T_FLOAT) &&
+			    (gr->P_size == 2*sizeof(double)))	/* QUADRUPLE */
+		    {
+			sy = gr->P_dblsy;
+			gr->gr_type = sym_g_btype(sy);
+			gr->P_size = sym_g_dsize(sy);
+			gr->P_val |= PvalUNSUPP;	/* error on first use */
+		    }
+#ifdef	MVS
+		    if ((i4)sym_g_vlue(sy) & PvalSTRPTR)
+			gr->P_val |= PvalSTRPTR;	/* STRINGPTR */
+#endif
+		    /*
+		    ** A parenthesized size is legal only for STRING,
+		    ** and only on MVS
+		    */
+		    if ($2.i)
+		    {
+#ifdef	MVS
+			if (sy != gr->P_strsy)
+#endif
+			    er_write(E_EQ0244_yySYNWRD, EQ_ERROR, 1, ERx("("));
+		    }
+		    gr->P_var = PvarDEC;
+		    $$.v = sy;
+		}
+;
+Popt_string_len: Plparen_key Pconst_expr Prparen_key	/* MVS only */
+		{
+		    $$.i = 1;
+		}
+	|	/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+;
+
+Ptype_scalar_key: Ptype_name_key
+		{
+		    switch (gr->gr_type)
+		    {
+		      case T_BYTE:
+		      case T_INT:
+		      case T_FLOAT:
+		      case T_CHAR:
+			break;
+		      default:
+			er_write( E_E20012_hpNOTSCALTYP, EQ_ERROR, 0 );
+			break;
+		    }
+		    /* $$.v = $1.v; */
+		}
+;
+Pvar_key:	Pvar_keyword
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->P_mode = PmodVAR;
+		    gr->P_var = PvarDEC;
+		}
+	|	tPCONST		/* MVS only */
+		{
+#ifndef	MVS
+		    er_write( E_EQ0244_yySYNWRD, EQ_ERROR, 1, $1.s );
+#endif
+		    gen_host( G_H_KEY, $1.s );
+		    gr->P_mode = PmodVAR;
+		    gr->P_var = PvarDEC;
+		}
+;
+Pvar_keyword:	tPVAR
+		{
+#ifndef	MVS
+		    if (STbcompare($1.s,0,ERx("var"),0,TRUE))
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+						    ERx("VAR"), ERx("VAR") );
+#endif
+		}
+;
+Pvarying_key:	tPVARYING
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->P_val |= PvalVARYING;
+		}
+;
+Pwith_key:	tWITH
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->P_var = PvarUSE;	/* expect use, of course */
+		    pasWith( TRUE );
+		}
+;
+
+/*
+** Plab_dec_name doesn't bother declaring anything since we'll never use them.
+*/
+
+Plab_dec_name:	Pdec_xname
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Plab_int_const:	tINTCONST		/* an int const in a label section */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+/*
+** Constants
+*/
+
+Pflt_const:	tFLTCONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->gr_type = T_FLOAT;
+		    $$.v = gr->P_fltsy;
+		}
+	|	tDECCONST	/* No decimal in Pascal, treat as a float */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->gr_type = T_FLOAT;
+		    $$.v = gr->P_fltsy;
+		}
+;
+Pint_const:	tINTCONST
+		{
+		    /*
+		    ** All integer constants (and subranges) are size(integer)
+		    ** on VMS.
+		    */
+		    gen_host( G_H_KEY, $1.s );
+		    gr->gr_type = T_INT;
+		    $$.v = gr->P_intsy;
+#ifdef	MVS
+		    CVal( $1.s, &gr->P_temp );
+#endif
+		}
+;
+Pname_const:	tPDECNAME	/* maybe a previously declared constant name */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.v = PAS_ISDECL( $1.s, syFisCONST );
+#ifdef	MVS
+		    if ($$.v == gr->P_intsy)
+		  /*
+			CVal( sym_g_vlue($$.s), &gr->P_temp );
+		   */
+			gr->P_temp = (i4) 70000L;	/* force i4 */
+#endif
+		}
+;
+Pstr_const:	tSCONST
+		{
+		    gen_host( G_H_SCONST, $1.s );
+		    gr->gr_type = T_CHAR;
+		    $$.v = gr->P_strsy;
+		}
+;
+Pconst_expr:	Pstr_const			/* { $$.v = $1.v; } */
+	|	Pnumeric_const			/* { $$.v = $1.v; } */
+	|	Pconst_unary Pnumeric_const %prec tUNARYOP
+		{
+		    $$.v = $2.v;
+		}
+;
+Pnumeric_const:	Pint_const
+	|	Pflt_const
+	|	Pname_const
+;
+Pconst_unary:	tARUOP
+		{
+		    if (*($1.s) == '-')		/* tARUOP is only + and - */
+			gen_host( G_H_OP, ERx("-") );
+		}
+;
+
+/* host_var - Host variable to receive data */
+
+host_var:	Puse_var 
+		{
+		    SYM		*sy;
+
+		    if ((sy = $1.v) == (SYM *)0 )	/* Enter undefined */
+		    {
+			if (gr->gr_type != T_UNDEF)	/* already complained */
+			{
+			    er_write( E_EQ0502_hNOVAR, EQ_ERROR, 2,
+						ERx("PASCAL"), id_getname() );
+			  /* don't declare anything but (non-#) bare names */
+			    if ((gr->P_dims+gr->P_indir) == 0 &&
+				gr->gr_type != T_STRUCT)
+			    {
+				sy = symDcEuc(id_getname(), 0, gr->P_blk,
+						syFisVAR, P_CLOSURE, SY_NORMAL);
+				if (sy)
+				    sym_s_btype( sy, T_UNDEF );
+			    }
+			}
+			gr->gr_type = T_UNDEF;
+		    } else     /* we know the name, but is it the right face? */
+		    {
+			if (!(sym_g_useof(sy) & syFisVAR)) /* const or type? */
+			    er_write( E_E20013_hpNOTVAR, EQ_ERROR, 1,
+								id_getname() );
+		      /* can't get/set a structure */
+			if (sym_g_btype(sy) == T_STRUCT)
+			    er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								id_getname() );
+			gr->gr_type = sym_g_btype( sy );
+		    }
+		    gr->gr_sym = sy;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+;
+
+/* host_name_var - Host language variable or just a name */
+
+host_name_var:	Puse_var
+		{
+		    if ($1.v)
+			gr->gr_type = sym_g_btype( $1.v );
+		    else
+			gr->gr_type = T_NONE;
+		    gr->gr_sym = $1.v;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+	|	tDEREF
+		{
+		    gr->gr_id = str_add( STRNULL, $1.s );
+		    gr->P_indir = gr->P_dims = 0;
+		    gr->gr_type = T_NONE;
+		    gr->gr_sym = (SYM *)0;
+		}
+;
+
+/*
+** Puse_var - A real PASCAL variable, or just a name
+**	Puv_mod_list returns the amount of internal indexing,
+**	which we currently ignore.  Puv_opt_modifier_list returns the
+**	amount of final indexing, which we use.
+**
+** Because of the problem with the QUEL dot, variables are parsed completely
+** differently than the following rule suggests, although the same thing is
+** accepted.
+**
++* UseVar:	(var_ident | field_ident) {VarBody} ;
+** VarBody:	['[' ExprList ']' | '.' field_ident | '^'] ['::' type_ident] ;
+-*
+**	which we parse as
+** UseVar:	structName {'^'|'[]'|'::' type_ident}
+**			{'.' structName {'^'|'[]'|'::' type_ident}}
+**			['.' memberName {'^'|'[]'|'::' type_ident}]
+*/
+
+Puse_var:	Puse_setup Puse_xvar
+		{
+		    register SYM	*sy;
+
+		    if (!(sy = $2.v))
+		    {
+			if (gr->P_dims)
+			{
+			  /* Indexing but no var */
+			    er_write( E_E20010_hpNOSUBSCR, EQ_ERROR, 1,
+								id_getname() );
+			  /* Inhibit "NOVAR" message in "host_var" */
+			    gr->gr_type = T_UNDEF;
+			} else if (gr->P_indir)
+			{
+			  /* Indirection but no var */
+			    er_write( E_E2000F_hpNOINDIR, EQ_ERROR, 1,
+								id_getname() );
+			  /* Inhibit "NOVAR" message in "host_var" */
+			    gr->gr_type = T_UNDEF;
+			}
+		    } else if (sym_g_btype(sy) != T_UNDEF &&
+			(gr->gr_flag & GR_NOINDIR) == 0)
+		    {
+		      /* check the indirection and dimension usage */
+			pas_badindir(sy, id_getname(), gr->P_dims, gr->P_indir);
+		    }
+		    $$.v = $2.v;
+		}
+;
+
+/* Set up to parse a variable usage */
+Puse_setup:	/* EMPTY */
+		{
+		    gr->gr_type = T_NONE;
+		    gr->P_record = (SYM *)0;
+		    gr->P_indir = gr->P_dims = 0;
+		}
+;
+
+Puse_xvar:	Puv_mod_list Puv_str_name Puv_opt_modifier_list
+		{
+		    gr->P_dims = $3.i;
+		    gr->gr_type = T_STRUCT;
+		    $$.v = $2.v;
+		}
+	|	Puv_name Puv_opt_modifier_list
+		{
+		    gr->P_dims = $2.i;
+		    $$.v = $1.v;
+		}
+;
+
+Puv_mod_list:	Puv_mod_elm			/* { $$.v = $1.v; } */
+	|	Puv_mod_list Puv_mod_elm
+		{
+		    $$.i = $1.i + $2.i;
+		}
+;
+
+Puv_mod_elm:	Pstruct_varkey Puv_opt_modifier_list tPERIOD
+		{
+		    id_add( $3.s );
+		    $$.i = $2.i;
+		}
+;
+
+/* returns the amount of indexing used */
+Puv_opt_modifier_list:
+		/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+	|	Puv_opt_modifier_list Puv_modifier_elm
+		{
+		    $$.i = $1.i + $2.i;
+		}
+;
+
+Puv_modifier_elm:		/* returns the amount of indexing used */
+		Puv_caret		/* { $$.i = $1.i; } */
+	|	Puv_arr_index		/* { $$.i = $1.i; } */
+	|	Puv_cast		/* { $$.i = $1.i; } */
+;
+
+Puv_caret:	tPCARET
+		{
+		    id_add( $1.s );
+		    gr->P_indir++;
+		    $$.i = 0;
+		}
+	|	tATSIGN		/* MVS only */
+		{
+#ifndef	MVS
+		    er_write( E_EQ0244_yySYNWRD, EQ_ERROR, 1, $1.s );
+#endif
+		    id_add( $1.s );
+		    gr->P_indir++;
+		    $$.i = 0;
+		}
+;
+
+Puv_arr_index:	tLBRKT
+		{
+		  /* Eat up the array dimension and save it - nest them */
+		    sc_eat( id_add, SC_SEEN|SC_NEST, ERx("]"), '[', ']' );
+		    $$.i = 1;
+		}
+;
+
+Puv_cast:	tPCAST tNAME
+		{
+		    id_add( $1.s );
+		    id_add( $2.s );
+		    $$.i = 0;
+		}
+;
+
+Puv_name:	tNAME 
+		{
+		    id_add( $1.s );
+		  /* Look it up in the context of all active WITH blocks */
+		    $$.v = pasWthLookup( $1.s, P_CLOSURE, syFisVAR|syFisCONST );
+		    gr->P_record = (SYM *)0; 	/* For next struct usage */
+		    gr->P_indir = 0;		/* So only Puv_mod_list adds */
+		}
+;
+
+/* 
+** Special rules and token, to prevent weird conflicts between the PASCAL '.'
+** and the Ingres '.', both of which are really just a NAME { .  NAME }  The
+** special tPSTRCT_VAR token is returned explicitly by gr_mechanism, and causes
+** all field members to be read till the last non-structured member.
+** Gr_mechanism could set P_record to be the pointer to the struct, but does
+** not because YACC may just be looking ahead.
+*/
+
+Puv_str_name:	tNAME 
+		{
+		    SYM		*sy;
+
+		    id_add( $1.s );
+		  /* Use P_record as the parent pointer */
+	    	    sy = sym_resolve( gr->P_record, $1.s, P_CLOSURE, syFisVAR);
+		    if (!sy)
+			er_write( E_E20018_hpSTRUCTREF, EQ_ERROR, 1,
+								id_getname() );
+		    $$.v = sy;
+		    gr->P_record = (SYM *)0; 	/* For next struct usage */
+		    gr->P_indir = 0;		/* So only Puv_mod_list adds */
+		}
+;
+
+Pstruct_varkey:	tPSTRCT_VAR 	/* Returned explicitly by gr_mechanism */
+		{
+		    id_add( $1.s );
+		    /*
+		    ** If this is the first component of a reference
+		    ** (gr->P_record is NULL)
+		    ** then look it up in reference to any WITH blocks.
+		    ** Otherwise gr->P_record points to who the parent
+		    ** of the new member is (already resolved according
+		    ** to WITH rules).  Set gr->P_record to the new member
+		    ** (parent of the next member, if any).
+		    ** Note that if there are no active WITH blocks and
+		    ** gr->P_record is NULL then the two lookups are equivalent.
+		    */
+		    if (gr->P_record)
+			gr->P_record = sym_resolve( gr->P_record, $1.s,
+					    P_CLOSURE, syFisVAR );
+		    else
+			gr->P_record = pasWthLookup($1.s, P_CLOSURE, syFisVAR);
+		}
+;
+/* %L rules end */
+
+%%
+
+/* %L mechanism begin - All the stuff to do with gr_mechanism() */
+
+GLOBALDEF GR_TYPES   gr_typetab[] = {
+  /* first 4 are fake; just for internal use */
+    { ERx(".byte"),	T_INT,		sizeof(char) },
+    { ERx(".short"),	T_INT,		sizeof(short) },
+    { ERx(".undef"),	T_UNDEF,	sizeof(int) },
+    { ERx(".string"),	T_CHAR,		0 },
+  /* now the real ones */
+    { ERx("char"), 	T_CHAR,		0 },
+    { ERx("text"),	T_CHAR,		0 },	/* == FILE OF CHAR == ^CHAR */
+  /* size of booleans is 1 byte on VMS */
+    { ERx("boolean"),	T_INT,		sizeof(i1) },
+    { ERx("integer"), 	T_INT, 		sizeof(int) },
+    { ERx("unsigned"),	T_INT, 		sizeof(int) },
+    { ERx("indicator"),	T_INT, 		sizeof(i2) },	/* indicator type */
+#ifdef	MVS
+    { ERx("real"), 	T_FLOAT,	sizeof(f8) },
+#else
+    { ERx("real"), 	T_FLOAT,	sizeof(f4) },
+#endif
+    { ERx("single"), 	T_FLOAT,	sizeof(f4) },
+    { ERx("double"), 	T_FLOAT,	sizeof(f8) },
+  /* quadruple is unsupported, and generates an error */
+    { ERx("quadruple"),	T_FLOAT,	2*sizeof(f8) },
+#ifdef	MVS
+    { ERx("shortreal"),	T_FLOAT,	sizeof(f4) },
+    { ERx("alfa"),	T_CHAR,		8 },   /* packed array[1..8] of char */
+    { ERx("alpha"),	T_CHAR,		16 },  /* packed array[1..16] of char */
+    { ERx("string"),	T_CHAR,		0 },
+    { ERx("stringptr"),	T_CHAR,		0 },
+#endif
+
+  /* table separator */
+    { (char *)0,  	0, 		0 },
+
+  /* now the constants */
+    { ERx("maxint"),	T_INT,		sizeof(int) },
+    { ERx("true"),	T_INT,		sizeof(char) },
+    { ERx("false"),	T_INT,		sizeof(char) },
+
+  /* table terminator */
+    { (char *)0,	0,		0 }
+};
+
+
+/*
+** Gr_mechanism - Language dependent utility called from within the grammar
+**		  or from outside.
+**
+** Parameters:	flag       - Which mechanism to choose.
+**		arg1, arg2 - Whatever is needed for the particular flag.
+** Returns:	None
+*/
+
+void
+gr_mechanism( flag, arg1, arg2 )
+i4	flag;
+i4	arg1;			/* Extra arguments for particular cases */
+i4	arg2;
+{
+    register SYM	*sy;
+    i4			use_mask, ret_val;
+    static   i4		einit = 0;
+    i4			yyequlex();
+
+    switch (flag)
+    {
+      case GR_EQINIT:
+	eq->eq_lang = EQ_PASCAL;
+	eq->eq_def_in = ERx("qp");
+	eq->eq_def_out = ERx("pas");
+	if (!einit)
+	{
+	    eq->eq_in_ext = ERx("qp");
+	    eq->eq_out_ext = ERx("pas");
+	    einit = 1;
+	}
+
+      /* tell the world we're Embedded QUEL! */
+	dml->dm_lex = yyequlex;
+
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->gr_id = ERx("");
+	gr->gr_flag = GR_HOSTCODE;
+
+      /* PASCAL specific flags */
+	gr->P_usedec = 0;
+	gr->P_var = PvarDEC;
+	gr->P_mode = PmodNONE;
+	gr->P_blk = 1;
+	gr->P_rec = 0;
+	gr->P_size = 0;
+	gr->P_indir = 0;
+	gr->P_dims = 0;
+	gr->P_savindir = 0;
+	gr->P_savdims = 0;
+	gr->P_savval = 0;
+	gr->P_record = (SYM *)0;
+	gr->P_procname = NULL;
+
+	pas_init();
+	ecs_clear();
+	break;
+
+      case GR_SYMINIT:
+	{
+	    /* Enter declarations into Equel symbol table */
+	    GR_TYPES	*gt;
+
+	    sym_init( (bool)TRUE );		/* ignore case */
+
+	  /* enter the types */
+	    for (gt=gr_typetab; gt->gt_id; gt++)
+	    {
+		sy = symDcEuc(gt->gt_id, 0, gr->P_blk,
+		    (syFisTYPE|syFisSYS|syFisBASE), P_CLOSURE, SY_NORMAL);
+		if (sy)
+		{
+		    sym_s_btype( sy, gt->gt_rep );
+		    sym_s_dsize( sy, gt->gt_len );
+		    sym_s_indir( sy, 0 );
+		}
+	    }
+
+	  /* skip the separator and go on with the constants */
+	    for (gt++; gt->gt_id; gt++)
+	    {
+		sy = symDcEuc(gt->gt_id, 0, gr->P_blk,
+		    (syFisCONST|syFisSYS), P_CLOSURE, SY_NORMAL);
+		if (sy)
+		{
+		    sym_s_btype( sy, gt->gt_rep );
+		    sym_s_dsize( sy, gt->gt_len );
+		    sym_s_indir( sy, 0 );
+		}
+	    }
+	}
+
+      /* remember them for convenience */
+	gr->P_bytesy = sym_resolve( (SYM *)0, ERx(".byte"), P_CLOSURE,
+								syFisTYPE );
+	gr->P_shrtsy = sym_resolve( (SYM *)0, ERx(".short"), P_CLOSURE,
+								syFisTYPE );
+	gr->P_undefsy = sym_resolve( (SYM *)0, ERx(".undef"), P_CLOSURE,
+								syFisTYPE );
+#ifdef	MVS
+	gr->P_realsy = sym_resolve((SYM *)0, ERx("shortreal"), P_CLOSURE,
+								syFisTYPE);
+
+      /* strings are like packed arrays */
+	gr->P_strsy = sym_resolve( (SYM *)0, ERx("string"), P_CLOSURE,
+								syFisTYPE );
+	sym_s_dims( gr->P_strsy, 1 );
+	sym_s_vlue( gr->P_strsy, PvalPACKED|PvalVARYING );
+
+      /* ALFAs are like packed arrays */
+	gr->P_alfasy = sym_resolve( (SYM *)0, ERx("alfa"), P_CLOSURE,
+								syFisTYPE );
+	sym_s_dims( gr->P_alfasy, 1 );
+	sym_s_vlue( gr->P_alfasy, PvalPACKED );
+
+      /* ALPHAs are like packed arrays */
+	gr->P_alphasy = sym_resolve( (SYM *)0, ERx("alpha"), P_CLOSURE,
+								syFisTYPE );
+	sym_s_dims( gr->P_alphasy, 1 );
+	sym_s_vlue( gr->P_alphasy, PvalPACKED );
+
+      /* string pointers are special pointers */
+	gr->P_ptrsy = sym_resolve((SYM *)0, ERx("stringptr"), P_CLOSURE,
+								syFisTYPE);
+	sym_s_indir( gr->P_ptrsy, 1 );
+	sym_s_vlue( gr->P_ptrsy, PvalSTRPTR );
+#else
+	gr->P_strsy = sym_resolve( (SYM *)0, ERx(".string"), P_CLOSURE,
+								syFisTYPE );
+      /* strings are like packed arrays */
+	sym_s_dims( gr->P_strsy, 1 );
+	sym_s_vlue( gr->P_strsy, PvalPACKED );
+#endif
+      /* TEXT is like FILE OF CHAR, which is like ^CHAR */
+	sym_s_indir( sym_resolve((SYM *)0, ERx("text"), P_CLOSURE,
+								syFisTYPE), 1 );
+	gr->P_intsy = sym_resolve( (SYM *)0, ERx("integer"), P_CLOSURE,
+								syFisTYPE );
+	gr->P_fltsy = sym_resolve( (SYM *)0, ERx("real"), P_CLOSURE,
+								syFisTYPE );
+	gr->P_dblsy = sym_resolve( (SYM *)0, ERx("double"), P_CLOSURE,
+								syFisTYPE );
+	gr->P_chrsy = sym_resolve( (SYM *)0, ERx("char"), P_CLOSURE,
+								syFisTYPE );
+
+	/* Declare "generic null" as a symbol */
+	sy = symDcEuc( ERx(".null"), 0, gr->P_blk, syFisVAR|syFisSYS,
+			P_CLOSURE, SY_NORMAL );
+	sym_s_btype( sy, T_NUL );
+	sym_s_dsize( sy, sizeof(i4) );
+	gr->gr_null = sy;
+	break;
+
+      case GR_LOOKUP:
+	/* How should we look up this name? */
+	if (gr->P_var == PvarUSE)		/* Variable usage */
+	{
+	    /* 
+	    ** If we have a period between name references then it may be the
+	    ** PASCAL period or the Ingres period.  To resolve this we use
+	    ** the global gr->P_record and see if the specified name is a
+	    ** field (child) of structure or a regular variable (including a
+	    ** structure parent).
+	    **
+	    ** If this is the first component of a reference (gr->P_record
+	    ** is NULL) then look it up in reference to any WITH blocks.
+	    ** Otherwise gr->P_record points to who the parent
+	    ** of the new member is (already resolved according
+	    ** to WITH rules).
+	    ** Note that if there are no active WITH blocks and
+	    ** gr->P_record is NULL then the two lookups are equivalent.
+	    */
+	    if (gr->P_record)
+		sy = sym_resolve( gr->P_record, (char *)arg1, P_CLOSURE,
+			    syFisVAR);
+	    else
+		sy = pasWthLookup( (char *)arg1, P_CLOSURE,
+			    syFisVAR|syFisCONST );
+
+	    if (sy)		/* it might have been a forward reference */
+		_VOID_ symExtType( sy );
+
+	    /* 
+	    ** We cannot set P_record here as YACC may look ahead and cause
+	    ** it to be reset.
+	    */
+	    if (sy && sym_g_btype(sy) == T_STRUCT)
+		*(i4 *)arg2 = tPSTRCT_VAR;
+	    else
+		*(i4 *)arg2 = tNAME;
+	} else		/* declaration */
+	{
+	    *(i4 *)arg2 = tPDECNAME;
+	}
+	break;
+
+      case GR_STMTFREE:
+	gr->P_dims = gr->P_indir = 0;
+	gr->P_savval = gr->P_savdims = gr->P_savindir = 0;
+	gr->P_val = 0;
+
+	pas_reset();		/* clear the "mode" stack */
+	str_reset();
+	sym_f_init();		/* clear the sym stack */
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->P_record = (SYM *)0;
+	gr->P_size = gr->P_rec = 0;
+	break;
+
+      case GR_ERROR:
+      /* clear out any unfinished declarations */
+	{
+	    i4		type_bits;
+
+	    switch (gr->P_mode)
+	    {
+	      case PmodCONST:
+		type_bits = syFisCONST;
+		break;
+	      case PmodTYPE:
+		type_bits = syFisTYPE;
+		break;
+	      case PmodVAR:
+	      default:
+		type_bits = syFisVAR;
+		break;
+	    }
+	    PAS_DECLARE( pas_count(), type_bits, gr->P_undefsy );
+	}
+	gr->P_mode = PmodNONE;
+	break;
+
+      case GR_CLOSE:
+	if (gr->P_blk > 1)
+	    er_write( E_E20019_hpUNCLOSED, EQ_ERROR, 1, er_na(gr->P_blk-1) );
+	pasLbFile( FALSE, (char *)0 );
+	break;
+
+      case GR_DUMP:
+	{
+	    char		*trBaseType();
+	    register FILE	*f = eq->eq_dumpfile;
+
+	    SIfprintf( f, ERx("GR_DUMP: gr_ \n") );
+	    SIfprintf( f,
+			ERx("  sym = 0x%p, id = '%s', type = %s, flag = 0%o\n"),
+			gr->gr_sym, gr->gr_id, trBaseType(gr->gr_type),
+			gr->gr_flag );
+	    SIfprintf( f, ERx("  func = %d, mode = 0%o\n"),
+			gr->gr_func, gr->gr_mode );
+	    SIfprintf( f, ERx("  P_usedec = %d, P_blk = %d, P_rec = %d\n"),
+			gr->P_usedec, gr->P_blk, gr->P_rec );
+	    SIfprintf( f, ERx("  P_size = %d, P_dims = %d, P_savdims = %d\n"),
+			gr->P_size, gr->P_dims, gr->P_savdims );
+	    SIfprintf( f, ERx("  P_indir = %d, P_savindir = %d, P_var = %d\n"), 
+			gr->P_indir, gr->P_savindir, gr->P_var );
+	    SIfprintf( f, ERx("  P_mode = %d, P_val = 0x%x, P_savval = 0x%x\n"),
+			gr->P_mode, gr->P_val, gr->P_savval );
+	    SIfprintf( f, ERx("  P_procname = '%s', P_record = 0x%x\n"),
+			gr->P_procname, gr->P_record );
+	    SIflush( f );
+	}
+	break;
+
+      case GR_BLOCK:	/* Enter/exit an EQUEL block - no symbol table stuff */
+	gr->P_var = PvarUSE;
+	break;
+       
+      case GR_EQSTMT:
+	{
+	    i4		mode = arg1;
+	    char	*kword = (char *)arg2;
+
+	  /* Turn off declarations flag and generate line directive */
+	    gr->gr_flag &= ~GR_HOSTCODE;
+	    gr->P_var = PvarUSE;
+	    gr->P_mode = PmodNONE;
+
+	    if (gr->gr_flag & GR_DECLCSR)
+		gen_line( kword );
+	    else
+		gen_eqstmt( G_OPEN, kword );
+
+	    /* Check if ## declare is required for certain languages */
+	    if (!gr->P_usedec)
+	    {
+		er_write( E_E20004_hpDECLARE, EQ_ERROR, 1, kword );
+		gr->P_usedec++;
+	    }
+
+	    switch (mode)
+	    {
+	      case GR_sREPEAT:
+		gr->gr_flag |= GR_REPEAT;
+		rep_begin( kword, NULL );
+		/* FALL THROUGH */
+
+	      case GR_sQUEL:
+		if (gr->gr_flag & GR_RETRIEVE)
+		{
+		    gr->gr_flag &= ~GR_RETRIEVE;
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		}
+		gr->gr_flag |= GR_QUEL;
+		db_key( kword );
+		break;
+
+	      case GR_sLIBQ:
+	      case GR_sFORMS:
+		gr->gr_flag |= GR_EQUEL;
+		break;
+
+	      case GR_sCURSOR:
+		if (gr->gr_flag & GR_RETRIEVE)
+		{
+		    gr->gr_flag &= ~GR_RETRIEVE;
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		}
+		break;
+	    }
+	}
+	break;
+
+      default:
+	break;
+    }
+}
+
+/*
++* Procedure:	gr_block
+** Purpose:	Open/Close a symbol table block.
+** Parameters:
+**	open_close - bool - TRUE ==> open, FALSE ==> close
+** Return Values:
+-*	None.
+** Notes:
+**	This is the GR_BLOCK mechanism, removed from gr_mechanism since the
+**	upper-level blocks mean nothing to the PASCAL symbol table.  This is
+**	called only from directly withing the low-level grammar itself.
+*/
+
+i4
+gr_block( open_close )
+bool	open_close;
+{
+    if (open_close)
+    {
+	gr->P_blk++;
+	sym_s_begin( P_CLOSURE );	/* PASCAL closure is always 0 */
+	gr->P_var = PvarUSE;		/* On entry never expect declares */
+    } else
+    {
+	if (gr->P_blk == 1)
+	    er_write( E_E20003_hpBLOCK, EQ_ERROR, 0 );
+	else
+	{
+	    _VOID_ sym_s_end( gr->P_blk-- );
+# ifdef	not_def
+    /*
+    ** This was done so that multiple modules in the same file
+    ** would work right.  That's not accepted by VMS Pascal,
+    ** and this causes backward-compatibility problems, so I'm
+    ** removing it.
+    */
+	  /* exiting last block?  Then the scope of ##declare is gone */
+	    if (gr->P_blk == 1)
+		gr->P_usedec = 0;
+# endif /* not_def */
+	}
+      /* On Pascal block exit reset decl flag - can't be immediate decls */
+	gr->P_var = PvarUSE;
+    }
+}
+/* %L mechanism end */

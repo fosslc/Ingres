@@ -1,0 +1,48 @@
+--
+--  Copyright (c) 2004 Ingres Corporation
+--
+--  This file contains the configuration rules required by Unicenter.
+--
+--# History:
+--#     08-feb-1999 (mcgem01)
+--#             Created.
+--#     26-apr-1999 (mcgem01)
+--#             If Ingres is to be run from the local system account
+--#		the "system" user must be granted Ingres privileges.
+--#	06-may-1999 (mcgem01)
+--#		Add a rule which defines this as a TNG installation.
+--#	02-aug-2000 (mcgem01)
+--#		If we're running this file, we're embedded ingres 
+--#		so set the embed_installation parameter.  Also, remove the 
+--#		dependency on the user we're running as so that the AHD
+--#		guys can continue to use ahd.tablename and not all tables
+--#		are owned by the user ingres.
+--#	17-aug-2000 (mcgem01)
+--#		The default gcf security mechanism for Embedded Ingres 2.5
+--#		should be 'null'
+--#	22-sep-2000 (somsa01)
+--#		Force the Bridge server count to be zero.
+--#	04-Jun-2004 (hanje04)
+--#		Enable caches for MDB
+--#	23-Jun-2004 (hanje04)
+--#		Enable TNG API
+--#	12-Jul-2004 (hanje04)
+--# 		Set API values in all.crs and net.crs for embed_installation 
+--#		= ON.
+--#	16-Jul-2004 (hanje04)
+--#		Move enabling of caches for MDB to iisudbms.
+--#	18-Apr-2005 (drivi01)
+--#	    SIR: 114339
+--#	    Windows crsfiles are merged with generic.
+--#
+
+-- Fool ID to always return the user 'ingres'
+ii.$.setup.embed_user: 		ON;
+ii.$.privileges.user.system:	"SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED";
+ii.$.setup.embed_installation:  ON;
+ii.$.gcf.mech.ingres.enabled:   "true", VALID = { "true", "false" };
+ii.$.gcf.mech.null.enabled:     "true", VALID = { "true", "false" };
+ii.$.gcf.security_mechanism:    "null";
+#ifndef NT_GENERIC
+ii.$.ingstart.$.gcb:            0;
+#endif /* NT_GENERIC */

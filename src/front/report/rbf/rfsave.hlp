@@ -1,0 +1,38 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Save Form
+
+     This form is used to save a new report or to edit Name, Short or
+     Long Remarks for an existing report.  This form has the same appearance
+     as the Catalog Details form, although the command menu is slightly
+     different.  The Name field on this form may be modified, which will
+     cause the current report, when saved, to be saved as a new report of
+     the given name.  
+
+     If a report, with the specified name, owned by either the current user 
+     or the DBA, already exists in the database, you will be asked to confirm 
+     your intention to save before proceeding.
+
+        FIELD 			DESCRIPTION
+        -----              	-----------
+        Name                    Name of the current report.
+        Owner                   Owner of the current report.
+        Created                 Date on which this report was first created.
+        Modified                Date on which this report was last altered.
+        Short Remark            One-line description of current report.
+        Long Remark             Longer description of current report.
+	Data Table		Data table associated with report.
+	Query Language		Database language (sql or quel) used in 
+				retrieving the data for the report.
+
+     The following commands are available on the Save Form:
+
+        MENU COMMANDS		SYNOPSIS
+        -------------           --------
+        Save                    Store the current object in the System
+                                Catalogs.  A valid name must be specified
+                                in the "Name" field.  After a successful
+                                save, this frame is exited.
+        Cancel                  Cancel the current save and any changes made
+                                on this form and return to the previous
+                                frame.
+        Help                    Print this message.

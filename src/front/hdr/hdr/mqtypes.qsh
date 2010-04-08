@@ -1,0 +1,273 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+## include	<ooclass.qsh>
+## include	<oocat.qsh>
+#  include	<mqtf.h>
+
+/**
+** Name:	mqtypes.qsh  -  CONSTANTS and STRUCTURES FOR MQBF
+**	
+**	This file contains the structures used by MQBF 
+**	
+** History:
+**	17-dec-1987 (prs)
+**		Integrated bug fix 10328.
+**	25-feb-88 (marian)
+**		Add mdtype to attribinfo structure.
+**	26-may-1989 (Mike S)
+**		Add constants for QBF/Emerald form generation
+**		Move ATTRIBINFO constants here from mqstates.h
+**	10-jul-89 (Mike S)
+**		Add MQTF structure
+**	9-aug-89 (Mike S)
+**		Add flags fields to MQTF
+**	5-mar-90 (Mike S)
+**		Move MQTF definition to mqtf.h
+**	1-oct-90 (esd)
+**		Add lkeyinfo to ATTRIBINFO structure.
+**	11-oct-90 (esd)
+**		Add join_att and join_seqno to ATTRIBINFO structure.
+**	30-jul-1993 (rdrane)
+**		Add mqappendok to MQQDESC structure as part of fix for b51411.
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      06-feb-2009 (stial01)
+**          Use DB_MAXNAME for database objects
+**       5-May-2009 (hanal04) Bug 122014
+**          structure. Used to reference the colseq value added to
+**          ATTRIBINFO which holds the column_seqence value for the column.
+*/
+# ifdef		SEINGRES
+# define	REDUCE
+# endif
+
+# ifdef		PCINGRES
+# define	REDUCE
+# endif
+
+
+# ifndef REDUCE
+
+# define	MQ_MAXRELS	10	/* max number of tables allowed
+					   in one mqbf instance */
+# define	MQ_MAXJOINS	50	/* max number of joins allowed
+					   in one mqbf instance */
+# define	MQ_MAXATTS	(2 * DB_GW2_MAX_COLS) 
+					/* max number of attributes
+					   retrieved in one mqbf instance */
+# define	MAXFLNM		64
+# define	MQ_MAXQRYSPEC	2000	/* max no. QRY_SPECs per list */
+# define	MQ_MAXCOLS	DB_GW2_MAX_COLS
+# define	mqmaxrows	100
+# define	SEQ_OFFSET	256	/* offset (8 bits) for sequence
+					** number within qtype in iiqbfinfo
+					** table. */
+
+# else
+
+# define	MQ_MAXRELS	6	/* max number of tables allowed
+					   in one mqbf instance */
+# define	MQ_MAXJOINS	30	/* max number of joins allowed
+					   in one mqbf instance */
+
+# ifdef	PCINGRES
+# define	MQ_MAXATTS	128	/* max number of attributes
+					   retrieved in one mqbf instance */
+# else
+# define	MQ_MAXATTS	50	/* max number of attributes
+					   retrieved in one mqbf instance */
+# endif	/* PCINGRES */
+
+# define	MAXFLNM		64
+# define	MQ_MAXSIZ	2048	/* max record size */
+# define	MQ_WSIZE	1500	/* max qual cause */
+
+# ifdef	PCINGRES
+# define	MQ_MAXCOLS	50
+# else
+# define	MQ_MAXCOLS	50
+# endif	/* PCINGRES */
+
+# define	mqmaxrows	50
+# define	SEQ_OFFSET	256	/* offset (8 bits) for sequence
+					** number within qtype in iiqbfinfo
+					** table. */
+
+# endif
+
+# define	MQ_HIDDENMAX	2000	/* max length of hidden column string */
+# define	MQ_MAXHIDECOLS	60	/* max number of hidden columns in QBF*/
+
+EXEC SQL BEGIN DECLARE SECTION;
+## typedef struct	relinfo		/* RELATION INFORMATION STRUCTURE */
+## {
+## 	char	mqrelid[DB_MAXNAME + 1];	/* relation name */
+## 	char 	mqrangevar[DB_MAXNAME + 1];	/* range variable */
+## 	char	mqrelown[DB_MAXNAME + 1];	/* owner code for table */
+## 	i2	mqtype;  		/* role for joindef - master, detail*/
+## 	i4	opdelete;			/* delete operation semantics */
+## 	char	*mquparam;			/* param string for updates */
+## 	DB_DATA_VALUE	**mquargv;		/* arguments for updates */
+## 	i4	**mqucolseq;			/* col seqs for updates */
+## 	char	*mqaparam;			/* param string for appends */
+## 	DB_DATA_VALUE	**mqaargv;		/* arguments for appends*/
+## 	i4	**mqacolseq;			/* col seqs for appends */
+## 	i4	mqrecl;				/* length of rec for this tbl*/
+## 	DB_DATA_VALUE	mqmtid;			/* tid for tables's record */
+EXEC SQL BEGIN EXCLUDE SECTION;
+	char	*mqdparam;			/* param string for deletes */
+	DB_DATA_VALUE	**mqdargv;		/* arguments for deletes */
+        i4	**mqdcolseq;                     /* col seqs for deletes */
+	i4	keytype;			/* key type used for updates */
+EXEC SQL END EXCLUDE SECTION;
+## } RELINFO;
+
+## typedef struct	attribinfo	/* INDIVIDUAL ATTRIBUTE INFORMATION STRUCTURE */
+## {
+## 	char	rvar[DB_MAXNAME+1];	/* relation name */
+## 	char	col[DB_MAXNAME+1];	/* attribute name */
+## 	char	formfield[FE_MAXNAME+1];/* unique form field name */
+## 	i2	ttype;			/* part of QM or QD */
+## 	DB_DATA_VALUE	dbv;		/* attr type,len; ptr to update rec */
+##	DB_DATA_VALUE	*rdbv;		/* pts to dbv for retrieve value */
+## 	i2	opupdate;		/* flags update semantics for column */
+## 	i2	jpart;			/* join display info */
+## 	i2	intbl;			/* is field in table fld? */
+##	i2	found;			/* 0 if joindef column not in table 
+##					** 1 if in table */
+EXEC SQL BEGIN EXCLUDE SECTION;
+	i2	keyinfo;    		/* true means attrib is part of key */
+EXEC SQL END EXCLUDE SECTION;
+##	i2	mdtype;			
+					/* used to determine if join field is
+					** in master or detail section - types
+					** are the same as ttype. */
+##	i2	mandfld;		/* a 1 indicates that this column
+					** should be a mandatory field on
+					** the QBF created form (the column
+					** is defined as: not null, no
+					** defaults).  A 0 indicates the field
+					** is not mandatory. */
+EXEC SQL BEGIN EXCLUDE SECTION;
+	i2	lkeyinfo;    		/* logical key information */
+	i2	join_seqno;    		/* sequence number indicating the
+					** relative position of this attribute
+					** in the list of joins.  irrelevant if
+					** this attribute isn't joined by QBF */
+	struct attribinfo *join_att;	/* if this attribute is joined by QBF,
+					** points to the primary join attribute
+					** to which this attribute is joined
+					** (either directly or indirectly).
+					** while the join list is being built,
+					** join_att is used to link a group of
+					** joined attr's into a circular list.
+					** if this attr isn't joined by QBF,
+					** its join_att points to itself. */
+	i4	colseq;                 /* column_seq for this attribute */
+EXEC SQL END EXCLUDE SECTION;
+## } ATTRIBINFO;
+
+## typedef struct	joininfo	/* INDIVIDUAL JOIN INFORMATION */
+## {
+## 	char	rv1[DB_MAXNAME + 1];	/* range var for first table */
+## 	char	col1[DB_MAXNAME + 1];	/* join column in first table */
+## 	char 	rv2[DB_MAXNAME + 1];	/* range var for second table */
+## 	char	col2[DB_MAXNAME + 1];	/* join column for second table */
+## 	char	jcode[3];		/* join type (MM, MD, DD, DM)*/
+## } JOININFO;
+
+##typedef struct qdefinfo
+##{
+## 	i4	d_tblfield;
+## 	i4	d_qdef_type;
+## 	i4	d_mq_func;
+## 	bool	d_mq_debug;
+## 	bool	d_mq_deffrm;
+## 	i4	d_tblwidth;
+## 	char	d_mq_frame[FE_MAXNAME+1];
+## 	char	d_mq_tbl[FE_MAXNAME+1];
+## 	char	d_mqflnm[MAXFLNM];
+## 	bool	d_onetbl;
+## 	i4	d_any_views;
+## 	i4	d_any_cats;
+## 	i4	d_mqnummasters;
+## 	i4	d_mqnumdetails;
+## 	bool	d_mq_name;
+##} QDEFINFO;
+
+/*
+**	Main MQBF query definition structure.
+**	This one holds all the stuff defined above.
+*/
+## typedef struct mqqdef
+## {
+##	OO_CATREC	mqcr;
+## 	RELINFO		*mqtabs[MQ_MAXRELS];
+## 	ATTRIBINFO	*mqatts[MQ_MAXATTS];
+## 	JOININFO	*mqjoins[MQ_MAXJOINS];
+## 	char		*mqmpform;	/* PARAM putform string for master*/
+## 	char 		**mqmpargv;	/* argv for putform for master */
+## 	char		*mqdpform;	/* PARAM putform string for detail*/
+## 	char 		**mqdpargv;	/* argv for putform for detail */
+## 	char		*mqmgform;	/* PARAM getform string for master */
+## 	char 		**mqmgargv;	/* argv for getform for master */
+## 	char		*mqdgform;	/* PARAM getform string for detail*/
+## 	char		**mqdgargv;	/* argv for getform for detail */
+## 	i4		mqmrecl;	/* length of master record */
+## 	i4		mqdrecl;	/* length of detail record */
+EXEC SQL BEGIN EXCLUDE SECTION;
+	QDESC		*mqqdesc;	/* param RETRIEVE structure */
+EXEC SQL END EXCLUDE SECTION;
+## 	i4		mqnumtabs;
+## 	i4		mqnumatts;
+## 	i4		mqnumjoins;
+## 	bool		mqdeadtabs[MQ_MAXRELS];	/* keeps track of deletions */
+## 	QDEFINFO	*mqdata;
+##	i2		mqtag;		/* tag for memory allocation */
+##	bool		mqappendok;	/*
+					** TRUE if APPEND allowed.
+					** FALSE if APPEND not allowed due
+					** to unsupported datatype which
+					** is NOT NULL and has no defined
+					** default.
+					*/
+## } MQQDEF;
+
+EXEC SQL END DECLARE SECTION;
+
+/*  Frame commands */
+# define	mqopENDF 	00			/* end of frame */
+
+/* Form gneration type */
+# define	MQFORM_QBF	0			/* QBF form */
+# define	MQFORM_VISION	1			/* Emerald form */
+
+/* indicates states of various ATTRIBINFO fields */
+/* jpart */
+# define	mqHIDDEN_JOIN	0	/* Subordinate join field */
+# define	mqJOIN_FIELD	1	/* Primary master-detail join field */
+# define	mqLU_JOIN_FIELD	2	/* Primary lookup join field (Emerald)*/
+# define	mq2_JOIN_FIELD	3	/* Primary master-detail and lookup join field (Emerald)*/
+# define	mqNOT_JOIN	-1	/* No join on field */
+/* ttype, mdtype */
+# define	mqIN_MASTER	0	/* In master table */
+# define	mqIN_DETAIL	1	/* In detail table */
+# define	mqIN_LU_MASTER	2	/* In lookup master table (Emerald) */
+# define	mqIN_LU_DETAIL	3	/* In detail lookup table (Emerald) */
+/* intbl */
+# define	mqIN_TABLE	1	/* In table field */
+/* lkeyinfo (bit mask) */
+# define	mqTABLE_KEY	1	/* table_key logical key */
+# define	mqOBJECT_KEY	2	/* object_key logical key */
+# define	mqSYSTEM_MAINT	4	/* system-maintained logical key */
+
+/* states of global variable qdef_type */
+# define	mqMD_JOIN	0	/* Master-detail join */
+# define	mq1to1_JOIN	1	/* Master-master join */

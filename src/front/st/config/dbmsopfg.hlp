@@ -1,0 +1,7 @@
+
+The opf_greedy_factor resource allows the adjustment of plan fragment costs,
+allowing optimal query plans to be chosen.
+
+The default value is 1.0, which has no affect. Setting opf_greedy_factor to
+< 1.0 will allow plan fragments to be considered that are more expensive than
+the current best plan fragment.

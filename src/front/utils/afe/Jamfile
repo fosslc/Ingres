@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!utils!afe
+#
+
+SubDir ING_SRC front utils afe ;
+
+IISUBSYS front utils afe ;
+
+IILIBRARY AFELIB : afvtyout.c afvtychk.c afvchcns.c aftyotpt.c
+        aftyhack.c aftygtw.c aftychk.c aftxtcns.c afprtype.c afpmxlat.c
+        afpad.c afopid.c afnullst.c aficoerc.c affnamck.c affitype.c
+        afficonv.c affdesc.c afertost.c aferror.c afdtrim.c
+        afdpval.c afdplen.c afdmlstr.c afdmlset.c afdecimal.c
+        afdclass.c afcvinto.c afcvexcp.c afctychk.c afcmplen.c
+        afclins.c afclfunc.c afcanco.c afagname.c afagfind.c ;
+
+IILIBRARY IMPEMBEDLIBDATA : afedata.c ;

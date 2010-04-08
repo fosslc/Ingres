@@ -1,0 +1,138 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<si.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<cf.h>
+
+/*{
+** Name:	cf_writeobj - write object header to file if exists
+**
+** Description:
+**	Writes the header to the intermediate file for one object.  
+**	Retrieves object descriptive info from ii_objects and ii_longremarks
+**	and incorporates that into the header.
+**
+** Input params:
+**	class		object class of object for which to write header.
+**	name		name of the object.
+**	owner		owner of the object.
+**	dbacode		user code of the dba.
+**	fd		file descriptor of the open file to write to.
+**	id		pointer to id to have object id returned in.
+**			may be NULL if id or existence is not desired.
+**
+** Output params:
+**	id		pointer to id to have object id returned in;
+**			if object doesn't exist, *id is set to -1.
+**
+** Returns:
+**	OK		No errors (object may not exist though).
+**	FALSE		Error writing header to file.
+**
+** Exceptions:
+**	none
+**
+** Side Effects:
+**
+** History:
+**	22-Apr-87 (rdesmond) - written.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      06-feb-2009 (stial01)
+**          Define copyform record buffer with size COPYFORM_MAX_REC
+*/
+STATUS
+cf_writeobj(class, name, owner, dbacode, fd, id)
+EXEC SQL BEGIN DECLARE SECTION;
+i4	class;
+char *name;
+char *owner;
+char *dbacode;
+EXEC SQL END DECLARE SECTION;
+FILE	*fd;
+i4	*id;
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    i4		temp_id;
+    char	short_remark[61];
+    char	long_remark[601];
+    char	obj_owner[FE_MAXNAME+1];
+    EXEC SQL END DECLARE SECTION;    
+    char	*title;
+    bool	found = FALSE;
+    char	linebuf[COPYFORM_MAX_REC];
+    i4		count;
+
+    switch(class)
+    {
+	case OC_QBFNAME:
+		title = ERx("QBFNAME:");
+		break;
+	case OC_JOINDEF:
+		title = ERx("JOINDEF:");
+		break;
+	case OC_FORM:
+	default:
+		title = ERx("FORM:");
+		break;
+    }
+
+    EXEC SQL REPEATED SELECT object_id, short_remark, object_owner
+	INTO :temp_id, :short_remark, :obj_owner
+	FROM ii_objects
+	WHERE object_name = :name
+	    AND	object_class = :class
+	    AND (object_owner = :owner OR object_owner = :dbacode);
+    EXEC SQL BEGIN;	
+	    STcopy(title, linebuf);
+	    STcat(linebuf, ERx("\t"));
+	    STcat(linebuf, name);
+	    STcat(linebuf, ERx("\t"));
+	    STcat(linebuf, short_remark);
+	    found = TRUE;
+	    if (STcompare(obj_owner, owner) == 0)
+	    {
+	    	EXEC SQL ENDSELECT;
+	    }
+    EXEC SQL END;
+    if(found == TRUE)
+    {
+	STcat(linebuf, ERx("\t"));
+	long_remark[0] = '\0';
+
+	EXEC SQL REPEATED SELECT long_remark
+	    INTO :long_remark
+	    FROM ii_longremarks
+	    WHERE object_id = :temp_id;
+	
+	STcat(linebuf, long_remark);
+	STcat(linebuf, ERx("\n"));
+	if (SIwrite(STlength(linebuf), linebuf, &count, fd) != OK)
+	    return (FAIL);
+
+	if (id != NULL)
+	    *id = temp_id;
+    }
+    else
+    {
+	if (id != NULL)
+	    *id = 0;
+    }
+    return(OK);
+}

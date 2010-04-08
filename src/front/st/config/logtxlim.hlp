@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The tx_limit resource specifies the maximum number of transactions which
+  can be concurrently supported by the logging system.  In this context,
+  "transaction" includes any connection to the logging system by worker
+  or system threads.

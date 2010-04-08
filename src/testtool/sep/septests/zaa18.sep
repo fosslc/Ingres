@@ -1,0 +1,131 @@
+/*
+	Test Name: newtest.sep
+	Time: Thu Sep  9 10:50:15 1993
+	User Name: ingres
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename:
+	Purpose	:
+	Input Files  :
+	Output Files :
+	Database     :
+	Tables       :
+	Synopsis     :
+
+ History:  9-Sep-1993	(Author)	Created
+          31-Jan-1996	(somsa01)	Added NT_GENERIC canons.
+*/
+.if !SEPPARAMDB 
+? setenv SEPPARAMDB septools 
+<<
+environment variable was defined
+>>
+.endif 
+? fill sedcmds.sed 
+!!
+s/a/A/g
+s/b/B/g
+s/c/C/g
+s/d/D/g
+s/e/E/g
+s/f/F/g
+s/g/G/g
+s/h/H/g
+s/i/I/g
+s/j/J/g
+s/k/K/g
+s/l/L/g
+s/m/M/g
+s/n/N/g
+s/o/O/g
+s/p/P/g
+s/q/Q/g
+s/r/R/g
+s/s/S/g
+s/t/T/g
+s/u/U/g
+s/v/V/g
+s/w/W/g
+s/x/X/g
+s/y/Y/g
+s/z/Z/g
+!!
+? sepset sed sedcmds.sed 
+<<
+>>
+? sql septools 
+<<
+ingres sUNos vERsIon 6.5/00 (su4.u42/00) login Thu Sep  9 10:54:58 1993
+continue
+* 
+>>
+<< IF (NT_GENERIC) 
+OPENINGRES MICROSOFT WINDOWS NT VERSION OPING 1.2/00 (INT.WNT/02) LOGIN
+WED JAN 31 13:52:58 1996
+CONTINUE
+* 
+>>
+* help *;\g 
+<<
+Executing . . .
+
+No tables were FOUND that matched '*'
+
+
+* 
+>>
+* \q 
+<<
+Your SQL statement(s) have been committed.
+
+INGRES Version 6.5/00 (su4.u42/00) logout
+Thu Sep  9 10:55:33 1993
+>>
+<< IF (NT_GENERIC) 
+YOUR SQL STATEMENT(S) HAVE BEEN COMMITTED.
+
+OPENINGRES VERSION OPING 1.2/00 (INT.WNT/02) LOGOUT
+WED JAN 31 13:54:00 1996
+>>
+? unsepset sed 
+<<
+>>
+? sql septools 
+<<
+INGRES SunOS Version 6.5/00 (su4.u42/00) login Thu Sep  9 12:50:42 1993
+continue
+* 
+>>
+<< IF (NT_GENERIC) 
+OpenIngres Microsoft Windows NT Version OpING 1.2/00 (int.wnt/02) login
+Wed Jan 31 13:54:41 1996
+continue
+* 
+>>
+* help;\g 
+<<
+Executing . . .
+
+Name                               Owner                              Type
+
+(0 rows)
+* 
+>>
+* \q 
+<<
+Your SQL statement(s) have been committed.
+
+INGRES Version 6.5/00 (su4.u42/00) logout
+Thu Sep  9 10:56:03 1993
+>>
+<< IF (NT_GENERIC) 
+Your SQL statement(s) have been committed.
+
+OpenIngres Version OpING 1.2/00 (int.wnt/02) logout
+Wed Jan 31 13:55:01 1996
+>>
+
+
+Ending at: Wed Jan 31 13:55:10 1996

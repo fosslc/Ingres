@@ -1,0 +1,649 @@
+/*
+** Copyright (c) 1990, 2008 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<me.h>		 
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<er.h>
+## include	<abclass.qsh>
+# include	<adf.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<frame.h>
+# include	<oocat.h>
+# include	<oodefine.h>
+# include	<st.h>
+# include	<cm.h>
+# include	<cv.h>
+# include	<ug.h>
+## include	<metafrm.qsh>
+# include	"vqescinf.h"
+## include	"vqffldlp.qsh"
+# include	"ervq.h"
+
+/**
+** Name:	vqobjhlp.qsc -	handle listpick options for frame parameters
+**
+** Description:
+**	This file has routines that present the user with a listpick,
+**	allowing the user to get help on form fields, local variables,
+**	global variables or global constants.
+**
+**	This file defines:
+**
+**	IIVQfveFrameVarList - presents help options in a listpick
+**	param_lp_hdlr - listpick handler to act on option selected
+**	IIVQfplFreeParamLP - frees memory used for form and field listpick
+**	load_glob_objs - loads global variable and constant information
+**	get_obj_hdlr - handler for global variable/constant listpick
+**	gff_lphandler - handler for form field listpick
+**	lp_alloc - allocates memory to load global variable/constants
+**
+** History:
+**	23-feb-90 (kenl) - created
+**	6-jun-90 (Mike S) - Add argument to distinguish caller from callee
+**	10/90 (Mike S) Check for derived field activations
+**	25-feb-92 (leighb) DeskTop Porting Change:
+**		IIUGbmaBadMemoryAllocation() has an argument - added it.
+**	05-aug-93 (connie) Bug #53345
+**		Fix memory overflow of lpmem by correcting lp_len
+**		(changed lp_len = ...   to lp_len += ...  )
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototype for load_glob_objs() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**/
+
+/*
+** Two structures for data passed to listpick handlers.  The first
+** has an object pointer and a bollean, the second a string pointer and a
+** boolean.  In both cases, the boolean is whether we're choosing
+** fields for the caller or the callee.
+*/
+typedef struct 
+{
+	OO_OBJECT *apobj;
+	bool	caller;
+} OBJPTR_BOOL;
+
+typedef struct 
+{
+	char 	*string;
+	bool	caller;
+} STRING_BOOL;
+
+# define param_title              (ERget(F_VQ0112_Select_Parameter))
+
+GLOBALREF APPL *IIVQappl; /* argument of frame flow entry, the current
+			   application we are editing in abf */
+
+FUNC_EXTERN i4		IIFDlpListPick();
+
+VOID IIVQfplFreeParamLP();
+
+static VOID gff_lphandler();
+static VOID get_obj_hdlr();
+static i4   param_lp_hdlr();
+static char *lp_alloc();
+static i4 load_glob_objs();
+
+static	char	ret_name[ 2 * FE_MAXNAME + 1];
+static  char    *helptitle = NULL;     /* Help screen title */
+static	char    *lpmem = NULL;         /* ptr to avail. memory for listpick */
+static	i4	lpsize = 0;            /* size of memory avail. to listpick */
+static	TAGID	frmtag = 0;	       /* memory tag used in form allocation*/
+static	u_i2	flags = 0;
+static	u_i2	*caller_flags;
+
+static const
+##	char	help_file[] =      ERx("vqparsel.hlp");
+
+# define ALLOC_CHUNK 500
+# define _vqloc_glob_prmpt	ERget(F_VQ00A7_vqloc_glob_prmpt)
+# define _vqframe_var_opt	ERget(F_VQ0111_frame_var_opt)
+# define _noconst_vqframe_var_opt	ERget(F_VQ0033_frame_var_nc_opt)
+
+/*{
+** Name:	IIVQfveFrameVarList	- present listpick of choices
+**
+** Description:
+**	Present popup allowing user to select either form fields, local
+**	variables or global variables/constants to get help on.
+**
+** Inputs:
+**	OO_OBJECT	*apobj - frame we are working with
+**	char		*var_buf - memory area where selection will be copied
+**	bool		caller    - TRUE if selecting for caller
+**	u_i2		*in_flags - flags indicating form/listpick mem alloc.
+**
+** Outputs:
+**	var_buff - contains char string of item/field selected
+**
+**	Returns:
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	23-feb-90 (kenl)
+**		Created.
+*/
+VOID
+IIVQfveFrameVarList(apobj, var_buff, caller, in_flags)
+OO_OBJECT	*apobj;
+char		*var_buff;
+bool		caller;
+u_i2		*in_flags;
+{
+	OBJPTR_BOOL data;
+
+	ret_name[0] = EOS;
+	caller_flags = in_flags;
+	data.apobj = apobj;
+	data.caller = caller;
+
+	_VOID_ IIFDlpListPick(_vqloc_glob_prmpt, 
+			caller ? _vqframe_var_opt : _noconst_vqframe_var_opt, 
+			0, -1, -1, _vqloc_glob_prmpt, ERx("vqfvars.hlp"),
+			param_lp_hdlr, (PTR)&data);
+	STcopy(ret_name, var_buff);
+}
+
+/*{
+** Name:	param_lp_hdlr	- performs specific help that user requested
+**
+** Description:
+**	Listpick help is provided based upon the choice that the user made
+**	from the routine IIVQfveFrameVarList().  Help is 
+**	provided on either form fields, local
+**	variables or global variables/constants.
+**
+** Inputs:
+**	PTR		lp_ptr - frame that we are working with
+**	i4		choice - indicates form, locals, global vars, const.
+**	bool		*resume - indicates whether to resume prev. listpick
+**
+** Outputs:
+**	caller_flags is set to reflect form field/listpick memory alloc.
+**	ret_name is set to selection made from whatever listpick was picked
+**
+**	Returns:
+**		i4	- the choice that was picked from calling listpick
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	23-feb-90 (kenl)
+**		Created.
+**	9-sept-92 (blaise)
+**		Since the vars array of the metaframe can now hold local
+**		procedures as well as local variables, make sure we only
+**		display local variables here.
+*/
+static i4
+param_lp_hdlr(lp_ptr, choice, resume)
+PTR	lp_ptr;
+i4	choice;
+bool	*resume;
+{
+	OBJPTR_BOOL *data = (OBJPTR_BOOL *)lp_ptr;
+	OO_OBJECT	*apobj = data->apobj;
+	METAFRAME	*meta_frame;
+	MFVAR	**frame_vars;
+	i4	i;
+	char	*namelist;
+	i4 	type;
+	i4	lp_len;
+	i4	lvars;
+	i4	lvarcount = 0;
+	i4	item;
+	STRING_BOOL strbool;
+
+	if (NULL == helptitle)
+		helptitle = STalloc(ERget(S_VQ0094_Select_Parameter));
+
+	switch (choice)
+	{
+	case 0:
+		/* only provide form help for frames that have forms */
+		switch (apobj->class)
+		{
+		  case OC_MUFRAME:
+		  case OC_APPFRAME:
+		  case OC_UPDFRAME:
+		  case OC_BRWFRAME:
+		  case OC_OSLFRAME:
+		  case OC_RWFRAME:
+			break;
+
+		  default:
+			IIUGerr(E_VQ0096_No_Form_For_Frame, UG_ERR_ERROR, 1,
+				apobj->name);
+			return (choice);
+		}
+
+		strbool.string = ret_name;
+		strbool.caller = data->caller;
+		_VOID_ IIVQgffGetFormFields(VQ_FIELD_FETCH, &flags,
+			apobj, &frmtag, gff_lphandler,
+			(PTR)&strbool, help_file, helptitle,
+			ERget(F_VQ0112_Select_Parameter));
+		*caller_flags = flags;
+		return (choice);
+
+	case 1:					/* local variables */
+        	/* locals only exist for Emerald frame types */
+		switch (apobj->class)
+		{
+		  case OC_MUFRAME:
+		  case OC_APPFRAME:
+		  case OC_UPDFRAME:
+		  case OC_BRWFRAME:
+			break;
+
+		  default:
+			IIUGerr(E_VQ0097_No_Locals_Defined, UG_ERR_ERROR, 1,
+				apobj->name);
+			return (choice);
+		}
+
+		meta_frame = ((USER_FRAME *)apobj)->mf;
+
+		if (IIAMmpMetaPopulate(meta_frame, MF_P_FLD) != OK)
+		{
+			return (choice);
+		}
+		frame_vars = meta_frame->vars;
+
+		if ((lvars = meta_frame->numvars) > 0)
+		{
+			/* we need to find out how much space to allocate  */
+			for (i = 0, lp_len = 0; i < lvars; i++)
+			{
+				lp_len += STlength(frame_vars[i]->name) + 2;
+			}
+
+			/* allocate space, set static lpmem to it */
+			_VOID_ lp_alloc(lp_len, TRUE);
+			namelist = lpmem;
+
+			/*
+			** now build the listpick string - don't include local
+			** procedures
+			*/
+			for (i = 0; i < lvars; i++)
+			{
+				if (frame_vars[i]->vartype == VAR_LVAR)
+				{
+					namelist +=
+						STlcopy (frame_vars[i]->name, 
+						namelist, 255);
+					namelist += STlcopy (ERx("\n"),
+						namelist, 255);
+					lvarcount++;
+				}
+			}
+			*(namelist-1) = EOS;
+		}
+
+		if (lvarcount == 0)
+		{
+			IIUGerr(S_VQ0091_No_Local_Vars, UG_ERR_ERROR, 1,
+				meta_frame->apobj->name);
+		}
+		else
+		{
+
+		 	item = IIFDlpListPick(param_title, lpmem, 0,
+					-1, -1, helptitle, help_file,
+					NULL, NULL);
+
+			/* if item < 0, then the user hit cancel */
+			if (item >= 0)
+			{
+				STcopy(frame_vars[item]->name, ret_name);
+			}
+		}
+
+		return (choice);
+
+	case 2:					/* global variables */
+		if (load_glob_objs(OC_GLOBAL) == 0)
+		{
+			IIUGerr(S_VQ0092_No_Global_Vars, UG_ERR_ERROR, 0);
+		}
+		return (choice);
+
+	case 3:					/* constants */
+		if (load_glob_objs(OC_CONST) == 0)
+		{
+			IIUGerr(S_VQ0093_No_Global_Cons, UG_ERR_ERROR, 0);
+		}
+		return (choice);
+
+	default:
+		return (choice);
+	}
+}
+
+/*{
+** Name:	IIVQfplFreeParamLP	- clear out form memory
+**
+** Description:
+**	If any memory was allocated for a form or the listpick form then
+**	free it up.
+**
+** Inputs:
+**
+** Outputs:
+**
+**	Returns:
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	23-feb-90 (kenl)
+**		Created.
+*/
+VOID
+IIVQfplFreeParamLP()
+{
+	if (flags != 0)
+	{
+		if ((flags & VQESC_LF) != 0)
+			IIdelfrm(iivqLP0form);
+
+		/* Free frame's form */
+		if ((flags & VQESC_FL) != 0)
+			IIUGtagFree(frmtag);
+		flags = 0;
+	}
+	*caller_flags = 0;
+}
+
+/*{
+** Name:	load_glob_objs	- load up global objects from the database
+**
+** Description:
+**	This routine loads either global variables or global constants from
+**	the database, builds the appropriately formatted listpick string, and
+**	then calls the listpick routine.
+**
+** Inputs:
+**	OOID		obj_type - should be either OC_GLOBAL or OC_CONST
+**
+** Outputs:
+**
+**	Returns:
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	23-feb-90 (kenl)
+**		Created.
+**	09-jan-92 (davel) bug 41464
+**		Add DISTINCT to the select, to avoid getting duplicate
+**		Constant rows (each language has a separate row in 
+**		ii_abfobjects).
+*/
+static i4
+load_glob_objs(obj_type)
+EXEC SQL BEGIN DECLARE SECTION;
+OOID	obj_type;
+EXEC SQL END DECLARE SECTION;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		OOID	applid;
+		char	obj_name[FE_MAXNAME + 1];
+	EXEC SQL END DECLARE SECTION;
+	char	*namelist;
+	i4	obj_len;
+	i4	cur_len = 0;
+	i4	item;
+	char	*new_str;
+	bool	found = FALSE;
+
+	applid = IIVQappl->ooid;
+
+	/* make sure at least ALLOC_CHUNK bytes are available */
+	_VOID_ lp_alloc(ALLOC_CHUNK, TRUE);
+	namelist = lpmem;
+
+	EXEC SQL REPEATED SELECT DISTINCT object_name
+		INTO :obj_name
+		FROM ii_objects, ii_abfobjects
+		WHERE ii_objects.object_class = :obj_type AND
+		      ii_objects.object_id = ii_abfobjects.object_id AND
+		      ii_abfobjects.applid = :applid
+		ORDER by object_name;
+	EXEC SQL BEGIN;
+		obj_len = STlength(obj_name);
+
+		/* make sure current name will fit */
+		if ((cur_len + obj_len + 2) > lpsize)
+		{
+			/* name won't fit, allocate some more memory */
+			new_str = lp_alloc(lpsize + ALLOC_CHUNK, FALSE);
+			/* copy old string to new string */
+			STcopy(lpmem, new_str);
+			namelist = new_str + (namelist - lpmem);
+			/* free up old list */
+			MEfree(lpmem);
+			lpmem = new_str;
+			lpsize += ALLOC_CHUNK;
+		}
+		namelist += STlcopy (obj_name, namelist, 255);
+		namelist += STlcopy (ERx("\n"), namelist, 255);
+		cur_len = namelist - lpmem;
+		found = TRUE;
+	EXEC SQL END;
+
+	/* only call the listpick routine if at least one name was found */
+	if (found)
+	{
+		*(namelist-1) = EOS;
+		 item = IIFDlpListPick(param_title, lpmem, 0,
+				-1, -1, helptitle, help_file, 
+				get_obj_hdlr, NULL);
+		return(1);
+	}
+	return (0);
+}
+
+/*{
+** Name:	get_obj_hdlr	- handler for global variables/constants
+**
+** Description:
+**	Pick the name of the global variable/constant off of the listpick
+**	form.
+**
+** Inputs:
+**	i4		choice - indicates row in which selection was made
+**	bool		*resume - indicates whether to resume prev. listpick
+**
+** Outputs:
+**
+**	Returns:
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	23-feb-90 (kenl)
+**		Created.
+*/
+static VOID
+get_obj_hdlr(data, choice, resume)
+PTR     data;
+i4      choice;
+bool    *resume;
+{
+##      char formname[FE_MAXNAME + 1];
+##      char tfname[FE_MAXNAME + 1];
+##      char colname[FE_MAXNAME + 1];
+##      char field_val[FE_MAXNAME + 1];
+
+	*resume = FALSE;        /* Leave the listpick */
+	if (choice < 0)
+		return;
+
+##	inquire_frs form (formname = name, tfname = field)
+##	inquire_frs table formname (colname = column(tfname))
+##      getrow formname tfname (field_val= colname)
+
+	STcopy(field_val, ret_name);
+}
+
+/*{
+** Name:	gff_lphandler	- pulls name from form field listpick
+**
+** Description:
+**	Handler used when calling IIVQgffGetFormFields().  Current 
+**	tablefield row contains the name of the form field that the user
+**	selected.
+**
+** Inputs:
+**	PTR		data - area to copy selection into
+**	i4		choice - indicates row in which selection was made
+**	bool		*resume - indicates whether to resume prev. listpick
+**
+** Outputs:
+**
+**	Returns:
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	23-feb-90 (kenl)
+**		Created.
+*/
+static VOID
+gff_lphandler(data, choice, resume)
+PTR     data;
+i4      choice;
+bool    *resume;
+{
+##      char actname[FE_MAXNAME + 1];
+##	i4 flags2;
+##	i4 fldtype;
+
+	STRING_BOOL *strbool = (STRING_BOOL *)data;
+
+	*resume = FALSE;        /* Leave the listpick */
+	if (choice < 0)
+	{
+		return;
+	}
+
+##      getrow iivqLP0form iivqLP1tblfld 
+##		(actname = iivqLP2actCol, flags2 = iivqLP4flags2Col,
+##		 fldtype = iivqLP5fldTypeCol)
+
+	/* Check for a derived field, if this is a target */
+	if (!strbool->caller)
+	{
+		if (IIVQcdfCheckDerivedField(actname, fldtype, flags2))
+		{
+			/* It is one; let the user try again */
+			*resume = TRUE;
+			return;
+		}
+	}
+
+	STcopy(actname, strbool->string);
+}
+
+/*{
+** Name:	lp_alloc	- allocate memory for use by listpick
+**
+** Description:
+**	Allocates at least ALLOC_CHUNK bytes of memory.  The goal of this
+**	whole module is to keep using the same piece of memory if it's
+**	large enough.  Therefore, we only allocate more memory when the
+**	requested size is less than the currenly allocated memory.
+**
+** Inputs:
+**	i4		size - size of memory chunk requested
+**	bool		lp_set - TRUE to set lpmem, FALSE to return a pointer
+**				 to the new memory
+**
+** Outputs:
+**
+**	Returns:
+**		character pointer to new memory (if lp_set was FALSE)
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	23-feb-90 (kenl)
+**		Created.
+*/
+static char *
+lp_alloc(size, lp_set)
+i4	size;
+bool	lp_set;
+{
+	if (lp_set)
+	{
+		/* if resetting lpmem, only do it if we need more memory */
+		if (size > lpsize)
+		{
+			/* allocate at least ALLOC_CHUNK bytes */
+			lpsize = (size < ALLOC_CHUNK) ? ALLOC_CHUNK: size;
+
+			/* free any existing memory */
+			if (lpmem != NULL)
+			{
+				MEfree(lpmem);
+			}
+
+			if ((lpmem = (char *)MEreqmem((u_i4)0, (u_i4)lpsize,
+					TRUE, (STATUS *)NULL)) == NULL)
+			{
+				IIUGbmaBadMemoryAllocation("lp_alloc()");		 
+			}
+		}
+		return(lpmem);
+	}
+	else
+	{
+		/*
+		** In this case, the caller knows what size memory chunk
+		** is needed and the caller DOES NOT want to touch lpmem.
+		** This is how lp_alloc() is called when we need to copy
+		** the lpmem string to a new and longer memory area.
+		*/
+		char	*newmem;
+
+		if ((newmem = (char *)MEreqmem((u_i4)0, (u_i4)size,
+				TRUE, (STATUS *)NULL)) == NULL)
+		{
+			IIUGbmaBadMemoryAllocation("lp_alloc()");		 
+		}
+		return(newmem);
+	}
+}

@@ -1,0 +1,79 @@
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<oodefine.h>
+# include	"ooldef.h"
+## include	<oosymbol.qsh>
+# include       <er.h>
+# include	"eroo.h"
+
+/**
+** History:
+**      22-oct-90 (sandyd)
+**              Fixed #include of local ooldef.h to use "" instead of <>.
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+   OO_REFERENCE*
+## REinitDb(self, name, rem, master, mdel, conn, detail, ddel)
+   OO_REFERENCE *self;
+## char *name, *rem;
+   OOID master, detail;
+   i4	mdel, ddel;
+   char *conn;
+## {
+##	i4	anyOther;
+##	char	*O1table = O1->table_name;
+##	char	*O2table = O2->table_name;
+##	char	*O3table = O3->table_name;
+
+##	range of #attribute is #attribute
+
+##	retrieve (anyOther = any(O3table.#id where O3table.#master = master
+##					and O3table.#id = O1table.#id
+##					and O1table.#name = name))
+	if (anyOther) {
+		err(E_OO003A_ReferenceAlreadyExist, name,
+			OOsnd(master, _name));
+		return NULL;
+	}
+##	retrieve (anyOther = any(O3table.#id where O3table.#master = master
+##					and O3table.#id = O2table.#id
+##					and O2table.#table = #attribute.#attrelid
+##					and #attribute.attowner = #usercode
+##					and #attribute.attname = name))
+	if (anyOther) {
+		err(E_OO003B_AttributeAlreadyExist, name,
+			OOsnd(master, _name));
+		return NULL;
+	}
+
+	return (OO_REFERENCE*)OOsndSelf(self, _init, name, rem, master, mdel, conn, detail, ddel);
+## }
+
+OO_REFERENCE*
+REinit(self, name, rem, master, mdel, conn, detail, ddel)
+OO_REFERENCE *self;
+char	*name, *rem;
+OOID	master, detail;
+i4	mdel, ddel;
+char	*conn;
+{
+	OOsndSuper(self, _init, name, 0, _, 1, rem, NULL, NULL, NULL);
+	self->master = master;
+	self->mdelete = mdel;
+	self->connector = conn;
+	self->detail = detail;
+	self->ddelete = ddel;
+	return self;
+}

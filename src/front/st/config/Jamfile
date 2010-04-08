@@ -1,0 +1,468 @@
+#
+# Jamfile file for front!st!config
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#	23-dec-2004 (srisu02)
+#	    Added dbmspsfv.hlp as change number 471308 had added dbmspsfv.hlp, 
+#	    but the Jamfile was not updated to reflect this
+#	10-Jan-2004 (shaha03)
+#	    Added dbmscrop.hlp for the resource cursor_default_open.
+#	14-Jan-2004 (hanje04)
+#	    Added dbmsnrst.hlp
+#	08-Jun-2005 (hanje04)
+#	    Add new files added in branch from 2.6
+#	29-Jul-2005 (sheco02)
+#	    Add new files due to the change of 477749 & 477781.
+#	01-Aug-2005 (sheco02)
+#	    Added dbmsophj.hlp and directio.hlp.
+#	15-Aug-2005 (penga03)
+#	    Added ingstop.hlp.
+#	06-Oct-2005 (jenjo02)
+#	    Added fdaffinity.hlp
+#	24-Oct-2005 (schka24)
+#	    Added dbmsqmms.hlp
+#	28-Nov-2005 (kschendel)
+#	    Added dbmsress.hlp and dizbufsize.hlp
+#	21-Mar-2006 (jenjo02)
+#	    Added logoptim.hlp
+#       30-Aug-2006 (kschendel)
+#           Added dbmsdmbp.hlp
+#	14-Sep-2006 (gusph01)
+#	    Added dateingres.hlp 
+#       07-Sep-2006 (wonca01) Bug 116437
+#           Remove the building of dbmsasso.hlp because the 
+#           dbms.*.association_timeout is no longer being used.
+#   02-Feb-2007 (clach04)
+#       Missing gateway files gwhex.hlp, gwmltcur.hlp, gwzeroln.hlp added
+#	12-Feb-2007 (bonro01)
+#	    Remove JDBC package.
+#   07-May-2007 (clach04)
+#       SIR 118263
+#       New gateway "string type cast length" help file added
+#   04-Jun-2007 (hweho01)
+#       Added dbmstbst.hlp
+#   07-jun-2007 (huazh01)
+#       Add the help file for config parameter qef_no_dependency_chk, which
+#       switches ON/OFF the fix to b112978. 
+#	27-Jun-2007 (bonro01)
+#	    Add entry for dbmspqpa.hlp for change 487307
+#   16-jul-2007 (Ralph Loen) Bug 118746
+#       Added help pages for various security configuration items.
+#	05-Nov-2007 (wanfr01)
+#          SIR 119419
+#          Added DMC_C_CORE_ENABLED
+#	26-Mar-2008 (bonro01)
+#	    Add missing dbmscady.hlp file for change 491111.
+#	30-oct-08 (hayke02)
+#	    Add dbmsopfg.hlp file for opf_greedy_factor. This change fixes
+#	    bug 121159.
+#   19-Mar-2009 (hweho01)
+#       Add dbmsdseg.hlp file for image_data_segments.  
+#	16-Apr-2009 (hanal04) Bug 121873
+#	    Add dbmsenum.hlp file for opf_new_enum.
+#    8-Jun-2009 (hanal04) Code Sprint SIR 122168 Ticket 387
+#       Add mllist.frm and dbmsmlst.hlp
+#	06-Aug-2009 (drivi01)
+#	     Add IIAdminManifest for cbf and iigenres.
+#	     This will ensure that the binary has a built-in manifest
+#	     with elevated privileges.
+#	7-Aug-2009 (kschendel) SIR 122512
+#	    Integrate Datallegro hash memory parameters.
+#	10-Feb-2010 (kschendel) SIR 122757
+#	    Add dbmsfalc.hlp.
+#	19-Feb-2010 (jonj)
+#	    SIR 121619 MVCC: Add logrbblk.hlp logrfblk.hlp
+#    29-Mar-2010 (ashco01) Bug 122768 
+#       Added dbmsqefm.hlp file for qef_memory.
+
+
+SubDir ING_SRC front st config ;
+
+IISUBSYS front st config ;
+
+
+IIUTILEXE cbf : config.sc ;
+IINEEDLIBS cbf : CONFIGLIB UTILLIB SHFRAMELIB SHEMBEDLIB SHCOMPATLIB ;
+IIUNDEFS cbf : II_copyright ;
+IIAdminManifest cbf ;
+
+IIUTILEXE iivalres : iivalres.c ;
+IINEEDLIBS iivalres : CONFIGLIB SHEMBEDLIB UTILLIB SHCOMPATLIB SHFRAMELIB ;
+IIUNDEFS iivalres : II_copyright ;
+
+IIUTILEXE iisetres : iisetres.c ;
+IINEEDLIBS iisetres : CONFIGLIB UTILLIB SHCOMPATLIB SHEMBEDLIB SHFRAMELIB ;
+IIUNDEFS iisetres : II_copyright ;
+
+IIUTILEXE iiresutl : iiresutl.c ;
+IINEEDLIBS iiresutl : UTILLIB UGLIB SHCOMPATLIB ;
+IIUNDEFS iiresutl : II_copyright ;
+
+IIUTILEXE iiremres : iiremres.c ;
+IINEEDLIBS iiremres : CONFIGLIB UTILLIB SHCOMPATLIB SHEMBEDLIB SHFRAMELIB ;
+IIUNDEFS iiremres : II_copyright ;
+
+IIUTILEXE iiinitres : iiinitres.c ;
+IINEEDLIBS iiinitres : CONFIGLIB UTILLIB SHEMBEDLIB SHCOMPATLIB SHFRAMELIB ;
+IIUNDEFS iiinitres : II_copyright ;
+
+IIUTILEXE iigenres : iigenres.c ;
+IINEEDLIBS iigenres : CONFIGLIB UTILLIB SHEMBEDLIB SHCOMPATLIB SHFRAMELIB ;
+IIUNDEFS iigenres : II_copyright ;
+IIAdminManifest iigenres ;
+
+IIFORM addvnode.frm ;
+IIFORM bridgeprots.frm ;
+IIFORM browser.frm ;
+IIFORM c2audit.frm ;
+IIFORM cfgcache.frm ;
+IIFORM dblist.frm ;
+IIFORM dmfdep.frm ;
+IIFORM dmfind.frm ;
+IIFORM gendep.frm ;
+IIFORM genind.frm ;
+IIFORM lgraph.frm ;
+IIFORM netprots.frm ;
+IIFORM mllist.frm ;
+IIFORM secmechs.frm ;
+IIFORM startup.frm ;
+IIFORM txlog2.frm ;
+IIFORM txlogs.frm ;
+
+File $(INGMSG)$(DFS)async.hlp : async.hlp ;
+File $(INGMSG)$(DFS)c2audmec.hlp : c2audmec.hlp ;
+File $(INGMSG)$(DFS)c2flush.hlp : c2flush.hlp ;
+File $(INGMSG)$(DFS)c2lmaxsz.hlp : c2lmaxsz.hlp ;
+File $(INGMSG)$(DFS)c2logful.hlp : c2logful.hlp ;
+File $(INGMSG)$(DFS)c2lpagsz.hlp : c2lpagsz.hlp ;
+File $(INGMSG)$(DFS)c2oneror.hlp : c2oneror.hlp ;
+File $(INGMSG)$(DFS)c2secaud.hlp : c2secaud.hlp ;
+File $(INGMSG)$(DFS)c2shrbuf.hlp : c2shrbuf.hlp ;
+File $(INGMSG)$(DFS)c2swilog.hlp : c2swilog.hlp ;
+File $(INGMSG)$(DFS)c2wtstrt.hlp : c2wtstrt.hlp ;
+File $(INGMSG)$(DFS)cachlock.hlp : cachlock.hlp ;
+File $(INGMSG)$(DFS)cachname.hlp : cachname.hlp ;
+File $(INGMSG)$(DFS)cachshar.hlp : cachshar.hlp ;
+File $(INGMSG)$(DFS)cbfmain.hlp : cbfmain.hlp ;
+File $(INGMSG)$(DFS)cbfsysck.hlp : cbfsysck.hlp ;
+File $(INGMSG)$(DFS)dascmax.hlp : dascmax.hlp ;
+File $(INGMSG)$(DFS)dascps.hlp : dascps.hlp ;
+File $(INGMSG)$(DFS)dascpsz.hlp : dascpsz.hlp ;
+File $(INGMSG)$(DFS)daspexp.hlp : daspexp.hlp ;
+File $(INGMSG)$(DFS)dastime.hlp : dastime.hlp ;
+File $(INGMSG)$(DFS)dateingres.hlp : dateingres.hlp ;
+File $(INGMSG)$(DFS)dbmsacct.hlp : dbmsacct.hlp ;
+File $(INGMSG)$(DFS)dbmsalim.hlp : dbmsalim.hlp ;
+File $(INGMSG)$(DFS)dbmsambi.hlp : dbmsambi.hlp ;
+File $(INGMSG)$(DFS)dbmsbufc.hlp : dbmsbufc.hlp ;
+File $(INGMSG)$(DFS)dbmscach.hlp : dbmscach.hlp ;
+File $(INGMSG)$(DFS)dbmscady.hlp : dbmscady.hlp ;
+File $(INGMSG)$(DFS)dbmscard.hlp : dbmscard.hlp ;
+File $(INGMSG)$(DFS)dbmsclim.hlp : dbmsclim.hlp ;
+File $(INGMSG)$(DFS)dbmscore.hlp : dbmscore.hlp ;
+File $(INGMSG)$(DFS)dbmscpus.hlp : dbmscpus.hlp ;
+File $(INGMSG)$(DFS)dbmscrsr.hlp : dbmscrsr.hlp ;
+File $(INGMSG)$(DFS)dbmscrop.hlp : dbmscrop.hlp ;
+File $(INGMSG)$(DFS)dbmscurs.hlp : dbmscurs.hlp ;
+File $(INGMSG)$(DFS)dbmsdefs.hlp : dbmsdefs.hlp ;
+File $(INGMSG)$(DFS)dbmsdlim.hlp : dbmsdlim.hlp ;
+File $(INGMSG)$(DFS)dbmsdlst.hlp : dbmsdlst.hlp ;
+File $(INGMSG)$(DFS)dbmsdmbp.hlp : dbmsdmbp.hlp ;
+File $(INGMSG)$(DFS)dbmsdmfa.hlp : dbmsdmfa.hlp ;
+File $(INGMSG)$(DFS)dbmsdmfc.hlp : dbmsdmfc.hlp ;
+File $(INGMSG)$(DFS)dbmsdmfe.hlp : dbmsdmfe.hlp ;
+File $(INGMSG)$(DFS)dbmsdmff.hlp : dbmsdmff.hlp ;
+File $(INGMSG)$(DFS)dbmsdmfg.hlp : dbmsdmfg.hlp ;
+File $(INGMSG)$(DFS)dbmsdmfl.hlp : dbmsdmfl.hlp ;
+File $(INGMSG)$(DFS)dbmsdmfm.hlp : dbmsdmfm.hlp ;
+File $(INGMSG)$(DFS)dbmsdmfs.hlp : dbmsdmfs.hlp ;
+File $(INGMSG)$(DFS)dbmsdmgr.hlp : dbmsdmgr.hlp ;
+File $(INGMSG)$(DFS)dbmsdmgu.hlp : dbmsdmgu.hlp ;
+File $(INGMSG)$(DFS)dbmsdpgs.hlp : dbmsdpgs.hlp ;
+File $(INGMSG)$(DFS)dbmsenum.hlp : dbmsenum.hlp ;
+File $(INGMSG)$(DFS)dbmsepgs.hlp : dbmsepgs.hlp ;
+File $(INGMSG)$(DFS)dbmsestr.hlp : dbmsestr.hlp ;
+File $(INGMSG)$(DFS)dbmsevnt.hlp : dbmsevnt.hlp ;
+File $(INGMSG)$(DFS)dbmsevpr.hlp : dbmsevpr.hlp ;
+File $(INGMSG)$(DFS)dbmsfalc.hlp : dbmsfalc.hlp ;
+File $(INGMSG)$(DFS)dbmsfast.hlp : dbmsfast.hlp ;
+File $(INGMSG)$(DFS)dbmsflag.hlp : dbmsflag.hlp ;
+File $(INGMSG)$(DFS)dbmsflat.hlp : dbmsflat.hlp ;
+File $(INGMSG)$(DFS)dbmsflsi.hlp : dbmsflsi.hlp ;
+File $(INGMSG)$(DFS)dbmsimag.hlp : dbmsimag.hlp ;
+File $(INGMSG)$(DFS)dbmsints.hlp : dbmsints.hlp ;
+File $(INGMSG)$(DFS)dbmsisol.hlp : dbmsisol.hlp ;
+File $(INGMSG)$(DFS)dbmsjrnl.hlp : dbmsjrnl.hlp ;
+File $(INGMSG)$(DFS)dbmslkmx.hlp : dbmslkmx.hlp ;
+File $(INGMSG)$(DFS)dbmslkrd.hlp : dbmslkrd.hlp ;
+File $(INGMSG)$(DFS)dbmslkto.hlp : dbmslkto.hlp ;
+File $(INGMSG)$(DFS)dbmslogw.hlp : dbmslogw.hlp ;
+File $(INGMSG)$(DFS)dbmslrsc.hlp : dbmslrsc.hlp ;
+File $(INGMSG)$(DFS)dbmslrut.hlp : dbmslrut.hlp ;
+File $(INGMSG)$(DFS)dbmsltsc.hlp : dbmsltsc.hlp ;
+File $(INGMSG)$(DFS)dbmsltut.hlp : dbmsltut.hlp ;
+FILE $(INGMSG)$(DFS)dbmsmdep.hlp : dbmsmdep.hlp ;
+File $(INGMSG)$(DFS)dbmsmtpl.hlp : dbmsmtpl.hlp ;
+File $(INGMSG)$(DFS)dbmsname.hlp : dbmsname.hlp ;
+File $(INGMSG)$(DFS)dbmsnrst.hlp : dbmsnrst.hlp ;
+File $(INGMSG)$(DFS)dbmsopfa.hlp : dbmsopfa.hlp ;
+File $(INGMSG)$(DFS)dbmsopff.hlp : dbmsopff.hlp ;
+File $(INGMSG)$(DFS)dbmsopfg.hlp : dbmsopfg.hlp ;
+File $(INGMSG)$(DFS)dbmsopfi.hlp : dbmsopfi.hlp ;
+File $(INGMSG)$(DFS)dbmsopfj.hlp : dbmsopfj.hlp ;
+File $(INGMSG)$(DFS)dbmsopfm.hlp : dbmsopfm.hlp ;
+File $(INGMSG)$(DFS)dbmsopfn.hlp : dbmsopfn.hlp ;
+File $(INGMSG)$(DFS)dbmsopfo.hlp : dbmsopfo.hlp ;
+File $(INGMSG)$(DFS)dbmsopfs.hlp : dbmsopfs.hlp ;
+File $(INGMSG)$(DFS)dbmsopft.hlp : dbmsopft.hlp ;
+File $(INGMSG)$(DFS)dbmsophj.hlp : dbmsophj.hlp ;
+File $(INGMSG)$(DFS)dbmsopja.hlp : dbmsopja.hlp ;
+File $(INGMSG)$(DFS)dbmsopjt.hlp : dbmsopjt.hlp ;
+File $(INGMSG)$(DFS)dbmsopon.hlp : dbmsopon.hlp ;
+File $(INGMSG)$(DFS)dbmspibs.hlp : dbmspibs.hlp ;
+File $(INGMSG)$(DFS)dbmspinb.hlp : dbmspinb.hlp ;
+File $(INGMSG)$(DFS)dbmspqdo.hlp : dbmspqdo.hlp ;
+File $(INGMSG)$(DFS)dbmspqth.hlp : dbmspqth.hlp ;
+File $(INGMSG)$(DFS)dbmspsbs.hlp : dbmspsbs.hlp ;
+File $(INGMSG)$(DFS)dbmspsfm.hlp : dbmspsfm.hlp ;
+File $(INGMSG)$(DFS)dbmspsmx.hlp : dbmspsmx.hlp ;
+File $(INGMSG)$(DFS)dbmspsnt.hlp : dbmspsnt.hlp ;
+File $(INGMSG)$(DFS)dbmspsrt.hlp : dbmspsrt.hlp ;
+File $(INGMSG)$(DFS)dbmsqedm.hlp : dbmsqedm.hlp ;
+File $(INGMSG)$(DFS)dbmsqefd.hlp : dbmsqefd.hlp ;
+File $(INGMSG)$(DFS)dbmsqefh.hlp : dbmsqefh.hlp ;
+File $(INGMSG)$(DFS)dbmsqefm.hlp : dbmsqefm.hlp ;
+File $(INGMSG)$(DFS)dbmsqefs.hlp : dbmsqefs.hlp ;
+File $(INGMSG)$(DFS)dbmsqesh.hlp : dbmsqesh.hlp ;
+File $(INGMSG)$(DFS)dbmsqhrb.hlp : dbmsqhrb.hlp ;
+File $(INGMSG)$(DFS)dbmsqhwb.hlp : dbmsqhwb.hlp ;
+File $(INGMSG)$(DFS)dbmsqhrt.hlp : dbmsqhrt.hlp ;
+File $(INGMSG)$(DFS)dbmsqhjn.hlp : dbmsqhjn.hlp ;
+File $(INGMSG)$(DFS)dbmsqhjx.hlp : dbmsqhjx.hlp ;
+File $(INGMSG)$(DFS)dbmsqmms.hlp : dbmsqmms.hlp ;
+File $(INGMSG)$(DFS)dbmsqsfg.hlp : dbmsqsfg.hlp ;
+File $(INGMSG)$(DFS)dbmsqsfm.hlp : dbmsqsfm.hlp ;
+File $(INGMSG)$(DFS)dbmsquan.hlp : dbmsquan.hlp ;
+File $(INGMSG)$(DFS)dbmsrdel.hlp : dbmsrdel.hlp ;
+File $(INGMSG)$(DFS)dbmsrdep.hlp : dbmsrdep.hlp ;
+File $(INGMSG)$(DFS)dbmsrdfc.hlp : dbmsrdfc.hlp ;
+File $(INGMSG)$(DFS)dbmsrdfm.hlp : dbmsrdfm.hlp ;
+File $(INGMSG)$(DFS)dbmsrdfs.hlp : dbmsrdfs.hlp ;
+File $(INGMSG)$(DFS)dbmsrdft.hlp : dbmsrdft.hlp ;
+File $(INGMSG)$(DFS)dbmsrepq.hlp : dbmsrepq.hlp ;
+File $(INGMSG)$(DFS)dbmsrept.hlp : dbmsrept.hlp ;
+File $(INGMSG)$(DFS)dbmsress.hlp : dbmsress.hlp ;
+File $(INGMSG)$(DFS)dbmsrnlk.hlp : dbmsrnlk.hlp ;
+File $(INGMSG)$(DFS)dbmsrpdq.hlp : dbmsrpdq.hlp ;
+File $(INGMSG)$(DFS)dbmsrpdt.hlp : dbmsrpdt.hlp ;
+File $(INGMSG)$(DFS)dbmsrpiq.hlp : dbmsrpiq.hlp ;
+File $(INGMSG)$(DFS)dbmsrpsa.hlp : dbmsrpsa.hlp ;
+File $(INGMSG)$(DFS)dbmsrupd.hlp : dbmsrupd.hlp ;
+File $(INGMSG)$(DFS)dbmsscfr.hlp : dbmsscfr.hlp ;
+File $(INGMSG)$(DFS)dbmssess.hlp : dbmssess.hlp ;
+File $(INGMSG)$(DFS)dbmssiob.hlp : dbmssiob.hlp ;
+File $(INGMSG)$(DFS)dbmssole.hlp : dbmssole.hlp ;
+File $(INGMSG)$(DFS)dbmssrvr.hlp : dbmssrvr.hlp ;
+File $(INGMSG)$(DFS)dbmsssiz.hlp : dbmsssiz.hlp ;
+File $(INGMSG)$(DFS)dbmsstca.hlp : dbmsstca.hlp ;
+File $(INGMSG)$(DFS)dbmstbst.hlp : dbmstbst.hlp ;
+File $(INGMSG)$(DFS)dbmstcbl.hlp : dbmstcbl.hlp ;
+File $(INGMSG)$(DFS)dbmstxlg.hlp : dbmstxlg.hlp ;
+File $(INGMSG)$(DFS)dbmsulmc.hlp : dbmsulmc.hlp ;
+File $(INGMSG)$(DFS)dbmsunxp.hlp : dbmsunxp.hlp ;
+File $(INGMSG)$(DFS)dbmswthd.hlp : dbmswthd.hlp ;
+File $(INGMSG)$(DFS)dbmsxsid.hlp : dbmsxsid.hlp ;
+File $(INGMSG)$(DFS)ddfclass.hlp : ddfclass.hlp ;
+File $(INGMSG)$(DFS)ddfddi.hlp : ddfddi.hlp ;
+File $(INGMSG)$(DFS)ddfname.hlp : ddfname.hlp ;
+File $(INGMSG)$(DFS)ddfnode.hlp : ddfnode.hlp ;
+File $(INGMSG)$(DFS)directio.hlp : directio.hlp ;
+File $(INGMSG)$(DFS)dizbufsize.hlp : dizbufsize.hlp ;
+File $(INGMSG)$(DFS)dmcm.hlp : dmcm.hlp ;
+File $(INGMSG)$(DFS)fdaffinity.hlp : fdaffinity.hlp ;
+File $(INGMSG)$(DFS)gather.hlp : gather.hlp ;
+File $(INGMSG)$(DFS)gcbibmax.hlp : gcbibmax.hlp ;
+File $(INGMSG)$(DFS)gcbprots.hlp : gcbprots.hlp ;
+File $(INGMSG)$(DFS)gcbvnode.hlp : gcbvnode.hlp ;
+File $(INGMSG)$(DFS)gccloglv.hlp : gccloglv.hlp ;
+File $(INGMSG)$(DFS)gcfmechan.hlp : gcfmechan.hlp ;
+File $(INGMSG)$(DFS)gcfmechingexptime.hlp : gcfmechingexptime.hlp ;
+File $(INGMSG)$(DFS)gcfmechingenabled.hlp : gcfmechingenabled.hlp ;
+File $(INGMSG)$(DFS)gcfmechingexpreq.hlp : gcfmechingexpreq.hlp ;
+File $(INGMSG)$(DFS)gcfmechkerbdelegation.hlp : gcfmechkerbdelegation.hlp ;
+File $(INGMSG)$(DFS)gcfmechkerbdomain.hlp : gcfmechkerbdomain.hlp ;
+File $(INGMSG)$(DFS)gcfmechkerbentry.hlp : gcfmechkerbentry.hlp ;
+File $(INGMSG)$(DFS)gcfmechkerbmodule.hlp : gcfmechkerbmodule.hlp ;
+File $(INGMSG)$(DFS)gcfmechkerbenabled.hlp : gcfmechkerbenabled.hlp ;
+File $(INGMSG)$(DFS)gcfmechsysenabled.hlp : gcfmechsysenabled.hlp ;
+File $(INGMSG)$(DFS)gcfmechnullenabled.hlp : gcfmechnullenabled.hlp ;
+File $(INGMSG)$(DFS)gcfmechloc.hlp : gcfmechloc.hlp ;
+File $(INGMSG)$(DFS)gcfremote.hlp : gcfremote.hlp ;
+File $(INGMSG)$(DFS)gcfsecuremech.hlp : gcfsecuremech.hlp ;
+File $(INGMSG)$(DFS)gcfpwdmech.hlp : gcfpwdmech.hlp ;
+File $(INGMSG)$(DFS)gcfremotemech.hlp : gcfremotemech.hlp ;
+File $(INGMSG)$(DFS)gcfservermech.hlp : gcfservermech.hlp ;
+File $(INGMSG)$(DFS)gcfusermech.hlp : gcfusermech.hlp ;
+File $(INGMSG)$(DFS)gcfrestrictpwd.hlp : gcfrestrictpwd.hlp ;
+File $(INGMSG)$(DFS)gcfrestrictrem.hlp : gcfrestrictrem.hlp ;
+File $(INGMSG)$(DFS)gcfrestrictsrv.hlp : gcfrestrictsrv.hlp ;
+File $(INGMSG)$(DFS)gcfrestrictusr.hlp : gcfrestrictusr.hlp ;
+File $(INGMSG)$(DFS)gcinterval.hlp : gcinterval.hlp ;
+File $(INGMSG)$(DFS)gcnbchktimeout.hlp : gcnbchktimeout.hlp ;
+File $(INGMSG)$(DFS)gcnchktype.hlp : gcnchktype.hlp ;
+File $(INGMSG)$(DFS)gcncomppoint.hlp : gcncomppoint.hlp ;
+File $(INGMSG)$(DFS)gcnexpint.hlp : gcnexpint.hlp ;
+File $(INGMSG)$(DFS)gcninter.hlp : gcninter.hlp ;
+File $(INGMSG)$(DFS)gcnlnode.hlp : gcnlnode.hlp ;
+File $(INGMSG)$(DFS)gcnregtype.hlp : gcnregtype.hlp ;
+File $(INGMSG)$(DFS)gcnrmech.hlp : gcnrmech.hlp ;
+File $(INGMSG)$(DFS)gcnrnode.hlp : gcnrnode.hlp ;
+File $(INGMSG)$(DFS)gcnsessl.hlp : gcnsessl.hlp ;
+File $(INGMSG)$(DFS)gcnsrvcl.hlp : gcnsrvcl.hlp ;
+File $(INGMSG)$(DFS)gcntickexp.hlp : gcntickexp.hlp ;
+File $(INGMSG)$(DFS)gcnticksz.hlp : gcnticksz.hlp ;
+File $(INGMSG)$(DFS)gcntimeout.hlp : gcntimeout.hlp ;
+File $(INGMSG)$(DFS)gcnumticks.hlp : gcnumticks.hlp ;
+File $(INGMSG)$(DFS)gcthresh.hlp : gcthresh.hlp ;
+File $(INGMSG)$(DFS)general.hlp : general.hlp ;
+File $(INGMSG)$(DFS)gwblobdt.hlp : gwblobdt.hlp ;
+File $(INGMSG)$(DFS)gwblobln.hlp : gwblobln.hlp ;
+File $(INGMSG)$(DFS)gwclobln.hlp : gwclobln.hlp ;
+File $(INGMSG)$(DFS)gwdate.hlp : gwdate.hlp ;
+File $(INGMSG)$(DFS)gwdbevpl.hlp : gwdbevpl.hlp ;
+File $(INGMSG)$(DFS)gwedretn.hlp : gwedretn.hlp ;
+File $(INGMSG)$(DFS)gwhex.hlp : gwhex.hlp ;
+File $(INGMSG)$(DFS)gwmltcur.hlp : gwmltcur.hlp ;
+File $(INGMSG)$(DFS)gwnlsdate.hlp : gwnlsdate.hlp ;
+File $(INGMSG)$(DFS)gwpstmax.hlp : gwpstmax.hlp ;
+File $(INGMSG)$(DFS)gwqual.hlp : gwqual.hlp ;
+File $(INGMSG)$(DFS)gwsqldasz.hlp : gwsqldasz.hlp ;
+File $(INGMSG)$(DFS)gwsqueez.hlp : gwsqueez.hlp ;
+File $(INGMSG)$(DFS)gwvchcmp.hlp : gwvchcmp.hlp ;
+File $(INGMSG)$(DFS)gwzeroln.hlp : gwzeroln.hlp ;
+File $(INGMSG)$(DFS)iceappdr.hlp : iceappdr.hlp ;
+File $(INGMSG)$(DFS)iceapps.hlp : iceapps.hlp ;
+File $(INGMSG)$(DFS)iceblkct.hlp : iceblkct.hlp ;
+File $(INGMSG)$(DFS)iceblksz.hlp : iceblksz.hlp ;
+File $(INGMSG)$(DFS)icecase.hlp : icecase.hlp ;
+File $(INGMSG)$(DFS)icecbref.hlp : icecbref.hlp ;
+File $(INGMSG)$(DFS)icecfloc.hlp : icecfloc.hlp ;
+File $(INGMSG)$(DFS)icecfws.hlp : icecfws.hlp ;
+File $(INGMSG)$(DFS)icecgibn.hlp : icecgibn.hlp ;
+File $(INGMSG)$(DFS)iceclass.hlp : iceclass.hlp ;
+File $(INGMSG)$(DFS)icecli.hlp : icecli.hlp ;
+File $(INGMSG)$(DFS)iceconnt.hlp : iceconnt.hlp ;
+File $(INGMSG)$(DFS)icedbovr.hlp : icedbovr.hlp ;
+File $(INGMSG)$(DFS)icedbtmo.hlp : icedbtmo.hlp ;
+File $(INGMSG)$(DFS)icedbusr.hlp : icedbusr.hlp ;
+File $(INGMSG)$(DFS)icedefdb.hlp : icedefdb.hlp ;
+File $(INGMSG)$(DFS)icedefid.hlp : icedefid.hlp ;
+File $(INGMSG)$(DFS)icedocs.hlp : icedocs.hlp ;
+File $(INGMSG)$(DFS)icedsess.hlp : icedsess.hlp ;
+File $(INGMSG)$(DFS)icedsql.hlp : icedsql.hlp ;
+File $(INGMSG)$(DFS)iceexe.hlp : iceexe.hlp ;
+File $(INGMSG)$(DFS)iceexts.hlp : iceexts.hlp ;
+File $(INGMSG)$(DFS)icefiles.hlp : icefiles.hlp ;
+File $(INGMSG)$(DFS)icehome.hlp : icehome.hlp ;
+File $(INGMSG)$(DFS)icehthom.hlp : icehthom.hlp ;
+File $(INGMSG)$(DFS)iceimage.hlp : iceimage.hlp ;
+File $(INGMSG)$(DFS)icelocs.hlp : icelocs.hlp ;
+File $(INGMSG)$(DFS)iceright.hlp : iceright.hlp ;
+File $(INGMSG)$(DFS)icerowst.hlp : icerowst.hlp ;
+File $(INGMSG)$(DFS)icerqtmo.hlp : icerqtmo.hlp ;
+File $(INGMSG)$(DFS)icesesto.hlp : icesesto.hlp ;
+File $(INGMSG)$(DFS)icesetsz.hlp : icesetsz.hlp ;
+File $(INGMSG)$(DFS)icesrver.hlp : icesrver.hlp ;
+File $(INGMSG)$(DFS)icesysad.hlp : icesysad.hlp ;
+File $(INGMSG)$(DFS)icesytmo.hlp : icesytmo.hlp ;
+File $(INGMSG)$(DFS)iceunits.hlp : iceunits.hlp ;
+File $(INGMSG)$(DFS)iceusers.hlp : iceusers.hlp ;
+File $(INGMSG)$(DFS)iceusess.hlp : iceusess.hlp ;
+File $(INGMSG)$(DFS)icevars.hlp : icevars.hlp ;
+File $(INGMSG)$(DFS)lckhsize.hlp : lckhsize.hlp ;
+File $(INGMSG)$(DFS)lcklistl.hlp : lcklistl.hlp ;
+File $(INGMSG)$(DFS)lcklockl.hlp : lcklockl.hlp ;
+File $(INGMSG)$(DFS)lckrhash.hlp : lckrhash.hlp ;
+File $(INGMSG)$(DFS)lcktxlim.hlp : lcktxlim.hlp ;
+File $(INGMSG)$(DFS)logarcin.hlp : logarcin.hlp ;
+File $(INGMSG)$(DFS)logarcrf.hlp : logarcrf.hlp ;
+File $(INGMSG)$(DFS)logbfcnt.hlp : logbfcnt.hlp ;
+File $(INGMSG)$(DFS)logblksz.hlp : logblksz.hlp ;
+File $(INGMSG)$(DFS)logcpimb.hlp : logcpimb.hlp ;
+File $(INGMSG)$(DFS)logcpint.hlp : logcpint.hlp ;
+File $(INGMSG)$(DFS)logdblim.hlp : logdblim.hlp ;
+File $(INGMSG)$(DFS)logfabrt.hlp : logfabrt.hlp ;
+File $(INGMSG)$(DFS)logfllim.hlp : logfllim.hlp ;
+File $(INGMSG)$(DFS)logoptim.hlp : logoptim.hlp ;
+File $(INGMSG)$(DFS)logrbblk.hlp : logrbblk.hlp ;
+File $(INGMSG)$(DFS)logrfblk.hlp : logrfblk.hlp ;
+File $(INGMSG)$(DFS)logtxlim.hlp : logtxlim.hlp ;
+File $(INGMSG)$(DFS)mechanisms.hlp : mechanisms.hlp ;
+File $(INGMSG)$(DFS)missing.hlp : missing.hlp ;
+File $(INGMSG)$(DFS)neterrlvl.hlp : neterrlvl.hlp ;
+File $(INGMSG)$(DFS)netibmax.hlp : netibmax.hlp ;
+File $(INGMSG)$(DFS)netiencryptmech.hlp : netiencryptmech.hlp ;
+File $(INGMSG)$(DFS)netiencryptmode.hlp : netiencryptmode.hlp ;
+File $(INGMSG)$(DFS)netmsgconcat.hlp : netmsgconcat.hlp ;
+File $(INGMSG)$(DFS)netobmax.hlp : netobmax.hlp ;
+File $(INGMSG)$(DFS)netoencryptmech.hlp : netoencryptmech.hlp ;
+File $(INGMSG)$(DFS)netoencryptmode.hlp : netoencryptmode.hlp ;
+File $(INGMSG)$(DFS)netprots.hlp : netprots.hlp ;
+File $(INGMSG)$(DFS)netregtype.hlp : netregtype.hlp ;
+File $(INGMSG)$(DFS)rcplgkml.hlp : rcplgkml.hlp ;
+File $(INGMSG)$(DFS)rcpresli.hlp : rcpresli.hlp ;
+File $(INGMSG)$(DFS)reccptim.hlp : reccptim.hlp ;
+File $(INGMSG)$(DFS)rmsbufrfa.hlp : rmsbufrfa.hlp ;
+File $(INGMSG)$(DFS)rmscachshar.hlp : rmscachshar.hlp ;
+File $(INGMSG)$(DFS)rmsclosefile.hlp : rmsclosefile.hlp ;
+File $(INGMSG)$(DFS)rmsfabsize.hlp : rmsfabsize.hlp ;
+File $(INGMSG)$(DFS)rmshashsize.hlp : rmshashsize.hlp ;
+File $(INGMSG)$(DFS)rmsreadonly.hlp : rmsreadonly.hlp ;
+File $(INGMSG)$(DFS)rmsrrl.hlp : rmsrrl.hlp ;
+File $(INGMSG)$(DFS)seclevel.hlp : seclevel.hlp ;
+File $(INGMSG)$(DFS)secome.hlp : secome.hlp ;
+File $(INGMSG)$(DFS)secpaswd.hlp : secpaswd.hlp ;
+File $(INGMSG)$(DFS)secraudf.hlp : secraudf.hlp ;
+File $(INGMSG)$(DFS)secrauky.hlp : secrauky.hlp ;
+File $(INGMSG)$(DFS)secroles.hlp : secroles.hlp ;
+File $(INGMSG)$(DFS)secrolps.hlp : secrolps.hlp ;
+File $(INGMSG)$(DFS)starnrec.hlp : starnrec.hlp ;
+File $(INGMSG)$(DFS)starobmx.hlp : starobmx.hlp ;
+File $(INGMSG)$(DFS)starrdfa.hlp : starrdfa.hlp ;
+File $(INGMSG)$(DFS)starrdfd.hlp : starrdfd.hlp ;
+File $(INGMSG)$(DFS)syscheck.hlp : syscheck.hlp ;
+File $(INGMSG)$(DFS)ingstop.hlp : ingstop.hlp ;
+File $(INGMSG)$(DFS)tcachsiz.hlp : tcachsiz.hlp ;
+File $(INGMSG)$(DFS)vchcomp.hlp : vchcomp.hlp ;
+File $(INGMSG)$(DFS)vmsaccnt.hlp : vmsaccnt.hlp ;
+File $(INGMSG)$(DFS)vmsastlm.hlp : vmsastlm.hlp ;
+File $(INGMSG)$(DFS)vmsbuflm.hlp : vmsbuflm.hlp ;
+File $(INGMSG)$(DFS)vmsenqlm.hlp : vmsenqlm.hlp ;
+File $(INGMSG)$(DFS)vmserrfl.hlp : vmserrfl.hlp ;
+File $(INGMSG)$(DFS)vmsexten.hlp : vmsexten.hlp ;
+File $(INGMSG)$(DFS)vmsfillm.hlp : vmsfillm.hlp ;
+File $(INGMSG)$(DFS)vmsiobuf.hlp : vmsiobuf.hlp ;
+File $(INGMSG)$(DFS)vmsiodir.hlp : vmsiodir.hlp ;
+File $(INGMSG)$(DFS)vmsmaxws.hlp : vmsmaxws.hlp ;
+File $(INGMSG)$(DFS)vmspgfil.hlp : vmspgfil.hlp ;
+File $(INGMSG)$(DFS)vmsprioi.hlp : vmsprioi.hlp ;
+File $(INGMSG)$(DFS)vmsprivs.hlp : vmsprivs.hlp ;
+File $(INGMSG)$(DFS)vmsquant.hlp : vmsquant.hlp ;
+File $(INGMSG)$(DFS)vmsquelm.hlp : vmsquelm.hlp ;
+File $(INGMSG)$(DFS)vmsstack.hlp : vmsstack.hlp ;
+File $(INGMSG)$(DFS)vmsuic.hlp : vmsuic.hlp ;
+File $(INGMSG)$(DFS)vmsworks.hlp : vmsworks.hlp ;
+File $(INGMSG)$(DFS)dbmspsfv.hlp : dbmspsfv.hlp ;
+File $(INGMSG)$(DFS)dbmslklv.hlp : dbmslklv.hlp ;
+File $(INGMSG)$(DFS)gwtrace_file.hlp : gwtrace_file.hlp ;
+File $(INGMSG)$(DFS)gwtrace_full.hlp : gwtrace_full.hlp ;
+File $(INGMSG)$(DFS)gwtrace_init.hlp : gwtrace_init.hlp ;
+File $(INGMSG)$(DFS)gwtypecast_strlen.hlp : gwtypecast_strlen.hlp ;
+File $(INGMSG)$(DFS)dbmspqpa.hlp : dbmspqpa.hlp ;
+File $(INGMSG)$(DFS)dbmsdseg.hlp : dbmsdseg.hlp ;
+
+IILIBRARY CONFIGLIB : crparse.yf txlogs.sc startup.sc
+	secmechs.sc netprots.sc generic.sc dblist.sc mllist.sc crscan.c cr.c ;
+

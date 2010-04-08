@@ -1,0 +1,173 @@
+
+/*
+**	Report: existing
+**
+**		Last Modified: 1998_10_09 02:01:23 gmt  
+**		Level: 1
+*/
+
+.NAME	existing
+.SHORTREMARK	Existing Report
+.LONGREMARK
+Example of publishing and existing report
+.ENDREMARK
+.DECLARE
+	ii_rbf_date_fmt = varchar(255) with value 'd''03-feb-1901''',
+	ii_rbf_time_fmt = varchar(255) with value 'd''16:05:06''',
+	ii_rbf_pageno_fmt = varchar(255) with value '''\-zzzn \-'''
+.QUERY
+	SELECT  *
+	FROM	plays RBF
+		/* WIDTH  87
+		*  DO NOT MODIFY.  DOING SO MAY CAUSE REPORT TO BE UNUSABLE.
+		*/
+.SORT	title : a
+
+.HEADER	report
+	.FORMAT title(cf0.35)
+	.POSITION title(0,35)
+	.FORMAT playwright(c20)
+	.POSITION playwright(38,20)
+	.FORMAT acts(f13)
+	.POSITION acts(61,13)
+	.FORMAT type(c10)
+	.POSITION type(77,10)
+	.RM 87
+	.LEFT 
+	.PRINT current_time($ii_rbf_date_fmt)
+	.RIGHT 
+	.PRINT current_time($ii_rbf_time_fmt)
+	.NEWLINE 1
+	.TFORMAT title(cf0.35)
+	.NEED 4
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT 'ICE Tutorial - Example of publishing an existing report'
+		.NEWLINE 
+	.END BLOCK
+	.NEWLINE 1
+	.BEGIN BLOCK
+		.TAB 32
+		.PRINT 'Report on Table: plays'
+		.NEWLINE 
+	.END BLOCK
+	.NEWLINE 1
+	.NEED 3
+	.NEWLINE 1
+	.BEGIN BLOCK
+		.WITHIN title
+			.TOP 
+			.LINESTART 
+			.PRINT 'Title'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN playwright
+			.TOP 
+			.LINESTART 
+			.PRINT 'Playwright'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN acts
+			.TOP 
+			.LINESTART 
+			.TAB +9
+			.PRINT 'Acts'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN type
+			.TOP 
+			.LINESTART 
+			.PRINT 'Type'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+	.END BLOCK
+	.NEWLINE 1
+
+.HEADER	page
+	.LEFT 
+	.PRINT current_time($ii_rbf_date_fmt)
+	.CENTER 
+	.PRINT 'Report: existing'
+	.RIGHT 
+	.PRINT current_time($ii_rbf_time_fmt)
+	.NEWLINE 1
+	.TFORMAT title(cf0.35)
+	.NEED 3
+	.NEWLINE 1
+	.BEGIN BLOCK
+		.WITHIN title
+			.TOP 
+			.LINESTART 
+			.PRINT 'Title'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN playwright
+			.TOP 
+			.LINESTART 
+			.PRINT 'Playwright'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN acts
+			.TOP 
+			.LINESTART 
+			.TAB +9
+			.PRINT 'Acts'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN type
+			.TOP 
+			.LINESTART 
+			.PRINT 'Type'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+	.END BLOCK
+	.NEWLINE 1
+
+.FOOTER	page
+	.NEWLINE 1
+	.CENTER 
+	.PRINT page_number($ii_rbf_pageno_fmt)
+	.NEWLINE 1
+
+.HEADER	title
+	.TFORMAT title(cf0.35)
+
+.DETAIL
+	.NEED 3
+	.BEGIN BLOCK
+		.WITHIN title
+			.TOP 
+			.LINESTART 
+			.PRINT title(b35)
+			.NEWLINE 
+		.END WITHIN
+		.WITHIN playwright
+			.TOP 
+			.LINESTART 
+			.PRINT playwright
+			.NEWLINE 
+		.END WITHIN
+		.WITHIN acts
+			.TOP 
+			.LINESTART 
+			.PRINT acts
+			.NEWLINE 
+		.END WITHIN
+		.WITHIN type
+			.TOP 
+			.LINESTART 
+			.PRINT type
+			.NEWLINE 
+		.END WITHIN
+	.END BLOCK
+	.NEWLINE 1
+
+

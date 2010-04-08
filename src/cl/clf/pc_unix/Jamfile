@@ -1,0 +1,22 @@
+#
+# Jamfile file for cl!clf!pc_unix
+# History:
+#    18-Jun-2007 (hweho01)
+#       Turned off optimizer for pcspawn.c on AMD Solaris build.
+#       Got core dump when 64-bit aducompile was spawned out (be/qp167 test).
+#       Compiler version: Sun C 5.7 patch 117837-01.
+#    25-Jul-2007 (drivi01)
+#	Added new file pcpriv.c to be built into COMPATLIB.
+#
+
+SubDir ING_SRC cl clf pc_unix ;
+
+IISUBSYS cl clf pc_unix ;
+
+IINOOPTIM pcspawn.c     : a64_sol ; 
+
+IILIBRARY COMPATLIB : pcwait.c pcunique.c pcsspawn.c pcspawn.c
+	pcsleep.c pcsendex.c pcreap.c pcread.c pcgetexec.c pcfspawn.c
+	pcfork.c pcforcex.c pcexit.c pcexeclp64.c pcexeclp32.c pcendpipe.c
+	pccmdline.c pccleanup.c pc.c pcalive.c pctidx.c ;
+

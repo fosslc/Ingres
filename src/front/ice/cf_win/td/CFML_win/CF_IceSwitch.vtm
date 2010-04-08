@@ -1,0 +1,70 @@
+
+<TAG NAME="CF_IceSwitch">
+    <EDITORLAYOUT HEIGHT="330" LFHEIGHT="330">
+
+	<control type="Image" name="imgEditor" width="170" height="MAXIMUM" corner="NE" right=5 down=5 filepath="../IngresIce/Icons/ingresii.bmp"/>
+
+		<CONTAINER TYPE="Panel" NAME="pnlCommon" CAPTION="" WIDTH="MAXIMUM" HEIGHT=100 LFHEIGHT=142 MAXWIDTHPADDING=0 ANCHOR="imgEditor" CORNER="NE" RIGHT=10>
+		    <CONTROL NAME="lblSwitch" TYPE="Label" CAPTION="Switch Expression:" DOWN="20" RIGHT="10" WIDTH="120"/>
+            <control type="TextBox" name="txtSwitch" width="MAXIMUM" anchor="lblSwitch" corner="NE"/>
+			
+			<CONTROL NAME="lblCase" TYPE="Label" CAPTION="Number of Case(s):" DOWN="45" CORNER="NE" RIGHT="10" WIDTH="120"/>
+            <control type="TextBox" name="txtCase" width="MAXIMUM" maxwidthpadding=10 anchor="lblCase" corner="NE" horizresize="BODY"/>
+
+			<CONTROL NAME="lblDefault" TYPE="Label" CAPTION="Default Result:" DOWN="70" CORNER="NE" RIGHT="10" WIDTH="120"/>
+            <control type="TextBox" name="txtDefault" width="MAXIMUM" maxwidthpadding=10 anchor="lblDefault" corner="NE" horizresize="BODY"/>
+			
+		</CONTAINER>
+					
+      </CONTAINER>
+
+
+   </EDITORLAYOUT>
+
+   <ATTRIBUTES>
+   </ATTRIBUTES>
+
+   <ATTRIBCATEGORIES>
+   </ATTRIBCATEGORIES>
+
+   <TAGLAYOUT>      
+   
+   <WIZIF OPTIONLowerCaseTags EQ 'true'>
+			<WIZSET TIMEOUT	= 'timeout'>
+			<WIZSET MIMEATTACH = 'mimeattach'>
+		<WIZELSE>
+			<WIZSET TIMEOUT	= 'TIMEOUT'>
+			<WIZSET MIMEATTACH = 'MIMEATTACH'>
+		</WIZIF>
+		
+		<WIZIF OPTIONLinearLayout EQ 'true'>
+			<WIZSET verticalSpacingGap =  ' ' >
+		<WIZELSE>
+			<WIZSET verticalSpacingGap =  Chr(13) & Chr(10) & '        ' >
+		</WIZIF>
+
+  		<WIZSET Exclaim =  '!' >
+		
+<$${Exclaim}-- #ICE SWITCH = `$${txtSwitch}`
+<WIZIF txtCase NEQ ''>
+	<WIZSET varIndent  = ' '>
+	<WIZIF txtCase GT 0>
+	<WIZSET Tab = Chr(9)>
+	<WIZSET LoopNum = 1>
+	<WIZLOOP CONDITION = "LoopNum LTE txtCase">
+<WIZIF 1>	$${DefaultCase('CASE=')}`CONSTANT$${LoopNum}` = `RESULT$${LoopNum}`
+</WIZIF>
+	<WIZSET LoopNum = LoopNum + 1>
+	</WIZLOOP>
+	</WIZIF>
+</WIZIF>
+<WIZIF txtDefault NEQ ''>	DEFAULT=`$$txtDefault`
+</WIZIF>-->
+</TAGLAYOUT>
+
+
+   <TAGDESCRIPTION HELPFILE="../../TagDefs/IngresIce/Docs/cfSwitch.html"/>
+
+
+</TAG>
+

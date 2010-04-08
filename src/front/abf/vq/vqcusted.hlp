@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqcusted.hlp, help for the confirmation pop-up editing the frame
+/#-- definition when the code has been customized
+/#-- 
+You are about to change this frame in such a way that Vision will need 
+to regenerate the 4GL code. However, the 4GL source code for this frame 
+has been edited directly and contains changes that Vision does not know 
+about.  
+
+Normally, Vision regenerates the 4GL source code automatically whenever 
+it needs to, but regenerating this frame would overwrite custom editing 
+to the 4GL code. In this case, Vision does not regenerate automatically. 
+You can proceed with the current changes, but in order to see these 
+changes in the running application you must force Vision to regenerate 
+the 4GL code by selecting the "Compile" menuitem for this frame.
+
+You may want to make a copy of the 4GL source code file before selecting
+the "Compile" menuitem so that you can copy your customizations back into
+the newly generated code. Use the system editor for copying.
+
+If you do not want to proceed with the edit operation, choose "Cancel".

@@ -1,0 +1,137 @@
+-- 
+--  Copyright (c) 2004 Ingres Corporation
+-- 
+--  This file contains the configuration rules for INGRES Internet 
+--  Communication Server (NT version)
+-- 
+--# History:
+--#     17-Sep-98 (fanra01)
+--#         Created.
+--#     01-Oct-1998 (fanra01)
+--#         Add startup resources.
+--#     02-Oct-98 (fanra01)
+--#         Add client_lib entry
+--#     14-Oct-98 (fanra01)
+--#         Correct syntax error.
+--#     19-Nov-1998 (fanra01)
+--#         Add case flag for ice users.
+--#     07-Dec-1998 (fanra01)
+--#         Change default database user to be icedbuser.
+--#         Increase default max locations to 20.
+--#     09-Apr-1999 (peeje01)
+--#         Branch from WNT.
+--#         Note: for Unix users the default is case sensitive.
+--#         Default database user icedefdb
+--#         Syntax change for ingprsym
+--#     07-May-1999 (peeje01)
+--#         Integration from change 441266:
+--#         Add connect_limit for ICE clients to ICE server.
+--#         Add default output directory to use default location.
+--#	13-Jan-2000 (somsa01)
+--#	    Conditionally set html_home based upon II_HTML_ROOT.
+--#	18-Jun-2001 (hanje04)
+--#	    Changed default startup count to 0, and set default
+--#	    app-dir to $II_SYSTEM/ingres/ice/samples/app
+--#     23-Jan-2003 (hweho01)
+--#         For hybrid build 32/64 on AIX, the 64-bit shared lib   
+--#         oiddi needs to have suffix '64' to reside in the   
+--#         the same location with the 32-bit one, due to the alternate 
+--#         shared lib path is not available in the current OS.
+--#	07-jul-2003 (devjo01)
+--#	    Added ii.$.icesvr.$.hex_session_ids.
+--#	09-Apr-2004 (gorvi01)
+--#	    Updated system_timout to indicate indefinite wait.
+--#	    Minimum Value of -1 with SIGNED_INT constraint 
+--#	    indicates indefinte wait.
+--#	18-Apr-2005 (drivi01)
+--#	    SIR: 114339
+--#	    Windows crsfiles are merged with generic.
+--#	22-Jun-2009 (kschendel) SIR 122138
+--#	    Update the hybrid symbols.
+
+-- start-up resources
+# ifndef NT_GENERIC
+ii.$.ingstart.$.icesvr:                0, MAX = 1;
+# else
+ii.$.ingstart.$.icesvr:                1, MAX = 1;
+# endif /* NT_GENERIC */
+ii.$.icesvr.$.server_class:            "ICESVR";
+
+-- connection parameters
+ii.$.icesvr.$.connect_limit:                32;
+
+-- dictionary
+# ifndef NT_GENERIC
+ii.$.icesvr.$.dictionary_node:         "`ingprsym 'II_GCN${II_INSTALLATION}_LCL_VNODE'`";
+# else
+ii.$.icesvr.$.dictionary_node:         "`iipmhost`";
+# endif /* NT_GENERIC */
+ii.$.icesvr.$.dictionary_name:         "icesvr";
+ii.$.icesvr.$.dictionary_class:        "ingres";
+# if defined(i64_win) || defined(a64_win)
+ii.$.icesvr.$.dictionary_driver:       "oiddi64";
+# else
+ii.$.icesvr.$.dictionary_driver:       "oiddi";
+# endif /*i64_win*/
+#if defined(any_aix) && defined(conf_BUILD_ARCH_32_64)
+ii.$.icesvr.$.dictionary_driver64:     "oiddi64";
+#endif 
+
+-- client library
+ii.$.icesvr.$.client_lib:              "oiice";
+
+-- rss
+ii.$.icesvr.$.rights_table:            100;
+ii.$.icesvr.$.users_table:             50;
+
+-- wss
+ii.$.icesvr.$.privilege_user:          "ingres";
+ii.$.icesvr.$.ignore_user_case:        ON;
+
+-- wcs
+ii.$.icesvr.$.units_table:             10;
+ii.$.icesvr.$.documents_table:         50;
+ii.$.icesvr.$.locations_table:         20;
+ii.$.icesvr.$.extensions_table:        20;
+ii.$.icesvr.$.files_table:             50;
+ii.$.icesvr.$.req_timeout:             600;
+# ifndef NT_GENERIC
+ii.$.icesvr.$.html_home:               IF( "`ingprsym II_HTML_ROOT`" IS "" )
+                                           "html_document_root"
+                                       ELSE
+                                           "`ingprsym II_HTML_ROOT`"
+                                       ENDIF;
+# else
+ii.$.icesvr.$.html_home:               "`ingprsym II_ICE_WEB_HTML`";
+# endif /* NT_GENERIC */
+ii.$.icesvr.$.dir_default_location:    "default";
+
+-- wsm
+ii.$.icesvr.$.user_session_table:      50;
+ii.$.icesvr.$.system_timeout:          300, MIN = -1, SIGNED_INT;
+ii.$.icesvr.$.db_conn_timeout:         300;
+ii.$.icesvr.$.default_dbuser:          "icedbuser";
+# ifdef NT_GENERIC
+ii.$.icesvr.$.row_set:                 256;
+ii.$.icesvr.$.set_size:                64;
+# endif /* NT_GENERIC */
+
+-- wps
+ii.$.icesvr.$.docsession_table:        50;
+ii.$.icesvr.$.sess_timeout:            600;
+ii.$.icesvr.$.block_size:              2048;
+ii.$.icesvr.$.block_count:             100;
+# ifndef NT_GENERIC
+ii.$.icesvr.$.app_dir:                 "${II_SYSTEM}/ingres/ice/bin";
+# else
+ii.$.icesvr.$.app_dir:                 "`iiconcat -s(II_SYSTEM) -s\ingres\ice\bin`";
+# endif  /* NT_GENERIC */
+ii.$.icesvr.$.allow_dsql:              ON;
+ii.$.icesvr.$.allow_exeapp:            ON;
+ii.$.icesvr.$.allow_dbovr:             ON;
+ii.$.icesvr.$.default_database:        "icedb";
+
+-- wsf
+ii.$.icesvr.$.vars_table:              50;
+ii.$.icesvr.$.apps_table:              10;
+ii.$.icesvr.$.hex_session_ids:         OFF;

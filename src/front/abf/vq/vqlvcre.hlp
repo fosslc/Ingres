@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlvcre.hlp, help behind Create a Local Variable
+/#-- 
+Here are the steps for creating a local variable:
+
+  * Name it.
+  * Specify a datatype.
+  * If you have specified an Ingres datatype, indicate whether it 
+    is nullable.
+  * If you have specified a record type, indicate whether it is an array.
+  * Enter a short description or comment if you want one.
+
+Refer to the Subtopics for more information.
+/#subtopic 'Naming local variables' vqlvnam.hlp
+/#subtopic 'Specifying datatypes' vqlvdata.hlp
+/#subtopic 'Using record types' vqlvclas.hlp

@@ -1,0 +1,3177 @@
+#
+# Name: GCCCSET.XLT - character set transliteration tables
+#
+## History:
+##	1-Mar-1991 (seiwald)
+##	    Created.
+##	15-Aug-1991 (seiwald)
+##	    Added mappings for DEC_THAI, DEC_HEBREW, DEC_GREEK.
+##	23-Aug-1991 (seiwald)
+##	    Added lines missing from DEC_HEBREW, DEC_GREEK entries.
+##	    Renamed ASCII_IBMPC to IBMPC_ASCII.
+##	23-Aug-1991 (gillnh2o/philiph)
+##	    Changed character set names to reflect 8-character limit imposed
+##	    by chset_install
+##	25-Oct-1991 (kima/philiph/fredv)
+##	    Added mapping for HP_ROMAN8.
+##	1-Nov-1991 (seiwald)
+##	    In ECBDIC_ICL mappings, delete 25=0a and add 15=0a as
+##	    per A.J. Britton of ICL.  This allows for the VME C
+##	    compiler which translates \n to 0x15.
+##	15-nov-91 (leighb) DeskTop Porting Change:
+##	    Chnaged IBMPC_ASCII to IBMPC_ASCII_INT, added IBMPC_ASCII_US
+##	03-Apr-92 (philiph)	
+##	    Added mapping for ARABIC (fix bug #42746).
+##	    Added mapping for ISO-8859/2
+##	    Added mapping for GREEK-ELOT-437
+##	    Added fix for bug #41596, #41916 (HPROMAN8 mapping)
+##	14-Apr-92 (philiph)	
+##	    Removed illegal "_" from character set names.
+##	20-apr-92 (kirke)
+##	    Added Asian language character set mappings (CHINESES, CHINESET,
+##	    KANJIEUC, SHIFTJIS, KOREAN).
+##      1-nov-92 (fraser)
+##          Changed IBMPC_ASCII_US to IBMPC437.
+##          Added mapping: IBMPC850 <--> NSCS.
+##	14-mar-1995 (peeje01)
+##	    Cross integratioin from 6500db_su4_us42
+##	    Original comment follows:
+##	16-jun-94 (kirke)
+##	    Added includes of DOUBLEBYTE <-> DOUBLEBYTE mappings.
+##	27-apr-95 (hanch04)
+##	    Removed CHINESET mapping
+##	7-dec-1995 (angusm)
+##		Cross-integ various mappings from 6.4 for charsets ISO 8859-5,
+##		ISO 8859-9, CW, ALT.ELOT437, WIN1250, plus changes to HPROMAN-8
+##		for fix to bug 53100.
+##	22-Mar-96 (surli01)
+##	    	Integrate mappings from OpenROAD for PCHEBREW/WHEBREW/DOSASMO/
+##		WARABIC/WTHAI
+##	20-june-1996 (angusm)
+##		Add IBMPC866. Corrections to WIN1250<-> NSCS, ALT <->NSCS
+##	24-feb-98 (mcgem01)
+##		Add include of chineses.xlt for simplified chinese translations
+##		and CSGBK <-> NSCS and CSGB2312 <-> NSCS
+##	11-Mar-1999 (peeje01)
+##		Add include of utf8.xlt for UTF-8 UCS Transformation Format
+##	17-sep-2001 (abbjo03)
+##	    Add ISO 8859-15 (Latin 9) and Windows 1252 (Latin 1). Fix some
+##	    mappings in Win1250.
+##	11-Oct-2001 (peeje01)
+##		Add FIRST class mapping table for ISO88591 <-> IBMPC850
+##	30-oct-2001 (rigka01) bug #104411
+##		Add ISO88595->CW (CW <-> ISO88595 already present)
+##      14-apr_2003 (rigka01) bug #101473
+##          Correct entries in the WIN1250, remote ISO88592, class FIRST
+##          mapping. Add entries to the local SLAV852, remote ISO88592,
+##          class FIRST mapping.
+##	24-oct-2003 (rigka01) bug #111155
+##	    Correct some WIN1250<->ISO88592 mappings:
+##	    small c with acute: change e6=86 to e6=e6 
+##	    small e with ogonek: change ea=a9 to ea=ea 
+##	    small n with acute: change f1=e4 to f1=f1 
+##	    small o with ogonek: change f3=a2 to f3=f3 
+##	    capital C with acute: change c6=8f to c6=c6 
+##	    capital E with ogonek: change ca=a8 to ca=ca 
+##	    capital L with acute: change c5=8d to c5=c5
+##	    delete: change no entry for 7f to 7f=7f
+##	01-jul-2005 (rigka01) bug #114739 INGNET173
+##	    add  WIN1253<-> ISO88597 tables
+##	    add  PC737<-> ISO88597 tables
+##	    add  WIN1253<-> GREEK tables
+##	    add  PC737<-> GREEK tables
+##	    add  WIN1253<->NSCS, PC737<->NSCS, ISO88597<->NSCS
+##	29-jul-2005 (gupsh01)
+##	    Doublebyte <-> Doublebyte files are now always
+##	    included, as all builds are double byte.
+##	22-sep-2005 (abbjo03)
+##	    Fix cross-integration of 1-jul-2005 change which messed up the
+##	    change of 29-jul-2005.
+#
+
+
+# ASCII <-> NSCS
+#
+#	This is an identity mapping for 0..0x7f, holes otherwise.
+#
+
+local ASCII
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+end
+
+# DEC Multinational <-> NSCS
+#	This is an identity mapping, with holes where there are no characters
+#	in DEC Multinational.
+#
+
+local DECMULTI
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+                                84=84, 85=85, 86=86, 87=87,
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f,
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+                         9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3,        a5=a5,        a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, 
+    b0=b0, b1=b1, b2=b2, b3=b3,        b5=b5, b6=b6, b7=b7,
+           b9=b9, ba=ba, bb=bb, bc=bc, bd=bd,        bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+           d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd,        df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+           f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd,     
+end
+
+# DEC Thai Tis <-> NSCS
+#
+#	Only the 7 bit ASCII component of DEC Thai maps into NSCS.
+
+local THAI
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+end
+
+# Windows/IBM Thai (cp 874)  <-> NSCS
+#
+#	Only the 7 bit ASCII component of Thai maps into NSCS.
+
+local WTHAI
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+end
+
+# DEC Hebrew <-> NSCS
+#
+# 	Up to 0xBF, the mapping into NSCS is the same as for DEC_MULTI.
+#  	The remainder does not map at all.
+#
+
+local HEBREW
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+                                84=84, 85=85, 86=86, 87=87,
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f,
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+                         9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3,        a5=a5,        a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, 
+    b0=b0, b1=b1, b2=b2, b3=b3,        b5=b5, b6=b6, b7=b7,
+           b9=b9, ba=ba, bb=bb, bc=bc, bd=bd,        bf=bf,
+end
+
+# DEC Greek <-> NSCS
+#
+# 	Up to 0xBF, the mapping into NSCS is the same as for DEC_MULTI.
+#  	The remainder does not map at all.
+#
+
+local GREEK
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+                                84=84, 85=85, 86=86, 87=87,
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f,
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+                         9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3,        a5=a5,        a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, 
+    b0=b0, b1=b1, b2=b2, b3=b3,        b5=b5, b6=b6, b7=b7,
+           b9=b9, ba=ba, bb=bb, bc=bc, bd=bd,        bf=bf,
+end
+
+#
+# Windows Hebrew <> - DEC Hebrew
+#
+local WHEBREW
+remote HEBREW
+class FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    a0=a0,        a2=a2, a3=a3,        a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9,        ab=ab, ac=ac, ad=ad, ae=ae, a8=a8
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9,        bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa,
+end
+    
+
+# Windows Hebrew <-> NSCS
+#
+#
+
+local WHEBREW
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+
+           a1=a1, a2=a2, a3=a3,        a5=a5, a6=a6, a7=a7,
+    a8=a4, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+end
+
+#
+# Windows Hebrew <-> PC DOS HEBREW
+#
+
+local WHEBREW
+remote PCHEBREW
+class FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+	a0=ff,
+                  a2=9b, a3=9c,        a5=9d,
+                         ab=ae, ac=aa, ad=fa,
+    b0=f8,        b2=fd,               b5=e6,
+                         bb=af, bc=ac, bd=ab, 
+    e0=80, e1=81, e2=82, e3=83, e4=84, e5=85, e6=86, e7=87, # hebrew chars
+    e8=88, e9=89, ea=8a, eb=8b, ec=8c, ed=8d, ee=8e, ef=8f  # hebrew chars
+    f0=90, f1=91, f2=92, f3=93, f4=94, f5=95, f6=96, f7=97  # hebrew chars
+    f8=98, f9=99, fa=9a,				    # hebrew chars
+end
+
+#
+# DEC Hebrew <-> PC DOS HEBREW
+#
+
+local HEBREW
+remote PCHEBREW
+class FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+	a0=ff,
+                  a2=9b, a3=9c,        a5=9d,
+                         ab=ae, ac=aa, ad=fa,
+    b0=f8,        b2=fd,               b5=e6,
+                         bb=af, bc=ac, bd=ab, 
+    e0=80, e1=81, e2=82, e3=83, e4=84, e5=85, e6=86, e7=87, # hebrew chars
+    e8=88, e9=89, ea=8a, eb=8b, ec=8c, ed=8d, ee=8e, ef=8f  # hebrew chars
+    f0=90, f1=91, f2=92, f3=93, f4=94, f5=95, f6=96, f7=97  # hebrew chars
+    f8=98, f9=99, fa=9a,				    # hebrew chars
+end
+
+local PCHEBREW
+remote NSCS
+class THIRD
+
+begin
+    00=00,                                                  # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d,               # \b\t\n\v\f\r
+                                       15=a7,               #      ^U
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+
+                         9b=a2, 9c=a3, 9d=a5,                
+    a0=e1, a1=ed, a2=f3, a3=fa, a4=f1, a5=d1, a6=aa, a7=ba,
+    a8=bf,        aa=ac, ab=bd, ac=bc, ad=a1, ae=ab, af=bb,
+                                       b5=c1, b6=c2, b7=c0,
+                                              c6=e3, c7=c3,
+    d0=f0, d1=d0, d2=ca, d3=cb, d4=c8,        d6=cd, d7=ce,
+    d8=cf,                                           de=cc,
+    e0=d3, e1=df, e2=d4, e3=d2, e4=f5, e5=d5, e6=b5, e7=fe,
+    e8=de, e9=da, ea=db, eb=d9,               ee=af, ef=b4,
+    f0=ad, f1=b1,        f3=be, f4=b6,        
+    f8=b0,        fa=b7, fb=b9, fc=b3, fd=b2    
+
+end
+
+
+
+
+# Arabic <-> NSCS
+#
+# 	Up to 0x7F, the mapping into NSCS is the same as for DEC_MULTI.
+#  	The remainder does not map at all.
+#
+
+local ARABIC
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+end
+
+
+#
+# DOS ArabiC ASMO <-> NSCS
+#
+# (Not very much of this maps into NSCS)
+#
+
+local DOSASMO
+remote NSCS
+class THIRD
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+                  82=e9, 83=e2,        85=e1,        87=e7,
+    88=ea, 89=eb, 8a=e8, 8b=ef, 8c=ee, 
+                         93=f4,               96=fb, 97=f9,
+                                a4=a8, 
+                                              ae=ab, af=bb,
+                                fc=b5, fd=a3,  
+end
+
+#
+# Windows Arabic ANSI <-> NSCS
+#
+
+local WARABIC
+remote NSCS
+class THIRD
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+                  a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+           a9=a9,        ab=ab, ac=ac,        ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9,        bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    e0=e0,        e2=e2,                             e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb,               ee=ee, ef=ef,
+                                f4=f4, 
+           f9=f9,        fb=fb, fc=fc,
+end 
+
+#
+# DOS ARABIC ASMO to WINDOWS ANSI ARABIC
+#
+
+local DOSASMO
+remote WARABIC
+class FIRST
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+                  82=e9, 83=e2,        85=e1,        87=e7,
+    88=ea, 89=eb, 8a=e8, 8b=ef, 8c=ee, 
+                         93=f4,               96=fb, 97=f9,
+                                a4=a4, 
+                                              ae=ab, af=bb,
+	       c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6,
+    d8=d8, d9=d9, da=da, db=db, 
+                                e4=e1, e5=e3, e6=e4, e7=e5,
+    e8=e6, e9=ec, ea=ed, eb=f0,        ed=f2, ee=f3, ef=f5,
+    f0=f6, f1=f8, f2=fa,
+                                fc=b5, fd=a3,  		 ff=a0,
+end
+
+# ISO 8859/1 <-> NSCS
+#
+
+local ISO88591
+remote IBMPC850
+class FIRST
+
+begin
+    00=00,
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27,
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f,
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37,
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f,
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47,
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f,
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57,
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f,
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67,
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f,
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77,
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,
+           a1=ad, a2=bd, a3=9c, a4=cf, a5=be, a6=dd, a7=f5,
+    a8=f9, a9=b8, aa=a6, ab=ae, ac=aa, ad=f0, ae=a9, af=ee,
+    b0=f8, b1=f1, b2=fd, b3=fc, b4=ef, b5=e6, b6=f4, b7=fa,
+           b9=fb, ba=a7, bb=af, bc=ac, bd=ab, be=f3, bf=a8,
+    c0=b7, c1=b5, c2=b6, c3=c7, c4=8e, c5=8f, c6=92, c7=80,
+    c8=d4, c9=90, ca=d2, cb=d3, cc=de, cd=d6, ce=d7, cf=d8,
+    d0=d1, d1=a5, d2=e3, d3=e0, d4=e2, d5=e5, d6=99, d7=9e,
+    d8=9d, d9=eb, da=e9, db=ea, dc=9a, dd=ed, de=e8, df=e1,
+    e0=85, e1=a0, e2=83, e3=c6, e4=84, e5=86, e6=91, e7=87,
+    e8=8a, e9=82, ea=88, eb=89, ec=8d, ed=a1, ee=8c, ef=8b,
+    f0=d0, f1=a4, f2=95, f3=a2, f4=93, f5=e4, f6=94, f7=f6,
+    f8=9b, f9=97, fa=a3, fb=96, fc=81, fd=ec, fe=e7, ff=98,
+end
+
+# ISO 8859/1 <-> NSCS
+#
+#   Courtesy of Steven Moore.  An identity mapping with the following
+#   exceptions:
+#
+#	8859/1   NSCS
+#	=============
+#	0x80 <-> 0xd7	# 0x80 is not in 8859/1!
+#	0x81 <-> 0xdd	# 0x81 is not in 8859/1!
+#	0x82 <-> 0xf7	# 0x82 is not in 8859/1!
+#	0x83 <-> 0xff	# 0x83 is not in 8859/1!
+#	0xa4 <-> 0xa8	# currency
+#	0xa8 <-> 0xa4	# dieresis
+#	0xd7 <-> 0x80	# multiply
+#	0xdd <-> 0x81	# Y acute
+#	0xf7 <-> 0x82	# divide
+#	0xfd <-> 0x83	# y acute
+#	0xff <-> 0xfd	# y dieresis
+#
+#   The 0x80..0x9f mappings are a mistake (there are no characters in
+#   these slots in 8859/1) and should have been left blank, but are 
+#   maintained for compatibility.
+#	
+
+local ISO88591
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=d7, 81=dd, 82=f7, 83=ff, 84=84, 85=85, 86=86, 87=87, # botch
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, # botch
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a4, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=80,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=81, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=82,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=83, fe=fe, ff=fd
+end
+
+# IBMPC_ASCII_INT <-> NSCS
+#	International version of IBMPC ACSII character set.
+#	The printable charaters in 0x20..0x7e are passed through;
+#	the special characters in 0x80..0xff are mapped as follows:
+#
+#	IBMPC <-> NSCS
+#	==============
+#	0x15 <-> 0xa7	section marker
+#	0x80 <-> 0xc7	C cedilla
+#	0x81 <-> 0xfc	u dieresis
+#	0x82 <-> 0xe9	e acute
+#	0x83 <-> 0xe2	a circumflex
+#	0x84 <-> 0xe4	a dieresis
+#	0x85 <-> 0xe0	a grave
+#	0x86 <-> 0xe5	a ring
+#	0x87 <-> 0xe7	c cedilla
+#	0x88 <-> 0xea	e circumflex
+#	0x89 <-> 0xeb	d dieresis
+#	0x8a <-> 0xe8	e grave
+#	0x8b <-> 0xef	i dieresis
+#	0x8c <-> 0xee	i circumflex
+#	0x8d <-> 0xec	i grave
+#	0x8e <-> 0xc4	A dieresis
+#	0x8f <-> 0xc5	A ring
+#	0x90 <-> 0xc9	E acute
+#	0x91 <-> 0xe6	ae
+#	0x92 <-> 0xc6	AE
+#	0x93 <-> 0xf4	o circumflex
+#	0x94 <-> 0xf6	o dieresis
+#	0x95 <-> 0xf2	o grave
+#	0x96 <-> 0xfb	u circumflex
+#	0x97 <-> 0xf9	u grave
+#	0x98 <-> 0xfd	y dieresis
+#	0x99 <-> 0xd6	O dieresis
+#	0x9a <-> 0xdc	U dieresis
+#	0x9b <-> 0xa2	cent
+#	0x9c <-> 0xa3	sterling
+#	0x9d <-> 0xa5	yen
+#	0xa0 <-> 0xe1	a acute
+#	0xa1 <-> 0xed	i acute
+#	0xa2 <-> 0xf3	o acute
+#	0xa3 <-> 0xfa	u acute
+#	0xa4 <-> 0xf1	n tilde
+#	0xa5 <-> 0xd1	N tilde
+#	0xa6 <-> 0xaa	ord feminine
+#	0xa7 <-> 0xba	ord masculine
+#	0xa8 <-> 0xbf	question down
+#	0xaa <-> 0xac	logical not
+#	0xab <-> 0xbd	one half
+#	0xac <-> 0xbc	one quarter
+#	0xad <-> 0xa1	exclam down
+#	0xae <-> 0xab	guillemot left
+#	0xaf <-> 0xbb	guillemot right
+#	0xb5 <-> 0xc1	A acute
+#	0xb6 <-> 0xc2	A circumflex
+#	0xb7 <-> 0xc0	A grave
+#	0xc6 <-> 0xe3	a tilde
+#	0xc7 <-> 0xc3	A tilde
+#	0xd0 <-> 0xf0	d slash
+#	0xd1 <-> 0xd0	D slash
+#	0xd2 <-> 0xca	E circumflex
+#	0xd3 <-> 0xcb	E umlaut
+#	0xd4 <-> 0xc8	E grave
+#	0xd6 <-> 0xcd	I acute
+#	0xd7 <-> 0xce	I circumflex
+#	0xd8 <-> 0xcf	I umlaut
+#	0xde <-> 0xcc	I grave
+#	0xe0 <-> 0xd3	O acute
+#	0xe1 <-> 0xdf	German dbl s
+#	0xe2 <-> 0xd4	O circumflex
+#       0xe3 <-> 0xd2   O grave
+#	0xe4 <-> 0xf5	o tilde
+#	0xe5 <-> 0xd5	O tilde
+#	0xe6 <-> 0xb5	microsign
+#	0xe7 <-> 0xfe	Thorn lowercase
+#	0xe8 <-> 0xde	Thorn uppercase
+#	0xe9 <-> 0xda	U acute
+#	0xea <-> 0xdb	U circumflex
+#	0xeb <-> 0xd9	U grave
+#	0xec <-> 0x83	y acute
+#	0xed <-> 0x81	Y acute
+#	0xee <-> 0xaf	upper hyphen
+#	0xef <-> 0xb4	acute sign
+#	0xf0 <-> 0xad	hyphen
+#	0xf1 <-> 0xb1	plus minus
+#	0xf3 <-> 0xbe	3/4 3 fourths
+#	0xf6 <-> 0x82	divide
+#	0xf8 <-> 0xb0	celcius
+#	0xfa <-> 0xb7	dot
+#	0xfb <-> 0xb9	1 superior
+#	0xfc <-> 0xb3	three superior
+#	0xfd <-> 0xb2	two superior
+
+local IBMPC_ASCII_INT
+remote NSCS
+class THIRD
+
+begin
+    00=00,                                                  # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d,               # \b\t\n\v\f\r
+                                       15=a7,               #      ^U
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+    80=c7, 81=fc, 82=e9, 83=e2, 84=e4, 85=e0, 86=e5, 87=e7,
+    88=ea, 89=eb, 8a=e8, 8b=ef, 8c=ee, 8d=ec, 8e=c4, 8f=c5,
+    90=c9, 91=e6, 92=c6, 93=f4, 94=f6, 95=f2, 96=fb, 97=f9,
+    98=fd, 99=d6, 9a=dc, 9b=a2, 9c=a3, 9d=a5, 9e=80,               
+    a0=e1, a1=ed, a2=f3, a3=fa, a4=f1, a5=d1, a6=aa, a7=ba,
+    a8=bf,        aa=ac, ab=bd, ac=bc, ad=a1, ae=ab, af=bb,
+                                       b5=c1, b6=c2, b7=c0,
+                                              c6=e3, c7=c3,
+    d0=f0, d1=d0, d2=ca, d3=cb, d4=c8,        d6=cd, d7=ce,
+    d8=cf,                                           de=cc,
+    e0=d3, e1=df, e2=d4, e3=d2, e4=f5, e5=d5, e6=b5, e7=fe,
+    e8=de, e9=da, ea=db, eb=d9, ec=83, ed=81, ee=af, ef=b4,
+    f0=ad, f1=b1,        f3=be, f4=b6,        f6=82,
+    f8=b0,        fa=b7, fb=b9, fc=b3, fd=b2    
+
+end
+
+# IBMPC437 <-> NSCS
+#
+#       IBM PC Code Page 437 - standard US/English character set.
+#
+#       IBMPC437 <-> NSCS
+#	==============
+#	0x15 <-> 0xa7	section marker
+#	0x80 <-> 0xc7	C cedilla
+#	0x81 <-> 0xfc	u dieresis
+#	0x82 <-> 0xe9	e acute
+#	0x83 <-> 0xe2	a circumflex
+#	0x84 <-> 0xe4	a dieresis
+#	0x85 <-> 0xe0	a grave
+#	0x86 <-> 0xe5	a ring
+#	0x87 <-> 0xe7	c cedilla
+#	0x88 <-> 0xea	e circumflex
+#	0x89 <-> 0xeb	d dieresis
+#	0x8a <-> 0xe8	e grave
+#	0x8b <-> 0xef	i dieresis
+#	0x8c <-> 0xee	i circumflex
+#	0x8d <-> 0xec	i grave
+#	0x8e <-> 0xc4	A dieresis
+#	0x8f <-> 0xc5	A ring
+#	0x90 <-> 0xc9	E acute
+#	0x91 <-> 0xe6	ae
+#	0x92 <-> 0xc6	AE
+#	0x93 <-> 0xf4	o circumflex
+#	0x94 <-> 0xf6	o dieresis
+#	0x95 <-> 0xf2	o grave
+#	0x96 <-> 0xfb	u circumflex
+#	0x97 <-> 0xf9	u grave
+#	0x98 <-> 0xfd	y dieresis
+#	0x99 <-> 0xd6	O dieresis
+#	0x9a <-> 0xdc	U dieresis
+#	0x9b <-> 0xa2	cent
+#	0x9c <-> 0xa3	sterling
+#	0x9d <-> 0xa5	yen
+#	0xa0 <-> 0xe1	a acute
+#	0xa1 <-> 0xed	i acute
+#	0xa2 <-> 0xf3	o acute
+#	0xa3 <-> 0xfa	u acute
+#	0xa4 <-> 0xf1	n tilde
+#	0xa5 <-> 0xd1	N tilde
+#	0xa6 <-> 0xaa	ord feminine
+#	0xa7 <-> 0xba	ord masculine
+#	0xa8 <-> 0xbf	question down
+#	0xaa <-> 0xac	logical not
+#	0xab <-> 0xbd	one half
+#	0xac <-> 0xbc	one quarter
+#	0xad <-> 0xa1	exclam down
+#	0xae <-> 0xab	guillemot left
+#	0xaf <-> 0xbb	guillemot right
+#       0xe6 <-> 0xb5   mu
+#	0xf1 <-> 0xb1	plus minus
+#	0xf6 <-> 0x82	divide
+#	0xfd <-> 0xb2	two superior
+
+local IBMPC437
+remote NSCS
+class THIRD
+
+begin
+    00=00,                                                  # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d,               # \b\t\n\v\f\r
+                                       15=a7,               #      ^U
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+    80=c7, 81=fc, 82=e9, 83=e2, 84=e4, 85=e0, 86=e5, 87=e7,
+    88=ea, 89=eb, 8a=e8, 8b=ef, 8c=ee, 8d=ec, 8e=c4, 8f=c5,
+    90=c9, 91=e6, 92=c6, 93=f4, 94=f6, 95=f2, 96=fb, 97=f9,
+    98=fd, 99=d6, 9a=dc, 9b=a2, 9c=a3, 9d=a5,               
+    a0=e1, a1=ed, a2=f3, a3=fa, a4=f1, a5=d1, a6=aa, a7=ba,
+    a8=bf,        aa=ac, ab=bd, ac=bc, ad=a1, ae=ab, af=bb,
+                                              e6=b5,
+           f1=b1,                             f6=82, 
+                                       fd=b2
+end
+
+# IBMPC850 <--> NSCS
+#
+#   This is the mapping for IBM PC Code Page 850
+
+#       IBMPC850 <-> NSCS
+#       ==============
+#       0x80 <-> 0xc7   C cedilla
+#       0x81 <-> 0xfc   u dieresis
+#       0x82 <-> 0xe9   e acute
+#       0x83 <-> 0xe2   a circumflex
+#       0x84 <-> 0xe4   a dieresis
+#       0x85 <-> 0xe0   a grave
+#       0x86 <-> 0xe5   a ring
+#       0x87 <-> 0xe7   c cedilla
+#       0x88 <-> 0xea   e circumflex
+#       0x89 <-> 0xeb   e dieresis
+#       0x8a <-> 0xe8   e grave
+#       0x8b <-> 0xef   i dieresis
+#       0x8c <-> 0xee   i circumflex
+#       0x8d <-> 0xec   i grave
+#       0x8e <-> 0xc4   A dieresis
+#       0x8f <-> 0xc5   A ring
+#       0x90 <-> 0xc9   E acute
+#       0x91 <-> 0xe6   ae
+#       0x92 <-> 0xc6   AE
+#       0x93 <-> 0xf4   o circumflex
+#       0x94 <-> 0xf6   o dieresis
+#       0x95 <-> 0xf2   o grave
+#       0x96 <-> 0xfb   u circumflex
+#       0x97 <-> 0xf9   u grave
+#       0x98 <-> 0xfd   y dieresis
+#       0x99 <-> 0xd6   O dieresis
+#       0x9a <-> 0xdc   U dieresis
+#       0x9b <-> 0xf8   o with slash
+#       0x9c <-> 0xa3   sterling
+#       0x9d <-> 0xd8   O with slash
+#       0x9e <-> 0x80   x (multiplication operator)
+#       0xa0 <-> 0xe1   a acute
+#       0xa1 <-> 0xed   i acute
+#       0xa2 <-> 0xf3   o acute
+#       0xa3 <-> 0xfa   u acute
+#       0xa4 <-> 0xf1   n tilde
+#       0xa5 <-> 0xd1   N tilde
+#       0xa6 <-> 0xaa   ord feminine
+#       0xa7 <-> 0xba   ord masculine
+#       0xa8 <-> 0xbf   question down
+#       0xa9 <-> 0xae   Registered (R in circle)
+#       0xaa <-> 0xac   logical not
+#       0xab <-> 0xbd   one half
+#       0xac <-> 0xbc   one fourth
+#       0xad <-> 0xa1   exclam down
+#       0xae <-> 0xab   guillemot left
+#       0xaf <-> 0xbb   guillemot right
+#       0xb5 <-> 0xc1   A acute
+#       0xb6 <-> 0xc2   A circumflex
+#       0xb7 <-> 0xc0   A grave
+#       0xb8 <-> 0xa9   Copyright (C in circle)
+#       0xbd <-> 0xa2   cent
+#       0xbe <-> 0xa5   yen
+#       0xc6 <-> 0xe3   a tilde
+#       0xc7 <-> 0xc3   A tilde
+#       0xcf <-> 0xa8   star
+#       0xd0 <-> 0xf0   d slash
+#       0xd1 <-> 0xd0   D slash
+#       0xd2 <-> 0xca   E circumflex
+#       0xd3 <-> 0xcb   E dieresis
+#       0xd4 <-> 0xc8   E grave
+#       0xd6 <-> 0xcd   I acute
+#       0xd7 <-> 0xce   I circumflex
+#       0xd8 <-> 0xcf   I umlaut
+#       0xdd <-> 0xa6   Vertical bar (with separation)
+#       0xde <-> 0xcc   I grave
+#       0xe0 <-> 0xd3   O acute
+#       0xe1 <-> 0xdf   German dbl s
+#       0xe2 <-> 0xd4   O circumflex
+#       0xe3 <-> 0xd2   O grave
+#       0xe4 <-> 0xf5   o tilde
+#       0xe5 <-> 0xd5   O tilde
+#       0xe6 <-> 0xb5   mu
+#       0xe7 <-> 0xfe   Thorn lowercase
+#       0xe8 <-> 0xde   Thorn uppercase
+#       0xe9 <-> 0xda   U acute
+#       0xea <-> 0xdb   U circumflex
+#       0xeb <-> 0xd9   U grave
+#       0xec <-> 0x83   y acute
+#       0xed <-> 0x81   Y acute
+#       0xee <-> 0xaf   upper hyphen
+#       0xef <-> 0xb4   acute sign
+#       0xf0 <-> 0xad   hyphen
+#       0xf1 <-> 0xb1   plus minus
+#       0xf3 <-> 0xbe   3/4 3 fourths
+#       0xf4 <-> 0xb6   Paragraph
+#       0xf5 <-> 0xa7   section marker
+#       0xf6 <-> 0x82   divide
+#       0xf8 <-> 0xb0   celcius
+#       0xf9 <-> 0xa4   umlaut
+#       0xfa <-> 0xb7   dot
+#       0xfb <-> 0xb9   1 superior
+#       0xfc <-> 0xb3   three superior
+#       0xfd <-> 0xb2   two superior
+
+local IBMPC850
+remote NSCS
+class THIRD
+
+begin
+    00=00,                                                  # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d,               # \b\t\n\v\f\r
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+    80=c7, 81=fc, 82=e9, 83=e2, 84=e4, 85=e0, 86=e5, 87=e7,
+    88=ea, 89=eb, 8a=e8, 8b=ef, 8c=ee, 8d=ec, 8e=c4, 8f=c5,
+    90=c9, 91=e6, 92=c6, 93=f4, 94=f6, 95=f2, 96=fb, 97=f9,
+    98=fd, 99=d6, 9a=dc, 9b=f8, 9c=a3, 9d=d8, 9e=80,
+    a0=e1, a1=ed, a2=f3, a3=fa, a4=f1, a5=d1, a6=aa, a7=ba,
+    a8=bf, a9=ae, aa=ac, ab=bd, ac=bc, ad=a1, ae=ab, af=bb,
+                                       b5=c1, b6=c2, b7=c0,
+    b8=a9,                             bd=a2, be=a5,
+                                              c6=e3, c7=c3,
+                                                     cf=a8,
+    d0=f0, d1=d0, d2=ca, d3=cb, d4=c8,        d6=cd, d7=ce,
+    d8=cf,                             dd=a6, de=cc,
+    e0=d3, e1=df, e2=d4, e3=d2, e4=f5, e5=d5, e6=b5, e7=fe,
+    e8=de, e9=da, ea=db, eb=d9, ec=83, ed=81, ee=af, ef=b4,
+    f0=ad, f1=b1,        f3=be, f4=b6, f5=a7, f6=82,
+    f8=b0, f9=a4, fa=b7, fb=b9, fc=b3, fd=b2
+
+end
+
+
+# EBCDIC_ICL <-> ISO_8859_1 
+#	This taken verbatim from a table labelled "Table A7.4 EBCDIC
+#	to ISO translation," provided by Charles Barker of ICL.
+
+local EBCDIC_ICL
+remote ISO88591
+class FIRST
+
+begin
+    # control codes
+    00=00, 01=01, 02=02, 03=03,        05=09,        07=7f, 
+                         0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, 
+    10=10, 11=11, 12=12, 13=13,        15=0a, 16=08,        
+    18=18, 19=19,               1c=1c, 1d=1d, 1e=1e, 1f=1f, 
+                                              26=17, 27=1b, 
+                                       2d=05, 2e=06, 2f=07, 
+                  32=16,                             37=04, 
+                                3c=14, 3d=15,        3f=1a, 
+    # printables
+    40=20, 41=a0, 42=a1, 43=a2, 44=23, 45=a4, 46=a5, 47=a6, 
+    48=a7, 49=a8, 4a=5b, 4b=2e, 4c=3c, 4d=28, 4e=2b, 4f=21, 
+    50=26, 51=a9, 52=aa, 53=ab, 54=ac, 55=ad, 56=ae, 57=7e, 
+    58=b0, 59=b1, 5a=5d, 5b=24, 5c=2a, 5d=29, 5e=3b, 5f=5e, 
+    60=2d, 61=2f, 62=b2, 63=b3, 64=b4, 65=b5, 66=b6, 67=b7, 
+    68=b8, 69=b9, 6a=7c, 6b=2c, 6c=25, 6d=5f, 6e=3e, 6f=3f, 
+    70=ba, 71=bb, 72=bc, 73=bd, 74=be, 75=bf, 76=c0, 77=c1, 
+    78=c2, 79=60, 7a=3a, 7b=a3, 7c=40, 7d=27, 7e=3d, 7f=22, 
+    80=c3, 81=61, 82=62, 83=63, 84=64, 85=65, 86=66, 87=67, 
+    88=68, 89=69, 8a=c4, 8b=c5, 8c=c6, 8d=c7, 8e=c8, 8f=c9, 
+    90=ca, 91=6a, 92=6b, 93=6c, 94=6d, 95=6e, 96=6f, 97=70, 
+    98=71, 99=72, 9a=cb, 9b=cc, 9c=cd, 9d=ce, 9e=cf, 9f=d0, 
+    a0=d1, a1=af, a2=73, a3=74, a4=75, a5=76, a6=77, a7=78, 
+    a8=79, a9=7a, aa=d2, ab=d3, ac=d4, ad=d5, ae=d6, af=d7, 
+    b0=d8, b1=d9, b2=da, b3=db, b4=dc, b5=dd, b6=de, b7=df, 
+    b8=e0, b9=e1, ba=e2, bb=e3, bc=e4, bd=e5, be=e6, bf=e7, 
+    c0=7b, c1=41, c2=42, c3=43, c4=44, c5=45, c6=46, c7=47, 
+    c8=48, c9=49, ca=e8, cb=e9, cc=ea, cd=eb, ce=ec, cf=ed, 
+    d0=7d, d1=4a, d2=4b, d3=4c, d4=4d, d5=4e, d6=4f, d7=50, 
+    d8=51, d9=52, da=ee, db=ef, dc=f0, dd=f1, de=f2, df=f3, 
+    e0=5c,        e2=53, e3=54, e4=55, e5=56, e6=57, e7=58, 
+    e8=59, e9=5a, ea=f4, eb=f5, ec=f6, ed=f7, ee=f8, ef=f9, 
+    f0=30, f1=31, f2=32, f3=33, f4=34, f5=35, f6=36, f7=37, 
+    f8=38, f9=39, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+# EBCDIC_ICL <-> NSCS
+#	This is EBCDIC_ICL <-> IS0_8859_1 table with the following 
+#	additional mappings from the ISO_8859_1 <-> NSCS table.
+#
+#	ICL 	8859/1	  NSCS
+#	======================
+#	0x45 <-> 0xa4 <-> 0xa8	# currency
+#	0x49 <-> 0xa8 <-> 0xa4	# dieresis
+#	0xaf <-> 0xd7 <-> 0x80	# multiply
+#	0xb5 <-> 0xdd <-> 0x81	# Y acute
+#	0xed <-> 0xf7 <-> 0x82	# divide
+#	0xfd <-> 0xfd <-> 0x83	# y acute
+#	0xff <-> 0xff <-> 0xfd	# y dieresis
+
+local EBCDIC_ICL
+remote NSCS
+class THIRD
+
+begin
+    # control codes
+    00=00, 01=01, 02=02, 03=03,        05=09,        07=7f, 
+                         0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, 
+    10=10, 11=11, 12=12, 13=13,        15=0a, 16=08,        
+    18=18, 19=19,               1c=1c, 1d=1d, 1e=1e, 1f=1f, 
+                                              26=17, 27=1b, 
+                                       2d=05, 2e=06, 2f=07, 
+                  32=16,                             37=04, 
+                                3c=14, 3d=15,        3f=1a, 
+    # printables
+    40=20, 41=a0, 42=a1, 43=a2, 44=23, 45=a8, 46=a5, 47=a6, 
+    48=a7, 49=a4, 4a=5b, 4b=2e, 4c=3c, 4d=28, 4e=2b, 4f=21, 
+    50=26, 51=a9, 52=aa, 53=ab, 54=ac, 55=ad, 56=ae, 57=7e, 
+    58=b0, 59=b1, 5a=5d, 5b=24, 5c=2a, 5d=29, 5e=3b, 5f=5e, 
+    60=2d, 61=2f, 62=b2, 63=b3, 64=b4, 65=b5, 66=b6, 67=b7, 
+    68=b8, 69=b9, 6a=7c, 6b=2c, 6c=25, 6d=5f, 6e=3e, 6f=3f, 
+    70=ba, 71=bb, 72=bc, 73=bd, 74=be, 75=bf, 76=c0, 77=c1, 
+    78=c2, 79=60, 7a=3a, 7b=a3, 7c=40, 7d=27, 7e=3d, 7f=22, 
+    80=c3, 81=61, 82=62, 83=63, 84=64, 85=65, 86=66, 87=67, 
+    88=68, 89=69, 8a=c4, 8b=c5, 8c=c6, 8d=c7, 8e=c8, 8f=c9, 
+    90=ca, 91=6a, 92=6b, 93=6c, 94=6d, 95=6e, 96=6f, 97=70, 
+    98=71, 99=72, 9a=cb, 9b=cc, 9c=cd, 9d=ce, 9e=cf, 9f=d0, 
+    a0=d1, a1=af, a2=73, a3=74, a4=75, a5=76, a6=77, a7=78, 
+    a8=79, a9=7a, aa=d2, ab=d3, ac=d4, ad=d5, ae=d6, af=80, 
+    b0=d8, b1=d9, b2=da, b3=db, b4=dc, b5=81, b6=de, b7=df, 
+    b8=e0, b9=e1, ba=e2, bb=e3, bc=e4, bd=e5, be=e6, bf=e7, 
+    c0=7b, c1=41, c2=42, c3=43, c4=44, c5=45, c6=46, c7=47, 
+    c8=48, c9=49, ca=e8, cb=e9, cc=ea, cd=eb, ce=ec, cf=ed, 
+    d0=7d, d1=4a, d2=4b, d3=4c, d4=4d, d5=4e, d6=4f, d7=50, 
+    d8=51, d9=52, da=ee, db=ef, dc=f0, dd=f1, de=f2, df=f3, 
+    e0=5c,        e2=53, e3=54, e4=55, e5=56, e6=57, e7=58, 
+    e8=59, e9=5a, ea=f4, eb=f5, ec=f6, ed=82, ee=f8, ef=f9, 
+    f0=30, f1=31, f2=32, f3=33, f4=34, f5=35, f6=36, f7=37, 
+    f8=38, f9=39, fa=fa, fb=fb, fc=fc, fd=83, fe=fe, ff=fd
+end
+
+# EBCDIC_USA <-> NSCS
+#
+#	Constructed from the English (USA) code page of the 3270
+#	display station code page charts.
+#
+#	The control codes transliterations are taken from the
+#	EBCDIC_ICL <-> ISO_8859_1 table.
+
+local EBCDIC_USA
+remote NSCS
+class THIRD
+
+begin
+    # control codes
+    00=00, 01=01, 02=02, 03=03,        05=09,        07=7f, 
+                         0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, 
+    10=10, 11=11, 12=12, 13=13,               16=08,        
+    18=18, 19=19,               1c=1c, 1d=1d, 1e=1e, 1f=1f, 
+                                       25=0a, 26=17, 27=1b, 
+                                       2d=05, 2e=06, 2f=07, 
+                  32=16,                             37=04, 
+                                3c=14, 3d=15,        3f=1a, 
+    # printables
+    40=20, 41=a0, 42=e2, 43=e4, 44=e0, 45=e1, 46=e3, 47=e5,
+    48=e7, 49=f1, 4a=a2, 4b=2e, 4c=3c, 4d=28, 4e=2b, 4f=7c,
+    50=26, 51=e9, 52=ea, 53=eb, 54=e8, 55=ed, 56=ee, 57=ef,
+    58=ec, 59=df, 5a=21, 5b=24, 5c=2a, 5d=29, 5e=3b, 5f=ac,
+    60=2d, 61=2f, 62=c2, 63=c4, 64=c0, 65=c1, 66=c3, 67=c5,
+    68=c7, 69=d1, 6a=a6, 6b=2c, 6c=25, 6d=5f, 6e=3e, 6f=3f,
+    70=f8, 71=c9, 72=ca, 73=cb, 74=c8, 75=cd, 76=ce, 77=cf,
+    78=cc, 79=60, 7a=3a, 7b=23, 7c=40, 7d=27, 7e=3d, 7f=22,
+    80=d8, 81=61, 82=62, 83=63, 84=64, 85=65, 86=66, 87=67,
+    88=68, 89=69, 8a=ab, 8b=bb, 8c=f0, 8d=83, 8e=fe, 8f=b1,
+    90=b0, 91=6a, 92=6b, 93=6c, 94=6d, 95=6e, 96=6f, 97=70,
+    98=71, 99=72, 9a=aa, 9b=ba, 9c=e6, 9d=b8, 9e=c6, 9f=a8,
+    a0=b5, a1=7e, a2=73, a3=74, a4=75, a5=76, a6=77, a7=78,
+    a8=79, a9=7a, aa=a1, ab=bf, ac=d0, ad=81, ae=de, af=ae,
+    b0=5e, b1=a3, b2=a5, b3=b7, b4=a9, b5=a7, b6=b6, b7=bc,
+    b8=bd, b9=be, ba=5b, bb=5d, bc=af, bd=a4, be=b4, bf=80,
+    c0=7b, c1=41, c2=42, c3=43, c4=44, c5=45, c6=46, c7=47,
+    c8=48, c9=49, ca=ad, cb=f4, cc=f6, cd=f2, ce=f3, cf=f5,
+    d0=7d, d1=4a, d2=4b, d3=4c, d4=4d, d5=4e, d6=4f, d7=50,
+    d8=51, d9=52, da=b9, db=fb, dc=fc, dd=f9, de=fa, df=fd,
+    e0=5c, e1=82, e2=53, e3=54, e4=55, e5=56, e6=57, e7=58,
+    e8=59, e9=5a, ea=b2, eb=d4, ec=d6, ed=d2, ee=d3, ef=d5,
+    f0=30, f1=31, f2=32, f3=33, f4=34, f5=35, f6=36, f7=37,
+    f8=38, f9=39, fa=b3, fb=db, fc=dc, fd=d9, fe=da
+end
+
+# EBCDIC_C <-> NSCS, tuned for C compatibility
+#
+#   This is the EBCDIC_USA <-> NSCS mapping with only the barest
+#   control characters mapped and the following oddball mappings done
+#   for compatibility with the Whitesmith's C compiler:
+#
+#
+#       C        USA      NSCS          C               USA/NSCS
+#       ======================          ========================
+#       0xb0 <-> 0x5f <-> 0xac          ^		logical-not
+#       0x5f <-> 0xb0 <-> 0x5e          logical-not	^
+#	0xba <-> 0xad <-> 0x81		[		Y-acute		
+#       0xad <-> 0xba <-> 0x5b          Y-acute 	[
+#       0xbb <-> 0xbd <-> 0xa4          ]		dieresis        
+#       0xbd <-> 0xbb <-> 0x5d          dieresis	]
+#
+#   Courtesy of Bruce Kleinman.
+#
+#	The control codes transliterations are taken from the
+#	EBCDIC_ICL <-> ISO_8859_1 table.
+
+local EBCDIC_C
+remote NSCS
+class THIRD
+
+begin
+    # control codes
+    00=00, 01=01, 02=02, 03=03,        05=09,        07=7f, 
+                         0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, 
+    10=10, 11=11, 12=12, 13=13,               16=08,        
+    18=18, 19=19,               1c=1c, 1d=1d, 1e=1e, 1f=1f, 
+                                       25=0a, 26=17, 27=1b, 
+                                       2d=05, 2e=06, 2f=07, 
+                  32=16,                             37=04, 
+                                3c=14, 3d=15,        3f=1a, 
+    # printables
+    40=20, 41=a0, 42=e2, 43=e4, 44=e0, 45=e1, 46=e3, 47=e5,
+    48=e7, 49=f1, 4a=a2, 4b=2e, 4c=3c, 4d=28, 4e=2b, 4f=7c,
+    50=26, 51=e9, 52=ea, 53=eb, 54=e8, 55=ed, 56=ee, 57=ef,
+    58=ec, 59=df, 5a=21, 5b=24, 5c=2a, 5d=29, 5e=3b, 5f=5e,
+    60=2d, 61=2f, 62=c2, 63=c4, 64=c0, 65=c1, 66=c3, 67=c5,
+    68=c7, 69=d1, 6a=a6, 6b=2c, 6c=25, 6d=5f, 6e=3e, 6f=3f,
+    70=f8, 71=c9, 72=ca, 73=cb, 74=c8, 75=cd, 76=ce, 77=cf,
+    78=cc, 79=60, 7a=3a, 7b=23, 7c=40, 7d=27, 7e=3d, 7f=22,
+    80=d8, 81=61, 82=62, 83=63, 84=64, 85=65, 86=66, 87=67,
+    88=68, 89=69, 8a=ab, 8b=bb, 8c=f0, 8d=83, 8e=fe, 8f=b1,
+    90=b0, 91=6a, 92=6b, 93=6c, 94=6d, 95=6e, 96=6f, 97=70,
+    98=71, 99=72, 9a=aa, 9b=ba, 9c=e6, 9d=b8, 9e=c6, 9f=a8,
+    a0=b5, a1=7e, a2=73, a3=74, a4=75, a5=76, a6=77, a7=78,
+    a8=79, a9=7a, aa=a1, ab=bf, ac=d0, ad=5b, ae=de, af=ae,
+    b0=ac, b1=a3, b2=a5, b3=b7, b4=a9, b5=a7, b6=b6, b7=bc,
+    b8=bd, b9=be, ba=81, bb=a4, bc=af, bd=5d, be=b4, bf=80,
+    c0=7b, c1=41, c2=42, c3=43, c4=44, c5=45, c6=46, c7=47,
+    c8=48, c9=49, ca=ad, cb=f4, cc=f6, cd=f2, ce=f3, cf=f5,
+    d0=7d, d1=4a, d2=4b, d3=4c, d4=4d, d5=4e, d6=4f, d7=50,
+    d8=51, d9=52, da=b9, db=fb, dc=fc, dd=f9, de=fa, df=fd,
+    e0=5c, e1=82, e2=53, e3=54, e4=55, e5=56, e6=57, e7=58,
+    e8=59, e9=5a, ea=b2, eb=d4, ec=d6, ed=d2, ee=d3, ef=d5,
+    f0=30, f1=31, f2=32, f3=33, f4=34, f5=35, f6=36, f7=37,
+    f8=38, f9=39, fa=b3, fb=db, fc=dc, fd=d9, fe=da
+end
+
+# HPROMAN8 conversion to NSCS
+# Following characters exist in HPROMAN8 and works in homogeneous
+# network but will not work heterogeneous due to they are specific 
+# to the HPROMAN8 characterset and does not exist in ISO standards.
+# 0xa9 (grave sign)
+# 0xaa (circumflex)
+# 0xac (diaresis)
+# 0xaf (Italian lira sign)
+# 0xbe (dutch guilder sign)
+# 0xeb (S caron uppercase)
+# 0xec (s caron lowercase)
+# 0xf5 
+# 0xfc (solid)
+# 
+# Following are undefined characters in HPROMAN8 and are not passed
+# to NSCS
+# 0x80 - 0xa0
+# 0xff
+# Design layout taken from chapter D-30 Keyboards and Character Sets
+# HP Terminal Reference Manual HP2393a Terminal Guide.
+# Date: 24th October, by Kim Andersen, Eurotech London
+
+local HPROMAN8
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+           a1=c0, a2=c2, a3=c8, a4=ca, a5=cb, a6=ce, a7=cf,
+    a8=b4,               ab=a4,        ad=d9, ae=db,       
+    b0=af, b1=81, b2=83, b3=b0, b4=c7, b5=e7, b6=d1, b7=f1,
+    b8=a1, b9=bf, ba=a8, bb=a3, bc=a5, bd=a7,        bf=a2,
+    c0=e2, c1=ea, c2=f4, c3=fb, c4=e1, c5=e9, c6=f3, c7=fa,
+    c8=e0, c9=e8, ca=f2, cb=f9, cc=e4, cd=eb, ce=f6, cf=fc,
+    d0=c5, d1=ee, d2=d8, d3=c6, d4=e5, d5=ed, d6=f8, d7=e6,
+    d8=c4, d9=ec, da=d6, db=dc, dc=c9, dd=ef, de=df, df=d4,
+    e0=c1, e1=c3, e2=e3, e3=d0, e4=f0, e5=cd, e6=cc, e7=d3,
+    e8=d2, e9=d5, ea=f5,               ed=da, ee=dd, ef=fd,
+    f0=de, f1=fe, f2=b7, f3=b5, f4=b6,        f6=ad, f7=bc,
+    f8=bd, f9=aa, fa=ba, fb=ab,        fd=bb, fe=b1       
+end
+
+# SLAV852 <-> ISO88592
+#	Mapping from Slavic PC to Slavic ISO8859/2 (Unix).
+# 	0x20..0x7e are passed through. The special printable
+#	characters are described as follows:
+#
+
+local SLAV852
+remote ISO88592
+class FIRST
+
+begin
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+    80=c7, 81=fc, 82=e9, 83=e2, 84=e4, 85=f9, 86=e6, 87=e7,
+    88=b3, 89=eb, 8a=d5, 8b=f5, 8c=ee, 8d=ac, 8e=c4, 8f=c6,
+    90=c9, 91=c5, 92=e5, 93=f4, 94=f6, 95=a5, 96=b5, 97=a6,
+    98=b6, 99=d6, 9a=dc, 9b=ab, 9c=bb, 9d=a3, 9e=d7, 9f=e8,
+    a0=e1, a1=ed, a2=f3, a3=fa, a4=a1, a5=b1, a6=ae, a7=be,
+    a8=ca, a9=ea,        ab=bc, ac=c8, ad=ba,        
+                                       b5=c1, b6=c2, b7=cc,
+    b8=aa,                             bd=af, be=bf,
+                                              c6=c3, c7=e3,
+                                                     cf=a4,  
+    d0=f0, d1=d0, d2=cf, d3=cb, d4=ef, d5=d2, d6=cd, d7=ce,
+    d8=ec,                             dd=de, de=d9,
+    e0=d3, e1=df, e2=d4, e3=d1, e4=f1, e5=f2, e6=a9, e7=b9,
+    e8=c0, e9=da, ea=e0, eb=db, ec=fd, ed=dd, ee=fe, ef=b4,
+    f0=ad, f1=bd, f2=b2, f3=b7, f4=a2, f5=a7, f6=f7, f7=b8, 
+    f8=b0, f9=a8, fa=ff, fb=fb, fc=d8, fd=f8,        ff=a0
+end
+
+
+# ELOT437 <-> GREEK
+#       Mapping between Greek for PC/RS6000/SCO-UNIX and DEC-Greek.
+#
+# 0x80 <-> 0xc1
+# 0x81 <-> 0xc2
+# 0x82 <-> 0xc3
+# 0x83 <-> 0xc4
+# 0x84 <-> 0xc5
+# 0x85 <-> 0xc6
+# 0x86 <-> 0xc7
+# 0x87 <-> 0xc8
+# 0x88 <-> 0xc9
+# 0x89 <-> 0xca
+# 0x8a <-> 0xcb
+# 0x8b <-> 0xcc
+# 0x8c <-> 0xcd
+# 0x8d <-> 0xce
+# 0x8e <-> 0xcf
+# 0x8f <-> 0xd0
+# 0x90 <-> 0xd1
+# 0x91 <-> 0xd3
+# 0x92 <-> 0xd4
+# 0x93 <-> 0xd5
+# 0x94 <-> 0xd6
+# 0x95 <-> 0xd7
+# 0x96 <-> 0xd8
+# 0x97 == 0xd9
+#
+# 0x98 <-> 0xe1
+# 0x99 <-> 0xe2
+# 0x9a <-> 0xe3
+# 0x9b <-> 0xe4
+# 0x9c <-> 0xe5
+# 0x9d <-> 0xe6
+# 0x9e <-> 0xe7
+# 0x9f <-> 0xe8
+# 0xa0 <-> 0xe9
+# 0xa1 <-> 0xea
+# 0xa2 <-> 0xeb
+# 0xa3 <-> 0xec
+# 0xa4 <-> 0xed
+# 0xa5 <-> 0xee
+# 0xa6 <-> 0xef
+# 0xa7 <-> 0xf0
+# 0xa8 <-> 0xf1
+# 0xa9 <-> 0xf3
+# 0xaa <-> 0xf2
+# 0xab <-> 0xf4
+# 0xac <-> 0xf5
+# 0xad <-> 0xf6
+# 0xae <-> 0xf7
+# 0xaf <-> 0xf8
+# 0xe0 <-> 0xf9
+#
+# 0xe1 <-> 0xdc
+# 0xe2 <-> 0xdd
+# 0xe3 <-> 0xde
+# 0xe4 <-> 0xfa
+# 0xe5 <-> 0xdf
+# 0xe6 <-> 0xfc
+# 0xe7 <-> 0xfd
+# 0xe8 <-> 0xfb
+# 0xe9 <-> 0xfe
+
+local ELOT437
+remote GREEK
+class FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=c1, 81=c2, 82=c3, 83=c4, 84=c5, 85=c6, 86=c7, 87=c8,
+    88=c9, 89=ca, 8a=cb, 8b=cc, 8c=cd, 8d=ce, 8e=cf, 8f=d0,
+    90=d1, 91=d3, 92=d4, 93=d5, 94=d6, 95=d7, 96=d8, 97=d9,
+    98=e1, 99=e2, 9a=e3, 9b=e4, 9c=e5, 9d=e6, 9e=e7, 9f=e8,
+    a0=e9, a1=ea, a2=eb, a3=ec, a4=ed, a5=ee, a6=ef, a7=f0,
+    a8=f1, a9=f3, aa=f2, ab=f4, ac=f5, ad=f6, ae=f7, af=f8,
+    e0=f9, e1=dc, e2=dd, e3=de, e4=fa, e5=df, e6=fc, e7=fd,
+    e8=fb, e9=fe
+end 
+
+
+# SHIFTJIS <-> NSCS
+#
+
+local SHIFTJIS
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, 
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, 
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+
+# KANJIEUC <-> NSCS
+#
+
+local KANJIEUC
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, 
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, 
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+# CHINESES <-> NSCS
+#
+
+local CHINESES
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, 
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, 
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+
+# CSGBK <-> NSCS
+#
+
+local CSGBK
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, 
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, 
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+
+# CSGB2312 <-> NSCS
+#
+
+local CSGB2312
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, 
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, 
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+
+# CHTEUC <-> NSCS
+#
+
+local CHTEUC
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, 
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, 
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+# CHTHP <-> NSCS
+#
+
+local CHTHP
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, 
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, 
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+# BIG5 <-> NSCS
+#
+
+local CHTBIG5
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, 
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, 
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+
+# KOREAN <-> NSCS
+#
+
+local KOREAN
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, 
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, 
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+# ISO Latin 8859/2 <--> NSCS
+#
+#	Only the 7 bit ASCII component of ISOLATIN 88592 (Slavic) to NSCS
+
+local ISO88592
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+end
+
+
+# ISO Latin 88595 <--> NSCS
+#
+#	Only the 7 bit ASCII component of ISOLATIN 88595 (Cyrillic) to NSCS
+
+local ISO88595
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+end
+
+
+# CW <-> ISO88595
+#
+#       Support for Windows Cyrillic coding (Cyrwin 3.1)
+#
+
+local CW
+remote ISO88595
+class FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    a8=a1,
+    b8=f1,
+    c0=b0, c1=b1, c2=b2, c3=b3, c4=b4, c5=b5, c6=b6, c7=b7,
+    c8=b8, c9=b9, ca=ba, cb=bb, cc=bc, cd=bd, ce=be, cf=bf,
+    d0=c0, d1=c1, d2=c2, d3=c3, d4=c4, d5=c5, d6=c6, d7=c7,
+    d8=c8, d9=c9, da=ca, db=cb, dc=cc, dd=cd, de=ce, df=cf,
+    e0=d0, e1=d1, e2=d2, e3=d3, e4=d4, e5=d5, e6=d6, e7=d7,
+    e8=d8, e9=d9, ea=da, eb=db, ec=dc, ed=dd, ee=de, ef=df,
+    f0=e0, f1=e1, f2=e2, f3=e3, f4=e4, f5=e5, f6=e6, f7=e7,
+    f8=e8, f9=e9, fa=ea, fb=eb, fc=ec, fd=ed, fe=ee, ff=ef
+end
+
+# ISO88595 <-> CW
+#
+#       Support for Windows Cyrillic coding (Cyrwin 3.1)
+#
+
+local ISO88595
+remote CW
+class FIRST
+
+begin
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+    a0=a0, a1=a8, a2=80, a3=81, a4=aa, a5=bd, a6=b2, a7=af,
+    a8=a3, a9=8a, aa=8c, ab=8e, ac=8d, ad=ad, ae=a1, af=8f,
+    b0=c0, b1=c1, b2=c2, b3=c3, b4=c4, b5=c5, b6=c6, b7=c7,
+    b8=c8, b9=c9, ba=ca, bb=cb, bc=cc, bd=cd, be=ce, bf=cf,
+    c0=d0, c1=d1, c2=d2, c3=d3, c4=d4, c5=d5, c6=d6, c7=d7,
+    c8=d8, c9=d9, ca=da, cb=db, cc=dc, cd=dd, ce=de, cf=df,
+    d0=e0, d1=e1, d2=e2, d3=e3, d4=e4, d5=e5, d6=e6, d7=e7,
+    d8=e8, d9=e9, da=ea, db=eb, dc=ec, dd=ed, de=ee, df=ef,
+    e0=f0, e1=f1, e2=f2, e3=f3, e4=f4, e5=f5, e6=f6, e7=f7,
+    e8=f8, e9=f9, ea=fa, eb=fb, ec=fc, ed=fd, ee=fe, ef=ff,
+    f0=b9, f1=b8, f2=90, f3=83, f4=ba, f5=be, f6=b3, f7=bf,
+    f8=bc, f9=9a, fa=9c, fb=9e, fc=9d, fd=a7, fe=a2, ff=9f
+end
+
+
+# ALT <-> ISO88595
+#
+#       This is an identity mapping for 0..0x7f,
+#       yet some trashing with upper codetable part.
+#
+# 0x80 <-> 0xb0
+# 0x81 <-> 0xb1
+# 0x82 <-> 0xb2
+# 0x83 <-> 0xb3
+# 0x84 <-> 0xb4
+# 0x85 <-> 0xb5
+# 0x86 <-> 0xb6
+# 0x87 <-> 0xb7
+# 0x88 <-> 0xb8
+# 0x89 <-> 0xb9
+# 0x8a <-> 0xba
+# 0x8b <-> 0xbb
+# 0x8c <-> 0xbc
+# 0x8d <-> 0xbd
+# 0x8e <-> 0xbe
+# 0x8f <-> 0xbf
+# 0x90 <-> 0xc0
+# 0x91 <-> 0xc1
+# 0x92 <-> 0xc2
+# 0x93 <-> 0xc3
+# 0x94 <-> 0xc4
+# 0x95 <-> 0xc5
+# 0x96 <-> 0xc6
+# 0x97 <-> 0xc7
+# 0x98 <-> 0xc8
+# 0x99 <-> 0xc9
+# 0x9a <-> 0xca
+# 0x9b <-> 0xcb
+# 0x9c <-> 0xcc
+# 0x9d <-> 0xcd
+# 0x9e <-> 0xce
+# 0x9f <-> 0xcf
+# 0xa0 <-> 0xd0
+# 0xa1 <-> 0xd1
+# 0xa2 <-> 0xd2
+# 0xa3 <-> 0xd3
+# 0xa4 <-> 0xd4
+# 0xa5 <-> 0xd5
+# 0xa6 <-> 0xd6
+# 0xa7 <-> 0xd7
+# 0xa8 <-> 0xd8
+# 0xa9 <-> 0xd9
+# 0xaa <-> 0xda
+# 0xab <-> 0xdb
+# 0xac <-> 0xdc
+# 0xad <-> 0xdd
+# 0xae <-> 0xde
+# 0xaf <-> 0xdf
+# 0xe0 <-> 0xe0
+# 0xe1 <-> 0xe1
+# 0xe2 <-> 0xe2
+# 0xe3 <-> 0xe3
+# 0xe4 <-> 0xe4
+# 0xe5 <-> 0xe5
+# 0xe6 <-> 0xe6
+# 0xe7 <-> 0xe7
+# 0xe8 <-> 0xe8
+# 0xe9 <-> 0xe9
+# 0xea <-> 0xea
+# 0xeb <-> 0xeb
+# 0xec <-> 0xec
+# 0xed <-> 0xed
+# 0xee <-> 0xee
+# 0xef <-> 0xef
+#
+
+local ALT
+remote ISO88595
+class FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=b0, 81=b1, 82=b2, 83=b3, 84=b4, 85=b5, 86=b6, 87=b7,
+    88=b8, 89=b9, 8a=ba, 8b=bb, 8c=bc, 8d=bd, 8e=be, 8f=bf,
+    90=c0, 91=c1, 92=c2, 93=c3, 94=c4, 95=c5, 96=c6, 97=c7,
+    98=c8, 99=c9, 9a=ca, 9b=cb, 9c=cc, 9d=cd, 9e=ce, 9f=cf,
+    a0=d0, a1=d1, a2=d2, a3=d3, a4=d4, a5=d5, a6=d6, a7=d7,
+    a8=d8, a9=d9, aa=da, ab=db, ac=dc, ad=dd, ae=de, af=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef
+end
+
+
+#
+# ELOT 437 <-> NSCS
+#
+
+local ELOT437
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87,
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f,
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a4, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+#
+# SLAV852  <-> NSCS
+# IBMPC852 7 bit ascii maps to NSCS, the rest just pass through
+#
+
+local SLAV852
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87,
+    88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f,
+    90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97,
+    98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f,
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a4, a5=a5, a6=a6, a7=a7,
+    a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+
+# CW <--> NSCS
+#
+#	Only the 7 bit ASCII component of CW (Cyrillic on Windows 3.1) 
+#	to NSCS. 
+
+local CW 
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+
+	       a1=81, a2=a3,        a4=a8,        a6=a6, a7=a7, #
+    a8=cb, a9=a9,        ab=ab, ac=ac, ad=ad, ae=ae, af=af, #
+	b0=b0, b1=b1,                      b5=b5, b6=b6, b7=b7, #
+	b8=eb,               bb=bb,                      bf=ef, #
+end
+
+
+# ALT <--> NSCS
+#
+# some gaps
+#
+local ALT
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+
+	b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+	b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+	
+	c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+	c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+	
+	f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+	f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff,
+end
+
+
+# ISO88599 <--> NSCS
+#
+#	Only the 7 bit ASCII component of ISO88599 (Turkish) 
+#	to NSCS. 
+
+local ISO88599
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+end
+
+
+local PC857 
+remote ISO88599 
+class FIRST
+
+begin
+    00=00,                                                  # 
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d,               # 
+                                       15=a7,               #      
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+    80=c7, 81=fc, 82=e9, 83=e2, 84=e4, 85=e0, 86=e5, 87=e7,
+    88=ea, 89=eb, 8a=e8, 8b=ef, 8c=ee, 8d=fd, 8e=c4, 8f=c5,
+    90=c9, 91=e6, 92=c6, 93=f4, 94=f6, 95=f2, 96=fb, 97=f9,
+    98=dd, 99=d6, 9a=dc, 9b=a2, 9c=a3, 9d=a5, 9e=de, 9f=fe,              
+    a0=e1, a1=ed, a2=f3, a3=fa, a4=f1, a5=d1, a6=d0, a7=f0,
+    a8=bf,        aa=ac, ab=bd, ac=bc, ad=a1, ae=ab, af=bb,
+                                       b5=c1, b6=c2, b7=c0,
+                                              c6=e3, c7=c3,
+    		  d2=ca, d3=cb, d4=c8,        d6=cd, d7=ce,
+    d8=cf,                                           de=cc,
+    e0=d3, e1=df, e2=d4, e3=d2, e4=f5, e5=d5, e6=b5, 
+    e8=d7, e9=da, ea=db, eb=d9, ec=83, ed=81, ee=af, ef=b4,
+    f0=ad, f1=b1,        f3=be, f4=b6,        f6=82,
+    f8=b0,        fa=b7, fb=b9, fc=b3, fd=b2    
+
+end
+
+# ISO 8859/15 <-> NSCS
+#
+#	ISO 8859-15 (Latin 9) to NSCS
+#	
+
+local IS885915
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+                                                            # 80-9F not in set
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=98, a5=a5,        a7=a7,
+           a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3,        b5=b5, b6=b6, b7=b7,
+           b9=b9, ba=ba, bb=bb, bc=d7, bd=f7, be=dd, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=80,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=81, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=82,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=83, fe=fe, ff=fd
+end
+
+#
+#	WIN1252 (Western Europe) <-> NSCS,
+#	THIRD class
+#
+
+local  WIN1252
+remote  NSCS
+class  THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=98,                                                  # Euro
+                                8c=d7,                      # OE
+                                9c=f7,               9f=dd, # oe, Y-diaeresis
+    a0=a0, a1=a1, a2=a2, a3=a3, a4=a8, a5=a5, a6=a6, a7=a7,
+    a8=a4, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6, b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=80,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=81, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=82,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=83, fe=fe, ff=fd
+end
+
+#
+#	WIN1250 (Eastern Europe) <-> NSCS,
+#	THIRD class
+#
+
+local  WIN1250
+remote  NSCS
+class  THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+    80=98,                                                  # Euro
+                                       95=b7,               #
+    a0=a0,                      a4=a8,        a6=a6, a7=a7, #
+    a8=a4, a9=a9,        ab=ab, ac=ac, ad=ad, ae=ae,        #
+    b0=b0, b1=b1,               b4=b4, b5=b5, b6=b6, b7=b7, #
+    b8=b8,               bb=bb,                             # 
+           c1=c1, c2=c2, c3=c3, c4=c4,               c7=c7, #
+           c9=c9,        cb=cb,        cd=cd, ce=ce,        #
+    d0=d0,               d3=d3, d4=d4,        d6=d6, d7=80, #
+                                dc=dc, dd=81,        df=df, #
+           e1=e1, e2=e2,        e4=e4, e5=cd,        e7=e7, #
+           e9=e9,        eb=eb,        ed=ed, ee=ee,        # 
+    f0=f0,               f3=f3, f4=f4,        f6=f6, f7=82, #
+                  fa=fa,        fc=fc, fd=83
+end
+
+# 	WIN1250 <-> ISO 8859-2.
+#
+#	From 0x20 -> 0x7e, exactly the same.
+#	From 0x7ff-> 0xbf, maps for all letters, and accents,
+#	but gaps for many non-printing chars
+#	From 0xc0->0xff, exactly the same.
+#
+
+local WIN1250
+remote ISO88592
+class  FIRST
+begin
+
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+
+	              8a=a9,        8c=a6, 8d=ab, 8e=ae, 8f=ac,	#
+	              9a=b9,        9c=b6, 9d=bb, 9e=be, 9f=bc, #
+	a0=a0, a1=b7, a2=a2, a3=a3, a4=a4, a5=a1, a7=a7, a8=a8, #
+	              aa=aa,               ad=ad,        af=af, #
+	b0=b0, b2=b2, b3=b3, b4=b4,                      b8=b8, #
+	       b9=b1, ba=ba,        bc=a5, bd=bd, be=b5, bf=bf, #
+
+	c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1, d2=d2, d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe, ff=ff
+end
+
+# KOI8 <-> NSCS
+#
+#	This is an identity mapping for 0..0x7f, holes otherwise.
+#
+
+local KOI8
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+	
+end
+
+local KOI8
+remote ISO88595
+class FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+	a2=f1,													# io
+	b2=a1,													# io
+	c0=b0, c1=b1, c2=b2, c3=b3, c4=b4, c5=b5, c6=b6, c7=b7, # cyrillic
+	c8=b8, c9=b9, ca=ba, cb=bb, cc=bc, cd=bd, ce=be, cf=bf,	# lowercase
+	d0=c0, d1=c1, c2=c2, d3=c3, d4=c4, d5=c5, d6=c6, d7=c7, #
+	d8=c8, d9=c9, da=ca, db=cb, dc=cc, dd=cd, de=ce, df=cf, #
+	e0=d0, e1=d1, e2=d2, e3=d3, e4=d4, e5=d5, e6=d6, e7=d7, # cyrillic 
+    e8=d8, e9=d9, ea=da, eb=db, ec=dc, ed=dd, ee=de, ef=df, # uppercase
+	f0=e0, f1=e1, f2=e2, f3=e3, f4=e4, f5=e5, f6=e6, f7=e7, #
+	f8=e8, f9=e9, fa=ea, fb=eb, fc=ec, fd=ed, fe=ee, ff=ef  #
+	 
+end
+
+
+#
+#	IBM PC 866 (Cyrillic for DOS)
+#	THIRD class
+#
+
+local  IBMPC866
+remote  NSCS
+class  THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+
+    f0=cb, f1=eb, 				f4=cf, f5=ef, 
+    	   f9=b7, 		 			   fd=a8, fe=fe
+end
+
+#
+#	IBM PC 866 (Cyrillic for DOS)
+#	FIRST class
+#
+
+local  IBMPC866
+remote  ALT
+class  FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+
+	80=80, 81=81, 82=82, 83=83, 84=84, 85=85, 86=86, 87=87, # uppercase
+	88=88, 89=89, 8a=8a, 8b=8b, 8c=8c, 8d=8d, 8e=8e, 8f=8f, #
+	90=90, 91=91, 92=92, 93=93, 94=94, 95=95, 96=96, 97=97, #
+	98=98, 99=99, 9a=9a, 9b=9b, 9c=9c, 9d=9d, 9e=9e, 9f=9f, #
+	
+	a0=a0, a1=a1, a2=a2, a3=a3, a4=a4, a5=a5, a6=a6, a7=a7, #lowercase
+	a8=a8, a9=a9, aa=aa, ab=ab, ac=ac, ad=ad, ae=ae, af=af, #
+	e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7, #
+	e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef, #
+
+	f0=cb,                      f4=cf,                      # E, I diaresis
+	f8=b0, f9=b7, 
+end
+
+local IBMPC866
+remote ISO88595
+class FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+
+	80=b0, 81=b1, 82=b2, 83=b3, 84=b4, 85=b5, 86=b6, 87=b7,	# ucase cyrillic
+	88=b8, 89=b9, 8a=ba, 8b=bb, 8c=bc, 8d=bd, 8e=be, 8f=bf, # ucase cyrillic
+	90=c0, 91=c1, 92=c2, 93=c3, 94=c4, 95=c5, 96=c6, 97=c7, # ucase cyrillic
+	98=c8, 99=c9, 9a=ca, 9b=cb, 9c=ec, 9d=cd, 9e=ce, 9f=cf, # ucase cyrillic
+
+	a0=d0, a1=d1, a2=d2, a3=d3, a4=d4, a5=d5, a6=d6, a7=d7, # lcase cyrillic
+	a8=d8, a9=d9, aa=da, ab=db, ac=dc, ad=dd, ae=de, af=df, # lcase cyrillic
+
+	e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7, # lcase cyrillic
+	e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef, # lcase cyrillic
+
+	f0=a1, f1=f1, f2=a4, f3=f4, f4=a7, f5=f7, f6=ae, f7=fe,
+								fc=fa,
+end
+
+# ALT <--> CW
+#
+# some gaps
+#
+local ALT
+remote CW
+class FIRST
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e, 7f=7f, # xyz{|}~
+
+	80=c0, 81=c1, 82=c2, 83=c3, 84=c4, 85=c5, 76=c6, 87=c7,	# uppercase
+	88=c8, 89=c9, 8a=ca, 8b=cb, 8c=cc, 8d=cd, 8e=ce, 8f=cf, #
+	90=d0, 91=d1, 92=d2, 93=d3, 94=d4, 95=d5, 96=d6, 97=d7, # 
+	98=d8, 99=d9, 9a=da, 9b=db, 9c=dc, 9d=dd, 9e=de, 9f=df, #
+	
+	a0=e0, a1=e1, a2=e2, a3=e3, a4=e4, a5=e5, a6=e6, a7=e7, # lowercase
+	a8=e8, a9=e9, aa=ea, ab=eb, ac=ec, ad=ed, ae=ee, af=ef, #
+
+	b0=b0, b1=b1,                      b5=b5, b6=b6, b7=b7, # various
+						 bb=bb, 
+
+						 cb=a8, 					 cf=af,	# E,I diaresis
+	
+	e0=f0, e1=f1, e2=f2, e3=f3, e4=f4, e5=f5, e6=f6, e7=f7, # lowercase
+	e8=f8, e9=f9, ea=fa, eb=fb, ec=fc, ed=fd, ee=fe, ef=ff, #
+end
+
+# WIN1253 <--> ISO88597
+#
+# For both, 0x20 through 0x7e are the same 
+# For Win1253:  aa,d2,ff are undefined
+#		a1=Unicode 0x385, a2=Unicode 0x386; 
+#               b5=Unicode 0xb5, b6=Unicode 0xb6
+# For ISO8859-7:0x00 through 0x1f are undefined
+# 		0x7f through 0x9f are undefined
+#		a4,a5,aa,ae,d2,ff are undefined
+#		a1=Unicode 0x2bd, a2=Unicode 0x2bc
+#		b5=Unicode 0x385, b6=Unicode 0x386
+#
+local WIN1253
+remote ISO88597 
+class FIRST
+
+begin
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+
+    a0=a0, a1=b5, a2=b6, a3=a3, 	      a6=a6, a7=a7,
+    a8=a8, a9=a9,        ab=ab, ac=ac, ad=ad,        af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4,               b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1,        d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe
+end
+
+# PC737 <--> ISO88597
+#
+# For both, 0x20 through 0x7e are the same 
+# For ISO8859-7:0x00 through 0x1f are undefined
+# 		0x7f through 0x9f are undefined
+#		a4,a5,aa,ae,d2,ff are undefined
+#
+local PC737
+remote ISO88597 
+class FIRST
+
+begin
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+    80=c1, 81=c2, 82=c3, 83=c4, 84=c5, 85=c6, 86=c7, 87=c8,
+    88=c9, 89=ca, 8a=cb, 8b=cc, 8c=cd, 8d=ce, 8e=cf, 8f=d0,
+    90=d1, 91=d3, 92=d4, 93=d5, 94=d6, 95=d7, 96=d8, 97=d9,
+    98=e1, 99=e2, 9a=e3, 9b=e4, 9c=e5, 9d=e6, 9e=e7, 9f=e8,
+    a0=e9, a1=ea, a2=eb, a3=ec, a4=ed, a5=ee, a6=ef, a7=f0,
+    a8=f1, a9=f3, aa=f2, ab=f4, ac=f5, ad=f6, ae=f7, af=f8,
+
+    e0=f9, e1=dc, e2=dd, e3=de, e4=fa, e5=df, e6=fc, e7=fd,
+    e8=fb, e9=fe, ea=b6, eb=b8, ec=b9, ed=ba, ee=bc, ef=be,
+    f0=bf, f1=b1,               f4=da, f5=db,
+    f8=b0,        fa=b7,               fd=b2,        ff=a0
+end
+
+# WIN1253 <--> GREEK
+#
+# copied from WIN1253 <--> ISO88597 
+#
+local WIN1253
+remote GREEK
+class FIRST
+
+begin
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+
+    a0=a0, a1=b5, a2=b6, a3=a3, 	      a6=a6, a7=a7,
+    a8=a8, a9=a9,        ab=ab, ac=ac, ad=ad,        af=af,
+    b0=b0, b1=b1, b2=b2, b3=b3, b4=b4,               b7=b7,
+    b8=b8, b9=b9, ba=ba, bb=bb, bc=bc, bd=bd, be=be, bf=bf,
+    c0=c0, c1=c1, c2=c2, c3=c3, c4=c4, c5=c5, c6=c6, c7=c7,
+    c8=c8, c9=c9, ca=ca, cb=cb, cc=cc, cd=cd, ce=ce, cf=cf,
+    d0=d0, d1=d1,        d3=d3, d4=d4, d5=d5, d6=d6, d7=d7,
+    d8=d8, d9=d9, da=da, db=db, dc=dc, dd=dd, de=de, df=df,
+    e0=e0, e1=e1, e2=e2, e3=e3, e4=e4, e5=e5, e6=e6, e7=e7,
+    e8=e8, e9=e9, ea=ea, eb=eb, ec=ec, ed=ed, ee=ee, ef=ef,
+    f0=f0, f1=f1, f2=f2, f3=f3, f4=f4, f5=f5, f6=f6, f7=f7,
+    f8=f8, f9=f9, fa=fa, fb=fb, fc=fc, fd=fd, fe=fe
+end
+
+# PC737 <--> GREEK
+#
+# copied from PC737 <--> ISO88597 
+#
+local PC737
+remote GREEK
+class FIRST
+
+begin
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+    80=c1, 81=c2, 82=c3, 83=c4, 84=c5, 85=c6, 86=c7, 87=c8,
+    88=c9, 89=ca, 8a=cb, 8b=cc, 8c=cd, 8d=ce, 8e=cf, 8f=d0,
+    90=d1, 91=d3, 92=d4, 93=d5, 94=d6, 95=d7, 96=d8, 97=d9,
+    98=e1, 99=e2, 9a=e3, 9b=e4, 9c=e5, 9d=e6, 9e=e7, 9f=e8,
+    a0=e9, a1=ea, a2=eb, a3=ec, a4=ed, a5=ee, a6=ef, a7=f0,
+    a8=f1, a9=f3, aa=f2, ab=f4, ac=f5, ad=f6, ae=f7, af=f8,
+
+    e0=f9, e1=dc, e2=dd, e3=de, e4=fa, e5=df, e6=fc, e7=fd,
+    e8=fb, e9=fe, ea=b6, eb=b8, ec=b9, ed=ba, ee=bc, ef=be,
+    f0=bf, f1=b1,               f4=da, f5=db,
+    f8=b0,        fa=b7,               fd=b2,        ff=a0
+end
+
+
+# WIN1253<-->NSCS
+#
+## NSCS character extrapolated from previous NSCS mappings to be: 
+#  NSCS character set:
+#  hex_code   Unicode   Character_Description
+#  0x00	      U+0x0000	NULL
+#  0x01	      U+0x0001	START OF HEADING
+#  0x02	      U+0x0002	START OF TEXT
+#  0x03	      U+0x0003	END OF TEXT
+#  0x04	      U+0x0004	END OF TRANSMISSION
+#  0x05	      U+0x0005	ENQUIRY
+#  0x06	      U+0x0006	ACKNOWLEDGE
+#  0x07	      U+0x0007	BELL
+#  0x08	      U+0x0008	BACKSPACE
+#  0x09	      U+0x0009	HORIZONTAL TABULATION
+#  0x0a	      U+0x000a	LINE FEED
+#  0x0b	      U+0x000b	VERTICAL TABULATION
+#  0x0c	      U+0x000c	FORM FEED
+#  0x0d	      U+0x000d	CARRIAGE RETURN
+#  0x0e	      U+0x000e	SHIFT OUT
+#  0x0f	      U+0x000f	SHIFT IN
+#  0x10	      U+0x0010	DATA LINK ESCAPE
+#  0x11	      U+0x0011	DEVICE CONTROL ONE
+#  0x12	      U+0x0012	DEVICE CONTROL TWO
+#  0x13	      U+0x0013	DEVICE CONTROL THREE
+#  0x14	      U+0x0014	DEVICE CONTROL FOUR
+#  0x15	      U+0x0015	NEGATIVE ACKNOWLEDGE
+#  0x16	      U+0x0016	SYNCHRONOUS IDLE
+#  0x17	      U+0x0017	END OF TRANSMISSION BLOCK
+#  0x18	      U+0x0018	CANCEL
+#  0x19	      U+0x0019	END OF MEDIUM
+#  0x1a	      U+0x001a	SUBSTITUTE
+#  0x1b	      U+0x001b	ESCAPE
+#  0x1c	      U+0x001c	FILE SEPARATOR
+#  0x1d	      U+0x001d	GROUP SEPARATOR
+#  0x1e	      U+0x001e	RECORD SEPARATOR
+#  0x1f	      U+0x001f	UNIT SEPARATOR
+#  0x20	      U+0x0020	SPACE
+#  0x21	      U+0x0021	EXCLAMATION MARK
+#  0x22	      U+0x0022	QUOTATION MARK
+#  0x23	      U+0x0023	NUMBER SIGN
+#  0x24	      U+0x0024	DOLLAR SIGN
+#  0x25	      U+0x0025	PERCENT SIGN
+#  0x26	      U+0x0026	AMPERSAND
+#  0x27	      U+0x0027	APOSTROPHE
+#  0x28	      U+0x0028	LEFT PARENTHESIS
+#  0x29	      U+0x0029	RIGHT PARENTHESIS
+#  0x2A	      U+0x002A	ASTERISK
+#  0x2B	      U+0x002B	PLUS SIGN
+#  0x2C	      U+0x002C	COMMA
+#  0x2D	      U+0x002D	HYPHEN-MINUS
+#  0x2E	      U+0x002E	FULL STOP
+#  0x2F	      U+0x002F	SOLIDUS
+#  0x30	      U+0x0030	DIGIT ZERO
+#  0x31	      U+0x0031	DIGIT ONE
+#  0x32	      U+0x0032	DIGIT TWO
+#  0x33	      U+0x0033	DIGIT THREE
+#  0x34	      U+0x0034	DIGIT FOUR
+#  0x35	      U+0x0035	DIGIT FIVE
+#  0x36	      U+0x0036	DIGIT SIX
+#  0x37	      U+0x0037	DIGIT SEVEN
+#  0x38	      U+0x0038	DIGIT EIGHT
+#  0x39	      U+0x0039	DIGIT NINE
+#  0x3A	      U+0x003A	COLON
+#  0x3B	      U+0x003B	SEMICOLON
+#  0x3C	      U+0x003C	LESS-THAN SIGN
+#  0x3D	      U+0x003D	EQUALS SIGN
+#  0x3E	      U+0x003E	GREATER-THAN SIGN
+#  0x3F	      U+0x003F	QUESTION MARK
+#  0x40	      U+0x0040	COMMERCIAL AT
+#  0x41	      U+0x0041	LATIN CAPITAL LETTER A
+#  0x42	      U+0x0042	LATIN CAPITAL LETTER B
+#  0x43	      U+0x0043	LATIN CAPITAL LETTER C
+#  0x44	      U+0x0044	LATIN CAPITAL LETTER D
+#  0x45	      U+0x0045	LATIN CAPITAL LETTER E
+#  0x46	      U+0x0046	LATIN CAPITAL LETTER F
+#  0x47	      U+0x0047	LATIN CAPITAL LETTER G
+#  0x48	      U+0x0048	LATIN CAPITAL LETTER H
+#  0x49	      U+0x0049	LATIN CAPITAL LETTER I
+#  0x4A	      U+0x004A	LATIN CAPITAL LETTER J
+#  0x4B	      U+0x004B	LATIN CAPITAL LETTER K
+#  0x4C	      U+0x004C	LATIN CAPITAL LETTER L
+#  0x4D	      U+0x004D	LATIN CAPITAL LETTER M
+#  0x4E	      U+0x004E	LATIN CAPITAL LETTER N
+#  0x4F	      U+0x004F	LATIN CAPITAL LETTER O
+#  0x50	      U+0x0050	LATIN CAPITAL LETTER P
+#  0x51	      U+0x0051	LATIN CAPITAL LETTER Q
+#  0x52	      U+0x0052	LATIN CAPITAL LETTER R
+#  0x53	      U+0x0053	LATIN CAPITAL LETTER S
+#  0x54	      U+0x0054	LATIN CAPITAL LETTER T
+#  0x55	      U+0x0055	LATIN CAPITAL LETTER U
+#  0x56	      U+0x0056	LATIN CAPITAL LETTER V
+#  0x57	      U+0x0057	LATIN CAPITAL LETTER W
+#  0x58	      U+0x0058	LATIN CAPITAL LETTER X
+#  0x59	      U+0x0059	LATIN CAPITAL LETTER Y
+#  0x5A	      U+0x005A	LATIN CAPITAL LETTER Z
+#  0x5B	      U+0x005B	LEFT SQUARE BRACKET
+#  0x5C	      U+0x005C	REVERSE SOLIDUS
+#  0x5D	      U+0x005D	RIGHT SQUARE BRACKET
+#  0x5E	      U+0x005E	CIRCUMFLEX ACCENT
+#  0x5F	      U+0x005F	LOW LINE
+#  0x60	      U+0x0060	GRAVE ACCENT
+#  0x61	      U+0x0061	LATIN SMALL LETTER A
+#  0x62	      U+0x0062	LATIN SMALL LETTER B
+#  0x63	      U+0x0063	LATIN SMALL LETTER C
+#  0x64	      U+0x0064	LATIN SMALL LETTER D
+#  0x65	      U+0x0065	LATIN SMALL LETTER E
+#  0x66	      U+0x0066	LATIN SMALL LETTER F
+#  0x67	      U+0x0067	LATIN SMALL LETTER G
+#  0x68	      U+0x0068	LATIN SMALL LETTER H
+#  0x69	      U+0x0069	LATIN SMALL LETTER I
+#  0x6A	      U+0x006A	LATIN SMALL LETTER J
+#  0x6B	      U+0x006B	LATIN SMALL LETTER K
+#  0x6C	      U+0x006C	LATIN SMALL LETTER L
+#  0x6D	      U+0x006D	LATIN SMALL LETTER M
+#  0x6E	      U+0x006E	LATIN SMALL LETTER N
+#  0x6F	      U+0x006F	LATIN SMALL LETTER O
+#  0x70	      U+0x0070	LATIN SMALL LETTER P
+#  0x71	      U+0x0071	LATIN SMALL LETTER Q
+#  0x72	      U+0x0072	LATIN SMALL LETTER R
+#  0x73	      U+0x0073	LATIN SMALL LETTER S
+#  0x74	      U+0x0074	LATIN SMALL LETTER T
+#  0x75	      U+0x0075	LATIN SMALL LETTER U
+#  0x76	      U+0x0076	LATIN SMALL LETTER V
+#  0x77	      U+0x0077	LATIN SMALL LETTER W
+#  0x78	      U+0x0078	LATIN SMALL LETTER X
+#  0x79	      U+0x0079	LATIN SMALL LETTER Y
+#  0x7A	      U+0x007A	LATIN SMALL LETTER Z
+#  0x7B	      U+0x007B	LEFT CURLY BRACKET
+#  0x7C	      U+0x007C	VERTICAL LINE
+#  0x7D	      U+0x007D	RIGHT CURLY BRACKET
+#  0x7E	      U+0x007E	TILDE
+#  0x80	      U+0x00D7	MULTIPLICATION SIGN
+#  0x81	      U+0x00DD	LATIN CAPITAL LETTER Y WITH ACUTE
+#  0x82	      U+0x00F7	DIVISION SIGN
+#  0x83	      U+0x00FD	LATIN SMALL LETTER Y WITH ACUTE
+#  0xA0	      U+0x00A0	NO-BREAK SPACE
+#  0xA1	      U+0x00A1	INVERTED EXCLAMATION MARK
+#  0xA2	      U+0x00A2	CENT SIGN
+#  0xA3	      U+0x00A3	POUND SIGN
+#  0xA4	      U+0x00A8	DIAERESIS
+#  0xA5	      U+0x00A5	YEN SIGN
+#  0xA6	      U+0x00A6	BROKEN BAR
+#  0xA7	      U+0x00A7	SECTION SIGN
+#  0xA8	      U+0x00A4	CURRENCY SIGN
+#  0xA9	      U+0x00A9	COPYRIGHT SIGN
+#  0xAA	      U+0x00AA	FEMININE ORDINAL INDICATOR
+#  0xAB	      U+0x00AB	LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
+#  0xAC	      U+0x00AC	NOT SIGN
+#  0xAD	      U+0x00AD	SOFT HYPHEN
+#  0xAE	      U+0x00AE	REGISTERED SIGN
+#  0xAF	      U+0x00AF	MACRON
+#  0xB0	      U+0x00B0	DEGREE SIGN
+#  0xB1	      U+0x00B1	PLUS-MINUS SIGN
+#  0xB2	      U+0x00B2	SUPERSCRIPT TWO
+#  0xB3	      U+0x00B3	SUPERSCRIPT THREE
+#  0xB4	      U+0x00B4	ACUTE ACCENT
+#  0xB5	      U+0x00B5	MICRO SIGN
+#  0xB6	      U+0x00B6	PILCROW SIGN
+#  0xB7	      U+0x00B7	MIDDLE DOT
+#  0xB8	      U+0x00B8	CEDILLA
+#  0xB9	      U+0x00B9	SUPERSCRIPT ONE
+#  0xBA	      U+0x00BA	MASCULINE ORDINAL INDICATOR
+#  0xBB	      U+0x00BB	RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
+#  0xBC	      U+0x00BC	VULGAR FRACTION ONE QUARTER
+#  0xBD	      U+0x00BD	VULGAR FRACTION ONE HALF
+#  0xBE	      U+0x00BE	VULGAR FRACTION THREE QUARTERS
+#  0xBF	      U+0x00BF	INVERTED QUESTION MARK
+#  0xC0	      U+0x00C0	LATIN CAPITAL LETTER A WITH GRAVE
+#  0xC1	      U+0x00C1	LATIN CAPITAL LETTER A WITH ACUTE
+#  0xC2	      U+0x00C2	LATIN CAPITAL LETTER A WITH CIRCUMFLEX
+#  0xC3	      U+0x00C3	LATIN CAPITAL LETTER A WITH TILDE
+#  0xC4	      U+0x00C4	LATIN CAPITAL LETTER A WITH DIAERESIS
+#  0xC5	      U+0x00C5	LATIN CAPITAL LETTER A WITH RING ABOVE
+#  0xC6	      U+0x00C6	LATIN CAPITAL LETTER AE
+#  0xC7	      U+0x00C7	LATIN CAPITAL LETTER C WITH CEDILLA
+#  0xC8	      U+0x00C8	LATIN CAPITAL LETTER E WITH GRAVE
+#  0xC9	      U+0x00C9	LATIN CAPITAL LETTER E WITH ACUTE
+#  0xCA	      U+0x00CA	LATIN CAPITAL LETTER E WITH CIRCUMFLEX
+#  0xCB	      U+0x00CB	LATIN CAPITAL LETTER E WITH DIAERESIS
+#  0xCC	      U+0x00CC	LATIN CAPITAL LETTER I WITH GRAVE
+#  0xCD	      U+0x00CD	LATIN CAPITAL LETTER I WITH ACUTE
+#  0xCE	      U+0x00CE	LATIN CAPITAL LETTER I WITH CIRCUMFLEX
+#  0xCF	      U+0x00CF	LATIN CAPITAL LETTER I WITH DIAERESIS
+#  0xD0	      U+0x00D0	LATIN CAPITAL LETTER ETH
+#  0xD1	      U+0x00D1	LATIN CAPITAL LETTER N WITH TILDE
+#  0xD2	      U+0x00D2	LATIN CAPITAL LETTER O WITH GRAVE
+#  0xD3	      U+0x00D3	LATIN CAPITAL LETTER O WITH ACUTE
+#  0xD4	      U+0x00D4	LATIN CAPITAL LETTER O WITH CIRCUMFLEX
+#  0xD5	      U+0x00D5	LATIN CAPITAL LETTER O WITH TILDE
+#  0xD6	      U+0x00D6	LATIN CAPITAL LETTER O WITH DIAERESIS
+#  0xD7	      U+0x0152	LATIN CAPITAL LIGATURE OE
+#  0xD8	      U+0x00D8	LATIN CAPITAL LETTER O WITH STROKE
+#  0xD9	      U+0x00D9	LATIN CAPITAL LETTER U WITH GRAVE
+#  0xDA	      U+0x00DA	LATIN CAPITAL LETTER U WITH ACUTE
+#  0xDB	      U+0x00DB	LATIN CAPITAL LETTER U WITH CIRCUMFLEX
+#  0xDC	      U+0x00DC	LATIN CAPITAL LETTER U WITH DIAERESIS
+#  0xDD	      U+0x0178	LATIN CAPITAL LETTER Y WITH DIAERESIS
+#  0xDE	      U+0x00DE	LATIN CAPITAL LETTER THORN
+#  0xDF	      U+0x00DF	LATIN SMALL LETTER SHARP S
+#  0xE0	      U+0x00E0	LATIN SMALL LETTER A WITH GRAVE
+#  0xE1	      U+0x00E1	LATIN SMALL LETTER A WITH ACUTE
+#  0xE2	      U+0x00E2	LATIN SMALL LETTER A WITH CIRCUMFLEX
+#  0xE3	      U+0x00E3	LATIN SMALL LETTER A WITH TILDE
+#  0xE4	      U+0x00E4	LATIN SMALL LETTER A WITH DIAERESIS
+#  0xE5	      U+0x00E5	LATIN SMALL LETTER A WITH RING ABOVE
+#  0xE6	      U+0x00E6	LATIN SMALL LETTER AE
+#  0xE7	      U+0x00E7	LATIN SMALL LETTER C WITH CEDILLA
+#  0xE8	      U+0x00E8	LATIN SMALL LETTER E WITH GRAVE
+#  0xE9	      U+0x00E9	LATIN SMALL LETTER E WITH ACUTE
+#  0xEA	      U+0x00EA	LATIN SMALL LETTER E WITH CIRCUMFLEX
+#  0xEB	      U+0x00EB	LATIN SMALL LETTER E WITH DIAERESIS
+#  0xEC	      U+0x00EC	LATIN SMALL LETTER I WITH GRAVE
+#  0xED	      U+0x00ED	LATIN SMALL LETTER I WITH ACUTE
+#  0xEE	      U+0x00EE	LATIN SMALL LETTER I WITH CIRCUMFLEX
+#  0xEF	      U+0x00EF	LATIN SMALL LETTER I WITH DIAERESIS
+#  0xF0	      U+0x00F0	LATIN SMALL LETTER ETH
+#  0xF1	      U+0x00F1	LATIN SMALL LETTER N WITH TILDE
+#  0xF2	      U+0x00F2	LATIN SMALL LETTER O WITH GRAVE
+#  0xF3	      U+0x00F3	LATIN SMALL LETTER O WITH ACUTE
+#  0xF4	      U+0x00F4	LATIN SMALL LETTER O WITH CIRCUMFLEX
+#  0xF5	      U+0x00F5	LATIN SMALL LETTER O WITH TILDE
+#  0xF6	      U+0x00F6	LATIN SMALL LETTER O WITH DIAERESIS
+#  0xF7	      U+0x0153	LATIN SMALL LIGATURE OE
+#  0xF8	      U+0x00F8	LATIN SMALL LETTER O WITH STROKE
+#  0xF9	      U+0x00F9	LATIN SMALL LETTER U WITH GRAVE
+#  0xFA	      U+0x00FA	LATIN SMALL LETTER U WITH ACUTE
+#  0xFB	      U+0x00FB	LATIN SMALL LETTER U WITH CIRCUMFLEX
+#  0xFC	      U+0x00FC	LATIN SMALL LETTER U WITH DIAERESIS
+#  0xFD	      U+0x00FF	LATIN SMALL LETTER Y WITH DIAERESIS
+#  0xFE	      U+0x00FE	LATIN SMALL LETTER THORN
+#  0xFF	      U+0x00FF	LATIN SMALL LETTER Y WITH DIAERESIS
+#
+local WIN1253
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+
+    a0=a0,               a3=a3, a4=a8, a5=a5,        a7=a7,
+    a8=a4, a9=a9,        ab=ab, ac=ac, ad=ad, ae=ae
+    b0=b0, b1=b1, b2=b2, b3=b3,        b5=b5, b6=b6, b7=b7,
+                         bb=bb,        bd=bd
+end
+
+# PC737<-->NSCS
+#
+#
+local PC737
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+
+           f1=b1,                             f6=82,
+    f8=b0,        fa=b7,               fd=b2,        ff=a0  
+end
+
+
+# ISO88597<-->NSCS
+#
+#
+local ISO88597
+remote NSCS
+class THIRD
+
+begin
+    00=00, 01=01, 02=02, 03=03, 04=04, 05=05, 06=06, 07=07, # null
+    08=08, 09=09, 0a=0a, 0b=0b, 0c=0c, 0d=0d, 0e=0e, 0f=0f, # \b\t\n\v\f\r
+    10=10, 11=11, 12=12, 13=13, 14=14, 15=15, 16=16, 17=17,
+    18=18, 19=19, 1a=1a, 1b=1b, 1c=1c, 1d=1d, 1e=1e, 1f=1f,
+    20=20, 21=21, 22=22, 23=23, 24=24, 25=25, 26=26, 27=27, #  !@#$%&'
+    28=28, 29=29, 2a=2a, 2b=2b, 2c=2c, 2d=2d, 2e=2e, 2f=2f, # ()*+,-./
+    30=30, 31=31, 32=32, 33=33, 34=34, 35=35, 36=36, 37=37, # 01234567
+    38=38, 39=39, 3a=3a, 3b=3b, 3c=3c, 3d=3d, 3e=3e, 3f=3f, # 89:;<=>?
+    40=40, 41=41, 42=42, 43=43, 44=44, 45=45, 46=46, 47=47, # @ABCDEFG
+    48=48, 49=49, 4a=4a, 4b=4b, 4c=4c, 4d=4d, 4e=4e, 4f=4f, # HIJKLMNO
+    50=50, 51=51, 52=52, 53=53, 54=54, 55=55, 56=56, 57=57, # PQRSTUVW
+    58=58, 59=59, 5a=5a, 5b=5b, 5c=5c, 5d=5d, 5e=5e, 5f=5f, # XYZ[\]^_
+    60=60, 61=61, 62=62, 63=63, 64=64, 65=65, 66=66, 67=67, # `abcdefg
+    68=68, 69=69, 6a=6a, 6b=6b, 6c=6c, 6d=6d, 6e=6e, 6f=6f, # hijklmno
+    70=70, 71=71, 72=72, 73=73, 74=74, 75=75, 76=76, 77=77, # pqrstuvw
+    78=78, 79=79, 7a=7a, 7b=7b, 7c=7c, 7d=7d, 7e=7e,        # xyz{|}~
+
+    a0=a0,               a3=a3,               a6=a6, a7=a7,
+    a8=a4, a9=a9,        ab=ab, ac=ac, ad=ad, 
+    b0=b0, b1=b1, b2=b2, b3=b3,                      b7=b7,
+                         bb=bb,        bd=bd
+end
+
+# include "japanese.xlt"
+
+# include "chineset.xlt"
+
+# include "chineses.xlt"
+

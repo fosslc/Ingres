@@ -1,0 +1,602 @@
+/*
+**  Copyright (c) 1992 Ingres Corporation
+**
+**  Name: crparse.y -- YACC grammar for the configuration rule parser
+**
+**  Description:
+**	Parses a list of files containing INGRES configuration rule
+**	specifications and builds rule trees which are used by the
+**	rule evaluation code.
+**
+**  History:
+**	14-dec-92 (tyler)
+**		Created.
+**      29-jan-93 (sweeney)
+**              undef abs() for usl_us5 - its yacc generates a #include
+**              of stdlib.h, which contains a forward reference for
+**              abs() which is getting macroexpanded into garbage.
+**	21-jun-93 (tyler)
+**		Needed to include <pm.h>, <lo.h>, and <er.h> in order
+**		to switch to new interface for multiple context PM
+**		functions.
+**	04-aug-93 (tyler)
+**		"reference" member now set to TRUE in CR_NODE structures
+**		for symbols and patterns referenced by others.
+**      30-aug-93 (huffman)
+**              Added <me.h>
+**	20-sep-93 (tyler)
+**		Cast arguments 1 and 3 to MEcopy() to PTR.
+**	21-nov-1994 (andyw)
+**	    Solaris 2.4/Compiler 3.00 port fails with syntax error in
+**	    /usr/include/stdlib.h where the macro abs is re-defined.
+**	    therefore, changed to undef as we also define this in the CL.
+**	31-oct-95 (nick)
+**		Changed some constants which have changed name in cr.h.
+**	27-nov-1995 (canor01)
+**		Added EXEC_TEXT_STR type.
+**	26-feb-1996 (canor01)
+**		Added DIRECTORY and FILE constraint types.
+**	29-jul-1997 (walro03)
+**		Undefined abs() for Tandem NonStop (ts2_us5) like other
+**		platforms.
+**      28-aug-1997 (musro02)
+**              Undef abs for sqs_ptx
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	20-aug-1999 (popri01)
+**	    Eliminate "undef abs" for Unixware (usl_us5).
+**	    It's now done in compat hdr.
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	16-March-2004 (gorvi01) SRS section 3.1.30
+**	    Added grammar for SIGNED_INT and DECIMAL type.
+**      7-oct-2004 (thaju02)
+**          Added grammar for SIZETYPE type.
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	24-Nov-2009 (frima01) Bug 122490
+**	    Added include of pc.h and eqscan.h to eliminate gcc 4.3 warnings.
+*/
+
+%{
+
+# include <compat.h>
+# include <si.h>
+# include <me.h>
+# include <st.h>
+# include <cm.h>
+# include <er.h>
+# include <lo.h>
+# include <pm.h>
+# include <pc.h>
+# include <eqscan.h>
+# include "cr.h"
+
+/*
+** yacc on usl_us5 is about to spit out a #include for <stdlib.h>
+** which has a prototyped forward reference for abs(int).
+** Because we define abs as a macro in compat.h, this forward
+** ref gets macroexpanded into "extern int ((int) > 0? (int) : -(int))"
+** which is clearly garbage, and won't compile. So stomp on the macro
+*/
+# ifdef sqs_ptx
+# undef abs
+# endif
+
+# ifdef sparc_sol
+# undef abs
+# endif
+
+# ifdef ts2_us5
+# undef abs
+# endif
+
+STATUS IIUGhfHtabFind();
+STATUS IIUGheHtabEnter();
+
+GLOBALREF PTR tab;	/* hash table */
+
+/*
+** Converts a PATTERN to a SYMBOL by replacing instances of "%" with "$". 
+*/
+static char *
+pattern_to_symbol( char *pattern )
+{
+	char *c, *symbol = STalloc( pattern );
+	
+	for( c = symbol; *c != EOS; CMnext( c ) )
+	{
+		if( *c == '%' )
+			*c = '$';
+	}
+	return( symbol );
+}
+
+
+%}
+
+%union
+{
+	f8	real;
+	char	*string;
+	i4	integer;
+	CR_NODE	*node;
+}
+
+%token <string> STR_CON
+%token <string> EXEC_TEXT
+%token <string> EXEC_TEXT_STR
+%token <string> SYMBOL
+%token <string> PATTERN
+%token <string> '+' 
+%token <string> '-' 
+%token <string> '*' 
+%token <string> '/' 
+%token <string> COMPARE_OP
+%token <string> LOGIC_OP
+
+%token <real> NUM_CON 
+%token <real> BOOL_CON 
+%token <real> REQUIRES
+%token <real> VALID
+%token <real> MIN
+%token <real> MAX
+%token <real> PRIME
+%token <real> POWER2
+%token <real> IF
+%token <real> ELSE
+%token <real> ELSEIF
+%token <real> ENDIF
+%token <real> UNDEFINED
+%token <real> DIRECTORY
+%token <real> FILESPEC
+%token <real> SIGNED_INT
+%token <real> DECIMAL
+%token <real> SIZETYPE
+
+%token <integer> SUM
+
+%type <node> expr 
+%type <node> else_if 
+%type <node> val_expr 
+%type <node> num_expr 
+%type <node> term 
+%type <node> factor 
+%type <node> bool_expr 
+%type <node> expr_list 
+%type <node> constraint 
+%type <node> constraint_list 
+%type <node> predicate 
+
+%left LOGIC_OP 
+
+%%
+
+rule_spec:
+
+	/* empty */
+
+	| rule_spec SYMBOL ':' predicate ';'
+	{
+		CR_NODE *s;
+
+		/* check hash table for previously referenced symbol */
+		if( IIUGhfHtabFind( tab, $2, (PTR *) &s ) == FAIL )
+		{
+			/* no symbol found - create hash table entry */
+			s = CRnode();
+			s->symbol = $2;
+			if( IIUGheHtabEnter( tab, $2, (PTR) s ) == FAIL )
+			{
+				SIfprintf( stderr,
+					ERx( "\n\nIIUGheHtabEnter failed.\n\n" ) );
+				PCexit( FAIL );
+			}
+		}
+		/* copy predicate to hash table entry */
+		if( $4 != NULL )
+			MEcopy( (PTR) $4, sizeof( CR_NODE ), (PTR) s ); 
+		/* restore symbol name (not contained in predicate) */
+		s->symbol = $2;
+	}
+	;
+
+predicate:
+
+	expr constraint_list 
+	{
+		$1->constraint= $2;
+		$$ = $1;
+	}
+	;
+
+expr:
+
+	val_expr { $$ = $1; }
+
+	| IF '(' bool_expr ')' expr else_if	
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_COND1;
+		n->child0 = $3;
+		n->child1 = CRnode();
+		n->child1->type = ND_COND2;
+		n->child1->child0 = $5;
+		n->child1->child1 = $6;
+		$$ = n;
+	}
+	;
+
+else_if:
+
+	ELSE expr ENDIF { $$ = $2; }
+
+	| ELSEIF '(' bool_expr ')' expr else_if
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_COND1;
+		n->child0 = $3;
+		n->child1 = CRnode();
+		n->child1->type = ND_COND2;
+		n->child1->child0 = $5;
+		n->child1->child1 = $6;
+		$$ = n;
+	}
+	;
+
+val_expr:
+
+ 	UNDEFINED
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_UNDEFINED;
+		$$ = n;
+	}
+
+	| num_expr { $$ = $1; }
+
+	| STR_CON
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_STR_VAL;
+		n->str_val = $1;
+		$$ = n;
+	}
+
+        | BOOL_CON
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_BOOL_VAL;
+		n->num_val = $1;
+		$$ = n;
+	}
+
+	| EXEC_TEXT 
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_EXEC_TEXT;
+		n->str_val = $1;
+		$$ = n;
+	}
+
+	| EXEC_TEXT_STR
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_EXEC_TEXT_STR;
+		n->str_val = $1;
+		$$ = n;
+	}
+	;
+
+num_expr:
+
+	term { $$ = $1; }
+
+	| num_expr '+' term
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_MATH_OP;
+
+		n->str_val = $2;
+		n->child0 = $1; 
+		n->child1 = $3;
+		$$ = n;
+	}
+
+	| num_expr '-' term
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_MATH_OP;
+
+		n->str_val = $2;
+		n->child0 = $1; 
+		n->child1 = $3;
+		$$ = n;
+	}
+	;
+
+term:
+
+	factor { $$ = $1; }
+
+	| term '*' factor
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_MATH_OP;
+
+		n->str_val = $2;
+		n->child0 = $1; 
+		n->child1 = $3;
+		$$ = n;
+	}
+
+	| term '/' factor
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_MATH_OP;
+
+		n->str_val = $2;
+		n->child0 = $1; 
+		n->child1 = $3;
+		$$ = n;
+	}
+	;
+
+factor:
+
+	SYMBOL 
+	{
+		CR_NODE *s;
+		CR_NODE *n = CRnode();	
+
+		/* check hash table for already referenced symbol */
+		if( IIUGhfHtabFind( tab, $1, (PTR *) &s ) == FAIL )
+		{
+			/* no symbol found - forward reference */
+			s = CRnode();
+			s->symbol = $1;
+			if( IIUGheHtabEnter( tab, $1, (PTR) s ) == FAIL )
+			{
+				SIfprintf( stderr,
+					ERx( "\n\nIIUGheHtabEnter failed.\n\n" ) );
+				PCexit( FAIL );
+			}
+		}
+		n->type = ND_SYM_VAL;
+		n->sym_val = s;
+		n->sym_val->reference = TRUE;
+		$$ = n;
+	}
+
+	| NUM_CON 
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_NUM_VAL;
+		n->num_val = $1;
+		$$ = n;
+	}
+
+
+	| '(' num_expr ')' { $$ = $2; }
+
+	| SUM '(' PATTERN ')'
+	{
+		CR_NODE *s;
+		CR_NODE *n = CRnode();
+
+		switch( $1 )
+		{
+			case SUM:
+			{
+				CR_NODE *s;
+				char *p = pattern_to_symbol( $3 );
+
+				/*
+				** If the pattern/symbol is not found,
+				** don't create it in this case, since
+				** the SUM() function doesn't imply
+				** existence. 
+				*/
+				if( IIUGhfHtabFind( tab, p, (PTR *) &s )
+					== OK )
+				{
+					s->reference = TRUE;
+				}
+				else
+					MEfree( p );
+				n->reference = TRUE;
+				n->type = ND_SUM; 
+				n->str_val = $3;
+				break;
+			}
+		}
+		n->symbol = $3;
+		$$ = n;
+	}
+	;
+
+bool_expr:
+
+	'(' bool_expr ')' { $$ = $2; }
+
+	| bool_expr LOGIC_OP bool_expr 
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_LOGIC_OP;	
+		n->str_val = $2;
+		n->child0 = $1;
+		n->child1 = $3;
+		$$ = n;
+	}
+
+	| val_expr COMPARE_OP val_expr
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_COMPARE_OP;	
+		n->str_val = $2;
+		n->child0 = $1;
+		n->child1 = $3;
+		$$ = n;
+	}
+	;
+
+constraint_list:
+
+	/* emtpy */ { $$ = NULL; }
+
+	| constraint_list ',' constraint
+	{		
+		$3->constraint = $1;
+		$$ = $3;
+	}
+	;
+
+constraint:
+
+	MIN '=' val_expr
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_MIN;
+		n->child0 = $3;
+		$$ = n;
+	}
+
+	| MAX '=' val_expr
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_MAX;
+		n->child0 = $3;
+		$$ = n;
+	}
+
+	| VALID '=' '{' expr_list '}'
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_SET_MEMBER;
+		n->list = $4;
+		$$ = n;
+	}
+
+	| PRIME
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_PRIME;
+		$$ = n;
+	}
+
+	| POWER2
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_POWER2;
+		$$ = n;
+	}
+
+	| SIGNED_INT
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_SIGNED_INT;
+		$$ = n;
+	}
+
+	| DECIMAL
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_DECIMAL;
+		$$ = n;
+	}
+
+        | SIZETYPE
+        {
+                CR_NODE *n = CRnode();
+
+                n->type = ND_SIZETYPE;
+                $$ = n;
+        }
+
+	| REQUIRES SYMBOL
+	{
+		CR_NODE *n = CRnode();
+
+		n->reference = TRUE;
+		n->type = ND_REQUIRES;
+		n->str_val = $2;
+		$$ = n;
+	}
+
+	| REQUIRES PATTERN
+	{
+		CR_NODE *n = CRnode(), *s;
+		char *p = pattern_to_symbol( $2 );
+
+		/*
+		** If the pattern/symbol is not found,
+		** don't create it in this case, since
+		** the SUM() function doesn't imply
+		** existence. 
+		*/
+		if( IIUGhfHtabFind( tab, p, (PTR *) &s )
+			== OK )
+		{
+			s->reference = TRUE;
+		}
+		else
+			MEfree( p );
+		n->reference = TRUE;
+		n->type = ND_REQUIRES;
+		n->str_val = $2;
+		$$ = n;
+	}
+
+	| DIRECTORY
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_DIRECTORY;
+		$$ = n;
+	}
+
+	| FILESPEC
+	{
+		CR_NODE *n = CRnode();
+
+		n->type = ND_FILESPEC;
+		$$ = n;
+	}
+
+	; 
+
+expr_list:
+
+	expr { $$ = $1; }
+
+	| expr_list ',' expr
+	{
+		$3->list = $1;	
+		$$ = $3;
+	}
+	;	
+
+%%
+

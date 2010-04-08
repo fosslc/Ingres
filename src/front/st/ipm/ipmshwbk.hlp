@@ -1,0 +1,188 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Blocking Lock Display screen.  This screen helps locate
+bottleneck areas in the database.  If there are tables where concurrent
+access is not occurring (i.e.  much waiting is occurring because a database
+session is performing table level locking or has page locks which escalate
+to table level locks), "Block_Info" can find the cause (the "Block_Info"
+menuitem is found on the Lock List Display screen).  It can find the lock
+that is granted on a resource for which another lock is waiting.
+
+For instance, suppose there is a lock list which is blocked (waiting
+or converting), "Block_Info" finds the blocking lock.  It could either
+be a granted page lock on the same page or a granted table lock on the
+table which contains the page (the granted lock is known as a "blocking
+lock" because it is blocking access to a resource).  All locks which are
+found are displayed in the scrolling area in the bottom area of the popup.
+The upper portion of the popup contains information on the selected resource.
+The first lock in the scrolling area is the blocking lock.  All other
+(waiting) locks are displayed below it.
+
+One way to look for concurrency bottlenecks is to run IPM on the desired
+database.  Once the Lock List Display screen is displayed, <TAB> over
+to the "Status" column.  Select the "Find" menuitem.  In response to the
+"String to search for" prompt, enter "WAIT".  If a waiting lock list is
+found, select the "Block_Info" menuitem.  If the blocking lock is in the
+Ingres locking system in the current installation on the machine where
+IPM is running, "Block_Info" will find it.
+
+Information on this screen includes:
+
+Resource ID    The resource block identifier of the resource that the blocking
+               lock is held on.
+
+Resource Type  The type of the resource.  Valid types are:
+
+               database     Any users connected to database will hold a
+                            database lock on that database.
+
+               table        Any user in a table will hold a table lock on
+                            that table.
+
+               page         Any user accessing a page in a table will hold a
+                            page lock on that page.
+
+               row          This lock type is held on a user table row if  
+                            row level locking is enabled. It is also used    
+                            for certain system catalog operations.
+
+               createtable  Any user creating a table will hold a createtable
+                            lock on that table.
+
+               svpage       Each page touched by a server on behalf of a
+                            session in that server will hold a server page
+                            lock.
+
+               extend       This lock type is used while extending (adding a
+                            new page to) a file.  It prevents two processes
+                            from trying to add pages to the same file at
+                            the same time.
+
+               config       This lock type is used when accessing a database
+                            config file.  The config file holds database
+                            configuration information.
+
+               dbtblid      This lock type is used to manage temp-table
+                            id's.  This does not actually lock anything, but
+                            the lock value is used to store the next table id
+                            to use for temp tables.
+
+               svdatabase   Each database opened by a server will hold
+                            a server database lock on it.
+
+               svtable      Each table touched by a session in a server will
+                            hold a server table resource lock.
+
+               event        This lock type is used by Ingres processes that
+                            use the locking system as a means to signal
+                            events.  Therefore it does not actually lock
+                            anything.
+
+               control      This is a table control lock.  It is requested in
+                            order to perform MODIFY, INDEX, RELOCATE,
+                            DESTROY, and CREATE SQL commands.  This lock is
+                            also held by sessions reading a table with
+                            readlock=nolock set.
+
+               journal      This lock type is used when accessing database
+                            journal files.  It is held only by RCP (Recovery
+                            process) and ACP (Archiver process).
+
+               opendb       Each open database in a server holds an open
+                            database resource lock.
+
+               checkpoint   Each database which has online backup running
+                            holds a checkpoint resource lock on it.
+
+               ckpcluster   This lock type is the same as checkpoint but is
+                            for VAXcluster installations of Ingres.
+
+               buffermgr    Each multiserver data buffer holds a buffer
+                            manager lock.
+
+               bufmgrdb     This is a buffer manager database lock.  It is
+                            used to determine the validity of cache
+                            contents.  When a database is opened by a server,
+                            the value in this lock is used to determine if
+                            the cached information for the database is
+                            valid.  Therefore it doesn't actually lock
+                            anything.
+
+               bufmgrtable  This lock type is the same as the buffer manager
+                            database lock, but operates on tables rather than
+                            databases.
+
+               syscontrol   This lock type is used in conjunction with user
+                            defined abstract datatypes.
+
+               eventcontrol This lock type is used in conjunction with event
+                            signaling.
+
+               ckptxn       This lock type is used to coordinate online
+                            checkpoints of a database.  All transactions which
+                            have updated the database have this lock.
+
+               audit        This lock type is used in conjunction with the
+                            auditing facility.
+
+               phpage       This lock type is used when row locking to get
+                            shared/exclusive control of page.
+ 
+               value        This lock type is used to lock a key value for 
+                            duplicate checking and phantom protection.
+
+Requested      The mode that this resource is requested in.  The possible
+               modes are:
+
+               S     Shared - used when reading.
+
+               IS    Intended shared - for table resource types, this means
+                     that there are shared page resources in this table.
+
+               X     Exclusive - used when writing.
+
+               IX    Intended exclusive - same as intended shared except pages
+                     are exclusively locked.
+
+               N     Null - used to keep a lock without causing locking
+                     contention.  It's less expensive to convert a lock than
+                     to drop and request a new lock.
+
+               SIX   Shared with intent to update.  Used with ESQL cursors.
+
+Convert        The mode that this resource is converting to.  See the Mode
+               list above for Requested.
+
+DB Name        The name of the database.
+
+Table          The table name this resource belongs to.  If the resource is
+               not a table or page resource type, this field will not appear.
+
+Page           The page number of this resource.  If the resource is
+               not a page resource type, this field will not appear.
+
+The scrolling area contains the following columns:
+
+ID             The internal lock identifier for this lock.
+
+List ID        The internal lock list identifier that this lock belongs to.
+
+Session        The name of the session that this lock belongs to.
+
+RQ             The mode the lock was requested in.  The possible modes
+               are listed above under "Requested".
+
+State          Current state of lock (GR = granted, WT = waiting)
+
+If the lock that is being searched for is on another node in the cluster
+(VAXcluster only), that lock may not be visible on the current node.
+Run IPM on the other nodes to find them.
+
+The following menuitems are available:
+
+Find           Searches a column in a scrolling region (tablefield).  If
+               searching a text column, "Find" will locate all occurrences
+               wherever they are in the column.
+
+Help           Displays this screen.
+
+End            Returns to the Lock List Display screen.

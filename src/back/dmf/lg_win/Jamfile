@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!dmf!lg_win
+#
+
+SubDir ING_SRC back dmf lg_win ;
+
+IISUBSYS back dmf lg_win ;
+
+
+IIBINEXE rcpstat  : rcpstwrp.c ;
+IINEEDLIBS rcpstat  :  COMPATLIB ;
+

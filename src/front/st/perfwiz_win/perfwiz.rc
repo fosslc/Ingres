@@ -1,0 +1,499 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\perfwiz.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\perfwiz.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_INTRO_PAGE DIALOGEX 0, 0, 410, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    CONTROL         "&Add/remove personal Ingres counter groups",
+                    IDC_CHECK_GROUP_MODIFY,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,124,58,155,10
+    CONTROL         "A&dd/modify personal Ingres counter groups",
+                    IDC_CHECK_PERSONAL,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,130,82,150,10
+    CONTROL         "&Remove all personal Ingres counter groups",
+                    IDC_CHECK_REMOVE,"Button",BS_AUTORADIOBUTTON | WS_GROUP,
+                    130,95,150,10
+    CONTROL         "&Create a Microsoft Performance Monitor chart file",
+                    IDC_RADIO_CREATE,"Button",BS_AUTORADIOBUTTON | WS_GROUP,
+                    130,146,218,10
+    CONTROL         "&Use an existing Microsoft Performance Monitor Chart file",
+                    IDC_RADIO_USE_EXISTING,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,130,162,218,10
+    COMBOBOX        IDC_CHARTLOC_COMBO,142,175,161,40,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Browse...",IDC_BUTTON_BROWSE,307,175,40,12
+    LTEXT           "heading2",IDC_INTRO_HEADING2,124,123,285,8
+    LTEXT           "101",IDC_IMAGE,0,14,106,192,NOT WS_VISIBLE
+    LTEXT           "heading",IDC_INTRO_HEADING,124,14,285,16
+    LTEXT           "static",IDC_CHECK_INTRO,124,38,285,16
+    GROUPBOX        "Personal group options",IDC_GROUP_PERSONAL,124,71,161,
+                    39
+    GROUPBOX        "Wizard Options",IDC_WIZARD_GROUP,124,135,230,58
+END
+
+IDD_SERVER_PAGE DIALOGEX 0, 0, 410, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT           "101",IDC_IMAGE,0,14,106,192,NOT WS_VISIBLE
+    LTEXT           "Please choose an Ingres server to profile:",
+                    IDC_SERVER_HEADING,117,14,215,10
+    CONTROL         "Tree1",IDC_TREE_SERVERS,"SysTreeView32",TVS_HASBUTTONS | 
+                    TVS_HASLINES | TVS_LINESATROOT | TVS_DISABLEDRAGDROP | 
+                    TVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,117,28,185,
+                    142,WS_EX_CLIENTEDGE
+    GROUPBOX        "Ingres Server:",IDC_SERVER_COMBO,117,175,185,28
+    LTEXT           "",IDC_SERVER_ID,117,188,174,8
+    PUSHBUTTON      "&Refresh All",IDC_BUTTON_REFRESH,336,92,50,14
+END
+
+IDD_FINAL_PAGE DIALOGEX 0, 0, 410, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "101",IDC_IMAGE,0,14,106,192,NOT WS_VISIBLE
+    LTEXT           "Please select the counters that you would like to graph with the Microsoft Performance Monitor. Upon clicking the 'Finish' button, the Microsoft Perfoemance Monitor will come up with the counters that you have chosen.",
+                    IDC_FINAL_HEADING,117,14,292,24
+    COMBOBOX        IDC_OBJECTS_COMBO,117,74,150,112,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Ingres &Objects:",IDC_INGRES_OBJECT,117,64,48,8
+    CONTROL         "List1",IDC_COUNTER_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,117,92,150,93
+    LTEXT           "Counter Description:",IDC_HELP_DESC2,273,92,65,8
+    EDITTEXT        IDC_COUNTER_DESC,273,103,136,82,ES_MULTILINE | 
+                    ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL
+    LTEXT           "Chart Name:",IDC_CHART_STRING,117,47,45,8
+    PUSHBUTTON      "&Select All",IDC_BUTTON_SELECT,117,188,50,14
+    PUSHBUTTON      "&Deselect All",IDC_BUTTON_DESELECT,180,188,50,14
+    COMBOBOX        IDC_CHARTLOC_COMBO,167,45,161,50,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Browse...",IDC_BUTTON_BROWSE2,332,45,40,12
+END
+
+IDD_PERSONAL_GROUP_PAGE DIALOGEX 0, 0, 410, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT           "&Please provide a list of personal Ingres counter groups that you would like to create:",
+                    IDC_PERSONAL_GROUP_HEADING,120,14,289,16
+    CONTROL         "List1",IDC_PERSONAL_GROUP_LIST,"SysListView32",
+                    LVS_REPORT | LVS_SINGLESEL | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,120,45,115,158,WS_EX_STATICEDGE
+    PUSHBUTTON      "&Add Group...",IDC_BUTTON_ADD_GROUP,289,78,85,14
+    PUSHBUTTON      "&Edit Group Attributes...",IDC_BUTTON_EDIT_GROUP,289,
+                    121,85,14
+    PUSHBUTTON      "&Delete Group",IDC_BUTTON_DELETE_GROUP,289,164,85,14
+    LTEXT           "101",IDC_IMAGE,0,14,106,192,NOT WS_VISIBLE
+END
+
+IDD_EDIT_OBJ_DIALOG DIALOG  0, 0, 210, 110
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Personal Group &Name: ",IDC_EDIT_OBJ_NAME,7,10,74,8
+    EDITTEXT        IDC_EDIT_NAME,83,8,120,12,ES_AUTOHSCROLL
+    LTEXT           "Personal Group &Description:",IDC_EDIT_OBJ_DESC,7,25,89,
+                    8
+    EDITTEXT        IDC_EDIT_DESCRIPTION,7,36,196,47,ES_MULTILINE | 
+                    ES_AUTOVSCROLL | WS_VSCROLL
+    DEFPUSHBUTTON   "&OK",IDOK,22,90,50,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,134,90,50,14
+END
+
+IDD_PERSONAL_COUNTER_PAGE DIALOGEX 0, 0, 410, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "&Personal Group Name: ",IDC_PERSONAL_GROUP_NAME,119,33,
+                    74,8
+    COMBOBOX        IDC_COMBO_GROUPS,196,30,126,50,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Ingres &Object:",IDC_INGRES_OBJECT,124,60,127,8
+    COMBOBOX        IDC_COMBO_OBJECTS,124,71,127,126,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "List1",IDC_COUNTER_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_OWNERDRAWFIXED | WS_BORDER | WS_TABSTOP,124,95,127,
+                    102
+    PUSHBUTTON      "--&>",IDC_BUTTON_ADD,256,128,16,14
+    CONTROL         "List3",IDC_PERSONAL_COUNTER_LIST,"SysListView32",
+                    LVS_REPORT | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,277,60,127,137
+    PUSHBUTTON      "&<--",IDC_BUTTON_DELETE,256,164,16,14
+    GROUPBOX        "Personal Group Counter Selection",
+                    IDC_PERSONAL_COUNTER_COMBO,119,50,290,153
+    LTEXT           "Please choose, for each personal group, a list of Ingres Server counters:",
+                    IDC_PERSONAL_COUNTER_HEADING,119,14,278,16
+    LTEXT           "101",IDC_IMAGE,0,14,106,192,NOT WS_VISIBLE
+END
+
+IDD_PERSONAL_HELP_PAGE DIALOGEX 0, 0, 410, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "Personal &Group Name:",IDC_PERSONAL_GROUP_NAME,117,35,
+                    72,8
+    COMBOBOX        IDC_PG_LIST,193,32,126,40,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    GROUPBOX        "&Personal Group Counters",IDC_PERSONAL_HELP_COMBO,117,
+                    50,292,154
+    CONTROL         "List1",IDC_PC_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,122,60,137,138
+    LTEXT           "&Counter Help Description:",IDC_HELP_DESC,264,60,82,8
+    EDITTEXT        IDC_EDIT_HELP,264,71,140,80,ES_MULTILINE | 
+                    ES_AUTOVSCROLL | WS_VSCROLL
+    PUSHBUTTON      "&Save Help Description",IDC_BUTTON_SAVE_HELP,264,154,80,
+                    14
+    PUSHBUTTON      "&Reset Counter Attributes To Default",IDC_BUTTON_RESET,
+                    264,184,120,14
+    LTEXT           "You may now edit the personal counters chosen for each personal counter group:",
+                    IDC_PERSONAL_HELP_HEADING,117,14,278,9
+    LTEXT           "101",IDC_IMAGE,0,14,106,192,NOT WS_VISIBLE
+END
+
+IDD_WAIT_DIALOG DIALOGEX 0, 0, 210, 57
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_TRANSPARENT | 
+                    ACS_AUTOPLAY,11,18,20,20
+    LTEXT           "Static",IDC_WAIT_HEADING,57,24,150,8
+END
+
+IDD_COUNTER_CREATION_PAGE DIALOGEX 0, 0, 410, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT           "You now have the option of creating/editing/removing personal counters for each personal counter group. Click the ""Next"" button of you do not want to create/edit/remove any personal counters.",
+                    IDC_COUNTER_CREATION_HEADING,120,14,289,24
+    CONTROL         "List1",IDC_PERSONAL_COUNTER_LIST,"SysListView32",
+                    LVS_REPORT | LVS_SINGLESEL | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,120,78,125,125,WS_EX_STATICEDGE
+    PUSHBUTTON      "&Create Counter...",IDC_BUTTON_CREATE_COUNTER,289,94,85,
+                    14
+    PUSHBUTTON      "&Edit Counter Attributes...",IDC_BUTTON_EDIT_COUNTER,
+                    289,137,85,14
+    PUSHBUTTON      "&Delete Counter",IDC_BUTTON_DELETE_COUNTER,289,180,85,
+                    14
+    LTEXT           "101",IDC_IMAGE,0,14,106,192,NOT WS_VISIBLE
+    LTEXT           "&Personal Group Name: ",IDC_PERSONAL_GROUP_NAME,120,47,
+                    74,8
+    COMBOBOX        IDC_COMBO_GROUPS,120,57,125,146,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_EDIT_COUNTER_DIALOG DIALOG  0, 0, 222, 200
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Performance Monitor Wizard"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Personal Counter &Name: ",IDC_EDIT_COUNTER_NAME,7,7,175,
+                    8
+    EDITTEXT        IDC_EDIT_NAME,7,17,175,12,ES_AUTOHSCROLL
+    LTEXT           "Personal Counter &Scale (Power of 10 by which to scale chart line):",
+                    IDC_COUNTER_SCALE,7,34,208,8
+    EDITTEXT        IDC_EDIT_SCALE,7,44,50,12,ES_AUTOHSCROLL
+    LTEXT           "&Database Name (<vnode>::<database> or <database>):",
+                    IDC_DB_NAME,7,61,177,8
+    EDITTEXT        IDC_EDIT_DBNAME,7,71,175,12,ES_AUTOHSCROLL
+    LTEXT           "Database &Query:",IDC_COUNTER_QUERY,7,88,208,8
+    EDITTEXT        IDC_EDIT_QUERY,7,98,208,30,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    WS_VSCROLL
+    LTEXT           "Personal Counter D&escription:",IDC_EDIT_COUNTER_DESC,7,
+                    132,208,8
+    EDITTEXT        IDC_EDIT_DESCRIPTION,7,143,208,30,ES_MULTILINE | 
+                    ES_AUTOVSCROLL | WS_VSCROLL
+    DEFPUSHBUTTON   "&OK",IDOK,29,180,50,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,141,180,50,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_SPLASH256           BITMAP                  "res\\Splash01.bmp"
+101                     BITMAP                  "res\\Block01.bmp"
+IDB_NODETREE            BITMAP                  "res\\nodetree.bmp"
+IDB_LV_STATEIMAGE       BITMAP                  "res\\LV_StateImage.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_CLOCK_AVI           AVI                     "res\\clock.avi"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_INGRES_DOWN         "The Ingres installation is not started.\nWould you like to start it now?"
+    IDS_TITLE               "Ingres Performance Monitor Wizard"
+    IDS_NO_SERVERS          "There are no registered, profilable Ingres servers on this vnode."
+    IDS_NO_SERVER_SELECTED  "You must choose an Ingres server to profile."
+    IDS_CANNOT_CONNECT      "Cannot retrieve information from this vnode. Please check to see that the\nlocal Ingres DBMS server is properly started. If this is a remote vnode, please\ncheck that the Communications Server is up and running both locally and\non the remote Ingres installation, and that the Ingres DBMS server is\nrunning on the remote Ingres installation."
+    IDS_SQL_ERROR           "Error in retrieving information from vnode. SQL error = %d."
+    IDS_PGLIST_COLUMN       "Personal Groups"
+    IDS_DUPLICATE_GROUP     "The name of this group belongs to another personal group\nthat was previously added. Please choose another name."
+    IDS_NEED_INPUT_GROUP    "You must proved both a name and description for your personal group."
+    IDS_NO_GROUPS           "No personal groups have been added. Please\nadd at least one personal group to proceed."
+    IDS_PERSLIST_COLNAME    "Personal Group Counters"
+    IDS_NOCTRS_SELECTED     "You have no counters selected for group '%s'. Please\nselect at least one counter for this group."
+    IDS_PCLIST_COLUMN       "Personal Group Counters"
+    IDS_UPDATE_HELP         "You have updated the help text for this\ncounter. Do you want to save your changes?"
+    IDS_COUNTLIST_COLNAME   "Ingres Object Counters"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_READINIT_WAIT       "Obtaining Ingres counter information..."
+    IDS_GETVNODE_WAIT       "Obtaining list of Ingres virtual nodes..."
+    IDS_INTRO_HEADING       "This wizard will help you set up the Microsoft Performance Monitor for charting Ingres-specific object counters."
+    IDS_CHECK_INTRO         "Check the box below if you wish to create and/or modify personal Ingres counter groups for the Microsoft Performance Monitor."
+    IDS_CHECK_PERSONAL      "A&dd/modify personal Ingres counter groups"
+    IDS_PERSONAL_GROUP_HEADING 
+                            "&Please provide a list of personal Ingres counter groups that you would like to create:"
+    IDS_BUTTON_ADD_GROUP    "&Add Group..."
+    IDS_BUTTON_EDIT_GROUP   "&Edit Group Attributes..."
+    IDS_BUTTON_DELETE_GROUP "&Delete Group"
+    IDS_EDIT_OBJ_NAME       "Personal Group &Name: "
+    IDS_EDIT_OBJ_DESC       "Personal Group &Description:"
+    IDS_PERSONAL_COUNTER_HEADING 
+                            "Please choose, for each personal group, a list of Ingres Server counters."
+    IDS_PERSONAL_GROUP_NAME "Personal &Group Name: "
+    IDS_PERSONAL_COUNTER_COMBO "Personal Group Counter Selection"
+    IDS_INGRES_OBJECT       "Ingres &Object:"
+    IDS_PERSONAL_HELP_HEADING 
+                            "You may now edit the personal counters chosen for each personal counter group:"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_PERSONAL_HELP_COMBO "&Personal Group Counters"
+    IDS_HELP_DESC           "&Counter Help Description:"
+    IDS_BUTTON_SAVE_HELP    "&Save Help Description"
+    IDS_BUTTON_RESET        "&Reset Counter Attributes To Default"
+    IDS_SERVER_HEADING      "Please choose an Ingres server to profile:"
+    IDS_BUTTON_REFRESH      "&Refresh All"
+    IDS_SERVER_COMBO        "Ingres Server:"
+    IDS_OK                  "&OK"
+    IDS_CANCEL              "&Cancel"
+    IDS_FINISH_PERS         "The personal counter groups have been successfully added."
+    IDS_ADDING_GROUPS       "Adding personal groups to the registry..."
+    IDS_CHECK_REMOVE        "&Remove all personal Ingres counter groups"
+    IDS_REMOVING_GROUPS     "Removing all personal Ingres counter groups..."
+    IDS_FINISH_REMOVE       "All personal Ingres counter groups have been removed."
+    IDS_GROUP_PERSONAL      "Personal group options"
+    IDS_CHECK_GROUP_MODIFY  "&Add/remove personal Ingres counter groups"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_FINAL_HEADING       "Please select the counters that you would like to graph with the Microsoft Performance Monitor. Clicking the 'Finish' button will launch the Microsoft Performance Monitor with the counters that you have chosen."
+    IDS_HELP_DESC2          "&Counter Description:"
+    IDS_CHART_STRING        "Chart Name:"
+    IDS_INTRO_HEADING2      "Please select one of the following options below:"
+    IDS_NEED_CHARTFILE      "You must specify the name and location of a chart file."
+    IDS_DIALOGFAILURE       "Failure to create file dialog box."
+    IDS_STRUCTSIZE          "The lStructSize member of the initialization structure for the corresponding file dialog box is invalid."
+    IDS_INITIALIZATION      "The common dialog box function failed during initialization."
+    IDS_NOTEMPLATE          "The ENABLETEMPLATE flag was set in the Flags member of the initialization structure for the corresponding file dialog box, but  a corresponding template was not provided."
+    IDS_NOHINSTANCE         "The ENABLETEMPLATE flag was set in the Flags member of the initialization structure for the corresponding file dialog box, but  a corresponding instance handle was not provided."
+    IDS_LOADSTRFAILURE      "The file dialog box function failed to load a specified string."
+    IDS_FINDRESFAILURE      "The file dialog box function failed to find a specified resource."
+    IDS_LOADRESFAILURE      "The file dialog box function failed to load a specified string."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_LOCKRESFAILURE      "The file dialog box function failed to lock a specified resource."
+    IDS_MEMALLOCFAILURE     "The file dialog box function was unable to allocate memory for internal structures."
+    IDS_MEMLOCKFAILURE      "The file dialog box function was unable to lock the memory associated with a handle."
+    IDS_NOHOOK              "The ENABLEHOOK flag was set in the Flags member of the initialization structure for the corresponding file dialog box, but  a pointer to a corresponding hook procedure was not provided."
+    IDS_SETUPFAILURE        "The PrintDlg function failed to load the required resources."
+    IDS_PARSEFAILURE        "The PrintDlg function failed to parse the strings in the [devices] section of the WIN.INI file."
+    IDS_RETDEFFAILURE       "The PD_RETURNDEFAULT flag was specified in the Flags member of the PRINTDLG structure, but the hDevMode or hDevNames member was not NULL."
+    IDS_LOADDRVFAILURE      "The PrintDlg function failed to load the device driver for the specified printer."
+    IDS_GETDEVMODEFAIL      "The printer driver failed to initialize a DEVMODE structure."
+    IDS_INITFAILURE         "The PrintDlg function failed during initialization, and there is no more specific extended error code to describe the failure."
+    IDS_NODEVICES           "No printer drivers were found."
+    IDS_NODEFAULTPRN        "A default printer does not exist."
+    IDS_DNDMMISMATCH        "The data in the DEVMODE and DEVNAMES structures describes two different printers."
+    IDS_CREATEICFAILURE     "The PrintDlg function failed when it attempted to create an information context."
+    IDS_PRINTERNOTFOUND     "The [devices] section of the WIN.INI file did not contain an entry for the requested printer."
+    IDS_NOFONTS             "No fonts exist."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_SUBCLASSFAILURE     "An attempt to subclass a list box failed because sufficient memory was not available."
+    IDS_INVALIDFILENAME     "A file name is invalid."
+    IDS_BUFFERTOOSMALL      "The buffer pointed to by the lpstrFile member of the OPENFILENAME structure is too small for the file name specified by the user."
+    IDS_UNKNOWNERROR        "An unknown error occurred while starting up the file dialog box."
+    IDS_CREATE_CHARTFILE    "Creating the Performance Monitor chart file..."
+    IDS_CHART_EXISTS        "The chart file that you have chosen exists.\nDo you want to overwrite it and continue?"
+    IDS_BUTTON_SELECT       "&Select All"
+    IDS_BUTTON_DESELECT     "&Deselect All"
+    IDS_NO_COUNTERS         "You must select at least one counter to monitor."
+    IDS_CANNOT_CREATE_CHART "Error creating the chart file. Please make sure that you have\npermission to create this file in the location provided. Also,\ncheck the Ingres errlog.log and the Windows NT Event Log\nfor any additional information. The error code was %d."
+    IDS_ERROR_LODCTR        "Error modifying Ingres counter groups. The error number was %d."
+    IDS_READINIT_ERR        "Error from ReadInitFile(). The error number was %d."
+    IDS_GETVNODE_ERR        "Error retrieving Ingres server information. Please verify that the\nlocal Ingres installation is properly running. The error code was %d."
+    IDS_RADIO_CREATE        "&Create a Microsoft Performance Monitor chart file"
+    IDS_RADIO_USE_EXISTING  "&Use an existing Microsoft Performance Monitor Chart file"
+    IDS_BUTTON_BROWSE       "&Browse..."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_WIZARD_GROUP        "Wizard Options"
+    IDS_ADDING_GROUPS_INFO  "The personal Ingres counter groups that you have created will\nnow be added to the registry. Do you want to continue?"
+    IDS_CHARTFILE_NOEXIST   "The name of the chart file provided does not exist."
+    IDS_REMOVE_CONFIRM      "All personal Ingres counter groups will now be removed.\nDo you want to continue with this operation?"
+    IDS_COUNTER_CREATION_HEADING 
+                            "You now have the option of creating/editing/removing personal counters for each personal counter group. Click the ""Next"" button of you do not want to create/edit/remove any personal counters."
+    IDS_BUTTON_CREATE_COUNTER "&Create Counter..."
+    IDS_BUTTON_EDIT_COUNTER "&Edit Counter Attributes..."
+    IDS_BUTTON_DELETE_COUNTER "&Delete Counter"
+    IDS_PERSONAL_COUNTERS_COLUMN "Personal Counters for Group"
+    IDS_DUPLICATE_COUNTER   "The name of this counter belongs to another personal counter\nthat was previously added. Please choose another name."
+    IDS_NEED_CTRNAME        "You must provide a name for your personal counter."
+    IDS_NEED_SCALE          "You must provide a default scale, which is\na power of 10, for your personal counter."
+    IDS_NEED_DBNAME         "You must provide a database name against which counter\nvalues will be retrieved for your personal counter."
+    IDS_NEED_QUERY          "You must provide a query which will be used to\nobtain counter values for your personal counter."
+    IDS_NEED_CTRDESC        "You must provide a description for your personal counter."
+    IDS_CANNOT_DELETE_CTR   "This is a personal counter. You cannot remove it from the\npersonal group's list on this screen. You can only remove it\nfrom the previous screen."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INVALID_SCALE       "You have specified an invalid default scale value."
+    IDS_EDIT_COUNTER_NAME   "Personal Counter &Name: "
+    IDS_COUNTER_SCALE       "Personal Counter &Scale (Power of 10 by which to scale chart line):"
+    IDS_DB_NAME             "&Database Name (<vnode>::<database> or <database>):"
+    IDS_COUNTER_QUERY       "Database &Query (result must be a single numeric value):"
+    IDS_EDIT_COUNTER_DESC   "Personal Counter D&escription:"
+    IDS_CHKQRY_ERROR        "Error in query execution. Error text follows:\n%s"
+    IDS_COPYRIGHT           "Copyright © 2005-2010 Ingres Corporation. All Rights Reserved."
+    IDS_UNKNOWN             "unknown"
+    IDS_LICENSE_TO          "This product is licensed to:"
+    IDS_SITEID              "Site ID:"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\perfwiz.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "gv.rc"
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

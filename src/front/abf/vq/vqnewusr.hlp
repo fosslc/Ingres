@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqnewusr.hlp, subtopic 'New user information' behind main help 
+/#-- screen for applications catalog.
+/#-- 
+Vision is an Ingres tool for developing applications that work with 
+Ingres databases.  You use it to create the forms and menus that allow 
+application users to access the information in the database.
+
+You don't need to know any programming languages to use Vision.  You use 
+the Vision screens to design and build the application, then Vision 
+generates the instructions that tell Ingres how to run your application.
+
+It is best to read the introductory chapters in the Forms-based Application
+Development Tools User Guide before you start working with the system.

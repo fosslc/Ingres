@@ -1,0 +1,12 @@
+#
+# wgl_32s.hnt file for cl\clf\nm_win
+#
+#	History
+#		30-Jan-2007	(wridu01)
+#			Created to facilitate the Ingres 2006 r2/OpenROAD build
+#			process
+#		
+#
+
+objonly = ingprenv.obj ingsetenv.obj ingunset.obj
+

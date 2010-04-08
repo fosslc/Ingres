@@ -1,0 +1,40 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for Veritas HA Cluster Ingres Data Service
+*/
+
+/*
+** History
+**      01-jan-2004 (hanch04)
+**              Created.
+*/
+
+PART	vcsha
+
+/*
+** VRTSvcs!bin!Ingres
+*/
+
+   DIRECTORY opt!VRTSvcs!bin!Ingres
+   BUILD_DIR (ING_BUILD)!opt!VRTSvcs!bin!Ingres
+	EXECUTABLE IngresAgent
+	SCRIPT ingres_server_manager
+	SCRIPT online
+	SCRIPT clean
+	SCRIPT monitor
+	SCRIPT envfile
+	SCRIPT offline
+
+/*
+** schingres!etc
+*/
+
+   DIRECTORY etc!VRTSvcs!Templates
+   BUILD_DIR (ING_BUILD)!etc!VRTSvcs!Templates
+	FILE IngresGroup.tf
+
+   DIRECTORY etc!VRTSvcs!conf!config
+   BUILD_DIR (ING_BUILD)!etc!VRTSvcs!conf!config
+	FILE IngresTypes.cf

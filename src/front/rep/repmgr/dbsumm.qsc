@@ -1,0 +1,264 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <stdprmpt.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	dbsumm.qsc - database summary
+**
+** Description:
+**	Defines
+**		db_summ	- database summary
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on dbcatlg.osq in replicator library.
+**	12-may-98 (padni01/joea) bug 88842
+**		When inserting a new row, scroll display window to the position
+**		where the new row will be added. Correct the code for finding
+**		the position where the new row will be added.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF
+##char	RMdb_display[];
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmdb_summary"),
+##	*tf_name = ERx("iitf"),
+##	*fdb_no = ERx("database_no"),
+##	*fvnode_name = ERx("vnode_name"),
+##	*fdb_name = ERx("database_name"),
+##	*ffull_db_name = ERx("vnode_dbname"),
+##	*fdb_owner = ERx("database_owner"),
+##	*fdbms_type = ERx("dbms_type"),
+##	*flocal_db = ERx("local_db"),
+##	*fremark = ERx("remark");
+
+
+FUNC_EXTERN STATUS db_add(i2 *db_no, char *vnode_name, char *db_name,
+	char *db_owner, char *dbms_type, char *remark);
+FUNC_EXTERN STATUS database_delete(i2 db_no);
+FUNC_EXTERN STATUS db_edit(i2 db_no, i2 local_db, char *vnode_name,
+	char *db_name, char *db_owner, char *dbms_type, char *remark);
+
+
+/*{
+** Name:	db_summ	- database summary
+**
+** Description:
+**	Summary of Replicated Database Information.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+db_summ()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i2	db_no;
+##	char	vnode_name[DB_MAXNAME+1];
+##	char	db_name[DB_MAXNAME+1];
+##	char	db_owner[DB_MAXNAME+1];
+##	char	dbms_type[9];
+##	char	remark[81];
+##	i2	local_db;
+	EXEC SQL END DECLARE SECTION;
+##	i2	curr_db_no;
+##	i4	rownumber;
+##	char	full_db_name[DB_MAXNAME*2+3];
+	DBEC_ERR_INFO	errinfo;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name read (fvnode_name = char(32) not null,
+##		fdb_name = char(32) not null, flocal_db = i2 not null)
+	IIUGmsg(ERget(F_RM001C_Selecting_data), FALSE, 0);
+	EXEC SQL SELECT database_no, vnode_name, database_name,
+			database_owner, local_db, dbms_type, remark
+		INTO	:db_no, :vnode_name, :db_name,
+			:db_owner, :local_db, :dbms_type, :remark
+		FROM	dd_databases
+		ORDER	BY database_no;
+	EXEC SQL BEGIN;
+		STtrmwhite(vnode_name);
+		STtrmwhite(db_name);
+		STprintf(full_db_name, ERx("%s::%s"), vnode_name, db_name);
+##		loadtable form_name tf_name (fdb_no = db_no,
+##			fvnode_name = vnode_name, fdb_name = db_name,
+##			ffull_db_name = full_db_name,
+##			fdb_owner = db_owner, flocal_db = local_db,
+##			fdbms_type = dbms_type, fremark = remark)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0013_No_data_found, UG_ERR_ERROR, 0);
+		return;
+	}
+	EXEC SQL COMMIT;
+
+##	display form_name read
+##	initialize (db = RMdb_display)
+##	activate menuitem ERget(F_RM001D_Add)
+##		(expl = ERget(F_RM001E_Add_db_expl))
+##	{
+		if (db_add(&db_no, vnode_name, db_name, db_owner, dbms_type,
+			remark) == 1)
+		{
+##			unloadtable form_name tf_name (curr_db_no = fdb_no,
+##				rownumber = _RECORD)
+##			{
+				if (db_no < curr_db_no)
+				{
+					--rownumber;
+##					endloop
+				}
+				else if (rownumber < 0)
+				{
+##					endloop
+				}
+##			}
+
+			if (rownumber < 0)
+##				inquire_frs table form_name
+##					(rownumber = datarows)
+
+			STprintf(full_db_name, ERx("%s::%s"), vnode_name,
+				db_name);
+			if (rownumber < 1)
+			{
+##				scroll form_name tf_name to 1
+##				insertrow form_name tf_name 0 (fdb_no = db_no,
+##					fvnode_name = vnode_name,
+##					fdb_name = db_name,
+##					ffull_db_name = full_db_name,
+##					fdb_owner = db_owner,
+##					fdbms_type = dbms_type,
+##					fremark = remark)
+			}
+			else
+			{
+##				scroll form_name tf_name to rownumber
+##				insertrow form_name tf_name (fdb_no = db_no,
+##					fvnode_name = vnode_name,
+##					fdb_name = db_name,
+##					ffull_db_name = full_db_name,
+##					fdb_owner = db_owner,
+##					fdbms_type = dbms_type,
+##					fremark = remark)
+			}
+		}
+##	}
+
+##	activate menuitem ERget(F_RM001F_Delete)
+##		(expl = ERget(F_RM0020_Delete_db_expl)), FRSkey13
+##	{
+##		getrow form_name tf_name (db_no = fdb_no,
+##			full_db_name = ffull_db_name, local_db = flocal_db)
+		if (local_db)
+		{
+			IIUGerr(E_RM0014_Cant_del_local_db, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+		if (IIUFccConfirmChoice(CONF_DELETE, full_db_name,
+			ERget(F_RM0021_database), NULL, NULL) != CONFCH_YES)
+##			resume
+
+		IIUGmsg(ERget(F_RM0022_Deleting), FALSE, 0);
+		if (database_delete(db_no) != OK)
+		{
+			IIUGerr(E_RM0015_Error_deleting, UG_ERR_ERROR, 0);
+##			resume field tf_name
+		}
+
+##		deleterow form_name tf_name
+##	}
+
+##	activate menuitem ERget(F_RM0023_Edit)
+##		(expl = ERget(F_RM0024_Edit_db_expl))
+##	{
+##		getrow form_name tf_name (db_no = fdb_no,
+##			vnode_name = fvnode_name, db_name = fdb_name,
+##			full_db_name = ffull_db_name, db_owner = fdb_owner,
+##			local_db = flocal_db, dbms_type = fdbms_type,
+##			remark = fremark)
+
+		if (db_edit(db_no, local_db, vnode_name, db_name, db_owner,
+			dbms_type, remark) == 1)
+		{
+			STprintf(full_db_name, ERx("%s::%s"), vnode_name,
+				db_name);
+##			putrow form_name tf_name (fdb_no = db_no,
+##				fvnode_name = vnode_name, fdb_name = db_name,
+##				ffull_db_name = full_db_name,
+##				fdb_owner = db_owner, fdbms_type = dbms_type,
+##				fremark = remark)
+		}
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmdbsumm.hlp"), ERget(F_RM0025_Db_summary));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##}

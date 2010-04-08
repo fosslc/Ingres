@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="AirportDataSet" targetNamespace="http://www.tempuri.org/AirportDataSet.xsd" xmlns:mstns="http://www.tempuri.org/AirportDataSet.xsd" xmlns="http://www.tempuri.org/AirportDataSet.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:msprop="urn:schemas-microsoft-com:xml-msprop" attributeFormDefault="qualified" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="urn:schemas-microsoft-com:xml-msdatasource">
+      <DataSource DefaultConnectionIndex="0" FunctionsComponentName="QueriesTableAdapter" Modifier="AutoLayout, AnsiClass, Class, Public" SchemaSerializationMode="IncludeSchema" xmlns="urn:schemas-microsoft-com:xml-msdatasource">
+        <Connections>
+        </Connections>
+        <Tables>
+        </Tables>
+        <Sources>
+        </Sources>
+      </DataSource>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="AirportDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true" msprop:Generator_UserDSName="AirportDataSet" msprop:Generator_DataSetName="AirportDataSet">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="airport" msprop:Generator_UserTableName="airport" msprop:Generator_RowDeletedName="airportRowDeleted" msprop:Generator_RowChangedName="airportRowChanged" msprop:Generator_RowClassName="airportRow" msprop:Generator_RowChangingName="airportRowChanging" msprop:Generator_RowEvArgName="airportRowChangeEvent" msprop:Generator_RowEvHandlerName="airportRowChangeEventHandler" msprop:Generator_TableClassName="airportDataTable" msprop:Generator_TableVarName="tableairport" msprop:Generator_RowDeletingName="airportRowDeleting" msprop:Generator_TablePropName="airport">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ap_iatacode" msprop:Generator_UserColumnName="ap_iatacode" msprop:Generator_ColumnPropNameInRow="ap_iatacode" msprop:Generator_ColumnVarNameInTable="columnap_iatacode" msprop:Generator_ColumnPropNameInTable="ap_iatacodeColumn" type="xs:string" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="airportName" msprop:Generator_UserTableName="airportName" msprop:Generator_RowDeletedName="airportNameRowDeleted" msprop:Generator_RowChangedName="airportNameRowChanged" msprop:Generator_RowClassName="airportNameRow" msprop:Generator_RowChangingName="airportNameRowChanging" msprop:Generator_RowEvArgName="airportNameRowChangeEvent" msprop:Generator_RowEvHandlerName="airportNameRowChangeEventHandler" msprop:Generator_TableClassName="airportNameDataTable" msprop:Generator_TableVarName="tableairportName" msprop:Generator_RowDeletingName="airportNameRowDeleting" msprop:Generator_TablePropName="airportName">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="result_column0" msprop:Generator_UserColumnName="result_column0" msprop:Generator_ColumnPropNameInRow="result_column0" msprop:Generator_ColumnVarNameInTable="columnresult_column0" msprop:Generator_ColumnPropNameInTable="result_column0Column" type="xs:string" />
+              <xs:element name="result_column2" msprop:Generator_UserColumnName="result_column2" msprop:Generator_ColumnPropNameInRow="result_column2" msprop:Generator_ColumnVarNameInTable="columnresult_column2" msprop:Generator_ColumnPropNameInTable="result_column2Column" type="xs:string" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="airportInfo" msprop:Generator_UserTableName="airportInfo" msprop:Generator_RowDeletedName="airportInfoRowDeleted" msprop:Generator_RowChangedName="airportInfoRowChanged" msprop:Generator_RowClassName="airportInfoRow" msprop:Generator_RowChangingName="airportInfoRowChanging" msprop:Generator_RowEvArgName="airportInfoRowChangeEvent" msprop:Generator_RowEvHandlerName="airportInfoRowChangeEventHandler" msprop:Generator_TableClassName="airportInfoDataTable" msprop:Generator_TableVarName="tableairportInfo" msprop:Generator_RowDeletingName="airportInfoRowDeleting" msprop:Generator_TablePropName="airportInfo">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ap_iatacode" msprop:Generator_UserColumnName="ap_iatacode" msprop:Generator_ColumnVarNameInTable="columnap_iatacode" msprop:Generator_ColumnPropNameInRow="ap_iatacode" msprop:Generator_ColumnPropNameInTable="ap_iatacodeColumn" type="xs:string" />
+              <xs:element name="ap_place" msprop:Generator_UserColumnName="ap_place" msprop:Generator_ColumnVarNameInTable="columnap_place" msprop:Generator_ColumnPropNameInRow="ap_place" msprop:Generator_ColumnPropNameInTable="ap_placeColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="ct_name" msprop:Generator_UserColumnName="ct_name" msprop:Generator_ColumnVarNameInTable="columnct_name" msprop:Generator_ColumnPropNameInRow="ct_name" msprop:Generator_ColumnPropNameInTable="ct_nameColumn" type="xs:string" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+    <xs:unique name="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:airport" />
+      <xs:field xpath="mstns:ap_iatacode" />
+    </xs:unique>
+    <xs:unique name="airportName_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:airportName" />
+      <xs:field xpath="mstns:result_column0" />
+    </xs:unique>
+    <xs:unique name="airportInfo_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:airportInfo" />
+      <xs:field xpath="mstns:ap_iatacode" />
+    </xs:unique>
+  </xs:element>
+</xs:schema>

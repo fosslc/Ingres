@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Please specify the name of the file to contain the archived report output.
+You must enter a file name before archiving the report from this popup.  
+
+An archived report contains the Report Writer commands used to create
+the RBF report.  This file may be further edited to customize the report
+to your specific needs.  Archived reports can be used as a template or
+as a starting point for writing Report Writer reports.  To save an
+archived report into the database, use SREPORT.
+
+        FIELD           DESCRIPTION
+        -----           -----------
+        File Name	Name of the file to contain the archived 
+			report output.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	OK 		Send the archived report to the specified file.
+
+        Cancel          Return to main catalog frame without archiving
+			the report.
+
+        Help            Print this message.

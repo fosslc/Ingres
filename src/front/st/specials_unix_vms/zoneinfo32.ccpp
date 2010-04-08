@@ -1,0 +1,196 @@
+/*
+** Copyright (c) 2005 Ingres Corporation
+*/
+/*
+** Generic part file for timezone files. 
+*/
+
+/*
+** History
+**	07-Mar-2005 (hanje04)
+**	    Created.
+**      18-Apr-2005 (hanje04)
+**          Re-add astrl/yanco timezone files. Removed in error at some point.
+**      31-Jan-2007 (bolke01) SIR 117176 117584
+**          Add utility/lp32/[iizic,iizck] to allow hand-building and checking
+**          of lp32 timezone files.  This is inline with the changes to include the
+**          lp64 versions.
+**      28-Feb-2007 (hanal04) Bug 117753
+**          Added sig/tz files iiworld.tz and readme.html
+**      17-nov-2009 (horda03) Bug 122916
+**          Add FIJI timezone.
+*/
+
+PART   zoneinfo32
+
+/*
+** ingres!utility!lp32
+*/
+   DIRECTORY (PROD2NAME)!utility!lp32
+   BUILD_DIR (ING_BUILD)!utility!lp32
+      EXECUTABLE (PROG1PRFX)zck
+      EXECUTABLE (PROG1PRFX)zic
+
+/*
+** ingres!files!zoneinfo!lp32!gmt
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp32!gmt
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp32!gmt
+      FILE gmt
+      FILE gmt-12
+      FILE gmt-11
+      FILE gmt-10
+      FILE gmt-9
+      FILE gmt-8
+      FILE gmt-7
+      FILE gmt-6
+      FILE gmt-5
+      FILE gmt-4
+      FILE gmt-3
+      FILE gmt-2
+      FILE gmt-1
+      FILE gmt1
+      FILE gmt2
+      FILE gmt3
+      FILE gmt4
+      FILE gmt5
+      FILE gmt6
+      FILE gmt7
+      FILE gmt8
+      FILE gmt9
+      FILE gmt10
+      FILE gmt11
+      FILE gmt12
+      FILE gmt13
+      FILE gmt-2half
+      FILE gmt-3half
+      FILE gmt3half
+      FILE gmt5half
+      FILE gmt9half
+      FILE gmt10half
+
+/*
+** ingres!files!zoneinfo!lp32!asia
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp32!asia
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp32!asia
+      FILE prc
+      FILE roc
+      FILE hongkong
+      FILE japan
+      FILE korea
+      FILE india
+      FILE pakistan
+
+/*
+** ingres!files!zoneinfo!lp32!astrl
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp32!astrl
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp32!astrl
+      FILE tsmni
+      FILE qnslnd
+      FILE ausnorth
+      FILE auswest
+      FILE aussouth
+      FILE vctr
+      FILE nsw
+      FILE lhi
+      FILE yanco
+
+/*
+** ingres!files!zoneinfo!lp32!mideast
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp32!mideast
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp32!mideast
+      FILE egypt
+      FILE kuwait
+      FILE iran
+      FILE israel
+      FILE saudi
+
+/*
+** ingres!files!zoneinfo!lp32!na
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp32!na
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp32!na
+      FILE eastern
+      FILE central
+      FILE mountain
+      FILE pacific
+      FILE alaska
+      FILE nwfdlnd
+      FILE atlantic
+      FILE yukon
+      FILE mxbajan
+      FILE mxbajas
+      FILE mxgen
+
+/*
+** ingres!files!zoneinfo!lp32!sp
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp32!sp
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp32!sp
+      FILE fiji
+      FILE hawaii
+      FILE nz
+      FILE nz-chat
+
+/*
+** ingres!files!zoneinfo!lp32!europe
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp32!europe
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp32!europe
+      FILE gb
+      FILE euwest
+      FILE eucntrl
+      FILE poland
+      FILE eueast
+      FILE moscow
+      FILE turkey
+
+/*
+** ingres!files!zoneinfo!lp32!sa
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp32!sa
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp32!sa
+      FILE bzeast
+      FILE bzwest
+      FILE bzacre
+      FILE bzden
+      FILE chlcont
+      FILE easteris
+
+/*
+** ingres!files!zoneinfo!lp32!seasia
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp32!seasia
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp32!seasia
+      FILE indowest
+      FILE indocntr
+      FILE indoeast
+      FILE malaysia
+      FILE phlppns
+      FILE sngpr
+      FILE thailand
+      FILE vietnam
+
+/*
+**      ingres!sig!tz
+*/
+
+# ifdef FULL_RELEASE
+   DIRECTORY (PROD2NAME)!sig!tz
+   BUILD_DIR (ING_BUILD)!sig!tz
+        FILE readme.html
+        FILE iiworld.tz
+# endif /* FULL_RELEASE */
+

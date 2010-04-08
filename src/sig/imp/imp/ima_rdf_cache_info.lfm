@@ -1,0 +1,12 @@
+COPYFORM:	6.4	2002_06_28 07:26:02 GMT  
+FORM:	ima_rdf_cache_info		
+	71	8	0	0	7	0	0	9	0	0	0	0	0	129	0	7
+FIELD:
+	0	server	21	32	0	30	1	57	0	0	30	0	27	RDF cache Info for Server:	0	0	0	66576	0	0	0		c30			0	0
+	1	max_defaults	30	4	0	13	1	27	7	0	13	0	14	Max Defaults:	0	0	0	66576	0	0	0		-f13			0	1
+	2	state_string	21	62	0	60	1	67	2	0	60	0	7	State:	0	0	0	66576	0	0	0		c60			0	2
+	3	cache_size	30	4	0	13	1	25	5	2	13	0	12	Cache Size:	0	0	0	66576	0	0	0		-f13			0	3
+	4	max_tables	30	4	0	13	1	25	5	42	13	0	12	Max Tables:	0	0	0	66576	0	0	0		-f13			0	4
+	5	max_qtrees	30	4	0	13	1	25	6	2	13	0	12	Max Qtrees:	0	0	0	66576	0	0	0		-f13			0	5
+	6	max_ldb_descs	30	4	0	13	1	28	6	40	13	0	15	Max Ldb Descs:	0	0	0	66576	0	0	0		-f13			0	6
+TRIM:

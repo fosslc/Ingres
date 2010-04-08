@@ -1,0 +1,41 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The Trim Attributes frame allows you to change the video attributes 
+of a piece of trim.
+
+To turn on attributes for the trim, move the cursor to the line containing
+the desired attribute, using the cursor keys.  Type in "y" (for Yes) to
+enable the attribute, or "n" (for No) to disable.
+
+The meaning of the attribute settings are:
+        
+        ATTRIBUTE NAME          SYNOPSIS
+        --------------          --------
+        Reverse Video           Display the trim in reverse video.
+
+        Blinking                Display the trim with the blinking
+                                video attribute.
+
+        Underline               Underline the trim.
+
+        Brightness Change       Display the trim in a different 
+                                brightness. Bold or half intensity 
+                                depending on what your terminal supports.
+
+
+Other field descriptions are:
+
+        FIELD NAME              SYNOPSIS
+        ----------              --------
+        Color                   Sets the color code (from 0-7) of the trim.
+                                Only available for terminals that support
+                                color.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to the previous menu.  The trim will
+                                now have the video attribute values given in
+                                this form.

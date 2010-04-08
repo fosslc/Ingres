@@ -1,0 +1,24 @@
+#
+# Jamfile file for dbutil!duf!dus
+#
+#       4-apr-2008  (bolke01) 120219
+#          MANIFEST was not in sync with the .lot file
+
+SubDir ING_SRC dbutil duf dus ;
+
+IISUBSYS dbutil duf dus ;
+
+
+IIBINEXE sysmod : dusysmod.qsc ;
+
+if ! $(VMS)
+{
+   IINEEDLIBS sysmod : DBUTILLIB SHQLIB ULFLIB SHCOMPATLIB SHFRAMELIB ;
+   IINEEDLIBSW sysmod : SHEMBEDLIB CUFLIB ;
+}
+else
+{
+    IINEEDLIBS sysmod : DBUTILLIB LIBQLIB LIBQGCALIB GCFLIB CUFLIB UGLIB AFELIB ADFLIB COMPATLIB ;
+}
+
+IILIBRARY DBUTILLIB : dusutil.c dusdata.c ;

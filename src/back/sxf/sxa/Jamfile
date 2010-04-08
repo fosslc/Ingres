@@ -1,0 +1,19 @@
+#
+# Jamfile file for back!sxf!sxa
+#
+# History:
+#    13-Feb-2007 (hweho01)
+#       Turned off optimizer for sxas.c during Solaris 64-bit build.
+#       Compiler version : Forte 6.0 Update 2 C 5.3.
+#    09-Apr-2007 (hweho01)
+#       For su9_us5, remove the sxas.c from IINOOPTIM list. The server 
+#       can work correctly with the optimization after dmx_option is 
+#       initialized in sxas_commit(). 
+#
+
+SubDir ING_SRC back sxf sxa ;
+
+IISUBSYS back sxf sxa ;
+
+IILIBRARY SXFLIB : sxau.c sxas.c sxar.c sxaf.c sxac.c ;
+

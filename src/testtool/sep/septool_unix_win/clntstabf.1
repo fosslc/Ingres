@@ -1,0 +1,20 @@
+.TH CLNTSTABF 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History:
+.\"	19-jan-1990 (boba)
+.\"		Written.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+clntstabf \- remove all files from \fB$ING_BUILD/abf\fP owned by testenv.
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B clntstabf
+.SH DESCRIPTION
+.I Clntstabf
+removes all files from \fB$ING_BUILD/abf\fP owned by testenv.
+.SH "SEE ALSO"
+.BR clningtst(1),
+.BR clntstdbs(1)
+.SH BUGS
+.I Clntstabf
+assumes that the tests have been run by the "testenv" user.

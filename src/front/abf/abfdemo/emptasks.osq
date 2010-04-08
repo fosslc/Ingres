@@ -1,0 +1,189 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+**
+** emptasks.osq : View and update employee information and employee task
+**                assignments.
+*/
+
+initialize (resp = c3, curr_field = c32, fnkey=i4)=
+begin
+	mode query;
+	today = date('now');
+	callproc timer_on(secs=15);
+end
+
+GetEmployee, key frskey4 = 
+begin
+	emptasks = select name, title, manager, hourly_rate
+		from emp
+		where qualification(name=name,title=title,
+			manager=manager, hourly_rate=hourly_rate)
+	tasktable = select distinct *
+	 	from tasks 
+		where name=:name
+		order by task
+	begin
+
+		initialize =
+		begin
+			callproc sum_hours(hourly_rate);
+			redisplay;
+		end
+
+		field hourly_rate, field tasktable.hours  =
+		begin
+			callproc sum_hours(hourly_rate);
+			redisplay;
+			resume next;
+		end
+
+		'Next', key frskey4 = 
+		begin
+			message 'Retrieving next Employee.';
+			next;
+			callproc sum_hours(hourly_rate);
+			redisplay;
+		end
+
+		DeleteEmp = 
+		begin
+			resp = prompt 'Type "y" to delete '+name+'.'
+				with style=popup;
+			if lowercase(left(resp,1)) = 'y' then
+			    callproc del_emp(empname = name);
+			    next;
+			else
+			    message 'Employee not deleted.';
+			    sleep 2;
+			endif;
+			redisplay;
+		end
+
+		RemoveTask = 	
+		begin
+		    inquire_forms field emptasks (curr_field = name); 
+		    if curr_field = 'tasktable' then
+			callproc rem_task(person = name,
+					proj = tasktable.project,
+					job = tasktable.task);
+			deleterow tasktable;
+			callproc sum_hours(hourly_rate);
+		    else
+			message 'Place cursor on task to be deleted'
+				with style=popup;
+		    endif;
+		end	
+
+		UpdateEmp = 	
+		begin
+			message 'Updating ' + name + ' . . . ';
+			  update emp e set
+				name = :name,
+				title = :title,
+				manager = :manager,
+				hourly_rate = :hourly_rate
+			      where :name =
+			      any (select name from tasks t 
+				       where t.name = e.name);
+		    	  unloadtable tasktable 
+			  begin
+			     update tasks set hours = :tasktable.hours
+				where :tasktable.task = task and
+				      :name = name and
+				      :tasktable.project = project;
+			  end;
+			commit;
+		end
+
+
+                'Help', key frskey1 =
+                begin
+                   help_forms (subject = 'EmpTasks Frame',
+                      file = 'II_SYSTEM:[INGRES.FILES.ABFDEMO]emptasks.hlp');
+                end
+
+		'4GL', key frskey16 = 
+		begin
+		   callproc timer_off();
+		   helpfile 'EmpTasks Frame'
+				'II_SYSTEM:[INGRES.FILES.ABFDEMO]emptasks.osq';
+		   callproc timer_on(secs=15);
+		end
+
+		'Quit', key frskey3 = 
+		begin
+			endloop;
+		end
+
+		on timeout =
+		begin
+			today = date('now');
+		end
+
+	end;
+	clear field all;
+	set_forms field '' (blink(tot_hours)=0); /* turn off blinking */
+	today = date('now');
+	redisplay;
+end
+		
+field 'title', field 'manager' =
+begin
+    if lowercase(title) = 'help' or lowercase(manager) = 'help' then
+        inquire_forms field '' (curr_field=name);
+        if curr_field = 'title' then
+	    title = callframe list (list.info = '    Titles';
+			list.vals = select distinct val = title
+					from titles order by val);
+        else
+	    manager = callframe list (list.info = '   Managers';
+			list.vals = select distinct val = manager
+					from managers order by val);
+        endif;
+    endif;
+    resume next;
+end
+
+key frskey2 =
+begin
+        inquire_forms field '' (curr_field=name);
+        if curr_field = 'title' then
+	    title = callframe list (list.info = '    Titles';
+			list.vals = select distinct val = title
+					from titles order by val);
+        else
+	    manager = callframe list (list.info = '   Managers';
+			list.vals = select distinct val = manager
+					from managers order by val);
+        endif;
+	resume next;
+end
+
+'4GL', key frskey16 = 
+begin
+	callproc timer_off(); 
+	helpfile 'EmpTasks Frame 4GL'
+	   'II_SYSTEM:[INGRES.FILES.ABFDEMO]emptasks.osq';
+	callproc timer_on(secs=15);
+end
+
+'Help', key frskey1 =
+begin
+        help_forms(subject = 'Employee Task Assignments Frame',
+           file = 'II_SYSTEM:[INGRES.FILES.ABFDEMO]emptasks.hlp');
+end
+
+'Quit', key frskey3 = 
+begin
+	callproc timer_on(secs=2);
+	return;
+end
+
+on timeout =
+begin
+	today = date('now');
+end
+

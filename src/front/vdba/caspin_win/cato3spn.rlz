@@ -1,0 +1,142 @@
+'*******************************************************************************
+'**   Name:          CATOSPIN.RLZ
+'**
+'**   Description:   CA-Spin API prototypes and enumeratives for Win32.
+'**
+'**   Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+'**
+'*******************************************************************************
+
+IF QVAR(%%CATOSPIN_RLZ, _Defined) THEN
+        EXIT MACRO
+END IF
+%%CATOSPIN_RLZ = 1
+
+IF QSYS(_OPSYS) = _WIN3 THEN
+ MessageBox("This macro is for WindowsNT only!", "Wrong CATOSPIN.RLZ File", _MB_OK, _MB_EXCLAMATION)
+ EXIT MACRO
+END IF
+
+CONST CASPINDLL = "CATO3SPN.DLL"
+
+EXTERNAL CASPINDLL CUSTOMCONTROLS
+
+'-----------------------------------------------------------------------------
+' Spin Class name
+'-----------------------------------------------------------------------------
+_CASpin = "CA_Spin32"
+
+'-----------------------------------------------------------------------------
+' Spin Styles
+'-----------------------------------------------------------------------------
+CONST SPS_VERTICAL       = &h00000001  ' vertical spin button 
+CONST SPS_HORIZONTAL     = &h00000002  ' horizontal spin button
+CONST SPS_NOPEGNOTIFY    = &h00000004  ' no msgs when position is pegged
+CONST SPS_WRAPMINMAX     = &h00000008  ' spin has a wrap-around range
+CONST SPS_TEXTHASRANGE   = &h00000010  ' text contains spin range
+CONST SPS_INVERTCHGBTN   = &h00000020  ' position change buttons are inverted
+CONST SPS_ASYNCNOTIFY    = &h00000040  ' use asynchronous notification method
+CONST SPS_HASSTRINGS     = &h00000080  ' spin button has strings
+CONST SPS_HASSORTEDSTRS  = &h00000100  ' spin button has sorted strings
+
+'-----------------------------------------------------------------------------
+' Spin Notification messages sent to the associate window
+'-----------------------------------------------------------------------------
+CONST SN_ASSOCIATEGAIN   = 701    ' wnd is now the spin associate
+CONST SN_ASSOCIATELOSS   = 702    ' wnd is no longer spin associate
+CONST SN_RANGECHANGE     = 703    ' the range has been changed
+CONST SN_POSINCREMENT    = 704    ' the position has been incremented
+CONST SN_POSDECREMENT    = 705    ' the position has been decremented
+CONST SN_POSWRAPTOMIN    = 706    ' the position has wrapped to range min
+CONST SN_POSWRAPTOMAX    = 707    ' the position has wrapped to range max
+CONST SN_POSCHANGE       = 708    ' the position has been changed arbitrarily
+CONST SN_INCBUTTONUP     = 709    ' the increment button has been released
+CONST SN_DECBUTTONUP     = 710    ' the decrement button has been released
+
+'-----------------------------------------------------------------------------
+' Spin Colors
+'-----------------------------------------------------------------------------
+CONST SPC_FACE           = 0      ' button face color
+CONST SPC_ARROW          = 1      ' direction indicator color
+CONST SPC_FRAME          = 2      ' border color around the button halves
+CONST SPC_HIGHLIGHT      = 3      ' highlight color used for 3D look
+CONST SPC_SHADOW         = 4      ' shadow color used for 3D look
+
+'-----------------------------------------------------------------------------
+' Spin Attributes
+'-----------------------------------------------------------------------------
+CONST SA_NOTOPARROW      = &h00000001  ' no arrow on the top button face
+CONST SA_NOBOTTOMARROW   = &h00000002  ' no arrow on the bottom button face
+CONST SA_NOLEFTARROW     = &h00000004  ' no arrow on the left button face
+CONST SA_NORIGHTARROW    = &h00000008  ' no arrow on the right button face
+
+'-----------------------------------------------------------------------------
+' Spin String Function Error Flags
+'-----------------------------------------------------------------------------
+CONST SPNSTR_ERR         = -1
+CONST SPNSTR_ERRSPACE    = -2
+
+'-----------------------------------------------------------------------------
+' Spin API Function Prototypes corresponding to DLL exports
+'-----------------------------------------------------------------------------
+EXTERNAL CASPINDLL FUNC SpinGetVersion() AS WORD ALIAS 20
+EXTERNAL CASPINDLL FUNC SpinAssociateSet(DWORD, DWORD) AS DWORD ALIAS 21
+EXTERNAL CASPINDLL FUNC SpinAssociateGet(DWORD) AS DWORD ALIAS 22
+EXTERNAL CASPINDLL PROC SpinStyleSet(DWORD, DWORD) ALIAS 23
+EXTERNAL CASPINDLL FUNC SpinStyleGet(DWORD) AS DWORD ALIAS 24
+EXTERNAL CASPINDLL PROC SpinStyleClear(DWORD, DWORD) ALIAS 25
+EXTERNAL CASPINDLL PROC SpinAttribSet(DWORD, DWORD) ALIAS 26
+EXTERNAL CASPINDLL FUNC SpinAttribGet(DWORD) AS DWORD ALIAS 27
+EXTERNAL CASPINDLL PROC SpinAttribClear(DWORD, DWORD) ALIAS 28
+EXTERNAL CASPINDLL FUNC SpinCursorSet(DWORD, DWORD) AS LONG ALIAS 29
+EXTERNAL CASPINDLL FUNC SpinColorSet(DWORD, DWORD, DWORD) AS DWORD ALIAS 30
+EXTERNAL CASPINDLL FUNC SpinColorGet(DWORD, DWORD) AS DWORD ALIAS 31
+EXTERNAL CASPINDLL FUNC SpinRangeSet(DWORD, LONG, LONG) AS LONG ALIAS 32
+EXTERNAL CASPINDLL FUNC SpinRangeMinGet(DWORD) AS LONG ALIAS 33
+EXTERNAL CASPINDLL FUNC SpinRangeMaxGet(DWORD) AS LONG ALIAS 34
+EXTERNAL CASPINDLL FUNC SpinPositionSet(DWORD, LONG) AS LONG ALIAS 35
+EXTERNAL CASPINDLL FUNC SpinPositionGet(DWORD) AS LONG ALIAS 36
+EXTERNAL CASPINDLL FUNC SpinPositionInc(DWORD) AS LONG ALIAS 37
+EXTERNAL CASPINDLL FUNC SpinPositionDec(DWORD) AS LONG ALIAS 38
+EXTERNAL CASPINDLL FUNC SpinTopBmpSet(DWORD, DWORD, LONG, LONG, LONG, LONG, LONG, LONG) AS LONG ALIAS 39
+EXTERNAL CASPINDLL FUNC SpinBottomBmpSet(DWORD, DWORD, LONG, LONG, LONG, LONG, LONG, LONG) AS LONG ALIAS 40
+EXTERNAL CASPINDLL FUNC SpinLeftBmpSet(DWORD, DWORD, LONG, LONG, LONG, LONG, LONG, LONG) AS LONG ALIAS 41
+EXTERNAL CASPINDLL FUNC SpinRightBmpSet(DWORD, DWORD, LONG, LONG, LONG, LONG, LONG, LONG) AS LONG ALIAS 42
+EXTERNAL CASPINDLL PROC SpinNotifyAssoc(DWORD, DWORD, LONG) ALIAS 43
+EXTERNAL CASPINDLL FUNC SpinNotifyGet(DWORD, LONG) AS DWORD ALIAS 44
+EXTERNAL CASPINDLL PROC SpinNotifyDone(DWORD, LONG) ALIAS 45
+EXTERNAL CASPINDLL FUNC SpinSNPosGet(DWORD, LONG) AS LONG ALIAS 46
+EXTERNAL CASPINDLL FUNC SpinStrAdd(DWORD, POINTER) AS LONG ALIAS 47
+EXTERNAL CASPINDLL FUNC SpinStrDelete(DWORD, LONG) AS LONG ALIAS 48
+EXTERNAL CASPINDLL FUNC SpinStrInsert(DWORD, LONG, POINTER) AS LONG ALIAS 49
+EXTERNAL CASPINDLL FUNC SpinStrFileNameAdd(DWORD, DWORD, POINTER) AS LONG ALIAS 50
+EXTERNAL CASPINDLL FUNC SpinStrPrefixFind(DWORD, LONG, POINTER) AS LONG ALIAS 51
+EXTERNAL CASPINDLL FUNC SpinStrExactFind(DWORD, LONG, POINTER) AS LONG ALIAS 52
+EXTERNAL CASPINDLL FUNC SpinStrCountGet(DWORD) AS LONG ALIAS 53
+EXTERNAL CASPINDLL FUNC SpinStrGet(DWORD, LONG, POINTER) AS LONG ALIAS 54
+EXTERNAL CASPINDLL FUNC SpinStrLenGet(DWORD, LONG) AS LONG ALIAS 55
+EXTERNAL CASPINDLL FUNC SpinStrDataSet(DWORD, LONG, LONG) AS LONG ALIAS 56
+EXTERNAL CASPINDLL FUNC SpinStrDataGet(DWORD, LONG) AS LONG ALIAS 57
+EXTERNAL CASPINDLL PROC SpinStrContentReset(DWORD) ALIAS 58
+
+'-----------------------------------------------------------------------------
+' Spin family for FCC files and FormDev custom controls
+'-----------------------------------------------------------------------------
+
+IF NOT QVAR(%%FCCCUST_RLZ, _Defined) THEN
+RUN "fcccust"
+END IF
+
+_CASpin.ClassName = _CASpin
+_CASpin.ItemType  = _Button
+_CASpin.ItemTypeForMods = _UserItem
+
+  ' Control window styles
+_CASpin.StyleMask = w.WS_.CHILD
+
+  ' This will consume a modifier whenever FormSetObject is used with _MyType.
+  ' Don't misspell StyleBits, or it won't be seen at all.
+_CASpin.StyleBits = -1
+  ' This will consume another modifier whenever FormSetObject is used with _MyType.
+  ' Don't misspell FlagsBits, or it won't be seen at all.
+_CASpin.FlagsBits = -1

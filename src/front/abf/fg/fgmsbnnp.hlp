@@ -1,0 +1,8 @@
+/#-- Help File: fgmsbnnp.hlp
+/#-- Master in simple fields browse frame, no next, no Qual, primary menu.
+This screen allows you to view data.
+
+  Help        Get help about this screen.
+  TopFrame    Return to the top frame in the application.
+  End         Stop work on this screen and return to the
+              screen that called it.

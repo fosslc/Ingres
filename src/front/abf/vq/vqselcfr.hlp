@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqselcfr.hlp, behind the popup list of frames that can be duplicated.
+
+You can duplicate a frame when you want to create a frame that is based on 
+an existing frame.  For example, this is a good method to use when you want 
+to create a frame like one you already have, but of a different type. The
+following rules apply:
+
+  * When you duplicate a frame, the system copies the entire frame 
+    definition, including the Visual Query and any escape codes you 
+    may have defined.
+
+  * Once you have duplicated a frame, you can edit the frame definition to 
+    make this frame distinct from the original.
+
+To duplicate a frame, move the cursor to the frame name and choose Select.

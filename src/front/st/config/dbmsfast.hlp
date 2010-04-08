@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The fast_commit resource specifies whether DBMS servers created with
+  this definition will optimize transaction I/O by using a delayed write
+  algorithm to buffer committed transactions in memory before writing
+  them to disk.
+
+  The default is ON.

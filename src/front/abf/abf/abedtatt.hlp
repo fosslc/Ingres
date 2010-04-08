@@ -1,0 +1,44 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at a catalog of the attributes for a user-defined record
+type definition that belongs to an application.  The table field lists the
+names of all the record attributes along with their data type, Nullability,
+and descriptive short remark.
+
+To create a new record attribute, use the Create menu operation.  To perform
+one of the menu operations on an existing record attribute, first position
+the cursor on the row containing the name of the record attribute of interest
+by using the cursor keys or the table field scrolling keys.  After the cursor
+has been positioned on the row containing the record attribute of interest,
+select the desired menu operation.
+
+The menu options are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Create          Create a definition of a new record attribute.
+                        If the attribute does not exist, it will be created
+                        and you will be placed in the definition frame for
+                        that attribute.
+
+        Destroy         Destroys the record attribute you have selected.
+                        You will be asked to confirm this decision.  You
+                        may only destroy record attributes that you are
+                        authorized to modify.
+
+        Edit            Edit the selected record attribute.
+                        Calls the Edit an Attribute Specification frame
+                        for the selected attribute where you can change
+                        its definition.
+
+        Rename          Renames the record attribute you have selected.
+                        Prompts you for the new name of the attribute and
+                        then changes its name in the database if it is a new
+                        and legal name.  If you press the RETURN key without
+                        entering a name, the operation will be canceled.  You
+                        may only rename record attributes that you are
+                        authorized to modify.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Application Record Type Definitions
+                        catalog frame.

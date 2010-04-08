@@ -1,0 +1,9 @@
+#
+# Copyright (c) 2010 Ingres Corporation
+#
+# The configuration rule specifications listed in this file are used
+# to generate the default configuration for the LSB ingres-client package
+# during its setup procedure.  Note that the named files are assumed to exist
+# in the "files" directory.
+#
+rulefile.01:	tz.crs

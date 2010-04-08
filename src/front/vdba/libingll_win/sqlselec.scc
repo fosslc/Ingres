@@ -1,0 +1,1577 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.		       
+*/
+
+/*
+**    Source   : sqlselec.scc 
+**    Project  : VDBA
+**    Author   : UK Sotheavut (uk$so01)
+**    Purpose  : SQL file, use cursor to retrieve data from the select statement.
+**
+** History:
+** xx-Jan-1998 (uk$so01)
+**    Created
+** 23-Apr-2001 (uk$so01)
+**    Bug #104487, 
+**    When creating the temporary table, make sure to use the exact type based on its length.
+**    If the type is integer and its length is 2 then use smallint or int2.
+**    If the type is float and its length is 4 then use float(4).
+** 23-Oct-2001 (uk$so01)
+**    SIR #106057 (sqltest as ActiveX & Sql Assistant as In-Process COM Server)
+** 30-Jan-2002 (uk$so01)
+**    SIR #106648, Enhance the library.
+** 14-Fev-2002 (uk$so01)
+**    SIR #106648, Enhance library (select loop)
+** 20-Jun-2002 (schph01)
+**  Bug #107929 add function ManageNonPrintableChars() to display the rows of
+**  table (in right pane "Rows" or in "Sqltest") like Terminal monitor
+**  and Isql.
+** 23-Jul-2002 (schph01)
+**  Bug #108345 in ConstructCursor() function, get the sql error before
+**  return false.
+** 17-Dec-2002 (uk$so01)
+**    SIR #109220, Enhance the library.
+** 29-Apr-2003 (uk$so01)
+**    SIR #106648, Split vdba into the small component ActiveX/COM 
+**    Handle special unicode only for Ingres Version 2.6
+** 05-Sep-2003 (uk$so01)
+**    SIR #106648, Integrate libraries libwctrl.lib, libingll.lib in Ija
+** 11-Sep-2003 (uk$so01)
+**    SIR #106648, incorporate change in 2.6 (change #461231, bug #107929)
+** 06-Feb-2004 (somsa01)
+**    In ManageNonPrintableChars(), make sure we pas UCHAR pointers to
+**    CMcpychar().
+** 26-Apr-2004 (uk$so01)
+**    BUG #111995 / ISSUE 13314121 (additional fixes to change #467343)
+** 13-May-2004 (schph01)
+**    SIR #111507 Add management for new column type bigint
+** 29-Sep-2004 (schph01)
+**    SIR #106648 Additional fix to retrieve the correct sql error code.
+** 28-Sep-2005 (gupsh01)
+**    CaCursor modified now to allow setting m_bReleaseSessionOnClose.
+** 04-Dec-2007 (kira01) b119555
+**    Added missing code for ANSI date type support and corrected behaviour
+**    of conversion code when presented with unknown datatypes. Now, when
+**    unrecognised types are met, the SQLDA will be fixed up to a CHAR(50)
+**    to allow the code to proceed with the extraction and have a reasonable
+**    chance of a visible representation of data - the conversion will have
+**    been pushed back to the data source.
+** 20-Aug-2008 (whiro01)
+**    Replace private <afx...> include with "stdafx.h"
+** 07-Aug-2009 (drivi01)
+**    Added pragma to disable warning 4996 about deprecated POSIX
+**    functions which is a bug.
+**/
+/* Turn off POSIX warning for this file until Microsoft fixes this bug */
+#pragma warning(disable: 4996)
+
+#define BUGNOTNULLABLE   // remove when bug is corrected at ingres level
+                         // Force to nullable whatever INGRES says.
+
+// compile:
+// esqlcc -fsqlselec.inc sqlselec.scc
+
+#include "stdafx.h"
+#include <stdlib.h>
+#include "dmlcolum.h"
+#include "sqlselec.h"
+#include "tlsfunct.h"
+#include "sqltrace.h"
+#include "mgterr.h"
+
+#if !defined (SQLCA_HEADER)
+#define SQLCA_HEADER
+//
+// Declare the SQLCA structure and the SQLDA typedef 
+//
+extern "C"
+{
+EXEC SQL INCLUDE SQLCA;
+EXEC SQL INCLUDE SQLDA;
+#include "compat.h"
+#include "nm.h"
+#include "cv.h"
+#include "cm.h"
+#include "gl.h"
+#include "iicommon.h"
+}
+#endif
+#define DATE_SIZE IISQ_DTE_LEN
+#define LEAD_MONEY  0
+#define TRAIL_MONEY 1
+#define NONE_MONY   2
+#define MAX_MONEY_FORMAT 4*sizeof(TCHAR)
+
+#define FIELD_OUTFORMAT_NON              0
+#define FIELD_OUTFORMAT_MONEYSYMBOL      1
+
+static void ManageNonPrintableChars(LPTSTR lpSourceStr, CString &cs)
+{
+	LPTSTR pEnd;
+	LPTSTR p1 = lpSourceStr;
+	CString csOctalValue, csResult = _T("");
+
+	pEnd = lpSourceStr + _tcslen(lpSourceStr) * sizeof(TCHAR);
+
+	while (p1 < pEnd)
+	{
+		if (CMcntrl((char *)p1))
+		{
+			switch (*p1)
+			{
+			case _T('\n'):
+				csResult += _T("\\n");
+				break;
+			case _T('\t'):
+				csResult += _T("\\t");
+				break;
+			case _T('\b'):
+				csResult += _T("\\b");
+				break;
+			case _T('\r'):
+				csResult += _T("\\r");
+				break;
+			case _T('\f'):
+				csResult += _T("\\f");
+				break;
+			default:
+				csOctalValue.Empty();
+				csOctalValue.Format(_T("\\%0.3o"),(unsigned char)*p1);
+				csResult += csOctalValue;
+				break;
+			}
+		}
+		else if (*p1 == _T('\\'))
+			csResult += _T("\\\\");
+		else
+		{
+			if (CMbytecnt(p1)==2)
+			{
+				TCHAR szTempo[3];
+				CMcpychar((UCHAR *)p1, (UCHAR *)szTempo);
+				szTempo[2] = _T('\0');
+				csResult += szTempo;
+			}
+			else
+				csResult += *p1;
+		}
+		CMnext(p1);
+	}
+	cs = csResult;
+}
+
+static void InitSqlda(IISQLDA*& pSqlDa, int nElement)
+{
+	//
+	// Free the old SQLDA:
+	if (pSqlDa)
+		free((void *)pSqlDa);
+
+	//
+	// Allocate a new SQLDA:
+	pSqlDa = (IISQLDA*) malloc (sizeof (IISQLDA) - (IISQ_MAX_COLS-nElement)*sizeof (IISQLVAR));
+	if (!pSqlDa)
+	{
+		throw CeSqlException (_T("Cannot allocate memory"));
+		return;
+	}
+	pSqlDa->sqln = nElement;
+}
+
+static void HandleFloatData(
+    LPVOID lpSqlv, 
+    CaDecimalFormat& decimalFormat,
+    CaMoneyFormat& moneyFormat,
+    CaFloatFormat* pFetchInfo, 
+    CaColumn* pCol,
+    CString& strItem,
+    UINT nFlags)
+{
+	USES_CONVERSION;
+	IISQLVAR* sqlv = (IISQLVAR*)lpSqlv;
+	i2 iResWidth,iTotal,idecimal;
+	TCHAR tchDisplayMode[2];
+	char  szFormatValue[CV_MAXDIGITS];
+	double dfValue = *(double *)sqlv->sqldata;
+
+	if (pCol->GetLength() == 4)
+	{
+		iTotal            = pFetchInfo->GetFloat4Width();;
+		idecimal          = pFetchInfo->GetFloat4Decimal();
+		tchDisplayMode[0] = pFetchInfo->GetFloat4DisplayMode();
+	}
+	else if (pCol->GetLength() == 8)
+	{
+		iTotal            = pFetchInfo->GetFloat8Width();;
+		idecimal          = pFetchInfo->GetFloat8Decimal();
+		tchDisplayMode[0] = pFetchInfo->GetFloat8DisplayMode();
+	}
+	else
+	{
+		if (pCol->GetLength() == 0 && pCol->GetType() == IISQ_MNY_TYPE)
+		{
+			iTotal            = 20;
+			idecimal          = moneyFormat.GetPrecision();
+			tchDisplayMode[0] = _T('n'); 
+		}
+		else
+		{
+			iTotal            = 11;
+			idecimal          = 3;
+			tchDisplayMode[0] = _T('n');
+		}
+	}
+
+	//
+	// Paremeter 4,5,6 of CVfa must be ansi character:
+	TCHAR tchszSep[4];
+	tchszSep[0] = decimalFormat.GetSeparator();
+	tchszSep[1] = _T('\0');
+	char* pSep = T2A(tchszSep);
+
+	CVfa(dfValue, iTotal, idecimal, T2A(tchDisplayMode)[0], pSep[0], szFormatValue, &iResWidth);
+
+	LPCTSTR lpszFormatValue = A2CT(szFormatValue);
+	if (pCol->GetType() == IISQ_MNY_TYPE && (nFlags & FIELD_OUTFORMAT_MONEYSYMBOL) && _tcslen(moneyFormat.GetSymbol())>0)
+	{
+		switch (moneyFormat.GetSymbolPosition())
+		{
+		case CaMoneyFormat::MONEY_LEAD:
+			strItem.Format(_T("%s%s"), moneyFormat.GetSymbol(), lpszFormatValue);
+			break;
+		case CaMoneyFormat::MONEY_TRAIL:
+			strItem.Format(_T("%s%s"), lpszFormatValue, moneyFormat.GetSymbol());
+			break;
+		default:
+			strItem = lpszFormatValue;
+			break;
+		}
+	}
+	else
+		strItem = lpszFormatValue;
+	strItem.TrimRight();
+}
+
+
+static void GetRowFromSqlda(
+    IISQLDA* pSqlda, 
+    CaDecimalFormat& decimalFormat,
+    CaMoneyFormat& moneyFormat,
+    CaFloatFormat* pFetchInfo, 
+    CTypedPtrList< CObList, CaColumn* >& listColumn,
+    CStringList& tuple, 
+    int& nCount, 
+    CArray <UINT, UINT>* pArrayNullField)
+{
+	USES_CONVERSION;
+	CaColumn* pCol;
+	POSITION pos = listColumn.GetHeadPosition();
+	IISQLVAR* sqlv;
+	CString   strItem = _T("");
+	nCount = 0;
+	if (pArrayNullField)
+		pArrayNullField->SetSize(listColumn.GetCount());
+
+	UINT nFlags = FIELD_OUTFORMAT_MONEYSYMBOL;
+	if (!moneyFormat.IsUsedMoneySymbol())
+		nFlags &= ~FIELD_OUTFORMAT_MONEYSYMBOL;
+
+	for (int i=0; i<pSqlda->sqld; i++)
+	{
+		if (pos != NULL)
+			pCol = listColumn.GetNext (pos);
+		else
+			pCol = NULL;
+		nCount++;
+		sqlv = &pSqlda->sqlvar[i];
+		if (pArrayNullField)
+			pArrayNullField->SetAt(i, 0);
+		if (sqlv->sqlind && *sqlv->sqlind < 0)
+		{
+			strItem = _T("(null)");
+			tuple.AddTail (strItem);
+			if (pArrayNullField)
+				pArrayNullField->SetAt(i, pArrayNullField->GetAt(i) | CAROW_FIELD_NULL);
+		}
+		else
+		{
+			TCHAR tchszIVal[32];
+			double dfValue = 0.0;
+			int iBaseType = abs (sqlv->sqltype);
+			switch (iBaseType)
+			{
+			case IISQ_DEC_TYPE:
+				{
+					char buf[512];
+					TCHAR tchszSep [4];
+					i4 ii4;
+					short prec,scale;
+					char* lpstr = (char*)sqlv->sqldata;
+					tchszSep[0] = decimalFormat.GetSeparator();
+					tchszSep[1] = _T('\0');
+					char* pSep = T2A(tchszSep);
+					if (pCol)
+					{
+						prec = (short)pCol->GetLength();
+						scale = (short)pCol->GetScale();
+					}
+					else
+					{
+						IISQL_UNPACK(sqlv->sqllen,prec,scale);
+					}
+
+					CVpka(lpstr, prec, scale, pSep[0], prec+4, (char)scale, 0 , buf, &ii4);
+					strItem = A2T(buf);
+					strItem.TrimLeft();
+					tuple.AddTail (strItem);
+				}
+				break;
+			case IISQ_INT_TYPE:
+				if (sqlv->sqllen == sizeof (long))
+					_stprintf (tchszIVal, _T("%d"), *(long *)sqlv->sqldata);
+				else
+					CVla8(*(i8 *)sqlv->sqldata,tchszIVal);
+				strItem = tchszIVal;
+				strItem.TrimRight();
+				tuple.AddTail (strItem);
+				break;
+			case IISQ_MNY_TYPE:
+			case IISQ_FLT_TYPE:
+				HandleFloatData((LPVOID)sqlv, decimalFormat, moneyFormat, pFetchInfo, pCol, strItem, nFlags);
+				tuple.AddTail (strItem);
+				break;
+			case IISQ_NCHR_TYPE:
+				{
+					// check whether displayable contents
+					char* lpstr = (char*)sqlv->sqldata;
+					char buf[1000]; /* long enough in the context of the SQL/Test display - given normal windows size */
+
+					if (lpstr) {
+						int ires = WideCharToMultiByte(CP_ACP, /*CP_THREAD_ACP doesn't seem to work */
+								 0,         // performance and mapping flags
+								(LPCWSTR)lpstr, // address of wide-character string
+								-1,             
+								(LPSTR)buf,
+								sizeof(buf),  NULL, NULL);
+						if (!ires)
+						   buf[0]='\0';
+ 
+						strItem = buf;
+						strItem.TrimRight();
+					}
+					else
+						strItem = _T("");
+
+					tuple.AddTail (strItem);
+				}
+				break;
+			case IISQ_NVCHR_TYPE:
+			case IISQ_LNVCHR_TYPE:
+				{
+					char* lpstr   = (char*)sqlv->sqldata + sizeof(short);
+					short nLendta = * ((short *)sqlv->sqldata);
+					char buf[1000];  /* long enough in the context of the SQL/Test display - given normal windows size */
+
+					if (lpstr) {
+						memset(buf,'\0',sizeof(buf)); /* ensures trailing \0 (avoids DBCS scan on target up to nLendta chars) */
+						int ires = WideCharToMultiByte(CP_ACP, /*CP_THREAD_ACP doesn't seem to work */
+								 0,         // performance and mapping flags
+								(LPCWSTR)lpstr, // address of wide-character string
+								nLendta,             
+								(LPSTR)buf,
+								sizeof(buf)-2,  NULL, NULL);
+						if (!ires)
+							buf[0]='\0';
+ 
+						strItem = buf;
+						strItem.TrimRight();
+					}
+					else
+						strItem = _T("");
+
+					tuple.AddTail (strItem);
+				}
+				break;
+
+			case IISQ_CHA_TYPE:
+			case IISQ_VCH_TYPE:
+			case IISQ_CHR_TYPE:
+			case IISQ_TXT_TYPE:
+			case IISQ_LVCH_TYPE:
+				{
+					// check whether displayable contents
+					char* lpstr = (char*)sqlv->sqldata;
+					int 	len = ( lpstr? strlen(lpstr) : 0);
+					BOOL bNotDisplayable = FALSE;
+					// 3 cases : null ptr, displayable, not displayable
+					if (bNotDisplayable)
+						strItem = _T("<Not Displayable>");
+					else if (lpstr)
+					{
+						ManageNonPrintableChars(lpstr , strItem);
+						strItem.TrimRight();
+					}
+					else
+						strItem = _T("");
+
+					tuple.AddTail (strItem);
+				}
+				break;
+			case IISQ_BYTE_TYPE:
+			case IISQ_VBYTE_TYPE:
+			case IISQ_LBYTE_TYPE:
+				{
+					char* lpstr   = (char*)sqlv->sqldata + sizeof(short);
+					short nLendta = * ((short *)sqlv->sqldata);
+					if(nLendta > sqlv->sqllen)
+						nLendta = sqlv->sqllen;
+
+					// check whether displayable contents
+					BOOL bNotDisplayable = FALSE;
+					// 3 cases : null ptr, displayable, not displayable
+					if (bNotDisplayable)
+						strItem = _T("<Not Displayable>");
+					else  if (lpstr)
+					{
+						lpstr[nLendta] = _T('\0');
+						ManageNonPrintableChars(lpstr,strItem);
+						strItem.TrimRight();
+					}
+					else
+						strItem = _T("");
+
+					tuple.AddTail (strItem);
+				}
+				break;
+			case IISQ_ADTE_TYPE:
+			case IISQ_DTE_TYPE:
+			case IISQ_INDS_TYPE:
+			case IISQ_INYM_TYPE:
+			case IISQ_TME_TYPE:
+			case IISQ_TMWO_TYPE:
+			case IISQ_TMW_TYPE:
+			case IISQ_TSTMP_TYPE:
+			case IISQ_TSWO_TYPE:
+			case IISQ_TSW_TYPE:
+			default:
+				if (pArrayNullField)
+					pArrayNullField->SetAt(i, pArrayNullField->GetAt(i) | CAROW_FIELD_NOTDISPLAYABLE);
+				/* We really should not be getting here as we have
+				** fixed up the unknown or awkward sqlda types to return char
+				*/
+				break;
+			}
+		}
+	}
+}
+
+
+static void InitializeHeader(
+    IISQLDA* pSqlda, 
+    CTypedPtrList< CObList, CaColumn* >& listHeader,
+    CTypedPtrList< CObList, CaBufferColumn* >& listBufferColumn,
+    CaMoneyFormat* pMoneyFormat)
+{
+	USES_CONVERSION;
+	int iBaseType = 0;
+	IISQLVAR* sqlv;
+	TCHAR tchszHeader [64];
+	CaColumn* pColumnHeader = NULL;
+	while (!listBufferColumn.IsEmpty())
+		delete listBufferColumn.RemoveHead();
+	while (!listHeader.IsEmpty())
+		delete listHeader.RemoveHead();
+	//
+	// Allocate buffer for column values:
+	for (int i=0; i<pSqlda->sqld; i++)
+	{
+		CaBufferColumn* pBufferColumn = new CaBufferColumn();
+		listBufferColumn.AddTail (pBufferColumn);
+
+		sqlv = &pSqlda->sqlvar[i];
+
+		int nMax = sqlv->sqlname.sqlnamel+1;
+		if (nMax > 64)
+			nMax = 64;
+		lstrcpyn (tchszHeader, (LPCTSTR)sqlv->sqlname.sqlnamec, nMax);
+		pColumnHeader = new CaColumn (tchszHeader, _T("???"), abs (sqlv->sqltype));
+		pColumnHeader->SetLength(sqlv->sqllen);
+		listHeader.AddTail (pColumnHeader);
+
+		iBaseType = abs (sqlv->sqltype);
+		switch (iBaseType)
+		{
+		case IISQ_INT_TYPE:
+			//
+			// int,int1,int2 or int4 retrieve into a long integer.
+			if (sqlv->sqllen <= sizeof (long))
+				sqlv->sqllen = sizeof (long);
+			else
+				sqlv->sqllen = sizeof (i8);// bigint retrieve into a i8 type
+			pBufferColumn->SetBufferSize (sqlv->sqllen);
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			break;
+		case IISQ_DEC_TYPE:
+			pBufferColumn->SetBufferSize (sqlv->sqllen+1);
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			{
+				short prec, scale;
+				IISQL_UNPACK(sqlv->sqllen, prec, scale);
+				pColumnHeader->SetLength (prec);
+				pColumnHeader->SetScale  (scale);
+			}
+				break;
+		case IISQ_MNY_TYPE:
+			//
+			// Always retrieve into a double floating point.
+			sqlv->sqllen = sizeof (double);
+			sqlv->sqltype= (sqlv->sqltype < 0)? -IISQ_FLT_TYPE: IISQ_FLT_TYPE;
+			pBufferColumn->SetBufferSize (sqlv->sqllen);
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			if (pMoneyFormat)
+				pColumnHeader->SetScale  (pMoneyFormat->GetPrecision());
+			break;
+		case IISQ_FLT_TYPE:
+			//
+			// Always retrieve into a double floating point.
+			sqlv->sqllen = sizeof (double);
+			pBufferColumn->SetBufferSize (sqlv->sqllen);
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			break;
+
+		case IISQ_DTE_TYPE:
+			sqlv->sqllen = 25; //AD_1DTE_OUTLENGTH;
+			goto handle_as_char;
+		case IISQ_ADTE_TYPE:
+			sqlv->sqllen = 10; //AD_2ADTE_OUTLENGTH;
+			goto handle_as_char;
+		case IISQ_TMWO_TYPE:
+			sqlv->sqllen = 21; //AD_3TMWO_OUTLENGTH;
+			goto handle_as_char;
+		case IISQ_TMW_TYPE:
+			sqlv->sqllen = 31; //AD_4TMW_OUTLENGTH;
+			goto handle_as_char;
+		case IISQ_TME_TYPE:
+			sqlv->sqllen = 31; //AD_5TME_OUTLENGTH;
+			goto handle_as_char;
+		case IISQ_TSWO_TYPE:
+			sqlv->sqllen = 39; //AD_6TSWO_OUTLENGTH;
+			goto handle_as_char;
+		case IISQ_TSW_TYPE:
+			sqlv->sqllen = 49; //AD_7TSW_OUTLENGTH;
+			goto handle_as_char;
+		case IISQ_TSTMP_TYPE:
+			sqlv->sqllen = 49; //AD_8TSTMP_OUTLENGTH;
+			goto handle_as_char;
+		case IISQ_INYM_TYPE:
+			sqlv->sqllen = 15; //AD_9INYM_OUTLENGTH;
+			goto handle_as_char;
+		case IISQ_INDS_TYPE:
+			sqlv->sqllen = 45; //AD_10INDS_OUTLENGTH;
+			goto handle_as_char;
+
+		default:
+			sqlv->sqllen = 50; // Limit data length
+			/* FALLTHROUGH */
+			
+		case IISQ_CHA_TYPE:
+handle_as_char:
+			sqlv->sqltype= (sqlv->sqltype < 0)? -IISQ_CHA_TYPE: IISQ_CHA_TYPE;
+			pBufferColumn->SetBufferSize (sqlv->sqllen + 1);
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			break;
+		case IISQ_LNVCHR_TYPE:
+			sqlv->sqllen = 130;
+		case IISQ_NCHR_TYPE: /* NCHAR. defined in iicommon.h */
+		case IISQ_NVCHR_TYPE: /* NVARCHAR. defined in iicommon.h */
+			sqlv->sqltype= (sqlv->sqltype < 0)? -IISQ_NVCHR_TYPE: IISQ_NVCHR_TYPE;
+			pBufferColumn->SetBufferSize (sqlv->sqllen + 2 + sizeof(short));
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			break;
+
+		// Varchar , byte and varbyte left "as is" since can be non-displayable 
+		// ---> special management in Fetch()
+		case IISQ_LVCH_TYPE:
+			sqlv->sqllen = 64;
+		case IISQ_VCH_TYPE:
+			sqlv->sqltype= (sqlv->sqltype < 0)? -IISQ_CHA_TYPE: IISQ_CHA_TYPE;
+			pBufferColumn->SetBufferSize (sqlv->sqllen + 1 + sizeof (short));
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			break;
+		case IISQ_LBYTE_TYPE:
+			// recover only the first 64 characters
+			sqlv->sqllen = 64;
+		case IISQ_BYTE_TYPE:
+		case IISQ_VBYTE_TYPE:
+			sqlv->sqltype= (sqlv->sqltype < 0)? -IISQ_VBYTE_TYPE: IISQ_VBYTE_TYPE;
+			pBufferColumn->SetBufferSize (sqlv->sqllen + 1 + sizeof (short));
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			break;
+
+		}
+
+#ifdef BUGNOTNULLABLE   // remove when bug is corrected at ingres level
+		                // Force to nullable whatever INGRES says   
+		if (sqlv->sqltype >= 0)
+			sqlv->sqltype *= -1;
+#endif
+		if (sqlv->sqltype < 0)
+			sqlv->sqlind = (short*)(pBufferColumn->GetIndicatorVariable());
+		else
+			sqlv->sqlind = (short *)0;
+	}
+}
+
+
+//
+// Ingres Specific Unicode Data ==>
+// ************************************************************************************************
+#if defined (_INGRES_DATA_UNICODE)
+#define MAXUNICODECONSTANTLEN 2000
+BOOL GetNextUniConstant(char* pc,wchar_t * bufuni,char** ppcstartuni, char** ppcafteruni)
+{
+	USES_CONVERSION;
+	while (*pc) {
+		switch (*pc) {
+			case '\'':
+				pc=strchr(pc+1, '\''); /* sufficient to cover also the 'escaping' of the ' character */
+				if (!pc)
+					return FALSE;
+				break;
+			case '\"':
+				pc=strchr(pc+1,'\"'); /* sufficient to cover also the 'escaping' of the " character */
+				if (!pc)
+					return FALSE;
+				break;
+			case 'N':
+				if (*(pc+1)==_T('\'')) {
+					char *pc1,*pc2;
+					char BufAnsiString[MAXUNICODECONSTANTLEN+1];
+					*ppcstartuni = pc;
+					pc1=CMnext(pc);
+					pc1=CMnext(pc1);
+					pc2=BufAnsiString;
+					while (TRUE) {
+						if (*pc1=='\0') 
+							return FALSE;
+						if (*pc1=='\'') {
+							if (*(pc1+1)=='\'')  /* escaped ' character */
+								pc1=CMnext(pc1);
+							else {
+								int ires;
+								*ppcafteruni = pc1+1;
+								*pc2=_T('\0');
+								ires = MultiByteToWideChar( CP_ACP, 0, BufAnsiString,-1,bufuni,MAXUNICODECONSTANTLEN+1);
+								if (ires== 0)
+									return FALSE;
+								return TRUE;
+							}
+						}
+						if ( (pc2-BufAnsiString)> MAXUNICODECONSTANTLEN -3)
+							return FALSE;
+						CMcpyinc(pc1,pc2);
+					}
+				}
+				break;
+		}
+		pc = CMnext(pc);
+	}
+	return FALSE;
+}
+static char* strwhere = "where";
+static char* Go2WhereClause(char *rawstm)
+{
+	char * pc=rawstm;
+	char * strselect = "select";
+	while (*pc==_T(' '))
+		pc++; /* skip leading spaces */
+	if (strnicmp(pc, strselect, strlen(strselect))!=0)
+		return (char *)0;
+	pc += strlen(strselect);
+	while (*pc) {
+		switch (*pc) {
+			case '\'':
+				pc=strchr(pc+1,'\''); /* sufficient to cover also the 'escaping' of the ' character */
+				if (!pc)
+					return FALSE;
+				break;
+			case '\"':
+				pc=strchr(pc+1,'\"'); /* sufficient to cover also the 'escaping' of the " character */
+				if (!pc)
+					return FALSE;
+				break;
+			default:
+				if (strnicmp(pc, strwhere, strlen(strwhere))==0)
+					return pc;
+				break;
+		}
+		pc = CMnext(pc);
+	}
+	return (char *)0;
+}
+BOOL HasUniConstInWhereClause(char* rawstm, char* pStmtWithoutWhereClause)
+{
+	char * pcstartuni, *pcafteruni;
+	wchar_t bufuni[MAXUNICODECONSTANTLEN+1];
+	BOOL bRes;
+	char * pc = Go2WhereClause(rawstm);
+	if (!pc)
+		return FALSE;
+	bRes = GetNextUniConstant(pc,bufuni,&pcstartuni, &pcafteruni);
+	if (bRes && pStmtWithoutWhereClause )
+		_fstrncpy(pStmtWithoutWhereClause, rawstm, 1+ (pc-rawstm) );
+	return bRes;
+}
+BOOL ManageDeclareAndOpenCur4Uni(char *cname, char *rawstmt) 
+{
+	wchar_t bufuni[MAXUNICODECONSTANTLEN+1];
+	char * pcstartuni, *pcafteruni;
+	char * pbuftemp;
+	char *pc;
+	char *pcstartsearch;
+	pbuftemp = (char*)malloc(strlen(rawstmt)+1);
+	if (!pbuftemp)
+		return FALSE;
+	IIsqInit(&sqlca);
+	IIcsOpen(cname,0,0);
+	pcstartsearch = Go2WhereClause(rawstmt);
+	if (!pcstartsearch)
+		pcstartsearch=rawstmt;
+	pc = rawstmt;
+	while (*pc) {
+		BOOL bres = GetNextUniConstant(pcstartsearch,bufuni,&pcstartuni, &pcafteruni);
+		if (!bres)  {
+			IIwritio(0,(short *)0,1,32,0, pc);
+			break;
+		}
+		_fstrncpy(pbuftemp, pc,(pcstartuni-pc)+1);
+		IIwritio(0,(short *)0,1,32,0, pbuftemp);
+		IIputdomio((short *)0,1,26,0,bufuni);
+		pc=pcafteruni;
+		pcstartsearch=pc;
+	}
+	IIcsQuery(cname,0,0);
+	free((void*)pbuftemp);
+	return TRUE;
+}
+//
+// <== Ingres Specific Unicode Data 
+// ************************************************************************************************
+#endif // _INGRES_DATA_UNICODE
+
+
+BOOL CaCursor::ConstructCursor(LPCTSTR lpszCursorName, LPCTSTR lpszStatement, LPCTSTR lpszRawStatement, LPVOID& pSqlda)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* cname = T2A((LPTSTR)lpszCursorName);
+		char* sname = T2A((LPTSTR)lpszStatement);
+		char* rawstm= T2A((LPTSTR)lpszRawStatement);
+	EXEC SQL END DECLARE SECTION;
+
+#if defined (_INGRES_DATA_UNICODE)
+	EXEC SQL BEGIN DECLARE SECTION;
+	char* pStmtWithoutWhereClause1 = (char *)0;
+	EXEC SQL END DECLARE SECTION;
+	char* pStmtWithoutWhereClause = NULL;
+	BOOL bUnicode = FALSE;
+#endif
+	
+	EXEC SQL WHENEVER SQLERROR GOTO CONSTRUCT_CURSOR_ERROR;
+	IISQLDA* sqlda = (IISQLDA *)0;
+
+	sqlda = (IISQLDA*) malloc (sizeof (IISQLDA) - (IISQ_MAX_COLS-10)*sizeof (IISQLVAR));
+	if (!sqlda)
+	{
+		throw CeSqlException (_T("Cannot allocate memory"));
+		return FALSE;
+	}
+	sqlda->sqln = 10;
+	//
+	// Prepare and describe the statement. If we cannot fully describe
+	// the statement (our SQLDA is too small) then allocate a new one
+	// and redescribe the statement again.
+	if (m_nIngresVersion >= INGRESVERS_26)
+	{
+		if (pStmtWithoutWhereClause)
+			free(pStmtWithoutWhereClause);
+		pStmtWithoutWhereClause = (char *) malloc(strlen(rawstm)+1);
+		if (!pStmtWithoutWhereClause) {
+			free ((void*)sqlda);
+			throw CeSqlException (_T("Cannot allocate memory"));
+			return FALSE;
+		}
+		bUnicode = HasUniConstInWhereClause(rawstm,pStmtWithoutWhereClause);
+		if ( ! bUnicode) {
+			EXEC SQL PREPARE  :sname FROM :rawstm;
+		}
+		else {
+			pStmtWithoutWhereClause1 = pStmtWithoutWhereClause;
+			EXEC SQL PREPARE  :sname FROM :pStmtWithoutWhereClause1;
+		}
+	}
+	else
+	{
+		EXEC SQL PREPARE  :sname FROM :rawstm;
+	}
+
+	EXEC SQL DESCRIBE :sname INTO sqlda;
+	if (sqlda->sqld > sqlda->sqln)
+	{
+		int nNewSize = sqlda->sqld;
+		free ((void*)sqlda);
+		sqlda = (IISQLDA*) malloc (sizeof (IISQLDA) - (IISQ_MAX_COLS-nNewSize)*sizeof (IISQLVAR));
+		if (!sqlda)
+		{
+#if defined (_INGRES_DATA_UNICODE)
+			free(pStmtWithoutWhereClause);
+			pStmtWithoutWhereClause = (char *) 0;
+#endif
+			throw CeSqlException (_T("Cannot allocate memory"));
+			return FALSE;
+		}
+		sqlda->sqln = nNewSize;
+		EXEC SQL DESCRIBE :sname INTO sqlda;
+	}
+	pSqlda = sqlda;
+
+	if (sqlda->sqld == 0)
+	{
+#if defined (_INGRES_DATA_UNICODE)
+		free(pStmtWithoutWhereClause);
+		pStmtWithoutWhereClause = (char *) 0;
+#endif
+		throw CeSqlException (_T("Not a select-statement"));
+		return FALSE;
+	}
+	
+	if (m_nIngresVersion >= INGRESVERS_26 && bUnicode) 
+	{
+		ManageDeclareAndOpenCur4Uni(cname,rawstm);
+	}
+	else
+	{
+		EXEC SQL DECLARE :cname CURSOR FOR :sname;
+		EXEC SQL OPEN :cname FOR READONLY;
+	}
+
+#if defined (_INGRES_DATA_UNICODE)
+	if (pStmtWithoutWhereClause) {
+		free(pStmtWithoutWhereClause);
+		pStmtWithoutWhereClause = (char *)0;
+	}
+#endif
+	if (sqlca.sqlcode == 0)
+		return TRUE;
+
+CONSTRUCT_CURSOR_ERROR:
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	if (sqlda)
+		free (sqlda);
+	pSqlda = NULL;
+#if defined (_INGRES_DATA_UNICODE)
+	if (pStmtWithoutWhereClause) {
+		free(pStmtWithoutWhereClause);
+		pStmtWithoutWhereClause = (char *)0;
+	}
+#endif
+	throw CeSqlException (A2T(error_buf), nErr);
+	return FALSE;
+}
+
+
+CaCursor::CaCursor(int nCounter, LPCTSTR lpszRawStatement)
+{
+	m_pSqlda        = NULL;
+	m_strCursorName.Format(_T("OPING_CUR_%d"), nCounter);
+	m_strStatement.Format (_T("OPING_STM_%d"), nCounter);
+	m_strRawStatement = lpszRawStatement? lpszRawStatement: _T("");
+
+	m_nIngresVersion = -1;
+	m_bReleaseSessionOnClose=TRUE;
+}
+
+CaCursor::CaCursor (int nCounter, LPCTSTR lpszRawStatement, int nIngresVersion)
+{
+	m_pSqlda        = NULL;
+	m_strCursorName.Format(_T("OPING_CUR_%d"), nCounter);
+	m_strStatement.Format (_T("OPING_STM_%d"), nCounter);
+	m_strRawStatement = lpszRawStatement? lpszRawStatement: _T("");
+
+	m_nIngresVersion = nIngresVersion;
+	m_bReleaseSessionOnClose=TRUE;
+}
+
+
+BOOL CaCursor::Open()
+{
+	if (!ConstructCursor(m_strCursorName, m_strStatement, m_strRawStatement, m_pSqlda))
+		throw CeSqlException(_T("Cannot open cursor."));
+	InitializeHeader((IISQLDA*)m_pSqlda, m_listHeader, m_listBufferColumn, &m_moneyFormat);
+	return TRUE;
+}
+
+
+CaCursor::~CaCursor()
+{
+	int nCol = (!m_listHeader.IsEmpty())? m_listHeader.GetCount(): 0;
+	while (!m_listHeader.IsEmpty())
+		delete m_listHeader.RemoveHead();
+	if (m_pSqlda)
+		free ((LPVOID)m_pSqlda);
+	while (!m_listBufferColumn.IsEmpty())
+		delete m_listBufferColumn.RemoveHead();
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* cname = (char*)(LPCTSTR)m_strCursorName;
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	EXEC SQL CLOSE :cname;
+}
+
+BOOL CaCursor::Fetch(CStringList& tuple, int& nCount)
+{
+	return DoFetch(tuple, nCount, NULL);
+}
+
+BOOL CaCursor::Fetch(CaRowTransfer* pRow, int& nCount)
+{
+	CStringList& listRecord = pRow->GetRecord();
+	CArray <UINT, UINT>& arrayFlag = pRow->GetArrayFlag();
+	BOOL bOk = DoFetch(listRecord, nCount, &arrayFlag);
+	return bOk;
+}
+
+BOOL CaCursor::DoFetch(CStringList& tuple, int& nCount, CArray <UINT, UINT>* pArrayNullField)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* cname = T2A((LPTSTR)(LPCTSTR)m_strCursorName);
+	EXEC SQL END DECLARE SECTION;
+	IISQLDA* pSqlda = (IISQLDA*)m_pSqlda;
+
+	EXEC SQL WHENEVER SQLERROR GOTO CLOSE_CURSOR;
+	EXEC SQL FETCH :cname USING DESCRIPTOR pSqlda;
+	if (sqlca.sqlcode == 0)
+	{
+		//
+		// Initialize the tuple and nCount from the sqlda:
+		GetRowFromSqlda(pSqlda, m_decimalFormat, m_moneyFormat, (CaFloatFormat *)&m_cursorInfo, m_listHeader, tuple, nCount, pArrayNullField);
+		return TRUE;
+	}
+	else
+	if (sqlca.sqlcode == 100)
+	{
+		// 
+		// Attempt to fetch past the last row of the result table.
+		EXEC SQL CLOSE :cname;
+		return FALSE;
+	}
+CLOSE_CURSOR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	if (sqlca.sqlcode < 0)
+	{
+		int nErr = sqlca.sqlcode;
+		EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+		EXEC SQL CLOSE :cname;
+		throw CeSqlException (A2T(error_buf), nErr);
+	}
+	EXEC SQL CLOSE :cname;
+	return TRUE;
+}
+
+
+BOOL CaCursor::Close()
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* cname = T2A((LPTSTR)(LPCTSTR)m_strCursorName);
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	EXEC SQL CLOSE :cname;
+	return TRUE;
+}
+
+
+
+CaBufferColumn::CaBufferColumn ()
+{
+	m_nSize      = 0;
+	m_pBuffer    = NULL;
+	m_sIndicator = 0;
+}
+
+CaBufferColumn::CaBufferColumn (int nSize)
+{
+	m_nSize     = nSize;
+	m_pBuffer   = new TCHAR [nSize];
+	m_sIndicator = 0;
+}
+
+CaBufferColumn::~CaBufferColumn ()
+{
+	if (m_nSize > 0 && m_pBuffer)
+		delete m_pBuffer;
+}
+
+void CaBufferColumn::SetBufferSize (int nSize)
+{
+	if (m_nSize > 0 && m_pBuffer)
+		delete m_pBuffer;
+	m_nSize     = nSize;
+	m_pBuffer= new TCHAR [nSize];
+}
+
+
+int INGRESII_GetSqlDisplayType(int nInternalIngresDataType)
+{
+	int nType = abs (nInternalIngresDataType);
+	switch (nType)
+	{
+	case IISQ_DTE_TYPE:
+		return SQLACT_DATE;
+	case IISQ_CHR_TYPE:
+	case IISQ_CHA_TYPE:
+	case IISQ_TXT_TYPE:
+	case IISQ_VCH_TYPE:
+	case IISQ_LVCH_TYPE:
+		return SQLACT_TEXT;
+	case IISQ_INT_TYPE:
+		return SQLACT_NUMBER;
+	case IISQ_DEC_TYPE:
+	case IISQ_FLT_TYPE:
+	case IISQ_MNY_TYPE:
+		return SQLACT_NUMBER_FLOAT;
+	case IISQ_BYTE_TYPE:
+	case IISQ_VBYTE_TYPE:
+		return SQLACT_TEXT;
+
+	case IISQ_ADTE_TYPE:
+	case IISQ_INDS_TYPE:
+	case IISQ_INYM_TYPE:
+	case IISQ_TME_TYPE:
+	case IISQ_TMWO_TYPE:
+	case IISQ_TMW_TYPE:
+	case IISQ_TSTMP_TYPE:
+	case IISQ_TSWO_TYPE:
+	case IISQ_TSW_TYPE:
+		/* Presently it is believed that no special handling is
+		** needed for the new date forms as they will compare
+		** correctly as text unlike DTE which has the DMY in an
+		** unhelpful form.
+		*/
+	default:
+		return SQLACT_TEXT;
+	}
+	return SQLACT_TEXT;
+}
+
+//
+// The function INGRESII_llDBMSInfo is defined in ingobdml.scc
+extern CString INGRESII_llDBMSInfo(LPCTSTR lpszConstName);
+static void SQLGetDbmsInfo(long& lplBio_cnt, long& lplCpu_ms)
+{
+	lplBio_cnt = -1;
+	lplCpu_ms  = -1;
+
+	CString strBio_cnt = INGRESII_llDBMSInfo(_T("_bio_cnt"));
+	CString strBio_cpu = INGRESII_llDBMSInfo(_T("_cpu_ms"));
+
+	lplBio_cnt = _ttol(strBio_cnt);
+	lplCpu_ms  = _ttol(strBio_cpu);
+}
+
+
+
+//
+// It only prepares and describes the statement in the OPTIMY ONLY MODE.
+// The caller must execute the SET OPTIMY ONLY statement.
+static BOOL CompileStatement (LPCTSTR lpszStatement, CeSqlException& exception, int nIngresVersion)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* sname = T2A((LPTSTR)_T("comstname"));
+		char* rawstm= T2A((LPTSTR)lpszStatement);
+	EXEC SQL END DECLARE SECTION;
+
+#if defined (_INGRES_DATA_UNICODE)
+	//
+	// don't try to let the optimizer compile "as is" select statements with unicode constants. */
+	// also indirectly leave the "compile time" as "n/a" in the corresponding control */
+	if (nIngresVersion >= INGRESVERS_26 && HasUniConstInWhereClause(rawstm, NULL)) 
+	{
+		return TRUE;
+	}
+#endif
+
+	IISQLDA* sqlda = (IISQLDA *)0;
+	sqlda = (IISQLDA*) malloc (sizeof (IISQLDA) - (IISQ_MAX_COLS-10)*sizeof (IISQLVAR));
+	if (!sqlda)
+	{
+		throw CeSqlException (_T("Cannot allocate memory"));
+		return FALSE;
+	}
+	sqlda->sqln = 10;
+
+	EXEC SQL WHENEVER SQLERROR GOTO COMPILE_ERROR;
+	//
+	// Prepare and describe the statement. If we cannot fully describe
+	// the statement (our SQLDA is too small) then allocate a new one
+	// and redescribe the statement again.
+	EXEC SQL PREPARE  :sname FROM :rawstm;
+	EXEC SQL DESCRIBE :sname INTO sqlda;
+	if (sqlda->sqld > sqlda->sqln)
+	{
+		int nNewSize = sqlda->sqld;
+		free ((void*)sqlda);
+		sqlda = (IISQLDA*) malloc (sizeof (IISQLDA) - (IISQ_MAX_COLS-nNewSize)*sizeof (IISQLVAR));
+		if (!sqlda)
+		{
+			throw CeSqlException (_T("Cannot allocate memory"));
+			return FALSE;
+		}
+		sqlda->sqln = nNewSize;
+		EXEC SQL DESCRIBE :sname INTO sqlda;
+	}
+
+	if (sqlda->sqld == 0)
+	{
+		if (sqlda)
+			free (sqlda);
+		throw CeSqlException (_T("Not a select-statement"));
+		return FALSE;
+	}
+	if (sqlda)
+		free (sqlda);
+	if (sqlca.sqlcode == 0)
+		return TRUE;
+	else
+		return FALSE;
+
+COMPILE_ERROR:
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	if (sqlda)
+		free (sqlda);
+	exception.SetReason(A2T(error_buf));
+	exception.SetErrorCode(nErr);
+	return FALSE;
+}
+
+//
+// Compile the Statements (return the time (ms) taken to compile the statements)
+long INGRESII_CompileStatement(CStringList& listStatement, int nIngresVersion)
+{
+	USES_CONVERSION;
+	CeSqlException e;
+	CString strStatement;
+	int  nStmtCompiled;
+	long lBiocntStart = 0;
+	long lBiocntEnd = 0;
+	long lCompileMsStart = 0;
+	long lCompileMsEnd = 0;
+	long ldiff = 0;
+	long lSetOptmMs = 0;
+	POSITION pos = NULL;
+	BOOL bCompileOk = TRUE;
+
+	// Calculate the time take by setting OPTM on and off (DBMSINFO CPU
+	// TIME IS NOT GIVEN WHEN RUNING WITH OPTM ON.
+	//
+	SQLGetDbmsInfo(lBiocntStart, lCompileMsStart);
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char szOptm[]  = "set optimizeonly"; 
+		char szNoOptm[]= "set nooptimizeonly"; 
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO COMILESTATEMENT_ERROR;
+	EXEC SQL EXECUTE IMMEDIATE :szOptm;
+	EXEC SQL EXECUTE IMMEDIATE :szNoOptm;
+
+	SQLGetDbmsInfo(lBiocntStart, lCompileMsEnd);
+
+	if (lCompileMsStart>=0 && lCompileMsEnd >=0) 
+		lSetOptmMs =lCompileMsEnd - lCompileMsEnd;
+	else
+		return -1L;
+	//
+	// Exec the statement to get the "compile time" statistics
+
+	SQLGetDbmsInfo(lBiocntStart, lCompileMsStart); // start time
+
+	EXEC SQL EXECUTE IMMEDIATE :szOptm;
+	nStmtCompiled = 0;
+	pos = listStatement.GetHeadPosition();
+	while (pos != NULL && bCompileOk)
+	{
+		strStatement = listStatement.GetNext (pos);
+		bCompileOk = CompileStatement (strStatement, e, nIngresVersion);
+		nStmtCompiled++;
+	}
+	EXEC SQL EXECUTE IMMEDIATE :szNoOptm;
+	if (nStmtCompiled > 0 && bCompileOk) 
+	{
+		SQLGetDbmsInfo (lBiocntEnd, lCompileMsEnd);
+		if (lCompileMsEnd >=0 && lCompileMsStart >=0) 
+		{
+			ldiff=lCompileMsEnd - lCompileMsStart - lSetOptmMs;
+			if (ldiff<0)
+				ldiff = 0;
+		}
+		else
+			ldiff = -1L;
+	}
+	else
+		ldiff = -1L;
+	if (bCompileOk)
+		return ldiff;
+COMILESTATEMENT_ERROR:
+	int nErr = sqlca.sqlcode;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	if (!bCompileOk)
+	{
+		INGRESII_ManageErrorInLogFiles( (LPTSTR)(LPCTSTR)e.GetReason(),(LPTSTR)(LPCTSTR)strStatement,e.GetErrorCode());
+		throw e;
+	}
+	else
+	{
+		EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+		EXEC SQL EXECUTE IMMEDIATE :szNoOptm;
+		INGRESII_ManageErrorInLogFiles( error_buf,"",nErr);
+		throw CeSqlException (A2T(error_buf), nErr);
+	}
+	return FALSE;
+}
+
+
+void INGRESII_llPrepareQEP(LPCTSTR lpszStatement, int nIngresVersion, int nCursorSequence)
+{
+	USES_CONVERSION;
+	int nCode = -1;
+	int nDefaultSize = 20;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* strStatement = T2A((LPTSTR)(LPCTSTR)lpszStatement);
+		char dyn_stm[]= "dbaqep";
+	EXEC SQL END DECLARE SECTION;
+
+#if defined (_INGRES_DATA_UNICODE)
+	EXEC SQL BEGIN DECLARE SECTION;
+	char* pStmtWithoutWhereClause1 = (char *)0;
+	EXEC SQL END DECLARE SECTION;
+	char* pStmtWithoutWhereClause = NULL;
+#endif
+
+	IISQLDA* pSqlda = (IISQLDA *)0;
+	BOOL bUnicode = FALSE;
+	class CaLocalCleanup
+	{
+	public:
+		CaLocalCleanup(IISQLDA** pSqlda, char** pStmtWithoutWhereClause)
+		{
+			m_pSqlda = pSqlda;
+			m_pStmtWithoutWhereClause = pStmtWithoutWhereClause;
+		}
+		~CaLocalCleanup()
+		{
+			if (m_pSqlda && *m_pSqlda)
+				free ((void*)*m_pSqlda);
+			if (m_pStmtWithoutWhereClause && *m_pStmtWithoutWhereClause)
+				free (*m_pStmtWithoutWhereClause);
+		}
+
+	protected:
+		IISQLDA** m_pSqlda;
+		char** m_pStmtWithoutWhereClause;
+	};
+	CaLocalCleanup cleanup(&pSqlda, &pStmtWithoutWhereClause1);
+
+	pSqlda = (IISQLDA*) malloc (sizeof (IISQLDA) - (IISQ_MAX_COLS-nDefaultSize)*sizeof (IISQLVAR));
+	if (!pSqlda)
+	{
+		throw CeSqlException (_T("Cannot allocate memory"));
+	}
+	pSqlda->sqln = nDefaultSize;
+	//
+	// Prepare and describe the statement. If we cannot fully describe
+	// the statement (our SQLDA is too small) then allocate a new one
+	// and redescribe the statement again.
+
+	EXEC SQL WHENEVER SQLERROR GOTO PREPAREQEP_ERROR;
+#if defined (_INGRES_DATA_UNICODE)
+	pStmtWithoutWhereClause = (char *) malloc(strlen(strStatement)+1);
+	if (!pStmtWithoutWhereClause)
+		throw CeSqlException (_T("Cannot allocate memory"));
+	if (nIngresVersion >= INGRESVERS_26)
+		bUnicode = HasUniConstInWhereClause(strStatement, pStmtWithoutWhereClause);
+
+	if (!bUnicode)
+	{
+		free (pStmtWithoutWhereClause);
+		EXEC SQL PREPARE :dyn_stm FROM :strStatement;
+	}
+	else 
+	{
+		pStmtWithoutWhereClause1 = pStmtWithoutWhereClause;
+		EXEC SQL PREPARE :dyn_stm FROM :pStmtWithoutWhereClause1;
+	}
+#endif
+
+	EXEC SQL DESCRIBE :dyn_stm INTO :pSqlda;
+	if (pSqlda->sqld > pSqlda->sqln)
+	{
+		int nNewSize = pSqlda->sqld;
+		pSqlda = (IISQLDA*) malloc (sizeof (IISQLDA) - (IISQ_MAX_COLS-nNewSize)*sizeof (IISQLVAR));
+		if (!pSqlda)
+		{
+			throw CeSqlException (_T("Cannot allocate memory"));
+		}
+		pSqlda->sqln = nNewSize;
+		EXEC SQL DESCRIBE :dyn_stm INTO pSqlda;
+	}
+
+	if (pSqlda->sqld == 0)
+	{
+		throw CeSqlException (_T("Not a select-statement"));
+	}
+
+	if (bUnicode)
+	{
+		CaCursor cursor (nCursorSequence, lpszStatement, nIngresVersion);
+		EXEC SQL BEGIN DECLARE SECTION;
+			char* cname = T2A((LPTSTR)(LPCTSTR)cursor.GetCursorName());
+		EXEC SQL END DECLARE SECTION;
+		ManageDeclareAndOpenCur4Uni(cname, strStatement);
+	}
+	else
+	{
+		EXEC SQL EXECUTE IMMEDIATE :strStatement USING DESCRIPTOR pSqlda;
+	}
+
+	nCode = sqlca.sqlcode;
+	return; 
+
+PREPAREQEP_ERROR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	nCode = sqlca.sqlcode;
+	if (nCode == -39100)
+	{
+		//
+		// Just do nothing, this error is:
+		// E_OP0008 Query Optimized
+		//         -trace flag indicates no execution should take place.
+	}
+	else
+	{
+		EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+		INGRESII_ManageErrorInLogFiles( error_buf,"",nCode);
+
+		throw CeSqlException (A2T(error_buf), nCode);
+	}
+}
+
+
+//
+// FETCH ROW: (using select loop instead of cursor)
+// CLASS: CaExecParamSelectLoop
+// ************************************************************************************************
+void CaExecParamSelectLoop::ConstructListHeader(PVOID* ppSqlDa)
+{
+	USES_CONVERSION;
+	int nCode = -1;
+	BOOL bInterrupted = FALSE;
+	IISQLDA* pSqlda = (IISQLDA *)0;
+	CaRowTransfer* pRecordTransfer = NULL;
+	CString strInfo;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* strStatement = T2A((LPTSTR)(LPCTSTR)m_strStatement);
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL DECLARE stmt STATEMENT; // Dynamic SQL
+
+
+	InitSqlda(pSqlda, 10);
+	EXEC SQL WHENEVER SQLERROR GOTO CONSTRUCTLISTHEADER_ERROR;
+	//
+	//
+	// Prepare and describe the statement. If we cannot fully describe
+	// the statement (our SQLDA is too small) then allocate a new one
+	// and redescribe the statement.
+	EXEC SQL PREPARE stmt FROM :strStatement;
+	EXEC SQL DESCRIBE stmt INTO :pSqlda;
+	if (pSqlda->sqld > pSqlda->sqln)
+	{
+		InitSqlda(pSqlda, pSqlda->sqld);
+		EXEC SQL DESCRIBE stmt INTO :pSqlda;
+	}
+
+	//
+	// Initialize the list of header
+	InitializeHeader(pSqlda, m_listHeader, m_listBufferColumn, &m_moneyFormat);
+	if (ppSqlDa)
+		*ppSqlDa = (void*)pSqlda;
+	else
+	{
+		if (pSqlda)
+			free ((void*)pSqlda);
+		pSqlda = NULL;
+	}
+	return;
+
+CONSTRUCTLISTHEADER_ERROR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	nCode = sqlca.sqlcode;
+	if (pSqlda)
+		free ((void*)pSqlda);
+	pSqlda = NULL;
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	INGRESII_ManageErrorInLogFiles( error_buf,"",nCode);
+	
+	throw CeSqlException (A2T(error_buf), nCode);
+	return;
+}
+
+
+BOOL CaExecParamSelectLoop::SelectLoop(HWND hWndTaskDlg)
+{
+	USES_CONVERSION;
+	int nCode = -1;
+	int nColCount;
+	BOOL bInterrupted = FALSE;
+	IISQLDA* pSqlda = (IISQLDA *)0;
+	CaRowTransfer* pRecordTransfer = NULL;
+	CString strInfo;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* strStatement = T2A((LPTSTR)(LPCTSTR)m_strStatement);
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL DECLARE stmt STATEMENT; // Dynamic SQL
+	CaSqlTrace aTrace;
+	BOOL bHasTrace = FALSE;
+	if (m_bUseTrace)
+	{
+		bHasTrace = FALSE;
+		aTrace.Start();
+	}
+
+	ConstructListHeader((PVOID*)(&pSqlda));
+	if (m_bUseTrace)
+	{
+		aTrace.Stop();
+		CString& strTraceBuffer = aTrace.GetTraceBuffer();
+		RCTOOL_CR20x0D0x0A(strTraceBuffer);
+		if (!strTraceBuffer.IsEmpty())
+		{
+			bHasTrace = TRUE;
+			::SendMessage (m_hWnd, WMUSRMSG_SQL_FETCH, (WPARAM)CaExecParamSelectCursor::FETCH_TRACEINFO, (LPARAM)(LPCTSTR)strTraceBuffer);
+		}
+		aTrace.Start();
+	}
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYROWSxLOOP_ERROR;
+	EXEC SQL EXECUTE IMMEDIATE :strStatement USING DESCRIPTOR :pSqlda;
+	EXEC SQL BEGIN;
+		if (m_synchronizeInterrupt.IsRequestCancel())
+		{
+			m_synchronizeInterrupt.BlockUserInterface (FALSE); // Release user interface
+			m_synchronizeInterrupt.WaitWorkerThread ();        // Wait itself until user interface releases it.
+		}
+
+		bInterrupted = IsInterrupted();
+		if (bInterrupted)
+		{
+			m_nEndFetchStatus = CaExecParamQueryRows::FETCH_INTERRUPTED;
+			EXEC SQL ENDSELECT;
+			return TRUE;
+		}
+		pRecordTransfer = new CaRowTransfer();
+		CStringList& listRecord = pRecordTransfer->GetRecord();
+		CArray <UINT, UINT>& arrayNullField = pRecordTransfer->GetArrayFlag();
+		GetRowFromSqlda(pSqlda, m_decimalFormat, m_moneyFormat, &m_fetchInfo, m_listHeader, listRecord, nColCount, &arrayNullField);
+		m_nAccumulation++;
+
+		if (hWndTaskDlg)
+		{
+			//
+			// MSG = "Rows fetched : %d"
+			strInfo.Format (m_strFetchInfo, m_nAccumulation);//_T("Rows fetched : %d")
+			LPTSTR lpszMsg = new TCHAR[strInfo.GetLength()+1];
+			lstrcpy (lpszMsg, strInfo);
+			::PostMessage (hWndTaskDlg, WM_EXECUTE_TASK, W_EXTRA_TEXTINFO, (LPARAM)lpszMsg);
+		}
+
+		if (m_hWnd)
+		{
+			//
+			// List of records to be displayed
+			::PostMessage (m_hWnd, WMUSRMSG_UPDATEDATA, 0, (LPARAM)pRecordTransfer);
+		}
+		else
+		if (m_pUserData && m_pfnUserHandlerResult)
+		{
+			m_pfnUserHandlerResult (m_pUserData, pRecordTransfer);
+		}
+		else
+		{
+			//
+			// The results of the select statement are not handled:
+			ASSERT (FALSE);
+			delete pRecordTransfer;
+			pRecordTransfer = NULL;
+		}
+	EXEC SQL END;
+
+	if (m_bUseTrace)
+	{
+		aTrace.Stop();
+		CString& strTraceBuffer = aTrace.GetTraceBuffer();
+		RCTOOL_CR20x0D0x0A(strTraceBuffer);
+		if (!strTraceBuffer.IsEmpty())
+		{
+			bHasTrace = TRUE;
+			::SendMessage (m_hWnd, WMUSRMSG_SQL_FETCH, (WPARAM)CaExecParamSelectCursor::FETCH_TRACEINFO, (LPARAM)(LPCTSTR)strTraceBuffer);
+		}
+	}
+	m_nEndFetchStatus = CaExecParamSelectLoop::FETCH_NORMAL_ENDING;
+	if (pSqlda)
+		free ((void*)pSqlda);
+	pSqlda = NULL;
+	return TRUE;
+
+QUERYROWSxLOOP_ERROR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[MAXSQLERROR];
+	EXEC SQL END DECLARE SECTION;
+
+	nCode = sqlca.sqlcode;
+	if (pSqlda)
+		free ((void*)pSqlda);
+	pSqlda = NULL;
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	INGRESII_ManageErrorInLogFiles( error_buf,"",nCode);
+
+	throw CeSqlException (A2T(error_buf), nCode);
+	return TRUE;
+}
+

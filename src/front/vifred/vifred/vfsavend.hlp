@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to end the editing session.  Would you like to save the form
+before leaving or end without saving the form.  The table field lists options
+that may be used to decide whether or not to save the form.  The options are:
+
+        Yes             Save changes, then end
+        No              End without saving changes
+
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Select          Choose the option indicated by the current line of
+                        the table field.  Indicates whether or not to save
+                        the form.
+
+        Cancel          Decide not to end at this time.
+
+        Help            Access the Ingres Help facility.

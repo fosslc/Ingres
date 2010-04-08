@@ -1,0 +1,31 @@
+# ifdef comment
+
+  Copyright (c) 1985, 2005 Ingres Corporation
+
+  Name: utcom.def -     UT Linking Rules Definition File.
+
+        This file is used to create variant "utlnk.def" files for
+        different target systems.  It specifies transformation rules
+        used to link.
+
+        BEWARE:  BEGIN EACH LINE WITH TAB ONLY - Not spaces
+                 ENSURE that there are no blank characters at the end of the
+                 lines.
+
+        Create the file via:
+
+                ccpp utcom.ccpp > utcom.def
+
+  History:
+        17-May-2005 (lakvi01)
+	    Created. The need for this file arose because, Ingres on i64_win 
+	    and a64_win is built (currently) using PSDK. bufferoverflowu.lib must
+	    be linked with explicitly if PSDK is used. This will not be needed
+	    when Whidbey will be used for building and on that day this file will 
+	    be replaced with utlnk.def	    
+# endif comment
+#if defined(i64_win) || defined(a64_win)
+link /NOLOGO /SUBSYSTEM:console /ENTRY:mainCRTStartup bufferoverflowu.lib @
+#else
+link /NOLOGO /SUBSYSTEM:console /ENTRY:mainCRTStartup @
+#endif

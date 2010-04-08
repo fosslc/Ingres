@@ -1,0 +1,9 @@
+#
+# Jamfile file for front!ice!fortunoff_image
+#
+
+SubDir ING_SRC front ice fortunoff_image ;
+
+IISUBSYS front ice fortunoff_image ;
+
+

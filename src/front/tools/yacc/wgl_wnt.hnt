@@ -1,0 +1,8 @@
+#
+# wgl_wnt.hnt file for front\tools\yacc
+#
+
+subsys = congui
+proto = false
+main = y1.c
+

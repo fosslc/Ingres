@@ -1,0 +1,59 @@
+/#-- Copyright (c) 2004 Ingres Corporation 
+/#-- vq4gldet.hlp       Help on details about generated frame
+For frames with a table field on the form, the table field name is:
+
+        iitf
+
+Two temporary INTEGER variables are available for your use in escape code:
+
+        IIint
+        IIint2  (not available in Menu frames)
+
+    'IIint' and 'IIint2' are for temporary use only -- their values may
+    change after your escape code executes (these temporary variables
+    are also used by the generated 4gl code). Also, because 'IIint' and
+    'IIint2' are used elsewhere in the generated 4gl, their initial values 
+    are undefined.
+
+IIretval is a built-in global variable used to return status information
+from child to parent frames.
+
+        IIretval
+        Value    Meaning
+        -------- ------------------------------
+         1       Normal return
+         2       User pressed TopFrame menuitem
+        -1       Error occurred in child frame
+
+If you want to exit from a Browse or Update frame with Query 
+Qualification Disabled, but you want to run any "QUERY-END" and "FORM-END"
+escapes first, do the following in your escape code:
+
+        ENDLOOP IIloop;
+
+    You can issue this statement from any escape code, except FORM-START
+    and QUERY-START.
+
+If you do NOT want to clear all fields after each Save in an Append
+frame and after each AddNew in an Update frame, add the following
+statement to the frame's Form-Start Escape:
+
+        IIclear = 'n';
+
+        (In an Update frame, this statement should only be used when the
+        Visual Query specifies that master Inserts are allowed.)
+
+If you do NOT want to clear all fields in an Update or Browse frame
+after running the Select query (before returning back to Query mode),
+add the following statement to the frame's Form-Start Escape:
+
+        IIclear2 = 'n';
+
+        (This statement should only be used in Update and Browse
+        frames where the 'Query Qualification' frame behavior is set
+        to 'Enabled'.)
+
+In ListChoices-style Menu frames, IIchoice is the command which the user
+Selects.  IIfound is set to 1 if this command is a child frame, and to 0
+otherwise.  If IIfound is 0, the User-Menuitem escape code is called to
+execute the command.

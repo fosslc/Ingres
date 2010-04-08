@@ -1,0 +1,14 @@
+<!-- #ICE REPEAT IF (`:html` != ``)
+		 THEN=`<!-- #ICE DECLARE=``session.html=:html`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=If you have null variables?&previous=format.html&next=sqlFinal.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`checkSQL.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`<INPUT SIZE="32" NAME="nullvar" VALUE=":nullvar">
+			<!-- #ICE REPEAT INCLUDE=``sqlResult.html`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

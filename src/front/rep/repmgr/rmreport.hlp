@@ -1,0 +1,53 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcfgmen.hlp
+RESOLVER REPORTS MENU
+
+This menu is used to run one of six report options for maintaining or
+troubleshooting the Replicator system.
+
+The following selections are available:
+
+        SELECTION       ALLOWS YOU TO
+        ---------       -------------
+        Collision       Run the Queue Collision Report which lists
+                        collision conflicts for items in the local
+                        distribution queue.
+
+        Integrity       Run the Table Integrity Report which compares a
+                        replicated table on two different databases.
+
+        Distrib Config  Run the Distributed Configuration Checker Report
+                        which details any configuration differences
+                        between the local database and other databases
+                        in the replication scheme.  These differences
+                        include registered tables and columns, database
+                        number, name, vnode, CDDS's, paths and so forth.
+
+        Databases       Run the Databases Report which lists all the
+                        databases in the replication scheme.  This
+                        report is equivalent to the contents of the
+                        Database Summary screen.
+
+        CDDS            Run the CDDS Data Propagation Paths Report which
+                        lists all CDDS's and their respective paths.
+                        This report is equivalent to the contents of the
+                        Propagation Path Definition screen.
+
+        Tables          Run the Registered Tables Report which displays
+                        information on all tables registered for
+                        replication.  This report is equivalent to the
+                        contents of the Table Registration Summary and
+                        the related Table Registration Detail screens.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Select          Choose the currently highlighted option.
+
+        Help            Access the Help facility.
+
+        End             Return to the Main Menu.
+
+        Quit            Exit Replicator Manager.

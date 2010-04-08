@@ -1,0 +1,43 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescms.hlp                Menu-Start escape code examples.
+Each menuitem specified in the Application Flow Diagram can have a
+Menu-Start escape. The Menu-Start escape executes before the CALLFRAME
+or CALLPROC statement.
+
+Menu-Start code examples:
+
+    To check if the current user is authorized to call the frame:
+
+        status = CALLPROC checkauth ('FrameNameToBeCalled', 'username');
+        IF (status != 1) THEN
+            CALLPROC beep();    /* 4gl built-in procedure */
+            MESSAGE 'You are not authorized to run this menuitem.'
+                WITH STYLE = POPUP;
+            RESUME;
+        ENDIF;
+
+    To check if the cursor is in the table field 'iitf' (if the table field 
+    arguments are passed to the called frame, then the cursor must be in 
+    the table field):
+
+        INQUIRE_FORMS FIELD '' (fldname = NAME);
+        IF (fldname != 'iitf') THEN
+            CALLPROC beep();    /* 4gl built-in procedure */
+            MESSAGE 'You can only select this menuitem when your'
+                  + ' cursor is in the table field.' WITH STYLE = POPUP;
+            RESUME;
+        ENDIF;
+
+    To make sure that a particular field contains a value before allowing
+    the CALLFRAME to take place (the field is an argument to the frame):
+
+        IF (last_name = '') THEN
+            CALLPROC beep();    /* 4gl built-in procedure */
+            MESSAGE 'You must enter a Last Name before selecting'
+                  + ' this menuitem.' WITH STYLE = POPUP;
+            RESUME FIELD last_name;
+        ENDIF;
+
+    To validate every field on the form:
+
+        VALIDATE;

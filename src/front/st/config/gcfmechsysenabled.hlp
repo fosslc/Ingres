@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ Indicates whether the "system" security mechanism is enabled.  "True" means
+ the "system" security mechanism is enabled; "false" means the "system"
+ mechanism is disabled.
+
+ The "system" security mechanism is the legacy method for authentication for
+ Ingres.  The principal means of authentication are user name and either
+ OS-level passwords or installation passwords.

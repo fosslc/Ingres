@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The opf_timeout_factor resource specifies the factor by which query 
+  "cost" estimates are adjusted before being compared with the machine's
+  "CPU time" for the purpose of determining query optimization timeout.
+
+  On machines with fast CPU and/or disk access/cache this factor may be 
+  reduced with caution.
+
+  Default is 10.

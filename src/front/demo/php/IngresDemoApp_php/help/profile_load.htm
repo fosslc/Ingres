@@ -1,0 +1,66 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How Profile Information Is Loaded and the Picture Displayed </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="Ajax, Profile function, SELECT statement, xajax">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body  onload="if (isTOCLoaded()) {expand('3405');expand('3326');expand('3319');highlight('3306')}">
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="email_load.htm" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="profile_add.htm" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How Profile Information Is Loaded and the Picture Displayed</h4>
+<p class="bodytext">The column up_image is defined as the long byte Ingres data type. To display the picture, it is necessary to read the binary value into a variable and store it into a file that can be downloaded by the browser. For this reason, a temporary file cannot be used.</p>
+<p class="bodytext">The picture value is downloaded from the database identified by the profile's email address in the method getProfileByEmail of the <a href="showSource.php?file=ProfileModel" target="_blank">ProfileModel</a> class.</p>
+<p class="bodytext">First, the user inputs are checked, then the SQL statement is created. We use the parameter $email in the WHERE clause to limit the result to the profile that exactly matches this mail address.  </p>
+<p class="bodytext">The query is submitted to the database and the result returned:</p>
+<p class="codefirst">$sql =&quot;SELECT up_airport, up_email, up_first, up_last, up_image,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ap_name, ap_place, ct_name, ct_code</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FROM user_profile, airport, country</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WHERE up_airport = ap_iatacode AND</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ap_ccode = ct_code AND</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;up_email ='&quot;.$email.&quot;'&quot;;</p>
+<p class="codefirst">$this-&gt;DBConn-&gt;query($sql);</p>
+<p class="codefirst">//let's get the profile as an object</p>
+<p class="code">$resObjArray = $this-&gt;DBConn-&gt;getResultObjects();</p>
+<p class="bodytext">In this case, the results are needed as objects, so we call getResultObjects of <a href="showSource.php?file=DBConnection" target="_blank">DBConnection</a>. This method in turn calls ingres_fetch_object and appends every returned object to an array.</p>
+<p class="codefirst">function getResultObjects()</p>
+<p class="code">{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$resultArray = array();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;while($obj = ingres_fetch_object())</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$resultArray[] = $obj;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return $resultArray;</p>
+<p class="code">}</p>
+<p class="note"><strong class="bold">Note: </strong>The array can contain only one or no Object because up_email is declared as the primary key of the table user_profile. It is implicitly unique because we know that we create a new empty object and assign one attribute for each attribute of the result object to it.</p>
+<p class="bodytext">This new object is returned to the xajax function loadCredentials in <a href="showSource.php?file=profileAJAX" target="_blank">profile.ajax.php</a>.</p>
+<p class="bodytext">With the information provided by the object, loadCredentials loads the home country and the home region of the user from the database, composes HTML code for the appropriate select boxes, and finally stores the image into a file named after the email address of the profile.</p>
+<p class="codefirst">$path = &quot;pictures/&quot;.session_id();</p>
+<p class="code">$file = $path.&quot;/&quot;.$profile-&gt;email;</p>
+<p class="code">$handle = fopen($file,&quot;w&quot;);</p>
+<p class="code">fwrite($handle,$profile-&gt;image);</p>
+<p class="code">fclose($handle);</p>
+<p class="bodytext">All the HTML code is assigned to the appropriate DOM Node in the HTML page with the Ajax Response Object.</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2007 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

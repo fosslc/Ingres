@@ -1,0 +1,105 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_BADOUTPUTFLAG       "bad -o (output) flag"
+    IDS_NOIISYSTEM          "The local XXX_SYSTEM environment variable must be set before continuing"
+    IDS_BADUSERNAMEFLAG     "bad -u (username) flag"
+    IDS_BADTIMEVALUE        "non-numeric -a[actual] value"
+    IDS_BADREPEATVALUE      "non-numeric -r[repeat] value"
+    IDS_BADFLAG             "bad flag %s"
+    IDS_BADTIMEFLAG         "Bad -a (actual-time) flag"
+    IDS_NOTESTGIVEN         "no test case given"
+    IDS_NODATABASEGIVEN     "no data base specification given"
+    IDS_CANNOTFIND          "Can't find %s"
+    IDS_CANNOTREAD          "Can't read %s"
+    IDS_NODIRECTORY         "output dir <%s>\ndoes not exist, creating it."
+    IDS_CANNOTCREATEDIRECTORY "Can not create directory %s"
+    IDS_NOOUTPUTPATH        "No output path was given."
+    IDS_WRONGDBSPEC         "Something's wrong with data base spec=%s"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_NOCOMSVRS           "No comsvrs are running"
+    IDS_NODBMSSERVER        "No dbms servers are running"
+    IDS_NOSTARSERVER        "No star servers are running"
+    IDS_CANNOTACCESSDB      "Could not access %s --\ntests not submitted"
+    IDS_CANNOTOPENCONFIG    "Can not open configuratio file %s."
+    IDS_CANNOTGETCONFIGSIZE "GetFileSize() function failed for file %s"
+    IDS_CANNOTALLOC         "Memory allocation faild. Requested memory size = %s"
+    IDS_CANNOTREADCONFIG    "Can not read config file %s"
+    IDS_CANNOTWRITECONFIG   "Can not write config file %s"
+    IDS_CANNOTOPENLOG       "Can not open log file %s"
+    IDS_CANNOTSTARTACHILLES "Can not start %s"
+    IDS_CANNOTDUPLICATELOG  "Can not duplicate loh handle%s"
+    IDS_BAD_SUT             "Bad product name supplied for ACHILLES_SUT environment var"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

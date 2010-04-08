@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!tpf!tpc
+#
+
+SubDir ING_SRC back tpf tpc ;
+
+IISUBSYS back tpf tpc ;
+
+
+IILIBRARY IMPTPFLIBDATA : tpconst.roc ;
+

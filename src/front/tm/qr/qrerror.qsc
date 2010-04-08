@@ -1,0 +1,370 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<cm.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<qr.h>
+# include	<ug.h>
+# include	"erqr.h"
+# include	<erlq.h>
+
+/**
+** Name:	qrerror.qsc - QR error handler for LIBQ errors
+**
+** Description:
+**
+**	Contains routine for handling user-query generated
+**	errors in QR module.  Errors generated within PRINT
+**	statement execution are handled here.
+**
+**	Public (extern) routines:
+**		qrerror(errp)
+**		qrtrace
+**
+**	History:
+**	86/10/01  10:33:42  peterk
+**		initial version in RCS.
+**	86/10/14  13:08:01  peterk
+**		workgin version 2.
+**		handle error translation for PRINT statements here now.
+**	86/11/06  10:01:48  peterk
+**		mods for use with 6.0 LIBQ; enlarged errbuf[] and made
+**		it GLOBALDEF here since it is only used here; changed
+**		parameters to qrerror() as per changes in way 6.0 LIBQ
+**		calls user-defined error handler (no more pc, pv);
+**		temporarily turn off error number/message translation for
+**		PRINT statements until 6.0 LIBQ/BE communication interface
+**		is complete.
+**	86/12/31  11:24:52  peterk
+**		change over to 6.0 CL headers
+**	87/03/31  15:40:02  peterk
+**		rearranged ifdefs for old 4.0-LIBQ based code.
+**	87/04/08  01:39:46  joe
+**		Added compat, dbms and fe.h
+**	87/04/22  11:24:11  peterk
+**		check for list of non-fatal errors (provided by BE group):
+**		don't terminate go=-block for these errors
+**		(i.e. set .severity = 0).  (this is an expedient hack
+**		for the time being to maintain backward compatibility.)
+**		also put in hack to output error message appropriate for
+**		PRINT statement.
+**	87/05/07  13:27:14  daver
+**		Added error 4224 to list of non-error-block-fatal ones.
+**	12-may-1987 (daver)
+**		Multiple backend error support added.
+**	12-feb-1988 (neil)
+**		Trap trace data (BUG 648).
+**	08-jun-88 (bruceb)
+**		Changed to use SQL.
+**	07-sep-88 (bruceb)	Fix for bugs 2196 and 3270.
+**		Added acceptance ('warning only') of errors 2753 and 5117.
+**	07-sep-88 (bruceb)	Fix for bug 3850.
+**		Added acceptance ('warning only') of error 2078.
+**	20-apr-89 (kathryn)	No longer distinguish between error messages.
+**		User now decides whether or not to terminate go_block when
+**		a user error is encountered.  Addition of TM command 
+**		[no]continue lets the user set severity.
+**	20-apr-89 (kathryn)	Updated for generic error messages on PRINT
+**		statements.
+**	30-sep-89 (teresal) PC porting change - declare qrerror as nat.
+**	02-01-1992 (kathryn)
+**	   	Add functions IIQRdehDbEventHdlr and IIQRpmhProcMsgHdlr as
+**		default database event and procedure message handlers.
+**		Add IIQRsqhSetQrHandlers funtion to register and de-register
+**	 	these default handlers to LIBQ.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	06-Apr-2005 (lakvi01)
+**	    Corrected function prototypes.
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ug.h to satisfy gcc 4.3.
+**/
+
+extern QRB	*QRqrb;
+EXEC SQL BEGIN DECLARE SECTION;
+static char	errbuf[ER_MAX_LEN+3];
+EXEC SQL END DECLARE SECTION;
+
+i4
+qrerror(errp)
+i4	*errp;
+{
+
+	/* re-initialize error msg buffer */
+	EXEC SQL INQUIRE_INGRES (:errbuf = ERRORTEXT);
+	STcat(errbuf, ERx("\n"));
+
+	QRqrb->errmsg = errbuf;
+
+	/* set error and severity level */
+	QRqrb->error = *errp;
+
+
+	/* trap PRINT errors for backward compatability */
+	if (QRqrb->stmtdesc->qrsd_type == PRINTstmt)
+	{
+	    /*
+	    ** change to corresponding PRINT error number
+	    */
+	    /* table does not exist */
+	    if ((QRqrb->error == 2117) || (QRqrb->error == 30100))
+	    {
+		QRqrb->error = 5001;
+		QRqrb->errmsg = ERget(E_QR0003_PRINT_table_not_exist);
+	    }
+	    /* RANGE syntax err */
+	    else if ((QRqrb->error == 2612) || (QRqrb->error == 31000))   
+	    {
+		QRqrb->error = 2611;
+		QRqrb->errmsg = ERget(E_QR0004_PRINT_syntax_error);
+	    }
+	}
+
+	if (QRqrb->flushfunc != NULL)
+	{
+		(*QRqrb->flushfunc)(QRqrb->flushparam, QRqrb->errmsg);
+	}
+
+	/* tell LIBQ we've dealt with the error */
+	return 0;
+}
+
+/*{
+**  Name: qrtrace - Trace trace data from LIBQ.
+**
+**  Description:
+**	If we are in "script" mode we want to trap trace data, as well
+**	as to provide this functionality to the fstm.
+**
+**  Inputs:
+**	trace_done	- There is trace data (FALSE)
+**			  Trace is done, flush the data (TRUE)
+**			  The routine uses these flags as well as a local
+**			  static flag to control the delimiting of trace
+**			  data in the output file.
+**	trace_dbv	- Contains trace data (not null terminated).
+**			  If 'trace_done' is set then ignore argument.
+**  Outputs:
+**	Returns:
+**	    Void
+**	Errors:
+**	    None
+**
+**  Side Effects:
+**	
+**  History:
+**	12-feb-1988	- Written (ncg)
+*/
+
+void
+qrtrace(trace_done, trace_dbv)
+bool		trace_done;
+DB_DATA_VALUE	*trace_dbv;
+{
+    static	bool	first = TRUE;
+    char		*line =
+ERx("\n********************************************************************\n");
+    i4			len;
+
+    if (QRqrb->flushfunc != NULL)
+    {
+	if (first)			/* Pass header line */
+	{
+	    STcopy(line, errbuf);
+	    (*QRqrb->flushfunc)(QRqrb->flushparam, errbuf);
+	    first = FALSE;
+	}
+	if (!trace_done)		/* Pass real trace data */
+	{
+	    len = min(ER_MAX_LEN, trace_dbv->db_length);
+	    len = CMcopy(trace_dbv->db_data, len, errbuf);
+	    errbuf[len] = '\0';
+	    (*QRqrb->flushfunc)(QRqrb->flushparam, errbuf);
+	}
+	else				/* Done with trace, pass footer line */
+	{
+	    STcopy(line, errbuf);
+	    (*QRqrb->flushfunc)(QRqrb->flushparam, errbuf);
+	    first = TRUE;		/* Ready for next time */
+	}
+    }
+}
+/*{
+**  Name: IIQRdehDbEventHdlr -- Database Event Handler.
+**
+**  Description:
+**	Display database event information.  This function will be called 
+**	by LIBQ (iilqevt.c) to display the event information whenever a 
+**	database event is received. 
+**	The output generated is identical to that which is produced by 
+**	setting "dbeventdisplay". 
+**	However, dbeventdisplay writes to stdout.  This handler is needed so
+**	that the ouput will be generated by the flushfunc which can capture it
+**	for SEP and scripting "\script" in SQL, and send it to the output
+**	screen rather than popups for ISQL.
+**
+**  Inputs:
+**	none.
+**
+**  Outputs:
+**	Displays database event info in the following format:
+**		EVENT NAME: 
+**		OWNER:      
+**		DATABASE:  
+**		DATE:     
+**		TEXT:
+**
+**	Returns:
+** 	    i4  - Nothing actually,  but must be defined nat. 
+**	Errors:
+**	    none.
+**
+**  Side Effects:
+**	Handler is registered to LIBQ so will be called whenever a database
+**	event is received.
+**
+**  History:
+**	02-01-1992 (kathryn)  Written.
+**
+*/
+
+i4
+IIQRdehDbEventHdlr()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+        char    ev_name[DB_MAXNAME+1];
+        char    ev_ownr[DB_MAXNAME+1];
+        char    ev_dbnm[DB_MAXNAME+1];
+        char    ev_text[71];
+        char    ev_time[DB_DTE_LEN];
+    EXEC SQL END DECLARE SECTION;
+
+    ev_text[0] = EOS;
+    EXEC SQL INQUIRE_SQL (:ev_name = dbeventname,  :ev_text = dbeventtext,
+			  :ev_ownr = dbeventowner, :ev_dbnm = dbeventdatabase,
+			  :ev_time = dbeventtime);
+    if (ev_text[0] == EOS)
+    {
+	STprintf(errbuf,
+           "\nEVENT NAME: %s\nOWNER:      %s\nDATABASE:   %s\nDATE:       %s\n\n",
+           ev_name, ev_ownr, ev_dbnm, ev_time );
+
+    }
+    else
+    {
+	STprintf(errbuf,
+            "\nEVENT NAME: %s\nOWNER:      %s\nDATABASE:   %s\nDATE:       %s\nTEXT:       %.70s\n\n",
+           ev_name, ev_ownr, ev_dbnm, ev_time, ev_text);
+    }
+    if (QRqrb->flushfunc != NULL)
+	(*QRqrb->flushfunc)(QRqrb->flushparam, errbuf);
+}
+
+/*{
+**  Name:  IIQRpmhProcMsgHdlr -- Database Procedure Message Handler
+**
+**  Description:
+**	Display database procedure messages.  This function is called by LIBQ
+**	(iierror.c) to display messages generated by database procedure
+**	MESSAGE statements.
+**	The output generated is identical to that which is produced by
+**	setting "sqlprint".
+**	However, sqlprint writes to stdout.  This handler is needed so that the
+**	output will be generated by the flushfunc which can capture it for SEP
+**	and scripting ("\script") in SQL, and for ISQL - send it to the output 
+**	screen rather than popups.
+**
+**  Inputs:
+**	none.
+**
+**  Outputs:
+**	Displays database procedure message.
+**
+**      Returns:
+**          i4  - Nothing actually,  but must be defined nat.
+**      Errors:
+**          none.
+**
+**  Side Effects:
+**	Handler is registered to LIBQ so will be called whenever a database
+**	procedure message is received.
+**
+**  History:
+**	02-01-1992 (kathryn)  Written.
+*/
+
+
+i4
+IIQRpmhProcMsgHdlr()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+	int	msgno;
+	char	msgbuf[ER_MAX_LEN +2];
+    EXEC SQL END DECLARE SECTION;
+  
+    msgbuf[0] = EOS;
+
+    EXEC SQL INQUIRE_SQL(:msgno = messagenumber, :msgbuf = messagetext);
+
+
+    STcat(msgbuf,ERx("\n"));
+    if (msgbuf[0] != EOS)           /* Number and text */
+        IIUGfmt(errbuf, ER_MAX_LEN, ERget(F_LQ0301_UMSG_BOTH), 2, &msgno, 
+                msgbuf);
+    else if (msgno != 0)                /* Just number */
+        IIUGfmt(errbuf, ER_MAX_LEN, ERget(F_LQ0303_UMSG_NUMBER), 1, &msgno);
+
+
+    if (QRqrb->flushfunc != NULL)
+        (*QRqrb->flushfunc)(QRqrb->flushparam, errbuf);
+}
+
+/*{
+**  Name: IIQRsqhSetQrHandlers -- Set/Unset default event and message handlers.
+**
+**  Description:
+** 	Register default database event and database procedure message handlers.
+**
+**  Inputs:
+**      Active:  If true register default handlers otherwise de-register them.
+**
+**  Outputs:
+**
+**  Side Effects:
+**      Handlers are registered to LIBQ.
+**	IIQRdehDbEventHdlr will be called whenever database events are received.
+**	IIQRpmhProcMsgHdlr will be called whenever database procedure messages
+**		are received.
+**
+**  History:
+**      02-01-1992 (kathryn)  Written.
+**
+*/
+
+VOID
+IIQRsqhSetQrHandlers(active)
+bool active;
+{
+	if (active)
+	{
+	    EXEC SQL SET_SQL (dbeventhandler = IIQRdehDbEventHdlr);
+	    EXEC SQL SET_SQL (messagehandler = IIQRpmhProcMsgHdlr);
+	}
+	else
+	{
+	    EXEC SQL SET_SQL (dbeventhandler = 0);
+	    EXEC SQL SET_SQL (messagehandler = 0);
+	}
+}

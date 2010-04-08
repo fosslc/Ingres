@@ -1,0 +1,26 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of a Graph frame.  You may change the
+definition of the frame on the form and through some of the menu operations.
+Within the running application, this frame will call RUNGRAPH to produce the
+graph named in the Graph Name field.
+
+Use the Command Line field to specify any special flags to use for the 
+RUNGRAPH command when the frame is run.
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Rename                  Give the frame a new name.
+
+        LongRemark              Display and allow editing of the long remarks.
+
+	ListChoices             Display choices for the current field.
+
+        Cancel                  Ignore any changes and return to the previous 
+                                frame.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Save any changes and return to the previous 
+                                frame.

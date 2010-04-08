@@ -1,0 +1,7 @@
+(PROD1NAME) JDBC Server w/(PROD1NAME) Networking
+
+The (PROD1NAME) JDBC Server enables communication between JAVA-JDBC Applets/
+Applications and Ingres, EDBC Servers. It is the server component of 
+(PROD1NAME) JDBC Driver.
+
+(PROD1NAME) JDBC Server currently supports TCP/IP protocol.       

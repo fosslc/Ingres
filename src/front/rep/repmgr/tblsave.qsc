@@ -1,0 +1,178 @@
+/*
+** Copyright (c) 1997, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <ug.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	tblsave.qsc - save table information
+**
+** Description:
+**	Defines
+**		tblsave		- save table information
+**
+** History:
+**	10-jan-97 (joea)
+**		Created based on tablesave.sc in replicator library.
+**	18-may-98 (padni01) bug 89865
+**		Use date_gmt instead of date to set columns_registered field 
+**		of dd_regist_tables.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+static const
+##char	*form_name = ERx("rmtbl_detail"),
+##	*tf_name = ERx("iitf"),
+##	*fcdds_no = ERx("cdds_no"),
+##	*fcdds_name = ERx("cdds_name"),
+##	*findex_used = ERx("index_used"),
+##	*fcdds_lookup_tbl = ERx("cdds_lookup_table"),
+##	*fprio_lookup_tbl = ERx("prio_lookup_table"),
+##	*fsupp_objs_created = ERx("supp_objs_created"),
+##	*frules_created = ERx("rules_created"),
+##	*fcol_name = ERx("column_name"),
+##	*fcol_seq = ERx("col_seq"),
+##	*fbase_col_seq = ERx("base_col_seq"),
+##	*fkey_seq = ERx("key_sequence"),
+##	*freplic_col = ERx("replicated_column");
+
+
+FUNC_EXTERN STATUS db_config_changed(i2 db_no);
+
+
+/*{
+** Name:	tblsave - save table information
+**
+** Description:
+**	Save information from table registration screen
+**
+** Inputs:
+**	tbl_no	- table number
+**	tbl_name	- table name
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	OK or FAIL
+*/
+STATUS
+tblsave(
+i4	tbl_no,
+char	*tbl_name)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+i4	tbl_no;
+char	*tbl_name;
+EXEC SQL END DECLARE SECTION;
+# endif
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	char	cdds_lookup_tbl[DB_MAXNAME+1];
+##	char	prio_lookup_tbl[DB_MAXNAME+1];
+##	i2	cdds_no;
+##	char	index_used[DB_MAXNAME+1];
+##	char	supp_objs_created[25];
+##	char	rules_created[25];
+##	i4	col_seq;
+##	i4	base_col_seq;
+##	i4	key_seq;
+##	char	col_name[DB_MAXNAME+1];
+	EXEC SQL END DECLARE SECTION;
+##	char	replic_col[2];
+	DBEC_ERR_INFO	errinfo;
+	STATUS	retval = OK;
+
+	/* Clean out existing columns for this table */
+	EXEC SQL DELETE FROM dd_regist_columns
+		WHERE	table_no = :tbl_no;
+	if (RPdb_error_check(0, NULL) != OK)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM004E_Error_del_regist_col, UG_ERR_ERROR, 0);
+		return (FAIL);
+	}
+
+##	unloadtable form_name tf_name (col_name = fcol_name,
+##		key_seq = fkey_seq, col_seq = fcol_seq,
+##		base_col_seq = fbase_col_seq, replic_col = freplic_col)
+##	{
+		/* Add interpretation of y/n in replicated_column */
+		if (STequal(replic_col, ERget(F_UG0006_No1)))
+			col_seq = 0;
+		else
+			col_seq = base_col_seq;
+
+		EXEC SQL REPEATED INSERT INTO dd_regist_columns (
+				table_no, column_name, column_sequence,
+				key_sequence)
+			VALUES	(:tbl_no, :col_name, :col_seq,
+				:key_seq);
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM004F_Error_ins_regist_col, UG_ERR_ERROR,
+				0);
+			retval = FAIL;
+##			endloop
+		}
+##	}
+	if (retval)
+		return (retval);
+
+##	getform form_name (cdds_no = fcdds_no, index_used = findex_used,
+##		supp_objs_created = fsupp_objs_created,
+##		rules_created = frules_created,
+##		cdds_lookup_tbl = fcdds_lookup_tbl,
+##		prio_lookup_tbl = fprio_lookup_tbl)
+	EXEC SQL REPEATED UPDATE dd_regist_tables
+		SET	cdds_no			= :cdds_no,
+			index_used		= :index_used,
+			supp_objs_created	= :supp_objs_created,
+			rules_created		= :rules_created,
+			cdds_lookup_table	= :cdds_lookup_tbl,
+			prio_lookup_table	= :prio_lookup_tbl,
+			columns_registered	= DATE_GMT('now')
+		WHERE	table_no = :tbl_no;
+	if (RPdb_error_check(DBEC_ZERO_ROWS_OK, &errinfo) != OK)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0050_Error_updt_regist_tbl, UG_ERR_ERROR, 0);
+		return (FAIL);
+	}
+
+	/* No row was updated, do an insert */
+	if (errinfo.rowcount == 0)
+	{
+		EXEC SQL REPEATED INSERT INTO dd_regist_tables (
+				table_no, table_name, cdds_no, index_used,
+				cdds_lookup_table, prio_lookup_table,
+				columns_registered)
+			VALUES	(:tbl_no, :tbl_name, :cdds_no, :index_used,
+				:cdds_lookup_tbl, :prio_lookup_tbl,
+				DATE_GMT('now'));
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM0050_Error_updt_regist_tbl, UG_ERR_ERROR,
+				0);
+			return (FAIL);
+		}
+	}
+	if (db_config_changed(0) != OK)
+	{
+		EXEC SQL ROLLBACK;
+		return (FAIL);
+	}
+	EXEC SQL COMMIT;
+
+	return (OK);
+##}

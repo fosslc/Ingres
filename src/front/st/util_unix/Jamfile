@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!st!util_unix
+#
+
+SubDir ING_SRC front st util_unix ;
+
+IISUBSYS front st util_unix ;
+
+
+IILIBRARY UTILLIB : rl.c ;
+

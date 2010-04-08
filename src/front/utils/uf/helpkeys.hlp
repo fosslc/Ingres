@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This displays information about the currently defined set of function
+and control keys.  The list is composed of the command, the key on
+your terminal which can be used to invoke that command, and a short
+description of the command.
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        NextPage        Display the next page of help for this screen.
+                        Note that this menu command is the same as the
+                        scrollup function key.
+
+        PrevPage        Display the previous page of help for this screen.
+                        Note that this menu command is the same as the
+                        scrolldown function key.
+
+        Help            Print this message.
+
+        End             Return to your current screen.

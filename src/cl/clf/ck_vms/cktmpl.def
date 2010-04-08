@@ -1,0 +1,142 @@
+This file is "II_CONFIG:CKTMPL.DEF".  It contains the user-provided commands
+that ckpdb and rollforwarddb will use to run backups and restores.
+
+In this file, empty lines and lines that don't start with 'B' 'W' or 'E' are
+ignored and can be used as comments.
+
+
+Line identifiers:
+----------------
+
+              1st: - The type of operation being carried out
+                 I  = Begin Table Level Recovery (initialize only)
+                 F  = End Table Level Recovery (comments only)
+                 B  = Begin Operation ckpdb/rolldb
+                 P  = Pre-Work on the Operation ckpdb/rolldb
+                 E  = End Operation ckpdb/rolldb
+                 W  = Work on the Operation ckpdb/rolldb
+
+             2nd:- The type of direction associated to the operation
+                 S  = Save (checkpoint)
+                 R  = Restore (rollforward)
+                 J  = Journal (Journal processing)
+                 U  = Dump (Dump processing)
+                 D  = Delete (delete file process)
+                 C  = Snapshot (Check snapshot exists rollforward)
+
+             3rd: - The device to be used
+                 T  = Tape device
+                 D  = Disk device
+
+             4th:- Granularity
+                 D  = Database level
+                 A  = All databases
+                 T  = Table Level (within a single database)
+
+
+
+Here are the symbols that INGRES will substitute at run time:
+------------------------------------------------------------
+
+	    %A	    checkpoint name	    %C prepended to %F to form a
+					    fully specified checkpoint file.
+
+	    %B	    list of files
+	    
+	    %C	    checkpoint directory:   Pathname of the checkpoint directory
+					    for disk operations.  (The device
+					    name if to tape.)
+
+	    %D	    database directory:	    Pathname of the database directory
+					    being saved or restored.
+
+	    %F	    checkpoint file	    Name of the checkpoint file.
+
+	    %H	    Number of tables in a location
+
+	    %I	    User specified string
+
+	    %J0	    either REDO or UNDO processing
+	      1	    First journal file
+	      2	    Last journal file
+	      3	    Journal pathname
+              4	    Journal filename
+
+	    %M	    Current location number 
+
+	    %N	    location number:	    For the Begin or End phases this
+					    is the total number of locations
+					    being written.  During the Work
+					    phase this starts at 1 and is
+					    incremented after each location
+
+	    %T	    type of operation:	    Set to '1' if tape, '0' if disk.
+
+	    %U0	    First Dump file
+	      1	    Last Dump file
+	      2	    Pathname of dump file
+	      3	    Dump filename
+
+	    %X	    table name
+
+================  Beginning/Init commands.  (Called once)  =================
+
+BJDA:	write sys$output "beginning restore of journals"
+BJTA:	write sys$output "beginning restore of journals"
+BSTD:	write sys$output "beginning checkpoint to tape %C of %N locations"
+BSDD:	write sys$output "beginning checkpoint to disk %C of %N locations"
+BRTD:	write sys$output "beginning restore of tape %C of %N locations"
+BRDD:	write sys$output "beginning restore of disk %C of %N locations"
+BSTT:	@ii_system:[ingres.files.checkpoint]ckp_tape_setup  "%C"  "%N" "%B" "%M"
+BSDT:	write sys$output "PARTIAL: beginning checkpoint to disk %C of %N locations"
+BRTT:	@ii_system:[ingres.files.checkpoint]rollfwd_tape_setup  "%C"  "%N" "%B" "%M"
+BRDT:	write sys$output "PARTIAL: beginning restore of disk %C of %N locations"
+BUTA:	write sys$output "beginning restore of dumps"
+BUDA:	write sys$output "beginning restore of dumps"
+IRTT:	write sys$output "beginning table level recovery" 
+IRDT:	write sys$output "beginning table level recovery"
+
+================  Work commands.  (Called once per location)  =========
+
+WCTA:	write sys$output "Checking database snapshot for table level recovery"
+WCDA:	write sys$output "Checking database snapshot for table level recovery"
+WDDD:	@ii_system:[ingres.files.checkpoint]rollfwd_delete_files "%D" 
+WDDT:	@ii_system:[ingres.files.checkpoint]rollfwd_delete_tables "%D" "%B" "%X"
+WDTD:	@ii_system:[ingres.files.checkpoint]rollfwd_delete_files "%D"
+WDTT:	@ii_system:[ingres.files.checkpoint]rollfwd_delete_tables "%D" "%B" "%X"
+WJTA:	! No operation
+WJDA:	! No operation
+PRDD:	write sys$output "executing restore to disk %C of %N locations"
+WRDD:	@ii_system:[ingres.files.checkpoint]rollfwd_from_disk  "%A"  "%D" "*.*" "%M"
+PRDT:	write sys$output "restoring table %X in database location %D"
+WRDT:	@ii_system:[ingres.files.checkpoint]rollfwd_from_disk  "%A"  "%D" "%B" "%M"
+PRTD:	write sys$output "executing restore from tape"
+WRTD:	@ii_system:[ingres.files.checkpoint]rollfwd_from_tape  "%N"  "%D"  "%C"  "%F" "*.*" "%M"
+PRTT:	write sys$output "executing restore from tape"
+WRTT:	@ii_system:[ingres.files.checkpoint]rollfwd_from_tape  "%N"  "%D"  "%C"  "%F" "%B" "%M"
+PSDD:	write sys$output "executing checkpoint to disk"
+WSDD:	@ii_system:[ingres.files.checkpoint]ckp_to_disk  "%D"  "%A" "*.*" "%M"
+PSDT:	write sys$output "executing checkpoint to disk %C of %N locations" 
+WSDT:	@ii_system:[ingres.files.checkpoint]ckp_to_disk  "%D"  "%A" "%B" "%M"
+PSTD:	write sys$output "executing checkpoint to tape"
+WSTD:	@ii_system:[ingres.files.checkpoint]ckp_to_tape  "%N"  "%D"  "%C"  "%F" "*.*" "%M"
+PSTT:	write sys$output "executing table level checkpoint to tape" 
+WSTT:	@ii_system:[ingres.files.checkpoint]ckp_to_tape  "%N"  "%D"  "%C"  "%F" "%B" "%M"
+WUTA:	! No operation
+WUDA:	! No operation
+
+================  Ending commands.  (Called once)   ==================
+
+ESTD:	write sys$output "ending checkpoint to tape %C of %N locations"
+ESDD:	write sys$output "ending checkpoint to disk %C of %N locations"
+ESTD:	write sys$output "ending checkpoint to tape %C of %N locations"
+ESDD:	write sys$output "ending checkpoint to disk %C of %N locations"
+ESTT:	write sys$output "PARTIAL: ending checkpoint to tape %C of %N locations"
+ESDT:	write sys$output "PARTIAL: ending checkpoint to disk %C of %N locations"
+ESTT:	write sys$output "PARTIAL: ending checkpoint to tape %C of %N locations"
+ESDT:	write sys$output "PARTIAL: ending checkpoint to disk %C of %N locations"
+
+FRDT:	write sys$output "ending table level recovery"
+FRTT:	write sys$output "ending table level recovery"
+EETE:	write sys$output "done with tape operations"
+EEDE:	write sys$output "done with disk operations"

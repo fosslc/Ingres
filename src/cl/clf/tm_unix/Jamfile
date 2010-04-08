@@ -1,0 +1,14 @@
+#
+# Jamfile file for cl!clf!tm_unix
+#
+
+SubDir ING_SRC cl clf tm_unix ;
+
+IISUBSYS cl clf tm_unix ;
+
+
+IILIBRARY COMPATLIB : tmmonthtab.roc tmyrsize.c tmtimestamp.c
+	tmtime.c tmsubtr.c tmstr.c tmstart.c tmsecs.c tmprfstat.c
+	tmparse.c tmhrnow.c tmformat.c tmend.c tmcvtsecs.c tmcpu.c
+	tmcmp.c tmbreak.c ;
+

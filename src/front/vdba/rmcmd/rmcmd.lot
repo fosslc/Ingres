@@ -1,0 +1,7 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:iisqlca.obj, -
+INGLIB:libcompat.olb/include=(gv,gver)	! for II_copyright
+INGLIB:librmcmd.olb/library, -
+II_LIBQLIB/share
+II_COMPATLIB/share

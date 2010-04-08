@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqedfr.hlp
+When you select the Edit option, the Frame Edit Options Menu appears. The 
+Edit Options allow you to edit the appearance of application screens and 
+add/change parts of the code. The Edit options are:
+
+   Visual Query       Displays the Visual Query Editor screen (only listed 
+		      for Append, Update, and Browse frames).
+   Data Entry Form    Use VIFRED to edit the form for the frame (only listed 
+		      for frames that have a form).
+   Menuitem Text      Allows you to change the name of the menuitem that 
+		      selects this frame.
+   Frame Parameters   Allows you to specify/change the parameters to be
+                      passed from the parent to the current frame (only 
+		      listed if parameters can be passed to the frame).
+   Local Variables    Displays the Edit Local Variables screen (only listed
+		      for Menu, Append, Update, and Browse frames).
+   Global Components  Displays a list of components from which you 
+                      select the type you want to create/edit.
+   Escape Code        Displays a list of Escape Types from which you 
+                      select the type you want to create/edit (only listed
+		      for Menu, Append, Update, and Browse frames).
+   Source Code File   Displays the source code file in the system editor
+                      (only listed for frames that have a source code file
+                      and if you are authorized to run the Ingres/ABF
+                      product).
+   Errors             Allows you to view/fix any compilation errors (only 
+		      listed for frames that must be compiled).

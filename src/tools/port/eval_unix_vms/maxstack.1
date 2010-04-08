@@ -1,0 +1,32 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/maxstack.1,v 1.1 90/03/09 09:17:34 source Exp $
+.TH MAXSTACK 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+maxstack \- Find stack size limitations
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B maxstack
+[ -v ][ -x ]
+.SH DESCRIPTION
+.I Maxstack
+finds out how large the stack may become.  It tries to grow a 100kB
+stack, 1k at a time, and then prints the largest stack it could create. 
+If a SIGBUS, SIGILL, SIGSEGV, or SIGSTACK signal is received, the
+program stops at that point.  Some systems, like the Gould/SEL, have a
+fixed size stack determined at load time.
+.PP
+.B -v
+``verbose'' mode prints the program's name and indents output by one tab
+stop.
+.PP
+.B -x
+``extra\-verbose'' mode prints the stack's size at every iteration. 
+This is voluminous, but of use if the system is killing the program
+before the summary can be written.  
+.SH BUGS
+.I Maxstack
+does not take into account the size of the call frame in determining
+stack size, therefore the size reported is approximate.  If the system
+decides to kill \fImaxstack\fP outright for rampant memory consumption
+the maximum size will not be printed unless the -x switch was thrown.

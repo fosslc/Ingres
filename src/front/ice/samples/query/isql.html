@@ -1,0 +1,163 @@
+<!--
+## Name: isql.html
+##
+## Description:
+##      Source file allows the execution of dynamic sql and the display of
+##      results in a web browser.
+##
+## History:
+##      07-Nov-2002 (fanra01)
+##          Bug 109082
+##          Added history comments.
+##          Add javascript setting of form action file to have the correct
+##          file extension.
+-->
+<HTML>
+<HEAD>
+<TITLE>Dynamic SQL</TITLE>
+<script language="javascript">
+<!--
+function callhelp( fobj )
+{
+    iurl = "/ice-bin/oiice.#cgi#/ice/samples/query/help.html"
+
+    for( var i=0; i < fobj.elements.length - 1; i++)
+    {
+        if ((fobj.elements[i].name != '') && (fobj.elements[i].value != ''))
+        {
+            if (i == 0)
+            {
+                iurl += "?"
+            }
+            if (i > 0)
+            {
+                iurl += "&"
+            }
+            iurl += fobj.elements[i].name + "=" + fobj.elements[i].value
+        }
+    }
+    open(iurl, "Dynamic_SQL_Help", "status=yes,scrollbars=yes,resizable=yes");
+}
+
+function updatepropdisp( formobj, id )
+{
+    for (var i=0; i < formobj.length; i++)
+    {
+        if (formobj.options[i].value == id)
+        {
+            formobj.selectedIndex = i;
+            formobj.options[i].selected = true;
+            return;
+        }
+    }
+}
+
+function sqlexec( form, fobj1 )
+{
+    var ext;
+
+    if (fobj1[0].checked) 
+        ext = 'html';
+    if (fobj1[1].checked)
+        ext = 'xml'
+        
+        form.action = '/ice-bin/oiice.#cgi#/ice/samples/query/msql.' + ext;
+        form.submit();
+}
+
+//-->
+</script>
+</HEAD>
+<BODY>
+<!-- #ICE REPEAT
+    DECLARE=`page.idb=<select name="ii_userid">
+<!-- #ICE DATABASE=``icesvr`` USER=``icedefdb`` SQL=``select alias from ice_dbusers order by alias asc`` TYPE=``unformatted`` HTML=``<option value=":alias">:alias</option>`` --></select>`
+-->
+<!-- #ICE REPEAT
+    DECLARE=`page.db=<select name="ii_database">
+<!-- #ICE DATABASE=``iidbdb`` USER=``icedefdb`` SQL=``select name from iidatabase order by name asc`` TYPE=``unformatted`` HTML=``<option value=":name">:name</option>`` --></select>`
+-->
+<!-- #ICE REPEAT
+    DECLARE=`page.ingusr=<select name="iuser">
+<!-- #ICE DATABASE=``iidbdb`` USER=``icedefdb`` SQL=``select name from iiuser order by name asc`` TYPE=``unformatted`` HTML=``<option value=":name">:name</option>``
+--></select>`
+-->
+
+<H3 ALIGN=CENTER>
+<font color="#0000FF">Ingres/ICE Dynamic SQL Console</Font>
+</H3>
+<CENTER>
+<table border="1">
+<tr><td>
+    <form method="POST" name="sql" TARGET="SQL_OUT">
+    <table width="100%">
+    <tr align="left"><th>User Id</th><th>Database</th><th>Output Format</th></tr>
+    <tr>
+    <td><!-- #ICE VAR=`:idb`-->
+    <script>
+    <!--
+    updatepropdisp(document.sql.ii_userid, 'icedefdb');
+    //-->
+    </script>
+    </td>
+    <td><!-- #ICE VAR=`:db`-->
+    <script>
+    <!--
+    updatepropdisp(document.sql.ii_database, 'icetutor');
+    //-->
+    </script>
+    </td>
+    <!-- #ICE SWITCH=`:htype`
+        CASE `xml`=`
+    <td>HTML Table<INPUT TYPE=radio NAME="ii_rel_type" VALUE="table">
+    XML<INPUT TYPE=radio NAME="ii_rel_type" VALUE="xml" CHECKED></td>`
+        CASE `table`=`
+    <td>HTML Table<INPUT TYPE=radio NAME="ii_rel_type" VALUE="table" CHECKED>
+    XML<INPUT TYPE=radio NAME="ii_rel_type" VALUE="xml"></td>`
+    -->
+    <td>&nbsp;</td>
+    </tr>
+    <tr>
+    <td colspan="3"><TEXTAREA ROWs=4 COLS=65 NAME="ii_query_statement">
+select * from plays</TEXTAREA></td>
+    <td valign="middle"><INPUT TYPE="button" VALUE="Execute Query" onClick="sqlexec( sql, ii_rel_type )"></td>
+    </tr>
+    </table>
+    </form>
+</td></tr>
+<tr><td>
+    <form action="javascript:void(0)" NAME="help">
+    <table width="100%">
+    <tr><th colspan="5" align="center"><font color="#0000FF">Database and Table Help</Font></th></tr>
+    <tr align="left"><th>ICE Alias DB User</th><th>Database</th><th>Ingres User</th><th>Table</th></tr>
+    <tr><td>Used to connect to db</td><td>Mandatory field</td><td>As specified in catalogs</td><td>Optional field</td></tr>
+    <tr><td><!-- #ICE VAR=`:idb`-->
+    <script>
+    <!--
+    updatepropdisp(document.help.ii_userid, 'icedefdb');
+    //-->
+    </script>
+    </td>
+    <td><!-- #ICE VAR=`:db`-->
+    <script>
+    <!--
+    updatepropdisp(document.help.ii_database, 'icetutor');
+    //-->
+    </script>
+    </td>
+    <td><!-- #ICE VAR=`:ingusr`-->
+    <script>
+    <!--
+    updatepropdisp(document.help.iuser, 'ingres');
+    //-->
+    </script>
+    </td>
+    <td><INPUT TYPE=text NAME="itablename"></td>
+    <td><INPUT TYPE="BUTTON" VALUE="Go" onClick="callhelp(this.form)"></td></tr>
+    </table>
+    </form>
+</td></tr>
+</table>
+
+</BODY>
+</HTML>

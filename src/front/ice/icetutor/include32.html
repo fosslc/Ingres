@@ -1,0 +1,19 @@
+<!-- #ICE REPEAT IF (`:incType` == `HTML`)
+THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?title=Include&previous=include3.html&next=include4.html`` -->
+<!-- #ICE DECLARE=``session.incVar=`` -->
+<INPUT TYPE="HIDDEN" NAME="incParName" VALUE="">
+<INPUT TYPE="HIDDEN" NAME="first" VALUE="yes">`
+-->
+
+<!-- #ICE REPEAT IF (`:incType` == `FACET`)
+THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?title=Include&previous=include3.html&next=include5.html`` -->`
+-->
+
+<!-- #ICE VAR=`<INPUT TYPE="HIDDEN" NAME="doc_unit" VALUE=":doc_unit">` -->
+
+Select one of the documents below:
+<!-- #ICE REPEAT IF (`:incType` == `FACET`)
+THEN=`<!-- #ICE REPEAT INCLUDE=``docName.html?filter=facet`` -->`
+ELSE=`<!-- #ICE REPEAT INCLUDE=``docName.html?filter=page`` -->`
+-->
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

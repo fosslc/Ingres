@@ -1,0 +1,10 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;		Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	        Renamed from iiqefdata.def to iilibqefdata.def.
+;
+
+EXPORTS
+Qef_s_cb		@1	DATA			
+Qef_err_map		@2	DATA			

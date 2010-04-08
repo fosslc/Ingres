@@ -1,0 +1,60 @@
+#
+# Jamfile file for cl!clf!cs_win
+#
+
+SubDir ING_SRC cl clf cs_win ;
+
+IISUBSYS cl clf cs_win ;
+
+IIMCTOH $(HDRCLF_W)/ingmsg.h : ingmsg.mc ;
+IIRCTORES ingmsg.rc ;
+
+IIBINEXE setperm : setperm.c ;
+IINEEDLIBS setperm : COMPATLIB ;
+
+IIBINEXE servproc : servproc.c ;
+IINEEDLIBS servproc :  COMPATLIB CLUSAPI ;
+IINEEDRES servproc : ingmsg.res ;
+
+IIBINEXE opingsvc : opingsvc.c ;
+IINEEDLIBS opingsvc :  COMPATLIB ;
+
+IIBINEXE opingclient : opingclnt.c ;
+IINEEDLIBS opingclient : COMPATLIB ;
+
+IIBINEXE oi12svc : oi12svc.c ;
+IINEEDLIBS oi12svc :  COMPATLIB ;
+
+IIUTILEXE iirun : iirunnt.c ;
+IINEEDLIBS iirun : COMPATLIB ;
+
+IIUTILEXE iirunice : iirunicent.c ;
+IINEEDLIBS iirunice : COMPATLIB ;
+
+IIUTILEXE iirundbms : iirundbmsnt.c ;
+IINEEDLIBS iirundbms : COMPATLIB ;
+
+IIBINEXE csphil : csphil.c ;
+IINEEDLIBS csphil :  COMPATLIB ;
+
+IIBINEXE clntproc : clntproc.c ;
+IINEEDLIBS clntproc :  COMPATLIB ;
+
+IILIBRARY COMPATLIB : iimksec.c
+	cssems.c
+	cssampler.c
+	csoption.c
+	csmoutil.c
+	csmosem.c
+	csmoscb.c
+	csmosamp.c
+	csmonitor.c
+	csmomon.c
+	csmocnd.c
+	csmo.c
+	csinterface.c
+	cshl.c
+        csdiag.c
+	cscond.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : csdata.c ;

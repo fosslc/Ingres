@@ -1,0 +1,1128 @@
+/*
+**  Copyright (c) 2004 Ingres Corporation
+**  All rights reserved.
+*/
+
+#include <compat.h>
+#include <dbms.h>
+#include <fe.h>
+#include <cs.h>
+#include <pc.h>
+#include <lk.h>
+#include <cx.h>
+#include <cv.h>
+#include <lg.h>
+#include <er.h>
+#include <me.h>
+#include <si.h>
+#include <st.h>
+#include        <adf.h>
+#include        <ft.h>
+#include        <fmt.h>
+#include        <frame.h>
+#include "lists.h"
+#include "msgs.h" 
+#include "dba.h"
+#include "servinfo.h"
+
+
+/*
+**
+**  File: ingdba.qc
+**
+**  Purpose - this is the top routine for the new lockinfo for R6.  this
+**	version does more.  In addition to displaying lock information,
+**	it displays a list of servers and allows viewing and manipulation
+**      of the servers/sessions in each server.
+**
+**  This file contains:
+**	main - top level routine
+**	dbamain - displays the main form
+**      process_args - validates the command line options and sets globals
+**	log_submenu - log submenu for the main INGDBA screen
+**	lock_submenu - lock submenu for the main INGDBA screen
+**
+**  History
+**	1/6/89		tomt	created
+**	8/16/89		tomt	added logging system functionality
+**	9/6/89		tomt	added frs timeout option on startup
+**	9/8/89		tomt	broke submenus into seperate procedures
+**	9/19/89		tomt	now ADDFORM in routines where forms are displayed
+**      3/12/90         tomt    added new startup options to filter out log/lock
+**	18 Sept 1990	jpk	modified top frame to conform to forms
+**				standards: no duplicate menu items for
+**				things defined in tablefield, no Help
+**				or Quit in tablefield, "Select" instead of "Go"
+**      16-nov-1992 (larrym)
+**          Added CUFLIB to NEEDLIBS.  CUF is the new common utility facility.
+**	13 Dec 1992	jpk	added DMFLIB, stubbed out ule_format
+**				(still not quite right but ok for now)
+**      5/26/93 (vijay)
+**		include pc.h
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**	10-mar-95 (reijo01) Bug 59221#
+**	 	Cleaned up help information. added -h flag for help.	
+**	18-Dec-97 (gordy)
+**	    Added SQLCALIB to NEEDLIBS, now required by LIBQ.
+**	20-May-1998 (hanch04)
+**	    Changed name of ule_format to ule_doformat for new macro.
+**      21-apr-1999 (hanch04)
+**          Added st.h
+**	12-jun-2001 (devjo01)
+**	    Replace LGcluster() with CXcluster_enabled(), add cx.h (s103715)
+**      25-Sep-2002 (hanch04)
+**          PCexeclp64 needs to only be called from the 32-bit version of
+**          the exe only in a 32/64 bit build environment.
+**	02-oct-2002 (devjo01)
+**	    Set NUMA context with CXget_context.
+**
+***************************
+**Various flags are available:
+**
+**	Flag		Action					
+**
+**	-f		writes output to "locks.out:		(DISABLED)
+**	-ffile		writes output to "file"			(DISABLED)
+**	(no f)		writes output to sys$output
+**	-ddbname	process only locks on a particular db
+**	-r		set frs timeout for certain screens
+**	(no r)		use default of 0 for timeout
+**	-l		process all INGRES locks,any type		
+**	-llocktype	process only INGRES locks of type locktype(II, lr ..)  
+**	(no l)		process only II, lr, dr, and gp locks
+**	-n		print NL granted locks		
+**	(no n)		don't print NL granted locks
+**	-t		process only locks for specified table (must specify db)
+**	(no t)		don't screen locks based on any particular table
+**      -i              display inactive and other transactions in tx display
+**      (no i)          suppress display of inactive transactions (default)
+**      -e              display system locklists in lock list display
+**      (no e)          suppress display of system lock lists
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	13-oct-2001 (somsa01)
+**	    Added GLOBALDEF of 64-bit form.
+**	06-sep-2002 (somsa01)
+**	    For the 32/64 bit build,
+**	    call PCexeclp64 to execute the 64 bit version
+**	    if II_LP64_ENABLED is true.
+**	11-sep-2002 (somsa01)
+**	    Prior change is not for Windows.
+**	29-Sep-2004 (drivi01)
+**	    Updated NEEDLIBS to link dynamic library SHQLIB and SHFRAMELIB
+**	    to replace its static libraries. Added NEEDLIBSW hint which is 
+**	    used for compiling on windows and compliments NEEDLIBS.
+**	10-Sep-2008 (jonj)
+**	    SIR 120874: Fixed ule_doformat stub to conform to new uleFormatFcn
+**	    prototype, though it's apparently never called anyway.
+**	29-Oct-2008 (jonj)
+**	    SIR 120874: Add non-variadic functions ule_formatNV, uleFormatNV.
+**	24-Nov-2009 (frima01) Bug 122490
+**	    Added include of cv.h to eliminate gcc 4.3 warnings.
+*/
+/*
+**      MKMFIN Hints
+**
+PROGRAM = ipm
+
+NEEDLIBS =      IPMLIB COMPATLIB SHFRAMELIB SHQLIB DMFLIB 
+
+NEEDLIBSW = 	SHGCFLIB SHEMBEDLIB
+
+UNDEFS =        II_copyright uleFormatFcn ule_formatNV uleFormatNV
+*/
+
+   GLOBALREF int *fdispdb;
+   GLOBALREF int *fdisplgtx;
+   GLOBALREF int *fmorelkres;
+   GLOBALREF int *fshowlkres;
+   GLOBALREF int *fmorelgdb;
+   GLOBALREF int *fsessdetail;
+   GLOBALREF int *fsessdetail64;
+   GLOBALREF int *fshowopts;
+   GLOBALREF int *fservdetail;
+   GLOBALREF int *fshowlksummno;
+   GLOBALREF int *fmorelklock;
+   GLOBALREF int *fmorelghdtx;
+   GLOBALREF int *fdisplgdb;
+   GLOBALREF int *fshowlklock;
+   GLOBALREF int *fdisplkres;
+   GLOBALREF int *fmorelklists;
+   GLOBALREF int *fshowblock;
+   GLOBALREF int *fshowlgsumm;
+   GLOBALREF int *fshowlksumm;
+   GLOBALREF int *fdisplklists;
+   GLOBALREF int *fshowlghdr;
+   GLOBALREF int *fshowsess;
+   GLOBALREF int *fshowsess64;
+   GLOBALREF int *fdispsrv;
+   GLOBALREF int *fdisplgproc;
+   GLOBALREF int *fmorelgtx;
+   GLOBALREF int *fdisplktype;
+   GLOBALREF int *fqrytext;
+## GLOBALREF int *fingdba;
+## GLOBALREF int *flockmenu;
+## GLOBALREF int *flogmenu;
+## GLOBALREF int *fmyhelp;
+
+VOID sys_init();
+VOID process_args();
+VOID ingdba();
+VOID read_iidbdb();
+VOID enable_frs();
+VOID dbamain();
+VOID lklginfo();
+VOID get_lklgstats();
+VOID set_options();
+VOID setlangcode();
+VOID syntax_error();
+VOID display_help();
+VOID lock_submenu();
+VOID log_submenu();
+VOID decl_errhndl();
+FUNC_EXTERN VOID close_db();
+i4  getlockcat();
+
+##define MENUITEM1 1
+##define MENUITEM2 2
+##define MENUITEM3 3
+##define MENUITEM4 4
+##define MENUITEM5 5
+##define MENUITEM6 6
+##define MENUITEM7 7
+
+/* Menu items for main menu */
+##  static struct _menu_choices {
+##	char option[15];
+##	char description[52];
+##	int num;
+##  } menu_choices[] = {
+##	{"Server_List", "Display a list of servers to examine", MENUITEM1},
+##	{"Lock_Info", "Display locks and related information", MENUITEM2},
+##	{"Log_Info", "Display information on the logging system", MENUITEM3},
+##	{" ", " ", -1}
+##  };
+
+/* Menu items for lock menu */
+##  static struct _lkmenu_choices {
+##	char option[15];
+##	char description[52];
+##	int num;
+##  } lkmenu_choices[] = {
+##	{"Summary", "Display a Locking System summary", MENUITEM1},
+##	{"Locks", "Display locklists and related information", MENUITEM2},
+##	{"Resources", "Display resource lists and related information", MENUITEM3},
+##	{"Refresh", "Get new snapshot of locking system information", MENUITEM4},
+##	{" ", " ", -1}
+##  };
+
+/* Menu items for log menu */
+##  static struct _lgmenu_choices {
+##	char option[15];
+##	char description[52];
+##	int num;
+##  } lgmenu_choices[] = {
+##	{"Summary", "Display a Logging System summary", MENUITEM1},
+##	{"Header", "Display the log file header", MENUITEM2},
+##	{"Processes", "Display the active processes in the logging system", MENUITEM3},
+##	{"Databases", "Display logging information on each open database", MENUITEM4},
+##	{"Transactions", "Display logging information on each transaction", MENUITEM5},
+##	{"Refresh", "Get new snapshot of logging system information", MENUITEM6},
+##	{" ", " ", -1}
+##  };
+
+/*
+**
+**  Name: main()
+**
+**  Purpose - this is the top routine for the new lockinfo for R6.  this
+**	version does more.  In addition to displaying lock information,
+**	it displays a list of servers and allows viewing and manipulation
+**      of the servers/sessions in each server.
+**
+** Inputs:
+**	argv, argc - command line arguments
+**
+** Outputs
+**	none
+**
+** Returns
+**	none
+**
+** History
+**	1/6/89		tomt	created
+**	8/27/89		tomt	added logging forms and got rid of 'f_' in form
+**				names replaced with 'f'.
+**	9/19/89		tomt	moved addforms to files where forms are displayed
+**	2 May 1991	jpk	moved MEadvise and SIeqinit to main,
+**				process_args before sys_init(), both to
+**				support client mode (flag_client)
+**	14-jun-95 (tutto01)
+**	    Redefined main to ii_user_main for NT.
+**	24-sep-95 (tutto01)
+**	    Restored main, run as a console app on NT.
+**	11/1/95		nick	remove file output code
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Hybrid add-on symbol changed, fix here.
+*/
+
+main(argc, argv)
+i4  argc;
+char **argv;
+{
+#if defined(conf_BUILD_ARCH_32_64) && defined(BUILD_ARCH32)
+    char	*lp64enabled;
+#endif
+
+    /* Initialize the INGRES memory allocator and lk/lg system. */
+    MEadvise(ME_INGRES_ALLOC);
+
+#if defined(conf_BUILD_ARCH_32_64) && defined(BUILD_ARCH32)
+
+    /*
+    ** Try to exec the 64-bit version
+    */
+    NMgtAt("II_LP64_ENABLED", &lp64enabled);
+    if ( (lp64enabled && *lp64enabled) &&
+       ( !(STbcompare(lp64enabled, 0, "ON", 0, TRUE)) ||
+	 !(STbcompare(lp64enabled, 0, "TRUE", 0, TRUE))))
+    {
+	PCexeclp64(argc, argv);
+    }
+#endif  /* hybrid */
+
+    /* Establish NUMA context */
+    if ( OK != CXget_context(&argc, argv, CX_NSC_STD_NUMA, NULL, 0) )
+	PCexit(FAIL);
+
+    /* Set up i/o streams */
+    SIeqinit();
+
+    process_args(argc, argv);
+
+    sys_init();
+
+    enable_frs();	/* turn on INGRES FRS */
+##  ADDFORM	fingdba
+##  ADDFORM flockmenu
+##  ADDFORM flogmenu
+
+    FEcopyright("IPM", "1990");
+
+    /*
+    ** Read in list of dbs, tids from iidbdb if user did not specify
+    ** a database.  If a db was specified on command line, these were
+    ** read in process_args()
+    */
+    if (!flag_db && !flag_standalone)	/* can't do it if server down */
+	read_iidbdb();
+
+    /* Display the main form.  All control is from there */
+    dbamain();
+
+    /* clean up and exit */
+    terminate(OK);
+}
+
+/*
+** Routine: dbamain
+**
+** This routine displays the main form
+**
+** History
+**	1/6/89		tomt	created
+**	6/23/89		tomt	fixed "Go" submenu
+**	6/23/89		tomt	populate the scrolling window with
+**				lock submenu choices when the proper
+**				submenu is chosen
+**	8/18/89		tomt	populate the scrolling window with
+**				logging submenu choices when proper
+**				submenu is chosen
+**	9/8/89		tomt	broke submenus into seperate procedures
+**	18 Sept 1990	jpk	removed duplicate menu items for
+**				choices defined in tablefield, no Help
+**				or Quit in tablefield
+*/
+VOID
+dbamain()
+{
+##  int		i, row_num;
+##  int		menu_number, tab_size;
+##  char	dbname[FE_MAXNAME + 1];
+
+##  DISPLAY #fingdba READ
+##  INITIALIZE
+##  {
+
+	/* set up selection tablefield */
+##	INITTABLE #fingdba #options READ (num = i2)
+	for (i = 0; menu_choices[i].num > 0; i++) 
+	{
+##	    LOADTABLE #fingdba #options
+##		(#option = menu_choices[i].option,
+##		#description = menu_choices[i].description,
+##		#num = menu_choices[i].num)
+	}
+	/* Determine tablefield size */
+##	INQUIRE_FRS TABLE #fingdba (tab_size = LASTROW(#options));
+
+##  }
+##  ACTIVATE MENUITEM "Select", frskey4:
+##  {
+##	GETROW #fingdba #options (menu_number = #num)
+	switch (menu_number) 
+	{
+	    case MENUITEM1:		/* server */
+		if (flag_standalone)
+		{
+		    POP_MSG("server information is not available in\
+ standalone mode (-s option)");
+		    break;
+		}
+		close_db();		/* taken from menu item code */
+		if (dispsrv() != OK)
+		{
+		    POP_MSG("Error getting server information");
+                }
+	        break;
+
+	    case MENUITEM2:		/* lock */
+		lock_submenu();
+		break;
+
+	    case MENUITEM3:		/* log */
+		log_submenu();
+		break;
+
+	    default:
+	        break;
+	}
+##  }
+##  ACTIVATE MENUITEM "Options":
+##  {
+	set_options();
+##  }
+##  ACTIVATE MENUITEM "Help", frskey1:
+##  {
+	my_help("ipmmain.hlp", "Top Menu");
+##  }
+##  ACTIVATE MENUITEM "Quit", frskey2:
+##  {
+##  	BREAKDISPLAY
+##  }
+##  ACTIVATE SCROLLUP #options
+##  {
+##  }
+##  ACTIVATE SCROLLDOWN #options
+##  {
+##  }
+    return;
+}
+
+/*
+**  Process_args
+**
+**  Parses the command line and validates it.  Reports errors accordingly.
+**  If the command line is valid, appropriate internal flags are set.
+**  Invalid input prints an error message and prints help.
+**
+**  Change History
+**  
+**   1/25/89     tomt     Converted to R6 version of lockinfo
+**   10/1/89	 tomt	  put in message for file output that it is not done
+**   3/13/90     tomt     added filter for surpressing inactive tx display
+*/
+
+VOID
+process_args(argc, argv)
+i4  argc;
+char **argv;
+{
+    for (argc--, argv++; argc > 0; argc--, argv++) 
+    {
+	if (*argv[0] != '-')
+	{
+	    syntax_error(argv[0], "illegal parameter (missed flag?)");
+	}
+	(*argv)++;
+
+	switch (*argv[0])
+	{	
+	    /*	CASE d:
+	    ** 	   -ddbname	process only locks on a db
+	    **     otherwise    process all databases
+	    */	
+	    case 'd' :
+	    {
+		if (flag_standalone)
+		{
+		    /* can't lookup db's if standalone */
+		    syntax_error("-d", "-s flag incompatible with -d flag");
+		}
+
+		if (flag_db)
+		{
+		    syntax_error("-d", "-d flag specified twice");
+		}
+		(*argv)++;
+	      	if (*argv[0] == NULL)
+		{
+		    syntax_error("-d", "no database name specified for -d");
+		}
+		else
+		{
+		    STcopy(*argv, ptr_dbname);
+		}
+		flag_db = TRUE;
+	        break;
+	    }
+
+	    /*	CASE r:
+	    **     -r		specified frs timeout value
+	    **     otherwise    if used interactivly, screens
+	    **			w/autorefresh will not.
+	    */	
+	    case 'r' :
+	    {
+		frs_timeout = 0;
+		(*argv)++;
+	      	if (*argv[0] == NULL)
+		{
+		    syntax_error("-r", "no refresh time specified");
+		}
+		else
+		{
+		    if (CVan(*argv, &frs_timeout) != OK /* keep in gbl var */
+			|| frs_timeout < 0 || frs_timeout > 999)
+		    {
+		        syntax_error("-r", "the refresh value \
+is an integer between 1 and 999 (seconds)");
+		    }
+		}
+		break;
+	    }
+
+	    /*	CASE l:
+	    **     -l		process ALL lock types
+	    ** 	   -llocktyupe	process ONLY lock types
+	    **     otherwise    process II, rl, rd, pg locks only
+	    */	
+	    case 'l' :
+	    {
+		if (flag_locktype)
+		{
+		    syntax_error("-l", "the -l flag was specfied twice");
+		}
+		if (flag_all_locks)
+		{
+		    syntax_error("-l", "the -l flag was specfied twice");
+		}
+		if (flag_table) 
+		{
+		    syntax_error("-t", "can't specify both a table and a\
+ resource type.");
+		}
+		if (!flag_nl)
+		    flag_nl = TRUE;	/* when looking for a specific lktype,
+				** we will print null granted locks also
+				*/
+		/* XXX doesn't this mean flag_nl = TRUE regardless? */
+
+		(*argv)++;
+	      	if (*argv[0] == NULL)
+		{
+		    flag_all_locks = TRUE;
+		}
+		else
+		{
+		    if ((ing_locktype = trns_lnm_to_lktyp(*argv)) == 0) 
+		    {
+		        syntax_error("-l", "nonexistent resource type");
+		    }
+ 	            flag_locktype = TRUE;
+		}
+	        break;
+	    }
+
+	    /*	CASE n:
+	    **     -n		print out all locks including those
+	    **			which are granted null
+	    **     otherwise    print out locks which are not granted
+	    **			NULL
+	    */	
+	    case 'n' :
+	    {
+		if (flag_locktype || flag_all_locks)
+		    break;	/* those options already set flag_nl */
+
+		if (flag_nl) 	/* this can be increm by -l flg */
+		{
+		    syntax_error("-n", "-n flag specified twice");
+		}
+	        flag_nl = TRUE;
+	        break;
+	    }
+
+	    /*	CASE t:
+	    **     -t		process locks for a specific table;
+	    **			also must specify a particular db.
+	    **			This flag and -l are mutually exclusive.
+	    **     otherwise    process all tables.
+	    */	
+	    case 't' :
+	    {
+		if (flag_table)
+		{
+		    syntax_error("-t", "-t flag specified twice");
+		}
+		if (flag_locktype || flag_all_locks)
+		{
+		    syntax_error("-l", "can't specify both a table and a\
+ resource type.");
+		}
+		if (!flag_nl)
+		    flag_nl = TRUE;	/* when looking for a specific table,
+				** we will print null granted locks also
+				*/
+		/* XXX doesn't this mean flag_nl = TRUE regardless? */
+		(*argv)++;
+	      	if (*argv[0] == NULL)
+		{
+		    syntax_error("-t", "no table specified for -t");
+		}
+		else
+		{
+		    STcopy(*argv, ptr_tablename);
+		}
+	        flag_table = TRUE;
+        	break;
+	    }
+
+	    /*	CASE e:
+	    **     -e		display system lock lists 
+	    **     otherwise    display all lock lists (default)
+	    */	
+	    case 'e' :
+	    {
+		if (flag_nonprot_lklists)
+		{
+		    syntax_error("-e", "-e flag specified twice");
+		}
+	        flag_nonprot_lklists = TRUE;
+	        break;
+	    }
+
+	    /*	CASE I:
+	    **     -I		display internal sessions
+	    **     otherwise    don't display internal sessions (default)
+	    */	
+	    case 'I' :
+	    {
+	        flag_internal_sess = TRUE;
+	        break;
+	    }
+
+
+	    /*	CASE i:
+	    **     -i		display inactive transactions also
+	    **     otherwise    don't display inactive xactions (default)
+	    */	
+	    case 'i' :
+	    {
+		if (flag_inactive_tx)
+		{
+		    syntax_error("-i", "-i flag specified twice");
+		}
+	        flag_inactive_tx = TRUE;
+	        break;
+	    }
+
+	    /*	CASE S:
+	    **     -s		standalone mode -- don't try to open databases
+	    **     otherwise    open databases
+	    */	
+	    case 's' :
+	    {
+		if (flag_db)
+		{
+		    syntax_error("-s", "-s flag incompatible with -d flag");
+		}
+	        flag_standalone = TRUE;
+	        break;
+	    }
+
+	    /*	CASE L:
+	    **     -L		enable IPM debugging to file IPM.LOG
+	    **     otherwise    IPM debugging log is disabled
+	    */	
+	    case 'L' :
+	    {
+		if (flag_debug_log)
+		{
+		    ;	/* undocumented for now, so do NOT tell user
+		    	** that she specified it twice, again for now
+		    	*/
+		}
+	        flag_debug_log = TRUE;
+	        break;
+	    }
+
+	    /*	CASE c:
+	    **     -c		client mode, do ONLY server and sessions
+	    **     otherwise    do ALL functionality, incl. log and lock
+	    */	
+	    case 'c' :
+	    {
+	        flag_client = TRUE;
+	        break;
+	    }
+
+	    /*	CASE h:
+	    **     -h	display flags and their usage	
+	    */	
+	    case 'h' :
+	    {
+	        display_help();    
+			terminate(OK);
+	        break;
+	    }
+
+	    default:
+	    {
+		syntax_error(argv[0], "unknown flag");
+	    }
+	  
+	}      /* end of switch on char following - */  
+
+    } /* end of for loop */
+
+    /*
+    ** If user specified a database, we load db names here instead of in the
+    ** CASE stomt.  We get database names here after we know
+    ** ALL of the command line args and ruled out bad combinations
+    */
+    if (flag_db && !flag_standalone)	/* can't do it if server down */
+    {
+	read_iidbdb();			/* Read in all the tids */
+			
+	/* Search for the tid of ptr_dbname */
+	if ((dbname_id = get_db_id(ptr_dbname)) == -1)
+	{
+	    terminate(FAIL, "Database '%s' not found.  Exiting...",
+		ptr_dbname);
+	}
+    }
+
+    /*
+    ** ensure that if the user specified a lock type other than
+    ** database level, that they also specify a database.  
+    */
+    {
+	i4 lock_cat;
+
+	lock_cat = getlockcat(ing_locktype);	/* lock catagory */
+        if (!flag_db && flag_locktype && (lock_cat != DATABASE_LOCK) &&
+	    (lock_cat != OTHER_LOCK))
+	{
+	    syntax_error("-l", "no database specified for -l");
+        }
+    }
+
+    /*
+    ** if user specifies a particular table, they
+    ** must also specify a database also.
+    */
+    if (flag_table && !flag_db)
+    {
+	syntax_error("-t", "no database specified for -t");
+    }
+
+} /* end of process_args */
+
+/*
+** sys_init() - perform any system initializations
+**
+** History
+**	1/6/89 		tomt	written
+**	6/9/89		tomt    added call to CSinitiate.
+**	6/15/89		tomt	added call to determine language code for INGRES
+**	8/16/89		tomt 	added call to LGinitialize
+**	9/20/89		tomt	made errmsgs more meaningful
+**	5/15/07		toumi01	add process info to shared memory
+*/
+VOID
+sys_init()
+{
+    STATUS		status;
+    CL_SYS_ERR		sys_err;
+
+    /*
+    **
+    ** Bug #4405
+    ** lockstat/logstat acts as a "psuedo-server" in that it must connect to
+    ** the "event system" when it uses LK.  The CSinitiate call is necessary
+    ** to initialize this, and to set up a cleanup routine which will free
+    ** a slot in the system shared memory segment when the program exits.
+    */
+    if (!flag_client)
+    {
+	if ((status = CSinitiate(0, 0, 0)) != OK)
+	{
+	    terminate(FAIL, "IPM: Attempt to connect to server failed.\n\
+Check permissions or installation.  Either the correct privileges are not\n\
+set or the INGRES system is not running");
+	}
+
+	if ((status = LKinitialize(&sys_err, ERx("ipm"))) != OK)
+	{			/* could not initialize LK system */
+	    terminate(FAIL, "IPM: Attempt to initialize the locking system failed.\n\
+Check permissions or installation.  Either the correct privileges are not\n\
+set or the INGRES system is not running.");
+	}
+
+	if ((status = LGinitialize(&sys_err, ERx("ipm"))) != OK)
+	{			/* could not initialize LG system */
+	    terminate(FAIL, "IPM: Attempt to initialize the logging system failed.\n\
+Check permissions or installation.  Either the correct privileges are not\n\
+set or the INGRES system is not running.");
+	}
+    }
+
+    /* Determine if we are operating on a cluster and set a global if we are */
+    if (CXcluster_enabled() != 0)
+	flag_cluster = TRUE;
+    else
+	flag_cluster = FALSE;
+
+    /* Set language code for INGRES error messages */
+    setlangcode();
+
+    /* Set up INGRES error handling */
+    decl_errhndl();
+}
+
+/*
+** lock_submenu() this contains the locking submenu for the main screen
+**
+** History
+**	9/8/89		tomt	took out of main display loop
+**	18 Sept 1990	jpk	modified top frame to conform to forms
+**				standards: no duplicate menu items for
+**				things defined in tablefield, no Help
+**				or Quit in tablefield, "Select" instead of "Go"
+*/
+VOID
+lock_submenu()
+{
+##  int		j, rownum;
+##  int		menunumber, table_size;
+##  char	db_name[FE_MAXNAME + 1];
+
+##  DISPLAY #flockmenu READ
+##  INITIALIZE
+##  {
+	get_lklgstats(GET_LOCKLIST, (PTR) 0);
+	get_lklgstats(GET_LOCKRES, (PTR) 0);
+
+	/* fill the database field with the proper strings XXX again? */
+
+	/* set up selection tablefield */
+##	INITTABLE #flockmenu #options READ (num = i2)
+        for (j = 0; lkmenu_choices[j].num > 0; j++) 
+	{
+##	    LOADTABLE #flockmenu #options
+##		(#option = lkmenu_choices[j].option,
+##		#description = lkmenu_choices[j].description,
+##		#num = lkmenu_choices[j].num)
+	}
+
+	/* Determine tablefield size */
+##	INQUIRE_FRS TABLE #flockmenu (table_size = LASTROW(#options));
+
+##  }
+##  ACTIVATE MENUITEM "Select", frskey4:
+##  {
+##	GETROW #flockmenu #options (menunumber = #num)
+	switch (menunumber) 
+	{
+	    case MENUITEM1:			/* Summary */
+		lklginfo(GET_LOCKSTAT);
+	        break;
+
+	    case MENUITEM2:			/* Locklists */
+##		MESSAGE "Loading lock information..."
+		lklginfo(GET_LOCKLIST);
+	        break;
+
+	    case MENUITEM3:			/* Resources */
+##		MESSAGE "Loading resource information..."
+		lklginfo(GET_LOCKRES);
+	        break;
+
+	    case MENUITEM4:			/* Refresh */
+##		MESSAGE "Refreshing lock information..."
+        	get_lklgstats(GET_LOCKLIST, (PTR) 0);
+		get_lklgstats(GET_LOCKRES, (PTR) 0);
+	        break;
+
+	    default:
+		break;
+	}
+##  }
+##  ACTIVATE MENUITEM "Options":
+##  {
+	set_options();
+##   }
+##  ACTIVATE MENUITEM "End", frskey3:
+##  {
+	/*  Restore the main menu choices to the selection tablefield */
+##	INITTABLE #flockmenu #options READ (num = i2)
+        for (j = 0; menu_choices[j].num > 0; j++) 
+	{
+##	    LOADTABLE #flockmenu #options
+##		(#option = menu_choices[j].option,
+##		#description = menu_choices[j].description,
+##		#num = menu_choices[j].num)
+	}
+##	BREAKDISPLAY
+##  }
+##  ACTIVATE SCROLLUP #options
+##  {
+##  }
+##  ACTIVATE SCROLLDOWN #options
+##  {
+##  }
+    return;
+}
+
+/*
+** log_submenu() this contains the logging submenu for the main screen
+**
+** History
+**	9/8/89		tomt	took out of main display loop
+**	18 Sept 1990	jpk	modified top frame to conform to forms
+**				standards: no duplicate menu items for
+**				things defined in tablefield, no Help
+**				or Quit in tablefield, "Select" instead of "Go"
+*/
+VOID
+log_submenu()
+{
+##  int		k, rowno;
+##  int		menu_num, tabsize;
+##  char	dbnam[FE_MAXNAME + 1];
+
+##  DISPLAY #flogmenu READ
+##  INITIALIZE
+##  {
+        get_lklgstats(GET_LOGPROCESS, (PTR) 0);
+	get_lklgstats(GET_LOGXACTLIST, (PTR) 0);
+	get_lklgstats(GET_LOGDBLIST, (PTR) 0);
+
+	/* fill the database field with the proper strings XXX again? */
+
+	/* set up selection tablefield	*/
+##	INITTABLE #flogmenu #options READ (num = i2)
+        for (k = 0; lgmenu_choices[k].num > 0; k++) 
+	{
+##	    LOADTABLE #flogmenu #options
+##		(#option = lgmenu_choices[k].option,
+##		#description = lgmenu_choices[k].description,
+##		#num = lgmenu_choices[k].num)
+	}
+	/* Determine tablefield size */
+##	INQUIRE_FRS TABLE #flogmenu (tabsize = LASTROW(#options));
+
+##  }
+##  ACTIVATE MENUITEM "Select", frskey4:
+##  {
+##	GETROW #flogmenu #options (menu_num = #num)
+	switch (menu_num) 
+	{
+	    case MENUITEM1:		/* Summary */
+##		MESSAGE "Loading summary logging statistics ..."
+		lklginfo(GET_LOGSTAT);
+	        break;
+
+	    case MENUITEM2:		/* Header */
+##		MESSAGE "Loading logging header information ..."
+		lklginfo(GET_LOGHEADER);
+	        break;
+
+	    case MENUITEM3:		/* Processes */
+##		MESSAGE "Loading process information ..."
+		lklginfo(GET_LOGPROCESS);
+	        break;
+
+	    case MENUITEM4:		/* Databases */
+##		MESSAGE "Loading database information ..."
+		lklginfo(GET_LOGDBLIST);
+	        break;
+
+	    case MENUITEM5:		/* Transactions */
+##		MESSAGE "Loading transaction information ..."
+		lklginfo(GET_LOGXACTLIST);
+	        break;
+
+	    case MENUITEM6:		/* Refresh */
+##		MESSAGE "Refreshing logging information..."
+        	get_lklgstats(GET_LOGXACTLIST, (PTR) 0);
+        	get_lklgstats(GET_LOGPROCESS, (PTR) 0);
+        	get_lklgstats(GET_LOGDBLIST, (PTR) 0);
+	        break;
+
+	    default:
+	break;
+	}
+##  }
+
+##  ACTIVATE MENUITEM "Options":
+##  {
+	set_options();
+##  }
+
+##  ACTIVATE MENUITEM "End", frskey3:
+##  {
+	/* Restore the main menu choices to the selection tablefield */
+##	INITTABLE #flogmenu #options READ (num = i2)
+        for (k = 0; menu_choices[k].num > 0; k++) 
+	{
+##	    LOADTABLE #flogmenu #options
+##		(#option = menu_choices[k].option,
+##		#description = menu_choices[k].description,
+##		#num = menu_choices[k].num)
+	}
+##      BREAKDISPLAY
+##  }
+##  ACTIVATE SCROLLUP #options
+##  {
+##  }
+##  ACTIVATE SCROLLDOWN #options
+##  {
+##  }
+    return;
+}
+
+/* VARARGS31 */
+DB_STATUS
+uleFormatFcn(dberror, error_code, clerror, flag, generic_error, msg_buffer,
+	msg_buf_length, msg_length, err_code, FileName, LineNumber, num_parms,
+    psize1,  pval1, psize2,  pval2, psize3,  pval3, psize4,  pval4,
+    psize5,  pval5, psize6,  pval6, psize7,  pval7, psize8,  pval8,
+    psize9,  pval9, psize10, pval10, psize11, pval11, psize12, pval12)
+PTR		    dberror;
+i4		    error_code;
+CL_ERR_DESC	    *clerror;
+i4		    flag;
+i4		    *generic_error;
+char		    *msg_buffer;
+i4		    msg_buf_length;
+i4		    *msg_length;
+i4		    *err_code;
+PTR		    FileName;
+i4		    LineNumber;
+i4		    num_parms;
+i4		    psize1;
+PTR		    pval1;
+i4		    psize2;
+PTR		    pval2;
+i4		    psize3;
+PTR		    pval3;
+i4		    psize4;
+PTR		    pval4;
+i4		    psize5;
+PTR		    pval5;
+i4		    psize6;
+PTR		    pval6;
+i4		    psize7;
+PTR		    pval7;
+i4		    psize8;
+PTR		    pval8;
+i4		    psize9;
+PTR		    pval9;
+i4		    psize10;
+PTR		    pval10;
+i4		    psize11;
+PTR		    pval11;
+i4		    psize12;
+PTR		    pval12;
+{
+    SIprintf("ule_format called with error code %d from %s:%d\n", 
+    		error_code,
+		(FileName) ? FileName : "unknown",
+		LineNumber);
+    return OK;
+}
+
+/* Non-variadic function forms */
+DB_STATUS
+ule_formatNV(error_code, clerror, flag, generic_error, msg_buffer,
+	msg_buf_length, msg_length, err_code, num_parms,
+    psize1,  pval1, psize2,  pval2, psize3,  pval3, psize4,  pval4,
+    psize5,  pval5, psize6,  pval6, psize7,  pval7, psize8,  pval8,
+    psize9,  pval9, psize10, pval10, psize11, pval11, psize12, pval12)
+{
+    return(uleFormatFcn(NULL,
+    			error_code,
+			clerror,
+			flag,
+			generic_error,
+			msg_buffer,
+			msg_buf_length,
+			msg_length,
+			err_code,
+			NULL,
+			0,
+			num_parms,
+			psize1, pval1,
+			psize2, pval2,
+			psize3, pval3,
+			psize4, pval4,
+			psize5, pval5,
+			psize6, pval6,
+			psize7, pval7,
+			psize8, pval8,
+			psize9, pval9,
+			psize10, pval10,
+			psize11, pval11,
+			psize12, pval12));
+}
+
+DB_STATUS
+uleFormatNV(dberror, error_code, clerror, flag, generic_error, msg_buffer,
+	msg_buf_length, msg_length, err_code, num_parms,
+    psize1,  pval1, psize2,  pval2, psize3,  pval3, psize4,  pval4,
+    psize5,  pval5, psize6,  pval6, psize7,  pval7, psize8,  pval8,
+    psize9,  pval9, psize10, pval10, psize11, pval11, psize12, pval12)
+{
+    return(uleFormatFcn(dberror,
+    			error_code,
+			clerror,
+			flag,
+			generic_error,
+			msg_buffer,
+			msg_buf_length,
+			msg_length,
+			err_code,
+			NULL,
+			0,
+			num_parms,
+			psize1, pval1,
+			psize2, pval2,
+			psize3, pval3,
+			psize4, pval4,
+			psize5, pval5,
+			psize6, pval6,
+			psize7, pval7,
+			psize8, pval8,
+			psize9, pval9,
+			psize10, pval10,
+			psize11, pval11,
+			psize12, pval12));
+}

@@ -1,0 +1,15 @@
+#
+# Jamfile file for back!gwf!gwm
+#
+
+SubDir ING_SRC back gwf gwm ;
+
+IISUBSYS back gwf gwm ;
+
+
+IILIBRARY GWFLIB : gwmxutil.c gwmxtab.c gwmutil.c gwmscb.c
+	gwmrow.c gwmpmib.c gwmplace.c gwmop.c gwmmob.c
+	gwmkey.c gwmima.c gwmgcn.c gwmgcm.c gwmerr.c ;
+
+IILIBRARY IMPGWFLIBDATA : gwmdata.c ;
+

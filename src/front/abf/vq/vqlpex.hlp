@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlpex.hlp		Local Procedure examples
+The following simple examples show the basic pattern for writing local
+procedures. See the sample application in the Ingres/4GL Reference Manual 
+for more complex examples.
+
+1. Local procedure to add the tax to the cost of an order. Procedure was 
+   created with a return type of FLOAT.
+
+Code to call the procedure:
+    total_cost = addtax (cost = costfield, tax = taxpercent);
+
+Local procedure source code:
+    PROCEDURE addtax (cost = FLOAT, tax = FLOAT) =
+    DECLARE
+	tot = FLOAT;
+    BEGIN
+	tot = cost + (cost * tax);
+	RETURN tot;
+    END
+
+2. Local procedure to display a goodbye message. Procedure was created with a
+   return type of NONE.
+
+Form-End escape code to call the procedure:
+    CALLPROC goodbye();
+
+Local procedure source code:
+    PROCEDURE goodbye() =
+    BEGIN
+	MESSAGE 'Leaving the phone_orders application....goodbye!';
+	SLEEP 2;
+    END

@@ -1,0 +1,2646 @@
+%{
+
+/*
+** Copyright (C) Ingres Corporation 1985, 2004. All Rights Reserved.
+**
+** History:
+**	13-dec-91 (swm)
+**		Added parsing of "globalconstref" and "globalconstdef"
+**		keywords.
+**	04-aug-1992 (larrym)
+**		changed EXEC SQL DECLARE TABLE to remain in EXEC mode until 
+**		entire statement has been reduced.  Since I split the master 
+**		and slave token tables, we want to use the master token table 
+**		for this statement.  See 31-jul-92 change in psqtoks.st. 
+**      24-sep-1992 (lan)
+**		Fixed bug where incorrect code was generated for statement 
+**		following a DECLARE TABLE within declare section.  Set flag 
+**		to suppress printing.
+**	02-oct-1992 (larrym)
+**		grammer now sets a global (sc_hostvar = TRUE) when it's 
+**		scanning a host variable reference.  Setting this variable
+**		to TRUE causes the scanner (scword) not to do keyword
+**		lookups.  The result of this is that you can now use reserved
+**		words in any element of a host variable reference.  See note
+**		at beginning of HOST VARIABLE USAGE section for more info.
+**	14-oct-1992 (lan)
+**		Also generate second word if present to line directive if
+**		mode is GR_sNODB or GR_sFORMS.
+**	20-nov-1992 (Mike S)
+**		Added GR_s4GL as a new mode: for EXEC 4GL.
+**	14-dec-1992 (lan)
+**		Added tDELIMID.
+**	16-dec-1992 (larrym)
+**		Cdec_var now checks (case sensitive) the name of the hostvar
+**		for SQLCODE.  If present, set's state flag EQ_SQLCODE.  This
+**		can be overridden by the -nosqlcode flag.  If that flag is 
+**		set, then we ignore SQLCODE.  Also Cdec_var checks (case 
+**		sensitive) the name of the hostvar for SQLSTATE.  If present, 
+**		set's state flag EQ_SQLSTATE.
+**	09-feb-1993 (teresal)
+**		Added call to set flag to indicate more sql code might
+**		need to be parsed.
+**	23-apr-1993 (sandyd)
+**		Added minimal ANSI C const/volatile syntax for NIST tests.
+**		(See "Ctype_qual")
+**	24-may-1993 (lan)
+**		Fixed a NIST bug where C variable initial values were not
+**		flagged by the FIPS flagger.
+**	25-may-1993 (lan)
+**		Changed E_EQ04FF to E_EQ051E, E_EQ04FF doesn't exist.
+**	20-aug-1993 (sandyd)
+**		Backed out Lan's change from 24-may-1993.  It turns out that
+**		this is really an SQL89 restriction, and not an SQL92 entry 
+**		level restriction.  So we shouldn't be flagging it under
+**		-wsql=entry_sql92.  (NIST removed it from their 127-1
+**		required list.)
+**	15-sep-1993 (sandyd)
+**		Added new "VARBYTE" special ESQL/C type, patterned after
+**		existing VARCHAR.  It is identical to VARCHAR except
+**		for the T_VBYTE datatype code that goes into the symbol table
+**		entry.  In order to share some existing VARCHAR processing, I
+**		changed the "C_varchar" flag to "C_varcharbyte" and let it
+**		contain T_VCH for varchars, T_VBYTE for varbytes, and 0 
+**		otherwise.
+**	15-oct-1993 (sandyd)
+**		Slight modification of Ctype_qual to make its usage more 
+**		readable.
+**	11-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**	13-jan-94 (swm)
+**		Bug #58882
+**		Changed type of generic args in gr_mechanism to PTR to avoid
+**		truncations.
+**	31-jan-1994 (lan)
+**		Fixed bug #55027 - DECLARE TABLE within BEGIN/END DECLARE
+**		SECTION gets syntax error on column datatype whenever the
+**		column datatype contains two words and the first word is a
+**		C reserved word (column datatypes such as long varchar,
+**		double precision).
+**	08-feb-94 (swm)
+**		Bug #59612
+**		Fixed warnings introduced by my 13-jan-94 change. When the
+**		generic arguments are not pointers their uses in expressions
+**		are cast to the appropriate types to eliminate compiler
+**		warnings.
+**	12-apr-94 (geri)
+**		Bug 54017 - Changed DECLARE TABLE within BEGIN/END DECLARE
+**		SECTION to handle delimited ids.
+**      23-may-1994 (sylviap)  SIR #62779
+**	        Added support for:
+**                 EXEC 4GL BEGIN DECLARE SECTION;
+**                 EXEC 4GL END DECLARE SECTION;
+**	15-may-1996 (toumi01)
+**		For axp_osf change text for E_EQ0517_SQLSTATUS_DECL to
+**		indicate that SQLCODE be specified as "int SQLCODE".  The
+**		suggestion of "long SQLCODE" fails because a long is 8
+**		bytes on this platform.
+**	18-Dec-97 (gordy)
+**	    Added support for SQLCA host variable declarations.
+**      12-Mar-98(allmi01/linke01)
+**              NO_OPTIM ming directive added for pym_us5 to correct
+**              eqsc internal error 68197 when an ERGet function call
+**              was found in and embedded sql statement while using
+**              the -c esqlc driective.         
+**      23-Mar-99 (hweho01)
+**              Extended the change dated 15-may-1996 by toumi01 to
+**              ris_u64 (AIX 64-bit platform).
+**      08-Sep-2000 (hanje04)
+**              Extended the axp_osf SQLCODE change to axp_lnx (Alpha Linux).
+**
+** Conflicts with main grammar:
+**	1:	Because of the changes to allow host variables to be reserved
+**		words (see HOST VARIABLE USAGE section for details) a 
+**		new rule for host variable reference was introduced that 
+**		allows a tNAME to follow a the old rule for a host variable 
+**		reference.  In other words, a hostvar can now be a hostvar
+**		or a hostvar tNAME.  This conflicts with cases where the
+**		tNAME might be part of another rule.  The default behavior
+**		is correct.
+**      21-apr-1999 (hanch04)
+**        Replace STrindex with STrchr
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	06-mar-2001 (abbjo03)
+**	    Add tCTYPE_WC for C/C++ wchar_t an tCNVARCHAR to support Unicode.
+**      06-Mar-2003 (hanje04)
+**              Extend axp_osf changes to all 64bit platforms (LP64).
+**	26-feb-2004 (somsa01)
+**	    Added SIZE_TYPE as a useable data type.
+**      04-may-2004 (stial01)
+**          Added long long as a useable data type. (b112266)
+**	28-Mar-2005 (lakvi01)
+**	    Added OFFSET_TYPE as a useable data type.
+**      06-dec-2007 (huazh01)
+**          generate line number and an object of new line when compiling
+**          the 'BEGIN DECLARE' and 'END DECLARE' statement. Otherwise,
+**          if '-p' flag is used, it will cause debugger to out of sync
+**          with the source file.
+**          b119575.
+**      18-sep-2008 (huazh01)
+**          generate a #line directive if the current host code is
+**          "#ifdef", "#endif" or "#else".
+**          bug 120920. 
+**      07-apr-2009 (coomi01) b121895
+**          Do not generate #line if host code is itself inside a comment.
+**	26-Aug-2009 (kschendel) b121804
+**	    Bool prototypes to keep gcc 4.3 happy.
+**      11-nov-2009 (joea)
+**          Add tCTYPE_B for C++'s (and C99) bool.
+*/
+
+
+/* %L merge <esqlgram.my> -- get the master grammar */
+/* %L fake begin */
+# include <esqlgram.my>		-- fake out MING
+/* %L fake end */
+
+/* %L language begin 
+** Define EQ_X_LANG where X is the EUC or PL1 for the symbol table
+*/
+# define	EQ_EUC_LANG
+/* %L language end */
+
+/* This file must pass a YACC and compilation test only */
+# include 	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<er.h>
+# include	<si.h>
+# include	<st.h>
+/* Files from the SQL translator not needed for test */
+/* Files from EQUEL preprocessor */
+# include	<equel.h>
+# include	<eqlang.h>
+# include	<equtils.h>
+# include	<eqsym.h>
+# include	<eqgen.h>
+# include	<eqstmt.h>
+# include	<eqscan.h>
+# include	<eqgr.h>
+
+/* Special ESQL overlay */
+# include	<eqesql.h>
+%}
+
+/*
++*  Filename:	csq.y
+**  Purpose:	Defines C dependent grammar for ESQL.
+**
+**  Defines:	yyparse		- YACC parser for C dependent rules.
+**		gr_mechanism	- Interface between grammar and the 'outside'.
+**  Notes:
+-*		Can only be run when 'eqmerged' with the main ESQL grammar.
+**
+**  Language dependent grammar for the C statements that can be embedded in 
+**  Equel.  Basically parses Declarations and Usages of variables and constants.
+**
+**  Conflicts with the main grammar:
+**	1. None
+**  Notes:
+**	1. We try to support most types. Any type built up from a typedef or
+**	   regular declaration we can support. We do not support casts, and we
+**	   do not support grouping of parts of variable references via 
+**	   parenthesization.  However, if the first element is parenthesized,
+**	   to provide indirection off a pointer, this will be accepted.
+**	   Eg:   ## XTYPE **x;
+**	         ## sleep (*x)->intelm
+**	2. Indirection in the middle of structure references is not checked, 
+**	   only the indirection of the last member.
+**
+** History:	10-jan-1985	- Written (ncg & mrw)
+** 		14-aug-1985	- Modified to work for ESQL (ncg)
+**		30-aug-1990 (mgw)
+**			Took out include line for cm.h, already included
+**			in front!embed!mgram!esqlgram.my. Addition of CMATTR
+**			typedef in cm.h prevented this from compiling if cm.h
+**			is included twice.
+**		21-jun-1990	- Add Decimal support (teresal)
+**		14-feb-1991	- Add support for double precision 
+**				  data type - bug 35410. (teresal)
+**	20-apr-00 (inkdo01)
+**	    Added tempgr to pass "return" info during exec procedure parse.
+**	2-may-01 (inkdo01)
+**	    Added gr_rcnt for row procs.
+*/
+
+/* Fake INGRES words reserved for testing */
+%token	tSET 	tRET 	tFSET	tINTO	tINS		/* Test host vars */
+	tFORMINPAR	tFORMOUTPAR			/* Form param */
+	tLABEL						/* Test host label */
+
+/* Keywords and Constants defined in G but used here */
+%token	tNAME		tSCONST		tINTCONST	tFLTCONST
+	tPARAM 		tEND		tINCLUDE	tDECCONST
+	tUNION		tEOFINC		tTABLE		tDELIMID
+/* Declaratives from G */
+%token	tDECLARE	tSECTION
+
+
+/* Punctuation from G */
+%token	tLPAREN		tRPAREN		tCOMMA		tPERIOD
+	tCOLON		tEQ		tMINUS
+
+/* Arithmetic binary operator from G - '*' or '**' */
+%token	tSTAR	tEXP
+
+/* Special L tokens required by G and scanner to fill tok_special */
+%token  tHOSTCODE	/* Host language */
+	tCOMMENT	/* Comment token to trigger skipping comments */
+	tQUOTE		/* Triggers reading strings */
+	tTERMINATE	/* Statement terminators */
+
+
+/* %L tokens begin - C tokens to import into G */
+
+/*
+** %ming NO_OPTIM = pym_us5
+*/
+
+/* Extra C punctuation */
+%token	tLBRKT 		tRBRKT 	  	tSEMICOL 	tARROW
+%token	tLBRACE		tRBRACE		tPOUND		tAMPERSAND
+
+/* Special C tokens - Some are returned explicitly by gr_mechanism() */
+%token	tCTYPE		
+        tCTYPE_B        /* Standard C++ bool or C99 bool/_Bool */
+	tCTYPE_I	/* Standard types are reserved */
+	tCTYPE_L
+	tCTYPE_S
+	tCTYPE_F
+	tCTYPE_D
+	tCTYPE_C
+	tCTYPE_WC
+	tCUNSIGNED
+	tCBADTYPE	/* Unsupported C declaration */
+	tCTAG		/* Returned when recognising structure tag */
+	tCSTORAGE	/* Static etc */
+	tCEXTERN	/* Extern storage class (forward declaration) */
+	tCTYPEDEF	/* Typedef */
+  	tCSTRUCT	/* Struct x {  } */
+	tCENUM		/* Enum x { } */
+	tCENUMTAG	/* Returned when recognising enum tag */
+  	tCLPAR_STAR	/* Allow first struct member to be (*x) */
+	tDEFINE		/* #define */
+	tCFUNCVAR	/* Kanjii function "variables" -- "ER*" */
+	tCVARCHAR	/* "varchar": special ESQL/C type */
+	tCVARBYTE	/* "varbyte": special ESQL/C type */
+	tCNVARCHAR	/* "nvarchar": special ESQL/C type */
+	tCCONST		/* "const" storage class modifier */
+	tCVOLATILE	/* "volatile" storage class modifier */
+
+/* %L tokens end */
+
+%start		program
+
+%{
+
+/* Structure from main grammar for test compilation has been move to eqesql.h */
+GLOBALDEF struct esq_struct _esq_struct ZERO_FILL;
+GLOBALDEF struct esq_struct *esq = &_esq_struct;
+
+/* Flag bits for esq->flag */
+# define	ESQ_CURSOR	0x001	
+# define	ESQ_NOPRT	0x002
+
+/* %L locals begin - Local variables and gr structure for C */
+# include	<eqc.h>
+# include	<ere0.h>
+# include	<iisqlca.h>
+
+struct	gr_state {
+	/* Members known to both G and L */
+	SYM	*gr_sym;
+	char	*gr_id;		/* Last full name used */
+	i4	gr_type;
+	i4	gr_flag;	/* Certain state information */
+	i4	gr_func;	/* I/O Function constant */
+	i4	gr_mode;	/* Mode of statement before entering block */
+	i4	gr_adjective;	/* Block modifier */
+	SYM	*gr_nlsym;	/* Symtab pointer to indicator var */
+	char	*gr_nlid;	/* Id of indicator var */
+	i4	gr_nltype;	/* Type of indicator var */
+	SYM	*gr_null;	/* Generic null symbol (for "= null" assgnmts */
+	i4	gr_rcnt;	/* count of result row entries (for RPPs) */
+
+	/* Add L (C) dependent members after this statement */
+	i4	C_rec;		/* C record level */
+	i4	C_storage;	/* extern, static, auto, register, typedef */
+	i4	C_size;		/* Size of declaration */
+	i4	C_indir;	/* Indirection of variables */
+	i4	C_dec;		/* In declaration or usage */
+	i4	C_varcharbyte;  /* Is a varchar, varbyte or nvarchar decl. */
+				/*     0       = neither		   */
+				/*     T_VCH   = varchar		   */
+				/*     T_VBYTE = varbyte		   */
+				/*     T_NVCH  = nvarchar		   */
+	SYM	*C_struct;	/* Special pointer for references to structs */
+	STR_TABLE *C_strvals;	/* String table for C values */
+	C_VALS	*C_cvals;	/* C value structure */
+};
+GLOBALDEF struct gr_state _gr_local ZERO_FILL;
+GLOBALDEF struct gr_state *gr = &_gr_local;
+GLOBALDEF char *sqlca_var = NULL;
+struct gr_state tempgr;
+
+/* Where do C array indices start? */
+# define C_NDX_BASE	0
+
+/* How do you index a C array? */
+# define C_NDX_EXPR	ERx("[%d]")
+
+FUNC_EXTERN bool sc_incomment(void);
+
+/* %L locals end */
+
+%}
+
+%%
+
+program:	/* Null program */
+	|	program statement host_term
+;
+
+statement:	tRET host_retvar
+	|	tSET host_setvar
+	|	tFSET host_fsetvar
+	|	tINTO host_intovar
+	|	tINS host_insvar
+	|	tLABEL host_label
+	|	host_code
+	|	host_declare
+	| 	error
+;
+dectab_list:	tCOMMA
+;
+/* SQL block delimiters */
+
+block_open:	tLBRACE		/* Pascal uses tBEGIN */
+;
+block_close:	tRBRACE		/* Pascal uses tEND */
+		{
+		    gr->gr_flag &= ~GR_HOSTCODE;
+		}
+;
+
+/*
+** Connecting rules between a usage of a C variables, names and string
+** constants and a equivalent Equel objects.
+**
+** Objects that must be defined by the L grammar for use by G:
+**
+** 1. host_code 		- Host code recognised, set L flags and print 
+**				  code.
+** 2. host_declare 		- Host language declaration sections.
+** 3. host_term	 (host_incterm)	- Host language terminator.
+** 4. host_label		- Host label.
+** 5. host_retvar, host_setvar, host_fsetvar, host_intovar, host_insvar
+**				- Host language variables.
+** 6. host_sqlda		- Host language SQLDA names.
+** 7. host_indretvar, host_indsetvar - Host language indicator variables
+** 8. block_open, block_close	- SQL/FRS block control syntax.
+** 9. Extra rules that may have alternative syntaxes for L.
+**
+** Note:
+**     Alls host_XXvar's must set gr->gr_sym, gr->gr_type and
+** gr->gr_id after freeing the current id space.  Callers above should be able 
+** to access gr->gr_sym, gr->gr_type, and gr->gr_id when wanting the variable.
+** The type of gr->gr_type should be the equivalent EQUEL type (C) not the 
+** host language type.
+*/
+
+/*
+** C dependent grammar 
+*/
+
+/* %L rules begin - C dependent grammar */
+
+/* 
+** G rules that must defined by L because of differences between
+** languages and systems.
+*/
+
+
+/*
+** C-specific extensions of main grammar rules
+*/
+
+sql_id:		C_types
+		{
+		    db_key( $1.s );
+		}
+;
+dectab_type:	C_types
+	|	tCTYPE tNAME			/* Allow double precision */
+;
+function_ref:	tCOUNT tCLPAR_STAR tRPAREN	/* Cause we reserve (* */
+		{
+		    db_key($1.s);
+		    db_op($2.s);
+		    db_op($3.s);
+		}
+;
+/* INITTABLE hidden column type names -- for CHAR */
+inithide_type:	C_types
+		{
+		    id_add( $1.s );
+		}
+;
+/*
+** We allow more types here than are allowed at run-time.
+*/
+C_types:        tCTYPE
+	|       tCTYPE_C                /* Char */
+	|       tCTYPE_WC               /* wchar_t */
+        |       tCTYPE_B                /* bool (C++ or C99) */
+	|       tCTYPE_I                /* Int */
+	|       tCTYPE_S                /* Short */
+	|       tCTYPE_L                /* Long */
+	|       tCTYPE_F                /* Float */
+	|	tCTYPE_D		/* Double */
+	|       tCVARCHAR               /* Reserved in C */
+	|       tCVARBYTE               /* Reserved in C */
+	|	tCNVARCHAR		/* Reserved in C */
+;
+						 
+
+/* 
+** HOST TERMINATOR
+**
+** host_term - The C semicolon terminates all ESQL statements.
+*/
+host_term:	tSEMICOL
+		{
+		    sc_moresql();
+		    dml->dm_exec = DML_HOST;
+		}
+;
+host_incterm:	host_term
+;
+
+
+
+/*
+** HOST CODE
+** host_code - The scanner has passed the full line of host language
+** code, as an argument.  The newline is included.
+*/
+host_code:	tHOSTCODE 
+		{
+		    bool genline = FALSE; 
+
+		    if ((gr->gr_flag & GR_HOSTCODE) == 0)
+		    {
+			gen_line( ERx("host code") );
+                        genline = TRUE;
+			gr->gr_flag |= GR_HOSTCODE;
+		    }
+
+                    if (!genline &&
+                        (gr->gr_flag & GR_HOSTCODE) &&
+                        (STncmp($1.s, "#ifdef", 6) == 0 ||
+                         STncmp($1.s, "#endif", 6) == 0 ||
+                         STncmp($1.s, "#else",  5) == 0
+                        )
+                       )
+                    {
+                       if ( ! sc_incomment() )
+			  gen_line((char *)0);
+                    }
+
+		    gen_host( G_H_CODE, $1.s );
+		    dml->dm_exec = DML_HOST;
+		}
+;
+
+/* 
+** HOST LABEL
+**
+** host_label - Can be preceded by an optional colon.
+*/
+host_label:	tCOLON tNAME
+		{
+		    $$.s = $2.s;
+		}
+	|	tNAME
+		{
+		    $$.s = $1.s;
+		}
+	|	tSCONST
+		{
+		    $$.s = $1.s;
+		}
+;
+
+		
+/*
+** HOST DECLARATIONS
+** 
+** host_declare - Section of ESQL declarations.
+*/
+host_declare:	Cdec_head Cdec_block Cdec_end
+;
+Cdec_head:	tBEG_DECLARE tSECTION tSEMICOL
+		{
+		    /* Accept either EXEC SQL | 4GL BEGIN DECLARE */
+
+		    if ((dml->dm_exec != (DML_EXEC|DML__SQL)) &&
+		        (dml->dm_exec != (DML_EXEC|DML__4GL)))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"), 
+				ERx("BEGIN DECLARE") );
+                    gen_line((char *)0);
+                    gen__obj( TRUE, ERx("\n") );
+		    dml->dm_exec = DML_DECL;
+		    gr->C_rec = 0;
+		    gr->C_size = 0;
+		    gr->C_indir = 0;
+		    gr->C_dec = GR_C_DEC;	/* Maybe dec's to follow */
+		    gr->C_varcharbyte = 0;
+		    gr->gr_type = T_INT;
+		    gr->C_storage = T_NONE;
+		    gr->C_struct = (SYM *)0;
+		    eq->eq_flags |= EQ_INDECL;	/* Scanner in declare mode */
+		}
+;
+Cdec_end:	tEND tDECLARE tSECTION tSEMICOL
+		{
+                    /* Accept either EXEC SQL | 4GL END DECLARE */
+
+                    if ((dml->dm_exec != (DML_EXEC|DML__SQL)) &&
+                        (dml->dm_exec != (DML_EXEC|DML__4GL)))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"), 
+				ERx("END DECLARE") );
+		    dml->dm_exec = DML_HOST;
+		    /* Some interface file may need to be included */
+		    gen_declare();
+                    gen_line((char *)0); 
+                    gen__obj( TRUE, ERx("\n") );      
+		    gr->C_dec = GR_C_USE;
+		    gr->gr_type = T_UNDEF;
+		    eq->eq_flags &= ~EQ_INDECL;	/* Scanner exits declare mode */
+		}
+;
+Cdec_block:	/* No declarations */
+	|	Cdec_block Cdeclaration
+		{
+		    gr->C_rec = 0;
+		    gr->C_size = 0;
+		    gr->C_indir = 0;
+		    gr->C_dec = GR_C_DEC;	/* Maybe dec's to follow */
+		    gr->gr_type = T_INT;
+		    gr->C_storage = T_NONE;
+		    gr->C_struct = (SYM *)0;
+		    gr->C_varcharbyte = 0;
+		}
+;
+Cdeclaration:	Cstor_dec Ctype_qual Cstor_spec Csemicol
+	|	Ctype_qual Cdecl_spec Csemicol
+	|	Cdefine
+	|	Cdec_include
+	|	Cdec_dectable
+	|	Cexclude_sec
+	|	error tSEMICOL
+		{
+		    dml->dm_exec = DML_DECL;
+		    gen_host( G_H_OP|G_H_NEWLINE, ERx("...DECLARE ERROR;") );
+		}
+;
+Ctype_qual: 	/* No type qualifier */
+	|	tCCONST
+		{
+		    gen_host(G_H_KEY, $1.s);
+		}
+	|	tCVOLATILE
+		{
+		    gen_host(G_H_KEY, $1.s);
+		}
+;
+/*
+** static, etc [varchar]
+** static, etc [varbyte]
+** typedef
+** extern [varchar]
+** extern [varbyte]
+** varchar
+*/
+Cstor_dec:	Cstor_xdec			/* Static, extern etc */
+		{
+		    gr->C_dec = GR_C_DEC;	/* Dec's to follow */
+		    gr->gr_type = T_INT;
+		    gr->C_size = sizeof(i4);
+		}
+;
+Cstor_xdec:	Cstor_word 			/* Static etc. */
+	|	tREGISTER			/* Also a SQL reserved wd */
+		{
+		    gen_host( G_H_KEY, $1.s );  
+		}
+	|	Cstor_word tCVARCHAR		/* Static varchar etc. */
+		{
+		    gr->C_varcharbyte = T_VCH;
+		}
+	|	Cstor_word tCVARBYTE		/* Static varbyte etc. */
+		{
+		    gr->C_varcharbyte = T_VBYTE;
+		}
+	|	Cstor_word tCNVARCHAR		/* Static nvarchar etc. */
+		{
+		    gr->C_varcharbyte = T_NVCH;
+		}
+	|	tCTYPEDEF
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->C_storage = T_TYPEDEF;
+		}
+	|	tCEXTERN
+		{
+		    gen_host( G_H_KEY, $1.s );  
+		    gr->C_storage = T_EXTERN;
+		}
+	|	tCEXTERN tCVARCHAR
+		{
+		    gen_host( G_H_KEY, $1.s );  
+		    gr->C_storage = T_EXTERN;
+		    gr->C_varcharbyte = T_VCH;
+		}
+	|	tCEXTERN tCVARBYTE
+		{
+		    gen_host( G_H_KEY, $1.s );  
+		    gr->C_storage = T_EXTERN;
+		    gr->C_varcharbyte = T_VBYTE;
+		}
+	|	tCEXTERN tCNVARCHAR
+		{
+		    gen_host( G_H_KEY, $1.s );  
+		    gr->C_storage = T_EXTERN;
+		    gr->C_varcharbyte = T_NVCH;
+		}
+	|	tCVARCHAR
+		{
+		    gr->C_varcharbyte = T_VCH;
+		}
+	|	tCVARBYTE
+		{
+		    gr->C_varcharbyte = T_VBYTE;
+		}
+	|	tCNVARCHAR
+		{
+		    gr->C_varcharbyte = T_NVCH;
+		}
+;
+Cstor_word:	tCSTORAGE
+		{
+		    /*
+		    ** Under the -compatlib flag special case the words:
+		    **	GLOBALREF, GLOBALDEF
+		    ** for compat.h
+		    */
+		    if (eq->eq_flags & EQ_COMPATLIB)
+		    {
+			if (STbcompare($1.s, 0, ERx("globalref"), 0, TRUE) == 0)
+			    gen_host(G_H_KEY, ERx("GLOBALREF"));
+			else
+			 if (STbcompare($1.s, 0, ERx("globaldef"), 0, TRUE)== 0)
+			    gen_host(G_H_KEY, ERx("GLOBALDEF"));
+			else
+			 if (STbcompare($1.s, 0, ERx("globalconstref"), 0, TRUE)== 0)
+			    gen_host(G_H_KEY, ERx("GLOBALCONSTREF"));
+			else
+			 if (STbcompare($1.s, 0, ERx("globalconstdef"), 0, TRUE)== 0)
+			    gen_host(G_H_KEY, ERx("GLOBALCONSTDEF"));
+			else
+			    gen_host(G_H_KEY, $1.s);  
+		    }
+		    else
+			gen_host(G_H_KEY, $1.s);  
+		}
+;
+/*
+** [typename] name [= stuff | ZERO_FILL] {, name [= stuff | ZERO_FILL]}
+** enum decl
+** struct decl
+*/
+Cstor_spec:	Cdecl_list 			/* No types - extern var; */
+	|	Cdecl_spec
+;
+Cdecl_spec:	Ctype_dec Cdecl_list 		/* Simple types */
+	|	Cenum_dec1 Cdecl_optlist	/* enum [name] {..} [declist] */
+	|	Cenum_dec2 Cdecl_list		/* enum tag declist */
+	|	Cstruct_dec1 Cdecl_optlist 	/* struct name {..} [declist] */
+	|	Cstruct_dec2 Cdecl_list 	/* struct {..} declist */
+	|	Cstruct_dec3 Cdecl_list		/* struct tag declist */
+	|	Cstruct_dec4 Cdecl_optlist	/* struct tag {..} [declist] */
+	|	Cbad_type
+;
+Ctype_dec:	Cxtype_dec
+		{
+		    SYM		*sy;
+
+		    sy = sym_resolve( (SYM *)0, $1.s, C_CLOSURE, syFisTYPE );
+		    if (sy)
+		    {
+			gr->C_size = sym_g_dsize( sy );
+			gr->C_indir = sym_g_indir( sy );
+			gr->gr_type = sym_g_btype( sy );
+			/*
+			** May need to save value info for cases like
+			**	typedef char	Buf[10];
+			**	Buf	b;	-- should have dimension 10
+			*/
+			gr->C_cvals = (C_VALS *)sym_g_vlue(sy);
+			/*
+			** This "if" is made use of only in Cdec_var
+			** where we set it only for typedefs of structs.
+			** We use it there only, so we know to set C_struct here
+			** so that when we get into Cdec_var for the Cdecl_list
+			** of this declaration we'll have a symbol table type
+			** entry to point to for the declared variable.
+			*/
+			if (gr->gr_type == T_STRUCT)
+			    gr->C_struct = sy;
+		    }
+		    gr->C_dec = GR_C_DEC;	/* Dec's to follow */
+		}
+;
+Cxtype_dec:	tCTYPE_L			/* Long */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+	|	tCTYPE_S			/* Short */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+	|	tCTYPE_I			/* Int */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+        |       tCTYPE_B                        /* bool (C++ or C99) */
+                {
+                    gen_host( G_H_KEY, $1.s );
+                    $$.s = $1.s;
+                }
+	|	tCTYPE_C			/* Char */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+	|	tCTYPE_WC			/* wchar_t */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+	|	tCUNSIGNED			/* Unsigned */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = ERx("int");
+		}
+	|	tCUNSIGNED tCTYPE_L		/* Unsigned long */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = $2.s;
+		}
+	|	tCUNSIGNED tCTYPE_S		/* Unsigned short */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = $2.s;
+		}
+	|	tCUNSIGNED tCTYPE_I		/* Unsigned int */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = $2.s;
+		}
+	|	tCUNSIGNED tCTYPE_C		/* Unsigned char */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = $2.s;
+		}
+	|	tCUNSIGNED tCTYPE_WC		/* unsigned wchar_t */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = $2.s;
+		}
+	|	tCTYPE_L tCTYPE_I		/* Long int */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = $1.s;
+		}
+	|	tCTYPE_S tCTYPE_I		/* Short int */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = $1.s;
+		}
+	|	tCTYPE_F 			/* Float */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+	|	tCTYPE_D 			/* Double */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+	|	tCTYPE_L tCTYPE_F		/* Long float */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = ERx("double");
+		}
+	|	tCTYPE_L tCTYPE_L		/* Long long */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = ERx("i8");
+		}
+	|	tCUNSIGNED tCTYPE_L tCTYPE_L	/* Unsigned Long long */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    gen_host( G_H_KEY, $3.s );
+		    $$.s = ERx("u_i8");
+		}
+	|	tCTYPE	 			/* Returned by gr_mechanism */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+;
+
+/* Eat till the semicolon */
+Cbad_type: 	tCBADTYPE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    er_write( E_EQ0501_hBADTYPE, EQ_ERROR, 2, ERx("C"), $1.s );
+		    sc_eat( gen_code, SC_NEST|SC_BACK, ERx(";"), '{', '}' );
+		    gr->C_dec = GR_C_DEC;	/* Dec's to follow */
+		}
+;
+
+/*
+** Enum declaration - Parse enumerated type declarations.
+**
+** 	An enumerated type has the following syntax:
+**	  enum enum_name '{'
+**		num_literal {, enum_literal}
+**	  '}'  [enum_var {, enum_var}];
+**	
+**	where
+**	  'enum_name' is entered into the symbol table
+**		  as syFisTAG with an INT type.  This object is really an
+**		  enum "tag" but we do not want to confuse it with
+**		  structure tags (as it has no children) so we give it an
+**		  integer base type.
+**	  'enum_literal' has the syntax:
+**		  name [= constant]
+**		  and is entered into the symbol table as a constant.
+**		  The literal list is only optional if enum_name has already
+**		  been declared as an enum tag.
+**	  'enum_var' is any variable declaration.
+** Examples:
+**	enum color {RED, YELLOW, GREEN};
+**	enum color col, colset[12];
+**	enum {FALSE, TRUE} bool;
+**
+** All enum constants, types and variables are treated as integer constants,
+** types and variables.
+*/
+
+Cenum_dec1:	Cenum_key Cenum_newtag Cenum_list /* enum new_tag {..} */
+		{
+		    gr->C_size = sizeof(i4);
+		    gr->C_indir = 0;
+		    gr->gr_type = T_INT;
+		}
+;
+Cenum_dec2:	Cenum_key Cenum_oldtag 		  /* enum old_tag */
+		{
+		    gr->C_size = sizeof(i4);
+		    gr->C_indir = 0;
+		    gr->gr_type = T_INT;
+		}
+;
+Cenum_key:	tCENUM
+		{
+		    gr->C_dec = GR_C_TAG;	/* Get ready for enum tag */
+		    gen_host( G_H_KEY, $1.s );
+		    if (gr->C_varcharbyte != 0)
+		    {
+			er_write( E_E00008_hcVCHIGNRE, EQ_ERROR, 0 );
+			gr->C_varcharbyte = 0;
+		    }
+		}
+;
+Cenum_newtag:	tNAME
+		{
+		    SYM		*sy;
+
+		    gen_host( G_H_KEY, $1.s );
+		    /* Declare the tag and mark as integer */
+		    sy = symDcEuc( $1.s, gr->C_rec, C_BLOCK, syFisTAG,
+			             C_CLOSURE, SY_TAG );
+		    if (sy)
+			sym_s_btype( sy, T_INT );
+		    gr->C_dec = GR_C_DEC;
+		}
+	|	tCENUMTAG
+		{
+		    /*
+		    ** Probably will be redeclaration to compiler but
+		    ** we will ignore it.
+		    */
+		    gen_host( G_H_KEY, $1.s );
+		    gr->C_dec = GR_C_DEC;
+		}
+	|	/* No tag - enum {a, b} c; note that enum {a, b} is legal! */
+		{
+		    gr->C_dec = GR_C_DEC;
+		}
+;
+Cenum_oldtag:	tCENUMTAG	/* Known enum tag (from gr_mechanism) */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->C_dec = GR_C_DEC;
+		}
+;
+Cenum_list:	Cenum_lbrace Cenum_literals tRBRACE
+		{
+		    gen_host( G_H_NEWLINE|G_H_OUTDENT, (char *)0 );
+		    gen_host( G_H_OP, $3.s );
+		}
+;
+Cenum_lbrace:	tLBRACE 
+		{
+		    gen_host( G_H_OP|G_H_NEWLINE|G_H_INDENT, $1.s );
+		}
+;
+Cenum_literals:	Cenum_lit
+	|	Cenum_literals Cdec_comma Cenum_lit
+;
+Cenum_lit:	Cenum_litname Cenum_liteq Cdef_intconst
+		{
+		    gen_host(G_H_KEY, $3.s);
+		}
+	|	Cenum_litname
+;
+Cenum_litname:	tNAME
+		{
+		    SYM		*sy;
+
+		    gen_host(G_H_KEY, $1.s);
+		    /* Not recorded as child of anything -- orphans */
+		    if (sy = symDcEuc($1.s, 0, C_BLOCK,
+				syFisORPHAN|syFisCONST, C_CLOSURE, SY_NORMAL))
+		    {
+			sym_s_btype( sy, T_INT );
+			sym_s_dsize(sy, sizeof(i4));
+		    }
+		}
+;
+Cenum_liteq:	tEQOP
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+
+/*
+** Structures with a name can have an optional field list, and optionally
+** followed by an associated variable.  Structures without a name must
+** have a field list, and must be followed by an associated variable.
+**
+** Examples:
+**
+** struct name {..} [declist]
+**   struct a { int b; } c;	- "a" not seen as a tag yet
+**   struct a { int b; };	- "a" not seen as a tag yet
+** struct {..} declist
+**    struct { int a; } b;	- without a name
+** struct tag declist
+**    struct a *b;		- "a" already seen as a tag
+** struct tag {..} [declist]
+**    struct a { int b; } c;	- "a" already seen as a tag; redeclaration?
+**    struct a { int b; };	- "a" already seen as a tag; inner scope?
+**
+** When pushing the field list (Cfld_rbrace) the C_struct value must be set to
+** the parent structure entry - all Cstruct_decX rules set C_struct.
+** When popping the field list (Cfld_rbrace) then C_struct is set so that all
+** variables may use the type pointer.
+*/
+Cstruct_dec1:	Cstruct_key Cstr_name Cfield_decl 	/* struct name {..} */
+		{
+		    gr->gr_type = T_STRUCT;
+		}
+;
+Cstruct_dec2:	Cstruct_key Cstr_noname Cfield_decl 	/* struct {..} */
+		{
+		    gr->gr_type = T_STRUCT;
+		}
+;
+Cstruct_dec3:	Cstruct_key Cstr_withtag		/* struct tag */
+		{
+		    gr->gr_type = T_STRUCT;
+		}
+;
+Cstruct_dec4:	Cstruct_key Cstr_dectag Cfield_decl	/* struct tag {..} */
+		{
+		    /* Repeated structure tag - legal in C */
+		    gr->gr_type = T_STRUCT;
+		}
+;
+Cstruct_key:	tCSTRUCT
+		{
+		    gr->C_dec = GR_C_TAG;		/* Get ready for tag */
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tUNION
+		{
+		    gr->C_dec = GR_C_TAG;		/* Get ready for tag */
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Cstr_name:	tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->C_struct = symDcEuc( $1.s, gr->C_rec, C_BLOCK, syFisTAG,
+			             C_CLOSURE, SY_TAG );
+		    gr->C_dec = GR_C_DEC;
+		}
+;
+Cstr_noname:	{
+		    gr->C_struct = symDcEuc( ERx(""), gr->C_rec, C_BLOCK, 
+					syFisTAG, C_CLOSURE, SY_TAG );
+		    gr->C_dec = GR_C_DEC;
+		}
+;
+Cstr_withtag:	tCTAG		/* Returned expilicitly by gr_mechanism */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->C_struct =
+			 sym_resolve((SYM *)0, $1.s, C_CLOSURE, syFisTAG) ;
+		    gr->C_dec = GR_C_DEC;
+		}
+;
+Cstr_dectag:	tCTAG		/* Returned explicitly by gr_mechanism */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->C_struct = symDcEuc( $1.s, gr->C_rec, C_BLOCK, syFisTAG, 
+				     C_CLOSURE, SY_TAG );
+		    gr->C_dec = GR_C_DEC;
+		}
+;
+Cfield_decl:	Cfld_lbrace Cfield_list Cfld_rbrace
+;
+/* Relies on the fact that C_struct is the struct symbol table entry */
+Cfld_lbrace:	tLBRACE 
+		{
+		    gen_host( G_H_OP|G_H_NEWLINE|G_H_INDENT, $1.s );
+		    gr->C_rec++;
+		    /* 
+		    ** Push the struct entry in case there are nested structs,
+		    ** so that variables of this struct type can be set.
+		    ** The struct pointer is popped on the right brace.
+		    */
+		    sym_fpush( gr->C_struct );
+		    /*
+		    ** Save info about outer varchar (or varbyte).
+		    ** Note that C_struct may be null if redecl.
+		    */
+		    if (gr->C_struct && gr->C_varcharbyte != 0)
+			sym_s_btype( gr->C_struct, gr->C_varcharbyte ); 
+		    gr->C_varcharbyte = 0;
+		}
+;
+Cfld_rbrace:	tRBRACE
+		{
+		    gr->C_rec--;
+		    gr->C_struct = sym_fpop();
+		    gen_host( G_H_KEY|G_H_OUTDENT, $1.s );
+		    if (gr->C_struct)	/* Could be null if redecl */
+		    {
+			if (sym_g_btype(gr->C_struct) == T_VCH)
+			{
+			    gr->C_varcharbyte = T_VCH;
+			    sym_s_btype( gr->C_struct, T_STRUCT ); 
+			}
+			else if (sym_g_btype(gr->C_struct) == T_VBYTE)
+			{
+			    gr->C_varcharbyte = T_VBYTE;
+			    sym_s_btype( gr->C_struct, T_STRUCT ); 
+			}
+			else if (sym_g_btype(gr->C_struct) == T_NVCH)
+			{
+			    gr->C_varcharbyte = T_NVCH;
+			    sym_s_btype(gr->C_struct, T_STRUCT); 
+			}
+			else
+			{
+			    gr->C_varcharbyte = 0; /* Reset nested varthings */
+			}
+		    }
+		}
+;
+Cfield_list:	Cfield
+	|	Cfield_list Cfield
+;
+/*
+** Bug 3487 - Do not save varchar flag over trailing fields.  For example:
+** 	struct {
+**	  int a;
+**	  varchar struct { ... } c;	-- Enter as VARCHAR.
+**	  int c;			-- Not a VARCHAR.
+**	} str;
+*/
+Cfield:		Cfield_dec Cdecl_list Csemicol 	/* Structs or simple */
+		{
+		    gr->gr_type = T_NONE;
+		    gr->C_struct = (SYM *)0;
+		    gr->C_size = 0;
+		    gr->C_indir = 0;
+		    gr->C_varcharbyte = 0;
+		}
+	|	Cexclude_sec		/* Undocumented */
+	|	error tSEMICOL
+		{
+		    dml->dm_exec = DML_DECL;
+		    gen_host( G_H_OP|G_H_NEWLINE, ERx("...FIELD ERROR;") );
+		    gr->gr_type = T_NONE;
+		    gr->C_struct = (SYM *)0;
+		    gr->C_size = 0;
+		    gr->C_indir = 0;
+		    gr->C_varcharbyte = 0;
+		}
+;
+Cfield_dec:	Ctype_dec 		/* Regular type */
+	|	Cvarchwd Ctype_dec	/* Varchar with type typedef */
+	|	Cvarbywd Ctype_dec	/* Varbyte with type typedef */
+	|	Cnvarchwd Ctype_dec	/* Nvarchar with type typedef */
+	|	Cstruct_dec1		/* Structure with a name */
+	|	Cvarchwd Cstruct_dec1	/* Varchar structure with a name */
+	|	Cvarbywd Cstruct_dec1	/* Varbyte structure with a name */
+	|	Cnvarchwd Cstruct_dec1	/* Nvarchar structure with a name */
+	|	Cstruct_dec2		/* Structure without a name */
+	|	Cvarchwd Cstruct_dec2	/* Varchar structure without a name */
+	|	Cvarbywd Cstruct_dec2	/* Varbyte structure without a name */
+	|	Cnvarchwd Cstruct_dec2	/* Nvarchar structure without a name */
+	|	Cstruct_dec3		/* struct with a tag but no dec list */
+	|	Cvarchwd Cstruct_dec3	/* Varch strct w/tag but no dec list */
+	|	Cvarbywd Cstruct_dec3	/* Varby strct w/tag but no dec list */
+	|	Cnvarchwd Cstruct_dec3	/* Nvarch strct w/tag but no dec list */
+	|	Cstruct_dec4		/* struct with a tag and dec list */
+	|	Cvarchwd Cstruct_dec4	/* Varch struct w/tag and dec list */
+	|	Cvarbywd Cstruct_dec4	/* Varby struct w/tag and dec list */
+	|	Cnvarchwd Cstruct_dec4	/* Nvarch struct w/tag and dec list */
+	|	Cenum_dec1		/* Enum with a list */
+	|	Cenum_dec2		/* Enum with a tag and no list */
+;
+Cvarchwd:	tCVARCHAR
+		{
+		    gr->C_varcharbyte = T_VCH;
+		}
+Cvarbywd:	tCVARBYTE
+		{
+		    gr->C_varcharbyte = T_VBYTE;
+		}
+Cnvarchwd:	tCNVARCHAR
+		{
+		    gr->C_varcharbyte = T_NVCH;
+		}
+;
+Cdecl_optlist:	/* No declarations - possibly structure */
+		{
+		    /*
+		    ** Varchar storage class ONLY allowed with variable decls.
+		    ** Disallow with structure tags (and no vars) but give
+		    ** error.
+		    */
+		    if (gr->C_varcharbyte != 0)
+		    {
+			er_write( E_E00008_hcVCHIGNRE, EQ_ERROR, 0 );
+			gr->C_varcharbyte = 0;
+		    }
+		}
+	|	Cdecl_list
+;
+Cdec_comma:	tCOMMA	 
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Cdecl_list:	C_dec
+	|	Cdecl_list Cdec_comma C_dec
+;
+C_dec:		Cdec_var tEQOP
+		{
+		    gen_host( G_H_KEY, $2.s );
+		    /* Now strip off any C initialization clause */
+		    sc_eat( gen_code, SC_NEST|SC_BACK, ERx(";,"), '{', '}' );
+		}
+	|	Cdec_var tCOLON		/* Bit fields - taken as basetype */   
+		{
+		    gen_host( G_H_KEY, $2.s );
+		    /* Now strip off any C bitfield clause */
+		    sc_eat( gen_code, SC_NEST|SC_BACK, ERx(";,"), '(', ')' );
+		}
+	|	Cdec_var Cdec_name
+		{
+		    if ((eq->eq_flags & EQ_COMPATLIB) &&
+			    STbcompare($2.s, 0, ERx("ZERO_FILL"), 0, 0)==0)
+			;
+		    else
+			er_write( E_E00009_hcMISSEQUAL, EQ_ERROR, 0 );
+		}
+	|	Cdec_var
+;
+Cdec_var:	Cdec_ptr Cdec_name Cdec_arrlist 
+		{
+		    /* Enter declarations into Equel symbol table */
+		    SYM		*sy;
+		    C_VALS	*cv;
+		    i4		cindir;
+		    i4		type_bit;
+		    i4		gr_type = gr->gr_type;
+		    i4		csize = gr->C_size;
+
+		    cindir = $1.i + $3.i + gr->C_indir;
+
+		    /*
+		    ** If there is already a value field from a type like:
+		    **	 typedef char BUF[10]; BUF b;
+		    ** then we have the value field in C_cvals.  Otherwise
+		    ** build one from the current type. Find ONLY the
+		    ** dimensions - should not include the ptrs, so as not
+		    ** to err on decls like:
+		    **	  char	*buf[10];
+		    */
+		    if ((cv = gr->C_cvals) == NULL &&
+			(gr_type == T_CHAR || gr_type == T_WCHAR) &&
+			cindir == $3.i && cindir > 0)
+		    {
+			char	*cpopen =  STrchr(id_getname(), '[');
+			char	*cpclose = STrchr(cpopen, ']');
+			i4	len;
+
+			if (cpopen && cpclose)
+			{
+			    /* Does not check embedded comments */
+			    CMnext(cpopen);	/* Skip first '[' */
+			    *cpclose = '\0';	/* Toss last ']' */
+
+			    for (; CMwhite(cpopen); CMnext(cpopen))
+				;
+			    if (len = STtrmwhite(cpopen))
+			    {
+				/* +2 for cv_flags and null byte */
+				cv = (C_VALS *)str_space(gr->C_strvals, len+2);
+				cv->cv_flags = CvalDIMS;
+				STcopy(cpopen, cv->cv_dims);
+			    }
+			}
+		    }
+		    id_free();	/* In case of Cdec_arrlist */
+
+		    /*
+		    ** Chars are pointers to buffers or they are one byte.
+		    ** Don't decrement indirection on outermost level of
+		    ** typedefs -- we'll do the decrement when we actually
+		    ** declare such a variable.  For example:
+		    ** We want to leave indirection at 2 for 's2'
+		    ** 		typedef char *s2; 
+		    ** so that 's' will get its indirection decremented in
+		    ** 		s2   s;
+		    */
+		    if ((gr_type == T_CHAR || gr_type == T_WCHAR) &&
+			(gr->C_storage != T_TYPEDEF || gr->C_rec != 0))
+		    {
+			if (cindir)
+			    cindir--;
+			else
+			{
+			    gr_type = T_INT;
+			    csize = 1;
+			}
+		    }
+		    if (gr->C_storage==T_TYPEDEF && gr->C_rec==0)
+			type_bit = syFisTYPE;
+		    else {
+			type_bit = syFisVAR;
+		      /* member names can't be external! */
+			if (gr->C_storage==T_EXTERN && gr->C_rec==0)
+			    type_bit |= syFisFORWARD;
+		    }
+
+		    /*
+		    ** Save SQLCA variables when declared in form:
+		    **
+		    ** IISQLCA *var;
+		    */
+		    if ( type_bit == syFisVAR  &&  gr_type == T_SQLCA  &&
+			 $1.i == 1  &&  ! $3.i  &&  ! gr->C_rec )
+		    {
+			if ( sqlca_var )  MEfree( (PTR)sqlca_var );
+			sqlca_var = STalloc( $2.s );
+		    }
+
+		  /* hint for ESQL redeclaration errors */
+		    sym_hint_type( gr->C_struct, gr_type, cindir );
+		    if (sy = symDcEuc($2.s, gr->C_rec, C_BLOCK, type_bit, 
+				       C_CLOSURE, SY_NORMAL))
+		    {
+			sym_s_indir( sy, cindir ); 
+			sym_s_btype( sy, gr_type ); 
+			sym_s_dsize( sy, csize );
+			sym_s_vlue( sy, cv );
+			if (gr_type == T_STRUCT && gr->C_struct)
+			{
+			    /* Assign type entry for structure variables */
+			    sym_type_euc( sy, gr->C_struct );
+			    /*
+			    ** See the comment in Ctype_dec about why we set
+			    ** the btype to T_STRUCT here.  Note that this
+			    ** test is "if this is a typedef".
+			    */
+			    if (gr->C_storage == T_TYPEDEF)
+				sym_s_btype( sy, T_STRUCT );
+			    if (gr->C_varcharbyte != 0) 
+			    { 
+				SYM	*sib1, *sib2; 
+
+				if (sib1 = syStrInit(gr->C_struct))
+				{
+				    if (!(sym_g_btype(sib1) == T_INT) ||
+					!(sym_g_dsize(sib1) == 2))
+				    {
+					er_write( E_E00008_hcVCHIGNRE, 
+						EQ_ERROR, 0 );
+				    }
+				    else
+				    {
+					if (sib2 = syStrNext(sib1))
+					{
+					    /* 
+					    ** Next entry must be single
+					    ** dimensioned variable (ie,
+					    ** indirection = 0).  Set the
+					    ** value field.
+					    */
+					    if ((sym_g_btype(sib2) == T_CHAR ||
+					        sym_g_btype(sib2) == T_WCHAR) &&
+						sym_g_indir(sib2) == 0 &&
+						sym_g_vlue(sib2))
+					    {
+						sym_s_btype( sy, 
+						    gr->C_varcharbyte );
+						sym_s_vlue(sy,sym_g_vlue(sib2));
+						sym_type_euc( sy, NULL );
+					    }
+					    else
+						er_write( E_E00008_hcVCHIGNRE, 
+							EQ_ERROR, 0 );
+					}
+					else		/* No 2nd child */
+					{
+					    er_write( E_E00008_hcVCHIGNRE, 
+						    EQ_ERROR, 0 );
+					}
+				    }
+				}
+				else		/* No child */
+				{
+				    er_write(E_E00008_hcVCHIGNRE, EQ_ERROR, 0);
+				}
+			    }
+			}
+			else if (gr->C_varcharbyte != 0)/* Vchr must be strct */
+			    er_write( E_E00008_hcVCHIGNRE, EQ_ERROR, 0 );
+		    }
+		}
+;
+Cdec_name:	tNAME 
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    if (!(eq->eq_flags & EQ_NOSQLCODE)
+		      && (STbcompare($1.s, 0, ERx("SQLCODE"), 0, FALSE) == 0))
+		    {
+			if ((gr->gr_type != T_INT) || (gr->C_size != 4))
+			    er_write( E_EQ0517_SQLSTATUS_DECL, EQ_ERROR, 2, 
+#if defined(LP64) 
+			      ERx("SQLCODE"), ERx("int SQLCODE;"));
+#else
+			      ERx("SQLCODE"), ERx("long SQLCODE;"));
+#endif
+			else
+			    eq->eq_flags |= EQ_SQLCODE;
+		    }
+		    if (STbcompare($1.s, 0, ERx("SQLSTATE"), 0, FALSE) == 0)
+		    {
+			if (gr->gr_type != T_CHAR)
+			    er_write( E_EQ0517_SQLSTATUS_DECL, EQ_ERROR, 2, 
+				ERx("SQLSTATE"), ERx("char SQLSTATE[6];"));
+			else
+			    eq->eq_flags |= EQ_SQLSTATE;
+
+		    }
+		    $$.s = $1.s;
+		    $$.s = $1.s;
+		}
+;
+Cdec_ptr:	Cptr 
+		{
+		    if ($1.i)
+		    {
+			gen_host( G_H_OP, id_getname() );
+			id_free();
+		    }
+		    $$.i = $1.i;
+		}
+;
+Cptr:		/* No pointer */
+		{
+		    $$.i = 0;
+		}
+	|	Cptr Cindir_op 
+		{
+		    $$.i = $1.i + $2.i;
+		}
+;
+Cindir_op:	tSTAR			/* "*" or "**" -- indirection ops */
+		{
+		    $$.i = 1;
+		    id_add( $1.s );
+		}
+	|	tEXP
+		{
+		    $$.i = 2;
+		    id_add( $1.s );
+		}
+;
+Cdec_arrlist:	Carrlist 
+		{
+		    if ($1.i)
+		    {
+			gen_host( G_H_OP, id_getname() );
+			/*
+			** If the array list eater changes then change the
+			** cv_dims stuff in the Cdec_var rule.
+			** Don't id_free here.
+			*/
+		    }
+		    $$.i = $1.i;
+		}
+;
+Carrlist:	/* No array or "[xx] [yy]" */
+		{
+		    $$.i = 0;
+		}
+	|	Carrlist tLBRKT 
+		{
+		  /* Eat up the array dimension and save it - nest them */
+		    sc_eat( id_add, SC_SEEN|SC_NEST, ERx("]"), '[', ']' );
+		    $$.i = $1.i +1;
+		}
+;
+Cdefine:	Cdef_name Cdef_cast Cdef_const
+		{
+		    SYM		*sy;
+
+		    if (gr->gr_type == T_CHAR)
+			gen_host( G_H_SCONST|G_H_NEWLINE, $3.s );
+		    else
+			gen_host( G_H_KEY|G_H_NEWLINE, $3.s );
+
+		    if (gr->gr_type != T_NONE)
+		    {
+		      /* hint for ESQL redeclaration errors */
+			sym_hint_type( (SYM *)0, gr->gr_type, 0 );
+			if (sy = symDcEuc($1.s, 0, C_BLOCK, syFisCONST, 
+			                   C_CLOSURE, SY_NORMAL))
+			{
+			    sym_s_btype( sy, gr->gr_type );
+			    sym_s_dsize( sy, gr->C_size );
+			}
+		    } 
+		    else
+			er_write( E_E00001_hcDEFINE, EQ_ERROR, 1, $3.s );
+		}
+;
+Cdef_name:	Cdef_key tNAME
+		{
+		    gr->C_dec = GR_C_DEC;	/* Dec's to follow */
+		    gen_host( G_H_OP, ERx("#") );
+		    gen_host( G_H_KEY, ERx("define") );
+		    gen_host( G_H_KEY, $2.s );
+		    $$.s = $2.s;
+		}
+;
+Cdef_key:	tPOUND tDEFINE
+	|	tDEFINE
+		{
+		    er_write( E_EQ0070_grMISSWORD, EQ_ERROR, 2, ERx("#"), $1.s );
+		}
+;
+Cdef_cast:	tLPAREN				/* Ignore the cast */
+		{
+		    sc_eat( NULL, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+		    er_write( E_E00002_hcIGNCAST, EQ_ERROR, 0 );
+		}
+	|	/* No cast */
+;
+Cdef_const:	Cdef_intconst
+		{
+		    $$.s = $1.s;
+		}
+	|	Cdef_other
+		{
+		    $$.s = $1.s;
+		}
+;
+Cdef_intconst:	tINTCONST
+		{
+		    gr->gr_type = T_INT;
+		    gr->C_size = sizeof(i4);
+		    $$.s = $1.s;
+		}
+	|	tMINUS tINTCONST
+		{
+		    char	ibuf[50];
+
+		    ibuf[0] = '-';
+		    ibuf[1] = '\0';
+		    $$.s = str_add( STRNULL, STcat(ibuf, $2.s) );
+		    gr->gr_type = T_INT;
+		    gr->C_size = sizeof(i4);
+		}
+;
+Cdef_other:	tFLTCONST
+		{
+		    gr->gr_type = T_FLOAT;
+		    gr->C_size = sizeof(f8);
+		    $$.s = $1.s;
+		}
+	|	tMINUS tFLTCONST
+		{
+		    char	fbuf[50];
+
+		    fbuf[0] = '-';
+		    fbuf[1] = '\0';
+		    $$.s = str_add( STRNULL, STcat(fbuf, $2.s) );
+		    gr->gr_type = T_FLOAT;
+		    gr->C_size = sizeof(f8);
+		}
+	|	tDECCONST  	/* No decimal constant in C - treat as float */
+		{
+		    gr->gr_type = T_FLOAT;
+		    gr->C_size = sizeof(f8);
+		    $$.s = $1.s;
+		}
+	|	tMINUS tDECCONST
+		{
+		    char	dbuf[50];
+
+		    dbuf[0] = '-';
+		    dbuf[1] = '\0';
+		    $$.s = str_add( STRNULL, STcat(dbuf, $2.s) );
+		    gr->gr_type = T_FLOAT;
+		    gr->C_size = sizeof(f8);
+		}
+	|	tSCONST
+		{
+		    gr->gr_type = T_CHAR;
+		    gr->C_size = STlength( $1.s );
+		    $$.s = $1.s;
+		}
+	|	tNAME
+		{
+		    gr->gr_type = T_NONE;
+		    $$.s = $1.s;
+		}
+	|	tCTYPE
+		{
+		    gr->gr_type = T_NONE;
+		    $$.s = $1.s;
+		}
+;
+Csemicol:	tSEMICOL 
+		{
+		    gen_host( G_H_OP, $1.s );
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+
+/*
+** EXEC SQL INCLUDE within declare section
+**	We now allow EXEC SQL INCLUDE <name>.  In order to tell the scinclude
+**	routines that we parsed an "angled" file name we use gr_adjective
+**	to be set to TRUE/FALSE (angled/regular) which the include routines
+**	use to process include files.
+*/
+Cdec_include:	Cinc_head Cinc_name tSEMICOL
+		{
+		    /* 
+		    ** Strip to end of line, but ensure scanner is synchronized
+		    ** via 'lex_need_input' - see yylex routines.  This is
+		    ** because the newline is the EXEC trigger.
+		    */
+		    sc_reset();
+		    if (inc_parse_name($2.s, gr->gr_adjective) == SC_INC)
+			inc_push_file();
+		    gr->gr_adjective = 0;
+		}
+	|	tEOFINC			/* Eof of an included file */
+		{
+		    /* Better be "<EOF>" else Yacc will produce syntax error */
+		    dml->dm_exec = DML_DECL;
+		}
+;
+Cinc_head:	tINCLUDE
+		{
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"), 
+				ERx("INCLUDE") );
+		    dml->dm_exec = DML_DECL;
+		}
+;
+Cinc_name:	tNAME
+		{
+		    $$.s = $1.s;
+		    gr->gr_adjective = FALSE;
+		}
+	|	tSCONST
+		{
+		    $$.s = $1.s;
+		    gr->gr_adjective = FALSE;
+		}
+	|	tNAME tNAME
+		{
+		    STprintf( esq->sbuf, ERx("%s.%s"), $1.s, $2.s );
+		    $$.s = esq->sbuf;
+		    gr->gr_adjective = FALSE;
+		}
+	|	tNAME tPERIOD tNAME
+		{
+		    STprintf( esq->sbuf, ERx("%s.%s"), $1.s, $3.s );
+		    $$.s = esq->sbuf;
+		    gr->gr_adjective = FALSE;
+		}
+
+	|	tLT	/* name(s) tGT <name> */
+		{
+		    /* Eat the name till right angle bracket */
+		    sc_eat(id_add, SC_STRIP, ERx(">"), '<', '>');
+		    $$.s = str_add(STRNULL, id_getname());
+		    id_free();
+		    gr->gr_adjective = TRUE;
+		}
+;
+
+/*
+** EXEC SQL DECLARE TABLE within declare section
+** Don't turn on DML_DECL mode until whole statement has been reduced
+** we want DECLARE TABLE to use the master keyword table.
+*/
+Cdec_dectable:	Cdec_tabhead tTABLE tLPAREN dectab_list tRPAREN tSEMICOL
+		{
+		    dml->dm_exec = DML_DECL;
+		}
+;
+Cdec_tabhead:	tDECLARE Cdec_tabname
+		{
+		    esq->flag |= ESQ_NOPRT;     /* Suppress printing */
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"), 
+				ERx("DECLARE TABLE") );
+		}
+	|	tDECLARE Cdec_ownname tPERIOD Cdec_tabname
+		{
+		    esq->flag |= ESQ_NOPRT;     /* Suppress printing */
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"), 
+				ERx("DECLARE TABLE") );
+		}
+;
+
+Cdec_tabname: 	tNAME 
+	| 	tDELIMID
+;
+Cdec_ownname: 	tNAME 
+	| 	tDELIMID
+;
+
+/*
+** EXEC SQL EXCLUDE SECTION within declare section.
+**	The EXCLUDE SECTION is for internal use only.  It allows declarations
+**	that are not understood by the preprocessor to appear within a
+**	DECLARE SECTION.  The contents of an EXCLUDE SECTION are treated as
+**	host code, i.e., they are just passed on to the user's output without
+**	processing.
+**	e.g.
+**	EXEC SQL BEGIN DECLARE SECTION;
+**	struct a {
+**	    int x;
+**	EXEC SQL BEGIN EXCLUDE SECTION;
+**	    WEIRD_TYPE *y[];
+**	EXEC SQL END EXCLUDE SECTION;
+**	    char *z;
+**	} struct_a;
+**	   ...
+**	EXEC SQL END DECLARE SECTION;
+*/
+Cexclude_sec:	Cexcl_head Cexc_decls Cexcl_end
+;
+
+Cexcl_head:	tBEG_EXCLUDE tSECTION tSEMICOL
+		{
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"), 
+				ERx("EXCLUDE SECTION") );
+		    dml->dm_exec = DML_HOST;
+		}
+;
+
+Cexc_decls:	/* empty */
+	|	Cexc_decls host_code
+;
+
+Cexcl_end:	tEND_EXCLUDE tSECTION tSEMICOL
+		{
+		    dml->dm_exec = DML_DECL;
+		}
+;
+
+/*
+** HOST VARIABLE USAGE
+** Now we allow the use of reserved words as host variables.  The way we do
+** this is set a global (sc_hostvar) to TRUE when we see a Ccolon (or a
+** Csqlda_colon).  The global tells scword (in the scanner) to ignore keyword
+** lookups and just returne a tNAME.  We turn it off when we're at the end
+** of the hostvar reference.  There's a problem, however, in that sometimes
+** the grammer doesn't know to turn the global off until after we've scanned
+** a real keyword.  For instance, in the statement:
+** 	EXEC SQL CONNECT :connect SESSION :session;
+** by the time the grammer turns off the global for :connect we've already
+** scanned SESSION, and it has been returned as a tNAME instead of tSESSION.
+** what we do here is to introduce a new rule that allows a hostvar to be a
+** variable or a variable followed by a tNAME.  In either case, we turn off
+** the sc_hostvar global.  Additionally if we see a variable followed by a
+** tNAME we call a new function, sc_popscptr, which sets up the scanner to
+** rescan the word with keyword lookups enabled.  So in our example above
+** SESSION will get "scanned" twice, once as a tNAME and then as tSESSION.
+** the same thing is done for sqlda variables.  
+** One other point, the ':' for indicator variables is processed in the 
+** master grammer, not here.  So we set sc_hostvar there as well.
+*/
+
+/* Usage syntax is ':'NAME */
+Ccolon:		tCOLON
+		{
+		    gr->C_dec = GR_C_USE;
+		    sym_f_init();
+		    sc_hostvar = TRUE;  /* disable keyword lookups */
+		}
+;
+/* Optional colon */
+Copt_colon:	Ccolon
+	|	/* Missing colon */
+		{
+		    gr->C_dec = GR_C_USE;
+		    sym_f_init();
+		    er_write( E_EQ0129_sqVARCOLON, EQ_ERROR, 0 );
+		}
+;
+
+/*
+** An indicator variable.
+** Note that it is the master grammar that copies the gr_id and gr_sym
+** fields to gr_nlid and gr_nlsym, so we use the originals here.
+*/
+host_indvar:	Ccolon_ind_gen C_retvar
+;
+
+/*
+** host_retvar - Result variables of an output statement. Used by the FRS
+**		 statements.  Must be an elementary variable.
+*/
+host_retvar:	Copt_colon C_retvar
+;
+/* Used by host_retvar and host_indvar */
+C_retvar:	Cuse_var
+		{
+		    SYM 	*sy;
+
+		    gr->gr_type = T_UNDEF;
+		    if ((sy = $1.v) == (SYM *)0)
+		    {
+			/* Do nothing - error already printed */
+		    } else 
+		    {
+			if ((sym_g_useof(sy) & syFisVAR) == 0 || 
+			     sym_g_btype(sy) == T_STRUCT)
+			    er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1, 
+				    id_getname() );
+			else
+			    gr->gr_type = sym_g_btype(sy);
+		    }
+		    gr->gr_sym = sy;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+;
+
+/*
+** host_setvar - Setting variables of an input statement. Used by the SQL
+**		 UPDATE statement, and the FRS statements. Can
+** be elementary variable or constant.
+**
+** host_fsetvar - Same as host_setvar, but in form system the colon is optional.
+*/
+host_fsetvar:	Copt_colon C_setvar
+;
+host_setvar:	Ccolon C_setvar
+;
+Ccolon_ind_gen:	/* EMPTY */
+		{
+		    gr->C_dec = GR_C_USE;
+		    sym_f_init();
+		}
+;
+/* Used by host_fsetvar, host_setvar, and host_indsetvar */
+C_setvar:	Cuse_var
+		{
+		    SYM 	*sy;
+
+		    gr->gr_type = T_UNDEF;
+		    if ((sy = $1.v) == (SYM *)0)
+		    {
+			/* Do nothing - error already printed */
+		    } else 
+		    {
+			if (sym_g_btype(sy) == T_STRUCT)
+			    er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1, 
+				id_getname() );
+			else
+			    gr->gr_type = sym_g_btype(sy);
+		    }
+		    gr->gr_sym = sy;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+;
+
+/*
+** An SQLDA name -- we're liberal here
+**
+** Notation:
+**	{}	zero or more
+**	{}+	one or more
+**	[]	zero or one
+**	a|b	either a or b but not both
+**	(expr)	groups "expr" for "|"
+**	\[	literal [
+**	\]	literal ]
+**	->	the single token "arrow"
+**	...	anything
+**
+** We accept [:][&]{*}{\({*}+name{\[...\]}\){\[...\]}(.|->)}name
+** that is, an optional colon, an optional ampersand, any number of stars,
+** any number of name-selectors, and a name, where a name-selector is
+** a struct-name, any number of bracketed subscript expressions, and a dot
+** or an arrow, and a struct-name is a name or lparen, one or more stars,
+** a name, any number of bracketed subscript expressions, and a rparen.
+** Note that the lparen and first star of a struct-name must be contiguous.
+** Also please see the note at the beginning of the HOST VARIABLE USAGE 
+** section.
+*/
+host_sqlda:	host_xsqlda
+		{
+		    sc_hostvar = FALSE;    /* re-enable keyword lookups */
+		}
+	|	host_xsqlda tNAME
+		{
+		    sc_hostvar = FALSE;  /* re-enable keyword lookups */
+		    sc_popscptr();	 /* move SC_PTR back one word */
+		}
+;
+host_xsqlda:	Csqlda_colon Csqlda_ampersand Cptr Csqlda_list
+		{
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		    if ($2.i && $3.i)
+			gr->gr_id += 2;		/* skip over the "&*" */
+		}
+;
+Csqlda_colon:	tCOLON
+		{
+		    sc_hostvar = TRUE;  /* disable keyword lookups */
+		}
+	|	/* EMPTY */
+;
+Csqlda_ampersand:
+		tAMPERSAND
+		{
+		    id_add( $1.s );
+		    $$.i = 1;
+		}
+	|	/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+;
+Csqlda_list:	Csqlda_elem
+	|	Csqlda_list Cselect_op Csqlda_elem
+;
+/*
+** name
+** name[]...
+** (*name)
+** (*name)[]...
+** (*name[]...)
+** (*name[]...)[]
+*/
+Csqlda_elem:	Csqlda_name Carrlist
+	|	Clparen_star Cptr Csqlda_name Carrlist Crparen_star Carrlist
+;
+Csqlda_name:	tNAME
+		{
+		    id_add( $1.s );
+		}
+;
+
+/*
+** host_intovar - Result variables of an INTO clause.  Used by SELECT INTO
+** 		  or FETCH INTO.
+**
+** 1. For a simple variable just make an entry into the result column storage or
+**    add a variable to the run-time FETCH call.
+** 2. For a structure variable, do this for each member name.
+** 3. All the semantics are done down here, so we do not need to set any gr_
+**    fields.
+*/
+host_intovar:	Copt_colon Cuse_var
+		{
+		    SYM 	*sy, *mem;
+		    char	*sid, *mid;
+
+		    sid = str_add( STRNULL, id_getname() );
+		    if ((sy = $2.v) == (SYM *)0)
+		    {
+			/* Do nothing, as error already printed */
+		    }
+		    else if (sym_g_btype(sy) == T_STRUCT)
+		    {
+			for (mem=syStrInit(sy); mem; mem=syStrNext(mem))
+			{
+			    /* Parens on struct name in case it's a pointer */
+			    STprintf(esq->sbuf, ERx("(%s).%s"), sid, 
+				     sym_str_name(mem));
+			    mid = str_add( STRNULL, esq->sbuf );
+			    if ((sym_g_useof(mem) & syFisVAR) == 0 || 
+				 sym_g_btype(mem) == T_STRUCT)
+				er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1, mid );
+			    else if (sym_g_indir(mem))
+				er_write(E_E00003_hcINDIR, EQ_ERROR, 3, mid, 
+				    ERx("0"), er_na(sym_g_indir(mem)));
+			    erec_mem_add( mid, mem, sym_g_btype(mem) );
+			}
+		    } else
+		    {
+			if ((sym_g_useof(sy) & syFisVAR) == 0)
+			    er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1, 
+				    id_getname() );
+			erec_mem_add( sid, sy, sym_g_btype(sy) );
+		    }
+		    id_free();
+		}
+;
+
+/*
+** host_insvar - INSERT VALUES clause variables.
+**
+** 1. For a simple variable just add via ins_add.
+** 2. For a structure variable, do this for each member name.
+** 3. All the semantics are done down here, so we do not need to set any gr_
+**    fields.
+*/
+host_insvar:	Ccolon Cuse_var
+		{
+		    SYM 	*sy, *mem;
+		    char	*sid, *mid;
+
+		    sid = str_add( STRNULL, id_getname() );
+		    if ((sy = $2.v) == (SYM *)0)
+		    {
+			/* Do nothing, as error already printed */
+		    } else if (sym_g_btype(sy) == T_STRUCT)
+		    {
+			for (mem=syStrInit(sy); mem; mem=syStrNext(mem))
+			{
+			    /* Parens on struct name in case it's a pointer */
+			    STprintf(esq->sbuf, ERx("(%s).%s"), sid, 
+				     sym_str_name(mem));
+			    mid = str_add( STRNULL, esq->sbuf );
+			    if (sym_g_btype(mem) == T_STRUCT)
+				er_write(E_EQ0057_grHOSTVAR, EQ_ERROR, 1, mid);
+			    else if (sym_g_indir(mem))
+				er_write(E_E00003_hcINDIR, EQ_ERROR, 3, mid, 
+				    ERx("0"), er_na(sym_g_indir(mem)));
+			    erec_mem_add( mid, mem, sym_g_btype(mem) );
+			    
+			}
+		    } else
+		    {
+			erec_mem_add( sid, sy, sym_g_btype(sy) );
+		    }
+		    id_free();
+		}
+;
+
+/*
+** Cuse_var - Usage of a C variable. Syntax is:
+**
+**		[{'*'}]cvar[{'['stuff']'}]
+**		 ^		^
+**		Cptr		Carrlist
+**
+** where cvar is:				example:
+**
+**		name				var1
+**		name{.name}+			str1.mem1
+**		({'*'}name){.name}+		(**ptr1)->mem1.mem2
+**
+** full example:
+**		*str1[2].mem1[2][3]
+** Notes:
+** 	Cuse_var returns the value from the last Carrlist indirection.
+**      Also, please see the notes at the beginning of the HOST VARIABLE
+**	USAGE section for an explanation of the following rule.
+*/
+Cuse_var:	Cuse_xxvar
+		{
+		    sc_hostvar = FALSE;  /* re-enable keyword lookups */
+		}
+	|	Cuse_xxvar tNAME
+		{
+		    /* the tNAME might have been a real keyword */
+		    sc_hostvar = FALSE;  /* re-enable keyword lookups */
+		    sc_popscptr();       /* move SC_PTR back a word */
+		}
+;
+Cuse_xxvar:	Cptr Cuse_xvar
+		{
+		    i4		cindir;
+		    SYM		*sy;
+		    i4		stat;
+
+		    cindir = $1.i + $2.i;	/* **'s + []'s */
+		    stat = symRsEuc( &sy,  C_CLOSURE, syFisVAR|syFisCONST );
+		    if (stat != syL_OK || sy == (SYM *)0)
+		    {
+			/* 
+			** This is not a var.
+			** Only enter as undefined, if no entry, no indirection
+			** and not a struct usage.
+			*/
+			if (gr->gr_type == T_STRUCT)
+			    er_write( E_E00004_hcSTRUCTREF, EQ_ERROR, 1, 
+				    id_getname() );
+			else
+			{
+			    er_write( E_EQ0502_hNOVAR, EQ_ERROR, 2, ERx("C"), 
+					id_getname() );
+			    if (sy == (SYM *)0 && cindir == 0)
+			    {
+				/* hint for ESQL redeclaration errors */
+				sym_hint_type( (SYM *)0, T_UNDEF, 0 );
+				sy = symDcEuc(id_getname(), 0, C_BLOCK,
+					      syFisVAR, C_CLOSURE, SY_NORMAL);
+				if (sy)
+				    sym_s_btype( sy, T_UNDEF );
+			    }
+			}
+		    } else if (erec_vars() > 0)
+		    {
+			/*
+			** If we are an indicator variable for a var which
+			** could be a struct (currently SELECT, FETCH, or
+			** INSERT) then allow an indirection mismatch of at
+			** most 1, and add the indicator.
+			** If the indirection matched, then we probably
+			** shouldn't try indexing into the indicator var.
+			*/
+			switch (sym_g_indir(sy) - cindir)
+			{
+			  case 1:
+			    erec_ind_add( C_NDX_BASE, id_getname(), C_NDX_EXPR,
+				    sy );
+			    break;
+			  case 0:
+			    erec_ind_add( C_NDX_BASE, id_getname(), NULL, sy );
+			    break;
+			  default:
+			    /* Illegal indirection */
+			    if ((gr->gr_flag & GR_NOINDIR) == 0)
+			    {
+				er_write( E_E00003_hcINDIR, EQ_ERROR, 3, 
+				    id_getname(), er_na(cindir), 
+				    er_na(sym_g_indir(sy)) );
+			    }
+			    break;
+			}
+		    } else if (sym_g_indir(sy) != cindir && 
+			     (gr->gr_flag & GR_NOINDIR) == 0) 
+		    {
+			    /* Illegal indirection */
+			    er_write( E_E00003_hcINDIR, EQ_ERROR, 3, 
+				    id_getname(), er_na(cindir), 
+				    er_na(sym_g_indir(sy)) );
+		    }
+		    $$.v = sy;
+		}
+ 	|	tCFUNCVAR tLPAREN	/* stuff tRPAREN */
+ 		{
+ 		    /*
+ 		    ** Kanji support - allow usages such as:
+ 		    ** 	EXEC SQL MESSAGE ERget(QBF_FETCHING, 1234)
+ 		    ** or:
+ 		    ** 	EXEC SQL ACTIVATE menuitem ERx(QBF_SAVE)
+ 		    ** Behave like system function "variables".
+ 		    */
+ 		    /* Eat up func args - allow nesting */
+ 		    id_add( $1.s );
+ 		    sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+ 	    	    $$.v = sym_resolve( (SYM *)0, $1.s, C_CLOSURE, syFisVAR );
+ 		}
+;
+/* 
+** Cuse_xvar returns the value of the indirection collected in Carrlist 
+** Sets gr_type = T_STRUCT if a struct was used. See above as to where this
+** is checked before entering the undefined var.
+*/
+Cuse_xvar:	Cuse_name			/* nm1 */
+		{
+		    $$.i = $1.i;
+		    gr->gr_type = T_UNDEF;
+		}
+	|	Cuse_name Cu_structbody		/* nm1.nm2.nm3 */
+		{
+		    $$.i = $2.i;
+		    gr->gr_type = T_STRUCT;
+		}
+	|	Cuse_strname Cu_structbody	/* (*nm1).nm2.nm3 */
+		{
+		    $$.i = $2.i;
+		    gr->gr_type = T_STRUCT;
+		}
+;
+Cuse_name:	Cuse_xname Carrlist
+		{
+		    $$.i = $2.i;
+		}
+;
+Cuse_xname:	tNAME
+		{
+		    id_add( $1.s );
+		    sym_fpush( sym_find($1.s) );
+		}
+;
+/*
+** name
+** name[]...
+** (*name)
+** (*name)[]...
+** (*name[]...)
+** (*name[]...)[]
+*/
+Cuse_strname:	Clparen_star Cptr Cuse_name Crparen_star Carrlist
+;
+Clparen_star:	tCLPAR_STAR
+		{
+		    id_add( $1.s );
+		}
+;
+Crparen_star:	tRPAREN
+		{
+		    id_add( $1.s );
+		}
+;
+Cu_structbody:	Cu_structelm
+		{
+		    $$.i = $1.i;
+		}
+	|	Cu_structbody Cu_structelm
+		{
+		    $$.i = $2.i;
+		}
+;
+Cu_structelm: 	Cselect_op Cuse_name
+		{
+		    $$.i = $2.i;
+		}
+;
+Cselect_op:	tPERIOD 	 /* C language '.' , not Ingres '.' */
+		{
+		    id_add( $1.s );
+		}
+	|	tARROW  	/* '->' C token */
+		{
+		    id_add( $1.s );
+		}
+;
+
+/* %L rules end */
+
+%%
+
+/* %L mechanism begin - All the stuff to do with gr_mechanism() */
+
+GLOBALDEF GR_TYPES   gr_typetab[] = {
+	ERx("short"),	 	T_INT, 		sizeof(short),
+	ERx("int"),		T_INT, 		sizeof(int),
+	ERx("long"), 		T_INT, 		sizeof(long),
+	ERx("void"), 		T_INT,		sizeof(int),
+	ERx("float"), 		T_FLOAT,	sizeof(float),
+	ERx("double"), 		T_FLOAT,	sizeof(double),
+	ERx("char"), 		T_CHAR,		0,
+	ERx("wchar_t"), 	T_WCHAR,	0,
+	ERx("IISQLCA"),		T_SQLCA,	sizeof(IISQLCA),
+	ERx("i8"),		T_INT,		sizeof(i8),
+	ERx("u_i8"),		T_INT,		sizeof(i8),
+        "bool",                 T_INT,          DB_BOO_LEN,
+
+	/* Stop here if not including the CL types */
+	(char *)0,  		0, 		0,
+	ERx("i1"), 		T_INT,		sizeof(i1),
+	ERx("u_i1"), 		T_INT,		sizeof(u_i1),
+	ERx("i2"), 		T_INT, 		sizeof(i2),
+	ERx("u_i2"), 		T_INT, 		sizeof(u_i2),
+	ERx("i4"), 		T_INT, 		sizeof(i4),
+	ERx("u_i4"), 		T_INT, 		sizeof(u_i4),
+	ERx("f4"), 		T_FLOAT,	sizeof(f4),
+	ERx("f8"), 		T_FLOAT,	sizeof(f8),
+	/*ERx("bool"), 		T_INT,		sizeof(bool),*/
+	ERx("u_char"), 		T_CHAR,		0,
+	ERx("STATUS"),		T_INT,		sizeof(STATUS),
+	ERx("DB_DATA_VALUE"),	T_DBV,		0,
+	ERx("DATE"),		T_DATE,		0,
+	ERx("PTR"),		T_INT,		sizeof(PTR),
+	ERx("ER_MSGID"),	T_INT,		sizeof(ER_MSGID),
+	ERx("BITFLD"),		T_INT,		sizeof(BITFLD),
+	ERx("VOID"), 		T_INT,		sizeof(i4),
+	ERx("SIZE_TYPE"),	T_INT,		sizeof(SIZE_TYPE),
+	ERx("OFFSET_TYPE"),	T_INT,		sizeof(OFFSET_TYPE),
+
+	/*
+	** Table separator for internal variables -
+	** added for Kanji
+	*/
+	(char *)0,		0,		0,
+	ERx("ERget"),		T_CHAR,		0,
+	ERx("ERx"),		T_CHAR,		0,
+
+	(char *)0,  		0, 		0
+};
+
+/*{
+**  Name: c_prtval - Print the sym value field. Called indirectly from symtab.
+**
+**  Inputs:
+**	symval - Really a pointer to a C_VALS.
+**
+**  Outputs:
+**	Returns:
+**	    0 - Dummy return value.
+*/
+
+i4
+c_prtval( symval )
+i4	*symval;
+{
+    register	C_VALS	*cv = (C_VALS *)symval;
+
+    trPrval(ERx("cv_addr:  0x%p "), cv);
+    if (cv) {
+	trPrval(ERx("cv_flags: %d "), cv->cv_flags);
+	trPrval(ERx("cv_dims: '%s' "), cv->cv_dims);
+    }
+    return 0;
+}
+
+/*
+** Gr_mechanism - Language dependent utility called from within the grammar
+**		  or from outside.
+**
+** Parameters:	flag       - Which mechanism to choose.
+**		arg1, arg2 - Whatever is needed for the particular flag.
+** Returns:	None
+*/
+
+void
+gr_mechanism( flag, arg1, arg2, arg3 )
+i4	flag;
+PTR	arg1;			/* Extra arguments for particular cases */
+PTR	arg2;
+PTR	arg3;
+{
+    register SYM	*sy;
+    static   i4	einit = 0;
+  /* DML routines */
+    extern   i4	gen__sqltab[];
+    i4			scStrIsCont(),
+			esq_repeat(),
+			yyesqlex(),
+			sc_iscomment();
+
+    switch (flag)
+    {
+      case GR_EQINIT:
+	eq->eq_lang = EQ_C;
+	eq->eq_def_in = ERx("sc");		/* s for SQL */
+	eq->eq_def_out = ERx("c");
+	if (!einit)
+	{
+	    eq->eq_in_ext = ERx("sc");
+	    eq->eq_out_ext = ERx("c");
+	    einit = 1;
+	}
+	eq->eq_sql_quote = '\'';
+	eq->eq_quote_esc = '\\';
+	eq->eq_host_quote = '"';
+
+      /* tell the world we're Embedded SQL! */
+	dml->dm_lang = DML_ESQL;
+	dml->dm_gentab = gen__sqltab;
+	dml->dm_lex = yyesqlex;
+	dml->dm_strcontin = scStrIsCont;
+	dml->dm_iscomment = sc_iscomment;
+
+	dml->dm_repeat = esq_repeat; 	/* Provide hook for REPEATED queries */
+
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->gr_id = ERx("");
+	gr->gr_flag = GR_HOSTCODE;
+	gr->C_dec = GR_C_DEC;
+	gr->C_rec = 0;
+	gr->C_storage = T_NONE;
+	gr->C_size = 0;
+	gr->C_indir = 0;
+	gr->C_struct = (SYM *)0;
+	gr->C_varcharbyte = 0;
+	gr->C_cvals = (C_VALS *)0;
+	if (gr->C_strvals)
+	    str_free( gr->C_strvals, (char *)0 );
+	else
+	    gr->C_strvals = str_new( ID_MAXLEN );
+
+	esq->inc = 0;
+	break;
+
+      case GR_SYMINIT:
+	{
+	    /* Enter declarations into Equel symbol table */
+	    GR_TYPES	*gt;
+	    i4		maxinit = 1;	/* 2 for CL types */
+	    extern i4	(*sym_prtval)();
+
+	    /* CL types are used too */
+	    if (eq->eq_flags & EQ_COMPATLIB)
+		maxinit = 2;
+	    sym_init( (bool)FALSE );
+	    sym_prtval = c_prtval;		/* Prt routine for C_VALS */
+
+	    for (gt = gr_typetab; maxinit; maxinit--, gt++)
+	    {
+		for (; gt->gt_id; gt++)
+		{
+		    sy = symDcEuc(gt->gt_id, 0, C_BLOCK,
+			    (syFisTYPE|syFisSYS), C_CLOSURE, SY_NORMAL);
+		    sym_s_btype( sy, gt->gt_rep );
+		    sym_s_dsize( sy, gt->gt_len );
+		    sym_s_indir( sy, 0 );
+		}
+	    }
+
+	    /* Declare "generic null" as a symbol */
+	    sy = symDcEuc( ERx(".null"), 0, C_BLOCK, syFisVAR|syFisSYS,
+			    C_CLOSURE, SY_NORMAL );
+	    sym_s_btype( sy, T_NUL );
+	    sym_s_dsize( sy, sizeof(i4) );
+	    sym_s_indir( sy, 0 );
+	    gr->gr_null = sy;
+
+	    if (eq->eq_flags & EQ_COMPATLIB)
+	    {
+		static C_VALS	cv_local;
+
+		cv_local.cv_flags = CvalFUNCVAR;
+		cv_local.cv_dims[0] = '\0';
+		/* Continue to declare internal variables */
+		for (; gt->gt_id; gt++)
+		{
+		    sy = symDcEuc(gt->gt_id, 0, C_BLOCK,
+			(syFisVAR|syFisSYS), C_CLOSURE, SY_NORMAL);
+		    sym_s_btype( sy, gt->gt_rep );
+		    sym_s_dsize( sy, gt->gt_len );
+		    sym_s_vlue( sy, &cv_local);
+		    sym_s_indir( sy, 0 );
+		}
+	    }
+	}
+	break;
+
+      /* Change length of int's (in arg1) to the given length (in arg2) */
+      case GR_LENFIX:
+	{
+	    register GR_TYPES	*gt;
+
+	    if (STcompare((char *)arg1, ERx("int")) != 0)
+		return;
+	    /* Do twice because of CL types in the middle */
+	    for (gt = gr_typetab; gt->gt_id; gt++)
+	    {
+		if (STcompare(gt->gt_id, ERx("int")) == 0)
+		    gt->gt_len = (i2)(SCALARP)arg2;
+	    }
+	    for (gt++; gt->gt_id; gt++)
+	    {
+		if (STcompare(gt->gt_id, ERx("nat")) == 0)
+		    gt->gt_len = (i2)(SCALARP)arg2;
+	    }
+	}
+	break;
+
+      case GR_LOOKUP:
+	/* How should we look up this name? */
+	*(i4 *)arg2 = tNAME;
+	switch (gr->C_dec)
+	{
+	  case GR_C_DEC: 
+	    if (sy = sym_resolve(NULL, (char *)arg1, C_CLOSURE, syFisTYPE))
+		*(i4 *)arg2 = tCTYPE;
+	    break;
+	  case GR_C_TAG:
+	    if (sy = sym_resolve(NULL, (char *)arg1, C_CLOSURE, syFisTAG))
+	    {
+		if (sym_g_btype(sy) == T_INT)
+		    *(i4 *)arg2 = tCENUMTAG;
+		else
+		    *(i4 *)arg2 = tCTAG;
+	    }
+	    /*
+	    ** (Bug 10459) Reset the flag here too (as well as in the rules)
+	    ** to allow constructs such as:
+	    **	struct abc abc;
+	    ** where "abc" is a known tag.
+	    ** If the flag is not reset, then this is returned as:
+	    **	tCSTRUCT tCTAG tCTAG
+	    ** because YACC needs to look ahead to resolve between using
+	    ** Cstr_dectag and Cstr_withtag.
+	    */
+	    gr->C_dec = GR_C_DEC;
+	    break;
+	  case GR_C_USE:
+	    /*
+	    ** See if this is a special Kanjii word (ERxxx).
+	    ** We've already initialized *arg2 to tNAME.
+	    */
+	    sy = sym_resolve( (SYM *)0, (char *)arg1, C_CLOSURE, 
+			      syFisVAR|syFisCONST );
+	    if (sy)
+	    {
+		register C_VALS	*cv;
+
+		if ((cv = (C_VALS *)sym_g_vlue(sy)) != NULL &&
+			  cv->cv_flags == CvalFUNCVAR)
+		    *(i4 *)arg2 = tCFUNCVAR;
+	    }
+	    break;
+	}
+	break;
+
+      case GR_STMTFREE:
+	str_reset();
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	esq->flag = 0;
+	break;
+
+      case GR_CLOSE:
+	break;
+
+      case GR_DUMP:
+	{
+	    register FILE	*f = eq->eq_dumpfile;
+
+	    SIfprintf( f, ERx("GR_DUMP: gr_ \n") );
+	    SIfprintf( f, ERx("  sym = 0x%p, id = '%s', type = %d, flag = 0%o\n"),
+		       gr->gr_sym, gr->gr_id, gr->gr_type, gr->gr_flag );
+	    SIfprintf( f, ERx("  func = %d, mode = 0%o\n"),
+		       gr->gr_func, gr->gr_mode, gr->C_dec );
+	    SIfprintf( f, ERx("  C_rec = %d, C_storage = %d, "),
+		       gr->C_rec, gr->C_storage );
+	    SIfprintf( f, ERx("C_size = %d, C_indir = %d\n"), 
+		       gr->C_size, gr->C_indir );
+	    SIfprintf( f, ERx("  C_dec = %d, C_struct = 0x%p\n"),
+		       gr->C_dec, gr->C_struct );
+	    SIfprintf( f, ERx("  C_varcharbyte = %d\n"), gr->C_varcharbyte );
+	    SIfprintf( f, ERx("ESQ: esq_ \n") );
+	    SIfprintf( f, ERx("  flag = 0%o,"), esq->flag );
+	    SIfprintf( f, ERx(" inc = 0%o, dml_exec = 0%o\n"), 
+		       esq->inc, dml->dm_exec );
+	    SIflush( f );
+	}
+	break;
+
+      case GR_BLOCK:		/* Enter/exit a block - inform symbol table */
+	break;
+       
+      case GR_EQSTMT:
+	{
+	    i4		mode = (i4)(SCALARP)arg1;
+	    char	*kword = (char *)arg2;
+	    char	*kw2 = (char *)arg3;
+	    char	buf[50];
+
+	    /* Turn off declarations flag and generate line directive */
+	    gr->gr_flag &= ~GR_HOSTCODE;
+	    gr->C_dec = GR_C_USE;
+	    if ((mode==GR_sSQL || mode==GR_sREPEAT
+		 || mode==GR_sNODB || mode==GR_sFORMS || mode==GR_s4GL) 
+		 && kw2 != (char *)0)
+	    {
+		STprintf( buf, ERx("%s %s"), kword, kw2 );
+		kword = buf;
+	    }
+	    if ((esq->flag & ESQ_NOPRT) == 0)
+		gen_eqstmt( G_OPEN, kword );
+
+	    /* 
+	    ** Check if SQLCA is required for certain languages.
+	    ** If the language requires all externals are defined for type
+	    ** checking then make sure the user did an INCLUDE SQLCA.
+	    */
+
+	    /* Check that the correct EXEC was used */
+	    if (mode == GR_sFORMS && dml->dm_exec != (DML_EXEC|DML__FRS))
+		er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("FRS"), kword );
+	    else if (mode == GR_s4GL && dml->dm_exec != (DML_EXEC|DML__4GL))
+		er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("4GL"), kword );
+	    else if (mode != GR_sFORMS && mode != GR_s4GL &&
+		     dml->dm_exec != (DML_EXEC|DML__SQL))
+		er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"), kword );
+	    /* Stay in EXEC mode but turn off SQL or FRS */
+	    dml->dm_exec = DML_EXEC;
+
+	    switch (mode)
+	    {
+	      case GR_sREPEAT:
+		if (gr->gr_flag & GR_RETRIEVE)
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		gr->gr_flag |= GR_REPEAT|GR_SQL;
+		/*
+		** rep_begin doesn't use the first arg, but for safety's sake,
+		** send only the keyword part, not the "repeat".
+		** definitely don't db_key( "repeat keyword" ), though.
+		*/
+		if (kw2)
+		    kword = kw2;
+		rep_begin( kword, NULL );
+		db_key( kword );
+		break;
+	      case GR_sSQL:		/* Reset SQL information */
+		if (gr->gr_flag & GR_RETRIEVE)
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		gr->gr_flag |= GR_SQL;
+		db_key( kword );
+		esq_init();
+		break;
+	      case GR_sLIBQ:
+		if (gr->gr_flag & GR_RETRIEVE)
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		gr->gr_flag |= GR_ESQL;
+		break;
+	      case GR_sNODB:
+	      case GR_sFORMS:
+	      case GR_s4GL:
+		gr->gr_flag |= GR_ESQL;
+		break;
+	    }
+	}
+	break;
+
+      default:
+	break;
+    }
+}
+/* %L mechanism end */

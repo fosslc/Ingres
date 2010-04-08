@@ -1,0 +1,32 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+This frame allows you to create a file loaded with the application's global
+constants. You may then edit and change the values for the global constants 
+of your choice with alternate values. The resulting global constants file
+will be used to override the application's global constants during 'Go' and 
+'Image' of the application.
+
+To use, fill in the field with a proper file name, create and edit the file. 
+When editing, make sure your syntax conforms with the original syntax.
+
+To revert back to global constants from the application's catalog, clear
+the field and take the 'End' option.
+
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+	Create			Create a file loaded with application's
+				global constants.
+
+        Edit                    Edit the named file.
+
+        Cancel			Return to previous frame without taking
+				any action.
+
+	End			If the field is blank, subsequent 'Go'
+				and 'Image' operations will use the
+				global constants from the application's
+				catalog, otherwise the named file will
+				be used to override the constants.

@@ -1,0 +1,35 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rbdetail.hlp       RBF Help on Edit a Column
+/#subtopic "Display Format Examples" vfformat.hlp
+You may edit certain characteristics of this field including the display
+format and the column options (sort sequence and selection criteria).  For
+break columns you can also edit the print options for the column.
+To return to the main menu without any editing, select the "End" menu command.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        DisplayFormat   Edit the format of the data window.  Valid data
+                        display formats are fully described in the RBF
+                        reference manual, but take the following form:
+			(select "SubTopics" for more examples)
+
+                        Character...  c10, c0, c0.10, cj60.20, cf0.20 
+                        Numeric...    f8.2, e8.2, i4, "zzz,zzz", "$,$$$.nn"
+                        Date...       d"Sunday, February 3, 1901 at 4:05:06 pm",
+                                      d"1 yr 2 mons 3 days 4 hrs 5 mins 6 secs"
+
+        ColumnOptions   This menu item allows you to edit options associated
+			with every column in the report such as sort order
+			and selection criteria. 
+
+	BreakOptions	This menu item is available for break columns only.  
+			It allows you to edit the output options for the
+			break column such as suppressing the printing of
+			duplicate values.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the report layout frame, without editing
+                        any of the field characteristics.

@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The client_lib resource specifies the name of the ice client library or
+  binary.
+
+  Default: oiice

@@ -1,0 +1,212 @@
+--
+-- Copyright (c) 1992, 2004 Ingres Corporation
+--
+-- This file contains the configuration rules for INGRES/Star.
+--
+--# History:
+--#	18-jan-93 (tyler)
+--#		Created.
+--#	16-feb-93 (tyler)
+--#		Fixed several bugs in initial revision.
+--#	18-feb-93 (tyler)
+--#		Added past History.
+--#	26-apr-93 (tyler)
+--#		Changed confusing boolean resource names.
+--#	23-jul-93 (tyler)
+--#		Removed ii.$.star.$.active_limit since it has no effect.
+--#	20-sep-93 (tyler)
+--#		Don't define ii.$.star.$.ob_connect_limit or 
+--#		ii.$.star.$.image_name on VMS.  Changed
+--#		ii.$.star.$.ob_connect_limit to	ii.$.star.$.outbound_limit.
+--#		Changed ii.$.dbms.$.opf_active to
+--#		ii.$.dbms.$.opf_active_limit.  Replaced
+--#		ii.$.star.$.active_limit since server doesn't start
+--#		without it.
+--#	19-oct-93 (tyler)
+--#		Changed ii.$.ingstart.$.star to ii.$.ingstart.*.star
+--#		Added ii.$.star.$.server_class default rule.
+--#	05-jan-94 (tyler)
+--#		Fixed broken RDF rules.  Increased vms_file_limit resource
+--#		for Star servers.  name_service is supposed to be ON!
+--#	05-may-94 (joplin)
+--#		Returned VMS quotas to 6.4 formulae 
+--#	14-Nov-94 (GordonW)
+--#		default to one star server.
+--#	31-Jan-1995 (canor01)
+--#		Changed calculation of vms_buffer_limit to use a default
+--#		size instead of LRPSIZE, which is no longer accurate in
+--#		OpenVMS.
+--#	30-jan-96 (pchang)
+--#		Changed default value for psf_memory from 100000 to 102400, in
+--#		line with PSF_SESMEM in pshparse.h.
+--#	06-jun-1996 (thaju02)
+--#		Added ii.$.star.$.max_tuple_length for variable page size/
+--#		tuple size increase support.
+--#     22-aug-96 (pchang)
+--#             Added opf_timeout_factor to allow queries to timeout earlier on
+--#             installations with fast CPU and/or disk caching.  Default as  
+--#             per OPS_MILADJUST.  (B78136)
+--#	09-dec-1996 (nanpr01)
+--#		Bug 79703 : fix up the min and max limit for max_tuple_length.
+--#	19-mar-1997 (rosga02)
+--#		Add Upgrade and Downgrade provs for SEVMS
+--#     15-dec-1997 (canor01)
+--#             Limit qef_qep_mem to about 1GB (entry is number of blocks
+--#             that are currently 288 bytes each).
+--#	5-feb-1998(angusm)
+--#		Adjust ii.$.star.connect_max to `iiresutl -star_max` 
+--#     15-sep-98 (sarjo01)
+--#             Added defaults for opf_joinop_timeout, opf_timeout_abort
+--#     12-Mar-99 (hanal04)
+--#         qef_sort_mem must be a positive, non-zero integer. b95823.
+--#     19-oct-99 (hweho01)
+--#             Increased the default stack_size from 64K to 128K for
+--#             axp_osf 64-bit platform.  Startrak #7659289. 
+--#     22-Nov-99 (hweho01)
+--#             Increased the default stack_size from 64K to 128K for
+--#             AIX 64-bit platform (ris_u64).
+--#     08-Sep-2000 (hanje04)
+--#             Increased the default stack_size from 64K to 128K for
+--#             Alpha Linux (axp_lnx).
+--#     26-Mar-2001 (hanch04)
+--#		Increased dbms server stack size to 128K for all platforms
+--#     18-oct-2002 (horda03) Bug 108966
+--#             Added NETMBX privilege.
+--#	04-Nov-2002 (somsa01)
+--#		Enforce the minimum stack size to be 128K.
+--#	16-jan-2003 (abbjo03)
+--#	    Increase VMS working set parameters.
+--#	30-Nov-2003 (schka24)
+--#	    Reflect some of the dbms parameter rule changes here.
+--#	    Kill some obsolete/unused star rdf params.
+--#	29-Jan-2004 (schka24)
+--#	    The == operator notwork reliably for strings, use IS.
+--#	19-mar-2004 (somsa01)
+--#	    Increase stack_size for 64-bit Linux to 256K default.
+--#	13-Jan-2005 (shaha03)
+--#	   SIR # 113754 Added condition of i64_hpu and conf_ADD_ON64 to 
+--#	   consider default value of "ii.$.star.$.stack_size" to be of 64-bit, 
+--#	   for hybrid build.
+--#	18-Apr-2005 (drivi01)
+--#	    SIR: 114339
+--#	    Windows crsfiles are merged with generic.
+--#     02-aug-2005 (abbjo03)
+--#         Set vms_page_file to 2 billion.
+--#	17-aug-2005 (thaju02)
+--#	    Changed calculation of qef_sorthash_memory to use star's
+--#	    qef_sort_mem and qef_hash_mem values. 
+--#     14-May-2008 (Ralph Loen) Bug 117737
+--#         Added ii.$.star.$.mechanisms with a default value of "none".
+--#	22-Jun-2009 (kschendel) SIR 122138
+--#	    Update hybrid symbols.
+
+ii.$.ingstart.$.star:		1;
+
+-- maximum connect_limit of all Star servers configured for start-up
+#ifndef NT_GENERIC
+ii.$.star.connect_max:		`iiresutl -star_max`,
+					REQUIRES ii.$.star.%.connect_limit,
+					REQUIRES ii.$.ingstart.%.star;
+#else
+ii.$.star.connect_max:          `iiresutl -star_max`,
+                                        REQUIRES ii.$.star.%.connect_limit,
+                                        REQUIRES ii.$.ingstart.%.star;
+#endif /* NT_GENERIC */
+
+ii.$.star.$.active_limit:	ii.$.star.$.connect_limit;
+ii.$.star.$.connect_limit:	10, MIN = 2;
+ii.$.star.$.cpu_statistics:	OFF;
+ii.$.star.$.cursor_limit:	16;
+ii.$.star.$.distributed_recovery: ON;
+ii.$.star.$.max_tuple_length:	2008, MIN = 0, MAX = 32767;
+ii.$.star.$.mechanisms:         "none";
+# ifndef VMS
+ii.$.star.$.image_name:		"iistar";
+# endif /* VMS */
+# if defined(UNIX) || defined(NT_GENERIC)
+ii.$.star.$.outbound_limit:	9 * ii.$.star.$.connect_limit + 14;
+# endif /* UNIX */
+ii.$.star.$.name_service:	ON;
+ii.$.star.$.opf_active_limit:	0.2 * ii.$.star.$.connect_limit,
+				MIN = 1, MAX = ii.$.star.$.connect_limit;
+ii.$.star.$.opf_hash_join:	OFF;
+ii.$.star.$.opf_memory:		6M + (256K * ii.$.star.$.opf_active_limit),
+				MIN = 1M, SIZETYPE;
+ii.$.star.$.opf_timeout_factor: 10, MIN = 1, MAX = 10;
+ii.$.star.$.opf_joinop_timeout: 0, MIN = 0;
+ii.$.star.$.opf_timeout_abort:  0, MIN = 0;
+ii.$.star.$.psf_memory:		2M + (50K * ii.$.star.$.connect_limit),
+				MIN = 512K, SIZETYPE;
+ii.$.star.$.qef_dsh_memory:	3000 * ii.$.star.$.connect_limit * ii.$.star.$.cursor_limit,
+				MIN = 1M, SIZETYPE;
+ii.$.star.$.qef_hash_mem:	4M, MIN = 256;
+ii.$.star.$.qef_sort_mem:	256K, MIN = 16K;
+ii.$.star.$.qef_sorthash_memory: (ii.$.star.$.connect_limit * ii.$.star.$.qef_sort_mem) +
+				(ii.$.star.$.connect_limit/5 * ii.$.star.$.qef_hash_mem),
+				MIN = ii.$.star.$.qef_sort_mem + ii.$.star.$.qef_hash_mem, 
+				SIZETYPE;
+# ifdef UNIX
+ii.$.star.$.quantum_size: 	1000;
+# endif /* UNIX */
+ii.$.star.$.qsf_guideline:	"medium",
+				VALID = {"small","medium","large","huge"};
+ii.$.star.$.qsf_memory:		IF ( ii.$.star.$.qsf_guideline IS "small" )
+				    5M
+				ELSEIF (ii.$.star.$.qsf_guideline IS "medium")
+				    15
+				ELSEIF (ii.$.star.$.qsf_guideline IS "large")
+				    50
+				ELSE
+				    100M
+				ENDIF, MIN = 2M, SIZETYPE;
+ii.$.star.$.rdf_avg_ldbs:	5;
+ii.$.star.$.rdf_cache_ddbs:	ii.$.star.$.connect_limit;
+ii.$.star.$.rdf_col_defaults:	50;
+ii.$.star.$.rdf_max_tbls:	300;
+ii.$.star.$.rdf_memory:		5M + (15K * ii.$.star.$.rdf_max_tbls +
+					2K * ii.$.star.$.rdf_col_defaults),
+				MIN = 512K, SIZETYPE;
+ii.$.star.$.rdf_tbl_synonyms:	ii.$.star.$.rdf_max_tbls;
+ii.$.star.$.scf_rows:		20;
+ii.$.star.$.server_class:	"STAR";
+ii.$.star.$.session_accounting:	OFF;
+# if defined(LP64) || defined(conf_BUILD_ARCH_32_64)
+ii.$.star.$.stack_size:         256K, MIN = 256K;
+# else
+ii.$.star.$.stack_size:         150K, MIN = 128K;
+# endif /* LNX && LP64 */
+
+# ifdef UNIX
+ii.$.star.$.unix_maximum_working_set: UNDEFINED;
+ii.$.star.$.unix_priority:	UNDEFINED;
+# endif /* UNIX */
+
+# ifdef VMS 
+-- run command qualifiers
+ii.$.star.$.vms_accounting:	ON;
+ii.$.star.$.vms_ast_limit:	4 * ii.$.star.$.connect_limit + 10; 
+--ii.$.config.lrpsize:		`iigetsyi lrpsize`;
+ii.$.config.ncp_buffer_size:	1504;
+ii.$.star.$.vms_buffer_limit:	(ii.$.star.$.connect_limit * 5 
+				  * (6 * (ii.$.config.ncp_buffer_size + 100)))
+					+ 16K + 5000;
+ii.$.star.$.vms_enqueue_limit:	UNDEFINED;
+ii.$.star.$.vms_error:		"ii_system:[ingres.files]iistar.error";
+ii.$.star.$.vms_extent:		`iigetsyi wsmax`;	
+ii.$.star.$.vms_file_limit:	5 * ii.$.star.$.connect_limit;
+--ii.$.star.$.vms_input:		"\'f$trnlnm(\"TT\")\'";
+--ii.$.star.$.vms_interval:	"";	
+ii.$.star.$.vms_io_buffered:	4 * ii.$.star.$.connect_limit + 10; 
+ii.$.star.$.vms_io_direct:	ii.$.star.$.connect_limit + 4;
+ii.$.star.$.vms_maximum_working_set: 4096; 
+--ii.$.star.$.vms_output:		"\'f$trnlnm(\"TT\")\'";
+ii.$.star.$.vms_page_file:	2000000000;
+ii.$.star.$.vms_priority:	4;
+# ifdef SEVMSBUILD
+ii.$.star.$.vms_privileges:	"(prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx,upgrade,downgrade)";
+# else
+ii.$.star.$.vms_privileges:	"(prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,netmbx)";
+# endif /* SEVMSBUILD */
+ii.$.star.$.vms_queue_limit:	2 * ii.$.star.$.connect_limit + 10; 
+ii.$.star.$.vms_working_set: 	2048;
+# endif /* VMS */

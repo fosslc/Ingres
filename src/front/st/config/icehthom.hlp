@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ This is the full path to your primary HTML document directory.
+
+ This field is mandatory. Communication with your Ingres database will not
+ work without a valid entry in this field.

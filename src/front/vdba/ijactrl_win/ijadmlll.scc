@@ -1,0 +1,595 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+*/
+
+/*
+**    Source   : ijadmlll.scc
+**    Project  : IJA 
+**    Author   : UK Sotheavut (uk$so01)
+**    Purpose  : SQL file, use for Querying ingres object
+** History :
+** 23-Dec-1999 (uk$so01)
+**    created
+** 23-Apr-2001 (uk$so01)
+**    Bug #104487, 
+**    When creating the temporary table, make sure to use the exact type based on its length.
+**    If the type is integer and its length is 2 then use smallint or int2.
+**    If the type is float and its length is 4 then use float(4).
+** 30-May-2001 (uk$so01)
+**    SIR #101169 (additional changes)
+**    Management the quote string (in auditdb command line).
+** 23-Oct-2001 (noifr01)
+**    (sir 106120) added a description for ijactrl sessions
+** 05-Jul-2002 (uk$so01)
+**    BUG #108187, Ija should support table that has unicode columns.
+** 05-Sep-2003 (uk$so01)
+**    SIR #106648, Integrate libraries libwctrl.lib, libingll.lib in Ija
+** 13-May-2004 (schph01)
+**    SIR #111507 Add management for new column type bigint
+**/
+
+
+#include <stdlib.h>
+#include "ijadmlll.h"
+#include "dmlrule.h"
+#include "dmlconst.h"
+#include "dmlproc.h"
+#include "dmlinteg.h"
+#include "rcrdtool.h"
+#include "ingobdml.h"
+
+
+#if !defined (SQLCA_HEADER)
+#define SQLCA_HEADER
+//
+// Declare the SQLCA structure and the SQLDA typedef 
+//
+extern "C"
+{
+EXEC SQL INCLUDE SQLCA;
+EXEC SQL INCLUDE SQLDA;
+#include <compat.h>
+#include <cm.h>
+#include <st.h>
+#include "nm.h"
+#include "cv.h"
+#include "er.h"
+#include "erug.h"
+#include "gl.h"
+#include "iicommon.h"
+}
+#endif
+
+#define USERNAMELEN (32+1)
+#define OBJNAMELEN (32+1)
+static TCHAR DefaultDecSeparartor[2]=_T(".");
+static TCHAR bufIIDecimal[2]=_T(".");
+static BOOL bDecimalRead  = FALSE;
+static BOOL bErrorDecimalDisplay = TRUE;
+
+static void GetDecimalSeparator()
+{
+	TCHAR *temp;
+
+	NMgtAt("II_DECIMAL", &temp);
+	if( temp != NULL && *temp != EOS )
+	{
+		if ( temp[0] != '.' && temp[0] != ',' )
+		{
+			if (bErrorDecimalDisplay)
+			{
+				CString csTemp,csFormat;
+				csFormat = ERget(E_UG0023_BadDecimal);
+				csTemp.Format(csFormat,temp[0]);
+				AfxMessageBox(csTemp);
+				bErrorDecimalDisplay = FALSE;
+			}
+			_tcscpy(bufIIDecimal,DefaultDecSeparartor);/* Default value when II_DECIMAL is not valid. */
+		}
+		else
+			_tcsncpy(bufIIDecimal, temp, 2);
+	}
+	else
+		strcpy(bufIIDecimal, DefaultDecSeparartor); /* Default value when II_DECIMAL is not defined. */
+	bDecimalRead = TRUE;
+}
+
+BOOL CaIjaCursor::Fetch(CStringList& tuple, int& nCount)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* cname = T2A((LPTSTR)(LPCTSTR)m_strCursorName);
+		char* sname = T2A((LPTSTR)(LPCTSTR)m_strStatement);
+	EXEC SQL END DECLARE SECTION;
+	IISQLDA* pSqlda = (IISQLDA*)m_pSqlda;
+	
+	EXEC SQL WHENEVER SQLERROR GOTO CLOSE_CURSOR;
+	EXEC SQL DECLARE :cname CURSOR FOR :sname;
+	EXEC SQL FETCH :cname USING DESCRIPTOR pSqlda;
+	if (sqlca.sqlcode == 0)
+	{
+		//
+		// Initialize the tuple and nCount from the sqlda:
+		IISQLVAR* sqlv;
+		CString   strItem = _T("");
+		nCount = 0;
+		for (int i=0; i<pSqlda->sqld; i++)
+		{
+			nCount++;
+			sqlv = &pSqlda->sqlvar[i];
+			if (sqlv->sqlind && *sqlv->sqlind < 0)
+			{
+				strItem = _T("(null)");
+				tuple.AddTail (strItem);
+			}
+			else
+			{
+				TCHAR tchszIVal[32];
+				double dfValue = 0.0;
+				int iBaseType = abs (sqlv->sqltype);
+				switch (iBaseType)
+				{
+				case IISQ_DEC_TYPE:
+				{
+					TCHAR buf[35];
+					i4 ii4;
+					short prec,scale;
+					char* lpstr = (char*)sqlv->sqldata;
+					IISQL_UNPACK(sqlv->sqllen,prec,scale);
+					CVpka(lpstr, prec, scale, bufIIDecimal[0], prec+4,scale, 0 , buf, &ii4);
+					strItem = buf;
+					tuple.AddTail (strItem);
+					break;
+				}
+				case IISQ_INT_TYPE:
+					if (sqlv->sqllen <= 4)
+						_stprintf (tchszIVal, _T("%d"), *(long *)sqlv->sqldata);
+					else
+						CVla8(*(i8 *)sqlv->sqldata,tchszIVal);
+					strItem = tchszIVal;
+					strItem.TrimRight();
+					tuple.AddTail (strItem);
+					break;
+				case IISQ_FLT_TYPE:
+					dfValue = *(double *)sqlv->sqldata;
+					_stprintf (tchszIVal, _T("%.6g"), dfValue);
+					strItem = tchszIVal;
+					strItem.TrimRight();
+					tuple.AddTail (strItem);
+					break;
+				case IISQ_CHA_TYPE:
+				case IISQ_VCH_TYPE:
+				case IISQ_BYTE_TYPE:
+				case IISQ_VBYTE_TYPE:
+					{
+						// check whether displayable contents
+						char* lpstr = (char*)sqlv->sqldata;
+						int   len = ( lpstr? strlen(lpstr) : 0);
+						BOOL bNotDisplayable = FALSE;
+						// 3 cases : null ptr, displayable, not displayable
+						if (bNotDisplayable)
+							strItem = _T("<Not Displayable>");
+						else if (lpstr)
+						{
+							strItem = lpstr;
+							strItem.TrimRight();
+						}
+						else
+							strItem = _T("");
+
+						tuple.AddTail (strItem);
+					}
+					break;
+				case 26: // DB_NCHR_TYPE unicode types available in iicommon.h
+				case 27: // DB_NVCHR_TYPE unicode types available in iicommon.h
+				case 28: // DB_LNVCHR_TYPE
+					tuple.AddTail (COL_DISP_UNAVAILABLE);
+					break;
+
+				default:
+					break;
+				}
+			}
+		}
+		return TRUE;
+	}
+	else
+	if (sqlca.sqlcode == 100)
+	{
+		// 
+		// Attempt to fetch past the last row of the result table.
+		EXEC SQL CLOSE :cname;
+		return FALSE;
+	}
+CLOSE_CURSOR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[640];
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	if (sqlca.sqlcode < 0)
+	{
+		int nErr = sqlca.sqlcode;
+		EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+		EXEC SQL CLOSE :cname;
+		throw CeSqlException (A2T(error_buf));
+	}
+	EXEC SQL CLOSE :cname;
+	return TRUE;
+}
+
+
+
+BOOL CaCursor4Statements::Fetch(CStringList& tuple, int& nCount)
+{
+	USES_CONVERSION;
+	EXEC SQL BEGIN DECLARE SECTION;
+		char* c2name = T2A((LPTSTR)(LPCTSTR)m_strCursorName);
+		char* sname  = T2A((LPTSTR)(LPCTSTR)m_strStatement);
+	EXEC SQL END DECLARE SECTION;
+	IISQLDA* pSqlda = (IISQLDA*)m_pSqlda;
+	
+	EXEC SQL WHENEVER SQLERROR GOTO CLOSE_CURSOR;
+	EXEC SQL DECLARE :c2name CURSOR FOR :sname;
+	EXEC SQL FETCH :c2name USING DESCRIPTOR pSqlda;
+	if (sqlca.sqlcode == 0)
+	{
+		//
+		// Initialize the tuple and nCount from the sqlda:
+		IISQLVAR* sqlv;
+		CString   strItem = _T("");
+		nCount = 0;
+		for (int i=0; i<pSqlda->sqld; i++)
+		{
+			nCount++;
+			sqlv = &pSqlda->sqlvar[i];
+			if (sqlv->sqlind && *sqlv->sqlind < 0)
+			{
+				strItem = _T("null");
+				tuple.AddTail (strItem);
+			}
+			else
+			{
+				TCHAR tchszIVal[32];
+				double dfValue = 0.0;
+				int iBaseType = abs (sqlv->sqltype);
+				switch (iBaseType)
+				{
+				case IISQ_DEC_TYPE:
+				{
+					TCHAR buf[35];
+					i4 ii4;
+					short prec,scale;
+					char* lpstr = (char*)sqlv->sqldata;
+					IISQL_UNPACK(sqlv->sqllen,prec,scale);
+					CVpka(lpstr, prec, scale, bufIIDecimal[0], prec+4,scale, 0 , buf, &ii4);
+					LPTSTR p1=buf; /* skip leading spaces (this code is used for generating the syntax)*/
+					while (*p1==_T(' '))
+						p1++;
+					strItem = p1;
+					tuple.AddTail (strItem);
+					break;
+				}
+				case IISQ_INT_TYPE:
+					if (sqlv->sqllen <= 4)
+						_stprintf (tchszIVal, _T("%d"), *(long *)sqlv->sqldata);
+					else
+						CVla8(*(i8 *)sqlv->sqldata,tchszIVal);
+					strItem = tchszIVal;
+					strItem.TrimRight();
+					tuple.AddTail (strItem);
+					break;
+				case IISQ_FLT_TYPE:
+					dfValue = *(double *)sqlv->sqldata;
+					_stprintf (tchszIVal, _T("%.15g"), dfValue);
+					strItem = tchszIVal;
+					strItem.TrimRight();
+					tuple.AddTail (strItem);
+					break;
+				case IISQ_CHA_TYPE:
+				case IISQ_VCH_TYPE:
+			//	case IISQ_BYTE_TYPE: /* external scripts not possible for byte */
+			//	case IISQ_VBYTE_TYPE:/* external scripts not possible for byte */
+					{
+						// check whether displayable contents
+						char* lpstr = (char*)sqlv->sqldata;
+						int   len = ( lpstr? strlen(lpstr) : 0);
+						BOOL bNotDisplayable = FALSE;
+						// 3 cases : null ptr, displayable, not displayable
+						if (bNotDisplayable)
+							strItem = _T("<Not Displayable>");
+						else if (lpstr)
+						{
+							strItem = lpstr;
+							strItem.TrimRight();
+							strItem="'"+strItem+"'";
+						}
+						else
+							strItem = _T("");
+
+						tuple.AddTail (strItem);
+					}
+					break;
+				case 26: // DB_NCHR_TYPE unicode types available in iicommon.h
+				case 27: // DB_NVCHR_TYPE unicode types available in iicommon.h
+				case 28: // DB_LNVCHR_TYPE
+					tuple.AddTail (COL_DISP_UNAVAILABLE);
+					break;
+				default:
+					tuple.AddTail (COL_DISP_UNAVAILABLE);
+					break;
+				}
+			}
+		}
+		return TRUE;
+	}
+	else
+	if (sqlca.sqlcode == 100)
+	{
+		// 
+		// Attempt to fetch past the last row of the result table.
+		EXEC SQL CLOSE :c2name;
+		return FALSE;
+	}
+CLOSE_CURSOR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[640];
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	if (sqlca.sqlcode < 0)
+	{
+		int nErr = sqlca.sqlcode;
+		EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+		EXEC SQL CLOSE :c2name;
+		throw CeSqlException (A2T(error_buf));
+	}
+	EXEC SQL CLOSE :c2name;
+	return TRUE;
+}
+
+
+
+BOOL GetTempAuditTableName( CString& csResultString, LPCTSTR lpSourceTableName, LPCTSTR lpSchemaName)
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		char  sztablename [OBJNAMELEN];
+		char szSchema     [USERNAMELEN];
+		int icount;
+	EXEC SQL END DECLARE SECTION;
+	int iNo;
+	
+	// no session to open, this function uses the current one
+	lstrcpy(szSchema,lpSchemaName);
+	for (iNo=0;iNo<1000;iNo++) {
+		wsprintf(sztablename,_T("ija_%s_%d"),lpSourceTableName,iNo);
+		EXEC SQL WHENEVER SQLERROR GOTO QUERYAUDITTBLNAMEE_ERROR;
+		EXEC SQL SELECT
+			count(*)
+		INTO
+			:icount
+		FROM
+			iitables
+		WHERE
+			LOWERCASE(table_name) = LOWERCASE(:sztablename) AND
+			LOWERCASE(table_owner) = LOWERCASE(:szSchema);
+		if (icount == 0) {
+
+			csResultString = sztablename;
+			int nFound = csResultString.FindOneOf(_T("$&*:,\"=/<>()-%.+?;' |"));
+			while (nFound != -1)
+			{
+				csResultString.SetAt(nFound, _T('_'));
+				nFound = csResultString.FindOneOf(_T("$&*:,\"=/<>()-%.+?;' |"));
+			}
+			
+			return TRUE;
+		}
+		iNo++;
+	}
+QUERYAUDITTBLNAMEE_ERROR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[255];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	AfxMessageBox(error_buf);
+	return FALSE;
+}
+
+BOOL IJA_llQueryUserInCurSession (CString &username)
+{
+#if defined (SIMULATION)
+	username = _T("Simulated user");
+	return TRUE;
+#endif
+	return INGRESII_llQueryUserInCurrentSession (username);
+}
+
+
+//
+// Query constraint of a table:
+BOOL INGRESII_llQueryConstraint (CaQueryTransactionInfo* pQueryInfo, CTypedPtrList< CObList, CaDBObject* >& listObject)
+{
+	USES_CONVERSION;
+	CaConstraint* pItem = NULL;
+	CString strTable, strTableOwner;
+	pQueryInfo->GetTable (strTable, strTableOwner);
+	ASSERT (!strTable.IsEmpty());
+
+#if defined (SIMULATION)
+	pItem = new CaConstraint (_T("Simulated constraint name"), _T("owner"), strTable, _T("Simulated constraint text ..."), _T("???"));
+	listObject.AddTail (pItem);
+	return TRUE;
+#endif
+
+	//
+	// NOTE: Owner of constraint is also owner of table !
+	//       You must be owner of table in order to create constraint.
+	EXEC SQL BEGIN DECLARE SECTION;
+		int   nTextSequence;
+		char  szConstraintName     [DBOBJECTLEN];
+		char  szSchemaName         [DBOBJECTLEN];
+		char  szTextSegment        [DBOBJECTLEN];
+		char  szConstraintType     [8];
+		char* pTableName = T2A((LPTSTR)(LPCTSTR)strTable);
+		char* pSchema    = T2A((LPTSTR)(LPCTSTR)strTableOwner);
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL WHENEVER SQLERROR GOTO QUERYCONSTRAINT_ERROR;
+	EXEC SQL SELECT DISTINCT
+		CONSTRAINT_NAME,
+		SCHEMA_NAME,
+		TEXT_SEGMENT,
+		TEXT_SEQUENCE,
+		CONSTRAINT_TYPE
+
+	INTO
+		:szConstraintName,
+		:szSchemaName,
+		:szTextSegment,
+		:nTextSequence,
+		:szConstraintType
+	FROM  IICONSTRAINTS
+	WHERE LOWERCASE (TABLE_NAME) = LOWERCASE (:pTableName) AND LOWERCASE (SCHEMA_NAME) = LOWERCASE (:pSchema)
+	ORDER BY CONSTRAINT_TYPE;
+	
+	EXEC SQL BEGIN;
+		if (nTextSequence == 1)
+		{
+			CString strType = _T("???");
+			switch (szConstraintType[0])
+			{
+			case 'c':
+			case 'C':
+				strType = _T("Check");
+				break;
+			case 'p':
+			case 'P':
+				strType = _T("Primary Key");
+				break;
+			case 'f':
+			case 'F':
+			case 'r':
+			case 'R':
+				strType = _T("Referential Key");
+				break;
+			case 'u':
+			case 'U':
+				strType = _T("Unique Key");
+				break;
+			default:
+				ASSERT (FALSE);
+				break;
+			}
+
+			pItem = new CaConstraint (
+				A2T(szConstraintName), 
+				A2T(szSchemaName), 
+				A2T(pTableName), 
+				A2T(szTextSegment), 
+				strType);
+			pItem->m_strText.TrimRight();
+			listObject.AddTail (pItem);
+		}
+		else
+		if (nTextSequence > 1 && pItem != NULL)
+		{
+			pItem->m_strText += szTextSegment;
+			pItem->m_strText.TrimRight();
+		}
+	EXEC SQL END;
+	return TRUE;
+
+QUERYCONSTRAINT_ERROR:
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[640];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	throw CeSqlException (A2T(error_buf));
+	return FALSE;
+}
+
+
+
+
+exec sql whenever sqlerror continue;
+static BOOL ManageSqlError(void  *Sqlca)
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[255];
+	EXEC SQL END DECLARE SECTION;
+	IISQLCA *psqlca = (IISQLCA *) Sqlca;
+	long lerrcode  = psqlca->sqlcode;
+	if (lerrcode>=0)
+	return TRUE;
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	AfxMessageBox((LPCTSTR)error_buf,MB_ICONSTOP | MB_OK );
+	psqlca->sqlcode = lerrcode;
+	return FALSE;
+}
+
+BOOL IJA_llGetArchiverInternal ()
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		int nbCPValue;
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL EXECUTE PROCEDURE ima_set_server_domain;
+	ManageSqlError(&sqlca); // Keep track of the SQL error if any
+
+	EXEC SQL EXECUTE PROCEDURE ima_set_vnode_domain;
+	ManageSqlError(&sqlca); // Keep track of the SQL error if any
+
+	EXEC SQL COMMIT;
+	ManageSqlError(&sqlca); // Keep track of the SQL error if any
+
+	EXEC SQL SET LOCKMODE SESSION WHERE readlock=nolock;
+	ManageSqlError(&sqlca); // Keep track of the SQL error if any
+
+	EXEC SQL SELECT lfb_hdr_lgh_cpcnt
+			INTO :nbCPValue
+			FROM ima_lgmo_lfb;
+
+	if (nbCPValue == 1)
+		return TRUE;
+	else
+		return FALSE;
+
+}
+
+void IJA_llActivateLog2Journal ()
+{
+	EXEC SQL SET TRACE POINT DM1314;
+	ManageSqlError(&sqlca); // Keep track of the SQL error if any
+	EXEC SQL SET TRACE POINT DM1305;
+	ManageSqlError(&sqlca);
+}
+
+void IJA_llLogFileStatus(CString& csCurStatus)
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		char status[101];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL EXECUTE PROCEDURE ima_set_server_domain;
+	ManageSqlError(&sqlca); // Keep track of the SQL error if any
+
+	EXEC SQL EXECUTE PROCEDURE ima_set_vnode_domain;
+	ManageSqlError(&sqlca); 
+
+	EXEC SQL COMMIT;
+	ManageSqlError(&sqlca);
+
+	EXEC SQL SET LOCKMODE SESSION WHERE readlock=nolock;
+	ManageSqlError(&sqlca);
+
+	EXEC SQL REPEATED SELECT lgd_status
+			 INTO :status
+			 FROM ima_lgmo_lgd lgd,ima_lgmo_lfb lfb
+			 WHERE lgd.vnode = lfb.vnode
+				AND lfb.vnode = dbmsinfo('ima_vnode');
+	EXEC SQL BEGIN;
+		csCurStatus = status;
+	EXEC SQL END;
+
+}

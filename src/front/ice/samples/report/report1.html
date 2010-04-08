@@ -1,0 +1,61 @@
+<!--
+##{
+## History:
+##    04-May-1999 (peeje01)
+##        Replaced .exe with #cgi# for platform independance
+##}
+-->
+<HTML>
+<HEAD><TITLE>Ingres/ICE - Publishing Reports</TITLE>
+<BASE TARGET="REP_OUT">
+</HEAD>
+<BODY>
+<CENTER>
+<TABLE BORDER=0 CELLSPACING=1 CELLPADDING=0 WIDTH=100% ALIGN=left>
+<TR ALIGN=center COLSPAN=2><TD>
+<STRONG>Basic reports</STRONG>
+<TR><TD>
+<FONT SIZE=-2>
+<!-- #ICE SQL=`select object_name, short_remark from ii_objects
+where object_name like '%' and object_class>= 1500 and object_class<= 1599
+  and(object_owner like 'icedbuser' or object_owner= 'icedbuser')
+  and short_remark not like '%variable%' order by object_name`
+DATABASE=`icetutor`
+LINKS=`object_name, /ice-bin/oiice.#cgi#/icereport/report2.html`
+HEADERS=`object_name, Report, short_remark, Description`
+ATTR=`BORDER=0 CELLSPACING=1 CELLPADDING=0 WIDTH=100% ALIGN=left`
+USER=`icedefdb`
+-->
+</FONT>
+</TD></TR>
+<TR COLSPAN=2><TD>
+<HR>
+</TD></TR>
+<TR ALIGN=center COLSPAN=2><TD>
+<STRONG>Using a variable</STRONG>
+</TD></TR>
+<TR><TD>
+<!-- #ICE SQL=`select object_name, short_remark from ii_objects
+where object_name like '%' and object_class>= 1500 and object_class<= 1599
+  and(object_owner like 'icedbuser' or object_owner= 'icedbuser')
+  and short_remark like '%variable%' order by object_name`
+DATABASE=`icetutor`
+LINKS=`object_name, /ice-bin/oiice.#cgi#/icereport/report3.html`
+HEADERS=`object_name, Report, short_remark, Description`
+ATTR=`BORDER=0 CELLSPACING=1 CELLPADDING=0 WIDTH=100% ALIGN=left`
+USER=`icedefdb`
+-->
+</TD></TR>
+<TR COLSPAN=2><TD>
+<HR>
+</TD></TR>
+<TR><TD>
+<CENTER>
+<P>
+<FORM ACTION="/ice/samples/report/report.html" METHOD=GET TARGET="_top">
+<INPUT TYPE=SUBMIT Value="Back">
+</TABLE>
+</CENTER>
+</TD></TR>
+</BODY>
+</HTML>

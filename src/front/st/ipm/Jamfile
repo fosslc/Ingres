@@ -1,0 +1,82 @@
+#
+# Jamfile file for front!st!ipm
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#       15-Jun-2007 (hanal04) Bug 118510
+#           Statically link ipm to avoid shared library problems when
+#           clients manually allow other users to run IPM.
+#	07-nov-2007 (joea)
+#	    Modify 15-jun change for VMS since libingres is not present.
+#	05-Nov-2008 (bonro01)
+#	    ipm fails to link.
+#	    Remove ule_doformat which was removed in change 494470
+#	01-May-2009 (drivi01)
+#	     Add IIAdminManifest for ipm.
+#	     This will ensure that the binary has a built-in manifest
+#	     with elevated privileges.
+
+SubDir ING_SRC front st ipm ;
+
+IISUBSYS front st ipm ;
+
+
+IIBINEXE ipm : ipmmain.qsc ;
+if $(NT)
+{
+    IINEEDLIBS ipm : IPMLIB SHFRAMELIB SHQLIB DMFLIB SHCOMPATLIB ;
+}
+else if $(VMS)
+{
+    IINEEDLIBS ipm : IPMLIB DMFLIB COMPATLIB ;
+}
+else
+{
+    IINEEDLIBS ipm : IPMLIB DMFLIB INGRESLIB COMPATLIB ;
+}
+IINEEDLIBSW ipm : SHGCFLIB SHEMBEDLIB ;
+IIUNDEFS ipm : II_copyright ;
+IIAdminManifest ipm ;
+
+IIQSHHDR lists.h : lists.qsh ;
+
+File $(INGMSG)$(DFS)ipmdbaop.hlp : ipmdbaop.hlp ;
+File $(INGMSG)$(DFS)ipmdplgd.hlp : ipmdplgd.hlp ;
+File $(INGMSG)$(DFS)ipmdplgp.hlp : ipmdplgp.hlp ;
+File $(INGMSG)$(DFS)ipmdplkl.hlp : ipmdplkl.hlp ;
+File $(INGMSG)$(DFS)ipmdplkr.hlp : ipmdplkr.hlp ;
+File $(INGMSG)$(DFS)ipmdslgt.hlp : ipmdslgt.hlp ;
+File $(INGMSG)$(DFS)ipmdspdb.hlp : ipmdspdb.hlp ;
+File $(INGMSG)$(DFS)ipmdsplt.hlp : ipmdsplt.hlp ;
+File $(INGMSG)$(DFS)ipmdspsv.hlp : ipmdspsv.hlp ;
+File $(INGMSG)$(DFS)ipmlkltd.hlp : ipmlkltd.hlp ;
+File $(INGMSG)$(DFS)ipmlkrdt.hlp : ipmlkrdt.hlp ;
+File $(INGMSG)$(DFS)ipmmain.hlp : ipmmain.hlp ;
+File $(INGMSG)$(DFS)ipmsesdt.hlp : ipmsesdt.hlp ;
+File $(INGMSG)$(DFS)ipmshlgh.hlp : ipmshlgh.hlp ;
+File $(INGMSG)$(DFS)ipmshlgs.hlp : ipmshlgs.hlp ;
+File $(INGMSG)$(DFS)ipmshlks.hlp : ipmshlks.hlp ;
+File $(INGMSG)$(DFS)ipmshopr.hlp : ipmshopr.hlp ;
+File $(INGMSG)$(DFS)ipmshses.hlp : ipmshses.hlp ;
+File $(INGMSG)$(DFS)ipmshut.hlp : ipmshut.hlp ;
+File $(INGMSG)$(DFS)ipmshwbk.hlp : ipmshwbk.hlp ;
+File $(INGMSG)$(DFS)ipmshwop.hlp : ipmshwop.hlp ;
+File $(INGMSG)$(DFS)ipmsvdet.hlp : ipmsvdet.hlp ;
+
+IILIBRARY IPMLIB : utility.qsc tblfldfn.qsc srvdtail.qsc
+	showsess.qsc showopts.qsc showblk.qsc sholksum.qsc sholgsum.qsc
+	sholghdr.qsc sesdtail.qsc procinfo.qsc lockwork.qsc
+	lkresdet.qsc lklstdet.qsc listmgr.qsc ingprivs.qsc gtlklgst.qsc
+	dsplogtx.qsc dsplogpr.qsc dsplogdb.qsc dsplkres.qsc
+	dsplklst.qsc dispsrv.qsc db_work.qsc db_list.qsc fsrvdetl.lfm
+	fshosess64.lfm fshosess.lfm fshoproc.lfm fshoopts.lfm
+	fsholksm.lfm fsholkrs.lfm fsholklk.lfm fsholgsm.lfm
+	fsholghd.lfm fshoblok.lfm fshlksmn.lfm fsesdetl64.lfm
+	fsesdetl.lfm fqrytext.lfm fmyhelp.lfm fmrlklst.lfm
+	fmorlkrs.lfm fmorlklk.lfm fmorlgtx.lfm fmorlghd.lfm
+	fmorlgdb.lfm fmorhdtx.lfm flogmenu.lfm flockmenu.lfm
+	fingdba.lfm fdsplkty.lfm fdsplkrs.lfm fdsplkls.lfm fdsplgtx.lfm
+	fdsplgpr.lfm fdsplgdb.lfm fdispsrv.lfm fdispdb.lfm servwork.c
+	namework.c lklginfo.c dbaglobs.c ;
+

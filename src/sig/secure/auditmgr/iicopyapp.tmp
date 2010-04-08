@@ -1,0 +1,373 @@
+COPYAPP	6	5	1994_03_23 12:34:49 GMT  
+OC_APPL:	0	auditmgr	Security Audit Utility	
+	/home/development/robf/abf/auditmgr		0		0	0	3		auditmgr		SQL			4096
+CUC_ADEPEND:
+	DUMMY		0	0		0
+OC_AFORMREF:	1	viewrecords		
+	10097	II03000viewrecords	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLFRAME:	1	viewrecords	View selected audit records	
+	viewrecords.osq	II02000viewrecords	0	none	0	0	3	dynamic						0
+CUC_AODEPEND:
+	audrecdetail	robf	2210	3504		0
+	extract	robf	2210	3503		0
+	viewrecords	robf	3001	3502		0
+OC_AFORMREF:	1	viewlogs0		
+	10053	II03viewlogs0	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_BRWFRAME:	1	viewlogs	View Registered audit logs	
+	viewlogs0.osq	II02viewlogs	0	none	0	0	3	dynamic				1994_02_16 16:21:27 GMT	0@1994_03_21 13:31:00 GMT	0
+CUC_VQTAB:
+	0	34	iiaudittables		0	2	16
+CUC_VQTCOL:
+	0	0	table_name	table_name	20	32	0	321	1	
+	1	0	table_owner	table_owner	20	32	0	1344	0	
+	2	0	audit_log	audit_log	20	256	0	64	0	
+	3	0	register_date	register_date	20	25	0	321	2	
+CUC_MENUARG:
+	Detail	table_name		iitf.table_name	0
+	Detail	table_owner		iitf.table_owner	1
+	Queries	table_name		iitf.table_name	0
+	Queries	table_owner		iitf.table_owner	1
+CUC_ESCAPE:
+	0	V64030000\n*10051{I0A-1I0}
+CUC_AODEPEND:
+	detail	robf	2264	3505	Detail	1
+	queries	robf	2260	3505	Queries	0
+	viewlogs0	robf	3001	3502		0
+OC_OSLPROC:	1	view_via_qbf	View audit log via QBF	
+	view_via_qbf.osq	II01view_via_qbf	-30	integer	5	0	3							0
+CUC_AODEPEND:
+OC_OSLPROC:	1	suspendaudit	Suspend auditing	
+	suspendaudit.osq	II01suspendaudit	-30	integer	5	0	3							4
+CUC_AODEPEND:
+OC_OSLPROC:	1	stopauditing	Stop security auditing	
+	stopauditing.osq	II01stopauditing	-30	integer	5	0	3							0
+CUC_AODEPEND:
+OC_AFORMREF:	1	setfilter		
+	10093	II03setfilter	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLFRAME:	1	setfilter	Set Filter for Audit Records	
+	setfilter.osq	II02setfilter	0	none	0	0	3	dynamic						0
+CUC_AODEPEND:
+	setfilter	robf	3001	3502		0
+OC_OSLPROC:	1	resumeauditing	Resume auditing after being suspended	
+	resumeauditing.osq	II01000resumeaudit	-30	integer	5	0	3							0
+CUC_AODEPEND:
+OC_OSLPROC:	1	restartauditing	Restart security auditing after stop	
+	restartauditing.osq	II01restartauditin	-30	integer	5	0	3							0
+CUC_AODEPEND:
+OC_BRWFRAME:	1	removelogs	Remove security audit logs	
+	removelogs.osq	II02removelogs	0	none	0	0	3	dynamic				1994_02_17 17:42:06 GMT	0@1994_02_17 17:44:44 GMT	0
+CUC_VQTAB:
+	0	34	iiaudittables		0	2	16
+CUC_VQTCOL:
+	0	0	table_name	table_name	20	32	0	321	0	
+	1	0	table_owner	table_owner	20	32	0	321	0	
+	2	0	audit_log	audit_log	20	256	0	1088	0	
+	3	0	register_date	register_date	20	25	0	320	0	
+CUC_MENUARG:
+	Remove	table_name		iitf.table_name	0
+	Remove	table_owner		iitf.table_owner	1
+CUC_ESCAPE:
+	0	V64030000\n*10088{I0A-1I1}*-1{i13"Remove""return ;\n"}
+CUC_AODEPEND:
+	detail	robf	2264	3505	Detail	1
+	remove1	robf	2050	3505	Remove	0
+	removelogs	robf	3001	3502		0
+OC_AFORMREF:	1	removelogs		
+	10090	II03removelogs	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLPROC:	1	remove1	Remove Audit Log	
+	remove1.osq	II01remove1	-30	integer	5	0	3							0
+CUC_AODEPEND:
+OC_OSLFRAME:	1	registerlogs	Register security audit log	
+	registerlogs.osq	II02registerlogs	30	integer	4	0	3	dynamic						0
+CUC_AODEPEND:
+	registerlogs	robf	3001	3502		0
+OC_AFORMREF:	1	registerlogs		
+	10081	II03registerlogs	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLPROC:	1	rbfreports	Create RBF reports on audit log	
+	rbfreports.osq	II01rbfreports	-30	integer	5	0	3							0
+CUC_AODEPEND:
+OC_MUFRAME:	1	queries	Run queries against select audit log	
+	queries.osq	II02queries	0	none	0	0	3	dynamic				1994_03_21 13:48:28 GMT	1024@1994_03_23 12:21:31 GMT	4096
+CUC_MENUARG:
+	QBF Query	table_name		table_name	0
+	Set Filter	username		byref(username)	0
+	Set Filter	startdate		byref(startdate)	1
+	Set Filter	enddate		byref(enddate)	2
+	Set Filter	database		byref(database)	3
+	Set Filter	aud_status		byref(aud_status)	4
+	Set Filter	eventtype		byref(eventtype)	5
+	Set Filter	eventaction		byref(eventaction)	6
+	Set Filter	objectname		byref(objectname)	7
+	View Records	viewrecords	audit_records	select * from session.audit_records	0
+CUC_FRMVAR:
+	0	cmd		varchar(1024) NOT NULL 	
+	1	loaded_data		integer NOT NULL 	Number of rows in loaded data
+	2	qual		varchar(1024) NOT NULL 	Qualification for query
+	3	tbl_name_owner		varchar(65) NOT NULL 	tableowner.tablename
+	4	destroy_data		PROCEDURE RETURNING integer	Removes temporary table
+	5	load_data		PROCEDURE RETURNING integer	Loads data into temporary table
+CUC_ESCAPE:
+	0	V64030000\n*10043{I0A-1I8}*-1{i1"SetFilter""qual='audittime>=date(''now'')-''2 days''';\ntbl_name_owner=trim(table_owner)+'.'+trim(table_name);\nstartdate=date('now')-'2 days';\n"i2"View Records""callproc destroy_data();\n"i12"Extract""if loaded_data=0\nthen\n        if load_data() !=1\n        then\n                resume;\n        endif;\nendif;\nif loaded_data=0\nthen\n        message 'No records to extract'\n        with style=popup;\nendif;\n"i12"Set Filter""if startdate=''\nthen\n        startdate=date('now'
+	1	)-'2 days';\nendif;\n"i12"View Records""if loaded_data=0\nthen\n        if load_data() !=1\n        then\n            resume;\n        endif;\nendif;\nif loaded_data>1000\nthen\n     message 'Too many records were extracted to View.'+\n             ' Please use SetFilter to limit the number of records returned'+\n             ' or use the Extract options to save the current records to'+\n             ' a file for further processing.'\n     with style=popup;\n     resume;\nendif;\n"i13"Set Filter""/*\n** Rebuild qu
+	2	alification\n*/\nqual='1=1';\nif username!=''\nthen\n        qual=qual+'and  user_name='''+username+'''';\nendif;\nif startdate!=''\nthen\n        qual=qual+' and audittime>='''+varchar(startdate)+'''';\nendif;\nif enddate!=''\nthen\n        qual=qual+' and audittime<='''+varchar(enddate)+'''';\nendif;\nif database!=''\nthen\n        qual=qual+' and database='''+database+'''';\nendif;\nif objectname!=''\nthen\n        qual=qual+' and objectname='''+objectname+'''';\nendif;\nif eventtype!=''\nthen\n        qual=qual+' an
+	3	d objecttype='''+eventtype+'''';\nendif;\nif eventaction!=''\nthen\n        qual=qual+' and auditevent='''+eventaction+'''';\nendif;\nif aud_status!=''\nthen\n        qual=qual+' and auditstatus='''+aud_status+'''';\nendif;\ncallproc destroy_data();\n"i23"destroy_data""PROCEDURE destroy_data() =\nBEGIN\n        if loaded_data>0\n        then\n                drop session.audit_records;\n                commit;\n                loaded_data=0;\n                set_forms field '' (invisible(extracted_rows)
+	4	=1);\n        endif;\n        return 1;\nEND;\n"i23"load_data""PROCEDURE load_data() =\nDECLARE\n        nrows=integer not null;\n        errno=integer not null;\n        status=integer not null;\nBEGIN\n        status=1;\n        status=callproc destroy_data();\n        if status!=1\n        then\n                message 'Error removing previous data'\n                with style=popup;\n                return status;\n        endif;\n        cmd=' declare global temporary table session.audit_records' +\n         
+	5	    ' as select * from '+tbl_name_owner+\n             ' where '+qual +\n             ' on commit preserve rows with norecovery';\n        message 'Finding selected audit records...';\n        execute immediate :cmd;\n        inquire_sql (errno=errorno, nrows=rowcount);\n        if errno=100\n        then\n                callproc beep();\n                message 'No records found'\n                with style=popup;\n                drop session.audit_records;\n                status=0;\n        elseif errno
+	6	!=0\n        then\n                callproc beep();\n                message 'Error loading audit records'\n                with style=popup;\n                status=0;\n        else\n                loaded_data=nrows;\n                set_forms field '' (invisible(extracted_rows)=0);\n                extracted_rows=loaded_data;\n        endif;\n        commit;\n        return status;\nEND\n"}
+CUC_AODEPEND:
+	view_via_qbf	robf	2050	3505	QBF Query	3
+	extract	robf	2210	3505	Extract	2
+	viewrecords	robf	2210	3505	View Records	1
+	setfilter	robf	2210	3505	Set Filter	0
+	queries	robf	3001	3502		0
+OC_AFORMREF:	1	queries		
+	10160	II03queries	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_MUFRAME:	1	manageaudit	Manage and Configure the Security Audit system	
+	manageaudit.osq	II02manageaudit	0	none	0	0	3	dynamic				1994_02_18 10:35:35 GMT	1280@1994_03_10 14:40:35 GMT	4096
+CUC_FRMVAR:
+	0	connect_iidbdb		integer NOT NULL 	
+	1	dbname		varchar(32) NOT NULL 	
+	2	old_session		integer NOT NULL 	
+	3	set_audit_state		PROCEDURE RETURNING none	Update audit_state  field
+CUC_ESCAPE:
+	0	V64030000\n*10010{I0A-1I7}*-1{i1"Change Log""callproc set_audit_state();\n"i13"Change Log""callproc set_audit_state();\n"i13"Restart Audit""callproc set_audit_state();\n"i13"Resume Audit""callproc set_audit_state();\n"i13"Stop Auditing""callproc set_audit_state();\n"i13"Suspend Audit""callproc set_audit_state();\n"i23"set_audit_state""PROCEDURE set_audit_state() =\nBEGIN\n     set session add privileges (maintain_audit);\n     select audit_log=dbmsinfo('security_audit_log'),\n            audit_state=dbmsin
+	1	fo('security_audit_state');\n     commit;\n     set session with privileges=default;\nend;\n"}
+CUC_AODEPEND:
+	resumeauditing	robf	2050	3505	Resume Audit	4
+	suspendaudit	robf	2050	3505	Suspend Audit	3
+	restartauditing	robf	2050	3505	Restart Audit	2
+	stopauditing	robf	2050	3505	Stop Auditing	1
+	changelog	robf	2050	3505	Change Log	0
+	manageaudit	robf	3001	3502		0
+OC_AFORMREF:	1	manageaudit		
+	10012	II03manageaudit	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_MUFRAME:	1	auditmgr	Security Audit Utility	
+	auditmgr.osq	II02auditmgr	0	none	0	0	3	dynamic				1994_03_10 15:02:55 GMT	1280@1994_03_10 15:02:57 GMT	4096
+CUC_ESCAPE:
+	0	V64030000\n*10004{I0A-1I0}
+CUC_AODEPEND:
+	manageaudit	robf	2260	3505	Manage Audit	4
+	auditmasks	robf	2210	3505	Audit Masks	3
+	removelogs	robf	2264	3505	Remove Logs	2
+	registerlogs	robf	2210	3505	Register Logs	1
+	viewlogs	robf	2264	3505	View Audit Logs	0
+	auditmgr	robf	3001	3502		0
+OC_AFORMREF:	1	auditmgr		
+	10006	II03auditmgr	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_AFORMREF:	1	extract		
+	10122	II03extract	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLFRAME:	1	extract	Extract audit records to file	
+	extract.osq	II02extract	0	none	0	0	3	dynamic						18
+CUC_AODEPEND:
+	extract	robf	3001	3502		0
+OC_BRWFRAME:	1	detail	View detail of audit log	
+	detail.osq	II02detail	0	none	0	0	3	dynamic				1994_02_16 16:22:43 GMT	0@1994_02_17 17:45:46 GMT	0
+CUC_VQTAB:
+	0	19	iiaudittables		0	2	16
+CUC_VQTCOL:
+	0	0	table_name	table_name	20	32	0	321	0	table_name
+	1	0	table_owner	table_owner	20	32	0	321	0	table_owner
+	2	0	audit_log	audit_log	20	256	0	65	0	
+	3	0	register_date	register_date	20	25	0	321	0	
+CUC_MENUARG:
+	Remove	table_name		table_name	0
+	Remove	table_owner		table_owner	1
+CUC_AODEPEND:
+	detail	robf	3001	3502		0
+OC_AFORMREF:	1	detail		
+	10057	II03detail	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLPROC:	1	changelog	Change the current security audit log	
+	changelog.osq	II01changelog	-30	integer	5	0	3							0
+CUC_AODEPEND:
+OC_AFORMREF:	1	audrecdetail		
+	10107	II03001audrecdetai	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLFRAME:	1	audrecdetail	View detail on a single audit record	
+	audrecdetail.osq	II02001audrecdetai	30	integer	4	0	3	dynamic						0
+CUC_AODEPEND:
+	audrecdetail	robf	3001	3502		0
+OC_OSLFRAME:	1	auditmasks	Alter security audit mask (enable/disable)	
+	auditmasks.osq	II02auditmasks	30	integer	4	0	3	dynamic						0
+CUC_AODEPEND:
+	auditmasks	robf	3001	3502		0
+OC_AFORMREF:	1	auditmasks		
+	10105	II03auditmasks	0		0	0	3							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_FORM:	0	auditmasks	Update audit event classes	
+	80	23	0	0	1	0	4	9	0	0	0	0	0	0	0	3
+CUC_FIELD:
+	0	masks	0	15	0	2	19	31	2	3	1	3	0		1	1	0	33	0	0	0					1	0
+	0	name	21	22	0	20	1	20	0	1	20	0	1	Audit Event Class	1	1	0	0	512	0	0		c20			2	1
+	1	yn	21	3	0	1	1	8	0	22	1	0	22	Enabled?	22	1	0	0	0	0	0		c1	Enter y or n	masks.yn in ["y", "n"]	2	2
+CUC_TRIM:
+	17	0	Update Audit Masks	0	0	0	0
+	39	5	Enter y or n to enable or disable	0	0	0	0
+	39	6	security auditing by the indicated	0	0	0	0
+	39	7	audit event class	0	0	0	0
+OC_FORM:	0	audrecdetail	View all fields in an audit record	
+	80	22	0	0	17	0	1	9	0	0	0	0	0	64	0	17
+CUC_FIELD:
+	0	audittime	3	12	0	25	1	31	2	8	25	0	6	Time:	0	0	0	66576	0	0	0		c25			0	0
+	1	auditstatus	20	1	0	1	1	9	2	52	1	0	8	Status:	0	0	0	66576	0	0	0		c1			0	1
+	2	database	20	32	0	32	1	42	3	4	32	0	10	Database:	0	0	0	66576	0	0	0		c32			0	2
+	3	sessionid	20	16	0	16	1	27	3	49	16	0	11	SessionID:	0	0	0	66576	0	0	0		c16			0	3
+	4	user_name	20	32	0	32	1	43	5	3	32	0	11	User Name:	0	0	0	66576	0	0	0		c32			0	4
+	5	objecttype	20	24	0	24	1	30	5	50	24	0	6	Type:	0	0	0	66576	0	0	0		c24			0	5
+	6	real_name	20	32	0	32	1	43	6	3	32	0	11	Real Name:	0	0	0	66576	0	0	0		c32			0	6
+	7	auditevent	20	24	0	24	1	32	6	48	24	0	8	Action:	0	0	0	66576	0	0	0		c24			0	7
+	8	objectname	20	32	0	32	1	44	8	2	32	0	12	Objectname:	0	0	0	66576	0	0	0		c32			0	8
+	9	objectowner	20	32	0	32	1	45	9	1	32	0	13	Objectowner:	0	0	0	66576	0	0	0		c32			0	9
+	10	objectlabel	60	24	0	128	2	77	10	1	64	0	13	Objectlabel:	0	0	0	66576	0	0	0		c128.64			0	10
+	11	description	20	80	0	60	1	73	12	1	60	0	13	Description:	0	0	0	66576	64	0	0		c60			0	11
+	12	detailinfo	20	256	0	256	4	77	14	1	64	0	13	Detail Text:	0	0	0	66576	0	0	0		c256.64			0	12
+	13	detailnum	30	4	0	13	1	28	18	0	13	0	15	Detail Number:	0	0	0	66576	0	0	0		-f13			0	13
+	14	querytext_sequence	30	4	0	13	1	33	18	41	13	0	20	Querytext Sequence:	0	0	0	66576	0	0	0		-f13			0	14
+	15	userprivileges	20	32	0	32	1	48	20	0	32	0	16	User privileges:	0	0	0	66576	0	0	0		c32			0	15
+	16	objprivileges	20	32	0	32	1	47	21	1	32	0	15	Obj privileges:	0	0	0	66576	0	0	0		c32			0	16
+CUC_TRIM:
+	20	0	View Audit Record Detail	2048	0	0	0
+OC_FORM:	0	detail	Frame 'detail' in Application 'auditmgr'	Form Created by INGRES for Frame 'detail' in Application 'auditmgr'
+	75	13	0	0	4	0	1	9	0	0	0	0	0	129	0	4
+CUC_FIELD:
+	0	table_name	20	32	0	32	1	44	2	2	32	0	12	Table Name:	0	0	0	66560	1024	0	0		c32			0	0
+	1	table_owner	20	32	0	32	1	45	3	1	32	0	13	Table Owner:	0	0	0	66560	1024	0	0		c32			0	1
+	2	audit_log	20	256	0	300	5	71	5	3	60	0	11	Audit Log:	0	0	0	66576	1024	0	0		c256.60			0	2
+	3	register_date	20	25	0	25	1	40	12	0	25	0	15	Register Date:	0	0	0	66560	1024	0	0		c25			0	3
+CUC_TRIM:
+	21	0	View detail of audit log	131072	0	0	0
+OC_FORM:	0	extract	Extract audit records to file	
+	50	11	0	0	2	0	1	9	0	0	0	0	0	129	0	2
+CUC_FIELD:
+	0	format	21	12	0	10	1	36	2	0	10	0	26	Extract raw or formatted:	0	0	0	1040	0	0	0	raw	c10		format in ["raw" ,"formatted"]	0	0
+	1	filename	21	302	0	300	7	50	4	0	50	1	0	Extract File Name:	0	0	0	1040	0	0	0		c300.50			0	1
+CUC_TRIM:
+	9	0	Extract Audit Records to File	2048	0	0	0
+OC_FORM:	0	auditmgr	Frame 'auditmgr' in Application 'auditmgr'	Form Created by INGRES for Frame 'auditmgr' in Application 'auditmgr'
+	80	9	0	0	1	0	2	9	0	0	0	0	0	262208	0	3
+CUC_FIELD:
+	0	iitf	0	5	0	2	7	78	2	1	1	1	0		1	1	0	1073758241	1024	0	0					1	0
+	0	command	20	32	0	15	1	15	0	1	15	1	1		1	-1	0	65536	1088	0	0		c15			2	1
+	1	explanation	20	60	0	60	1	60	0	17	60	1	17		17	-1	0	65536	1024	0	0		c60			2	2
+CUC_TRIM:
+	23	0	Security Audit Utility	0	0	0	0
+	70	0	Menu Frame	0	0	0	0
+OC_FORM:	0	manageaudit	Frame 'manageaudit' in Application 'auditmgr'	Form Created by INGRES for Frame 'manageaudit' in Application 'auditmgr'
+	82	15	0	0	3	0	2	9	0	0	0	0	0	262208	0	5
+CUC_FIELD:
+	0	iitf	0	5	0	2	7	78	2	1	1	1	0		1	1	0	1073758241	1024	0	0					1	0
+	0	command	20	32	0	15	1	15	0	1	15	1	1		1	-1	0	65536	1088	0	0		c15			2	1
+	1	explanation	20	60	0	60	1	60	0	17	60	1	17		17	-1	0	65536	1024	0	0		c60			2	2
+	1	audit_state	21	22	0	20	1	33	10	5	20	0	13	Audit State:	0	0	0	2048	512	0	0		c20			0	3
+	2	audit_log	21	42	0	40	1	56	11	2	40	0	16	Audit Log File:	0	0	0	2048	512	0	0		c40			0	4
+CUC_TRIM:
+	11	0	Manage and Configure the Security Audit system	0	0	0	0
+	70	0	Menu Frame	0	0	0	0
+OC_FORM:	0	queries	Frame 'queries' in Application 'auditmgr'	Form Created by INGRES for Frame 'queries' in Application 'auditmgr'
+	80	22	0	0	12	0	4	9	0	0	0	0	0	262208	0	14
+CUC_FIELD:
+	0	iitf	0	4	0	2	6	78	3	1	1	1	0		1	1	0	1073758241	1024	0	0					1	0
+	0	command	20	32	0	15	1	15	0	1	15	1	1		1	-1	0	65536	1088	0	0		c15			2	1
+	1	explanation	20	60	0	60	1	60	0	17	60	1	17		17	-1	0	65536	1024	0	0		c60			2	2
+	1	table_name	21	322	0	20	1	25	1	4	20	0	5	Log:	0	0	0	2048	576	0	0		c20			0	3
+	2	table_owner	21	322	0	20	1	27	2	2	20	0	7	Owner:	0	0	0	0	576	0	0		c20			0	4
+	3	username	21	34	0	32	1	43	13	5	32	0	11	User Name:	0	0	0	0	512	0	0		c32			0	5
+	4	startdate	3	12	0	20	1	32	14	4	20	0	12	Start Date:	0	0	0	0	512	0	0		c20			0	6
+	5	enddate	3	12	0	20	1	30	15	6	20	0	10	End Date:	0	0	0	0	512	0	0		c20			0	7
+	6	database	21	34	0	32	1	42	16	6	32	0	10	Database:	0	0	0	0	512	0	0		c32			0	8
+	7	aud_status	21	3	0	1	1	9	17	8	1	0	8	Status:	0	0	0	0	512	0	0		c1			0	9
+	8	eventtype	21	34	0	32	1	44	18	4	32	0	12	Event Type:	0	0	0	0	512	0	0		c32			0	10
+	9	eventaction	21	34	0	32	1	40	19	8	32	0	8	Action:	0	0	0	0	512	0	0		c32			0	11
+	10	objectname	21	34	0	32	1	45	20	3	32	0	13	Object Name:	0	0	0	0	512	0	0		c32			0	12
+	11	extracted_rows	30	4	0	7	1	26	2	50	7	0	19	Records Extracted:	0	0	0	16779264	512	0	0		-i7			0	13
+CUC_TRIM:
+	1	11	11:49:2	1	0	0	0
+	3	12	Audit Filters	2048	0	0	0
+	16	0	Run queries against select audit log	0	0	0	0
+	70	0	Menu Frame	0	0	0	0
+OC_FORM:	0	registerlogs		
+	85	36	0	0	3	0	1	9	0	0	0	0	0	0	0	6
+CUC_FIELD:
+	0	tablename	21	34	0	32	1	44	2	5	32	0	12	Table Name:	0	0	0	1296	0	0	0		c32			0	0
+	1	auditlogfile	21	258	0	256	4	80	3	1	64	0	16	Audit Log File:	0	0	0	1040	0	0	0	current	c256.64			0	1
+	2	columns	0	10	0	3	14	62	8	5	1	3	0		1	1	0	1073741857	0	0	0					1	2
+	0	int_name	21	26	0	24	1	24	0	1	24	0	1	Audit Attribute	1	1	0	0	512	0	0		c24			2	3
+	1	yn	21	3	0	1	1	10	0	26	1	0	26	Register ?	26	1	0	0	0	0	0		c1	Enter "y" or "n"	columns.yn in [ "y", "n"]	2	4
+	2	reg_name	21	26	0	24	1	24	0	37	24	0	37	Register As	37	1	0	0	512	0	0		c24			2	5
+CUC_TRIM:
+	14	0	Register Security Audit Log	0	0	0	0
+OC_FORM:	0	removelogs	Frame 'auditlogs' in Application 'auditmgr'	Form Created by INGRES for Frame 'auditlogs' in Application 'auditmgr'
+	69	14	0	0	1	0	1	9	0	0	0	0	0	129	0	3
+CUC_FIELD:
+	0	iitf	0	8	0	2	12	67	2	1	1	3	0		0	0	0	1073741857	1024	0	0					1	0
+	0	table_name	20	32	0	32	1	32	0	1	32	0	1	Table Name	1	1	0	65536	1024	0	0		c32			2	1
+	1	table_owner	20	32	0	32	1	32	0	34	32	0	34	Table Owner	34	1	0	65536	1024	0	0		c32			2	2
+CUC_TRIM:
+	15	0	Remove security audit logs	131072	0	0	0
+OC_FORM:	0	setfilter	Set audit file filters	
+	52	15	0	0	8	0	1	9	0	0	0	0	0	129	0	8
+CUC_FIELD:
+	0	username	21	34	0	32	1	44	2	3	32	0	12	User Name :	0	0	0	0	0	0	0		c32			0	0
+	1	startdate	3	12	0	32	1	44	4	3	32	0	12	Start Date:	0	0	0	0	0	0	0		c32			0	1
+	2	enddate	3	12	0	32	1	42	5	5	32	0	10	End Date:	0	0	0	0	0	0	0		c32	End  date must be after start date	enddate>=startdate or enddate=""	0	2
+	3	database	21	34	0	32	1	42	7	5	32	0	10	Database:	0	0	0	0	0	0	0		c32			0	3
+	4	aud_status	21	3	0	1	1	9	9	7	1	0	8	Status:	0	0	0	128	0	0	0		c1		aud_status in ["Y","N",""]	0	4
+	5	eventtype	21	34	0	32	1	44	11	3	32	0	12	Event Type:	0	0	0	128	0	0	0		c32			0	5
+	6	eventaction	21	34	0	32	1	46	12	1	32	0	14	Event Action:	0	0	0	128	0	0	0		c32			0	6
+	7	objectname	21	34	0	32	1	45	14	2	32	0	13	Object Name:	0	0	0	0	0	0	0		c32			0	7
+CUC_TRIM:
+	10	0	Set Audit Filters	2048	0	0	0
+OC_FORM:	0	viewlogs0	Frame 'viewlogs' in Application 'auditmgr'	Form Created by INGRES for Frame 'viewlogs' in Application 'auditmgr'
+	80	22	0	0	1	0	2	9	0	0	0	0	0	0	0	3
+CUC_FIELD:
+	0	iitf	0	16	0	2	20	60	2	10	1	3	0		0	0	0	1073741857	1024	0	0					1	0
+	0	table_name	20	32	0	32	1	32	0	1	32	0	1	Audit Table Name	1	1	0	65536	1024	0	0		c32			2	1
+	1	register_date	20	25	0	25	1	25	0	34	25	0	34	Register Date	34	1	0	65536	1024	0	0		c25			2	2
+CUC_TRIM:
+	20	0	View Registered audit logs	131072	0	0	0
+	68	0	Browse Frame	131072	0	0	0
+OC_FORM:	0	viewrecords		
+	837	22	0	0	2	0	1	9	0	0	0	0	0	64	0	19
+CUC_FIELD:
+	0	audit_records	0	16	0	17	20	740	2	0	1	3	0		0	0	0	1073741857	0	0	0					1	0
+	0	audittime	3	12	0	20	1	20	0	1	20	3	1	Date/Time	1	1	0	65536	0	0	0		c20			2	1
+	1	user_name	20	32	0	10	1	10	0	22	10	3	22	User Name	22	1	0	65536	64	0	0		c10			2	2
+	2	auditstatus	20	1	0	1	1	4	0	33	1	3	33	Stat	33	1	0	65536	0	0	0		c1			2	3
+	3	description	20	80	0	41	1	41	0	38	41	3	38	Description	38	1	0	65536	64	0	0		c41			2	4
+	4	objecttype	20	32	0	12	1	12	0	80	12	3	80	Type	80	1	0	16842752	64	0	0		c12			2	5
+	5	auditevent	20	32	0	12	1	12	0	93	12	3	93	Action	93	1	0	16842752	64	0	0		c12			2	6
+	6	real_name	20	32	0	32	1	32	0	106	32	3	106	Real Name	106	1	0	16842752	0	0	0		c32			2	7
+	7	userprivileges	20	32	0	32	1	32	0	139	32	3	139	Userprivileges	139	1	0	16842752	0	0	0		c32			2	8
+	8	objprivileges	20	32	0	32	1	32	0	172	32	3	172	Objprivileges	172	1	0	16842752	0	0	0		c32			2	9
+	9	database	20	32	0	32	1	32	0	205	32	3	205	Database	205	1	0	16842752	0	0	0		c32			2	10
+	10	objectname	20	32	0	32	1	32	0	238	32	3	238	Objectname	238	1	0	16842752	0	0	0		c32			2	11
+	11	objectowner	20	32	0	32	1	32	0	271	32	3	271	Objectowner	271	1	0	16842752	0	0	0		c32			2	12
+	12	sessionid	20	16	0	16	1	16	0	304	16	3	304	Sessionid	304	1	0	16842752	0	0	0		c16			2	13
+	13	detailinfo	20	256	0	256	1	256	0	321	256	3	321	Detailinfo	321	1	0	16842752	0	0	0		c256			2	14
+	14	detailnum	30	4	0	13	1	13	0	578	13	3	578	Detailnum	578	1	0	16842752	0	0	0		-f13			2	15
+	15	objectlabel	60	24	0	128	1	128	0	592	128	3	592	Objectlabel	592	1	0	16842752	0	0	0		c128.128			2	16
+	16	querytext_sequence	30	4	0	13	1	18	0	721	13	3	721	Querytext Sequence	721	1	0	16842752	0	0	0		-f13			2	17
+	1	total_rows	30	4	0	10	1	25	1	1	10	0	15	Audit Records:	0	0	0	0	512	0	0		-f10			0	18
+CUC_TRIM:
+	21	0	Audit Records	2048	0	0	0

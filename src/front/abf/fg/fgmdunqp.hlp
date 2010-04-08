@@ -1,0 +1,19 @@
+/#-- Help File: fgmdunqp.hlp
+/#-- Master detail update frame, no next, user Qual, primary help file.
+This screen allows you to change displayed data. To make changes, update
+the information on the form and then select "Save".
+
+  Save        Update database with current screen data.
+  AddNew      Treat the current screen data as new information,
+              rather than as an update of existing information.
+              Save this new information to the database.
+              (optional menuitem; may not appear)
+  Delete      Delete current screen of data from Database.
+              (optional menuitem; may not appear)
+  RowDelete   Delete current row from table field.
+              (optional menuitem; may not appear)
+  RowInsert   Open new row in table field.
+              (optional menuitem; may not appear)
+  ListChoices Show valid values for current field. 
+  Help        Get help about this screen.
+  End         Leave Update mode to enter a new query.

@@ -1,0 +1,16 @@
+#
+# MANIFEST file for gl!glf!lc
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+
+
+SubDir ING_SRC gl glf lc ;
+
+IISUBSYS gl glf lc ;
+
+IILIBRARY COMPATLIB : lc.c ;
+
+IIFILES xmlname.map ;

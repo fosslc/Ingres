@@ -1,0 +1,46 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are in the Utilities sub-menu.  This sub-menu allows you to select 
+several utility operations.  Some operations are always available.  Others
+affect the current application, and so are not available if there are no
+applications in the database.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Image                   Build an executable image of the current 
+                                application that can later be run from the 
+                                operating system level.
+
+        AppReport               Generate a summary of information about
+                                the current application.  The report may be 
+                                saved or printed.
+
+        INGRES/Menu             Call INGRES/MENU.  You will then be able
+                                to call any Ingres subsystem (except 
+                                Ingres/Applications) without losing your 
+                                current context and on exit return back 
+                                to here.
+
+        Shell/Spawn/CLI         Escape to the operating system command
+                                interpreter.  Exiting the command interpreter
+                                will return back here.
+
+        Reconcile               Check for discrepancies between the tables in 
+                                the database and the definitions of specified 
+                                frames in the current application. If any are 
+                                found, change the frame definition to match 
+                                the table structure or reject the changes. 
+                                (This is only present if you are authorized to 
+                                run Vision.)
+
+        Cleanup                 Check the system catalogs for database objects
+                                that have been destroyed. If any are found, 
+                                remove the catalog entries for these objects 
+                                to free up space on your disk.
+
+        LockStatus              Examine locks for the current application.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to the current frame.

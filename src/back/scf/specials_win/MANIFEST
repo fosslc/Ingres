@@ -1,0 +1,31 @@
+#
+# MANIFEST file for back!scf!specials_win
+#
+# History :
+#	07-Oct-2004 (drivi01)
+#		Removed SDLIB from being linked into iilibscf.dll.
+#	11-Jan-2004 (drivi01)
+#	        Replace PSFLIB with import library of iilibpsf and add
+#		newly created iilibpsfdata.lib to the link line.
+#	21-Mar-2005 (drivi01)
+#	        Modified libraries being linked in to iilibscf.dll
+#		to include newly added iilibpsfdata.dll.
+
+SubDir ING_SRC back scf specials_win ;
+
+IISUBSYS back scf specials_win ;
+
+IIIMPLIBRARY $(IMPSCFLIB) : $(SCFLIB) ;
+
+IISHLIBRARY $(SHSCFLIBDATA) : $(SHSCFLIB) $(SCFLIBDATA) $(IMPCOMPATLIB) ;
+
+
+IISHLIBRARY $(SHSCFLIB) : $(IMPSCFLIBDATA) $(SCFLIB) $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA)
+	$(IMPCUFLIB) $(IMPULFLIB) $(IMPULFLIBDATA) $(IMPADFLIB) $(IMPADFLIBDATA) 
+	$(IMPDMFLIB) $(IMPDMFLIBDATA) $(IMPSXFLIB) $(IMPSXFLIBDATA) $(IMPPSFLIB) 
+	$(IMPPSFLIBDATA) $(IMPGCFLIB) $(IMPGCFLIBDATA) $(IMPQSFLIB) $(IMPQSFLIBDATA)
+	$(IMPGWFLIB) $(IMPGWFLIBDATA) $(IMPQEFLIB) $(IMPQEFLIBDATA) $(IMPRQFLIB) 
+	$(IMPRQFLIBDATA) $(IMPTPFLIB) $(IMPTPFLIBDATA) $(IMPUDTLIB) $(IMPRDFLIB) 
+	$(IMPRDTLIBDATA) $(IMPTPFLIB) $(IMPTPFLIBDATA) $(IMPOPFLIB) 
+	$(IMPOPFLIBDATA) ;
+

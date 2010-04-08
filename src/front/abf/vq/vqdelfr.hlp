@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqdelfr.hlp, behind popup asking user whether they really want to
+/#-- destroy a frame.
+/#-- 
+Destroying a frame is different from Removing a frame: 
+
+  * When you Destroy a frame, it is deleted from the application. You 
+    cannot insert it again later.  
+    - Lower-level frames in the family are removed but not destroyed.  Since 
+      they are not destroyed, they are available for inserting again later. 
+
+  * When you Remove a frame, it is not destroyed.  
+    - The menuitem that calls the frame is deleted from the parent frame.
+    - Lower-level frames in the family are removed along with the frame.
+    - All the frames that have been removed can be inserted again later.
+
+The system will not let you destroy a frame while another user is editing it.
+
+If you are not sure about destroying a frame, cancel this operation and use 
+Remove instead.  (Be aware that you may end up storing unused frames.)

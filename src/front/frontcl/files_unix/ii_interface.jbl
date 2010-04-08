@@ -1,0 +1,613 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+
+/*
+** Filename:	ii_interface.jbl
+** Purpose:	DEC FORTRAN to INGRES REL 6 C function jacket definitions
+**
+**	This is a DEC ULTRIX jacket building language source
+**	file.  It contains definitions which allow DEC ULTRIX
+**	FORTRAN(fort) to link INGRES C functions into FORTRAN
+**	programs written using embedded QUEL and SQL.  It is distributed
+**	on systems where embedded QUEL and SQL support DEC FORTRAN.
+**	Include me on the fort compile line as if it were a fortran
+**	source file.  It knows what to do with .jbl files too.
+**
+**	There should be one jacket for each interface function
+**	defined in and runsys_unix/(iiufrunt.c, iiuftb.c)
+**	and libqsys_unix/(iiuflibq.c, iiufutil.c, iiufsql.c).
+**
+**	If you get unresolved externals during linking, check to
+**	see that someone has not added a function to these files
+**	without adding a corresponding jacket to this file
+**	There may be other .jbl files which interface functions
+**	in other files. You may also need to include one or more
+**	of these on the compile line.
+**
+** History:
+**	6/14/89 (terryr) 	created file
+**
+*/
+
+
+
+/*
+** jackets for functions in runsys_unix/iiufrunt.c
+*/
+
+
+/* IIactclm - ## activate column <tablefldname> <colname> */
+IIACCL:_iiaccl_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIactcomm - ## activate command <control-key> */
+IIACTC:_iiactc_( ref:ref, ref:ref );
+
+
+/* IIactfld - ## activate field <fldname> */
+IIACTF:_iiactf_( ref:ref, ref:ref );
+
+
+/* IInmuact - ## activate menuitem <itemname> */
+IINMUA:_iinmua_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIactscrl - activate scroll[up/down] <tablefldname> */
+IIACTS:_iiacts_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIaddform - ## addform formname */
+IIADDF:_iiaddf_(ref:ref);
+
+
+/* IIchkfrm */
+IICHKF:_iichkf_;
+
+
+/* IIclrflds - ## clear field all */
+IICLRF:_iiclrf_;
+
+
+/* IIclrscr - ## clear screen */
+IICLRS:_iiclrs_;
+
+
+/* IIdispfrm - ## display <formname> */
+IIDISP:_iidisp_( ref:ref, ref:ref );
+
+
+/* IIprmptio - ## prompt _(<message> <response>) */
+IIPRMP:_iiprmp_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref,
+	ref:ref, ref:ref, ref:ref );
+
+
+/* IIendforms - ## endform */
+IIENFO:_iienfo_;
+
+
+/* IIendfrm - end frame */
+IIENDF:_iiendf_;
+
+
+/* IIendmu */
+IIENDM:_iiendm_;
+
+
+/* IIfmdatio */
+IIFMDA:_iifmda_;
+
+
+/* IIfldclear - ## clear field <fieldname> */
+IIFLDC:_iifldc_( ref:ref );
+
+
+/* IIfnames - ## Formdata */
+IIFNAM:_iifnam_;
+
+
+/* IIforminit - ## forminit <formname> */
+IIFOMI:_iifomi_( ref:ref );
+
+
+/* IIforms - ## forms */
+IIFORM:_iiform_( ref:ref );
+
+/* IIFRitIsTimeout */
+IIFRIT:_iifrit_;
+
+/* IIfrshelp - ## help_frs_(subject = string, file = string) */
+IIFRSH:_iifrsh_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIfrsinq - ## inquire_frs 'object' _(var = <frs_const>, ...) */
+IIFSIN:_iifsin_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIFRtoact - ## activate timeout */
+IIFRTO:_iifrto_(ref:ref, ref:ref);
+
+
+/* IInfrskact - ## activate frskeyN command */
+IINFRS:_iinfrs_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIfssetio - ## set_frs 'object' _(frsconst = var/val, ...) */
+IIFSSE:_iifsse_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIfsetio - ## initialize statement */
+IIFSET:_iifset_( ref:ref );
+
+
+/* IIgetoper - ## getoper_(field) */
+IIGETO:_iigeto_( ref:ref );
+
+
+/* IIgtqryio */
+IIGTQR:_iigtqr_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIhelpfile - ## helpfile <subject> <filename> */
+IIHELP:_iihelp_( ref:ref, ref:ref );
+
+
+/* IIinitmu */
+IIINIT:_iiinit_;
+
+
+/* IIiqset - ## inquire_frs 'table' <formname> _(var = column) */
+IIIQSE:_iiiqse_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIinqset - ## inquire_frs 'field' <frmname> <fldname> _(modevar = 'mode') */
+IIINQS:_iiinqs_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIiqfsio - ## inquire_frs 'object' <formname> _(var = frsconst) */
+IIIQFS:_iiiqfs_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref,
+	ref:ref, ref:ref, ref:ref );
+
+
+/* IImessage - ## message */
+IIMESS:_iimess_( ref:ref );
+
+
+/* IImuonly */
+IIMUON:_iimuon_;
+
+
+/* IIprnscr - ## printscreen [_(file = filename)] */
+IIPRNS:_iiprns_( ref:ref );
+
+
+/* IIputoper */
+IIPUTO:_iiputo_( ref:ref );
+
+
+/* IIredisp */
+IIREDI:_iiredi_;
+
+
+/* IIrescol - ## resume column <tablefield> <column> */
+IIRESC:_iiresc_( ref:ref, ref:ref );
+
+
+/* IIresfld - ## resume <fldname> */
+IIRESF:_iiresf_( ref:ref );
+
+
+/* IIresmu - ## resume menu */
+IIRESM:_iiresm_;
+
+
+/* IIresnext - ## resume */
+IIRESN:_iiresn_;
+
+
+/* IIgetfldio - ## getform I/O */
+IIGETF:_iigetf_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIretval */
+IIRETV:_iiretv_;
+
+
+/* IIrf_param - ## getform <formname> _(param (tlist, arg)) */
+IIRFPA:_iirfpa_( ref:ref, ref:ref );
+
+
+/* IIrunform */
+IIRUNF:_iirunf_;
+
+
+/* IIrunmu */
+IIRUNM:_iirunm_( ref:ref );
+
+
+/* IIputfldio - ## initialize_(fld = var, ...) */
+IIPUTF:_iiputf_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIsf_param - ## putform <formname> _(param (tlist, arg)) */
+IISFPA:_iisfpa_( ref:ref, ref:ref );
+
+
+/* IIsleep - ## sleep */
+IISLEE:_iislee_( ref:ref );
+
+
+/* IIstfsio - ## set_frs statement */
+IISTFS:_iistfs_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref,
+	ref:ref, ref:ref, ref:ref );
+
+
+/* IIvalfld - ## validate */
+IIVALF:_iivalf_( ref:ref );
+
+
+/* IInestmu - ## validate */
+IINEST:_iinest_;
+
+
+/* IIrunnest - ## validate */
+IIRUNN:_iirunn_;
+
+
+/* IIendnest - ## validate */
+IIENDN:_iiendn_;
+
+
+/* IIFRgpcontrol - POPUP forms control */
+IIFRGP:_iifrgp_( ref:ref, ref:ref );
+
+
+/* IIFRgpsetio - POPUP forms */
+IIFGPS:_iifgps_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+
+/*
+** jackets for functions in runsys_unix/iiuftb.c
+*/
+
+
+/* IItbact */
+IITBAC:_iitbac_( ref:ref, ref:ref, ref:ref );
+
+
+/* IItbinit - ## inittable formname tablefldname */
+IITBIN:_iitbin_( ref:ref, ref:ref, ref:ref );
+
+
+/* IItbsetio */
+IITBSE:_iitbse_( ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IItbsmode */
+IITBSM:_iitbsm_( ref:ref );
+
+
+/* IItclrcol - ## clearrow formname tablename 1 _(col1, col2) */
+IITCLR:_iitclr_( ref:ref );
+
+
+/* IIclrrow - ## clearrow formname tablename 3 */
+IITCLC:_iitclc_;
+
+
+/* IItcogetio - ## getrow formname tablefldname _(var = column, ...) */
+IITCOG:_iitcog_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref);
+
+
+/* IItcoputio - ## putrow formname tablefldname _(colname = var, ...) */
+IITCOP:_iitcop_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IItcolval - ## validrow formname tablefldname row _(col1, col2) */
+IITCOL:_iitcol_( ref:ref );
+
+
+/* IItdata - ## tabledata */
+IITDAT:_iitdat_;
+
+
+/* IItdatend */
+IITDTE:_iitdte_;
+
+
+/* IItdelrow - ## deleterow formname tablename [row] [out/in clause] */
+IITDEL:_iitdel_( ref:ref );
+
+
+/* IItfill - ## inittable */
+IITFIL:_iitfil_;
+
+
+/* IIhidecol - ## inittable statement with hidden column clause */
+IITHID:_iithid_( ref:ref, ref:ref );
+
+
+/* IItins - ## insertrow formname tablefldname [row] [target list] */
+IITINS:_iitins_;
+
+
+/* IItrc_param - ## getrow formname tablename _(param (tlist, arg)) */
+IITRCP:_iitrcp_( ref:ref, ref:ref );
+
+
+/* IItsc_param - ## putrow formname tablename _(param (tlist, arg)) */
+IITSCP:_iitscp_( ref:ref, ref:ref );
+
+
+/* IItscroll */
+IITSCR:_iitscr_( ref:ref, ref:ref );
+
+
+/* IItunend */
+IITUNE:_iitune_;
+
+
+/* IItunload */
+IITUNL:_iitunl_;
+
+
+/* IItvalrow - ##  validrow command */
+IITVLR:_iitvlr_;
+
+
+/* IItvalval - ## validrow command */
+IITVAL:_iitval_( ref:ref );
+
+
+
+/*
+** jackets for functions in front/libqsys_unix/iiflibq.c
+*/
+
+
+/* IIbreak */
+IIBREA:_iibrea_;
+
+
+/* IIerrtest */
+IIERRT:_iierrt_;
+
+
+/* IIexit - ## exit */
+IIEXIT:_iiexit_;
+
+
+/* IIflush */
+IIFLUS:_iiflus_(ref:ref, ref:ref);
+
+
+/* IIingopen **	- ## ingres <dbname> flags */
+IIINGO:_iiingo_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref,
+	ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref,
+	ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IInextget */
+IINEXT:_iinext_;
+
+
+/* IInexec */
+IINEXE:_iinexe_;
+
+
+/* IIeqiqio **	- ## inquire_equel statement */
+IIEQIQ:_iieqiq_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref);
+
+
+/* IIeqstio **	- ## set_equel command */
+IIEQST:_iieqst_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIparret */
+IIPARR:_iiparr_( ref:ref, ref:ref );
+
+
+/* IIparset */
+IIPARS:_iipars_( ref:ref, ref:ref );
+
+
+/* IIgetdomio */
+IIGETD:_iigetd_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIretinit */
+IIRETI:_iireti_( ref:ref, ref:ref );
+
+
+/* IIputdomio - Generated on ## append and ## replace */
+IIPUTD:_iiputd_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IInotrimio - ## append  and  ## replace */
+IINOTR:_iinotr_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIsexec */
+IISEXE:_iisexe_;
+
+
+/* IIsyncup */
+IISYNC:_iisync_( ref:ref, ref:ref );
+
+
+/* IItupget */
+IITUPG:_iitupg_;
+
+
+/* IIutsys **	- ## call <ingres subsystem>  _(parameters) */
+IIUTSY:_iiutsy_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIwritio */
+IIWRIT:_iiwrit_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsClose - close cursor */
+IICSCL:_iicscl_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsDelete - delete cursor */
+IICSDE:_iicsde_( ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsERplace - Cursor UPDATE/REPLACE end */
+IICSER:_iicser_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsRplace - Cursor UPDATE/REPLACE begin */
+IICSRP:_iicsrp_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsOpen - Cursor OPEN begin */
+IICSOP:_iicsop_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsQuery - Cursor OPEN end */
+IICSQU:_iicsqu_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsRetrieve - Cursor FETCH Begin */
+IICSRE:_iicsre_( ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsGetio - Cursor FETCH data into user variable */
+IICSGE:_iicsge_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsRtrievE - Cursor FETCH end */
+IICSRT:_iicsrt_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIexDefine - Repeat Query Definition */
+IIEXDE:_iiexde_( ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIexExec - Repeat Query Execution */
+IIEXEX:_iiexex_( ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIputctrl - Place control character in the DBMS query string */
+IIPUTC:_iiputc_( ref:ref );
+
+
+/* IIxact - { Begin, Commit, End } Transaction */
+IIXACT:_iixact_( ref:ref );
+
+
+/* IIvarstrio - Send variable to the BE as string */
+IIVARS:_iivars_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIcsRdO - Open cursor for Repeat Query readonly operations */
+IICSRD:_iicsrd_( ref:ref, ref:ref );
+
+
+/* IILQpriProcInit - { Create, Execute, Drop } procedure */
+IILQPR:_iilqpr_( ref:ref, ref:ref );
+
+
+/* IILQprsProcStatus - EXECUTE PROCEDURE control flow */
+IILPRS:_iilprs_;
+
+
+/* IILQprvProcValio - EXECUTE PROCEDURE requiring i/o */
+IILPRV:_iilprv_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIseterr - user defined error function */
+IISERR:_iiserr_( ref:ref );
+
+
+
+/*
+** jackets for functions in libqsys_unix/iiufutil.c
+** debug these jackets first, they will cause almost all your problems
+** there are other functions in this code that are not called externally
+**	do not add them to this list
+*/
+
+
+/* IInum */
+IINUM:_iinum_( ref:ref );
+
+
+/* IIstr */
+IISTR:_iistr_( descr:ref, :val{len(1)} );
+
+
+/* IIsd */
+IISD:_iisd_( descr:ref, :val{len(1)} );
+
+
+/* IIsdno */
+IISDNO:_iisdno_( descr:ref, :val{len(1)} );
+
+
+/* IIslen */
+IISLEN:_iislen_( descr:ref, :val{len(1)} );
+
+
+/* IIsadr */
+IISADR:_iisadr_( descr:ref, :val{len(1)} );
+
+
+
+/*
+** jackets for functions in libqsys_unix/iisqlf.c
+*/
+
+
+/* IIsqConnect */
+IISQCO:_iisqco_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref,
+	ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref,
+	ref:ref, ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIsqDisconnect */
+IISQDI:_iisqdi_;
+
+
+/* IIsqFlush */
+IISQFL:_iisqfl_( ref:ref, ref:ref );
+
+
+/* IIsqInit */
+IISQIN:_iisqin_( ref:ref );
+
+
+/* IIsqStop */
+IISQST:_iisqst_( ref:ref );
+
+
+/* IIsqPrint */
+IISQPR:_iisqpr_( ref:ref );
+
+
+/* IIsqUser */
+IISQUS:_iisqus_( ref:ref );
+
+
+/* IIsqPrepare */
+IISQPE:_iisqpe_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );
+
+
+/* IIsqExImmed - EXECUTE IMMEDIATE query */
+IISQEI:_iisqei_( ref:ref );
+
+
+/* IIsqExStmt - EXECUTE STATEMENT [USING ...] */
+IISQEX:_iisqex_( ref:ref, ref:ref );
+
+
+/* IIsqMods - singleton select or gateway CONNECT WITH */
+IISQMO:_iisqmo_( ref:ref );
+
+
+/* IIsqParams - Gateway WITH clause on CONNECT */
+IISQPA:_iisqpa_( ref:ref, ref:ref, ref:ref, ref:ref, ref:ref );

@@ -1,0 +1,187 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+/**
+** Name:	uigdata.qsh  -	Front-End Global Data Declarations File.
+**
+** Description:
+**	Contains the declarations for the Front-End global data shared by all
+**	modules in Front-End code.  This data is defined in "utils!ui" and
+**	"utils!ug", and is used by all higher modules above those.  It's
+**	collected into one structure to reduce the number of transfer vectors
+**	needed in VMS.
+**
+** History:
+**	Revision 6.4  89/11/30  mikes
+**	Initial revision.
+**	28-aug-1990 (Joe)
+**	    Split UIGDATA into 2 structures: one for DBMS info and
+**	    one for non-DBMS info.  Added IIUIdbdata to return the
+**	    DBMS info, and IIUIfedata to return the non-DBMS info.
+**	    IIUIgdata is no longer defined.
+**	1991/05/05  wong
+**	Added version capability levels, 'ingsql_level', 'opensql_level',
+**	'catalog_level' and 'ingquel_level' to replace 'version'.  Bug #36993.
+**	10-dec-1996 (donc)
+**	    Insure that this doesn't get included twice
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for database objects.
+**/
+
+#ifndef UIGDATA_INCLUDE
+#define UIGDATA_INCLUDE 0
+
+/*}
+** Name:	UIDBDATA - global data for DBMS session.
+**
+** Description:
+**	This contains all the information needed for a DBMS session that
+**	a Frontend is connected to.  It is used by the UI module and in
+**	various places throughout the frontends.
+**
+**	firstAutoCom	This is TRUE if the session was originally
+**		        started by FEingres, IIUIck1stAutoCom had been
+**			called prior to the original FEingres call and
+**			the autocommit state was on after the connection
+**			established by the original FEingres call.  This is
+**			used by the terminal monitor and ingmenu.
+**
+** History:
+**	11/30/89 (Mike S)	Initial Version.
+**	16-aug-1990 (Joe)
+**	    Changed to use a different structure name so that the
+**	    DBMS and non-DBMS information would reside in different structures.
+**	27-aug-1990 (Joe)
+**	    Added ROstatus for support of DB/SQL.
+**	28-sep1-1990 (Joe)
+**	    Changed firstAutoCom to mean what IIui1stAutoCom used to mean.
+**	    Added entryAC to keep the value of autocommit on entry to
+**	    a shared process.
+**	05-may-1991 (jhw)  Added version capability levels (ingsql_level, etc.)
+**	10-jun-92 (rdrane)
+**		Removed obsolete "version" from UIDBDATA, and added "dlm_Case" for
+**		6.5 delimited identifier casing.
+**	05-feb-1997 (sandyd)
+**	    Added "max_cat_col_wid" to hold value from new iidbcapability row
+**	    (MAX_CATALOG_COLUMN_WIDTH).  Note that this capability value
+**	    defaults to zero, and zero signifies "normal Ingres" catalog
+**	    widths.  On servers that can't support normal OpenROAD catalog 
+**	    column widths (approx. 1800 bytes), this value indicates the 
+**	    actual width to which the OpenROAD catalog columns have been 
+**	    truncated to accommodate the server limitation (which is 
+**	    typically something like 255 bytes, as on SQL Server).
+**	03-May-2007 (kibro01) b118230
+**	    Add date_type_alias
+**	18-Jun-2007 (kibro01) b118511/b118230
+**	    Back out change for bug 118230 - now fixed in FEadfcb() call
+*/
+#define VER_SIZE	5	/* nn.nn */
+
+EXEC SQL BEGIN DECLARE SECTION;
+##typedef struct
+##{
+EXEC SQL BEGIN EXCLUDE SECTION;
+	bool	firstAutoCom;		/* Whether autocommit state */
+	bool	isdba;			/* Whether user is DBA */
+	bool	connected;		/* Whether connect to DB */
+EXEC SQL END EXCLUDE SECTION;
+
+##	char	dba[DB_MAXNAME+1];	/* DBA's name */
+##	char	user[DB_MAXNAME+1];	/* user's name */
+## 	char	sdba[DB_MAXNAME+1];	/* DBA's name  (as in iidbconstants) */
+##	char	suser[DB_MAXNAME+1];	/* user's name (as in iidbconstants) */
+##	char  	database[FE_MAXDBNM+1];	/* Database name */
+##	char  	catowner[DB_MAXNAME+1];	/* Owner of system catalogs */
+##	char	ingsql_level[VER_SIZE+1];	/* INGRES SQL Level */
+##	char	opensql_level[VER_SIZE+1];	/* Open/SQL Level */
+##	char	catalog_level[VER_SIZE+1];	/* Standard Catalog Level */
+##	char	ingquel_level[VER_SIZE+1];	/* INGRES QUEL Level */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	/*
+	** The following are the capabilities.  Strictly speaking
+	** these are private to the ui module.
+	*/
+	i4	sql_level;		/* SQL capability level */
+	i4	quel_level;		/* QUEL capability level */
+	i4	name_Case;		/* The case of DBMS regular object names */
+	i4	dlm_Case;		/* The case of DBMS delimited object names */
+	i4	key_req;		/* Key requirements. */
+	i4	max_cat_col_wid;	/* MAX_CATALOG_COLUMN_WIDTH */
+	BITFLD	is_init:1;		/* Whether the capabilities are
+					** initialized (PRIVATE)
+					*/
+	/*
+	** The following are the capabilities bits.  A 1 means the
+	** capability is present (normally this means there was a 'Y' or
+	** a 'T' in the cap_value column of iidbcapabilities.
+	*/
+	BITFLD	isDistributed:1;	/* DISTRIBUTED is Y */
+	BITFLD  isIngres:1;		/* INGRES is Y */
+	BITFLD 	useIItables:1;		/* PHYSICAL_SOURCE is T */
+	BITFLD  hasRules:1;		/* INGRES_RULES is Y */
+	BITFLD  hasLogKeys:1;		/* INGRES_LOGICAL_KEYS is Y */
+	BITFLD  hasUADT:1;		/* INGRES_UDT is Y */
+	BITFLD  hasGroups:1;		/* INGRES_AUTH_GROUP is Y */
+	BITFLD  hasRoles:1;		/* INGRES_AUTH_ROLE is Y */
+	BITFLD  hasEscape:1;		/* ESCAPE is Y */
+	/*
+	** Following are private and are used by various modules within UI.
+	*/
+	bool	sharedSession;		/* Whether started with -X flag. */
+	i4	savept_counter;		/* Counter for savepoints. */
+	bool	in_transaction;		/* For use by uixact. */
+	i4	xactlabel;		/* For use by uixact. */
+	bool	lababort;		/* For use by uixact. */
+	i4	dmldef;			/* Used by IIUIdml. */
+	bool	ROstatus;		/* Used by feingres.qsc */
+	bool	entryAC;		/* The autocommit state on entry
+					** only valid if sharedSession is
+					** TRUE.
+					*/
+EXEC SQL END EXCLUDE SECTION;
+##} UIDBDATA;
+EXEC SQL END DECLARE SECTION;
+
+UIDBDATA	*IIUIdbdata();
+
+#define IIuiUser	IIUIdbdata()->user
+#define IIuiDBA		IIUIdbdata()->dba
+#define IIui1stAutoCom	IIUIdbdata()->firstAutoCom
+#define IIuiDatabase	IIUIdbdata()->database
+#define IIuiIsDBA	IIUIdbdata()->isdba
+
+#define IIuiSQLlevel	IIUIdbdata()->ingsql_level
+#define IIuiOpenSQLlevel	IIUIdbdata()->opensql_level
+#define IIuiCatalogLevel	IIUIdbdata()->catalog_level
+#define IIuiQUELlevel	IIUIdbdata()->ingquel_level
+
+/*}
+** Name:	UIGDATA		- Global data for frontends.
+**
+** Description:
+**	This is information that is global to a frontend session.
+**	It does not include any information about the DBMS session which
+**	is contained in the UIDBDATA structure.
+**
+** History:
+**	20-aug-1990 (Joe)
+**	    Extracted from old UIGDATA definition.
+**	<manual history entries>
+*/
+typedef struct
+{
+    bool	testing;		/* Global front end testing flag */
+    VOID	(*prompt_func)();	/* Prompt for command parameters */
+} UIGDATA;
+
+UIGDATA	*IIUIfedata();
+
+#endif

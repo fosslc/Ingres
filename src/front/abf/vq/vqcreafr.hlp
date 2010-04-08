@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqcreafr.hlp, subtopic 'Creating and inserting frames' of main AFD
+/#-- help screen.
+/#-- 
+Before you create a frame, decide on the structure of the application you are 
+developing.  Plan the "family" relationship of frames to each other, the 
+names of the frames, and the tables you will use.  To Create a frame: 
+  * Select Create from the menu.
+  * At the prompt, specify placement of the frame.
+  * Select the frame type from a popup list.
+  * Name the frame and specify the tables it will use.
+
+Instead of creating a new frames, you can insert an existing frame. When you 
+insert a frame, you also insert all the frames below it in its tree.  Because 
+a frame cannot call itself, the frame you insert cannot already appear in the 
+Application Flow Diagram above the point where you want to insert it. To 
+Insert a frame:
+  * Select Insert from the menu.
+  * At the prompt, specify placement of the frame.
+  * Select the frame you want to insert from the list of existing frames.
+  * Name the frame.

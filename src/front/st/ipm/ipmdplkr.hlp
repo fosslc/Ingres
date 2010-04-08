@@ -1,0 +1,211 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Resource List Display screen.  This screen contains an
+entry for each resource that has one or more locks granted/requested on it.
+The information displayed is sorted by database.  Page resources are listed
+under the table resource that they belong to (all pages for table "x" in
+database "test" are listed under the entry for table "x").  The Database
+name is left justified in the "DB-Table-Page" column.  The database name
+is only printed when it changes.  The same applies for table names (table
+names are indented 5 spaces).
+
+This screen allows high traffic areas to be found.  If there is much
+page locking in a given table, there will be many page type entries
+under the table entry of interest.  Of course, it is easier to select the
+"Examine" menuitem by placing the cursor on the table entry of interest.
+For example, to see what and how many locks are on table "test", place the
+cursor on that table resource entry then select the "Examine" menuitem.
+When the Lock Detail Display screen appears, there will be one lock for
+each session touching the "test" table.  If many locks are displayed, it
+is an indication that this table is a potential contention source (should
+any session attempt to lock the table shared or exclusive, for example).
+
+If a database can't be opened to display table names, IPM will displays
+"<can't find [x,y]>" instead.  X is the reltid of the table and y is the
+reltidx of that table (reltid and reltidx are columns in the iirelation
+database catalog).  When a database can't be opened it may be because the
+database is locked exclusively by another session.  It can also be caused
+by another user accessing that database using a server started up with the
+-sole or /sole option (see the Ingres Installation Guide).  If IPM 
+is in standalone mode (-s option), database names will usually be 
+unavailable as well.
+
+By selecting the "Options" menuitem, various IPM options which affect what
+resources are displayed can be viewed or modified.  Please refer to the
+help information describing the Option Selection screen.  After changing
+any of the options that affect the Resource List Display screen, it is
+a good idea to select the "Refresh" menuitem so the resource information
+displayed reflects the changed options.
+
+The only time you do not need to select the "Refresh" menuitem is when the
+options just changed would result in a subset of the resource information
+currently displayed.  For example, all resources for database "test" may
+have been selected based on the previous options.  If the new option
+settings would only select a specific resource type for that database, it is
+only necessary to return to the Lock Info Menu then select the "Resources"
+menuitem.  In any event, selecting the "Refresh" menuitem after changing the
+options will collect resource information based on the new option settings.
+
+Columns on this screen include:
+
+Id             The internal resource block identifier.
+
+GR             This indicates the mode that this resource is granted in.
+               The possible modes are:
+
+               S     Shared - used when reading.
+
+               IS    Intended shared - for table resource types, this means
+                     that there are shared page resources in this table.
+
+               X     Exclusive - used when writing.
+
+               IX    Intended exclusive - same as intended shared except
+                     pages are exclusively locked.
+
+               N     Null - used to keep a lock without causing locking
+                     contention.  It's less expensive to convert a lock
+                     than to drop and request a new lock.
+
+               SIX   Shared with intent to update.  Used with ESQL cursors.
+
+CV             This indicates the mode that this resource is converting to. 
+               (See the list above)
+
+Lock Type      The type of the resource.  Valid types are:
+
+               database     Any users connected to database will hold a
+                            database lock on that database.
+
+               table        Any user in a table will hold a table lock on
+                            that table.
+
+               page         Any user accessing a page in a table will hold a
+                            page lock on that page.
+
+               row          This lock type is held on a user table row if
+                            row level locking is enabled. It is also used 
+                            for certain system catalog operations. 
+
+               createtable  Any user creating a table will hold a createtable
+                            lock on that table.
+
+               svpage       Each page touched by a server on behalf of a
+                            session in that server will hold a server page
+                            lock.
+
+               extend       This lock type is used while extending (adding a
+                            new page to) a file.  It prevents two processes
+                            from trying to add pages to the same file at
+
+               config       This lock type is used when accessing a database
+                            config file.  The config file holds database
+                            configuration information.
+
+               dbtblid      This lock type is used to manage temp-table
+                            id's.  This does not actually lock anything, but
+                            the lock value is used to store the next table id
+                            to use for temp tables.
+
+               svdatabase   Each database opened by a server will hold a
+                            server database lock on it.
+
+               svtable      Each table touched by a session in a server will
+                            hold a server table resource lock.
+
+               event        This lock type is used by Ingres processes that
+                            use the locking system as a means to signal
+                            events.  Therefore it does not actually lock
+                            anything.
+
+               control      This is a table control lock.  It is requested in
+                            order to perform MODIFY, INDEX, RELOCATE,
+                            DESTROY, and CREATE SQL commands.  This lock is
+                            also held by sessions reading a table with
+                            readlock=nolock set.
+
+               journal      This lock type is used when accessing database
+                            journal files.  It is held only by RCP (Recovery
+                            process) and ACP (Archiver process).
+
+               opendb       Each open database in a server holds an open
+                            database resource lock.
+
+               checkpoint   Each database which has online backup running
+                            holds a checkpoint resource lock on it.
+
+               ckpcluster   This lock type is the same as checkpoint but is
+                            for VAXcluster installations of Ingres.
+
+               buffermgr    Each multiserver data buffer holds a buffer
+                            manager lock.
+
+               bufmgrdb     This is a buffer manager database lock.  It is
+                            used to determine the validity of cache
+                            contents.  When a database is opened by a server,
+                            the value in this lock is used to determine if
+                            the cached information for the database is
+                            valid.  Therefore it doesn't actually lock
+                            anything.
+
+               bufmgrtable  This lock type is the same as the buffer manager
+                            database lock, but operates on tables rather than
+                            databases.
+
+               syscontrol   This lock type is used in conjunction with user
+                            defined abstract datatypes.
+
+               eventcontrol This lock type is used in conjunction with event
+                            signaling.
+
+               ckptxn       This lock type is used to coordinate online
+                            checkpoints of a database.  All transactions which
+                            have updated the database have this lock.
+
+               audit        This lock type is used in conjunction with the
+                            auditing facility.
+
+               phpage       This lock type is used when row locking to get
+                            shared/exclusive control of page.
+
+               value        This lock type is used to lock a key value for 
+                            duplicate checking and phantom protection.             
+                            
+DB-Table-Pg    The database name, table name and/or page that this lock is
+               held on is displayed.  The values are justified and formatted.
+
+When the "More_Info" menuitem is selected, a popup containing additional
+fields for the specified resource is displayed.  The additional fields are:
+
+Value          Lock value associated with this resource
+
+Invalid        Indicates if the value is valid or not.
+
+Number of      This indicates the number of physical locks held on this
+locks          resource.
+
+The menuitems available on this screen include:
+
+Refresh        Queries the Ingres locking system for locking information.
+               Lock List and Resource information are obtained together
+               to ensure a consistent snapshot of the locking system.
+               After setting IPM Options, you should select this menuitem
+               so the locking information reflects the options you set.
+
+More_Info      Place the cursor on the desired resource and select this
+               menuitem.  The number of physical locks on the indicated
+               resource are shown, as well as some additional information.
+
+Examine        Place the cursor on the desired resource and select this
+               menuitem.  The Lock Detail Display screen is displayed.
+               It shows information for all locks on the indicated resource.
+               Other information such as the session name is also displayed.
+
+Find           Searches a column in a scrolling region (tablefield).
+               If searching a text column, Find will locate all
+               occurrences wherever they are in the column.
+
+Help           Displays this screen.
+
+End            Returns to the Lock Info Menu screen.
+
+Quit           Exits IPM.

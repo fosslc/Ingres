@@ -1,0 +1,19 @@
+User Interfaces
+
+Terminal Monitors (sql/isql/iquel) - Simple SQL/Quel interfaces to
+the Ingres Intelligent DBMS.
+
+Query-By-Forms (qbf) - An interactive, visually oriented, forms-based
+system for rapidly creating, querying, and manipulating database tables.
+
+Report-By-Forms (rbf) - An interactive, visually oriented, forms-based
+system for rapidly creating and producing simple database reports.
+
+Report-Writer (rw) - A high-level programming system for creating and
+producing complex database reports without using a 3GL.
+
+Visual-Forms-Editor (vifred) - A visually oriented tool for creating
+and editing Ingres forms.
+
+INGRES/Menu (ingmenu) - A simple forms-based front-end to the Ingres
+Query and Reporting Tools and Database Administration Tools.

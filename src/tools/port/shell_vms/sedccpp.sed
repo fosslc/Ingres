@@ -1,0 +1,12 @@
+s:^XX::
+s:(PROG0PRFX)::g
+s:(PROG1PRFX):ii:g
+s:(PROG2PRFX):ing:g
+s:(PROG3PRFX):II:g
+s:(PROG4PRFX):ii:g
+s:(PROG5PRFX):ING:g
+s:(PROG6PRFX):II:g
+s:(PRODLOC):II_SYSTEM:g
+/^--#/d
+s:(PROD1NAME):Ingres:g
+s:(PROD2NAME):ingres:g

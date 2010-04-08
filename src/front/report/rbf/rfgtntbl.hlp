@@ -1,0 +1,26 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to use an existing table to create or run a default report.
+If you are creating a report, it can then be edited to create a saved
+report in the database.  This form allows you to specify the table to use.
+
+If you are creating a report and wish to modify the list of columns that
+will be used in the report (and the order in which they appear), select the
+"ChooseColumns" menuitem.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        OK              Create/run a default report for the specified table.
+
+        Cancel          Return to the previous form without creating/running
+			a default report.
+
+        ChooseColumns   Bring up the Choose Report Columns frame to edit
+                        the list of columns to use in the default report
+			being created.
+
+        ListChoices     Produce a list of the available tables from which
+                        to create/run a default report.
+
+        Help            Prints this message.

@@ -1,0 +1,12 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Profile/Database release&submit=actProfConn.html` -->
+		<INPUT TYPE="HIDDEN" NAME="action" VALUE="delete">
+		<INPUT TYPE="HIDDEN" NAME="profile" VALUE="<!-- #ICE VAR=`:profile` -->">
+		<INPUT TYPE="HIDDEN" NAME="db" VALUE="<!-- #ICE VAR=`:db` -->">
+		Do you want to release the following profile/role association :
+		<BLOCKQUOTE>
+		The user is <!-- #ICE FUNCTION=`profile?action=retrieve&profile_id=:profile`
+					 HTML=`:profile_name <INPUT TYPE="HIDDEN" NAME="name" VALUE=":profile_name">` --><p>
+		The role is <!-- #ICE FUNCTION=`database?action=retrieve&db_id=:db`
+					 HTML=`:db_name`	-->
+		</BLOCKQUOTE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

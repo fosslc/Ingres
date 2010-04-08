@@ -1,0 +1,29 @@
+.\" $Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/offend.1,v 1.1 90/03/09 09:18:33 source Exp $
+.TH OFFEND rti rti "Relational Technology" "Relational Technology"
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+\f(CWoffend\fR \- match compiler warnings/errors with offending source lines
+.SH SYNTAX
+.ft CW
+offend
+.SH DESCRIPTION
+.PP
+\f(CWoffend\fR read lines produced by the C compiler and formats
+warnings or errors along with the source line that caused them.
+.SH EXAMPLES
+.DS
+.nf
+.ft CW
+cc -c buggy.c |& offend
+offend < buildresults
+.ft R
+.fi
+.DE
+.SH AUTHOR
+.PP
+Roger Rohrbach
+.SH CAVEATS
+.PP
+\f(CWoffend\fR ignores messages produced by the C preprocessor.
+.SH "SEE ALSO"
+cc(1)

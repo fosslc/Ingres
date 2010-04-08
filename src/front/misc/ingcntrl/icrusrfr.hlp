@@ -1,0 +1,45 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icusrfr.hlp       Catalogdb's "Information about an Ingres User" frame.
+/#subtopic "Group and Role Identifiers" icgrprol.hlp
+/#subtopic "Authorization Hierarchy" icauthhi.hlp
+/#subtopic "User Passwords" icusrpwd.hlp
+/#subtopic "User Privileges" icprivs.hlp
+/#--
+The "User" frame allows you to examine user information and change the
+user password, if applicable.
+
+	FIELD NAME	SYNOPSIS
+	----------	--------
+	User Name       Enter the name of the new user.
+	
+	Profile         Profile name to be used for the user.
+
+	Default Group	The default group id for Ingres sessions if not
+			overridden by the user or the application being run.
+
+	Expire Date     The expiry date for the user. After this date the
+			user may no longer access Ingres.
+
+	Privileges      Please see subtopic User Privileges
+
+	Audit All
+	  Activity	"yes" or "no" to indicate if all Ingres database
+			work done by the user should be audited. 
+			(ALL_EVENT security audit option.)
+
+	Audit Query
+	  Text		"yes" or "no" to indicate if the text of all 
+			queries entered by the user should be written to 
+			the security audit log. 
+			(QUERY_TEXT security audit option.)
+
+
+The menu commands are:
+	
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Help            Access the Ingres help facility.
+
+	Password        Change user password, if applicable.
+	
+	End             Return to the previous frame.

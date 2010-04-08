@@ -1,0 +1,5 @@
+# include "windows.h"
+# include "winver.h"
+# include "..\..\..\cl\clf\gv\gv.rc"
+# include "pfctrmsg.rc"
+

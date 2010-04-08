@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the description of an application component before it is
+created.  You can change the description on the form before you create the
+component.  Component creation follows selection of the Create menu item.
+
+The Name field specifies the name of the application component and must be
+a unique Ingres name among all the application's components (which includes
+frames, procedures, record types, variables, and constants) in the database.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        OK                      Create the application component.
+
+        Cancel                  Cancel the Create operation and return
+                                to the previous frame.
+
+        ListChoices             Show and select legal values for the current
+                                field.
+
+        Help                    Access the Ingres Help facility.

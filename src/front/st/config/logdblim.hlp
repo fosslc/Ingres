@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The database_limit resource specifies the maximum number of log-
+  database control blocks allowed in the logging system.  Log-database
+  control blocks are allocated from lock/log shared memory, so this
+  resource affects the size of lock/log shared memory.
+
+  One log-database control block is needed for each distinct database
+  concurrently in use in the installation.  One more is needed for non-
+  database connections to the logging system.

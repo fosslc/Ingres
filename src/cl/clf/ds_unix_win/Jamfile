@@ -1,0 +1,15 @@
+#
+# Jamfile file for cl!clf!ds_unix_win
+#
+
+SubDir ING_SRC cl clf ds_unix_win ;
+
+IISUBSYS cl clf ds_unix_win ;
+
+
+IILIBRARY COMPATLIB : dsencode.c
+	dsdecode.c
+	dsclose.c
+	ds.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : dsnat.c ;

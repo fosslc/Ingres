@@ -1,0 +1,313 @@
+/*
+**	Copyright (c) 2009 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+##include	<ui.qsh>
+##include	<uigdata.qsh>
+
+/**
+** Name:    uixact.qsc -Front-End Utility Transaction Management Module.
+**
+** Description:
+**	These are routines to simulate QUEL transactions using 
+**	the SET AUTOCOMMIT statements.  
+**	IMPORTANT NOTE:
+**		These routines assume that all INGRES FE code runs
+**	with autocommit ON, and that ALL transaction statements issued
+**	by INGRES FE products are done through this interface.
+**	Note that the forms system looks at the LIBQ transaction state
+**	information to determine whether to COMMIT after initializing
+**	a form, and so does not use these routines.
+**
+** Defines:
+**	IIUIautocommit()
+**	IIUIbeginXaction()
+**	IIUIendXaction()
+**	IIUIabortXaction()
+**	IIUIinXaction()
+**	
+** History:
+**	25-aug-1988 (danielt)
+**		written
+**	3/90 (bobm)
+**		added labelled Xact wrappers
+**	11/90 (bobm)
+**		added IIUIfxcForceXactCommit
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	14-Jan-2009 (kiria01) b120451
+**	    Applied fuller prototypes in ANSI form
+**/
+
+/*
+** label count is started at a strange number to make it unlikely
+** that a random argument to IIUIlxeLabelXactEnd will match a set
+** IIUIdbdata()->xactlabel.
+*/
+static i4  Labcount = 1001;
+
+/*
+** If this flag is turned on, SQL commits will be done before all
+** transaction starts.  This is chiefly to accomodate low traffic
+** FE's which do not run in autocommit state.   Added for fecvt60.
+*/
+static bool ForceCommit = FALSE;
+
+/*{
+** Name:	IIUIfxcForceXactCommit() -	set forced commits.
+**
+** Description:
+**	Allows the setting of a flag which will cause commits on
+**	all transaction starts, to make sure everything is "flushed".
+**
+** Inputs:
+**	state - Setting for "force commit" flag.
+**
+** History:
+**	11/90 (bobm) - written.
+*/
+VOID
+IIUIfxcForceXactCommit(state)
+bool state;
+{
+	ForceCommit = state;
+}
+
+/*{
+** Name:	IIUIautocommit() -	Set the DBMS AutoCommit State.
+**
+** Description: Routine to turn autocommit on or off.  Currently
+**	these routines use the SET AUTOCOMMIT statement.  If this 
+**	is not supported against all gateways, this routine will 
+**	need to be changed (to put support into LIBQ for this, for
+**	example).
+**
+** Inputs:
+** 	i4	set_flag; UI_AC_ON - turn autocommit on 	
+**			  UI_AC_OFF - turn autocommit off
+**
+** Returns:
+**	{DB_STATUS}	OK			successful
+**			other			dbms error
+**
+** Side Effects:
+**	changes autocommit state of the DBMS.
+**
+** History:
+**	aug-25-1988 (danielt) 
+**		written
+*/
+DB_STATUS
+IIUIautocommit(i4 set_flag)
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4	error_no;
+	EXEC SQL END DECLARE SECTION;
+
+	if (set_flag == UI_AC_OFF)
+	{
+		EXEC SQL SET AUTOCOMMIT OFF;
+		IIUIdbdata()->in_transaction = TRUE;
+	}
+	else 
+	{
+		EXEC SQL SET AUTOCOMMIT ON;
+		IIUIdbdata()->in_transaction = FALSE;
+	}
+	EXEC SQL INQUIRE_INGRES (:error_no = errorno);
+	return (error_no);
+}
+
+/*{
+** Name: IIUIlxbLabelXactBegin()
+**
+** Description: 
+**	This call is to allow us to "wrap" routines which perform
+**	transactions with a larger transaction.  This starts a transaction,
+**	and returns a number to the caller.  All transaction begin / ends
+**	will essentially be ignored until IIUIlxeLabelXactEnd is called
+**	with the same number.  If these are nested, only the outer one
+**	is effective.
+**
+**	If any aborts occur within the scope of the labelled transaction,
+**	we will abort on the end of it, which may create a redundant
+**	rollback, but is safer.  We DO actually abort on the "abort"
+**	call, to be sure it gets done. 
+**
+**	This is being provided expressly for the -q option of copyapp, and
+**	should be used with care, obviously.
+**
+** Outputs:
+**	label - label number to close transaction.
+**
+** History:
+**	3/90 (bobm)
+**		written
+*/
+DB_STATUS
+IIUIlxbLabelXactBegin(i4 *label)
+{
+	STATUS stat;
+
+	*label = ++Labcount;
+
+	if (IIUIdbdata()->xactlabel != 0)
+		return OK;
+
+	if ((stat = IIUIbeginXaction()) == OK)
+	{
+		IIUIdbdata()->xactlabel = *label;
+		IIUIdbdata()->lababort = FALSE;
+	}
+
+	return stat;
+}
+
+/*{
+** Name: IIUIlxeLabelXactEnd()
+**
+** Description: 
+**	End labelled transaction.  This will be called with the number
+**	returned by IIUIlxbLabelXactBegin, and will actually commit
+**	that transaction, if it was the "outermost" one.  If it appears
+**	that no labelled transaction is active, we just commit, although
+**	such a situation indicates something wrong.
+**
+** Outputs:
+**	label - label number to close transaction.
+**
+** History:
+**	3/90 (bobm)
+**		written
+*/
+DB_STATUS
+IIUIlxeLabelXactEnd(i4 label)
+{
+	if (IIUIdbdata()->xactlabel == 0)
+		return IIUIendXaction();
+
+	if (IIUIdbdata()->xactlabel != label)
+		return OK;
+
+	IIUIdbdata()->xactlabel = 0;
+
+	if (IIUIdbdata()->lababort)
+		return IIUIabortXaction();
+
+	return IIUIendXaction();
+}
+
+
+/*{
+** Name: IIUIbeginXaction()
+**
+** Description: simulates QUEL begin transaction statement by
+**	turning autocommit off in backend or gateway.
+**
+** Returns:
+**	{DB_STATUS}	OK			successful
+**			other			dbms error
+**
+** Side Effects:
+**	changes autocommit state of the DBMS.
+**
+** History:
+**	aug-25-1988 (danielt) 
+**		written
+*/
+DB_STATUS
+IIUIbeginXaction()
+{
+	if (IIUIdbdata()->xactlabel != 0)
+		return OK;
+	if (ForceCommit)
+	{
+		EXEC SQL COMMIT WORK;
+	}
+	return (IIUIautocommit(UI_AC_OFF));
+}
+
+/*{
+** Name: IIUIendXaction()
+**
+** Description: simulates QUEL end transaction statement by
+**	commiting all work, then turning autocommit on in backend or gateway.
+**
+** Returns:
+**	{DB_STATUS}	OK			successful
+**			other			dbms error
+** Side Effects:
+**	changes autocommit state of the DBMS.
+*
+** History:
+**	aug-25-1988 (danielt) 
+**		written
+*/
+DB_STATUS
+IIUIendXaction()
+{
+	if (IIUIdbdata()->xactlabel != 0)
+		return OK;
+	EXEC SQL COMMIT WORK;
+	return (IIUIautocommit(UI_AC_ON));	
+}
+
+/*{
+** Name: IIUIabortXaction()
+**
+** Description: simulates QUEL abort transaction statement by
+**	rolling back all work, then turning autocommit on in backend 
+**	or gateway.
+**
+** Returns:
+**	{DB_STATUS}	OK			successful
+**			other			dbms error
+**
+** Side Effects:
+**	changes autocommit state of the DBMS.
+**
+** History:
+**	aug-25-1988 (danielt) 
+**		written
+*/
+DB_STATUS
+IIUIabortXaction()
+{
+	EXEC SQL ROLLBACK WORK;
+	if (IIUIdbdata()->xactlabel != 0)
+	{
+		IIUIdbdata()->lababort = TRUE;
+		return OK;
+	}
+	return IIUIautocommit(UI_AC_ON);	
+}
+
+/*{
+** Name:	IIUIinXaction()
+**
+** Description:
+**	Boolean function returning whether there
+**	is an FE transaction currently in effect.
+**
+** Returns:
+**	{bool}	TRUE 	transaction active
+**		FALSE   no transaction active
+** History:
+**	21-apr-1989 (danielt) 
+**		written
+*/
+bool
+IIUIinXaction()
+{
+	return IIUIdbdata()->in_transaction;
+}

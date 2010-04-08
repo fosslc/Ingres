@@ -1,0 +1,6 @@
+
+  When set to ON, the opf_old_idxorder resource causes OPF to use the
+  reverse 'from' clause order when examining and adding useful secondary
+  indices.
+
+  The default value for opf_old_idxorder is OFF.

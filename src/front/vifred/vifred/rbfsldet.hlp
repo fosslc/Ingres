@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are moving a data window to a new location.  Move the cursor
+to the new position for the selected data window, and then use the
+"Place" or "Shift" menu items to perform the move.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Place           Place the component at the current position.
+
+        Left            Move the component to the left border of the form.
+
+        Center          Center the component.
+
+        Right           Move the component to the right border of the form.
+
+        Shift           Place the component at the current position,
+                        shifting all components which are to the right.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Report Layout frame, without changing 
+                        the location of the component.

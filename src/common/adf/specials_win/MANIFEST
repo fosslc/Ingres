@@ -1,0 +1,12 @@
+#
+# Jamfile file for common!adf!specials_win
+#
+
+SubDir ING_SRC common adf specials_win ;
+
+IISUBSYS common adf specials_win ;
+
+IISHLIBRARY $(SHADFLIB) : $(IMPADFLIBDATA) $(ADFLIB) $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) ;
+IINEEDOBJ $(SHADFLIB) : ultrace.c ; 
+
+IISHLIBRARY $(SHADFLIBDATA) : $(SHADFLIB) $(ADFLIBDATA) ;

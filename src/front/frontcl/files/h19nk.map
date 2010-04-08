@@ -1,0 +1,80 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* FRS mapping file for H19 with 8 Function Keys and Numeric Keypad */
+
+/* Menu Key */
+	menu = pf6 (Blue)
+
+/* Help facility */
+	frskey1 = pf7 (Red)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf8 (White)
+
+/* Exit the system */
+	frskey2 = pf5 (f5)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Bring up List Choices */
+	frskey10 = pf4 (f4)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf1 (f1)
+
+/* Select second menu item */
+	menuitem2 = pf2 (f2)
+
+/* Select third menu item */
+	menuitem3 = pf3 (f3)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlL (^L)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlDEL (Delete)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)
+
+/* Escape to shell */
+	shell = controlW (^W)

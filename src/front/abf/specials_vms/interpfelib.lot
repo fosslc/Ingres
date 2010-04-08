@@ -1,0 +1,23 @@
+!  History:
+!	19-jun-2001 (kinte01)
+!		Add support for multiple product build
+!	09-may-2003 (abbjo03)
+!	    Increment major/minor version id to 126,0 for 2.6/0305. Clean up
+!	    unused and commented out entries.
+!	06-jan-2005 (abbjo03)
+!	    Changes to build with Jam and mkshlibs.
+!
+IDENT=interplib
+GSMATCH=LEQUAL,126,0
+SYMBOL_VECTOR=(IIOtop=PROCEDURE)
+INGLIB:libinterp/include = (iltop)/lib
+INGLIB:libilrf/library
+INGLIB:libioi/library
+INGLIB:libiaom/library
+INGLIB:liboo/include=(oosymbol)	! to pick up symbols in oosymbol.roc
+INGLIB:libfeds/include=(dsf8,dsi4,dsstring,dschar)  ! to pick up symbols DSf8,
+						    ! DSi4, DSstring & DSchar
+INGLIB:libcompat/include=(dsnat, ollang)	! to pick up DSnat
+II_FRAMELIB/share
+II_LIBQLIB/share
+II_COMPATLIB/share

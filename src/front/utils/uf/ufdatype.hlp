@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You need to select a data type from the displayed list of legal data types.
+Position the cursor on the row that describes the data type that you wish to
+specify and select it.  You will then be prompted for a length specification
+(or precision and scale) if applicable.  Except for the character types,
+lengths are either not applicable or will be defaulted if you select a data
+type without specifying a length.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Select                  Choose the type described by the current
+                                row of the table field as the data type
+                                that you want.  The data type field on the
+                                form for the previous frame will be filled
+                                in with this data type description.
+
+        Help                    Access the INGRES Help facility.
+
+        End                     Return to the previous frame.

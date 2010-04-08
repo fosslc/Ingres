@@ -1,0 +1,10 @@
+;
+; tree_dll.def : .def pour dll catolbox utilisant mfc 4.0 CTreeCtrl
+;
+
+LIBRARY      CATOLBOX
+
+EXPORTS
+  LRCreateWindow        @3
+;  LRCreateWindowPrint   @4
+

@@ -1,0 +1,24 @@
+#
+# Jamfile file for gl!glf!bt
+#
+
+SubDir ING_SRC gl glf bt ;
+
+IISUBSYS gl glf bt ;
+
+
+IILIBRARY COMPATLIB : btxor.c
+	bttest.c
+	btsubset.c
+	btset.c
+	btor.c
+	btnot.c
+	btnext.c
+	bthigh.c
+	btcount.c
+	btclear.c
+	btclearmask.c
+	btand.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : bttab.roc ;
+

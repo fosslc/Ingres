@@ -1,0 +1,152 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+**  Name:	cddstbls.qsc - tables in a CDDS
+**
+**  Description:
+**	Defines
+**		cdds_regist_tables - CDDS registered tables
+**
+**  History:
+**	16-dec-96 (joea)
+**		Created based on cddstbls.osq in replicator library.
+**	18-sep-97 (joea) bug 85643
+**		Trim trailing white space from table status variables to
+**		display correct status.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmcdds_tables"),
+##	*tf_name= ERx("iitf"),
+##	*ftable_name = ERx("table_name"),
+##	*ftable_owner = ERx("table_owner"),
+##	*fcolumns = ERx("columns"),
+##	*fsupport = ERx("support"),
+##	*frules = ERx("rules");
+
+
+/*{
+** Name:	cdds_regist_tables - CDDS registered tables
+**
+** Description:
+**	Display list of tables registered in a given cdds
+**
+** Inputs:
+**	cdds_no		- CDDS number
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+cdds_regist_tables(
+i2	cdds_no)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+i2	cdds_no;
+EXEC SQL END DECLARE SECTION;
+# endif
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	char	table_name[DB_MAXNAME+1];
+##	char	table_owner[DB_MAXNAME+1];
+##	char	columns[26];
+##	char	support[26];
+##	char	rules[26];
+	EXEC SQL END DECLARE SECTION;
+	DBEC_ERR_INFO	errinfo;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+##	inittable form_name tf_name read
+
+	EXEC SQL SELECT	table_name, table_owner, columns_registered,
+			supp_objs_created, rules_created
+		INTO	:table_name, :table_owner, :columns,
+			:support, :rules
+		FROM	dd_regist_tables
+		WHERE	cdds_no = :cdds_no
+		ORDER	BY table_name;
+	EXEC SQL BEGIN;
+		STtrmwhite(columns);
+		STtrmwhite(support);
+		STtrmwhite(rules);
+		if (*columns != EOS)
+			STcopy(ERget(F_RM0038_yes), columns);
+		if (*support != EOS)
+			STcopy(ERget(F_RM0038_yes), support);
+		if (*rules != EOS)
+			STcopy(ERget(F_RM0038_yes), rules);
+##		loadtable form_name tf_name (
+##			ftable_name = table_name, ftable_owner = table_owner,
+##			fcolumns = columns, fsupport = support, frules = rules)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0013_No_data_found, UG_ERR_ERROR, 0);
+		return;
+	}
+
+##	display form_name read
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmcddstb.hlp"), ERget(F_RM0039_Cdds_tables));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##}

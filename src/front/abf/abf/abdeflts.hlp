@@ -1,0 +1,56 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the default parameters for the application.  You can
+change the values on the form and they will be saved when the application
+is saved.
+
+The Source-Code Directory field specifies the location of the directory
+that will contain any source specification files for the application and
+must have a value entered.  You should make sure this directory exists
+before you specify its location in this field.
+
+The Link Options file specifies the name of the file that contains any
+additional link commands required to link your application (if any.)
+This can be a file in the source directory for the application, or can
+be the full path name specification for the file.
+
+The Default Image field specifies the default name of the file that will
+contain an executable image when you chose to create one.  Otherwise, the
+image name will be determined from the name of the application.
+(In any case, you can change the name before you create an image.)
+
+One or the other, but not both, of the Default Start Frame or
+Default Start Procedure field can have a name entered that will specify
+the frame or procedure with which the application will begin execution
+when it is run.
+
+The Role field allows you to enter the role name under which the
+application will run.  Roles allow you to give the application permissions
+beyond those of the user running the application.  If you fill in this
+field, you will be asked to give the role's password when you test the 
+application or create an executable image.  (You can also override the
+role name when you create an image.)
+
+The next field lets you specify how the application behaves when run as
+an image.  It asks whether the application should use compiled forms for
+all Report and 4GL frames.  The usual answer is "yes".  That allows forms to
+be activated faster and makes it easier to run the image against another
+database.  If you answer "no", another field appears.  It asks whether 
+new frames should use default to using compiled forms.  When you answer this
+question, you are given the choice of converting all existing frames to the
+new default. 
+
+In Vision, another field appears.  It determines the default menu style for
+Menu frames.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        OK                      Return to the previous frame -- changes 
+                                will be saved automatically.
+
+        Cancel                  Ignore changes and return to the previous 
+                                frame.
+
+        Help                    Access the Ingres Help facility.
+

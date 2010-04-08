@@ -1,0 +1,20 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/headers.1,v 1.1 90/03/09 09:18:25 source Exp $
+.TH HEADERS 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+headers \- gives hierarchic list of header files etc
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B headers
+[ -d ] [ -l ] file(s)
+.SH DESCRIPTION
+.I Headers
+gives a full hierarchic list of all included header files, in source-code
+order, including any duplicates.  The -d option only lists any duplicate header files, while the -l option simply lists all headers included.
+.SH "SEE ALSO"
+cexpand(1)
+.SH BUGS
+.I Headers
+makes assumptions about cpp living in /lib and on the exact output format
+especially for the hierarchic print.

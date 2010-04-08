@@ -1,0 +1,176 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<er.h>
+# include	<ug.h>
+# include	<ui.h>
+# include	"ertu.h"
+# include	"tuconst.h"
+# include	<tu.h>
+
+/**
+** Name:	mqbf.qc -	Start up QBF from the TABLES UTILITY.
+**
+** Description:
+**	This contains code to spawn a QBF process. This file defines:
+**
+**	mqbfstart	Start up QBF from the TABLES UTILITY.
+**
+** History:
+**	14-apr-1987 (daver)
+**		First Documented.
+**	22-oct-1987 (peter)
+**		Change FEmsg.
+**	24-nov-1987 (peter)
+**		Add -mall flag.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	21-Aug-2009 (kschendel) 121804
+**	    Need tu.h to satisfy gcc 4.3.
+*/
+
+/* # define's */
+
+# define	QBF_START	0
+# define	QBF_TABLE	1
+# define	QBF_JOIN	2
+
+/* GLOBALDEF's */
+/* extern's */
+
+/* static's */
+
+/*{
+** Name:	mqbfstart()	- Start up a QBF process.
+**
+** Description:
+**	This routine spawns off a QBF process. It needs to be changed
+**	a bit because it is ALWAYS called in QBF_TABLE mode. Oh well.
+**
+** Inputs:
+**	type		always QBF_TABLE.
+**
+**	is_tblfield	whether to start up with 'tablefield' or 'simplefield'
+**
+**	tblname		name of the table of interest.
+**
+** Outputs:
+**	Calls QBF.
+**
+**	Returns:
+**		none.
+**
+** History:
+**	14-apr-87	(daver)		Stolen from menu.
+**	17-jan-93	(rogerl)	Remove tuchkname(), has already been
+**					check by now.
+*/
+VOID
+mqbfstart(type, is_tblfield, tblname)
+i4	type;
+i4	is_tblfield;
+char	*tblname;
+{
+	char	mqfflags[20];
+	char	sbuf[80];
+	char	buffer[80];
+	char	*sysname = ERx("qbf");
+	char	*args[10];
+	char	**argp = args;
+	i4	argcount = 0;
+
+##	message ERget(F_TU0041_Starting_QBF)
+	argp = args;
+	argcount = 0;
+	mqfflags[0] = '\0';
+	/* Add the -mAll flag so that no Start menu is given */
+	STprintf (mqfflags, ERx(" -m%s"), ERget(FE_All));
+
+	if (type == QBF_START || type == QBF_JOIN)
+	{
+		buffer[0] = '\0';
+
+# ifdef DGC_AOS
+		/*
+		** When running on DG, if the database is only open for read
+		** access then we will call QBF with the appropriate flags
+		** so that the user will go straight to the RETRIEVE frame
+		** and won't be able to APPEND or UPDATE.
+		*/
+		if (IIUIcro_CheckReadOnly())
+		{
+			STcopy(ERx(" -mretrieve +p"), mqfflags);
+		}
+# endif
+
+		if (type == QBF_JOIN)
+		{
+			STcat(mqfflags, ERx(" -j"));
+		}
+		if (FEecats())
+		{
+			STcat(mqfflags, ERx(" -e"));
+		}
+		if (mqfflags[0])
+		{
+			STcat(buffer, ERx("flags = %S"));
+			*argp++ = mqfflags;
+			argcount++;
+		}
+
+		if (FEspawn(sysname, buffer, argcount, args) != OK)
+		{
+			starterr(sysname);
+		}
+
+##		clear screen
+	}
+	else if (type == QBF_TABLE)
+	{
+		STcopy(ERx("table = %S"), buffer);
+		/* VARARGS2 */
+		STprintf(sbuf, ERx("%s"), tblname);
+		*argp++ = tblname;
+		argcount++;
+
+# ifdef DGC_AOS
+		/*
+		** When running on DG, if the database is only open for read
+		** access then we will call QBF with the appropriate flags
+		** so that the user will go straight to the RETRIEVE frame
+		** and won't be able to APPEND or UPDATE.
+		*/
+		if (IIUIcro_CheckReadOnly())
+		{
+			STcopy(ERx(" -mretrieve +p"), mqfflags);
+		}
+# endif
+
+		if (is_tblfield)
+			STcat(mqfflags, ERx(" -t"));
+		if (FEecats())
+			STcat(mqfflags, ERx(" -e"));
+		if (mqfflags[0])
+		{
+			STcat(buffer, ERx(", flags = %S"));
+			*argp++ = mqfflags;
+			argcount++;
+		}
+
+		if (FEspawn(sysname, buffer, argcount, args) != OK)
+		{
+			starterr(sysname);
+		}
+##		clear screen
+	}
+}

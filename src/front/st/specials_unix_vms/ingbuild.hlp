@@ -1,0 +1,19 @@
+(PROG2PRFX)build - (PROD1NAME) Installation Utility
+
+The interactive installation utility ((PROG2PRFX)build) is used 
+to install all files from the distribution medium to the 
+(PRODLOC) location for your installation on this node.
+
+In the Distribution field, indicate the location of your
+distribution medium by entering the full path for one of
+the following:
+    . A physical device, such as a magnetic tape drive, or
+    . A disk file that contains the 'tar' image optionally
+      copied from the distribution medium.
+If the disk resides on a different host, include the host
+name and a colon before the device or file name, e.g.:
+    myhost:/mydisk/myfile
+
+Select 'CustomInstall' to begin the custom component installation.
+
+Select 'PackageInstall' to begin the package installation.

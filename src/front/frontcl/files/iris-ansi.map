@@ -1,0 +1,96 @@
+/* Copyright (c) 2004 Ingres Corporation */
+
+/* FRS mapping file for iris-ansi */
+
+/* Menu Key */
+	menu = pf1 (F1) 
+
+/* Help facility */
+	frskey1 = pf2 (F2)
+
+/* Quit from program */
+	frskey2	= pf4 (F4)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (F3)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlB (^B)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlH (^H)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf6 (F6)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf5 (F5) 
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf7 (F7)
+
+/* Select second menu item */
+	menuitem2 = pf8 (F8)
+
+/* Select third menu item */
+	menuitem3 = pf9 (F9)
+
+/* Select fourth menu item */
+	menuitem4 = pf10 (F10)
+
+/* Select fifth menu item */
+	menuitem5 = pf11 (F11)
+
+/* Select sixth menu item */
+	menuitem6 = pf12 (F12)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlDEL (Delete)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to the next field */
+	clearrest = controlM (^M)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)

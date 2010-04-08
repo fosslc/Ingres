@@ -1,0 +1,43 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqparam.hlp, help on passing parameters between frames.
+/#-- 
+Passing parameters is a way of moving information from a parent to a child 
+frame. Use this technique to be sure a user is working with the correct data 
+and to save a user from having to re-enter data. The following rules apply:
+
+  * Pass parameters only from Append, Browse, Update or Menu frames, between 
+    variables or displayed fields, and from a parent to any number of its 
+    child frames. (Specify the parameters separately for each child frame.)
+  * The parameter you enter must be a local or global variable, a global
+    constant, a field on the form, or a 4GL expression.
+  * By default, Vision passes parameters by value; the value in the calling
+    frame remains unchanged, regardless of the operation performed on the 
+    data in the called frame.  To pass the parameter by reference, use the 
+    4GL keyword 'byref' in the Parent Frame column.  For example, to pass 
+    the field 'age' by reference, enter "byref(age)". Complex types like
+    records and arrays are always passed by reference; do not use the keyword
+    "byref" with them.
+  * The value you pass must be current for the parent frame. If you remove 
+    the value (for example, by clearing the form), it is not passed.
+  * The order in which parameters are passed is only important if the child
+    frame is a 3GL procedure.  In that case, the parameters must be passed in
+    the order in which the 3GL source code declares them.
+
+To specify a parameter, enter the value for the parent frame with the full 
+4GL specification. For 4GL procedures only (this step doesn't apply to 3GL
+procedures), press TAB and enter the name of the field on the child frame to 
+which this value should be passed. Select End to save your changes.
+
+The menuitems are:
+ Insert         Insert a blank line above the current row of the table field.
+ Delete         Delete the current row of the table field.
+ Move           Move the current row of the table field to another position.
+ Variables      Edit local or global variables.  You will see the local 
+                variables either for the parent or child frame, depending on 
+                which column of the table field you are currently in.
+ ListChoices    Display a list of choices for parameter values.  You will see
+                choices either for the parent or child frame, depending on
+                which column of the table field you are currently in.
+ Help           Access the Ingres Help facility.
+ Cancel         Cancel any changes you have made and exit this frame.
+ End            Keep any changes you have made and exit this frame.

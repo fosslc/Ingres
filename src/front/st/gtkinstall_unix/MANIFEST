@@ -1,0 +1,36 @@
+#
+# Name: MANIFEST
+#
+# Description:
+#       Custom JAM file for front!st!gtkinstall_unix
+#
+# History:
+#    17-Oct-2006 (hanje04)
+#	SIR 116877
+#	Created.
+#    25-Oct-2006 (hanje04)
+#	SIR 116877
+#	Add ingres_install.sh
+#    20-Oct-2007 (hanje04)
+#	SIR 117044
+#	Only build if BUILD_GTK_INST = TRUE (Jamdefs.abc_xyz)
+#    04-Aug-2009 (hanje04)
+#       BUG 122571
+#       Remove RPM dependecies and replace with Python module to do the same
+#       job.
+#
+
+SubDir ING_SRC front st gtkinstall_unix ;
+
+IISUBSYS front st gtkinstall_unix ;
+
+if $(BUILD_GTK_INST) = "TRUE"
+{
+    IINoHbUtilExe inginstgui : gipmain.c gipxml.c ;
+    IINoHbNeedLibs inginstgui : GINSTALLLIB RFAPILIB COMPATLIB
+	GTKLIBS XMLLIBS ;
+
+    IIBINSH ingres_install : ingres_install.sh ;
+    IIUtilPy ingpkgqry : ingpkgqry.py ;
+}
+

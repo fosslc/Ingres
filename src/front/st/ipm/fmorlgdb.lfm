@@ -1,0 +1,14 @@
+COPYFORM:	6.4	1991_08_19 08:51:27 GMT  
+FORM:	fmorelgdb	more info for dbs in log sys	
+	70	6	0	0	7	0	2	9	0	0	0	0	0	192	0	7
+FIELD:
+	0	db_id	21	10	0	8	1	12	1	1	8	0	4	ID:	0	0	0	0	0	0	0		+c8			0	0
+	1	owner	21	34	0	12	1	19	1	15	12	0	7	Owner:	0	0	0	0	64	0	0		c12			0	1
+	2	force	30	4	0	8	1	15	1	36	8	0	7	Force:	0	0	0	0	0	0	0		+i8			0	2
+	3	wait	30	4	0	8	1	14	1	53	8	0	6	Wait:	0	0	0	0	0	0	0		+i8			0	3
+	4	location	21	66	0	54	1	64	2	5	54	0	10	Location:	0	0	0	0	64	0	0		c54			0	4
+	5	lga	21	56	0	54	1	66	3	3	54	0	12	Jnl Window:	0	0	0	0	0	0	0		c54			0	5
+	6	backup	21	56	0	54	1	68	4	1	54	0	14	Start Backup:	0	0	0	0	512	0	0		c54			0	6
+TRIM:
+	0	0	6:70:0	2049	0	0	0
+	1	0	More Info	2048	0	0	0

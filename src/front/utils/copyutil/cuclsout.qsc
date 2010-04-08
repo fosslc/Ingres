@@ -1,0 +1,134 @@
+
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<oocat.h>
+# include	<cu.h>
+# include	<er.h>
+# include	"ercu.h"
+# include	<si.h>
+
+
+/**
+** Name:	cuclsout.c -    Copy a class out.
+**
+** Description:
+**	Copies a user-defined class definition to a copyutil file.
+**
+**
+** History:
+**	1/80 (billc) First Written
+**	01-May-97 (sarjo01)
+**	    Bug 81866: If attr def's did not have a long remark, the
+**	    attr would be skipped. Added UNION SELECT to account for this.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	13-May-2005 (kodse01)
+**	    replace %ld with %d for old nat and long nat variables.
+**       6-May-2008 (hanal04) Bug 120472
+**          Datatype and scale are i2's elsewhere in the code. Select
+**          the i4 columns from ii_abfclasses into i2's to avoid generating
+**          incorrect type values during export.
+**/
+
+/*{
+** Name:	IICUclwCLassWrite	-  Copy a class's attributes to a file.
+**
+** Description:
+**	Given a class id this copies the class's attribute 
+**	definitions to a copyutil file.  (The routines name is arguably a
+** 	misnomer.  The layout for the attributes
+**	of the class tables is given in the CURECORD
+**	for the attribute objects.
+**
+** Inputs:
+**	ooid		The ooid of the class to copy out.
+**	fp		The file the output to.
+**
+** Outputs:
+**	Returns:
+**		OK if succeeded.
+**		otherwise a failure status.
+**
+** History:
+**	1/80 (billc) First Written
+**	01-May-97 (sarjo01)
+**	    Bug 81866: If attr def's did not have a long remark, the
+**	    attr would be skipped. Added UNION SELECT to account for this.
+*/
+
+STATUS
+IICUclwCLassWrite(ooid, fp)
+EXEC SQL BEGIN DECLARE SECTION;
+OOID	ooid;
+EXEC SQL END DECLARE SECTION;
+FILE	*fp;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		char    a_name[FE_MAXNAME + 1];
+		i2      a_order;
+		char    a_typename[(FE_MAXNAME * 3) + 1];
+		i2      a_type;
+		i4      a_length;
+		i2      a_scale;
+		char    a_shortrem[OOSHORTREMSIZE + 1];
+		char    a_longrem[OOLONGREMSIZE + 1];
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL SELECT
+		o.object_name, c.class_order,
+		c.type_name, c.adf_type, c.adf_length, c.adf_scale,
+		o.short_remark, l.long_remark
+    	INTO
+    		:a_name, :a_order,
+    		:a_typename, :a_type, :a_length, :a_scale,
+    		:a_shortrem, :a_longrem
+	FROM
+		ii_objects o, ii_abfclasses c, ii_longremarks l
+    	WHERE
+		c.class_id = :ooid
+		AND l.object_id = c.catt_id
+		AND o.object_id = c.catt_id
+        UNION SELECT
+                o.object_name, c1.class_order,
+                c1.type_name, c1.adf_type, c1.adf_length, c1.adf_scale,
+                o.short_remark, ' ' 
+        FROM
+                ii_objects o, ii_abfclasses c1
+        WHERE
+                c1.class_id = :ooid
+                AND o.object_id = c1.catt_id
+	        AND not exists (select l.object_id from ii_longremarks l
+				where l.object_id = c1.catt_id)
+    	ORDER BY 2 asc;
+	EXEC SQL BEGIN;
+    	{
+		/* Write out the header. */
+		_VOID_ cu_wrobj(OC_RECMEM, 
+				2, /* OC_RECORD level + 1 */
+				a_name, a_shortrem, a_longrem, fp
+			);
+		/* Write out the detail line. */
+	    	SIfprintf(fp, ERx("\t%d\t%d\t%s\t%d\t%d\n"),
+			(i4) a_order,
+			a_type,
+			a_typename,
+			a_length,
+			a_scale
+		    );
+	}
+	EXEC SQL END;
+
+	return FEinqerr();
+}
+

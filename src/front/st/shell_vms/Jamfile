@@ -1,0 +1,57 @@
+#
+# Jamfile file for front!st!shell_vms
+#
+# History:
+#	17-dec-2004 (abbjo03)
+#	    Add invocations to install utility scripts.
+#	21-jan-2005 (srisu02)
+#	    Add invocations to install utility and bin scripts.
+#	22-feb-2005 (abbjo03)
+#	    Add iijobdel, ingXXXdef, iisudas/odbc, and ingdefdev scripts.
+#	03-mar-2005 (abbjo03)
+#	    Add setingreslanguage.
+#	16-may-2005 (bolke01)
+#	    Add iimkcluster, iishlib, iisunode, iiuncluster.
+#	12-Feb-2007 (bonro01)
+#	    Remove JDBC package.
+#	02-oct-2007 (abbjo03)
+#	    Fix to remove history comments from delivered ingXXXdef.com's.
+
+SubDir ING_SRC front st shell_vms ;
+
+IISUBSYS front st shell_vms ;
+
+IIExeSedShell $(ING_BUILDROOT)iijobdel : iijobdel$(SUFSH) ;
+IIExeSedShell $(ING_BUILDROOT)ingusrdef : ingusrdef$(SUFSH) ;
+IIExeSedShell $(ING_BUILDROOT)ingdbadef : ingdbadef$(SUFSH) ;
+IIExeSedShell $(ING_BUILDROOT)ingsysdef : ingsysdef$(SUFSH) ;
+
+IIUTILSH iidmfacp : iidmfacp$(SUFSH) ;
+IIUTILSH iirunacp : iirunacp$(SUFSH) ;
+IIUTILSH iishare : iishare$(SUFSH) ;
+IIUTILSH iisyschk : iisyschk$(SUFSH) ;
+IIUTILSH ingstop : ingstop$(SUFSH) ;
+IIUTILSH iigetsyi : iigetsyi$(SUFSH) ;
+IIUTILSH iigetuic : iigetuic$(SUFSH) ;
+IIUTILSH iijobdel : iijobdel$(SUFSH) ;
+IIUTILSH iircpseg : iircpseg$(SUFSH) ;
+IIUTILSH iirunrmcmd : iirunrmcmd$(SUFSH) ;
+IIUTILSH iisuabf : iisuabf$(SUFSH) ;
+IIUTILSH iisubr : iisubr$(SUFSH) ;
+IIUTILSH iisuc2 : iisuc2$(SUFSH) ;
+IIUTILSH iisudas : iisudas$(SUFSH) ;
+IIUTILSH iisudbms : iisudbms$(SUFSH) ;
+IIUTILSH iisukerberos : iisukerberos$(SUFSH) ;
+IIUTILSH iisunet : iisunet$(SUFSH) ;
+IIUTILSH iisuodbc : iisuodbc$(SUFSH) ;
+IIUTILSH iisurep : iisurep$(SUFSH) ;
+IIUTILSH iisurms : iisurms$(SUFSH) ;
+IIUTILSH iisustar : iisustar$(SUFSH) ;
+IIUTILSH iiunloadfix : iiunloadfix$(SUFSH) ;
+IIUTILSH ingdefdev : ingdefdev$(SUFSH) ;
+IIBINSH rmcmd : rmcmd$(SUFSH) ;
+IIUTILSH setingreslanguage : setingreslanguage$(SUFSH) ;
+IIUTILSH iimkcluster : iimkcluster$(SUFSH) ;
+IIUTILSH iishlib : iishlib$(SUFSH) ;
+IIUTILSH iisunode : iisunode$(SUFSH) ;
+IIUTILSH iiuncluster : iiuncluster$(SUFSH) ;

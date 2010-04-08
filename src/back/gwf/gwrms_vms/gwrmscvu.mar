@@ -1,0 +1,412 @@
+	.title	gwrmscvu
+;
+;	Copyright (c) 1990	Ingres Corp.
+;
+;
+;   Description:
+;
+;	Globally visible entry points:
+;
+;	    rms_mcvt_g_l	- convert g_float to longword
+;	    rms_mcvt_h_l	- convert h_float to longword
+;	    rms_mcvt_l_g	- convert longword to g_float
+;	    rms_mcvt_l_h	- convert longword to h_float
+;	    rms_mcvt_f_g	- convert f_float to g_float
+;	    rms_mcvt_f_h	- convert f_float to h_float
+;	    rms_mcvt_d_h	- convert d_float to h_float
+;	    rms_mcvt_p_s	- convert packed to leading numeric
+;	    rms_mcvt_p_t	- convert packed to trailing numeric
+;	    rms_mcvt_s_p	- convert leading numeric to packed
+;	    
+;   History:
+;       20-apr-90 (jrb)
+;	    Created.
+;       12-apr-93 (schang)
+;           add rms_mcvt_s_p
+	.psect	$code,	pic,usr,con,rel,lcl,shr,exe,rd,nowrt,novec,byte
+
+
+
+;
+; Name: rms_mcvt_g_l - convert g_float to longword
+;
+; Description:
+;      Convert a g_float value to a longword
+;
+; Inputs:
+;	in	address of the g_float
+;	out	address of the longword
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;	    1		Overflow
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      20-apr-89 (jrb)
+;          Written.
+;
+;in  = 4
+;out = 8
+;	.entry	rms_mcvt_g_l,^m<>
+;	clrl	r0
+;	cvtgl	@in(ap), @out(ap)
+;	bvc	cvgl99
+;	movl	#1, r0
+;cvgl99:	ret
+
+
+;
+; Name: rms_mcvt_h_l - convert h_float to longword
+;
+; Description:
+;      Convert a h_float value to a longword
+;
+; Inputs:
+;	in	address of the h_float
+;	out	address of the longword
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;	    1		Overflow
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      20-apr-89 (jrb)
+;          Written.
+;
+;in  = 4
+;out = 8
+;	.entry	rms_mcvt_h_l,^m<>
+;	clrl	r0
+;	cvthl	@in(ap), @out(ap)
+;	bvc	cvhl99
+;	movl	#1, r0
+;cvhl99:	ret
+
+
+;
+; Name: rms_mcvt_l_g - convert longword to g_float
+;
+; Description:
+;      Convert a longword to a g_float
+;
+; Inputs:
+;	in	address of the longword
+;	out	address of the g_float
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      20-apr-89 (jrb)
+;          Written.
+;
+;in  = 4
+;out = 8
+;	.entry	rms_mcvt_l_g,^m<>
+;	cvtlg	@in(ap), @out(ap)
+;	ret
+
+
+;
+; Name: rms_mcvt_l_h - convert longword to h_float
+;
+; Description:
+;      Convert a longword to a h_float
+;
+; Inputs:
+;	in	address of the longword
+;	out	address of the h_float
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      20-apr-89 (jrb)
+;          Written.
+;
+;in  = 4
+;out = 8
+;	.entry	rms_mcvt_l_h,^m<>
+;	cvtlh	@in(ap), @out(ap)
+;	ret
+
+
+;
+; Name: rms_mcvt_f_g - convert f_float to g_float
+;
+; Description:
+;      Convert a f_float to a g_float
+;
+; Inputs:
+;	in	address of the f_float
+;	out	address of the g_float
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      20-apr-89 (jrb)
+;          Written.
+;
+;in  = 4
+;out = 8
+;	.entry	rms_mcvt_f_g,^m<>
+;	cvtfg	@in(ap), @out(ap)
+;	ret
+
+
+;
+; Name: rms_mcvt_f_h - convert f_float to h_float
+;
+; Description:
+;      Convert a f_float to a h_float
+;
+; Inputs:
+;	in	address of the f_float
+;	out	address of the h_float
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      20-apr-89 (jrb)
+;          Written.
+;
+;in  = 4
+;out = 8
+;	.entry	rms_mcvt_f_h,^m<>
+;	cvtfh	@in(ap), @out(ap)
+;	ret
+
+
+;
+; Name: rms_mcvt_d_g - convert d_float to g_float
+;
+; Description:
+;      Convert a d_float to a g_float
+;
+; Inputs:
+;	in	address of the d_float
+;	out	address of the g_float
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      23-apr-89 (jrb)
+;          Written.
+;
+;in  = 4
+;out = 8
+;	.entry	rms_mcvt_d_g,^m<>
+;	pushl	in(ap)
+;	calls	#1, G^MTH$CVT_D_G
+;	movg	r0, @out(ap)
+;	ret
+
+
+;
+; Name: rms_mcvt_d_h - convert d_float to h_float
+;
+; Description:
+;      Convert a d_float to a h_float
+;
+; Inputs:
+;	in	address of the d_float
+;	out	address of the h_float
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      20-apr-89 (jrb)
+;          Written.
+;
+;in  = 4
+;out = 8
+;	.entry	rms_mcvt_d_h,^m<>
+;	cvtdh	@in(ap), @out(ap)
+;	ret
+
+
+;
+; Name: rms_mcvt_p_s - convert packed decimal to leading numeric
+;
+; Description:
+;	Convert a packed decimal value to a leading numeric value with the
+;	same precision and scale.
+;
+; Inputs:
+;	in	address of the packed decimal value
+;	prec	precision of both in and out
+;	out	address of the leading numeric buffer
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      25-apr-89 (jrb)
+;          Written.
+;
+in	= 4
+prec	= 8
+out	= 12
+	.entry	rms_mcvt_p_s,^m<>
+	cvtps	prec(ap), @in(ap), prec(ap), @out(ap)
+	ret
+
+
+;
+; Name: rms_mcvt_p_t - convert packed decimal to trailing numeric
+;
+; Description:
+;	Convert a packed decimal value to a trailing numeric value with the
+;	same precision and scale (trailing numeric is unsigned, zoned, or
+;	overpunched numeric).
+;
+; Inputs:
+;	in	address of the packed decimal value
+;	prec	precision of both in and out
+;	out	address of the trailing numeric buffer
+;	cvtab	conversion table for CVTPT instruction
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      25-apr-89 (jrb)
+;          Written.
+;
+in	= 4
+prec	= 8
+out	= 12
+cvtab	= 16
+	.entry	rms_mcvt_p_t,^m<>
+	cvtpt	prec(ap), @in(ap), @cvtab(ap), prec(ap), @out(ap)
+	ret
+;
+; Name: rms_mcvt_s_p - convert leading numeric to packed decimal
+;
+; Description:
+;	Convert a leading numeric value to a packed decimal value with the
+;	same precision and scale.
+;
+; Inputs:
+;	in	address of the leading numeric value
+;	prec	precision of both in and out
+;	out	address of the packed decimal buffer
+;
+; Outputs:
+;	*out	converted result
+;
+;	Returns:
+;	    0		Success
+;
+;	Exceptions:
+;	    none
+;
+; Side Effects:
+;	    none
+;
+; History:
+;      04-mar-1993 (schang)
+;          Written.
+;
+in	= 4
+in_prec	= 8
+out	= 12
+out_prec = 16
+	.entry	rms_mcvt_s_p,^m<>
+	cvtsp	in_prec(ap), @in(ap), out_prec(ap), @out(ap)
+	ret
+	.end

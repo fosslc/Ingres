@@ -1,0 +1,150 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for tm
+*/
+
+/*
+** History
+**	29-jan-1993 (jonb)
+**		Created.
+**	11-feb-1993 (jonb)
+**		Changes.
+**	16-mar-1993 (dianeh)
+**		Corrections; added History.
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	05-aug-1993 (tyler)
+**		Cleaned up and corrected VMS syntax errors.
+**	06-aug-1993 (tyler)
+**		Added contents of defunct itm package.
+**	23-aug-1993 (ricka)
+**		on VMS, "dayfile", "startsql", and "startup" need to be
+**		"dayfile.", "startsql." and "startup."
+**	19-sep-1993 (kellyp)
+**		Modified for the new way in which SETUP works.
+**	20-sep-1993 (kellyp)
+**		SETUP now is a file option and not a file attribute
+**		which means it appears after the file name
+**	24-sep-1993 (tyler)
+**		Moved SETUP keyword to SCRIPT declaration.
+**	03-nov-1993 (kellyp)
+**		Removed support map files in VOLUME E.
+**	05-jan-1994 (tyler)
+**		Added tm.stb for VMS.
+**      12-jan-1994 (huffman)
+**              tm.exe was not being delivered (previously it was delivered
+**              via abf.ccpp, where it really shouldn't have been.)
+**	26-apr-2000 (somsa01)
+**		Updated to handle build of different products.
+**	19-jun-2001 (kinte01)
+**		Add VMS updates to handle multiple product builds
+**	11-Jun-2004 (somsa01)
+**		Cleaned up code for Open Source.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	11-mar-2005 (sheco02)
+**	    Add dataldr to ingres TM package.
+**	16-mar-2005 (abbjo03)
+**	    Fix 11-mar change because dataldr is not built on VMS.
+**	06-Apr-2005 (sheco02)
+**	    Add dataldr to ingres TM package for LNX only because it is not 
+**	    ported to other platforms yet and it SHOULD NOT in open source.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART   tm
+   capability CI_SQL_TM
+   capability CI_QUEL_TM
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY var!lib!ingres!files
+#else
+	DIRECTORY (PROD2NAME)!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+# ifdef VMS
+      FILE dayfile.
+      FILE startsql.
+      FILE startup.
+# else /* VMS */
+      FILE dayfile.dst
+      FILE startsql.dst
+      FILE startup.dst
+# endif /* VMS */
+
+/*
+** ingres!files!english
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY (PROD2NAME)!files!english
+#endif
+   BUILD_DIR (ING_BUILD)!files!english
+      FILE fserr.hlp
+      FILE fsfile.hlp
+      FILE fslinedt.hlp
+      FILE fsoutput.hlp
+      FILE fsqinput.hlp
+      FILE fssinput.hlp
+      FILE qrhlpsql.hlp
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY (PROD2NAME)!bin
+#endif
+   BUILD_DIR (ING_BUILD)!bin
+# ifndef VMS
+      SCRIPT ingres
+      SCRIPT iquel
+      SCRIPT quel
+      SCRIPT isql
+      SCRIPT (PROG0PRFX)sql
+# endif /* VMS */
+# ifdef LNX
+      EXECUTABLE dataldr
+# endif /* LNX */
+      EXECUTABLE (PROG0PRFX)tm
+      EXECUTABLE itm
+
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY (PROD2NAME)!utility
+#endif
+# ifndef VMS
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT SETUP (PROG1PRFX)sutm
+# endif /* VMS */
+
+# ifdef VMS
+/*
+** ingres!debug
+*/
+
+   DIRECTORY (PROD2NAME)!debug
+   BUILD_DIR (ING_BUILD)!debug
+      FILE itm.stb
+      FILE (PROG0PRFX)tm.stb
+
+# endif /* VMS */

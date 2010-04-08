@@ -1,0 +1,40 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of a Report frame.  You may change
+the definition of the frame on the form and through some of the menu
+operations.  Within the running application, the frame will run the
+report named in the Report Name field.
+
+The report name is the name of an existing report in your database.
+If you wish to specify a new report using the Report-Writer command 
+language, fill in the Report Source File field with the name of the file 
+to contain the report specification.
+
+Use the Output File field to specify where the report output is to be
+directed when the application is executed.  This is either a file name
+or "printer" or "terminal."
+
+If the report has parameters, and you wish the user to specify the parameters
+in a VIFRED form, fill in the Report Form field.  If the current application 
+uses some non-compiled forms, you can specify whether to use a compiled form 
+or fetch the form from the database at run-time.
+
+Use the Command Line Flags field for any additional Report Writer flags
+you wish to use.  See the Ingres Character-based Querying and Reporting Tools
+User Guide for more information on the command line flags.
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Rename                  Give the frame a new name.
+
+        LongRemark              Display and allow editing of the long remarks.
+
+	ListChoices             Display choices for the current field.
+
+        Cancel                  Ignore any changes and return to the previous 
+                                frame.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Save any changes and return to the previous 
+                                frame.

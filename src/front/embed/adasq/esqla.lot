@@ -1,0 +1,8 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/library/include=(gver), -	! for II_copyright
+INGLIB:libadasq.olb/include=(adasq,adsqtoks,adsqscan,adasqgen), -
+INGLIB:libada.olb/library, -
+INGLIB:libequel.olb/library, -
+II_LIBQLIB/share
+II_COMPATLIB/share

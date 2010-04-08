@@ -1,0 +1,23 @@
+<!-- #ICE REPEAT VAR=`<!-- #ICE DECLARE=``server.:name=:value`` -->` -->
+
+<!-- #ICE REPEAT IF (`:ii_status_number` != `0`)
+		 THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?form=&title=Sorry`` -->
+						You cannot :action the variable :name . Please, check with you administrator`
+		 ELSE=`<!-- #ICE REPEAT INCLUDE=``begin.html?form=&title=Congratulations`` -->
+						<SCRIPT language="JavaScript">
+						top.Main.item:action(
+																	2, 
+																	'v', 
+																	0, 
+																	':name', 
+																	0, 
+																	':name', 
+																	'<!-- #ICE INCLUDE=``icon_var.gif`` -->', 
+																	'BLACK', 
+																	'serVar.html?name=:name')
+								top.Main.refresh()
+								</SCRIPT>`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+

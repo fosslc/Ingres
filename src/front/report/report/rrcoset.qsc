@@ -1,0 +1,1020 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<lo.h>
+# include	<si.h>
+# include	<st.h>
+# include	<ug.h>
+# include	<nm.h>
+# include	<stype.h>
+# include	<sglob.h>
+# include	<fedml.h>
+# include	<er.h>
+# include	<errw.h>
+
+/*{
+** Name:	r_rco_set() -	Setup Report Commands Structure from RCOMMANDS.
+**
+** Description:
+**   R_RCO_SET - read in the rows from the RCOMMANDS table and
+**	store them in the correct structures.  This simply reads
+**	in the rows in random order, and uses the sequencing
+**	information to reorder them for later processing by
+**	other routines.	 Essentially, it breaks up and sorts
+**	the RCOMMAND table.
+**
+** Parameters:
+**	uses global En_ variables as set up by r_env_set
+**
+** Returns:
+**	none.
+**
+** Called by:
+**	r_rep_load().
+**
+** Side Effects:
+**	Sets up QUR, and SRT arrays, and may
+**	set En_ferslv.name, En_file_name and En_fspec, En_qlang.
+**
+** Error Messages:
+**	Syserr: Bad RCOMMAND file.
+**
+** Trace Flags:
+**	1.0, 1.4.
+**
+** History:
+**		Revision 50.0  85/06/17	 11:22:50  wong
+**		Clean-up (lint, etc., from 4.0/02b)
+**
+**		Revision 30.5  86/03/12	 14:26:49  bruceb
+**		ifndef (SEINGRES) out most of the SQL code (for size).
+**
+**		Revision 40.6  85/11/03	 16:59:58  joe
+**		Fixed incorrect access to location structure.
+**
+**		Revision 40.3  85/08/01	 14:27:51  wong
+**		Added checks for SQL queries against available query languages.
+**
+**		12/29/81 (ps)	written.
+**		12/1/84 (rlm)	rewrite for ACT reduction - added static
+**				cache structure, change to fetch first cache
+**				Also removed formal parameter and used En_
+**				variables.  Always called previously with
+**				En_ren as an argument, and would have created
+**				inconsistent data otherwise.
+**		12/20/84 (rlm)	SORT/SRT structures merged and made dynamic
+**		7/16/85 (drh)	Added NAM_SQL as another type of query, and
+**				set En_qlang to be query language of report.
+**		17-jun-86 (mgw) bug # 9593
+**			write a newline out to the tmp file so vms treat's it
+**			as the right type of file and allows it to be read
+**			properly later.
+**
+**		23-mar-1987 (Joe)
+**			Added include of st.h and forward static declarations
+**			for record_cache, c_range and en_cache to compile
+**			on MVS.
+**		19-aug-88 (sylviap)
+**			Initializes scount, bcount, qcount and acount in 
+**			r_rco_set so can archive and edit more than once. 
+**			(#3167)
+**		26-aug-1988 (danielt)
+**			SQLized database access.
+**		09-nov-88 (marian)
+**			Modified column names for extended catalogs to allow 
+**			them to work with gateways.
+**		12-dec-88 (sylviap)
+**			Changed memory allocation from FE[t]alloc to FEreqmem.
+**		6/21/89	(elein) garnet
+**			Add pointers and structures for setup/cleanup commands
+**      	07/24/89 (martym)
+**                  Fixed bug #6883(#6879), by modifying error 902 calls
+**                  to send in a string of blanks if En_sfile happens to
+**                  be null.
+**		21-sep-89 (sylviap)
+**		    If there are no actions (En_acount=0), no fatal memory error
+**		    is printed.  RW just continues in case there are any 
+**		    .CLEANUP commands.
+**		28-sep-89 (sylviap)
+**		    Changed QFMT_ADD to use single quotes rather than double
+**		    quotes.
+**		12/21/89 (elein)
+**			Fixed rsyserr calls
+**		1/10/90 (elein)
+**			Ensure call to rsyserr uses i4 ptr
+**		27-nov-89 (sylviap)
+**		    Changed the '!=' to '<>' in QFMT_ADD for gateways. 
+**		12/18/89 (martym) (garnet)
+**		    Modularized the processing of declared variables by 
+**		    adding the routine DeclareVar(), to support Labels 
+**		    style reports.
+**		1/18/90 (elein) B9802
+**		    Check Err_count after s_readin and stop if there
+**		    were errors.  This will only be the case if the
+**		    -i flag were used.
+**		1/22/90 (martym)
+** 			Changed the max size of En_relation from FE_MAXNAME to 
+**			FE_MAXTABNAME.
+**		1/24/90 (elein)
+**			Use En_file_name as char array instead of char *.
+**			Decl changed. Also break apart SIread loop for easier
+**			debugging.
+**		2/7/90 (martym)
+**			Coding standards cleanup.
+**		3/15/90 (elein) performance
+**			Remove all code which involves action caching.
+**			It is no longer used.  All actions are to be
+**			stored in Act_cache[] array.  Also removed 
+**			unnecessary STtrmwhite calls from process_command
+**			and DeclareVar
+**              3/20/90 (elein) performance
+**                      Change STcompare to STequal
+**		4/9/90 (elein)
+**			Need to not free anything in the case of r_ach_del(7)
+**			if we are report writer.  Both pieces are necessary.
+**		10-apr-90 (sylviap)
+**			Added support for the .PAGEWIDTH command. Added 
+**			NAM_WIDTH to process_command. (US #129 & #588)
+**		5/3/90 (elein)
+**			Add back in STtrmwhite in get_fields for -i case only
+**			Trailing spaces were causing problems with the .setup 
+**			command
+**		07-oct-90 (sylviap)
+**			Checks for PAGEWIDTH in the column Rcocommand in the
+**			table, ii_rcommands.  6.4 RBF now saves the pg_width 
+**			in the first row of the query, so 6.3 rbf/rw can 
+**			continue to execute/edit 6.4 reports that do not take
+**			advantage of 6.4 features -- backwards compatibility.
+**		05-nov-90 (sylviap)
+**			Sets En_pg_width from width saved in the query in
+**			ii_rcommands.  The width does NOT have to be in the 
+**			first row of the query.  (#33894)
+**		3/15/91 (elein) b35832
+**			When writing the input file spec to a temp file
+**			St_to_term cannot be set to true or we will be trying
+**			to send to scrollable output.  Save the value
+**			and reset afterwards.  Bug actually occurs only with
+**			ABF call report with a .rw file specified with -i.
+**			St_to_term is set at this point so that RBF or ABF
+**			can output errors appropriately.
+**		24-sep-1992 (rdrane)
+**			Use new constants in (s/r)_reset invocations.
+**			Add processing for .ANSI92 command in process_command()
+**			(enable 6.5 eXpanded Name Space).  Converted r_error()
+**			err_num value to hex to facilitate lookup in errw.msg
+**			file.  Eliminate references to r_syserr() and use
+**			IIUGerr() directly.  Convert ecode to a i4  since that's
+**			what any error message expects and that's what
+**			process_command() returns.  Fix-up the declarations of
+**			internal routines.   Customized
+**			IIUGbmaBadMemoryAllocation() text to disambiguate which
+**			may have occured.  Replace En_relation reference with
+**			global FE_RSLV_NAME structure name reference.
+**		25-nov-1992 (rdrane)
+**			Rename .ANSI92 command to .DELIMID
+**			(.DELIMITEDIDENTIFIER) as per the LRC.
+**		15-jan-1993 (rdrane)
+**			Disambiguate process_command() return values.
+**		04-apr-93 (essi)
+**			As part of fix for bug 51174 placed an ORDER BY
+**			for the query on ii_rcommands table. This query
+**			returned rows out of sequence when attached to
+**			DB2. The table structure in DB2 is ISAM which is
+**			not guaranteed sorted. 
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# define	 ECODE_OK	0	/* These map to the previous codes */
+# define	 ECODE_BAD_TYPE	2
+# define	 ECODE_BAD_CNT	3
+# define	 ECODE_NO_SQL	4
+
+# define	 ECODE_AC_SEQ	10	/* These were previously all code 1*/
+# define	 ECODE_Q_SEQ	20
+# define	 ECODE_SRT_SEQ	30
+# define	 ECODE_BRK_SEQ	40
+# define	 ECODE_SU_SEQ	50
+# define	 ECODE_CU_SEQ	60
+# define	 ECODE_DEC_SEQ	70
+
+static	VOID	get_fields();
+static	i4	process_command();
+static	VOID	en_cache();
+static	VOID	DeclareVar();
+
+static	QUR	*qur;			/* ptr to QUR array element */
+static	SORT	*srt;			/* ptr to SORT array element */
+static	DCL	*dcl;			/* ptr to DCL array element */
+static	SC	*setup;			/* ptr to setup array element */
+static	SC	*cleanup;		/* ptr to cleanup array element */
+static	RCMD_REC crec;			/* retrieve buffer */
+EXEC SQL BEGIN DECLARE SECTION;
+static char	*ctype;
+static char	*cattid;
+static char	*ccommand;
+static char	*ctext;
+static char	*csection;
+static i4	csequence;
+EXEC SQL END DECLARE SECTION;
+static i4	ql_avail;		/* available query languages */
+static i4	scount = 0;		/* check of SRT count */
+static i4	bcount = 0;		/* check of BREAK count */
+static i4	qcount = 0;		/* check of QUR count */
+static i4	acount = 0;		/* check of ACT count */
+
+/*
+**	data structure for ACT cache, known to routines in this file
+**	(r_rco_set, r_gch_act, r_ch_look, r_gsv_act, r_ach_del)
+*/
+
+	static ACT *Act_cache = NULL;	/* current cache array */
+	static i2 Ach_tag = -1;		/* tag for cache array */
+	static i2 Ach_st_tag = -1;	/* tag for action storage */
+
+/*
+**	retrieve qualifier format for r_rco_set
+*/
+
+#define QFMT_DEF ERx("ii_rcommands.object_id = %d")
+
+VOID
+r_rco_set()
+{
+	/* internal declarations */
+
+	i4	ecode = ECODE_OK;		/* error code */
+	char            s_buffer[20];	/* converted sreport err code */
+	EXEC SQL BEGIN DECLARE SECTION;
+	char	qual [240];		/* retrieve qualification */
+	EXEC SQL END DECLARE SECTION;
+	char	line[MAXFLINE+1];
+	bool	to_term;
+
+		/* pointers set into RCMD_REC structure for equel */
+
+	/* start of routine, initialize counters */
+
+	scount = 0;		
+	bcount = 0;	
+	qcount = 0;
+	acount = 0;
+	cattid = crec.b_attid;
+	ccommand = crec.b_cmd;
+	ctext = crec.b_txt;
+	csection = crec.b_sect;
+	ctype = crec.b_type;
+
+	if (St_ispec)
+	{
+	    /* have SREPORT routines create a temporary file of report spec */
+
+	    to_term = St_to_term;
+	    St_to_term = FALSE;
+	    s_reset(RP_RESET_SRC_FILE, RP_RESET_REPORT, RP_RESET_LIST_END);
+	    s_readin(En_sfile);
+	    St_to_term = to_term;
+ 	    if (Err_count > 0)
+            {
+                CVna((i4)Err_count,s_buffer);  /* convert number to string */
+		r_error(0x0A, FATAL, s_buffer, NULL);
+            }
+
+	    r_fclose(Fl_rcommand);
+
+	    En_report = Cact_ren->ren_report;
+	    En_rep_owner = Cact_ren->ren_owner;
+	    En_acount = Cact_ren->ren_acount;
+	    En_qcount = Cact_ren->ren_qcount;
+	    En_scount = Cact_ren->ren_scount;
+	    En_bcount = Cact_ren->ren_bcount;
+	    En_rtype = *(Cact_ren->ren_type);
+	}
+
+#ifdef CFEVMSTAT
+	r_FEtrace (ERx("rco entry: a%d,s%d,q%d"),En_acount,En_scount,En_qcount);
+#endif
+
+	/*
+	**	the cache buffer has one element more than the cache
+	**	size for the action look ahead routine, r_ch_look.
+	**	We "cheat" and let the cache size go to En_amax + 1
+	**	if En_acount = En_amax + 1 since we'd need the extra
+	**	element anyway, and it's kind of silly to retrieve a
+	**	second cache for one action.
+	**	THIS COMMENT IS OBSOLETE.  CACHE IS NOT LONGER USED
+	*/
+	Ach_st_tag = FEgettag();
+	Ach_tag = FEbegintag ();
+	if (En_acount == 0)
+	{
+		/*
+		** If there are no action commands, do not call FEreqmem.
+		** Continue processing instead of exiting, in case there are any
+		** .CLEANUP commands to execute.
+		*/
+		Act_cache = NULL;
+	}
+	else if ((Act_cache = (ACT *)FEreqmem ((u_i4)0, 
+		(u_i4)((sizeof(ACT))*(En_acount)), TRUE, 
+		(STATUS *)NULL)) == NULL)
+	{
+               	IIUGbmaBadMemoryAllocation(ERx("r_rco_set - cache"));
+	}
+	if (En_qcount == 0)
+	{
+		Ptr_qur_arr = NULL;
+	}	
+	else if ((Ptr_qur_arr = (QUR *)FEreqmem ((u_i4)0, 
+		(u_i4)((sizeof(QUR))*(En_qcount)),TRUE, 
+		(STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("r_rco_set - query"));
+	}
+						 
+	FEendtag();
+
+	if (En_scount == 0)
+	{
+		Ptr_sort_top = NULL;
+	}	
+	else if ((Ptr_sort_top = (SORT *)FEreqmem ((u_i4)Rst4_tag, 
+		(u_i4)((sizeof(SORT))*(En_scount)), TRUE, 
+		(STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("r_rco_set - sort array"));
+	}
+
+	if (En_bcount == 0)
+	{
+		Ptr_break_top = NULL;
+	}	
+	else if ((Ptr_break_top = (char **)FEreqmem ((u_i4)Rst4_tag, 
+		(u_i4)((sizeof(char *))*(En_bcount)), TRUE, 
+		(STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("r_rco_set - break array"));
+	}
+	
+	if ((En_ferslv.name = (char *)FEreqmem ((u_i4)Rst4_tag,
+		(u_i4)(FE_MAXTABNAME+1), TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("r_rco_set - name"));
+	}
+
+	if ((En_ferslv.name_dest = (char *)FEreqmem ((u_i4)Rst4_tag,
+		(u_i4)(FE_MAXNAME+1), TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("r_rco_set - name_dest"));
+	}
+
+	if ((En_ferslv.owner_dest = (char *)FEreqmem ((u_i4)Rst4_tag,
+		(u_i4)(FE_MAXNAME+1), TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("r_rco_set - owner_dest"));
+	}
+
+
+#ifdef CFEVMSTAT
+	r_FEtrace (ERx("rco arrays: c%d"),0);
+#endif
+
+	/*
+	**  Set the default query language.  The report may not include
+	**  a .QUERY statement when read.
+	*/
+	FEdml(&En_qlang, &ql_avail);
+
+	if (St_ispec)
+	{
+	    /* read commands from temporary file created by SREPORT routines */
+
+	    if (r_fopen(En_rcommands, &Fl_rcommand) < 0)
+	    {       /* bad file */
+		if (En_sfile == NULL)
+			r_error(0x386, FATAL, " ", NULL);	/* ABORT!!!*/
+		else
+			r_error(0x386, FATAL, En_sfile, NULL);	/* ABORT!!!*/
+	    }
+
+	    while (r_readln(Fl_rcommand, line, MAXFLINE) > 0)
+	    {
+		get_fields(line);
+		ecode = process_command();
+		if (ecode != ECODE_OK)
+		{
+		    break;
+		}
+	    }
+
+	    r_fclose(Fl_rcommand);
+	    r_fdelete(En_rcommands);
+	}
+	else
+	{
+	    /*
+	    **	we can optimize the retrieve to not worry about the range
+	    **	of sequence numbers if the cache will contain all actions
+	    **	--which it will since no actions are now cached out to a file
+	    */
+	    STprintf(qual, QFMT_DEF, En_rid);
+
+
+	    /* go through RCOMMANDS rows, putting things in proper arrays */
+
+	    EXEC SQL SELECT 
+			rcosequence,
+			rcotype,
+			rcosection,
+			rcoattid,
+			rcocommand,
+			rcotext
+		INTO
+			:csequence,
+			:ctype,
+			:csection,
+			:cattid,
+			:ccommand,
+			:ctext
+		FROM ii_rcommands
+		WHERE :qual
+		ORDER BY rcotype, rcosequence;
+	    EXEC SQL BEGIN;
+		ecode = process_command();
+		if (ecode != ECODE_OK)
+		{
+		    EXEC SQL ENDSELECT;
+		}
+	    EXEC SQL END;
+	}
+
+	if  ((ecode == ECODE_OK) &&
+	     ((acount != En_acount) || (qcount != En_qcount) ||
+	      (scount != En_scount) || (bcount != En_bcount)))
+	{
+		ecode = ECODE_BAD_CNT;
+	}
+
+	if (ecode != ECODE_OK)
+	{	/* error in file */
+# ifdef SQL
+	    if (ecode == ECODE_NO_SQL)
+		r_error(0x3DF, FATAL, En_ren->ren_report, ERx("sql"), NULL);
+	    else
+# endif
+		IIUGerr(E_RW0041_Error_in_RCOMMANDS,UG_ERR_FATAL,1,&ecode);
+	}
+
+	/* set current action to first */
+	Sequence_num = 1;
+
+	/*
+	**	opening temp file with unique name in current directory
+	**	On failure, SIopen leaves Act_tf NULL.	We only need the
+	**	temp file for report writer, not rbf or sreport.  It also
+	**	makes no sense to tag the storage for the filename for
+	**	this reason (name needed until report finishes).
+	**	OBSOLETE--temp file creation removed
+	*/
+
+#ifdef CFEVMSTAT
+	r_FEtrace (ERx("rco exit"),0);
+#endif
+
+	return;
+}
+
+static
+VOID
+get_fields(line)
+char	*line;
+{
+    char	*start;
+
+    /* skip id */
+    line = STindex(line, F_DELIM, 0);
+    line++;
+
+    start = line;
+    line = STindex(line, F_DELIM, 0);
+    *line++ = EOS;
+    STcopy(start, ctype);
+
+    start = line;
+    line = STindex(line, F_DELIM, 0);
+    *line++ = EOS;
+    CVan(start, &csequence);
+
+    start = line;
+    line = STindex(line, F_DELIM, 0);
+    *line++ = EOS;
+    STcopy(start, csection);
+
+    start = line;
+    line = STindex(line, F_DELIM, 0);
+    *line++ = EOS;
+    STcopy(start, cattid);
+
+    start = line;
+    line = STindex(line, F_DELIM, 0);
+    *line++ = EOS;
+    STcopy(start, ccommand);
+
+    STtrmwhite(line);
+    STcopy(line, ctext);
+
+    return;
+}
+
+static
+i4
+process_command()
+{
+    SC		*tsc;		/* temp setup/cleanup struct */
+    i4		r_margin;
+
+
+    if (STequal(ctype,NAM_ACTION) )
+    {
+	/* ACTION type */
+
+	if (csequence<1 || csequence>En_acount)
+	{
+	    return ECODE_AC_SEQ;	/* will abort */
+	}
+
+	/* move data into appropriate fields */
+	en_cache (&crec,csequence-1);
+
+	acount++;
+    }
+    else if ( (STequal(ctype,NAM_QUERY) ) ||
+		((ql_avail == FEDMLSQL || ql_avail == FEDMLBOTH) &&
+			    STequal(ctype,NAM_SQL) ) )
+    {
+	/* QUERY type */
+
+# ifdef SQL
+	En_qlang = STequal(ctype,NAM_SQL)  ? FEDMLSQL : FEDMLQUEL;
+# endif
+
+	if (csequence<1 || csequence>En_qcount)
+	{
+	    return ECODE_Q_SEQ;		/* will abort */
+	}
+
+	/* 
+	** Check if the report width was saved.  Starting
+	** w/ 6.4 RBF, the width is saved in 'command'
+	** column.  This is a kludge to be able to save the width in a
+	** manner that would allow 6.3 RW and RBF to run 6.4 reports
+	** without breaking it.  It is necessary to have backward compatibility
+	** w/6.4 reports.
+	** For RBF, the width is saved in rFm_data; for SREPORT, in s_q_add; 
+	** for COPYREP/ARCHIVE, in cr_wrt_rep.
+	**
+	** Only set En_pg_width if not already set.  .PAGEWIDTH and the -l can
+	** override.
+	*/
+	if ((CVan (ccommand, &r_margin) == OK) &&
+	     (r_margin != 0) &&
+	     (En_pg_width[0] == '\0'))
+	{
+	      STcopy(ccommand, En_pg_width);
+	}
+	/* move data into appropriate fields */
+
+	qur = &(Ptr_qur_arr[csequence-1]);
+	qur->qur_section = FEtsalloc(Ach_tag, csection);
+	qur->qur_attid = FEtsalloc(Ach_tag, cattid);
+	qur->qur_text = FEtsalloc(Ach_tag, ctext);
+
+	qcount++;
+    }
+    else if (STequal(ctype,NAM_SORT) )
+    {
+	/* SORT type */
+
+	if (csequence<1 || csequence>En_scount)
+	{
+	    return ECODE_SRT_SEQ;		/* will abort */
+	}
+
+	/* move data into appropriate fields */
+
+	srt = &(Ptr_sort_top[csequence-1]);
+	srt->sort_attid = FEtsalloc(Rst4_tag, cattid);
+	srt->sort_break = FEtsalloc(Rst4_tag, ccommand);
+	srt->sort_direct = FEtsalloc(Rst4_tag, ctext);
+
+	scount++;
+    }
+    else if (STequal(ctype, NAM_BREAK) )
+    {
+	/* BREAK type */
+
+	if (csequence < 1 || csequence > En_bcount)
+	{
+	    return ECODE_BRK_SEQ;		/* will abort */
+	}
+
+	/* move data into appropriate fields */
+
+	Ptr_break_top[csequence-1] = FEtsalloc(Rst4_tag, cattid);
+
+	bcount++;
+    }
+    else if (STequal(ctype,NAM_SETUP) )
+    {
+	/* SETUP type */
+
+	if (csequence < 1)
+	{
+	    return ECODE_SU_SEQ;		/* will abort */
+	}
+
+	/* move data into appropriate fields */
+
+	if ((tsc = (SC *)FEreqmem ((u_i4)Rst4_tag, 
+		(u_i4)(sizeof(SC)), TRUE, (STATUS *)NULL)) == NULL)
+	{
+                IIUGbmaBadMemoryAllocation(ERx("process_command - setup"));
+	}
+	if (Ptr_set_top == NULL)
+	{
+	    Ptr_set_top = setup = tsc;
+	}
+	else
+	{
+	    setup->sc_below = tsc;
+	    setup = setup->sc_below;
+	}
+
+	setup->sc_text = FEtsalloc(Rst4_tag, ctext);
+	setup->sc_below = NULL;
+    }
+    else if (STequal(ctype,NAM_CLEANUP) )
+    {
+	/* SETUP type */
+
+	if (csequence < 1)
+	{
+	    return ECODE_CU_SEQ;		/* will abort */
+	}
+
+	/* move data into appropriate fields */
+
+	if ((tsc = (SC *)FEreqmem ((u_i4)Rst4_tag, 
+		(u_i4)(sizeof(SC)), TRUE, (STATUS *)NULL)) == NULL)
+	{
+                IIUGbmaBadMemoryAllocation(ERx("process_command - cleanup"));
+	}
+	if (Ptr_clean_top == NULL)
+	{
+	    Ptr_clean_top = cleanup = tsc;
+	}
+	else
+	{
+	    cleanup->sc_below = tsc;
+	    cleanup = cleanup->sc_below;
+	}
+
+	cleanup->sc_text = FEtsalloc(Rst4_tag, ctext);
+	cleanup->sc_below = NULL;
+    }
+    else if (STequal(ctype,NAM_DECLARE) )
+    {
+	/* DECLARE type */
+
+	if (csequence < 1)
+	{
+	    return ECODE_DEC_SEQ;		/* will abort */
+	}
+
+	_VOID_ DeclareVar(cattid, ctext);
+
+    }
+    else if (STequal(ctype,NAM_OUTPUT) )
+    {
+	/* OUTPUT type */
+
+	STcopy(ctext, En_file_name);
+    }
+    else if (STequal(ctype,NAM_TABLE) )
+    {
+	/* TABLE type */
+
+	STcopy(ctext, En_ferslv.name);
+    }
+    else if (STequal(ctype,NAM_WIDTH) )
+    {
+	/* pagewidth type #129, #588 */
+
+	STcopy(ctext, En_pg_width);
+	St_pgwdth_cmd = TRUE;
+    }
+# ifdef SQL
+    else if (STequal(ctype, NAM_SQL) )
+    {
+	/* SQL Query not available */
+	return ECODE_NO_SQL;
+    }
+# endif
+    else if (STequal(ctype, NAM_DELIMID))
+    {
+	/*
+	** Enable expanded namespace - delim id's, etc. 
+	** SREPORT will have screened multiple occurances,
+	** so we shouldn't have to ...
+	*/
+	St_xns_given = TRUE;
+    }
+    else
+    {
+	/* Bad type  if it made it here */
+	return ECODE_BAD_TYPE;
+    }
+
+    return ECODE_OK;
+}
+
+
+/*
+**    R_GCH_ACT - return a pointer to an action in the cache.  If not in
+**	current cache, a new cache is retrieved.
+**
+**	Parameters:
+**		pos - zero if second argument is a relative offset from last
+**			record retrieved, non-zero for second argument an
+**			absolute sequence number.
+**		cmd - sequence number or relative offset.
+**
+**	Returns:
+**		pointer to the ACT element in the cache.
+**		NULL for failure.
+**
+**	Called by:
+**		r_advance, r_g_eskip, r_tcmdset.
+**		cr_wrt_rep in copyrep
+**
+**	Side Effects:
+**		only to static data used by routines in this file:
+**		cache, cache pointer and temp file updated.
+**
+**	Trace Flags:
+**		1.0, 1.4.
+**
+**	History:
+**		12/1/84 (rlm)	written
+**		3/15/90 (elein) performance
+**		Only return the address requested--dont
+**		check range or anything else
+**
+*/
+ACT *
+r_gch_act (pos, cmd)
+i2	pos;	/* 0 = relative, else absolute */
+i4	cmd;	/* seq. number or offset */
+{
+	i4		new;	/* temp to check new value before update */
+
+	new = (pos == 0) ? Sequence_num + cmd : cmd;
+
+	/* return NULL if out of range or no cache */
+	if (new < 1 || new > En_acount || En_acount <= 0)
+		return (NULL);
+
+	/* update Sequence_num and return pointer to element */
+	Sequence_num = new;
+	return (Act_cache + Sequence_num -1);
+}
+/*
+**    R_CH_LOOK - look ahead at next item in cache without bumping
+**		current pointer.  This routine allows r_g_eskip to
+**		reject an action without causing extra retrieves on
+**		cache boundaries.  Works by having actually an extra
+**		element in the cache array.  If r_gch_act is called
+**		we then actually do another retrieve
+**
+**	Parameters:
+**		none
+**
+**	Returns:
+**		pointer to the next ACT element.
+**		NULL for failure.
+**
+**	Called by:
+**		r_g_eskip
+**
+**	Side Effects:
+**		none
+**
+**	History:
+**		12/1/84 (rlm)	written
+*/
+
+ACT *
+r_ch_look()
+{
+	if (Sequence_num >= En_acount)
+		return (NULL);
+
+	return (Act_cache + Sequence_num );
+}
+
+/*
+**    R_ACH_DEL -  cleanup / initialize action cache.  Can be called
+**		with all initialization phases, will do nothing for
+**		those that don't apply.	 Phase 0 removes temp file, and
+**		is called by r_exit.
+**
+**	Parameters:
+**		n - initialization phase, consistent with r_reset().
+**
+**	Returns:
+**		none
+**
+**	Called by:
+**		r_reset
+**		r_exit
+**
+**	Side Effects:
+**		cleanup / initialize static data in this file:
+**		cache, cache pointer and temp file.
+**
+**	Trace Flags:
+**		1.0, 1.4.
+**
+**	History:
+**		12/1/84 (rlm)	written
+**		3/20/90 (elein) performance
+**		removed closing and deleting action file and
+**		Commented out freeing up action cache array
+**		8-oct-1992 (rdrane)
+**			Fix-up to use r_reset() manifest constants.
+**			Eliminate cases which behave exactly like default.
+*/
+VOID
+r_ach_del (n)
+i2	n;	/* reset phase from r_reset */
+{
+
+	switch (n)
+	{
+	case RP_RESET_CLEANUP:
+		if (En_program != PRG_REPORT)
+		{
+			/* Don't free action cache
+			** Keep around for error
+			** messages for report writer only
+			*/
+			if (Ach_tag > 0)
+			{
+				FEfree (Ach_tag);
+			}
+			Ach_tag = -1;
+			if (Ach_st_tag > 0)
+			{
+				FEfree (Ach_st_tag);
+			}
+			Ach_st_tag = -1;
+		}
+		Ptr_qur_arr = NULL;
+		break;
+	default:
+		break;
+	}
+
+	return;
+}
+
+/*
+**    R_GSV_ACT - get a saved action from the temporary file for
+**		diagnostics after the cache has been closed.  Should
+**		not be called before the run phase of the report.
+**		r_ach_del(RP_RESET_CLEANUP) makes r_gsv_act legal.
+**
+**	Parameters:
+**		cmd - sequence number of desired command.
+**		r - RCMD_REC structure pointing to contain record.
+**
+**	Returns:
+**		0 for failure, 1 for success
+**
+**	Called by:
+**		r_runerr
+**
+**	Side Effects:
+**		none
+**
+**	Trace Flags:
+**		1.0, 1.4.
+**
+**	History:
+**		12/1/84 (rlm)	written
+**		3/15/90 (elein) removed/performance
+**		no longer saving actions out to a file
+**			
+**	r_gsv_act (cmd,r)
+**	i4		cmd;	* action desired *
+**	RCMD_REC	*r;	* storage for action *
+**	{
+**	}
+/*
+**	record_cache utility writes Act_cache to temporary file.  Even if
+**	Act_tf is NULL, this routine is called so Rec_seq updated to show
+**	cache "recorded".  Assumes consecutive writes to file before any
+**	read operations.  Since strings are null terminated, padding in xbuf
+**	can be whatever garbage bytes are present.
+**
+**	Rec_seq is now OBSOLETE
+**	History:
+**		3/15/90 (elein) removed/performance
+**		no longer saving actions out to a file
+**			
+**	static
+**	record_cache ()
+**	{
+**	}
+**	c_range utility sets range of cache containing a given
+**	sequence number, including truncation of last range
+**	since it's for internal use, it doesn't range check seq.
+**	History:
+**		3/15/90 (elein) removed/performance
+**		no longer saving actions out to a file
+**			
+*/
+
+/*
+**	en_cache utility inserts a retrieved action into the cache.
+**	uses globally defined tag to store text.
+*/
+
+static
+VOID
+en_cache (rec, idx)
+register RCMD_REC	*rec;	/* record */
+i4			idx;	/* index in cache */
+{
+	register ACT	*act = &Act_cache[idx];
+
+	act->act_section = FEtsalloc(Ach_st_tag, rec->b_sect);
+	act->act_attid = FEtsalloc(Ach_st_tag, rec->b_attid);
+	act->act_command = FEtsalloc(Ach_st_tag, rec->b_cmd);
+	act->act_text = FEtsalloc(Ach_st_tag, rec->b_txt);
+
+	return;
+}
+
+/*
+** Name:    DeclareVar - Process commands for .DECLARE
+**
+** Description:
+**         This routine is called to process a ".DECLARE" stmt.
+**
+**/
+
+static
+VOID
+DeclareVar(Cattid, Ctext)
+char *Cattid;
+char *Ctext;
+{
+
+    	DCL *tdcl;
+
+	/* 
+	** move data into appropriate fields 
+	*/
+
+	if ((tdcl = (DCL *)FEreqmem ((u_i4)Rst4_tag, 
+		(u_i4)(sizeof(DCL)), TRUE, (STATUS *)NULL)) == NULL)
+	{
+                IIUGbmaBadMemoryAllocation(ERx("DeclareVar"));
+	}
+	if (Ptr_dcl_top == NULL)
+	{
+	    Ptr_dcl_top = dcl = tdcl;
+	}
+	else
+	{
+	    dcl->dcl_below = tdcl;
+	    dcl = dcl->dcl_below;
+	}
+
+	dcl->dcl_name = FEtsalloc(Rst4_tag, Cattid);
+	dcl->dcl_datatype = FEtsalloc(Rst4_tag, Ctext);
+	dcl->dcl_below = NULL;
+
+	return;
+
+}

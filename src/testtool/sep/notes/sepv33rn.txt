@@ -1,0 +1,1088 @@
+
+
+			Release Notes for SEP V3.3
+			==========================
+
+		   Summary of Feature Changes/Additions
+		   ====================================
+
+
+1) SEP tracing feature:
+
+    In SEP V3.2 the command:
+
+	? sepset trace [option[,option]...]
+	<<
+	>>
+
+    created a file, trace1.stf. Turning off tracing with:
+
+	? unsepset trace
+	<<
+	>>
+
+    closed the file, trace1.stf. If tracing was turned on again, the
+    file, trace2.stf, would be created. If tracing was turned off and
+    on {n} times, files trace1.stf to trace{n}.stf would be created.
+
+    In SEP V3.3 the filename has changed from trace{n}.stf to
+    tr{pid}{n}.stf to insure against filename conflicts between con-
+    current users of SEP.
+
+
+    a) Added Trace Flags:
+
+	SEPSET TRACE DIALOG
+
+	Used for debugging the interaction between SEP and the SEPSON
+	subprocess(es).
+
+	The SEP commands:
+
+	    ? vision -e septools 
+	    <<
+	    ~
+	    >>
+	    ^^ `ESC'
+	    <<
+	    ~
+	    >>
+	    ^^ end`CR'
+	    <<
+	    ~
+	    >>
+
+	Would create a trace file like this:
+
+	    dialog fe, II_FRSFLAGS>-*11269
+	    SEPspawn argc = 3
+	    SEPspawn argv[0]> vision
+	    SEPspawn argv[1]> -e
+	    SEPspawn argv[2]> septools
+	    dialog fm fe >
+
+	    (TC_BOS1)
+	    dialog fm fe (recording) >
+
+	    %%     
+	    %% INGRES Vision -- Copyright (c) 1982, 1992 Ingres Corporation
+	    %% INSERT loop:
+	    ##
+	    ___________________________________________________________________
+	    |Vision - Applications Catalog                                    |
+	    |                                                                 |
+	    | +-------------------------------------------------------------+ |
+	    | |Name                    |Owner   |Short Remark               | |
+	    | |------------------------+--------+---------------------------| |
+	    | |_                       |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | |                        |        |                           | |
+	    | +-------------------------------------------------------------+ |
+	    |                                                                 |
+	    |     Place cursor on row and select desired operation from menu. |
+	    |                                                                 |
+	    |  Create Destroy Edit  Rename MoreInfo  Go Utilities Help  >     |
+	    ___________________________________________________________________
+	    @@
+
+	    (TC_EQR1)
+	    dialog to fe (buffer_1)>^^ `ESC'
+	    dialog fm fe (recording) >
+
+	    %% MENU KEY selected
+
+	    (TC_EQR1)
+	    dialog to fe (buffer_1)>^^ end`CR'
+	    dialog fm fe (recording) >
+
+	    %% MENU RESPONSE: End
+	    %% MENU: Create Destroy Edit Rename MoreInfo Go Utilities Help >
+	    %% MENU AT POSITION `8' SELECTED VIA A FUNCTION/PF KEY
+
+	    %% MENU AT POSITION `8' is "End"
+
+	    (TC_EOF1)
+
+
+2) Conditional Canons:
+
+    ? Command
+    << IF <expression>
+	.....
+    >>
+    <<
+    >>
+
+    In a conditional Canon, the conditional expression is evaluated and, if
+    it evaluates true, the canon is diffed against the results, if the ex-
+    pression evaluates false the canon is skipped. Therefore it makes sense
+    that conditional canons should appear before normal conditional canons.
+
+    Also, there should always be at least one unconditional canon for each
+    command. So if nothing else, put an empty canon at the end of the list
+    of canons.
+
+    When SEP is run in maintenance mode (SEP -m), and an alternate or
+    main canon is added to a command, SEP prompts for a conditional
+    expression:
+
+	IF () > 
+
+    At this point you have two options:
+
+	a) Type in an expression:
+
+	    IF () > VMS
+		    ---
+
+	b) Hit a <CR> to have no conditional expression.
+
+
+    If a previous conditional expression was input or the environmental
+    variable, SEP_IF_EXPRESSION is set, that conditional expression will
+    appear in the parentheses:
+
+	IF (VMS) >
+
+	To accept the default, type a <CR>. For no expression, type a
+	<SP><CR>, or type a new expression.
+
+    You can also hand-edit the sep test and add the conditional expressions
+    manually.
+
+    For mass updating of canons, using the command, "sep -ma" or "sep -mm".
+    SEP will add conditional expressions if SEP_IF_EXPRESSION is set, but
+    no prompting will be done. In this case, "sep -mm" is preferred, as it's
+    more efficient to have labelled canons appear before unlabelled ones.
+
+
+
+3) Abort if Canon Matched:
+
+    ? Command
+    <<
+    <Expected output>
+    >>
+    <<
+    <Error msg>
+    >> ABORT
+
+    This allows for tests to look for fatal conditions and abort.
+
+
+
+4) IF expression key words:
+
+    .if VMS		..OR..	? command
+    ? command			<< if VMS
+    <<				>>
+    >>				<< if UNIX
+    .else			>>
+    .if UNIX			<< if ALPHA
+    ? command			>>
+    <<				<< if MPE
+    >>				>>
+    .else
+    .if ALPHA
+    ? command
+    <<				    The SEP expression analyzer is fairly
+    >>				    basic in it's parsing please include
+    .else			    parentheses (any depth) in any instance
+    .if MPE			    where precedence is important, such as:
+    ? command
+    <<					<< if UNIX || (VMS && ALPHA)
+    >>	
+    .endif				rather than
+    .endif
+    .endif				<< if UNIX || VMS && ALPHA
+    .endif
+
+
+    You can also use platform identifiers as they appear in the Version
+    identifier 6.4/03 (su4.u42/00).
+    		       -------
+
+	Ex:	.if sun.u42 || su4.u42		? <command>
+		? <command>			<< if sun.u42 || su4.u42
+		<<			OR	>>
+		>>				<<
+		.endif				>>
+
+    These platform identifiers are not the same as the "#define"'s used
+    in C coding "#ifdef su4_u42"'s here at Ingres. The form su4_u42 is not
+    known to SEP.
+
+
+
+5) SEP command line flag enhancements:
+
+    a) -v flag
+
+	"-v1" to "-v{n}"
+
+	The -v verbose flag used to simply save the log file even if no diffs
+	were found. A simple "-v" still does just that. A -v is equal to -v0.
+
+	    -v{n} where {n} is:
+
+		>=1 	prints results of all commands in log file.
+
+		>=2	inhibits deletion of fill files on exiting SEP.
+
+    b) -o flag
+
+	The -o output flag used to take only a path argument. It now
+	take a path, as it did before, or a full file name as well.
+
+    c) -f flag
+
+	The -f fuzzfactor flag takes a number as an argument that sets the
+	rounding factor for floating point diffing.
+
+	Examples:	SEP -f5 filename.sep
+
+	The numeric 5 conforms to five significant digits to the right of
+	the decimal. All comparisons will be made by rounding down (truncating)
+	the number.
+
+
+6) SEP now can use SED files for masking within individual tests or canons.
+
+    SEP can now apply a SED file against the results and/or canon of a command
+    before SEP's normal differ tokenizes it. This gives the user more ability
+    to remove spurious diffs by preprocessing with SED.
+
+	? sepset sed [results|canon] <sedfile>
+	<<
+	>>
+
+    In this example, the sed file is run against both canon and results for
+    for command1. For command2 sed is run against just the results. For
+    command3 sed is run against just the canon:
+
+	? fill sedfile.cmds
+	!!
+	s/a/A/g
+	!!
+	? sepset sed sedfile.cmds
+	<<
+	>>
+	? <command1>
+	<<
+	>>
+	? sepset sed results sedfile.cmds
+	<<
+	>>
+	? <command2>
+	<<
+	>>
+	? sepset sed canon sedfile.cmds
+	<<
+	>>
+	? <command3>
+	<<
+	>>
+	? unsepset sed
+	<<
+	>>
+
+
+7) New SEP Environmental Variables:
+
+    a) SEP_IF_EXPRESSION
+
+	See notes above for conditional expressions.
+
+    b) SEP_TRACE
+
+	This sets tracing to the defined options as does the "sepset trace"
+	command.
+
+	The SEP command:	? sepset trace dialog
+				<<
+				>>
+
+	Can be set implicitly by defining SEP_TRACE to be "dialog". Case is
+	ignored.
+
+    c) SEP_SET
+
+	SEP_SET is like SEP_TRACE in that it allows you to specify general
+	"sepset" and "setenv" commands. It also allows you to specify a file
+	of commands.
+
+	Example:
+
+	The file, sepset.cmds	=	sepset trace token
+					trace dialog
+					sepset diff_numerics 1e-05
+					setenv SEPPARAMDB septools
+
+	Then set the environmental variable SEP_SET to "@sepset.cmds"
+
+	When SEP starts up, it will execute those "sepset" and "setenv"
+	commands in this file before beginning the test.
+
+    d) SEP_TIMEOUT
+
+	SEP_TIMEOUT will modify the default waitlimit of 180 seconds. This is
+	also the SEP command line flag, "-w".
+
+
+8) Added Abort option to DIFF menu
+
+    "(P)rev or (N)extscreen (C)omments (Q)uit (D)isconnect (A)bort"
+    "(P)rev or (N)extscreen (C)omments (E)dit_canon (Q)uit (D)isconnect (A)bort"
+
+    The "A" abort option in either of these two menus will abort the test
+    immediately.
+
+
+9) Added New Token Mask Types to Sep's Differ.
+
+    a) Double Byte characters - A_DBLWORD
+
+	Used to flag DoubleByte words.
+
+    b) Ingres Objects:
+
+	Token		  Label
+	------------------------------------
+	A_DBNAME	- [Dd]atabase
+	A_RULE		- [Rr]ule
+	A_PROCEDURE	- [Pp]rocedure
+	A_USER		- [Tt]able
+	A_COLUMN	- [Cc]olumn
+	A_TABLE		- [Tt]able
+	A_OWNER		- [Oo]wn(er|ed[ ]by)
+
+	Forms that are masked:
+
+	{Label}, {objname}     {Label}, "{objname}"     {Label}, '{objname}'
+	{Label}: {objname}     {Label}: "{objname}"     {Label}: '{objname}'
+	{Label} {objname}      {Label} "{objname}"      {Label} '{objname}'
+
+    c) Ingres Error Messages about objects:
+
+	Token		  Label
+	------------------------------------
+	A_DESTROY	- E_US1452[ ]DESTROY
+	A_DROP		- E_US0AC1[ ]DROP
+
+	Forms that are masked:
+
+	{Label}, {objname}     {Label}, "{objname}"     {Label}, '{objname}'
+	{Label}: {objname}     {Label}: "{objname}"     {Label}: '{objname}'
+	{Label} {objname}      {Label} "{objname}"      {Label} '{objname}'
+
+
+10) Listexec/Executor:
+
+    a) List files can now include comments. Lines that begin with a '#'
+       are comment lines. Single '#' lines are printed in the *.out file.
+       Double '##' lines are not printed.
+
+    b) Listexec and Executor now have the same version number as Sep.
+
+    c) New flag "-f" to pass command line flags to each SEP test.
+
+    d) Listexec looks for ingreslvl.lis and ingrestyp.lis in a more
+       appropriate way. Also handles partial and/or relative directory
+       specifications better. Handles "@file()" translations better.
+       Doesn't rewrite the *.cfg file unless something has changed about
+       it.
+
+
+
+
+                 Files affected by this change and how:
+                 ======================================
+
+
+DESCRIP.MMS
+
+	Added new header file $(SHDR)sepdefs.h and $(SHDR)si.h to
+	$(STMP)sepspawn.obj for tracing definitions.
+
+	Added COMMENTS module to SEPTOOL. $(SSRC)comments.c, the
+	($STMP)comments.obj and ($STMP)comments_dbg.obj. This module
+	has the comments handling code of SEP.
+
+	Broke out certain functions from $(SSRC)utility.c (used by
+	SEPTOOL) and created a new file $(SSRC)utility2.c to be used
+	by SEPTOOL,EXECUTOR and LISTEXEC.
+
+	Added file, $(SVMS)sepalloc.c. This is a SEP wrapper for the
+	MEreqmem function. It's function name is: SEP_MEalloc. Will
+	be used by SEPTOOL,EXECUTOR,LISTEXEC and PEDITOR.
+
+	moved this file to generic!testtool!sep!mms. Made it compatible
+	with the DBMS groups VMS Jupiter build environment (.IFDEF
+	JPT_LLBASE).
+
+	Split off some functions into more logical groupings, seplo.c,
+	sepnm.c, sepcm.c, sepst.c
+
+	Reflect location change for getloc.c from testtool!sep!sep
+	to testtool!sep!sepcl. Also add /noopt to /debug flag on
+	CFLAGS for debug version.
+
+		--------------------------------------
+
+EXECUTOR.H
+
+	Modified all quoted string constants to use the ERx("") macro.
+	Reformatted variable declarations to one per line for clarity.
+
+
+		--------------------------------------
+
+SEPDEFS.H
+
+	Add TRACE_DIALOG for debugging the interaction between SEP and
+	the SEPSON subprocess.
+
+	Added WORD_ARRAY_SIZE used by SEP_cmd_line() and the options
+	arrays it uses. Added two bits to sep_state defines,
+	OPEN_CANON_ARGS and CLOSE_CANON_ARGS to flag when the "<<" and
+	">>" had supplemental arguments present. This is for
+	implementation of labelled canons. Also added OPTION_LIST
+	structure for SEP_cmd_line(). Also modified SEP_VER.
+
+	Added ABORT_TEST constant to be used to indicate that the sep
+	test should be aborted.
+
+	Added a static array constant for the double quote character in
+	the form that is compatible with 8/16 bit char sets and the CM cl
+	module. Added constants for handling cl ME memory tags.
+
+	Moved ME memory tag constants from memory.c to here and included
+	this file in memory.c. Also changed all constants to be cast as
+	a u_nat.
+
+	Changed TOKEN_TAG to fit the other SEP_ME_TAG_???? constants.
+
+	Version [] should be READONLY char, not just READONLY (int?).
+
+	Also added some other ME tag constants.
+
+	Added definition of MPE if platform is hp9_mpe. Also moved typedef
+	of structure for tracking fill files, FILLSTACK, from sepostcl.c.
+	Also created a ME tag for use by the fill file routines.
+
+		--------------------------------------
+
+SEPPARAM.H
+
+	Added verboseLevel to improve the "-v" flag to use "-v1" to
+	"-v{n}". Added version and platform references to implement
+	labelled canons. made the username option global.
+
+	Took out gotuserName, not used anywhere.
+
+	Added outLoc and outLoc_exists for the modification to the
+	"-o" command line switch. Added SEP_IF_EXPRESSION to hold the
+	value of the environmental variable to set the default for adding
+	conditional alternate and/or main conditional canons.
+
+	Moved *sepResults, SEPresloc and SEPcanloc here from qadiff.c as
+	part of the SED masking enhancements.
+
+		--------------------------------------
+
+SEPTXT.H
+
+	Took out some commented out definitions. Added YES_NO.
+
+	Added Abort option to DIFF menus and answers. Had to shorten
+	some of the message lines.
+
+		--------------------------------------
+
+TOKEN.H
+
+	Added constant definition for A_DBNAME for MILLER.C to mask
+	the phrase "database '{word}'" found in createdb and destroydb,
+	etc.
+
+	Added constant definition for A_DBLWORD, A_DESTROY, A_DROP,
+	A_RULE, A_PROCEDURE, A_TABLE, A_OWNER, A_USER and A_COLUMN.
+
+		--------------------------------------
+
+EXECUTOR.C
+
+	Don't use COMPAT but LIBINGRES, this causes build problems on
+	machines that don't have the full source trees, ex is the Stress
+	machines.
+
+	Added globalrefs to tracing, trace_nr and traceptr. These tracing
+	vars are used by SEPspawn() in SEPTOOL.EXE. They're here to
+	provide that reference only.
+
+	Changed all refs to '\0' to EOS. Changed more char pointer
+	increments (c++) to CM calls (CMnext(c)). Changed a "while (*c)"
+	to the standard "while (*c != EOS)"
+
+	Add SEP_cmd_line() to make command line parsing more uniform
+	amoungst SEPTOOL,LISTEXEC and EXECUTOR. Changed more code to use
+	CM routines. Optimized the use of memory by using MEreqmem().
+	Removed some useless variables. Added code to skip lines beginning
+	with a "#" character (comment line).
+
+	Added SEP version code to allow listexec and executor to know
+	which SEP version it was built against. Listexec and Executor's
+	version will now be the same as the SEP version. Added to sepflags
+	option to pass command line flags to each SEP test. Trimmed compat
+	library out of NEEDLIBS of the ming hints. Not needed. This will
+	allow listexec and executor to be built on UNIX w/o having
+	libcompat.a. Libcompat.a is not delivered with the UNIX tar file.
+
+	Forgot to put LIBINGRES into NEEDLIBS to replace COMPAT.
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Converted LOfroms() to SEP_LOfroms(). Change local function,
+	break_line() to parse_list_line() so as not to confuse with SEP's
+	break_line function.  Take getLocation() out of here and use the
+	same one SEP uses.
+
+	MPE can't handle SIopen() for writing SI_TXT files. Creates
+	binary files by default. Changed SIopen for write to SIfopen().
+
+		--------------------------------------
+
+LISTEXEC.C
+
+	Added globalrefs to tracing, trace_nr and traceptr. These tracing
+	vars are used by SEPspawn() in SEPTOOL.EXE. They're here to
+	provide that reference only.
+
+	Changed all refs to '\0' to EOS. Changed more char pointer
+	increments (c++) to CM calls (CMnext(c)). Changed a "while (*c)"
+	to the standard "while (*c != EOS)"
+
+	Add SEP_cmd_line() to make command line parsing more uniform
+	amoungst SEPTOOL,LISTEXEC and EXECUTOR. Changed more code to use
+	CM routines. Moved #include's to after header text.
+
+	Added SEP version code to allow listexec and executor to know
+	which SEP version it was built against. Listexec and Executor's
+	version will now be the same as the SEP version. Added to sepflags
+	option to pass command line flags to each SEP test. Trimmed compat
+	library out of NEEDLIBS of the ming hints. Not needed. This will
+	allow listexec and executor to be built on UNIX w/o having
+	libcompat.a. Libcompat.a is not delivered with the UNIX tar file.
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Changed put_message() to lput_message() to avoid symbol def clashes.
+	Added better code for finding the ingresprt.lis, ingreslvl.lis and
+	ingrestyp.lis files.
+
+	Modularize code a bit better. Make Listexec look for the ingresprt.lis,
+	ingreslvl.lis and ingrestyp.lis in a more appropriate way. Also handle
+	partial and/or relative directory specifications better. Handle "@file()"
+	translations better. Don't rewrite the *.cfg file unless something has
+	changed about it.  Took out local getLocation(), uses SEP's one now.
+
+	Sun4 didn't like trying to autoinit the array of char pointers,
+	dir_path[] in Find_file_locs().
+
+		--------------------------------------
+
+RUNTESTS.C
+
+	Changed userName and testStyle to array references rather than
+	pointer references for easier use with CM functions. Changed
+	some "if (*ptr)"'s to "if (*ptr != EOS)"'s to fit coding standards.
+
+	Added to sepflags option to pass command line flags to each SEP
+	test.
+
+	Fix a unix problem.
+
+	Only rewrite *.cfg file if something has changed.
+
+		--------------------------------------
+
+TESTPARAMS.C
+
+	Mark Rewrite_cfg flag if user changes types, levels or parts.
+
+		--------------------------------------
+
+FUNCKEYS.C
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Trying to be swift and improving on dkhor errmsg change, spelled
+	mapName as mapname. This change fixes it.
+
+		--------------------------------------
+
+PEDITOR.C
+
+	Rewrote how peditor used the ctrlW char to refresh the screen when
+	peditor starts and finishes.
+
+	Added SEP_LOexists.
+
+		--------------------------------------
+
+PROCMMD.C
+
+	Try fixing bug #42144, leaving files, in_*.sep and out_*.sep behind
+	on UNIX. (maybe VMS too in certain circumstances).
+
+	Fixed a UNIX problem with tokptr[], can't initialize it as an
+	automatic variable.
+
+	Build a tracing for dialog between SEP and it's subprocess, SEPSON.
+
+	Removed References not used. Split comments handling away to a
+	new file, COMMENTS.C. Added code to scan and parse possible options
+	on the "<<" and ">>" lines. So far all we have is a "-platform"
+	switch for the open canon line ("<<"). Changed all refs to '\0'
+	to EOS. Changed more char pointer increments (c++) to CM calls
+	(CMnext(c)). Changed a "while (*c)" to the standard
+	"while (*c != EOS)". Implement other CM routines as per CM
+	documentation. Add capability to handle blank lines in SEP tests.
+	Fix problem with comments inside of TM/FE commands. Implement
+	skipping canons if they're labelled and don't match the current
+	platform. Also implement printing all results if verboseLevel is
+	set high enough.
+
+	Added to the Eval_if() function ability to check OS and platform
+	types. ".if VMS" or ".if UNIX" or ".if vax.vms", etc. work now
+	in the ".if,.else,.endif" control structure.
+
+	Added command array for close_args. Put in code to look for
+	the keyword ABORT on close_canon line and set abort_if_matched
+	if found. Had diffing() return new STATUS constant, ABORT_TEST,
+	if abort_if_matched is set TRUE.
+
+	Added command option array for close cannon line to implement an
+	ABORT-if-Matched function. This function will abort the SEP test
+	if the canon matches. Function has not been fully implemented. But
+	this first part is done. Rewrote how process_fe handles keystroke
+	data to make it more compatible with the cl CM functions. Added a
+	expression analyzer to determine to diff or skip a particular
+	cannon. Added cl ME memory tags to use MEtfree() to make memory
+	handling simpler. Added process dialog tracing. Rewrote how SEP
+	relates to SEPSON processes. More explicitly handles TC_EOQ,
+	TC_BOS and TC_EOF chars. Also SEPSON and SEPSON subprocesses.
+	Example: SEP calls ABF which runs an ABF image. OR SEP call RBF
+	which runs a REPORT. Modularize the handling of .if,.then,.else
+	statements inside of the various process handlers, process_tm and
+	process_fe. Replaced the older .if,.else expression analyzer and
+	call the newer, more complete version, SEP_Eval_If(). Modularize
+	encoding of keystroke sequences.
+
+	Fix a "code not reached" warning on sunOS.
+
+	Define SEP_CMpackwords for sunOS. Also fix cunfusion of sendEOQ
+	used as a parameter to Read_TCresults()by changing it to
+	sendEOQ_ptr.
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Add code to handle allocated memory better. Add tracing stuff.
+	Implement ABORT command for end-canon qualifier. Take trans_tokens()
+	out and put in its own file.
+
+	Fix a problem with disconnecting from a forms-system frontend
+	when running SEP in shell mode. SEPtcsubs was not getting
+	decremented to less than zero. Changed test to look for zero
+	instead.
+
+		--------------------------------------
+
+SEPFILES.C
+
+	SEPputc() was passed negative values (< -1) when 'achar' is
+	a high or low byte of a DoubleByte character.  The problem
+	arises somewhere upstream (probably in TCgetc()) and has to do
+	with signed and unsigned char casting.  The fix here
+	may not be elegant but it works.  e.g. a hi-byte of 0xbb is
+	passed as -69 to SEPputc() which will mess up the result file
+	giving 'false' diffs.
+
+	Changed all refs to '\0' to EOS. Changed more char pointer 
+	increments (c++) to CM calls (CMnext(c)). Changed a "while (*c)"
+	to the standard "while (*c != EOS)". Implement other CM routines
+	as per CM documentation.
+
+	Added include of sepfiles.h for the ME memory tag constants.
+	Isolated these MEreqmems to their own tag.
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	made SEPresloc and SEPcanloc global.
+
+		--------------------------------------
+
+SEPOSTCL.C
+
+	Took out TRACE_PARM from the default for SEPSET TRACE. If you want
+	all trace features, you have to say SEPSET TRACE ALL. UNSEPSET
+	will still remove all tracing.
+
+	Added tracing for SEP to SEPSON dialog to sepset command.
+
+	Removed unneeded references. Changed all refs to '\0' to EOS. Changed more char pointer
+	increments (c++) to CM calls (CMnext(c)). Changed a "while (*c)"
+	to the standard "while (*c != EOS)". Implement other CM routines
+	as per CM documentation.
+
+	Free_mem not needed anymore. Using Tagged memory blocks
+
+	Added cl ME memory tags to use MEtfree() to make memory handling
+	simpler. Added process dialog and SEP CM wrapper tracing.
+
+	Switch MEreqmem() with SEP_MEalloc().
+
+	Elaborate on SEPSET command for the SED masking enhancements.
+
+	Sun4 needed a FUNC_EXTERN for SEP_CMlastchar().
+	Moved typedefs for FILLSTACK to sepdefs.h. Created GLOBALREFS
+	for fillstack pointers here, and GLOBALDEFS in septool.c.
+	Rewrote fill_cmmd() and del_fillfiles(). Also added constant
+	definitions for return codes for SIopen(), SI_BAD_SYNTAX,
+	and SI_CANT_OPEN.
+
+		--------------------------------------
+
+SEPPARM.C
+
+	Removed unneeded references. Changed all refs to '\0' to EOS. Chang
+	increments (c++) to CM calls (CMnext(c)). Changed a "while (*c)"
+	to the standard "while (*c != EOS)". Implement other CM routines
+	as per CM documentation. Added use of FIND_SEPstring() and other
+	constructions to fix "'sepparamdb'" where the symbol is not
+	delimited by whitespace.
+
+	Added cl ME memory tags to use MEtfree() to make memory handling
+	simpler.
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Handle allocated memory better. Took Find_SEPstring() out and put
+	it into sepst.c.
+
+	Changed ME tag for tmp_buffers trying to find error on UNIX. Also
+	Changed Trans_SEPparam() to not try to free memory tagged
+	"SEP_ME_TAG_NODEL" (nodelete).
+
+	Fix a syntax error, missing ")".
+
+	Included lo.h because sepdefs.h now references LOCATION type.
+
+		--------------------------------------
+
+SEPTOOL.C
+
+	Added fuzz_factor and "-f" switch for diff_numerics diffing
+	precision.
+
+	Fixed some UNIX problems; eq_sign, d_quote and s_quote, can't
+	be static inside a function.
+
+	Removed unneeded references. Changed all refs to '\0' to EOS. Chang
+	increments (c++) to CM calls (CMnext(c)). Changed a "while (*c)"
+	to the standard "while (*c != EOS)". Implement other CM routines
+	as per CM documentation. Added definitions for open and close
+	canon ("<<".">>") argument lists. Added SEP_cmd_line() and
+	OPTION_LIST structure for more efficient command line parsing.
+	Add sep_state capability to notice the canon args. Removed from
+	get_args() the commands handled by SEP_cmd_line().
+
+	Got rid of gotuserName; not used anywhere. Moved the SEP_cmd_line()
+	to utility2.c so it could be used by LISTEXEC and EXECUTOR.
+
+	Modularized SEP version code to be used by other images. Replace
+	references to '"' to more compatible DBL_QUO static array.
+
+	Isolating MEreqmem ME_tags.
+
+	Switched MEadvise fm ME_INGRES_ALLOC to ME_USER_ALLOC for UNIX.
+	Didn't work on sun4 (gracie or neon).
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Fix a problem with break_line handling double quoted strings that
+	didn't end with EOS or whitespace (ie '(SEPPARAM == "Y") || ...').
+	-
+	Message declaration in get_command() should be an array of chars
+	not an array of char pointers.
+
+	Implemented a SEP_TIMEOUT environmental var that will modify the
+	default waitLimit.
+
+	Add the "-o" outloc enhancements, the new environmental variables,
+	SEP_IF_EXPRESSION, SEP_TRACE, SEP_SET, SEP_TIMEOUT. Externalized
+	get_string(). Handle allocated memory better with ME tag,
+	SEP_ME_TAG_ENVCHAIN.
+
+	Fixed a problem with tracing, re: opening the trace file. Also
+	handling the tracing flag.
+
+	Wrap LOcompose() with SEP_LOcompose() to fix a UNIX bug.
+
+	Add GLOBALDEFS for FILLSTACK vars here from sepostcl.c.
+
+		--------------------------------------
+
+TERMCAP.C
+
+	Removed unneeded references. Changed all refs to '\0' to EOS.Changed
+	increments (c++) to CM calls (CMnext(c)). Changed a "while (*c)"
+	to the standard "while (*c != EOS)". Implement other CM routines
+	as per CM documentation.
+
+	Using ME memory tags.
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Use SEP_LOexists() as a wrapper for LOexists().
+
+		--------------------------------------
+
+UTILITY.C
+
+	Removed unneeded references. Changed all refs to '\0' to EOS. Chang
+	increments (c++) to CM calls (CMnext(c)). Changed a "while (*c)"
+	to the standard "while (*c != EOS)". Implement other CM routines
+	as per CM documentation. Added SEP_CMstlen() to find char len
+	rather than byte len. Added SEP_CMlastchar() to find last char in
+	string when ( string[STlength(string)-1] ) wouldn't do it.
+
+	Changed MEreqmem to use a memory block tag and then replaced call
+	to clear_pages with a call to MEtfree. Deleted clear_pages routine.
+
+	Switch MEreqmem() with SEP_MEalloc().
+
+	Include code to ask for conditional expression for cannon. Add code
+	for Abort option in menu choice.
+
+	Sun4 needed a FUNC_EXTERN for SEP_CMlastchar().
+
+	Changed two local char arrays in open_log() to size, MAX_LOC+1.
+	They're being used in LO functions and need to be pegged at that
+	size.
+
+		--------------------------------------
+
+GETLOC.C
+
+	Added inclusion of the cm.h cl module. Removed commented out
+	inclusions that were not needed. Added FIND_SEPstring()
+	reference. Changed all refs to '\0' to EOS. Changed more char 
+	pointer increments (c++) to CM calls (CMnext(c)). Changed a 
+	"while (*c)" to the standard "while (*c != EOS)". Made 
+	explicitly declared char arrays dynamically allocated with
+	MEreqmem(). Used FIND_SEPstring() rather than STbcompare() so
+	I could handle cases such as: " '@FILE()' " where the pattern
+	we're looking for is not delimited by whitespace. Implement
+	other CM routines as per CM documentation.
+
+	Added include of sepfiles.h for the ME memory tag constants.
+	Isolated these MEreqmems to their own tag.
+
+	Added tracing to debug a problem with translating '@file()'
+	function. Found that replacing a "MEreqmem(); STcopy" with a
+	STtalloc() fixed the problem.
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Re-worked getLocation() function that translates the "@file()"
+	sep function. GetLocation() won't try to translate any dev specs.
+	Also, "@file()" will work in many forms previously not available
+	i.e., "@file(dev,)" "@file(,dir,dir,)" "@file(,file)" "@file(file)"
+	and "@file(dev,file)".
+
+	Made tracing a little simpler. Added a ME tag to Trans_SEPfile().
+
+	Changed ME tag for tmp_buffers trying to find error on UNIX. Also
+	Changed Trans_SEPparam() to not try to free memory tagged
+	"SEP_ME_TAG_NODEL" (nodelete).
+
+	Wrap LOcompose() with SEP_LOcompose() to fix a UNIX bug.
+
+	Rewrote getLocation() for UNIX LO peculiarities and added MPE
+	logic as per HenryM's specs.
+
+		--------------------------------------
+
+TERMSTUFF.C
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Took out FEreqmem() and FEfree(). They were obsolete.
+
+		--------------------------------------
+
+NMSETENV.C
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+		--------------------------------------
+
+SEPSPAWN.C
+
+	Add in tracing code to trace dialog between SEP and SEPSON.
+
+	Added:
+	1) SEPfork symbol.
+	2) error checking in spawning
+
+	Took out code that removed the "ferun" and "run" commands from
+	the spawned command line before spawning.
+
+		--------------------------------------
+
+SEPSPAWN.C
+
+	Added tracing vars and si.h and sepdefs.h inclusions and code
+	to trace the command line sent to SEPSON.
+
+	Added CM functions to string handling. Removed useless vars.
+	Made exitvalue less complicated. Added some extra tracing and
+	comments. Moved #include's to below header text.
+
+		--------------------------------------
+
+SEPEXIT.C
+
+	Removed unneeded references. Changed all refs to '\0' to EOS. Chang
+	increments (c++) to CM calls (CMnext(c)). Changed a "while (*c)"
+	to the standard "while (*c != EOS)". Implement other CM routines
+	as per CM documentation.
+
+		--------------------------------------
+
+GRAMMAR.LEX
+
+	Make seconds optional in time string. Add back in the A_DBNAME
+	types that were here and were lost.
+
+	Re-added dkhor's grammar (character classes) to recognise DBL words.
+	> dblhi	[\201-\377]
+	> dbllo	[\100-\377]
+	> dblword	({dblhi}{dbllo})
+
+	> {dblword}+		{put_token(A_DBLWORD); };
+
+	Bump %k (packed char classes) parameter. su4_u42 was complaining.
+
+	Took out some definitions that added nothing to readability. Had
+	take out dkhor's doublebyte grammar, it was breaking date masking
+	when the date was in a selected ingres table output. Added new
+	token types like A_DBNAME these are Ingres objects, A_RULE,
+	A_PROCEDURE, A_TABLE, A_USER, A_OWNER, A_COLUMN, A_DESTROY,
+	A_DROP and A_OWNER. Reset the parameters to be roughly twice
+	the actual usage.
+
+		--------------------------------------
+
+MEMORY.C
+
+	Moved ME memory tag constants from memory.c to sepdefs.h and
+	included sepdefs.h in this file.
+
+	Changed TOKEN_TAG to fit the other SEP_ME_TAG_???? constants.
+
+	Replaced calls to MEreqmem with either STtalloc or SEP_MEalloc.
+
+	Included lo.h because sepdefs.h now references LOCATION type.
+
+		--------------------------------------
+
+MILLER.C
+
+	Added fuzz_factor for floating point numeric approximate
+	comparisons.
+
+	Added A_DBNAME token type.
+
+	Included lo.h because sepdefs.h now references LOCATION type.
+	Add cases for masking of token types: A_DESTROY, A_DROP, A_RULE,
+	A_PROCEDURE, A_OWNER, A_USER, A_TABLE and A_COLUMN.
+
+		--------------------------------------
+
+OUTPUT.C
+
+	Included lo.h because sepdefs.h now references LOCATION type.
+
+		--------------------------------------
+
+QADIFF.C
+
+	Added A_DBNAME token type. Moved static nat's out of QAdiff().
+
+	Try using C-coded version of yylex(), SEP_GRdo_file().
+
+	Add SED masking enhancements.
+
+	Wrap LOcompose() with SEP_LOcompose() to fix a UNIX bug.
+
+	Added tracing cases for A_DBLWORD, A_DESTROY, A_DROP, A_RULE,
+	A_PROCEDURE, A_TABLE, A_OWNER, A_USER, A_COLUMN.
+
+		--------------------------------------
+
+FERUN.SH
+
+	Fix problem running an implied "run ./file.exe" when expressed
+	as "run file.exe". The test, [ ! -f $1 ], found the file, but the
+	"exec $cmdline" couldn't. Also practice adding Ingres environment
+	checking and including the call to iisysdep.
+
+		--------------------------------------
+
+QASETUSER.C
+
+	added notauth, syscat, and super to authorized user list.
+
+	looks like I managed to pick&put too many lines up here
+	and ended up with duplicating the ming hints and #includes
+	by mistake (must have hit 22y instead of 2y -- oops).
+
+		--------------------------------------
+
+RUN.SH
+
+	Fix problem running an implied "run ./file.exe" when expressed
+	as "run file.exe". The test, [ ! -f $1 ], found the file, but the
+	"exec $cmdline" couldn't. Also practice adding Ingres environment
+	checking and including the call to iisysdep.
+
+		--------------------------------------
+
+SEPCC.SH
+
+	pick up CCFLAGS from environment
+
+	Added Ingres environment check and call to iisysdep. Will
+	make compiler calls more compatible to porting.
+
+		--------------------------------------
+
+SEPLNK.SH
+
+	Some machines have split libingres into two libraries.
+	Added conditional code for this.
+
+		--------------------------------------

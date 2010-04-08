@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!opf!ops
+#
+
+SubDir ING_SRC back opf ops ;
+
+IISUBSYS back opf ops ;
+
+
+IILIBRARY OPFLIB : opsstartup.c opsshut.c opsseq.c opsinit.c
+	opsgetcb.c opsendsess.c opsdealloc.c opsbgnsess.c opsalter.c
+	opfcall.c ;
+

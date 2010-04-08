@@ -1,0 +1,673 @@
+	Misc. NOTES About Generated Code For Emerald Project
+
+o  From polishing template files:
+
+	The Delete menuitem in MD update frames is inconsistent with the
+	rest of the Update frame behavior because database updates are
+	done immediately, without the Save menuitem having to be pressed.
+	Poll users to make sure this is ok. Also, consider various update
+	rules (esp. Delete restricted) to make sure these rules are always
+	respected.
+
+	Ex: If Master&Detail is selected, then the database is updated &
+	the screen is cleared. User then selects 'NextMaster'. However,
+	if CurrentDetailRow is selected, then only the table field row
+	is deleted (database not updated); the database work is done
+	when they select 'Save' later (there may be other updates they
+	want to do on this master & detail before selecting Save).
+
+o  From new_oe.osq:
+
+	Message text for error while generating a new surrogate key should
+	be different from other "Saving" type errors.
+
+	Lookup/Select should resume to next field (put that in Lookup spec).
+
+	Field entry activation: Consider when field is first on form & when
+		program does "RESUME FIELD" to the field.
+		When cursor is currently in the field, then going back
+		to field from menuline or program resumeing to it again
+		shouldn't trigger a field entry activation.
+
+	Top menu should have menuitem Quit -- others shouldn't.
+
+	Message "Changes Saved" and generation of new Surrogate key could
+	be a problem when run after user APPEND-END escape code (what if user
+	doesn't want those to run?). Would be
+	nice, though to make user escape part of this same transaction.
+	Also, user-escape must run before we clear the screen. Main problem
+	= skipping code that follows after an error -- but that may not
+	be a problem cause user will ROLLBACK and RESUME if an error occurs
+	in their escape code.
+
+	We need a builtin function to do the surrogate key increment. Also,
+	can remove the message about "Generating new key" cause will be
+	be repeated queries and will be fast.
+
+	Where is a range of error numbers that users can use for themselves?
+
+o  From order_entry.osq:
+
+	"help lookup" should not clobber field contents unless user
+	selects something.
+
+	If join column is NOT NULLable when it is the Primary Key, but is 
+	NULLable in tables that join with that table, then this can cause
+	problems for lookup because same field will be NULLable on one
+	form, and NOT NULLable on another. That causes runtime warning
+	about a type mismatch when attempt to pass value from one frame
+	to another.
+
+	To create good default qualification screen for lookup, domains
+	would be nice. Otherwise, we'll have to label fields on generated
+	form with database column names, which may be meaningless to user.
+
+	Generate code for Delete restricted (currently have Delete cascades)
+	and Update Cascades and Update Restricted (currently have Update
+	of join key not allowed).
+
+	Insertrow adds a row with state "unchanged". In our case, these
+	inserted rows are NEW rows, and should be same as rows added at end by
+	user pressing down arrow key (such rows are added with rowstate=
+	Undefined(0) and become rowstate=New(1) when user types on row
+	or when program assigns value to row).
+	1. New syntax and functionality to allow us to insertrow an Undefined(0)
+	row, that will be treated just like rows added at bottom of table
+	field:  InsertNEWrow .. ;, or
+		Insertrow .. WITH status=undefined|unchanged;
+	2. Ability to dynamically change row status via set_forms command.
+	(there would probably be restrictions here).
+	3. Generated code could not allow insertrow in table field -- user
+	must always add rows at bottom of table field during Update. This
+	is very inconvenient if table field contains many rows.
+	4. Generated code could always create a hidden column that could be
+	set by insertrow. Kind of ugly, and points a current 4gl/frs weakness;
+	Better to fix the problem, than to work around it.
+
+	Think about how users will enter various custom text strings needed for
+	messages ("No rows found with that customer number", etc.
+	----------------------------------------------------------------------
+
+	Things to think about: (1) is limiting lookup tables to only a 1 column
+	key too severe a restriction? How often will people want to join
+	with a lookup table that has a composite key? Consider: lookup
+	must be 1-1 relationship with master or detail data.
+	(2) If no domains, where do we store surrogate key info?
+	(3) Need to discuss which update rules we support for master/detail
+	relationships expressed in VQE.
+
+	Insertrow always puts row below current row. Need a way to put row
+	above current row, since can always get new row at bottom by opening
+	a new row. Currently, there is no way for user to add new row at
+	top of table field. DONE.
+
+	Insertrow & Deleterow: couple of improvements could be made here --
+	(1) Currently you have to specify the table field name in the statement;
+	would be nice if could just say "deleterow" or "insertrow" and that
+	would mean "the current table field". (2) give good message if cursor
+	is not on table field when select it. Given current behavior, generated
+	code has to inquire for field name before doing deleterow/insertrow,
+	and has to avoid errors since error msg isn't so good.
+
+	Can we rely on the fact that query only fields can be typed in while
+	form is in fill mode? Yes.
+
+	Could optimize the field activate queries by not performing them
+	when field value hasn't changed.
+
+	Primary keys must be treated separate from fields used in WHERE
+	clause and join fields.
+	Hidden versions of primary keys: join column(s) are factored out of
+	table field and made read-only simple fields. The primary key of
+	the detail must still be stored separately in the table field for
+	update and delete purposes. Rule: never use displayed fields in
+	WHERE clause?
+
+	Concurrency: minimize time when locks are held; do commit in initialize
+	block of attached query, and after each select & after each update.
+	No locks on displayed data; good for concurrency, bad for consistency.
+	is on display
+
+	It's easier to extend the single table field case to multiple table
+	fields if don't use M-D attached queries above. Rather, do
+	a single Master attached query and do the detail query in the
+	initialize block and REPEAT it again after each "next". I
+	believe these are completely equivalent.
+	However the REPEATED query is replicated in the code.
+	Could avoid this replication of queries if either 4GL supported
+	multiple detail queries, or (better yet -since would be useful
+	elsewhere too) if could put such queries in an in-line procedure.
+	In fact, in-line procedures would allow us to share much more
+	generated code (never repeating the same query twice, etc).
+
+	Can't do "LastQuery", like QBF, because can't restore prior
+	values to numeric fields on screen (query operators like ">"
+	are not valid numeric values).
+
+	Need way to switch a field and/or table field column to Display
+	only. Reason: want join column(s) to be R/O during Update mode,
+	but editable during Insert and Query mode.
+
+	Hidden fields/columns: (1) need hidden field for every master PK col.
+	This field will be loaded in Select and used in Update & Delete stmts.
+	(2) Need hidden column for every PK in each detail table, except
+	the join column(s) which are factored out of table field and will
+	be R/O in update mode. (3) table field columns that are part of detail
+	PK: *** unfinished ***
+
+	I guess we have to allow for updates to the primary key of the
+	master and detail data (if we had easy way for people to use surrogates,
+	then would be more conceivable to restrict PK updates). That means
+	we have to save prior values of primary key for use in update and
+	delete statements.
+
+	Don't allow updates to join field(s). Always factor them out
+	of the table field and make reverse video. But note that join
+	columns != primary key of the detail. Join column + at least
+	one other column (which could be hidden) = primary key.
+	(what if, as in this example, master PK = join column).
+
+	In all cases, we should not allow updates to the table field join
+	field. If we do, then code generation is more complicated and
+	larger: if (any join fields have changed) then every row in
+	the table field must be unloaded and have its key value changed --
+	even rows which did not change, according to _state. Alternative:
+	don't "factor" join columns out of table field; leave them in
+	the table field and require user to enter them for every row.
+
+	Could save a master update some times if had way to inquire if
+	any simple fields have changed (FRS could check change bit of
+	every simple field). Then, if form change bit indicates changes,
+	and can determine that no simple fields have changed value, then
+	can skip master UPDATE and just unload the table fields looking
+	for changed rows.
+
+	I use resume menu in initialize block in submenu to put cursor
+	on menu line when what I want is for user to select an item in
+	a submenu.
+
+	In Update menuitem, if we want both a save menuitem + to save
+	automatically when they select NextMaster, then all that update
+	code (including repeated queries) must be repeated twice in the
+	file. In-line procedures or some other method of code sharing
+	would be useful here.
+
+	Would be nice if 4GL could automatically ROLLBACK and RESUME on any SQL
+	errors in certain main or submenu blocks above (e.g. 'Insert'/'Save').
+	Code above just does simple error recovery -- rolling back and resuming
+	on ANY error (including deadlock).
+
+	Need way to create a submenu that doesn't require a query. above,
+	you have to allocate a temp var to do fake select into, and it
+	looks pretty weird -- also some performance impact. Also, selecting
+	without a FROM clause is not allowed on Gateway, according to Select
+	syntax in Common SQL document.
+
+	Qualification function must list every updateable master-field
+	on the form. I've been told by customers that QUALIFICATION =
+	(..long list of fields...) is sloooow. Qualification on detail too?
+	Note that there's no way to switch table field mode without harming
+	data (why not?).
+
+	Internationalization: the prompt "do you wish to leave
+	without saving changes" and 'Y'/'N' response assume only English.
+
+	Main menu Column/Field activates are not active in submenus. In which
+	submenus must they be repeated? Above, they are repeated in Insert
+	and Update submenus.
+
+	Can 4GL procedures be placed in a library? If so, we could provide
+	such a library and give users source code too & use those procedures
+	in our generated code. Ex: check for change constant before Ending.
+		
+	Think about what restrictions we'll have on user changing the form --
+	can they add new fields/columns or delete them? Can they make them
+	read-only, or not read-only when we created them that way?
+
+	Can't select directly into table field cause frm.tbl := select
+	always clears the table field before doing the select. So, must
+	select into hidden fields and then assign those to the table field.
+	Would be helpful if we had a way to only overwrite specific columns
+	in current row only (e.g. frm.tbl[] := select).
+
+	Need to deal with initial values passed in from another frame?
+
+	Triggers require declaration of hidden variables?
+
+	Consider multiple detail tables too. other complexities?
+
+	Consider composite keys in lookup tables.
+
+	Best transaction semantics? Best to assume autocommit off for
+	sql compatibility?
+
+	Join fields are factored out of table field; only appear in
+	simple fields (read only might be best). Don't allow update
+	of key fields for updateable tables -- make them read-only
+	except in query mode?
+
+	Joins can also produce duplicate items in target list (same column
+	names in several tables). Need rule for how to tag these with a
+	correlation variable to remove ambiguity; updateable one always
+	takes precedence??
+
+	table field columns in qualification function. In qbf, if no
+	qualification is done on master, then detail query is done first,
+	and matching masters are somehow detected! I don't think we want
+	to do that, cause of integrity problems. Masters must drive
+	everything. Qualification on details would apply within that master.
+
+	Qualification function does not accept table field columns or hidden
+	fields/columns. Must be enhanced to allow qualification on table field
+	columns for this project.
+
+	every field corresponding to a non-updateable table is created as
+	query-only or read-only on the form.
+
+	Key fields in simple fields should be read-only when form is in
+	update mode and writeable in Append mode. Keys in table field
+	need to be enterable. Do we have
+	to support changing the primary key?? (if so, then we have to keep
+	before change value, which could get complicated).
+
+	Users will want ability to specify custom help file for each submenu
+	and frame.  We could have a canned help text
+	for each type of frame we can generate, but wouldn't cover
+	user-created menuitems.
+
+	How about support for master-only in a table field and simple fields?
+
+SELECT notes:
+	Joining on a non-updateable table in the select for either master
+	or detail implies that the master and detail data was entered
+	with a "field in tbl.col" integrity check. What guarantee do we
+	have that this validation check will be part of the form def'n?
+
+Menuitem notes:
+    Generated Query frames: (e.g. QueryParts, QueryItems)
+	Rather than generating QBF like code for the called frame, how
+	about just generating a call to QBF? Maybe with ability to only
+	have menuitem "Retrieve".
+
+	Must generate frame name.
+
+	simply put passed in value on the form, and allow user to select
+	a menuitem that dictates what to do with it? (e.g. they type 'Go',
+	or enter more values and then type 'Go', etc).
+
+	When pass arguments from one frame to another, always automatically
+	pass the key of the table? 
+
+INSERT/UPDATE notes:
+	In Update mode we must Save before NextMaster -- this differs
+	from QBF, which saves the changes in a temp file and does all
+	database updates at end of all user updates, when user selects
+	Save menuitem. QBF (6.1) also uses savepoints.
+
+	We should also commit after each save. Advantages of commiting after
+	every save: Loose less data if error; better concurrency and less
+	chance of deadlock; would work with future 4gl automatic retry/rollback
+	on errors. Advantage of commiting at end after all saves: compatible
+	with cursors.
+
+	Need unique displayed key for table updates (or else error or use tid;
+	but tid would require allocating a hidden field or table field col
+	to hold it, since don't want to display tids; also won't work on
+	Gateway).
+
+	Master target list obtained by matching up (== JOIN) table columns
+	with simple fields on form. Anything that matches gets put in the
+	target list.
+	Problem = when primary key is a surrogate. It is a problem for
+	both masters and for details in  a table field where each NEW
+	item should get a new surrogate. How can user insert code into
+	the generated unloadtable loop??
+
+	if row with key 'n' is deleted from table field, and then another
+	with that same key is added to the table field, then new row gets
+	inserted (which generates error cause of duplicate key in keyed
+	unique structure in SQL); then delete deletes the old row -- you're
+	left with nothing! *** NEED: way to tell FRS to unload DELETED rows
+	first, instead of last (there is rarely a case when deleted rows
+	should be unloaded last).
+
+==========================================================================
+o  From entry_oe.osq:
+
+	"help lookup" should not clobber current field contents unless user
+	selects something.
+
+	If join column is NOT NULLable when it is the Primary Key, but is 
+	NULLable in tables that join with that table, then this can cause
+	problems for lookup because same field will be NULLable on one
+	form, and NOT NULLable on another. That causes runtime warning
+	about a type mismatch when attempt to pass value from one frame
+	to another. How about if nullability of MD join columns don't match
+	up?
+
+	Insertrow adds a row with state "unchanged". In our case, these
+	inserted rows are NEW rows, and should be same as rows added at end by
+	user pressing down arrow key (such rows are added with rowstate=
+	Undefined(0) and become rowstate=New(1) when user types on row
+	or when program assigns value to row).
+	1. New syntax and functionality to allow us to insertrow an Undefined(0)
+	row, that will be treated just like rows added at bottom of table
+	field:  InsertNEWrow .. ;, or
+		Insertrow .. WITH status=undefined|unchanged;
+	2. Ability to dynamically change row status via set_forms command.
+	(there would probably be restrictions here).
+	3. Generated code could not allow insertrow in table field -- user
+	must always add rows at bottom of table field during Update. This
+	is very inconvenient if table field contains many rows.
+	4. Generated code could always create a hidden column that could be
+	set by insertrow. Kind of ugly, and points a current 4gl/frs weakness;
+	Better to fix the problem, than to work around it.
+	(ALSO, THERE WON'T BE ANY PRIMARY KEY INFO IN HIDDEN COLUMNS OF
+	THE ROW, AS THERE WILL BE FOR OTHER ROWS WITH STATE=CHANGED)
+
+	----------------------------------------------------------------------
+
+	Insertrow & Deleterow: couple of improvements could be made here --
+	(1) Currently you have to specify the table field name in the statement;
+	would be nice if could just say "deleterow" or "insertrow" and that
+	would mean "the current table field". (2) give good message if cursor
+	is not on table field when select it. Given current behavior, generated
+	code has to inquire for field name before doing deleterow/insertrow,
+	and has to avoid errors since error msg isn't so good.
+
+	Can we rely on the fact that query only fields can be typed in while
+	form is in fill mode too? ANS: Yes.
+
+	Could optimize the field activate queries by not performing them
+	when field value hasn't changed.
+
+	It's easier to extend the single table field case to multiple table
+	fields if don't use M-D attached queries above. Rather, do
+	a single Master attached query and do the detail query in the
+	initialize block and REPEAT it again after each "next". I
+	believe these are completely equivalent.
+	However the REPEATED query is replicated in the code.
+	Could avoid this replication of queries if either 4GL supported
+	multiple detail queries, or (better yet -since would be useful
+	elsewhere too) if could put such queries in an in-line procedure.
+	In fact, in-line procedures would allow us to share much more
+	generated code (never repeating the same query twice, etc).
+
+	Can't do "LastQuery", like QBF, because can't restore prior
+	values to numeric fields on screen (query operators like ">"
+	are not valid numeric values).
+
+	Need way to switch a field and/or table field column to Display
+	only. Reason: want join column(s) to be R/O during Update mode,
+	but editable during Insert and Query mode. (will be done for Ask).
+
+	Could save a master update some times if had way to inquire if
+	any simple fields have changed (FRS could check change bit of
+	every simple field). Then, if form change bit indicates changes,
+	and can determine that no simple fields have changed value, then
+	can skip master UPDATE and just unload the table fields looking
+	for changed rows.
+
+	I use resume menu in initialize block in submenu to put cursor
+	on menu line when what I want is for user to select an item in
+	a submenu.
+
+	In Update menuitem, if we want both a save menuitem + to save
+	automatically when they select NextMaster, then all that update
+	code (including repeated queries) must be repeated twice in the
+	file. In-line procedures or some other method of code sharing
+	would be useful here. ANS: user must press Save menuitem before
+	doing Nextmaster.
+
+	Would be nice if 4GL could automatically ROLLBACK and RESUME on any SQL
+	errors in certain main or submenu blocks above (e.g. 'Insert'/'Save').
+	Code above just does simple error recovery -- rolling back and resuming
+	on ANY error (including deadlock).
+
+	Qualification function must list every updateable master-field
+	on the form. I've been told by customers that QUALIFICATION =
+	(..long list of fields...) is sloooow. Qualification on detail too?
+	Note that there's no way to switch table field mode without harming
+	data (why not?).
+
+	Main menu Column/Field activates are not active in submenus. In which
+	submenus must they be repeated? Above, they are repeated in Insert
+	and Update submenus.
+
+	Can 4GL procedures be placed in a library? If so, we could provide
+	such a library and give users source code too & use those procedures
+	in our generated code. Ex: check for change constant before Ending.
+		
+	Think about what restrictions we'll have on user changing the form --
+	can they add new fields/columns or delete them? Can they make them
+	read-only, or not read-only when we created them that way?
+
+	Can't select directly into table field cause frm.tbl := select
+	always clears the table field before doing the select. So, must
+	select into hidden fields and then assign those to the table field.
+	Would be helpful if we had a way to only overwrite specific columns
+	in current row only (e.g. frm.tbl[] := select).
+
+	Triggers require declaration of hidden variables?
+
+	No composite keys allowed for lookup tables; single column keys
+	only, because of their relationship with vifred validations.
+
+	Joins can also produce duplicate items in target list (same column
+	names in several tables). Need rule for how to tag these with a
+	correlation variable to remove ambiguity; updateable one always
+	takes precedence??
+
+	Table field columns in qualification function. In qbf, if no
+	qualification is done on master, then detail query is done first,
+	and matching masters are somehow detected! I don't think we want
+	to do that, cause of integrity problems. Masters must drive
+	everything. Qualification on details would apply within that master.
+
+	Qualification function does not accept table field columns or hidden
+	fields/columns. Must be enhanced to allow qualification on table field
+	columns for this project, in order to support masters in table field.
+
+	every field, except the join field, corresponding to a non-updateable
+	table is created as query-only or read-only on the form.
+
+Think about & test/discuss with others:
+
+	Multiple detail tables.
+	Lookup tables:
+	  Need for multiple lookup tables. Both master & detail.
+	  If no columns of lookup table assigned back to screen, ok to no
+		join with it in SELECTs?
+	  Join on one column only (tied to validation).
+	  Lookup must be 1-1 relationship with master or detail data.
+
+	Display tables: table that is read only, but is not a lookup table,
+		and can join with master or detail on multiple columns.
+
+	Support for master-only in a table field.
+	Canned help text file for each type of frame? Generate Help menuitem
+		that points to it? Problem: user defined menuitems.
+	Transaction semantics: Commit and Set autocommit off in initialize
+	  block.
+
+	Violating 3NF: may want to use lookup table data for insertion into
+	master or detail tables. Can that be expressed ok for Insert frame?
+
+	Concurrency: minimize time when locks are held; do commit in initialize
+	block of attached query, and after each select & after each update.
+	No locks on displayed data; good for concurrency, bad for consistency.
+	Would it be important to be able to specify whether to commit
+	often or not?
+
+	"Hard Coded" qualification values. Build some WHERE clauses with
+	these.
+
+	Modify and Display frames: how to deal with initial values passed
+	in from another frame? Need to return anything?
+	Update and Delete require specification of unique key. User must
+	specify? Use entire WHERE clause? Tids?
+	Surrogate keys: automatically increment after save? Holes in sequence.
+
+	Update rules we support for master/detail relationships expressed
+	in VQE.
+
+	Think about how users will enter various custom text strings needed for
+	messages ("No rows found with that customer number", etc.
+
+SELECT notes:
+	Joining on a non-updateable table in the select for either master
+	or detail implies that the master and detail data was entered
+	with a "field in tbl.col" integrity check. What guarantee do we
+	have that this validation check will be part of the form def'n?
+
+Menuitem notes:
+    Generated Query frames: (e.g. QueryParts, QueryItems)
+	Rather than generating QBF like code for the called frame, how
+	about just generating a call to QBF? Maybe with ability to only
+	have menuitem "Retrieve".
+
+	Must generate frame name.
+
+	simply put passed in value on the form, and allow user to select
+	a menuitem that dictates what to do with it? (e.g. they type 'Go',
+	or enter more values and then type 'Go', etc).
+
+	When pass arguments from one frame to another, always automatically
+	pass the key of the table? 
+
+INSERT/UPDATE notes:
+	In Update mode we must Save before NextMaster -- this differs
+	from QBF, which saves the changes in a temp file and does all
+	database updates at end of all user updates, when user selects
+	Save menuitem. QBF (6.1) also uses savepoints.
+
+	We should also commit after each save. Advantages of commiting after
+	every save: Loose less data if error; better concurrency and less
+	chance of deadlock; would work with future 4gl automatic retry/rollback
+	on errors. Advantage of commiting at end after all saves: compatible
+	with cursors.
+
+	Need unique displayed key for table updates (or else error or use tid;
+	but tid would require allocating a hidden field or table field col
+	to hold it, since don't want to display tids; also won't work on
+	Gateway or view). Tables utility should be changed to MODIFY UNIQUE?
+
+	Master target list obtained by matching up (== JOIN) table columns
+	with simple fields on form. Anything that matches gets put in the
+	target list.
+	Problem = when primary key is a surrogate. It is a problem for
+	both masters and for details in  a table field where each NEW
+	item should get a new surrogate. How can user insert code into
+	the generated unloadtable loop??
+
+	if row with key 'n' is deleted from table field, and then another
+	with that same key is added to the table field, then new row gets
+	inserted (which generates error cause of duplicate key in keyed
+	unique structure in SQL); then delete deletes the old row -- you're
+	left with nothing! *** NEED: way to tell FRS to unload DELETED rows
+	first, instead of last (there is rarely a case when deleted rows
+	should be unloaded last).
+
+UPDATE/Delete Rules:
+	Generate code for Delete restricted (currently have Delete cascades)
+	and Update Cascades and Update Restricted (currently have Update
+	of join key not allowed).
+
+	For cascade update: want to avoid having two unloadtable loops: one
+	where join field has changed and another for when it hasn't. How to
+	do this? Also, don't want to always update unchanged rows.
+
+	Primary keys must be treated separate from fields used in WHERE
+	clause and join fields.
+	Hidden versions of primary keys: join column(s) are factored out of
+	table field and made read-only simple fields. The primary key of
+	the detail must still be stored separately in the table field for
+	update and delete purposes. Rule: never use displayed fields in
+	WHERE clause for update & delete? 
+
+	Hidden fields/columns: (1) need hidden field for every master PK col.
+	This field will be loaded in Select and used in Update & Delete stmts.
+	(2) Need hidden column for every PK in each detail table, except
+	the join column(s) which are factored out of table field and will
+	be R/O in update mode. (3) table field columns that are part of detail
+	PK: *** unfinished ***
+
+	I guess we have to allow for updates to the primary key of the
+	master and detail data (if we had easy way for people to use surrogates,
+	then would be more conceivable to restrict PK updates). That means
+	we have to save prior values of primary key for use in update and
+	delete statements.
+
+	Don't allow updates to join field(s). Always factor them out
+	of the table field and make reverse video. But note that join
+	columns != primary key of the detail. Join column + at least
+	one other column (which could be hidden) = primary key.
+	(what if, as in this example, master PK = join column).
+
+	In all cases, we should not allow updates to the table field join
+	field. If we do, then code generation is more complicated and
+	larger: if (any join fields have changed) then every row in
+	the table field must be unloaded and have its key value changed --
+	even rows which did not change, according to _state. Alternative:
+	don't "factor" join columns out of table field; leave them in
+	the table field and require user to enter them for every row.
+
+	Join fields are factored out of table field; only appear in
+	simple fields (read only might be best). Don't allow update
+	of key fields for updateable tables -- make them read-only
+	except in query mode?
+
+	Key fields in simple fields should be read-only when form is in
+	update mode and writeable in Append mode. Keys in table field
+	need to be enterable. Do we have
+	to support changing the primary key?? (if so, then we have to keep
+	before change value, which could get complicated).
+
+==========================================================================
+o  From scanmod_oe.osq, &update_oe.osq:
+
+	(comment on deleting detail for a master in a mdupdate frame
+	via an unloadtable loop, rather than via a single query over
+	the join clause):
+            NOTE on following delete of matching detail rows:
+            It is possible to delete ALL matching details in one
+            query. However: 1. "generate query delete detail" doesn't
+            generate the query for that, so we'd need a new query
+            type. also: 2. if details were qualified then we'd need that
+            qualification in the delete query. So just unload the table
+	    field and delete each row.
+
+	Zero rows (0 rows) on update, insert or Delete: Don't produce an
+	error, or even
+	check for the condition. The reasons for this are very DBMS specific
+	and can't be determined to be an error condition without knowing
+	something about the application, the table being updated, how
+	concurrency is being controlled, and the type of operation being
+	performed (see 8-5 in adv abf notes). For our first release, just
+	check for errors, and let the customers determine where we go next.
+	(6/29): also, terminator rules could cause delete of master to
+	cascade and delete all details, in which case our detail deletes
+	would return no error and zero rows. On Ingres delete or update
+	of non-existant row is not an error -- it just returns a rowcount
+	of zero. 
+
+	Main table should always join with Lookup tables unless no other
+	columns in lookup table are displayed. In that case, the join should
+	not take place -- that will allow people to see masters
+	that have invalid values in lookup column. Even though masters
+	with bad lookup values can be selected in this case, when the user
+	enters a bad lookup value it will get caught as invalid by the
+	lookup Select validation.
+
+	What happens if user adds a column, changes a column name, drops
+	a column, or changes a column's type or nullability? How to get
+	the change reflected into the VQE, form & generated code?
+	What if user has edited the form already?
+	Possibilities: 1. must define brand new VQE and form.
+	2. Can drop column from display but that may not keep it from being
+	referenced ("Set to:" in Append frames); Can't add new column to
+	a VQE table field? Would have to manually change form field names,
+	etc.  3. be able to 'refresh' the VQE somehow with current table
+	def'n. What to do with existing customized form? Maybe we need a tool
+	to merge 2 forms; 1 describes the layout (the old one), and a second
+	describes the correct data types and lengths (the new one). 

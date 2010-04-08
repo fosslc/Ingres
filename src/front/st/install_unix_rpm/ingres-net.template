@@ -1,0 +1,94 @@
+%pre
+# RPM install option for PIF
+# PIF_RPM_UPDATE_OPTION= --nodeps --replacefiles --replacepkgs
+#set environment from RPM info
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+export II_SYSTEM=$RPM_INSTALL_PREFIX
+
+# run pre-install setup
+if [ $1 -gt 1 ] ; then
+    # upgrade mode
+    $II_SYSTEM/ingres/utility/iigenpreinst -r %rpm_basename% \
+	-v %rpm_version% -u
+else
+    $II_SYSTEM/ingres/utility/iigenpreinst -r %rpm_basename% \
+	-v %rpm_version%
+fi
+
+rc=$?
+
+# Netu has been moved from $II_SYSTEM/ingres/sig/netu to
+# $II_SYSTEM/ingres/sig/netu which can cause problems on upgrade. Remove
+# the file from the old location if it exists to avoid this. SD issue 120016
+[ -f ${II_SYSTEM}/ingres/sig/netu ] && rm -f ${II_SYSTEM}/ingres/sig/netu
+exit $rc
+
+%post
+#Set environment from RPM info
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+export II_SYSTEM=$RPM_INSTALL_PREFIX
+instid=`$II_SYSTEM/ingres/bin/ingprenv II_INSTALLATION`
+
+rc=0 # initialize return code
+
+# make sure ingvalidpw is correctly installed
+[ $rc == 0 ] &&
+{
+    mkvalidpw=$II_SYSTEM/ingres/bin/mkvalidpw
+# Build password validation program if we can
+    if [ -x $mkvalidpw ] && \
+	( which gcc > /dev/null 2>&1 )
+    then
+	if [ "$silent" ] ; then
+	    $mkvalidpw >& /dev/null
+	else
+	    $mkvalidpw
+	fi
+    elif [ ! -x $II_SYSTEM/ingres/bin/ingvalidpw ]
+    then
+	# Use the distributed version
+	[ -f "$II_SYSTEM/ingres/files/iipwd/ingvalidpw.dis" ] && \
+                cp -f $II_SYSTEM/ingres/files/iipwd/ingvalidpw.dis \
+                "$II_SYSTEM/ingres/bin/ingvalidpw"
+
+	# Set II_SHADOW_PWD if we need to
+	[ -f /etc/shadow ] && \
+	    ingsetenv II_SHADOW_PWD $II_SYSTEM/ingres/bin/ingvalidpw
+    fi
+
+    # If ingvalidpw exists then it needs to be owned by root
+    # and have SUID set.
+    [ -x $II_SYSTEM/ingres/bin/ingvalidpw ] &&
+    {
+	chown root $II_SYSTEM/ingres/bin/ingvalidpw
+	chmod 4755 $II_SYSTEM/ingres/bin/ingvalidpw
+    }
+}
+
+# Add setup to todo list
+sulist=%pkg_sulist%
+ifssave=$IFS
+IFS=:
+for script in ${sulist}
+do
+    echo $script >> /var/lib/ingres/${instid}/setup.todo
+done
+IFS=$ifssave
+
+exit 0
+
+%preun
+#Set environment from RPM info
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+export II_SYSTEM=$RPM_INSTALL_PREFIX
+
+# Check pre-un script is present, if it's not just exit
+[ -x $II_SYSTEM/ingres/utility/iigenpreun ] || exit 0
+if [ $1 = 0 ] ; then
+    $II_SYSTEM/ingres/utility/iigenpreun -r %rpm_basename% \
+        -v %rpm_version% -p %pkg_name% -s %pkg_sulist%
+fi
+exit 0
+
+%files
+

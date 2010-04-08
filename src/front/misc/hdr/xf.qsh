@@ -1,0 +1,720 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+/**
+** Name:	xf.qsh - header for xferdb.
+**
+** Description:
+**	<comments>
+**
+** History:
+**	<manual entries>
+**	11-oct-88 (marian)
+**		Added support for procedures.
+**	18-oct-88 (marian-
+**		Changed XF_LINELEN to 70 instead of 4800 since this number
+**		is the number of char per line.
+**	26-jan-89 (marian)
+**		Add XF_CAT for copying in FE catalogs.
+**	16-may-89 (marian)
+**		Add support for RULES.
+**	18-may-89 (marian)
+**		Modify attinfo structure to handle system_maintained information
+**		for logical keys.
+**	08-jan-90 (marian)	bug 9148
+**		Modified attinfo structure to handle UDT information.  Added
+**		col_int_datatype to the structure.
+**	09-sep-91 (billc)	bug 39517
+**		added field to relinfo for detecting multiple locations.
+**      17-jan-92 (billc)	bug 40139 
+**              Added macro to assist testing for nullable UDTs.
+**	2-sep-93 (robf)
+**	        Add support for secure options on tables
+**	17-nov-93 (robf)
+**              Add prototype for xfsecalarm()
+**	28-Mar-94 (jpk)		bug 59669
+**		Modified that macro to allow spatial datatypes as well.
+**	25-may-95 (emmag)
+**		Added NT to the DOS define for CMDLINE.
+**	19-jul-95 (emmag)
+**		NT scripts have a .bat suffix.
+**	15-may-1996 (nanpr01 & thaju02)
+**	 	Added pagesize field in XF_TABINFO. Added #define for 
+**		XF_COMPAT_PGSIZE.
+**      11-Dec-1997 (hanal04)
+**              Added priority field in XF_TABINFO. b94494.
+**	26-Feb-1999 (consi01) bug 92376 INGBBA 29
+**		Added fields to XF_TABINFO to support the use of the
+**		range clause on RTREE indexes.
+**	11-Feb-1999 (nicph02)
+**		Moved #definition of XF_MAXPAGES to here (b94487)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      07-jun-2000 (gupsh01)
+**              Added location_list array to hold a comma separated
+**              list for locations. Used for storing index locations.
+**	16-nov-2000 (gupsh01)
+**	    Added new XF constant for the copydb options -createonly,
+**	    -modifyonly flags, etc. modify the parameter list for the 
+**	    functions xfcrscript, xftables to include the output_flags
+**	    requested by the user.
+**	18-may-2001 (abbjo03)
+**	    Add CreateParallelIndexes globalref.
+**	20-may-2001 (gusph01)
+**	    Added support for new utility genxml.
+**	12-june-2001 (gupsh01)
+**	    Added function get_colcnt for utility genxml.
+**	14-jun-2001 (gupsh01)
+**	    Modified the members log_key, becat, fecat, for XF_COLIFO 
+**	    and XF_TABINFO from bool to char, as its conflicts with 
+**	    native type bool in cpp. (used in impxml).
+**	14-jun-2001 (gupsh01)
+**	    Added XF_CHECK_PERSIST for dealing with persistent indexes.
+**	    if this flag is set then in the copy.in script, any indexes
+**	    with persistence will not be asked to be recreated.
+**	10-Oct-2001 (hanch04)
+**	    Add xffillcolinfo and TH_READONLY flag
+**      15-Oct-2001 (hanal04) Bug 105924 INGSRV 1566
+**          Made location_list a character pointer which requires
+**          dynamic allocation due to the fact that we could have up
+**          to 256 locations.
+**	01-nov-2001 (gupsh01)
+**	    Added new function xffileinput to convert parameters read
+**	    from a parameter file into the command line arguments. 
+**	    This implement the -param_file=filename flag for copydb.
+**      04-jan-2002 (stial01)
+**          Added XF_INTEG_ONLY for unloading check constraints
+**	15-jan-2002 (gupsh01)
+**	    Added  XF_MAX_INTEGLINE. 
+**	29-may-2002 (gupsh01)
+**	    Modified the parameter list of xmlprintrows to contain  a
+**	    pointer to  XF_TAB_INFO structure instead of simply the 
+**	    table name, in order to get the correct datatype of the
+**	    columns when printing them.
+**	25-jun-2002 (guphs01)
+**	    Added new flag -no_repmod which allows not to modify the 
+**	    replicator catalogs if they exist. This will be used for
+**	    usermod.
+**	01-jul-2002 (gupsh01)
+**	    Added support for writing to binary files.
+**	29-jan-03 (inkdo01)
+**	    Add flag for "sequence_only".
+**	05-Feb-2003 (inifa01) bug 109576 INGSRV 2091
+**	    Unloaddb does not generate unique copy filenames when multiple
+**	    users with similar names (eg pvusr1 & pvusr2) own tables with  
+**	    the same name in a db. 
+**	    Modified the upper limit for XF_UNIQUE to 32 (the maximum length
+**	    of an ingres table name).
+**	05-feb-03 (devjo01)
+**	    Added XF_MODIFY_ALLOCATION as a flag to control the placement
+**	    of the WITH ALLOCATION clause between MODIFY, and COPY.
+**      31-Jul-2003 (hanal04) SIR 110651 INGDBA 236
+**          Added new -journal option to allow fully journalled copy.in.
+**	23-Apr-2004 (gupsh01)
+**	    Added support for convtouni.
+**       4-May-2004 (hanal04) Bug 112265 INGSRV2814
+**          Added XF_PST_NUMVARS to prevent copydb generating parallel
+**          index creation statements that blow the range variable
+**          limit (PST_NUMVARS).
+**	7-Jun-2004 (schka24)
+**	    Added partition support.
+**	24-Jun-2004 (gupsh01)
+**	    Added support for no owner name in convtouni.
+**	9-Sep-2004 (schka24)
+**	    Update prototype for xfevent.
+**	28-oct-04 (inkdo01)
+**	    Update XF_PST_NUMVARS for expanded range table feature.
+**	07-dec-2004 (gupsh01)
+**	    Modify writecopy to accept the filename into which 
+**	    sql statements should be written to. This is only
+**	    used by impxml for now.
+**	30-dec-04 (inkdo01)
+**	    Added collID for collation support.
+**	16-feb-2005 (thaju02)
+**	    Added concurrent_updates for usermod.
+**	03-May-2005 (komve01)
+**	    Added no_seq(XF_NO_SEQUENCES) option for copydb.
+**      04-May-2005 (gilta01) bug 112138 INGCBT522
+**          Moved prototype for xfxmlwrite() to this head file to make it
+**          available outside of xfgenxml.sc
+**          Added new flag to xfxmlwrite() to allow the caller to select the
+**          format to be used for special characters.
+**	06-May-2005 (drivi01) 
+**	    Added quotes around path to copy.out in 
+**	    windows specific CMDLINE define.
+**	13-oct-05 (inkdo01)
+**	    Added With_r302_catalogs.
+**	31-Oct-2006 (kiria01) b116944
+**	    Added XF_NODEPENDENCY_CHECK
+**      13-Jan-2008 (hanal04) Bug 119826
+**          Added XF_MOD_TO_HEAP to allow callers of xfmodify() to modify
+**          the specified table to a simple heap.
+**          Added XF_NOCREATE to allow callers of xfindexes() to generate
+**          only the drop statements for the supplied target list. 
+**	14-nov-2008 (dougi)
+**	    Added always_ident, bydefault_ident to XF_COLINFO and sequence
+**	    name/owner to XF_TABINFO for identity column support.
+**       3-Dec-2008 (hanal04) SIR 116958
+**          Added output2 flag XF_NOREP to exclude ALL replicator objects.
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for database objects, DB_IITYPE_LEN for
+**          iitypename() result, DB_IISTRUCT_LEN for iistructure() result.
+**      27-Feb-2009 (coomi01) b121663
+**          Add prototypes for xf_encode_buffer/xf_decode_buffer
+**          Add encoding parameter to xmlprintrows.
+**      16-Jun-2009 (maspa05) trac 386, SIR 122202
+**          Add NoLogging for -nologging flag on copydb, unloaddb
+**	25-Aug-2009 (kschendel) 121804
+**	    Delete duplicate routine definitions.  Add a couple bool protos.
+*/
+
+/*
+** max length of the integrity buffer for alter table statement, 
+** for named constraint index portion of the statement
+*/
+# define XF_MAX_INTEGBUF  500
+
+/* length of integrity text in one tuple of iiintegrities */
+# define XF_INTEGLINE   240
+
+/* Maximum number of range variables. Must be set equal to PST_NUMVARS */
+# define XF_PST_NUMVARS DB_MAXVARS-2
+
+/*
+** An instance of this struct describes a column in a table.
+*/
+
+EXEC SQL BEGIN DECLARE SECTION;
+typedef struct xf_colinfo_struct
+{
+    char	column_name[DB_MAXNAME + 1];
+    i4	extern_length;
+    i4	intern_length;
+    i4		precision;
+    i4		collID;
+    i4		adf_type;
+    char	nulls[2];
+    char	defaults[2];
+    char	sys_maint[2];
+    char	log_key;
+    char	col_int_datatype[DB_IITYPE_LEN + 1];
+    i4		col_seq;
+    i4		key_seq;
+
+    /* For user-defined defaults, starting in 6.5: */
+    char	*default_value;		/* allocate from memory. */
+    char	has_default[2];
+
+    /* For secure extensions */
+    char	audit_key[2];	/* security audit key */
+
+    /* For identity columns */
+    char	always_ident[1];
+    char	bydefault_ident[1];
+
+    struct xf_colinfo_struct *col_next;
+} XF_COLINFO;
+
+/*
+** An instance of this struct describes a table or index.
+**
+** 	This is getting quite big.  Could save space by using bitmaps for
+**	booleans, and using union structs for the view/index/table-specific
+**	information.
+*/
+
+typedef struct xf_tabinfo_struct
+{
+    char    name[DB_MAXNAME + 1];
+    char    owner[DB_MAXNAME + 1];
+    char    base_name[DB_MAXNAME + 1];
+    char    base_owner[DB_MAXNAME + 1];
+    char    fecat;
+    char    becat;
+    char    table_type[2];
+    char    has_permit[2];
+    char    alltoall[2];	/* shouldn't be used after 6.4 */
+    char    rettoall[2];	/* shouldn't be used after 6.4 */
+    char    has_integ[2];
+    char    journaled[2];
+    char    duplicates[2];
+    char    multi_locations[2];
+    i4	    expire_date;
+    char    location[DB_MAXNAME + 1];
+    char    *location_list;
+    char    is_data_comp[2];
+    char    is_key_comp[2];
+    char    is_unique[2];
+    char    otherlocs[2];
+    char    indexes[2];
+    char    storage[DB_IISTRUCT_LEN+1];
+    char    unique_scope[2];	/* new in 6.5, for referential integ. */
+    char    persistent[2];	/* new in 6.5, for referential integ. */
+    i4	    allocation_size;	/* new in 6.5, for file-extend. */
+    i4	    extend_size; 	/* new in 6.5, for file-extend. */
+    char    concur_access[2];	/* new in 6.5, for high performance load */
+    char    is_readonly[2];	/* new in 6.5, for high performance load */
+    i4 num_rows;		/* new in 6.5, for high performance load */
+    i4 ifillpct;
+    i4 dfillpct;
+    i4 lfillpct;
+    i4 minpages;
+    i4 maxpages;
+    i4 pagesize;
+    double  rng_ll1;
+    double  rng_ll2;
+    double  rng_ll3;
+    double  rng_ll4;
+    double  rng_ur1;
+    double  rng_ur2;
+    double  rng_ur3;
+    double  rng_ur4;
+    char    row_sec_audit[2];
+    XF_COLINFO	*column_list;
+    struct xf_tabinfo_struct *tab_next;
+    i4 priority;
+    i4 row_width;
+    i4 table_reltid;
+    i4 table_reltidx;
+    i4 phys_partitions;
+    i4 partition_dimensions;
+    char    idseq_name[DB_MAXNAME + 1];
+    char    idseq_owner[DB_MAXNAME + 1];
+} XF_TABINFO;
+EXEC SQL END DECLARE SECTION;
+
+/* Some globals. */
+EXEC SQL BEGIN DECLARE SECTION;
+	GLOBALREF	char *Owner;
+EXEC SQL END DECLARE SECTION;
+
+GLOBALREF	bool With_64_catalogs;
+GLOBALREF	bool With_65_catalogs;
+GLOBALREF	bool With_20_catalogs;
+GLOBALREF	bool With_r3_catalogs;
+GLOBALREF	bool With_r302_catalogs;
+GLOBALREF	bool With_r930_catalogs;
+GLOBALREF	bool CreateParallelIndexes;
+GLOBALREF	bool GroupTabIdx;
+GLOBALREF	bool NoLogging;
+GLOBALREF       bool SetJournaling;
+GLOBALREF       bool concurrent_updates;
+
+# define	XF_COMPAT_PGSIZE 2048
+
+# define	INGRES_NAME 	ERx("$ingres")
+
+/* maximum number of objects that can be copied in copydb */
+# define XF_MAXOBJONCL   1024
+
+/* 
+** Maximum length of output line (in the reload script) for text of views, 
+** permits, etc.
+*/
+# define XF_LINELEN	70
+
+/* 
+** length of view text in one tuple of iiviews 
+** It's not clear why this is 256 and all other text lines are 240...
+*/
+# define XF_VIEWLINE	256
+
+/* length of procedure text in one tuple of iiprocedures */
+# define XF_PROCLINE	240
+
+/* length of rule text in one tuple of iirules */
+# define XF_RULELINE	240
+
+/* length of permit text in one tuple of iipermits */
+# define XF_PERMITLINE	240
+
+/* length of registration text in one tuple of iiregistrations */
+# define XF_REGLINE	240
+
+/* length of comment short-remark text in one tuple of iidb_comments */
+# define XF_SHORTREMLINE	60
+
+/* length of comment long-remark text in one tuple of iidb_comments */
+# define XF_LONGREMLINE	1600
+
+/* length of default value stored in iidefaults. */
+# define XF_DEFAULTLINE	1500
+
+
+/* WARNING: if this value ever changes we're in trouble. */
+# define XF_MAXPAGES    8388607
+
+# define        XF_TAB_CREATEONLY       0x00000002L
+# define        XF_TAB_MODONLY          0x00000004L
+# define        XF_TAB_COPYONLY         0x00000008L
+# define        XF_PRINT_TOTAL		0x00000010L
+# define        XF_ORDER_CCM            0x00000020L
+# define        XF_INDEXES_ONLY         0x00000040L
+# define        XF_CONSTRAINTS_ONLY     0x00000080L
+# define        XF_VIEW_ONLY            0x00000100L
+# define        XF_SYNONYM_ONLY         0x00000200L
+# define        XF_EVENT_ONLY           0x00000400L
+# define        XF_PROCEDURE_ONLY       0x00000800L
+# define        XF_REGISTRATION_ONLY    0x00001000L
+# define        XF_RULES_ONLY           0x00002000L
+# define        XF_SECALARM_ONLY        0x00004000L
+# define        XF_COMMENT_ONLY         0x00008000L
+# define        XF_ROLE_ONLY            0x00010000L
+# define        XF_DROP_INCLUDE         0x00020000L
+# define        XF_USER_FILEIN          0x00040000L
+# define        XF_USER_FILEOUT         0x00080000L
+# define        XF_PRECISION_SET        0x00100000L
+# define        XF_PERMITS_ONLY         0x00200000L
+# define        XF_RELATIVE_PATH        0x00400000L
+# define        XF_NO_LOCATIONS         0x00800000L
+# define        XF_NO_PERMITS           0x01000000L
+# define        XF_UNINTURRUPTED        0x02000000L
+# define        XF_XMLFLAG		0x04000000L
+# define        XF_CHECK_PERSIST	0x08000000L
+# define	XF_INTEG_ONLY		0x10000000L
+# define	XF_NO_REPMODIFY		0x20000000L
+# define        XF_SEQUENCE_ONLY        0x40000000L
+# define        XF_MODIFY_ALLOCATION    0x80000000L
+
+/* These are flags for output2 */ 
+# define        XF_CONVTOUNI		0x00000001L
+# define        XF_UNITOCONV		0x00000002L
+# define        XF_NO_SEQUENCES		0x00000004L
+# define        XF_NODEPENDENCY_CHECK	0x00000008L
+# define        XF_MOD_TO_HEAP          0x00000010L
+# define        XF_NOCREATE             0x00000020L
+# define        XF_NOREP                0x00000040L
+
+/* These flags identify list type indicator */
+# define        XF_COLUMN_LIST		0x00000001L
+# define        XF_TABFILTER_LIST	0x00000002L
+
+/* procedure declarations */
+
+/* xffilobj.qsc */
+FUNC_EXTERN XF_TABINFO	*xffilltable();
+FUNC_EXTERN XF_TABINFO	*xffillindex();
+
+FUNC_EXTERN XF_TABINFO	*xf_getobj(char *owner, char *table);
+FUNC_EXTERN void	xf_putobj(XF_TABINFO *info);
+FUNC_EXTERN bool	xfselected(char *name);
+FUNC_EXTERN void	xfaddlist(char *name);
+FUNC_EXTERN void	xfifree(XF_TABINFO *list);
+FUNC_EXTERN XF_TABINFO  *get_empty_xf_tabinfo();
+
+/* xfgetatts.qsc */
+FUNC_EXTERN void	xfgetcols();
+FUNC_EXTERN void	xfgeticols();
+FUNC_EXTERN void	xfattfree();
+FUNC_EXTERN XF_COLINFO  *attnode();
+FUNC_EXTERN bool	xffillcolinfo( char	*table_name,
+    char	*owner_name,
+    char	*datatype,
+    char	*int_datatype,
+    i4		int_ingtype,
+    i4		extern_len,
+    i4		intern_len,
+    i2		scale,
+    XF_COLINFO	*cp,
+    char	*default_value);
+
+/* xfinteg.qsc */
+FUNC_EXTERN void	xfinteg();
+FUNC_EXTERN void	xfconstraints();
+
+/* xfregs.qsc */
+FUNC_EXTERN void	xfregistrations();
+
+/* xfcomm.qsc */
+FUNC_EXTERN void	xfcomments();
+
+/* xfchkcap.qsc */
+FUNC_EXTERN void	xfcapset();
+
+/* xfpermit.qsc */
+FUNC_EXTERN void	xfpermits();
+FUNC_EXTERN void	xfalltoall();
+
+/* xfphys.qsc */
+FUNC_EXTERN STATUS	xfphys();
+FUNC_EXTERN void	xfsave();
+FUNC_EXTERN void  	xfmodify (XF_TABINFO *, i4, i4 );	
+FUNC_EXTERN void	xfjournal();
+FUNC_EXTERN void	xfindexes();
+FUNC_EXTERN void	xfsecalarms();
+FUNC_EXTERN void	writewith();
+FUNC_EXTERN void	writeindex(XF_TABINFO *, i4 );
+
+/* xfproc.qsc */
+FUNC_EXTERN void	xfprocedures(i4 output_flags2);
+
+/* xfrules.qsc */
+FUNC_EXTERN void	xfrules();
+FUNC_EXTERN void	xfevents(i4 output_flags, i4 output_flags2);
+FUNC_EXTERN void	xfsynonyms();
+
+/* xfview.qsc */
+FUNC_EXTERN void	xfviews();
+FUNC_EXTERN void	xfdrop_rules(i4 output_flags);
+
+/* xfwith.qsc */
+FUNC_EXTERN void	xfaddloc();
+
+/* xfwrap.c */
+
+/*
+** This struct is the mainstay of our file and buffer handling.  
+** We read much of our
+** text from the DBMS without knowing how much we'll get before
+** we write it out, so this mechanism provides a standoff allocation
+** method.  This is invoked when openning with the TH_IS_BUFFERED flag
+** turned on.  Also, we hide the details of formatting the text before
+** the actual writing.
+** Without the TH_IS_BUFFERED flag, writes are unbuffered.
+*/
+typedef struct text_handle_struct
+{
+    char   *t_buf;         /* the current text buffer being built. */
+    u_i4  t_size;         /* size of the current buffer. */
+    i4     t_i;            /* current offset in the current buffer. */
+    i4	   t_flags;        /* flags, currently only one. */
+    FILE        *f_fd;          /* file descriptor */
+    char        f_locbuf[MAX_LOC + 1];
+    LOCATION    f_loc;
+    struct text_handle_struct	*t_next; /* for chaining on a free list */
+} TXT_HANDLE;
+
+/* Indicates that special text buffering is in effect on this file. */
+# define TH_IS_BUFFERED 0x02 	/* special text buffering. */
+# define TH_BLANK_PAD 	0x04	/* add blank to end of line (HACK ATTACK) */
+# define TH_BASEFILE	0x08	/* writes to real physical file. */
+# define TH_SCRIPT	0x10	/* file is an executable "script". */
+# define TH_DUPLEX	0x20	/* writes go to two underlying files. */
+# define TH_READONLY    0x40	/* open file for readonly. */
+# define TH_BINWRITE	0x80	/* open binary file for writing. */
+
+GLOBALREF	TXT_HANDLE	*Xf_in;
+GLOBALREF	TXT_HANDLE	*Xf_out;
+GLOBALREF	TXT_HANDLE	*Xf_both;
+GLOBALREF	TXT_HANDLE	*Xf_reload;
+GLOBALREF	TXT_HANDLE	*Xf_unload;
+GLOBALREF	TXT_HANDLE	*Xf_xmlfile;
+GLOBALREF	TXT_HANDLE	*Xf_xml_dtd;
+GLOBALREF	TXT_HANDLE	*Xf_xmlfile_sql;
+GLOBALREF	TXT_HANDLE	*Xf_xmlfile_data;
+
+FUNC_EXTERN TXT_HANDLE	*xfopen(char *name, i4  flags);
+FUNC_EXTERN TXT_HANDLE	*xfreopen(TXT_HANDLE *oldtdp, i4  flags);
+FUNC_EXTERN TXT_HANDLE	*xfduplex(TXT_HANDLE *tdp1, TXT_HANDLE *tdp2, 
+					i4 flags);
+FUNC_EXTERN char	*xffilename(TXT_HANDLE *tdp);
+FUNC_EXTERN void	xfwrite(TXT_HANDLE *tdp, char *text);
+FUNC_EXTERN void	xfread(TXT_HANDLE *tdp, i4 numofbytes, char *buf);
+FUNC_EXTERN void	xfflush(TXT_HANDLE *tdp);
+FUNC_EXTERN void	xfclose(TXT_HANDLE *tdp);
+FUNC_EXTERN void	xfdelete(TXT_HANDLE *tdp);
+FUNC_EXTERN bool	xf_dbreplicated(void);
+
+/* xffileio.c */
+FUNC_EXTERN char	*xfnewfname(char *table_name, char *owner);
+FUNC_EXTERN STATUS	xfsetdirs(char *dir, char *frompath, char *topath);
+FUNC_EXTERN char	*xfaddpath(char *filename, i4  in_or_out);
+# define	XF_FROMFILE	1
+# define	XF_INTOFILE	2
+FUNC_EXTERN STATUS    xffileinput(char *paramfilename, char ***argv, i4 *argc);
+# define 	XF_MAXBUFLEN       256
+# define	XF_MAXARGLEN       1000
+
+/* Modified from 5 (MPE)/8 to 32 */
+# define XF_UNIQUE  32	
+
+/* xfwrscrpt.c */
+FUNC_EXTERN void	xfcrscript(char *owner, char *progname, char *dbaname,
+				bool portable, 
+				i4 output_flags, i4 output_flags2);
+FUNC_EXTERN bool	xf_is_cat(char *name);
+FUNC_EXTERN bool	xf_is_fecat(char *name);
+FUNC_EXTERN void	xf_found_msg(char *otype, i4  count);
+FUNC_EXTERN void	xfescape_quotes(char *str, char *buf);
+
+/* xfcopy.c */
+FUNC_EXTERN void	xftables(i4 *tcount, i4 output_flags,
+			i4 output_flags2, XF_TABINFO **tlist_ptr);
+FUNC_EXTERN void	xfwritehdr(ER_MSGID msg);
+FUNC_EXTERN void	xfsetauth(TXT_HANDLE *tfd, char *owner);
+FUNC_EXTERN void	xfwrite_id(TXT_HANDLE *tfd, char *name);
+FUNC_EXTERN void	xfread_id(char *name);
+FUNC_EXTERN void	xfsetlang(TXT_HANDLE *tfd, DB_LANG dml);
+FUNC_EXTERN void writecreate(XF_TABINFO  *tp, i4 output_flags); 
+FUNC_EXTERN void writecopy(XF_TABINFO  *, i4 , char *);
+FUNC_EXTERN void	writedefault(XF_COLINFO *cp);
+
+/* xfcnvuni.c */
+FUNC_EXTERN void	writealtcol(XF_TABINFO *tp, i4 output_flags2);
+FUNC_EXTERN bool	xfobjselected(char *name, i4 listtype);
+FUNC_EXTERN void	xfaddobject(char *name, i4 listtype);
+FUNC_EXTERN bool	xfremovetab(XF_TABINFO      *tab);
+FUNC_EXTERN void	update_tablist(XF_TABINFO     **tablist, 
+					i4              output_flags2);
+
+/* xfgenxml.sc */
+FUNC_EXTERN void    xmlimport();
+FUNC_EXTERN void    xmldtd(bool internal_dtd, char *name_doctype);
+FUNC_EXTERN i4      xmlprintcols(XF_TABINFO *tp);
+FUNC_EXTERN void    writevalue(TXT_HANDLE *tdp, i4  value);
+FUNC_EXTERN void    writelongvalue();
+FUNC_EXTERN void    writedoublevalue();
+FUNC_EXTERN void    xmlprintstru(XF_TABINFO *tp);
+FUNC_EXTERN void    xmlprintindex(XF_TABINFO *tp);
+FUNC_EXTERN void    xmlprintstats();
+FUNC_EXTERN void    xmlprintrows(int numcols, XF_TABINFO *tp, char *dbname, i4 use64bitEncoder);
+FUNC_EXTERN void    xfxmlloc();
+FUNC_EXTERN i4      get_schema_nr();
+FUNC_EXTERN i4      get_view_nr();
+FUNC_EXTERN char    *get_version();
+FUNC_EXTERN void    xmldbinfo(char *dbname, char *owner);
+FUNC_EXTERN i4	    xmltabinfo(XF_TABINFO *tp);
+FUNC_EXTERN void    xmlprintresultset(XF_TABINFO *tp); 
+FUNC_EXTERN void    print_docType(char *dtd_filename, bool referredloc, char *name_doctype); 
+FUNC_EXTERN i4      get_colcnt(XF_TABINFO *tp);
+FUNC_EXTERN void    xfxmlwrite(char *instr, i4 len, i4 format);
+FUNC_EXTERN i4      xf_encode_buffer(unsigned char *ibuf, u_i4 ilen, char **obuf, bool *isClean);
+FUNC_EXTERN i4      xf_decode_buffer(char *ibuf, u_i4 ilen, char **obuf);
+
+# define        XML_CDATA               1	
+						/* Escape blocks of text which
+                                                ** contains special characters.
+                                                */
+# define        XML_EXPANDED            2
+						/* Escape each special character
+						** in a block of text
+						*/
+#define        XML_ENCODED		4       /* Use 64bit encoding
+						*/
+/* 
+** Macro for testing whether a given db_datatype is a UDT. 
+*/
+# define IS_UDT(d)	(((d) >= ADD_LOW_USER && (d) <= ADD_HIGH_USER) \
+		      || (-(d) >= ADD_LOW_USER && -(d) <= ADD_HIGH_USER)) \
+		      || (((d) >= ADD_LOW_CLSOBJ && (d) <= ADD_HIGH_CLSOBJ) \
+		      || (-(d) >= ADD_LOW_CLSOBJ && -(d) <= ADD_HIGH_CLSOBJ))
+
+/* 
+** Macro for testing whether a given db_datatype is a Blob. 
+*/
+# define IS_BLOB(d)	((d) == DB_LBIT_TYPE || -(d) == DB_LBIT_TYPE \
+		    || (d) == DB_LVCH_TYPE || -(d) == DB_LVCH_TYPE)
+
+/* 
+** Macro for simplifying memory allocation.  We're only interested
+** in the size and whether to zero out the allocated memory.
+*/
+
+# define XF_REQMEM(s, z)    (MEreqmem((u_i4)0, (u_i4)(s), z, (STATUS*)0))
+
+/*
+** This is written to every script after every command.
+*/
+
+# define GO_STMT	(ERx("\n\\p\\g\n"))
+
+/*
+** Horrible ugly platform dependendies for commandlines and messages.
+*/
+
+# ifdef CMS
+#	define MSG_COMPLETE1	S_UD0008_Completed_UNLOADDB_an
+#	define MSG_COMPLETE2	S_UD0009_Don_t_forget_to_run_U
+#	define MSG_COMPLETE3	S_CT0005_Completed_CONVTOUNI_a
+# else
+# ifdef PMFE                                          
+#	define MSG_COMPLETE1 S_UD0008_Completed_UNLOADDB_an  /* 6-x_PC_80x86 */
+#	define MSG_COMPLETE2 S_UD0009_Don_t_forget_to_run_U  /* 6-x_PC_80x86 */
+#	define MSG_COMPLETE3 S_CT0005_Completed_CONVTOUNI_a
+# else 	
+# ifdef NT_GENERIC
+#	define MSG_COMPLETE1	S_UD0016_Completed_unload_bat_
+#	define MSG_COMPLETE2	S_UD0017_Don_t_forget_to_run_b
+#	define MSG_COMPLETE3	S_CT0006_Completed_CONVTOUNI_b
+# else
+#	define MSG_COMPLETE1	S_UD000A_Completed_unload_ing_
+#	define MSG_COMPLETE2	S_UD000B_Don_t_forget_to_run_u
+#	define MSG_COMPLETE3	S_CT0007_Completed_CONVTOUNI_i
+# endif /* NT_GENERIC */
+# endif /* PMFE */                                     
+# endif /* CMS */
+
+# ifdef	CMS
+#    define CMDLINE ERx("address command 'sql -s -f4F79.38 -f8F79.38 -u%s%s %s < %s'\n")
+# endif
+
+# ifdef	MVS
+#	define CMDLINE	ERx("sql -s -f4F79.38 -f8F79.38 -u%s%s %s < %s\n")
+# endif
+
+# ifdef	VMS
+#	define CMDLINE	ERx("$ sql -s -f4F79.38 -f8F79.38 -u%s%s %s <%s\n")
+/*		
+**	Fix bug us1012: quote the +U on VMS to prevent lowercasing.
+*/
+#	define SUFLAG          ERx(" \"+U\"")
+# else
+#	define SUFLAG          ERx(" +U")
+# endif
+
+# ifdef	UNIX
+#	define CMDLINE	ERx("sql -s -f4F79.38 -f8F79.38 -u'%s'%s %s < %s\n")
+# endif
+
+# ifdef	hp9_mpe
+#	define CMDLINE	ERx("sql -s -f4F79.38 -f8F79.38 -u%s%s %s < %s\n")
+# endif
+
+# if defined (MSDOS) || defined (NT_GENERIC)
+#	define CMDLINE	ERx("sql -s -f4F79.38 -f8F79.38 -u%s%s %s < \"%s\"\n ") 
+# endif                        
+
+/* For convtouni use CMDLINE2 to write sql execution statement without username */
+# ifdef	CMS
+#    define CMDLINE2 ERx("address command 'sql -s -f4F79.38 -f8F79.38 %s %s < %s'\n")
+# endif
+
+# ifdef	MVS
+#	define CMDLINE2	ERx("sql -s -f4F79.38 -f8F79.38 %s %s < %s\n")
+# endif
+
+# ifdef	VMS
+#	define CMDLINE2	ERx("$ sql -s -f4F79.38 -f8F79.38 %s %s <%s\n")
+# endif
+
+# ifdef	UNIX
+#	define CMDLINE2	ERx("sql -s -f4F79.38 -f8F79.38 %s %s < %s\n")
+# endif
+
+# ifdef	hp9_mpe
+#	define CMDLINE2	ERx("sql -s -f4F79.38 -f8F79.38 %s %s < %s\n")
+# endif
+
+# if defined (MSDOS) || defined (NT_GENERIC)
+#	define CMDLINE2	ERx("sql -s -f4F79.38 -f8F79.38 %s %s < %s\n ") 
+# endif                        
+
+# define	CMD_BUF_SIZE	256
+
+/*
+** Filename suffixes for reload scripts.
+*/
+# ifdef CMS
+#       define SCRIPT_SUFFIX    ERx("exec")
+# else
+# if defined(PMFE) || defined (NT_GENERIC)              /* 6-x_PC_80x86 */
+#       define SCRIPT_SUFFIX    ERx("bat")              /* 6-x_PC_80x86 */
+# else
+#       define SCRIPT_SUFFIX    ERx("ing")
+# endif /* PMFE */
+# endif /* CMS */
+

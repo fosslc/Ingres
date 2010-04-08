@@ -1,0 +1,863 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <tm.h>
+# include <pc.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <rpu.h>
+# include <tbldef.h>
+# include <targtype.h>
+# include "errm.h"
+
+/**
+** Name:	tblsumm.qsc - table registration summary
+**
+** Description:
+**	Defines
+**		tbl_summ	- table registration summary
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on tblcatlg.osq in replicator library.
+**	19-may-97 (joea) bug 82149
+**		Deal with tbl_rules() returning -1 (no need to activate).
+**	25-sep-97 (joea)
+**		Remove unused argument to tbl_deactivate.
+**	14-oct-97 (joea) bug 83765
+**		Remove unused argument to tbl_rules. After calling RMtbl_fetch,
+**		do not create support objects if the target type is URO.
+**	18-may-98 (padni01) bug 89865
+**		Use date_gmt instead of date to set supp_objs_created field 
+**		of dd_regist_tables.
+**	24-aug-98 (abbjo03)
+**		Add FRSkey4 (Go) to Register and ThisTable options.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF
+##char	RMdb_display[];
+GLOBALREF TBLDEF	*RMtbl;
+
+GLOBALREF
+EXEC SQL BEGIN DECLARE SECTION;
+i2	RMlocal_db_no;
+EXEC SQL END DECLARE SECTION;
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmtbl_summary"),
+##	*tf_name = ERx("iitf"),
+##	*ftbl_no = ERx("table_no"),
+##	*ftbl_name = ERx("table_name"),
+##	*ftbl_owner = ERx("table_owner"),
+##	*fcdds_no = ERx("cdds_no"),
+##	*fcdds_name = ERx("cdds_name"),
+##	*fcolumns = ERx("columns"),
+##	*fsupport = ERx("support"),
+##	*frules = ERx("rules"),
+##	*fcols_registd = ERx("cols_registd"),
+##	*fsupp_objs_created = ERx("supp_objs_created"),
+##	*frules_created = ERx("rules_created"),
+##	*findex_used = ERx("index_used"),
+##	*fcdds_lookup_tbl = ERx("cdds_lookup_tbl"),
+##	*fprio_lookup_tbl = ERx("prio_lookup_tbl"),
+##	*funique_rule = ERx("unique_rule"),
+##	*ftbl_indexes = ERx("tbl_indexes"),
+##	*ferror_no = ERx("error_no"),
+##	*blank = ERx("");
+
+
+FUNC_EXTERN STATUS tbl_register(i4 *tbl_no, char *tbl_name, char *tbl_owner,
+	i2 cdds_no, char *unique_rule, char *tbl_indexes,
+	char *columns_registered, char *index_used);
+FUNC_EXTERN STATUS deregister(i4 *tbl_no, char *full_db_name);
+FUNC_EXTERN void tbl_edit(i4 *tbl_no, char *tbl_name, char *tbl_owner,
+	i2 *cdds_num, char *cdds_name, char *cdds_lookup_tbl,
+	char *prio_lookup_tbl, char *index_used, char *columns_registered,
+	char *supp_objs_created, char *rules_created, char *unique_rule,
+	char *tbl_indexes);
+FUNC_EXTERN STATUS create_support_tables(i4 tbl_no);
+FUNC_EXTERN STATUS tbl_dbprocs(i4 tbl_no);
+FUNC_EXTERN STATUS create_replication_keys(i4 tbl_no, bool queue_flag);
+
+
+static void display_errors(void);
+
+
+/*{
+** Name:	tbl_summ	- table registration summary
+**
+** Description:
+**	Initial registration of tables for replication
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+tbl_summ()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i4	tbl_no;
+##	char	tbl_name[DB_MAXNAME+1];
+##	char	tbl_owner[DB_MAXNAME+1];
+##	i2	cdds_no;
+##	char	cdds_name[DB_MAXNAME+1];
+##	char	cols_registd[26];
+##	char	supp_objs_created[26];
+##	char	rules_created[26];
+##	char	columns[4];
+##	char	support[4];
+##	char	rules[4];
+##	char	index_used[DB_MAXNAME+1];
+##	char	cdds_lookup_tbl[DB_MAXNAME+1];
+##	char	prio_lookup_tbl[DB_MAXNAME+1];
+##	char	unique_rule[2];
+##	char	tbl_indexes[2];
+	char	local_db_name[DB_MAXNAME*2+3];
+##	i4	err_no;		/* for failed registration/supp obj creates */
+##	char	timestamp[26];
+	EXEC SQL END DECLARE SECTION;
+##	i4	rownumber;
+	DBEC_ERR_INFO	errinfo;
+##	char	*yes = ERget(F_RM0038_yes);
+##	char	*err = ERget(F_RM003E_err);
+	i4	nerrs;
+	SYSTIME	stime;
+	struct TMhuman	now;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+	EXEC SQL SELECT TRIM(vnode_name) + '::' + TRIM(database_name)
+		INTO	:local_db_name
+		FROM	dd_databases
+		WHERE	database_no = :RMlocal_db_no;
+	if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+	{
+		IIUGerr(E_RM0030_Err_retrieve_db_name, UG_ERR_ERROR, 0);
+		return;
+	}
+
+##	inittable form_name tf_name read (ftbl_no = i4 not null,
+##		fcdds_no = i2 not null, fcols_registd = char(25) not null,
+##		fsupp_objs_created = char(25) not null,
+##		frules_created = char(25) not null,
+##		findex_used = char(32) not null,
+##		fcdds_lookup_tbl = char(32) not null,
+##		fprio_lookup_tbl = char(32) not null,
+##		funique_rule = char(1) not null,
+##		ftbl_indexes = char(1) not null, ferror_no = i4 not null)
+	IIUGmsg(ERget(F_RM001C_Selecting_data), FALSE, 0);
+	/*
+	** FIXME: unique_rule and table_indexes are only used by tbl_register
+	**	so they could be retrieved there only when needed.
+	*/
+	EXEC SQL SELECT t.table_no, t.table_name, t.table_owner, t.cdds_no,
+			c.cdds_name, t.columns_registered, t.supp_objs_created,
+			t.rules_created, t.index_used, t.cdds_lookup_table,
+			t.prio_lookup_table, i.unique_rule, i.table_indexes
+		INTO	:tbl_no, :tbl_name, :tbl_owner, :cdds_no,
+			:cdds_name, :cols_registd, :supp_objs_created,
+			:rules_created, :index_used, :cdds_lookup_tbl,
+			:prio_lookup_tbl, :unique_rule, :tbl_indexes
+		FROM	iitables i, dd_regist_tables t, dd_cdds c
+		WHERE	i.table_name = t.table_name
+		AND	i.table_owner = t.table_owner
+		AND	i.table_type = 'T'
+		AND	c.cdds_no = t.cdds_no
+		UNION
+		SELECT	0, i.table_name, i.table_owner, 0,
+			c.cdds_name, '', '',
+			'', '', '',
+			'', i.unique_rule, i.table_indexes
+		FROM	iitables i, dd_cdds c
+		WHERE	i.system_use != 'S'
+		AND	i.table_name NOT LIKE 'ii%'
+		AND	i.table_type = 'T'
+		AND	NOT EXISTS (
+			SELECT	table_name
+			FROM	dd_regist_tables t
+			WHERE	t.table_name = i.table_name
+			AND	t.table_owner = i.table_owner)
+		AND	NOT EXISTS (
+			SELECT	table_name
+			FROM	dd_support_tables s
+			WHERE	LOWERCASE(s.table_name) =
+				LOWERCASE(i.table_name))
+		AND	c.cdds_no = 0
+		ORDER	BY 2, 3;
+	EXEC SQL BEGIN;
+		STtrmwhite(tbl_name);
+		STtrmwhite(tbl_owner);
+		STtrmwhite(cols_registd);
+		STtrmwhite(supp_objs_created);
+		STtrmwhite(rules_created);
+		*columns = *support = *rules = EOS;
+		if (*cols_registd != EOS)
+			STcopy(yes, columns);
+		if (*supp_objs_created != EOS)
+			STcopy(yes, support);
+		if (*rules_created != EOS)
+			STcopy(yes, rules);
+##		loadtable form_name tf_name (ftbl_no = tbl_no,
+##			ftbl_name = tbl_name, ftbl_owner = tbl_owner,
+##			fcdds_no = cdds_no, fcdds_name = cdds_name,
+##			fcols_registd = cols_registd,
+##			fsupp_objs_created = supp_objs_created,
+##			frules_created = rules_created, fcolumns = columns,
+##			fsupport = support, frules = rules,
+##			findex_used = index_used,
+##			fcdds_lookup_tbl = cdds_lookup_tbl,
+##			fprio_lookup_tbl = prio_lookup_tbl,
+##			funique_rule = unique_rule, ftbl_indexes = tbl_indexes,
+##			ferror_no = 0)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0013_No_data_found, UG_ERR_ERROR, 0);
+		return;
+	}
+	EXEC SQL COMMIT;
+
+##	display form_name read
+##	initialize (db = RMdb_display)
+##	activate menuitem ERget(F_RM003A_Register)
+##		(expl = ERget(F_RM003B_Register_expl)), FRSkey4
+##	{
+##		display submenu
+##		initialize
+##		{
+##			resume menu
+##		}
+
+##		activate menuitem ERget(F_RM003C_ThisTable)
+##			(expl = ERget(F_RM003D_ThisTable_reg_expl)), FRSkey4
+##		{
+##			getrow form_name tf_name (columns = fcolumns,
+##				tbl_no = ftbl_no, tbl_name = ftbl_name,
+##				tbl_owner = ftbl_owner, cdds_no = fcdds_no,
+##				unique_rule = funique_rule,
+##				tbl_indexes = ftbl_indexes,
+##				cols_registd = fcols_registd,
+##				index_used = findex_used)
+			if (STequal(columns, yes))
+			{
+				IIUGerr(E_RM0031_Tbl_already_regist,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+			err_no = tbl_register(&tbl_no, tbl_name, tbl_owner,
+				cdds_no, unique_rule, tbl_indexes,
+				cols_registd, index_used);
+			if (err_no)
+##				putrow form_name tf_name (ftbl_no = 0,
+##					fcolumns = err, ferror_no = err_no)
+			else
+##				putrow form_name tf_name (ftbl_no = tbl_no,
+##					fcolumns = yes,
+##					fcols_registd = cols_registd,
+##					findex_used = index_used,
+##					ferror_no = err_no)
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(F_RM003F_AllTables)
+##			(expl = ERget(F_RM0040_AllTables_reg_expl))
+##		{
+##			unloadtable form_name tf_name (columns = fcolumns,
+##				tbl_no = ftbl_no, tbl_name = ftbl_name,
+##				tbl_owner = ftbl_owner, cdds_no = fcdds_no,
+##				unique_rule = funique_rule,
+##				tbl_indexes = ftbl_indexes,
+##				cols_registd = fcols_registd,
+##				index_used = findex_used, rownumber = _RECORD)
+##			{
+##				scroll form_name tf_name to rownumber
+##				redisplay
+				if (!STequal(columns, yes))
+				{
+					err_no = tbl_register(&tbl_no,
+						tbl_name, tbl_owner, cdds_no,
+						unique_rule, tbl_indexes,
+						cols_registd, index_used);
+					if (err_no)
+##						putrow form_name tf_name (
+##							ftbl_no = 0,
+##							fcolumns = err,
+##							ferror_no = err_no)
+					else
+##						putrow form_name tf_name (
+##							ftbl_no = tbl_no,
+##							fcolumns = yes,
+##							fcols_registd =
+##								cols_registd,
+##							findex_used =
+##								index_used,
+##							ferror_no = err_no)
+				}
+##			}
+
+##			scroll form_name tf_name to 1
+			display_errors();
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+##	}
+
+##	activate menuitem ERget(F_RM0041_Deregister)
+##		(expl = ERget(F_RM0042_Deregister_expl))
+##	{
+##		display submenu
+##		initialize
+##		{
+##			resume menu
+##		}
+
+##		activate menuitem ERget(F_RM003C_ThisTable)
+##			(expl = ERget(F_RM0043_ThisTable_dereg_expl)), FRSkey4
+##		{
+##			getrow form_name tf_name (tbl_no = ftbl_no,
+##				tbl_name = ftbl_name, tbl_owner = ftbl_owner)
+			IIUGmsg(ERget(F_RM0044_Deregistering), FALSE, 2,
+				tbl_owner, tbl_name);
+			err_no = deregister(&tbl_no, local_db_name);
+			if (err_no == 0)
+##				putrow form_name tf_name (ftbl_no = 0,
+##					fcolumns = blank, fsupport = blank,
+##					frules = blank, fcols_registd = blank,
+##					fsupp_objs_created = blank,
+##					frules_created = blank,
+##					ferror_no = err_no)
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(F_RM003F_AllTables)
+##			(expl = ERget(F_RM0045_AllTables_dereg_expl))
+##		{
+			nerrs = 0;
+##			unloadtable form_name tf_name (tbl_no = ftbl_no,
+##				tbl_name = ftbl_name, tbl_owner = ftbl_owner,
+##				columns = fcolumns, support = fsupport,
+##				rownumber = _RECORD)
+##			{
+##				scroll form_name tf_name to rownumber
+##				redisplay
+				if (STequal(columns, yes) ||
+					STequal(support, yes))
+				{
+					IIUGmsg(ERget(F_RM0044_Deregistering),
+						FALSE, 2, tbl_owner, tbl_name);
+					err_no = deregister(&tbl_no,
+						local_db_name);
+					if (err_no == 0)
+					{
+##						putrow form_name tf_name (
+##							ftbl_no = 0,
+##							fcolumns = blank,
+##							fsupport = blank,
+##							frules = blank,
+##							fcols_registd = blank,
+##							fsupp_objs_created =
+##								blank,
+##							frules_created = blank,
+##							ferror_no = err_no)
+					}
+					else
+					{
+##						putrow form_name tf_name (
+##							ftbl_no = tbl_no,
+##							ferror_no = err_no)
+						++nerrs;
+					}
+				}
+##			}
+##			scroll form_name tf_name to 1
+			if (nerrs == 0)
+			{
+				EXEC SQL UPDATE dd_last_number
+					SET	last_number = 0
+					WHERE	column_name = 'table_no';
+				if (RPdb_error_check(DBEC_SINGLE_ROW, NULL)
+					!= OK)
+				{
+					EXEC SQL ROLLBACK;
+					IIUGerr(E_RM0032_Err_updt_last_tbl_no,
+						UG_ERR_ERROR, 0);
+##					resume
+				}
+				EXEC SQL COMMIT;
+			}
+
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+##	}
+
+##	activate menuitem ERget(F_RM0023_Edit)
+##		(expl = ERget(F_RM0046_Edit_tbl_expl))
+##	{
+##		getrow form_name tf_name (tbl_no = ftbl_no,
+##			tbl_name = ftbl_name, tbl_owner = ftbl_owner,
+##			cdds_no = fcdds_no, cdds_name = fcdds_name,
+##			cdds_lookup_tbl = fcdds_lookup_tbl,
+##			prio_lookup_tbl = fprio_lookup_tbl,
+##			index_used = findex_used, cols_registd = fcols_registd,
+##			supp_objs_created = fsupp_objs_created,
+##			rules_created = frules_created,
+##			unique_rule = funique_rule, tbl_indexes = ftbl_indexes)
+
+		tbl_edit(&tbl_no, tbl_name, tbl_owner, &cdds_no, cdds_name,
+			cdds_lookup_tbl, prio_lookup_tbl, index_used,
+			cols_registd, supp_objs_created, rules_created,
+			unique_rule, tbl_indexes);
+
+		*columns = *support = *rules = EOS;
+		if (*cols_registd != EOS)
+			STcopy(yes, columns);
+		if (*supp_objs_created != EOS)
+			STcopy(yes, support);
+		if (*rules_created != EOS)
+			STcopy(yes, rules);
+
+##		putrow form_name tf_name (ftbl_no = tbl_no,
+##			fcdds_no = cdds_no, fcdds_name = cdds_name,
+##			fcdds_lookup_tbl = cdds_lookup_tbl,
+##			fprio_lookup_tbl = prio_lookup_tbl,
+##			findex_used = index_used, fcols_registd = cols_registd,
+##			fsupp_objs_created = supp_objs_created,
+##			frules_created = rules_created, fcolumns = columns,
+##			fsupport = support, frules = rules)
+##	}
+
+##	activate menuitem ERget(F_RM0047_Support)
+##		(expl = ERget(F_RM0048_Support_expl))
+##	{
+##		display submenu
+##		initialize
+##		{
+##			resume menu
+##		}
+
+##		activate menuitem ERget(F_RM003C_ThisTable)
+##			(expl = ERget(F_RM0049_ThisTable_supp_expl)), FRSkey4
+##		{
+##			getrow form_name tf_name (tbl_no = ftbl_no,
+##				columns = fcolumns,
+##				supp_objs_created = fsupp_objs_created)
+
+			if (*columns == EOS)
+			{
+				IIUGerr(E_RM0033_Must_reg_before_supp,
+					UG_ERR_ERROR, 0);
+				err_no = 1;
+			}
+			else if (STequal(columns, err))
+			{
+				IIUGerr(E_RM0034_Correct_reg_errors,
+					UG_ERR_ERROR, 0);
+				err_no = 1;
+			}
+			else		/* columns = "yes" */
+			{
+				TMnow(&stime);
+				TMbreak(&stime, &now);
+				STprintf(timestamp, ERx("%s-%s-%s %s:%s:%s"),
+					now.day, now.month, now.year, now.hour,
+					now.mins, now.sec);
+##				clear screen
+
+				/* Fetch complete table definition */
+				err_no = RMtbl_fetch(tbl_no, TRUE);
+				if (err_no == 0 &&
+					RMtbl->target_type != TARG_UNPROT_READ)
+				{
+					err_no = create_support_tables(tbl_no);
+					if (err_no <= 0)
+					{
+						err_no = tbl_dbprocs(tbl_no);
+						if (err_no == 0)
+						{
+##							putrow form_name
+##								tf_name (
+##								fsupp_objs_created =
+##								timestamp)
+							EXEC SQL UPDATE dd_regist_tables
+								SET	supp_objs_created = DATE_GMT(:timestamp)
+								WHERE	table_no = :tbl_no;
+							err_no = RPdb_error_check(
+								DBEC_SINGLE_ROW,
+								NULL);
+						}
+					}
+				}
+			}
+			if (err_no <= 0 &&
+				RMtbl->target_type != TARG_UNPROT_READ)
+			{
+				if (db_config_changed(0) != OK)
+				{
+					EXEC SQL ROLLBACK;
+					err_no = 1;
+				}
+				else
+				{
+					EXEC SQL COMMIT;
+				}
+##				putrow form_name tf_name (fsupport = yes,
+##					error_no = err_no)
+			}
+			else
+			{
+##				putrow form_name tf_name (fsupport = err,
+##					ferror_no = err_no)
+			}
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(F_RM003F_AllTables)
+##			(expl = ERget(F_RM004A_AllTables_supp_expl))
+##		{
+##			clear screen
+##			unloadtable form_name tf_name (tbl_no = ftbl_no,
+##				columns = fcolumns,
+##				supp_objs_created = fsupp_objs_created,
+##				rownumber = _RECORD)
+##			{
+				if (STequal(columns, err))
+				{
+					IIUGmsg(ERget(
+						E_RM0034_Correct_reg_errors),
+						FALSE, 0);
+					PCsleep(2000);
+					err_no = 1;
+				}
+				else if (STequal(columns, yes))
+				{
+					TMnow(&stime);
+					TMbreak(&stime, &now);
+					STprintf(timestamp,
+						ERx("%s-%s-%s %s:%s:%s"),
+						now.day, now.month, now.year,
+						now.hour, now.mins, now.sec);
+					/* Fetch complete table definition */
+					err_no = RMtbl_fetch(tbl_no, TRUE);
+					if (err_no == 0 && RMtbl->target_type
+						!= TARG_UNPROT_READ)
+					{
+						err_no = create_support_tables(
+							tbl_no);
+						if (err_no <= 0)
+						{
+							err_no = tbl_dbprocs(
+								tbl_no);
+							if (err_no == 0)
+							{
+##								putrow form_name
+##									tf_name (
+##									fsupp_objs_created =
+##									timestamp)
+								EXEC SQL UPDATE dd_regist_tables
+									SET	supp_objs_created = DATE_GMT(:timestamp)
+									WHERE	table_no = :tbl_no;
+								err_no = RPdb_error_check(
+									DBEC_SINGLE_ROW,
+									NULL);
+							}
+						}
+					}
+					if (err_no <= 0 && RMtbl->target_type
+						!= TARG_UNPROT_READ)
+					{
+##						putrow form_name tf_name (
+##							fsupport = yes,
+##							ferror_no = err_no)
+						if (db_config_changed(0) != OK)
+							EXEC SQL ROLLBACK;
+						else
+							EXEC SQL COMMIT;
+					}
+					else
+					{
+##						putrow form_name tf_name (
+##							fsupport = err,
+##							ferror_no = err_no)
+					}
+				}
+##			}
+##			scroll form_name tf_name to 1
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+##	}
+
+##	activate menuitem ERget(F_RM004B_Activation)
+##		(expl = ERget(F_RM004C_Activation_expl))
+##	{
+##		getrow form_name tf_name (tbl_no = ftbl_no, columns = fcolumns,
+##			support = fsupport)
+		if (!(STequal(columns, yes) && STequal(support, yes)))
+		{
+
+			IIUGerr(E_RM0035_Reg_supp_before_activ, UG_ERR_ERROR,
+				0);
+##			resume
+		}
+
+##		display submenu
+##		initialize
+##		{
+##			resume menu
+##		}
+
+##		activate menuitem ERget(F_RM0017_Activate)
+##		{
+##			clear screen
+			err_no = tbl_rules(tbl_no);
+			if (err_no == OK)
+			{
+				TMnow(&stime);
+				TMbreak(&stime, &now);
+				STprintf(timestamp, ERx("%s-%s-%s %s:%s:%s"),
+					now.day, now.month, now.year, now.hour,
+					now.mins, now.sec);
+##				putrow form_name tf_name (frules = yes,
+##					frules_created = timestamp)
+			}
+			else if (err_no != -1)
+			{
+##				putrow form_name tf_name (frules = err)
+			}
+			EXEC SQL COMMIT;
+##			clear screen
+##			redisplay
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(F_RM004D_DeActivate)
+##		{
+			err_no = tbl_deactivate(tbl_no);
+			if (err_no == 0)
+			{
+##				putrow form_name tf_name (frules = blank,
+##					frules_created = blank)
+				EXEC SQL COMMIT;
+			}
+			else
+			{
+##				putrow form_name tf_name (frules = err)
+				EXEC SQL ROLLBACK;
+			}
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+##	}
+
+##	activate menuitem ERget(F_RM004E_CreateKeys)
+##		(expl = ERget(F_RM004F_CreateKeys_expl))
+##	{
+##		display submenu
+##		initialize
+##		{
+##			resume menu
+##		}
+
+##		activate menuitem ERget(F_RM003C_ThisTable), FRSkey4
+##		{
+##			getrow form_name tf_name (tbl_no = ftbl_no,
+##				support = fsupport)
+##			display submenu
+##			initialize
+##			{
+##				resume menu
+##			}
+
+##			activate menuitem ERget(F_RM0050_ShadowTableOnly)
+##			{
+				if (STequal(support, yes))
+					create_replication_keys(tbl_no,
+						FALSE);
+##				breakdisplay
+##			}
+
+##			activate menuitem ERget(F_RM0051_BothQueue_ShadowTable)
+##			{
+				if (STequal(support, yes))
+					create_replication_keys(tbl_no,
+						TRUE);
+##				breakdisplay
+##			}
+
+##			activate menuitem ERget(FE_Cancel)
+##				(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##			{
+##				breakdisplay
+##			}
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(F_RM003F_AllTables)
+##		{
+##			display submenu
+##			activate menuitem ERget(F_RM0050_ShadowTableOnly)
+##			{
+##				unloadtable form_name tf_name (
+##					tbl_no = ftbl_no, support = fsupport,
+##					rownumber = _RECORD)
+##				{
+##					scroll form_name tf_name to rownumber
+##					redisplay
+					if (STequal(support, yes))
+						create_replication_keys(tbl_no,
+							FALSE);
+##				}
+##				breakdisplay
+##			}
+
+##			activate menuitem ERget(F_RM0051_BothQueue_ShadowTable)
+##			{
+##				unloadtable form_name tf_name (
+##					tbl_no = ftbl_no, support = fsupport,
+##					rownumber = _RECORD)
+##				{
+##					scroll form_name tf_name to rownumber
+##					redisplay
+					if (STequal(support, yes))
+						create_replication_keys(tbl_no,
+							TRUE);
+##				}
+##				breakdisplay
+##			}
+
+##			activate menuitem ERget(FE_Cancel)
+##				(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##			{
+##				breakdisplay
+##			}
+##			breakdisplay
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmtblsum.hlp"),
+			ERget(F_RM0052_Table_Registration));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##}
+
+
+static void
+display_errors()
+##{
+##	char	tbl_name[DB_MAXNAME+1];
+##	char	tbl_owner[DB_MAXNAME+1];
+##	i4	err_no;
+	i4	lerr_no;
+	i4	nerrs;
+
+	nerrs = 0;
+##	unloadtable form_name tf_name (err_no = error_no,
+##		tbl_name = ftbl_name, tbl_owner = ftbl_owner)
+##	{
+		if (err_no)
+		{
+			lerr_no = err_no;
+			IIUGmsg(ERget(E_RM0036_Err_processing_tbl), FALSE, 3,
+				&lerr_no, tbl_owner, tbl_name);
+			PCsleep(2000);
+			++nerrs;
+		}
+##	}
+
+	if (nerrs > 0)
+		IIUGerr(E_RM0037_Found_regist_errors, UG_ERR_ERROR, 1, &nerrs);
+##}

@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!dmf!dmxe
+#
+
+SubDir ING_SRC back dmf dmxe ;
+
+IISUBSYS back dmf dmxe ;
+
+
+IILIBRARY DMFLIB : dmxe.c dmxexa.c ;
+

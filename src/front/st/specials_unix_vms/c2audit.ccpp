@@ -1,0 +1,76 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for C2 security auditing sub-system 
+*/
+
+/*
+** History
+**	19-oct-1993 (tyler)
+**		Created.
+**	27-oct-1993 (tyler)
+**		Fixed errors in initial revision and added #ifdef since
+**		this part only shows up on Unix for now.
+**	27-oct-1993 (tyler)
+**		Added missing rule file map (secure.rfm).
+**	 1-nov-1993 (ricka)
+**		secure.rfm and .crs are picked up out of
+**		(front_path)!install!'front_vers'!files on VMS.
+**	16-dec-1993 (tyler)
+**		Shortened name of setup script.
+**	16-mar-94 (robf)
+**              Rename c2audit.ccpp when splitting ES and C2 functionality
+**	7-apr-94 (robf)
+**              Add iiaudloc to configure default audit locations
+**	12-apr-94 (robf)
+**	        Move iiaudloc to utility, also removed non-VMS define
+**		since this applies generically
+**	14-apr-94 (ajc)
+**              Do not wish iiaudloc to run as a setup exe.
+**		It is run by iisuc2.
+**	28-feb-95 (wolf)
+**              Pick up VMS script and executable from different directories.
+**	28-apr-95 (forky01)
+**		C2audit really needs CI_RESRC_CNTRL more than CI_BACKEND.
+**	28-may-1998 (kinte01)
+**          	Modified the location for iisuc2 on VMS to pick up SED 
+**	    	stripped version
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+
+PART   c2audit
+   capability CI_RESRC_CNTRL
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+      FILE secure.crs
+      FILE secure.rfm
+
+/*
+** ingres!utility
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY ingres!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT SETUP iisuc2
+      EXECUTABLE iiaudloc 
+

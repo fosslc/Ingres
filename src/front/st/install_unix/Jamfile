@@ -1,0 +1,23 @@
+#
+# Jamfile file for front!st!install_unix
+#
+
+SubDir ING_SRC front st install_unix ;
+
+IISUBSYS front st install_unix ;
+
+
+IIUTILEXE buildrel : buildrel.c ;
+IINEEDLIBS buildrel : INSTALLLIB UFLIB RUNSYSLIB RUNTIMELIB
+	FDLIB FTLIB FEDSLIB UILIB LIBQSYSLIB LIBQLIB UGLIB FMTLIB
+	AFELIB LIBQGCALIB SQLCALIB GCFLIB ADFLIB CUFLIB SQLCALIB
+	COMPATLIB MALLOCLIB ;
+IIUNDEFS buildrel : II_copyright ;
+
+IIUTILSH delshlib : delshlib.sh ;
+IIUTILSH delshlib64 : delshlib64.sh ;
+
+IITMANFILES buildrel.1 ;
+
+IILIBRARY INSTALLLIB : ipcl.c genrpm.c gendeb.c genpkg.c ;
+

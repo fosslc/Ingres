@@ -1,0 +1,23 @@
+#
+# Jamfile file for back!ascf!ascs
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back ascf ascs ;
+
+IISUBSYS back ascf ascs ;
+
+if $(BUILD_ICE)
+{
+IINOOPTIM ascsdbfcn.c : dr6_us5 dgi_us5 i64_aix ;
+
+IILIBRARY ASCFLIB : ascstok.c ascssvc.c ascsstub.c ascsscan.c
+	ascsquery.c ascsqncr.c ascsproc.c ascsmo.c ascsmntr.c
+	ascsinit.c ascsgcaint.c ascsformat.c ascseauth.c
+	ascsdbfcn.c ascsbuild.c ;
+
+IILIBRARY IMPICELIBDATA	: ascsdata.c ;
+}

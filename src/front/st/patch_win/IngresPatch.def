@@ -1,0 +1,21 @@
+;
+;  Name: IngresPatch.def: Contains custom actions name to be exported.
+;
+;
+;  History:
+;		01-Dec-2005 (drivi01)
+;			Created.
+;		21-Mar-2006 (drivi01)
+;			Added rollback_patch function.
+;		04-May-2006 (drivi01)
+;			Added delete_backups function.
+;
+;
+
+EXPORTS
+	backup_files
+	update_vers
+	ingres_stop_ingres
+	rollback_patch
+	delete_backups
+	SetBackupDir

@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The gc_interval resource gives the length in milliseconds of the
+  group-commit interval.
+
+  When a log buffer write is being delayed for group-commit, the group-
+  commit thread wakes up periodically to check whether the buffer has
+  been written, or should be written.  The gc_interval resource gives
+  the sleep time between wake-ups.
+
+  The default is 20 milliseconds.

@@ -1,0 +1,53 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How You Add or Change Table Values Using the DataGridView </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="DataGridView, INSERT statement, UPDATE statement">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body>
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="1596.html" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="1621.html" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How You Add or Change Table Values Using the DataGridView</h4>
+<p class="bodytext">The result table returned by executing a search can be used for adding and changing values in the Route table using the editing capabilities of the DataGridView control. </p>
+<p class="bodytext"><strong class="bold">Note:</strong> This example uses the ingresInsertCommand5, which was created when the ingresDataAdapter5 was added.</p>
+<p class="bodytext">The event handler for detecting changes in the DataGridView control is routeBindingSource_PositionChanged. In the event handler, the row DataGridView row property is used to determine whether a value in an existing row was changed or added and to invoke the appropriate UPDATE or INSERT command.</p>
+<p class="bodytext">The queries used are as follows. </p>
+<p class="proceduresubheading">INSERT</p>
+<p class="codefirst">INSERT into route</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;( rt_id, rt_airline, rt_flight_num, rt_depart_from, rt_arrive_to,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rt_depart_at, rt_arrive_at, rt_arrive_offset, rt_flight_day ) </p>
+<p class="code">VALUES ( NEXT VALUE FOR rt_id, ?, ?, ?, ?, ?, ?, ?, ? )</p>
+<p class="proceduresubheading">UPDATE</p>
+<p class="codefirst">UPDATE route </p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;SET rt_airline = ?, rt_flight_num = ?, rt_depart_from = ?,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rt_arrive_to = ?, rt_depart_at = ?, rt_arrive_at = ?,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rt_arrive_offset = ?, rt_flight_day = ?</p>
+<p class="code">&nbsp;WHERE rt_airline = ? AND rt_flight_num = ? AND rt_flight_day = ?</p>
+<p class="bodytext">You can write these queries using the Query Designer for the IngresCommand by changing the CommandText property, or assign them directly to the IngresCommand CommandText property as a string.</p>
+<p class="bodytext">The table updateRoute is added to the RouteDataSet. </p>
+<p class="relatedheading">More information:</p>
+<p class="relateditem"><a id="h1635" class="jumptemplate" title="How You Add a Table for Updating the Route Table" href="1623.html" target="_self">How You Add a Table for Updating the Route Table</a></p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2006 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

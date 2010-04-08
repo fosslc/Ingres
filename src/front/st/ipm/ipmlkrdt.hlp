@@ -1,0 +1,45 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Lock Detail Display screen.  This screen contains all
+the locks held on the specified resource.  The number of locks held on
+a resource indicates the amount of concurrent activity and points to
+potential concurrency bottlenecks.
+
+Fields on this screen include:
+
+ID             The internal lock identifier for this lock.
+
+List ID        The internal lock list identifier that this lock belongs to.
+
+Session        The name of the session that this lock belongs to.
+
+RQ             The mode the lock was requested in.  The possible modes are:
+
+               S     Shared - used when reading.
+
+               IS    Intended shared - for table resource types, this means
+                     that there are shared page resources in this table.
+
+               X     Exclusive - used when writing.
+
+               IX    Intended exclusive - same as intended shared except pages
+                     are exclusively locked.
+
+               N     Null - used to keep a lock without causing locking
+                     contention.  It's less expensive to convert a lock than
+                     to drop and request a new lock.
+
+               SIX   Shared with intent to update.  Used with ESQL cursors.
+
+State          Current state of lock (GR = granted, WT = waiting)
+
+Menuitems available on this screen include:
+
+Find           Searches a column in a scrolling region (tablefield).  If
+               searching a text column, Find will locate all occurrences
+               wherever they are in the column.
+
+Help           Displays this screen.
+
+End            Returns to the Resource List Display screen.
+
+Quit           Exits IPM.

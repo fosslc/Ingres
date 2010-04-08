@@ -1,0 +1,320 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<cm.h>
+#include	<ug.h>
+#include	<erug.h>
+#include	<flddesc.h>
+##include	<ui.qsh>
+##include	"mqbf.qsh"
+##include	"mqsymbol.qsh"
+#include	"erqf.h"
+
+/**
+** Name:	rules.qc -
+**
+** Description:
+**	This file contains the routine mq_rules that displays the update
+**	semantics form and semantics information.
+**
+** History:
+**	Revision 6.4
+**	6/20/90 (martym) Changed to accept 'y', 'ye', 'yes', 'n', 'no'  
+**			 as input and always display 'yes', 'no', and 
+**			 display popup when user selects ListChoices.
+**	10/01/90 (emerson)
+**		Changed fname declaration from uninitialized pointer
+**		to unitialized array.
+**	10/01/90 (emerson)
+**		Replaced literal strings "yes" and "no" by strings
+**		retrieved via ERget from internationalizable strings
+**		defined in $HDR2/erug.msg.
+**	10/11/90 (emerson)
+**		Don't show logical keys in the Update Information table
+**		(bug 8593).
+**
+**	Revision 6.1  
+**	88/09  wong
+**		Merged duplicate messages.
+**	08-mar-89 (kenl)
+**		Doubled the length of tblcol.
+**
+**	Revision 6.0
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh
+**	10-dec-87 (bruceb)
+**		Changed buffer length specifications for those form fields
+**		increased in length for dg.
+**
+**	Revision 2.0  83/07  nadene
+**	written 7/28/83 (nml)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ui.h to satisfy gcc 4.3.
+*/
+
+#define	_HelpExpl		F_FE0100_ExplFrameHelp
+#define	_EndExpl		F_FE0102_ExplEnd
+
+static 		VOID	updrules();
+
+i4
+mq_rules(qdef, changed)
+register MQQDEF	*qdef;
+i4		*changed;
+##{
+##	i4	chgd;
+	i4	ss = 0;
+##	char	ans [10];
+	STATUS	ynstat;
+	char	*choices;
+	char 	*help_scr;
+	char 	*help_file;
+	i4	i;
+##	char	fname[FE_MAXNAME + 1];
+
+
+##	INITTABLE _mqbfops _mquops UPDATE (aindx = i4)
+##	INITTABLE _mqbfops _mqdops UPDATE
+##	DISPLAY _mqbfops
+##	INITIALIZE
+##	{
+		register i4	i;
+
+		for ( i = 0 ; i < qdef->mqnumtabs ; ++i )
+		{
+			register RELINFO	*rel = qdef->mqtabs[i];
+##			char			rv[FE_UNRML_MAXNAME+1];
+##			char			rv_owner[FE_UNRML_MAXNAME+1];
+
+			/*
+			** Normalize (i.e., re-quote) a delimited identifier
+			** name and owner, if necessary
+			*/
+			IIUGxri_id(rel->mqrangevar, rv);
+			IIUGxri_id(rel->mqrelown, rv_owner);
+
+##			LOADTABLE _mqbfops _mqdops (
+##				role = ERget( (rel->mqtype == 0)
+##					? F_QF0015_MASTER : F_QF0016_detail
+##				),
+##				table = rv,
+##				owner = rv_owner,
+##				del = ERget( (rel->opdelete)
+##						? F_UG0002_Yes2 : F_UG0007_No2
+##				)
+##			);
+		}
+		for ( i = 0 ; i < qdef->mqnumatts ; ++i )
+		{
+		    register ATTRIBINFO	*att = qdef->mqatts[i];
+
+		    if (att->jpart != -1 && att->lkeyinfo == 0)
+		    {
+			register i4		j;
+			register RELINFO	*rel;
+##			i4		attindx;
+##			char		tblcol[2 * FE_UNRML_MAXNAME + 1 + 1];
+
+			for ( j = 0 ; j < qdef->mqnumtabs ; ++j )
+			{
+				rel = qdef->mqtabs[j];
+				if ( STequal(att->rvar, rel->mqrangevar) )
+				{
+					break;
+				}
+			}
+			attindx = i;
+
+			/*
+			** IIUIxrt_tbl() is used to rejoining owner.table
+			** pairs, but can be used for table.column ones just
+			** the same
+			*/
+			IIUIxrt_tbl(rel->mqrangevar, att->col, tblcol);
+
+##			LOADTABLE _mqbfops _mquops (
+##				col = tblcol,
+##				upd = ERget( (att->opupdate == 1)
+##						? F_UG0002_Yes2 : F_UG0007_No2
+##				),
+##				aindx = attindx
+##			);
+		    }
+		}
+##	}
+##	ACTIVATE MENUITEM ERget(F_QF0022_Joins)
+##	{
+		if (qdef->mqnumtabs <= 1 || qdef->mqnumjoins == 0)
+##			VALIDATE FIELD _mqdops
+		else
+##			VALIDATE
+
+##		INQUIRE_FRS FORM (chgd = change(_mqbfops))
+		if ( chgd != 0 )
+		{
+			updrules(qdef);
+		}
+
+##		CLEAR SCREEN
+		ss = 1;
+##		BREAKDISPLAY
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Forget), FRSkey9 (VALIDATE = 0)
+##	{
+		chgd = 0;
+##		BREAKDISPLAY
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##			EXPL = ERget(FE_LookupExpl)), 
+##			FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##	{
+		/*
+		IIUFfieldHelp();
+		*/
+
+##		INQUIRE_FRS FIELD _mqbfops (fname = NAME)
+
+		if (STequal(fname, _mquops))
+		{
+			help_scr = ERget(S_QF0162_EnableModOfJF);
+			choices = ERget(F_QF0160_EnableModOfJF);
+			help_file = ERx("qfmodjf.hlp");
+		}
+		else
+		{
+			help_scr = ERget(S_QF0163_DisableDelOfRows);
+			choices = ERget(F_QF0161_DisableDelOfRows);
+			help_file = ERx("qfdelrow.hlp");
+		}
+		i = IIFDlpListPick(NULL, choices, 0, 
+				LPGR_FLOAT, LPGR_FLOAT, help_scr, help_file,
+				NULL, NULL);
+		if (i >= 0)
+		{
+			if (i == 0)
+				STcopy(ERget(F_UG0002_Yes2), ans);
+			else
+				STcopy(ERget(F_UG0007_No2), ans);
+						
+			if (STequal(fname, _mquops))
+			{
+##				PUTROW _mqbfops fname (upd = ans)
+			}
+			else
+			{
+##				PUTROW _mqbfops fname (del = ans)
+			}
+		}
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Help) (EXPL = ERget(_HelpExpl), VALIDATE=0),
+##		FRSkey1 (VALIDATE = 0)
+##	{
+		FEhelp( ERx("qrules.hlp"), ERget(F_QF0017_QBF_UpdateDelete) );
+##	}
+
+##	ACTIVATE COLUMN _mquops upd
+##	{
+##		GETROW _mqbfops _mquops (ans = upd)
+
+		_VOID_ IIUGyn(ans, &ynstat);
+		if (ynstat == E_UG0004_Yes_Response)
+		{
+			STcopy(ERget(F_UG0002_Yes2), ans);
+##			PUTROW _mqbfops _mquops (upd = ans)
+		}
+		else
+		if (ynstat == E_UG0005_No_Response)
+		{
+			STcopy(ERget(F_UG0007_No2), ans);
+##			PUTROW _mqbfops _mquops (upd = ans)
+		}
+
+##		RESUME NEXT			
+##	}
+
+##	ACTIVATE COLUMN _mqdops del
+##	{
+##		GETROW _mqbfops _mqdops (ans = del)
+
+		_VOID_ IIUGyn(ans, &ynstat);
+		if (ynstat == E_UG0004_Yes_Response)
+		{
+			STcopy(ERget(F_UG0002_Yes2), ans);
+##			PUTROW _mqbfops _mqdops (del = ans)
+		}
+		else
+		if (ynstat == E_UG0005_No_Response)
+		{
+			STcopy(ERget(F_UG0007_No2), ans);
+##			PUTROW _mqbfops _mqdops (del = ans)
+		}
+
+##		RESUME NEXT			
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_End) (EXPL = ERget(_EndExpl)), FRSkey3
+##	{
+		if (qdef->mqnumtabs <= 1 || qdef->mqnumjoins == 0)
+##			VALIDATE FIELD _mqdops
+		else
+##			VALIDATE
+
+##		INQUIRE_FRS FORM (chgd = change(_mqbfops))
+		if ( chgd != 0 )
+		{
+			updrules(qdef);
+		}
+
+##		BREAKDISPLAY
+##	}
+##	FINALIZE()
+	*changed = chgd;
+
+	return ss;
+##}
+
+static VOID
+updrules ( qdef )
+register MQQDEF	*qdef;
+##{
+##	char	ans[5];
+##	i4	recnum;
+##	i4	recstat;
+##	i4	attindx;
+	STATUS	ynstat;
+
+##	UNLOADTABLE _mqbfops _mqdops
+##		(ans = del, recnum = _RECORD, recstat = _STATE)
+##	{
+		if ( recstat == CHANGED )
+		{
+			qdef->mqtabs[recnum-1]->opdelete = IIUGyn(ans,&ynstat);
+		}
+##	}
+##	UNLOADTABLE _mqbfops _mquops (ans = upd,
+##			recstat = _STATE, attindx = aindx)
+##	{
+		if ( recstat == CHANGED )
+		{
+			qdef->mqatts[attindx]->opupdate = IIUGyn(ans, &ynstat);
+		}
+##	}
+##}

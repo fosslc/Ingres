@@ -1,0 +1,255 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<VSDataViewSupport xmlns="http://tempuri.org/VSDataViewSupport.xsd">
+	<DataViews>
+		<DataView name="Ingres">
+			<DisplayName resource="RESX_Value_Ingres"/>
+			<StaticConnectionNode>
+				<!-- any extra characters inside InitialDisplayName will be displayed -->
+				<InitialDisplayName>{Root.Server}.{Root.Database}.{Root.DefaultSchema}</InitialDisplayName>
+				<CommandBindings>
+					<!-- Use the built-in Visual Studio query designer -->
+					<CommandBinding name="NewQuery"
+						guid="501822E1-B5AF-11d0-B4DC-00A0C91506EF" cmdid="13608"
+						handler="884DD964-5327-461f-9F06-6484DD540F8F"/>
+				</CommandBindings>
+				<Children>
+					<!--
+					******************************
+						TABLES
+					******************************
+					-->
+					<StaticNode nid="Tables">
+						<DisplayName resource="RESX_DataView_Tables"/>
+						<CommandBindings>
+							<!-- Use the built-in Visual Studio query designer -->
+							<CommandBinding name="NewQuery"
+								guid="501822E1-B5AF-11d0-B4DC-00A0C91506EF" cmdid="13608"
+								handler="884DD964-5327-461f-9F06-6484DD540F8F"/>
+						</CommandBindings>
+						<Children>
+							<Selection type="Table" restrictions="null,null,null">
+								<SelectionNode nid="Table">
+									<DisplayName resource="DataView_RESX_NameWithSchema"/>
+									<Icon name="Table"/>
+									<Children>
+										<Selection type="Column" restrictions="null,{Table.Schema},{Table.Name}">
+											<SelectionNode>
+												<Icon name="Column"/>
+											</SelectionNode>
+										</Selection>
+									</Children>
+								</SelectionNode>
+							</Selection>
+						</Children>
+					</StaticNode>  <!-- end TABLES -->
+
+					<!--
+					******************************
+						VIEWS
+					******************************
+					-->
+					<StaticNode nid="Views">
+						<DisplayName resource="RESX_DataView_Views"/>
+						<CommandBindings>
+							<!-- Use the built-in Visual Studio query designer -->
+							<CommandBinding name="NewQuery"
+								guid="501822E1-B5AF-11d0-B4DC-00A0C91506EF" cmdid="13608"
+								handler="884DD964-5327-461f-9F06-6484DD540F8F"/>
+						</CommandBindings>
+						<Children>
+							<Selection type="View">
+								<SelectionNode nid="View">
+									<DisplayName resource="DataView_RESX_NameWithSchema"/>
+									<Icon name="View"/>
+									<Children>
+										<Selection type="ViewColumn" restrictions="null,{View.Schema},{View.Name}">
+											<SelectionNode>
+												<Icon name="Column"/>
+											</SelectionNode>
+										</Selection>
+									</Children>
+								</SelectionNode>
+							</Selection>
+						</Children>
+					</StaticNode>   <!-- end VIEWS -->
+
+				</Children>
+			</StaticConnectionNode>
+		</DataView>
+	</DataViews>
+
+	<!--
+	******************************
+		TYPE EXTENSIONS for the Property Window names, layout, and documentation
+	******************************
+	-->
+	<TypeExtensions>
+		<TypeExtension name="Table">
+			<DisplayName resource="RESX_Type_Table"/>
+			<Identifier>
+				<Part name="Schema">
+					<DisplayName resource="RESX_Property_Schema"/>
+					<Category    resource="RESX_Category_Identifier"/>
+					<Description resource="RESX_Description_TableSchema"/>
+				</Part>
+				<Part name="Name">
+					<DisplayName resource="RESX_Property_Name"/>
+					<Category    resource="RESX_Category_Identifier"/>
+					<Description resource="RESX_Description_TableName"/>
+				</Part>
+			</Identifier>
+		</TypeExtension>
+
+		<TypeExtension name="Column">
+			<DisplayName resource="RESX_Type_Column"/>
+			<Identifier>
+				<Part name="Schema">
+					<DisplayName resource="RESX_Property_Schema"/>
+					<Category    resource="RESX_Category_Identifier"/>
+					<Description resource="RESX_Description_ColumnSchema"/>
+				</Part>
+				<Part name="Table">
+					<DisplayName resource="RESX_Property_Table"/>
+					<Category    resource="RESX_Category_Identifier"/>
+					<Description resource="RESX_Description_ColumnTable"/>
+				</Part>
+				<Part name="Name">
+					<DisplayName resource="RESX_Property_Name"/>
+					<Category    resource="RESX_Category_Identifier"/>
+					<Description resource="RESX_Description_ColumnName"/>
+				</Part>
+			</Identifier>
+			<Properties>
+				<Property name="Ordinal">
+					<DisplayName resource="RESX_Property_Ordinal"/>
+					<Description resource="RESX_Description_Ordinal"/>
+				</Property>
+				<Property name="SystemType">
+					<DisplayName resource="RESX_Property_SystemType"/>
+					<Category    resource="RESX_Category_DataType"/>
+					<Description resource="RESX_Description_SystemType"/>
+				</Property>
+				<Property name="Length">
+					<DisplayName resource="RESX_Property_Length"/>
+					<Category    resource="RESX_Category_DataType"/>
+					<Description resource="RESX_Description_Length"/>
+					<StandardValues>  <!-- safety check, in case the length is null-->
+						<StandardValue value="">0</StandardValue>
+					</StandardValues>
+				</Property>
+				<Property name="Precision">
+					<DisplayName resource="RESX_Property_Precision"/>
+					<Category    resource="RESX_Category_DataType"/>
+					<Description resource="RESX_Description_Precision"/>
+					<StandardValues>
+						<!-- safety check, in case the length is null-->
+						<StandardValue value="">0</StandardValue>
+					</StandardValues>
+				</Property>
+				<Property name="Scale">
+					<DisplayName resource="RESX_Property_Scale"/>
+					<Category    resource="RESX_Category_DataType"/>
+					<Description resource="RESX_Description_Scale"/>
+					<StandardValues>
+						<!-- safety check, in case the length is null-->
+						<StandardValue value="">0</StandardValue>
+					</StandardValues>
+				</Property>
+				<Property name="Nullable">
+					<DisplayName resource="RESX_Property_Nullable"/>
+					<Description resource="RESX_Description_Nullable"/>
+					<StandardValues>
+						<!-- map to localized YES/NO (future)-->
+						<StandardValue value="YES" resource="RESX_Value_Yes"/>
+						<StandardValue value="NO"  resource="RESX_Value_No"/>
+					</StandardValues>
+				</Property>
+				<Property name="Default">
+					<DisplayName resource="RESX_Property_Default"/>
+					<Description resource="RESX_Description_Default"/>
+				</Property>
+			</Properties>
+		</TypeExtension>
+
+			<TypeExtension name="View">
+				<DisplayName resource="RESX_Type_View"/>
+				<Identifier>
+					<Part name="Schema">
+						<DisplayName resource="RESX_Property_Schema"/>
+						<Category    resource="RESX_Category_Identifier"/>
+						<Description resource="RESX_Description_ViewSchema"/>
+					</Part>
+					<Part name="Name">
+						<DisplayName resource="RESX_Property_Name"/>
+						<Category    resource="RESX_Category_Identifier"/>
+						<Description resource="RESX_Description_ViewName"/>
+					</Part>
+				</Identifier>
+			</TypeExtension>
+
+		<TypeExtension name="ViewColumn">
+			<DisplayName resource="RESX_Type_ViewColumn"/>
+			<Identifier>
+				<Part name="Schema">
+					<DisplayName resource="RESX_Property_Schema"/>
+					<Category    resource="RESX_Category_Identifier"/>
+					<Description resource="RESX_Description_ViewColumnSchema"/>
+				</Part>
+				<Part name="View">
+					<DisplayName resource="RESX_Property_View"/>
+					<Category    resource="RESX_Category_Identifier"/>
+					<Description resource="RESX_Description_ViewColumnTable"/>
+				</Part>
+				<Part name="Name">
+					<DisplayName resource="RESX_Property_Name"/>
+					<Category    resource="RESX_Category_Identifier"/>
+					<Description resource="RESX_Description_ViewColumnName"/>
+				</Part>
+			</Identifier>
+			<Properties>
+				<Property name="Ordinal">
+					<DisplayName resource="RESX_Property_Ordinal"/>
+					<Description resource="RESX_Description_Ordinal"/>
+				</Property>
+				<Property name="SystemType">
+					<DisplayName resource="RESX_Property_SystemType"/>
+					<Category    resource="RESX_Category_DataType"/>
+					<Description resource="RESX_Description_SystemType"/>
+				</Property>
+				<Property name="Length">
+					<DisplayName resource="RESX_Property_Length"/>
+					<Category    resource="RESX_Category_DataType"/>
+					<Description resource="RESX_Description_Length"/>
+					<StandardValues>
+						<!-- safety check, in case the length is null-->
+						<StandardValue value="">0</StandardValue>
+					</StandardValues>
+				</Property>
+				<Property name="Precision">
+					<DisplayName resource="RESX_Property_Precision"/>
+					<Category    resource="RESX_Category_DataType"/>
+					<Description resource="RESX_Description_Precision"/>
+					<StandardValues>
+						<!-- safety check, in case the length is null-->
+						<StandardValue value="">0</StandardValue>
+					</StandardValues>
+				</Property>
+				<Property name="Scale">
+					<DisplayName resource="RESX_Property_Scale"/>
+					<Category    resource="RESX_Category_DataType"/>
+					<Description resource="RESX_Description_Scale"/>
+					<StandardValues>
+						<!-- safety check, in case the length is null-->
+						<StandardValue value="">0</StandardValue>
+					</StandardValues>
+				</Property>
+			</Properties>
+		</TypeExtension>
+
+
+	</TypeExtensions>
+
+	<Resources baseName="Ingres.Client.Design.resources">
+		<Resource name="DataView_RESX_NameWithSchema">{Name} ({Schema})</Resource>
+	</Resources>
+</VSDataViewSupport>

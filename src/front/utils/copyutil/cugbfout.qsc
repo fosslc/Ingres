@@ -1,0 +1,204 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<cv.h>
+# include	<st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<cu.h>
+# include	<er.h>
+# include	"ercu.h"
+# include	<si.h>
+# include	<uigdata.h>
+
+/**
+** Name:	cugbfout.c -    Copy a gbf graph out.
+**
+** Description:
+**	Copies a gbf graph to a copyutil file.
+**
+**
+** History:
+**	30-Jul-1987 (Joe)
+**		First Written
+**	2-Feb-1988 (Joe)
+**		Took out ranges and made queries repeats.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	13-May-2005 (kodse01)
+**	    replace %ld with %d for old nat and long nat variables.
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+/* extern's */
+/* static's */
+
+/*{
+** Name:	IICUcgoCopyGbfgraphOut	-  Copy a gbf graph to a file.
+**
+** Description:
+**	Given a gbf graph name this copies the gbf graph's
+**	definition to a copyutil file.  The layout for the fields
+**	of the different gbf graph tables is given in the CURECORD
+**	for the gbf graph objects.
+**
+** Inputs:
+**	name		The name of the gbf graph to copy out.
+**
+**	class		The class of the gbf graph to copy out.
+**			This is not used in this routine.  We copy
+**			out any gbf graph we find.
+**
+**	notthereok	If this is TRUE, then the gbf graph not being
+**			there is not an error.  Otherwise it is an
+**			error.
+**
+**	fp		The file the output to.
+**
+** Outputs:
+**	Returns:
+**		OK if succeeded.
+**		If notthereok is false and the gbf graph is not present
+**		returns a failure status.
+**
+** History:
+**	30-jul-1987 (Joe)
+**		Taken from 5.0 copyapp.
+**	2-Feb-1988 (Joe)
+**		Took out ranges and made queries repeats.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+*/
+STATUS
+IICUcgoCopyGbfgraphOut(name, class, notthereok, fp)
+char	*name;
+i4	class;
+bool	notthereok;
+FILE	*fp;
+{
+	bool	found = FALSE;		/* TRUE if graph found in catalogs */
+
+	EXEC SQL BEGIN DECLARE SECTION;
+	    char	t_graphname[13];	/* buffer to hold graph name */
+	    char	t_user[10];		/* buffer to hold user code */
+
+	    /* GRAPHS fields, as ascii strings */
+
+	    i4	g_gdate;
+	    char	g_gtupcnt[14];
+	    i4	g_gvalcnt;
+	    i4	g_gseries;
+	    i4	g_gserlen;
+	    i4	g_glabels;
+	    i4	g_glbllen;
+	    i4	g_xtype;
+	    i4	g_ytype;
+	    i4	g_ztype;
+
+	    /* GCOMMANDS fields, as ascii strings */
+    
+	    i4	c_gseqno;
+	    i4	c_gcontinue;
+	    char	c_gmodule[13];
+	    char	c_gcommand[13];
+	    i4	c_gint;
+	    f8	c_gflt;
+	    char	c_gstr[256];
+
+	    char	*user;
+	    char	*dba;
+	EXEC SQL END DECLARE SECTION;
+
+	user = IIUIdbdata()->user;
+	dba = IIUIdbdata()->dba;
+
+	/* copy arguments into local variables, then force lowercase */
+	STcopy(name, t_graphname);
+	CVlower(t_graphname);
+
+
+	/* read in the graph and, if found, write it to the file */
+
+	if (STcompare(user, dba) < 0)
+	{
+	    EXEC SQL REPEATED SELECT
+		    gowner, gdate, gtupcnt, gvalcnt, gseries,
+		    gserlen, glabels, glbllen, xtype, ytype, ztype
+	        INTO
+		    :t_user, :g_gdate, :g_gtupcnt, :g_gvalcnt, :g_gseries,
+		    :g_gserlen, :g_glabels, :g_glbllen, :g_xtype, :g_ytype,
+		    :g_ztype
+	        FROM graphs
+	        WHERE graphic = :t_graphname
+	        ORDER BY gowner ASC;
+	    EXEC SQL BEGIN;
+	        SIfprintf(fp, ERx("CUO_GBF:\t%s\t%s\n"), t_graphname, t_user);
+	        SIfprintf(fp, ERx("\t%s\t%s\t%d\t%ld\t%d\t%d\t%d\t%d"),
+		    t_graphname, t_user, g_gdate, g_gtupcnt,
+		    g_gvalcnt, g_gseries, g_gserlen, g_glabels);
+	        SIfprintf(fp, ERx("\t%d\t%d\t%d\t%d\n"),
+		    g_glbllen, g_xtype, g_ytype, g_ztype);
+	        found = TRUE;
+		EXEC SQL ENDSELECT;
+	    EXEC SQL END;
+	}
+	else
+	{
+	    EXEC SQL REPEATED SELECT
+		    gowner, gdate, gtupcnt, gvalcnt, gseries,
+		    gserlen, glabels, glbllen, xtype, ytype, ztype
+	        INTO
+		    :t_user, :g_gdate, :g_gtupcnt, :g_gvalcnt, :g_gseries,
+		    :g_gserlen, :g_glabels, :g_glbllen, :g_xtype, :g_ytype,
+		    :g_ztype
+	        FROM graphs
+	        WHERE graphic = :t_graphname
+	        ORDER BY gowner DESC;
+	    EXEC SQL BEGIN;
+	        SIfprintf(fp, ERx("CUO_GBF:\t%s\t%s\n"), t_graphname, t_user);
+	        SIfprintf(fp, ERx("\t%s\t%s\t%d\t%ld\t%d\t%d\t%d\t%d"),
+		    t_graphname, t_user, g_gdate, g_gtupcnt,
+		    g_gvalcnt, g_gseries, g_gserlen, g_glabels);
+	        SIfprintf(fp, ERx("\t%d\t%d\t%d\t%d\n"),
+		    g_glbllen, g_xtype, g_ytype, g_ztype);
+	        found = TRUE;
+		EXEC SQL ENDSELECT;
+	    EXEC SQL END;
+	}
+
+	if (FEinqerr() != 0)
+	    return FEinqerr();
+
+	if (!found)
+	{
+	    return (notthereok ? OK : FAIL);
+	}
+
+	cu_wrcomp(CUC_GCOMMANDS, fp);
+
+		/* GCOMMANDS output line */
+
+	EXEC SQL REPEATED SELECT
+		gseqno, gcontinue, gmodule, gcommand, gint, gflt, gstr
+	    INTO
+		:c_gseqno, :c_gcontinue, :c_gmodule, :c_gint, :c_gflt, :c_gstr
+	    FROM gcommands
+	    WHERE graphid = :t_graphname AND gowner = :t_user;
+	EXEC SQL BEGIN;
+	    SIfprintf(fp, ERx("\t%s\t%s\t%d\t%d\t%s\t%s\t%d\t%f\t%s\n"),
+		    t_graphname, t_user, c_gseqno, c_gcontinue,
+		    c_gmodule, c_gcommand, c_gint, c_gflt, c_gstr);
+	EXEC SQL END;
+	return FEinqerr();
+}

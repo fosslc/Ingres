@@ -1,0 +1,10 @@
+MODIFY ii_framevars TO CBTREE UNIQUE ON object_id, fr_seq
+
+MODIFY ii_menuargs TO CBTREE UNIQUE ON object_id, mu_text, mu_seq
+
+MODIFY ii_vqjoins TO BTREE UNIQUE ON object_id, vq_seq
+
+MODIFY ii_vqtabcols TO CBTREE UNIQUE ON object_id, vq_seq, tvq_seq
+
+MODIFY ii_vqtables TO BTREE UNIQUE ON object_id, vq_seq
+

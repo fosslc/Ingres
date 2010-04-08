@@ -1,0 +1,19 @@
+#
+# Jamfile file for back!dmf!dmse
+#
+# History:
+#       30-Dec-2004 (hweho01)
+#           Added IINOOPTIM for AIX platform, avoid runtime error during
+#           the process of creating iidbdb.
+#           Compiler : C for AIX 6.006 (VisualAge). 
+
+
+SubDir ING_SRC back dmf dmse ;
+
+IISUBSYS back dmf dmse ;
+
+IINOOPTIM dmse.c : rs4_us5 r64_us5 ;
+
+IILIBRARY DMFLIB : dmsethread.c dmsecomp.c dmse.c ;
+
+

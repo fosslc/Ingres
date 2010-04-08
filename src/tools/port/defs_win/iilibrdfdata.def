@@ -1,0 +1,32 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;		Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	 	Renamed from iirdfdata.def to iilibrdfdata.def.
+;		Contains data symbols for rdf directories.
+;
+
+EXPORTS
+RDF_privctr		@1	DATA			
+rdf_stat_classes	@2	DATA			
+rdf_svci_classes	@3	DATA			
+Rdi_svcb		@4	DATA
+RDF_privctr		@5	DATA
+rdf_stat_classes	@6	DATA
+rdf_svci_classes	@7	DATA
+Iird_quoted		@8	DATA
+Iird_yes		@9	DATA
+Iird_no			@10	DATA
+Iird_upper		@11	DATA
+Iird_mixed		@12	DATA
+Iird_lower		@13 	DATA
+Iird_caps 		@14	DATA
+Iird_dd_caps		@15	DATA
+Iird_unknown		@16	DATA
+Iird_btree		@17	DATA
+Iird_hash		@18	DATA
+Iird_isam		@19	DATA
+Iird_heap		@20	DATA
+Iird_lower_systab	@21	DATA
+Iird_upper_systab	@22	DATA
+Rdf_call_info		@23	DATA

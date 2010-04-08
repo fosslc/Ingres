@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!ulf!uld
+#
+
+SubDir ING_SRC back ulf uld ;
+
+IISUBSYS back ulf uld ;
+
+IILIBRARY ULFLIB : uldtretx.c uldprtree.c
+	uldlookup.c ;
+
+IILIBRARY IMPULFLIBDATA	: ulddata.roc ;

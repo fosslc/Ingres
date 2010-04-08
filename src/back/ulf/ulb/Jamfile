@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!ulf!ulb
+#
+
+SubDir ING_SRC back ulf ulb ;
+
+IISUBSYS back ulf ulb ;
+
+
+IILIBRARY ULFLIB : ulb.c ;
+

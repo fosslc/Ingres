@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqeceend.hlp, help for the confirmation pop-up ending from escape code
+/#-- editing session.
+/#-- 
+You have made changes to the escape code for the current frame, but have
+selected the menuitem 'End' without selecting 'Save' first.  Your
+options are:
+
+  Yes           Save the changes and then end
+  No		End without saving the changes
+
+If you choose 'No,' your changes will be ignored.  
+
+The menu commands are:
+
+  Select        Choose the highlighted option.
+  Cancel        Go back to editing the escape code.
+  Help          Displays this help text.

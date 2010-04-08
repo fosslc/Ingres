@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You attempted to list available tables and views in this database, but there
+are none available to you. At this point, you have the option of either
+creating a new table, or returning back to where you were before you
+attempted to look at tables and views.
+
+Position the cursor on the row with the desired response and press
+"Select". The response options are:
+
+        Yes             Create a new table
+        No              Do not create a new table
+
+The menu commands are:
+
+        MENU COMMAND    DESCRIPTION
+        ------------    -----------
+        Select          Choose the option indicated by the current line of
+                        the table field.
+
+        Cancel          Cancel this operation and return to where you were
+			before you attempted to look at available tables
+			and views. Do not Create anything.
+
+        Help            Access the INGRES Help facility.

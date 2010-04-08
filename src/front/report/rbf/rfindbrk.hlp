@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may specify if the current column is a break column.
+At least one column must be a break column for an Indented Style report.
+
+To specify a break column, scroll to the desired option, and choose the 
+Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Yes		The current column is a break column. 
+	No		The current column is not a break column. 
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select	        Associate the current column as a break column in 
+			the specified manner.
+			
+        Cancel          Return to the Break Columns popup without selecting 
+			a break option.
+
+        Help            Print this message.

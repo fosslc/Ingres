@@ -1,0 +1,41 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Location&submit=actLoc.html` -->
+		<INPUT TYPE="HIDDEN" NAME="action" VALUE="insert">
+		<TABLE BORDER=0>
+			<TR>
+				<TD  colspan=2>Please fill following information :</TD>
+			</TR>
+			<TR>
+				<TD>name: </TD>
+				<TD><INPUT SIZE="32" NAME="name"></TD>
+			</TR>
+			<TR>
+				<TD>Type: </TD>
+				<TD>
+						<INPUT TYPE="RADIO" NAME="type"	VALUE="loc_http" CHECKED>HTTP location (has to be visible by the http server)<BR>
+						<INPUT TYPE="RADIO" NAME="type"	VALUE="loc_ice">Ice location (can be every where on your machine)<BR>
+				</TD>
+			</TR>
+			<TR>
+				<TD>Public: </TD><TD>
+						<INPUT TYPE="CHECKBOX" NAME="public" VALUE="checked">Public
+				</TD>
+			</TR>
+			<TR>
+				<TD>path: </TD>
+				<TD><INPUT SIZE="50" MAXLENGTH="256" NAME="path"></TD>
+			</TR>
+			<TR>
+				<TD>extensions: </TD>
+				<TD><INPUT SIZE="50" NAME="extensions"></TD>
+			</TR>
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

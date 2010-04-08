@@ -1,0 +1,305 @@
+/*
+** getfrm.qsc
+**
+** Copyright (c) 2004 Ingres Corporation
+**
+** History
+**	1/2/85 drh - Changed to FEcalloc in blankFrame routine
+**	13-jul-87 (bruceb)	Changed memory allocation to use [FM]Ereqmem.
+**	08/14/87 (dkh) - ER changes.
+**	16-nov-87 (bruceb)
+**		Check if scrolling fields exist.  If they exist and
+**		-q flag not specified, give user a warning.  If they
+**		exist and -q is specified, set up ftoper with
+**		scrolling field width for a later save.
+**	09-feb-88 (bruceb)
+**		When checking for scrolling fields, check fhd2flags
+**		instead of fhdflags.  Can't use most significant bit
+**		of fhdflags due to overflow problems.
+**	05/26/88 (dkh) - Removed call to IIVFcsfChkScrollFlds(), it is
+**			 no longer needed.
+**	05/27/88 (danielt) - added SQL COMMIT WORK after reading
+**		in the form to release locks on FE catalogs.
+**	06/21/88 (dkh) - Fixed to handle form size in a saner manner.
+**	11-dec-1988 (danielt)
+**		removed COMMIT
+**	19-dec-88 (bruceb)
+**		Added code to convert displayonly fields and columns into
+**		readonly fields and columns.
+**	05-apr-89 (bruceb)
+**		Removed IIVFirtInternalRTI; not used.
+**	12/15/89 (dkh) - VMS shared lib changes.
+**	02/02/90 (dkh) - Put in special hooks to allow Vifred to edit a
+**			 form even though it may have validatin syntax
+**			 errors.
+**      06/09/90 (esd) - Set fdFRMSTRTCHD for new form if FTspace() > 0
+**      06/12/90 (esd) - Make the member frmaxx in FRAME during vifred
+**                       include room for an attribute byte to the left
+**                       of the end marker, as well as the end marker.
+**                       (We won't always insert this attribute
+**                       before the end marker, but we always leave
+**                       room for it).
+**	11-sep-90 (bruceb)
+**		Set frame's frversion so that vfcursor will work with
+**		form stretching.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Aug-2009 (kschendel) 121804
+**	    Need vt.h to satisfy gcc 4.3.
+*/
+
+# include	<compat.h>
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"decls.h"
+# include	<ug.h>
+# include	<er.h>
+# include	"ervf.h"
+# include	<vt.h>
+
+
+FUNC_EXTERN	VOID	IIVFdtrDispToRead();
+FUNC_EXTERN	VOID	IIVFnsnNonSeqNormal();
+FUNC_EXTERN	VOID	IIFDieIgnoreErrs();
+FUNC_EXTERN	i4	FTspace();
+
+GLOBALREF	FT_TERMINFO	IIVFterminfo;
+
+
+/*
+** getFrame
+** get the frame definition by calling frcreate of the
+** frame driver but not having it parse the validation strings
+*/
+
+# ifndef FORRBF
+FRAME *
+vfgetFrame(name)
+char	*name;
+{
+	FRAME	*frm;
+
+	IIFDieIgnoreErrs(TRUE);
+	frm = FDwfrcreate(name, NOWIN);
+	IIFDieIgnoreErrs(FALSE);
+	if (frm != NULL)
+	{
+		IIVFdtrDispToRead(frm);
+
+		/*
+		**  Increase size for the end markers.
+		*/
+                (frm->frmaxx) += 2;
+		(frm->frmaxy)++;
+		if (VTnewfrm(frm))
+		{
+			return(frm);
+		}
+	}
+	return(NULL);
+}
+
+# endif
+
+/*
+** blank frame
+** build a blank frame with name
+*/
+
+# ifndef FORRBF
+FRAME *
+blankFrame()
+{
+	FRAME	*frm;
+
+	if ((frm = (FRAME *)FEreqmem((u_i4)0, (u_i4)sizeof(FRAME), TRUE,
+	    (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("blankFrame"));
+	}
+
+	/*
+	** If we're in environment in which FTspace returns positive val
+	** (which, incidentally, should always be 1) then indicate that
+	** the new blank form should leave room for attribute bytes
+	** when subsequently modified.
+	*/
+	if (FTspace() > 0)
+		frm->frmflags |= fdFRMSTRTCHD;
+
+	frm->frversion = FRMVERSION;
+	frm->frmaxx = IIVFterminfo.cols + 2;
+	frm->frmaxy = IIVFterminfo.lines;
+	if (!VTnewfrm(frm))
+	{
+		IIUGbmaBadMemoryAllocation(ERx("blankFrame"));
+	}
+	if (Vfformname != NULL)
+	{
+		STcopy(Vfformname, frm->frname);
+	}
+	return(frm);
+}
+# endif
+
+
+# ifndef FORRBF
+/*{
+** Name:	IIVFdtrDispToRead	- Convert displayonly fields to
+**					  readonly fields.
+**
+** Description:
+**	Given that the readonly field attribute is replacing the displayonly
+**	attribute in new forms, convert any displayonly fields or columns
+**	to readonly.  For regular fields this involves placing the contents
+**	of frnsfld at the end of frfld (with arbitrary sequence numbers and
+**	the readonly flag bit set.)  For table field columns this simply
+**	requires that the fdtfCOLREAD flag be replaced by the fdREADONLY
+**	flag.
+**
+** Inputs:
+**	frm	Frame whose displayonly fields are to be converted to readonly.
+**
+** Outputs:
+**	frm	Modified to the extent that displayonly is replaced by
+**		readonly.
+**
+**	Returns:
+**		None
+**
+**	Exceptions:
+**		None
+**
+** Side Effects:
+**	None
+**
+** History:
+**	19-dec-88 (bruceb)	Written.
+*/
+
+VOID
+IIVFdtrDispToRead(frm)
+FRAME		*frm;
+{
+    FIELD	*fld;
+    FIELD	**fldlist;
+    TBLFLD	*tbl;
+    FLDHDR	*hdr;
+    i4		i;
+    i4		j;
+
+    fldlist = frm->frfld;
+    for (i = 0; i < frm->frfldno; i++, fldlist++)
+    {
+	fld = *fldlist;
+
+	/* Convert any displayonly table field columns to readonly columns */
+	if (fld->fltag == FTABLE)
+	{
+	    tbl = fld->fld_var.fltblfld;
+	    for (j = 0; j < tbl->tfcols; j++)
+	    {
+		hdr = &tbl->tfflds[j]->flhdr;
+
+		if (hdr->fhdflags & fdtfCOLREAD)
+		{
+		    hdr->fhdflags &= ~fdtfCOLREAD;	/* Turn off disponly */
+		    hdr->fhd2flags |= fdREADONLY;	/* Turn on readonly */
+		}
+	    }
+	}
+    }
+
+    /* Convert any displayonly regular fields to readonly fields */
+    if (frm->frnsno)
+	IIVFnsnNonSeqNormal(frm);
+}
+# endif
+
+
+# ifndef FORRBF
+/*{
+** Name:	IIVFnsnNonSeqNormal	- Place the non-sequence fields onto
+**					  the normal field chain.
+**
+** Description:
+**	Allocate memory for a larger list of normal fields to which both
+**	the original normal field and the non-sequence field lists are
+**	copied.  Does not free up the memory for the original lists because
+**	they are part of the same tag group as the rest of the form, and
+**	anyway will be freed up when user is done editing this form.
+**
+** Inputs:
+**	frm	Frame whose displayonly fields are to be converted to readonly.
+**
+** Outputs:
+**	frm	Non-sequence field list placed onto normal field list.
+**
+**	Returns:
+**		None
+**
+**	Exceptions:
+**		None
+**
+** Side Effects:
+**	None
+**
+** History:
+**	19-dec-88 (bruceb)	Written.
+*/
+
+VOID
+IIVFnsnNonSeqNormal(frm)
+FRAME		*frm;
+{
+    FIELD	**fldlist;
+    FIELD	**flist;
+    FIELD	**fnslist;
+    i4		fldno;
+    i4		i;
+    i4		seqno;	/* used to assign sequence numbers to readonly fields */
+
+    if ((fldlist = (FIELD **)FEreqmem((u_i4)0,
+	(u_i4)((frm->frfldno + frm->frnsno) * sizeof(FIELD *)),
+	FALSE, (STATUS *)NULL)) == NULL)
+    {
+	IIUGbmaBadMemoryAllocation(ERx("IIVFnsnNonSeqNormal"));
+    }
+    
+    fldno = frm->frfldno;	/* number of updatable fields to copy */
+    seqno = fldno;
+
+    /* Copy existing updatable fields to the new list */
+    if (fldno)
+    {
+	MEcopy((PTR)(frm->frfld), (u_i4)(fldno * sizeof(FIELD *)),
+	    (PTR)fldlist);
+    }
+    
+    flist = fldlist + fldno;
+    fnslist = frm->frnsfld;
+
+    fldno = frm->frnsno;	/* number of displayonly fields to copy */
+
+    /* Add the old displayonly fields to the new updatable field list */
+    for (i = 0; i < fldno; i++, seqno++, flist++, fnslist++)
+    {
+	*flist = *fnslist;
+	/* Only regular fields are on the non-sequence list */
+	(*flist)->fld_var.flregfld->flhdr.fhseq = seqno;
+	(*flist)->fld_var.flregfld->flhdr.fhd2flags |= fdREADONLY;
+    }
+
+    frm->frfldno += fldno;
+    frm->frfld = fldlist;
+    frm->frnsno = 0;
+    frm->frnsfld = NULL;
+}
+# endif

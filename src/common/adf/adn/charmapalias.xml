@@ -1,0 +1,653 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE characterMappingAliases SYSTEM "charactermappingaliases.dtd">
+<!-- 
+** Copyright (c) 2004 Ingres Corporation
+**
+** =============================================================================
+** ICU License - ICU 1.8.1 and later
+** COPYRIGHT AND PERMISSION NOTICE
+**  
+** Copyright (c) 1995-2003 International Business Machines Corporation and others
+** All rights reserved.
+**  
+** Permission is hereby granted, free of charge, to any person obtaining a
+** copy of this software and associated documentation files (the
+** "Software"), to deal in the Software without restriction, including
+** without limitation the rights to use, copy, modify, merge, publish,
+** distribute, and/or sell copies of the Software, and to permit persons
+** to whom the Software is furnished to do so, provided that the above
+** copyright notice(s) and this permission notice appear in all copies of
+** the Software and that both the above copyright notice(s) and this
+** permission notice appear in supporting documentation.
+**  
+** THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+** OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+** OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+** HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL
+** INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING
+** FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+** NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
+** WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+**  
+** Except as contained in this notice, the name of a copyright holder
+** shall not be used in advertising or otherwise to promote the sale, use
+* or other dealings in this Software without prior written authorization
+* of the copyright holder.
+** =============================================================================
+*/
+##
+## History:
+##      26-Jan-2004 (gupsh01)
+##          Created based on UTR22.
+##
+-->
+
+<!-- Fully algorithmic converters -->
+<characterMappingAliases>
+<mapping id="UTF-8">
+  <alias name="ibm-1208" preferredBy="IBM*"/>
+  <alias name="ibm-1209" preferredBy="IBM"/>
+  <alias name="ibm-5304" preferredBy="IBM"/>
+  <alias name="ibm-5305" preferredBy="IBM"/>
+  <alias name="windows-65001" preferredBy="WINDOWS*"/>
+  <alias name="cp1208"/>
+</mapping>
+
+<!-- Standard iso-8859-1, Does not have Euro update. -->
+<mapping id="ca-iso8859-1-latin1-2004">
+  <alias name="ibm-819" preferredBy="IBM* JAVA"/>
+  <alias name="IBM819" preferredBy="IANA"/>
+  <alias name="cp819" preferredBy="IANA JAVA"/>
+  <alias name="latin1" preferredBy="IANA JAVA"/>
+  <alias name="8859_1" preferredBy="JAVA"/>
+  <alias name="csISOLatin1" preferredBy="IANA JAVA"/>
+  <alias name="iso-ir-100" preferredBy="IANA JAVA"/>
+  <alias name="ISO_8859-1:1987" preferredBy="IANA* JAVA"/>
+  <alias name="l1" preferredBy="IANA JAVA"/>
+  <alias name="819" preferredBy="JAVA"/>
+  <alias name="iso88591" preferredBy="INGRES"/>
+  <alias name="C" preferredBy="UNIX"/>
+  <alias name="POSIX" preferredBy="UNIX"/>
+</mapping>
+
+<!-- LATIN_1" -->
+<mapping id="ca-us-ascii-2004">
+  <alias name="ASCII" preferredBy="JAVA* IANA WINDOWS"/>
+  <alias name="ANSI_X3.4-1968" preferredBy="IANA* WINDOWS"/>
+  <alias name="ANSI_X3.4-1986" preferredBy="IANA WINDOWS"/>
+  <alias name="ISO_646.irv:1991" preferredBy="IANA WINDOWS"/>
+  <alias name="iso_646.irv:1983" preferredBy="JAVA"/>
+  <alias name="ISO646-US" preferredBy="JAVA IANA WINDOWS"/>
+  <alias name="us" preferredBy="IANA"/>
+  <alias name="csASCII" preferredBy="IANA WINDOWS"/>
+  <alias name="iso-ir-6" preferredBy="IANA"/>
+  <alias name="cp367" preferredBy="IANA WINDOWS"/>
+  <alias name="ascii7" preferredBy="JAVA"/>
+  <alias name="646" preferredBy="JAVA"/>
+  <alias name="windows-20127" preferredBy="WINDOWS*"/>
+</mapping>
+
+<!-- Table-based interchange codepages -->
+
+<!-- This is ASCII, with fallbacks -->
+<mapping id="ca-ibm367-ascii-2004">
+  <alias name="ibm-367" preferredBy="IBM*"/>
+  <alias name="IBM367" preferredBy="IANA*"/>
+</mapping>
+
+<!-- Central Europe -->
+<mapping id="ca-iso8859-2-latin2-2004">
+  <alias name="ibm-912" preferredBy="IBM* JAVA"/>
+  <alias name="iso-8859-2" preferredBy="MIME* IANA JAVA* WINDOWS"/>
+  <alias name="ISO_8859-2:1987" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="latin2" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="csISOLatin2" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="iso-ir-101" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="l2" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="8859_2" preferredBy="JAVA"/>
+  <alias name="cp912" preferredBy="JAVA"/>
+  <alias name="912" preferredBy="JAVA"/>
+  <alias name="windows-28592" preferredBy="WINDOWS*"/>
+  <alias name="iso88592" preferredBy="INGRES"/>
+</mapping>
+
+<!-- Cyrillic -->
+<mapping id="ca-iso8859-5-cyrillic-2004">
+  <alias name="ibm-915" preferredBy="IBM* JAVA"/>
+  <alias name="iso-8859-5" preferredBy="MIME* IANA WINDOWS JAVA*"/>
+  <alias name="cyrillic" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="csISOLatinCyrillic" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="iso-ir-144" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="ISO_8859-5:1988" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="8859_5" preferredBy="JAVA"/>
+  <alias name="cp915" preferredBy="JAVA"/>
+  <alias name="915" preferredBy="JAVA"/>
+  <alias name="windows-28595" preferredBy="WINDOWS*"/>
+  <alias name="iso88595" preferredBy="INGRES"/>
+</mapping>
+
+<!-- Arabic -->
+<!-- ISO_8859-6-E and ISO_8859-6-I are similar to this charset, but BiDi is done differently-->
+<!-- From a narrow mapping point of view, there is no difference.-->
+<!-- -E means explicit. -I means implicit.-->
+<!-- -E requires the client to handle the ISO 6429 bidirectional controls-->
+<mapping id="ca-iso8859-6-arabic-2004">
+  <alias name="ibm-1089" preferredBy="IBM* JAVA"/>
+  <alias name="iso-8859-6" preferredBy="MIME* IANA WINDOWS JAVA*"/>
+  <alias name="arabic" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="csISOLatinArabic" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="iso-ir-127" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="ISO_8859-6:1987" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="ECMA-114" preferredBy="IANA JAVA"/>
+  <alias name="ASMO-708" preferredBy="IANA JAVA"/>
+  <alias name="8859_6" preferredBy="JAVA"/>
+  <alias name="cp1089" preferredBy="JAVA"/>
+  <alias name="1089" preferredBy="JAVA"/>
+  <alias name="windows-28596" preferredBy="WINDOWS*"/>
+  <alias name="ISO-8859-6-I" preferredBy="IANA MIME"/>
+<!-- IANA considers this alias different and BiDi needs to be applied. -->
+  <alias name="ISO-8859-6-E" preferredBy="IANA MIME"/>
+<!-- IANA considers this alias different and BiDi needs to be applied. -->
+  <alias name="dosasmo" preferredBy="INGRES"/>
+</mapping>
+
+<!-- ISO Greek (w/o euro update) -->
+<mapping id="ca-iso8859-7-greek-2004">
+  <alias name="ibm-813" preferredBy="IBM* JAVA"/>
+  <alias name="iso-8859-7" preferredBy="MIME* IANA WINDOWS JAVA*"/>
+  <alias name="greek" preferredBy="IANA WINDOWS JAVA INGRES"/>
+  <alias name="greek8" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="ELOT_928" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="ECMA-118" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="csISOLatinGreek" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="iso-ir-126" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="ISO_8859-7:1987" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="8859_7" preferredBy="JAVA"/>
+  <alias name="cp813" preferredBy="JAVA"/>
+  <alias name="813" preferredBy="JAVA"/>
+  <alias name="windows-28597" preferredBy="WINDOWS*"/>
+</mapping>
+
+<!-- hebrew -->
+<!-- ISO_8859-8-E and ISO_8859-8-I are similar to this charset, but BiDi is done differently -->
+<!-- From a narrow mapping point of view, there is no difference. -->
+<!-- -E means explicit. -I means implicit. -->
+<!-- -E requires the client to handle the ISO 6429 bidirectional controls -->
+<mapping id="ca-iso8859-8-hebrew-2004">
+  <alias name="ibm-916" preferredBy="IBM* JAVA"/>
+  <alias name="iso-8859-8" preferredBy="MIME* IANA WINDOWS JAVA*"/>
+  <alias name="hebrew" preferredBy="IANA WINDOWS JAVA INGRES"/>
+  <alias name="csISOLatinHebrew" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="iso-ir-138" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="ISO_8859-8:1988" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="ISO-8859-8-I" preferredBy="IANA MIME"/>
+<!-- IANA and Windows considers this alias different and BiDi needs to be applied. -->
+  <alias name="ISO-8859-8-E" preferredBy="IANA MIME"/>
+<!-- IANA and Windows considers this alias different and BiDi needs to be applied. -->
+  <alias name="8859_8" preferredBy="JAVA"/>
+  <alias name="cp916" preferredBy="JAVA"/>
+  <alias name="916" preferredBy="JAVA"/>
+  <alias name="windows-28598" preferredBy="WINDOWS*"/>
+</mapping>
+
+<!-- Turkish -->
+<mapping id="ca-iso8859-9-turkish-2004">
+  <alias name="ibm-920" preferredBy="IBM* JAVA"/>
+  <alias name="iso-8859-9" preferredBy="MIME* IANA WINDOWS JAVA*"/>
+  <alias name="latin5" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="csISOLatin5" preferredBy="IANA JAVA"/>
+  <alias name="iso-ir-148" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="ISO_8859-9:1989" preferredBy="IANA* WINDOWS"/>
+  <alias name="l5" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="8859_9" preferredBy="JAVA"/>
+  <alias name="cp920" preferredBy="JAVA"/>
+  <alias name="920" preferredBy="JAVA"/>
+  <alias name="windows-28599" preferredBy="WINDOWS*"/>
+  <alias name="ECMA-128"/>
+  <alias name="iso88599" preferredBy="INGRES"/>
+<!-- IANA doesn't have this alias 6/24/2002 -->
+</mapping>
+
+<!-- Latin 9 -->
+<mapping id="ca-iso8859-15-latin9-2004">
+  <alias name="ibm-923" preferredBy="IBM* JAVA"/>
+  <alias name="iso-8859-15" preferredBy="IANA* MIME* WINDOWS JAVA*"/>
+  <alias name="Latin-9" preferredBy="IANA WINDOWS"/>
+  <alias name="l9" preferredBy="WINDOWS"/>
+  <alias name="8859_15" preferredBy="JAVA"/>
+  <alias name="latin0" preferredBy="JAVA"/>
+  <alias name="csisolatin0" preferredBy="JAVA"/>
+  <alias name="csisolatin9" preferredBy="JAVA"/>
+  <alias name="iso8859_15_fdis" preferredBy="JAVA"/>
+  <alias name="cp923" preferredBy="JAVA"/>
+  <alias name="923" preferredBy="JAVA"/>
+  <alias name="windows-28605" preferredBy="WINDOWS*"/>
+  <alias name="is885915" preferredBy="INGRES"/>
+</mapping>
+
+<!-- CJK encodings -->
+
+<!-- Kanjieuc, encodings -->
+<mapping id="ca-cp943c-shiftjis-jp-2004">
+  <alias name="ibm-943"/>
+  <alias name="Shift_JIS" preferredBy="IANA* MIME* WINDOWS JAVA"/>
+  <alias name="MS_Kanji" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="csShiftJIS" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="windows-31j" preferredBy="IANA JAVA"/>
+<!-- A further extension of Shift_JIS to include NEC special characters (Row 13) -->
+  <alias name="csWindows31J" preferredBy="IANA WINDOWS JAVA"/>
+<!-- A further extension of Shift_JIS to include NEC special characters (Row 13) -->
+  <alias name="x-sjis" preferredBy="WINDOWS JAVA"/>
+  <alias name="x-ms-cp932" preferredBy="WINDOWS"/>
+  <alias name="cp932" preferredBy="WINDOWS"/>
+  <alias name="windows-932" preferredBy="WINDOWS*"/>
+  <alias name="cp943c" preferredBy="JAVA*"/>
+<!-- This is slightly different, but the backslash mapping is the same. -->
+  <alias name="ms932"/>
+  <alias name="pck"/> <!-- Probably SOLARIS -->
+  <alias name="sjis"/> <!-- This might be for ibm-1351 -->
+  <alias name="ibm-943_VSUB_VPUA"/>
+  <alias name="shiftjis" preferredBy="INGRES"/>
+</mapping>
+
+<!-- eucjp mapping -->
+<mapping id="ca-eucjp-kanjieuc-jp-2004">
+  <alias name="ibm-33722"/>  
+  <alias name="ibm-5050"/>
+  <alias name="EUC-JP" preferredBy="IANA MIME* WINDOWS JAVA*"/>
+  <alias name="Extended_UNIX_Code_Packed_Format_for_Japanese" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="csEUCPkdFmtJapanese" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="X-EUC-JP" preferredBy="WINDOWS JAVA"/>
+<!-- Japan EUC. x-euc-jp is a MIME name -->
+  <alias name="eucjis" preferredBy="JAVA"/>
+  <alias name="windows-51932" preferredBy="WINDOWS*"/>
+  <alias name="ibm-33722_VPUA"/>
+  <alias name="IBM-eucJP"/>
+  <alias name="kanjieuc" preferredBy="INGRES"/>
+</mapping>
+
+<!-- Taiwan Big-5 (w/ euro update) -->
+<mapping id="ca-big5-cht-2004">
+  <alias name="ibm-1373" preferredBy="IBM*"/>
+  <alias name="Big5" preferredBy="IANA* MIME* JAVA* WINDOWS"/>
+  <alias name="csBig5" preferredBy="IANA WINDOWS"/>
+  <alias name="windows-950" preferredBy="WINDOWS*"/>
+  <alias name="x-big5"/>
+  <alias name="chtbig5" preferredBy="INGRES"/>
+</mapping>
+
+<!-- Taiwan Big-5 (w/o euro update) -->
+<mapping id="ca-cp950-big5_euro-cht-2004">
+  <alias name="ibm-950" preferredBy="IBM* JAVA"/>
+  <alias name="cp950" preferredBy="JAVA*"/>
+  <alias name="950" preferredBy="JAVA"/>
+</mapping>
+
+<mapping id="ca-big5-hkscs-cht-2004">
+  <alias name="Big5-HKSCS" preferredBy="IANA* JAVA*"/>
+  <alias name="big5hk" preferredBy="JAVA"/>
+  <alias name="HKSCS-BIG5"/> 
+<!-- From http://www.openi18n.org/localenameguide/ -->
+<!-- big5-hkscs:unicode3.0 -->
+<!-- This is actually post 3.0 data, which has different mappings -->
+</mapping>
+
+<!-- GBK -->
+<mapping id="ca-gbk-csgbk-cn-2004">
+  <alias name="ibm-1386" preferredBy="IBM* JAVA"/>
+  <alias name="GBK" preferredBy="IANA* WINDOWS"/>
+  <alias name="CP936" preferredBy="IANA"/>
+  <alias name="windows-936" preferredBy="IANA WINDOWS*"/>
+  <alias name="MS936" preferredBy="IANA"/>
+  <alias name="cp1386" preferredBy="JAVA*"/>
+  <alias name="ibm-1386_VSUB_VPUA"/>
+  <alias name="csgbk" preferredBy="INGRES"/>
+<!-- zh_cn -->
+</mapping>
+
+<!-- China EUC. -->
+<mapping id="ca-euccn-gb2312-cn-2004">
+  <alias name="ibm-1383" preferredBy="IBM*"/>
+  <alias name="GB2312" preferredBy="IANA* MIME*"/>
+  <alias name="csGB2312" preferredBy="IANA"/>
+  <alias name="EUC-CN"/> 
+<!-- According to other platforms, windows-20936 looks more like euc-cn. x-euc-cn is also a MIME name -->
+  <alias name="ibm-eucCN"/>
+  <alias name="hp15CN"/> 
+  <alias name="cp1383"/> 
+  <alias name="1383"/> 
+  <alias name="ibm-1383_VPUA"/> 
+  <alias name="chthp" preferredBy="INGRES"/>
+</mapping>
+
+<!-- This gb_2312_80 DBCS mapping is needed by iso-2022. -->
+<mapping id="ca-gb2312-80-cn-2004">
+  <alias name="ibm-5478" preferredBy="IBM*"/>
+  <alias name="GB_2312-80" preferredBy="IANA*"/>
+<!-- Windows maps this alias incorrectly -->
+  <alias name="chinese" preferredBy="IANA"/>
+  <alias name="iso-ir-58" preferredBy="IANA"/>
+  <alias name="csISO58GB231280" preferredBy="IANA"/>
+  <alias name="gb2312-1980"/>
+  <alias name="GB2312.1980-0"/>  
+<!-- From X11R6 -->
+  <alias name="csgb2312" preferredBy="INGRES"/>
+</mapping>
+
+<!-- Taiwan EUC. x-euc-tw is a MIME name -->
+<mapping id="ca-euctw-chteuc-2004">
+  <alias name="ibm-964" preferredBy="IBM* JAVA"/>
+  <alias name="EUC-TW"/>
+  <alias name="ibm-eucTW"/>
+  <alias name="cns11643"/> 
+  <alias name="cp964" preferredBy="JAVA*"/>
+  <alias name="964" preferredBy="JAVA"/>
+  <alias name="ibm-964_VPUA"/>
+  <alias name="chteuc" preferredBy="INGRES"/>
+</mapping>
+
+<!-- ISO-2022 needs one, and other people may need others. -->
+<mapping id="ca-cp949-cn-2004">
+  <alias name="ibm-949" preferredBy="IBM* JAVA"/>
+  <alias name="cp949" preferredBy="JAVA*"/>
+  <alias name="949" preferredBy="JAVA"/>
+  <alias name="ibm-949_VASCII_VSUB_VPUA"/>
+</mapping>
+
+<!-- ibm-970 is a almost a subset of ibm-1363. -->
+<!-- Java, Solaris and AIX use euc-kr to also mean ksc5601. -->
+<!-- Korean EUC. x-euc-kr is a MIME name -->
+<mapping id="ca-euckr-kr-2004">
+  <alias name="ibm-970" preferredBy="IBM*"/>
+  <alias name="EUC-KR" preferredBy="IANA* MIME* WINDOWS JAVA*"/>
+  <alias name="windows-51949" preferredBy="WINDOWS*"/>
+  <alias name="ibm-eucKR" preferredBy="JAVA"/>
+  <alias name="csEUCKR" preferredBy="IANA WINDOWS"/>
+  <alias name="ibm-970_VPUA"/>
+<!-- Java, Solaris and AIX use euc-kr to also mean ksc5601, and _sometimes_ for Windows too. -->
+<!-- ibm-1363 is almost a superset of ibm-970. -->
+<!-- Johab seems to be ksc5601-1992 and windows-1361, which is not this. -->
+</mapping>
+
+<mapping id="ca-ksc5601-korean-kr-2004">
+  <alias name="ibm-1363"/>
+<!-- Leave untagged because this isn't the default -->
+  <alias name="KS_C_5601-1987" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="KS_C_5601-1989" preferredBy="IANA WINDOWS"/>
+  <alias name="KSC_5601" preferredBy="MIME* IANA WINDOWS"/>
+  <alias name="csKSC56011987" preferredBy="IANA WINDOWS"/>
+  <alias name="korean" preferredBy="IANA WINDOWS INGRES"/>
+  <alias name="iso-ir-149" preferredBy="IANA WINDOWS"/>
+  <alias name="5601" preferredBy="JAVA"/>
+  <alias name="windows-949" preferredBy="JAVA* WINDOWS*"/>
+  <alias name="cp1363"/> 
+  <alias name="ksc"/> 
+  <alias name="ibm-1363_VSUB_VPUA"/> 
+<!-- ks_x_1001:1992 -->
+<!-- This seems to mean johab -->
+<!-- ksc5601-1992 -->
+<!-- This seems to mean johab -->
+</mapping>
+
+<mapping id="ca-tis620-wthai-th-2004">
+<!-- Thai (w/ euro update) -->
+  <alias name="ibm-1162" preferredBy="IBM*"/>
+  <alias name="TIS-620" preferredBy="IANA* WINDOWS"/>
+  <alias name="windows-874" preferredBy="JAVA* WINDOWS*"/>
+  <alias name="tis620.2533" preferredBy="JAVA"/>
+  <alias name="eucTH"/>
+  <alias name="wthai" preferredBy="INGRES"/>
+<!-- eucTH is an unusual alias from Solaris.  eucTH has fewer mappings than TIS620 -->
+<!-- iso-8859-11 is similar to TIS-620. ibm-13162 is a closer match. -->
+</mapping>
+
+<mapping id="ca-cp874-thai_euro-th-2004">
+<!-- Thai PC (w/o euro update). -->
+  <alias name="ibm-874" preferredBy="IBM*"/>
+  <alias name="ibm-9066" preferredBy="IBM"/>
+<!-- Yes ibm-874 == ibm-9066. ibm-1161 has the euro update. -->
+  <alias name="874" preferredBy="JAVA"/>
+  <alias name="cp874" preferredBy="JAVA*"/>
+  <alias name="cp9066"/>
+  <alias name="thai" preferredBy="INGRES"/>
+</mapping>
+
+<!-- Platform codepages -->
+<!-- PC US -->
+<mapping id="ca-ibmpc437-pcus-2004">
+  <alias name="ibm-437" preferredBy="IBM*"/>
+  <alias name="IBM437" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="ibmpc437" preferredBy="IANA* WINDOWS JAVA INGRES"/>
+  <alias name="cp437" preferredBy="IANA WINDOWS JAVA*"/>
+  <alias name="437" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="csPC8CodePage437" preferredBy="IANA JAVA"/>
+  <alias name="windows-437" preferredBy="WINDOWS*"/>
+</mapping>
+
+<!-- PC latin1 -->
+<mapping id="ca-ibmpc850-latin1-2004">
+  <alias name="ibm-850" preferredBy="IBM*"/>
+  <alias name="IBM850" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="ibmpc850" preferredBy="INGRES"/>
+  <alias name="cp850" preferredBy="IANA MIME* WINDOWS JAVA*"/>
+  <alias name="850" preferredBy="IANA JAVA"/>
+  <alias name="csPC850Multilingual" preferredBy="IANA JAVA"/>
+  <alias name="windows-850" preferredBy="WINDOWS*"/>
+</mapping>
+
+<!-- PC DOS Greek (w/o euro) -->
+<mapping id="ca-elot437-cp851-greek-2004">
+  <alias name="ibm-851" preferredBy="IBM*"/>
+  <alias name="IBM851" preferredBy="IANA*"/>
+  <alias name="cp851" preferredBy="IANA MIME*"/>
+  <alias name="851" preferredBy="IANA"/>
+  <alias name="csPC851" preferredBy="IANA"/>
+  <alias name="elot437" preferredBy="INGRES"/>
+</mapping>
+
+<!-- PC latin2 (w/o euro update) -->
+<mapping id="ca-cp852-slav852-latin2-2004">
+  <alias name="ibm-852" preferredBy="IBM*"/>
+  <alias name="IBM852" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="cp852" preferredBy="IANA WINDOWS JAVA*"/>
+  <alias name="852" preferredBy="IANA WINDOWS JAVA"/>
+  <alias name="slav852" preferredBy="INGRES"/>
+  <alias name="csPCp852" preferredBy="IANA JAVA"/>
+  <alias name="windows-852" preferredBy="WINDOWS*"/>
+</mapping>
+
+<!-- PC cyrillic (w/o euro update) -->
+<mapping id="ca-ibm855-alt-cyrillic-2004">
+  <alias name="ibm-855" preferredBy="IBM*"/>
+  <alias name="IBM855" preferredBy="IANA*"/>
+  <alias name="cp855" preferredBy="IANA"/>
+  <alias name="855" preferredBy="IANA"/>
+  <alias name="csIBM855" preferredBy="IANA"/>
+  <alias name="csPCp855"/>
+  <alias name="alt" preferredBy="INGRES"/>
+</mapping>
+
+<!-- PC Hebrew (old) -->
+<mapping id="ca-cp856-hebrew_old-2004">
+  <alias name="ibm-856" preferredBy="IBM* JAVA"/>
+  <alias name="cp856" preferredBy="MIME* JAVA*"/>
+  <alias name="856" preferredBy="JAVA"/>
+</mapping>
+
+<!-- PC Latin 5 (w/o euro update) -->
+<mapping id="ca-pc857-turkish-2004">
+  <alias name="ibm-857" preferredBy="IBM*"/>
+  <alias name="IBM857" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="cp857" preferredBy="IANA MIME* JAVA*"/>
+  <alias name="857" preferredBy="IANA JAVA"/>
+  <alias name="pc857" preferredBy="INGRES"/>
+  <alias name="csIBM857" preferredBy="IANA JAVA"/>
+  <alias name="windows-857" preferredBy="WINDOWS*"/>
+</mapping>
+
+<!-- PC latin1 with Euro -->
+<mapping id="ca-ibm858-latin1_euro-2004">
+  <alias name="ibm-858" preferredBy="IBM* JAVA*"/>
+  <alias name="IBM00858" preferredBy="IANA*"/>
+  <alias name="CCSID00858" preferredBy="IANA"/>
+  <alias name="CP00858" preferredBy="IANA"/>
+  <alias name="PC-Multilingual-850+euro" preferredBy="IANA"/>
+  <alias name="cp858" preferredBy="MIME*"/>
+</mapping>
+
+<!-- PC Hebrew (w/o euro update) -->
+<mapping id="ca-ibm862-pchebrew-2004">
+  <alias name="ibm-862" preferredBy="IBM*"/>
+  <alias name="IBM862" preferredBy="IANA* JAVA"/>
+  <alias name="cp862" preferredBy="IANA MIME* JAVA*"/>
+  <alias name="862" preferredBy="IANA JAVA"/>
+  <alias name="csPC862LatinHebrew" preferredBy="IANA JAVA"/>
+  <alias name="DOS-862" preferredBy="WINDOWS"/>
+  <alias name="windows-862" preferredBy="WINDOWS*"/>
+  <alias name="pchebrew" preferredBy="INGRES"/>
+</mapping>
+
+<!-- PC Arabic (w/o euro update) -->
+<mapping id="ca-ibm864-arabic-2004">
+  <alias name="ibm-864" preferredBy="IBM*"/>
+  <alias name="IBM864" preferredBy="IANA* JAVA"/>
+  <alias name="cp864" preferredBy="IANA MIME* JAVA*"/>
+  <alias name="csIBM864" preferredBy="IANA JAVA"/>
+</mapping>
+
+<!-- PC Russian (w/o euro update) -->
+<mapping id="ca-ibm866-cyrillic-2004">
+  <alias name="ibm-866" preferredBy="IBM*"/>
+  <alias name="IBM866" preferredBy="IANA* JAVA"/>
+  <alias name="ibmpc866" preferredBy="INGRES"/>
+  <alias name="cp866" preferredBy="IANA MIME* WINDOWS JAVA*"/>
+  <alias name="866" preferredBy="IANA JAVA"/>
+  <alias name="csIBM866" preferredBy="IANA JAVA"/>
+  <alias name="windows-866" preferredBy="WINDOWS*"/>
+</mapping>
+
+<!-- PC Hebrew (w/ euro update) Updated version of ibm-862 -->
+<mapping id="ca-ibm867-hebrew-2004">
+  <alias name="ibm-867" preferredBy="IBM*"/>
+  <alias name="cp867"/>  
+</mapping>
+
+<!-- PC Greek (w/o euro update) -->
+<mapping id="ca-ibm869-greek-2004">
+  <alias name="ibm-869" preferredBy="IBM*"/>
+  <alias name="IBM869" preferredBy="IANA* WINDOWS JAVA"/>
+  <alias name="cp869" preferredBy="IANA MIME* JAVA*"/>
+  <alias name="869" preferredBy="IANA JAVA"/>
+  <alias name="cp-gr" preferredBy="IANA JAVA"/>
+  <alias name="csIBM869" preferredBy="IANA JAVA"/>
+  <alias name="windows-869" preferredBy="WINDOWS*"/>
+</mapping>
+
+<!-- Russian internet -->
+<mapping id="ca-koi8-cyrillic-2004">
+  <alias name="ibm-878" preferredBy="IBM*"/>
+  <alias name="KOI8-R" preferredBy="IANA* MIME* JAVA*"/>
+  <alias name="koi8" preferredBy="JAVA INGRES"/>
+  <alias name="csKOI8R" preferredBy="IANA JAVA"/>
+  <alias name="cp878"/>  
+</mapping>
+
+<!-- The cp aliases in this section aren't really windows aliases, but it's used by ICU for Windows. -->
+<!-- Windows Latin2 (w/ euro update) -->
+<mapping id="ca-win1250-latin2-2004"	>
+  <alias name="ibm-5346" preferredBy="IBM*"/>
+  <alias name="windows-1250" preferredBy="IANA* JAVA* WINDOWS*"/>
+  <alias name="win1250" preferredBy="INGRES"/>
+  <alias name="cp1250" preferredBy="WINDOWS"/>
+</mapping>
+
+<!-- Windows Cyrillic (w/ euro update) -->
+<mapping id="ca-win1251-cyrillic-2004">
+  <alias name="ibm-5347" preferredBy="IBM*"/>
+  <alias name="windows-1251" preferredBy="IANA* JAVA* WINDOWS*"/>
+  <alias name="cp1251" preferredBy="WINDOWS"/>
+  <alias name="cw" preferredBy="INGRES"/>
+</mapping>
+
+<!-- Windows Latin1 (w/ euro update) -->
+<mapping id="ca-win1252-latin1-2004">
+  <alias name="ibm-5348" preferredBy="IBM*"/>
+  <alias name="windows-1252" preferredBy="IANA* JAVA* WINDOWS*"/>
+  <alias name="win1252" preferredBy="INGRES"/>
+  <alias name="inst1252" preferredBy="INGRES"/>
+  <alias name="cp1252" preferredBy="WINDOWS"/>
+</mapping>
+
+<!-- Windows Greek (w/ euro update) -->
+<mapping id="ca-win1253-greek_euro-2004">
+  <alias name="ibm-5349" preferredBy="IBM*"/>
+  <alias name="windows-1253" preferredBy="IANA* JAVA* WINDOWS*"/>
+  <alias name="cp1253" preferredBy="WINDOWS"/>
+</mapping>
+
+<!-- Windows Turkish (w/ euro update) -->
+<mapping id="ca-win1254-turkish-2004">
+  <alias name="ibm-5350" preferredBy="IBM*"/>
+  <alias name="windows-1254" preferredBy="IANA* JAVA* WINDOWS*"/>
+  <alias name="cp1254" preferredBy="WINDOWS"/>
+</mapping>
+
+<!-- Windows Hebrew (w/ euro update) -->
+<mapping id="ca-win1255-whebrew-2004">
+  <alias name="ibm-5351" preferredBy="IBM*"/>
+  <alias name="windows-1255" preferredBy="IANA* JAVA* WINDOWS*"/>
+  <alias name="cp1255" preferredBy="WINDOWS"/>
+  <alias name="whebrew" preferredBy="INGRES"/>
+</mapping>
+
+<!-- Windows Arabic (w/ euro update) -->
+<mapping id="ca-win1256-warabic-2004">
+  <alias name="ibm-5352" preferredBy="IBM*"/>
+  <alias name="windows-1256" preferredBy="IANA* JAVA* WINDOWS*"/>
+  <alias name="cp1256" preferredBy="WINDOWS"/>
+  <alias name="warabic" preferredBy="INGRES"/>
+</mapping>
+
+<!-- These tables are out of date, and don't have the Euro-->
+<!-- Windows Cyrillic (w/o euro update) -->
+<mapping id="ca-ibm1251-cyrillic-2004">
+  <alias name="ibm-1251" preferredBy="IBM*"/>
+</mapping>
+
+<!-- Windows Hebrew (w/o euro update) -->
+<mapping id="ca-ibm1255-hebrew-2004">
+  <alias name="ibm-1255" preferredBy="IBM*"/>
+</mapping>
+
+<!-- HP Latin1 -->
+<mapping id="ca-hproman8-latin1-2004">
+  <alias name="ibm-1051" preferredBy="IBM*"/>
+  <alias name="hp-roman8" preferredBy="IANA*"/>
+  <alias name="roman8" preferredBy="IANA"/>
+  <alias name="r8" preferredBy="IANA"/>
+  <alias name="csHPRoman8" preferredBy="IANA"/>
+  <alias name="hproman8" preferredBy="INGRES"/>
+</mapping>
+
+<!-- EBCDIC codepages according to the CDRA -->
+<!-- without Euro -->
+<!-- EBCDIC US -->
+<mapping id="ca-ebcdic-ibm37-2004">
+  <alias name="ibm-37" preferredBy="IBM*"/>
+  <alias name="IBM037" preferredBy="IANA*"/>
+  <alias name="ibm-037" preferredBy="JAVA"/>
+  <alias name="ebcdic-cp-us" preferredBy="IANA"/>
+  <alias name="ebcdic-cp-ca" preferredBy="IANA"/>
+  <alias name="ebcdic-cp-wt" preferredBy="IANA"/>
+  <alias name="ebcdic-cp-nl" preferredBy="IANA"/>
+  <alias name="csIBM037" preferredBy="IANA"/>
+  <alias name="cp037" preferredBy="JAVA*"/>
+  <alias name="cpibm37"/>
+  <alias name="cp37"/>
+</mapping>
+
+<!-- It maps both EBCDIC LF and NL controls to Unicode LF U+000A. -->
+<mapping id="ca-ebcdic-xml-us-2004"/>
+
+</characterMappingAliases>

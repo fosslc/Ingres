@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2005 Ingres Corporation
+
+  The fd_affinity resource determines if the Server will open
+  one file descriptor (FD) per file, shared by all threads (FILE), 
+  or one file descriptor per thread per file (THREAD).
+  Specifying THREAD may improve I/O throughput under heavy,
+  concurrent load, but is not supported by all platforms, nor when
+  the DBMS is configured for INTERNAL threads.
+
+  The default is THREAD.

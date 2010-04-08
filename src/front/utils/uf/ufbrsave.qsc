@@ -1,0 +1,1189 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<pc.h>
+# include	<ut.h>
+# include	<tm.h>
+# include	<nm.h>
+# include	<si.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<fstm.h>
+# include	<qr.h>
+# include	<uf.h>
+# include	"eruf.h"
+# include	<ug.h>
+
+/**
+** Name:	ufbrsave.qsc -	Output Browser Save Module.
+**
+** Description:
+**	Contains the output browser save routine.  Defines:
+**
+**	iiufBrSave()	sends the browser output to either a file or
+**				to the printer
+**
+** History:
+**	12-oct-89 (sylviap)
+**		Created.
+**	24-oct-89 (sylviap)
+**		Use LOexist() instead of SIopen(read only) to determine
+**		if the print-file will be written or appended-to.
+**		Placed the ifdef DG redisplay code after the SIopen.
+**		(Got bug fix from fsprnscr.qsc.)
+**	04-apr-90 (teresal)
+**		Bug fix 4064 8484 - increase file buffer size to 8K.
+**	01-may-90 (sylviap)
+**		Added support for popups in scrollable output.
+**		   - Added print_title, file_title, qrb as parameters to
+**			iiufBrSave.
+**		   - Wrote _bcb_inMemory, _GetFullQuery and
+**			_ValidFilename.
+**		   - Added display loops to _ToPrint and _ToFile.
+**	22-may-90 (sylviap)
+**		Changed print/file menuitems as per FRC decision.
+**	28-jun-90 (sylviap)
+**		Added flush to sent out to disk. (#31005)
+**	24-jul-90 (sylviap)
+**		In _GetFullQuery, check if bcb->bffd is null before calling 
+**		IIUFfsh_Flush.  For big queries, the buffer is full so some
+**		data needs to be flused to the spill file.  For smaller queries,
+**		bffd is not yet opened, so the flush is not necessary.
+**	07/24/90 (dkh) - Put in fix to prevent spill file from being opened
+**			 multiple times.  This was a problem on VMS since
+**			 VMS does not allow multiple handles to the same file
+**			 automatically.
+**      24-aug-90 (sylviap)
+**              Change LOdelete to LOpurge so all versions of the temp file
+**              will be deleted.  Problem was evident on VMS but not on Unix.
+**		#32797.
+**	29-aug-90 (kathryn)
+**		Add  Key Explanations for Output Browser submenus Print and
+**		File.
+**      20-nov-90 (sylviap)
+**              Added second parameter to LOpurge.
+**      15-mar-91 (sylviap) #32101
+**		Calls error E_UF005A.  In _ToPrinter, does not return FAIL if
+**		UTprint returns error. 
+**	26-may-91 (mgw) Bug 36841
+**		The real fix for 36841 is in frontcl!ft!ftprnsrc.qsc in the
+**		way it calls UTprint(). This file has the same problem with the
+**		way it calls UTprint() so I'm fixing it here too. Problem is
+**		that the next to last arg should be just the file name for
+**		the title page of the print job (VMS) or the job name (Unix),
+**		not the full path. Full path causes VMS print command to fail
+**		if it's more than 39 chars.
+**	20-aug-1991  wong  Added missing status return to '_GetFullQuery()'.
+**		Bug #39188.
+**	30-jan-1993 (rogerl) 
+**		Save state (on input or output form) of caller, switch state to
+**		[ backed out ]
+**	5-feb-1993 (rogerl) 
+**		Back out above change; solve #44276 by bracketing
+**		[ backed out ]
+**	8-mar-1993 (rogerl) 
+**		Back out 30-jan-1993, 5-feb-1993 (bcb->onpopup initialization)
+**	13-jul-1993 (connie) Bug #50714
+**		Print the last underline only if bcb->print_time is true;
+**		This supplements the fix for #40202.
+**	27-jul-1993 (connie) Bug #43773
+**		Comment out the codes that check for II_PRINTSCREEN_FILE
+**		inside the 'file' menu item
+**	08/07/93 (dkh) - Code cleanup.  Deleting code that is no longer
+**			 needed instead of just commenting it out.
+**	06-oct-1993 (andrewc)
+**		Changed _GetFullQuery, _ToFile, and _ToPrinter to take
+**		FILE ** as argument instead of FILE *.  The file pointer
+**		in_fp was getting closed and reopened under certain
+**		conditions in a way that did not allow the correct
+**		file pointer information to make its way back to the
+**		top calling routine.  Bug 52860
+**	16-mar-2000 (kitch01)
+**		Bug 99136. Amended read of spill file to use maximum column
+**		width as record length in spill file is not now a fixed maximum.
+**		Also commented the code to explain more about what is happening.
+**      08-Nov-2000 (horda03)
+**              Previous change attempted to calculate the address of a register
+**              variable which is not permitted.
+**  17-nov-2000 (kitch01)
+**      Amend above fix to be CL compliant. File access is now random and
+**      (for VMS) we pass the max column size. Also changes to allow correct
+**      seeking on spill file should it subsequently be used for display.
+**  24-apr-2001 (horda03) Bug 104345 INGCBT 342
+**      Rather than taking a tag/memory for each record written to a file and
+**      then releasing the file (incorrectly -tag id wasn't freed) use one
+**      tag region and two memory requests (one for the file info, and one for
+**      the record to be written). After all records have been written, the one
+**      tag is released (and the tag id freed).
+**  09-may-2001 (kinte01)
+**	Modify previous change for bug 104345 to reference IIUGtagFree 
+**	instead of IIUGtagfree to correct warnings on VAX
+**  20-jun-2001 (bespi01)
+**      The bcb contains a variable which should hold the maximum width of a
+**      line in the spill file. Incorrect uses of this variable have been
+**      replaced.
+**      Bug 104175, Problem INGCBT 335
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	19-may-2001 (somsa01)
+**	    IIUGtagfree() should be IIUGtagFree().
+**	17-sep-2001 (hanch04)
+**	    SIputrec returns EOF on error.
+**  27-Nov-2001 (bespi01) Bug #106421, Problem INGCBT#380
+**	The file copy loop in _GetFile() would exit without copying the last
+**	buffer that was read.
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	26-Aug-2009 (kschendel) b121804
+**	    Move fstm include to proper place.
+*/
+
+#define BFRSIZE 8192
+#define MSGSIZE 512
+
+GLOBALREF VOID  (*iiuftfdDiagFunc)();	/* Diagnostic tracing function */
+
+static STATUS	_ToFile();
+static STATUS	_OpenFile();
+static VOID	_GetFile();
+static STATUS	_ToPrinter();
+static STATUS	_ValidFilename();
+static STATUS	_GetFullQuery();
+static VOID	_bcb_inMemory();
+
+
+VOID 	IIUFbot_Bottom();
+
+/*{
+** Name:	iiufBrSave() -	Sends the browser output to either a
+**						file or to the printer.
+** History:
+**	(27-nov-1985) (peter)	Add ref to FSprnscr routine.
+**	11/12/87 (dkh) - FTdiag -> FSdiag.
+**	14-aug-89 (sylviap)
+**		Added is_file parameter to allow PRINT option.
+**	12-oct-89 (sylviap)
+**		Extracted from FSsave.
+**	6-oct-1993 (andrewc)
+**		Modified to pass &in_fp instead of in_fp to _ToFile and
+**		_ToPrinter.  bug 52860
+**  17-nov-2000 (kitch01)
+**   If opening for append wind the filepointer to the end so that any 
+**   subsequent SIftell() call will correctly return the right position.
+**   this is needed because the spill file used is also used for the 
+**   display spill file in ufbrowse.qsc.
+**      17-sep-2002 (wanfr01)
+**		Bug 107573, INGCBT 415
+**		Go to bottom of scroll buffer when saving to a file.
+**		This creates consistent saving behavior and forces user to
+**              reload scroll buffer.
+*/
+STATUS
+iiufBrSave ( bcb, is_file, xpos, ypos, print_title, file_title, qrb )
+BCB	 *bcb;
+bool	 is_file;	/* TRUE  if output to go to file */
+			/* FALSE if output to the printer */
+i4	xpos;
+i4	ypos;
+char	*print_title;
+char	*file_title;
+QRB	*qrb;
+
+{
+	STATUS		rc;
+	FILE		*in_fp;
+	STATUS		stat;
+
+	if (iiuftfdDiagFunc != NULL)
+		(*iiuftfdDiagFunc)(ERx("iiufBrSave: entering\n"));
+
+	_bcb_inMemory(bcb, &in_fp);
+
+	/*
+	**	Call the interactive terminal monitor equivalent of FTprnscr
+	**	to read through the input file, and dump it to an output file.
+	**	Save whether caller is on output or input form, switch state
+	**	to 'input' for ToFile or ToPrint menu, restore original state.
+	*/
+
+	if (is_file)
+		stat = _ToFile(bcb, &in_fp, xpos, ypos, file_title, qrb);
+	else
+		stat = _ToPrinter(bcb, &in_fp, xpos, ypos, print_title, qrb);
+
+	/* Close input file */
+	if (iiuftfdDiagFunc != NULL)
+		(*iiuftfdDiagFunc)(ERx("iiufBrSave: closing temp spill file\n"));
+	SIclose(in_fp);
+
+	/*
+	**	 If necessary, re-open the spill file for append so we will be
+	**	 positioned to add more records.
+	*/
+	if (bcb->lrec >= bcb->nrecs)
+	{
+		if (iiuftfdDiagFunc != NULL)
+			(*iiuftfdDiagFunc)
+			   (ERx("iiufBrSave: opening spill file for append\n"));
+		if ((rc = SIfopen(&bcb->bfloc, ERx("a"), SI_RACC, RACC_BLKSIZE,
+			&bcb->bffd)) != OK)
+		{
+			iiufBrExit( bcb, E_UF001B_FileOpenAppend,
+					2, bcb->bfname, (PTR)&rc
+			);
+		}
+        /* Position spill file at the end 
+        ** Required so that SIftell returns the correct position.
+        */
+	    if ((rc=SIfseek(bcb->bffd, 0, SI_P_END)) != OK)
+	    {
+	       if (iiuftfdDiagFunc != NULL)
+	            (*iiuftfdDiagFunc) (ERx("iiufBrSave: Unable to seek end-of-file\n"));
+	       iiufBrExit( bcb, E_UF0080_BrowseFileSeek, 2, 0, (PTR)&rc);
+	       return(rc);
+	    }
+	}
+
+	if (iiuftfdDiagFunc != NULL)
+		(*iiuftfdDiagFunc)(ERx("iiufBrSave: leaving\n"));
+	return stat;
+}
+
+static const
+##	char	_FileForm[]	= ERx("uffile"),
+##		_PrintForm[]	= ERx("ufprint"),
+##		_blank[]	= ERx(""),
+##		_filename[]	= ERx("filename"),
+##		_printer[]	= ERx("printer"),
+##		_copies[]	= ERx("copies"),
+##		_FileHelp[]	= ERx("uffile.hlp"),
+##		_PrintHelp[]	= ERx("ufprint.hlp");
+
+/*
+** Name:	_ToFile() -	creates the file for the current output buffer
+**
+** Description:
+**	Write out the current output buffer to a file, with the
+**	current data included.
+**
+**	This routine is stolen directly from FTprnscr, with changes
+**	to the part which points to a Window structure.	 In the
+**	interactive terminal monitor, the data to be printed comes
+**	from the spill file.
+**
+**	If the INGRES name 'II_PRINTSCREEN_FILE' is set, that file
+**	name will be used.  If the name is not defined,
+**	then the user will be prompted for a file name.
+**
+**	In any case, the current buffer is appended to the
+**	named file, if it exists, or created if it does not.
+**
+**
+** Inputs:
+**	bcb		- BCB control block from FSsave.
+**	in_fp		- input file pointer.  File is assumeed
+**			  to be open for reading.
+**
+** Side Effects:
+**	Repositions in_fp file.
+**
+** History:
+**	27-nov-85 (peter)	written.
+**	07/23/87 (dkh) - Changed to use ## prompt instead of FTprompt directly.
+**	08/25/87 (scl) - #ifdef out some non-FT3270 code
+**	11/11/88 (dkh) - Fixed calls to FTmessage.
+**	05-apr-89 (wolf)
+**		Add TOwscnme call to support CMS fileid syntax; remove
+**		#ifdef FT3270 around call to ITlnprint
+**	14-aug-89 (sylviap)
+**		Created FSgetfile to allow the PRINT option.
+**	12-oct-89 (sylviap)
+**		Extracted fron FSprnscr.
+**		Change FSgetfile to _GetFile.
+**	01-may-90 (sylviap)
+**		Added display loop.
+**	25-feb-1991 (kathryn)	Bug 36005
+**		Call LOfroms for location when II_PRINTSCREEN_FILE is defined.
+**	6-oct-1993 (andrewc)
+**		Changed type of arugment in_fp from "FILE *" to "FILE **"
+**		bug 52860.
+*/
+
+##static char	*file_partial = NULL;
+
+static STATUS
+_ToFile ( bcb, in_fp, xpos, ypos, file_title, qrb )
+BCB	*bcb;
+FILE	**in_fp;
+i4	xpos;
+i4	ypos;
+##char	*file_title;
+QRB	*qrb;
+##{
+	ER_MSGID	msg;
+	FILE		*fp;
+	char		*mode;
+	char		*nameptr;		/* name pointer */
+##	char		filebuf[MAX_LOC+1];	/* File name buffer */
+	bool		break_fl;		/* TRUE = CANCEL key */
+	STATUS		stat;
+	
+	LOCATION	loc;			/* temporary location */
+# ifndef	PCINGRES
+	SYSTIME		stime;			/* current time */
+# endif	/* PCINGRES */
+
+	break_fl = FALSE;
+	stat = OK;
+
+##	{
+		/*
+		** No name yet.  Prompt for one. Get form and intialize
+		** if first time
+		*/
+
+##		i4		xsize,ysize;		/* popup size */
+##		i4		xput,yput;		/* popup position */
+
+		if ( file_partial == NULL )
+		{
+			if (IIUFgtfGetForm(IIUFlcfLocateForm(), _FileForm)!=OK)
+			{
+				IIUGerr(E_UF0051_LoadForm, 0, 1, _FileForm);
+				return FAIL;
+			}
+
+			/* Get the string to use as menuitem on popup */
+			file_partial = STalloc(ERget(S_UF0054_file_partial));
+		}
+		IIMTlf(TRUE); /* set up to allow popups in scrollable output */
+
+		/*
+		** Figure out where the popup should be displayed.
+		** Can if fit where the cursor is? - or is cursor too
+		** close to the border?
+		*/
+		/* Get the size of the popup */
+##		inquire_frs form  
+##			(xsize=columns(_FileForm), ysize=rows(_FileForm))
+		xput = min(xpos, bcb->mx_cols - xsize - 1);
+		yput = min(ypos, bcb->mx_rows - ysize - 1); /* account for menu line */
+##		display _FileForm	/* default: FILL */
+##			with style = popup (startcolumn = xput, startrow = yput)
+##		initialize (title = file_title)
+
+##		activate menuitem ERget(FE_OK)
+##		   (expl=ERget(F_UF007B_ExplFileOK)), frskey4
+##		{
+##			i2	null_file;
+
+##			getform ( filebuf:null_file = _filename );
+			if ( null_file == DB_EMB_NULL )
+			{
+				IIUGerr(E_UF0056_no_filename, 0, 0);
+## 				resume field _filename;
+			}
+			else if ( _ValidFilename(filebuf, &loc) != OK )
+			{
+##				resume field _filename;
+			}
+			if (!bcb->req_complete)
+			{
+				/*
+				**  If we need to get more data, close
+				**  off in_fp so that we can append more
+				**  data (problem on VMS).
+				*/
+				if (*in_fp != NULL)
+				{
+					SIclose(*in_fp);
+				}
+
+				/* run query to completion */
+				stat = _GetFullQuery(bcb,qrb,in_fp,&break_fl);
+			}
+			else
+			   IIUFbot_Bottom(bcb);
+## 			breakdisplay
+##		}
+##		activate menuitem ERget(FE_Cancel)
+##		   (expl=ERget(F_FE0103_ExplCancel), validate = 0,activate = 0),
+##		   FRSkey9 (validate = 0,activate = 0)
+##		{
+			break_fl = TRUE;
+##			breakdisplay
+##		}
+##		activate menuitem file_partial
+##		   (expl=ERget(F_UF007C_ExplFilePartial))
+##		{
+##			i2	null_file;
+
+##			getform ( filebuf:null_file = _filename );
+			if ( null_file == DB_EMB_NULL )
+			{
+				IIUGerr(E_UF0056_no_filename, 0, 0);
+## 				resume field _filename;
+			}
+			else if ( _ValidFilename(filebuf, &loc) != OK )
+			{
+##				resume field _filename;
+			}
+## 			breakdisplay
+##		}
+##		activate menuitem ERget(FE_Help)
+##			(expl = ERget(F_FE0100_ExplFrameHelp), validate=0),
+##			FRSkey1 (validate = 0)
+##		{
+			FEhelp(_FileHelp, file_title);
+##		}
+
+		IIMTlf(FALSE);	/* Turn off popup on scrollable output */
+##	}
+
+	if (break_fl)
+		return stat;
+
+	/* Check to see if file exists for message. */
+
+	if (LOexist(&loc) != OK)
+	{ /* File does NOT exist */
+		/* New file */
+		mode = ERx("w");
+		msg = S_UF001F_WritingScreen;
+	}
+	else
+	{ /* File DOES exist. */
+		/* Old file */
+		mode = ERx("a");
+		msg = S_UF0020_AppendingScreen;
+	}
+
+	if ( _OpenFile(&loc, mode, &fp) != OK )
+	{ /* Could not open file */
+		return FAIL;
+	}
+
+	IIUGmsg(ERget(msg), FALSE, 1, filebuf);
+	PCsleep(2000);
+
+	_GetFile(bcb, *in_fp, fp, loc, filebuf, FALSE );
+
+	return stat;
+##}
+
+static STATUS
+_OpenFile ( loc, mode, fp )
+LOCATION	*loc;
+char		*mode;
+FILE		**fp;
+{
+	STATUS	retstat;
+	char	*filename;
+
+# ifdef hp9_mpe
+	retstat = SIfopen(loc, mode, SI_TXT, 256, fp);
+# else
+	retstat = SIopen(loc, mode, fp);
+
+#ifdef DGC_AOS
+##	clear screen;
+#endif /* DGC_AOS */
+# endif /* hp9_mpe */
+
+	if ( retstat != OK )
+	{ /* Could not open file */
+		LOtos(loc, &filename);
+		IIUGerr(E_UF001E_FileOpen, 0, 2, filename, (PTR)&retstat);
+	}
+	return retstat;
+}
+
+/*
+** Name:	_GetFile() -	Saves the output buffer to a file
+**
+** Description:
+**	Saves output buffer to a file.  If the name of the file is 'printer',
+**	then the output is sent to the printer.  A new function key, 'Print'
+**	has been added, but sending the file to the printer by specifying the
+**	filename as 'printer' is kept for backwards compatibility.
+**
+**	History:
+**	    16-dec-1991 (pearl)  40202
+**		Check BCB print_time field before printing out time stamp.
+**		16-mar-2000 (kitch01)
+**		Bug 99136. Amended read of spill file to use maximum column
+**		width as record length in spill file is not now a fixed maximum.
+**          08-nov-2000 (horda03)
+**              As need to pass address of "i", it cannot be a register
+**              variable.
+**      22-nov-2000 (kitch01)
+**      Remove old way of reading file for output. As this file is the same
+**      as the spill file and as it has now been changed for CL compatibility
+**      the old way is no longer appropriate.
+*/
+
+static VOID
+_GetFile ( bcb, in_fp, out_fp, loc, name, is_print )
+BCB		*bcb;
+FILE		*in_fp;
+FILE		*out_fp;
+LOCATION	loc;		/* temporary location */
+char		*name;
+bool		is_print;	/* TRUE  = user did ^G (forms print screen)
+				** and requested 'printer'
+				*/
+{
+	i4	i;		/* Loop for read/write of records */
+	STATUS		retstat;	/* return status */
+	char		msg[MSGSIZE];	/* Error message buffer */
+# ifndef	PCINGRES
+	SYSTIME		stime;		/* current time */
+# endif		/* PCINGRES */
+
+	char	*mbfr;	/* Buffer for reading lines from input */
+	char	*mbfr2;	/* Buffer for ITlnprint xlation */
+	i4	len;	/* length of buffer */
+	TAGID	tag;	/* memory tag */
+
+	/* Put in a time stamp to start off the file */
+	if (bcb->print_time)
+	{
+# ifndef	PCINGRES
+	/* First put in the system time */
+		TMnow(&stime);
+		TMstr(&stime, msg);
+		_VOID_ STtrmwhite(msg);
+# else		/* PCINGRES */
+		STcopy(ERget(F_UF0008_Output), msg);
+# endif		/* PCINGRES */
+		SIfprintf( out_fp,
+		"___ %s ___________________________________________________\n",
+		msg
+		);
+	}
+
+	/*
+	**	Read through the browse file and copy each record to the
+	**	user's output file.
+	**  (99136) Read the file until return is not OK. This ensures
+	**	that we read all the file.
+	*/
+
+        /* New way of doing the printable/viewable output */
+        /* Get a memory tag so we can free all the memory we use in one go */
+	tag = FEgettag();
+
+        /* Get some memory for the file read, and for the record translation */
+	if ( ( (mbfr = FEreqmem(tag, RACC_BLKSIZE + 2, TRUE, NULL)) == NULL) ||
+             ( (mbfr2 = FEreqmem(tag, RACC_BLKSIZE + 2, TRUE, NULL )) == NULL ) )
+	{
+	    if (iiuftfdDiagFunc != NULL)
+	       (*iiuftfdDiagFunc) (ERx("_GetFile: Unable to allocate mbfr buffer\n"));
+	    SIclose(in_fp);
+	    SIclose(out_fp);
+	    iiufBrExit( bcb, E_UG0009_Bad_Memory_Allocation, 1, "_GetFile");
+	}
+	i = 0;
+	len = 0;
+	retstat = SIread(in_fp, RACC_BLKSIZE + 1, &len, mbfr);
+	while (len > 0)
+	{
+		STATUS rc;
+
+		i++;
+               /* Translate the record to printable/viewable format */
+               ITlnprint(mbfr, mbfr2, len);
+               if ( SIputrec(mbfr2, out_fp) == EOF )
+               {
+                  IIUGtagFree(tag);
+                  SIclose(in_fp);
+                  SIclose(out_fp);
+                  iiufBrExit( bcb, E_UF0083_BrowseFileWrite, 
+                              3, (PTR)&i, name, (PTR)&rc);
+		}
+		/* anything more to read? */
+		if (retstat != OK)
+		{
+			break;
+		}
+		len = 0;
+		retstat = SIread(in_fp, RACC_BLKSIZE + 1, &len, mbfr);
+        }
+
+    /* Free all the memory we acquired in one go */
+    IIUGtagFree(tag);
+
+    if (retstat != ENDFILE)
+    {
+       if (iiuftfdDiagFunc != NULL)
+          (*iiuftfdDiagFunc) (ERx("_GetFile: Read file failed rc = %d\n"), retstat);
+       SIclose(in_fp);
+       SIclose(out_fp);
+       iiufBrExit(bcb, E_UF0081_BrowseFileRead, 3, (PTR)&i, bcb->bfname, (PTR)&retstat);
+    }
+
+	if (bcb->print_time)
+	{
+		SIfprintf( out_fp,
+"________________________________________________________________________________\n");
+	}
+
+	if ( (retstat = SIclose(out_fp)) != OK )
+	{ /* shouldn't happen */
+		IIUGerr(E_UF0019_CloseFile, 0, 2, name, (PTR)&retstat);
+		return;
+	}
+
+# ifndef	PCINGRES
+
+	if ( is_print )
+	{
+		char	*u_printer;
+		char	user_print[MAX_LOC+1];	/* stores printer command */
+		char	dummy[MAX_LOC+1];	/* These 3 used to get */
+		char	gfpref[MAX_LOC+1];	/* just file name for  */
+		char	gfsuff[MAX_LOC+1];	/* header page of print job */
+
+		NMgtAt(ERx("ING_PRINT"), &u_printer);
+		if (u_printer != (char *)NULL && *u_printer != '\0')
+		{
+			STlcopy(u_printer, user_print, sizeof(user_print)-1);
+		}
+		else
+		{
+			 *user_print = EOS;
+		}
+
+		/* Get just the file name for the header page of print job */
+		LOdetail(&loc, dummy, dummy, gfpref, gfsuff, dummy);
+		STprintf(dummy, "%s.%s", gfpref, gfsuff);
+
+		if ( UTprint(user_print, &loc, TRUE, 1, dummy, (char *)NULL)
+				!= OK )
+		{ 	/* Could not print file */
+			IIUGerr(E_UF005A_PrintFailed, 0, 1, name);
+			return;
+		}
+	}
+# endif	/* PCINGRES */
+	return;
+}
+
+/*
+** Name:	_ToPrinter() -	print current output buffer to printer.
+**
+** Description:
+**	Write out the current output buffer to a printer, with the
+**	current data included.
+**
+**	This routine is stolen directly from FTprnscr, with changes
+**	to the part which points to a Window structure.	 In the
+**	interactive terminal monitor, the data to be printed comes
+**	from the spill file.
+**
+**	In any case, the current buffer is appended to the
+**	named file, if it exists, or created if it does not.
+**
+**
+** Inputs:
+**	bcb		- BCB control block from FSsave.
+**	in_fp		- input file pointer.  File is assumeed
+**			  to be open for reading.
+**
+** Side Effects:
+**	Repositions in_fp file.
+**
+** History:
+**	14-aug-89 (sylviap)
+**		Created.
+**	12-oct-89 (sylviap)
+**		Extracted from FSprint.
+**	01-may-90 (sylviap)
+**		Added display loop.
+**	6-oct-93 (andrewc)
+**		Changed type of arugment in_fp from "FILE *" to "FILE **"
+**		bug 52860
+*/
+
+##static char	*print_partial = NULL;
+
+static STATUS
+_ToPrinter ( bcb, in_fp, posx, posy, print_title, qrb )
+BCB	*bcb;
+FILE	**in_fp;
+i4	posx;
+i4	posy;
+##char	*print_title;
+QRB	*qrb;
+{
+	STATUS		retstat;		/* return status */
+	FILE		*fp;
+	LOCATION	loc;			/* temporary location */
+##	char		filbuf[MAX_LOC+1];	/* File name buffer */
+##	char		printbuf[MAX_LOC+1];	/* Printer name buffer */
+##	i4		copies;			/* number of copies */
+##	char		default_str[MAX_LOC+1];
+
+	char		*u_printer;
+	char		*u_print;
+	char		user_print[MAX_LOC+1];	/* stores printer command */
+	char		dummy[MAX_LOC+1];	/* These 3 used to get */
+	char		gfpref[MAX_LOC+1];	/* just file name for  */
+	char		gfsuff[MAX_LOC+1];	/* header page of print job */
+##	i4		sizex,sizey;		/* popup size */
+##	i4		putx,puty;		/* popup position */
+	bool		break_fl;
+
+	break_fl = FALSE;
+	retstat = OK;
+
+	/* get the printer info */
+
+	if ( print_partial == NULL )
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), _PrintForm)!=OK)
+		{
+			IIUGerr(E_UF0051_LoadForm,0,1,_PrintForm);
+			return FAIL;
+		}
+
+		/* Get the strings to use as menuitem on popup */
+		print_partial = STalloc(ERget(S_UF0055_print_partial));
+	}
+	IIMTlf(TRUE);	/* set up to allow popups in scrollable output */
+
+	/*
+	** Figure out where the popup should be displayed.
+	** Can if fit where the cursor is? - or is cursor too
+	** close to the border?
+	*/
+	/* Get the size of the popup */
+##	inquire_frs form ( sizex=columns(_PrintForm), sizey=rows(_PrintForm) );
+	putx = min(posx, bcb->mx_cols - sizex - 1);
+	puty = min(posy, bcb->mx_rows - sizey - 1); /* account for menu line */
+
+##	display _PrintForm	/* default:  FILL */
+##		with style = popup( startcolumn = putx, startrow = puty )
+##	initialize (title = print_title)
+##	{
+##		getform ( default_str = _printer );
+##	}
+##	activate menuitem ERget(FE_OK)
+##		   (expl=ERget(F_UF007D_ExplPrintOK)) , frskey4
+##	{
+##		i2	null_printer;
+##		i2	null_file;
+##		i2	null_copies;
+
+##		getform (	printbuf:null_printer = _printer,
+##				copies:null_copies = _copies,
+##				filbuf:null_file = _filename
+##		);
+		if ( null_printer == DB_EMB_NULL )
+		{
+			IIUGerr(E_UF0059_no_printer, 0, 0);
+##  			putform ( _printer = default_str );
+##			resume field _printer;
+		}
+		else if ( null_copies == DB_EMB_NULL )
+		{
+			IIUGerr(E_UF0053_no_copy, 0, 0);
+##			putform (_copies = 1)
+## 			resume field _copies;
+		}
+		else if ( null_file == DB_EMB_NULL )
+		{
+			IIUGerr(E_UF0056_no_filename, 0, 0);
+## 			resume field _filename;
+		}
+		else if ( _ValidFilename(filbuf, &loc) != OK )
+		{
+## 			resume field _filename;
+		}
+		u_print = ( STbcompare(printbuf, 0, default_str, 0, TRUE) == 0 )
+				? NULL : printbuf;
+
+		if (!bcb->req_complete)
+		{
+			/*
+			**  If we need to get more data, close
+			**  off in_fp so that we can append more
+			**  data (problem on VMS).
+			*/
+			if (*in_fp != NULL)
+			{
+				SIclose(*in_fp);
+			}
+
+			/* run query to completion */
+			retstat = _GetFullQuery(bcb, qrb, in_fp, &break_fl);
+		}
+## 		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Cancel)
+##		(expl=ERget(F_FE0103_ExplCancel), validate = 0,activate = 0),
+##		FRSkey9 (validate = 0,activate = 0)
+##	{
+		break_fl = TRUE;
+##		breakdisplay;
+##	}
+##	activate menuitem print_partial
+##		   (expl=ERget(F_UF007E_ExplPrintPartial))
+##	{
+##		i2	null_printer;
+##		i2	null_file;
+##		i2	null_copies;
+
+##		getform (	printbuf:null_printer = _printer,
+##				copies:null_copies = _copies,
+##				filbuf:null_file = _filename
+##		);
+
+		if ( null_printer == DB_EMB_NULL )
+		{
+			IIUGerr(E_UF0059_no_printer, 0, 0);
+##  			putform ( _printer = default_str );
+##			resume field _printer;
+		}
+		else if ( null_copies == DB_EMB_NULL )
+		{
+			IIUGerr(E_UF0053_no_copy, 0, 0);
+## 			resume field _copies;
+		}
+		else if ( null_file == DB_EMB_NULL )
+		{
+			IIUGerr(E_UF0056_no_filename, 0, 0);
+## 			resume field _filename;
+		}
+		else if ( _ValidFilename(filbuf, &loc) != OK )
+		{
+## 			resume field _filename;
+		}
+		u_print = ( STbcompare(printbuf, 0, default_str, 0, TRUE) == 0 )
+				? NULL : printbuf;
+
+##  		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp), validate=0),
+##		FRSkey1 (validate = 0)
+##	{
+		FEhelp(_PrintHelp, print_title);
+##	}
+
+	IIMTlf(FALSE);	/* Turn off popup on scrollable output */
+	if (break_fl)
+		return retstat;
+
+	/* Check to see if file exists for overwrite message. */
+
+	if ( LOexist(&loc) == OK )
+	{ /* File already exists. */
+		if (!IIUFver(ERget(S_UF0023_OverwritePrompt), 0))
+			return OK;		/* Do not overwrite file */
+	}
+
+	if ( _OpenFile(&loc, ERx("w"), &fp) != OK )
+	{ /* Could not open file */
+		return FAIL;
+	}
+
+	/* Output is to a printer */
+	IIUGmsg(ERget(S_UF0022_PrintingOutput), FALSE, 0);
+	PCsleep(2000);
+
+	_GetFile( bcb, *in_fp, fp, loc, filbuf, FALSE );
+
+	/*
+	** Same code as in _GetFile for printing a file , but did
+	** want the # ifndef PCINGRES.  When 'ifndef' becomes obsolete,
+	** UTprint call can be done in _GetFile.  Will need to then
+	** call with TRUE as last parameter. (See above)
+	*/
+
+	NMgtAt("ING_PRINT", &u_printer);
+	if (u_printer != (char *)NULL && *u_printer != '\0')
+	{
+		STlcopy(u_printer, user_print, sizeof(user_print)-1);
+	}
+	else
+	{
+		*user_print = EOS;
+	}
+
+	/* Get just the file name for the header page of print job */
+	LOdetail(&loc, dummy, dummy, gfpref, gfsuff, dummy);
+	STprintf(dummy, "%s.%s", gfpref, gfsuff);
+
+	if ( UTprint(user_print, &loc, TRUE, copies, dummy, u_print) != OK )
+	{ 	/* Could not print file */
+		IIUGerr(E_UF005A_PrintFailed, 0, 1, filbuf);
+		/* return OK because FAIL means FATAL error and exit to OS */
+	}
+	return(OK);
+}
+
+/*
+** Name:	_ValidFilename() -	Validates a filename.
+**
+** Description:
+**	Validates a filename.  Returns FAIL under the following circumstances:
+**		- null indicator is set or an empty filename is passed
+**		- a filename with invalid characters
+**		- a non-writeable/invalid directory is specified
+**
+*/
+
+static STATUS
+_ValidFilename ( filename, loc )
+char		*filename;
+LOCATION	*loc;
+{
+	FILE		*fl_ptr;		/* file pointer */
+	char		tmp_name[MAX_LOC + 1];	/* temporary name */
+	LOCATION	tmp_loc;		/* temporary location */
+
+	if ( STtrmwhite(filename) <= 0 )
+	{
+		IIUGerr(E_UF0056_no_filename, 0, 0);
+		return FAIL;
+	}
+
+# ifdef CMS
+	TOwscnme(filename);
+# endif /* CMS */
+
+	/*
+	** LOfroms checks for a valid filename. If the temp file can be
+	** created, then the directory is writeable.  Otherwise, tell user to
+	** enter a different name.  Delete the temp file created since
+	** the real file will be created later.
+	*/
+	if (LOfroms(PATH & FILENAME, filename, loc) != OK)
+	{
+		IIUGerr(E_UF0057_bad_filename, 0, 0);
+		return (FAIL);
+	}
+	LOcopy(loc, tmp_name, &tmp_loc);
+	LOuniq(ERx("uf"),ERx("tmp"),&tmp_loc);
+	if (SIopen(&tmp_loc, ERx("w"), &fl_ptr) != OK)
+	{
+		IIUGerr(E_UF0058_cannot_open_file,0,0);
+		return FAIL;
+	}
+	SIclose(fl_ptr);
+	LOpurge(&tmp_loc,0);	/* Bug #32797 */
+
+	return OK;
+}
+
+/*
+** Name:	_bcb_inMemory() -	Brings the full BCB into memory.
+**
+** Description:
+**	Brings the full BCB into memory by reading in the spill file.
+**
+** History
+**	  16-mar-2000 (kitch01)
+**		No code change, I just updated the comments to be more useful.
+**		The function is misnamed. It simply forces the current browse
+**		buffer to be written to disk. It then opens the spill file giving
+**	    its location to a file pointer local to UFbrsave. This is so that
+**		this spill file is not confused with any spill file created by 
+**		browse file buffer overflow (even though the 2 file pointers point
+**		to the same file!).
+**    17-nov-2000 (kitch0)
+**      More comments. Although the two spill files share the same file
+**      they are used in different ways. here the spill to disk is so that
+**      it can be read to generate the print or save file more easily than
+**      trying to negotiate the in memory buffer (I think!). However if
+**      the subsequent 'run query to completion' action causes an in memory
+**      buffer overflow then the buffer will be spilled to disk anyway.
+**      See ufbrowse.qsc for comments on how this is dealt with. If that 
+**      happens then the spill file is used both to generate the print/save
+**      and to control the display.
+*/
+
+static VOID
+_bcb_inMemory ( bcb, in_fp )
+BCB	*bcb;
+FILE	**in_fp;
+{
+	STATUS		rc;
+	LOCATION	in_loc;
+	char		in_locstr[MAX_LOC+1];
+
+	if (iiuftfdDiagFunc != NULL)
+		(*iiuftfdDiagFunc)(ERx("_bcb_inMemory: entering\n"));
+
+	LOcopy(&bcb->bfloc,in_locstr,&in_loc);
+
+	/*
+	** Flush any records from memory to disk that require it. 
+	** This writes all records currently in the browse buffer to
+	** disk.
+	*/
+	IIUFfsh_Flush(bcb);
+
+	/*
+	** If necessary, close the file for write in order to flush any
+	** buffers still in memory.
+	*/
+
+	if (bcb->lrec >= bcb->nrecs)
+	{
+		if (iiuftfdDiagFunc != NULL)
+		   (*iiuftfdDiagFunc)(
+		    ERx("_bcb_inMemory: closing spill file\n"));
+		if ((rc=SIclose(bcb->bffd)) != OK)
+		{
+			iiufBrExit( bcb, E_UF0019_CloseFile,
+					2, bcb->bfname, (PTR)&rc
+			);
+		}
+	}
+	bcb->bffd = NULL;
+
+	/*
+	**	 Open the file for read and read all the way to end-of-file,
+	**	 so we will have the bottommost records in memory.
+	**	 (kitch01)
+	**   This really just opens the spill file, there is no read operation.
+	*/
+
+	if (iiuftfdDiagFunc != NULL)
+		(*iiuftfdDiagFunc)
+		   (ERx("_bcb_inMemory: opening temp spill file '%s' for input\n"),
+		   bcb->bfname
+		);
+	if ((rc=SIfopen(&in_loc,ERx("r"),SI_RACC, RACC_BLKSIZE, in_fp)) != OK)
+	{
+		iiufBrExit(bcb, E_UF0017_FileOpenRead, 2, bcb->bfname, (PTR)&rc);
+	}
+}
+
+
+/*
+** Name:	_GetFullQuery() -	Executes the query to completion.
+**
+** Description:
+**	Executes the query to completion, then brings the entire BCB into
+**	memory.
+**
+** History:
+**	08/1991 (jhw) Added missing status "return OK" at end.  Bug #39188.
+**
+**	6-oct-1993 (andrewc) 
+**		Changed type of arugment in_fp from "FILE *" to "FILE **".
+**		bug 52860
+**	16-mar-2000 (kitch01)
+**	 No code change only comments updated to help understand this function.
+**	 It runs the query to completion and flushes the browse buffer to disk
+**	 but does not bring the entire BCB into memory unless it can fit in 
+**	 memory. This is because if the BCB cannot fit in memory it will be 
+**	 spilt to disk during the call to IIUFmro_MoreOutput().
+**  17-nov-2000 (kitch01)
+**   If opening for append wind the filepointer to the end so that any 
+**   subsequent SIftell() call will correctly return the right position.
+**   this is needed because the spill file used is also used for the 
+**   display spill file in ufbrowse.qsc.
+*/
+
+static STATUS
+_GetFullQuery ( bcb, qrb, in_fp, break_fl )
+BCB	*bcb;
+QRB	*qrb;
+FILE	**in_fp;
+bool	*break_fl;
+{
+	IIUGmsg(ERget(S_UF0018_RunToCompletion), FALSE, 0);
+
+	/* Execute rest of query */
+	if (!IIUFmro_MoreOutput(bcb, 0, qrb))
+	{
+		*break_fl = TRUE;
+		return (FAIL);
+	}
+	IIUFbot_Bottom(bcb);
+
+	/*
+	** Flush any records from memory to disk that require it. #31005
+	*/
+	if (bcb->bffd != NULL)
+		IIUFfsh_Flush(bcb); 
+
+	/*
+	** Open spill file to add more records
+	** (kitch01) Not sure why this is here since IIUFmro_MoreOutput()
+	** will have made sure lrec is not > nrecs. If they are equal then
+	** the number of records in the spill file matches the expected
+	** number anyway. Also nowhere in the code after this point is there
+	** any writes to the spill file anyway.
+	*/
+	if (bcb->lrec >= bcb->nrecs)
+	{
+		STATUS	stat;
+
+		if (iiuftfdDiagFunc != NULL)
+			(*iiuftfdDiagFunc)
+			(ERx("_GetFullQuery: opening spill file for append\n"));
+
+		/*
+		**  Close bffd if it is already opened so we can append
+		**  to the file.  This is the safest approach since we
+		**  don't necessarily know who has the file opened in
+		**  what mode.
+		**
+		**  In the particular case of "printing everything" to a
+		**  file, IIUFadd_AddRec() will have opened this file
+		**  for "append" already but we can't depend on this
+		**  all the time.
+		**
+		**  We really need to redo this code.
+		**	(kitch01) Yes we certainly do.
+		*/
+		if (bcb->bffd != NULL)
+		{
+			SIclose(bcb->bffd);
+		}
+		if ( (stat = SIfopen(&bcb->bfloc, ERx("a"), SI_RACC, RACC_BLKSIZE,
+				&bcb->bffd)) != OK )
+		{
+			iiufBrExit( bcb, E_UF001B_FileOpenAppend,
+					2, bcb->bfname, (PTR)&stat
+			);
+            /* Position spill file at the end 
+            ** Required so that SIftell returns the correct position.
+            */
+	        if ((stat=SIfseek(bcb->bffd, 0, SI_P_END)) != OK)
+	        {
+               if (iiuftfdDiagFunc != NULL)
+                  (*iiuftfdDiagFunc) (ERx("_GetFullQuery: Unable to seek end-of-file\n"));
+               iiufBrExit( bcb, E_UF0080_BrowseFileSeek, 2, 0, (PTR)&stat);
+               return stat;
+	        }
+			*break_fl = TRUE;
+			return stat;
+		}
+		/* Bring rest of query into memory */
+		/* (kitch01) This function does not do this. The call to 
+		** IIUFmro_MoreOutput() will have brought the rest of the query
+		** output into memory if it fitted otherwise the output will have been
+		** spilt to disk.
+		*/
+		_bcb_inMemory(bcb, in_fp);
+	}
+	return OK;
+}

@@ -1,0 +1,94 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for DAS server
+*/
+
+/*
+** History
+**	20-Feb-2003 (wansh01)
+**	   Created.
+**	11-nov-2003 (kinte01)
+**	   Update location of DAS Server & JDBC files for VMS
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	16-Feb-2007 (hanje04)
+**	    SIR 117341
+**	    Add edbc.jar as the JDBC package (its former location) is no
+**	    longer shipped.
+**	17-Dec-2007 (rajus01)
+**	    Added the Ingres JDBC driver properties generator utility
+**	    iijdbcprop.c
+**      08-Jan-2008 (bolke01)
+**           Bring VMS inline with UNIX and build into install directory.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**      01-apr-2010 (joea)
+**          Add iigcd.stb on VMS.
+*/
+
+PART  das
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!bin
+#else
+	DIRECTORY (PROD2NAME)!bin
+#endif
+   BUILD_DIR (ING_BUILD)!bin
+      EXECUTABLE (PROG1PRFX)gcd
+      EXECUTABLE (PROG1PRFX)jdbcprop
+
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY (PROD2NAME)!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT SETUP (PROG1PRFX)sudas
+
+/*
+** ingres!lib
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY (PROD2NAME)!LIB_TGT
+#endif
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+      FILE iijdbc.jar
+      FILE edbc.jar
+      FILE JdbcInfo.class
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY (PROD2NAME)!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+      FILE das.crs
+      FILE das.rfm
+
+#ifdef VMS
+/*
+** ingres!debug
+*/
+   DIRECTORY (PROD2NAME)!debug
+   BUILD_DIR (ING_BUILD)!debug
+      FILE (PROG1PRFX)gcd.stb
+#endif

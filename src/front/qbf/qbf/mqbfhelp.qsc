@@ -1,0 +1,208 @@
+/*
+**  Copyright (c) 2004 Ingres Corporation
+**
+*/
+
+/*
+**	MQBFHELP.QSC  -	This module performs special MQBF help
+**			functions.
+**
+**	Routines:
+**	     mqhelp()	-Call tumain() for tables utility.
+**
+**	History:
+**	Written: 7/14/83 (nml)
+**		10/20/86 (KY)  -- Changed CH.h to CM.h.
+**		11/18/86 (KY)  -- changed STindex, STrindex for
+**					Double Bytes characters.
+**		24-apr-1987	(daver)
+**			Replaced with call to tu_main() for the Tables Utility.
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**		01-mar-88 (marian)
+**			Deleted if statement from end of file.  this looks like
+**			it was left over when the call to tu_main() was added.
+**      	18-jan-93 (daver)
+**              	Removed paramter to mq_tbl_load, nuked in 1989.
+**		18-aug-1993 (rdrane)
+**			Rework mqhlpgo().  tu_main() sets tablename to the
+**			reconstructed, unnormalized string.  So, break it
+**			up (again!) and place it into the qdef fields.
+**			This addresses all/part of b54048, b51773, b51756,
+**			and b52570.  Also remove unused parameters from
+**			the routine.
+**		15-sep-1993 (rdrane)
+**			Calling mq_rslv() to decompose the tablename from
+**			tu_main() was a bit of overkill when connected to
+**			pre-6.4 databases, since the owner was always reflected
+**			in an owner.tablename construct, which was being
+**			failed since the cat_level wasn't at least 6.5.
+**			So, if pre-6.5, effect a simply decompose here and
+**			be done with it.  This addresses bug 54952.
+**		31-dec-1993 (rdrane)
+**			Use OpenSQL level to determine 6.5 syntax features
+**			support.
+**              14-feb-1994 (huffman)
+**                      Address is expected in FE_decompose, therefore
+**                      need to pass it.  (Access Violates on AXP)
+**		16-jul-1998 (i4jo01)
+**			If QBF is started using the -e flag, make sure
+**			that we grab the resolved table from the form where
+**			it has been previously stored. (b92017)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Aug-2009 (kschendel) 121804
+**	    Define mq-rslv.
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ui.h>
+# include	<tu.h>
+## include	"mqbf.qsh"
+# include	<er.h>
+# include	"erqf.h"
+
+## extern char _mqbftbls[];
+## extern char _table[];
+## extern char _tables[];
+
+## GLOBALDEF char _colhelp[] = ERx("colhelp");
+## GLOBALDEF char _columns[] = ERx("columns");
+## GLOBALDEF char _tblhelp[] = ERx("tblhelp");
+## GLOBALDEF char _towner[] = ERx("towner");
+
+FUNC_EXTERN	bool	mq_rslv(MQQDEF *, FE_RSLV_NAME *);
+FUNC_EXTERN	VOID	tu_main();
+
+hlp_reload()
+{
+	/*
+	**	This routine is the help the overlay loader
+	**	reload the help routines after calling mq_tables
+	*/
+}
+
+
+/*{
+** Name:	mqhelp - Call the Tables Utility (previously "help" in quel)
+**
+** Description:
+**	<comments>
+**
+** Input params:
+**	<param name>	<input value description>
+**
+** Output params:
+**	<param name>	<output value description>
+**
+** Returns:
+**	<function return values>
+**
+** Exceptions:
+**	<exception codes>
+**
+** Side Effects:
+**
+** History:
+**	<manual entries>
+*/
+bool
+mqhelp(qdef)
+MQQDEF	*qdef;
+{
+	char		itemname[10];
+	TU_MENUSTRUCT	menuitem;
+	VOID		mqhlpgo();
+	i4		mask;
+
+	STcopy(ERget(FE_Go), itemname);
+	menuitem.name = itemname;
+	menuitem.mem = (PTR)(qdef);
+	menuitem.rout = mqhlpgo;
+
+	mask = (mq_tflag && !mq_name)? TU_ONLYQUIT_ENABLED: TU_QUIT_ENABLED;
+	if (mq_noload)
+	    mask |= TU_EMPTYCATS;
+
+	tu_main(ERx(""), &menuitem, mask, ERget(F_QF0023_tblutil));
+	return(menuitem.end_not_quit);
+
+}
+
+VOID
+mqhlpgo(qdefptr,tblname)
+PTR	qdefptr;
+char	*tblname;
+##{
+	MQQDEF	*qdef;
+	FE_RSLV_NAME	rslv_name;
+
+
+	qdef = (MQQDEF *)qdefptr;
+
+	for (;;)
+	{
+##		SUBMENU
+##		ACTIVATE MENUITEM ERget(F_QF000B_SimpleFields)
+##		{
+			mq_tflag = FALSE;
+			break;
+##		}
+##		ACTIVATE MENUITEM ERget(FE_TblField)
+##		{
+			mq_tflag = TRUE;
+			break;
+##		}
+##		ACTIVATE MENUITEM ERget(FE_Help), FRSkey1
+##		{
+			FEhelp(ERx("qtabgosb.hlp"), ERget(S_QF0070_Run_Table_Submenu));
+			continue;
+##		}
+##		ACTIVATE MENUITEM ERget(FE_End), FRSkey3
+##		{
+			return;
+##		}
+	}
+
+	onetbl = TRUE;
+
+	if (mq_noload)
+	{
+	    ltcheck(FALSE, &qdef->mqcr.name[0], &qdef->mqcr.owner[0]);
+	    IIUIxrt_tbl(&qdef->mqcr.owner[0], &qdef->mqcr.name[0], tblname);
+	}
+
+	rslv_name.name = tblname;
+	rslv_name.name_dest = &qdef->mqcr.name[0];
+	rslv_name.owner_dest = &qdef->mqcr.owner[0];
+
+	if  (STcompare(IIUIcsl_CommonSQLLevel(),UI_LEVEL_65) < 0)
+	{
+		qdef->mqcr.owner[0] = EOS;
+		qdef->mqcr.name[0] = EOS;
+		FE_decompose(&rslv_name);
+	}
+	else
+	{
+		if  (!mq_rslv(qdef,&rslv_name))
+		{
+			return;
+		}
+	}
+
+	mq_going = TRUE;
+	mq_tbl_load(qdef, FALSE, mqHELP);
+	mq_going = FALSE;
+	mq_tflag = FALSE;
+
+	return;
+##}

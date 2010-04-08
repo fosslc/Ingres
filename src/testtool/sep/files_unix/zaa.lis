@@ -1,0 +1,44 @@
+#
+#	ZAA.LIS
+#
+#    Description:
+#	listexec list file for testing the SEP
+#	tool.
+#
+##    History:
+##	##-???-## (donj)	Created.
+##	15-apr-92 (donj)
+##		Added comments to test Executors'
+##		handling of comments in list files.
+##	30-nov-92 (donj)
+##		Stripped off -w flags since we've
+##		added the SEP_TIMEOUT function.
+##	14-sep-93 (donj)
+##		Adding new tests zaa15 - zaa16.
+##
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa00.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa01.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa02.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa03.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa04.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa05.sep:
+SEP,VISION,CONFIRMATORY,CERTIFICATION::zaa06.sep:
+SEP,VISION,CONFIRMATORY,CERTIFICATION::zaa07.sep:-v1
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa08.sep:
+#
+#   zaa09 will error without the -f1e-03 swith.
+#
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa09.sep:-f1e-03
+SEP,VISION,CONFIRMATORY,CERTIFICATION::zaa10.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa11.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa12.sep:
+SEP,ABF,CONFIRMATORY,CERTIFICATION::zaa13.sep:
+SEP,REPORT,CONFIRMATORY,CERTIFICATION::zaa14.sep:
+SEP,ABF,CONFIRMATORY,CERTIFICATION::zaa15.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa16.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa17.sep:
+SEP,SED,CONFIRMATORY,CERTIFICATION::zaa18.sep:
+SEP,SEP,CONFIRMATORY,CERTIFICATION::zaa19.sep:
+#
+#	End of ZAA.LIS.
+#

@@ -1,0 +1,8 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/include=(gver), -	! for II_copyright
+INGLIB:libreport.olb/library, -
+INGLIB:libsreport.olb/library, -
+II_FRAMELIB/share
+II_LIBQLIB/share
+II_COMPATLIB/share

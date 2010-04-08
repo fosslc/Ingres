@@ -1,0 +1,48 @@
+#
+# Jamfile file for common!adf!adu
+#
+#       06-oct-2009 (joea)
+#           Add adubool.c
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+#	12-Nov-2009 (kschendel) SIR 122882
+#	    Add adumisc.c
+#	14-Nov-2009 (kiria01) SIR 122894
+#	    Added GREATEST and LEAST generic polyadic functions in
+#	    adugreatest.c
+#	16-Nov-2009 (coomi01) 
+#	    Add adulongcmp.c
+
+
+SubDir ING_SRC common adf adu ;
+
+IISUBSYS common adf adu ;
+
+
+IINOOPTIM adupriv.c : su4_u42 su4_cmw ;
+IINOOPTIM aduperm.c : su4_u42 su4_cmw ;
+IINOOPTIM aducoerce.c : sgi_us5 ;
+
+IIAduPatHdr adupatexec_ops.h : adupatexec.awk adupatexec.dotty ;
+IIAduPatBdy adupatexec_inc.i : adupatexec.awk adupatexec.dotty ;
+
+IIUTILEXE aducompile : aducompile.c ;
+IINEEDLIBS aducompile : ADFLIB COMPATLIB ;
+
+IILIBRARY ADFLIB : adubool.c aduuuid.c aduuserlen.c aduulike.c aduucs.c
+	aduucmp.c adutypename.c adutabid.c adustrutil.c
+	adustring.c adustrcmp.c aduredeem.c adurandom.c adupriv.c 
+	aduprint.c aduperm.c adupatcmp.c adunchar.c adumisc.c
+	adumoney.c adumaplkup.c adulvch.c adullmoney.c adulllgk.c
+	adulldates.c adulcs.c adukey.c aduintpow.c aduiftru.c
+	aduifnull.c aduhex.c aduhash.c adufexi.c aduextdt.c
+	aduerror.c adudec.c adudbmsinfo.c adudates.c aducvtime.c
+	aducpnify.c aduconverter.c aducompatstr.c aducoerce.c
+	aducmp.c aduchkmonth.c adubitwise.c adubits.c aduascii.c
+	aduagstr.c aduagstat.c aduagmny.c aduaglgk.c aducheck.c
+	adupat.c adupatda.c adupatcomp.c adupatexec.c adugreatest.c
+	aduagint.c aduagflt.c aduagdec.c aduagdate.c aduagcommon.c aduuquel.c 
+	adulongcmp.c ;
+
+IILIBRARY IMPADFLIBDATA : adumontab.roc adutabdate.roc aduoutarg.roc ;
+

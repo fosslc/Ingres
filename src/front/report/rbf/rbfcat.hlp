@@ -1,0 +1,76 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame contains a table field listing all reports in the database
+owned by you or by the DBA.  The Name field lists the report name.
+The Owner field either lists your username, or "DBA" for reports owned
+by the DBA.  The Short Remark field lists a user defined short remark
+for the report, or "RBF" as the default short remark for a report created
+by RBF.
+
+From RBF, you may edit reports that were created with the RBF report layout 
+editor.  Please note that you may not edit reports created by the 
+Report Writer source statements, SREPORT.
+
+To create a new RBF report, use the "Create" menu command.  To perform one
+of the menu operations on an existing report, first position the cursor to
+the row containing the name of the report of interest, by using the
+cursor keys, the table field scrolling keys.  After the cursor has been 
+positioned on the row containing the report of interest, select the 
+appropriate menu command.
+
+The menu commands are:
+
+     MENU COMMANDS   SYNOPSIS
+     -------------   --------
+     Create          Create a new report.  You will first be asked to select
+                     a data source;  you may base your new report on an
+                     existing RBF report, a table or a joindef.  Then you
+                     will be prompted for the name of the existing RBF
+                     report, table or joindef.  Once the name has been
+                     entered, if this is based on a table or a joindef,
+                     you are offered a selection of report styles for
+                     further editing.
+
+     Destroy         Deletes the report you have selected from the database.
+                     You will be asked to confirm this decision.  You may
+                     only destroy reports that you own.
+
+     Edit            Edit the selected RBF report.  If the report was
+                     created using RBF then the report layout frame will
+                     be displayed.  If the report was created using Report
+                     Writer statements then an error will be generated.
+
+     Rename          Changes the name of the report you have selected.
+                     RBF prompts you for the new name of the report.
+                     You may only rename reports that you own.
+
+     MoreInfo        Brings up the report details frame. You can view the
+                     creation date, alter date, full short remarks, long
+                     remarks, whether the report is editable by the RBF
+                     report layout editor, the table on which the report
+                     is based, and the query language for the report.
+                     You may edit the short remarks and long remarks
+                     from the report details frame.
+
+     Preview         Produces the default report for a table or view.
+                     You will be prompted for the table name.  A popup
+                     will then be displayed showing what styles of reports
+                     can be produced.  You may choose the appropriate
+                     style, after which the default report for the table
+                     will be run.  You may display the report at the
+                     terminal or write the output to a file.
+
+     Utilities       Brings up a submenu of utility functions to perform
+                     on the selected report.  From this submenu, you
+                     may Archive the report to a text file.
+
+     Go              Run the report.  You may run a default report, write 
+		     the output to a file or send the output to a printer.
+		     A default report will either send the report to the 
+		     screen or a file depending on the presence of a 
+		     .OUTPUT statement in the report.
+
+     Help            Print this.
+
+     End             Exits from RBF.
+
+     Quit	     Exits from RBF.

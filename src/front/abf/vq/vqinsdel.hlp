@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqinsdel.hlp, subtopic 'Insert and delete rules' of subtopic 'Update 
+/#-- frames' behind the main VQ Editor help screen.
+/#-- 
+The default insert and delete settings allow users to:
+
+  * Change records in the Master or Detail table, then save them as new 
+    records without overwriting the original data.
+
+  * Delete records from the Master or Detail table.  (All matching records in 
+    the Detail table are deleted automatically when a record is deleted from 
+    the Master table.)
+
+If your frame uses both a Master and a Detail table, make sure the settings 
+are consistent.  For example, if you do not allow deletions from the Master 
+table, you should not allow deletions from the Detail table either.
+
+To change the default settings, type an 'n' over the 'y' in the "Insert" or 
+"Delete" field.

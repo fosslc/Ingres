@@ -1,0 +1,45 @@
+#
+# MAIFEST file for common!aif!demo
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	14-Jul-2004 (hanje04)
+#	    Replace IIDEMOFILES with generic IIDFILES
+#	19-Aug-2004 (drivi01)
+#	    Modified copy of makefile to be specific
+#	    to windows and copy makefile.wnt to
+#	    the makefile in appropriate demo directory.
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#	08-dec-2004 (abbjo03)
+#	    Use SLASH as directory-directory separator for portability.
+#	23-feb-2005 (abbjo03)
+#	    Deliver a build script on VMS.
+
+
+SubDir ING_SRC common aif demo ;
+
+IISUBSYS common aif demo ;
+
+
+if $(UNIX)
+{
+IICCPPFILE $(INGDEMOAPI)$(DFS)Makefile : Makefile.ccpp ;
+}
+else if $(NT)
+{
+FILE $(INGDEMO)/api/makefile : makefile.wnt ;
+}
+else # VMS
+{
+    IIExeShell $(INGDEMOAPI)$(DFS)apibuild.com : build$(SUFSH) ;
+}
+
+IIBFILES demo$(SLASH)api : apiaclnt.c apiaclnt.h apiademo.c apiademo.h apiasvr.c
+	apiasvr.h apiautil.c apiautil.h apis2ph1.c apis2ph2.c apisauto.c
+	apisblob.c apiscdel.c apiscomm.c apisconn.c apiscopy.c apiscupd.c
+	apisdata.c apiserr.c apisinit.c apisname.c apisparm.c apisprbr.c
+	apisprgt.c apisproc.c apisprrp.c apisrept.c apisroll.c apisselc.c
+	apissell.c apisscrl.c ;

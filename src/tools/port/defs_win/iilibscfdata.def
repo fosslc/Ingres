@@ -1,0 +1,24 @@
+;
+; History:
+;       27-Oct-98 (fanra01)
+;           Add Sc_server_name for getting startup name in ima.
+;       31-Jan-2001 (fanra01)
+;           Bug 103817
+;           Add export of Sc_main_cb from the data library.  Now global
+;           across a process.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2005 (drivi01)
+;	    Renamed iiscfdata.def to iilibscfdata.def.
+;       19-Jun-2009 (hanal04) Code Sprint SIR 122168 Ticket 387
+;           Added MustLog_DB_Lst.
+
+EXPORTS
+Sc_main_cb		@1	DATA			
+IOmaster		@2	DATA			
+Sc_server_type		@3	DATA			
+Sc_server_name		@4	DATA			
+Scd_classes		@5	DATA			
+dbdb_dbtuple		@6	DATA			
+Scs_classes		@7	DATA			
+MustLog_DB_Lst		@8	DATA

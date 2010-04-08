@@ -1,0 +1,14 @@
+Ingres Star Distributed DBMS
+
+The Ingres Star Distributed DBMS is a distributed extension to
+the Ingres Intelligent DBMS server which allows data from multiple
+independent databases to be accessed as if contained in a single,
+centralized relational database.  In this way, Ingres Star provides
+client applications with transparent access to enterprise-wide data.
+
+In addition to supporting access to Ingres databases, Ingres
+Star can seamlessly integrate data from other database systems, with
+the addition of Ingres Networking and Enterprise Access extensions.
+In combination, these Ingres products allow seamless, distributed
+access to data stored in a wide variety of database systems: IBM DB2,
+IBM IMS, IBM ISAM, IBM VSAM, and HP data in ALLBASE/SQL or TurboIMAGE/XL.

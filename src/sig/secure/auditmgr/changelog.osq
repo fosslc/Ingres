@@ -1,0 +1,52 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: changelog
+**
+** Description: Change current audit log
+**
+** History:
+**	17-feb-94 (robf)
+**	   Written
+*/
+
+procedure changelog () = 
+declare
+	errno=integer4 not null;
+	filename=varchar(256) not null;
+{
+	set session 
+	add privileges (maintain_audit);
+
+	inquire_sql (errno=errorno);
+	if(errno!=0)
+	then
+		message 'You lack appropriate privileges to perform this operation'
+		with style=popup;
+		return 0;
+	endif;
+	filename=prompt 'Enter new audit file name. This value must be one of the audit logs specified in the INGRES configuration file'
+		with style=popup;
+	if filename=''
+	then
+		message 'Security audit log NOT changed'
+		with style=popup;
+		return 0;
+	endif;
+	alter security_audit 
+	with audit_log=:filename;
+	inquire_sql (errno=errorno);
+	if(errno!=0)
+	then
+		message 'Unable to change audit log.'
+		with style=popup;
+		return 0;
+	endif;
+	message 'Security audit log changed.';
+	sleep  2;
+	set session 
+	with privileges=default;
+	return 1;
+}
+		

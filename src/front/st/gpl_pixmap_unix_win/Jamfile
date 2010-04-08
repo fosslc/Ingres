@@ -1,0 +1,57 @@
+#
+# Jamfile for front!st!gpl_pixmap_unix_win
+#
+
+SubDir ING_SRC front st gpl_pixmap_unix_win ;
+
+IISUBSYS front st gpl_pixmap_unix_win ;
+
+if ! $(NT)
+{
+    IIDFILES pixmaps : admin_32.ico calendar_month_1_config_48.ico
+	cluster_48.ico connect_to_db_config_48.ico database2_config_48.ico
+	database2_info_48.ico database2_next_48.ico database2_star_48.ico
+	database2_up_48.ico group_32.ico info_16_2.ico network_48.ico
+	server_48.ico server_complete_48.ico terminal_48.ico trash_48.ico 
+	folder_24.ico folder_48.ico world_database_128.ico world_write_32.ico
+	world_clock_32.ico wizard_config_48.ico server_custom_48.ico
+	database2_reload_48.ico database2_clock_48.ico wizard_clock_48.ico 
+	tool_add_48.ico connect_to_db_next_48.ico ;
+}
+else
+{
+IIWiFile enterprise_preinst_win res connect_to_db_next_48.ico : icon_48.ico ;
+IIWiFile enterprise_preinst_win res connect_to_db_config_48.ico : icon_48.ico ;
+IIWiFile enterprise_preinst_win res database2_reload_48.ico : icon_48.ico ;
+IIWiFile enterprise_preinst_win res database2_next_48.ico : icon_48.ico ;
+IIWiFile enterprise_preinst_win res database2_up_48.ico : icon_48.ico ;
+IIWiFile enterprise_preinst_win res wizard_clock_48.ico : icon_48.ico ;
+IIWiFile enterprise_preinst_win res wizard_config_48.ico : icon_48.ico ;
+IIWiFile enterprise_preinst_win res info_16.bmp : info_16_2.bmp ;
+IIWiFile enterprise_preinst_win res connect_to_db_next_48.ico : icon_48.ico ;
+IIWiFile enterprise_preinst_win res world_database.bmp : blank_white_128.bmp ;
+
+IIWiFile enterprise_is_win resource calendar_month_1_config_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource cluster_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource database2_config_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource folder_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource network_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource server_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource server_complete_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource server_custom_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource tool_add_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource tool_config_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource trash_48.ico : icon_48.ico ;
+IIWiFile enterprise_is_win resource database2_info_128.ico : icon_128.ico ;
+IIWiFile enterprise_is_win resource database2_clock_128.ico : icon_128.ico ;
+IIWiFile enterprise_is_win resource database2_star_128.ico : icon_128.ico ;
+IIWiFile enterprise_is_win resource folder_128.ico : icon_128.ico ;
+IIWiFile enterprise_is_win resource terminal_128.ico : icon_128.ico ;
+IIWiFile enterprise_is_win resource folder_24.ico : icon_24.ico ;
+IIWiFile enterprise_is_win resource world_clock_32.ico : icon_32.ico ;
+IIWiFile enterprise_is_win resource world_write_32.ico : icon_32.ico ;
+IIWiFile enterprise_is_win resource info_16_3.bmp : info_16_2.bmp ;
+IIWiFile enterprise_is_win resource book_config_128.ico : icon_128.ico ;
+IIWiFile enterprise_is_win resource password_php_unlock_48.ico : icon_48.ico ;
+
+}

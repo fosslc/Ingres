@@ -1,0 +1,26 @@
+#
+# Jamfile file for cl!clf!te_win
+#
+
+SubDir ING_SRC cl clf te_win ;
+
+IISUBSYS cl clf te_win ;
+
+
+IILIBRARY COMPATLIB : tewrite.c
+	tevalid.c
+	tetest.c
+	testub.c
+	terestor.c
+	terefres.c
+	teopen.c
+	tename.c
+	temouse.c
+	temisc.c
+	telock.c
+	tejob.c
+	teget.c
+	teclose.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : teglob.c
+	tedata.c ;

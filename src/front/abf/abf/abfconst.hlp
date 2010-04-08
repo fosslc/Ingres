@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abfconst.hlp, help for editing global constants
+/#-- 
+At this screen, you can change the entries in these fields:
+
+  * Value
+
+  * Short Remark
+
+After you have made your changes to the constant definition on this screen,
+select End, which will save your work and return to the previous screen.
+
+You cannot change the name of the global constant at this screen.  To change 
+the name, select End (or Cancel if you made no changes to this screen), then
+select Rename at the Edit Application Constants screen.

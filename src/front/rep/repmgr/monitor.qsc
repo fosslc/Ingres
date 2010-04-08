@@ -1,0 +1,486 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <cm.h>
+# include <cv.h>
+# include <st.h>
+# include <er.h>
+# include <pc.h>
+# include <te.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <stdprmpt.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	monitor.qsc - replication monitor
+**
+** Description:
+**	Defines
+**		rep_monitor		- replication monitor
+**		load_server_tblfld	- load the servers tablefield
+**		refresh_queue_stats	- refresh queue statistics
+**
+** History:
+**	03-dec-96 (joea)
+**		Created based on monitor.osq in replicator library.
+**	30-jan-97 (joea)
+**		Remove the 'Server has shutdown' message when user cancels a
+**		Stop action on a server that is not running. Always reset the
+**		counter when a dd_serverN event is received.
+**	24-oct-97 (joea)
+**		Make sure that we commit after raising dbevents in order not to
+**		leave an open transaction.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototype for load_server_tblfld() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+## define MON_TIMEOUT		5
+
+
+GLOBALREF
+##char	RMdb_display[];
+GLOBALREF
+EXEC SQL BEGIN DECLARE SECTION;
+i2	RMlocal_db_no;
+EXEC SQL END DECLARE SECTION;
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmreplic_monitor"),
+##	*tf_name = ERx("servers"),
+##	*tf2_name = ERx("tblfield"),
+##	*fsvr_no = ERx("server_no"),
+##	*fsvr_name = ERx("server_name"),
+##	*fcounter = ERx("counter"),
+##	*fsvr_status = ERx("ebuff"),
+##	*finput_cnt = ERx("input"),
+##	*fdistrib_cnt = ERx("distribution"),
+##	*ftrans_info = ERx("ebuff"),
+##	*ftrans_cnt = ERx("num");
+
+static bool	start = TRUE;
+
+
+static STATUS load_server_tblfield(void);
+static void refresh_queue_stats(void);
+static STATUS load_server_tblfld(void);
+
+
+/*{
+** Name:	rep_monitor - replication monitor
+**
+** Description:
+**	Handles processing on monitor screen.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+rep_monitor()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	char	evt_name[DB_MAXNAME+1];
+	char	stmt[81];
+##	char	evt_text[132];
+##	i4	cnt;
+	EXEC SQL END DECLARE SECTION;
+##	i2	svr_no;
+##	char	svr_name[25];
+##	char	trans_info[132];
+##	char	fld_name[FE_MAXNAME+1];
+##	char	run_cmd[81];
+##	char	*shell_menu;
+##	i4	counter;
+	bool	found;
+	bool	svr_evt;
+	CL_ERR_DESC	err_code;
+
+# ifdef VMS
+	shell_menu = ERget(FE_Spawn);
+# else
+	shell_menu = ERget(FE_Shell);
+# endif
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+	if (start)
+	{
+##		inittable form_name tf_name read (
+##			fsvr_name = char(24) not null, fcounter = i4 not null)
+##		inittable form_name tf2_name read
+		if (load_server_tblfld() != OK)
+			return;
+
+		EXEC SQL REGISTER DBEVENT dd_insert;
+		EXEC SQL REGISTER DBEVENT dd_update;
+		EXEC SQL REGISTER DBEVENT dd_delete;
+		EXEC SQL REGISTER DBEVENT dd_transaction;
+		EXEC SQL REGISTER DBEVENT dd_insert2;
+		EXEC SQL REGISTER DBEVENT dd_update2;
+		EXEC SQL REGISTER DBEVENT dd_delete2;
+		EXEC SQL REGISTER DBEVENT dd_transaction2;
+
+##		unloadtable form_name tf_name (svr_name = fsvr_name)
+##		{
+			STprintf(stmt, ERx("REGISTER DBEVENT %s"), svr_name);
+			EXEC SQL EXECUTE IMMEDIATE :stmt;
+##		}
+
+		EXEC SQL RAISE DBEVENT dd_ping;
+		EXEC SQL COMMIT;
+		start = FALSE;
+	}
+
+	refresh_queue_stats();
+##	set_frs frs (timeout = MON_TIMEOUT)
+
+##	display form_name read
+##	initialize (db = RMdb_display)
+##	activate timeout
+##	{
+		while (TRUE)
+		{
+			EXEC SQL GET DBEVENT WITH NOWAIT;
+			EXEC SQL INQUIRE_SQL (:evt_name = DBEVENTNAME,
+				:evt_text = DBEVENTTEXT);
+			CVlower(evt_name);
+			if (*evt_name == EOS)
+				break;
+
+			svr_evt = FALSE;
+			if (STequal(evt_name, ERx("dd_insert")) ||
+				STequal(evt_name, ERx("dd_update")) ||
+				STequal(evt_name, ERx("dd_delete")) ||
+				STequal(evt_name, ERx("dd_transaction")) ||
+				STequal(evt_name, ERx("dd_insert2")) ||
+				STequal(evt_name, ERx("dd_update2")) ||
+				STequal(evt_name, ERx("dd_delete2")) ||
+				STequal(evt_name, ERx("dd_transaction2")))
+			{
+##				getform form_name (cnt = evt_name)
+				++cnt;
+##				putform form_name (evt_name = cnt)
+			}
+			else
+			{
+##				unloadtable form_name tf_name (
+##					svr_name = fsvr_name)
+##				{
+					if (STequal(evt_name, svr_name))
+					{
+##						putrow form_name tf_name (
+##							fsvr_status = evt_text,
+##							fcounter = 0)
+##						endloop
+					}
+##				}
+				svr_evt = TRUE;
+			}
+
+			if (!svr_evt)
+			{
+				found = FALSE;
+##				unloadtable form_name tf2_name (trans_info =
+##					ftrans_info, cnt = ftrans_cnt)
+##				{
+					if (STequal(evt_text, trans_info))
+					{
+						++cnt;
+##						putrow form_name tf2_name (
+##							ftrans_cnt = cnt)
+						found = TRUE;
+##						endloop
+					}
+##				}
+
+				if (!found)
+##					loadtable form_name tf2_name (
+##						ftrans_info = evt_text,
+##						ftrans_cnt = 1)
+			}
+		}
+
+##		unloadtable form_name tf_name (svr_no = fsvr_no,
+##			counter = fcounter)
+##		{
+			if (counter != 0)
+				--counter;
+			if (counter == 1)
+			{
+				counter = 0;
+				if (!is_server_running(svr_no))
+##					putrow form_name tf_name (fsvr_status =
+##						ERget(S_RM007E_Server_couldnt_start))
+			}
+##			putrow form_name tf_name (fcounter = counter)
+##		}
+
+##		redisplay
+##	}
+
+##	activate menuitem ERget(F_RM0072_Server)
+##		(expl = ERget(F_RM0073_Server_expl))
+##	{
+##		inquire_frs field form_name (fld_name = name)
+
+		if (!STequal(fld_name, tf_name))
+		{
+			IIUGerr(E_RM0056_Must_be_on_server_tf, UG_ERR_ERROR,
+				0);
+##			resume
+		}
+
+##		display submenu
+##		activate menuitem ERget(F_RM0075_Start)
+##			(expl = ERget(F_RM0076_Start_expl)), FRSkey4
+##		{
+##			getrow form_name tf_name (svr_no = fsvr_no)
+			if (!RMopt_exists(svr_no))
+			{
+				IIUGerr(E_RM0057_No_config_file, UG_ERR_ERROR,
+					0);
+##				resume
+			}
+
+			if (is_server_running(svr_no))
+			{
+				IIUGerr(E_RM0058_Svr_already_running,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+
+			/* Give the server 2 mins (24 * 5 secs) to start */
+##			putrow form_name tf_name (fcounter = 25)
+			STprintf(run_cmd, "rpserver %d", (i4)svr_no);
+			TErestore(TE_NORMAL);
+			PCcmdline(NULL, run_cmd, PC_WAIT, NULL, &err_code);
+			TErestore(TE_FORMS);
+
+##			putrow form_name tf_name (fsvr_status =
+##				ERget(F_RM0077_Starting_rep_server))
+##		}
+
+##		activate menuitem ERget(F_RM0078_Stop)
+##			(expl = ERget(F_RM0079_Stop_expl))
+##		{
+##			putrow form_name tf_name (fcounter = 0)
+##			getrow form_name tf_name (svr_no = fsvr_no)
+			if (!is_server_running(svr_no))
+			{
+				if (IIUFccConfirmChoice(CONF_GENERIC, NULL,
+					NULL, NULL, NULL,
+					S_RM0059_Server_not_running,
+					S_RM005A_Yes_stop, S_RM005B_No_stop,
+					ERx(""), TRUE) != CONFCH_YES)
+##					resume
+			}
+
+			STprintf(stmt, ERx("RAISE DBEVENT dd_stop_server%d"),
+				(i4)svr_no);
+			EXEC SQL EXECUTE IMMEDIATE :stmt;
+			EXEC SQL COMMIT;
+
+##			putrow form_name tf_name (fsvr_status =
+##				ERget(F_RM007A_Stopping_rep_server))
+##		}
+
+##		activate menuitem ERget(F_RM007B_EditConfig)
+##			(expl = ERget(F_RM007C_EditConfig_expl))
+##		{
+##			set_frs frs (timeout = 0)
+##			getrow form_name tf_name (svr_no = fsvr_no)
+			edit_cfg_file(svr_no);
+##			set_frs frs (timeout = MON_TIMEOUT)
+##		}
+
+##		activate menuitem ERget(F_RM007D_ShowAssign)
+##			(expl = ERget(F_RM007E_ShowAssign_expl))
+##		{
+##			set_frs frs (timeout = 0)
+##			getrow form_name tf_name (svr_no = fsvr_no)
+			svr_show_assignments(svr_no);
+##			set_frs frs (timeout = MON_TIMEOUT)
+##		}
+
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel)), FRSkey9
+##		{
+##			breakdisplay
+##		}
+##	}
+
+##	activate menuitem ERget(F_RM007F_Ping)
+##		(expl = ERget(F_RM0080_Ping_expl))
+##	{
+		EXEC SQL RAISE DBEVENT dd_ping;
+		EXEC SQL COMMIT;
+##	}
+
+##	activate menuitem ERget(F_RM0081_Queues)
+##		(expl = ERget(F_RM0082_Queues_expl))
+##	{
+		refresh_queue_stats();
+##	}
+
+##	activate menuitem ERget(F_RM0083_Events)
+##		(expl = ERget(F_RM0084_Events_expl))
+##	{
+##		set_frs frs (timeout = 0)
+		evt_list();
+##		set_frs frs (timeout = MON_TIMEOUT)
+##	}
+
+##	activate menuitem shell_menu (expl = ERget(F_FE010A_ExplShell))
+##	{
+##		set_frs frs (timeout = 0)
+##		call system (command = ERx(""))
+##		redisplay
+##		set_frs frs (timeout = MON_TIMEOUT)
+##	}
+
+##	activate menuitem ERget(F_RM000A_Clear)
+##		(expl = ERget(F_RM000B_Clear_expl))
+##	{
+##		clear field all
+##		putform form_name (db = RMdb_display)
+		if (load_server_tblfld() != OK)
+##			breakdisplay
+		EXEC SQL RAISE DBEVENT dd_ping;
+		EXEC SQL COMMIT;
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+##		set_frs frs (timeout = 0)
+		FEhelp(ERx("rmmonitr.hlp"),
+			ERget(F_RM0085_Replication_monitor));
+##		set_frs frs (timeout = MON_TIMEOUT)
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		set_frs frs (timeout = 0)
+##		breakdisplay
+##	}
+##}
+
+
+/*{
+** Name:	load_server_tblfld - load the servers tablefield
+**
+** Description:
+**	Reinitializes the servers tablefield from the dd_servers table.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	OK or FAIL.
+*/
+static STATUS
+load_server_tblfld()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i2	svr_no;
+##	char	svr_name[25];
+	EXEC SQL END DECLARE SECTION;
+	DBEC_ERR_INFO	errinfo;
+
+	EXEC SQL SELECT DISTINCT s.server_no, server_name
+		INTO	:svr_no, :svr_name
+		FROM	dd_servers s, dd_db_cdds c
+		WHERE	s.server_no = c.server_no
+		AND	c.database_no != :RMlocal_db_no
+		ORDER	BY server_no;
+	EXEC SQL BEGIN;
+##		loadtable form_name tf_name (fsvr_no = svr_no,
+##			fsvr_name = svr_name)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	EXEC SQL COMMIT;
+	if (errinfo.errorno)
+	{
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return (FAIL);
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		IIUGerr(E_RM005C_No_server_assignments, UG_ERR_ERROR, 0);
+		return (FAIL);
+	}
+
+	return (OK);
+##}
+
+
+/*{
+** Name:	refresh_queue_stats - refresh queue statistics
+**
+** Description:
+**	Queries the input and distribution queues and displays the number of
+**	items on each queue.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+static void
+refresh_queue_stats()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i4	input_cnt;
+##	i4	distrib_cnt;
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL COMMIT;
+	EXEC SQL SET LOCKMODE SESSION WHERE READLOCK = NOLOCK;
+	EXEC SQL SELECT COUNT(*)
+		INTO	:input_cnt
+		FROM	dd_input_queue;
+	EXEC SQL SELECT COUNT(*)
+		INTO	:distrib_cnt
+		FROM	dd_distrib_queue;
+	EXEC SQL COMMIT;
+	EXEC SQL SET LOCKMODE SESSION WHERE READLOCK = SESSION;
+##	putform form_name (finput_cnt = input_cnt, fdistrib_cnt = distrib_cnt)
+##}

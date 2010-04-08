@@ -1,0 +1,37 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The APPEND Function of QBF adds rows to the table(s) in your Join
+Definition (JoinDef).  You can invoke the APPEND function either by 
+specifying the "-mappend" flag in the command line or by entering the 
+"Append" command from the QBF Execution Phase menu.
+
+Once invoked, the APPEND function displays a form on the screen corresponding
+to your Join Definition (JoinDef).  Each field on the screen corresponds to 
+either a column in one of the JoinDef table(s) or a join pair of the JoinDef.
+To enter data simply fill in the form.  
+
+If the form contains a table field, you may fill in several rows to be
+appended to the table(s) in your JoinDef.  Additionally, you may select the
+Insert command to open up a new row in the table field just above the row
+the cursor was resting on. Then you may type new data into this row. 
+
+After the form is filled in, you can add the data to your table(s) by 
+selecting the "Append" command from the menu.
+
+QBF checks your form for valid data at this point.  If there is an error,
+it returns you to the invalid field.  If there are no errors, QBF will send
+your data to the DBMS to be written to your table(s).  The DBMS performs
+further validity, permission and integrity checks on your data before
+writing the append(s).  If any errors occur at this point, INGRES prints
+an appropriate error message.  Then QBF allows you to correct the errors
+and run the append again.
+
+The commands for the APPEND Function are:
+
+    COMMAND             FUNCTION
+    -------             --------
+    Append              Add the data on the forms to the tables in your
+                        Join Definition.
+    Insert              Open up a new row in the table field, just above
+                        the row the cursor was resting on. 
+    Help                Print this message.
+    Quit                Leave QBF and return to the operating system.

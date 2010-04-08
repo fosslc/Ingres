@@ -1,0 +1,19 @@
+#
+# Jamfile file for front!frame!compfrm
+#
+
+SubDir ING_SRC front frame compfrm ;
+
+IISUBSYS front frame compfrm ;
+
+
+IIBINEXE compform : compform.c ;
+IINEEDLIBS compform : COMPFRMLIB SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS compform : II_copyright ;
+
+IIMSGHDR erfc.msg ;
+
+IILIBRARY COMPFRMLIB : wrval.c wrtype.c wrtrim.c wrtab.c
+	wrreg.c wrnonseq.c wrhdr.c wrfrm.c wrfield.c wrcol.c wrarr.c
+	iicmpfrm.c compfrm.c cfrmdata.c cfgtargs.c ;
+

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="RouteDataSet" targetNamespace="http://www.tempuri.org/RouteDataSet.xsd" xmlns:mstns="http://www.tempuri.org/RouteDataSet.xsd" xmlns="http://www.tempuri.org/RouteDataSet.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:msprop="urn:schemas-microsoft-com:xml-msprop" attributeFormDefault="qualified" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="urn:schemas-microsoft-com:xml-msdatasource">
+      <DataSource DefaultConnectionIndex="0" FunctionsComponentName="QueriesTableAdapter" Modifier="AutoLayout, AnsiClass, Class, Public" SchemaSerializationMode="IncludeSchema" xmlns="urn:schemas-microsoft-com:xml-msdatasource">
+        <Connections>
+        </Connections>
+        <Tables>
+        </Tables>
+        <Sources>
+        </Sources>
+      </DataSource>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="RouteDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true" msprop:Generator_UserDSName="RouteDataSet" msprop:Generator_DataSetName="RouteDataSet">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="route" msprop:Generator_UserTableName="route" msprop:Generator_RowDeletedName="routeRowDeleted" msprop:Generator_RowChangedName="routeRowChanged" msprop:Generator_RowClassName="routeRow" msprop:Generator_RowChangingName="routeRowChanging" msprop:Generator_RowEvArgName="routeRowChangeEvent" msprop:Generator_RowEvHandlerName="routeRowChangeEventHandler" msprop:Generator_TableClassName="routeDataTable" msprop:Generator_TableVarName="tableroute" msprop:Generator_RowDeletingName="routeRowDeleting" msprop:Generator_TablePropName="route">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="rt_airline" msprop:Generator_UserColumnName="rt_airline" msprop:Generator_ColumnPropNameInRow="rt_airline" msprop:Generator_ColumnVarNameInTable="columnrt_airline" msprop:Generator_ColumnPropNameInTable="rt_airlineColumn" type="xs:string" />
+              <xs:element name="al_iatacode" msprop:Generator_UserColumnName="al_iatacode" msprop:nullValue="_throw" msprop:Generator_ColumnVarNameInTable="columnal_iatacode" msprop:Generator_ColumnPropNameInTable="al_iatacodeColumn" msprop:Generator_ColumnPropNameInRow="al_iatacode" type="xs:string" minOccurs="0" />
+              <xs:element name="rt_flight_num" msprop:Generator_UserColumnName="rt_flight_num" msprop:Generator_ColumnPropNameInRow="rt_flight_num" msprop:Generator_ColumnVarNameInTable="columnrt_flight_num" msprop:Generator_ColumnPropNameInTable="rt_flight_numColumn" type="xs:int" />
+              <xs:element name="rt_depart_from" msprop:Generator_UserColumnName="rt_depart_from" msprop:Generator_ColumnPropNameInRow="rt_depart_from" msprop:Generator_ColumnVarNameInTable="columnrt_depart_from" msprop:Generator_ColumnPropNameInTable="rt_depart_fromColumn" type="xs:string" />
+              <xs:element name="rt_arrive_to" msprop:Generator_UserColumnName="rt_arrive_to" msprop:Generator_ColumnPropNameInRow="rt_arrive_to" msprop:Generator_ColumnVarNameInTable="columnrt_arrive_to" msprop:Generator_ColumnPropNameInTable="rt_arrive_toColumn" type="xs:string" />
+              <xs:element name="rt_depart_at" msprop:Generator_UserColumnName="rt_depart_at" msprop:Generator_ColumnPropNameInRow="rt_depart_at" msprop:Generator_ColumnVarNameInTable="columnrt_depart_at" msprop:Generator_ColumnPropNameInTable="rt_depart_atColumn" type="xs:dateTime" />
+              <xs:element name="rt_arrive_at" msprop:Generator_UserColumnName="rt_arrive_at" msprop:Generator_ColumnPropNameInRow="rt_arrive_at" msprop:Generator_ColumnVarNameInTable="columnrt_arrive_at" msprop:Generator_ColumnPropNameInTable="rt_arrive_atColumn" type="xs:dateTime" />
+              <xs:element name="rt_arrive_offset" msprop:Generator_UserColumnName="rt_arrive_offset" msprop:Generator_ColumnPropNameInRow="rt_arrive_offset" msprop:Generator_ColumnVarNameInTable="columnrt_arrive_offset" msprop:Generator_ColumnPropNameInTable="rt_arrive_offsetColumn" type="xs:byte" />
+              <xs:element name="rt_flight_day" msprop:Generator_UserColumnName="rt_flight_day" msprop:Generator_ColumnPropNameInRow="rt_flight_day" msprop:Generator_ColumnVarNameInTable="columnrt_flight_day" msprop:Generator_ColumnPropNameInTable="rt_flight_dayColumn" type="xs:string" />
+              <xs:element name="al_name" msprop:Generator_UserColumnName="al_name" msprop:nullValue="_null" msprop:Generator_ColumnVarNameInTable="columnal_name" msprop:Generator_ColumnPropNameInTable="al_nameColumn" msprop:Generator_ColumnPropNameInRow="al_name" type="xs:string" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="updateRoute" msprop:Generator_UserTableName="updateRoute" msprop:Generator_RowDeletedName="updateRouteRowDeleted" msprop:Generator_RowChangedName="updateRouteRowChanged" msprop:Generator_RowClassName="updateRouteRow" msprop:Generator_RowChangingName="updateRouteRowChanging" msprop:Generator_RowEvArgName="updateRouteRowChangeEvent" msprop:Generator_RowEvHandlerName="updateRouteRowChangeEventHandler" msprop:Generator_TableClassName="updateRouteDataTable" msprop:Generator_TableVarName="tableupdateRoute" msprop:Generator_RowDeletingName="updateRouteRowDeleting" msprop:Generator_TablePropName="updateRoute">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="rt_airline" msprop:Generator_UserColumnName="rt_airline" msprop:Generator_ColumnPropNameInRow="rt_airline" msprop:Generator_ColumnVarNameInTable="columnrt_airline" msprop:Generator_ColumnPropNameInTable="rt_airlineColumn" type="xs:string" />
+              <xs:element name="rt_flight_num" msprop:Generator_UserColumnName="rt_flight_num" msprop:Generator_ColumnPropNameInRow="rt_flight_num" msprop:Generator_ColumnVarNameInTable="columnrt_flight_num" msprop:Generator_ColumnPropNameInTable="rt_flight_numColumn" type="xs:int" />
+              <xs:element name="rt_depart_from" msprop:Generator_UserColumnName="rt_depart_from" msprop:Generator_ColumnPropNameInRow="rt_depart_from" msprop:Generator_ColumnVarNameInTable="columnrt_depart_from" msprop:Generator_ColumnPropNameInTable="rt_depart_fromColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="rt_arrive_to" msprop:Generator_UserColumnName="rt_arrive_to" msprop:Generator_ColumnPropNameInRow="rt_arrive_to" msprop:Generator_ColumnVarNameInTable="columnrt_arrive_to" msprop:Generator_ColumnPropNameInTable="rt_arrive_toColumn" type="xs:string" minOccurs="0" />
+              <xs:element name="rt_depart_at" msprop:Generator_UserColumnName="rt_depart_at" msprop:Generator_ColumnPropNameInRow="rt_depart_at" msprop:Generator_ColumnVarNameInTable="columnrt_depart_at" msprop:Generator_ColumnPropNameInTable="rt_depart_atColumn" type="xs:dateTime" minOccurs="0" />
+              <xs:element name="rt_arrive_at" msprop:Generator_UserColumnName="rt_arrive_at" msprop:Generator_ColumnPropNameInRow="rt_arrive_at" msprop:Generator_ColumnVarNameInTable="columnrt_arrive_at" msprop:Generator_ColumnPropNameInTable="rt_arrive_atColumn" type="xs:dateTime" minOccurs="0" />
+              <xs:element name="rt_arrive_offset" msprop:Generator_UserColumnName="rt_arrive_offset" msprop:Generator_ColumnPropNameInRow="rt_arrive_offset" msprop:Generator_ColumnVarNameInTable="columnrt_arrive_offset" msprop:Generator_ColumnPropNameInTable="rt_arrive_offsetColumn" type="xs:byte" minOccurs="0" />
+              <xs:element name="rt_flight_day" msprop:Generator_UserColumnName="rt_flight_day" msprop:Generator_ColumnPropNameInRow="rt_flight_day" msprop:Generator_ColumnVarNameInTable="columnrt_flight_day" msprop:Generator_ColumnPropNameInTable="rt_flight_dayColumn" type="xs:string" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+    <xs:unique name="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:route" />
+      <xs:field xpath="mstns:rt_airline" />
+      <xs:field xpath="mstns:rt_flight_num" />
+      <xs:field xpath="mstns:rt_flight_day" />
+    </xs:unique>
+    <xs:unique name="updateRouteKey1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:updateRoute" />
+      <xs:field xpath="mstns:rt_airline" />
+      <xs:field xpath="mstns:rt_flight_num" />
+      <xs:field xpath="mstns:rt_flight_day" />
+    </xs:unique>
+  </xs:element>
+</xs:schema>

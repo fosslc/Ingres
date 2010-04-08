@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have selected the "Move" menu option for one of the columns in the
+new table.  You should position the cursor to the new position in the
+table and select the "Place" menu option.  The selected column will be
+moved to the position immediately above the cursor.
+
+If you wish to leave the column where it was, select the "End" menu
+option.
+
+The menu options are:
+
+	MENU OPTION		SYNOPSIS
+	-----------		--------
+
+	Place			After positioning the cursor to the
+				new position in the table field, move
+				the selected column to the position
+				above the cursor position when "Place"
+				is selected.
+
+	Help			Access the INGRES Help facility.
+
+	End			Leaves the column where it was.

@@ -1,0 +1,9 @@
+a:link    { color: maroon; }
+a:visited { color: maroon; }
+a:active  { color: fuchsia; }
+h1 {font: bold 20pt/24pt helvetica; text-align: center }
+body { background: white;
+    font: 12pt/14pt helvetica;
+    color: blue;
+    margin: 20%;
+    }

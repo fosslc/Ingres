@@ -1,0 +1,96 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for shadow-pwd
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	14-oct-93 (vijay)
+**		Add mkvalidpw. Remove SHADOWX which is no longer needed.
+**		correct permissions on ingvalidpw. It is actually setuid root,
+**		and is set by running mkvalidpw after an installation is
+**		read in from the tape. Setting it here avoids the error message
+**		from buildrel.
+**	24-nov-93 (tyler)
+**		Cleaned up and removed R_SHADOW pre-processing directives
+**		since it's handled in release.ccpp
+**	27-Jan-1995 (canor01)
+**		Make ingvalidpw install into the iipwd directory, because
+**		ingbuild can't install on top of a root setuid executable
+**	19-nov-1996 (canor01)
+**		Change name of 'iiconfig.h' to 'pwconfig.h'.
+**	26-apr-2000 (somsa01)
+**		Added support for other products.
+**	11-Jun-2004 (somsa01)
+**		Cleaned up code for Open Source.
+**	25-Jun-2008 (rajus01) SIR 120420, SD issue 116370
+**		Added PAM support. 
+**      11-Aug-2008 (rajus01) SIR 120420
+**        	Added R_PAM. The change 492540 (PAM support in Ingres)
+**        	introduces build failures on platforms that don't support PAM.
+**        	Include ingvalidpam executable only on those platforms that 
+**		support PAM. So making it conditional based on R_PAM define 
+**		in CONFIG file.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	09-Mar-2010 (hanje04)
+**	    SIR 123296
+**	    Remove mk/ingvalidpw from LSB saveset. Using ingvalidpam for user
+**	    authentication instead. May make this the default for all RPM
+**	    builds
+*/
+
+PART shadow-pwd
+
+/*
+** ingres!files!iipwd
+*/
+
+# ifndef conf_LSB_BUILD
+    DIRECTORY (PROD2NAME)!files!iipwd
+   BUILD_DIR (ING_BUILD)!files!iipwd
+      FILE pwconfig.h
+      FILE ingvalidpw.c
+      FILE ingpwutil.h
+      FILE ingpwutil.c
+      FILE ingvalidpam.c
+
+    DIRECTORY (PROD2NAME)!files!iipwd
+   BUILD_DIR (ING_BUILD)!bin
+   {
+   BUILD_FILE (PROG2PRFX)validpw
+   PERMISSION s:rwed,o:rwed,g:re,w:re
+      EXECUTABLE (PROG2PRFX)validpw.dis
+   }
+
+# endif
+/*
+** ingres!bin
+*/
+
+   BUILD_DIR (ING_BUILD)!bin
+   {
+# ifndef conf_LSB_BUILD
+    DIRECTORY (PROD2NAME)!bin
+      SCRIPT (PROG0PRFX)mkvalidpw
+# else
+    DIRECTORY usr!libexec!ingres!bin
+    PERMISSION s:rwed,o:red,g:e,w:e,setuid
+# endif
+# ifdef R_PAM
+      EXECUTABLE (PROG2PRFX)validpam
+# endif
+   }
+
+# ifdef conf_LSB_BUILD
+   BUILD_DIR (ING_BUILD)!files!pam
+  DIRECTORY etc!pam.d
+      FILE ingres
+# endif

@@ -1,0 +1,357 @@
+/*
+**Copyright (c) 2004 Ingres Corporation
+*/
+/*
+**	DBCNF.QRY
+**
+**	Create the Jupiter core catalog tables (Version 1).
+**	In this version of the templates character fields are implemented
+**	using the 'c' datatype.  This script is intended to be run in
+**	a 5.0 installation.
+*/
+
+\nomacro
+
+begin transaction
+\p\g
+
+create rel(reltid=i4,reltidx=i4,relid=c24,
+	relowner=c24,relatts=i2,relwid=i2,relkeys=i2,
+	relspec=i2,relstat=i4,reltups=i4,relpages=i4,
+	relprim=i4,relmain=i4,relsave=i4,
+	relstamp1=i4,relstamp2=i4,relloc=c24,relcmptlvl=c4,
+        relcreate=i4, relqid1=i4, relqid2=i4, 
+        relmoddate=i4, relidxcount=i2, relifill=i2,
+        reldfill=i2, rellfill=i2, relmin=i4, relmax=i4,
+        relfree=c40)
+
+create relx(relid=c24,relowner=c24,tidp=i4)
+
+create att(attrelid=i4,attrelidx=i4,attid=i2,attxtra=i2,
+	attname=c24,attoff=i2,attfrmt=i2,attfrml=i2,
+	attfrmp=i2,attkdom=i2,attflag=i2)
+
+create idx(baseid=i4,indexid=i4,sequence=i2,idom1=i2,idom2=i2,idom3=i2,
+	idom4=i2,idom5=i2,idom6=i2,idom7=i2,idom8=i2,
+	idom9=i2,idom10=i2,idom11=i2,idom12=i2,idom13=i2,idom14=i2,
+	idom15=i2,idom16=i2,idom17=i2,idom18=i2,idom19=i2,idom20=i2,
+	idom21=i2,idom22=i2,idom23=i2,idom24=i2,idom25=i2,idom26=i2,
+	idom27=i2,idom28=i2,idom29=i2,idom30=i2,idom31=i2,idom32=i2)
+\p\g
+
+append to rel(reltid=1,reltidx=0,relid="iirelation",relowner="$ingres",
+        relatts=29,relwid=196,
+	relspec=7,relkeys=1,relstat=1 + 2 + 16 + 4096 + 131072,
+	reltups=4,relpages=23,relprim=23,
+	relmain=23,relsave=0,relloc="ii_database",
+	relcmptlvl="6.0 ",relstamp1=0,relstamp2=0,
+        relcreate=0, relqid1=0, relqid2=0, relmoddate=0, relidxcount=1,
+        relifill=0, reldfill=50, rellfill=0, relmin=23, relmax=0,
+	relfree="")
+
+append to rel(reltid=1,reltidx=2,relid="iirel_idx",relowner="$ingres",
+	relatts=3,relwid=52,
+	relspec=7,relkeys=2,relstat=1 + 2 + 16 + 128 + 4096,
+	reltups=4,relpages=17,relprim=17,relmain=17,relsave=0,
+	relloc="ii_database",relcmptlvl="6.0 ",relstamp1=0,relstamp2=0,
+        relcreate=0, relqid1=0, relqid2=0, relmoddate=0, relidxcount=0,
+        relifill=0, reldfill=50, rellfill=0, relmin=17, relmax=0,
+	relfree="")
+
+append to rel(reltid=3,reltidx=0,relid="iiattribute",relowner="$ingres",
+	relatts=11,relwid=48,
+	relspec=7,relkeys=2,relstat=1 + 2 + 16 + 4096,
+	reltups=41,relpages=23,relprim=23,relmain=23,relsave=0,
+	relloc="ii_database",relcmptlvl="6.0 ",relstamp1=0,relstamp2=0,
+        relcreate=0, relqid1=0, relqid2=0, relmoddate=0, relidxcount=0,
+        relifill=0, reldfill=50, rellfill=0, relmin=23, relmax=0,
+	relfree="")
+
+append to rel(reltid=4,reltidx=0,relid="iiindex",relowner="$ingres",
+	relatts=35,relwid=74,
+	relspec=7,relkeys=1,relstat=1 + 2 + 16 + 4096,
+	reltups=1,relpages=23,relprim=23,relmain=23,relsave=0,
+	relloc="ii_database",relcmptlvl="6.0 ",relstamp1=0,relstamp2=0,
+        relcreate=0, relqid1=0, relqid2=0, relmoddate=0, relidxcount=0,
+        relifill=0, reldfill=50, rellfill=0, relmin=23, relmax=0,
+	relfree="")
+\p\g
+append to relx(relid="iirelation", relowner="$ingres", tidp = 0)
+
+append to relx(relid="iirel_idx", relowner="$ingres", tidp=1)
+
+append to relx(relid="iiattribute", relowner="$ingres", tidp=2)
+
+append to relx(relid="iiindex", relowner="$ingres", tidp=3)
+\p\g
+
+append to att(attrelid=1,attrelidx=0,attid=1,attname="reltid",
+	attoff=0,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=1,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=2,attname="reltidx",
+	attoff=4,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=3,attname="relid",
+	attoff=8,attfrmt=32,attfrml=24,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=4,attname="relowner",
+	attoff=32,attfrmt=32,attfrml=24,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=5,attname="relatts",
+	attoff=56,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=6,attname="relwid",
+	attoff=58,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=7,attname="relkeys",
+	attoff=60,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=8,attname="relspec",
+	attoff=62,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=9,attname="relstat",
+	attoff=64,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=10,attname="reltups",
+	attoff=68,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=11,attname="relpages",
+	attoff=72,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=12,attname="relprim",
+	attoff=76,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=13,attname="relmain",
+	attoff=80,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=14,attname="relsave",
+	attoff=84,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=15,attname="relstamp1",
+	attoff=88,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=16,attname="relstamp2",
+	attoff=92,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=17,attname="relloc",
+	attoff=96,attfrmt=32,attfrml=24,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=18,attname="relcmptlvl",
+	attoff=120,attfrmt=32,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=19,attname="relcreate",
+	attoff=124,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=20,attname="relqid1",
+	attoff=128,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=21,attname="relqid2",
+	attoff=132,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=22,attname="relmoddate",
+	attoff=136,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=23,attname="relidxcount",
+	attoff=140,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=24,attname="relifill",
+	attoff=142,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=25,attname="reldfill",
+	attoff=144,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=26,attname="rellfill",
+	attoff=146,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=27,attname="relmin",
+	attoff=148,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=28,attname="relmax",
+	attoff=152,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=1,attrelidx=0,attid=29,attname="relfree",
+	attoff=156,attfrmt=32,attfrml=40,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+\p\g
+
+append to att(attrelid=1,attrelidx=2,attid=1,attname="relid",
+	attoff=0,attfrmt=32,attfrml=24,
+	attxtra=0,attfrmp=0,attkdom=1,attflag=0)
+append to att(attrelid=1,attrelidx=2,attid=2,attname="relowner",
+	attoff=24,attfrmt=32,attfrml=24,
+	attxtra=0,attfrmp=0,attkdom=2,attflag=0)
+append to att(attrelid=1,attrelidx=2,attid=3,attname="tidp",
+	attoff=48,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+\p\g
+
+append to att(attrelid=3,attrelidx=0,attid=1,attname="attrelid",
+	attoff=0,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=1,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=2,attname="attrelidx",
+	attoff=4,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=2,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=3,attname="attid",
+	attoff=8,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=4,attname="attxtra",
+	attoff=10,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=5,attname="attname",
+	attoff=12,attfrmt=32,attfrml=24,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=6,attname="attoff",
+	attoff=36,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=7,attname="attfrmt",
+	attoff=38,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=8,attname="attfrml",
+	attoff=40,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=9,attname="attfrmp",
+	attoff=42,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=10,attname="attkdom",
+	attoff=44,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=3,attrelidx=0,attid=11,attname="attflag",
+	attoff=46,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+\p\g
+
+append to att(attrelid=4,attrelidx=0,attid=1,attname="baseid",
+	attoff=0,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=1,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=2,attname="indexid",
+	attoff=4,attfrmt=30,attfrml=4,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=3,attname="sequence",
+	attoff=8,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=4,attname="idom1",
+	attoff=10,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=5,attname="idom2",
+	attoff=12,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=6,attname="idom3",
+	attoff=14,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=7,attname="idom4",
+	attoff=16,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=8,attname="idom5",
+	attoff=18,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=9,attname="idom6",
+	attoff=20,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=10,attname="idom7",
+	attoff=22,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=11,attname="idom8",
+	attoff=24,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=12,attname="idom9",
+	attoff=26,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=13,attname="idom10",
+	attoff=28,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=14,attname="idom11",
+	attoff=30,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=15,attname="idom12",
+	attoff=32,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=16,attname="idom13",
+	attoff=34,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=17,attname="idom14",
+	attoff=36,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=18,attname="idom15",
+	attoff=38,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=19,attname="idom16",
+	attoff=40,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=20,attname="idom17",
+	attoff=42,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=21,attname="idom18",
+	attoff=44,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=22,attname="idom19",
+	attoff=46,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=23,attname="idom20",
+	attoff=48,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=24,attname="idom21",
+	attoff=50,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=25,attname="idom22",
+	attoff=52,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=26,attname="idom23",
+	attoff=54,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=27,attname="idom24",
+	attoff=56,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=28,attname="idom25",
+	attoff=58,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=29,attname="idom26",
+	attoff=60,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=30,attname="idom27",
+	attoff=62,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=31,attname="idom28",
+	attoff=64,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=32,attname="idom29",
+	attoff=66,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=33,attname="idom30",
+	attoff=68,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=34,attname="idom31",
+	attoff=70,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+append to att(attrelid=4,attrelidx=0,attid=35,attname="idom32",
+	attoff=72,attfrmt=30,attfrml=2,
+	attxtra=0,attfrmp=0,attkdom=0,attflag=0)
+\p\g
+
+append to idx(baseid=1,indexid=2,sequence=0,idom1=3,idom2=4,
+	idom3=0,idom4=0,idom5=0,idom6=0,idom7=0,idom8=0,
+	idom9=0,idom10=0,idom11=0,idom12=0,idom13=0,idom14=0,
+	idom15=0,idom16=0,idom17=0,idom18=0,idom19=0,idom20=0,
+	idom21=0,idom22=0,idom23=0,idom24=0,idom25=0,idom26=0,
+	idom27=0,idom28=0,idom29=0,idom30=0,idom31=0,idom32=0)
+\p\g
+
+end transaction
+\p\g
+
+print rel,relx,att,idx
+\p\g
+
+modify rel to hash on reltid where minpages=23
+\p\g
+modify att to hash on attrelid, attrelidx where minpages=23
+\p\g
+modify idx to hash on baseid where minpages=23
+\p\g
+modify relx to hash on relid, relowner where minpages=17
+\p\g
+
+replace relx(tidp=rel.tid) where relx.relid=rel.relid and
+    relx.relowner = rel.relowner
+\p\g
+
+\q

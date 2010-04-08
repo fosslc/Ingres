@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The system_lock_level resource specifies the system setting for lock level.
+ 
+  You may override the default system lock level with:
+	SET LOCKMODE statement
+
+  Possible values are DEFAULT, PAGE, ROW, MVCC, and TABLE.
+
+  If the system_lock_level is DEFAULT the optimizer will pick the lock level.
+  Otherwise the specified lock level will override the optimizer lock level.
+  
+  The default system lock level is DEFAULT.

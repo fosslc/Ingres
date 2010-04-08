@@ -1,0 +1,718 @@
+/*
+**    Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<lo.h>
+# include	<si.h>
+# include	<st.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<afe.h>
+## include	<ooclass.qsh>
+## include	<uigdata.qsh>
+# include	<er.h>
+# include	<ui.h>
+# include	"erpf.h"
+
+/**
+** Name:    dumpform	- Print a file copy of a form.
+**
+** Description:
+**	This file defines.
+**
+**	dumpform	- print a file copy of a form.
+**
+**	Take a form and put it out in a text file, with an image of
+**	the form, and information about the fields in the form.
+**	This is the output of the PRINTFORM command and the
+**	VIFRED 'Print' command in the catalogs form.
+**
+** Inputs:
+**	formname	name of the form.
+**	filename	name of file to put it too.
+**
+** Outputs:
+**	Returns:
+**		none.
+**
+** Side Effects:
+**	Must be in forms mode.
+**
+** History:
+**	01-oct-1984 (arthur)	written.
+**	21-oct-1985 (peter)	pulled out of printform.
+**	13-jan-1986 (peter)	integrate marian;s bug fix 7263.
+**	05/08/87 (dkh) - Made it work for 6.0.
+**	08/14/87 (dkh) - ER changes.
+**	10/08/87 (dkh) - Changed so that printform is not a forms program.
+**	10/17/87 (dkh) - Changed to not use single letter range vars.
+**	12/19/87 (dkh) - Including ooclass.qsh instead of ooclass.qh.
+**	16-mar-88 (sylviap)
+**		Changed the QUEL to SQL.  Took out HACKFOR50.
+**	05/28/88 (dkh) - Added support for popups and boxes.
+**	20-jun-88 (bruceb)
+**		Changed inquire_equel to inquire_ingres.
+**	06/22/88 (dkh) - Added more venus support and fixed inquire_ingres
+**			 syntax.
+**	23-jun-88 (bruceb)
+**		Further change to inquire_ingres.
+**	12-aug-88 (bruceb)	Fix for bug 2900
+**		Added third parameter to dumpform().  This parameter, a
+**		function pointer, will be pointed at a 'clear screen/
+**		redisplay' function when called from VIFRED, and will
+**		be used by DG to refresh the screen in CEO.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	02-jan-89 (bruceb)
+**		Reversed order of row/column printout for trim so that
+**		they match the message string.  (Was X rows and Y columns.)
+**	02-jan-89 (bruceb)
+**		Added print out of the new displayonly and invisible attributes.
+**	05-jan-89 (bruceb)
+**		Added parameter to call on FTdumpscr to indicate called
+**		by Printform.
+**	07/21/89 (dkh) - Fixed bug 6316.
+**	15-aug-89 (bruceb)
+**		Changed to handle derived fields/columns, and to deal with
+**		longer validation strings and messages.
+**	12-dec-89 (bruceb)	Fix for bug 8495.
+**		Indicate presence of 'query only' attribute.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	30-Nov-92 (fredb)
+**	    Integated porting change from 6.2 codeline:
+**		   05-Nov-90 (DCarter)
+**              	Changed SIopen to SIfopen, for HP3000 only.
+**	06/18/93 (dkh) - Fixed bug 51409.  The input mask attribute will
+**			 now be listed by printform.
+**      07/14/99 (hweho01)
+**          Added *FDfrcreate() function prototype.
+**          Without the explicit declaration, the default int return 
+**          value for a function will truncate a 64-bit address on 
+**          ris_u64 platform.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+FUNC_EXTERN	ADF_CB	*FEadfcb();
+FUNC_EXTERN	VOID	IIFDmcvMakeColsVisible();
+FUNC_EXTERN	FRAME   *FDfrcreate();
+
+static	VOID	getcolor();
+
+
+static VOID
+getcolor(flags, color)
+i4	flags;
+i4	*color;
+{
+	i4	val = 0;
+
+	if (flags & fd1COLOR)
+	{
+		val = 1;
+	}
+	else if (flags & fd2COLOR)
+	{
+		val = 2;
+	}
+	else if (flags & fd3COLOR)
+	{
+		val = 3;
+	}
+	else if (flags & fd4COLOR)
+	{
+		val = 4;
+	}
+	else if (flags & fd5COLOR)
+	{
+		val = 5;
+	}
+	else if (flags & fd6COLOR)
+	{
+		val = 6;
+	}
+	else if (flags & fd7COLOR)
+	{
+		val = 7;
+	}
+
+	*color = val;
+}
+
+
+VOID
+dumpform(formname, filename, clrfunc)
+EXEC SQL BEGIN DECLARE SECTION;
+	char *formname;
+EXEC SQL END DECLARE SECTION;
+char	*filename;
+VOID	(*clrfunc)();
+{
+EXEC SQL BEGIN DECLARE SECTION;
+	char	fowner[FE_MAXNAME + 1];
+	char	fname[FE_MAXNAME + 1];
+	char	ftitle[51];
+	char	fdefault[51];
+	char	fformat[51];
+	char	fvalmsg[101];
+	char	fvalchk[256];
+	i4	fseq;
+	i4	fflags;
+	i4	f2flags;
+	i4	fbegcol;
+	i4	fbegrow;
+	i4	fdtype;
+	i4	flength;
+	i4	fprec;
+	i4	fmaxcol;
+	i4	fmaxlin;
+	i4	ffldno;
+	i4	fnsno;
+	i4	ftrimno;
+	i4	ftype;
+	i4	fsubseq;
+	char	fcdate[26];
+	char	fadate[26];
+	OOID	oo_id;
+	i4	tposx;
+	i4	tposy;
+	i4	tflags;
+	i4	tboxx;
+	i4	tboxy;
+	char	ttrm[fdTRIMLEN + 1];
+	i4	rcount;
+
+	UIDBDATA	*uidbdata;
+EXEC SQL END DECLARE SECTION;
+
+	char	buf[200];
+	i4	temp;
+	FILE	*fptr;
+	LOCATION	outloc;
+	char	locbuf[MAX_LOC + 1];
+	FRAME	*frm = NULL;
+	DB_USER_TYPE	usertype;
+	DB_DATA_VALUE	dbv;
+	char		*nullable;
+	i4		color;
+	char		*dvstr;
+
+	/* Start of routine */
+
+	uidbdata = IIUIdbdata();
+
+	FTfrprint((i4) 1);
+
+	IIUGmsg(ERget(S_PF0001_Writing_form), FALSE, 2, formname, filename);
+
+	/*
+	**  Setup to only do syntax checks on validation
+	**  strings when getting form out of the db.
+	**  Don't need to reset this value since only
+	**  Vifred will call this routine and it already
+	**  is in check syntax only state.
+	*/
+	FDsetparse(TRUE);
+
+	STcopy(filename, locbuf);
+	LOfroms(PATH & FILENAME, locbuf, &outloc);
+#ifdef hp9_mpe
+	if (SIfopen(&outloc, ERx("w"), SI_TXT, 256, &fptr) != OK)
+#else
+	if (SIopen(&outloc, ERx("w"), &fptr) != OK)
+#endif
+	{
+		IIUGmsg(ERget(E_PF0002_Cant_open_file), TRUE, 1, filename);
+	}
+	else if ((frm = (FRAME *)FDfrcreate(formname)) == NULL)
+	{
+		SIclose(fptr);
+	}
+	else
+	{
+		/* Set fowner to username */
+		STcopy(uidbdata->user, fowner);
+
+		EXEC SQL SELECT object_id, create_date, alter_date
+			INTO :oo_id, :fcdate, :fadate
+			FROM ii_objects
+			WHERE object_name = :formname
+			AND object_owner = :uidbdata->user
+			AND object_class = :OC_FORM;
+
+		EXEC SQL INQUIRE_INGRES (:rcount = ROWCOUNT);	/* FIX 7263 */
+
+		if (rcount == 0)
+		{
+			/* Set fowner to dba */
+			STcopy(uidbdata->dba, fowner);
+
+			EXEC SQL SELECT object_id, create_date, alter_date
+				INTO :oo_id, :fcdate, :fadate
+				FROM ii_objects
+				WHERE object_name = :formname
+				AND object_owner = :uidbdata->dba
+				AND object_class = :OC_FORM;
+		
+		}
+		EXEC SQL SELECT frmaxcol, frmaxlin, frfldno, frnsno,
+			frtrimno, frflags, frposy, frposx
+			INTO :fmaxcol, :fmaxlin, :ffldno, :fnsno,
+			:ftrimno, :fflags, :fbegrow, :fbegcol
+			FROM ii_forms
+			WHERE object_id = :oo_id;
+		EXEC SQL BEGIN;
+			/* Make any invisible columns visible for the print. */
+			IIFDmcvMakeColsVisible(frm);
+			/* Print/dump the form */
+			FTdumpscr(frm, fptr, FALSE, (bool)TRUE);
+			SIfprintf(fptr, ERget(F_PF0001_Form_name), formname);
+			SIfprintf(fptr, ERget(F_PF0002_Form_owner), fowner);
+
+			if (fflags & fdISPOPUP)
+			{
+				if (fbegrow)
+				{
+					SIfprintf(fptr, ERget(F_PF002E_fixed),
+						fbegrow, fbegcol);
+				}
+				else
+				{
+					SIfprintf(fptr, ERget(F_PF002F_float));
+				}
+				if (fflags & fdBOXFR)
+				{
+					SIfprintf(fptr, ERget(F_PF0034_boxed));
+				}
+				else
+				{
+					SIfprintf(fptr, ERget(F_PF0035_nobox));
+				}
+			}
+			else
+			{
+				SIfprintf(fptr, ERget(F_PF002D_full));
+			}
+
+			SIfprintf(fptr, ERget(F_PF0003_Number_of_columns),
+				fmaxcol);
+			SIfprintf(fptr, ERget(F_PF0004_Number_of_lines),
+				fmaxlin);
+			SIfprintf(fptr, ERget(F_PF0005_Number_of_fields),
+				ffldno + fnsno);
+			SIfprintf(fptr, ERget(F_PF0006_Number_of_trim_string),
+				ftrimno);
+			SIfprintf(fptr, ERget(F_PF0007_Date_first_created),
+				fcdate);
+			SIfprintf(fptr, ERget(F_PF0008_Date_last_modified),
+				fadate);
+		EXEC SQL END;
+
+		if (clrfunc != NULL)
+			(*clrfunc)();
+
+		IIUGmsg(ERget(S_PF0003_Writing_out_detailed), FALSE, 0);
+
+		SIfprintf(fptr, ERget(F_PF0009_FIELD_DESCRIPTIONS));
+
+		EXEC SQL SELECT flseq, fldname, fldatatype, fllength,
+			        flprec, fltitle, fldflags, fld2flags,
+				fldefault, flformat, flvalmsg, flvalchk,
+				fltype, flsubseq
+			INTO :fseq, :fname, :fdtype, :flength,
+			     :fprec, :ftitle, :fflags, :f2flags,
+			     :fdefault, :fformat, :fvalmsg, :fvalchk,
+			     :ftype, :fsubseq
+			FROM ii_fields
+		  	WHERE object_id = :oo_id 
+			ORDER BY flsubseq;
+		EXEC SQL BEGIN;
+			STtrmwhite(fname);
+			STtrmwhite(ftitle);
+			STtrmwhite(fdefault);
+			STtrmwhite(fformat);
+			STtrmwhite(fvalmsg);
+			STtrmwhite(fvalchk);
+			if (ftype == FTABLE)
+			{
+				SIfprintf(fptr, 
+					ERget(F_PF003A_TblField_name), fname);
+				SIfprintf(fptr,
+					ERget(F_PF000C_Number_of_rows_in_tab),
+					flength);
+				buf[0] = '\0';
+				if (fflags & fdNOTFLINES)
+				{
+					STcat(buf,
+					    ERget(F_PF000D_No_row_separators));
+				}
+				if (fflags & fdROWHLIT)
+				{
+					STcat(buf,
+					  ERget(F_PF000E_Highlighting_current));
+				}
+				if (fflags & fdNOTFTITLE)
+				{
+					STcat(buf, ERget(F_PF0030_notitle));
+				}
+				if (fflags & fdINVISIBLE)
+				{
+					STcat(buf, ERget(F_PF003C_Invisible));
+				}
+				SIfprintf(fptr,
+					ERget(F_PF000F_Special_table_field));
+				temp = STlength(buf);
+				if (temp > 0)
+				{
+					buf[temp - 1] = '\0';
+					if (temp <= 100)
+					{
+						SIfprintf(fptr, ERx("%s\n"),
+							buf);
+					}
+					else
+					{
+						SIfprintf(fptr, ERx("\n\t%s\n"),
+							buf);
+					}
+				}
+				else
+				{
+					SIfprintf(fptr, ERget(F_PF0010_None));
+				}
+				SIfprintf(fptr, ERx("\n\n"));
+			}
+			else
+			{
+				if (ftype == FREGULAR)
+				{
+					SIfprintf(fptr, 
+						ERget(F_PF000A_Field_name), 
+						fname);
+					SIfprintf(fptr, 
+						ERget(F_PF0011_Field_title),
+						ftitle);
+				}
+				else
+				{
+					SIfprintf(fptr, 
+						ERget(F_PF0038_Column_name), 
+						fname);
+					SIfprintf(fptr, 
+						ERget(F_PF0039_Column_title),
+						ftitle);
+				}
+				dbv.db_datatype = fdtype;
+				dbv.db_length = flength;
+				dbv.db_prec = fprec;
+				_VOID_ afe_tyoutput(FEadfcb(), &dbv, &usertype);
+				if (usertype.dbut_kind == DB_UT_NULL)
+				{
+					nullable = ERget(F_PF0012_Nullable);
+				}
+				else
+				{
+					nullable = ERget(F_PF0013_Non_nullable);
+				}
+				SIfprintf(fptr, ERget(F_PF0014_Data_type),
+					nullable, usertype.dbut_name);
+				SIfprintf(fptr, ERget(F_PF0015_Display_format),
+					fformat);
+				getcolor(fflags, &color);
+				STprintf(buf, ERget(F_PF0036_color), color);
+				SIfprintf(fptr, buf);
+
+				buf[0] = '\0';
+				if ( ftype != FCOLUMN && fseq < 0 ||
+					ftype == FCOLUMN &&
+					(fflags & fdtfCOLREAD))
+				{
+					STcat(buf,
+						ERget(F_PF0016_Display_only));
+				}
+				if ((fflags & fdBOXFLD) && ftype != FCOLUMN)
+				{
+					STcat(buf, ERget(F_PF0017_Box_field));
+				}
+				if (fflags & fdKPREV)
+				{
+					STcat(buf,
+					  ERget(F_PF0018_Keep_previous_value));
+				}
+				if (fflags & fdMAND)
+				{
+					STcat(buf,
+					    ERget(F_PF0019_Mandatory_field));
+				}
+				if (fflags & fdRVVID)
+				{
+					STcat(buf,
+						ERget(F_PF001A_Reverse_video));
+				}
+				if (fflags & fdBLINK)
+				{
+					STcat(buf, ERget(F_PF001B_Blinking));
+				}
+				if (fflags & fdUNLN)
+				{
+					STcat(buf, ERget(F_PF001C_Underline));
+				}
+				if (fflags & fdCHGINT)
+				{
+					STcat(buf,
+					    ERget(F_PF001D_Brightness_change));
+				}
+				if (fflags & fdQUERYONLY)
+				{
+					STcat(buf, ERget(F_PF0043_Query_only));
+				}
+				if (fflags & fdLOWCASE)
+				{
+					STcat(buf,
+					    ERget(F_PF001E_Force_lower_case));
+				}
+				if (fflags & fdUPCASE)
+				{
+					STcat(buf,
+					    ERget(F_PF001F_Force_upper_case));
+				}
+				if (fflags & fdNOAUTOTAB)
+				{
+					STcat(buf, ERget(F_PF0020_No_auto_tab));
+				}
+				if (fflags & fdNOECHO)
+				{
+					STcat(buf, ERget(F_PF0021_No_echo));
+				}
+				if (fflags & fdREVDIR)
+				{
+					STcat(buf,
+					  ERget(F_PF0022_Right_to_left_input));
+				}
+				if (f2flags & fdSCRLFD)
+				{
+					STcat(buf, ERget(F_PF0031_scrollable));
+				}
+				if (f2flags & fdREADONLY)
+				{
+				    if (f2flags & fdDERIVED)
+				    {
+					STcat(buf, ERget(F_PF003B_Derived));
+				    }
+				    else
+				    {
+					STcat(buf,
+						ERget(F_PF0016_Display_only));
+				    }
+				}
+				if (fflags & fdINVISIBLE)
+				{
+					STcat(buf, ERget(F_PF003C_Invisible));
+				}
+				if (f2flags & fdEMASK)
+				{
+					STcat(buf, ERget(F_PF0044_EMASK));
+				}
+				SIfprintf(fptr,
+					ERget(F_PF0023_Special_display_attri));
+				temp = STlength(buf);
+				if (temp > 0)
+				{
+					buf[temp - 1] = '\0';
+					if (temp <= 100)
+						SIfprintf(fptr, ERx("%s\n"),
+							buf);
+					else
+						SIfprintf(fptr,
+							ERx("\n	       %s\n"),
+							buf);
+				}
+				else
+				{
+					SIfprintf(fptr, ERget(F_PF0024_None));
+				}
+
+				SIfprintf(fptr, ERget(F_PF0025_Type_of_field));
+				if (ftype == FREGULAR)
+				{
+					SIfprintf(fptr,
+						ERget(F_PF0026_regular));
+				}
+				else
+				{
+					SIfprintf(fptr,
+					 ERget(F_PF0027_column_in_table_field));
+				}
+
+				SIfprintf(fptr, ERget(F_PF0028_Default_value),
+					fdefault);
+
+				temp = STlength(fvalchk);
+				if (temp <= 60)
+				{
+				    if (f2flags & fdDERIVED)
+				    {
+					dvstr =
+					    ERget(F_PF003D_Derivation_formula);
+				    }
+				    else
+				    {
+					dvstr =
+					    ERget(F_PF0029_Validation_check);
+				    }
+				    SIfprintf(fptr, dvstr, fvalchk);
+				}
+				else if (temp <= 120)
+				{
+				    if (f2flags & fdDERIVED)
+				    {
+					dvstr =
+					    ERget(F_PF003E_Derivation_formula);
+				    }
+				    else
+				    {
+					dvstr =
+					    ERget(F_PF002A_Validation_check);
+				    }
+				    SIfprintf(fptr, dvstr, fvalchk,
+					&fvalchk[60]);
+				}
+				else if (temp <= 180)
+				{
+				    if (f2flags & fdDERIVED)
+				    {
+					dvstr =
+					    ERget(F_PF003F_Derivation_formula);
+				    }
+				    else
+				    {
+					dvstr =
+					    ERget(F_PF002B_Validation_check);
+				    }
+				    SIfprintf(fptr, dvstr, fvalchk,
+					&fvalchk[60], &fvalchk[120]);
+				}
+				else
+				{
+				    if (f2flags & fdDERIVED)
+				    {
+					dvstr =
+					    ERget(F_PF0040_Derivation_formula);
+				    }
+				    else
+				    {
+					dvstr =
+					    ERget(F_PF0041_Validation_check);
+				    }
+				    SIfprintf(fptr, dvstr, fvalchk,
+					&fvalchk[60], &fvalchk[120],
+					&fvalchk[180]);
+				}
+
+				if (!(f2flags & fdDERIVED))
+				{
+				    temp = STlength(fvalchk);
+				    if (temp <= 50)
+				    {
+					SIfprintf(fptr,
+					    ERget(F_PF002C_Validation_error_mess),
+					    fvalmsg);
+				    }
+				    else
+				    {
+					SIfprintf(fptr,
+					    ERget(F_PF0042_Validation_error_mess),
+					    fvalmsg, &fvalmsg[50]);
+				    }
+				}
+			}
+		EXEC SQL END;
+
+		SIfprintf(fptr, ERget(F_PF0037_trimdesc));
+
+		/*
+		**  Get the trim information and print it out.
+		*/
+		EXEC SQL SELECT trim_col, trim_lin, trim_trim, trim_flags
+			INTO :tposx, :tposy, :ttrm, :tflags
+			FROM ii_trim
+			WHERE object_id = :oo_id;
+		EXEC SQL BEGIN;
+			/*
+			**  If tflags is non-zero, then we are dealing
+			**  with a box, at least in release 6.1.
+			*/
+			if (tflags & fdBOXFLD)
+			{
+				if (STscanf(ttrm, ERx("%d:%d"), &tboxy,
+					&tboxx) == 2)
+				{
+					SIfprintf(fptr, ERget(F_PF0033_box),
+						tposy, tposx, tboxy, tboxx);
+				}
+			}
+			else
+			{
+				SIfprintf(fptr, ERget(F_PF0032_text_trim),
+					tposy, tposx, ttrm);
+			}
+			getcolor(tflags, &color);
+			STprintf(buf, ERget(F_PF0036_color), color);
+			SIfprintf(fptr, buf);
+			buf[0] = EOS;
+			if (tflags & fdRVVID)
+			{	STcat(buf, ERget(F_PF001A_Reverse_video));
+			}
+			if (tflags & fdBLINK)
+			{
+				STcat(buf, ERget(F_PF001B_Blinking));
+			}
+			if (tflags & fdUNLN)
+			{
+				STcat(buf, ERget(F_PF001C_Underline));
+			}
+			if (tflags & fdCHGINT)
+			{
+				STcat(buf, ERget(F_PF001D_Brightness_change));
+			}
+			SIfprintf(fptr, ERget(F_PF0023_Special_display_attri));
+			temp = STlength(buf);
+			if (temp > 0)
+			{
+				buf[temp - 1] = EOS;
+				if (temp <= 100)
+				{
+					SIfprintf(fptr, ERx("%s\n"), buf);
+				}
+				else
+				{
+					SIfprintf(fptr, ERx("\n\t%s\n"), buf);
+				}
+			}
+			else
+			{
+				SIfprintf(fptr, ERget(F_PF0024_None));
+			}
+			SIfprintf(fptr, ERx("\n\n"));
+		EXEC SQL END;
+
+		IIUGmsg(ERget(S_PF0004_Form_written), FALSE, 2, formname,
+			filename);
+		SIclose(fptr);
+	}
+	FTfrprint((i4) 0);
+	return;
+}

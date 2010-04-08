@@ -1,0 +1,338 @@
+# ifdef comment
+
+  Copyright (c) 1985, 2004 Ingres Corporation
+
+  Name:	utcom.def -	UT Compilation Rules Definition File.
+
+	This file is used to create variant "utcom.def" files for
+	different target systems.  It specifies transformation rules
+	used to compile various types of source files into objects.
+
+	BEWARE:  BEGIN EACH LINE WITH TAB ONLY - Not spaces
+		 ENSURE that there are no blank characters at the end of the
+		 lines.
+
+	Create the file via:
+
+		ccpp utcom.ccpp > utcom.def
+
+  History:
+	Revision 6.2  89/03  wong
+	Optimized to use "mv" rather than "cp;rm".
+	89/04  wong  Modified to change to the source directory before
+	each compile.  Ensures that includes using relative pathnames work.
+	JupBug #3687.
+	
+	08-may-89 (daveb)
+	Replace porting version with Jon's 6.2 version, deleting a bunch
+	of old crufty history and log garbage in the process.
+
+	16-apr-90 (kimman)
+	Surpressing verbose mode while compiling embedded c programs.
+
+	30-may-90 (blaise)
+	Integrated changes from 61 and ingresug, and cleaned up this file:
+	    Define CFLAGS, FFLAGS to specify compile flags (from 61). Also 
+	    define FORTRAN and FSUFFX for fortran compilation; add machine-
+	    specific definitions of these symbols to avoid using lots of 
+	    nested ifdefs; move the "-w" cc flag from the general case
+	    to specific machines, since many machines don't have it; add
+	    machine-specific support for vax_ulx (can't get around having
+	    several ifdefs for this one); added support for all valid unix
+	    fortran suffixes, and for jbl files, which are interface files
+	    for use with DEC ultrix fortran.
+
+	4-june-90 (blaise)
+	Integrated changes from termcl code line:
+	    Change F77 macro to FORTRAN (seems like a better name);
+	    Remove FSUFFX macro - it was only used by rtp_us5 and can be
+	    combined into the definintion of FORTRAN;
+	    Add special case for sqs_us5 and sqs_ptx.
+
+	12-oct-1990 (jhw)
+	Corrected "c" compilation line to refer to name (%N) not pathname
+	(%I) when compiling.  Bug #33877.
+
+	19-feb-91 (blaise)
+	Replaced dirname with a sed expression, since dirname does not exist
+	in standard BSD Unix. Bug #35542.
+
+	04-jun-91 (kathryn)
+	Remove References to FSUFFX - this Macro does not appear to be defined
+        anywhere.  Ensure "# else" statements are on a new line. Add -c as f77 
+	flag for su4_u42.
+	05-jun-91 (kathryn)
+	Ensure each line starts with a tab.
+	06-jun-91 (kirke)
+	Made a few more lines beginning with spaces begin with tabs.
+	08-jul-91 (seng)
+	Add definition of RS/6000 Fortran compiler.  The compiler is called
+	xlf there.
+	08-jul-91 (kirke)
+	One more try - Now all lines begin with a tab.
+	04-nov-92 (peterw)
+	Integrated changes from ingres63p to add COBOL support for dr6_us5 
+	and dra_us5. Also added support for dr6_uv1.
+	04-feb-93 (vijay) (jab's change in 63p)
+	Changed blaise's "sed" command into an "expr" invocation, so that
+	if the input file doesn't have a directory component, the "cd" doesn't
+	break.
+	Corrected typo in dr6 case.
+	10-feb-1994 (ajc)
+	Added hp8_bls specific entries based hp8*
+	04-may-94 (andrewc)
+	Add definitions for CFLAGS and FFLAGS for su4_us5
+        10-feb-1995 (chech02)
+        Added rs4_us5 for AIX 4.1.
+        30-Nov-94 (nive/walro03)
+        Added dg8_us5 flags from change from FCS1 port
+        11-Jan-96 (allmi01)
+        Added dgi_us5 specific changes to reverse default set up of cc compiler flags and
+	change the default frotran compiler fronm f77 to epcf77 with the -132 flag
+        2-Feb-96 (allmi01)
+        Added dgi_us5 flags from change from FCS1 port
+        21-nov-1996 (canor01)
+        Add "%F" (used for extra flags by UTcompile_ex()) to compile
+        scripts.
+        08-jan-1997 (canor01)
+        Add DFLAGS (misc definitions), at the moment containing definitions
+        specific to Jasmine.  Also add command line for C++ compiler (the
+        Solaris C++ compiler is called 'CC' but can be #defined for other
+        platforms).
+	09-jan-1997 (canor01)
+	Change file extension for c++ files.
+	14-jan-1997 (canor01)
+	Added '-DJASMINE' for Jasmine.
+	06-feb-1997 (canor01)
+	Added '-DMETHODHEADER' for Jasmine.
+	30-may-1997 (kosma01)
+	When OpenIngres 2.0 is built with USED_OS_THREADS on the AIX 4.1 platform,
+	it calls certain pthread functions even if II_THREAD_TYPE is set to INTERNAL.
+	To support pthread functions, an executable must be linked with crt0_r.o and
+	the pthread lib, libpthread,  and the reentrant c lib, libc_r. xlc_r and xlC_r
+	are aliases for the C compiler and C++ compiler that compile and link for
+	pthreads and reentrancy.
+	10-nov-1997 (walro03)
+		Above fix (30-may-1997) was made for AIX 4.1 (rs4_us5) and
+		AIX 3.2 (ris_us5).  It only applies for AIX 4.1, so I removed 
+		the ris_us5 version.
+	12-sep-1997 (canor01)
+	Remove default optimization for Jasmine on Solaris.
+	23-Mar-1999 (kosma01)
+		For sgi_us5, enforce compilation to be -n32 (new ELF library format),
+		and MIPS 3 architechture.
+        22-Jul-1999 (hweho01)
+                Add supports for ris_u64 (AIX 64-bit). 
+	23-jul-2001 (stephenb)
+		Add support for i64_aix
+	27-Sep-2002 (bonro01)
+		Suppress compiler warnings from imageapp in UnixWare.
+	21-May-2003 (bonro01)
+		Add support for HP Itanium (i64_hpu)
+	10-Sep-2003 (bonro01)
+		Change fortran compiler to f90 for i64_hpu
+	17-Jun-2004 (somsa01)
+		Cleaned up code for Open Source.
+        22-Sep-2004 (hanje04)
+                SIR 111413
+                Enable support for Intel Linux build running on AMD64 Linux.
+                If running under AMD64 Linux, we need to tell the compiler to
+                create 32bit binaries and not 64bit.
+	27-Oct-2004 (bonro01)
+		Ensure that all command lines begin with a tab.
+	25-Dec-2004 (shaha03)
+		SIR #113754 Changed the compiler options to 32-bit for i64_hpu 
+		for hybrid build.
+	15-Mar-2005 (bonro01)
+		Added support for Solaris AMD64 a64_sol.
+	28-Mar-2005 (shaha03)
+		Changed the compiler optiont to 64-bit for i64_hpu for reverse
+		hybrid build, to revert back the changes done for hybrid build.
+         6-Nov-2006 (hanal04) SIR 117044
+            Add int.rpl for Intel Rpath Linux build.
+	30-Mar-2007 (hanje04)
+	    SIR 117985
+	    Define CFLAGS for PowerPC Linux, not sure why they are defined
+	    separately here instead of using defines from default.h
+	22-May-2007 (hanje04)
+	    SIR 117044
+	    Correct typo introduced by int.rpl changes.
+         3-Feb-2009 (hanal04) Bug 121585 and Bug 120738
+                Add -m31 to CFLAGS for ibm_lnx. This will prevent s390x
+                instalaltions defaulting to -m64 which will be
+                incompatible with the -m31 built shared libraries.
+        24-Mar-2009 (hanal04) Bug 121842
+            "-O1" is described by HP as being a development compile level. HP
+            recommend "+O2" as a minimum compiler optimization level for
+            applications that are going to be deployed.
+	22-Jun-2009 (kschendel) SIR 122138
+	    Be more generic for new hybrid scheme.  Since this is a ccpp'd
+	    file, the BUILD_ARCHxx symbol for hybrid capables will be the
+	    one for the primary.  Delete some obsolete crud (eg vax-ultrix).
+	23-Sep-2009 (frima01) SIR 122138
+	    Removed obsolete hp8_us5 and hp3_us5 platform strings and
+	    unsupported -m64 flag from i64.lnx.
+
+# endif
+
+/* set up the compiler flags for each machine */
+
+# if defined(rs4_us5) || defined(r64_us5)
+# define FORTRAN xlf
+# define CCOMPLR xlc_r
+# define CPP	 xlC_r
+# if defined(BUILD_ARCH64)
+# define CFLAGS -q64 -c -O
+# endif
+# endif /* aix */
+
+
+# if defined(hpb_us5) || defined(hp2_us5) || defined(i64_hpu)
+# if defined(BUILD_ARCH64)
+# define CFLAGS -c -w +O2 +DD64
+# define FFLAGS -c +O2 +DD64
+# else
+# define CFLAGS -c +O2
+# define FFLAGS -c +O2 
+# endif
+# if defined(i64_hpu)
+# define FORTRAN f90
+# endif
+# endif /* hp */
+
+
+/* For Solaris, mkdefault.sh defines CCSUN32/64 symbols for arch.
+** Older Sun compilers need -xarch and don't understand -m32/64.
+** Newer compilers (studio 12 and later) understand both, but issue
+** annoying "deprecated" warnings when -xarch seen.
+*/
+#if defined(sparc_sol)
+# if defined(BUILD_ARCH32)
+# define CFLAGS -c -w -O CCSUN32
+# define FFLAGS -c -xarch=v8plus
+# else
+# define CFLAGS -c -w -O CCSUN64
+# define FFLAGS -c -xarch=v9
+# endif
+#endif
+
+#if defined(a64_sol)
+# if defined(BUILD_ARCH32)
+# define CFLAGS -c -w -O CCSUN32
+# define FFLAGS -c -xarch=generic
+# else
+# define CFLAGS -c -w -O CCSUN64
+# define FFLAGS -c -xarch=generic64
+# endif
+#endif
+
+# if defined(sco_us5) || defined(sos_us5)
+# define FFLAGS -mixedcase
+# define FORTRAN	lpifortran
+# endif
+
+# if defined(rtp_us5) || defined(ps2_us5)
+# define FORTRAN	vs mr1
+# endif
+
+# if defined(sqs_us5) || defined(sqs_ptx)
+# define FORTRAN fortran -c132
+# endif
+
+# ifdef dg8_us5
+# define FORTRAN ghf77
+# define FFLAGS -c -f77 -O -elf
+# define CFLAGS -O -c
+# endif
+
+# ifdef dgi_us5
+# define FORTRAN epcf77
+# define FFLAGS -132
+# define CFLAGS -Xt -O -c
+# endif
+
+# ifdef sgi_us5
+# define CFLAGS -c -O -n32 -mips3 -signed 
+# endif
+
+# ifdef usl_us5
+# define CFLAGS -c -w -O
+# endif
+
+# ifdef ibm_lnx
+# define CFLAGS -c -m31 -O
+# elif defined(ppc_lnx)
+# define CFLAGS -c -O -m64
+# elif defined(LNX) && defined(BUILD_ARCH64)
+# ifdef i64_lnx
+# define CFLAGS -c -O
+# else
+# define CFLAGS -c -O -m64
+# endif
+# elif defined(LNX)
+/* 32-bit primary, or non-hybrid eg int-rpl */
+# define CFLAGS -c -O -m32
+# endif
+
+# ifndef CFLAGS
+# define CFLAGS -c -O
+# endif
+
+# ifndef FFLAGS
+# define FFLAGS -c
+# endif
+
+# ifndef DFLAGS     /* misc defines */
+#   define  DFLAGS 
+# endif /* DFLAGS */
+
+# ifndef FORTRAN
+# define FORTRAN	f77
+# endif
+
+# ifndef CCOMPLR
+# define CCOMPLR	cc
+# endif
+
+# ifndef CPP
+# define CPP		CC
+# endif
+
+qc
+	cd `expr %I : '\(.*\)/' \| .`; %Eeqc -A %N.qc
+	cd `expr %I : '\(.*\)/' \| .`; CCOMPLR CFLAGS %N.c
+	if [ %I.o != %O ];then mv %I.o %O;fi
+	rm %I.c
+sc
+	cd `expr %I : '\(.*\)/' \| .`; %Eesqlc %N.sc
+	cd `expr %I : '\(.*\)/' \| .`; CCOMPLR CFLAGS %N.c
+	if [ %I.o != %O ];then mv %I.o %O;fi
+	rm %I.c
+cc
+	cd `expr %I : '\(.*\)/' \| .`; CPP CFLAGS DFLAGS %F %N.cc
+	if [ %I.o != %O ];then mv %I.o %O;fi
+c
+	cd `expr %I : '\(.*\)/' \| .`; CCOMPLR CFLAGS DFLAGS %F %N.c
+	if [ %I.o != %O ];then mv %I.o %O;fi
+qf
+	cd `expr %I : '\(.*\)/' \| .`; %Eeqf %N.qf
+	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+	if [ %I.o != %O ];then mv %I.o %O;fi
+	rm %I.f
+sf
+	cd `expr %I : '\(.*\)/' \| .`; %Eesqlf %N.sf
+	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+	if [ %I.o != %O ];then mv %I.o %O;fi
+	rm %I.f
+f
+	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+	if [ %I.o != %O ];then mv %I.o %O;fi
+for
+	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+	if [ %I.o != %O ];then mv %I.o %O;fi
+F
+	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+	if [ %I.o != %O ];then mv %I.o %O;fi
+FOR
+	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+	if [ %I.o != %O ];then mv %I.o %O;fi

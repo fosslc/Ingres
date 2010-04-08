@@ -1,0 +1,23 @@
+#
+# MANIFEST file for front!abf!specials_win
+#
+# History : 
+# 	13-Sep-2004 (drivi01)
+#	     Cleaned up build proccess for iilibinterp.dll.
+#	29-Sep-2004 (drivi01)
+#	     Updated oosymbol.c to oosymbol.roc to avoid warnings.
+
+SubDir ING_SRC front abf specials_win ;
+
+IISUBSYS front abf specials_win ;
+
+
+IISHLIBRARY $(SHINTERPLIBDATA) : $(SHINTERPLIB) $(INTERPLIBDATA) $(IMPEMBEDLIB)
+	$(IMPEMBEDLIBDATA) $(IMPFRAMELIB) $(IMPFRAMELIBDATA) $(IMPLIBQLIB)
+	$(IMPLIBQLIBDATA) $(IMPADFLIB) $(IMPADFLIBDATA) $(ABFRTLIB) ;
+
+IISHLIBRARY $(SHINTERPLIB) : $(INTERP_LIBS) $(IMPINTERPLIBDATA) 
+	$(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(IMPEMBEDLIB) $(IMPEMBEDLIBDATA)
+	$(IMPFRAMELIB) $(IMPFRAMELIBDATA) $(IMPLIBQLIB) $(IMPLIBQBLIDATA) 
+	$(ABFRTLIB) $(IMPADFLIB) $(IMPADFLIBDATA) ;
+IINEEDOBJ $(SHINTERPLIB) : oosymbol.roc ;

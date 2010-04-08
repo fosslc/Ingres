@@ -1,0 +1,72 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+##include	<oocat.qsh>
+
+/**
+** Name:	oolngrem.qc -	Catalog Form Long Remark Utilities.
+**
+** Description:
+**	Contains routines to get and put the long remarks onto a form.  The
+**	name of the field should be "long_remark".  Defines:
+**
+**	OOput_long_remark()
+**	OOget_long_remark()
+**
+** History:
+**	Revision 6.2  89/01  wong
+**	Abstracted from "obcatfor.qsc".  Also, fixed JupBug #???.
+**/
+
+/*{
+** Name:	OOput_long_remark() - put long remark onto form
+**
+** Description:
+**
+** Input params:
+**	char	*form;		form name
+**	char	buffer[];	at least OOLONGREMSIZE+1 chars
+**
+** Side effect:
+**	form display is updated;
+**
+** History:
+**	01/89 (jhw) -- Must clear the field if no long remark exists
+**		otherwise, a previous value may show up.
+*/
+##OOput_long_remark(form, buffer)
+##char	*form, *buffer;
+##{
+	if ( buffer != NULL )
+##		PUTFORM form ( _long_remark = buffer );
+	else
+##		CLEAR FIELD _long_remark;
+##}
+
+/*{
+** Name:	OOget_long_remark() - get long remark from form
+**
+** Description:
+**
+** Input params:
+**	char	*form;		form name
+**	char	buffer[];	at least OOLONGREMSIZE+1 chars
+**
+** Side effect:
+**	buffer is filled in;
+**
+** History:
+*/
+##OOget_long_remark(form, buffer)
+##char	*form,
+##	buffer[OOLONGREMSIZE+1];
+##{
+##	GETFORM form (buffer = _long_remark)
+##}

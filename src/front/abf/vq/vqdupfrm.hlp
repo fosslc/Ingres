@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqdupfrm.hlp, help behind the "Duplicate the form...?" popup which
+/#-- you see when duplicating a frame.
+
+When you duplicate or import a frame, you may also duplicate its form.
+Vision will create a form for your new frame which is an exact copy of the
+existing frame's form.
+
+  * Select "Yes" to duplicate the form of the frame you are duplicating
+
+  * Select "No" to have Vision create a default form.
+
+Move the cursor to the desired option and choose "Select"; or choose "Cancel"
+to cancel the duplicate or import operation.

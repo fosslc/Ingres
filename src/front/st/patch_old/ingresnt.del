@@ -1,0 +1,11 @@
+:
+: These files will just be renamed ("deleted").
+: This file is just for the front!st!patch ingresnt.mas version,
+: patch #4015!
+: This file should be placed at the end of the ingresnt.mas .
+:
+A \ingres\bin\ abf.bat 4
+A \ingres\bin\ isql.bat 4
+A \ingres\bin\ iquel.bat 4
+A \ingres\bin\ vision.bat 4
+A \ingres\bin\ ingprsym.bat 4

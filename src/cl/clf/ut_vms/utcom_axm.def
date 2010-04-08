@@ -1,0 +1,118 @@
+qc
+	%Eeqc "-A" %I.qc
+	cc := @ii_system:[ingres.files]cc
+	delete :=
+	purge :=
+	cc %I %O
+	delete %I.c.*
+	purge %O
+sc
+	%Eesqlc %I.sc
+	cc := @ii_system:[ingres.files]cc
+	delete :=
+	purge :=
+	cc %I %O
+	delete %I.c.*
+	purge %O
+c
+	cc := @ii_system:[ingres.files]cc
+	purge :=
+	cc %I %O
+	purge %O
+osl
+	%Eoldosl -f%N %I.osl -o%I.mar
+	macro :=
+	delete :=
+	purge :=
+	macro/migrate/nolist/object=%O %I.mar
+	delete %I.mar.*
+	purge %O
+mar
+	macro :=
+	purge :=
+	macro/migrate/nolist/object=%O %I.mar
+	purge %O
+qf
+	%Eeqf %I.qf
+	fortran :=
+	delete :=
+	purge :=
+	fortran/float=ieee_float/nolist/alignment=all/object=%O %I.for
+	delete %I.for.*
+	purge %O
+sf
+	%Eesqlf %I.sf
+	fortran :=
+	delete :=
+	purge :=
+	fortran/float=ieee_float/nolist/alignment=all/object=%O %I.for
+	delete %I.for.*
+	purge %O
+qb
+	%Eeqb %I.qb
+	basic :=
+	delete :=
+	purge :=
+	basic/real=sfloat/nolist/object=%O %I.bas
+	delete %I.bas.*
+	purge %O
+sb
+	%Eesqlb %I.sb
+	basic :=
+	delete :=
+	purge :=
+	basic/real=sfloat/nolist/object=%O %I.bas
+	delete %I.bas.*
+	purge %O
+qp
+	%Eeqp %I.qp
+	pascal :=
+	delete :=
+	purge :=
+	pascal/float=ieee_float/nolist/object=%O %I.pas
+	delete %I.pas.*
+	purge %O
+sp
+	%Eesqlp %I.sp
+	pascal :=
+	delete :=
+	purge :=
+	pascal/float=ieee_float/nolist/object=%O %I.pas
+	delete %I.pas.*
+	purge %O
+qcb
+	%Eeqcbl %I.qcb
+	cobol :=
+	delete :=
+	purge :=
+	cobol/float=ieee_float/nolist/alignment=padding/object=%O %I.cob
+	delete %I.cob.*
+	purge %O
+scb
+	%Eesqlcbl %I.scb
+	cobol :=
+	delete :=
+	purge :=
+	cobol/float=ieee_float/nolist/alignment=padding/object=%O %I.cob
+	delete %I.cob.*
+	purge %O
+for
+	fortran :=
+	purge :=
+	fortran/float=ieee_float/nolist/object=%O %I.for
+	purge %O
+bas
+	basic :=
+	purge :=
+	basic/real=sfloat/nolist/object=%O %I.bas
+	purge %O
+pas
+	pascal :=
+	purge :=
+	pascal/float=ieee_float/nolist/object=%O %I.pas
+	purge %O
+cob
+	cobol :=
+	purge :=
+	cobol/float=ieee_float/nolist/alignment=padding/object=%O %I.cob
+	purge %O

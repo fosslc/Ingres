@@ -1,0 +1,80 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- NETUTIL's top help file 
+/#--
+You are looking at the main screen also known as "login screen" for NETUTIL.  
+
+The NETUTIL screen consists of a single form with three tablefields: 
+a Virtual Node Name field which displays a list of vnode names, a detail 
+table displaying the Login/password entries for the currently selected 
+vnode (i.e. the one under the cursor), and another detail table displaying
+the connection entries.  As you move the cursor through the vnode tablefield,
+the two detail tablefields are updated automatically with the information 
+that corresponds to the newly selected vnode.
+
+Menu Operations
+
+All menu items apply to whichever tablefield contains the cursor when the 
+item is activated.  The menu operations are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Create          A new entry is created for whichever tablefield 
+                        contains the cursor.  Whenever a new vnode entry is 
+                        created, NETUTIL automatically brings up the popups 
+                        for creating login and connection entries for the
+                        same vnode name.  You are not required to create 
+                        detail records at the time the vnode entry is
+                        created; the detail records will be left blank if 
+                        you select the Ok menu item of the popups without 
+                        entering data.
+ 
+                        When an authorization entry is created or edited, a
+                        special popup appears for each login (private, global,
+                        or both) which is entered, on which you must supply
+                        the password for that login.  The password is entered 
+                        twice, and the two entries must be identical before 
+                        it will be accepted.
+ 
+
+        Destroy         The entry under the cursor is destroyed.  Your must 
+                        respond to a "Do you really mean it"  prompt;
+                        if the response is positive, the entry under the 
+                        cursor is destroyed.  Whenever a vnode entry is 
+                        destroyed, all detail entries for the same vnode are 
+                        automatically destroyed as well.
+ 
+        Edit            The entry under the cursor is edited.  In the case of
+                        a detail record, the same popup as the one originally 
+                        used for entering the data is brought up for editing, 
+                        with the fields pre-filled with the current values.
+                        If a login name is changed during an edit, you are
+                        prompted to re-enter the password.
+ 
+                        Selecting Edit with the cursor in the Virtual Node 
+                        Name tablefield allows you to rename the vnode.
+  
+        Control         Selecting Control lets you perform network server 
+                        control operations.
+
+	Attributes	Upon selecting Attributes, another screen called
+			"attribute screen", very much similar to main screen
+			( a.k.a "login screen" ) pops up, displaying vnode table
+			connection table, attribute table. All the operations 
+			performed on the "login screen" are applicable to 
+			"attribute screen" also.
+
+        Test            The connection indicated by the cursor is tested:  
+                        NETUTIL attempts to connect to the name server on the 
+                        indicated server system, and reports on its success 
+                        or failure.
+
+        Help            Displays this help screen.
+
+        End             Exit NETUTIL.
+
+/#subtopic 'Cursor movement' nucursor.hlp
+/#subtopic 'Virtual Node Name (vnode) tablefield' nuvnode.hlp
+/#subtopic 'Login/password data tablefield' nulogin.hlp
+/#subtopic 'Connection data tablefield' nuconn.hlp
+/#subtopic 'Attribute data tablefield' nuattrib.hlp

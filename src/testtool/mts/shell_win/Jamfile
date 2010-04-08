@@ -1,0 +1,10 @@
+#
+# Jamfile file for testtool!mts!shell_win
+#
+
+SubDir ING_SRC testtool mts shell_win ;
+
+IISUBSYS testtool mts shell_win ;
+
+
+IITBIN mts.bat ;

@@ -1,0 +1,21 @@
+#
+# Jamfile file for front!frame!tbacc
+#
+
+SubDir ING_SRC front frame tbacc ;
+
+IISUBSYS front frame tbacc ;
+
+
+IIMSGHDR ertb.msg ;
+
+IILIBRARY RUNTIMELIB : iivalcol.c iitstcol.c
+	iitscprm.c iitrtcol.c iitrcprm.c iitqycol.c iitbutil.c
+	iitbunld.c iitbstio.c iitbscrl.c iitbputf.c iitblist.c
+	iitbins.c iitbinit.c iitbget.c iitbfind.c iitbdelr.c iitbdata.c
+	iitbclr.c iitbbug.c iitbact.c iisetmde.c iiscrtb.c iiscrscn.c
+	iiscrfke.c iiscrds.c iiscrbrk.c iiretrow.c iihdecol.c
+	iigocol.c iiftfake.c iidsprow.c iiderive.c iicolbrk.c
+	iiclrrow.c iiclrcol.c ;
+
+IILIBRARY IMPFRAMELIBDATA : tbdata.c ;

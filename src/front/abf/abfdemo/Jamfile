@@ -1,0 +1,23 @@
+#
+# Jamfile file for front!abf!abfdemo
+#
+# History:
+#	08-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#	23-feb-2005 (abbjo03)
+#	    Need to use FDirName to construct the proper target directory
+#	    for iicopyapp.tmp.
+
+SubDir ING_SRC front abf abfdemo ;
+
+IISUBSYS front abf abfdemo ;
+
+IIDFILES abfdemo : database.hlp database.osq delemp.osq
+	delemp.sql dependen.dat design.txt emp.dat empdep.hlp
+	empdep.osq emptasks.hlp emptasks.osq experience.rw
+	list.osq projects.dat qbf_forms.frm remtask.osq
+	sqlcopy.in startup.osq sum_hours.sc tasks.dat timer_off.osq
+	timer_on.osq top.hlp top.osq ;
+
+TARGDIR = [ FDirName $(INGFILES) abfdemo ] ;
+File $(TARGDIR)$(DFS)iicopyapp.tmp : <front!abf!abfdemo>iicopyapp.tmp ;

@@ -1,0 +1,31 @@
+
+# Jamfile file for front!st!install_vms
+#
+# History:
+#	24-jan-2005 (abbjo03)
+#	    Created.
+#	30-apr-2007 (upake01)
+#	    Added line to execute rule IIKitInstalData for kitinstal.data.
+#       10-Jam-2008 (bolke01) 
+#           Added iipatch.com 
+#       12-mar-2008 (bolke01)
+#           Changed target directory of iipatch.com to ING_BUILD:[utility]
+#	17-apr-2009 (joea)
+#	    Add ii_installs.
+
+SubDir ING_SRC front st install_vms ;
+
+IISUBSYS front st install_vms ;
+
+ING_INSTALL = [ FDirName $(ING_BUILD) install ] ;
+
+IIUTILEXE buildrel : buildrel.c ;
+IINEEDLIBS buildrel : INSTALLLIB SHFRAMELIB SHQLIB SHCOMPATLIB ;
+
+IILIBRARY INSTALLLIB : ipcl.c ;
+
+IIKitInstalData kitinstal.data ;
+
+IIUTILSH IIPATCH : IIPATCH.COM ;
+
+IIExeSedShell $(ING_INSTALL)ii_installs : ii_installs$(SUFSH) ;

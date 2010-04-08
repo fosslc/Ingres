@@ -1,0 +1,61 @@
+<!-- #ICE DECLARE=`error=:ii_status_number` -->
+<!-- #ICE DECLARE=`message=:ii_status_text` -->
+<!-- #ICE DECLARE=`info=:ii_status_info` -->
+
+<!-- #ICE DECLARE=`back=(go back to change it)` -->
+
+<!-- #ICE REPEAT IF (`:name` != ``) 
+THEN=`<!-- #ICE DECLARE=``page.congr=Congratulations`` -->
+	  <!-- #ICE DECLARE=``page.sorry=Sorry`` -->` 
+ELSE=`<!-- #ICE DECLARE=``page.congr=`` -->
+	  <!-- #ICE DECLARE=``page.sorry=`` -->` 
+-->
+
+<!-- #ICE REPEAT IF (`:action` == `insert`) THEN=`<!-- #ICE DECLARE=``action=created`` -->` -->
+<!-- #ICE REPEAT IF (`:action` == `update`) THEN=`<!-- #ICE DECLARE=``action=updated`` -->` -->
+<!-- #ICE REPEAT IF (`:action` == `delete`) THEN=`<!-- #ICE DECLARE=``action=deleted`` -->` -->
+
+<!-- #ICE REPEAT IF (`:error` == `0`)
+THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?form=&title=:congr`` -->
+			<!-- #ICE IF (``:name`` != ````) THEN=``The :object (:name) was successfully :action.`` -->`
+ELSE=`<!-- #ICE REPEAT INCLUDE=``begin.html?form=&title=:sorry`` -->
+			The :object <!-- #ICE IF (``:name`` != ````) THEN=``(:name)`` --> cannot be :action. The reason is
+			<!-- #ICE REPEAT IF (``:error`` == ``6619232``)
+			THEN=``the password confirmation does not match the provided password :back.
+						 <!-- #ICE DECLARE=````found=yes```` -->`` -->
+
+			<!-- #ICE REPEAT IF (``:error`` == ``6553682`` OR
+													 ``:error`` == ``6553687`` OR
+													 ``:error`` == ``6553696`` OR
+													 ``:error`` == ``6553697`` OR
+													 ``:error`` == ``6619264`` OR
+													 ``:error`` == ``6553680`` OR
+													 ``:error`` == ``6553602``)
+			THEN=``you attempted to duplicate an existing :object :back.
+						 <!-- #ICE DECLARE=````found=yes```` -->`` -->
+
+			<!-- #ICE REPEAT IF (``:error`` == ``6553681``)
+			THEN=``:name doesn't exist.
+						 <!-- #ICE DECLARE=````found=yes```` -->`` -->
+
+			<!-- #ICE REPEAT IF (``:error`` == ``6553685`` OR 
+													 ``:error`` == ``6553689`` OR
+													 ``:error`` == ``6553686`` OR
+													 ``:error`` == ``6619267``)
+			THEN=``you attempted to remove :name which is still referenced.
+						 <!-- #ICE DECLARE=````found=yes```` -->`` -->
+
+			<!-- #ICE REPEAT IF (``:error`` == ``6619234``)
+			THEN=``insufficient authorization. Please check with your security administrator
+						 <!-- #ICE DECLARE=````found=yes```` -->`` -->
+
+			<!-- #ICE REPEAT IF (``:error`` == ``6619225``)
+			THEN=``a value is incorrect :back
+						 <!-- #ICE DECLARE=````found=yes```` -->`` -->
+
+			<!-- #ICE IF (``:found`` != ``yes``)
+			THEN=``unmanaged.<BR>error number :error: :message (:info)`` -->`
+-->
+
+			
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

@@ -1,0 +1,20 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:iisqlca.obj, -
+INGLIB:libcompat.olb/include=(gv,gver), -	! for II_copyright
+INGLIB:libingcntrl.olb/library, -
+INGLIB:libuf.olb/library
+INGLIB:libruntime.olb/library
+INGLIB:libfd.olb/library
+INGLIB:libft.olb/library
+INGLIB:libui.olb/library
+INGLIB:libfeds.olb/library
+INGLIB:libq.olb/library
+INGLIB:libqgca.olb/library
+INGLIB:libgcf.olb/library
+INGLIB:libug.olb/library
+INGLIB:libfmt.olb/library
+INGLIB:libafe.olb/library
+INGLIB:libadf.olb/library
+INGLIB:libcuf.olb/library
+INGLIB:libcompat.olb/library

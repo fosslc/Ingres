@@ -1,0 +1,24 @@
+//
+// IVM.RC2 - resources Microsoft Visual C++ does not edit directly
+//
+
+#ifdef APSTUDIO_INVOKED
+	#error this file is not editable by Microsoft Visual C++
+#endif //APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Add manually edited resources here...
+
+/////////////////////////////////////////////////////////////////////////////
+
+/* History:
+**
+**  29-Jan-2003 (noifr01)
+**      (SIR 108139) changing the resources through the resource editor was
+**      losing a hand-edited section. Moved that section to the .rc2 file
+*/ 
+
+#ifndef MAINWIN
+#include "gv.rc"
+#endif

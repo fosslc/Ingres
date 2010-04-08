@@ -1,0 +1,14 @@
+COPYFORM:	6.4	1993_11_22 14:14:13 GMT  
+FORM:	add_screen		
+	80	23	0	0	3	0	6	9	0	0	0	0	0	0	0	3
+FIELD:
+	0	description	-21	53	0	50	3	52	6	21	50	1	1		1	1	0	1	0	0	0		c50			0	0
+	1	type	-21	9	0	6	3	8	9	21	6	1	1		1	1	0	129	0	0	0	TEXT	c6	Type must be "TEXT" or "BINARY"	type="TEXT" or type="BINARY"	0	1
+	2	filename	-21	53	0	50	3	52	12	21	50	1	1		1	1	0	1	0	0	0		c50			0	2
+TRIM:
+	8	3	Please supply the following details:	0	0	0	0
+	8	7	Description:	0	0	0	0
+	8	10	Type:	0	0	0	0
+	8	13	Filename:	0	0	0	0
+	21	0	INGRES EVIDENCE SET MANAGEMENT UTILITY	0	0	0	0
+	31	10	TEXT or BINARY	0	0	0	0

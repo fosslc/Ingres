@@ -1,0 +1,85 @@
+/*
+**Copyright (c) 2004 Ingres Corporation
+*/
+
+/**
+** Name: DUDDB.QSH -   contains definitions used only by the system utility,
+**		       destroydb.
+**
+** Description:
+**        This file contains definitions that are used only by the system
+**	utility, destroydb.
+**
+**	This file is dependent on dbms.h.
+**
+** History: 
+**      04-Sep-86 (ericj)
+**          Initial creation.  Added the DUD_MODE_VECT and defined some of the
+**	    destroydb error numbers.
+**      17-Apr-87 (ericj)
+**          Updated DUD_MODES struct.
+**	24-Jul-90 (teresa)
+**	    renamed from duddb.qh to duddb.qsh.
+[@history_template@]...
+**/
+/*
+[@forward_type_references@]
+[@forward_function_references@]
+*/
+
+
+/*
+**  Defines of other constants.
+*/
+
+/*
+**      Define the possible error numbers for destroydb.
+*/
+
+/*
+[@defined_constants@]...
+
+[@group_of_defined_constants@]...
+*/
+
+/*
+[@global_variable_references@]
+*/
+
+/*}
+** Name: DUD_MODE_VECT -    describes the possible modes destroydb can be run
+**			    in.
+**
+** Description:
+**        This structure is used to describe the mode which destroydb is
+**	being run in.
+**
+**
+** History:
+**      04-Sep-86 (ericj)
+**          Initial creation.
+**	17-Apr-87 (ericj)
+**	    Removed dud_complete_flag field.
+**	10-Nov-94 (ramra01)
+**		Nowait flag being set
+[@history_template@]...
+*/
+##  typedef struct _DUD_MODE_VECT
+##  {
+    i4              dud_super_usr;       /* Super-user mode. */
+    i4              dud_query_flag;     /* Query user for confirmation of
+					** database destruction.
+					*/
+	i4				dud_nowait_flag;    	
+##  char	    dud_alias_usr[DU_USR_SIZE + 1];  /* The user alias,
+					** destroydb is trying to run under,
+					** as specified with the "-u" flag.
+					*/
+##  char	    dud_dbname[DB_MAXNAME + 1];	/* Name of database to be
+						** destroyed.
+						*/
+##  }   DUD_MODE_VECT;
+
+/*
+[@type_definitions@]
+*/

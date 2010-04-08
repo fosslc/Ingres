@@ -1,0 +1,17 @@
+
+
+  The rule_del_prefetch specifies whether a rule fired by a delete
+  will prefetch the rows on which it is to act.
+
+  If the rows are not prefetched and execution of the rule causes
+  rows to move the rule may loop until the row is moved to a point 
+  in the table which is earlier than the current position of the 
+  update cursor or qualifying expressions are no longer true. This 
+  can lead to spurious errors or silent data corruption as the 
+  number of times the rule is executed can not be guaranteed.
+
+  If set to OFF, it is the user's responsibility to ensure 
+  appropriate measures are taken to ensure rules fired by deletes
+  produce the expected behaviour.
+
+  The default is ON. 

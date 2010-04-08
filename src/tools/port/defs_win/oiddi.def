@@ -1,0 +1,35 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+
+EXPORTS
+PDBConnect		@1				
+PDBCommit		@2				
+PDBRollback		@3				
+PDBDisconnect		@4				
+PDBExecute		@5				
+PDBPrepare		@6				
+PDBParams		@7				
+PDBParamsFromTab		@8				
+PDBNumberOfProperties		@9				
+PDBName		@10				
+PDBType		@11				
+PDBText		@12				
+PDBInteger		@13				
+PDBFloat		@14				
+PDBDate		@15				
+PDBBlob		@16				
+PDBNext		@17				
+PDBClose		@18				
+PDBRelease		@19				
+PDBRepInsert		@20				
+PDBRepUpdate		@21				
+PDBRepDelete		@22				
+PDBRepSelect		@23				
+PDBRepKeySelect		@24				
+PDBRepObjects		@25				
+PDBRepProperties		@26				
+PDBRepStatements		@27				
+PDBGenerate		@28				
+PDBDriverName		@29				
+PDBGetStatement		@30				

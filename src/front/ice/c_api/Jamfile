@@ -1,0 +1,14 @@
+#
+# Jamfile file for front!ice!c_api
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC front ice c_api ;
+
+IISUBSYS front ice c_api ;
+
+if $(BUILD_ICE)
+{
+IILIBRARY C_APILIB : c_api.c ;
+}

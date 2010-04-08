@@ -1,0 +1,13 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+
+LIBRARY ICE
+EXPORTS
+HttpExtensionProc		@1				
+GetExtensionVersion		@2				
+TerminateExtension		@3				
+ICE_Init		@4				
+ICE_ProcessRequest		@5				
+ICE_Terminate		@6				
+    

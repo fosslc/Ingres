@@ -1,0 +1,2493 @@
+%{
+
+/* %L merge <eqgram.my> -- get the master grammar */
+/* %L fake begin */
+# include <eqgram.my>		-- fake out MING
+/* %L fake end */
+
+
+/* %L language begin
+** Define EQ_X_LANG where X is the EUC or PL1 for the symbol table
+*/
+# define	EQ_EUC_LANG
+/* %L language end */
+
+# include 	<compat.h>
+# include	<er.h>
+# include	<si.h>
+# include	<equel.h>
+# include	<eqlang.h>
+# include	<equtils.h>
+# include	<eqsym.h>
+# include	<eqgen.h>
+# include	<eqstmt.h>
+# include	<eqscan.h>
+# include	<eqgr.h>
+# include	<ereq.h>
+# include	<ere6.h>
+
+%}
+
+/*
+**  Equel_Lang( ADA )
+**
+**  Language dependent grammar for the ADA statements that can be embedded
+**  in Equel.
+**  Basically parses Declarations and Usages of variables and constants.
+**
+**  Conflicts:
+**	1,2,3,  The <WITH> statement causes a shift/reduce conflict with the
+**	4,5,6,	<CREATE ... [WITH clause]> statement.  Because of this, we
+**	7.	will require that if the WITH statement immediately follows
+**		a non-LOGGING CREATE statement, then the CREATE statement must
+**		be terminated with a semicolon.  This is also true for the
+**		<SET func_value [ON] param [WITH clause]> (twice),
+**		MODIFY ... [WITH clause]>, <RETRIEVE INTO ... [WITH clause]>,
+**		<COPY ... [WITH clause]>, and INDEX statements.
+**	8,9.	The array-subcript-left-paren causes a shift/reduce conflict
+**		with the QUEL-left-paren in both parts of the Ause_var rule.
+**	10,11.  The ADA block that begins with a "begin" (anywhere) causes a 
+**	        shift/reduce conflict with empty (no blocks) retrieve loops and
+**	        initialize statements. "Begin-end" was added as a sir.
+**	12,13.	The Ada "Representation Clause" <FOR name USE description>
+**		is allowed in order to provide better error messages, but
+**		causes conflicts with the optional FOR READONLY clause at the
+**		end of an <OPEN CURSOR> statement, and with the optional
+**		<FOR UPDATE ...> clause at the end of a <DECLARE CURSOR>
+**		statement.
+**	14,15,  The WITH statement in the optional forms with clause 
+**      16.	also causes a shift/reduce conflict with the {MESSAGE, 
+**		PROMPT, DISPLAY} [WITH clause] statements.
+**		Because of this, we will require, in this case as well as 
+**		those stated above, that if the WITH statement immediately 
+**		follows a non-WITH CREATE, RETRIEVE INTO, COPY, or MODIFY 
+**		statement, then the CREATE (etc) statement must be 
+**		terminated with a semicolon.
+**	17,18,	The WITH statement causes a shift/reduce conflict with
+**	19,20.	the STAR statements (conflict): {DIRECT CONNECT, DEFINE LINK, 
+**		REGISTER and REGISTER INDEX} which have an optional WITH
+**		clause.  In reality, the ADA WITH statement can only appear
+**		at the beginning of a program, before any EQUEL statements,
+**		so this conlfict as well as the other WITH conflicts are
+**		not a problem.
+**  Notes:
+**	1. We try to support most types. Any type built up from a type or
+**	   regular declaration we can support.
+**	2. The grammar closely follows (or tries to, anyway) the syntax
+**	   description in Appendix E of the ADA LRM (Language Reference Manual).
+**	   The order of the rules has been extensively changed.
+**	3. WARNING!! "gr->A_val" is a "nat", but is stored in the "st_value"
+**	   field of the symbol table, which is a "nat *".  This will work
+**	   since:
+**		(1) We use only 1 byte of it (and pointers are guaranteed
+**		    to be at least that big!).
+**		(2) We don't care which byte we get; since we always read
+**		    it the same way we write it, we'll always get the same
+**		    byte, whatever it is.
+**	   We should make "st_value" be a union, but until we do this will work.
+**	   We haven't changed it yet since it would cause source-code changes
+**	   in all the compilers that use it, and we don't have time just now.
+**
+** History:
+**	12-feb-1986	- Written (mrw)
+**	10-mar-1988	- Modified for VERDIX ADA on UNIX. (russ)
+**	19-may-1988	- Comments on shift/reduce conflicts 14-16.  (marge) 
+**	03-oct-1989	- Dynamic configuartion of different compilers.  Mostly
+**			  modified type tables of built-in types to allow 
+**			  dynamic selection. (ncg)
+**	22-jun-1990	- Added Decimal support. (teresal)	
+**	17-jul-1990	(gurdeep rahi)
+**	    Put in Alsys specific changes.
+**	    - Add description of Alsys Ada types in gr_typetab[] table
+**	    - Set output file extension to be ".ada" and handle
+**	      long_floats in gr_mechanism().
+**	11-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**      15-nov-95 (muhpa01)
+**          Added kchin's change for axp_osf
+**          19-oct-93 (kchin)
+**          Changed type of arg1 and arg2 from i4 to PTR in
+**          gr_mechanism(), since they are holding pointers, use of 
+**          i4 could result in truncation of 64-bit addresses.
+**          Modify GR_ADTYPES to accomodate new datatypes for DEC
+**          AXP ADA.
+**	21-feb-1997 (walro03)
+**		Reapply OpIng changes: linke01's of 31-oct-96, bonro01's of 
+**		09-dec-96:
+**		Cast arg1 in case GR_EQSTMT for ris_us5 and rs4_us5.
+**	27-Jul-1998 (kosma01)
+**		The IRIX 6.4 compiler is as touchy as AIX's. I am going
+**		to make the cast of arg1 (see walro03) generic.
+**		
+**
+** Copyright (c) 2004 Ingres Corporation
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-feb-2002 (toumi01)
+**	    add explicit support for GNAT Ada compiler (initially identical
+**	    to Verdix Ada)
+*/
+
+/* Fake Ingres words reserved for testing */
+
+/* Keywords and Constants defined in G but used here */
+%token	tNAME		tSCONST		tINTCONST	tFLTCONST
+  	tDEREF		tOF		tWITH		tIS
+  	tINCLUDE	/* Include filename - or Eof of file */
+	tARUOP		tIN		tOUT		tALL
+	tRANGE		tNEQOP
+	tDECCONST
+
+/* Punctuation from G */
+%token	tLPAREN		tRPAREN		tCOMMA		tPERIOD		tCOLON
+
+/* Extra L tokens defined for G */
+%token	tPARAM
+
+/* Special L tokens required by G and scanner to fill tok_special */
+%token  tHOSTCODE	/* Host language */
+	tCOMMENT	/* Comment token to trigger skipping comments */
+	tQUOTE		/* Triggers reading strings */
+	tTERMINATE	/* Statement terminators */
+
+/* Special L tokens required by G and scanner to fill tok_ahead */
+%token	tBEGIN_XACT	/* Begin and End Transaction */
+	tEND 		tEND_XACT
+
+/* %L tokens begin - ADA tokens to import into G */
+
+/* Extra ADA punctuation */
+%token	tSEMICOL	tLBRACE		tRBRACE
+
+/* Special ADA tokens - Some are returned explicitly by gr_mechanism() */
+%token	tAACCESS	/* ACCESS */
+	tAARRAY		/* ARRAY */
+	tAARROW		/* => */
+	tAASSIGN	/* := */
+	tABEGIN		/* BEGIN */
+	tABODY		/* BODY */
+	tACASE		/* CASE */
+	tACONST		/* CONSTANT */
+	tADECLARE	/* DECLARE */
+	tADECNAME	/* A name to be declared */
+	tADELTA		/* DELTA */
+	tADIGITS	/* DIGITS */
+	tADOTDOT	/* .. */
+	tAFUNCTION	/* FUNCTION */
+	tALIMITED	/* LIMITED */
+	tANEW		/* NEW */
+	tAOTHERS	/* OTHERS */
+	tAPACKAGE	/* PACKAGE */
+	tAPIPE		/* | */
+	tAPRIVATE	/* PRIVATE */
+	tAPROCEDURE	/* PROCEDURE */
+	tARECORD	/* RECORD */
+	tAREC_VAR	/* A record variable */
+	tARENAMES	/* RENAMES */
+	tARETURN	/* RETURN */
+	tASEPARATE	/* SEPARATE */
+	tASUBTYPE	/* SUBTYPE */
+	tATYPEDEF	/* TYPE */
+	tAWHEN		/* WHEN */
+	tAUSE		/* USE */
+
+/* %L tokens end */
+
+%{
+
+/* %L locals begin - Local variables and gr structure for ADA */
+# include	<eqada.h>
+# include	<ere6.h>
+
+struct	gr_state {
+	/* Members known to both G and L */
+	SYM	*gr_sym;
+	char	*gr_id;		/* Last full name used */
+	i4	gr_type;
+	i4	gr_flag;	/* Certain state information */
+	i4	gr_func;	/* I/O Function constant */
+	i4	gr_mode;	/* Mode of statement before entering block */
+	i4	gr_adjective;	/* Block modifier */
+	SYM	*gr_nlsym;	/* Symtab pointer to indicator var */
+	char	*gr_nlid;	/* Id of indicator var */
+	i4	gr_nltype;	/* Type of indicator var */
+	SYM	*gr_null;	/* Generic null symbol (for "= null" assgnmts */
+
+	/* Add L (ADA) dependent members after this statement */
+	i4	A_type;		/* ADA base type (in declarations) */
+	i4	A_blk;		/* ADA block level */
+	i4	A_rec;		/* ADA record level */
+	i4	A_size;		/* Size of declaration */
+	i4	A_dims;		/* number of array dimensions */
+	i4	A_var;		/* In declaration (AvarDEC) or use (AvarUSE) */
+	i4	A_val;		/* Flags in st_value (really a i4  *) */
+	i4	A_simpvar;	/* Is a simple variable */
+	i4	A_err;		/* Var usage has an error */
+	i4	A_with;		/* AwithFORMS or AwithEQUEL or AwithNONE */
+	SYM	*A_record;	/* Special pointer for references to structs */
+	SYM	*A_bytesy;	/* points to 1-byte integer entry (internal) */
+	SYM	*A_shrtsy;	/* points to 2-byte integer entry (internal) */
+	SYM	*A_undefsy;	/* points to "Undefined" entry (internal) */
+	SYM	*A_intsy;	/* points to "integer" entry, for convenience */
+	SYM	*A_fltsy;	/* points to "real" entry, for convenience */
+	SYM	*A_dblsy;	/* points to "double" entry, for convenience */
+	SYM	*A_chrsy;	/* points to "char" entry, for convenience */
+	SYM	*A_strsy;	/* points to "string" entry, for convenience */
+};
+GLOBALDEF struct gr_state _gr_local ZERO_FILL;
+GLOBALDEF struct gr_state *gr = &_gr_local;
+
+/* Generate an error if no error is yet issued */
+# define   ADA_ERR( x )				\
+			if (!gr->A_err) {	\
+			    gr->A_err = 1;	\
+			    er_write x;		\
+			} else			\
+
+/* Declare variables that have been pushed on stack */
+# define   ADA_DECLARE( count, typbits, typesy )		  \
+		       ada_declare( count, gr->A_rec, gr->A_blk,  \
+				    typbits, gr->A_dims, gr->A_val, typesy )
+SYM	*ada_declare();
+
+/* %L locals end */
+
+%}
+
+%start	host_declare
+
+%%
+
+/*
+** ADA dependent grammar
+*/
+
+/*
+** Connecting rules between a usage of ADA variables, names and string
+** constants and a equivalent Equel objects.
+**
+** Objects that must be defined by the L grammar for use by G:
+**
+** block_open and block_close - Block control syntax.
+** ql_in_param, ql_out_param, fm_in_param and fm_out_param Param target lists.
+**
+** Extra rules that may have alternative syntax for L:
+**    host_code - Host code recognised, set L flags and print code.
+**    host_declare - Host language declarations.
+**    host_var - Host language variable.
+**    host_name_var - Host language name or variable.
+**
+** Note:
+**     Both host_var, and host_name_var must set gr->gr_sym, gr->gr_type and
+** gr->gr_id after freeing the current id space.  Callers above should be able
+** to access gr->gr_sym, gr->gr_type, and gr->gr_id when wanting the variable.
+** The type of gr->gr_type should be the equivalent Equel type (C) not the
+** host language type.
+*/
+
+/* %L rules begin - ADA dependent grammar */
+
+/*
+** G rules that must defined by L because of differences between
+** languages and systems.
+*/
+
+/* Equel block delimiters */
+
+block_open:	tLBRACE
+	|	tABEGIN
+;
+
+block_close:	tRBRACE
+	|	tEND
+;
+
+/*
+** Param target lists.
+**
+** Syntax:	PARAM ( format, argvec )
+**
+** Generates:
+**		For Out lists:
+**		    IIoutfunc( targetlist, argvector );
+**		For In lists:
+**		    IIinfunc( targetlist, argvector );
+** Note:
+**    1. C and Fortran store raw user arguments for historical reasons.
+**    2. Others should parse: tPARAM tLPAREN string tCOMMA host_var tRPAREN
+**	 Remember to set GR_NOINDIR before parsing host_var.
+*/
+
+/* Quel Param target lists */
+
+ql_in_param:	ql_param_parens		/* Input param */
+		{
+		    gen_call( IIPARSET );
+		}
+;
+ql_out_param:	ql_param_parens		/* Output param */
+		{
+		    gen_call( IIPARRET );
+		}
+;
+ql_param_parens: tPARAM tLPAREN		/* args tRPAREN */
+		{
+		    db_send();
+		    sc_eat( id_add, SC_STRIP|SC_NEST|SC_SEEN, ERx(")"),
+								    '(', ')' );
+		    id_free();
+		    er_write( E_EQ0076_grNOWUNSUPP, EQ_ERROR, 1, ERx("PARAM") );
+		}
+;
+
+/*
+** Form param target lists.
+*/
+
+fm_out_param:	fm_param_parens		/* Output param */
+		{
+		    gen_call( IIPARRET );
+		}
+;
+fm_in_param:	fm_param_parens		/* Input param */
+		{
+		    gen_call( IIPARSET );
+		}
+;
+fm_param_parens: tPARAM tLPAREN		/* args tRPAREN */
+		{
+		    sc_eat( id_add, SC_STRIP|SC_NEST|SC_SEEN, ERx(")"),
+								    '(', ')' );
+		    id_free();
+		    er_write( E_EQ0076_grNOWUNSUPP, EQ_ERROR, 1, ERx("PARAM") );
+		}
+;
+
+/*
+** Must allow some of our reserved words in these places for the upper grammar
+** (for FRS stuff)
+*/
+
+/* We must allow "type" here. (inquire_frs) */
+frs_constname:	tATYPEDEF
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/* HOST CODE +++ */
+/* Host code production
+**
+** The scanner has passed the full line of host language
+** code, as an argument.  The newline is included.
+*/
+host_code:	tHOSTCODE
+		{
+		    if ((gr->gr_flag & GR_HOSTCODE) == 0)
+		    {
+			gen_line( ERx("host code") );
+			gr->gr_flag |= GR_HOSTCODE;
+		    }
+		    gen_host( G_H_CODE, $1.s );
+		    gr->A_var = AvarDEC;	/* Maybe dec's to follow */
+		}
+	|	tSEMICOL			/* Allow random ';' */
+;
+		
+/* DECLARATIONS +++ */
+host_declare:	Acompilation
+	|	Abasic_declaration
+;
+
+/*
++* Acompilation:	[SEPARATE (name)] package-or-subprogram-body
+*/
+/* COMPILATION UNITS +++ */
+Acompilation:	Asecond_unit
+	|	Acontext_elem
+;
+
+Asecond_unit:	Alib_unit_body
+	|	Asubunit
+;
+
+/*
++* Alib_unit_body:	package-or-subprogram body
+*/
+Alib_unit_body:	Asubprog_body
+	|	Apack_body
+;
+
+/*
++* Asubprog_body:	PROC name [(params)] IS [decls] BEGIN stmts END [name] ;
+**	|		FUNC name [(params)] RETURNS type-name IS [decls]
+**			    BEGIN stmts END [name] ;
+*/
+/* DECL_PART-BASIC_ITEMS-BODY-PROPER-SUBPROG +++ */
+Asubprog_body:	Asubprog_spec Ais_key Agen_newline Aopt_decl_part Abegin_key
+			Astatement_list Aend_key Aend_name_key Asemi_key
+			Ablock_close
+;
+
+Asubprog_spec:	Aproc_key Ablock_open Aname_key Aopt_formal_part
+	|	Afunc_key Ablock_open Adesignator Aopt_formal_part Areturn_key
+			Aname_key
+;
+
+/*
++* Apack_body:		PACKAGE BODY name IS [decls] [BEGIN stmts] END [name] ;
+*/
+/* DECL_PART-BASIC_ITEMS-BODY-PROPER-PACK +++ */
+Apack_body:	Apack_body_head Ais_key Agen_newline Aopt_decl_part
+			Aopt_pack_stmts Aend_key Aend_name_key Asemi_key
+			Ablock_close
+;
+
+Aopt_pack_stmts: /* EMPTY */
+	|	Abegin_key Astatement_list
+;
+
+Aend_name_key:	/* EMPTY */
+	|	Aname_key
+	|	Atname_key
+	|	Arname_key
+;
+
+Apack_body_head:
+		Apackage_key Abody_key Ablock_open Aname_key
+;
+
+Ablock_open:	/* EMPTY */
+		{
+		    gr->A_blk++;
+		    sym_s_begin( A_CLOSURE );	/* ADA closure is always 0 */
+		    gr->A_var = AvarDEC;	/* On entry expect declares */
+		    gen_do_indent( 1 );
+		}
+;
+
+Ablock_close:	/* EMPTY */
+		{
+		    if (gr->A_blk > 1)
+			_VOID_ sym_s_end( gr->A_blk-- );
+		  /*
+		  ** On ADA block exit set decl flag
+		  ** -- may be immediate decl names.
+		  ** QUEL statements start with a keyword which will switch
+		  ** to USE mode.
+		  */
+		    gr->A_var = AvarDEC;
+		    gen_do_indent( -1 );
+		}
+;
+
+Adesignator:	Aname_key
+	|	Astring_key
+;
+
+Aopt_formal_part: /* EMPTY */
+	|	Alparen_key Aparam_list Arparen_key
+;
+
+/*
++* Aparam_list:		name {, name} : [mode] type-name [:= stuff]
+*/
+Aparam_list:	Aparam_spec
+	|	Aparam_list Aformal_semi Aparam_spec
+;
+
+Aformal_semi:	tSEMICOL
+		{
+		    gr->A_val = 0;		/* not really needed */
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+
+Aparam_spec:	Adecl_list Acolon_key Amode Atype_mark Aparam_init
+		{
+		    ADA_DECLARE( $1.i, ($3.i ? syFisCONST:syFisVAR), $4.v );
+		}
+;
+
+Amode:		/* EMPTY */
+		{
+		    $$.i = 1;		/* default is IN */
+		}
+	|	Ain_key
+		{
+		    $$.i = 1;
+		}
+	|	Ain_key Aout_key
+		{
+		    $$.i = 0;
+		}
+	|	Aout_key
+		{
+		    $$.i = 0;
+		}
+;
+
+/* Param initialization may end with a left paren too */
+Aparam_init:	/* EMPTY */	
+	|	Aassign_key
+		{
+		    sc_eat( gen_code, SC_BACK|SC_NEST, ERx(");"), '(', ')' );
+		}
+;
+
+
+Asubunit:	Asubunit_begin Abody_proper
+;
+
+Asubunit_begin:	Aseparate_key
+		{
+		    sc_eat( gen_code, SC_NEST, ERx(")"), '(', ')' );
+		    gen_host( G_H_NEWLINE, NULL );
+		    er_write( E_E60013_haTYPUNSUPP, EQ_ERROR, 1,
+							    ERx("SEPARATE") );
+		}
+;
+
+/* DECL_PART-BASIC_ITEMS-BODY-PROPER +++ */
+Abody_proper:	Asubprog_body
+	|	Apack_body
+;
+
+/*
++* Acontext_elem:	WITH name ;
+**	|		USE name ;
+*/
+Acontext_elem:	Awith_clause
+	|	Ause_clause
+;
+
+Awith_clause:	Axwith_clause tSEMICOL
+		{
+		    gen_host( G_H_NEWLINE, NULL );
+		}
+;
+
+Axwith_clause:	tWITH tADECNAME
+		{
+		    if (STbcompare($2.s,0,ERx("equel"),0,TRUE)==0)
+		    {
+			gr->A_with |= AwithEQUEL;
+			gen_declare( FALSE );
+		    } else if (STbcompare($2.s,0,ERx("equel_forms"),0,TRUE)==0)
+		    {
+			gr->A_with |= AwithEQUEL|AwithFORMS;
+			gen_declare( TRUE );
+		    } else
+		    {
+			gen_host( G_H_KEY, $1.s );
+			gen_host( G_H_KEY, $2.s );
+			sc_eat( gen_code, SC_BACK, ERx(";"), '(', ')' );
+			gen_host( G_H_OP, ERx(";") );
+		    }
+		}
+;
+
+/* DECL_PART-BASIC_ITEMS-USE +++ */
+Ause_clause:	Axuse_clause tSEMICOL
+		{
+		    gen_host( G_H_NEWLINE, NULL );
+		}
+;
+
+Axuse_clause:	tAUSE tADECNAME
+		{
+		    if ((STbcompare($2.s,0,ERx("equel"),0,TRUE) != 0) &&
+		        (STbcompare($2.s,0,ERx("equel_forms"),0,TRUE) != 0))
+		    {
+			gen_host( G_H_KEY, $1.s );
+			gen_host( G_H_KEY, $2.s );
+			sc_eat( gen_code, SC_BACK, ERx(";"), '(', ')' );
+			gen_host( G_H_OP, ERx(";") );
+		    }
+		}
+;
+
+/*
++* Abasic_declaration:	name {, name} : [CONSTANT] [ARRAY (stuff) OF] type-name
+**				[:= stuff] ;
+**	|		name {, name} : CONSTANT := stuff ;
+**	|		TYPE name [(stuff)] IS type-def ;
+**	|		TYPE name [(stuff)] [IS [LIMITED] PRIVATE] ;
+**	|		SUBTYPE name IS type-name ;
+**	|		PROC name [(params)] ;
+**	|		FUNC name [(params)] RETURNS type-name ;
+**	|		PACKAGE name IS [decls] [PRIVATE decls] END [name] ;
+**	|		name : type-name RENAMES host-object ;
+**	|		FOR stuff ;		-- semantic error
+*/
+/* BASIC DECLARATIONS +++ */
+Abasic_declaration:
+		Aobj_decl
+	|	Anum_decl
+	|	Atype_decl
+	|	Asubtype_decl
+	|	Asubprog_decl
+	|	Apack_decl
+	|	Arename_decl
+	|	Arepresent_clause	/* Causes error */
+;
+
+/*
++* Aobj_decl:		name {, name} : [CONSTANT] [ARRAY (stuff) OF] type-name
+**				[:= stuff] ;
+*/
+/* BASIC-OBJECT DECLARATIONS +++ */
+Aobj_decl:	Adecl_list Acolon_key Aopt_const Asubtyp_indicat
+		    Aopt_init Asemi_key
+		{
+		    SYM	*sy;
+
+		    sy = ADA_DECLARE($1.i, ($3.i ? syFisCONST:syFisVAR), $4.v);
+		    if (sy)
+		    {
+			if ((i4)sym_g_vlue(sy) & AvalCHAR)
+			{
+			    /*
+			    ** The following #if-block mimics what 5.0 did
+			    ** (except that it complains on multi-dimensional
+			    ** arrays too).  The #else-block simply decrements
+			    ** the dims-count, allowing a properly indexed
+			    ** (multi-)array of chars to work.  It would require
+			    ** such arrays to be coerced to STRINGs.
+			    ** I don't see why this wouldn't work, but I seem
+			    ** to have taken pains in 5.0 to disallow it.
+			    ** If I have time I'll check this out.  In the
+			    ** meantime, better safe than sorry. (mrw)
+			    */
+#if 1
+			    if (sym_g_dims(sy) != 1)
+				er_write( E_E60004_haCHARDIMS, EQ_ERROR, 1,
+							    sym_str_name(sy) );
+			    else
+				sym_s_dims( sy, 0 );
+#else
+			    if (sym_g_dims(sy) == 0)
+				er_write( E_E60004_haCHARDIMS, EQ_ERROR, 1,
+							    sym_str_name(sy) );
+			    else
+				sym_s_dims( sy, sym_g_dims(sy)-1 );
+#endif
+			}
+			if ($3.i && !$5.i)
+			    er_write( E_E60009_haNOTINITED, EQ_ERROR, 1,
+							    sym_str_name(sy) );
+		    }
+		}
+	|	Adecl_list Acolon_key Aopt_const Aconstr_array_def
+		    Aopt_init Asemi_key
+		{
+		    SYM	*sy;
+
+		    sy = ADA_DECLARE($1.i, ($3.i ? syFisCONST:syFisVAR), $4.v);
+		    if (sy)
+		    {
+			if ((i4)sym_g_vlue(sy) & AvalCHAR)
+			{
+			    /*
+			    ** See the comment block above for info on
+			    ** this #if-#else block. (mrw)
+			    */
+#if 1
+			    sym_s_dims( sy, 0 );	/* not an array */
+#else
+			    i4	dims = sym_g_dims(sy);
+
+			    if (dims > 0)
+				sym_s_dims( sy, dims-1 );
+#endif
+			}
+			if ($3.i && !$5.i)
+			    er_write( E_E60009_haNOTINITED, EQ_ERROR, 1,
+							    sym_str_name(sy) );
+		    }
+		}
+;
+
+Adecl_list:	Adec_name
+		{
+		    $$.i = 1;
+		}
+	|	Adecl_list Acomma_key Adec_name
+		{
+		    $$.i = $1.i + 1;
+		}
+;
+
+Adec_name:	Aname_key
+		{
+		    ada_push( $1.s );
+		}
+;
+
+Aopt_const:	/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+	|	Aconst_key
+		{
+		    $$.i = 1;
+		}
+;
+
+/*
++* Asubtyp_indicat:	type-name [ (stuff) | DIGITS int-num [RANGE num..num] ]
+*/
+Asubtyp_indicat:
+		Atype_mark Aopt_constraint		/* { $$.v = $1.v; } */
+;
+
+Atype_mark:	tADECNAME
+		{
+		    register SYM	*sy;
+
+		    sy = sym_resolve( (SYM *)0, $1.s, A_CLOSURE, syFisTYPE );
+		    if (!sy)
+		    {
+			er_write( E_E60003_haBADTYPE, EQ_ERROR, 1, $1.s );
+			gr->A_type = T_UNDEF;
+			sy = gr->A_undefsy;
+		    } else
+		    {
+			gr->A_type = sym_g_btype(sy);
+			gr->A_size = sym_g_dsize(sy);
+			if (((i4)sym_g_vlue(sy)) & AvalUNSUPP)
+			    er_write( E_E60013_haTYPUNSUPP, EQ_ERROR, 1, $1.s );
+		    }
+		    $$.v = sy;
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Aopt_constraint: /* EMPTY */
+	|	Aconstraint
+;
+
+Aconstraint:	Arange_constr
+	|	Afloat_constr
+	|	Adiscr_or_index_constr
+;
+
+Arange_constr:	Arange_key Asimple_expr Adotdot_key Asimple_expr
+;
+
+Afloat_constr:	Adigits_key Aint_const Aopt_range_constr
+		{
+		    if ($2.i > 0 && $2.i <= 6)
+			$$.v = gr->A_fltsy;
+		    else if ($2.i >= 7 && $2.i <= 16)
+			$$.v = gr->A_dblsy;
+		    else
+		    {
+			er_write( E_E60005_haDIGITS, EQ_ERROR, 1, $2.i );
+			$$.v = gr->A_fltsy;
+		    }
+		}
+;
+
+Aopt_range_constr:
+		/* EMPTY */
+	|	Arange_constr
+;
+
+Adiscr_or_index_constr:
+		Aarray_lparen_key
+;
+
+Aarray_lparen_key:
+		Alparen_key
+		{
+		    sc_eat( gen_code, SC_SEEN|SC_NEST|SC_STRIP, ERx(")"),
+								    '(', ')' );
+		    gen_host( G_H_OP, ERx(")") );
+		}
+;
+
+Aconstr_array_def:
+		Aarray_typ_def
+;
+
+/* BASIC-TYPE-FULL-TYPEDEF-ARRAY DECLARATIONS +++ */
+Aarray_typ_def:	Aarray_def		/* { $$.v = $1.v; } */
+		{
+		    gr->A_dims++;
+		}
+;
+
+Aarray_def:	Aarray_key Aarray_lparen_key Aof_key Asubtyp_indicat
+		{
+		    $$.v = $4.v;
+		}
+;
+
+Aopt_init:	/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+	|	Ainit
+		{
+		    $$.i = 1;
+		}
+;
+
+Ainit:		Aassign_key
+		{
+		    sc_eat( gen_code, SC_BACK, ERx(";"), '(', ')' );
+		}
+;
+
+/*
++* Anum_decl:		name {, name} : CONSTANT := stuff ;
+-*
+**	The names are always declared as INTEGER; if you modify this
+**	to allow FLOAT constants then you must modify the code generator,
+**	as it currently assumes that objects with symbol-table entries have
+**	addresses and so can be sent by reference.
+*/
+/* BASIC-NUMBER DECLARATIONS +++ */
+Anum_decl:	Adecl_list Acolon_key Aconst_key Ainit Asemi_key
+		{
+		    ADA_DECLARE( $1.i, syFisCONST, gr->A_intsy );
+		}
+;
+
+/*
++* Atype_decl:		TYPE name [(stuff)] IS type-def ;
+**	|		TYPE name [(stuff)] [IS [LIMITED] PRIVATE] ;
+*/
+/* BASIC-TYPE DECLARATIONS +++ */
+Atype_decl:	Afull_typ_decl
+	|	Apart_typ_decl
+	|	Apriv_typ_decl
+;
+
+/*
++* Afull_typ_decl:	TYPE name [(stuff)] IS type-def ;
+*/
+/* BASIC-TYPE-FULL DECLARATIONS +++ */
+Afull_typ_decl:	Axfull_type Asemi_key
+;
+
+Axfull_type:	Atype_key Adec_name Aopt_discr Ais_key Atype_def
+		{
+		    if ($5.v)		/* non-enums */
+		    {
+			register SYM	*sy;
+
+			sy = ADA_DECLARE( 1, syFisTYPE, $5.v );
+		      /* access types will have a btype of T_UNDEF */
+			if (gr->A_val & AvalACCESS)
+			    sym_s_btype( sy, T_FORWARD );
+		    }
+		}
+;
+
+Aopt_discr:	/* EMPTY */
+	|	Adiscr_or_index_constr
+;
+
+/*
++* Atype_def:		( enum-literal {, enum-literal} )
+**	|		RANGE int-num .. int-num
+**	|		DIGITS int-num [RANGE num..num]
+**	|		DELTA num
+**	|		RECORD component-list END RECORD
+**	|		ACCESS type-name
+**	|		NEW type-name
+*/
+/* BASIC-TYPE-FULL-TYPEDEF DECLARATIONS +++ */
+Atype_def:	Aenum_typ_def
+		{
+		    $$.v = (SYM *)0;	/* flag as enum -- already declared */
+		}
+	|	Aint_typ_def		/* { $$.v = $1.v; } */
+	|	Areal_typ_def		/* { $$.v = $1.v; } */
+	|	Aarray_typ_def		/* { $$.v = $1.v; } */
+	|	Arec_typ_def		/* { $$.v = $1.v; } */
+	|	Aaccess_typ_def		/* { $$.v = $1.v; } */
+	|	Aderived_typ_def	/* { $$.v = $1.v; } */
+;
+
+/*
++* Aenum_typ_def:	( enum-literal {, enum-literal} )
+*/
+/* BASIC-TYPE-FULL-TYPEDEF-ENUM DECLARATIONS +++ */
+Aenum_typ_def:	Aenum_begin Aenum_end
+;
+
+Aenum_begin:	Alparen_key
+		{
+		    /*
+		    ** The name being declared is that of the type
+		    ** (LHS of "full_type_decl").
+		    ** Sets $$.v for Aenum_end.
+		    */
+		    gr->A_type = T_INT;
+		    gr->A_val |= AvalENUM;
+		    $$.v = ADA_DECLARE( 1, syFisTYPE, gr->A_bytesy );
+		}
+;
+
+Aenum_end:	Aenum_literal_list Arparen_key
+		{
+		  /* Uses $0.v from Aenum_begin */
+		    gr->A_type = T_INT;
+		    if ($1.i > 0)
+			ADA_DECLARE( $1.i, syFisCONST, $0.v );
+		}
+;
+
+Aenum_literal_list:
+		Aenum_literal			/* { $$.i = $1.i; } */
+	|	Aenum_literal_list Acomma_key Aenum_literal
+		{
+		    $$.i = $1.i + $3.i;
+		}
+;
+
+Aenum_literal:	Adec_name
+		{
+		    $$.i = 1;
+		}
+	|	Achar_literal
+		{
+		    $$.i = 0;
+		}
+;
+
+/*
++* Aint_typ_def:	RANGE int-num .. int-num
+*/
+/* BASIC-TYPE-FULL-TYPEDEF-INT DECLARATIONS +++ */
+Aint_typ_def:	Aint_range_constr
+		{
+		    gr->A_type = T_INT;
+		    switch ($1.i)
+		    {
+		      case 1:
+			$$.v = gr->A_bytesy;
+			break;
+		      case 2:
+			$$.v = gr->A_shrtsy;
+			break;
+		      case 4:
+		      default:
+			$$.v = gr->A_intsy;
+			break;
+		    }
+		}
+;
+
+Aint_range_constr:		/* returns the size of the range (in bytes) */
+		Arange_key Aint_const Adotdot_key Aint_const
+		{
+		    i4		m, n;
+
+		    m = ada_sizeof( $2.i );
+		    n = ada_sizeof( $4.i );
+		    $$.i = max( m, n );
+		}
+;
+
+/*
++* Areal_typ_def:	DIGITS int-num [RANGE num..num]
+**	|		DELTA num
+*/
+/* BASIC-TYPE-FULL-TYPEDEF-REAL DECLARATIONS +++ */
+Areal_typ_def:	Afloat_constr
+		{
+		    $$.v = $1.v;
+		}
+	|	Afixed_constr
+		{
+		    $$.v = gr->A_fltsy;
+		    er_write( E_E60013_haTYPUNSUPP, EQ_ERROR, 1, ERx("FIXED") );
+		}
+;
+
+Afixed_constr:	Afixed_acc_def Aopt_range_constr
+;
+
+Afixed_acc_def:	Adelta_key Aint_const
+	|	Adelta_key Aflt_const
+;
+
+/*
++* Arec_typ_def:	RECORD component-list END RECORD
+** Acomponent-list:	host-code
+**	|		NULL ;
+**	|		ERROR ;
+**	|		component-decl-list
+** component-decl-list:	{ component-decl } [variant-part]
+** component-decl:	name {, name} : type-name [:= stuff] ;
+** variant-part:	CASE name IS {WHEN choice {| choice} => component-list}+
+**				END CASE ;
+** choice:		num [.. num] | OTHERS | name
+*/
+/* BASIC-TYPE-FULL-TYPEDEF-RECORD DECLARATIONS +++ */
+Arec_typ_def:	Arecord_begin Acomponent_list tEND tARECORD
+		{
+		    gr->A_rec--;
+		    gr->A_type = T_STRUCT;
+		    gen_host( G_H_KEY|G_H_OUTDENT, $3.s );
+		    gen_host( G_H_KEY, $4.s );
+		  /* { $$.v = $1.v; } */
+		}
+;
+
+Arecord_begin:	Arecord_key
+		{
+		    register SYM	*sy;
+
+		    sy = $$.v = symDcEuc( ERx(""), gr->A_rec, gr->A_blk,
+						syFisTAG, A_CLOSURE, SY_TAG );
+		    if (sy)
+			sym_s_btype( sy, T_STRUCT );
+		    gr->A_rec++;
+		    gr->A_val = 0;
+		}
+;
+
+/*
++* Acomponent-list:	NULL ;
+**	|		ERROR ;
+**	|		component-decl-list
+*/
+Acomponent_list:
+		Acomponent_decl_list
+	|	Acomponent_decl_list Avariant_part
+	|	Avariant_part
+	|	Anull_key Asemi_key
+	|	error tSEMICOL
+;
+
+Acomponent_decl_list:
+		Acomponent_decl
+	|	Acomponent_decl_list Acomponent_decl
+;
+
+Acomponent_decl:
+		Adecl_list Acolon_key Acomponent_subtype_def Aopt_init Asemi_key
+		{
+		    ADA_DECLARE( $1.i, syFisVAR, $3.v );
+		}
+	|	Ahost_code
+;
+
+Ahost_code:	tHOSTCODE
+		{
+		    gr->gr_flag |= GR_HOSTCODE;
+		    gen_host( G_H_CODE, $1.s );
+		    gr->A_var = AvarDEC;	/* Maybe dec's to follow */
+		}
+	|	tSEMICOL			/* Allow random ';' */
+;
+
+Acomponent_subtype_def:
+		Asubtyp_indicat		/* { $$.v = $1.v; } */
+;
+
+Aindent_begin:
+		/* EMPTY */
+		{
+		    gen_host( G_H_NEWLINE|G_H_INDENT, NULL );
+		}
+;
+
+Aindent_end:
+		/* EMPTY */
+		{
+		    gen_host( G_H_OUTDENT, NULL );
+		}
+;
+
+Avariant_part:	Acase_key Aname_key Ais_key Aindent_begin Avariant_list
+			Aend_key Acase_key Asemi_key Aindent_end
+;
+
+Avariant_list:	Avariant
+	|	Avariant_list Avariant
+;
+
+Avariant:	Awhen_key Achoice_list Aarrow_key Acomponent_list
+;
+
+Achoice_list:	Achoice
+	|	Achoice_list Apipe_key Achoice
+;
+
+Achoice:	Asimple_expr_or_discrete_range
+	|	Aothers_key
+;
+
+Asimple_expr_or_discrete_range:
+		Asimple_expr
+	|	Asimple_expr Adotdot_key Asimple_expr
+;
+
+/*
++* Aaccess_typ_def:	ACCESS type-name
+*/
+/* BASIC-TYPE-FULL-TYPEDEF-ACCESS DECLARATIONS +++ */
+Aaccess_typ_def:
+		Aaccess_key Asubtyp_indicat
+		{
+		    $$.v = $2.v;
+		    gr->A_val |= AvalACCESS;
+		}
+;
+
+/*
++* Aderived_typ_def:	NEW type-name
+*/
+/* BASIC-TYPE-FULL-TYPEDEF-DERIVED DECLARATIONS +++ */
+Aderived_typ_def:
+		Anew_key Asubtyp_indicat
+		{
+		    $$.v = $2.v;
+		}
+;
+
+/*
++* Apart_typ_decl:	TYPE name [(stuff)] [IS [LIMITED] PRIVATE] ;
+*/
+/* BASIC-TYPE-PART DECLARATIONS +++ */
+Apart_typ_decl:	Atype_key Adec_name Aopt_discr Asemi_key
+		{
+		    register SYM	*sy;
+
+		    sy = ADA_DECLARE( 1, syFisTYPE|syFisFORWARD, (SYM *)0 );
+		    sym_s_btype( sy, T_FORWARD );
+		}
+;
+
+/* BASIC-TYPE-PRIV DECLARATIONS +++ */
+Apriv_typ_decl:	Atype_key Adec_name Aopt_discr Ais_key Aopt_limited
+		    Aprivate_key Asemi_key
+		{
+		    register SYM	*sy;
+
+		    sy = ADA_DECLARE( 1, syFisTYPE|syFisFORWARD, (SYM *)0 );
+		    sym_s_btype( sy, T_FORWARD );
+		}
+;
+
+Aopt_limited:	/* EMPTY */
+	|	Alimited_key
+;
+
+/*
++* Asubtype_decl:	SUBTYPE name IS type-name ;
+*/
+/* BASIC-SUBTYPE DECLARATIONS +++ */
+Asubtype_decl:	Asubtype_key Adec_name Ais_key Asubtyp_indicat Asemi_key
+		{
+		    ADA_DECLARE( 1, syFisTYPE, $4.v );
+		}
+;
+
+/*
++* Asubprog_decl:	PROC name [(params)] ;
+**	|		FUNC name [(params)] RETURNS type-name ;
+*/
+/* BASIC-SUBPROG DECLARATIONS */
+Asubprog_decl:	Asubprog_spec Asemi_key Ablock_close
+;
+
+/*
++* Apack_decl:		PACKAGE name IS [decls] [PRIVATE decls] END [name] ;
+*/
+/* BASIC-PACKAGE DECLARATIONS */
+Apack_decl:	Apack_spec Asemi_key
+;
+
+/*
+** Package specifications must not start a new scope, as the objects
+** declared therein must be visible outside of them; eg, compiled forms.
+*/
+Apack_spec:	Apackage_key Aname_key Ais_key Aindent_begin
+			Aopt_basic_decl_item_list Aopt_private_part
+			Aend_key Aend_name_key Aindent_end
+;
+
+/*
++* Arename_decl:	name : type-name RENAMES host-object ;
+*/
+/*
+** Arename_decl - Format supported is that for variables (not package or
+** 		  subroutine names):
+**			name: type renames name;
+**
+**		  The Aopt_const isn't legal, but then no one should use it!
+**		  (It's there to prevent a shift/reduce conflict).  A semantic
+**		  error is issued if the CONSTANT is present.
+**
+**		  Only one name is allowed, although more are allowed to
+**		  prevent a shift/reduce conflict.  A error is issued
+**		  if a list is given.
+*/
+/* BASIC-RENAME DECLARATIONS +++ */
+Arename_decl:	Adecl_list Acolon_key Aopt_const Atype_mark Arename_key
+		    Arename_var Asemi_key
+		{
+		    SYM		*sy, *typsy;
+
+		    if ($6.v)
+		    {
+			i4		dims = gr->A_dims;
+
+		      /* Fake a syntax error if "CONSTANT" appears */
+			if ($3.i > 0)
+			    er_write( E_EQ0244_yySYNWRD, EQ_ERROR, 1,
+							    ERx("CONSTANT") );
+			if ($1.i > 1)
+			    er_write( E_E60010_haRNMMANY, EQ_ERROR, 0 );
+
+		      /* ADA_DECLARE uses A_dims, which is set by Arename_var */
+			dims = gr->A_dims;
+			gr->A_dims = 0;
+			sy = ADA_DECLARE( $1.i, syFisVAR, sym_g_type($6.v) );
+
+			typsy = $4.v;
+			if (typsy)
+			{
+			  /* Base type, dims, and element size must match */
+			    if (sym_g_btype($6.v) != sym_g_btype(typsy) ||
+			        sym_g_dims($6.v) != (sym_g_dims(typsy)+dims) ||
+			        sym_g_dsize($6.v) != sym_g_dsize(typsy))
+			    {
+				er_write(E_E6000F_haRNMCOMPAT, EQ_ERROR, 0);
+			    }
+
+			    /*
+			    ** A subscripted rename-var is not an array
+			    ** even if the renamed-object is.
+			    */
+			    if (sy && dims && sym_g_dims($6.v))
+				sym_s_dims( sy, 0 );
+			}
+		    } else
+			ADA_DECLARE( $1.i, syFisVAR, gr->A_undefsy );
+		    id_free();		/* rename var name */
+		}
+;
+
+Arename_var:	Arename_setup Axrename_var
+		{
+		    SYM		*sy;
+		    i4		stat;
+		    char	*name;
+
+		    stat = symRsEuc( &sy, A_CLOSURE, syFisVAR|syFisCONST );
+		    name = str_add( STRNULL, id_getname() );
+		    /* id_free is done above in Arename_decl */
+
+		    gen_host( G_H_KEY, name );
+
+		    switch (stat)
+		    {
+		      case syL_OK:
+			$$.v = sy;
+			break;
+		      case syL_NO_NAMES:
+		      case syL_BAD_REF:
+		      case syL_NOT_FOUND:
+		      case syL_RECURSIVE:
+		      default:
+			er_write( E_E6000E_haRNMBAD, EQ_ERROR, 1, name );
+			$$.v = (SYM *)0;
+			gr->A_dims = 0;
+			break;
+		    }
+		}
+;
+
+Arename_setup:	/* EMPTY */
+		{
+		    sym_f_init();
+		    gr->A_dims = 0;
+		}
+;
+
+Axrename_var:	Arename_name
+	|	Axrename_var Arename_dot Arename_name
+;
+
+Arename_name:	Axrename_name
+	|	Axrename_name tLPAREN
+		{
+		    gr->A_dims = 1;
+		    sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+		}
+;
+
+Arename_dot:	tPERIOD
+		{
+		    id_add( $1.s );
+		    gr->A_dims = 0;
+		}
+;
+
+Axrename_name:	tADECNAME
+		{
+		    id_add( $1.s );
+		    sym_fpush( sym_find($1.s) );
+		}
+;
+
+/*
++* Arepresent_clause:	FOR stuff ;		-- semantic error
+*/
+/* BASIC-REPRESENT DECLARATIONS +++ */
+Arepresent_clause:
+		Axrepresent Asemi_key
+;
+
+Axrepresent:	tFOR
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    sc_eat( gen_code, SC_BACK, ERx(";"), '(', ')' );
+		    er_write( E_E60016_haUNSUPP, EQ_ERROR, 1, ERx("FOR") );
+		}
+;
+
+/* DECLARATION PART +++ */
+Aopt_decl_part:	/* EMPTY */
+	|	Adecl_part
+;
+
+Adecl_part:	Abasic_decl_item_list
+;
+
+Aopt_basic_decl_item_list:
+		/* EMPTY */
+	|	Abasic_decl_item_list
+;
+
+Abasic_decl_item_list:
+		Abasic_decl_item
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+	|	Abasic_decl_item_list Abasic_decl_item
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+;
+
+/*
++* Abasic_decl_item:	object-declaration
+**	|		number-declaration
+**	|		type-declaration
+**	|		subtype-declaration
+**	|		subprogram-declaration
+**	|		package-declaration
+**	|		rename-declaration
+**	|		represent-clause
+**	|		PROC name [(params)] IS SEPARATE ;
+**	|		FUNC name [(params)] RETURNS type-name IS SEPARATE ;
+**	|		PROC name [(params)] IS [decls] BEGIN stmts END [name] ;
+**	|		FUNC name [(params)] RETURNS type-name IS [decls]
+**				BEGIN stmts END [name] ;
+**	|		USE name ;
+**	|		host-code
+**	|		ERROR ;
+*/
+/* DECL_PART-BASIC_ITEMS +++ */
+Abasic_decl_item:
+		Abasic_declaration
+	|	Ause_clause
+	|	Abody			/* really a later_decl_item_list */
+	|	Ahost_code
+	|	error tSEMICOL
+;
+
+/* DECL_PART-BASIC_ITEMS-BODY +++ */
+Abody:		Abody_proper
+	|	Abody_stub
+;
+
+/*
++* Abody_stub:		PROC name [(params)] IS SEPARATE ;
+**	|		FUNC name [(params)] RETURNS type-name IS SEPARATE ;
+*/
+/* DECL_PART-BASIC_ITEMS-BODY-STUB +++ */
+Abody_stub:	Asubprog_spec Ais_key Aseparate_key Asemi_key Ablock_close
+	|	Apack_body_head Ais_key Aseparate_key Asemi_key Ablock_close
+;
+
+/*
++* Ablock_stmt:		[DECLARE decls] BEGIN stmts END [name]
+*/
+/* STATEMENTS */
+Ablock_stmt:	Aplain_block			/* { $$.s = $1.s; } */
+	|	Adecl_block			/* { $$.s = $1.s; } */
+;
+
+Aplain_block:	Abegin_key Astatement_list Aend_key Aend_name_key
+;
+
+Adecl_block:	Adeclare_key Agen_newline Ablock_open Adecl_part Abegin_key
+			Astatement_list Aend_key Aend_name_key Ablock_close
+;
+
+Aopt_private_part: /* EMPTY */
+	|	Apriv_out_key Abasic_decl_item_list
+;
+
+Astatement_list:
+		Astatement
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+	|	Astatement_list Astatement
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+;
+
+/*
++* Astatement:		[DECLARE decls] BEGIN stmts END [name] ;
+**	|		NULL ;
+**	|		EQUEL-statement
+*/
+Astatement:	Ablock_stmt Asemi_key
+	|	Anull_key Asemi_key
+	|	statement
+;
+
+/* MISCELLANEOUS +++ */
+Asimple_expr:	Aint_const
+		{
+		    gr->A_type = T_INT;
+		    $$.v = gr->A_intsy;
+		}
+	|	Aflt_const
+		{
+		    gr->A_type = T_FLOAT;
+		    $$.v = gr->A_fltsy;
+		}
+	|	Achar_literal
+		{
+		    gr->A_type = T_CHAR;
+		    $$.v = gr->A_chrsy;
+		}
+	|	Aname_key
+		{
+		    gr->A_type = T_INT;
+		    $$.v = gr->A_bytesy;
+		}
+;
+
+Achar_literal:	tSCONST
+		{
+		    char	buf[4];
+
+		    buf[0] = '\'';
+		    buf[1] = *($1.s);
+		    buf[2] = '\'';
+		    buf[3] = '\0';
+		    gen_host( G_H_OP, buf );
+		}
+;
+
+Aint_const:	tINTCONST
+		{
+		    i4		i = 0;
+		    /*
+		    ** All integer constants (and subranges) are size(integer)
+		    ** on VMS.
+		    */
+		    gen_host( G_H_KEY, $1.s );
+		    CVan( $1.s, &i );
+		    $$.i = i;
+		}
+	|	tARUOP tINTCONST %prec tUNARYOP
+		{
+		    i4		i = 0;
+
+		    CVan( $2.s, &i );
+		    if (*($1.s) == '-')		/* tARUOP is only + and - */
+		    {
+			gen_host( G_H_OP, ERx("-") );
+			$$.i = -i;
+		    } else
+			$$.i = i;
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+
+Aflt_const:	tFLTCONST
+		{
+		    /*
+		    ** All float constants (and subranges) are size(float)
+		    ** on VMS.
+		    */
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tARUOP tFLTCONST %prec tUNARYOP
+		{
+		    if (*($1.s) == '-')		/* tARUOP is only + and - */
+			gen_host( G_H_OP, ERx("-") );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tDECCONST	/* No decimal in Ada, treat as a float */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tARUOP tDECCONST %prec tUNARYOP
+		{
+		    if (*($1.s) == '-')		/* tARUOP is only + and - */
+			gen_host( G_H_OP, ERx("-") );
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+
+Agen_newline:	/* EMPTY */
+		{
+		    gen_host( G_H_NEWLINE, NULL );
+		}
+;
+
+/*
+** KEYWORDS +++
+*/
+
+Aaccess_key:	tAACCESS
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Aarray_key:	tAARRAY
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Aarrow_key:	tAARROW
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Aassign_key:	tAASSIGN
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Abegin_key:	tABEGIN
+		{
+		    gen_host(G_H_KEY|G_H_OUTDENT|G_H_INDENT|G_H_NEWLINE, $1.s);
+		}
+;
+Abody_key:	tABODY
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Acase_key:	tACASE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Acolon_key:	tCOLON
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Acomma_key:	tCOMMA
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Aconst_key:	tACONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Adeclare_key:	tADECLARE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Adelta_key:	tADELTA
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Adigits_key:	tADIGITS
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Adotdot_key:	tADOTDOT
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Aend_key:	tEND
+		{
+		    gen_host( G_H_KEY|G_H_OUTDENT|G_H_INDENT, $1.s );
+		}
+;
+Afunc_key:	tAFUNCTION
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Ain_key:	tIN
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Ais_key:	tIS
+		{
+		  /* since "=" also goes to tIS */
+		    if (STbcompare($1.s, 0, ERx("is"), 0, TRUE))
+		    {
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+							ERx("ADA"), ERx("IS") );
+			gen_host( G_H_KEY, ERx("is") );
+		    } else
+			gen_host( G_H_KEY, $1.s );
+		}
+;
+Alimited_key:	tALIMITED
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Alparen_key:	tLPAREN
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Aname_key:	tADECNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Anew_key:	tANEW
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Anull_key:	tNULL
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Aof_key:	tOF
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Aothers_key:	tAOTHERS
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Aout_key:	tOUT
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Apackage_key:	tAPACKAGE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->A_var = AvarDEC;	/* On entry expect declares */
+		}
+;
+Apipe_key:	tAPIPE
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Aprivate_key:	tAPRIVATE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Apriv_out_key:	tAPRIVATE	/* Like Aprivate_key, but temp outdent-ed */
+		{
+		    gen_host(G_H_KEY|G_H_INDENT|G_H_OUTDENT|G_H_NEWLINE, $1.s);
+		}
+;
+Aproc_key:	tAPROCEDURE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Arange_key:	tRANGE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Arecord_key:	tARECORD
+		{
+		    gen_host( G_H_KEY|G_H_INDENT|G_H_NEWLINE, $1.s );
+		}
+;
+Arename_key:	tARENAMES
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Areturn_key:	tARETURN
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Arname_key:	tAREC_VAR
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->A_var = AvarDEC;	/* Back to DEC mode */
+		}
+;
+Arparen_key:	tRPAREN
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+Asemi_key:	tSEMICOL
+		{
+		    gr->A_val = 0;
+		    gen_host( G_H_OP|G_H_NEWLINE, $1.s );
+		}
+;
+Aseparate_key:	tASEPARATE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Astring_key:	tSCONST
+		{
+		    gen_host( G_H_SCONST, $1.s );
+		}
+;
+Asubtype_key:	tASUBTYPE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->A_var = AvarDEC;
+		}
+;
+Atname_key:	tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->A_var = AvarDEC;	/* Back to DEC mode */
+		}
+;
+Atype_key:	tATYPEDEF
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->A_var = AvarDEC;
+		}
+;
+Awhen_key:	tAWHEN
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+/* VAR USAGE +++ */
+/*
+** host_var - ADA host variable to receive data.
+**
+** Returns to main grammar:
+**	gr->gr_type = Type of variable (T_UNDEF if an error).
+**	gr->gr_sym  = Should be the variable pointer.
+**	gr->gr_id   = Name of variable.
+** Example:
+**		var = expr
+**		arr(subs) = expr
+**		struct(2).mem = expr
+**
+** Notes:
+** 1. Ause_var returns pointer to current symbol, if any.
+** 2. gr->A_simpvar is set if an array/structure was not used.
+** 3. gr->A_err is set if an error occurred parsing this variable.
+*/
+
+host_var:	Ause_setup Ause_var
+		{
+		    SYM		*sy;
+
+		    gr->gr_type = T_UNDEF;		/* Default */
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		    if ((sy = $2.v) == (SYM *)0)
+		    {
+			ADA_ERR( (E_E60012_haUNDEC, EQ_ERROR, 1, gr->gr_id) );
+			if (gr->A_simpvar)
+			{
+			    sy = symDcEuc( gr->gr_id, 0, gr->A_blk,
+					syFisVAR, A_CLOSURE, SY_NORMAL );
+			    if (sy)
+				sym_s_btype( sy, T_UNDEF );
+			}
+		    } else	/* Known to EQUEL -- check usage */
+		    {
+			/* Must be a real variable - not constant or enum */
+			if (!syBitAnd(sym_g_useof(sy), syFisVAR))
+			{
+			    ADA_ERR((E_E6000A_haNOTVAR, EQ_ERROR, 1,gr->gr_id));
+			} else if (sym_g_btype(sy) == T_STRUCT)
+			{
+			  /*
+			  ** Cannot be a structure - this can't really happen as
+			  ** structures affect parsing.
+			  */
+			    ADA_ERR( (E_E60014_haVARRECORD, EQ_ERROR, 1,
+								gr->gr_id) );
+			} else
+			    gr->gr_type = sym_g_btype(sy);
+		    }
+		    gr->gr_sym = sy;
+		}
+;
+
+/*
+** host_name_var - ADA simple name or host variable.
+**
+** Returns to main grammar:
+**	gr->gr_type = Type of var/name (T_NONE if no variable was used).
+**	gr->gr_sym  = If var was returned by Ause_var then return it.
+**	gr->gr_id   = Name of variable or identifier.
+**
+** Notes:
+** 1. Ause_var returns pointer to current symbol, if any.
+** 2. gr->A_err is set if an error occurred parsing this variable.
+*/
+host_name_var:	Ause_setup Ause_var
+		{
+		    if ($2.v)
+		    {
+			if (gr->A_err)
+			    gr->gr_type = T_UNDEF;
+			else
+			    gr->gr_type = sym_g_btype( $2.v );
+		    } else
+			gr->gr_type = T_NONE;
+		    gr->gr_sym = $2.v;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+	|	tDEREF
+		{
+		    gr->gr_type = T_NONE;
+		    gr->gr_sym = (SYM *)0;
+		    gr->gr_id = str_add( STRNULL, $1.s );
+		}
+;
+
+Ause_setup:	/* Set up variable lookup info */
+		{
+		    gr->A_record = (SYM *)0;
+		    gr->A_var = AvarUSE;
+		    gr->A_simpvar = TRUE;
+		    gr->A_err = 0;
+		}
+;
+
+/*
+** Ause_var - Full reference to any name (variable or not) returns sym pointer
+**	      if there is a variable.
+**
+** Notes:
+** 1. Ause_var returns current symbol pointer.
+*/
+							   /* Examples */
+Ause_var:	Ause_regname Ause_paren			   /* var */
+		{
+		    $$.v = $1.v;
+		}
+	|	Ause_recordvar Ause_recordname Ause_paren  /* rec.mem */
+		{
+		    $$.v = $2.v;
+		    gr->A_simpvar = FALSE;
+		}
+	|	Ause_recordvar Ause_all			   /* rec.rec.all */
+		{
+		    $$.v = $2.v;
+		    gr->A_simpvar = FALSE;
+		}
+;
+
+/*
+** Ause_regname - A simple name (not the root of a record).
+**
+** Set the symbol pointer (if there is one) for returning upward, and for
+** Ause_paren.
+*/
+Ause_regname:	tNAME
+		{
+		    id_add( $1.s );
+		    /*
+		    ** MUST check for syFisCONST as IN params
+		    ** and CONSTANT objects are syFisCONST but can be vars.
+		    **
+		    ** $$.v set for $0 of Ause_paren
+		    */
+	    	    $$.v = sym_resolve( (SYM *)0, $1.s, A_CLOSURE,
+				        syFisVAR|syFisCONST );
+		    /* Reset here, because YACC looks ahead for left paren */
+		    gr->A_record = (SYM *)0;
+		}
+;
+
+/*
+** Because of the problem of INGRES and ADA both using the dot, we had to use
+** the same solution as in EQUEL/C and therefore require any qualified name that
+** starts with a record head to be correctly qualified.  Under this
+** assumption we have to use sym_resolve instead of the cleaner symRsEuc.
+**
+** Special rules and token, to prevent weird conflicts between the ADA '.' and
+** the INGRES '.', both of which are really just a NAME { .  NAME }.
+** 1. The special tAREC_VAR token is returned explicitly by gr_mechanism,
+**    and causes all field members to be read till the last non-record member.
+**    Gr_mechanism uses the global gr->A_record to find out if we are nesting
+**    record references.  Even though A_record could be set by gr_mechanism,
+**    it is not set because YACC may just be looking ahead.
+** 2. The token tAREC_VAR is also returned if we have an access variable
+**    that is not pointing at a record type - the only way to use it is via
+**    the ".all" clause.  For example:
+**	## type IP is access INTEGER;
+**	## iptr: IP;
+**	## sleep iptr.all;
+*/
+Ause_recordvar:	Ause_recordmem 			/* recordmem */
+	|	Ause_recordvar Ause_recordmem 	/* recordmem.recordmem */
+;
+Ause_recordmem:	Ause_mem_elm Ause_dot  		/* recordmem (i) . */
+;
+Ause_mem_elm:	Ause_recordkey tLPAREN	/* tRPAREN eaten by EQUEL */
+		{
+		    /*
+		    ** Whether or not this is an array reference, eat
+		    ** up the left paren!  Otherwise we will get a syntax
+		    ** error at the left paren.  There is a symbol table
+		    ** entry but we may not know it as an array.
+		    */
+		    if (gr->A_record && !sym_g_dims(gr->A_record))
+			ADA_ERR( (E_E60002_haCANTINDIR, EQ_ERROR, 1,
+								id_getname()) );
+		    sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+		}
+	|	Ause_recordkey
+		{
+		    if (gr->A_record && sym_g_dims(gr->A_record))
+			ADA_ERR( (E_E60001_haMUSTINDIR, EQ_ERROR, 1,
+								id_getname()) );
+		}
+;
+Ause_recordkey:	tAREC_VAR 	/* Returned explicitly by gr_mechanism */
+		{
+		    id_add( $1.s );
+		    /*
+		    ** MUST check for syFisCONST as IN params
+		    ** and CONSTANT objects are syFisCONST but can be RECORDs.
+		    */
+		    gr->A_record = sym_resolve( gr->A_record, $1.s, A_CLOSURE,
+						syFisVAR|syFisCONST );
+		}
+;
+Ause_dot:	tPERIOD 	 /* ADA '.' , not INGRES '.' */
+		{
+		    id_add( $1.s );
+		}
+;
+Ause_recordname:
+		tNAME 		/* Last member on the qualified list */
+		{
+		    SYM		*sy;
+
+		    id_add( $1.s );
+		    /*
+		    ** MUST check for syFisCONST as IN params
+		    ** and CONSTANT objects are syFisCONST but are vars.
+		    ** Use A_record as the parent pointer.
+		    */
+		    sy = sym_resolve( gr->A_record, $1.s,  A_CLOSURE,
+				      syFisVAR|syFisCONST );
+		    if (sy == (SYM *)0)
+		    {
+			ADA_ERR( (E_E6000D_haRECORDREF, EQ_ERROR, 1,
+								id_getname()) );
+		    }
+		    /* Reset here, because YACC looks ahead for left paren */
+		    gr->A_record = (SYM *)0;
+		    $$.v = sy;		/* Set for $0 of Ause_paren */
+		}
+;
+Ause_all:	tALL
+		{
+		    SYM		*sy;
+
+		    id_add( $1.s );
+		    /*
+		    ** Inspect A_record, and its children if it is a record,
+		    ** or its type if it is an access type to a scalar type.
+		    */
+		    if ((sy = gr->A_record) == (SYM *)0)
+		    {
+			ADA_ERR( (E_E6000B_haBADRECALL, EQ_ERROR, 1,
+								id_getname()) );
+			$$.v = (SYM *)0;
+		    } else if (sym_g_btype(sy) == T_STRUCT)
+		    {
+		       ADA_ERR((E_E6000C_haSCALRECALL, EQ_ERROR, 1,
+								id_getname()));
+		       $$.v = (SYM *)0;
+		    } else 	/* Must be a scalar access type */
+		    {
+			/*
+			** An access type was used, without a record as its
+			** final type. Eg: type ip is access INTEGER;
+			**		   I: ip;
+			**		   sleep I.ALL
+			*/
+			$$.v = sy;
+		    }
+		}
+;
+
+/*
+** Ause_paren relies on the fact that $0 is set to point at a symbol, so that
+** arrays (beginning with left parens) can be parsed.  This rule comes after
+** Ause_regname or Ause_recordname so both must set $$.v.
+**
+*/
+Ause_paren:	tLPAREN		/* tRPAREN may be eaten */
+		{
+		    if ($0.v)    /* Variable found - are these our parens */
+		    {
+			if (sym_g_dims($0.v))	
+			{
+			    $$.i = TRUE;
+			    gr->A_simpvar = FALSE;	/* non-Simpvar */
+			    sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"),
+								    '(', ')' );
+			} else
+			    SC_PTR--;
+		    } else
+			SC_PTR--;
+		}
+	|	/* No parens used */
+		{
+		    /* Check to see dimensions needed on last element */
+		    if ($0.v && sym_g_dims($0.v))
+		    {
+			ADA_ERR( (E_E60001_haMUSTINDIR, EQ_ERROR, 1,
+								id_getname()) );
+		    }
+		}
+;
+/* %L rules end */
+
+%%
+
+/* %L mechanism begin - All the stuff to do with gr_mechanism() */
+
+GLOBALDEF GR_ADTYPES   gr_typetab[] = {
+  /* first 3 are fake; just for internal use */
+ {ERx(".byte"),		T_INT,	sizeof(char),	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+ {ERx(".short"),	T_INT,	sizeof(short),	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+ {ERx(".undef"),	T_UNDEF, sizeof(int), 	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+  /* now the real ones */
+ {ERx("character"),	T_CHAR,	0,   		EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+ {ERx("string"),	T_CHAR,	0,   		EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+  /* size of booleans is 1 byte on VMS */
+ {ERx("boolean"),	T_INT,	sizeof(char),	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+#if defined(axp_osf)
+ {ERx("short_short_integer"),T_INT,sizeof(char),EQ_ADVADS|EQ_ADGNAT          },
+#else /* axp_osf */
+ {ERx("tiny_integer"),	T_INT,	sizeof(char),	EQ_ADVADS|EQ_ADGNAT	     },
+#endif /* axp_osf */
+ {ERx("short_short_integer"),T_INT,	sizeof(char),		  EQ_ADVAX   },
+ {ERx("short_integer"),	T_INT, 	sizeof(char),	EQ_ADALSYS		     },
+ {ERx("short_integer"),	T_INT, 	sizeof(short),	EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX },
+ {ERx("integer"), 	T_INT, 	sizeof(short),	EQ_ADALSYS		     },
+ {ERx("integer"), 	T_INT, 	sizeof(int),	EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX },
+#if defined(axp_osf)
+ {ERx("long_integer"),  T_INT,  sizeof(long),   EQ_ADVADS|EQ_ADGNAT          },
+#endif /* axp_osf */
+ {ERx("long_integer"), 	T_INT, 	sizeof(int),	EQ_ADALSYS		     },
+ {ERx("natural"), 	T_INT, 	sizeof(int),   	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+ {ERx("positive"), 	T_INT, 	sizeof(int),   	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+ {ERx("short_float"), 	T_FLOAT,sizeof(float),	EQ_ADVADS|EQ_ADGNAT	     },
+ {ERx("float"), 	T_FLOAT,sizeof(float),	EQ_ADALSYS|EQ_ADVAX	     },
+#if defined(axp_osf)
+ {ERx("float"),         T_FLOAT,sizeof(float),  EQ_ADVADS|EQ_ADGNAT          },
+ {ERx("long_float"),    T_FLOAT,sizeof(double), EQ_ADALSYS|EQ_ADVAX|EQ_ADVADS|EQ_ADGNAT},
+ {ERx("long_long_float"),T_FLOAT,sizeof(double),EQ_ADVADS|EQ_ADGNAT          },
+#else /* axp_osf */
+ {ERx("float"),	 	T_FLOAT,sizeof(double),	EQ_ADVADS|EQ_ADGNAT  	     },
+ {ERx("long_float"),	T_FLOAT,sizeof(double),	EQ_ADALSYS|EQ_ADVAX	     },
+#endif /* axp_osf */
+ {ERx("f_float"), 	T_FLOAT,sizeof(float), 	EQ_ADVAX		     },
+ {ERx("d_float"), 	T_FLOAT,sizeof(double),	EQ_ADVAX		     },
+
+  /* table separator */
+ {(char *)0,  		0, 	0, 		0			     },
+
+  /* quadruple is unsupported, and generates an error */
+ {ERx("long_long_float"),T_FLOAT, 2*sizeof(double), 	  EQ_ADVAX	     },
+
+  /* table separator */
+ {(char *)0,  		0, 	0, 		0			     },
+
+  /* now the constants */
+ {ERx("max_int"),	T_INT,	sizeof(int),	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+ {ERx("min_int"),	T_INT,	sizeof(int),	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+ {ERx("true"),		T_INT,	sizeof(char),	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+ {ERx("false"),		T_INT,	sizeof(char),	EQ_ADALSYS|EQ_ADVADS|EQ_ADGNAT|EQ_ADVAX},
+
+  /* table terminator */
+ {(char *)0,			0,	0,		0		     }
+};
+
+
+/*
+** Gr_mechanism - Language dependent utility called from within the grammar
+**		  or from outside.
+**
+** Parameters:	flag       - Which mechanism to choose.
+**		arg1, arg2 - Whatever is needed for the particular flag.
+** Returns:	None
+*/
+
+void
+gr_mechanism( flag, arg1, arg2 )
+i4	flag;
+PTR	arg1;			/* Extra arguments for particular cases */
+PTR	arg2;
+{
+    register SYM	*sy;
+    static   i4	einit = 0;
+    i4			yyequlex();
+    static   char	*patch_extension = "--"; /* Patched after SYMINIT */
+
+    switch (flag)
+    {
+      case GR_EQINIT:
+	eq->eq_lang = EQ_ADA;
+	eq->eq_def_in = ERx("qa");
+	eq->eq_def_out = patch_extension;
+	if (!einit)
+	{
+	    eq->eq_in_ext = ERx("qa");
+	    eq->eq_out_ext = patch_extension;
+	    einit = 1;
+	}
+
+      /* tell the world we're Embedded QUEL! */
+	dml->dm_lex = yyequlex;
+
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->gr_id = ERx("");
+	gr->gr_flag = GR_HOSTCODE;
+
+      /* ADA specific flags */
+	gr->A_var = AvarDEC;
+	gr->A_blk = 1;
+	gr->A_rec = 0;
+	gr->A_size = 0;
+	gr->A_dims = 0;
+	gr->A_record = (SYM *)0;
+	gr->A_with = AwithNONE;
+
+	ecs_clear();
+	ada_init();
+	break;
+
+      case GR_SYMINIT:
+	/* Patch up extensions as Ada command line flags -a may change them */
+	if (eq->eq_def_out == patch_extension)
+	    eq->eq_def_out = (eq->eq_config & (EQ_ADVAX|EQ_ADALSYS)) ?
+				ERx("ada") : ERx("a");
+	if (eq->eq_out_ext == patch_extension)
+	    eq->eq_out_ext = (eq->eq_config & (EQ_ADVAX|EQ_ADALSYS)) ?
+				ERx("ada") : ERx("a");
+
+	{
+	    /* Enter declarations into Equel symbol table */
+	    GR_ADTYPES	*gt;
+
+	    sym_init( (bool)TRUE );		/* ignore case */
+
+	  /* enter the types */
+	    for (gt=gr_typetab; gt->gt_id; gt++)
+	    {
+		if ((eq->eq_config & gt->gt_flags) == 0)	
+		    continue;			/* Skip if wrong Ada config */
+
+		sy = symDcEuc(gt->gt_id, 0, gr->A_blk,
+		    (syFisTYPE|syFisSYS|syFisBASE), A_CLOSURE, SY_NORMAL);
+		if (sy)
+		{
+		    sym_s_btype( sy, gt->gt_rep );
+		    sym_s_dsize( sy, gt->gt_len );
+		    sym_s_indir( sy, 0 );
+		}
+	    }
+
+	  /* skip the separator and go on with the unsupported types */
+	    for (gt++; gt->gt_id; gt++)
+	    {
+		if ((eq->eq_config & gt->gt_flags) == 0)	
+		    continue;			/* Skip if wrong Ada config */
+
+		sy = symDcEuc(gt->gt_id, 0, gr->A_blk,
+		    (syFisTYPE|syFisSYS|syFisBASE), A_CLOSURE, SY_NORMAL);
+		if (sy)
+		{
+		    sym_s_btype( sy, gt->gt_rep );
+		    sym_s_dsize( sy, gt->gt_len );
+		    sym_s_indir( sy, 0 );
+		    sym_s_vlue( sy, AvalUNSUPP );
+		}
+	    }
+
+	  /* skip the separator and go on with the constants */
+	    for (gt++; gt->gt_id; gt++)
+	    {
+		if ((eq->eq_config & gt->gt_flags) == 0)
+		    continue;			/* Skip if wrong Ada config */
+
+		sy = symDcEuc(gt->gt_id, 0, gr->A_blk,
+		    (syFisCONST|syFisSYS), A_CLOSURE, SY_NORMAL);
+		if (sy)
+		{
+		    sym_s_btype( sy, gt->gt_rep );
+		    sym_s_dsize( sy, gt->gt_len );
+		    sym_s_indir( sy, 0 );
+		}
+	    }
+	}
+
+      /* remember them for convenience */
+	gr->A_bytesy =
+		sym_resolve( (SYM *)0, ERx(".byte"), A_CLOSURE, syFisTYPE );
+	gr->A_shrtsy =
+		sym_resolve( (SYM *)0, ERx(".short"), A_CLOSURE, syFisTYPE );
+	gr->A_undefsy =
+		sym_resolve( (SYM *)0, ERx(".undef"), A_CLOSURE, syFisTYPE );
+	gr->A_strsy =
+		sym_resolve( (SYM *)0, ERx("string"), A_CLOSURE, syFisTYPE );
+	gr->A_intsy =
+		sym_resolve( (SYM *)0, ERx("integer"), A_CLOSURE, syFisTYPE );
+	if (eq->eq_config & (EQ_ADVAX|EQ_ADALSYS))
+	{
+	    gr->A_fltsy =
+		sym_resolve( (SYM *)0, ERx("float"), A_CLOSURE, syFisTYPE );
+	    gr->A_dblsy =
+		sym_resolve((SYM *)0, ERx("long_float"), A_CLOSURE, syFisTYPE);
+	}
+	else
+	{
+#if defined(axp_osf)
+            gr->A_fltsy =
+                sym_resolve( (SYM *)0, ERx("float"), A_CLOSURE, syFisTYPE );
+            gr->A_dblsy =
+                sym_resolve((SYM *)0, ERx("long_float"), A_CLOSURE, syFisTYPE);
+#else /* axp_osf */
+	    gr->A_fltsy =
+		sym_resolve((SYM *)0, ERx("short_float"), A_CLOSURE, syFisTYPE);
+	    gr->A_dblsy =
+		sym_resolve((SYM *)0, ERx("float"), A_CLOSURE, syFisTYPE);
+#endif /* axp_osf */
+	}
+	gr->A_chrsy =
+		sym_resolve( (SYM *)0, ERx("character"), A_CLOSURE, syFisTYPE);
+	sym_s_vlue( gr->A_chrsy, AvalCHAR );
+
+      /* note enumerated names -- these can't be type-coerced */
+	{
+	    SYM		*boolsy;
+
+	    boolsy =
+		sym_resolve( (SYM *)0, ERx("boolean"), A_CLOSURE, syFisTYPE );
+	    sym_s_vlue( boolsy, AvalENUM );
+
+	    sy = sym_resolve( (SYM *)0, ERx("true"), A_CLOSURE, syFisCONST );
+	    sym_s_vlue( sy, AvalENUM );
+	    sym_s_type( sy, boolsy );
+
+	    sy = sym_resolve( (SYM *)0, ERx("false"), A_CLOSURE, syFisCONST );
+	    sym_s_vlue( sy, AvalENUM );
+	    sym_s_type( sy, boolsy );
+	}
+
+      /* declare "generic null" as a symbol */
+	sy = symDcEuc( ERx(".null"), 0, gr->A_blk, syFisVAR|syFisSYS, 
+		      A_CLOSURE, SY_NORMAL );
+	sym_s_btype( sy, T_NUL );
+	sym_s_dsize( sy, sizeof(i4) );
+	gr->gr_null = sy;
+	break;
+
+      case GR_LOOKUP:
+	/* How should we look up this name? */
+	if (gr->A_var == AvarUSE)		/* Variable usage */
+	{
+	    /*
+	    ** If we have a dot between name references then it may be the ADA
+	    ** dot or the INGRES dot.  To resolve this we use the global
+	    ** gr->A_record and see if the specified name is a member (child)
+	    ** of record or a regular variable (including a record parent).
+	    **
+	    ** If this is the first component of a reference then gr->A_record
+	    ** is NULL and we will be looking it up independently, otherwise
+	    ** gr->A_record points to who the parent of the new member is.
+	    **
+	    ** MUST check for syFisCONST as IN params
+	    ** and CONSTANT objects are syFisCONST but can be RECORDs.
+	    */
+	    sy = sym_resolve( gr->A_record, (char *)arg1, A_CLOSURE,
+			      syFisVAR|syFisCONST );
+	    if (sy)		/* It might have been a forward reference */
+		_VOID_ symExtType( sy );
+	    /*
+	    ** We cannot set gr->A_record here as YACC may look ahead and cause
+	    ** it to be reset.
+	    */
+
+	    if (sy == (SYM *)0)
+		*(i4 *)arg2 = tNAME;
+	    else if (sym_g_btype(sy) == T_STRUCT ||
+	    	     ((i4)sym_g_vlue(sy) & AvalACCESS))
+		*(i4 *)arg2 = tAREC_VAR;
+	} else		/* In declare mode */
+	    *(i4 *)arg2 = tADECNAME;
+	break;
+
+      case GR_NUMBER:		/* are we in a label declaration? */
+	break;
+
+      case GR_STMTFREE:
+	gr->A_dims = 0;
+	gr->A_val = 0;
+
+	ada_reset();		/* clear the "name" stack */
+	str_reset();
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->A_record = (SYM *)0;
+	gr->A_size = gr->A_rec = 0;
+	break;
+
+      case GR_ERROR:
+	break;
+
+      case GR_CLOSE:
+	if (gr->A_blk > 1)
+	    er_write( E_E60011_haUNCLOSED, EQ_ERROR, 1, er_na((gr->A_blk-1)) );
+	break;
+
+      case GR_DUMP:
+	{
+	    char		*trBaseType();
+	    register FILE	*f = eq->eq_dumpfile;
+
+	    SIfprintf( f, ERx("GR_DUMP: gr_ \n") );
+	    SIfprintf( f,
+			ERx("  sym = 0x%p, id = '%s', type = %s, flag = 0%o\n"),
+			gr->gr_sym, gr->gr_id, trBaseType(gr->gr_type),
+			gr->gr_flag );
+	    SIfprintf( f, ERx("  func = %d, mode = 0%o\n"),
+			gr->gr_func, gr->gr_mode );
+	    SIfprintf( f, ERx("  A_type = %s, A_blk = %d, A_rec = %d\n"),
+			trBaseType(gr->A_type), gr->A_blk, gr->A_rec );
+	    SIfprintf( f, ERx("  A_size = %d, A_dims = %d\n"),
+			gr->A_size, gr->A_dims );
+	    SIfprintf( f, ERx("  A_var = %d, A_val = 0x%x\n"),
+			gr->A_var, gr->A_val );
+	    SIfprintf( f, ERx("  A_simpvar = %d, A_err = %d, A_with = 0x%x\n"),
+			gr->A_simpvar, gr->A_err, gr->A_with );
+	    SIfprintf( f, ERx("  A_record = 0x%p\n"), gr->A_record );
+	    SIflush( f );
+	}
+	break;
+
+      case GR_BLOCK:	/* Enter/exit an EQUEL block - no symbol table stuff */
+	gr->A_var = AvarUSE;
+	break;
+
+      case GR_EQSTMT:
+	{
+	    i4		mode = (i4)arg1;
+	    char	*kword = (char *)arg2;
+	    static i4	in_include_err = FALSE;	/* Already complained */
+
+	    /* Turn off declarations flag and generate line directive */
+	    gr->gr_flag &= ~GR_HOSTCODE;
+	    gr->A_var = AvarUSE;
+	    if (inc_is_nested() == SC_INC && !in_include_err)
+	    {
+		er_write( E_E60006_haINCPKG, EQ_ERROR, 1, kword );
+		in_include_err = TRUE;
+	    }
+
+	    /* Check if ## WITH {EQUEL|EQUEL_FORMS}; was used */
+	    if (mode == GR_sFORMS && (gr->A_with & AwithFORMS) == 0)
+	    {
+		er_write( E_E60015_haWITHEQUEL, EQ_ERROR, 2,
+						    ERx("EQUEL_FORMS"), kword );
+		gr->A_with |= (AwithEQUEL|AwithFORMS);	/* No more complaints */
+	    } else if ((gr->A_with & AwithEQUEL) == 0)
+	    {
+		er_write( E_E60015_haWITHEQUEL, EQ_ERROR, 2,
+						    ERx("EQUEL"), kword );
+		gr->A_with |= (AwithEQUEL|AwithFORMS);	/* No more complaints */
+	    }
+
+	    if (gr->gr_flag & GR_DECLCSR)
+		gen_line( kword );
+	    else
+		gen_eqstmt( G_OPEN, kword );
+
+	    switch (mode)
+	    {
+	      case GR_sREPEAT:
+		gr->gr_flag |= GR_REPEAT;
+		rep_begin( kword, NULL );
+		/* FALL THROUGH */
+
+	      case GR_sQUEL:
+		if (gr->gr_flag & GR_RETRIEVE)
+		{
+		    gr->gr_flag &= ~GR_RETRIEVE;
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		}
+		gr->gr_flag |= GR_QUEL;
+		db_key( kword );
+		break;
+
+	      case GR_sLIBQ:
+	      case GR_sFORMS:
+		gr->gr_flag |= GR_EQUEL;
+		break;
+
+	      case GR_sCURSOR:
+		if (gr->gr_flag & GR_RETRIEVE)
+		{
+		    gr->gr_flag &= ~GR_RETRIEVE;
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		}
+		break;
+	    }
+	}
+	break;
+
+      default:
+	break;
+    }
+}
+/* %L mechanism end */

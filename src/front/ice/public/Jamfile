@@ -1,0 +1,19 @@
+#
+# Jamfile file for front!ice!public
+#
+# History:
+#	08-dec-2004 (abbjo03)
+#	    Use DFS instead of slash for portability.
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC front ice public ;
+
+IISUBSYS front ice public ;
+
+if $(BUILD_ICE)
+{
+IIICEFILE public$(DFS)exception.html : exception.html ;
+IIICEFILE public$(DFS)ice.css : ice.css ;
+IIICEFILE public$(DFS)ice_index.html : ice_index.html ;
+}

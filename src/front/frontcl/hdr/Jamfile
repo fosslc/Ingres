@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!frontcl!hdr
+#
+
+SubDir ING_SRC front frontcl hdr ;
+
+IISUBSYS front frontcl hdr ;
+
+
+IIMSGHDR erft.msg ;
+

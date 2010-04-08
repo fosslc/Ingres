@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!tools!eqmerge
+#
+
+SubDir ING_SRC front tools eqmerge ;
+
+IISUBSYS front tools eqmerge ;
+
+
+IIBINEXE eqmerge : eqmerge.c ;
+IINEEDLIBS eqmerge : COMPATLIB ;
+IIUNDEFS eqmerge : II_copyright ;
+

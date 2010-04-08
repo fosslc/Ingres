@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The ib_max resource specifies the maximum number of inbound connections
+  which can be supported by a Bridge server created with this definition.

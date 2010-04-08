@@ -1,0 +1,23 @@
+#
+# Jamfile file for front!rep!repserv_win
+#
+
+SubDir ING_SRC front rep repserv_win ;
+
+IISUBSYS front rep repserv_win ;
+
+
+IIMCTOH $(INGBIN)/repmsg.res : repmsg.mc ;
+
+
+IIBINEXE repinst : repinst.c ;
+IINEEDLIBS repinst : COMPATLIB ;
+IIAdminManifest repinst ;
+
+IIBINEXE replsvc : replsvc.c ;
+IINEEDLIBS replsvc : COMPATLIB APILIB SAWLIB ;
+
+IIBINEXE rpserver : repstart.c ;
+IINEEDLIBS rpserver : COMPATLIB ;
+IIAdminManifest rpserver ;
+

@@ -1,0 +1,243 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+exec sql include	<ooclass.sh>;
+# include	<er.h>
+# include	"ercu.h"
+# include	<cu.h>
+
+
+/**
+** Name:	cudelete.sc -	Contains generic deletion routines.
+**
+** Description:
+**	This files contains the routines that are used to
+**	delete objects.
+**
+**	IICUdoDeleteObject	Delete most objects.
+**	IICUdgDeleteGbfgraph	Delete gbf graph
+**	IICUdaDeleteAppl	Delete application and its objects.
+**
+** History:
+**	4-aug-1987 (Joe)
+**		Initial Version
+**	25-nov-1987 (peter)
+**		Add delete of ii_longremarks.
+**	2-feb-1988 (Joe)
+**		Tooks out ranges, and made queries repeats.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**/
+
+/*
+**  This routine has been modified to use dynamic SQL when deleting an 
+**  object.  The string variable into which the SQL DELETE statment is
+**  to be prepared must be large enough to contain the following dynamic
+**  DELETE:
+**
+**	STpolycat(5, ERx("DELETE FROM "), tabname, ERx(" WHERE "),
+**		colname, ERx(" = ?"), stmt_buffer);
+**
+**  The following #DEFINE takes into account the length of the literal
+**  strings and the maximum length of the string variables.
+*/
+#define	MAX_DEL_OBJ_LEN 12 + FE_MAXNAME + 7 + FE_MAXNAME + 10
+
+/*{
+** Name:	IICUdoDeleteObject - Delete an object.
+**
+** Description:
+**	Given a class and an id this routine deletes all traces
+**	of the object from the database.
+**
+** Inputs:
+**	class		The class for the object.
+**
+**	id		The id of the object to delete.
+**
+** History:
+**	4-aug-1987 (Joe)
+**	25-nov-1987 (peter)
+**		Add delete of ii_longremarks.
+**	2-feb-1988 (Joe)
+**		Tooks out ranges, and made queries repeats.
+**	05-sep-88 (kenl)
+**		Changed QUEL to SQL.
+**	25-apr-1991 (jhw) - Added FAIL return for safety check on 'cu_recfor()'.
+*/
+STATUS
+IICUdoDeleteObject ( class, id )
+OOID	class;
+EXEC SQL BEGIN DECLARE SECTION;
+OOID	id;
+EXEC SQL END DECLARE SECTION;
+{
+    CURECORD	*curec;
+    CUDELLIST	*deltab;
+    EXEC SQL BEGIN DECLARE SECTION;
+	char	*tabname;
+	char	*colname;
+	char	stmt_buffer[MAX_DEL_OBJ_LEN];
+    EXEC SQL END DECLARE SECTION;
+
+    CURECORD	*cu_recfor();
+
+    if ((curec = cu_recfor(class)) == NULL)
+    { /* unknown class */
+	return FAIL;
+    }
+    if (curec->cudelete != NULL)
+    {
+	(*curec->cudelete)(id);
+    }
+
+    /* Delete the generic entries for the object */
+
+    EXEC SQL REPEATED DELETE FROM ii_objects
+	WHERE object_id = :id;
+    EXEC SQL REPEATED DELETE FROM ii_longremarks
+	WHERE object_id = :id;
+
+    /* Now delete any specific records that need deleting */
+    if (curec->cudeltab == NULL)
+	return OK;
+
+    for (deltab = curec->cudeltab; deltab->cutable != NULL; deltab++)
+    {
+	tabname = deltab->cutable;
+	colname = deltab->cucolumn;
+	/*
+	** Can't make this a repeat because the table is changing
+	*/
+	STpolycat(5, ERx("DELETE FROM "), tabname, ERx(" WHERE "),
+		colname, ERx(" = ?"), stmt_buffer);
+	EXEC SQL PREPARE IICUdo_stmt FROM :stmt_buffer;
+	EXEC SQL EXECUTE IICUdo_stmt USING :id;
+    }
+    return FEinqerr();
+}
+
+/*{
+** Name:	IICUdaDeleteAppl	- Delete an application and its objects.
+**
+** Description:
+**	Deletes an application and its objects.
+**
+** Inputs:
+**	id		The id of the application to delete.
+**
+** Outputs:
+**	Returns:
+**		OK
+**
+** History:
+**	12-aug-1987 (Joe)
+**		Initial Version
+**	30-nov-1987 (Joe)
+**		Added code to delete the encodings for
+**		OSL frames in ii_encodings.
+**		Also delete the long remarks.
+**	2-feb-1988 (Joe)
+**		Didn't make these query repeat since
+**		it only gets called once (at this time)
+*/
+STATUS
+IICUdaDeleteAppl(id)
+EXEC SQL BEGIN DECLARE SECTION;
+    OOID	id;
+EXEC SQL END DECLARE SECTION;
+{
+    /*
+    ** Delete the encodings for an applications OSL
+    ** frames and procedures.
+    */
+    EXEC SQL DELETE FROM ii_encodings
+	WHERE object_id IN
+	    (SELECT o.object_id FROM ii_objects o,
+				     ii_abfdependencies d,
+				     ii_abfobjects a
+		WHERE o.object_name = d.abfdef_name
+		  AND d.object_class = :OC_ILCODE
+		  AND d.object_id = a.object_id
+		  AND a.applid = :id
+	    );
+
+    if (FEinqerr() != 0)
+	return FEinqerr();
+    /*
+    ** Delete the long remarks for the encodings for an applications OSL
+    ** frames and procedures.
+    */
+    EXEC SQL DELETE FROM ii_longremarks
+	WHERE object_id IN
+	    (SELECT o.object_id FROM ii_objects o,
+				     ii_abfdependencies d,
+				     ii_abfobjects a
+		WHERE o.object_name = d.abfdef_name
+		  AND d.object_class = :OC_ILCODE
+		  AND d.object_id = a.object_id
+		  AND a.applid = :id
+	    );
+
+    if (FEinqerr() != 0)
+	return FEinqerr();
+    /*
+    ** Delete the iiobject entries for the encodings for an applications OSL
+    ** frames and procedures.
+    */
+    EXEC SQL DELETE FROM ii_objects
+		WHERE object_name IN
+		    (SELECT d.abfdef_name FROM ii_abfdependencies d,
+					       ii_abfobjects a
+			WHERE d.object_class = :OC_ILCODE
+			  AND d.object_id = a.object_id
+			  AND a.applid = :id
+		    );
+
+    if (FEinqerr() != 0)
+	return FEinqerr();
+    /*
+    ** Delete the dependency records for the application
+    */
+    EXEC SQL DELETE FROM ii_abfdependencies
+	WHERE object_id IN
+	    (SELECT object_id FROM ii_abfobjects
+		WHERE applid = :id
+	    );
+    if (FEinqerr() != 0)
+	return FEinqerr();
+    /*
+    ** Delete the long remarks for the application and its
+    ** objects.
+    */
+    EXEC SQL DELETE FROM ii_longremarks
+	WHERE object_id IN
+	    (SELECT object_id FROM ii_abfobjects
+		WHERE applid = :id
+	    );
+    if (FEinqerr() != 0)
+	return FEinqerr();
+    /*
+    ** Delete the object entries for the objects in an
+    ** application.
+    */
+    EXEC SQL DELETE FROM ii_objects
+	WHERE object_id IN
+	    (SELECT object_id FROM ii_abfobjects
+		WHERE applid = :id
+	    );
+
+    if (FEinqerr() != 0)
+	return FEinqerr();
+    EXEC SQL DELETE FROM ii_abfobjects WHERE applid = :id;
+    return FEinqerr();
+}

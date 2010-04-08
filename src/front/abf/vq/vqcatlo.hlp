@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqcatlo.hlp, subtopic 'Screen layout' behind the main help screen for 
+/#-- the applications catalog.
+
+  names of all the applications
+   in the database                      a brief comment about the application
+      |                                                    |
+      |  Ingres user who created the application           |
+      |                      |                             |
+      V                      V                             V
++----------------------+-------------+---------------------------------------+
+| Name                 | Owner       | Short Remark                          |
+|----------------------+-------------+---------------------------------------|
+|orderentry            |lucy         |order entry app for sales administratio|
+|payables              |dba          |accounts payable application           |
+|receivables           |dba          |accounts receivable application        |
+|testapp               |jack         |prototype of new invoicing application |
+|                      |             |                                       |
++----------------------+-------------+---------------------------------------+

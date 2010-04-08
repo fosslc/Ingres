@@ -1,0 +1,18 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+**
+** remtask.osq: remove a task from the project management database.
+*/
+
+procedure rem_task (person=c20,proj=c12,job=c9) =
+begin
+	message 'Removing ' + :proj + ' Task: ' + :job;
+	sleep 3;
+	delete from tasks where 
+		    tasks.name = :person and
+		    tasks.project = :proj and
+		    tasks.task = :job;
+end

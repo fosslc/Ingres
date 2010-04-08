@@ -1,0 +1,55 @@
+#
+# This makefile is used to build a sample COBOL application, CBLDEMO,
+# using Advantage Ingres Embedded SQL and Micro Focus Net Express 3.1, 4.0.
+#
+# Requirements
+# ------------
+# 1) Microsoft Visual C++ 6.0, 7.0
+#    or
+#    Microsoft Visual Studio .NET
+#
+# 2) Micro Focus Net Express 3.1, 4.0
+#
+# Building and Executing CBLDEMO
+# ------------------------------
+# 1) Change to the directory containing this file:
+#
+#      		cd %II_SYSTEM%\ingres\esqldemo\cobol
+#
+# 2) Assuming that a database has already been created, and the Ingres
+# installation has been started, enter the following command to create and
+# populate the table required by CBLDEMO:
+#
+#		sql dbname < demo.sql
+#
+# 3) Build the CBLDEMO executable program by entering the following command:
+#
+#		nmake -a
+#
+# 4) Run the program by entering:
+#
+#		cbldemo dbname
+#
+all:  cbldemo.exe
+
+cbldemo.cbl:  cbldemo.scb
+	esqlcbl cbldemo.scb
+
+cbldemo.obj:  cbldemo.cbl
+	cobol cbldemo.cbl /case /litlink;
+	cblnames -t -mcbldemo cbldemo.obj
+
+cbldemo.exe:  cbldemo.obj 
+	link /OUT:cbldemo.exe \
+	/SUBSYSTEM:CONSOLE \
+	/MACHINE:i386 \
+	/NOD \
+	cbldemo.obj cbllds.obj \
+	ingres.lib \
+	msvcrt.lib \
+	oldnames.lib \
+	mfrts32s.lib \
+	kernel32.lib \
+	user32.lib \
+	gdi32.lib \
+	advapi32.lib

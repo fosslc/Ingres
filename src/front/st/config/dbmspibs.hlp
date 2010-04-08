@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The pindex_bsize resource sets the size in rows of the exchange buffers
+  used to pass data between parent and child threads when doing a
+  parallel index.  The exchange buffer is filled by the parent thread
+  doing the base table scan, and read by the child threads extracting
+  the secondary index columns.
+
+  The default is 5000 rows.  The minimum setting is 100 rows.

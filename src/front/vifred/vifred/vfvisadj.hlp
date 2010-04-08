@@ -1,0 +1,29 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have invoked the VisuallyAdjust menu command from the Form Attribute
+frame.  VisuallyAdjust allows you to view the current form as it would 
+appear on the screen when it runs, and also to change the position and 
+size of the Popup style form.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Resize          Allows the size of the Popup form to be changed. 
+			During this operation any one of the 4 corners of
+			the form may be moved to a new location.
+			(Pressing the [TAB] key during the resizing
+			operation will rotate the movable corner 
+			around in a clockwise direction.)
+
+        Move            Allows the position of the Popup style form to be 
+			changed.  During this operation you may select where
+			the upper-left corner of the Popup style form is
+			to be located. (This menu item is only available
+			when the form being edited is "Fixed" position,
+			"Floating" position forms do not have any specific
+			starting coordinates, but rather float to a 
+			position near the last active field.)
+
+        Help            Access the Ingres Help facility.
+
+        End             Go back to the Form Attribute frame.

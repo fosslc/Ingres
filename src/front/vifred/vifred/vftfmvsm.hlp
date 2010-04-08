@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have selected the move operation for a column descriptor for a
+table field.  Position the cursor to the new position for the column
+descriptor and select the "Place" menu command.  The column descriptor
+will be moved immediately before the new position.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Place                   After positioning the cursor to the new
+                                position for the column descriptor, this
+                                commits the movement.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Return without moving the column descriptor.

@@ -1,0 +1,1899 @@
+/********************************************************************
+**
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+**
+**  Project : Visual DBA
+**
+**  Source : main.rc
+**  definitions for resources for the main part
+**
+**  History after 26-Mar-2003
+**
+**  27-Mar-2003 (noifr01)
+**   (sir 107523) management of sequences
+** 05-Aug-2003 (uk$so01)
+**    SIR #106648, Remove printer setting
+** 09-Jan-2004 (schph01)
+**    SIR #111462, Put string into resource files
+** 27-Jan-2004 (schph01)
+**    (sir 104378) Remove IDS_VERSION_ABOUT, since the about box
+**    is now implemented according to the corporate guidelines
+**    - Change the value in IDS_VERSION_MARKER
+** 03-Feb-2004 (uk$so01)
+**    SIR #106648, Split vdba into the small component ActiveX or COM:
+**    Integrate Export assistant into vdba
+** 02-Aug-2004 (kodse01)
+**    Changed #include "..\hdr\resource.h" to #include "..\hdr_win\resource.h"
+********************************************************************/
+#include "..\hdr_win\resource.h"
+
+#include "afxres.h"
+#include "dlgres.h"
+//
+// Icons
+//
+
+// Application and mdi documents
+IDI_FRAME                 ICON  DISCARDABLE   "main.ico"
+IDI_DOC_DOM               ICON  DISCARDABLE   "mdi_dom.ico"
+
+// tree icons of level 0
+IDI_TREE_STATIC_DATABASE  ICON  DISCARDABLE   "datab_st.ico"
+IDI_TREE_STATIC_PROFILE   ICON  DISCARDABLE   "prof_st.ico"
+IDI_TREE_STATIC_USER      ICON  DISCARDABLE   "user_st.ico"
+IDI_TREE_STATIC_GROUP     ICON  DISCARDABLE   "group_st.ico"
+IDI_TREE_STATIC_ROLE      ICON  DISCARDABLE   "role_st.ico"
+IDI_TREE_STATIC_LOCATION  ICON  DISCARDABLE   "locat_st.ico"
+IDI_TREE_STATIC_SYNONYMED ICON  DISCARDABLE   "syn_rst.ico"
+
+// tree icons of level 1, children of database
+IDI_TREE_STATIC_TABLE               ICON  DISCARDABLE   "table_st.ico"
+IDI_TREE_STATIC_VIEW                ICON  DISCARDABLE   "view_st.ico"
+IDI_TREE_STATIC_PROCEDURE           ICON  DISCARDABLE   "proc_st.ico"
+IDI_TREE_STATIC_SCHEMA              ICON  DISCARDABLE   "schem_st.ico"
+IDI_TREE_STATIC_SYNONYM             ICON  DISCARDABLE   "synon_st.ico"
+IDI_TREE_STATIC_DBEVENT             ICON  DISCARDABLE   "dbev_st.ico"
+IDI_TREE_STATIC_DBGRANTEES          ICON  DISCARDABLE   "dbgr_st.ico"
+
+IDI_TREE_STATIC_DBALARM                 ICON  DISCARDABLE "dbs_st.ico"
+
+// tree icons of level 1, children of database/replicator
+IDI_TREE_STATIC_REPLICATOR        ICON  DISCARDABLE   "re_st.ico"
+IDI_TREE_STATIC_REPLIC_CONNECTION ICON  DISCARDABLE   "reco_st.ico"
+IDI_TREE_STATIC_REPLIC_CDDS       ICON  DISCARDABLE   "recd_st.ico"
+IDI_TREE_STATIC_REPLIC_MAILUSER   ICON  DISCARDABLE   "rema_st.ico"
+
+IDI_TREE_STATIC_R_GRANT             ICON DISCARDABLE "ug_rst.ico"
+
+IDI_TREE_STATIC_R_ROLEGRANT         ICON DISCARDABLE "ugr_rst.ico"
+
+// tree icons of level 2, children of "table of database"
+IDI_TREE_STATIC_INTEGRITY       ICON  DISCARDABLE   "integ_st.ico"
+IDI_TREE_STATIC_RULE            ICON  DISCARDABLE   "rule_st.ico"
+IDI_TREE_STATIC_INDEX           ICON  DISCARDABLE   "index_st.ico"
+
+IDI_TREE_STATIC_SECURITY        ICON  DISCARDABLE   "sec_st.ico"
+
+// tree icons of level 2, children of "view of database"
+IDI_TREE_STATIC_VIEWTABLE     ICON  DISCARDABLE   "viewt_st.ico"
+
+// tree icons of level 2, children of replicator cdds
+IDI_TREE_STATIC_REPLIC_CDDS_DETAIL  ICON  DISCARDABLE   "recdd_st.ico"
+
+// new style alarms (with 2 sub-branches alarmee and launched dbevent)
+IDI_TREE_STATIC_ALARMEE         ICON  DISCARDABLE   "alus_st.ico"
+
+
+//
+//  Star management : customized icons for objects database/table/view
+//                    also for procedures and indexes
+//
+IDI_TREE_STAR_DB_DDB            ICON  DISCARDABLE   "starddb.ico"
+IDI_TREE_STAR_DB_CDB            ICON  DISCARDABLE   "starcdb.ico"
+IDI_TREE_STAR_TBL_NATIVE        ICON  DISCARDABLE   "startbna.ico"
+IDI_TREE_STAR_TBL_LINK          ICON  DISCARDABLE   "startbln.ico"
+IDI_TREE_STAR_VIEW_NATIVE       ICON  DISCARDABLE   "starvina.ico"
+IDI_TREE_STAR_VIEW_LINK         ICON  DISCARDABLE   "starviln.ico"
+IDI_TREE_STAR_PROCEDURE         ICON  DISCARDABLE   "starproc.ico"
+IDI_TREE_STAR_INDEX             ICON  DISCARDABLE   "staridx.ico"
+
+//
+// ICE
+//
+IDI_TREE_STATIC_ICE                      ICON  DISCARDABLE   "ic____st.ico"
+// Under "Security"
+IDI_TREE_STATIC_ICE_SECURITY             ICON  DISCARDABLE   "ics___st.ico"
+IDI_TREE_STATIC_ICE_ROLE                 ICON  DISCARDABLE   "icdbr_st.ico"
+IDI_TREE_STATIC_ICE_DBUSER               ICON  DISCARDABLE   "icdbu_st.ico"
+IDI_TREE_STATIC_ICE_DBCONNECTION         ICON  DISCARDABLE   "icdbc_st.ico"
+IDI_TREE_STATIC_ICE_WEBUSER              ICON  DISCARDABLE   "icwu__st.ico"
+IDI_TREE_STATIC_ICE_PROFILE              ICON  DISCARDABLE   "icpr__st.ico"
+// Under "Bussiness unit" (BUNIT)
+IDI_TREE_STATIC_ICE_BUNIT                ICON  DISCARDABLE   "icbu__st.ico"
+IDI_TREE_STATIC_ICE_BUNIT_SECURITY       ICON  DISCARDABLE   "icbus_st.ico"
+IDI_TREE_STATIC_ICE_BUNIT_FACET          ICON  DISCARDABLE   "icbuf_st.ico"
+IDI_TREE_STATIC_ICE_BUNIT_PAGE           ICON  DISCARDABLE   "icbup_st.ico"
+
+IDI_TREE_STATIC_ICE_BUNIT_LOCATION       ICON  DISCARDABLE   "icbul_st.ico"
+// Under "Server"
+IDI_TREE_STATIC_ICE_SERVER               ICON  DISCARDABLE   "icse__st.ico"
+IDI_TREE_STATIC_ICE_SERVER_APPLICATION   ICON  DISCARDABLE   "icsea_st.ico"
+IDI_TREE_STATIC_ICE_SERVER_LOCATION      ICON  DISCARDABLE   "icsel_st.ico"
+IDI_TREE_STATIC_ICE_SERVER_VARIABLE      ICON  DISCARDABLE   "icsev_st.ico"
+
+// Icons for the configuration window
+IDI_CFGICON1 ICON MOVEABLE DISCARDABLE PRELOAD "CF_AUT.ICO"
+IDI_CFGICON2 ICON MOVEABLE DISCARDABLE PRELOAD "CF_CAL.ICO"
+IDI_CFGICON3 ICON MOVEABLE DISCARDABLE PRELOAD "CF_COR.ICO"
+IDI_CFGICON10 ICON MOVEABLE DISCARDABLE PRELOAD "CF_PRINT.ICO"
+
+// WARNING: Come from mainmfc directory!!!
+IDI_CFGICON14 ICON MOVEABLE DISCARDABLE PRELOAD "..\\mainmfc_win\\res\\vnodemdi.ico"  // IDR_VNODEMDI
+IDI_CFGICON15 ICON MOVEABLE DISCARDABLE PRELOAD "..\\mainmfc_win\\res\\icon1.ico"    // IDR_IPMTYPE
+
+IDI_TREE_STATIC_SEQUENCE                 ICON  DISCARDABLE   "seque_st.ico"
+
+// Menu when current doc is on OpenIngres node (no gateway)
+ID_MENU_GWNONE MENU DISCARDABLE
+BEGIN
+  POPUP "&File"
+  BEGIN
+    MENUITEM "&New\tCtrl+N",                IDM_NEW
+    MENUITEM "&Open...\tCtrl+O",            IDM_OPEN
+    MENUITEM "&Save\tCtrl+S",               IDM_SAVE
+    MENUITEM "Save &As...",                 IDM_SAVEAS
+    MENUITEM SEPARATOR
+    MENUITEM "&Connect...",                 IDM_CONNECT
+    MENUITEM "&Disconnect...",              IDM_DISCONNECT
+    MENUITEM SEPARATOR
+    MENUITEM "&Print...\tCtrl+P",           IDM_PRINT, GRAYED
+    MENUITEM "P&references...",             IDM_PREFERENCES
+    MENUITEM SEPARATOR
+    MENUITEM "E&xit\tAlt+F4",               IDM_FILEEXIT
+  END
+
+  POPUP "&Edit"
+  BEGIN
+    MENUITEM "Cu&t\tCtrl+X",                IDM_CUT, GRAYED
+    MENUITEM "&Copy\tCtrl+C",               IDM_COPY, GRAYED
+    MENUITEM "&Paste\tCtrl+V",              IDM_PASTE, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "C&reate...",                  IDM_ADDOBJECT, GRAYED
+    MENUITEM "&Alter...",                   IDM_ALTEROBJECT, GRAYED
+    MENUITEM "&Drop...",                    IDM_DROPOBJECT, GRAYED
+    MENUITEM "&Grant...",                   IDM_GRANT, GRAYED
+    MENUITEM "Re&voke...",                  IDM_REVOKE, GRAYED
+    MENUITEM "Imp&ort...",		    IDM_POPULATE, GRAYED
+    MENUITEM "&Export Data...",             IDM_EXPORT, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "&Find...\tCtrl+F",            IDM_FIND, GRAYED
+    MENUITEM "&Locate...\tCtrl+L",          IDM_LOCATE, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "Reg&ister as Link...",        IDM_REGISTERASLINK, GRAYED
+    MENUITEM "Refresh Lin&k...",            IDM_REFRESHLINK, GRAYED
+    MENUITEM "Remove...",                   IDM_REMOVEOBJECT, GRAYED
+  END
+
+  POPUP "&View"
+  BEGIN
+    MENUITEM "E&xpand One Level\t+",            IDM_CLASSB_EXPANDONE     , GRAYED
+    MENUITEM "Expand &Branch\t*",               IDM_CLASSB_EXPANDBRANCH  , GRAYED
+    MENUITEM "Expand &All Branches\tCtrl+*",    IDM_CLASSB_EXPANDALL     , GRAYED
+    MENUITEM "&Collapse One Level\t-",          IDM_CLASSB_COLLAPSEONE   , GRAYED
+    MENUITEM "Collapse B&ranch\t/",             IDM_CLASSB_COLLAPSEBRANCH, GRAYED
+    MENUITEM "Colla&pse All Branches\tCtrl+/",  IDM_CLASSB_COLLAPSEALL   , GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "Force Refres&h...\tF5",           IDM_REFRESH, GRAYED
+    MENUITEM "Activate Bac&kground Refresh",    IDM_CHMODREFRESH
+    MENUITEM SEPARATOR
+    MENUITEM "&Filters...\tCtrl+R",             IDM_FILTER, GRAYED
+    MENUITEM "&Show System Objects",            IDM_SHOW_SYSTEM, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "Proper&ties...",                  IDM_PROPERTIES, GRAYED
+//    MENUITEM "&Map",                            IDM_MAP, GRAYED
+  END
+
+  POPUP "&Database"
+  BEGIN
+    MENUITEM "Du&plicate DB",               IDM_DUPLICATEDB, GRAYED
+    MENUITEM "&Infodb",                     IDM_INFODB, GRAYED
+    MENUITEM "Backup (C&heckpoint)...",     IDM_CHECKPOINT, GRAYED
+    MENUITEM "Restore (Rollfor&ward DB)...",          IDM_ROLLFORWARD, GRAYED
+    POPUP    "Generate &Scripts"
+      BEGIN
+        MENUITEM "Unloadd&b...",            IDM_UNLOADDB, GRAYED
+        MENUITEM "&Copydb...",              IDM_COPYDB, GRAYED
+      END
+    MENUITEM SEPARATOR
+    MENUITEM "S&QL Scratchpad...\tCtrl+T",        IDM_SQLACT
+    MENUITEM SEPARATOR
+    MENUITEM "Space &Calculations...",      IDM_SPACECALC
+  END
+
+  POPUP "&Operations"
+  BEGIN
+    MENUITEM "G&enerate Statistics (Optimize Database)...",       IDM_GENSTAT, GRAYED
+    MENUITEM "Disp&lay Statistics...",        IDM_DISPSTAT, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "Al&ter DB...",                  IDM_ALTERDB, GRAYED
+    MENUITEM "A&udit...",                     IDM_AUDIT, GRAYED
+    MENUITEM "Mod&ify Structure...\tCtrl+M",  IDM_MODIFYSTRUCT, GRAYED
+    MENUITEM "&Sysmod...\tCtrl+Y",            IDM_SYSMOD, GRAYED
+    MENUITEM "User&mod...",                   IDM_USERMOD, GRAYED
+    MENUITEM "Verif&y Database...",           IDM_VERIFYDB, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "Change &Journaling State...",   IDM_JOURNALING, GRAYED
+    MENUITEM "E&xpiration Date...",           IDM_EXPIREDATE, GRAYED
+    MENUITEM "Comme&nts...",                  IDM_COMMENT, GRAYED
+    MENUITEM "&Fastload...",                  IDM_FASTLOAD, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "Enable/Disable Audit Events...", IDM_SECURITYAUDIT, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "Install Replication Objects...",IDM_REPLIC_INSTALL,  GRAYED
+    MENUITEM "Propagate...",                  IDM_REPLIC_PROPAG,   GRAYED
+    MENUITEM "Build Server(s)...",            IDM_REPLIC_BUILDSRV, GRAYED
+    MENUITEM "Create Keys...",                IDM_REPLIC_CREATEKEYS, GRAYED
+    MENUITEM "Activate Replication...",       IDM_REPLIC_ACTIVATE, GRAYED
+    MENUITEM "Deactivate Replication...",     IDM_REPLIC_DEACTIVATE, GRAYED
+    MENUITEM "Reconciler...",                 IDM_REPLIC_RECONCIL, GRAYED
+    MENUITEM "Arcclean...",                   IDM_REPLIC_ARCCLEAN, GRAYED
+    MENUITEM "Repmod...",                     IDM_REPLIC_REPMOD, GRAYED
+    MENUITEM "Dereplicate...",                IDM_REPLIC_DEREPLIC, GRAYED
+    MENUITEM "Mobile Parameters...",          IDM_REPLIC_MOBILE,   GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "Force Refres&h...\tF5",           IDM_REFRESH, GRAYED
+  END
+
+  POPUP "&Query"
+  BEGIN
+    MENUITEM "&Clear",                      IDM_QUERYCLEAR, GRAYED
+    MENUITEM "&Open Query...",              IDM_QUERYOPEN, GRAYED
+    MENUITEM "&Save Query As...",           IDM_QUERYSAVEAS, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "SQL &Assistant...",           IDM_SQLWIZARD, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "&Go\tF9",                     IDM_QUERYGO, GRAYED
+    MENUITEM SEPARATOR
+    MENUITEM "S&how Query Result",          IDM_QUERYSHOWRES, GRAYED
+  END
+
+  POPUP "&Window"
+  BEGIN
+    MENUITEM "&Cascade",                    IDM_WINDOWCASCADE
+    MENUITEM "&Tile Horizontal",            IDM_WINDOWTILE_HORZ
+    MENUITEM "Tile &Vertical",              IDM_WINDOWTILE_VERT
+    MENUITEM "&Arrange Icons",              IDM_WINDOWICONS
+    MENUITEM SEPARATOR
+    MENUITEM "&New Window",                 IDM_NEWWINDOW, GRAYED
+    MENUITEM "Tear &Out",                   IDM_TEAROUT, GRAYED
+    MENUITEM "&Restart From Position",      IDM_RESTARTFROMPOS, GRAYED
+    MENUITEM "&Scratchpad",                 IDM_SCRATCHPAD
+    MENUITEM SEPARATOR
+    MENUITEM "S&elect Window...",           IDM_SELECTWINDOW
+    MENUITEM "Close All &Windows",          IDM_WINDOWCLOSEALL
+  END
+
+  POPUP "&Help"
+  BEGIN
+    MENUITEM "&Contents...",                  IDM_HELPINDEX
+    MENUITEM "&Search...",                    IDM_HELPSEARCH
+    MENUITEM "Context &Help\tF1",             IDM_CONTEXTHELP
+    MENUITEM SEPARATOR
+    MENUITEM "&About Visual DBA...", IDM_ABOUT
+  END
+
+END
+
+
+
+
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE
+BEGIN
+  IDS_DOMDOC_TITLE            "%s - %s - %d"
+  IDS_DOMDOC_LOWONRESOURCE    "Low on Resources - Lines will be Resequenced as soon as possible"
+  IDS_DOMDOC_CANNOTCREATE     "Cannot Create Database Object Manager"
+  IDS_DOMDOC_PRINTING         "Virtual Node %s"
+  IDS_DOMDOC_PRINTPAGENUM     "Page %d"
+
+  // NOTE: length of the markers must NOT exceed (VERSIONSIZE-COMPRESSKEYSIZE)
+  // constants defined in main.c, current value 35
+  IDS_VERSION_MARKER              "VisualDBA    Version 3.0/0404"
+
+  // create/alter/drop messages - TO BE FINISHED: SEEM NOT TO BE USED ANYMORE
+  IDS_RES_ERR                 "Error - Contact Development"
+  IDS_RES_TIMEOUT             "Time-Out Error"
+  IDS_RES_NOGRANT             "Permission not Granted for this Operation"
+  IDS_RES_ALREADYEXIST        "Object Already Exists"
+
+  // Dom Tree status lines
+  // IMPORTANT NOTE : the following 7 strings are only used to compute
+  // the status line item width - Feel free to change their width for
+  // internationalization purposes, but don't put any significant text
+  IDS_TS_W_OBJTYPE              "abcdefghijklmnopqrst"
+  IDS_TS_W_OBJNAME              "abcdefghijklmnopqrstuvwxyz1234567890"
+  IDS_TS_W_CAPT_OWNER           "abcdefgh"
+  IDS_TS_W_OWNERNAME            "abcdefghijklmnopqrst"
+  IDS_TS_W_CAPT_COMPLIM         "abcdefghijklmnopqrst"
+  IDS_TS_W_COMPLIM              "abcdefghijklmnopqrst"
+  IDS_TS_W_BSYSTEM              "abcdefghij"
+
+  // Strings that will be displayed in the status line
+  IDS_TS_CAPT_OWNER           "Owner :"
+  IDS_TS_SYSTEMOBJ            "System"    // when system object
+  IDS_TS_NONSYSTEMOBJ         ""          // when not system object
+
+  // Dom title : sub-strings
+  IDS_DOMDOC_TITLE_NORMAL     "Database Object Manager"
+  IDS_DOMDOC_TITLE_TEAROUT    "Tear-out from %s"
+  IDS_DOMDOC_TITLE_REPOS      "Reposition from %s"
+  IDS_DOMDOC_TITLE_SCRATCHPAD "Scratchpad"
+
+  // dom system menu custom menuitem for scratchpad
+  IDS_DOMDOC_CHANGEVNODE      "Change Virtual Node..."
+
+  // "New environment" and "Open environment" menuitem messages
+  IDS_NEW_QUERYSAVE_CAPT      "%s/Visual DBA Save Changes"
+  IDS_NEW_QUERYSAVE_TXT       "Do you Want to Save the Changes to the '%s' Environment ?"
+  IDS_NEW_UNTITLED_ENV        "<Untitled>"
+
+
+  // Global status lines - ids of displayed strings
+  IDS_GS_T_CAPT_CONNSRV       "Connected servers :"
+  IDS_GS_T_CAPT_CURRSRV       "Current :"
+  IDS_GS_T_CAPT_OBJECTS       "Objects :"
+  IDS_GS_ERR_TIMER            "Cannot Manage Global Status Bar : Out of Timers"
+  IDS_GS_T_UNKNOWNOBJCOUNT    ""
+  IDS_GS_T_OBJECTS_NOAPPLY    "n/a"
+
+  //
+  // tree lines
+  //
+  // STRINGS WITH IDS_xxx_STATUS MUST BE SHORT IN LENGTH ( <= 19 CHARS)
+  //
+
+  // special items on tree lines
+  IDS_TREE_DUMMY                  ""
+    // Note: Should never show on tree - Empty string feature used for sorts
+  IDS_TREE_ERR_NOGRANT                "< Permission not Granted >"
+  IDS_TREE_ERR_TIMEOUT                "< Time-out Occured >"
+  IDS_TREE_ERROR                  "< Data Unavailable >"
+  IDS_TREE_GRANTEE_NONEXISTENT    "Grantee Object not Found - Not Expandable"
+  IDS_TREE_VIEWTABLE_NONEXISTENT  "View Component Object not Found - Current List will be Refreshed for Synchronization"
+  IDS_TREE_SYNONYMED_NONEXISTENT  "Object Synonym is Defined on Not Found - Not Expandable"
+  IDS_TREE_ALARMEE_NONEXISTENT    "User/Group/Role Triggering Alarm not Found - Not Expandable"
+  IDS_TREE_REPLICTABLE_NONEXISTENT  "%s (deleted table)"
+
+  // tree lines of level 0
+  IDS_TREE_DATABASE_STATIC          "Databases"
+  IDS_DATABASE_STATIC_STATUS        "Databases"
+  IDS_TREE_DATABASE_NONE            "< No Databases >"
+  IDS_TREE_PROFILE_STATIC           "Profiles"
+  IDS_PROFILE_STATIC_STATUS         "Profiles"
+  IDS_TREE_PROFILE_NONE             "< No Profiles >"
+  IDS_TREE_USER_STATIC              "Users"
+  IDS_USER_STATIC_STATUS            "Users"
+  IDS_TREE_USER_NONE                "< No Users >"
+  IDS_TREE_GROUP_STATIC             "Groups"
+  IDS_GROUP_STATIC_STATUS           "Groups"
+  IDS_TREE_GROUP_NONE               "< No Groups >"
+  IDS_TREE_ROLE_STATIC              "Roles"
+  IDS_ROLE_STATIC_STATUS            "Roles"
+  IDS_TREE_ROLE_NONE                "< No Roles >"
+  IDS_TREE_LOCATION_STATIC          "Locations"
+  IDS_LOCATION_STATIC_STATUS        "Locations"
+  IDS_TREE_LOCATION_NONE            "< No Locations >"
+  IDS_TREE_SYNONYMED_STATIC         "Object Synonym is Defined on"
+  IDS_SYNONYMED_STATIC_STATUS       "Object/Synonym"
+
+  // tree lines of level 1, children of database
+  IDS_TREE_TABLE_STATIC               "Tables"
+  IDS_TABLE_STATIC_STATUS             "Tables"
+  IDS_TREE_TABLE_NONE                 "< No Tables >"
+  IDS_TREE_VIEW_STATIC                "Views"
+  IDS_VIEW_STATIC_STATUS              "Views"
+  IDS_TREE_VIEW_NONE                  "< No Views >"
+  IDS_TREE_PROCEDURE_STATIC           "Procedures"
+  IDS_PROCEDURE_STATIC_STATUS         "Procedures"
+  IDS_TREE_PROCEDURE_NONE             "< No Procedures >"
+  IDS_TREE_SCHEMA_STATIC              "Schemas"
+  IDS_SCHEMA_STATIC_STATUS            "Schemas"
+  IDS_TREE_SCHEMA_NONE                "< No Schemas >"
+  IDS_TREE_SYNONYM_STATIC             "Synonyms"
+  IDS_SYNONYM_STATIC_STATUS           "Synonyms"
+  IDS_TREE_SYNONYM_NONE               " < No Synonyms >"
+
+  // special duplication for desktop
+  IDS_TREE_DBEVENT_STATIC             "Dbevents"
+  IDS_DBEVENT_STATIC_STATUS           "Dbevents"
+  IDS_TREE_DBEVENT_NONE               " < No Dbevents >"
+
+  IDS_TREE_DBGRANTEES_STATIC          "Grantees on Database"
+  IDS_DBGRANTEES_STATIC_STATUS        "Grantees/Database"
+
+  // special duplication for desktop
+  IDS_TREE_DBGRANTEES_ACCESY_STATIC     "Grantees for Access"
+  IDS_DBGRANTEES_ACCESY_STATIC_STATUS   "Grantees/Access"
+  IDS_TREE_DBGRANTEES_ACCESY_NONE       "< No Grantees for Access >"
+
+  IDS_TREE_DBGRANTEES_ACCESN_STATIC   "Grantees for No Access"
+  IDS_DBGRANTEES_ACCESN_STATIC_STATUS "Grantees/No Access"
+  IDS_TREE_DBGRANTEES_ACCESN_NONE     "< No Grantees for No Access >"
+  IDS_TREE_DBGRANTEES_CREPRY_STATIC   "Grantees for Create Proc"
+  IDS_DBGRANTEES_CREPRY_STATIC_STATUS "Grantees/Cr.Proc"
+  IDS_TREE_DBGRANTEES_CREPRY_NONE     "< No Grantees for Create Proc >"
+  IDS_TREE_DBGRANTEES_CREPRN_STATIC   "Grantees for No Create Proc"
+  IDS_DBGRANTEES_CREPRN_STATIC_STATUS "Grantees/No Cr.Proc"
+  IDS_TREE_DBGRANTEES_CREPRN_NONE     "< No Grantees for No Create Proc >"
+
+  // special duplication for desktop
+  IDS_TREE_DBGRANTEES_CRETBY_STATIC   "Grantees for Create Table"
+  IDS_DBGRANTEES_CRETBY_STATIC_STATUS "Grantees/Cr.Table"
+  IDS_TREE_DBGRANTEES_CRETBY_NONE     "< No Grantees for Create Table >"
+
+  IDS_TREE_DBGRANTEES_CRETBN_STATIC   "Grantees for No Create Table"
+  IDS_DBGRANTEES_CRETBN_STATIC_STATUS "Grantees/No Cr.Tbl"
+  IDS_TREE_DBGRANTEES_CRETBN_NONE     "< No Grantees for No Create Table >"
+
+  // special duplication for desktop
+  IDS_TREE_DBGRANTEES_DBADMY_STATIC   "Grantees for Db Admin"
+  IDS_DBGRANTEES_DBADMY_STATIC_STATUS "Grantees/Db Admin"
+  IDS_TREE_DBGRANTEES_DBADMY_NONE     "< No Grantees for Db Admin >"
+
+  IDS_TREE_DBGRANTEES_DBADMN_STATIC   "Grantees for No Db Admin"
+  IDS_DBGRANTEES_DBADMN_STATIC_STATUS "Grantees/No Db.Adm."
+  IDS_TREE_DBGRANTEES_DBADMN_NONE     "< No Grantees for No Db Admin >"
+  IDS_TREE_DBGRANTEES_LKMODY_STATIC   "Grantees for Lockmode"
+  IDS_DBGRANTEES_LKMODY_STATIC_STATUS "Grantees/Lockmode"
+  IDS_TREE_DBGRANTEES_LKMODY_NONE     "< No Grantees for Lockmode >"
+  IDS_TREE_DBGRANTEES_LKMODN_STATIC   "Grantees for No Lockmode"
+  IDS_DBGRANTEES_LKMODN_STATIC_STATUS "Grantees/No Lockmd"
+  IDS_TREE_DBGRANTEES_LKMODN_NONE     "< No Grantees for No Lockmode >"
+  IDS_TREE_DBGRANTEES_QRYIOY_STATIC   "Grantees for Query IO Limit"
+  IDS_DBGRANTEES_QRYIOY_STATIC_STATUS "Grantees/Quer.IO L."
+  IDS_TREE_DBGRANTEES_QRYIOY_NONE     "< No Grantees for Query IO Limit >"
+  IDS_TREE_DBGRANTEES_QRYION_STATIC   "Grantees for No Query IO Limit"
+  IDS_DBGRANTEES_QRYION_STATIC_STATUS "Grantees/No Q.IO L."
+  IDS_TREE_DBGRANTEES_QRYION_NONE     "< No Grantees for No Query IO Limit >"
+  IDS_TREE_DBGRANTEES_QRYRWY_STATIC   "Grantees for Query Row Limit"
+  IDS_DBGRANTEES_QRYRWY_STATIC_STATUS "Grantees/Qry Row L."
+  IDS_TREE_DBGRANTEES_QRYRWY_NONE     "< No Grantees for Query Row Limit >"
+  IDS_TREE_DBGRANTEES_QRYRWN_STATIC   "Grantees for No Query Row Limit"
+  IDS_DBGRANTEES_QRYRWN_STATIC_STATUS "Grantees/No Qu.R.L."
+  IDS_TREE_DBGRANTEES_QRYRWN_NONE     "< No Grantees for No Query Row Limit >"
+  IDS_TREE_DBGRANTEES_UPDSCY_STATIC   "Grantees for Update Syscat"
+  IDS_DBGRANTEES_UPDSCY_STATIC_STATUS "Grantees/Upd Syscat"
+  IDS_TREE_DBGRANTEES_UPDSCY_NONE     "< No Grantees for Update Syscat >"
+  IDS_TREE_DBGRANTEES_UPDSCN_STATIC   "Grantees for No Update Syscat"
+  IDS_DBGRANTEES_UPDSCN_STATIC_STATUS "Grantees/No Up.Sysc"
+  IDS_TREE_DBGRANTEES_UPDSCN_NONE     "< No Grantees for No Update Syscat >"
+
+  IDS_TREE_DBGRANTEES_SELSCY_STATIC   "Grantees for Select Syscat"
+  IDS_DBGRANTEES_SELSCY_STATIC_STATUS "Grantees/Sel Syscat"
+  IDS_TREE_DBGRANTEES_SELSCY_NONE     "< No Grantees for Select Syscat >"
+  IDS_TREE_DBGRANTEES_SELSCN_STATIC   "Grantees for No Select Syscat"
+  IDS_DBGRANTEES_SELSCN_STATIC_STATUS "Grantees/No Se.Sysc"
+  IDS_TREE_DBGRANTEES_SELSCN_NONE     "< No Grantees for No Select Syscat >"
+  IDS_TREE_DBGRANTEES_CNCTLY_STATIC   "Grantees for Connect Time Limit"
+  IDS_DBGRANTEES_CNCTLY_STATIC_STATUS "Grantees/Conn.Tim.Lim"
+  IDS_TREE_DBGRANTEES_CNCTLY_NONE     "< No Grantees for Connect Time Limit >"
+  IDS_TREE_DBGRANTEES_CNCTLN_STATIC   "Grantees for No Connect Time Limit"
+  IDS_DBGRANTEES_CNCTLN_STATIC_STATUS "Grantees/No Conn.Lim"
+  IDS_TREE_DBGRANTEES_CNCTLN_NONE     "< No Grantees for No Connect Time Limit >"
+  IDS_TREE_DBGRANTEES_IDLTLY_STATIC   "Grantees for Idle Time Limit"
+  IDS_DBGRANTEES_IDLTLY_STATIC_STATUS "Grantees/Idle Tim.Lim"
+  IDS_TREE_DBGRANTEES_IDLTLY_NONE     "< No Grantees for Idle Time Limit >"
+  IDS_TREE_DBGRANTEES_IDLTLN_STATIC   "Grantees for No Idle Time Limit"
+  IDS_DBGRANTEES_IDLTLN_STATIC_STATUS "Grantees/No Idle.Lim"
+  IDS_TREE_DBGRANTEES_IDLTLN_NONE     "< No Grantees for No Idle Time Limit >"
+  IDS_TREE_DBGRANTEES_SESPRY_STATIC   "Grantees for Change Session Priority"
+  IDS_DBGRANTEES_SESPRY_STATIC_STATUS "Grantees/Sess.Pri"
+  IDS_TREE_DBGRANTEES_SESPRY_NONE     "< No Grantees for Change Session Priority >"
+  IDS_TREE_DBGRANTEES_SESPRN_STATIC   "Grantees for No Change Session Priority"
+  IDS_DBGRANTEES_SESPRN_STATIC_STATUS "Grantees/No Ses.Pri"
+  IDS_TREE_DBGRANTEES_SESPRN_NONE     "< No Grantees for No Change Session Priority >"
+  IDS_TREE_DBGRANTEES_TBLSTY_STATIC   "Grantees for Table Statistics"
+  IDS_DBGRANTEES_TBLSTY_STATIC_STATUS "Grantees/Tbl.Stat"
+  IDS_TREE_DBGRANTEES_TBLSTY_NONE     "< No Grantees for Table Statistics >"
+  IDS_TREE_DBGRANTEES_TBLSTN_STATIC   "Grantees for No Table Statistics"
+  IDS_DBGRANTEES_TBLSTN_STATIC_STATUS "Grantees/No Tbl.Stat"
+  IDS_TREE_DBGRANTEES_TBLSTN_NONE     "< No Grantees for No Table Statistics >"
+
+  IDS_TREE_DBGRANTEES_QRYCPY_STATIC   "Grantees for Query Cpu Limit"
+  IDS_DBGRANTEES_QRYCPY_STATIC_STATUS "Grantees/Query.Cpu"
+  IDS_TREE_DBGRANTEES_QRYCPY_NONE     "< No Grantees for Query Cpu Limit >"
+  IDS_TREE_DBGRANTEES_QRYCPN_STATIC   "Grantees for No Query Cpu Limit"
+  IDS_DBGRANTEES_QRYCPN_STATIC_STATUS "Grantees/No Query.Cpu"
+  IDS_TREE_DBGRANTEES_QRYCPN_NONE     "< No Grantees for No Query Cpu Limit >"
+  IDS_TREE_DBGRANTEES_QRYPGY_STATIC   "Grantees for Query Page Limit"
+  IDS_DBGRANTEES_QRYPGY_STATIC_STATUS "Grantees/Query.Page"
+  IDS_TREE_DBGRANTEES_QRYPGY_NONE     "< No Grantees for Query Page Limit >"
+  IDS_TREE_DBGRANTEES_QRYPGN_STATIC   "Grantees for No Query Page Limit"
+  IDS_DBGRANTEES_QRYPGN_STATIC_STATUS "Grantees/No Query.Page"
+  IDS_TREE_DBGRANTEES_QRYPGN_NONE     "< No Grantees for No Query Page Limit >"
+  IDS_TREE_DBGRANTEES_QRYCOY_STATIC   "Grantees for Query Cost Limit"
+  IDS_DBGRANTEES_QRYCOY_STATIC_STATUS "Grantees/Query.Cost"
+  IDS_TREE_DBGRANTEES_QRYCOY_NONE     "< No Grantees for Query Cost Limit >"
+  IDS_TREE_DBGRANTEES_QRYCON_STATIC   "Grantees for No Query Cost Limit"
+  IDS_DBGRANTEES_QRYCON_STATIC_STATUS "Grantees/No Query.Cost"
+  IDS_TREE_DBGRANTEES_QRYCON_NONE     "< No Grantees for No Query Cost Limit >"
+
+  IDS_TREE_DBGRANTEES_CRSEQY_STATIC   "Grantees for Create Sequence"
+  IDS_DBGRANTEES_CRSEQY_STATIC_STATUS "Grantees/Create Sequence"
+  IDS_TREE_DBGRANTEES_CRSEQY_NONE     "< No Grantees for Create Sequence >"
+  IDS_TREE_DBGRANTEES_CRSEQN_STATIC   "Grantees for No Create Sequence"
+  IDS_DBGRANTEES_CRSEQN_STATIC_STATUS "Grantees/No Create Sequence"
+  IDS_TREE_DBGRANTEES_CRSEQN_NONE     "< No Grantees for No Create Sequence >"
+
+
+  IDS_TREE_DBALARM_STATIC             "Security Alarms on Database"
+  IDS_DBALARM_STATIC_STATUS           "Sec.Alarms/Database"
+  IDS_TREE_DBALARM_CONN_SUCCESS_STATIC      "Alarms if Success on Connect"
+  IDS_DBALARM_CONN_SUCCESS_STATIC_STATUS    "Alarms/Succ/Connect"
+  IDS_TREE_DBALARM_CONN_SUCCESS_NONE        "< No Alarms if Success on Connect >"
+  IDS_TREE_DBALARM_CONN_FAILURE_STATIC      "Alarms if Failure on Connect"
+  IDS_DBALARM_CONN_FAILURE_STATIC_STATUS    "Alarms/Fail/Connect"
+  IDS_TREE_DBALARM_CONN_FAILURE_NONE        "< No Alarms if Failure on Connect >"
+  IDS_TREE_DBALARM_DISCONN_SUCCESS_STATIC   "Alarms if Success on Disconnect"
+  IDS_DBALARM_DISCONN_SUCCESS_STATIC_STATUS "Alarms/Succ/Disc."
+  IDS_TREE_DBALARM_DISCONN_SUCCESS_NONE     "< No Alarms if Success on Disconnect >"
+  IDS_TREE_DBALARM_DISCONN_FAILURE_STATIC   "Alarms if Failure on Disconnect"
+  IDS_DBALARM_DISCONN_FAILURE_STATIC_STATUS "Alarms/Fail/Disc"
+  IDS_TREE_DBALARM_DISCONN_FAILURE_NONE     "< No Alarms if Failure on Disconnect >"
+
+  // tree lines of level 1, children of group
+  IDS_TREE_GROUPUSER_STATIC   "Users in Group"
+  IDS_GROUPUSER_STATIC_STATUS "Users in Group"
+  IDS_TREE_GROUPUSER_NONE     "< No Users in Group >"
+
+  // tree lines of level 1, children of user
+  IDS_TREE_R_USERSCHEMA_STATIC    "Schema Databases for User"
+  IDS_R_USERSCHEMA_STATIC_STATUS  "Schema DB/User"
+  IDS_TREE_R_USERSCHEMA_NONE      "< No Schema Databases for User >"
+  IDS_TREE_R_USERGROUP_STATIC     "Groups Containing User"
+  IDS_R_USERGROUP_STATIC_STATUS   "Groups Cont.User"
+  IDS_TREE_R_USERGROUP_NONE       "< No Groups Containing User >"
+
+  IDS_TREE_R_SECURITY_STATIC        "Related Tables Security Alarms"
+  IDS_R_SECURITY_STATIC_STATUS      "Related Sec.Alarms"
+  IDS_TREE_R_SEC_SEL_SUCC_STATIC    "Related Alarms if Success on Select"
+  IDS_R_SEC_SEL_SUCC_STATIC_STATUS  "Rel.Alarms/Succ/Sel"
+  IDS_TREE_R_SEC_SEL_SUCC_NONE      "< No Related Alarms if Success on Select >"
+  IDS_TREE_R_SEC_SEL_FAIL_STATIC    "Related Alarms if Failure on Select"
+  IDS_R_SEC_SEL_FAIL_STATIC_STATUS  "Rel.Alarms/Fail/Sel"
+  IDS_TREE_R_SEC_SEL_FAIL_NONE      "< No Related Alarms if Failure on Select >"
+  IDS_TREE_R_SEC_DEL_SUCC_STATIC    "Related Alarms if Success on Delete"
+  IDS_R_SEC_DEL_SUCC_STATIC_STATUS  "Rel.Alarms/Succ/Del"
+  IDS_TREE_R_SEC_DEL_SUCC_NONE      "< No Related Alarms if Success on Delete >"
+  IDS_TREE_R_SEC_DEL_FAIL_STATIC    "Related Alarms if Failure on Delete"
+  IDS_R_SEC_DEL_FAIL_STATIC_STATUS  "Rel.Alarms/Fail/Del"
+  IDS_TREE_R_SEC_DEL_FAIL_NONE      "< No Related Alarms if Failure on Delete >"
+  IDS_TREE_R_SEC_INS_SUCC_STATIC    "Related Alarms if Success on Insert"
+  IDS_R_SEC_INS_SUCC_STATIC_STATUS  "Rel.Alarms/Succ/Ins"
+  IDS_TREE_R_SEC_INS_SUCC_NONE      "< No Related Alarms if Success on Insert >"
+  IDS_TREE_R_SEC_INS_FAIL_STATIC    "Related Alarms if Failure on Insert"
+  IDS_R_SEC_INS_FAIL_STATIC_STATUS  "Rel.Alarms/Fail/Ins"
+  IDS_TREE_R_SEC_INS_FAIL_NONE      "< No Related Alarms if Failure on Insert >"
+  IDS_TREE_R_SEC_UPD_SUCC_STATIC    "Related Alarms if Success on Update"
+  IDS_R_SEC_UPD_SUCC_STATIC_STATUS  "Rel.Alarms/Succ/Upd"
+  IDS_TREE_R_SEC_UPD_SUCC_NONE      "< No Related Alarms if Success on Update >"
+  IDS_TREE_R_SEC_UPD_FAIL_STATIC    "Related Alarms if Failure on Update"
+  IDS_R_SEC_UPD_FAIL_STATIC_STATUS  "Rel.Alarms/Fail/Upd"
+  IDS_TREE_R_SEC_UPD_FAIL_NONE      "< No Related Alarms if Failure on Update >"
+
+  IDS_TREE_R_GRANT_STATIC               "Grants"
+  IDS_R_GRANT_STATIC_STATUS             "Grants"
+  IDS_TREE_R_DBEGRANT_STATIC            "Granted Dbevents"
+  IDS_R_DBEGRANT_STATIC_STATUS          "Granted Dbevents"
+  IDS_TREE_R_DBEGRANT_RAISE_STATIC      "Dbevents with Raise Granted"
+  IDS_R_DBEGRANT_RAISE_STATIC_STATUS    "Dbevents/Raise Gr."
+  IDS_TREE_R_DBEGRANT_RAISE_NONE        "< No Dbevents with Raise Granted >"
+  IDS_TREE_R_DBEGRANT_REGISTER_STATIC   "Dbevents with Register Granted"
+  IDS_R_DBEGRANT_REGISTER_STATIC_STATUS "Dbevents/Register Gr."
+  IDS_TREE_R_DBEGRANT_REGISTER_NONE     "< No Dbevents with Register Granted >"
+  IDS_TREE_R_PROCGRANT_STATIC           "Granted Procedures"
+  IDS_R_PROCGRANT_STATIC_STATUS         "Granted Procedures"
+  IDS_TREE_R_PROCGRANT_EXEC_STATIC      "Procedures with Exec Granted"
+  IDS_R_PROCGRANT_EXEC_STATIC_STATUS    "Procs /Exec Granted"
+  IDS_TREE_R_PROCGRANT_EXEC_NONE        "< No Procedures with Exec Granted >"
+
+  IDS_TREE_R_SEQGRANT_STATIC            "Granted Sequences"
+  IDS_R_SEQGRANT_STATIC_STATUS          "Granted Sequences"
+  IDS_TREE_R_SEQGRANT_NEXT_STATIC       "Sequences with Next On Sequence Granted"
+  IDS_R_SEQGRANT_NEXT_STATIC_STATUS     "Sequences/Next Granted"
+  IDS_TREE_R_SEQGRANT_NEXT_NONE         "< No Sequences with Next on Sequences >"
+
+  IDS_TREE_R_DBGRANT_CRESEQY_STATIC     "Db with Create Sequence Granted"
+  IDS_R_DBGRANT_CRESEQY_STATIC_STATUS   "Db/Cr.Sequence Granted"
+  IDS_TREE_R_DBGRANT_CRESEQY_NONE       "< No Db with Create Sequence Granted >"
+  IDS_TREE_R_DBGRANT_CRESEQN_STATIC     "Db with No Create Sequence Granted"
+  IDS_R_DBGRANT_CRESEQN_STATIC_STATUS   "Db/No Cr.Seq Gra."
+  IDS_TREE_R_DBGRANT_CRESEQN_NONE       "< No Db with No Create Sequence Granted >"
+
+  IDS_TREE_R_DBGRANT_STATIC             "Granted Databases"
+  IDS_R_DBGRANT_STATIC_STATUS           "Granted Databases"
+  IDS_TREE_R_DBGRANT_ACCESY_STATIC      "Db with Access Granted"
+  IDS_R_DBGRANT_ACCESY_STATIC_STATUS    "Db/Access Granted"
+  IDS_TREE_R_DBGRANT_ACCESY_NONE        "< No Db with Access Granted >"
+  IDS_TREE_R_DBGRANT_ACCESN_STATIC      "Db with No Access Granted"
+  IDS_R_DBGRANT_ACCESN_STATIC_STATUS    "Db/No Access Gra."
+  IDS_TREE_R_DBGRANT_ACCESN_NONE        "< No Db with No Access Granted >"
+  IDS_TREE_R_DBGRANT_CREPRY_STATIC      "Db with Create Proc Granted"
+  IDS_R_DBGRANT_CREPRY_STATIC_STATUS    "Db/Cr.Proc Granted"
+  IDS_TREE_R_DBGRANT_CREPRY_NONE        "< No Db with Create Proc Granted >"
+  IDS_TREE_R_DBGRANT_CREPRN_STATIC      "Db with No Create Proc Granted"
+  IDS_R_DBGRANT_CREPRN_STATIC_STATUS    "Db/No Cr.Proc Gra."
+  IDS_TREE_R_DBGRANT_CREPRN_NONE        "< No Db with No Create Proc Granted >"
+  IDS_TREE_R_DBGRANT_CRETBY_STATIC      "Db with Create Table Granted"
+  IDS_R_DBGRANT_CRETBY_STATIC_STATUS    "Db/Create Tbl Gra."
+  IDS_TREE_R_DBGRANT_CRETBY_NONE        "< No Db with Create Table Granted >"
+  IDS_TREE_R_DBGRANT_CRETBN_STATIC      "Db with No Create Table Granted"
+  IDS_R_DBGRANT_CRETBN_STATIC_STATUS    "Db/No Cr.Table Gra."
+  IDS_TREE_R_DBGRANT_CRETBN_NONE        "< No Db with No Create Table Granted >"
+  IDS_TREE_R_DBGRANT_DBADMY_STATIC      "Db with Db Admin Granted"
+  IDS_R_DBGRANT_DBADMY_STATIC_STATUS    "Db/Db Admin Granted"
+  IDS_TREE_R_DBGRANT_DBADMY_NONE        "< No Db with Db Admin Granted >"
+  IDS_TREE_R_DBGRANT_DBADMN_STATIC      "Db with No Db Admin Granted"
+  IDS_R_DBGRANT_DBADMN_STATIC_STATUS    "Db/No Db Adm.Gra."
+  IDS_TREE_R_DBGRANT_DBADMN_NONE        "< No Db with No Db Admin Granted >"
+  IDS_TREE_R_DBGRANT_LKMODY_STATIC      "Db with Lockmode Granted"
+  IDS_R_DBGRANT_LKMODY_STATIC_STATUS    "Db/Lockmode Granted"
+  IDS_TREE_R_DBGRANT_LKMODY_NONE        "< No Db with Lockmode Granted >"
+  IDS_TREE_R_DBGRANT_LKMODN_STATIC      "Db with No Lockmode Granted"
+  IDS_R_DBGRANT_LKMODN_STATIC_STATUS    "Db/No Lockmode Gra."
+  IDS_TREE_R_DBGRANT_LKMODN_NONE        "< No Db with No Lockmode Granted >"
+  IDS_TREE_R_DBGRANT_QRYIOY_STATIC      "Db with Query IO Limit Granted"
+  IDS_R_DBGRANT_QRYIOY_STATIC_STATUS    "Db/Qu.IO Limit Gra."
+  IDS_TREE_R_DBGRANT_QRYIOY_NONE        "< No Db with Query IO Limit Granted >"
+  IDS_TREE_R_DBGRANT_QRYION_STATIC      "Db with No Query IO Limit Granted"
+  IDS_R_DBGRANT_QRYION_STATIC_STATUS    "Db/No Qu.IO Lim. Gr."
+  IDS_TREE_R_DBGRANT_QRYION_NONE        "< No Db with No Query IO Limit Granted >"
+  IDS_TREE_R_DBGRANT_QRYRWY_STATIC      "Db with Query Row Limit Granted"
+  IDS_R_DBGRANT_QRYRWY_STATIC_STATUS    "Db/Qu. Row Lim.Gra."
+  IDS_TREE_R_DBGRANT_QRYRWY_NONE        "< No Db with Query Row Limit Granted >"
+  IDS_TREE_R_DBGRANT_QRYRWN_STATIC      "Db with No Query Row Limit Granted"
+  IDS_R_DBGRANT_QRYRWN_STATIC_STATUS    "Db/No Qu.R.Lim.Gra."
+  IDS_TREE_R_DBGRANT_QRYRWN_NONE        "< No Db with No Query Row Limit Granted >"
+  IDS_TREE_R_DBGRANT_UPDSCY_STATIC      "Db with Update Syscat Granted"
+  IDS_R_DBGRANT_UPDSCY_STATIC_STATUS    "Db/Upd Syscat Gra."
+  IDS_TREE_R_DBGRANT_UPDSCY_NONE        "< No Db with Update Syscat Granted >"
+  IDS_TREE_R_DBGRANT_UPDSCN_STATIC      "Db with No Update Syscat Granted"
+  IDS_R_DBGRANT_UPDSCN_STATIC_STATUS    "Db/No Upd.Sysc.Gra."
+  IDS_TREE_R_DBGRANT_UPDSCN_NONE        "< No Db with No Update Syscat Granted >"
+
+  IDS_TREE_R_DBGRANT_SELSCY_STATIC      "Db with Select Syscat"
+  IDS_R_DBGRANT_SELSCY_STATIC_STATUS    "Db/Sel Syscat"
+  IDS_TREE_R_DBGRANT_SELSCY_NONE        "< No Db with Select Syscat >"
+  IDS_TREE_R_DBGRANT_SELSCN_STATIC      "Db with No Select Syscat"
+  IDS_R_DBGRANT_SELSCN_STATIC_STATUS    "Db/No Se.Sysc"
+  IDS_TREE_R_DBGRANT_SELSCN_NONE        "< No Db with No Select Syscat >"
+  IDS_TREE_R_DBGRANT_CNCTLY_STATIC      "Db with Connect Time Limit"
+  IDS_R_DBGRANT_CNCTLY_STATIC_STATUS    "Db/Conn.Tim.Lim"
+  IDS_TREE_R_DBGRANT_CNCTLY_NONE        "< No Db with Connect Time Limit >"
+  IDS_TREE_R_DBGRANT_CNCTLN_STATIC      "Db with No Connect Time Limit"
+  IDS_R_DBGRANT_CNCTLN_STATIC_STATUS    "Db/No Conn.Lim"
+  IDS_TREE_R_DBGRANT_CNCTLN_NONE        "< No Db with No Connect Time Limit >"
+  IDS_TREE_R_DBGRANT_IDLTLY_STATIC      "Db with Idle Time Limit"
+  IDS_R_DBGRANT_IDLTLY_STATIC_STATUS    "Db/Idle Tim.Lim"
+  IDS_TREE_R_DBGRANT_IDLTLY_NONE        "< No Db with Idle Time Limit >"
+  IDS_TREE_R_DBGRANT_IDLTLN_STATIC      "Db with No Idle Time Limit"
+  IDS_R_DBGRANT_IDLTLN_STATIC_STATUS    "Db/No Idle.Lim"
+  IDS_TREE_R_DBGRANT_IDLTLN_NONE        "< No Db with No Idle Time Limit >"
+  IDS_TREE_R_DBGRANT_SESPRY_STATIC      "Db with Change Session Priority"
+  IDS_R_DBGRANT_SESPRY_STATIC_STATUS    "Db/Sess.Pri"
+  IDS_TREE_R_DBGRANT_SESPRY_NONE        "< No Db with Change Session Priority >"
+  IDS_TREE_R_DBGRANT_SESPRN_STATIC      "Db with No Change Session Priority"
+  IDS_R_DBGRANT_SESPRN_STATIC_STATUS    "Db/No Ses.Pri"
+  IDS_TREE_R_DBGRANT_SESPRN_NONE        "< No Db with No Change Session Priority >"
+  IDS_TREE_R_DBGRANT_TBLSTY_STATIC      "Db with Table Statistics"
+  IDS_R_DBGRANT_TBLSTY_STATIC_STATUS    "Db/Tbl.Stat"
+  IDS_TREE_R_DBGRANT_TBLSTY_NONE        "< No Db with Table Statistics >"
+  IDS_TREE_R_DBGRANT_TBLSTN_STATIC      "Db with No Table Statistics"
+  IDS_R_DBGRANT_TBLSTN_STATIC_STATUS    "Db/No Tbl.Stat"
+  IDS_TREE_R_DBGRANT_TBLSTN_NONE        "< No Db with No Table Statistics >"
+
+  IDS_TREE_R_DBGRANT_QRYCPY_STATIC      "Db with Query Cpu Limit"
+  IDS_R_DBGRANT_QRYCPY_STATIC_STATUS    "Db/Query.Cpu"
+  IDS_TREE_R_DBGRANT_QRYCPY_NONE        "< No Db with Query Cpu Limit >"
+  IDS_TREE_R_DBGRANT_QRYCPN_STATIC      "Db with No Query Cpu Limit"
+  IDS_R_DBGRANT_QRYCPN_STATIC_STATUS    "Db/No Query.Cpu"
+  IDS_TREE_R_DBGRANT_QRYCPN_NONE        "< No Db with No Query Cpu Limit >"
+  IDS_TREE_R_DBGRANT_QRYPGY_STATIC      "Db with Query Page Limit"
+  IDS_R_DBGRANT_QRYPGY_STATIC_STATUS    "Db/Query.Page"
+  IDS_TREE_R_DBGRANT_QRYPGY_NONE        "< No Db with Query Page Limit >"
+  IDS_TREE_R_DBGRANT_QRYPGN_STATIC      "Db with No Query Page Limit"
+  IDS_R_DBGRANT_QRYPGN_STATIC_STATUS    "Db/No Query.Page"
+  IDS_TREE_R_DBGRANT_QRYPGN_NONE        "< No Db with No Query Page Limit >"
+  IDS_TREE_R_DBGRANT_QRYCOY_STATIC      "Db with Query Cost Limit"
+  IDS_R_DBGRANT_QRYCOY_STATIC_STATUS    "Db/Query.Cost"
+  IDS_TREE_R_DBGRANT_QRYCOY_NONE        "< No Db with Query Cost Limit >"
+  IDS_TREE_R_DBGRANT_QRYCON_STATIC      "Db with No Query Cost Limit"
+  IDS_R_DBGRANT_QRYCON_STATIC_STATUS    "Db/No Query.Cost"
+  IDS_TREE_R_DBGRANT_QRYCON_NONE        "< No Db with No Query Cost Limit >"
+
+
+  IDS_TREE_R_TABLEGRANT_STATIC          "Granted Tables"
+  IDS_R_TABLEGRANT_STATIC_STATUS        "Granted Tables"
+  IDS_TREE_R_TABLEGRANT_SEL_STATIC      "Tables with Select Granted"
+  IDS_R_TABLEGRANT_SEL_STATIC_STATUS    "Tables/Sel Granted"
+  IDS_TREE_R_TABLEGRANT_SEL_NONE        "< No Tables with Select Granted >"
+  IDS_TREE_R_TABLEGRANT_INS_STATIC      "Tables with Insert Granted"
+  IDS_R_TABLEGRANT_INS_STATIC_STATUS    "Tables/Ins Granted"
+  IDS_TREE_R_TABLEGRANT_INS_NONE        "< No Tables with Insert Granted >"
+  IDS_TREE_R_TABLEGRANT_UPD_STATIC      "Tables with Update Granted"
+  IDS_R_TABLEGRANT_UPD_STATIC_STATUS    "Tables/Upd Granted"
+  IDS_TREE_R_TABLEGRANT_UPD_NONE        "< No Tables with Update Granted >"
+  IDS_TREE_R_TABLEGRANT_DEL_STATIC      "Tables with Delete Granted"
+  IDS_R_TABLEGRANT_DEL_STATIC_STATUS    "Tables/Del Granted"
+  IDS_TREE_R_TABLEGRANT_DEL_NONE        "< No Tables with Delete Granted >"
+  IDS_TREE_R_TABLEGRANT_REF_STATIC      "Tables with Reference Granted"
+  IDS_R_TABLEGRANT_REF_STATIC_STATUS    "Tables/Ref. Granted"
+  IDS_TREE_R_TABLEGRANT_REF_NONE        "< No Tables with Reference Granted >"
+
+  IDS_TREE_R_TABLEGRANT_CPI_STATIC      "Tables with Copy Into Granted"
+  IDS_R_TABLEGRANT_CPI_STATIC_STATUS    "Tables/CpIn Granted"
+  IDS_TREE_R_TABLEGRANT_CPI_NONE        "< No Tables with Copy Into Granted >"
+  IDS_TREE_R_TABLEGRANT_CPF_STATIC      "Tables with Copy From Granted"
+  IDS_R_TABLEGRANT_CPF_STATIC_STATUS    "Tables/CpFr.Granted"
+  IDS_TREE_R_TABLEGRANT_CPF_NONE        "< No Tables with Copy From Granted >"
+
+  IDS_TREE_R_TABLEGRANT_ALL_STATIC      "Tables with All Rights Granted"
+  IDS_R_TABLEGRANT_ALL_STATIC_STATUS    "Tables/All Granted"
+  IDS_TREE_R_TABLEGRANT_ALL_NONE        "< No Tables with All Rights Granted >"
+  IDS_TREE_R_VIEWGRANT_STATIC           "Granted Views"
+  IDS_R_VIEWGRANT_STATIC_STATUS         "Granted Views"
+  IDS_TREE_R_VIEWGRANT_SEL_STATIC       "Views with Select Granted"
+  IDS_R_VIEWGRANT_SEL_STATIC_STATUS     "Views/Sel Granted"
+  IDS_TREE_R_VIEWGRANT_SEL_NONE         "< No Views with Select Granted >"
+  IDS_TREE_R_VIEWGRANT_INS_STATIC       "Views with Insert Granted"
+  IDS_R_VIEWGRANT_INS_STATIC_STATUS     "Views/Ins Granted"
+  IDS_TREE_R_VIEWGRANT_INS_NONE         "< No Views with Insert Granted >"
+  IDS_TREE_R_VIEWGRANT_UPD_STATIC       "Views with Update Granted"
+  IDS_R_VIEWGRANT_UPD_STATIC_STATUS     "Views/Upd Granted"
+  IDS_TREE_R_VIEWGRANT_UPD_NONE         "< No Views with Update Granted >"
+  IDS_TREE_R_VIEWGRANT_DEL_STATIC       "Views with Delete Granted"
+  IDS_R_VIEWGRANT_DEL_STATIC_STATUS     "Views/Del Granted"
+  IDS_TREE_R_VIEWGRANT_DEL_NONE         "< No Views with Delete Granted >"
+  IDS_TREE_R_ROLEGRANT_STATIC           "Granted Roles"
+  IDS_R_ROLEGRANT_STATIC_STATUS         "Granted Roles"
+  IDS_TREE_R_ROLEGRANT_NONE             "< No Granted Roles >"
+
+  // tree statics of level 1, children of role
+  IDS_TREE_ROLEGRANT_USER_STATIC      "Grantees on Role"
+  IDS_ROLEGRANT_USER_STATIC_STATUS    "Grantees on Role"
+  IDS_TREE_ROLEGRANT_USER_NONE        "< Grantees on Role >"
+
+  // tree lines of level 1, children of location
+  IDS_TREE_R_LOCATIONTABLE_STATIC   "Tables Using Location"
+  IDS_R_LOCATIONTABLE_STATIC_STATUS "Tables Using Loc."
+  IDS_TREE_R_LOCATIONTABLE_NONE     "< No tables Using Location >"
+
+  // tree lines of level 2, children of "table of database"
+  IDS_TREE_INTEGRITY_STATIC       "Integrities"
+  IDS_INTEGRITY_STATIC_STATUS     "Integrities"
+  IDS_TREE_INTEGRITY_NONE         "< No Integrities >"
+
+  // special duplication for desktop
+  IDS_TREE_RULE_STATIC            "Rules"
+  IDS_RULE_STATIC_STATUS          "Rules"
+  IDS_TREE_RULE_NONE              "< No Rules >"
+
+  IDS_TREE_INDEX_STATIC           "Indexes"
+  IDS_INDEX_STATIC_STATUS         "Indexes"
+  IDS_TREE_INDEX_NONE             "< No Indexes >"
+  IDS_TREE_TABLELOCATION_STATIC   "Locations of Table"
+  IDS_TABLELOCATION_STATIC_STATUS "Locations of Table"
+  IDS_TREE_TABLELOCATION_NONE     "< No Locations for this Table - ABNORMAL >"
+
+  IDS_TREE_SECURITY_STATIC        "Security Alarms"
+  IDS_SECURITY_STATIC_STATUS      "Security Alarms"
+  IDS_TREE_SEC_SEL_SUCC_STATIC    "Alarms if Success on Select"
+  IDS_SEC_SEL_SUCC_STATIC_STATUS  "Alarms/Succ/Sel"
+  IDS_TREE_SEC_SEL_SUCC_NONE      "< No Alarms if Success on Select >"
+  IDS_TREE_SEC_SEL_FAIL_STATIC    "Alarms if Failure on Select"
+  IDS_SEC_SEL_FAIL_STATIC_STATUS  "Alarms/Fail/Sel"
+  IDS_TREE_SEC_SEL_FAIL_NONE      "< No Alarms if Failure on Select >"
+  IDS_TREE_SEC_DEL_SUCC_STATIC    "Alarms if Success on Delete"
+  IDS_SEC_DEL_SUCC_STATIC_STATUS  "Alarms/Succ/Del"
+  IDS_TREE_SEC_DEL_SUCC_NONE      "< No Alarms if Success on Delete >"
+  IDS_TREE_SEC_DEL_FAIL_STATIC    "Alarms if Failure on Delete"
+  IDS_SEC_DEL_FAIL_STATIC_STATUS  "Alarms/Fail/Del"
+  IDS_TREE_SEC_DEL_FAIL_NONE      "< No Alarms if Failure on Delete >"
+  IDS_TREE_SEC_INS_SUCC_STATIC    "Alarms if Success on Insert"
+  IDS_SEC_INS_SUCC_STATIC_STATUS  "Alarms/Succ/Ins"
+  IDS_TREE_SEC_INS_SUCC_NONE      "< No Alarms if Success on Insert >"
+  IDS_TREE_SEC_INS_FAIL_STATIC    "Alarms if Failure on Insert"
+  IDS_SEC_INS_FAIL_STATIC_STATUS  "Alarms/Fail/Ins"
+  IDS_TREE_SEC_INS_FAIL_NONE      "< No Alarms if Failure on Insert >"
+  IDS_TREE_SEC_UPD_SUCC_STATIC    "Alarms if Success on Update"
+  IDS_SEC_UPD_SUCC_STATIC_STATUS  "Alarms/Succ/Upd"
+  IDS_TREE_SEC_UPD_SUCC_NONE      "< No Alarms if Success on Update >"
+  IDS_TREE_SEC_UPD_FAIL_STATIC    "Alarms if Failure on Update"
+  IDS_SEC_UPD_FAIL_STATIC_STATUS  "Alarms/Fail/Upd"
+  IDS_TREE_SEC_UPD_FAIL_NONE      "< No Alarms if Failure on Update >"
+
+  IDS_TREE_R_TABLESYNONYM_STATIC    "Synonyms for Table"
+  IDS_R_TABLESYNONYM_STATIC_STATUS  "Synonyms for Table"
+  IDS_TREE_R_TABLESYNONYM_NONE      "< No Synonyms for Table >"
+  IDS_TREE_R_TABLEVIEW_STATIC       "Views Referencing Table"
+  IDS_R_TABLEVIEW_STATIC_STATUS     "Views Ref/Table"
+  IDS_TREE_R_TABLEVIEW_NONE         "< No Views Referencing Table >"
+
+  IDS_TREE_TABLEGRANTEES_STATIC         "Grantees on Table"
+  IDS_TABLEGRANTEES_STATIC_STATUS       "Grantees on Table"
+  IDS_TREE_TABLEGRANT_SEL_USER_STATIC   "Grantees on Table for Select"
+  IDS_TABLEGRANT_SEL_USER_STATIC_STATUS "Grantees/Table/Sel"
+  IDS_TREE_TABLEGRANT_SEL_USER_NONE     "< No Grantees for Select >"
+  IDS_TREE_TABLEGRANT_INS_USER_STATIC   "Grantees on Table for Insert"
+  IDS_TABLEGRANT_INS_USER_STATIC_STATUS "Grantees/Table/Ins"
+  IDS_TREE_TABLEGRANT_INS_USER_NONE     "< No Grantees for Insert >"
+  IDS_TREE_TABLEGRANT_UPD_USER_STATIC   "Grantees on Table for Update"
+  IDS_TABLEGRANT_UPD_USER_STATIC_STATUS "Grantees/Table/Upd"
+  IDS_TREE_TABLEGRANT_UPD_USER_NONE     "< No Grantees for Update >"
+  IDS_TREE_TABLEGRANT_DEL_USER_STATIC   "Grantees on Table for Delete"
+  IDS_TABLEGRANT_DEL_USER_STATIC_STATUS "Grantees/Table/Del"
+  IDS_TREE_TABLEGRANT_DEL_USER_NONE     "< No Grantees for Delete >"
+  IDS_TREE_TABLEGRANT_REF_USER_STATIC   "Grantees on Table for Reference"
+  IDS_TABLEGRANT_REF_USER_STATIC_STATUS "Grantees/Table/Ref"
+  IDS_TREE_TABLEGRANT_REF_USER_NONE     "< No Grantees for Reference >"
+
+  IDS_TREE_TABLEGRANT_CPI_USER_STATIC   "Grantees on Table for Copy Into"
+  IDS_TABLEGRANT_CPI_USER_STATIC_STATUS "Grantees/Table/CpIn"
+  IDS_TREE_TABLEGRANT_CPI_USER_NONE     "< No Grantees for Copy Into >"
+  IDS_TREE_TABLEGRANT_CPF_USER_STATIC   "Grantees on Table for Copy From"
+  IDS_TABLEGRANT_CPF_USER_STATIC_STATUS "Grantees/Table/CpFr"
+  IDS_TREE_TABLEGRANT_CPF_USER_NONE     "< No Grantees for Copy From >"
+
+  IDS_TREE_TABLEGRANT_ALL_USER_STATIC   "Grantees on Table for All"
+  IDS_TABLEGRANT_ALL_USER_STATIC_STATUS "Grantees/Table/All"
+  IDS_TREE_TABLEGRANT_ALL_USER_NONE     "< No Grantees for All >"
+
+  // desktop
+  IDS_TREE_TABLEGRANT_INDEX_USER_STATIC   "Grantees on Table for Index"
+  IDS_TABLEGRANT_INDEX_USER_STATIC_STATUS "Grantees/Table/Index"
+  IDS_TREE_TABLEGRANT_INDEX_USER_NONE     "< No Grantees for Index >"
+  IDS_TREE_TABLEGRANT_ALTER_USER_STATIC   "Grantees on Table for Alter"
+  IDS_TABLEGRANT_ALTER_USER_STATIC_STATUS "Grantees/Table/Alter"
+  IDS_TREE_TABLEGRANT_ALTER_USER_NONE     "< No Grantees for Alter >"
+
+  // tree lines of level 2, children of "view of database"
+  IDS_TREE_VIEWTABLE_STATIC       "View Components"
+  IDS_VIEWTABLE_STATIC_STATUS     "View Components"
+  IDS_TREE_VIEWTABLE_NONE         "< No View Components>"
+  IDS_TREE_R_VIEWSYNONYM_STATIC   "Synonyms for View"
+  IDS_R_VIEWSYNONYM_STATIC_STATUS "Synonyms for View"
+  IDS_TREE_R_VIEWSYNONYM_NONE     "< No Synonyms for View >"
+
+  IDS_TREE_VIEWGRANTEES_STATIC          "Grantees on View"
+  IDS_VIEWGRANTEES_STATIC_STATUS        "Grantees on View"
+  IDS_TREE_VIEWGRANT_SEL_USER_STATIC    "Grantees on View for Select"
+  IDS_VIEWGRANT_SEL_USER_STATIC_STATUS  "Grantees/View/Sel"
+  IDS_TREE_VIEWGRANT_SEL_USER_NONE      "< No Grantees for Select >"
+  IDS_TREE_VIEWGRANT_INS_USER_STATIC    "Grantees on View for Insert"
+  IDS_VIEWGRANT_INS_USER_STATIC_STATUS  "Grantees/View/Ins"
+  IDS_TREE_VIEWGRANT_INS_USER_NONE      "< No Grantees for Insert >"
+  IDS_TREE_VIEWGRANT_UPD_USER_STATIC    "Grantees on View for Update"
+  IDS_VIEWGRANT_UPD_USER_STATIC_STATUS  "Grantees/View/Upd"
+  IDS_TREE_VIEWGRANT_UPD_USER_NONE      "< No Grantees for Update >"
+  IDS_TREE_VIEWGRANT_DEL_USER_STATIC    "Grantees on View for Delete"
+  IDS_VIEWGRANT_DEL_USER_STATIC_STATUS  "Grantees/View/Del"
+  IDS_TREE_VIEWGRANT_DEL_USER_NONE      "< No Grantees for Delete >"
+
+  // tree lines of level 2, child of "procedure of database"
+  IDS_TREE_PROCGRANT_EXEC_USER_STATIC   "Grantees on Proc for Execute"
+  IDS_PROCGRANT_EXEC_USER_STATIC_STATUS "Grantees/Proc/Exec"
+  IDS_TREE_PROCGRANT_EXEC_USER_NONE     "< No Grantees for Execute >"
+
+  // special duplication for desktop
+  IDS_TREE_R_PROC_RULE_STATIC           "Rules Executing Procedure"
+  IDS_R_PROC_RULE_STATIC_STATUS         "Rules/Exec.Proc."
+  IDS_TREE_R_PROC_RULE_NONE             "< No Rules Executing Procedure >"
+
+  // tree lines of level 2, child of "dbevent of database"
+  IDS_TREE_DBEGRANT_RAISE_USER_STATIC   "Grantees on Dbevent for Raise"
+  IDS_DBEGRANT_RAISE_USER_STATIC_STATUS "Grantees/Dbev./Rai."
+  IDS_TREE_DBEGRANT_RAISE_USER_NONE     "< No Grantees for Raise >"
+  IDS_TREE_DBEGRANT_REGTR_USER_STATIC   "Grantees on Dbevent for Register"
+  IDS_DBEGRANT_REGTR_USER_STATIC_STATUS "Grantees/Dbev./Reg."
+  IDS_TREE_DBEGRANT_REGTR_USER_NONE     "< No Grantees for Register >"
+
+  // tree lines of level 3, children of "index on table of database"
+  IDS_TREE_R_INDEXSYNONYM_STATIC    "Synonyms for Index"
+  IDS_R_INDEXSYNONYM_STATIC_STATUS  "Synonyms/Index"
+  IDS_TREE_R_INDEXSYNONYM_NONE      "< No Synonyms for Index >"
+
+  // tree lines of level 3, children of "rule on table of database"
+
+  // special duplication for desktop
+  IDS_TREE_RULEPROC_STATIC          "Procedure Executed by Rule"
+  IDS_RULEPROC_STATIC_STATUS        "Proc Executed/Rule"
+  IDS_TREE_RULEPROC_NONE            "< No Procedure Executed by Rule >"
+
+  // replicator strings - all levels mixed
+  IDS_TREE_REPLICATOR_STATIC              "Replication"
+  IDS_REPLICATOR_STATIC_STATUS            "Replication"
+  IDS_TREE_REPLICATOR_NONE                "Replication Objects are not Installed"
+
+  IDS_TREE_REPLIC_CONNECTION_STATIC       "Databases"
+  IDS_REPLIC_CONNECTION_STATIC_STATUS     "Databases"
+  IDS_TREE_REPLIC_CONNECTION_NONE         "< No Databases >"
+  IDS_TREE_REPLIC_CDDS_STATIC             "C.D.D.S"
+  IDS_REPLIC_CDDS_STATIC_STATUS           "C.D.D.S"
+  IDS_TREE_REPLIC_CDDS_NONE               "< No C.D.D.S >"
+  IDS_TREE_REPLIC_MAILUSER_STATIC         "Mail Alert Users"
+  IDS_REPLIC_MAILUSER_STATIC_STATUS       "Mail Alert Users"
+  IDS_TREE_REPLIC_MAILUSER_NONE           "< No Mail Alert Users >"
+  IDS_TREE_REPLIC_REGTABLE_STATIC         "Registered Tables"
+  IDS_REPLIC_REGTABLE_STATIC_STATUS       "Registered Tables"
+  IDS_TREE_REPLIC_REGTABLE_NONE           "< No Registered Tables >"
+
+  IDS_TREE_REPLIC_CDDS_DETAIL_STATIC      "CDDS Components"
+  IDS_REPLIC_CDDS_DETAIL_STATIC_STATUS    "CDDS Components"
+  IDS_TREE_REPLIC_CDDS_DETAIL_NONE        "< No CDDS components >"
+  IDS_TREE_R_REPLIC_CDDS_TABLE_STATIC     "Registered Tables for CDDS"
+  IDS_R_REPLIC_CDDS_TABLE_STATIC_STATUS   "Reg.Tables /CDDS"
+  IDS_TREE_R_REPLIC_CDDS_TABLE_NONE       "< No Registered Tables for CDDS >"
+
+  IDS_TREE_R_REPLIC_TABLE_CDDS_STATIC     "Replicator CDDS on Table"
+  IDS_R_REPLIC_TABLE_CDDS_STATIC_STATUS   "Replic.CDDS /Table"
+  IDS_TREE_R_REPLIC_TABLE_CDDS_NONE       "< No Replicator CDDS on Table >"
+
+  // new style alarms (with 2 sub-branches alarmee and launched dbevent)
+  IDS_TREE_ALARMEE_STATIC                 "User/Group/Role Triggering Alarm "
+  IDS_ALARMEE_STATIC_STATUS               "Auth_id/Trigg.Alarm"
+  IDS_TREE_ALARMEE_NONE                   "< No User/Group/Role Triggering Alarm >" // SHOULD NOT OCCUR
+  IDS_TREE_ALARM_EVENT_STATIC             "Launched Dbevent"
+  IDS_ALARM_EVENT_STATIC_STATUS           "Launched Dbevent"
+  IDS_TREE_ALARM_EVENT_NONE               "< No Launched Dbevent >"
+
+  // tree lines of level 1, child of "Databases"
+  IDS_TREE_SEQUENCE_STATIC                "Sequences"
+  IDS_TREE_SEQUENCE_STATIC_STATUS         "Sequences"
+  IDS_TREE_SEQUENCE_NONE                  "< No Sequences >"
+
+  // tree lines of level 2, child of "Sequence of Databases"
+  IDS_TREE_SEQUENCE_GRANT_STATIC          "Grantees For Next on Sequence"
+  IDS_TREE_SEQUENCE_GRANT_STATIC_STATUS   "Grantees/Sequence"
+  IDS_TREE_SEQUENCE_GRANT_NONE            "< No Grantees for Sequence >"
+
+  // strings related to edits and checkboxes on DOM doc. button line
+  IDS_STAT_BASE_OWNER         "Select the Owner Name as a Filter for the Database Objects"
+  IDS_STAT_OTHER_OWNER        "Select the Owner Name as a Filter for the Other Objects"
+
+
+  IDS_STAT_SYSTEMOBJECTS      "Select whether You Want to Display the System Objects"
+  IDS_CHECKBOX_SYSTEMOBJECTS  "System Obj."
+  IDS_FILTER_OWNER_ALL        "<all Owners>"
+  IDS_FILTER_OWNER_ERROR      "<Unavailable List>"
+  IDS_FILTER_OWNER_NOGRANT    "<Permission not Granted>"
+
+ 
+  // Find messages
+  IDS_FIND_TREE_NOTFOUND      "No Tree Line Matching %s"
+
+  //
+  // strings for status bar information about current non-static objects
+  // STRINGS WITH IDS_TREE_STATUS_xxx MUST BE SHORT IN LENGTH ( <= 19 CHARS)
+  //
+
+  // Unknown
+  IDS_TREE_STATUS_OT_UNKNOWN              "UNKNOWN OBJECT"
+
+  // level 0
+  IDS_TREE_STATUS_OT_DATABASE             "Database"
+  IDS_TREE_STATUS_OT_PROFILE              "Profile"
+  IDS_TREE_STATUS_OT_USER                 "User"
+  IDS_TREE_STATUS_OT_GROUP                "Group"
+  IDS_TREE_STATUS_OT_ROLE                 "Role"
+  IDS_TREE_STATUS_OT_LOCATION             "Location"
+  IDS_TREE_STATUS_OT_SYNONYMED            "Object/Synonym"
+  IDS_TREE_STATUS_OT_REPLICATOR           "Replication"  // replicator not installed
+
+  // level 1, child of database
+  IDS_TREE_STATUS_OT_TABLE                "Table"
+  IDS_TREE_STATUS_OT_VIEW                 "View"
+  IDS_TREE_STATUS_OT_PROCEDURE            "Procedure"
+  IDS_TREE_STATUS_OT_SCHEMAUSER           "Schema"
+  IDS_TREE_STATUS_OT_SYNONYM              "Synonym"
+  IDS_TREE_STATUS_OT_SEQUENCE             "Sequence"
+  // Level 2 child of sequences
+  IDS_TREE_STATUS_OT_GRANTSEQ             "Grantees For Next on Sequence"
+
+  // special duplication for desktop
+  IDS_TREE_STATUS_OT_DBGRANT_ACCESY_USER      "Auth_id/Access Gr."
+
+  IDS_TREE_STATUS_OT_DBGRANT_ACCESN_USER  "Auth_id/No Acc Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_CREPRY_USER  "Auth_id/Cr.Proc Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_CREPRN_USER  "Auth_id/No cr.P.Gr"
+
+  // special duplication for desktop
+  IDS_TREE_STATUS_OT_DBGRANT_CRETBY_USER      "Auth_id/Cr.Tbl Gr."
+
+  IDS_TREE_STATUS_OT_DBGRANT_CRETBN_USER  "Auth_id/No Cr.Tb.Gr"
+
+  // special duplication for desktop
+  IDS_TREE_STATUS_OT_DBGRANT_DBADMY_USER      "Auth_id/Db Adm. Gr."
+
+  IDS_TREE_STATUS_OT_DBGRANT_DBADMN_USER  "Auth_id/No Db Ad.Gr"
+  IDS_TREE_STATUS_OT_DBGRANT_LKMODY_USER  "Auth_id/Lockm. Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_LKMODN_USER  "Auth_id/No lo. Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_QRYIOY_USER  "Auth_id/Q.IO L. Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_QRYION_USER  "Auth_id/NO QIOL Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_QRYRWY_USER  "Auth_id/Q. Row L.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_QRYRWN_USER  "Auth_id/No QRL Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_UPDSCY_USER  "Auth_id/Upd.Sysc.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_UPDSCN_USER  "Auth_id/No Upd.SC.Gr"
+
+  IDS_TREE_STATUS_OT_DBGRANT_SELSCY_USER  "Auth_id/Sel.Sysc.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_SELSCN_USER  "Auth_id/No Sel.SC.Gr"
+  IDS_TREE_STATUS_OT_DBGRANT_CNCTLY_USER  "Auth_id/Conn.T.L.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_CNCTLN_USER  "Auth_id/No Con.TL.Gr"
+  IDS_TREE_STATUS_OT_DBGRANT_IDLTLY_USER  "Auth_id/Idle T.L.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_IDLTLN_USER  "Auth_id/No Idl.TL.Gr"
+  IDS_TREE_STATUS_OT_DBGRANT_SESPRY_USER  "Auth_id/Sess.Pri.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_SESPRN_USER  "Auth_id/No Ses.Pr.Gr"
+  IDS_TREE_STATUS_OT_DBGRANT_TBLSTY_USER  "Auth_id/Tbl.Stat.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_TBLSTN_USER  "Auth_id/No Tb.St.Gr"
+
+  IDS_TREE_STATUS_OT_DBGRANT_QRYCPY_USER  "Auth_id/Qry.Cpu.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_QRYCPN_USER  "Auth_id/No Qry.Cpu.Gr"
+  IDS_TREE_STATUS_OT_DBGRANT_QRYPGY_USER  "Auth_id/Qry.Pg.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_QRYPGN_USER  "Auth_id/No Qry.Pg.Gr"
+  IDS_TREE_STATUS_OT_DBGRANT_QRYCOY_USER  "Auth_id/Qry.Cost.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_QRYCON_USER  "Auth_id/No Qry.Cost.Gr"
+
+  IDS_TREE_STATUS_OT_DBGRANT_CRSEQY_USER  "Auth_id/Cre.Seq.Gr."
+  IDS_TREE_STATUS_OT_DBGRANT_CRSEQN_USER  "Auth_id/No Cre.Seq.Gr"
+
+  // special duplication for desktop
+  IDS_TREE_STATUS_OT_DBEVENT              "DbEvent"
+
+  IDS_TREE_STATUS_OT_DBALARM_CONN_SUCCESS     "Alarm/Succ/Connect"
+  IDS_TREE_STATUS_OT_DBALARM_CONN_FAILURE     "Alarm/Fail/Connect"
+  IDS_TREE_STATUS_OT_DBALARM_DISCONN_SUCCESS  "Alarm/Succ/Disc."
+  IDS_TREE_STATUS_OT_DBALARM_DISCONN_FAILURE  "Alarm/Fail/Disc."
+
+  // level 1, child of user
+  IDS_TREE_STATUS_OTR_USERSCHEMA              "Schema DB/User"
+  IDS_TREE_STATUS_OTR_USERGROUP               "Group Cont.User"
+  IDS_TREE_STATUS_OTR_ALARM_SELSUCCESS_TABLE  "[DB]Tbl/Al/Succ/Sel"
+  IDS_TREE_STATUS_OTR_ALARM_SELFAILURE_TABLE  "[DB]Tbl/Al/Fail/Sel"
+  IDS_TREE_STATUS_OTR_ALARM_DELSUCCESS_TABLE  "[DB]Tbl/Al/Succ/Del"
+  IDS_TREE_STATUS_OTR_ALARM_DELFAILURE_TABLE  "[DB]Tbl/Al/Fail/Del"
+  IDS_TREE_STATUS_OTR_ALARM_INSSUCCESS_TABLE  "[DB]Tbl/Al/Succ/Ins"
+  IDS_TREE_STATUS_OTR_ALARM_INSFAILURE_TABLE  "[DB]Tbl/Al/Fail/Ins"
+  IDS_TREE_STATUS_OTR_ALARM_UPDSUCCESS_TABLE  "[DB]Tbl/Al/Succ/Upd"
+  IDS_TREE_STATUS_OTR_ALARM_UPDFAILURE_TABLE  "[DB]Tbl/Al/Fail/Upd"
+  IDS_TREE_STATUS_OTR_GRANTEE_RAISE_DBEVENT   "DbEvent/Raise Gra."
+  IDS_TREE_STATUS_OTR_GRANTEE_REGTR_DBEVENT   "DbEvent/Reg Gra."
+  IDS_TREE_STATUS_OTR_GRANTEE_EXEC_PROC   "Proc/Exec Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_NEXT_SEQU   "Seq/Next Granted"
+  IDS_TREE_STATUS_OTR_DBGRANT_ACCESY_DB   "DB/Access Granted"
+  IDS_TREE_STATUS_OTR_DBGRANT_ACCESN_DB   "DB/No Access Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_CREPRY_DB   "DB/Cr.Proc Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_CREPRN_DB   "DB/No Cr.Proc Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_SEQCRY_DB   "DB/Cr.Seq Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_SEQCRN_DB   "DB/No Cr.Seq Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_CRETBY_DB   "DB/Cr.Table Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_CRETBN_DB   "DB/No Cr.Table Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_DBADMY_DB   "DB/Db Admin Granted"
+  IDS_TREE_STATUS_OTR_DBGRANT_DBADMN_DB   "DB/No Db Adm. Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_LKMODY_DB   "DB/Lockmode Granted"
+  IDS_TREE_STATUS_OTR_DBGRANT_LKMODN_DB   "DB/No Lockmode Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYIOY_DB   "DB/Q. IO Limit Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYION_DB   "DB/No Q.IO Lim.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYRWY_DB   "DB/Qu.Row Lim. Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYRWN_DB   "DB/No Q.R.Lim. Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_UPDSCY_DB   "DB/Upd Syscat Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_UPDSCN_DB   "DB/No Upd.Sysc.Gra."
+
+  IDS_TREE_STATUS_OTR_DBGRANT_SELSCY_DB   "DB/Sel.Syscat.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_SELSCN_DB   "DB/No Sel.Sysc.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_CNCTLY_DB   "DB/Conn.Tim.L.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_CNCTLN_DB   "DB/No Con.T.L.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_IDLTLY_DB   "DB/Idle Tim.L.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_IDLTLN_DB   "DB/No Idl.T.L.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_SESPRY_DB   "DB/Sess.Pri.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_SESPRN_DB   "DB/No Sess.Pr.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_TBLSTY_DB   "DB/Tbl.Stat.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_TBLSTN_DB   "DB/No Tbl.St.Gra."
+
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYCPY_DB   "DB/Qry.Cpu.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYCPN_DB   "DB/No Qry.Cpu.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYPGY_DB   "DB/Qry.Pg.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYPGN_DB   "DB/No Qry.Pg.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYCOY_DB   "DB/Qry.Cost.Gra."
+  IDS_TREE_STATUS_OTR_DBGRANT_QRYCON_DB   "DB/No Qry.Cost.Gra."
+
+  IDS_TREE_STATUS_OTR_GRANTEE_SEL_TABLE   "Table/Sel Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_INS_TABLE   "Table/Ins Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_UPD_TABLE   "Table/Upd Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_DEL_TABLE   "Table/Del Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_REF_TABLE   "Table/Ref Granted"
+
+  IDS_TREE_STATUS_OTR_GRANTEE_CPI_TABLE   "Table/CpIn Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_CPF_TABLE   "Table/CpFr.Granted"
+
+  IDS_TREE_STATUS_OTR_GRANTEE_ALL_TABLE   "Table/all Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_SEL_VIEW    "View/Sel Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_INS_VIEW    "View/Ins Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_UPD_VIEW    "View/Upd Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_DEL_VIEW    "View/Del Granted"
+  IDS_TREE_STATUS_OTR_GRANTEE_ROLE        "Role Granted->User"
+
+  // level 1, child of group
+  IDS_TREE_STATUS_OT_GROUPUSER            "User in Group"
+
+  // level 1, child of role
+  IDS_TREE_STATUS_OT_ROLEGRANT_USER       "Users/Grant on Role"
+
+  // level 1, child of location
+  IDS_TREE_STATUS_OTR_LOCATIONTABLE       "Table at Location"
+
+
+  // level 2, child of "table of database"
+  IDS_TREE_STATUS_OT_INTEGRITY                "Integrity"
+
+  // special duplication for desktop
+  IDS_TREE_STATUS_OT_RULE                     "Rule"
+
+  IDS_TREE_STATUS_OT_INDEX                    "Index"
+  IDS_TREE_STATUS_OT_TABLELOCATION            "Table Location"
+
+  IDS_TREE_STATUS_OT_S_ALARM_SELSUCCESS_USER  "Auth_id/Al/Succ/Sel"
+  IDS_TREE_STATUS_OT_S_ALARM_SELFAILURE_USER  "Auth_id/Al/Fail/Sel"
+  IDS_TREE_STATUS_OT_S_ALARM_DELSUCCESS_USER  "Auth_id/Al/Succ/Del"
+  IDS_TREE_STATUS_OT_S_ALARM_DELFAILURE_USER  "Auth_id/Al/Fail/Del"
+  IDS_TREE_STATUS_OT_S_ALARM_INSSUCCESS_USER  "Auth_id/Al/Succ/Ins"
+  IDS_TREE_STATUS_OT_S_ALARM_INSFAILURE_USER  "Auth_id/Al/Fail/Ins"
+  IDS_TREE_STATUS_OT_S_ALARM_UPDSUCCESS_USER  "Auth_id/Al/Succ/Upd"
+  IDS_TREE_STATUS_OT_S_ALARM_UPDFAILURE_USER  "Auth_id/Al/Fail/Upd"
+
+  IDS_TREE_STATUS_OT_TABLEGRANT_SEL_USER  "Auth_id/Sel Granted"
+  IDS_TREE_STATUS_OT_TABLEGRANT_INS_USER  "Auth_id/Ins Granted"
+  IDS_TREE_STATUS_OT_TABLEGRANT_UPD_USER  "Auth_id/Upd Granted"
+  IDS_TREE_STATUS_OT_TABLEGRANT_DEL_USER  "Auth_id/Del Granted"
+  IDS_TREE_STATUS_OT_TABLEGRANT_REF_USER  "Auth_id/Ref Granted"
+
+  IDS_TREE_STATUS_OT_TABLEGRANT_CPI_USER  "Auth_id/CpIn Granted"
+  IDS_TREE_STATUS_OT_TABLEGRANT_CPF_USER  "Auth_id/CpFr. Granted"
+
+  IDS_TREE_STATUS_OT_TABLEGRANT_ALL_USER  "Auth_id/All Granted"
+
+  // desktop
+  IDS_TREE_STATUS_OT_TABLEGRANT_INDEX_USER  "Auth_id/Idx Granted"
+  IDS_TREE_STATUS_OT_TABLEGRANT_ALTER_USER  "Auth_id/Alt Granted"
+
+  IDS_TREE_STATUS_OTR_TABLESYNONYM        "Synonym for Table"
+  IDS_TREE_STATUS_OTR_TABLEVIEW           "View Ref. Table"
+
+  // level 2, child of "view of database"
+  IDS_TREE_STATUS_OT_VIEWTABLE            "View Component"
+  IDS_TREE_STATUS_OTR_VIEWSYNONYM         "Synonym for View"
+
+  IDS_TREE_STATUS_OT_VIEWGRANT_SEL_USER   "Auth_id/Sel Granted"
+  IDS_TREE_STATUS_OT_VIEWGRANT_INS_USER   "Auth_id/Ins Granted"
+  IDS_TREE_STATUS_OT_VIEWGRANT_UPD_USER   "Auth_id/Upd Granted"
+  IDS_TREE_STATUS_OT_VIEWGRANT_DEL_USER   "Auth_id/Del Granted"
+
+  // level 2, child of "procedure of database"
+  IDS_TREE_STATUS_OT_PROCGRANT_EXEC_USER  "Auth_id/Ex. Granted"
+
+  // special duplication for desktop
+  IDS_TREE_STATUS_OTR_PROC_RULE           "Rule Exec. Proc."
+
+  // level 2, child of "dbevent of database"
+  IDS_TREE_STATUS_OT_DBEGRANT_RAISE_USER  "Auth_id/Rai.Granted"
+  IDS_TREE_STATUS_OT_DBEGRANT_REGTR_USER  "Auth_id/Reg.Granted"
+
+// level 3, child of "index on table of database"
+  IDS_TREE_STATUS_OTR_INDEXSYNONYM        "Synonym for Index"
+
+// level 3, child of "rule on table of database"
+
+  // special duplication for desktop
+  IDS_TREE_STATUS_OT_RULEPROC             "Proc Executed/Rule"
+
+  // replicator, all levels mixed
+  IDS_TREE_STATUS_OT_REPLIC_CONNECTION    "Replic. Connection"
+  IDS_TREE_STATUS_OT_REPLIC_CDDS          "Replic. CDDS"
+  IDS_TREE_STATUS_OT_REPLIC_MAILUSER      "Replic. Mail User"
+  IDS_TREE_STATUS_OT_REPLIC_REGTABLE      "Replic. Reg. Table"
+
+  IDS_TREE_STATUS_OT_REPLIC_CDDS_DETAIL   "Replic. CDDS Comp."
+  IDS_TREE_STATUS_OTR_REPLIC_CDDS_TABLE   "Replic.CDDS Reg.Tbl"
+  IDS_TREE_STATUS_OTR_REPLIC_TABLE_CDDS   "Replic. CDDS on Tbl"
+
+  // "Solved" types
+  IDS_TREE_STATUS_OT_GRANTEE_SOLVED_USER  "Grantee User"
+  IDS_TREE_STATUS_OT_GRANTEE_SOLVED_GROUP "Grantee Group"
+  IDS_TREE_STATUS_OT_GRANTEE_SOLVED_ROLE  "Grantee Role"
+
+  // new style alarms (with 2 sub-branches alarmee and launched dbevent)
+  IDS_TREE_STATUS_OT_ALARMEE              "Auth_id/Trigg.Alarm"
+  IDS_TREE_STATUS_OT_ALARM_EVENT          "Launched Dbevent"
+  IDS_TREE_STATUS_OT_ALARMEE_SOLVED_USER  "User Triggering Al."
+  IDS_TREE_STATUS_OT_ALARMEE_SOLVED_GROUP "Group Trigg. Al."
+  IDS_TREE_STATUS_OT_ALARMEE_SOLVED_ROLE  "Role Triggering Al."
+
+  // table/view/procedure as subbranches of schema
+  IDS_TREE_SCHEMAUSER_TABLE_STATIC               "Tables for schema"
+  IDS_SCHEMAUSER_TABLE_STATIC_STATUS             "Tables for schema"
+  IDS_TREE_SCHEMAUSER_TABLE_NONE                 "< No Tables for schema >"
+  IDS_TREE_SCHEMAUSER_VIEW_STATIC                "Views for schema"
+  IDS_SCHEMAUSER_VIEW_STATIC_STATUS              "Views for schema"
+  IDS_TREE_SCHEMAUSER_VIEW_NONE                  "< No Views for schema >"
+  IDS_TREE_SCHEMAUSER_PROCEDURE_STATIC           "Procedures for schema"
+  IDS_SCHEMAUSER_PROCEDURE_STATIC_STATUS         "Procedures for schema"
+  IDS_TREE_SCHEMAUSER_PROCEDURE_NONE             "< No Procedures for schema >"
+
+  IDS_TREE_STATUS_OT_SCHEMAUSER_TABLE            "Table for schema"
+  IDS_TREE_STATUS_OT_SCHEMAUSER_VIEW             "View for schema"
+  IDS_TREE_STATUS_OT_SCHEMAUSER_PROCEDURE        "Procedure for schema"
+
+
+  // strings for parent reminder when child teared out
+  IDS_PARENT    "Parent"
+
+  //
+  // Strings for the configuration window
+  //
+  IDS_CFG_TITLE  "Preferences"
+  IDS_CFG_MENU   "&Settings"
+  IDS_CFG_EXIT   "&Close"
+
+  // Save/Load Error box messages
+  IDS_ERR_SAVE_OPEN             "Error Opening File to Save Environment"
+  IDS_ERR_SAVE_VERSIONID        "Error Saving Environment Version Id"
+  IDS_ERR_SAVE_SETTINGS         "Error Saving Environment Settings"
+  IDS_ERR_SAVE_CACHE            "Error Saving Environment Cache"
+  IDS_ERR_SAVE_DISP             "Error Saving Environment Documents Images"
+  IDS_ERR_SAVE_CLOSE            "Error Closing File while Saving Environment"
+  IDS_ERR_SAVE_PASSWORD         "Error Saving Environment Security Information"
+
+  IDS_ERR_LOAD_OPEN             "Error Opening File to Load Environment"
+  IDS_ERR_LOAD_VERSIONID        "Incompatible or Inconsistent Environment Version Id"
+  IDS_ERR_LOAD_SETTINGS         "Error Loading Environment Settings"
+  IDS_ERR_LOAD_CACHE            "Error Loading Environment Cache"
+  IDS_ERR_LOAD_DISP             "Error Loading Environment Documents Images"
+  IDS_ERR_LOAD_CLOSE            "Error Closing File while Loading Environment"
+  IDS_ERR_LOAD_PASSWORD         "Error Loading Environment Security Information"
+  IDS_ERR_LOAD_BADPASSWORD      "Error Loading Environment : Bad Password"
+
+  // replicator installation messages
+  IDS_CONFIRM_INSTALL_REPLICATOR  "Do you Want to Install Replication Objects ?"
+  IDS_ERROR_INSTALL_REPLICATOR    "Failed to Install Replication Objects"
+
+  // Clipboard messages
+  IDS_ERR_CLIPBOARD_DOM_COPY        "Cannot Copy DOM Object to Clipboard"
+  IDS_ERR_CLIPBOARD_DOM_PASTE       "Cannot Paste DOM Object from Clipboard"
+
+  // Objects Drag/Drop messages
+  IDS_CONFIRM_MV_DRAGDROP           "Are you Sure you Want to Move Object %s Definition ?"
+  IDS_CONFIRM_CP_DRAGDROP           "Are you Sure you Want to Duplicate Object %s Definition ?"
+  IDS_CONFIRM_DRAGDROP_CAPT         "Mouse Operation on DOM Objects"
+  IDS_CONFIRM_DRAGTODDB             "Are you Sure you Want to Distribute Object %s Definition ?"
+
+  // Background task messages
+  IDS_ERR_TIMER_BKTASK              "Cannot Activate Background Task : Out of Timers"
+
+  // remote command messages
+  IDS_ERR_TIMER_REMOTECMD           "Cannot Control Remote Command : Out of Timers"
+  IDS_ERR_MEM_REMOTECMD             "Cannot Control Remote Command : Out of Memory"
+
+  // expand messages
+  IDS_EXPANDDIRECT            "Expand Branch and its Sub-Branches"
+  IDS_EXPANDALL               "Expand All Branches"
+  IDS_EXPAND_LONG             "This operation may take some time to complete. Continue?"
+
+  // tree resequence messages
+  IDS_RESEQUENCING_TREE       "Resequencing tree lines - please wait..."
+
+  // Desktop statistics
+  
+  // Strings for INI settings - DON'T TRANSLATE THESE STRINGS!!!
+
+#ifdef EDBC
+  IDS_INIFILENAME       "EDBCVDBA.INI"
+#else
+  IDS_INIFILENAME       "VDBA.INI"
+#endif
+  IDS_INISETTINGS       "Settings"
+  IDS_INIBROWSFONT      "BrowsersFont"
+  IDS_INICONTFONT       "ContFont"
+  IDS_INIFONTFORMAT     "%d %d %d %d %d %d %d %d %d %d %d %d %d %s"
+  IDS_INISTATUSBARFONT    "StatusFont"
+  IDS_INISTATUSBAR        "StatusBar"
+  IDS_INISTATUSBARFORMAT  "%d %d %d %d %d %d %d"
+  IDS_INITOOLBAR          "Toolbar"
+  IDS_INITOOLBARFORMAT    "%d"
+  IDS_INIDOM              "Dom"
+  IDS_INIDOMFORMAT        "%d"
+  IDS_INIBKTASK           "BkTask"  // Emb June 10, 95
+  IDS_INIBKTASKFORMAT     "%d"      // Emb June 10, 95
+
+  IDS_INIIPMFONT          "IpmFont"
+  IDS_ININODEFONT         "NodeFont"
+
+  // strings for remote command dialog box
+  IDS_REMOTECMD_INPROGRESS        "Please Wait - Feedback from Command Displays Below"
+  IDS_REMOTECMD_FINISHED          "Remote Command Execution Finished - Click OK to Continue"
+  IDS_REMOTECMD_NOTACCEPTED       "Command not accepted by server"
+  IDS_REMOTECMD_NOANSWER          "No answer from RMCMD on the server.\nPlease make sure RMCMD is running.\nContinue?"
+  IDS_REMOTECMD_WARNING           "Warning"
+  IDS_COMMAND_COMPLETED		  "Operation Completed."
+
+  // confirm messages
+  IDS_CONFIRM_EXIT                "Do You Want to Save Current Environment ?"
+  IDS_CONFIRM_EXIT_CAPT           "Exit %s/Visual DBA"
+
+  // Locate messages
+  IDS_LOCATE_ERR_CAPT             "Locate Object"
+  IDS_LOCATE_ERR_NOOBJ            "Object Does not Exit"
+  IDS_LOCATE_ERR_MEMORY           "Out of Memory"
+  IDS_LOCATE_ERR_ADDLINE          "Cannot Add DOM Line"
+  IDS_LOCATE_ERR_WILD_UNACC       "Wildcard not Acceptable for the Selected Type"
+
+
+  IDS_INVALIDCFGPLATFORM          "Cannot load CFG files created on other platforms."
+
+END
+
+//
+// memory shortage specific error messages
+// see gMemErrFlag management in esltools.c
+//
+STRINGTABLE DISCARDABLE
+BEGIN
+IDS_E_MEMERR_STARTUP            "Cannot startup application due to Memory Shortage"
+IDS_E_MEMERR_LOADCACHE          "Cannot Load Environment Cache due to Memory Shortage"
+IDS_E_MEMERR_LOADPROPS          "Cannot Load Environment Properties due to Memory Shortage"
+IDS_E_MEMERR_LOADDISP           "Cannot Load Environment Display due to Memory Shortage"
+IDS_E_MEMERR_REFRESHONLOAD      "Cannot Refresh On Load due to Memory Shortage"
+IDS_E_MEMERR_NEWDOM             "Cannot Create Database Object Manager due to Memory Shortage"
+IDS_E_MEMERR_EXPANDONE          "Cannot Expand due to Memory Shortage"
+IDS_E_MEMERR_EXPANDBRANCH       "Cannot Expand Branch with Subbranches due to Memory Shortage"
+IDS_E_MEMERR_EXPANDALL          "Cannot Expand all Branches due to Memory Shortage"
+IDS_E_MEMERR_SHOWSYSTEM         "Cannot Show/Hide System Objects due to Memory Shortage"
+IDS_E_MEMERR_PRINTDOM           "Cannot Print Database Object Manager due to Memory Shortage"
+IDS_E_MEMERR_SHOWPROPS          "Cannot Show Properties due to Memory Shortage"
+IDS_E_MEMERR_INSTALLREPLIC      "Cannot Install Replicator due to Memory Shortage"
+IDS_E_MEMERR_BUILDSERVER        "Cannot Build Server due to Memory Shortage"
+IDS_E_MEMERR_FORCEREFRESH       "Cannot Force Refresh due to Memory Shortage"
+IDS_E_MEMERR_FILTERCHANGE       "Cannot Change Filters due to Memory Shortage"
+IDS_E_MEMERR_BASEFILTERCHANGE   "Cannot Change Base Filter due to Memory Shortage"
+IDS_E_MEMERR_OTHERFILTERCHANGE  "Cannot Change Other Filter due to Memory Shortage"
+IDS_E_MEMERR_QUERYGO            "Cannot Execute Query due to Memory Shortage"
+IDS_E_MEMERR_PRINTSQLACT        "Cannot Print Statement due to Memory Shortage"
+IDS_E_MEMERR_STANDARD           "Cannot Perform Operation due to Memory Shortage"
+IDS_E_MEMERR_DBAGETFIRSTOBJECT  "Cannot Perform Operation due to Memory Shortage"
+IDS_E_MEMERR_PRINTCONTAINER     "Cannot Print Container due to Memory Shortage"
+IDS_E_MEMERR_SQLACT             "Cannot Create Sql Scratchpad due to Memory Shortage"
+
+// log file
+IDS_E_SQLERR_STMT               "Erroneous statement:"
+IDS_E_SQLERR_ERRNUM             "Sql error code: %ld"
+IDS_E_SQLERR_ERRTXT             "Sql error text:"
+
+END
+
+
+// Specific for STAR
+STRINGTABLE DISCARDABLE
+BEGIN
+IDS_TREE_R_CDB_STATIC           "Coordinator Database"
+IDS_TREE_R_CDB_STATIC_STATUS    "CDB"
+IDS_TREE_R_CDB_NONE             "No Coordinator Database"
+IDS_TREE_STATUS_OTR_CDB         "CDB"
+END
+
+//
+// ICE
+//
+STRINGTABLE DISCARDABLE
+BEGIN
+IDS_TREE_ICE_STATIC                     "ICE"
+IDS_TREE_ICE_STATIC_STATUS              "ICE"
+IDS_TREE_ICE_NONE                       "< No ICE Installation >"
+IDS_TREE_STATUS_OT_ICE                  "ICE"
+// Under "Security"
+IDS_TREE_ICE_SECURITY_STATIC              "Security"
+IDS_TREE_ICE_SECURITY_STATIC_STATUS       "Security"
+IDS_TREE_ICE_SECURITY_NONE              "< No Security >"
+IDS_TREE_STATUS_OT_ICE_SECURITY           "Security"
+
+IDS_TREE_ICE_ROLE_STATIC                "Roles"
+IDS_TREE_ICE_ROLE_STATIC_STATUS         "Roles"
+IDS_TREE_ICE_ROLE_NONE                "< No Role >"
+IDS_TREE_STATUS_OT_ICE_ROLE             "Role"    
+
+IDS_TREE_ICE_DBUSER_STATIC                "Database Users"
+IDS_TREE_ICE_DBUSER_STATIC_STATUS         "Database Users"       
+IDS_TREE_ICE_DBUSER_NONE                "< No Database User >"
+IDS_TREE_STATUS_OT_ICE_DBUSER             "Database User"    
+
+IDS_TREE_ICE_DBCONNECTION_STATIC          "Database Connections"
+IDS_TREE_ICE_DBCONNECTION_STATIC_STATUS   "Database Connections"       
+IDS_TREE_ICE_DBCONNECTION_NONE            "< No Database Connection >"
+IDS_TREE_STATUS_OT_ICE_DBCONNECTION       "Database Connection"    
+
+IDS_TREE_ICE_WEBUSER_STATIC               "Web Users"
+IDS_TREE_ICE_WEBUSER_STATIC_STATUS        "Web Users"       
+IDS_TREE_ICE_WEBUSER_NONE               "< No Web User >"
+IDS_TREE_STATUS_OT_ICE_WEBUSER            "Web User"    
+
+IDS_TREE_ICE_WEBUSER_ROLE_STATIC          "Roles"
+IDS_TREE_ICE_WEBUSER_ROLE_STATIC_STATUS   "Roles"       
+IDS_TREE_ICE_WEBUSER_ROLE_NONE            "< No Role >"
+IDS_TREE_STATUS_OT_ICE_WEBUSER_ROLE       "Role"    
+
+IDS_TREE_ICE_WEBUSER_CONNECTION_STATIC          "Database Connections"
+IDS_TREE_ICE_WEBUSER_CONNECTION_STATIC_STATUS   "Database Connections"      
+IDS_TREE_ICE_WEBUSER_CONNECTION_NONE            "< No Database Connection >" 
+IDS_TREE_STATUS_OT_ICE_WEBUSER_CONNECTION       "Database Connection"    
+
+IDS_TREE_ICE_PROFILE_STATIC               "Profiles"
+IDS_TREE_ICE_PROFILE_STATIC_STATUS        "Profiles"       
+IDS_TREE_ICE_PROFILE_NONE               "< No Profile >"
+IDS_TREE_STATUS_OT_ICE_PROFILE            "Profile"    
+
+IDS_TREE_ICE_PROFILE_ROLE_STATIC          "Roles"
+IDS_TREE_ICE_PROFILE_ROLE_STATIC_STATUS   "Roles"            
+IDS_TREE_ICE_PROFILE_ROLE_NONE            "< No Role >"
+IDS_TREE_STATUS_OT_ICE_PROFILE_ROLE       "Role"       
+
+IDS_TREE_ICE_PROFILE_CONNECTION_STATIC          "Database Connections"
+IDS_TREE_ICE_PROFILE_CONNECTION_STATIC_STATUS   "Database Connections"       
+IDS_TREE_ICE_PROFILE_CONNECTION_NONE            "< No Database Connection >" 
+IDS_TREE_STATUS_OT_ICE_PROFILE_CONNECTION       "Database Connection"    
+
+// Under "Bussiness unit" (BUNIT)
+IDS_TREE_ICE_BUNIT_STATIC                 "Business Units"
+IDS_TREE_ICE_BUNIT_STATIC_STATUS          "Business Units"       
+IDS_TREE_ICE_BUNIT_NONE                   "< No Business Unit >"
+IDS_TREE_STATUS_OT_ICE_BUNIT              "Business Unit"    
+
+IDS_TREE_ICE_BUNIT_SECURITY_STATIC          "Security"
+IDS_TREE_ICE_BUNIT_SECURITY_STATIC_STATUS   "Security"     
+IDS_TREE_ICE_BUNIT_SECURITY_NONE            "< No Security >"
+IDS_TREE_STATUS_OT_ICE_BUNIT_SECURITY       "Security"  
+
+IDS_TREE_ICE_BUNIT_SEC_ROLE_STATIC          "Roles"
+IDS_TREE_ICE_BUNIT_SEC_ROLE_STATIC_STATUS   "Roles"           
+IDS_TREE_ICE_BUNIT_SEC_ROLE_NONE            "< No Role >"
+IDS_TREE_STATUS_OT_ICE_BUNIT_SEC_ROLE       "Role"        
+
+IDS_TREE_ICE_BUNIT_SEC_USER_STATIC          "Users"
+IDS_TREE_ICE_BUNIT_SEC_USER_STATIC_STATUS   "Users"          
+IDS_TREE_ICE_BUNIT_SEC_USER_NONE            "< No User >"
+IDS_TREE_STATUS_OT_ICE_BUNIT_SEC_USER       "User"       
+
+IDS_TREE_ICE_BUNIT_FACET_STATIC           "Facets"
+IDS_TREE_ICE_BUNIT_FACET_STATIC_STATUS    "Facets"             
+IDS_TREE_ICE_BUNIT_FACET_NONE             "< No Facet >"
+IDS_TREE_STATUS_OT_ICE_BUNIT_FACET        "Facet"          
+
+IDS_TREE_ICE_BUNIT_PAGE_STATIC            "Pages"
+IDS_TREE_ICE_BUNIT_PAGE_STATIC_STATUS     "Pages"            
+IDS_TREE_ICE_BUNIT_PAGE_NONE              "< No Page >"
+IDS_TREE_STATUS_OT_ICE_BUNIT_PAGE         "Page"         
+
+IDS_TREE_ICE_BUNIT_FACET_ROLE_STATIC           "Roles"
+IDS_TREE_ICE_BUNIT_FACET_ROLE_STATIC_STATUS    "Roles"             
+IDS_TREE_ICE_BUNIT_FACET_ROLE_NONE             "< No Role >"
+IDS_TREE_STATUS_OT_ICE_BUNIT_FACET_ROLE        "Role"
+
+IDS_TREE_ICE_BUNIT_FACET_USER_STATIC           "Users"
+IDS_TREE_ICE_BUNIT_FACET_USER_STATIC_STATUS    "Users"             
+IDS_TREE_ICE_BUNIT_FACET_USER_NONE             "< No User>"
+IDS_TREE_STATUS_OT_ICE_BUNIT_FACET_USER        "User"
+
+IDS_TREE_ICE_BUNIT_PAGE_ROLE_STATIC           "Roles"
+IDS_TREE_ICE_BUNIT_PAGE_ROLE_STATIC_STATUS    "Roles"             
+IDS_TREE_ICE_BUNIT_PAGE_ROLE_NONE             "< No Role >"
+IDS_TREE_STATUS_OT_ICE_BUNIT_PAGE_ROLE        "Role"
+
+IDS_TREE_ICE_BUNIT_PAGE_USER_STATIC           "Users"
+IDS_TREE_ICE_BUNIT_PAGE_USER_STATIC_STATUS    "Users"             
+IDS_TREE_ICE_BUNIT_PAGE_USER_NONE             "< No User>"
+IDS_TREE_STATUS_OT_ICE_BUNIT_PAGE_USER        "User"
+
+IDS_TREE_ICE_BUNIT_LOCATION_STATIC          "Locations"
+IDS_TREE_ICE_BUNIT_LOCATION_STATIC_STATUS   "Locations"           
+IDS_TREE_ICE_BUNIT_LOCATION_NONE            "< No Location >"
+IDS_TREE_STATUS_OT_ICE_BUNIT_LOCATION       "Location"        
+
+// Under "Server"
+IDS_TREE_ICE_SERVER_STATIC          "Server"
+IDS_TREE_ICE_SERVER_STATIC_STATUS   "Server" 
+IDS_TREE_ICE_SERVER_NONE            "< No Ice Server Running >"
+IDS_TREE_STATUS_OT_ICE_SERVER       "Server"
+
+IDS_TREE_ICE_SERVER_APPLICATION_STATIC          "Session Groups"
+IDS_TREE_ICE_SERVER_APPLICATION_STATIC_STATUS   "Session Groups" 
+IDS_TREE_ICE_SERVER_APPLICATION_NONE            "< No Session Group >"
+IDS_TREE_STATUS_OT_ICE_SERVER_APPLICATION       "Session Group"
+
+IDS_TREE_ICE_SERVER_LOCATION_STATIC           "Locations"
+IDS_TREE_ICE_SERVER_LOCATION_STATIC_STATUS    "Locations"   
+IDS_TREE_ICE_SERVER_LOCATION_NONE             "< No Location >"
+IDS_TREE_STATUS_OT_ICE_SERVER_LOCATION        "Location"
+
+IDS_TREE_ICE_SERVER_VARIABLE_STATIC           "Server Variables"
+IDS_TREE_ICE_SERVER_VARIABLE_STATIC_STATUS    "Server Variables"   
+IDS_TREE_ICE_SERVER_VARIABLE_NONE             "< No Server Variable >"
+IDS_TREE_STATUS_OT_ICE_SERVER_VARIABLE        "Server Variable"
+
+//
+// INSTALLATION LEVEL SETTINGS
+//
+IDS_TREE_INSTALL_STATIC                     "Installation Level Settings"
+IDS_TREE_INSTALL_STATIC_STATUS              "Installation Level Settings"
+IDS_TREE_INSTALL_NONE                       "< No installation level settings >"
+IDS_TREE_STATUS_OT_INSTALL                  "Installation level Setting"
+
+IDS_TREE_INSTALL_SECURITY_STATIC            "Security Auditing"
+IDS_TREE_INSTALL_SECURITY_STATIC_STATUS     "Security Auditing"
+IDS_TREE_INSTALL_SECURITY_NONE              "< No Security Auditing >"
+IDS_TREE_STATUS_OT_INSTALL_SECURITY         "Security Auditing"
+
+IDS_TREE_INSTALL_GRANTEES_STATIC            "Installation Grantees"
+IDS_TREE_INSTALL_GRANTEES_STATIC_STATUS     "Installation Grantees"
+IDS_TREE_INSTALL_GRANTEES_NONE              "< No Installation Grantees >"
+IDS_TREE_STATUS_OT_INSTALL_GRANTEES         "Installation Grantees"
+
+IDS_TREE_INSTALL_ALARMS_STATIC              "Installation Security Alarms"
+IDS_TREE_INSTALL_ALARMS_STATIC_STATUS       "Installation Security Alarms"
+IDS_TREE_INSTALL_ALARMS_NONE                "< No Installation Security Alarms >"
+IDS_TREE_STATUS_OT_INSTALL_ALARMS           "Installation Security Alarms"
+
+END
+
+
+STRINGTABLE DISCARDABLE
+BEGIN
+IDS_MSG_INSTALL_NOT_STARTED			"Your %s Installation must be started before trying to get the list of nodes or connect.\nDo you want to start it now ?\n(If not, you only will be able to load an environment)"
+IDS_MSG_NODE_EQUAL_LOCALVNODE		"Node '%s' has the same name as the local_vnode and doesn't define an installation password.\nConnections through the '%s' Node will result in connecting to the local machine.\nIt it highly recommended either to remove that node, or to change the local_vnode name, for example through the Configuration Manager (name server parameters)."
+IDS_ERR_MORETH1_REPSERV_DIFFLDB		"There is more than one server # %d, on the Run Node %s, with different local Databases.\nThis cannot work.\nPlease either change the Run Node for one of them, or change the Replication scheme (in the CDDS definitions), defined in database %s."
+IDS_ERR_REPSERV_STATUS_UNAVAILABLE	"Status of server %d on %s::%s was unavailable. Continue trying to get it ? (if NO, this question will not be asked any more for that server (unless you close all monitor windows on current node, and then reopen one)"
+IDS_REFRESH_REPLICSERVER_STATUS		"Refresh Replicator Server Status"
+IDS_ERR_UNABLE2GET_REPSERV_STATUS	"Unable to get Server Status for server %d on %s::%s"
+IDS_MSG_ONLOAD_SHOULDREFRESH_MON	"The loaded environment contains Performance Monitor Windows, but the 'Refresh On Load' Setting is not set for 'Performance Monitor Data'. Due to the fact that such data is dynamic, the data in your Performance Monitor Windows is probably out of date: it will be AUTOMATICALLY refreshed as soon as you expand a branch that never had been expanded before the save operation (or through normal background refresh, if enabled).\nAn immediate manual refresh is recommended."
+IDS_TITLE_PERF_MON_WINDOWS			"Performance Monitor Windows"
+IDS_ERR_SOME_INFO_NOT_REFRESHED		"Some information was not refreshed due to connection/communication failure"
+IDS_ERR_CONNECTLOCAL_OPINGDTUSED	"Problem connecting to the local node.\n /OPINGDT server class will be used."
+IDS_ERR_ONLY_ING_OR_STAR_CANBESTPD	"Only INGRES or STAR servers can be Shutdown."
+IDS_ERR_CANNOT_SCAN_DBEV_CLOSEW		"Cannot Scan DBEvents. Please Close DBEvent trace Windows"
+IDS_ERR_CANNOT_SCAN_DBEV_MON_NOTUTD	"Cannot Scan DBEvents. Replication Monitor Data may not be up to date"
+
+IDS_NONE_							"<none>"
+
+
+
+
+IDS_OBJTYPES_NODES			"Connections"
+IDS_OBJTYPES_DATABASES		"Databases"
+IDS_OBJTYPES_USERS			"Users"
+IDS_OBJTYPES_PROFILES		"Profiles"
+IDS_OBJTYPES_GROUPS			"Groups"
+IDS_OBJTYPES_GROUPUSERS		"Users in group";
+IDS_OBJTYPES_ROLES			"Roles"
+IDS_OBJTYPES_LOCATIONS		"Locations"
+IDS_OBJTYPES_TABLES			"Tables"
+IDS_OBJTYPES_TABLE_LOCATIONS "Locations of Table"
+IDS_OBJTYPES_VIEWS			"Views"
+IDS_OBJTYPES_VIEWCOMPONENTS	"View Components"
+IDS_OBJTYPES_INDEXES		"Indexes"
+IDS_OBJTYPES_INTEGRITIES	"Integrities"
+IDS_OBJTYPES_PROCEDURES		"Procedures"
+IDS_OBJTYPES_RULES			"Rules"
+IDS_OBJTYPES_SCHEMAS		"Schemas"
+IDS_OBJTYPES_SYNONYMS		"Synonyms"
+IDS_OBJTYPES_SEQUENCES		"Sequences"
+IDS_OBJTYPES_DBEVENTS		"Database Events" 
+IDS_OBJTYPES_SECALARMS		"Security Alarms"
+IDS_OBJTYPES_GRANTEES		"Grantees"
+IDS_OBJTYPES_DBGRANTEES		"Database Grantees"
+IDS_OBJTYPES_DBSECALARMS	"Database Security Alarms"
+IDS_OBJTYPES_GRANTS			"Grants"
+IDS_OBJTYPES_COLUMNS		"Columns"
+IDS_OBJTYPES_REP_OBJECTS	"Replication Objects"
+IDS_OBJTYPES_REP_CDDS		"Replication CDDS"
+IDS_OBJTYPES_REP_REGTBLS	"Replication Registered tables"
+IDS_OBJTYPES_ERRLIST_USRNMS	"Usernames of Error Mail List"
+IDS_OBJTYPES_REP_SERVERS	"Replication Servers"
+IDS_OBJTYPES_MON_DATA		"Performance Monitor Data"
+IDS_OBJTYPES_NODE_DEF_DATA	"Node Definition Data"
+IDS_OBJTYPES_ICE_ROLES		"ICE Roles"
+IDS_OBJTYPES_ICE_DBUSERS	"ICE Database Users"
+IDS_OBJTYPES_ICE_DBCONNECTS		"ICE Database Connections"
+IDS_OBJTYPES_ICE_WEBUSRS		"ICE Web Users"
+IDS_OBJTYPES_ICE_WEBUSRROLES	"ICE Web User Roles"
+IDS_OBJTYPES_ICE_WEBUSERDBCONNS	"ICE Web User DB Connections"
+IDS_OBJTYPES_ICE_PROFILES		"ICE Profiles"
+IDS_OBJTYPES_ICE_PROF_ROLES		"ICE Profile Roles"
+IDS_OBJTYPES_ICE_PROF_CONNS		"ICE Profile Connections"
+IDS_OBJTYPES_ICE_BUS			"ICE Business Units"
+IDS_OBJTYPES_ICE_BU_ROLES		"ICE Business Unit Roles"
+IDS_OBJTYPES_ICE_BU_USERS		"ICE Business Unit Users"
+IDS_OBJTYPES_ICE_BU_FACETS		"ICE Business Unit Facets"
+IDS_OBJTYPES_ICE_BU_PAGES		"ICE Business Unit Pages"
+IDS_OBJTYPES_ICE_BU_LOCATIONS	"ICE Business Unit Locations"
+IDS_OBJTYPES_ICE_SVR_B_GROUPS	"ICE Server Business Groups"
+IDS_OBJTYPES_ICE_LOCATIONS		"ICE Server Locations"
+IDS_OBJTYPES_ICE_VARIABLES		"ICE Server variables"
+IDS_OBJTYPES_ICE_OBJECT_DEFS	"ICE Objects Definition"
+
+IDS_ERR_NOPRIMKEY_CANT_BE_REF	"The table has no primary key, cannot be referenced."
+
+
+IDS_UNAMED_W_NB					"<Unnamed %d>"
+
+IDS_REPLIC_FULL_PEER			"Full Peer"
+IDS_REPLIC_PROT_RO				"Prot. Read-only"
+IDS_REPLIC_UNPROT_RO			"Unprot.Read-only"
+IDS_REPLIC_UNDEFINED			"Undefined"
+
+IDS_REPLIC_PROP_DLGTITLE		"Propagate from %s::%s to %s::%s"
+IDS_REPLIC_DB_NOTFOUND_PROPSTP	"Database not found on target. Propagate operation failed."
+IDS_REPLIC_INSTALL_REPL			"Install Replication Objects"
+IDS_REPLIC_ERR_OPN_SESS			"Failure while opening session on %s"
+IDS_REPLIC_REC_1PARM_TITLE		"Reconciler on database %s"
+IDS_REPLIC_REC_2PARMS_TITLE		"Reconciler on database %s::%s"
+
+IDS_CURRENT_INSTALLATION		"<current installation>"
+
+IDS_DRAGANDDROP_DEST_ERR		"Destination Schema Error"
+IDS_OF							" of "
+IDS_ON_							"ON"
+IDS_OFF_						"OFF"
+
+IDS_WARNING_BKRF_GLOBAL_SETTING "This is a general VDBA setting, that will take effect the next time VDBA is started.\nThis setting will apply to other object types than those currently displayed"  
+IDS_CANNOT_ALTER_ICE_OBJ_ICE_ERR "Cannot get the ICE Object Properties. The 'Alter' dialog box cannot be launched."
+IDS_E_CREATE_TEMPORARY_FILE		"Error creating temporary file for managing the SQL Error History.\nThis functionality will be disabled."
+END
+
+//
+// Dialog boxes
+//
+
+// Taken from vo4clip\editor\print.dlg
+ABORTPRINTDIALOG DIALOG 56, 67, 130, 57
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Printing"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    //394@JT003
+    DEFPUSHBUTTON "Cancel", IDD_PABORT_CANCEL, 45, 40, 40, 14, WS_CHILD | WS_VISIBLE | WS_TABSTOP
+    CTEXT "Thats My Text", IDD_PABORT_TEXT, 8, 4, 113, 33
+END
+
+
+PRINTPAGESETUP DIALOG 69, 77, 164, 93
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Page Setup"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL "0", IDD_PSETUP_LEFTEDIT, "EDIT", ES_LEFT | ES_NOHIDESEL | ES_OEMCONVERT | WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP, 64, 21, 20, 12
+    CONTROL "0", IDD_PSETUP_RIGHTEDIT, "EDIT", ES_LEFT | ES_NOHIDESEL | ES_OEMCONVERT | WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP, 64, 35, 20, 12
+    CONTROL "0", IDD_PSETUP_TOPEDIT, "EDIT", ES_LEFT | ES_NOHIDESEL | ES_OEMCONVERT | WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP, 64, 49, 20, 12
+    CONTROL "0", IDD_PSETUP_BOTTOMEDIT, "EDIT", ES_LEFT | ES_NOHIDESEL | ES_OEMCONVERT | WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP, 64, 63, 20, 12
+    CONTROL "Cm", IDD_PSETUP_CM, "BUTTON", BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 8, 79, 28, 10
+    CONTROL "Inch", IDD_PSETUP_INCH, "BUTTON", BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 45, 79, 28, 10
+    PUSHBUTTON "&OK", IDD_PSETUP_OKAY, 116, 24, 40, 14, WS_CHILD | WS_VISIBLE | WS_TABSTOP
+    PUSHBUTTON "&Cancel", IDD_PSETUP_CANCEL, 116, 44, 40, 14
+    LTEXT "Left Border:", -1, 6, 24, 45, 8
+    LTEXT "Right Border", -1, 6, 37, 46, 8
+    LTEXT "Top Border:", -1, 6, 51, 47, 8
+    LTEXT "Bottom Border:", -1, 6, 65, 53, 8
+    SCROLLBAR IDD_PSETUP_LEFTSCROLL, 84, 21, 9, 12, SBS_VERT | WS_CHILD | WS_VISIBLE
+    SCROLLBAR IDD_PSETUP_RIGHTSCROLL, 84, 35, 9, 12, SBS_VERT | WS_CHILD | WS_VISIBLE
+    SCROLLBAR IDD_PSETUP_TOPSCROLL, 84, 49, 9, 12, SBS_VERT | WS_CHILD | WS_VISIBLE
+    SCROLLBAR IDD_PSETUP_BOTTOMSCROLL, 84, 63, 9, 12, SBS_VERT | WS_CHILD | WS_VISIBLE
+    LTEXT "Page Size:", -1, 5, 6, 38, 8
+    LTEXT "0.00", IDD_PSETUP_WIDTH, 48, 6, 19, 8
+    LTEXT "x", -1, 71, 6, 9, 8
+    LTEXT "0.00", IDD_PSETUP_HEIGHT, 86, 6, 19, 8
+END
+
+
+DOMFILTERSDIALOG DIALOG DISCARDABLE  0, 0, 210, 50
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Set Filters on Current DOM"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Owner for &Databases", -1, 5, 13, 70, 8
+    COMBOBOX        IDD_DOMFILTER_BASE, 80, 11, 80, 50,
+                    CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Owner for &Other Objects", -1, 5, 33, 70, 8
+    COMBOBOX        IDD_DOMFILTER_OTHER, 80, 31, 80, 50,
+                    CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "OK", IDOK, 165, 10, 40, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 165, 30, 40, 14
+END
+
+VERIFYENVPASSWORDDIALOG DIALOG DISCARDABLE 98, 66, 160, 52
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Load Environment - Password Check"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "&Password:", -1, 4, 10, 40, 8
+    EDITTEXT        IDD_LOADENV_PASSWORD, 50, 8, 34, 12, ES_AUTOHSCROLL | ES_PASSWORD | WS_TABSTOP
+    //LTEXT           "&Confirm Password:", -1, 4, 30, 66, 8
+    //EDITTEXT        IDD_LOADENV_CONFIRMPASSWORD, 72, 30, 34, 12, ES_AUTOHSCROLL | ES_PASSWORD | WS_TABSTOP
+    PUSHBUTTON      "OK", IDOK, 116, 8, 40, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 116, 26, 40, 14
+END
+
+
+
+
+
+// Emb 21/6/95 : custom template for fonts so we have a custom caption
+IDD_CUSTOM_FONTSETUP DIALOG DISCARDABLE  13, 54, 264, 157
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Properties Font Preferences"
+FONT 8, "Helv"
+BEGIN
+    LTEXT           "&Font:",stc1,6,3,40,9
+    COMBOBOX        cmb1,6,13,94,54,CBS_SIMPLE | CBS_OWNERDRAWFIXED |
+                    CBS_AUTOHSCROLL | CBS_SORT | CBS_HASSTRINGS |
+                    CBS_DISABLENOSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Font St&yle:",stc2,108,3,44,9
+    COMBOBOX        cmb2,108,13,64,54,CBS_SIMPLE | CBS_DISABLENOSCROLL |
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Size:",stc3,179,3,30,9
+    COMBOBOX        cmb3,179,13,32,54,CBS_SIMPLE | CBS_OWNERDRAWFIXED |
+                    CBS_SORT | CBS_HASSTRINGS | CBS_DISABLENOSCROLL |
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,218,6,40,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,218,23,40,14,WS_GROUP
+    PUSHBUTTON      "&Apply",psh3,218,40,40,14,WS_GROUP
+    PUSHBUTTON      "&Help",pshHelp,218,57,40,14,WS_GROUP
+    GROUPBOX        "Effects",grp1,6,72,84,34,WS_GROUP
+    CONTROL         "Stri&keout",chx1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    10,82,49,10
+    CONTROL         "&Underline",chx2,"Button",BS_AUTOCHECKBOX,10,94,51,10
+    LTEXT           "&Color:",stc4,6,110,30,9
+    COMBOBOX        cmb4,6,120,84,100,CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED |
+                    CBS_AUTOHSCROLL | CBS_HASSTRINGS | WS_BORDER |
+                    WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Sample",grp2,98,72,160,49,WS_GROUP
+    CTEXT           "",stc6,98,124,160,30,SS_NOPREFIX | NOT WS_GROUP
+    CTEXT           "AaBbYyZz",stc5,104,81,149,37,SS_NOPREFIX | NOT
+                    WS_VISIBLE
+END
+
+// Emb 04/03/96 : custom template for fonts,
+// duplicated from IDD_CUSTOM_FONTSETUP
+// for dom font choice in 32 bit mode with Win95 tree control
+IDD_DOM_FONTSETUP DIALOG DISCARDABLE  13, 54, 264, 157
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dom Font Preferences"
+FONT 8, "Helv"
+BEGIN
+    LTEXT           "&Font:",stc1,6,3,40,9
+    COMBOBOX        cmb1,6,13,94,54,CBS_SIMPLE | CBS_OWNERDRAWFIXED |
+                    CBS_AUTOHSCROLL | CBS_SORT | CBS_HASSTRINGS |
+                    CBS_DISABLENOSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Font St&yle:",stc2,108,3,44,9
+    COMBOBOX        cmb2,108,13,64,54,CBS_SIMPLE | CBS_DISABLENOSCROLL |
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Size:",stc3,179,3,30,9
+    COMBOBOX        cmb3,179,13,32,54,CBS_SIMPLE | CBS_OWNERDRAWFIXED |
+                    CBS_SORT | CBS_HASSTRINGS | CBS_DISABLENOSCROLL |
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,218,6,40,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,218,23,40,14,WS_GROUP
+    PUSHBUTTON      "&Apply",psh3,218,40,40,14,WS_GROUP
+    PUSHBUTTON      "&Help",pshHelp,218,57,40,14,WS_GROUP
+    GROUPBOX        "Effects",grp1,6,72,84,34,WS_GROUP
+    CONTROL         "Stri&keout",chx1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    10,82,49,10
+    CONTROL         "&Underline",chx2,"Button",BS_AUTOCHECKBOX,10,94,51,10
+    LTEXT           "&Color:",stc4,6,110,30,9
+    COMBOBOX        cmb4,6,120,84,100,CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED |
+                    CBS_AUTOHSCROLL | CBS_HASSTRINGS | WS_BORDER |
+                    WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Sample",grp2,98,72,160,49,WS_GROUP
+    CTEXT           "",stc6,98,124,160,30,SS_NOPREFIX | NOT WS_GROUP
+    CTEXT           "AaBbYyZz",stc5,104,81,149,37,SS_NOPREFIX | NOT
+                    WS_VISIBLE
+END
+
+IDD_SQLERR DIALOG 15, 28, 310, 234
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "History of SQL Statements errors"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Sql &Statement :", -1, 8, 6, 290, 9
+    EDITTEXT        IDC_SQLERR_STMT, 5, 20, 290, 50,
+                    ES_MULTILINE | ES_OEMCONVERT | ES_READONLY |
+                    WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | WS_HSCROLL
+    LTEXT           "Sql &Error Code :", -1, 8, 76, 65, 9
+    LTEXT           "", IDC_SQLERR_ERRCODE, 75, 77, 100, 9
+    LTEXT           "Sql Error &Text :", -1, 8, 86, 100, 9
+    EDITTEXT        IDC_SQLERR_ERRTXT, 5, 100, 290, 100,
+                    ES_MULTILINE | ES_OEMCONVERT | ES_READONLY |
+                    WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | WS_HSCROLL
+    PUSHBUTTON      "&First", IDC_SQLERR_FIRST,  5, 215, 50, 14
+    PUSHBUTTON      "&Prev",  IDC_SQLERR_PREV,  60, 215, 50, 14
+    PUSHBUTTON      "&Next",  IDC_SQLERR_NEXT, 115, 215, 50, 14
+    PUSHBUTTON      "&Last",  IDC_SQLERR_LAST, 170, 215, 50, 14
+    DEFPUSHBUTTON   "Finis&h", IDOK, 245, 215, 50, 14
+END
+
+
+// MFC ONLY:
+IDD_IPM_FONTSETUP DIALOG DISCARDABLE  13, 54, 264, 157
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Monitor Font Preferences"
+FONT 8, "Helv"
+BEGIN
+    LTEXT           "&Font:",stc1,6,3,40,9
+    COMBOBOX        cmb1,6,13,94,54,CBS_SIMPLE | CBS_OWNERDRAWFIXED |
+                    CBS_AUTOHSCROLL | CBS_SORT | CBS_HASSTRINGS |
+                    CBS_DISABLENOSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Font St&yle:",stc2,108,3,44,9
+    COMBOBOX        cmb2,108,13,64,54,CBS_SIMPLE | CBS_DISABLENOSCROLL |
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Size:",stc3,179,3,30,9
+    COMBOBOX        cmb3,179,13,32,54,CBS_SIMPLE | CBS_OWNERDRAWFIXED |
+                    CBS_SORT | CBS_HASSTRINGS | CBS_DISABLENOSCROLL |
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,218,6,40,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,218,23,40,14,WS_GROUP
+    PUSHBUTTON      "&Apply",psh3,218,40,40,14,WS_GROUP
+    PUSHBUTTON      "&Help",pshHelp,218,57,40,14,WS_GROUP
+    GROUPBOX        "Effects",grp1,6,72,84,34,WS_GROUP
+    CONTROL         "Stri&keout",chx1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    10,82,49,10
+    CONTROL         "&Underline",chx2,"Button",BS_AUTOCHECKBOX,10,94,51,10
+    LTEXT           "&Color:",stc4,6,110,30,9
+    COMBOBOX        cmb4,6,120,84,100,CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED |
+                    CBS_AUTOHSCROLL | CBS_HASSTRINGS | WS_BORDER |
+                    WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Sample",grp2,98,72,160,49,WS_GROUP
+    CTEXT           "",stc6,98,124,160,30,SS_NOPREFIX | NOT WS_GROUP
+    CTEXT           "AaBbYyZz",stc5,104,81,149,37,SS_NOPREFIX | NOT
+                    WS_VISIBLE
+END
+
+// MFC ONLY:
+IDD_NODE_FONTSETUP DIALOG DISCARDABLE  13, 54, 264, 157
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Nodes Window Font Preferences"
+FONT 8, "Helv"
+BEGIN
+    LTEXT           "&Font:",stc1,6,3,40,9
+    COMBOBOX        cmb1,6,13,94,54,CBS_SIMPLE | CBS_OWNERDRAWFIXED |
+                    CBS_AUTOHSCROLL | CBS_SORT | CBS_HASSTRINGS |
+                    CBS_DISABLENOSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Font St&yle:",stc2,108,3,44,9
+    COMBOBOX        cmb2,108,13,64,54,CBS_SIMPLE | CBS_DISABLENOSCROLL |
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Size:",stc3,179,3,30,9
+    COMBOBOX        cmb3,179,13,32,54,CBS_SIMPLE | CBS_OWNERDRAWFIXED |
+                    CBS_SORT | CBS_HASSTRINGS | CBS_DISABLENOSCROLL |
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,218,6,40,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,218,23,40,14,WS_GROUP
+    PUSHBUTTON      "&Apply",psh3,218,40,40,14,WS_GROUP
+    PUSHBUTTON      "&Help",pshHelp,218,57,40,14,WS_GROUP
+    GROUPBOX        "Effects",grp1,6,72,84,34,WS_GROUP
+    CONTROL         "Stri&keout",chx1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    10,82,49,10
+    CONTROL         "&Underline",chx2,"Button",BS_AUTOCHECKBOX,10,94,51,10
+    LTEXT           "&Color:",stc4,6,110,30,9
+    COMBOBOX        cmb4,6,120,84,100,CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED |
+                    CBS_AUTOHSCROLL | CBS_HASSTRINGS | WS_BORDER |
+                    WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Sample",grp2,98,72,160,49,WS_GROUP
+    CTEXT           "",stc6,98,124,160,30,SS_NOPREFIX | NOT WS_GROUP
+    CTEXT           "AaBbYyZz",stc5,104,81,149,37,SS_NOPREFIX | NOT
+                    WS_VISIBLE
+END
+

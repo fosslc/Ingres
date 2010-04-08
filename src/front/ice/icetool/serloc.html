@@ -1,0 +1,42 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Location&submit=actLoc.html` -->
+		<TABLE BORDER=0>
+			<!-- #ICE FUNCTION=`ice_locations?action=retrieve&loc_id=:loc`
+					 HTML=`
+			<INPUT TYPE="HIDDEN" NAME="id" VALUE=":loc_id">
+			<TR>
+				<TD>name: </TD>
+				<TD><INPUT SIZE="32" NAME="name" VALUE=":loc_name"></TD>
+			</TR>
+			<TR>
+				<TD>Type: </TD>
+				<TD>
+						<INPUT TYPE="RADIO" NAME="type"	VALUE="loc_http" :loc_http>HTTP location (has to be visible through the http server)<BR>
+						<INPUT TYPE="RADIO" NAME="type"	VALUE="loc_ice" :loc_ice>Ice location (can be every where on your machine)<BR>
+				</TD>
+			</TR>
+			<TR>
+				<TD>Public: </TD><TD>
+						<INPUT TYPE="CHECKBOX" NAME="public" VALUE="checked" :loc_public>Public
+				</TD>
+			</TR>
+			<TR>
+				<TD>path: </TD>
+				<TD><INPUT SIZE="50" MAXLENGTH="256" NAME="path" VALUE=":loc_path"></TD>
+			</TR>
+			<TR>
+				<TD>extensions: </TD>
+				<TD><INPUT SIZE="50" NAME="extensions" VALUE=":loc_extensions"></TD>
+			</TR>`
+			-->
+			<!-- #ICE REPEAT INCLUDE=`action.html` -->
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

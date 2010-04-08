@@ -1,0 +1,99 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<pc.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	<ex.h>
+# include	<ci.h>
+# include	<me.h>
+# include	<er.h>
+
+/*
+**	MAIN.QSC
+**
+**	written 11/8/83 (nml)
+**	22-oct-1985 (peter)	Add license check.
+**	2/18/87 (daveb)  -- Call to MEadvise, added MALLOCLIB hint.
+**	22-dec-1986 (peter)	Change MKMFIN for 6.0.
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh
+**	14-apr-88 (bruceb)
+**		Added, if DG, a send of the terminal's 'is' string at
+**		the very beginning of the program.  Needed for CEO.
+**	01-oct-90 (stevet)
+**		Added IIUGinit call to initialize character set attribute 
+**		table.
+**      16-nov-1992 (larrym)
+**          Added CUFLIB to NEEDLIBS.  CUF is the new common utility facility.
+**	03/25/94 (dkh) - Added call to EXsetclient().
+**	15-jun-95 (emmag)
+**	    Redfine main as ii_user_main on NT.
+**	24-sep-95 (tutto01)
+**	    Restored main, run as console app on NT.
+**      11-Jun-2004 (hanch04)
+**          Removed reference to CI for the open source release.
+**	29-Sep-2004 (drivi01)
+**	    Updated NEEDLIBS to link dynamic library SHQLIB and SHFRAMELIB
+**	    to replace its static libraries.
+*/
+
+# ifdef DGC_AOS
+# define main IIQFrsmRingSevenMain
+# endif
+
+/*
+**	MKMFIN Hints
+**
+PROGRAM =	qbf
+
+NEEDLIBS =	QBFLIB SHFRAMELIB SHQLIB SHCOMPATLIB
+
+NEEDLIBSW = 	SHEMBEDLIB SHADFLIB
+
+NEEDOBJ = 	oosymbol.roc
+
+UNDEFS =	II_copyright
+*/
+
+
+i4
+main(argc, argv)
+i4	argc;
+char	**argv;
+{
+	i4		mqhandler();
+	EX_CONTEXT	context;
+
+	/* Tell EX this is an ingres tool. */
+	(void) EXsetclient(EX_INGRES_TOOL);
+
+	/* Use the ingres allocator instead of malloc/free default (daveb) */
+	MEadvise( ME_INGRES_ALLOC );
+
+	/* Call IIUGinit to initialize character set attribute table */
+	if ( IIUGinit() != OK)
+	{
+		PCexit(FAIL);
+	}
+
+	/* no files exist to be cleaned up yet */
+	QG_mqqry = NULL;
+	Upd_exists = FALSE;
+
+	if (EXdeclare(mqhandler, &context) != OK)
+	{
+	    EXdelete();
+	    PCexit(FAIL);
+	}
+
+	mqbfmain(argc, argv);
+
+	EXdelete();
+}

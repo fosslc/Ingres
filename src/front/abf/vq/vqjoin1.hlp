@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqjoin1.hlp, help on finishing an AddJoin after specifying the first 
+/#-- of two join columns.
+
+You are adding a join between tables and just specified the first join 
+column.
+
+  * To finish adding the join, move your cursor to the other join column 
+    and select Set_Join_Column again.
+
+  * To stop and not add the join, select Cancel from the menu.

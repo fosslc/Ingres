@@ -1,0 +1,17 @@
+/#-- Help File: fgmdupda.hlp
+/#-- Master detail update frame, AppendMode menu.
+This screen allows you to add new data to the database. To add
+new data, enter the new information on the form and then select
+"AddNew".
+
+  AddNew      Treat the current screen data as new information,
+              rather than as an update of existing information
+              and save this new information to the database.
+  RowDelete   Delete current row from table field.
+              (optional menuitem; may not appear)
+  RowInsert   Open new row in table field.
+              (optional menuitem; may not appear)
+  Clear       Clear every field on the screen.
+  ListChoices Show valid values for current field. 
+  Help        Get help about this screen.
+  End         Leave Insert mode to enter a new query.

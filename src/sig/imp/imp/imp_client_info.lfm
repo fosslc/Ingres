@@ -1,0 +1,12 @@
+COPYFORM:	6.4	2002_06_28 07:26:02 GMT  
+FORM:	imp_client_info		
+	43	12	0	0	6	0	1	9	0	0	0	0	0	129	0	6
+FIELD:
+	0	client_host	-21	23	0	20	1	29	3	3	20	0	9	on host:	0	0	0	0	512	0	0		c20			0	0
+	1	client_tty	-21	23	0	20	1	30	4	2	20	0	10	Terminal:	0	0	0	0	512	0	0		c20			0	1
+	2	client_user	-21	23	0	20	1	30	2	2	20	0	10	Username:	0	0	0	0	512	0	0		c20			0	2
+	3	client_pid	-21	23	0	20	1	25	5	7	20	0	5	Pid:	0	0	0	0	512	0	0		c20			0	3
+	4	client_info	-21	123	0	120	4	36	8	6	30	0	6	Info:	0	0	0	0	512	0	0		c120.30			0	4
+	5	client_connection	-21	63	0	60	2	42	6	0	30	0	12	Requesting:	0	0	0	0	512	0	0		c60.30			0	5
+TRIM:
+	0	0	Client Connection Information	0	0	0	0

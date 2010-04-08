@@ -1,0 +1,14 @@
+# Copyright (c) 2004 Ingres Corporation
+# This is a hook for the makefile to call during `make install'.
+# It creates a user-level header from the `frame2.h' in the
+# INGRES source by changing the references to INGRES headers
+# into a reference to <stdio.h>, and places it in $1/files.
+
+set -x
+rm -f $1/${DBG}files/frame2.h &&
+sed '
+    /^#[ 	]*include[ 	]*<\(compat\)\.h>/d
+    /^#[ 	]*include[ 	]*<\(SI\)\.h>/s/SI/stdio/
+' ../hdr/frame2.h > $1/${DBG}files/frame2.h &&
+chmod 444 $1/${DBG}files/frame2.h
+exit 0

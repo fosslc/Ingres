@@ -1,0 +1,43 @@
+#
+# Jamfile file for front!utils!oo
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front utils oo ;
+
+IISUBSYS front utils oo ;
+
+IINOOPTIM oodetail.qsc : ris_us5 i64_aix ;
+
+
+IIMSGHDR eroo.msg ;
+
+IIFORM iicat.frm ;
+IIFORM iidetail.frm ;
+IIFORM iisave.frm ;
+IIFORM oolngrem.frm ;
+
+File $(INGMSG)$(DFS)oocreate.hlp : oocreate.hlp ;
+File $(INGMSG)$(DFS)oodetail.hlp : oodetail.hlp ;
+File $(INGMSG)$(DFS)oodstobj.hlp : oodstobj.hlp ;
+File $(INGMSG)$(DFS)oolremfr.hlp : oolremfr.hlp ;
+File $(INGMSG)$(DFS)oosave.hlp : oosave.hlp ;
+File $(INGMSG)$(DFS)oosavseq.hlp : oosavseq.hlp ;
+
+IILIBRARY OOLIB : ooencsiz.sc 
+        ref.qsc ooschema.qsc oosavfrm.qsc oosave.qsc oolremfr.qsc
+        oolngrem.qsc ooisindb.qsc ooidutil.qsc ooid.qsc ooencode.qsc
+        oodetail.qsc oocreate.qsc oocatlog.qsc obtime.qsc
+        obdestro.qsc obcatfor.qsc method.qsc memory.qsc co.qsc
+        cmethod.qsc catutil.qsc catcover.qsc send.c p.c ooinit.c
+        oofrs.c oodummy.c obprint.c obencode.c obconfrm.c
+        ob.c mproc.c catrec.c catinit.c catclass.c ;
+
+IILIBRARY IMPFRAMELIBDATA : oodata.qsc levelmas.c ooclass.c ooproctb.roc oosymbol.roc ;
+
+
+IILIBOBJECT oosymbol.roc ; 

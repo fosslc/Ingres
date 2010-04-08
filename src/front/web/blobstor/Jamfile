@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!web!blobstor
+#
+# History:
+#	11-feb-2005 (abbjo03)
+#	    Link with the shared OpenAPI library.
+
+SubDir ING_SRC front web blobstor ;
+
+IISUBSYS front web blobstor ;
+
+
+IIBINEXE blobstor : blobstor.c ;
+IINEEDLIBS blobstor : SHAPILIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB SHEMBEDLIB ; 
+IIUNDEFS blobstor :  malloc ;
+

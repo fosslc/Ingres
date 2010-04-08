@@ -1,0 +1,44 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/machine.1,v 1.1 90/03/09 09:17:32 source Exp $
+.TH MACHINE 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+machine \- Determine machine type.
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B Machine
+[ sun ][ -v ]
+.SH DESCRIPTION
+.I Machine
+figures out kind of machine you are on.  By default, it prints out one
+of the following, based on magic definitions built into the `C'
+preprocessor \fIcpp(1)\fP:  u370, u3b, u3b2, u3b5, mc68k, mc68000, vax,
+pdp11, pyr, tahoe, or sel.
+.PP
+The word printed means you're on the following machine:
+.nf
+
+	u370		IBM/Amdahl/etc. Mainframe
+	u3b		ATTIS 3b20
+	u3b2		ATTIS 3b2
+	u3b5		ATTIS 3b5
+	mc68k		some 68000's
+	mc68000		other 68000's
+	vax		DEC VAX
+	pdp11		DEC PDP-11
+	pyr		Pyramid 90x
+	tahoe		CCI Power 6
+	sel		Gould/SEL
+.fi
+.PP
+.B -v
+``verbose'' prints the program name and indents output one tab stop,
+and a human understandable machine name is also printed.
+.PP
+.B sun
+has the program print ``yes'' or ``no'' if ``sun'' is defined by
+\fIcpp\fP.
+.SH BUGS
+.I Machine
+needs to know the special machine name buried inside \fIcpp(1)\fP, and
+assumes that this is correct.

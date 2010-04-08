@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqdeljo.hlp, help for the confirmation pop-up deleting a join in VQ
+/#-- 
+You are about to delete a join between two tables.  If this is the last
+join between the two tables and you delete it, you will not be able to run 
+this frame of the application until a join is re-established.  Use the 
+"AddJoin" menuitem to create a new join between tables.
+
+If you do not need a "Lookup" table any more, position your cursor on the 
+Lookup table then choose the "DelTable" menuitem.
+
+If you do not want to proceed with this operation, choose "Cancel".

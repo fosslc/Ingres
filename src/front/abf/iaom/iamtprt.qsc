@@ -1,0 +1,119 @@
+/*
+**	Copyright (c) 1991, 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<er.h>
+# include	<si.h>
+# include	<st.h>		 
+# include	<tm.h>		 
+
+/*
+** History:
+**	03/09/91 (emerson)
+**		Integrated DESKTOP porting changes.
+**	03-mar-92 (leighb) DeskTop Porting Change: added tm.h
+**	10-sep-92 (leighb) DeskTop Porting Change:
+**		Changed fprintf's to SIfprintf and sprintf to STprintf
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+static FILE *Tm_fp = NULL;
+
+#ifdef MSDOS
+/*  #include "dos.h"  */				 
+#include "iaomdos.h"					 
+
+long Current;
+int First = 1;
+
+IIAMtprintf(s,a,b,c,d,e,f)
+char *s;
+i4 a,b,c,d,e,f;
+{
+	char bufr[120];
+	union REGS in, o;
+	long now;
+
+	if (Tm_fp == NULL)
+		Tm_fp = fopen(ERx("time.out"),ERx("w"));
+
+	/* get DOS time of day clock in total 1/100 seconds */
+	in.h.ah = 0x2c;
+	intdos(&in,&o);
+	now = o.h.ch * 360000L + o.h.cl * 6000L + o.h.dh * 100L + o.h.dl;
+
+	/* if first call, force 0 increment */
+	if (First)
+	{
+		Current = now;
+		First = 0;
+	}
+
+	/* if crossed a day boundary, subtract a day from current */
+	if (now < Current)
+		Current -= 8640000L;
+
+	now -= Current;
+	SIfprintf(Tm_fp,s,a,b,c,d,e,f);		 
+	SIfprintf(Tm_fp,ERx(": %d.%d sec\n"), (int) (now/1000), (int) (now%1000));		 
+
+	/*
+	** set Current by resnapping clock so we aren't timing file i/o.
+	** probably moot, since clock is only accurate to 1/20 sec.
+	*/
+	in.h.ah = 0x2c;
+	intdos(&in,&o);
+	Current = o.h.ch * 360000L + o.h.cl * 6000L + o.h.dh * 100L + o.h.dl;
+}
+#else
+
+static i4 FeLast = 0;
+static i4 BeLast = 0;
+static i4 Start = 0;
+
+IIAMtprintf(s,a,b,c,d,e,f)
+char *s;
+i4 a,b,c,d,e,f;
+{
+	char bufr[240];
+	i4 fenow,now;
+##	i4 benow;
+
+	if (Tm_fp == NULL)
+	{
+		Tm_fp = fopen(ERx("time.out"),ERx("w"));
+		SIfprintf(Tm_fp,ERx("%48s FE ms.	BE ms.	REAL\n"),ERx(""));		 
+		Start = TMsecs();
+	}
+
+	fenow = TMcpu();
+	now = TMsecs();
+##	retrieve (benow = _cpu_ms)
+	STprintf(bufr,s,a,b,c,d,e,f);				 
+	SIfprintf(Tm_fp,ERx("%48s%7d%8d%6d\n"), bufr,		 
+		(i4) fenow-FeLast, (i4) benow-BeLast, (i4) now-Start);
+	FeLast = TMcpu();
+	BeLast = benow;
+}
+#endif
+
+IIAMtpclose()
+{
+	if (Tm_fp != NULL)
+		fclose(Tm_fp);
+	Tm_fp = NULL;
+}
+
+IIAMtpflush()
+{
+	if (Tm_fp != NULL)
+		fflush(Tm_fp);
+}

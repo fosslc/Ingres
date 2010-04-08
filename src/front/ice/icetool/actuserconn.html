@@ -1,0 +1,12 @@
+<SCRIPT language="JavaScript">
+			<!-- #ICE REPEAT FUNCTION=`user_database?action=:action&ud_user_id=:user_id&ud_db_id=:db_id`
+					 HTML=`
+					<!-- #ICE REPEAT FUNCTION=``database?action=retrieve&db_id=:db_id``
+							 HTML=``
+						top.Main.item:action(4, 'uc', :user_id, 'ucc', :db_id, ':db_name', '<!-- #ICE INCLUDE=````icon_db.gif```` -->', 'BLACK', 'secUserConn.html?user=:user_id&db=:db_id')``
+					-->`
+			-->
+			top.Main.refresh()
+</SCRIPT>
+
+<!-- #ICE REPEAT INCLUDE=`result.html?submit=&cancel=&object=association between a database connection and the user` -->

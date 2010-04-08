@@ -1,0 +1,87 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+**
+** Name:	updproc2.tlp - Create update database procedure for type 2
+**
+** Description:
+**	Procedure in remote database to replicate an UPDATE to a Protected
+**	Read Only target.
+##
+## History:
+##	16-dec-96 (joea)
+##		Created based on updproc2.tlp in replicator library.
+##	03-oct-97 (joea) bug 83087
+##		Correct datatypes for sourcedb, old_sourcedb and table_no.
+##	21-apr-98 (joea)
+##		Change MESSAGE x; RETURN to RETURN x.
+##	08-mar-07 (gupsh01)
+##		Modified DATE to INGRESDATE.
+**/
+CREATE PROCEDURE $rup(
+	$ddl,
+	sourcedb		SMALLINT	NOT NULL,
+	transaction_id		INTEGER		NOT NULL,
+	sequence_no		INTEGER		NOT NULL,
+	table_no		INTEGER		NOT NULL,
+	old_sourcedb		SMALLINT	NOT NULL,
+	old_transaction_id	INTEGER		NOT NULL,
+	old_sequence_no		INTEGER		NOT NULL,
+	cdds_no			SMALLINT	NOT NULL,
+	dd_priority		SMALLINT	NOT NULL,
+	trans_time		INGRESDATE	NOT NULL,
+	trans_type		SMALLINT	NOT NULL,
+	target_type		SMALLINT	NOT NULL,
+	s_cdds_no		SMALLINT	NOT NULL,
+	s_dd_priority		SMALLINT	NOT NULL,
+	s_trans_time		INGRESDATE	NOT NULL,
+	s_new_key		SMALLINT	NOT NULL,
+	$ddk(_ii_)) =
+BEGIN
+	IF s_new_key != 0 THEN
+		INSERT	INTO $sha ($key,
+			cdds_no, dd_priority, trans_type, sourcedb,
+			transaction_id, sequence_no, trans_time,
+			distribution_time, new_key,
+			old_sourcedb, old_transaction_id, old_sequence_no)
+		VALUES	($key(:_ii_),
+			:s_cdds_no, :s_dd_priority, 1, :old_sourcedb,
+			:old_transaction_id, :old_sequence_no, :s_trans_time,
+			:s_trans_time, 1,
+			0, 0, 0);
+		IF IIerrornumber != 0 OR IIrowcount != 1 THEN
+			RAISE ERROR 5 'Unable to insert into $sha';
+			RETURN;
+		ENDIF;
+	ENDIF;
+
+	UPDATE	$odt
+	SET	$cll()(:)
+	WHERE	$jon()(:_ii_);
+	IF IIerrornumber != 0 OR IIrowcount != 1 THEN
+		RETURN 1227;
+	ENDIF;
+
+	UPDATE	$sha
+	SET	in_archive = 1
+	WHERE	sourcedb = :old_sourcedb
+	AND	transaction_id = :old_transaction_id
+	AND	sequence_no = :old_sequence_no
+	AND	in_archive = 0;
+	IF IIerrornumber != 0 OR IIrowcount != 1 THEN
+		RETURN 1228;
+	ENDIF;
+
+	INSERT	INTO $sha ($key,
+		sourcedb, transaction_id, sequence_no, trans_time,
+		trans_type, distribution_time, in_archive, cdds_no,
+		dd_priority, old_sourcedb, old_transaction_id,
+		old_sequence_no)
+	VALUES	($key(:),
+		:sourcedb, :transaction_id, :sequence_no, :trans_time,
+		:trans_type, 'now', 0, :cdds_no,
+		:dd_priority, :old_sourcedb, :old_transaction_id,
+		:old_sequence_no);
+	IF IIerrornumber != 0 OR IIrowcount != 1 THEN
+		RETURN 1229;
+	ENDIF;
+END

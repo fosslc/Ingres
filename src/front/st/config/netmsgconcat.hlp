@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Boolean to determine whether or not the Net Server requests concatenated
+ messages.  A value of "false" or "OFF" means that the Net Server requests 
+ the remote dbms server to send only individual messages.  A setting 
+ of "true" or "ON" causes the remote dbms to group (concatenate) individual 
+ messages.

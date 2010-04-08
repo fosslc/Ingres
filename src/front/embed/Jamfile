@@ -1,0 +1,60 @@
+#
+# Jamfile file for front!embed
+#
+# History:
+#	11-jan-2005 (abbjo03)
+#	    Created.
+#	25-feb-2010 (joea)
+#	    Only build Ada on Alpha VMS.
+
+SubDir ING_SRC front embed ;
+
+IISUBSYS front embed ;
+
+IIINCLUDE front embed c ;
+IIINCLUDE front embed cobol ;
+IIINCLUDE front embed cobolsq ;
+IIINCLUDE front embed copy ;
+IIINCLUDE front embed csq ;
+IIINCLUDE front embed dclgen ;
+IIINCLUDE front embed equel ;
+IIINCLUDE front embed fortran ;
+IIINCLUDE front embed fortransq ;
+IIINCLUDE front embed hdr ;
+IIINCLUDE front embed libqgca ;
+IIINCLUDE front embed libq ;
+IIINCLUDE front embed mgram ;
+IIINCLUDE front embed raat ;
+IIINCLUDE front embed sqlca ;
+
+if $(NT)
+{
+    IIINCLUDE front embed esqlcobdemo ;
+    IIINCLUDE front embed esqldemo ;
+    IIINCLUDE front embed specials_win ;
+}
+
+if $(NT) || $(UNIX)
+{
+    IIINCLUDE front embed libqxa ;
+}
+
+if $(UNIX)
+{
+    IIINCLUDE front embed libqtxxa ;
+}
+
+if $(UNIX) || $(VERS) = axm_vms 
+{
+    IIINCLUDE front embed ada ;
+    IIINCLUDE front embed adasq ;
+}
+
+if $(VMS)
+{
+    IIINCLUDE front embed basic ;
+    IIINCLUDE front embed basicsq ;
+    IIINCLUDE front embed pascal ;
+    IIINCLUDE front embed pascalsq ;
+    IIINCLUDE front embed specials_vms ;
+}

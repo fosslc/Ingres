@@ -1,0 +1,41 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for vdba
+*/
+
+/*
+** History
+**
+**	21-nov-95 (hanch04)
+**		Created.
+**	11-jan-96 (dougb)
+**		Move executables to correct directory on VMS.
+**	17-jul-96 (boama01 and rosga02)
+**		Added rmcmdv executable and rmcmd script
+**	19-jun-97 (hanch04)
+**		Removed insw31.zip
+**	06-Nov-1997 (hanch04)
+**	    Added SQL scripts
+**      10-Nov-1997 (kinte01)
+**          Corrected location of SQL scripts for VMS, only shared executables
+**          should be in !share
+**	17-Nov-1997 (hanch04)
+**	    Added iisuvdba
+**	19-Nov-1997 (kinte01)
+**	    Fixed location of iisuvdba for VMS
+**	04-Dec-1997 (kinte01)
+**	    Added new SQL script for VMS 
+**      28-jan-1998 (hanch04)
+**          Added ifdef FULL_RELEASE.  This will not be defined
+**          for the black box release of Ingres.
+**	28-may-1998 (kinte01)
+**          Modified the location for iisuvdba on VMS to pick up SED 
+**	    stripped version
+**	26-Aug-1998 (hanch04)
+**	    Moved to rmcmd.
+*/
+
+PART   vdba
+

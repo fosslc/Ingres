@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The unix_priority resource specifies the Unix scheduling priority for
+  the DBMS process.  The priority is a Unix "nice" value; zero is normal
+  priority, negative values are higher priority, and positive values are
+  lower priority.
+
+  The default is 0 (normal priority).

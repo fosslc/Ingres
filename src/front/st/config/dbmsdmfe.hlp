@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The resource dmf_wb_end is the "off" threshold for the write-behind
+  mechanism in the buffer cache.  If write-behind is running, and the
+  number of modified pages in the cache is reduced to dmf_wb_end,
+  the write-behind thread(s) stop and go to sleep.
+
+  The default is 2/3 of the write-behind start limit.

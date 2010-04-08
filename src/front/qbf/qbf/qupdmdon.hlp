@@ -1,0 +1,50 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+With the UPDATE function, you can change or delete existing rows in your
+table.  You can invoke the UPDATE function either by specifying the "-mupdate"
+flag in your command line or by typing the "Update" command in the main Query
+Execution phase menu.
+
+There are two states in the UPDATE function.  The first state is the QUERY
+state in which you can specify which rows you wish to retrieve to change or
+delete.  Once you enter your query, QBF will display your data to edit. 
+This is the GO state.
+
+You are now in the GO state.  After editing the data on the screen, you can 
+display the next records in your query by selecting the "NextMaster" or 
+"NxtDetail" commands.
+
+Depress the MENU KEY to call the GO state menu. You then have several options:
+You can delete the rows you are viewing by typing the "Delete" command.
+(You will be asked which rows you wish to delete; you can choose to delete
+just the detail, or to delete the master along with the currently displayed
+detail, or to delete the master along with all associated details). 
+You can add a new detail to the current master with the "AddDetail" command.
+(You must overtype the currently displayed detail with the new detail
+before you depress the MENU KEY and type "AddDetail"; after you type
+"AddDetail", the previously displayed detail will be redisplayed).
+You can write the changes you have made by typing the "Save" command.
+You can also start a new query without writing your changes by typing
+the "Query" command, or leave the UPDATE function by typing "End".
+
+As in the RETRIEVE and APPEND functions, the menu displayed in the UPDATE
+function is tailored to fit the type of Join Definition you are running
+and the format in which you are displaying your data.  
+
+QBF stores all the changes you make to your data in a temporary buffer as 
+you browse through and edit the data.  Those changes are not written to the
+database until you select the "Save" command.
+
+To summarize, the commands in the UPDATE Function are:
+
+    COMMAND             FUNCTION
+    -------             --------
+    NextMaster          Get the next master record and its associated
+                        first detail record.
+    Query               Exit the GO state and return to QUERY state.
+    Delete              Display a submenu to chose what components of the
+                        currently displayed records to delete.
+    NxtDetail           Get the next detail record for the current master.
+    AddDetail           Append a new detail record for the current master.
+    Save                Write the changes stored in the buffer to INGRES.
+    Help                Print this message.
+    End                 Leave the UPDATE Function.

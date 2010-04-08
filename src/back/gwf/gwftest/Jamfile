@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!gwf!gwftest
+#
+
+SubDir ING_SRC back gwf gwftest ;
+
+IISUBSYS back gwf gwftest ;
+
+IILIBRARY GWFLIB : gwlgtst.c gwdmftst.c ;
+
+IILIBRARY IMPGWFLIBDATA : gwftestdata.c ;
+
+

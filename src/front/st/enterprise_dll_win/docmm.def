@@ -1,0 +1,21 @@
+;
+; History:
+;	28-aug-2001 (penga03)
+;	    Created.
+;	30-jan-2001 (penga03)
+;	    Removed ingres_set_doc_path, added ingres_set_doc_shortcuts.
+;	16-Nov-2006 (drivi01)
+;	    Added new functions for documentation installer:
+;	    ingres_install_adobe_reader and
+;	    ingres_start_bookshelf.
+;	18-Mar-2007 (drivi01)
+;	    Add function ingres_remove_shortcuts.
+;
+EXPORTS
+	ingres_set_doc_shortcuts
+	ingres_install_adobe_reader
+	ingres_start_bookshelf
+	ingres_remove_shortcuts
+
+
+

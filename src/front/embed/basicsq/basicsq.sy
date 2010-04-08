@@ -1,0 +1,2082 @@
+%{
+/*
+** Copyright (C) 1986, 1992, 2001 Ingres Corporation
+*/
+
+
+/* %L merge <esqlgram.my> -- get the master grammar */
+/* %L fake begin */
+# include <esqlgram.my>		-- fake out MING
+/* %L fake end */
+
+/* %L language begin 
+** Define EQ_X_LANG where X is EUC or PL1 for the symbol table
+** Also define the real host lang (if different) for gr_mechanism
+*/
+# define	EQ_EUC_LANG
+# define	EQ_FOR_LANG
+/* %L language end */
+
+/* This file must pass a YACC and compilation test only */
+# include 	<compat.h>
+# include	<er.h>
+# include	<si.h>
+# include 	<st.h>
+/* Files from EQUEL preprocessor */
+# include	<equel.h>
+# include	<eqlang.h>
+# include	<equtils.h>
+# include	<eqsym.h>
+# include	<eqgen.h>
+# include	<eqstmt.h>
+# include	<eqscan.h>
+# include	<eqgr.h>
+# include	<ereq.h>
+# include	<ere3.h>
+
+# include	<eqesql.h>
+%}
+
+/*
++* Filename:	basicsq.y
+** Purpose:	Defines BASIC dependent grammar for ESQL
+**
+** Defines:	yyparse		- YACC parser for FORTRAN dependent rules
+**		gr_mechanism	- Interface between grammar and the 'outside'.
+** Notes:
+-*		Can only be run when 'eqmerged' with the main ESQL grammar.
+**
+** Language dependent grammar for the BASIC statements that can be embedded in 
+** ESQL.  Basically parses declarations and usages of variables and constants.
+**
+**	1. We support all VMS types.
+**
+** History:
+**	11-nov-1986	- written for VMS ESQL/BASIC (bjb)
+**	11-jul-1990	- Added decimal support (teresal)	
+**	12-feb-1991	- Added "double precision" as valid data type
+**			  for SQL - bug 35410. (teresal)
+**      04-aug-92       - changed EXEC SQL DECLARE TABLE to remain in
+**                        EXEC mode until entire statement has been
+**                        reduced.  Since I split the master and slave
+**                        token tables, we want to use the master
+**                        token table for this statement.  See
+**                        31-jul-92 change in psqtoks.st. (larrym)
+**	24-sep-1992	- Fixed bug where incorrect code was generated for
+**			  statement following a DECLARE TABLE within declare
+**			  section.  Set flag to suppress printing. (lan)
+**      02-oct-1992 (larrym)
+**              grammer now sets a global (sc_hostvar = TRUE) when it's
+**              scanning a host variable reference.  Setting this variable
+**              to TRUE causes the scanner (scword) not to do keyword
+**              lookups.  The result of this is that you can now use reserved
+**              words in any element of a host variable reference.  See note
+**              at beginning of HOST VARIABLE USAGE section for more info.
+**	14-oct-1992 (lan)
+**		Also generate second word if present to line directive if mode
+**		is GR_sNODB or GR_sFORMS.
+**	24-oct-1992 (larrym)
+**		Fixed bug in Buse_var rule that was causing grammar to 
+**		generate a "dummy" tNAME that we really want to throw away.
+**		We were using Bxname (which has generation semantics)
+**		instead of just tNAME. 
+**      16-dec-1992 (larrym)
+**              Bdec_var now checks (case in-sensitive) the name of the hostvar
+**              for SQLCODE.  If present, set's state flag EQ_SQLCODE. This
+**              can be overridden by the -nosqlcode flag.  If that flag is
+**              set, then we ignore SQLCODE.  Also Bdec_var checks (case
+**              in-sensitive) the name of the hostvar for SQLSTATE.  If present
+**              set's state flag EQ_SQLSTATE.
+**	26-jul-1993 (lan)
+**		Added GR_s4GL for EXEC 4GL.
+**	11-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**      22-feb-2000 (kinte01)
+**              Add support for SFLOAT, TFLOAT for AlphaVMS
+**              SINGLE & DOUBLE are not supported AlphaVMS. (SIR 100394)
+**	15-feb-2001	(kinte01)
+**	    Bug 103393 - removed nat, longnat, u_nat, & u_longnat
+**	    from VMS CL as the use is no longer allowed
+**	18-sep-2001 (kinte01)
+**	    Adding inkdo01 changes for embedded compilers to basic, pascal, 
+**	    and pl1
+**	    Add tempgr to pass "return" info during exec procedure parse.
+**	    Add gr_rcnt for row procs
+**
+** Conflicts with the main grammar:
+** 1.  There is a shift/reduce conflict on the left paren following a variable 
+**     name (in connection with the variable usage rules).  The conflict arises 
+**     because in the local grammar the parenthesis is optional (an optional
+**     array reference) and gives rise to a null rule (Buse_paren) but a left 
+**     parenthesis also appears in the follow set of the var name (and is dealt 
+**     with in the generic grammar rules).  YACC resolves this conflict 
+**     correctly by shifting the paren.  The semantics of the Buse_paren rule 
+**     "eat" up to and including the right parenthesis if this is an array 
+**     reference; otherwise they back up the scanner's global input pointer 
+**     so that the paren will be reduced by generic grammar rules.
+** 2.  Because of the changes to allow host variables to be reserved
+**     words (see HOST VARIABLE USAGE section for details) a
+**     new rule for host variable reference was introduced that
+**     allows a tNAME to follow a the old rule for a host variable
+**     reference.  In other words, a hostvar can now be a hostvar
+**     or a hostvar tNAME.  This conflicts with cases where the
+**     tNAME might be part of another rule.  The default behavior
+**     is correct.
+*/
+
+
+/* Special L tokens required by G and scanner to fill tok_special */
+%token	tHOSTCODE	/* Host language */
+	tCOMMENT	/* Comment token to trigger skipping comments */
+	tQUOTE		/* Triggers reading strings */
+	tTERMINATE	/* Statement terminators */
+	tEOFINC		/* Unexpected end of included file */
+
+%token	tBSEMI				/* Terminator for testing */
+
+/* %L tokens begin - BASIC tokens to import into G */
+
+%token	tBDOUBCOLON			/* BASIC punctuation */
+
+	tBBYTE		tBDECIMAL	/* Data types */
+	tBDOUBLE	tBINTEGER
+	tBLONG		tBREAL
+	tBSINGLE	tBSTRING
+	tBWORD		tBRECORD
+	tBSFLOAT	tBTFLOAT
+
+%token	tBCOMMON	tBCONSTANT	/* Storage class */
+	tBDIM		tBDYNAMIC
+	tBEXTERN	tBMAP
+	tDECLARE
+
+%token	tBCASE		tGROUP		/* Record items */
+	tBVARIANT
+
+/* 
+** Special token returned from gr_mechanism 
+*/
+%token  tBSTRUCT 			/* Record (tag) name */
+
+/* %L tokens end */
+	 
+%nonassoc	tUNARYOP
+
+%start		Bprogram
+
+%{
+
+
+/* Structure from main grammar for test compilation */
+struct esq_struct {
+    i4		*csrroot;	/* Really an SQNODE */
+    i4		flag;		/* See flag bits below */
+    i4		level;		/* Sub-query nesting level */
+    i4		inc;		/* Include SQLCA used */
+    char	sbuf[ SC_STRMAX ];  /* Extra string working buffer */
+};
+GLOBALDEF struct esq_struct _esq_struct ZERO_FILL;
+GLOBALDEF struct esq_struct *esq = &_esq_struct;
+
+/* %L locals begin - local variables and gr structure for BASIC */
+
+# include	<eqbas.h>
+# include	<ere3.h>
+
+struct	gr_state {
+	/* Members known to both G and L */
+	SYM	*gr_sym;	/* Pointer to current symbol */
+	char	*gr_id;		/* Last full name used */
+	i4	gr_type;
+	i4	gr_flag;	/* Certain state information */
+	i4	gr_func;	/* I/O Function constant */
+	i4	gr_mode;	/* Mode of statement before entering block */
+	i4	gr_adjective;	/* Block modifier */
+	SYM	*gr_nlsym;	/* Symtab pointer to indicator var */
+	char	*gr_nlid;	/* Id of indicator var */
+	i4	gr_nltype;	/* Type of indicator var */
+	SYM	*gr_null;	/* Generic null symbol (for "= null" assgnmts */
+	i4	gr_rcnt;	/* count of result row entries (for RPPs) */
+
+	/* Members known to only L BASIC */
+# define	B_BLOCK		1	/* No scope in ESQL */
+	i4	B_dec;		/* In declaration or usage */
+	i4	B_rec;		/* BASIC record level */
+	i4	B_type;		/* BASIC type */
+	i4	B_class;	/* MAP, RECORD, DECLARE, etc. */
+	i4	B_size;		/* Size of declaration */
+	i4	B_dims;		/* Array subscript flags */
+	i4	B_err;		/* Don't issue more error messages */
+	i4	B_simpvar;	/* Simple var (useful for undeclared vars */
+	SYM	*B_struct;	/* Pointer to user-defined struct */
+	struct {	/* Default lengths of BASIC integers and floats */
+		i4	B_real;
+		i4	B_int;
+	} Bsizes;
+};
+GLOBALDEF struct gr_state _gr_local ZERO_FILL;
+GLOBALDEF struct gr_state *gr = &_gr_local;
+struct gr_state tempgr;
+
+/* 
+** Where do BASIC array indices start?  A BASIC array actually starts
+** at zero.  For example, the following array:
+**	DIMS integer x(10)
+** has 10 elements plus a zero element.  However, it's common to ignore
+** the zero'th element (the MAT READ and MAT PRINT statements do just that),
+** so we'll assume arrays start at 1.
+*/ 
+# define B_ARR_BASE	1
+
+/* The syntax of array indices */
+# define B_ARR_EXPR	ERx("(%d)")
+
+
+/* %L locals end */
+
+%}
+
+
+%%
+
+Bprogram:	Bstatement
+	|	Bprogram tBSEMI Bstatement
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+;
+
+Bstatement:	tBUSE tNAME host_term
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+	| 	host_declare
+	|	host_code
+	| 	error host_term
+		{
+		    gr_mechanism( GR_STMTFREE );
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+
+dectab_list:	tNAME
+;
+
+/*
+** BASIC dependent grammar
+*/
+
+/*
+** Connecting rules between usage of a BASIC variable, name or
+** constants and an equivalent ESQL object.
+**
+** Objects that must be defined by the L grammar for use by G:
+**
+** 1. host_code	 	 	- Host code recognized, set L flags and
+**			   	  print code.
+** 2. host_declare		- Host language declaration sections.
+** 3. host_term			- Host label.
+** 4. host_incterm		- Special host label for include statements.
+** 5. host_label		- Host label.
+** 6. host_retvar, host_setvar, host_fsetvar, host_intovar, host_insvar
+**				- Host language variables.
+** 7. extra rules that may have alternative syntaxes for L.
+**
+** Note:
+** 	All host_XXvars must set gr->gr_sym, gr->gr_type and gr->gr_id 
+** after freeing the current id space.  Callers above should be able to
+** to access gr->gr_sym, gr->gr_type and gr->gr_id when wanting the variable.
+** The type of gr->gr_type should be the equivalent EQUEL type, not the
+** host language type.
+*/
+
+/* %L rules begin - BASIC dependent grammar */
+
+/*
+** BASIC-specific extensions of main grammar rules
+*/
+
+sql_id:		tBINTEGER
+		{
+		    db_key( $1.s );
+		}
+	|	tBDECIMAL
+		{
+		    db_key( $1.s );
+		}
+	|	tBDOUBLE
+		{
+		    db_key( $1.s );
+		}
+	|	tBTFLOAT
+		{
+		    db_key( $1.s );
+		}
+;
+dectab_type:	tBINTEGER
+	|	tBDECIMAL
+	|	tBDOUBLE tNAME
+	|	tBTFLOAT tNAME
+;
+inithide_type:	tBINTEGER
+		{
+		    id_add( $1.s );
+		}
+	|	tBDECIMAL
+		{
+		    id_add( $1.s );
+		}
+;
+
+/*
+** Allow for word MAP in FRS statement - MAP is a BASIC reserved word
+*/
+frs_constname:	tBMAP
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/*
+** HOST TERMINATOR
+** 
+** host_term - ESQL/BASIC statements have no terminator.  However, to define
+** host_term as a null rule would lead to many conflicts.  Therefore, the
+** scanner provides the grammar with a "fake" terminator token.
+*/ 
+host_term:	tTERMINATE
+		{
+		    dml->dm_exec = DML_HOST;
+		}
+;
+
+/* 
+** host_incterm - special terminator for INCLUDE statement
+**
+** No (fake) terminators on INCLUDE statements for BASIC.
+** (If we allow fake terminators, the scanner will have
+** already looked ahead into the next line in the main file --
+** just at the moment when the grammar and scanner must be in sync.)
+** We explicitly turn on DML_HOST mode to prevent the scanner from
+** pushing back the fake terminator (it only pushes one back when
+** in EXEC mode).
+*/ 
+host_incterm:	/* EMPTY */
+		{
+		    dml->dm_exec = DML_HOST;
+		}
+;
+
+/*
+** HOST LABEL
+**
+** host_label - Integers (line numbers) for GOTO conditions
+**		Names for CALL conditons
+*/
+host_label:	tINTCONST
+		{
+		    $$.s = $1.s;
+		}
+	|	tCOLON tINTCONST
+		{
+		    $$.s = $2.s;
+		}
+	|	tNAME
+		{
+		    $$.s = $1.s;
+		}
+	|	tCOLON tNAME
+		{
+		    $$.s = $2.s;
+		}
+	|	tSCONST
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/* Host code production
+**
+** The scanner has passed the full line of host language code as
+** an argument.  The newline is include.
+*/
+host_code:	tHOSTCODE
+		{
+		    if ((gr->gr_flag & GR_HOSTCODE) == 0)
+		    {
+			gen_line( ERx("host_code") );
+			gr->gr_flag |= GR_HOSTCODE;
+		    }
+		    gen_host( G_H_CODE, $1.s );
+		    dml->dm_exec = DML_HOST;
+		}
+;
+
+/* BASIC declarations */
+		
+host_declare:	Bdec_head Bdec_block Bdec_end
+;
+
+Bdec_head:	tBEG_DECLARE tSECTION tTERMINATE
+		{
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"),
+							ERx("BEGIN DECLARE") );
+		    dml->dm_exec = DML_DECL;
+		    eq->eq_flags |= EQ_INDECL;	/* Scanner in declare mode */
+		}
+;
+Bdec_end:	tEND tDECLARE tSECTION tTERMINATE
+		{
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"),
+							ERx("END DECLARE") );
+		    dml->dm_exec = DML_HOST;
+		    eq->eq_flags &= ~EQ_INDECL;
+		}
+;
+Bdec_block:	/* No declarations */
+	|	Bdec_block Bdeclaration
+		{
+		    gr->B_rec = 0;
+		    gr->B_dims = 0;
+		    gr->B_size = 0;
+		    gr->gr_type = T_INT;
+		    gr->B_struct = (SYM *)0;
+		    gr_mechanism( GR_STMTFREE );
+		}
+
+;
+
+/*
+** A VMS BASIC data declaration is
+**	1. DECLARE declist (non-standard VMS extension)
+**	2. EXTERNAL declist (non-standard VMS extension)
+**	3. RECORD record description (non-standard VMS extension)
+**	4. DIMENSION arraylist
+**	5. MAP/COMMON (common area) declist
+**
+** A record declaration does not declare any variables (reserve storage).
+**
+** Declarations inside an INCLUDE SQL block also include SQL declarations:
+**	1. EXEC SQL DECLARE TABLE 
+**	2. EXEC SQL INCLUDE filename
+*/
+
+Bdeclaration:	Bdecl		/* Explicit variable/constant declarations */
+	|	Bextern		/* External variable/constant declarations */
+	|	Brec		/* User-defined record type */
+	|	Bdimension	/* Special array declarations */
+	|	Bcomdec		/* Static storage declarations */
+	|	Bmapdec		/* Static storage declarations */
+	|	Bdec_dectable	/* EXEC SQL DECLARE TABLE */
+	|	Bdec_include	/* EXEC SQL INCLUDE */
+	|	error
+		{
+		    /* 
+		    ** Important to get scanner out of EXEC mode to
+		    ** prevent it from continually pushing back fake
+		    ** terminator.
+		    */
+		    dml->dm_exec = DML_DECL;
+		}
+;
+
+Bdec_gen:	/* Initializing to be done before every decl */
+		{
+		    gr->B_dec = BdecDEC;
+		    gr->B_rec = 0;
+		    gr->B_type = T_NONE;
+		    gr->B_size = 0;
+		    gr->B_err = 0;
+		    gr->B_struct = (SYM *)0;
+		}
+;
+
+/*
+** A DECLARE statement 
+** 1) Variables
+** 
+**    DECLARE data-type decl-item [, [data-type] decl-item]...
+**
+**    decl-item names a simple variable or an array.
+**
+** 2) Constants
+**
+**    DECLARE data-type CONSTANT {const-nam = const},...
+**
+** data-type is a general data-type OR a sub-data-type optionally
+** preceded by a general data-type.  (BASIC allows no type at all 
+** because there is a way via the command line or OPTIONS statement 
+** to specify a "default" type, BUT we treat this as an error.)
+**
+** Examples:
+**
+** DECLARE INTEGER BYTE var1, REAL DOUBLE var2, var3
+** DECLARE var4, SINGLE var5, DECIMAL(5,2) var6(3)
+** DECLARE STRING CONSTANT cons1 = 'hi', cons2 = "bye"
+**
+*/
+Bdecl:		Bdecl_wd Bconst_decl
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+	|	Bdecl_wd Bdec_list
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+	|	tDECLARE tNAME
+		{
+		    er_write( E_E30013_hbTYPE, EQ_ERROR, 0 );
+		}
+;
+
+Bdecl_wd:	tDECLARE Bdec_gen
+		{
+		    gr->B_class = BclVAR;
+		    Bput_lnum();
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+/*
+** EQUEL recognizes EXTERNAL statements on constants and variables (not
+** functions and subs).  The syntax is:
+**
+**   EXTERNAL data-type CONSTANT {const-nam},...
+**   EXTERNAL data-type {var-name},...
+**
+** External constants must not have a value assignment clause and their 
+** type may only be integer or 4-byte floats.  External variables must
+** not be arrays and their type may only be numeric.
+** We treat the const-name and var-name as a Bdec-var and check that for
+** this class of variables/constants (BclEX...) there are no parens,
+** equals clauses, etc.
+*/
+Bextern:	Bext_wd Bconst_decl
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+	|	Bext_wd Bdec_xtype Bex_list
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+Bext_wd:	tBEXTERN Bdec_gen
+		{
+		    Bput_lnum();
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_class = BclEXVAR;
+		}
+;
+Bex_list:	Bdec_var
+	|	Bex_list Bcomma Bdec_var
+;
+/*
+** A RECORD statement defines a user datatype.  The syntax is:
+**
+**   RECORD rec-name
+**	list of record components
+**   END RECORD [ rec-name ]
+**
+** record components can be:
+** 1) variables of all the same types as in a DECLARE statement
+**	BUT string var decls may be followed by an optional [ = int-const ] 
+**	to indicate string length; 
+** 2) group-clause:
+**    	GROUP group-nam [ (int-conts,...) ]
+**	    list of group components (same as list of record components)
+**	END GROUP [ group-nam ]
+** 3) variant-clause
+**	VARIANT
+**	    CASE
+**		list of components (same as list of record components)
+**	    CASE
+**	 	list 
+**	     ...
+**	END VARIANT
+** 4) User-defined items e.g., FILL (I suppose we'll just eat these up)
+*/
+Brec:		Brec_open Brec_list Brec_end
+		{
+		    if ($3.s != (char *)0)
+		    {
+			if (STbcompare($1.s, 0, $3.s, 0, TRUE) != 0)
+			    er_write( E_E30005_hbEND, EQ_ERROR, 1, $1.s );
+		    }
+		    gr->B_rec--;
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+Brec_open:	Brec_wd Brectag
+		{
+		    SYM		*sy;
+
+		    gen_host( G_H_NEWLINE|G_H_INDENT, (char *)0 );
+		    sy = symDcEuc( $2.s, gr->B_rec, B_BLOCK, syFisTYPE,
+			BSCLOSURE, SY_NORMAL );
+		    if (sy)
+			sym_s_btype( sy, T_STRUCT );
+		    gr->B_rec++;
+		    $$.s = $2.s;
+		}
+;
+Brec_wd:	tBRECORD Bdec_gen
+		{
+		    gr->B_class = BclRECORD;
+		    Bput_lnum();
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+/* 
+** If this record is being defined for the first time, the scanner will
+** return the token tNAME;  if its tag was already defined as a forward
+** reference (as in SUB or FUNCTION parameter lists) the scanner will
+** return the token tBSTRUCT.  See gr_mechanism: GR_LOOKUP as to why
+** this happens.
+*/
+Brectag:	tNAME
+		{
+		    $$.s = $1.s;
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tBSTRUCT
+		{
+		    $$.s = $1.s;
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Brec_list:	Brec_component
+	|	Brec_list Brec_component
+;
+Brec_component: Bdec_reclist
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+	|	Bgroup_clause
+	|	Bvariant_clause
+;
+Bdec_reclist:	Brec_gen Bdec_xtype Bdec_var
+	|	Bdec_reclist Bcomma Bdec_type Bdec_var
+;
+Brec_gen:	{
+		    Bput_lnum();
+		}
+;
+Brec_end:	Brec_endwd
+		{
+		   $$.s = (char *)0;
+		}
+	|	Brec_endwd Brectag
+		{
+		   $$.s = $2.s;
+		}
+;
+Brec_endwd:	tEND tBRECORD
+		{
+		    Bput_lnum();
+		    gen_host( G_H_KEY|G_H_OUTDENT, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+Bgroup_clause:  Bgroup_init Brec_list Bgroup_end
+		{
+		    if ($3.s != (char *)0)
+		    {
+			if (STbcompare($1.s, 0, $3.s, 0, TRUE) != 0)
+			    er_write( E_E30005_hbEND, EQ_ERROR, 1, $1.s );
+		    }
+		    gr->B_rec--;
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+/* 
+** We enter GROUP names into the symbol table as variables (since they
+** will be used as such).  
+*/
+Bgroup_init:	Bgroup_wd Bname Bdec_arrlist
+		{
+		    SYM		*sy;
+
+		    sy = symDcEuc( $2.s, gr->B_rec, B_BLOCK, syFisVAR,
+			BSCLOSURE, SY_NORMAL );
+		    if (sy)
+		    {
+			sym_s_btype( sy, T_STRUCT );
+			sym_s_dims( sy, $3.i );
+		    }
+		    gr->B_rec++;
+		    $$.s = $2.s;
+		    gen_host( G_H_NEWLINE|G_H_INDENT, (char *)0 );
+		}
+;
+Bgroup_wd:	tGROUP
+		{
+		    Bput_lnum();
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Bname:		tNAME
+		{
+		    $$.s = $1.s;
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Bgroup_end:	Bgr_endword 
+		{
+		    $$.s = (char *)0;
+		}
+	|	Bgr_endword Bname	
+		{
+		    $$.s = $2.s;
+		}
+;
+Bgr_endword:	tEND tGROUP
+		{
+		    Bput_lnum();
+		    gen_host( G_H_KEY|G_H_OUTDENT, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+Bvariant_clause:Bvart_wd Bcase_list Bvart_end
+		{
+		    /*
+		    ** Note that a variant does not increase the
+		    ** B_rec level
+		    */
+		}
+;
+Bvart_wd:	tBVARIANT
+		{
+		    Bput_lnum();
+		    gen_host( G_H_KEY|G_H_NEWLINE|G_H_INDENT, $1.s );
+		}
+;
+Bcase_list:	Bcase_clause
+	|	Bcase_list Bcase_clause
+;
+Bcase_clause:	Bcase_wd Brec_list
+		{
+		    gen_host( G_H_OUTDENT, (char *)0 );
+		}
+;
+Bcase_wd:	tBCASE
+		{
+		    Bput_lnum();
+		    gen_host( G_H_KEY|G_H_NEWLINE|G_H_INDENT, $1.s );
+		}
+;
+Bvart_end:	tEND tBVARIANT
+		{
+		    Bput_lnum();
+		    gen_host( G_H_KEY|G_H_OUTDENT, $1.s );
+		    gen_host( G_H_KEY|G_H_NEWLINE, $2.s );
+		}
+;
+/*
+** A dimension statement creates a static, dynamic or virtual array.
+** At the moment we are not supporting virtual arrays.  Dynamic arrays
+** differ from static arrays in that they are created at runtime (they
+** take at least one var in their subscript list to distinguish them
+** from static arrays).  However, EQUEL can't tell the difference between
+** static and dynamic arrays in the DIM statement because it ignores
+** everything between the parens of the subscript list.
+** Note that with both static and dynamic DIM statements, an array of
+** strings does NOT take a length because the strings themselves are
+** dynamic (like in a DECLARE statement).
+**
+** The syntax of a static DIM statement is:
+** DIM [ ENSION ] { [data_type ] array-nam ( int-const,... ) },... 
+**
+** The syntax of a dynamic DIM statement is:
+** DIM [ ENSION ] { [data_type ] array-nam ( int-var,... ) },... 
+*/
+Bdimension:	Bdim_wd Bdec_list
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+Bdim_wd:	tBDIM Bdec_gen
+		{
+		    Bput_lnum();
+		    gr->B_class = BclDIMS;
+		    gen_host( G_H_KEY, $1.s );
+		}
+;		    
+/*
+** The BASIC MAP and COMMON statements define global static storage.
+** These declarations allow programs and subprograms to share
+** the same data space.  With a MAP statement a program (or a
+** subprogram) can overlay the same data area with variables of
+** a different type.  A MAP DYNAMIC specifies variables in a MAP
+** area which will be assigned a position at runtime (via a REMAP 
+** statement).
+**
+** Examples:
+** 	MAP (a) string bigbuf = 100	(* These consecutive statements
+**      MAP (a) long arr(20), str = 16  ** are legal *)  
+**	
+**
+**	COMMON (b) real x, integer y(4)  (* In main program *)
+**	 ....
+**	SUB h (...)
+**	COMMON (b) real s, integer t(4)  (* Accesses same area as main
+**					 ** program *)
+**
+**	MAP (c) STRING dummy = 100
+**	MAP DYNAMIC (c) STRING name, address, INTEGER zip, age
+**
+**	COMMON BYTE bb			 (* Storage area name optional *)
+*/
+Bcomdec:	Bcom_init Bglob_name Bdec_list
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+Bmapdec:	Bmap_init Bxglob_name Bdec_list
+		{
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+Bcom_init:	Bcom_wd Bdec_gen
+		{
+		    gr->B_class = BclSTATIC;
+		}
+;
+Bmap_init:	Bmap_wd Bdec_gen
+		{
+		    gr->B_class = BclSTATIC;
+		}
+;
+Bcom_wd: 	tBCOMMON
+		{
+		    Bput_lnum();
+		    gen_host( G_H_KEY, $1.s );
+		}
+;	
+Bmap_wd:	tBMAP
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tBMAP tBDYNAMIC
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+Bglob_name:	/* Can be omitted */
+	|	Bxglob_name
+;
+Bxglob_name: 	tLPAREN 	/* tRPAREN */
+		{
+		    gen_host( G_H_CODE, ERx(" ") );
+		    /* Eat up what's in the middle */
+		    sc_eat( gen_code, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+		    gen_host( G_H_CODE, ERx(" ") );
+		}
+;
+
+/* 
+** A Constant declaration as part of a DECLARE statement is: 
+** 
+**   data-type CONSTANT {const-nam = const},...
+**
+** You can't have more than one type on the same line.
+*/
+Bconst_decl:	Bdec_xtype Bconst_key Bconst_list
+;
+/*
+** This could be an external constant or a regular constant.  gr->B_class
+** will have been set if we are in an external statement
+*/
+Bconst_key:	tBCONSTANT
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    if(gr->B_class == BclEXVAR)
+			gr->B_class = BclEXCONS;
+		    else
+			gr->B_class = BclCONSTANT;
+		}
+;
+Bconst_list:	Bdec_var
+	|	Bconst_list Bcomma Bdec_var
+;
+/*
+** This rule is used on the commas between variable declarations
+** in a list.  We reset the error flag, but leave the other gr defaults 
+** in place since subsequent variable names may "inherit" a type already 
+** specified in the list.  
+** The rule is also used during testing the BASIC dependent grammar
+** in the use of variables, and resetting B_err doesn't do any harm
+** here.
+*/
+Bcomma:		tCOMMA
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_err = 0;
+		}
+;
+/*
+** A list of variables in a DECLARE, DIMS, MAP or COMMON statement.
+** The first variable in the list must be preceded by a type specifier.
+** the following variables may be preceded by a type; otherwise they
+** adopt the last type given.
+**
+** Example:
+**    LONG var1, var2, BYTE var3
+**    STRING var4, REAL var5, var6 
+**    DECIMAL var7, var8
+*/
+Bdec_list:	Bdec_xtype Bdec_var
+	|	Bdec_list Bcomma Bdec_type Bdec_var
+;
+Beq_word:	tEQOP
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Bdec_type:	{
+		    /* No type -- leave other gr defaults in place */
+		}
+	|	Bdec_xtype
+;
+Bdec_xtype: 	Bint_set
+		{
+		    gr->B_type = T_INT;
+		    gr->B_struct = (SYM *)0;
+		}
+	|	Bfloat_set
+		{
+		    gr->B_type = T_FLOAT;
+		    gr->B_struct = (SYM *)0;
+		}
+	|	Bstring_type
+		{
+		    gr->B_type = T_CHAR;
+		    gr->B_struct = (SYM *)0;
+		}
+	|	Bpack_type
+		{
+		    gr->B_type = T_PACKED;
+		    gr->B_size = $1.i;
+		    gr->B_struct = (SYM *)0;
+		}
+/*
+** User-defined record will have this special tBSTRUCT token that gr_mechanism
+** has returned to the scanner.  We save this symbol-type's address in B_struct 
+** so that we may later assist the symbol table manager in declaration of the 
+** variable.
+*/
+  	|	tBSTRUCT
+    		{
+		    SYM 	*sy;
+
+	     	    if (sy = sym_resolve((SYM *)0, 
+			    $1.s, BSCLOSURE, syFisTYPE))
+		    {
+			gr->B_struct = sy;
+			/* Type is either T_STRUCT or T_FORWARD */
+			gr->B_type = sym_g_btype( sy );
+		    }
+		    gr->B_size = 0;
+    		    gen_host( G_H_KEY, $1.s );
+    		}
+;
+Bint_set:	Bgen_intype
+	|	Bint_type
+	|	Bgen_intype Bint_type
+;
+Bfloat_set:	Bgen_floatype
+	|	Bfloat_type
+	|	Bgen_floatype Bfloat_type
+;
+Bgen_intype:	tBINTEGER
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = gr->Bsizes.B_int;
+		}
+;
+Bint_type:	tBBYTE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = BszBYTE;
+		}
+	|	tBWORD
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = BszWORD;
+		}
+	|	tBLONG
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = BszLONG;
+		}
+;
+Bgen_floatype:	tBREAL
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = gr->Bsizes.B_real;
+		}
+;
+Bfloat_type: 	tBSINGLE
+		{
+#if defined (ALPHA) && defined (VMS)
+                    er_write( E_E3001E_hbSINGLE, EQ_ERROR, 0 );
+#else
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = BszSING;
+#endif
+		}
+	|	tBDOUBLE
+		{
+#if defined (ALPHA) && defined (VMS)
+                    er_write( E_E3001F_hbDOUBLE, EQ_ERROR, 0 );
+#else
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = BszDOUB;
+#endif
+		}
+	|	tBSFLOAT
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = BszSFLT;
+		}
+	|	tBTFLOAT
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = BszTFLT;
+		}
+;		
+Bstring_type:	tBSTRING
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->B_size = 0;
+		}
+;
+/*
+** For the DECIMAL datatype the scale and length (Bpk_size) are optional.
+** Since we always move user's decimal types into f8's and back, we do
+** not need to keep scale and length info anyway.
+**
+** Example:
+** 	DECLARE DECIMAL(4,2) a
+** 	DECLARE DECIMAL b
+*/
+Bpack_type:	Bpk_decword Bpk_size
+		{
+		    $$.i = $2.i;
+		}
+;
+Bpk_decword:	tBDECIMAL
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+Bpk_size:	/* No scale and length */
+		{
+		    /* Use Basic's default scale and precision */
+		    $$.i = (i4) DB_PS_ENCODE_MACRO(BszDPREC,BszDSCALE);
+		}
+	|	tLPAREN tINTCONST tCOMMA tINTCONST tRPAREN
+		{
+		    i4		prec, scale;
+
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    gen_host( G_H_KEY, $3.s );
+		    gen_host( G_H_KEY, $4.s );
+		    gen_host( G_H_KEY, $5.s );
+		    if (CVan($2.s, &prec) != OK || (prec == 0))
+		    {
+			/* Bad precision for decimal data type */
+			$$.i = 0;
+			er_write( E_E3001B_hbPREC, EQ_ERROR, 1, $2.s );
+		    }
+		    else if (CVan($4.s, &scale) != OK)
+		    {
+			/* Bad scale for decimal data type */
+			$$.i = 0;
+			er_write( E_E3001C_hbSCALE, EQ_ERROR, 1, $4.s );
+		    }
+		    else
+		    {
+			$$.i = (i4) DB_PS_ENCODE_MACRO(prec,scale);
+		    }
+		}
+;
+/*
+** A "variable" name may occur as part of a DECLARE (const/var), EXTERNAL,
+** RECORD, COMMON, MAP and DIMS statement.  In RECORD, COMMON and DIMS 
+** statements a string variable may be followed by an optional [ = intconst ] 
+** which is the length of the string.   This is because strings inside records 
+** are fixed length.  In a DECLARE ... CONSTANT statement the [ = const ] 
+** clause is mandatory (it's the constant assignment).  In other cases this 
+** clause is an error.
+**
+** Examples:
+**     RECORD a
+**	 STRING b = 20
+**	 STRING c(4) = 10	(* An array of 10-char strings *)
+**     END RECORD
+**
+**     COMMON (a) STRING b = 200  (* length okay here *)
+**
+**     DECLARE STRING a = 15    (* Error to use length in this context
+**				** because strings in DECLARE statements
+**				** are dynamic *)
+**     DIM STRING(10,10) = 8    (* Length is an error, again *)
+**
+**     DECLARE STRING CONSTANT s = "Hi Willow"
+**
+**     EXTERNAL INTEGER CONSTANT ccc
+*/
+Bdec_var:	Bdec_xvar Bdec_eq
+		{
+		    /* 
+		    ** Assume that $1 and $2 indicate, respectively, 
+		    ** array subs seen, record delimiters seen.
+		    */
+		    if (!gr->B_err)
+			Bdecl_errs( gr->B_class, gr->B_type, 
+			   (gr->B_size == BszDOUB || gr->B_type == T_PACKED),	
+			    $1.i, $2.i );
+		}
+;
+Bdec_xvar:	Bdec_name Bdec_arrlist
+		{
+		    SYM		*sy;
+		    i4		state;
+
+		    if (gr->B_class == BclCONSTANT || gr->B_class == BclEXCONS)
+			state = syFisCONST;
+		    else 
+			state = syFisVAR;
+		    /* 
+		    ** If the symbol table couldn't enter the name, it will
+		    ** have already given an error so we set B_err flag for 
+		    ** Bdec_var which does a lot of error checking.
+		    ** In most declarations, it's possible that the variable
+		    ** will have no type: syntactically we allow it but we
+		    ** catch it here.
+		    */
+		    if ((sy = symDcEuc( $1.s, gr->B_rec, B_BLOCK, state,
+			    BSCLOSURE, SY_NORMAL )) == (SYM *)0)
+			gr->B_err = 1;		
+		    else		/* Name  got entered */
+		    {
+			if (gr->B_type == T_NONE)  /* Can't happen in ESQL */
+			{
+			    er_write( E_E30013_hbTYPE, EQ_ERROR, 0 );
+			    gr->B_err = 1;
+			    gr->B_type = T_UNDEF;
+			}
+			sym_s_btype( sy, gr->B_type );
+			sym_s_dsize( sy, gr->B_size );
+			sym_s_dims( sy, $2.i );
+			/* 
+			** If the type was (or will be) a user-defined 
+			** structure, we assign its saved SYM pointer as 
+			** the type entry for current variable.
+			*/ 
+			if ((gr->B_type == T_STRUCT || gr->B_type == T_FORWARD) 
+				&& gr->B_struct)
+			    sym_type_euc( sy, gr->B_struct );
+		    }
+		    /* 
+		    ** Tell Bdec_var whether array subscripts were seen
+		    ** on this declaration
+		    */
+		    $$.i = $2.i;	
+		}
+;
+Bdec_name:	tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    if (!(eq->eq_flags & EQ_NOSQLCODE)
+                     && (STbcompare($1.s, 0, ERx("SQLCODE"), 0, TRUE) == 0))
+                    {
+			if (!(eq->eq_flags & EQ_SQLCODE))
+			{
+			    /*
+			    ** This is an error, because we probably
+			    ** This is an error, because we probably
+			    ** included the wrong eqslqca.
+			    */
+			    er_write( E_E3001D_hbNOSQLCODE, EQ_ERROR, 0,
+			        (char *)0 );
+			    eq->eq_flags |= EQ_SQLCODE;
+			}
+			if (gr->B_type != T_INT)
+			{
+			    er_write( E_EQ0517_SQLSTATUS_DECL, EQ_ERROR, 2,
+			      ERx("SQLCODE"), ERx("DECLARE INTEGER SQLCODE"));
+			}
+			else
+			{
+                            eq->eq_flags |= EQ_SQLCODE;
+			}
+                    }
+                    if (STbcompare($1.s, 0, ERx("SQLSTATE"), 0, TRUE) == 0)
+                    {
+                        if (gr->B_type != T_CHAR)
+			{
+                            er_write( E_EQ0517_SQLSTATUS_DECL, EQ_ERROR, 2,
+                              ERx("SQLSTATE"), ERx("DECLARE STRING SQLSTATE"));
+			}
+                        else
+			{
+                            eq->eq_flags |= EQ_SQLSTATE;
+			}
+                    }
+		    $$.s = $1.s;
+		}
+;
+Bdec_arrlist:	{
+		    $$.i = 0;		/* No array */
+		}
+	|	tLPAREN 		/* tRPAREN */
+		{
+		    sc_eat( gen_code, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+		    $$.i = 1;		/* Seen an array */
+		}
+;
+Bdec_eq:	{
+		    $$.i = 0;		/* No equals clause */
+		}
+	|	Beq_word Beq_const
+		{
+		    $$.i = 1;
+		}
+;
+Beq_const:	tINTCONST
+		{
+		    char	intbuf[ SC_NUMMAX +2 ];
+
+		    STprintf( intbuf, ERx("%s%%"), $1.s ); /* Catenate a '%' */
+		    gen_host( G_H_KEY, intbuf );
+		    if (gr->B_class == BclCONSTANT && gr->B_type == T_CHAR)
+		    {
+			er_write( E_E30002_hbCONS, EQ_ERROR, 0 );
+			gr->B_err = 1;
+		    }
+		}
+	|	B_aruop tINTCONST	%prec tUNARYOP
+		{
+		    char	intbuf[ SC_NUMMAX +2 ];
+
+		    gen_host( G_H_OP, ERx(" ") );
+		    gen_host( G_H_OP, $1.s );
+		    STprintf( intbuf, ERx("%s%%"), $2.s ); /* Catenate a '%' */
+		    gen_host( G_H_KEY, intbuf );
+		    if (gr->B_class == BclCONSTANT && gr->B_type == T_CHAR)
+		    {
+			er_write( E_E30002_hbCONS, EQ_ERROR, 0 );
+			gr->B_err = 1;
+		    }
+		}
+	|	tFLTCONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    if (gr->B_class == BclCONSTANT && gr->B_type == T_CHAR)
+		    {
+			er_write( E_E30002_hbCONS, EQ_ERROR, 0 );
+			gr->B_err = 1;
+		    }
+		}
+	|	B_aruop tFLTCONST	%prec tUNARYOP
+		{
+		    gen_host( G_H_OP, ERx(" ") );
+		    gen_host( G_H_OP, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    if (gr->B_class == BclCONSTANT && gr->B_type == T_CHAR)
+		    {
+			er_write( E_E30002_hbCONS, EQ_ERROR, 0 );
+			gr->B_err = 1;
+		    }
+		}
+	|	tDECCONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    if (gr->B_class == BclCONSTANT && gr->B_type == T_CHAR)
+		    {
+			er_write( E_E30002_hbCONS, EQ_ERROR, 0 );
+			gr->B_err = 1;
+		    }
+		}
+	|	B_aruop tDECCONST	%prec tUNARYOP
+		{
+		    gen_host( G_H_OP, ERx(" ") );
+		    gen_host( G_H_OP, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    if (gr->B_class == BclCONSTANT && gr->B_type == T_CHAR)
+		    {
+			er_write( E_E30002_hbCONS, EQ_ERROR, 0 );
+			gr->B_err = 1;
+		    }
+		}
+	|	tSCONST
+		{
+		    gen_host( G_H_SCONST, $1.s );
+		    if (gr->B_class == BclCONSTANT && gr->B_type != T_CHAR)
+		    {
+			er_write( E_E30002_hbCONS, EQ_ERROR, 0 );
+			gr->B_err = 1;
+		    }
+		}
+	|	tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    /* Must use literals */
+		    er_write( E_E30014_hbLIT, EQ_ERROR, 1, $1.s );
+		}
+;		
+
+B_aruop:	tPLUS
+		{
+		    $$.s = $1.s;
+		}
+	|	tMINUS
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/*
+** EXEC SQL INCLUDE filename within declare section
+**
+** Generate a BASIC "include" statement and preprocess named file.
+** Note that no fake terminator will be pushed back by the scanner
+** because sc_reset() will will make the scanner ready to get a newline
+** (the first line of the include file).  The newline on the current
+** line will not get processed and no fake terminator will be triggered.
+** Turn DML_DECL mode back on when the whole statement has been reduced.
+*/
+Bdec_include:	Binc_head Binc_name
+		{
+		    /*
+		    ** Inform scanner that we should read in a new line.
+		    */
+		    sc_reset();
+		    if (inc_parse_name($2.s, FALSE) == SC_INC)
+			inc_push_file();
+		    dml->dm_exec = DML_DECL;
+		}
+	|	tEOFINC			/* Eof of an included file */
+		{
+		    /* Better be "<EOF>" else Yacc will produce syntax error */
+		    dml->dm_exec = DML_DECL;
+		}
+;
+Binc_head:	tINCLUDE
+		{
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"),
+							    ERx("INCLUDE") );
+		}
+;
+Binc_name:	tNAME
+		{	
+		    $$.s = $1.s;
+		}
+	|	tSCONST
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/*
+** EXEC SQL DECLARE TABLE within declare section
+**
+** Statement is parsed but no code is produced.  The rule "dectab_list"
+** is defined in G.
+** Don't turn on DML_DECL mode until whole statement has been reduced
+** otherwise scanner won't recognize BASIC line continuation.
+*/
+Bdec_dectable:	Bdec_tabhead tLPAREN dectab_list tRPAREN 
+		{
+		    dml->dm_exec = DML_DECL;
+		}
+;
+
+Bdec_tabhead:	tDECLARE tNAME tTABLE
+		{
+		    esq->flag |= ESQ_NOPRT;     /* Suppress printing */
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"),
+							ERx("DECLARE TABLE") );
+		}
+;
+
+/* 
+** HOST VARIABLE USAGE
+** Now we allow the use of reserved words as host variables.  The way we do
+** this is set a global (sc_hostvar) to TRUE when we see a Ccolon (or a
+** Csqlda_colon).  The global tells scword (in the scanner) to ignore keyword
+** lookups and just returne a tNAME.  We turn it off when we're at the end
+** of the hostvar reference.  There's a problem, however, in that sometimes
+** the grammer doesn't know to turn the global off until after we've scanned
+** a real keyword.  For instance, in the statement:
+**      EXEC SQL CONNECT :connect SESSION :session;
+** by the time the grammer turns off the global for :connect we've already
+** scanned SESSION, and it has been returned as a tNAME instead of tSESSION.
+** what we do here is to introduce a new rule that allows a hostvar to be a
+** variable or a variable followed by a tNAME.  In either case, we turn off
+** the sc_hostvar global.  Additionally if we see a variable followed by a
+** tNAME we call a new function, sc_popscptr, which sets up the scanner to
+** rescan the word with keyword lookups enabled.  So in our example above
+** SESSION will get "scanned" twice, once as a tNAME and then as tSESSION.
+** the same thing is done for sqlda variables.
+** One other point, the ':' for indicator variables is processed in the
+** master grammer, not here.  So we set sc_hostvar there as well.
+*/
+
+/* Usage syntax is ":"NAME */
+Bcolon:		tCOLON
+		{
+		    sc_hostvar = TRUE;	/* disable keyword lookups */
+		}
+;
+
+/* Optional colon */
+Bopt_colon:	Bcolon
+	|	/* Missing colon */
+		{
+		    er_write( E_EQ0129_sqVARCOLON, EQ_ERROR, 0 );
+		}
+;
+
+/*
+** An indicator variable.
+** Note that it is the master grammer that copies the gr_id and gr_sym
+** fields to gr_nlid and gr_nlsym, so we use the originals here.
+*/
+
+host_indvar:	B_retvar
+;
+
+/*
+** host_retvar - Result variables of an output statement.  Used by the
+**		 FRS statements.  Must be an elementary variable.  
+**		 Buse_set has checked that it is elementary and has set
+**		 gr_ fields; here we need check only that it's not a
+**		 constant.
+*/
+host_retvar:	Bopt_colon B_retvar
+;
+
+B_retvar:	Buse_retset
+		{
+		    if (gr->gr_sym != (SYM *)0)
+		    {
+			if (!syBitAnd(sym_g_useof(gr->gr_sym), syFisVAR))
+			    er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		}
+;
+
+/*
+** host_setvar - Setting variables of an input statement.  Used by the
+**		 SQL UPDATE statement and the FRS statements.  Can be
+**		 elementary variable or constant.
+*/
+host_setvar:	Bcolon Buse_retset
+;
+
+/*
+** host_fsetvar - Same as host_setvar, but the colon is optional for
+**		  forms statement.
+*/
+host_fsetvar:	Bopt_colon Buse_retset
+;
+
+/*
+** Buse_retset - used by host_retvar, host_setvar, host_fsetvar.
+**		 Variable/constant must be elementary level.
+**		 Fields in gr_ struct are set for use by G grammar.
+*/
+Buse_retset:	Buse_var
+		{
+		    SYM		*sy;
+
+		    gr->gr_type = T_UNDEF;		/* Default */
+		    if ((sy = $1.v) != (SYM *)0)
+		    {
+			if (sym_g_btype(sy) == T_STRUCT)
+			    er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								id_getname() );
+			else
+			    gr->gr_type = sym_g_btype(sy);
+		    }
+		    gr->gr_sym = sy;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+;
+
+/*
+** An SQLDA name -- allow anything
+*/
+host_sqlda:	host_varsqlda
+		{
+		    sc_hostvar = FALSE;	/* re-enable keyword lookups */
+		}
+	|	host_varsqlda tNAME
+		{
+		    sc_hostvar = FALSE; /* re-enable keyword lookups */
+		    sc_popscptr();	/* move SC_PTR back one word */
+		}
+;
+host_varsqlda:	Bsqlda_colon Buse_xvar
+		{
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		    sym_f_init();
+		}
+;
+
+Bsqlda_colon:	tCOLON
+		{
+		    /* only allow a reserved word SQLDA if they use a : */
+		    sc_hostvar = TRUE;	/* disable keyword lookups */
+		}
+	|	/* EMPTY */
+;
+
+/* 
+** host_intovar - Result variables of an INTO clause.  Used by SELECT INTO
+**		 or FETCH INTO.	
+**
+** 1. For a simple variable, make an entry into result-variable storage
+**    or add a variable to the run-time FETCH call.
+** 2. For a structure variable, do this for each member name.
+** 3. Since the semantics are done here instead of in G, we do not
+**    need to set any gr_ fields.
+*/
+
+host_intovar:	Bopt_colon Buse_var
+		{
+		    SYM		*sy, *mem;
+		    char	*sid, *mid;
+
+		    sid = str_add( STRNULL, id_getname() );
+		    if ((sy = $2.v) != (SYM *)0)
+		    {
+			if (sym_g_btype(sy) == T_STRUCT)
+			{
+			    for (mem=syStrInit(sy); mem; mem=syStrNext(mem))
+			    {
+				STprintf( esq->sbuf, ERx("%s::%s"), sid,
+				    sym_str_name(mem) );
+				mid = str_add( STRNULL, esq->sbuf );
+				/* Members must be elementary */
+				if ((sym_g_btype(mem) == T_STRUCT) ||
+				        sym_g_dims(mem))
+				    er_write( E_E3001A_hbELEM, EQ_ERROR, 2,
+						    er_na(mid), id_getname() );
+				erec_mem_add( mid, mem, sym_g_btype(mem) );
+			    }
+			}
+			else
+			{
+			    if (!syBitAnd(sym_g_useof(sy), syFisVAR))
+				er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								id_getname() );
+			    erec_mem_add( sid, sy, sym_g_btype(sy) );
+			}
+		    }
+		    id_free();
+		}
+;
+
+/*
+** host_insvar - INSERT VALUES clause variables.
+**
+** 1. For a simple variable, just add to insert-tree storage.
+** 2. For a structure variable, do this for each member.
+** 3. Since the semantics are done here instead of in G, we do not need 
+**    to set any gr_ fields, but we do need to return the created node.
+*/
+
+host_insvar:	Bcolon Buse_var
+		{
+		    SYM		*sy, *mem;
+		    char	*sid, *mid;
+
+		    sid = str_add( STRNULL, id_getname() );
+		    if ((sy = $2.v) == (SYM *)0)
+		    {
+			/* Do nothing, as error already printed */
+		    }
+		    else
+		    {
+			if (sym_g_btype(sy) == T_STRUCT)
+			{
+			    for (mem=syStrInit(sy); mem; mem=syStrNext(mem))
+			    {
+				STprintf( esq->sbuf, ERx("%s::%s"), sid,
+				    sym_str_name(mem) );
+				mid = str_add( STRNULL, esq->sbuf );
+			      /* Members must be elementary */
+				if ((sym_g_btype(mem) == T_STRUCT) ||
+				        sym_g_dims(mem))
+				    er_write( E_E3001A_hbELEM, EQ_ERROR, 2,
+						er_na(mid), id_getname() );
+				erec_mem_add(  mid,  mem, sym_g_btype(mem) );
+			    }
+			}
+			else		/* btype != T_STRUCT */
+			{
+			    erec_mem_add( sid, sy, sym_g_btype(sy) );
+			}
+		    }
+		    id_free();
+		}
+;
+
+/* 
+** Buse_var - Usage of BASIC variable.  Syntax is:
+**	usename { {::} usename }
+**
+** where usename is:
+**	name [(]
+**
+** Examples:
+**	a::b::c 	a(4)::b
+**	a() 		a
+**
+** We don't allow elliptical record references.  (BASIC allows semi-
+** elliptical references in that GROUP names may be omitted, but we 
+** insist they are specified.)
+** Buse_var returns resolved variable sym pointer or (SYM *)0.  
+** If no variable, it enters an undefined variable for later referencing,
+** providing the declaration was simple (i.e., not an array reference
+** or a record).
+*/
+
+Buse_var:	Buse_hostvar
+		{
+		    sc_hostvar = FALSE;	/* re-enable keyword lookups */
+		}
+	|	Buse_hostvar tNAME
+		{
+		    sc_hostvar = FALSE;	/* re-enable keyword lookups */
+		    sc_popscptr();	/* move SC_PTR back a word */
+		}
+;
+Buse_hostvar:	Buse_setup Buse_xvar
+		{
+		    SYM		*sy = (SYM *)0;
+		    i4		stat;
+
+		    stat = symRsEuc( &sy, BSCLOSURE, syFisVAR|syFisCONST );
+		    $$.v = sy;
+		    if (stat != syL_OK) 	/* Undefined */
+		    {
+			er_write( E_EQ0502_hNOVAR, EQ_ERROR, 2, ERx("BASIC"),
+								id_getname() );
+			if (gr->B_simpvar == 1)
+			{
+			    /* Give hint for ESQL redecs */
+			    sym_hint_type( (SYM *)0, T_UNDEF, 0 );
+			    sy = symDcEuc( id_getname(), 0, B_BLOCK, syFisVAR,
+				BSCLOSURE, SY_NORMAL );
+			    if (sy)
+				sym_s_btype( sy, T_UNDEF );
+			}
+			$$.v = (SYM *)0;	/* Keep higher rules quiet */
+			gr->B_err = 1;
+		    }
+		    else	/* state == syL_OK */
+		    {
+			/*
+			** Are we following use of a structure variable
+			** e.g., as in SELECT, FETCH or INSERT stmts).
+			** If so, this is probably an indicator array.
+			*/
+			if (erec_vars() > 0)
+			{
+			    /* 
+			    ** Assume an indicator array if it should 
+			    ** be subscripted.   (In BASIC, we can't
+			    ** distinguish numbers of levels of subscripting.)
+			    */
+			    if (gr->B_dims == BdimsNEED)
+			    {
+				erec_ind_add( B_ARR_BASE, id_getname(),
+				    B_ARR_EXPR, sy );
+			    }
+			    else
+			    {
+				erec_ind_add( B_ARR_BASE, id_getname(),
+				    (char *)0, sy );
+				/* (Extra dims will be a syntax error */
+			    }
+			}
+			/* 
+			** Complain about bad subscripting only if var 
+			** defined 
+			*/
+			else if (sym_g_btype(sy) != T_UNDEF)
+			{
+			    if (gr->B_dims == BdimsNEED)
+			    {
+				if (sym_g_dims(sy))
+				    er_write( E_E30001_hbARRAY, EQ_ERROR, 1,
+								id_getname() );
+				else 
+				    er_write( E_E30006_hbNOSUBS, EQ_ERROR, 1,
+								id_getname() );
+				gr->B_err = 1;
+			    }
+			    else if (gr->B_dims == BdimsEXTRA)
+			    {
+				er_write( E_E30007_hbXSUBS, EQ_ERROR, 1,
+								id_getname() );
+				gr->B_err = 1;
+			    }
+			}
+		    }
+		}
+;
+Buse_setup:	/* Reset stuff */
+		{
+		    sym_f_init();
+		    gr->B_dims = BdimsDEF;	/* default */
+		    gr->B_simpvar = 1;		/* assume simple variable */
+		    gr->B_err = 0;
+		}
+;
+Buse_xvar:	Bvar_name
+	|	Buse_xvar Brec_delim Bvar_name
+		{
+		    gr->B_simpvar = 0;
+		}
+;
+Bvar_name:	Bxname Bvar_arr
+;
+/* 
+** Why we look up the variable down here:
+** Down at this level the variable may be just a component of a record
+** reference.   However, if we see a left paren we must decide whether 
+** it belongs to the variable or to ESQL.  To make this decision we must 
+** look the variable up in the symbol table.  The paren belongs to the variable 
+** if the symbol has dimensions or is a structure.  In this case we eat up 
+** everything to the closing paren.  Otherwise, it belongs to ESQL or is an 
+** error and in this case we push the paren back.  While we are here we do
+** some error checking as to whether an array reference was required
+** or not at this level, and set B_dims flags accordingly.  We also use
+** B_dims to let higher levels know if an array reference has been seen.
+*/
+Bxname:		tNAME
+		{
+		    SYM		*sy = (SYM *)0;
+
+		    id_add( $1.s );
+		    sym_fpush( sym_find($1.s));
+		    symRsEuc( &sy, BSCLOSURE, syFisVAR|syFisCONST );
+		    $$.v = sy;
+		}
+;
+/*
+** The Bvar_arr rule must follow the Bxname reduction because it depends
+** on a value set in Bxname.
+*/
+Bvar_arr:	/* No subscript */
+		{
+		    SYM		*sy = $0.v;	/* Set by Bxname */
+
+		    if (sy) 	
+			if (sym_g_dims(sy) && gr->B_dims == BdimsDEF)
+			    gr->B_dims = BdimsNEED;
+		}
+		/* Paren belongs to var or to EQUEL */
+	|	tLPAREN 	/* tRPAREN */
+		{
+		    SYM		*sy = $0.v;	/* Set by Bxname */
+
+		    if (sy == (SYM *)0)
+			SC_PTR--;
+			
+		    else 		/* Symbol found */
+		    {
+			if (sym_g_btype(sy) == T_STRUCT)
+			{
+			    sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"),
+								    '(', ')' );
+			    if (!sym_g_dims(sy) && gr->B_dims == BdimsDEF)
+				gr->B_dims = BdimsEXTRA;
+			    gr->B_simpvar = 0;
+			}
+			else 		/* No structure */
+			{
+			    if (!sym_g_dims(sy))	
+				SC_PTR--;
+			    else
+			    {
+				sc_eat(id_add, SC_SEEN|SC_NEST, ERx(")"),
+								    '(', ')');
+				gr->B_simpvar = 0;
+			    }
+			}
+		    }
+		}
+;
+Brec_delim:	tBDOUBCOLON
+		{
+		    id_add( $1.s );
+		}
+;
+
+
+
+/* %L rules end */
+
+%%
+
+/* %L mechanism begin - All the stuff to do with gr_mechanism() */
+
+GLOBALDEF GR_TYPES	gr_typetab[] = {
+			(char *)0,	0,	0
+		};
+
+/*
+** Gr_mechanism - Language dependent utility called from within the grammar
+**		  or from outside.
+**
+** Parameters:	flag       - Which mechanism to choose.
+**		arg1, arg2 - Whatever is needed for the particular flag.
+** Returns:	None
+*/
+
+void
+gr_mechanism( flag, arg1, arg2, arg3 )
+i4	flag;
+i4	arg1;			/* Extra arguments for particular cases */
+i4	arg2;
+i4	arg3;
+{
+    register SYM	*sy;
+    i4			use_mask, ret_val;
+    static   i4		einit = 0;
+  /* DML routines */
+    extern	i4	gen__sqltab[];
+    extern	i4	(*sc_linecont)();	/* Defined in sc_operator */
+    i4	 		sc_iscomment(),
+			scStrIsCont(),
+			Bsq_continue(),
+			esq_repeat(),
+			yyesqlex();
+
+
+    switch (flag)
+    {
+      case GR_EQINIT:
+
+	eq->eq_lang = EQ_BASIC;
+	eq->eq_def_in = ERx("sb");
+	eq->eq_def_out = ERx("bas");
+	if (!einit)
+	{
+	    eq->eq_in_ext = ERx("sb");
+	    eq->eq_out_ext = ERx("bas");
+	    einit = 1;
+	}
+	eq->eq_sql_quote = '\'';
+	eq->eq_quote_esc = '\0';
+	eq->eq_host_quote = '\"';
+
+	gr->B_dec = 0;
+	gr->B_rec = 0;
+	gr->gr_type = T_NONE;
+	gr->B_class = BclVAR;
+	gr->B_size = 0;
+	gr->B_dims = BdimsDEF;
+	gr->B_err = 0;
+	gr->gr_sym = (SYM *)0;
+	gr->gr_id = ERx("");
+	gr->gr_flag = GR_HOSTCODE;
+	gr->Bsizes.B_real = sizeof(i4);         /* VMS default size */
+	gr->Bsizes.B_int = sizeof(i4);		/* VMS default size */
+
+      /* tell the world we're Embedded ESQL! */
+	dml->dm_lang = DML_ESQL;
+	dml->dm_exec = DML_HOST;
+	dml->dm_gentab = gen__sqltab;
+	dml->dm_lex = yyesqlex;
+	dml->dm_strcontin = scStrIsCont;
+	dml->dm_iscomment = sc_iscomment;
+	dml->dm_repeat = esq_repeat; 	/* Provide hook for REPEATED queries */
+
+	sc_linecont = Bsq_continue;	/* BASIC handler for cont. indicator */
+
+	esq->inc = 0;
+	break;
+
+      case GR_SYMINIT:
+	sym_init( (bool)TRUE );
+
+      /* Declare "generic null" as a symbol at a faked "global" level */
+	sy = symDcEuc( ERx(".null"), 0, BlevNONE, syFisVAR|syFisSYS,
+			BSCLOSURE, SY_NORMAL );
+	sym_s_btype( sy, T_NUL );
+	sym_s_dsize( sy, sizeof(i4) );
+	gr->gr_null = sy;
+	break;
+
+      /*
+      ** GR_LOOKUP: we're being called from scword in the scanner.
+      ** If B_dec indicates we're in a declaration then the scanner 
+      ** is trying to establish if the word is a user-defined type
+      ** or a varname.  We look up arg1 in the symbol table.  If it's
+      ** a record tagname then we return that this is a type (tBSTRUCT);
+      ** otherwise it's a varname (tNAME).
+      ** Note: We depend on the fact that when we're called, the
+      ** grammar has already reduced the "Bdec_gen" rule, which sets
+      ** the B_dec flag.
+      */
+      case GR_LOOKUP:
+	if (gr->B_dec == BdecDEC)
+	{
+	    if (sy = sym_resolve((SYM *)0,
+		    (char *)arg1, BSCLOSURE, syFisTYPE))
+		*(i4 *)arg2 = tBSTRUCT;
+	    else
+		*(i4 *)arg2 = tNAME;
+	}
+	break;
+
+      case GR_STMTFREE:
+	str_reset();
+	sym_f_init();		/* clear the sym stack */
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->B_struct = (SYM *)0;
+	esq->flag = 0;
+	break;
+
+      case GR_DUMP:
+	{
+	    register FILE	*f = eq->eq_dumpfile;
+
+	    SIfprintf( f, ERx("GR_DUMP: gr_ \n") );
+	    SIfprintf( f,
+		       ERx("  sym = 0x%p, id = '%s', type = %d, flag = 0%o\n"),
+		       gr->gr_sym, gr->gr_id, gr->gr_type, gr->gr_flag );
+	    SIfprintf( f, ERx("  func = %d, mode = 0%o\n"),
+		       gr->gr_func, gr->gr_mode );
+	    SIfprintf( f, ERx("  B_rec = %d, B_size = %d, B_dims = %d\n"),
+		       gr->B_rec, gr->B_size, gr->B_dims );
+	    SIfprintf( f, ERx("  B_struct = 0x%p B_intsize = %d\n"),
+		       gr->B_struct, gr->Bsizes.B_int );
+	    SIflush( f );
+	}
+	break;
+
+      case GR_LENFIX:
+      /*
+      ** change the length of the type (in arg1) to the given length (in arg2).
+      ** for BASIC and FORTRAN.
+      */
+	if (STbcompare((char *)arg1, 0, ERx("integer"), 0, TRUE) == 0)
+	    gr->Bsizes.B_int = arg2;
+	else if (STbcompare((char *)arg1, 0, ERx("real"), 0, TRUE) == 0)
+	    gr->Bsizes.B_real = arg2;
+	break;
+
+      case GR_EQSTMT:
+	{
+	    i4		mode = arg1;
+	    char	*kword = (char *)arg2;
+	    char	*kw2 = (char *)arg3;
+	    char	buf[50];
+
+	    /* Turn off declarations flag and generate line directive */
+	    gr->gr_flag &= ~GR_HOSTCODE;
+
+	    if ((mode == GR_sSQL || mode == GR_sNODB
+		 || mode==GR_sNODB || mode==GR_sFORMS || mode==GR_s4GL)
+		 && kw2 != (char *)0)
+	    {
+		STprintf( buf, ERx("%s %s"), kword, kw2 );
+		kword = buf;
+	    }
+	    if ((esq->flag & ESQ_NOPRT) == 0)
+	    {
+		gen_eqstmt( G_OPEN, kword );
+	        Bput_lnum();
+	    }
+	    gr->B_dec = BdecUSE;		/* In use, not decl */
+
+	    /* 
+	    ** Check if SQLCA is required for certain languages.
+	    ** If the language requires all externals are defined for type
+	    ** checking then make sure the user did an INCLUDE SQLCA.
+	    */
+	    if ((esq->inc & sqcaSQL) == 0)
+	    {
+		er_write( E_EQ0503_hSQLCA, EQ_ERROR, 1, kword );
+		esq->inc |= sqcaSQL;
+	    }
+
+	    /* Check that the correct EXEC was used */
+	    if (mode == GR_sFORMS && dml->dm_exec != (DML_EXEC|DML__FRS))
+		er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("FRS"), kword );
+	    else if (mode == GR_s4GL && dml->dm_exec != (DML_EXEC|DML__4GL))
+		er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("4GL"), kword );
+	    else if (mode != GR_sFORMS && mode != GR_s4GL &&
+		     dml->dm_exec != (DML_EXEC|DML__SQL))
+		er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"), kword );
+	    /* Stay in EXEC mode but turn off SQL or FRS */
+	    dml->dm_exec = DML_EXEC;
+
+	    switch (mode)
+	    {
+	      case GR_sREPEAT:
+		if (gr->gr_flag & GR_RETRIEVE)
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		gr->gr_flag |= GR_REPEAT|GR_SQL;
+		/*
+		** rep_begin doesn't use the first arg, but for safety's sake,
+		** send only the keyword part, not the "repeat".  Definitely
+		** don't db_key( "repeat keyword" ), though.
+		*/
+		if (kw2)
+		    kword = kw2;
+		rep_begin( kword, NULL );
+		db_key( kword );
+		break;
+	      case GR_sSQL:		/* Reset SQL information */
+		if (gr->gr_flag & GR_RETRIEVE)
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		gr->gr_flag |= GR_SQL;
+		esq_init();
+		db_key( kword );
+		break;
+	      case GR_sQUEL:
+		gr->gr_flag |= GR_QUEL;
+		esq_init();
+		db_key( kword );
+		break;
+	      case GR_sLIBQ:
+		if (gr->gr_flag & GR_RETRIEVE)
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		gr->gr_flag |= GR_ESQL;
+		break;
+	      case GR_sNODB:
+	      case GR_sFORMS:
+	      case GR_s4GL:
+		gr->gr_flag |= GR_EQUEL;
+		break;
+	    }
+	}
+	break;
+
+      default:
+	break;
+    }
+}
+/* %L mechanism end */

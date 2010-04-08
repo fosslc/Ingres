@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+/#-- ODBC configuration screen help file 
+/#--
+You are looking at iiodbcadmin's Data Source Definition Page.
+
+Enter a unique data source name in the entry field provided.
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Save            Save the data source definition.  iiodbcadmin
+                        displays a popup menu for selection of the
+			installed Ingres drivers.
+
+        Cancel          Exit without creating a new data source definition.
+
+        Help            Displays this help screen.
+
+        End             Exit Data Source Definition Page.

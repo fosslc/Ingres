@@ -1,0 +1,44 @@
+:
+# dual -- Install in the Pyramid dual universe environment.
+#
+**Copyright (c) 2004 Ingres Corporation
+#
+# History:
+#	5-24-1989 (boba)
+#		Created.
+#	28-sep-89 (arana)
+#	    Allow script to be run more than once.  Change chmod
+#	    to use absolute pathnames.
+
+#
+# May be a pure BSD release - check for $II_SYSTEM/ingres/.att
+#
+
+if [ ! -d $II_SYSTEM/ingres/.att ]
+then
+	echo "No att universe files in $II_SYSTEM/ingres/.att"
+	exit
+fi
+
+mkdir $II_SYSTEM/ingres/.ucb \
+      $II_SYSTEM/ingres/.ucb/bin \
+      $II_SYSTEM/ingres/.ucb/files \
+      $II_SYSTEM/ingres/.ucb/lib >/dev/null 2>&1
+
+chmod 755 $II_SYSTEM/ingres/.att \
+	  $II_SYSTEM/ingres/.ucb \
+	  $II_SYSTEM/ingres/.ucb/*
+
+cd $II_SYSTEM/ingres/.att
+for f in */*
+do
+#
+# Only move ucb universe file if it's not already a link
+#
+	if [ "`ls -L $II_SYSTEM/ingres/$f`" = "`ls $II_SYSTEM/ingres/$f`" ]
+	then
+		mv $II_SYSTEM/ingres/$f $II_SYSTEM/ingres/.ucb/$f
+		ln -c ucb:$II_SYSTEM/ingres/.ucb/$f \
+		      att:$II_SYSTEM/ingres/.att/$f $II_SYSTEM/ingres/$f
+	fi
+done

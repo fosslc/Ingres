@@ -1,0 +1,9 @@
+#
+# Jamfile file for sig!tz!tz
+#
+
+SubDir ING_SRC sig tz tz ;
+
+IISUBSYS sig tz tz ;
+
+IISIGFILES tz : australasia.tz howto.txt ;

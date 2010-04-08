@@ -1,0 +1,24 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Database&previous=if.html&next=statement.html` -->
+First, you must choose the database against which you want to run your query. <P>
+
+The name of the database specified can either be a real database name, or can be a logical alias. The alias can be 
+used to allow a user access to a database for which that user would not ordinarily have access. See the User Guide
+for more details.<p>
+There are two types of Ingres Web Deployment Option users:<p>
+<TABLE width="85%">
+<TR><TD><b>Web user</b>: </TD><TD></TD></TR>
+<TR><TD></TD><TD>A user defined in the ICE server by the Web Deployment Option Security Administrator. This type of user can access any
+secured web application for which that user has permission.
+		</TD></TR>
+<TR><TD><b>Database user</b>: </TD><TD></TD></TR>
+<TR><TD></TD><TD>An Ingres user defined in the Ingres DBMS that can be used by Web Deployment Option to connect to the database. A database
+user must be redefined in the ICE server in order for that user to be utilized.
+</TD></TR>
+</TABLE><p>
+Each web user is associated with a default database user that makes connections to the database on its behalf. 
+<P>
+
+Please enter the name of an existing database or a logical alias:<!-- #ICE VAR=`<INPUT SIZE="32" NAME="dbname" VALUE=":dbname">` -->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+    

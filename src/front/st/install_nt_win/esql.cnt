@@ -1,0 +1,191 @@
+:Base esql.hlp
+:Title CA-OpenIngres Embedded SQL Companion Guide for C
+:Index CA-OpenIngres Embedded SQL Companion Guide for C=esql.hlp
+1 CA-OpenIngres Embedded SQL Companion Guide for C
+2 Preface
+3 Overview=C00_SC0000000
+3 Purpose of This Manual=C00_SC0000010
+3 Audience=C00_SC0000015
+3 Contents
+4 Overview=C00_SC0000020
+4 Special Considerations
+5 Overview=C00_SC0000025
+5 Enterprise Access Compatibility=C00_SC0000030
+4 Conventions
+5 Overview=C00_SC0000035
+5 Statements and Commands=C00_SC0000040
+5 Terminology=C00_SC0000045
+5 Syntax=C00_SC0000050
+3 Related Manuals
+4 Overview=C00_SC0000055
+2 Chapter 1:  Embedded SQL Statement Syntax for C
+3 Overview=C01_SC0000000
+3 Introduction=C01_SC0000005
+3 Margin=C01_SC0000010
+3 Terminator=C01_SC0000015
+3 Labels=C01_SC0000020
+3 Line Continuation=C01_SC0000025
+3 Comments=C01_SC0000030
+3 String Literals
+4 Overview=C01_SC0000035
+4 String Literals and Statement Strings=C01_SC0000040
+3 The Create Procedure Statemen
+4 Overview=C01_SC0000045
+3 Creating Sub-processes in ESQL/C programs
+4 Overview=C01_SC0000050
+2 Chapter 2:  C Variables and Data Types
+3 Overview=C02_SC0000000
+3 Variable and Type Declarations
+4 Overview=C02_SC0000005
+4 Embedded SQL Variable Declaration Sections=C02_SC0000010
+4 Reserved Words in Declarations=C02_SC0000015
+4 Data Types
+5 Overview=C02_SC0000020
+5 The Integer Data Type=C02_SC0000025
+5 The Floating Point Data Type=C02_SC0000030
+5 The Character String Data Type=C02_SC0000035
+4 # Define Declaration
+5 Overview=C02_SC0000040
+4 Variable Declarations Syntax
+5 Overview=C02_SC0000045
+4 Type Declarations Syntax
+5 Overview=C02_SC0000050
+4 Array Declarations Syntax
+5 Overview=C02_SC0000055
+4 Pointer Declarations Syntax
+5 Overview=C02_SC0000060
+4 Structure Declarations Syntax
+5 Overview=C02_SC0000065
+5 A Structure with a Tag and a Body=C02_SC0000070
+5 A Structure with a Body and No Tag=C02_SC0000075
+5 A Structure with a Tag and No Body=C02_SC0000080
+5 Enumerated Integer Types=C02_SC0000085
+5 The Varying Length String Type=C02_SC0000090
+4 The Varying Length Binary Type
+5 Overview=C02_SC0000095
+4 The DCLGEN Utility
+5 Overview=C02_SC0000100
+4 DCLGEN and Large Objects
+5 Overview=C02_SC0000105
+4 Indicator Variables
+5 Overview=C02_SC0000110
+4 Compiling and Declaring External Compiled Forms
+5 Overview=C02_SC0000115
+5 Windows NT Forms=C02_SC0000120
+4 Concluding Example
+5 Overview=C02_SC0000125
+3 The Scope of Variables
+4 Overview=C02_SC0000130
+3 Variable Usage
+4 Overview=C02_SC0000135
+4 Simple Variables=C02_SC0000140
+4 Array Variables=C02_SC0000145
+4 Pointer Variables=C02_SC0000150
+4 Structure Variables
+5 Overview=C02_SC0000155
+5 Using a Structure as a Collection of Variables=C02_SC0000160
+5 Using a Structure Member=C02_SC0000165
+5 Using an Enumerated Variable (Enum)=C02_SC0000170
+5 Using a Varying Length String Variable (Varchar or Varbyte)=C02_SC0000175
+4 Using Indicator Variables
+5 Overview=C02_SC0000180
+4 Using Varchar Variables for Logical Key Data Types
+5 Overview=C02_SC0000185
+4 Declaring Function Arguments
+5 Overview=C02_SC0000190
+3 Data Type Conversion
+4 Overview=C02_SC0000195
+4 Run-Time Numeric Type Conversion=C02_SC0000200
+4 Run-Time Character Type Conversion
+5 Overview=C02_SC0000205
+5 Using Varchar to Receive and Set Character Data=C02_SC0000210
+2 Chapter 3:  The SQL Communications Area
+3 Overview=C03_SC0000000
+3 The Include SQLCA Statement=C03_SC0000005
+3 Contents of the SQLCA=C03_SC0000010
+3 Using the SQLCA for Error Handling
+4 Overview=C03_SC0000015
+4 Error Handling with the Whenever Statement=C03_SC0000020
+4 Explicit Error Handling=C03_SC0000025
+4 Determining the Number of Affected Rows=C03_SC0000030
+3 Using the SQLSTATE Variable
+4 Overview=C03_SC0000035
+2 Chapter 4:  Dynamic Programming for C
+3 Overview=C04_SC0000000
+3 The SQLDA Structure=C04_SC0000010
+3 Declaring and Allocating an SQLDA Variable
+4 Overview=C04_SC0000015
+4 Dynamic Allocation of an SQLDA=C04_SC0000020
+4 Static Declaration of an SQLDA=C04_SC0000025
+3 Using the SQLVAR
+4 Overview=C04_SC0000030
+4 C Variable Type Codes=C04_SC0000035
+4 Character Data and the SQLDA=C04_SC0000040
+4 Binary Data and the SQLDA=C04_SC0000045
+4 Pointing at C Variables=C04_SC0000050
+3 Setting SQLNAME for Dynamic FRS
+4 Overview=C04_SC0000055
+2 Chapter 5:  Advanced Processing
+3 Overview=C05_SC0000000
+3 User-Defined Error, DBevent, and Message Handlers
+4 Overview=C05_SC0000005
+4 Declaring and Defining User-Defined Handlers=C05_SC0000010
+3 User-Defined Data Handlers for Large Objects
+4 Overview=C05_SC0000015
+4 ESQL/C Usage Notes=C05_SC0000020
+4 DATAHANDLERS and the SQLDA=C05_SC0000025
+4 Sample Programs
+5 Overview=C05_SC0000030
+5 Handler Program=C05_SC0000035
+5 Put Handler=C05_SC0000040
+5 Get Handler=C05_SC0000045
+5 Dynamic SQL Handler Program=C05_SC0000050
+2 Chapter 6:  Preprocessor Operation
+3 Overview=C06_SC0000000
+3 Include File Processing
+4 Overview=C06_SC0000005
+4 Including Source Code with Labels=C06_SC0000010
+3 Coding Requirements for Writing Embedded SQL Programs
+4 Overviews=C06_SC0000015
+4 Comments Embedded in C Output=C06_SC0000020
+4 Embedding Statements Inside C If Blocks=C06_SC0000025
+4 Embedded SQL Statements that Do Not Generate Code=C06_SC0000030
+3 Command Line Operations
+4 Overview=C06_SC0000035
+4 The Embedded SQL Preprocessor Command=C06_SC0000040
+4 The C Compiler=C06_SC0000045
+3 Linking Embedded SQl Programs
+4 Overview=C06_SC0000050
+4 Programs without Embedded Forms =C06_SC0000055
+4 Compiling and Linking Precompiled Forms=C06_SC0000060
+3 SQL Preprocessor Errors
+4 Overview=C06_SC0000065
+2 Chapter 7:  C++ Programming
+3 Overview=C07_SC0000000
+3 Creating ESQL/C++ Programs
+4 Overview=C07_SC0000010
+4 Program Comments=C07_SC0000015
+4 Declaring Data=C07_SC0000020
+4 Transferring Data Between Programs and the Database=C07_SC0000025
+4 Declaring Function Parameters=C07_SC0000030
+4 DCLGEN and ESQL/C++=C07_SC0000035
+4 CA-OpenIngres Run Time Library Prototypes=C07_SC0000040
+4 4GL Restriction=C07_SC0000045
+4 Creating User-Defined Handlers=C07_SC0000050
+3 Building ESQL/C++ Programs
+4 Overview=C07_SC0000055
+3 Sample Application
+4 Overview=C07_SC0000060
+2 Appendix A:  Embedded SQL Preprocessor Errors
+3 Overview=AA_SC0000000
+2 Appendix B:  The Department-Employee Master/Detail Application
+3 Overview=AB_SC0000000
+2 Appendix C:  The Table Editor Table Field Application
+3 Overview=AC_SC0000000
+2 Appendix D:  The Professor-Student Mixed Form Application
+3 Overview=AD_SC0000000
+2 Appendix E:  The Department-Employee Master/Detail Application
+3 Overview=AE_SC0000000
+2 Appendix F:  A Dynamic SQL/Forms Database Browser
+3 Overview=AF_SC0000000
+

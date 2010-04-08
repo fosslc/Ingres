@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!sxf!sxapo
+#
+
+SubDir ING_SRC back sxf sxapo ;
+
+IISUBSYS back sxf sxapo ;
+
+
+IILIBRARY SXFLIB : sxapor.c sxapof.c sxapocv.c sxapoc.c ;
+
+IILIBRARY IMPSXFLIBDATA : sxapodata.c ;

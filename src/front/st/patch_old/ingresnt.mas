@@ -1,0 +1,37 @@
+OpenIngres Patch#4923 PATCH
+f:\patchwk\output
+f:\patchwk\cut
+f:\patchwk\compress
+f:\patchwk\cdimage\test
+: Lines 1 to 6 define each product name as it should appear on the disk   
+: followed by the product baseapp/isc name.
+: Line #7 of mas file is the output path. 
+: Line #8 of mas file is the ingres path.
+: Line #9 of mas file is the compressed ingres path.
+: Line #10 of mas file is the cdrom output path. 
+: List of Files to copy to Disk 1 of every product.
+: XXXXXX.ISC is needed to represent the individual product ISC files.
+: Note terminated by a closing phrase of END
+:
+CAINLOGS.DL_
+CAIN4SHL.DL_
+CALM_W32.DL_
+CATOCFGE.EX_
+CATOPATH.EX_
+INSTALL.EXE
+CAINW32.EXE
+OPINGNT_.DAT
+DLLBMP.DLL
+CTL3D95.DLL
+CTL3DNT.DLL
+MSVCRT.DLL
+PATCH.TXT
+INSTALL.ISC
+XXXXXXX.ISC
+END COPY FILES SECTION 
+: Rest of file has following format:
+: (Note colon in column 1 indicates comment line.)
+: {product code} {path under ingres} {file name} {flag} {icon} {icon desc} {icon parm}
+A \ingres\bin\ oiopfnt.dll 2
+A \ingres\bin\ oirdfnt.dll 2
+A \ingres\bin\ windo_pt.exe 2

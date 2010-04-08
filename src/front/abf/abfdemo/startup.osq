@@ -1,0 +1,14 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+**
+** startup.osq: Sets additional frskey mapping.
+*/
+
+procedure startup  =
+begin
+	set_forms frs (map(frskey16) = 'controlL'); 
+	set_forms frs (label(frskey16) = '^L'); 
+end

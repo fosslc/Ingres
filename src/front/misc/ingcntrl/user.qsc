@@ -1,0 +1,2475 @@
+/*
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+#include        <compat.h>
+#include        <st.h>
+#include        <er.h>
+#include        <cv.h>
+#include        <gl.h>
+#include        <sl.h>
+#include        <cm.h>
+#include        <iicommon.h>
+#include        <fe.h>
+#include        <erfe.h>
+#include        <ug.h>
+#include        <uf.h>
+#include        <ui.h>
+#include        <stdprmpt.h>
+#include        <generr.h>
+#include        "eric.h"
+#include        "global.h"
+##include       "ictables.qsh"
+/*
+fool ming:
+#include        "ictables.qsh"
+*/
+# define USR_EXT_PWD_FLAG       0x20000
+
+/**
+** Name:        USER.QSC        - INGCNTRL USER FRAME HANDLING
+**
+** Description:
+**      This file contains routines for handling the ACCESSDB/CATALOGDB
+**      User frame. It allows users to see information about user accounts
+**      and to alter it or add new users in ACCESSDB.
+**      This file defines:
+**
+**      userform()      Entry point for the user form from ACCESSDB
+**
+** History:
+**      18-may-89 (mgw)
+**              Made updates to handle default groups for TERMINATOR project.
+**      27-sep-1989 (jennifer)
+**             Added new SQL statement support for B1/C2 security requirements.
+**             For this file CREATE USER, DROP USER, and ALTER USER statements 
+**             replaced inserts/replaces into iiuser catalog directly.  Also
+**             substitued GRANT ACCESS statements to replace direct updates 
+**             to iidbpriv.
+**      15-Dec-89 (pete) porting change 90971 - Form will core dump on PS/2 AIX
+**              if compiled with optimization (added "NO_OPTIM" line above).
+**      ~1-Jan-90 (pete) - Allow selection of Help, End & Delete even when on
+**                      invalid field; check for unsaved changed when
+**                      user hits menuitem End.
+**      23-apr-1990 (pete)
+**              fix 6.3 bug 21342 with bad explanations for Help & End.
+**      19-oct-1990 (pete)
+**              Merge in changes done by Jennifer Lyerla in 9/89 for B1 proj.
+**      30-oct-90 (pete)
+**              Change user permissions from 4: Createdb, UpdSysCat, SetTRace,
+**              SuperUser; to 6: Createdb, SysAdmin, SecAdmin, Operator,
+**              SetTRace, AuditAll. This was done to support backend changes
+**              made for TMAC/CHOTS and (later) the 6.5 (B1) project.
+**              Also support access modes in table field.
+**      5-jan-1991 (pete)
+**              Fix bug 35121 -- bad cursor positioning after enter bad
+**              group name. (already fixed in Orion, 6.5, line).
+**      20-sep-1993 (robf)
+**              Query standard catalog (iilocation_info) not internal catalog
+**              (iilocations)
+**              Add support for MAINTAIN_USER, MAINTAIN_AUDIT and AUDITOR
+**              privileges, plus QUERY_TEXT security auditing.
+**      23-may-94 (michael/kirke)
+**              accessdb in a fips installation, regular identifiers are
+**              stored as case-sensitive instead of all uppercase.
+**      12-dec-94 (harpa06)
+**              Integrated INGRES 6.4 bug fix #50334 by nick:
+**              Don't allow the removal of super user permissions from
+**              $ingres or ingres.
+**      30-dec-1994 (andyw)
+**              Problems found creating users in HP platforms
+**              where we get a syntax error on create user
+**              appears to be an uninitialized variable in user_create()
+**      16-jan-1995 (ramra01)
+**              Backout fix by harpa06. Causes parser error on
+**              user Edit or Create
+**      17-jan-94 (harpa06)
+**              Bug #66223 - Removed the problem of when tabbing through the
+**              User Information screen and then saving the information, the
+**              user Permissions would change from their previous values to
+**              "r"s (privilege on Request.) A check is now done to see if there
+**              were any REAL changes.
+**
+**              Bug #50334 - Re-submitted fix since ir did not cause parser errors
+**      30-jan-1995 (liibi01)
+**              Accessdb doesn't convert group name and profile name into
+**              upper case in create or edit screen in FIPS installation. And
+**              it doesn't convert them to lower case in regular installation.  
+**      7-feb-95 (hanch04)
+**              fix mixing EXEC SQL lines
+**      20-Mar-1995 (liibi01)
+**             Bug 67522, when creating user, select save, user can input any
+**             invalid value besides 'Y' or 'N' and the program treats the
+**             invalid input value as 'Y'.
+**      23-mar-95 (sarjo01)
+**              Bug 67523: userform(): change order of menu items so that
+**              ListChoices (9) is last. That way, when it is disabled and
+**              reenabled moving through fields, the () number of other
+**              items won't be changed.
+**      01-may-95 (harpa06)
+**              Bug #68422: Added a flag in user_privileges to indicate that the
+**              priviliges form has been modified which will reflect the User
+**              Information form.
+**      23-aug-95 (emmag)
+**              Changed OpenINGRES to OpenIngres.
+**      07-nov-1995 (canor01)
+**              Add forward function declarations to clean up compiler 
+**              warnings.
+**      12-jul-96 (sarjo01)
+**              Bug 77705: user_create(): increase size of promptMsg[]
+**              buffer to 80. STprintf() was overrunning this buffer,
+**              corrupting other stack vars. This caused a memory access
+**              violation on NT.
+**	06-jan-97 (mcgem01)
+**		Bug 79866.   Only update the changed_access flag if the current
+**		tablefield is Access_tbl.
+**	01-jun-98 (kitch01)
+**		Bug 74731. Disallow ability to set external password to yes if there
+**		is no external password verification utility setup for this user.
+**		Bug 77451. If there is no user password set for this user then set the 
+**		user password field to 'no'.
+**		Bug 91019. Invalid 'alter user' syntax generated when a user tries to
+**		change their own password.
+**      07-Jan-99 (hanal04)
+**              Ensure user_modify and user_create do not submit querries
+**              which modify the audit state when the user running accessdb
+**              does not have the maintain_audit privilege. b81618.
+**	10-may-1999 (walro03)
+**		Remove obsolete version string ps2_us5.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	20-Apr-2004 (bonro01)
+**	    Allow Ingres to be installed as a user other than 'ingres'.
+**	    'ingres' is no longer a special userid and may be deleted.
+**	16-Nov-2004 (bonro01)
+**	    Prevent install userid from being deleted.
+**/
+
+     EXEC SQL INCLUDE SQLCA ;
+     EXEC SQL WHENEVER SQLERROR CALL SQLPRINT ;
+
+FUNC_EXTERN     STATUS  fchkuname();
+FUNC_EXTERN     VOID    put_user_stat();
+FUNC_EXTERN     VOID    get_user_stat();
+FUNC_EXTERN     VOID    ro_user_stat();
+FUNC_EXTERN     VOID    ul_user_stat();
+FUNC_EXTERN     STATUS  iiicsuSelectUser();
+FUNC_EXTERN     STATUS  iiicsgSelectUsergroup();
+FUNC_EXTERN     STATUS  iiicsrSelectRole();
+FUNC_EXTERN     STATUS  iiicsdSelectDatabase();
+FUNC_EXTERN     i4      iiicueUsergroupExists();
+FUNC_EXTERN     STATUS  icSetGlobals();
+FUNC_EXTERN     i4      icaudit_string();
+FUNC_EXTERN     STATUS  user_password();
+
+static bool     Newuser = FALSE;
+static bool     Isdba = FALSE;
+static STATUS   write_user_pwd(char *user_name);
+static VOID     user_privileges (char *id, i4 *stat, i4 *def_stat);
+static STATUS   profile_exist_chk(char *profile);
+##static        char    Resume_fld[FE_MAXNAME+1];
+
+##GLOBALREF char Usrform[];	/* User form name */
+##GLOBALREF char Pwdform[];	/* Password form name */
+##GLOBALREF char Prvform[];	/* Privileges form name */
+
+GLOBALREF       bool    Mgr;
+## GLOBALREF    char    F_Maxname[];
+GLOBALREF bool  IiicPrivMaintUser; /* TRUE if user has MAINTAIN_USERS priv*/
+GLOBALREF bool  IiicC2Security;    /* TRUE if installation has C2 Security. */
+/* b81618 */
+GLOBALREF bool  IiicPrivMntAudit;  /* TRUE if user has MAINTAIN_AUDIT priv. */
+GLOBALREF       char    *IC_allDBs;     /* "all databases" */
+GLOBALREF       char    *Real_username;
+
+GLOBALREF IIROLE Iirole;
+GLOBALREF IIUSERGROUP Iiusergroup;
+GLOBALREF IIUSER Iiuser;
+GLOBALREF IIDATABASE Iidatabase;
+
+##static char   U_group[((2 * FE_MAXNAME) + 2 + 1)] = ERx("");
+##static char   U_profile[((2 * FE_MAXNAME) + 2 + 1)] = ERx("");
+##static char   U_exp_date[((2 * FE_MAXNAME) + 2 + 1)] = ERx("");
+##static i4 U_status;
+##static i4 U_def_status;
+
+EXEC SQL BEGIN DECLARE SECTION;
+##static char   U_name[((2 * FE_MAXNAME) + 2 + 1)] = ERx("");
+EXEC SQL END DECLARE SECTION;
+
+static          bool    F_add = FALSE;
+
+static  char    Comma[]         = ERx(","),
+		SingleQuote[]   = ERx("'"),
+		Rparen[]        = ERx(")"),
+		Empty[]         = ERx("");
+
+	/* names of 2 table fields on form "usrfrm": */
+##static        char    Access_tbl[]    = ERx("access");
+##static        char    Database_tbl[]  = ERx("owns");
+
+##static        char    Object_name[FE_MAXNAME+1];      /* work area */
+
+static STATUS   user_init();
+static STATUS   user_new();
+static STATUS   user_write();
+static STATUS   get_dbtbl();
+static STATUS   user_create();
+static STATUS   user_modify();
+static bool     usr_chg_chk();
+static bool     usr_mod_chk();
+static bool     usr_delim_chk();
+static STATUS   grp_exist_chk();
+static void		check_pwd_enabled();
+bool            IIICiruIsReqUser();
+char            *icdelimit();
+i4              icpriv_string();
+
+## static       char    *Mode;
+## static       char    *Save_menuitem;
+## static       char    *Listchoices_menuitem;
+## static       char    *Title;
+## static       char    *Password_menuitem;
+## static       char    *Privileges_menuitem;
+
+static          bool    PrivChg = FALSE;
+
+/*{
+** Name:        userform()      - Main routine for ACCESSDB's User frame
+**
+** Description:
+**      Calls user_init() to initialize the USRFRM form and make some
+**      preliminary validity checks. Then goes into a display loop for
+**      the main menu of the User frame of ACCESSDB.
+**
+** Inputs:
+**      id      - Name of a valid or new INGRES user
+**
+** Outputs:
+**      none.
+**
+** Returns:
+**      FAIL    - if user could not be initialized
+**      OK      - successful frame interaction
+**
+** Side Effects:
+**
+** History:
+**      18-may-89 (mgw)
+**              Added comments.
+**      31-oct-90 (pete)
+**              Suppress the Group field on the screen if no group support
+**              (rather than switching between 2 different screens, as before).
+**      2-apr-91 (pete)
+**              fix bug 21138; don't allow user ingres or $ingres to be
+**              deleted.
+**      6-aug-93 (kellyp)
+**              Make access for authorized database default to yes.
+**              Also, when returning a value from the picklist, place the
+**              value on the current row if the current row is empty.
+**              Otherwise, place the value at the end of the table.
+**      18-aug-93 (kellyp)
+**              Added CANCEL menuitem to the CREATE screen.
+**      24-aug-93 (kellyp)
+**              Deleted ACTIVATION for the access column,
+**              changed RowDelete to Delete, plus more. 
+**      16-sep-93 (kellyp)
+**              Took out IIUFfieldhelp
+**      17-sep-93 (kellyp)
+**              Removed CANCEL menuitem from the CREATE screen.
+**      22-nov-93 (kellyp)
+**              Should not ACTIVATE validation when save_menuitem is
+**              selected since this will bring up the error message twice. 
+**              ( related to bug 56833 )
+**      20-jul-94 (robf)
+**              Listchoices menuitem was working inconsistently profile name
+**              field, corrected.
+**      12-dec-94 (nanpr01)
+**              BUG # 65953. When creating user, id is set to null.
+**              So in user_privileges parameter, use U_name instead of id.
+**      17-jan-94 (harpa06)
+**              Bug #66223 - Removed the problem of when tabbing through the
+**              User Information screen and then saving the information, the
+**              user Permissions would change from their previous values to
+**              "r"s (privilege on Request.) A check is now done to see if there
+**              were any REAL changes.
+**      23-mar-95 (sarjo01)
+**              Bug 67523: change order of menu items so that
+**              ListChoices (9) is last. That way, when it is disabled and
+**              reenabled moving through fields, the () number of other
+**              items won't be changed.
+**      30-jul-96 (rodjo04)
+**              Bug 77423: Fix given so that when you edit a users'
+**              privilege(s), it will save what you edited via Save(F3). 
+**      18-Sep-96 (rodjo04)
+**              Bug 77418: Fix given so that when a user adds a database to 
+**              the 'Authorized Databases' field and presses Save(F3) without
+**              first tabbing or pressing return (while in the field), It 
+**              will save the row that contains the database object. 
+**      13-Nov-96 (rodjo04)
+**              Bug 79063: Check now given to see if the cursor is positioned 
+**              on a table field in the form before trying to get row 
+**              information. 
+**              
+*/
+
+
+STATUS
+userform (id)
+char    *id;
+##{
+
+    /* Check if form added */
+    if (!F_add)
+    {
+	STATUS  stat;
+
+	stat = IIUFgtfGetForm(IIUFlcfLocateForm(), Usrform);
+	if (stat != OK)
+	{
+	    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_ERROR, 0);
+	    return FAIL;
+	}
+
+	stat = IIUFgtfGetForm(IIUFlcfLocateForm(), Pwdform);
+	if (stat != OK)
+	{
+	    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_ERROR, 0);
+	    return FAIL;
+	}
+
+	stat = IIUFgtfGetForm(IIUFlcfLocateForm(), Prvform);
+	if (stat != OK)
+	{
+	    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_ERROR, 0);
+	    return FAIL;
+	}
+
+	if (!Mgr)
+	    Title = ERget(F_IC0083_Catalogdb_User_Info);
+
+	if (!IiicC2Security)
+	{
+	    /* Installation has not purchased Security Auditing feature. */
+##          SET_FRS FIELD Usrform (INVISIBLE(#audit_all) = 1,
+##                                 INVISIBLE(#audit_query_text) =1,
+##                                 INVISIBLE(#maintain_audit) =1,
+##                                 INVISIBLE(#auditor)=1)
+	}
+	F_add = TRUE;
+    }
+    if (Mgr)
+    {
+	if (id == NULL)
+	    Title = ERget(F_IC0111_Accessdb_Create_User);
+	else
+	    Title = ERget(F_IC0082_Accessdb_User_Info);
+    }
+    /*
+    ** Must change password after creation
+    */
+    if (id == NULL)
+	Password_menuitem = Empty;
+    else
+	Password_menuitem = ERx("Password");
+
+    Privileges_menuitem = ERx("Privileges");
+
+    if (Mgr && IiicPrivMaintUser)
+    {
+	Save_menuitem = ERget(FE_Save);
+	Listchoices_menuitem = ERget(FE_Lookup);
+	Mode = ERx("update");
+
+	/* underline permission fields. */
+	ul_user_stat();
+##      SET_FRS FIELD Usrform (UNDERLINE(default_group) = 1,
+##              UNDERLINE(profile_name)=1, 
+##              UNDERLINE(expire_date)=1)
+    }
+    else
+    {
+	Save_menuitem = Empty;
+	Listchoices_menuitem = Empty;
+	Mode = ERx("read");
+
+	/* set permission fields to be readonly. */
+	ro_user_stat();
+##      SET_FRS FIELD Usrform (DISPLAYONLY(default_group) = 1,
+##              DISPLAYONLY(profile_name)=1, 
+##              DISPLAYONLY(expire_date)=1)
+    }
+
+    /* Check if user exists and initialize form */
+    if (user_init(id) != OK)
+	return FAIL;
+
+##  DISPLAY Usrform Mode
+##  INITIALIZE (#title = Title)
+##  {
+##      PUTFORM Usrform ( #name = U_name, #default_group = U_group,
+##                              #profile_name=U_profile,
+##                              #expire_date=U_exp_date)
+##  }
+
+##  ACTIVATE FIELD #name:
+##  {
+##      char    u_name[FE_MAXNAME + 1];
+	int rc = 0;
+
+##      GETFORM Usrform ( u_name = #name )
+	if (IIUGdlm_ChkdlmBEobject( u_name, u_name, FALSE ) == UI_BOGUS_ID)
+	{
+	    i4       Maxn = DB_MAXNAME;
+	    IIUGerr(E_IC002D_bad_username, 0, 2, u_name, (PTR)&Maxn);
+##          RESUME
+	}
+
+	rc = user_new(u_name);
+##      PUTFORM Usrform ( #name = u_name )
+	if (rc == OK)
+##          RESUME NEXT
+	else
+##          RESUME
+##  }
+
+##  ACTIVATE BEFORE FIELD #profile_name
+##  {
+##      set_frs menu '' (active(ERget(FE_Lookup))=1);
+##  }
+
+##  ACTIVATE AFTER FIELD #profile_name
+##  {
+##      char    u_profile[FE_MAXNAME + 1];
+##      set_frs menu '' (active(ERget(FE_Lookup))=0);
+##      GETFORM Usrform (u_profile = #profile_name)
+	IIUGdlm_ChkdlmBEobject( u_profile, u_profile, FALSE);
+##      PUTFORM Usrform (#profile_name = u_profile)
+##      RESUME NEXT
+##  }
+
+##  ACTIVATE BEFORE FIELD #default_group
+##  {
+##      set_frs menu '' (active(ERget(FE_Lookup))=1);
+
+##  }
+
+##  ACTIVATE AFTER FIELD #default_group
+##  {
+##      char    u_group[FE_MAXNAME + 1];
+##      set_frs menu '' (active(ERget(FE_Lookup))=0);
+##      GETFORM Usrform ( u_group = # default_group)
+	IIUGdlm_ChkdlmBEobject( u_group, u_group, FALSE);
+##      PUTFORM Usrform (#default_group = u_group) 
+##      RESUME NEXT
+##  }
+
+##  ACTIVATE COLUMN Access_tbl #dbname:
+##  {
+##      i4  changed;
+
+##      INQUIRE_FRS ROW "" "" (changed = CHANGE)
+	if (changed != 0)
+	{
+	    /* user has changed this value. validate it */
+
+##          GETROW Usrform Access_tbl (Object_name = #dbname)
+
+	    if (STtrmwhite(Object_name) <= 0)
+##              RESUME NEXT
+
+	    /* database names are never case sensitive */
+	    IIUGlbo_lowerBEobject(Object_name);
+
+	    if (!STequal(IC_allDBs, Object_name))
+	    {
+		/* get Database info */
+		if (iiicsdSelectDatabase(Object_name, &Iidatabase) != OK)
+		{
+		    /* no such database */
+##                  RESUME
+		}
+	    }
+
+##          PUTROW Usrform Access_tbl (#access = ERx("yes"))
+
+	    /* mark column so won't be validated next time */
+##          SET_FRS ROW '' '' (CHANGE = 0)
+	}
+	else
+##          RESUME NEXT
+##  }
+
+##  ACTIVATE MENUITEM Save_menuitem
+##      (ACTIVATE = 0, EXPL = ERget(F_FE0117_SaveExpl)),
+##      FRSkey8 (ACTIVATE = 0):
+##  {
+##  i4  changed_access = 0;
+##  i4  istable;
+
+	STATUS      stat;
+     
+	if (Save_menuitem[0] == EOS)
+	{
+	    /* this was selected via the FRSkey */
+	    FTbell();
+##          RESUME
+	}
+
+	if (Mgr)
+	{
+	    /* user is running Accessdb */
+ 
+##          i4  changed;
+
+ 
+##          INQUIRE_FRS FORM (changed = CHANGE)
+ 
+	    if ((!changed) && (!PrivChg))
+##              BREAKDISPLAY
+	}
+
+    /*  We know that the user has updated something, but did
+    **  the user update the access table form without pressing
+    **  tab or return? See if so and put the row.
+    */
+
+##    INQUIRE_FRS FIELD "" (istable = TABLE)
+	
+      if (istable) 
+      {
+
+##      INQUIRE_FRS TABLE "" (Object_name = NAME)
+
+        if (STequal(Object_name, Access_tbl))
+##          INQUIRE_FRS ROW "" "" (changed_access = CHANGE)
+
+	  if (changed_access != 0)
+	  {
+	      /* user has changed this value. validate it */
+
+##            GETROW Usrform Access_tbl (Object_name = #dbname)
+
+	      if (STtrmwhite(Object_name) <= 0)
+##                RESUME NEXT
+
+	      /* database names are never case sensitive */
+	      IIUGlbo_lowerBEobject(Object_name);
+
+	      if (!STequal(IC_allDBs, Object_name))
+	      {
+		  /* get Database info */
+		  if (iiicsdSelectDatabase(Object_name, &Iidatabase) != OK)
+		  {
+		      /* no such database */
+##                    RESUME
+		  }
+	      }
+
+##            PUTROW Usrform Access_tbl (#access = ERx("yes"))
+
+	      /* mark column so won't be validated next time */
+##            SET_FRS ROW '' '' (CHANGE = 0)
+	  }
+	
+      }   
+
+##      VALIDATE
+
+	STcopy (Access_tbl, Resume_fld);
+
+	if (usr_chg_chk() || user_write() != OK)
+##          RESUME FIELD Resume_fld
+
+    PrivChg=FALSE;
+##      BREAKDISPLAY
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey1 (VALIDATE =0, ACTIVATE = 0):
+##  {
+	if (Mgr)
+	{
+	    if (Newuser)
+		FEhelp(ERx("icusrfrm.hlp"), ERget(S_IC004B_User_form));
+	    else
+		FEhelp(ERx("iceusrfr.hlp"), ERget(S_IC004B_User_form));
+	}
+	else
+	{
+	    FEhelp(ERx("icrusrfr.hlp"), ERget(S_IC004B_User_form));
+	}
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey3 (VALIDATE =0, ACTIVATE = 0):
+##  {
+
+##      i4  changed;
+
+	if (Mgr)
+	{
+	    /* user is running Accessdb */
+##          INQUIRE_FRS FORM (changed = CHANGE)
+
+	    if ((changed)||(PrivChg))
+	    {
+		if (usr_chg_chk())
+		{
+		    PrivChg=FALSE;
+##                  BREAKDISPLAY
+		}
+
+##              GETFORM Usrform ( Object_name = #name)
+
+		changed = CONFIRM(Object_name, ERget(F_IC0019_User));
+		switch(changed)
+		{
+		case CONFCH_YES:
+##                  VALIDATE
+		    if (user_write() != OK)
+			break;
+		    /* fall through */
+		case CONFCH_NO:
+		    PrivChg=FALSE;
+##                  BREAKDISPLAY
+		default:
+		    break;
+		}
+
+##              RESUME;
+	    }
+	}
+	PrivChg=FALSE;
+##      BREAKDISPLAY
+##  }
+
+##  ACTIVATE FRSkey7
+##          (EXPL = ERget(F_FE0104_ExplFind)) /* ERget(FE_Find) */
+##  {
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+	if (STequal(Object_name, Access_tbl) ||
+	    STequal(Object_name, Database_tbl) )
+	{
+	    FEtabfnd(Usrform, Object_name);
+	}
+	else
+	    IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+##  ACTIVATE FRSkey5
+##          (EXPL = ERget(F_FE0105_ExplTop))  /* ERget(FE_Top) */
+##  {
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+	if (STequal(Object_name, Access_tbl) ||
+	    STequal(Object_name, Database_tbl) )
+	{
+##          SCROLL Usrform Object_name TO 1
+	}
+	else
+	    IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+##  ACTIVATE FRSkey6
+##          (EXPL = ERget(F_FE0106_ExplBottom)) /*ERget(FE_Bottom) */
+##  {
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+	if (STequal(Object_name, Access_tbl) ||
+	    STequal(Object_name, Database_tbl) )
+	{
+##          SCROLL Usrform Object_name TO END
+	}
+	else
+	    IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+
+## ACTIVATE MENUITEM Password_menuitem
+## {
+	(VOID)user_password(id);
+## }
+
+## ACTIVATE MENUITEM Privileges_menuitem
+## {
+       get_user_stat(&U_status, &U_def_status);
+       user_privileges(U_name, &U_status, &U_def_status);
+       put_user_stat(U_status, U_def_status);
+## }
+
+##  ACTIVATE MENUITEM Listchoices_menuitem (VALIDATE = 0, ACTIVATE = 0,
+##      EXPL = ERget(FE_LookupExpl)),
+##      FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##  {
+##      char nm[FE_MAXNAME + 1];        
+##      char tmpname[FE_MAXNAME + 1];   
+
+	if (Listchoices_menuitem[0] == EOS)
+	{
+	    /* this was selected via the FRSkey */
+	    FTbell();
+##          RESUME
+	}
+
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+	if (STequal(Object_name, Access_tbl))
+	{
+##          INQUIRE_FRS TABLE "" (Object_name = COLUMN)
+	    if (STequal(Object_name, ERx("dbname")))
+	    {
+		icListPicks(ERget(FE_Database),
+			    ERx("iidatabase"), ERx("name"), nm);
+		if (nm[0] != EOS)
+		{
+##                  GETROW Usrform Access_tbl ( tmpname = #dbname )
+		    if (STequal(tmpname, ERx("")))
+##                      PUTROW Usrform Access_tbl ( #dbname = nm,
+##                          #access = ERx("yes"))
+		    else
+		    {
+##                      LOADTABLE Usrform Access_tbl ( #dbname = nm,
+##                          #access = ERx("yes"))
+##                      SCROLL Usrform Access_tbl TO END
+		    }
+
+##                  SET_FRS FORM (CHANGE(Usrform) = 1)
+		}
+	    }
+	}
+	else if (STequal(Object_name, ERx("default_group")))
+	{
+	    icListPicks(ERget(F_IC001C_GroupType),
+			    ERx("iiusergroup"), ERx("groupid"), nm);
+	    if (nm[0] != EOS)
+	    {
+		STcopy (Iiuser.default_group, U_group);
+##              PUTFORM Usrform ( #default_group = nm )
+##              SET_FRS FORM (CHANGE(Usrform) = 1)
+##              RESUME NEXT;
+	    }
+	}
+	else if (STequal(Object_name, ERx("profile_name")))
+	{
+	    icListPicks(ERget(F_IC0039_ProfileType),
+			    ERx("iiprofiles"), ERx("profile_name"), nm);
+	    if (nm[0] != EOS)
+	    {
+		STcopy (Iiuser.profile, U_profile);
+##              PUTFORM Usrform ( #profile_name = nm )
+##              SET_FRS FORM (CHANGE(Usrform) = 1)
+##              RESUME NEXT;
+	    }
+	}
+	else
+	{
+##              RESUME
+	}
+##  }
+
+
+##  FINALIZE
+
+    return OK;
+##}
+
+
+/*{
+** Name:        user_init       Initialize user form for a user
+**
+** Description:
+**      Initialize user form for a new or existing user specified by id.
+**      Performs validity checks and makes form updates.
+**
+**      Note:  User names are case sensitive!
+**
+** Inputs:
+**      id      - User name
+**
+** Returns:
+**      FAIL    - Validity check failure.
+**      OK      - OK
+**
+**
+** Side Effects:
+**      Globals Updated:
+**              Newuser         New user flag
+**              U_name          User name
+**              U_group         Default Group name
+**              Isdba           Owns databases (valid only if an existing user)
+**
+** History:
+**      18-may-89 (mgw)
+**              Added validity checks to prevent name collisions between new
+**              user names and groups or roles for TERMINATOR. Also added
+**              code to update U_group with the user's default group.
+**      11-apr-90 (pete)
+**              Change couple QUEL queries that check for existing user name to
+**              SQL so any pattern match characters entered by user will
+**              be treated as literals (jupbug 20469).
+**      11-oct-93 (kellyp)
+**              "Database Owned" and "Authorized Database" tables are now
+**              invisible for the User/Create frame - took out the
+**              Delete menuitem since it no longer makes sense.
+**      21-jul-94 (robf)
+**              Handle default privileges.
+*/
+
+static STATUS
+user_init (id)
+char    *id;
+##{
+    EXEC SQL BEGIN DECLARE SECTION;
+##  char        db_access[32];  
+##  char        db_name[FE_MAXNAME+1];
+    EXEC SQL END DECLARE SECTION;
+
+##  char        *tb_mode = Mgr ? ERx("fill") : ERx("read");
+
+    /* Initialize "owns" and "access" table fields */
+##  INITTABLE Usrform Database_tbl READ
+##  INITTABLE Usrform Access_tbl tb_mode (#dbname_orig = F_Maxname,
+##                                        #access_orig = c3)
+
+    U_name[0] = EOS;
+
+    if (id == NULL)
+    {
+	    /* Creating a new user. */
+
+##          SET_FRS FIELD Usrform 
+##             (UNDERLINE(name) = 1, DISPLAYONLY(name) = 0,
+##              INVISIBLE(Database_tbl)=1, INVISIBLE(Access_tbl)=1)
+
+	    Newuser = TRUE;
+	    Isdba = FALSE;
+
+	    put_user_stat((i4) U_CREATDB, (i4)U_CREATDB);
+	    U_group[0] = EOS;
+	    U_status=U_CREATDB;
+	    U_def_status=U_status;
+	    return OK;
+    }
+    /* OK, we have an existing user, so fetch the info */
+
+    STlcopy(id, U_name, sizeof(U_name) - 1);
+    if (STtrmwhite(U_name) <= 0)
+	return FAIL;
+
+    /* just double-check this.  Shouldn't happen, but... */
+    if (iiicsuSelectUser(U_name, &Iiuser) != OK)
+	return FAIL;
+
+##  SET_FRS FIELD Usrform 
+##             (UNDERLINE(name) = 0, DISPLAYONLY(name) = 1,
+##              INVISIBLE(Database_tbl)=0, INVISIBLE(Access_tbl)=0)
+
+    Newuser = FALSE;
+    Isdba = FALSE;
+    put_user_stat(Iiuser.status, Iiuser.default_status);
+    U_status=Iiuser.status;
+    U_def_status=Iiuser.default_status;
+    STcopy (Iiuser.default_group, U_group); /* need this in global.*/
+    STcopy (Iiuser.profile, U_profile);
+    STcopy (Iiuser.expire_date, U_exp_date);
+
+    EXEC SQL SELECT database_name
+	     INTO :db_name
+	     FROM iidatabase_info
+	     WHERE database_owner = :U_name;
+    EXEC SQL BEGIN;
+    {
+##          LOADTABLE Usrform Database_tbl (#dbname = db_name)
+	    Isdba = TRUE;
+    }
+    EXEC SQL END;
+
+    EXEC SQL SELECT database_name, db_access
+		 INTO   :db_name, :db_access
+		 FROM   iidbprivileges
+		 WHERE  grantee_name = :U_name
+		 AND    db_access = 'Y';
+    EXEC SQL BEGIN;
+    {
+	STtrmwhite(db_name);
+	CVlower(db_access);
+	if (db_access[0] == 'y')
+	    STcopy(Yes, db_access);
+	else if (db_access[0] == 'n')
+	    STcopy(No, db_access);
+
+	if (db_name[0] == EOS)
+	{
+	    /* empty dbname = GRANT ON INSTALLATION TO USER */
+	    STcopy (IC_allDBs, db_name);
+	}
+
+##      LOADTABLE Usrform Access_tbl (#dbname      = db_name,
+##                                        #dbname_orig = db_name,
+##                                        #access      = db_access,
+##                                        #access_orig = db_access)
+    }
+    EXEC SQL END;
+
+    return OK;
+##}
+
+/*{
+** Name:        user_new        
+**
+** Description:
+**
+** Inputs:
+**      id      - User name
+**
+** Returns:
+**      FAIL    - User name already exists, or clashes with a group name.
+**      OK      - User name is OK to create.
+*/
+
+static STATUS
+user_new (id)
+char    *id;
+##{
+    i4          grpcnt =0;
+
+    STlcopy(id, U_name, sizeof(U_name) - 1);
+    if (U_name[0] == EOS)
+    {
+	/* We know it's bad.  fchkuname will give a nice error msg. */
+	(void) fchkuname(U_name);
+	return FAIL;
+    }
+
+# ifndef UNIX
+    IIUGlbo_lowerBEobject(U_name);
+# endif
+
+
+    /* get user info */
+    if (iiicsuSelectUser(U_name, &Iiuser) != OK || FEinqrows() > 0)
+    {
+	/* user already exists. */
+	IIUGerr(E_IC004E_A_user_already_exists, UG_ERR_ERROR, 0);
+	return FAIL;
+    }
+
+    /* Check that new user name doesn't collide with an existing
+    ** group name (user & group names share same name space)
+    */
+    if (IIUIdcg_group())
+    {
+	grpcnt = iiicueUsergroupExists(U_name);
+
+	if (FEinqerr() != OK)
+	    return FAIL;
+	else if (grpcnt > 0)
+	{
+	    IIUGerr(E_IC0024_A_grp_already_exists, UG_ERR_ERROR, 0);
+	    return FAIL;
+	}
+    }
+
+    /* Check that new user name doesn't collide with an existing
+    ** role name (user, group & role names share same name space)
+    */
+    if (IIUIdco_role())
+    {
+	if (iiicsrSelectRole(U_name, &Iirole) != OK)
+	    return FAIL;
+	if (FEinqrows() > 0)
+	{
+	    IIUGerr(E_IC002F_A_role_already_exists, 0, 0);
+	    return FAIL;
+	}
+    }
+    /*
+    ** Check that new user name doesn't collide with an existing
+    ** profile name (user & profiles share the same name space )
+    */
+    if(profile_exist_chk(U_name)==OK)
+    {
+	     IIUGerr(E_IC0071_A_profile_exists, UG_ERR_ERROR, 0);
+	     return FAIL;
+    }
+    return OK;
+##}
+
+/*{
+** Name:        user_write              Write user form back to ingres
+**
+** Description:
+**      Perform either a user create or a user update.
+**      The dbdb and the users file are updated
+**
+**      Note:  User names are case sensitive!
+**
+** Returns:
+**      OK              ok
+**      FAIL            error of some sort ( bad database table, etc ..)
+**
+** History:
+**      18-may-89 (mgw)
+**              Added default group handling for TERMINATOR.
+**      20-jul-94 (robf)
+**              Trim white space from expire date & group.
+**      12-dec-94 (harpa06)
+**              Integrated bug fix #50334 by nick:
+**              Don't allow the removal of super user permissions from
+**              $ingres or ingres.
+*/
+
+static STATUS
+user_write()
+##{
+##  char        u_name[((2 * FE_MAXNAME) + 2 + 1)];
+##  char        u_group[((2 * FE_MAXNAME) + 2 + 1)];
+##  char        u_profile[((2 * FE_MAXNAME) + 2 + 1)];
+##  char        u_exp_date[26];
+    i4     u_audit=0;
+    STATUS      stat;
+
+##  GETFORM Usrform ( u_name = #name, u_group = #default_group,
+##                      u_profile=#profile_name, 
+##                      u_exp_date=#expire_date)
+
+    if (usr_chg_chk())
+	return FAIL;
+ 
+    if (usr_mod_chk())
+	return FAIL;
+
+    STtrmwhite(u_profile);
+    if(u_profile[0]!=EOS && profile_exist_chk(u_profile)!=OK)
+    {
+	/*
+	** Couldn't find the profile
+	*/
+	IIUGerr(E_IC0070_Profile_not_found, 0, 0);
+	STcopy(ERx("profile_name"), Resume_fld);
+	return FAIL;
+    }
+    STtrmwhite(u_exp_date);
+    STtrmwhite(u_group);
+
+    get_user_stat(&U_status, &U_def_status);
+
+    get_audit_stat(&u_audit);
+
+    if (Newuser)
+	stat = user_create(u_name, U_status, u_group, u_audit, 
+				U_def_status, u_profile,u_exp_date);
+    else
+	stat = user_modify(u_name, U_status, u_group, u_audit,
+				U_def_status, u_profile, u_exp_date);
+
+    return stat;
+##}
+
+
+
+/*{
+** Name:        USER_CREATE             Create an INGRES user
+**
+** Description:
+**      Put user in dbdb, and setup the list of databases he may access
+**
+** Inputs:
+**      x_name          - user name
+**      x_status        - database access privileges
+**      x_group         - default group
+**      x_audit         - audit flags
+**      x_defpriv       - default privileges
+**      x_profile       - profile
+**      x_exp_date      - expire date
+**
+** Returns:
+**      OK      ok
+**      FAIL    error - existing user, etc..
+**
+** History:
+**      18-may-89 (mgw)
+**              Added handling for Default Groups for TERMINATOR.
+**      2-nov-1990 (pete)
+**              Removed replicated code to build CREATE USER stmt & created
+**              array "Priv" declared above.
+**      20-sep-93 (robf)
+**              Added profile, audit, expire_date info
+**      20-jul-94 (robf)
+**              In confirmation popup, only specify group if there is
+**              one and default to positive response. (following suggestion)
+**              Add support for default privileges.
+**      30-dec-1994 (andyw)
+**              Problems found creating users in HP platforms
+**              where we get a syntax error on create user
+**              appears to be an uninitialized variable in user_create()
+**              moved (needgroup) to after privcnt check
+**      12-jul-96 (sarjo01)
+**              Bug 77705: increase size of promptMsg[] buffer to 80. 
+**              STprintf() was overrunning this buffer, corrupting other
+**              stack vars. This caused a memory access violation on NT.
+**      07-Jan-99 (hanal04)
+**              If user (of accessdb) does not have maintain_audit priv do 
+**              not add SECURITY_AUDIT options to the CREATE USER query.
+**              b81618.
+*/
+
+static STATUS
+##user_create (x_name, x_status, x_group, x_audit, x_defpriv, 
+		x_profile, x_exp_date)
+##char  *x_name;
+##i4   x_status;
+##char  *x_group;
+##i4   x_audit;
+##i4   x_defpriv;
+##char  *x_profile;
+##char  *x_exp_date;
+##{
+##  char        db_name[FE_MAXNAME+1];
+##  i4          db_state;
+##  i4          changed;
+    STATUS      uval;
+    bool        addit = FALSE;
+    char        tmpbuf[256];
+    char        audbuf[256];
+    char        defprivbuf[256];
+##  char        access[3 +1];
+##  char        promptMsg[160];
+##  char        answer[1];
+    i4          privcnt = 0;
+    i4          audcnt=0;
+    i4          defprivcnt=0;
+    bool        needgroup = FALSE;
+    char        i=0;
+    bool        add_comma=FALSE;
+    EXEC SQL BEGIN DECLARE SECTION ;
+    char        sbuffer[1024];
+    EXEC SQL END DECLARE SECTION ;
+
+##  MESSAGE ERget(S_IC004D_Working_dot_dot_dot)
+
+##  INQUIRE_FRS FIELD Usrform (changed = change(name))
+
+    if (changed)
+    {
+	/* If the name field has been activated, this may already have
+	 * been done. However, it's been changed so reformat it for redisplay
+	 * and CREATE.
+	 */
+	if (IIUGdlm_ChkdlmBEobject( x_name, x_name, FALSE ) == UI_BOGUS_ID)
+	{
+	    i4       Maxn = DB_MAXNAME;
+	    IIUGerr(E_IC002D_bad_username, 0, 2, x_name, (PTR)&Maxn);
+	    return FAIL;
+	}
+##      PUTFORM Usrform ( #name = x_name )
+    }
+					     
+
+    /*
+    **  Only print group name if specified, makes prompt cleaner
+    */
+    if(x_group[0]!='\0')
+    {
+	STprintf( promptMsg,
+	    "Creating Ingres user '%s' in group '%s'. Is this correct (y|n)? ",
+	    x_name, x_group );
+    }
+    else
+    {
+	STprintf( promptMsg,
+	    "Creating Ingres user '%s'. Is this correct (y|n)? ",
+	    x_name);
+    }
+								      
+##  PROMPT (promptMsg, answer) WITH STYLE=POPUP
+								       
+    if (answer[0] == 'n' || answer[0] == 'N')
+    {
+	return FAIL;
+    }
+    
+    else if ( answer[0] != 'Y' && answer[0] != 'y' )
+    {
+       IIUGerr(E_IC0130_Yes_or_No, 0, 0);
+       return FAIL;
+    } 
+    /*
+    ** We should handle delimited ids here!
+    */
+    /* Check that no user with same name already exists */
+    if (iiicsuSelectUser(x_name, &Iiuser) != OK)
+	return FAIL;
+    else if (FEinqrows() > 0)
+    {
+	IIUGerr(E_IC004E_A_user_already_exists, 0, 0);
+	return FAIL;
+    }
+
+    /* Make sure group exists and x_name is a member of that group */
+    if (x_group != NULL && *x_group != EOS)
+    {
+	if (grp_exist_chk(x_group, x_name, &addit) != OK)
+	{
+		STcopy(ERx("default_group"), Resume_fld);
+		return FAIL;
+	}
+    }
+
+    /* build list of PRIVILEGES  & AUDITS*/
+    privcnt = icpriv_string(x_status, tmpbuf);
+    audcnt = icaudit_string(x_audit, audbuf);
+    defprivcnt = icpriv_string(x_defpriv, defprivbuf);
+
+    if (IIUIdcg_group() && (x_group != NULL) && (*x_group != EOS))
+	needgroup = TRUE;
+    else
+	needgroup = FALSE;
+
+
+    STprintf (sbuffer, ERx("CREATE USER %s"), icdelimit(x_name));
+
+    /*
+    ** b81618 - If user does not have maintain_audit priv do not attempt
+    ** to change the auditing system.
+    */
+    if (needgroup || privcnt > 0 || (audcnt>0 && IiicPrivMntAudit)
+	|| x_exp_date[0]!=EOS
+	|| x_profile[0]!=EOS)
+    {
+	STcat (sbuffer, ERx(" WITH"));  /* we'll need a WITH clause */
+
+	if (privcnt > 0)
+	{
+	    STcat (sbuffer, ERx(" PRIVILEGES = ("));
+	    STcat (sbuffer, tmpbuf);
+	    STcat (sbuffer, Rparen);
+	    add_comma=TRUE;
+	}
+	if (needgroup)
+	{
+	    if(add_comma)
+		STcat(sbuffer,",");
+	    STcat (sbuffer, ERx(" GROUP = "));
+	    STcat (sbuffer, icdelimit(x_group));
+	    add_comma=TRUE;
+	}
+	if (defprivcnt>0)
+	{
+	    if(add_comma)
+		STcat(sbuffer,",");
+	    STcat (sbuffer, ERx(" DEFAULT_PRIVILEGES = ("));
+	    STcat (sbuffer, defprivbuf);
+	    STcat (sbuffer, Rparen);
+	    add_comma=TRUE;
+	}
+	else
+	{
+	    if(add_comma)
+		STcat(sbuffer,",");
+	    STcat (sbuffer, ERx(" NODEFAULT_PRIVILEGES"));
+	    add_comma=TRUE;
+	}
+
+        /* b81618 */
+	if (audcnt>0 && IiicPrivMntAudit)
+	{
+	    if(add_comma)
+	        STcat(sbuffer,",");
+	    STcat (sbuffer, ERx(" SECURITY_AUDIT = ("));
+	    STcat (sbuffer, audbuf);
+	    STcat (sbuffer, Rparen);
+	    add_comma=TRUE;
+        }
+
+	if (x_profile[0]!=EOS)
+	{
+	    if(add_comma)
+		STcat(sbuffer,",");
+	    STcat (sbuffer, ERx(" PROFILE = "));
+	    STcat (sbuffer, icdelimit(x_profile));
+	    add_comma=TRUE;
+	}
+	if (x_exp_date[0]!=EOS)
+	{
+	    if(add_comma)
+		STcat(sbuffer,",");
+	    STcat (sbuffer, ERx(" EXPIRE_DATE = '"));
+	    STcat (sbuffer, x_exp_date);
+	    STcat (sbuffer, "'");
+	    add_comma=TRUE;
+	}
+    }
+
+##  MESSAGE ERget(S_IC0023_Updating_database)
+
+##  BEGIN TRANSACTION
+
+    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+
+    if (sqlca.sqlcode < 0 && sqlca.sqlcode != (-E_GE0032_WARNING))
+    {
+	EXEC SQL ROLLBACK;
+	IIUGerr(E_IC004F_Cannot_add_user, 0, 1, x_name);
+	STcopy (ERx("name"), Resume_fld);       /* resume here*/
+	return FAIL;
+    }
+
+    /* Write list of authorized databases */
+    uval = OK;
+##  UNLOADTABLE Usrform Access_tbl (db_name = #dbname, access = #access,
+##                                  db_state = _STATE)
+##  {
+	if (db_state == stNEW)
+	{
+	    if (db_name[0] != EOS)
+	    {
+		if (STbcompare(IC_allDBs, 0, db_name, 0, TRUE) != 0)
+		{
+		    STprintf(sbuffer,
+		    ERx("GRANT %sACCESS ON DATABASE %s TO USER %s"),
+			(access[0] == Yes[0]) ? Empty : ERx("NO"),
+			db_name, icdelimit(x_name));
+		}
+		else
+		{
+		    /* Issue GRANT ON INSTALLATION */
+		    STprintf(sbuffer,
+			ERx("GRANT %sACCESS ON INSTALLATION TO USER %s"),
+			(access[0] == Yes[0]) ? Empty : ERx("NO"),
+			icdelimit(x_name));
+		}
+
+		EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+		if ( FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+		{
+		    uval = FAIL;
+##                  endloop
+		}
+	    }
+	}
+##  }
+
+    if (uval == OK)
+    {
+	EXEC SQL COMMIT WORK;
+	Newuser = TRUE;
+    }
+    else
+    {
+	EXEC SQL ROLLBACK;
+    }
+
+    return uval;
+##}
+
+
+/*{
+** Name:        USER_MODIFY             Modify an INGRES user
+**
+** Description:
+**      Replace user information and incrementally update user access list
+**
+** Inputs:
+**      x_name          - user name
+**      x_gid           - group id (probably defunct)
+**      x_mid           - 
+**      x_status        - database access privileges
+**      x_group         - default group
+**      x_audit         - audit flags
+**      x_profile       - profile
+**      x_exp_date      - expire date
+**
+** Returns:
+**      OK      ok
+**      FAIL    error - illegal change
+** History:
+**      18-may-89 (mgw)
+**              Added Default Group handling for TERMINATOR.
+**      2-nov-1990 (pete)
+**              Removed replicated code to build ALTER USER stmt & created
+**              array "Priv" declared above.
+**      15-nov-1991 (pete)
+**              If user updates own user privilege info, then call icSetGlobals
+**              again to reset cached user priv info.
+**      07-nov-1995 (canor01)
+**              If there are no new databases added to auth list, only deletes,
+**              don't do a GRANT ACCESS.
+**      07-Jan-99 (hanal04)
+**              If user (of accessdb) does not have maintain_audit priv do 
+**              not add SECURITY_AUDIT or NOSECURITY_AUDIT options to the 
+**              ALTER USER query. b81618.
+**      27-Apr-2004 (hanal04) Bug 111896 INGCBT513
+**              NOPROFILE becomes default profile. This causes E_US1968 in
+**              psyuser.c if NOPRIVILEGES is set because NODEFAULT_PRIVILEGES 
+**              has not been used to block the NOPRIVILEGES from acquiring 
+**              DEFAULT_PRIVILEGES from the default profile.
+*/
+
+static STATUS
+user_modify(x_name, x_status, x_group, x_audit, x_defpriv, 
+		x_profile, x_exp_date)
+##char  *x_name;
+##i4   x_status;
+##char  *x_group;
+##i4   x_audit;
+##i4   x_defpriv;
+##char  *x_profile;
+##char  *x_exp_date;
+##{
+##      char    db_name[FE_MAXNAME+1];
+##      char    dbname_orig[FE_MAXNAME+1];
+##      char    access[3 +1];
+##      char    access_orig[3 +1];
+##      i4      db_state;
+	bool    addit = FALSE;
+	char    tmpbuf[256];
+	char    audbuf[256];
+	char    defprivbuf[256];
+	i4     privcnt = 0;
+	i4     defprivcnt = 0;
+	bool    needgroup=FALSE;
+	i4     audcnt = 0;
+	i4     i=0;
+	STATUS  uval = OK;
+    EXEC SQL BEGIN DECLARE SECTION ;
+	char        sbuffer[1024];
+    EXEC SQL END DECLARE SECTION ;
+
+
+    /* Make sure group exists and x_name is a member of that group */
+    if (x_group != NULL && *x_group != EOS)
+    {
+	if (grp_exist_chk(x_group, x_name, &addit) != OK)
+	{
+		STcopy(ERx("default_group"), Resume_fld);
+		return FAIL;
+	}
+	needgroup=TRUE;
+    }
+
+    /* build list of PRIVILEGES  & AUDITS*/
+    privcnt = icpriv_string(x_status, tmpbuf);
+    audcnt = icaudit_string(x_audit, audbuf);
+    defprivcnt = icpriv_string(x_defpriv, defprivbuf);
+
+    STprintf (sbuffer, ERx("ALTER USER %s"), icdelimit(x_name));
+
+    STcat (sbuffer, ERx(" WITH"));      /* we'll need a WITH clause */
+
+    if (needgroup)
+    {
+	STcat (sbuffer, ERx(" GROUP = "));
+	STcat (sbuffer, icdelimit(x_group));
+    }
+    else
+	STcat (sbuffer, ERx(" NOGROUP "));
+
+    if (privcnt > 0)
+    {
+	STcat (sbuffer, ERx(",PRIVILEGES = ("));
+	STcat (sbuffer, tmpbuf);
+	STcat (sbuffer, Rparen);
+        if (defprivcnt>0)
+        {
+            STcat (sbuffer, ERx(",DEFAULT_PRIVILEGES = ("));
+            STcat (sbuffer, defprivbuf);
+            STcat (sbuffer, Rparen);
+        }
+        else
+        {
+            STcat (sbuffer, ERx(",NODEFAULT_PRIVILEGES"));
+        }
+    }
+    else
+    {
+	STcat (sbuffer,ERx(",NOPRIVILEGES"));
+        STcat (sbuffer, ERx(",NODEFAULT_PRIVILEGES"));
+    }
+
+    /*
+    ** b81618 - If user does not have maintain_audit priv do not attempt
+    ** to change the auditing system.
+    */
+    if(IiicPrivMntAudit)
+    {
+       if (audcnt>0)
+       {
+	   STcat (sbuffer, ERx(",SECURITY_AUDIT = ("));
+	   STcat (sbuffer, audbuf);
+	   STcat (sbuffer, Rparen);
+       }
+       else
+	   STcat (sbuffer,ERx(",NOSECURITY_AUDIT"));
+    }
+
+    if (x_profile[0]!=EOS)
+    {
+	STcat (sbuffer, ERx(",PROFILE = "));
+	STcat (sbuffer, icdelimit(x_profile));
+    }
+    else
+	STcat (sbuffer,ERx(",NOPROFILE"));
+
+    if (x_exp_date[0]!=EOS)
+    {
+	STcat(sbuffer,",");
+	STcat (sbuffer, ERx(" EXPIRE_DATE = '"));
+	STcat (sbuffer, x_exp_date);
+	STcat (sbuffer, "'");
+    }
+    else
+	STcat (sbuffer,ERx(",NOEXPIRE_DATE"));
+
+##  MESSAGE ERget(S_IC0023_Updating_database)
+
+##  BEGIN TRANSACTION
+
+    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+
+    if (sqlca.sqlcode < 0 && sqlca.sqlcode != (-E_GE0032_WARNING) )
+    {
+	EXEC SQL ROLLBACK;
+	return FAIL;
+    }
+
+    /* process stDELETE rows */
+##  UNLOADTABLE Usrform Access_tbl (db_name = #dbname, access = #access,
+##                                  dbname_orig = #dbname_orig,
+##                                  access_orig = #access_orig,
+##                                  db_state = _STATE)
+##  {
+	sbuffer[0] = EOS;
+
+	switch (db_state)
+	{
+	case stDELETE:
+	    /* Delete the Access, with the original database name */
+	    if (STbcompare(IC_allDBs, 0, dbname_orig, 0, TRUE) != 0)
+	    {
+		/* don't try to REVOKE if empty database name */
+		STprintf(sbuffer,
+			ERx("REVOKE %sACCESS ON DATABASE %s FROM USER %s"),
+			(access_orig[0] == Yes[0]) ? Empty : ERx("NO"),
+			dbname_orig, icdelimit(x_name));
+	    }
+	    else
+	    {
+		/* REVOKE an INSTALLATION access */
+		STprintf(sbuffer,
+			ERx("REVOKE %sACCESS ON INSTALLATION FROM USER %s"),
+			(access_orig[0] == Yes[0]) ? Empty : ERx("NO"),
+			icdelimit(x_name));
+	    }
+
+	    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+	    if ( FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+	    {
+		uval = FAIL;
+##              ENDLOOP
+	    }
+	    break;
+	}
+##  }   
+
+    if (uval == FAIL)
+	goto done;
+
+    /* process all but stDELETE statements */
+##  UNLOADTABLE Usrform Access_tbl (db_name = #dbname, access = #access,
+##                                  dbname_orig = #dbname_orig,
+##                                  access_orig = #access_orig,
+##                                  db_state = _STATE)
+##  {
+	sbuffer[0] = EOS;
+
+	switch (db_state)
+	{
+
+	case stCHANGE:
+	    /* Delete old access, and add new one */
+	    if (STbcompare(IC_allDBs, 0, dbname_orig, 0, TRUE) != 0)
+	    {
+		STprintf(sbuffer,
+		  ERx("REVOKE %sACCESS ON DATABASE %s FROM USER %s"),
+			(access_orig[0] == Yes[0]) ? Empty : ERx("NO"),
+		  dbname_orig, icdelimit(x_name));
+	    }
+	    else
+	    {
+		/* REVOKE an INSTALLATION access */
+
+		STprintf(sbuffer,
+			ERx("REVOKE %sACCESS ON INSTALLATION FROM USER %s"),
+			(access_orig[0] == Yes[0]) ? Empty : ERx("NO"),
+			icdelimit(x_name));
+	    }
+
+	    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+	    if ( FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+	    {
+		    uval = FAIL;
+##                  ENDLOOP
+	    }
+
+	    /* fall through */
+
+	case stNEW:
+	    /* if new dbname, do the GRANT */
+	    if (db_name[0] != EOS)
+	    {
+		/* Add new user to database */
+		if (STbcompare(IC_allDBs, 0, db_name, 0, TRUE) != 0)
+		{
+		    STprintf(sbuffer, 
+			ERx("GRANT %sACCESS ON DATABASE %s TO USER %s"),
+			(access[0] == Yes[0]) ? Empty : ERx("NO"),
+			db_name, icdelimit(x_name));
+		}
+		else
+		{
+			/* Issue GRANT ON INSTALLATION */
+		    STprintf(sbuffer,
+			ERx("GRANT %sACCESS ON INSTALLATION TO USER %s"),
+			(access[0] == Yes[0]) ? Empty : ERx("NO"),
+			icdelimit(x_name));
+		}
+
+		EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+		if ( FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+		{
+		    uval = FAIL;
+##                  ENDLOOP
+		}
+	    }
+
+	    break;
+
+	default:
+		break;
+	}
+
+##  }   /* end of UNLOADTABLE */
+
+done:
+    if (uval == OK)
+    {
+	EXEC SQL COMMIT WORK;
+
+	/* If user just updated their own privileges, then reset
+	** our cached user-priv info.
+	*/
+	if (STequal(Real_username, x_name) == 0)
+	    _VOID_ icSetGlobals(Real_username, &Iiuser);
+    }
+    else
+    {
+	EXEC SQL ROLLBACK WORK;
+    }
+
+    return uval;
+##}
+
+/*{
+** Name:        usr_chg_chk()   - Disallow updates to the $ingres user
+**
+** Returns:
+**      FALSE   - OK - user isn't trying to update the $ingres account
+**      TRUE    - ERROR - user is trying to update the $ingres account
+**
+** History:
+*/
+
+static bool
+usr_chg_chk()
+{
+    bool        err = FALSE;
+
+    if (!Newuser && STequal(U_name, ERx("$ingres")))
+##  {
+##      char    u_name[FE_MAXNAME+1];
+
+##      GETFORM Usrform (u_name = name)
+	if (STtrmwhite(u_name) > 0 && STequal(u_name, ERx("$ingres")))
+	{
+	    IIUGerr(E_IC0051_cant_change_ingres, 0, 0);
+##          PUTFORM Usrform (name = U_name)
+	    err = TRUE;
+	}
+##  }
+    return err;
+}
+/*{
+** Name:        grp_exist_chk()         - Insure selected default group exists
+**
+** Description:
+**      Checks to make sure group exists in preparation for setting a default
+**      group
+**
+** Inputs:
+**      x_grp   - selected default group
+**      x_user  - user name
+**
+** Outputs:
+**      addit   - TRUE if x_user is not a member of selected default group,
+**                but user wants to add x_user to that group 
+**
+** Returns:
+**      FAIL    - selected default group doesn't exist or it does, but user
+**                doesn't want to add it to that group or some database
+**                interaction failed
+**      OK      - group exists or will be added
+**
+** Side Effects:
+**      sets default group field back to what it was on entry into the user
+**      frame if failure occurs
+**
+** History:
+**      18-may-89 (mgw)
+**              Written - for TERMINATOR.
+**      6-nov-90 (pete)
+**              Replaced in-line RETRIEVEs with calls to functions.
+*/
+
+static STATUS
+grp_exist_chk(x_grp, x_user, addit)
+char    *x_grp;
+char    *x_user;
+bool            *addit;
+##{
+    i4          grpcnt = 0;
+
+# ifndef UNIX
+    IIUGlbo_lowerBEobject(x_grp);
+# endif
+
+    if (iiicsgSelectUsergroup(x_grp, x_user, &Iiusergroup) != OK)
+	return FAIL;
+    else if (FEinqrows() > 0)
+	return OK;
+    else
+    {
+	grpcnt = iiicueUsergroupExists(x_grp);
+
+	if (FEinqerr() != OK)
+	    return FAIL;
+	else if (grpcnt <= 0)
+	{
+	    /* Error: group does not exist */    
+	    IIUGerr(E_IC0063_No_Such_Group, 0, 1, x_grp);
+##          PUTFORM Usrform ( #default_group = U_group )
+	    return FAIL;
+	}
+    }
+    *addit = TRUE;
+    return OK;
+##}
+
+/*
+** Name: profile_exist_chk
+**
+** Description: Check if a profile exists
+**
+** Inputs:
+**      Profile name
+**
+** Returns:
+**      OK      - Exists
+**      FAIL    - Doesn't
+**
+** History:
+**      20-sep-93 (robf)
+*/
+
+static STATUS
+profile_exist_chk (x_profile)
+char *x_profile;
+{
+exec sql begin declare section;
+	i4     nrows;
+	char    *prof_name;
+exec sql end declare section;
+
+	prof_name=x_profile;
+	EXEC SQL REPEATED SELECT COUNT(*) 
+		 INTO :nrows
+		 FROM iiprofiles
+		 WHERE profile_name=:prof_name;
+
+	if (FEinqerr() != OK)
+	    return FAIL;
+	if(nrows<1)
+		return FAIL;
+	else
+		return OK;
+}
+
+
+/* required ingres usernames. these must be valid and can't be deleted */
+static char     *Req_users[] = { 
+	ERx("$ingres"),
+	NULL
+	};
+
+/*{
+** Name:        IIICiruIsReqUser - Is required username.
+**
+** Description:
+**      Check if user is a required user (and, for example, should not
+**      be deleted).
+**
+** Inputs:
+**      char    *user           username to check.
+**
+** Outputs:
+**
+**      Returns:
+**              Return TRUE if username argument is a required ingres
+**              user; FALSE otherwise.
+**
+** Side Effects:
+**
+** History:
+**      2-apr-1991 (pete)
+**              Initial version.
+*/
+bool
+IIICiruIsReqUser(user)
+char    *user;
+{
+	i4 i;
+
+	for (i=0; Req_users[i] != NULL; i++)
+	{
+	    if (STbcompare(user, 0, Req_users[i], 0, TRUE) == 0)
+		return (TRUE);
+	}
+	if (STbcompare(user, 0, SystemAdminUser, 0, TRUE) == 0)
+	    return (TRUE);
+	return (FALSE);
+}
+
+
+/*{
+** Name:        icdelimit - Delimit an identifier if necessary
+**
+** Description:
+**      Check if a delimiter requires delimiting, and fix it up if needed.
+**
+** Inputs:
+**      char    *id             identifier to check.
+**
+** Outputs:
+**
+**      Returns:
+**              A pointer to the input identifier if it was unchanged, or
+**              to the delimited version if it was changed.
+**
+*/
+
+char *
+icdelimit(id)
+char    *id;
+{
+    char idbuf[((2 * FE_MAXNAME) + 2 + 1)];
+
+    if (STtrmwhite(id) == 0 || !IIUGdlm_ChkdlmBEobject(id, NULL, TRUE))
+    {
+	/*
+	** This is wrong, but it's the only way to handle empty group
+	** names.  An empty group name is actually a legitimate 
+	** name consisting of a single blank, requiring delimitation.
+	** However, that breaks everything, since in INGRES an empty
+	** group name means no group.
+	*/
+	return id;
+    }
+
+    IIUGrqd_Requote_dlm(id, idbuf);
+    return STalloc(idbuf);
+}
+
+/*
+** Name:        PRIVS - CREATE/ALTER USER privileges structure.
+*/
+typedef struct{
+	i4             id;     /* symbolic name of privilege */
+	char            *name;  /* official INGRES/SQL name of privilege */
+} PRIV;
+
+static PRIV Privs[] =
+{
+	{U_CREATDB,             ERx("CREATEDB")},
+	{U_TRACE,               ERx("TRACE")},
+	{U_SECURITY,            ERx("SECURITY")},
+	{U_SYSADMIN,            ERx("MAINTAIN_LOCATIONS")},
+	{U_OPERATOR,            ERx("OPERATOR")},
+	{U_AUDITOR,             ERx("AUDITOR")},
+	{U_ALTER_AUDIT,         ERx("MAINTAIN_AUDIT")},
+	{U_MAINTAIN_USER,       ERx("MAINTAIN_USERS")},
+	{0,     NULL}
+};
+
+static PRIV Audit[] =
+{
+	{U_AUDIT,               ERx("ALL_EVENTS")},
+	{U_AUDIT_QRYTEXT,       ERx("QUERY_TEXT")},
+	{0,     NULL}
+};
+
+i4
+icpriv_string(statmask, buf)
+i4 statmask;
+char    *buf;
+{
+    i4  i;
+    i4  count = 0;
+
+    buf[0] = EOS;
+    for (i = 0; Privs[i].id != 0 ; i++)
+    {
+	if (statmask & Privs[i].id)
+	{
+	    if (count > 0)
+		STcat(buf, Comma);      /* don't do this for first one */
+		
+	    STcat(buf, Privs[i].name);
+	    count++;
+	}
+    }
+    return (count);
+}
+
+i4
+icaudit_string(statmask, buf)
+i4 statmask;
+char    *buf;
+{
+    i4  i;
+    i4  count = 0;
+
+    buf[0] = EOS;
+    for (i = 0; Audit[i].id != 0 ; i++)
+    {
+	if (statmask & Audit[i].id)
+	{
+	    if (count > 0)
+		STcat(buf, Comma);      /* don't do this for first one */
+		
+	    STcat(buf, Audit[i].name);
+	    count++;
+	}
+    }
+    return (count);
+}
+
+/*
+** Name: user_password - update user password
+**
+** Description:
+**      Change user password.
+**
+** Inputs:
+**      user_name - name of user being changed
+**
+** History:
+**      20-jul-94 (robf)
+**         Created
+**	01-jun-98 (kitch01)
+**		Bug 74731. Disallow ability to set external password to yes if there
+**		is no external password verification utility setup for this user.
+**		New flag 'extvalid' set for this.
+**		Bug 77451. If there is no user password set for this user then set the 
+**		user password field to 'no'. New flag 'ingpwd' set for this.
+**		New function check_pwd_enabled will check if this user has an ingres
+**		password and/or has external password authentication enabled.
+*/
+STATUS
+user_password (char *user_name)
+##{
+##  char *uname;
+##  char pwdyn[10];
+##  char pwdextern[10];
+##  char pwdstr[25];
+
+	bool extvalid;
+	bool ingpwd;
+
+    uname=user_name;
+
+	check_pwd_enabled(user_name, &extvalid, &ingpwd);
+	
+	if (ingpwd)
+       STcopy(ERx("yes"),pwdyn);
+	else
+	   STcopy(ERx("no"),pwdyn);
+
+    if(Iiuser.internal_flags & USR_EXT_PWD_FLAG)
+	{
+	   STcopy(ERx("yes"),pwdextern);
+	   STcopy(ERx("yes"),pwdyn);
+	}
+    else        
+	STcopy(ERx("no"), pwdextern);
+
+    Title = ERget(S_IC0151_User_pwd_title);
+
+    if(!Mgr)
+    {
+	if(Iiuser.internal_flags & USR_EXT_PWD_FLAG)
+	{
+	    /*
+	    ** External authentication, thus can't change anything
+	    */
+	    Mode=ERx("read");
+##          SET_FRS FIELD Pwdform (invisible(pwd_extern)=0,
+##                              invisible(pwd_yn)=0)
+##          SET_FRS FIELD Pwdform (invisible(pwd_str)=1,
+##                      invisible(pwd_str2)=1)
+	}
+	else
+	{
+	    Mode=ERx("update"); 
+##          SET_FRS FIELD Pwdform (invisible(pwd_extern)=1,
+##                              invisible(pwd_yn)=1)
+##          SET_FRS FIELD Pwdform (invisible(pwd_str)=0,
+##                      invisible(pwd_str2)=1)
+	}
+    }
+    else
+    {
+	Mode=ERx("update");
+	if (extvalid)
+	{
+		if(*pwdyn=='y')
+		{
+##      SET_FRS FIELD Pwdform (invisible(pwd_extern)=0,
+##                      invisible(pwd_str)=0)
+		}
+		else
+		{
+##      SET_FRS FIELD Pwdform (invisible(pwd_extern)=1,
+##                      invisible(pwd_str)=0)
+		}
+	}
+	else
+	{
+##      SET_FRS FIELD Pwdform (invisible(pwd_extern)=1,
+##                             invisible(pwd_yn)=0)
+	}
+##      SET_FRS FIELD Pwdform (invisible(pwd_str)=1,
+##                      invisible(pwd_str2)=1)
+    }
+
+##  DISPLAY Pwdform Mode
+##  INITIALIZE (name=uname, pwd_yn=pwdyn, pwd_extern=pwdextern,
+##              title=Title)
+##  ACTIVATE FIELD pwd_yn:
+##  {
+##      GETFORM Pwdform (pwdyn=pwd_yn)
+	if(*pwdyn=='y')
+	{
+		if (extvalid)
+		{
+##              SET_FRS FIELD Pwdform (invisible(pwd_extern)=0)
+		}
+		else
+		{
+##              SET_FRS FIELD Pwdform (invisible(pwd_extern)=1,
+##                                     invisible(pwd_str)=0)
+		}
+	}
+	else
+	{
+##              SET_FRS FIELD Pwdform (invisible(pwd_extern)=1,
+##                              invisible(pwd_str)=1,
+##                              invisible(pwd_str2)=1)
+	}
+##      RESUME NEXT
+##  }
+##  ACTIVATE FIELD pwd_extern:
+##  {
+##      GETFORM Pwdform (pwdextern=pwd_extern)
+	if(*pwdextern=='n')
+	{
+##              SET_FRS FIELD Pwdform (
+##                              invisible(pwd_str)=0)
+	}
+	else
+	{
+##              SET_FRS FIELD Pwdform (
+##                              invisible(pwd_str)=1,
+##                              invisible(pwd_str2)=1)
+	}
+##      RESUME NEXT
+##  }
+
+
+##  ACTIVATE MENUITEM ERget(FE_Save)
+##      (ACTIVATE = 0, EXPL = ERget(F_FE0117_SaveExpl)),
+##      FRSkey8 (ACTIVATE = 0):
+##  {
+
+##      VALIDATE
+	if(write_user_pwd(user_name)!=OK)
+##              RESUME;
+
+##      BREAKDISPLAY
+##  }
+
+##  ACTIVATE FIELD pwd_str:
+##  {
+##      GETFORM Pwdform (pwdstr=pwd_str)
+	STtrmwhite(pwdstr);
+	if(pwdstr[0]=='\0')
+##              SET_FRS FIELD Pwdform (invisible(pwd_str2)=1)
+	else
+##              SET_FRS FIELD Pwdform (invisible(pwd_str2)=0)
+##      RESUME NEXT
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey1 (VALIDATE =0, ACTIVATE = 0):
+##  {
+	FEhelp(ERx("icusrpwd.hlp"), ERget(S_IC004B_User_form));
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey3 (VALIDATE =0, ACTIVATE = 0):
+##  {
+
+##      i4  changed;
+
+##          INQUIRE_FRS FORM (changed = CHANGE)
+
+	    if ( changed )
+	    {
+
+##              GETFORM Pwdform ( Object_name = #name)
+
+		changed = CONFIRM(Object_name, ERget(F_IC0019_User));
+		if(changed==CONFCH_YES)
+		{
+##                  VALIDATE;
+		    if(write_user_pwd(user_name)!=OK)
+##                      RESUME
+		}
+	    }
+##      BREAKDISPLAY
+##  }
+##  FINALIZE
+
+    return OK;
+##}
+
+/*
+** Name: write_user_pwd - write user password to database
+**
+** Description:
+**      Saves user password information from Pwdform to database
+**
+** Inputs:
+**      user_name - name for user having password altered
+**
+** Returns:
+**      OK -   operation succeeded
+**      FAIL - operation failed
+**
+** History:
+**      20-jul-94 (robf)
+**          Created.
+**	01-jun-98 (kitch01)
+**		Bug 91019. Invalid 'alter user' syntax generated when a user tries to
+**		change their own password.
+*/
+static STATUS
+write_user_pwd(char *user_name)
+##{
+##      char pwdyn[10];
+##      char pwdextern[10];
+##      char pwdstr[25];
+##      char pwdstr2[25];
+##      char oldpwd[25];
+exec sql begin declare section;
+	char stmt[255];
+exec sql end declare section;
+	bool    extern_pwd=FALSE;
+
+##      GETFORM Pwdform (pwdyn=pwd_yn, pwdextern=pwd_extern, 
+##              pwdstr=pwd_str, pwdstr2=pwd_str2)
+	if(pwdyn[0]=='n')
+	{
+	     STprintf(stmt,"alter user %s with nopassword",
+		icdelimit(user_name));
+	}
+	else if (pwdextern[0]=='y')
+	{
+		STprintf(stmt,"alter user %s with external_password",
+			icdelimit(user_name));
+		extern_pwd=TRUE;
+	}
+	else
+	{
+		if(STcompare(pwdstr,pwdstr2)!=0)
+		{
+			IIUGerr(E_IC0152_Password_mismatch, UG_ERR_ERROR, 0);
+			return FAIL;
+		}
+		if(STlength(pwdstr)<3 || STindex(pwdstr,"'",0)!=NULL)
+		{
+			IIUGerr(E_IC0153_Password_invalid, UG_ERR_ERROR, 0);
+			return FAIL;
+		}
+		/*
+		** Need to check whether user is changing their old
+		** password, or assigning a new password
+		*/
+		if (IiicPrivMaintUser)
+		{
+		    STprintf(stmt,"alter user %s with password='%s'",
+			icdelimit(user_name),
+			pwdstr);
+		}
+		else
+		{
+##                  PROMPT NOECHO ("Enter your old password:", oldpwd)
+##                  WITH STYLE=POPUP;
+		    if(*oldpwd=='\0')
+			return FAIL;
+
+		    STprintf(stmt,"alter user %s with password='%s', oldpassword='%s'",
+				icdelimit(user_name), pwdstr, oldpwd);
+		}
+	}
+	EXEC SQL EXECUTE IMMEDIATE :stmt;
+	if (sqlca.sqlcode < 0 && sqlca.sqlcode != (-E_GE0032_WARNING))
+	{
+		EXEC SQL ROLLBACK;
+		/* Diagnostic already issued from DBMS */
+		return FAIL;
+	}
+	else
+	{
+		if(extern_pwd)
+			Iiuser.internal_flags|=USR_EXT_PWD_FLAG;
+		else
+			Iiuser.internal_flags&= ~USR_EXT_PWD_FLAG;
+		EXEC SQL COMMIT;
+		return OK;
+	}
+##}
+
+/*
+** Name: user_privileges - build user privileges
+**
+** Description: Edit full list of user subject privileges, including 
+**              defaults.
+**
+** Inputs:
+**      id - user id being edited
+**
+**      stat - Privilege status mask
+**
+**      def_stat - Default Privilege status mask
+**
+** Outputs:
+**      stat - Updated Privilege status mask
+**
+**      def_stat - Updated Default Privilege status mask
+**
+** History:
+**      21-jul-94 (robf)
+**          Created
+**      01-may-95 (harpa06)
+**          Bug #68422: Added a flag to indicate that the priviliges form has
+**          been modified which will reflect the User Information form.
+*/
+static VOID
+user_privileges (char *id, i4 *stat, i4 *def_stat)
+##{
+##  char *uname;
+##  i4  i;
+##  char p_name[33];
+##  char p_value[3];
+##  i4   rowno;
+    uname=id;
+    Title = ERget(S_IC0150_User_priv_title);
+
+##  INITTABLE Prvform priv_table update;
+    for (i = 0; Privs[i].id != 0 ; i++)
+    {
+	char *p;
+	STcopy(Privs[i].name, p_name);
+	for(p=p_name; *p; p++)
+	{
+	   if (*p=='_')
+		*p=' ';
+	   else if(CMupper(p))
+		CMtolower(p,p);
+	}
+	if(*def_stat & Privs[i].id)
+##              LOADTABLE Prvform priv_table (pvalue='y', pname=p_name)
+	else if(*stat & Privs[i].id)
+##              LOADTABLE Prvform priv_table (pvalue='r', pname=p_name)
+	else
+##              LOADTABLE Prvform priv_table (pvalue='n', pname=p_name)
+    }
+
+    if (Mgr)
+	Mode = ERx("update");
+    else
+	Mode = ERx("read");
+
+##  DISPLAY Prvform Mode
+##  INITIALIZE (name=uname, title=Title)
+
+##  ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey1 (VALIDATE =0, ACTIVATE = 0):
+##  {
+	FEhelp(ERx("icprivs.hlp"), ERget(S_IC004B_User_form));
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_Cancel) (expl = ERget(F_FE0102_ExplEnd),
+##  VALIDATE = 0, ACTIVATE = 0), FRSkey9 (VALIDATE =0, ACTIVATE = 0):
+##  {
+
+##      BREAKDISPLAY
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey3 (VALIDATE =0, ACTIVATE = 0):
+##  {
+##      i4  changed;
+ 
+##      INQUIRE_FRS FORM (changed = CHANGE)
+ 
+	if (!changed )
+##           BREAKDISPLAY
+
+##      VALIDATE
+	
+	PrivChg=TRUE;
+
+##      UNLOADTABLE Prvform priv_table (rowno=_RECORD, p_value=pvalue)
+##      {
+	    i=rowno-1;
+	    if(*p_value=='y')
+	    {
+		*def_stat|=Privs[i].id;
+		*stat|=Privs[i].id;
+	    }
+	    else if(*p_value=='r')
+	    {
+		*def_stat&= ~Privs[i].id;
+		*stat|=Privs[i].id;
+	    }
+	    else
+	    {
+		*def_stat&= ~Privs[i].id;
+		*stat&= ~Privs[i].id;
+	    }
+##      }
+##      BREAKDISPLAY
+##  }
+##  FINALIZE
+
+    return ;
+##}
+
+/*{
+** Name:        usr_mod_chk()   - Disallow removal of super user from ingres
+**
+** Returns:
+**      FALSE   - OK - user isn't trying to update the ingres account
+**      TRUE    - ERROR - user is trying to update the ingres account
+**
+** History:
+**
+**      12-dec-94 (harpa06)
+**          Created for OpenINGRES 1.1. Replica of creation in INGRES 6.4 by
+**          nick.
+**      05-apr-95 (canor01)
+**          get_user_stat() takes two parameters, but was only being
+**          passed one, causing SEGV in AIX.
+**	20-apr-98 (mcgem01)
+**	    Product name change to Ingres.
+*/
+ 
+static bool
+usr_mod_chk()
+{
+    bool        err = FALSE;
+ 
+     if (!Newuser && IIICiruIsReqUser(U_name))
+     {
+       i4     u_status = 0;
+       i4     u_def_status;
+ 
+       get_user_stat(&u_status,&u_def_status);
+       if (!(u_status & U_SUPER))
+       {
+	   IIUGerr(E_IC005E_Cannot_remove_super, 0, 1, U_name);
+	   err = TRUE;
+       }
+     }
+    return err;
+ 
+}
+
+/*
+** Name:	check_pwd_enabled() - Check password authentication enabled
+**
+** Inputs:
+**		authname - name of user
+** Returns:
+**      extvalid - FALSE   - External password authentication has not been enabled for
+**						  this user
+**                 TRUE    - External password authentication has been enabled for this
+**						  user
+**      ingpwd   - FALSE   - Ingres password not set for this user
+**                 TRUE    - Ingres password has been set for this user
+**
+** History:
+**
+**		26-May-1998 (kitch01)
+**			Created to resolve bugs 74731 and 77451.
+**
+*/
+static void check_pwd_enabled(char *authname, bool *extvalid, bool *ingpwd)
+{
+exec sql begin declare section;
+	i4     pwdlen;
+	char    *username;
+exec sql end declare section;
+
+	char pmname[64];
+	char *pmvalue;
+
+	*extvalid = FALSE;
+	username = icdelimit(authname);
+
+	EXEC SQL SELECT length(password) 
+		 INTO :pwdlen
+		 FROM iiuser
+		 WHERE name=:username;
+
+	*ingpwd = pwdlen ? TRUE : FALSE;
+
+	STprintf(pmname, "ii.$.secure.role_auth.%*s",
+			STtrmwhite(authname), (char*)authname);
+	if (PMget(pmname, &pmvalue) == OK)
+	{
+		*extvalid = TRUE;
+		return;
+	}
+	
+	STprintf(pmname, "ii.$.secure.user_auth.%*s",
+			STtrmwhite(authname), (char*)authname);
+	if (PMget(pmname, &pmvalue) == OK)
+	{
+		*extvalid = TRUE;
+		return;
+	}
+
+	return;
+
+}

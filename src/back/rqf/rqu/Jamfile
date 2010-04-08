@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!rqf!rqu
+#
+
+SubDir ING_SRC back rqf rqu ;
+
+IISUBSYS back rqf rqu ;
+
+
+IILIBRARY RQFLIB : rqutil.c ;
+

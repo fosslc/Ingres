@@ -1,0 +1,398 @@
+/*
+** Copyright (c) 1987, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<cm.h> 
+#include	<er.h> 
+#include	<st.h> 
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<adf.h>
+#include	<fe.h>
+#include	<ui.h>
+#include	<uigdata.h>
+#include	<abqual.h>
+#include	<qg.h>
+#include	<abrterr.h>
+
+/**
+** Name:	abrtspred.qc -  ABF RunTime Qualification Predicate Function.
+**
+** Description:
+**	Contains the routine used to generate a predicates for a qualification.
+**	Defines:
+**	
+**	IIARqualify()		generate predicates for qualification.
+**	IIARrpgRtsPredGen()	generate predicates for qualification.
+**	iiarCkQryMode()		verify form in query mode for qualification.
+**
+** History:
+**	Revision 6.0  87/06/15  joe
+**	Initial Version.
+**
+**	Revision 6.1  88/06  wong
+**	Added support to check for QUERY mode for form, 'iiarCkQryMode()',
+**	and for processing predicates for non-retrieve queries.
+**
+**	Revision 6.5
+**	21-sep-92 (davel)
+**		In IIARrpgRtsPredGen() - add protection against discovering
+**		that we're in a session that was established in 3GL, so that
+**		we won't try to issue a query for dbcapabilities info.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototype for get_tf_quals() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+*/
+
+FUNC_EXTERN	bool	iiarCkQryMode();
+FUNC_EXTERN	ADF_CB	*FEadfcb();
+
+/* Status kept by IIARrpgRtsPredGen and its called routines */
+static	i4	dml_level;		/* DML code */
+static 	STATUS	ret_val;		/* Return status */
+static	ABRT_QUAL *qual;		/* Qualification staructure */
+static	STATUS 	(*func)();		/* QG function to call */
+static	PTR	data;			/* Data to pass to func */
+static STATUS get_tf_quals(
+			char *tfname,
+			i4  first,
+			i4  last);
+
+/* Prefix and suffix strings */
+static const char andST[] = 		ERx(" and ");
+static const char llST[] =  		ERx("((");
+static const char and_llST[] =  	ERx(" and ((");
+static const char r_or_lST[] =  	ERx(") or (");
+static const char rrST[] = 		ERx("))");
+
+VOID
+IIARqualify ( gendata, qgfunc, qgvalue )
+PTR	gendata;
+STATUS	(*qgfunc)();
+PTR	qgvalue;
+{
+	if ( iiarCkQryMode( ((ABRT_QUAL *)gendata)->qu_form ) &&
+		    IIARrpgRtsPredGen(gendata, qgfunc, qgvalue) == QG_NOSPEC )
+	{
+		IIwritio(FALSE, (i2 *)NULL, TRUE, DB_CHR_TYPE, 0, ERx(" 1=1 "));
+	}
+}
+
+/*{
+** Name:	IIARrpgRtsPredGen() -	Generate Predicates for a Qualificiation.
+**
+** Description:
+**	This function is called by QG when it is running a query
+**	that has a qualification function in it.  The code generator
+**	(or interpreter) places a QGGEN type of QRY_SPEC in the
+**	where clause in place of the qualifcation function.  This
+**	QRY_SPEC points to a ABRT_QUAL structure that describes the fields
+**	to build the qualification from.
+**	
+**	This routine simply runs down the ABRT_QUAL structure checking
+**	each field for a query and sending it to the function passed
+**	to it.
+**
+** Inputs:
+**	gendata	{PTR}  This is really a ABRT_QUAL structure.
+**			QG passed to here as a PTR.  It contains
+**			information on how to build a  query from the
+**			form.
+**
+**	qgfunc	{VOID (*)()}  This is the function to call
+**			with each query spec to send down.
+**
+**	qgvalue	{PTR}  This is a value to pass to the function
+**			as its first argument.
+**
+** Returns:
+**	{STATUS}  OK if everything succeeded.
+**		  QG_NOSPEC if no QRYSPECs sent.
+**		  FAIL on any other error.
+**
+** History:
+**	11-may-1987 (Joe)
+**		Initial Version.
+**	20-may-1987 (Joe)
+**		Initial Version with ABRT_QUAL structure.
+**	14-jun-1987 (Joe)
+**		Taken from QG module tests and changed to use RTS
+**		ABRT_QUAL structure.
+**	1/90 (Mike S)
+**		Allow qualification in table field
+**	21-sep-92 (davel)
+**		In determining the dml_level, do not use IIUIdml() if no session
+**		information exists yet; instead default to lowest
+**		form of SQL (UI_DML_GTWSQL).  This protects us in the event
+**		that we discover that we're in a session established in 3GL
+**		while we're in the middle generating a 4GL query.  A side-effect
+**		of IIUIdml() is issuance of queries for dbcapabilities.
+*/
+STATUS
+IIARrpgRtsPredGen ( gendata, qgfunc, qgvalue )
+PTR	gendata;
+STATUS	(*qgfunc)();
+PTR	qgvalue;
+{
+	UIDBDATA *IIUIcddCheckDBdata();
+
+	char	*prefix;
+	char 	last_tf[FE_MAXNAME+1];	/* Last tablefield qualified from */
+	char 	cur_tf[FE_MAXNAME+1];	/* current tablefield */
+
+	ret_val = QG_NOSPEC;
+	qual = (ABRT_QUAL *) gendata;
+	func = qgfunc;
+	data = qgvalue;
+
+	if ( qual->qu_type != ABQ_FLD )
+		abproerr(ERx("IIARrpgRtsPredGen"), ABBADQUAL, (char *)NULL);
+	else if ( iiarCkQryMode( qual->qu_form ) )
+	{
+		ABRT_QFLD	*fld;
+		register i4	i;
+		DB_LANG	dml = (FEadfcb())->adf_qlang;
+		bool	in_tblfld = FALSE;
+		i4  	first_col;
+		char	*dot;
+		STATUS	rval;
+
+		/* set dml_level as follows: 
+		** if this is a QUEL frame/procedure, set to UI_DML_QUEL;
+		** if SQL, set flavor of SQL based on session's capabilities
+		** if the session info has been set.  if no session info 
+		** exists (i.e. we're connected to a session established in
+		** 3GL), then default to most restrictive SQL (UI_DML_GTWSQL).
+		*/
+		if (dml == DB_QUEL)
+		{
+			dml_level = UI_DML_QUEL;
+		}
+		else if (IIUIcddCheckDBdata() != NULL)
+		{
+			dml_level = IIUIdml();
+		}
+		else
+		{
+			dml_level = UI_DML_GTWSQL;
+		}
+
+		/* The fields are sorted thus:
+		**	Columns for tablefield 1
+		**	...
+		**	Columns for tablefield n
+		**	Simple fields
+		*/
+		/* Do all tablefields */
+		for (i = 0 ; i < qual->qu_count ; ++i, ++fld)
+		{
+			fld = (ABRT_QFLD *)qual->qu_elms + i;
+			dot = STindex(fld->qf_field, ERx("."), 0);
+			if (!dot)
+			{
+				break;	/* We've finished tablefield columns */
+			}
+
+			STlcopy(fld->qf_field, cur_tf, dot - fld->qf_field);
+				
+
+			if (!in_tblfld)
+			{
+				/* A new tablefield */
+				STcopy(cur_tf, last_tf);
+				in_tblfld = TRUE;
+				first_col = i;
+			}
+			else
+			{
+				if (!STequal(cur_tf, last_tf))
+				{
+					rval = get_tf_quals(last_tf, first_col,
+							    i-1);
+					if (rval == OK)
+						ret_val = OK;
+					else if (rval != QG_NOSPEC)
+						return rval;
+					STcopy(cur_tf, last_tf);
+				}
+			}
+		}
+
+		/* Do the last tablefield, if need be */
+		if (in_tblfld)
+		{
+			rval = get_tf_quals(last_tf, first_col, i - 1);
+			if (rval == OK)
+				ret_val = OK;
+			else if (rval != QG_NOSPEC)
+				return rval;
+		}
+
+		/* Do any simple fields */
+		prefix = (ret_val == QG_NOSPEC) ? NULL : andST;
+		for (; i < qual->qu_count; i++)
+		{
+			fld = (ABRT_QFLD *) qual->qu_elms + i;
+			rval = IIgetquery(qual->qu_form, fld->qf_field,
+						(char *)NULL, (char *)NULL,
+						dml_level, fld->qf_expr, prefix,
+						func, data);
+			if ( rval == QG_NOSPEC )
+				continue;
+			if ( rval != OK )
+				return rval;
+			prefix = andST;
+		}
+		if ( prefix != NULL )
+			ret_val = OK;
+	}
+	return ret_val;
+}
+
+/*
+** get_tf_quals -- Do qualification in a tablefield
+**
+** Columns in the tablefield AND across and OR down.  The tablefield must be 
+** in Query mode.  Other than setting up prefix and suffix strungs so that the
+** generated WHERE clause will be syntactically correct, we let IIgetquery
+** do all the work.
+**
+** We generate:
+** (Row 1) [AND] (( field1 AND field2 ... AND fieldn)
+** (Row 2)    OR  ( field1 AND field2 ... AND fieldn)
+** ...
+** (Row m)    OR  (field1 AND field2 ... AND fieldn))
+** Inputs:
+**	tfname	char *	The name of the tablefield
+**	first	i4	The first member of qu_elms for this tablefield
+**	last	i4 	The last member of qu_elms for this tablefield
+*/
+static STATUS 
+get_tf_quals(tfname, first, last)
+##char *tfname;
+i4  first;
+i4  last;
+{
+##	char mode[16];
+##	char *form = qual->qu_form;
+##	i4  state_var;
+	ABRT_QFLD	*fld;
+	i4		i;
+	char		*column;	/* Column name */
+	bool		tf_empty;	/* Nothing generated from tf yet */
+	bool		row_empty;	/* Nothing generated from row yet */
+	bool		error_found = FALSE;
+					/* Did we get an error from QG */
+	STATUS		rval = QG_NOSPEC;
+	char		*prefix;
+
+	/* First, be sure the tablefield is in QUERY mode */
+##	inquire_frs table form (mode = mode(tfname))
+	if (CMcmpnocase(mode, ERx("q")) != 0)
+	{
+		abusrerr(ABTFQRYMODE, form, tfname, (char *)NULL);
+		return rval;
+	}
+
+	/* OK, now unload it */
+	tf_empty = TRUE;
+##	UNLOADTABLE form tfname (state_var = _state)
+##	{
+		row_empty = TRUE;
+		switch (state_var)
+		{
+		    case 1:	/* New */
+		    case 2:	/* Unchanged */
+		    case 3:	/* Changed */
+			
+			for (i = first; i <= last; i++)
+			{
+				if (tf_empty)
+				{
+					prefix = (ret_val == QG_NOSPEC) ?
+							llST	:  /* (( */
+							and_llST;  /* and (( */
+				}
+				else
+				{
+					prefix = (row_empty) ?
+							r_or_lST:  /* ) or ( */
+							andST;	   /* and */
+				}
+				fld = (ABRT_QFLD *) qual->qu_elms + i;
+				column = STindex(fld->qf_field, ERx("."), 0) 
+					 + 1;
+				rval = IIgetquery(qual->qu_form, tfname,
+						column, (char *)NULL,
+						dml_level, fld->qf_expr, prefix,
+						func, data);
+				if (rval == OK)
+				{
+					ret_val = OK;
+					row_empty = tf_empty = FALSE;
+					prefix = andST;
+				}
+				else if (rval != QG_NOSPEC)
+				{
+					/* An error.  We'll stop now */
+					error_found = TRUE;
+##					endloop
+				}
+			}
+			break;
+
+		    default:
+			break;
+		}
+##	}
+
+	/* If we generated anything, close with "))" */
+	if (!error_found && !tf_empty)
+		IIFDrcsRangeCheckSuffix(rrST, func, data);
+	return rval;
+}
+
+/*{
+** Name:	iiarCkQryMode() -	Verify Form in Query Mode for Qualification.
+**
+** Description:
+**	Verifies that the form is in query mode for when a qualification is
+**	being processed.
+**
+** Input:
+**	form	{char *}  The name of the form.
+**
+** Returns:
+**	{bool}  TRUE if in query mode.
+**
+** History:
+**	06/88 (jhw) -- Written.
+*/
+bool
+##iiarCkQryMode ( form )
+##char	*form;
+##{
+##	char	mode[16];
+
+##	inquire_frs form ( mode = mode(form) );
+
+	if ( CMcmpnocase(mode, ERx("q")) == 0 )
+	{
+		return TRUE;
+	}
+	else
+	{
+		abusrerr(ABQRYMODE, form, (char *)NULL);
+		return FALSE;
+	}
+##}

@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqnedesc.hlp, subtopic 'Description' behind the popup asking for 
+/#-- menuitem and description when creating frames.
+/#-- 
+Menuitem descriptions should be kept short and to the point.  Keep in mind 
+that the description you enter will be used in many places throughout your 
+application, as listed below:
+
+  * In the menu of the parent frame, next to the menuitem text.
+
+  * In the help file of the parent frame.
+
+  * At the top of the screen, whenever the frame itself is displayed.
+
+  * As the title of the main help screen for the frame.
+
+Although the entry field will hold up to 50 characters, you should probably 
+make your menuitem description much shorter than that.

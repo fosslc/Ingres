@@ -1,0 +1,66 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Session List screen.  This screen displays all of the user
+sessions connected to the indicated server (the server that the cursor
+rested on).  For each session, IPM displays the session id, name, terminal
+if known, database connected to, session state, server facility, and query.
+
+Name           The name of the session.  Ingres internal sessions are
+               displayed with angle brackets "<>" as shown.  This is a
+               scrollable field; move the cursor to the field and use the
+               arrow keys to see the entire contents.  Session names for
+               user sessions are usually the same as the username.  (Both
+               the username and session name are shown under More_Info.)
+
+State          The state of the session.  COM means the session is
+               computable; it is not waiting for the user or for I/O.
+               LOG-IO means the session is waiting for output to the
+               logfile.  (This, as well as other states, are not identical
+               in meaning for internal sessions, such as the Fast Commit
+               Thread).  DIO means the session is waiting for disk I/O.
+               BIO means the session is waiting for client [frontend]
+               communications.  LOCK means the session is waiting for
+               another session to release locks.  Use the Find menuitem to
+               search this column.
+
+TTY            The terminal name, if known.  Network and internal sessions
+               don't show a terminal.
+
+Database       The database that the session is currently connected to.
+
+Facil          The server facility that the session is currently in.  QEF
+               is the Query Execution Facility.  Other facilities include
+               DMF, the data manipulation facility, OPF and the optimizer
+               facility.  The More_Info screen spells out the meaning of
+               the facility acronym.
+
+Query          If the user running IPM is an Ingres superuser, the query is
+               shown.  The More_Info screen shows more of the query.  The
+               query is only shown if it is current.  A current query is
+               one being processed by the DBMS, not a query that has
+               returned results and finished executing, even though the
+               user has not committed.
+
+The Session List screen has the following menuitems:
+
+More_Info      Displays the Session Detail screen.  This screen displays
+               information about the indicated session (the one the cursor
+               was placed on).
+
+DBA_Operations Displays a submenu which allows an Ingres superuser to
+               delete the session on which the cursor is placed.  Do NOT
+               remove Ingres internal sessions (marked with <>).
+
+Refresh        Queries the specified Ingres server for a list of sessions
+               and refreshes the display.  If the server no longer
+               exists, a message is printed.
+
+Find           Searches for matching values in any column in the scrolling
+               area.  <TAB> to the desired column, then select "Find".
+               You can use this, for instance, to search for LOCK in the
+               State column.
+
+Help           Displays this screen.
+
+End            Returns to the Server List screen.
+
+Quit           Exits IPM.

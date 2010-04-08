@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may specify the underlining option for the current 
+report section.  
+
+To specify an underlining option, scroll to the desired option, and choose the 
+Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	None		Do not underline any text in this report section.
+	All		Underline all the text in this report section.
+	Last		Only underline the last line of this report section.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select	        Underline the current report section in the specified 
+			manner.
+			
+        Cancel          Return to the Report Options frame without selecting 
+			an underlining option.
+
+        Help            Print this message.

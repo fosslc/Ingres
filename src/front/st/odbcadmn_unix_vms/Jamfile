@@ -1,0 +1,56 @@
+#
+# Jamfile file for front!st!odbcadmn_unix_vms
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#	11-feb-2005 (abbjo03)
+#	    On VMS, link iiodbcadmn with the shared libraries.
+#       13-Mar-2007 (Ralph Loen) SIR 117786
+#           Added pooltimeout.frm and octimeout.hlp.
+#      12-oct-2007 (Ralph Loen) Bug 119296
+#           Changed "iiodbcadmn" to "iiodbcadmin" to match the Ingres
+#           documentation.
+#      19-oct-2007 (Ralph Loen) Bug 119329
+#           Changed dependency on the API library to the CLI library. 
+#           Merged VMS treatment of shared libraries with Unix/Linux.
+#      19-March-2008 (rapma01)
+#           bug 119329
+#           Removed ODBCCFGLIB from iiodbcadmin since SHODBCMGRLIB
+#           is already used      
+
+SubDir ING_SRC front st odbcadmn_unix_vms ;
+
+IISUBSYS front st odbcadmn_unix_vms ;
+
+
+IIBINEXE iiodbcadmin : odbcadmn.sc ;
+IINEEDLIBS iiodbcadmin : SHAPILIB SHODBCMGRLIB SHFRAMELIB SHQLIB
+        SHCOMPATLIB ;
+
+IIUNDEFS iiodbcadmin : II_copyright ;
+
+IIFORM advanced.frm ;
+IIFORM altdrvpath.frm ;
+IIFORM altdsnpath.frm ;
+IIFORM details.frm ;
+IIFORM dsnconfig.frm ;
+IIFORM dsnname.frm ;
+IIFORM instdrivers.frm ;
+IIFORM odmainmenu.frm ;
+IIFORM seldrivers.frm ;
+IIFORM tracing.frm ;
+IIFORM pooltimeout.frm ;
+
+File $(INGMSG)$(DFS)ocadvname.hlp : ocadvname.hlp ;
+File $(INGMSG)$(DFS)ocaltdrvp.hlp : ocaltdrvp.hlp ;
+File $(INGMSG)$(DFS)ocaltdsnp.hlp : ocaltdsnp.hlp ;
+File $(INGMSG)$(DFS)ocdrvdetails.hlp : ocdrvdetails.hlp ;
+File $(INGMSG)$(DFS)ocdsncfg.hlp : ocdsncfg.hlp ;
+File $(INGMSG)$(DFS)ocdsndetails.hlp : ocdsndetails.hlp ;
+File $(INGMSG)$(DFS)ocdsnname.hlp : ocdsnname.hlp ;
+File $(INGMSG)$(DFS)ocfgmm.hlp : ocfgmm.hlp ;
+File $(INGMSG)$(DFS)ocinstdrvr.hlp : ocinstdrvr.hlp ;
+File $(INGMSG)$(DFS)octrace.hlp : octrace.hlp ;
+File $(INGMSG)$(DFS)octimeout.hlp : octimeout.hlp ;
+

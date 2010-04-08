@@ -1,0 +1,61 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+     This form contains the Update and Delete rules for the current
+     Join Definition.  You can browse and/or modify the rules shown
+     on this form.  These rules inform you of the effects updates and
+     deletes will have on the tables in your database.  You may change
+     these values by changing the Update? and Delete? columns in each
+     of the tables on the form.  
+
+     The Update Information table contains one row for each join field 
+     in the Join Definition (JoinDef).  Each join field is specified by
+     its column designation which is given in the form table.column_name,
+     where "table" is the table abbreviation, if one has been given.
+     Otherwise the table name itself is used.  QBF fills in all values in
+     this table.  Except for "Update?", all other columns in the table are
+     read only.  The fields in the Update Information table are:
+
+     Field                      Description
+     -----                      -----------
+     Column                     A column designation.  A join has been
+                                defined between this column and a column in
+                                another table.
+     Update?                    A YES/NO field that indicates whether 
+                                UPDATES are enabled for this join field.
+                                This field is asking the question:
+                                In QBF UPDATE Mode if the value in the
+                                form field attached to this join field 
+                                changes, do you want the change to be 
+                                reflected in your database table?
+
+     The Delete Information table contains one row for each table in the
+     Join Definition (JoinDef).  QBF fills in all values in this table. 
+     Except for "Delete?", all other columns in the table are read only.
+     The fields in the Delete Information Table are:
+
+     Field                      Description
+     -----                      -----------
+     Role                       Indicates the role of the table described on
+                                the row. Valid roles are Master and Detail.
+     TableName or Abbreviation  Name (or abbreviation) of one of the table(s)
+                                in the Join Definition.
+     Delete?                    A YES/NO field that indicates whether
+                                DELETES are enabled for this table. This
+                                field is asking the question:  In QBF UPDATE
+                                Mode if row(s) are deleted on the form, do you
+                                want the corresponding row(s) to also be 
+                                deleted in this particular table in your
+                                database?
+
+     The following commands are on the QBF Update & Delete Rules Form:
+
+     Command                    Function
+     -------                    --------
+     Joins                      Go to the Join Specification Form.
+     Cancel                     Return to the Table Entry Form.  The update and 
+                                delete rules are not modified.
+     ListChoices                Produce a list of possible values to place 
+				under columns 'Update?' and 'Delete?' (YES/NO).
+     Help                       Print this message.
+     End                        Return to the Table Entry Form, modifying the 
+                                update and delete rules to reflect the changes
+                                made on the form.

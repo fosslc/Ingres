@@ -1,0 +1,12 @@
+#
+# Jamfile file for dbutil!duf!dui
+#
+
+SubDir ING_SRC dbutil duf dui ;
+
+IISUBSYS dbutil duf dui ;
+
+
+IILIBRARY DBUTILLIB : duifemod.qsc duicrdb.qsc duifedef.c
+	duifecap.c duidsdb.c duidata.c ;
+

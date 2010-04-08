@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The dictionary_driver resource specifies the name of the shared library or
+  dynamic link library that provides the functions to access data sources.
+  This file name is specified without extension.
+
+  Default: oiddi

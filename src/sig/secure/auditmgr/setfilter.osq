@@ -1,0 +1,14 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+initialize() = 
+declare
+	result=integer4 not null;
+{
+}
+'End', key frskey3  = {
+	return;
+}
+'Help', key frskey1 = {
+	result=callproc help_field();
+}

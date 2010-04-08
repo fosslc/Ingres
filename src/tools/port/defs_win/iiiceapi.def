@@ -1,0 +1,94 @@
+; Name:     oiiceapi.def
+;
+; Description:
+;       Exported functions for the ICE C API.
+;
+; History:
+;       02-Aug-2000 (fanra01)
+;           Bug 102246
+;           Created.
+;       30-Mar-2001 (fanra01)
+;           Sir 103813
+;           Add entrypoints for ice configuration library.
+;       04-Apr-2001 (peeje01)
+;           SIR 103810
+;           Add entry points to support XML tag converstion to ICE 2.5.
+;       04-May-2001 (fanra01)
+;           Sir 103813
+;           Add entry points for ic_retvariable, ic_setvariable,
+;           ic_getvalbyref and ic_getnxtvalbyref
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	22-Jun-2004 (drivi01)
+;	    Removed duplicate of ic_release.
+;
+
+EXPORTS
+ICEQuery		@1				
+ICE_C_Close		@2				
+ICE_C_Connect		@3				
+ICE_C_Disconnect		@4				
+ICE_C_Execute		@5				
+ICE_C_ExecuteDownload		@6				
+ICE_C_ExecuteFunction		@7				
+ICE_C_Fetch		@8				
+ICE_C_GetAttribute		@9				
+ICE_C_Initialize		@10				
+ICE_C_LastError		@11				
+ICE_C_SetError		@12				
+ICE_C_Terminate		@13				
+ic_initialize		@14				
+ic_seterror		@15				
+ic_select		@16				
+ic_idselect		@17				
+ic_getnext		@18				
+ic_idretrieve		@19				
+ic_getval		@20				
+ic_getnxtval		@21				
+ic_getvalbyref		@22				
+ic_getnxtvalbyref		@23				
+ic_release		@24				
+ic_getitem		@25				
+ic_errormsg		@27				
+ic_close		@28				
+ic_getfileparts		@29				
+ic_terminate		@30				
+ic_createsessgrp		@31				
+ic_deletesessgrp		@32				
+ic_createprofile		@33				
+ic_deleteprofile		@34				
+ic_createrole		@35				
+ic_deleterole		@36				
+ic_createdbuser		@37				
+ic_deletedbuser		@38				
+ic_createuser		@39				
+ic_deleteuser		@40				
+ic_createloc		@41				
+ic_deleteloc		@42				
+ic_createbu		@43				
+ic_deletebu		@44				
+ic_createdoc		@45				
+ic_deletedoc		@46				
+ic_assocunitrole		@47				
+ic_releaseunitrole		@48				
+ic_assocprofilerole		@49				
+ic_releaseprofilerole		@50				
+ic_retvariable		@51				
+ic_setvariable		@52				
+stk_alloc		@53				
+stk_free		@54				
+stk_pushentry		@55				
+stk_popentry		@56				
+stk_gethead		@57				
+stk_gettail		@58				
+stk_getnext		@59				
+stk_getprevious		@60				
+stk_getdata		@61				
+stk_getlength		@62				
+igen_setgenln		@63				
+igen_flush		@64				
+igen_getparent		@65				
+igen_getstart		@66				
+igen_setflags		@67				
+igen_clrflags		@68				
+igen_testflags		@69				

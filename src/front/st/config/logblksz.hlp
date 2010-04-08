@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The block_size resource specifies the size of a log buffer, which is
+  also the size of all I/O to the transaction log.  The block_size is
+  given in Kbytes.  Valid values are 4, 8, 16, or 32 kb.

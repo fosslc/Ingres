@@ -1,0 +1,271 @@
+
+                         Document #: AU-7334,EN
+------------------------------------------------------------------------------
+
+Major subject: data_mgmt    Minor subjects: no_minor
+
+Keywords: 
+
+
+Abstract:
+Worked example of how to change timezone rules, using example
+based on Autralian timezones. Should only be attempted if
+rules have changed from those supplied with product.
+
+Ingres now supplies iiworld.tz which contains all support
+time zones. For more up to date instructions please refer to 
+the readme.html found in this directory.
+
+Expert Note:
+Instructions on changing the timezone rule files.
+
+Contents:
+
+1.	Timezone support in Ingres
+2.	Changing rules for existing timezone
+3.	Adding new timezone
+4.	Format of rule file
+
+
+
+
+
+1.	Timezone support in Ingres
+	------------------------------
+
+	This is an aspect of our SQL2 support. In order to achieve this,
+	dates and adjusted if displayed in another timezone to that which 
+	they are stored in.
+	
+	Timezone data is loaded from a binary file on disk into
+	static tables in server memory with rules for determining the time 
+	adjustments according to local DST etc.
+
+	The timezone files are generated using a utility 'iizic', which is
+	based on a UNIX public domain utility 'zic'. The utility accepts a 
+	text file of rules and identifying information for a given timezone, 
+	which are then compiled into a binary file and stored on disk. 
+	Rule file format is also public domain POSIX/TZ format, and is 
+	decribed in more detail below. A corresponding INGRES utility
+	'iizck' is also supplied to read back the contents of a binary file.
+
+	Ingres uses the Ingres symbol II_TIMEZONE_NAME to identify
+	the TZ of an installation. This will use, by default, the binary
+	file at $II_SYSTEM/ingres/files/zoneinfo/<timezone-group>/<timezone-name>,
+	but this can be overridden (for local user or installation as a whole)
+	by variable II_TIMEZONE_FILE.  II_TIMEZONE_NAME may also be overriden
+	by a local user.
+
+
+
+2.	Changing rules for existing timezone
+	------------------------------------
+
+1)  Save ALL timzeone files which you wish to change.
+
+	Thse will be found at $II_SYSTEM/ingres/files/zoneinfo/*/*
+	
+2) Generate the new timezone rule files using the file below:
+
+	iizic -d /some/directory australasia.tz
+
+   Two directories, "astrl" and "sp" should be created. 
+
+3) If you want you can check the new files by using iizck, 
+   for example:
+
+	iizck -f /some/directory/astrl/qnslnd
+
+4) Bring Ingres down using ingstop.
+
+5) Substitute the new files into the zoneinfo directory, 
+   for example:
+
+	cd $II_SYSTEM/ingres/files/zoneinfo/astrl
+	mv qnslnd qnslnd.save
+	cp /some/directory/astrl/qnslnd .
+
+6) Restart Ingres using ingstart.
+
+
+3.	Adding new timezone
+	-------------------
+
+	This requires changes to:
+
+	$II_SYSTEM/ingres/files/tz.crs
+	$II_SYSTEM/ingres/files/config.dat
+
+	and should not be attempted without consulting Ingres support.
+
+	If you change the timezone name, you will need to
+	change II_TIMEZONE_NAME in the symbol table while Ingres is down.  
+
+4.	Format of rule file
+	-------------------
+	
+4.1	Contents
+	--------
+
+	4.2		Composition of lines
+	4.3		Rule lines
+	4.4		Zone lines
+	
+	
+4.2	Composition of lines
+	--------------------
+
+	 Input lines are made up of  fields.   Fields  are  separated
+     by white space characters.  Leading/ trailing white space 
+	 is  ignored.  White space characters and sharp characters
+     may be enclosed in ` "' (double quotes) if  they're  to
+     be  used  as part of a field.
+
+     An  `#' (unquoted sharp character) in the input introduces a
+     comment which extends to the end of the line the sharp 
+	 character appears on.  
+	 
+	 Any line that is blank (after comment stripping) is ignored.  
+	 Non-blank lines are expected to be either rule lines or zone lines
+
+4.3	Rule lines
+	----------
+
+    A rule line has the form
+
+          Rule  NAME  FROM  TO    TYPE  IN   ON       AT    SAVE  LETTER/S
+
+    For example:
+
+          Rule  USA   1969  1973  -     Apr  lastSun  2:00  1:00  D
+
+    The fields that make up a rule line are:
+
+     NAME    User-defined name of the set of rules  this
+             rule is part of.
+
+     FROM    First year in which the rule applies. Valid values:
+			 valid year
+			 
+			 minimum (or an abbreviation)    - the minimum
+             year with a representable time value.  
+			
+			maximum  (or  an  abbreviation)  - the maximum year
+             with a representable time value.
+
+     TO      Final year in which the rule applies. Valid values as FROM.
+
+     TYPE    Gives the type of year in which  the  rule  applies.
+
+			 '-' 		all years between FROM and TO
+			 'uspres'	U.S presidential election years
+			 'nonpres'	years other than U.S presidential years
+			 other		valid type for system call 'yearistype()'
+
+     IN      Full name of the month in which the rule takes effect. 
+
+     ON      Gives the  day  on  which the rule takes effect.
+             Recognized forms include:
+
+             5         the fifth of the month
+
+             lastSun
+                       the last Sunday in the month
+
+             lastMon
+                       the last Monday in the month
+
+             Sun>=8
+                       first Sunday on or after the eighth
+
+             Sun<=25
+                       last Sunday on or before the 25th
+
+             Names of days of the  week  may  be  abbreviated  or
+             spelled  out in full.  Note: there must be no spaces
+             within the ON field.
+
+     AT      Gives the time  of  day  at  which  the  rule  takes
+             effect.  Recognized forms include:
+
+             2              time in hours
+
+             2:00           time in hours and minutes
+
+             15:00          24-hour format time (for times  after
+                            noon)
+
+             1:28:14        time in hours, minutes, and seconds
+
+
+     Any of these forms may be followed by the letter  w  if  the
+     given  time  is  local ``wall clock'' time or s if the given
+     time is local ``standard'' time; in the absence of w  or  s,
+     wall clock time is assumed.
+
+     SAVE Gives the amount of time to be added to local  standard
+          time  when  the  rule is in effect.  This field has the
+          same format as the AT field (although, of course, the w
+          and s suffixes are not used).
+
+     LETTER/S
+          Gives the ``variable part'' (for example, the ``S''  or
+          ``D'' in ``EST'' or ``EDT'') of time zone abbreviations
+          to be used when this rule is in effect.  If this  field
+          is `-', the variable part is null.
+
+
+4.4	Format of zone line
+	-------------------
+	
+	A zone line has the form
+
+          Zone  NAME                  GMTOFF  RULES/SAVE  FORMAT  [UNTIL]
+
+     For example:
+
+Zone  Australia/South-west  9:30    Aus         CST     1987 Mar 15 2:00
+
+     The fields that make up a zone line are:
+
+     NAME  The name of the time zone.  This is the name  used  in
+           creating  the time conversion information file for the
+           zone.
+
+     GMTOFF
+           The amount of time to add to GMT to get standard  time
+           in  this  zone.  This field has the same format as the
+           AT and SAVE fields of rule lines; begin the field with
+           a minus sign if time must be subtracted from GMT.
+
+     RULES/SAVE
+           The name of the rule(s) that apply in  the  time  zone
+           or,  alternately,  an  amount  of time to add to local
+           standard time.  If this field  is  `-'  then  standard
+           time always applies in the time zone.
+
+     FORMAT
+           The format for time zone abbreviations  in  this  time
+           zone.  The pair of characters %s is used to show where
+           the ``variable part'' of the  time  zone  abbreviation
+           goes.   UNTIL  The time at which the GMT offset or the
+           rule(s) change for a location.  It is specified  as  a
+           year,  a  month, a day, and a time of day.  If this is
+           specified, the time zone information is generated from
+           the  given  GMT  offset and rule change until the time
+           specified.
+
+           The next line must be a  ``continuation''  line;  this
+           has  the  same  form  as  a  zone line except that the
+           string ``Zone'' and the name are omitted, as the  con-
+           tinuation  line will place information starting at the
+           time specified as the UNTIL field in the previous line
+           in  the  file used by the previous line.  Continuation
+           lines may contain an UNTIL field, just as  zone  lines
+           do,  indicating  that  the next line is a further con-
+           tinuation.
+
+4.5	Examples
+	--------
+
+	See file 'australasia.tz' in this directory.

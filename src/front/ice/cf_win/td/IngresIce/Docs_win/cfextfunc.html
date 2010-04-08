@@ -1,0 +1,488 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word 9">
+<meta name=Originator content="Microsoft Word 9">
+<link rel=File-List href="./cfextfunc_files/filelist.xml">
+<title>FUNCTION Keyword</title>
+<!--[if gte mso 9]><xml>
+ <o:DocumentProperties>
+  <o:Author>Raymond Fan</o:Author>
+  <o:Template>Normal</o:Template>
+  <o:LastAuthor>Raymond Fan</o:LastAuthor>
+  <o:Revision>9</o:Revision>
+  <o:TotalTime>24</o:TotalTime>
+  <o:Created>1999-12-16T17:06:00Z</o:Created>
+  <o:LastSaved>2000-10-03T09:54:00Z</o:LastSaved>
+  <o:Pages>1</o:Pages>
+  <o:Words>288</o:Words>
+  <o:Characters>1642</o:Characters>
+  <o:Company>Ingres Corporation</o:Company>
+  <o:Lines>13</o:Lines>
+  <o:Paragraphs>3</o:Paragraphs>
+  <o:CharactersWithSpaces>2016</o:CharactersWithSpaces>
+  <o:Version>9.2720</o:Version>
+ </o:DocumentProperties>
+</xml><![endif]-->
+<style>
+<!--
+ /* Font Definitions */
+@font-face
+	{font-family:Courier;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:modern;
+	mso-font-format:other;
+	mso-font-pitch:fixed;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:AvantGarde;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:swiss;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:Palatino;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-alt:"Book Antiqua";
+	mso-font-charset:0;
+	mso-generic-font-family:roman;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+ /* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{mso-style-parent:"";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	font-family:"Times New Roman";
+	mso-fareast-font-family:"Times New Roman";}
+h1
+	{mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:1;
+	font-size:16.0pt;
+	font-family:Arial;
+	mso-font-kerning:16.0pt;}
+h2
+	{mso-style-parent:"Heading 1";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:14.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:2;
+	tab-stops:48.0pt;
+	font-size:12.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+h3
+	{mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:3;
+	font-size:13.0pt;
+	font-family:Arial;}
+h4
+	{mso-style-parent:"Heading 3";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:4;
+	tab-stops:48.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+p.NormalLeadin, li.NormalLeadin, div.NormalLeadin
+	{mso-style-name:NormalLeadin;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalLeft, li.NormalLeft, div.NormalLeft
+	{mso-style-name:NormalLeft;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	text-indent:-1.5in;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.extraspace, li.extraspace, div.extraspace
+	{mso-style-name:"extra space";
+	mso-style-next:Normal;
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalTable, li.NormalTable, div.NormalTable
+	{mso-style-name:NormalTable;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.label1, li.label1, div.label1
+	{mso-style-name:label1;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tablecolhdright, li.tablecolhdright, div.tablecolhdright
+	{mso-style-name:"table colhd \(right\)";
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecolhdleft, li.tablecolhdleft, div.tablecolhdleft
+	{mso-style-name:"table colhd \(left\)";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tableright, li.tableright, div.tableright
+	{mso-style-name:"table \(right\)";
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tableleft, li.tableleft, div.tableleft
+	{mso-style-name:"table \(left\)";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.codefirst, li.codefirst, div.codefirst
+	{mso-style-name:codefirst;
+	mso-style-next:Normal;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.code, li.code, div.code
+	{mso-style-name:code;
+	mso-style-parent:codefirst;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+@page Section1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.25in 1.0in 1.25in;
+	mso-header-margin:.5in;
+	mso-footer-margin:.5in;
+	mso-paper-source:0;}
+div.Section1
+	{page:Section1;}
+-->
+</style>
+<!--
+    Name: cfextfunc.html
+##
+##  Description:
+##      ColdFusion Studio help file for ICE extension function macro.
+##
+##  History:
+##      03-Oct-2000 (fanra01)
+##          Bug 102784
+##          Created based on cfFunction.html.
+##
+-->
+</head>
+
+<body lang=EN-GB style='tab-interval:.5in'>
+
+<div class=Section1>
+
+<h2 style='line-height:14.0pt;mso-line-height-rule:exactly'><span lang=EN-US
+style='mso-ansi-language:EN-US'>FUNCTION Keyword</span><!--[if supportFields]><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-element:field-begin'></span>
+tc &quot;FUNCTION Keyword&quot; \L 3 </span><![endif]--><!--[if supportFields]><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-element:field-end'></span></span><![endif]--><span
+lang=EN-US style='mso-ansi-language:EN-US'><o:p></o:p></span></h2>
+
+<h4 style='line-height:12.0pt;mso-line-height-rule:exactly'><span lang=EN-US
+style='mso-ansi-language:EN-US'>Purpose<o:p></o:p></span></h4>
+
+<p class=NormalLeadin style='margin-top:12.0pt;mso-outline-level:1'><span
+lang=EN-US style='mso-ansi-language:EN-US'>Invokes the specified Ingres/ICE
+extension function.<o:p></o:p></span></p>
+
+<h4 style='line-height:12.0pt;mso-line-height-rule:exactly'><span lang=EN-US
+style='mso-ansi-language:EN-US'>Syntax<o:p></o:p></span></h4>
+
+<table border=0 cellspacing=0 cellpadding=0 style='border-collapse:collapse;
+ mso-padding-alt:0in 6.0pt 0in 6.0pt'>
+ <tr>
+  <td width=144 valign=top style='width:1.5in;padding:0in 6.0pt 0in 6.0pt'>
+  <p class=label1>For Extension Functions</p>
+  </td>
+  <td width=400 valign=top style='width:300.0pt;padding:0in 6.0pt 0in 6.0pt'>
+  <p class=NormalTable style='tab-stops:.25in'><b style='mso-bidi-font-weight:
+  normal'>&lt;!-- #ICE [REPEAT] FUNCTION=<br>
+  <span style='mso-tab-count:1'>        </span></b><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span></b>[<i style='mso-bidi-font-style:
+  normal'>library_name</i><b style='mso-bidi-font-weight:normal'>.</b>]<i
+  style='mso-bidi-font-style:normal'>function_name</i><b style='mso-bidi-font-weight:
+  normal'>?</b>{<i style='mso-bidi-font-style:normal'>variable_name</i><b
+  style='mso-bidi-font-weight:normal'>=</b><i style='mso-bidi-font-style:normal'>value</i>}[<b
+  style='mso-bidi-font-weight:normal'>&amp;</b>...]<b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span></b><br>
+  <span style='mso-tab-count:1'>        </span>[<b style='mso-bidi-font-weight:
+  normal'>HTML=</b><b style='mso-bidi-font-weight:normal'><span
+  style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:normal'>HTML
+  text with variables</i><b style='mso-bidi-font-weight:normal'><span
+  style='font-family:Courier'>`</span></b>]<br>
+  <b style='mso-bidi-font-weight:normal'>--&gt;</b></p>
+  </td>
+ </tr>
+ <tr>
+  <td width=144 valign=top style='width:1.5in;padding:0in 6.0pt 0in 6.0pt'>
+  <p class=label1><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></p>
+  </td>
+  <td width=400 valign=top style='width:300.0pt;padding:0in 6.0pt 0in 6.0pt'>
+  <p class=NormalTable style='tab-stops:.25in'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></p>
+  </td>
+ </tr>
+</table>
+
+<h4 style='line-height:12.0pt;mso-line-height-rule:exactly'><span lang=EN-US
+style='mso-ansi-language:EN-US'>Description<o:p></o:p></span></h4>
+
+<p class=NormalLeft><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+10.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'>Parameters</span><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>                          </span>The
+following table lists the parameters used with the FUNCTION keyword:<o:p></o:p></span></p>
+
+<p class=extraspace><span lang=EN-US style='mso-ansi-language:EN-US'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></span></p>
+
+<table border=0 cellspacing=0 cellpadding=0 style='margin-left:108.4pt;
+ border-collapse:collapse;mso-padding-alt:0in 0in 0in 0in'>
+ <thead>
+  <tr>
+   <td width=152 valign=top style='width:114.0pt;border:none;border-top:solid windowtext 1.5pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tablecolhdleft>Parameter</p>
+   </td>
+   <td width=232 valign=top style='width:174.0pt;border:none;border-top:solid windowtext 1.5pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tablecolhdright>Description</p>
+   </td>
+  </tr>
+  <tr>
+   <td width=152 valign=top style='width:114.0pt;border:none;border-top:solid windowtext 1.5pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tableleft><i style='mso-bidi-font-style:normal'>library_name<o:p></o:p></i></p>
+   </td>
+   <td width=232 valign=top style='width:174.0pt;border:none;border-top:solid windowtext 1.5pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tableright>The name of the library containing the function.<span
+   style="mso-spacerun: yes">  </span>It can be either a DLL (on Windows NT) or
+   shared library (on UNIX).</p>
+   </td>
+  </tr>
+  <tr>
+   <td width=152 valign=top style='width:114.0pt;border-top:solid windowtext .75pt;
+   border-left:none;border-bottom:solid windowtext .75pt;border-right:none;
+   padding:0in 0in 0in 0in'>
+   <p class=tableleft><i style='mso-bidi-font-style:normal'>function_name<o:p></o:p></i></p>
+   </td>
+   <td width=232 valign=top style='width:174.0pt;border-top:solid windowtext .75pt;
+   border-left:none;border-bottom:solid windowtext .75pt;border-right:none;
+   padding:0in 0in 0in 0in'>
+   <p class=tableright>The name of the function.</p>
+   </td>
+  </tr>
+  <tr>
+   <td width=152 valign=top style='width:114.0pt;padding:0in 0in 0in 0in'>
+   <p class=tableleft><i style='mso-bidi-font-style:normal'>variable_name<o:p></o:p></i></p>
+   </td>
+   <td width=232 valign=top style='width:174.0pt;padding:0in 0in 0in 0in'>
+   <p class=tableright>The name of a variable being passed to the function.</p>
+   </td>
+  </tr>
+  <tr>
+   <td width=152 valign=top style='width:114.0pt;border:none;border-top:solid windowtext .75pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tableleft><i style='mso-bidi-font-style:normal'>value<o:p></o:p></i></p>
+   </td>
+   <td width=232 valign=top style='width:174.0pt;border:none;border-top:solid windowtext .75pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tableright>The value assigned to the variable.<span
+   style="mso-spacerun: yes">  </span>For server functions, <i
+   style='mso-bidi-font-style:normal'>value</i> is only specified if the
+   requested action/property combination is associated with an output value.</p>
+   </td>
+  </tr>
+  <tr>
+   <td width=152 valign=top style='width:114.0pt;border-top:solid windowtext .75pt;
+   border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+   padding:0in 0in 0in 0in'>
+   <p class=tableleft><i style='mso-bidi-font-style:normal'>HTML text with
+   variables<o:p></o:p></i></p>
+   </td>
+   <td width=232 valign=top style='width:174.0pt;border-top:solid windowtext .75pt;
+   border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+   padding:0in 0in 0in 0in'>
+   <p class=tableright>Any allowable HTML text.<span style="mso-spacerun:
+   yes">  </span>A format string containing markup tags and column names.<span
+   style="mso-spacerun: yes">  </span>This option provides the ability to describe
+   a line of HTML or markup language syntax and embed within it variable
+   placeholders.</p>
+   </td>
+  </tr>
+ </thead>
+</table>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>Refer to
+the Writing Ingres/ICE Server Extensions section in the “Creating Web
+Applications” chapter for more information on writing extension functions.<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></span></p>
+
+<p class=NormalLeft><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+10.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'>REPEAT Option</span><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>                   </span>The
+REPEAT option allows the recursive parsing of macros.<span style="mso-spacerun:
+yes">  </span>This allows multiple queries and macros to be embedded within a
+single macro.<span style="mso-spacerun: yes">  </span>It must be used in
+conjunction with another macro option and has no meaning when used on its own.<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>Since the
+grave quote (</span><span lang=EN-US style='font-family:Courier;mso-ansi-language:
+EN-US'>`</span><span lang=EN-US style='mso-ansi-language:EN-US'>) and the colon
+(:) characters are used as delimiters, they must be duplicated when used with
+the REPEAT option.<span style="mso-spacerun: yes">  </span>This option has the
+effect of disabling the delimiting effect when only one delimiter is used.<o:p></o:p></span></p>
+
+<h4><span lang=EN-US style='mso-ansi-language:EN-US'>Example<o:p></o:p></span></h4>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>The
+following example invokes the “newOrder” Ingres/ICE extension function, which
+obtains an order number and assigns the returned value to the e_orderNumber
+session variable.<o:p></o:p></span></p>
+
+<p class=codefirst style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;!-- #ICE REPEAT
+FUNCTION=`play_NewOrder.newOrder`<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>HTML=`&lt;!--
+#ICE DECLARE=``session.e_orderNumber=:out_orderNumber``--&gt;`<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>--&gt;<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></span></p>
+
+</div>
+
+</body>
+
+</html>

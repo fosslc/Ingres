@@ -1,0 +1,42 @@
+	.title	TMtostr
+;
+;	TMtostr -- change the number of seconds from 1/1/70 to the 64 bit
+;		VMS time structure and then convert it to an ascii string.
+;	history
+;		VMS CL 10/3/83 -- (dd)
+;		02-nov-92 (dkh)
+;		TMtostr.mar was passing stack storage that it didn't allocate which
+;		led to an AV on the alpha.
+;		04-may-95 (albany)
+;		    Integrated markg's change from the 6.4 AXP/VMS CL:
+;			16-nov-1994 (markg)
+;			Changed psect attributes so as not to conflict with other
+;			$code$ psects.
+;		16-may-95 (albany)
+;	    	    Really update psect attributes to be in line with other
+;	    	    CL psects.
+;
+	.psect	$code$	pic,con,rel,lcl,shr,exe,nord,nowrt,novec,4
+
+	.entry	TMtostr,0
+	emul	#10000000,4(ap),#0,r0	; get vms time
+	addl2	#1273708544,r0
+	adwc	#8164711,r1
+	movq	r0,-(sp)
+	pushl	8(ap)
+	pushl	#24
+	pushl	#0							; added 02-nov-92 (dkh)
+	clrl	-(sp)
+	pushal	-8(fp)
+	pushal	-16(fp)
+	pushaw	-20(fp)
+	calls	#4,g^sys$asctim
+	blbc	r0,error
+	movl	8(ap),r1
+	clrb	20(r1)
+	popr	#^m<r0>
+	ret
+error:
+	mcoml	#0,r0
+	ret
+	.end

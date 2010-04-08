@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abfflst.hlp, help at the pop-up warning users that the application 
+/#-- flow diagram has been changed by someone else.
+/#-- 
+The application flow diagram has been changed by someone else editing
+this application at the same time.  You may choose to have the diagram
+updated to reflect the change.  Since new frames may have been added
+or existing frames removed, it may be beneficial to see the changes.
+
+Select OK to update the application flow diagram, or select Cancel to
+leave the current display alone.

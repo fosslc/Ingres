@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abprvpwd.hlp, help for the confirmation pop-up asking whether to reuse
+/#-- the previous role password
+/#-- 
+You are building an application to run under the role shown.  You have 
+previously entered a password for this role.  You are being asked whether
+to reuse the password you entered last time, or to enter a different 
+password.  Choose "Yes" or "No", and press OK.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        OK                      Select "Yes", to reuse the previous 
+                                password, or "No", to enter a new password.
+
+        Cancel                  Cancel building the application.
+
+        Help                    Print this message.

@@ -1,0 +1,37 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for abf_patch
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modifed to generic.
+**	xx-xxx-1993 (tyler)
+**		Cleaned up.
+*/
+
+/*
+**===========================================================================
+** advisor notes
+** -------------
+**===========================================================================
+*/
+
+PART   abf_patch
+
+/*
+** ingres!sig!abf_patch
+*/
+
+   DIRECTORY ingres!sig!abf_patch
+# ifdef VMS
+   BUILD_DIR (sig_path)!abf_patch!abf_patch
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!sig!abf_patch
+# endif /* VMS */
+      FILE abf_patch.quel
+      FILE abf_patch.sql
+      FILE read.me

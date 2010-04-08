@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The resource_limit resource is the maximum number of resource entries
+  that can be locked by the locking system.  A resource is any object
+  that is locked.

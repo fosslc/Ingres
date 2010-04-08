@@ -1,0 +1,28 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##      28-Mar-2003 (fanra01)
+##          Bug 109944
+##          Variable value is returned correctly with the correct number of
+##          delimited colons.
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Server variables&submit=actVar.html` -->
+		<TABLE BORDER=0>
+			<!-- #ICE REPEAT VAR=`
+			<TR>
+				<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">
+				<INPUT TYPE="HIDDEN" NAME="name" VALUE=":name">
+				<TD>Name:</TD>
+				<TD>:name</TD>
+			</TR>
+			<TR>
+				<TD>Value: </TD>
+				<TD><INPUT NAME="value" MAXLENGTH="255" SIZE="50" VALUE="<!-- #ICE VAR=``::::name`` -->">
+			</TR>`
+			-->
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

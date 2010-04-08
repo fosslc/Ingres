@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How a Profile Is Removed </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="DELETE statement, Profile function">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body>
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="1682.html" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="1663.html" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How a Profile Is Removed</h4>
+<p class="bodytext">Clicking the Remove button in the application triggers the execution of the profileRemoveButton_Click event handler.</p>
+<p class="bodytext"><strong class="bold">Note:</strong> This example uses the ingresDeleteCommand6, which was created when the ingresDataAdapter6 was created.</p>
+<p class="bodytext">The query is as follows: </p>
+<p class="codefirst">DELETE FROM user_profile WHERE up_email = ?</p>
+<p class="bodytext">You can write this query using the Query Designer for the IngresCommand by changing the CommandText property, or assign them directly to the IngresCommand CommandText property as a string.</p>
+<p class="bodytext">The value selected in the profileEmailComboBox is used to identify the profile record for deletion.</p>
+<p class="bodytext">A transaction is defined to allow programmatic transaction control of the deletion. The row is deleted, but the change is not committed until a confirmation is received from the dialogue.</p>
+<p class="bodytext">A transaction is defined for the session and assigned to the delete command. A commit or rollback is not performed until the respective method is invoked.</p>
+<p class="codefirst">public int ProfileRemove(DataSet profileDataSet, string profileAddr)</p>
+<p class="code">{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;int rowsDeleted = 0;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;IngresParameter email = new IngresParameter(&quot;up_email&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IngresType.NChar);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;try</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IngresConnection connection;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IngresTransaction delete;</p>
+<p class="code">&nbsp;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;email.Value = profileAddr;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;connection = ingresDataAdapter6.DeleteCommand.Connection;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;connection.Open();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delete = connection.BeginTransaction();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.DeleteCommand.Prepare();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.DeleteCommand.Parameters.Clear();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter6.DeleteCommand.Parameters.Add(email);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rowsDeleted = ingresDataAdapter6.DeleteCommand.ExecuteNonQuery();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DialogResult result = MessageBox.Show(&quot;Profile: &quot; + profileAddr,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;Remove profile&quot;, MessageBoxButtons.YesNo,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MessageBoxIcon.Warning);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (result == DialogResult.No)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rowsDeleted = 0;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delete.Rollback();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else if (result == DialogResult.Yes)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delete.Commit();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;connection.Close();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;catch (IngresException ex)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DialogResult result = DisplayError(ex);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (result != DialogResult.OK)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;throw;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;return (rowsDeleted);</p>
+<p class="code">}</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2006 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

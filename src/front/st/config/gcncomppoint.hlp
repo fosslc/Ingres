@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Percentage of active (valid) records in the Name Server database.  When 
+ the percentage of active records falls below this point, the Name Server 
+ will delete the inactive records.

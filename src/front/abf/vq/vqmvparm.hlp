@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqmvparm.hlp, help on moving parameter positions.
+/#-- 
+Moving parameters is a way to control the order in which the parameters
+are passed.  Generally, the order is only important when calling a 3GL
+procedure, since 4GL parameter passing is position independent.  To move
+the currently selected parameter, move the cursor to the row above which 
+you want to insert the selected parameter pair.  Select "Place" to move
+the parameters into the new position.
+
+The menuitems are:
+
+  Place         Moves the parameters into the indicated position.
+  Help          Displays this help text.
+  End           Cancels the operation and returns to the previous screen.

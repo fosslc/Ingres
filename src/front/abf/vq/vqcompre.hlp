@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqcompre.hlp, behind compressed display of the VQ Editor.
+Visual Query Editor                                                             
+Frame: addparts                                                                 
+
+          +-----------<Append>+           
+  +-------|parts              |           
+  |       +-------------------+         
+  |                                   
+  |       +-----------<Lookup>+                                                 
+  +-------|suppliers          |           
+          +-------------------+           
+                                         
+This screen shows a compressed display of the frame definition. The frame
+name is in the screen's upper-left corner. Here, the frame is "addparts."
+
+The compressed display shows how the tables in the query are related. In 
+this example, "Suppliers" is a Lookup table for the master table, "Parts."
+
+To go back to the full display, select End from the menu.

@@ -1,0 +1,144 @@
+#
+# Jamfile file for front!rep!repmgr
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front rep repmgr ;
+
+IISUBSYS front rep repmgr ;
+
+
+IIBINEXE repmod : repmod.sc ;
+IINEEDLIBS repmod :  REPMGRLIB REPCOMNLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS repmod : II_copyright malloc ;
+
+IIBINEXE repdbcfg : repdbcfg.sc ;
+IINEEDLIBS repdbcfg :  REPMGRLIB REPCOMNLIB 
+	SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS repdbcfg : II_copyright malloc ;
+
+IIBINEXE repcfg : repcfg.sc ;
+IINEEDLIBS repcfg :  REPMGRLIB REPCOMNLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW repcfg : SHEMBEDLIB SHADFLIB ;
+IIUNDEFS repcfg : II_copyright malloc ;
+
+IIBINEXE repcat : repcat.sc ;
+IINEEDLIBS repcat :  REPMGRLIB REPCOMNLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS repcat : II_copyright malloc ;
+
+IIBINEXE reconcil : reconcil.sc ;
+IINEEDLIBS reconcil :  REPMGRLIB REPCOMNLIB SHFRAMELIB 
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS reconcil : II_copyright malloc ;
+
+IIBINEXE dereplic : dereplic.sc ;
+IINEEDLIBS dereplic :  REPMGRLIB REPCOMNLIB SHFRAMELIB 
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS dereplic : II_copyright malloc ;
+
+IIBINEXE ddmovcfg : ddmovcfg.sc ;
+IINEEDLIBS ddmovcfg :  REPMGRLIB REPCOMNLIB SHFRAMELIB 
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS ddmovcfg : II_copyright malloc ;
+
+IIBINEXE ddgensup : ddgensup.sc ;
+IINEEDLIBS ddgensup :  REPMGRLIB REPCOMNLIB SHFRAMELIB 
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS ddgensup : II_copyright malloc ;
+
+IIBINEXE ddgenrul : ddgenrul.sc ;
+IINEEDLIBS ddgenrul :  REPMGRLIB REPCOMNLIB SHFRAMELIB 
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS ddgenrul : II_copyright malloc ;
+
+IIBINEXE convrep : convrep.sc ;
+IINEEDLIBS convrep :  REPMGRLIB REPCOMNLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS convrep : II_copyright malloc ;
+
+IIBINEXE arcclean : arcclean.sc ;
+IINEEDLIBS arcclean :  REPMGRLIB REPCOMNLIB SHFRAMELIB 
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS arcclean : II_copyright malloc ;
+
+IIBINEXE repmgr : repmgr.qsc ;
+IINEEDLIBS repmgr :  REPMGRLIB REPCOMNLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW repmgr : SHEMBEDLIB SHADFLIB ;
+IIUNDEFS repmgr : II_copyright malloc ;
+
+IIMSGHDR errm.msg ;
+
+IIFORM rmcddact.frm ;
+IIFORM rmcdddbs.frm ;
+IIFORM rmcdddet.frm ;
+IIFORM rmcddpth.frm ;
+IIFORM rmcddsum.frm ;
+IIFORM rmcddtbl.frm ;
+IIFORM rmcfgmnu.frm ;
+IIFORM rmdbdetl.frm ;
+IIFORM rmdbsumm.frm ;
+IIFORM rmdisply.frm ;
+IIFORM rmedtcfg.frm ;
+IIFORM rmevents.frm ;
+IIFORM rmlocldb.frm ;
+IIFORM rmmailct.frm ;
+IIFORM rmmainmn.frm ;
+IIFORM rmmonitr.frm ;
+IIFORM rmmovcfg.frm ;
+IIFORM rmreport.frm ;
+IIFORM rmshwasg.frm ;
+IIFORM rmsndevt.frm ;
+IIFORM rmtbldet.frm ;
+IIFORM rmtblint.frm ;
+IIFORM rmtblsum.frm ;
+
+File $(INGMSG)$(DFS)rmactchg.hlp : rmactchg.hlp ;
+File $(INGMSG)$(DFS)rmasgsho.hlp : rmasgsho.hlp ;
+File $(INGMSG)$(DFS)rmcddbty.hlp : rmcddbty.hlp ;
+File $(INGMSG)$(DFS)rmcdddef.hlp : rmcdddef.hlp ;
+File $(INGMSG)$(DFS)rmcddsad.hlp : rmcddsad.hlp ;
+File $(INGMSG)$(DFS)rmcddsed.hlp : rmcddsed.hlp ;
+File $(INGMSG)$(DFS)rmcddstb.hlp : rmcddstb.hlp ;
+File $(INGMSG)$(DFS)rmcddsum.hlp : rmcddsum.hlp ;
+File $(INGMSG)$(DFS)rmcfgmen.hlp : rmcfgmen.hlp ;
+File $(INGMSG)$(DFS)rmcolmod.hlp : rmcolmod.hlp ;
+File $(INGMSG)$(DFS)rmcrtins.hlp : rmcrtins.hlp ;
+File $(INGMSG)$(DFS)rmdbadd.hlp : rmdbadd.hlp ;
+File $(INGMSG)$(DFS)rmdbedit.hlp : rmdbedit.hlp ;
+File $(INGMSG)$(DFS)rmdbsumm.hlp : rmdbsumm.hlp ;
+File $(INGMSG)$(DFS)rmdppdef.hlp : rmdppdef.hlp ;
+File $(INGMSG)$(DFS)rmedfile.hlp : rmedfile.hlp ;
+File $(INGMSG)$(DFS)rmerrmod.hlp : rmerrmod.hlp ;
+File $(INGMSG)$(DFS)rmevents.hlp : rmevents.hlp ;
+File $(INGMSG)$(DFS)rmevtsnd.hlp : rmevtsnd.hlp ;
+File $(INGMSG)$(DFS)rmmaills.hlp : rmmaills.hlp ;
+File $(INGMSG)$(DFS)rmmonitr.hlp : rmmonitr.hlp ;
+File $(INGMSG)$(DFS)rmmovcfg.hlp : rmmovcfg.hlp ;
+File $(INGMSG)$(DFS)rmpaths.hlp : rmpaths.hlp ;
+File $(INGMSG)$(DFS)rmrepmgr.hlp : rmrepmgr.hlp ;
+File $(INGMSG)$(DFS)rmreport.hlp : rmreport.hlp ;
+File $(INGMSG)$(DFS)rmtargty.hlp : rmtargty.hlp ;
+File $(INGMSG)$(DFS)rmtbledt.hlp : rmtbledt.hlp ;
+File $(INGMSG)$(DFS)rmtblint.hlp : rmtblint.hlp ;
+File $(INGMSG)$(DFS)rmtblsum.hlp : rmtblsum.hlp ;
+
+IILIBRARY REPMGRLIB : tblrules.sc tblregst.sc tblprocs.sc
+	tblinteg.sc tblfetch.sc tblexist.sc tablerpt.sc sqlgen.sc
+	repevent.sc printcol.sc pathrpt.sc move1cfg.sc moddict.sc
+	loaddict.sc issvrrun.sc expfunc.sc dropobj.sc deregtbl.sc
+	ddbamsg.sc dbrpt.sc dbdelete.sc dbcfgchg.sc crsuptbl.sc
+	crrepkey.sc collrpt.sc colllist.sc ckdstcfg.sc cddsdel.sc
+	cddsacti.sc tblsumm.qsc tblsave.qsc tblintgt.qsc tbledit.qsc
+	movecfg.qsc monitor.qsc maillist.qsc filedisp.qsc evtsend.qsc
+	evtlist.qsc editcfg.qsc dbsumm.qsc dbedit.qsc dbaddloc.qsc
+	dbadd.qsc cddstbls.qsc cddssumm.qsc cddspath.qsc cddsedit.qsc
+	cddsdb.qsc cddsadd.qsc asgnshow.qsc activate.qsc reports.qc
+	cfgmenu.qc targtype.c svgenlog.c optexist.c gtsvrdir.c
+	genopen.c exptoken.c ;
+

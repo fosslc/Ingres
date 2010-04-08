@@ -1,0 +1,5 @@
+Ingres 32bit support
+
+Ingres 32bit support allows legacy 32bit application
+to link and run against Ingres on platforms which are traditionally 64bit.
+

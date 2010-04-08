@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The full_limit resource specifies the percentage of the transaction
+  log(s) which must be full before the logging system stops processing
+  additional transactions.  full_limit is always larger than the
+  force_abort_limit, so rollback of the oldest pending transaction
+  will already be in progress.
+

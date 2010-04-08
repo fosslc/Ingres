@@ -1,0 +1,74 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ooclass.h>
+# include	<cu.h>
+
+/**
+** Name:	abfadd.qc	- Post add function for ABF.
+**
+** Description:
+**	This file contains the post add function for abfobjects.
+**
+**	IICUpaaPostAbfobjectAdd
+**
+** History:
+**	17-aug-1987 (Joe)
+**		Initial Version.
+** 	3/90 (bobm)
+**		Emerald changes.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+static STATUS (*Metastamp)() = NULL;
+
+/*
+** metastamp registers a handler to be used to post-process every
+** metaframe add.
+*/
+IICUmsMetaStamp(fn)
+STATUS (*fn)();
+{
+	Metastamp = fn;
+}
+
+STATUS
+IICUpaaPostAbfobjectAdd(class, level, name, ids)
+OOID	class;
+i4	level;
+char	*name;
+IDSTACK	*ids;
+{
+    STATUS	rval;
+
+    switch(class)
+    {
+    case OC_BRWFRAME:
+    case OC_UPDFRAME:
+    case OC_APPFRAME:
+    case OC_MUFRAME:
+	if (Metastamp != NULL)
+	    _VOID_ (*Metastamp)(ids->idstk[1]);
+
+	/* FALL THROUGH */
+
+    case OC_OSLPROC:
+    case OC_OSLFRAME:
+
+	if ( (rval = IIAMafrAddFidRecord(name, ids->idstk[1], ids->idstk[0])) 
+		!= OK )
+		return rval;
+    }
+    return OK;
+}

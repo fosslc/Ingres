@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!embed!basic
+#
+
+SubDir ING_SRC front embed basic ;
+
+IISUBSYS front embed basic ;
+
+IIBINEXE eqb : basmain.c ;
+IINEEDLIBS eqb : BASICLIB EQUELLIB SHQLIB SHCOMPATLIB ;
+
+IILIBRARY BASICLIB : basic.sy btokens.st basutils.c basgen.c ;

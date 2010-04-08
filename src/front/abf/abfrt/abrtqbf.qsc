@@ -1,0 +1,106 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+/**
+** Name:	abfrtsqbf.qc-	Run a qbf frame.
+**
+** Description:
+**	Contains the runtime code to run a qbf frame.
+**
+** History:
+**	14-aug-1986 (Joe)
+**		Extracted from abfrts for PC overlay work.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<er.h> 
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<adf.h>
+# include	<feconfig.h>
+# include	<abfcnsts.h>
+# include	<abftrace.h>
+# include	<fdesc.h>
+# include	<abfrts.h>
+
+/*{
+** Name:	abrtsqbf() -	Call a qbf image from ABF.
+**
+**	Parameters:
+**		frm		{ABRTSFRM *}
+**			The frame being called.
+**
+**		param		{ABRTSPRM *}
+**			The parameters.
+**			Ignored by ABF for now.
+**
+**	Called by:
+**		abrtscall
+**
+**	History:
+**		Written (jrc)
+**		Modified (nml) 10/18/83 to reflect changes in calls
+**					to abexeprog().
+**		Modified (jrc) 8/23/84 Added code to run a QDEF.
+**	03/22/91 (emerson)
+**		Fix interoperability bug 36589:
+**		Change all calls to abexeprog to remove the 3rd parameter
+**		so that images generated in 6.3/02 will continue to work.
+**		(Generated C code may contain calls to abexeprog).
+**		This parameter was introduced in 6.3/03/00, but all calls
+**		to abexeprog specified it as TRUE.  See abfrt/abrtexe.c
+**		for further details.
+**
+*/
+VOID
+abrtsqbf(frm, param)
+ABRTSFRM	*frm;
+ABRTSPRM	*param;
+##{
+	register ABRTSQBF	*qbffrm = &(frm->abrfrqbf);
+	ABRTSFO			*form;
+	i4			argcnt;
+	char			*args[3];
+	char			abexestr[256];
+	char			combuf[ABCOMSIZE+1];
+
+	argcnt = 0;
+	args[argcnt] = qbffrm->abrqfrelid;
+	if (! qbffrm->abrqfjdef)
+		STcopy(ERx("table = %S"), abexestr);
+	else
+		STcopy(ERx("joindef = %S"), abexestr);
+	form = frm->abrform; 
+	if ( form != NULL )
+	{
+		argcnt++;
+		args[argcnt] = form->abrfoname;
+		STcat(abexestr, ERx(", form = %S"));
+	}
+	if (qbffrm->abrqfcomline != NULL && *(qbffrm->abrqfcomline) != '\0')
+	{
+		/*
+		** BUG 3729
+		**
+		** Pass combuf, rather than qbffrm->abrqfcomline itself, so
+		** that multiple entries in the command line will be preserved.
+		*/
+		STcopy(qbffrm->abrqfcomline, combuf);
+		argcnt++;
+		args[argcnt] = combuf;
+		STcat(abexestr, ERx(", flags = %S"));
+	}
+	abexeprog(ERx("qbf"), abexestr,
+			++argcnt, args[0], args[1], args[2]);
+##	clear screen
+##}

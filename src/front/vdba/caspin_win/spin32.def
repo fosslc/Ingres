@@ -1,0 +1,58 @@
+;*****************************************************************************
+;  SPIN32.DEF
+; 
+;  Module Definition file for linking INGR3SPN.DLL under Win32.
+;*****************************************************************************
+
+LIBRARY     INGR3SPN
+
+;DESCRIPTION 'Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved. - Spin Custom Control'
+
+;DATA        READ WRITE
+
+HEAPSIZE    0x10000 0x5000
+
+EXPORTS     CustomControlInfoA       @1
+            ShowSpinStyleDlg         @2
+            SpinSizeToText           @3
+            SpinWndProc              @4
+            SpinStyleDlgProc         @5
+            SpinGetVersion           @20
+            SpinAssociateSet         @21
+            SpinAssociateGet         @22
+            SpinStyleSet             @23
+            SpinStyleGet             @24
+            SpinStyleClear           @25
+            SpinAttribSet            @26
+            SpinAttribGet            @27
+            SpinAttribClear          @28
+            SpinCursorSet            @29
+            SpinColorSet             @30
+            SpinColorGet             @31
+            SpinRangeSet             @32
+            SpinRangeMinGet          @33
+            SpinRangeMaxGet          @34
+            SpinPositionSet          @35
+            SpinPositionGet          @36
+            SpinPositionInc          @37
+            SpinPositionDec          @38
+            SpinTopBmpSet            @39
+            SpinBottomBmpSet         @40
+            SpinLeftBmpSet           @41
+            SpinRightBmpSet          @42
+            SpinNotifyAssoc          @43
+            SpinNotifyGet            @44
+            SpinNotifyDone           @45
+            SpinSNPosGet             @46
+            SpinStrAdd               @47
+            SpinStrDelete            @48
+            SpinStrInsert            @49
+            SpinStrFileNameAdd       @50
+            SpinStrPrefixFind        @51
+            SpinStrExactFind         @52
+            SpinStrCountGet          @53
+            SpinStrGet               @54
+            SpinStrLenGet            @55
+            SpinStrDataSet           @56
+            SpinStrDataGet           @57
+            SpinStrContentReset      @58

@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!ulf!ult
+#
+
+SubDir ING_SRC back ulf ult ;
+
+IISUBSYS back ulf ult ;
+
+
+IILIBRARY ULFLIB : ultrace.c ;
+
+IILIBOBJECT ultrace.c ;

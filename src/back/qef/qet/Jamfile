@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!qef!qet
+#
+
+SubDir ING_SRC back qef qet ;
+
+IISUBSYS back qef qet ;
+
+
+IILIBRARY QEFLIB : qettpf.c qet.c ;
+

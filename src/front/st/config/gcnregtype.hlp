@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Name Server registry type.  Set to one of the following values:
+ 	none - No registry type
+ 	slave - Slave
+ 	peer - Peer
+ 	master - Master
+ The registry type is used to provide information about multiple
+ installations.  The master name server holds information about the
+ slaves.  If all the installations are set to the peer registry type,
+ the master installation is negotiated at runtime.  The default is
+ "none".

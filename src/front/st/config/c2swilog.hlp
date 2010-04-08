@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The on_switch_log parameter is used to specify the FULL filename of the user
+ utility to execute:
+
+	- whenever an audit log has been filled
+	- prior to a new log being initialized 
+
+ The utility will be passed the filenames if the new and old audit logs.
+ 

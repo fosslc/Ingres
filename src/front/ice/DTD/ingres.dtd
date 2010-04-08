@@ -1,0 +1,226 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+
+<!-- 
+** Copyright (c) 2004 Ingres Corporation 
+## 
+##  History:
+##    15-Dec-2000 (peeje01)
+##      Created
+##    27-Apr-2001 (peeje01)
+##      Constraints added
+##    21-Dec-2001 (hanch04)
+##	Updated to match genxml's dtd
+##	Added precision, scale, persistence, unique_keys
+##    24-Jan-2002 (hanch04)
+##	Removed dt:type that was going to be used for blobs, but microsoft IE
+##	does not support it.
+##    19-Mar-2002 (gupsh01)
+##	Made changes to match the genxml's dtd.
+##    30-May-2002 (gusph01)
+##	Added new attribute had_default to the meta_column element, 
+##	this will store the information whether the column has any default values
+##	formaly stored by the parameter default_value for the column.
+##	default_value will now store the actual value of the default.
+##
+-->
+<!--
+**  IngresDoc is the root element and should be declared as
+**  the document type.
+-->
+<!ELEMENT IngresDoc (meta_ingres? , table*)>
+
+<!ATTLIST IngresDoc  version CDATA  #REQUIRED >
+<!ELEMENT meta_ingres (meta_table+)>
+
+<!ATTLIST meta_ingres  class     CDATA  #REQUIRED
+                        db_name   CDATA  #IMPLIED
+                        owner     CDATA  #REQUIRED
+                        locale    CDATA  #REQUIRED
+                        schema_nr CDATA  #REQUIRED
+                        table_nr  CDATA  #REQUIRED
+                        version   CDATA  #REQUIRED
+                        view_nr   CDATA  #REQUIRED >
+<!ELEMENT meta_table (meta_column+ , meta_index* , constraints* , table_location*)>
+
+<!ATTLIST meta_table  table_name       CDATA  #REQUIRED
+                       table_owner      CDATA  #REQUIRED
+                       id               CDATA  #REQUIRED
+                       column_nr        CDATA  #REQUIRED
+                       page_size        CDATA  #REQUIRED
+                       row_nr           CDATA  #REQUIRED
+                       locale           CDATA  #IMPLIED
+                       table_type       CDATA  #REQUIRED
+                       allow_duplicates CDATA  #REQUIRED
+                       row_width        CDATA  #REQUIRED
+                       data_compression CDATA  #REQUIRED
+                       key_compression  CDATA  #REQUIRED
+                       journaling       CDATA  #REQUIRED
+                       unique_keys      CDATA  #REQUIRED
+                       table_structure  CDATA  #REQUIRED >
+<!ELEMENT meta_column EMPTY>
+
+<!ATTLIST meta_column  column_name    CDATA  #IMPLIED
+                        column_type    CDATA  #REQUIRED
+                        column_width   CDATA  #IMPLIED
+                        allow_nulls    CDATA  #IMPLIED
+                        has_default    CDATA  #IMPLIED
+                        default_value  CDATA  #IMPLIED
+                        is_key         CDATA  #REQUIRED
+                        key_position   CDATA  #IMPLIED
+                        is_foreign_key CDATA  #IMPLIED
+                        precision      CDATA  #IMPLIED
+                        scale          CDATA  #IMPLIED
+                        column_label   CDATA  #IMPLIED >
+<!ELEMENT meta_index (index_column+)>
+
+<!ATTLIST meta_index  index_name       CDATA  #IMPLIED
+                       column_nr        CDATA  #REQUIRED
+                       page_size        CDATA  #REQUIRED
+                       index_structure  CDATA  #IMPLIED
+                       persistent       CDATA  #IMPLIED
+                       data_compression CDATA  #REQUIRED
+                       key_compression  CDATA  #REQUIRED
+                       unique_keys      CDATA  #IMPLIED >
+<!-- Constraints
+** The supported constraints are:
+**    -unique
+**    -check
+**    -referential
+**    -primaryKey
+**    -foreignKey
+** 
+** In general constraints may be specified at the column or table
+** level. Table level constraints are required where more than one
+** column is involved in the constraint.
+** Constraints share the attribute constraint_name. This means
+** that there can only one definition of the constraint_name 
+** attribute.
+-->
+<!ELEMENT constraints (constraints_unique* , constraints_check* , constraints_referential* , constraints_primaryKey* , constraints_foreignKey*)>
+
+<!-- Unique Constraints
+** A Unique constraint List may contain zero or more unique constraints.
+** Unique Constraints are named at the table level because it
+** is only table level unique constraints that may be named
+** The name attribute for column level unique constraints is irrelevant
+** This implementation, whilst not strictly correct keeps the XML simple
+** The implication is that more than one constraints_unique element 
+** is needed to represent more than one named table level unique constraint.
+-->
+<!ELEMENT constraints_unique (constraint_unique*)>
+
+<!ATTLIST constraints_unique  constraint_name CDATA  #IMPLIED >
+<!-- Unique Constraint
+** A unique constraint is an empty element which has one required
+** attribute, column_name. The attribute column_name is used to
+** specify the column that is to contain unique values. Note that 
+** a UNIQUE column implies that it should also be NOT NULL.
+** The optional attribute constraint_name is used to name the constraint.
+-->
+<!ELEMENT constraint_unique EMPTY>
+
+<!ATTLIST constraint_unique  column_name CDATA  #REQUIRED
+                              level       CDATA  #IMPLIED >
+<!-- Check Constraints
+** A Check constraint List may contain zero or more check constraints.
+** Check constraints may be named at the table or column level.
+** The check constraint is specified as text in the constraint_check
+** element.
+** It would be possible further to specify the syntax of the 
+** check constraint expression if this were considered desirable
+** The optional attribute constraint_name is used to name the constraint.
+-->
+<!ELEMENT constraints_check (constraint_check*)>
+
+<!ATTLIST constraints_check  constraint_name CDATA  #IMPLIED >
+<!-- Check Constraint
+** A check constraint contains text data, specifying the constraint.
+** It has two optional attributes, level and constraint_name. The 
+** level attribute specifies the level of the constraint and may take
+** the valus "table" or "column".
+** The optional attribute constraint_name is used to name the constraint.
+-->
+<!ELEMENT constraint_check (#PCDATA)>
+
+<!ATTLIST constraint_check  level           CDATA  #IMPLIED
+                             constraint_name CDATA  #IMPLIED >
+<!-- Referential Constraints
+** A Referential Constraint List contains zero or more referential constraints.
+** The two attributes are references_table and constraint_name. 
+** The references_table attribute specifies the reference table and the 
+** constraint_name names the constraint.
+-->
+<!ELEMENT constraints_referential (constraint_referential)>
+
+<!ATTLIST constraints_referential  references_table CDATA  #REQUIRED
+                                    constraint_name  CDATA  #IMPLIED >
+<!-- Referential Constraint
+** A check constraint is an empty element with two attributes, all
+** must be specified. The two attributes are local_col
+** and references_col. The attribute local_col specifies the column
+** in the table to which the constraint applies and references_col
+** specifies the column in the referenced table.
+-->
+<!ELEMENT constraint_referential EMPTY>
+
+<!ATTLIST constraint_referential  local_col      CDATA  #REQUIRED
+                                   references_col CDATA  #REQUIRED >
+<!-- Foreign Key Constraints
+** A Foreign Key Constraint List contains zero or more Foreign Key constraints.
+** The attribute is references_table which specifies which table is referenced
+** by the foreign key definition
+-->
+<!ELEMENT constraints_foreignKey (constraint_referential*)>
+
+<!ATTLIST constraints_foreignKey  references_table CDATA  #REQUIRED
+                                   constraint_name  CDATA  #IMPLIED >
+<!-- Foreign Key Constraint
+** A Foreign Key constraint is an empty element with two attributes, all
+** must be specified. The two attributes are local_col,
+** and references_col. The attribute local_col specifies the column
+** in the table to which the constraint applies, and references_col
+** specifies the column in the referenced table. Note that the referenced
+** table is specified in the constraints_foreignKey element.
+-->
+<!ELEMENT constraint_foreignKey EMPTY>
+
+<!ATTLIST constraint_foreignKey  local_col      CDATA  #REQUIRED
+                                  references_col CDATA  #REQUIRED >
+<!-- Primary Key Constraints
+** A Primary Key Constraint List contains zero or more Primary Key constraints.
+-->
+<!ELEMENT constraints_primaryKey (constraint_primaryKey*)>
+
+<!ATTLIST constraints_primaryKey  constraint_name CDATA  #IMPLIED >
+<!-- Primary Key Constraint
+** A Primary Key constraint is an empty element with one mandatory 
+** attributes. The key_col refers to the column that is part
+** of this key constraint.
+-->
+<!ELEMENT constraint_primaryKey EMPTY>
+
+<!ATTLIST constraint_primaryKey  key_col CDATA  #REQUIRED >
+<!ELEMENT table_location EMPTY>
+
+<!ATTLIST table_location  table_path CDATA  #IMPLIED >
+<!ELEMENT table (resultset+)>
+
+<!ATTLIST table  table_name CDATA  #IMPLIED
+                  table_nr   CDATA  #REQUIRED >
+<!ELEMENT row (column+)>
+
+<!ELEMENT column (#PCDATA)>
+
+<!ATTLIST column  column_name CDATA     #IMPLIED
+                   is_null     CDATA     #IMPLIED
+                   a-dtype     NMTOKENS  'is_null boolean' >
+<!ELEMENT resultset (row*)>
+
+<!ATTLIST resultset  row_start   CDATA  #IMPLIED
+                      row_end     CDATA  #IMPLIED
+                      subset_size CDATA  #IMPLIED
+                      row_count   CDATA  #IMPLIED >
+<!ELEMENT index_column (#PCDATA)>
+
+<!ATTLIST index_column  column_name    CDATA  #IMPLIED
+                         index_position CDATA  #IMPLIED >

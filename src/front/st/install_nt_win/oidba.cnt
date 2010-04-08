@@ -1,0 +1,1006 @@
+:Base oidba.hlp
+:Title CA-OpenIngres Database Administrator's Guide
+:Index CA-OpenIngres Database Administrator's Guide =oidba.hlp
+1 CA-OpenIngres Database Administrator's Guide
+2 Preface
+3 Overview=DBPREFNT0000002
+3 Purpose of this Guide=DBPREFNT0000005
+3 Audience=DBPREFNT0000010
+3 Special Considerations
+4 Special Considerations=DBPREFNT0000015
+4 The Knowledge Management Extension=DBPREFNT0000020
+4 C2 Security=DBPREFNT0000025
+4 Enterprise Access Compatibility=DBPREFNT0000030
+3 Conventions
+4 Conventions=DBPREFNT0000035
+4 Entering Data from the Keyboard=DBPREFNT0000040
+4 Statements and Commands
+5 Statements and Commands=DBPREFNT0000045
+5 Terminology=DBPREFNT0000050
+5 Query Languages=DBPREFNT0000055
+5 ISO Entry SQL92=DBPREFNT0000060
+5 Syntax=DBPREFNT0000065
+5 Additional Notation=DBPREFNT0000070
+3 Related Guides
+4 Related Guides=DBPREFNT0000075
+4 CA-OpenROAD Documentation=DBPREFNT0000080
+2 Chapter 1:  CA-OpenIngres Users and Responsibilities
+3 Overview=DB01NT0000000
+3 CA-OpenIngres Users
+4 CA-OpenIngres Users=DB01NT0000010
+4 Operating System Administrator=DB01NT0000015
+4 CA-OpenIngres System Administrator=DB01NT0000020
+4 Database Administrator=DB01NT0000025
+4 End User=DB01NT0000030
+3 Managing Databases
+4 A Summary=DB01NT0000035
+2 Chapter 2:  Authorizing User Access
+3 Overview=DB02NT0000000
+3 The Accessdb Utility
+4 The Accessdb Utility=DB02NT0000010
+4 Starting Up Accessdb=DB02NT0000015
+4 Accessdb Menu Map=DB02NT0000020
+4 Accessdb Start-Up Screen=DB02NT0000025
+3 Databases
+4 Databases=DB02NT0000030
+4 Database Catalog
+5 Database Catalog Screen=DB02NT0000035
+5 Database Catalog Fields=DB02NT0000040
+5 Database Catalog Menu Items=DB02NT0000045
+4 Database Access
+5 Database Access Screen=DB02NT0000050
+5 Database Access Fields=DB02NT0000055
+5 Database Access Menu Items=DB02NT0000060
+4 Database Extensions
+5 Database Extensions Screen=DB02NT0000065
+5 Database Extensions Fields=DB02NT0000070
+5 Database Extensions Menu Items=DB02NT0000075
+4 Database Information
+5 Database Information Screen=DB02NT0000080
+5 Database Information Fields=DB02NT0000085
+5 Database Information Menu Items=DB02NT0000090
+3 Locations
+4 Locations=DB02NT0000095
+4 Location Information
+5 Location Information Screen=DB02NT0000100
+5 Location Information Fields=DB02NT0000105
+5 Location Information Menu Items=DB02NT0000110
+4 Create A Location
+5 Create A Location Screen=DB02NT0000115
+5 Create A Location Fields=DB02NT0000120
+5 Create A Location Menu Items=DB02NT0000125
+4 Edit A Location
+5 Edit A Location Screen=DB02NT0000130
+5 Edit A Location Fields=DB02NT0000135
+5 Edit A Location Menu Items=DB02NT0000140
+3 Users
+4 Users=DB02NT0000145
+4 Users Catalog
+5 Users Catalog Screen=DB02NT0000150
+5 Users Catalog Fields=DB02NT0000155
+5 Users Catalog Menu Items=DB02NT0000160
+4 Create A User
+5 Create A User Screen=DB02NT0000165
+5 Create A User Fields=DB02NT0000170
+5 Create A User Menu Items=DB02NT0000175
+4 User Information
+5 User Information Screen=DB02NT0000180
+5 User Information Fields=DB02NT0000185
+5 User Information Menu Items=DB02NT0000190
+4 SQLscript Pop-Up=DB02NT0000195
+3 Using the Accessdb Utility
+4 Using the Accessdb Utility=DB02NT0000200
+4 Identifying Your Terminal to Accessdb=DB02NT0000205
+4 Authorizing New Users With Accessdb=DB02NT0000210
+4 Modifying an Existing User=DB02NT0000215
+4 Deleting an Existing User=DB02NT0000220
+4 Authorizing Multiple Users with SQLscript=DB02NT0000225
+4 Other Uses for Accessdb=DB02NT0000230
+3 Create User Statement Authorizations
+4 Create User Statement Authorizations=DB02NT0000235
+4 Authorizing New Users With Create User=DB02NT0000240
+4 Editing a User With Alter User=DB02NT0000245
+4 User Privilege Types=DB02NT0000250
+4 Deleting a User With Drop User=DB02NT0000255
+2 Chapter 3:  Creating Databases
+3 Overview=DB03NT0000000
+3 Database Files
+4 Database Files=DB03NT0000010
+4 The Configuration File=DB03NT0000015
+4 The Master Database=DB03NT0000020
+3 Creating a Database
+4 Creating a Database=DB03NT0000025
+4 How Many Databases Can Be Created?=DB03NT0000030
+4 Rules for Naming Databases=DB03NT0000035
+4 The Createdb Command
+5 The Createdb Command=DB03NT0000040
+5 How Createdb Works=DB03NT0000045
+4 Creating a Public Database=DB03NT0000050
+4 Creating a Private Database
+5 Creating a Private Database=DB03NT0000055
+5 Authorizing Access to Private Databases=DB03NT0000060
+5 Changing a Database From Private to Public=DB03NT0000065
+3 Listing Information about Databases
+4 Listing Information about Databases=DB03NT0000070
+4 Listing Database Information With Accessdb=DB03NT0000075
+4 Listing Database Information With Catalogdb=DB03NT0000080
+3 Destroying a Database
+4 Destroying a Database=DB03NT0000085
+2 Chapter 4:  Using Alternate Locations
+3 Chapter 4:  Using Alternate Locations=DB04NT0000000
+3 Overview=DB04NT0000005
+3 Locations and Areas
+4 Locations and Areas=DB04NT0000010
+4 What is a Location?=DB04NT0000015
+4 What is an Area?=DB04NT0000020
+4 Mapping Locations and Areas=DB04NT0000025
+4 Using a New Location=DB04NT0000030
+4 Changing an Area=DB04NT0000035
+3 Default Locations for Database Files
+4 Default Locations for Database Files=DB04NT0000040
+4 Guidelines for Using Alternate Locations=DB04NT0000045
+3 Implementing Alternate Locations
+4 Implementing Alternate Locations=DB04NT0000050
+4 Creating a New Area
+5 Creating a New Area=DB04NT0000055
+5 Creating a New Area in NT=DB04NT0000060
+4 Creating a New Location
+5 Creating a New Location=DB04NT0000065
+5 The Create Location Statement=DB04NT0000070
+5 Using Accessdb to Create a Location=DB04NT0000075
+3 Creating a Database in an Alternate Location
+4 Creating a Database in an Alternate Location=DB04NT0000080
+4 Extending a Database=DB04NT0000085
+4 Modifying Location Uses=DB04NT0000090
+4 Deleting A Location=DB04NT0000095
+3 Using Work Locations
+4 Using Work Locations=DB04NT0000100
+4 Multi-Location Sorts=DB04NT0000105
+4 Initial Work Location=DB04NT0000110
+4 Creating New Work Locations=DB04NT0000115
+4 Altering a Work Location=DB04NT0000120
+4 Dropping a Work Location=DB04NT0000125
+4 Default and Auxiliary Locations
+5 Default and Auxiliary Locations=DB04NT0000130
+5 Altering a Work Location Extension=DB04NT0000135
+4 Setting Work Locations for the Current Session
+5 Setting Work Locations for the Current Session=DB04NT0000140
+5 The Set Work Locations Statement=DB04NT0000145
+5 Determining Work Locations for a Session=DB04NT0000150
+3 Using Relocatedb to Move Locations
+4 Using Relocatedb to Move Locations=DB04NT0000155
+2 Chapter 5:  Creating Tables, Views, and Schemas
+3 Overview=DB05NT0000000
+3 Creating a New Table
+4 Creating a New Table=DB05NT0000010
+4 The Create Table Statement=DB05NT0000015
+4 Creating a Table in an Alternate Location=DB05NT0000020
+4 Creating a Table with Journaling=DB05NT0000025
+4 Duplicate Rows in Tables
+5 Duplicate Rows in Tables=DB05NT0000030
+5 Duplicate Rows When Adding New Rows or Modifying a Table=DB05NT0000035
+5 Duplicate Rows When Bulk Copying Rows in a Table=DB05NT0000040
+5 Duplicate Rows in Updated Tables=DB05NT0000045
+5 Removing Duplicate Rows from Tables=DB05NT0000050
+3 Additional Examples of the Create Table Statement
+4 Additional Examples of the Create Table Statement=DB05NT0000055
+3 Creating a New Table from Another Table
+4 Creating a New Table from Another Table=DB05NT0000060
+4 The Create Table As Statement=DB05NT0000065
+4 Examples of the Create Table As Statement=DB05NT0000070
+3 Columns
+4 Adding, Changing, and Deleting Columns=DB05NT0000075
+4 Adding a Column=DB05NT0000080
+4 Deleting a Column=DB05NT0000085
+4 Renaming a Column=DB05NT0000090
+4 Changing Data Types
+5 Changing Data Types=DB05NT0000095
+5 Making a Character Column Larger=DB05NT0000100
+5 Data Type Conversion Functions=DB05NT0000105
+3 Additional Examples of Manipulating Columns
+4 Additional Examples of Manipulating Columns=DB05NT0000110
+3 Moving a Table
+4 Moving a Table to a New Location=DB05NT0000115
+4 Relocating a Table
+5 Relocating a Table=DB05NT0000120
+5 The Modify to Relocate Statement=DB05NT0000125
+5 Examples of Moving a Table to the Same Number of Locations=DB05NT0000130
+4 Reorganizing a Table
+5 Reorganizing a Table=DB05NT0000135
+5 The Modify to Reorganize Statement=DB05NT0000140
+5 Examples of Moving a Table to a Different Number of Locations=DB05NT0000145
+3 Expired Tables
+4 Expired Tables=DB05NT0000150
+3 Creating Views
+4 Creating Views=DB05NT0000155
+4 The Create View Statement=DB05NT0000160
+4 Examples of the Create View Statement=DB05NT0000165
+4 Additional Information about Views=DB05NT0000170
+4 Updating Views
+5 Updating Views=DB05NT0000175
+5 Rules for Updating Views=DB05NT0000180
+3 Schemas
+4 Creating Schemas=DB05NT0000185
+4 Create Schema Authorization Statement=DB05NT0000190
+4 Example of Creating a Schema=DB05NT0000195
+4 Using schema.Tablename=DB05NT0000200
+4 Implicit Schema Creation=DB05NT0000205
+3 Temporary Tables, Synonyms and Comments
+4 Temporary Tables, Synonyms and Comments=DB05NT0000210
+4 Creating Temporary Tables
+5 Creating Temporary Tables=DB05NT0000215
+5 The Declare Global Temporary Table Statement=DB05NT0000220
+5 Dropping a Global Temporary Table=DB05NT0000225
+5 Examples of Temporary Tables=DB05NT0000230
+4 Synonyms
+5 Creating Synonyms=DB05NT0000235
+5 The Create Synonym Statement=DB05NT0000240
+5 Dropping a Synonym=DB05NT0000245
+5 Examples of Creating Synonyms=DB05NT0000250
+4 Commenting Tables and Views 
+5 Commenting Tables and Views =DB05NT0000255
+5 The Comment On Statement=DB05NT0000260
+5 The Declare Table Statement=DB05NT0000265
+3 Other Database Objects
+4 Other Database Objects=DB05NT0000270
+4 Creating Other Database Objects=DB05NT0000275
+4 Deleting Objects with Delobj=DB05NT0000280
+2 Chapter 6:  Populating Tables
+3 Overview=DB06NT0000000
+3 The Copy Statement
+4 The Copy Statement=DB06NT0000010
+4 Unloading and Reloading Data=DB06NT0000015
+4 Specifying a Filename=DB06NT0000020
+4 With-Clause Options of the Copy Statement=DB06NT0000025
+3 Operation of the Copy Statement
+4 Operation of the Copy Statement=DB06NT0000030
+4 Binary and Formatted Copying=DB06NT0000035
+4 Bulk versus Incremental Load=DB06NT0000040
+4 Copy, Permissions, and Integrities=DB06NT0000045
+4 Locking During a Copy=DB06NT0000050
+3 Binary Copying
+4 Binary Copying=DB06NT0000055
+4 Binary Copying Into a File=DB06NT0000060
+4 Reloading in Binary Format=DB06NT0000065
+3 Formatted Copying
+4 Formatted Copying=DB06NT0000070
+4 Column Name and Format Specifications=DB06NT0000075
+4 The Copy Statement and Nulls=DB06NT0000080
+4 Formatted Copying Into a File
+5 Formatted Copying Into a File=DB06NT0000085
+5 Copying to Files with Fixed-Length Fields=DB06NT0000090
+5 Copying to Files with Variable-Length Fields=DB06NT0000095
+3 Reloading Formatted Data
+4 Reloading Formatted Data=DB06NT0000100
+4 Bulk Load
+5 Bulk Load=DB06NT0000105
+5 Bulk Loading Requirements=DB06NT0000110
+5 Logging During Bulk and Incremental Load=DB06NT0000115
+5 Bulk and Incremental Copy Processing=DB06NT0000120
+5 Using Bulk Copy With-Clauses=DB06NT0000125
+5 Bulk Copy Examples=DB06NT0000130
+3 Advanced Use of the Copy Statement
+4 Advanced Use of the Copy Statement=DB06NT0000135
+4 How to Use Multiple Files to Populate Multiple Database Tables
+5 How to Use Multiple Files to Populate Multiple Database Tables=DB06NT0000140
+5 Loading a Table from Multiple Files=DB06NT0000145
+5 Multi-line File Records=DB06NT0000150
+3 Loading Fixed-length and Binary Records
+4 Loading Fixed-length and Binary Records=DB06NT0000155
+4 Loading Large Objects
+5 Loading Large Objects=DB06NT0000160
+5 Copying Formatted Large Objects=DB06NT0000165
+5 Binary Copy for Large Objects=DB06NT0000170
+3 How to Use Set Nologging
+4 How to Use Set Nologging for Large Data Loads=DB06NT0000175
+4 The Set Nologging Statement=DB06NT0000180
+4 Using the Set Nologging Option=DB06NT0000185
+4 Restoring Logging with the Set Logging Option=DB06NT0000190
+4 Example—New Database=DB06NT0000195
+4 Example—Existing Database=DB06NT0000200
+3 Avoiding Problems with the Copy Statement
+4 Avoiding Problems with the Copy Statement=DB06NT0000205
+4 Reloading Problems
+5 Reloading Problems=DB06NT0000210
+5 Invalid Data=DB06NT0000215
+5 Miscounting Fixed-Length Field Widths=DB06NT0000220
+5 Neglecting the "nl" Delimiter in the Copy Statement=DB06NT0000225
+5 Omitting Delimiters Between Fields=DB06NT0000230
+5 Including Too Many Delimiters=DB06NT0000235
+4 Copy Statement
+5 Controlling Error Handling with the Copy Statement=DB06NT0000240
+5 Stopping or Continuing the Copy=DB06NT0000245
+5 Stopping After a Specified Number of Errors=DB06NT0000250
+5 Rolling Back Rows=DB06NT0000255
+5 Logging Errors=DB06NT0000260
+3 Checking for Integrity Errors
+4 Checking for Integrity Errors=DB06NT0000265
+4 What To Do If You Are Having Trouble Loading Data=DB06NT0000270
+2 Chapter 7:  Loading and Unloading the Database
+3 Overview=DB07NT0000000
+3 Uses for Unloaddb and Copydb=DB07NT0000010
+3 Unloaddb 
+4 Using Unloaddb =DB07NT0000015
+4 What Unloaddb Copies=DB07NT0000020
+4 Unloading iidbdb=DB07NT0000025
+4 Unloaddb Syntax=DB07NT0000030
+4 How Unloaddb Works=DB07NT0000035
+4 Unloading in ASCII or Binary Format=DB07NT0000040
+4 Changing the Floating Point Specification=DB07NT0000045
+4 Locking During Unloaddb=DB07NT0000050
+4 Preventing an Inconsistent Database During Unloaddb=DB07NT0000055
+3 Copydb
+4 Using Copydb=DB07NT0000060
+4 What Copydb Copies=DB07NT0000065
+4 Copydb Syntax=DB07NT0000070
+4 How Copydb Works
+5 How Copydb Works=DB07NT0000075
+5 The Copy.out and Copy.in Scripts=DB07NT0000080
+3 Copying in ASCII or Binary Format
+4 Copying in ASCII or Binary Format=DB07NT0000085
+4 Changing the Floating Point Specification=DB07NT0000090
+4 Copydb and Locking
+5 Copydb and Locking=DB07NT0000095
+5 Preventing an Inconsistent Database During Copydb=DB07NT0000100
+3 Copying Individual Database Objects
+4 Copying Individual Database Objects=DB07NT0000105
+4 Procedure: Copying a Database Object=DB07NT0000110
+4 Copying Tables
+5 Copying Tables=DB07NT0000115
+5 Using Copydb, Copy.out and Copy.in=DB07NT0000120
+5 Table Example=DB07NT0000125
+4 Copying Forms
+5 Copying Forms=DB07NT0000130
+5 Copyform Syntax=DB07NT0000135
+5 Form Example=DB07NT0000140
+4 Copying Applications
+5 Copying Applications=DB07NT0000145
+5 Copyapp Syntax=DB07NT0000150
+4 Copying Reports
+5 Copying Reports=DB07NT0000155
+5 Copyrep and Sreport Syntax=DB07NT0000160
+5 Report Example=DB07NT0000165
+3 Copying a Database with Unloaddb
+4 Copying a Database with Unloaddb=DB07NT0000170
+4 Procedure: Copying a Database=DB07NT0000175
+3 Copying a Database With Relocatedb
+4 Copying a Database With Relocatedb=DB07NT0000180
+4 Relocatedb Examples=DB07NT0000185
+4 Avoiding Problems With Relocatedb=DB07NT0000190
+2 Chapter 8:  Changing Ownership of Databases and Database Objects
+3 Overview=DB08NT0000000
+3 What is Ownership?=DB08NT0000010
+3 Objects Whose Ownership Can Be Changed=DB08NT0000015
+3 Changing Ownership of a Database Object
+4 Changing Ownership of a Database Object=DB08NT0000020
+4 Changing Ownership of a Table
+5 Changing Ownership of a Table=DB08NT0000025
+5 Using Copydb, Copy.out and Copy.in=DB08NT0000030
+5 Table Example=DB08NT0000035
+4 Changing Ownership of a Form
+5 Changing Ownership of a Form=DB08NT0000040
+5 Copyform Syntax=DB08NT0000045
+5 Form Example=DB08NT0000050
+4 Changing Ownership of a Report
+5 Changing Ownership of a Report=DB08NT0000055
+5 Copyrep and Sreport Syntax=DB08NT0000060
+5 Report Example=DB08NT0000065
+3 Changing Ownership of a Database
+4 Changing Ownership of a Database=DB08NT0000070
+2 Chapter 9:  Maintaining a Database
+3 Overview=DB09NT0000000
+3 Tables
+4 Tables=DB09NT0000010
+4 Listing User Tables=DB09NT0000015
+4 Deleting Tables and Views=DB09NT0000020
+4 Routine Table Maintenance=DB09NT0000025
+4 Table Repair=DB09NT0000030
+4 Using Verifydb
+5 Using Verifydb=DB09NT0000035
+5 Verifydb Syntax=DB09NT0000040
+5 Verifydb Options=DB09NT0000045
+5 Unsupported Verifydb Options=DB09NT0000050
+3 Choosing Storage Structures for Easy Maintenance
+4 Choosing Storage Structures for Easy Maintenance=DB09NT0000055
+4 Tables and the Operating System=DB09NT0000060
+4 Avoiding User Errors=DB09NT0000065
+4 Translating File Names into Table Names=DB09NT0000070
+4 Retaining Templates of Important Tables=DB09NT0000075
+3 Views
+4 Views=DB09NT0000080
+4 Listing Views=DB09NT0000085
+4 Updating Views=DB09NT0000090
+4 Deleting Views=DB09NT0000095
+3 Database Objects
+4 Database Objects=DB09NT0000100
+4 Listing and Deleting Private Objects=DB09NT0000105
+4 Listing and Deleting Forms=DB09NT0000110
+4 Listing and Deleting Reports=DB09NT0000115
+4 Listing and Destroying Applications=DB09NT0000120
+2 Chapter 10:  Ensuring Access Security
+3 Overview=DB10NT0000000
+3 Basic Terms=DB10NT0000010
+3 Privileges
+4 User Privileges=DB10NT0000015
+4 Create Databases Privilege=DB10NT0000020
+4 Security Privilege=DB10NT0000025
+4 Operator Privilege=DB10NT0000030
+4 Maintain_Locations Privilege=DB10NT0000035
+4 Trace Privilege=DB10NT0000040
+3 Built-In Security
+4 Built-In Security=DB10NT0000045
+4 Caution on Security Privilege=DB10NT0000050
+3 Groups and Roles
+4 Groups and Roles=DB10NT0000055
+4 Groups
+5 Groups=DB10NT0000060
+5 Creating a Group Identifier=DB10NT0000065
+5 Using a Group Identifier=DB10NT0000070
+4 Roles
+5 Roles=DB10NT0000075
+5 Creating a Role Identifier=DB10NT0000080
+5 Using a Role Identifier=DB10NT0000085
+3 Granting Object Permissions
+4 Granting Object Permissions=DB10NT0000090
+4 The Grant Statement
+5 The Grant Statement=DB10NT0000095
+5 Grant Syntax=DB10NT0000100
+5 Grant Parameters=DB10NT0000105
+5 Authorization IDs=DB10NT0000110
+4 Grants on Tables and Views
+5 Grants on Tables and Views=DB10NT0000115
+5 Assigning Grants on Tables=DB10NT0000120
+5 Assigning Grants on Views=DB10NT0000125
+4 Grants on the Database
+5 Grants on the Database=DB10NT0000130
+5 Installation Grants=DB10NT0000135
+5 'All' Grant=DB10NT0000140
+4 Evaluating Grants
+5 Evaluating Grants=DB10NT0000145
+5 Grants and Earlier Permits=DB10NT0000150
+5 Grant Overhead=DB10NT0000155
+5 Multiple Permission Checks=DB10NT0000160
+5 The Authorization Hierarchy=DB10NT0000165
+5 Beginning a Session=DB10NT0000170
+4 Examining Privileges
+5 Examining Privileges=DB10NT0000175
+5 Help=DB10NT0000180
+5 Dbmsinfo=DB10NT0000185
+5 System Catalogs with Permissions=DB10NT0000190
+5 Listing Groups=DB10NT0000195
+5 Listing Roles=DB10NT0000200
+4 Removing Permissions
+5 Removing Permissions=DB10NT0000205
+5 Dropping Permits on Tables, Procedures, and Events=DB10NT0000210
+5 Revoking Permits=DB10NT0000215
+3 Security Auditing and Security Events
+4 Security Auditing and Security Events=DB10NT0000220
+4 Configuring Security Audit Logs=DB10NT0000225
+4 Security Audit Statements=DB10NT0000230
+4 Audit_all Privilege=DB10NT0000235
+4 Security Alarm Statements
+5 Security Alarm Statements=DB10NT0000240
+5 Implementing a Security Alarm=DB10NT0000245
+3 Example
+4 Example=DB10NT0000250
+4 When Security Changes Take Effect=DB10NT0000255
+4 Accessing the Security Audit Log
+5 Accessing the Security Audit Log=DB10NT0000260
+5 Registering the Security Audit Log File=DB10NT0000265
+5 Obtaining the Current Audit File Name=DB10NT0000270
+5 Security Audit Log File Format=DB10NT0000275
+5 Example=DB10NT0000280
+3 Using Database Procedures
+4 Using Database Procedures=DB10NT0000285
+4 Controlling Data Access With Database Procedures=DB10NT0000290
+4 Implementing a Database Procedure=DB10NT0000295
+4 Creating Database Procedures
+5 Creating Database Procedures=DB10NT0000300
+5 The Create Procedure Statement=DB10NT0000305
+5 Granting Create Permission=DB10NT0000310
+3 Granting Execute Permission
+4 Granting Execute Permission=DB10NT0000315
+4 Executing a Procedure=DB10NT0000320
+4 Examining Procedures with Help=DB10NT0000325
+4 Dropping a Procedure=DB10NT0000330
+2 Chapter 11:  Ensuring Data Integrity
+3 Overview=DB11NT0000000
+3 Basic Terms=DB11NT0000010
+3 Establishing Integrity Constraints=DB11NT0000015
+4 Adding Table Constraints 
+5 Adding Table Constraints =DB11NT0000020
+5 Alter Table Statement=DB11NT0000025
+5 Create Table Statement=DB11NT0000030
+3 Adding Column Constraints
+4 Adding Column Constraints=DB11NT0000035
+4 Column-Level Constraints versus Table-Level Constraints=DB11NT0000040
+4 Constraint Types
+5 Constraint Types=DB11NT0000045
+5 Unique Constraint=DB11NT0000050
+5 Check Constraint=DB11NT0000055
+5 References Constraint=DB11NT0000060
+5 Primary Key Constraint=DB11NT0000065
+4 Removing a Table Constraint
+5 Removing a Table Constraint=DB11NT0000070
+5 Restrict and Cascade=DB11NT0000075
+3 Constraints and the Copy Statement
+4 Constraints and the Copy Statement=DB11NT0000080
+3 Rules
+4 Rules=DB11NT0000085
+4 The Create Rule Statement=DB11NT0000090
+4 Rule Transactions=DB11NT0000095
+4 Rules and the Copy Statement=DB11NT0000100
+4 Enforcing Referential Integrity with Rules
+5 Enforcing Referential Integrity with Rules=DB11NT0000105
+5 Reject Method=DB11NT0000110
+5 Nullify Method=DB11NT0000115
+5 Cascade Method=DB11NT0000120
+3 Enforcing General Integrities
+4 Enforcing General Integrities=DB11NT0000125
+4 Enforcing General Purpose Rules=DB11NT0000130
+4 Setting Norules=DB11NT0000135
+4 Disabling Rules=DB11NT0000140
+4 Dropping a Rule=DB11NT0000145
+3 Database Events
+4 Database Events=DB11NT0000150
+4 Grants on Events=DB11NT0000155
+4 Database Event Statements
+5 Database Event Statements=DB11NT0000160
+5 Creating an Event=DB11NT0000165
+5 Raising an Event=DB11NT0000170
+5 Registering to Receive an Event=DB11NT0000175
+5 Receiving an Event=DB11NT0000180
+3 Example
+4 Example=DB11NT0000185
+4 Removing a Registration=DB11NT0000190
+4 Dropping an Event=DB11NT0000195
+3 Using Integrity Statements
+4 Using Integrity Statements=DB11NT0000200
+4 Constraints versus Integrities=DB11NT0000205
+4 The Create Integrity Statement
+5 The Create Integrity Statement=DB11NT0000210
+5 Nulls and Integrity Constraints=DB11NT0000215
+3 Examining Integrities with Help
+4 Examining Integrities with Help=DB11NT0000220
+4 Dropping Integrities=DB11NT0000225
+4 When an Integrity Violation Occurs=DB11NT0000230
+4 Integrity Checks with Forms Validations=DB11NT0000235
+2 Chapter 12:  Choosing Storage Structures and Secondary Indexes
+3 Overview=DB12NT0000000
+3 Heap
+4 Heap=DB12NT0000010
+4 Structure of a Heap Table=DB12NT0000015
+4 When to Use Heap=DB12NT0000020
+3 Hash
+4 Hash=DB12NT0000025
+4 Structure of a Hash Table=DB12NT0000030
+4 Retrievals Supported by Hash=DB12NT0000035
+4 When to Use Hash=DB12NT0000040
+3 Isam
+4 Isam=DB12NT0000045
+4 Structure of an Isam Table=DB12NT0000050
+4 Retrievals Supported by Isam=DB12NT0000055
+4 When to Use Isam=DB12NT0000060
+3 Btree
+4 Btree=DB12NT0000065
+4 Structure of a Btree Table
+5 Structure of a Btree Table=DB12NT0000070
+5 Portrait of a Btree=DB12NT0000075
+3 Associated Data Pages
+4 Associated Data Pages=DB12NT0000080
+4 Index Growth=DB12NT0000085
+4 Locking and Btree Tables=DB12NT0000090
+4 Sorted Order in a Btree Table=DB12NT0000095
+4 Deleted Rows: Data Pages=DB12NT0000100
+4 When to Use Btree=DB12NT0000105
+4 Deciding What Storage Structure to Use=DB12NT0000110
+4 Isam versus Btree
+5 Isam versus Btree=DB12NT0000115
+5 When to Choose Isam Over Btree=DB12NT0000120
+5 When to Choose Btree Over Isam=DB12NT0000125
+3 Summary Chart
+4 Summary Chart=DB12NT0000130
+3 Keys
+4 Keys=DB12NT0000135
+4 Choosing Key Columns=DB12NT0000140
+4 Using Secondary Keys=DB12NT0000145
+3 Secondary Indexes
+4 Secondary Indexes=DB12NT0000150
+4 The Create Index Statement=DB12NT0000155
+4 Implementation and Overhead=DB12NT0000160
+4 Using Secondary Indexes to Improve Performance=DB12NT0000165
+4 Forcing Use of Secondary Indexes=DB12NT0000170
+4 Using Two Secondary Indexes=DB12NT0000175
+2 Chapter 13:  Maintaining Storage Structures
+3 Overview=DB13NT0000000
+3 Storage Structures and Performance=DB13NT0000010
+3 Modifying Storage Structures
+4 Modifying Storage Structures=DB13NT0000015
+4 Modify Cautions=DB13NT0000020
+4 Optional Modify Parameters
+5 Optional Modify Parameters=DB13NT0000025
+5 Unique=DB13NT0000030
+5 Fillfactor=DB13NT0000035
+5 Specifying an Alternate Fillfactor=DB13NT0000040
+5 Leaffill and Nonleaffill=DB13NT0000045
+5 Minpages and Maxpages=DB13NT0000050
+5 Preallocating Space=DB13NT0000055
+5 Extending Space=DB13NT0000060
+3 Modify
+4 Modify to Merge=DB13NT0000065
+4 Modify to Extend=DB13NT0000070
+4 Modifying Secondary Indexes
+5 Modifying Secondary Indexes=DB13NT0000075
+5 Persistence Option=DB13NT0000080
+5 Changing the Index Storage Structure=DB13NT0000085
+3 When to Remodify Btree Tables
+4 When to Remodify Btree Tables=DB13NT0000090
+4 Common Errors Using the Modify Statement=DB13NT0000095
+3 Compressed Storage Structures
+4 Compressed Storage Structures=DB13NT0000100
+4 Data Compression=DB13NT0000105
+4 When to Compress Your Tables=DB13NT0000110
+3 Overflow
+4 Overflow=DB13NT0000115
+4 Measuring the Amount of Overflow=DB13NT0000120
+4 Repetitive Key Overflow=DB13NT0000125
+4 Badly Distributed Overflow=DB13NT0000130
+4 Overflow and Storage Structures
+5 Overflow and Storage Structures=DB13NT0000135
+5 Overflow and Isam and Hash Tables=DB13NT0000140
+5 Overflow and Btree Tables=DB13NT0000145
+5 Overflow and Secondary Indexes=DB13NT0000150
+5 Tids=DB13NT0000155
+2 Chapter 14:  Using the CA-OpenIngres Query Optimizer
+3 Overview=DB14NT0000000
+3 The Optimizedb Utility
+4 The Optimizedb Utility=DB14NT0000010
+4 When to Run Optimizedb
+5 When to Run Optimizedb=DB14NT0000015
+5 Resource Issues=DB14NT0000020
+5 Running Sysmod after Optimizedb=DB14NT0000025
+4 What Information Optimizedb Collects
+5 What Information Optimizedb Collects=DB14NT0000030
+5 Row Count=DB14NT0000035
+4 Statistics
+5 Types of Statistics=DB14NT0000040
+5 Non-Sampled and Sampled Statistics=DB14NT0000045
+5 Full Statistics=DB14NT0000050
+5 Minmax Statistics=DB14NT0000055
+5 Key Column Statistics=DB14NT0000060
+5 Input Text File Statistics=DB14NT0000065
+3 What Columns to Run Optimizedb On
+4 What Columns to Run Optimizedb On=DB14NT0000070
+4 Optimizedb Output
+5 Reading Optimizedb Output=DB14NT0000075
+5 Sample Optimizedb Output=DB14NT0000080
+3 Histogram Cells
+4 Histogram Cells=DB14NT0000085
+4 When to Rerun Optimizedb=DB14NT0000090
+4 Example: Before and After Optimizedb=DB14NT0000095
+3 The Query Execution Plan (QEP)
+4 QEP=DB14NT0000100
+4 Listing a QEP=DB14NT0000105
+4 Setting Optimize-Only=DB14NT0000110
+4 Reading a QEP=DB14NT0000115
+4 Sample Tables for QEP Examples=DB14NT0000120
+4 Types of Nodes in a QEP
+5 Types of Nodes in a QEP=DB14NT0000125
+5 Orig Node=DB14NT0000130
+5 Proj-rest Node=DB14NT0000135
+5 Sort Nodes=DB14NT0000140
+5 Examples=DB14NT0000145
+5 Join Nodes=DB14NT0000150
+5 Cartesian Products=DB14NT0000155
+5 Full Sort Merge=DB14NT0000160
+5 Partial Sort Merge=DB14NT0000165
+5 Key and Tid Lookup Joins=DB14NT0000170
+5 Subquery Joins=DB14NT0000175
+3 Multiple Query Plans
+4 Multiple Query Plans=DB14NT0000180
+4 More Complex QEPS=DB14NT0000185
+4 Evaluating QEPS: A Summary=DB14NT0000190
+3 Specialized Statistics Processing
+4 Specialized Statistics Processing=DB14NT0000195
+4 The Statdump Utility
+5 The Statdump Utility=DB14NT0000200
+5 Reviewing Statistics=DB14NT0000205
+5 Deleting Statistics=DB14NT0000210
+5 Specifying Floating Point Precision=DB14NT0000215
+5 Statdump Output with Floating Point Precision=DB14NT0000220
+4 Statistics in Text Files
+5 Statistics in Text Files=DB14NT0000225
+5 Sample Text File Statistics=DB14NT0000230
+5 Loading Optimizer Statistics from a Text File=DB14NT0000235
+5 Loading Statistics for Selected Tables or Columns=DB14NT0000240
+5 Updating Row and Page Counts=DB14NT0000245
+5 Unloading Optimizer Statistics into a Text File=DB14NT0000250
+5 Unloading Statistics for Selected Tables or Columns=DB14NT0000255
+5 Copying a Table and Associated Statistics=DB14NT0000260
+4 Sampled Optimizer Statistics
+5 Sampled Optimizer Statistics=DB14NT0000265
+5 Creating Sampled Statistics=DB14NT0000270
+5 Sorting Sampled Statistics=DB14NT0000275
+3 Optimizer Timeout
+4 Optimizer Timeout=DB14NT0000280
+2 Chapter 15:  CA-OpenIngres Locking
+3 Overview=DB15NT0000000
+3 The Locking System=DB15NT0000010
+3 Locks
+4 Locks=DB15NT0000015
+4 Lock Modes=DB15NT0000020
+4 Locking Levels=DB15NT0000025
+3 How Locking Works
+4 How Locking Works=DB15NT0000030
+4 Initiating a Lock Request=DB15NT0000035
+4 Checking If a Lock Is Available In the System=DB15NT0000040
+4 Determining Lock Grants=DB15NT0000045
+4 Lock Mode Compatibility=DB15NT0000050
+4 Determining the Lock Mode=DB15NT0000055
+4 Determining the Locking Level
+5 Determining the Locking Level=DB15NT0000060
+5 Initial Locking Level=DB15NT0000065
+5 Lock Escalation=DB15NT0000070
+3 Summary of Default Locks
+4 Summary of Default Locks=DB15NT0000075
+4 Releasing Locks=DB15NT0000080
+3 Locking Examples
+4 Locking Examples=DB15NT0000085
+4 Single User Locking Example=DB15NT0000090
+4 Multiple User Locking Example
+5 Multiple User Locking Example=DB15NT0000095
+5 Concurrent Access Sequence=DB15NT0000100
+5 Waiting for Locks=DB15NT0000105
+5 Avoiding Lock Delays=DB15NT0000110
+3 User-Controlled Locking 
+4 User-Controlled Locking =DB15NT0000115
+4 Set Lockmode Syntax=DB15NT0000120
+4 Specifying a Set Lockmode Statement =DB15NT0000125
+4 Range of the Set Lockmode Statement=DB15NT0000130
+4 Changing the Locking Level=DB15NT0000135
+4 Changing Maxlocks =DB15NT0000140
+4 Setting a Timeout
+5 Setting a Timeout=DB15NT0000145
+5 Guidelines for Timeout Handling=DB15NT0000150
+5 Timeout Program Example=DB15NT0000155
+4 Setting Readlock
+5 Setting Readlock=DB15NT0000160
+5 Setting Readlock to Nolock =DB15NT0000165
+5 Setting Readlock to Exclusive=DB15NT0000170
+3 Avoiding Deadlock
+4 Avoiding Deadlock=DB15NT0000175
+4 A Deadlock Situation=DB15NT0000180
+4 Deadlock in Single Query Transactions
+5 Deadlock in Single Query Transactions=DB15NT0000185
+5 When Different Access Paths Are Used=DB15NT0000190
+5 When Lock Escalation Occurs=DB15NT0000195
+5 When Locking Occurs Down an Overflow Chain=DB15NT0000200
+3 Handling Deadlock in Applications
+4 Handling Deadlock in Applications=DB15NT0000205
+3 Monitoring Locking
+4 Monitoring Locking=DB15NT0000210
+4 Using Set Lock_trace=DB15NT0000215
+4 Lock_trace Output=DB15NT0000220
+4 Lock_trace Example=DB15NT0000225
+3 Improving Concurrency
+4 Improving Concurrency=DB15NT0000230
+4 Two Approaches for Handling Heavy Concurrent Usage
+5 Two Approaches for Handling Heavy Concurrent Usage=DB15NT0000235
+5 The 'Never Escalate' Approach=DB15NT0000240
+5 The 'Table Lock' Approach=DB15NT0000245
+2 Chapter 16:  Backup and Recovery
+3 Overview=DB16NT0000000
+3 The Logging System
+4 The Logging System=DB16NT0000010
+4 The Logging Facility=DB16NT0000015
+4 Log Space Reservation=DB16NT0000020
+4 The Recovery Process=DB16NT0000025
+4 The Archiver Process=DB16NT0000030
+3 Verifying Data Accessibility Before Backup
+4 Verifying Data Accessibility Before Backup=DB16NT0000040
+3 Backing Up a Database with Checkpoints
+4 Backing Up a Database with Checkpoints=DB16NT0000045
+4 The Ckpdb Command=DB16NT0000050
+4 Checkpointing a Database =DB16NT0000055
+4 Checkpointing Tables=DB16NT0000060
+4 On-line and Off-line Checkpoints=DB16NT0000065
+4 Locking During a Checkpoint=DB16NT0000070
+4 Cleaning Up Outdated Checkpoints=DB16NT0000075
+4 Deleting the Oldest Checkpoint with Alterdb=DB16NT0000080
+4 Checkpoints and Destroyed Databases=DB16NT0000085
+4 Putting Checkpoints on Tape in Windows NT=DB16NT0000120
+3 Using the Journaling System
+4 Using the Journaling System=DB16NT0000125
+4 Starting Journaling=DB16NT0000130
+4 Disabling Journaling =DB16NT0000135
+4 Stopping Journaling
+5 Stopping Journaling=DB16NT0000140
+5 Using the Disable Journaling Feature of Alterdb=DB16NT0000145
+5 Using the Ckpdb -j Command=DB16NT0000150
+3 The Alterdb Command
+4 Using the Alterdb Command=DB16NT0000155
+4 Resizing the Journal File with Alterdb
+5 Resizing the Journal File with Alterdb=DB16NT0000160
+5 Setting the Target Journal Size with Alterdb=DB16NT0000165
+5 Setting the Journal Block Size with Alterdb=DB16NT0000170
+5 Setting the Initial Journal Size with Alterdb=DB16NT0000175
+5 Resize Considerations=DB16NT0000180
+4 Producing Audit Trails With Journals
+5 Producing Audit Trails With Journals=DB16NT0000185
+5 The Auditdb Command=DB16NT0000190
+5 Loading an Audit Trail as a Table=DB16NT0000195
+5 Auditing Multiple Tables=DB16NT0000200
+3 Backing Up With Copydb
+4 Backing Up With Copydb=DB16NT0000205
+4 Backing Up Tables With Copydb=DB16NT0000210
+3 Backing Up With Unloaddb
+4 Backing Up With Unloaddb=DB16NT0000215
+3 Recovering Databases
+4 Recovering Databases=DB16NT0000220
+4 Recovering Databases from Checkpoints and Journals
+5 Recovering Databases from Checkpoints and Journals=DB16NT0000225
+5 The Rollforwarddb Command=DB16NT0000230
+5 Recovering a Journaled Database=DB16NT0000235
+5 Recovering a Non-journaled Database=DB16NT0000240
+5 Recovering a Database From Tape Checkpoints =DB16NT0000245
+5 Recovering Tables with Rollforwarddb=DB16NT0000250
+5 Retracting Changes with Rollforwarddb=DB16NT0000255
+5 Recovering a Database from an Old Checkpoint=DB16NT0000260
+5 Avoiding Problems with Rollforwarddb=DB16NT0000265
+3 Recovering Data from Copydb Backups
+4 Recovering Data from Copydb Backups=DB16NT0000270
+4 Recovering from the Loss of the Transaction Log File=DB16NT0000275
+3 Altering the Checkpoint Template File
+4 Altering the Checkpoint Template File=DB16NT0000280
+4 Checkpoint Template Codes=DB16NT0000285
+4 Substitution Parameters=DB16NT0000290
+4 Format of the Checkpoint Template File in NT
+5 Format of the Checkpoint Template File in NT=DB16NT0000330
+5 NT Examples=DB16NT0000335
+5 NT File Listing=DB16NT0000340
+3 Backup and Recovery of the Master Database (iidbdb)
+4 Backup and Recovery of the Master Database (iidbdb)=DB16NT0000345
+4 Checkpointing the iidbdb=DB16NT0000350
+3 Tracing with Set Log_Trace
+4 Tracing with Set Log_Trace=DB16NT0000355
+2 Chapter 17:  Calculating Disk Space
+3 Overview=DB17NT0000000
+3 Initial Disk Space Requirements=DB17NT0000010
+3 Tables
+4 Tables=DB17NT0000015
+4 Heap Tables=DB17NT0000020
+4 Hash Tables=DB17NT0000025
+4 Isam Tables=DB17NT0000030
+4 Btree Tables=DB17NT0000035
+4 Compressed Tables=DB17NT0000040
+4 Tracking Used and Free Pages=DB17NT0000045
+4 Calculating Allocated Table Size=DB17NT0000050
+3 Journal Files
+4 Journal Files=DB17NT0000055
+3 Disk Space Used by the Modify Statement
+4 Disk Space Used by the Modify Statement=DB17NT0000060
+4 Factors Affecting Disk Requirements=DB17NT0000065
+4 Summary of Disk Requirements=DB17NT0000070
+3 Disk Space Required for Sorts
+4 Disk Space Required for Sorts=DB17NT0000075
+4 Correcting Insufficient Sort Space=DB17NT0000080
+4 Orphaned Sort Files=DB17NT0000085
+4 Sort Performance=DB17NT0000090
+2 Chapter 18:  Improving Database and Query Performance
+3 Overview=DB18NT0000000
+3 Locking and Concurrency Issues
+4 Locking and Concurrency Issues=DB18NT0000010
+4 Identifying Lock Waits=DB18NT0000015
+4 Multi-Query Transactions (MQT's)=DB18NT0000020
+4 Managing Overflow=DB18NT0000025
+4 Set Statements=DB18NT0000030
+3 Database Maintenance
+4 Database Maintenance=DB18NT0000035
+3 Design Issues
+4 Design Issues=DB18NT0000040
+4 Diagnostic Hierarchy=DB18NT0000045
+4 Storage Structures and Index Design=DB18NT0000050
+4 Keys
+5 Keys=DB18NT0000055
+5 Evaluate your Keys=DB18NT0000060
+5 Using Multi-Column Keys=DB18NT0000065
+5 Surrogate Keys=DB18NT0000070
+3 Query Design
+4 Query Design=DB18NT0000075
+3 Query Problems
+4 Before Calling Technical Support With Query Problems=DB18NT0000080
+4 Isolate and Analyze the Suspect Query=DB18NT0000085
+4 Create a Test Case=DB18NT0000090
+2 Appendix A:  CA-OpenIngres System Files
+3 Overview=DBAANT0000000
+3 CA-OpenIngres Files and Directories=DBAANT0000010
+2 Appendix B:  CA-OpenIngres System Catalogs
+3 Overview=DBABNT0000000
+3 Standard Catalog Interface
+4 Standard Catalog Interface=DBABNT0000010
+4 The iialt_columns Catalog=DBABNT0000015
+4 The iiaudit Catalog =DBABNT0000020
+4 The iiaudittables Catalog =DBABNT0000025
+4 The iicolumns Catalog=DBABNT0000030
+4 The iiconstraint_indexes Catalog=DBABNT0000035
+4 The iiconstraints Catalog=DBABNT0000040
+4 The iidb_comments Catalog=DBABNT0000045
+4 The iidb_subcomments Catalog=DBABNT0000050
+4 The iidbcapabilities Catalog=DBABNT0000055
+4 The iidbconstants Catalog =DBABNT0000060
+4 The iidbprivileges Catalog=DBABNT0000065
+4 The iievents Catalog=DBABNT0000070
+4 The iifile_info Catalog=DBABNT0000075
+4 The iihistograms Catalog=DBABNT0000080
+4 The iiindex_columns Catalog=DBABNT0000085
+4 The iiindexes Catalog=DBABNT0000090
+4 The iiintegrities Catalog=DBABNT0000095
+4 The iikeys Catalog=DBABNT0000100
+4 The iilocation_info Catalog=DBABNT0000105
+4 The iimulti_locations Catalog=DBABNT0000110
+4 The iipermits Catalog =DBABNT0000115
+4 The iiphysical_tables Catalog=DBABNT0000120
+4 The iiprocedures Catalog=DBABNT0000125
+4 The iiref_constraints Catalog=DBABNT0000130
+4 The iiregistrations Catalog=DBABNT0000135
+4 The iirules Catalog =DBABNT0000140
+4 The iisecurity_alarms Catalog =DBABNT0000145
+4 The iisecurity_state Catalog =DBABNT0000150
+4 The iistats Catalog =DBABNT0000155
+4 The iisynonyms Catalog =DBABNT0000160
+4 The iitables Catalog=DBABNT0000165
+4 The iiusers Catalog=DBABNT0000170
+4 The iiviews Catalog=DBABNT0000175
+3 Mandatory and CA-OpenIngres-Only Standard Catalogs
+4 Mandatory and CA-OpenIngres-Only Standard Catalogs=DBABNT0000180
+4 Mandatory Catalogs With Entries Required=DBABNT0000185
+4 Mandatory Catalogs Without Entries Required=DBABNT0000190
+4 CA-OpenIngres-Only Catalogs=DBABNT0000195
+3 Extended System Catalogs
+4 Extended System Catalogs=DBABNT0000200
+4 Organization of Extended System Catalogs=DBABNT0000205
+4 The Data Dictionary Catalogs=DBABNT0000210
+4 Object IDs=DBABNT0000215
+4 Copying the Extended System Catalogs=DBABNT0000220
+4 Catalogs Shared By All CA-OpenIngres/Tools
+5 Catalogs Shared By All CA-OpenIngres/Tools=DBABNT0000225
+5 The ii_encodings Catalog=DBABNT0000230
+5 The ii_id Catalog=DBABNT0000235
+5 The ii_locks Catalog=DBABNT0000240
+5 The ii_longremarks Catalog=DBABNT0000245
+5 The ii_objects Catalog=DBABNT0000250
+3 Querying the Extended System Catalogs (SQL)
+4 Querying the Extended System Catalogs (SQL)=DBABNT0000255
+3 Forms System Catalogs
+4 Forms System Catalogs=DBABNT0000260
+4 The ii_encoded_forms Catalog=DBABNT0000265
+4 The ii_fields Catalog=DBABNT0000270
+4 The ii_forms Catalog=DBABNT0000275
+4 The ii_trim Catalog=DBABNT0000280
+3 ABF System Catalogs
+4 ABF System Catalogs=DBABNT0000285
+4 The ii_abfclasses Catalog=DBABNT0000290
+4 The ii_abfdependencies Catalog=DBABNT0000295
+4 The ii_abfobjects Catalog=DBABNT0000300
+4 The ii_sequence_values Catalog=DBABNT0000305
+3 QBF System Catalogs
+4 QBF System Catalogs=DBABNT0000310
+4 The ii_joindefs Catalog=DBABNT0000315
+4 The ii_qbfnames Catalog=DBABNT0000320
+3 Report-Writer System Catalogs
+4 Report-Writer System Catalogs=DBABNT0000325
+4 The ii_rcommands Catalog=DBABNT0000330
+4 The ii_reports Catalog=DBABNT0000335
+3 Vision System Catalogs
+4 Vision System Catalogs=DBABNT0000340
+4 The ii_framevars Catalog=DBABNT0000345
+4 The ii_menuargs Catalog=DBABNT0000350
+4 The ii_vqjoins Catalog=DBABNT0000355
+4 The ii_vqtabcols Catalog=DBABNT0000360
+4 The ii_vqtables Catalog=DBABNT0000365
+4 Additional Vision Catalog Information
+5 Additional Vision Catalog Information=DBABNT0000370
+5 Application Flow Diagram=DBABNT0000375
+5 Escape Code=DBABNT0000380
+3 The DBMS System Catalogs
+4 The DBMS System Catalogs=DBABNT0000385

@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> Routes Form </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="Country combo box control, Routes function">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body>
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="dev_routes.html" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="1579.html" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">Routes Form</h4>
+<p class="bodytext">The Routes form provides four items of information that are used to retrieve the flights result set:</p>
+<ul class="listbullet"><li class="listbullet">Country</li><li class="listbullet">Region</li><li class="listbullet">Airport</li><li class="listbullet">Day</li></ul><p class="bodytext">The following three parameters are used to filter data from the database:</p>
+<ul class="listbullet"><li class="listbullet">Departing airport code</li><li class="listbullet">Arriving airport code</li><li class="listbullet">Operating days</li></ul><p class="bodytext">The Return Journey parameter affects the query passed to Ingres for processing. </p>
+<p class="bodytext">The list of airports is reduced by restricting the available airports based on the country and region.</p>
+<p class="bodytext">Airport code selection is composed of three form controls:</p>
+<p class="beforetable"></p>
+<table width="486" cellpadding="2" cellspacing="0" border="0" style="border-collapse:collapse">
+<tr align="left" valign="top">
+<th style = "border-top:2px solid #010101;border-bottom:2px solid #010101;" width="144"><p class="tableheading">Form Control</p>
+</th>
+<th style = "border-top:2px solid #010101;border-bottom:2px solid #010101;" width="174"><p class="tableheading">Departing</p>
+</th>
+<th style = "border-top:2px solid #010101;border-bottom:2px solid #010101;" width="168"><p class="tableheading">Arriving</p>
+</th>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:1px solid #010101;" width="144"><p class="tablebodytext">CountryComboBox</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="174"><p class="tablebodytext">departingCountryComboBox</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="168"><p class="tablebodytext">arrivingCountryComboBox</p>
+</td>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:1px solid #010101;" width="144"><p class="tablebodytext">RegionComboBox</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="174"><p class="tablebodytext">departingRegionComboBox</p>
+</td>
+<td style = "border-bottom:1px solid #010101;" width="168"><p class="tablebodytext">arrivingRegionComboBox</p>
+</td>
+</tr>
+<tr align="left" valign="top">
+<td style = "border-bottom:2px solid #010101;" width="144"><p class="tablebodytext">AirportComboBox</p>
+</td>
+<td style = "border-bottom:2px solid #010101;" width="174"><p class="tablebodytext">departingAirportComboBox</p>
+</td>
+<td style = "border-bottom:2px solid #010101;" width="168"><p class="tablebodytext">arrivingAirportComboBox</p>
+</td>
+</tr>
+
+</table>
+<p class="bodytext">The Routes function uses a DataGridView control for displaying tabular results. </p>
+<p class="bodytext">In the following screen shot, the Country and Region selections have been used to return a list of airport codes and their equivalent airport names in a DataGridView. </p>
+<p class="picture"><img src="1614.png" alt="DataGridView" vspace="0" hspace="0" align="bottom" border="0"></p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2006 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

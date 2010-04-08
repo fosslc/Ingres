@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- Login/password edit screen help file 
+/#--
+You are looking at NETUTIL's Login/password data entry screen.
+
+This popup allows you to edit Login and password entries associated
+with a vnode.
+
+Menu Operations
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Save            Saves all edits.
+
+        Cancel          Cancels the edit operation without saving any
+                        potentially changed fields.
+
+        Help            Displays this help screen.

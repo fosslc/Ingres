@@ -1,0 +1,32 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may specify if the formfeed character should 
+automatically be generated before the first page of the report.
+This is useful if your printer uses continuous, perforated paper, and you 
+want to start your report at the top of the page.
+
+This option is only available if you have selected to include formfeed 
+characters in your report.
+
+To select a response, scroll to the desired option, and choose the 
+Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Yes		Generate a formfeed characters before the first 
+			report page
+	No		Do not generate a formfeed characters before the 
+			first page
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select		If Yes, the report will contain a formfeed character
+			before the first report page.  If No, then the 
+			report will not contain a formfeed before the 
+			first report page. 
+
+        Cancel          Return to the Report Options frame without selecting 
+			a response.
+
+        Help            Print this message.

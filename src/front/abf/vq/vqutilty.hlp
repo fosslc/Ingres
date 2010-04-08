@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqutilty.hlp
+You are in the Utilities sub-menu for the displayed visual query.
+This sub-menu allows you to select several utility operations for general
+purposes.  The menu commands are:
+
+        MENU COMMANDS         SYNOPSIS
+        -------------         --------
+        INGRES/Menu           Call INGRES/MENU.  You will then be able to
+                              call any Ingres subsystem (except Vision)
+                              without leaving the current context and on 
+                              exit return here.
+
+        Shell                 Escape to the operating system command 
+                              interpreter.  Exiting the command inter-
+                              preter will return here.
+
+        Help                  Access the Ingres Help facility.
+
+        End                   Return to the visual query.

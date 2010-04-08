@@ -1,0 +1,48 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icdbace.hlp        Info on GRANTing ACCESS and NOACCESS in Accessdb.
+/#--
+GRANTing ACCESS
+---------------
+For database 'lab' if the following entries are added to the table field
+of Access privileges:
+
+        +-------------------------+------+
+        |User Name                |Access|
+        +-------------------------+------+
+        |user1                    |y     |
+        |user2                    |n     |
+        |user3                    |y     |
+        +-------------------------+------+
+
+and then the "Save" menuitem is pressed, then the following SQL statements
+will be issued by Accessdb:
+
+        GRANT ACCESS ON DATABASE lab TO USER user1;
+        GRANT NOACCESS ON DATABASE lab TO USER user2;
+        GRANT ACCESS ON DATABASE lab TO USER user3;
+
+REVOKEing ACCESS
+----------------
+If a database currently has the following Access privileges granted:
+
+        +-------------------------+------+
+        |User Name                |Access|
+        +-------------------------+------+
+        |user1                    |y     |
+        |user2                    |n     |
+        |user3                    |y     |
+        +-------------------------+------+
+
+and you Delete each of these rows in Accessdb and press the "Save"
+menuitem, then Accessdb will issue the following SQL statements:
+
+        REVOKE ACCESS ON DATABASE lab FROM USER user1;
+        REVOKE NOACCESS ON DATABASE lab FROM USER user2;
+        REVOKE ACCESS ON DATABASE lab FROM USER user3;
+
+Note that Accessdb users must have SECURITY privilege to issue these
+statements (Accessdb users with only MAINTAIN_LOCATIONS privilege will not
+have a "Save" menuitem, and the frame will be displayed in Read-only mode).
+
+Users with SECURITY privilege may issue these Ingres/SQL statements 
+directly, by connecting to the "iidbdb" database.

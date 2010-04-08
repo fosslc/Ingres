@@ -1,0 +1,123 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* FRS Mapping file for Siemens 97801 */
+
+/*k0=\012        Menu Key */
+	menu = pf1 (MENUE)
+
+/*k1=\E>         Help facility */
+	frskey1 = pf2 (HELP)
+
+/*k2=^D          End current screen and return to previous screen */
+	frskey3 = pf3 (END)
+
+/*k3=\EX         Quit from program */
+	frskey2 = pf4 (F22)
+
+/*k4=\Em          Go or execute function */
+	frskey4 = pf5 (START)
+
+/*k5=\E-	 Find next occurrence of string in this column of table field */
+	frskey7 = pf6 (F18)
+
+/*k6=\EP         Save Function */
+	frskey8 = pf7 (F16)
+
+/*k7=\EV         Undo and Forget Function */
+	frskey9 = pf8 (F21)
+
+/*k8=\E@         Select first menu item */
+	menuitem1 = pf9 (F1)
+
+/*k9=\EA         Select second menu item */
+	menuitem2 = pf10 (F2)
+
+/*kA=\EB         Select third menu item */
+	menuitem3 = pf11 (F3)
+
+/*kB=\EC         Select fourth menu item */
+	menuitem4 = pf12 (F4)
+
+/*kC=\ED         Select fifth menu item */
+	menuitem5 = pf13 (F5)
+
+/*kD=\EF         Select sixth menu item */
+	menuitem6 = pf14 (F6)
+
+/*kE=\EG         Select seventh menu item */
+	menuitem7 = pf15 (F7)
+
+/*kF=\EH         Select eighth menu item */
+	menuitem8 = pf16 (F8)
+
+/*kG=\EI         Select ninth menu item */
+	menuitem9 = pf17 (F9)
+
+/*kH=\EJ         Select tenth menu item */
+	menuitem10 = pf18 (F10)
+
+/*kI=\EK         Select eleventh menu item */
+	menuitem11 = pf19 (F11)
+
+/*kJ=\EL         Select twelfth menu item */
+	menuitem12 = pf20 (F12)
+
+
+/*kK=\E[H\E[S   Put cursor on top of form or table field */
+	frskey5 = pf21 (HOME,PAGE UP)
+
+/*kL=\E[H\E[T    Put cursor on bottom of form or table field */
+	frskey6 = pf22 (HOME,PAGE DOWN)
+
+/*kM=\E[S        Previous screen or set of rows in table field */
+	scrolldown = pf23 (PAGE UP)
+
+/*kN=\E[T        Next screen or set of rows in table field */
+	scrollup = pf24 (PAGE DOWN)
+
+/*kO=\Eg         Print contens of current screen to file or printer */
+	printscreen = pf25 (PRINT)
+
+/*kP=\E[P        Remove character under cursor */
+	deletechar = pf26 (DELETE CHAR)
+
+/*kQ=\E[@        Switch between insert and overstrike */
+	mode = pf27  (INSERT CHAR)
+
+/*kR=^I          Move cursor to next field */
+	nextfield = pf28 (TAB RIGHT)
+
+/*kS=\E[Z        Move cursor to previous field */
+	previousfield = pf29 (TAB LEFT)
+
+/*kT=\E:         Move up one word within field */
+	nextword = pf30 (WORD RIGHT)
+
+/*kU=\E9         Move back one word within field */
+	previousword = pf31 (WORD LEFT)
+
+/*kV=\ET         Redraw the screen */
+	redraw = pf32 (F20)
+
+/*               Delete character immediately to left of cursor */
+	rubout = controlH (<--)
+
+/*kX=\Ed         Start default text editor on field */
+	editor = pf34 (F19)
+
+/*kY=\E0         Move to first column of next row in table field */
+	newrow = pf35 (F17)
+
+/*kZ=\Ep         Clear out the rest of the field */
+	clear = pf36 (DEL WORD)
+
+/*KA=\E[M        Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/*KB=\Eo         Auto-duplicate value while in fill mode */
+	duplicate = pf38 (INSERT WORD)
+
+/*KC=\E[H\E[D    Scroll page or form left */
+	scrollleft = pf39 (HOME,LEFT)
+
+/*KD=\E[H\E[C    Scroll page or form right */
+	scrollright = pf40 (HOME,RIGHT)

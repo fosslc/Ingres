@@ -1,0 +1,13 @@
+(PROD1NAME) Protocol Bridge
+
+The (PROD1NAME) Protocol Bridge extension enables communication between
+(PROD1NAME) clients on one network and Servers on a different type of network.
+Under current architecture a Client and Server must be able to communicate 
+over the same network protocol ( such as TCP/IP, SNA_LU62 ).
+The Protocol Bridge will "bridge" a Client speaking one network protocol to
+Server speaking another. For example, a PC on a TCP/IP network could speak
+through the bridge to an (PROD1NAME) Gateway ( DB2, IMS, DATACOM, etc., ) on an
+SNA network.
+
+(PROD1NAME) Protocol Bridge currently supports protocols, TCP/IP, Asynchronous,
+SNA/LU6.2.

@@ -1,0 +1,47 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You may specify the sort sequence, the sort direction and the selection 
+criteria for the columns in the report.  Position the cursor to the column 
+of interest, either using the cursor keys or the table field scrolling 
+commands.  You may then edit the data for that column.  
+
+To edit a field, you do not need to spell out the complete word.  You only 
+need to type in enough of the word to make it distinct from all the other 
+choices.
+
+The fields on the form are:
+
+        FIELD           DESCRIPTION
+        -----           -----------
+        Column Name     Name of column in the base table or view.
+
+	Sort Sequence   The sort ordinal of this column for the report.
+			If set to 0 (zero), then the column will not
+			be used in the sorting of data.  If non-zero, 
+			this will be the order in the sort list (i.e. the 
+			column with sequence 1 is sorted first, followed 
+			by the column with sequence 2 ...).
+
+	Sort Direction  The sort direction is used only for columns with a 
+			non-zero sequence to specify whether the column is 
+			to be sorted in ascending or descending order.
+
+	Selection       By choosing a value other than 'none' for this 
+	Criteria	option, the report writer will prompt for a value 
+			or a range of values for this column whenever the
+			report is executed.  Only rows in the data table 
+			with matching values to your entry will be used as 
+			data in the report.  Use 'value' to select data
+			by a specific value, and 'range' to be able to 
+			select data within a range of values.  If more 
+			than one column is selected, rows must pass all 
+			selections to be used in the report.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	ListChoices	List all possible choices for the current field.
+			
+        Help            Print this message.
+
+        End             Return to the main menu.

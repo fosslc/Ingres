@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The allow_exeapp resource enables or diables the execution of external
+  applications.  This parameter is provided for compatibility with previous
+  versions of ICE and applies to non-macro pages only.
+
+  Default: ON

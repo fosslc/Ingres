@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- frsubtop.hlp.  Help file for the subtopic selection list.
+You have selected the "SubTopics" menu command for a help frame.
+The set of available subtopics is display in a PopUp form.  A subtopic
+will typically provide a more detailed explanation on a specific
+subject matter or provide examples on what needs to be entered.
+
+To select a subtopic, move the cursor with the arrow keys until the
+desired subject is highlighted and then choose the "Select" menu command.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+
+        Select                  Retrieves and displays information
+                                on the highlighted subtopic.
+ 
+        Cancel                  Return to previous help frame.
+
+        Help                    Obtain help, essentially this message.

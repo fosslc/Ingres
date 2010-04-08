@@ -1,0 +1,1209 @@
+/*
+** Copyright (c) 1990, 2008 Ingres Corporation
+**		All rights reserved.
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<cv.h>
+# include	<cm.h>
+# include	<er.h>
+# include	<ex.h>
+# include	<lo.h>
+# include	<ug.h>
+# include	<si.h>
+# include	<st.h>
+# include	<nm.h>
+# include	<generr.h>
+# include	<ui.h>
+# include	<uigdata.h>
+# include	<ut.h>
+## include	<dictutil.qsh>
+# include	"dctdll.h"	 
+# include	"erdu.h"
+EXEC SQL INCLUDE SQLCA;
+
+/*
+** FOOL MING
+**
+#include "dictutil.h"
+*/
+
+/**
+** Name:	dctmdsup.qsc - support routines for upgradefe and modifyfe
+**
+** Description:
+**	These are some routines which support upgradefe and modifyfe.
+**	(Historal note: upgradefe was formerly known as "dictinstall";
+**	and modifyfe was formerly known as "dictmod"; some people objected
+**	to the "dict" prefix so it was changed. But "dict" was sure funny
+**	while it lasted!).
+**
+**	This file defines:
+**
+**	modifymodule		- modify one module.
+**	execsql_from_file	- execute sql statements from script file.
+**	execsql			- execute one sql statement from buffer.
+**	resolve_file		- fill LOCATION with appropriate dict file
+**	register_db_type	- register current database type
+**	cat_exists		- returns whether system catalog exists
+**
+** History:
+**	May 1990 (rdesmond).
+**		first created.
+**      19-jul-1990 (pete)
+**              Add support for "-s" (silent) flag.
+**	2-aug-1990 (pete)
+**		Add support for IGNORE_NEXT_ERROR statement in *.cre and
+**		*.mfy files.
+**	20-sep-1990 (pete)
+**		change dictinstall to upgradefe; dictmod to modifyfe.
+**	25-sep-1990 (pete)
+**		rearanged some declarations for readability.
+**		Also, add DD
+**      18-oct-1990 (sandyd)
+**              Fixed #include of local erdu.h to use "" instead of <>.
+**	3-jan-1990 (pete)
+**		Make changes for Star support.
+**	20-jun-1990 (pete)
+**		Remove unused variable; declare FUNC_EXTERN as per Saber C
+**		suggestion.
+**	29-jul-1991 (pete)
+**		Add routine IIDDcseCheckStartupErrs(). Add module dump
+**		status decoding routine while working on bug 38984.
+**	17-aug-91 (leighb) DeskTop Porting Change:
+**		Reference data via a function call instead of referencing
+**		data across facilities (for DLL's on IBM/PC).
+**	05-sep-91 (leighb) DeskTop Porting Change:
+**		Unconditionally include dctdll.h header in all modules 
+**		that reference data across facilities; 
+**		move cross facilitiy GLOBALREF's to dctdll.h.
+**	24-jun-92 (jpk) make work from createdb again now that createdb
+**		calls -u$ingres.
+**	12/15/92 (dkh) - Changed code to use a real buffer on call to
+**			 LOfroms() rather than just a string constant.
+**			 Modifying string constants does not work on the alpha.
+**	22-july-1993 (jpk) add function cat_exists for system catalog lookup.
+**      11-jan-1996 (toumi01; from 1.1 axp_osf port)
+**              Added kchin's change (from 6.4) for axp_osf
+**              04-mar-93 (kchin)
+**              Added function declaration for  IIxflag(), since it returns
+**              char *.  On 64-bit platform, the default int return value
+**              for a function will truncate an address which is 64-bit long.
+**      24-sep-96 (hanch04)
+**              Global data moved to dctudata.c
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      07-nov-2001 (stial01)
+**          Added support for modifyfe -page_size=%N
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+#define BUFLEN 10000 /* buffer length for SQL statement */ 
+
+static	LOCATION	tmp_loc;
+static	char		tmp_loc_buf[MAX_LOC];
+static	i4		db_type_save;
+static	char	*dbtype_code[] =
+		{
+		    ERx("in"),
+#define INGRES	0
+		    ERx("st"),
+#define STAR	1
+		    ERx("gw"),
+#define GATEWAY	2
+		    ERx("d2"),
+#define DB2	3
+		    ERx("dg"),
+#define DGN	4
+		    ERx("hp"),
+#define HPA	5
+		    ERx("im"),
+#define IMS	6
+		    ERx("ns"),
+#define NSS	7
+		    ERx("rd"),
+#define RDB	8
+		    ERx("rm"),
+#define RMS	9
+		    ERx("sq")
+#define SQD	10
+		};
+
+/*	max # error numbers allowed on a IGNORE_NEXT_ERROR statement: */
+#define MAX_IGNORE_ERRS		10
+#define	IGNORE_ERROR_WORDSIZE	17	/* strlen("IGNORE_NEXT_ERROR"): */
+
+static i4	Ignore_errs[MAX_IGNORE_ERRS];
+static i4	Cnt_ignore_err;		/* number entries in "Ignore_errs" */
+static char	const	Word_ignore_err[] = ERx("IGNORE_NEXT_ERROR");
+static char	const	IgnoreAllErrors[] = ERx("ALL");
+#define ALL_ERRORS_CODE	0
+
+static STATUS	checkIgnoreErr();
+static i4	getStmtType();
+static VOID	errmsg();
+
+FUNC_EXTERN STATUS	finishStarStmts();
+FUNC_EXTERN VOID	initStarStmts();
+FUNC_EXTERN bool	IIDDidIsDistributed();
+FUNC_EXTERN VOID	IIDDga_GrantAllToDba();
+FUNC_EXTERN bool	IIDDigIsGateway();
+FUNC_EXTERN bool	IIDDcseCheckStartupErrs();
+FUNC_EXTERN STATUS	modifymodule();
+FUNC_EXTERN char	*IIDDscStatusDecode();
+FUNC_EXTERN char        *IIxflag();
+
+GLOBALREF char	IIDDResolvefilemsg[FE_MAXNAME+1];
+
+GLOBALREF bool IIDDsilent;      /* TRUE if "-s" (silent) was specified */
+GLOBALREF i4   IIDDpagesize;
+
+char	G_query_buf[BUFLEN];		/* stmt buffer */
+char	*Inarray[MAX_IGNORE_ERRS + 1];	/* pointers to words in stmt */
+i4	Wordcount;			/* # words in stmt */
+
+i4	Stmt_type;	/* type of SQL statement in .cre or .mfy file */
+
+
+/*{
+** Name:	modifymodule - modify one module.
+**
+** Description:
+**	Issue the SQL statements to modify one module.  When this is called
+**	from modifyfe, module cleanup should also be requested.  Modify
+**	statements are always contained in script files in the dictionary
+**	directory.  Module cleanup is executed through a stand-alone
+**	executable.  If cleanup is requested and the cleanup executable does
+**	not exist then no cleanup is done and processing continues.
+**
+** Inputs:
+**	moduledesc	- MODULEDESC for module to modify.
+**	cleanup		- flag which is set if cleanup is also desired.
+**
+** Outputs:
+**
+**	Returns:
+**		STATUS	-	OK:	module modified.
+**				FAIL:	module not modified.
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	May 1990 (rdesmond).
+**		first created.
+**	04-jun-1990 (rdesmond).
+**		now uses DD_dev and DD_path to construct locations.
+*/
+STATUS
+modifymodule(moduledesc, cleanup)
+MODULEDESC	*moduledesc;
+bool		cleanup;
+{
+    STATUS	status;
+    LOCATION	*tmp_loc;
+
+    if (!IIDDsilent)
+	IIUGmsg(ERget(S_DD0016_MODIFYING_MOD), (bool)FALSE, 2,
+	    moduledesc->modname, &moduledesc->modversion);
+
+    status = OK;
+    if (cleanup && resolve_file(moduledesc->filebase, CLEANUP, &tmp_loc) == OK)
+    {
+	/* first execute cleanup process then execute modify script */
+	/* If cleanup executable doesn't exist that's OK, just a noop */
+
+	char	*arglist;
+	char	*execname;
+	CL_ERR_DESC	err_code;
+
+	/* spawn cleanup program */
+	LOtos(tmp_loc, &execname);
+
+	arglist = ERx
+	  ("executable = %S, database = %S, equel = %S, user = %S");
+	status = UTexe(UT_WAIT, NULL, NULL, NULL, ERx("dictupgrade"),
+	  &err_code, arglist, 4, execname, IIuiDatabase, IIxflag(), IIuiUser);
+
+	/* guard against being in unknown transaction state in cleanup */
+	EXEC SQL COMMIT;
+	EXEC SQL SET AUTOCOMMIT ON;
+    }
+
+    /* If modify script doesn't exist that's OK, just a noop */
+    if (status == OK && 
+      resolve_file(moduledesc->filebase, MODIFY, &tmp_loc) == OK)
+	status = execsql_from_file(tmp_loc, 1);
+
+    if (status != OK)
+	IIUGerr(E_DD0010_CANT_MODIFY_MOD, UG_ERR_ERROR, 2,
+	  moduledesc->modname, &moduledesc->modversion);
+
+    return (status);
+}
+
+/*{
+** Name:	execsql_from_file - execute sql statements from script file.
+**
+** Description:
+**	Issue SQL statements from one script file.  SQL statements are
+**	separated in the script file by blank lines.
+**
+** Inputs:
+**	location	- LOCATION for file containing SQL script.
+**	starting_line	- line in file where SQL statements begin.
+**
+** Outputs:
+**
+**	Returns:
+**		STATUS	-	OK:	SQL statements successfully executed.
+**				FAIL:	SQL statements not successfully run.
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	May 1990 (rdesmond).
+**		first created.
+**	31-dec-1990 (pete)
+**		Changed logic a bit so don't need two calls to execsql.
+*/
+STATUS
+execsql_from_file(location, starting_line)
+LOCATION	*location;
+i4		starting_line;
+{
+    i4		i;
+    char	line_buf[BUFLEN];
+    char	query_buf[BUFLEN];
+    FILE	*filedesc;
+    STATUS	stat;
+
+    if (SIfopen(location, ERx("r"), SI_TXT, DO_INBUFSIZE,
+      &filedesc) != OK)
+	return(FAIL);
+    /* skip over file header */
+    for (i = 1; i < starting_line; i++)
+	SIgetrec(line_buf, BUFLEN, filedesc);
+
+    /* SQL statements are separated by blank lines */
+    query_buf[0] = EOS;
+    while (1)
+    {
+    	stat = SIgetrec(line_buf, BUFLEN, filedesc);
+
+	if (((line_buf[0] == '\n') || (stat == ENDFILE))
+	     && (query_buf[0] != EOS))
+	{
+	    /* we have a complete statement to execute */
+
+	    if (execsql(query_buf) != OK)
+	    {
+		SIclose(filedesc);
+		return (FAIL);
+	    }
+	    /* reinitialize query buffer */
+	    query_buf[0] = EOS;
+
+	    if (stat == ENDFILE)
+		break;
+	}
+	else
+	{
+	    /* same statement, so add to query buffer */
+	    STcat(query_buf, line_buf);
+	}
+    }
+    SIclose(filedesc);
+
+    return (OK);
+}
+
+/*{
+** Name:	execsql - execute sql statements from buffer.
+**
+** Description:
+**	Issue one SQL statement.
+**
+**	Information on generic errors for the "IGNORE_NEXT_ERROR" statement.
+**	Use the ', Decimal Value' numeric value below in the IGNORE_NEXT_ERROR
+**	statement in the *.cre file prior to the statement that can trigger
+**	the error. Also use the (deciml) Ingres Error value since generic
+**	errors didn't start till 6.3 -- 6.2 and earlier servers will return
+**	local Ingres errors:
+**					Ingres
+**					Error
+**		Error Description      (deciml)	Generic Error, Decimal GE Value
+**		----------------------	------	------------------------------
+**		CREATE dup table	US07DA	E_GE75F8_DEF_RESOURCE, 30200
+**					(2010)
+**		CREATE dup system tbl	US07D9	E_GE7D00_QUERY_ERROR, 32000
+**					(2009)
+**		CREATE dup procedure
+**		  (user & system)	US0960	E_GE7D00_QUERY_ERROR, 32000
+**					(2400)
+**		DROP table/index that doesn't
+**		  exist (user & system)	US0AC1	E_GE7594_TABLE_NOT_FOUND, 30100
+**					(2753)
+**		DROP procedure that doesn't
+**		  exist (user & system)	US0965	E_GE75B2_NOT_FOUND, 30130
+**					(2405)
+**              MODIFY non-existant tbl US0845  E_GE7594_TABLE_NOT_FOUND, 30100
+**                                      (2117)
+**              CREATE INDEX on
+**                non-existant table    US14B4  E_GE7594_TABLE_NOT_FOUND, 30100
+**                                      (5300)
+**
+** Inputs:
+**	query_buf	- buffer containing SQL statement, or IGNORE_NEXT_ERROR
+**			  statement.
+**
+** Outputs:
+**
+**	Returns:
+**		STATUS	-	OK:	SQL statement successfully executed, or
+**					else statement is IGNORE_NEXT_ERROR.
+**				FAIL:	SQL statement not successfully executed.
+**
+**	Exceptions:
+**
+** Side Effects:
+**	IGNORE_NEXT_ERROR statement sets error values in an array that
+**	won't be used till after the next SQL statement has executed.
+**
+** History:
+**	May 1990 (rdesmond).
+**		first created.
+**	July 31, 1990 (pete)
+**		Change logic so we check what type of statement we just
+**		tried to EXECUTE before we issue error messages and abort.
+**	Aug 1, 1990 (pete)
+**		Add support for "IGNORE_NEXT_ERROR" statement in *.cre files.
+**		Each statement in the *.cre and *.mfy files can be preceded
+**		by an "IGNORE_NEXT_ERROR" statement. For example:
+**
+**			CREATE TABLE ii_objects ( ... )
+**			
+**			IGNORE_NEXT_ERROR 30200 32000
+**
+**			CREATE TABLE ii_sequence_values ( ... )
+**
+**		Also, remove code added above on 7/31/90 which special cased
+**		some of this.
+**	21-sep-1990 (pete)
+**		Change message DD0019 to DD001F so can print query text too
+**		to help with debugging.
+**	28-dec-1990 (pete)
+**		Make changes for Star. If Star, then we'll be connected
+**		to the CDB, due to a "DIRECT CONNECT" issued above. Reason:
+**		Can't do GRANTs or MODIFYs in Star. So strategy = issue
+**		statements directly in the CDB; then do DIRECT DISCONNECT
+**		to return to star and issue a REGISTER (CREATE TABLE) or
+**		REMOVE (DROP TABLE) statement.
+**		Complication: if upgradefe has been run directly on the CDB,
+**		then tables may exist that aren't registered and vice-versa,
+**		hence a CREATE may fail but the REGISTER would work. Upgradefe
+**		subsequently changed so it will not run on a CDB -- gives error.
+**	26-feb-1991 (pete)
+**		Fix bug 36093. Can't issue GRANT statements on Gateway.
+**	22-mar-1991 (pete)
+**		Fix bug 36639. Be able to ignore ALL errors.
+**	9-apr-1991 (pete)
+**		Fix bug encountered while doing 6.4 PC port. On PC, end of file
+**		processing of .cre files caused execute immediate of
+**		statement that contains only a '\n' -- causes back-end error.
+**		Add block to check that "query_buf" contains at least one
+**		Alpha or Numeric character; if not, then return OK.
+**	5 Feb 1993 (jpk)
+**		Add commit after create table.  Stop eating the transaction
+**		logfile.
+*/
+
+STATUS
+execsql(query_buf)
+EXEC SQL BEGIN DECLARE SECTION;
+char	*query_buf;
+EXEC SQL END DECLARE SECTION;
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    i4		local_errno;
+    char	errtext[257];
+    EXEC SQL END DECLARE SECTION;
+    char	*tempptr;
+    bool	good_query = FALSE;
+    STATUS	stat = OK;
+    char	page_size_buf[256];
+    char	*cp;
+
+    /* query_buf must have some alpha or numeric characters; if it doesn't
+    ** have any (e.g. it contains only control characters) we quietly don't
+    ** run it and return OK.
+    */
+    for (tempptr = query_buf; *tempptr != EOS; CMnext(tempptr))
+    {
+	if (CMalpha(tempptr) || CMdigit(tempptr))
+	{
+	    good_query = TRUE;
+	    break;
+	}
+    }
+    if (!good_query)
+	goto done;
+
+    /* translate tabs and newlines to blanks for gateways */
+    if (db_type_save != INGRES && db_type_save != STAR)
+    {
+	for (tempptr = query_buf; *tempptr != EOS; tempptr++)
+	    if (CMwhite(tempptr))
+		*tempptr = ' ';
+    }
+
+    /* make copy of query buffer that can be parsed */
+    STcopy (query_buf, G_query_buf);
+
+    /* parse statement to be executed */
+    Wordcount = MAX_IGNORE_ERRS +1;	/* must reset every time */
+    STgetwords(G_query_buf, &Wordcount, Inarray);
+
+    if (Wordcount == 0)
+	goto done;
+
+    if ((Stmt_type = getStmtType(Inarray, Wordcount)) == DD_IGNORE_ERROR)
+	goto done;
+
+    IIDDbnxBeginNestedXact();
+    IIDDnw1NestedWriteOn();
+
+    IIsqInit(&sqlca);
+    IIwritio(TRUE, (i2 *)0, TRUE, DB_CHR_TYPE, 0, query_buf);
+    if (Stmt_type == DD_MODIFY_TABLE && IIDDpagesize != 0)
+    {
+	cp = &page_size_buf[0];
+	if (STstrindex(query_buf, "where", 0, TRUE)
+	    || STstrindex(query_buf, "with", 0, TRUE))
+	    cp = STprintf(cp, " ,page_size=%d", IIDDpagesize);
+	else
+	    cp = STprintf(cp, " with page_size=%d", IIDDpagesize);
+	IIwritio(TRUE, (i2 *)0, TRUE, DB_CHR_TYPE, 0, page_size_buf);
+    }
+    IIsyncup((char *)0, 0);
+    EXEC SQL INQUIRE_INGRES(:local_errno = errorno, :errtext = errortext);
+
+    if (local_errno != 0)
+    {
+	/* error occurred; see if it should be ignored. ABORT if it's "real" */
+    	if ((stat = checkIgnoreErr(local_errno, Stmt_type, errtext, query_buf))
+			!= OK)
+	    goto done;
+    }
+
+    if (Stmt_type == DD_CREATE_TABLE)
+    {
+        if (IIDDigIsGateway() == FALSE)
+        {
+            /*
+	    ** This is Ingres or Star (if Star, then we're connected to the
+	    ** CDB). Can't issue GRANT stmts on Ingres/Gateway.
+	    **
+	    ** Execute 'grant' statement for catalog.  This could be done
+	    ** in the .cre files, if there were a way to symbolically reference
+	    ** the DBA, for example dbmsinfo('dba'). (but there isn't)
+	    */
+	    IIDDga_GrantAllToDba(Inarray[2], &tempptr);
+
+	    EXEC SQL INQUIRE_INGRES(:local_errno = errorno,
+				    :errtext = errortext);
+	    if (local_errno != 0)
+	    {
+	        IIDDnw0NestedWriteOff();
+	        IIDDanxAbortNestedXact();
+                IIUGerr(E_DD001F_DBMS_ERROR2, UG_ERR_ERROR,
+					 2, errtext, tempptr);
+	        stat = FAIL;
+	        goto done;
+	    }
+	}
+    }
+
+    IIDDnw0NestedWriteOff();
+    IIDDenxEndNestedXact();
+
+    if (IIDDidIsDistributed() &&
+	(Stmt_type == DD_CREATE_TABLE || Stmt_type == DD_DROP_TABLE
+	|| Stmt_type == DD_MODIFY_TABLE))
+    {
+        /* Keep track of which tables we have issued CREATE TABLE or DROP
+	** TABLE statements for on the CDB (we're connected to the CDB).
+        */
+        if ((stat = saveStarStmt(Stmt_type, Inarray)) != OK)
+	    goto done;
+    }
+
+done:
+    if (stat == OK)
+    {
+	exec sql commit;
+    }
+    return (stat);
+}
+
+/*{
+** Name:	checkIgnoreErr - check if an error should be ignored.
+**
+** Description:
+**	Check if an error should be ignored, or if it is real and should
+**	cause an ABORT. If so, do the ABORT.
+**
+** Inputs:
+**	i4	local_errno	the error that occurred.
+**	i4	stmt_type	the statement type.
+**	char	*errtext	the error message text.
+**	char	*query_buf	the query that caused the error.
+**
+** Outputs:
+**
+**	Returns:
+**		STATUS - OK if error should be ignored.
+**			 FAIL if error is real and transaction was ABORTed.
+** History:
+**	31-dec-1990 (pete)
+**		Initial version.
+**	22-mar-1991 (pete)
+**		Add support for ignoring ALL errors.
+**	10-mar-1994 (pete)
+**		Always ignore certain errors. Reason: in future we may want
+**		to split up some modules into smaller pieces. But can result
+**		in older version of a module trying to create a catalog
+**		that isn't in later versions of that module. This could
+**		happen if older client runs its upgradefe on a DB with newer
+**		clients already installed. So, ignore errors related to
+**		a module assuming that table X does not exist, and then
+**		trying to create it; likewise for assuming that table X
+**		exists and try to modify or create an index for it.
+**		Also, removed a block of code that ignored errors when
+**		running on star ("if (!ignore_err && IIDDidIsDistributed())")
+**		because it was covered by these new ignore error checks.
+*/
+static STATUS
+checkIgnoreErr (local_errno, stmt_type, errtext, query_buf)
+i4	local_errno;
+i4	stmt_type;
+char	*errtext;
+char	*query_buf;
+{
+    bool	ignore_err = FALSE;	/* don't ignore the error */
+    STATUS	stat = OK;
+    i4		i;
+
+    if (Cnt_ignore_err > 0)
+    {
+	/* Previous statement was an IGNORE_NEXT_ERROR statement, so
+	** there are some errors to ignore for this statement.
+	** Check if error that just occurred is one previous statement said
+	** to ignore.
+	*/
+	if (Ignore_errs[0] == (i4) ALL_ERRORS_CODE)
+	{
+	    /* ignore the error no matter what it is. Previous statement
+	    ** said:   IGNORE_NEXT_ERROR ALL
+	    */
+	    ignore_err = TRUE;	/* ignore the error */
+	}
+	else
+	{
+	    /* see if this particular error should be ignored */
+	    for (i = 0; i < Cnt_ignore_err; i++)
+	    {
+		if (Ignore_errs[i] == local_errno)
+		    ignore_err = TRUE;	/* ignore the error */
+	    }
+	}
+	Cnt_ignore_err = 0;		/* reset for next statement */
+    }
+
+    /* Check for an error that we should ignore. We ignore the following:
+    **	 CREATE TABLE when the table already exists.
+    **	 MODIFY, DROP TABLE, or DROP INDEX  when the table/index does Not exist.
+    **	 CREATE INDEX when the base table does not exist.
+    ** We check for both generic and local errors in case we're connected
+    ** with 6.2 Ingres DBMS, or site has II_EMBED_SET set to "dbmserror".
+    */
+    if (!ignore_err &&
+        ((stmt_type == DD_CREATE_TABLE) &&
+         (local_errno == E_GE75F8_DEF_RESOURCE ||
+          local_errno == E_GE7D00_QUERY_ERROR  ||	/* create dup table */
+          local_errno == 2010		       ||	/* US07DA */
+          local_errno == 2009))				/* US07D9 */
+        ||
+	((stmt_type == DD_MODIFY_TABLE || stmt_type == DD_CREATE_INDEX ||
+	  stmt_type == DD_DROP_INDEX || stmt_type == DD_DROP_TABLE) &&
+	 (local_errno == E_GE7594_TABLE_NOT_FOUND ||
+          local_errno == 2117 ||		/* US0845, tbl does not exist */
+	  local_errno == 5300 ||		/* US14B4 */
+	  local_errno == 2753))			/* US0AC1 */
+	)
+	ignore_err = TRUE;			/* ignore the error */
+
+    if (!ignore_err)
+    {
+	/* don't ignore it; get really mad about it */
+
+        IIDDanxAbortNestedXact();
+        IIDDnw0NestedWriteOff();
+        IIUGerr(E_DD001F_DBMS_ERROR2, UG_ERR_ERROR, 2, errtext, query_buf);
+	stat = FAIL;
+    }
+
+    return (stat);
+}
+
+/*{
+** Name:	getStmtType - get statement type.
+**
+** Description:
+**	Determine the statement type: CREATE TABLE, DROP TABLE, MODIFY,
+**	IGNORE_NEXT_ERROR or OTHER. If statement type is IGNORE_NEXT_ERROR,
+**	then also pick up and save all the error numbers on the statement.
+**
+** Inputs:
+**	char	*wordarray[];
+**	i4	wordcount;
+**
+** Outputs:
+**
+**	Returns:
+**		i4  -  The statement type:
+**				DD_CREATE_TABLE
+**				DD_DROP_TABLE
+**				DD_MODIFY_TABLE
+**				DD_IGNORE_ERROR
+**                              DD_CREATE_INDEX
+**                              DD_DROP_INDEX
+**				DD_OTHER_STMT
+** History:
+**	31-dec-1990 (pete)
+**		Initial version.
+**	22-mar-1991 (pete)
+**		Look for IGNORE_NEXT_ERROR ALL (part of fix for bug 36639).
+**	29-mar-1991 (pete)
+**		Fix problem that was crashing upgradefe on VMS. Change
+**		"wordcount > 0" to "wordcount > 1" in STbcompare below.
+**	10-mar-1994 (pete)
+**		Add check for CREATE INDEX statement.
+*/
+static i4
+getStmtType (wordarray, wordcount)
+char	*wordarray[];
+i4	wordcount;
+{
+    i4		i;
+    i4	err;
+    i4		stmt_type = DD_OTHER_STMT;
+
+    /* check statement type (CREATE or DROP TABLE, etc) */
+    if ((wordcount > 1) &&
+	(STbcompare(wordarray[1], 0, ERx("table"), 0, TRUE) == 0))
+    {
+        if (STbcompare(wordarray[0], 0, ERx("create"), 0, TRUE) == 0)
+	    stmt_type = DD_CREATE_TABLE;
+	else if (STbcompare(wordarray[0], 0, ERx("drop"), 0, TRUE) == 0)
+	    stmt_type = DD_DROP_TABLE;
+    }
+    else if ((STbcompare(wordarray[0], 0, ERx("modify"), 0, TRUE) == 0))
+    {
+	stmt_type = DD_MODIFY_TABLE;
+    }
+    else if ((wordcount > 1) &&
+	(STbcompare(wordarray[1], 0, ERx("index"), 0, TRUE) == 0))
+    {
+	if (STbcompare(wordarray[0], 0, ERx("create"), 0, TRUE) == 0)
+	    stmt_type = DD_CREATE_INDEX;
+	else if (STbcompare(wordarray[0], 0, ERx("drop"), 0, TRUE) == 0)
+	    stmt_type = DD_DROP_INDEX;
+    }
+    else if (STbcompare (wordarray[0], IGNORE_ERROR_WORDSIZE,
+		    Word_ignore_err, IGNORE_ERROR_WORDSIZE, TRUE) == 0)
+    {
+	/* This stmt gives error numbers to ignore after next DDL statement.
+	** Save errors in global array for next statement.
+	*/
+	stmt_type = DD_IGNORE_ERROR;
+	Cnt_ignore_err = 0;
+
+	if ((wordcount > 1) &&
+	    (STbcompare (wordarray[1], 0, IgnoreAllErrors, 0, TRUE) == 0))
+	{
+	    /* Statement looks like:   IGNORE_NEXT_ERROR ALL
+	    ** This means to ignore all errors on next statement.
+	    ** Signal that with Ignore_errs[0] set to ALL_ERRORS_CODE.
+	    */
+	    Ignore_errs[Cnt_ignore_err++] = (i4) ALL_ERRORS_CODE;
+	}
+	else
+	{
+	    /* Statement says to ignore specific errors.
+	    ** Save the error numbers to ignore.
+	    */
+	    for (i = 1; i < wordcount; i++)
+	    {
+	            err = 0;
+	            CVal (wordarray[i], &err);
+	            if (err != 0)
+	            {
+		        /* save this error number & ignore on next stmt */
+		        Ignore_errs[Cnt_ignore_err++] = err;
+	            }
+	    }
+	}
+    }
+
+    return (stmt_type);
+}
+
+/*{
+** Name:	resolve_file - fills location with appropriate dict file
+**				for module.
+**
+** Description:
+**	Given a type of file (one of create script, modify script, upgrade
+**	executable or cleanup executable) and a file base name, this procedure
+**	will find the first file in the search path which exists or will
+**	return an indication that none exists.
+**
+** Inputs:
+**	file_base_in	- name of base of filename
+**	file_type_in	- type of file to resolve.  One of:
+**				CREATE		<mod><ver>c<dbcode>.cre
+**				MODIFY		<mod><ver>m<dbcode>.mfy
+**				CLEANUP		<mod><ver>f<dbcode>
+**				UPGRADE		<mod><ver>u<dbcode>
+**	loc_out		- location to hold the resolved file name (buffer is
+**			  static).
+**
+** Outputs:
+**
+**	Returns:
+**		STATUS	-	OK:	Location contains file.
+**				FAIL:	No file in search path exists.
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	August 1990 (rdesmond).
+**		first created.
+**	25-sep-1990 (pete)
+**		Added support for different file extensions on different
+**		operating systems (DDIMGEXT).
+**	9-nov-1990 (pete)
+**		Changed DDIMGEXT to LO_EXE_EXT, which now exists in lo.h.
+**      4-jan-1991 (pete)
+**              Removed separate search list for Star; now its filenames are
+**              totally equivalent to Ingres.
+**	11-apr-1991 (pete)
+**		Improve error checking after couple reports of mysterious
+**		problems on VMS systems where an upgrade executable can't
+**		be found, but appears to be there and is executable.
+*/
+STATUS
+resolve_file(file_base_in, file_type_in, loc_out)
+char		*file_base_in;
+i4		file_type_in;
+LOCATION	**loc_out;
+{
+    char	filebase[9];
+    char	*filetype_code;
+    char	tmp_dev[MAX_LOC];
+    char	tmp_path[MAX_LOC];
+    char	dmy[MAX_LOC];
+    i4		search_path[4];
+    i4		i;
+    STATUS	stat;
+
+    /* 5th character in file name says what file does. Set it: */
+    switch (file_type_in)
+    {
+	case CREATE:
+		filetype_code = ERx("c");
+		break;
+	case MODIFY:
+		filetype_code = ERx("m");
+		break;
+	case CLEANUP:
+		filetype_code = ERx("f");
+		break;
+	case UPGRADE:
+		filetype_code = ERx("u");
+		break;
+	default:
+		return (FAIL);
+    }
+
+    /* set up search path vector */
+    i = 0;
+    if ((db_type_save != INGRES) && (db_type_save != STAR))
+    {
+        search_path[i++] = db_type_save;
+        search_path[i++] = GATEWAY;
+        search_path[i++] = INGRES;
+    }
+    else
+        search_path[i++] = INGRES;      /* STAR & INGRES use same files */
+
+    search_path[i] = -1;
+
+    /*
+    **	For each member in the search path, construct location and attempt to
+    **	open file.
+    */
+    for (i = 0; search_path[i] != -1; i++)
+    {
+	char	tmp_filename[9];
+
+	/* place file type code onto file name */
+	STcopy(file_base_in, filebase);
+	STcat(filebase, filetype_code);
+
+	/* append code for database type onto file base */
+	STcopy(filebase, tmp_filename);
+	STcat(tmp_filename, dbtype_code[search_path[i]]);
+
+	if (file_type_in == CLEANUP || file_type_in == UPGRADE)
+	{
+	    /* Construct location for executable file */
+	    if ((stat = NMloc(BIN, PATH, NULL, &tmp_loc)) != OK)
+	    {
+		errmsg(stat, ERx("NMloc"));
+	        goto badreturn;
+	    }
+	    LOcopy(&tmp_loc, tmp_loc_buf, &tmp_loc);
+
+	    if ((stat = LOdetail(&tmp_loc, tmp_dev, tmp_path, dmy, dmy, dmy))
+	    		!= OK)
+	    {
+		errmsg(stat, ERx("LOdetail"));
+	        goto badreturn;
+	    }
+
+	    /* LO_EXE_EXT holds name of file extension for an executable on
+	    ** this OS.
+	    */
+	    if ((stat = LOcompose(tmp_dev, tmp_path, tmp_filename,
+				LO_EXE_EXT, NULL, &tmp_loc)) != OK)
+	    {
+		errmsg(stat, ERx("LOcompose"));
+	        goto badreturn;
+	    }
+	}
+	else
+	{
+	    char	*suffix;
+
+	    if (file_type_in == CREATE)
+		suffix = ERx("cre");
+	    else
+		suffix = ERx("mfy");
+
+	    /* compose name of script */
+	    if ((stat = LOcompose(DD_dev, DD_path, tmp_filename,
+				suffix, NULL, &tmp_loc)) != OK)
+	    {
+		errmsg(stat, ERx("LOcompose2"));
+	        goto badreturn;
+	    }
+	}
+
+	if ((stat = LOexist(&tmp_loc)) == OK)
+	{
+	    *loc_out = &tmp_loc;
+	    return (OK);
+	}
+	else
+	    errmsg(stat, ERx("LOexist"));
+    }
+
+badreturn:
+    /* no file found in search path */
+    *loc_out = &tmp_loc;	/* caller may want to report path in error msg*/
+    return (FAIL);
+}
+
+/*{
+** Name:	errmsg - format a portion of an error message (E_DD0025).
+**
+** Inputs:
+**	STATUS	stat;
+**	char	*routine;
+**
+** Outputs:
+**	Writes to global string array: IIDDResolvefilemsg
+**
+**	Returns:
+**		VOID
+**
+** History:
+**	Apr 11, 1991 (pete)
+**		Initial Version.
+*/
+static VOID
+errmsg(stat, routine)
+STATUS	stat;
+char	*routine;
+{
+	char c_stat[FE_MAXNAME+1];
+
+	CVla((i4) stat, c_stat);
+	STprintf(IIDDResolvefilemsg, ERx("%s returned %s"), routine, c_stat);
+
+	return;
+}
+
+/*{
+** Name:	register_db_type - register current database type
+**
+** Description:
+**	This registers the current database type with this module so that
+**	dictionary installation file names can be resolved with respect to
+**	the registered database name.  The database type is detected by
+**	selecting the value for the capability "DBMS_TYPE" from
+**	iidbcapabilities.
+**
+** Inputs:
+**
+** Outputs:
+**
+**	Returns:
+**		STATUS	-	OK:	Database type registered.
+**				FAIL:	Database type not registered.
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	August 1990 (rdesmond).
+**		first created.
+*/
+STATUS
+register_db_type()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char	db_type_str[FE_MAXNAME +1];
+    char	*cap_capability;
+    i4		local_errno;
+    char	errtext[257];
+    EXEC SQL END DECLARE SECTION;
+    char	lobuf[MAX_LOC + 1];
+
+    /*
+    **  Need to use a real buffer for calls to LOfroms() since modifying
+    **  string constants will not work on the alpha.
+    */
+    STcopy(ERx(""), lobuf);
+
+    /* create blank location and associate buffer with it */
+    LOfroms(PATH & FILENAME, lobuf, &tmp_loc);
+    LOcopy(&tmp_loc, tmp_loc_buf, &tmp_loc);
+
+    /* determine database or gateway type */
+    cap_capability = ERx("DBMS_TYPE");
+    IIDDnr1NestedReadOn(ERx("iidbcapabilities"));
+    EXEC SQL REPEATED
+	SELECT
+	    cap_value
+	INTO
+	    :db_type_str
+	FROM
+	    iidbcapabilities 
+	WHERE
+	    cap_capability = :cap_capability;
+    EXEC SQL INQUIRE_INGRES(:local_errno = errorno, :errtext = errortext);
+    IIDDnr0NestedReadOff(ERx("iidbcapabilities"));
+    if (local_errno != 0)
+    {
+	IIUGerr(E_DD0019_DBMS_ERROR, UG_ERR_ERROR, 1, errtext);
+	return (FALSE);
+    }
+
+    /* save database type */
+    STtrmwhite(db_type_str);
+    CVlower(db_type_str);
+    if (STcompare(db_type_str, ERx("ingres")) == 0)
+	db_type_save = INGRES;
+    else if (STcompare(db_type_str, ERx("star")) == 0)
+	db_type_save = STAR;
+    else
+	/*
+	    FOR NOW.. we don't handle specific gateways.  When we do,
+	    set db_type_save to the constant for the supported gateways.
+	    Assume generic gateway here.
+	*/
+	db_type_save = GATEWAY;
+
+    return (OK);
+}
+
+/*{
+** Name:        IIDDcseCheckStartupErrs - check startup errors
+**
+** Description:
+**      Check for specific errors after CONNECT. Called by upgradefe &
+**      modifyfe.
+**
+** Inputs:
+**      STATUS          rval        return code from FEingres().
+**      char            *dbname     name of database.
+**      char            *progname   calling program (e.g. "upgradefe").
+**      ER_MSGID        dboperation operation being done (e.g. "upgrade").
+**
+** Outputs:
+**
+**      Returns:
+**              TRUE if successful CONNECT.
+**              Otherwise doesn't return.
+**
+** History:
+**      jul-29-1991 (pete)
+**              Initial Version.
+**	25-July-1992 (jpk)
+**		Accept catowner ($ingres) as privs enough.
+**	26-July-1993 (jpk)
+**		make comparision to $ingres case insensitive.
+**	23-Aug-2009 (kschendel) 121804
+**	    Resolve bool vs STATUS confusion, make this bool.
+*/
+bool
+IIDDcseCheckStartupErrs(rval, dbname, progname, dboperation)
+STATUS  rval;
+char    *dbname;
+char    *progname;
+ER_MSGID        dboperation;
+{
+
+    /* Note: generic errors start in 6.3; in 6.2 and earlier server US0002 will
+    ** be returned above, if user not authorized.
+    */
+    if (rval == E_GE84D0_NO_PRIVILEGE)
+    {
+        /* error message like US0002 or US0003; no priv to run pgm */
+        IIUGerr(E_DD001B_NO_DB_PRIV, UG_ERR_FATAL, 2, (PTR) progname,
+                (PTR)dbname);
+        /*NOTREACHED*/
+    }
+    else if (rval != OK)
+    {
+        IIUGerr(E_DD0002_CANT_CONNECT_TO_DB, UG_ERR_FATAL,
+                                2, (PTR)dbname, (PTR) progname);
+        /*NOTREACHED*/
+    }
+
+    if (register_db_type() != OK)
+    {
+        IIUGerr(E_DD001D_CANT_GET_DB_TYPE, UG_ERR_FATAL, 0);
+        /*NOTREACHED*/
+    }
+
+    /* Check if User != DBA. You must specify the -u flag to impersonate
+    ** DBA if want to upgrade another user's database.  If called from
+    ** createdb, accept $ingres (catowner) as privs enough.
+    */
+    if (!IIuiIsDBA && (STbcompare(IIUIdbdata()->user, 0,
+	IIUIdbdata()->catowner, 0, TRUE) != 0))
+    {
+        IIUGerr(E_DD0027_NOT_DBA, UG_ERR_FATAL,
+                3, (PTR) ERget(dboperation), (PTR) IIuiUser, (PTR) IIuiDBA);
+        /*NOTREACHED*/
+    }
+    return TRUE;
+}
+
+/*
+**  Called by upgradefe and modifyfe when logical II_DDTRACE is set.
+**  Decodes MODULEDESC->status for printing debug output.
+*/
+char *
+IIDDscStatusDecode(stat)
+i4	stat;
+{
+        char    *stat_name;
+
+        switch (stat)
+        {
+        case UNKNOWN:
+                stat_name = ERx("NOT_SET");
+                break;
+        case INSTALLED:
+                stat_name = ERx("INSTALLED");
+                break;
+        case ANC_COMPAT:
+                stat_name = ERx("ANCESTOR_IS_COMPAT");
+                break;
+        case ANC_INCOMPAT:
+                stat_name = ERx("ANCESTOR_NOT_COMPAT");
+                break;
+        case DESC_COMPAT:
+                stat_name = ERx("CHILDMODULE_IS_COMPAT");
+                break;
+        case DESC_INCOMPAT:
+                stat_name = ERx("CHILDMODULE_NOT_COMPAT");
+                break;
+        case NOTINSTALLED:
+                stat_name = ERx("NOTINSTALLED");
+                break;
+        case UPGRADE_ABORT:
+                stat_name = ERx("UPGRADE_ABORT");
+                break;
+        case MODIFIED:
+                stat_name = ERx("MODIFIED");
+                break;
+        default:
+                stat_name = ERx("<could not find>");
+                break;
+        }
+
+        return (stat_name);
+}
+
+STATUS
+valid_dbms_pagesize(page_size)
+{
+    exec sql begin declare section;
+	char	dbmsinfo_2k[32];
+	char	dbmsinfo_4k[32];
+	char	dbmsinfo_8k[32];
+	char	dbmsinfo_16k[32];
+	char	dbmsinfo_32k[32];
+	char	dbmsinfo_64k[32];
+    exec sql end declare section;
+
+    exec sql select dbmsinfo('page_size_2k'), dbmsinfo('page_size_4k'),
+    dbmsinfo('page_size_8k'), dbmsinfo('page_size_16k'),
+    dbmsinfo('page_size_32k'), dbmsinfo('page_size_64k') into
+    :dbmsinfo_2k, :dbmsinfo_4k, :dbmsinfo_8k, :dbmsinfo_16k, 
+    :dbmsinfo_32k, :dbmsinfo_64k;
+
+    if(sqlca.sqlcode != 0)
+    {
+	return (FAIL);
+    }
+
+    if ((page_size == 2048  && dbmsinfo_2k[0]  == 'Y') ||
+	(page_size == 4096  && dbmsinfo_4k[0]  == 'Y') ||
+	(page_size == 8192  && dbmsinfo_8k[0]  == 'Y') ||
+	(page_size == 16384 && dbmsinfo_16k[0] == 'Y') ||
+	(page_size == 32768 && dbmsinfo_32k[0] == 'Y') ||
+	(page_size == 65536 && dbmsinfo_64k[0] == 'Y'))
+	return (OK);
+    else
+	return (FAIL); 
+}

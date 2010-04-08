@@ -1,0 +1,23 @@
+;
+;  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+;
+;    Source   : ijactrl.def , Defintion the export function
+;    Project  : Ingres Journal Analyser
+;    Author   : Sotheavut UK (uk$so01)
+;
+;
+; History:
+; 22-Dec-1999 (uk$so01)
+;    Created
+; 30-Jul-2004 (uk$so01)
+;    SIR #112708, Change the AboutBox due to UI Standard.
+;
+; IjaCtrl.def : Declares the module parameters.
+
+LIBRARY      "IJACTRL.OCX"
+
+EXPORTS
+	DllCanUnloadNow      PRIVATE
+	DllGetClassObject    PRIVATE
+	DllRegisterServer    PRIVATE
+	DllUnregisterServer  PRIVATE

@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abloktr.hlp, help at the pop-up warning users that the application/frame 
+/#-- is in use by others.
+/#-- 
+The display shows you the login name(s) of the people currently working in 
+this frame or in a frame below this one. 
+
+If you choose to go ahead and remove this frame, it could seriously affect 
+their ability to run and test the application.
+ 
+At this point, you may select Cancel to abort the remove request, or you
+may select OK to proceed with the removal of the frame.

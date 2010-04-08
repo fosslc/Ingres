@@ -1,0 +1,5 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/include=(gv), -
+INGLIB:libgcf.olb/library, -
+II_COMPATLIB/share

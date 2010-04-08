@@ -1,0 +1,17 @@
+#
+# Jamfile file for common!aif!ait
+#
+
+SubDir ING_SRC common aif ait ;
+
+IISUBSYS common aif ait ;
+
+
+
+IIBINEXE apitest : aitmain.c ;
+IINEEDLIBS apitest : AITLIB APILIB GCFLIB ADFLIB CUFLIB
+	COMPAT ;
+
+IILIBRARY AITLIB : aitsym.c aitproc.c aitparse.c aitmisc.c
+	aitfunc.c aitbind.c ;
+

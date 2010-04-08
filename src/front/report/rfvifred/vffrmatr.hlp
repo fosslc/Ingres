@@ -1,0 +1,110 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The Form Attribute frame allows you to change the default display style of
+the current form.  "Fullscreen" and "Popup" are the major choices.  If a 
+form's default display style is Fullscreen, then one can additionally
+specify the screen width to display the form in.  For a default display
+style of Popup, it is possible to specify other style attributes such as
+the presence of a border, and the default positioning method to be applied
+when the form is run.
+
+Note that application code can override all of the default form attributes
+which can be set by Vifred.
+
+Field descriptions are:
+
+        FIELD NAME              SYNOPSIS
+        ----------              --------
+
+        Style                   Sets the basic display style of the 
+                                form. The choices are:
+
+                                Fullscreen - which means that when the form
+                                             is running it will cover the
+                                             entire screen.  (All forms are 
+                                             initially created as Fullscreen 
+                                             and can later be converted to
+                                             Popup as desired.)
+
+                                Popup      - which means that the form does
+                                             not necessarily cover the entire
+                                             screen but can be popped up 
+                                             on top of another form.
+                                             Popup style forms must fit
+                                             within the screen boundaries.
+
+        Screen Width            Sets the terminal screen width to display
+                                a Fullscreen style form in at runtime.
+                                The choices are:
+
+                                Current    - which means to display the form
+                                             in the current width.
+
+                                Narrow     - which means to display the form
+                                             in the narrow width for the
+                                             terminal.  This would typically
+                                             be 80 columns.
+
+                                Wide       - which means to display the form
+                                             in the wide width for the
+                                             terminal.  This would typically
+                                             be 132 columns.
+                                              
+        Positioning             Sets the basic positioning method of a 
+                                popup form.  The choices are:
+
+                                Floating   - which means that the form will
+                                             be displayed as near as possible
+                                             to the field that was being 
+                                             edited on the last active form.
+                                             (This is the default initial 
+                                             positioning method for Popup 
+                                             style forms.)
+
+                                Fixed      - which means that the form will
+                                             be displayed at a fixed position
+                                             on the screen. Note that this
+                                             is screen relative positioning
+                                             which is not affected by the 
+                                             forms that might be displayed 
+                                             below it.
+
+        StartRow                Sets the start screen column of a 
+                                "Fixed" position Popup form. Rows are 
+                                numbered from the top downward starting
+                                with row 1 as the top row of the form.
+
+        StartColumn             Sets the start screen column of a 
+                                "Fixed" position Popup form. Columns are
+                                numbered from the left to right starting
+                                with column 1 as the rightmost column.
+
+        Size                    Display only field showing the size of
+                                the form in rows and columns.
+
+        Border                  Sets whether or not a Popup style form will 
+                                be displayed with a border.
+                                (When a form is converted to Popup style
+                                the border is initially turned on.)
+
+        Note that fields which are not relevant at any particular time
+        will not be displayed.  For example, if the Position type is
+        Floating, then the StartRow and StartColumn fields do not display
+        because they would only be relevant to a Fixed position form.
+        
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        
+        VisuallyAdjust          Adjust the size and position of a
+                                Popup style form. Choosing this menu item
+                                allows viewing the Popup style form as it 
+                                would appear to the user when the form is
+                                run. This menu item is only valid for Popup
+                                style forms, not for Fullscreen style forms.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to editing the current form. 
+                                

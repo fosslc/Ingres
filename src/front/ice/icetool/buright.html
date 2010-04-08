@@ -1,0 +1,100 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Access definition&submit=` -->
+
+<TABLE BORDER=1 WIDTH="90%" CELLPADDING=5 CELLSPACING=2>
+	<TR>
+		<TD ALIGN="CENTER">Role</TD>
+		<TD ALIGN="CENTER">Execute documents</TD>
+		<TD ALIGN="CENTER">Create document</TD>
+		<TD ALIGN="CENTER">Read documents</TD>
+		<TD ALIGN="CENTER">Submit</TD>
+	</TR>
+	<TR>
+	  <FORM NAME="newrole" ACTION="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext` -->/iceTools/actbuRole.html" METHOD="POST"> 
+			<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">
+			<INPUT TYPE="HIDDEN" NAME="ch_unit" VALUE="<!-- #ICE VAR=`:unit` -->">
+			<TD WIDTH="150">New: <SELECT NAME="ch_role_id">
+				 <OPTION VALUE="0"></OPTION>
+			<!-- #ICE FUNCTION=`role?action=select`
+					 HTML=`
+					 <OPTION VALUE=":role_id">:role_name</OPTION>`
+			-->
+			</SELECT></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_execute"		VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_insert"		VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_read"		VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="IMAGE"	  NAME="go" BORDER=0	SRC="<!-- #ICE INCLUDE=`submit.gif` -->"></TD>
+		</FORM>
+	</TR>
+	<TR>
+	<!-- #ICE REPEAT FUNCTION=`unit_role?action=retrieve&ur_unit_id=:unit`
+			 HTML=`
+			 <TR><FORM ACTION="/ice-bin/oiice.:http_api_ext/iceTools/actbuRole.html" METHOD="POST"> 
+					<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">
+					<INPUT TYPE="HIDDEN" NAME="ch_unit" VALUE=":ur_unit_id">
+					<INPUT TYPE="HIDDEN" NAME="ch_role_id" VALUE=":ur_role_id">
+					<TD>:ur_role_name</TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_execute" VALUE="checked" :ur_execute></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_insert" VALUE="checked" :ur_insert></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_read" VALUE="checked" :ur_read></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="image" NAME="Submit" BORDER=0 SRC="<!-- #ICE INCLUDE=``update.gif`` -->"></TD>
+				</FORM></TR>`
+	-->
+	</TR>
+</TABLE>
+
+<!-- #ICE REPEAT INCLUDE=`result.html?submit=&cancel=&object=access information for this unit&name=&cancel=&submit=&action=accessed` -->
+
+<TABLE BORDER=1 WIDTH="90%" CELLPADDING=5 CELLSPACING=2>
+	<TR>
+		<TD ALIGN="CENTER">User</TD>
+		<TD ALIGN="CENTER">unit Read</TD>
+		<TD ALIGN="CENTER">Create document</TD>
+		<TD ALIGN="CENTER">Read documents</TD>
+		<TD ALIGN="CENTER">Submit</TD>
+	<TR>
+	</TR>
+	  <FORM ACTION="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext` -->/iceTools/actbuUser.html" METHOD="POST"> 
+			<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">
+			<INPUT TYPE="HIDDEN" NAME="ch_unit" VALUE="<!-- #ICE VAR=`:unit` -->">
+			<TD WIDTH="150">New: <SELECT NAME="ch_user_id">
+				 <OPTION VALUE="0"></OPTION>
+			<!-- #ICE REPEAT FUNCTION=`user?action=select`
+					 HTML=`
+					 <OPTION VALUE=":user_id">:user_name</OPTION>`
+			-->
+			</SELECT></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_execute" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_insert" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_read" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="image" 	 NAME="Submit" BORDER=0 SRC="<!-- #ICE INCLUDE=`submit.gif` -->"></TD>
+		</FORM>
+	</TR>
+	<TR>
+	<!-- #ICE FUNCTION=`unit_user?action=retrieve&uu_unit_id=:unit`
+			 HTML=`
+			 <TR><FORM ACTION="/ice-bin/oiice.:http_api_ext/iceTools/actbuUser.html" METHOD="POST"> 
+					<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">
+					<INPUT TYPE="HIDDEN" NAME="ch_unit" VALUE=":uu_unit_id">
+					<INPUT TYPE="HIDDEN" NAME="ch_user_id" VALUE=":uu_user_id">
+					<TD>:uu_user_name</TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_execute" VALUE="checked" :uu_execute></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_insert" VALUE="checked" :uu_insert></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_read" VALUE="checked" :uu_read></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="image" NAME="Submit" BORDER=0 SRC="<!-- #ICE INCLUDE=``update.gif`` -->"></TD>
+				</FORM></TR>`
+	-->
+	</TR>
+</TABLE>
+
+<!-- #ICE REPEAT INCLUDE=`result.html?submit=&cancel=&object=access information for this unit&name=&cancel=&submit=&action=accessed` -->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

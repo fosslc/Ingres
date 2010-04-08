@@ -1,0 +1,98 @@
+<HTML>
+<HEAD>
+<TITLE>Dynamic SQL</TITLE>
+<script language="javascript">
+<!--
+function callhelp( fobj )
+{
+    iurl = "/ice-bin/oiice.#cgi#/ice/samples/query/help.html"
+
+    for( var i=0; i < fobj.elements.length - 1; i++)
+    {
+        if ((fobj.elements[i].name != '') && (fobj.elements[i].value != ''))
+        {
+            if (i == 0)
+            {
+                iurl += "?"
+            }
+            if (i > 0)
+            {
+                iurl += "&"
+            }
+            iurl += fobj.elements[i].name + "=" + fobj.elements[i].value
+        }
+    }
+    open(iurl, "Dynamic_SQL_Help", "status=yes,scrollbars=yes,resizable=yes");
+}
+
+function updatepropdisp( formobj, id )
+{
+    for (var i=0; i < formobj.length; i++)
+    {
+        if (formobj.options[i].value == id)
+        {
+            formobj.selectedIndex = i;
+            formobj.options[i].selected = true;
+            return;
+        }
+    }
+}
+//-->
+</script>
+</HEAD>
+<BODY>
+<!-- #ICE REPEAT
+    DECLARE=`page.idb=<select name="ii_userid">
+<!-- #ICE DATABASE=``icesvr`` USER=``ingroot`` SQL=``select alias from ice_dbusers`` TYPE=``unformatted`` HTML=``<option value=":alias">:alias</option>`` --></select>`
+-->
+<!-- #ICE REPEAT
+    DECLARE=`page.db=<select name="ii_database">
+<!-- #ICE DATABASE=``iidbdb`` USER=``ingroot`` SQL=``select name from iidatabase`` TYPE=``unformatted`` HTML=``<option value=":name">:name</option>`` --></select>`
+-->
+<!-- #ICE REPEAT
+    DECLARE=`page.ingusr=<select name="iuser">
+<!-- #ICE DATABASE=``iidbdb`` USER=``ingroot`` SQL=``select name from iiuser`` TYPE=``unformatted`` HTML=``<option value=":name">:name</option>``
+--></select>`
+-->
+
+<H3 ALIGN=CENTER>
+<font color="#0000FF">Ingres/ICE Database Explorer</Font>
+</H3>
+<CENTER>
+<table border="1">
+<tr><td>
+    <form action="javascript:void(0)" NAME="help">
+    <table>
+    <tr><th colspan="6" align="center"><font color="#0000FF">Select Database and/or Table</Font></th>
+    <tr><th>ICE Alias DB User</th><th>Database</th><th>Ingres User</th><th>Table</th></tr>
+    <tr><td>Used to connect to db</td><td>Mandatory field</td><td>As specified in catalogs</td><td>Optional field</td></tr>
+    <tr><td><!-- #ICE VAR=`:idb`-->
+    <script>
+    <!--
+    updatepropdisp(document.help.ii_userid, 'icedefdb');
+    //-->
+    </script>
+    </td>
+    <td><!-- #ICE VAR=`:db`-->
+    <script>
+    <!--
+    updatepropdisp(document.help.ii_database, 'infocadb');
+    //-->
+    </script>
+    </td>
+    <td><!-- #ICE VAR=`:ingusr`-->
+    <script>
+    <!--
+    updatepropdisp(document.help.iuser, 'ingres');
+    //-->
+    </script>
+    </td>
+    <td><INPUT TYPE=text NAME="itablename" VALUE=""></td>
+    <td><INPUT TYPE="BUTTON" VALUE="Go" onClick="callhelp(this.form)"></td></tr>
+    </table>
+    </form>
+</td></tr>
+</table>
+
+</BODY>
+</HTML>

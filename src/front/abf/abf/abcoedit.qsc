@@ -1,0 +1,887 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<cv.h>
+#include	<st.h>
+#include	<lo.h>
+#include	<si.h>
+#include	<cv.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<oosymbol.h>
+##include	<oocat.qsh>
+##include	<abclass.qsh>
+#include        <dmchecks.h>
+#include	<stdprmpt.h>
+##include	"abclinfo.qsh"
+#include	"abfglobs.h"
+#include	"erab.h"
+
+/**
+** Name:	abcoedit.qc -	ABF Application Constants Component Edit Module.
+**
+** Description:
+**	Contains the definition of the component class edit information
+**	structure for the application variable component objects.  Defines:
+**
+**	iiABconsts	ABF constants component class edit information.
+**
+** History:
+**	Revision 6.3/03/00  89/08  JFried  
+**	Initial revision -- cloned from abgledit.qsc.
+**
+**	Revision 6.4
+**	02-dec-91 (leighb) DeskTop Porting Change:
+**		Added routines to pass data across ABF/IAOM boundary.
+** 	6-Feb-92 (blaise)
+**		Added include abfglobs.h.
+**
+**	Revision 6.5
+**	21-jan-92 (davel)
+**		Modifications for removing natural language dependence of
+**		global constants.
+**	04-aug-92 (davel)
+**		modify _ckValue() to set db_length and db_prec for
+**		string type and decimal type constants. Re-wrote iiabVG_ValueGet
+**		to reflect this change (and other clean-up).
+**		Also removed references to DB_DYC_TYPE (string
+**		type not supported for global constants, or for that matter
+**		anywhere else...).
+**	15-oct-92 (davel)
+**		Completely removed references to the "language" field.
+**	16-Nov-92 (donc)
+** 		Modified COMP_CLASS_INFO initialization to accomodate fix for
+**		bug 44162.
+**	15-jan-93 (davel)
+**		Raise correct error in _co_verifyType when user tries to change
+**		the datatype during an edit operation.
+**	25-jan-93 (davel)
+**		Truncate decimal value entry when instructed to do so from
+**		the confirmation popup.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**/
+
+ADF_CB	*FEadfcb();
+STATUS	iiabPrint();
+STATUS	iiabVG_ValueGet();
+STATUS	afe_dec_info();
+
+static VOID	_co_display();
+static STATUS	_co_save();
+static STATUS	_co_verifyType();
+static STATUS	_ckValue();
+static STATUS	_ckType();
+static STATUS	finalize_value();
+static VOID	reset_typestr();
+
+static const
+	DB_DT_ID	_types[] = { DB_CHA_TYPE, DB_VCH_TYPE,
+					DB_CHR_TYPE, DB_TXT_TYPE,
+					DB_INT_TYPE, DB_FLT_TYPE, DB_DEC_TYPE
+	};
+
+/*:
+** Name:	iiABconsts -	ABF Application Constant Class Edit Information.
+**
+** Description:
+**	Defines additional class information for the Application Constant
+**	component objects for use in editing.
+*/
+
+#define _NewEditExpl	F_AB0052_NewEdit_expl
+#define _EditExpl	F_AB0055_Edit4GL_expl
+#define _PrintExpl	F_AB0380_ObjPrint_expl
+#define _EmptyExpl 	F_AB005E_Empty_expl
+
+GLOBALDEF const COMP_CLASS_INFO iiABconsts = {
+	OC_CONST,
+	ERx("abfconstedit"), ERx("abfconst.hlp"), ERx(""), 2,
+	F_AB006C_ACODef_title,
+	ER_OK,
+	sizeof(_types)/sizeof(_types[0]), _types,	/* legal types */
+	{NULL,	NULL},	_data_type,	NULL, NULL, NULL,	/* Fields */
+	/*{iiabNxtEdit,	AB_NewEdit,	_NewEditExpl,	0},	/* NextEdit */
+	{NULL,		0,		_EmptyExpl,	0}, 	/* Go */
+	{NULL,		0,		_EmptyExpl,	0},	/* Edit */
+	{NULL,		0,		_EmptyExpl,	0}, 	/* Compile */
+	{NULL,		0,		_EmptyExpl,	0}, 	/* FormEdit */
+	{iiabPrint,	FE_Print,	_PrintExpl,	0},	/* Print */
+	_co_display, _co_save, NULL, _co_verifyType
+};
+
+/*
+** Name:	_co_display() -	Display a Constant Component Definition.
+**
+** Description:
+**	Displays the attributes of an application constant component on its 
+**	definition form.
+**
+** Inputs:
+**	constant	{CONSTANT *}  The application constant component.
+**
+** History:
+**	08/89 (jfried)  Cloned from Bill Coffins code for _gl_display.
+**	21-jan-92 (davel)
+**		Show the default value for both string and numeric constants -
+**		part of the changes for removing natural language dependence
+**		of global constants for 6.5.
+*/
+
+static VOID
+##_co_display ( constant )
+##register CONSTANT	*constant; 
+##{
+##	char			*formname = iiABconsts.form;
+##	char			*value;
+##	char			*type;
+##	char			title[63+1];
+
+	GLOBALREF char	*IIabExename;
+
+	IIUGfmt(title,sizeof(title)-1, ERget(iiABconsts.title), 1, IIabExename);
+
+	value = constant->value[0];
+	if (value == NULL)
+		value = _iiOOempty;
+	/* this is cast below to be ready for the day when the db_data portion
+	** is a PTR (which is what a DB_DATA_VALUE's db_data is).
+	*/
+	type = (char *)constant->data_type.db_data;
+
+##	putform formname (	
+##		_title		= title,
+##		_name		= constant->name,
+##		_data_type	= type,
+##		_value		= value
+##	);
+
+	/* Turn off name entry (no underlines, too) since this form was used by
+	** create method, too.
+	** Turn on informational fields, which may have been turned off for
+	** creation too.
+	*/
+##	set_frs field formname (	displayonly(_name) = 1,
+##					underline(_name) = 0,
+##					invisible(_owner) = 0,
+##					invisible(_create_date) = 0,
+##					invisible(_altr_date) = 0,
+##					invisible(_last_altered_by) = 0
+##	);
+##}
+
+/*
+** Name:	_co_save() -	Save Global Variable Component Definition from
+**					the Form.
+** Description:
+**	Saves the attributes for an application constant component object from
+**	the component definition form for this class.  This checks if any values
+**	changed before modifying the object's attributes and only then writing
+**	the object to the database.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**	obj	{CONSTANT *}  The Application Constant component object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	08/89 (jfried)  Cloned from Bill Coffins code for _gl_save.
+**	03/90 (jhw)  Modified 'iiabVG_ValueGet()' to operate on constant.
+**	05/90 (jhw)  Added long remark check for save.
+*/
+static STATUS
+_co_save ( app, obj )
+APPL			*app;
+register APPL_COMP	*obj;
+{
+	STATUS	IIAMwrConst();
+
+	if ( iiabVG_ValueGet( (CONSTANT *)obj, iiABconsts.form ) != OK )
+	{
+		return FAIL;
+	}
+
+	_VOID_ IIOOckLongRemark((OO_OBJECT *)obj);
+
+	if ( obj->data.dirty )
+	{
+                /* Invalidate our callers */
+                IIAMxdsDepSearch(obj, IIAM_zccCompChange,
+                                 (PTR)NULL);
+
+		return iiabSvComp(obj, IIAMwrConst);
+	}
+	return OK;
+}
+
+/*
+** Name:	_co_verifyType() -	Verify Data Type on Form.
+**
+** Description:
+**	Reads the data type specifiction (type only) from the form and
+**	verifies that it's legit.  Also clears the data value from the form
+**	if it is no longer legal for the new type.
+**
+** Inputs:
+**	comp		{APPL_COMP *}  The object checking the type.
+**	desc		{char *}  A string describing the type.
+**
+** Outputs:
+**	NONE - dbdv is not filled.
+**
+** Returns:
+**	{STATUS}  OK if datatype is valid, FAIL otherwise.
+**
+** History:
+**	08/89 (jfried)  Cloned from Bill Coffins code for _gl_verifyType.
+**	10/89 (jhw)  Modified to check for legal constant types.
+**	07/90 (jhw)  Modified to ignore character length specifications; #32044.
+**	23-nov-92 (davel)
+**		Changed extensively for 6.5 support.
+*/
+
+static STATUS
+_co_verifyType ( comp, desc, dbdv )
+APPL_COMP	*comp;
+char		*desc;
+DB_DATA_VALUE	*dbdv;
+##{
+	DB_DATA_VALUE	tmpdbv;
+	bool		len_specd;
+	CONSTANT	*xconst = (CONSTANT *)comp;
+
+	if (_ckType(desc, &tmpdbv, &len_specd) == OK)
+	{
+##		i4     val_changed;
+##		char    value[180+1];
+##		char    *old_type_str = NULL;
+##		char    *form = NULL;
+
+		/* a few things to check: first, make sure that if this is an
+		** edit, then the datatype must not change.  Note: during the
+		** "create", the xconst->data_type.db_datatype is 0 - in this
+		** case, then type can change entirely.
+		*/
+		if (xconst->data_type.db_datatype != 0 && 
+		    xconst->data_type.db_datatype != tmpdbv.db_datatype )
+		{
+			IIUGerr( E_AB012B_TypeChange, UG_ERR_ERROR, 0);
+			old_type_str = (char *) xconst->data_type.db_data;
+##			putform form (	
+##				_data_type	= old_type_str
+##			);
+			return FAIL;
+		}
+
+		/* Check if value changed or if already
+		** in DB.  This guarantees that the
+		** value field is not empty, which
+		** avoids getting the "mandatory data"
+		** message when the constant is being
+		** created and the value field is empty
+		** and unchanged.
+		*/
+##		inquire_frs field "" (
+##			val_changed = change(_value)
+##		); 
+		if ( val_changed || comp->data.inDatabase )
+		{ 
+			/* value field is not empty; check 
+			** against new type.
+			*/
+##			getform form ( value = _value );
+			if ( STtrmwhite(value) > 0
+			  && _ckValue(&tmpdbv, value) != OK
+			   )
+			{
+##				clear field _value;
+			}
+		}
+		return OK;
+	}
+	iiabTypeError(desc, E_AB0265_BadConstType);
+	return FAIL;
+##}
+
+/*{
+** Name:	iiabVG_ValueGet() -	Get Constant Definition from Form.
+**
+** Description:
+**	Fills in the constant's definition from fields on the form.  The data
+**	type specification and value are gotten from the form if they have been
+**	changed.  Then, it gets the internal data value representation for the
+**	type, and if it is different, checks that the value matches the type.
+**	Finally, it updates the constant.
+**
+** Inputs:
+**	xconst	{CONSTANT *}  The constant being defined/edited.
+**	form	{char *}  The component object definition form name.
+**
+** Output:
+**	xconst	{CONSTANT *}  The updated constant.
+**			.data.dirty	{nat}  Whether the constant was updated.
+**			.data_type	{DB_DATA_DESC} The data type descriptor.
+**				.db_data	{char *} The type specification.
+**				.db_datatype	{DB_DT_ID}  The data type.
+**				.db_length	{i4}  The data length.
+**				.db_scale	{i2}  The DB_DEC_TYPE scale.
+**			.value		{char *[]}  The constant's value.
+**			.short_remark	{char *}  The short remark.
+**
+** Returns:
+**	{STATUS}  OK if the constant is valid or unchanged.
+**		  FAIL if the constant is not valid.
+** History:
+**	09/89 (jfried)  Cloned from iiabTG_TypeGet.
+**	03/90 (jhw)  Changed to return STATUS and to check value against type.
+**	21-jan-92 (davel)
+**		Always use xconst->value[0].
+**	07-aug-92 (davel)
+**		re-write to reflect proper handling of length for non-numeric
+**		types.
+*/
+STATUS
+##iiabVG_ValueGet ( xconst, form )
+##register CONSTANT	*xconst;
+##char			*form;
+##{
+##  i4		sremark_change;
+    char	*cp;
+##  char	value[180+1];
+##  char	constant_type[FE_MAXNAME+1];
+    DB_DATA_VALUE	newdbv;
+    bool	len_specd;
+    bool	type_changed = FALSE;
+    bool	val_changed = FALSE;
+
+##  inquire_frs field form (
+##	sremark_change = change(_short_remark)
+##  );
+    
+##  set_frs field form ( change(_data_type) = 0 );
+##  getform form ( constant_type = _data_type );
+##  getform form ( value = _value );
+    
+    if ( STtrmwhite(constant_type) <= 0
+      || _ckType(constant_type, &newdbv, &len_specd) != OK
+       )
+    {
+	/* field activation should have already caught this. We do it
+	** anyway to re-get the dbv, as well as the "length specified"
+	** indicator.
+	*/
+	iiabTypeError(constant_type, E_AB0269_Data_type);
+	return FAIL;
+    }
+
+    if ( STtrmwhite(value) <= 0 )
+    {
+	IIUGerr( E_AB0264_BadConstValue, UG_ERR_ERROR,
+			    2, (PTR)value, (PTR)constant_type);
+	return FAIL;
+    }
+
+    /* validate the combination of type and value - potential side-effects
+    ** of resetting length/precision of newdbv, and new strings in value
+    ** and/or constant_type.
+    */
+    if ( finalize_value(xconst, len_specd, &newdbv, value, constant_type)
+	 != OK
+       )
+    {
+	return FAIL;
+    }
+
+    /* allocate string for the constant's type if it has changed */
+    type_changed = ( xconst->data_type.db_data == NULL
+      		  || ! STequal(xconst->data_type.db_data, constant_type) 
+       		   );
+    if (type_changed)
+    {
+	if ( (cp = FEtsalloc(xconst->data.tag, constant_type) ) == NULL
+	   )
+	{
+		IIUGerr( E_AB0264_BadConstValue, UG_ERR_ERROR,
+			    2, (PTR)value, (PTR)constant_type);
+		return FAIL;
+	}
+	else
+	{
+		xconst->data_type.db_data = cp;
+	}
+    }
+
+    xconst->data_type.db_datatype = newdbv.db_datatype;
+    xconst->data_type.db_length = newdbv.db_length;
+    xconst->data_type.db_scale = newdbv.db_prec;
+    xconst->data.dirty = TRUE;
+    
+    /* allocate string for the constant's value if it has changed */
+    val_changed = ( xconst->value[0] == (char *) NULL
+		 || !STequal(xconst->value[0], value) 
+		  );
+    if ( val_changed )
+    {
+	    if ( (cp = FEtsalloc(xconst->data.tag, value)) == NULL )
+	    {
+		    IIUGerr( E_AB0264_BadConstValue, UG_ERR_ERROR,
+			     2, (PTR)value, xconst->data_type.db_data);
+		    return FAIL;
+	    }
+	    else
+	    {
+		    xconst->value[0] = cp;
+	    }
+    }
+
+    if ( sremark_change != 0 )
+##  {
+##	char	short_remark[OOSHORTREMSIZE+1];
+
+##	set_frs field form ( change(_short_remark) = 0 );
+##	getform form ( short_remark = _short_remark );
+	if ( ! STequal(xconst->short_remark, short_remark)
+		&& (cp = FEtsalloc(xconst->data.tag, short_remark)) != NULL )
+	{
+		xconst->short_remark = cp;
+		xconst->data.dirty = TRUE;
+	}
+##  }
+
+    return OK;
+##}
+
+/*
+** Name:	_ckValue() -	Check Constant Value against Type.
+**
+** Description:
+**	Convert the string representing the constant value to the type indicated
+**	by the type description and return error if it is not valid.
+**
+** Inputs:
+**	type	{DB_DATA_VALUE *}  The type descriptor.
+**			.db_datatype	{DB_DT_ID}  The data type.(Not Nullable)
+**
+** Outputs:
+**
+** Returns:
+**	{STATUS}  OK if the value checks.
+**		  FAIL otherwise.
+**
+** History:
+**	03/90 (jhw)  Written.
+**	23-nov-92 (davel)
+**		Change operation to just return STATUS as to whether the value
+**		is legal for the input datatype.
+*/
+static STATUS
+_ckValue ( type, value )
+DB_DATA_VALUE	*type;
+char		*value;
+{
+	switch ( type->db_datatype )
+	{
+	  case DB_INT_TYPE:
+	  {
+		i4	chk;
+
+		return CVal(value, &chk);
+	  }
+	  case DB_FLT_TYPE:
+	  {
+		f8	chk;
+
+		/* 
+		** XXX Potential internationalism problem - the decimal point
+		**	is hardwired as '.' here.  This is not an easy one
+		** 	to fix!
+		*/
+		return CVaf(value, '.', &chk);
+	  }
+	  case DB_DEC_TYPE:
+	  {
+		i4 len, prec, scale;
+
+		/* same internationalism problem as for floats... */
+		return afe_dec_info( value, '.', &len, &prec, &scale);
+	  }
+	  case DB_CHR_TYPE:
+	  case DB_CHA_TYPE:
+	  case DB_VCH_TYPE:
+	  case DB_TXT_TYPE:
+		/* any value is legal for the string types. */
+		return OK;
+	}
+	return FAIL;
+}
+
+/*
+** Name:	_ckType() -	Check type string specification
+**
+** Description:
+**	Convert the string representing a datatype specifcation, and return
+**	a dbv corresponding to the spec.  Also return an indicator of whether
+**	the length for explicitly specified for a string or decimal type,
+**	which is necessary info to complete the "save" operation.
+**
+** Inputs:
+**	typestring {char *}  		The type string.
+**
+** Outputs:
+**	dbv 	   {DB_DATA_VALUE *}	A filled DBV based on the type string.
+**	len_specd  {bool *}  		Was a length specified?  Always FALSE
+**					for float or integer.
+**
+** Returns:
+**	{STATUS}  OK if type is one of the valid types for a constant.
+**		  FAIL otherwise.
+**
+** History:
+**	23-nov-92 (davel)
+**		Written.
+**	16-oct-2006 (gupsh01)
+**	        Fix date key word to refer to ingresdate or ansidate.
+**	10-Jul-2007 (kibro01) b118702
+**	    Date check should not happen here - it happens in adi_tyid
+*/
+static STATUS
+_ckType ( typestring, dbv, len_specd )
+char		*typestring;
+DB_DATA_VALUE	*dbv;
+bool		*len_specd;
+{
+	STATUS iiabCkTypeSpec();
+	STATUS afe_vtychk();
+
+	char            dtemp[11];
+        char            *dp = dtemp;
+
+	if ( iiabCkTypeSpec(typestring, FALSE, dbv) == OK )
+	{
+		register i4	i;
+
+		for ( i = (sizeof(_types)/sizeof(_types[0])) ; --i >= 0 ; )
+		{
+			if ( _types[i] == dbv->db_datatype )
+			{
+				/* the type is a valid type.  Also determine if
+				** a length was specified for a string or
+				** decimal constant.
+				*/
+				DB_DATA_VALUE tmpdbv;
+				DB_USER_TYPE  tmptype;
+
+				/* check if type spec was declared without
+				** a length specification for string and
+				** decimal types.  This is determined by
+				** calling afe_vtychk(), which only returns
+				** OK if no length was specified.
+				*/
+				_VOID_ STlcopy( typestring, tmptype.dbut_name, 
+						sizeof(tmptype.dbut_name)-1 );
+
+				*len_specd = (afe_vtychk(FEadfcb(), 
+						&tmptype, &tmpdbv) != OK );
+
+				return OK;
+			}
+		}
+	}
+	return FAIL;
+}
+
+/*
+** Name:	finalize_value() - verify value and type for consistency.
+**
+** Description:
+**
+** Inputs:
+**	comp	  {CONSTANT *}		The CONSTANT component. (input only)
+**	len_specd {bool}		Was a length specified as part of type?
+**	dbv	  {DB_DATA_VALUE *}	The type descriptor:
+**			.db_datatype	{DB_DT_ID}  The data type.(Not Nullable)
+**	value	  {char *}		The constant value string (alloc 180).
+**	type_str  {char *}		The datatype string (alloc FE_MAXNAME).
+**
+** Outputs:
+**	dbv	  {DB_DATA_VALUE *}	The type descriptor:
+**			.db_length	{i4}  length, set for string/dec types
+**			.db_prec	{i2}  precision/scale, set for decimal
+**	value	  {char *}		constant value string may be changed.
+**	type_str  {char *}		datatype string may be changed.
+**
+** Side-effects:
+**	Errors will be raised - caler is not expected to raise an error if
+**	a FAIL status is returned.
+**
+** Returns:
+**	{STATUS}  OK if the value checks and user doesn't cancel.
+**		  FAIL otherwise.
+**
+** History:
+**	23-nov-92 (davel)
+**		Written.
+*/
+static STATUS
+finalize_value ( cmp, len_specd, dbv, value, type_str )
+CONSTANT	*cmp;
+bool		len_specd;
+DB_DATA_VALUE	*dbv;
+char		*value;
+char		*type_str;
+{
+	i4	len;
+	i4	cc;		/* return value from IIUFccConfirmChoices */
+	char	cns_str[256];
+	char	*cnstname = cmp->name;
+	i4	dbcntsize_or_zero = 0;
+	STATUS	stat;
+
+	switch ( dbv->db_datatype )
+	{
+	  case DB_INT_TYPE:
+	  {
+		i4	chk;
+
+		stat = CVal(value, &chk);
+		if (stat != OK)
+		{
+			IIUGerr( E_AB0264_BadConstValue, UG_ERR_ERROR, 2, 
+				 (PTR)value, (PTR)type_str);
+		}
+		break;
+	  }
+	  case DB_FLT_TYPE:
+	  {
+		f8	chk;
+
+		/* 
+		** XXX Potential internationalism problem - the decimal point
+		**	is hardwired as '.' here.  This is not an easy one
+		** 	to fix!
+		*/
+		stat = CVaf(value, '.', &chk);
+		if (stat != OK)
+		{
+			IIUGerr( E_AB0264_BadConstValue, UG_ERR_ERROR, 2, 
+				 (PTR)value, (PTR)type_str);
+		}
+		break;
+	  }
+	  case DB_DEC_TYPE:
+	  {
+		i4 prec, scale, dbvprec, dbvscale;
+		i2  ps;
+
+		/* same internationalism problem as for floats... */
+		if ( (stat = afe_dec_info( value, '.', &len, &prec, &scale)
+		     ) != OK
+		   )
+		{
+			IIUGerr( E_AB0264_BadConstValue, UG_ERR_ERROR, 2, 
+				 (PTR)value, (PTR)type_str);
+			return stat;
+		}
+		ps = DB_PS_ENCODE_MACRO(prec,scale);
+
+		if (!len_specd)
+		{
+			dbv->db_length = len;
+			dbv->db_prec = ps;
+			reset_typestr(dbv, type_str);
+			stat =  OK;
+			break;
+		}
+		dbvprec = DB_P_DECODE_MACRO(dbv->db_prec);
+		dbvscale= DB_S_DECODE_MACRO(dbv->db_prec);
+
+		if (prec-scale > dbvprec-dbvscale || scale > dbvscale)
+		{
+			/*
+			** do popup here and ask user if we should truncate
+			** value or increase length.  NOTE: we know at this
+			** point whether or not the truncation will succeed -
+			** it's awkward to handle though.  Still give them the
+			** choice to expand or truncate, and fail the truncate
+			** if prec-scale > dbvprec-dbvscale.
+			*/
+
+			STprintf(cns_str, "'%s' a value of:\n'%s'", cnstname,
+					value);
+
+			cc = IIUFccConfirmChoice(CONF_GENERIC, type_str, cns_str,
+				ERget(F_AB00EA_Cons_Hlp), ERx("abfcnsov.hlp"),
+				F_AB00E7_Cons_Note, F_AB00E8_Cons_Yes, 
+				F_AB00E9_Cons_No, ERx(""), TRUE);
+			if (cc == CONFCH_YES)
+			{
+				/* expand length to accomodate value */
+				dbv->db_length = len;
+				dbv->db_prec = ps;
+				reset_typestr(dbv, type_str);
+				stat = OK;
+			}
+			else if (cc == CONFCH_NO)
+			{
+				/* truncate value to fit len: this may
+				** not be possible.  Use CVapk to try
+				** to convert the string to a packed decimal
+				** using the declared precision and scale.
+				** Something like:
+				*/
+				char	tmp[DB_MAX_DECLEN];
+				STATUS	cvst;
+
+				cvst = CVapk(value, '.', dbvprec,dbvscale,
+							(PTR)tmp);
+				if (cvst == OK || cvst == CV_TRUNCATE)
+				{
+				    if (scale > dbvscale)
+				    {
+					value[prec+1-(scale-dbvscale)] = EOS;
+				    }
+				    stat = OK;
+				}
+				else
+				{
+					/* generic "bad constant value for type"
+					** error looks okay here.
+					*/
+					IIUGerr( E_AB0264_BadConstValue, 
+						 UG_ERR_ERROR, 2, (PTR)value, 
+						 (PTR)type_str);
+					stat = FAIL;
+				}
+			}
+			else /* cc == CONFCH_CANCEL */
+			{
+				/* no error, but return FAIL so save does not
+				** continue.
+				*/
+				stat = FAIL;
+			}
+		}
+		else
+		{
+			stat = OK;
+		}
+		break;
+	  }
+	  case DB_VCH_TYPE:
+	  case DB_TXT_TYPE:
+		dbcntsize_or_zero = DB_CNTSIZE;
+		/* fall through */
+
+	  case DB_CHR_TYPE:
+	  case DB_CHA_TYPE:
+	  {
+		len = STlength(value) + dbcntsize_or_zero;;
+		if (!len_specd)
+		{
+			dbv->db_length = len;
+			reset_typestr(dbv, type_str);
+			stat =  OK;
+		}
+		else if (len > dbv->db_length)
+		{
+			/*
+			** do popup here and ask user if we should truncate
+			** value or increase length
+			*/
+
+			STprintf(cns_str, "'%s' a value of:\n'%s'", cnstname,
+					value);
+
+			cc = IIUFccConfirmChoice(CONF_GENERIC, type_str, cns_str,
+				ERget(F_AB00EA_Cons_Hlp), ERx("abfcnsov.hlp"),
+				F_AB00E7_Cons_Note, F_AB00E8_Cons_Yes, 
+				F_AB00E9_Cons_No, ERx(""), TRUE);
+			if (cc == CONFCH_YES)
+			{
+				/* expand length to accomodate value */
+				dbv->db_length = len;
+				reset_typestr(dbv, type_str);
+				stat =  OK;
+			}
+			else if (cc == CONFCH_NO)
+			{
+				/* truncate value to fit dbv->db_length */
+				value[dbv->db_length-dbcntsize_or_zero] = EOS;
+				stat =  OK;
+			}
+			else /* cc == CONFCH_CANCEL */
+			{
+				/* no error, but return FAIL so save does not
+				** continue.
+				*/
+				stat =  FAIL;
+			}
+		}
+		else
+		{
+			stat = OK;
+		}
+		break;
+	  }
+	  default:
+	  {
+		stat = FAIL;
+	  }
+	}	/* end switch */
+	return stat;
+}
+
+/*
+** Name:	reset_typestr() - change type string to match updated DBV.
+**
+** Description:
+**
+** Inputs:
+**	dbv	  {DB_DATA_VALUE *}	The type descriptor.
+**
+** Outputs:
+**	type_str  {char *}		The datatype string (alloc FE_MAXNAME).
+**
+** Side-effects:
+**
+** Returns:
+**
+** History:
+**	24-nov-92 (davel)
+**		Written.
+*/
+static VOID
+reset_typestr ( dbv, type_str )
+DB_DATA_VALUE	*dbv;
+char		*type_str;
+{
+	DB_USER_TYPE	utype;
+	DB_STATUS	afe_tyoutput();
+
+	if (afe_tyoutput ( FEadfcb(), dbv, &utype )  == OK)
+	{
+		/* copy the string back into type_str */
+		STcopy( utype.dbut_name, type_str);
+	}
+	return;
+}

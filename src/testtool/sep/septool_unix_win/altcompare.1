@@ -1,0 +1,60 @@
+.TH ALTCOMPARE 1 "Ingres" "Ingres Corporation" "Ingres Corporation"
+.\" History:
+.\"	03-dec-1991 (jonb)
+.\"		Written.
+.\"	27-dec-1991 (boba)
+.\"		General audit tool man page cleanup.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+altcompare \- Compares altcanons in a SEP file to base canon
+.SH ORIGIN
+Ingres Corporation
+.SH SYNOPSIS
+.B altcompare
+{
+.I original-file derived-file
+} | {
+.I filename
+}
+.SH DESCRIPTION
+.I Altcompare
+compares two files, one of which is an "original"
+SEP file, and another which is derived from the first by adding alternate
+test outputs, a.k.a. altcanons.  The script determines where altcanons
+have been added, and for each new one, finds the first canon for the
+particular test step; this is taken to be the "base" canon.  
+Each altcanon is compared to its corresponding base canon using 
+.I diff, 
+and the output is placed on standard output.
+.SH OPTIONS
+.I Altcompare
+may be called with either one or two filenames supplied on the command
+line.  If two file names are given, the first is the name of the original
+file, and the second is the name of the derived file.  If only one name
+is given,
+.I altcompare
+expects the original file to be named \fIfilename\fP\fB.sep\fP, and the derived
+file to be named \fIfilename\fP\fB.upd\fP.
+.SH FILES
+.TP
+.B Original SEP file
+A file created by the 
+.I sep 
+test management tool.
+.TP
+.B Derived file
+The result of modifying the original file by adding altcanons to it.
+.SH "SEE ALSO"
+.BR diff(1),
+.BR tac(1),
+.BR sep(1)
+.SH BUGS
+.I Altcompare
+depends on the existence of the 
+.I tac
+program.  That's 
+.I cat
+backwards, and it does what you might expect. 
+.PP
+.I Altcompare
+blindly assumes that any text added to the derived file is an altcanon.

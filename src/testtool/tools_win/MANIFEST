@@ -1,0 +1,16 @@
+#
+# MANIFEST file for testtool!tools
+#
+
+IISUBSYS testtool tools_win ;
+
+IITOOLSWNTEXE PCwhich : PCwhich.c ;
+IITOOLSWNTEXE PCdate : PCdate.c ;
+IITOOLSWNTEXE PCread : PCread.c ;
+IITOOLSWNTEXE readB : readB.c ;
+IITOOLSWNTEXE numtoexit : numtoexit.c ;
+IITOOLSWNTEXE PCecho : PCecho.c ;
+IITOOLSWNTEXE basename :  basename.c ;
+IITOOLSWNTEXE dirname : dirname.c ;
+IITOOLSWNTEXE sleep : sleep.c ;
+

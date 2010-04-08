@@ -1,0 +1,114 @@
+/* Copyright (c) 2004 Ingres Corporation */
+
+/* FRS mapping file for Sun with Function Keys */
+
+/* Menu Key */
+	menu = pf2 (F2)
+
+/* Help facility */
+	frskey1 = pf1 (R7)
+
+/* Exit the system */
+	frskey2 = pf4 (F4)
+
+/* End current screen and return to previous screen */
+        frskey3 = pf3 (F3)
+
+/* Go or execute function */
+	frskey4 = pf5 (F5)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = pf6 (F6)
+
+/* Forget and Undo */
+	frskey9 = pf7 (F7)
+
+/* Bring up List Choices */
+	frskey10 = pf18 (R6)
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlH (^H)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf8 (F8)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf9 (F9)
+
+/* Printfrskey11 of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf10 (L2)
+
+/* Select second menu item */
+	menuitem2 = pf11 (L3)
+
+/* Select third menu item */
+	menuitem3 = pf12 (L4)
+
+/* Select fourth menu item */
+	menuitem4 = pf13 (R1)
+
+/* Select fifth menu item */
+	menuitem5 = pf14 (R2)
+
+/* Select sixth menu item */
+	menuitem6 = pf15 (R3)
+
+/* Select seventh menu item */
+	menuitem7 = pf16 (R4)
+
+/* Select eighth menu item */
+	menuitem8 = pf17 (R5)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlDEL (Delete)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)

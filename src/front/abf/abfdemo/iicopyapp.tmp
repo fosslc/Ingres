@@ -1,0 +1,271 @@
+COPYAPP	6	5	1995_07_19 21:50:24 GMT  
+OC_APPL:	0	projmgmt	The ABF Project Management Demonstration	This is the Release 1.2/00 ABF Project Management Demonstration. In this release:                                                                                                                                                  o Data dictionary comments and documentation for all application             objects using the NEW ABF interface.                                                                                                                o Activation on Timeout used to update time displays.
+	II_SYSTEM:[INGRES.FILES.ABFDEMO]		0		0	0	2	projmgmt.exe	top		SQL			0
+CUC_ADEPEND:
+	DUMMY		0	0		0
+OC_AFORMREF:	1	top		
+	f10022	II03000top	0		0	0	2							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLFRAME:	1	top	The starting frame	The top form provides access to the main functions of the application
+	top.osq	II02top	0	none	0	0	2	dynamic				1970_01_01 00:00:00 GMT		0
+CUC_AODEPEND:
+	experience		2220	3503		0
+	emptasks		2210	3503		0
+	empdep		2210	3503		0
+	database		2210	3503		0
+	timer_on		2050	3503		0
+	timer_off		2050	3503		0
+	startup		2050	3503		0
+	top		3001	3502		0
+OC_OSLPROC:	1	timer_on	Turn timeout activation on	Syntax:                                                                          callproc timer_on (secs=X);                                                                                                                     Arguments:                                                                       X number of seconds for timeout. [1-32000]                                                                                                      Return value:                                                                    None
+	timer_on.osq	II01000timer_on	0	none	0	0	2							0
+CUC_AODEPEND:
+OC_OSLPROC:	1	timer_off	Turn timeout activation off	
+	timer_off.osq	II01001timer_off	0	none	0	0	2							0
+CUC_AODEPEND:
+OC_QBFFRAME:	1	task_assignments	Use Default Form with task_assignments joindef	
+			0		0	0	2		joindef					0
+CUC_AODEPEND:
+	task_assignments		1002	3502		0
+OC_HLPROC:	1	sum_hours	Sum the hours for an employee.	
+	sum_hours.sc	sum_hours	0	none	0	0	2	C						0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLPROC:	1	startup	Set up function keys	
+	startup.osq	II01startup	0	none	0	0	2							0
+CUC_AODEPEND:
+OC_OSLPROC:	1	rem_task	Remove a task	
+	remtask.osq	II01rem_task	0	none	0	0	2							0
+CUC_AODEPEND:
+OC_OSLFRAME:	1	list	Pop-up selection list with title	
+	list.osq	II02list	-37	text(20)	23	0	2	dynamic				1970_01_01 00:00:00 GMT		0
+CUC_AODEPEND:
+	timer_off		2050	3503		0
+	list		3001	3502		0
+OC_AFORMREF:	1	list		
+	f10015	II03list	0		0	0	2							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_RWFRAME:	1	experience	Run the Experience report	Date     Who     Change Description                                        ---------------------------------------------------------                  12/09/88  mah    Written                                                   03/27/89  erp    Added totals to footer                                    04/01/89  msb    Reverse video trim for experience form
+	experience.rw		0		0	0	2					1970_01_01 00:00:00 GMT		0
+CUC_AODEPEND:
+	experience		3001	3502		0
+	experience		1501	3502		0
+OC_AFORMREF:	1	experience		
+	f10012	II03experience	0		0	0	2							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLFRAME:	1	emptasks	Browse and Update Employee Tasks	
+	emptasks.osq	II02emptasks	0	none	0	0	2	dynamic				1970_01_01 00:00:00 GMT		0
+CUC_AODEPEND:
+	list		2210	3504		0
+	timer_on		2050	3503		0
+	timer_off		2050	3503		0
+	rem_task		2050	3503		0
+	del_emp		2050	3503		0
+	sum_hours		2021	3503		0
+	emptasks		3001	3502		0
+OC_AFORMREF:	1	emptasks		
+	f10009	II03emptasks	0		0	0	2							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_AFORMREF:	1	empdep		
+	f10013	II03empdep	0		0	0	2							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_OSLFRAME:	1	empdep	Employee and Dependent Information	This frame demonstrates the use of hidden fields. The dependents table     field is only displayed when the employee has dependents.
+	empdep.osq	II02000empdep	0	none	0	0	2	dynamic				1970_01_01 00:00:00 GMT		0
+CUC_AODEPEND:
+	timer_on		2050	3503		0
+	empdep		1601	3502		0
+OC_OSLPROC:	1	del_emp	Delete an employee	
+	delemp.osq	II01del_emp	0	none	0	0	2							0
+CUC_AODEPEND:
+OC_OSLFRAME:	1	database	Database structure and tables	This frame uses a single character field activation to select the          table to view with QBF. The default form for the task_assignments          joindef can be accessed through the frame menu. The database structure     is displayed by putting the 'design.txt' file in a help_forms frame.
+	database.osq	II02database	0	none	0	0	2	dynamic				1970_01_01 00:00:00 GMT		0
+CUC_AODEPEND:
+	task_assignments		2230	3503		0
+	timer_on		2050	3503		0
+	timer_off		2050	3503		0
+	database		3001	3502		0
+OC_AFORMREF:	1	database		
+	f10005	II03database	0		0	0	2							0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_FORM:	0	database	Popup menu form for tables in the database	
+	31	16	8	5	1	1	7	6	0	0	0	0	0	129	0	2
+CUC_FIELD:
+	0	selection	32	1	0	1	3	3	10	13	1	1	1		1	1	0	1	0	0	0		c1			0	0
+	-1	title	32	27	0	27	3	29	1	1	27	1	1		28	1	0	2305	0	0	0	PROJECT MANAGEMENT DATABASE	c27			0	1
+CUC_TRIM:
+	0	0	16:31	2049	0	0	0
+	3	13	Enter a letter to examine	0	0	0	0
+	5	14	a table using QBF.	0	0	0	0
+	6	5	a) Database Design	0	0	0	0
+	6	6	b) Emp Table	0	0	0	0
+	6	7	c) Tasks Table	0	0	0	0
+	6	8	d) Projects Table	0	0	0	0
+OC_FORM:	0	empdep	Shows an Invisible Table field	
+	61	20	10	4	7	0	4	9	0	0	0	0	0	128	0	9
+CUC_FIELD:
+	0	name	21	22	0	20	3	31	1	4	20	1	10	Name	1	1	0	67845	0	0	0		c20			0	0
+	1	title	-21	23	0	20	1	29	4	5	20	0	9	Title	0	0	0	264448	0	0	0		c20	Select Help Field for a list of values.	title in ["Programmer","Sr Programmer", "Analyst","Consultant","Project Leader"]	0	1
+	2	manager	-21	23	0	20	1	29	6	5	20	0	9	Manager	0	0	0	2304	0	0	0		c20		manager in managers.manager	0	2
+	3	hourly_rate	-5	9	0	7	3	11	4	42	7	2	2	Hourly Rate	0	0	0	264192	0	0	0		+"$---.nn"			0	3
+	4	deps	-21	4	0	1	1	13	9	11	1	0	12	Dependents?	0	0	0	2304	512	0	0		c1			0	4
+	5	today	-3	13	0	14	1	15	1	44	14	0	1		0	0	0	2099200	512	0	0		d"02/03/01 16:05"			0	5
+	6	dependents	0	3	0	2	7	36	11	13	1	3	0		1	1	0	1090519073	0	0	0					1	6
+	0	depname	21	17	0	15	1	15	0	1	15	3	1	Dependent	1	1	0	2048	0	0	0		c15			2	7
+	1	birth	3	12	0	18	1	18	0	17	18	3	17	Birthdate	17	1	0	2048	0	0	0		d"February 3, 1901"			2	8
+CUC_TRIM:
+	0	0	20:61:0	526337	0	0	0
+	4	3	5:31:1	1	0	0	0
+	21	0	Employee Information	0	0	0	0
+	38	3	5:19:2	1	0	0	0
+OC_FORM:	0	emptasks	Employee and task information for emptasks 4gl frame	Uses boxes and lines, date and money formatting, and is a pop-up window.
+	61	20	10	4	8	0	13	7	0	0	0	0	0	128	0	11
+CUC_FIELD:
+	0	name	21	22	0	20	3	31	1	4	20	1	10	Name	1	1	0	67845	0	0	0		c20			0	0
+	1	title	-21	23	0	20	1	29	4	5	20	0	9	Title	0	0	0	264448	0	0	0		c20	Select Help Field for a list of values.	title in ["Programmer","Sr Programmer", "Analyst","Consultant","Project Leader"]	0	1
+	2	manager	-21	23	0	20	1	29	6	5	20	0	9	Manager	0	0	0	2304	0	0	0		c20		manager in managers.manager	0	2
+	3	hourly_rate	-5	9	0	7	3	11	4	42	7	2	2	Hourly Rate	0	0	0	2048	0	0	0		+"$---.nn"			0	3
+	4	tasktable	0	3	0	3	5	53	10	4	1	1	0		0	0	0	1073758241	0	0	0					1	4
+	0	project	21	27	0	25	1	25	0	1	25	0	1	Project	1	-1	0	67584	512	0	0		c25			2	5
+	1	task	21	16	0	14	1	14	0	27	14	0	27	Task	27	-1	0	133136	512	0	0		c14	Debug, Design, Implement, Manage or Test.	tasktable.task in ["Debug","Design","Implement","Manage","Test"]	2	6
+	2	hours	-30	5	0	10	1	10	0	42	10	0	42	Hours	42	-1	0	133120	0	0	0		+i10			2	7
+	5	today	-3	13	0	14	1	15	1	44	14	0	1		0	0	0	2099200	512	0	0		d"02/03/01 16:05"			0	8
+	6	tot_hours	-30	5	0	9	1	10	15	46	9	0	1		0	0	0	2048	512	0	0		+i9			0	9
+	7	tot_cost	-5	9	0	9	1	10	17	46	9	0	1		0	0	0	2048	512	0	0		+"$-,---.nn"			0	10
+CUC_TRIM:
+	0	0	20:61:0	526337	0	0	0
+	4	3	5:31:1	1	0	0	0
+	4	8	3:53:3	1	0	0	0
+	5	9	Project	0	0	0	0
+	6	8	Task Assignments	0	0	0	0
+	18	0	Employee Task Assignments	0	0	0	0
+	31	9	Task	0	0	0	0
+	33	15	Total Hours	0	0	0	0
+	33	17	Total Cost	0	0	0	0
+	38	3	5:19:2	1	0	0	0
+	45	14	3:12:4	1	0	0	0
+	45	16	3:12:5	1	0	0	0
+	46	9	Hours	0	0	0	0
+OC_REPORT:	0	experience	Employee Experience Crossreference Report	7/1/88 Created
+	s	71	1	3	0
+CUC_RCOMMANDS:
+	ac	1	h	report	newpage	
+	ac	2	h	page	newline	
+	ac	3	h	page	underline	
+	ac	4	h	page	center	
+	ac	5	h	page	print	"Employee Experience Summary Report"
+	ac	6	h	page	endprint	
+	ac	7	h	page	nounderline	
+	ac	8	h	page	newline	2
+	ac	9	h	page	center	
+	ac	10	h	page	print	date("today")(d "February 3, 1901")
+	ac	11	h	page	endprint	
+	ac	12	h	page	newline	4
+	ac	13	h	page	center	50
+	ac	14	h	page	print	"Assigned Tasks"
+	ac	15	h	page	endprint	
+	ac	16	h	page	newline	2
+	ac	17	h	page	underline	
+	ac	18	h	page	print	"Name"
+	ac	19	h	page	endprint	
+	ac	20	h	page	tab	25
+	ac	21	h	page	print	"Design"
+	ac	22	h	page	endprint	
+	ac	23	h	page	tab	35
+	ac	24	h	page	print	"Implement"
+	ac	25	h	page	endprint	
+	ac	26	h	page	tab	48
+	ac	27	h	page	print	"Test"
+	ac	28	h	page	endprint	
+	ac	29	h	page	tab	58
+	ac	30	h	page	print	"Debug"
+	ac	31	h	page	endprint	
+	ac	32	h	page	tab	68
+	ac	33	h	page	print	"Proj Mgr"
+	ac	34	h	page	endprint	
+	ac	35	h	page	nounderline	
+	ac	36	h	page	newline	2
+	ac	37	h	name	newline	
+	ac	38	h	name	print	name(c23)
+	ac	39	h	name	endprint	
+	ac	40	h	detail	if	task="Design"
+	ac	41	h	detail	then	
+	ac	42	h	detail	tab	25
+	ac	43	h	detail	print	"Yes"
+	ac	44	h	detail	endprint	
+	ac	45	h	detail	elseif	task="Implement"
+	ac	46	h	detail	then	
+	ac	47	h	detail	tab	35
+	ac	48	h	detail	print	"Yes"
+	ac	49	h	detail	endprint	
+	ac	50	h	detail	elseif	task="Test"
+	ac	51	h	detail	then	
+	ac	52	h	detail	tab	48
+	ac	53	h	detail	print	"Yes"
+	ac	54	h	detail	endprint	
+	ac	55	h	detail	elseif	task="Debug"
+	ac	56	h	detail	then	
+	ac	57	h	detail	tab	58
+	ac	58	h	detail	print	"Yes"
+	ac	59	h	detail	endprint	
+	ac	60	h	detail	elseif	task="Manage"
+	ac	61	h	detail	then	
+	ac	62	h	detail	tab	68
+	ac	63	h	detail	print	"Yes"
+	ac	64	h	detail	endprint	
+	ac	65	h	detail	endif	
+	ac	66	f	page	need	3
+	ac	67	f	page	newline	1
+	ac	68	f	page	center	
+	ac	69	f	page	print	page_number("zn")
+	ac	70	f	page	endprint	
+	ac	71	f	page	newline	1
+	so	1		name	y	a
+	sq	1	targetlist	distinct		name, task
+	sq	2	from			tasks
+	sq	3	where			name like '$name' or name = '$name'
+OC_FORM:	0	experience	Popup form for the experience report frame	
+	43	9	27	12	1	0	3	6	0	0	0	0	0	129	0	1
+CUC_FIELD:
+	0	name	32	20	0	20	3	37	4	3	20	1	16	Employee name:	1	1	0	257	0	0	0	%	c20			0	0
+CUC_TRIM:
+	0	0	9:43	2305	0	0	0
+	1	1	7:41	1	0	0	0
+	8	2	EMPLOYEE EXPERIENCE REPORT	0	0	0	0
+OC_FORM:	0	list	popup for list of valid values	List of valid values depending on what was passed to the frame.  Whether itbe Managers, or Title.
+	24	10	0	0	1	1	2	6	0	0	0	0	0	128	0	3
+CUC_FIELD:
+	0	vals	0	5	0	1	7	22	2	1	1	1	0		0	0	0	1073758241	0	0	0					1	0
+	0	val	-32	21	0	20	1	20	0	1	20	0	1		1	1	0	2049	0	0	0		c20			2	1
+	-1	info	32	15	0	15	1	15	1	5	15	0	0		14	0	0	2048	0	0	0		c15			0	2
+CUC_TRIM:
+	0	0	10:24	1	0	0	0
+	1	1	2:22	1	0	0	0
+OC_JOINDEF:	0	task_assignments	Employee Task Assignments	
+	0	y			
+	1	emp	0	emp	1
+	2	emp	name	name	011
+	3	emp	name	tasks	name
+	257	tasks	1	tasks	1
+	258	emp	title	title	101
+	514	emp	hourly_rate	hourly_rate	101
+	770	emp	manager	manager	101
+	1026	tasks	name	name	010
+	1282	tasks	project	project	101
+	1538	tasks	task	task	101
+	1794	tasks	hours	hours	101
+OC_FORM:	0	top	top form for project mangement application	The date fields 'today' and 'current_time' that can use the
+	80	23	0	0	6	0	0	7	0	0	0	0	0	0	0	6
+CUC_FIELD:
+	0	today	3	12	0	18	1	20	0	59	18	0	2		0	0	0	2048	512	0	0		d"February 3, 1901"			0	0
+	1	ingres	21	28	0	26	1	28	1	2	26	0	2		0	0	0	2100224	512	0	0	I N G R E S / Applications	c26			0	1
+	2	current_time	3	12	0	11	1	13	1	60	11	0	2		0	0	0	2048	512	0	0		d"4:05:06 pm"			0	2
+	3	title	32	37	0	37	3	39	7	21	37	1	1		1	1	0	2305	512	0	0	Project Management Sample Application	c37			0	3
+	4	text1	-21	23	0	20	1	22	13	27	20	0	2		0	0	0	0	512	0	0		c20			0	4
+	5	text2	-21	23	0	20	1	22	14	27	20	0	2		0	0	0	0	512	0	0		c20			0	5
+CUC_TRIM:

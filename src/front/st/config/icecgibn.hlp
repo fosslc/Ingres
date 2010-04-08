@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The cgi-bin_dir parameter contains the full path to the location of your 
+ Web server's Common Gateway Interface (CGI) directory. This is used by
+ the internet communication install utility as well as Ingres/ICE itself. 
+
+ This field is mandatory. Communication with your Ingres database will not
+ work without a valid entry in this field.

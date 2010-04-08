@@ -1,0 +1,52 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ctrltool", "ctrltool.vcproj", "{2FCC9EC9-BF09-4F43-A966-E1D11481F609}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		AIX_Release|Win32 = AIX_Release|Win32
+		Debug|Win32 = Debug|Win32
+		Debug64|Win32 = Debug64|Win32
+		DebugU|Win32 = DebugU|Win32
+		EDBC_Debug|Win32 = EDBC_Debug|Win32
+		EDBC_Release|Win32 = EDBC_Release|Win32
+		HPUX_Debug|Win32 = HPUX_Debug|Win32
+		HPUX_Release|Win32 = HPUX_Release|Win32
+		Linux_Release|Win32 = Linux_Release|Win32
+		Release|Win32 = Release|Win32
+		Release64|Win32 = Release64|Win32
+		ReleaseU|Win32 = ReleaseU|Win32
+		Solaris_Release|Win32 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.AIX_Release|Win32.ActiveCfg = AIX_Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.AIX_Release|Win32.Build.0 = AIX_Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Debug|Win32.Build.0 = Debug|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Debug64|Win32.ActiveCfg = Debug64|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Debug64|Win32.Build.0 = Debug64|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.DebugU|Win32.ActiveCfg = DebugU|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.DebugU|Win32.Build.0 = DebugU|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.EDBC_Debug|Win32.ActiveCfg = EDBC_Debug|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.EDBC_Debug|Win32.Build.0 = EDBC_Debug|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.EDBC_Release|Win32.ActiveCfg = EDBC_Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.EDBC_Release|Win32.Build.0 = EDBC_Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.HPUX_Debug|Win32.ActiveCfg = HPUX_Debug|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.HPUX_Debug|Win32.Build.0 = HPUX_Debug|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.HPUX_Release|Win32.ActiveCfg = HPUX_Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.HPUX_Release|Win32.Build.0 = HPUX_Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Linux_Release|Win32.ActiveCfg = Linux_Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Linux_Release|Win32.Build.0 = Linux_Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Release|Win32.ActiveCfg = Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Release|Win32.Build.0 = Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Release64|Win32.ActiveCfg = Release64|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Release64|Win32.Build.0 = Release64|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.ReleaseU|Win32.ActiveCfg = ReleaseU|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.ReleaseU|Win32.Build.0 = ReleaseU|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Solaris_Release|Win32.ActiveCfg = Solaris_Release|Win32
+		{2FCC9EC9-BF09-4F43-A966-E1D11481F609}.Solaris_Release|Win32.Build.0 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

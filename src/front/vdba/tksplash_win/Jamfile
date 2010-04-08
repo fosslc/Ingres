@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!tksplash_win
+#
+
+SubDir ING_SRC front vdba tksplash_win ;
+
+IISUBSYS front vdba tksplash_win ;
+
+
+IISLN tksplash.dll : tksplash.sln ;

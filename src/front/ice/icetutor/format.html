@@ -1,0 +1,44 @@
+<!-- #ICE DECLARE=`session.rows=:rows` -->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Formatting the Layout&previous=rows.html&next=format2.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`checkSQL.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`Web Deployment Option allows the developer to define the output style for SELECT statements. 
+			The following values are currently supported. Please choose one:<p>
+			<TABLE width="85%">
+			<TR><TD><b>
+			<INPUT TYPE="RADIO" NAME="format" VALUE="TABLE" <!-- #ICE IF (``:format`` == ``TABLE``) THEN=``checked`` -->>TABLE
+			</b>: </TD><TD></TD></TR>
+			<TR><TD></TD><TD>
+			This is the default. It formats the result rows as an HTML table. 
+			By default, column headers are the names of the result columns. 
+			Each table cell contains a single item in the result set. 
+			</TD></TR>
+			<TR><TD><b>
+			<INPUT TYPE="RADIO" NAME="format" VALUE="SELECTOR" <!-- #ICE IF (``:format`` == ``SELECTOR``) THEN=``checked`` -->>SELECTOR
+			</b></TD><TD></TD></TR>
+			<TR><TD></TD><TD>
+			This type formats the results using the HTML SELECT tag, which generates a combo box (prompted entry) or 
+			list box field. If the query contains multiple columns, the columns in each row are concatenated. 
+			</TD></TR>
+			<TR><TD><b>
+			<INPUT TYPE="RADIO" NAME="format" VALUE="PLAIN" <!-- #ICE IF (``:format`` == ``PLAIN``) THEN=``checked`` -->>PLAIN
+			</b>: </TD><TD></TD></TR>
+			<TR><TD></TD><TD>
+			Ingres Web Deployment Option formats each row of the result set as an HTML paragraph. The HTML &lt;P&gt; tag is automatically placed
+			at the end of the row.
+			</TD></TR>
+			<TR><TD><b>
+			<INPUT TYPE="RADIO" NAME="format" VALUE="UNFORMATTED" <!-- #ICE IF (``:format`` == ``UNFORMATTED``) THEN=``checked`` -->>UNFORMATTED
+			</b>: </TD><TD></TD></TR>
+			<TR><TD></TD><TD>
+			Ingres Web Deployment Option outputs the data with no HTML formatting or separators. 
+			</TD></TR>
+			</TABLE><p>
+
+			<!-- #ICE REPEAT INCLUDE=``sqlResult.html`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

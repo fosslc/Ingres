@@ -1,0 +1,28 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Remove&submit=actDoc.html` -->
+<!-- #ICE VAR=`
+			<INPUT TYPE="HIDDEN" NAME="action" VALUE="delete">
+			<INPUT TYPE="HIDDEN" NAME="unit" VALUE=":unit_id">
+			<INPUT TYPE="HIDDEN" NAME="id" VALUE=":doc">`
+-->
+
+<!-- #ICE REPEAT FUNCTION=`document?action=retrieve&doc_id=:doc` 
+HTML=`
+			<INPUT TYPE="HIDDEN" NAME="name" VALUE=":doc_name">
+			<INPUT TYPE="HIDDEN" NAME="suffix" VALUE=":doc_suffix">
+			Document name: :doc_name.:doc_suffix<p>
+			Owned by: :doc_owner<p>
+		  General access: <!-- #ICE IF (``:doc_public`` == ``checked``) THEN=``public`` ELSE=``private`` --><P>
+			<!-- #ICE REPEAT IF (``:doc_ext_file`` == ````)
+			THEN=``The document is 
+						 <!-- #ICE IF (````:doc_pre_cache```` == ````checked````) THEN=````pre-cached```` -->
+						 <!-- #ICE IF (````:doc_perm_cache```` == ````checked````) THEN=````permanent cached```` -->
+						 <!-- #ICE IF (````:doc_session_cache```` == ````checked````) THEN=````session cached```` -->
+					 ``
+			ELSE=``Location: <!-- #ICE FUNCTION=````ice_locations?action=retrieve&loc_id=:doc_unit_id````
+												HTML=````:loc_name````
+											 --><p>
+					file name: :doc_ext_file.:doc_ext_suffix``
+			-->
+` -->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

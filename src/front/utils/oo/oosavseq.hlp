@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Save Menu
+
+     This menu is gives you the choice of immediately saving the current
+     object as is ("Save") or proceeding to the Save Frame ("EditInfo")
+     where you may supply a different name under which to save the object,
+     or change the Short or Long Remarks associated with the object.
+
+     The following commands are available in the Save Menu:
+
+        Command                 Function
+        --------                --------
+        EditInfo                Enter the Save frame to update Name, Short
+                                or Long Remarks of the current object before
+                                saving.
+        Save                    Store the current object as is in the System
+                                Catalogs.  A valid name must already be
+                                specified.
+        Cancel                  Cancel the save request.
+        Help                    Print this message.

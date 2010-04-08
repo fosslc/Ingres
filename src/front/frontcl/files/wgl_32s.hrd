@@ -1,0 +1,161 @@
+#
+# History:
+#	20-feb-97 (sandyd)
+#		Rewrote to provide real dependencies.  Previously, the command
+#		block did the right thing (if nmake was invoked with "-a"), but
+#		there were no dependents, so without the "-a" nothing would
+#		ever happen.
+#	21-feb-97 (sandyd)
+#		Tweaking this one more time to handle bootstrap situations.
+#		Added command to create $(ING_BUILD)\files if it doesn't 
+#		already exist, and changed $(COPY) command line to avoid 
+#		getting that prompt about "file or directory?" when the 
+#		destination file doesn't yet exist.
+#	11-sep-03 (dansa02)
+#		As of change 464872 eqdef.f and eqsqlda.f aren't here anymore.
+#	29-sep-03 (dansa02)
+#		As of change 465168 eqmsqlda.cbl isn't here anymore.
+#	23-dec-03 (dansa02)
+#		As of change 465797 the *.pli files are gone also.
+#	04-may-07 (toumi01)
+#		For -multi support add eqsqlcag.a[da].
+#	10-oct-07 (toumi01)
+#		For -multi support add eqsqlcam.a[da] and remove eqsqlcag.a[da].
+#
+
+CONFIG = wgl_32s 
+SDK = $(W32_SDK) 
+PATH = $(SDK)\bin;$(ING_BUILD)\bin;$(PATH) 
+	
+!INCLUDE "$(ING_SRC)\tools\port\nmake\$(CONFIG).ini" 
+	
+FILETARGETS = \
+	$(ING_BUILD)\files\97801f.map \
+	$(ING_BUILD)\files\abfurts.h \
+	$(ING_BUILD)\files\ansif.map \
+	$(ING_BUILD)\files\ansinf.map \
+	$(ING_BUILD)\files\at386.map \
+	$(ING_BUILD)\files\bar1.gr \
+	$(ING_BUILD)\files\bar2.gr \
+	$(ING_BUILD)\files\bar3.gr \
+	$(ING_BUILD)\files\bull12.map \
+	$(ING_BUILD)\files\bull24.map \
+	$(ING_BUILD)\files\bullbds1.map \
+	$(ING_BUILD)\files\bullvtu10.map \
+	$(ING_BUILD)\files\bullwv.map \
+	$(ING_BUILD)\files\cbf.map \
+	$(ING_BUILD)\files\cbfhelp.dat \
+	$(ING_BUILD)\files\cbfunits.dat \
+	$(ING_BUILD)\files\dbms.rfm \
+	$(ING_BUILD)\files\default.rfm \
+	$(ING_BUILD)\files\dg100em.map \
+	$(ING_BUILD)\files\dg220em.map \
+	$(ING_BUILD)\files\dgxterm.map \
+	$(ING_BUILD)\files\eqddef.cob \
+	$(ING_BUILD)\files\eqdef.a \
+	$(ING_BUILD)\files\eqdef.ada \
+	$(ING_BUILD)\files\eqdef.bas \
+	$(ING_BUILD)\files\eqdef.cob \
+	$(ING_BUILD)\files\eqdef.for \
+	$(ING_BUILD)\files\eqdef.in \
+	$(ING_BUILD)\files\eqdef.pas \
+	$(ING_BUILD)\files\eqdsqlda.cob \
+	$(ING_BUILD)\files\eqenv.qp \
+	$(ING_BUILD)\files\eqfdef.f \
+	$(ING_BUILD)\files\eqmdef.cbl \
+	$(ING_BUILD)\files\eqmsqlca.cbl \
+	$(ING_BUILD)\files\eqmsqlcd.cbl \
+	$(ING_BUILD)\files\eqpname.h \
+	$(ING_BUILD)\files\eqsqlca.a \
+	$(ING_BUILD)\files\eqsqlcam.a \
+	$(ING_BUILD)\files\eqsqlca.ada \
+	$(ING_BUILD)\files\eqsqlcam.ada \
+	$(ING_BUILD)\files\eqsqlca.bas \
+	$(ING_BUILD)\files\eqsqlca.cob \
+	$(ING_BUILD)\files\eqsqlca.f \
+	$(ING_BUILD)\files\eqsqlca.for \
+	$(ING_BUILD)\files\eqsqlca.h \
+	$(ING_BUILD)\files\eqsqlca.in \
+	$(ING_BUILD)\files\eqsqlca.pas \
+	$(ING_BUILD)\files\eqsqlcd.bas \
+	$(ING_BUILD)\files\eqsqlcd.cob \
+	$(ING_BUILD)\files\eqsqlcd.f \
+	$(ING_BUILD)\files\eqsqlcd.for \
+	$(ING_BUILD)\files\eqsqlcd.in \
+	$(ING_BUILD)\files\eqsqlda.a \
+	$(ING_BUILD)\files\eqsqlda.ada \
+	$(ING_BUILD)\files\eqsqlda.bas \
+	$(ING_BUILD)\files\eqsqlda.cob \
+	$(ING_BUILD)\files\eqsqlda.for \
+	$(ING_BUILD)\files\eqsqlda.h \
+	$(ING_BUILD)\files\eqsqlda.pas \
+	$(ING_BUILD)\files\frame2.h \
+	$(ING_BUILD)\files\frame60.h \
+	$(ING_BUILD)\files\frame61.h \
+	$(ING_BUILD)\files\frs.map \
+	$(ING_BUILD)\files\h19f.map \
+	$(ING_BUILD)\files\h19nk.map \
+	$(ING_BUILD)\files\hp2392.map \
+	$(ING_BUILD)\files\hp70092.map \
+	$(ING_BUILD)\files\ibm5151f.map \
+	$(ING_BUILD)\files\icl12.map \
+	$(ING_BUILD)\files\icl34.map \
+	$(ING_BUILD)\files\icl5.map \
+	$(ING_BUILD)\files\icldrs.map \
+	$(ING_BUILD)\files\iiud.scr \
+	$(ING_BUILD)\files\iiud64.scr \
+	$(ING_BUILD)\files\iiud65.scr \
+	$(ING_BUILD)\files\io8256.map \
+	$(ING_BUILD)\files\ioalsys.a \
+	$(ING_BUILD)\files\line1.gr \
+	$(ING_BUILD)\files\m30n.map \
+	$(ING_BUILD)\files\m91e.map \
+	$(ING_BUILD)\files\mac2.map \
+	$(ING_BUILD)\files\mws00.map \
+	$(ING_BUILD)\files\mws01.map \
+	$(ING_BUILD)\files\mws02.map \
+	$(ING_BUILD)\files\mws03.map \
+	$(ING_BUILD)\files\mws04.map \
+	$(ING_BUILD)\files\mws05.map \
+	$(ING_BUILD)\files\mws06.map \
+	$(ING_BUILD)\files\net.rfm \
+	$(ING_BUILD)\files\pc-220.map \
+	$(ING_BUILD)\files\pc-305.map \
+	$(ING_BUILD)\files\pc-386.map \
+	$(ING_BUILD)\files\pckermit.map \
+	$(ING_BUILD)\files\pie1.gr \
+	$(ING_BUILD)\files\pt35.map \
+	$(ING_BUILD)\files\pt35t.map \
+	$(ING_BUILD)\files\scat1.gr \
+	$(ING_BUILD)\files\sql_standard.a \
+	$(ING_BUILD)\files\sql_standard.ada \
+	$(ING_BUILD)\files\suncmdf.map \
+	$(ING_BUILD)\files\sunf.map \
+	$(ING_BUILD)\files\sunk.map \
+	$(ING_BUILD)\files\sunm.map \
+	$(ING_BUILD)\files\suntype5.map \
+	$(ING_BUILD)\files\termcap \
+	$(ING_BUILD)\files\tk4105.map \
+	$(ING_BUILD)\files\vt220ak.map \
+	$(ING_BUILD)\files\wview.map \
+	$(ING_BUILD)\files\wy60at.map \
+	$(ING_BUILD)\files\xsun.map \
+	$(ING_BUILD)\files\secure.rfm \
+	$(ING_BUILD)\files\ibmpc.map \
+	$(ING_BUILD)\files\winpcalt.map \
+	$(ING_BUILD)\files\ice.rfm \
+
+
+initial all install: $(FILETARGETS)
+
+$(FILETARGETS): $$(@F)
+	$(MKRDIR) $(ING_BUILD)\files
+	$(COPY) $(@F) $(ING_BUILD)\files
+
+hdr:
+
+derive:
+
+lib:
+
+objfiles:

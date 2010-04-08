@@ -1,0 +1,75 @@
+<HTML>
+<head>
+<title>
+</title>
+<script language="javascript">
+<!--
+function backdb( iu, idb, ingu )
+{
+    iurl = "/ice-bin/oiice.#cgi#/ice/samples/query/help.html?"
+    iurl += "ii_userid="+ iu
+    iurl += "&ii_database=" + idb
+    iurl += "&iuser=" + ingu
+
+    window.location.href= iurl
+    window.history.back();
+    return
+}
+
+//-->
+</script>
+</head>
+<body>
+<!-- #ICE REPEAT IF (DEFINED(iuser) AND (`:iuser` != ``))
+    THEN=`<!-- #ICE DECLARE=``page.idbuser=:iuser``-->`
+    ELSE=`<!-- #ICE DECLARE=``page.idbuser=ingres``-->`
+-->
+<!-- #ICE REPEAT IF (DEFINED(ii_database) AND (`:ii_database` != ``))
+    THEN=`<!-- #ICE REPEAT IF (DEFINED(itablename) AND (``:itablename`` != ````))
+        THEN=``<h1>Table <i>:itablename</i></h1><!-- #ICE DATABASE=````:ii_database````
+            USER=````:ii_userid````
+            SQL=````select column_name, column_datatype, column_length, column_nulls,
+  column_defaults, key_sequence, column_sequence, column_system_maintained,
+  column_internal_datatype, column_internal_length, column_has_default,
+  column_default_val from iicolumns where table_name= ':itablename'
+  and table_owner=':idbuser' order by column_sequence````
+        -->``
+        ELSE=``<h1>Database <i>:ii_database</i></h1><table border="1">
+<tr><th>Table Name</th><th>Owner</th><th>Type</th><th>System use</th></tr>
+<!-- #ICE DATABASE=````:ii_database````
+            USER=````:ii_userid````
+            SQL=````select table_name, table_owner, table_type, system_use from iitables
+  where table_owner=':idbuser' and system_use<>'S' and system_use<>'G' and
+      table_name not like 'ii%'
+  union select table_name, table_owner, table_type, system_use from iiaccess
+  where(permit_user= ':idbuser'
+      or permit_user=' ' or permit_user='PUBLIC' or
+      permit_user=dbmsinfo('group'))and system_use<>'S' and
+      table_name not like 'ii%' union select isyn.synonym_name as table_name,
+      isyn.synonym_owner as table_owner, 'S' as table_type,
+      itbl.system_use from iisynonyms isyn, iitables itbl
+  where isyn.table_name=itbl.table_name and
+      isyn.table_owner=itbl.table_owner and synonym_owner=':idbuser'
+      order by table_name, table_owner````
+        HTML=````<tr><td><a href="/ice-bin/oiice.#cgi#/ice/samples/query/help.html?ii_userid=:ii_userid&ii_database=:ii_database&iuser=:idbuser&itablename=:table_name">:table_name</a></td><td>:table_owner</td><td>:table_type</td><td>:system_use</td></tr>````
+        --></table>``-->`
+    ELSE=`Error <strong>Database has not been defined</strong>`
+-->
+<table>
+<tr>
+<td>
+<form action="javascript:void(0)">
+<input type="Button" value="Close" onClick="window.close()">
+</form>
+</td>
+<td>
+<!-- #ICE VAR=`
+<form action="javascript:void(0)">
+<input type="Button" value=":ii_database" onClick="backdb(':ii_userid', ':ii_database', ':idbuser')" >
+</form>
+`-->
+</td>
+</tr>
+</table>
+</body>
+</HTML>

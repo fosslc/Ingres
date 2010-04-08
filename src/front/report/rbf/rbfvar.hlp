@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to run a report in non-interactive mode.  You may enter in 
+the values for the variables in this frame.  Only declared variables with
+a prompt associated with it are displayed on this frame.  Any variable 
+that does not have a value entered will be assigned the NULL value.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	OK 		Execute the report with the values specified.
+
+	FullPrompt	Display the full prompt for the variable.  The table
+			field only displays up to 31 characters of the prompt
+			which may have up to 98 characters.
+
+        Cancel          Return to the previous popup.
+
+        Help            Print this message.

@@ -1,0 +1,40 @@
+MODIFY ii_atttype
+    TO BTREE UNIQUE
+    ON entity_id
+
+MODIFY ii_defaults TO HEAP
+
+MODIFY ii_databases
+    TO BTREE UNIQUE
+    ON entity_id
+
+MODIFY ii_domains TO BTREE UNIQUE
+    ON entity_id
+
+MODIFY ii_enttype TO BTREE UNIQUE
+    ON entity_id
+
+MODIFY ii_joinspecs to BTREE UNIQUE
+    ON entity_id, join_group, enttype_position
+
+MODIFY ii_key_info TO BTREE UNIQUE
+    ON entity_id
+
+MODIFY ii_key_map TO BTREE UNIQUE
+    ON entity_id
+
+MODIFY ii_limits TO HEAP
+
+MODIFY ii_rel_cncts_ent TO BTREE UNIQUE
+    ON rel_id, entity_id, enttype_position
+
+MODIFY ii_reltype
+    TO BTREE UNIQUE
+    ON entity_id
+
+MODIFY ii_sqlatts TO BTREE UNIQUE
+    ON entity_id
+
+MODIFY ii_sqltables TO BTREE UNIQUE
+    ON entity_id
+

@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqolcols.hlp, help on how to use optimistic locking.
+/#-- 
+You must assign one or more table columns to be used for optimistic locking.
+The following combinations work best:
+
+  * An update counter, incremented each time the row is updated
+  * A date/time stamp column, showing when the row was last updated
+  * A date/time stamp column and a username column, showing the name of the
+    user who last updated the row
+
+Optimistic locking works by checking the values of these column(s) when a
+user tries to save a record. If the value has changed since the user
+retrieved the record from the database, this means that someone else has
+updated the record, and the save will not be performed.
+
+Optimistic locking columns will usually be in the master table only, though
+you can use detail columns as well (or instead). The column you use must have
+the correct datatype: integer for an update counter, date for a date/time
+stamp, and varchar for a username.
+
+Enter the column name next to the column type you have chosen, or select
+ListChoices for a list of columns of the right datatype.

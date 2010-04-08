@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- fslinedt.hlp, help for the "LineEdit" submenu in the Interactive Terminal
+/#-- Monitor.
+/#-- 
+From this submenu you may do a variety of things to edit the lines of the
+Interactive Terminal Monitor input form:
+
+  InsertLine    Opens a new line above the current cursor position.
+  DeleteLine    Deletes the line that the cursor is on.
+  SplitLine     Creates a new line starting with the character the
+                cursor is positioned on.
+  JoinLines     Joins the current and subsequent lines together.
+  Help          Displays this help text.
+  End           Returns back to the input form of the Terminal Monitor.

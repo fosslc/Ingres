@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+The empty_date_return parameter defines the value returned to the 
+client when the gateway receives an empty date. If a date matches
+the setting in empty_date, and empty_date_return is set to "empty", 
+an empty Ingres date is returned. If a date does not match the 
+setting in empty_date, then the date is passed through unmodified. 
+If a date does match the setting in empty_date, but empty_date_return 
+is not set to "empty", the date is passed through as the setting 
+in empty_date.
+
+Default for empty_date_return is OFF.

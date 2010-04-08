@@ -1,0 +1,40 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Profile&submit=actProfile.html` -->
+		<TABLE BORDER=0>
+			<!-- #ICE REPEAT FUNCTION=`profile?action=retrieve&profile_id=:profile`
+					 HTML=`
+			<TR>
+				<INPUT TYPE="HIDDEN" NAME="id" VALUE=":profile_id">
+				<TD>Name </TD>
+				<TD><INPUT SIZE="32" NAME="name" VALUE=":profile_name"></TD>
+			</TR>
+			<TR>
+				<TD>Default database profile </TD>
+				<TD><SELECT NAME="dbuser">
+			<!-- #ICE REPEAT FUNCTION=``dbuser?action=select``
+					 HTML=``
+					 <OPTION VALUE=":dbuser_id" 
+							<!-- #ICE 
+							IF (````:dbuser_id```` == ````:profile_dbuser````)
+							THEN=````SELECTED```` 
+							-->
+					 >:dbuser_alias</OPTION>``
+			-->
+				</SELECT></TD>
+			</TR>
+			<TR>
+				<TD>profile: </TD>
+				<TD>
+						<INPUT TYPE="CHECKBOX" NAME="fadm" VALUE="checked" :profile_administration>administrator<BR>
+						<INPUT TYPE="CHECKBOX" NAME="fsec" VALUE="checked" :profile_security>security administrator<BR>
+						<INPUT TYPE="CHECKBOX" NAME="funit" VALUE="checked" :profile_unit>unit manager<BR>
+						<INPUT TYPE="CHECKBOX" NAME="fmonitor" VALUE="checked" :profile_monitor>monitoring<BR>
+				</TD>
+			</TR>
+			<TR>
+				<TD>timeout: </TD>
+				<TD><INPUT TYPE="TEXT" SIZE="6" NAME="timeout" VALUE=":profile_timeout"> s</TD>
+			</TR>`
+			-->
+			<!-- #ICE REPEAT INCLUDE=`action.html` -->
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

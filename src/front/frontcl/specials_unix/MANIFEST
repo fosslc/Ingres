@@ -1,0 +1,31 @@
+#
+# YAM MANIFEST file for front!frontcl!specials_unix
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#	03-Aug-2004 (hanje04)
+#	    Updated IIABFOBJS to do ABFLINK stuff as well.
+#	30-Jan-2005 (hanje04)
+#	    Remove IIABFOBJ calls, targets now built directly in 
+#	    front!abf!abfrts
+
+
+IISUBSYS front frontcl specials_unix ;
+
+IIOSLHDR oslhdr.h : oslhdr.cpp ;
+
+IIABFCFG config.done ;
+
+IISHLIBRARY $(SHCOMPATLIB) ;
+IINEEDLIBS $(SHCOMATLIB) : COMPAT_LIBS ;
+
+IISHLIBRARY $(SHQLIB) ;
+IINEEDLIBS $(SHQLIB) : LIBQ_LIBS SHCOMPATLIB ;
+
+IISHLIBRARY $(SHFRAMELIB) ;
+IINEEDLIBS $(SHFRAMELIB) : FRAME_LIBS SHCOMPATLIB SHQLIB ;
+
+IISHLIBRARY $(SHINTERPLIB) ;
+IINEEDLIBS $(SHINTERPLIB) : INTERP_LIBS ;

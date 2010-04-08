@@ -1,0 +1,22 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Demoapp Plug-in
+Bundle-SymbolicName: com.ingres.demoapp; singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.ingres.demoapp.DemoApp
+Bundle-Vendor: Ingres Corporation
+Bundle-Localization: plugin
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.ui.views,
+ org.eclipse.help.ui,
+ org.apache.lucene,
+ org.eclipse.help.appserver,
+ org.eclipse.help.base,
+ org.eclipse.help.webapp,
+ org.eclipse.tomcat,
+ org.eclipse.ui.forms,
+ com.ingres.demoapp.help
+Eclipse-LazyStart: true
+Bundle-ClassPath: iijdbc.jar,
+ .

@@ -1,0 +1,20 @@
+COPYFORM:	6.4	1991_08_19 08:51:25 GMT  
+FORM:	fmorelghdtx	more info for transaction header	
+	52	8	0	0	9	0	6	9	0	0	0	0	0	192	0	9
+FIELD:
+	0	tr_first	30	4	0	8	1	16	2	2	8	0	8	First:	0	0	0	256	512	0	0		+i8			0	0
+	1	write	30	4	0	6	1	13	2	21	6	0	7	Write:	0	0	0	0	512	0	0		+i6			0	1
+	2	split	30	4	0	6	1	13	2	37	6	0	7	Split:	0	0	0	0	512	0	0		+i6			0	2
+	3	tr_last	30	4	0	8	1	16	3	2	8	0	8	Last:	0	0	0	256	512	0	0		+i8			0	3
+	4	force	30	4	0	6	1	13	3	21	6	0	7	Force:	0	0	0	0	512	0	0		+i6			0	4
+	5	wait	30	4	0	6	1	13	3	37	6	0	7	Wait:	0	0	0	0	512	0	0		+i6			0	5
+	6	tr_cp	30	4	0	8	1	16	4	2	8	0	8	CP:	0	0	0	256	512	0	0		+i8			0	6
+	7	tr_pid	21	10	0	8	1	20	5	21	8	0	12	Process ID:	0	0	0	0	512	0	0		c8			0	7
+	8	tr_status	21	72	0	42	1	50	6	1	42	0	8	Status:	0	0	0	256	576	0	0		c42			0	8
+TRIM:
+	0	0	8:52:0	1	0	0	0
+	1	0	More Info	2048	0	0	0
+	1	1	5:18:1	1	0	0	0
+	2	1	Page in log file	0	0	0	0
+	20	1	4:31:2	1	0	0	0
+	21	1	Logging Statistics	0	0	0	0

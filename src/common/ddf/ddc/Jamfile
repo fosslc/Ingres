@@ -1,0 +1,14 @@
+#
+# Jamfile file for common!ddf!ddc
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC common ddf ddc ;
+
+IISUBSYS common ddf ddc ;
+
+if $(BUILD_ICE)
+{
+IILIBRARY DDFLIB : ddcmo.c ddcdata.c dbaccess.c ;
+}

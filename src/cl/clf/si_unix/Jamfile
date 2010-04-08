@@ -1,0 +1,13 @@
+#
+# Jamfile file for cl!clf!si_unix
+#
+
+SubDir ING_SRC cl clf si_unix ;
+
+IISUBSYS cl clf si_unix ;
+
+
+IILIBRARY COMPATLIB : siwrite.c sistubs.c siread.c siputrec.c
+	siprintf.c siopen.c siisopen.c sihistgetrec.c sigetrec.c
+	siftell.c sifseek.c sieqinit.c sicreate.c sicopy.c sicat.c ;
+

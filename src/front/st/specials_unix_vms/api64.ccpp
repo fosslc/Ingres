@@ -1,0 +1,28 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+**  Generic part file for API64
+*/
+
+/*
+** History
+**	06-sep-2002 (somsa01)
+**	    Created from 32-bit version.
+**	30-Jun-2004 (hanje04)
+**	    Add missing #endif
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+*/ 
+
+PART	api64
+
+# ifdef FULL_RELEASE
+/*
+** ingres!lib!lp64
+*/
+   DIRECTORY (PROD2NAME)!LIB_TGT!lp64
+   BUILD_DIR (ING_BUILD)!LIB_BLD!lp64
+      FILE lib(PROG1PRFX)api.a
+# endif
+

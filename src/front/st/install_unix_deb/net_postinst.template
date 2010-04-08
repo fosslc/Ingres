@@ -1,0 +1,68 @@
+#
+## Copyright Ingres Corporation 2007. All Rights Reserved.
+##
+## Name: net_postinst.template
+##
+## Description:
+##	Template file for DEB postinst script for the net package. Not
+##	intended to be manually runnable
+##
+## History:
+##	12-Jul-2007 (hanje04)
+##	    SIR 118420
+##	    Created.
+##
+. /usr/share/debconf/confmodule
+
+if [ -n "$DEBIAN_SCRIPT_DEBUG" ]; then set -v -x; DEBIAN_SCRIPT_TRACE=1; fi
+${DEBIAN_SCRIPT_TRACE:+ echo "#42#DEBUG# RUNNING $0 $*" 1>&2 }
+
+export II_SYSTEM=%rpm_prefix%
+PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+export II_SYSTEM PATH LD_LIBRARY_PATH
+
+rc=0
+
+if [ "$1" = "configure" ] ; then
+    $II_SYSTEM/ingres/utility/iigenpostinst -r %rpm_basename% \
+        -v %rpm_version% -p %pkg_name% %pkg_sulist%
+    rc=$?
+
+    # make sure ingvalidpw is correctly installed
+    [ $rc == 0 ] && 
+    {	
+	# Build password validation program if we can
+	if [ -x $II_SYSTEM/ingres/bin/mkvalidpw ] && \
+			( which gcc > /dev/null 2>&1 )
+	then
+	    if [ "$silent" ] ; then
+		mkvalidpw >& /dev/null
+	    else
+		mkvalidpw
+	    fi
+	elif [ ! -x II_SYSTEM/ingres/bin/ingvalidpw ]
+	then
+       	    # Use the distributed version
+	    [ -f "$II_SYSTEM/ingres/files/iipwd/ingvalidpw.dis" ] && \
+		cp -f $II_SYSTEM/ingres/files/iipwd/ingvalidpw.dis \
+		"$II_SYSTEM/ingres/bin/ingvalidpw"
+
+	    # Set II_SHADOW_PWD if we need to
+	    [ -f /etc/shadow ] && \
+		ingsetenv II_SHADOW_PWD $II_SYSTEM/ingres/bin/ingvalidpw
+	fi
+
+	# If ingvalidpw exists then it needs to be owned by root
+	# and have SUID set.
+	[ -x $II_SYSTEM/ingres/bin/ingvalidpw ] &&
+	{
+	    chown root $II_SYSTEM/ingres/bin/ingvalidpw
+	    chmod 4755 $II_SYSTEM/ingres/bin/ingvalidpw
+	}
+    }
+
+fi
+
+exit $rc
+

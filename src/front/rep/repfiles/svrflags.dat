@@ -1,0 +1,46 @@
+-CTO	Con_Timeout	Connection Timeout	Each replication cycle the server will close unneeded connections that have not been used in CTO seconds.  0 -- do not close at all.  Flag Format -CTOnnnnnn.  Default value is 0.	D
+
+-EMX	err_max	Maximum Error	The Maximum Error count that this replication server can accumulate before shutting down. Flag Format -EMXnnnn.  Default -EMX100, shut down after 100 errors.	D
+
+-EVT	db_event_tim	Event Time Out	The number of seconds to wait before processing the replication.  If 0, the replication server will only process the replication as a response to a database event.  Flag format -EVTnnn.  Default -EVT0, never timeout waiting for a database event.	D
+
+-IDB	localdb	Local DB Name	The local database name. Flag Format -IDBdbname. Not a dynamic flag.  The dbname can be in the format NodeName::DBname.	S
+
+-LGL	Log_level	Log Level	Set the level of messages to be sent to the server log file. Recommended Level is 3 for report warnings. Flag Format -LGLn.  Default -LGL3, a log level of 3.	D
+
+-MLE	err_mail	Error Mail	Send mail message on error to usernames in dd_mail_alert table.  Flag format -MLE.  This is the default.	D
+
+-MON	trace3	Send Monitor Events	Send monitor database events to the Replicator/Manager. There will be a performance impact in doing this.  Flag format -MON.  This is NOT the default.	D
+
+-NLR	nolock_read	Use readlock server	use readlock= nolock when reading from shadow, base archive tables of a UPRO target.  Flag format -NLR.  This is not the default.	D
+
+-NML	err_mail	No Error Mail	Do not send email on error.  Flag Format -NML.  This is not the default.	D
+
+-NMO	trace3	No Monitor Events	Do not send monitor events to replication monitor.  This is a performance enhancement flag.  Flag format -NMO.  This is the default.	D
+
+-NQT	Quiet	Unquiet Server	Unquiet the replication server. The server will now process the replication as activity happens on the local database.  Flag format -NQT.  This is the default.	D
+
+-NSR	skip_check_r	Don't Skip Rule Chk	Rule checking is enabled.  There is a performance penalty to check the rules and unique indexes.  Flag format -NSR.  This is the default.	D
+
+-ORT	open_retry	Open Retry	The number of replication cycles that are to be executed before the server tries to open any target databases that are not currently open.  Flag format -ORTnnn.  The default is 0, never try to reopen a broken connection to a database.	D
+
+-OWN	localowner	Local Database Owner	The owner of the local database. Flag Format -OWNdbaname.  Not a dynamic flag.  A mandatory flag in the runrepl.opt file.	S
+
+-PTL	Print_level	Print Level	Set the print level to be sent to standard output. This is a debugging feature. Recommended Level is zero. Flag Format -PTLn.  Default print level is zero.	D
+
+-QBM	read_q_must	Absolute Memory	Queue Break Must. This is the absolute number of records that can be read into memory. Memory throttle. Flag Format -QBMnnnnnn.  Default value is 5000.	D
+
+-QBT	read_q_try	Queue Break Transact	Memory Throttle. Stop reading transaction commands into memory after next break in target or transactions. The queue being serviced by this server is becoming very large. Flag Format -QBTnnnnnn.  The default value is 4000.	D
+
+-QIT	Quiet	Quiet Server	Quiet the server.  Ignore action 1 database events that signify activity is taking place in the local database.  This flag permits an active server to be scheduled by sending it a dd_go_server database event.  Flag format -QIT.  Not a default flag.	D
+
+-SCR	skip_check_r	Skip Rule Check	Do not do an integrity check for rules and unique indexes on server start up.  Flag format -SCR.  Not the default.	D
+
+-SGL	single_pass	Single Pass	Only process the replication once and then shutdown.  This flag permits a server to be scheduled on an operating system level.  Flag format -SGL.  Not the default.	S
+
+-SVR	server_no	Server Number	The server number.  The server number will determine what targets a server will process as defined in the Ingres/Replicator Manager.  Flag Format -SVRnn. Not a dynamic flag.	S
+
+-TOT	time_out	Time Out	Set Ingres Timeout in seconds.  This flag should be set to avoid distributed deadlocks.  Flag format -TOT.  Default value is 60 seconds.	D
+
+-TPC	two_phase	Two-Phase Commit	The Two-Phase Commit Mode of the server.  0 -- two-phase commit disabled.  1 -- two-phased commit enabled.	D
+

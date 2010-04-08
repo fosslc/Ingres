@@ -1,0 +1,27 @@
+#
+# Jamfile file for front!ice!DTD
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+#	17-Dec-2009 (bonro01)
+#	    Replace unix specific path separator
+
+SubDir ING_SRC front ice DTD ;
+
+IISUBSYS front ice DTD ;
+
+# This one is also used by genxml -- really ought to be moved to a
+# more common place.
+
+IIFILE ingres.dtd : ingres.dtd ;
+
+if $(BUILD_ICE)
+{
+IIICEFILE DTD$(DFS)icelang_frag.dtd : icelang_frag.dtd ;
+IIICEFILE DTD$(DFS)ingres.dtd : ingres.dtd ;
+
+IIICEFILE DTD$(DFS)xhtml-lat1.ent : xhtml-lat1.ent ;
+IIICEFILE DTD$(DFS)xhtml-special.ent : xhtml-special.ent ;
+IIICEFILE DTD$(DFS)xhtml-symbol.ent : xhtml-symbol.ent ;
+IIICEFILE DTD$(DFS)xhtml1-transitional.dtd : xhtml1-transitional.dtd ;
+}

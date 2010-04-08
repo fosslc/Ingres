@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The archiver_interval resource specifies the number of consistency
+  points to be taken between waking states of the archiver process.

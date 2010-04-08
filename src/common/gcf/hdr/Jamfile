@@ -1,0 +1,9 @@
+#
+# Jamfile file for common!gcf!hdr
+#
+
+SubDir ING_SRC common gcf hdr ;
+
+IISUBSYS common gcf hdr ;
+
+IIFILE gcnapi.h : gcnapi.h ;

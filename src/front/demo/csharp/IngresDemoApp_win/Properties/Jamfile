@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!demo!csharp!IngresDemoApp_win!Properties
+#
+
+SubDir ING_SRC front demo csharp IngresDemoApp_win Properties ;
+
+IISUBSYS front demo csharp IngresDemoApp_win Properties ;
+
+IIBFILES demo$(DFS)csharp$(DFS)travel$(DFS)solution$(DFS)Properties : 
+	AssemblyInfo.cs Resources.Designer.cs Resources.resx 
+	Settings.Designer.cs Settings.settings app.manifest ;

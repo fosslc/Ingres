@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!vsda_win
+#
+
+SubDir ING_SRC front vdba vsda_win ;
+
+IISUBSYS front vdba vsda_win ;
+
+
+IISLN vsda.ocx : vsda.sln ;

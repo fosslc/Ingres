@@ -1,0 +1,10 @@
+#
+# Jamfile file for cl!clf!cm_vms
+#
+
+SubDir ING_SRC cl clf cm_vms ;
+
+IISUBSYS cl clf cm_vms ;
+
+IILIBRARY COMPATLIB : cmtype.c cmunctrl.c cmkcheck.c cmccopy.c cmicopy.c
+	cmutype.c cmfile.c cmafile.c cmglobs.c cmutf8.c ;

@@ -1,0 +1,27 @@
+<?xml version="1.0" standalone="yes"?>
+<AppConfigDataSet xmlns="AppConfigDataSet.xsd">
+  <AppConfig>
+    <ParamName>Host</ParamName>
+    <ParamValue>(local)</ParamValue>
+  </AppConfig>
+  <AppConfig>
+    <ParamName>Instance</ParamName>
+    <ParamValue>II</ParamValue>
+  </AppConfig>
+  <AppConfig>
+    <ParamName>Database</ParamName>
+    <ParamValue>demodb</ParamValue>
+  </AppConfig>
+  <AppConfig>
+    <ParamName>UserID</ParamName>
+    <ParamValue />
+  </AppConfig>
+  <AppConfig>
+    <ParamName>Password</ParamName>
+    <ParamValue />
+  </AppConfig>
+  <AppProfile>
+    <ParamName>Email</ParamName>
+    <ParamValue />
+  </AppProfile>
+</AppConfigDataSet>

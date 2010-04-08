@@ -1,0 +1,8 @@
+COPYFORM:	6.4	1993_11_18 13:39:36 GMT  
+FORM:	export_screen		
+	80	23	0	0	1	0	2	9	0	0	0	0	0	0	0	1
+FIELD:
+	0	data	-21	81	0	78	3	80	10	0	78	1	1		1	1	0	1	0	0	0		c78			0	0
+TRIM:
+	9	7	Please supply the name of a file to export the evidence set to	0	0	0	0
+	21	0	INGRES EVIDENCE SET MANAGEMENT UTILITY	0	0	0	0

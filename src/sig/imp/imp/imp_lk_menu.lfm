@@ -1,0 +1,12 @@
+COPYFORM:	6.4	2002_06_28 07:26:10 GMT  
+FORM:	imp_lk_menu		
+	83	23	0	0	2	0	2	9	0	0	0	0	0	0	0	5
+FIELD:
+	0	vnode	-21	23	0	20	1	27	0	56	20	0	7	Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	imp_menu	0	3	0	3	5	68	5	9	1	1	0		1	1	0	1073758241	0	0	0					1	1
+	0	item_number	-30	5	0	4	1	4	0	1	4	1	1		1	-1	0	16777216	0	0	0		-i4			2	2
+	1	short_name	-21	18	0	15	1	15	0	6	15	1	6		6	-1	0	0	0	0	0		c15			2	3
+	2	long_name	-21	48	0	45	1	45	0	22	45	1	22		22	-1	0	0	0	0	0		c45			2	4
+TRIM:
+	0	0	IMP - Locking System Menu	0	0	0	0
+	9	12	Place the cursor on your choice and press "Select"	0	0	0	0

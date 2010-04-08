@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to quit the editing session.  Would you like to save your 
+edits to the JoinDef before leaving or quit without saving your edits. The 
+table field lists options that may be used to decide whether or not to save 
+your edits to the JoinDef.
+The options are:
+
+        Yes             Save changes, then quit
+        No              Quit without saving changes
+
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Select          Choose the option indicated by the current line of
+                        the table field.  Indicates whether or not to save
+                        edits made to the JoinDef.
+
+        Cancel          Decide not to quit at this time.
+
+        Help            Access the INGRES Help facility.

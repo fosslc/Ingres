@@ -1,0 +1,12 @@
+#
+# Jamfile file for testtool!icetest!icetest_wnt
+#
+
+SubDir ING_SRC testtool icetest icetest_win ;
+
+IISUBSYS testtool icetest icetest_win ;
+
+
+IITOOLSWNTEXE icetest : icetest.c ;
+IINEEDLIBS icetest : COMPATLIB ;
+

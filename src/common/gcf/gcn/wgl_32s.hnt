@@ -1,0 +1,9 @@
+#
+# OpenROAD makefile generation hints for common\gcf\gcn
+#
+# History:
+#	30-Jan-2007 (wridu01)
+#		Adapted for flat-linking instead of IngresII DLL structure.
+#
+objonly = iigcn.obj 
+

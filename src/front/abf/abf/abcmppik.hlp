@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have decided to create an application component and must now select the
+general type of component that you wish to create.  You can select the type
+by positioning the cursor on the row of the table field that describes the
+type that you want and then choosing the Select menu item.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        Select                  Choose the type described by the current
+                                row of the table field as the general type
+                                of application component that you wish to
+                                create.  
+
+        Cancel                  Cancel the Create operation and return
+                                to the previous frame.
+
+        Help                    Access the Ingres Help facility.

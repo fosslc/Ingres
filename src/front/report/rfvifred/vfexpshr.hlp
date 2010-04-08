@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This menu allows you to either contract or expand the length or width of
+the form.  To contract the form, move the cursor to the desired location
+and select the "Place" menu item.  Expanding the form is accomplished by
+selecting the "Expand" menu item.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Place           Place the selected boundary at cursor position.
+                        If this will cause overlap with components on
+                        the form, then the boundary will be placed as close
+                        to the last component as possible.
+
+        Expand          Expand the form by a quarter of a display screen
+                        either to the right (if you are moving the right
+                        border) or down (if you are moving the end of the form).
+
+        Help            Access the Ingres Help facility.
+
+        End             Leave this menu without doing anything.

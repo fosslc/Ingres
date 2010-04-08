@@ -1,0 +1,127 @@
+#
+# Jamfile file for front!abf!abf
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front abf abf ;
+
+IISUBSYS front abf abf ;
+
+
+IIBINEXE iiabf : abmain.c ;
+IINEEDLIBS iiabf : ABFLIB ABFIMAGELIB VQLIB FGLIB OSLLIB
+	SQLLIB GNLIB INGMENULIB VIFREDLIB PRINTFORMLIB COMPFRMLIB	
+	COPYFORMLIB QBFLIB TBLUTILLIB INTERP_LIBS SHFRAMELIB
+	SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW iiabf : SHEMBEDLIB SHADFLIB ;
+IINEEDOBJ iiabf : oosymbol.roc ;
+
+IIUNDEFS iiabf : II_copyright _And  malloc ;
+
+IIMSGHDR erab.msg erib.msg ;
+
+IIQSHHDR abcatrow.h : abcatrow.qsh ;
+IIQSHHDR abclinfo.h : abclinfo.qsh ;
+
+IIFORM abaddtop.frm ;
+IIFORM abcompcr.frm ;
+IIFORM abcompsx.frm ;
+IIFORM abdeflts.frm ;
+IIFORM abedlock.frm ;
+IIFORM abfcnsed.frm ;
+IIFORM abfconf.frm ;
+IIFORM abfconst.frm ;
+IIFORM abfcpcat.frm ;
+IIFORM abfcpdet.frm ;
+IIFORM abfcreat.frm ;
+IIFORM abfgcnsf.frm ;
+IIFORM abfglobs.frm ;
+IIFORM abfgrafd.frm ;
+IIFORM abfimage.frm ;
+IIFORM abfprocd.frm ;
+IIFORM abfqbfd.frm ;
+IIFORM abfrec.frm ;
+IIFORM abfrecd.frm ;
+IIFORM abfrepwd.frm ;
+IIFORM abfuserd.frm ;
+IIFORM abglobsx.frm ;
+IIFORM ablnkdsp.frm ;
+IIFORM ablokadm.frm ;
+IIFORM ablokdet.frm ;
+IIFORM abloktr.frm ;
+IIFORM abpartcr.frm ;
+IIFORM abpaswrd.frm ;
+IIFORM abreccr.frm ;
+IIFORM abtyppik.frm ;
+
+File $(INGMSG)$(DFS)ab4glpmi.hlp : ab4glpmi.hlp ;
+File $(INGMSG)$(DFS)ab4glpro.hlp : ab4glpro.hlp ;
+File $(INGMSG)$(DFS)abcatlog.hlp : abcatlog.hlp ;
+File $(INGMSG)$(DFS)abchcomp.hlp : abchcomp.hlp ;
+File $(INGMSG)$(DFS)abchstrt.hlp : abchstrt.hlp ;
+File $(INGMSG)$(DFS)abchstyl.hlp : abchstyl.hlp ;
+File $(INGMSG)$(DFS)abcmpcrt.hlp : abcmpcrt.hlp ;
+File $(INGMSG)$(DFS)abcmppik.hlp : abcmppik.hlp ;
+File $(INGMSG)$(DFS)abcomps.hlp : abcomps.hlp ;
+File $(INGMSG)$(DFS)abcreate.hlp : abcreate.hlp ;
+File $(INGMSG)$(DFS)abcustrg.hlp : abcustrg.hlp ;
+File $(INGMSG)$(DFS)abdbprmi.hlp : abdbprmi.hlp ;
+File $(INGMSG)$(DFS)abdbproc.hlp : abdbproc.hlp ;
+File $(INGMSG)$(DFS)abdeflts.hlp : abdeflts.hlp ;
+File $(INGMSG)$(DFS)abdetail.hlp : abdetail.hlp ;
+File $(INGMSG)$(DFS)abedlock.hlp : abedlock.hlp ;
+File $(INGMSG)$(DFS)abedtapp.hlp : abedtapp.hlp ;
+File $(INGMSG)$(DFS)abedtatt.hlp : abedtatt.hlp ;
+File $(INGMSG)$(DFS)abedtcls.hlp : abedtcls.hlp ;
+File $(INGMSG)$(DFS)abedtcon.hlp : abedtcon.hlp ;
+File $(INGMSG)$(DFS)abedtglo.hlp : abedtglo.hlp ;
+File $(INGMSG)$(DFS)abfclup.hlp : abfclup.hlp ;
+File $(INGMSG)$(DFS)abfcnsov.hlp : abfcnsov.hlp ;
+File $(INGMSG)$(DFS)abfconst.hlp : abfconst.hlp ;
+File $(INGMSG)$(DFS)abfflst.hlp : abfflst.hlp ;
+File $(INGMSG)$(DFS)abffrmst.hlp : abffrmst.hlp ;
+File $(INGMSG)$(DFS)abfgrafd.hlp : abfgrafd.hlp ;
+File $(INGMSG)$(DFS)abfgrami.hlp : abfgrami.hlp ;
+File $(INGMSG)$(DFS)abfimage.hlp : abfimage.hlp ;
+File $(INGMSG)$(DFS)abfqbfd.hlp : abfqbfd.hlp ;
+File $(INGMSG)$(DFS)abfqbfmi.hlp : abfqbfmi.hlp ;
+File $(INGMSG)$(DFS)abfratts.hlp : abfratts.hlp ;
+File $(INGMSG)$(DFS)abfrepmi.hlp : abfrepmi.hlp ;
+File $(INGMSG)$(DFS)abfrepwd.hlp : abfrepwd.hlp ;
+File $(INGMSG)$(DFS)abfrmpik.hlp : abfrmpik.hlp ;
+File $(INGMSG)$(DFS)abfrunhl.hlp : abfrunhl.hlp ;
+File $(INGMSG)$(DFS)abfusemi.hlp : abfusemi.hlp ;
+File $(INGMSG)$(DFS)abfuserd.hlp : abfuserd.hlp ;
+File $(INGMSG)$(DFS)abfvars.hlp : abfvars.hlp ;
+File $(INGMSG)$(DFS)abgconsf.hlp : abgconsf.hlp ;
+File $(INGMSG)$(DFS)abhlpik.hlp : abhlpik.hlp ;
+File $(INGMSG)$(DFS)abhlprmi.hlp : abhlprmi.hlp ;
+File $(INGMSG)$(DFS)abhlproc.hlp : abhlproc.hlp ;
+File $(INGMSG)$(DFS)ablnkapp.hlp : ablnkapp.hlp ;
+File $(INGMSG)$(DFS)ablokadm.hlp : ablokadm.hlp ;
+File $(INGMSG)$(DFS)ablokdel.hlp : ablokdel.hlp ;
+File $(INGMSG)$(DFS)ablokdet.hlp : ablokdet.hlp ;
+File $(INGMSG)$(DFS)abloktr.hlp : abloktr.hlp ;
+File $(INGMSG)$(DFS)abmurg.hlp : abmurg.hlp ;
+File $(INGMSG)$(DFS)abnewtop.hlp : abnewtop.hlp ;
+File $(INGMSG)$(DFS)abnwedit.hlp : abnwedit.hlp ;
+File $(INGMSG)$(DFS)abpaswrd.hlp : abpaswrd.hlp ;
+File $(INGMSG)$(DFS)abpropik.hlp : abpropik.hlp ;
+File $(INGMSG)$(DFS)abprvpwd.hlp : abprvpwd.hlp ;
+File $(INGMSG)$(DFS)absrchql.hlp : absrchql.hlp ;
+File $(INGMSG)$(DFS)abutilty.hlp : abutilty.hlp ;
+
+IILIBRARY ABFLIB : abflang.sc abfldnms.roc newedit.qsc
+	ibdoimg.qsc editutil.qsc editglo.qsc editcomp.qsc editapp.qsc
+	defaults.qsc conflict.qsc abutilty.qsc abufedit.qsc
+	abrfedit.qsc abrcedit.qsc abraedit.qsc abqfedit.qsc
+	abpaswrd.qsc ablocks.qsc abimage.qsc abhpedit.qsc abgledit.qsc
+	abgfedit.qsc abgconsf.qsc abfrun.qsc abfcat.qsc aberrlst.qsc
+	abdpedit.qsc abcreate.qsc abcoedit.qsc abcatlog.qsc
+	abapplnk.qsc ab4pedit.qsc userrun.c inifrm.c gninit.c abut.c
+	abtstbld.c abstatus.c abret.c aboslver.c ablink.c abftab.c
+	abfnames.c abffile.c abfexe.c abfdir.c abfdata.c abfcom.c
+	abfcngen.c abfapp.c abf.c abexhand.c abcomchk.c abcatget.c ;
+

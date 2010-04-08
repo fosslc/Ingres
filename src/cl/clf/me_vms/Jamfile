@@ -1,0 +1,24 @@
+#
+# Jamfile file for cl!clf!me_vms
+#
+#   22-dec-2008 (stegr01)
+#      Itanium VMS port
+#   10-nov-2009 (stegr01)
+#      Use assembler files for AXP and C files for Itanium
+
+SubDir ING_SRC cl clf me_vms ;
+
+IISUBSYS cl clf me_vms ;
+
+IILIBRARY COMPATLIB : melifo.c mepages.c meactual.c me.c meuse.c
+	metls.c ;
+
+if $(VERS) = axm_vms
+{
+   IILIBRARY COMPATLIB : mebyte.mar ;
+}
+else
+{
+   IILIBRARY COMPATLIB : mebyte.c ;
+}
+ 

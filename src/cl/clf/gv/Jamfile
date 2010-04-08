@@ -1,0 +1,16 @@
+#
+# Jamfile file for cl!clf!gv
+#
+# History:
+#	16-nov-2004 (abbjo03)
+#	    Make this directory generic.
+
+SubDir ING_SRC cl clf gv ;
+
+IISUBSYS cl clf gv ;
+
+
+IILIBRARY COMPATLIB : gvosvers.c gvmo.c gviivers.c gvshobj.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : gver.roc gvdata.c gv.c ;
+

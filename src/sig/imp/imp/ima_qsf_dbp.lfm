@@ -1,0 +1,12 @@
+COPYFORM:	6.4	2002_06_28 07:26:00 GMT  
+FORM:	ima_qsf_dbp		
+	210	22	0	0	2	0	0	9	0	0	0	0	0	0	0	7
+FIELD:
+	0	ima_qsf_dbp	0	16	0	5	20	72	2	0	1	3	0		0	0	0	1073741857	0	0	0					1	0
+	0	dbp_name	21	32	0	30	1	30	0	1	30	0	1	Name	1	1	0	65552	0	0	0		c30			2	1
+	1	dbp_owner	21	12	0	10	1	10	0	32	10	0	32	Owner	32	1	0	65552	0	0	0		c10			2	2
+	2	dbp_dbname	-21	13	0	10	1	10	0	43	10	0	43	DB	43	1	0	0	0	0	0		c10			2	3
+	3	dbp_size	30	4	0	8	1	8	0	54	8	0	54	Size	54	1	0	65552	0	0	0		+f8			2	4
+	4	dbp_usage_count	30	4	0	8	1	8	0	63	8	0	63	Usage	63	1	0	65552	0	0	0		+f8			2	5
+	1	server	-21	33	0	30	1	69	0	0	30	0	39	Database Procedures in QSF for Server:	0	0	0	0	512	0	0		c30			0	6
+TRIM:

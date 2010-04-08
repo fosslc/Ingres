@@ -1,0 +1,9 @@
+#
+# Jamfile file for cl!clf!hdr_vms
+#
+
+SubDir ING_SRC cl clf hdr_vms ;
+
+IISUBSYS cl clf hdr_vms ;
+
+IICLSECRET clsecret.h ;

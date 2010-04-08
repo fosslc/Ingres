@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcddstb.hlp
+/#subtopic "Consistent Distributed Data Set" rmcdddef.hlp
+CDDS TABLES
+
+This pop-up form lists the tables registered under the highlighted
+CDDS.
+
+The columns on the list are:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        Table Name      The name of the table.
+
+        Owner           The owner of the table.
+
+        Reg             Indicates whether columns for this table have
+                        been registered in the current CDDS.
+
+        Sup             Indicates whether the support objects have been
+                        created for this table.
+
+        Act             Indicates whether change recording is active on
+                        this table.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Help            Access the Help facility.
+
+        End             Return to the CDDS Summary screen.

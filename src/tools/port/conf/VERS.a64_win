@@ -1,0 +1,12 @@
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+#set: config a64_win
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+PLATFORM_JAMDEFS = a64_win ;

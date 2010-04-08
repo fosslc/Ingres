@@ -1,0 +1,91 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Result Subset from a Hyperlink
+</title>
+</head>
+<body>
+<h1>
+Result Subset from a Hyperlink
+</h1>
+This document is virtually the same as the sub-select
+document in the combo box example. The variable name in the
+where clause has been changed to be the HTML variable
+<tt>type</tt> and we include a parameterized hyperlink
+back to the calling page using the Web Deployment Option session variable
+<tt>e_return</tt>. This said, it is a trivial exercise to 
+modify the combo box's sub-select document to have the 
+same functionality as this document.
+<h3>File: play_typeLinkSubSet.html</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Link generated sub-set of Shakespeare's Plays by type&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;center&gt;
+&lt;h1&gt;Link generated sub-set of Shakespeare's Plays by type&lt;/h1&gt;
+&lt;/center&gt;
+&lt;FORM ACTION="/ice-bin/oiice.dll/playgroup/plays[play_typeLinkSubSet.html]"
+	METHOD="GET"&gt;
+&lt;!-- #ICE DECLARE=`session.e_playTxn=Complete` --&gt;
+&lt;!-- #ICE DECLARE=`session.e_playTxnCommitted=FALSE` --&gt;
+&lt;!-- #ICE REPEAT
+          DATABASE = `icetutor` 
+          <span class="macro">SQL=`select * from plays where type = ':type'`</span>
+          TRANSACTION=`Complete` 
+          CURSOR=`Works` 
+          ROWS=`5` 
+          TYPE=`TABLE`
+--&gt;
+&lt;p&gt;
+<span class="macro">
+&lt;!-- #ICE VAR=`
+&lt;A HREF="/ice-bin/oiice.dll/playgroup/plays[:e_return]"&gt;Select a new play type&lt;/A&gt;`
+--&gt;
+</span>
+&lt;p&gt;
+&lt;INPUT TYPE="submit" NAME="More" VALUE="More" ALT="Show more plays"&gt;
+&lt;!-- #ICE VAR=`&lt;INPUT TYPE="hidden" NAME="type" VALUE=":type"&gt;` --&gt;
+&lt;/FORM&gt;
+
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+<p>
+The hyperlink that returns the user to the calling page is
+created by expanding the Web Deployment Option session variable
+<tt>e_return</tt>. The VAR keyword takes any text (including
+HTML text) containing Web Deployment Option variables and replaces them with
+their contents. Here we make use of this to generate a
+hyperlink dynamically:
+<p><tt>
+&lt;!-- #ICE VAR=`
+&lt;A HREF="/ice-bin/oiice.dll/playgroup/plays[:e_return]"&gt;Select a new play type&lt;/A&gt;`
+--&gt;
+</tt><p>
+With this pair of documents we have ended up with text links
+based on the contents of the table
+making the page dynamic. As an improvement we would like to
+have an 
+<a href="fr_imageLink.html"
+target="page">image</a> to click on rather than plain text.
+</body>
+</html>

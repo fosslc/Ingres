@@ -1,0 +1,61 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=WEB User&submit=actUser.html` -->
+		<TABLE BORDER=0>
+			<!-- #ICE REPEAT FUNCTION=`user?action=retrieve&user_id=:user`
+					 HTML=`
+			<TR>
+				<INPUT TYPE="HIDDEN" NAME="id" VALUE=":user_id">
+				<TD>Name </TD>
+				<TD><INPUT SIZE="32" NAME="name" VALUE=":user_name"></TD>
+			</TR>
+			<TR>
+				<TD>password </TD>
+				<TD><INPUT TYPE="PASSWORD" SIZE="32" NAME="pass1" VALUE=":user_password1"></TD>
+			</TR>
+			<TR>
+				<TD>confirmation </TD>
+				<TD><INPUT TYPE="PASSWORD" SIZE="32" NAME="pass2" VALUE=":user_password1"></TD>
+			</TR>
+			<TR>
+				<TD>Default database user </TD>
+				<TD><SELECT NAME="dbuser">
+			<!-- #ICE REPEAT FUNCTION=``dbuser?action=select``
+					 HTML=``
+					 <OPTION VALUE=":dbuser_id" 
+							<!-- #ICE 
+							IF (````:dbuser_id```` == ````:user_dbuser````)
+							THEN=````SELECTED```` 
+							-->
+					 >:dbuser_alias</OPTION>``
+			-->
+				</SELECT></TD>
+			</TR>
+			<TR>
+				<TD>comment </TD>
+				<TD><TEXTAREA NAME="com" COLS=32 ROWS=5>:user_comment</TEXTAREA></TD>
+			</TR>
+			<TR>
+				<TD>profile: </TD>
+				<TD>
+						<INPUT TYPE="CHECKBOX" NAME="fadm" VALUE="checked" :user_administration>administrator<BR>
+						<INPUT TYPE="CHECKBOX" NAME="fsec" VALUE="checked" :user_security>security administrator<BR>
+						<INPUT TYPE="CHECKBOX" NAME="funit" VALUE="checked" :user_unit>unit manager<BR>
+						<INPUT TYPE="CHECKBOX" NAME="fmonitor" VALUE="checked" :user_monitor>monitoring<BR>
+				</TD>
+			</TR>
+			<TR>
+				<TD>timeout: </TD>
+				<TD><INPUT TYPE="TEXT" SIZE="6" NAME="timeout" VALUE=":user_timeout"> s</TD>
+			</TR>
+			<TR>
+				<TD>Authentication method: </TD>
+				<TD><INPUT TYPE="RADIO" NAME="auth" VALUE=":user_authtype"
+                                <!-- #ICE
+                                    IF (``:user_authtype`` == ``ICE``) THEN=``CHECKED`` -->>ICE</TD>
+				<TD><INPUT TYPE="RADIO" NAME="auth" VALUE=":user_authtype"
+                                <!-- #ICE
+                                    IF (``:user_authtype`` == ``OS``) THEN=``CHECKED``-->>OS</TD>
+			</TR>`
+			-->
+			<!-- #ICE REPEAT INCLUDE=`action.html` -->
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

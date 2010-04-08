@@ -1,0 +1,19 @@
+#
+# Jamfile file for cl!clf!ex_win
+#
+#    History:
+#       28-Jan-2010 (horda03) Bug 121811
+#          Evidence Sets port to Windows.
+
+SubDir ING_SRC cl clf ex_win ;
+
+IISUBSYS cl clf ex_win ;
+
+
+IILIBRARY COMPATLIB : exdump.c
+	exclient.c
+        evset.c
+        evtar.c
+	ex.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : exdata.c ;

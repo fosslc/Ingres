@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame allows you to create an executable image of the application.
+This image can then be run from the operating system level as a complete
+application.  Please note that creating an image can be a time-consuming 
+operation.
+
+Fill in the first field with the name of a file, to be placed in your current
+directory, which will contain the executable image.
+
+You can also override the default role for the application by changing the
+second field on the form.
+
+See the Ingres Forms-based Application Development Tools User Guide for more
+information on the use of image files.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        OK                      Create the executable image.  The
+                                image will be placed in your current
+                                directory with the specified filename.
+                                This image will run as the specified role.
+
+        Help                    Print this message.
+
+        End                     Return to the APPLICATION DEFINITION
+                                frame without creating an image.

@@ -1,0 +1,74 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+/#-- ODBC configuration screen help file 
+/#--
+You are looking at iiodbcadmin's Data Source Configuration Page.
+
+The iiodbcadmin screen consists of a single form with the
+following entry fields:
+
+        FIELD           SYNOPSIS
+        -----           --------
+       
+	Description     Any character string for convenient description of 
+			the data source.
+
+	WITH Options    The Enterprise Access (Gateway) WITH Options field 
+			allows the passing of gateway specific parameters to 
+			certain subsequent statements in a given connection.  
+			When specifying options do not include the "WITH" 
+			keyword and separate multiple options with a comma, 
+			i.e. keyword=value,keyword=value. For example:
+
+			    dcom_ct_option = `in area CASQLDEFAULT`
+
+        Role Name,
+	Role Password   A role id and its associated password can be
+			entered if a role identifier has been defined
+			that associates privileges with the role.
+
+	Vnode           The virtual node (vnode) name known on the local 
+			installation to identify a particular remote
+	                database server installation.  Vnodes are defined by 
+			the Netutil or Visual DBA programs.  The choice of 
+			"(local)" indicates a selection of the local database.
+
+	Database        The target database name.
+
+	Server Type     The class of Net server accessing the database
+	                server installation.  The default is "Ingres",
+			indicating a native Ingres database server.  If the 
+			database server installation is being accessed through 
+			an Enterprise Access (Gateway) server, specify the 
+			gateway server class (e.g. "IDMS").  
+
+        Read Only       An entry of "Y" means that the database sessions 
+			using this data source will reject attempts to 
+			perform update operations.  
+
+All menu items apply to whichever tablefield contains the cursor when the 
+item is activated.  The menu operations are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Advanced        Configure "advanced" DSN configuration items.  The
+                        iiodbcadmin utility displays the
+			Advanced Data Source Configuration Page.
+
+	Details         List the source data for the ODBC data source
+                 	as it appears in the configuration file.
+			Displays the Data Source Configuration Details
+			Page.
+
+        ListChoices     When the cursor is on the "Server Type" entry field, 
+			a popup menu of available server types is displayed.
+
+	Save            When data on the this page has been modified, a
+			popup menu appears asking for confirmation on
+			whether the modified data should be saved.
+			Entering "Y" causes the data to be saved in the
+			corresponding configuration file.
+
+        Help            Displays this help screen.
+
+        End             Exit the Data Source Configuration Page.

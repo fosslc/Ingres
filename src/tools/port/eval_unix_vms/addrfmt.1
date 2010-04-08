@@ -1,0 +1,52 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/addrfmt.1,v 1.1 90/03/09 09:17:28 source Exp $
+.TH ADDRFMT 1 "rti" "Relational Technology Inc." "Relational Technology Inc."
+.SH NAME
+addrfmt \- Show raw pointer formats
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B addrfmt
+[ -v ]
+.SH DESCRIPTION
+.I Addrfmt
+shows the format of a pointer to each of the `C' base data types:  char,
+short, int long, float, and double.  A pointer to a variable is shown in
+hex and octal; it is then incremented and shown again.  This will reveal
+what parts of the address actually change.  This is the output for a
+Pyramid:
+.ta 8n 16n 24n 32n 40n 48n 56n
+.nf
+
+	char *		= 1ff510c7	03775210307
+	++char *	= 1ff510c8	03775210310
+	
+	short *		= 1ff510ca	03775210312
+	++short *	= 1ff510cc	03775210314
+	
+	int *		= 1ff510cc	03775210314
+	++int *		= 1ff510d0	03775210320
+	
+	long *		= 1ff510d0	03775210320
+	++long *	= 1ff510d4	03775210324
+	
+	float *		= 1ff510d4	03775210324
+	++float *	= 1ff510d8	03775210330
+	
+	double *	= 1ff510d8	03775210330
+	++double *	= 1ff510e0	03775210340
+.fi
+.PP
+.B -v
+``verbose'' output prints the program's name and indents everything one
+tab stop:
+.nf
+
+	addrfmt:
+		char *		= 1ff510c7	03775210307
+		++char *	= 1ff510c8	03775210310
+	
+		short *		= 1ff510ca	03775210312
+		++short *	= 1ff510cc	03775210314
+	
+.fi
+.I etc.

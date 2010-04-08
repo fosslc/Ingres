@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!rep!shell_vms
+#
+
+SubDir ING_SRC front rep shell_vms ;
+
+IISUBSYS front rep shell_vms ;
+
+
+IIBINSH rpgensql : rpgensql.dcl ;
+IIBINSH rpserver : rpserver.dcl ;
+IIBINSH rpsrvr : rpsrvr.dcl ;
+

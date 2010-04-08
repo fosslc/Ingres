@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!abf!abfimage
+#
+
+SubDir ING_SRC front abf abfimage ;
+
+IISUBSYS front abf abfimage ;
+
+
+IIMSGHDR erai.msg ;
+
+IILIBRARY ABFIMAGELIB : abimain.c abfimage.c ;
+

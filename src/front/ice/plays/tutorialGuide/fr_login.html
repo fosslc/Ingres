@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+## History:
+##      02-Apr-2004 (fanra01)
+##          Bug 112091
+##          Editorial changes from griel02.
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>Create the Login Page</title>
+</head>
+<body>
+<h1>Create the Login Page</h1>
+
+You must login to the ICE Server before you can
+access any pages held under its control. Here is
+an example of a login page
+where web users can create for themselves
+an account by leaving the entry
+fields blank:
+
+<h3>File: play_login.html</h3>
+<div class="boxCode"><tt><pre>
+&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN"&gt;
+&lt;!-- Copyright (c) 2004 Ingres Corporation --&gt; 
+&lt;HTML&gt;
+&lt;HEAD&gt;
+&lt;META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css"&gt;
+&lt;LINK HREF="/ice/styles/play_public.css" TYPE="text/css" REL="STYLESHEET"&gt;
+&lt;title&gt;Shakespeare Plays &lt;/title&gt;
+&lt;/HEAD&gt;
+&lt;body&gt;
+&lt;center&gt;
+&lt;H1&gt;Shakespeare Plays &lt;/H1&gt;&lt;/TD&gt;
+&lt;/center&gt;
+Thank you for visiting the Globe centre for Shakespeare.
+&lt;p&gt;
+If you are a new visitor to our site, leave the
+user name and password fields &lt;i&gt;blank.&lt;/i&gt; 
+&lt;br&gt;
+Click on the
+picture of the original Globe below and you will be 
+taken to another page from whence you
+will be able to register with us. 
+&lt;p&gt;
+If you already have an account, please fill in
+your user name and password below. 
+&lt;br&gt;
+Click on the
+picture of the original Globe below.
+&lt;p&gt;
+We hope you enjoy your visit!
+&lt;HR&gt;
+
+&lt;BODY&gt;
+&lt;FORM ACTION="/ice-bin/oiice.dll/plays[play_home.html]" METHOD="POST"&gt;
+<span class="macro">&lt;INPUT TYPE=hidden NAME="ii_action" value="connect"&gt;</span>
+&lt;INPUT TYPE=hidden NAME="ii_error_url" value="/plays[play_autoUser.html]"&gt;
+&lt;CENTER&gt;
+&lt;TABLE BORDER=0 ALIGN=CENTER VALIGN=CENTER&gt;
+	&lt;TR&gt;
+		&lt;TD&gt;Please enter your:&lt;/TD&gt;
+	&lt;/TR&gt;
+	&lt;TR&gt;
+		&lt;TD&gt;Name: &lt;/TD&gt;
+		&lt;TD&gt;&lt;INPUT SIZE=32 NAME="ii_userid"&gt;&lt;/TD&gt;
+	&lt;/TR&gt;
+	&lt;TR&gt;
+		&lt;TD&gt;Password: &lt;/TD&gt;
+		&lt;TD&gt;&lt;INPUT SIZE=32 TYPE=PASSWORD NAME="ii_password"&gt;&lt;/TD&gt;
+	&lt;/TR&gt;
+&lt;/TABLE&gt;		
+&lt;INPUT TYPE="IMAGE" BORDER=0 NAME="connect" SRC="/ice/OldGlobe.gif" ALT="Press Here to Enter the Globe Experience"&gt;
+&lt;/CENTER&gt;
+&lt;/FORM&gt;
+&lt;/BODY&gt;
+&lt;/HTML&gt;
+</pre></tt></div>
+This page sets the value of the hidden variable
+<tt>ii_action</tt> to "connect", collects the
+account name and password from
+the user, and passes them all to the page
+<b>plays[play_home.html]</b>
+when the user presses the
+<b>connect</b> 
+button:
+<tt>
+<pre>
+&lt;FORM ACTION="/ice-bin/oiice.dll/plays[play_home.html]" METHOD="POST"&gt;
+&lt;INPUT TYPE=hidden NAME="ii_action" value="connect"&gt;
+...
+&lt;INPUT TYPE="IMAGE" BORDER=0 NAME="connect" SRC="/iceimages/logout.gif" ALT="Connect"&gt;
+</pre>
+</tt>
+If the user has no account, the login will fail and
+the failure action (specified by
+<tt>ii_error_url</tt>) takes them to the page
+<tt>plays[play_autoUser.html]</tt>. This page
+allows the user to create a new account. We will
+look at how to do that later. First we will take a
+quick look at the
+<a href="fr_home.html" target="page">home</a>
+page for our system.
+</body>
+</html>

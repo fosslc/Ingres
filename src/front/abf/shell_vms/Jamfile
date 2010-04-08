@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!abf!shell_vms
+#
+# History:
+#	21-jan-2005 (srisu02)
+#	    Add invocations to install demo scripts.
+
+SubDir ING_SRC front abf shell_vms ;
+
+IISUBSYS front abf shell_vms ;
+
+IIBINSH abfdemo : abfdemo$(SUFSH) ;
+IIBINSH deldemo : deldemo$(SUFSH) ;

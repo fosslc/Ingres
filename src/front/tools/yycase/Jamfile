@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!tools!yycase
+#
+
+SubDir ING_SRC front tools yycase ;
+
+IISUBSYS front tools yycase ;
+
+
+IIBINEXE yycase : yycase.c ;
+IINEEDLIBS yycase : COMPATLIB ;
+

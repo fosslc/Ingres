@@ -1,0 +1,17 @@
+#
+# Jamfile file for back!psf!yacc
+#
+
+SubDir ING_SRC back psf yacc ;
+
+IISUBSYS back psf yacc ;
+
+
+IIBINEXE byacc : y1.c ;
+IINEEDLIBS byacc : BYACCLIB COMPATLIB MALLOCLIB ;
+
+File $(BYACCPAR) : byacc.par ;
+
+
+IILIBRARY BYACCLIB : yaccdata.c y4.c y3.c y2.c ;
+

@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+The blob_len parameter specifies the length passed to db2 udb when 
+the Gateway translates the Open SQL LONG BYTE data type to the 
+BLOB data type in create table statements.  For example, 
+if blob_len were set to 1M, the following translation would occur:
+
+create table lb_test (lb long byte);
+
+/* is translated to */
+
+create table lb_test (lb blob(1M));
+
+Default for blob_len is 1G.  Note that lengths for the BLOB 
+data type may be specified in kilobytes (K), megabytes (M), or 
+gigabytes (G).
+

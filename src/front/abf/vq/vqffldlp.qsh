@@ -1,0 +1,29 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+/**
+** Name:	vqffldlp.qsh
+**
+** Description:
+**	Definitions needed by vqffldlp.qsc and its clients.  These are the
+**	routines which do a listpick of field and column names on a frame's
+**	form.
+**
+** History:
+**	10/90 (Mike S) created
+**	13-dec-1991 (kevinm)
+** 		Declared iivqLP0form[], iivqLP1tblfld[], iivqLP2actCol[],
+**		iivqLP3flagsCol, iivqLP4flags2Col, iivqLP5fldTypeCol to
+**		be GLOBALCONSTREF to be consistent with other places it is
+**		declared.
+**/
+
+## GLOBALCONSTREF char iivqLP0form[];	/* Listpick form */
+## GLOBALCONSTREF char iivqLP1tblfld[];	/* Listpick tablefield */
+## GLOBALCONSTREF char iivqLP2actCol[];	/* Column with activation names */
+## GLOBALCONSTREF char iivqLP3flagsCol[];	/* Column with first flags word */
+## GLOBALCONSTREF char iivqLP4flags2Col[];	/* Column with second flags word */
+## GLOBALCONSTREF char iivqLP5fldTypeCol[];	/* Column with field type */
+
+FUNC_EXTERN bool IIVQcdfCheckDerivedField();

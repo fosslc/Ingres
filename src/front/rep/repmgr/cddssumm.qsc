@@ -1,0 +1,309 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <stdprmpt.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	cddssumm.qsc - CDDS summary
+**
+** Description:
+**	Defines
+**		cdds_summ	- CDDS summary
+**
+** History:
+**	05-dec-96 (joea)
+**		Created based on cddscat.osq in replicator library.
+**	12-may-98 (padni01/joea) bug 88842
+**		When inserting a new row, scroll display window to the position
+**		where the new row will be added. Correct the code for finding
+**		the position where the new row will be added.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF
+##char	RMdb_display[];
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmcdds_summary"),
+##	*tf_name = ERx("iitf"),
+##	*fcdds_no = ERx("cdds_no"),
+##	*fcdds_name = ERx("cdds_name"),
+##	*fcoll_mode = ERx("collision_mode"),
+##	*fcoll_mode_alpha = ERx("collision_mode_alpha"),
+##	*ferr_mode = ERx("error_mode"),
+##	*ferr_mode_alpha = ERx("error_mode_alpha");
+
+
+FUNC_EXTERN STATUS cdds_add(i2 *cdds_no, char *cdds_name,
+	i2 *collision_mode, char *collision_mode_alpha, i2 *error_mode,
+	char *error_mode_alpha);
+FUNC_EXTERN STATUS cdds_delete(i2 cdds_no, i4  RegTableCount);
+FUNC_EXTERN STATUS cdds_edit(i2 cdds_no, char *cdds_name,
+	i2 *collision_mode, char *collision_mode_alpha, i2 *error_mode,
+	char *error_mode_alpha);
+FUNC_EXTERN void cdds_databases(i2 cdds_no, char *cdds_name);
+FUNC_EXTERN void cdds_path(i2 cdds_no, char *cdds_name);
+FUNC_EXTERN void cdds_regist_tables(i2 cdds_no);
+
+
+/*{
+** Name:	cdds_summ	- CDDS summary
+**
+** Description:
+**	Summary of Consistent Distributed Data Set Information
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+cdds_summ()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i2	cdds_no;
+##	char	cdds_name[DB_MAXNAME+1];
+##	i2	coll_mode;
+##	char	coll_mode_alpha[21];
+##	i2	err_mode;
+##	char	err_mode_alpha[21];
+	i4	cnt_tables;
+	EXEC SQL END DECLARE SECTION;
+##	i2	curr_cdds_no;
+##	i4	rownumber;
+	DBEC_ERR_INFO	errinfo;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name read (fcoll_mode = i2 not null,
+##		ferr_mode = i2 not null)
+	IIUGmsg(ERget(F_RM001C_Selecting_data), FALSE, 0);
+	EXEC SQL SELECT cdds_no, cdds_name, collision_mode,
+			o1.alpha_value, error_mode, o2.alpha_value
+		INTO	:cdds_no, :cdds_name, :coll_mode,
+			:coll_mode_alpha, :err_mode, :err_mode_alpha
+		FROM	dd_cdds, dd_option_values o1, dd_option_values o2
+		WHERE	o1.option_name = 'collision_mode'
+		AND	collision_mode = o1.numeric_value
+		AND	o2.option_name = 'error_mode'
+		AND	error_mode = o2.numeric_value
+		ORDER	BY cdds_no;
+	EXEC SQL BEGIN;
+		STtrmwhite(cdds_name);
+##		loadtable form_name tf_name (fcdds_no = cdds_no,
+##			fcdds_name = cdds_name, fcoll_mode = coll_mode,
+##			fcoll_mode_alpha = coll_mode_alpha,
+##			ferr_mode = err_mode, ferr_mode_alpha = err_mode_alpha)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0013_No_data_found, UG_ERR_ERROR, 0);
+		return;
+	}
+	EXEC SQL COMMIT;
+
+##	display form_name read
+##	initialize (db = RMdb_display)
+##	activate menuitem ERget(F_RM001D_Add)
+##		(expl = ERget(F_RM0028_Add_cdds_expl))
+##	{
+		if (cdds_add(&cdds_no, cdds_name, &coll_mode,
+			coll_mode_alpha, &err_mode, err_mode_alpha) == 1)
+		{
+##			unloadtable form_name tf_name (curr_cdds_no = fcdds_no,
+##				rownumber = _RECORD)
+##			{
+				if (cdds_no < curr_cdds_no)
+				{
+					--rownumber;
+##					endloop
+				}
+				else if (rownumber < 0)
+				{
+##					endloop
+				}
+##			}
+
+			if (rownumber < 0)
+##				inquire_frs table form_name
+##					(rownumber = datarows)
+
+			if (rownumber < 1)
+			{
+##				scroll form_name tf_name to 1
+##				insertrow form_name tf_name 0 (
+##					fcdds_no = cdds_no,
+##					fcdds_name = cdds_name,
+##					fcoll_mode = coll_mode,
+##					fcoll_mode_alpha = coll_mode_alpha,
+##					ferr_mode = err_mode,
+##					ferr_mode_alpha = err_mode_alpha)
+			}
+			else
+			{
+##				scroll form_name tf_name to rownumber
+##				insertrow form_name tf_name (fcdds_no = cdds_no,
+##					fcdds_name = cdds_name,
+##					fcoll_mode = coll_mode,
+##					fcoll_mode_alpha = coll_mode_alpha,
+##					ferr_mode = err_mode,
+##					ferr_mode_alpha = err_mode_alpha)
+			}
+		}
+##	}
+
+##	activate menuitem ERget(F_RM001F_Delete)
+##		(expl = ERget(F_RM0029_Delete_cdds_expl)), FRSkey13
+##	{
+##		getrow form_name tf_name (cdds_no = fcdds_no,
+##			cdds_name = fcdds_name)
+		if (cdds_no == 0)
+		{
+			IIUGerr(E_RM001B_Cant_del_default_cdds, UG_ERR_ERROR,
+				0);
+##			resume
+		}
+
+		/* Be sure there are no registered tables using this cdds */
+		EXEC SQL SELECT	COUNT(*)
+			INTO	:cnt_tables
+			FROM	dd_regist_tables
+			WHERE	cdds_no = :cdds_no;
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM001C_Error_check_cdds_tbls, UG_ERR_ERROR,
+				0);
+##			resume
+		}
+		EXEC SQL COMMIT;
+		if (cnt_tables && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM001D_Cdds_has_tables,
+			S_RM001E_Yes_reassign, S_RM001F_No_reassign, ERx(""),
+			TRUE) != CONFCH_YES)
+##			resume
+
+		if (IIUFccConfirmChoice(CONF_DELETE, cdds_name,
+			ERget(F_RM000F_CDDS), NULL, NULL) != CONFCH_YES)
+##			resume
+
+		IIUGmsg(ERget(F_RM0022_Deleting), FALSE, 0);
+		if (cdds_delete(cdds_no, cnt_tables) != OK)
+		{
+			IIUGerr(E_RM0015_Error_deleting, UG_ERR_ERROR, 0);
+##			resume field tf_name
+		}
+
+##		deleterow form_name tf_name
+##	}
+
+##	activate menuitem ERget(F_RM0023_Edit)
+##		(expl = ERget(F_RM002A_Edit_cdds_expl))
+##	{
+##		getrow form_name tf_name (cdds_no = fcdds_no,
+##			cdds_name = fcdds_name, coll_mode = fcoll_mode,
+##			coll_mode_alpha = fcoll_mode_alpha,
+##			err_mode = ferr_mode, err_mode_alpha = ferr_mode_alpha)
+
+		if (cdds_edit(cdds_no, cdds_name, &coll_mode, coll_mode_alpha,
+			&err_mode, err_mode_alpha) == 1)
+		{
+##			putrow form_name tf_name (fcdds_name = cdds_name,
+##				fcoll_mode = coll_mode,
+##				fcoll_mode_alpha = coll_mode_alpha,
+##				ferr_mode = err_mode,
+##				ferr_mode_alpha = err_mode_alpha)
+		}
+##	}
+
+##	activate menuitem ERget(F_RM000D_Databases)
+##		(expl = ERget(F_RM002B_Databases_expl))
+##	{
+##		getrow form_name tf_name (cdds_no = fcdds_no,
+##			cdds_name = fcdds_name)
+		cdds_databases(cdds_no, cdds_name);
+##	}
+
+##	activate menuitem ERget(F_RM002C_Paths)
+##		(expl = ERget(F_RM002D_Paths_expl))
+##	{
+##		getrow form_name tf_name (cdds_no = fcdds_no,
+##			cdds_name = fcdds_name)
+		cdds_path(cdds_no, cdds_name);
+##	}
+
+##	activate menuitem ERget(F_RM0011_Tables)
+##		(expl = ERget(F_RM002E_Tables_expl))
+##	{
+##		getrow form_name tf_name (cdds_no = fcdds_no)
+		cdds_regist_tables(cdds_no);
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmcddsum.hlp"), ERget(F_RM002F_Cdds_summary));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##}

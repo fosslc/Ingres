@@ -1,0 +1,13 @@
+#
+# Jamfile file for cl!clf!ut_unix
+#
+
+SubDir ING_SRC cl clf ut_unix ;
+
+IISUBSYS cl clf ut_unix ;
+
+
+IICCPPFILE $(INGFILES)/utcom.def : utcom.ccpp ;
+
+IIFILE utexe.def : utexe.def ;
+

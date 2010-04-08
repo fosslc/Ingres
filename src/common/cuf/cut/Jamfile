@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!cuf!cut
+#
+
+SubDir ING_SRC common cuf cut ;
+
+IISUBSYS common cuf cut ;
+
+
+IILIBRARY CUFLIB : cutinterf.c ;
+

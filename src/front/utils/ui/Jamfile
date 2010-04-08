@@ -1,0 +1,25 @@
+#
+# Jamfile file for front!utils!ui
+#
+#   20-Oct-2009 (hweho01)
+#   Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front utils ui ;
+
+IISUBSYS front utils ui ;
+
+
+IINOOPTIM uirelhlp.qsc : ris_us5 rs4_us5 i64_aix ;
+
+IILIBRARY UILIB : uiseqval.sc uipartdesc.sc cleanup.sc uixconn.qsc
+        uixact.qsc uiupdate.qsc uisavept.qsc uirelhlp.qsc uirelacc.qsc
+        uiinsert.qsc uidbcap.qsc uidatset.qsc uicnl.qsc uicatacc.qsc
+        ugdifarc.qsc iiuicw.qsc iiuicr.qsc ferslv.qsc ferelexi.qsc
+        ferelacc.qsc ferel.qsc fenumatt.qsc feinmst.qsc feingres.qsc
+        feinginq.qsc feattacc.qsc featt.qsc dctsuprt.qsc chckdict.qsc
+        xflag.c uiroleid.c uipasswd.c uidml.c uideadlk.c
+        ugwldcrd.c uglower.c ugkeyword.c feuidata.c fetmpnm.c fenetnm.c
+        fedbpipe.c ;
+
+IILIBRARY IMPLIBQLIBDATA : uidata.c ;
+

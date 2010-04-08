@@ -1,0 +1,12 @@
+#
+# Jamfile file for dbutil!duf!duve_win
+#
+
+SubDir ING_SRC dbutil duf duve_win ;
+
+IISUBSYS dbutil duf duve_win ;
+
+
+IIBINEXE verifydb : vfydbwrp.c ;
+IINEEDLIBS verifydb :  SHCOMPATLIB ;
+

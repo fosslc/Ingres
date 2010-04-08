@@ -1,0 +1,80 @@
+/#-- Copyright (c) 2004 Ingres Corporation 
+/#-- vq4glex.hlp        Examples of 4gl code, overview.
+/#subtopic "Forms Statements" vq4glfrm.hlp
+/#subtopic "Database Statements" vq4gldb.hlp
+/#subtopic "Flow-Control Statements" vq4glflw.hlp
+/#subtopic "Application Flow-Control Statements" vq4glafl.hlp
+/#subtopic "4GL Data Types" vq4gldt.hlp
+4GL statements can be broken into 4 types (select menuitem
+"SubTopics" to see examples of the following):
+
+1. Forms Statements:
+
+                CLEAR
+                CLEARROW
+                DELETEROW
+                DISPLAY SUBMENU, RUN SUBMENU
+                HELP_FORMS, HELPFILE
+                INITIALIZE *
+                INITTABLE
+                INQUIRE_FORMS
+                INSERTROW
+                MESSAGE
+                MODE
+                PRINTSCREEN
+                PROMPT
+                REDISPLAY
+                RESUME *
+                SCROLL
+                SET_FORMS
+                SLEEP
+                UNLOADTABLE
+                VALIDATE
+                VALIDROW
+
+2. Database Statements:
+
+                DELETE
+                INQUIRE_INGRES
+                INSERT
+                NEXT
+                SELECT
+                UPDATE
+
+3. Flow-Control Statements for an Individual Frame:
+
+                ENDLOOP
+                IF-ELSEIF-ELSE-ENDIF
+                RETURN
+                WHILE
+
+4. Flow-Control Statements for an Application:
+
+                CALLFRAME
+                CALLPROC
+                CALL APPLICATION | QBF | REPORT ...
+                CALL SYSTEM
+                EXIT
+
+Footnotes:
+* 4gl Statements that should not be issued in Escape code:
+
+    INITIALIZE - You should never issue this statement in escape code; the
+		 4GL code generator creates it for you automatically. 
+
+    RESUME - RESUME statements (and RESUME statement variants: RESUME FIELD
+	     and RESUME NEXT) should only be issued in "Query-New-Data,"
+	     "Before-Field-Entry," and "After-Field-Exit" escapes. This is 
+	     because the RESUME statement effectively branches control out
+	     of the 4GL operation; any 4GL statements in the operation 
+	     following the RESUME are skipped. The three escapes mentioned
+	     above are the only ones not followed by additional 4GL 
+	     statements.
+
+	     However, there may be cases where you want to skip the 4GL 
+	     statements following an escape. For example, if an "Update-
+	     Start" escape code segment detects an error in what the user
+	     entered on the screen, you could have it skip the subsequent 
+	     database update statements. In these cases, it is okay to issue 
+	     a RESUME statement, but it is still a good idea to Edit the 
+	     source code and review which 4GL statements will be skipped.

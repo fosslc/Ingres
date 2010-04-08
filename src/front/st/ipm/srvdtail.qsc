@@ -1,0 +1,92 @@
+/*
+** (c) 1989 Relational Technology
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+/*
+** includes and defines
+*/
+#include <compat.h>
+#include <dbms.h>
+#include <fe.h>
+#include "servinfo.h"
+#include "dba.h"
+#include "msgs.h"
+
+/*
+** Forward and external declarations
+*/
+VOID servdetail();
+
+/*
+**
+**  File: srvdtail.qc
+**
+**  Purpose - this file contains the routines which display the server
+**	detail information form.  
+**
+**  This file contains:
+**	servdetail - displays the server detail information form. 
+**
+**  History
+**	1/6/89		tomt	created
+**	4/4/89		tomt	added code to display the info
+**	8/24/89		tomt	added server_name parm and refresh menuitem
+**	3/21/91		tomt	changed title on form to trim.  Removed
+**                              variable used to hold title.
+**	5/18/95		harpa06 Cross Integration change for bug 56349 by nick:
+**				disconnect from the server when processing
+**				Quit() as the disconnect is normally done
+**				in the caller when we return.
+*/
+VOID
+servdetail(server)
+PTR server;
+{
+    bool	e_xit = FALSE;
+
+    /* Display the form and get the information */
+##  DISPLAY #fservdetail READ
+##  INITIALIZE
+##  {
+	/*  Put information on the form	*/
+	dispsrvinfo(DISP_SERV_INFO, server, (char *)0);
+
+##  }
+##  ACTIVATE MENUITEM "Refresh":
+##  {
+##	MESSAGE "Loading server information..."
+	if (load_servinfo(GET_SERVINFO, server) != OK)
+	{
+	    POP_MSG("Error getting server information.  Server may not exist\
+ or may be refusing connects.  To get an updated list of servers, return to\
+ the previous screen and select the 'Refresh' menuitem.");
+##	    RESUME
+	}
+	dispsrvinfo(DISP_SERV_INFO, server, (char *)0);
+##  }
+##  ACTIVATE MENUITEM "Help", frskey1:
+##  {
+	my_help("ipmsvdet.hlp", "Server Detail");
+##  }
+##  ACTIVATE MENUITEM "End", frskey3:
+##  {
+##	BREAKDISPLAY
+##  }
+##  ACTIVATE MENUITEM "Quit", frskey2:
+##  {
+	e_xit = TRUE;	/* user wants to leave */
+        if (dosrvoper(GC_SERV_DISCONNECT, (char *)NULL) != OK)
+        {
+            POP_MSG("Error disconnecting from server");
+        }
+##	MESSAGE " "	/* force cursor to bottom of screen */
+##	BREAKDISPLAY
+##  }
+
+    if (e_xit) {	/* user wants to leave */
+	terminate(OK);
+    }
+    return;
+}

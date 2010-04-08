@@ -1,0 +1,11 @@
+#
+# wgl_32s.hnt file for cl/clf/tc
+#
+# Note: The wgl_32s.ini file contains a special case for this
+#	directory.  CFLAGS3 is used to compile this directory.
+#
+# History:
+#	19-nov-1996 (donc)
+#		Set up this hint file for the Win32s build.
+
+objonly = tcdata.obj

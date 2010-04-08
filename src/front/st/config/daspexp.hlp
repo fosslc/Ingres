@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+ Time, in minutes, for which a connection will remain in the connection
+ pool.  The DBMS connection will be closed if a pooled connection
+ is not used in this amount of time.  Set to 0 for no expiration.
+

@@ -1,0 +1,197 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: Extract, extract records from current audit log
+**
+** History:
+**	23-mar-94 (robf)
+** 	    Created
+*/
+initialize() =
+declare
+	errno=integer not null;
+	status=integer not null;
+	extract_raw = procedure returning integer;
+	extract_formatted=procedure returning integer;
+{
+}
+'Cancel', key frskey9 = {
+	return ;
+}
+'Go', key frskey4 =  {
+	validate;
+	message 'Extracting records to file...';
+	if format='raw' 
+	then
+		status=callproc extract_raw();
+	else
+		status=callproc extract_formatted();
+	endif;
+	commit;
+	if status=1
+	then
+		message 'Extraction Complete';
+		sleep 2;
+		return;
+	endif;
+}
+'Help', key frskey1=
+{
+	status=callproc help_field();
+}
+procedure extract_raw()=
+{
+	copy table session.audit_records ( 
+		audittime= c0tab,
+		user_name= c0tab,
+		real_name= c0tab,
+		userprivileges= c0tab,
+		objprivileges= c0tab,
+		database= c0tab,
+		auditstatus= c0tab,
+		auditevent= c0tab,
+		objecttype= c0tab,
+		objectname= c0tab,
+		objectowner= c0tab,
+		description= c0tab,
+		sessionid= c0tab,
+		detailinfo= c0tab,
+		detailnum= c0tab,
+		objectlabel= c0tab,
+		querytext_sequence= c0nl)
+	into :filename;
+	inquire_sql (errno=errorno);
+
+	if errno!=0
+	then
+		message 'Error copying records to file'
+		with style=popup;
+		return 0;
+	else
+		return 1;
+	endif;
+}
+procedure extract_formatted() =
+declare
+	audittime=date not null,
+	user_name=char(32) not null,
+	real_name=char(32) not null,
+	userprivileges=char(32) not null,
+	objprivileges=char(32) not null,
+	database=char(32) not null,
+	auditstatus=char(1) not null,
+	auditevent=char(24) not null,
+	objecttype=char(24) not null,
+	objectname=char(32) not null,
+	objectowner=char(32) not null,
+	description=char(80) not null,
+	sessionid=char(16) not null,
+	detailinfo=char(256) not null,
+	detailnum=integer not null,
+	objectlabel=security_label not null,
+	querytext_sequence=integer not null,
+	handle=integer4 not null,
+	label=varchar(80) not null,
+	audstat=char(15) not null
+{
+	status=OpenFile (filename=:filename,
+		filetype='text',
+		filemode='create',
+		handle=byref(handle));
+	if status!=0
+	then
+		message 'Error opening file '+filename
+		with style=popup;
+		return 0;
+	endif;
+	message 'Extracting audit records...';
+	select  audittime,
+		user_name,
+		real_name,
+		userprivileges,
+		objprivileges,
+		database,
+		auditstatus,
+		auditevent,
+		objecttype,
+		objectname,
+		objectowner,
+		description,
+		sessionid,
+		detailinfo,
+		detailnum,
+		objectlabel,
+		querytext_sequence
+	from session.audit_records 
+	{
+		status=WriteFile (handle=:handle,
+			'Audit Time   : '+char(audittime));
+		status=WriteFile (handle=:handle,
+			'User Name    : '+user_name);
+		status=WriteFile (handle=:handle,
+			'Real Name    : '+real_name);
+		status=WriteFile (handle=:handle,
+			'Database     : '+database);
+		status=WriteFile (handle=:handle,
+			'Session ID   : '+sessionid);
+		if auditstatus='Y'
+		then
+			audstat='Success';
+		elseif auditstatus='N'
+		then
+			audstat='Failure';
+		else
+			audstat='Unknown';
+		endif;
+		status=WriteFile (handle=:handle,
+			'Status       : '+audstat);
+		status=WriteFile (handle=:handle,
+			'Event Type   : '+objecttype);
+		status=WriteFile (handle=:handle,
+			'Action       : '+auditevent);
+		status=WriteFile (handle=:handle,
+			'Object Name  : '+objectname);
+		status=WriteFile (handle=:handle,
+			'Object Owner : '+objectowner);
+		label=varchar(objectlabel);
+		status=WriteFile (handle=:handle,
+			'Object Label : '+label);
+		status=WriteFile (handle=:handle,
+			'Object Privs : '+objprivileges);
+		status=WriteFile (handle=:handle,
+			'User Privs   : '+userprivileges);
+		status=WriteFile (handle=:handle,
+			'Description  : '+description);
+		if querytext_sequence!=0
+		then
+		status=WriteFile (handle=:handle,
+			'Query Text   : '+trim(detailinfo));
+		status=WriteFile (handle=:handle,
+			'Text Sequence: '+c(detailnum));
+		elseif detailinfo!=''
+		then
+		status=WriteFile (handle=:handle,
+			'Detail Text  : '+trim(detailinfo));
+		endif;
+		if detailnum!=0 and querytext_sequence=0
+		then
+		status=WriteFile (handle=:handle,
+			'Detail Number: '+c(detailnum));
+		endif;
+		status=WriteFile (handle=:handle,
+			'-------------------------------------------------------------------------');
+		
+	};
+	inquire_sql (errno=errorno);
+
+	callproc CloseFile(handle=handle);
+	if errno!=0
+	then
+		message 'Error copying records to file'
+		with style=popup;
+		return 0;
+	else
+		return 1;
+	endif;
+}

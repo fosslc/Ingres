@@ -1,0 +1,39 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How a Profile Is Removed </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="DELETE statement, Profile function, xajax">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body  onload="if (isTOCLoaded()) {expand('3405');expand('3326');expand('3319');highlight('3308')}">
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="profile_add.htm" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="profile_change.htm" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How a Profile Is Removed</h4>
+<p class="bodytext">The remove button onClick event is handled by the JavaScript function delet Profile, which calls the xajax function <a href="showSource.php?file=profileAJAX" target="_blank">xajax_deleteProfile()</a> after the user has confirmed the deletion.</p>
+<p class="bodytext">This function generates a new instance of <a href="showSource.php?file=ProfileModel" target="_blank">ProfileModel</a> and calls its delete-method.</p>
+<p class="bodytext">In <a href="showSource.php?file=ProfileModel" target="_blank">ProfileModel</a>::delete, the following query is set up and sent to the server:</p>
+<p class="codefirst">DELETE FROM user_profile WHERE up_email='&quot;.$email.&quot;'&quot;;</p>
+<p class="bodytext">The selected value of the selectBox with name mailaddressText is used to identify the profile record for deletion. Its value is read in the function xajax_deleteProfile and passed to the delete method of <a href="showSource.php?file=ProfileModel" target="_blank">ProfileModel</a>.</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2007 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

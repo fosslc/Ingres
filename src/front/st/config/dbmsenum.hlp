@@ -1,0 +1,13 @@
+
+The opf_new_enum parameter determines whether greedy enumeration is 
+used (ON) or not (OFF).
+
+The default value is ON.
+
+Greedy enumeration reduces the time taken to optimize and compile large
+queries (involving large numbers of tables and/or potentially useful
+indexes - typically more than 10). In some fringe cases non-greedy
+enumeration may provide a better query plan.
+
+Greedy enumeration can be enabled or disabled at the session level
+by using: SET JOINOP [NO]GREEDY

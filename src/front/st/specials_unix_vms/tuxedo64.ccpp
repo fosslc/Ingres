@@ -1,0 +1,35 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for DTP for TUXEDO
+*/
+
+/*
+** History
+**	24-nov-1993 (tyler)
+**		Created.
+**	04-mar-1994 (larrym)
+**		added utility and files directory
+**	21-apr-1994 (larrym)
+**		added iisutux to create tuxedo directory under files.
+**	10-may-1995 (forky01)
+**		added CI_XA_TUXEDO bit check for licensing
+**	28-dec-1995 (hanch04)
+**		remove no longer needed files.
+**	07-nov-2002 (somsa01)
+**		Changes for 64 bit hybrid ports.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+*/
+
+PART tuxedo64
+   capability CI_XA_TUXEDO
+
+/*
+** ingres!lib!lp64
+*/
+
+   DIRECTORY ingres!LIB_TGT!lp64
+   BUILD_DIR (ING_BUILD)!LIB_BLD!lp64
+      FILE libiitux.a

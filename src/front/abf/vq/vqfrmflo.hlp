@@ -1,0 +1,26 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqfrmflo.hlp, the main AFD help screen.
+/#-- 
+Use the menu operations on this frame to lay out your application.  The top 
+menu frame is already created and displayed as the starting point.
+
+  Create     Adds a new frame.
+  Destroy    Destroys a frame.
+  Edit       Lets you modify the current frame's specifications.
+  Compile    Generates and compiles the 4GL code and form for a frame.
+  Go         Compiles and runs the application or specific areas of it.
+  Insert     Lets you insert existing frames into the diagram.
+  Remove     Removes (but does not destroy) frames from the diagram.
+  MoreInfo   Displays basic frame information.
+  Utilities  Allows access to various utility functions.
+  Catalog    Used with ABF, offers advanced operations through the 
+             ABF frame catalog (only available if you have ABF).
+  Help       Displays this help screen.
+  End        Saves your work and displays the previous screen.
+  Quit       Saves your work and ends the session.
+/#subtopic 'Creating and inserting frames' vqcreafr.hlp
+/#subtopic 'Destroying and removing frames' vqdestfr.hlp
+/#subtopic 'Editing frames' vqedfr.hlp
+/#subtopic 'Compiling and testing frames' vqcompfr.hlp
+/#subtopic 'Screen layout' vqflolo.hlp
+/#subtopic 'Scrolling' vqfloscr.hlp

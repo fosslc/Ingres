@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!opf!opb
+#
+
+SubDir ING_SRC back opf opb ;
+
+IISUBSYS back opf opb ;
+
+
+IILIBRARY OPFLIB : opbsfind.c opbpqbf.c opbpmbf.c opbmbf.c
+	opbjkeyl.c opbcreate.c opbbfkget.c ;
+

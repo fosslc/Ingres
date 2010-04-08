@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The db_conn_timeout resource specifies the number of seconds a session will
+  wait when attempting to establish a database connection.
+
+  Default: 300

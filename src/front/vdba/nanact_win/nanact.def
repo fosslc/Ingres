@@ -1,0 +1,16 @@
+LIBRARY   INGRACT
+
+EXETYPE   WINDOWS
+
+CODE      MOVEABLE DISCARDABLE
+DATA      MOVEABLE SINGLE
+
+HEAPSIZE  0
+
+EXPORTS
+	WEP                                         @1 RESIDENTNAME
+	NanBarWndClassRegister        @2
+	CreateNanBarWnd               @3
+	NanStatusWndClassRegister     @4
+	CreateNanStatusWnd            @5
+

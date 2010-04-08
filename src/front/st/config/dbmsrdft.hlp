@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The rdf_max_tbls resources specifies the maximum number of tables that
+  the Relation Description Facility (RDF) may keep in its cache at one time.
+  A "table" includes base tables, secondary indexes, partitions, and
+  gateway or Star registrations, and views.
+
+  The default is 400.

@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!cuf!cue
+#
+
+SubDir ING_SRC common cuf cue ;
+
+IISUBSYS common cuf cue ;
+
+
+IILIBRARY CUFLIB : ss2ge.c ;
+

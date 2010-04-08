@@ -1,0 +1,21 @@
+#
+# MANIFEST file for front!tools!yacc
+#
+
+SubDir ING_SRC front tools yacc ;
+
+IISUBSYS front tools yacc ;
+
+IIBINEXE iyacc : y1.c ;
+IINEEDLIBS iyacc : YACCLIB COMPATLIB ;
+if $(NT)
+{
+IICPEXE $(INGTOOLSWNTBIN)$(DFS)iyacc.exe : iyacc.exe ;
+}
+
+File $(IYACCPAR) : iyacc.par ;
+
+
+IILIBRARY YACCLIB : y4.c y3.c y2.c ;
+
+

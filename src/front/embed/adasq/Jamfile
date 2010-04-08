@@ -1,0 +1,18 @@
+#
+# Jamfile file for front!embed!adasq
+#
+
+SubDir ING_SRC front embed adasq ;
+
+IISUBSYS front embed adasq ;
+
+
+IIBINEXE esqla : adsqmain.c ;
+IINEEDLIBS esqla : ADASQLIB ADALIB EQUELLIB UGLIB FMTLIB
+	AFELIB ADFLIB COMPATLIB ;
+
+IIUNDEFS esqla : tok_optab yylex yyparse ;
+
+IILIBRARY ADASQLIB : adasq.sy adsqtoks.st adsqscan.c
+	adasqgen.c ;
+

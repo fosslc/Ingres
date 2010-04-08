@@ -1,0 +1,176 @@
+##Copyright (c) 2004 Ingres Corporation
+###
+### makefile generated automatically by mknmake (3.02) for WNT.
+###	 date: Thu Dec 09 14:54:01 1993
+###	 path: D:\rplus\back\dmf\lg
+###
+
+##
+## Start of extra control macros for the make.ini file.
+##
+
+# Set to sub system type, (windows, console, posix).
+!IF "$(SUBSYS)" == ""
+SUBSYS = windows
+!ENDIF
+
+# Set to true for proto typing.
+!IF "$(PROTO_TYPE)" == ""
+PROTO_TYPE = false
+!ENDIF
+
+# Local flags for the compiler.
+!IF "$(LCL_CFLAGS)" == ""
+LCL_CFLAGS =
+!ENDIF
+
+# Ingres path structure.
+PART = back
+FACILITY = dmf
+SUBSYSTEM = lg
+LCLPATH = back\dmf\lg
+
+# DOS file system type.
+FS_FAT = 1
+FS_CASE = 0
+
+##
+## End of extra control macros for the make.ini file.
+##
+
+!include "$(ING_SRC)\tools\port\nmake\make.ini"
+!include "deps.mak"
+
+QSHFILES = 
+
+MSGFILES = 
+
+QHFILES = 
+
+SHFILES = 
+
+QSCFILES = 
+
+SCFILES = 
+
+QCFILES = 
+
+SYFILES = 
+
+STFILES = 
+
+LFILES = 
+
+YFILES = 
+
+YIFILES = 
+
+OBJFILES = lgadd.obj lgalter.obj lgbegin.obj lgcbmem.obj lgclose.obj  \
+	lgclustr.obj lgcopy.obj lgdmsvcb.obj lgend.obj lgerase.obj  \
+	lgevent.obj lgfabrab.obj lgforce.obj lginit.obj lglsn.obj  \
+	lgmisc.obj lgmo.obj lgmutex.obj lgopen.obj lgposn.obj  \
+	lgread.obj lgremove.obj lgreserve.obj lgshow.obj lgsize.obj  \
+	lgwrite.obj lgwrttst.obj 
+
+PROFILES = 
+
+PCFILES = 
+
+LGLIB = $(LIBNAME) 
+
+EXEFILES = lgtpoint.exe rcpstat.exe 
+
+
+OBJONLY =
+
+
+$(OBJFILES): $(QSCFILES) $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) \
+	 $(LFILES) $(YFILES) $(YIFILES)
+
+
+all: hdr prh pc lib exe
+hdr: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES)
+prh:
+pc:
+lib: $(LGLIB) $(OBJONLY)
+exe: $(EXEFILES)
+
+derive: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES) $(QSCFILES) \
+	 $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) $(LFILES) \
+	 $(YFILES) $(YIFILES)
+
+archive: atouch lib
+atouch:
+	$(TOUCH) $(OBJFILES)
+	$(SLEEP) 2
+
+
+##
+## Local .lib rule.
+##
+$(LGLIB): $(OBJFILES)
+!IF [$(TEST) -f $(LGLIB)] == 0
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS) $@
+$(OBJFILES)
+<<KEEP
+!ELSE
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS)
+$(OBJFILES)
+<<KEEP
+!ENDIF
+	$(LIB_CMD) @lib.rf6 > lib.er6 2>&1
+
+
+##
+## Custom .exe rule.
+##
+lgtpoint_deps = \
+	lgtpoint.obj
+
+lgtpoint.exe: $(lgtpoint_deps)
+	@echo >nul @<<lgtpoint.rf7
+$(LFLAGS) /OUT:lgtpoint.exe
+$(lgtpoint_deps)
+$(IISCFLIB)
+$(IIDMFLIB)
+$(IICUFLIB)
+$(IIULFLIB)
+$(IIGCFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @lgtpoint.rf7 > lgtpoint.er7 2>&1
+
+
+##
+## Custom .exe rule.
+##
+rcpstat_deps = \
+	rcpstat.obj
+
+rcpstat.exe: $(rcpstat_deps)
+	@echo >nul @<<rcpstat.rf7
+$(LFLAGS) /OUT:rcpstat.exe
+$(rcpstat_deps)
+$(IISCFLIB)
+$(IIDMFLIB)
+$(IICUFLIB)
+$(IIADFLIB)
+$(IIULFLIB)
+$(IIGCFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @rcpstat.rf7 > rcpstat.er7 2>&1
+
+
+##
+## Local install rule.
+##
+install: all
+	$(CP) *.exe $(ING_BUILD)\bin
+

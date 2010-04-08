@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The set_size resource determines the maximum size of memory in kilobytes
+  available within an ICE Server session to process a tuple set.
+
+  Default: 64

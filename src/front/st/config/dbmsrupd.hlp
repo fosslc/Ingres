@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The rule_upd_prefetch specifies whether a rule fired by an update
+  will prefetch the rows on which it is to act. 
+
+  If the rows are not prefetched and execution of the rule causes rows
+  to move due to changes in the primary key (or it is not possible to 
+  perform in-place replace operations due to compression differences),
+  the rule will loop until the row is moved to a point in the table 
+  which is earlier than the current position of the update cursor or
+  qualifying expressions are no longer true. This can lead to spurious 
+  errors or silent data corruption as the number of times the rule is 
+  executed can not be guaranteed.
+
+  The prefetch operation introduces an overhead. This overhead is required
+  to guarantee consistent behaviour for rules fired by an update.
+  Setting this parameter to OFF will improve the performance of rules
+  fired by updates. If set to OFF, it is the user's responsibility to
+  ensure appropriate measures are taken to ensure rules fired by updates
+  produce the expected behaviour.
+
+  The default is ON. 

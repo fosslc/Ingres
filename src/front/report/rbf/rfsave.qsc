@@ -1,0 +1,605 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<fedml.h>
+# include	<ug.h>
+# include	<ui.h>
+# include	<st.h>
+# include	<rcons.h>
+# include	"rbftype.h"
+# include	"rbfglob.h"
+
+/* static char	Sccsid[] = "%W% %G%"; */
+
+/*
+**   RFSAVE - save the edited report into the database.	 This converts
+**	the frame definitions etc back into report writer commands.
+**	This is called after the report has been edited on the screen.
+**
+**	Parameters:
+**		none.
+**
+**	Returns:
+**		OK	report was written (not to ii_object though).
+**		FAIL	report was not written.
+**
+**	Called by:
+**		rFwrite.
+**
+**	Side Effects:
+**		Puts a report in the database.
+**
+**	Trace Flags:
+**		200, 250.
+**
+**	Error messages:
+**		none.
+**
+**	History:
+**		2/10/82 (ps)	written.
+**		2/13/84 (gac)	added multi-statement transactions.
+**		5/29/86 (rld)	removed multi-statement transaction;
+**				now part of OOsave transaction.
+**		03-mar-1988 (rdesmond)
+**			removed looping on error on write to DB.
+**      	9/22/89 (elein) UG changes ingresug change #90045
+**		changed <rbftype.h> & <rbfglob.h> to "rbftype.h" & "rbfglob.h"
+**		01-aug-89 (cmr)
+**			major rewrite to support report/page/break
+**			headers and footers.
+**		22-nov-89 (cmr)
+**			sec_list* routines now take another argument.
+**		01-dec-89 (sylviap)
+**			Added call to rFm_decl to create .DECLARE's for
+**			runtime parameters.
+**		12/5/89  (martym) (garnet)
+**			Added support for labels style reports.
+**		30-jan-90 (cmr)	
+**			Underlining capabilities now stored in the 
+**			Sec_node for each section rather than in Opt
+**			or picking them off the form.
+**		2/2/90 (martym)
+**			Added new status message for saving of reports 
+**			based on JoinDefs.
+**		2/20/90 (martym)
+**			Checking the status of calls to rFm_decl(), rFm_sort(), 
+**			rFm_rhead(), rFm_data(), s_w_action(), rFm_sec(),  
+**			rFm_head(), rFm_rfoot(), rFm_foot(), rFm_ptop(), 
+**			rFm_pbot(), and r_GenLabDetSec() since the 
+**			underlying SREPORTLIB routines are passing back 
+**			STATUS now.
+**              17-apr-90 (sylviap)
+**			Created IIRFsvw_SaveWidth.  RBF now saves the width
+**			of a report as an rcommand.  Needed for .PAGEWIDTH 
+**			support. (#129, #588)
+**		02-may-90 (cmr) Added RbfAggNum to keep track of agg #.
+**				Also, don't write out RBFHEAD for page footer.
+**		04-jun-90 (cmr) Put back in support for TFORMAT; add arg to
+**				rFm_sec.  Also, alloc ag_array for use by
+**				MapToAggNum (got rid of RbfAggNum).
+**              06-aug-90 (sylviap)
+**			For label reports, added code to close the block at 
+**			the beginning of a page header and footer.
+**			Added routine, IIRFcbk_CloseBlock, to generate code
+**			to close a block. (#32085)
+**      	29-aug-90 (sylviap)
+**              	Added the parameter, right_margin. #32701.
+**		07-oct-90 (sylviap)
+**                      Passes right_margin to rFm_data.  6.4 RBF now 
+**			saves the pg_width in the first row of the query, 
+**			so 6.3 rbf/rw can continue to execute/edit 6.4 
+**			reports that do not take advantage of 6.4 features 
+**			-- backwards compatibility.  Deleted routine 
+**			IIRFsvw_SaveWidth.
+**		 2-jan-91 (steveh)
+**			Correctly parenthesized a number of `if' expressions.
+**		 6-aug-91 (steveh)
+**			Fixed bug 38938: First page header not printed if the
+**			report header has been deleted.  Also removed unused
+**			variable i from rFsave.
+**		9-oct-1992 (rdrane)
+**			Use new constants in (s/r/rbf)_reset invocations.
+**			Replace En_relation with reference to global
+**			FE_RSLV_NAME En_ferslv.name.
+**		30-oct-1992 (rdrane)
+**			Remove all FUNCT_EXTERN's since they're already
+**			declared in included hdr files.  Ditto GLOBALREF of
+**			ing_deadlock and declaration of r_gt_agg().
+**			Ensure that we ignore unsupported datatypes (of which
+**			there shouldn't be any).  Generate a .DELIMID command if
+**			we have reason to.
+**		8-dec-1992 (rdrane)
+**			Use RBF specific global to determine if delimited
+**			identifiers are enabled - St_xns_given will get reset
+**			before we get a chance to use it!  Add static routine
+**			rFxns_chk() to determine if we need to enable delimited
+**			identifiers.  Prompt to disallow QUEL if we find we need
+**			delimited identifiers or owner.tablename.
+**		15-jan-1993 (rdrane)
+**			.DELIMID is not an AC command - use s_w_row()!
+**		27-jan-1993 (rdrane)
+**			Add xns_reason #define's.  We may want to use them in
+**			more extensively in the future, and will use them now
+**			to determine disallowing QUEL.  Also, add error
+**			messages indicating FAIL reasons (at the moment, we're
+**			assuming the sub-calls issue their own error messages,
+**			but this is not certain).
+**		14-sep-1993 (rdrane)
+**			Set the report level to indicate support for 
+**			user-specified overide of date/timestamp and
+**			pageno formats, and their inclusion.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      06-Mar-2003 (hanje04)
+**          Cast last '0' in calls to s_w_action() with (char *) so that
+**          the pointer is completely nulled out on 64bit platforms.
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+
+static	bool	rFxns_chk();
+# define	RBF_XNS_NOT_REQ		0
+# define	RBF_XNS_TAR_DELIM	10
+# define	RBF_XNS_FROM_DELIM	20
+# define	RBF_XNS_ATTR_DELIM	30
+
+GLOBALDEF	i4	*ag_array;
+
+STATUS
+rFsave(r_margin)
+i4	*r_margin;
+{
+	/* internal declarations */
+
+	i4	ord;			/* ordinal of attribute */
+	i4	bline;
+	i4	xns_reason;
+	Sec_node *n;
+	STATUS	stat = OK;
+	TAGID	rfsave_tag = -1;
+	i4	right_margin;	
+	ATT	*att;
+
+	/* start of routine */
+
+	right_margin = *r_margin + 1;	/* compensate for 0 vs 1 based */
+					/* reset Sreport Global vars */
+	s_reset(RP_RESET_SRC_FILE,RP_RESET_REPORT,RP_RESET_LIST_END);
+
+	s_ren_set(En_report,ERx("f"), En_rid);
+
+	/*
+	** Establish the support level of this report.
+	*/
+	Cact_ren->ren_level = LVL_RBF_PG_FMT;
+
+	/*
+	** Determine if we really need to enable delimited identifiers.
+	** We may already have set it because of delimited owner and/or
+	** table names (non-JoinDef).
+	*/
+	xns_reason = RBF_XNS_NOT_REQ;
+	if  (!Rbf_xns_given)
+	{
+		Rbf_xns_given = rFxns_chk(&xns_reason);
+	}
+	/*
+	** If the user specified QUEL and we need to enable delimited
+	** identifiers or the FROM clause contains owner.tablename, prompt
+	** to change to SQL or cancel the save operation.  Note that QUEL
+	** cannot be specified if JoinDef!
+	*/
+	if  ((En_qlang == FEDMLQUEL) &&
+	     ((xns_reason != RBF_XNS_NOT_REQ) ||
+	      ((STindex(En_sql_from,ERx("."),0)) &&
+	       (STcompare(En_sql_from,ERx("RBF.all")) != 0))))
+	{
+		IIUGerr(E_RF00AD_XNS_QUEL, UG_ERR_ERROR, 0);
+		return(FAIL);
+	}
+
+	if  (Rbf_xns_given)
+	{
+		STcopy(NAM_DELIMID,Ctype);
+		Csequence = 0;
+		STcopy(ERx(" "),Csection);
+		STcopy(ERx(" "),Cattid);
+		STcopy(ERx(" "),Ccommand);
+		STcopy(ERx(" "),Ctext);
+		RF_STAT_CHK(s_w_row());
+		St_xns_given = TRUE;
+		/*
+		** We need to reset Csequence back to zero.  Actually,
+		** there should be a more appropriate place to effect this,
+		** but there isn't time to find it at the moment ...
+		*/
+		Csequence = 0;
+	}
+
+	if (En_SrcTyp == JDRepSrc)
+	{
+		scrmsg(ERget(S_RF006E_Saving_JDrep___s__fo), En_report, 
+			En_ferslv.name);
+	}
+	else
+	{
+		scrmsg(ERget(S_RF003E_Saving_report___s__fo), En_report, 
+			En_ferslv.name);
+	}
+
+	/* allocate the ag_array */
+	if (Agg_count > 0)
+	{
+		rfsave_tag = FEgettag();
+		if ((ag_array = (i4*)FEreqmem((u_i4)rfsave_tag, 
+			Agg_count*sizeof(i4), TRUE, (STATUS*)NULL)) == NULL)
+		{
+			IIUGbmaBadMemoryAllocation(ERx("rFsave - agg array"));
+		}
+	}
+	/* locate where the columns are now located */
+
+	rFscn_col();
+
+	/* Write out the Sort attributes */
+
+	if ((stat = rFm_sort()) != OK)
+	{
+		return(stat);
+	}
+
+	/* Set up the .DECLARE commands */
+
+	if ((stat = rFm_decl()) != OK)
+	{
+		return(stat);
+	}
+
+
+	/* Write out commands for the report heading */
+
+	/*
+	** If we have a labels style report call r_GenLabDetSec() first 
+	** to calculate the new report dimensions:
+	*/
+	if (St_style == RS_LABELS)
+	{
+		n = sec_list_find(SEC_DETAIL, 0, &Sections);
+		bline = (n->next ? n->next->sec_y : 0);
+		RF_STAT_CHK(r_GenLabDetSec(n->sec_y, bline, 
+				n->sec_under, FALSE, right_margin));
+	}
+	s_rso_set(NAM_REPORT,B_HEADER);
+
+  	/*
+	** Set up report heading commands
+	*/
+	if ((stat = rFm_rhead(right_margin)) != OK)
+	{
+		return(stat);
+	}
+
+	if ( n = sec_list_find( SEC_REPHDR, 0, &Sections ) )
+	{
+		/* set up page top for report */
+		RF_STAT_CHK(rFm_ptop(0,0,1,right_margin));
+		RF_STAT_CHK(s_w_action(ERx("begin"), ERx("rbftitle"), (char *)0));
+		bline = ( n->next ? n->next->sec_y : 0 );
+		RF_STAT_CHK(rFm_sec(n->sec_y, bline, n->sec_under, FALSE));
+		RF_STAT_CHK(s_w_action(ERx("end"), ERx("rbftitle"), (char *)0));
+	}
+
+	/*
+	** This if statement was moved outside of the check for SEC_REPHDR
+	** (above) to insure that page headers are printed for the first
+	** in the absence of report headers. (bug 38938, steveh)
+	*/
+	if ( Opt.rphdr_first == 'y' )
+	{
+		if (n == (Sec_node *)NULL)
+		{
+			/* print the current date/time */
+			RF_STAT_CHK(rFm_ptop(1,0,1,right_margin));
+		}
+		if (n = sec_list_find( SEC_PAGHDR, 0, &Sections ))
+		{
+			RF_STAT_CHK(s_w_action(ERx("begin"), 
+					ERx("rbfhead"), (char *)0));
+			bline = ( n->next ? n->next->sec_y : 0 );
+			RF_STAT_CHK(rFm_sec(n->sec_y, bline, 
+				n->sec_under, FALSE));
+			RF_STAT_CHK(s_w_action(ERx("end"), 
+					ERx("rbfhead"), (char *)0));
+		}
+	}
+
+	/* Write out commands for the page header */
+
+	if ( n = sec_list_find(SEC_PAGHDR, 0, &Sections) )
+	{
+		s_rso_set(NAM_PAGE, B_HEADER);
+
+		/* For label reports, close the detail block (32085) */
+		if (St_style == RS_LABELS)
+		{
+			IIRFcbk_CloseBlock(FALSE);
+		}
+		
+		RF_STAT_CHK(rFm_ptop(1,0,1,right_margin));
+		RF_STAT_CHK(s_w_action(ERx("begin"), ERx("rbfhead"), (char *)0));
+		bline = ( n->next ? n->next->sec_y : 0 );
+		RF_STAT_CHK(rFm_sec(n->sec_y, bline, n->sec_under, FALSE));
+		RF_STAT_CHK(s_w_action(ERx("end"), ERx("rbfhead"), (char *)0));
+	}
+
+	/* Write out commands for the page footer */
+
+	if ( n = sec_list_find(SEC_PAGFTR, 0, &Sections) )
+	{
+		s_rso_set(NAM_PAGE, B_FOOTER);
+
+		/* For label reports, close the detail block (32085) */
+		if (St_style == RS_LABELS)
+		{
+			IIRFcbk_CloseBlock(FALSE);
+		}
+
+		bline = ( n->next ? n->next->sec_y : 0 );
+		RF_STAT_CHK(rFm_sec(n->sec_y, bline, n->sec_under, FALSE));
+		RF_STAT_CHK(rFm_pbot(1,1));
+	}
+
+	/* Write out the commands for HEADERs of break attributes */
+
+	for (ord=1; ord<=En_n_attribs; ord++)
+	{
+		if (((rFgt_copt(ord))->copt_brkhdr == 'y') &&
+		    ((att = r_gt_att(ord)) != (ATT *)NULL))
+		{	/* set up a header block */
+			s_rso_set(att->att_name,B_HEADER);
+			RF_STAT_CHK(rFm_head(ord));
+		}
+	}
+
+	/* Write out the commands for the detail lines */
+
+	s_rso_set(NAM_DETAIL, B_HEADER);
+	n = sec_list_find( SEC_DETAIL, 0, &Sections );
+	bline = ( n->next ? n->next->sec_y : 0 );
+
+	if (St_style == RS_LABELS)
+        {
+		RF_STAT_CHK(r_GenLabDetSec(n->sec_y, bline, 
+				n->sec_under, TRUE, right_margin));
+	}
+	else
+	{
+		RF_STAT_CHK(rFm_sec(n->sec_y, bline, n->sec_under, TRUE));
+	}
+
+
+	/* Write out the commands for FOOTERs of break attributes */
+
+	for (ord=En_n_attribs; ord>=1; ord--)
+	{
+		if (((rFgt_copt(ord))->copt_brkftr == 'y') &&
+		    ((att = r_gt_att(ord)) != (ATT *)NULL))
+		{	/* set up a header block */
+			s_rso_set(att->att_name,B_FOOTER);
+			RF_STAT_CHK(rFm_foot(ord));
+		}
+	}
+
+	/* Now add the commands for the report footer if needed */
+
+	if ( n = sec_list_find(SEC_REPFTR, 0, &Sections) )
+	{
+		s_rso_set(NAM_REPORT,B_FOOTER);
+		RF_STAT_CHK(rFm_rfoot());
+	}
+	/* SYLVIAP BUG FIX
+ 	if (St_style == RS_LABELS && pg_width < En_lmax)
+ 		pg_width = En_lmax;
+	*/
+
+	if (rfsave_tag > 0)
+		FEfree(rfsave_tag);
+
+	/* Now set up the data retrieval commands */
+
+	if ((stat = rFm_data(right_margin)) != OK)
+		return(stat);
+
+	/* Now add the report to the database */
+
+	s_del_old();	/* delete old report with this name */
+	if (FEinqerr())
+	    return (FAIL);
+
+	s_copy_new();	/* add new report */
+	if (FEinqerr())
+	    return (FAIL);
+
+	return (OK);
+}
+
+
+/*
+** Name: IIRFcbk_CloseBlock
+**
+** Description: 
+**	Writes the rcommand out to the database to close the block that was
+**	opened in the detail section.  This is only necessary for label
+**	style reports.
+**	
+** History:
+**	30-oct-1992 (rdrane)
+**		Ensure that all string constants are generated with single,
+**		not double quotes.
+*/
+
+STATUS
+IIRFcbk_CloseBlock(in_break)
+bool	in_break;	/* TRUE = closing a block in a break head/footer */
+{
+	STATUS stat = OK;
+
+	RF_STAT_CHK(s_w_action(ERx("if"), ERx("$"),
+	   ERx(LABST_IN_BLK), ERx("='yes'"),(char *)0));
+
+	RF_STAT_CHK(s_w_action(ERx("then"), (char *)0));
+	RF_STAT_CHK(s_w_action(ERx("let"), ERx(LABST_IN_BLK),
+	   ERx("='no'"),(char *)0));
+	RF_STAT_CHK(s_w_action(ERx("endlet"), (char *)0));
+	RF_STAT_CHK(s_w_action(ERx("end"), ERx("block"),(char *)0));
+	
+	if (in_break)
+	{
+		/* 
+		** Need to reset the label variables so next set of
+		** labels will be drawn starting at the left margin.
+		*/
+		RF_STAT_CHK(s_w_action(ERx("let"), ERx(LABST_LINECNT), 
+			ERx("=0"), (char *)0));
+		RF_STAT_CHK(s_w_action(ERx("endlet"), (char *)0));
+		RF_STAT_CHK(s_w_action(ERx("lm"), ERx("0"), (char *)0));
+
+	}
+	RF_STAT_CHK(s_w_action(ERx("endif"), (char *)0));
+}
+
+
+/*
+**   RFXNS_CHK - Determine if a report being saved requires generation of the
+**		 .DELIMID command.  This routine must handle both SQL and
+**		 QUEL queries, as well as JoinDef's.
+**
+**		 Procesing proceeds as follows:
+**
+**		 o Examine the target list (if any) for instances of double
+**		   quotes.  This will be safe and effective for SQL and QUEL,
+**		   and represents a shortcut approach.
+**
+**		 o Examine the FROM list (if any) for instances of double
+**		   quotes.  This will also be safe and effective for SQL and
+**		   QUEL.  This is not a shortcut approach, as the FROM clause
+**		   is always valid and complete.
+**
+**		 o Loop through the ATT array and check each attribute name.
+**		   This can result from the target list being "*" or "RBF.all",
+**		   or a SORT or QUALIFICATION on a non-printed column.  If it
+**		   is a delimited identifier, ensure that it's a supported
+**		   data type and is actively being used in the report (in which
+**		   case it's COPT select value should be active).
+**		   This is a brute-force method, but the only way to navigate
+**		   through the confusion of UNION SELECT, WHERE clauses,
+**		   and QUEL values which are string literals delimited by
+**		   double quotes!
+**
+**		 Note that for reports being save initially, the target list
+**		 and FROM clause will be NULL, and so this routine may
+**		 indicate RBF_XNS_NOT_REQ when this is not actually the case.
+**
+**	Parameters:
+**		xns_reason	Pointer to a i4  which will receive a
+**				code as to where the delimited identifier
+**				was (not) found.  This may be specified as
+**				(i4)NULL.
+**
+**	Output:
+**		xns_reason	Reason code (if not (i4)NULL).  Note that if
+**				the return value is FALSE, this will always be
+**				RBF_XNS_NOT_REQ.
+**	Returns:
+**		TRUE		At least one active delimited identifier was
+**				found.
+**		FALSE		No delimited identifiers are being used in the
+**				report.
+**
+**	History:
+**		8-dec-1992 (rdrane)
+**			Created.
+**		16-dec-1992 (rdrane)
+**			Correct mishandling of loop control variable.
+**		27-jan-1993 (rdrane)
+**			Add "reason" parameter.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+
+static
+bool
+rFxns_chk(xns_reason)
+	i4	*xns_reason;
+{
+
+	i4	i;
+	i4	dmy_xns_reason;
+	i4	*xns_ptr;
+	ATT	*att_ptr;
+	COPT	*copt_ptr;
+
+
+	/*
+	** Avoid checking xns_reason for (i4)NULL
+	** every time we want to use it ...
+	*/
+	xns_ptr = xns_reason;
+	if  (xns_ptr == NULL)
+	{
+		xns_ptr = &dmy_xns_reason;
+	}
+
+    	if  ((En_tar_list != NULL) &&
+    	     (STindex(En_tar_list,ERx("\""),0) != NULL))
+	{
+		*xns_ptr = RBF_XNS_TAR_DELIM;
+		return(TRUE);
+	}
+	
+    	if  ((En_sql_from != NULL) &&
+    	     (STindex(En_sql_from,ERx("\""),0) != NULL))
+	{
+		*xns_ptr = RBF_XNS_FROM_DELIM;
+		return(TRUE);
+	}
+
+	i = 0;		/* Start at zero to allow for pre-increment	*/
+	while (++i <= En_n_attribs)
+	{
+		if  ((att_ptr = r_gt_att(i)) == (ATT *)NULL)
+		{
+			continue;	/* This shouldn't happen!	*/
+		}
+		if  (att_ptr->att_value.db_data == (PTR)NULL)
+		{
+			continue;	/* Unsupported datatype		*/
+		}
+		/*
+		** We still need to ignore columns which have been deleted
+		** from the report!  But can they participate in WHERE
+		** and/or ORDER BY clauses?
+		*/
+		if  (IIUGdlm_ChkdlmBEobject(att_ptr->att_name,NULL,TRUE) ==
+				UI_DELIM_ID)
+		{
+			*xns_ptr = RBF_XNS_ATTR_DELIM;
+			return(TRUE);
+		}
+	}
+
+	*xns_ptr = RBF_XNS_NOT_REQ;
+	return(FALSE);
+}
+

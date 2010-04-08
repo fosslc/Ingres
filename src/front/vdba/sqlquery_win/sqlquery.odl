@@ -1,0 +1,184 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+*/
+
+/*
+**    Source   : sqlquery.odl : type library source for ActiveX Control project.
+**    Project  : sqlquery.ocx 
+**    Author   : Sotheavut UK (uk$so01)
+**    Purpose  : This file will be processed by the Make Type Library (mktyplib) tool to
+**               produce the type library (sqlquery.tlb) that will become a resource in
+**               sqlquery.ocx.
+**
+**
+** History:
+**
+** 23-Oct-2001 (uk$so01)
+**    SIR #106057
+**    Transform code to be an ActiveX Control
+** 19-Dec-2001 (uk$so01)
+**    SIR #106648, Split vdba into the small component ActiveX/COM
+** 13-Jun-2003 (uk$so01)
+**    SIR #106648, Take into account the STAR database for connection.
+** 03-Oct-2003 (uk$so01)
+**    SIR #106648, Vdba-Split, Additional fix for GATEWAY Enhancement 
+** 15-Oct-2003 (uk$so01)
+**    SIR #106648, (Integrate 2.65 features for EDBC)
+** 17-Oct-2003 (uk$so01)
+**    SIR #106648, Additional change to change #464605 (role/password)
+** 30-Jan-2004 (uk$so01)
+**    SIR #111701, Use Compiled HTML Help (.chm file)
+** 22-Sep-2004 (uk$so01)
+**    BUG #113104 / ISSUE 13690527, 
+**    Add method: short GetConnected(LPCTSTR lpszNode, LPCTSTR lpszDatabase)
+**    that return 1 if there is an SQL Session.
+**/
+
+
+#include <olectl.h>
+#include <idispids.h>
+
+#if defined (EDBC)
+[ uuid(ED36274A-0B58-41f1-8A4B-B111338B5A15), version(1.0),
+  helpfile("sqlquery.hlp"),
+  helpstring("sqlquery (EDBC) ActiveX Control module"),
+  control ]
+#else
+[ uuid(634C383A-A069-11D5-8769-00C04F1F754A), version(1.0),
+  helpfile("sqlquery.hlp"),
+  helpstring("sqlquery ActiveX Control module"),
+  control ]
+#endif
+library SQLQUERYLib
+{
+	importlib(STDOLE_TLB);
+	importlib(STDTYPE_TLB);
+
+	//  Primary dispatch interface for CSqlqueryCtrl
+
+#if defined (EDBC)
+	[ uuid(C026183C-1383-40eb-8A70-DD05B3073091),
+	  helpstring("Dispatch interface for Sqlquery (EDBC) Control"), hidden ]
+#else
+	[ uuid(634C383B-A069-11D5-8769-00C04F1F754A),
+	  helpstring("Dispatch interface for Sqlquery Control"), hidden ]
+#endif
+	dispinterface _DSqlquery
+	{
+		properties:
+			// NOTE - ClassWizard will maintain property information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_PROP(CSqlqueryCtrl)
+			[id(DISPID_FONT), bindable] IFontDisp* Font;
+			[id(1)] boolean ShowGrid;
+			[id(2)] boolean AutoCommit;
+			[id(3)] boolean ReadLock;
+			[id(4)] long TimeOut;
+			[id(5)] long SelectLimit;
+			[id(6)] long SelectMode;
+			[id(7)] long MaxTab;
+			[id(8)] long MaxTraceSize;
+			[id(9)] boolean ShowNonSelectTab;
+			[id(10)] boolean TraceTabActivated;
+			[id(11)] boolean TraceTabToTop;
+			[id(12)] long F4Width;
+			[id(13)] long F4Scale;
+			[id(14)] boolean F4Exponential;
+			[id(15)] long F8Width;
+			[id(16)] long F8Scale;
+			[id(17)] boolean F8Exponential;
+			[id(18)] long QepDisplayMode;
+			[id(19)] long XmlDisplayMode;
+			//}}AFX_ODL_PROP
+
+		methods:
+			// NOTE - ClassWizard will maintain method information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_METHOD(CSqlqueryCtrl)
+			[id(20)] boolean Initiate(BSTR lpszNode, BSTR lpszServer, BSTR lpszFlags);
+			[id(21)] void SetDatabase(BSTR lpszDatabase);
+			[id(22)] void Clear();
+			[id(23)] void Open();
+			[id(24)] void Save();
+			[id(25)] void SqlAssistant();
+			[id(26)] void Run();
+			[id(27)] void Qep();
+			[id(28)] void Xml();
+			[id(29)] boolean IsRunEnable();
+			[id(30)] boolean IsQepEnable();
+			[id(31)] boolean IsXmlEnable();
+			[id(32)] void Print();
+			[id(33)] boolean IsPrintEnable();
+			[id(34)] void EnableTrace();
+			[id(35)] boolean IsClearEnable();
+			[id(36)] boolean IsTraceEnable();
+			[id(37)] boolean IsSaveAsEnable();
+			[id(38)] boolean IsOpenEnable();
+			[id(39)] void PrintPreview();
+			[id(40)] boolean IsPrintPreviewEnable();
+			[id(41)] SCODE Storing(IUnknown** ppStream);
+			[id(42)] SCODE Loading(IUnknown* pStream);
+			[id(43)] boolean IsUsedTracePage();
+			[id(44)] void SetIniFleName(BSTR lpszFileIni);
+			[id(45)] void SetSessionDescription(BSTR lpszSessionDescription);
+			[id(46)] void SetSessionStart(long nStart);
+			[id(47)] void InvalidateCursor();
+			[id(48)] void Commit(short nCommit);
+			[id(49)] boolean IsCommitEnable();
+			[id(50)] void CreateSelectResultPage(BSTR lpszNode, BSTR lpszServer, BSTR lpszUser, BSTR lpszDatabase, BSTR lpszStatement);
+			[id(51)] void SetDatabaseStar(BSTR lpszDatabase, long nFlag);
+			[id(52)] void CreateSelectResultPage4Star(BSTR lpszNode, BSTR lpszServer, BSTR lpszUser, BSTR lpszDatabase, long nDbFlag, BSTR lpszStatement);
+			[id(53)] boolean Initiate2(BSTR lpszNode, BSTR lpszServer, BSTR lpszUser, BSTR lpszOption);
+			[id(54)] void SetConnectParamInfo(long nSessionVersion);
+			[id(55)] long GetConnectParamInfo();
+			[id(56)] long ConnectIfNeeded(short nDisplayError);
+			[id(57)] boolean GetSessionAutocommitState();
+			[id(58)] boolean GetSessionCommitState();
+			[id(59)] boolean GetSessionReadLockState();
+			[id(60)] void SetHelpFile(BSTR lpszFileWithoutPath);
+			[id(61)] void SetErrorFileName(BSTR lpszErrorFileName);
+			//}}AFX_ODL_METHOD
+
+			[id(DISPID_ABOUTBOX)] void AboutBox();
+			[id(62), helpstring("method GetConnected")] SHORT GetConnected(BSTR lpszNode, BSTR lpszDatabase);
+	};
+
+	//  Event dispatch interface for CSqlqueryCtrl
+#if defined (EDBC)
+	[ uuid(850E614C-A94B-4764-83DA-940E522E11DC),
+	  helpstring("Event interface for Sqlquery (EDBC) Control") ]
+#else
+	[ uuid(634C383C-A069-11D5-8769-00C04F1F754A),
+	  helpstring("Event interface for Sqlquery Control") ]
+#endif
+	dispinterface _DSqlqueryEvents
+	{
+		properties:
+			//  Event interface has no properties
+
+		methods:
+			// NOTE - ClassWizard will maintain event information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_EVENT(CSqlqueryCtrl)
+			[id(1)] void PropertyChange();
+			//}}AFX_ODL_EVENT
+	};
+
+	//  Class information for CSqlqueryCtrl
+#if defined (EDBC)
+	[ uuid(7A9941A3-9987-4914-AB55-F7F630CF8B38),
+	  helpstring("Sqlquery (EDBC) Control"), control ]
+#else
+	[ uuid(634C383D-A069-11D5-8769-00C04F1F754A),
+	  helpstring("Sqlquery Control"), control ]
+#endif
+	coclass Sqlquery
+	{
+		[default] dispinterface _DSqlquery;
+		[default, source] dispinterface _DSqlqueryEvents;
+	};
+
+
+	//{{AFX_APPEND_ODL}}
+	//}}AFX_APPEND_ODL}}
+};

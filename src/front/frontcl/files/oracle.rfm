@@ -1,0 +1,12 @@
+#
+# Copyright (c) 2006 Ingres Corporation. All Rights Reserved.
+#
+# The configuration rule specifications listed in this file are used
+# to generate the default configuration for the Oracle Gateway during its 
+# setup procedure.  Note that the named files are assumed to exist
+# in the "files" directory.
+#
+
+rulefile.01:	oracle.crs
+rulefile.02:	all.crs
+rulefile.03:	tz.crs

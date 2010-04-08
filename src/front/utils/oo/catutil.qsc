@@ -1,0 +1,603 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<cv.h>		/* 6-x_PC_80x86 */
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+##include	<ooclass.qsh>
+#include	<oodefine.h>
+##include	<oocat.qsh>
+##include	<oocatlog.qsh>
+# include	<uigdata.h>
+# include 	<stdprmpt.h>
+#include	"eroo.h"
+
+/**
+** Name:	catutil.qc -	Visual Object Catalog Utility Methods.
+**
+** Description:
+**	Contains utilities used to access the rows in an object catalog
+**	table field of a form.	This file defines:
+**
+**	IIOOct0Init()	initialize visual object catalog.
+**	IIOOctEmpty()	clear visual object catalog.
+**	IIOOctCheck()	check object in current row.
+**	IIOOctLoad()	load visual object catalog.
+**	IIOOctDestroy()	destroy object in current row.
+**	IIOOctRename()	rename object in current row.
+**	IIOOctFetch()	read in object in current row.
+**
+** History:
+**	Revision 6.2  89/01  wong
+**	Converted and renamed to be methods for the Visual Object Catalog class
+**		adding 'IIOOct0Init()' and 'IIOOctLoad()' with the old routines
+**		rewritten as covers in "catcover.qsc," and moving the Catalog
+**		Record methods to "catrec.c".
+**	-- 88/12  wong
+**	Assign class from catalog record (i.e., table field row) before calling
+**		an 'IIOOid*()' routines.  (Also, changed 'OOid*()' to
+**		'IIOOid*()'.)  Also added support for 'alter_cnt' and
+**		'altered_by' in the catalog.
+**
+**	Revision 6.0
+**	10/17/87 (dkh) - Fixed jup bug 1122.
+**	10/19/87 (dkh) - Fixed jup bug 666.
+**	03/28/91 (dkh) - Replaced old inquire_frs syntax with new.
+**
+**	Revision 4.0  86/01  wong
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	28-Mar-2005 (lakvi01)
+**	    For AMD64, turned off global optimization around IIOOctDestroy()
+**	    to avoid ABF from SEGV'ing when destroying a frame (abf04.sep).
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+/*{
+** Name:	IIOOct0Init() -	Initialize Visual Object Catalog.
+**
+** Description:
+**	Initializes the visual object catalog with the class of the objects to
+**	be displayed by it, the name of the form and the table field associated
+**	with it, and whether it is to be loaded automatically or by user action
+**	(which is `expert' mode.)
+**
+**	The table field is then initialized.
+**
+** Inputs:
+**	self	{OO_CATALOG *}  The visual object catalog.
+**	class	{OO_CLASS *}  The (base) class for the objects in the catalog.
+**	form	{char *}  The name of the catalog form.
+**	tfld	{char *}  The name of the table field on the catalog form
+**	noload	{bool}  Whether the catalogs are loaded automatically.
+**
+** History:
+**	01/89 (jhw) -- Written.
+**      08/24/92 (gautam)
+**              fixed problem causing stack corruption in vision and vigraph.
+**      09/16/92 (deannaw)
+**              Backed out previous fix by Gautam.  Stack corruption problems
+**		corrected when new "refresher" compiler installed on AIX port. 
+*/
+VOID
+##IIOOct0Init ( self, class, form, tfld, noload )
+##register OO_CATALOG	*self;
+OO_CLASS		*class;
+char			*form;
+char			*tfld;
+bool			noload;
+##{
+	/* Set-up interactive methods */
+	iiooInteractive();
+
+	self->c_form = form;
+	self->c_tfield = tfld;
+	self->c_class = class;
+	self->c_noload = noload;
+
+	_send(catTFldInit, self)( self, noload ? ERx("update") :  ERx("read") );
+
+##	INQUIRE_FRS TABLE self->c_form (
+##			self->c_maxrow = MAXROW( self->c_tfield )
+##	);
+
+	if ( noload )
+##		LOADTABLE self->c_form self->c_tfield ( _name = _iiOOempty );
+##}
+
+
+/*{
+** Name:	IIOOctEmpty() -	Clear Visual Object Catalog.
+**
+** Description:
+**	Clear visual object catalog table field.  If in noload mode,
+**	initialize with blank row and set form in UPDATE mode.
+**
+** Input params:
+**	self	{OO_CATALOG *}  The visual object catalog.
+**
+** Side Effects:
+**	may change mode of form to UPDATE.
+**
+** History:
+**	01/89 (jhw) -- Modified from 'OOcatEmpty()' to be method.
+*/
+ 
+VOID
+##IIOOctEmpty ( self )
+##register OO_CATALOG	*self;
+##{
+##	CLEAR FIELD self->c_tfield;
+
+	if ( self->c_noload )
+	{
+##		LOADTABLE self->c_form self->c_tfield ( _name = _iiOOempty, _id = -1 );
+##		SET_FRS FORM ( mode(self->c_form) = UPDATE );
+	}
+##}
+
+
+/*
+** Name:	IIOOctCheck() -	Check Visual Object Catalog TableField for Row.
+**
+** Description:
+**	Gets current non-empty row from the object catalog table field.
+**
+**	If object name contains a "wild-card" pattern (as in
+**	expert-mode), a retrieve against the database is run and
+**	the tableField is loaded with info representing objects
+**	whose names match pattern.  A value of FALSE is returned
+**	in this case to indicate that no idividual row record has
+**	been obtained.
+**
+** Inputs:
+**	self	{OO_CATALOG *}  The visual object catalog.
+**	record	{OO_CATREC *}  Reference to catalog row object.
+**				(Cannot be NULL.)
+**
+** Outputs:
+**	record	{OO_CATREC *}  Catalog row object for row.
+**
+** Returns:
+**	{STATUS}  OK	if non-empty row extracted.
+**		  FAIL	no row fetched.
+**
+** Side Effects:
+**	object information may be fetched from database and
+**	display may be updated in expert-mode;
+**
+** History:
+**	01/89 (jhw) -- Modified from 'OOcatCheck()' to be method.
+*/
+
+STATUS
+##IIOOctCheck ( self, record )
+##register OO_CATALOG	*self;
+##register OO_CATREC	*record;
+##{
+##	OOID	id;
+##	char	name[sizeof(record->name)];
+##	i4	rowcount;
+##	i4	state;
+
+	/* Check for an empty catalog. */
+	state = 3;	/* any non-zero number will do... */
+##	INQUIRE_FRS TABLE self->c_form ( rowcount = lastrow(self->c_tfield) );
+	if ( rowcount == 1)
+	{
+		/* Found one row, but it might be a dummy. */
+##		GETROW self->c_form self->c_tfield ( state = _STATE );
+	}
+	if ( rowcount == 0 || state == 0 )
+	{
+		IIUGerr(S_OO0006_None_in_table, UG_ERR_ERROR,
+			1, self->c_class->name
+		);
+		return FAIL;
+	}
+
+##	GETROW self->c_form self->c_tfield ( id = _id, name = _name );
+
+	if ( STtrmwhite(name) <= 0 )
+	{
+		IIUGerr( E_OO0007_Name_must_be_specifie, UG_ERR_ERROR,
+				1, self->c_class->name
+		);
+		return FAIL;
+	}
+	CVlower(name);
+
+	if ( id <= 0 )
+	{
+		/*
+		** If we don't have a valid object ID - must be expert mode;
+		** therefore, send catLoad to fetch from database all objects
+		** whose names match the string entered in the row by the user.
+		*/
+		_send(catLoad, self)(self, name, (char *)NULL);
+##		INQUIRE_FRS TABLE self->c_form (
+##				rowcount = lastrow(self->c_tfield)
+##		);
+
+		/* give information message if none found */
+		if ( rowcount == 0 )
+		{
+			IIUGerr( S_OO0008_None_found, UG_ERR_ERROR,
+					1, self->c_class->name
+			);
+
+			/* Set form back to expert mode. */
+			_send(catEmpty, self)(self);
+
+			/* Restore input name string so the user
+			** can correct it if it was incorrect.
+			*/
+##			PUTROW self->c_form self->c_tfield ( _name = name );
+		}
+
+		/*
+		** if more than 1 found, just return so user can make selection;
+		** return value of FAIL means no single row selected.
+		*/
+		if ( rowcount != 1 )
+			return FAIL;
+	}
+
+	/*
+	**  If we got here we have a single row selected in table field.
+	**  Fill in row structure member values from fields if not NULL.
+	*/
+	if ( record != NULL )
+	{
+##		GETROW self->c_form self->c_tfield (
+##			record->name = _name,
+##			record->id = _id,
+##			record->class = _class, 
+##			record->owner = _owner,
+##			record->env = _env, 
+##			record->is_current = _is_current, 
+##			record->short_remark = _short_remark,
+##			record->create_date = _create_date,
+##			record->alter_date = _altr_date,
+##			record->altered_by = _last_altered_by,
+##			record->alter_cnt = _altr_count
+##		);
+		_VOID_ STtrmwhite(record->owner);
+		_VOID_ STtrmwhite(record->short_remark);
+		_VOID_ STtrmwhite(record->altered_by);
+	}
+	return OK;
+##} 
+
+
+/*{
+** Name:	IIOOctLoad() -	Load Visual Object Catalog.
+**
+** Description:
+**	Loads the catalog with the description of the objects selected by
+**	the pattern specified to match the names.  The cursor will be left
+**	on the row corresponding to the last row that the cursor was on as
+**	specified by the name for that last row.
+**
+**	This method calls the 'catTFldLoad' method where sub-class specific
+**	selection criteria are isolated.  The message, clear and cursor
+**	positioning code are then shared by this method.
+**
+** Input:
+**	self	{OO_CATALOG *}  The visual object catalog.
+**	pattern	{char *}  Name pattern (either QUEL or SQL) with which
+**				to load the catalog.
+**	lastname {char *}  Name of object on which cursor was last positioned
+**				in catalog table field.
+**
+** History:
+**	01/89 (jhw) - Written.  (The cursor positioning was abstracted out
+**			from 'OBcatform()'.)
+*/
+VOID
+##IIOOctLoad ( self, pattern, lastname )
+##register OO_CATALOG	*self;
+char			*pattern;
+char			*lastname;
+##{
+	i4	prevcursor = 0;
+
+	IIUGmsg( ERget(F_OO0004_Retrieving), FALSE, 1, self->c_class->name );
+
+##	CLEAR FIELD self->c_tfield;
+	_send(catTFldLoad, self)(self, pattern, lastname, &prevcursor);
+
+	/*
+	** attempt to put cursor back on object/row on which it was
+	** previously located and arrange to place it about 1/4 of
+	** the way from the top of the tablefield.
+	*/
+	if ( prevcursor > 0 )
+	{
+		FEtfscrl(self->c_form, self->c_tfield, _name, prevcursor);
+	}
+##}
+
+
+/*{
+** Name:	IIOOctDestroy() -	Destroy Object in Current Row.
+**
+** Description:
+**	Gets row from catalog table field, prompts for confirmation, checks
+**	owner authorization (fetching object info. from database if necessary
+**	for expert-mode), invokes Destroy operation on object, and updates
+**	catalog table field display.
+**
+** Inputs:
+**	self	{OO_CATALOG *}  The visual object catalog.
+**
+** Outputs:
+**	row	{OO_CATREC *}  Catalog row object for row.
+**	
+** Returns:
+**	{STATUS}  OK	// operation succeeds
+**		  FAIL	// operation fails
+**
+** Side Effects:
+**	object may be fetched from database and allocated;
+**	display may be updated;
+**
+** History:
+**	01/89 (jhw) -- Modified from 'OOcatDestroy()' to be method.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+*/
+
+#ifdef a64_win
+#pragma optimize("g", off)
+#endif
+
+STATUS
+##IIOOctDestroy ( self, row )
+##register OO_CATALOG	*self;
+OO_CATREC		*row;
+##{
+	OO_CATREC	rowbuf;
+
+	if (row == NULL)
+		row = &rowbuf;
+
+	if ( _send(catCheck, self)(self, row) == OK )
+	{
+		OOID	class;
+		char	*owner = ( *row->owner == EOS )
+					? IIUIdbdata()->user : row->owner;
+
+		class = row->class;
+		if ( IIOOidCheck(&class, &row->id, row->name, owner) != OK )
+		{
+			IIUGerr( E_OO0026_NotOwner, UG_ERR_ERROR,
+					2, OOsnd(class, _name), row->name
+			);
+			return FAIL;
+		}
+
+		 if (IIUFccConfirmChoice(
+				CONF_DESTROY, row->name, (char *) OOsnd(class, _name), 
+				ERget(F_OO0003_Destroy_Conf), 
+				ERx("oodstobj.hlp"))
+			== CONFCH_YES)
+		{
+			IIUGmsg(ERget(S_OO0002_Destroy_Status), FALSE,
+				2, OOsnd(class, _name), row->name
+			);
+			if ( IIOOidDestroy(&class, &row->id, row->name, owner)
+					!= OK )
+				IIUGmsg(ERget(E_OO0003_Destroy_Error), TRUE,
+					2, OOsnd(class, _name), row->name
+				);
+			else
+			{ /* Destroyed successfully ... */
+				if ( self->c_noload )
+					_send(catEmpty, self)(self);
+				else
+##					DELETEROW self->c_form self->c_tfield;
+				return OK;
+			}
+		}
+	}
+	return FAIL;
+##}
+
+#ifdef a64_win
+#pragma optimize("g", on)
+#endif
+
+
+/*{
+** Name:	IIOOctRename() -	Rename Object in Current Row.
+**
+** Description:
+**	Gets row from catalog tableField, prompts for new object
+**	name, checks validity, checks owner authorization (fetching
+**	object info from database if necessary for expert-mode),
+**	invokes Rename operation on object, and updates catalog
+**	tableField display.
+**
+** Inputs:
+**	self	{OO_CATALOG *}  The visual object catalog.
+**	row	{OO_CATREC *}  Catalog row object for row.
+**	a1	{i4}  Optional argument for _withName.
+**
+** Outputs:
+**	oldname	{char [FE_MAXNAME+1]}  The old name of the object.
+**
+** Returns:
+**	{STATUS}  OK	// operation succeeds
+**		  FAIL	// operation fails
+**
+** Side Effects:
+**	object may be fetched from database and allocated;
+**	display may be updated;
+**
+** History:
+**	01/89 (jhw) -- Modified from 'OOcatRename()' to be method
+**			and added 'oldname' as output parameter.
+**	03/90 (jhw) -- Added optional parameter for _withName (application
+**		components will pass in the application ID.)  Also, check for
+**		rename to same name.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	03/91 (steveh)
+**     	    Increased the size of `ans' to fix bug 36363: RBF and VIFRED are 
+**	    inconsistent in their handling of Rename.  The change to the 
+**          message involved reversing the order of the arguments so that 
+**          IIUGerr correctly displays the name of the renamed object when 
+**          the length of the name is excessively long.
+*/
+
+STATUS
+##IIOOctRename ( self, row, oldname, a1 )
+##register OO_CATALOG	*self;
+OO_CATREC		*row;
+char			*oldname;
+i4			a1;
+##{
+	OO_CATREC	rowbuf;
+
+	if ( row == NULL )
+		row = &rowbuf;
+
+	if ( _send(catCheck, self)(self, row) == OK )
+	{ /* got row from catalog */
+		char	ans[FE_PROMPTSIZE+1];
+		OOID	class;
+		char	*owner = (*row->owner == EOS)
+					     ? IIUIdbdata()->user : row->owner;
+
+		class = row->class;
+		if ( IIOOidCheck(&class, &row->id, row->name, owner, a1) != OK )
+		{
+			IIUGerr( E_OO0026_NotOwner, UG_ERR_ERROR,
+					2, OOsnd(class, _name), row->name
+			);
+			return FAIL;
+		}
+
+		IIUFprompt( ERget(S_OO0004_Enter_new_name_Prompt), 1,
+				(bool)FALSE, ans, sizeof(ans)-1, 0
+		);
+		if ( ans[0] != EOS && (CVlower(ans), !STequal(row->name, ans)) )
+		{
+			if ( FEchkname(ans) != OK )
+			{
+				IIUGerr( E_OO0005_Not_a_legal_name, UG_ERR_ERROR,
+					2, ans, OOsnd(class, _name)
+				);
+			}
+			else
+			{
+				IIUGmsg(ERget(S_OO0009_Rename_Status), FALSE,
+					3, OOsnd(class, _name), row->name, ans
+				);
+				if ( IIOOidRename(&class, &row->id, row->name,
+						owner, STalloc(ans), a1) != OK )
+				{
+					/*
+					**  Just return since 'IIOOidRename()'
+					**  has put out error message already.
+					**  Fix for jup bug 666.
+					*/
+					return FAIL;
+				}
+				else
+				{
+					STcopy(UGcat_now(), row->alter_date);
+					if ( oldname != NULL )
+						STcopy(row->name, oldname);
+					STcopy(ans, row->name);
+					if ( self->c_noload )
+						_send(catEmpty, self)(self);
+					else
+					{
+##						DELETEROW self->c_form
+##							self->c_tfield;
+						_send(catInsertRow, self)(
+							self, OOp(row->id),
+							FEtbsins( self->c_form,
+								self->c_tfield,
+								ans, _name,
+								TRUE
+							)
+						);
+					}
+					return OK;
+				}
+			}
+		}
+	}
+	return FAIL;
+##}
+
+
+/*{
+** Name:	IIOOctFetch() -	Fetch Object in Current Row from DB.
+**
+** Description:
+**	Gets row from catalog tableField, 
+**	fetches object info from database if necessary for expert-mode,
+**	invokes OO method given by 'sym' on object, passing it
+**	arbitrary args a0 ... a6; 
+**
+**	This routine will probably only be used by Vigraph at present.
+**
+** Input params:
+**	self	{OO_CATALOG *}  The visual object catalog.
+**	sym	{char []}	// method selector string
+**	PTR	a0, a1, ... a6; // arbitrary args
+**
+** Output params:
+**	row	{OO_CATREC *}  Catalog row object for row.
+**
+** Returns:
+**	{STATUS}  OK	// operation succeeds
+**		  FAIL	// if row fetch failed or as returned by
+**			   named method.
+**
+** Side Effects:
+**	object may be fetched from database and allocated;
+**
+** History:
+**	01/89 (jhw) -- Modified from 'OOcatRead()' to be method.
+*/
+
+STATUS
+IIOOctFetch ( self, sym, row, a0, a1, a2, a3, a4, a5, a6 )
+register OO_CATALOG	*self;
+char			sym[];
+OO_CATREC		*row;
+PTR	a0,a1,a2,a3,a4,a5,a6;
+{
+	OO_CATREC	rowbuf;
+	OOID	class;
+
+	if ( row == NULL )
+		row = &rowbuf;
+
+	if ( _send(catCheck, self)(self, row) != OK )
+		return FAIL;
+	class = row->class;
+	return IIOOidFetch(&class, &row->id, row->name, sym,
+			a0,a1,a2,a3,a4,a5,a6
+	);
+}

@@ -1,0 +1,67 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at a catalog of the frame and procedure components defined and
+used by an application.  The table field lists all the frames and procedures
+along with their type and descriptive short remark.
+
+To create a new frame or procedure, use the Create menu operation.  To perform
+one of the menu operations on an existing application, first position the
+cursor on the row containing the name of the frame or procedure of interest by
+using the cursor keys or the table field scrolling keys.  After the cursor
+has been positioned on the row containing the frame or procedure of interest,
+select the desired menu operation.
+
+To create or edit other global components (record type definitions, global
+variables, or constants), use the Globals menu operation.
+
+The menu options are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Create          Create a definition of a new frame or procedure
+                        component.  A series of pop-up frames will be
+                        displayed that allow selection of the type of
+                        component and specification of its name.  If the
+                        component does not exist, it will be created and
+                        you will be placed in the definition frame for that
+                        component.
+
+        Destroy         Destroy the frame or procedure you have selected from
+                        the database.  You will be asked to confirm this
+                        decision.  You may only destroy frames or procedures
+                        that you are authorized to modify.
+
+        Edit            Edit the selected frame or procedure.  This goes to
+                        Edit Definition frame for the selected component, where
+                        you can change its definition.
+
+        Rename          Change the name of the frame or procedure you have
+                        selected.  You will be prompted for the new name of 
+                        the frame or procedure.  If you immediately depress 
+                        the RETURN key without entering a name, the command is 
+                        cancelled and the cursor returns to the table field.  
+                        If you enter a legal name, the name of the component 
+                        is changed in the database. 
+
+        Go              Run the application.  This allows you to test
+                        the application before you have finished defining
+                        it, or before you create an executable image. 
+
+        Globals         Create or edit application global variables, constants,
+                        or record type definitions.
+
+        Defaults        Edit the application's build parameters, which
+                        includes the Source-Code Directory.
+
+        Errors          Display the outstanding compilation errors for
+                        the current application.
+
+        Utilities       Brings up a submenu of utility functions to perform
+                        on the application or in general.  You can create
+                        an executable image of the application, or access
+                        other Ingres utilities using INGRES/Menu.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the application catalog frame.
+
+        Quit            Exit the program.

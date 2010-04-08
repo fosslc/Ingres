@@ -1,0 +1,3 @@
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/include=(gver)	! for II_copyright
+II_COMPATLIB/share

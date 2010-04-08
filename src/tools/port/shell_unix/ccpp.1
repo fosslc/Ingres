@@ -1,0 +1,69 @@
+.TH CCPP 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History:
+.\"	31-jul-1989 (boba)
+.\"		Change conf to tools/port/conf.
+.\"	02-oct-1989 (boba)
+.\"		Add the new -U option.
+.\" 	15-oct-1992 (lauraw)
+.\"		Updated for new VERS handling.
+.\"		Also added mention of bzarch.h, since that's what actually
+.\"		happens in ccpp.sh.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+ccpp \- run cpp over tools/port/conf/CONFIG and given files
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B ccpp
+[ -c xxx_uyy ] [ files... ] [-Dsym ...] [-Usym ...]
+.br
+.B ccpp
+[ -c xxx_uyy ] -s symbol [-Dsym ...] [-Usym ...]
+.SH DESCRIPTION
+.I Ccpp
+runs the C
+pre-processor over the configuration boiler-plate \fBtools/port/conf/CONFIG\fR, 
+and then over the specified files.  \fICcpp\fR is keyed on the config string,
+which is normally determined by the cl/hdr/hdr/bzarch.h file, if it exists,
+or by
+.I readvers
+from the VERS file.
+.PP
+\fBCONFIG\fR has #ifdef's in it for each possible config string, and
+#define's a variety of symbols.  The symbols defined in \fBCONFIG\fR will
+grow, but currently are the "R_*" symbols developed for controlling
+what source directories gets copied to a source client
+and the "RLS_*" symbols used for controlling the release tape making
+procedures.
+.PP
+.I -c
+overrides the default config string.
+Using
+.I -c
+will cause ccpp to ignore both bzarch.h and VERS.
+.PP
+.I -D
+is used to define additional symbols to the C pre-processor other than
+the ones defined in \fB$ING_SRC/tools/port/conf/CONFIG\fR for the given config string.
+.PP
+.I -U
+is used to undefine symbols that the C pre-processor defines by default
+(e.g. "unix").
+.PP
+.I -s
+is used to specify a single symbol, the value of which will be output
+by ccpp.  For example, "ccpp -s RLS_SIZE" will return just the value
+of the RLS_SIZE symbol for the configuration identified in 
+\fB$ING_SRC/tools/port/conf/VERS\fR.
+.SH FILES
+.br
+tools/port/conf/VERS
+.br
+tools/port/conf/CONFIG
+.SH "SEE ALSO"
+.BR readvers(1)
+.SH BUGS
+.I Ccpp
+checks the config string against a hard coded list of valid operating
+system types (e.g. u42, us5).  If a new system type is added,
+ccpp must be modified to include it in the list of valid system types.

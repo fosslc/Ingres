@@ -1,0 +1,88 @@
+/*
+** Copyright (c) 2006 Ingres Corporation
+*/
+/*
+** Generic part file for Ingres Package Manager
+*/
+
+/*
+** History
+**    25-Oct-2006 (hanje04)
+**	SIR 116911
+**	Add Ingres package manager
+**    01-Dec-2006 (hanje04)
+**	SIR 116911
+**	Add images for package manager
+**    12-Mar-2007 (hanje04)
+**	Add new icons for package manager and GUI installer.
+**    14-Mar-2007 (hanje04)
+**	More new icons.
+**    06-Oct-2009 (hanje04)
+**	BUG 122309
+**	Add new icons to package manager
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART packman
+
+/*
+** ingres!utility
+*/
+
+   BUILD_DIR (ING_BUILD)!utility
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY ingres!utility
+#endif
+      EXECUTABLE ingpackman
+
+/*
+** ingres!files!pixmap
+*/
+   BUILD_DIR (ING_BUILD)!files!pixmaps
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!pixmaps
+#else
+	DIRECTORY ingres!files!pixmaps
+#endif
+      FILE check3.png
+      FILE enterprise.ico
+      FILE Ingres_Logo_WordMark_Trim.gif
+      FILE tux.png
+      FILE wabi.png
+      FILE admin_32.ico
+      FILE calendar_month_1_config_48.ico
+      FILE connect_to_db_config_48.ico
+      FILE connect_to_db_next_48.ico
+      FILE folder_24.ico
+      FILE folder_48.ico
+      FILE database2_clock_48.ico
+      FILE database2_config_48.ico
+      FILE database2_info_48.ico
+      FILE database2_next_48.ico
+      FILE database2_reload_48.ico
+      FILE database2_star_48.ico
+      FILE database2_up_48.ico
+      FILE info_16_2.ico
+      FILE group_32.ico
+      FILE network_48.ico
+      FILE server_48.ico
+      FILE server_complete_48.ico
+      FILE server_custom_48.ico
+      FILE terminal_48.ico
+      FILE tool_add_48.ico
+      FILE trash_48.ico
+      FILE wizard_clock_48.ico
+      FILE wizard_config_48.ico
+      FILE world_clock_32.ico
+      FILE world_database_128.ico
+      FILE world_write_32.ico
+      FILE BI_48.png
+      FILE cm_48.png
+      FILE ingres_48.png
+      FILE txn_48.png

@@ -1,0 +1,10 @@
+#
+# Jamfile file for cl!clf!nm_vms
+#
+
+SubDir ING_SRC cl clf nm_vms ;
+
+IISUBSYS cl clf nm_vms ;
+
+IILIBRARY COMPATLIB : nmpathing.c nmpart.c nmgtat.c nmfiles.c
+	nmgetenv.c nmgtingat.c ;

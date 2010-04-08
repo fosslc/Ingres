@@ -1,0 +1,21 @@
+#
+# Jamfile file for front!ice!ICETranslate
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC front ice ICETranslate ;
+
+IISUBSYS front ice ICETranslate ;
+
+if $(BUILD_ICE)
+{
+
+IIBINEXE ICETranslate : ICETranslate.cpp ;
+IICppNeedLibs ICETranslate :  ICETRANSLATELIB ICECONFLIB
+	SHXERCESLIB SHCOMPATLIB ;
+IIUNDEFS ICETranslate :  malloc ;
+
+IILIBRARY ICETRANSLATELIB : ICETranslateHandlers.cpp ;
+
+}

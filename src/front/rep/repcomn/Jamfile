@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!rep!repcomn
+#
+
+SubDir ING_SRC front rep repcomn ;
+
+IISUBSYS front rep repcomn ;
+
+
+IILIBRARY REPCOMNLIB : dberrchk.sc crkeycls.sc ckunqkey.sc
+	validnm.c tblobjs.c delimnam.c bldmsgst.c ;
+

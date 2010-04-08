@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  hex_session_ids allows you to change the radix of session identifiers
+  displayed in the various IMA tables from decimal to hexadecimal.
+
+  IMA columns affected by setting this for a DBMS server are:
+
+      ima_server_sessions.session_ptr
+      ima_server_sessions.session_id
+
+      ima_server_sessions_desc.session_id
+
+      ima_server_sessions_extra.session_id
+
+      ima_locklists.locklist_session_id
+
+      ima_log_processes.force_abort_session
+      ima_log_processes.group_commit_session
+
+      ima_log_transactions.tx_session_id
+
+  IMA columns affected by setting this for an ICESVR are:
+
+      ice_user_transactions.trn_session
+

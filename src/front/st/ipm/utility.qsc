@@ -1,0 +1,898 @@
+/*
+** Copyright (c) 1988, 2008 Ingres Corporation
+**      All rights reserved.
+*/
+
+/*
+** utility.qc
+**
+** This file contains miscellaneous routines which obtain info
+** from VMS about logical names and process information,
+** perform cleanup operations and print command line option help message.
+**
+** This file defines
+**      sub_str() - substring function which returns the pointer into the target
+**			(also, simpler and more robust, and case insensitive.)
+**	get_pid_from_name() - given a process name, this routine returns the pid
+**	get_pid_from_dev() - given a device name, this routine returns the pid
+**	clean_up() - this routine is called when the program is exiting
+**	syntax_error() - prints out list of command line options
+**	enable_frs() - called to turn on frs, also sets a static used
+**	   in error handling which indicates whether or not the frs is on
+**      stat_decode() - given a bit field and a wordlist, puts the words
+**	   in the wordlist into a string buffer that correspond to the
+**	   set bits in the bit field
+**	dispmsg() - called by other routines to display errors.  Depending
+**	   upon whether the forms system is active, the message will be
+**	   outputted as a popup or directly to the screen.  Also, the caller
+**	   can specify what kind of message (popup or regular) when the forms
+**	   system is active.
+**	setlangcode() - determines the INGRES language code.  Used to determine
+**	   what langauge error messages are in.
+**	geting_error() - given an error code and a return buffer, this routine
+**	   gets the text for the error code and places it in the return buffer
+**	strmove() - given a pointer to a string and destination ptr, this
+**	   routine moves count characters to destination
+**	version_check() - lookup server version from system catalogs,
+**	   decide if we can run on it
+**	my_help() - homebrew help to avoid depending on formindex file
+**	refresh_status() - display whether we're in autorefresh mode
+**
+** History:
+**	12-sep-91 (kirke)
+**	    Removed obsolete and unused functions cindex() and index().
+**	    They caused link problems on some boxes.
+**      5/26/93 (vijay)
+**              include pc.h
+**      21-Sep-1993 (smc)
+**              Added <cs.h> for CS_SID.
+**      23-sept-1993 (huffman)
+**              STtrmwhite requires only one parameter, and according
+**              to the code in the CL it returns the length of new string.
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**  10-mar-95 (reijo01) Bug 59221#
+**      Cleaned up help information. added function display_help.
+** 		changed syntax_error to call display_help.
+**      20-apr-1995 (nick) Bug 67888
+**              Add new transaction ckp lock types.
+**	21-aug-1995 (albany)  Bug #70787
+**		Updated Vmslkstat[] and Lklststcl[] to be in line with
+**		lkdef.h so that the proper values for the bitmaps are
+**		displayed.  Changed Vmslkstat from char * to char
+**		in order to use stat_decode.  Also shortened some
+**		descriptions.
+**	12-sep-95 (albany)
+**		Within stat_decode(), in the case where bit_var was 0, 
+**		buf_ptr's contents were indeterminate.  We now initialize 
+**		buf_ptr[0] to EOS.  If bit_var is 0, a clean value is returned;
+**		otherwise we just STcat the values on.
+**	 1-nov-95 (nick)
+**		Removed unused code.
+**	22-nov-1996 (dilma04)
+**              Add "PH Page"  and "Value" for row level locking.
+**      19-Mar-1997 (mosjo01/linke01)
+**              defined variable inline as in_line for dgi_us5, inline is a system 
+**              compiler key word.
+**	10-Feb-1998 (bonro01)
+**		Defined variable inline as in_line for dgi_us5.
+**	24-feb-98 (toumi01)
+**		Define inline as in_line for Linux (lnx_us5); inline is keyword.
+**      16-feb-1999 (nanpr01)
+**          Support update mode lock.
+**	06-oct-1999 (toumi01)
+**		Change Linux config string from lnx_us5 to int_lnx.
+**      08-Aug-2000 (hanal04) 
+**              Defined variable inline as in_line for axp_osf.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	14-Jun-2000 (hanje04)
+**		Define inline as in_line for OS/390 Linux (ibm_lnx)
+**	08-Sep-2000 (hanje04)
+**		Define inline as in_line for Alpha Linux (axp_lnx).
+**	19-Sep-2001 (kinte01)
+**		Define inline as in_line for VMS
+**	05-Mar-2002 (jenjo02)
+**	   Added LK_SEQUENCE lock type.
+**	14-Jun-2002 (hanch04)
+**	    change inline to be in_line for everything.
+**	28-oct-2008 (joea)
+**	    Use EFN$C_ENF and IOSB when calling a synchronous system service.
+**	    Replace homegrown item list by ILE3.
+**	24-Nov-2009 (frima01) Bug 122490
+**	    Added return type for refresh_status Moved string_move and
+**	    clean_up prototypes to fe.h to eliminate gcc 4.3 warnings.
+*/
+/* includes and globals */
+#include <compat.h>
+#ifdef VMS
+#include <starlet.h>
+#include <dvidef.h>
+#include <efndef.h>
+#include <iledef.h>
+#include <iosbdef.h>
+#endif 
+#include <cs.h>
+#include <dbms.h>
+#include <fe.h>
+#include <pc.h>
+#include <lk.h>
+#include <lg.h>
+#include <er.h>
+#include <si.h>
+#include <st.h>
+#include <cm.h>
+#include <lo.h>
+#include <adf.h>
+#include <ft.h>
+#include <fmt.h>
+#include <frame.h>
+#include "lists.h"
+#include "dba.h"
+#include "msgs.h"
+
+i4  get_pid_from_name();
+i4  get_pid_from_dev();
+VOID syntax_error();
+VOID display_help();
+VOID enable_frs();
+VOID stat_decode();
+VOID setlangcode();
+VOID geting_error();
+VOID l_free();	/* called from clean_up to free memory */
+FUNC_EXTERN VOID close_db();
+
+GLOBALDEF char *Lock_type[] = {" ", "Database", "Table", "Page", "Extend",
+	"SV Page", "Create Table", "Name", "Config", "DB_TBL_ID",
+	"SV Database", "SV Table", "Event", "Control", "Journal", "Open DB",
+	"Checkpoint", "CKP Cluster", "Buffer Mgr", "BufMgr DB", "BufMgr Table",
+	"Sys Control", "Ev Connect", "Audit", "Row", "CKP Txn", "PH Page",
+        "Value", "Sequence"};
+GLOBALDEF u_i4	Lock_type_size = sizeof(Lock_type) / sizeof(Lock_type[0]);
+
+GLOBALDEF char *Lkmode[] = {"N", "IS", "IX", "S", "SIX", "U", "X"};
+GLOBALDEF u_i4	Lkmode_size = sizeof(Lkmode) / sizeof(Lkmode[0]);
+
+GLOBALDEF char *Lkstate[] = {" ", "GR", "CV", "WT"};
+GLOBALDEF u_i4	Lkstate_size = sizeof(Lkstate) / sizeof(Lkstate[0]);
+
+GLOBALDEF char *Invalid[] = {" ", "Invalid"};
+GLOBALDEF u_i4	Invalid_size = sizeof(Invalid) / sizeof(Invalid[0]);
+
+#ifdef VMS
+GLOBALDEF char	Vmslkstat[] = " ,TEMP,CANCEL,ENQWAIT,CONCANCEL";
+#endif
+
+GLOBALDEF char Lklststcl[] = "WAIT,NONPROT,ORPHAN,EWAIT,RECOVER,MASTER,\
+ESET,EDONE,NOINT,SHARED,PSHARED,ENQWAIT,GBL_DLK_SRCH,STALL_ENQ,M_CSP";
+
+GLOBALDEF char Lklstst[] = "WAIT,NONPROT,ORPHAN,EWAIT,RECOVER,MASTER,ESET,\
+EDONE,NOINT,SHARED,PSHARED";
+
+
+#ifdef VMS 
+
+/* Definition of a string descriptor, used in various system calls */
+typedef struct dsc$descriptor STR_DESC;
+#endif /* VMS */
+
+/* defines for stat_decode() */
+#define		MAXVALUES  32
+#define		VALLENGTH  40
+
+/*
+**  statics
+**
+**	forms_on - if set, the FRS is on, else it is off.
+**	lang_code - set at startup.  Used to get ingres errors.
+*/
+static bool	forms_on = FALSE;
+static i4	lang_code = 0;
+
+
+/*
+** sub_str
+** 
+** find occurance of substr in str.
+** If the substr is found in str, a pointer to substr is returned. 
+*/
+char *
+sub_str(str, substr)
+char	*str;
+char	*substr;
+{
+    d_print("looking for substring <<%s>> in string <<%s>>\n", substr, str);
+    if (str == NULL || substr == NULL || *str == EOS)
+	return(NULL);
+
+    /*
+    **  Perform substring function.  If the substring
+    **  occurs anywhere in the target string, the pointer is returned.
+    */
+    while (*str != EOS)
+    {
+	char *p_str = str;
+	char *p_substr = substr;
+
+	while (CMcmpnocase(p_str, p_substr) == 0 && *p_str != EOS) 	
+	{
+	    p_str++;
+	    p_substr++;
+	}
+	if (*p_substr == EOS)
+	    return (str);
+
+	str++;
+    }
+    return (NULL);
+}
+
+/*
+** get_pid_from_name - given a process name, this routine
+**	returns positive pid, else 0.
+**
+*/
+i4
+get_pid_from_name(process_name)
+char *process_name;
+{
+    i4	 process_id = 0;
+#ifdef VMS
+    IOSB	iosb;
+    STATUS	status;
+    char	proc_name[16];
+    i4		length = 0, pid = -1;
+
+    ILE3 jpiinfo[] = {
+	{sizeof(process_id), JPI$_PID, &process_id, 0},
+	{sizeof(proc_name), JPI$_PRCNAM, proc_name, 0},
+	{0, 0}
+    };
+		
+    /*
+    **  Get the information we want - get each process - when the process
+    **  with the process name matching the passed process name is found,
+    **  return the pid
+    */
+    for (;;) 
+    {
+	status = sys$getjpiw(EFN$C_ENF, &pid, 0, &jpiinfo, &iosb, 0, 0);
+	if (status & 1)
+	    status = iosb.iosb$w_status;
+	if (status != SS$_NORMAL) 
+	{
+	    if (status == SS$_NOPRIV)
+	    {
+		POP_MSG("privilege error: process info requires WORLD privilege");
+		return 0;
+	    }
+	    else if (status != SS$_NOMOREPROC) 
+	    { 
+		/* bad return code - bail out */
+		terminate(status, "get_pid_from_name: sys$getjpi returned %d",
+		    status);
+	    } 
+	    else 
+	    {
+		process_id = 0;	/* no pid found */
+		break;
+	    }
+	}
+
+	/* Check if process names match */
+	if (!STcompare(process_name, proc_name)) 
+	{	
+	    /* got a match */
+	    break;
+	}
+    }
+#endif /* VMS */
+    return(process_id);
+}
+
+/*
+** get_pid_from_dev - given a process name, this routine returns
+** the pid, else 0
+*/
+i4
+get_pid_from_dev(devname)
+PTR devname;
+{
+    int	process_id = 0;
+#ifdef VMS
+    IOSB iosb;
+    int status;
+    int length = 0;
+
+    STR_DESC	term_name;
+
+    ILE3 dviinfo[] = {
+	{sizeof(process_id), DVI$_PID, &process_id, 0},
+	{ 0, 0, 0, 0}
+    };
+
+    /* get rid of all white space */
+    term_name.dsc$w_length = STtrmwhite(devname);
+    term_name.dsc$a_pointer = devname;
+
+    /*
+    **  Get the info we want, get the process id of the owner of the
+    **  passed device name, in this case a terminal.  Return the pid;
+    */
+    status = sys$getdviw(EFN$C_ENF, 0, &term_name, &dviinfo, &iosb, 0, 0, 0);
+    if (status & 1)
+	status = iosb.iosb$w_status;
+    if (status != SS$_NORMAL)
+    {
+	if ((status != SS$_NOSUCHDEV) && (status != SS$_BADPARAM) &&
+	    (status != SS$_IVDEVNAM) && (status != SS$_IVLOGNAM))
+	{
+	    STprintf("get_pid_from_term -> sys$getdviw returned %d \n", status);
+	    PCexit(status);
+	}
+	else
+	{
+	    process_id = 0;	/* no pid found */
+	}
+    }
+#endif /* VMS */
+    return(process_id);
+}
+
+/*	enable_frs
+**
+**	Turns on the INGRES forms system.  This routine also toggles a static
+**	which indicates whether or not the forms system is on or not.  When
+**	exiting due to error, the static flag (forms_on) determines if an
+**	##ENDFORMS needs to be issued.
+**
+**	1 June 1992      jpk    disabled use of editor or shell --
+**			        security hole if IPM installed setuid
+*/
+VOID
+enable_frs()
+{
+##  FORMS			/* Turn on the INGRES FORMS system */
+##  set_frs frs (editor = 0)	/* disable two dangerous commands */
+##  set_frs frs (shell = 0)		/* (dangerous if IPM is setuid) */
+##  SET_FRS FRS (timeout = 0)	/* prevent timeout from affecting ALL screens */
+    forms_on = TRUE;		/* toggle the FORMS status flag */
+}
+
+/*	clean_up
+**
+**	calls the database closure routine and if output to a file, closes
+**	file.  Closes down the forms system, if currently turned on.
+**	Also frees up malloc'ed memory (l_free() can be called at any time
+**	because it checks if there is any)
+*/
+VOID
+clean_up()
+{
+    close_db();
+    if (forms_on) 
+    {
+##      CLEAR SCREEN
+##	ENDFORMS
+    }
+
+    /*
+    ** Free up linked list memory
+    */
+    l_free(RESINFO, 0);
+    l_free(DBINFO, 0);
+    l_free(LOCKINFO, 0);
+    l_free(SERVERINFO, 0);
+
+    return;
+}
+ 
+/*	syntax_error
+**	called from process_args.	
+**	if bad flag has been specified, spits out correct syntax and
+**	exits
+*/
+VOID
+syntax_error(err, text)
+char	*err;
+char	*text;
+{
+    clean_up();
+    SIprintf("error at \"%s\": %s\n", err, (STlength(text) > 0) ? text : "");
+	display_help();  
+    terminate(FAIL, "command line error");
+}
+
+/*	display_help
+**	called from process_args and syntax_error.	
+*/
+VOID
+display_help()
+{
+    SIprintf("usage: ipm [-ddbname] [-e] [-i] [-l | -lresource_type]\n");
+    SIprintf("\t[-n] [-rtime] [-s] [-ttablename]\n\n");
+    SIprintf("    -ddbname\tonly report on resources for database 'dbname'\n");
+    SIprintf("    -e\t\tdisplay system locklists in addition to user locklists\n");
+    SIprintf("    -i\t\tdisplay inactive transactions in addition to user transactions\n");
+    SIprintf("    -l\t\treport on ALL resource types (cache, admin, etc.)\n");
+    SIprintf("    -lresourcetype\treport only on the specified resource type (pg,II,..)\n");
+    SIprintf("    -n\t\tdon't print resources granted in NL (Null) mode\n");
+    SIprintf("    -rtime\tspecify refresh interval (seconds)\n");
+    SIprintf("    -s\t\tstandalone mode, databases will not be opened\n");
+    SIprintf("    -t\t\treport on a particular table (must specify a database name)\n");
+}
+
+/*
+** stat_decode - given a list of values, a bit field and a pointer to a
+**	buff, this routine will put the values (from the value list) into
+**	the string buffer depending upon what bits are set in the bit field
+**
+** History
+**	2/24/89		tmt	written
+**	12-sep-95 (albany)
+**	    In the case where bit_var was 0, buf_ptr's contents were
+**	    indeterminate.  We now initialize buf_ptr[0] to EOS.  If bit_var
+**	    is 0, a clean value is returned; otherwise we just STcat
+**	    the values on.
+**
+** Inputs
+**	bit_var - the bit field to decode
+**	val_list - the list of values to decode with.
+**		The values must be separated by a ",".
+**		The value list can't contain more than MAXVALUES values.
+**		Each value can't be longer than VALLENGTH long.
+**	buf_ptr - the ptr to the buff where to place the selected
+**		values
+**
+** Output
+**	the values placed into the buffer pointed to by buf_ptr
+**
+** Returns
+*/
+VOID
+stat_decode(buf_ptr, val_list, bit_var)
+char *buf_ptr;
+char *val_list;
+u_i4  bit_var;
+{
+    i4		numvals;
+    i4		count;
+    i4		length;
+    i4		delim_pos[MAXVALUES];
+    i4		vallen;
+    i4		cnt;
+    u_i4	mask;
+    char	*valptr;
+    char	*strptr;
+    char	buf[VALLENGTH + 1];
+
+    *buf_ptr = EOS;
+
+    /*
+    ** Determine how many values are in the list and remember where the
+    ** delimiters are
+    */
+    length = STlength(val_list);	/* length of value list */
+    if (length == 0) return;  /* no value list passed */
+
+    numvals = 0;
+    delim_pos[numvals++] = 0;	/* first value position */
+    for (valptr = val_list, count = 1; count <= length; count++, valptr++) 
+    {
+	if (*valptr == ',') 
+	{
+	    delim_pos[numvals] = count; /* where delimiter is */
+	    numvals++;			/* another value */
+	    if (numvals > MAXVALUES) 
+	    {	
+		/* too many elements */
+		return;
+	    }	    
+	}
+    }	    
+
+    /*
+    ** Build string in buffer
+    */
+    cnt = 0;	/* number of values in the built list */
+    for (count = 1, mask = 1; count <= numvals; count++, mask = mask<<1)
+    {
+	if (mask & bit_var)  /* there is a bit set */
+	{
+	    /* get beginning of value */
+	    strptr = &val_list[delim_pos[count - 1]];
+
+	    /*
+	    ** Determine length of value.  Extract value from value list.
+	    ** Place value into return buffer.
+	    */
+	    if (count == numvals)  /* last item, use strlen length instead */
+	    {
+		vallen = length - delim_pos[count - 1]; /* account for "," */
+	    }
+	    else
+	    {
+		vallen = delim_pos[count] - delim_pos[count - 1] - 1;
+	    }
+	    if (vallen > VALLENGTH) 	/* error - value too long */
+	    {
+		return;
+	    }
+	    if (vallen == 0) 	/* just a placeholder - no value */
+		continue;
+
+	    string_move(buf, strptr, vallen);	/* extract value from valstr */
+	    buf[vallen] = EOS;
+
+            cnt++;	/* another item in the list */
+	    if ((cnt > 1) && (count <= numvals))  /* glue a "," on */
+		STcat(buf_ptr, ",");
+
+	    STcat(buf_ptr, buf);		  /* glue value onto return buf */
+	}
+    }
+    return;		
+}
+
+/*
+** dispmsg() - this routine is called to display errors.  If the forms system
+**	is on, a popup message is used.  Else, a printf type output is used.
+**
+** Inputs
+**	msg - the message to print
+**	msgtype - the type of message.  This is only lookek at when the
+**		forms system is active.  The types are:
+**		MSG_POPUP - a popup message - must hit return
+**		MSG_LINE - appears at the bottom of the screen (default)
+**	sleeptime - if a regular msg, how long to sleep in seconds
+**
+** Outputs
+**	a message to the screen
+**
+** Returns
+**	nothing
+**
+** History
+**	3/29/89		tmt	written
+**	7/7/89		tmt	modified to insulate from the user whether or
+**				not to use a popup msg or a printf type msg
+**	7/10/89		tmt	modified to allow caller to specify what kind
+**				msg (popup or regular) when forms system is
+**				active.
+*/
+
+VOID
+dispmsg(msg, msgtype, sleeptime)
+##char *msg;
+u_i4 msgtype;
+u_i4 sleeptime;
+{
+##  int msgsleep;
+
+    if (forms_on)
+    {
+	switch(msgtype)
+	{
+	    case MSG_POPUP:
+	    {
+##		MESSAGE msg WITH STYLE = POPUP
+		break;
+	    }
+	    default:
+	    {
+		msgsleep = (int)sleeptime;
+
+##		MESSAGE msg
+##		SLEEP msgsleep
+	    }
+	}
+    }
+    else
+    {
+	SIprintf("%s\n", msg);
+    }
+    return;
+}
+
+/*
+** geting_error - this routine looks up the appropriate error in the
+**	ingres error message files based on errcod.  If the error
+**	is found, it it copied into errmsg buffer and the routine
+**	returns to the caller.
+**
+** Inputs
+**	errcod - the error number to use to get msg text
+**	errmsg - pointer to buffer to place error text in
+**	lang_code - actually a file wide static set by setlangcode
+**
+** Outputs
+**	errmsg - the error message is placed in the buffer pointed to
+**		by errmsg.
+**
+** Side Effects
+**	Assumes setlangcode has been called to set lang_code
+**
+** History
+**	10/1/89		tomt	integrated 6.3 changes
+*/
+static	bool	been_here_before = FALSE;
+
+VOID
+geting_error(errcod, errmsg)
+i4  errcod;
+char *errmsg;
+{
+    i4			err_msg_len;
+    CL_SYS_ERR		cl_err_code;
+    char		errbuf[ER_MAX_LEN];
+
+    if (been_here_before)
+    {
+	STcopy("This routine was called recursively.", errmsg);
+	return;
+    }
+    else
+    {
+	been_here_before = TRUE;
+    }	
+
+    if (ERlookup(errcod, NULL, 0, NULL, errbuf, ER_MAX_LEN, lang_code,
+		&err_msg_len, &cl_err_code, 0, NULL) == OK)
+    {
+	STcopy(errbuf, errmsg);
+    }
+    else
+    {
+	STcopy("Could not find INGRES error message.", errmsg);
+    }
+    return;
+}
+
+/*
+** setlangcode - this routine finds out the language code for INGRES
+**	error messages.  This routine is called at startup by the
+**	initialization routines.
+**
+** Inputs
+**	none
+**
+** Outputs
+**	set the static lang_code
+**
+** History
+**	3/29/89		tomt	written
+**
+*/
+VOID
+setlangcode()
+{
+    if (ERlangcode(NULL, &lang_code) != OK)
+    {
+	terminate(FAIL, "setlangcode: could not find INGRES language code.");
+    }
+}
+
+/*
+** string_move() - given a pointer to a string and destination ptr, this
+**	   routine moves count characters to destination
+**
+** Inputs
+**	strfrom - pointer to string to copy
+**	strto - pointer to location to copy string to
+**	cnt - how many characters to move
+**
+** Outputs
+**	places input string into buffer pointed to by strto
+**
+** History
+**	10/1/89		tomt	written
+**
+*/
+VOID
+string_move(strto, strfrom, cnt)
+PTR strto;
+PTR strfrom;
+i4  cnt;
+{
+    i4  counter;
+
+    /*
+    ** check passed pointers
+    */
+    if ((strfrom == NULL) || (*strfrom == EOS) || (cnt == 0))
+	return;
+
+    if (strto == NULL)
+	return;
+
+    /*
+    ** move values
+    */
+    for (counter = 1; counter <= cnt; counter++)
+	*strto++ = *strfrom++;
+
+    return;
+}
+
+STATUS
+version_check(ok_ver)
+char	*ok_ver;
+{
+##  char	ver_string[20];
+##  retrieve (ver_string = trim(dbmsinfo("_version")))
+    ver_string[STlength(ok_ver)] = EOS;
+    if (STequal(ver_string, ok_ver))
+	return OK;
+    else
+	return FAIL;
+}
+
+
+#define	MAXLEN		78		/* 80 col screen - box borders */
+##define MAXHEIGHT	20		/* 24 line scr - brds - menu - title */
+#define	MAXMAXLEN	255		/* max input line length */
+static bool	fd_forms_added = FALSE;
+##static char Fmyhelp[] = "fmyhelp";
+STATUS
+my_help(fname, title)
+char	*fname;
+##char	*title;
+{
+	char		fullpath[MAX_LOC];
+	LOCATION	loc;
+##	char		in_line[MAXMAXLEN];
+	FILE		*fp;
+##	GLOBALREF int	*fmyhelp;
+	u_i4		currow;
+##	i4		target;
+	u_i4		linect = 0;
+	bool		e_xit = FALSE;
+	bool		forward = TRUE;		/* vector of scroll motion */
+	char		errbuff[150];
+
+	if (IIUGhlpname(fname, fullpath) != OK)
+	{
+		STprintf(errbuff, "Could not find help file \"%s\" for help\
+ on %s.  On UNIX, check $II_SYSTEM/ingres/files/english/%s; on VMS, check\
+ II_SYSTEM:[INGRES.FILES.ENGLISH]%s", fname, title, fname, fname);
+		POP_MSG(errbuff);
+		return FAIL;
+	}
+
+	if (LOfroms(PATH & FILENAME, fullpath, &loc) != OK)
+	{
+		STprintf(errbuff, "Could not build location for help file %s;\
+ looking at full path %s", fname, fullpath);
+		POP_MSG(errbuff);
+		return FAIL;
+	}
+
+	if (SIfopen(&loc, "r", SI_TXT, MAXLEN, &fp) != OK)
+	{
+		STprintf(errbuff, "Could not find help on topic %s;\
+ could not open help file %s", title, fullpath);
+		POP_MSG(errbuff);
+		return FAIL;
+	}
+
+	if (!fd_forms_added)
+	{
+##		ADDFORM fmyhelp
+##		INITTABLE Fmyhelp #disbox READ
+		fd_forms_added = TRUE;
+	}
+
+##	DISPLAY Fmyhelp READ
+##	INITIALIZE
+##	{
+##		CLEAR FIELD ALL
+##		PUTFORM (#title = title)
+		while (SIgetrec(in_line, MAXMAXLEN, fp) != ENDFILE)
+		{
+			in_line[MAXLEN] = EOS;
+##			LOADTABLE Fmyhelp #disbox (#disline = in_line)
+			++linect;
+		}
+		SIclose(fp);
+		target = MAXHEIGHT;
+		if (target > linect)
+			target = linect;
+		while (!e_xit)
+		{
+##			SCROLL Fmyhelp #disbox to target
+			currow = target;
+##			REDISPLAY
+##			SUBMENU
+##			ACTIVATE MENUITEM "NextPage":
+##			{
+				if (currow < linect)
+				{
+					target = currow + (MAXHEIGHT - 2);
+					if (!forward)
+						target += MAXHEIGHT;
+					if (target > linect)
+						target = linect;
+					forward = TRUE;
+				}
+##			}
+##			ACTIVATE MENUITEM "PrevPage":
+##			{
+				if (currow > 1)
+				{
+					target = currow - (MAXHEIGHT - 2);
+					if (forward)
+						target -= MAXHEIGHT;
+					if (target < 1)
+						target = 1;
+					forward = FALSE;
+				}
+##			}
+##			ACTIVATE MENUITEM "Top":
+##			{
+				target = 1;
+				forward = FALSE;
+##			}
+##			ACTIVATE MENUITEM "Bottom":
+##			{
+				target = linect;
+				forward = TRUE;
+##			}
+##			ACTIVATE MENUITEM "End", frskey3
+##			{
+				e_xit = TRUE;
+##				BREAKDISPLAY
+##			}
+		}
+##	}
+##	FINALIZE
+}
+
+/* refresh_status: display whether we're in autorefresh mode.
+ * really just a convenience to modularize here
+ */
+VOID
+refresh_status(visible, formname)
+bool	visible;
+##char	*formname;
+{
+##  char	refresh_msg[40];
+
+    if (visible)
+    {
+##	SET_FRS FIELD formname (invisible(#autorefresh) = 0)
+    }
+    else
+    {
+##	SET_FRS FIELD formname (invisible(#autorefresh) = 1)
+	return;		/* short circuit */
+    }
+
+    if (frs_timeout != 0)
+    {
+	STprintf(refresh_msg, "Enabled, %d second%s",
+		frs_timeout, (frs_timeout > 1) ? "s" : "");
+##	PUTFORM formname (#autorefresh = refresh_msg)
+    } 
+    else 
+    {
+##	PUTFORM formname (#autorefresh = "Disabled")
+    }
+}
+
+/* LOCK_ITOA: safe way to convert lock value to lock type */
+char	*
+lock_itoa(thislock)
+i4(thislock);
+{
+    static char		returnval[25];
+
+    if (thislock < Lkmode_size)
+	STcopy(Lkmode[thislock], returnval);
+    else
+	STprintf(returnval, "%d", thislock);
+    return returnval;
+}

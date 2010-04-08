@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlkrmov.hlp, subtopic 'Removing' of subtopic 'Lookup tables' behind 
+/#-- the main VQ Editor help screen.
+
+To remove a Lookup table from the frame definition and Visual Query display, 
+place the cursor on the Lookup table and select DelTable.  

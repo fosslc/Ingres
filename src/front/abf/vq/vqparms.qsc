@@ -1,0 +1,493 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<er.h>
+# include	<abclass.h>
+# include	<adf.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<frame.h>
+# include	<oocat.h>
+# include	<ooclass.h>
+# include	<st.h>
+# include	<ug.h>
+# include	<runtime.h>
+# include	<cm.h>
+# include	<cv.h>
+
+# include	<metafrm.h>
+
+# include	"ervq.h"
+
+
+/**
+** Name:	vqparms.c - User interface for parameter handling
+**
+** Description:
+**	This file has routines to display existing paramters that are being
+**	passed to a given frame, allows the user to modify the paramters,
+**	and saves the parameters back into the database.
+*	diagram frame.
+**
+**	This file defines:
+**
+**	IIVQparams		Displays and updates parameters for frames
+**
+** History:
+**	14-sep-89 (kenl) - created
+**	20-feb-90 (kenl)
+**		Added call to listpick routines for ListChoices.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+# define _param_prmpt           (ERget(F_VQ0107_param_prmpt))
+# define LOC_UNSET	-1
+# define ON_PARENT	1
+# define ON_CHILD	0
+
+/* GLOBALDEF's */
+GLOBALREF APPL *IIVQappl; /* argument of frame flow entry, the current
+			   application we are editing in abf */
+
+/* extern's */
+FUNC_EXTERN VOID IIVQfplFreeParamLP();
+FUNC_EXTERN VOID IIVQlgLocGlobEdit();
+FUNC_EXTERN STATUS IIAMmpMetaPopulate();
+
+/* static's */
+static 		PTR	loc_alloc();
+
+## static char	*vqparms_form = ERx("vq4glparms");
+## static char	*vqhlparms_form = ERx("vqhlparms");
+## static char	*p_from_column = ERx("p_from");
+## static char	*p_to_column = ERx("p_to");
+static	const char	_empty[] = ERx("");
+static		bool	first_call = TRUE;
+
+VOID
+##IIVQparams(pmf, idx)
+METAFRAME	*pmf;
+i4		idx;
+##{
+	MFCFARG		**margs;
+	MFCFARG		*cfarg;
+##	char		*pfrom, *pto;
+##	char		from_temp[240],to_temp[65];
+##	char		*pform;
+##	char		frame_name[FE_MAXNAME + 1];
+	MFMENU		*cmenu;
+	TAGID		tag;
+	OOID		frame_type;
+	bool		frame;
+##	i4		changed;
+	i4		i, j;
+	i4		form_side;
+	u_i2		flags = 0;
+
+	if (first_call)
+	{
+		first_call = FALSE;
+		IIARiaForm(vqparms_form);
+		IIARiaForm(vqhlparms_form);
+	}
+
+	cmenu = pmf->menus[idx];
+
+	if (IIAMmpMetaPopulate(pmf, MF_P_ARG) != OK)
+	{
+		return;
+	}
+	margs = cmenu->args;
+
+	frame_type = (*(cmenu->apobj)).class;
+
+	switch (frame_type)
+	{
+	  case OC_MUFRAME:
+	  case OC_APPFRAME:
+	  case OC_UPDFRAME:
+	  case OC_BRWFRAME:
+	  case OC_OSLFRAME:
+	  case OC_RWFRAME:
+	  case OC_OSLPROC:
+	  case OC_DBPROC:
+		frame = TRUE;
+		pform = vqparms_form;
+		break;
+
+	  case OC_HLPROC:
+		frame = FALSE;
+		pform = vqhlparms_form;
+		break;
+
+	  case OC_QBFFRAME:
+		IIUGerr(E_VQ0088_No_Params_Allowed, 0, 1, ERx("QBF"));
+		return;
+
+	  case OC_GRFRAME:
+	  case OC_GBFFRAME:
+		IIUGerr(E_VQ0088_No_Params_Allowed, 0, 1, ERx("VIGRAPH"));
+		return;
+
+	  default:
+		IIUGerr(E_VQ0089_Unknown_Frame_Type, 0, 0);
+		return;
+
+	}
+
+##	inittable pform vqparms fill
+##	display pform
+##	initialize()
+##	{
+		STcopy(pmf->apobj->name, frame_name);
+##              putform ( parentframe = frame_name )
+		STcopy(cmenu->apobj->name, frame_name);
+##              putform ( currentframe = frame_name )
+		for (i = 0; i < cmenu->numargs; i++)
+		{
+			pfrom = (*margs)->expr;
+			pto = (*margs)->var;
+			if (frame)
+			{
+##				loadtable pform vqparms (
+##					p_from_column = pfrom,
+##					p_to_column   = pto
+##				)
+			}
+			else
+			{
+##				loadtable pform vqparms (
+##					p_from_column = pfrom
+##				)
+			}
+			margs++;
+		}
+
+##	}
+
+##      activate menuitem ERget(FE_Insert)
+##              (EXPL = ERget(F_FE0110_InsertExpl))
+##      {
+##              i4      curcol;
+
+##              inquire_frs table pform (curcol = rowno(vqparms))
+		--curcol;
+##              insertrow pform vqparms curcol
+##              set_frs form (change = 1)
+##      }
+
+##      activate menuitem ERget(FE_Delete)
+##              (EXPL = ERget(F_FE0111_DeleteExpl))
+##      {
+##              deleterow pform vqparms
+##              set_frs form (change = 1)
+##      }
+
+##      activate menuitem ERget(FE_Move)
+##              (EXPL = ERget(F_VQ0113_ExplMove))
+##      {
+##              i4      currow;
+##              i4      moverec;
+##		i4	state;
+
+##		getrow pform vqparms (state = _STATE)
+		if (state == stUNDEF || state == stDELETE)
+		{
+			IIUGerr(E_VQ0095_Cannot_Move_Empty_Row,
+				UG_ERR_ERROR, (i4) 0);
+##                      resume
+		}
+		else
+		{
+##                      inquire_frs table pform (currow = rowno(vqparms))
+##                      getrow pform vqparms currow (moverec = _RECORD)
+		}
+
+##              display submenu
+##              activate menuitem ERget(FE_Place)
+##                      (EXPL = ERget(F_VQ0114_ExplPlace))
+##              {
+##                      i4      destrec;
+
+##                      inquire_frs table pform (currow = rowno(vqparms))
+##                      getrow pform vqparms currow (destrec = _RECORD);
+			if (destrec == moverec)
+			{
+##                              breakdisplay;
+			}
+##                      scroll pform vqparms to moverec
+
+			if (frame)
+			{
+##                      	getrow pform vqparms (
+##						from_temp = p_from_column,
+##						to_temp   = p_to_column
+##                      	);
+			}
+			else
+			{
+##                      	getrow pform vqparms (from_temp = p_from_column)
+			}
+
+##                      deleterow pform vqparms
+			if (moverec < destrec)
+			{
+				--destrec;
+			}
+##                      scroll pform vqparms to destrec
+##                      inquire_frs table pform (currow = rowno(vqparms))
+			--currow;
+
+			if (frame)
+			{
+##                      	insertrow pform vqparms currow (
+##					p_from_column = from_temp,
+##					p_to_column   = to_temp
+##                      	);
+			}
+			else
+			{
+##                      	insertrow pform vqparms currow (
+##					p_from_column = from_temp
+##                      	);
+			}
+
+##                      set_frs form (change = 1)
+##                      breakdisplay;
+##              }
+
+##              activate menuitem ERget(FE_Help) (validate=0, activate=0,
+##                      EXPL = ERget(F_FE0100_ExplFrameHelp)),
+##                      FRSkey1 (validate = 0, activate=0)
+##              {
+			FEhelp(ERx("vqmvparm.hlp"),
+					ERget(F_VQ0115_Move_Column_Submenu));
+##              }
+
+##              activate menuitem ERget(FE_End) (validate=0, activate=0,
+##                      EXPL = ERget(F_FE0102_ExplEnd)),
+##                      FRSkey3 (validate = 0, activate=0)
+##              {
+##                      breakdisplay;
+##              }
+##      }
+
+##      activate menuitem ERget(F_VQ00A8_vqloc_glob_menu)
+##              (expl = ERget(F_VQ00A9_vqloc_glob_expl),
+##		validate = 0, activate = 0)
+##	{ 
+##		char	formfield[FE_MAXNAME + 1];
+		OO_OBJECT	*frame;
+
+		/* 
+		** See what side we're on, so we know whether to
+		** display local variables for the parent or the child.
+		*/
+##		inquire_frs table pform (formfield = column(vqparms))
+		if (STequal(formfield, p_from_column))
+			frame = pmf->apobj;	/* parent */
+		else
+			frame = cmenu->apobj;	/* child */
+
+		IIVQlgLocGlobEdit(IIVQappl, NULL, frame);
+##	} 
+
+##      activate menuitem ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##                      EXPL = ERget(FE_LookupExpl)),
+##                      FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##      {
+##		char	formfield[FE_MAXNAME + 1];
+##		char	ret_val[FE_MAXNAME + 1];
+
+		ret_val[0]  = EOS;
+##		inquire_frs table pform (formfield = column(vqparms))
+		if (STequal(formfield, p_from_column))
+		{
+			if (form_side == ON_CHILD)
+			{
+				if (flags != 0)
+				{
+					_VOID_ IIVQfplFreeParamLP();
+				}
+			}
+			IIVQfveFrameVarList(pmf->apobj, ret_val, TRUE, &flags);
+			form_side = ON_PARENT;
+		}
+		else
+		{
+			if (form_side == ON_PARENT)
+			{
+				if (flags != 0)
+				{
+					_VOID_ IIVQfplFreeParamLP();
+				}
+			}
+			IIVQfveFrameVarList((USER_FRAME *)cmenu->apobj,
+				ret_val, FALSE, &flags);
+			form_side = ON_CHILD;
+		}
+
+		if (ret_val[0] != EOS)
+		{
+##      		set_frs form (change = 1)
+##			putrow pform vqparms ( formfield = ret_val )
+		}
+##	}
+
+##      activate menuitem ERget(FE_Help)
+##              (expl = ERget(F_FE0100_ExplFrameHelp), validate = 0,
+##                      activate = 0),
+##                      FRSkey1 (validate = 0, activate = 0)
+##	{
+		FEhelp(ERx("vqparam.hlp"), _param_prmpt);  
+##	}
+
+##      activate menuitem ERget(FE_Cancel)
+##              (expl = ERget(F_FE0109_ExplForget), validate = 0, activate = 0),
+##              FRSkey9 (validate = 0, activate = 0)
+##	{ 
+		if (flags != 0)
+		{
+			_VOID_ IIVQfplFreeParamLP();
+		}
+##		breakdisplay 
+##	} 
+
+##      activate menuitem ERget(FE_End), FRSkey3
+##              (EXPL = ERget(F_FE0102_ExplEnd))
+##	{
+##		i4	urow = 0;
+##		i4	state;
+
+		if (flags != 0)
+		{
+			_VOID_ IIVQfplFreeParamLP();
+		}
+
+##      	inquire_frs form (changed = change)
+		if (changed == 0)
+		{
+			IIAMmfMetaFree(pmf, MF_P_ARG);
+##			breakdisplay
+		}
+
+		tag = (pmf->ptag)[MF_PT_ARG];
+
+                if (margs == (MFCFARG **)NULL);
+		{
+			cmenu->args = (MFCFARG **) loc_alloc(tag,
+					MF_MAXARGS*sizeof(MFCFARG *), NULL);
+		}
+
+                cmenu->numargs = 0;
+		if (frame)
+		{
+##			unloadtable pform vqparms (
+##				from_temp = p_from_column,
+##				to_temp   = p_to_column,
+##				urow      = _RECORD,
+##				state	  = _STATE
+##			)
+##			{
+			    if ((state != stDELETE) && (state != stUNDEF))
+			    {
+                		i = STtrmwhite(from_temp);
+				j = STtrmwhite(to_temp);
+                		if ((i != 0) && (j != 0))
+				{
+					cfarg = (MFCFARG *) loc_alloc(tag,
+						sizeof(MFCFARG),NULL);
+					(cmenu->args)[cmenu->numargs] = cfarg;
+                       		 	++(cmenu->numargs);
+					cfarg->var = loc_alloc(tag,0,to_temp);
+					cfarg->expr =
+						loc_alloc(tag,0,from_temp);
+				}
+				else if ((i == 0) && (j != 0))
+				{
+					IIUGerr(E_VQ008A_No_Source_Param, 0, 0);
+##					scroll pform vqparms to urow
+##					resume column vqparms p_from_column
+				}
+				else if ((i != 0) && (j == 0))
+				{
+					IIUGerr(E_VQ008B_No_Destin_Param, 0, 0);
+##					scroll pform vqparms to urow
+##					resume column vqparms p_to_column
+				}
+			    }
+##			}
+		}
+		else
+		{
+##			unloadtable pform vqparms (
+##				from_temp = p_from_column,
+##				urow      = _RECORD,
+##				state	  = _STATE
+##			)
+##			{
+				if ((state != stDELETE) && (state != stUNDEF) &&
+                			(STtrmwhite(from_temp) != 0))
+				{
+					cfarg = (MFCFARG *) loc_alloc(tag,
+						sizeof(MFCFARG),NULL);
+					(cmenu->args)[cmenu->numargs] = cfarg;
+                       		 	++(cmenu->numargs);
+					cfarg->var = ERx("");
+					cfarg->expr =
+						loc_alloc(tag,0,from_temp);
+				}
+##			}
+		}
+		/* set the metaframe state to say that it needs regen */
+		pmf->state |= MFST_DOGEN;
+
+	        /* write the flags to the database */
+		IIAMufqUserFrameQuick(pmf->apobj);
+
+		/* update the frame parameters */
+                IIAMmuMetaUpdate(pmf, MF_P_ARG);
+
+		/* free the frame parameter structures */
+		IIAMmfMetaFree(pmf, MF_P_ARG);
+##		breakdisplay
+##	}
+
+##	finalize
+
+##}
+
+static PTR
+loc_alloc(tag,size,str)
+TAGID   tag;
+i4      size;
+char    *str;
+{
+	PTR mem;
+
+	if (str != NULL)
+		size = STlength(str)+1;
+
+	mem = FEreqmem((u_i4)tag, (u_i4)size, FALSE, (STATUS *)NULL);
+	if (mem == NULL)
+	{
+		return (NULL);
+	}
+
+	if (str != NULL)
+		STcopy(str,(char *) mem);
+
+	return (mem);
+}

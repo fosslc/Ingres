@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!libguids_win
+#
+
+SubDir ING_SRC front vdba libguids_win ;
+
+IISUBSYS front vdba libguids_win ;
+
+
+IISLN libguids.lib : libguids.sln ;

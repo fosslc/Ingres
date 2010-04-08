@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation 
+/#-- vqapfrdt.hlp, subtopic which details frame detail information in the
+/#-- application report.
+/#-- 
+In the application report, the frame details section provides detailed
+information on all the frames in the application:
+
+  Frame Name            The name of the frame.
+  Type                  The frame type (menu, append, browse, update, etc).
+  Owner                 The name of the Ingres user that created the frame.
+  Creation Date         The date/time the frame was originally created.
+  Last Modify Date	The date/time the frame was last changed.
+  Short Remark		A comment about the frame.

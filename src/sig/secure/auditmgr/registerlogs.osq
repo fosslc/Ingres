@@ -1,0 +1,126 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: registerlogs
+**
+** Description: Register security audit logs
+**
+** History:
+**	17-feb-94 (robf)
+**	   Written
+**	23-mar-94 (robf)
+**         Add warning if changing column attributes.
+*/
+
+initialize() = 
+declare
+	errno=integer4 not null;
+	columns.datatype=varchar(20) not null;
+	cmd=varchar(1024) not null;
+	i=integer4 not null;
+	newname=varchar(32) not null;
+	warn=integer4 not null;
+	yn=c10 not null;
+{
+    set session 
+    add privileges (auditor);
+    inquire_sql (errno=errorno);
+    if errno!=0
+    then
+	message  'You do not have sufficient privileges to '+
+		'perform this action'
+	with style=popup;
+	return 0;
+    endif;
+    inittable columns update;
+    loadtable columns (reg_name='audittime', yn='y', datatype='date');
+    loadtable columns (reg_name='user_name', yn='y', datatype='char(32)');
+    loadtable columns (reg_name='real_name', yn='y', datatype='char(32)');
+    loadtable columns (reg_name='userprivileges', yn='y',datatype='char(32)');
+    loadtable columns (reg_name='objprivileges', yn='y',datatype='char(32)');
+    loadtable columns (reg_name='database', yn='y',datatype='char(32)');
+    loadtable columns (reg_name='auditstatus', yn='y',datatype='c1');
+    loadtable columns (reg_name='auditevent', yn='y',datatype='c24');
+    loadtable columns (reg_name='objecttype', yn='y',datatype='c24');
+    loadtable columns (reg_name='objectname', yn='y',datatype='char(32)');
+    loadtable columns (reg_name='objectowner', yn='y',datatype='char(32)');
+    loadtable columns (reg_name='description', yn='y',datatype='char(80)');
+    loadtable columns (reg_name='objectlabel', yn='y',datatype='short security_label');
+    loadtable columns (reg_name='detailinfo', yn='y',datatype='char(256)');
+    loadtable columns (reg_name='detailnum', yn='y',datatype='i4');
+    loadtable columns (reg_name='sessionid', yn='y',datatype='char(16)');
+    loadtable columns (reg_name='querytext_sequence', yn='y',datatype='i4');
+    unloadtable columns 
+    {
+	columns.int_name=columns.reg_name;
+    };
+}
+'Go', key frskey4 =  {
+	validate;
+	cmd='register table "'+tablename+'" (';
+	i=0;
+	warn=0;
+	unloadtable columns 
+	{
+		if columns.yn='y'
+		then
+			if i=1
+			then
+				cmd=cmd+',';
+			else
+				i=1;
+			endif;
+			cmd=cmd+'"'+columns.reg_name+'" '+columns.datatype+' not null ';
+			if columns.reg_name!=columns.int_name
+			then
+				cmd=cmd+'IS '''+columns.int_name+'''';
+				warn=1;
+			endif;
+		else
+			warn=1;
+		endif;
+	};
+	cmd=cmd+') AS IMPORT FROM '''+auditlogfile+''' WITH DBMS=SXA';
+	if  warn=1
+	then
+		yn=prompt 'WARNING: You have changed the default registration '+
+			  ' columns and/or names. This may make the audit log '+
+			  ' unusable with the browse section of this utility. '+
+			  ' Continue ? [y/n]'
+		with style=popup;
+		if yn!='y'
+		then
+			message 'Log NOT registered';
+			sleep 2;
+			resume;
+		endif;
+	endif;
+	execute immediate :cmd;
+	inquire_sql (errno=errorno);
+	if errno!=0
+	then
+		message 'Unable to register audit log'
+		with style=popup;
+		message 'The command executed was: "'+cmd+'"'
+		with style=popup;
+		resume;
+	endif;
+	commit;
+	set session with privileges=default;
+	message 'Audit log '+tablename+' has been registered.';
+	sleep 2;
+	return 1;
+}
+'Cancel', key frskey9 = {
+	set session with privileges=default;
+	return 0;
+}
+'EditName' = {
+	newname=prompt 'Enter alternate name for '+columns.int_name+' :'
+	with style=popup;
+	if newname!=''
+	then
+		columns.reg_name=newname;
+	endif;
+}

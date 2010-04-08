@@ -1,0 +1,15 @@
+#
+# Jamfile file for front!st!patch_unix
+#
+
+SubDir ING_SRC front st patch_unix ;
+
+IISUBSYS front st patch_unix ;
+
+
+IIBINSH install_patch : install_patch.sh ;
+IIUTILSH pffiles : pffiles.sh ;
+IIUTILSH pfinstall : pfinstall.sh ;
+IIUTILSH pfrestore : pfrestore.sh ;
+IIUTILSH pfsave : pfsave.sh ;
+

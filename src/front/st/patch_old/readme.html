@@ -1,0 +1,4783 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0115)file://E:\Documents%20and%20Settings\devjo01\Local%20Settings\Temporary%20Internet%20Files\OLKD\patch_template.html -->
+<HTML><HEAD><TITLE>Service Pack 2 for Ingres 2.0 on Windows</TITLE>
+<META http-equiv=Content-Type content="text/html; charset=windows-1252"><!-- Created with DOC2HTML, 426 (05/20/02) -->
+<STYLE>A:link {
+	FONT-WEIGHT: bold; FONT-SIZE: 12px; COLOR: #000080; TEXT-DECORATION: underline
+}
+A:hover {
+	FONT-WEIGHT: bold; FONT-SIZE: 12px; COLOR: blue; TEXT-DECORATION: underline
+}
+A:active {
+	FONT-WEIGHT: bold; FONT-SIZE: 12px; COLOR: #006666; TEXT-DECORATION: underline
+}
+A:visited {
+	FONT-WEIGHT: bold; FONT-SIZE: 12px; COLOR: blue; TEXT-DECORATION: underline
+}
+BODY {
+	FONT-WEIGHT: normal; FONT-SIZE: 13px; FONT-FAMILY: arial, helvetica
+}
+P {
+	FONT-WEIGHT: normal; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: arial, helvetica
+}
+TD {
+	FONT-WEIGHT: normal; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: arial, helvetica
+}
+TH {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: arial, helvetica
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 23px; COLOR: #000080
+}
+H2 {
+	FONT-WEIGHT: normal; FONT-SIZE: 20px; COLOR: #000080; FONT-FAMILY: arial, helvetica
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 16px; COLOR: #000080; FONT-FAMILY: arial, helvetica
+}
+H4 {
+	FONT-WEIGHT: bold; FONT-SIZE: 16px; COLOR: #000000; FONT-FAMILY: arial, helvetica
+}
+OL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: decimal
+}
+UL OL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: decimal
+}
+UL UL OL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: decimal
+}
+OL OL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: lower-alpha
+}
+UL OL OL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: lower-alpha
+}
+OL UL OL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: lower-alpha
+}
+UL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: disc
+}
+OL UL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: disc
+}
+OL OL UL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: disc
+}
+UL UL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: circle
+}
+OL UL UL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: circle
+}
+UL OL UL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: circle
+}
+UL UL UL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: square
+}
+OL OL OL {
+	LIST-STYLE-IMAGE: url('none'); LIST-STYLE-TYPE: upper-roman
+}
+B {
+	FONT-WEIGHT: bold
+}
+STRONG {
+	FONT-WEIGHT: bold
+}
+I {
+	FONT-STYLE: italic
+}
+EM {
+	FONT-STYLE: italic
+}
+INPUT {
+	FONT-SIZE: 10px; COLOR: #000088; FONT-FAMILY: arial
+}
+TEXTAREA {
+	FONT-SIZE: 10px; COLOR: #000088; FONT-FAMILY: arial
+}
+BLOCKQUOTE {
+	FONT-SIZE: 10px
+}
+PRE {
+	FONT-SIZE: 13px; FONT-FAMILY: "courier new", courier, monospace
+}
+div.Section1
+	{page:Section1;}
+span.SpellE
+	{}
+span.GramE
+	{}
+</STYLE>
+
+<META content="Microsoft FrontPage 4.0" name=GENERATOR></HEAD>
+<BODY>
+<H1><a name="patch_title">Service Pack 2 for Ingres 2.0 on Windows</a></H1>
+<HR>
+<FONT size=-1><NOBR><BR><a href="#patch_title">Service Pack 2&nbsp; for&nbsp; Ingres
+2.0</a> 
+<BR>&nbsp;&nbsp;<a href="#welcome">1.0 
+Welcome</a> <BR>&nbsp;&nbsp;<a href="#installation_considerations">2.0 
+Installation Considerations</a> <BR>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#installation_on_windows_platforms">2.1 
+Installation on Windows platforms</a> <BR>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#de_installation_on_windows_platforms">2.2
+Uninstalling on Windows platforms</a> </NOBR></FONT>
+<FONT size=-1> <BR>&nbsp;&nbsp;<a href="#general_considerations">3.0 
+General Considerations</a> <BR>&nbsp;&nbsp;<a href="#contacting_technical_support">4.0 
+Contacting Technical Support</a> </FONT>
+<P>
+<HR>
+
+<H2><A name=welcome>1.0 Welcome</A></H2>
+<P>Welcome to Service Pack 2 for Ingres 2.0. This
+Service Pack must be installed over Ingres
+2.0 releases 2.0/9808, 2.0/9905, 2.0/0001 or 2.0/0011. In all cases, once the
+installation is complete the release identifier will be II 2.0/0308. This change will not affect system catalogs or user data. This Readme contains important 
+information about Service Pack 2 , including how to install and 
+uninstall it on all platforms, a list of all the problems that the Service Pack
+addresses, and technical support contact information. You can connect to the Ingres Relational Database product page at <A 
+href="http://ca.com/">http://ca.com/</A>. 
+<P>
+<HR>
+
+<H2><A name=installation_considerations>2.0 Installation Considerations</A></H2>
+<P>
+<p>Please be sure to read the problem notes for
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#INGREP55">INGREP55</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#BUG98493">98493</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#BUG98644">98644</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#BUG98645">98645</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#BUG99009">99009</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#INGSRV1820">INGSRV1820</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#INGREP97">INGREP97</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#INGREP98">INGREP98</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#INGREP107">INGREP107</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#INGSRV1841">INGSRV1841</a>,
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#INGSRV463">INGSRV463</a> and
+<a style="text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080" href="#INGSRV895">INGSRV895</a> as they require additional steps for remediation
+over and above applying the Service Pack, or contain warnings.<p>&nbsp;
+<HR>
+
+<H3><a name="installation_on_windows_platforms">2.1 Installation on Windows 
+platforms<br>
+</a></H3>
+<P>To install this Service Pack on Windows platforms: 
+<OL style="list-style-type: decimal">
+  <P>
+  <br>
+  <LI>Log on to your Windows machine. <b>
+  Note: </span></b>
+  To install this Service 
+  Pack on the Ingres DBMS, you must log on as the “ingres” user. For 
+  client installations, you can log on as any user.<br>
+    <br>
+  <br>
+    
+  <li>Stop all Ingres 
+  processes with the INGSTOP utility or through the Ingres Visual Manage (IVM). 
+  You will also need to stop IVM either by issuing the command &quot;ivm -stop&quot; or by 
+  right clicking on the IVM icon and choosing the Exit menu option.<br>
+    <br>
+    <br>
+ </li>
+  <li>If Service Pack is supplied on CD media then load into drive. If you have 
+  downloaded the Service Pack from the CA web site or if<br>
+  the CD you received contains a ZIP file, then you should first un-ZIP the ZIP 
+  file into a temporary directory.<br>
+    <br>
+    <br>
+  </li>
+  <li>Run install.exe from the CD drive or from the temporary directory.<br>
+    <br>
+    <br>
+  </li>
+  <li>Follow the instructions displayed on the screen to complete the Service
+    Pack installation.<br>
+    <br>
+    <br>
+  </li>
+  <li>Restart the Ingres instance.<br>
+    <br>
+  </li>
+</OL>
+<p>During installation the following options are available:</p>
+<p>&nbsp;</p>
+<ol style="list-style-type: decimal">
+  <li>&quot;Force execution of patch install even if cdimage verification fails&quot; - This option forces the Service Pack to be installed despite the 
+  verification of the files to be installed failing. This option should only be 
+  used on the advice of CA technical support.<br>
+    <br>
+    <br>
+  </li>
+  <li>&quot;Backup files to be replaced in the installation&quot; - Any files that will be 
+  replaced during the installation of this Service Pack will be backed up to a 
+  specified directory. The default directory is %II_SYSTEM%\ingres\install\backup. 
+  It is recommended that this option be chosen as it allows the Service Pack to be 
+  uninstalled should that prove necessary.<br>
+    <br>
+    <br>
+  </li>
+  <li>&quot;Install Patch&quot; - This option installs the Service Pack.<br>
+    <br>
+    <br>
+  </li>
+  <li>&quot;View Patch Notes&quot; - This option allows you to view the README for this
+    Service Pack.<br>
+    <br>
+    <br>
+  </li>
+  <li>&quot;Exit Installation&quot; - This option will terminate the Service
+    Pack installation 
+  without installing the Service Pack.<br>
+  </li>
+</ol>
+<P>
+<HR>
+
+<H3><a name="de_installation_on_windows_platforms">2.2 Uninstalling on Windows 
+Platforms<br>
+</a></H3>
+<P>
+Providing the Service Pack was installed with the 'Backup.....' option checked the
+Service Pack may be uninstalled using the following procedure:<br>
+<br>
+<ol style="list-style-type: decimal">
+  <li>Start the Windows Explorer.<br>
+    <br>
+    <br>
+  </li>
+  <li>Locate the directory used as the backup during Service Pack installation, e.g.
+    %II_SYSTEM%\ingres\install\backup.<br>
+    <br>
+    <br>
+  </li>
+  <li>Click and hold on the Ingres directory, e.g. %II_SYSTEM%\ingres\install\backup\pre-p&lt;patch#&gt;\ingres 
+  where &lt;patch#&gt; is the patch number.<br>
+    <br>
+    <br>
+  </li>
+  <li>Drag this directory to the %II_SYSTEM% directory and release.<br>
+  </li>
+</ol>
+<P>
+Answer 'Yes to all' when prompted.<br>
+<P>
+This sequence of steps moves the backup files back into the %II_SYSTEM% 
+directory structure and overwrites those files that are already present.<br>
+<br>
+<br>
+If you have multiple backup directories from multiple patch installations care 
+should be taken when deciding which directory to use. For example, if patch 1 
+was installed, and then later patch 2 was installed, uninstalling using the 
+patch 1 backup will cause both patch 1 and 2 to be uninstalled.<br>
+<br>
+&nbsp;<br>
+  <HR>
+
+<H2><A name=general_considerations>3.0 General Considerations</A></H2>
+<P>The following reported problems have been resolved with this Service Pack. For 
+reference, each problem is listed with its published STARTRAK problem identifier, and the 
+operating systems to which it applies. Please note that problems are
+labeled with the 
+STARTRAK problem identifier as well as the internal bug number, in order to 
+facilitate use of Computer Associates customer support systems.<P>&nbsp;<HR>
+
+<H3>Problems addressed by this Service Pack since the General Availability of II
+2.0/0001 and II 2.0/0011</H3>
+<HR>
+
+<br>
+<p>(GENERIC)<br>
+optimizedb -zs100.0 is rejected with error E_OP094E '-zs' flag<br>
+must be followed by a number in the (0.0, 100.0) range expressing<br>
+percentage of table rows to be sampled.<br>
+(38890) (INGSRV1038)<br>
+<br>
+(GENERIC)<br>
+Rollforwarddb aborts when it is used against a multi-location<br>
+database in which two locations point to the same physical area.<br>
+(39563) (INGSRV1956)<br>
+<br>
+(GENERIC)<br>
+Embedded SQL statement names used in PREPARE and DESCRIBE for&nbsp;<br>
+example, can now be set to 32 characters without resulting in&nbsp;<br>
+error E_US0900.<br>
+(43805)<br>
+<br>
+(GENERIC)<br>
+REPLICATOR: When vertical partitioning is setup, even if a<br>
+non replicated column is updated, replicator performs<br>
+data capture, creates shadow and archive table records, etc.<br>
+This is not necessary and leads to performance overhead.<br>
+(69562) (INGREP58)<br>
+<br>
+(UNIX)<br>
+SQL: SELECT on table with ORDER BY can fail<br>
+with &quot;E_DM9713&nbsp; Error occurred writing to sort work file&quot;,<br>
+even though multiple work locations are available<br>
+with enough space for sort.<br>
+(75831) INGSRV0552)<br>
+<br>
+(UNIX)<br>
+A session performing a copy, which is force aborted, hangs.<br>
+(76625) (INGNET51)<br>
+<br>
+(UNIX)<br>
+ingbuild does not work correctly when the path given for II_DATABASE,<br>
+II_CHECKPOINT, etc., matches a part of another path which is shown<br>
+by the &quot;df&quot; command.&nbsp; Actually, the problem occurs when
+II_DATABASE,<br>
+etc. exists on a Network FileSystem (NFS).&nbsp; In such a situation, &quot;df&quot;<br>
+returns mount point for II_DATABASE, prepended with the node name<br>
+and a colon as a field separator.&nbsp; Within iidsfree, which interprets<br>
+the output of &quot;df&quot; to determine whether II_DATABASE has sufficient
+free<br>
+space, the colon is treated as a field separator so that the mount&nbsp;<br>
+point is shifted into the position where space values are expected.<br>
+This change copes with that shift.<br>
+(79518) (INGINS69)<br>
+<br>
+(GENERIC)<br>
+When copying a table which has a column of data type long polygon,<br>
+the output file grows in size until it fills up the disk, at which<br>
+point it fails.<br>
+(80955) (INGSRV1130)<br>
+<br>
+(GENERIC)<br>
+In a shared cache, fast commit environment bursts of the following<br>
+errors are reported to the errlog.log;<br>
+E_DM0054, E_DM9C84, E_DM9C81<br>
+(83999) (INGSRV100)<br>
+<br>
+(GENERIC)<br>
+When a user other than &quot;ingres&quot; tries to create a location in&nbsp;<br>
+accessdb, no error is reported and the location will be created<br>
+successfully even though the location path does not exist.<br>
+(87619) (INGCBT257)<br>
+<br>
+(GENERIC)<br>
+On transaction abort, resulting from removing the session via<br>
+ipm, the errors reported to the errlog.log are incorrect. The<br>
+errors reported are E_DM010C, E_QE0024 and E_DM9059. These errors<br>
+indicate that the abort is being performed due to a logfile&nbsp;<br>
+full situation which is not the case.<br>
+(90402) (INGSRV1182)<br>
+<br>
+(GENERIC)<br>
+When creating a table as select field = :variable where variable is<br>
+declared as varchar with NULL and NULL is assigned as value, it will<br>
+create a table with a varchar column of length 0.<br>
+(90970) (INGCBT258)<br>
+<br>
+(GENERIC)<br>
+The ABF READFILE function was unnecessarily using up system memory.<br>
+(91439)<br>
+<br>
+(GENERIC, HP)<br>
+Transaction performance on a single CPU machine is poor when<br>
+running multiple ingres threads (iislaves).<br>
+The modify times are poorer than the 1.2 HP release.<br>
+(91805) (INGSRV453)<br>
+<br>
+(GENERIC)<br>
+Issuing the command 'auditdb -a &lt;dbname&gt;' results in<br>
+E_AD2004_BAD_DTID errors.<br>
+(92143) (INGSRV516)<br>
+<br>
+(GENERIC)<br>
+An IF statement in a Database Procedure with many ANDs and ORs<br>
+is evaluated incorrectly.<br>
+(92148) (INGSRV0494)<br>
+<br>
+(GENERIC)<br>
+Running an ABF image which includes a 4GL procedure will result in<br>
+&quot;This program has performed an illegal operation and will be shut<br>
+down&quot;. The 4GL 'ReadFile' command is being used.<br>
+(92444)<br>
+<br>
+(WINDOWS NT)<br>
+CBF only displays the networking protocols selected at installation&nbsp;<br>
+time, in fact it should display all protocols with a status of on&nbsp;<br>
+or off accordingly.&nbsp;&nbsp;&nbsp;&nbsp;<br>
+Also, any value may be input for the protocol status - it should&nbsp;<br>
+be limited to 'ON' or 'OFF'<br>
+It is now possible to set a protocol's status using CBF.<br>
+(93303)<br>
+<br>
+(GENERIC)<br>
+Possible random SEGV within DMF facility due to a<br>
+stale pointer reference.<br>
+(94100)<br>
+<br>
+(GENERIC)<br>
+Opening the cursor twice for the same prepared statement<br>
+and accessing the data over a view depending on the datatype<br>
+of the parameter passed, it may fail with E_OP0783 and<br>
+E_AD2009.<br>
+(94175) (INGSRV0594)<br>
+<br>
+(GENERIC)<br>
+ESQL/ABF procedure which creates a number of global temporary<br>
+tables with the 'on commit preserve rows' option can fail with<br>
+error E_US1263. This can happen if a large number of internal<br>
+temporary tables are created during the processing, after the commit<br>
+statement and before the global temporary tables are destroyed.<br>
+(94474) (INGSRV0633)<br>
+<br>
+(GENERIC)<br>
+Inner join queries coded with the new ANSI/ISO join syntax may<br>
+not produce optimal plans, even though they are semantically<br>
+equivalent to queries coded with an old style from clause. In<br>
+particular, such queries with where clause references to columns<br>
+mapped by secondary indexes may not use the secondary index.<br>
+(94906) (INGSRV0677)<br>
+<br>
+(GENERIC)<br>
+ABF. IF frameA is larger than the display window and fieldX is&nbsp;<br>
+below the visible part of the frame, then frameA is scrolled to<br>
+display fieldX when tabbing into fieldX. If frameB is now called,<br>
+when control returns from frameB to frameA, frameA will initially<br>
+be incorrectly positioned on the first field before being scrolled<br>
+to fieldX. This causes frameA to 'flicker' on return from a call<br>
+to frameB.<br>
+(94962) (INGCBT0161)<br>
+<br>
+(GENERIC)<br>
+After rolling back an update to a blob column in a global temporary<br>
+table, execution of a select * on the table may fail with E_LQ003A.<br>
+E_DM0054, E_AD7007, E_SC0216 and E_SC0206 appear in the errlog.log.<br>
+(95357) (INGSRV1055)<br>
+<br>
+(GENERIC)<br>
+When creating tables in ABF or W4GL with sql/quel, columns specified<br>
+with a 'not null not default' option are created as 'not null with&nbsp;<br>
+default'.<br>
+(95433) (INGCBT0186)<br>
+<br>
+(GENERIC)<br>
+REPLICATOR : Createkeys fails with error 1584 GET_CDDS_NO,<br>
+E_US0834 table X owned by Y does not contain columns Z.<br>
+If the base table has a lookup table and the horizontal partitioning<br>
+is on a column that is not the base table replication key then this<br>
+error will occur. ails with the following error message :<br>
+line 1&nbsp; Table 'lookup_table' owned by &lt;username&gt; does not contain<br>
+column 'col1'&nbsp; (E_US0834).<br>
+Error -- 1584 GET_CDDS_NO -- Error 30110 looking up cdds_no in&nbsp;<br>
+'lookup_table.<br>
+(95574) (INGREP52)<br>
+<br>
+(GENERIC)<br>
+Sporadic installation hangs in a heavily loaded multiple server&nbsp;<br>
+installation due to an undetected mutex / scheduling deadlock.<br>
+Not all servers will be accessible to iimonitor.<br>
+Problem is more likely if feature of altering session priority&nbsp;<br>
+higher than the default value is used.&nbsp;&nbsp;&nbsp;&nbsp;<br>
+Most common scenario has most blocked sessions for visible servers&nbsp;<br>
+in CS_COMPUTABLE/CS_MUTEX_MASK state spinning on a &quot;RSH mutex&quot;.<br>
+(95607) (INGSRV0736)<br>
+<br>
+(UNIX)<br>
+Queries would continue to run on the server when interrupted with<br>
+SIGHUP or control-c in terminal monitor.&nbsp; This may occur if OS<br>
+threads are being used.<br>
+(95680) (INGSRV0812)<br>
+<br>
+(GENERIC)<br>
+The archiver does not wake up when the consistency point is forced by&nbsp;<br>
+cp_timer.<br>
+(96106) (INGSRV797)<br>
+<br>
+(GENERIC)<br>
+Logfile reserve space is significantly over-estimated.<br>
+(96744) (INGSRV0851)<br>
+<br>
+(UNIX)<br>
+During the building of an ABF image, linking of the application failsthe<br>
+when the link command exceeds the size of the maximum command line&nbsp;&nbsp;<br>
+length for the operating system.&nbsp;&nbsp;&nbsp;<br>
+(96873) (INGCBT201)<br>
+<br>
+(UNIX)<br>
+While editing a source file through ABF, the user may make an editing&nbsp;<br>
+error, such as issuing an unrecognized command.&nbsp;&nbsp;<br>
+When the editor is exited, ABF reports error&nbsp;<br>
+&nbsp;&nbsp; E_AR001A: Execution failure in program 'editor',&nbsp;<br>
+The program 'editor' could not be executed, or failed to execute&nbsp;<br>
+successfully.&nbsp; The execution module returned a value of '1'('0x1').<br>
+(96875) (INGCBT0202)<br>
+<br>
+(GENERIC)<br>
+Ingres hangs. New sessions can not connect as they wait for<br>
+the DCB iidbdb mutex. The end of the wait chain in a spinning<br>
+dmfrcp.<br>
+(97015) (INGSRV819)<br>
+<br>
+<a name="INGREP55">(ATTENTION, GENERIC)</a><br>
+E_US125E - Lock timeout on 'dd_distrib_queue' causes<br>
+the replicator server to shutdown rather than try again like<br>
+the message 1021 in the 'replicat.log' says.<br>
+The replicator server needs to be relinked in order to have<br>
+this fix applied.<br>
+(97055) (INGREP55)<br>
+<br>
+(GENERIC)<br>
+DBMS server hangs when logging system status is online, logfull,<br>
+cpflush. Sessions waiting on the LCTX mutex and LOG-IO. New<br>
+connections hang waiting on the DCB iidbdb mutex.<br>
+(97058) (INGSRV983)<br>
+<br>
+(GENERIC)<br>
+If you 'create view as select * from table' and the<br>
+default_page_size in cbf is set less than the row width of<br>
+the table, the creation fails with: E_US07FD An error<br>
+occurred when attempting to create or alter a table. The<br>
+specified row size exceeded the maximum allowable row width.<br>
+(97144) (INGSRV0882)<br>
+<br>
+(GENERIC)<br>
+Copydb does not preserve hidata tables.&nbsp; The tables when recreated<br>
+with copy.in will be regular compression.<br>
+(97230) (INGCBT209)<br>
+<br>
+(GENERIC)<br>
+DBMS reports E_DM9C2A_NOROWLOCK, E_DM904C_ERROR_GETTING_RECORD<br>
+E_DM008A_ERROR_GETTING_RECORD and E_QE007C_ERROR_GETTING_RECORD<br>
+when more than 65K of row locks are taken.<br>
+The front end reports E_QE007C Error trying to get a record.<br>
+(97316) (INGSRV0921)<br>
+<br>
+(GENERIC)<br>
+Outer join query against a constant view (e.g. iidbconstants)<br>
+returns incorrect number of rows if we do not select any<br>
+attributes from the constant view.<br>
+(97371) (INGSRV0883)<br>
+<br>
+(GENERIC)<br>
+Several Australian states have amended the Daylight Saving Time (DST)<br>
+begin date in the year 2000 so that the Olympics can be held in DST.<br>
+The states involved are New South Wales, Victoria, Tasmania and<br>
+Lord Howe Island.<br>
+(97460) (INGSRV891)<br>
+<br>
+(GENERIC)<br>
+4GL call frame/report commands can fail with error E_RW100A when&nbsp;<br>
+passing parameters via the ut.exe system. This is caused by strings&nbsp;<br>
+being incorrectly delimited on some platforms.&nbsp;<br>
+(97545) (INGCBT195)<br>
+<br>
+(GENERIC)<br>
+Query doesn't apply given restrictions and returns all rows or<br>
+results in E_OP08A2_EXCEPTION since fix for bug 95384, when<br>
+using a collation sequence.<br>
+(97581) (INGSRV916)<br>
+<br>
+(GENERIC)<br>
+Increased execution time for retrieve/insert of not null compressed<br>
+datatypes.<br>
+(97604) (INGSRV920)<br>
+<br>
+(GENERIC)<br>
+DMFACP: Archiver crashes when journal files exceed a size<br>
+of approximately 190MB.<br>
+(97845) (INGSRV0941)<br>
+<br>
+(UNIX)<br>
+An Ingres installation using OS threads may occasionally<br>
+report a false E_CL2517 (semaphore already owned) error when<br>
+attempting to acquire an Ingres mutex (semaphore) which is<br>
+under heavy contention.&nbsp;&nbsp; Depending on which mutex is involved,<br>
+the installation may crash, and a iicrash.log generated.<br>
+(97886) (INGSRV944)<br>
+<br>
+(GENERIC)<br>
+The API may occasionally fail to retrieve rows if the row contains a&nbsp;<br>
+blob.<br>
+(97923) (INGAPI6)<br>
+<br>
+(UNIX)<br>
+If all lines are deleted from the file being edited during the execution<br>
+of the SQL \e command, the system editor is entered after exiting<br>
+from the ING_EDIT editor.<br>
+(98001) (INGSRV949)<br>
+<br>
+(GENERIC)<br>
+Some select queries involving user tables containing long varchar/byte<br>
+(blob) columns may fail with error E_QE0308, depending on the<br>
+combined length of the non-blob and blob data.<br>
+(98103) (INGSRV962)<br>
+<br>
+(GENERIC)<br>
+Some select queries involving user tables containing long varchar/byte<br>
+(blob) columns may result in terminal monitor infinitely looping.<br>
+(98104) (INGSRV963)<br>
+<br>
+(GENERIC)<br>
+In building a query plan for a multisite UPDATE query,<br>
+the STAR server may not choose the more efficient strategy<br>
+for transferring rows between sites, resulting in unnecessary<br>
+network traffic and poor query execution time.<br>
+(98108) (INGSTR31)<br>
+<br>
+(GENERIC)<br>
+Outer Joins: Query with two tables joined using an inner join<br>
+with conditions and another table joined using a left join.<br>
+The restrictions from the inner join are not being applied and<br>
+the query returns incorrect results.<br>
+(98117) (INGSRV0967)<br>
+<br>
+(GENERIC)<br>
+Commas may not be used as decimal separators in a derivation formula on<br>
+the field attribute screen in the forms editor. For example, 3,2 will&nbsp;<br>
+produce an error.<br>
+The resolution requires that II_APP_DECIMAL is set to , (comma).<br>
+(98227) (INGCBT0229)<br>
+<br>
+(GENERIC)<br>
+When report writer is called with arguments similar to 'report dbname<br>
+&quot;fl_par='''0,1''')&quot; ' and II_DECIMAL is set to a comma, the
+following&nbsp;<br>
+errors are reported: E_US100F, E_RW1019 and E_RW100A. Report writer is&nbsp;<br>
+interpreting the value 0,1 as two values separated by a comma instead of<br>
+as a single decimal value.<br>
+(98262) (INGCBT0225)<br>
+<br>
+(GENERIC)<br>
+Searches for exact keys on non-unique primary btree table with&nbsp;<br>
+page size greater than 2k may return zero rows after a delete of&nbsp;<br>
+some but not all rows having the duplicated key value.<br>
+(98274) (INGSRV985)<br>
+<br>
+(GENERIC)<br>
+CBF is missing the &quot;Derived Recovery Server Parameters&quot; screen
+title.&nbsp;<br>
+This will cause a Segv on a Unix system.<br>
+(98353)<br>
+<br>
+(GENERIC)<br>
+A query such as:<br>
+select ... from p left join q on p.x = q.y where q.z is null,<br>
+may return more rows than expected if q.z is declared &quot;not null&quot; and<br>
+is also not in the select list. The where clause effectively qualifies<br>
+some rows which it should fail.<br>
+(98395)<br>
+<br>
+(GENERIC)<br>
+The DBMS server hangs with two user sessions in a mutex deadlock.<br>
+Session A holds &quot;Mutex: LG LXB mutex 3&quot; and requests &quot;Mutex: LG<br>
+local LFB curr mutex&quot;. Session B holds &quot;Mutex: LG local LFB curr<br>
+mutex&quot; and requests &quot;Mutex: LG LXB mutex 3&quot;.<br>
+NB. The LXB mutex number (3) may vary but will be the same value<br>
+across the two sessions in the deadly embrace.<br>
+(98473) (INGSRV994)<br>
+<br>
+<a name="BUG98493">(ATTENTION, GENERIC)</a><br>
+Add support for row level locking and repeatable read isolation<br>
+level to RepServer.<br>
+<br>
+The Replicator Server needs to be rebuilt to get this change<br>
+applied.&nbsp; Tables involved in replication need to have a page<br>
+size of 4K or larger to activate row level locking.<br>
+(98493)<br>
+<br>
+(GENERIC)<br>
+24 iidbms servers started. 24 listed in iinamu. Only<br>
+20 of them are utilized when starting connections.<br>
+(98558) (INGSRV0999)<br>
+<br>
+(GENERIC)<br>
+AUDITDB: User may receive E_DM1206 too many TX. This is due<br>
+to a hard coded limit of the number of simultaneous TXs. The&nbsp;<br>
+limit is approximately 256.<br>
+(98560) (INGSRV1000)<br>
+<br>
+(GENERIC)<br>
+In a heavily concurrent installation, the dbms server may crash with<br>
+errors E_DMA459, E_DM9238, E_DM9509, E_DM942B.<br>
+(98594) (INGSRV1002)<br>
+<br>
+(UNIX)<br>
+With the fix for 96873 in place the building a large application is&nbsp;<br>
+extremely slow. For this fix to be effective the archive command 'ar'&nbsp;<br>
+must be in the search path.<br>
+Only if the command line length is insufficient will the archive<br>
+command be used.<br>
+(98629) (INGCBT0235)<br>
+<br>
+<a name="BUG98644">(ATTENTION, GENERIC)</a><br>
+The input and distribution queues are created with NODUPLICATES<br>
+but without a unique index, which causes expensive duplicate<br>
+checking to occur. Since the Change Recorder and Distribution<br>
+Threads do the inserts into these tables, the checking is<br>
+unnecessary.<br>
+<br>
+If replication is already set up, make sure that nobody is<br>
+accessing the database and that there are no rows left in the<br>
+dd_input_queue or dd_distrib_queue tables.<br>
+- Shutdown the Replicator Server(s).<br>
+- Use 'copydb &lt;dbname&gt; dd_distrib_queue dd_input_queue' as the DBA.<br>
+- Remove the NODUPLICATES clause from the CREATE TABLE statements<br>
+&nbsp; within copy.in.<br>
+- Drop the tables in the database as DBA.<br>
+- Use 'sql &lt;dbname&gt; &lt; copy.in' to recreate the tables without<br>
+&nbsp; NODUPLICATES.<br>
+<br>
+Please contact Technical Support, if you need help.<br>
+(98644)<br>
+<br>
+<a name="BUG98645">(ATTENTION, GENERIC)</a><br>
+The Replicator input queue should use a hash structure&nbsp; with a default<br>
+minpages allocation suitable for most sites.&nbsp;<br>
+The Replicator distribution queue should be organized using the&nbsp;<br>
+columns that are used to delete from it, and the columns that are<br>
+used to join to it when reading from it.<br>
+The default minpages allocation for the dd_input_queue is<br>
+1024 pages. 'repmod &lt;dbname&gt;' needs to be run against your<br>
+replicated databases to have these changes applied.<br>
+(98645)<br>
+<br>
+(GENERIC)<br>
+The ingstart utility may hang on some very fast machines after starting<br>
+the Name Server.<br>
+(98648) (INGSRV1009)<br>
+<br>
+(GENERIC)<br>
+Under certain conditions, optimizedb may generate statistics having<br>
+duplicate cell values. The histogram may appear similar to this<br>
+when dumped:<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ...
+repf:0.0000000&nbsp;&nbsp;&nbsp;&nbsp; value:&nbsp;&nbsp; 29548<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ...
+repf:0.0000000&nbsp;&nbsp;&nbsp;&nbsp; value:&nbsp;&nbsp; 29548<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ... repf:5522.0000000&nbsp;
+value:&nbsp;&nbsp; 29549<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ... repf:2665.0000000&nbsp;
+value:&nbsp;&nbsp; 29550<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ...
+repf:0.0000000&nbsp;&nbsp;&nbsp;&nbsp; value:&nbsp;&nbsp; 29550<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ... repf:4388.0000000&nbsp;
+value:&nbsp;&nbsp; 29551<br>
+<br>
+If these statistics are used as input to optimizedb, it will fail<br>
+with the error<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; E_OP0945 Histogram values for table
+'x', column 'y'<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+are not in ascending order.<br>
+(98665) (INGSRV1011)<br>
+<br>
+(UNIX)<br>
+Ingres could hang on a system wait() call within the SIGCHLD<br>
+handler during stress tests which had a high rate of session<br>
+creation.<br>
+(98689) (INGSRV1013)<br>
+<br>
+(GENERIC) <br>
+Netutil and formindex increase stack usage unnecessarily.<br>
+(98738) (INGNET46)<br>
+<br>
+(GENERIC)<br>
+DBMS server crashes with E_DM9301 'Buffer still fixed'.<br>
+Sessions specified to use READ COMMITTED isolation level.<br>
+Buffer still fixed is a btree data page with buffer status<br>
+of 'valid, modified, fixed, write'.<br>
+(98766) (INGSRV1016)<br>
+<br>
+(GENERIC)<br>
+The United-Kingdom timezone rule file has an incorrect end date for<br>
+British Summer Time in 1999.<br>
+Please note this affects all releases of Ingres since 1.2/00.<br>
+(98866) (INGSRV1021)<br>
+<br>
+(GENERIC)<br>
+With autocommit on, insertion of blob fails with<br>
+errors E_DM0054, E_AD7008 and E_AD7009.<br>
+Regression of bug 81398.<br>
+(98883) (INGSRV1024)<br>
+<br>
+(GENERIC)<br>
+Using vt100, vt220, vt200, ibmpc, etc with 60 line display with tables<br>
+that had large definitions would either lock up or not display properly&nbsp;<br>
+in isql.<br>
+(98949) (INGCBT239)<br>
+<br>
+(GENERIC)<br>
+Possible memory leak using RETRIEVE INTO to populate a table.&nbsp;<br>
+(98952) (INGSRV1025)<br>
+<br>
+<a name="BUG99009">(ATTENTION,GENERIC)</a><br>
+Implement optimistic collision resolution for insert transaction types<br>
+in Priority Resolution and Last Write Wins collision modes.<br>
+<br>
+Any existing Replicator support objects need to be dropped and<br>
+recreated. The Replicator Server needs to be rebuilt.<br>
+(99009)<br>
+<br>
+(GENERIC)<br>
+A query deleting rows from a 2k page table that also uses the table in<br>
+an exists clause sub query may not delete all rows.<br>
+(99047) (INGSRV1029)<br>
+<br>
+(GENERIC) <br>
+The Ingres DBMS server leaks memory when multiple IMA queries are&nbsp;<br>
+executed in a single SQL session.<br>
+(99055) (INGSRV1052)<br>
+<br>
+(UNIX)<br>
+Ice crash when selecting integer and char columns in macro.<br>
+(99084) (INGICE0019)<br>
+<br>
+(GENERIC)<br>
+K Join query containing TID attributes causes SIGSEGV in<br>
+ade_execute_cx(). Second attempt to run the query causes the<br>
+server to crash.<br>
+(99090) (INGSRV1036)<br>
+<br>
+(GENERIC)<br>
+Session which inserts into an empty table and then immediately copies<br>
+from a file into the table containing blob column(s) hangs/loops<br>
+endlessly.<br>
+(99119) (INGSRV1031)<br>
+<br>
+(GENERIC)<br>
+In a database that uses a collation sequence other than the Ingres<br>
+default, a query accessing a table having statistics can fail with&nbsp;<br>
+the error E_OP08A2_EXCEPTION.<br>
+(99120) (INGSRV1051)<br>
+<br>
+(GENERIC)<br>
+A small value entered into a float field displays N format as zero<br>
+instead of exponential form.&nbsp;&nbsp;<br>
+This change enables the exponential form to be displayed by setting the<br>
+environment variable II_FLOAT_UNDERFLOW to EXPONENTIAL via ingsetenv.<br>
+(99122) (INGSRV1034)<br>
+<br>
+(GENERIC)<br>
+Allow configuration of DMF page cache buffers with greater than<br>
+65,536 pages.&nbsp; New limit is 2,147,483,647&nbsp; (2^31) - 1,&nbsp; although<br>
+how many pages you can actually allocate is constrained by the<br>
+actual resources available.<br>
+(99124) (INGSRV1032)<br>
+<br>
+(GENERIC)<br>
+Replicator: Horizontal and priority lookup tables are locked<br>
+exclusive during read access. This may result in a concurrency<br>
+problem leading to poor performance.<br>
+The default locking strategy for this type of table is now IS&nbsp;<br>
+(intended shared) at page level, which results in the best performance.<br>
+This level can only be changed by issuing a&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp; 'set lockmode on &lt;table_name&gt; where
+level=&lt;level&gt;'.<br>
+statement.<br>
+(99176) (INGREP0066)<br>
+<br>
+(GENERIC)<br>
+When the current transaction state of a session is 0 (i.e. not in a&nbsp;<br>
+transaction) and a database procedure is executed whose first statement<br>
+is &quot;select dbmsinfo('transaction_state')&quot;, the result of this
+statement&nbsp;<br>
+is 1 (i.e. in a transaction) but should be 0.<br>
+(99199) (INGSRV1084)<br>
+<br>
+(GENERIC)<br>
+In a stored database procedure delete ... where ... and &lt;c1&gt; and<br>
+&lt;c2&gt; does not delete anything, whereas delete ... where ... and<br>
+&lt;c2&gt; and &lt;c1&gt; works as expected.<br>
+(99239) (INGSRV1042)<br>
+<br>
+(GENERIC)<br>
+Replicator/Repmgr/CreateKeys fails while creating shadow table<br>
+entries if the base table keys has a character datatype and horizontal<br>
+partitioning configured. Error 1585 get_cdds_no error 31000 followed<br>
+by E_US09C5.<br>
+(99272) (INGREP0067)<br>
+<br>
+(UNIX)<br>
+DBMS: Queries executed in Ingres installations configured to use<br>
+OS threads (instead of internal slaves) on 64-bit operating systems&nbsp;<br>
+may fail with &quot;E_QE007C Error trying to get a record.&quot; or
+&quot;E_QE007D&nbsp;<br>
+Error trying to put a record.&quot;.<br>
+Only present in installations which have applied a patch containing<br>
+the fix for bug 97151 alone. The following errors may be seen in<br>
+the errlog.log;<br>
+E_DM93A7_BAD_FILE_PAGE_ADDR, E_DM9206_BM_BAD_PAGE_NUMBER,<br>
+E_DM920C, E_DM9C83, E_DM9261, E_DM008A, E_DM9204, E_DM9247, E_DM904D,<br>
+E_DM008B, ...<br>
+(99302) (INGSRV1039)<br>
+<br>
+(GENERIC)<br>
+Replicator/Arcclean can leave some table entries without a shadow&nbsp;<br>
+record entry.<br>
+(99359) (INGREP0068)<br>
+<br>
+(GENERIC)<br>
+If 'set lockmode session where readlock = nolock' when selecting<br>
+from a table and another session performs a 'copy ... from' into<br>
+the same table before the first session is completed, it fails<br>
+with E_SC0206 and gives also E_SC0216 in the errlog.log.<br>
+(99360) (INGSRV1047)<br>
+<br>
+(GENERIC) <br>
+API applications, such as CA ODBC 2.8, hang when connecting to a&nbsp;<br>
+mainframe or 6.4-based gateway or Ingres 6.4 server.<br>
+(99363) (INGAPI8)<br>
+<br>
+(GENERIC)<br>
+UPDATE and DELETE when row locking may lock too many rows<br>
+if there is a HASH or ISAM secondary index.<br>
+(99411)<br>
+<br>
+(GENERIC)<br>
+Higher isolation levels for replicator shadow and archive tables<br>
+are used. This affects concurrency and may cause deadlock.<br>
+(99412 )<br>
+<br>
+(GENERIC)<br>
+Force-aborted transactions may not be totally aborted,<br>
+duplicate E_DM9059_TRAN_FORCE_ABORT messages.<br>
+(99429) (INGSRV1172)<br>
+<br>
+(GENERIC)<br>
+Remove the license checking for the DTP XA options<br>
+(TUXEDO, CICS, and ENCINA) to reduce the administrative<br>
+overhead involved in deploying OMNI license files to all<br>
+clients for ODBC Microsoft Transaction Server (MTS) support.<br>
+(99439)<br>
+<br>
+(GENERIC)<br>
+Mutex deadlock across four sessions. Mutexes involved are;<br>
+LG Local LFB curr mutex&quot;, &quot;LG Local LFB wq mutex&quot;,<br>
+&quot;LG LXB mutex N&quot; (where N is a numeric value), &quot;LG LPB mutex
+Y&quot;<br>
+(where Y is a numeric value). The ingres installation will<br>
+hang.<br>
+(99540) (INGSRV1053)<br>
+<br>
+(GENERIC)<br>
+SQL: MAX function on ISAM tables on integer column may return NULL value<br>
+even when qualifying rows exist.<br>
+(99581) (INGSRV1060)<br>
+<br>
+(GENERIC) <br>
+A select statement using the sql wildcard &quot;_&quot; in its where
+clause&nbsp;<br>
+doesn't return the correct number of rows if the database was created<br>
+with a collation sequence.<br>
+(99608) (INGSRV1064)<br>
+<br>
+(GENERIC)<br>
+The RMCMD server will not start in Embedded Ingres installations<br>
+(e.g. TNG) when started as a service where the logon id is not 'ingres'.<br>
+(99645)<br>
+<br>
+(GENERIC)<br>
+Optimizedb crashes with SIGBUS in certain conditions. E_LQ0040<br>
+E_LC002B E_OP095B are displayed on screen. Seen when using<br>
+vch_compression=ON, max_tuple_length=8084, 8K cache=ON and<br>
+optimizedb is run against a table with 2K pages.<br>
+(99750) (INGSRV1072)<br>
+<br>
+(GENERIC) <br>
+II_DATE_CENTURY_BOUNDARY settings are not recognized for ODBC or&nbsp;<br>
+API applications that insert dates.<br>
+(99770)<br>
+<br>
+(GENERIC)<br>
+Help table (isql,sql,quel) and copydb/unloaddb have a non Y2K<br>
+compliant feature. This is the 'SAVE UNTIL' feature. It uses<br>
+a non Y2K compliant function so it can cause ambiguity when<br>
+operating on SAVE UNTIL tables.<br>
+(99787) (INGSRV1075)<br>
+<br>
+(GENERIC)<br>
+qry1 + qry2 != (qry1 OR qry2) : A query that contains two groups<br>
+of where clauses joined by an OR gives more data than the sum of<br>
+the two separate group of conditions.<br>
+(99854) (INGSRV1080)<br>
+<br>
+(UNIX)<br>
+An heavily loaded Ingres installation using OS threads may suffer&nbsp;<br>
+performance degradation due to high contention on one or more&nbsp;<br>
+of the bm_mpq or bm_fpq mutexes (semaphores).<br>
+<br>
+To address this, a new set of cache tuning parameters is<br>
+provided.<br>
+<br>
+'dmf_pq_count' controls the number of priority queues for a&nbsp;<br>
+particular page size.&nbsp; Use of this parameter is only indicated&nbsp;<br>
+in the rare situation where there exist performance problems&nbsp;<br>
+due to contention on a bm_mpq or bm_fpq mutex.<br>
+<br>
+It is strongly advised that you use IPM or IIMONITOR to<br>
+confirm contention on the priority queue mutexes before<br>
+adjusting this parameter.<br>
+<br>
+Which page size and priority may need additional priority queues<br>
+can be determined from the mutex name as follows:<br>
+<br>
+Given a mutex name of &quot;bm_[f|m]pq &lt;page_size&gt;.&lt;priority&gt;.&lt;n&gt;&quot;,<br>
+where &quot;bm_[f|m]pq&quot; indicates either bm_fpq or bm_mpq and &lt;page_size&gt;<br>
+will be 2048, 4096, etc. and &lt;priority&gt; will be a page priority<br>
+in the range 0 - 7, and &lt;n&gt; will be an instance identifier for<br>
+the mutex (typically 0), the controlling parameter will be the<br>
+(&lt;priority&gt;+1)th element of the priority queue split factor list<br>
+for the dmf_pq_count parameter for the specific &lt;page_size&gt;&nbsp;<br>
+buffer cache.<br>
+<br>
+Values for this setting take the form of a comma separated list of<br>
+integers in the range 1 - 8.&nbsp; First list element is the number of<br>
+&quot;page priority 0&quot; queues to allocate, the second the number of<br>
+&quot;page priority 1&quot; queues to allocate, up to the highest page<br>
+priority of 7.&nbsp; Elements absent from end of list default to 1.<br>
+<br>
+Setting a value higher than 1 for any priority, introduces the<br>
+possibility that certain actions will not effect the absolutely<br>
+oldest page buffer in a given cache, since the oldest buffer in<br>
+one queue may be younger than the oldest buffer in one of the<br>
+other queues for this page size and priority.&nbsp; This may possibly&nbsp;<br>
+cause a small decrease in cache hit rate.<br>
+<br>
+This parameter will normally not appear in config.dat, but<br>
+may be added using 'iiinitres dmf_pq_count'.&nbsp;&nbsp; This will create<br>
+initial default settings of 'dmf_pq_count' for all pages sizes and<br>
+cache definitions.&nbsp;&nbsp; The default settings maintain the existing<br>
+behavior or allocating one modified, and one free page buffer<br>
+queue for each priority and page size in use.&nbsp;<br>
+<br>
+Once added, dmf_pq_count settings may be viewed and&nbsp;<br>
+maintained in CBF.&nbsp;&nbsp;<br>
+(99857) (INGSRV1081)<br>
+<br>
+(GENERIC)<br>
+Server crashes in routine dm2r_replace() when replicator is<br>
+running.<br>
+(99870) (INGSRV1082)<br>
+<br>
+(GENERIC)<br>
+Session hung with cs_state of CS_EVENT_WAIT (LKEVENT). In lockstat,<br>
+the session is waiting for i/o completion on a dmf cache buffer.<br>
+(99915) (INGSRV1085)<br>
+<br>
+(GENERIC)<br>
+A date/time value that is exactly at the beginning of Daylight
+Saving&nbsp;&nbsp;&nbsp;&nbsp;<br>
+Time (DST) will incorrectly be inserted into a date column when
+using&nbsp;&nbsp;&nbsp;<br>
+the date() function.<br>
+The time will be interpreted as being 1 hour prior to DST instead of<br>
+the correct time of 1 hour after DST.<br>
+For example 29-Mar-1992 02:00 will be inserted as 29-Mar-1992 01:00,&nbsp;<br>
+the correct value should be 29-Mar-1992 03:00 as the hour 'jumps'&nbsp;<br>
+forward to DST at 02:00.<br>
+This is only a problem if a timezone that incorporates DST is used in<br>
+II_TIMEZONE_NAME.<br>
+(99917) (INGSRV1089)<br>
+<br>
+(UNIX)<br>
+Passing a bad address with the IIMONITOR &quot;show mutex&quot; command&nbsp;<br>
+in an Ingres installation using OS threads will trigger non-fatal&nbsp;<br>
+segmentation violations.<br>
+(99927) (INGSRV1087)<br>
+<br>
+(GENERIC)<br>
+Server crash when doing inserts in a highly concurrent environment.&nbsp;<br>
+User gets SEGV in rdf_unfix() and/or psl_make_user_default().<br>
+(99982) (INGSRV1211)<br>
+<br>
+(GENERIC)<br>
+OPTIMIZEDB: histogram values for a float attribute are not<br>
+in ascending order. This leads to E_OP03A2 when a range<br>
+predicate is applied to the float attribute. <br>
+(100032) (INGSRV1093)<br>
+<br>
+(GENERIC)<br>
+Retrieve statement occasionally fails causes a SIGSEGV and&nbsp;<br>
+stack dump, when executed concurrently with sessions which are<br>
+destroying and recreating secondary indices on the same table.<br>
+Front end is returned E_OP0082_UNEXPECTED_EX consistency check -<br>
+unexpected exception occurred.<br>
+(100060) (INGSRV1097)<br>
+<br>
+(GENERIC)<br>
+Performing an IMAGEAPP to build an ABF application that has a role&nbsp;<br>
+defined, would cause a SIGBUS.<br>
+(100247) (INGCBT260)<br>
+<br>
+(GENERIC)<br>
+CBF fails with SIGSEGV when you attempt to edit the Ingres/NET<br>
+server count, and immediately go and change the Listen Address<br>
+in the Protocols for any of the protocols.<br>
+(100287) (INGCBT0263)<br>
+<br>
+(GENERIC) <br>
+The API maps the generic error -33000 (logical error) to SQLSTATE&nbsp;<br>
+22011 (sub string error), if the backend is 6.4.<br>
+(100348) (INGAPI11)<br>
+<br>
+(GENERIC)<br>
+Optimizedb goes into a tight loop until it blows the stack<br>
+limit for the process. A very large core file is generated.<br>
+(100372) (INGSRV1107)<br>
+<br>
+(GENERIC)<br>
+Selecting columns and count(*) with group by clause and more<br>
+than 5 OR's gives a wrong result (count(*) is not correct).<br>
+Removing the count(*) and the group by clause gives the<br>
+correct number of rows.<br>
+(100484) (INGSRV1116)<br>
+<br>
+(GENERIC)<br>
+E_US09C5 is returned when running a distributed query against&nbsp;<br>
+two registered tables in different databases.<br>
+Setting trace point op164 shows that a table name is missing<br>
+in one of the queries.<br>
+(100491) (INGSTR35)<br>
+<br>
+(GENERIC)<br>
+E_CL2517_CS_SMPR_DEADLOCK, E_DMF001_MUTEX_LOCK, E_UL0306_EXCEPTION,<br>
+E_DM904A_FATAL_EXCEPTION, E_SC010E_DB_DELETE reported in the<br>
+errlog.log<br>
+(100742) (INGSRV1122)<br>
+<br>
+(GENERIC)<br>
+SIGSEGV in whilst executing &quot;format sessions&quot; or<br>
+whilst using the &quot;formatted&quot; option in the &quot;show sessions&quot;<br>
+command under iimonitor in an OS threaded installation.<br>
+(100771) (INGSRV1125)<br>
+<br>
+(GENERIC)<br>
+Outer join suffers performance degradation after the application<br>
+of a patch having a fix for SIR 95161 (Union view containing a&nbsp;<br>
+left outer join and an ifnull() causes E_OP0082 then crashes the dbms<br>
+server).<br>
+(100871) (INGSRV1131)<br>
+<br>
+(GENERIC)<br>
+Verifydb incorrectly counts the number of locations when the number of<br>
+locations has been reduced.&nbsp; Error S_DU161F_WRONG_NUM incorrectly<br>
+reported.<br>
+(100875) (INGSRV1129)<br>
+<br>
+(GENERIC)<br>
+E_OP0395 when running query containing a combination of<br>
+joins, left joins and right joins.<br>
+(100899) (INGSRV1133)<br>
+<br>
+(GENERIC)<br>
+Certain Frskeys are no longer functional in ABF.<br>
+(100900) (INGCBT270)<br>
+<br>
+(GENERIC)<br>
+copydb on specified table(s) is very slow if the database<br>
+contains other tables with many permits on each table.<br>
+(100911) (INGSRV1137)<br>
+<br>
+(GENERIC)<br>
+STAR: A union query with a constant and no from clause can cause&nbsp;<br>
+E_US0845 errors. i.e., &quot;SELECT &lt;COL1&gt; FROM &lt;LDBTABLE&gt; UNION
+SELECT 1&quot;.<br>
+(100982) (INGSTR0036)<br>
+<br>
+(GENERIC)<br>
+After abnormal termination of the dbms and dmfrcp servers, a&nbsp;<br>
+subsequent ingstart hangs during dmfrcp server startup in the<br>
+redo/undo phase.<br>
+(101134) (INGSRV1151)<br>
+<br>
+(GENERIC)<br>
+auditdb -e displays journal records for a transaction that<br>
+ends after the -e time specified.<br>
+(101268) (INGSRV1160)<br>
+<br>
+(GENERIC)<br>
+Undetected deadlock between update transaction and online checkpoint.&nbsp;<br>
+Update makes request to reserve log space, meanwhile ckp starts.&nbsp;<br>
+Ckp alters logging system to mark for a stall.&nbsp;<br>
+Transaction checks and finds database stalled for ckp. It then takes&nbsp;<br>
+out a shared LK_CKP_TXN lock and loops waiting for stall status&nbsp;<br>
+to change. Meanwhile the checkpoint requests an exclusive LK_CKP_TXN&nbsp;<br>
+and waits. Deadlock. Problem is rare but a window exists for it to&nbsp;<br>
+happen.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+(101303) (INGSRV1164)<br>
+<br>
+(GENERIC)<br>
+User gets E_RD0138 consistency check - Error reading procedure text&nbsp;<br>
+from iiqrytext,&nbsp;<br>
+&nbsp;&nbsp; E_SC0206 An internal error prevents further processing of this
+query&nbsp;<br>
+when trying to execute, drop or grant permission on procedure if the&nbsp;<br>
+procedure query text contains more than 65K characters.<br>
+(101306)<br>
+<br>
+(GENERIC)<br>
+QBF fails to fill in user defined default values when the user,&nbsp;<br>
+table owner and database owner are all different.<br>
+(101416) (INGCBT275)<br>
+<br>
+(GENERIC)<br>
+Rollback/abort of an update/delete against a large table fails<br>
+with errors E_DMA00D, E_DM004B followed by various undo errors.<br>
+Pass abort may follow. Database may be marked inconsistent.<br>
+(101536) (INGSRV1175)<br>
+<br>
+(GENERIC)<br>
+An ABF application calling an ABF image with 'call application'<br>
+reports E_AS0002 and fails to pass parameters to the called<br>
+application.<br>
+(101835) (INGCBT282)<br>
+<br>
+(GENERIC)<br>
+VISION: Running vis51.sep, accessing browse frame causes a<br>
+segmentation violation (SIGSEGV) in f_cvta().<br>
+(102055) (INGCBT0287)<br>
+<br>
+(GENERIC)<br>
+In embedded versions of Ingres, the wrong license codes were being<br>
+used. This was seen from printouts in the errlog.log.<br>
+(102713)<br>
+<br>
+(UNIX)<br>
+IIINSTALLER: the UNIX patch installer script can fail during<br>
+the installation/patch version checking. The following is<br>
+seen:<br>
+Patch version conflicts with that for the installation.<br>
+Patch version file:&nbsp;&nbsp;&nbsp; /ingsw/ingres/patch6871/version.rel<br>
+Installation version:&nbsp; 23 II 2.0/9808 (usl.us5/00)<br>
+Patch version:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2.0/0001
+(usl.us5/00)<br>
+Invalid installation version for this patch<br>
+(102927) (INGINS0077)<br>
+<br>
+(SU4_US5 ONLY)<br>
+ESQLC: Cursor fetch hangs - this fetch should return E_LQ000E.<br>
+(102961) (INGEMB0047)<br>
+<br>
+(UNIX)<br>
+II 2.0/0001 SFP/COMP patches cannot be installed on top of<br>
+II 2.0/9905 (TNG Edition). iiinstaller fails with:<br>
+Installation version:&nbsp; 2.0/9905 (su4.us5/00)<br>
+Patch version:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2.0/0001
+(su4.us5/00)<br>
+Invalid installation version for this patch<br>
+Please install II 2.0/0001 (su4.us5/00) before applying this<br>
+patch.<br>
+(103323) (INGINS0084)</p>
+<p>(GENERIC)<br>
+	DBMS server crashes with E_DM9C01, E_DM9301. Buffer involved is btree&nbsp;<br>
+	root, btree index or fhdr page. Involves two sessions of which one is&nbsp;<br>
+	readlock nolock and the other is using table level locking.&nbsp;<br>
+	(95771) (INGSRV744)<br>
+<br>
+	(GENERIC)<br>
+	Trace point qe90 erroneously reports 0 actual tuples (at) for PSM<br>
+	join nodes (displayed in the qe90 output as ISJOIN - Inner Sorted)<br>
+	when there are, in fact, greater than 0 actual tuples returned.<br>
+	(92567) (INGSRV2009)<br>
+<br>
+	(VMS)<br>
+	Invoking a 3GL ADA function that returns a string from a 4GL<br>
+	application results in an ACCVIO when the ADA function tries<br>
+	to set-up the return area.<br>
+	(106895) (INGCBT389)<br>
+<br>
+	(GENERIC)<br>
+	Upgradedb from II 2.0 to II 2.5 causes server crash with SEGV in<br>
+	memcpy() and errors "Aborting upgrade of this database because<br>
+	of error E_SC0206 An internal error prevents further processing of&nbsp;<br>
+	this query." and  E_LQ002E. Verifydb on II 2.0 and II 2.5 also&nbsp;<br>
+	causes same server crash.&nbsp;<br>
+	(106094) (INGSRV1576)<br>
+<br>
+	(GENERIC)<br>
+	Building the replicator server fails with errors similar to:&nbsp;<br>
+	Compiling server lookup table . . .<br>
+	"rptbldef.c", line 18.21: 1506-196 (S) Initialization between types&nbsp;<br>
+	"int" and "char*" is not allowed.<br>
+	(109146) (INGREP0132)<br>
+<br>
+	(GENERIC)<br>
+	The Transaction Log file %full increases when transactions to<br>
+	non-journalled databases are carried out. The transactions are<br>
+	not cleared from the transaction log file until an update occurs<br>
+	to a journalled database.<br>
+	(107356) (INGSRV1728)<br>
+<br>
+	(GENERIC)<br>
+	Use of application flags may result in bypassing permission checks for&nbsp;<br>
+	the -u flag.<br>
+	(109322) (INGORD1644)<br>
+<br>
+	(UNIX)<br>
+	DBMS server hangs in TR routines waiting for the TRcontext_mutex.<br>
+	This can only be established by using a debugger.<br>
+	Any session which needs to log messages to the DBMS log<br>
+	will stall. The knock on effect is LOG-IO waits, LK EVENT waits,<br>
+	CS_MUTEX waits etc as resources held by sessions in TR routines<br>
+	are requested by other sessions.<br>
+	(109222) (INGSRV2020)<br>
+<br>
+	(GENERIC)<br>
+	Following fix for Bug 107171, the command<br>
+	   select left(right(ascii(date('now')),25),2)<br>
+	returns the wrong result.<br>
+	(109234) (INGSRV2022)<br>
+<br>
+	(NTclient,HPserver)<br>
+	IIACCT ACCOUNTING: On a client(nt)/server(hp) installation, the&nbsp;<br>
+	accounting reports produced by iiacct + convacct + acctcom -h show all&nbsp;<br>
+	the activity belonging to the user "ingres" even when this activity&nbsp;<br>
+	belongs to other users. It works fine when the sessions are local to&nbsp;<br>
+	the server.<br>
+	(100310) (INGSRV2326)<br>
+<br>
+	(GENERIC)<br>
+	Select using btree index is slower and reads more leaf pages than&nbsp;<br>
+	expected after a large number of keys have been deleted.&nbsp;<br>
+	(108852) (INGSRV1900)<br>
+<br>
+	(VMS)<br>
+	The Recovery Server may ACCVIO in IICSresume, if the session being<br>
+	resumed by the Recovery Server has been removed.<br>
+	(109272) (INGSRV2027)<br>
+<br>
+	(GENERIC)&nbsp;<br>
+	Decimal values entered into an OpenROAD entryfield whose datatype is<br>
+	float and has a format string of '-------n.nnn' are not displayed<br>
+	correctly under some circumstances.<br>
+	(108472) (INGCBT434)<br>
+<br>
+	(GENERIC)<br>
+	Queries involving views and executed through an embedded 'C' program&nbsp;<br>
+	may cause DBMS server process to die with an exception (SIGSEGV) and&nbsp;<br>
+	report of an E_PS0004_EXCEPTION error.<br>
+	(109572) (INGSRV2089)<br>
+<br>
+	(GENERIC)<br>
+	On system running many CPUs with many DBMS(or OS threads),<br>
+	the following errors may occur E_CL103E, E_CL1003, E_DM901C,<br>
+	E_DM926D, E_DM906F, E_DM967A, E_DM9639, E_DM9509. These may<br>
+	be repeated several times before the system crashes.<br>
+	These errors occurred with the fix for bug 105321 in place.<br>
+	(109528) (INGSRV2098)<br>
+<br>
+	(AXP.OSF ONLY)<br>
+	Ingres generates unaligned access errors in the terminal<br>
+	that starts Ingres, if "parent printing" is enabled (see<br>
+	'man uac'). Errors can be seen simply by starting a new<br>
+	terminal monitor session e.g. sql iidbdb.<br>
+	(103076) (INGSRV1295)<br>
+<br>
+	(GENERIC)<br>
+	alterdb -delete_oldest_ckp will delete ALL checkpoint files if the&nbsp;<br>
+	checkpoint being deleted is a directory.<br>
+	(109738) (INGSRV1882)<br>
+<br>
+	(VMS)<br>
+	Multiplying decimals together where the sum of the scales is 31<br>
+	may return the wrong value.<br>
+	(95576) (INGSRV733)<br>
+<br>
+	(GENERIC)<br>
+	If a user runs two jobs simultaneously against one Ingres<br>
+	Star server, and repeated query(s) is being used in the<br>
+	application, then Ingres Star server may report error<br>
+	E_QE0023_INVALID_QUERY to errlog.log.<br>
+	(109618) (INGSTR52)<br>
+<br>
+	(GENERIC)<br>
+	The replication thread in the DBMS server may generate an exception&nbsp;<br>
+	(SIGSEGV) and die if a table level deadlock is encountered while&nbsp;<br>
+	opening the needed resources.&nbsp;<br>
+	(109056) (INGREP128)<br>
+<br>
+	<a name="INGSRV1820">(GENERIC, ATTENTION)</a><br>
+	CPU cost estimate to sort a base table is overestimated on&nbsp;<br>
+	machines with fast cpus.<br>
+<br>
+	In order to apply this fix, you must run&nbsp;<br>
+	    'iiinitres opf_sort_factor'<br>
+	to add the opf_sort_factor dbms configuration parameter.<br>
+<br>
+	The opf_sort_factor resource specifies the factor by which&nbsp;<br>
+	query "sort cost" estimates are adjusted.  The speed of the machine&nbsp;<br>
+	may cause sort nodes estimates to be consistently too high or low.<br>
+	If necessary this factor may be reduced with caution.<br>
+<br>
+	Default is 100.  Any adjustment of this number will have an&nbsp;<br>
+	inversely proportional effect on sort cost estimates.  i.e. setting&nbsp;<br>
+	it to 200 will halve cpu estimates of sort cost nodes.<br>
+	(109239) (INGSRV1820)<br>
+<br>
+	(GENERIC)<br>
+	Following a user interrupt of a DMFJSP utility<br>
+	(e.g. CKPDB, ROLLFORWARDDB) the installation<br>
+	may become unresponsive.<br>
+	(109776) (INGSRV2118)<br>
+<br>
+	(GENERIC)<br>
+	Incorrect results from query, containing nested left and inner<br>
+	outer joins, when a column is ommitted from the select list but<br>
+	is included in the where clause. The QEP shows a cartesian<br>
+	product join.<br>
+	(108601) (INGSRV1868)<br>
+<br>
+	(GENERIC)<br>
+	Select query with a (cartesian) inner join combined with a left<br>
+	join. The results of the query change depending on the columns<br>
+	selected. The QEPs are the same.<br>
+	(96265) (INGSRV0796)<br>
+<br>
+	(UNIX)<br>
+	Call report fails with error E_RW1001 on UNIX if escaped<br>
+	double quotes are used as a string in the parameter list.<br>
+	(107117) (INGCBT395)<br>
+<br>
+	(GENERIC)<br>
+	select * from t where b='' or b=' ' returns only one row where<br>
+	it should return two rows. The problem happens only if column<br>
+	b has type text.<br>
+	(108731) (INGSRV1881)<br>
+<br>
+	(GENERIC)<br>
+	Performing an on-line checkpoint may cause the ckpdb and sessions to<br>
+	hang.<br>
+	(109857) (INGSRV2132)<br>
+<br>
+	(HP-UX ONLY)<br>
+	In $II_SYSTEM/ingres/utility/iisysdep, 'PSCMD' is set to 'ps -auxw'.&nbsp;<br>
+	This causes ingstop to generate error: 'ps: unknown user xw' and<br>
+	sometimes ingstop fails to shut down running ingres processes.&nbsp;<br>
+	(105697) (INGSRV2441)<br>
+<br>
+	(GENERIC)<br>
+	During an "ALTER TABLE ... DROP COLUMN ... " command, an ACCVIO will<br>
+	occur if there is a rule registered against the table but the index for<br>
+	the rule does not exist.<br>
+	(110138) (INGSRV2234)<br>
+<br>
+	(GENERIC)<br>
+	E_US1265 error when running a query with multiple left joins on<br>
+	a view with multiple aggregates.<br>
+	(108353) (INGSRV2201)<br>
+<br>
+	(AXM.VMS)<br>
+	Following an installation of a patch using the IIPATCH<br>
+	install script, the "%DCL-W-ACTIMAGE, error activating<br>
+	image II_COMPATLIB" is reported when running an<br>
+	IISU*.COM.<br>
+	(110048) (INGINS161)<br>
+<br>
+	(AXM.VMS)<br>
+	%DCL-E-OPENIN, error opening<br>
+	SYS$COMMON:[SYSEXE]INGRES_INSTALLATIONS.DAT error<br>
+	reported whilst IIPATCH is cleaning up after installing<br>
+	the patch (if the file doesn't exist). The utility<br>
+	reports "INSTALL ABORTED...", but the patch has been<br>
+	installed.<br>
+	(110043) (INGINS0162)<br>
+<br>
+	(VMS)<br>
+	II_ALLADT_BUILD.COM builds the IIUSERADTxx.EXE shared<br>
+	library, using the supplied SPATIAL object types, but<br>
+	doesn't include the Demo UDTs.<br>
+	(109878) (INGSRV1510)<br>
+<br>
+	(GENERIC)<br>
+	The number of rows affected by a query may be 1 less than expected if<br>
+	there are Rules executed which invoke nested DB procedures.<br>
+	(109224) (INGSRV2019)<br>
+<br>
+	(GENERIC)<br>
+	If more than 30 columns of a table have optimizer statistics on<br>
+	them then 'alter table ... drop column ...' can fail with 'E_US1208<br>
+	Duplicate records were found'.<br>
+	(109728) (INGSRV2112)<br>
+<br>
+	(GENERIC)<br>
+	DBMS terminates with E_DM9049 Unexpected exception in DMF<br>
+	facility reported, and a stack trace.<br>
+	(108954) (INGSRV1948)<br>
+<br>
+	(GENERIC)<br>
+	Front End application may hang waiting for the DBMS server to<br>
+	send an Interrupt ACKnowldeged message, if the application<br>
+	aborts a query while the DBMS server is sending the results.<br>
+	(109326) (INGSRV2026)<br>
+<br>
+	(GENERIC)<br>
+	DBMS terminates with E_DM9397_CP_INCOMPLETE, E_DM942B_CRASH_LOG<br>
+	and E_DMF024_INCOMPLETE_CP.<br>
+	(108982) (INGSRV1974)<br>
+<br>
+	(VMS ONLY)<br>
+	IIJOBDEF.EXE defines JOB level logical names for SYSTEM&nbsp;<br>
+	level installations.<br>
+	(110139) (INGSRV2235)<br>
+<br>
+	(GENERIC)<br>
+	Deadlock message shows that the deadlocked session already holding a&nbsp;<br>
+	lock on the resource. This might be seen with E_DM9042, E_DM9045 and&nbsp;<br>
+	E_DM9043.<br>
+	(87049) (INGSRV0190)<br>
+<br>
+	(GENERIC)<br>
+	The Replicator server fails to resolve collisions in&nbsp;<br>
+	collision mode 3 and 4 when the remote database owner&nbsp;<br>
+	information is not supplied by the user in the<br>
+	initial configuration.&nbsp;<br>
+	(110188) (INGREP138)<br>
+<br>
+	(VMS)<br>
+	The recovery server (DMFRCP) fails to start if an attempt is made to&nbsp;<br>
+	install Ingres on an ODS-5 (extended file naming) disk.<br>
+	(109652) (INGSRV2241)<br>
+<br>
+	(UNIX)<br>
+	On AIX 4.3.1 or later, Ingres DBMS server crashes after select()<br>
+	returns error code 9 (EBADF).&nbsp;<br>
+	(110117) (INGSRV2228)<br>
+<br>
+	(GENERIC)<br>
+	E_DU3010_BAD_DBNAME reported when attempting to create a database<br>
+	using a private server class (e.g. CREATEDB db/dbclass).&nbsp;<br>
+	(94700) (INGSRV0654)<br>
+<br>
+	(GENERIC)<br>
+	With fix for bug 95771 in place, dbms server may crash with E_DM934C,<br>
+	E_DM942B, E_DM9306, E_UL0306, E_DM904A, E_DM004A, E_QE009C.<br>
+	(109635) (INGSRV2144)<br>
+<br>
+	(GENERIC)<br>
+	unloaddb and copydb fails for any quoted string which contains seventy&nbsp;<br>
+	(70) or more characters on a single output line. Failure symptoms may&nbsp;<br>
+	include a very large copy.in file and/or an exception (SIGSEGV).&nbsp;<br>
+	(109584) (INGSRV2102)<br>
+<br>
+	(GENERIC)<br>
+	copydb of a database containing the procedure get_network_class<br>
+	keeps on writing to the copy.in file with random text until it<br>
+	is killed or we run out of discspace.<br>
+	(110296) (INGSRV2275)<br>
+<br>
+	(GENERIC)<br>
+	unloaddb and copydb of a table with a COMMENT ON COLUMN gains&nbsp;<br>
+	additional spaces in the quoted comment if the comment wraps around the&nbsp;<br>
+	end of line.<br>
+	(110026) (INGSRV2208)<br>
+<br>
+	(GENERIC)<br>
+	copydb/unloaddb generates syntax-incorrect copy.in file.<br>
+	The keyword "key" is missing from the statement:<br>
+	"alter table &lt;table name> add primary key &lt;column name>"<br>
+	(107358) (INGSRV1730)<br>
+<br>
+	(GENERIC)<br>
+	When a large database_list is specified in the config.dat<br>
+	under the dbms configuration parameters the server may<br>
+	fail to register with the name server. Sessions not using<br>
+	II_DBMS_SERVER will not be able to connect to the related<br>
+	databases and the rmcmd may also fail to connect to iidbdb.<br>
+	(110372) (INGSRV2362)<br>
+<br>
+	(UNIX INSTALL)<br>
+	ingbuild immediately reports error "Error opening PM configuration<br>
+	file during the timezone initiation process (E_CL1F0B)" on startup.<br>
+	After the error is reported, ingbuild proceeds as normal.<br>
+	(110850) (INGINS200)</p>
+
+<p>(GENERIC)<br>
+        E_DMA464_LGREAD_BADFORMAT or E_DM9054_BAD_LOG_RESERVE updating<br>
+        btree table having page size 64k.<br>
+        (108241) (INGSRV2395)<br>
+<br>
+        (UNIX)<br>
+        Selecting the SQL option in starview as a user other than ingres<br>
+        fails with E_LQ0030 Run-time CALL statement to subsystem 'isql'<br>
+        failed.<br>
+        (108124) (INGSTR47)<br>
+<br>
+	(GENERIC)<br>
+	Created new API II_GCNapi_Node_Exists() to check the existence of&nbsp;<br>
+	a vnode name.<br>
+	(101507) (INGAPI30)<br>
+<br>
+	(GENERIC)<br>
+	Someone connecting directly to the server's listen port&nbsp;<br>
+	without sending any data to the server will cause the&nbsp;<br>
+	server to be unable to open any new connections.<br>
+	The server will not accept any new connections until&nbsp;<br>
+	the person blocking the port disconnects.<br>
+<br>
+	To enable a timeout on direct connections perform<br>
+	the following steps after patch installation;<br>
+<br>
+	cd $II_SYSTEM/ingres/utility<br>
+	iiinitres association_timeout<br>
+	cbf<br>
+	        Configure the DBMS server.<br>
+	        Edit the association_timeout to a non-zero value.<br>
+	        End and Save the changes.<br>
+	        Repeat for each DBMS server configuration as required.<br>
+	        Quit<br>
+	(100847) (INGSRV1910)<br>
+<br>
+	(GENERIC)<br>
+	Trace point qe90 causes various processes to crash when certain<br>
+	queries are executed using unions. The user may see the error<br>
+	E_DMA469 in the errlog.log .<br>
+	(93384) (INGSRV540)<br>
+<br>
+	(GENERIC)<br>
+	When a database has multiple schemas with the same table name(s) and<br>
+	constraint name(s), COPYDB/UNLOADDB create incorrect copy.in scripts<br>
+	for the table constraints. Running the copy.in will result in the error<br>
+	E_PS0495 CREATE/ALTER TABLE: Duplicate constraint name;<br>
+	a constraint with the name &lt;constraint_name> already exists in schema<br>
+	&lt;schema_name>.<br>
+	(97600) (INGSRV0918)<br>
+<br>
+<br>
+	(GENERIC)<br>
+	Row locking does not work with RAAT interface.<br>
+	(101373) (INGSRV1158)<br>
+<br>
+	(GENERIC)<br>
+	The DBMS server reports spurious SIGSEGVs in OS functions<br>
+	when using OS threads. Usually seen during high bursts of<br>
+	new sessions. Typically the SIGSEGVs are seen in memset(),<br>
+	OtsFill(), nxm_pthread_kill() or select().<br>
+	(98820) (INGSRV1094)<br>
+<br>
+	(GENERIC)<br>
+	Intermittent E_LQ003A errors when running ABF<br>
+	while using both database procedures and database<br>
+	events.<br>
+	(101260) (INGCBT435)<br>
+<br>
+	(NT ONLY)<br>
+	If Ingres is started via the SYSTEM account, the 'ingres' user<br>
+	will not be able to access the shared memory segments when<br>
+	running commands such as 'ckpdb'. This has been fixed.<br>
+	(101732)<br>
+<br>
+	(GENERIC)<br>
+	Front end applications may hang when sending interrupts<br>
+	to the server.  GCA_TRACE shows GCA_ATTENTION is sent to<br>
+	the server, but a GCA_IACK is never sent back from the<br>
+	server.<br>
+	(100849) (INGSRV1128)<br>
+<br>
+	(GENERIC)<br>
+	Transactions which are begun after a ckpdb -timeout<br>
+	has been initiated, continue to be stalled  after the<br>
+	checkpoint times out.<br>
+	(101773) (INGSRV1192)<br>
+<br>
+	(GENERIC)<br>
+	Invocation of a select/retrieve query that uses the incorrect<br>
+	syntax of an aggregate function name, may result in invalid<br>
+	results or a SIGSEGV/SIGBUS in the dbms server.<br>
+	(74997) (INGSRV1907)<br>
+<br>
+	(GENERIC)<br>
+	A global temporary table id can be seen to be in use by more than one&nbsp;<br>
+	session. The sessions involved hang in a deadlock during an attempt to&nbsp;<br>
+	escalate to table level locking.&nbsp;<br>
+	(101418) (INGSRV1170)<br>
+<br>
+	(GENERIC)<br>
+	An Integer Nullable field has template 'zzn' and Inputmasking<br>
+	is switched on.  It should display zero by default but<br>
+	(97274) (INGORD519)<br>
+<br>
+	(GENERIC)<br>
+	In a multi-server environment with a disjoint database list<br>
+	per server, the replicator queue management threads die<br>
+	frequently with the following errors:<br>
+	        E_SC012D_DB_NOT_FOUND<br>
+	        E_DM9564_REP_SCF_DBUSERADD<br>
+	        E_SC037C_REP_QMAN_EXIT.<br>
+	The rep threads always die while trying to add a database not<br>
+	on its servers database list.<br>
+	(101852) (INGSRV1201)<br>
+<br>
+	(GENERIC)<br>
+	UNLOADDB fails with a SIGSEGV when the user does not have<br>
+	the necessary permissions to determine the present working<br>
+	directory.<br>
+	(101667) (INGDBA65)<br>
+<br>
+	(GENERIC)<br>
+	Alter table drop column' corrupts tables of upgraded databases.<br>
+	select queries fail with E_QE007C Error trying to get a record.<br>
+	Attempts to drop the table causes the server to crash in<br>
+	dm1cn_compexpand.<br>
+	(101920) (INGSRV1204)<br>
+<br>
+	(AXPVMS)<br>
+	Using multiple DBMS servers on a multi-cpu machine can result in<br>
+	E_CL1032 errors.<br>
+	(101872) (INGSRV1162)<br>
+<br>
+	(AXPVMS)<br>
+	Multiple sessions connected to different servers may cause the DBMS<br>
+	server to spin using 100% of a CPU.<br>
+	(101705) (INGSRV1186)<br>
+<br>
+	(GENERIC)<br>
+	Queries run slower when using a case insensitive collation<br>
+	sequence and the case of the text in the query does not match<br>
+	the case of the text in the table.<br>
+	(101739) (INGSRV1912)<br>
+<br>
+	(GENERIC)<br>
+	In a multipart message, if the last part of the message was<br>
+	received while the previous message part was being processed,<br>
+	occasionally a ULE_FORMAT error 0 could be generated.<br>
+	(90875) (INGEMB18)<br>
+<br>
+	(VMS)<br>
+	Performing a CKPDB operation from a non-privileged user could fail with<br>
+	%SYSTEM-F-NOPRIV, E_DM1101 and E_DM110B if the DB being checkpointed<br>
+	contains files which the user has no access rights.<br>
+	(101523) (INGSRV1174)<br>
+<br>
+	(GENERIC)<br>
+	verifydb -mreport -s&lt;installation | dba> -odbms_catalogs<br>
+	terminates with W_DU1010_UTIL_ABORT.<br>
+	(101942) (INGCBT285)<br>
+<br>
+	(WINDOWS NT)<br>
+	Set session with priority=x where x is any allowed value (e.g. maximum,<br>
+	minimum, initial, 1) fails with E_SC033E Error occurred setting session<br>
+	priority to x.<br>
+	(99542) (INGSRV1062)<br>
+<br>
+	(VMS)<br>
+	Several errors and Server crashes were caused when a DBMS thread was&nbsp;<br>
+	resumed before the asynchronous operation it was waiting for completed.&nbsp;<br>
+	Typical errors are E_CL0605 and E_CL0607.&nbsp;<br>
+	(48904) (INGSRV705)<br>
+<br>
+	(VMS)<br>
+	FE applications may disconnect from server reporting E_SC0206.<br>
+	There may be no corresponding error in the errlog, or a<br>
+	ULE_FORMAT FF.<br>
+	(101951) (INGSRV1206)<br>
+<br>
+	(UNIX ONLY)<br>
+	The GCC crashes at random times with no error messages logged.&nbsp;<br>
+	Internal analysis showed an invalid file descriptor had been&nbsp;<br>
+	encountered.<br>
+	(101800) (INGNET59)<br>
+<br>
+	(GENERIC)<br>
+	When running with Masterpiece, E_DM9C1D, E_DM93B7, E_DM93B7,<br>
+	E_DM9260 are output to the errlog.log.<br>
+	(102074) (INGSRV1220)<br>
+<br>
+	(GENERIC)<br>
+	ABF will receive error E_CG0006 when trying to compile a  4GL statement<br>
+	involving a 4GL variable in a nested JOIN ON clause.<br>
+	(98775) (INGCBT237)<br>
+<br>
+	(GENERIC)<br>
+	User gets segmentation violation in abf when esqlc statement: exec frs<br>
+	message :disperr with style = popup; is executed in nested frame.<br>
+	(102027) (INGCBT286)<br>
+<br>
+	(GENERIC)<br>
+	K-join cost is underestimated if there is a&nbsp;<br>
+	high repetition factor on a non-btree key.<br>
+	(100642) (INGSRV1120)<br>
+<br>
+	(GENERIC)<br>
+	Inserting records into a table fails and the dbms server stops.<br>
+	The table has a btree secondary index where key column has&nbsp;<br>
+	more than 440 bytes. Such<br>
+	an index should not be allowed as it exceeds the limits<br>
+	for the length of a key.<br>
+	(102065) (INGSRV1225)<br>
+<br>
+	(GENERIC)<br>
+	Inserting into a table fails after inserting some rows.<br>
+	The table has a 64k btree index, extend=1000, allocation=1000,<br>
+	page_size=65536.<br>
+	 e.g. the error E_QE007D occurs after rows are inserted.<br>
+	(102098) (INGSRV1228)<br>
+<br>
+	(UNIX ONLY)<br>
+	The ingstop command does not force or kill gateway servers<br>
+	(and sessions) when "ingstop -force" or "ingstop -kill"&nbsp;<br>
+	is requested.<br>
+	(101879) (INGGAT0068)<br>
+<br>
+	(GENERIC)<br>
+	Under some circumstances the error message E_DM901C_BAD_LOCK_REQUEST<br>
+	is reported immediately prior to an associated deadlock message.<br>
+	This error is misleading and should not appear in the errlog.log<br>
+	(101425) (INGSRV1165)<br>
+<br>
+	(GENERIC)<br>
+	E_US1265, database reorganization activity has rendered query<br>
+	plan invalid. Error reported whilst inserting into global temporary<br>
+	table. Fails on all but first run against any database other<br>
+	than iidbdb. Restarting Ingres clears the problem but after first<br>
+	run the error occurs again.<br>
+	(101248) (INGSRV1154)<br>
+<br>
+	(GENERIC)<br>
+	Client gets error codes E_DM9387_INDEX_UPDATE_ERROR<br>
+	and E_DM9386_INDEX_ERROR when using MK ( Manufacturing Knowledgebase ).<br>
+	(101521) (INGSRV1226)<br>
+<br>
+	(RMX_US5 ONLY)<br>
+	Running utilities that dynamically link to shared object<br>
+	libraries e.g. sql, isql, accessdb fail with:<br>
+	dynamic linker: &lt;binary_name>: can't open<br>
+	/devsrc/ii20sni/build/rplus/lib/libframe.1.s0<br>
+	(102240) (INGCBT0291)<br>
+<br>
+	(GENERIC)<br>
+	The statement 'copy &lt;table> from &lt;ascii file>' takes much longer<br>
+	when run from an embedded program than when run interactively.<br>
+	Performance is worse for both sql and quel.<br>
+	(102007) (INGEMB43)<br>
+<br>
+	(GENERIC)<br>
+	Error "E_OP0487 consistency check - no joining equivalence<br>
+	class found when expected" when running a select containing<br>
+	an explicit (i.e. user coded) TID join - &lt;indexname>.tidp =<br>
+	&lt;tablename>.tid.<br>
+	(101959) (INGSRV1207)<br>
+<br>
+	(NT ONLY)<br>
+	Creation of Windows NT Ingres replicator service entries is limited to<br>
+	fewer than 100 due to naming limitation.  Windows NT error 1078<br>
+	reported when the service installer attempts to create the 100th<br>
+	service entry.<br>
+	(102245) (INGREP0078)<br>
+<br>
+	(GENERIC)<br>
+	Query with (inner) join and left join does not have<br>
+	a QEP produced. We get the error E_OP0491 consistency<br>
+	check - no query plan was found.<br>
+	(81386) (INGSRV0031)<br>
+<br>
+	(GENERIC)<br>
+	Tables created by the QUEL command RETRIEVE INTO would not<br>
+	be journalled unless WITH JOURNALING was explicitly defined<br>
+	when the session had Journaling enabled.<br>
+	(102193) (INGSRV1241)<br>
+<br>
+	(GENERIC)<br>
+	select date('now') when issued from within a database procedure<br>
+	returns the same value every time.<br>
+	(101064) (INGSRV1145)<br>
+<br>
+	(USL ONLY)<br>
+	A select query on tables using money / float (either in<br>
+	summation, or in the where clause) in different sessions<br>
+	on a multiple CPU (Unixware) machine results in<br>
+	incorrect and inconsistent results. Each run returns<br>
+	different results. Running any query on its own always<br>
+	returns the correct results. No errors logged. Only<br>
+	occurs whilst using OS threads.<br>
+	(101275) (INGSRV1155)<br>
+<br>
+	(VMS ONLY)<br>
+	When copying BLOB data in ASCII format the error E_CO0047 would<br>
+	occur and the copy fails.<br>
+	(72137) (INGSRV922)<br>
+<br>
+	(AXP VMS ONLY)<br>
+	If the Archiver or a JSP process has to wait too long for a MUTEX<br>
+	an ACCVIO occurs.<br>
+	(102353) (INGSRV1247)<br>
+<br>
+	(VMS ONLY)<br>
+	DBMS Servers for Server Classes other than INGRES are<br>
+	not shutdown by INGSTOP. The Ingstop hangs waiting for<br>
+	the Recovery server to shutdown.<br>
+	(102064) (INGSRV1219)<br>
+<br>
+	(GENERIC)<br>
+	The Tables facility can not launch QBF (query a table) if the table&nbsp;<br>
+	name should contain a single quote.<br>
+	(102293) (INGSRV295)<br>
+<br>
+	(GENERIC)<br>
+	when performing a copydb -c table_name, no "with row_estimate" = ##&nbsp;<br>
+	is generated in the copy.in sql after the "copy from" statement.<br>
+	(102333) (INGSRV1245)<br>
+<br>
+	(VMS)<br>
+	Simultaneous access problems on Scratch files occur with&nbsp;<br>
+	various DCL scripts.&nbsp;<br>
+	To prevent this let IISDALL.COM (ingstop) check for<br>
+	an orphaned CSP process as part of installation shutdown.<br>
+	(101019) (INGSRV1934)<br>
+<br>
+	(VMS)<br>
+	Simultaneous calls to IISYSCHK.COM may fail due to access conflicts on a<br>
+	scratch file.  With clustered Ingres, this may possibly cause a startup<br>
+	failure on one or more nodes.<br>
+	(101006) (INGSRV1141)<br>
+<br>
+	(AXP VMS ONLY)<br>
+	If the virtual size of a DBMS server approaches 1GB, a new session<br>
+	connection will cause the DBMS server to terminate due to a<br>
+	SYSTEM-W-UNWIND.<br>
+	(102291) (INGSRV1243)<br>
+<br>
+	(GENERIC)<br>
+	IF a DBMS server is killed whilst holding a locking facility mutex,<br>
+	the DMFRCP server will SIGSEGV while reporting the errors E_DMA469,<br>
+	E_CL2529 and E_DMA009.<br>
+	(87612) (INGSRV0243)<br>
+<br>
+	(GENERIC)<br>
+	OPF: Different results from select from outer join view<br>
+	depending on attributes in select list. The view contains<br>
+	date_trunc() functions applied to attributes from the<br>
+	inner relations in outer joins.<br>
+	(101847) (INGSRV1199)<br>
+<br>
+	(AXP VMS)<br>
+	The IIACP.LOG and IIRCP.LOG files were not readable while the DMFACP<br>
+	and DMFRCP processes are executing. The file reference by II_DBMS_LOG<br>
+	will only be accessible while the DBMS server is executing if the<br>
+	filename begins IIDBMS.<br>
+	(102372) (INGSRV1243)<br>
+<br>
+	(GENERIC)<br>
+	OPF: Nested outer join query containing an ON clause equals<br>
+	predicate of date_trunc('day', &lt;datecol>) = date_trunc('day',<br>
+	&lt;datecol>) will not have this predicate applied, and the query<br>
+	will return wrong rows.<br>
+	(102283) (INGSRV1240)<br>
+<br>
+	(GENERIC)<br>
+	After dropping a char/varchar column from a compressed (nokey,data)<br>
+	table via alter table, select query fails with E_DM9388, E_DM9389,<br>
+	E_DM942C.<br>
+	(101362) (INGSRV1157)<br>
+<br>
+	(GENERIC)<br>
+	With a 16M transaction log, fastload of a table containing blob<br>
+	columns results in the server coming down with E_DMA48E, E_DMA48E,<br>
+	E_DM9070, E_DM9015, E_DM9070, E_DM9247, E_DM904D, E_DM008B,<br>
+	E_DM008B, E_DM9B04.<br>
+	(102383) (INGSRV1249)<br>
+<br>
+	(GENERIC)<br>
+	In ABF, after receiving message that "All current compilation errors&nbsp;<br>
+	for application 'a1' have been fixed" and pressing enter to clear&nbsp;<br>
+	the message, only menu items are re-displayed; when enter or tab is&nbsp;<br>
+	then pressed, the rest of the screen fields reappear.<br>
+	(102167) (INGCBT303)<br>
+<br>
+	(GENERIC)<br>
+	After installation of patch 6626: When tabbing from an entry<br>
+	field to a field which gets switched from invisible to visible&nbsp;<br>
+	and trying to display text in this field by setting the field&nbsp;<br>
+	to equal the contents of an already defined/assigned variable&nbsp;<br>
+	in the field's "before field" section fails. Text does not get<br>
+	displayed.<br>
+	(102136) (INGCBT290)<br>
+<br>
+	(GENERIC)<br>
+	When netutil is first started, a virtual node is highlighted but the&nbsp;<br>
+	node's password and connection information are missing until tab is&nbsp;<br>
+	pressed.<br>
+	(101316) (INGCBT0273)<br>
+<br>
+	(GENERIC)<br>
+	Sporadic outbursts of control lock timeout errors (E_DM9043) on<br>
+	temporary tables, deadlock messages (E_CL1004, E_DM9045, E_DM0042,<br>
+	E_QE002A), or sessions hung waiting on temporary table control<br>
+	locks.<br>
+	(102321) (INGSRV1250)<br>
+<br>
+	(GENERIC)<br>
+	After dropping a nullable char/varchar column containing null data<br>
+	from a compressed table via alter table, select query fails with<br>
+	E_DM9388, E_DM9389, E_DM942C.<br>
+	(102446) (INGSRV1257)<br>
+<br>
+	(GENERIC)<br>
+	Copy into a table containing a nullable blob column, a blob of<br>
+	length 8082 bytes, fails with E_QE007D, E_US16D2. The following<br>
+	error messages appear in the errlog.log: E_DM9B0B, E_DM9B01,<br>
+	E_DM9B01, E_DM9B04, E_DM9275, E_DM008B, E_QE007D.<br>
+	(102547) (INGSRV1265)<br>
+<br>
+	(GENERIC)<br>
+	Create and populate table, alter table drop column, modify table<br>
+	with compression, followed by a select * from table displays<br>
+	incorrect data.<br>
+	Create and populate table, modify table with compression, alter<br>
+	table drop column, insert into table, followed by a select * from<br>
+	table displays incorrect data.<br>
+	In both scenarios, compressed table is corrupt.<br>
+	(102455) (INGSRV1258)<br>
+<br>
+	(GENERIC)<br>
+	The iigcc process grows in size until the swap space is consumed.<br>
+	Alternatively the iigcc hits a SIGSEGV in gcd_convert() and core<br>
+	dumps. Typically seen whilst connecting to a 64-bit host from<br>
+	a 32-bit client.<br>
+	(102577) (INGNET65)<br>
+<br>
+	(GENERIC)<br>
+	E_CLFE07, E_SC022F, E_SC0123, E_CLFE06, E_CLFE06, CSMTp_semaphore&nbsp;<br>
+	failure (in dbms log only), plus an exception (SIGSEGV) in QUremove()&nbsp;<br>
+	from scs_terminate(). Seen when a session dies (or is killed)&nbsp;<br>
+	unexpectedly.<br>
+	(102108) (INGSRV1230)<br>
+<br>
+	(HP-UX/11 ONLY)<br>
+	Ingvalidpw routine fails to validate user passwords on trusted systems.<br>
+	(102237) (INGNET63)<br>
+<br>
+	(GENERIC)<br>
+	Increased the Log commits per second and Log write I/O per second&nbsp;<br>
+	fields in IPM. These fields will now hold 5 digits.<br>
+	(102652) (INGCBT304)<br>
+<br>
+	(GENERIC)<br>
+	The RMCMD objects will fail to install if the user installing Ingres<br>
+	is not the 'ingres' user. Also, RMCMD will not start if 'ingstart'<br>
+	is executed by a user who is not the 'ingres' user. These problems<br>
+	only exist in embedded versions of Ingres.&nbsp;<br>
+	(102705) (INGSRV1921)<br>
+<br>
+	(GENERIC)<br>
+	When a global temp table is modified failure is expected,<br>
+	you get E_DM005D in the error log.<br>
+	When you quit tm, you get E_DM9C75,<br>
+	E_DM9270, E_DM9267, E_SC010E, E_DM003F, E_DM003F, E_SC0122,<br>
+	E_SC010D, E_DM003F, E_DM003F in the error log.<br>
+	When you try and rerun tm, you get E_US0049 in front-end, and<br>
+	E_DM927F, E_SC010C, E_SC010D, E_DM0133, E_SC0121, E_SC010D,&nbsp;<br>
+	E_DM0133, E_US0049, E_SC0123 in the error log.<br>
+	(101017) (INGSRV1143)<br>
+<br>
+	(GENERIC)<br>
+	If the change for SIR 94906 (Running a query with an INNER JOIN&nbsp;<br>
+	and a LEFT JOIN) has been applied, the query generates<br>
+	a OP03A0 error.&nbsp;<br>
+	Without that change (or with it removed), the query returns&nbsp;<br>
+	fewer rows than it should. One of the ON clauses is incorrectly&nbsp;<br>
+	evaluated.<br>
+	(102582) (INGSRV1273)<br>
+<br>
+	(ALPHA VMS ONLY)<br>
+	DCLGEN generates DOUBLE and SINGLE Datatypes within Embedded Basic<br>
+	declarations.&nbsp;<br>
+	These Datatypes are replaced by TFLOAT and SFLOAT within AlphaVMS BASIC.<br>
+	(102697) (INGEMB46)<br>
+<br>
+	(GENERIC)<br>
+	Multiple invocations of a DBP needed for DBP to run through to<br>
+	completion. DBP calls another two (nesting to three levels deep).<br>
+	When there is a commit inside the innermost DBP the first two<br>
+	invocations do not complete. The third time the DBP executes<br>
+	successfully. This behavior is seen after DBMS startup or after<br>
+	QSF cache cleanup (via trace point qs506).<br>
+	(102123) (INGSRV1234)<br>
+<br>
+	(GENERIC)<br>
+	Using a VB program with ODBC, an ESQLC executable, or any other&nbsp;<br>
+	non-terminal monitor ( SQL,ISQL - TM) method to execute a nested<br>
+	database procedure does not complete fully the first time it&nbsp;<br>
+	is executed or the dbproc is not in QSF.&nbsp;<br>
+	If the database procedure is executed again then it runs through to<br>
+	completion  OK.&nbsp;<br>
+	If the database procedure is executed from the server side via<br>
+	TM then it runs through to completion the first time it is run.<br>
+	(102320) (INGSRV1268)<br>
+<br>
+	(GENERIC)<br>
+	The DBMS server reports spurious SIGSEGVs in OS functions<br>
+	when using OS threads. Usually seen during high bursts of<br>
+	new sessions. Typically the SIGSEGVs are seen in memset(),<br>
+	OtsFill(), memcpy() or select().<br>
+	(102725) (INGSRV1275)<br>
+<br>
+	(UNIX)<br>
+	Startup problems on multiprocessor machines. Symptoms vary from<br>
+	machine to machine. Sometimes the recovery server or dbms server<br>
+	hang during startup.&nbsp;<br>
+	(98804) (INGSRV892)<br>
+<br>
+	(GENERIC)<br>
+	When the security_mechanism for gcf is set to 'null', the GCC and<br>
+	GCB servers will come up but not get registered with the Name<br>
+	server. This has been fixed.<br>
+	(102715) (INGSRV1920)<br>
+<br>
+	(GENERIC)<br>
+	Incorrect results returned when using a union with aggregates<br>
+	that are similar but use the same tables with different<br>
+	(102154) (INGSRV1232)<br>
+<br>
+	(GENERIC)<br>
+	Ingres installation hangs. iimonitor shows a mutex deadlock between<br>
+	the DI LRU list mutex and the DI FD x mutex (where x is a number).<br>
+	(102756) (INGSRV1279)<br>
+<br>
+	(GENERIC)<br>
+	Using 'infodb #c&lt;ckp number> &lt;db name>' on certain platforms will cause<br>
+	a memory access violation, returning error code&nbsp;<br>
+	   E_DM904A_UNEXPECTED_EXCEPTION.<br>
+	(102286) (INGSRV1922)<br>
+<br>
+	(GENERIC)<br>
+	The server crashes with SIGSEGV, SIGBUS, or SIGILL when running<br>
+	a transaction with several updates on one table. There are<br>
+	rules and procedures updating a shadow table. The database is<br>
+	created with the Swedish collation sequence. The PC address<br>
+	resolves to adt_kkcmp(). In errlog.log : RMCMD, E_LQ002D<br>
+	E_LC0001 E_DMA469.<br>
+	(102686) (INGSRV1274)<br>
+<br>
+	(VMS)<br>
+	Performance problems in Clustered Ingres installations<br>
+	have been seen. No specific citations.<br>
+	(101483) (INGSRV1932)<br>
+<br>
+	(GENERIC)<br>
+	Under an OS threaded configuration, IPM displays an incorrect<br>
+	active session count. The active session count displays the<br>
+	total number of user sessions, as opposed to the number of<br>
+	active (COM) user sessions.<br>
+	(102042) (INGDBA67)<br>
+<br>
+	(NC4_US5 ONLY)<br>
+	optimizedb -zk &lt;dbname> -r&lt;tablename> fails with E_QE009C error<br>
+	and terminates the DBMS server with a core file (SIGFPE). The<br>
+	errlog.log shows: E_DM004A, E_QE009C, E_SC010E, E_SC0122,<br>
+	E_SC010D, E_SC0221, E_PS0501, E_SC0235, E_SC0127.<br>
+	(102080) (INGSRV1223)<br>
+<br>
+	(NC4_US5 ONLY)<br>
+	A select on a view involving a three table join and large<br>
+	data sets results in server crash with SIGFPE and<br>
+	E_DM9049_UNKNOW_EXCEPTION on NCR. Errors E_DM004A and E_QE009C<br>
+	are also reported.<br>
+	(99864) (INGSRV1083)<br>
+<br>
+	(GENERIC)<br>
+	Protocol Bridge fails to start, reports E_GC2A08_NTWK_INIT_FAIL<br>
+	and E_GC2A01_INIT_FAIL Protocol Bridge initialization failed<br>
+	although protocols correctly configured.<br>
+	(103035) (INGNET66)<br>
+<br>
+	(AXP.VMS)<br>
+	An E_CL2517 error is being reported, but the Semaphore Deadlock message<br>
+	in the II_DBMS_LOG indicates that the error was raised in error. A new<br>
+	version of Ingres has been produced for AlphaVMS (AXM.VMS), which is<br>
+	built with natural alignment (previously Ingres was built without<br>
+	natural alignment).<br>
+	(102804) (INGSRV1917)<br>
+<br>
+	(GENERIC)<br>
+	Ingstop would only stop the RMCMD server and then terminate. A<br>
+	second INGSTOP must be entered to shutdown the remaining servers.<br>
+	(102742) (INGSRV1278)<br>
+<br>
+	(GENERIC)<br>
+	The Name Server crashes upon ingstart when one of its files is&nbsp;<br>
+	corrupted.<br>
+	(102423) (INGNET64)<br>
+<br>
+	(GENERIC)<br>
+	ESQLCBL COBOL pre-compiler generates CALL "IILQSHSETHANDLER"<br>
+	statements with corrupt function names.<br>
+	(103099) (INGEMB048)<br>
+<br>
+	(GENERIC)<br>
+	OPTIMIZEDB: histogram values for a float attribute are not<br>
+	in ascending order. This leads to E_OP03A2 when a range<br>
+	predicate is applied to the float attribute.<br>
+	(102829) (INGSRV1282)<br>
+<br>
+	(VMS ONLY)<br>
+	ABF applications randomly encounter E_QG0010 (error on temp file) and&nbsp;<br>
+	abort.<br>
+	(102029) (INGSRV1215)<br>
+<br>
+	(ALPHA VMS ONLY)<br>
+	A server process may encounter the E_GC0012 (listen failure) error due<br>
+	to a process suspended.<br>
+	(102701) (INGSRV1944)<br>
+<br>
+	(VMS ONLY)<br>
+	An application process may encounter the E_US08B4 (No MST) error when<br>
+	processing records within a QUEL RETRIEVE..ENDLOOP.<br>
+	(103147) (INGEMB49)<br>
+<br>
+	(GENERIC)&nbsp;<br>
+	The Name Server does not reject IngresNet clients using an expired&nbsp;<br>
+	system password.<br>
+	(100276) (INGNET55)<br>
+<br>
+	(GENERIC)<br>
+	'MODIFY table-name TO TABLE_OPTION = 3' corrupts a table<br>
+	instead of giving a syntax error.<br>
+	(103064) (INGSRV1294)<br>
+<br>
+	(VMS)<br>
+	Bridge servers (IIGCB) once started were not shutdown by the INGSTOP&nbsp;<br>
+	utility.<br>
+	(103169) (INGNET70)<br>
+<br>
+	(WINDOWS ONLY)<br>
+	'verifydb' will not work consistently when executed as a user who<br>
+	did not start Ingres. This has been fixed.<br>
+	(100928) (INGSRV1188)<br>
+<br>
+	(UNIX)<br>
+	With security auditing on, on_log_full set to stopaudit, and<br>
+	on_switch_log set, after audit log fills up and the file<br>
+	specified by on_switch_log is executed, the installation hangs.<br>
+	The session which fills the audit log goes into a LOG-IO state<br>
+	(no wait reason), and new sessions wait on the DCB iidbdb mutex.<br>
+	(103092) (INGSRV1297)<br>
+<br>
+	(GENERIC)<br>
+	rollforwarddb of a number of big insert queries corrupts the<br>
+	FMAP page so that it states that all 16000 pages within the<br>
+	FMAP are used.<br>
+	Verifydb will report W_DM51FE_CANT_READ_PAGE        WARNING:<br>
+	Unable to read page X from table's file.<br>
+	The error is repeated for every page from the actual end of<br>
+	the file to a multiple of 16000.<br>
+	errlog.log contains E_DM93A7 E_DM9206 E_DM9C83.<br>
+	********************* WARNING *********************************<br>
+	This fix modifies the format of FMAP log page entries. Previous<br>
+	journal files will not be compatible with the executables&nbsp;<br>
+	supplied in this patch.<br>
+	(103037) (INGSRV1291)<br>
+<br>
+	(NT ONLY)<br>
+	Made changes necessary to install / run Ingres on NT where the<br>
+	machine hostname contains embedded special characters.<br>
+	(103165) (INGCBT315)<br>
+<br>
+	(GENERIC)<br>
+	ISQL fails with SIGSEGV and core dumped when executing a simple select<br>
+	statement against a table with a page size of 32K.<br>
+	(99136) (INGSRV1033)<br>
+<br>
+	(GENERIC)<br>
+	SIGSEGV segmentation violation in PSF and errors E_PS0004,<br>
+	E_PS0002 when executing prepared queries of the form 'insert<br>
+	into ... select ...', 'create table ... as select ...' and<br>
+	'update ... from ...'.<br>
+	(100411) (INGSRV1111)<br>
+<br>
+	(GENERIC)<br>
+	DMF: connecting to iidbdb that has been upgraded fails with<br>
+	SEGV and server dying. Stack dump in errlog.log shows SEGV<br>
+	n dm1cn_compexpand() (via read_tcb(), build_tcb(), dm2t_fix_tcb(),<br>
+	dm2t_open(), dmt_open(),..., scs_dbdb_info(),...).<br>
+	(103243) (INGSRV1317)<br>
+<br>
+	(GENERIC)<br>
+	Running iimonitor/stop server will produce the error<br>
+	'GCA_RECEIVE returned status 0001FE07'. The expected<br>
+	response is 'DBMS terminated association' - No error.<br>
+	(103285) (INGSRV1322)<br>
+<br>
+	(GENERIC)<br>
+	When running with II_DBMS_LOG set and the isolation level is set to<br>
+	read_committed or repeatable_read, it is possible to get hundreds of<br>
+	warnings in the dbms.log saying:<br>
+<br>
+	WARNING:  Constraint processing SERIALIZABLE<br>
+	(103188) (INGSRV1311)<br>
+<br>
+	(INT.W32)<br>
+	Using IPM, the Active Count and Total Count will now properly<br>
+	reflect the session counts in a particular server.<br>
+	(90741)<br>
+<br>
+	(GENERIC)<br>
+	Added return code II_ERROR_II_SYSTEM_DIR_NOT_EXIST to II_GetVersion()<br>
+	API.<br>
+	(102431) (INGAPI16)<br>
+<br>
+	(WINDOWS NT, 95/98 AND 2000 ONLY)<br>
+	Multi-threaded Ingres programs may hang if more than one thread&nbsp;<br>
+	attempts to read the configuration file at the same time.<br>
+	(103318) (INGINS83)<br>
+<br>
+	(GENERIC)<br>
+	Query containing inner and outer joins fails with E_OP0287.<br>
+	(102969) (INGSRV1288)<br>
+<br>
+	(GENERIC)<br>
+	PERMISSIONS and CONSTRAINTS appear in the wrong order in the copy.in&nbsp;<br>
+	script generated by unloaddb and copydb yielding error message E_PS04A1.<br>
+	(101172) (INGSRV1173)<br>
+<br>
+	(UNIX)<br>
+	ABF call report truncates first significant digit of money value<br>
+	when report is generated. Passing (x='$12345.00') to report<br>
+	generates 2345.00.<br>
+	(102986) (INGCBT311)<br>
+<br>
+	(GENERIC)<br>
+	When inserting 123 points as a long polygon (which should<br>
+	fail with SPuslong_valchk: Polygon invalid: polygon segments<br>
+	crossed) error E_SC0206 is produced and errlog.log shows SIGSEGV<br>
+	in qso_destroy() or qeq_cleanup().<br>
+	(102972) (INGSRV1289)<br>
+<br>
+	(GENERIC)<br>
+	Issuing the "format" command in iimonitor without any<br>
+	further parameters, or followed by an invalid session<br>
+	ID, leads to a SIGSEGV within the DBMS server.<br>
+	(103286) (INGSRV1321)<br>
+<br>
+	(ALPHA VMS)<br>
+	Linking embedded/SQL 3GL programs using the<br>
+	II_SYSTEM:[INGRES.FILES]ESQL.NOSHARE option file, results in failure to<br>
+	Find SYS$SHARE:CALIB.OLB. This should refer to SYS$SHARE:CALIC.OLB.<br>
+	(103450) (INGEMB50)<br>
+<br>
+	(AXP.VMS)<br>
+	Server sampling is not available on AXP.VMS.<br>
+	(102059) (INGSRV1218)<br>
+<br>
+	(AXP.VMS)<br>
+	A DBMS server crashed when it was unable to validate the License if the&nbsp;<br>
+	process the DBMS tried to communicate with was listed as SUSPENDED.<br>
+	(103403) (INGSRV1330)<br>
+<br>
+	(GENERIC)<br>
+	Query with restriction against spatial datatype which uses an<br>
+	R-tree index to replace the base table fails to return any<br>
+	qualifying rows.<br>
+	(103158) (INGSRV1325)<br>
+<br>
+	(GENERIC)<br>
+	When starting multiple communication (IIGCC) or Protocol Bridge<br>
+	(IIGCB) servers, each subsequent server attempts to open using<br>
+	the same TCP_IP socket number (listen address).<br>
+	(103329) (INGNET72)<br>
+<br>
+	(VMS)<br>
+	IIIMPORT utility returned a VMS error message, even when an application<br>
+	was successfully imported.<br>
+	(103429) (INGCBT319)<br>
+<br>
+	(GENERIC)<br>
+	When installing Ingres, it is possible to end up with the<br>
+	IMA tables not being registered.<br>
+	(103389) (INGINS85)<br>
+<br>
+	(GENERIC)<br>
+	Using MK (manufacturing knowledgebase), you can get serializable&nbsp;<br>
+	(SIX) page locks when running, instead of IX locks.&nbsp;<br>
+	This causes other users to potentially get lock timeouts when&nbsp;<br>
+	trying to access the same page, when using row-level locking.<br>
+	(103127) (INGSRV1909)<br>
+<br>
+	(GENERIC)<br>
+	Inconsistent error handling for E_DM004D_LOCK_TIMER_EXPIRED in database<br>
+	procedure.<br>
+	(103150) (INGSRV1032)<br>
+<br>
+	(GENERIC)<br>
+	E_DM934D_DM0P_BAD_PAGE, E_DM942B_CRASH_LOG, E_DM9306_DM0P_UNFIX_PAGE,<br>
+	E_UL0306_EXCEPTION, E_DM904A_FATAL_EXCEPTION when running in a&nbsp;<br>
+	highly concurrent multi-CPU environment.<br>
+	(103261) (INGSRV1338)<br>
+<br>
+	(GENERIC)<br>
+	Replicator: The replication thread in the DBMS server may generate an&nbsp;<br>
+	exception (SIGSEGV) and bring down the whole server if a table level&nbsp;<br>
+	deadlock is encountered when trying to distribute a transaction.&nbsp;<br>
+	(103342) (INGREP0084)<br>
+<br>
+	(GENERIC)<br>
+	Poor performance from query containing ifnull(max(&lt;colname>),<br>
+	&lt;value>) in a subselect - the subselect is not being flattened.<br>
+	(103255) (INGSRV1319)<br>
+<br>
+	(GENERIC)<br>
+	OPF: Outer join query with subselect fails with SEGV in BTand()<br>
+	(via opv_uindex(), opv_index()...). FE and errlog.log both<br>
+	report E_OP0082 consistency check - unexpected exception occurred.<br>
+	(103509) (INGSRV1344)<br>
+<br>
+	(GENERIC)<br>
+	Query using a select with outer joins performs poorly. The query&nbsp;<br>
+	optimizer generates and chooses a bad QEP in which a sort is executed&nbsp;<br>
+	when a secondary index could have been used.<br>
+	(100286) (INGSRV1298)<br>
+<br>
+	(GENERIC)<br>
+	When a specific sort order is requested (order by or group by) on&nbsp;<br>
+	a set of columns which consists of the key columns (in order) of a<br>
+	unique Btree index, followed by one or more other columns, Ingres<br>
+	currently forces a sort to produce the desired order.&nbsp;<br>
+	It can be seen, though, that since each set of key columns produces&nbsp;<br>
+	a unique value, reading the data through the index will produce the<br>
+	requested order even with the added columns in the order clause.&nbsp;<br>
+	The sort is therefore an unnecessary overhead.<br>
+	(100482) (INGSRV1117)<br>
+<br>
+	(GENERIC)<br>
+	Returning to the TABLES utility after calling ABF or RBF will always<br>
+	highlight the first row of the tables list when it should highlight<br>
+	the last chosen table.<br>
+	(98490) (INGCBT233)<br>
+<br>
+	(int_wnt)<br>
+	The Ingres service STOP button will be grayed out if there is a problem<br>
+	with shutting down the service.<br>
+	(103580) (INGCBT322)<br>
+<br>
+	(AXP.OSF)<br>
+	Using ABF callframe to call report, will fail because of the parameters<br>
+	that are passed to report are not formatted correctly.<br>
+	(103473) (INGCBT320)<br>
+<br>
+	(UWARE)<br>
+	Running optimizedb against tables having varchar columns causes&nbsp;<br>
+	performance problems. The histograms generated by optimizedb are&nbsp;<br>
+	incorrect and the optimizer selects a poor QEP.<br>
+	The Histograms produced have 2 rows,  the replication factor<br>
+	in the second row is set equal to the table row count.<br>
+	(103471) (INGSRV1324)<br>
+<br>
+	(VMS)<br>
+	Ingres start up stalls for 1 minute after the Recovery<br>
+	server is started.<br>
+	(86579) (INGSRV1953)<br>
+<br>
+	(GENERIC)<br>
+	With ING_SET = "set session with on_error = rollback transaction",<br>
+	a DELETE statement within the .CLEANUP section of a report rolls<br>
+	back silently unless there is an explicit commit.<br>
+	(102996) (INGCBT312)<br>
+<br>
+	(UNIX,NT)<br>
+	Message E_CL0617_DI_SLAVE_INIT_ERROR will now display the correct&nbsp;<br>
+	path to the iislave binary.<br>
+	(102099) (INGSRV1222)<br>
+<br>
+	(GENERIC)<br>
+	Query containing identical subselects results in either<br>
+	E_OP0082 (SEGV), E_OP0482 or E_OP0491.<br>
+	(103365) (INGSRV1345)<br>
+<br>
+	(GENERIC)<br>
+	Poor performance whilst using DBEVENTS. On a system which is generating<br>
+	events, session response time can be poor. A new CONFIG.DAT parameter<br>
+	(ii.&lt;node>.dbms.&lt;server>.event_priority) has been added to allow the<br>
+	priority of the event thread to be changed. Default Event thread<br>
+	priority is 8.<br>
+	(103596) (INGSRV1349)<br>
+<br>
+	(UNIX)<br>
+	Spawned sub-programs would leak file descriptors  for files opened by&nbsp;<br>
+	siopen().<br>
+	(31071) (INGSRV974)<br>
+<br>
+	(UNIX)<br>
+	Syscheck does not consider the space required for large DMF caches<br>
+	when checking for sufficient Swap space to start Ingres.&nbsp;<br>
+	This may lead to Ingres failing to start due to a E_SC0107 error&nbsp;<br>
+	whilst trying to create the DMF cache area.<br>
+	Additionally, if larger than 2K page sizes were configured these<br>
+	were not included.<br>
+	(103736) (INGDBA79)<br>
+<br>
+	(UNIX)<br>
+	sreport db_name rep_file.rw seg faults when long remark string in report<br>
+	file contains a period.<br>
+	(103512) (INGCBT321)<br>
+<br>
+	(GENERIC)<br>
+	Wrong license string is used when running Embedded Ingres.<br>
+	(103802) (INGLIC0003)<br>
+<br>
+	(GENERIC)<br>
+	If varchar compression is enabled, varchar columns may be displayed<br>
+	as blank or null data.<br>
+	(103786) (INGNET73)<br>
+<br>
+	(GENERIC)<br>
+	When the OpenROAD ifnull() procedure is passed the same variable as<br>
+	is being assigned, the variable is set to an incorrect value. For&nbsp;<br>
+	example, var1 = ifnull(var1, '06/06/99').<br>
+	(96079) (INGSRV1906)<br>
+<br>
+	(GENERIC)<br>
+	ISQL and IQUEL incorrectly display statement numbers&nbsp;<br>
+	greater than 999 in the output buffer.<br>
+	(103291) (INGCBT0318)<br>
+<br>
+	(GENERIC)<br>
+	ACCVIO may occur if a session abnormally disconnects.<br>
+	(103927) (INGSRV1916)<br>
+<br>
+	(SU4_US5 ONLY)<br>
+	Solaris demo UDT's: ord_pair and complex values are not being<br>
+	inserted correctly - e.g. inserting the ord_pair value '(5, 5)'<br>
+	will result in a stored/displayed value of (2048.000, 2048.000).<br>
+	The error message 'Usop_convert: Insufficient space for ord_pair<br>
+	output' may also be seen for larger values.<br>
+	(103930) (INGINS141)<br>
+<br>
+	(UNIX)<br>
+	Description of the UNIX_PRIORITY parameter for a DBMS server&nbsp;<br>
+	incorrectly stated that it set the priority of a database.<br>
+	(103865) (INGCBT328)<br>
+<br>
+	(GENERIC)<br>
+	Some UPGRADEDB messages were not completely displayed.<br>
+	(103873) (INGINS92)<br>
+<br>
+	(VMS)<br>
+	SYSCHECK may erroneously report that there is sufficient resources&nbsp;<br>
+	available to start Ingres. The Recovery server fails to start due to&nbsp;<br>
+	insufficient memory, which causes Ingstart to hang.<br>
+	(102803) (INGSRV1281)<br>
+<br>
+	(GENERIC)<br>
+	execute statement_name statements within printqry output when set<br>
+	via ING_SET include duplicate lines of parameter values.<br>
+	(102568) (INGDBA82)<br>
+<br>
+	(GENERIC)<br>
+	ONLINE checkpoint no longer turns journaling on for a table which&nbsp;<br>
+	is created with nojournaling and then a 'set journaling on&nbsp;<br>
+	table_name' is issued.<br>
+<br>
+	Online checkpoint now enables journaling of the table marked as<br>
+	"Journaling enabled after next checkpoint" on a journalled database.<br>
+	(92299) (INGSRV1945)<br>
+<br>
+	(GENERIC)<br>
+	A database procedure returns incorrect results when it contains<br>
+	a looping query of the form&nbsp;<br>
+	      'select count(*) into :&lt;parameter><br>
+	      from &lt;tablename1> where &lt;colname1> not in (select &lt;colname2><br>
+	      from &lt;tabname2>)'.&nbsp;<br>
+	Correct results are returned if the 'not in' is replaced with 'in'.<br>
+	i.e. the logic is in reverse.<br>
+	(102928) (INGSRV1285)<br>
+<br>
+	(GENERIC)<br>
+	When an ABF application is run through the CACI<br>
+	UpFront application, it continues to display<br>
+	a menu option even after it has been disabled.<br>
+	All menu options including the menu option that has been disabled<br>
+	now behave incorrectly.<br>
+	(103805) (INGCBT330)<br>
+<br>
+	(GENERIC)<br>
+	A simple select statement failed with E_US125D<br>
+	Ambiguous Replace, which should not occur on Select<br>
+	statements.<br>
+	(83046) (INGSRV477)<br>
+<br>
+	(HP8_U5 ONLY)<br>
+	On hp8_us5 output from trace -pid &lt;dbms_pid> shows hundreds<br>
+	of sigprocmask() calls. These are adversely affecting performance.<br>
+	(103254) (INGSRV1318)<br>
+<br>
+	(GENERIC)<br>
+	Execution of a database procedure containing queries which<br>
+	involve subselect joins may result in a SIGSEGV.&nbsp;<br>
+	A stack dump followed by&nbsp;<br>
+	   "Segmentation Violation (SIGSEGV) dmt_close...",<br>
+	and  the error messages:<br>
+	    E_DM9049, E_DM004A, E_QE009C&nbsp;<br>
+	appear in the errlog.log.<br>
+	(103845) (INGSRV1366)<br>
+<br>
+	(GENERIC)<br>
+	When updating a column that is part of a secondary index,<br>
+	which is btree with page size > 2K, and using "set nologging",<br>
+	it gets corrupted, having the same tidp on more than one row.&nbsp;<br>
+	(103111) (INGSRV1310)<br>
+<br>
+	(GENERIC)<br>
+	Query containing more than one subselect with an ifnull(max())<br>
+	results in a query plan with cart prod nodes, giving very poor<br>
+	performance.<br>
+	(103720) (INGSRV1353)<br>
+<br>
+	(GENERIC)<br>
+	Poor performance with sum(&lt;float/money column>) function. A simple<br>
+	group by query from a single table performs much more CPU if the<br>
+	results set includes a sum(). This is not the case for max() or<br>
+	count().<br>
+	(103756) (INGSRV1362)<br>
+<br>
+	(GENERIC)<br>
+	Secondary index not being used in a query where it could replace<br>
+	the base table completely and prevent a full table scan. Query<br>
+	contains an IN clause against one attribute and date range<br>
+	predicates against another attribute.<br>
+	(103745) (INGSRV1356)<br>
+<br>
+	(NT Only)<br>
+	A select query hangs after the query has been executed a few<br>
+	thousand times within the same session/transaction. The iimonitor<br>
+	output shows the session as being computable in OPF.<br>
+	(103883) (INGSRV1369)<br>
+<br>
+	(usl_us5)<br>
+	Changed the link definition file to not include the libc&nbsp;<br>
+	library (removed -lc). This is included automatically.&nbsp;<br>
+	Added -L/usr/ccs/lib to search path.&nbsp;<br>
+	(104158) (INGCBT437)<br>
+<br>
+	(UNIX)<br>
+	gwsetlogin did NOT work under any circumstances on Unix platforms.<br>
+	Utility silently fails<br>
+	(104130) (INGGAT0123)<br>
+<br>
+	(GENERIC)<br>
+	Create table, modify table to btree/hash/isam, alter table add<br>
+	column, copy into table from file, followed by a select * from&nbsp;<br>
+	table, results in added column data not being visible for all<br>
+	rows.<br>
+	(104100) (INGSRV1392)<br>
+<br>
+	(VMS NT)<br>
+	Oracle Gateway database procedure can not handle BYREF parameters.<br>
+	This deficiency is now removed.  User can  now register Oracle&nbsp;<br>
+	database procedure with BYREF parameters corresponding to OUT or&nbsp;<br>
+	IN OUT Oracle parameters.<br>
+	After executing the registered procedure, the BYREF parameter will&nbsp;<br>
+	contain modified value.<br>
+	(103965) (INGGAT248)<br>
+<br>
+	(GENERIC)<br>
+	In ACCESSDB when attempting to create a user called 'do', the save<br>
+	function fails with :<br>
+	  'do' is not a valid username. Legal characters are<br>
+	  alphanumerics, '@', '#', '$', and '_'. The first character<br>
+	  must be alphabetic. Maximum length is 32 characters.  (E_IC002D)<br>
+	This is because 'do' is a reserved word.<br>
+	(104220) (INGSRV1402)<br>
+<br>
+	(GENERIC)<br>
+	A join query in which at least one of the base tables has several<br>
+	potentially useful secondary indexes defined on permutations of the<br>
+	same key columns can produce a query plan in which more than one of<br>
+	the indexes is used. The second index is essentially useless, as it<br>
+	imposes no further restriction on the query result and simply<br>
+	introduces unnecessary overhead.<br>
+	(102956) (INGSRV1286)<br>
+<br>
+	(AIX)<br>
+	iiinterp GPF : create a frame named fr1 with form f1, compile it,<br>
+	create a frame named fr2 with form f2, compile it.  Run both.&nbsp;<br>
+	All is OK. Change the form name of frame fr2 from f2 to f1.&nbsp;<br>
+	Compile both frames. No error.  Run frame fr1. No error.&nbsp;<br>
+	Run frame fr2. Segmentation violation running frame fr2.&nbsp;<br>
+	(92235) (INGCBT127)<br>
+<br>
+	(GENERIC)<br>
+	Query containing join(s) and group by/order by clause and a<br>
+	btree unique relation can return wrong number of rows/incorrectly<br>
+	ordered data if the first group by/order by attribute is the btree<br>
+	unique key, and subsequent group by/order by attributes are from<br>
+	another relation.<br>
+	(104288) (INGSRV1409)<br>
+<br>
+	(GENERIC)<br>
+	"E_DMA493 The end of the LBB wait q queue was reached unexpectedly."<br>
+	This error appears in the errlog.log and is often repeated many<br>
+	times. Occasionally the installation will hang after this error has<br>
+	been reported.<br>
+	(104143) (INGSRV1393)<br>
+<br>
+	(UNIX)<br>
+	IIMONITOR: remove &lt;sid> where &lt;sid> is an invalid session ID<br>
+	results in a SIGSEGV in the DBMS.<br>
+	(103872) (INGSRV1368)<br>
+<br>
+	(GENERIC)<br>
+	E_DM93F6_BAD_REPOSITION error when row locking. Immediately preceeding&nbsp;<br>
+	this error in the log is E_DM9042_PAGE_DEADLOCK.<br>
+	(91379) (INGSRV1417)<br>
+<br>
+	(NT)<br>
+	The fstm executable has been added to the DBMS and Net components.<br>
+	(80558)<br>
+<br>
+	(WINDOWS NT)<br>
+	When the settings in System and Services that are required for&nbsp;<br>
+	starting Ingres as a service are missing, or the user specified in&nbsp;<br>
+	Services for starting ingres is different from the user issuing a&nbsp;<br>
+	command such as ckpdb, the command fails with the message:<br>
+	   "ERROR : The execution of this command failed.  Please verify&nbsp;<br>
+	   with your ...&nbsp;<br>
+	The operating system error was 2".&nbsp;<br>
+	This occurs when Ingres is not started as a service.<br>
+	(104000) (INGSRV1382)<br>
+<br>
+	(NT ONLY)<br>
+	In embedded Ingres installations, when Ingres is started as a&nbsp;<br>
+	service by the Ingres account and programs such as ckpdb are<br>
+	invoked under other than the Ingres account, if ckpdb fails to run<br>
+	the first time, it hangs the next time.<br>
+	(103976) (INGSRV1377)<br>
+<br>
+	(NT-ONLY)<br>
+	In embedded Ingres installations, when Ingres is started as a<br>
+	service by the applications SYSTEM account, other users such as<br>
+	Administrator experience problems in user representation (which&nbsp;<br>
+	should be "ingres") when using programs such as ACCESSDB.&nbsp;<br>
+	(103590) (INGSRV1383)<br>
+<br>
+	(NT-ONLY)<br>
+	Front-end programs such as ACCESSDB and TERMAINAL MONITOR may<br>
+	not retrieve the proper user in an Embedded Ingres installation.<br>
+	(103589) (INGSRV1384)<br>
+<br>
+	(VMS ONLY)<br>
+	Passing parameters from ABF/Vision frames to Report frame generates<br>
+	error E_RW1001 Bad parameters specified at or near '= )'.Occurs when<br>
+	the parameter contains embedded quotes.<br>
+	(95356) (INGCBT171)<br>
+<br>
+	(AXP.VMS)<br>
+	The IIPATCH.COM does not install the patch to a SYSTEM ingres<br>
+	installation if GROUP ingres installations are executing.<br>
+	(104264) (INGSRV1405)<br>
+<br>
+	(GENERIC)<br>
+	The dbms server becomes unresponsive after taking the following errors&nbsp;<br>
+	on a db open of a replicated database: E_DM9042_PAGE_DEADLOCK&nbsp;<br>
+	(on dd_input_queue), W_DM9578_REP_QMAN_DEADLOCK,<br>
+	E_DM9569_REP_INQ_CLEANUP, E_SC0121_DB_OPEN and E_DM003F.  Sometimes<br>
+	occurs with SEGV in dmc_open_db(0x28d8ec_ @ PC 28dc84 and/or<br>
+	E_SC037C_REP_QMAN_EXIT.<br>
+	(104267) (INGREP92)<br>
+<br>
+	(NT ONLY)<br>
+	Changed reported version from II 2.0/0001 (int.wnt/00)DBL to<br>
+	II 2.0/0001 (int.w32/00)DBL<br>
+	(104415) (INGSRV1422)<br>
+<br>
+	(GENERIC)<br>
+	Create index and/or modify table may SIGSEGV. Callstack dump of<br>
+	ipage_dupcheck, dm1i_allocate,... appears in the errlog.log followed<br>
+	by E_DM9049_UNKNOWN_EXCEPTION. This bug was introduced with the<br>
+	fix for bug 104382.<br>
+	(104382) (INGSRV1419)<br>
+<br>
+	(NT ONLY)<br>
+	The installer will now post ii.%s.config.%s.ii200001intw3200DBL in a<br>
+	double byte installation. This is so that the patch installer can<br>
+	determine if the installation is double byte or single byte.<br>
+	(104417) (INGINS101)<br>
+<br>
+	(NT ONLY)<br>
+	When installing and using a response file, servicepassword and<br>
+	primarylogdir parameters are not working.<br>
+	(104431) (INGINS102)<br>
+<br>
+	(GENERIC)<br>
+	ISQL hangs while attempting to display results of a query<br>
+	which returns a large number of rows.<br>
+	(104291) (INGCBT340)<br>
+<br>
+	(GENERIC)<br>
+	Under special circumstances the internal date format is not<br>
+	normalized. As a consequence subsequent selects fail if<br>
+	date('now') was used to fill a column whilst the date in<br>
+	GMT was different to the active timezone.<br>
+	E.g. '19-dec-2000 00:10:00' in GMT1 Timezone, which is<br>
+	'18-dec-2000 23:10:00' in GMT.<br>
+	(103533) (INGSRV1347)<br>
+<br>
+	(NT-ONLY)<br>
+	The servproc.exe executable does not leak handles anymore.<br>
+	(104381) (INGSRV1429)<br>
+<br>
+	(GENERIC)<br>
+	SQL Fortran precompiler incorrectly emits code for maintaining SQLSTATE&nbsp;<br>
+	if program source contains a character variable within its DECLARE&nbsp;<br>
+	section whose first six characters are “SQLSTA” (Case<br>
+	insignificant).<br>
+	A previous fix to this problem incorrectly introduced a declaration of&nbsp;<br>
+	SQLSTATE into some of the Fortran header files. This declaration should&nbsp;<br>
+	not be in the header files, and the Fortran precompiler should only&nbsp;<br>
+	emit code for maintaining SQLSTATE if the user has declared either&nbsp;<br>
+	SQLSTA or SQLSTATE as a character variable within a DECLARE section.<br>
+	(93910) (INGEMB24)<br>
+<br>
+	(GENERIC)<br>
+	Running the command "report dbname repname -o" with the ING_PRINT&nbsp;<br>
+	environment variable set to any_executable_shellscript creates a core&nbsp;<br>
+	file.&nbsp;<br>
+<br>
+	Note that the report output file is created and shellscript runs to&nbsp;<br>
+	completion<br>
+	(102675) (INGCBT306)<br>
+<br>
+	(GENERIC)<br>
+	Compiling applications in ABF on Linux causes osl<br>
+	to fail during compilation with Segmentation Violation.<br>
+	This is being caused by the temporary .c generated during&nbsp;<br>
+	compilation being closed twice with an fclose.&nbsp;<br>
+	According to the man page for gnu fclose, this will result in&nbsp;<br>
+	undefined behavior.&nbsp;<br>
+	This will affect all platforms using the gnu c libraries.<br>
+	(103368) (INGSRV1936)<br>
+<br>
+	(LINUX ONLY)<br>
+	upgradedb -u\$ingres iidbdb fails with Segmentation<br>
+	Violation (SIGSEGV).<br>
+	(103418) (INGSRV1334)<br>
+<br>
+	(AXP.OSF)<br>
+	When starting an Ingres installation on Tru64 5.x, syscheck reports&nbsp;<br>
+	that there are insufficient shared memory segments available.&nbsp;<br>
+	This prevents the installation from starting.<br>
+	(103507) (INGINS88)<br>
+<br>
+	(GENERIC)<br>
+	Some hard system or ingres crashes may cause transaction IDs to<br>
+	be re-used after recovery. This is not a problem to the base<br>
+	Ingres product.&nbsp;<br>
+	It can cause problems, however, when using replicator which relies&nbsp;<br>
+	on the fact that transaction IDs are unique.<br>
+<br>
+	Transaction IDs will now always be unique unless the log file<br>
+	is forcefully re-initialized (rcpconfig -force_init), and the<br>
+	average transaction rate for the life of the logging system was<br>
+	greater than 1 per second.<br>
+	(79489) (INGSRV1156)<br>
+<br>
+	(GENERIC)<br>
+	When an application sets a timezone name for a connection or&nbsp;<br>
+	environment,<br>
+	OpenAPI will determine the GMT offset of the timezone when connecting to<br>
+	a 6.4 DBMS, rather than using the GMT offset of the local timezone.<br>
+	(104334) (INGAPI31)<br>
+<br>
+	(GENERIC)<br>
+	Linking an embedded Cobol program which uses a BLOB data handler fails&nbsp;<br>
+	with errors "LNK2001: unresolved external symbol _IILQlpd_LoPutD,&nbsp;<br>
+	_IILQled_LoEndD, _IILQlgd_LoGetD".&nbsp;<br>
+	(104292) (INGEMB44)<br>
+<br>
+	(GENERIC)<br>
+	During an Ingres start following an Ingres crash, the recovery<br>
+	server may hang after reporting an E_CL2517 and E_DMA42E.<br>
+	(104776) (INGSRV1463)<br>
+<br>
+	(GENERIC)<br>
+	Reload of a database fails with E_US14E4 Invalid options<br>
+	have been specified for a non fast-load COPY.<br>
+	(98350) (INGCBT231)<br>
+<br>
+	(UNIX)<br>
+	DECMULTI character set cannot be selected during installation.<br>
+	(78236) (INGSRV971)<br>
+<br>
+	(GENERIC)<br>
+	Updating rules which are triggered may loop an indeterminate&nbsp;<br>
+	number of times if the update causes a row to move.&nbsp;<br>
+<br>
+	The row may move if the primary key is modified by<br>
+	the update and/or row compression means that an in-place<br>
+	replace is not possible.<br>
+<br>
+	The looping activity will terminate if;<br>
+	a) The row moves to a point preceding the update cursor.<br>
+	b) Qualifying conditions are no longer true.<br>
+	c) The infinite loop generates an error condition such as<br>
+	   integer overflow or disk full for example.<br>
+<br>
+	This is commonly referred to as the Friday the 13th Problem<br>
+	(a.k.a. The Halloween Problem).<br>
+<br>
+	The solution to this problem imposes a prefetch overhead on<br>
+	all rules triggered by an update. This solution can be<br>
+	manually enabled/disabled under CBF once the following steps<br>
+	have been performed;<br>
+<br>
+	ingstop<br>
+	iiinitres rule_upd_prefetch<br>
+<br>
+	The new rule_upd_prefetch parameter will be visible under the<br>
+	DBMS server configuration screen within CBF. A help file<br>
+	will be available once the above steps have been performed.<br>
+	If rule_upd_prefetch is set to OFF, it is the user's responsibility<br>
+	to apply appropriate measures to ensure rules fired by updates<br>
+	produce the expected behavior.<br>
+	(100680) (INGSRV1123)<br>
+<br>
+	(GENERIC)<br>
+	cbf will show the correct size of dual log.<br>
+	(101893) (INGSRV1269)<br>
+<br>
+	(GENERIC)<br>
+	After successfully executing a database procedure in an OpenIngres<br>
+	installation the same procedure will fail against a 6.4 installation<br>
+	with E_LQ002D Association to the dbms has failed. This occurs in an&nbsp;<br>
+	embedded SQL program after switching sessions from OpenIngres 1.2 to<br>
+	Ingres 6.4 using the EXEC SQL set_sql(session=&lt;n>) syntax.<br>
+	(99170) (INGEMB39)<br>
+<br>
+	(GENERIC)<br>
+	Comments that begin on a line containing "EXEC SQL...." but continue<br>
+	on further lines, are not correctly handled and cause the compile phase<br>
+	to fail. The comments causing the problem have a "newline" character<br>
+	immediately after the /*.<br>
+	(96482) (INGEMB0029)<br>
+<br>
+	(GENERIC)<br>
+	The 4GL command 'CLEAR FIELD' removes the input mask when used<br>
+	on a field that has input masking turned on.&nbsp;<br>
+	(99039) (INGCBT0240)<br>
+<br>
+	(GENERIC)<br>
+	When using MK (Manufacturing Knowledgebase) and Replicator,&nbsp;<br>
+	table updates may not be replicated.<br>
+	(103667) (INGSRV1908)<br>
+<br>
+	(GENERIC)<br>
+	An ABF application loading a database table runs much slower&nbsp;<br>
+	than displaying the table in select via sql.<br>
+	(102265) (INGCBT294)<br>
+<br>
+	(UNIX)<br>
+	Running vision applications created with an app name containing&nbsp;<br>
+	the '$' sign fails.  The application name will not be recognised.<br>
+	(104514) (INGCBT372)<br>
+<br>
+	(UNIX ONLY)&nbsp;<br>
+	The server-side GCC will not clean up an IngresNet session if the<br>
+	client aborts and more than one operation is queued on the same GCC<br>
+	socket.  The result is a small memory leak.&nbsp;<br>
+	(104337) (INGNET75)<br>
+<br>
+	(GENERIC)<br>
+	ESQLP does not allow the use of SET OF for a variable<br>
+	declaration within the DECLARE section of an embedded<br>
+	pascal program.<br>
+	(104463) (INGCBT345)<br>
+<br>
+	(SQS_PTX)<br>
+	The wrong value is returned for the Soft File limit on Sequent Dynix/ptx<br>
+	(103098) (INGSRV1303)<br>
+<br>
+	(GENERIC)<br>
+	Select from btree with lock level row, isolation level read<br>
+	committed misses records if another transaction is concurrently<br>
+	inserting qualifying rows.<br>
+	(99229) (INGSRV1435)<br>
+<br>
+	(GENERIC)<br>
+	Deleting via ipm a session that is waiting on the 'LG LCTX mutex'&nbsp;<br>
+	results in E_CL250F_CS_REQUEST_ABORTED, E_DM942B_CRASH_LOG,&nbsp;<br>
+	E_DM00F1_MUTEX_LOCK, E_UL0306_EXCEPTION, E_DM904A_FATAL_EXCEPTION. DBMS&nbsp;<br>
+	server is terminated.<br>
+	(104254) (INGSRV1404)<br>
+<br>
+	(GENERIC)<br>
+	ISQL reports an "Internal Memory Tag" error when more<br>
+	than 32K lines are written to a file.<br>
+	(104345) (INGCBT342)<br>
+<br>
+	(GENERIC)<br>
+	Under an OS threaded configuration, IPM displays an incorrect<br>
+	active session count if user interrupts have been used.<br>
+	(103080) (INGSRV1296)<br>
+<br>
+	(WINDOWS 2000)<br>
+	Checkpoint to tape fails within ntbackup with "invalid command line&nbsp;<br>
+	parameter '/tape:0'".<br>
+	(103755) (INGSRV1360)<br>
+<br>
+	(NT ONLY)<br>
+	Any attempt to use rcpconfig fails after installing a patch based on&nbsp;<br>
+	mark 2100.  Patches 7404 and 7738 only are currently affected.&nbsp;<br>
+	Mark 2100 has been recut to include this change<br>
+	(104606) (INGSRV1441)<br>
+<br>
+	(NT ONLY)<br>
+	Installation of double byte patch fails with "Internal error checking<br>
+	Ingres Version" while config.dat contains dbms.ii200001intw3200 instead<br>
+	of dbms.ii200001intw3200dbl.<br>
+	(104173) (INGINS97)<br>
+<br>
+	(GENERIC)<br>
+	Unable to modify a READONLY table to NOREADONLY if there<br>
+	are persistent indices on the table.<br>
+	(104553) (INGDBA139)<br>
+<br>
+	(GENERIC)<br>
+	Time taken to execute a query increases as the value of opf_maxmemf<br>
+	(default 50%) is increased. OPF is not timing out, but different<br>
+	QEPs are produced for different values of opf_maxmemf.<br>
+	(103858) (INGSRV1367)<br>
+<br>
+	(GENERIC)<br>
+	Multi-attribute CO (Check Only) K join is being chosen because of<br>
+	incorrect low DIO estimate, resulting in poor performance.<br>
+	Occurs when one or more lower order columns on RHS of<br>
+	join is/are not covered by the key structure, and key<br>
+	attributes have a high repetition factor.<br>
+	(104552) (INGSRV1938)<br>
+<br>
+	(GENERIC)<br>
+	Queries with CO ( Check Only) joins can produce sub optimal plans.<br>
+	(104516) (INGSRV1951)<br>
+<br>
+	(VMS only)<br>
+	II_WORK definition for Express install is now picked up from the<br>
+	local environment if defined.<br>
+	(104540) (INGINS146)<br>
+<br>
+	(VMS only)<br>
+	The Ingres System Administrator's Account created via VMSinstal<br>
+	will now have the correct process quotas<br>
+	(102541) (INGINS74)<br>
+<br>
+	(GENERIC)<br>
+	Poor handling of Btree tables using Readonly cursors<br>
+	(104097) (INGEMB52)<br>
+<br>
+	(GENERIC)<br>
+	Optimizedb -zk &lt;dbname> fails with "E_OP0901 Unknown exception<br>
+	occurred in optimizer utility. Value is 70401.".<br>
+	(104224) (INGSRV1403)<br>
+<br>
+	(VMS, INSTALL)<br>
+	When installing Ingres II using a separate account to the account<br>
+	designated as the Ingres System Administrator, the installation fails<br>
+	to initialize the RMCMD process information.<br>
+	(100039) (INGSRV1095)<br>
+<br>
+	(VMS)<br>
+	IIG4seSendEvent undefined when linking Embedded ADA applications.<br>
+	(104608) (INGEMB53)<br>
+<br>
+	(GENERIC)<br>
+	Replicator database becomes inaccessible after taking the following&nbsp;<br>
+	errors:  E_DM9569_REP_INQ_CLEANUP, E_DM9270_RELEASE_TCB<br>
+	E_DM937E_TCB_BUSY, E_DM9C76_DM2D_CLOSE_TCBERR Error&nbsp;<br>
+	closing Table Control Block at database close time. The TCB for table&nbsp;<br>
+	(dd_databases, dsnhdba) of database dbname could not be released&nbsp;<br>
+	: tcb_ref_count -1, tcb_valid_count -1, tcb_status 0x00000001<br>
+	E_DM9267_CLOSE_DB, E_DM927F_DCB_INVALID.<br>
+	(104696) (INGREP94)<br>
+<br>
+	(GENERIC)<br>
+	OPTIMIZEDB produces non-monotonically increasing statistics for a&nbsp;<br>
+	date column. The date data contains dates and times.&nbsp;<br>
+	Problem only occurs with the supplied binary data - unloading and<br>
+	reloading the data in ASCII format, then re-running optimizedb&nbsp;<br>
+	produces valid stats.<br>
+	(91872) (INGSRV0458)<br>
+<br>
+	(AXP_OSF ONLY)<br>
+	Optimizedb crashes with SIGFPE at PC 1200874e0<br>
+	(adu_float_compare) when running on a float8 field.<br>
+	The error E_OP095B is displayed followed by<br>
+	'Floating Point Exception (SIGFPE): Floating overflow.'<br>
+	The error is data dependent - the first float8 value<br>
+	must account for at least 25% of the total rows.<br>
+	(104737) (INGSRV1456)<br>
+<br>
+	(GENERIC)<br>
+	VDBA does not recognise user defined DBMS server class names.<br>
+	As a result the Performance Monitor pane does not allow<br>
+	the user to examine the sessions within a DBMS server which<br>
+	does not have a class name of INGRES.<br>
+	(102895) (INGDBA071)<br>
+<br>
+	(ALPHA VMS ONLY)<br>
+	DCLGEN generates incorrect declarations for COBOL.  Float4; float8 and&nbsp;<br>
+	money columns generate COMP-3 (Unix default). This should be for VMS:&nbsp;<br>
+	COMP-1 for the float4 columns and COMP-2 for float8 and money columns.<br>
+	(104828) (INGCBT355)<br>
+<br>
+	(GENERIC)<br>
+	Ingstop parameters such as -kill are not working. The usage message is<br>
+	shown instead.<br>
+	(104851) (INGSRV1466)<br>
+<br>
+	(WINDOWS NT)<br>
+	Windows NT error 2140 received when attempting to stop Ingres under<br>
+	NT Services.<br>
+	(104834) (INGSRV1465)<br>
+<br>
+	(DGI_US5 ONLY)<br>
+	Unable to produce printqry trace information when a DBP is called<br>
+	from ABF or OpenROAD and a null parameter is passed. SIGBUS and<br>
+	errors: E_PS0004, E_PS0002, E_SC0215, E_SC0220 in errlog.log and<br>
+	E_SC0206, E_LQ002D in front end.<br>
+	(104713) (INGSRV1453)<br>
+<br>
+	(GENERIC)<br>
+	Floating point column values inserted as decimal constants, or<br>
+	compared to decimal constants (numeric constants containing&nbsp;<br>
+	a decimal point) can produce incorrect results. A client example<br>
+	shows "float8(0.375)" producing a different internal float value<br>
+	than "float8('0.375')".&nbsp;<br>
+	(102529) (INGSRV1596)<br>
+<br>
+	(GENERIC)<br>
+	Lock timeout on row lock results in E_DM9043 error message&nbsp;<br>
+	reporting lock timeout occurred on page rather than row in<br>
+	errlog.log.<br>
+	(104562) (INGSRV1438)<br>
+<br>
+	(GENERIC)<br>
+	Setting the query_io_limit (or any other limit) via a role does<br>
+	not work when connecting via OpenROAD and employing Server Side<br>
+	Licensing.<br>
+	(104714) (INGSRV1454)<br>
+<br>
+	(GENERIC)<br>
+	Heavy concurrent use of global temporary tables in queries<br>
+	containing outer joins leads to multiple exceptions; SIGBUS<br>
+	opn_jintersect(), SIGBUS ulm_fadd(), SIGSEGV ade_execute_cx(),<br>
+	SIGBUS opc_cxest(), SIGSEGV psq_end_session() followed by<br>
+	E_DMA469_PROCESS_HAS_DIED when the dbms keels over.<br>
+	Related query will contain unary operators. For example;<br>
+	.... where .... = -1<br>
+	(104607) (INGSRV1442)<br>
+<br>
+	(GENERIC)<br>
+	ABF/4GL: Concatenating a char field with a hex constant&nbsp;<br>
+	(e.g. X'22') inserts an extra space character before the hex<br>
+	constant in the resulting string.<br>
+	(80896) (INGCBT353)<br>
+<br>
+	(GENERIC)<br>
+	OPF: Very poor QEP produced by the optimizer in terms of CPU<br>
+	and DIO. If the from clause order is changed, a good QEP is<br>
+	produced.<br>
+	(101399) (INGSRV1161)<br>
+<br>
+	(GENERIC)<br>
+	In the VDBA "rows" tab for a table, and in SQL/Test, VDBA displays<br>
+	decimal columns in float format with default significant digits.<br>
+	(103635) (INGDBA141)<br>
+<br>
+	(VMS)<br>
+	When starting a client only installation, the syscheck utility fails<br>
+	due to a missing image file.&nbsp;<br>
+	(104977) (INGINS145)<br>
+<br>
+	(VMS)<br>
+	For client only installations, the prompt for II_CHARSET is no<br>
+	longer truncated and will not give a warning if return or other<br>
+	valid data is input.<br>
+	(104998) (INGINS144)<br>
+<br>
+	(DBL)<br>
+	In an ABF frame displaying DoubleByte characters which<br>
+	has a popup menu overlaid over these characters, some of<br>
+	the DoubleByte characters can be corrupted.<br>
+	(104819) (INGCBT354)<br>
+<br>
+	(WINDOWS 2000 ONLY)<br>
+	Table level rollforwarddb fails due to the 'echo dummy> nul' command<br>
+	failing on Windows 2000. Rollforwarddb reports E_DM1321 and<br>
+	E_DM1301 to the terminal window.<br>
+	(101369) (INGSRV1929)<br>
+<br>
+	(VMS)<br>
+	When reporting a page level deadlock (E_DM9042) the information&nbsp;<br>
+	detailing the session holding the resource is missing.&nbsp;<br>
+	On rare occasions, a SIGSEGV may occur when Ingres logs this error.<br>
+	(104932) (INGINS143)<br>
+<br>
+	(GENERIC)<br>
+	When selecting from a view we are getting incorrect results.<br>
+	Test case has 3 levels of aggregate function (table, view on<br>
+	table with aggregates and union, view on view with aggregates,<br>
+	select on second view with aggregates).<br>
+	(100100) (INGSRV1102)<br>
+<br>
+	(Win32 only)<br>
+	The uninstaller does not remove DATA,CKP,DMP,JNL,WORK or LOG directories<br>
+	when these locations differ from II_SYSTEM.  If the directories reside<br>
+	under the II_SYSTEM tree -the uninstallation process will fail - if<br>
+	they are outside the tree - the directories will remain.<br>
+	(92372) (INGINS105)<br>
+<br>
+	(SU4_US5 ONLY)<br>
+	On Solaris 2.7 onwards ipcs strips leading zeroes from shared memory<br>
+	and semaphore key values, whereas iimemkey does not. This means<br>
+	that for II_INSTALLATION values which lead to the creation of key<br>
+	values with leading zeroes (e.g. ip and M0) this mismatch between<br>
+	ipcs and iimemkey results in ipcclean failing to clear up shared<br>
+	memory and semaphores during ingstop.<br>
+	(102539) (INGINS95)<br>
+<br>
+	(GENERIC)<br>
+	Query with an 'in' clause on an outer join view results<br>
+	in error E_OP068F consistency check - could not find temp<br>
+	table attribute number.<br>
+	(104920) (INGSRV1470)<br>
+<br>
+	(VMS)<br>
+	If the IVP utilities may only be executed now during the VMSINSTAL of<br>
+	the product, or by the Ingres System Administrator account.<br>
+	(105058) (INGINS142)<br>
+<br>
+	(GENERIC)<br>
+	DMFACP abnormally terminates. The following error sequences may appear<br>
+	in the errlog.log: E_DMA465, E_CL0F0A, E_DM9014, E_DM922F, E_DM9855,<br>
+	E_DMA459, E_DMA45E, E_DMA467 E_DMA464, E_CL0F0A, E_CL0F0A, E_DM9014,<br>
+	E_DM922F, E_DM9843, E_DM9815, E_DM9855. In a dual logging instance, the<br>
+	dual log is disabled due to errors E_DMA458, E_DMA45E, E_DMA467. The<br>
+	checksum noted in the log file buffer is 00000000.<br>
+	(104569) (INGSRV1440)<br>
+<br>
+	(GENERIC)<br>
+	dbms server crashes in a heavily replicated environment after taking&nbsp;<br>
+	the following errors: E_CL2517_CS_SMPR_DEADLOCK, E_DMF001_MUTEX_LOCK,<br>
+	E_UL0306_EXCEPTION,E_DM904A_FATAL_EXCEPTION, E_SC010E_DB_DELETE.<br>
+	(105037) (INGSRV1477)<br>
+<br>
+	(GENERIC)<br>
+	Default unloaddb or copydb scripts create massive overflow in<br>
+	hash tables due to improper sequence of create and load.<br>
+	Tables should be created heap, then loaded and modified to hash<br>
+	AFTER data has been loaded.<br>
+	The fix for this problem has been implemented with the new copydb<br>
+	command flag -order_ccm.<br>
+	(103297) (INGSRV1481)<br>
+<br>
+	(GENERIC)<br>
+	CSInstall, Ingstart fails when ii_installation id is defined as M1 or M2<br>
+	(105038) (INGSRV1478)<br>
+<br>
+	(GENERIC)<br>
+	If an entryfield has a template set to +"zzzz", even if you are able to&nbsp;<br>
+	enter a negative value, when the field is exited, the negative sign (-)<br>
+	disappears.<br>
+	(103582) (INGORD1032)<br>
+<br>
+	(GENERIC)<br>
+	Select query joining two tables, results in E_DM008E on the<br>
+	front end. E_DM008E, E_QE0080 appear in the errlog.log.<br>
+	(105190) (INGSRV1486)<br>
+<br>
+	(GENERIC)<br>
+	When scrolling up and down the results screen in isql, the display can<br>
+	become corrupted.<br>
+	(104175) (INGCBT0335)<br>
+<br>
+	(GENERIC)<br>
+	In ABF using a JOIN ON statement with form variables of either CHAR&nbsp;<br>
+	or VARCHAR may cause an error during runtime.<br>
+	(104887) (INGCBT358)<br>
+<br>
+	(GENERIC)<br>
+	Execution of 'declare global temporary table as select...where<br>
+	in (select...union...)' may result in "E_US07DA Duplicate object<br>
+	name" on the front end. No errors appear in the errlog.log.<br>
+	(103567) (INGSRV1346)<br>
+<br>
+	(GENERIC)<br>
+	COPYAPP: Attempting to use copyapp to copy out applications with a<br>
+	large number of application objects produced error E_OO000E<br>
+	'No available slots in OOtable for object'. The number of slots has<br>
+	been increased from 2048 to 4096 to accommodate more objects.<br>
+<br>
+	However, in case where this is insufficient, the environment<br>
+	variable/logical II_OO_TABLE_SIZE may be defined to a larger value.<br>
+	(45781) (INGSRV1955)<br>
+<br>
+	(GENERIC)<br>
+	Statistics collected by statdump on a table with repetition factor&nbsp;<br>
+	greater than 16777216.000000 is incorrect.<br>
+	(105184) (INGSRV1484)<br>
+<br>
+	(GENERIC)<br>
+	Loading statistics on certain tables fails with E_OP093F for some of&nbsp;<br>
+	the fields. E_OP093F Actual number of cells retrieved (nn) differs from&nbsp;<br>
+	the number of cells declared (mm).&nbsp;<br>
+	(104907) (INGSRV1540)<br>
+<br>
+	(GENERIC)<br>
+	E_SC0216_QEF_ERROR, E_SC0206_CANNOT_PROCESS appear in the errlog.log<br>
+	after a lock time-out in a database procedure.<br>
+	(87296) (INGSRV0203)<br>
+<br>
+	(UNIX)&nbsp;<br>
+	Internal Threads: Server size grows with IMA activity such as&nbsp;<br>
+	VDBA refreshes until OS resources are exhausted and server gives<br>
+	error message E_SC0107_BAD_SIZE_EXPAND and may in some cases&nbsp;<br>
+	crash. This bug is related to Bug #99055.<br>
+	(103999) (INGSRV1380)<br>
+<br>
+	(GENERIC)<br>
+	select statement run in star fails with E_OP0A8C consistency check -<br>
+	cost resolution for final query plan cannot be found<br>
+	(105143) (INGSTR41)<br>
+<br>
+	(GENERIC)<br>
+	Updating key columns of data that contain no corresponding shadow table&nbsp;<br>
+	entries results in inserting a second row into the target database.&nbsp;<br>
+	(103776) (INGREP0089)<br>
+<br>
+	(GENERIC)<br>
+	Delete query followed by modify to merge may result in data rows<br>
+	not being referenced in any leaf page. Subsequent queries may result<br>
+	in "E_DM0056 nopart btree" errors.<br>
+	(105235) (INGSRV1493)<br>
+<br>
+	(NT ONLY)<br>
+	Netstop "Ingres Intelligent Database" times out and displays the error<br>
+	 "The Ingres Intelligent Database service could not be stopped" but&nbsp;<br>
+	continues to shutdown all servers.&nbsp;<br>
+	(105249) (INGSRV1494)<br>
+<br>
+	(GENERIC)<br>
+	Lockmode READLOCK=NOLOCK not honored when executing a "select<br>
+	count(*)..." query on non-btree tables.<br>
+	(104534) (INGSRV1452)<br>
+<br>
+	(GENERIC)<br>
+	VERIFYDB reports errors against BTREE tables when there<br>
+	more than 470 keys on a leaf or index page.<br>
+	(105302) (INGSRV1499)<br>
+<br>
+	(GENERIC)<br>
+	Duplicating a deeply recursive userclass object causes a stack overflow.<br>
+	Note that this fix also requires a fix for OpenIngres bug 101133.<br>
+	(97464) (INGORD536)<br>
+<br>
+	(VMS,CLUSTER)<br>
+	In a clustered installation, if a node failed, information<br>
+	about the archive window for the failed node could incorrectly<br>
+	overwrite information about the archive window for the local<br>
+	node.  This could lead to local archiver failure with errors<br>
+	E_DM9845 or E_DM9846.<br>
+	(105041) (INGINS104)<br>
+<br>
+	(VMS,CLUSTER)<br>
+	In a clustered installation, recovery of a failed node could<br>
+	fail with errors E_CL0002, E_DM9043, E_DM004D, E_DM960F,<br>
+	E_DM9638, ... , from the CSP.   CSP would then crash, causing<br>
+	node failure to propagate.<br>
+	(105000) (INGSRV1476)<br>
+<br>
+	(VMS ONLY)<br>
+	In a Clustered Ingres environment the performance of<br>
+	secondary nodes is markedly worse since the application<br>
+	of the fix for bug 90388. As an example HELP TABLE may<br>
+	take up to three times longer on secondary cluster nodes.<br>
+	(95062) (INGSRV0689)<br>
+<br>
+	(GENERIC)<br>
+	Incorrect results when using the not exists aggregate<br>
+	in a high concurrency environment.<br>
+	(105318) (INGSRV1501)<br>
+<br>
+	(NT ONLY)<br>
+	Added missing function II_IngresVersion to tngapi (oiutil.dll).<br>
+	(105063) (INGAPI25)<br>
+<br>
+	(GENERIC)<br>
+	DBMS server SEGV in rdf or psf when running concurrent inserts.<br>
+	(105248) (INGSRV1531)<br>
+<br>
+	(GENERIC)<br>
+	A set of tables is defined to have many fields that have a default<br>
+	value.&nbsp;<br>
+	When running many concurrent sessions which issue inserts into these<br>
+	tables such that most of the fields default, the server crashes in&nbsp;<br>
+	rdf_unfix or sessions crash in psl_make_user_default().<br>
+	(103486) (INGSRV1337)<br>
+<br>
+	(UNIX)<br>
+	Multiple SIGSEGVs in CSMT_find_scb(). Followed by a fatal<br>
+	SIGSEGV in scs_terminate(). Errors in the errlog.log<br>
+	include; E_CL2514, E_CL25FF, E_CL1037, E_SC0122, E_DM942B.<br>
+	Occurs when a server is hit with a very high number<br>
+	of user sessions.<br>
+	(105265) (INGSRV1496)<br>
+<br>
+	(GENERIC)<br>
+	DBMS will crash if full path for audit file is not given<br>
+	when registering an auditing table with sxa - errlog.log will<br>
+	contain E_SX011 (x2) E_GW4059 E_GW4070 - dump session.<br>
+	(97794) (INGSRV1008)<br>
+<br>
+	(GENERIC)<br>
+	Executing 'set session isolation level &lt;isolation_level>' or<br>
+	'set session read write | only' in a STAR session fails with<br>
+	E_SC0206. In the errlog.log: Segmentation Violation (SIGSEGV),<br>
+	E_CL2514, E_QS001E, E_QS0014.<br>
+	(99976) (INGSTR0032)<br>
+<br>
+	(GENERIC)<br>
+	Running COPYDB/UNLOADDB against individual tables having<br>
+	'delimited ids' results in error E_XF0019 'There was a table<br>
+	or view specified on the command line that does not exist<br>
+	or is not owned by you'.<br>
+	(101617) (INGSRV1191)<br>
+<br>
+	(GENERIC)<br>
+	In ISQL, using the print option with a single digit number as the<br>
+	output filename, omits the filename from the print command.  The<br>
+	The message "Printing output..." is displayed and hangs.<br>
+	(60056) (INGCBT0325)<br>
+<br>
+	(GENERIC)<br>
+	rollback of a TX causes global temporary tables that were not<br>
+	updated in the TX to be dropped.<br>
+	(105755) (INGSRV1542)<br>
+<br>
+	(VMS)<br>
+	Ingres images installed into memory are not uninstalled when Ingres is<br>
+	shutdown.<br>
+	(105541) (INGSRV1519)<br>
+<br>
+	(GENERIC)<br>
+	ISAM table with an IASM unique secondary index allows duplicate<br>
+	rows to appear in the base table.<br>
+	(104980) (INGSRV1473)<br>
+<br>
+	(GENERIC)<br>
+	Select query qualifying point inside box results in incorrect<br>
+	data. Table involved in query has rtree secondary index.<br>
+	(105639) (INGSRV1529)<br>
+<br>
+	(GENERIC)<br>
+	Create rtree index on point column fails with E_DM93E0, E_DM93B9<br>
+	in errlog.log.<br>
+	(105635) (INGSRV1528)<br>
+<br>
+	(GENERIC)<br>
+	The active session count shown in IPM->server list is incorrect<br>
+	(105517) (INGSRV1518)<br>
+<br>
+	(GENERIC)<br>
+	Incorrect results are returned from a query containing a subselect<br>
+	with both an inner and an outer join in which the inner join clause<br>
+	contains a simple restriction, an inequality join predicate and an<br>
+	equality join predicate.<br>
+	(87175) (INGSRV432)<br>
+<br>
+	(GENERIC)<br>
+	If a database is quieted by a RepServer, because of a<br>
+	communications or similar error, then when it becomes<br>
+	available again, dd_set_server UDB and dd_go_server<br>
+	fail to resume the service and replicator has to be<br>
+	stopped and restarted.<br>
+	(103778) (INGREP0088)<br>
+<br>
+	(GENERIC)<br>
+	Problem with compressed index (index modified to CISAM).<br>
+	After an update one of the index key references to the<br>
+	base table data row (tidp) is lost.<br>
+	(105860) (INGSRV1557)<br>
+<br>
+	(GENERIC)<br>
+	Compressed secondary index corruption after an update.<br>
+	(103044) (INGSRV1933)<br>
+<br>
+	(DBL)<br>
+	The SHIFTJIS character set does not interpret character codes F0-FC as<br>
+	valid codes for the first byte of a double-byte character..<br>
+	(105127) (INGDBA138)<br>
+<br>
+	(GENERIC)<br>
+	alterdb &lt;dbname> -delete_oldest_ckp may delete the only valid<br>
+	checkpoint.  This occurs when the oldest checkpoint is the only<br>
+	valid checkpoint and a more recent checkpoint is not valid.<br>
+	(104242) (INGSRV1411)<br>
+<br>
+	(GENERIC)<br>
+	Negative values are being displayed incorrectly in ABF frames, where<br>
+	the field template uses the 'z' character code. This problem occurs<br>
+	following the application of a patch which fixes bug 103582.<br>
+	(106214) (INGSRV1935)<br>
+<br>
+	(GENERIC)<br>
+	Invoking iinamu with absolute path '&lt;full pathname>/iinamu' results<br>
+	in core dump.<br>
+	(106443) (INGNET89)<br>
+<br>
+	(VMS ONLY)<br>
+	The IINAMU prompt displays the full pathname and executable<br>
+	name of the iinamu.exe program, so placing the input region<br>
+	halfway across the screen on some systems.<br>
+	(106157) (INGSRV1579)<br>
+<br>
+	(GENERIC)&nbsp;<br>
+	Binary 'copy...from' may fail with E_CO0032 COPY: Bad data value<br>
+	for column ... Problem happens when inserting date('now') during<br>
+	the time when the month got with  date('now') is different from<br>
+	the one got with date_gmt('now'). For example;<br>
+	01-aug-2001 00:10:00 in EUROPE-CENTRAL which is<br>
+	31-jul-2001 22:10:00 in GMT.<br>
+	(105417) (INGSRV1515)<br>
+<br>
+	(Tru64,64bit)<br>
+	IMA ima_server_sessions contains incorrect values in session_id (junk&nbsp;<br>
+	byte at end of each session_id) and ima_server_sessions_extra contains&nbsp;<br>
+	no rows.<br>
+	(103257) (INGSRV1324)<br>
+<br>
+	(GENERIC)<br>
+	GCF tracing can only be set by restarting the relevant server,&nbsp;<br>
+	such as the communications server (IIGCC); that is, the trace&nbsp;<br>
+	settings cannot be modified while the server is running.  In high&nbsp;<br>
+	volume environments where a problem may only occur infrequently,&nbsp;<br>
+	tracing is impractical due to the negative impact of tracing on&nbsp;<br>
+	performance and the resulting large trace file.  The fix for this&nbsp;<br>
+	problem allows GCA and GCC tracing to be managed while the server&nbsp;<br>
+	is running using either IMA or an internal tool, GCMTOOL, which&nbsp;<br>
+	currently must be provided by Technical Support.  The GCF traces&nbsp;<br>
+	that can now be managed dynamically as managed objects are:<br>
+	  Ingres or OS variable   config.dat      managed object<br>
+	     II_GCA_LOG		gca_trace_log	  exp.gcf.gca.trace_log<br>
+	     II_GCA_TRACE	gca_trace_level	  exp.gcf.gca.trace_level<br>
+	     II_GCC_TRACE	gcc_trace_level	  exp.gcf.gcc.trace_level<br>
+	(105459) (INGNET0081)<br>
+<br>
+	(GENERIC)<br>
+	Some characters are not transliterated from Cyrillic Windows (i.e. CW)<br>
+	into ISO-8859-5 (e.g. ISO889595).<br>
+	(104411) (INGNET78)<br>
+<br>
+	(GENERIC)&nbsp;<br>
+	QBF table fields: A date attribute with time specified as&nbsp;<br>
+	"dd/mm/yyyy 00:00:00" is not changed when modified to&nbsp;<br>
+	"dd/mm/yyyy".  The reverse modification also fails.  This&nbsp;<br>
+	also occurs with other date formats.<br>
+	(101931) (INGCBT283)<br>
+<br>
+	(VMS)<br>
+	On a clustered Ingres installation, a session is terminated&nbsp;<br>
+	following a E_CL2519 error. This error occurs while the&nbsp;<br>
+	sesson is performing an optimizedb.<br>
+	(105658) (INGSRV1532)<br>
+<br>
+	(VMS)<br>
+	With old_opf_jcard set on, ingres fails to startup. Machine is a&nbsp;<br>
+	Compaq GS160.&nbsp;<br>
+	Errors seen in the errlog.log are  E_CL2507, E_CL100A, E_DM901C,&nbsp;<br>
+	E_CL2519, E_DM937C, E_DM930A and E_SC0124.&nbsp;<br>
+	Problem was only reproducable on one machine. Another machine,&nbsp;<br>
+	ES40, did not exhibit the same problem.<br>
+	(102665) (INGSRV1271)<br>
+<br>
+	(GENERIC)<br>
+	This bug specifically complains that a non-histogrammable column&nbsp;<br>
+	encountered in a non-column specific run of optimizedb causes the&nbsp;<br>
+	messages OP0917/AD3011 to be repeated for all columns following&nbsp;<br>
+	the faulty one, regardless of data type.&nbsp;<br>
+<br>
+	In fact, the messages shouldn't be issued at all for non-column<br>
+	specific runs of optimizedb. Rather, it should just skip them<br>
+	without error and process the remaining columns. Moreover, the<br>
+	E_OP0917 message is unintelligible and should be replaced with&nbsp;<br>
+	something more meaningful.<br>
+	(91345) (INGSRV1592)<br>
+<br>
+	(GENERIC)<br>
+	Statdump in a non-column specific run reports E_OP0917,<br>
+	E_AD3011 when a non-histogrammable column (eg. long varchar)<br>
+	is encountered.<br>
+	(105719) (INGSRV1538)<br>
+<br>
+	(GENERIC)<br>
+	Selects from hash tables keyed on multiple columns could fail<br>
+	with a segmentation violation if select criteria contains only<br>
+	comparisons for equality and all comparisons are on keys columns<br>
+	and the select criteria combines one or more AND terms covering<br>
+	all the key columns, OR'ed with at least on term in which some<br>
+	of the key components are not specified.<br>
+	(103164) (INGSRV1305)<br>
+<br>
+	(GENERIC)<br>
+	The IPM display "Sever Detail" always indicates that the number of Idle<br>
+	Quantums as 20.<br>
+	(105200) (INGSRV1490)<br>
+<br>
+	(GENERIC)<br>
+	IPM displays the wrong process details for a session where the terminal<br>
+	id is unknown (usually a batch process).<br>
+	(104438) (INGDBA140)<br>
+<br>
+	(NT ONLY)<br>
+	A vnode connection will fail if the machine name has leading<br>
+	digits. Ex A machine name of 92test will fail.<br>
+	(105650) (INGNET82)<br>
+<br>
+	(GENERIC)<br>
+	Given a table which contains blob columns - copying the table,<br>
+	explicitly skipping blob columns, into a file fails.<br>
+	(105381) (INGSRV1511)<br>
+<br>
+	(GENERIC)<br>
+	Copying a file into a table containing long varchar/varbyte<br>
+	columns fails with E_QE007D, E_US16D2, E_CO002A.&nbsp;<br>
+	E_DM9B0B, E_DM9B01, E_DM9B01, E_DM9B04, E_DM9275, E_DM008B&nbsp;<br>
+	and E_QE007D appear in the errlog.log.<br>
+	(105415) (INGSRV1513)<br>
+<br>
+	(GENERIC)<br>
+	Copying a file into a table containing long varchar/varbyte<br>
+	columns may result in the dbms server spinning with 100% cpu<br>
+	usage.<br>
+	(103391) (INGSRV1335)<br>
+<br>
+	(GENERIC)<br>
+	Problems when comparing float8 to float4.<br>
+	(85284) (INGSRV1602)<br>
+<br>
+	(GENERIC)<br>
+	Copy into table from file fails with E_SC031A, E_SC0206 and<br>
+	E_US16D2 on the front end. E_AD7011, E_SC031A, E_US0005 appear<br>
+	in the errlog.log.<br>
+	(105406) (INGSRV1514)<br>
+<br>
+	(UNIX)<br>
+	Ingres will look for the CA licensing in /opt/CA/CAlib, then&nbsp;<br>
+	/usr/local/CAlib.<br>
+	(105705) (INGSRV1952)<br>
+<br>
+	(GENERIC)<br>
+	A query which contains incorrect sql which compares<br>
+	a varchar column to an integer value reports E_DM008A<br>
+	and E_QE007C if the query contains a K-Join. These<br>
+	errors suggest data corruption which is not the case.<br>
+	The expected error is E_US1130.<br>
+	(105231) (INGSRV1495)<br>
+<br>
+	(GENERIC)<br>
+	When the page size is 32K+ the number of leaf entries on a compressed&nbsp;<br>
+	tuple is greater than 510 any sql code that retrieves data from the<br>
+	pages referenced by the Id's above will loop.<br>
+	(106336) (INGSRV1593)<br>
+<br>
+	(UNIX)<br>
+	server crashed with errors: E_CL0607_DI_BADREAD. A session<br>
+	waiting for a disk I/O operation was resumed before the disk<br>
+	operation actually completed. E_DM9005_BAD_FILE_READ.<br>
+	E_DM933C, E_DM933C error faulting a page, E_DM920C, E_DM924A,<br>
+	E_DM9246, E_DM904D,E_DM008B, E_QE007D, E_CL0606, E_DM9006,..<br>
+	E_DM920E, DM9371 TCB could not be released due to inability to<br>
+	flush out modified pages from cache. In II_DBMS_LOG, there is<br>
+	CSfree_event on  [8035E168] failed, flags [00000003] before<br>
+	E_CL0607.<br>
+	(65571) (INGSRV950)<br>
+<br>
+	(GENERIC)<br>
+	Trying to do a checkpoint of a database fails after the database has&nbsp;<br>
+	had journalling disabled (using $ alterdb -disable_journaling ).<br>
+	When running the following command:&nbsp;<br>
+	ckpdb +j database_name&nbsp;<br>
+	it complains that the archiver is not running when it is.  The<br>
+	checkpoint then fails.<br>
+	(104984) (INGSRV1474)<br>
+<br>
+	(GENERIC)<br>
+	For collision mode 3 (PRIORITYRESOLUTION) or&nbsp;<br>
+	4(LASTWRITEWINS), the  Error 1383(table does not exist or is not owned<br>
+	 by you) occurs when the dba and table owner for the source and target&nbsp;<br>
+	are different.&nbsp;<br>
+	(101363) (INGREP0073)<br>
+<br>
+	(GENERIC)<br>
+	Cannot replicate a full peer a dba owned table in the source database to<br>
+	the dba owned table of an unprotected read only (URO) (target type 3)<br>
+	target when the dba names are different.  This results in the following&nbsp;<br>
+	errors in replicat.log: error E_US0845 (generic 30100/replicator errors&nbsp;<br>
+	1128/1227/1556) in replicat.log, complaining 'tbname' doesn't exists.<br>
+	(98488) (INGREP0062)<br>
+<br>
+	(GENERIC)<br>
+	when using "aliases" set in iinamu for several dbms servers to allow<br>
+	load balancing between the various dbms servers, several queries in&nbsp;<br>
+	imadb do not work. For example setting the following alias in iinamu:&nbsp;<br>
+	iinamu>  add aliasname * port_of_a_running_dbms_server.<br>
+	When a connection is made to the dbms with the alias as server&nbsp;<br>
+	class (sql dbname/aliasname), queries in imadb such as the following<br>
+	do not work execute procedure ima_set_vnode_domain;<br>
+	    select * from ima_locks;<br>
+	Error is:E_GW8204_SELF_NOT_INSTALL, GWM error--@3146' isn't a Vnode&nbsp;<br>
+	server!?<br>
+	(104451) (INGSRV1425)<br>
+<br>
+	(GENERIC)<br>
+	The Euro currency sign is now converted between Windows2000 and Unix.<br>
+	Two new character sets are provided to support this conversion:<br>
+	IS885915 corresponding to ISO 8859-15 Latin 9, which includes the<br>
+	Euro at code point 0xA4, and WIN1252 corresponding to Windows code<br>
+	page 1252 Latin 1, which includes the Euro at code point 0x80.<br>
+	(105247) (INGCBT432)<br>
+<br>
+	(GENERIC)<br>
+	E_RD0043_CACHE_FULL, E_UL0104_FULL_TABLE errors requiring&nbsp;<br>
+	server shutdown.<br>
+	(106005) (INGSRV1568)<br>
+<br>
+	(UNIX)<br>
+	With II_THREAD_TYPE set to INTERNAL, if more than 1000 session context<br>
+	changes are executed per second, sessions suspended with a time-out<br>
+	specified will prematurely resume.<br>
+	(104072) (INGSRV1389)<br>
+<br>
+	(GENERIC)<br>
+	The more recent appearance of this bug was reported on a Siemans<br>
+	processor, for which there is no native thread support. Testing<br>
+	has shown that it is a problem on other Ingres thread systems. The<br>
+	original problem was a total lockout of other processing while the<br>
+	complex query compiled, whereas the lingering problem is simply a<br>
+	visible delay in starting and processing other work.<br>
+	(72196) (INGSRV1911)<br>
+<br>
+	(GENERIC)<br>
+	In ABF when using a variable for a table name, the server will send<br>
+	back error "Syntax error on '~V' the correct syntax is......<br>
+	(106438) (INGCBT381)<br>
+<br>
+	(64bit)<br>
+	SELECT from IMA tables ima_qsf_rqp and ima_qsf_dbp incorrectly returns&nbsp;<br>
+	no rows.&nbsp;<br>
+	(106318) (INGSRV1590)<br>
+<br>
+	<a name="INGREP97">(ATTENTION,GENERIC)</a><br>
+	When the replicator server starts up, if the number of records to be&nbsp;<br>
+	read from the distribution queue is large (exceeds QBM value) the&nbsp;<br>
+	server hangs and fails to process any of the records in the queue.<br>
+	In II 2.0 the Replicator Server needs to be re-built for this fix<br>
+	to take effect.<br>
+	(105555) (INGREP97)<br>
+<br>
+	<a name="INGREP98">(ATTENTION,GENERIC)</a><br>
+	Replicator server silently looses data in a concurrent environment.&nbsp;<br>
+	Some of the rows in a given transaction will not be replicated to&nbsp;<br>
+	targets, though no errors are reported and the records will be deleted<br>
+	from the distribution queue.<br>
+	The Replicator Server will need to be re-built for this fix to take&nbsp;<br>
+	effect.<br>
+	(105675) (INGREP98)<br>
+<br>
+	(GENERIC)<br>
+	When accessing HASH tables, a full table scan is<br>
+	used. This leads to poor performance and possible<br>
+	deadlocks.<br>
+	(106777) (INGSRV1651)<br>
+<br>
+	(GENERIC)<br>
+	Complex query may hang in optimizer facility and doesn't come back.&nbsp;<br>
+	On systems with internal threads the dbms server becomes unavailable&nbsp;<br>
+	and eats all CPU. In a multiple dbms server environment the other&nbsp;<br>
+	servers will hang some time later, no connect to the database is&nbsp;<br>
+	possible(but the other servers are reachable with iimonitor).&nbsp;<br>
+	To stop the system the dbms server has to be killed(kill -9),&nbsp;<br>
+	often the recovery must be killed too.&nbsp;<br>
+	(106068) (INGSRV1572)<br>
+<br>
+	(GENERIC)<br>
+	Create table with 'fc float with default 1,1' fails<br>
+	with E_US0F0F and E_US0AA0 when II_DECIMAL set to ",".<br>
+	Create table with 'fc float with default 1.1' works fine<br>
+	when II_DECIMAL set to ".". However, trying to insert a<br>
+	row into that table with II_DECIMAL set to "," fails<br>
+	with E_US100F.<br>
+	(102580) (INGSRV1272)<br>
+<br>
+	(GENERIC)<br>
+	INSERT into a table with a default float, decimal, or money value can<br>
+	sometimes fail.  This occurs when the value of II_DECIMAL at the time of<br>
+	the INSERT is different from what it was when the table was created.<br>
+	(102757) (INGSRV1570)<br>
+<br>
+	(GENERIC)<br>
+	Embedded SQL programs may experience memory update errors<br>
+	when an SQL statement is executed from a module which doesn't<br>
+	use the SQLCODE feature, following an SQL statement executed from<br>
+	a module which uses the SQLCODE feature (when the SQLCODE<br>
+	variable is declared locally to the module).<br>
+	(106237) (INGEMB60)<br>
+<br>
+	(GENERIC)<br>
+	Performing Table level Checkpoints fail with error E_DM1057 when the<br>
+	page size of the table is greater than 2K.<br>
+	(106230) (INGSRV1587)<br>
+<br>
+	(GENERIC)<br>
+	Reports display asterisks when value would still fit. With a mask of&nbsp;<br>
+	"zz,zzz,zzn.nn-" we are seeing "**********" even with a value of&nbsp;<br>
+	14,693,278.80- which should be fine. The value is displayed correctly&nbsp;<br>
+	in 6.4.<br>
+	(104753) (INGCBT364)<br>
+<br>
+	(NT ONLY)<br>
+	gcc handle count increases by 1 for every incoming session that<br>
+	(106140) (INGNET88)<br>
+<br>
+	(GENERIC)<br>
+	When saving query results in isql, the last few lines would not<br>
+	be written to the output file. An analgous behaviour is seen<br>
+	on printing<br>
+	(106421) (INGCBT0380)<br>
+<br>
+	(GENERIC)<br>
+	Rmcmd fails to start. Rmcmd returns sql error code -39100 and<br>
+	E_US0022. Errlog.log reports E_SC0123.<br>
+	(106591) (INGSRV1625)<br>
+<br>
+	(GENERIC)<br>
+	Copy from table with blob columns into file, creates a huge data<br>
+	file, eventually exhausting disk space.<br>
+	(104122) (INGSRV1584)<br>
+<br>
+	(VMS)<br>
+	Failure on audit of the account privileges when compared to<br>
+	the documentation.<br>
+	(47845) (INGSRV1954)<br>
+<br>
+	(GENERIC)<br>
+	Compilation of the 4GL statement localvar=char('xxxx',1) results in a<br>
+	compilation error due to SIGBUS in 4GL compiler.<br>
+	(105513) (INGCBT0373)<br>
+<br>
+	(WIN32 ONLY)<br>
+	Cannot connect more than 200 sessions concurrently from a single<br>
+	application process on Windows platforms.  Error received on<br>
+	201st session is:<br>
+	  E_GC2201_NRM_RCV_FAIL GCA normal receive failure: reason follows.<br>
+	  E_GC0001_ASSOC_FAIL   Association failure: partner abruptly<br>
+	     released association<br>
+	Although the internal limit has been eliminated on WinNT/2000<br>
+	systems, it was merely increased on Win9x systems from 100 to<br>
+	1000.  Note that configuration parameters such as<br>
+	gcc.inbound_limit, gcc.outbound_limit, and dbms.connect_limit<br>
+	are still enforced.<br>
+	(105793) (INGNET0083)<br>
+<br>
+	(GENERIC)<br>
+	Copying from a large file into a table containing long<br>
+	varchar/varbyte columns may result in the lock limit being<br>
+	met. Copy fails. E_CL102F, E_DMA010, E_DM9046, E_DM004B,&nbsp;<br>
+	E_DM004B, E_DM9B09, E_AD7006, etc. appear in the errlog.log.<br>
+	(106154) (INGSRV1578)<br>
+<br>
+	(GENERIC)<br>
+	Unprotected updates to internal structures may very rarely cause the&nbsp;<br>
+	DBMS to call abort() from iiCLpoll() causing the server to die without&nbsp;<br>
+	any related error messages. Later on the recovery process (dmfrcp) will&nbsp;<br>
+	report E_DMA469.&nbsp;<br>
+	(101849) (INGSRV1200)<br>
+<br>
+	(GENERIC)<br>
+	Dividing a decimal of format (31,4) etc. by integers<br>
+	return incorrect results. Division by an integer returns<br>
+	the value rounded as integer but having decimal data type.<br>
+	The fix reverses the incorrect change 438573 which did not resolve&nbsp;<br>
+	the decimal*integer overflow causing the bug 91609/92366 the change&nbsp;<br>
+	438573 was trying to fix anyway. The decimal*integer truncation )<br>
+	should be a DAR since no document for it.<br>
+	(98986) (INGSRV1027)<br>
+<br>
+	(GENERIC)<br>
+	A session which interrupts a REPEATED query and then repeated the same<br>
+	REPEATED query may get different results. This occurs only if the<br>
+	query result requires more than one GCA message to send the data from<br>
+	the DBMS server to the FE application, and the interrupt must be<br>
+	received by the DBMS server before the second GCA message is sent.<br>
+	(106708) (INGSRV1610)<br>
+<br>
+	(GENERIC)<br>
+	Query containing outer joins, aggregates and group by<br>
+	attributes, against an aggregate view, returns incorrect<br>
+	results.<br>
+	(105669) (INGSRV1534)<br>
+<br>
+	(GENERIC)<br>
+	E_DM0042_DEADLOCK is reported without a preceeding<br>
+	error message that identifies the resource on which<br>
+	the deadlock occurred.<br>
+	(106766) (INGSRV1646)<br>
+<br>
+	(GENERIC)<br>
+	Running &lt;unloaddb> on a STAR database leads to error E_US0834<br>
+	(105610) (INGSRV1527)<br>
+<br>
+	(GENERIC)<br>
+	When running with MK, page locks are being taken even though<br>
+	tables are opened explicitly with readlock nolock.<br>
+	(106696) (INGSRV1637)<br>
+<br>
+	(GENERIC)<br>
+	On non byte-swapped machines, the SQL hex() function now returns<br>
+	the hex format of a number in proper format.<br>
+	(104189) (INGSRV1919)<br>
+<br>
+	(GENERIC)<br>
+	After modifying a heap table to hash using the minpages option<br>
+	and then running copydb, the minpages option appears in the copy<br>
+	statement. Running another copydb after the table has been dropped<br>
+	and recreated using this copy.in will cause the minpages value to<br>
+	be reduced to the default value of 10.<br>
+	(106799) (INGSRV1654)<br>
+<br>
+	(GENERIC)<br>
+	select sum(column) from an aggregate view does not return the correct<br>
+	result. Only distinct values from all qualified rows are included.<br>
+	(106767) (INGSRV1647)<br>
+<br>
+	(GENERIC)<br>
+	E_SC0216, E_SC0206 followed by SIGSEGV in qso_destroy()<br>
+	when a select cursor exceeds the MAXROW limit.<br>
+	(106986) (INGSRV1677)<br>
+<br>
+	GENERIC)<br>
+	alterdb -delete_oldest_ckp dbname fails to delete dump history<br>
+	information  and dump files if for some reason the checkpoint and<br>
+	dump sequence numbers go out of sync.  For instance if an invalid<br>
+	checkpoint was taken.<br>
+	(106914) (INGSRV1670)<br>
+<br>
+	(GENERIC)<br>
+	Using QBF to update a table created by the DBA when a table of the same<br>
+	name exists for the user performing the update, will update the User<br>
+	table.<br>
+	(106812) (INGCBT390)<br>
+<br>
+	(GENERIC)<br>
+	Blanks may be lost in strings containing many blanks when the strings&nbsp;<br>
+	are copied out and then copied back into a database via copydb or&nbsp;<br>
+	unloadb/reloaddb. For some strings, an extra blank may appear.&nbsp;<br>
+	(81256) (INGSRV454)<br>
+<br>
+	<a name="INGREP107">(ATTENTION,GENERIC)</a><br>
+	When II_TIMEZONE_NAME=EUROPE-CENTRAL, inserting GMT dates<br>
+	as '28/10/01 00:00 GMT' and '28/10/01 01:00 GMT' in the<br>
+	primary key field on a replicated table, will fail with&nbsp;<br>
+	error:'D_INSERT: DBMS error inserting record Source DB XX,&nbsp;<br>
+	Transaction ID 'trans_id', Sequence 'seq_no' into Target&nbsp;<br>
+	DB XX on table 'table name'.<br>
+	-- 30210 -- E_US1194 Duplicate key  on INSERTdetected.&nbsp;<br>
+	(Similar values for other timezones are also affected).<br>
+	The Replicator Server needs to be re-built for this fix to<br>
+	take effect.<br>
+	(106417) (INGREP107)<br>
+<br>
+	(UNIX)<br>
+	An iimonitor session goes into a loop when performing<br>
+	a "format all" command at a time when existing sessions<br>
+	are in the process of being removed from the DBMS server.<br>
+	(105444) (INGSRV1563)<br>
+<br>
+	(AIX)<br>
+	optimizedb runs very slowly after a patch containing the fix for bug&nbsp;<br>
+	72196/104072 is applied.)<br>
+	(106893) (INGSRV1669)<br>
+<br>
+	(GENERIC)<br>
+	A query with a very large from clause (19 tables) causes a OP0002<br>
+	(OPF out of memory) error during the plan enumeration phase. OPF<br>
+	uses several strategies to avoid running out of memory, even in the<br>
+	face of large, complex queries. So this error should not have happened.<br>
+	(107186) (INGSRV1937)<br>
+<br>
+	(GENERIC)<br>
+	Various queries with large from clauses and numerous applicable<br>
+	secondary indexes cause a variety of OPF errors. These problems<br>
+	include OP0482 and OP0082 (internal SEGV), in addition to tight<br>
+	CPU loops.<br>
+	(107096) (INGSRV1688)<br>
+<br>
+	(GENERIC)<br>
+	Query is executed using cartesian product join node(s) rather<br>
+	than K/FSM/PSM join node(s) resulting in excessive disk IO and<br>
+	CPU usage.<br>
+	(107083) (INGSRV1687)<br>
+<br>
+	(GENERIC)<br>
+	Problem with cursors and endselect. If a select loop inside<br>
+	an open cursor use the endselect statement, the cursor is&nbsp;<br>
+	closed prematurely.&nbsp;<br>
+	(106889) (INGSRV1668)<br>
+<br>
+	(GENERIC)<br>
+	Interrupting ISQL while the contents of the Output window is written<br>
+	to disk, either causes the screen to become blank (with exception of<br>
+	the menu options), or it becomes impossible to return to the command<br>
+	entry window.<br>
+	(105407) (INGCBT368)<br>
+<br>
+	(GENERIC)<br>
+	lockstat sometimes displays negative numbers in values listed under the&nbsp;<br>
+	section titled "Locking System Statistics".<br>
+	(107029) (INGSRV1683)<br>
+<br>
+	(GENERIC)<br>
+	TRACE POINT DM420 sometimes displays negative values for FIX CALLS and&nbsp;<br>
+	other fields.<br>
+	(106435) (INGSRV1606)<br>
+<br>
+	(GENERIC)<br>
+	When using daylight savings time for Israel, The GMT offset is<br>
+	incorrect.<br>
+	(105597) (INGSRV1950)<br>
+<br>
+	(VMS)<br>
+	Cannot access the CSP log file whilst installation is up.&nbsp;<br>
+	(105951) (INGSRV1605)<br>
+<br>
+	(VMS, RMCMD)<br>
+	When a user enters a create database command from VDBA, the Remote<br>
+	Command processes on the VMS server machine hang.<br>
+	(107279) (INGSRV1927)<br>
+<br>
+	(UNIX)<br>
+	In an OS threaded installation an application throws<br>
+	hundreds (400-800+) of new sessions at the DBMS server<br>
+	whilst using IPM and/or iimonitor to monitor the<br>
+	sessions. This results in very slow session connect<br>
+	times (in the order of minutes).<br>
+	(107182) (INGSRV1704)<br>
+<br>
+	(UNIX)<br>
+	In an OS threaded installation an application throws<br>
+	hundreds (400-800+) of new sessions at the DBMS server<br>
+	whilst using IPM and/or iimonitor to monitor the<br>
+	sessions. This results in very slow session connect<br>
+	times (in the order of minutes).<br>
+	(107159) (INGSRV1696)<br>
+<br>
+	(GENERIC)<br>
+	A new SQL/ISQL flag "-T" has been added, which instructs Ingres<br>
+	to extract/display dates with sufficient characters to handle<br>
+	the longest possible date interval that can be stored.<br>
+	(107171) (INGSRV1699)<br>
+<br>
+	(GENERIC)<br>
+	CBF abnormally exits with error:<br>
+	  "Unable to open for writing.(S_ST0323)"  or&nbsp;<br>
+	  "ERslookup() ERROR: Missing or bad parameter for this&nbsp;<br>
+	      message. *** (S_ST0323)"<br>
+	(102964) (INGSRV1320)<br>
+<br>
+	(VMS)<br>
+	SEGV in CBF when updating the local_vnode and selecting&nbsp;<br>
+	option RESTORE.<br>
+	(107057) (INGSRV1686)<br>
+<br>
+	(AXM.VMS)<br>
+	EDONE bit set prior to call from  LK!LKRLSE.C:&nbsp;<br>
+	LKrelease_1 Pos 1 Msk 00012000&nbsp;<br>
+	(106882) (INGSRV1665)<br>
+<br>
+	(GENERIC)<br>
+	Ingres has been enhanced to follow the new CA-Licensing procedures.<br>
+	(106246) (INGSRV1930)<br>
+<br>
+	(HPUX)<br>
+	PERFORMANCE: Performance degradation since upgrading to Ingres II on a&nbsp;<br>
+	single processor machine running with internal threads and IO slaves on&nbsp;<br>
+	an OS threaded release. Tests show best results obtained when using&nbsp;<br>
+	zero IO slaves.&nbsp;<br>
+	(106436) (INGSRV1611)<br>
+<br>
+	(GENERIC)<br>
+	"set lockmode", as the first statement, in a STAR transaction<br>
+	fails when the lockmode is applied to a remote table and the<br>
+	local Star server's RDF cache does not contain the remote table<br>
+	definition. The following errors are reported to the front end:<br>
+	E_US172C, E_RQ0042, E_QE0514.<br>
+	(107330) (INGSRV1729)<br>
+<br>
+	(GENERIC)<br>
+	Rollforward of a checkpoint taken prior to the creation<br>
+	of a non-journalled table fails with:<br>
+	E_DM1306_RFP_APPLY_RECORD, E_DM1301_RFP_ROLL_FORWARD.<br>
+	(102072) (INGSRV1709)<br>
+<br>
+	(GENERIC)<br>
+	E_OP0783_ADI_FICOERCE consistency check on a query using function&nbsp;<br>
+	aggregates and outer joins.<br>
+	(106678) (INGSRV1633)<br>
+<br>
+	(GENERIC)<br>
+	Users are unable to interrupt an AUDITDB with CTRL-C. A message is<br>
+	displayed indicating that a user interrupt has been detected, but the<br>
+	audit continues.<br>
+	(107181) (INGSRV1703)<br>
+<br>
+	(GENERIC)<br>
+	After apply a patch containing a fix for bug 107344, the DBA is unable&nbsp;<br>
+	to execute sysmod against a database owned by another user.<br>
+	(107683) (INGSRV1829)<br>
+<br>
+	(GENERIC)<br>
+	Following a power failure, the Recovery server<br>
+	may fail to recover the uncommitted transactions.<br>
+	This can lead to an Inconsistent database.<br>
+	(105246) (INGSRV1702)<br>
+<br>
+	(GENERIC)<br>
+	Creating a distributed database fails when more than one DBMS server is<br>
+	running if the current configuration prevents multiple DBMS servers<br>
+	from accessing the same database (e.g. sole server). The following<br>
+	errors are reported: E_US0014, E_RQ0042, E_RQ0006, E_QE0506, E_SC0206,<br>
+	E_LQ0009, E_DU3511_NOCR_FE_CATS and the STAR server may die. The<br>
+	solution requires II_DBMS_SERVER to be set in the local environment<br>
+	and II_LDB_SERVER to be set to point to the same DBMS server in the<br>
+	Ingres environment.<br>
+	(81521) (INGSRV1580)<br>
+<br>
+	(UNIX)<br>
+	Provided support of Trace Window on Unix platforms the same way as<br>
+	on NT.<br>
+	(105960) (INGORD1797)<br>
+	(107276) (INGORD1856)<br>
+<br>
+	(GENERIC)<br>
+	Complex query may hang in optimizer facility and doesn't come back.&nbsp;<br>
+	On systems with internal threads the dbms server becomes unavailable&nbsp;<br>
+	and eats all CPU. In a multiple dbms server environment the other&nbsp;<br>
+	servers will hang some time later, no connect to the database is&nbsp;<br>
+	possible (but the other servers are reachable with iimonitor).&nbsp;<br>
+	To stop the system the dbms server has to be killed (kill -9),&nbsp;<br>
+<br>
+	A tracepoint has been added to provide a method of tripping out<br>
+	the query when the cpu usage of the query becomes excessive.<br>
+<br>
+	The usage is:<br>
+		set trace point OP248  max_cpu warn_cpu<br>
+<br>
+	where&nbsp;<br>
+	max_cpu is the maximum time (in milli-second) before the&nbsp;<br>
+		 query will exit from the optimizer and, if a&nbsp;<br>
+		 plan has been found, run the query.<br>
+<br>
+	warn_cpu is the time (in milli-second) after which the&nbsp;<br>
+		  query plan will be reported, together with&nbsp;<br>
+		  statistical estimates of the time to complete<br>
+		  and the cpu used so far.  The query will also<br>
+		  be written to the error log and dbms log.<br>
+<br>
+	An environment variable will also be checked and if the value&nbsp;<br>
+	is set to a non 0 value, the query will be tripped out&nbsp;<br>
+	immediately by default or when set to a non-zero value.<br>
+<br>
+	ingsetenv II_OPF_FORCE_TIMEOUT  [0|1]<br>
+<br>
+	    Note: this must be set system wide using ingsetenv.<br>
+	  		It should only be set once a query has been identified&nbsp;<br>
+	 		 as running for a long time.<br>
+<br>
+	No guidance is provided on what is excessive for a given system.<br>
+	In testing I have used the following command:<br>
+<br>
+	    set trace point OP248 90000 5000&nbsp;<br>
+<br>
+	which has provided adequate during testing.<br>
+<br>
+	Note:  The value of II_OPF_FORCE_TIMEOUT is only checked<br>
+	   after 5 * warn_cpu has expired.  At this point<br>
+	   the session is suspended for 1 second after each<br>
+	   N potential plans have been examined.&nbsp;<br>
+	   N is defined as the warn_cpu value.    This allows the<br>
+	   dba to access the server using either ipm or<br>
+	   iimonitor for session that are cpu intensive and&nbsp;<br>
+	   have exceeded what would be consider an adequate&nbsp;<br>
+	   cpu usage for the optimization phase.<br>
+	(106595) (INGSRV1572)<br>
+<br>
+	(GENERIC)<br>
+	OP0082 is generated when a query is run and the tables are optimized,&nbsp;<br>
+	but runs OK with no statistics.<br>
+	(107406) (INGSRV1735)<br>
+<br>
+	(GENERIC)<br>
+	SELECT from a UNION VIEW with many ANDs and ORs in the WHERE clause&nbsp;<br>
+	returns E_OP0681.<br>
+	(105464) (INGSRV1517)<br>
+<br>
+	(VMS)<br>
+	IPM hangs when trying to obtain server details, if the<br>
+	active servers have long Database Lists<br>
+	(107259) (INGSRV1714)<br>
+<br>
+	(USL.US5)<br>
+	A report called from abf or vision produces a core dump file when there&nbsp;<br>
+	is a syntax error in a SELECT clause.<br>
+	(107927) (INGEMB0066)<br>
+<br>
+	(AIX 4.x ONLY)<br>
+	SYSCHECK reports insufficient shared memory of 256Mb<br>
+	although a fixed value of 2Gb is now available on<br>
+	AIX 4.x systems.&nbsp;<br>
+	(105773) (INGDBA095)<br>
+<br>
+	(GENERIC)<br>
+	Deadlock occurs on iirelation when running a modify to truncate or an&nbsp;<br>
+	aggregate of a column in iitables.<br>
+	(79456) (INGSRV1765)<br>
+<br>
+	(GENERIC)<br>
+	When the last attribute of a table is the key, if a another column is&nbsp;<br>
+	dropped from the table (using ALTER TABLE...), then subsequent selects&nbsp;<br>
+	on the table using the key will fail with an "E_QE0080 Error trying to&nbsp;<br>
+	position a table."&nbsp;<br>
+	(107439) (INGSRV1740)<br>
+<br>
+	(GENERIC)<br>
+	Left join query fails with E_OP0082 consistency check - unexpected&nbsp;<br>
+	exception occurred. Caused by an exception (SIGSEGV) in opb_gbfbm().&nbsp;<br>
+	Only seen after applying a patch containing the fix for bug 102582.&nbsp;<br>
+	(107551) (INGSRV1752)<br>
+<br>
+	(GENERIC)<br>
+	Loss of table data when a MODIFY TABLE operation is interrupted<br>
+	with a CTRL-C. No errors are reported in the errlog.log.<br>
+	(107319) (INGSRV1723)<br>
+<br>
+	(CLUSTER)<br>
+	When a E_DM9044_ESCALATE_DEADLOCK messages occurs for a Mode 5 lock is<br>
+	followed by a E_DM9045_TABLE_DEADLOCK for a Mode 2 lock, the Recovery<br>
+	processes tries to abort the transaction but fails. This causes a<br>
+	E_DM9424_RCP_HARD_SHUTDOWN which shuts down the installation.<br>
+	(107834) (INGSRV1782)<br>
+<br>
+	(NC4_US5)<br>
+	A simple select query fails with E_OP048C_SORTCOST consistency check&nbsp;<br>
+	error.<br>
+	(103611) (INGSRV1385)<br>
+<br>
+	(UNIX)<br>
+	REPLICATOR: repmgr and the replication process hang periodically. Both&nbsp;<br>
+	have to be shutdown and restarted in order to continue processing.&nbsp;<br>
+	(107953) (INGREP0115)<br>
+<br>
+	(UNIX)<br>
+	A 4GL frame registered to receive a DB Event hangs when a DBevent is&nbsp;<br>
+	received. The DBevent is not processed until another DBevent is&nbsp;<br>
+	triggered. When another DBevent has been activated, the DBevent is&nbsp;<br>
+	processed and the frame becomes unusable.&nbsp;<br>
+	(107942) (INGCBT422)<br>
+<br>
+	(GENERIC)<br>
+	On a non Fast-Commit installation a COPY IN which causes a<br>
+	FORCE_ABORT may also result in a LOG_FULL. This causes the<br>
+	installation to shutdown.<br>
+	(108074) (INGSRV1609)<br>
+<br>
+	(GENERIC)<br>
+	Ingres would incorrectly report a licensing violation for an OLF based<br>
+	on hardware capacity units, if more than one user would connect to a<br>
+	DBMS server.<br>
+	(107777) (INGLIC0006)<br>
+<br>
+	(GENERIC)<br>
+	Running arcclean in a SQL92 compliant installation results in error<br>
+	'arcclean: iiindexes persistent expected 1 row, but found 0' while<br>
+	modifying a shadow table. If shadow and archive tables are not<br>
+	present, error message is `Could not modify dd_input_queue - no<br>
+	iitables row found. Could not modify dd_distrib_queue - no iitables<br>
+	row found.'<br>
+	(107820) (INGREP113)<br>
+<br>
+	(SQS_PTX)<br>
+	When using II_DIRECT_IO (y) errlog.log shows E_CL0607_DI_BADREAD,&nbsp;<br>
+	read() failed with operating system error 22 (Invalid argument),&nbsp;<br>
+	E_DM9005, E_DM933C, E_DM920D, E_DM9C83, E_DM9204, E_DM904C, E_DM008A....<br>
+	(107686) (INGSRV1764)<br>
+<br>
+	(GENERIC)<br>
+	E_DM002A returned to RAAT on an IIraat_table_open call if INTERNAL&nbsp;<br>
+	threads are enabled.&nbsp;<br>
+	(107776) (INGSRV1774)<br>
+<br>
+	(GENERIC)<br>
+	When the collision mode is set to LastWriteWin and Replicator<br>
+	server is in quiet mode, updating a key column of data in the&nbsp;<br>
+	target database and then updating the same key column in the&nbsp;<br>
+	local database causes a second row to be inserted into both<br>
+	databases.<br>
+	(110035) (INGREP145)<br>
+<br>
+	(GENERIC)<br>
+	'select varchar(NULL)...union select varchar(NULL)...' or<br>
+	'select text(NULL)...union select text(NULL)...' fails with:<br>
+	E_OP0093_ULM_ERROR consistency check - memory manager error<br>
+	- E_UL0014 Bad parameter supplied to one of the ULM routines.<br>
+	(104672) (INGSRV1458)<br>
+<br>
+	(GENERIC)<br>
+	ingstop -force and ingstop -immediate may fail with the DBMS server&nbsp;<br>
+	logging an exception (SIGSEGV) in psq_end_session().<br>
+	(102787) (INGSRV1819)<br>
+<br>
+	(GENERIC)<br>
+	The DBMS Server fails with an exception (SIGSEGV) in GC_send_sm() when&nbsp;<br>
+	Ingres/NET sessions are still connected and ingstop -force is run.&nbsp;<br>
+	ingstop hangs displaying 'Waiting for the logging system to go down'.<br>
+	(102373) (INGSRV1264)<br>
+<br>
+	(GENERIC)<br>
+	Sorting arrays of equal elements is extremely slow.<br>
+	(107721) (INGORD137)<br>
+<br>
+	<a name="INGSRV1841">(ATTENTION,GENERIC)</a><br>
+	Query on a single relation locks the table exclusively when<br>
+	page level locking is expected. The locking level changes if<br>
+	a QEP is requested via 'set qep'.<br>
+<br>
+	The fix for this bug has been implemented via the new configuration<br>
+	parameter opf_one_rel_opt. When set ON this option will cause the<br>
+	query optimizer (OPF) to perform enumeration (row, page and cost<br>
+	estimation) for single relation queries. Trace point op207 can<br>
+	also be used to give the same effect as opf_one_rel_opt. Trace<br>
+	point op208 switches off both opf_one_rel_opt and op207. Use<br>
+	"iiinitres opf_one_rel_opt" to initialise the parameter to OFF,<br>
+	then switch it ON via CBF, or by using "iisetres<br>
+	'ii.&lt;node_name>.dbms.&lt;dbms_config_name>.opf_one_rel_opt' ON".<br>
+	(108293) (INGSRV1841)<br>
+<br>
+	(GENERIC)<br>
+	isql is taking significantly longer to complete a query than it did on&nbsp;<br>
+	a 6.4 installation.&nbsp;<br>
+	(107271) (INGCBT400)<br>
+<br>
+	(GENERIC)<br>
+	A TID join which is also an outer join may fail with E_OP0791 and&nbsp;<br>
+	E_AD1012 error messages. This problem may also be seen in verifydb.<br>
+	(99086) (INGSRV2442)<br>
+<br>
+	(GENERIC)<br>
+	Error E_CL1F07 is not emitted if a user doesn't have READ access to the&nbsp;<br>
+	specified timezone file. Instead no warning is reported and the&nbsp;<br>
+	connection is made assuming GMT timezone.<br>
+	(108121) (INGSRV1815)<br>
+<br>
+	(GENERIC)<br>
+	optimizedb fails with memory exhausted error (E_OP091A) when optimizing&nbsp;<br>
+	tables which contain compressed NULL-able VARCHAR columns.<br>
+	(108464) (INGDBA126)<br>
+<br>
+	(VMS)<br>
+	The IIPATCH.COM utility reports "Package [ORACLE] unknown<br>
+	to manifest".<br>
+	(108517)<br>
+<br>
+	(DBMS, VAX, VMS)<br>
+	Installing clustered Ingres OI 2.0 failed due to failure of creating<br>
+	iidbdb.<br>
+	(108546)<br>
+<br>
+	(GENERIC)<br>
+	Running multiple jobs on a Star server leads to&nbsp;<br>
+	E_OP0901, E_OP0082 error.<br>
+	(107625) (INGSRV1551)<br>
+<br>
+	(SU4.US5 ONLY)<br>
+	Replicator error notifications via email do not have a subject line.<br>
+	(The replicator server needs to be rebuilt for this fix to take effect)<br>
+	(108370) (INGREP121)<br>
+<br>
+	(VMS)<br>
+	The DBMS server would consume memory when executing IMA queries. The&nbsp;<br>
+	memory was never being reused.<br>
+	(108672) (INGSRV1871)<br>
+<br>
+	(GENERIC)<br>
+	DBMS server returns less rows of data when doing a FSM join on a hash&nbsp;<br>
+	structure base table with another table.&nbsp;<br>
+	(107351) (INGSRV1727)<br>
+<br>
+	(GENERIC)<br>
+	Query containing LIKE predicates with no pattern matching characters&nbsp;<br>
+	OR'ed to equals predicates fails with "E_OP089B Consistency check:&nbsp;<br>
+	PJOIN implied".&nbsp;<br>
+	(107869) (INGSRV1787)<br>
+<br>
+	(GENERIC)<br>
+	tm binary consumes more cpu time when running<br>
+	queries in 2.0 versus 1.2.&nbsp;<br>
+	(106667) (INGSRV1634)<br>
+<br>
+	(GENERIC)<br>
+	A query with a WHERE clause containing more than one instance of&nbsp;<br>
+	restriction predicate collections in the form of "(a = v1 AND b = v2&nbsp;<br>
+	AND ...) OR (a = v3 AND b = v4 AND ...) or ..." may result in an&nbsp;<br>
+	exception (SIGSEGV) in QEF.&nbsp;<br>
+	(107273) (INGSRV1718)<br>
+<br>
+	(INT.W32)<br>
+	date('now') and date_gmt('now') give incorrect results.<br>
+	Time and date shown suggest the current timezone is<br>
+	PST8DST regardless of the actual timezone setting.<br>
+	(108609) (INGSRV1869)<br>
+<br>
+	(GENERIC)<br>
+	When running with Masterpiece, a delete fails. E_DM9C1D,<br>
+	E_DM93B7, E_DM93B7, E_DM9260 appear in the errlog.log .<br>
+	(106757) (INGSRV1644)<br>
+<br>
+	(GENERIC)<br>
+	When running with Masterpiece, E_DM93F5_ROW_LOCK_PROTOCOL is output to&nbsp;<br>
+	the errlog.log, when deleting a record.&nbsp;<br>
+	(108202) (INGSRV1708)<br>
+<br>
+	(GENERIC)<br>
+	A query runs for an exceptionally long time if the DMF cache is<br>
+	increased above a certain threshold. Query which runs in less than 10<br>
+	minutes requires in excess of thirty hours, and takes many millions of<br>
+	DIO and CPU units.<br>
+	(108522) (INGSRV1862)<br>
+<br>
+	(GENERIC)<br>
+	When performing an online checkpoint, a catalog update to iirelation&nbsp;<br>
+	can possibly fail and put logging/journaling into a non-recoverable&nbsp;<br>
+	state.<br>
+	(108377) (INGSRV1893)<br>
+<br>
+	(GENERIC)<br>
+	When running auditdb on journals containing CREATE VIEW statements, the&nbsp;<br>
+	LOCATION field displayed can sometimes contain garbage.<br>
+	(108815) (INGSRV1894)<br>
+<br>
+	(GENERIC)<br>
+	A copy of a global temporary table just created may<br>
+	fail with error E_US0845. Other tables (not just temporary<br>
+	tables) may also fail with the error message.<br>
+	Occurs when "set session with on_error = rollback transaction;"<br>
+	is in use.<br>
+	(108013) (INGSRV1805)<br>
+<br>
+	(GENERIC)<br>
+	optimizedb -zh -r may show statistics count 0 for both cell0 and cell1,&nbsp;<br>
+	and gives bad QEP.&nbsp;<br>
+	(108337) (INGSRV1863)<br>
+<br>
+	(GENERIC)<br>
+	In heavy concurrent environments, where rapid open/closure<br>
+	of databases are occurring, the installation may hang due<br>
+	to a mutex deadlock between an "LG LPB mutex" and the<br>
+	"LG LGD status mutex".<br>
+	(107654) (INGSRV1736)<br>
+<br>
+	(GENERIC)<br>
+	Attempting to connect to Ingres when II_ TIMEZONE_NAME is set to an&nbsp;<br>
+	undefined time zone causes an "E_FORMAT: Couldn't look up message&nbsp;<br>
+	9033d" to be reported.<br>
+	(108988) (INGNET102)<br>
+<br>
+	(GENERIC)<br>
+	Binary copy in of dates generated using the date('now') routine<br>
+	may fail. select left(hex(date_col),2) shows a value in<br>
+	which the hex mask (0x40) is set. The value displayed is<br>
+	usually "61". Front end reports E_CO0032 COPY: Bad data value<br>
+	for column X encountered while processing row Y.<br>
+	Please refer to http://support.ca.com/techbases/ingres/4310.html<br>
+	for details of how to correct date values affected by this bug.<br>
+	(108793) (INGSRV1890)<br>
+<br>
+	(GENERIC)<br>
+	When the date is different in GMT to the date in the current<br>
+	timezone (NEW-ZEALAND for example) dates entered using the<br>
+	format date('02:00:00') are not normalised. selecting hex(date_col)<br>
+	gives a different time value to hex(date(char(date_col))).<br>
+	(108775) (INGSRV1888)<br>
+<br>
+	(WINDOWS)<br>
+	Performance over Ingres/Net on Windows is significantly slower<br>
+	(approximately 4x) in Ingres II using OpenROAD 4x (or other<br>
+	applications) against gateways or Ingres than it was using<br>
+	OpenROAD 3.5 and drivers. Also, response time in the application over<br>
+	Ingres/NET is much slower (2-10 times) than running locally. The<br>
+	response time differences are most notable in batch-like operations<br>
+	(e.g., an application that runs 1000s of simple updates or queries).<br>
+	(106589) (INGNET0090)<br>
+<br>
+	(GENERIC)<br>
+	A statement level RULE with a qualification that invokes a data base&nbsp;<br>
+	procedure that does not have any parameters defined will always fire,&nbsp;<br>
+	even if the qualification does not apply.<br>
+	(108628) (INGSRV1872)<br>
+<br>
+	(VMS)<br>
+	INSERT INTO tablename VALUES ( 999987654*200); etc., should fail with&nbsp;<br>
+	"E_US1068 Integer overflow detected in query".&nbsp;<br>
+	(108914) (INGSRV1913)<br>
+<br>
+	(GENERIC)<br>
+	A user abort of a query may cause error E_DMA406 followed<br>
+	by a system hang. Alternatively, a user abort may be followed<br>
+	by a E_CL1037 or E_CL103E error, resulting in a server crash<br>
+	or hang.&nbsp;<br>
+	(105321) (INGSRV1502)<br>
+<br>
+	(GENERIC)<br>
+	Ingres STAR: E_RQ004A, E_RQ0006, E_RQ0011, E_QE0511, followed by an&nbsp;<br>
+	exception (SIGSEGV) in rqu_put_qtxt(), followed by repeating E_QE0002&nbsp;<br>
+	errors. The Star server becomes inaccessible and Ingres has to be shut&nbsp;<br>
+	down.<br>
+	(106640) (INGSRV1629)<br>
+<br>
+	(GENERIC)<br>
+	Ingres hangs. Detailed analysis using a debugger shows a number of&nbsp;<br>
+	sessions waiting on an unnamed mutex in one of the following routines:&nbsp;<br>
+	TRdisplay(), TRflush(), TRset_file(), TRrequest(), write_line(). The&nbsp;<br>
+	owner thread is usually suspended on a LOG-IO event and will not&nbsp;<br>
+	contain any of these routines in its call stack. This problem will only&nbsp;<br>
+	be seen on platforms that support OS threads.<br>
+	(109026) (INGSRV1990)<br>
+<br>
+	(GENERIC)<br>
+	COPY out of a NULL-able money column using a 'WITH NULL (X)' clause&nbsp;<br>
+	when X is an integer value, will have this "NULL" value incorrectly&nbsp;<br>
+	treated as a regular value during COPY in.<br>
+	(102023) (INGSRV1214)<br>
+<br>
+	(VMS)<br>
+	Ingres is unable to successfully resolve file names when<br>
+	the logical used in the path name, references a logical<br>
+	which references a logical which is a directory search<br>
+	list.<br>
+	(108702) (INGCBT430)<br>
+<br>
+	(VMS)<br>
+	Ingres fails to start if the NETMBX  privilege isn't enabled<br>
+	for the Ingres account.<br>
+	(108966) (INGINS148)<br>
+<br>
+	(VMS,CLUSTER)<br>
+	Not all Ingres locks are being released. The number of locks in use by&nbsp;<br>
+	the installation continues to increase. Eventually the system will run&nbsp;<br>
+	out of locks and crash.&nbsp;<br>
+	(109002) (INGSRV1980)<br>
+<br>
+	(GENERIC)<br>
+	Repmgr->Monitor screen does not display the table name of the<br>
+	replicated row.<br>
+	(108708) (INGREP125)<br>
+<br>
+	(VMS)<br>
+	Storing FLOAT8 values which were close to the minimum IEEE float<br>
+	value causes an unhandled exception. which terminates the<br>
+	session.<br>
+	(78947)<br>
+<br>
+	(GENERIC)&nbsp;<br>
+	The gateway will not shutdown with ingstop.<br>
+<br>
+	WORKAROUND:<br>
+	Use iinamu from base release of Ingres II 2.0 (genlevel<br>
+	9808 or 0001) or kill gateway processes manually.<br>
+	(109132) (INGGAT0277)<br>
+<br>
+	(GENERIC)<br>
+	Secondary indices sometimes not being used if they have date columns.<br>
+	(108172) (INGSRV1820)<br>
+<br>
+	(GENERIC)<br>
+	Where clause involving histogrammed date column with empty<br>
+	date values can cause E_OP03A2 error.<br>
+	(104568) (INGSRV1455)<br>
+<br>
+	(GENERIC)<br>
+	A query of the form 'select * from tab where<br>
+	date_col1 >= low date and date_col1 &lt;= high date<br>
+	does not correctly use a secondary index on the<br>
+	date column.<br>
+	(96064) (INGSRV776)<br>
+<br>
+	(GENERIC)<br>
+	The "COPY TABLE table_name ( column_name=... ) FROM ..." command does<br>
+	not assign the correct default value for columns not specified in the<br>
+	column list. When a column not supporting NULL is omitted from the<br>
+	column list, the implicit default value for the column type is used<br>
+	(e.g. 0 for INT), rather than the explicit default defined for that<br>
+	column.<br>
+<br>
+	Please note that after applying the fix for this bug, columns defined<br>
+	with NOT NULL NOT DEFAULT will cause "E_US0ADB No value specified for<br>
+	mandatory column 'column_name'" to be reported if an attempt is made<br>
+	to copy in data and the column is not specified in the column list.<br>
+	(77895) (INGSRV1981)<br>
+<br>
+	(GENERIC)<br>
+	UPDATE and DELETE queries without a WHERE clause sets SQLWARN4<br>
+	when used outside of a PREPARE statement. This contradicts<br>
+	the specification of the SQLWARN4 definition in the SQL Reference<br>
+	guide.<br>
+	(106509) (INGEMB0061)<br>
+<br>
+	(GENERIC)<br>
+	DBMS logs the message "EDONE bit set prior to call from..." to the<br>
+	DBMS log.<br>
+	(109144) (INGSRV2003)
+</p>
+
+<p>(GENERIC)<br>
+The test case involves creating a database, checkpointing the<br>
+database, and then extending the database to a location which is<br>
+in the same physical location as ii_database. Rollforwarding the<br>
+database will fail with E_DM130D and E_DM1301.<br>
+(87552) (INGDBA0055)</p>
+<p><a name="INGSRV463">(GENERIC)</a><br>
+Inserting into a table with pagesize &gt; 8K during an online<br>
+CKPDB results in a runaway Dnnnnnnn.DMP dump file which<br>
+eventually fills the dmp location.<br>
+************************************************************************<br>
+WARNING: THIS FIX INVALIDATES PREVIOUS ONLINE CHECKPOINTS<br>
+************************************************************************<br>
+(91957) (INGSRV463)</p>
+<p><a name="INGSRV895">(GENERIC)</a><br>
+Rollforwarddb fails to apply dump records from on online checkpoint.<br>
+This can produce the following sequences of errors in the errlog.log<br>
+during the rollforward.<br>
+E_DM93AF/E_DM9006/E_DM9335/E_DM929C/E_DM967C/E_DM9606 or<br>
+E_DM966D/E_DM961E/E_DM9607<br>
+************************************************************************<br>
+WARNING: THIS FIX INVALIDATES PREVIOUS ONLINE CHECKPOINTS<br>
+************************************************************************<br>
+(97500) (INGSRV0895)</p>
+<p>(AXP_OSF ONLY)<br>
+Select queries containing group by and having clauses that use<br>
+aggregates such as min() and max(), and are qualified with the<br>
+not operator, fail with E_OP0681 consistency check - unknown<br>
+query tree type found. Example: select col1 from g group by<br>
+col1 having col1 not between min(col1) and max(col1).<br>
+(99570) (INGSRV1914)</p>
+<p>(GENERIC)<br>
+When running COPYDB against a specific table within a database the<br>
+'COMMENT ON' statements where not included in the COPY.IN script.<br>
+(99603) (INGDBA57)</p>
+<p>(DG UNIX)<br>
+Heavy concurrent access to DBMS servers may lead to performance<br>
+degradation on the DG INTEL, and DG MOTOROLA UNIX implementations<br>
+due to contention on the &quot;CL Misc Sem&quot; mutex (semaphore).<br>
+(99713) (INGSRV1069)</p>
+<p>(GENERIC)<br>
+UPGRADEFE fails with Segmentation Fault core dumped (SIGSEGV)<br>
+and E_DD0026, E_DD0009. It is run against a database created<br>
+with the -fnofeclients flag and reloaded from 6.4 with<br>
+reload.ing, as recommended in the 6.4 -&gt; II upgrade cookbook.<br>
+(99825) (INGSRV1077)</p>
+<p>(GENERIC)<br>
+STAR: When executing certain queries on certain star servers the&nbsp;<br>
+error E_OP0A01 QEP NOT USEFUL will be displayed.&nbsp;<br>
+No QEP can be seen.&nbsp;<br>
+This occurs usually when statistics exist on some or all tables.<br>
+(100335) (INGSTR0034)</p>
+<p>(WINDOWS)<br>
+A database could become inconsistent through a COPY IN of variable<br>
+length data (i.e. varchar) which fails (i.e. due to a bad data file).<br>
+(109085) (INGSRV2333)</p>
+<p>(WINDOWS)<br>
+E_CL030F_CK_COMMAND_ERROR is written to the error log when<br>
+rollforwarddb is issued from a non-Ingres user ID Ingres is<br>
+started as a service.<br>
+(101366) (INGDBA284)</p>
+<p>(GENERIC)<br>
+An ABF application calling an ABF image with 'call application'<br>
+reports E_AS0002 and fails to pass parameters to the called<br>
+application.<br>
+(101835) (INGCBT282)</p>
+<p>(GENERIC)<br>
+During the setup of Replicator for Ingres, the following error occurs,<br>
+but only once:<br>
+&nbsp;</p>
+<p>&nbsp;&nbsp;&nbsp; E_CL2654_CI_CANT_OPEN&nbsp; Computer Associates Licensing
+-1JG2 -&nbsp;<br>
+&nbsp;&nbsp;&nbsp; Can't open license file. Please run the appropriate
+license&nbsp;<br>
+&nbsp;&nbsp;&nbsp; program to properly license your product.&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp; LRF=1JG2, 00b0d03a49f8, DESKTOP,userid, 0<br>
+&nbsp;</p>
+<p>The following error may occur instead of, or in addition to the above&nbsp;<br>
+error:<br>
+&nbsp;&nbsp;&nbsp; &quot;E_CL2650_CI_NO_LICENSE&nbsp; Computer Associates
+Licensing -1JG2 -<br>
+&nbsp;&nbsp;&nbsp; Component not licensed. Please run the appropriate
+license&nbsp;<br>
+&nbsp;&nbsp;&nbsp; program to properly license your product.&nbsp; LRF=1JG2,&nbsp;<br>
+&nbsp;&nbsp;&nbsp; 0060977a08ca, DESKTOP, userid, 0.<br>
+(102653) (INGLIC0002)</p>
+<p>(SU4_US5 ONLY)<br>
+ESQLC: Cursor fetch hangs - this fetch should return E_LQ000E.<br>
+(102961) (INGEMB0047)</p>
+<p>(GENERIC)<br>
+In a query executing a select with an order by clause fails with&nbsp;<br>
+either&nbsp;<br>
+'E_OP0497 consistency check. Incompatible orderings found in CO node',&nbsp;<br>
+or produces incorrectly ordered data, depending on the attributes in<br>
+the select list.<br>
+(104151) (INGSRV1398)</p>
+<p>(GENERIC)<br>
+Incorrect results from date interval functions when<br>
+date('now') is used during December or around month<br>
+boundaries.<br>
+(106513) (INGSRV1628)</p>
+<p>(WINDOWS)<br>
+Errlog.lg reports E_DMA469_PROCESS_HAS_DIED, when there is<br>
+evidence in the errlog that the process is still active.<br> 
+(109615) (INGSRV2114)</p>
+<p>(WINDOWS)<br>
+Ingres does not start on Windows .NET Server nor on Windows 2003.<br>
+(109005) (INGINS222)</p>
+<p>(WINDOWS)<br>
+DBA commands (such as lockstat and logstat) issued by a non-ingres<br>
+user while the Ingres service is starting or stopping may cause the<br>
+DBA command to become CPU-bound and will never exit.<br>
+(110053) (INGSRV2742)</p>
+<p>(GENERIC)<br>
+Some ckpdb and rollforwarddb messages are truncated and the subsequent<br>
+message may not start on a new line.<br>
+(111666) (INGSRV2426)</p>
+<p>(WINDOWS)<br>
+Attempts to start Ingres on Windows results in popup message: "The<br>
+instruction at 0x0076a9fb referenced memory at 0x007c5140. The memory<br>
+could not be read."  Subsequent attempts to clean out shared memory<br>
+via the issuance of ipcclean after ensuring all Ingres processes are
+not running fail.<br>
+(112179) (INGINS235)</p>
+<p>(WINDOWS)<br>
+Fastload fails with "E_DM9411_DMF_INIT Error initializing the DMF<br>
+working environment" when Ingres is started as a service and the<br>
+fastload command is issued under a user that did not start Ingres.<br>
+(112185) (INGDBA279)</p>
+
+<font SIZE="2" COLOR="#0000ff">
+<p>(WINDOWS ONLY)<br>
+On Windows XP, running 'repinst &lt;any number from 1-10&gt;' fails,<br>
+giving an error 1057 in CreateService().<br>
+(105815) (INGREP105)</p>
+</font>
+
+<hr>
+<H2><A name=contacting_technical_support>4.0 Contacting Technical 
+Support</A></H2>
+<P>For technical assistance with this product, contact Computer Associates Technical Support 
+at <A href="http://ca.com/">http://ca.com/</A> for a complete 
+list of locations and telephone numbers. Technical support is available 24 hours a 
+day, 7 days a week. 
+<P>
+<HR>
+<FONT size=-2>
+2004 Computer Associates International, Inc. <BR>All 
+trademarks, trade names, service marks, and logos referenced herein belong to 
+their respective companies. </FONT></BODY></HTML>

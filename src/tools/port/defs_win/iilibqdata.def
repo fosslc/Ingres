@@ -1,0 +1,15 @@
+; 
+; History:
+;	25-Aug-2005 (drivi01)
+;	     Created to replace iiembddata.def.
+;	     Right now iiembddata.def is split into iilibqdata and iilibembeddata. 
+;
+;
+
+
+EXPORTS
+	DD_dev		@1	DATA			
+	DD_path		@2	DATA	
+	clienttable	@3	DATA			
+	moduletable	@4	DATA			
+	stmt_buffer	@5	DATA					

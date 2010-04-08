@@ -1,0 +1,36 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/others/mathsigs.1,v 1.1 90/03/09 09:18:07 source Exp $
+.TH MATHSIGS 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+mathsigs \- write clsecret.h defines for math signal handling
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B mathsigs
+.SH DESCRIPTION
+.I Mathsigs
+writes the appropriate definitions of the following symbols onto stdout
+for the current machine.
+.nf
+
+	xCL_046_IDIV_HARD
+	xCL_047_IDIV_SIGILL
+	xCL_IDIV_SIGTRAP
+	xCL_048_IDIV_UNDETECTED
+	xCL_049_FDIV_HARD
+	xCL_050_FDIV_SIGILL
+	xCL_FDIV_SIGTRAP
+	xCL_051_FDIV_UNDETECTED
+	xCL_052_IOVF_HARD
+	xCL_053_IOVF_SIGILL
+	xCL_IOVF_SIGTRAP
+	xCL_054_IOVF_UNDETECTED
+	xCL_055_FOVF_HARD
+	xCL_056_FOVF_SIGILL
+	xCL_FOVF_SIGTRAP
+	xCL_057_FOVF_UNDETECTED
+	xCL_058_FUNF_HARD
+	xCL_059_FUNF_SIGILL
+	xCL_FUNF_SIGTRAP
+	xCL_060_FUNF_UNDETECTED
+.fi

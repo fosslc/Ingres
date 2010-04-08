@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The role_password parameter indicates whether or not role passwords are
+ optional or required in the current installation.
+
+
+ Choices are: OPTIONAL 
+
+ Default: OPTIONAL (C2 installation)
+ 

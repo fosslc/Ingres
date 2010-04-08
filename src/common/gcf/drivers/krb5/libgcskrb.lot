@@ -1,0 +1,38 @@
+!
+! History:
+!    13-Mar-02 (loera01)
+!        Created.
+!	09-may-2003 (abbjo03)
+!	    Increment major/minor version id to 126,0 for 2.6/0305.
+!	06-jan-2005 (abbjo03)
+!	    Changes to build with Jam and mkshlibs.
+!       18-oct-2004 (loera01) Bug 115408
+!           Replaced deprecated gss_c_nt_service_name with 
+!           gss_c_nt_hostbased_service.
+!       19-oct-2008 (Ralph Loen) Bug 120134
+!           Link against the static version of the compatlib instead
+!           of the dynamic version.
+!       06-aug-2007 (stegr01)                          
+!          remove gss_*from symbol vector
+!          you can't export another shareable image's pdscs
+!
+ident=kerberoslib
+GSMATCH=LEQUAL,126,0
+gcskrb.obj
+SYMBOL_VECTOR=(gcs_kerberos=PROCEDURE,-
+SPARE,- ! gss_accept_sec_context=PROCEDURE,-
+SPARE,- ! gss_acquire_cred=PROCEDURE,-
+SPARE,- ! gss_delete_sec_context=PROCEDURE,-
+SPARE,- ! gss_display_name=PROCEDURE,-
+SPARE,- ! gss_display_status=PROCEDURE,-
+SPARE,- ! gss_import_name=PROCEDURE,-
+SPARE,- ! gss_init_sec_context=PROCEDURE,-
+SPARE,- ! gss_inquire_cred=PROCEDURE,-
+SPARE,- ! gss_c_nt_hostbased_service=PROCEDURE,-
+SPARE,- ! gss_release_buffer=PROCEDURE,-
+SPARE,- ! gss_release_cred=PROCEDURE,-
+SPARE,- ! gss_release_name=PROCEDURE,-
+SPARE,- ! gss_unwrap=PROCEDURE,-
+SPARE)  ! gss_wrap=PROCEDURE)
+INGLIB:libcompat/lib
+SYS$LIBRARY:GSS$RTL32/SHARE

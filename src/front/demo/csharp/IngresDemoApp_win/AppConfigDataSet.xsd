@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="AppConfigDataSet" targetNamespace="AppConfigDataSet.xsd" xmlns:mstns="AppConfigDataSet.xsd" xmlns="AppConfigDataSet.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:msprop="urn:schemas-microsoft-com:xml-msprop" attributeFormDefault="qualified" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="urn:schemas-microsoft-com:xml-msdatasource">
+      <DataSource DefaultConnectionIndex="0" FunctionsComponentName="QueriesTableAdapter" Modifier="AutoLayout, AnsiClass, Class, Public" SchemaSerializationMode="IncludeSchema" xmlns="urn:schemas-microsoft-com:xml-msdatasource">
+        <Connections>
+        </Connections>
+        <Tables>
+        </Tables>
+        <Sources>
+        </Sources>
+      </DataSource>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="AppConfigDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true" msprop:Generator_UserDSName="AppConfigDataSet" msprop:Generator_DataSetName="AppConfigDataSet">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="AppConfig" msprop:Generator_UserTableName="AppConfig" msprop:Generator_RowDeletedName="AppConfigRowDeleted" msprop:Generator_RowChangedName="AppConfigRowChanged" msprop:Generator_RowClassName="AppConfigRow" msprop:Generator_RowChangingName="AppConfigRowChanging" msprop:Generator_RowEvArgName="AppConfigRowChangeEvent" msprop:Generator_RowEvHandlerName="AppConfigRowChangeEventHandler" msprop:Generator_TableClassName="AppConfigDataTable" msprop:Generator_TableVarName="tableAppConfig" msprop:Generator_RowDeletingName="AppConfigRowDeleting" msprop:Generator_TablePropName="AppConfig">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ParamName" msprop:Generator_UserColumnName="ParamName" msprop:Generator_ColumnPropNameInRow="ParamName" msprop:Generator_ColumnVarNameInTable="columnParamName" msprop:Generator_ColumnPropNameInTable="ParamNameColumn" type="xs:string" />
+              <xs:element name="ParamValue" msprop:Generator_UserColumnName="ParamValue" msprop:Generator_ColumnPropNameInRow="ParamValue" msprop:Generator_ColumnVarNameInTable="columnParamValue" msprop:Generator_ColumnPropNameInTable="ParamValueColumn" type="xs:string" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="AppProfile" msprop:Generator_UserTableName="AppProfile" msprop:Generator_RowDeletedName="AppProfileRowDeleted" msprop:Generator_TableClassName="AppProfileDataTable" msprop:Generator_RowChangedName="AppProfileRowChanged" msprop:Generator_RowClassName="AppProfileRow" msprop:Generator_RowChangingName="AppProfileRowChanging" msprop:Generator_RowEvArgName="AppProfileRowChangeEvent" msprop:Generator_RowEvHandlerName="AppProfileRowChangeEventHandler" msprop:Generator_TablePropName="AppProfile" msprop:Generator_TableVarName="tableAppProfile" msprop:Generator_RowDeletingName="AppProfileRowDeleting">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ParamName" msprop:Generator_UserColumnName="ParamName" msprop:Generator_ColumnPropNameInRow="ParamName" msprop:Generator_ColumnVarNameInTable="columnParamName" msprop:Generator_ColumnPropNameInTable="ParamNameColumn" type="xs:string" />
+              <xs:element name="ParamValue" msprop:Generator_UserColumnName="ParamValue" msprop:Generator_ColumnPropNameInRow="ParamValue" msprop:Generator_ColumnVarNameInTable="columnParamValue" msprop:Generator_ColumnPropNameInTable="ParamValueColumn" type="xs:string" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+    <xs:unique name="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:AppConfig" />
+      <xs:field xpath="mstns:ParamName" />
+    </xs:unique>
+    <xs:unique name="AppProfile_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:AppProfile" />
+      <xs:field xpath="mstns:ParamName" />
+    </xs:unique>
+  </xs:element>
+</xs:schema>

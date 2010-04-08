@@ -1,0 +1,7 @@
+
+Ingres/API
+
+The Ingres Application Programming Interface (API) is a set
+of C language functions that enable you to create applications for 
+accessing Ingres databases. It provides an alternative to 
+using Embedded SQL as the application interface. 

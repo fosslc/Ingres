@@ -1,0 +1,60 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+**
+** database.osq: Examine the contents and structure of the project management
+**               database.
+*/
+
+field selection = 
+begin
+	set_forms field '' (normal(selection)=1); 
+	if selection = 'a' then
+		helpfile 'Database Design' 
+			'II_SYSTEM:[INGRES.FILES.ABFDEMO]design.txt';
+	elseif selection = 'b' then
+		call qbf (qbfname='emp', mode='retrieve');
+	elseif selection = 'c' then
+		call qbf (qbfname='tasks', mode='retrieve');
+	elseif selection = 'd' then			
+		call qbf (qbfname='projects', mode='retrieve');
+	else
+		set_forms 'field' '' (blink(selection)=1);
+		message 'Selection must be a, b, c, or d' with style=popup;
+	endif;
+end
+
+'Task_Assignments' =
+begin
+	callframe task_assignments;
+end
+
+'4GL', key frskey16 =
+begin
+	helpfile 'Database Frame 4GL'
+		   'II_SYSTEM:[INGRES.FILES.ABFDEMO]database.osq';
+end
+
+'Help', key frskey1 =  
+begin
+	help_forms(subject='Database Information',
+	      		file = 'II_SYSTEM:[INGRES.FILES.ABFDEMO]database.hlp');
+end
+
+'Quit', key frskey3  = 
+begin
+	callproc timer_on(secs=2);
+	return;
+end
+
+key frskey2  =
+begin
+	exit;
+end
+
+on timeout =
+begin
+	callproc timer_off;
+end

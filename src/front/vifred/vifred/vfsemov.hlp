@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are moving a Straight Edge to a new location.  Move the cursor to the new
+location and then use the "Place" menu command to put the Straight Edge there.
+
+If moving the vertical Straight Edge, the vertical Straight Edge will be
+moved to the same column position as the cursor.  For the horizontal
+Straight Edge, it will be moved to the same row position as the cursor.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Place           Place the Straight Edge at the current cursor
+                        position.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Form Layout menu without changing 
+                        the location of the Straight Edge.

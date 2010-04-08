@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The block_size resource specifies the number of bytes of memory in a block
+  used for storing a generated HTML page.  A generated HTML page may span a
+  number of blocks and is extended until the page is completed.
+
+  Default: 2048

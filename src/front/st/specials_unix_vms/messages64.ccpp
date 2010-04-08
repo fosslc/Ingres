@@ -1,0 +1,20 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for messages64
+*/
+
+/*
+** History
+**	05-sep-2002 (somsa01)
+**	    Created from 32-bit version.
+*/
+
+PART  messages64
+
+/*
+** DIRECTORY specified in release.ccpp 
+*/
+   BUILD_DIR (ING_BUILD)!files!english!lp64
+      FILE rtiforms.fnx

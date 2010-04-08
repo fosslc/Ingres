@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!winmain_win
+#
+
+SubDir ING_SRC front vdba winmain_win ;
+
+IISUBSYS front vdba winmain_win ;
+
+
+IISLN mainlib.lib : mainlib.sln ;

@@ -1,0 +1,48 @@
+
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+
+/**
+** Name:	FEtfscrl.qc -- scroll a table field row to 1/4 down.
+**
+** Description:
+**	This file defines:
+**
+**	FEtfscrl(frm, tf, col, rownum) -- position row rownum of
+**		tablefield tf (column col) of form frm to an
+**		aesthetically pleasing location, 1/4 of the way
+**		down the tablefield if possible.
+**
+** History:
+**	3/10/87 (peterk) - created from qbf/mqbfhelp.qc/tabscroll()
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+## FEtfscrl(frm, tabfld, col, rownumber)
+## char	*frm, *tabfld, *col;
+   i4	rownumber;
+## {
+##	i4	currrec;
+##	i4	numrows;
+##	i4	numrecs;
+
+	if (rownumber > 0)
+	{
+##		INQUIRE_FRS TABLE frm (
+## 			numrecs = DATAROWS(tabfld),
+## 			numrows = LASTROW(tabfld)
+## 		)
+		currrec = min(rownumber+(numrows*3/4), numrecs);
+##		SCROLL frm tabfld TO currrec
+##		GETROW frm tabfld numrows (currrec = _RECORD)
+		IIrowset(frm, tabfld,
+			 numrows - (currrec-rownumber), col);
+	}
+## }

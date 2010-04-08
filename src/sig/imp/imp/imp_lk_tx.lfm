@@ -1,0 +1,10 @@
+COPYFORM:	6.4	2002_06_28 07:26:11 GMT  
+FORM:	imp_lk_tx		
+	52	4	0	0	4	0	1	9	0	0	0	0	0	129	0	4
+FIELD:
+	0	tx_id	-21	33	0	30	1	46	1	0	30	0	16	Transaction ID:	0	0	0	0	512	0	0		c30			0	0
+	1	related_lock_list_id	-21	18	0	15	1	37	2	0	15	0	22	Related Lock List ID:	0	0	0	0	512	0	0		c15			0	1
+	2	related_count	-30	5	0	4	1	11	2	40	4	0	7	Count:	0	0	0	0	512	0	0		-i4			0	2
+	3	waiting_resource_list_id	-21	18	0	15	1	41	3	0	15	0	26	Waiting Resource List ID:	0	0	0	0	512	0	0		c15			0	3
+TRIM:
+	0	0	More Info:	1024	0	0	0

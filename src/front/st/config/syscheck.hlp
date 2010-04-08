@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+ Ingstart syscheck.
+
+ The pref.ingstart_syscheck parameter determines whether the syscheck
+ utility will be run prior to starting up the Ingres installation. 
+
+ Choices are:
+
+        ON    Indicating that the syscheck utility will be run before
+              starting your Ingres installation.
+
+        OFF   Indicating that the syscheck utility will not be run
+              before starting your Ingres installation.
+
+ Default: ON

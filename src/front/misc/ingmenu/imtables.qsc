@@ -1,0 +1,51 @@
+/*
+**  tblstart.qc
+**
+**  Copyright (c) 2004 Ingres Corporation
+**
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<er.h>
+# include	"erim.h"
+# include	"imconst.h"
+# include	"imextern.h"
+
+
+VOID
+tablestart()
+{
+	char	buffer[256];
+	char	specbuf[6];
+	char	ebuf[4];
+	char	*args[10];
+	i4	argcount;
+
+##	message ERget(F_IM002C_Starting_Tblutil)
+
+	argcount = 1;
+	STcopy(ERx("specflag = %S"), buffer);
+	STcopy(ERx("3"), specbuf);
+	args[0] = specbuf;
+
+	if (im_empty_catalogs)
+	{
+		argcount++;
+		STcat(buffer, ERx(", emptycat = %S"));
+		STcopy(ERx("-e"), ebuf);
+		args[1] = ebuf;
+	}
+
+
+	if (swspawn(ERx("tables"), buffer, argcount, args) != OK)
+	{
+		starterr(ERx("tables"));
+	}
+
+##	clear screen
+}

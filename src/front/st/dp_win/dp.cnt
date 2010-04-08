@@ -1,0 +1,9 @@
+:Title Help for DP Wizard
+1 DP Wizard Help
+2 Using the DP Wizard=dp_wizard_welcome@dp.hlp
+2 Authorization String Dialog=dp_wizard_auth@dp.hlp
+2 Table/Index Information Dialog=dp_wizard_tableinfo@dp.hlp
+2 Table/Index File Options Dialog=dp_wizard_tableoptions@dp.hlp
+2 Printout Options Dialog=dp_wizard_printopts@dp.hlp
+2 Check Options Dialog=dp_wizard_checkopts@dp.hlp
+2 Log Options Dialog=dp_wizard_logopts@dp.hlp

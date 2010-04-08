@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How a New Profile Is Added </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="INSERT statement, Profile function">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body>
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="1680.html" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="1682.html" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How a New Profile Is Added</h4>
+<p class="bodytext">Clicking the Add button in the application triggers the execution of the profileAddButton_Click event handler.</p>
+<p class="bodytext"><strong class="bold">Note:</strong> This example uses the ingresInsertCommand6, which was created when the ingresDataAdapter6 was added.</p>
+<p class="bodytext">The query used is as follows: </p>
+<p class="codefirst">INSERT into user_profile VALUES ( next value FOR up_id, ?, ?, ?, ?, ? )</p>
+<p class="bodytext">You can write this query using the Query Designer for the IngresCommand by changing the CommandText property, or assign it directly to the IngresCommand CommandText property as a string.</p>
+<p class="bodytext">The values are assigned into a data table cloned from the user_profile table in the ProfileDataSet.</p>
+<p class="codefirst">DataTable dataTable = profileDataSet.Tables[&quot;user_profile&quot;].Clone();</p>
+<p class="codefirst">DataRow dataRow = dataTable.NewRow();</p>
+<p class="bodytext">The values to be added are taken from the profile form controls and used as parameters to the query.</p>
+<p class="codefirst">dataRow[&quot;up_last&quot;] = lastName;</p>
+<p class="code">dataRow[&quot;up_first&quot;] = firstName;</p>
+<p class="code">dataRow[&quot;up_email&quot;] = email;</p>
+<p class="code">dataRow[&quot;up_airport&quot;] = airport;</p>
+<p class="code">if (photoFile.Length &gt; 0)</p>
+<p class="code">{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;MemoryStream stream = new MemoryStream();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;Image photo = System.Drawing.Image.FromFile(photoFile);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;photo.Save(stream, photo.RawFormat);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;dataRow[&quot;up_image&quot;] = stream.ToArray();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;stream.Close();</p>
+<p class="code">}</p>
+<p class="bodytext">The path and file name of the image are used to convert it into a Byte array and read into the up_image column.</p>
+<p class="bodytext">The new row is added to the data table which is used in the INSERT command.</p>
+<p class="codefirst">dataTable.Rows.Add(dataRow);</p>
+<p class="code">ingresDataAdapter6.InsertCommand.Parameters.Clear();</p>
+<p class="code">ingresDataAdapter6.InsertCommand.Parameters.Add(&quot;@up_last&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.NVarChar, &quot;up_last&quot;);</p>
+<p class="code">ingresDataAdapter6.InsertCommand.Parameters.Add(&quot;@up_first&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.NVarChar, &quot;up_first&quot;);</p>
+<p class="code">ingresDataAdapter6.InsertCommand.Parameters.Add(&quot;@up_email&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.NVarChar, &quot;up_email&quot;);</p>
+<p class="code">ingresDataAdapter6.InsertCommand.Parameters.Add(&quot;@up_airport&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.NChar, &quot;up_airport&quot;);</p>
+<p class="code">ingresDataAdapter6.InsertCommand.Parameters.Add(&quot;@up_image&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;Ingres.Client.IngresType.LongVarBinary, &quot;up_image&quot;);</p>
+<p class="code">resAffected = ingresDataAdapter6.Update(dataTable);</p>
+<p class="bodytext">The added parameters link the parameter values to the columns in the data table. The data table is used in the update method to add the new row.</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2006 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

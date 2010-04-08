@@ -1,0 +1,6 @@
+; Ingres configurator DEF file for Windows
+
+
+EXPORTS
+
+    gcs_kerberos      @1

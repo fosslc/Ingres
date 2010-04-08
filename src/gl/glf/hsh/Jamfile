@@ -1,0 +1,12 @@
+#
+# Jamfile file for gl!glf!hsh
+#
+
+SubDir ING_SRC gl glf hsh ;
+
+IISUBSYS gl glf hsh ;
+
+
+IILIBRARY COMPATLIB : hshsrc.c
+	hshcrc.c ;
+

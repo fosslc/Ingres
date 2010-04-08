@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The resource rdf_avg_ldbs is the average number of local databases.
+  This resource, together with the rdf_cache_ddbs resource, is used to
+  size the Star local database cache in the Relation Definition Facility
+  (RDF).  The cache holds rdf_avg_ldbs times rdf_cache_ddbs entries.
+
+  The default is 5.

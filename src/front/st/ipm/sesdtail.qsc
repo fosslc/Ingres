@@ -1,0 +1,161 @@
+/*
+**  Copyright (c) 2004 Ingres Corporation
+**  All rights reserved.
+*/
+
+/*
+** includes and defines
+*/
+#include <compat.h>
+#include <dbms.h>
+#include <fe.h>
+#include "servinfo.h"
+#include "msgs.h"
+#include "ingpriv.h"
+#include "dba.h"
+
+/*
+** Forward and External References
+*/
+i4	chkingpriv();
+
+#if defined(LP64)
+static char sessdtl[] = "fsessdetail64";
+#else
+static char sessdtl[] = "fsessdetail";
+#endif  /* LP64 */
+
+## static char *Fsessdetail = sessdtl;
+
+/*
+**
+**  File: sessdetail.qc
+**
+**  Purpose - this file contains the routines which display the session
+**	detail information form.  
+**
+**  This file contains:
+**	sessdetail - displays the session detail information form. 
+**
+**
+** Inputs
+**	server_name - need to know this to get and refresh data.
+**	session_id - same as above
+**
+**  History
+**	1/6/89		tomt	created
+**	4/5/89		tomt	added code to display info
+**	4/6/89		tomt	changed fields on form - got rid of some
+**	8/24/89		tomt	changed calls to get info on screen and
+**				added refresh menuitem.
+**	6/1/90		tomt	added new 6.3/02 info: query, activity
+**				rollout info.
+**	3/21/91		tomt	changed title on form to trim.  Removed
+**                              variable used to hold title.
+**	29 May 1992	jpk	added support for long queries
+**	18-may-1995     harpa06 Cross Integration bug fix 56349 by nick:
+**				disconnect before Quit() - server is connected
+**				when calling sessdetail() so we need to
+**				disconnect if we are quiting rather than
+**				returning.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	13-oct-2001 (somsa01)
+**	    Added references to the 64-bit forms.
+*/
+VOID
+sessdetail(server_name, session_id)
+PTR server_name;
+PTR session_id;
+{
+    bool	e_xit = FALSE;
+##  char	*Procinfo =
+#ifdef VMS 
+			"Process_Info";
+#else
+			"";
+#endif
+
+    /* Display the form and get the information */
+##  DISPLAY Fsessdetail READ WITH STYLE = POPUP
+##  (BORDER = none, STARTCOLUMN = 3)
+##  INITIALIZE
+##  {
+
+	/* If the user is not a superuser, don't display query field */
+	if (chkingpriv(ING_SUPERUSER) != OK)
+	{
+##	    SET_FRS FIELD Fsessdetail (invisible(#querytext) = 1);
+        }
+
+	/* Put information on the form	*/
+	dispsrvinfo(DISP_SESS_INFO, server_name, session_id);
+##  }
+##  ACTIVATE MENUITEM "MoreQuery":
+##  {
+##	DISPLAY #fqrytext READ WITH STYLE = POPUP
+##	(BORDER = none, STARTROW = 6)
+##	ACTIVATE MENUITEM "End", frskey3:
+##	{
+##	    BREAKDISPLAY
+##	}
+##  }
+##  ACTIVATE MENUITEM "Refresh":
+##  {
+##	MESSAGE "Loading session information..."
+	if (load_servinfo(GET_SERVINFO, server_name) != OK)
+	{
+	    POP_MSG("Error getting session information.  Session may not exist\
+ or server may not be accepting connects.  To get an updated list of sessions\
+ for this server, return to previous screen and select the 'Refresh'\
+ menuitem");
+##	    RESUME
+	}
+	dispsrvinfo(DISP_SESS_INFO, server_name, session_id);
+##  }
+##  ACTIVATE MENUITEM Procinfo
+##  {
+#ifdef VMS
+##      char	client_pid[HEXID_SIZE + 1];
+##	GETFORM Fsessdetail (client_pid = #client_pid)
+	if (client_pid[0] == '<')   /* no pid to use */
+	{
+	    POP_MSG("Could not obtain client process information for this\
+ session.  This is because a PID could not be obtained because this session\
+ is being run from a batch job, detached process or is internal.");
+##	    RESUME
+	}
+	showproc(client_pid);
+#else
+	POP_MSG("Process_Info (client) is available only on VMS");
+##	RESUME
+#endif 
+
+##  }
+##  ACTIVATE MENUITEM "Help", frskey1:
+##  {
+	my_help("ipmsesdt.hlp", "Session List");
+##  }
+##  ACTIVATE MENUITEM "End", frskey3:
+##  {
+##	BREAKDISPLAY
+##  }
+##  ACTIVATE MENUITEM "Quit", frskey2:
+##  {
+	e_xit = TRUE;		/* user wants to leave */
+        if (dosrvoper(GC_SERV_DISCONNECT, (char *)NULL) != OK)
+        {
+            POP_MSG("Error disconnecting from server");
+        }
+##	MESSAGE " "		/* force cursor to bottom of screen */
+##	BREAKDISPLAY
+##  }
+
+    if (e_xit) {		/* user wants to leave */
+	terminate(OK);
+    }
+    return;
+}

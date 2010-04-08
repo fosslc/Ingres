@@ -1,0 +1,9 @@
+COPYFORM:	6.4	1993_11_22 13:47:55 GMT  
+FORM:	show_screen		
+	80	23	0	0	2	0	1	9	0	0	0	0	0	0	0	3
+FIELD:
+	0	title	-20	61	0	60	1	67	2	1	60	0	7	Title:	0	0	0	0	512	0	0		c60			0	0
+	1	data	0	18	0	1	20	80	3	0	1	1	0		1	1	0	16417	0	0	0					1	1
+	0	data	-21	81	0	78	1	78	0	1	78	1	1	data	1	-1	0	0	0	0	0		c78			2	2
+TRIM:
+	21	0	INGRES EVIDENCE SET MANAGEMENT UTILITY	0	0	0	0

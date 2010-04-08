@@ -1,0 +1,1694 @@
+/*
+** RBF.QSC
+**	Routines for RBF.
+**
+** Copyright (c) 2004 Ingres Corporation
+**
+** History:
+**
+**	03/14/87 (dkh) - Added support for ADTs.
+**	13-jul-87 (bruceb) Changed memory allocation to use [FM]Ereqmem.
+**	08/14/87 (dkh) - ER changes.
+**	10/25/87 (dkh) - Error message cleanup.
+**	21-jul-88 (bruceb)	Fix for bug 2969.
+**		Changes to vfgets to specify maximum length.
+**	31-aug-88 (sylviap)	
+**		Changed CVlower to IIUGlbo_lowerBEobject (colname) to handle 
+**		mixed cased column names.
+**	12/07/88 (dkh) - Fixed venus bug 4225.
+**	01-sep-89 (cmr)	sweeping changes to support dynamic sections 
+**			(hdrs/ftrs).  Get rid of refs to COLHEAD/DETAIL.
+**	07-sep-89 (bruceb)
+**		Call VTputstring with trim attributes now, instead of 0.
+**      9/22/89 (elein) UG changes
+**                      ingresug change #90178
+**      9/22/89 (elein) UG changes
+**	22-nov-89 (cmr)
+**		Support for creating an aggregate via addColumn().
+**		Rewrote saveSection() and changeSec().  Revamped
+**		moving/placing routines so that components can be
+**		be moved freely from section to section rather than
+**		restricted to a certain section.  Changed the algorithm
+**		for creating a column heading (see heading()).  When
+**		going back to RBF (vftorbf()) be sure to put aggregates
+**		on the CS list.
+**	03-jan-90 (cmr)
+**		addColumn(): check if we are in a footer when creating
+**		an aggregate.  Also, call IIVTlf() before and after
+**		displaying series of popups.
+**	24-jan-90 (cmr)	
+**		New routine SectionsUpdate() supersedes multiple calls
+**		to newLimits().  Called once by vfUpdate() when screen
+**		is about to get refreshed.  
+**	02/06/90 (dkh) - Fixed jup bug 9932.  Removed code that changed
+**			 the value of frame->frmaxy and frame->frmaxx in
+**			 vftorbf().  This prevents the form from being
+**			 too small to fit the "end of report" trim.
+**	06-feb-90 (cmr)
+**		chkVertical() -- Only check for aggregates when the item
+**		is a field not a heading.  Also cleaned up error messages.  
+**	07-feb-90 (cmr) fix for jupbug 9932
+**		fix vftorbf() - frmaxy and frmaxx were needlessly being set
+**		incorrectly; this caused RBF to core dump on Save/Move/Expand.
+**	07-mar-90 (cmr)
+**		addColumn() - for the aggregates count and any make sure
+**			      the datatype and format get set correctly.
+**	09-mar-90 (cmr)
+**		addColumn() - call vftorbf() to update the CS list array
+**		before calling rFcols().  This makes it possible to
+**		determine which columns already exist.
+**	15-mar-90 (cmr)
+**		Added support for re-ordering break headers and footers
+**		when the sort sequences change.  New routine RebuildLines
+**		is called by rFcoptions in RBF.
+**	17-apr-90 (cmr)
+**		addColumn() - changed the way aggregate headings are formed.
+**	19-apr-90 (bruceb)
+**		Removed setLimit(); no longer used since RBF doesn't restrict
+**		cursor to current section.
+**	19-apr-90 (cmr)	
+**		Added routine Remove_agu to remove agg field from copt list if 
+**		the agg is unique.  Added routine VifAgguHandler called by RBF 
+**		when the user changes the sort seq of a break column to 0 to 
+**		handle unique aggs.  Also, when creating a field pass FDnewfld 
+**		a sequence #.
+**	26-apr-90 (cmr)
+**		UpdateNodes - Don't update a multi-line pos until the last line
+**		is encountered.  This ensures that vflnNext works properly.
+**	04-jun-90 (cmr)
+**		Before going back to RBF (vftorbf) make sure Agg_count is 
+**		updated.
+**	6/6/90 (martym)
+**		Added Reset_copt().
+**      06/12/90 (esd) - Add new parameter to call to palloc indicating
+**                       whether the feature requires attribute bytes
+**                       on each side.
+**      06/12/90 (esd) - Add extra parm to VTputstring to indicate
+**                       whether form reserves space for attribute bytes.
+**	21-jun-90 (cmr)
+**		addColumn() - for aggregates pass RbfAggSeq to FDnewfld().
+**	07/04/90 (dkh) - Put in changes so layout does not change for
+**			 RBF when popups are displayed.
+**	20-aug-90 (cmr)- Fix for bug 32205
+**		moveColumn() - Corrected and simplified code for moving entire
+**		column.  Removed fitCol().  Also, when checking for overlap
+**		take into consideration the new y coord not just the x coord.
+**		Do not assume that if one component can't move Sideways then
+**		the other can't either.
+**	28-aug-90 (sylviap)
+**		If the report is a label and creating a column, do not create
+**		a column heading.  Aggregates in label reports do have 
+**		column headings. #32155
+**	10/08/90 (dkh) - Fixed bug 33779.
+**	08-Oct-90 (steveh)
+**		Added missing third argument to STindex.
+**	06/28/92 (dkh) - Added support for rulers in vifred/rbf.
+**	10-may-1999 (walro03)
+**	    Remove obsolete version string ps2_us5.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"decls.h"
+# include	<ug.h>
+# include	<me.h>
+# include	<si.h>
+# include	<st.h>
+# include	<vt.h>
+# include	<cm.h>
+# include	<er.h>
+# include	"ervf.h"
+
+# ifdef FORRBF
+# include	<rtype.h>
+static		bool		testVertical();
+static		bool		chkVertical();
+static		bool		InSection();
+static				UpdateNodes();
+# endif /* FORRBF */
+
+
+FUNC_EXTERN	STATUS		fmt_size();
+FUNC_EXTERN	STATUS		fmt_fmtstr();
+FUNC_EXTERN	DB_STATUS	adc_lenchk();
+FUNC_EXTERN	char		*FEsalloc();
+
+# ifdef FORRBF
+FUNC_EXTERN	ATT		*r_gt_att();
+FUNC_EXTERN	COPT		*rFgt_copt();
+FUNC_EXTERN	Sec_node	*sec_list_find();
+FUNC_EXTERN	VOID		sec_list_insert();
+FUNC_EXTERN	VOID		sec_list_unlink();
+FUNC_EXTERN	Sec_node	*sec_node_alloc();
+FUNC_EXTERN 	AGG_INFO	*rFagg();
+FUNC_EXTERN	VOID		rFagu_append();
+FUNC_EXTERN	VOID		rFagu_remove();
+# endif /* FORRBF */
+
+GLOBALREF	FILE	*vfdfile;
+
+
+#ifdef FORRBF
+Sec_node *
+whichSec( y, secList )
+i4	y;
+Sec_List	*secList;
+{
+	Sec_node *p, *q;
+
+	p = secList->head;
+	while ( p )
+	{
+		q = p;
+		p = p->next;
+		if ( y == q->sec_y )
+		{
+			/* special -- insert a line at the first   */
+			/* line will insert a line below not above.*/
+			if ( q == secList->head )
+				return( q );
+			else
+				return( q->prev );
+		}
+		if ( y > q->sec_y && y < p->sec_y )
+			return( q );
+	}
+}
+/*
+** This routine is called by vfUpdate().  The screen is about to be
+** be refreshed because some lines have been added or deleted. Consequently
+** the y coords in the Sections list is out of date and must be updated.
+*/
+VOID
+SectionsUpdate()
+{
+	i4	i;
+	VFNODE	*nd;
+	POS	*ps;
+	Sec_node *s;
+
+	s = Sections.head;
+	for (i = 0; i <= endFrame; i++)
+	{
+	/*
+		if ( !(nd = line[i]))	
+			continue;
+		if ( !(ps = nd->nd_pos) ) 
+			continue;
+	*/
+		for (nd = line[i]; nd != NULL; nd = vflnNext(nd, i))
+		{
+			ps = nd->nd_pos;
+
+			/*
+			** The assumption here is that none of the special 
+			** section lines can be deleted.  So the number of 
+			** section lines in the lines table should match the 
+			** number of elements in the Sections list.  Therefore
+			** there is no need to compare the trim text with the
+			** section name, etc.
+			**
+			**  However, we must allow cross hairs to coexist on
+			**  the same line as a RBF section marker.
+			**  That is the reason for the loop.
+			*/
+			if ( ps->ps_name == PSPECIAL ) 
+			{
+				s->sec_y = ps->ps_begy;
+				s = s->next;
+				break;
+			}
+		}
+	}
+}
+#endif
+bool
+inLimit(y)
+i4	y;
+{
+# ifdef FORRBF
+	Sec_node *p = Sections.head;
+
+	while ( p )
+	{
+		if ( y == p->sec_y )
+			return( TRUE );
+		p = p->next;
+	}
+	return( FALSE );
+# else
+	return (FALSE);
+# endif
+}
+
+# ifdef FORRBF
+
+/* The following two routines are only called by the heading routine */
+
+adjpos(lt, num, i)
+VFNODE	*lt;
+i4	num;
+i4	i;
+{
+	reg	POS	*ps;
+
+	while (lt != NNIL)
+	{
+		ps = lt->nd_pos;
+		lt = vflnNext(lt, i);
+		if ((num == 1 && ps->ps_begy == i) ||
+		    (num == -1 && ps->ps_endy == i))
+		{
+			ps->ps_begy += num;
+			ps->ps_endy += num;
+		}
+	}
+}
+
+newfrm(num)
+i4	num;
+{
+	reg	i4	i;
+	reg	VFNODE	*lt;
+	reg	VFNODE	**nlp;
+	POS		*ps;
+
+	nlp = line;
+	VTerase(frame);
+	if (endFrame + num >= frame->frmaxy)
+	{
+		VTextend(frame, num);
+	}
+	for (i = 0; i <= endFrame + num; i++, nlp++)
+	{
+		for (lt = *nlp; lt != NNIL; lt = vflnNext(lt, i))
+		{
+			ps = lt->nd_pos;
+			if (i == ps->ps_begy)
+			{
+				newFeature(ps, frame);
+			}
+		}
+	}
+
+	endFrame += num;
+}
+
+/*
+** give the component the cursor is currently on a new
+** column heading
+*/
+
+/*
+**  Algorithm:
+**	If we are on an existing field and there already exists one or more
+**	lines of heading then try to put the new heading in the same
+**	section as the existing headings.  If the existing headings 
+**	are above the field in the same section then try to preserve this
+**	relationship by opening up a line if needed.
+**	If we are on a field in the detail section and there is no existing 
+**	heading then put the heading in the nearest header.  If there is no 
+**	available header then put it in the current section.
+**	If we are on a field in a section other than the detail and there
+**	is no existing heading then put the heading in the current section.
+**	If we are on an existing heading put the new heading in the same
+**	section. If the existing heading is above the field in the same 
+**	section then try to preserve this relationship by opening up a 
+**	line if needed.
+**	In all cases, a line will be opened if the new heading does not
+**	fit in the prescribed section/place.
+*/
+
+i4
+heading()
+{
+	register POS	*ps;
+	register POS	*newps;
+		POS	*list, *maxl;
+		i4	menu_val;
+		i4	poscount;
+		i4	trx,
+			try;
+		i4	newy, maxy;
+		TRIM	*tr;
+		char	*str;
+		bool	line_inserted = FALSE;
+		VFNODE	**lp;
+		VFNODE	**nlp;
+		i4	i;
+		Sec_node *p;
+
+	p = whichSec( globy, &Sections );
+
+	ps = onPos(globy, globx);
+	/* must be on an existing component */
+	if (ps == NULL)
+	{
+		IIUGerr(E_VF00A1_Can_only_give_a_headi, UG_ERR_ERROR, 0);
+		return;
+	}
+	/* if not on a field then it must be on a heading */
+	if ((ps->ps_name != PFIELD) && (ps->ps_column == NULL))
+	{
+		IIUGerr(E_VF00A2_Can_only_give_a_headi, UG_ERR_ERROR, 0);
+		return;
+	}
+
+	/* find the first avail line for the new heading */
+	if ( ps->ps_name != PFIELD )     /* we are on a heading */
+	{
+		newy = globy + 1;
+		/* find the field pos */
+		list = ps->ps_column;
+		while ( list != ps )
+		{
+			if (list->ps_name == PFIELD)
+				break;
+			list = list->ps_column;
+		}
+			if ( (whichSec(list->ps_begy, &Sections) == whichSec(globy, &Sections)) 
+				&& (ps->ps_begy < list->ps_begy) )
+				maxy = list->ps_begy;
+			else
+				maxy = (whichSec(globy, &Sections))->next->sec_y;
+	}
+	else    /* we are on a field */
+	{
+		if ( ps->ps_column )	/* heading already exists */
+		{
+			list = ps->ps_column;
+			maxl = list;
+			/* find the last heading */
+			while ( list != ps->ps_column )
+			{
+				list = list->ps_column;
+				if ( (maxl->ps_begy < list->ps_begy)
+					&& (list->ps_name != PFIELD) )
+					maxl = list;
+			}
+			newy = maxl->ps_begy + 1;
+			/*
+			** if the heading is in the same section as the field 
+			** and it is somewhere above the field then make
+			** sure that the new heading stays above the field.
+			*/
+			if ( (whichSec(maxl->ps_begy, &Sections) == whichSec(globy, &Sections)) 
+				&& (maxl->ps_begy < ps->ps_begy) )
+				maxy = globy;
+			else
+				maxy = (whichSec(maxl->ps_begy, &Sections))->next->sec_y;
+		}
+		else	/* no heading exists */
+		{
+			if ( p->sec_type == SEC_DETAIL )
+			{
+				if ( p->prev ) 
+				{
+					newy = p->prev->sec_y + 1;
+					maxy = p->sec_y;
+				}
+				else
+				{
+					newy = p->sec_y + 1;
+					maxy = globy;
+				}
+			}
+			else
+			{
+				newy = p->sec_y + 1;
+				maxy = globy;
+			}
+		}
+	}
+
+	while (newy != maxy && onPos(newy, globx) != NULL)
+	{
+		newy++;
+	}
+
+	globy = newy;
+
+	/* insert a new line temporarily */
+	if (globy == maxy)
+	{
+		vfnewLine(1);
+		lp = &line[endFrame];
+		nlp = lp + 1;
+		for (i = endFrame; i >= globy; i--)
+		{
+			adjpos(*lp, 1, i);
+			*nlp-- = *lp--;
+		}
+		*nlp = NULL;
+		newfrm(1);
+		line_inserted = TRUE;
+	}
+
+	VTxydraw(frame, globy, globx);
+
+	scrmsg(ERget(F_VF002A_Enter_column_heading));
+	trx = globx;
+	try = globy;
+	vfsvImage();
+	VTxydraw(frame, try, trx);
+	str = (char *) vfgets(0);
+	vfresImage();
+	/* why are we undoing what just happened above??*/
+	/* is it just in case the str is null?? */
+	if (line_inserted)
+	{
+		lp = &line[globy];
+		nlp = lp + 1;
+		for (i = globy+1; i <= endFrame; i++)
+		{
+			adjpos(*nlp, -1, i);
+			*lp++ = *nlp++;
+		}
+		*lp = NNIL;
+		newfrm(-1);
+	}
+	if (str == NULL || *str == '\0')
+	{
+		return;
+	}
+
+	setGlobUn(enTRIM, NULL, NULL);
+	if (line_inserted)
+	{
+		lp = &line[endFrame];
+		nlp = lp + 1;
+		for (i = endFrame + 1; i > globy; i--)
+		{
+			adjustPos(*lp, 1, i);
+			*nlp-- = *lp--;
+		}
+		*nlp = NULL;
+		newFrame(1);
+	}
+	tr = trAlloc(try, trx, saveStr(str));
+	newps = palloc(PTRIM, try, trx, 1, STlength(str), tr, FALSE);
+	frame->frtrimno++;
+	putEnTrim(newps, TRUE);
+	insColumn(ps, newps);
+}
+# endif
+
+
+/*
+** insert a new position in a list of positions which
+** constitute a column.
+** The Column is kept sorted.
+*/
+VOID
+insColumn(col, ps)
+POS		*col;
+register POS	*ps;
+{
+	register POS	**place;
+	register POS	*maxl;
+
+	if (col->ps_column == NULL)
+	{
+		col->ps_column = ps;
+		ps->ps_column = col;
+		return;
+	}
+	maxl = maxColumn(col);
+	place = &(maxl->ps_column);
+	maxl = *place;
+	do
+	{
+		if (ps->ps_begy < (*place)->ps_begy)
+			break;
+		place = &((*place)->ps_column);
+	} while (*place != maxl);
+	ps->ps_column = *place;
+	*place = ps;
+}
+
+/*
+** delete the position from its
+** column.
+** The column pointer on the delete position is left intact
+** so that undo can later relink the column.
+** Print an error if the position is not found in its column
+*/
+VOID
+delColumn(col, ps)
+POS		*col;
+register POS	*ps;
+{
+	register POS	**place;
+	register POS	*maxl;
+
+	if (col->ps_column == NULL)
+	{
+		syserr(ERget(S_VF00A3_delColumn_passed), col);
+	}
+	maxl = ps->ps_column;
+	place = &(maxl->ps_column);
+	do {
+		if (*place == ps)
+		{
+			*place = ps->ps_column;
+			/*
+			** we don't want one position columns
+			*/
+			ps = *place;
+			if (ps == ps->ps_column)
+				ps->ps_column = NULL;
+			return;
+		}
+		place = &((*place)->ps_column);
+	} while (*place != maxl);
+	syserr(ERget(S_VF00A4_delColumn_Cant), ps, col);
+}
+
+POS *
+maxColumn(ps)
+register POS	*ps;
+{
+	register POS	*list;
+	register POS	*maxl;
+
+	if (ps->ps_column == NULL)
+		return (NULL);
+	list = ps;
+	maxl = list;
+	do
+	{
+		list = list->ps_column;
+		if (maxl->ps_begy < list->ps_begy)
+			maxl = list;
+	} while (list != ps);
+	return (maxl);
+}
+
+# ifdef FORRBF
+VOID
+vfcolsize(ps, minx, maxx)
+register POS	*ps;
+i4		*minx;
+i4		*maxx;
+{
+	register POS	*list;
+
+	*minx = ps->ps_begx;
+	*maxx = ps->ps_endx;
+	if (ps->ps_column == NULL)
+		return;
+	list = ps->ps_column;
+	do
+	{
+		if (list->ps_begx < *minx)
+			*minx = list->ps_begx;
+		if (list->ps_endx > *maxx)
+			*maxx = list->ps_endx;
+		list = list->ps_column;
+	} while (list != ps);
+	return;
+}
+
+bool
+place_Column(ps, y, x, noUndo)
+POS	*ps;
+i4	y;
+i4	x;
+i4	noUndo;
+{
+	i4	movex;
+	i4	movey;
+
+	movex = x - ps->ps_begx;
+	movey = y - ps->ps_begy;
+	if (!testHorizontal(movex, ps))
+	{
+		return (FALSE);
+	}
+	if (!testVertical(movey, ps))
+	{
+		return (FALSE);
+	}
+	moveColumn(movey, movex, ps, noUndo);
+	return (TRUE);
+}
+
+/*
+** see if a whole column can be moved a specified distance horizontally.
+*/
+
+bool
+testHorizontal(howFar, ps)
+i4	howFar;
+POS	*ps;
+{
+	register POS	*col;
+	i4		ex;
+	i4		bx;
+
+	col = ps;
+	do
+	{
+		ex = col->ps_endx + howFar;
+		bx = col->ps_begx + howFar;
+		if (ex >= endxFrm + 1 || bx < 0)
+		{
+			IIUGerr(E_VF00A5_Cant_move_column, UG_ERR_ERROR, 0);
+			return (FALSE);
+		}
+		col = col->ps_column;
+	} while(ps != col);
+	return (TRUE);
+}
+
+/*
+** see if a whole column can be moved a specified distance vertically.
+*/
+
+static bool
+testVertical(howFar, ps)
+i4	howFar;
+POS	*ps;
+{
+	POS	*list;
+
+	if ( !chkVertical(ps,howFar) )
+		return(FALSE);
+	if ( !(list = ps->ps_column) )
+		return(TRUE);
+	while ( list != ps )
+	{
+		if ( !chkVertical(list,howFar) )
+			return(FALSE);
+		list = list->ps_column;
+	}
+	return(TRUE);
+}
+
+
+/* Checks that all components within a section of a column may be moved
+** vertically without crossing the section boundary.
+*/
+
+static bool
+chkVertical(ps, deltay)
+register POS	*ps;
+i4	deltay;
+{
+	i4	i;
+
+	for (i = ps->ps_begy; i <= ps->ps_endy; i++)
+	{
+		if ((i + deltay < 1) || (i + deltay >= endFrame) )
+		{
+			IIUGerr(E_VF00A6_Cant_move_column, UG_ERR_ERROR, 0);
+			return(FALSE);
+		}
+		if ( inLimit(i + deltay) )
+		{
+			IIUGerr(E_VF0162_Cant_move_column, UG_ERR_ERROR, 0);
+			return(FALSE);
+		}
+	}
+
+	if ( (ps->ps_name == PFIELD)  &&
+	  (FDgethdr((FIELD*)ps->ps_feat))->fhd2flags & fdDERIVED )
+	{
+		if ( (whichSec(ps->ps_begy+deltay, &Sections))->sec_type < SEC_BRKFTR )
+		{
+			IIUGerr(E_VF0161_Cant_move_the_agg, UG_ERR_ERROR, 0);
+			return (FALSE);
+		}
+	}
+	return (TRUE);
+}
+
+/*
+** move the whole column over
+** start at the position with the least vertical position
+** and work down the list
+*/
+
+static Sec_List	oldSections = {0};
+
+VOID
+moveColumn(movey, movex, ps, noUndo)
+i4	movey;
+i4	movex;
+POS	*ps;
+bool	noUndo;
+{
+	register POS	*maxl;
+	register POS	*list;
+	SMLFLD		fd;
+	i4		newy;
+	bool		newframe = FALSE;
+	i4		changey;
+	POS		over;
+	VFNODE		*nd;
+
+	maxl = maxColumn(ps);
+	list = maxl;
+	if (noUndo)
+	{
+		setGlobUn(slCOLUMN, ps, movex);
+		unLinkCol(ps);
+		ersCol(ps);
+	}
+	saveSection();
+	resetMoveLevel();
+	do
+	{
+		list = list->ps_column;
+		newy = changeSec(list->ps_begy + movey);
+		changey = newy - list->ps_begy;
+		list->ps_begy += changey;
+		list->ps_endy += changey;
+		list->ps_begx += movex;
+		list->ps_endx += movex;
+		if (overLap(list) != NULL)
+		{
+
+			if (sideWays(list, noUndo) == FALSE)
+			{
+				compOver(list, &over);
+				moveDown(list, &over, noUndo);
+				newframe = TRUE;
+			}
+		}
+		list->ps_begy -= changey;
+		list->ps_endy -= changey;
+		list->ps_begx -= movex;
+		list->ps_endx -= movex;
+		nextMoveLevel();
+	} while (list != maxl);
+	if (noUndo)
+		setGlMove(ps);
+	list = maxl;
+	do
+	{
+		list = list->ps_column;
+		newy = changeSec(list->ps_begy + movey);
+		switch (list->ps_name)
+		{
+		case PTRIM:
+			moveTrim(list, newy, list->ps_begx + movex,
+			   FALSE);
+			break;
+
+		case PFIELD:
+			FDToSmlfd(&fd, list);
+			moveField(list, &fd, newy,
+			    list->ps_begx + movex, FALSE);
+			break;
+		}
+	} while (list != maxl);
+	if (newframe)
+	{
+		newFrame(0);
+	}
+	resetMoveLevel();
+	sec_list_remove_all( &oldSections );
+}
+
+VOID
+saveSection()
+{
+	Sec_node	*p, *n;
+
+	p = Sections.head;
+	while ( p )
+	{
+		n = sec_node_alloc( p->sec_type, p->sec_brkseq, p->sec_y );
+		sec_list_append( n, &oldSections );
+		p = p->next;
+	}
+}
+/*
+** compute the beginning y of the position in respect to the
+** section lines
+*/
+
+i4
+changeSec(y)
+i4	y;
+{
+	Sec_node *oldsec, *newsec;
+
+	oldsec = whichSec( y, &oldSections );
+	newsec = sec_list_find( oldsec->sec_type, oldsec->sec_brkseq, &Sections );
+
+	return( newsec->sec_y + ( y - oldsec->sec_y) );
+
+}
+# endif
+
+/*
+** unlink all the positions in a column
+*/
+VOID
+unLinkCol(ps)
+register POS	*ps;
+{
+	register POS	*list;
+
+	if (ps->ps_column == NULL)
+		return;
+	list = ps;
+	do
+	{
+		list = list->ps_column;
+		unLinkPos(list);
+	} while (list != ps);
+}
+
+/*
+** erase the features in a column
+*/
+VOID
+ersCol(ps)
+register POS	*ps;
+{
+	register POS	*list;
+
+	if (ps->ps_column == NULL)
+		return;
+	list = ps;
+	do
+	{
+		list = list->ps_column;
+		vfersPos(list);
+	} while (list != ps);
+}
+
+/*
+** fix the count of features for a frame
+** This is called when a column is deleted or a column delete
+** is undone
+*/
+VOID
+vfcolcount(ps, val)
+register POS	*ps;
+i4		val;
+{
+	register POS	*list;
+
+	if (ps->ps_column == NULL)
+	{
+		vffrmcount(ps, val);
+		return;
+	}
+	list = ps;
+	do
+	{
+		list = list->ps_column;
+		vffrmcount(list, val);
+	} while (list != ps);
+}
+
+/*
+** link up the associate features of a report
+*/
+
+# ifdef FORRBF
+VOID
+vfAscTrim(cs, length)
+register CS	*cs;
+i4		length;
+{
+    i4			i;
+    register LIST	*lt;
+    FIELD		*fd;
+    TRIM		*tr;
+    POS			*col,
+			*ps;
+
+    for (i = 0; i < length; i++, cs++)
+    {
+	lt = cs->cs_flist;
+	fd = (FIELD*)lt->lt_var.lt_vpos;
+	if ((col = onPos(fd->flposy, fd->flposx)) == NULL)
+		syserr(ERget(S_VF00A7_Associated_Field),
+			fd->fldname);
+	lt = lt->lt_next;
+	for (; lt != LNIL; lt = lt->lt_next)
+	{
+	    fd = (FIELD*)lt->lt_var.lt_vpos;
+	    if ((ps = onPos(fd->flposy, fd->flposx)) == NULL)
+		syserr(ERget(S_VF00A7_Associated_Field),
+		    fd->fldname);
+	    insColumn(col, ps);
+	}
+	for (lt = cs->cs_tlist; lt != LNIL; lt = lt->lt_next)
+	{
+	    tr = (TRIM *)lt->lt_var.lt_vpos;
+	    if ((ps = onPos(tr->trmy, tr->trmx)) == NULL)
+		syserr(ERget(S_VF00A8_Associated_Trim),
+		    tr->trmstr);
+	    insColumn(col, ps);
+	}
+    }
+}
+
+/*
+** go from frame structures to rbf structures
+*/
+
+static LIST	**otherp = NULL;
+static LIST	**flist = NULL;
+static LIST	**tlist = NULL;
+static CS	*csp = NULL;		/* a pointer to the new CStop struct */
+static i4	cscnt = -1;		/* number of elements in new CStop */
+					/* we are always one ahead */
+static i4	acnt = 0;
+
+VOID
+vftorbf()
+{
+	i4	i;
+	VFNODE	**lp;
+	VFNODE	*lt;
+	POS	*ps;
+	LIST	*newl;
+	FIELD	*fld;
+	Sec_node *n;
+
+	vfnewCs();
+	for (i = 0, lp = line; i <= endFrame; i++, lp++)
+	{
+		for (lt = *lp; lt != NNIL; lt = vflnNext(lt, i))
+		{
+			ps = lt->nd_pos;
+			if (ps->ps_mask == PRBFDONE)
+				continue;
+			ps->ps_mask = PRBFDONE;
+			switch (ps->ps_name)
+			{
+			case PTRIM:
+				if (ps->ps_column == NULL)
+				{
+					newl = lalloc(LTRIM);
+					newl->lt_trim =
+						(struct trmstr *)ps->ps_feat;
+					*otherp = newl;
+					otherp = &(newl->lt_next);
+				}
+				else
+					vfnewAssoc(ps);
+				break;
+
+			case PFIELD:
+				if (ps->ps_column == NULL)
+				{
+					newl = lalloc(LFIELD);
+					newl->lt_trim =
+						(struct trmstr *)ps->ps_feat;
+					*flist = newl;
+					vfnextCs();
+				}
+				else
+					vfnewAssoc(ps);
+				fld = (FIELD *)ps->ps_feat;
+				if ((FDgethdr(fld))->fhd2flags & fdDERIVED)
+					acnt++;
+				break;
+			}
+		}
+	}
+	Cs_length = cscnt;
+	Agg_count = acnt;
+	clearLine();
+}
+
+/*
+** free the old CS and add a new one
+*/
+VOID
+vfnewCs()
+{
+	reg i4		i;
+	reg CS		*cs;
+
+	lfree( Other.cs_tlist );
+	Other.cs_tlist = NULL;
+	otherp = &(Other.cs_tlist);
+
+	for (i = 0, cs = Cs_top; i < Cs_length; i++, cs++)
+	{
+		lfree(cs->cs_flist);
+		lfree(cs->cs_tlist);
+	}
+	if ((Cs_top = (CS *)FEreqmem((u_i4)vflinetag,
+	    (u_i4)(frame->frfldno * sizeof(CS)),
+	    TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("vfnewCs"));
+	}
+	csp = Cs_top;
+	csp--;		/* next cs will increment first */
+	cscnt = -1;
+	acnt = 0;
+	vfnextCs();
+}
+
+VOID
+vfnewAssoc(ps)
+POS	*ps;
+{
+	POS	*end;
+	LIST	*newl;
+	FIELD	*fld;
+
+	end = ps;
+	do {
+		ps->ps_mask = PRBFDONE;
+		switch (ps->ps_name)
+		{
+		case PTRIM:
+			newl = lalloc(LTRIM);
+			newl->lt_trim = (struct trmstr *)ps->ps_feat;
+			*tlist = newl;
+			tlist = &(newl->lt_next);
+			break;
+
+		case PFIELD:
+			newl = lalloc(LFIELD);
+			newl->lt_trim = (struct trmstr *)ps->ps_feat;
+			*flist = newl;
+			fld = (FIELD*)ps->ps_feat;
+			if ((FDgethdr(fld))->fhd2flags & fdDERIVED)
+				acnt++;
+			break;
+		}
+		ps = ps->ps_column;
+	} while (ps != end);
+	vfnextCs();
+}
+
+
+VOID
+vfnextCs()
+{
+	cscnt++;
+	csp++;
+	flist = &(csp->cs_flist);
+	tlist = &(csp->cs_tlist);
+}
+
+/*
+** N.B.
+**	The following function computes the least Omnilinear
+**	line of the passed y value using the definition
+**	of least Omnilinearity found in the Schmitz/Cortopassi
+**	Unified Theory of Omnilinearity in Two Dimensional Euclidian
+**	Space with Extensions to Banach Spaces of Order 5.
+**	(JISM vol. 234 July 1945)
+*/
+
+i4
+omnilin(y)
+	reg i4  y;
+{
+	reg VFNODE	*lp;
+	reg POS		*ps;
+	i4		oldy;
+
+	while (y < endFrame)
+	{
+		oldy = y;
+		if ((lp = line[y]) == NULL)
+			return (y);
+		for (; lp != NULL; lp = vflnNext(lp, oldy))
+		{
+			ps = lp->nd_pos;
+			if (ps->ps_endy > y)
+				y = ps->ps_endy;
+		}
+		if (y == oldy)
+			return (y+1);
+
+	}
+	return (endFrame);
+}
+
+VOID
+addColumn(aggflag)
+bool	aggflag;
+{
+##	char		*colname;
+	ATTRIB		ord = 0;
+	i4		i, index;
+	bool		cum = FALSE;
+	ATT		*att;
+	FIELD		*fld;
+	TRIM		*trm;
+	AGG_INFO	*agg_info = NULL;
+	char		trmstr[fdTRIMLEN + 1];
+	char		fmtstr[MAX_FMTSTR];
+	char		valstr[FE_MAXNAME + 32];
+	POS		*ps, *newps;
+	i4		width, numcol, numrow;
+	i4		fmtlen, areasize;
+	VFNODE		**lp, *lt;
+	ADF_CB		*ladfcb;
+	i4		usrlen, adflen;
+	DB_DATA_VALUE	dbv;
+	PTR		area;
+	FMT		*fmt;
+	ADI_OP_ID	cnt_id, any_id;
+	STATUS		status;
+	i2		rep_style;
+
+	/* must be in a footer to create an aggregate */
+	if ( aggflag && ((whichSec(globy, &Sections))->sec_type <= SEC_DETAIL) )
+	{
+		IIUGerr( E_VF0160_Cursor_must_be_in_ftr, UG_ERR_ERROR, 0 );
+		return;
+	}
+	/* update the CS array which contains info about extant cols */
+	vftorbf();
+	/* call to IIVTlf() needed before displaying a sequence of popups */
+	IIVTlf( frame, TRUE, TRUE );
+	rFcols(aggflag, &ord, &index, &cum, &rep_style);
+	/* call to IIVTlf() needed after displaying a sequence of popups */
+##	redisplay
+	IIVTlf( frame, FALSE, FALSE );
+
+	if ( ord == 0 || (aggflag && index == -1) )
+	{
+		return;
+	}
+	att = r_gt_att(ord);
+	if ( aggflag )
+	{
+		agg_info = &((rFgt_copt( ord ))->agginfo[index]);
+		/*
+		** valstr is used for creating the heading for an agg and 
+		** also for the field validation (later used on save).   
+		*/
+		if ( cum )
+			STpolycat(5, ERx("cum "), agg_info->agnames->ag_funcname,
+				ERx("("), att->att_name, ERx(")"), valstr);
+		else
+			STpolycat(4, agg_info->agnames->ag_funcname, ERx("("), 
+				att->att_name, ERx(")"), valstr);
+		colname = valstr;
+	}
+	else
+		colname = att->att_name;
+
+
+	/* if we are creating a non-aggregate column
+	** then check if that column already exists.
+	*/
+	if ( !aggflag)
+	{
+		lp = line;
+		for (i = 0; i < endFrame; i++, lp++)
+			for (lt = *lp; lt != NNIL; lt = vflnNext(lt, i))
+				if (lt->nd_pos->ps_begy == i)
+				{
+					ps = lt->nd_pos;
+					if (ps->ps_name == PFIELD)
+					{
+						fld = (FIELD *) ps->ps_feat;
+						if (STcompare(colname,
+							fld->fldname) == 0)
+						{
+					    		IIUGmsg(ERget(S_VF00AC_Col_already),
+								TRUE, 1, colname);
+							return;
+						}
+					}
+				}
+
+	}
+	if ( !att->att_format )
+		r_fmt_dflt(ord);
+
+	ladfcb = FEadfcb();
+
+	adi_opid( ladfcb, ERx("count"), &cnt_id );
+	adi_opid( ladfcb, ERx("any"), &any_id );
+
+	/* For most aggregates we assume that the datatype for the  */
+	/* agg is the same as the column.  But for Count(u) and Any */
+	/* we coerce the datatype to be an i4 to get the right fmt. */
+	if ( aggflag && (agg_info->agnames->ag_opid == cnt_id 
+			|| agg_info->agnames->ag_opid == any_id) )
+	{
+		dbv.db_datatype = DB_INT_TYPE;
+		if ( agg_info->agnames->ag_opid == cnt_id )
+			dbv.db_length = 4;
+		else
+			dbv.db_length = 1;
+
+		status = fmt_deffmt( ladfcb, &dbv, 0, TRUE, fmtstr );
+		if ( status != OK )
+			FEafeerr( ladfcb );
+		status = fmt_areasize( ladfcb, fmtstr, &areasize );
+		if ( status != OK )
+			FEafeerr( ladfcb );
+		area = MEreqmem( 0, areasize, TRUE, NULL );
+		status = fmt_setfmt( ladfcb, fmtstr, area, &fmt, &fmtlen );
+		if ( status != OK )
+			FEafeerr( ladfcb );
+	}
+	else	
+	{
+		dbv = att->att_value;
+		fmt = att->att_format;
+	}
+
+	if (fmt_size(ladfcb, fmt, &dbv, &numrow, &numcol) != OK)
+	{
+		IIUGmsg(ERget(S_VF00AD_Bad_format_found_for), TRUE, 1, colname);
+		return;
+	}
+
+	/* for a column in a label report, do not add a column heading */
+	if ((aggflag) || (rep_style != RS_LABELS))
+		i = globx + STlength(colname) + 2 + numcol; 
+	else
+		i = globx + numcol; 
+
+	if (i > endxFrm + 1)
+	{
+		IIUGerr(E_VF00AE_Column_will_not_fit, UG_ERR_ERROR, 0);
+		return;
+	}
+
+
+	if (rep_style == RS_LABELS)
+	{
+		setGlobUn(enFIELD, NULL, NULL);
+	}
+	else
+	{
+		setGlobUn(enCOLUMN, NULL, NULL);
+	}
+
+	if ((aggflag) || (rep_style != RS_LABELS))
+	{
+		STcopy(colname, trmstr);
+		CMtoupper(trmstr, trmstr);
+		STcat(trmstr, ERx(":"));
+		trm = FDnewtrim(trmstr, globy, globx);
+		ps = palloc(PTRIM, globy, globx, 1, STlength(trmstr), trm,
+			FALSE);
+		wrOver();
+		fitPos(ps, TRUE);
+		insPos(ps, TRUE);
+		VTputstring(frame, globy, globx, trm->trmstr, trm->trmflags, 
+			FALSE, IIVFsfaSpaceForAttr);
+	}
+
+	/* 
+	** N.B. - It is important that we pass the sequence # to FDnewfld; it
+	** uniquely identifies the field.  It is used later by VifAgguHandler.
+	*/
+
+	fld = FDnewfld(colname, (aggflag ? ++RbfAggSeq : ord), FREGULAR);
+
+	/* don't create a heading for cols in label reports */
+	if ((aggflag) || (rep_style != RS_LABELS))
+		fld->flposx = globx + STlength(colname) + 2;
+	else
+		fld->flposx = globx;
+
+	fld->fltitle = saveStr(ERx(""));
+	fld->flposy = globy;
+	fld->fldatax = 0;
+	fld->fldatay = 0;
+	if ( aggflag )
+		fld->flvalstr = STalloc(valstr);
+
+	fld->fllength = dbv.db_length;
+	fld->fld_var.flregfld->fltype.ftprec = dbv.db_prec;
+	fld->flmaxx = numcol;
+	fld->flmaxy = numrow;
+
+	if (fmt_fmtstr(ladfcb, fmt, fmtstr) != OK)
+	{
+		IIUGerr(E_VF00AF_Could_not_get_format, UG_ERR_ERROR, 1, colname); 
+		return; 
+	} 
+	fld->flfmtstr = FEsalloc(fmtstr); 
+	fld->flfmt = fmt;
+	width = numcol; 
+	fld->fldatatype = dbv.db_datatype; 
+	if ((fld->flwidth = numcol * numrow) == 0) 
+	{ 
+		fld->flwidth = numcol + numcol; 
+		fld->flmaxy = 2; 
+	}
+	fld->fldataln = numcol;
+	if ( aggflag )
+	{
+		(FDgethdr(fld))->fhd2flags |= fdDERIVED;
+		/* if unique, append it to the copt agu_list */
+		if (agg_info->agnames->ag_prime)
+			rFagu_append(fld, ord);	/* RBF routine */
+	}
+
+	/* for a column in a label report, do not add a column heading */
+	if ((aggflag) || (rep_style != RS_LABELS))
+		newps = palloc(PFIELD, globy, globx+STlength(colname)+2,
+		       fld->flmaxy, fld->flmaxx, fld, FALSE);
+	else
+		newps = palloc(PFIELD, globy, globx, fld->flmaxy, fld->flmaxx, 
+			fld, FALSE);
+
+	nextMoveLevel();
+	if ((aggflag) || (rep_style != RS_LABELS))
+		ps->ps_mask = getMoveLevel();	/* Make sure title does not 
+						** move while fitting the data.
+						*/
+	fitPos(newps, TRUE);		
+	resetMoveLevel();
+	insPos(newps, TRUE);
+
+	/* no headings for label reports */
+	if ((aggflag) || (rep_style != RS_LABELS))
+		insColumn(ps, newps);
+	vfFlddisp(fld);
+	vfcolcount(newps, 1);
+	VTxydraw(frame, globy, globx);
+}
+/*
+** RebuildLines() - Re-arrange hdrs and ftrs to reflect new sort order.
+**
+** This routine is called by rFcoptions() whenever the sort sequences
+** have changed.  We must make sure that the break headers and footers 
+** reflect this change on the screen and internally (line and Sections
+** get updated).  The basic algorithm is:
+**		1. Update the Sections list.
+**		2. Determine which lines on the screen are effected
+**		   and save these lines into a temp line array.
+**		3. Update the line array from the temp line array
+**		   so that the order of the sections reflects the 
+**		   Sections list.  Also when moving lines around
+**		   make sure to update the y coords for components
+**		   on the line.
+**		   
+*/
+
+VOID
+RebuildLines( sort_seq )
+i4	sort_seq[];
+{
+	i4	*seq;
+	Sec_node *n, *first, *last;
+	VFNODE	**savelines;
+	VFNODE	**sp, **lp;
+	i4	oldy, newy;
+	i4	i, j;
+	TAGID	savetag;
+
+	/*
+	** Get the boudaries for the area that will change.
+	** This includes any break headers, the detail 
+	** section, and any break footers.
+	*/
+	first = NULL;
+	last = NULL;
+	for ( n = Sections.head; n; n = n->next )
+	{
+		switch (n->sec_type) {
+			case SEC_BRKHDR:
+			case SEC_DETAIL:
+				if ( !first )
+					first = n;
+				break;
+			case SEC_PAGFTR:
+			case SEC_REPFTR:
+			case SEC_END:
+				if ( !last )
+					last = n;
+				break;
+		}
+		if ( first && last )
+			break;
+	}
+
+	savetag = FEgettag();
+	if ( (savelines = (VFNODE**)FEreqmem( (u_i4)savetag,
+		(u_i4)((last->sec_y - first->sec_y + 1) * sizeof(VFNODE*)),
+		TRUE, (STATUS*)NULL )) == NULL )
+	{
+		 IIUGbmaBadMemoryAllocation(ERx("RebuildLines"));
+	}
+
+	/* Save this area of the lines table. */
+	for ( i = first->sec_y, j = 0; i <= last->sec_y; i++, j++ )
+	{
+		savelines[j] = line[i];
+	}
+
+	/*
+	** Now rebuild the Sections list.  This re-arranges the
+	** headers and footers according to the new sort order but
+	** the y coordinates will not get updated until vfUpdate().
+	*/
+	for ( seq = sort_seq; *seq > 0; seq++ )
+	{
+		if ( n = sec_list_find( SEC_BRKHDR, *seq, &Sections) )
+		{
+			sec_list_unlink( n, &Sections );
+			sec_list_insert( n, &Sections );
+		}
+		if ( n = sec_list_find( SEC_BRKFTR, *seq, &Sections) )
+		{
+			sec_list_unlink( n, &Sections );
+			sec_list_insert( n, &Sections );
+		}
+	}
+
+
+	/* Rebuild the line array. */
+	newy = first->sec_y; 	/* current index for the line array */
+	lp = &line[newy];
+	for ( n = Sections.head; n; n = n->next )
+	{
+		if ( n->sec_type == SEC_BRKHDR || n->sec_type == SEC_BRKFTR )
+		{
+			oldy = n->sec_y;
+			/* calculate the offset for savelines */
+			sp = &savelines[oldy - first->sec_y];
+			do {
+				*lp++ = *sp++;
+				UpdateNodes( oldy++, newy++ );
+			} while (InSection( *sp ) );
+		}
+		if ( n->sec_type == SEC_DETAIL )
+		{
+			oldy = n->sec_y;
+			sp = &savelines[oldy - first->sec_y];
+			do {		/* Detail section does not change */
+				lp++; sp++; newy++;
+			} while (InSection( *sp ) );
+		}
+	}
+	FEfree(savetag);
+}
+/*
+** InSection() - TRUE if the current line is within a section.
+**		 FALSE if the current line is the start of a new section.
+*/
+static bool
+InSection( node )
+VFNODE	*node;
+{	
+	POS *ps;
+
+	if ( !node )
+		return( TRUE );
+	ps = node->nd_pos;
+	if ( ps->ps_name == PSPECIAL )
+		return( FALSE );
+	return( TRUE );
+}
+/*
+** UpdateNodes() - Update the y coords for all components on a line.
+*/
+static
+UpdateNodes( old_y, new_y )
+i4  old_y, new_y;
+{
+	VFNODE	*p, *q;
+	POS	*ps;
+	TRIM	*tr;
+	FIELD	*fld;
+	FLDHDR	*fldhdr;
+
+	p = line[new_y];
+	while ( p )
+	{
+		q = p;
+		p = vflnNext(p, old_y);
+		ps = q->nd_pos;
+		
+		/* update the feature */
+		switch ( ps->ps_name ) {
+			case PSPECIAL:
+			case PTRIM:
+				tr = (TRIM*)ps->ps_feat;
+				tr->trmy = new_y;
+				break;
+			case PFIELD:
+				fld = (FIELD*)ps->ps_feat;
+				fldhdr = FDgethdr(fld);
+				if ( fldhdr->fhposy == old_y )
+					fldhdr->fhposy = new_y;
+				if ( fldhdr->fhmaxy == old_y )
+					fldhdr->fhmaxy = new_y;
+				break;
+		}
+		/* update the position */
+		if (ps->ps_begy == old_y)
+		{
+			/*
+			** Defer updating multi-line pos til the last line.
+			** This ensures that vflnNext() works properly.
+			*/
+			if (ps->ps_begy != ps->ps_endy)
+				continue;
+			else
+			{
+				ps->ps_begy = new_y;
+				ps->ps_endy = new_y;
+			}
+		}
+		/* Last line of a multi-line pos */
+		else if (ps->ps_endy == old_y) 
+		{
+			ps->ps_begy += new_y - old_y; 
+			ps->ps_endy = new_y;
+		}
+	}
+}
+/*
+** Remove_agu() - Remove the agg field from the copt agu_list if it is
+**		  a unique agg.  This is called by delFeat when an agg 
+**		  field is being deleted.  For aggregate fields, the 
+**		  validation string (f->flvalstr) contains the text for 
+**		  the aggregation (including the attribute name).
+*/
+VOID
+Remove_agu(f)
+FIELD *f;
+{
+	FIELD	*agg_u;
+	char	att_name[FE_MAXNAME +1];
+	char	*begs, *ends;
+	LIST	*p;
+	COPT	*copt;
+	i4	ord;
+
+	/* get the attribute name */
+	begs = STindex(f->flvalstr, ERx("("),0) ;
+	ends = STindex(begs, ERx(")"),0);
+	begs++;	 	/* Cmprev not needed cuz this is an internal string */
+	STlcopy(begs, att_name, ends - begs);
+	/* get the attribute ordinal */
+	ord = r_mtch_att(att_name);
+	copt = rFgt_copt(ord);
+	p = copt->agu_list;
+	/* Go through the list.  If the field is on the list, remove it. */
+	while (p)
+	{
+		agg_u = p->lt_field;
+		/* the sequence # uniquely identifies the filed */
+		if (agg_u->flseq == f->flseq)
+		{
+			/* remove it from the agu_list */
+			rFagu_remove(agg_u, ord);	/* RBF routine */
+			break;
+		}
+		p = p->lt_next;
+	}
+	return;
+}
+/*
+** VifAgguHandler() - Called by RBF to handle unique aggs when the user
+**		      changes the sort sequence of a break column to 0.
+**		      The user specified what action to take on them --
+**		      either delete all the unique aggs on this attribute,
+**		      or make them non-unique.
+**
+**		      For aggregate fields, the validation string (f->flvalstr)
+**		      contains the text for the aggregation.  Making a unique
+**		      agg non-unique involves updating this string.
+*/
+
+VOID
+VifAgguHandler(ord, aggu, action)
+i4	ord;
+FIELD	*aggu;
+i4	action;
+{
+	VFNODE	*lt;
+	FIELD	*f;
+	POS	*p;
+	Sec_node *d;
+	char	*paren;
+	i4	i, y;
+
+	/* find the y position for the first footer if there is one */
+	d = sec_list_find(SEC_DETAIL, 0, &Sections);
+	y = d->next->sec_y;
+	/* Starting at the first footer, locate the agg fld and take action. */
+	for (i = y; i < endFrame; i++)
+	{
+		for (lt = line[i]; lt != NNIL; lt=vflnNext(lt,i))
+		{
+			p = lt->nd_pos;
+			if (p->ps_name != PFIELD)
+				continue;
+			f = (FIELD *)p->ps_feat;
+			if (aggu->flseq != f->flseq)
+				continue;
+			if (action == 0)	/* delete the agg */
+			{
+				/* delFeat calls rFagu_remove */
+				delFeat(p, TRUE, TRUE);
+			}
+			else			/* make it non-unique */
+			{
+				paren = STindex(f->flvalstr, ERx("("), 0);
+				if (*--paren == 'u') 
+					*paren = ' ';
+				/* remove it from the agu_list */
+				rFagu_remove(f, ord);
+			}
+			return;
+		}
+	}
+	return;
+}
+
+VOID Reset_copt(f)
+FIELD *f;
+{
+	COPT	*copt;
+	i4	ord;
+
+	ord = r_mtch_att(f->fldname);
+	copt = rFgt_copt(ord);
+	copt->copt_whenprint = 'a';
+	copt->copt_newpage = FALSE;
+
+	return;
+}
+# endif

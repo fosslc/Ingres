@@ -1,0 +1,342 @@
+/*
+**	QDESCFRM.QSC  -	This module is called to correlate the
+**			qdef's columns with the forms fields.
+**			It is only used in the case where a
+**			qbfname is the qdefname and the VIFRED
+**			defined form must then be matched with
+**			the attributes of the qdef.
+**
+**	Routines:
+**	     mqfrmqdesc()
+**	     mqjpartchk()- check placement of M/D joins on VIFRED form
+**
+**	Written: 2/21/84 (nml)
+**
+**	History:
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**		10/13/90 (emerson)
+**			Exempt logical key attributes from edits
+**			involving forms (bug 8593).
+**
+**	Copyright (c) 2004 Ingres Corporation
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	<er.h>
+# include	"erqf.h"
+# include	<afe.h>
+
+mqfrmqdesc(qdef)
+MQQDEF	*qdef;	/* current qdef */
+##{
+##	char		*fname;		/* name of form */
+##	char		fldnm[FE_MAXNAME+1];	/* name of table field */
+##	char		cname[FE_MAXNAME+1];	/* column name */
+##	i4		istable;	/* is field a table field */
+##	i2		ftype;		/* field type */
+##	i2		flen;		/* field length */
+##	i4		fnum;		/* field number */
+##	char		fmode[10];	/* mode of field */
+	ATTRIBINFO	**atts;		/* ptr to set of attributes */
+	i4		numatts;
+	ATTRIBINFO	*catt;		/* ptr to current attribute */
+	ATTRIBINFO	*jatt;
+	i4		j;
+	i4		i;
+	i4		numtbls;	/* number of table fields */
+	bool		found;
+	bool		badform;
+	bool		fldmtched[MQ_MAXATTS];
+	bool		fldokay;
+
+	fname = mq_frame;
+	numtbls = 0;
+	badform = FALSE;
+	atts = qdef->mqatts;		/* ptr to set of attributes */
+	numatts = qdef->mqnumatts;
+
+	/* first do some general form checking */
+##	FORMDATA fname
+##	{
+##		INQUIRE_FRS FIELD ERx("") (istable = table, fldnm = name)
+		if (istable)
+		{
+			numtbls++;
+			STcopy(fldnm, mq_tbl);
+			if (numtbls > 1)
+			{
+				FDerror(MORETBLS, 0 , ERx(""));
+				badform = TRUE;
+##				ENDDATA
+			}
+		}
+##	}
+
+	if (badform)
+	{
+		mq_forms = FALSE;
+		mq_frame[0] = '\0';
+		return(FALSE);
+	}
+	if (onetbl)
+	{
+		if (numtbls == 1)
+		{
+			tblfield = 1;
+##			PUTFORM mqbftbls (tablefield = ERget(F_QF0010_YES))
+		}
+		else if (numtbls == 0)
+		{
+			tblfield = 0;
+##			PUTFORM mqbftbls (tablefield = ERget(F_QF0011_NO))
+		}
+	}
+	else if ((numtbls == 1) && (!tblfield))
+	{
+		tblfield = 1;
+##		PUTFORM mqbftbls (tablefield = ERget(F_QF0010_YES))
+	}
+	if ((numtbls == 0) && (tblfield))
+	{
+		tblfield = 0;
+##		PUTFORM mqbftbls (tablefield = ERget(F_QF0011_NO))
+	}
+	/*
+	** initialize array of matched fields
+	*/
+	for (i = 0; i < numatts; i++)
+	{
+		fldmtched[i] = 0;
+	}
+
+##	FORMDATA fname
+##	{
+##		INQUIRE_FRS FIELD ERx("")
+##			(fldnm = name, istable = table,
+##			 ftype = datatype, fnum = number,
+##			 flen = length, fmode = mode)
+
+		if (istable)
+		{
+##			TABLEDATA
+##			{
+##				INQUIRE_FRS COLUMN ERx("") ERx("")
+##					(cname = name, ftype = datatype,
+##					flen = length, fmode = mode)
+
+				found = FALSE;
+				for (i = 0; i<numatts; i++)
+				{
+					catt = atts[i];
+					if (STcompare(catt->formfield, cname) == 0)
+					{
+						found = TRUE;
+						if ((mq_typechk(catt, cname, flen, ftype, fmode, fnum, istable)
+							!= TRUE))
+						{
+							badform = TRUE;
+##							ENDLOOP
+						}
+						fldmtched[i] = 1;
+						break;
+					}
+				}
+##			}
+		}
+		else
+		{
+			found = FALSE;
+			for (i=0; i<numatts; i++)
+			{
+				catt = atts[i];
+				if (STcompare(catt->formfield, fldnm) == 0)
+				{
+					found = TRUE;
+					if ((mq_typechk(catt, fldnm, flen, ftype, fmode, fnum, istable) != TRUE))
+					{
+						badform = TRUE;
+##						ENDDATA
+					}
+					fldmtched[i] = 1;
+					break;
+				}
+			}
+		}
+##	}
+	if (badform)
+		return(FALSE);
+
+	for (i = 0; i<numatts; i++)
+	{
+		if (!(fldmtched[i]) && atts[i]->lkeyinfo == 0)
+		{
+# ifdef DEBUG
+			if (mq_debug)
+			{
+				SIfprintf(mqoutf, ERx("MQFRMQDESC: unmatched field is %s\n"), atts[i]->formfield);
+				SIfprintf(mqoutf, ERx("with intbl=%d and jpart=%d\n"), atts[i]->intbl, atts[i]->jpart);
+			}
+# endif
+
+			if ((atts[i]->jpart) == -1)
+			{
+				atts[i]->formfield[0] = EOS;
+			}
+			else
+			{
+				fldokay = FALSE;
+				catt = atts[i];
+				for (j=0; j<numatts; j++)
+				{
+					jatt = atts[j];
+					if (((STcompare(jatt->formfield, catt->formfield)) == 0) && (i != j))
+					{
+						if (fldmtched[j])
+						{
+							fldmtched[i] = 1;
+							fldokay = TRUE;
+							catt->intbl = jatt->intbl;
+							break;
+						}
+					}
+				}
+				if (!fldokay)
+				{
+					/* join fields must be displayed */
+					FDerror(NOMATCH, 1, atts[i]->col);
+					return(FALSE);
+				}
+			}
+		}
+	}
+# ifdef lint
+	found = found;		/* use variable to keep lint happy */
+# endif
+	return(TRUE);
+##}
+
+
+
+mq_typechk(catt, fldnm, flen, ftype, fmode, fnum, istable)
+ATTRIBINFO	*catt;
+char		*fldnm;
+i2		flen;		/*!!!!! NOTE: i2 parameter !!!!!*/
+i2		ftype;		/*!!!!! NOTE: i2 parameter !!!!!*/
+char		*fmode;
+i4		fnum;
+i4		istable;
+{
+	DB_DATA_VALUE	fld_dbv;
+	bool		cancoerce;
+
+	/* NOTE:
+	** This is where MQBF checks the data type of
+	** the field with that of the attribute.
+	*/
+
+	fld_dbv.db_length = flen;
+	fld_dbv.db_datatype = ftype;
+
+	if (afe_cancoerce(FEadfcb(), &catt->dbv, &fld_dbv, &cancoerce)
+	    != OK)
+	{
+	    FDerror(COERCE_CHK_ERR, 0, ERx(""));
+	    return FALSE;
+	}
+	if (cancoerce == FALSE)
+	{
+	    FDerror(TYPEMATCH, 2, fldnm, catt->col);
+	    return FALSE;
+	}
+
+	/* now do other necessary checking */
+	if (istable)
+	{
+		catt->intbl = 1;
+		if (((STcompare(fmode, ERx("QUERY"))) == 0) || ((STcompare(fmode, ERx("READ"))) == 0))
+		{
+			catt->opupdate = 0;
+
+# ifdef DEBUG
+			if (mq_debug)
+				SIfprintf(mqoutf, ERx("QUERY/DISPLAY only column: %s\n"), catt->formfield);
+# endif
+
+		}
+	}
+	else
+	{
+		catt->intbl = 0;
+		if (((STcompare(fmode, ERx("QUERY"))) == 0) || ((STcompare(fmode, ERx("READ"))) == 0))
+		{
+			catt->opupdate = 0;
+
+# ifdef DEBUG
+			if (mq_debug)
+				SIfprintf(mqoutf, ERx("QUERY/DISPLAY only field: %s\n"), catt->formfield);
+# endif
+
+		}
+		if (fnum < 0)
+			catt->opupdate = 0;
+	}
+	return(TRUE);
+}
+
+mqjpartchk(qdef)
+MQQDEF	*qdef;
+{
+	ATTRIBINFO	**atts = qdef->mqatts;
+	i4		numatts = qdef->mqnumatts;
+	register JOININFO	*join;
+	register i4		j;
+	i4	att1;
+	i4	att2;
+	char	*jtype;
+	char	*rng1;
+	char	*col1;
+	char	*rng2;
+	char	*col2;
+
+	for (j=0; j<qdef->mqnumjoins; j++)
+	{
+		join = qdef->mqjoins[j];
+		jtype = join->jcode;
+		if (((STcompare(jtype, ERx("MD"))) == 0)
+			|| ((STcompare(jtype, ERx("DM"))) == 0))
+		{
+			rng1 = join->rv1;
+			col1 = join->col1;
+			rng2 = join->rv2;
+			col2 = join->col2;
+			att1 = mqfindatt(qdef, rng1, col1);
+			att2 = mqfindatt(qdef, rng2, col2);
+			if (atts[att1]->intbl && atts[att1]->lkeyinfo == 0)
+			{
+				FDerror(MDJINTBL, 1, col1);
+				atts[att1]->intbl = 0;
+				atts[att2]->intbl = 0;
+				mq_forms = FALSE;
+				mq_frame[0] = '\0';
+				return(FALSE);
+			}
+		}
+	}
+	return(TRUE);
+}

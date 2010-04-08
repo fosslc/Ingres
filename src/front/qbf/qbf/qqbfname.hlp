@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are in the QBF QBFNames catalog.  This form displays all QBFNames
+specified within the database.
+
+A QBFName is a name that combines a JoinDef or table name with a form name.
+QBFNames are created within the context of INGRES/FORMS - from QBF, they
+may only be executed.
+
+To run one of the QBFNames displayed in the catalog, position the cursor over
+the QBFName and select "Go".
+
+Commands available from the QBFNames catalog are:
+
+        Command                 Function
+        -------                 --------
+
+        MoreInfo                Show additional details about the selected
+                                QBFName.
+        Go                      Execute the selected QBFName (i.e. run the 
+                                query using the customized form and Query 
+                                Target associated with the QBFName).
+        Find                    Find an entry containing the specified string.
+        Top                     Move to the top of the catalog display.
+        Bottom                  Move to the bottom of the catalog display.
+        Help                    Get help about this frame.
+        End                     Stop work in this frame and return to the
+                                frame that called it.
+        Quit                    Leave QBF and return to the operating system.

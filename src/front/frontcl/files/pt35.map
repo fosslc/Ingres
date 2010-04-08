@@ -1,0 +1,120 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* FRS Mapping File for ICL PT3 & PT5 Terminals for OFFICEPOWER */
+
+/* Go to the menu line (the Menu Key) */
+	menu = pf1 (ExtndFunc)
+
+/* Go to the next field on the form */
+	nextfield = controlI (->|)
+
+/* Go to the previous field on the form */
+	previousfield = pf2 (|<-)
+
+/* Move forward one word within a field */
+	nextword = pf3 (Word)
+
+/* Move backward one word within a field */
+	previousword = pf4 (shift&Word)
+
+/* Switch between insert and overstrike mode */
+	mode = pf5 (Norm)
+
+/* Redraw the screen */
+	redraw = pf6 (Rfrsh)
+ 
+/* Delete character under cursor */
+	deletechar = controlDEL (CharacterDelete)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlH (BackSpace)
+
+/* Start text editor on field */
+	editor = pf7 (Wndw)
+
+/* Move to first column of next row */
+	newrow = pf8 (Para)
+
+/* Clear field or menu input */
+	clear = pf9 (Del)
+
+/* Clear rest of field, beginning from current cursor position */
+	clearrest = pf10 (Cut)
+
+/* Scroll up in current table field or form, leaving cursor on same field */
+	scrollup = pf11 (ScrlDown)
+
+/* Scroll down in current table field or form, leaving cursor on same field */
+	scrolldown = pf12 (ScrlUp)
+
+/* Scroll form left, leaving cursor on same field */
+	scrollleft = pf13 (shift&->)
+
+/* Scroll form right, leaving cursor on same field */
+	scrollright = pf14 (shift&<-)
+
+/* Auto-duplicate field value */
+	duplicate =  pf15 (Copy)
+
+/* Send a copy of the form currently displayed to a file or the printer */
+	printscreen = pf16 (Page)
+
+/* Select first menu item */
+	menuitem1 = pf17 (SoftA)
+
+/* Select second menu item */
+	menuitem2 = pf18 (SoftB)
+
+/* Select third menu item */
+	menuitem3 = pf19 (SoftC)
+
+/* Select fourth menu item */
+	menuitem4 = pf20 (SoftD)
+
+/* Select fifth menu item */
+	menuitem5 = pf21 (SoftE)
+
+/* Select sixth menu item */
+	menuitem6 = pf22 (SoftF)
+
+/* Select seventh menu item */
+	menuitem7 = pf23 (SoftG)
+
+/* Select eighth menu item */
+	menuitem8 = pf24 (SoftH)
+
+/* Select ninth menu item */
+	menuitem9 = pf25 (SoftI)
+
+/* Select tenth menu item */
+	menuitem10 = pf26 (SoftJ)
+
+/* Access INGRES help facility */
+	frskey1 = pf27 (Help)
+
+/* Exit the system */
+	frskey2 = controlZ (Stop)
+
+/* Exit the frame, returning to previous frame */
+	frskey3 = pf28 (Exit)
+
+/* Execute function */
+	frskey4 = pf29 (Accept)
+
+/* Move to top of table field */
+	frskey5 = pf30 (shift&Up)
+
+/* Move to bottom of table field */
+	frskey6 = pf31 (shift&Down)
+
+/* Search table field for specified string */
+	frskey7 = pf32 (Srch)
+
+/* Save object in database */
+	frskey8 = pf33 (Paste)
+
+/* Undo last action or forget changes made in frame */
+	frskey9 = pf34 (Undo)
+
+/* Listchoice menu selection */
+	frskey10 = pf35 (Mark)
+

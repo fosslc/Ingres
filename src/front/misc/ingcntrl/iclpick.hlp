@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- iclpick.hlp        Help on ListChoices forms.
+/#-- 
+The ListChoices frame allows you to choose from a list of
+valid choices.  Just select one on the table field and choose
+the Select menu item.
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Select		Select the object on the current row of the table field.
+	
+	Cancel		Exit to the previous frame without selecting an object.
+	
+	Help            Access the Ingres help facility.

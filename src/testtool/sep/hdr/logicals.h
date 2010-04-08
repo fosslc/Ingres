@@ -1,0 +1,4 @@
+#define	PROCESS_TABLE	1
+#define	JOB_TABLE	2
+#define	GROUP_TABLE	3
+#define	SYSTEM_TABLE	4

@@ -1,0 +1,36 @@
+#
+# Jamfile file for cl!clf!cs_vms
+#
+# History:
+#	03-dec-2008 (joea)
+#	    Add csdiag.c.
+#	05-dec-2008 (joea)
+#	    Add csshmem.c.
+#       22-dec-2008 (stegr01)
+#           Itanium VMS port.
+#           cssprsm.m64 changed to .c
+
+SubDir ING_SRC cl clf cs_vms ;
+
+IISUBSYS cl clf cs_vms ;
+
+IIUTILEXE csphil : csphil.c ;
+IINEEDLIBS csphil : COMPATLIB ;
+
+IIUTILEXE iirundbms : iirundbms.c ;
+IINEEDLIBS iirundbms : COMPATLIB ;
+
+IILIBRARY COMPATLIB : cssampler.c csoption.c csmoutil.c csmosem.c
+        csmoscb.c csmonitor.c csmomon.c csmocnd.c csmo.c csinterface.c
+        cshl.c cscpres.c csll_stubs.c cs_jmp_start.c pick_new_thread.c
+	csclock.c csef.c csev.c csrusage.c csdiag.c csshmem.c ;
+
+if $(VERS) = axm_vms
+{
+   IILIBRARY COMPATLIB : cssprsm.m64 ;
+   IILIBRARY COMPATLIB : cs_cactus_save.m64 ;
+}
+else
+{
+   IILIBRARY COMPATLIB : cssprsm.c ;
+}

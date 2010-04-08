@@ -1,0 +1,21 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+**
+** Name:	crarchive.tlp - Create archive template
+**
+** Description:
+**	Used by create_support_tables to create the archive table.
+##
+## History:
+##	16-dec-96 (joea)
+##		Created based on crarchive.tlp in replicator library.
+##	17-sep-97 (joea)
+##		Add variable page size clause.
+**/
+
+CREATE TABLE $arc (
+	$ddl,
+	sourcedb	SMALLINT	NOT NULL,
+	transaction_id	INTEGER		NOT NULL,
+	sequence_no	INTEGER		NOT NULL)
+WITH JOURNALING, PAGE_SIZE = $vps

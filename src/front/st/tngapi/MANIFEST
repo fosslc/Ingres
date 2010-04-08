@@ -1,0 +1,40 @@
+#
+# MANIFEST file for front!st!tngapi
+#
+# History:
+#	01-Aug-2004 (hanje04)
+#	    Added rule to build shared library, and comments
+#	27-Oct-2004 (drivi01)
+#	    Moved tngapi to tngapi_unix
+#   07-Feb-2005 (fanra01)
+#       Sir 113881
+#       Revert to tngapi.
+#	18-feb-2005 (abbjo03)
+#	    Do not build this on VMS for the time being.
+#   25-Feb-2005 (fanra01)
+#       Add iff.h to delivered header file list.
+
+SubDir ING_SRC front st tngapi ;
+
+IISUBSYS front st tngapi ;
+
+if ! $(VMS)
+{
+IIFILES tngapi.h iff.h ;
+
+IILIBFILES oiutil.doc ;
+
+IILIBRARY TNGAPILIB : iffcnfget.sc tngapi.c precheck.c
+	iffutil.c ifftrace.c iffinit.c iffget.c iffgca.c ;
+
+if ! $(NT)
+{
+IISHLIBRARY $(SHTNGAPILIB) ;
+}
+else
+{
+IISHLIBRARY $(SHTNGAPILIB) : $(TNGAPILIB) $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(IMPGCFLIB) $(IMPGCFLIBDATA) $(UTILLIB) $(IMPEMBEDLIB) $(IMPEMBEDLIBDATA) ;
+IINEEDLIBS $(SHTNGAPILIB) : VERSIONLIB NETAPILIB GDILIB MORELIB RPCLIB ;
+IINEEDRES $(SHTNGAPILIB) : $(ING_SRC)/front/st/tngapi_win/tngmsg.res ;
+}
+}

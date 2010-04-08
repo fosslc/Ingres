@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The row_set resource determines the number of tuples to be processed by the
+  ICE Server if iterative requests, to the DBMS, are required to fulfil a
+  query.
+
+  Default: 256

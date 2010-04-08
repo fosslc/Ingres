@@ -1,0 +1,36 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of a global variable.  You may change
+the definition of the variable on the form and through some of the menu
+operations.  
+
+Fill in the Data Type field with the datatype of the global variable.
+
+Legal types are any Ingres datatype or any record type that has already been
+defined for the application (through the "Edit a Record Type Definition"
+frame).  Legal Ingres datatypes can be listed and specified through the
+ListChoices menu operation for this frame.  An Ingres datatype may also be
+Nullable, which can be specified in the Nullable field.  A global variable
+that is a record type may also be a dynamic array, which can be specified
+in the Array field.
+
+Record type global variables cannot be Nullable, and Ingres datatypes cannot
+be dynamic arrays.
+
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+
+        LongRemark              Display and allow editing of the long remarks.
+
+	ListChoices		Show and select legal values for the current
+				field.  (In the Data Type field, user-defined
+				record types are not included in the list.)
+
+        Print                   Print the definition for the global variable.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to the Edit Global Variables catalog 
+                                frame.

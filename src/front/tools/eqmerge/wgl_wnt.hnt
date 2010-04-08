@@ -1,0 +1,10 @@
+#
+# wgl_wnt.hnt file for front/tools/eqmerge
+#
+
+cflags = $(CFLAGS1)
+
+subsys = congui
+proto = false
+main = eqmerge.c
+

@@ -1,0 +1,61 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcrtins.hlp
+DEFINE LOCAL DATABASE
+
+This form allows to define information about the local database where
+you are going to configure Ingres Replicator.
+
+NOTE:  The form is displayed only the first time you connect to the
+       database.
+
+To complete this form, enter the appropriate values for the database.
+Use the Tab key to move from one field to the next.
+
+The fields on the form are:
+
+        FIELD NAME              DESCRIPTION
+        ----------              -----------
+        Database Number         A mandatory field to specify a unique
+                                number within the whole replication
+                                system.  The number assigned to this
+                                database is used as part of the
+                                replicated transaction key for
+                                transactions originated from this
+                                database.  Valid range from 1 to 32,767.
+
+        Virtual Node Name       A mandatory field to specify a virtual
+                                node name as defined in the
+                                Ingres/Net netutil utility.
+
+        Database Name           The name of the database on which this
+                                Replicator installation resides.  This
+                                is already filled in and cannot be
+                                changed.
+
+        Database Owner          The owner (DBA) of the database.  This
+                                is already filled in and cannot be
+                                changed.
+
+        DBMS Type               The type of DBMS, for example,
+                                Ingres or CA-Datacom.  This is
+                                already filled in and cannot be changed.
+
+        Remarks                 A short comment.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Save            Save the definition and proceed to the
+                        Replicator Manager Main Menu.
+
+        Clear           Reset the values entered.  You will be asked to
+                        confirm before the form is cleared.
+
+        Help            Access the Help facility.
+
+        End             Exit from Replicator Manager.  Since the
+                        information on this form is critical to running
+                        Replicator Manager, you will be asked to select
+                        this twice as confirmation.

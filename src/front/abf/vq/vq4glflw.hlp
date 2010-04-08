@@ -1,0 +1,32 @@
+/#-- Copyright (c) 2004 Ingres Corporation 
+/#-- vq4glflw.hlp       Help on 4GL Flow control statements.
+     IF (status = 'n') THEN   /* example of IF-ELSEIF-ELSE-ENDIF statement */
+        CALLFRAME new;
+     ELSEIF (status = 'c') THEN
+        CALLFRAME completed;
+     ELSE
+        CALLFRAME inprogress;
+     ENDIF;
+
+     RETURN; 
+     RETURN status;           /* returns value of status to parent frame   */
+                     /* example of a SELECT loop; h_name is a hidden field */
+     SELECT h_name = name   
+     FROM emptable
+     WHERE salary < :target_salary             /* no semicolon here        */
+     BEGIN
+           MESSAGE h_name + ' is underpaid!' WITH STYLE=POPUP;
+     END
+
+     WHILE (succeed = 0) AND (tries <= 2) DO   /* example of a WHILE loop  */
+        INSERT INTO depttable (dname, dfloor)
+        VALUES (:dname, :dfloor);
+        INQUIRE_INGRES (errno = ERRORNO);
+        IF (errno = 0) THEN
+           succeed := 1;
+        ELSEIF (errno = 4700) THEN             /* deadlock error           */
+           tries := tries + 1;
+        ELSE
+           ENDLOOP;                            /* to break out of loop     */
+        ENDIF;
+     ENDWHILE;

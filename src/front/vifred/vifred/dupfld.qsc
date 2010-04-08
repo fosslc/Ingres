@@ -1,0 +1,1126 @@
+/*
+**
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+/* # include's */
+
+# include	<compat.h>
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"decls.h"
+# include	"vfunique.h"
+# include	"seq.h"
+# include	<lo.h>
+# include	<st.h>
+# include	<ug.h>
+# include	<er.h>
+# include	"ervf.h"
+## include	<ooclass.qsh>
+## include	<uigdata.qsh>
+# include	<flddesc.h>
+# include	<frame.h>
+
+/**
+** Name:	dupfld.qsc - Duplicate Field Support File.
+**
+** Description:
+**	This file contains routines to implement the DuplicateField
+**	feature in Vifred.
+**
+**	IIVFlfdListFld	List the set of fields defined in a form.
+**	IIVFlfListFOrms	List set of forms user can access in db.
+**	IIFVdfDupFld	Top level entry point for DuplicateField feature.
+**
+** History:
+**	08/09/89 (dkh) - Initial version.
+**	09/12/89 (dkh) - Changed `vflsforms.hlp' to `vflsfrms.hlp'.
+**	10/01/89 (dkh) - Code cleanup.
+**	10/02/89 (dkh) - Changed IIVFdfDupFld() to IIVFfdFldDup().
+**	11/14/89 (dkh) - Fixed problem with using same counter in
+**			 nested loops.
+**	11/27/89 (dkh) - Changed menuitem "End" to "Cancel" in top level
+**			 menu in IIVFfdFldDup().
+**	27-nov-89 (bruceb)
+**		Find no longer a visible menuitem.
+**		Added Top/Bottom frskey activations.
+**	12/04/89 (dkh) - Fixed a few bugs.
+**	01/10/90 (dkh) - Added a ## redisplay statement to the init
+**			 blocks in IIVFlfdListFld() and IIVFlfListForms().
+**			 This cleans up the display in case we are displaying
+**			 fewer rows than the previous display loop.
+**	30-jan-90 (bruceb)
+**		Changed Cancel's frskey mapping to frskey9 as per FRC ruling.
+**	17-apr-90 (bruceb)
+**		Lint changes; removed args in call on FDwtblalloc.
+**	25-apr-90 (bruceb)
+**		Converted to use listpick.
+**	07/04/90 (dkh) - Put in changes so layout does not change for
+**			 RBF when popups are displayed.
+**	11-sep-90 (bruceb)
+**		Remove calls on FTspace() as endxFrm will be up-to-date
+**		for use with attribute bytes.
+**	12/26/90 (dkh) - Fixed bug 35056.  The 7th parameter was missing
+**			 in call to palloc().
+**	25-Aug-1993 (fredv)
+**		Removed the declaration of MEreqmem(). It is declared in
+**			<me.h> already.
+**      15-jan-1996 (toumi01; from 1.1 axp_osf port)
+**              Added kchin's changes (from 6.4) for axp_osf
+**              15-feb-93 (kchin)
+**              Changed type of fldptr and idlist1[] in IIVFfdFldDup()
+**              from i4 to PTR, as they are holding pointers.  On 64-bit
+**              platform, PTR is 8-byte in length.
+**              Also, changed 'id' to 'idfld' in IIVFfdFldDup(), as it
+**              will be used to store pointers and other routines that
+**              make use of 'id' are still using it to hold i4's.  This
+**              change is also necessary, since IIthidecol() will be
+**              changed accordingly to recognize 'idfld' as PTR. See comment
+**              there.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	21-Aug-2009 (kschendel) 121804
+**	    Need frame.h to satisfy gcc 4.3.
+**/
+
+/* # define's */
+
+# define	DUPMAXDISP	10	/* max rows to display for dup flds */
+
+
+/* extern's */
+
+FUNC_EXTERN	LOCATION	*IIUFlcfLocateForm();
+FUNC_EXTERN	FIELD		*FDnewfld();
+FUNC_EXTERN	FIELD		*FDfndfld();
+FUNC_EXTERN	i4		IIFRclpCallListPick();
+FUNC_EXTERN	i4		IIFRrlpRunListPick();
+
+
+/* static's */
+
+static	bool	init_dupform = TRUE;	/* boolean for initializing form */
+static	i4	maxy_dupfrm = 0;
+static	i4	maxy_tbl = 0;
+static	FRAME	*dupfrm = NULL;
+static	TBLFLD	*tbl_dupfrm = NULL;
+static	FLDHDR	*tbl_hdr = NULL;
+static	FIELD	*new_fld = NULL;
+static	bool	created = FALSE;
+static	POS	*fld_pos = NULL;
+
+##static	char	Form[] = ERx("dupfldform");
+##static	char	TFld[] = ERx("list");
+
+# define MU_LISTFORMS	2
+
+static	LISTMENU	lstflds_menu[] =
+{
+    { FE_Select, F_FE0108_ExplSelect,  LPB_CRSELECT, 4 },
+    { FE_Cancel, F_FE0103_ExplCancel,  LPB_QUIT,     9 },
+    { F_VF0076_Listforms,
+	     F_VF0092_ExplListForms,   LPB_SELECT,   0 },
+    { FE_Empty,  F_FE0104_ExplFind,    LPB_FIND,     7 },
+    { FE_Empty,  F_FE0105_ExplTop,     LPB_TOP,      5 },
+    { FE_Empty,  F_FE0106_ExplBottom,  LPB_BOTTOM,   6 },
+    { FE_Help,   F_FE0101_ExplKeyHelp, LPB_HELP,     1 }
+};
+
+
+
+/*{
+** Name:	IIVFlfdListFld - List fields in a form.
+**
+** Description:
+**	Display a list of fields that user can select from.
+**
+** Inputs:
+**	id	Object id of form to obtain list of fields from.
+**
+** Outputs:
+**	None.
+**	Returns:
+**		None.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	New field may be added to form being edited.
+**
+** History:
+**	08/09/89 (dkh) - Initial version.
+*/
+VOID
+IIVFlfdListFld(id, nm)
+exec sql begin declare section;
+i4	id;
+exec sql end declare section;
+##	char	*nm;
+{
+	i4	fldcount;
+exec sql begin declare section;
+##	char	fname[FE_MAXNAME + 1];
+	i4	maxcol;
+	i4	maxlin;
+	i4	posy;
+	i4	posx;
+	i4	flags;
+	i2	seq;
+	i4	datatype;
+	i4	length;
+##	i4	width;
+	i4	datawidth;
+	i4	datalin;
+	i4	datacol;
+	char	title[fdTILEN + 1];
+	i4	titcol;
+	i4	titlin;
+	i4	intrp;
+	char	defval[fdDEFLEN + 1];
+	char	format[fdFMTLEN + 1];
+	char	valmsg[fdVMSGLEN + 1];
+	char	valchk[fdVSTRLEN + 1];
+##	i4	type;
+##	i4	subseq;
+	i4	fld2flg;
+	i4	font;
+	i4	ptsz;
+	i4	prec;
+	i4	seq1;
+	i4	seq2;
+exec sql end declare section;
+##	char	msgbuf[200];
+	i4	error;
+	FIELD	*fld;
+	FLDHDR	*hdr;
+	FLDTYPE	*ftype;
+	FLDVAL	*fval;
+	FLDCOL	**colarr;
+	FLDCOL	*acol;
+	TBLFLD	*tbl;
+	FLDHDR	*ahdr;
+	FLDTYPE	*atype;
+	FLDVAL	*aval;
+	PTR	blk;
+	i4	fmtsize;
+	i4	fmtlen;
+	POS	*ps;
+	i4	pstype;
+	i4	untype;
+##	char	nmlist3[DUPMAXDISP][FE_MAXNAME + 1];
+##	i4	subseqlist[DUPMAXDISP];
+##	i4	typelist[DUPMAXDISP];
+##	i4	colslist[DUPMAXDISP];
+	i4	listcount = 0;
+##	char	*aname;
+	i4	need_toinit = TRUE;
+	i4	i;
+	i4	overflow;
+	char	savename[FE_MAXNAME + 1];
+##	i4	sel_fld;
+
+	dupfrm->frmaxy = maxy_dupfrm;
+	tbl_hdr->fhmaxy = maxy_tbl;
+	tbl_dupfrm->tfrows = DUPMAXDISP;
+
+	fldcount = 0;
+
+	IIUIcnb_CatNolockBegin(ERx("ii_fields"));
+	exec sql repeated select fldname, flsubseq, fltype, flwidth
+	    into :fname, :subseq, :type, :width from ii_fields
+	    where object_id = :id
+	order by fldname;
+	exec sql begin;
+		if (type == FREGULAR || type == FTABLE)
+		{
+			if (listcount < DUPMAXDISP)
+			{
+				STcopy(fname, nmlist3[listcount]);
+				subseqlist[listcount] = subseq;
+				typelist[listcount] = type;
+				colslist[listcount] = width;
+			}
+			else
+			{
+				if (need_toinit)
+				{
+##					inittable Form TFld read
+##						(hsubseq = i4, htype = i4,
+##						hcols = i4)
+					need_toinit = FALSE;
+					for (i = 0; i < DUPMAXDISP; i++)
+					{
+##						loadtable Form TFld
+##							(name = nmlist3[i],
+##							hsubseq = subseqlist[i],
+##							htype = typelist[i],
+##							hcols = colslist[i])
+					}
+				}
+##				loadtable Form TFld (name = fname,
+##					hsubseq = subseq, htype = type,
+##					hcols = width)
+			}
+			fldcount++;
+			listcount++;
+		}
+	exec sql end;
+	IIUIcne_CatNolockEnd(ERx("ii_fields"));
+
+	/*
+	**  If form has no fields, display error message and return.
+	*/
+	if (!fldcount)
+	{
+		STprintf(msgbuf, ERget(S_VF013C_NoFldInForm), nm);
+##		message msgbuf with style=popup
+		return;
+	}
+
+	if (need_toinit)
+	{
+		dupfrm->frmaxy -= (DUPMAXDISP - listcount);
+		tbl_hdr->fhmaxy -= (DUPMAXDISP - listcount);
+		tbl_dupfrm->tfrows = listcount;
+##		inittable Form TFld read (hsubseq = i4, htype = i4,
+##			hcols = i4)
+		for (i = 0; i < listcount; i++)
+		{
+			aname = nmlist3[i];
+			subseq = subseqlist[i];
+			type = typelist[i];
+			width = colslist[i];
+##			loadtable Form TFld (name = aname,
+##				hsubseq = subseq, htype = type, hcols = width)
+		}
+	}
+
+##	putform Form (title1 = ERget(F_VF0078_FldsIn), title2 = nm)
+##	redisplay
+
+	sel_fld = IIFRrlpRunListPick(Form, TFld, LPGR_CENTER, LPGR_CENTER,
+	    ERget(S_VF013D_Dupfromdb), ERx("vflsflds.hlp"), NULL, NULL);
+
+	if (++sel_fld > 0)
+	{
+##	    scroll Form TFld to sel_fld
+##	    getrow Form TFld (fname = name, subseq = hsubseq,
+##		type = htype, width = hcols)
+	    /*
+	    **  Save away field name for error messages.
+	    */
+	    STcopy(fname, savename);
+	    
+##	    message ERget(F_VF0079_Crfld)
+	    /*
+	    **  Now get field out of DB and create it.
+	    */
+	    fldcount = 0;
+	    error = FALSE;
+	    fld = FDnewfld(fname, 0, type);
+	    if (type == FTABLE)
+	    {
+		    tbl = fld->fld_var.fltblfld;
+		    if ((colarr = (FLDCOL **) FEreqmem(0,
+			    (width * sizeof(FLDCOL *)), TRUE,
+			    (STATUS *) NULL)) == NULL)
+		    {
+			   IIUGbmaBadMemoryAllocation(ERx("IIVFlfd"));
+		    }
+		    tbl->tfflds = colarr;
+		    /*
+		    **  Calculate seq1 and seq2
+		    */
+		    seq1 = subseq;
+		    seq2 = subseq + width;
+		    hdr = &(tbl->tfhdr);
+		    ftype = NULL;
+		    fval = NULL;
+	    }
+	    else
+	    {
+		    seq1 = seq2 = subseq;
+		    hdr = &(fld->fld_var.flregfld->flhdr);
+		    ftype = &(fld->fld_var.flregfld->fltype);
+		    fval = &(fld->fld_var.flregfld->flval);
+	    }
+	    fldcount = 0;
+	    exec sql repeated select flseq, fldname, fldatatype,
+		    fllength, flwidth, flmaxlin, flmaxcol,
+		    flposy, flposx, fldatawidth, fldatalin,
+		    fldatacol, fltitle, fltitcol, fltitlin,
+		    flintrp, fldflags, fldefault, flformat,
+		    flvalmsg, flvalchk, fltype, fld2flags,
+		    fldfont, fldptsz, flprec, flsubseq
+		into :seq, :fname, :datatype,
+		    :length, :width, :maxlin, :maxcol,
+		    :posy, :posx, :datawidth, :datalin,
+		    :datacol, :title, :titcol, :titlin,
+		    :intrp, :flags, :defval, :format,
+		    :valmsg, :valchk, :type, :fld2flg,
+		    :font, :ptsz, :prec, :subseq
+		from ii_fields
+	    where object_id = :id and flsubseq >= :seq1 and flsubseq <= :seq2;
+	    exec sql begin;
+		    if (fldcount && seq1 == seq2)
+		    {
+			    /*
+			    **  Too many rows for a simple field
+			    **  retrieval.
+			    */
+			    IIUGerr(E_VF013E_TooManyRows, UG_ERR_ERROR,
+				    2, savename, nm);
+			    error = TRUE;
+			    exec sql endselect;
+		    }
+		    /*
+		    **  If this is the row defining the field
+		    **  then set up the fields.
+		    */
+		    if (type != FCOLUMN)
+		    {
+			    ahdr = hdr;
+			    atype = ftype;	/* meaningless for tf */
+			    aval = fval;	/* meaningless for tf */
+		    }
+		    else
+		    {
+			    acol = FDnewcol(fname, seq);
+			    colarr[seq] = acol;
+			    ahdr = &(acol->flhdr);
+			    atype = &(acol->fltype);
+		    }
+		    ahdr->fhdflags = flags;
+		    ahdr->fhintrp = intrp;
+		    ahdr->fhd2flags = (fld2flg & ~fdVQLOCK);
+		    ahdr->fhdfont = font;
+		    ahdr->fhdptsz = ptsz;
+
+		    ahdr->fhseq = seq;
+		    ahdr->fhmaxx = maxcol;
+		    ahdr->fhmaxy = maxlin;
+		    ahdr->fhposx = posx;
+		    ahdr->fhposy = posy;
+		    ahdr->fhtitle = FEsalloc(title);
+		    ahdr->fhtitx = titcol;
+		    ahdr->fhtity = titlin;
+
+		    if (type == FTABLE)
+		    {
+			    tbl->tfrows = length;
+			    tbl->tfcols = width;
+			    tbl->tfwidth = datawidth;
+			    tbl->tfstart = datalin;
+		    }
+		    else
+		    {
+			    atype->ftdatatype = datatype;
+			    atype->ftwidth = width;
+			    atype->ftlength = length;
+			    atype->ftprec = prec;
+			    atype->ftdatax = datacol;
+			    atype->ftdataln = datawidth;
+			    atype->ftvalmsg = FEsalloc(valmsg);
+			    atype->ftdefault = FEsalloc(defval);
+			    atype->ftvalstr = FEsalloc(valchk);
+			    if (type == FREGULAR)
+			    {
+				    aval->fvdatay = datalin;
+			    }
+			    atype->ftfmtstr = FEsalloc(format);
+
+			    /*
+			    **  Now set the FMT structure.  Should
+			    **  have no errors.
+			    */
+			    (VOID) fmt_areasize(FEadfcb(), format,&fmtsize);
+			    if ((blk = MEreqmem(0, fmtsize, TRUE,
+				    (STATUS *)NULL)) == NULL)
+			    {
+				    IIUGbmaBadMemoryAllocation(ERx("ld"));
+			    }
+			    (VOID) fmt_setfmt(FEadfcb(), format, blk,
+				    &(atype->ftfmt), &fmtlen);
+		    }
+
+		    fldcount++;
+	    exec sql end;
+
+	    if (error)
+	    {
+		    /*
+		    **  Retrieval error already outputted to user.
+		    **  So just return.
+		    */
+		    return;
+	    }
+
+	    /*
+	    **  Couldn't find all the pieces of a
+	    **  table field.
+	    */
+	    if (fldcount != seq2 - seq1 + 1)
+	    {
+		    IIUGerr(E_VF013F_TFRetErr, UG_ERR_ERROR, 2,
+			    savename, nm);
+		    return;
+	    }
+
+	    /*
+	    **  Now complete the rest of the table field.
+	    */
+	    if (fld->fltag == FTABLE)
+	    {
+		    if ((tbl->tfwins  = (FLDVAL *)FEreqmem(0,
+			    (sizeof(FLDVAL) * tbl->tfcols * tbl->tfrows),
+			    TRUE, (STATUS *) NULL)) == NULL)
+		    {
+			    IIUGbmaBadMemoryAllocation(ERx("IIVFldf2"));
+		    }
+		    if ((tbl->tffflags = (i4 *)FEreqmem(0,
+			    (sizeof(i4) * tbl->tfcols * tbl->tfrows),
+			    TRUE, (STATUS *) NULL)) == NULL)
+		    {
+			    IIUGbmaBadMemoryAllocation(ERx("IIVFldf2"));
+		    }
+	    }
+
+	    /*
+	    **  Check for name uniqueness.
+	    */
+	    if (vfnmunique(hdr->fhdname, TRUE, AFIELD) == FOUND)
+	    {
+		    for (;;)
+		    {
+##				prompt(ERget(F_VF0077_NewFldName), msgbuf)
+			    if (!vffnmchk(msgbuf, ERget(F_VF0011_field)))
+			    {
+				    continue;
+			    }
+			    if (vfnmunique(msgbuf, TRUE, AFIELD) == FOUND)
+			    {
+				    IIUGerr(E_VF0052_name, UG_ERR_ERROR,
+					    1, msgbuf);
+			    }
+			    else
+			    {
+				    STcopy(msgbuf, hdr->fhdname);
+				    break;
+			    }
+		    }
+	    }
+
+	    /*
+	    **  Put new field into Vifred structures.
+	    **  We are of course assuming that what we
+	    **  get out of the DB is correct.
+	    */
+	    hdr->fhposy = globy;
+	    hdr->fhposx = globx;
+
+	    if ((overflow = globx + hdr->fhmaxx - 1 - endxFrm) > 0)
+	    {
+		    vfwider(frame, overflow);
+	    }
+
+	    if (fld->fltag == FREGULAR)
+	    {
+		    pstype = PFIELD;
+		    untype = enFIELD;
+	    }
+	    else
+	    {
+		    pstype = PTABLE;
+		    untype = enTABLE;
+	    }
+	    hdr->fhseq = NEWFLDSEQ;
+	    fld_pos = ps = palloc(pstype, globy, globx, hdr->fhmaxy,
+		    hdr->fhmaxx, (i4 *)fld, IIVFsfaSpaceForAttr);
+	    setGlobUn(untype, (POS *)NULL, NULL);
+	    fitPos(ps, TRUE);
+	    insPos(ps, TRUE);
+	    created = TRUE;
+	    new_fld = fld;
+	}
+}
+
+
+/*{
+** Name:	IIVFlfListForms - List forms from DB.
+**
+** Description:
+**	List forms that user has accessed to in the DB.
+**
+** Inputs:
+**	None.
+**
+** Outputs:
+**	None.
+**	Returns:
+**		None.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	New field may be added to form being edited.
+**
+** History:
+**	08/09/89 (dkh) - Initial version.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+*/
+VOID
+IIVFlfListForms()
+{
+exec sql begin declare section;
+	char		*formname;
+	i4		formid;
+	i4		objclass;
+	char		owner[FE_MAXNAME + 1];
+	UIDBDATA	*uidbdata;
+exec sql end declare section;
+##	char	*loadname;
+##	i4	loadid;
+	char	*names[2];
+	char	*nameptr;
+	char	buf1[FE_MAXNAME + 1];
+	char	buf2[FE_MAXNAME + 1];
+	i4	id1;
+	i4	formcount;
+	i4	userfirst;
+	i4	state;
+##	char	nmlist2[DUPMAXDISP][FE_MAXNAME + 1];
+##	i4	idlist2[DUPMAXDISP];
+	i4	listcount = 0;
+	i4	need_toinit = TRUE;
+	i4	i;
+##	i4	sel_frm;
+
+	dupfrm->frmaxy = maxy_dupfrm;
+	tbl_hdr->fhmaxy = maxy_tbl;
+	tbl_dupfrm->tfrows = DUPMAXDISP;
+
+	objclass = OC_FORM;
+	names[0] = buf1;
+	names[1] = buf2;
+	formcount = 0;
+
+	uidbdata = IIUIdbdata();
+	userfirst = (STcompare(uidbdata->user, uidbdata->dba) <= 0 ? 1 : 0);
+	state = 0;
+	formname = names[0];
+
+	IIUIcnb_CatNolockBegin(ERx("ii_objects"));
+	exec sql repeated select object_id, object_name, object_owner
+	    into :formid, :formname, :owner from ii_objects
+	    where object_class = :objclass
+		and (object_owner = :uidbdata->user or
+		object_owner = :uidbdata->dba)
+	order by object_name, object_owner;
+	exec sql begin;
+		if (state == 0)
+		{
+			formname = names[1];
+			id1 = formid;
+			state++;
+		}
+		else
+		{
+			if (STequal(names[0], names[1]))
+			{
+				if (userfirst)
+				{
+					loadname = names[0];
+					loadid = id1;
+				}
+				else
+				{
+					loadname = names[1];
+					loadid = formid;
+				}
+				formname = names[0];
+				state = 0;
+			}
+			else
+			{
+				loadname = nameptr = formname = names[0];
+				loadid = id1;
+				names[0] = names[1];
+				names[1] = nameptr;
+				id1 = formid;
+			}
+			if (listcount < DUPMAXDISP)
+			{
+				STcopy(loadname, nmlist2[listcount]);
+				idlist2[listcount] = loadid;
+			}
+			else
+			{
+				if (need_toinit)
+				{
+##					inittable Form TFld read (id = i4)
+					need_toinit = FALSE;
+					for (i = 0; i < DUPMAXDISP; i++)
+					{
+##						loadtable Form TFld
+##							(name = nmlist2[i],
+##							id = idlist2[i])
+					}
+				}
+##				loadtable Form TFld (name = loadname,
+##					id = loadid)
+			}
+			formcount++;
+			listcount++;
+		}
+	exec sql end;
+	IIUIcne_CatNolockEnd(ERx("ii_objects"));
+	if (state)
+	{
+		loadname = names[0];
+		loadid = id1;
+		if (listcount < DUPMAXDISP)
+		{
+			STcopy(loadname, nmlist2[listcount]);
+			idlist2[listcount] = loadid;
+		}
+		else
+		{
+			if (need_toinit)
+			{
+##				inittable Form TFld read (id = i4)
+				need_toinit = FALSE;
+				for (i = 0; i < DUPMAXDISP; i++)
+				{
+##					loadtable Form TFld
+##						(name = nmlist2[i],
+##						id = idlist2[i])
+				}
+			}
+##			loadtable Form TFld (name = loadname, id = loadid)
+		}
+		listcount++;
+		formcount++;
+	}
+
+	if (need_toinit)
+	{
+		dupfrm->frmaxy -= (DUPMAXDISP - listcount);
+		tbl_hdr->fhmaxy -= (DUPMAXDISP - listcount);
+		tbl_dupfrm->tfrows = listcount;
+##		inittable Form TFld read (id = i4)
+		for (i = 0; i < listcount; i++)
+		{
+			loadname = nmlist2[i];
+			loadid = idlist2[i];
+##			loadtable Form TFld (name = loadname, id = loadid)
+		}
+	}
+
+	/*
+	**  If user has no forms that he can access, display error
+	**  message and return.
+	*/
+	if (!formcount)
+	{
+		IIUGerr(E_VF0140_NoForms, UG_ERR_ERROR, 0);
+		return;
+	}
+
+##	putform Form (title1 = ERget(F_VF007A_FormsIn),
+##	    title2 = ERget(F_VF007B_DB))
+##	redisplay
+
+	sel_frm = IIFRrlpRunListPick(Form, TFld, LPGR_CENTER, LPGR_CENTER,
+	    ERget(S_VF0141_LsForms), ERx("vflsfrms.hlp"), NULL, NULL);
+
+	if (++sel_frm > 0)
+	{
+##		scroll Form TFld to sel_frm
+##		getrow Form TFld (loadname = name, loadid = id)
+##		message ERget(F_VF007C_RetFlds)
+		IIVFlfdListFld(loadid, loadname);
+	}
+}
+
+
+
+
+
+/*{
+** Name:	IIVFfdFldDup - Entry point for DuplicateField feature.
+**
+** Description:
+**	This routine is the top level entry point routine for
+**	supporting the DuplicateField feature of Vifred.
+**
+** Inputs:
+**	None.
+**
+** Outputs:
+**	None.
+**
+**	Returns:
+**		None.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	A new field may actually be created.
+**
+** History:
+**	08/09/89 (dkh) - Initial version.
+*/
+VOID
+IIVFfdFldDup()
+{
+	i4	i;
+	i4	j;
+	VFNODE	**lp;
+	VFNODE	*lt;
+	POS	*ps;
+	FLDHDR	*hdr;
+	FLDTYPE	*type;
+	FLDVAL	*val;
+	FLDHDR	*nhdr;
+	FLDTYPE	*ntype;
+	FLDVAL	*nval;
+	TBLFLD	*tbl;
+	TBLFLD	*ntbl;
+	FLDCOL	*col;
+	FLDCOL	*ncol;
+	FLDHDR	*chdr;
+	FLDHDR	*nchdr;
+	FIELD	*fd;
+	FIELD	*nfd;
+##	PTR	fldptr;
+##	char	*fdname;
+##	char	buf[200];
+##	i4	sel_row;
+	i4	mitem;
+	PTR	blk;
+	i4	fmtsize;
+	i4	fmtlen;
+	i4	pstype;
+	i4	untype;
+##	char	nmlist1[DUPMAXDISP][FE_MAXNAME + 1];
+##	PTR	idlist1[DUPMAXDISP];
+	i4	listcount = 0;
+	i4	need_toinit = TRUE;
+	i4	overflow;
+	bool	dummy;
+	LISTPICK	lpck;
+
+	/*
+	**  Initialize form if it has not already been done.
+	*/
+	if (init_dupform)
+	{
+		FDsetparse(FALSE);
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), Form))
+		{
+			/*
+			**  never returns.
+			*/
+			syserr(ERget(S_VF0001_Can_not_access_form), Form);
+		}
+		FDsetparse(TRUE);
+		init_dupform = FALSE;
+		dupfrm = IIfindfrm(Form);
+		maxy_dupfrm = dupfrm->frmaxy;
+		fd = FDfndfld(dupfrm, TFld, &dummy);
+		tbl_dupfrm = fd->fld_var.fltblfld;
+		tbl_hdr = &(tbl_dupfrm->tfhdr);
+		maxy_tbl = tbl_hdr->fhmaxy;
+	}
+	else
+	{
+		dupfrm->frmaxy = maxy_dupfrm;
+		tbl_hdr->fhmaxy = maxy_tbl;
+		tbl_dupfrm->tfrows = DUPMAXDISP;
+	}
+
+	IIVTlf(frame, TRUE, FALSE);
+	created = FALSE;
+	new_fld = NULL;
+
+	/*
+	**  Find list of fields in current form, if any.
+	*/
+	if (frame->frfldno > 0)
+	{
+		lp = line;
+		for (i = 0; i < endFrame; i++, lp++)
+		{
+			for (lt = *lp; lt != NNIL; lt = vflnNext(lt, i))
+			{
+				if (lt->nd_pos->ps_begy != i)
+				{
+					continue;
+				}
+				ps = lt->nd_pos;
+				switch (ps->ps_name)
+				{
+				    case PFIELD:
+					fd = (FIELD *) ps->ps_feat;
+					hdr = FDgethdr(fd);
+					break;
+
+				    case PTABLE:
+					fd = (FIELD *) ps->ps_feat;
+					hdr = &(fd->fld_var.fltblfld->tfhdr);
+					break;
+
+				    default:
+					continue;
+				}
+				if (listcount < DUPMAXDISP)
+				{
+					STcopy(hdr->fhdname,
+						nmlist1[listcount]);
+					idlist1[listcount] = (PTR) fd;
+				}
+				else
+				{
+					if (need_toinit)
+					{
+##						inittable Form TFld
+##							read (idfld = i4)
+						need_toinit = FALSE;
+						for (j = 0; j < DUPMAXDISP; j++)
+						{
+##						    loadtable Form TFld
+##							(name = nmlist1[j],
+##							idfld = idlist1[j])
+						}
+					}
+					fldptr = (PTR) fd;
+					fdname = hdr->fhdname;
+##					loadtable Form TFld
+##						(name = fdname, idfld = fldptr)
+				}
+				listcount++;
+			}
+		}
+
+		if (need_toinit)
+		{
+			dupfrm->frmaxy -= (DUPMAXDISP - listcount);
+			tbl_hdr->fhmaxy -= (DUPMAXDISP - listcount);
+			tbl_dupfrm->tfrows = listcount;
+##			inittable Form TFld read (idfld = i4)
+			for (i = 0; i < listcount; i++)
+			{
+				fldptr = idlist1[i];
+				fdname = nmlist1[i];
+##				loadtable Form TFld (name = fdname,
+##					idfld = fldptr)
+			}
+		}
+
+		lpck.form = Form;
+		lpck.tf = TFld;
+		lpck.srow = LPGR_CENTER;
+		lpck.scol = LPGR_CENTER;
+		lpck.lineno = 0;
+		lpck.hfile = ERx("vfdupfld.hlp");
+		lpck.htitle = ERget(S_VF013B_DupHelp);
+		lpck.nomenitems = (sizeof(lstflds_menu)/sizeof(LISTMENU));
+		lpck.menuitems = lstflds_menu;
+		lpck.handler = NULL;
+		lpck.data = NULL;
+		lpck.flags = 0;
+
+##		putform Form (title1 = ERget(F_VF0078_FldsIn),
+##			title2 = ERget(F_VF007D_CurForm))
+
+		sel_row = IIFRclpCallListPick(&lpck, &mitem);
+
+		if (mitem == MU_LISTFORMS)
+		{
+		    /*
+		    **  Grab list of forms from db.
+		    */
+##		    message ERget(F_VF007E_RetForms)
+		    IIVFlfListForms();
+		}
+		else if (++sel_row > 0)
+		{
+##		    scroll Form TFld to sel_row
+##		    getrow Form TFld (buf = name, fldptr = idfld)
+		    fdname = buf;
+		    fd = (FIELD *) fldptr;
+		    for (;;)
+		    {
+##				prompt(ERget(F_VF0077_NewFldName), buf)
+			    /*
+			    **  Check new name to make sure its
+			    **  unique.
+			    */
+			    if (!vffnmchk(buf, ERget(F_VF0011_field)))
+			    {
+				    continue;
+			    }
+			    if (vfnmunique(buf, TRUE, AFIELD) == FOUND)
+			    {
+				    IIUGerr(E_VF0052_name,
+					    UG_ERR_ERROR, 1, buf);
+				    continue;
+
+			    }
+			    break;
+		    }
+
+		    /*
+		    **  Now create new field and put it into
+		    **  the node structure, etc.
+		    */
+		    nfd = FDnewfld(buf, 0, fd->fltag);
+		    if (nfd->fltag == FREGULAR)
+		    {
+			    hdr = &(fd->fld_var.flregfld->flhdr);
+			    type = &(fd->fld_var.flregfld->fltype);
+			    val = &(fd->fld_var.flregfld->flval);
+			    nhdr = &(nfd->fld_var.flregfld->flhdr);
+			    ntype = &(nfd->fld_var.flregfld->fltype);
+			    nval = &(nfd->fld_var.flregfld->flval);
+			    MEcopy((PTR)hdr, sizeof(FLDHDR), (PTR)nhdr);
+			    MEcopy((PTR)type, sizeof(FLDTYPE), (PTR)ntype);
+			    MEcopy((PTR)val, sizeof(FLDVAL), (PTR)nval);
+			    nhdr->fhd2flags &= ~fdVQLOCK;
+			    nhdr->fhtitle = FEsalloc(hdr->fhtitle);
+			    ntype->ftvalmsg = FEsalloc(type->ftvalmsg);
+			    ntype->ftdefault = FEsalloc(type->ftdefault);
+			    if (type->ftvalstr)
+			    {
+				ntype->ftvalstr = FEsalloc(type->ftvalstr);
+			    }
+			    ntype->ftfmtstr = FEsalloc(type->ftfmtstr);
+			    /*
+			    **  Now set the fmt structures.  Should have
+			    **  no errors.
+			    */
+			    (VOID) fmt_areasize(FEadfcb(), ntype->ftfmtstr,
+				    &fmtsize);
+			    if ((blk = MEreqmem(0, fmtsize, TRUE,
+				    (STATUS *)NULL)) == NULL)
+			    {
+				    IIUGbmaBadMemoryAllocation(ERx("lf"));
+			    }
+			    (VOID) fmt_setfmt(FEadfcb(), ntype->ftfmtstr,
+				    blk, &(ntype->ftfmt), &fmtlen);
+		    }
+		    else
+		    {
+			    tbl = fd->fld_var.fltblfld;
+			    ntbl = nfd->fld_var.fltblfld;
+			    hdr = &(fd->fld_var.fltblfld->tfhdr);
+			    nhdr = &(nfd->fld_var.fltblfld->tfhdr);
+			    MEcopy((PTR)tbl, sizeof(TBLFLD), (PTR)ntbl);
+			    nhdr->fhd2flags &= ~fdVQLOCK;
+			    if (!FDwtblalloc(ntbl))
+			    {
+				    IIUGbmaBadMemoryAllocation(ERx("lf"));
+			    }
+			    for (i = 0; i < ntbl->tfcols; i++)
+			    {
+				    col = tbl->tfflds[i];
+				    chdr = &(col->flhdr);
+				    type = &(col->fltype);
+				    ncol = FDnewcol(chdr->fhdname,
+					    chdr->fhseq);
+				    ntbl->tfflds[i] = ncol;
+				    nchdr = &(ncol->flhdr);
+				    ntype = &(ncol->fltype);
+				    MEcopy((PTR)col, sizeof(FLDCOL),
+					    (PTR)ncol);
+				    nchdr->fhd2flags &= ~fdVQLOCK;
+				    nchdr->fhtitle = FEsalloc(chdr->fhtitle);
+				    ntype->ftvalmsg = FEsalloc(type->ftvalmsg);
+				    ntype->ftdefault = FEsalloc(type->ftdefault);
+				    if (type->ftvalstr)
+				    {
+					    ntype->ftvalstr =
+						FEsalloc(type->ftvalstr);
+				    }
+				    ntype->ftfmtstr = FEsalloc(type->ftfmtstr);
+				    (VOID) fmt_areasize(FEadfcb(),
+					    ntype->ftfmtstr, &fmtsize);
+				    if ((blk = MEreqmem(0, fmtsize, TRUE,
+					    (STATUS *)NULL)) == NULL)
+				    {
+					    IIUGbmaBadMemoryAllocation(ERx("lf"));
+				    }
+				    (VOID) fmt_setfmt(FEadfcb(),
+					    ntype->ftfmtstr, blk,
+					    &(ntype->ftfmt), &fmtlen);
+			    }
+		    }
+		    STcopy(buf, nhdr->fhdname);
+		    nhdr->fhseq = NEWFLDSEQ;
+		    nhdr->fhposy = globy;
+		    nhdr->fhposx = globx;
+		    if ((overflow = globx + hdr->fhmaxx - 1 - endxFrm) > 0)
+		    {
+			    vfwider(frame, overflow);
+		    }
+		    if (nfd->fltag == FREGULAR)
+		    {
+			    pstype = PFIELD;
+			    untype = enFIELD;
+		    }
+		    else
+		    {
+			    pstype = PTABLE;
+			    untype = enTABLE;
+		    }
+		    fld_pos = ps = palloc(pstype, globy, globx, hdr->fhmaxy,
+			    hdr->fhmaxx, (i4 *)nfd, IIVFsfaSpaceForAttr);
+		    setGlobUn(untype, (POS *)NULL, NULL);
+		    fitPos(ps, TRUE);
+		    insPos(ps, TRUE);
+		    created = TRUE;
+		    new_fld = nfd;
+		}
+	}
+	else
+	{
+##		message ERget(F_VF007F_NoCurFld)
+
+		/*
+		**  Grab list of forms from db.
+		*/
+		IIVFlfListForms();
+	}
+
+	/*
+	**  Put vifred edit screen back to what it was before
+	**  DuplicateField was called.
+	*/
+##	redisplay
+	IIVTlf(frame, FALSE, FALSE);
+
+	if (created)
+	{
+		if (new_fld->fltag == FREGULAR)
+		{
+			vfFlddisp(new_fld);
+		}
+		else
+		{
+			vfTabdisp(new_fld->fld_var.fltblfld, FALSE);
+		}
+		vffrmcount(fld_pos, 1);
+		vfTrigUpd();
+		vfUpdate(globy, globx, TRUE);
+		vfTestDump();
+	}
+}

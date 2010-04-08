@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have decided to create a frame component for an application and must now
+choose the type of frame that you wish to create.  You can specify the type
+by positioning the cursor on the row of the table field that describes the
+type of frame that you want and then choosing the Select menu item.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        Select                  Choose the type described by the current row
+                                of the table field as the type of frame that
+                                you wish to create.  You will then go to a
+                                frame where you can specify the name of the
+                                frame component that you want to create.
+
+        Cancel                  Cancel the Create operation and return
+                                to the previous frame.
+
+        Help                    Access the Ingres Help facility.

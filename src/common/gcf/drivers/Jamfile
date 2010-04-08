@@ -1,0 +1,9 @@
+#
+# Jamfile file for common!gcf!drivers
+#
+
+SubDir ING_SRC common gcf drivers ;
+
+IISUBSYS common gcf drivers ;
+
+IIINCLUDE common gcf drivers krb5 ;

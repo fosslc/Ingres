@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqnewsmi.hlp, behind the popup asking for menuitem and description only 
+/#-- (when creating frames other than Append, Browse, Update type).
+
+Enter the menuitem text and a short description of the frame.  
+
+  * The system uses the first 12 characters of the menuitem text to name 
+    the frame.
+
+  * Enter a short description.  It will appear throughout your application, 
+    wherever a reference to this frame exists.
+
+/#subtopic 'Menuitem text' vqnemitx.hlp
+/#subtopic 'Description' vqnedesc.hlp

@@ -1,0 +1,32 @@
+#
+# Jamfile file for gl!glf!tmgl
+#
+#	02-nov-2004 (abbjo03)
+#	    tmtzstr.c and tmtzbreak.c are not built on VMS.
+#       22-Feb-2007 (hanal04) Bug 117753
+#           Make iiworld.tz a deliverable along with a readme.html to
+#           explain how to make changes and rebuild tz files.
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entry that was generated incorrectly.
+
+SubDir ING_SRC gl glf tmgl ;
+
+IISUBSYS gl glf tmgl ;
+
+IINOOPTIM iizic.c : sqs_ptx usl_us5 ;
+
+IIUTILEXE iizic : iizic.c ;
+IINEEDLIBS iizic : COMPAT ;
+
+IIUTILEXE iizck : iizck.c ;
+IINEEDLIBS iizck : COMPAT ;
+
+IITIMEZONE iiworld.tz ;
+
+IILIBRARY COMPATLIB : tmtz.c ;
+if ! $(VMS)
+{
+    IILIBRARY COMPATLIB : tmtzstr.c tmtzbreak.c ;
+}
+
+IISIGFILES tz : readme.html iiworld.tz ;

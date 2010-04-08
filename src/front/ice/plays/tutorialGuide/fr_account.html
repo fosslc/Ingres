@@ -1,0 +1,86 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## History:
+##      24-Apr-2001 (fanra01)
+##          Bug 104537
+##          Update profile name in code example.
+##      02-Apr-2004 (fanra01)
+##          Bug 112091
+##          Editorial changes from griel02.
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>Automatic Account Creation</title>
+</head>
+<body>
+    <h1>Page to Automatically Create a New Account</h1>
+Anyone accessing non public pages in a part of your web site controlled by Web Deployment Option
+ must have an account. Since this could mean creating accounts for a large number of users, we need 
+some way for the users to allocate themselves an account. The account should
+ have the minimum privileges required, by associating a role in the administration tool.
+
+<p>
+Here is an example of a self declaration page:
+<h3>File: play_autoUser.html</h3>
+<p>
+<div class="boxCode"><tt>
+<pre>
+&lt;HTML&gt;
+&lt;HEAD&gt;
+&lt;TABLE BORDER=0 WIDTH="100%"&gt;
+	&lt;TD&gt;&lt;IMG SRC="/iceimages/ingreslogo.gif"&gt;&lt;/TD&gt;
+	&lt;TD ALIGN=CENTER&gt;&lt;H1&gt;Automatic Declaration&lt;/H1&gt;&lt;/TD&gt;
+&lt;/TABLE&gt;
+&lt;HR&gt;
+&lt;/HEAD&gt;
+
+&lt;BODY BGPROPERTIES=FIXED BGCOLOR=WHITE TEXT=#000000 LINK=#ff6600 VLINK=#330099&gt;
+ 	<span class="hiy">&lt;FORM ACTION="/ice-bin/oiice.dll/plays[play_home.html]" METHOD="POST"&gt;</span>
+		<span class="hiy">&lt;INPUT TYPE=hidden NAME="ii_action" value="declare"&gt;</span>
+		<span class="hiy">&lt;INPUT TYPE=hidden NAME="ii_profile" value="play_tutor_profile"&gt;</span>
+		&lt;CENTER&gt;
+		&lt;TABLE BORDER=0 ALIGN=CENTER VALIGN=CENTER&gt;
+			&lt;TR&gt;
+				&lt;TD&gt;Please enter your:&lt;/TD&gt;
+			&lt;/TR&gt;
+			&lt;TR&gt;
+				&lt;TD&gt;Name: &lt;/TD&gt;
+				&lt;TD&gt;&lt;INPUT SIZE=32 NAME="ii_userid"&gt;&lt;/TD&gt;
+			&lt;/TR&gt;
+			&lt;TR&gt;
+				&lt;TD&gt;Password: &lt;/TD&gt;
+				&lt;TD&gt;&lt;INPUT SIZE=32 TYPE=PASSWORD NAME="ii_password"&gt;&lt;/TD&gt;
+			&lt;/TR&gt;
+		&lt;/TABLE&gt;		
+		&lt;INPUT TYPE="IMAGE" BORDER=0 NAME="connect" SRC="/iceimages/logout.gif" ALT="Connect"&gt;
+		&lt;/CENTER&gt;
+	&lt;/FORM&gt;
+&lt;/BODY&gt;
+&lt;/HTML&gt;
+</tt></div>
+</pre>
+<p>
+In this example, the lines of interest are
+<p>
+<tt>
+<br>&lt;FORM ACTION="/ice-bin/oiice.dll/plays[play_home.html]" METHOD="POST"&gt;
+<br>&lt;INPUT TYPE=hidden NAME="ii_action" value="declare"&gt;
+<br>&lt;INPUT TYPE=hidden NAME="ii_profile" value="play_tutor_profile"&gt;
+</tt>
+<p>
+The action for the form is the document
+<tt>play_home.html</tt> in the location <tt>plays</tt>.
+It is passed, along with the new user name and password, the
+action <b>declare</b>. This causes a new web user to be
+created with the profile play_tutor_profile. Note that the
+profile <b>play_tutor_profile</b>
+must have been previously defined in the
+administration tool.
+<p>
+The next page describes how to create a simple
+<a href="fr_select.html"
+target="page">select</a> on a database table.
+</body>
+</html>

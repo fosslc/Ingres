@@ -1,0 +1,139 @@
+	.TITLE	MEbyte - VAX/VMS LOW LEVEL SUPPORT ROUTINES FOR Memory
+	.IDENT	'V01-000'
+
+;
+;****************************************************************************
+;*									    *
+;*  COPYRIGHT (c) 1987	Relational Technology Inc.			    *
+;*									    *
+;****************************************************************************
+;
+
+;++
+;
+; FACILITY:
+;
+;	VAX/VMS ME (Memory) 
+;
+; ABSTRACT:
+;
+;	This module contains the low level support routines
+;	necessary to provide efficient memory (byte) manipulations
+;	on within a VAX/VMS system.
+;
+;   Services included:
+;
+;	MEcmp() - compare bytes
+;	MEcopy() - move bytes
+;	MEfill() - fill bytes with a value
+;	MEmove() - move bytes padded with a value
+;
+;   History:
+;	02-mar-1987 (fred)
+;	    Created.
+;       11-aug-93 (ed)
+;           II prefix added
+;	04-may-95 (albany)
+;	    Updated $code -> $code$ for AXP/VMS.
+;	16-may-95 (albany)
+;	    Updated psect attributes to be in line with other
+;	    CL psects.
+;--
+	.PAGE
+	.SBTTL	MEcmp -- Compare blocks of bytes
+;
+;   Compare Blocks
+;
+;	Compare two blocks of memory bytewise, with the lowest address bying 
+;	most significant.  This routine returns < 0 if a < b, equal to 0 if
+;	a == b, and > 0 if a > b.  If nbytes is zero, 0 is returned.  If either
+;	pointer is zero, behaviour is unspecified.
+;   
+;	ret_val = MEcmp(a, b, nbytes)
+;
+;	nat	ret_val;
+;	char	*a;
+;	char	*b;
+;	unsigned short	nbytes;
+;
+
+	.psect	$code$	pic,con,rel,lcl,shr,exe,nord,nowrt,novec,4
+	.entry	IIMEcmp,^m<r2,r3>
+
+	cmpc3	12(ap),@4(ap),@8(ap)
+	bgtr	1$			; branch to put a one in r0 if string1 is greater than string2
+	blss	2$			; branch to put a -1 in r0 if string1 is less than string2
+	clrl	r0			; string1 is equal to string2 so put a zero in r0 and return
+	ret
+1$:
+	movl	s^#1,r0
+	ret
+2$:
+	mcoml	#0,r0
+	ret
+
+	.PAGE
+	.SBTTL	MEcopy	- move memory
+;
+;	MEcopy(s,l,d)
+;
+;	char	*s;
+;	unsigned short	l;
+;	char	*d;
+;
+	.entry	IIMEcopy,^m<r2,r3,r4,r5>
+	movc3	8(ap),@4(ap),@12(ap)
+	ret
+
+	.PAGE
+	.SBTTL	MEfill - fill bytes with a value
+
+;
+;	Name:
+;		MEfill
+;
+;	Arguments:
+;		i4		n;
+;		unsigned char 	val;
+;		char		*mem;
+;
+;	Result:
+;		Fill 'n' bytes starting at 'mem' with the unsigned character 'val'.
+;
+;	Side Effects:
+;		None
+;
+;	History:
+;		03/83 - (gb) - written
+;
+;		11/83 (wood) -- rewritten in VAX-11 MACRO
+;
+;	22-mar-95 (albany)
+;		Added .call_entry line where the macro cross-compiler
+;		indicated that argument homing was necessary on an AXP/VMS.
+;
+;
+;	.entry	MEfill,^m<r2,r3,r4,r5>
+MEfill::
+	.call_entry preserve=<r2,r3,r4,r5>,max_args=3,home_args=true
+	movc5	#0,(ap),8(ap),4(ap),@12(ap)
+	ret
+
+	.PAGE
+	.SBTTL	MEmove -- move padded memory
+;
+;	MEmove(source_length, source, pad_char, dest_length, dest)
+;
+;	i2	source_length;
+;	char	*source;
+;	char	pad_char;
+;	i2	dest_length;
+;	char	*dest;
+;
+
+	.entry	IIMEmove,^m<r2,r3,r4,r5>
+
+	movc5	4(ap), @8(ap), 12(ap), 16(ap), @20(ap)
+	ret
+;
+	.end

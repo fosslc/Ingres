@@ -1,0 +1,249 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="RESX_Category_DataType" xml:space="preserve">
+    <value>Data Type</value>
+  </data>
+  <data name="RESX_Category_Identifier" xml:space="preserve">
+    <value>(Identifier)</value>
+  </data>
+  <data name="RESX_DataProvider_Description" xml:space="preserve">
+    <value>Connect to the Ingres database using the .NET Framework Data Provider for Ingres.</value>
+    <comment>Description of Ingres for use in the VS "Choose Data Source" description area.</comment>
+  </data>
+  <data name="RESX_DataProvider_DisplayName" xml:space="preserve">
+    <value>.NET Framework Data Provider 2.1 for Ingres</value>
+    <comment>Display name of Ingres for use in the registry and VS "Choose Data Source"/"Data provider" edit box.</comment>
+  </data>
+  <data name="RESX_DataProvider_ShortName" xml:space="preserve">
+    <value>Ingres .NET Data Provider 2.1</value>
+    <comment>Used by VS's Add Connection...</comment>
+  </data>
+  <data name="RESX_DataView_Tables" xml:space="preserve">
+    <value>Tables</value>
+  </data>
+  <data name="RESX_DataView_Views" xml:space="preserve">
+    <value>Views</value>
+  </data>
+  <data name="RESX_Description_ColumnName" xml:space="preserve">
+    <value>The name of the column in the Ingres table.</value>
+  </data>
+  <data name="RESX_Description_ColumnSchema" xml:space="preserve">
+    <value>The Ingres owner's username of the table that contains the column.</value>
+  </data>
+  <data name="RESX_Description_ColumnTable" xml:space="preserve">
+    <value>The name of the Ingres table containing the column.</value>
+  </data>
+  <data name="RESX_Description_Default" xml:space="preserve">
+    <value>The value of the default, if the column has one, which is inserted into the column automatically if no value is specified during an insert operation.</value>
+  </data>
+  <data name="RESX_Description_Length" xml:space="preserve">
+    <value>The length in characters for a character data type or the length in bytes for a binary data type.  Otherwise, 0.</value>
+  </data>
+  <data name="RESX_Description_Nullable" xml:space="preserve">
+    <value>Set to true if the application can set the column to a null value or if the data provider cannot determine if the application can set the column to a null value. Set to false if it is known that the application is not permitted to set the column to a null. Note that a column value may be null even if the application is not permitted to set the null value.</value>
+  </data>
+  <data name="RESX_Description_Ordinal" xml:space="preserve">
+    <value>The number of the column in the object's create statement, beginning with 1.</value>
+  </data>
+  <data name="RESX_Description_Precision" xml:space="preserve">
+    <value>The maximum precision of the column if the column is a numeric or date data type.</value>
+  </data>
+  <data name="RESX_Description_Scale" xml:space="preserve">
+    <value>The number of decimal places in the column if the column is a numeric data type.</value>
+  </data>
+  <data name="RESX_Description_SystemType" xml:space="preserve">
+    <value>The native Ingres data type.</value>
+  </data>
+  <data name="RESX_Description_TableName" xml:space="preserve">
+    <value>The name of the Ingres table.</value>
+  </data>
+  <data name="RESX_Description_TableSchema" xml:space="preserve">
+    <value>The Ingres owner's username that is the creator of this table.</value>
+  </data>
+  <data name="RESX_Description_ViewColumnName" xml:space="preserve">
+    <value>The name of the column in the Ingres view.</value>
+  </data>
+  <data name="RESX_Description_ViewColumnSchema" xml:space="preserve">
+    <value>The Ingres owner's username of the view that contains the column.</value>
+  </data>
+  <data name="RESX_Description_ViewColumnTable" xml:space="preserve">
+    <value>The name of the Ingres view containing the column.</value>
+  </data>
+  <data name="RESX_Description_ViewName" xml:space="preserve">
+    <value>The name of the Ingres view.</value>
+  </data>
+  <data name="RESX_Description_ViewSchema" xml:space="preserve">
+    <value>The Ingres owner's username that is the creator of this view.</value>
+  </data>
+  <data name="RESX_Property_Default" xml:space="preserve">
+    <value>Default Value</value>
+  </data>
+  <data name="RESX_Property_Length" xml:space="preserve">
+    <value>Length</value>
+  </data>
+  <data name="RESX_Property_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="RESX_Property_Nullable" xml:space="preserve">
+    <value>Nullable</value>
+  </data>
+  <data name="RESX_Property_Ordinal" xml:space="preserve">
+    <value>Ordinal</value>
+  </data>
+  <data name="RESX_Property_Precision" xml:space="preserve">
+    <value>Precision</value>
+  </data>
+  <data name="RESX_Property_Scale" xml:space="preserve">
+    <value>Scale</value>
+  </data>
+  <data name="RESX_Property_Schema" xml:space="preserve">
+    <value>Schema</value>
+  </data>
+  <data name="RESX_Property_SystemType" xml:space="preserve">
+    <value>System Type</value>
+  </data>
+  <data name="RESX_Property_Table" xml:space="preserve">
+    <value>Table</value>
+  </data>
+  <data name="RESX_Property_View" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="RESX_Type_Table" xml:space="preserve">
+    <value>Table</value>
+  </data>
+  <data name="RESX_Type_TableColumn" xml:space="preserve">
+    <value>Table Column</value>
+  </data>
+  <data name="RESX_Type_View" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="RESX_Type_ViewColumn" xml:space="preserve">
+    <value>View Column</value>
+  </data>
+  <data name="RESX_Value_Ingres" xml:space="preserve">
+    <value>Ingres</value>
+  </data>
+  <data name="RESX_Value_No" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="RESX_Value_Yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+</root>

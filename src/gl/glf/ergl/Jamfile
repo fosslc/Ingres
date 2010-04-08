@@ -1,0 +1,11 @@
+#
+# Jamfile file for gl!glf!ergl
+#
+
+SubDir ING_SRC gl glf ergl ;
+
+IISUBSYS gl glf ergl ;
+
+
+IILIBRARY COMPATLIB : eroptlog.c ;
+

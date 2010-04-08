@@ -1,0 +1,11 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:iisqlca.obj, -
+INGLIB:libq.olb/library, -
+INGLIB:libqgca.olb/library, -
+INGLIB:libgcf.olb/library, -
+INGLIB:libafe.olb/library, -
+INGLIB:libug.olb/library, -
+INGLIB:libadf.olb/library, -
+INGLIB:libcuf.olb/library, -
+INGLIB:libcompat.olb/library

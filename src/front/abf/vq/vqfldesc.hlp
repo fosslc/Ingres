@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqfldesc.hlp, subtopic 'Layout description' of subtopic 'Screen layout'
+/#-- which is behind the main AFD help screen.
+/#-- 
+The Application Flow Diagram displays information about an application. 
+The application name is shown in the upper-left corner of the screen.
+
+The Diagram provides the following information:
+
+  * Each box represents a frame.  The name of the current frame is 
+    highlighted. (Use MoreInfo to see frame names exceeding 13 characters.) 
+  * The frame type is in brackets at the bottom right of the box.
+  * Menuitem text above a box shows the menu choice from the parent frame.
+  * The diagram displays the parent frame and up to four of the child frames 
+    for the current frame.  Expansion indicators V, <, and > show you that 
+    there are more child or peer frames.  Use the arrow keys to view them.
+  * To change the current frame, use the arrow keys.
+  * Indicators show the current status of a frame:
+    - "New" appears on newly created frames.
+    - "Changed" appears after you make changes to the frame.
+    - "Error" appears if there is an error in the compiler or the visual 
+       query.

@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The row_audit_key parameter indicates whether or not tables are required to 
+ have a potential row-audir key provided on creation.
+
+
+ Choices are: ON OFF

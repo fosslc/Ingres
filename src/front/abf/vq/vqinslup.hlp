@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqinslup.hlp, help on entering the table name when inserting a Lookup 
+/#-- table at the VQ Editor screen.
+/#-- 
+You can enter the Lookup table name in any of these ways:
+
+  * If you know the name of the table you want to use, type it in response 
+    to the prompt and then select OK.
+
+  * If you don't remember the exact table name or spelling, select
+    ListChoices to display a list of the tables in the database.  Move the 
+    cursor to the name of the table and then select OK.
+
+  * If you need to create a new table, select ListChoices and then select 
+    Create.  The system calls the Ingres Tables Utility.

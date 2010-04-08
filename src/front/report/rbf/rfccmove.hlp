@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This popup allows you to move the selected column name to a new location,
+effectively changing the order the column names will appear in the report.
+The new location is with respect to the current name (typically displayed
+in reverse video).  The selected column name is typically displayed in a
+different intensity than the other names.
+
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Above           Move the selected row to be above the current row
+                        and return to the Choose Report Columns popup.
+
+        Below           Move the selected row to be below the current row
+                        and return to the Choose Report Columns popup.
+
+        Help            Print this message.
+
+        End             Return to the Choose Report Columns popup.

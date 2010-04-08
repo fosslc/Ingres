@@ -1,0 +1,371 @@
+/*
+** Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+*/
+ 
+/*
+** Generic contents file for the INGRES release
+** History
+**      29-apr-1999 (kinte01)
+**              Created.
+**	08-jun-1999 (kinte01)
+**		added New Gateway package
+**	18-jun-1999 (kinte01)
+**		add RDB GW (98243)
+**	02-aug-1999 (kinte01)
+**		add RMS GW (98235)
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+RELEASE Ingres
+
+# undef R_VIGRAPH
+
+# ifdef VMS
+/*
+** All files go in saveset "B" on VMS unless otherwise specified.
+*/
+VOLUME	B
+
+# include "packdefs.h"
+# endif /* VMS */
+
+/*
+** Group product definitions
+*/
+
+# ifdef R_ORACLE
+
+PACKAGE oraclegwpkg
+
+    VISIBLEPKG
+
+    NEED gateway
+    NEED net
+    NEED tm
+/*
+** Include INSTALL pkg for VMS since it is not automatically included.
+*/
+# ifdef VMS
+   INCLUDE install
+# endif /* VMS */
+
+    PART oracle
+       DEFINITION oracle.prt
+
+# endif /*R_ORACLE*/
+
+# ifdef R_RDB
+
+PACKAGE rdbgwpkg
+
+    VISIBLEPKG
+
+    NEED gateway
+    NEED net
+    NEED tm
+/*
+** Include INSTALL pkg for VMS since it is not automatically included.
+*/
+# ifdef VMS
+   INCLUDE install
+# endif /* VMS */
+
+    PART rdb
+       DEFINITION rdb.prt
+
+# endif /*R_RDB*/
+
+# ifdef R_RMS
+
+PACKAGE rmsgwpkg
+
+    VISIBLEPKG
+
+    NEED gateway
+    NEED net
+    NEED tm
+/*
+** Include INSTALL pkg for VMS since it is not automatically included.
+*/
+# ifdef VMS
+   INCLUDE install
+# endif /* VMS */
+
+    PART rms
+       DEFINITION rms.prt
+
+# endif /*R_RMS*/
+
+/* 
+** End Group product definitions
+*/
+
+/*
+** Various useful INVISIBLE PACKAGEs
+*/
+
+PACKAGE basic 
+
+   INVISIBLE
+
+   PART charsets
+      DEFINITION charsets.prt
+
+   PART collation
+      DEFINITION collation.prt
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+   PART frs
+      DEFINITION frs.prt
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY ingres!files!english
+#endif
+   PART messages
+      DEFINITION messages.prt
+
+# ifdef FULL_RELEASE
+   PART errhelp
+      DEFINITION errhelp.prt
+
+#ifdef VMS
+   PART setuser
+      DEFINITION setuser.prt
+# endif
+
+# endif /* FULL_RELEASE */
+
+   PART ingenv
+      DEFINITION ingenv.prt
+
+   PART name-server
+      DEFINITION namesrv.prt
+
+# ifdef R_SHADOW
+   PART shadow-pwd
+      DEFINITION shadow-pwd.prt
+# endif /* R_SHADOW */
+
+   PART utdef
+      DEFINITION utdef.prt
+
+   PART zoneinfo
+      DEFINITION zoneinfo.prt
+
+   PART fegeneric
+      DEFINITION fegeneric.prt
+
+   PART sharelib
+      DEFINITION sharelib.prt
+
+   PART release-notes
+      DEFINITION relnotes.prt
+
+   PART api
+      DEFINITION api.prt
+
+# ifdef FULL_RELEASE
+   PART sigima
+      DEFINITION sigima.prt
+# endif /* FULL_RELEASE */
+
+   PART raat
+      DEFINITION raat.prt
+
+PACKAGE setupsup 
+
+   INVISIBLE 
+
+   PART setupsup
+      DEFINITION setupsup.prt
+
+PACKAGE tm 
+
+   VISIBLE CI_PER_USER_LICENSING
+
+   INCLUDE setupsup
+
+   PART tm
+      DEFINITION tm.prt
+
+# ifdef R_OLDMSG
+# ifdef FULL_RELEASE
+PACKAGE oldmsg
+
+   VISIBLE CI_PER_USER_LICENSING
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY ingres!files!english
+#endif
+   PART oldmsg
+      DEFINITION oldmsg.prt
+# endif /* FULL_RELEASE */
+# endif /* R_OLDMSG */
+
+PACKAGE generr 
+
+   INVISIBLE
+
+   PART generr
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+# ifdef VMS
+   BUILD_DIR (jpt_cmn_hdr)
+# else
+   BUILD_DIR (ING_BUILD)!files
+# endif /* VMS */
+      FILE generr.h
+
+# ifdef R_NET
+/*
+** Ingres Networking
+*/
+
+PACKAGE net 
+
+   INCLUDE basic
+   INCLUDE setupsup
+   INCLUDE config
+
+# ifdef SEVMSBUILD
+   PREFER secure
+# endif /* SEVMSBUILD */
+
+   PART net
+      DEFINITION net.prt
+
+# ifdef R_STREAM
+   PART stream
+      DEFINITION stream.prt
+# endif /* R_STREAM */
+# endif /* R_NET */
+
+
+# ifdef R_ORACLE
+/*
+** Ingres Oracle Gateway
+*/
+
+PACKAGE oracle
+
+    NEED gateway
+    NEED net
+    NEED tm
+/*
+** Include INSTALL pkg for VMS since it is not automatically included.
+*/
+# ifdef VMS
+   INCLUDE install
+# endif /* VMS */
+
+    PART oracle
+       DEFINITION oracle.prt
+# endif /* R_ORACLE */
+
+# ifdef R_RMS
+/*
+** Ingres RMS Gateway
+*/
+
+PACKAGE rms
+
+    NEED gateway
+    NEED net
+    NEED tm
+/*
+** Include INSTALL pkg for VMS since it is not automatically included.
+*/
+# ifdef VMS
+   INCLUDE install
+# endif /* VMS */
+
+    PART rms
+       DEFINITION rms.prt
+# endif /* R_RMS */
+
+
+PACKAGE gateway
+   NEED net
+   NEED tm
+/*
+** Include INSTALL pkg for VMS since it is not automatically included.
+*/
+# ifdef VMS
+   INCLUDE install
+# endif /* VMS */
+
+   PART gateway
+      DEFINITION gateway.prt
+
+/*
+** Interactive configuration utility
+*/
+
+PACKAGE config 
+
+   INVISIBLE
+
+   PART config
+      DEFINITION config.prt
+
+
+/*
+** The installation utility package
+*/
+
+# ifdef VMS
+/*
+** Installation package needs to go in saveset "A" on VMS.
+*/
+VOLUME	A
+# endif /* VMS */
+
+PACKAGE install 
+
+   INVISIBLE
+
+# ifndef VMS
+   INCLUDE messages
+   INCLUDE frs 
+# endif /* VMS */
+
+   DIRECTORY ingres!install
+
+/*
+** Replace 'messages' part on VMS with 'kitinstal-msgs' (stripped version)...
+*/
+# ifdef VMS
+   PART kitinstal-msgs
+      DEFINITION kitinstal-msgs.prt
+# else /* VMS */
+   PART messages
+      DEFINITION messages.prt
+# endif /* VMS */
+
+   PART install
+      DEFINITION install.prt
+
+# ifndef VMS
+   PART frs
+      DEFINITION frs.prt
+# endif /* VMS */
+
+/*
+** Warning: the installation package must be the last thing in this file. 
+*/

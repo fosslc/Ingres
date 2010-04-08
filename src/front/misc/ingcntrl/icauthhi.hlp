@@ -1,0 +1,45 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icauthhi.hlp       Info on Ingres Authorization Hierarchy.
+/#--
+Authorization Hierarchy
+-----------------------
+Ingres derives the privileges in effect for any session from the privileges
+defined for the authorization identifiers (role, user, group and public)
+associated with the session and any applicable defaults.  If a particular
+privilege is defined for more than one authorization identifier associated
+with a session, then Ingres uses a hierarchy to determine which defined
+privilege is enforced for that session.
+
+The authorization hierarchy in order of most to least precedence, is:
+
+        role
+        user
+        group
+        public
+
+For each accessed object in a session, Ingres searches for a defined 
+privilege that specifies that object and the desired access characteristic(s)
+(select, insert, execute etc.).
+
+If the specified object is a table, view or procedure, then one of the
+authorization identifiers in effect for the session must have the required
+privilege for that object in order for the session to have that privilege.
+For example, to insert into a specified table, one of the authorization
+identifiers associated with the session must have the insert privilege
+defined for the specified table. If none of the authorization identifiers
+associated with the session have this privilege and the user does not own
+the table, then Ingres uses its internal default. In this case, because
+the internal default for the insert privilege is not to allow inserts,
+Ingres would not allow inserts into the specified table.
+
+The authorization hierarchy is also important when the specified
+object is the database because the privileges defined on the database
+can be defined with different values for different authorization
+identifiers. When a database privilege (for example ACCESS, or
+QUERY_ROW_LIMIT) is defined at differing levels, Ingres uses the
+hierarchy to determine which privilege to enforce.
+
+Note that privileges granted on the INSTALLATION to the authorization
+identifiers that apply to the session will also affect session privileges.
+
+See the Ingres/SQL Reference Manual for more information.

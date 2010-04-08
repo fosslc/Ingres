@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!abf!quel
+#
+
+SubDir ING_SRC front abf quel ;
+
+IISUBSYS front abf quel ;
+
+
+IIBINEXE osl : oslqmain.c ;
+IINEEDLIBS osl :  QUELLIB OSLLIB CODEGENLIB ILGLIB
+	SHINTERPLIB SHFRAMELIB SHQLIB SHCOMPATLIB EQUELLIB ;
+IINEEDLIBSW osl : SHADFLIB SHEMBEDLIB ;
+IIUNDEFS osl : II_copyright malloc ;
+
+IILIBRARY QUELLIB : quel.sy quelkw.roc ;
+

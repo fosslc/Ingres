@@ -1,0 +1,27 @@
+<!-- #ICE REPEAT FUNCTION=`unit_copy?action=:action&unit_id=:unit&copy_file=:path&default_loc=:default`
+HTML=`<!-- #ICE REPEAT INCLUDE=``begin.html?form=&title=Congratulations&submit=buCopy.html?unit=:unit&action=:action`` -->
+			The copy was successful. 
+			
+			
+			<!-- #ICE IF (``:action`` == ``out``) and (``:default`` == ``default``)
+			THEN=``<A href="/:copy_file" ALT="Download"><br><br>
+			Right click here</A> and select 'Save Target As...' to download the copy.``
+			-->
+
+			<!-- #ICE IF (``:action`` == ``out``) and (``:default`` != ``default``)
+			THEN=``<A href="/ice-bin/oiice.:http_api_ext/iceTools/:name[:copy_file]?ii_action=download" ALT="Download"><br><br>
+			Right click here</A> and select 'Save Target As...' to download the copy.``
+            -->
+
+			<!-- #ICE IF (``:action`` == ``in``)
+			THEN=``<A href="/ice-bin/oiice.:http_api_ext/iceTools/buMenu.html" ALT="Refresh" TARGET="Menu">
+			click here</A> to refresh the menu.`` 
+			-->`
+-->
+
+<!-- #ICE REPEAT IF (`:ii_status_number` != `0`)
+THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?form=&title=Sorry`` -->
+			<p>:ii_status_text (:ii_status_info)`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The hash_size resource specifies the size of the locking system hash
+  table.

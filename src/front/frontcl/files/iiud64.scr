@@ -1,0 +1,66 @@
+/* Copyright (c) 2004 Ingres Corporation */
+
+/* QUEL script iiud64.scr */
+\quel
+\macro
+
+/* Make sure that we're allowed to destroy/create standard catalogs. */
+retrieve (user_name=user) where lowercase(user)="$ingres"
+\go
+/* If the user isn't $ingres, leave now. */
+\branch ?{ifgt;@{tuplecount};0;1;0}=0 NotIngres
+\branch IsIngres
+\mark NotIngres
+{type E_UD0010 Frontend catalogs are owned by the user '$ingres'. }\v
+{type You must be the '$ingres' user in order to reload the catalogs.}\v
+{type }\v
+\quit
+\mark IsIngres
+
+/* Retrieve into temp table names of all objs to be deleted. */
+retrieve into iiud_64temp (iitables.table_name)
+	where lowercase(iitables.table_owner)="$ingres" 
+	  and iitables.table_name = "ii_*"
+	  and iitables.table_type = "T"
+\go
+/* If no objs found, leave now. */
+\branch ?{ifgt;@{tuplecount};0;1;0}=0 NoDrop
+
+/* now copy into file, using COPY to create destruction script. */
+\reset
+\quel
+copy iiud_64temp ( 
+	drop= d1,
+	sp= d1,
+	table_name= char(0),
+	dummy1= "d0\\",
+	dummy2= d0p,
+	dummy3= "d0\\",
+	dummy4= d0g,
+	nl= d1
+	)
+into "ii_copy.tmp"
+\go
+/* If no rows copied, error. */
+\branch ?{ifgt;@{tuplecount};0;1;0}=0 NoCopy
+\branch CopyOK
+\mark NoCopy
+{type E_UD0011 The reload scripts were unable to create the temporary file}\v
+{type 'ii_copy.tmp' in this directory.  Please check that you have the proper}\v
+{type permissions to write a file in this directory.}\v
+{type }\v
+destroy iiud_64temp
+\go
+\quit
+\mark CopyOK
+
+/* Now include the COPY file, which destroys the catalogs. */
+\quel
+{type Removing old Frontend Catalogs prior to reload.}\v
+\sql
+\include ii_copy.tmp
+\mark NoDrop
+\sql
+drop table iiud_64temp
+\go
+\nomacro

@@ -1,0 +1,12 @@
+#
+# Jamfile file for testtool!cts!shell_vms
+#
+
+SubDir ING_SRC testtool cts shell_vms ;
+
+IISUBSYS testtool cts shell_vms ;
+
+IITOOLSSH coord : coord$(SUFSH) ;
+IITOOLSSH cts : cts$(SUFSH) ;
+IITOOLSSH ctsnodes : ctsnodes$(SUFSH) ;
+IITOOLSSH slave : slave$(SUFSH) ;

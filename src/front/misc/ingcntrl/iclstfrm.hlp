@@ -1,0 +1,42 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- iclstfrm.hlp       Create/Examine/Update Locations.
+/#--
+This frame displays all locations and their areas.  You may examine,
+modify, create, or delete LocationName - Area mappings.
+
+(Note: If you do not have the MAINTAIN_LOCATIONS user permission, then you cannot
+CREATE, DELETE, or ALTER existing locations and this frame will be displayed
+in read-only mode)
+
+Location Names specify Areas (disk volumes or directories) that
+can be made available for database data, journals, checkpoints,
+or online backup dumps. Once the LocationName - Area mapping is
+established, database tables, journals, checkpoints, or online
+backup dumps can reside on the established Area. The list of
+databases displays those that are currently using the LocationName.
+
+Once the LocationName has been created, the Area that the LocationName 
+refers to is in read-only mode.  You can modify the availability 
+of the LocationName for data, journals, checkpoints, or online backup
+dumps even after the LocationName has been created. The modifications
+will apply to all future usage of the LocationName.
+
+You can only delete a location if it is unused.
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Create          Make a new LocationName available to the system.
+	
+	Edit            Change an existing LocationName
+	
+	Delete          Delete an existing LocationName ( will work only
+			if the location was never used )
+	
+	                (the above 3 menuitems will only appear if you have
+	                been GRANTed the MAINTAIN_LOCATIONS user permission)
+	
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

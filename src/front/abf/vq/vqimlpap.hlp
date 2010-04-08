@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqimlpap.hlp, help for listpick of applications from which to import
+/#-- a frame.
+
+You can import a frame when you want to create a frame that is based on an
+existing frame in another Vision application.  The frame you import must be
+an append, browse or update frame, but does not have to be of the same type
+as the frame you are creating.
+
+  * When you import a frame, the system copies the entire frame 
+    definition, including the Visual Query and any escape codes you 
+    may have defined.
+
+  * Once you have imported a frame, you can edit the frame definition to 
+    make this frame distinct from the original.
+
+To import a frame from another application, move the cursor to the application
+name and press Select.

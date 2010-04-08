@@ -1,0 +1,16 @@
+#
+# Jamfile file for cl!clf!erold_vms
+#
+
+SubDir ING_SRC cl clf erold_vms ;
+
+IISUBSYS cl clf erold_vms ;
+
+IIBINEXE ercompile_v3 : ercomp_v3.c ;
+IINEEDLIBS ercompile_v3 : COMPATLIB MALLOCLIB ;
+
+IIBINEXE ercompile_v2 : ercomp_v2.c ;
+IINEEDLIBS ercompile_v2 : COMPATLIB MALLOCLIB ;
+
+IIBINEXE ercompile_v1 : ercomp_v1.c ;
+IINEEDLIBS ercompile_v1 : COMPATLIB MALLOCLIB ;

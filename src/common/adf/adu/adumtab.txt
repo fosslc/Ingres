@@ -1,0 +1,101 @@
+/*
+** Copyright 2010, Ingres Corporation
+*/
+
+/* If you edit this file, read below!  jam does not regenerate adumtab.h */
+
+/*
+** Name: adumtab.txt - Month Name lookup.
+**
+** Description:
+**
+** This file is a gperf input file for month names known to date input.
+** Actually, any "name" that might be entered as part of a date, but
+** NOT as part of a time or interval, has to be listed here.  Mostly,
+** that means the month names, but it also includes "today" and "now".
+** The d_class member of the ADU_DATENAME struct can be examined to see
+** whether one has found a month name, today, or now.
+**
+** To be more specific, a "month" lookup is done:
+** a) if it's the first date component.  This picks up 'today', 'now',
+**    and m-d-y forms.  No interval or time starts with a keyword.
+** b) if it's after a dash, and not part of a time (ie no colon has been
+**    seen.  This picks up traditional d-m-y.  Anomalies like n-n-m
+**    will be caught by template matching.
+**
+** Month name lookup is critical to date input performance, at least
+** when an alphabetic month is supplied!  Originally, a binary search
+** (of ALL date names) was done, which isn't bad;  but a perfect-hash
+** lookup is even better.  It's difficult to hand code a perfect-hash
+** lookup, so the "gperf" program was used to generate one.  The gperf
+** output is #include'd into adudates.c.
+**
+** gperf is a GNU utility, and there's no guarantee that it exists on
+** all Ingres platforms.  Since month name changes should be very rare (!),
+** I have decided that (for now anyway) it's good enough to keep
+** BOTH this file and the generated .h file under source control.
+** The adumtab.h file is NOT re-generated for each build.
+**
+** To add or change month name strings:
+**
+** 1) Open both adumtab.txt and adumtab.h for editing, on some
+**    platform that has a working gperf.  gperf 3.0.2 was used initially,
+**    any later version should be OK too.
+**
+** 2) Make the necessary change to adumtab.txt.
+**
+** 3) Re-run gperf:  gperf -m 50 adumtab.txt >adumtab.h
+**    The -m 50 option is not essential but it tells gperf to run more
+**    trials.  50 seems plenty to get the smallest output table.
+**
+** 4) Build, verify that the change is OK, and submit both adumtab.txt
+**    and adumtab.h back into source control.
+**
+** Edit History:
+**	15-Mar-2010 (kschendel) SIR 123275
+**	    Create: Speed up date scanning with perfect hash.
+*/
+
+
+
+%readonly-tables
+%struct-type
+struct _ADU_DATENAME;
+%omit-struct-type
+
+%define slot-name d_name
+%define hash-function-name adu_monthname_hash
+%define lookup-function-name adu_monthname_lookup
+
+%enum
+
+%%
+# Don't use blank lines in this section, gperf thinks it's an empty key
+#
+# d_name, d_class, d_value
+#
+jan, 'm', 1
+january, 'm', 1
+feb, 'm', 2
+february, 'm', 2
+mar, 'm', 3
+march, 'm', 3
+apr, 'm', 4
+april, 'm', 4
+may, 'm', 5
+jun, 'm', 6
+june, 'm', 6
+jul, 'm', 7
+july, 'm', 7
+aug, 'm', 8
+august, 'm', 8
+sep, 'm', 9
+september, 'm', 9
+oct, 'm', 10
+october, 'm', 10
+nov, 'm', 11
+november, 'm', 11
+dec, 'm', 12
+december, 'm', 12
+today, 'Z', 0
+now, 'R', 0

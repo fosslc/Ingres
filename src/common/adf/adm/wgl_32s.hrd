@@ -1,0 +1,64 @@
+#
+#   NMAKE makefile
+#
+#  History:
+#	13-jul-95 (tutto01)
+# 	    Created.
+#	15-jan-96 (tutto01)
+#	    Added 8.3 conforming directory for install building process only.
+#	22-nov-96 (donc)
+#	    Port of OpenINGRES build to OpenROAD Win32s build.
+#	28-jan-2003 (zhayu01) SIR 111125
+#	    Add default unicode collation file, udefault.uce.
+#	21-mar-2007 (wridu01)
+#	    Make sure that specialcasing.txt gets copied into 
+#	    $(ING_BUILD)\files\collation by a initial rule so
+#	    that aducompile of udefault will not fail
+#
+
+# Build Environment
+CONFIG = wgl_32s
+SDK = $(W32_SDK)
+PATH = $(SDK)\bin;$(ING_BUILD)\bin;$(PATH)
+
+!include "$(ING_SRC)\tools\port\nmake\$(CONFIG).ini"
+
+all  install: maked multi spanish udefault duplicate
+
+initial:
+	-$(MKRDIR) $(ING_BUILD)\files\collation > NUL $(REDIRECT)
+	$(COPY) specialcasing.txt $(ING_BUILD)\files\collation
+
+objfiles:
+
+derive:
+
+prh:
+
+hdr:
+
+pc:
+
+exe:
+
+lib:
+
+maked:
+    if not exist $(ING_BUILD)\files\collation mkdir $(ING_BUILD)\files\collation
+    if not exist $(ING_BUILD)\files\collatio mkdir $(ING_BUILD)\files\collatio 
+
+multi :
+	aducompile multi.dsc multi
+	$(COPY) multi.dsc $(ING_BUILD)\files\collation
+
+spanish :
+	aducompile spanish.dsc spanish
+	$(COPY) spanish.dsc $(ING_BUILD)\files\collation
+
+udefault :
+	$(COPY) udata.ucd $(ING_BUILD)\files\collation
+	aducompile udefault.uce udefault -u
+	$(COPY) udefault.uce $(ING_BUILD)\files\collation
+
+duplicate:
+	$(COPY) $(ING_BUILD)\files\collation\* $(ING_BUILD)\files\collatio

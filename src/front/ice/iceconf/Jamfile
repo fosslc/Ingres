@@ -1,0 +1,14 @@
+#
+# Jamfile file for front!ice!iceconf
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC front ice iceconf ;
+
+IISUBSYS front ice iceconf ;
+
+if $(BUILD_ICE)
+{
+IILIBRARY ICECONFLIB : iceref.c iceconf.c iceapi.c ;
+}

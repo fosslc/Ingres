@@ -1,0 +1,29 @@
+%summary_tag% %rpm_product%
+%pkgname_tag% %rpm_basename%%rpm_specname%
+%version_tag% %rpm_version%
+%release_tag% %rpm_release%
+%license_tag% %rpm_license%
+%group_tag% %rpm_group%
+%arch_tag% %deb_arch%
+%source_tag% none
+%patch_tag% none
+%maintainer_tag% %rpm_vendor%
+%url_tag% %rpm_url%
+%buildroot_tag% %rpm_buildroot%
+%prefix_tag% %rpm_prefix%
+%rpmprereq_tag% %rpm_basename% = %rpm_version%-%rpm_release%
+%debprereq_tag% %rpm_basename% (= %rpm_version%)
+%provides_tag% %rpm_basename%-ome
+%provides_tag% %rpm_basename%-tuxedo
+%provides_tag% %rpm_basename%-c2audit
+%replaces_tag% ca-ingres%rpm_specname%
+%replaces_tag% ca-ingres-ome
+%replaces_tag% ca-ingres-tuxedo
+%replaces_tag% ca-ingres-c2audit
+%replaces_tag% ingres2006%rpm_specname%
+%autoreq_tag% %rpm_autoreq_off%
+%define_tag% %rpm_unpack_term_off%
+%define_tag% %rpm_missing_doc_term_off%
+%define_tag% %rpm_spec_install_post%
+%rpm_descrip_tag%
+%deb_descrip_tag% %product_name% Intelligent DBMS

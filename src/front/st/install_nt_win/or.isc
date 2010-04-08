@@ -1,0 +1,1188 @@
+;                               INSTALL.ISC
+;
+;  SAMPLE INSTALLATION FILE WITH FORMAT NOTES
+;
+;  General Rules:
+;       1) Items in brackets '[' or ']' denote keywords used to define
+;	   sections of the install script or used to set internal flags.
+;       2) Comment lines begin with ';'
+;	3) Several pre-defined variables exist:
+;	    %0% : Target directory for the installed product.
+;	    %1% : In WINDOWS, the Windows directory; in OS2, the
+;		  current directory on the active hard disk.
+;	    %2% : In WINDOWS, the Windows System directory; in OS2, the
+;		  OS2 DLL directory
+;	    %3% : This is a bit flag representation of up to 32
+;		  components (groups) that show up on the selection
+;		  dialog.  Each bit, when 1 (starting from the lowest
+;		  bit) represents the respective option selected.
+;		  This can be used to pass the selection information
+;                 to another program when EXEC'd by the installer.
+;	    %4% : This is the drive of the target directory, to pass
+;                 to exec's or calls primarily.
+;	    %5% : The directory of the CA-APPS common tools.  Use this
+;		  as the target drive when installing common tools such
+;		  as CABL.DLL, etc.
+;	    %6% : The source subdirectory.
+;	    %7% : The boot drive.
+;	    %8% : The response file name.
+;           %9% : The machine (host) name for NT and Win95
+;	    %{any letter}% : The directory specified in the [directory]
+;		  section that matches that letter.
+;	4) MAX Disks	   = 100
+;	5) MAX Files	   = 10000
+;	6) MAX Directories = 625
+;
+;   NOTE:   If you are using help in a multi-product installation and using
+;           sub-scripts then you must have instos2.hlp file on the disk.
+;	    CA-Install will look on the disk and will Initialize the help
+;	    manager if it finds instos2.hlp. Otherwise, it will hide the help
+;	    button.
+;
+;   NOTE:   The new version of CA-INSTALL (3.2) is mostly backward compatible
+;	    with 3.0 and old scripts should be able to run without a problem.
+;	    Largest number of changes are made in the products section for
+;	    multi-product installation.
+;	    If you are moving from 3.0 to 3.2 the following sections are
+;	    changed. Please read the full discriptions of each section,
+;	    compare the changes and then update your 3.0 script files.
+;
+;		[progman]
+;		    OLD:
+;			FOR WINDOWS:
+;                       "n", "Parameter String", "icon caption", "Title","filename"
+;			FOR OS/2:
+;                       "n", "Parameter String", "Class", "icon caption", "Title","filename"
+;		    NEW:
+;			FOR BOTH OS:
+;                       "n", "Parameter String", "icon caption", "Class", "Title","filename"
+;		[products]
+;		    OLD:
+;                       "prod","appname","baseapp","comment"
+;		    NEW:
+;                       "prod","appname","baseapp","comment","flags","iscname","iscdisk"
+;		[environment]
+;		    OLD:
+;			env string
+;		    NEW:
+;                       "prog", "env"
+;		[call]
+;		    OLD:
+;                       "prog", "product", "comp-ID", "call", "prompt"
+;		    NEW:
+;                       "prog", "product", "comp-ID", "call", "prompt", "state"
+;		[exec]
+;		    OLD:
+;                       "product","exec","prompt"
+;		    NEW:
+;                       "prog","exec","prompt", "state"
+;
+;
+;   NOTE:   In 3.3 the file section has been changed.
+;
+;               [files]
+;		    OLD:
+;                       ;"n","prod","flags","d","idir","destfilename","PName","Description","Comment","size","finalsize"
+;;                   NEW:
+;                       ;"n","prod","flags","d","idir","destfilename","srcfilename","PName","Description","Comment","size";,"finalsize"
+;
+;   NOTE:   Licensing requires a DAT file to be created by the CA-Install.
+;           CA-Install creates a DAT file if BASEAPP name was given, LICENSE
+;           keyword was used and the file is encrypted.
+
+
+
+[setup]
+; Ingres/NT Installation
+;
+; OpenIngres/NT OpenROAD 3.5" Diskette Installation
+  "PACKAGENAME","OpenROAD Version 3.5"
+  "CAPTIONNAME","OpenROAD Installation"
+  "APPNAME", "OpenROAD"
+  "RELEASESTRING", "Version 3.5"
+;
+; The string, SPJWIN, in BASEAPP is used to generate the name of registration
+; key file.  The installation program concatnates this string, only the first
+; 7 characters are used, with "_.dat" and use the derived string as the name
+; of registration key file.  Therefore, this string should match the name of
+; your registration key file.
+; 
+  "BASEAPP", "OPINOR"
+  "COPYRIGHTSTR", "Copyright © 2005-2006 Ingres Corporation."
+  "PRODIDMATCH", "000000"
+; The following are new version identifiers for license checking.
+  "MAJORVERSION",  "2"
+  "MINORVERSION",  "0"
+  "REVLETTER",     "A"
+
+;
+; demo version and turn off registration
+;
+
+;[register_as_demo]
+
+;
+; education version
+;
+;[register_as_education]
+
+;Supported for backward compatibility. It has no effect.
+;[noregister]
+
+;
+; Don't display the splash screen when bringing up the product.
+;
+[nosplash]
+
+; The BYPASSUI flag, when present, prevents the user info dialog box
+; to come up.
+;
+;[bypassui]
+
+
+; The BYPASSPID flag, when present, prevents the product ID field from
+; being requested and displayed when asking for user info.
+;
+;[bypasspid]
+
+; The NOTCOMPLETE keyword specifies that after the install product is
+; finished we don't want to display an "Install Complete" message, since
+; the user will be doing more installation work via execs.
+;
+;[not_complete]
+
+; The SKIPWRITEKEY  keyword skips writing the keyfile information back
+; to the ORIGINAL keyfile on the source disks.	This is important for
+; products that will be installed from CD-ROM or other non-writable media.
+; This flag is set automatically if cd-rom key word is used.
+;
+[skipwritekey]
+
+; The CD-ROM  keyword makes all the destination files writeable and
+; does not allow the writeback of key file and the log files.
+; In other words it automatically sets the skipwritekey flag and
+; overrides the creation of the log files.
+;
+;[CD-ROM]
+
+
+; Use the BASIC_DLG key to bring up a dialog with the basic/advanced
+; selection.
+;
+;[basic_dlg]
+
+; The LOGFILE specifies a filename to use in the SOURCE directory to log
+; various installation information, such as the date and time, which
+; files were copied and/or compressed, errors, etc.
+; This keyword is disabled if cd-rom key word is used.
+;
+
+;[logfile]
+;"SPJINST.LOG"
+
+; The PRODUCT_LOG specifies a filename to use in the SOURCE directory to
+; log which products were installed, where, and when.
+; This keyword is disabled if cd-rom key word is used.
+;
+
+;[product_log]
+;"SPJPROD.LOG"
+
+; The RESPONSE command specifies a filename which contains canned responses
+; for the installer.  Look in the file RESPONSE.RSP for the syntax of
+; response files.
+;
+[response]
+"C:\RESPONSE.RSP"
+
+; The SKIPCAPPS command bypasses the prompt for CA-APPS common directory.
+; This should only be used if there are no common CA tools in your product,
+; and you do not wish the product to be "registered" in CAI.INI.
+;
+[skipcaapps]
+
+; The SKIPPLUGMSG skips the first message telling user to have a plug
+; ready if the installation method requires plugs.
+;
+[skipplugmsg]
+
+; The NOBACKLEVEL flag does not allow older versions of files to be
+; installed - the user gets no indication that files have been skippped.
+;
+[nobacklevel]
+
+; The USEMULTITITLE is used in multi-product installation. If it is used
+; then "CA-Multiple product installation" is displayed as title on the
+; product selection screen rather than the baseapp installation.
+;[usemultititle]
+
+
+;  The PRODUCTS keyword specifies which products are to be installed
+;  for multiple product installations.	If there is only one product
+;  to be installed, this keyword/section can be skipped, or it may
+;  be defined.	Products may be broken out further into components.
+;
+;  FORMAT:
+;
+;   "prod","appname","baseapp","comment","flags","iscname","iscdisk"
+;
+;   prod    : This is a one character string, A to Z, that uniquely identifies
+;	      each product.  This is checked against in in various other
+;	      sections.
+;   appname : This is an override for the setup string "APPNAME"
+;   baseapp : This is an override for the setup string "BASEAPP"
+;   comment : A longer description of the product.
+;   flags   : (Optional)Can be none, one, or many of the following:
+;		R   : Required product- Setup **will** copy this product.
+;		D   : Display this product in the User Selection Listbox.
+;		      This is the default option.
+;		T   : Turn off selection of this item as a default.
+;		U   : Do not ask for parent sub-directory. Use default.
+;               E   : Exclusive components
+;   iscname : (Optional) Seperate script file for this product.
+;   iscdisk : (Optional) Disk number iscname resides on.
+;   DATDir  : (Optional) Destination dir for the key file for this product.
+;
+;
+;       TO USE THE OPTIONAL INCLUDED SCRIPT FILE:
+;           External script files for multi-product installs is supported
+;           in this release.  These script files should only contain
+;           the [disks], [directories], [files], and [calls].  The
+;           primary script file must contain the products defined in
+;           the products section, and the [disks] section should have
+;           disk defined that contains the sub-script file.
+;
+;
+
+[products]
+"A","OpenIngres DBMS","DBMS","OpenIngres for Microsoft Windows NT DBMS","D"
+"B","OpenIngres Net","NET","OpenIngres for Microsoft Windows NT Net","D","NET.ISC","16"
+"C","OpenIngres Star","STAR","OpenIngres for Microsoft Windows NT Star","D","STAR.ISC","29"
+"D","OpenIngres ESQL/C","ESQLC","OpenIngres for Microsoft Windows NT ESQL/C","D","ESQLC.ISC","31"
+"E","OpenIngres ESQL/COBOL","COBOL","OpenIngres for Microsoft Windows NT ESQL/COBOL","D","COBOL.ISC","34"
+"F","OpenIngres Tools","TOOLS","OpenIngres for Microsoft Windows NT Tools","D","TOOLS.ISC","36"
+"G","OpenIngres Vision","VISION","OpenIngres for Microsoft Windows NT Vision","D","VISION.ISC","38"
+"H","OpenIngres Replicator","REP","OpenIngres for Microsoft Windows NT Replicator","D","REP.ISC","41"
+"I","OpenIngres ICE","ICE","OpenIngres for Microsoft Windows NT ICE","D","ICE.ISC","43"
+"J","OpenIngres OpenROAD","OR","OpenIngres for Microsoft Windows NT OpenROAD","D","OR.ISC","45"
+"K","HAHT Software HAHTsite","HAHT","OpenIngres for Microsoft Windows NT HAHTsite","D","HAHT.ISC","59"
+"L","Prophecy Americas Inc. Demo","PROPHECY","OpenIngres for Microsoft Windows NT Demo","D","PROPHECY.ISC","80"
+"M","Tactica Corporation Demo","TACTICA","OpenIngres for Microsoft Windows NT Demo","D","TACTICA.ISC","83"
+"N","Brio Technology Demo","BRIO","OpenIngres for Microsoft Windows NT Demo","D","BRIO.ISC","85"
+"O","Bluestone Software Demos","BLUE","OpenIngres for Microsoft Windows NT Demos","D","BLUE.ISC","90"
+"P","WRQ Inc. Reflection X","WRQ","OpenIngres for Microsoft Windows NT X","D","WRQ.ISC","103"
+"Q","Interactive Softare Systems Inc.","SAFARI","OpenIngres for Microsoft Windows NT Inc.","D","SAFARI.ISC","111"
+;END OR
+
+;  The license keyword specifies which license types are to be checked
+;
+;  FORMAT:
+;
+;   "prod","license_type","param1","param2"
+;
+;   prod    : This is a one character string, A to Z, that uniquely identifies
+;	      each product.  This is checked against in in various other
+;	      sections.
+;   license_type : "NO LICENSE"      - no checking
+;                  "USER COUNT"      - specifies concurrent users running
+;				       this product on a network
+;                  "PLUG"            - checks hardware plugs, or "dongles"
+;                  "SERIAL"          - not used yet
+;                  "STANDALONE"      - does not work on a network
+;                  "NETWORK"         - MUST run on a network
+;                  "TIME RESTRICTED" - product works for a specified time;
+;				       then must get a key from sales
+;                  "COUNTRY"         - country code is checked before running
+;   param1 :
+;	    USER COUNT:      The number of users that can be activated.
+;	    PLUG:	     This parameter specifies the byte offset in the
+;			     plug reserved for this product.  This should be
+;			     registered with config control and must match
+;			     the production of the plug.
+;	    COUNTRY:	     The country code that MUST be defined in the
+;			     system settings for the product to run.
+;	    TIME RESTRICTED: The number of days to let the product
+;			     run before requiring a key.
+;   param2 :
+;		PLUG: This is the release number of the product.  It has
+;		      no bearing on the displayed version number; all
+;		      products start out at 1 (even if it is release 6.2),
+;		      and new releases will increment that number by one.
+;		      The max value is 63.
+;
+;NOTE:  Licensing requires a DAT file to be created by the CA-Install.
+;       CA-Install creates a DAT file if BASEAPP name was given, LICENSE
+;       keyword was used and the file is encrypted.
+
+;[license]
+;"A", "PLUG", "20", "1"
+;"A", "COUNTRY", "1"
+
+;  The EXCLUSIVE keyword works in conjunction with the PRODUCTS keyword
+;  and determines whether or not the top-level products are mutually
+;  exclusive or not.  For instance, if there was a bundle of un-related
+;  products, you would NOT use the exclusive keyword; if only one
+;  product could be installed at a time you WOULD set the exclusive
+;  keyword.
+;
+;[exclusive]
+
+; Net License - don't use.  Changes the registration dialog.
+;[net_license]
+
+
+;  The BACKGROUND keyword specifies the colors or a bitmap to be displayed
+;  as the background of the install.
+;  If bit map is given it will override color schemes except for the title
+;  color.
+;
+;
+;  FORMAT:
+;   "dll","id256","id16","titleColor","bkColor","barColor"
+;
+;       dll         : Name of the DLL containing the background bitmaps.
+;                     The name of the DLL should be what it is on the disk.
+;                     e.g. compressed DLL may have an extension of .DL$
+;       id256       : Id of a 256 color bitmap.
+;       id16        : Id of a 16 color bitmap.
+;       titleColor  : Color of the title string.
+;       bkColor     : Color of the back ground. Include 'S' in the parameter
+;                     list if shaded background is required.
+;                     "R0G255B0S" will result in a shaded green screen.
+;       barColor    : Color of the bar running across the screen.
+;
+;  NOTE:
+;   The color must be a RGB value; e.g. R255G0B0 is red.
+;   Use Windows control panel/Color utility to see the RGB value of a
+;   color. In OS2 use color editing utility
+;
+
+;
+;[background]
+;"BACK.DL$","100","101","R0G0B0","SR0G0B255","R255G0B0"
+
+
+;  The SLIDESHOW keyword specifies a list of bitmaps to display, along
+;  with how long each one should last.	The bitmaps will display only
+;  while files are being copied.
+;
+;  FORMAT:
+;   bitmap DLL : The first line following the [slideshow] command
+;		 defines what DLL the bitmaps are to be loaded from.
+;
+;   bitmap_id, time, x, y
+;
+;       bitmap_id : The id of defined bitmaps that are built into
+;                   into the DLL via the .rc file.
+;	time	  : The time, in tenths of seconds, to display the bitmap.
+;	x	  : upper left x coordinate to display bitmap in dialog coords.
+;	y	  : upper left y coordinate to display bitmap in dialog coords.
+;
+;
+;[slideshow]
+;BOMBS.DLL
+;5000, 20, 20, 20
+;5001, 30, 20, 100
+
+;
+;  The SIGNATURE keyword checks for the existance of a file before
+;  the product is installed. This check can be used for upgrade products
+;  that require a previous version or competetive product or perhaps
+;  other required modules in a multi-module app.
+;
+;  If there is more than one file specified a list box will display the
+;  descriptions then ask the user to specify which product or file they have.
+;  Once specified at least one pattern at offset 1-n must match.
+;
+;  If your product is compressed use the compressed offset and match
+;  pattern as one pattern and the uncompressed as the other. This allows
+;  the user to just insert the original disk without the need to install
+;  the product. Also use multiple patterns for revisions of the product that
+;  have the same file name (i.e Rev SC4 Rev A,B,C).
+;
+;  If your product requires mutliple files use multiple [SIGNATURE] blocks.
+;  You should, of course, encrypt this file when using SIGNATURE blocks.
+;
+; "prod", "filename", "description", offset_1, "match_string_1",offset_2, "match_string_1"
+;       prod     - This is a one character string, A to Z, that uniquely identifies
+;	        each product.  This is checked against in in various other
+;	        sections.
+;	filename - full filename and optional drive and file extent
+;		program will check for existence of file on optional
+;		drive and path, if not found a dialog will ask for
+;		location.
+;
+;	Description
+;               Description of file to look for. I.e. "Harvard Project 1.0"
+;
+;	File Offset 1
+;		Offset in bytes expressed as decimal or hexidecimal
+;		if preceeded with 0x notation (123 or 0x40000)
+;	Match String 1
+;		String or byte pattern to look for at location file offset.
+;		Quoted string may contain ascii character or hexidecimal
+;               notation when preceeded with a "\" (i.e  \x07). A backslash
+;       is specified as "\\".
+;	Optional File Offset 2-n
+;	Optional Match String 2-n (up to 256 line length)
+;	EXAMPLE
+;	   [signature]
+;	   ; The following allows installation of SuperCalc if the user has
+;	   ; any previous version or Lotus 123 version 2.1
+;          "SC3.COM","SuperCalc3",0x128,"S/N0"
+;          "SC4.COM","SuperCalc4 Rev B, Installed",0x40000,"\xAE\x52\x01",0x128,"S/N"
+;          "SC5.COM","SuperCalc5 Revision A" ,0x122,"\xAE\x52\x01"
+;          "SC5.COM","SuperCalc5 Revision C" ,0x122,"\xdd\x52\x01"
+;          "123.EXE","Lotus 123",0x40000,"\xAE\x52\x01",0x128,"S/N"
+;
+;[signature]
+;"A", "spj.exe", "SuperProject Expert Version 1.00", 0x27100, ;"\x00\x0a\x00\x00\x00\x00\x00\x00", 0x27100, "\x00Cannot "
+;"A", "spj.exe", "SuperProject Expert Version 1.10", 0x27100, "\x32\x1f\xb3\x40\x36\x1f\xb3\x40"
+;"A", "spj.exe", "SuperProject Plus Version 2.00", 0x27100, "\xc7\x86\xda\x00\x00\x00\xc7\x86", ;0x27100, "\x46\x26\x8b\x04\x3d\x18\x00\x89", 0x27100, "\x4e\x02\x89\x56\x00\x8b\x86\xec"
+;"A", "spjplus.exe", "SuperProject Plus Version 3.00", 0x27100, "ral fail"
+;"A", "spj.exe", "SuperProject Version 1.10", 0x27100, "\x50\x53\x1e\xb8\xe0\x29\x50\x16", ;0x27100, "\x39\x05\x62\x1a\x51\x05\x62\x1a"
+;"A", "spj.exe", "SuperProject Version 2.00", 0x20000, "uare roo", 0x8fd0, "ay mappi", 0x9000, ;"ound wro", 0x8fd0, "ror (ove"
+;"A", "spjwin.exe", "SuperProject for Windows Version 2.00", 0x20000, ;"\x0a\x93\xba\x1b\x06\xa2\x25\x10", 0x20000, "\x8b\x46\xbc\x8b\x56\xbe\x01\x06"
+;"A", "spj.exe", "CA-SuperProject Version 2.10", 0x1ddd0, "Error:\x00O"
+
+
+; Specifies what disks are part of the installation.
+;
+;
+; Format:
+;
+; "n","path","name"
+;
+; n	: The disk number, 0-100
+; path  : The path of the disk, i.e. "A:\".  This will generally be
+;	  ignored since the path will be replaced if the user executes
+;	  the install from another drive.
+; name  : The name on the printed disk label you stick on,
+;         i.e. "KillerApp Disk #1"
+;
+
+[disks]
+"45","A:\","OpenIngres OpenROAD Disk #46"
+"46","A:\","OpenIngres OpenROAD Disk #47"
+"47","A:\","OpenIngres OpenROAD Disk #48"
+"48","A:\","OpenIngres OpenROAD Disk #49"
+"49","A:\","OpenIngres OpenROAD Disk #50"
+"50","A:\","OpenIngres OpenROAD Disk #51"
+"51","A:\","OpenIngres OpenROAD Disk #52"
+"52","A:\","OpenIngres OpenROAD Disk #53"
+"53","A:\","OpenIngres OpenROAD Disk #54"
+"54","A:\","OpenIngres OpenROAD Disk #55"
+"55","A:\","OpenIngres OpenROAD Disk #56"
+"56","A:\","OpenIngres OpenROAD Disk #57"
+"57","A:\","OpenIngres OpenROAD Disk #58"
+"58","A:\","OpenIngres OpenROAD Disk #59"
+;END OR
+
+;
+; This is where you indicate where to place the files.  There are
+; two types of directories: The parent, and children.  Children
+; must be from the parent, or from other children. There can
+; only be one parent, as many children as you like
+;
+;
+; Note: MAX number of dirs = 625 !!
+;
+; Note: To create empty directories use an null destination file name in file
+;       section.
+;
+; Format:
+;
+; "product","n","path","description"
+;
+; product     : The product identifier (for multiple product installs).
+;               If there is only one product, this value should be "A".
+; n	      : The directory Number. PARENT must be 0, and must exist.
+;               Children can have names A-ZZ.  Children start with backslash.
+; path        : The name of the subdirectory
+; description : The description of the purpose of this directory
+;
+; Note: "0", the parent, may be modified by the user.  This is reflected
+; in "0"'s value.
+;
+
+[directories]
+"J","0","C:\oping","OpenIngres C:\oping"
+"J","AA","\ingres\bin","OpenIngres \ingres\bin"
+"J","AB","\ingres\utility","OpenIngres \ingres\utility"
+"J","AC","\ingres\files","OpenIngres \ingres\files"
+"J","AE","\ingres\lib","OpenIngres \ingres\lib"
+"J","AI","\ingres\files\english","OpenIngres \ingres\files\english"
+"J","CH","\ingres","OpenIngres \ingres"
+"J","CQ","\ingres\bin\or_nt","OpenIngres \ingres\bin\or_nt"
+"J","CR","\ingres\bin\or_w95","OpenIngres \ingres\bin\or_w95"
+"J","CS","\ingres\files\deffiles","OpenIngres \ingres\files\deffiles"
+"J","CT","\ingres\files\w4gldemo","OpenIngres \ingres\files\w4gldemo"
+"J","CU","\ingres\sig\or","OpenIngres \ingres\sig\or"
+"J","CV","\ingres\w4glapps","OpenIngres \ingres\w4glapps"
+"J","CW","\ingres\w4glsamp\3gl","OpenIngres \ingres\w4glsamp\3gl"
+"J","CX","\ingres\w4glsamp\extevent","OpenIngres \ingres\w4glsamp\extevent"
+"J","CY","\ingres\w4glsamp\interop","OpenIngres \ingres\w4glsamp\interop"
+"J","CZ","\ingres\guides","OpenIngres \ingres\guides"
+;END OR
+
+
+;
+; This is where you place the information about each file to be
+; copied.
+;
+;
+; ----------------------------------------------------------------------------
+;
+; NOTE:  There are two types of setup: Simple and Complex.
+;
+;        Simple:  Installs ALL files, like a batch file.  For this       
+;                 setup, do not worry about "D" flags, "R" flags,
+;                 or the <nn> flag.
+;
+;        Complex: Presents the user with a dialog box allowing
+;                 them to install certain files.  All flags apply
+;                 in this case.                
+;
+;        For Group (or Component) definitions, ALL fields are required.
+;           For files following each group definition, only the first 6
+;           fields are required.  There should always be at least one
+;           group defined, using either the D, T, or R flag (these are
+;           mutually exclusive).
+;
+; NOTE:  To install files spanning multiple disks the first file should have
+;        normal paramter; e.g. "C" or "CD10IA" or "CR" etc. The remaining files
+;        must have "S" in their parameter list; e.g. "CS". The "S" flag tells
+;        CA-Install that this file is a part of a spanned file.
+;
+; Example of a spanned file:
+;
+;    "3","A","C","0","","BIGFILE.TXT","BIGFILE.001",""
+;    "4","A","CS","0","","BIGFILE.TXT","BIGFILE.002",""
+;    "5","A","CS","0","","BIGFILE.TXT","BIGFILE.003",""
+;    "6","A","CS","0","","BIGFILE.TXT","BIGFILE.004",""
+;
+; ----------------------------------------------------------------------------
+;
+; Format:
+;
+; "n","prod","flags","d","idir","destfilename","srcfilename","PName",
+;     "Description","Comment","size","finalsize", "iconfile","paramstr"
+;
+; n          : The disk number this file resides on
+;
+; prod	     : Product code which matches the product codes defined in the
+;	       [products] section.  If there is no products section, this
+;              value should be "A".
+;
+; flags      : Can be none, one, or many of the following:
+;
+;              R     : Required GROUP - Setup **will** copy all files
+;                      in this group.
+;              D     : Display this GROUP in the User Selection Listbox.
+;              T     : Turn off selection of this item as a default, but
+;                      show this in the list box as a group.
+;              C     : Compressed file. Use the "real" filename in this .ISC
+;		       file, setup will look for a filename with the last
+;                      character of the extension == '_'.
+;              Ic[t] : Add this program to ProgMan, group c. Group is A-Z
+;		       t is an optional parameter that can be either W, P,
+;		       or M (Windows, PM, or MS-DOS).
+;              N     : Minimize the executeable on start. Only valid if 'I'
+;                      paramter is specified to create icons. (Only for Windows)
+;	       nn    : The next nn entries are part of the group to copy,
+;		       for example, if there are four files for KillerApp,
+;		       all of which you copy or you dont, then you
+;		       would place 03 in this spot, and make the next
+;		       three entries be the other three files. The user
+;		       will see this entry as only one Object though.
+;	       On    : (Optional) If the product already exists on the
+;                      users computer this flag can be used to determine
+;		       CA-Install actions:
+;				    n = 0   Check time and dates of the
+;					    source and destination files
+;					    and then ask display a dialog
+;					    box for overwrite instructions if
+;					    the source file is older otherwise
+;					    copy file. (default).
+;				    n = 1   Always display a dialog box for
+;					    instructions.
+;				    n = 2   Replace destination file
+;					    with source file.
+;				    n = 3   Do not replace destination file
+;					    with source file.
+;	       V=n.nn: Install only if the operating system (i.e. Windows)
+;                      is this version or later. If n='S', then this will
+;                      check for the existence of Win32s, if n='N' this
+;                      will check for NT, if n='C' this will check for
+;                      Windows95 (Chicago).
+;
+;		       Examples:
+;
+;                      This example says "if running under Windows 3.0 then copy SPJWIN.EXE".
+;                      "0","A","C07DIAV=3.0","0","","SPJWIN.EXE","CA-SuperProject","Program Files","CA-SuperProject program, help and report files","2550", "2550"
+;
+;		       Copy this file if the version number greater than 2.0
+;                      "0","A","CV>2.0","0","","SPJLOGO.DLL",""
+;
+;		       The following is WRONG beacuse the version number and
+;                      file count can't go together.
+;                      "0","A","CV=3.007DIA","0","","SPJWIN.EXE","CA-SuperProject","Program Files","CA-SuperProject program, help and report files","2550", "2550"
+;              S     : Necessary if the file is spanning multiple disks and this
+;                      is not the first portion of the spanning file.
+;
+; d          : The destination directory. 0 = Parent, A-ZZ = Children, %5%
+;              for common tools
+;
+; idir       : The directory on the install disk
+;
+; destfilename: The actual name of the file. 12 chars MAX. This can be blank
+;               for the creation of empty sub-directories.
+;
+; srcfilename: The name of the file on disk. 12 chars MAX. (optional)
+;
+; PName      : The name of the Icon in Progman (required if D flag)
+;              32 chars MAX.
+;
+; Description: (Group Definitions Only)
+;              A short description, for the listbox entry (only if D flag)
+;              20 chars MAX.
+;
+; Comment    : (Group Definitions Only)
+;              The lengthy text displayed in the Comment box (only if D flag)
+;	       80 chars MAX.
+;
+; size       : (Group Definitions Only)
+;              Size of file/group actually copied in K
+;
+; finalsize  : (Group Definitions Only)
+;              The ulitmate file size of file/group in K. Usually different if
+;	       there are other processes which will expand or implode files
+;	       after the install program is finished.  Another use is to
+;	       account for the sector size of hard disks; for instance,
+;	       20 files with a length of 10 bytes would show up in the
+;              "size" parameter as 200 bytes (1K), but if installed on a hard
+;	       disk with an 8K sector size the actual used space would be
+;	       20 * 8K = 160K.
+;
+; iconfile   : Fully qualified path to an icon file name. It is only valid if
+;              'I' parameter is used in the flags section. ( optional )
+;
+; paramstr   : The command-line parameters to attach to the program when
+;              associating with an icon. (optional)
+;
+
+[files]
+"45","J","RCO0","%5%","","CAINLOGS.DLL","CAINLOGS.DL_","","","","1","1","",""
+"45","J","RCO0","%5%","","CAIN4SHL.DLL","CAIN4SHL.DL_","","","","1","1","",""
+"45","J","RCO0","%5%","","CALM_W32.DLL","CALM_W32.DL_","","","","1","1","",""
+"45","J","RCO0","%5%","","CATOCFGE.EXE","CATOCFGE.EX_","","","","1","1","",""
+"45","J","RCO0","%5%","","CATOPATH.EXE","CATOPATH.EX_","","","","1","1","",""
+"45","J","RCO2","CH","ingres","OVERVIEW.WRI","OVERVIEW.WR_","","","","38","38","",""
+"46","J","RCO2","CH","ingres","W4GLDEV.REL","W4GLDEV.RE_","","","","1","1","",""
+"46","J","RCO2","CH","ingres","W4GLRUN.REL","W4GLRUN.RE_","","","","1","1","",""
+"46","J","RCO2","AA","bin","ADF32_1.DLL","ADF32_1.DL_","","","","286","286","",""
+"46","J","RCO2","AA","bin","APPLYTMP.ICO","APPLYTMP.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","CAICLEAN.EXE","CAICLEAN.EX_","","","","9","9","",""
+"46","J","RCO2","AA","bin","CAIZAP32.EXE","CAIZAP32.EX_","","","","20","20","",""
+"46","J","RCO2","AA","bin","CL32_1.DLL","CL32_1.DL_","","","","308","308","",""
+"46","J","RCO2","AA","bin","COMPILE.ICO","COMPILE.IC_","","","","2","2","",""
+"46","J","RCO2","AA","bin","CREATEAP.ICO","CREATEAP.IC_","","","","2","2","",""
+"46","J","RCO2","AA","bin","DEMOBLDR.ICO","DEMOBLDR.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","DESTROY.ICO","DESTROY.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","DEV.ICO","DEV.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","DOCU_APP.ICO","DOCU_APP.IC_","","","","2","2","",""
+"46","J","RCO2","AA","bin","ESQLCOR.EXE","ESQLCOR.EX_","","","","497","497","",""
+"46","J","RCO2","AA","bin","EXPORTAP.ICO","EXPORTAP.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","FRN32_1.DLL","FRN32_1.DL_","","","","237","237","",""
+"46","J","RCO2","AA","bin","IIGCC.ICO","IIGCC.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","IIGCN.ICO","IIGCN.IC_","","","","2","2","",""
+"46","J","RCO2","AA","bin","IIRUNGCC.BAT","IIRUNGCC.BA_","","","","1","1","",""
+"46","J","RCO2","AA","bin","IIRUNGCN.BAT","IIRUNGCN.BA_","","","","1","1","",""
+"46","J","RCO2","AA","bin","IMPORTAP.ICO","IMPORTAP.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","INTROP32.DLL","INTROP32.DL_","","","","57","57","",""
+"46","J","RCO2","AA","bin","LIBQ32_1.DLL","LIBQ32_1.DL_","","","","293","293","",""
+"46","J","RCO2","AA","bin","MAKEIMG.ICO","MAKEIMG.IC_","","","","2","2","",""
+"46","J","RCO2","AA","bin","MONIMAGE.ICO","MONIMAGE.IC_","","","","2","2","",""
+"46","J","RCO2","AA","bin","NETU.ICO","NETU.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","NETU2.EXE","NETU2.EX_","","","","74","74","",""
+"46","J","RCO2","AA","bin","NETU2.INI","NETU2.IN_","","","","1","1","",""
+"46","J","RCO2","AA","bin","PURGEAP.ICO","PURGEAP.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","QUERYIMG.ICO","QUERYIMG.IC_","","","","2","2","",""
+"46","J","RCO2","AA","bin","RUNDBAPP.ICO","RUNDBAPP.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","RUNIMAGE.ICO","RUNIMAGE.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","TMOR.EXE","TMOR.EX_","","","","407","407","",""
+"46","J","RCO2","AA","bin","UPGRADEF.ICO","UPGRADEF.IC_","","","","1","1","",""
+"46","J","RCO2","AA","bin","USERFILE.EXE","USERFILE.EX_","","","","24","24","",""
+"46","J","RCO2","AA","bin","VER_APP.ICO","VER_APP.IC_","","","","1","1","",""
+"47","J","RCO2","AA","bin","W4GL32_1.DLL","W4GL32_1.DL_","","","","2904","2904","",""
+"47","J","RCO2","AA","bin","W4GLACC.DLL","W4GLACC.DL_","","","","6","6","",""
+"47","J","RCO2","AA","bin","W4GLDEV.EXE","W4GLDEV.EX_","","","","17","17","",""
+"48","J","RCO2","AA","bin","W4GLRUN.EXE","W4GLRUN.EX_","","","","2356","2356","",""
+"48","J","RCO2","AA","bin","W4GLRUNU.EXE","W4GLRUNU.EX_","","","","30","30","",""
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Compileapp","","","63","63","%0%\ingres\bin\compile.ico","Compileapp W4GLUTIL.EXE compileapp"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Createapp","","","63","63","%0%\ingres\bin\createap.ico","Createapp W4GLUTIL.EXE createapp"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Destroyapp","","","63","63","%0%\ingres\bin\destroy.ico","Destroyapp W4GLUTIL.EXE destroyapp"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Development 3.5","","","63","63","%0%\ingres\bin\dev.ico","Development 3.5 W4GLUTIL.EXE"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Documentapp","","","63","63","%0%\ingres\bin\docu_app.ico","Documentapp W4GLUTIL.EXE documentapp"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Exportapp","","","63","63","%0%\ingres\bin\exportap.ico","Exportapp W4GLUTIL.EXE exportapp"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Importapp","","","63","63","%0%\ingres\bin\importap.ico","Importapp W4GLUTIL.EXE importapp"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Makeimage","","","63","63","%0%\ingres\bin\makeimg.ico","Makeimage W4GLUTIL.EXE makeimage"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Monimage","","","63","63","%0%\ingres\bin\monimage.ico","Monimage W4GLUTIL.EXE monimage"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Purgeapp","","","63","63","%0%\ingres\bin\purgeap.ico","Purgeapp W4GLUTIL.EXE purgeapp"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Queryimage","","","63","63","%0%\ingres\bin\queryimg.ico","Queryimage W4GLUTIL.EXE queryimage"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Rundbapp","","","63","63","%0%\ingres\bin\rundbapp.ico","Rundbapp W4GLUTIL.EXE rundbapp"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Runimage","","","63","63","%0%\ingres\bin\runimage.ico","Runimage W4GLUTIL.EXE runimage"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Versionapp","","","63","63","%0%\ingres\bin\ver_app.ico","Versionapp W4GLUTIL.EXE versionapp"
+"48","J","RCO2IJ","AA","bin","W4GLUTIL.EXE","W4GLUTIL.EX_","Demobuilder","","","63","63","%0%\ingres\bin\demobldr.ico","Demobuilder W4GLUTIL.EXE demobuilder"
+"48","J","RCO2","CQ","or_nt","GCA32_1.DLL","GCA32_1.DL_","","","","41","41","",""
+"48","J","RCO2","CR","or_w95","GCA32_1.DLL","GCA32_1.DL_","","","","42","42","",""
+"48","J","RCO2","AC","files","APPED.CTB","APPED.CT_","","","","2","2","",""
+"48","J","RCO2","AC","files","APPED2.FF","APPED2.F_","","","","9","9","",""
+"48","J","RCO2","AC","files","APPEDTT.FF","APPEDTT.F_","","","","11","11","",""
+"48","J","RCO2","AC","files","APPEDTT2.FF","APPEDTT2.F_","","","","11","11","",""
+"48","J","RCO2","AC","files","TIFFTBLS.DAT","TIFFTBLS.DA_","","","","138","138","",""
+"48","J","RCO2","AC","files","W4GL2ACC.KBD","W4GL2ACC.KB_","","","","2","2","",""
+"48","J","RCO2","AC","files","W4GL3ACC.KBD","W4GL3ACC.KB_","","","","2","2","",""
+"48","J","RCO2","AC","files","W4GLEXT.H","W4GLEXT._","","","","1","1","",""
+"48","J","RCO2","AC","files","WDEPTH4.CTB","WDEPTH4.CT_","","","","2","2","",""
+"48","J","RCO2","AC","files","WDEPTH8.CTB","WDEPTH8.CT_","","","","2","2","",""
+"48","J","RCO2IJ","AC","files","W4GL.LOG","W4GL.LO_","W4GL LOG","","","1","1","%0%\ingres\files\w4gl.log",""
+"48","J","RCO2","CS","deffiles","BACKUPAP.DEF","BACKUPAP.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","COMPILEA.DEF","COMPILEA.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","CREATEAP.DEF","CREATEAP.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","DESTROYA.DEF","DESTROYA.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","DOCUMENT.DEF","DOCUMENT.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","MAKE3GLT.DEF","MAKE3GLT.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","MAKEIMAG.DEF","MAKEIMAG.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","PURGEAPP.DEF","PURGEAPP.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","QUERYIMA.DEF","QUERYIMA.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","RUNDBAPP.DEF","RUNDBAPP.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","RUNIMAGE.DEF","RUNIMAGE.DE_","","","","1","1","",""
+"48","J","RCO2","CS","deffiles","VERSIONA.DEF","VERSIONA.DE_","","","","1","1","",""
+"49","J","RCO2","AI","english","APPED.HLP","APPED.HL_","","","","4707","4707","",""
+"49","J","RCO2","AI","english","FAST_V3.MNX","FAST_V3.MN_","","","","45","45","",""
+"49","J","RCO2","AI","english","FW4GV3.MNX","FW4GV3.MN_","","","","20","20","",""
+"50","J","RCO2","AI","english","SLOW_V3.MNX","SLOW_V3.MN_","","","","1311","1311","",""
+"50","J","RCO2","AI","english","SW4GV3.MNX","SW4GV3.MN_","","","","1231","1231","",""
+"50","J","RCO2","CT","w4gldemo","ADAMS.GIF","ADAMS.GI_","","","","60","60","",""
+"50","J","RCO2","CT","w4gldemo","CALCULAT.GIF","CALCULAT.GI_","","","","48","48","",""
+"50","J","RCO2","CT","w4gldemo","CALZ2.GIF","CALZ2.GI_","","","","57","57","",""
+"50","J","RCO2","CT","w4gldemo","CHECKS.GIF","CHECKS.GI_","","","","70","70","",""
+"50","J","RCO2","CT","w4gldemo","CHR.GIF","CHR.GI_","","","","1","1","",""
+"50","J","RCO2","CT","w4gldemo","CHR2.GIF","CHR2.GI_","","","","1","1","",""
+"50","J","RCO2","CT","w4gldemo","CHRYLEB.GIF","CHRYLEB.GI_","","","","34","34","",""
+"50","J","RCO2","CT","w4gldemo","CHRYLETN.GIF","CHRYLETN.GI_","","","","5","5","",""
+"50","J","RCO2","CT","w4gldemo","CHRYTC.GIF","CHRYTC.GI_","","","","31","31","",""
+"50","J","RCO2","CT","w4gldemo","CHRYTCTN.GIF","CHRYTCTN.GI_","","","","5","5","",""
+"50","J","RCO2","CT","w4gldemo","CLIPSCAP.GIF","CLIPSCAP.GI_","","","","74","74","",""
+"50","J","RCO2","CT","w4gldemo","COLORCZN.GIF","COLORCZN.GI_","","","","57","57","",""
+"51","J","RCO2","CT","w4gldemo","COLORPAP.GIF","COLORPAP.GI_","","","","70","70","",""
+"51","J","RCO2","CT","w4gldemo","CUSTORDR.EXP","CUSTORDR.EX_","","","","532","532","",""
+"51","J","RCO2","CT","w4gldemo","CUTTER.GIF","CUTTER.GI_","","","","61","61","",""
+"51","J","RCO2","CT","w4gldemo","CVCAVSD.GIF","CVCAVSD.GI_","","","","25","25","",""
+"51","J","RCO2","CT","w4gldemo","CVCAVSTN.GIF","CVCAVSTN.GI_","","","","6","6","",""
+"51","J","RCO2","CT","w4gldemo","DOSGCARV.GIF","DOSGCARV.GI_","","","","31","31","",""
+"51","J","RCO2","CT","w4gldemo","DOSGCATN.GIF","DOSGCATN.GI_","","","","5","5","",""
+"51","J","RCO2","CT","w4gldemo","ERASERS.GIF","ERASERS.GI_","","","","61","61","",""
+"51","J","RCO2","CT","w4gldemo","FLOPPY2.GIF","FLOPPY2.GI_","","","","57","57","",""
+"51","J","RCO2","CT","w4gldemo","FORD.GIF","FORD.GI_","","","","1","1","",""
+"51","J","RCO2","CT","w4gldemo","FORD2.GIF","FORD2.GI_","","","","1","1","",""
+"51","J","RCO2","CT","w4gldemo","FORD4DR.GIF","FORD4DR.GI_","","","","25","25","",""
+"51","J","RCO2","CT","w4gldemo","FORD4DTN.GIF","FORD4DTN.GI_","","","","4","4","",""
+"51","J","RCO2","CT","w4gldemo","FORDEXP.GIF","FORDEXP.GI_","","","","47","47","",""
+"51","J","RCO2","CT","w4gldemo","FORDEXTN.GIF","FORDEXTN.GI_","","","","6","6","",""
+"51","J","RCO2","CT","w4gldemo","FORDWDST.GIF","FORDWDST.GI_","","","","49","49","",""
+"51","J","RCO2","CT","w4gldemo","FORDWDTN.GIF","FORDWDTN.GI_","","","","7","7","",""
+"51","J","RCO2","CT","w4gldemo","GM.GIF","GM.GI_","","","","1","1","",""
+"51","J","RCO2","CT","w4gldemo","GM2.GIF","GM2.GI_","","","","1","1","",""
+"51","J","RCO2","CT","w4gldemo","GRANT.GIF","GRANT.GI_","","","","46","46","",""
+"51","J","RCO2","CT","w4gldemo","HANDSTYP.GIF","HANDSTYP.GI_","","","","67","67","",""
+"51","J","RCO2","CT","w4gldemo","KNIFE.GIF","KNIFE.GI_","","","","77","77","",""
+"51","J","RCO2","CT","w4gldemo","MERLIN.GIF","MERLIN.GI_","","","","49","49","",""
+"51","J","RCO2","CT","w4gldemo","MONROED.GIF","MONROED.GI_","","","","45","45","",""
+"51","J","RCO2","CT","w4gldemo","MONROEJ.GIF","MONROEJ.GI_","","","","44","44","",""
+"51","J","RCO2","CT","w4gldemo","MOTORS.EXP","MOTORS.EX_","","","","1724","1724","",""
+"51","J","RCO2","CT","w4gldemo","NISS.GIF","NISS.GI_","","","","1","1","",""
+"51","J","RCO2","CT","w4gldemo","NISS2.GIF","NISS2.GI_","","","","1","1","",""
+"51","J","RCO2","CT","w4gldemo","NISS300Z.GIF","NISS300Z.GI_","","","","30","30","",""
+"51","J","RCO2","CT","w4gldemo","NISS30TN.GIF","NISS30TN.GI_","","","","4","4","",""
+"51","J","RCO2","CT","w4gldemo","NISSPATH.GIF","NISSPATH.GI_","","","","62","62","",""
+"51","J","RCO2","CT","w4gldemo","NISSPATN.GIF","NISSPATN.GI_","","","","7","7","",""
+"52","J","RCO2","CT","w4gldemo","NISSQUES.GIF","NISSQUES.GI_","","","","61","61","",""
+"52","J","RCO2","CT","w4gldemo","NISSQUTN.GIF","NISSQUTN.GI_","","","","8","8","",""
+"52","J","RCO2","CT","w4gldemo","OLD88.GIF","OLD88.GI_","","","","8","8","",""
+"52","J","RCO2","CT","w4gldemo","OLD88TN.GIF","OLD88TN.GI_","","","","8","8","",""
+"52","J","RCO2","CT","w4gldemo","PALMRECD.GIF","PALMRECD.GI_","","","","57","57","",""
+"52","J","RCO2","CT","w4gldemo","PCBONNSE.GIF","PCBONNSE.GI_","","","","22","22","",""
+"52","J","RCO2","CT","w4gldemo","PCBONNTN.GIF","PCBONNTN.GI_","","","","5","5","",""
+"52","J","RCO2","CT","w4gldemo","PCFBRDCV.GIF","PCFBRDCV.GI_","","","","15","15","",""
+"52","J","RCO2","CT","w4gldemo","PCFBRDTN.GIF","PCFBRDTN.GI_","","","","4","4","",""
+"52","J","RCO2","CT","w4gldemo","PENZADD.GIF","PENZADD.GI_","","","","58","58","",""
+"52","J","RCO2","CT","w4gldemo","PENZZZ2.GIF","PENZZZ2.GI_","","","","67","67","",""
+"52","J","RCO2","CT","w4gldemo","PLYGVOTN.GIF","PLYGVOTN.GI_","","","","7","7","",""
+"52","J","RCO2","CT","w4gldemo","PLYGVOY.GIF","PLYGVOY.GI_","","","","29","29","",""
+"52","J","RCO2","CT","w4gldemo","PLYNECP.GIF","PLYNECP.GI_","","","","13","13","",""
+"52","J","RCO2","CT","w4gldemo","PLYNECTN.GIF","PLYNECTN.GI_","","","","3","3","",""
+"52","J","RCO2","CT","w4gldemo","PUSHPINS.GIF","PUSHPINS.GI_","","","","60","60","",""
+"52","J","RCO2","CT","w4gldemo","ROLODEX.GIF","ROLODEX.GI_","","","","56","56","",""
+"52","J","RCO2","CT","w4gldemo","SIS.EXP","SIS.EX_","","","","429","429","",""
+"52","J","RCO2","CT","w4gldemo","VANBUREN.GIF","VANBUREN.GI_","","","","50","50","",""
+"52","J","RCO2","CT","w4gldemo","VID1.GIF","VID1.GI_","","","","10","10","",""
+"52","J","RCO2","CT","w4gldemo","VID1.TXT","VID1.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID10.GIF","VID10.GI_","","","","11","11","",""
+"52","J","RCO2","CT","w4gldemo","VID10.TXT","VID10.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID11.GIF","VID11.GI_","","","","13","13","",""
+"52","J","RCO2","CT","w4gldemo","VID11.TXT","VID11.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID12.GIF","VID12.GI_","","","","5","5","",""
+"52","J","RCO2","CT","w4gldemo","VID12.TXT","VID12.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID13.GIF","VID13.GI_","","","","6","6","",""
+"52","J","RCO2","CT","w4gldemo","VID13.TXT","VID13.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID14.GIF","VID14.GI_","","","","5","5","",""
+"52","J","RCO2","CT","w4gldemo","VID14.TXT","VID14.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID15.GIF","VID15.GI_","","","","20","20","",""
+"52","J","RCO2","CT","w4gldemo","VID15.TXT","VID15.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID16.GIF","VID16.GI_","","","","15","15","",""
+"52","J","RCO2","CT","w4gldemo","VID16.TXT","VID16.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID17.GIF","VID17.GI_","","","","11","11","",""
+"52","J","RCO2","CT","w4gldemo","VID17.TXT","VID17.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID18.GIF","VID18.GI_","","","","10","10","",""
+"52","J","RCO2","CT","w4gldemo","VID18.TXT","VID18.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID19.GIF","VID19.GI_","","","","9","9","",""
+"52","J","RCO2","CT","w4gldemo","VID19.TXT","VID19.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID2.GIF","VID2.GI_","","","","5","5","",""
+"52","J","RCO2","CT","w4gldemo","VID2.TXT","VID2.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID20.GIF","VID20.GI_","","","","6","6","",""
+"52","J","RCO2","CT","w4gldemo","VID20.TXT","VID20.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID21.GIF","VID21.GI_","","","","9","9","",""
+"52","J","RCO2","CT","w4gldemo","VID21.TXT","VID21.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID22.GIF","VID22.GI_","","","","8","8","",""
+"52","J","RCO2","CT","w4gldemo","VID22.TXT","VID22.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID23.GIF","VID23.GI_","","","","6","6","",""
+"52","J","RCO2","CT","w4gldemo","VID23.TXT","VID23.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID24.GIF","VID24.GI_","","","","9","9","",""
+"52","J","RCO2","CT","w4gldemo","VID24.TXT","VID24.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID25.GIF","VID25.GI_","","","","4","4","",""
+"52","J","RCO2","CT","w4gldemo","VID25.TXT","VID25.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID26.GIF","VID26.GI_","","","","4","4","",""
+"52","J","RCO2","CT","w4gldemo","VID26.TXT","VID26.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID27.GIF","VID27.GI_","","","","5","5","",""
+"52","J","RCO2","CT","w4gldemo","VID27.TXT","VID27.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID28.GIF","VID28.GI_","","","","12","12","",""
+"52","J","RCO2","CT","w4gldemo","VID28.TXT","VID28.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID29.GIF","VID29.GI_","","","","10","10","",""
+"52","J","RCO2","CT","w4gldemo","VID29.TXT","VID29.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID3.GIF","VID3.GI_","","","","9","9","",""
+"52","J","RCO2","CT","w4gldemo","VID3.TXT","VID3.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID30.GIF","VID30.GI_","","","","4","4","",""
+"52","J","RCO2","CT","w4gldemo","VID30.TXT","VID30.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID31.GIF","VID31.GI_","","","","8","8","",""
+"52","J","RCO2","CT","w4gldemo","VID31.TXT","VID31.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID32.GIF","VID32.GI_","","","","7","7","",""
+"52","J","RCO2","CT","w4gldemo","VID32.TXT","VID32.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID33.GIF","VID33.GI_","","","","6","6","",""
+"52","J","RCO2","CT","w4gldemo","VID33.TXT","VID33.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID34.GIF","VID34.GI_","","","","12","12","",""
+"52","J","RCO2","CT","w4gldemo","VID34.TXT","VID34.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID35.GIF","VID35.GI_","","","","7","7","",""
+"52","J","RCO2","CT","w4gldemo","VID35.TXT","VID35.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID4.GIF","VID4.GI_","","","","9","9","",""
+"52","J","RCO2","CT","w4gldemo","VID4.TXT","VID4.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID5.GIF","VID5.GI_","","","","9","9","",""
+"52","J","RCO2","CT","w4gldemo","VID5.TXT","VID5.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID6.GIF","VID6.GI_","","","","11","11","",""
+"52","J","RCO2","CT","w4gldemo","VID6.TXT","VID6.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID7.GIF","VID7.GI_","","","","8","8","",""
+"52","J","RCO2","CT","w4gldemo","VID7.TXT","VID7.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID8.GIF","VID8.GI_","","","","5","5","",""
+"52","J","RCO2","CT","w4gldemo","VID8.TXT","VID8.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VID9.GIF","VID9.GI_","","","","9","9","",""
+"52","J","RCO2","CT","w4gldemo","VID9.TXT","VID9.TX_","","","","1","1","",""
+"52","J","RCO2","CT","w4gldemo","VIDEOS.EXP","VIDEOS.EX_","","","","1005","1005","",""
+"52","J","RCO2","CT","w4gldemo","WAITFORD.GIF","WAITFORD.GI_","","","","50","50","",""
+"52","J","RCO2","CT","w4gldemo","WILSON.GIF","WILSON.GI_","","","","50","50","",""
+"52","J","RCO2","CU","or","TRANSLAT.IMG","TRANSLAT.IM_","","","","13","13","",""
+"52","J","RCO2","CU","or","TRANSLAT.WRI","TRANSLAT.WR_","","","","4","4","",""
+"52","J","RCO2","AB","utility","iisuor.bat","iisuor.ba_","","","","2","2","",""
+"53","J","RCO2","CV","w4glapps","APPED.IMG","APPED.IM_","","","","2210","2210","",""
+"53","J","RCO2","CV","w4glapps","APPLYTMP.IMG","APPLYTMP.IM_","","","","42","42","",""
+"53","J","RCO2","CV","w4glapps","CORE.PLB","CORE.PL_","","","","1387","1387","",""
+"53","J","RCO2","CV","w4glapps","DEMOBLDR.IMG","DEMOBLDR.IM_","","","","401","401","",""
+"53","J","RCO2","CV","w4glapps","FINANCE.PKG","FINANCE.PK_","","","","203","203","",""
+"54","J","RCO2","CV","w4glapps","IIDEBUG.IMG","IIDEBUG.IM_","","","","418","418","",""
+"54","J","RCO2","CV","w4glapps","IISCRED.IMG","IISCRED.IM_","","","","99","99","",""
+"54","J","RCO2","CV","w4glapps","IIUTIL.IMG","IIUTIL.IM_","","","","258","258","",""
+"54","J","RCO2","CV","w4glapps","MASTDETL.PKG","MASTDETL.PK_","","","","2796","2796","",""
+"54","J","RCO2","CV","w4glapps","MISC.PKG","MISC.PK_","","","","237","237","",""
+"54","J","RCO2","CV","w4glapps","STAT.PKG","STAT.PK_","","","","41","41","",""
+"54","J","RCO2","CW","3gl","3GL.WRI","3GL.WR_","","","","4","4","",""
+"54","J","RCO2","CW","3gl","MAKEFILE","MAKEFILE","","","","1","1","",""
+"54","J","RCO2","CW","3gl","SAMP3GL.C","SAMP3GL._","","","","16","16","",""
+"54","J","RCO2","CW","3gl","SAMP3GL.DEF","SAMP3GL.DE_","","","","1","1","",""
+"54","J","RCO2","CW","3gl","TEST_3GL.EXP","TEST_3GL.EX_","","","","70","70","",""
+"54","J","RCO2","CX","extevent","EXTEV.H","EXTEV._","","","","1","1","",""
+"54","J","RCO2","CX","extevent","EXTEVENT.C","EXTEVENT._","","","","3","3","",""
+"54","J","RCO2","CX","extevent","EXTEVENT.EXP","EXTEVENT.EX_","","","","27","27","",""
+"54","J","RCO2","CX","extevent","EXTEVENT.RC","EXTEVENT.R_","","","","1","1","",""
+"54","J","RCO2","CX","extevent","EXTEVENT.WRI","EXTEVENT.WR_","","","","5","5","",""
+"54","J","RCO2","CX","extevent","MAKEFILE","MAKEFILE","","","","2","2","",""
+"54","J","RCO2","CY","interop","INTEROP.EXP","INTEROP.EX_","","","","57","57","",""
+"54","J","RCO2","CY","interop","INTEROP.WRI","INTEROP.WR_","","","","48","48","",""
+"54","J","RCO2","AE","lib","ESQLC.LIB","ESQLC.LI_","","","","200","200","",""
+"54","J","RCO2","CZ","guides","CAOR.CNT","CAOR.CN_","","","","1","1","",""
+"54","J","RCO2IJ","CZ","guides","CAOR.HLP","CAOR.HL_","OpenROAD HELP","","","7","7","%0%\ingres\guides\CAOR.HLP",""
+"54","J","RCO2","CZ","guides","ORDG.CNT","ORDG.CN_","","","","7","7","",""
+"54","J","RCO2","CZ","guides","ORDG.HLP","ORDG.HL_","","","","238","238","",""
+"55","J","RCO2","CZ","guides","ORPG.CNT","ORPG.CN_","","","","36","36","",""
+"55","J","RCO2","CZ","guides","ORPG.HLP","ORPG.HL_","","","","3218","3218","",""
+"55","J","RCO2","CZ","guides","ORTR.CNT","ORTR.CN_","","","","5","5","",""
+"56","J","RCO2","CZ","guides","ORTR.HLP","ORTR.HL_","","","","2676","2676","",""
+"56","J","RCO2","CZ","guides","ORUG.CNT","ORUG.CN_","","","","33","33","",""
+"57","J","1RCO2","CZ","","ORUG.HLP","ORUG.001","","","","5846","5846","",""
+"58","J","SCO2","CZ","","ORUG.HLP","ORUG.002","","","","1","1","",""
+;END OR
+
+;
+; This defines the progman groups that the apps above will be added to
+;
+; Format:
+;
+; "n", "Parameter String", "icon caption", "Class", "Title","filename","flags","iconfile"
+;
+; n		  : The number of the group, A-Z, or the name of the .exe
+;		    file with path.
+; parameter string: The default parameters (in a string)
+; icon caption    : The string displayed below the icon.  Only needed if
+;		    an external program is set up (such as winhelp).
+;                   Should be empty if not an external program.
+; class (OS2 ONLY): A user specified object class for objects owned by this
+;                   group.  The default should be "WPProgram".
+; title           : The caption on the group window
+; filename	  : The name of the .GRP file.
+; flags           : Can be none, one, or many of the following:
+;
+;                   N   :   Minimize the executeable on start. Only valid if
+;                           if a name of an .exe was provided in 'n' parameter.
+;                           (Only for Windows)
+; iconfile        : Fully qualified path to an icon file name. It is only valid
+;                   if a name of an .exe was provided in 'n' parameter. (optional)
+;
+; NOTE:     There are two ways for creating icons. Either by putting using 'I'
+;           flag in the flags parameter of the files section or providing an exe
+;           name in the 'n' paramter of the progman section. If files section was
+;           used to specify the progman id then icon file name will be taken from
+;           there. Otherwise, if exe name was provided in the 'n' paramter the
+;           'iconfile' paramter in progman section will be used.
+;
+;
+
+[progman]
+
+; The ENVIRONMENT section describes changes to run-time environment variables
+; to be issued.
+;
+;   NOT SUPPORTED FOR WINDOWS!
+;
+; Format:
+;
+;   "prog", "env"
+;
+;   prog    : The program identifier - ( used in call, precall or exec )
+;   env     : Environment string.
+;
+;[environment]
+;"A","PATH=C:\SPJWIN;%PATH%"
+
+;
+; The [precall] section specifies a program to be run before copying any files.
+; It must appear on the line following the [precall] header.
+; The entire line is passed to the system.  Args can be included, as well as
+; any level of path spec desired.
+;
+; Format:
+;
+;   "prog", "precall", "prompt", "state"
+;
+;   prog    : The program identifier - OS/2 only (from environment )
+;   precall : The call string, including all command line parameters
+;   prompt  : A yes/no prompt - if no, the exec will not be issued, otherwise
+;	      it will be executed.
+;   state   : 0 = Visible; 1 = Invisible;
+;	      Note: In Windows all dos programs are controlled by PIF files.
+;	      Note: Once the program has been started it can activate itself
+;		    and become visible.
+;
+;[precall]
+;"A", "notepad.exe %0%\readme.prn","Do you want to view the readme file now?",0
+
+
+;
+; The [call] section specifies a program to be run before the end of the
+; successful install.  It must appear on the line following the [call] header.
+; The entire line is passed to the system.  Args can be included, as well as
+; any level of path spec desired.
+;
+; Format:
+;
+;   "prog", "product", "comp-ID", "call", "prompt", "state"
+;
+;   prog    : The program identifier - OS/2 only (from environment )
+;   product : The product identifier - only if installing this product will
+;             this exec be issued.  "0" signifies to execute this command
+;	      regardless of which products were installed.
+;   comp-ID : The component identifier - only if installing this component of
+;             this product will this exec be issued.  "0" signifies to execute
+;             this command regardless of which components were installed.
+;   call    : The call string, including all command line parameters
+;   prompt  : A yes/no prompt - if no, the exec will not be issued, otherwise
+;	      it will be executed.
+;   state   : 0 = Visible; 1 = Invisible;
+;	      Note: In Windows all dos programs are controlled by PIF files.
+;	      Note: Once the program has been started it can activate itself
+;		    and become visible.
+;
+;[call]
+;"A","F","0","%0%\ingres\bin\ipprod.exe Vision %0%","","1"
+
+
+; The CHANGEDIR command resets the current directory to the specified
+; directory.  This could be useful, for instance, if you wanted to set
+; you current directory to a DLL subdirectory, and then EXEC a program
+; that resides in another directory (but is in the path).
+;
+;[changedir]
+;%0%\DLL
+
+
+;
+; The [exec] section specifies a program to be run at the end of the successful
+; install.  It must appear on the line following the [exec] header.
+; The entire line is passed to the system.  Args can be included, as well as
+; any level of path spec desired.
+;
+; Format:
+;
+;  "prog","exec","prompt", "state"
+;
+;   prog    : The program identifier - OS/2 only (from environment )
+;   exec    : The exec string, including all command line parameters
+;   prompt  : A yes/no prompt - if no, the exec will not be issued, otherwise
+;	      it will be executed.
+;   state   : 0 = Visible; 1 = Invisible;
+;	      Note: In Windows all dos programs are controlled by PIF files.
+;	      Note: Once the program has been started it can activate itself
+;		    and become visible.
+;
+;[exec]
+;"A","ingstart.exe -init",,0
+;"A","notepad.exe %0%\readme.prn","Do you want to view the readme file now?",0
+
+;
+; The [ini] section defines all of the settings that will go into the app's
+; .INI file.
+;
+; The line following the [ini] header contains the name of your .INI file.
+; It should be name.extension followed by the PRODUCT IDENTIFIER.
+; By default it is placed in the app's main directory.
+;
+; Following the Product Identifier is an optional flag 'F', which forces
+; the sections to be overwritten even if they already exist (normal
+; behaviour is described below).
+;
+; Remaining lines, to end of SETUP.ISC file, are settings for your INI file.
+; All settings MUST be preceded with a group name in square brackets.
+;
+; If INI file does not exist, it is built with these lines verbatim.
+;
+; If INI file DOES exist, only new settings (right hand side) are added.
+; Existing keys with different values are NOT modified in the INI file.
+;
+; You may substitute params into the text with %token%.  Valid tokens:
+;   - single char "0", and A-Z.  Refers to token in [directories] section.
+;     Note that this always substitutes a fully qualified pathname, NOT
+;     terminated with a backslash.  That is, specifying a child directory
+;     id token will result in: drive, colon, slash, parent, slash, child.
+;
+;   - "PACKAGENAME", "CAPTIONNAME", "APPNAME", "RELEASESTRING", "BASEAPP"
+;       These are defined in the [setup] section.
+;       Do not specify the token name within quotes.  See example.
+;
+; Text is substituted exactly as declared within quotes.  No blanks added.
+; See example "setting6" below; see it expand when you generate INI file.
+;
+;
+;[ini]
+;IniFileName: %1%\spjwin.ini,A,F
+;[SPJ General]
+;Macro Program Types=Realizer,V-Basic,Other
+
+;[SPJ Run Command Definitions]
+
+;
+; The REGISTRY keword is available only under NT and Windows95.  This
+; section replaces the INI section for these operating systems.
+;
+; Format:
+;   Line 1:                [registry]
+;   Line 2 (Group Key):    Software: A
+;   Line 3..n (Keywords):  {subkey},keyword {, type, value}
+;   Line n+1 (Group Key):  Environment: A
+;   Line n+2..m            {subkey},keyword {, type, value}
+;   Line m+1 (Group Key):  Software: B
+;
+; Line 2 has several options:
+;       Software:    The stuff that used to go in your .ini file
+;       Environment: The stuff that used to go in autoexec.bat
+;   This line always contains the Product Identifier as well.
+;   There can only be one software group and environment group for
+;   each product.
+;
+; Keyword lines contain keywords with optional values to be put
+; into the registry for this product.  For CASoftware, CA-Install puts this
+; info in the HKEY_LOCAL_MACHINE\Software\ComputerAssociates\{ProductName}\ and
+; HKEY_CURRENT_USER\Software\ComputerAssociates\{ProductName}\ sections
+; of the Registry, where ProductName is defined in the [products] section.
+;
+; For Environment, these values are put in the HKEY_USERS\Environment and
+; HKEY_CURRENT_USER\Environment sections.
+;
+; Subkeys can be defined, with multiple levels.  For example, to create the
+; subkey Preferences\CalculationOptions you would specify
+; "Preferences\\CalculationOptions","Option",REG_SZ,Value
+;
+; FOR THE DE-INSTALL TO WORK, YOU MUST CREATE A KEY THAT DEFINES "Root" as
+;   the root directory of your application (i.e. %0%).  CA-Install will
+;   also write to a file called CAREGENV.LOG which will provide de-install
+;   information.
+;
+; All other specialized Registry installation needs will have to be handled by
+; post-install processes.
+;
+; Types can be any one of the following values, but only 3 types are
+;   fully supported (REG_SZ, REG_EXPAND_SZ, REG_NONE, and REG_DWORD - all
+;   others are treated as REG_SZ for now):
+;       REG_BINARY
+;       REG_DWORD
+;       REG_DWORD_LITTLE_ENDIAN
+;       REG_DWORD_BIG_ENDIAN
+;       REG_EXPAND_SZ           - A string that needs to be expanded by system
+;       REG_LINK
+;       REG_MULTI_SZ
+;       REG_NONE
+;       REG_RESOURCE_LIST
+;       REG_SZ                  - Normal strings
+;
+; For more information on the types, see the RegQueryValueEx function
+; in the Win32 SDK documentation.
+;
+;[registry]
+;CASoftware: A
+;"","Root",REG_SZ,"%0%"
+;"","II_SYSTEM",REG_SZ,"%0%"
+;"","II_GCC_PROTOCOLS,REG_SZ,"wintcp,netbios,..."
+
+
+
+;Environment: A
+;"","Path", REG_EXPAND_SZ, "%0%\INGRES\BIN"
+
+; end of file INSTALL.ISC

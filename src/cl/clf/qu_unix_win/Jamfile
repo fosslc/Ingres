@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!qu_unix_win
+#
+
+SubDir ING_SRC cl clf qu_unix_win ;
+
+IISUBSYS cl clf qu_unix_win ;
+
+
+IILIBRARY COMPATLIB : qu.c ;
+

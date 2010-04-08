@@ -1,0 +1,7 @@
+Ingres i18n64 (64 bit Internationalization Support)
+
+The Ingres i18n64 package is a set of 64 bit additional message files and 
+forms which have been translated to a number of different languages. This 
+allows the user to select a language other than English to be used when 
+displaying Ingres errors, informational messages and other written 
+dialogues.

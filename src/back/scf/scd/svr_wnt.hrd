@@ -1,0 +1,155 @@
+##Copyright (c) 2004 Ingres Corporation
+###
+### makefile generated automatically by mknmake (3.02) for WNT.
+###	 date: Wed Jan 19 15:45:29 1994
+###	 path: D:\rplus\back\scf\scd
+###
+
+##
+## Start of extra control macros for the make.ini file.
+##
+
+# Set to sub system type, (windows, console, posix).
+!IF "$(SUBSYS)" == ""
+SUBSYS = windows
+!ENDIF
+
+# Set to true for proto typing.
+!IF "$(PROTO_TYPE)" == ""
+PROTO_TYPE = false
+!ENDIF
+
+# Local flags for the compiler.
+!IF "$(LCL_CFLAGS)" == ""
+LCL_CFLAGS =
+!ENDIF
+
+# Ingres path structure.
+PART = back
+FACILITY = scf
+SUBSYSTEM = scd
+LCLPATH = back\scf\scd
+
+# DOS file system type.
+FS_FAT = 1
+FS_CASE = 0
+
+##
+## End of extra control macros for the make.ini file.
+##
+
+!include "$(ING_SRC)\tools\port\nmake\make.ini"
+!include "deps.mak"
+
+QSHFILES = 
+
+MSGFILES = 
+
+QHFILES = 
+
+SHFILES = 
+
+QSCFILES = 
+
+SCFILES = 
+
+QCFILES = 
+
+SYFILES = 
+
+STFILES = 
+
+LFILES = 
+
+YFILES = 
+
+YIFILES = 
+
+OBJFILES = scddbfcn.obj scdinit.obj scdmo.obj scdnote.obj scdopt.obj 
+
+PROFILES = 
+
+PCFILES = 
+
+SCDLIB = $(LIBNAME) 
+
+EXEFILES = iidbms.o.exe 
+
+
+OBJONLY =
+
+
+$(OBJFILES): $(QSCFILES) $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) \
+	 $(LFILES) $(YFILES) $(YIFILES)
+
+
+all: hdr prh pc lib exe
+hdr: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES)
+prh:
+pc:
+lib: $(SCDLIB) $(OBJONLY)
+exe: $(EXEFILES)
+
+derive: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES) $(QSCFILES) \
+	 $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) $(LFILES) \
+	 $(YFILES) $(YIFILES)
+
+archive: atouch lib
+atouch:
+	$(TOUCH) $(OBJFILES)
+	$(SLEEP) 2
+
+
+##
+## Local .lib rule.
+##
+$(SCDLIB): $(OBJFILES)
+!IF [$(TEST) -f $(SCDLIB)] == 0
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS) $@
+$(OBJFILES)
+<<KEEP
+!ELSE
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS)
+$(OBJFILES)
+<<KEEP
+!ENDIF
+	$(LIB_CMD) @lib.rf6 > lib.er6 2>&1
+
+
+##
+## Custom .exe rule.
+##
+iidbms_deps = \
+	scdmain.obj
+
+iidbms.exe: $(iidbms.o_deps)
+	@echo >nul @<<iidbms.o.rf7
+$(LFLAGS) /OUT:iidbms.exe
+$(iidbms_deps)
+$(IISCFLIB)
+$(IIPSFLIB)
+$(IIOPFLIB)
+$(IIGWFLIB)
+$(IIPSFLIB)
+$(IIRDFLIB)
+$(IIQEFLIB)
+$(IIQSFLIB)
+$(IIDMFLIB)
+$(IIADFLIB)
+$(IIULFLIB)
+$(IIGCFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @iidbms.o.rf7 > iidbms.o.er7 2>&1
+
+
+##
+## Local install rule.
+##
+install: all
+	$(CP) *.exe $(ING_BUILD)\bin
+

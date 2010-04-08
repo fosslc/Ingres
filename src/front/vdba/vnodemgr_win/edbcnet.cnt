@@ -1,0 +1,27 @@
+:Title Help for EDBC Network Utility
+2 Procedures
+3 Refreshing Vnodes=refreshing_vnodes@edbcnet.hlp
+3 Creating a Vnode=creating_vnodes@edbcnet.hlp
+3 Altering a Vnode=altering_vnodes@edbcnet.hlp
+3 Dropping a Vnode=dropping_vnodes@edbcnet.hlp
+3 Maintaining Logins for a Vnode=maintaining_logins_vnode@edbcnet.hlp
+3 Maintaining Vnode Attributes=maintaining_vnode_attributes@edbcnet.hlp
+3 Testing a Vnode=testing_vnodes@edbcnet.hlp
+3 Opening a Database Object Manager=opening_database_object_manager@edbcnet.hlp
+3 Opening an SQL Window=opening_sql_window@edbcnet.hlp
+2 Menu Commands
+3 File Menu Commands
+4 Exit command=file_exit@edbcnet.hlp
+3 Node Menu Commands
+4 Add command=node_add@edbcnet.hlp
+4 Alter command=node_alter@edbcnet.hlp
+4 Drop command=node_drop@edbcnet.hlp
+4 Database Object Manager command=node_databaseobjectmanager@edbcnet.hlp
+4 SQL Test command=node_sqltest@edbcnet.hlp
+4 Test Node command=node_testnode@edbcnet.hlp
+4 Force Refresh command=node_forcenoderefresh@edbcnet.hlp
+3 View Menu Commands
+4 Toolbar command=view_toolbar_net@edbcnet.hlp
+4 Status Bar command=view_statusbar_net@edbcnet.hlp
+3 Help Menu Commands
+4 About EDBC Network Utility=help_aboutedbcnetworkutility@edbcnet.hlp

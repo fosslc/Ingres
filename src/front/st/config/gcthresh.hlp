@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The gc_threshold resource is the number of other updating transactions
+  that must be active in the logging system to invoke group-commit.
+
+  When a log buffer is to be written, and it is not full, and there are
+  at least gc_threshold other transactions that might be able to write
+  into the log buffer, the write is delayed and periodic group-commit
+  checking starts for that buffer.  If the number of other transactions
+  falls below gc_threshold at any group-commit check, the buffer is written.
+  (The buffer would also be written if it became full, or if the check timer
+  expired.)
+
+  The default is 1.

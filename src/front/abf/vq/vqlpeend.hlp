@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlpeend.hlp, help for the confirmation pop-up ending from local
+/#-- procedure source code editing session.
+/#-- 
+You have made changes to the source code for a local procedure, but have
+selected the menuitem 'End' without selecting 'Save' first.  Your
+options are:
+
+  Yes           Save the changes and then end
+  No		End without saving the changes
+
+If you choose 'No,' your changes will be ignored.  
+
+The menu commands are:
+
+  Select        Choose the highlighted option.
+  Cancel        Go back to editing the source code.
+  Help          Displays this help text.

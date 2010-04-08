@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The database_limit resource specifies the maximum number of databases 
+  which can be opened concurrently by DBMS servers created with this
+  definition.   This resource merely sets an upper limit and does not
+  directly affect any resource allocation within the DBMS server.
+
+  The default allows for a different database for each session.

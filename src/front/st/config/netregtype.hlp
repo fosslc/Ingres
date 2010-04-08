@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Net Server registry type.  Set to one of the following values:
+ 	none - No registry type
+ 	slave - Slave
+ 	peer - Peer
+ 	master - Master
+ 	default - Use Name Server registry type
+ The registry type is used to provide information about multiple
+ installations.  The master Net Server holds information about the
+ slaves.  If all the installations are set to the peer registry type,
+ the master installation is negotiated at runtime.  The default is
+ "default".

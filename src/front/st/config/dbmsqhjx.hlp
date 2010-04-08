@@ -1,0 +1,13 @@
+/#-- Copyright 2009 Ingres Corporation
+  The qef_hashjoin_max resource controls the maximum amount of memory
+  reserved for any one hash join operation.  This may be useful in
+  situations where qef_hash_mem is very high (100's of megabytes).
+
+  Adding memory to a hash join does not necessarily make it faster;
+  it only helps if the added memory can reduce overflow spillage.
+  If qef_hash_mem is large, excessive memory might be reserved by
+  queries without improving performance.  The qef_hashjoin_max
+  resource puts a cap on the individual hash join reservation,
+  preventing excessive memory usage.
+
+  The default is zero, no per-join reservation cap.

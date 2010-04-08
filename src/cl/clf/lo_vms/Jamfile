@@ -1,0 +1,16 @@
+#
+# Jamfile file for cl!clf!lo_vms
+#
+
+SubDir ING_SRC cl clf lo_vms ;
+
+IISUBSYS cl clf lo_vms ;
+
+IILIBRARY COMPATLIB : lowhat.c lowcard.c
+        louniq.c lotos.c lostfile.c losize.c lorename.c loqueue.c
+        lopurge.c lolist.c lolast.c loisfull.c loisdir.c loingpath.c
+        loinfo.c logtfile.c logt.c lofstfile.c lofroms.c
+        loexist.c lodetail.c lodelete.c
+        lodbname.c locurnode.c locreate.c locopy.c lochange.c
+        loaddpath.c locompose.c loparse.c losearchpath.c lovmscvt.c 
+	lonoconceal.c lotoes.c ;

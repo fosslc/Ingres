@@ -1,0 +1,53 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+INGRES/MENU allows you to access any of the capabilities of the INGRES 
+database management and application development system through simple
+menu selections.  Position the cursor to the desired option and then
+press "Select" on the command menu.
+
+The INGRES capabilities which can be run from this menu are:
+
+	Tables		Displays a list of the tables and views in
+			the database, from which you can get detailed 
+			information, or run queries or reports.  You can 
+			also create and delete tables from this selection.
+
+	Forms		Displays a list of the forms in the database,
+			from which you can edit or use them to access 
+			data.  You can also create and delete forms 
+			using the visual forms editor (VIFRED) through 
+			this selection.
+
+	JoinDefs	Displays a list of the Join Definitions stored 
+			in the database for use with the Query-By-Forms
+			tool.  You can also create and delete Join
+			Definitions from this selection.
+
+	Reports		Displays a list of the reports stored in the
+			database for running or editing.  Reports can
+			also be created, deleted and edited by the 
+			Report-By-Forms editor through this selection.
+
+	Applications	Create, edit, or run Ingres applications through
+			the Vision and/or Application-By Forms facilities.
+
+	Queries		Use interactive SQL or QUEL, or Query-By-Forms
+			to access your database.
+
+(If you are not authorized to run one of the above INGRES capabilities, then
+it will not appear in your menu.)
+
+The following additional menu items are available:
+
+	Select		Selects the row the cursor is currently on.
+
+	Shell/Spawn	Escape to the operating system. To return
+			to INGRES/MENU from an operating system shell,
+			type "logout" or "exit".
+			(this menu item will be "Shell" on some systems
+			and "Spawn" or "CLI" on others)
+
+	Help		Show this help text.
+
+	End		Leave INGRES/MENU.
+
+	Quit		Leave INGRES/MENU.

@@ -1,0 +1,199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Add Item to Bag and Confirm
+</title>
+</head>
+<body>
+<h1>
+Add Item to Bag and Confirm
+</h1>
+<p>
+There are three main sections in this document:
+The first section adds the order to the order
+table. The second section confirms that the item
+has been added. In the final section the user
+can return to the shop (<span class="link">OK</span>) or view
+the contents of their shopping bag (<span
+class="link">View Contents of Shopping Bag</span>).
+<p>
+The first section inserts the required item into the order
+table, <tt>play_order</tt>, along with the user's
+login id and the order number. A status of 1 is
+included. 
+<a name="OrderStatus"></a>
+<p>
+The meaning of the status column is as
+follows:
+<table>
+<tr><td>Status<td>Meaning
+<tr><td align=right>1<td>Item placed in bag
+<tr><td align=right>2<td>Item ordered
+<tr><td align=right>3<td>Order passed to warehouse
+<tr><td align=right>4<td>Order in dispatch
+<tr><td align=right>5<td>Courier confirms delivery
+</table>
+This exercise set uses the first two. For others, see
+the <a href="#Further">further exercise</a> at the end of this page.
+<p>
+The first section adds the order to the order
+table. The second section confirms that the item
+has been added and in the final section the user
+can return to the shop (<span class="link">OK</span>) or view
+the contents of their shopping bag (<span
+class="link">View Contents of Shopping Bag</span>).
+<h3>File: play_shopDescribe.html</h3>
+<p><div class="boxCode"><tt><pre>
+
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Add to Bag: Confirmation&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Add to Bag: Confirmation&lt;/h1&gt;
+
+&lt;!-- #ICE
+    DATABASE=`icetutor`
+    <span class="macro">SQL=`insert into play_order
+    (order_nr, user_id, product_id, status)
+    values (:e_orderNumber, ':ii_userid', :id, 1)`
+    TRANSACTION=`t_shopAdd`</span>
+--&gt;
+&lt;!-- Flag the transaction as open; we have now added something to the bag --&gt;
+&lt;!-- #ICE DECLARE=`session.e_shopTxn=OPEN` --&gt;
+&lt;table border=0&gt;
+&lt;tr&gt;
+&lt;td bgcolor="lime"&gt;
+The item, 
+&lt;!-- #ICE REPEAT
+    DATABASE=`icetutor`
+    <span class="macro">SQL=`
+	set lockmode session where readlock = nolock;
+	select name, cost
+	from play_item
+	where id = 
+	    (select product_id from play_order
+	    where order_nr = :e_orderNumber 
+	    and user_id = ':ii_userid'
+	    and product_id = :id)`</span>
+    TRANSACTION=`t_shopAddConfirm`
+    TYPE=`UNFORMATTED`
+    HTML=`&lt;b&gt;:name&lt;/b&gt; @&lt;i&gt;:cost Silver Crown&lt;!-- #ICE IF ( ``1`` != ``:cost``)
+                      THEN=``s`` --&gt;
+        &lt;/i&gt;`
+--&gt;
+&lt;!-- #ICE COMMIT=`t_shopAddConfirm` --&gt;
+has been added to your shopping bag.
+&lt;!-- Standard Shop Action: enable View --&gt;
+<span class="macro">&lt;!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]?View=Yes` --&gt;</span>
+&lt;!-- Standard Session Control --&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+
+
+&lt;/body&gt;
+&lt;/html&gt;
+</pre></tt></div><p>
+Adding the ordered item to the play_order table 
+is accomplished with an SQL insert statement:
+<p><tt><pre>
+    SQL=`insert into play_order
+    (order_nr, user_id, product_id, status)
+    values (:e_orderNumber, ':ii_userid', :id, 1)`
+    TRANSACTION=`t_shopAdd`</span>
+</pre></tt><p>
+We do <i>not</i> commit this transaction yet
+because the user may want to add other items to
+the order. Furthermore, the user may log out or
+time out before completing their purchases, at
+which point the ICE server will automatically
+rollback any open transactions on our behalf.
+What we do instead is to set the session variable
+<tt>e_shopTxn OPEN</tt> with the statement:
+<p><tt><pre>
+    SQL=`insert into play_order
+&lt;!-- #ICE DECLARE=`session.e_shopTxn=OPEN` --&gt;
+</pre></tt><p>
+This is a dummy though meaningful
+value. Remember that when its value is
+<tt>COMPLETE</tt> then the shop home page will
+generate a new order number. We defer committing
+the transaction until later (on the order
+confirmation page).
+<p>
+In the second section of the document, 
+we select the same record from play_order and
+display it in a table with a green background. We
+place the select statement inside a table cell
+(<tt>&lt;td&gt;</tt>). Note that we use
+readlock&nbsp;=&nbsp;nolock to avoid any locks
+that may be taken on the table. The transaction, 
+<tt>t_shopAddConfirm</tt>, is
+committed immediately -in fact <i>within</i> the HTML table
+element. Here is the table element in its entirety:
+<p><tt><pre>
+&lt;table border=0&gt;
+&lt;tr&gt;
+&lt;td bgcolor="lime"&gt;
+The item, 
+&lt;!-- #ICE REPEAT
+    DATABASE=`icetutor`
+    SQL=`
+	set lockmode session where readlock = nolock;
+	select name, cost
+	from play_item
+	where id = 
+	    (select product_id from play_order
+	    where order_nr = :e_orderNumber 
+	    and user_id = ':ii_userid'
+	    and product_id = :id)`
+    TRANSACTION=`t_shopAddConfirm`
+    TYPE=`UNFORMATTED`
+    HTML=`&lt;b&gt;:name&lt;/b&gt; @&lt;i&gt;:cost Silver Crown&lt;!-- #ICE IF ( ``1`` != ``:cost``)
+                      THEN=``s`` --&gt;
+        &lt;/i&gt;`
+--&gt;
+&lt;!-- #ICE COMMIT=`t_shopAddConfirm` --&gt;
+has been added to your shopping bag.
+&lt;/table&gt;
+</pre></tt><p>
+The same technique from the previous example has
+been used to add an "s" to the Silver Crown if the
+cost is other than one Silver Crown.
+<p>
+In the third section, we enable the View option for
+the standard set of shop action links.
+<p><tt><pre>
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]?View=Yes` --&gt;
+</pre></tt><p>
+and
+<div class="openBox">
+<h3><a name="Further">Further exercise</a></h3>
+Using the status values 3 through 5, extend the web site so
+that the user, specifying their order number, can
+track the order through the system. <i>Hint: At
+each stage, increment the status, orders
+of status 5 can be purged from the current order
+table.</i>
+</div>
+<p>
+We have already examined the shop home page. We
+now move on to the
+<a href="fr_shopView.html" target="page">
+view shopping bag</a>
+page.
+</body>
+</html>

@@ -1,0 +1,37 @@
+
+<!-- #ICE REPEAT IF (`:ifOpen` == `on`) 
+THEN=`<!-- #ICE DECLARE=``page.ifOpen=(`` -->` 
+ELSE=`<!-- #ICE DECLARE=``page.ifOpen=`` -->` 
+-->
+
+<!-- #ICE REPEAT IF (`:ifClose` == `on`) 
+THEN=`<!-- #ICE DECLARE=``page.ifClose=)`` -->` 
+ELSE=`<!-- #ICE DECLARE=``page.ifClose=`` -->` 
+-->
+
+<!-- #ICE REPEAT IF (`:ifParI1` == `yes`) THEN=`<!-- #ICE DECLARE=``page.ifI1Name=::ifI1Name`` -->` -->
+<!-- #ICE REPEAT IF (`:ifParI2` == `yes`) THEN=`<!-- #ICE DECLARE=``page.ifI2Name=::ifI2Name`` -->` -->
+
+<!-- #ICE DECLARE=`session.ifCond=:ifCond :ifOpen ``:ifI1Name`` :ifSign ``:ifI2Name`` :ifClose` -->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Conditional expression&previous=include5.html&next=if4.html` -->
+
+The conditional expression can have multiple boolean expressions separated by a logical operator.
+<H4 CLASS="question">If you want to add an expression, please choose one of these operators:</H4>
+<H4 CLASS="choice">
+<TABLE>
+	<TR>
+		<TD ALIGN="LEFT">
+			<!-- #ICE VAR=`:ifCond` -->
+		</TD>
+		<TD ALIGN="LEFT">
+			<INPUT TYPE="RADIO" NAME="ifOperator" VALUE="AND">AND<BR>
+			<INPUT TYPE="RADIO" NAME="ifOperator" VALUE="OR">OR<BR>
+		</TD>
+		<TD ALIGN="LEFT">
+			<FONT SIZE="10">...</FONT>
+		</TD>
+	</TR>
+</TABLE>
+</H4>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

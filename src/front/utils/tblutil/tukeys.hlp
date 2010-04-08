@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Your table will be created as a btree structure, with the keys you specified
+in the "Key" column of the table field.  Your table will be keyed either
+unique or not-unique, according to your selection on this form.
+
+To make a selection, place the cursor on the row of your choice and select
+the menu command "Select".  Select the row labeled "Unique" if you want your
+table to have unique keys.  If you do not want unique keys, then select
+the row labeled "Not unique".  Select the menu command "Cancel" if you
+want to return to the "Create a Table" screen without creating a table.
+
+Creating a table with unique keys has the effect of requiring each key value
+in the table to be unique.  (A key value is the concatenation of all key
+columns in a row.)  Ingres will not allow the insertion of two rows with
+the same key value in a table with unique keys.  If your table is created
+without unique keys, then keyed access is still possible, but Ingres will
+allow you to insert multiple rows with the same key value.
+
+Unique keys are recommended when possible to improve performance and
+data integrity.

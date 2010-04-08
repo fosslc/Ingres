@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Query By Forms (QBF) is an interactive, visually oriented forms interface
+package for adding, deleting, changing and viewing data in your tables.
+
+The tasks you perform in QBF are divided into two phases: JOIN DEFINITION
+and QUERY EXECUTION.  In the DEFINITION phase you specify the tables you  
+wish to query.  Then, in the EXECUTION phase you query those tables and
+browse or update the data.
+
+You are now in QBF's start-up menu.  From this menu, you can execute various
+commands to get information about the tables in your database or define a join
+(go to QBF Join Definition phase) and run a query (go to QBF Query Execution 
+phase).  To enter a command just type the name of the command followed by a
+carriage return.
+
+Commands for QBF's start-up menu are:
+
+        Command                 Function
+        -------                 --------
+        QBFNames                Summon the QBF QBFNames catalog.  You can
+                                browse through a list of all QBFNames (links
+                                between a VIFRED form and a table), and select
+                                a QBFName to run.
+        JoinDefs                Summon the QBF JoinDefs catalog. You can
+                                browse through the list of Join Definitions
+                                (JoinDefs) stored in the database, and select
+                                a Join Definition to run. You can create a
+                                new JoinDef, or edit an existing one. You can
+                                also change a Join Definition's name or delete
+                                it from the catalog.
+        Tables                  Summon the QBF Tables catalog.
+        Help                    Print this message
+        Quit                    Leave QBF and return to Operating System

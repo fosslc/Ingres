@@ -1,0 +1,36 @@
+#
+# Jamfile file for cl!clf!nm_win
+#
+
+SubDir ING_SRC cl clf nm_win ;
+
+IISUBSYS cl clf nm_win ;
+
+
+IIBINEXE ingunset : ingunset.c ;
+IINEEDLIBS ingunset : COMPAT ;
+IIUNDEFS ingunset : II_copyright ;
+IIAdminManifest ingunset ;
+
+IIBINEXE ingsetenv : ingsetenv.c ;
+IINEEDLIBS ingsetenv : COMPAT ;
+IIUNDEFS ingsetenv : II_copyright ;
+IIAdminManifest ingsetenv ;
+
+IIBINEXE ingprsym : ingprsym.c ;
+IINEEDLIBS ingprsym :  COMPATLIB ;
+
+IIBINEXE ingprenv : ingprenv.c ;
+IINEEDLIBS ingprenv : COMPAT ;
+IIUNDEFS ingprenv : II_copyright ;
+
+IIFILE nmerr.def : nmerr.def ;
+
+IILIBRARY COMPATLIB : nmunseting.c
+	nmseting.c
+	nmpathing.c
+	nmpart.c
+	nmgtat.c
+	nmfiles.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : nmdata.c ;

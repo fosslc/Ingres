@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may enable or disable the deletion of rows in the 
+current table.
+
+To enable or disable deletion of rows, scroll to the desired option, and 
+choose the Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Yes		Enable deletion of rows in this table in UPDATE mode.
+	No		Disable deletion of rows in this table in UPDATE mode.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select	        Enable or disable deletion of rows in the current 
+			table in UPDATE mode.
+			
+        Cancel          Return to the JoinDef Update & Delete Rules form 
+			without registering any selections.
+
+        Help            Print this message.

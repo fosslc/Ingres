@@ -1,0 +1,614 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*	static	char	Sccsid[] = "@(#)rfmlayout.qc	30.1	11/14/84";	*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h> 
+# include	"rbftype.h" 
+# include	"rbfglob.h" 
+# include	<rglob.h>
+# include	<rcons.h>
+# include	<cm.h>
+# include	<cv.h>
+# include	<st.h>
+# include	<tr.h>
+# include	<ug.h>
+
+/*
+**   RFMLAYOUT - routine to set up the main report layout frame.
+**	This is called after the report specifications
+**	have been evaluated and will set up the structures needed
+**	by VIFRED.
+**	
+**
+**	Parameters:
+**		none.
+**
+**	Returns:
+**		TRUE	if everything is ok.
+**		FALSE	if anything went wrong.
+**
+**	Called by:
+**		rFdisplay.
+**
+**	Side Effects:
+**		Sets up Rbfframe, Cs_length, Cs_top, Sections,
+**		Curx, Cury, Curtop, Curordinal, Other.
+**
+**	Trace Flags:
+**		200, 220, 221.
+**
+**	Error messages:
+**		Syserr: Bad order of commands in report.
+**
+**	History:
+**		2/10/82 (ps)	written.
+**		12/20/84 (rlk) - Added calls to gather virual memory stats.
+**		1/21/85 (rlk) - Changed ME calls to FE calls.
+**		1/85	(ac)	Split codes to rfframe.c and rfedit.qc
+**				for modularization.
+**		2/2/87 (rld) - Add call to rFsetaggarrs to set up arrays
+**				needed for aggregate processing under ADF.
+**		12-dec-88 (sylviap)
+**			Changed memory allocation from FEalloc to FEreqmem.
+**      9/22/89 (elein) UG changes ingresug change #90045
+**    changed <rbftype.h> & <rbfglob.h> to "rbftype.h" & "rbfglob.h"
+**		9/25/89 (martym)
+**			>> GARNET <<
+**			Added support for joindefs, and report styles.
+**		01-sep-89 (cmr)
+**			Major changes made to support visible page/report/
+**			break headers and footers.  Mostly changed the way
+**			the break structure TCMDS are scanned.  Setup the
+**			appropriate data structures (Sections and copt).
+**		22-nov-89 (cmr)
+**			Support for editable aggregates.  When allocating
+**			the CS structs be sure to include aggregates (add
+**			in Agg_count).  When scanning commands in the footers
+**			catch RBFHEAD so that fields, trim, aggregates, etc
+**			get processed by rFscan().
+**		11/27/89 (martym)
+**			Took out the call to r_JDMasterDetailSetUp().
+**      12/12/89 (elein) replaced rbfstyle.h with rcons.h
+**		1/5/90 (martym)
+**			Added support for the loading of labels style reports.
+**		1/13/90 (martym)
+**			Increased the size of b_name[].
+**		30-jan-90 (cmr)
+**			Underlining capabilities now stored in the 
+**			Sec_node for each section rather than in Opt
+**			or picking them off the form.
+**		31-jan-90 (cmr)
+**			Initialize Opt.rulchar.
+**		2/7/90 (martym)
+**			Coding standards cleanup.
+**		10-apr-90 (cmr)
+**			Curaggregate gets set in rFscan() now.
+**		02-may-90 (cmr)
+**			Expose Page Header and Footer (so that all reports
+**			get date, time, page #).
+**		04-jun-90 (cmr)
+**			Don't process RBFHEAD when scanning break headers;
+**			it's obsolete.
+**		21-jun-90 (cmr)
+**			Initialize RbfAggSeq (seq # passed to FDnewfld).
+**		21-jul-90 (cmr) fix for bug 31731
+**			For break sections, make sure underlining gets set
+**			properly.
+**		03-jul-90 (cmr) fix for bug 32111
+**			The first section of the report must have a y coord
+**			of 0 even though Cury starts at 1.  This code was
+**			assuming that a report header would always be the
+**			first section.
+**		14-sep-90 (sylviap) fix for bug 32744
+**			Added parameter to rFscan calls, to pass if in the
+**			detail section.
+**		31-oct-90 (steveh) fix for bug 33773.
+**			(Footer items lose underlining attribute during save)
+**			The call to CreateBrkSection was incorrectly formulated.
+**			The return value from CreateBrkSection was being ignored
+**			and the previous Secnode was incorrectly used instead.
+**			This had the effect of incorrectly underlining the
+**			previous section and of orphaning the current section.
+**		31-oct-90 (steveh) 
+**			added missing headers cv.h and tr.h.
+**		12-nov-1992 (rdrane)
+**			Ensure that we ignore unsupported datatypes.
+**			Fix-up IIUGbmaBadMemoryAllocation() ambiguities.
+**	12/09/92 (dkh) - Added Choose Columns support for rbf.
+**		22-jun-1993 (rdrane)
+**			Add support for suppression of initial formfeed.
+**		2-jul-1993 (rdrane)
+**			Added support for user override of hdr/ftr date/time
+**			and page # formats.  Default the variables to an
+**			appropriate format. 
+**		13-sep-1993 (rdrane)
+**			Delay setting of the Opt.*_inc_fmt values so that we
+**			can differentiate between an existing 6.4 report with
+**			no user-specified overide format and a 6.5 report where
+**			the user has declined to include one or more of the
+**			items.
+**	15-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototype for rFscan_commands() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+static	Sec_node	*CreateBrkSection();
+static	rFscan_commands();
+
+bool
+rFmlayout(ntrim, nfield)
+i4	*ntrim;
+i4	*nfield;
+{
+	/* internal declarations */
+
+	CS		*cs;		/* ptr to cs */
+	register LIST	*l;		/* fast ptr to linked lists */
+	i4		ntrims;		/* number of trim elements */
+	i4		nfields;	/* number of fields */
+	i4		i;		/* ptr */
+	ATT		*att;		/* temp ptr to ATT */
+
+	/* start of routine */
+
+#	ifdef	xRTR1
+	if (TRgettrace(200,0) || TRgettrace(220,0) || TRgettrace(221,0))
+	{
+		SIprintf(ERx("rFmlayout: entry.\r\n"));
+	}
+#	endif
+
+#	ifdef	xRTR3
+	if (TRgettrace(220,0))
+	{
+		r_pr_brk();
+	}
+#	endif
+
+	/* Set up arrays for aggregate processing */
+	rFagset();
+	rFset_aggarrs();
+
+	Cs_length = En_n_attribs + Agg_count;
+	RbfAggSeq = Cs_length + 1; /* this # is passed to FDnewfld to */
+				   /* uniquely identify an aggregate. */
+
+	/*
+	** Default the hdr/ftr date/time and page # formats, then look for
+	** any user specified overrides.  The Opt.*_inc_fmt values are
+	** defaulted/set in rFgdf_getdeffmts() to handle the new report and
+	** pre-6.5 compatibility cases.
+	*/
+	Opt.rdate_w_fmt = RBF_DEF_W_DATE_FMT;
+	STcopy(RBF_DEF_DATE_FMT,&Opt.rdate_fmt[0]);
+	Opt.rtime_w_fmt = RBF_DEF_W_TIME_FMT;
+	STcopy(RBF_DEF_TIME_FMT,&Opt.rtime_fmt[0]);
+	Opt.rpageno_w_fmt = RBF_DEF_W_PAGENO_FMT;
+	STcopy(RBF_DEF_PAGENO_FMT,&Opt.rpageno_fmt[0]);
+	rFgdf_getdeffmts();
+
+#	ifdef CFEVMSTAT
+	FEgetvm(ERx("rFmlayout:  Before CS allocation"));
+#	endif
+
+	Cs_tag = FEbegintag();
+	if ((Cs_top = (CS *)FEreqmem ((u_i4)0, (u_i4)(Cs_length*(sizeof(CS))),
+		TRUE, (STATUS *)NULL)) == NULL)
+	{
+			IIUGbmaBadMemoryAllocation(ERx("rFmlayout - Cs_top"));
+	}
+				 
+	FEendtag();
+
+#	ifdef CFEVMSTAT
+	FEgetvm(ERx("rFmlayout:  After CS allocation"));
+#	endif
+
+
+	for(i=1,cs=Cs_top; i<=En_n_attribs; i++,cs++)
+	{
+		if  (((att = r_gt_att(i)) == (ATT *)NULL) ||
+			att->pre_deleted)
+		{
+			continue;
+		}
+		if ((cs->cs_name = (char *)FEreqmem ((u_i4)Cs_tag, 
+			(u_i4)(STlength(att->att_name)+1), TRUE, 
+			(STATUS *)NULL)) == NULL)
+        	{
+			IIUGbmaBadMemoryAllocation(ERx("rFmlayout - cs_name"));
+		}
+
+		STcopy(att->att_name, cs->cs_name);
+	}
+
+
+	/* now set up for and scan the setup commands */
+
+
+	rFscan_commands();
+
+	/* Now put things in the FRAME structure */
+	/* Add up the number of trim and fields */
+
+	ntrims = 0;
+	nfields = 0;
+	
+#	ifdef	xRTR3
+	if (TRgettrace(221,0))
+	{
+		SIprintf(ERx("	About to scan the Other list.\r\n"));
+		rFpr_cs(&Other);
+	}
+#	endif
+
+	for (l=Other.cs_tlist; l!=NULL; l=l->lt_next)
+	{
+
+#		ifdef	xRTR3
+		if (TRgettrace(221,0))
+		{
+			SIprintf(ERx("	Next trim in OTRIM:%p\r\n"),l);
+			rFpr_list(l,LTRIM,FALSE);
+		}
+#		endif
+
+		ntrims++;
+	}
+
+	for (l=Other.cs_flist; l!=NULL; l=l->lt_next)
+	{
+
+		if ((l->lt_field)->fltitle == NULL)
+		{
+			(l->lt_field)->fltitle = ERx("\0");
+		}
+
+#		ifdef	xRTR3
+		if (TRgettrace(221,0))
+		{
+			SIprintf(ERx("	Next field in Other:%p\r\n"),l);
+			rFpr_list(l,LFIELD,FALSE);
+		}
+#		endif
+
+		nfields++;
+	}
+
+#	ifdef	xRTR3
+	if (TRgettrace(221,0))
+	{
+		SIprintf(ERx("	About to look at CS structures.\r\n"));
+	}
+#	endif
+
+	for (i=1; i<=Cs_length; i++)
+	{	/* go through CS structures */
+
+		cs = &(Cs_top[i - 1]);
+		if (cs == NULL)
+			continue;
+
+		for(l=cs->cs_flist; l!=NULL; l=l->lt_next)
+		{
+			if ((l->lt_field)->fltitle == NULL)
+			{
+				(l->lt_field)->fltitle = ERx("\0");
+			}
+			nfields++;
+		}
+
+#		ifdef	xRTR2
+		if(TRgettrace(221,0))
+		{
+			SIprintf(ERx("    In rFmlayout.  Next field:%d\r\n"),i);
+			rFpr_cs(cs);
+		}
+#		endif
+
+		for (l=cs->cs_tlist; l!=NULL; l=l->lt_next, ntrims++)
+			;
+	}
+
+
+	*ntrim = ntrims;
+	*nfield = nfields;
+}
+
+/* rFscan_commands() - Scan the TCMDS of a report for setup.
+**
+**	This routine scans through the TCMDS of the various break 
+**	structures to setup the report layout.  It gets info about 
+**	the report options such as the underline char, page length, 
+**	etc. and it gleens info needed to determine what kind of 
+**	report sections (headers and footers) are needed.
+*/
+static 
+rFscan_commands()
+{
+	char		ultype;		/* underline type from rFscan */
+	char		b_name[(FE_MAXNAME * 2) + 1];
+	BRK		*brk;
+	ATT		*att;
+	COPT		*copt;
+	Sec_node	*n;
+	PAR *par;
+
+	STcopy(ERx("    "), Opt.rpl);
+	Opt.rffs = 'y';
+	Opt.no1stff = 'n';
+	STcopy(ERx(""), Opt.rnulstr);
+	Opt.rulchar = ' ';
+	Opt.rphdr_first = 'n';
+
+	/* scan the Report Header */
+	Cact_tcmd = Ptr_brk_top->brk_header;
+	while (Cact_tcmd != NULL)
+	{	/* go through setup commands, processing blocks */
+		switch(Cact_tcmd->tcmd_code)
+		{
+			case(P_RBFSETUP):
+				ultype = rFscan(TRUE, 0, FALSE);
+				/* add values to ROPTIONS form */
+				if (St_pl_set && (St_p_length<100)
+					&& (St_p_length>=0))
+				{	/* put in page length */
+					CVna(St_p_length, Opt.rpl);
+				}
+				Opt.rulchar = St_ulchar;
+				Opt.rffs = (St_ff_on) ? 'y' : 'n';
+				Opt.no1stff = (St_no1stff_on) ? 'y' : 'n';
+				if (r_par_find(ERx(LABST_LINECNT), &par))
+				  if (r_par_find(ERx(LABST_MAXPERLIN), &par))
+				    if (r_par_find(ERx(LABST_MAXFLDSIZ), &par))
+				    {
+					St_style = RS_LABELS;
+					_VOID_ r_m_InitLabs();
+				    }
+				break;
+
+			case(P_RBFTITLE):
+				/* we have a report header */
+				n = sec_node_alloc(SEC_REPHDR, 0, 0);
+				n->sec_name = ERget(F_RF0038_Report_Header);
+				sec_list_insert( n, &Sections );
+				n->sec_under = rFscan(TRUE, 0, FALSE);
+				break;
+
+			case(P_RBFPBOT):
+				/* fall through */
+			case(P_RBFPTOP):
+				rFskip(TRUE);
+				break;
+
+			case(P_RBFHEAD):
+				/* include the page hdr in the rep hdr */
+				rFskip(TRUE);
+				Opt.rphdr_first = 'y';
+				break;
+
+			default:
+				break;		/* doesn't matter */
+		}
+		Cact_tcmd = Cact_tcmd->tcmd_below;
+	}
+
+	/* Scan the Page Header */
+	Cact_tcmd = Ptr_pag_brk->brk_header;
+	while (Cact_tcmd != NULL)
+	{	/* go through setup commands, processing blocks */
+		switch(Cact_tcmd->tcmd_code)
+		{
+			case(P_RBFHEAD):
+				n->sec_under = rFscan(TRUE, 0, FALSE);
+				break;
+			case(P_RBFPBOT):
+				/* fall through */
+			case(P_RBFPTOP):
+				/* we have a page header */
+				n = sec_node_alloc(SEC_PAGHDR, 0, 
+					Sections.head != NULL? Cury++: 0);
+				n->sec_name = ERget(F_RF003A_Page_Header);
+				sec_list_insert( n, &Sections );
+				Curtop = Cury;
+				rFskip(TRUE);
+				break;
+			default:
+				break;
+		}
+		Cact_tcmd = Cact_tcmd->tcmd_below;
+
+	}
+	
+	/* Process the break headers */
+	for ( brk = Ptr_brk_top->brk_below; 
+		brk != NULL; brk = brk->brk_below )
+	{
+		Cact_tcmd = brk->brk_header;
+		while (Cact_tcmd != NULL)
+		{	/* go through setup commands, processing blocks */
+			switch(Cact_tcmd->tcmd_code)
+			{
+				case(P_RBFHEAD):
+					n = CreateBrkSection(brk, SEC_BRKHDR);
+					Curtop = Cury;
+					n->sec_under = rFscan(TRUE, 0, FALSE);
+					break;
+				case (P_AOP):
+					break;
+				default:
+					/* pre 6.4 report */
+					n = CreateBrkSection(brk, SEC_BRKHDR);
+					Curtop = Cury;
+					n->sec_under = rFscan(FALSE, 0, FALSE);
+					break;
+			}
+			if (Cact_tcmd)
+				Cact_tcmd = Cact_tcmd->tcmd_below;
+		}
+	}
+	/* Now process the detail text lines */
+
+	n = sec_node_alloc(SEC_DETAIL, 0, Sections.head != NULL? Cury++: 0);
+	n->sec_name = ERget(F_RF003D_Detail);
+	sec_list_insert( n, &Sections );
+	Curtop = Cury;
+	Cact_tcmd = Ptr_det_brk->brk_header;
+	n->sec_under = rFscan(FALSE, 0, TRUE);
+
+	/* Process the break footers */
+	for ( brk = Ptr_brk_top->brk_below; 
+		brk != NULL; brk = brk->brk_below )
+	{
+		Cact_tcmd = brk->brk_footer;
+		while (Cact_tcmd != NULL)
+		{	/* go through setup commands, processing blocks */
+			switch(Cact_tcmd->tcmd_code)
+			{
+				case(P_RBFHEAD):
+					n = CreateBrkSection(brk, SEC_BRKFTR);
+					Curtop = Cury;
+					n->sec_under = rFscan(TRUE, 0, FALSE);
+					break;
+				case (P_ACLEAR):
+					break;
+				default:
+					/* pre 6.4 report */
+					n = CreateBrkSection(brk, SEC_BRKFTR);
+					Curtop = Cury;
+					n->sec_under = rFscan(FALSE, 0, FALSE);
+					break;
+			}
+			if (Cact_tcmd)
+				Cact_tcmd = Cact_tcmd->tcmd_below;
+		}
+	}
+
+	/* process the page footer if there is one */
+	Cact_tcmd = Ptr_pag_brk->brk_footer;
+	if (Cact_tcmd)
+	{
+		n = sec_node_alloc(SEC_PAGFTR, 0, Cury++);
+		n->sec_name = ERget(F_RF003B_Page_Footer);
+		sec_list_insert( n, &Sections );
+		n->sec_under = rFscan(FALSE, 0, FALSE);
+		Curtop = Cury;
+	}
+
+	/* process the report footer if there is one */
+	Cact_tcmd = Ptr_brk_top->brk_footer;
+	while (Cact_tcmd != NULL)
+	{
+		switch (Cact_tcmd->tcmd_code)
+		{
+			case (P_RBFHEAD):
+				n = sec_node_alloc(SEC_REPFTR, 0, Cury++);
+				n->sec_name = ERget(F_RF0039_Report_Footer);
+				sec_list_insert( n, &Sections );
+				Curtop = Cury;
+				/*
+				** If we are loading a labels style report, 
+				** start the block level at 1 for the report 
+				** footer:
+				*/
+				if (St_style == RS_LABELS)
+					n->sec_under = rFscan(TRUE, 1, FALSE);
+				else
+					n->sec_under = rFscan(TRUE, 0, FALSE);
+				break;
+			case (P_ACLEAR):
+			case (P_AOP):
+				break;
+			default:
+				/* pre-6.4 report */
+				n = sec_node_alloc(SEC_REPFTR, 0, Cury++);
+				n->sec_name = ERget(F_RF0039_Report_Footer);
+				sec_list_insert( n, &Sections );
+				Curtop = Cury;
+				n->sec_under = rFscan(FALSE, 0, FALSE);
+				break;
+		}
+		if (Cact_tcmd)
+			Cact_tcmd = Cact_tcmd->tcmd_below;
+				
+	}
+
+	n = sec_node_alloc(SEC_END, 0, Cury);
+	n->sec_name = ERget(F_RF003C_End_of_Report);
+	sec_list_append( n, &Sections );
+}
+
+
+
+/*
+**
+**	12-nov-1992 (rdrane)
+**		Ensure that we ignore unsupported datatypes (of which there
+**		shouldn't be any!).  Add default case to switch.  Note that
+**		the routine will return a NULL ptr on error (not found;
+**		unknown section type).  Note also that if F_RF003E_Break_Header
+**		or F_RF003F_Break_Footer ever exceed FE_MAXNAME, then the
+**		b_name buffer may overflow.
+*/
+
+static
+Sec_node *
+CreateBrkSection(brk, sec_type)
+BRK	*brk;
+i4	sec_type;
+{
+	ATT		*att;
+	COPT		*copt;
+	Sec_node	*n;
+	char		b_name[(FE_MAXNAME * 2) + 1];
+
+
+	att = r_gt_att(brk->brk_attribute);
+	copt = rFgt_copt(brk->brk_attribute);
+	if ((copt == NULL) || (att == (ATT *)NULL))
+	{
+		return((Sec_node *)NULL);
+	}
+
+	STcopy(att->att_name, b_name);
+	CMtoupper( b_name, b_name );
+	switch (sec_type)
+	{
+		case SEC_BRKHDR:
+			copt->copt_brkhdr = 'y';
+			STcat(b_name, ERget(F_RF003E_Break_Header));
+			n = sec_node_alloc(SEC_BRKHDR, copt->copt_sequence,
+					Sections.head != NULL? Cury++: 0);
+			break;
+		case SEC_BRKFTR:
+			copt->copt_brkftr = 'y';
+			STcat(b_name, ERget(F_RF003F_Break_Footer));
+			n = sec_node_alloc(SEC_BRKFTR, 
+				copt->copt_sequence, Cury++);
+			break;
+		default:
+			return((Sec_node *)NULL);
+			break;
+	}
+	sec_list_insert( n, &Sections );
+	n->sec_name = STalloc( b_name );
+	n->sec_brkord = brk->brk_attribute;
+
+	return(n);
+}

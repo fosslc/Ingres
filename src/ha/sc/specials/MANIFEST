@@ -1,0 +1,14 @@
+#
+# MANIFEST file for ha!sc!specials
+#
+# History:
+#       14-Sep-2005 (bonro01)
+#           SIR 111969
+#           Add support for Solaris HA Clusters
+
+
+SubDir ING_SRC ha sc specials ;
+
+IISUBSYS ha sc specials ;
+
+IISCHAFILES Ingres.ingres_server ;

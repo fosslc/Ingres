@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The qef_sorthash_memory resource controls the maximum size of the QEF
+  (Query Execution Facility) sorting and hashing memory pool.  Buffers
+  for in-memory sorting, and hash probe areas for hash join and hash
+  aggregation, are allocated from this memory pool.
+
+  This resource has to be large enough to allow for all concurrently
+  executing queries that do hashing operations or in-memory sorting.
+
+  The default is one qef_sort_mem allowance for every session, plus one
+  qef_hash_mem allowance for 1/5 of connected sessions.

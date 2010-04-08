@@ -1,0 +1,117 @@
+INGRES TERMINAL MONITOR -- Copyright (c) 1981, 1992 Ingres Corporation
+E_US0AC1 DROP: 'zc' does not exist or is not owned by you.
+    (Thu Feb 27 11:55:43 1992)
+
+create table zc (first zchar(10) not null,
+		 nick  zchar(20),
+		 last zchar(12) not null)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(25 rows)
+
++--------------+------------+
+|last          |first       |
++--------------+------------+
+|Black         |John        |
+|Bohl          |Marilyn     |
+|Butterworth   |Paul        |
+|Carter        |Fred        |
+|Collier       |Cal         |
+|Fried         |Jeff        |
+|Hung          |David       |
+|Leachman      |Claire      |
+|Lee           |Carl        |
+|Lee           |Shirley     |
+|Lyerla        |Jennifer    |
+|Matrigali     |Mike        |
+|McCord        |Rob         |
+|McGhee        |Claire      |
+|Park          |Kelly       |
+|Pasker        |Bob         |
+|Rees          |Steve       |
+|Schmitz       |Peter       |
+|Seputis       |Ed          |
+|Simonson      |Dave        |
+|Taranto       |Roger       |
+|White         |Bill        |
+|Winning       |Mike        |
+|Wong          |Jon         |
+|Wong          |Marian      |
++--------------+------------+
+(25 rows)
+select last,first from zc where first='boB'
+
++--------------+------------+
+|last          |first       |
++--------------+------------+
+|Pasker        |Bob         |
++--------------+------------+
+(1 row)
+select first,last from zc where last='wong'
+
++------------+--------------+
+|first       |last          |
++------------+--------------+
+|Jon         |Wong          |
+|Marian      |Wong          |
++------------+--------------+
+(2 rows)
+select last,first from zc where last > 'b' and zchar(left(last,1)) < 'F'
+E_US0B5C line 1, Function 'left' is not defined for arguments of type
+    'zchar' and 'integer'. Explicitly convert its arguments to the desired
+    type(s).
+    (Thu Feb 27 11:55:46 1992)
+
+select last,first from zc where last >= 'QUIGLEY' and last <= 'taranto'
+
++--------------+------------+
+|last          |first       |
++--------------+------------+
+|Rees          |Steve       |
+|Schmitz       |Peter       |
+|Seputis       |Ed          |
+|Simonson      |Dave        |
+|Taranto       |Roger       |
++--------------+------------+
+(5 rows)
+select last,first from zc where last like 'p%'
+
++--------------+------------+
+|last          |first       |
++--------------+------------+
+|Park          |Kelly       |
+|Pasker        |Bob         |
++--------------+------------+
+(2 rows)
+select last,length=length(last) from zc
+E_US0B5B line 1, Function 'length' does not take an argument of type
+    'zchar'. Explicitly convert the argument to the desired type.
+    (Thu Feb 27 11:55:46 1992)
+
+E_US0B5C line 1, Function '+' is not defined for arguments of type 'zchar'
+    and 'varchar'. Explicitly convert its arguments to the desired type(s).
+    (Thu Feb 27 11:55:46 1992)
+

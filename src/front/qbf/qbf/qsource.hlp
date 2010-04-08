@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This form contains options for the basis of a new QBF JoinDef.  A new
+JoinDef may be based on an existing JoinDef, or created from a blank.
+
+The selections on the form are:
+
+     SELECTION       DESCRIPTION
+     ---------       -----------
+     Blank           Create a new QBF JoinDef starting from a blank.
+
+     Duplicate       Select an existing QBF JoinDef as the basis of your
+                     new JoinDef.
+
+
+The menu commands are the following: 
+
+     MENU COMMAND    SYNOPSIS
+     ------------    --------
+     Select          Select one of the choices.
+
+     Cancel          Return to previous frame.
+
+     Help            Print this message.

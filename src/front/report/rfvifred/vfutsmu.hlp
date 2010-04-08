@@ -1,0 +1,27 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are in the Utilities submenu for the selected form.  This submenu
+allows you to select several utility procedures on the form.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Compile         Compiles the form the cursor is currently positioned
+                        over.  You are prompted for the name of a file in
+                        which to place the compiled form.  See any of the
+                        embedded language user's guides for more
+                        information on how to use compiled forms.
+
+        Print           Places a printable image of the form into a file.
+                        Additional information about the form is also written
+                        to this file.  You are prompted for the name of a 
+                        file in which to place the forms image.  The file 
+                        is created in your current directory.
+
+        QBFNames        Displays a catalog of all QBFNames associated with
+                        the form, and allows you to perform maintenance
+                        activities on the QBFNames.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Forms Catalog menu.

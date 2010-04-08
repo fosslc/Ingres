@@ -1,0 +1,8 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/library/include=(gver), -	! for II_copyright
+INGLIB:libcobolsq.olb/include=(cobolsq,cbsqtoks,cbsqscan,cobsqgen), -
+INGLIB:libcobol.olb/library, -
+INGLIB:libequel.olb/library, -
+II_LIBQLIB/share
+II_COMPATLIB/share

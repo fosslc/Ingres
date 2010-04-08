@@ -1,0 +1,77 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<HTML>
+<SCRIPT language="JavaScript">
+top.Main.declareMenu(50, 5)
+
+top.Main.iteminsert(1, 't', 0, 'B', 0, 'Introduction', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'intro.html')
+
+top.Main.iteminsert(1, 't', 0, 'B', 1, 'Your site', '<!-- #ICE INCLUDE=`icon_book.gif` -->', 'GRAY', '')
+	top.Main.iteminsert(2, 'B', 1, 'C', 2, 'Authentication', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '', '')
+		top.Main.iteminsert(3, 'C', 2, 'P', 1, 'logout', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'out.html')
+		top.Main.iteminsert(3, 'C', 2, 'P', 0, 'login', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'in.html')
+
+	top.Main.iteminsert(2, 'B', 1, 'C', 1, 'Document', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '', '')
+		top.Main.iteminsert(3, 'C', 1, 'P', 5, 'Call', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'docCall.html')
+		top.Main.iteminsert(3, 'C', 1, 'P', 4, 'Access', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'docAccess.html')
+		top.Main.iteminsert(3, 'C', 1, 'P', 3, 'Owner', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'docOwner.html')
+		top.Main.iteminsert(3, 'C', 1, 'P', 2, 'Creation', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'docCreation.html')
+		top.Main.iteminsert(3, 'C', 1, 'P', 1, 'Caching', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'docCache.html')
+		top.Main.iteminsert(3, 'C', 1, 'P', 0, 'Definition', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'docDef.html')
+
+	top.Main.iteminsert(2, 'B', 1, 'C', 0, 'Business unit', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '', '')
+		top.Main.iteminsert(3, 'C', 0, 'P', 4, 'Locations', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'unitConf.html')
+		top.Main.iteminsert(3, 'C', 0, 'P', 3, 'Access', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'unitAccess.html')
+		top.Main.iteminsert(3, 'C', 0, 'P', 2, 'Owner', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'unitOwner.html')
+		top.Main.iteminsert(3, 'C', 0, 'P', 1, 'Creation', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'unitCreation.html')
+		top.Main.iteminsert(3, 'C', 0, 'P', 0, 'Definition', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'unitDef.html')
+
+top.Main.iteminsert(1, 't', 0, 'B', 2, 'Macro commands', '<!-- #ICE INCLUDE=`icon_book.gif` -->', 'GRAY', '')
+	top.Main.iteminsert(2, 'B', 2, 'C', 9, 'Recursive macro', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '')
+		top.Main.iteminsert(3, 'C', 9, 'P', 1, 'Repeat', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'repeat.html')
+		top.Main.iteminsert(3, 'C', 9, 'P', 0, 'Objectives', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'recursive.html')
+
+	top.Main.iteminsert(2, 'B', 2, 'C', 8, 'Transaction', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '')
+		top.Main.iteminsert(3, 'C', 8, 'P', 1, 'Rollback', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'rollback.html')
+		top.Main.iteminsert(3, 'C', 8, 'P', 0, 'Commit', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'commit.html')
+
+	top.Main.iteminsert(2, 'B', 2, 'C', 7, 'SQL statement', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '')
+		top.Main.iteminsert(3, 'C', 7, 'P', 14, 'Result', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'sqlFinal.html')
+		top.Main.iteminsert(3, 'C', 7, 'P', 11, 'Headers', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'header.html')
+		top.Main.iteminsert(3, 'C', 7, 'P', 10, 'Attribute', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'attr.html')
+		top.Main.iteminsert(3, 'C', 7, 'P', 9,  'Links', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'links.html')
+		top.Main.iteminsert(3, 'C', 7, 'P', 8,  'Format', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'format.html')
+		top.Main.iteminsert(3, 'C', 7, 'P', 6,  'Rows', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'rows.html')
+		top.Main.iteminsert(3, 'C', 7, 'P', 5,  'Cursor', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'cursor.html')
+		top.Main.iteminsert(3, 'C', 7, 'P', 4,  'Transaction', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'transaction.html')
+		top.Main.iteminsert(3, 'C', 7, 'P', 1,  'Statement', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'statement.html')
+		top.Main.iteminsert(3, 'C', 7, 'P', 0,  'Database', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'database.html')
+
+	top.Main.iteminsert(2, 'B', 2, 'C', 6, 'Condition', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '')
+		top.Main.iteminsert(3, 'C', 6, 'P', 2, 'Else', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'else.html')
+		top.Main.iteminsert(3, 'C', 6, 'P', 1, 'Then', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'then.html')
+		top.Main.iteminsert(3, 'C', 6, 'P', 0, 'If', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'if.html')
+
+	top.Main.iteminsert(2, 'B', 2, 'C', 5, 'Include', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '')
+		top.Main.iteminsert(3, 'C', 5, 'P', 1, 'How', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'include2.html')
+		top.Main.iteminsert(3, 'C', 5, 'P', 0, 'Why', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'include.html')
+
+	top.Main.iteminsert(2, 'B', 2, 'C', 4, 'Variable', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '')
+		top.Main.iteminsert(3, 'C', 4, 'P', 2, 'Get', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'varget.html')
+		top.Main.iteminsert(3, 'C', 4, 'P', 1, 'Set', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'varset.html')
+		top.Main.iteminsert(3, 'C', 4, 'P', 0, 'Definition', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'vardef.html')
+
+top.Main.iteminsert(1, 't', 0, 'B', 3, 'Helpful', '<!-- #ICE INCLUDE=`icon_book.gif` -->', 'GRAY', '')
+	top.Main.iteminsert(2, 'B', 3, 'C', 11, 'File transfer', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '')
+		top.Main.iteminsert(3, 'C', 11, 'P', 1, 'Download', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'download.html')
+		top.Main.iteminsert(3, 'C', 11, 'P', 0, 'Upload', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'upload.html')
+
+	top.Main.iteminsert(2, 'B', 3, 'C', 10, 'Error management', '<!-- #ICE INCLUDE=`icon_chap.gif` -->', 'GRAY', '')
+    top.Main.iteminsert(3, 'C', 10, 'P', 0, 'Error', '<!-- #ICE INCLUDE=`icon_page.gif` -->', 'BLACK', 'error.html')
+top.Main.display();
+</SCRIPT>
+
+</HTML>
+
+
+

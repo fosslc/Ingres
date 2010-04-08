@@ -1,0 +1,109 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE DECLARE=`withTrans=` -->
+<!-- #ICE DECLARE=`withCursor=` -->
+<!-- #ICE DECLARE=`withRows=` -->
+<!-- #ICE DECLARE=`withHtml=` -->
+<!-- #ICE DECLARE=`withHeader=` -->
+<!-- #ICE DECLARE=`withLinks=` -->
+<!-- #ICE DECLARE=`withAttr=` -->
+<!-- #ICE DECLARE=`withNull=` -->
+<!-- #ICE DECLARE=`withExt=` -->
+<!-- #ICE DECLARE=`withUser=` -->
+<!-- #ICE DECLARE=`withPassword=` -->
+
+<!-- #ICE REPEAT IF (`:transaction` != ``)
+THEN=`<!-- #ICE DECLARE=``page.withTrans=TRANSACTION=````````:transaction`````````` -->` 
+-->
+
+<!-- #ICE REPEAT IF (`:cursor` != ``)
+THEN=`<!-- #ICE DECLARE=``page.withCursor=CURSOR=````````:cursor`````````` -->` 
+-->
+
+<!-- #ICE REPEAT IF (`:rows` != ``)
+THEN=`<!-- #ICE DECLARE=``page.withRows=ROWS=````````:rows`````````` -->` 
+-->
+
+<!-- #ICE REPEAT IF (`:format` == `UNFORMATTED` and `:html` != ``)
+THEN=`
+	<!-- #ICE REPEAT FUNCTION=``TagToString?tags=:html``
+			 HTML=``<!-- #ICE DECLARE=````page.withHtml=HTML=````````````````:string```````````````````` -->``
+	-->`
+-->
+
+<!-- #ICE REPEAT IF (`:head` != ``)
+THEN=`<!-- #ICE DECLARE=``page.withHeader=HEADERS=````````:head`````````` -->` 
+-->
+
+<!-- #ICE REPEAT IF (`:links` != ``)
+THEN=`<!-- #ICE DECLARE=``page.withLinks=LINKS=````````:links`````````` -->` 
+-->
+
+<!-- #ICE REPEAT IF (`:attr` != ``)
+THEN=`<!-- #ICE DECLARE=``page.withAttr=ATTR=````````:attr`````````` -->` 
+-->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`
+<HR>
+The macro command is <br>
+<H4 CLASS="macro">
+&lt;!-- #ICE <BR>
+DATABASE = ``:dbname`` <BR>
+SQL=``:dbquery`` <BR>
+<!-- #ICE IF (``:withTrans`` != ````)		THEN=``:withTrans <BR>`` -->
+<!-- #ICE IF (``:withCursor`` != ````)	THEN=``:withCursor <BR>`` -->
+<!-- #ICE IF (``:withRows`` != ````)		THEN=``:withRows <BR>`` -->
+TYPE=``:format``<BR>
+<!-- #ICE IF (``:withHtml`` != ````)		THEN=``:withHtml <BR>`` -->
+<!-- #ICE IF (``:withHeader`` != ````)	THEN=``:withHeader <BR>`` -->
+<!-- #ICE IF (``:withLinks`` != ````)		THEN=``:withLinks <BR>`` -->
+<!-- #ICE IF (``:withAttr`` != ````)		THEN=``:withAttr <BR>`` -->
+--&gt;<BR><BR>
+`
+-->
+</H4>
+
+<!-- #ICE REPEAT IF (`:format` == `UNFORMATTED` and `:html` != ``)
+THEN=`<!-- #ICE DECLARE=``page.withHtml=HTML=````````:html`````````` -->`
+-->
+
+<!-- #ICE DECLARE=`ii_error_message=An error occurred during the execution` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`
+<!-- #ICE REPEAT VAR=``
+the result will be:<BR><BR>
+<!-- #ICE 
+SQL=````:dbquery````
+DATABASE = ````:dbname````
+TYPE=````:format````
+:withHtml
+:withHeader
+:withLinks
+:withAttr
+:withTrans
+:withCursor
+:withRows
+-->``
+-->
+`
+-->
+
+<p>ii_rowcount = <!-- #ICE VAR=`:ii_rowcount` -->
+
+<!-- #ICE REPEAT IF (`:ii_status_number` != `0`) 
+THEN=`:ii_status_text (info: :ii_status_info).
+			Click <A HREF="/ice-bin/oiice.:http_api_ext/iceTutorial/database.html">here</A> to change it.`
+-->
+
+<!-- #ICE REPEAT IF (`:transaction` != ``)
+THEN=`<!-- #ICE COMMIT=``:transaction`` -->` 
+-->
+##
+## (DO NOT REMOVE)

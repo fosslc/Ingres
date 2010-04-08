@@ -1,0 +1,35 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+     This form contains a list of fields that will be displayed on the
+     form for the current Join Definition.  You browse through these 
+     fields on a table-by-table basis.  Any field(s) that you decide not 
+     to display on the form can be removed with the "Delete" command.  
+     This gives you the flexibility to make a table field narrower and/or 
+     a form smaller.  You can further customize the form by using the 
+     Visual Forms Editor (VIFRED).
+
+     The fields on this form are:
+
+     Field Name                 Description
+     ----------                 -----------
+     Table                      Name (or abbreviation) of a table in the
+                                JoinDef.  The current list of fields
+                                corresponds to the columns in this table.
+     ColumnName                 List of displayed columns for the table.
+     FieldName                  List of field names that correspond to the
+                                columns of the table.
+
+     The following commands are on the QBF Change Display Form:
+
+     Command                    Function
+     -------                    --------
+     NextTable                  Get the list of displayed fields for the next
+                                table in the Join Definition.
+     Delete                     Remove the field that the cursor was positioned
+                                over from the list of displayed fields.
+                                (Deleting columns has no impact on the table(s)
+                                in the database ).
+                                NOTE: you cannot delete a join field.
+     Undo                       Backout the effects of the last "Delete" or
+                                "Undo" action. 
+     Help                       Print this message.
+     End                        Return to QBF Table Entry Form.

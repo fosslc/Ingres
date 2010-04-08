@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!embed!libqtxxa
+#
+
+SubDir ING_SRC front embed libqtxxa ;
+
+IISUBSYS front embed libqtxxa ;
+
+
+IIUTILSH iimkicas : iimkicas.sh ;
+IIUTILSH iimktms : iimktms.sh ;
+
+IIFILES iitxxa.h ;
+
+IILIBRARY LIBQTXXALIB : iitxtmsu.sc iitxtms.c iitxswch.c
+	iitxmain.c iitxinit.c iitxftms.c iitxfica.c iitxfas.c ;
+

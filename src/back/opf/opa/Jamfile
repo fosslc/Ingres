@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!opf!opa
+#
+
+SubDir ING_SRC back opf opa ;
+
+IISUBSYS back opf opa ;
+
+
+IILIBRARY OPFLIB : opasuboj.c opaprime.c opaoptim.c opalink.c
+	opainitsq.c opagen.c opafinal.c opacompat.c opabyprj.c
+	opaaggr.c ;
+

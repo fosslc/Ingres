@@ -1,0 +1,112 @@
+
+/*
+**	Report: htmlwrite
+**
+**		Last Modified: 1998_10_06 22:29:55 gmt  
+**		Level: 1
+*/
+
+.NAME	htmlwrite
+.SHORTREMARK	HTML tags by hand
+.LONGREMARK
+Example of embedding HTML tags in a report 
+.ENDREMARK
+.DECLARE
+	ii_rbf_date_fmt = varchar(255) with value 'd''03-feb-1901''',
+	ii_rbf_time_fmt = varchar(255) with value 'd''16:05:06''',
+	ii_rbf_pageno_fmt = varchar(255) with value '''\-zzzn \-'''
+.QUERY
+	SELECT  *
+	FROM	 plays RBF
+		/* WIDTH  90
+		*  DO NOT MODIFY.  DOING SO MAY CAUSE REPORT TO BE UNUSABLE.
+		*/
+.SORT	title : a
+
+.HEADER	report
+	.FORMAT title(cf0.35)
+	.POSITION title(0,35)
+	.FORMAT playwright(c20)
+	.POSITION playwright(38,20)
+	.FORMAT acts(f13)
+	.POSITION acts(61,17)
+	.FORMAT type(c10)
+	.POSITION type(79,10)
+	.RM 90
+	.PRINT '<CENTER><TABLE BORDER = 0 WIDTH = 100%>'
+	.PRINT '<TR><TD ALIGN=left><STRONG>'
+	.PRINT current_time($ii_rbf_date_fmt)
+	.PRINT '</STRONG></TD><TD ALIGN=right><STRONG>'
+	.PRINT current_time($ii_rbf_time_fmt)
+	.PRINT '</STRONG></TD></TR></TABLE></CENTER><HR>'
+	.NEWLINE 1
+	.TFORMAT title(cf0.35)
+	.NEED 4
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '<CENTER><H3>'
+		.PRINT 'ICE Tutorial - Example of publishing an existsing report'
+		.PRINT '<H3></CENTER>'
+		.NEWLINE 
+	.END BLOCK
+	.NEWLINE 1
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '<CENTER><H3>Report on Table: plays</H3></CENTER>'
+		.NEWLINE 
+	.END BLOCK
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '<HR>'
+		.NEWLINE 
+	.END BLOCK
+	.NEED 4
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '<TABLE BORDER=2 WIDTH = 100%>'
+		.NEWLINE 
+		.PRINT '<TR><TD ALIGN=CENTER COLSPAN=4>'
+		.PRINT '<STRONG>A list of plays</STRONG>'
+		.PRINT '</TD></TR>'
+		.NEWLINE 
+		.PRINT '<TD ALIGN=center><STRONG>Title</STRONG></TD>'
+		.NEWLINE 
+		.PRINT '<TD ALIGN=center><STRONG>Playwright</STRONG></TD>'
+		.NEWLINE 
+		.PRINT '<TD ALIGN=center><STRONG>Acts</STRONG></TD>'
+		.NEWLINE 
+		.PRINT '<TD ALIGN=center><STRONG>Type</STRONG></TD>'
+		.NEWLINE 
+		.PRINT '</TR>'
+		.NEWLINE 
+	.END BLOCK
+
+.DETAIL
+	.PRINT '<TR>'
+	.NEWLINE 
+	.PRINT '<TD ALIGN=left>'
+	.PRINT title
+	.PRINT '</TD>'
+	.NEWLINE 
+	.PRINT '<TD ALIGN=left>'
+	.PRINT playwright
+	.PRINT '</TD>'
+	.NEWLINE 
+	.PRINT '<TD ALIGN=left>'
+	.PRINT acts
+	.PRINT '</TD>'
+	.NEWLINE 
+	.PRINT '<TD ALIGN=left>'
+	.PRINT type
+	.PRINT '</TD>'
+	.NEWLINE 
+	.PRINT '</TR>'
+	.NEWLINE 
+
+.FOOTER	report
+	.PRINT '</TABLE>'
+	.PRINT '<P>'
+	.PRINT '<CENTER>Please make selection from the menu pane.</CENTER>'
+	.NEWLINE 
+
+

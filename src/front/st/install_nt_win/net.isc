@@ -1,0 +1,1458 @@
+;                               INSTALL.ISC
+;
+;  SAMPLE INSTALLATION FILE WITH FORMAT NOTES
+;
+;  General Rules:
+;       1) Items in brackets '[' or ']' denote keywords used to define
+;	   sections of the install script or used to set internal flags.
+;       2) Comment lines begin with ';'
+;	3) Several pre-defined variables exist:
+;	    %0% : Target directory for the installed product.
+;	    %1% : In WINDOWS, the Windows directory; in OS2, the
+;		  current directory on the active hard disk.
+;	    %2% : In WINDOWS, the Windows System directory; in OS2, the
+;		  OS2 DLL directory
+;	    %3% : This is a bit flag representation of up to 32
+;		  components (groups) that show up on the selection
+;		  dialog.  Each bit, when 1 (starting from the lowest
+;		  bit) represents the respective option selected.
+;		  This can be used to pass the selection information
+;                 to another program when EXEC'd by the installer.
+;	    %4% : This is the drive of the target directory, to pass
+;                 to exec's or calls primarily.
+;	    %5% : The directory of the CA-APPS common tools.  Use this
+;		  as the target drive when installing common tools such
+;		  as CABL.DLL, etc.
+;	    %6% : The source subdirectory.
+;	    %7% : The boot drive.
+;	    %8% : The response file name.
+;           %9% : The machine (host) name for NT and Win95
+;	    %{any letter}% : The directory specified in the [directory]
+;		  section that matches that letter.
+;	4) MAX Disks	   = 100
+;	5) MAX Files	   = 10000
+;	6) MAX Directories = 625
+;
+;   NOTE:   If you are using help in a multi-product installation and using
+;           sub-scripts then you must have instos2.hlp file on the disk.
+;	    CA-Install will look on the disk and will Initialize the help
+;	    manager if it finds instos2.hlp. Otherwise, it will hide the help
+;	    button.
+;
+;   NOTE:   The new version of CA-INSTALL (3.2) is mostly backward compatible
+;	    with 3.0 and old scripts should be able to run without a problem.
+;	    Largest number of changes are made in the products section for
+;	    multi-product installation.
+;	    If you are moving from 3.0 to 3.2 the following sections are
+;	    changed. Please read the full discriptions of each section,
+;	    compare the changes and then update your 3.0 script files.
+;
+;		[progman]
+;		    OLD:
+;			FOR WINDOWS:
+;                       "n", "Parameter String", "icon caption", "Title","filename"
+;			FOR OS/2:
+;                       "n", "Parameter String", "Class", "icon caption", "Title","filename"
+;		    NEW:
+;			FOR BOTH OS:
+;                       "n", "Parameter String", "icon caption", "Class", "Title","filename"
+;		[products]
+;		    OLD:
+;                       "prod","appname","baseapp","comment"
+;		    NEW:
+;                       "prod","appname","baseapp","comment","flags","iscname","iscdisk"
+;		[environment]
+;		    OLD:
+;			env string
+;		    NEW:
+;                       "prog", "env"
+;		[call]
+;		    OLD:
+;                       "prog", "product", "comp-ID", "call", "prompt"
+;		    NEW:
+;                       "prog", "product", "comp-ID", "call", "prompt", "state"
+;		[exec]
+;		    OLD:
+;                       "product","exec","prompt"
+;		    NEW:
+;                       "prog","exec","prompt", "state"
+;
+;
+;   NOTE:   In 3.3 the file section has been changed.
+;
+;               [files]
+;		    OLD:
+;                       ;"n","prod","flags","d","idir","destfilename","PName","Description","Comment","size","finalsize"
+;;                   NEW:
+;                       ;"n","prod","flags","d","idir","destfilename","srcfilename","PName","Description","Comment","size";,"finalsize"
+;
+;   NOTE:   Licensing requires a DAT file to be created by the CA-Install.
+;           CA-Install creates a DAT file if BASEAPP name was given, LICENSE
+;           keyword was used and the file is encrypted.
+
+
+
+[setup]
+; Ingres/NT Installation
+;
+; OpenIngresNet/NT 3.5" Diskette Installation
+  "PACKAGENAME","OpenIngresNet/NT Version 2.0"
+  "CAPTIONNAME","OpenIngresNet/NT Installation"
+  "APPNAME", "OpenIngresNet/NT"
+  "RELEASESTRING", "Version 2.0"
+;
+; The string, SPJWIN, in BASEAPP is used to generate the name of registration
+; key file.  The installation program concatnates this string, only the first
+; 7 characters are used, with "_.dat" and use the derived string as the name
+; of registration key file.  Therefore, this string should match the name of
+; your registration key file.
+; 
+  "BASEAPP", "OPINNET"
+  "COPYRIGHTSTR", "Copyright © 2005-2006 Ingres Corporation."
+  "PRODIDMATCH", "000000"
+; The following are new version identifiers for license checking.
+  "MAJORVERSION",  "1"
+  "MINORVERSION",  "2"
+  "REVLETTER",     "A"
+
+;
+; demo version and turn off registration
+;
+
+;[register_as_demo]
+
+;
+; education version
+;
+;[register_as_education]
+
+;Supported for backward compatibility. It has no effect.
+;[noregister]
+
+;
+; Don't display the splash screen when bringing up the product.
+;
+[nosplash]
+
+; The BYPASSUI flag, when present, prevents the user info dialog box
+; to come up.
+;
+;[bypassui]
+
+
+; The BYPASSPID flag, when present, prevents the product ID field from
+; being requested and displayed when asking for user info.
+;
+;[bypasspid]
+
+; The NOTCOMPLETE keyword specifies that after the install product is
+; finished we don't want to display an "Install Complete" message, since
+; the user will be doing more installation work via execs.
+;
+;[not_complete]
+
+; The SKIPWRITEKEY  keyword skips writing the keyfile information back
+; to the ORIGINAL keyfile on the source disks.	This is important for
+; products that will be installed from CD-ROM or other non-writable media.
+; This flag is set automatically if cd-rom key word is used.
+;
+[skipwritekey]
+
+; The CD-ROM  keyword makes all the destination files writeable and
+; does not allow the writeback of key file and the log files.
+; In other words it automatically sets the skipwritekey flag and
+; overrides the creation of the log files.
+;
+;[CD-ROM]
+
+
+; Use the BASIC_DLG key to bring up a dialog with the basic/advanced
+; selection.
+;
+;[basic_dlg]
+
+; The LOGFILE specifies a filename to use in the SOURCE directory to log
+; various installation information, such as the date and time, which
+; files were copied and/or compressed, errors, etc.
+; This keyword is disabled if cd-rom key word is used.
+;
+
+;[logfile]
+;"SPJINST.LOG"
+
+; The PRODUCT_LOG specifies a filename to use in the SOURCE directory to
+; log which products were installed, where, and when.
+; This keyword is disabled if cd-rom key word is used.
+;
+
+;[product_log]
+;"SPJPROD.LOG"
+
+; The RESPONSE command specifies a filename which contains canned responses
+; for the installer.  Look in the file RESPONSE.RSP for the syntax of
+; response files.
+;
+[response]
+"C:\RESPONSE.RSP"
+
+; The SKIPCAPPS command bypasses the prompt for CA-APPS common directory.
+; This should only be used if there are no common CA tools in your product,
+; and you do not wish the product to be "registered" in CAI.INI.
+;
+[skipcaapps]
+
+; The SKIPPLUGMSG skips the first message telling user to have a plug
+; ready if the installation method requires plugs.
+;
+[skipplugmsg]
+
+; The NOBACKLEVEL flag does not allow older versions of files to be
+; installed - the user gets no indication that files have been skippped.
+;
+[nobacklevel]
+
+; The USEMULTITITLE is used in multi-product installation. If it is used
+; then "CA-Multiple product installation" is displayed as title on the
+; product selection screen rather than the baseapp installation.
+;[usemultititle]
+
+
+;  The PRODUCTS keyword specifies which products are to be installed
+;  for multiple product installations.	If there is only one product
+;  to be installed, this keyword/section can be skipped, or it may
+;  be defined.	Products may be broken out further into components.
+;
+;  FORMAT:
+;
+;   "prod","appname","baseapp","comment","flags","iscname","iscdisk"
+;
+;   prod    : This is a one character string, A to Z, that uniquely identifies
+;	      each product.  This is checked against in in various other
+;	      sections.
+;   appname : This is an override for the setup string "APPNAME"
+;   baseapp : This is an override for the setup string "BASEAPP"
+;   comment : A longer description of the product.
+;   flags   : (Optional)Can be none, one, or many of the following:
+;		R   : Required product- Setup **will** copy this product.
+;		D   : Display this product in the User Selection Listbox.
+;		      This is the default option.
+;		T   : Turn off selection of this item as a default.
+;		U   : Do not ask for parent sub-directory. Use default.
+;               E   : Exclusive components
+;   iscname : (Optional) Seperate script file for this product.
+;   iscdisk : (Optional) Disk number iscname resides on.
+;   DATDir  : (Optional) Destination dir for the key file for this product.
+;
+;
+;       TO USE THE OPTIONAL INCLUDED SCRIPT FILE:
+;           External script files for multi-product installs is supported
+;           in this release.  These script files should only contain
+;           the [disks], [directories], [files], and [calls].  The
+;           primary script file must contain the products defined in
+;           the products section, and the [disks] section should have
+;           disk defined that contains the sub-script file.
+;
+;
+
+[products]
+"A","OpenIngres DBMS","DBMS","OpenIngres for Microsoft Windows NT DBMS","D"
+"B","OpenIngres Net","NET","OpenIngres for Microsoft Windows NT Net","D","NET.ISC","16"
+"C","OpenIngres Star","STAR","OpenIngres for Microsoft Windows NT Star","D","STAR.ISC","29"
+"D","OpenIngres ESQL/C","ESQLC","OpenIngres for Microsoft Windows NT ESQL/C","D","ESQLC.ISC","31"
+"E","OpenIngres ESQL/COBOL","COBOL","OpenIngres for Microsoft Windows NT ESQL/COBOL","D","COBOL.ISC","34"
+"F","OpenIngres Tools","TOOLS","OpenIngres for Microsoft Windows NT Tools","D","TOOLS.ISC","36"
+"G","OpenIngres Vision","VISION","OpenIngres for Microsoft Windows NT Vision","D","VISION.ISC","38"
+"H","OpenIngres Replicator","REP","OpenIngres for Microsoft Windows NT Replicator","D","REP.ISC","41"
+"I","OpenIngres ICE","ICE","OpenIngres for Microsoft Windows NT ICE","D","ICE.ISC","43"
+"J","OpenIngres OpenROAD","OR","OpenIngres for Microsoft Windows NT OpenROAD","D","OR.ISC","45"
+"K","HAHT Software HAHTsite","HAHT","OpenIngres for Microsoft Windows NT HAHTsite","D","HAHT.ISC","59"
+"L","Prophecy Americas Inc. Demo","PROPHECY","OpenIngres for Microsoft Windows NT Demo","D","PROPHECY.ISC","80"
+"M","Tactica Corporation Demo","TACTICA","OpenIngres for Microsoft Windows NT Demo","D","TACTICA.ISC","83"
+"N","Brio Technology Demo","BRIO","OpenIngres for Microsoft Windows NT Demo","D","BRIO.ISC","85"
+"O","Bluestone Software Demos","BLUE","OpenIngres for Microsoft Windows NT Demos","D","BLUE.ISC","90"
+"P","WRQ Inc. Reflection X","WRQ","OpenIngres for Microsoft Windows NT X","D","WRQ.ISC","103"
+"Q","Interactive Softare Systems Inc.","SAFARI","OpenIngres for Microsoft Windows NT Inc.","D","SAFARI.ISC","111"
+;END NET
+
+;
+;  FORMAT:
+;
+;   "prod","license_type","param1","param2"
+;
+;   prod    : This is a one character string, A to Z, that uniquely identifies
+;	      each product.  This is checked against in in various other
+;	      sections.
+;   license_type : "NO LICENSE"      - no checking
+;                  "USER COUNT"      - specifies concurrent users running
+;				       this product on a network
+;                  "PLUG"            - checks hardware plugs, or "dongles"
+;                  "SERIAL"          - not used yet
+;                  "STANDALONE"      - does not work on a network
+;                  "NETWORK"         - MUST run on a network
+;                  "TIME RESTRICTED" - product works for a specified time;
+;				       then must get a key from sales
+;                  "COUNTRY"         - country code is checked before running
+;   param1 :
+;	    USER COUNT:      The number of users that can be activated.
+;	    PLUG:	     This parameter specifies the byte offset in the
+;			     plug reserved for this product.  This should be
+;			     registered with config control and must match
+;			     the production of the plug.
+;	    COUNTRY:	     The country code that MUST be defined in the
+;			     system settings for the product to run.
+;	    TIME RESTRICTED: The number of days to let the product
+;			     run before requiring a key.
+;   param2 :
+;		PLUG: This is the release number of the product.  It has
+;		      no bearing on the displayed version number; all
+;		      products start out at 1 (even if it is release 6.2),
+;		      and new releases will increment that number by one.
+;		      The max value is 63.
+;
+;NOTE:  Licensing requires a DAT file to be created by the CA-Install.
+;       CA-Install creates a DAT file if BASEAPP name was given, LICENSE
+;       keyword was used and the file is encrypted.
+
+;[license]
+;"A", "PLUG", "20", "1"
+;"A", "COUNTRY", "1"
+
+;  The EXCLUSIVE keyword works in conjunction with the PRODUCTS keyword
+;  and determines whether or not the top-level products are mutually
+;  exclusive or not.  For instance, if there was a bundle of un-related
+;  products, you would NOT use the exclusive keyword; if only one
+;  product could be installed at a time you WOULD set the exclusive
+;  keyword.
+;
+;[exclusive]
+
+; Net License - don't use.  Changes the registration dialog.
+;[net_license]
+
+
+;  The BACKGROUND keyword specifies the colors or a bitmap to be displayed
+;  as the background of the install.
+;  If bit map is given it will override color schemes except for the title
+;  color.
+;
+;
+;  FORMAT:
+;   "dll","id256","id16","titleColor","bkColor","barColor"
+;
+;       dll         : Name of the DLL containing the background bitmaps.
+;                     The name of the DLL should be what it is on the disk.
+;                     e.g. compressed DLL may have an extension of .DL$
+;       id256       : Id of a 256 color bitmap.
+;       id16        : Id of a 16 color bitmap.
+;       titleColor  : Color of the title string.
+;       bkColor     : Color of the back ground. Include 'S' in the parameter
+;                     list if shaded background is required.
+;                     "R0G255B0S" will result in a shaded green screen.
+;       barColor    : Color of the bar running across the screen.
+;
+;  NOTE:
+;   The color must be a RGB value; e.g. R255G0B0 is red.
+;   Use Windows control panel/Color utility to see the RGB value of a
+;   color. In OS2 use color editing utility
+;
+
+;
+;[background]
+;"BACK.DL$","100","101","R0G0B0","SR0G0B255","R255G0B0"
+
+
+;  The SLIDESHOW keyword specifies a list of bitmaps to display, along
+;  with how long each one should last.	The bitmaps will display only
+;  while files are being copied.
+;
+;  FORMAT:
+;   bitmap DLL : The first line following the [slideshow] command
+;		 defines what DLL the bitmaps are to be loaded from.
+;
+;   bitmap_id, time, x, y
+;
+;       bitmap_id : The id of defined bitmaps that are built into
+;                   into the DLL via the .rc file.
+;	time	  : The time, in tenths of seconds, to display the bitmap.
+;	x	  : upper left x coordinate to display bitmap in dialog coords.
+;	y	  : upper left y coordinate to display bitmap in dialog coords.
+;
+;
+;[slideshow]
+;BOMBS.DLL
+;5000, 20, 20, 20
+;5001, 30, 20, 100
+
+;
+;  The SIGNATURE keyword checks for the existance of a file before
+;  the product is installed. This check can be used for upgrade products
+;  that require a previous version or competetive product or perhaps
+;  other required modules in a multi-module app.
+;
+;  If there is more than one file specified a list box will display the
+;  descriptions then ask the user to specify which product or file they have.
+;  Once specified at least one pattern at offset 1-n must match.
+;
+;  If your product is compressed use the compressed offset and match
+;  pattern as one pattern and the uncompressed as the other. This allows
+;  the user to just insert the original disk without the need to install
+;  the product. Also use multiple patterns for revisions of the product that
+;  have the same file name (i.e Rev SC4 Rev A,B,C).
+;
+;  If your product requires mutliple files use multiple [SIGNATURE] blocks.
+;  You should, of course, encrypt this file when using SIGNATURE blocks.
+;
+; "prod", "filename", "description", offset_1, "match_string_1",offset_2, "match_string_1"
+;       prod     - This is a one character string, A to Z, that uniquely identifies
+;	        each product.  This is checked against in in various other
+;	        sections.
+;	filename - full filename and optional drive and file extent
+;		program will check for existence of file on optional
+;		drive and path, if not found a dialog will ask for
+;		location.
+;
+;	Description
+;               Description of file to look for. I.e. "Harvard Project 1.0"
+;
+;	File Offset 1
+;		Offset in bytes expressed as decimal or hexidecimal
+;		if preceeded with 0x notation (123 or 0x40000)
+;	Match String 1
+;		String or byte pattern to look for at location file offset.
+;		Quoted string may contain ascii character or hexidecimal
+;               notation when preceeded with a "\" (i.e  \x07). A backslash
+;       is specified as "\\".
+;	Optional File Offset 2-n
+;	Optional Match String 2-n (up to 256 line length)
+;	EXAMPLE
+;	   [signature]
+;	   ; The following allows installation of SuperCalc if the user has
+;	   ; any previous version or Lotus 123 version 2.1
+;          "SC3.COM","SuperCalc3",0x128,"S/N0"
+;          "SC4.COM","SuperCalc4 Rev B, Installed",0x40000,"\xAE\x52\x01",0x128,"S/N"
+;          "SC5.COM","SuperCalc5 Revision A" ,0x122,"\xAE\x52\x01"
+;          "SC5.COM","SuperCalc5 Revision C" ,0x122,"\xdd\x52\x01"
+;          "123.EXE","Lotus 123",0x40000,"\xAE\x52\x01",0x128,"S/N"
+;
+;[signature]
+;"A", "spj.exe", "SuperProject Expert Version 1.00", 0x27100, ;"\x00\x0a\x00\x00\x00\x00\x00\x00", 0x27100, "\x00Cannot "
+;"A", "spj.exe", "SuperProject Expert Version 1.10", 0x27100, "\x32\x1f\xb3\x40\x36\x1f\xb3\x40"
+;"A", "spj.exe", "SuperProject Plus Version 2.00", 0x27100, "\xc7\x86\xda\x00\x00\x00\xc7\x86", ;0x27100, "\x46\x26\x8b\x04\x3d\x18\x00\x89", 0x27100, "\x4e\x02\x89\x56\x00\x8b\x86\xec"
+;"A", "spjplus.exe", "SuperProject Plus Version 3.00", 0x27100, "ral fail"
+;"A", "spj.exe", "SuperProject Version 1.10", 0x27100, "\x50\x53\x1e\xb8\xe0\x29\x50\x16", ;0x27100, "\x39\x05\x62\x1a\x51\x05\x62\x1a"
+;"A", "spj.exe", "SuperProject Version 2.00", 0x20000, "uare roo", 0x8fd0, "ay mappi", 0x9000, ;"ound wro", 0x8fd0, "ror (ove"
+;"A", "spjwin.exe", "SuperProject for Windows Version 2.00", 0x20000, ;"\x0a\x93\xba\x1b\x06\xa2\x25\x10", 0x20000, "\x8b\x46\xbc\x8b\x56\xbe\x01\x06"
+;"A", "spj.exe", "CA-SuperProject Version 2.10", 0x1ddd0, "Error:\x00O"
+
+
+; Specifies what disks are part of the installation.
+;
+;
+; Format:
+;
+; "n","path","name"
+;
+; n	: The disk number, 0-100
+; path  : The path of the disk, i.e. "A:\".  This will generally be
+;	  ignored since the path will be replaced if the user executes
+;	  the install from another drive.
+; name  : The name on the printed disk label you stick on,
+;         i.e. "KillerApp Disk #1"
+;
+
+[disks]
+"16","A:\","OpenIngres Net Disk #17"
+"17","A:\","OpenIngres Net Disk #18"
+"18","A:\","OpenIngres Net Disk #19"
+"19","A:\","OpenIngres Net Disk #20"
+"20","A:\","OpenIngres Net Disk #21"
+"21","A:\","OpenIngres Net Disk #22"
+"22","A:\","OpenIngres Net Disk #23"
+"23","A:\","OpenIngres Net Disk #24"
+"24","A:\","OpenIngres Net Disk #25"
+"25","A:\","OpenIngres Net Disk #26"
+"26","A:\","OpenIngres Net Disk #27"
+"27","A:\","OpenIngres Net Disk #28"
+"28","A:\","OpenIngres Net Disk #29"
+;END NET
+
+
+; This is where you indicate where to place the files.  There are
+; two types of directories: The parent, and children.  Children
+; must be from the parent, or from other children. There can
+; only be one parent, as many children as you like
+;
+;
+; Note: MAX number of dirs = 625 !!
+;
+; Note: To create empty directories use an null destination file name in file
+;       section.
+;
+; Format:
+;
+; "product","n","path","description"
+;
+; product     : The product identifier (for multiple product installs).
+;               If there is only one product, this value should be "A".
+; n	      : The directory Number. PARENT must be 0, and must exist.
+;               Children can have names A-ZZ.  Children start with backslash.
+; path        : The name of the subdirectory
+; description : The description of the purpose of this directory
+;
+; Note: "0", the parent, may be modified by the user.  This is reflected
+; in "0"'s value.
+;
+
+[directories]
+"B","0","C:\oping","OpenIngres C:\oping"
+"B","AA","\ingres\bin","OpenIngres \ingres\bin"
+"B","AB","\ingres\utility","OpenIngres \ingres\utility"
+"B","AC","\ingres\files","OpenIngres \ingres\files"
+"B","AE","\ingres\lib","OpenIngres \ingres\lib"
+"B","AF","\ingres\demo\api\asc","OpenIngres \ingres\demo\api\asc"
+"B","AG","\ingres\demo\api\syc","OpenIngres \ingres\demo\api\syc"
+"B","AH","\ingres\vdba","OpenIngres \ingres\vdba"
+"B","AI","\ingres\files\english","OpenIngres \ingres\files\english"
+"B","AJ","\ingres\files\zoneinfo\gmt","OpenIngres \ingres\files\zoneinfo\gmt"
+"B","AK","\ingres\files\zoneinfo\asia","OpenIngres \ingres\files\zoneinfo\asia"
+"B","AL","\ingres\files\zoneinfo\astrl","OpenIngres \ingres\files\zoneinfo\astrl"
+"B","AM","\ingres\files\zoneinfo\mideast","OpenIngres \ingres\files\zoneinfo\mideast"
+"B","AN","\ingres\files\zoneinfo\na","OpenIngres \ingres\files\zoneinfo\na"
+"B","AO","\ingres\files\zoneinfo\sp","OpenIngres \ingres\files\zoneinfo\sp"
+"B","AP","\ingres\files\zoneinfo\europe","OpenIngres \ingres\files\zoneinfo\europe"
+"B","AQ","\ingres\files\zoneinfo\sa","OpenIngres \ingres\files\zoneinfo\sa"
+"B","AR","\ingres\files\zoneinfo\seasia","OpenIngres \ingres\files\zoneinfo\seasia"
+"B","AS","\ingres\files\charsets\alt","OpenIngres \ingres\files\charsets\alt"
+"B","AT","\ingres\files\charsets\arabic","OpenIngres \ingres\files\charsets\arabic"
+"B","AU","\ingres\files\charsets\chineses","OpenIngres \ingres\files\charsets\chineses"
+"B","AV","\ingres\files\charsets\chineset","OpenIngres \ingres\files\charsets\chineset"
+"B","AW","\ingres\files\charsets\chtbig5","OpenIngres \ingres\files\charsets\chtbig5"
+"B","AX","\ingres\files\charsets\chteuc","OpenIngres \ingres\files\charsets\chteuc"
+"B","AY","\ingres\files\charsets\chthp","OpenIngres \ingres\files\charsets\chthp"
+"B","AZ","\ingres\files\charsets\cw","OpenIngres \ingres\files\charsets\cw"
+"B","BA","\ingres\files\charsets\decmulti","OpenIngres \ingres\files\charsets\decmulti"
+"B","BB","\ingres\files\charsets\dosasmo","OpenIngres \ingres\files\charsets\dosasmo"
+"B","BC","\ingres\files\charsets\elot437","OpenIngres \ingres\files\charsets\elot437"
+"B","BD","\ingres\files\charsets\greek","OpenIngres \ingres\files\charsets\greek"
+"B","BE","\ingres\files\charsets\hebrew","OpenIngres \ingres\files\charsets\hebrew"
+"B","BF","\ingres\files\charsets\hproman8","OpenIngres \ingres\files\charsets\hproman8"
+"B","BG","\ingres\files\charsets\ibmpc437","OpenIngres \ingres\files\charsets\ibmpc437"
+"B","BH","\ingres\files\charsets\ibmpc850","OpenIngres \ingres\files\charsets\ibmpc850"
+"B","BI","\ingres\files\charsets\ibmpc866","OpenIngres \ingres\files\charsets\ibmpc866"
+"B","BJ","\ingres\files\charsets\iso88591","OpenIngres \ingres\files\charsets\iso88591"
+"B","BK","\ingres\files\charsets\iso88592","OpenIngres \ingres\files\charsets\iso88592"
+"B","BL","\ingres\files\charsets\iso88595","OpenIngres \ingres\files\charsets\iso88595"
+"B","BM","\ingres\files\charsets\iso88599","OpenIngres \ingres\files\charsets\iso88599"
+"B","BN","\ingres\files\charsets\kanjieuc","OpenIngres \ingres\files\charsets\kanjieuc"
+"B","BO","\ingres\files\charsets\korean","OpenIngres \ingres\files\charsets\korean"
+"B","BP","\ingres\files\charsets\pc857","OpenIngres \ingres\files\charsets\pc857"
+"B","BQ","\ingres\files\charsets\pchebrew","OpenIngres \ingres\files\charsets\pchebrew"
+"B","BR","\ingres\files\charsets\shiftjis","OpenIngres \ingres\files\charsets\shiftjis"
+"B","BS","\ingres\files\charsets\slav852","OpenIngres \ingres\files\charsets\slav852"
+"B","BT","\ingres\files\charsets\thai","OpenIngres \ingres\files\charsets\thai"
+"B","BU","\ingres\files\charsets\warabic","OpenIngres \ingres\files\charsets\warabic"
+"B","BV","\ingres\files\charsets\whebrew","OpenIngres \ingres\files\charsets\whebrew"
+"B","BX","\ingres\files\charsets\wthai","OpenIngres \ingres\files\charsets\wthai"
+"B","BY","\ingres\files\charsets","OpenIngres \ingres\files\charsets"
+"B","CA","\ingres\files\name","OpenIngres \ingres\files\name"
+"B","CD","\ingres\files\dictfiles","OpenIngres \ingres\files\dictfiles"
+"B","CG","\ingres\sig\tz","OpenIngres \ingres\sig\tz"
+"B","CH","\ingres","OpenIngres \ingres"
+;END NET
+
+
+;
+; This is where you place the information about each file to be
+; copied.
+;
+;
+; ----------------------------------------------------------------------------
+;
+; NOTE:  There are two types of setup: Simple and Complex.
+;
+;        Simple:  Installs ALL files, like a batch file.  For this       
+;                 setup, do not worry about "D" flags, "R" flags,
+;                 or the <nn> flag.
+;
+;        Complex: Presents the user with a dialog box allowing
+;                 them to install certain files.  All flags apply
+;                 in this case.                
+;
+;        For Group (or Component) definitions, ALL fields are required.
+;           For files following each group definition, only the first 6
+;           fields are required.  There should always be at least one
+;           group defined, using either the D, T, or R flag (these are
+;           mutually exclusive).
+;
+; NOTE:  To install files spanning multiple disks the first file should have
+;        normal paramter; e.g. "C" or "CD10IA" or "CR" etc. The remaining files
+;        must have "S" in their parameter list; e.g. "CS". The "S" flag tells
+;        CA-Install that this file is a part of a spanned file.
+;
+; Example of a spanned file:
+;
+;    "3","A","C","0","","BIGFILE.TXT","BIGFILE.001",""
+;    "4","A","CS","0","","BIGFILE.TXT","BIGFILE.002",""
+;    "5","A","CS","0","","BIGFILE.TXT","BIGFILE.003",""
+;    "6","A","CS","0","","BIGFILE.TXT","BIGFILE.004",""
+;
+; ----------------------------------------------------------------------------
+;
+; Format:
+;
+; "n","prod","flags","d","idir","destfilename","srcfilename","PName",
+;     "Description","Comment","size","finalsize", "iconfile","paramstr"
+;
+; n          : The disk number this file resides on
+;
+; prod	     : Product code which matches the product codes defined in the
+;	       [products] section.  If there is no products section, this
+;              value should be "A".
+;
+; flags      : Can be none, one, or many of the following:
+;
+;              R     : Required GROUP - Setup **will** copy all files
+;                      in this group.
+;              D     : Display this GROUP in the User Selection Listbox.
+;              T     : Turn off selection of this item as a default, but
+;                      show this in the list box as a group.
+;              C     : Compressed file. Use the "real" filename in this .ISC
+;		       file, setup will look for a filename with the last
+;                      character of the extension == '_'.
+;              Ic[t] : Add this program to ProgMan, group c. Group is A-Z
+;		       t is an optional parameter that can be either W, P,
+;		       or M (Windows, PM, or MS-DOS).
+;              N     : Minimize the executeable on start. Only valid if 'I'
+;                      paramter is specified to create icons. (Only for Windows)
+;	       nn    : The next nn entries are part of the group to copy,
+;		       for example, if there are four files for KillerApp,
+;		       all of which you copy or you dont, then you
+;		       would place 03 in this spot, and make the next
+;		       three entries be the other three files. The user
+;		       will see this entry as only one Object though.
+;	       On    : (Optional) If the product already exists on the
+;                      users computer this flag can be used to determine
+;		       CA-Install actions:
+;				    n = 0   Check time and dates of the
+;					    source and destination files
+;					    and then ask display a dialog
+;					    box for overwrite instructions if
+;					    the source file is older otherwise
+;					    copy file. (default).
+;				    n = 1   Always display a dialog box for
+;					    instructions.
+;				    n = 2   Replace destination file
+;					    with source file.
+;				    n = 3   Do not replace destination file
+;					    with source file.
+;	       V=n.nn: Install only if the operating system (i.e. Windows)
+;                      is this version or later. If n='S', then this will
+;                      check for the existence of Win32s, if n='N' this
+;                      will check for NT, if n='C' this will check for
+;                      Windows95 (Chicago).
+;
+;		       Examples:
+;
+;                      This example says "if running under Windows 3.0 then copy SPJWIN.EXE".
+;                      "0","A","C07DIAV=3.0","0","","SPJWIN.EXE","CA-SuperProject","Program Files","CA-SuperProject program, help and report files","2550", "2550"
+;
+;		       Copy this file if the version number greater than 2.0
+;                      "0","A","CV>2.0","0","","SPJLOGO.DLL",""
+;
+;		       The following is WRONG beacuse the version number and
+;                      file count can't go together.
+;                      "0","A","CV=3.007DIA","0","","SPJWIN.EXE","CA-SuperProject","Program Files","CA-SuperProject program, help and report files","2550", "2550"
+;              S     : Necessary if the file is spanning multiple disks and this
+;                      is not the first portion of the spanning file.
+;
+; d          : The destination directory. 0 = Parent, A-ZZ = Children, %5%
+;              for common tools
+;
+; idir       : The directory on the install disk
+;
+; destfilename: The actual name of the file. 12 chars MAX. This can be blank
+;               for the creation of empty sub-directories.
+;
+; srcfilename: The name of the file on disk. 12 chars MAX. (optional)
+;
+; PName      : The name of the Icon in Progman (required if D flag)
+;              32 chars MAX.
+;
+; Description: (Group Definitions Only)
+;              A short description, for the listbox entry (only if D flag)
+;              20 chars MAX.
+;
+; Comment    : (Group Definitions Only)
+;              The lengthy text displayed in the Comment box (only if D flag)
+;	       80 chars MAX.
+;
+; size       : (Group Definitions Only)
+;              Size of file/group actually copied in K
+;
+; finalsize  : (Group Definitions Only)
+;              The ulitmate file size of file/group in K. Usually different if
+;	       there are other processes which will expand or implode files
+;	       after the install program is finished.  Another use is to
+;	       account for the sector size of hard disks; for instance,
+;	       20 files with a length of 10 bytes would show up in the
+;              "size" parameter as 200 bytes (1K), but if installed on a hard
+;	       disk with an 8K sector size the actual used space would be
+;	       20 * 8K = 160K.
+;
+; iconfile   : Fully qualified path to an icon file name. It is only valid if
+;              'I' parameter is used in the flags section. ( optional )
+;
+; paramstr   : The command-line parameters to attach to the program when
+;              associating with an icon. (optional)
+;
+
+[files]
+"16","B","RCO0","%5%","","CAINLOGS.DLL","CAINLOGS.DL_","","","","1","1","",""
+"16","B","RCO0","%5%","","CAIN4SHL.DLL","CAIN4SHL.DL_","","","","1","1","",""
+"16","B","RCO0","%5%","","CALM_W32.DLL","CALM_W32.DL_","","","","1","1","",""
+"16","B","RCO0","%5%","","CATOCFGE.EXE","CATOCFGE.EX_","","","","1","1","",""
+"16","B","RCO0","%5%","","CATOPATH.EXE","CATOPATH.EX_","","","","1","1","",""
+"16","B","RCO2","AA","bin","msvcrt40.dll","msvcrt40.dl_","","","","327","327","",""
+"17","B","RCO2","AA","bin","msvcrt.dll","msvcrt.dl_","","","","266","266","",""
+"17","B","RCO2","AA","bin","msvcirt.dll","msvcirt.dl_","","","","75","75","",""
+"17","B","RCO2","AA","bin","oiadfdata.dll","oiadfdat.dl_","","","","105","105","",""
+"17","B","RCO2","AA","bin","oiadfnt.dll","oiadfnt.dl_","","","","401","401","",""
+"17","B","RCO2","AA","bin","oiapi.dll","oiapi.dl_","","","","185","185","",""
+"17","B","RCO2","AA","bin","oiclfdata.dll","oiclfdat.dl_","","","","164","164","",""
+"17","B","RCO2","AA","bin","oiclfnt.dll","oiclfnt.dl_","","","","409","409","",""
+"17","B","RCO2","AA","bin","oicufnt.dll","oicufnt.dl_","","","","12","12","",""
+"17","B","RCO2","AA","bin","oiembddata.dll","oiembdda.dl_","","","","6","6","",""
+"17","B","RCO2","AA","bin","oiembdnt.dll","oiembdnt.dl_","","","","535","535","",""
+"17","B","RCO2","AA","bin","oifrsdata.dll","oifrsdat.dl_","","","","77","77","",""
+"17","B","RCO2","AA","bin","oifrsnt.dll","oifrsnt.dl_","","","","1193","1193","",""
+"17","B","RCO2","AA","bin","oigcfdata.dll","oigcfdat.dl_","","","","34","34","",""
+"17","B","RCO2","AA","bin","oigcfnt.dll","oigcfnt.dl_","","","","169","169","",""
+"17","B","RCO2","AA","bin","oigcndata.dll","oigcndat.dl_","","","","5","5","",""
+"18","B","RCO2","AA","bin","oigcnnt.dll","oigcnnt.dl_","","","","38","38","",""
+"18","B","RCO2","AA","bin","oiglfdata.dll","oiglfdat.dl_","","","","9","9","",""
+"18","B","RCO2","AA","bin","oiglfnt.dll","oiglfnt.dl_","","","","66","66","",""
+"18","B","RCO2","AA","bin","oiulfnt.dll","oiulfnt.dl_","","","","41","41","",""
+"18","B","RCO2","AA","bin","upgradefe.exe","upgradef.ex_","","","","31","31","",""
+"18","B","RCO2","AA","bin","upgradef.exe","upgradef.ex_","","","","31","31","",""
+"18","B","RCO2","AA","bin","ad103uin.exe","ad103uin.ex_","","","","15","15","",""
+"18","B","RCO2","AA","bin","ad104uin.exe","ad104uin.ex_","","","","15","15","",""
+"18","B","RCO2","AA","bin","ad301fin.exe","ad301fin.ex_","","","","7","7","",""
+"18","B","RCO2","AA","bin","cor02fin.exe","cor02fin.ex_","","","","7","7","",""
+"18","B","RCO2","AA","bin","createdb.exe","createdb.ex_","","","","205","205","",""
+"18","B","RCO2","CD","dictfile","ad101cin.cre","ad101cin.cr_","","","","5","5","",""
+"18","B","RCO2","CD","dictfile","ad101mgw.mfy","ad101mgw.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ad101min.mfy","ad101min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ad102cin.cre","ad102cin.cr_","","","","6","6","",""
+"18","B","RCO2","CD","dictfile","ad102mgw.mfy","ad102mgw.mf_","","","","2","2","",""
+"18","B","RCO2","CD","dictfile","ad102min.mfy","ad102min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ad103cin.cre","ad103cin.cr_","","","","6","6","",""
+"18","B","RCO2","CD","dictfile","ad103mgw.mfy","ad103mgw.mf_","","","","2","2","",""
+"18","B","RCO2","CD","dictfile","ad103min.mfy","ad103min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ad104cin.cre","ad104cin.cr_","","","","6","6","",""
+"18","B","RCO2","CD","dictfile","ad104mgw.mfy","ad104mgw.mf_","","","","2","2","",""
+"18","B","RCO2","CD","dictfile","ad104min.mfy","ad104min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ad201min.mfy","ad201min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ad201mgw.mfy","ad201mgw.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ad201cin.cre","ad201cin.cr_","","","","2","2","",""
+"18","B","RCO2","CD","dictfile","w4gl1.cli","w4gl1.cl_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","w4gl2.cli","w4gl2.cl_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ad301cin.cre","ad301cin.cr_","","","","2","2","",""
+"18","B","RCO2","CD","dictfile","ad301mgw.mfy","ad301mgw.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ad301min.mfy","ad301min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","c6101cin.cre","c6101cin.cr_","","","","2","2","",""
+"18","B","RCO2","CD","dictfile","c6101mgw.mfy","c6101mgw.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","c6101min.mfy","c6101min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","cor01cin.cre","cor01cin.cr_","","","","2","2","",""
+"18","B","RCO2","CD","dictfile","cor01mgw.mfy","cor01mgw.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","cor01min.mfy","cor01min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","cor02cin.cre","cor02cin.cr_","","","","3","3","",""
+"18","B","RCO2","CD","dictfile","cor02mgw.mfy","cor02mgw.mf_","","","","2","2","",""
+"18","B","RCO2","CD","dictfile","cor02min.mfy","cor02min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","dbd1.cli","dbd1.cl_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","dbd2.cli","dbd2.cl_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","dmd01cin.cre","dmd01cin.cr_","","","","9","9","",""
+"18","B","RCO2","CD","dictfile","dmd01mgw.mfy","dmd01mgw.mf_","","","","2","2","",""
+"18","B","RCO2","CD","dictfile","dmd01min.mfy","dmd01min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ingres1.cli","ingres1.cl_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ingres2.cli","ingres2.cl_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","ingres3.cli","ingres3.cl_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","msc01cin.cre","msc01cin.cr_","","","","8","8","",""
+"18","B","RCO2","CD","dictfile","msc01mgw.mfy","msc01mgw.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","msc01min.mfy","msc01min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","pdm01cin.cre","pdm01cin.cr_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","pdm01mgw.mfy","pdm01mgw.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","pdm01min.mfy","pdm01min.mf_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","prods.lst","prods.ls_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","vision1.cli","vision1.cl_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","vision2.cli","vision2.cl_","","","","1","1","",""
+"18","B","RCO2","CD","dictfile","vision3.cli","vision3.cl_","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt","gmt","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-12","gmt-12","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-11","gmt-11","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-10","gmt-10","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-9","gmt-9","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-8","gmt-8","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-7","gmt-7","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-6","gmt-6","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-5","gmt-5","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-4","gmt-4","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-3","gmt-3","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-2","gmt-2","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt-1","gmt-1","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt1","gmt1","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt2","gmt2","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt3","gmt3","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt4","gmt4","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt5","gmt5","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt6","gmt6","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt7","gmt7","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt8","gmt8","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt9","gmt9","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt10","gmt10","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt11","gmt11","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt12","gmt12","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt13","gmt13","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt3half","gmt3half","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt5half","gmt5half","","","","1","1","",""
+"18","B","RCO2","AJ","gmt","gmt9half","gmt9half","","","","1","1","",""
+"18","B","RCO2","AK","asia","prc","prc","","","","1","1","",""
+"18","B","RCO2","AK","asia","roc","roc","","","","1","1","",""
+"18","B","RCO2","AK","asia","hongkong","hongkong","","","","1","1","",""
+"18","B","RCO2","AK","asia","japan","japan","","","","1","1","",""
+"18","B","RCO2","AK","asia","korea","korea","","","","1","1","",""
+"18","B","RCO2","AK","asia","india","india","","","","1","1","",""
+"18","B","RCO2","AK","asia","pakistan","pakistan","","","","1","1","",""
+"18","B","RCO2","AL","astrl","tsmni","tsmni","","","","1","1","",""
+"18","B","RCO2","AL","astrl","qnslnd","qnslnd","","","","1","1","",""
+"18","B","RCO2","AL","astrl","ausnorth","ausnorth","","","","1","1","",""
+"18","B","RCO2","AL","astrl","auswest","auswest","","","","1","1","",""
+"18","B","RCO2","AL","astrl","aussouth","aussouth","","","","1","1","",""
+"18","B","RCO2","AL","astrl","vctr","vctr","","","","1","1","",""
+"18","B","RCO2","AL","astrl","nsw","nsw","","","","1","1","",""
+"18","B","RCO2","AM","mideast","egypt","egypt","","","","1","1","",""
+"18","B","RCO2","AM","mideast","kuwait","kuwait","","","","1","1","",""
+"18","B","RCO2","AM","mideast","iran","iran","","","","1","1","",""
+"18","B","RCO2","AM","mideast","israel","israel","","","","1","1","",""
+"18","B","RCO2","AM","mideast","saudi","saudi","","","","1","1","",""
+"18","B","RCO2","AN","na","eastern","eastern","","","","1","1","",""
+"18","B","RCO2","AN","na","central","central","","","","1","1","",""
+"18","B","RCO2","AN","na","mountain","mountain","","","","1","1","",""
+"18","B","RCO2","AN","na","pacific","pacific","","","","1","1","",""
+"18","B","RCO2","AN","na","alaska","alaska","","","","1","1","",""
+"18","B","RCO2","AN","na","nwfdlnd","nwfdlnd","","","","1","1","",""
+"18","B","RCO2","AN","na","atlantic","atlantic","","","","1","1","",""
+"18","B","RCO2","AN","na","yukon","yukon","","","","1","1","",""
+"18","B","RCO2","AN","na","mxbajan","mxbajan","","","","1","1","",""
+"18","B","RCO2","AN","na","mxbajas","mxbajas","","","","1","1","",""
+"18","B","RCO2","AN","na","mxgen","mxgen","","","","1","1","",""
+"18","B","RCO2","AO","sp","hawaii","hawaii","","","","1","1","",""
+"18","B","RCO2","AO","sp","nz","nz","","","","1","1","",""
+"18","B","RCO2","AP","europe","gb","gb","","","","1","1","",""
+"18","B","RCO2","AP","europe","euwest","euwest","","","","1","1","",""
+"18","B","RCO2","AP","europe","eucntrl","eucntrl","","","","1","1","",""
+"18","B","RCO2","AP","europe","poland","poland","","","","1","1","",""
+"18","B","RCO2","AP","europe","eueast","eueast","","","","1","1","",""
+"18","B","RCO2","AP","europe","turkey","turkey","","","","1","1","",""
+"18","B","RCO2","AQ","sa","bzeast","bzeast","","","","1","1","",""
+"18","B","RCO2","AQ","sa","bzwest","bzwest","","","","1","1","",""
+"18","B","RCO2","AQ","sa","bzacre","bzacre","","","","1","1","",""
+"18","B","RCO2","AQ","sa","bzden","bzden","","","","1","1","",""
+"18","B","RCO2","AQ","sa","chlcont","chlcont","","","","1","1","",""
+"18","B","RCO2","AQ","sa","easteris","easteris","","","","1","1","",""
+"18","B","RCO2","AR","seasia","indowest","indowest","","","","1","1","",""
+"18","B","RCO2","AR","seasia","indocntr","indocntr","","","","1","1","",""
+"18","B","RCO2","AR","seasia","indoeast","indoeast","","","","1","1","",""
+"18","B","RCO2","AR","seasia","malaysia","malaysia","","","","1","1","",""
+"18","B","RCO2","AR","seasia","phlppns","phlppns","","","","1","1","",""
+"18","B","RCO2","AR","seasia","sngpr","sngpr","","","","1","1","",""
+"18","B","RCO2","AR","seasia","thailand","thailand","","","","1","1","",""
+"18","B","RCO2","AR","seasia","vietnam","vietnam","","","","1","1","",""
+"18","B","RCO2","AI","english","missing.hlp","missing.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","cbfmain.hlp","cbfmain.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","gccinlim.hlp","gccinlim.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","gccloglv.hlp","gccloglv.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","gccoutlm.hlp","gccoutlm.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","gccproto.hlp","gccproto.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","gcnlnode.hlp","gcnlnode.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","gcnrnode.hlp","gcnrnode.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","gcnsessl.hlp","gcnsessl.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","gcnsrvcl.hlp","gcnsrvcl.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","general.hlp","general.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","iceblkqy.hlp","iceblkqy.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icecbref.hlp","icecbref.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icecgibn.hlp","icecgibn.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icedefdb.hlp","icedefdb.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icedefid.hlp","icedefid.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icehthom.hlp","icehthom.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icerwloc.hlp","icerwloc.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icerwtme.hlp","icerwtme.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icesrver.hlp","icesrver.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icelocfm.hlp","icelocfm.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icelstfr.hlp","icelstfr.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","iceusrfr.hlp","iceusrfr.hl_","","","","2","2","",""
+"18","B","RCO2","AI","english","icext.hlp","icext.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","icextfrm.hlp","icextfrm.hl_","","","","2","2","",""
+"18","B","RCO2","AI","english","netibmax.hlp","netibmax.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","netobmax.hlp","netobmax.hl_","","","","1","1","",""
+"18","B","RCO2","AI","english","netprots.hlp","netprots.hl_","","","","1","1","",""
+"18","B","RCO2","AB","utility","cbf.exe","cbf.ex_","","","","140","140","",""
+"18","B","RCO2","AC","files","cbfhelp.dat","cbfhelp.da_","","","","17","17","",""
+"18","B","RCO2","AC","files","cbfunits.dat","cbfunits.da_","","","","9","9","",""
+"18","B","RCO2","AB","utility","iiresutl.exe","iiresutl.ex_","","","","19","19","",""
+"18","B","RCO2","AC","files","secure.crs","secure.cr_","","","","5","5","",""
+"18","B","RCO2","AC","files","all.crs","all.cr_","","","","9","9","",""
+"18","B","RCO2","AC","files","tz.crs","tz.cr_","","","","13","13","",""
+"18","B","RCO2","AC","files","net.crs","net.cr_","","","","1","1","",""
+"18","B","RCO2","AC","files","utexe.def","utexe.de_","","","","11","11","",""
+"18","B","RCO2","AB","utility","msvcrt40.dll","msvcrt40.dl_","","","","327","327","",""
+"18","B","RCO2","AB","utility","msvcrt.dll","msvcrt.dl_","","","","266","266","",""
+"18","B","RCO2","AB","utility","msvcirt.dll","msvcirt.dl_","","","","75","75","",""
+"18","B","RCO2","AC","files","97801f.map","97801f.ma_","","","","3","3","",""
+"18","B","RCO2","AC","files","ansif.map","ansif.ma_","","","","3","3","",""
+"18","B","RCO2","AC","files","ansinf.map","ansinf.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","at386.map","at386.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","cbf.map","cbf.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","dgxterm.map","dgxterm.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","frs.map","frs.ma_","","","","1","1","",""
+"18","B","RCO2","AC","files","ibmpc.map","ibmpc.ma_","","","","3","3","",""
+"18","B","RCO2","AC","files","m30n.map","m30n.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","m91e.map","m91e.ma_","","","","3","3","",""
+"18","B","RCO2","AC","files","mac2.map","mac2.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","pc-220.map","pc-220.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","pc-305.map","pc-305.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","pc-386.map","pc-386.ma_","","","","3","3","",""
+"18","B","RCO2","AC","files","pckermit.map","pckermit.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","vt100f.map","vt100f.ma_","","","","3","3","",""
+"18","B","RCO2","AC","files","vt100i.map","vt100i.ma_","","","","3","3","",""
+"18","B","RCO2","AC","files","vt100nk.map","vt100nk.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","vt200i.map","vt200i.ma_","","","","3","3","",""
+"18","B","RCO2","AC","files","vt220.map","vt220.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","winpcalt.map","winpcalt.ma_","","","","2","2","",""
+"18","B","RCO2","AC","files","wy60at.map","wy60at.ma_","","","","3","3","",""
+"18","B","RCO2","AE","lib","oiapi.lib","oiapi.li_","","","","20","20","",""
+"18","B","RCO2","AB","utility","iigetres.exe","iigetres.ex_","","","","13","13","",""
+"18","B","RCO2","AB","utility","ipcclean.exe","ipcclean.ex_","","","","5","5","",""
+"18","B","RCO2","AB","utility","cichkcap.exe","cichkcap.ex_","","","","421","421","",""
+"18","B","RCO2","AB","utility","ingchkdate.bat","ingchkda.ba_","","","","1","1","",""
+"18","B","RCO2","AB","utility","ingsetauth.bat","ingsetau.ba_","","","","1","1","",""
+"18","B","RCO2","AB","utility","ingprsym.exe","ingprsym.ex_","","","","5","5","",""
+"18","B","RCO2","AA","bin","rcpconfig.exe","rcpconfi.ex_","","","","23","23","",""
+"18","B","RCO2","AA","bin","rcpstat.exe","rcpstat.ex_","","","","23","23","",""
+"18","B","RCO2","AB","utility","iirundbms.exe","iirundbm.ex_","","","","7","7","",""
+"18","B","RCO2","AB","utility","iirun.exe","iirun.ex_","","","","7","7","",""
+"18","B","RCO2","AA","bin","iisustrt.bat","iisustrt.ba_","","","","9","9","",""
+"18","B","RCO2","AB","utility","iisudbms.bat","iisudbms.ba_","","","","12","12","",""
+"18","B","RCO2","AB","utility","iisunet.bat","iisunet.ba_","","","","2","2","",""
+"18","B","RCO2","AB","utility","iisustar.bat","iisustar.ba_","","","","2","2","",""
+"18","B","RCO2","AB","utility","iisutm.bat","iisutm.ba_","","","","1","1","",""
+"18","B","RCO2","AB","utility","iisuabf.bat","iisuabf.ba_","","","","3","3","",""
+"18","B","RCO2","AH","vdba","msvcrt20.dll","msvcrt20.dl_","","","","254","254","",""
+"18","B","RCO2","AH","vdba","cato3cnt.dll","cato3cnt.dl_","","","","105","105","",""
+"18","B","RCO2","AH","vdba","cato3dat.dll","cato3dat.dl_","","","","17","17","",""
+"18","B","RCO2","AH","vdba","cato3msk.dll","cato3msk.dl_","","","","26","26","",""
+"18","B","RCO2","AH","vdba","cato3nbr.dll","cato3nbr.dl_","","","","25","25","",""
+"18","B","RCO2","AH","vdba","cato3spn.dll","cato3spn.dl_","","","","25","25","",""
+"18","B","RCO2","AH","vdba","cato3tim.dll","cato3tim.dl_","","","","18","18","",""
+"18","B","RCO2","AH","vdba","catobal.dll","catobal.dl_","","","","25","25","",""
+"18","B","RCO2","AH","vdba","catolbox.dll","catolbox.dl_","","","","130","130","",""
+"18","B","RCO2","AH","vdba","catolist.dll","catolist.dl_","","","","22","22","",""
+"18","B","RCO2","AH","vdba","catostbx.dll","catostbx.dl_","","","","9","9","",""
+"18","B","RCO2","AH","vdba","catowizd.dll","catowizd.dl_","","","","23","23","",""
+"18","B","RCO2","AH","vdba","lbtreelp.dll","lbtreelp.dl_","","","","78","78","",""
+"18","B","RCO2","AH","vdba","ingract.dll","ingract.dl_","","","","23","23","",""
+"18","B","RCO2","AH","vdba","ingrswin.dll","ingrswin.dl_","","","","17","17","",""
+"18","B","RCO2","AH","vdba","read.me","read.m_","","","","4","4","",""
+"18","B","RCO2","AC","files","dba.cnt","dba.cn_","","","","41","41","",""
+"19","B","RCO2","AC","files","dba.hlp","dba.hl_","","","","1460","1460","",""
+"19","B","RCO2","AC","files","dbtug.cnt","dbtug.cn_","","","","14","14","",""
+"20","B","1RCO2","AC","","dbtug.hlp","dbtug.001","","","","6844","6844","",""
+"21","B","SCO2","AC","","dbtug.hlp","dbtug.002","","","","1","1","",""
+"21","B","RCO2","AC","files","esql.cnt","esql.cn_","","","","7","7","",""
+"21","B","RCO2","AC","files","esql.hlp","esql.hl_","","","","182","182","",""
+"21","B","RCO2","AC","files","oi20nt.hlp","oi20nt.hl_","","","","6","6","",""
+"21","B","RCO2","AC","files","oi20nt.cnt","oi20nt.cn_","","","","1","1","",""
+"21","B","RCO2","AC","files","relsum.cnt","relsum.cn_","","","","3","3","",""
+"21","B","RCO2","AC","files","relsum.hlp","relsum.hl_","","","","52","52","",""
+"21","B","RCO2","AC","files","replicat.cnt","replicat.cn_","","","","13","13","",""
+"21","B","RCO2","AC","files","replicat.hlp","replicat.hl_","","","","704","704","",""
+"21","B","RCO2","AC","files","oigs.cnt","oigs.cn_","","","","3","3","",""
+"21","B","RCO2","AC","files","oigs.hlp","oigs.hl_","","","","486","486","",""
+"21","B","RCO2","AC","files","oiice.cnt","oiice.cn_","","","","7","7","",""
+"21","B","RCO2","AC","files","oiice.hlp","oiice.hl_","","","","278","278","",""
+"21","B","RCO2","AC","files","netnt.cnt","netnt.cn_","","","","12","12","",""
+"21","B","RCO2","AC","files","netnt.hlp","netnt.hl_","","","","303","303","",""
+"21","B","RCO2","AC","files","openapi.cnt","openapi.cn_","","","","9","9","",""
+"21","B","RCO2","AC","files","openapi.hlp","openapi.hl_","","","","393","393","",""
+"21","B","RCO2","AC","files","ordg.cnt","ordg.cn_","","","","7","7","",""
+"21","B","RCO2","AC","files","ordg.hlp","ordg.hl_","","","","238","238","",""
+"21","B","RCO2","AC","files","orpg.cnt","orpg.cn_","","","","36","36","",""
+"22","B","RCO2","AC","files","orpg.hlp","orpg.hl_","","","","3218","3218","",""
+"22","B","RCO2","AC","files","ortr.cnt","ortr.cn_","","","","5","5","",""
+"23","B","RCO2","AC","files","ortr.hlp","ortr.hl_","","","","2676","2676","",""
+"23","B","RCO2","AC","files","orug.cnt","orug.cn_","","","","33","33","",""
+"24","B","1RCO2","AC","","orug.hlp","orug.001","","","","5846","5846","",""
+"25","B","SCO2","AC","","orug.hlp","orug.002","","","","1","1","",""
+"25","B","RCO2","AC","files","sqlref.cnt","sqlref.cn_","","","","49","49","",""
+"25","B","RCO2","AC","files","sqlref.hlp","sqlref.hl_","","","","1775","1775","",""
+"25","B","RCO2","AC","files","sysref.cnt","sysref.cn_","","","","27","27","",""
+"25","B","RCO2","AC","files","sysref.hlp","sysref.hl_","","","","941","941","",""
+"25","B","RCO2","AH","vdba","vdba.hlp","vdba.hl_","","","","279","279","",""
+"25","B","RCO2","AH","vdba","vdba.cnt","vdba.cn_","","","","15","15","",""
+"25","B","RCO2","AH","vdba","vdba.ico","vdba.ic_","","","","1","1","",""
+"25","B","RCO2","AH","vdba","wingstrt.exe","wingstrt.ex_","","","","161","161","",""
+"25","B","RCO2","AB","utility","ingstop.exe","ingstop.ex_","","","","20","20","",""
+"25","B","RCO2","AB","utility","ingstart.exe","ingstart.ex_","","","","26","26","",""
+"25","B","RCO2","AB","utility","iigenres.exe","iigenres.ex_","","","","56","56","",""
+"26","B","RCO2","AB","utility","iipmhost.exe","iipmhost.ex_","","","","7","7","",""
+"26","B","RCO2","AB","utility","iisetres.exe","iisetres.ex_","","","","54","54","",""
+"26","B","RCO2","AB","utility","oifrsnt.dll","oifrsnt.dl_","","","","1193","1193","",""
+"26","B","RCO2","AB","utility","oifrsdata.dll","oifrsdat.dl_","","","","77","77","",""
+"26","B","RCO2","AB","utility","oiembdnt.dll","oiembdnt.dl_","","","","535","535","",""
+"26","B","RCO2","AB","utility","oiembddata.dll","oiembdda.dl_","","","","6","6","",""
+"26","B","RCO2","AB","utility","oiclfnt.dll","oiclfnt.dl_","","","","409","409","",""
+"26","B","RCO2","AB","utility","oiclfdata.dll","oiclfdat.dl_","","","","164","164","",""
+"26","B","RCO2","AB","utility","oiglfnt.dll","oiglfnt.dl_","","","","66","66","",""
+"26","B","RCO2","AB","utility","oiglfdata.dll","oiglfdat.dl_","","","","9","9","",""
+"26","B","RCO2","AB","utility","oiadfnt.dll","oiadfnt.dl_","","","","401","401","",""
+"26","B","RCO2","AB","utility","oiadfdata.dll","oiadfdat.dl_","","","","105","105","",""
+"26","B","RCO2","AB","utility","oicufnt.dll","oicufnt.dl_","","","","12","12","",""
+"26","B","RCO2","AB","utility","oigcfnt.dll","oigcfnt.dl_","","","","169","169","",""
+"26","B","RCO2","AB","utility","oigcfdata.dll","oigcfdat.dl_","","","","34","34","",""
+"26","B","RCO2","AB","utility","oigcfnt.dll","oigcfnt.dl_","","","","169","169","",""
+"26","B","RCO2","AB","utility","oigcfdata.dll","oigcfdat.dl_","","","","34","34","",""
+"26","B","RCO2","AB","utility","oigcnnt.dll","oigcnnt.dl_","","","","38","38","",""
+"26","B","RCO2","AB","utility","oigcndata.dll","oigcndat.dl_","","","","5","5","",""
+"26","B","RCO2","AC","files","default.rfm","default.rf_","","","","1","1","",""
+"26","B","RCO2","AI","english","connedit.hlp","connedit.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","helpfrm.hlp","helpfrm.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","helpkeys.hlp","helpkeys.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","helpvals.hlp","helpvals.hl_","","","","2","2","",""
+"26","B","RCO2","AI","english","iceblkqy.hlp","iceblkqy.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","icecbref.hlp","icecbref.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","icecgibn.hlp","icecgibn.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","icedefdb.hlp","icedefdb.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","icedefid.hlp","icedefid.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","icehthom.hlp","icehthom.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","icerwloc.hlp","icerwloc.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","icerwtme.hlp","icerwtme.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","icesrver.hlp","icesrver.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","logpass.hlp","logpass.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","nucomsvr.hlp","nucomsvr.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","nuconn.hlp","nuconn.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","nucursor.hlp","nucursor.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","nulogin.hlp","nulogin.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","numain.hlp","numain.hl_","","","","4","4","",""
+"26","B","RCO2","AI","english","nuvnode.hlp","nuvnode.hl_","","","","1","1","",""
+"26","B","RCO2","AI","english","fast_v4.mnx","fast_v4.mn_","","","","78","78","",""
+"27","B","RCO2","AI","english","slow_v4.mnx","slow_v4.mn_","","","","1937","1937","",""
+"27","B","RCO2","AI","english","rtiforms.fnx","rtiforms.fn_","","","","568","568","",""
+"27","B","RCO2","AA","bin","iigcc.exe","iigcc.ex_","","","","8","8","",""
+"27","B","RCO2","AA","bin","iigcn.exe","iigcn.ex_","","","","9","9","",""
+"27","B","RCO2","AA","bin","netu.exe","netu.ex_","","","","14","14","",""
+"27","B","RCO2","AA","bin","wrapit.exe","wrapit.ex_","","","","5","5","",""
+"27","B","RCO2","AA","bin","wrapnosb.exe","wrapnosb.ex_","","","","5","5","",""
+"27","B","RCO2","AA","bin","windo.exe","windo.ex_","","","","87","87","",""
+"27","B","RCO2","AA","bin","start.ico","start.ic_","","","","1","1","",""
+"27","B","RCO2","AA","bin","stop.ico","stop.ic_","","","","1","1","",""
+"27","B","RCO2IB","AA","bin","winstart.exe","winstart.ex_","Ingstart","","","165","165","%0%\ingres\bin\start.ico",""
+"27","B","RCO2IB","AA","bin","winstop.exe","winstop.ex_","Ingstop","","","162","162","%0%\ingres\bin\stop.ico",""
+"27","B","RCO2","AA","bin","fstm.exe","fstm.ex_","","","","140","140","",""
+"27","B","RCO2","AA","bin","fstm.ico","fstm.ic_","","","","1","1","",""
+"27","B","RCO2","AA","bin","iinamu.ico","iinamu.ic_","","","","1","1","",""
+"27","B","RCO2","AA","bin","netutil.ico","netutil.ic_","","","","1","1","",""
+"27","B","RCO2","AA","bin","netutil.exe","netutil.ex_","","","","46","46","",""
+"27","B","RCO2IB","AA","bin","wrapsql.exe","wrapsql.ex_","Terminal Monitor","","","5","5","%0%\ingres\bin\fstm.ico",""
+"27","B","RCO2","AA","bin","iinamu.exe","iinamu.ex_","","","","9","9","",""
+"27","B","RCO2IB","AA","bin","wrapnosb.exe","wrapnosb.ex_","Name Utility","","","5","5","%0%\ingres\bin\iinamu.ico","IINAMU iinamu.exe"
+"27","B","RCO2","AA","bin","ingprenv.exe","ingprenv.ex_","","","","5","5","",""
+"27","B","RCO2","AA","bin","ingsetenv.exe","ingseten.ex_","","","","5","5","",""
+"27","B","RCO2","AA","bin","ingunset.exe","ingunset.ex_","","","","5","5","",""
+"27","B","RCO2IB","AA","bin","wrapnosb.exe","wrapnosb.ex_","Netutil","","","5","5","%0%\ingres\bin\netutil.ico","NetUtil netutil.exe"
+"27","B","RCO2","AC","files","iiapi.h","iiapi._","","","","65","65","",""
+"27","B","RCO2","AC","files","iiapidep.h","iiapidep._","","","","1","1","",""
+"27","B","RCO2","BY","charsets","gcccset.nam","gcccset.na_","","","","5","5","",""
+"27","B","RCO2","BY","charsets","gcccset.xlt","gcccset.xl_","","","","105","105","",""
+"27","B","RCO2","BY","charsets","chineset.xlt","chineset.xl_","","","","309","309","",""
+"27","B","RCO2","BY","charsets","japanese.xlt","japanese.xl_","","","","237","237","",""
+"27","B","RCO2","AT","arabic","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","AS","alt","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","AU","chineses","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","AV","chineset","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","AW","chtbig5","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","AX","chteuc","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","AY","chthp","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","AZ","cw","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BA","decmulti","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BB","dosasmo","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BC","elot437","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BD","greek","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BE","hebrew","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BF","hproman8","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BG","ibmpc437","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BH","ibmpc850","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BI","ibmpc866","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BJ","iso88591","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BK","iso88592","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BL","iso88595","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BM","iso88599","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BN","kanjieuc","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BO","korean","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BP","pc857","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BQ","pchebrew","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BR","shiftjis","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BS","slav852","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BT","thai","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BU","warabic","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BV","whebrew","desc.chx","desc.ch_","","","","1","1","",""
+"27","B","RCO2","BX","wthai","desc.chx","desc.ch_","","","","1","1","",""
+"28","B","RCO2","AA","bin","tm.exe","tm.ex_","","","","164","164","",""
+"28","B","RCO2","AA","bin","iquel.exe","iquel.ex_","","","","7","7","",""
+"28","B","RCO2","AA","bin","isql.exe","isql.ex_","","","","7","7","",""
+"28","B","RCO2","AA","bin","mkingusr.bat","mkingusr.ba_","","","","1","1","",""
+"28","B","RCO2","AA","bin","sql.exe","sql.ex_","","","","7","7","",""
+"28","B","RCO2","AA","bin","quel.exe","quel.ex_","","","","7","7","",""
+"28","B","RCO2","AA","bin","ipwrite.exe","ipwrite.ex_","","","","4","4","",""
+"28","B","RCO2","AA","bin","ipreadp.exe","ipreadp.ex_","","","","4","4","",""
+"28","B","RCO2","AA","bin","ipchoice.exe","ipchoice.ex_","","","","4","4","",""
+"28","B","RCO2","AA","bin","ipsetp.exe","ipsetp.ex_","","","","5","5","",""
+"28","B","RCO2","AA","bin","ipset.bat","ipset.ba_","","","","1","1","",""
+"28","B","RCO2","AA","bin","setperm.exe","setperm.ex_","","","","7","7","",""
+"28","B","RCO2","AA","bin","iitouch.bat","iitouch.ba_","","","","1","1","",""
+"28","B","RCO2","AA","bin","oi12svc.exe","oi12svc.ex_","","","","5","5","",""
+"28","B","RCO2","AA","bin","rmcser12.exe","rmcser12.ex_","","","","30","30","",""
+"28","B","RCO2","AA","bin","opingsvc.exe","opingsvc.ex_","","","","9","9","",""
+"28","B","RCO2","AA","bin","servproc.exe","servproc.ex_","","","","7","7","",""
+"28","B","RCO2","AA","bin","opingclient.exe","opingcli.ex_","","","","8","8","",""
+"28","B","RCO2","AA","bin","clntproc.exe","clntproc.ex_","","","","6","6","",""
+"28","B","RCO2","AF","asc","makefile","makefile","","","","1","1","",""
+"28","B","RCO2","AF","asc","asc.c","asc._","","","","5","5","",""
+"28","B","RCO2","AF","asc","asc.hh","asc.h_","","","","2","2","",""
+"28","B","RCO2","AF","asc","asccallb.c","asccallb._","","","","21","21","",""
+"28","B","RCO2","AF","asc","asccallb.hh","asccallb.h_","","","","2","2","",""
+"28","B","RCO2","AF","asc","ascceev.c","ascceev._","","","","13","13","",""
+"28","B","RCO2","AF","asc","ascceev.hh","ascceev.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascconn.c","ascconn._","","","","6","6","",""
+"28","B","RCO2","AF","asc","ascconn.hh","ascconn.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","asccreev.c","asccreev._","","","","6","6","",""
+"28","B","RCO2","AF","asc","asccreev.hh","asccreev.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","asccrepc.c","asccrepc._","","","","4","4","",""
+"28","B","RCO2","AF","asc","asccrepc.hh","asccrepc.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","asccrerp.c","asccrerp._","","","","15","15","",""
+"28","B","RCO2","AF","asc","asccrerp.hh","asccrerp.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","asccretb.c","asccretb._","","","","3","3","",""
+"28","B","RCO2","AF","asc","asccretb.hh","asccretb.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascdlcur.c","ascdlcur._","","","","12","12","",""
+"28","B","RCO2","AF","asc","ascdlcur.hh","ascdlcur.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascdrptb.c","ascdrptb._","","","","3","3","",""
+"28","B","RCO2","AF","asc","ascdrptb.hh","ascdrptb.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascexepc.c","ascexepc._","","","","6","6","",""
+"28","B","RCO2","AF","asc","ascexepc.hh","ascexepc.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascinvoc.c","ascinvoc._","","","","3","3","",""
+"28","B","RCO2","AF","asc","ascinvoc.hh","ascinvoc.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascmem.c","ascmem._","","","","2","2","",""
+"28","B","RCO2","AF","asc","ascmem.hh","ascmem.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascmisc.c","ascmisc._","","","","6","6","",""
+"28","B","RCO2","AF","asc","ascmisc.hh","ascmisc.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascprint.c","ascprint._","","","","7","7","",""
+"28","B","RCO2","AF","asc","ascprint.hh","ascprint.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascregev.c","ascregev._","","","","3","3","",""
+"28","B","RCO2","AF","asc","ascregev.hh","ascregev.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascrmev.c","ascrmev._","","","","8","8","",""
+"28","B","RCO2","AF","asc","ascrmev.hh","ascrmev.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascrocur.c","ascrocur._","","","","5","5","",""
+"28","B","RCO2","AF","asc","ascrocur.hh","ascrocur.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascslct.c","ascslct._","","","","4","4","",""
+"28","B","RCO2","AF","asc","ascslct.hh","ascslct.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","ascspccb.c","ascspccb._","","","","6","6","",""
+"28","B","RCO2","AF","asc","ascspccb.hh","ascspccb.h_","","","","1","1","",""
+"28","B","RCO2","AF","asc","asctran.c","asctran._","","","","9","9","",""
+"28","B","RCO2","AF","asc","asctran.hh","asctran.h_","","","","2","2","",""
+"28","B","RCO2","AF","asc","ascupcur.c","ascupcur._","","","","12","12","",""
+"28","B","RCO2","AF","asc","ascupcur.hh","ascupcur.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","makefile","makefile","","","","1","1","",""
+"28","B","RCO2","AG","syc","syc.c","syc._","","","","4","4","",""
+"28","B","RCO2","AG","syc","syc.hh","syc.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycconn.c","sycconn._","","","","4","4","",""
+"28","B","RCO2","AG","syc","sycconn.hh","sycconn.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycdlcur.c","sycdlcur._","","","","15","15","",""
+"28","B","RCO2","AG","syc","sycdlcur.hh","sycdlcur.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycfunc.c","sycfunc._","","","","7","7","",""
+"28","B","RCO2","AG","syc","sycfunc.hh","sycfunc.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycins.c","sycins._","","","","10","10","",""
+"28","B","RCO2","AG","syc","sycins.hh","sycins.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycmem.c","sycmem._","","","","2","2","",""
+"28","B","RCO2","AG","syc","sycmem.hh","sycmem.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycmisc.c","sycmisc._","","","","6","6","",""
+"28","B","RCO2","AG","syc","sycmisc.hh","sycmisc.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycprint.c","sycprint._","","","","7","7","",""
+"28","B","RCO2","AG","syc","sycprint.hh","sycprint.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycproc.c","sycproc._","","","","9","9","",""
+"28","B","RCO2","AG","syc","sycproc.hh","sycproc.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycrocur.c","sycrocur._","","","","8","8","",""
+"28","B","RCO2","AG","syc","sycrocur.hh","sycrocur.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycselct.c","sycselct._","","","","6","6","",""
+"28","B","RCO2","AG","syc","sycselct.hh","sycselct.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","syctable.c","syctable._","","","","5","5","",""
+"28","B","RCO2","AG","syc","syctable.hh","syctable.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","syctran.c","syctran._","","","","6","6","",""
+"28","B","RCO2","AG","syc","syctran.hh","syctran.h_","","","","1","1","",""
+"28","B","RCO2","AG","syc","sycupcur.c","sycupcur._","","","","15","15","",""
+"28","B","RCO2","AG","syc","sycupcur.hh","sycupcur.h_","","","","1","1","",""
+"28","B","RCO2","CA","name","iiname.all","iiname.al_","","","","1","1","",""
+"28","B","RCO2","AC","files","termcap","termcap","","","","131","131","",""
+"28","B","RCO2","AC","files","utexe.def","utexe.de_","","","","11","11","",""
+"28","B","RCO2","AC","files","startsql","startsql","","","","1","1","",""
+"28","B","RCO2","AC","files","startup","startup","","","","1","1","",""
+"28","B","RCO2","AC","files","net.crs","net.cr_","","","","1","1","",""
+"28","B","RCO2","AC","files","net.rfm","net.rf_","","","","1","1","",""
+"28","B","RCO2IB","AH","vdba","vdba.exe","vdba.ex_","Visual DBA","","","2386","2386","%0%\ingres\vdba\vdba.ico",""
+"28","B","RCO3IB","AC","files","errlog.log","errlog.lo_","Error Log","","","1","1","%1%\notepad.exe",""
+"28","B","RCO2IB","AC","files","oi20nt.hlp","oi20nt.hl_","Online Documentation","","","6","6","%1%\winhlp32.exe",""
+"28","B","RCO2IB","CH","ingres","rel2000.txt","rel2000.tx_","Release Notes","","","54","54","%1%\notepad.exe",""
+"28","B","RCO2","CG","tz","howto.doc","howto.do_","","","","9","9","",""
+"28","B","RCO2","CG","tz","australasia.tz","australa.t_","","","","5","5","",""
+;END NET
+
+;
+; This defines the progman groups that the apps above will be added to
+;
+; Format:
+;
+; "n", "Parameter String", "icon caption", "Class", "Title","filename","flags","iconfile"
+;
+; n		  : The number of the group, A-Z, or the name of the .exe
+;		    file with path.
+; parameter string: The default parameters (in a string)
+; icon caption    : The string displayed below the icon.  Only needed if
+;		    an external program is set up (such as winhelp).
+;                   Should be empty if not an external program.
+; class (OS2 ONLY): A user specified object class for objects owned by this
+;                   group.  The default should be "WPProgram".
+; title           : The caption on the group window
+; filename	  : The name of the .GRP file.
+; flags           : Can be none, one, or many of the following:
+;
+;                   N   :   Minimize the executeable on start. Only valid if
+;                           if a name of an .exe was provided in 'n' parameter.
+;                           (Only for Windows)
+; iconfile        : Fully qualified path to an icon file name. It is only valid
+;                   if a name of an .exe was provided in 'n' parameter. (optional)
+;
+; NOTE:     There are two ways for creating icons. Either by putting using 'I'
+;           flag in the flags parameter of the files section or providing an exe
+;           name in the 'n' paramter of the progman section. If files section was
+;           used to specify the progman id then icon file name will be taken from
+;           there. Otherwise, if exe name was provided in the 'n' paramter the
+;           'iconfile' paramter in progman section will be used.
+;
+;
+
+[progman]
+
+
+; The ENVIRONMENT section describes changes to run-time environment variables
+; to be issued.
+;
+;   NOT SUPPORTED FOR WINDOWS!
+;
+; Format:
+;
+;   "prog", "env"
+;
+;   prog    : The program identifier - ( used in call, precall or exec )
+;   env     : Environment string.
+;
+;[environment]
+;"A","PATH=C:\SPJWIN;%PATH%"
+
+;
+; The [precall] section specifies a program to be run before copying any files.
+; It must appear on the line following the [precall] header.
+; The entire line is passed to the system.  Args can be included, as well as
+; any level of path spec desired.
+;
+; Format:
+;
+;   "prog", "precall", "prompt", "state"
+;
+;   prog    : The program identifier - OS/2 only (from environment )
+;   precall : The call string, including all command line parameters
+;   prompt  : A yes/no prompt - if no, the exec will not be issued, otherwise
+;	      it will be executed.
+;   state   : 0 = Visible; 1 = Invisible;
+;	      Note: In Windows all dos programs are controlled by PIF files.
+;	      Note: Once the program has been started it can activate itself
+;		    and become visible.
+;
+;[precall]
+;"A", "notepad.exe %0%\readme.prn","Do you want to view the readme file now?",0
+
+
+;
+; The [call] section specifies a program to be run before the end of the
+; successful install.  It must appear on the line following the [call] header.
+; The entire line is passed to the system.  Args can be included, as well as
+; any level of path spec desired.
+;
+; Format:
+;
+;   "prog", "product", "comp-ID", "call", "prompt", "state"
+;
+;   prog    : The program identifier - OS/2 only (from environment )
+;   product : The product identifier - only if installing this product will
+;             this exec be issued.  "0" signifies to execute this command
+;	      regardless of which products were installed.
+;   comp-ID : The component identifier - only if installing this component of
+;             this product will this exec be issued.  "0" signifies to execute
+;             this command regardless of which components were installed.
+;   call    : The call string, including all command line parameters
+;   prompt  : A yes/no prompt - if no, the exec will not be issued, otherwise
+;	      it will be executed.
+;   state   : 0 = Visible; 1 = Invisible;
+;	      Note: In Windows all dos programs are controlled by PIF files.
+;	      Note: Once the program has been started it can activate itself
+;		    and become visible.
+;
+;[call]
+;"A","B","0","%0%\ingres\bin\vardlg.exe NetDlg,%0%"
+;"A","B","0","%0%\ingres\vdba\rmcmdenv.exe %0%\ingres\vdba"
+
+
+; The CHANGEDIR command resets the current directory to the specified
+; directory.  This could be useful, for instance, if you wanted to set
+; you current directory to a DLL subdirectory, and then EXEC a program
+; that resides in another directory (but is in the path).
+;
+;[changedir]
+;%0%\DLL
+
+
+;
+; The [exec] section specifies a program to be run at the end of the successful
+; install.  It must appear on the line following the [exec] header.
+; The entire line is passed to the system.  Args can be included, as well as
+; any level of path spec desired.
+;
+; Format:
+;
+;  "prog","exec","prompt", "state"
+;
+;   prog    : The program identifier - OS/2 only (from environment )
+;   exec    : The exec string, including all command line parameters
+;   prompt  : A yes/no prompt - if no, the exec will not be issued, otherwise
+;	      it will be executed.
+;   state   : 0 = Visible; 1 = Invisible;
+;	      Note: In Windows all dos programs are controlled by PIF files.
+;	      Note: Once the program has been started it can activate itself
+;		    and become visible.
+;
+[exec]
+;"A","%0%\ingres\bin\iisustrt.bat %0%","","0"
+
+;
+; The [ini] section defines all of the settings that will go into the app's
+; .INI file.
+;
+; The line following the [ini] header contains the name of your .INI file.
+; It should be name.extension followed by the PRODUCT IDENTIFIER.
+; By default it is placed in the app's main directory.
+;
+; Following the Product Identifier is an optional flag 'F', which forces
+; the sections to be overwritten even if they already exist (normal
+; behaviour is described below).
+;
+; Remaining lines, to end of SETUP.ISC file, are settings for your INI file.
+; All settings MUST be preceded with a group name in square brackets.
+;
+; If INI file does not exist, it is built with these lines verbatim.
+;
+; If INI file DOES exist, only new settings (right hand side) are added.
+; Existing keys with different values are NOT modified in the INI file.
+;
+; You may substitute params into the text with %token%.  Valid tokens:
+;   - single char "0", and A-Z.  Refers to token in [directories] section.
+;     Note that this always substitutes a fully qualified pathname, NOT
+;     terminated with a backslash.  That is, specifying a child directory
+;     id token will result in: drive, colon, slash, parent, slash, child.
+;
+;   - "PACKAGENAME", "CAPTIONNAME", "APPNAME", "RELEASESTRING", "BASEAPP"
+;       These are defined in the [setup] section.
+;       Do not specify the token name within quotes.  See example.
+;
+; Text is substituted exactly as declared within quotes.  No blanks added.
+; See example "setting6" below; see it expand when you generate INI file.
+;
+;
+;[ini]
+;IniFileName: %1%\spjwin.ini,A,F
+;[SPJ General]
+;Macro Program Types=Realizer,V-Basic,Other
+
+;[SPJ Run Command Definitions]
+
+;
+; The REGISTRY keword is available only under NT and Windows95.  This
+; section replaces the INI section for these operating systems.
+;
+; Format:
+;   Line 1:                [registry]
+;   Line 2 (Group Key):    Software: A
+;   Line 3..n (Keywords):  {subkey},keyword {, type, value}
+;   Line n+1 (Group Key):  Environment: A
+;   Line n+2..m            {subkey},keyword {, type, value}
+;   Line m+1 (Group Key):  Software: B
+;
+; Line 2 has several options:
+;       Software:    The stuff that used to go in your .ini file
+;       Environment: The stuff that used to go in autoexec.bat
+;   This line always contains the Product Identifier as well.
+;   There can only be one software group and environment group for
+;   each product.
+;
+; Keyword lines contain keywords with optional values to be put
+; into the registry for this product.  For CASoftware, CA-Install puts this
+; info in the HKEY_LOCAL_MACHINE\Software\ComputerAssociates\{ProductName}\ and
+; HKEY_CURRENT_USER\Software\ComputerAssociates\{ProductName}\ sections
+; of the Registry, where ProductName is defined in the [products] section.
+;
+; For Environment, these values are put in the HKEY_USERS\Environment and
+; HKEY_CURRENT_USER\Environment sections.
+;
+; Subkeys can be defined, with multiple levels.  For example, to create the
+; subkey Preferences\CalculationOptions you would specify
+; "Preferences\\CalculationOptions","Option",REG_SZ,Value
+;
+; FOR THE DE-INSTALL TO WORK, YOU MUST CREATE A KEY THAT DEFINES "Root" as
+;   the root directory of your application (i.e. %0%).  CA-Install will
+;   also write to a file called CAREGENV.LOG which will provide de-install
+;   information.
+;
+; All other specialized Registry installation needs will have to be handled by
+; post-install processes.
+;
+; Types can be any one of the following values, but only 3 types are
+;   fully supported (REG_SZ, REG_EXPAND_SZ, REG_NONE, and REG_DWORD - all
+;   others are treated as REG_SZ for now):
+;       REG_BINARY
+;       REG_DWORD
+;       REG_DWORD_LITTLE_ENDIAN
+;       REG_DWORD_BIG_ENDIAN
+;       REG_EXPAND_SZ           - A string that needs to be expanded by system
+;       REG_LINK
+;       REG_MULTI_SZ
+;       REG_NONE
+;       REG_RESOURCE_LIST
+;       REG_SZ                  - Normal strings
+;
+; For more information on the types, see the RegQueryValueEx function
+; in the Win32 SDK documentation.
+;
+;[registry]
+;CASoftware: B
+;"","Root",REG_SZ,"%0%"
+;"","II_SYSTEM",REG_SZ,"%0%"
+
+;Environment: B
+;"","PATH", REG_EXPAND_SZ, "%0%\\INGRES\\BIN,%0%\\INGRES\\UTILITY"
+
+; end of file INSTALL.ISC

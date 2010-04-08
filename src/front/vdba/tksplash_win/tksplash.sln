@@ -1,0 +1,55 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tksplash", "tksplash.vcproj", "{64C73EA4-7DB0-4088-9790-2612B1E18060}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		AIX_Release|Win32 = AIX_Release|Win32
+		Debug|Win32 = Debug|Win32
+		Debug64|Win32 = Debug64|Win32
+		DebugU|Win32 = DebugU|Win32
+		EDBC_Debug|Win32 = EDBC_Debug|Win32
+		EDBC_Release|Win32 = EDBC_Release|Win32
+		HPUX_Debug|Win32 = HPUX_Debug|Win32
+		HPUX_Release|Win32 = HPUX_Release|Win32
+		Linux_Debug|Win32 = Linux_Debug|Win32
+		Linux_Release|Win32 = Linux_Release|Win32
+		Release|Win32 = Release|Win32
+		Release64|Win32 = Release64|Win32
+		ReleaseU|Win32 = ReleaseU|Win32
+		Solaris_Release|Win32 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.AIX_Release|Win32.ActiveCfg = AIX_Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.AIX_Release|Win32.Build.0 = AIX_Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Debug|Win32.ActiveCfg = Debug|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Debug|Win32.Build.0 = Debug|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Debug64|Win32.ActiveCfg = Debug64|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Debug64|Win32.Build.0 = Debug64|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.DebugU|Win32.ActiveCfg = DebugU|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.DebugU|Win32.Build.0 = DebugU|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.EDBC_Debug|Win32.ActiveCfg = EDBC_Debug|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.EDBC_Debug|Win32.Build.0 = EDBC_Debug|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.EDBC_Release|Win32.ActiveCfg = EDBC_Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.EDBC_Release|Win32.Build.0 = EDBC_Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.HPUX_Debug|Win32.ActiveCfg = HPUX_Debug|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.HPUX_Debug|Win32.Build.0 = HPUX_Debug|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.HPUX_Release|Win32.ActiveCfg = HPUX_Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.HPUX_Release|Win32.Build.0 = HPUX_Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Linux_Debug|Win32.ActiveCfg = Linux_Debug|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Linux_Debug|Win32.Build.0 = Linux_Debug|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Linux_Release|Win32.ActiveCfg = Linux_Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Linux_Release|Win32.Build.0 = Linux_Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Release|Win32.ActiveCfg = Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Release|Win32.Build.0 = Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Release64|Win32.ActiveCfg = Release64|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Release64|Win32.Build.0 = Release64|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.ReleaseU|Win32.ActiveCfg = ReleaseU|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.ReleaseU|Win32.Build.0 = ReleaseU|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Solaris_Release|Win32.ActiveCfg = Solaris_Release|Win32
+		{64C73EA4-7DB0-4088-9790-2612B1E18060}.Solaris_Release|Win32.Build.0 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

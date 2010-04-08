@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ Indicates whether the "Kerberos" security mechanism is enabled.  "True" means
+ the "Kerberos" security mechanism is enabled; "false" means the "Kerberos"
+ mechanism is disabled.
+
+ Kerberos is a dynamic mechanism and requires external configuration of the
+ Kerberos authentication environment.

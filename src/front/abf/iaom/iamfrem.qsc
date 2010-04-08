@@ -1,0 +1,80 @@
+/*
+**	Copyright (c) 1986, 2004 Ingres Corporation
+*/
+
+#include <compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include <fe.h>
+# include	<er.h>
+#include "iamstd.h"
+
+/**
+** Name:	iamfrem.c - remove fid from database.
+**
+** Description:
+**	remove frame from database.
+*/
+
+/*{
+** Name:	IIAMfrFidRem - remove frame id
+**
+** Description:
+**	Removes frame id and associated IL from the database.  Valid both to
+**	remove an already encoded frame, or one that has been noted
+**	in the ii_objects table through IIAMfaFidAdd, but not encoded yet.
+**
+** Inputs:
+**	fid	frame to remove
+**
+** Side Effects:
+**	updates ii_objects, ii_encodings table
+**
+** Returns:
+**	OK
+**	ILE_FAIL DB failure
+**
+** History:
+**
+**	1/88 (bobm) note that abf no longer uses return value anywhere,
+**		so we can save a retrieve by simplifying return information.
+**	18-aug-88 (kenl)
+**		Changed QUEL to SQL.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+STATUS
+IIAMfrFidRem(fid)
+EXEC SQL BEGIN DECLARE SECTION;
+    i4 fid;
+EXEC SQL END DECLARE SECTION;
+{
+        EXEC SQL BEGIN DECLARE SECTION;
+                i4  errchk;
+        EXEC SQL END DECLARE SECTION;
+
+	/*
+	** delete the encoding record first.  Having just an
+	** object table record is still a consistent state.
+	*/
+	iiuicw1_CatWriteOn();
+        EXEC SQL REPEATED DELETE FROM ii_encodings WHERE encode_object = :fid;
+        EXEC SQL INQUIRE_INGRES (:errchk = errorno);
+	if (errchk == 0)
+	{
+                EXEC SQL REPEATED DELETE FROM ii_objects where object_id = :fid;
+                EXEC SQL INQUIRE_INGRES (:errchk = errorno);
+	}
+	iiuicw0_CatWriteOff();
+	if (errchk != 0)
+		return (ILE_FAIL);
+	return (OK);
+}

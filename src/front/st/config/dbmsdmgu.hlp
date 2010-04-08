@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The cache_guideline resource controls the default sizes of the DMF
+  buffer caches.  The possible values are:
+
+  small - A low-memory setting suitable for very light usage.
+
+  medium - An intermediate setting that balances performance and memory
+           usage, for moderate loads.
+
+  large - A setting suitable for heavily loaded installations with many users.
+
+  huge - A very large memory setting, appropriate only for dedicated servers
+         with lots of memory and very heavy loads.
+
+  The cache_guideline resource only controls the Configurator defaults.
+  Individual buffer cache settings can still be tuned to best suit the
+  installation.
+
+
+  The default is "medium".

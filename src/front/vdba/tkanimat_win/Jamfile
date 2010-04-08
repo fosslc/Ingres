@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!tkanimat_win
+#
+
+SubDir ING_SRC front vdba tkanimat_win ;
+
+IISUBSYS front vdba tkanimat_win ;
+
+
+IISLN tkanimat.dll : tkanimat.sln ;

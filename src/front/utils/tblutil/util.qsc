@@ -1,0 +1,1070 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+/* # include's */
+
+# include	<compat.h>
+# include	<cv.h>		 
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ui.h>
+# include	<ug.h>
+# include	<cm.h>
+# include	<er.h>
+# include	<st.h>
+# include	"ertu.h"
+# include	"tuconst.h"
+# include	<uigdata.h>
+# include	<tu.h>
+
+/**
+** Name:	util.qsc -	Utilities for the Tables Utility.
+**
+** Description:
+**	This file defines:
+**
+**	gettbls		Load tablefield with valid tables.
+**	tuchkname	Check for a valid INGRES name.
+**	ltcheck		get name from table field.
+**	tblscroll	scroll the table field.
+**	IITUstlSetTitle build the title for a frame.
+**	IITUtsTblfldSearch  general purpose table field search.
+**	IITUfr_FindRow  Find place to insert info in sorted table field
+**	IITUstf_ScrollTF
+**
+** History:
+**		6/5/85 (prs)	Fix to bug 5525.  INGRES not allowed.
+**		6/11/85 (prs)	Fix bug 5975.  No GBF/Graph allowed.
+**		10/85 (prs)	Add CI capabilities.
+**		11/85 (prs)	Add refs to ISQL and IQUEL.
+**				Get rid of INGRES as valid command.
+**		11/85 (prs)	Get tuchkname to call FEchkname.
+**		12/85 (prs)	Get tuchkname to return OK on success.
+**		9/16/85 (marian)	Changed starterr error message.
+**		2/10/86 (prs)	Add support for VIGRAPH and RUNGRAPH.
+**		9-oct-1986 (Joe)
+**			Added Saturn support.
+**		4-mar-1987 (daver)
+**			Removed routines not germain to the tables utility.
+**			Changed globals SWuser and SWusername to User and
+**			UserName, respectively.
+**		27-mar-87	(daver)
+**			Added utility routines from the old tblutils.qc.
+**		8-apr-87	(daver)
+**			Added Joe's forward static decalration for loadtab to
+**			get compiled on MVS.
+**		10-apr-87	(daver)
+**			Add another forward declaration for tblscroll.
+**		25-nov-1987 (peter)
+**			Changed queries to repeats for performance.
+**		1-dec-1987 (peter)
+**			Moved turelexists to tutabinf.
+**		8/89	(pete)	Add tufixtitles(). (formerly named fixtitles())
+**		4/90	(pete)  Added several new routines for 6.4.
+**		28-aug-1990 (Joe)
+**			Changed references to IIUIgdata to the UIDBDATA
+**			structure returned from IIUIdbdata().
+**		12-jan-1993 (rogerl)
+**			Juggle normal/un names for del id's.
+**		15-apr-1993 (rogerl)
+**			Add IITUeqEscapeQuotes() (for now only used in
+**			prscreat.qsc).  For bug 49210.
+**		21-apr-1993 (rogerl)
+**			Add IITUnndNotNullDefaultNull(); make sure user isn't
+**			creating column NOT NULL DEFAULT NULL.
+**		9-juno1993 (rogerl)
+**			Add escape_underscores() to, uh, escape uscores so that
+**			UGscanwildcard() doesn't regard them as SQL wildcards.
+**			(52498).  Also fix a problem with -e mode where a
+**			delimited id object name couldn't be chosen with the
+**			cursor after loading matching table names.
+**		21-jul-1993 (rogerl)
+**			Add TUstripquotes() for stripping single quotes (and
+**			'quoted' quotes) from a string
+**		21-jul-1993 (rogerl)
+**			Allow historic * as wildcard as well as SQL % (50049)
+**		26-jul-1993 (rogerl)
+**			As in previous change, treat '?' as wildcard.  Use
+**			available utility routines.  Fix expert mode problem
+**			where literal table names not found at 'examine'.
+**		22-apr-1994 (mgw) Bug #57669
+**			Make the owner field writable in expert (-e) mode
+**			so the user can specify a table owned by someone else.
+**		21-apr-1995 (harpa06) Bug #68076 
+**			Allow table names to be found if entered in lowercase in
+**			FIPS mode. 
+**
+**              	When entering a delimited table name in the TABLES 
+**			utility	WITHOUT the quotes surrounding the name, and the
+**			delimited version of the table exists in the database, 
+**			you receive an error message stating that the table name
+**			the user sepcified does not exist. This is correct 
+**			because the user did not specify that the table was 
+**			delimited. However, at this point, the user is NOT able
+**			to go back and either re-edit or re-enter the correct 
+**			version of the delimited table name. This has been fixed
+**			so that the user must re-enter the delimited version of 
+**			the table name, or enter in a new table name. This only **			happens in non-FIPS mode.  
+**      	25-sep-96 (mcgem01)
+**              	Global data moved to tbldata.c
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	19-May-2009 (kschendel) b122041
+**	    Fix type of IITUvun... routine.
+**	21-Aug-2009 (kschendel) 121804
+**	    Need tu.h to satisfy gcc 4.3.
+*/
+
+/* # define's */
+/* extern's */
+
+/* prototypes */
+char	*IITUeqEscapeQuotes( char *inbuf, char *outbuf );
+bool	IITUnndNotNullDefaultNull( char *nullable, char *def );
+VOID	TUstripquotes( char *input, char *output );
+static VOID	escape_underscores( char *source, char *dest );
+
+FUNC_EXTERN	STATUS	FEchkname();
+FUNC_EXTERN	DB_STATUS	FErel_open();
+FUNC_EXTERN	DB_STATUS	FErel_fetch();
+FUNC_EXTERN	DB_STATUS	FErel_close();
+FUNC_EXTERN	ER_MSGID	IITUvunValueUserNull( char *mvdefault );
+
+/* static's */
+static	PTR	tu_table;
+static	PTR	tu_view;
+static	PTR	tu_index;
+static	PTR	tu_synonym;
+static  bool	tbl_types_set = FALSE;
+
+GLOBALREF	bool	second_pass_emode;
+
+/* following could be put in .roc file */
+static
+##      char    _Form[]         = ERx("tutopfr"),
+##              _Tblfld[]       = ERx("tbllist");
+
+
+/*{
+** Name:  IITUfr_FindRow - Find place to insert info in sorted table field
+**
+** Description:
+**	Search (case sensitive) the "tblfld" table field on form "form"
+**	(the table field is assumed to be in sorted order) for where
+**	to insert information. Two columns are searched.
+**	Then SCROLL the table field to that
+**	row and return the row number so the caller can issue an
+**	INSERTROW.
+**
+** Inputs:
+**	form	Name of form.
+**	tblfld	Name of table field.
+**	col1	Name of first column in "tblfld" (primary sort column).
+**	col2	Name of second column in "tblfld" (secondary sort col).
+**	dat1	String to match values in "tblfld.col1"
+**	dat2	String to match values in "tblfld.col2"
+**
+** Outputs:
+**
+**	Returns:
+**		_RECORD number in dataset where new data should be
+**		inserted after (INSERTROW inserts after).
+**
+** Side Effects:
+**
+** History:
+**	3/1/90	(pete)	Initial Version.
+**	4/23/90 (pete)  Rewrote (for 6.3--6.4 interoperability)
+*/
+i4
+## IITUfr_FindRow(form, tblfld, col1, col2, dat1, dat2)
+## char *form;
+## char *tblfld;
+## char *col1;
+## char *col2;
+char *dat1;
+char *dat2;
+## {
+##	char col1_dat[FE_MAXNAME+1];
+##	char col2_dat[FE_MAXNAME+1];
+	bool foundit = FALSE;	/* TRUE if find place in tblfld to Insert */
+##	i4 record =0;
+	i4  col1_compare = 0;
+	i4  col2_compare = 0;
+
+##      UNLOADTABLE form tblfld (col1_dat = col1, col2_dat = col2,
+##				record = _RECORD)
+##      {
+	    /*
+	    ** Search till find combination of col1 and col2 that is
+	    ** lexically larger. Return that row number so can insert
+	    ** just before that.
+	    */
+            col1_compare = STcompare(dat1, col1_dat);
+
+	    if (col1_compare > 0)
+		;	/* check next one */
+	    else if (col1_compare == 0)
+            {
+                col2_compare = STcompare(dat2, col2_dat);
+		if (col2_compare > 0)
+		    ;	/* check next one */
+		else
+		{
+		    /* (dat1 == col1) and (dat2 <= col2)
+		    ** Insert just before this.
+		    */
+		    foundit = TRUE;
+##                  ENDLOOP
+		}
+            }
+	    else
+	    {
+		/* too small. insert just before here */
+		foundit = TRUE;
+##              ENDLOOP
+	    }
+##      }
+
+	if (foundit)
+	    /* insert right above this row */
+	    return ( --record );
+	else
+	    /* Didn't find it.
+	    ** Either: 1. table field has data; so INSERTROW after "record"
+	    **            (the last row).
+	    ** Or,     2. table field is empty (record == 0).
+	    */
+	    return ( record );
+
+## }
+
+/*{
+** Name:	IITUstf_ScrollTF - Scroll table field for INSERTROW/PUTROW.
+**
+** Description:
+**	Scroll the table field to the correct row and tell the caller
+**	whether to do an INSERTROW or PUTROW, and which displayed row
+**	to do it on.
+**
+** Inputs:
+**	form	Name of form.
+**	tblfld	table field name on form.
+**	colname	name of column in "tblfld"
+**	record	dataset record just above where we want new one to go.
+**	tblname Name of table (table names are in tblfld.colname)
+**	insert_row	Set to TRUE if caller should use INSERTROW; FALSE
+**			if should use PUTROW.
+**
+** Outputs:
+**
+**	Returns:
+**		Displayed row number to use in either PUTROW or INSERTROW stmt.
+**		Sets "insert_row" to TRUE or FALSE (see above).
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	4/23/90	pete	Initial version.
+**	8/28/90 (pete)	Comment out (via #if 0) section that sorted differently
+**			after 6.4. We'll sort the old fashioned way until
+**			owner.table is fully supported and we can better
+**			test what we commented out here.
+**	5/8/91 (pete)	Change version check to use new IIUIscl_StdCatLevel()
+**			function. Bug 36993.
+**	25-aug-1992 (mgw)
+**		Turned on 6.5 handling to allow display of more than one
+**		table with the same name if owned by different owners.
+*/
+i4
+## IITUstf_ScrollTF (form, tblfld, colname, record, tblname, insert_row)
+## char *form;
+## char *tblfld;
+## char *colname;
+## i4 record;
+## char *tblname;
+   bool *insert_row;
+## {
+##	i4 disp_row =0;
+##	i4 numrows;
+
+##	char tmp_tname[FE_MAXNAME+1];
+##	char tmp_towner[FE_MAXNAME+1];
+
+	*insert_row = TRUE;
+
+	/* FUNC_EXTERN char *IIUIscl_StdCatLevel();	*/
+
+	if (STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_64) <= 0)
+	{
+	    /* Database has 6.4 or earlier standard catalogs, and therefore
+	    ** does not have iitable_grants.
+	    ** In version 6.4 or earlier; only show one copy of a table
+	    ** owned by particular user. later, after iitable_grants
+	    ** is implemented, many copies of a table may be displayed,
+	    ** each owned by diff. user.
+	    */
+
+	    if (record > 0)
+	    {
+##	        SCROLL form tblfld TO record
+
+##		INQUIRE_FRS TABLE form (disp_row = ROWNO)
+
+##		GETROW form tblfld disp_row (tmp_tname = colname)
+
+		if (STequal(tmp_tname, tblname))
+	      	    *insert_row = FALSE;	/* overlay this row w/PUTROW */
+	    }
+	    else
+	    {
+		/* every row in table field is lexically larger */
+
+##	        INQUIRE_FRS TABLE form (numrows = DATAROWS(tblfld))
+	        if (numrows > 0)
+	        {
+		    /* table field has data. new entry goes before
+		    ** first row in table field
+		    */
+##	            SCROLL form tblfld TO 1
+
+##		    INQUIRE_FRS TABLE form (disp_row = ROWNO)
+
+##		    GETROW form tblfld disp_row (tmp_tname = colname)
+
+		    if (STequal(tmp_tname, tblname))
+	      	        *insert_row = FALSE;	/* overlay this row w/PUTROW */
+		    else
+			--disp_row;	/* insertrow above */
+	        }
+	        /* else tblfld empty. no need to scroll.
+		** want to INSERTROW at 0.
+		*/
+	    }
+	}
+	else
+	{
+	    /* version 6.5 or later; show tables with same
+	    ** name, owned by different users
+	    */
+
+	    if (record > 0)
+	    {
+##	        SCROLL form tblfld TO record
+##	        INQUIRE_FRS TABLE form (disp_row = ROWNO)
+	    }
+	    else
+	    {
+##	        INQUIRE_FRS TABLE form (numrows = DATAROWS(tblfld))
+	        if (numrows > 0)
+	        {
+		    /* new entry goes before first row in table field */
+##	            SCROLL form tblfld TO 1
+##	            INQUIRE_FRS TABLE form (disp_row = ROWNO)
+	            --disp_row;	/* INSERTROW places new row after the
+				** SCROLL TO row, and we want it to go
+				** before the row we just scrolled to,
+				** so decrement "record".
+				*/
+	        }
+	        /* else tblfld empty. no need to scroll */
+	    }
+	}
+
+	return disp_row;
+##  }
+
+/**
+** Name:	gettbls		- fill up main catalog form with tables
+**
+** Description:
+**	Load the main tables utility catalog form with the tables, views,
+**	indexes and synonyms owned by this user, or the DBA, based on a
+**	qualification.
+**
+** Inputs:
+**	tblqual		The qualification on table name to use in
+**			loading the tables.
+**	ownerqual	The qualification on owner name to use in
+**			loading the tables.
+**
+** Returns:
+**	none.
+**
+** History:
+**	1-mar-1987 (daver)
+**		Taken from rtingres.
+**	2-dec-1987 (peter)
+**		Commented and changed parameters.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	19-feb-92 (leighb) DeskTop Porting Change:
+**	    FEchkname() has only argument; 2nd bogus argument deleted.
+**	18-jun-1992 (mgw)
+**		Added support for synonyms.
+**	24-aug-92 (mgw)
+**		Added support for "table"."owner". Took out 'name' arg
+**		(name of row to resume to upon return) since it was never
+**		used. Changed 'qual' arg to 'tblqual' and added 'ownerqual'
+**		arg to handle "table"."owner".
+**      21-apr-95 (harpa06) Bug #68076 
+**              Allow table names to be found if entered in lowercase in 
+**              FIPS mode.
+*/
+VOID
+gettbls(tblqual, ownerqual)
+## char *tblqual;
+## char *ownerqual;
+{
+##	char	rname[FE_MAXNAME+1];
+##	char	rown[FE_MAXNAME+1];
+##	i4	tblictype ;
+##	char	tbltype[21] ;
+	DB_STATUS	rval;
+	FE_REL_QBLK	rel_block;
+	FE_REL_INFO	rel_info;
+	VOID	tblscroll();
+	bool    dmy      = FALSE;
+
+	/* following done for performance to avoid same ERget
+	** calls below inside a loop
+	*/
+	if (!tbl_types_set) {
+		tu_table= ERget(F_TU002E_TABLE);
+		tu_view = ERget(F_TU001C_VIEW);
+		tu_index= ERget(F_TU001D_INDEX);
+		tu_synonym = ERget(F_TU006E_Synonym);
+		
+		tbl_types_set = TRUE;
+	}
+
+##	message ERget(F_TU003A_Loading_Tables)
+
+##	inittable _Form _Tblfld read (ictype=i4)
+##	set_frs column _Form _Tblfld (mode(owner) = FILL)
+
+/* b68076 */
+        IIUGdlm_ChkdlmBEobject( tblqual, tblqual, dmy );
+
+	/*
+	** Change dets_wanted from TRUE to FALSE. This involves
+	** the create date, which we don't care about!
+	*/
+	if ((rval = FErel_open(&rel_block, tblqual, ownerqual, 
+						FEecats(), FALSE)) == OK)
+	{
+		while (FErel_fetch(&rel_block, &rel_info) == OK)
+		{
+			STcopy(rel_info.name, rname);
+
+			STcopy(rel_info.owner, rown);
+
+			if (rel_info.type == ICTABLE)
+			{
+				STcopy(tu_table, tbltype);
+			}
+			else if (rel_info.type == ICVIEW)
+			{
+				STcopy(tu_view, tbltype);
+			}
+			else if (rel_info.type == ICINDEX)
+			{
+				STcopy(tu_index, tbltype);
+			}
+			else if (rel_info.type == ICSYNONYM)
+			{
+				STcopy(tu_synonym, tbltype);
+			}
+			else
+			{
+				STprintf (tbltype, "%d", rel_info.type ) ;
+			}
+
+			tblictype = rel_info.type ;
+
+##			loadtable _Form _Tblfld (table=rname,
+##			     owner=rown, #type=tbltype, ictype=tblictype)
+		}
+
+		FErel_close(&rel_block);
+	}
+	else
+	{
+		IIUGerr(E_TU0034_Error_in_FErelopen, UG_ERR_ERROR,
+			(i4) 1, (PTR) &rval);
+	}
+
+	tblscroll(0);
+}
+
+
+/* 	NOTE: see util.qsc in accessdb. there is very similar routine
+**	called chkdbname. Can these be combined and put into shared lib?
+**
+**	17-jan-93 (rogerl) Don't normalize here.
+*/
+STATUS
+tuchkname(name)
+char	*name;
+{
+	register	char	*cp;
+
+	if (name == NULL || *name == EOS)
+	{
+		/* VARARGS2 */
+		IIUGerr(E_TU0035_Blankname_not_allowed, UG_ERR_ERROR, (i4) 0);
+		return(FAIL);
+	}
+
+	if (IIUGdlm_ChkdlmBEobject(name, NULL, FALSE) == UI_BOGUS_ID)
+	{	/* Bad character in name. or SQL keyword */
+		IIUGerr(E_TU0037_Name_contain_bad_char, UG_ERR_ERROR,
+			(i4) 1, (PTR) name);
+		return(FAIL);
+	}
+	return(OK);
+}
+
+
+/**
+** Name:	ltcheck		- get values for current row in table
+**
+** Description:
+**	Get the values for the current row in the table list, giving
+**	appropriate errors if not found.  This also runs the query and
+**	fills in the table if the -e flag is set.
+**	Object names returned are 'normalized' (delimited ids sense).
+**
+** Inputs:
+**	maychange	Set to TRUE if the operation to be checked
+**			for would allow updates to the table.  This
+**			makes sure that the table pointed to is
+**			owned by the person running the program.
+**
+** Outputs:
+**	tblname		Pointer to a buffer large enough to hold table name
+**	rrowner		Pointer to a buffer large enough to hold owner name
+**
+**	Returns:
+**		TRUE	if an error is found or other resume should be done.
+**		FALSE	if it was loaded.
+**
+** History:
+**	1-mar-1987 (daver)
+**		Taken from RTINGRES.
+**	1-dec-1987 (peter)
+**		Added comments.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	14-jan-1992 (rogerl)
+**		lifting names off of form - (they are only put there if
+**		normalized) so don't reapply normalization.  Check for 
+**		whitespace tablename to preserve the space.
+**	12-mar-1993 (rogerl)
+**	    names aren't necessarily normalized - user may have typed
+**	    the string onto the form when in (-e) mode.  Check and reject
+**	    if improper - unless it's a wildcard.  Do far more special casing
+**	    for tables named " " (blank) than it's worth.  Bugs 49209,49771.
+**	10-sep-1993 (mgw) Bug #54367
+**		If in -e (expert mode) and user has specified a tablename
+**		(that may be wildcarded) that evaluates to only one table,
+**		then just use it, don't make the user select from a list of
+**		one table.
+**	30-mar-1994 (geri)
+**		Bug 55809: protect '-' in table names from being expanded
+**		as wildcard characters.
+**	31-mar-1994 (geri)
+**		Bugs 58267, 57481:normalize the table name in -e mode so
+**		that it is cased appropriately prior to generating the query.
+**		BUT..don't normalize the tablename for FIPS databases
+**		because this would break wildcard-matching with FIPS.
+**	04-apr-1994 (geri)
+**		Bug 62003: if only one table is found when using wildcard, 
+**		expand the wildcard so that test doesn't fail due to 
+**		UI_BOGUS_ID caused by the * character.
+**	21-apr-1995 (harpa06)
+**                      When entering a delimited table name in the TABLES
+**                      utility WITHOUT the quotes surrounding the name, and the
+**                      delimited version of the table exists in the database,
+**                      you receive an error message stating that the table name
+**                      the user sepcified does not exist. This is correct
+**                      because the user did not specify that the table was
+**                      delimited. However, at this point, the user is NOT able
+**                      to go back and either re-edit or re-enter the correct
+**                      version of the delimited table name. This has been fixed
+**                      so that the user must re-enter the delimited version of
+**                      the table name, or enter in a new table name. This only
+**                      happens in non-FIPS mode.  
+*/
+bool
+## ltcheck(maychange, tblname, rrowner)
+bool	maychange;
+## char *tblname;
+## char *rrowner;
+##{
+##	i4	numrows;
+	i4	len;
+	bool	isnrml;
+	bool	stripped = FALSE;
+	bool	isdelim  = FALSE;
+	bool	dmy	 = FALSE;
+
+##	inquire_frs table _Form (numrows = lastrow(_Tblfld))
+	if (numrows == 0)
+	{
+		IIUGerr(E_TU003D_No_tables_in_catalog, UG_ERR_ERROR,
+			(i4) 0);
+		return(TRUE);
+	}
+
+##	getrow _Form _Tblfld (tblname = table, rrowner = owner)
+
+	isnrml = FEecats() ? FALSE : TRUE;
+
+	len = STtrmwhite(rrowner);
+
+	if (!isnrml)	/* if -e (expert) mode */
+	{
+			/* if second pass emode, don't attempt to expand
+			** whatever the user chose from the table form (or
+			** if it is a delimited id)
+			*/
+		isdelim = (IIUGdlm_ChkdlmBEobject( tblname, NULL, FALSE ) 
+					== UI_DELIM_ID);
+		if ( ! second_pass_emode &&
+		    /* Not FIPS: */
+		    ! (IIUIcase() == UI_UPPERCASE &&
+		     IIUIdlmcase() == UI_MIXEDCASE)
+		   )
+		    IIUGdbo_dlmBEobject(tblname, isdelim);
+
+		if ( ! second_pass_emode && ! isdelim)
+		{
+		char	temptblname[ FE_UNRML_MAXNAME + 1 ];
+			/* escape the underscores first so we don't escape
+			** _'s that used to be ?'s (after IIUGwildcard())
+			** (since they're legal chars in tblnames)
+			*/
+		    escape_underscores( tblname, temptblname );
+		    IIUGwildcard( tblname, &dmy );
+		    IIUGwildcard( temptblname, &dmy );
+
+		    /* following block no longer depends upon presence of
+		    ** wildcard chars.  match what we can, wild or no
+		    */
+			
+		    gettbls( temptblname, NULL );
+##			inquire_frs table _Form (numrows = lastrow(_Tblfld))
+/* harpa06 */
+		    if (numrows == 0)
+		    {
+			if (STindex(tblname,ERx("%"),0) == NULL)
+			{
+				IIUGerr(E_TU000E_Own_dot_Tab_notexist,
+					UG_ERR_ERROR,(i4) 2,tblname,
+					IIUIdbdata()->user);
+		        }	
+
+			else 
+		    	{
+				IIUGerr(E_TU003F_No_tables_found, UG_ERR_ERROR,
+					(i4) 0);
+			}
+			
+			fix_emptycat_form();
+			return(TRUE);
+		    }
+		    else if (numrows != 1) /* fix for bug 54367 */
+		    {
+			second_pass_emode = TRUE;
+			    /* when we come back in for the users actual
+			    ** selection, we need to know that they chose
+			    ** the name from the form, so it is already
+			    ** checked for correctness and normalized and
+			    ** avoid expanding wildcards (again).  But if
+			    ** there were no rows found, then the user
+			    ** must be starting over.
+			    */
+			return(TRUE);
+		    }
+		    /* else user specified only one row, fall thru and use it */
+		    /* but check first and expand if wildcard was used */
+		    else if (dmy)
+		    {
+##			getrow _Form _Tblfld (tblname = table, rrowner = owner)
+		    }
+	    }
+	    else
+	    {
+		stripped = TRUE;
+	    }
+
+		/* isn't wildcard string; is it a valid delimited or other
+		** identifier ?   If user typed del id, must be quoted.
+		** (unless it is second pass in expert mode)
+		*/
+	    if ( ( tblname && *tblname != EOS ) && ( !second_pass_emode ) )
+	    {
+		if ( IIUGdlm_ChkdlmBEobject( tblname, tblname, dmy )
+						    == UI_BOGUS_ID )
+		{
+		    IIUGerr(E_TU0037_Name_contain_bad_char, UG_ERR_ERROR,
+			(i4) 1, (PTR) tblname);
+
+		/* reinitialize the form since the delimited table name specified by
+		** the user did not include quotes around the name, even though the
+		** delimited version of what the user specified exists. 
+		*/
+		    fix_emptycat_form();
+
+		    return( TRUE );
+		}
+	    }
+	    else if ( len == 0 )
+	    {
+			    /* len will be greater than zero if user
+			    ** chose a table name of " " from the form
+			    */
+		IIUGerr(E_TU003E_Name_not_specified, UG_ERR_ERROR,
+		    (i4) 1, (PTR) tblname);
+		return( TRUE );
+	    }
+	}
+
+	second_pass_emode = FALSE;
+
+		/* preserve table name of non-quoted " " iff read off of form.
+		** User-typed name of " " must be quoted.
+		*/
+	if ( STtrmwhite( tblname ) == 0 )
+	{
+	    if ( len > 0 || stripped )
+	    {		/* assert 1: stripped and trimmed table name == 0
+			**   -> correctly quoted table name of "blank"
+			** assert 2: owner len > 0 -> cursor chosen value
+			*/
+		tblname[0] = ERx(' ');
+		tblname[1] = EOS;
+	    }
+	    else
+	    {
+		return( TRUE );
+	    }
+	}
+
+	if (len == 0)
+		STcopy(IIUIdbdata()->suser, rrowner);
+
+	/* ltcheck is only called with maychange == TRUE to destroy a table */
+	if (maychange && STcompare(rrowner, IIUIdbdata()->suser) != 0)
+	{
+		IIUGerr(E_TU0040_Table_not_owned_by_yo, UG_ERR_ERROR,
+			(i4) 0);
+		return(TRUE);
+	}
+	return(FALSE);
+##}
+
+
+/**
+** Name:	tblscroll	- scroll the table list to the given number.
+**
+** Description:
+**	Scroll the table list form to the given row number.
+**
+** Inputs:
+**	rownumber	the record number to scroll to.
+**
+** Outputs:
+**	None.
+**
+** History:
+**	3-mar-1987 (daver)
+**		Taken from rtingres.
+*/
+VOID
+tblscroll(rownumber)
+i4	rownumber;
+##{
+##	i4	currrec;
+##	i4	numrows;
+##	i4	numrecs;
+
+	if (rownumber > 0)
+	{
+##		inquire_frs table _Form
+##					(numrecs = datarows(_Tblfld),
+##					 numrows = lastrow(_Tblfld))
+		currrec = min(rownumber+(numrows*3/4), numrecs);
+##		scroll _Form _Tblfld to currrec
+##		getrow _Form _Tblfld numrows (currrec = _RECORD)
+		IIrowset(_Form, _Tblfld,
+			 numrows - (currrec-rownumber), ERx("table"));
+	}
+	else
+	{
+##		scroll _Form _Tblfld to 1
+	}
+##}
+
+/* Bug 57669 - take out the mode(owner)=READ from the 1st set_frs command */
+fix_emptycat_form()
+## {
+##	i4 tbltype = ICTABLE;
+##	inittable _Form _Tblfld UPDATE (ictype=i4)
+##	loadtable _Form _Tblfld
+##		(table = ERx(""), owner = ERx(""), ictype=tbltype)
+##	set_frs column _Form _Tblfld (mode(type)=READ)
+##	set_frs form (mode = UPDATE)
+## }
+
+/*{
+** Name:	IITUstlSetTitle - build the title for a frame.
+**
+** Description: builds the title for a frame.
+**		(replaces the old 'tufixtitles', which built all
+**		titles at once).
+**
+** Inputs:
+**	char    *prefix		title prefix.
+**	char    *title		bulk of title for this frame.
+**	char    *buf		buffer to write title into.
+**
+** Outputs:
+**	writes to 'buf'
+**
+**	Returns:
+**		NONE
+**
+** History:
+**	8/89	(pete)	Initial Version.
+*/
+VOID
+IITUstlSetTitle(prefix,title,buf)
+char    *prefix;
+char    *title;
+char    *buf;
+{
+	STpolycat (2,
+		((prefix != NULL) && (*prefix != EOS))
+			? prefix : ERget(F_TU002F_Tables),
+		title, buf);
+}
+
+/*{
+** Name: IITUtsTblfldSearch - Search a (<=2*FE_MAXNAME) char table field column
+**
+** Description: Search character table field column looking for a matching
+**      value (not case sensitive). See restriction on length of column
+**	to search. Returns row number where match occurred (or 0).
+**
+** Sample Call:
+**      ##      i4  row;
+**              if ( (row = IITUtsTblfldSearch(ERx("form"), ERx("tablefield"),
+**                              ERx("column"), "match_value")) > 0)
+**      ##      SCROLL ERx("form") ERx("tablefield") TO row
+**
+** Inputs:
+**      char    *form           name of form
+**      char    *tblfld         name of table field on form
+**      char    *column         name of column in table field to search
+**                              NOTE: this table field column must be
+**                                    <= (2*FE_MAXNAME) in length.
+**      char    *match          search column for value matching this.
+**
+** Outputs:
+**      NONE
+**
+**      Returns:
+**              If match is found, returns the table field row number.
+**              Otherwise, returns 0.
+**
+** History:
+**      8/89    (Pete)  Initial Version.
+*/
+i4
+## IITUtsTblfldSearch(form, tblfld, tblcol, match)
+## char *form;          /* name of form */
+## char *tblfld;        /* name of table field on form */
+## char *tblcol;        /* name of column in table field to search */
+register  char  *match;    /* search tblcol for value matching this. */
+##{
+##      i4      record;
+##      i4      row=0;
+##      char    column_value[(2*FE_MAXNAME)+1];
+
+##      UNLOADTABLE form tblfld (column_value=tblcol, record=_RECORD)
+##      {
+            /* case insensitive compare */
+            if (STbcompare(column_value,0, match,0, TRUE) == 0)
+            {
+                row = record;
+##              ENDLOOP
+            }
+##      }
+        return row;
+##}
+
+
+/*{
+** Name: IITUeqEscapeQuotes - escape any quotes (') by doubling them
+**
+** Description:
+**	Copies inbuf to outbuf, doubling any embedded 's.
+**
+** Inputs:
+**	char * inbuf - input string
+**	char * outbuf - output string
+**
+** Returns:
+**	char * to outbuf
+**
+** History:
+**      15-apr-1993 (rogerl)
+*/
+
+char *
+IITUeqEscapeQuotes(
+    char *inbuf,
+    char *outbuf
+) {
+    char *ret_str = outbuf;
+    char *quotc   = ERx( "\'" );
+
+    while( *inbuf != EOS )
+    {
+	if ( CMcmpnocase( inbuf, quotc ) == 0 )
+	{
+	    CMcpychar( quotc, outbuf );
+	    CMnext( outbuf );
+	}
+	CMcpychar( inbuf, outbuf );
+	CMnext( outbuf );
+	CMnext( inbuf );
+    }
+    *outbuf = EOS;
+    return( ret_str );
+}
+
+/*{
+** Name: IITUnndNotNullDefaultNull - check for argument one being 'no' and
+**		argument two being 'null'
+**
+** Description:
+**	If argument one is 'no' and argument two is 'null', return TRUE
+**
+** Inputs:
+**	char * nullable
+**	char * default
+**
+** Returns:
+**	bool
+**
+** History:
+**      15-apr-1993 (rogerl)
+*/
+
+bool
+IITUnndNotNullDefaultNull(
+    char *nullable,
+    char *def
+) {
+    STATUS stat;
+
+    if ( IITUvunValueUserNull( def ) == F_TU007D_Null2 )
+	if ( ! IIUGyn( nullable, &stat ) )
+    		return( TRUE );
+    return( FALSE );
+}
+
+/*{
+** Name: escape_underscores -  escape underscores ('_') with backslash;
+**				copy to dest string
+**
+** Description:
+**	Copy source to dest, escaping underscores if found.
+**	It would be nice to use IIUGescapewildcard(), but that escapes % as
+**	well, and we need to leave those alone for this use.
+**
+** Inputs:
+**	char * source
+**	char * dest
+**
+** History:
+**      8-jun-1993 (rogerl) (who stole what he could from IIUGescapewildcard())
+*/
+
+static VOID
+escape_underscores(
+    char *source,
+    char *dest
+) {
+
+    while ( *source != EOS )
+    {
+	switch( *source )
+	{
+	    case ERx( '_' ):
+		*dest++ = ERx( '\\' );
+		break;
+	    default:
+		if  ( *source == ERx( '\\' ) )
+		    *dest++ = ERx( '\\' );
+		break;
+	}
+	CMcpyinc( source, dest );
+    }
+
+    *dest = EOS;
+    return;
+}
+
+/*{
+** Name: TUstripquotes strip leading and trailing single quotes and unquoted
+**	embedded quotes (quoted by doubling).  Assume trailing white space has
+**	been eliminated and the input was taken from the DBMS so no checks for
+**	incorrectly quoted values etc.
+**
+**	char * input
+**	char * output
+*/
+
+VOID
+TUstripquotes(
+    char *input,
+    char *output
+) {
+
+    while ( *input != EOS )
+    {
+	switch( *input )
+	{
+	    case ERx('\''):
+
+		CMnext( input );
+
+		if  ( *input != EOS )
+		    CMcpyinc( input, output );
+
+		break;
+
+	    default:
+
+		CMcpyinc( input, output );
+
+		break;
+	}
+   }
+   *output = EOS;
+}

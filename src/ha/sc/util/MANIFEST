@@ -1,0 +1,11 @@
+#
+# Jamfile file for ha!sc!util
+#
+
+SubDir ING_SRC ha sc util ;
+
+IISUBSYS ha sc util ;
+
+
+IISCHABINEXE gettime : gettime.c ;
+

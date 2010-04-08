@@ -1,0 +1,18 @@
+#
+# Jamfile file for common!ddf!ddfcom
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC common ddf ddfcom ;
+
+IISUBSYS common ddf ddfcom ;
+
+if $(BUILD_ICE)
+{
+IINOOPTIM ddfhash.c : rs4_us5 i64_aix r64_us5 ;
+
+IILIBRARY DDFLIB : ddfsem.c ddfhash.c ddfcom.c ;
+
+IILIBRARY DDFCOMLIB : ddfsem.c ddfhash.c ddfcom.c ;
+}

@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abrtlkql.hlp, help for listchoices on runtime qualification popup
+/#-- for Vision/ABF application.
+/#--
+This screen allows you to enter some search conditions (qualifications) on the
+information to be selected from the database.  This will reduce the number of
+choices and will help obtain the information faster.  For a description and
+examples of search conditions, select the topic 'Search Qualifications'.
+
+  Go            Retrieves the choices that meet the specified search conditions.
+  Cancel        Terminates the ListChoices operation without making a choice.
+  Help          Displays this help screen.
+/#subtopic "Search Qualifications" absrchql.hlp

@@ -1,0 +1,96 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Log Database Display screen.  This screen contains an entry
+for each active database.  This allows you to monitor logging activity
+by database.  Information includes the number of transaction begins and
+ends as well as the number of log file write requests.  Based on this
+information, you can spot databases with large amounts of logging activity.
+
+The status of a database can also be determined.  See the information on
+the "Status" field for a list of valid status values.
+
+Columns on this screen include:
+
+    DB Name        The database name.
+
+    Status         The database status.  Valid statuses are:
+
+                   NOTDB          The entry is not a database.
+
+                   FAST_COMMIT    This database is running with Fast Commit.
+
+                   JOURNAL        This database has journaling enabled.
+                       
+                   OPENDB_PEND    This database is about to be opened for the 
+                                  first user of that database.
+
+                   CLOSEDB_PEND   This database is about to be closed,
+                                  the last user in the database is exiting.
+
+                   EBACKUP        On line backup
+
+                   FBACKUP        On line backup
+
+                   CKPDB_PEND     On line backup for this database is about
+                                  to start.
+
+                   PURGE          This database is closed and the archiver is
+                                  archiving transactions for this database.
+
+    TX Cnt         The number of currently open transactions.
+
+    Begin          The number of transaction begins so far.
+
+    End            The number of transaction ends so far.  The difference
+                   between the "Begin" and "End" columns is displayed in the
+                   "TX Cnt" column.
+
+    Read           The number of log file read requests made so far.
+                   It is unusual for this value to be greater than 0
+                   for any entry except the "$recovery" entry.  Log
+                   file reads are usually done during transaction rollout.
+
+    Write          Displays the number of log file write requests made.
+
+When the "More_Info" menuitem is selected, a popup containing additional
+fields for the specified database is displayed).  The additional fields are:
+
+    ID             The internal database ID for this database.
+
+    Owner          The DBA for this database.
+
+    Force          The number of times log file forces occurred for this
+                   database.
+
+    Wait           The number of times transactions in this database had to
+                   wait to use the logging system.
+
+    Location       The database location.
+
+    Jnl Window     The range of log file addresses where there are
+                   transactions for this database that must be journaled.
+                   This implies that journaling is enabled for this database.
+
+    Start Backup   The log file address where online backup for this
+                   database begins.
+
+The menuitems available on this screen include:
+
+    Refresh        Queries the Ingres logging system for logging 
+                   information.  Process, database and transaction 
+                   information are obtained together to ensure a consistent 
+                   snapshot of the logging system.
+
+    More_Info      Place the cursor on the desired database and select this
+                   menuitem.  Additional information for that database
+                   is displayed on a popup screen, including the database
+                   location and journal window.
+
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurrences wherever they are in the column.
+
+    Help           Displays Ingres help screens.
+
+    End            Returns to the Log Info Menu screen.
+
+    Quit           Exit IPM.

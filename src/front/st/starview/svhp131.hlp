@@ -1,0 +1,36 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+OwnerHelp Command
+
+This command is used to select an object owner from a list of
+object owners. The selected object owner name is placed into
+the Object Owner field of the Object Selection Criteria form.
+The distributed objects displayed in the OBJECTS table field
+are limited to objects owned by the selected object owner.  
+If asterisk (*) is selected, all owners are displayed.
+
+The SELECT command selects the highlighted owner and returns automatically 
+to the Objects Selection Criteria form.  The TOP/BOTTOM commands move the 
+cursor to the top/bottom of the Owner list respectively. The FIND command 
+searches for a specified string within the Owner list. The HELP command 
+displays this screen, and the END command returns to the Objects Selection 
+Criteria form without changing the Object Owner field.
+
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	Select		Select the highlighted object, and return
+			to the Object Selection Criteria form.
+
+	Top		Move the cursor to the top of the Owner list.
+
+	Bottom		Move the cursor to the bottom of the Owner list.
+
+	Find		Search for a specified string of characters
+			within the Owner list.
+
+	Help		Display this screen.
+
+	End		Exit to the Objects Selection Criteria form without
+			selecting a new owner.

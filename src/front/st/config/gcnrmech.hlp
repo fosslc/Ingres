@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Mechanism for distributed authentication.  Example: kerberos.  Only 
+ one mechanism is allowed.  Login and password information for a remote 
+ dbms are not required if you define this field.  Both the client and 
+ remote dbms must support the specified mechanism.  A value of "default" 
+ will load the installation (default) security mechanism.  See the 
+ Security section.  A value of "none" disables remote authentication.
+

@@ -1,0 +1,11 @@
+#
+# wgl_32s.hnt file for front\abf\iaom
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+
+ignore = iamtprt.qsc 
+ignore = iamtprt.sc 
+ignore = iamtprt.c 
+

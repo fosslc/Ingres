@@ -1,0 +1,18 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/whatunix.1,v 1.1 90/03/09 09:18:34 source Exp $
+.TH WHATUNIX 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+whatunix \- what kind of UNIX have I got?
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B whatunix
+.SH DESCRIPTION
+.I whatunix
+prints either BSD41, BSD42 or SYS5 depending on the variety of UNIX running
+on the current box.
+.SH BUGS
+.I whatunix
+uses heuristic methods; you should verify that is produces the correct
+result on a new machine.
+

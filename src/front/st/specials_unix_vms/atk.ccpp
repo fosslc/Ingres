@@ -1,0 +1,39 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for appletalk (for smartlook)
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	xx-xxx-1993 (tyler)
+**		Cleanup up.
+*/
+
+PART   appletlk
+
+# ifdef VMS
+/*
+** ingres!listen2
+*/
+
+   DIRECTORY ingres!listen_2
+   BUILD_DIR (treasures_path)!ingres!listen_2
+      EXECUTABLE atk_ingres
+      EXECUTABLE atk_ingres_slave
+      SCRIPT start_atk_ingres
+  }
+
+/*
+** ingres!listen3
+*/
+
+   DIRECTORY ingres!listen_3
+   BUILD_DIR (treasures_path)!ingres!listen_3
+      EXECUTABLE atk_ingres
+      EXECUTABLE atk_ingres_slave
+      SCRIPT start_atk_ingres
+# endif /* VMS */

@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!dl_unix
+#
+
+SubDir ING_SRC cl clf dl_unix ;
+
+IISUBSYS cl clf dl_unix ;
+
+
+IILIBRARY COMPATLIB : dltext.c dlos.c dl.c ;
+

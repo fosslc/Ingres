@@ -1,0 +1,155 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+**  Frame:         auditmgr
+**  Form:          auditmgr
+**  Description:   Security Audit Utility
+**
+**  Source File:   auditmgr.osq
+**  Frame Type:    Menu
+**  Template File: ntmenu.tf, Version: 1.4
+*/
+INITIALIZE =
+DECLARE
+
+    /* working variables needed by generated code */
+    IIobjname   = CHAR(32) NOT NULL,    /* Holds an object name */
+    IIchoice    = VARCHAR(80),          /* Menu item chosen */
+    IIfound     = INTEGER(4),           /* Was the chosen Menu item found */
+    IIint       = INTEGER(4)            /* General purpose integer */
+
+BEGIN
+    IIretval = 1;       /* Success. This built-in global is used for
+                        ** communication between frames.
+                        */
+    SET_FORMS FRS (TIMEOUT = 0);
+    SET_FORMS FRS (VALIDATE(NEXTFIELD) = 1, VALIDATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(NEXTFIELD) = 1, ACTIVATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(MENUITEM) = 1,  ACTIVATE(KEYS) = 1,
+        GETMESSAGES = 0);
+
+    INITTABLE iitf READ;
+    LOADTABLE iitf ( command = 'View Audit Logs', 
+      explanation = 'View Registered audit logs'); 
+    LOADTABLE iitf ( command = 'Register Logs', 
+      explanation = 'Register security audit log'); 
+    LOADTABLE iitf ( command = 'Remove Logs', 
+      explanation = 'Remove security audit logs'); 
+    LOADTABLE iitf ( command = 'Audit Masks', 
+      explanation = 'Alter security audit mask (enable/disable)'); 
+    LOADTABLE iitf ( command = 'Manage Audit', 
+      explanation = 'Manage and Configure the Security Audit system'); 
+    SCROLL iitf TO 1;
+END
+
+
+'Select' (VALIDATE = 1, ACTIVATE = 1,
+         EXPLANATION = 'Select a command'),
+         KEY FRSKEY4 (VALIDATE = 1, ACTIVATE = 1) =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF (IIint != 1 OR IIobjname != 'iitf') THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'You can only "Select" when your cursor is in the' +
+                ' table field with the commands.'
+        WITH STYLE = POPUP;
+        RESUME;
+    ENDIF;
+    
+    INQUIRE_FORMS TABLE '' (IIint = DATAROWS(iitf));
+    IF (IIint = 0) THEN
+        RESUME;        /* No commands in tablefield */
+    ENDIF;
+
+    IIfound = 0;
+    IIchoice = iitf[].command;
+    IF IIchoice = 'View Audit Logs' THEN
+					   /*# BEGIN Call\View\_Audit\_Logs */
+        CALLFRAME viewlogs ( ); 
+					     /*# END Call\View\_Audit\_Logs */
+        IIfound = 1;
+    ELSEIF IIchoice = 'Register Logs' THEN
+					      /*# BEGIN Call\Register\_Logs */
+        CALLFRAME registerlogs ( ); 
+						/*# END Call\Register\_Logs */
+        IIfound = 1;
+    ELSEIF IIchoice = 'Remove Logs' THEN
+						/*# BEGIN Call\Remove\_Logs */
+        CALLFRAME removelogs ( ); 
+						  /*# END Call\Remove\_Logs */
+        IIfound = 1;
+    ELSEIF IIchoice = 'Audit Masks' THEN
+						/*# BEGIN Call\Audit\_Masks */
+        CALLFRAME auditmasks ( ); 
+						  /*# END Call\Audit\_Masks */
+        IIfound = 1;
+    ELSEIF IIchoice = 'Manage Audit' THEN
+					       /*# BEGIN Call\Manage\_Audit */
+        CALLFRAME manageaudit ( ); 
+						 /*# END Call\Manage\_Audit */
+        IIfound = 1;
+    ENDIF;
+
+    IF (IIfound = 0) THEN
+        IF (IIfound = 0) THEN
+            MESSAGE '"' + IIchoice + '" is an unrecognized command.'
+            WITH STYLE = POPUP;
+	ENDIF;
+    ENDIF;
+
+    IF ((IIretval = 2) AND
+        (ii_frame_name('current') <> ii_frame_name('entry'))) THEN
+        /* Return to top (this is not the start frame) */
+         RETURN ;
+    ELSE
+        IIretval = 1;   /* restore default value */
+    ENDIF;
+END
+
+KEY FRSKEY7 (EXPLANATION = 'Search table field for a specified value') =
+BEGIN
+    IIint = CALLPROC find_record();
+END
+
+KEY FRSKEY5 (EXPLANATION = 'Scroll to top of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field'
+              + ' before selecting "Top".'
+              WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO 1;
+    ENDIF;
+END
+
+KEY FRSKEY6 (EXPLANATION = 'Scroll to bottom of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field before'
+          + ' selecting "Bottom".'
+          WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO END;
+    ENDIF;
+END
+
+'Help' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Display help for this frame'),
+        KEY FRSKEY1 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    HELPFILE 'Security Audit Utility'
+    	'';
+END
+
+'End' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Return to previous frame'),
+        KEY FRSKEY3 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    RETURN  ;
+END
+

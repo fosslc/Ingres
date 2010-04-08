@@ -1,0 +1,635 @@
+
+			RELEASE NOTES FOR SEP V3.2
+			==========================
+
+
+			Summary of Feature Changes
+			==========================
+
+
+	1) Listexec now reports better on errors that occur with it's SEP
+	   children. It now reports these additional errors:
+
+	   a) SEPerr_bad_cmdline
+
+	      Something about the command line that called SEP is bad.
+	      Either a switch has an illegal value or a file or directory
+	      doesn't exist or an unknown switch was used.
+
+	   b) SEPerr_Cant_Connect_to_FE
+
+	      Forms based front end connection was refused or failed. Check
+	      Ingres installation.
+
+	   c) SEPerr_Cant_Opn_Commfile
+
+	      SEP can't open the TC-COMM files used for communication
+	      between frontends and SEP. Check File privileges for the
+	      directory or Ingres installation setup.
+
+	   d) SEPerr_Cant_Opn_ResFile
+
+	      SEP can't open Terminal Monitors' results file.
+
+	   e) SEPerr_Cant_Trans_Token
+
+	      Failure looking up SEPPARAM environmental variables.
+
+	   f) SEPerr_Cant_Set_FRSFlags
+
+	      SEP failed to set the environmental variable, II_FRSFLAGS.
+
+	   g) SEPerr_Cant_Set_Peditor
+
+	      UNIX ONLY: SEP couldn't set the ING_EDIT, EDITOR or VISUAL
+	      environmental variables that tell UTedit which editor to
+	      call inside of Ingres.
+
+	   h) SEPerr_Cant_Spawn
+
+	      SEP can't spawn the command line process, check operating
+	      system resources.
+
+	   i) SEPerr_cmd_load_fail
+
+	      SEP failed loading the list of sep commands from commands.sep
+	      in TST_SEP. Check integrity of commands.sep file.
+
+	   j) SEPerr_CpyHdr_fail
+
+	      SEP failed copying the header template file. Check file
+	      privileges for the directory or Ingres installation setup.
+
+	   k) SEPerr_CtrlC_entered
+
+	      SEP caught a user entered Ctrl-C in its main exception handler,
+	      main_exhandler().
+
+	   l) SEPerr_FE_timed_out
+
+	      Forms Based front end stopped communicating with SEP. Check
+	      Ingres installation and/or system resources. This error
+	      might occur on a sluggish system with a command that
+	      would normally take awhile to execute, now takes longer
+	      than allowed. Use the SEP -w 'secs' to change time out
+	      interval.
+
+	   m) SEPerr_LogOpn_fail
+
+	      SEP couldn't open log file or update file if in maintenance
+	      mode. Check directory privileges.
+
+	   n) SEPerr_no_IISYS
+
+	      II_SYSTEM environmental variable not set.
+
+	   o) SEPerr_No_TST_SEP
+
+	      SEP can't read the definition of the "TST_SEP" environmental
+	      variable. Check piccolo client area setup or Ingres Tools
+	      setup.
+
+	   p) SEPerr_OpnHdr_fail
+
+	      SEP couldn't create a new septest *.sep file. Check directory
+	      privileges.
+
+	   q) SEPerr_SEPfileInit_fail
+
+	      SEP couldn't open results, canons, or differ files. Check
+	      directory privileges.
+
+	   r) SEPerr_TM_Cant_connect
+
+	      Terminal Monitor connection was refused or failed. Check
+	      Ingres installation.
+
+	   s) SEPerr_TM_timed_out
+
+	      Terminal Monitor stopped communicating with SEP. Check
+	      Ingres installation and/or system resources. This error
+	      might occur on a sluggish system with a command that
+	      would normally take awhile to execute, now takes longer
+	      than allowed. Use the SEP -w 'secs' to change time out
+	      interval.
+
+	   t) SEPerr_trmcap_load_fail
+
+	      SEP failed loading the trmcap.sep file located in TST_SEP.
+	      Check integrity of termcap.sep file.
+
+	   u) SEPerr_Unk_exception
+
+	      SEP caught an unknown exception.
+
+
+	2) The lexical analyzer:
+
+	   a) Accepts new date formats. An incomplete list:
+
+		1763-Jan-31 23:59:59	31-03-1991 12:30:17
+		1763-JAN-31 23:59:59	31/MAR/91
+		1763-jan-31 23:59:59	31_Mar_1991 00:01:01
+		63/01/31 23:59:59
+		1765/JAN/01 12:00:00	SUN JAN  1 00:00:01 1992
+					Sun January 31 23:59:59 1991
+		12-31-1991 23:59:59		
+		Dec_31_91		JAN 31, 1992 23:00:00
+		12/31/1991 00:05:00	January  1, 1992
+					Jan  1, 91
+
+	   b) Masks the Copyright statement:
+
+		Copyright (c) ####, ####
+
+
+	3) The "@FILE()" sep function can now be used in the following
+	   SEP OS/TCL commands:
+
+		delete, fill, cd, type, exists, setenv.
+
+
+	4) Adding Comments to commands now works. When SEP asks whether the
+	   results to a command should be the only, main, ignore, alternate or
+	   comments,; if you pick comments, SEP will now let you add or update
+	   the comments between the command and the first canon; i.e.:
+
+		? sql mydb
+		/*
+			Here is the entry to the Terminal Monitor.
+		*/
+		<<
+		~
+		>>
+
+	   OR you can manually add comments in most places in a SEP script.
+
+	   You cannot add comments between alternate canons; i.e.:
+
+		/*
+			Next is the call to the Terminal Monitor.
+			This comment is between SEP commands.
+		*/
+		? sql mydb
+		/*
+			Here is the entry to the Terminal Monitor.
+			This comment is between the SEP command and the
+			first canon.
+		*/
+		<<
+		......
+		>>
+		/*
+			This comment is illegal and will error. It cannot
+			lie between alternate cannons.
+		*/
+		<<
+		???????
+		>>
+
+
+	5) A new command construction exists. An ".if, .else, .endif"
+	   construction can be used.
+
+		.if {symbol} [= {symbol}]
+		{sep command}
+		      .
+		      .
+		{sep command}
+		.else
+		{sep command}
+		      .
+		      .
+		{sep command}
+		.endif
+
+	    Where:
+
+		{symbol}      Either a quoted string or a sepparam.
+
+		{sep command} Any command listed in TST_SEP:commands.sep.
+
+			      Any TM type of sep command must include all of
+			      its TM subcommands and their comments and canons.
+
+			      Any FE type of sep command must include all of
+			      its FE subcommands (keystrokes) and their
+			      comments and canons.
+	    Example:
+
+		.if sepparamgw = "YES"
+		? createdb mydb/star
+		/*
+		   Create the distributed database.
+		*/
+		<<
+		>>
+		? sql mydb/star
+		<<
+		>>
+		* \q
+		<<
+		>>
+		.else
+		? createdb mydb
+		/*
+		   Create the local database.
+		*/
+		<<
+		>>
+		? sql mydb/star
+		<<
+		>>
+		* \q
+		<<
+		>>
+		.endif
+
+	   This construction cannot be entered from the "-s" shell mode of SEP.
+	   It can be updated using "-m" maintainence mode of SEP. For the above
+	   example, you would have to update it twice; once with separamgw equal
+	   to "YES", then once with sepparamgw either undefined or defined to
+	   something other than "YES".
+
+	   As of now, ".if,.else,.endif"'s cannot be used within Terminal
+	   Monitor command sequences or Forms command sequences. This will
+	   be implemented at a later date. So ALL TM or FE commands must be
+	   included in each section of the ".if,.else,.endif".
+
+		The following contruction is illegal:
+
+		? sql iidbdb
+		<<
+		~
+		>>
+		.if sepparamdoit = "YES"
+		* help table mytable;\g
+		<<
+		~
+		>>
+		.else
+		* help table yourtable;\g
+		<<
+		~
+		>>
+		.endif
+		* \q
+		<<
+		~
+		>>
+
+
+	   As of now, nesting of ".if,.else,.endif"'s is illegal. This will be
+	   implemented at a later date. To implement a .if,.elseif,.elseif...
+	   use the following contruction of a list of ".if"'s followed by an
+	   ".if,.else".
+
+		.if sepparamgw = "RDB"
+		? sql mydb/rdb
+		<<
+		>>
+		* \q
+		<<
+		>>
+		.endif
+		.if sepparamgw = "RMS"
+		? sql mydb/rms
+		<<
+		>>
+		* \q
+		<<
+		>>
+		.endif
+		.if sepparamgw = "DB2"
+		? sql mydb/db2
+		<<
+		>>
+		* \q
+		<<
+		>>
+		.else
+		? sql mydb
+		<<
+		>>
+		* \q
+		<<
+		>>
+		.endif
+
+
+	6) sepset has new internal variables it can set:
+
+	   a) (un)sepset paging		( default: paging ON )
+
+	      This variable controls explicit paging as a 70% fix to the
+	      annoying problem of SEP filling the window and then continuing
+	      to write everything to the last line over and over without
+	      scrolling. It was present in latter versions of SEP V3.1.
+	      It has changed to be defaulted to ON in V3.2.
+
+	   b) (un)sepset trace (tokens|lex)	( default: tracing OFF )
+
+	      Dumps tracing information to a file trace#.stf. The "#"
+	      increments as the sep test SEPSETS and UNSEPSETS tracing.
+
+	   c) (un)sepset diff_numerics	( default: diff_numerics OFF )
+
+	      This tells the SEP differ to compare numerics as either
+	      integers or floats rather than as character strings. As of
+	      now, if diff_numerics is set, the values must match exactly.
+
+	7) SEP now creates history entries for maintenance mode updates
+	   of SEP tests.
+
+	   When running a test in "-m" mode, SEP will now print:
+
+		CUCKOO> sep -m newtest.sep
+
+	   SEP will clear the screen and then print:
+
+		SEP Version 3.2: 6.4/02 (vax.vms/99)
+		Creating maintenance history entry...
+
+	   SEP will then dump you into the editor with the following file:
+
+		          8-JAN-1992       (Author)
+
+
+
+
+	   Here, change "Author" to your username and then add the change
+	   history as you would if you were editing the SEP test by hand.
+	   It will be appended to the bottom of the SEP test hdr.
+
+
+                 Files affected by this change and how:
+                 ======================================
+
+EXECUTOR.C
+
+	Elaborated on SEPerr_IOinit_fail and add additional errors:
+
+	   SEPerr_bad_cmdline		SEPerr_FE_timed_out
+	   SEPerr_Cant_Connect_to_FE	SEPerr_LogOpn_fail
+	   SEPerr_Cant_Opn_Commfile	SEPerr_no_IISYS
+	   SEPerr_Cant_Opn_ResFile	SEPerr_No_TST_SEP
+	   SEPerr_Cant_Trans_Token	SEPerr_OpnHdr_fail
+	   SEPerr_Cant_Set_FRSFlags	SEPerr_SEPfileInit_fail
+	   SEPerr_Cant_Set_Peditor	SEPerr_TM_Cant_connect
+	   SEPerr_Cant_Spawn		SEPerr_TM_timed_out
+	   SEPerr_cmd_load_fail		SEPerr_trmcap_load_fail
+	   SEPerr_CpyHdr_fail		SEPerr_Unk_exception
+	   SEPerr_CtrlC_entered
+	   
+	Modified all quoted string constants to use the ERx("") macro.
+
+	Reformatted variable declarations to one per line for clarity.
+
+	Added explicit declarations for all submodules called.
+
+	Simplified and clarified some control loops.
+
+	Removed smatterings of code that had been commented out long ago.
+
+                 --------------------------------------
+
+EXECUTOR.H, FUNCKEYS.H, IT.H, LISTEXEC.H, LISTS.H, SEPFILES.H, SEPMENU.H,
+SEPPARAM.H, SEPTXT.H, TERMDRVR.H, WINDEX.H
+
+	Modified all quoted string constants to use the ERx("") macro.
+
+	Reformatted variable declarations to one per line for clarity.
+
+                 --------------------------------------
+
+TOKEN.H
+
+	Added constant definition for A_COPYRIGHT for MILLER.C to mask
+	the Ingres copyright message.
+
+	Reformatted variable declarations to one per line for clarity.
+
+GRAMMAR.LEX
+
+	Elaborated on A_DATE token type to allow for recognition of additional
+	date formats:
+
+	  time  = ' 12:59:59'   day = 31     month = 12    year = 91 or 1991
+	  n_dow = SUN, sun, Sun, etc...
+	  n_mo  = JAN, Jan, jan, etc...
+	  l_mo  = JANUARY, January, january, etc...
+	  d_day = '-31-'  | '/31/'  | '_31_'
+	  d_mo  = '-12-'  | '/12/'  | '_12_'  | '-DEC-' | '/DEC/' | '_DEC_' |
+		  '-Jan-' | '/Jan/' | '_Jan_' | '-feb-' | '/feb/' | '_feb_'
+			
+	  1) {year}{d_mo}{day}{time}?({space}{letter}{letter}{letter})?
+
+	     1763-Jan-31 23:59:59   or   63/01/31   or   1765/JAN/01 12:00:00
+			      (other combinations possible)
+
+	  2) {day}{d_mo}{year}{time}?
+
+	     31-03-1991 12:30:17    or  31/MAR/91   or    31_Mar_1991 00:01:01
+			      (other combinations possible)
+
+	  3) ({month}|{n_mo}){d_day}{year}{time}?
+
+	     12-31-1991 23:59:59   or   Dec_31_91    or   12/31/1991 00:05:00
+			      (other combinations possible)
+
+	  4) {n_dow}{space}({n_mo}|{l_mo}){space}{space}?{day}{time}{space}{year}
+
+	     SUN JAN  1 00:00:01 1992   or   Sun January 31 23:59:59 1991
+			      (other combinations possible)
+
+	  5) ({n_mo}|{l_mo}){space}{space}?{day}","?{space}?{year}{time}?
+
+	     JAN 31, 1992 23:00:00   or   January  1, 1992   or   Jan  1, 91
+			      (other combinations possible)
+
+
+	Created a A_FLOAT token type for exponential and decimal notation.
+	A_NUMBER becomes integer only.
+
+                   --------------------------------------
+
+LISTEXEC.C, LOGICAL.C, MEMORY.C, OUTPUT.C, PEDITOR.C, QADIFF.C, RUNTESTS.C,
+SEPEXIT.C, SEPFILES.C, SEPSPAWN.C, SETUSER.C, TERMCAP.C, TERMSTUFF.C,
+TESTPARAMS.C, FUNCKEYS.C, NMSETENV.C (unix), SEPSPAWN.C (unix & vms)
+
+	Modified all quoted string constants to use the ERx("") macro.
+
+	Reformatted variable declarations to one per line for clarity.
+
+	Added explicit declarations for all submodules called.
+
+	Simplified and clarified some control loops.
+
+                   --------------------------------------
+
+MILLER.C
+
+        Reformatted variable declarations to one per line for clarity.
+
+	Added explicit declarations for all submodules called.
+
+	Removed smatterings of code that had been commented out long ago.
+
+	Added code for numeric comparisons of integer and floating point
+	numbers (A_NUMBER, A_FLOAT), if diff_numerics is set.
+
+                   --------------------------------------
+
+PARAMS.H
+
+	Removed the array size constant from the globalref statements. Its
+	best not to have it limited here so that you need to change the array
+	size only in the globaldef statement. The code should be written not
+	to rely on a specific size array. Rather, it should look for some
+	delimiter value (such as array[i] == NULL;).
+
+                   --------------------------------------
+
+PROCMMD.C
+
+        Reformatted variable declarations to one per line for clarity.
+
+	Added explicit declarations for all submodules called.
+
+	Removed smatterings of code that had been commented out long ago.
+
+	Made the pidstring var a global SEPpidstr. It was getting carried
+	just about everywhere thru argument lists. It seemed a fine candidate
+	for a global var.
+
+	Condensed building blocks for error msgs.
+
+	Modified all quoted string constants to use the ERx("") macro.
+
+	Centralized the code used for translating "SEPPARAM" environmental
+	variables and "@FILE(" contructions into SEPPARM.C and GETLOC.C.
+
+	Centralized the code for creating canons into create_canon() in this
+	file.
+
+	Centralized the code for opening the TC-COMM files.
+
+	Added a sep_state variable that's set inside of get_command. It carries
+	info like "I'm inside of a comment" "I'm inside of a canon", etc.
+
+	Finished code for conditional execution of SEP commands.
+
+		modules process_if(), Eval_If() added.
+
+	Added SEPerr_'s to many of the error traps. (SEE ABOVE ITEM 1.)
+
+                   --------------------------------------
+
+SEPDEFS.H
+
+        Reformatted variable declarations to one per line for clarity.
+
+	Modified all quoted string constants to use the ERx("") macro.
+
+	Added the following defines for sep_state and sep_state_old vars.
+
+	    STARTUP_STATE      0x000	    BLANK_LINE_STATE   0x020
+	    IN_OS_STATE        0x001	    IN_CONTROL_STATE   0x040
+	    IN_TM_STATE        0x002	    IN_FILL_STATE      0x080
+	    IN_FE_STATE        0x004	    IN_SKIP_STATE      0x100
+	    IN_COMMENT_STATE   0x008	    IN_SKIPV_STATE     0x200
+	    IN_CANON_STATE     0x010	    IN_ENDING_STATE    0x400
+	    STATE_MASK         0x7ff
+
+	Added if_level[] array and if_ptr for .if,.else,.endif functionality.
+
+	Added CONTROL_PROMPT (for .if,.else,.endif) and ENDING_PROMPT (for
+	recognising the ending banner of a sep test) string constants.
+                   --------------------------------------
+
+SEPERRS.H
+
+	Added error values to pass to listexec's executor.exe so it knows
+	why we failed. Elaborated on IO errors.
+
+	SEPerr_no_IISYS           -1	SEPerr_TM_timed_out       -14
+	SEPerr_bad_cmdline        -3	SEPerr_FE_timed_out       -15
+	SEPerr_SEPfileInit_fail   -4	SEPerr_Cant_Spawn         -16
+	SEPerr_No_TST_SEP         -5	SEPerr_TM_Cant_connect    -17
+	SEPerr_cmd_load_fail      -7	SEPerr_Cant_Trans_Token   -18
+	SEPerr_trmcap_load_fail   -8	SEPerr_Cant_Opn_Commfile  -19
+	SEPerr_OpnHdr_fail        -9	SEPerr_Cant_Opn_ResFile   -20
+	SEPerr_CpyHdr_fail        -10	SEPerr_Cant_Set_FRSFlags  -21
+	SEPerr_LogOpn_fail        -11	SEPerr_Cant_Set_Peditor   -22
+	SEPerr_CtrlC_entered      -12	SEPerr_Cant_Connect_to_FE -23
+	SEPerr_Unk_exception      -13
+
+	--------------------------------------
+
+SEPOSTCL.C
+
+        Reformatted variable declarations to one per line for clarity.
+
+	Modified all quoted string constants to use the ERx("") macro.
+
+	Added explicit declarations for all submodules called.
+
+	Added sepset command, "sepset diff_numerics". This turns on numeric
+	diffing for A_NUMBER (INTEGER) and A_FLOAT token types.
+
+	Added "@FILE(" capabilities to the SEP OS/TCL commands:
+
+		delete, fill, cd, type, exists, setenv.
+
+                   --------------------------------------
+
+SEPPARM.C
+
+	New file. Contains Trans_SEPparam() and IS_SEPparam().
+
+                   --------------------------------------
+
+SEPTOOL.C
+
+        Reformatted variable declarations to one per line for clarity.
+
+	Modified all quoted string constants to use the ERx("") macro.
+
+	Added explicit declarations for all submodules called.
+
+	Removed smatterings of code that had been commented out long ago.
+
+	Added conditional statement support to call process_if.
+
+	Added function set_sep_state() in get_command() and shell_cmmd() to
+	set sep_state variable. Use the sep_state variable to check state
+	rather than always looking at the line buffer.
+
+	Change paging var (sepset command) to default to on. Yet turn it
+	off if we're going into forms based frontend.
+
+	Simplified and clarified some control loops.
+
+	Added maintenance history upkeep in copy_hdr() routine.
+
+	Added SEPerr_'s to many of the error traps. (SEE ABOVE ITEM 1.)
+
+
+                   --------------------------------------
+
+UTILITY.C
+
+	Took out getLocataion() and started new file, GETLOC.C, which has
+	additional functions to handle "@FILE(" stuff.
+
+	Modified all quoted string constants to use the ERx("") macro.
+
+	Reformatted variable declarations to one per line for clarity.
+
+	Added explicit declarations for all submodules called.
+
+	Simplified and clarified some control loops.
+
+                   --------------------------------------
+
+

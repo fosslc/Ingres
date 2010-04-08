@@ -1,0 +1,130 @@
+; History:
+;	22-nov-96 (mcgem01)
+;		Clean up def file and add new API functions.
+;	04-May-1998 (shero03)
+;	    Add API Connection Manager functions
+;	06-may-98 (mcgem01)
+;		Add synchronous API wrapper functions.
+;	14-jul-98 (mcgem01)
+;		The IIsw_queryNP function has been replaced by a macro.
+;	24-aug-98 (abbjo03)
+;		Remove discontinued IIsw_queryPrepExec. Add repeated query
+;		wrapper functions.
+;	28-sep-98 (mcgem01)
+;		Changes required for API Version 2 support.
+;	31-dec-98 (abbjo03)
+;		Replace IIsw_getEvent by IIsw_catchEvent, IIsw_waitEvent and
+;		IIsw_getEventInfo.
+;	18-may-99 (abbjo03)
+;		Add IIsw_cancelEvent.
+;	01-oct-99 (abbjo03)
+;		Add IIsw_releaseXID.
+;       27-apr-04 (loera01)
+;               Removed IIapi_jas_init().
+;	11-Jun-2004 (drivi01)
+;		Added ordinals.
+;	24-Aug-2004 (drivi01)
+;		Renamed iiapi to iilibapi.def due to new
+;		build procedure.
+;      28-July-2006 (Ralph Loen) SIR 116322
+;               Add support for  IIapi_xaStart, IIapi_xaEnd, IIapi_xaPrepare,
+;               IIapi_xaCommit, and IIapi_xaRollback.
+;      02-July-2007 (drivi01)
+;		Add IIapi_position.
+;      06-Aug-2007 (drivi01)
+;		Add IIapi_scroll.
+;	11-Aug-08 (gordy)
+;		Add IIapi_getColumnInfo.
+;	29-Mar-10 (Bruce Lunsford for gordy)
+;		Add IIapi_batch.
+
+EXPORTS
+IIapi_cancel		@1				
+IIapi_catchEvent		@2				
+IIapi_close		@3				
+IIapi_commit		@4				
+IIapi_connect		@5				
+IIapi_convertData		@6				
+IIapi_disconnect		@7				
+IIapi_getColumns		@8				
+IIapi_getCopyMap		@9				
+IIapi_getDescriptor		@10				
+IIapi_getErrorInfo		@11				
+IIapi_getQueryInfo		@12				
+IIapi_initialize		@13				
+IIapi_modifyConnect		@14				
+IIapi_prepareCommit		@15				
+IIapi_putColumns		@16				
+IIapi_putParms		@17				
+IIapi_query		@18				
+IIapi_registerXID		@19				
+IIapi_releaseXID		@20				
+IIapi_rollback		@21				
+IIapi_savePoint		@22				
+IIapi_setConnectParam		@23				
+IIapi_setDescriptor		@24				
+IIapi_terminate		@25				
+IIapi_wait		@26				
+IIapi_getEvent		@27				
+IIapi_autocommit		@28				
+;IIsw_initialize		@29				
+;IIsw_terminate		@30				
+;IIsw_setConnParam		@31				
+;IIsw_dbConnect		@32				
+;IIsw_connect		@33				
+;IIsw_disconnect		@34				
+;IIsw_commit		@35				
+;IIsw_rollback		@36				
+;IIsw_registerXID		@37				
+;IIsw_releaseXID		@38				
+;IIsw_prepareCommit		@39				
+;IIsw_query		@40				
+;IIsw_queryRepeated		@41				
+;IIsw_selectSingleton		@42				
+;IIsw_selectSingletonRepeated		@43				
+;IIsw_selectLoop		@44				
+;IIsw_selectLoopRepeated		@45				
+;IIsw_execProcDesc		@46				
+;IIsw_execProcedure		@47				
+;IIsw_catchEvent		@48				
+;IIsw_waitEvent		@49				
+;IIsw_getEventInfo		@50				
+;;IIsw_cancelEvent		@51				
+;IIsw_raiseEvent		@52				
+;IIsw_getColumns		@53				
+;IIsw_getQueryInfo		@54				
+;IIsw_getRowCount		@55				
+;IIsw_getErrorInfo		@56				
+;IIsw_close		@57				
+;IIcm_GetAPIConnection		@58				
+;IIcm_DropAPIConnection		@59				
+IIapi_setEnvParam		@60				
+IIapi_ns_tinit		@61				
+IIapi_sql_init		@62				
+IIapi_sql_cinit		@63				
+IIapi_sql_dinit		@64				
+IIapi_sql_sinit		@65				
+IIapi_sql_tinit		@66				
+IIapi_abort		@67				
+IIapi_createGCNOper		@68				
+IIapi_parseNSQuery		@69				
+IIapi_validNSDescriptor		@70				
+IIapi_validNSParams		@71				
+IIapi_saveNSParams		@72				
+IIapi_getNSDescriptor		@73				
+IIapi_loadNSColumns		@74				
+IIapi_ns_init		@75				
+IIapi_ns_cinit		@76				
+IIapi_ns_sinit		@77				
+IIapi_formatData		@78				
+IIapi_releaseEnv		@79				
+IIapi_xaStart                   @80
+IIapi_xaEnd                     @81
+IIapi_xaPrepare                 @82
+IIapi_xaCommit                  @83
+IIapi_xaRollback                @84
+IIapi_position			@85
+IIapi_scroll			@86
+IIapi_getColumnInfo		@87
+IIapi_batch			@88
+

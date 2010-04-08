@@ -1,0 +1,18 @@
+#
+# Jamfile file for back!dmf!dmu
+#
+#    20-Oct-2009 (hweho01)
+#      Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back dmf dmu ;
+
+IISUBSYS back dmf dmu ;
+
+IINOOPTIM dm2umod.c : dr6_us5 i64_aix ;
+IINOOPTIM dm2ucre.c : su4_cmw i64_aix ;
+
+IILIBRARY DMFLIB : dmutabid.c dmushow.c dmureloc.c dmupindex.c
+	dmumodify.c dmuindex.c dmudestroy.c dmucreate.c dmuconvert.c
+	dmuatbl.c dmualter.c dm2uuti.c dm2urel.c dm2uputi.c dm2upind.c
+	dm2umod.c dm2uind.c dm2udes.c dm2ucre.c dm2uconv.c dm2uatbl.c ;
+

@@ -1,0 +1,40 @@
+drop table zc\g
+create table zc (first zchar(10) not null,
+		 nick  zchar(20),
+		 last zchar(12) not null)\p\g
+
+insert into zc values ('Kelly',NULL,'Park');
+insert into zc values ('Marilyn','Manute','Bohl');
+insert into zc values ('Fred','UDT','Carter');
+insert into zc values ('Cal','Bears','Collier');
+insert into zc values ('Peter',NULL,'Schmitz');
+insert into zc values ('Mike','hoops','Matrigali');
+insert into zc values ('David',NULL,'Hung');
+insert into zc values ('Carl','BRUCE','Lee');
+insert into zc values ('Shirley','Don''t call me Bruce','Lee');
+insert into zc values ('Dave',NULL,'Simonson');
+insert into zc values ('Jeff',NULL,'Fried');
+insert into zc values ('Bob',NULL,'Pasker');
+insert into zc values ('Jon',NULL,'Wong');
+insert into zc values ('Ed','buy some new pants','Seputis');
+insert into zc values ('Claire',NULL,'Leachman');
+insert into zc values ('Claire',NULL,'McGhee');
+insert into zc values ('Paul','Line Drive','Butterworth');
+insert into zc values ('Roger','NOT Montreal','Taranto');
+insert into zc values ('Marian',NULL,'Wong');
+insert into zc values ('Mike',NULL,'Winning');
+insert into zc values ('Steve',NULL,'Rees');
+insert into zc values ('Bill','black and','White');
+insert into zc values ('Rob','Corcky','McCord');
+insert into zc values ('John','back in','Black');
+insert into zc values ('Jennifer','backend','Lyerla');
+\g
+modify zc to btree on last;
+select last,first from zc\g
+select last,first from zc where first='boB'\p\g
+select first,last from zc where last='wong'\p\g
+select last,first from zc where last > 'b' and zchar(left(last,1)) < 'F'\p\g
+select last,first from zc where last >= 'QUIGLEY' and last <= 'taranto'\p\g
+select last,first from zc where last like 'p%'\p\g
+select last,length=length(last) from zc\p\g
+select nick_name = first+' "'+nick+'" '+last from zc where nick is not NULL\g

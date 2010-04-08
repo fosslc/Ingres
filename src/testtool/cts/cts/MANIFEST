@@ -1,0 +1,37 @@
+#
+# MANIFEST file for testtool!cts!cts
+#
+# History:
+#	09-feb-2005 (abbjo03)
+#	    Modifications to build on VMS.
+
+IISUBSYS testtool cts cts ;
+
+if ! $(NT)
+{
+IITOOLSEXE ctsslave : ctsslave.sc ;
+
+IITOOLSEXE ctscoord : ctscoord.sc ;
+
+    if $(VMS)
+    {
+        IINEEDLIBS ctsslave : CTSLIB COMPATLIB  ;
+        IINEEDLIBS ctscoord : CTSLIB COMPATLIB ;
+    }
+    else
+    {
+        IINEEDLIBS ctsslave : CTSLIB LIBINGRES  ;
+        IINEEDLIBS ctscoord : CTSLIB LIBINGRES ;
+    }
+}
+else
+{
+IITOOLSEXE ctsslave : ctsslave.sc ;
+IINEEDLIBS ctsslave : CTSLIB LIBINGRES  ;
+
+IITOOLSEXE ctscoord : ctscoord.sc ;
+IINEEDLIBS ctscoord : CTSLIB LIBINGRES ;
+}
+IILIBRARY CTSLIB : trl.sc ctserror.sc ;
+
+

@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The session_accounting resource specifies whether session accounting
+  information will be maintained by DBMS servers created with this
+  definition. 

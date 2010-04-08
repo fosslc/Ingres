@@ -1,0 +1,166 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<lo.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"ervq.h"
+
+
+/**
+** Name:	vqlisfil.qsc	- Display 4GL listing file on full screen
+**
+** Description:
+**	IIVQdlfDisplayListFile	- Display 4GL lising file on full screen
+**
+** History:
+**	11/24/89 (Mike S)	Initial Version
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+/* extern's */
+FUNC_EXTERN VOID	FEhelp();
+FUNC_EXTERN VOID	IIUGerr();
+
+/* static's */
+static const
+## char  _form[]	= ERx("vqlisfil"),
+##	 _frame[]	= ERx("frame"),
+##	 _file[]	= ERx("file"),
+##	 _text[]	= ERx("text"),
+##	 _summary[]	= ERx("summary"),
+##	 _texttf[]	= ERx("current_error");
+
+static bool init_done = FALSE;
+
+/*{
+** Name:	IIVQdlfDisplayListFile	-Display 4GL listing file on full screen
+**
+** Description:
+**	Give a full screen display of the 4GL listing file in a readonly
+**	tablefield.  This is used as an "explosion" of the smaller display
+**	on the error display screen.  We load the tablefield in this frame from
+**	the one in vqcmperr, and begin by displaying the same portion of the 
+**	file.
+**
+**	We get information from these fields in forms vqcmperr and vqcmper2:
+**
+**		Field	summary		Name, type, and errors of current frame
+**		Field	filename	Name of listing file
+**		Tablefield current_error
+**		    Column text		Listing file text
+**
+** Inputs:
+**	srcfrm		char []		Form to read from
+**					(vqcmperr or vqcmper2)
+**	filename	char *		Name of listing file
+**	startline	i4		Line to display
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	11/24/89 (Mike S)	Initial version
+*/
+VOID
+IIVQdlfDisplayListFile(srcfrm, filename, startline)
+## char		*srcfrm;
+## char		*filename;
+## i4	startline;
+{
+	/* Init form, if need be */
+	if (!init_done)
+	{
+		IIARiaForm(_form);
+		init_done = TRUE;
+	}
+
+	/* Display form */
+##	display	_form read
+##	initialize
+##	{
+##		char buffer[80];
+##		char summary[78];
+##		i4 no_lines;
+
+		/* Fill in title */
+##		putform _form (_file = filename)
+
+##		getform srcfrm (summary = _summary)
+##		putform (_frame = summary)
+
+		/* Load tablefield */
+##		inittable _form _text read
+##		unloadtable srcfrm _texttf (buffer = _text)
+##		{
+##			loadtable _form _text (_text = buffer)
+##		}
+
+		/* scroll to desired line */
+##		inquire_frs table _form (no_lines = datarows(_text))
+		if (startline <= 0 || startline > no_lines)
+			startline = 1;
+##		scroll _form _text to startline
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##                      (expl = ERget(F_FE0101_ExplKeyHelp)),
+##                      FRSkey1
+##	{
+		FEhelp(ERx("vqlisfil.hlp"),
+		       ERget(S_VQ0028_DisplayListFile));
+##	}
+
+##      activate menuitem ERget(FE_End)
+##                      (expl = ERget(F_FE0102_ExplEnd)),
+##                      FRSkey3 
+##	{
+##		clear field _text
+##              breakdisplay
+##	}
+
+##      activate frskey5 (expl = ERget(F_FE0105_ExplTop))
+##      {
+                /* top */
+##             scroll _form _text to 1
+##      }
+
+##      activate frskey6 (expl = ERget(F_FE0106_ExplBottom))
+##      {
+                /* bottom */
+##              i4      no_rows;
+
+##              inquire_frs table _form (no_rows = datarows(_text))
+
+##              scroll _form _text to no_rows
+##      }
+
+##      activate frskey7 (expl = ERget(F_FE0104_ExplFind))
+##      {
+                /* find */
+                FEtabfnd(_form, _text);
+##      }
+
+	return;
+}

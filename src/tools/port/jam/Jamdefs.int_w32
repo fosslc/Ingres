@@ -1,0 +1,487 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.int_w32 -- Variable definitions for Intel Windows
+#
+#  Description:
+#       Platform specific variable definitions for Intel Windows
+#
+# History:
+#       13-Jul-2004 (drivi01)
+#           Created.
+#	29-Jul-2004 (kodse01)
+#	    Modified RM to variable to "rm -f".
+#	04-aug-2004 (somsa01)
+#	    Added CD variable.
+#	05-aug-2004 (somsa01)
+#	    Added IYACCFLAGS flag, set to iyacc debug flag if DEBUG is on.
+#	16-aug-2004 (drivi01)
+#	    Added flags for sln projects compiled using devenv.
+#	18-Aug-2004 (kodse01_
+#	    Added AWK as $(AWK_CMD).
+#	18-Aug-2004 (drivi01)
+#	    Added odbc link libraries, path to ApacheCore library
+#	    and pointer to an object file termdr to link with.  
+#	19-Aug-2004 (drivi01)  
+#	    Added a link to oosymbol.obj to link with for executables.
+#	25-Aug-2004 (drivi01)
+#	    Modified path to gver.obj and gv.obj to the new path.
+#	26-Aug-2004 (drivi01)
+#	    Added variables for odbc shared libraries to represent
+#	    object files and resource files that will be used for 
+#	    building shared libraries.
+#	30-Aug-2004 (kodse01)
+#	    CP now points to cp -f.
+#	31-Aug-2004 (kodse01)
+#	    Modified the DEBUG value test with ON only. Comparison with
+#	    OFF is eliminated.
+#	07-Aug-2004 (drivi01)
+#	    Added a version.lib and variables for res files.
+#	10-Aug-2004 (drivi01)
+#	    Added rebase variable.
+#	13-Sep-2004 (drivi01)
+#	    Added link to gv.rc to place inside .rc files as include.
+#	29-Sep-2004 (drivi01)
+#	    Cleaned up the file, removed all variables that no longer
+#	    needed or used and commented code.
+#	07-Oct-2004 (drivi01)
+#	    Added LIBSFX, SLSFX and other platform specific suffixes from
+#	    Jamdefs into this file, as well as added ice variables to have
+#	    generalized ice. Added BUILD variable to specify /rebuild or
+#	    /build flag at the command line of visual studio projects.
+#	08-Oct-2004 (somsa01)
+#	    Corrected setting of ICE_EXT=dll and CGI_EXT=exe.
+#       13-Oct-2004 (fanra01)
+#           Removed erroneous imbedded cross integration markers.
+#	15-Oct-2004 (drivi01)
+#	    Added variable for flag -D_WIN32_WINNT=0x0500.
+#	    Added variable MORELIB2 for additional system libraries needed
+#	    to build enterprise dlls.
+#	19-Oct-2004 (drivi01)
+#	    Took out VSREBUILD dependcy on BUILD variable, added variables
+#	    for 4 dotnet targets.
+#	31-Oct-2004 (somsa01)
+#	   Consolidated XDK into VISUALC.
+#	15-Nov-2004 (drivi01)
+#	   Due to extensive problems of jam on windows with spaces in the path,
+#	   Visual Studio is required to be in a path and therefore we do not need
+#	   to specify full path to executables such as cl.exe link.exe and lib.exe.
+#	19-Nov-2004 (drivi01)
+#	   cl\clf\gv_unix_win has been moved to generic directory cl\clf\gv.
+#	03-Dec-2004 (drivi01)
+#	   Added variable for msi.lib as  a stand alone system library.
+#	04-Jan-2005 (drivi01)
+#	   Fixed compile flags for shared libraries that don't link with version file.
+#	01-Apr-2005 (drivi01)
+#	    Added two more flags to DLLFLAGS variabe as part of 
+#	    effots in generating pdb files in non-debug environment.
+#	18-Apr-2005 (drivi01)
+#	    Updated a parameter to /MACHINE flag of linker to be X86 
+#	    instead of IX86.  IX86 was used in previous compilers,
+#	    and has been replaced with X86.
+#	26-Jul-2005 (fanra01)
+#       Bug 90455
+#       Add empty SHELLHEADER	
+#	22-Sep-2005 (drivi01)
+#	    Added two new variables extension_config and platform_config.
+#	    extension_config is equal to config_string on most platforms.
+#	    platform_config is a GV_ENV value from gv.h in most cases.
+#   	27-Sep-2005 (fanra01)
+#           Bug 115298
+#           Add psapi library to linker list.
+#	25-Sep-2006 (drivi01) SIR 116656
+#	    Moved .NET Data Provider libraries to generic Jamdefs.
+#	8-Feb-2007 (bonro01)
+#	    Updated Kerberos5 headers to r1.6
+#	    Eliminated need for -DKRB5_SYSTYPES__
+#	12-Dec-2007 (kiria01) b119607
+#	    Correct debug mode link libraries to allow debugging
+#	    of VDBA et al.
+#	13-May-2008 (drivi01)
+#	    Add ML flag to the list of flags.  Separate debug from
+#	    not debug flags for MD and ML. 
+#	15-Oct-2008 (whiro01)
+#	    Added /nologo to linker flags; took off /PDB:none and /WARN.
+#	03-Nov-2008 (drivi01)
+#	    Added htmlhelp.lib to the list of libraries.
+#	21-Nov-2008 (whiro01)
+#	    Undid Ian's change of 12-Dec-2007 (along with massive other
+#	    changes) to enable VDBA debugging by always linking with
+#	    release C runtime libs.
+#	01-May-2009 (drivi01)
+#	    The following changes were added for the Visual Studio
+#	    2008 port:
+#	    - Added /Zc:wchar_t- flag
+#	    - Remove /G7 flag as it is no longer exist
+# 	    - Turn on optimization
+#	    - Updated linker flags to remove absolete
+#	    - Add ADMIN_MANIFEST variable which adds portion of the
+#	      link line when elevated application needs to be built
+#	    - Add RMWARNINGS flag which adds -D_CRT_SECURE_NO_WARNINGS 
+#	      to the command line to remove security warnings.
+#	15-May-2009 (drivi01)
+#	    Add CHMSFX suffix in efforts to try to cleanup Jamrules
+#	    on Windows.
+#	15-May-2009 (drivi01)
+#	    Turn on optimization. 
+#	    For Debug builds optimization will be turned off for more
+#	    productive debugging experience.
+#	25-Jan-2010 (kschendel) b123194
+#	    - Eliminate WCHART (un-defining of wchar_t as a builtin).  Not
+#	    sure what problem it was solving before, but /Zc:wchar_t- causes
+#	    link failures with apache.org-built Xerces DLL's, because they
+#	    were presumably built with builtin wchar_t.  To match the c++
+#	    call signatures, Ingres code also needs to use builtin wchar_t.
+#	    - If CYGWIN (USE_CYGWIN is TRUE from bldenv.bat), pass --nounistd
+#	    to the flex command line so it doesn't generate an include of
+#	    non-existent unistd.h.  Cygwin flex is 2.6.35, MKS flex on our
+#	    internal boxes is apparently 2.6.4.
+#	19-Feb-2010 (bonro01) b123194
+#	    Correct build problem caused by previous change. 
+#	    Don't eliminate WCHART.  Make /Zc:wchar_t- the default for xerces
+#	    2.7 and make the default unset for all newer xerces versions.
+#
+#
+#VARS
+#
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+MISCFLAGS	default = "/nologo" ;
+THREADS		= "-D_DLL -D_MT" ;
+ERR_LVL		default = "-W3" ;
+PREPROCESS 	default = $(PREP) ;
+BUILDTYPE	default = DYNAMIC ;
+VERSINFO	default = \"$(ING_SRC)/cl/clf/gv_win/gv.res\"  ;
+VERSINFORC	default = \"$(ING_SRC)/cl/clf/gv_win/gv.rc\" ;
+C_LIB		default = msvcrt.lib ;
+RUNTIME		default = "/MD" ;
+RUNTIME_LIBC	default = "/ML" ;
+if $(DEBUG) = ON
+{
+ CDEBUG		default = "/Z7" ;
+ IYACCFLAGS	default = "-Xa" ;
+}
+else
+{
+ CDEBUG 	default = "" ;
+ IYACCFLAGS	default = "" ;
+}
+SYSLIBS		default = $(C_LIB) kernel32.lib ;
+ADVAPILIB	default = advapi32.lib ;
+NETAPILIB 	default = netapi32.lib ;
+USERLIB 	default = user32.lib ;
+GDILIB 		default = gdi32.lib ;
+MSILIB		default = msi.lib ;
+MORELIB		default = ws2_32.lib shell32.lib imagehlp.lib winmm.lib ;
+MORELIB2	default = Msi.lib ole32.lib shlwapi.lib Comdlg32.lib ;
+RPCLIB		default = RpcRT4.lib ;
+CLUSAPI  	default = clusapi.lib ;
+ODBC32LIB	default = odbccp32.lib ;
+ODBCLIBS	default = odbc32.lib odbccp32.lib comctl32.lib ;
+VERSIONLIB	default = version.lib ;
+PSAPILIB      	default = psapi.lib ;
+HTMLHELPLIB	default = htmlhelp.lib ;
+GV     		default = \"$(ING_SRC)/cl/clf/gv/gver.obj\" ;
+APACHECORE	default = $(ING_SRC)/front/ice/lib/ApacheCore.lib ;
+#TERMDR		default = $(ING_SRC)/front/frontcl/termdr/termdr.obj ;
+OO		default = $(ING_SRC)/front/utils/oo/oosymbol.obj ;
+PORTREF		= "-DREFERENCE_IN_DLL" ;
+PORTIMP		= "-DIMPORT_DLL_DATA" ;
+EHFLAG		= "/EHsc" ;
+NOARSCAN 	= true ;
+CD		= "cd /d" ;
+CP		= "cp -f" ;
+RM		= "rm -f" ;
+CHMOD		= chmod ;
+FLEX		= flex ;
+if $(USE_CYGWIN)
+{
+    FLEX	= flex --nounistd ;
+}
+LEX 		= flex ;
+AWK		= $(AWK_CMD) ;
+REBASE		= rebase ;
+platform_string = "Microsoft Windows 32-bit" ;  #Equal to GV_ENV val 
+extension_string = $(config_string) ;
+
+#
+# Xerces shared libary link flag
+#    The following WCHART definition is required for older Xerces libraries
+#    like version 2.7 and for newer xerces libraries using Visual C 7.1
+#    Uncomment this variable or get a newer version of xerces compiled with
+#    VC 8.0 or newer to resolve any link problems with xerces.
+#WCHART		default = /Zc:wchar_t- ;
+
+#
+#ODBC object files
+#
+#ODBCOBJ1 = \"$(ING_SRC)/common/odbc/winspecials_win/dllmai32.obj\" ;
+#ODBCOBJ2 = \"$(ING_SRC)/common/odbc/driver/getrw.obj\" ;
+#ODBCOBJ3 = \"$(ING_SRC)/common/odbc/driver/encrypt.obj\" ;
+#ODBCOBJ4 = \"$(ING_SRC)/common/odbc/config_win/caiioc32.obj\" ;
+#ODBCRES = caiiodbc.res ;
+#ODBCRES2 = caiioc32.res ;
+
+#
+#TESTS res files
+#
+#ACSRES = acstart.res ;
+
+#
+#EMBED OBJECTS
+#
+#EQDATA = eqdata.obj ;
+#EQGLOBS = eqglobs.obj ;
+#CGCDATA = cgcdata.obj ;
+#IIGLOBAL = iiglobal.obj ;
+
+#
+#TNGRES = \"$(ING_SRC)/front/st/tngapi_win/tngmsg.res\" ;
+#PFCRES = \"$(ING_SRC)/front/st/perfmon_win/pfctrmsg.res\" ;
+#
+#set CPUFLAGS
+#
+if $(CPU) = i386
+{
+CPUFLAGS	default = "-Di386=1 -D_X86_" ;
+}
+
+#
+#set OPTIM
+#
+if ( $(CPU) = IA64 || $(CPU) = AMD64 || $(CPU) = i386 ) && $(DEBUG) != ON
+{
+OPTIM = "/O2" ;
+}
+else
+{
+OPTIM = "/Od" ;
+}
+NOOPTIM		default = "/Od" ;
+
+#
+#set PLATFORM
+#
+if $(CPU) = i386
+{
+PLATFORM 	default = "-DNT_INTEL" ;
+LIBSUFFIX	default = "" ;
+}
+if $(CPU) = IA64 
+{
+PLATFORM	default = "/G2 /Wp64 - DNT_IA64 -D_IA64_=1 -DWIN64 -D_WIN64 -DWIN32 -D_WIN32" ;
+LIBSUFFIX	default = "64" ;
+}
+if $(CPU) = AMD64
+{
+LIBSUFFIX	default = "64" ;
+PLATFORM	default = "/Wp64 -DNT_AMD64 -D_AMD64_=1 -DWIN64 -D_WIN64  -DWIN32 -D_WIN32" ;
+}
+if $(CPU) = ALPHA
+{
+PLATFORM	default = "-DNT_ALPHA" ;
+LIBSUFFIX	default = "" ;
+}
+if $(CPU) = MIPS
+{
+LIBSUFFIX	default = "" ;
+PLATFORM	default = "-DNT_MIPS" ;
+}
+if $(CPU) = PPC
+{
+LIBSUFFIX	default = "" ;
+PLATFORM	default = "-DNT_PPC" ;
+}
+else
+{
+LIBSUFFIX	default = "" ;
+PLATFORM	default = "" ;
+}
+
+#
+#set DBLFLAG
+#
+if $(DOUBLEBYTE) = ""
+{
+DBFLAG	default = "-DDOUBLEBYTE" ;
+}
+
+#
+#set EDFLAG
+#
+if $(DEVELOPER_EDITION) = ""
+{
+DEVELOPER_EDITION 	default = "OFF" ;
+}
+else
+{
+DEVELOPER_EDITION 	default = "ON" ;
+EDFLAG 		default = "-DEVELOPER_EDITION" ;
+}
+
+#
+#set DECFLAG
+#
+if $(DECBUILD) != ""
+{
+DECFLAG 	default = "-DDNET_USE_WINSOCK" ;
+}
+
+#
+#set DEVFLAGS
+#
+if $(DEBUG) = ON
+{
+DEVFLAGS 	default = "-DIIDEV_TEST -DIIDEV_DEBUG" ;
+}
+
+
+#
+#set MACH
+#
+if $(CPU) = i386
+{
+	MACH 	default = /MACHINE:X86 ;
+}
+
+if $(CPU) = IA64
+{
+	MACH 	default = /MACHINE:IA64 ;
+}
+
+if $(CPU) = AMD64
+{
+	MACH 	default = /MACHINE:AMD64 ;
+}
+
+if $(CPU) = ALPHA
+{
+	MACH 	default = -machine:alpha ;
+}
+
+#
+#set DLLFLAGS
+#
+if $(DEBUG) = ON
+{
+	if $(CPU) = IA64 || $(CPU) = AMD64
+	{
+		DLLFLAGS 	default = /DEBUG /DEBUGTYPE:CV /MAP $(MACH) /LARGEADDRESSWARE 
+					  $(VERSINFO) ;
+		DLLFLAGSNV = /DEBUG /DEBUGTYPE:CV /MAP $(MACH) ;
+	}
+	else
+	{
+		DLLFLAGS 	default = /DEBUG /DEBUGTYPE:CV /MAP $(MACH) 
+					$(VERSINFO) ;
+		DLLFLAGSNV = /DEBUG /DEBUGTYPE:CV /MAP $(MACH) ;
+
+	}
+}
+else
+{
+	DLLFLAGS = /MAP /DEBUG /INCREMENTAL:NO $(MACH)  $(VERSINFO) ;
+	DLLFLAGSNV = /MAP /DEBUG /INCREMENTAL:NO $(MACH) ;
+}
+
+if $(DEBUG) != ON
+{
+	if $(CPU) = IA64
+	{
+		MSDEV_CONFIG = "Release64" ;
+		DEVENVFLAGS  = "/nologo /useenv" ;	
+	}
+	if $(CPU) = AMD64
+	{
+		MSDEV_CONFIG = "ReleaseAMD64" ;
+		DEVENVFLAGS  = "/nologo /useenv" ;	
+	}
+	if $(CPU) != IA64 && $(CPU) != AMD64
+	{
+		MSDEV_CONFIG = "Release" ;
+		DEVENVFLAGS  = "/nologo" ;
+	}
+}
+else
+{
+	if $(CPU) = IA64
+	{
+		MSDEV_CONFIG = "Debug64" ;
+		DEVENVFLAGS  = "/nologo /useenv" ;
+	}
+	if $(CPU) = AMD64 
+	{
+		MSDEV_CONFIG = "DebugAMD64" ;
+		DEVENVFLAGS  = "/nologo /useenv" ;
+	}
+	if $(CPU) != IA64 && $(CPU) != AMD64
+	{
+		MSDEV_CONFIG = "Debug" ;
+		DEVENVFLAGS  = "/nologo" ;
+	}
+
+}
+
+#
+# set MANIFEST UI Level
+#
+ADMIN_MANIFEST	default = "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\"" ;
+
+#
+# set MISC FLAGS
+#
+RMWARNINGS	default = -D_CRT_SECURE_NO_WARNINGS ;
+
+#
+# Constants
+#
+MACROS = -DDESKTOP -DDEVIL -DWIN32 -DINCLUDE_ALL_CL_PROTOS -DNT_GENERIC -DSEP -DSEPDEBUG -DDOUBLEBYTE -DxCL_NO_AUTH_STRING_EXISTS -DINGRESII ;
+
+#
+#Variables
+#
+VERS	default = "int_w32" ;
+CCMACH	default = $(CPUFLAGS) $(CDEBUG) $(RUNTIME) $(ERR_LVL) $(PLATFORM) $(PREPROCESS) $(MACROS) $(DBFLAG) $(EDFLAG) $(DECFLAG) $(DEVFLAGS) $(THREADS) $(RMWARNINGS) ;
+WINNT	default = -D_WIN32_WINNT=0x0500 ;
+CC	default = "CC" ;
+JAMSHELL	default = cmd /C % ;
+VISUALC = "" ;
+C++	 = cl.exe ;
+LINK	 = link.exe ;
+AR	 = lib.exe ;
+LDLIBMACH = /nologo $(DLLFLAGS) ;
+LINKFLAGS = /nologo $(MISCFLAGS) $(DLLFLAGS) ;
+CCLDMACH  = /nologo $(DLLFLAGS) ;
+
+LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(GV) $(PSAPILIB) ;
+STDHDRS  = \"$(VISUALC)\\include\" ;
+KEEPOBJ = true ;
+SHELLHEADER = "" ;
+
+
+#
+# File suffixes
+#
+LIBSFX	default = lib ;
+SLSFX	default = dll ;
+DEFSFX	default = def ;
+PDBSFX	default = pdb ;
+EXESFX	default = exe ;
+OBJSFX	default = obj ;
+CHMSFX	default = chm ;
+
+
+
+#
+#ICE File extensions
+#
+ICE_EXT = dll ;
+CGI_EXT = exe ;
+
+
+#
+# Visual Studio rebuild flag
+#
+BUILD = /rebuild ;
+

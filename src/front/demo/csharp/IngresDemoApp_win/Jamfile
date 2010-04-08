@@ -1,0 +1,27 @@
+#
+# Jamfile file for front!demo!csharp!IngresDemoApp_win
+#
+
+SubDir ING_SRC front demo csharp IngresDemoApp_win ;
+
+IISUBSYS front demo csharp IngresDemoApp_win ;
+
+
+IISLN IngresDemoApp.exe : IngresDemoApp.sln ;
+
+IIBFILES demo$(DFS)csharp$(DFS)travel$(DFS)solution : AboutBox.Designer.cs AboutBox.cs
+	AboutBox.resx AirportDataSet.Designer.cs AirportDataSet.xsc AirportDataSet.xsd
+	AirportDataSet.xss AppConfigDataSet.Designer.cs AppConfigDataSet.xml
+	AppConfigDataSet.xsc AppConfigDataSet.xsd AppConfigDataSet.xss CountryDataSet.xsc
+	CountryDataSet.xsd CountryDataSet.xss CountryDataSet1.Designer.cs Form1.Designer.cs
+	Form1.cs Form1.resx Ingres.cs IngresDemoApp.csproj Instance.cs ProfileDataSet.Designer.cs
+	ProfileDataSet.xsc ProfileDataSet.xsd ProfileDataSet.xss Profiles.cs Program.cs
+	RegionDataSet.Designer.cs RegionDataSet.xsc RegionDataSet.xsd RegionDataSet.xss
+	RouteDataSet.Designer.cs RouteDataSet.xsc RouteDataSet.xsd RouteDataSet.xss Routes.cs 
+	IngresDemoApp.sln ;
+
+IIINCLUDE front demo csharp IngresDemoApp_win Help ;
+IIINCLUDE front demo csharp IngresDemoApp_win Properties ;
+IIINCLUDE front demo csharp IngresDemoApp_win Resources ;
+
+

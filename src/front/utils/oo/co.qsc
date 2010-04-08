@@ -1,0 +1,249 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ooclass.h>
+#include	<oodefine.h>
+#include	<oosymbol.h>
+#include	"eroo.h"
+
+/**
+** Name:	co.c -	Object Module Collection Methods.
+**
+** Description:
+**	Defines:
+**
+**	iioCOat()
+**	iioCOxatEnd()
+**	iioCOprint()
+**	iioCOnext()
+**	iioCOmatchName()
+**	iioCOinit()		initialize collection object.
+**	iioCOalloc()		allocate collection object.
+**	iioCOisEmpty()
+**	iioCOfirst()
+**	iioCOdo()
+**	iioCOcurrentName()
+**	iioCOpatPut()
+**
+** History:
+**	Revision 6.2  89/06  wong
+**	Added allocation method, 'iioCOalloc()'.
+**
+**      18-oct-1993 (kchin)
+**          	Since the return type of OOsnd() has been changed to PTR,
+**          	when being called in iioCOdo(), its return type needs to 
+**		be cast to the proper datatype.
+**
+**	Revision 4.0  86  peterk
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-Aug-2009 (kschendel) b121804
+**	    Bool prototypes to keep gcc 4.3 happy.
+**/
+
+OO_OBJECT	*iiooMemAlloc();
+
+OOID	iioCOfirst();
+bool	iioCOisEmpty();
+OOID	iioCOnext();
+bool	OBisNil();
+
+OOID
+iioCOat(self, at)
+register OO_COLLECTION	*self;
+register i4	at;
+{
+	if (at > self->size - 1)
+	{
+	    IIUGerr(E_OO0010_at_index_out_of_range, 0, 0);
+	    return nil;
+	}
+	return self->array[at];
+}
+
+bool
+iioCOxatEnd(self)
+register OO_COLLECTION	*self;
+{
+	return (bool)( iioCOisEmpty(self) || self->atend );
+}
+
+OOID
+iioCOpatPut(self, at, put)
+register OO_COLLECTION	*self;
+register i4	at;
+OOID	put;
+{
+	if (at > self->size - 1)
+	{
+	    err(E_OO0011_atPut_index_out_of_ra);
+	    return nil;
+	}
+	return (self->array[at] = put);
+}
+
+char *
+iioCOcurrentName(self)
+register OO_COLLECTION	*self;
+{
+	return iioCOxatEnd(self) ? NULL
+		: (char *)OOsnd(self->array[self->current_obj], _name, 0);
+}
+
+/*
+**	17-aug-91 (leighb) DeskTop Porting Change: must decl all 11 PTR's!
+**      06-dec-93 (smc)
+**		Bug #58882
+**		Commented lint pointer truncation warning.
+*/
+OOID
+iioCOdo(self, msg, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11)
+register OO_COLLECTION	*self;
+char	msg[];
+PTR	a1;		 
+PTR	a2;		 
+PTR	a3;		 
+PTR	a4;		 
+PTR	a5;		 
+PTR	a6;		 
+PTR	a7;		 
+PTR	a8;		 
+PTR	a9;		 
+PTR	a10;		 
+PTR	a11;		 
+{
+	register OOID	item;
+
+	for ( item = iioCOfirst(self) ; !iioCOxatEnd(self) ;
+			item = iioCOnext(self))
+	{
+    		/* lint truncation warning if size of ptr > OOID, 
+		   but code valid */
+		item = (OOID)OOsnd(item, msg, a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,0);
+	}
+	return item;
+}
+
+OOID
+iioCOfirst(self)
+register OO_COLLECTION	*self;
+{
+	if (iioCOisEmpty(self))
+		return nil;
+	self->current_obj = 0;
+	if (self->size > 0)
+	{
+		self->atend = 0;
+		return self->array[0];
+	}
+	else
+	{
+		self->atend = 1;
+		return nil;
+	}
+}
+
+bool
+iioCOisEmpty(self)
+register OO_COLLECTION	*self;
+{
+	return (bool)( OBisNil(self) || self->size == 0 );
+}
+
+OOID
+iioCOalloc ( self, id, tag, varsize )
+OO_CLASS	*self;
+OOID		id;
+u_i4		tag;
+i4		varsize;
+{
+	register u_i4	varmem = self->memsize;
+	register OO_COLLECTION	*col;
+
+	if ( self->hasarray )
+	{ /* add array size */
+		varmem += varsize * max(sizeof(OO_OBJECT *), sizeof(OOID));
+	}
+
+	return ( (col = (OO_COLLECTION *)iiooMemAlloc(self, id, tag, varmem))
+			!= NULL ) ? col->ooid : nil;
+}
+
+OOID
+iioCOinit ( self, tag, cnt )
+register OO_COLLECTION	*self;
+u_i4			tag;
+i4			cnt;
+{
+	OOsndSuper( self, _init, _, 0, _, 1, _,
+			(char *)NULL, (char *)NULL, (char *)NULL
+	);
+	self->array = (OOID *)((char *)self + sizeof(*self));
+	self->size = cnt;
+	self->atend = 0;
+	self->current_obj = 0;
+
+	return self->ooid;
+}
+
+OOID
+iioCOmatchName(self, name)
+register OO_COLLECTION	*self;
+char			*name;
+{
+	register OOID	item;
+
+	for ( item = iioCOfirst(self) ; !iioCOxatEnd(self) ;
+			item = iioCOnext(self) )
+	{
+		char	*item_name = (char *)OOsnd(item, _name, 0);
+
+		if ( STequal(name, item_name) )
+		    return item;
+	}
+	return nil;
+}
+
+OOID
+iioCOnext(self)
+register OO_COLLECTION	*self;
+{
+	if (iioCOisEmpty(self))
+		return nil;
+	if (++self->current_obj >= self->size)
+	{
+		self->atend = 1;
+		return nil;
+	}
+	return self->array[self->current_obj];
+}
+
+VOID
+iioCOprint(self)
+register OO_COLLECTION	*self;
+{
+	register i4	i;
+
+	OOsndSuper(self, _print, 0);
+	P(ERx("{ /* %s (variable part)	*/"), 
+	    (char *)OOsnd(self->class, _name, 0)
+	);
+	for (i=1; i<self->size; i++)
+	{
+	    P(ERx("  /* array[%d] (ID)\t*/ %d,"), i, self->array[i]);
+	}
+	P(ERx("}"));
+}

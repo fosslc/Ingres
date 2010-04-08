@@ -1,0 +1,491 @@
+:Base oisysref.hlp
+:Title CA-OpenIngres System Reference Guide
+:Index CA-OpenIngres System Reference Guide
+1 CA-OpenIngres System Reference Guide
+2 Preface
+3 Overview=SRPREFNT0000000
+3 Purpose of this guide=SRPREFNT0000005
+3 Audience=SRPREFNT0000010
+3 Contents=SRPREFNT0000015
+3 Special Considerations
+4 Special Considerations=SRPREFNT0000020
+4 The Knowledge Management Extension=SRPREFNT0000025
+4 C2 Security=SRPREFNT0000030
+4 Enterprise Access Compatibility=SRPREFNT0000035
+3 Conventions
+4 Conventions=SRPREFNT0000040
+4 Entering Data from the Keyboard=SRPREFNT0000045
+4 Statements and Commands
+5 Statements and Commands=SRPREFNT0000050
+5 Terminology=SRPREFNT0000055
+5 Query Languages=SRPREFNT0000060
+5 ISO Entry SQL92=SRPREFNT0000065
+5 Syntax=SRPREFNT0000070
+5 Additional Notation=SRPREFNT0000075
+3 Related Guides
+4 Related Guides=SRPREFNT0000080
+2 Chapter 1:  Introduction
+3 Overview=SR01NT0000000
+3 The CA-OpenIngres Installation=SR01NT0000010
+3 The CA-OpenIngres System Administrator
+4 System Administrator=SR01NT0000015
+4 System Administrator Responsibilities=SR01NT0000020
+3 Using CA-OpenIngres Commands
+4 Using CA-OpenIngres Commands=SR01NT0000025
+4 CA-OpenIngres System Administration Commands
+5 CA-OpenIngres System Administration Commands=SR01NT0000030
+5 Commands for the DBA=SR01NT0000035
+4 Commands for End Users and Developers=SR01NT0000040
+4 CA-OpenROAD=SR01NT0000045
+2 Chapter 2:  CA-OpenIngres Architecture
+3 Overview=SR02NT0000000
+3 The CA-OpenIngres Querying and Reporting Tools
+4 Querying and Reporting Tools=SR02NT0000010
+4 Database Utility Facility (DUF)=SR02NT0000015
+3 The DBMS Server=SR02NT0000020
+3 How CA-OpenIngres Executes a Query
+4 How CA-OpenIngres Executes a Query=SR02NT0000025
+4 The Query Environment=SR02NT0000030
+4 DBMS Server Facilities
+5 DBMS Server Facilities=SR02NT0000035
+5 The Abstract Data Type Facility (ADF)=SR02NT0000040
+5 The Data Manipulation Facility (DMF)=SR02NT0000045
+5 The Optimizer Facility (OPF)=SR02NT0000050
+5 The Parser Facility (PSF)=SR02NT0000055
+5 The Query Execution Facility (QEF)=SR02NT0000060
+5 The Query Storage Facility (QSF)=SR02NT0000065
+5 The Relation Description Facility (RDF) =SR02NT0000070
+5 The System Control Facility (SCF) =SR02NT0000075
+3 The Logging and Locking System
+4 The Logging and Locking System=SR02NT0000080
+4 The Lock Manager=SR02NT0000085
+4 The Logging Facility=SR02NT0000090
+4 The Recovery Process=SR02NT0000095
+4 The Archiver Process=SR02NT0000100
+4 Transaction Recovery=SR02NT0000105
+4 Log Files
+5 CA-OpenIngres Log Files=SR02NT0000110
+5 Transaction Log File=SR02NT0000115
+5 Error Log=SR02NT0000120
+5 Archiver Log=SR02NT0000125
+5 Recovery Log=SR02NT0000130
+5 Primary Configuration Log Files=SR02NT0000135
+5 Optional Configuration Log Files=SR02NT0000140
+5 Other Optional Log Files=SR02NT0000145
+3 General Communication Facility (GCF)
+4 General Communication Facility (GCF)=SR02NT0000150
+4 The Name Server=SR02NT0000155
+4 The Communications Server=SR02NT0000160
+4 The GCA=SR02NT0000165
+2 Chapter 3:  Configuring CA-OpenIngres
+3 Overview=SR03NT0000000
+3 Using the CBF Utility
+4 Using the CBF Utility=SR03NT0000010
+4 Starting Up CBF=SR03NT0000015
+4 Using CBF to Improve Performance=SR03NT0000020
+4 CBF Data Files=SR03NT0000025
+4 Setting GCA Privileges=SR03NT0000030
+3 Configuration-By-Forms Start-up Screen
+4 Configuration-By-Forms Start-up Screen=SR03NT0000035
+4 Selecting from the Start-up Screen=SR03NT0000040
+4 Startup Screen Menu Items=SR03NT0000045
+3 Configure Name Server Screen
+4 Configure Name Server Screen=SR03NT0000050
+4 Name Server Parameters=SR03NT0000055
+4 Configure Name Server Menu Items=SR03NT0000060
+3 Configure DBMS Server Definition Screen
+4 Configure DBMS Server Definition Screen=SR03NT0000065
+4 DBMS Server Parameters=SR03NT0000070
+4 Configure DBMS Server Definition Menu Items=SR03NT0000075
+4 Using the fast_commit and write_behind Options=SR03NT0000080
+4 Using a Shared Buffer Cache=SR03NT0000085
+4 The Size of the Shared Buffer Cache=SR03NT0000090
+4 The Size of the RDF Buffer Cache=SR03NT0000095
+4 Calculating the Value for the Event-limit Parameter=SR03NT0000100
+3 Derived DBMS Server Parameters Screen
+4 Derived DBMS Server Parameters Screen=SR03NT0000105
+4 Protected Field=SR03NT0000110
+4 Derived DBMS Server Parameters=SR03NT0000115
+4 Derived DBMS Server Parameters Menu Items=SR03NT0000120
+3 Database Access List Screen
+4 Database Access List Screen=SR03NT0000125
+4 Database Access List Menu Items=SR03NT0000130
+3 Configure DBMS Cache Definition Screen
+4 Configure DBMS Cache Definition Screen=SR03NT0000135
+4 DBMS Cache Parameters=SR03NT0000140
+4 Configure DBMS Cache Definition Menu Items=SR03NT0000145
+3 Derived DBMS Cache Parameters Screen
+4 Derived DBMS Cache Parameters Screen=SR03NT0000150
+4 Derived DBMS Cache Parameters=SR03NT0000155
+4 Derived DBMS Cache Menu Items=SR03NT0000160
+3 Configure Net Server Definition Screen
+4 Configure Net Server Definition Screen=SR03NT0000165
+4 Configure Net Server Definition Menu Items=SR03NT0000170
+3 Configure Net Server Protocols Screen
+4 Configure Net Server Protocols Screen=SR03NT0000175
+4 Configure Net Server Protocols Menu Items=SR03NT0000180
+3 Configure Star Server Definition Screen
+4 Configure Star Server Definition Screen=SR03NT0000185
+4 Star Server Parameters=SR03NT0000190
+4 Configure Star Server Definition Menu Items=SR03NT0000195
+3 Derived Star Server Parameters
+4 Derived Star Server Parameters Screen=SR03NT0000200
+4 Derived Star Server Parameters=SR03NT0000205
+4 Derived Star Server Parameters Menu Items=SR03NT0000210
+3 Configure Locking System Pop-Up
+4 Configure Locking System Pop-Up=SR03NT0000215
+3 Derived Locking System Parameters Screen
+4 Derived Locking System Parameters Screen=SR03NT0000220
+4 Derived Locking System Parameters=SR03NT0000225
+4 Derived Locking System Parameters Menu Items=SR03NT0000230
+3 Configure Logging System
+4 Configure Logging System Screen=SR03NT0000235
+4 Logging System Parameters=SR03NT0000240
+4 Configure Logging System Menu Items=SR03NT0000245
+3 Derived Logging System Parameters
+4 Derived Logging System Parameters Screen=SR03NT0000250
+4 Derived Logging System Parameters=SR03NT0000255
+4 Derived Logging System Parameters Menu Items=SR03NT0000260
+3 Transaction Log Configuration
+4 Transaction Log Configuration Screen=SR03NT0000265
+4 Transaction Log Configuration Screen Menu Items=SR03NT0000270
+3 Change Log Screen
+4 Change Log Screen=SR03NT0000275
+3 Configure Preferences
+4 Configure Preferences Screen=SR03NT0000280
+4 Configure Preferences Parameters=SR03NT0000285
+4 Configure Preferences Menu Items=SR03NT0000290
+3 Configure Security Auditing
+4 Configure Security Auditing Screen=SR03NT0000295
+4 Security Configuration Parameters=SR03NT0000300
+4 Configure Security Auditing Menu Items=SR03NT0000305
+2 Chapter 4:  Setting CA-OpenIngres Environment Variables/Logicals
+3 Overview=SR04NT0000000
+3 Scope=SR04NT0000010
+3 Windows NT Environment Variables=SR04NT0000015
+3 Installation-Wide CA-OpenIngres Environment Variables/Logicals=SR04NT0000020
+3 CA-OpenIngres Environment Variables/Logicals
+4 User-Definable CA-OpenIngres Environment Variables/Logicals=SR04NT0000025
+4 Locally Resettable=SR04NT0000030
+4 Not Locally Resettable=SR04NT0000035
+3 Start-up Files
+4 Creating Start-up Files=SR04NT0000040
+4 Run-time Customization=SR04NT0000045
+4 Customization Levels=SR04NT0000050
+4 General Rules Of Start-up File And CA-OpenIngres Environment Variable/Logical Syntax=SR04NT0000055
+4 Summary Chart=SR04NT0000060
+4 CA-OpenIngres Environment Variables/Logicals for Start-up Files=SR04NT0000065
+4 Start-up Files and Their CA-OpenIngres Environment Variables/Logicals
+5 Start-up Files and Their CA-OpenIngres Environment Variables/Logicals=SR04NT0000070
+5 Dayfile=SR04NT0000075
+5 DBNAME_ING=SR04NT0000080
+5 DBNAME_SQL_ INIT=SR04NT0000085
+5 II_SQL_INIT=SR04NT0000090
+5 ING_SET=SR04NT0000095
+5 ING_SET_ DBNAME=SR04NT0000100
+5 ING_SYSTEM_ SET=SR04NT0000105
+5 INIT_INGRES=SR04NT0000110
+5 Startsql=SR04NT0000115
+5 Startup=SR04NT0000120
+3 CA-OpenIngres Environment Variables/Logicals Set at Server Start-up
+4 CA-OpenIngres Environment Variables/Logicals Set at Server Start-up=SR04NT0000125
+3 Changing CA-OpenIngres Installation Locations
+4 Changing CA-OpenIngres Installation Locations=SR04NT0000130
+4 When Installation Locations Do Not Need to be Changed
+5 When Installation Locations Do Not Need to be Changed=SR04NT0000135
+5 Making Space for Future Growth=SR04NT0000140
+5 Making Additional Space for Existing Tables=SR04NT0000145
+4 When Installation Locations Need To Be Changed
+5 When Installation Locations Need To Be Changed=SR04NT0000150
+4 Changing Location Variables in Windows NT
+5 Changing Location Variables in Windows NT=SR04NT0000155
+5 Changing Location Variables That Do Not Require Unloading=SR04NT0000160
+5 Changing ING_ABFDIR=SR04NT0000165
+5 Changing II_LOG_FILE or II_DUAL_LOG=SR04NT0000170
+5 Changing Location Variables Requiring Unloading=SR04NT0000175
+5 Procedure: Changing an Installation Location with Unloading=SR04NT0000180
+2 Chapter 5:  Customization Options
+3 Overview=SR05NT0000000
+3 Selecting a Character Set
+4 Selecting a Character Set=SR05NT0000010
+4 Supported Character Sets=SR05NT0000015
+4 Additional Character Sets=SR05NT0000020
+3 Local Collation Sequences
+4 Local Collation Sequences=SR05NT0000025
+4 The Multi-Collation Sequence=SR05NT0000030
+4 The Spanish Collation Sequence=SR05NT0000035
+4 Implementing A Customized Collation Sequence
+5 Implementing A Customized Collation Sequence=SR05NT0000040
+5 Writing the Description File=SR05NT0000045
+5 Using the aducompile Utility=SR05NT0000050
+5 Cautionary Guidelines=SR05NT0000055
+3 Changing the CA-OpenIngres Log File Size
+4 Changing the CA-OpenIngres Log File Size=SR05NT0000060
+4 Resizing a Regular Log File=SR05NT0000065
+3 Using a Dual Log
+4 Using a Dual Log=SR05NT0000070
+4 The Archiver Exit Script (acpexit)=SR05NT0000075
+2 Chapter 6:  Monitoring and Tracing Tools
+3 Overview=SR06NT0000000
+3 CA-OpenIngres System Utilities=SR06NT0000010
+3 Operating System Utilities
+4 Operating System Utilities=SR06NT0000015
+4 Windows NT Diagnostics=SR06NT0000020
+4 Performance Monitor=SR06NT0000025
+4 Event Viewer=SR06NT0000030
+4 Registry Editor=SR06NT0000035
+4 Vendor Utilities=SR06NT0000040
+3 Error Messages
+4 Error Messages=SR06NT0000045
+4 Error Message Format=SR06NT0000050
+4 Message Help Files=SR06NT0000055
+4 Types of Error Messages
+5 Types of Error Messages=SR06NT0000060
+5 Non-fatal Errors=SR06NT0000065
+5 Fatal Errors=SR06NT0000070
+4 CA-OpenIngres Facility Codes
+5 CA-OpenIngres Facility Codes=SR06NT0000075
+5 Primary CA-OpenIngres Components=SR06NT0000080
+5 Server-Only Components=SR06NT0000085
+5 CA-OpenIngres/Tools-Only Components=SR06NT0000090
+5 Stream File Management=SR06NT0000095
+5 CA-OpenIngres Utility Routines=SR06NT0000100
+5 Miscellaneous=SR06NT0000105
+3 CA-OpenIngres Trace Utilities
+4 CA-OpenIngres Trace Utilities=SR06NT0000110
+4 Set Statement=SR06NT0000115
+4 CA-OpenIngres Environment Variables/Logicals Commonly Used with Set
+5 CA-OpenIngres Environment Variables/Logicals Commonly Used with Set=SR06NT0000120
+5 Direct Set Example=SR06NT0000125
+5 Set Example Using an Include File=SR06NT0000130
+5 Set Statements in Start-up Files=SR06NT0000135
+4 Set Options for Tracing Queries
+5 Set Options for Tracing Queries=SR06NT0000140
+5 Set Printqry Option=SR06NT0000145
+5 Printqry Example with ING_SET=SR06NT0000150
+5 Printqry Example with II_EMBED_SET=SR06NT0000155
+5 Set QEP Option=SR06NT0000160
+5 Set Joinop Notimeout Option=SR06NT0000165
+5 Cancelling Set Options=SR06NT0000170
+4 The Set Session With On_Error Option
+5 The Set Session With On_Error Option=SR06NT0000175
+5 Tracing I/O=SR06NT0000180
+5 Tracing Locks=SR06NT0000185
+5 Tracing Events=SR06NT0000190
+4 Tracing User-Server Communications
+5 Tracing User-Server Communications=SR06NT0000195
+5 Tracing with Printgca=SR06NT0000200
+5 Using II_GCx_TRACE and II_GCA_LOG=SR06NT0000205
+4 Setting CA-OpenIngres Trace Points
+5 Setting CA-OpenIngres Trace Points=SR06NT0000210
+5 CA-OpenIngres Query Optimizer Trace Points=SR06NT0000215
+5 CA-OpenIngres Query Storage Facility Trace Points=SR06NT0000220
+2 Chapter 7:  Basic Troubleshooting Procedures
+3 Overview=SR07NT0000000
+3 Determining the Area of Trouble
+4 Determining the Area of Trouble=SR07NT0000010
+4 Check the Error Log Files=SR07NT0000015
+4 Find Your Problem Category=SR07NT0000020
+4 Troubleshooting Flow Chart 1=SR07NT0000025
+3 Problems With Start Up, Shutdown or Configuration of the CA-OpenIngres Installation
+4 Problems With Start Up, Shutdown or Configuration of the CA-OpenIngres Installation=SR07NT0000030
+4 Troubleshooting Flow Chart 2=SR07NT0000035
+4 Basic Installation Checks in Windows NT
+5 Basic Installation Checks in Windows NT=SR07NT0000040
+5 Ingstart in Windows NT=SR07NT0000045
+4 Start-up Problems On Machine Reboot
+5 Start-up Problems On Machine Reboot=SR07NT0000050
+5 Checking Start-up Problems in Windows NT=SR07NT0000055
+4 Shutdown Problems
+5 Shutdown Problems=SR07NT0000060
+5 Checking Shutdown Problems in Windows NT=SR07NT0000065
+3 Procedures for Checking Individual CA-OpenIngres Processes in Windows NT
+4 Procedures for Checking Individual CA-OpenIngres Processes in Windows NT=SR07NT0000070
+4 Checking the Name Server in Windows NT=SR07NT0000075
+4 Checking the Communications Server in Windows NT=SR07NT0000080
+4 Checking the Recovery Process in Windows NT=SR07NT0000085
+4 Checking the Archiver Process in Windows NT=SR07NT0000090
+4 Checking the DBMS Server in Windows NT=SR07NT0000095
+3 Problems With CA-OpenIngres/Tools Start Up
+4 Problems With CA-OpenIngres/Tools Start Up=SR07NT0000100
+4 Troubleshooting Flow Chart 3=SR07NT0000105
+4 DBMS Server Stopped=SR07NT0000110
+4 Database Connection Problems
+5 Database Connection Problems=SR07NT0000115
+5 No Database Connections=SR07NT0000120
+5 Individual Database Connection Failure=SR07NT0000125
+3 Inconsistent Databases and Recovery
+4 Inconsistent Databases and Recovery=SR07NT0000130
+4 Automatic Recovery
+5 Automatic Recovery=SR07NT0000135
+5 Recovery During Normal Operation=SR07NT0000140
+5 Recovery at Shutdown=SR07NT0000145
+5 Recovery at Start Up=SR07NT0000150
+3 Monitoring the Recovery Process
+4 Monitoring the Recovery Process=SR07NT0000155
+4 If a Database Becomes Inconsistent=SR07NT0000160
+4 Diagnosing an Inconsistent Database=SR07NT0000165
+4 Preventing Inconsistent Databases=SR07NT0000170
+4 Recovering an Inconsistent Database
+5 Recovering an Inconsistent Database=SR07NT0000175
+5 Using a Checkpoint=SR07NT0000180
+5 Using an Operating System Backup=SR07NT0000185
+5 When No Backup Exists=SR07NT0000190
+3 Performance Problems
+4 Performance Problems=SR07NT0000195
+4 Troubleshooting Flow Chart 4=SR07NT0000200
+4 Logging System Issues
+5 Logging System Issues=SR07NT0000205
+5 Avoiding Logfull Abort=SR07NT0000210
+5 Resizing the Transaction Log=SR07NT0000215
+5 Reestablishing Dual Logging=SR07NT0000220
+4 Resource and Maintenance Issues
+5 Resource and Maintenance Issues=SR07NT0000225
+5 Operating System Resources=SR07NT0000230
+5 Checking System Resources=SR07NT0000235
+3 Technical Support
+4 Before Calling Technical Support=SR07NT0000240
+4 Windows NT Installations=SR07NT0000245
+2 Appendix A:  CA-OpenIngres  Environment Variables/Logicals
+3 Overview=SRAPANT0000000
+3 List of CA-OpenIngres Environment Variables/Logicals=SRAPANT0000010
+2 Appendix B:  CA-OpenIngres Commands
+3 Overview=SRAPBNT0000000
+3 Command Syntax
+4 Command Syntax=SRAPBNT0000010
+4 Standard Command-Line Flags and Parameters=SRAPBNT0000015
+4 Uppercase Flags=SRAPBNT0000020
+4 Using Schemas for Owner Qualification=SRAPBNT0000025
+4 Delimited Identifiers on the Command Line
+5 Delimited Identifiers on the Command Line=SRAPBNT0000030
+5 Authorization Parameters=SRAPBNT0000035
+5 Case Sensitivity =SRAPBNT0000040
+3 Commands
+4 Abf=SRAPBNT0000045
+4 Accessdb=SRAPBNT0000060
+4 Alterdb=SRAPBNT0000075
+4 Auditdb=SRAPBNT0000090
+4 Catalogdb=SRAPBNT0000110
+4 Cbf=SRAPBNT0000130
+4 Ckpdb=SRAPBNT0000145
+4 Compform=SRAPBNT0000165
+4 Copyapp=SRAPBNT0000190
+4 Copydb=SRAPBNT0000210
+4 Copyform=SRAPBNT0000230
+4 Copyrep=SRAPBNT0000245
+4 Createdb=SRAPBNT0000260
+4 Delobj=SRAPBNT0000295
+4 Destroydb=SRAPBNT0000315
+4 ESQL Preprocessor=SRAPBNT0000335
+4 Imageapp=SRAPBNT0000350
+4 Infodb=SRAPBNT0000365
+4 Ingmenu=SRAPBNT0000425
+4 Ingprenv=SRAPBNT0000440
+4 Ingsetenv=SRAPBNT0000455
+4 Ingstart=SRAPBNT0000470
+4 Ingstop=SRAPBNT0000490
+4 Ingunset=SRAPBNT0000505
+4 Ipm=SRAPBNT0000520
+4 Iquel=SRAPBNT0000535
+4 Isql=SRAPBNT0000555
+4 Modifyfe=SRAPBNT0000575
+4 Optimizedb=SRAPBNT0000590
+4 Printform=SRAPBNT0000610
+4 Qbf=SRAPBNT0000630
+4 Query=SRAPBNT0000645
+4 Rbf=SRAPBNT0000660
+4 Relocatedb=SRAPBNT0000675
+4 Report=SRAPBNT0000695
+4 Rollforwarddb=SRAPBNT0000710
+4 Sql=SRAPBNT0000730
+4 SQL Option Flags=SRAPBNT0000745
+4 Sreport=SRAPBNT0000755
+4 Statdump=SRAPBNT0000770
+4 Sysmod=SRAPBNT0000790
+4 Unloaddb=SRAPBNT0000810
+4 Upgradedb=SRAPBNT0000830
+4 Upgradefe=SRAPBNT0000845
+4 Verifydb=SRAPBNT0000865
+4 Vifred=SRAPBNT0000885
+4 Vision=SRAPBNT0000905
+2 Appendix C:  CA-OpenIngres System Utilities
+3 Overview=SRAPCNT0000000
+3 Cacheutil=SRAPCNT0000010
+3 iimonitor=SRAPCNT0000025
+3 iinamu=SRAPCNT0000040
+3 iizic=SRAPCNT0000060
+3 iizck=SRAPCNT0000075
+3 Lartool=SRAPCNT0000090
+3 Lockstat=SRAPCNT0000110
+3 Logstat=SRAPCNT0000155
+3 Rcpconfig=SRAPCNT0000220
+3 Rcpstat=SRAPCNT0000235
+2 Appendix D:  Upgrading from Previous Releases
+3 Overview=SRAPDNT0000000
+3 Checkpointing Before You Upgrade
+4 Checkpointing Before You Upgrade=SRAPDNT0000010
+4 Checkpointing Journaled Databases
+5 Checkpointing Journaled Databases=SRAPDNT0000015
+5 Recovering an Earlier Database=SRAPDNT0000020
+3 Upgradedb 
+4 Upgradedb Syntax=SRAPDNT0000025
+4 Using Upgradedb=SRAPDNT0000030
+4 Upgrading the iidbdb=SRAPDNT0000035
+4 Database Access During Upgradedb Operations=SRAPDNT0000040
+4 Upgrading Distributed Databases=SRAPDNT0000045
+4 Upgradedb Error Reporting
+5 Upgradedb Error Reporting=SRAPDNT0000050
+5 Upgradefe Error Reports=SRAPDNT0000055
+3 Updating Views Based on Catalogs
+4 Updating Views Based on Catalogs=SRAPDNT0000060
+3 Unloaddb
+4 Using Unloaddb=SRAPDNT0000065
+2 Appendix E:  Ingres Management Architecture (IMA)
+3 Overview=SRAPENT0000000
+3 The IMA Audience=SRAPENT0000010
+3 Introduction to the IMA=SRAPENT0000015
+3 The Management Information Base (MIB)
+4 The Management Information Base (MIB)=SRAPENT0000020
+4 Data and the Object Model
+5 Data and the Object Model=SRAPENT0000025
+5 Classid=SRAPENT0000030
+5 Location=SRAPENT0000035
+5 Instances=SRAPENT0000040
+4 Data Keys=SRAPENT0000045
+3 IMA
+4 How the IMA Works=SRAPENT0000050
+4 Reference Model=SRAPENT0000055
+4 IMA Management Protocol=SRAPENT0000060
+4 IMA Server=SRAPENT0000065
+3 Creating an SQL Management Information Base
+4 Creating an SQL Management Information Base=SRAPENT0000070
+4 Registering IMA Tables
+5 Registering IMA Tables=SRAPENT0000075
+5 The Register Table Statement=SRAPENT0000080
+5 IMA Table Types=SRAPENT0000085
+4 Register Table Examples
+5 Register Table Examples=SRAPENT0000090
+5 Example of a Flat Object Table=SRAPENT0000095
+5 Example of an Object Meta-Data Table=SRAPENT0000100
+5 Examples of Domain Tables=SRAPENT0000105
+5 Example of a Table of SCF Sessions=SRAPENT0000110
+5 Examples of Lock Tables=SRAPENT0000115
+5 Examples of Logging Tables=SRAPENT0000120
+3 Removing Table Registrations
+4 Removing Table Registrations=SRAPENT0000125
+3 Querying the IMA
+4 Querying the IMA=SRAPENT0000130
+4 SQL Management Domains=SRAPENT0000135
+4 Control Objects=SRAPENT0000140
+4 IMA Dbmsinfo Constants=SRAPENT0000145
+4 Query Examples to IMA Tables
+5 Query Examples to IMA Tables=SRAPENT0000150
+5 Example: Controlling the Management Domain=SRAPENT0000155
+5 Example: What are User Sessions Doing?=SRAPENT0000160
+5 Example: Who is Waiting for a Lock?=SRAPENT0000165
+5 Example: Who Holds Locks=SRAPENT0000170
+5 Example: Who is Holding a Lock Others Need?=SRAPENT0000175
+5 Example: Shutting Down a Server=SRAPENT0000180
+5 Example: Monitoring Performance=SRAPENT0000185
+3 Restrictions
+4 IMA Restrictions=SRAPENT0000190

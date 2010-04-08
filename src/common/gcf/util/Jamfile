@@ -1,0 +1,55 @@
+#
+# Jamfile file for common!gcf!util
+#
+# 13-Aug-2009 (horda03)
+#    On VMS, iibrowse built using static libraries
+#       31-Dec-2009 (horda03)
+#            Correct VMS library dependancies.
+
+SubDir ING_SRC common gcf util ;
+
+IISUBSYS common gcf util ;
+
+
+IIBINEXE iibrowse : iibrowse.sc ;
+IISIGEXE netu netu : netu.c ;
+IIBINEXE nqfile : nqfile.c ;
+
+if $(VMS)
+{
+   IINEEDLIBS iibrowse : ADFLIB AFELIB CUFLIB LIBQLIB GCALIB GCFLIB UGLIB COMPATLIB ;
+
+   IINEEDLIBS netu : GCFLIB SHCOMPATLIB ;
+   IINEEDLIBS nqfile : GCFLIB SHCOMPATLIB ;
+}
+else
+{
+   IINEEDLIBS iibrowse : SHQLIB SHCOMPATLIB SHFRAMELIB ;
+   IINEEDLIBSW iibrowse : SHEMBEDLIB SHGCFLIB ;
+
+   IINEEDLIBS netu : GCFLIB COMPATLIB ;
+   IINEEDLIBS nqfile : GCFLIB COMPATLIB ;
+}
+
+IIBINEXE iinamu : iinamu.c ;
+IINEEDLIBS iinamu : GCFLIB COMPATLIB ;
+
+IIBINEXE iigcstop : iigcstop.c ;
+IINEEDLIBS iigcstop : GCFLIB COMPATLIB ;
+
+IIBINEXE gcmtool : gcmtool.c ;
+IINEEDLIBS gcmtool : GCFLIB COMPATLIB ;
+
+if $(VMS)
+{
+    IIUTILEXE iicvtgcn : iicvtgcn.c ;
+    IINEEDLIBS iicvtgcn : COMPATLIB ;
+}
+IIBINEXE iijdbcprop : iijdbcprop.c ;
+IINEEDLIBS iijdbcprop : GCFLIB COMPATLIB ;
+
+if $(NT)
+{
+    IIBINEXE iicvtwintcp : iicvtwintcp.c ;
+    IINEEDLIBS iicvtwintcp : APILIB GCFLIB ADFLIB CUFLIB COMPATLIB ;
+}

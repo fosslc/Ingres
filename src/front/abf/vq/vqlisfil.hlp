@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlisfil.hlp, help for the "ListingFile" frame in the error processing
+/#-- facility.
+/#-- 
+This display provides a larger view of the error listing file that is 
+generated when the frame is compiled.  You can scroll up and down through 
+the listing file by using the appropriate scrolling keys for your terminal.  
+These might include the arrow keys, the return key, or certain control keys.  
+You can also use the "Find" function to locate a particular text string.
+
+Select "Keys" from this menu to see the scrolling keys and the Find key 
+for your terminal.

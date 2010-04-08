@@ -1,0 +1,10 @@
+Embedded SQL Precompilers
+
+(PROD1NAME) Embedded SQL combines the flexibility of a 3GL with (PROD1NAME)
+advanced application development tools for rapid development of highly
+interactive, portable, forms-based applications, database procedures,
+and other 3GL programs which can access relational and non-relational
+databases.  These open, portable tools are designed for use on
+client-server and host-based systems and include complete libraries
+for database access and memory management.  Embedded SQL programming
+kits are available for C and several other 3GLs.

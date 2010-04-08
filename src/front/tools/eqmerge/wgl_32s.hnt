@@ -1,0 +1,12 @@
+#
+# wgl_32s.hnt file for front/tools/eqmerge
+#
+# History:
+#       12-oct-2004 (dansa02)
+#           Adapted for flat-linking instead of IngresII DLL structure.
+#           Removed congui subsys (which was a vestige of Win3.1 ugliness).
+
+subsys = console
+
+main = eqmerge.c
+

@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The system_maxlocks resource specifies the default system setting used
+  to determine the maximum number of page or row locks that will be taken
+  on a table before locking escalates to a table lock. The total number of
+  locks available depend on locking system configuration.
+
+  This default setting is only used if no SET LOCKMODE MAXLOCKS statement 
+  was issued, or if one has been issued with the MAXLOCKS=SYSTEM parameter.
+
+  The default is 50.  The minimum setting is 10.

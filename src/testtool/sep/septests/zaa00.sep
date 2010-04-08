@@ -1,0 +1,41 @@
+/*
+	Test Name: zaa00.sep
+	Time: Wed Aug 11 17:26:42 1993
+	User Name: ingres
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename:
+	Purpose	:
+	Input Files  :
+	Output Files :
+	Database     :
+	Tables       :
+	Synopsis     :
+
+ History: 11-Aug-1993	(Author)	Created
+*/
+.if !SEPPARAMDB
+? setenv SEPPARAMDB septools
+<<
+environment variable was defined
+>>
+.endif
+? sql SEPPARAMDB
+<<
+INGRES SunOS Version 6.5/00 (su4.u42/00) login Wed Aug 11 17:26:56 1993
+continue
+* 
+>>
+<<
+Terminal Monitor could not connect to database
+>> ABORT
+* \q 
+<<
+INGRES Version 6.5/00 (su4.u42/00) logout
+Wed Aug 11 17:26:59 1993
+>>
+
+
+Ending at: Sat Aug 21 18:41:36 1993

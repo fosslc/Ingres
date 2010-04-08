@@ -1,0 +1,166 @@
+/*
+** This file is used to create cktmpl_ocfs.def file which specifies
+** the pax commands for ckpdb and rollforwarddb operations.
+** cktmpl_ocfs.def is a deliverable and is shipped to users.
+**
+**
+** Syntax Descriptions:
+**
+** The FOUR letters codes:
+**
+**		1st: - The type of operation being carried out
+**		    I  = Begin Table Level Recovery (initialize only)
+**		    F  = End Table Level Recovery (comments only)
+**	 	    B  = Begin Operation ckpdb/rolldb
+**		    P  = Pre-Work on the Operation ckpdb/rolldb
+**		    E  = End Operation ckpdb/rolldb
+**		    W  = Work on the Operation ckpdb/rolldb
+**
+**		2nd:- The type of direction associated to the operation
+**		    S  = Save (checkpoint)
+**	 	    R  = Restore (rollforward)
+**		    J  = Journal (Journal processing)
+**		    U  = Dump (Dump processing)
+**		    D  = Delete (delete file process)
+**		    C  = Snapshot (Check snapshot exists rollforward)
+**
+**		3rd: - The device to be used
+**		    T  = Tape device
+**	    	    D  = Disk device
+**
+**		4th:- Granularity
+**		    D  = Database level
+**		    A  = All databases
+**		    T  = Table Level (within a single database)
+**		    R  = Raw location (Database and Table level same)
+**
+** the fifth character must be a colon ':'
+**
+** the rest of the line is a command to run after the following substitutions
+** have been made:
+**
+** With Partial recovery the following as also been implemented
+**
+** %A   - Specify checkpoint path and file_name
+** %B   - Physical datafile in the ../ingres/data/default/xxx
+** %C   - Checkpoint pathname
+** %D   - Physical pathname of data ../ingres/data/default/xxx
+** %E   - Physical path and file_name of table to extract
+** %F   - Checkpoint filename
+** %G   - Total number of checkpoint files
+** %H   - Number of tables in a location
+** %I   - User specified string
+** %J0  - either REDO or UNDO processing
+**   1  - First journal file
+**   2  - Last journal file
+**   3  - Journal pathname
+**   4  - Journal filename
+** %K   - Checkpoint file number
+** %N   - Total number of locations be operated on
+** %M   - Current location number of operated on
+** %P   - Location size in number of blocks 
+** %O   - Offset of location in number of blocks
+** %Q   - Blocksize
+** %T   - Device number (assending!)
+** %U0  - First Dump file
+**   1  - Last Dump file
+**   2  - Pathname of dump file
+**   3  - Dump filename
+** %X   - Table name
+**
+**
+** History:
+**      27-Apr-2004 (fanch01)
+**          Based on cktmpl_cpio.ccpp, use cp in lieu of tar or cpio to perform
+**          the ckpdb/rollforwarddb operations.  OCFS requires special binaries
+**          that support O_DIRECT to avoid corruption.  This template creates
+**          a directory for the checkpoint rather than a single tar file in the
+**          checkpoint location.
+**          * requires coreutils package which supports --o_direct flag
+**	08-Jul-2004 (fanch01)
+**	    We will now be distributing "pax" as the Ingres archiver.  pax has
+**	    been enabled for OCFS and checkpoint definitions here have been
+**	    rewritten to take advantage of it.  pax should also allow
+**	    checkpoints to tape again.
+**          * raw location definitions provided for completeness, should not be
+**	      used on Linux/OCFS
+**	02-Feb-2005 (hanje04)
+**	    BUG 113830
+**	    iseek and oseek are not supported options to dd on Linux
+**
+*/
+
+# ifndef HAVE_CKTMPL_OCFS
+/*
+** default "cktmpl_ocfs.def"
+*/
+/*
+** DEFINITIONS FOR PARTIAL BACKUP DMFCPP
+*/
+BSTD:	/bin/echo beginning checkpoint to tape %C of %N locations
+BSDD:	/bin/echo beginning checkpoint to disk %C of %N locations
+ESTD:   /bin/echo ending checkpoint to tape %C of %N locations
+ESDD:   /bin/echo ending checkpoint to disk %C of %N locations
+PSTD:   /bin/echo mount tape %M and press return; read foo;
+WSTD:   cd %D && /usr/bin/test -O $II_SYSTEM/ingres/bin/pax && $II_SYSTEM/ingres/bin/pax -w -M -b 32k -f %C *
+PSDD:   /bin/echo executing checkpoint to disk
+WSDD:   cd %D && /usr/bin/test -O $II_SYSTEM/ingres/bin/pax && $II_SYSTEM/ingres/bin/pax -w -M -b 32k -f %A *
+PSDR:   /bin/echo executing checkpoint to disk
+WSDR:	mkdir -p %A; dd --o_direct if=%E of=%A/%F count=%P bs=%Q
+PSTR:   /bin/echo mount tape %M and press return; read foo;
+WSTR:	exit 1
+BSTT:   /bin/echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   /bin/echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   /bin/echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   /bin/echo PARTIAL: ending checkpoint to disk %C of %N locations
+PSTT:   /bin/echo PARTIAL: mount tape %K and press return; read foo;
+WSTT:   cd %D && /usr/bin/test -O $II_SYSTEM/ingres/bin/pax && $II_SYSTEM/ingres/bin/pax -w -M -b 32k -f %C %B
+PSDT:   /bin/echo executing checkpoint to disk %C of %N locations
+WSDT:   cd %D && /usr/bin/test -O $II_SYSTEM/ingres/bin/pax && $II_SYSTEM/ingres/bin/pax -w -M -b 32k -f %A %B
+
+/*
+** DEFINITIONS FOR PARTIAL RECOVERY DMFRFP
+*/
+BRDD:	/bin/echo beginning restore of disk %C of %N locations
+BRTD:	/bin/echo beginning restore of tape %C of %N locations
+BRDT:   /bin/echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   /bin/echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   /bin/echo beginning restore of journals
+BJTA:   /bin/echo beginning restore of journals
+BUDA:   /bin/echo beginning restore of dumps
+BUTA:   /bin/echo beginning restore of dumps
+PRDD:   /bin/echo executing restore to disk %C of %N locations
+WRDD:   cd %D && /usr/bin/test -O $II_SYSTEM/ingres/bin/pax && $II_SYSTEM/ingres/bin/pax -r -f %A
+PRTD:   /bin/echo mount tape %M and press return; read foo;
+WRTD:   cd %D && /usr/bin/test -O $II_SYSTEM/ingres/bin/pax && $II_SYSTEM/ingres/bin/pax -r -f %C
+PRDT:	/bin/echo restoring table %X in database location %D;
+WRDT:   cd %D && /usr/bin/test -O $II_SYSTEM/ingres/bin/pax && $II_SYSTEM/ingres/bin/pax -r -f %A %B
+PRTT:   /bin/echo mount tape %K and press return; read foo;
+WRTT:   cd %D && /usr/bin/test -O $II_SYSTEM/ingres/bin/pax && $II_SYSTEM/ingres/bin/pax -r -f %C %B
+PRDR:   /bin/echo executing restore to disk %C of %N locations
+WRDR:	dd --o_direct if=%A of=%E count=%P bs=%Q
+PRTR:	/bin/echo mount tape %M and press return; read foo;
+WRTR:	exit 1
+
+WJDA:	/bin/true
+WJTA:	/bin/true
+WUDA:   /bin/true
+WUTA:   /bin/true
+WCDA:   /bin/echo Checking database snapshot for table level recovery
+WCTA:   /bin/echo Checking database snapshot for table level recovery
+WDDD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDTD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDTR:   /bin/true
+WDDT:   /bin/echo deleting table %X in database location %D
+WDTT:   /bin/echo deleting table %X in database location %D
+
+IRDT:   /bin/echo beginning table level recovery
+IRTT:   /bin/echo beginning table level recovery
+
+FRDT:	/bin/echo ending table level recovery
+FRTT:	/bin/echo ending table level recovery
+
+EETE:	/bin/echo done with tape operations
+EEDE:	/bin/echo done with disk operations
+# define HAVE_CKTMPL_OCFS
+#endif   /* OCFS case */

@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The opf_hash_join resource controls whether the DBMS will use hash
+  joining and hash aggregation.  If OFF, the DBMS will fall back on
+  traditional sort and sort-merge based algorithms, which are nearly
+  always slower than hash techniques.
+
+  The default is ON.

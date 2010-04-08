@@ -1,0 +1,889 @@
+/*
+**	GETATTRIB.QSC  -    Attribute collection routine for MQBF
+**
+**	This module is called after all the master and detail
+**	table names are read from the Table Entry Form.	 For
+**	each table in this QDEF, the attribute names are collected
+**	from the attribute relation and saved in the MQBF MQATTRIBS
+**	structure.
+**
+**	written 7/11/83 (NML)
+**
+**	Copyright (c) 2004 Ingres Corporation
+**
+** History:
+**	written 7/11/83 (NML)
+**	30-sep-1986 (sandyd)
+**		Saturn changes.	 Added FEconnect() and FEdisconnect() around
+**		access to the "attribute" relation.  Had to add a new
+**		"loop_status" (-8) if the connect failed.  (TABLES.QC was
+**		updated to recognize that new status.)
+**	30-apr-1987 (daver) Removed <adf.h> from list of includes.
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	7/87 (peterk) changed accesses to "attribute" relation to
+**		calls on FEatt_* routines.  Also, use the FE_REL_INFO
+**		structure to more efficiently call the FEatt_fopen
+**		routine.
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh.  Added call to
+**		IIQFsqj_sqlKeyCheck to check for type of key to use on table.
+**		Added code to set approprate field within ATTRIBINFO structure
+**		for a column to indicate if it is used as part of the key.
+**	19-feb-88 (kenl & marian) 
+**		Integrated bug fixes for 14072, 12969 from 5.0
+**		Make sure att->mdtype is initialized.  This value will
+**		be used in update.qsc to determine when updates
+**		should be performed.
+**	14-apr-1988 (danielt)
+**		added commits after FEatt* routines
+**	22-apr-88 (kenl)
+**		Major modifications to fix a number of JoinDef bugs.
+**	20-jul-88 (kenl)
+**		Bug fix #2191.  Added code to initialize new ATTRIBINFO
+**		field 'mandfld'.  This is set to '1' if underlying column
+**		is NOT NULL NOT DEFAULT.
+**	23-nov-88 (kenl)
+**		Added handling of the global allow_appends.  Changes 
+**		originated from the IBM group (ham).
+**	14-dec-88 (kenl)
+**		Put in quick hack to check unique_rule from iitables.  If this
+**		is not set, key_sequence from iicolumns is not unique.  This
+**		uses RELINFO->keytype to store the value of unique_rule.
+**	01/10/89 (dkh) - Changed to use IIUIcase() which was renamed
+**			 from IIUIdcm_mix() in ui directory.
+**	08/03/89 (dkh) - Updated with interface change to adc_lenchk().
+**	09/27/90 (emerson)
+**		Revisions to mqgetattrib (see its history).
+**	10/08/90 (emerson)
+**		Revisions to mqgetattrib (see its history).
+**     	10/09/90 (emerson)
+**		Revisions to mqgetattrib (see its history).
+**     	10/10/90 (emerson)
+**		Revisions to mqgetattrib (see its history).
+**	10/11/90 (emerson)
+**		Replaced global variable allow_appends and allow_updates
+**		by IIQFnkaNoKeyForAppends and IIQFnkuNoKeyForUpdates
+**		(with opposite sense) because the names are misleading:
+**		we now have other reasons for disallowing appends
+**		(certain joins on logical keys), and we might have
+**		other reasons for disallowing appends or updates
+**		in the future.  Keeping separate flags allows us
+**		to give specific error messages.  (bug 8593).
+**	09-sep-95 (sarjo01) Bug 70780
+**		Changed test for mandatory column.
+**	02-jul-1997 (nanpr01)
+**		A master detail join with long varchar in table causes
+**		segv.
+**      13-oct-2008 (stial01)
+**              Limited support for object_key/table_key exported as byte
+**      06-feb-2009 (stial01)
+**              Use DB_MAXNAME for database objects
+*/
+
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ui.h>
+# include	<ug.h>
+## include	"mqbf.qsh"
+# include	<me.h>
+# include	<st.h>
+# include	<er.h>
+# include	<afe.h>
+# include 	"erqf.h"
+
+/*	Forward/external declarations */
+
+FUNC_EXTERN	STATUS	FEatt_fopen();
+FUNC_EXTERN	STATUS	FEatt_fetch();
+FUNC_EXTERN	STATUS	FEatt_close();
+FUNC_EXTERN	VOID	IIQFmauMarkAllUnjoined();
+FUNC_EXTERN	bool	IIQFmjMarkJoined();
+FUNC_EXTERN	bool	IIQFfjaFixJoinedAttributes();
+
+/* Routine to determine what keys to use (primary, TID, alternate, or row) */
+FUNC_EXTERN	i4	IIQFsqj_sqlKeyCheck();
+
+/*
+** Routine to make formfield names unique -- 
+** no longer static, since mq_resetatt needs to use it when it deletes a
+** join attribute
+*/
+FUNC_EXTERN	VOID    unique_it();	
+
+static		i4	unique_num = 0;
+
+/*{
+** Name:	mqgetattrib
+**
+** History:
+**	30-sep-1986 (sandyd)
+**		Saturn changes.	 Added FEconnect() and FEdisconnect() around
+**		access to the "attribute" relation.  Had to add a new
+**		"loop_status" (-8) if the connect failed.  (TABLES.QC was
+**		updated to recognize that new status.)
+**	7/87 (peterk) changed accesses to "attribute" relation to
+**		calls on FEatt_* routines.  Also, use the FE_REL_INFO
+**		structure to more efficiently call the FEatt_fopen
+**		routine.
+**	14-apr-1988 (danielt)
+**		added commits after FEatt* routines
+**	14-dec-88 (kenl)
+**		Put in quick hack to check unique_rule from iitables.  If this
+**		is not set, key_sequence from iicolumns is not unique.  This
+**		uses RELINFO->keytype to store the value of unique_rule.
+**	09/27/90 (emerson)
+**		Set lkeyinfo in ATTRIBINFO to indicate whether 
+**		column is a logical key, and, if so, whether it's
+**		system-maintained or user-maintained (bug 8593).
+**	10/08/90 (emerson)
+**		Don't include a pair of columns in the default joindef
+**		if they would produce fatal errors E_QF0166 thru E_QF0169
+**		(which are new errors having to do with logical keys)
+**		or E_QF0058 in joins.qsc.  This implies that this
+**		routine need no longer check for error E_QF0148
+**		(which was basically the same as E_QF0058). 
+**		(bug 33914).
+**     	10/09/90 (emerson)
+**		Revisions for logical keys (bug 8593) and for bug 33795.
+**		Restructured to use new functions IIQFmauMarkAllUnjoined,
+**		IIQFmjMarkJoined, and IIQFfjaFixJoinedAttributes.
+**		There is no longer any need for the join_log.
+**	30-jul-1993 (rdrane)
+**		Do NOT include unsupported datatypes in target lists!
+**		This corrects b51411.  Set mqappendok appropriately so that
+**		later APPEND and UPDATE attempts are disallowed as required.
+**		Warn about the unsupported datatype columns here since they
+**		won't be present when we get to mq_makefrm().
+**		Bail out if all tables contain all unsupported datatypes.
+**		Change all instances of IIUGerr()m to use #define for
+**		error severity.
+**	18-nov-1993 (rdrane)
+**		Believe it or not, this routine gets called in such a way
+**		that it never goes through the table validation loop (relstart
+**		is passed equal to qdef->mqnumtabs, which implies that no new
+**		tables were added and so implies that there are no new
+**		attributes to check ...).  In these instances, the addition of
+**		the check for all unsupported datatypes confused the return
+**		status.
+**	31-dec-1993 (rdrane)
+**		Check dlm_Case capability directly to determine if delimited
+**		identifiers are suppported.
+**      09-sep-95 (sarjo01) Bug 70780
+**              Changed test for mandatory column.
+**       5-May-2009 (hanal04) Bug 122014
+**              Save the attribute's column_sequence for later use.
+*/
+mqgetattrib(qdef, relstart, make_joins, goto_joins)
+MQQDEF		*qdef;
+i4		relstart;
+bool		make_joins;
+bool		goto_joins;	/* is final destin. Join Definition Screen? */
+{
+	i2	type;
+	i4	i, j, k, x;
+	RELINFO		*rel;
+	ATTRIBINFO	*attj, *attk;
+	i4		loop_status = OK;
+	i4		saveatts, savejoins;
+	FE_ATT_QBLK	aqblk;
+	FE_ATT_INFO	attinfo;
+	STATUS		rstat;
+	char		tbl_keys[MQ_MAXCOLS][DB_MAXNAME + 1];
+	DB_DATA_VALUE   *dbv[2];
+	DB_DATA_VALUE   sdbv;
+	i4		frmt[2];
+	i4		ext_length[2];
+	i4		table_start;
+	i4		kfound;
+	FE_REL_INFO	relinfo;
+	i4		result_numatts;
+
+	savejoins = qdef->mqnumjoins;
+	j = saveatts = qdef->mqnumatts;
+
+	qdef->mqappendok = TRUE;
+	result_numatts = 0;
+
+	for (i = relstart; i < qdef->mqnumtabs; i++)
+	{
+		table_start = j;
+
+		/* start off assuming that no keys were found for table */
+		kfound = 0;
+
+		rel = qdef->mqtabs[i];
+		type = rel->mqtype;
+		/* Create an FE_REL_INFO structure to get attributes */
+		_VOID_ STcopy(rel->mqrelid, relinfo.name);
+		_VOID_ STcopy(rel->mqrelown, relinfo.owner);
+
+		if ((rstat = FEatt_fopen(&aqblk, &relinfo)) == OK)
+		{
+		    while (FEatt_fetch(&aqblk, &attinfo) == OK)
+		    {
+			/* process each attribute for the ith relation */
+			if (j >= MQ_MAXATTS)
+			{
+				char	maxattstr[20];
+				CVna((i4)(MQ_MAXATTS), maxattstr);
+				FDerror(ATT_OVERFLOW, 1, maxattstr);
+				loop_status = (-5);
+				break;
+			}
+
+			if ((qdef->mqatts[j] = (ATTRIBINFO *)MEreqmem((u_i4)0,
+			    (u_i4)sizeof(ATTRIBINFO),
+			    TRUE, (STATUS *)NULL)) == NULL)
+			{
+			    FDerror(ERRALLOC, 0, ERx(""));
+			    loop_status = (-7);
+			    break;
+			}
+			else
+			{
+			    attj = qdef->mqatts[j];
+
+			    STcopy(rel->mqrangevar, attj->rvar);
+			    STcopy(attinfo.column_name, attj->col);
+                            attj->colseq = attinfo.seq;
+			    /* 
+			    ** Don't just copy the column name to be the
+			    ** formfield name, since cols can be delim ids and
+			    ** contain spaces (among other things). 
+			    ** IIUGfnFeName() will copy only those legal chars 
+			    ** over to make up the formfield name; however,
+			    ** this may cause name collisions, as columns 
+			    ** "a bc" "ab c" and "abc" will all map to 
+			    ** formfield name abc. We need to check all other 
+			    ** formfields (for this table) for collisions,
+			    ** and possibly create a unique formfield name.
+			    */
+			    IIUGfnFeName(attinfo.column_name, attj->formfield);
+			    CVlower(attj->formfield);
+
+			    /*
+			    ** Pre 6.5, this check existed probably to ensure
+			    ** that column names differing only by case were
+			    ** flagged with an error
+			    */
+			    for (k = table_start; k < j; k++)
+			    {
+				/* 
+				** Check each attribute in this table for
+				** formfield uniqueness... if we find a
+				** duplicate, disambiguate the current one 
+				*/
+			        attk = qdef->mqatts[k];
+				if (STcompare(attk->formfield,
+					attj->formfield) == 0)
+				{
+			    	    if (IIUIdlmcase() != UI_UNDEFCASE)
+				    {
+					unique_it(qdef, attj->formfield, 
+							j, table_start);
+				    }
+				    /* 
+				    ** else do what we did in previous
+				    ** versions, issue an error!
+				    */
+				    else
+				    {
+				        loop_status = -12;
+			                IIUGerr(E_QF0150_duplicate_formfield,
+						UG_ERR_ERROR,
+					    2, attk->formfield, rel->mqrelid);
+				        break;
+				    }
+				}
+			    }
+
+			    if (loop_status != OK)
+				break;
+
+			    /*
+			    ** Set lkeyinfo to indicate whether column
+			    ** is a logical key, and, if so, whether it's
+			    ** system-maintained or user-maintained.
+			    ** (bug 8593).
+			    */
+			    attj->lkeyinfo = 0;
+			    if (STequal(attinfo.column_internal_datatype,
+				ERx("OBJECT_KEY")))
+			    {
+				attj->lkeyinfo = mqOBJECT_KEY;
+			    }
+			    if (STequal(attinfo.column_internal_datatype,
+				ERx("TABLE_KEY")))
+			    {
+				attj->lkeyinfo = mqTABLE_KEY;
+			    }
+			    if (attj->lkeyinfo != 0 &&
+				STequal(attinfo.column_system_maintained,
+				    ERx("Y")))
+			    {
+				attj->lkeyinfo |= mqSYSTEM_MAINT;
+			    }
+
+			    /* Bug fix #2191
+			    ** Set mandfld to 1 if underlying column is
+			    ** defined as NOT NULL NOT DEFAULT.
+			    **
+			    ** The first case is for pre-6.5; for 6.5 and later,
+			    ** this is determined by the column_has_default
+			    ** field in iicolumns (attinfo.column_has_default)
+			    */
+			    if (STcompare( IIUIscl_StdCatLevel(),
+							UI_LEVEL_65) < 0)
+			    {
+			    	if (!attinfo.nulls && !attinfo.defaults)
+				{
+					attj->mandfld = 1;
+				}
+			    	else
+				{
+					attj->mandfld = 0;
+				}
+			    }
+                            else /* 6.5 or later, check new column */
+                            {
+                                if (attinfo.column_has_default[0] != 'Y' &&
+				    attinfo.nulls == 0)
+                                {
+                                        attj->mandfld = 1;
+                                }
+                                else
+                                {
+                                        attj->mandfld = 0;
+                                }
+                            }
+ 
+			    attj->ttype = type;
+
+			    /* bug 14072, 12969
+			    ** initialize mdtype
+			    */
+			    attj->mdtype = type;
+
+			    /*
+			    ** Start by allowing updates to everything
+			    ** but logical keys.
+			    */
+			    if (attj->lkeyinfo == 0)
+			    {
+				attj->opupdate = 1;
+			    }
+			    else
+			    {
+				attj->opupdate = 0;
+			    }
+
+			    FEatt_dbdata(&attinfo, &attj->dbv);
+			    /*
+			    ** Skip unsupported datatypes!
+			    ** (b51411)
+			    */
+			    if (!IIAFfedatatype(&attj->dbv) && !attj->lkeyinfo)
+			    {
+				/* 
+				** Issue a warning here ...
+				*/
+				IIUGerr(E_QF0176_Not_supported_type,
+					UG_ERR_ERROR,2,attj->rvar,attj->col);
+				/*
+				** If the column is NOT NULL and doesn't
+				** have a default, then we can't APPEND
+				** because it won't show up on the form
+				** and the DB will complain that we're not
+				** providing a value!
+				*/
+				if  ((!attinfo.nulls) && (!attinfo.defaults))
+				{
+					qdef->mqappendok = FALSE;
+				}
+				_VOID_ MEfree(qdef->mqatts[j]);
+				qdef->mqatts[j] = NULL;
+				continue;
+			    }
+			    result_numatts++;
+			    attj->rdbv = NULL;
+			    attj->jpart = -1;	/* non-join initially */
+			    attj->join_att = attj;
+
+			    if ((attinfo.keyseq != 0) && (rel->keytype != 0))
+			    {
+				kfound++;
+				attj->keyinfo = mqISKEY;
+			    }
+			    else
+			    {
+			    	attj->keyinfo = mqISNOTKEY;
+			    }
+
+			    if (qdef_type)
+			    {
+				attj->intbl = tblfield? 1: 0;
+			    }
+			    else
+			    {
+				attj->intbl = tblfield && type? 1: 0;
+			    }
+
+			}    /* end of "allocate ATTRIBINFO struct" */
+			j++;
+		    }    /* end of "while we continue to fetch attributes" */
+		    _VOID_ FEatt_close(&aqblk);
+
+		    /* See if a key was located as we loaded up columns */
+		    if (kfound > 0)
+		    {
+			rel->keytype = kfound;
+		    }
+		    else
+		    {
+			/* no key found - check alternates, TID, dups */
+			rel->keytype = IIQFsqj_sqlKeyCheck(rel->mqrelid,
+				rel->mqrelown, tbl_keys);
+
+			/*
+			**  If rel->keytype > 0 then keytype indicates
+			**  how many columns were found to be key
+			**  columns.  If keytype is not greater than
+			**  zero then the whole row is used (already
+			**  taken care of above) or a TID will be used.
+			**  (Or there was an error on finding the key.)
+			*/
+			if (rel->keytype > 0)
+			{
+			    /* check all keys that were located */
+			    for (k = 0; k < rel->keytype; k++)
+			    {
+			        for (x = table_start; x < j; x++)
+			    	{
+				    attj = qdef->mqatts[x];
+				    if (STcompare(attj->col, tbl_keys[k])
+						== 0)
+				    {
+				    	attj->keyinfo = mqISKEY;
+				    	break;
+				    }
+				}
+			    }
+			}
+			else if (rel->keytype == mqUSEROW)
+			{
+			    for (x = table_start; x < j; x++)
+			    {
+				attj = qdef->mqatts[x];
+				attj->keyinfo = mqISKEY;
+			    }
+			}
+		    }
+
+		    /* DO NOT allow updates if no suitable key was found */
+		    if (rel->keytype == mqNOUPDATE)
+		    {
+			IIQFnkuNoKeyForUpdates = TRUE;
+		    }
+		    else if (rel->keytype == mqNOAPPEND)
+		    {
+			IIQFnkuNoKeyForUpdates = TRUE;
+			IIQFnkaNoKeyForAppends = TRUE;
+		    }
+		}    /* end of "FEatt_fopen on relinfo successful" */
+	}    /* end of "process all new tables" */
+	
+	if  ((result_numatts == 0) && (relstart < qdef->mqnumtabs))
+	{
+		/* 
+		** All columns of all tables are of
+		** unsupported datatypes - can't do anything!
+		** Set FAIL so we won't try and create the
+		** form upon return!  Note that we don't get in here
+		** unless we went through the new table loop above.
+		*/
+		IIUGerr(E_QF0179_AllUnDataType,UG_ERR_ERROR,0);
+		return(FAIL);
+	}
+
+	if (loop_status == OK)
+	{
+	    qdef->mqnumatts = j;
+
+	    if (make_joins)
+	    {
+		bool	formfield_name_generated;
+		bool	compatible_pair;
+
+		IIQFmauMarkAllUnjoined(qdef, TRUE);
+		for (i = 0; (i < qdef->mqnumatts) && (loop_status == OK); i++)
+		{
+		    attj = qdef->mqatts[i];
+		    type = attj->ttype;
+
+		    formfield_name_generated = FALSE;
+		    for (k = 0; k < i; k++)
+		    {
+			/*
+			**  Look for join fields; i.e. pairs of fields:
+			**  (1) whose column names match 
+			**  (2) which will pass the edits 
+			**	for the "logical key" errors
+			**      (errors E_QF0166 thru 169; see joins.qsc)
+			**  (3) which are of compatible type 
+			**	(won't get error E_QF0058)
+			*/
+			attk = qdef->mqatts[k];
+
+			if ((STcompare(attj->col, attk->col)) != 0)
+			{
+			    continue;
+			}
+
+			/* 
+			** At this point, the column names are the same. We
+			** figure they might be compatible join candidates,
+			** but assume they're not until they go thru the
+			** block, below -- if they pass those tests, they're
+			** compatible!
+			*/
+
+			compatible_pair = FALSE;
+
+			/*
+			** The columns are compatible iff:
+			** 	+ they are both keys
+			**	+ they are not logical keys
+			**	+ they are of the same datatype
+			**
+			** This WAS a "for (;;)" loop, with comments 
+			** it's "just a block -- not a true loop". For 
+			** readability, the code breaks out of a loop 
+			** rather than constructing monstrous, if-then-else
+			** code. The wonderful ACC compiler didn't like it, 
+			** so we use a do-while (1==0) loop instead.
+			*/
+			do
+			{
+			    i4		lkeyinfo[2];
+			    ADI_FI_ID	dummy = 0;
+
+			    lkeyinfo[0] = attk->lkeyinfo;
+			    lkeyinfo[1] = attj->lkeyinfo;
+			    if ( (lkeyinfo[0] & (mqOBJECT_KEY | mqTABLE_KEY)) !=
+				 (lkeyinfo[1] & (mqOBJECT_KEY | mqTABLE_KEY)) )
+			    {
+				break;
+			    }
+			    if ( (lkeyinfo[0] & mqSYSTEM_MAINT) &&
+				 (lkeyinfo[1] & mqSYSTEM_MAINT) )
+			    {
+				break;
+			    }
+			    if ( (lkeyinfo[0] & mqSYSTEM_MAINT) &&
+				 (attj->ttype == 0) && (attk->ttype == 1) )
+			    {
+				break;
+			    }
+			    if ( (lkeyinfo[1] & mqSYSTEM_MAINT) &&
+				 (attk->ttype == 0) && (attj->ttype == 1) )
+			    {
+				break;
+			    }
+
+			    dbv[0] = &attk->dbv;
+			    dbv[1] = &attj->dbv;
+			    frmt[0] = dbv[0]->db_datatype;
+			    frmt[1] = dbv[1]->db_datatype;
+
+			    if ((adi_ficoerce(FEadfcb(), frmt[0],
+				frmt[1], &dummy) != OK) ||
+				(adi_ficoerce(FEadfcb(), frmt[1],
+				frmt[0], &dummy) != OK))
+			    {
+				break;
+			    }
+			    compatible_pair = TRUE;
+
+			/*
+			** only execute this code, above ONCE -- 
+			** its a block, not a loop 
+			*/
+			} while (1 == 0); 
+
+			/*
+			**  If we found a pair of attributes
+			**  that can't be joined, we must ensure that
+			**  they have different formfield values.
+			**  If they have the same column name,
+			**  it's possible that they have the same formfield
+			**  (because formfield defaults to column name).
+			**  If so, we'll find a unique formfield value
+			**  for the later attribute (attj).
+			*/
+			if (!compatible_pair)
+			{
+			    char    *p = attj->formfield;
+			    char    *q;
+			    i4      l;
+
+			    if (formfield_name_generated)
+			    {
+				continue;
+			    }
+
+			    /* NEED TO come back to this, too!
+			    ** does it work:
+			    ** Pass 0 for table start, since we'll want
+			    ** to make sure that we check all possible
+			    ** formfields.
+			    */
+			    unique_it(qdef, attj->formfield, i, 0);
+
+
+			    /*
+			    ** I'm not sure we want to do this code
+			    ** fragment anymore. We DON'T want to use
+			    ** the STcopy(attj->col, p) since this will 
+			    ** screw things up if col is a delim id. 
+			    ** ME thinks unique_it should be employed here!@
+			    **
+			    STcopy(attj->col, p);
+			    do that FEfnname thang here,
+
+			    q = p + STlength(p);
+			    do
+			    {
+				STprintf(q, ERx("%d"), uniquenum++);
+				for (l = 0; l < qdef->mqnumatts; l++)
+				{
+				    if (l == i) continue;
+				    if ((STcompare(p,
+					qdef->mqatts[l]->formfield)) == 0)
+				    {
+					break;
+				    }
+				}
+			    }	while (l < qdef->mqnumatts);
+			    */
+
+			    formfield_name_generated = TRUE;
+			    continue;
+			}
+
+			/*
+			**  Found matching pair of columns.
+			*/
+			{
+			    i2	t1;
+			    char jtype[3];
+
+			    /*
+			    **  Mark the pair as joined.
+			    **  If already marked, resume search
+			    **  for matching attribute 
+			    */
+			    if (!IIQFmjMarkJoined(attk, attj))
+			    {
+				continue;
+			    }
+
+			    /*
+			    **  Add join to join table.
+			    **  The possible return codes are:
+			    **  -6: too many joins.
+			    **  -7: storage allocation failed.
+			    */
+			    if ((loop_status = mqaddjoin(qdef, k, i)) != OK)
+			    {
+				char	maxjoinstr[20];
+				CVna((i4)(MQ_MAXJOINS), maxjoinstr);
+				FDerror(JOIN_OVERFLOW, 1, maxjoinstr);
+				break;
+			    }
+			    t1 = attk->ttype;
+
+			    jtype[0] = t1 == 0? 'M': 'D';
+			    jtype[1] = type == 0? 'M': 'D';
+			    jtype[2] = EOS;
+
+			    for (x = 0; x < 2; x++)
+			    {
+				if (adc_lenchk(FEadfcb(), FALSE, dbv[x],
+					&sdbv) != OK)
+				{
+				    FEafeerr(FEadfcb());
+				    loop_status = -9;
+				    break;
+				}
+				ext_length[x] = sdbv.db_length;
+			    }
+
+			    if ((abs(frmt[0])) != (abs(frmt[1])))
+			    {
+				IIUGerr(E_QF0144_Mixed_Datatype_Join,
+				    UG_ERR_ERROR,
+				    4, attk->rvar, attk->col, 
+				    attj->rvar, attj->col);
+			    }
+	    
+			    if ((AFE_NULLABLE_MACRO(frmt[0])) !=
+				    (AFE_NULLABLE_MACRO(frmt[1])))
+			    {
+				IIUGerr(E_QF0145_Mixed_Nullable_Join,
+				    UG_ERR_ERROR,
+				    4, attk->rvar, attk->col, 
+				    attj->rvar, attj->col);
+			    }
+
+			    if (ext_length[0] != ext_length[1])
+			    {
+				IIUGerr(E_QF0146_Mixed_Length_Join,
+				    UG_ERR_ERROR,
+				    4, attk->rvar, attk->col, 
+				    attj->rvar, attj->col);
+			    }
+
+			    STcopy( jtype, 
+				    qdef->mqjoins[qdef->mqnumjoins++]->jcode);
+
+			}   /* end of "we found a join" */
+		    }   /* end of "for each 'second' attribute" */
+		}   /* end of "for each 'first' attribute" */
+
+		/*
+		**  If no error has been detected yet,
+		**  fix attributes in joined columns.
+		**  If an error is detected during that process,
+		**  arrange to return -10, which appears to be appropriate
+		**  for any incompatibility between joined columns.
+		*/
+		if (loop_status == OK &&
+			!IIQFfjaFixJoinedAttributes(qdef, TRUE))
+		{
+			loop_status = -10;
+		}
+
+		/*
+		**  If an error has been detected,
+		**  back the joins out of the attributes.
+		**
+		**  Exception:  if the error was simply that there
+		**  was an incompatibility between a pair of joined columns,
+		**  *and* we're on our way to the Join screen,
+		**  then we let the joins stand.  (The Join screen is where
+		**  the user gets the opportunity to correct such errors).
+		*/
+		if (loop_status != OK && (loop_status != -10 || !goto_joins))
+		{
+		    IIQFmauMarkAllUnjoined(qdef, TRUE);
+		}
+	    }   /* end of "if (make_joins)" */
+	}   /* end of "if (loop_status == OK)" */
+
+	if (loop_status != OK && (loop_status != -10 || !goto_joins))
+	{
+		JOININFO	**joinptr;
+		ATTRIBINFO	**attptr;
+		i4		newjoin, newatt;
+
+		joinptr = qdef->mqjoins;
+		attptr = qdef->mqatts;
+		if (loop_status != -6)	/* error was not "too many joins" */
+		{
+			for (newatt = saveatts; newatt < MQ_MAXATTS; newatt++)
+			{
+				if (*attptr != NULL)
+					MEfree(*attptr);
+				*attptr++ = NULL;
+			}
+
+			/*
+			** stmt below inserted 10/14/90 (emerson)
+			** (surely we should be restoring mqnumatts,
+			** just as we restore mqnumjoins)
+			*/
+			qdef->mqnumatts = saveatts;
+		}
+		for (newjoin = savejoins; newjoin < MQ_MAXJOINS; newjoin++)
+		{
+			if (*joinptr != NULL)
+				MEfree(*joinptr);
+			*joinptr++ = NULL;
+		}
+		qdef->mqnumjoins = savejoins;
+		return(loop_status);
+	}
+
+# ifdef DEBUG
+	if (mq_debug)
+		SIfprintf(mqoutf, ERx("Join Definition had %d joins"), *numjoins);
+# endif
+
+	return(loop_status);
+}
+
+/*
+** We have found that the latest attribute's formfield name is already taken;
+This routine must find a suitable formfield name which is not already in the
+qdef. since we know its not unique, we'll first tack on a number at the end
+of the name, and figure that will make it unique. but we'll have to check
+first, starting with either be the start of the current table, or 0 (start of
+all the attributes); we then check the name of each formfield -- if there's
+yet another collision, use an incremented number and try again.
+name. 
+*/
+VOID
+unique_it(qdef, formfield, our_num, start)
+MQQDEF	*qdef;
+char	*formfield;
+i4	our_num;
+i4	start;
+{
+	i4	len, cur_att;
+	char	*numplace;
+
+	len = STlength(formfield);
+
+	/*
+	** lets account for 100 duplicate form field names, and if they're 
+	** 32 chars wide, we'll need to tack on the unique number and the
+	** 29th character position, so we don't blow away the FE_MAXNAME limit
+	** (this is a real degenerate case)
+	*/
+	if (len > (FE_MAXNAME - 3))
+		len  = FE_MAXNAME -3 ;
+
+	numplace = formfield + len;
+
+	/* 
+	** it looks like this:
+	** 		formfield_name0
+	** numplace goes here -----------^
+	** once we change it, check thru all the attributes so far and make sure
+	** it hasn't been taken already
+	** if it *is* taken, the break from the for loop will cause us to
+	** replace the number with an incremented one, and enter the for loop
+	** again and re-check all the attributes
+	*/
+	do
+	{
+	    STprintf(numplace, ERx("%d"), unique_num++);
+	    for (cur_att = start; cur_att < qdef->mqnumatts; cur_att++)
+	    {
+		if (cur_att == our_num) 
+		{
+			continue;
+		}
+		if ((STcompare(formfield, 
+				qdef->mqatts[cur_att]->formfield)) == 0)
+		{
+		    break;
+		}
+	    }
+	} while (cur_att < qdef->mqnumatts);
+}

@@ -1,0 +1,317 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+**  Frame:         queries
+**  Form:          queries
+**  Description:   Run queries against select audit log
+**
+**  Source File:   queries.osq
+**  Frame Type:    Menu
+**  Template File: ntmenu.tf, Version: 1.4
+*/
+INITIALIZE =
+DECLARE
+							/*# BEGIN LocalVars */
+    /* Local Variables created by developer of frame */
+    cmd = varchar(1024) NOT NULL ,	/*  */
+    loaded_data = integer NOT NULL ,	/* Number of rows in loaded data */
+    qual = varchar(1024) NOT NULL ,	/* Qualification for query */
+    tbl_name_owner = varchar(65) NOT NULL ,	/* tableowner.tablename */
+							  /*# END LocalVars */
+						       /*# BEGIN LocalProcs */
+    /* Local Procedures created by developer of frame */
+    destroy_data = PROCEDURE RETURNING integer ,	/* Removes temporary table */
+    load_data = PROCEDURE RETURNING integer ,	/* Loads data into temporary table */
+							 /*# END LocalProcs */
+
+    /* working variables needed by generated code */
+    IIobjname   = CHAR(32) NOT NULL,    /* Holds an object name */
+    IIchoice    = VARCHAR(80),          /* Menu item chosen */
+    IIfound     = INTEGER(4),           /* Was the chosen Menu item found */
+    IIint       = INTEGER(4)            /* General purpose integer */
+
+BEGIN
+    IIretval = 1;       /* Success. This built-in global is used for
+                        ** communication between frames.
+                        */
+    SET_FORMS FRS (TIMEOUT = 0);
+    SET_FORMS FRS (VALIDATE(NEXTFIELD) = 1, VALIDATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(NEXTFIELD) = 1, ACTIVATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(MENUITEM) = 1,  ACTIVATE(KEYS) = 1,
+        GETMESSAGES = 0);
+
+    INITTABLE iitf READ;
+    LOADTABLE iitf ( command = 'Set Filter', 
+      explanation = 'Set Filter for Audit Records'); 
+    LOADTABLE iitf ( command = 'View Records', 
+      explanation = 'View selected audit records'); 
+    LOADTABLE iitf ( command = 'Extract', 
+      explanation = 'Extract audit records to file'); 
+    LOADTABLE iitf ( command = 'QBF Query', 
+      explanation = 'View audit log via QBF'); 
+    SCROLL iitf TO 1;
+						       /*# BEGIN Form-Start */
+    qual='audittime>=date(''now'')-''2 days''';
+    tbl_name_owner=trim(table_owner)+'.'+trim(table_name);
+    startdate=date('now')-'2 days';
+							;/*# END Form-Start */
+END
+
+
+'Select' (VALIDATE = 1, ACTIVATE = 1,
+         EXPLANATION = 'Select a command'),
+         KEY FRSKEY4 (VALIDATE = 1, ACTIVATE = 1) =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF (IIint != 1 OR IIobjname != 'iitf') THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'You can only "Select" when your cursor is in the' +
+                ' table field with the commands.'
+        WITH STYLE = POPUP;
+        RESUME;
+    ENDIF;
+    
+    INQUIRE_FORMS TABLE '' (IIint = DATAROWS(iitf));
+    IF (IIint = 0) THEN
+        RESUME;        /* No commands in tablefield */
+    ENDIF;
+
+    IIfound = 0;
+    IIchoice = iitf[].command;
+    IF IIchoice = 'Set Filter' THEN
+					   /*# BEGIN Menu-Start\Set\_Filter */
+        if startdate=''
+        then
+                startdate=date('now')-'2 days';
+        endif;
+					    ;/*# END Menu-Start\Set\_Filter */
+						 /*# BEGIN Call\Set\_Filter */
+        CALLFRAME setfilter ( username=byref(username); startdate=
+          byref(startdate); enddate=byref(enddate); database=
+          byref(database); aud_status=byref(aud_status); eventtype=
+          byref(eventtype); eventaction=byref(eventaction); objectname=
+          byref(objectname) ); 
+						   /*# END Call\Set\_Filter */
+        IIfound = 1;
+					     /*# BEGIN Menu-End\Set\_Filter */
+        /*
+        ** Rebuild qualification
+        */
+        qual='1=1';
+        if username!=''
+        then
+                qual=qual+'and  user_name='''+username+'''';
+        endif;
+        if startdate!=''
+        then
+                qual=qual+' and audittime>='''+varchar(startdate)+'''';
+        endif;
+        if enddate!=''
+        then
+                qual=qual+' and audittime<='''+varchar(enddate)+'''';
+        endif;
+        if database!=''
+        then
+                qual=qual+' and database='''+database+'''';
+        endif;
+        if objectname!=''
+        then
+                qual=qual+' and objectname='''+objectname+'''';
+        endif;
+        if eventtype!=''
+        then
+                qual=qual+' and objecttype='''+eventtype+'''';
+        endif;
+        if eventaction!=''
+        then
+                qual=qual+' and auditevent='''+eventaction+'''';
+        endif;
+        if aud_status!=''
+        then
+                qual=qual+' and auditstatus='''+aud_status+'''';
+        endif;
+        callproc destroy_data();
+					      ;/*# END Menu-End\Set\_Filter */
+    ELSEIF IIchoice = 'View Records' THEN
+					 /*# BEGIN Menu-Start\View\_Records */
+        if loaded_data=0
+        then
+                if load_data() !=1
+                then
+                    resume;
+                endif;
+        endif;
+        if loaded_data>1000
+        then
+             message 'Too many records were extracted to View.'+
+                     ' Please use SetFilter to limit the number of records returned'+
+                     ' or use the Extract options to save the current records to'+
+                     ' a file for further processing.'
+             with style=popup;
+             resume;
+        endif;
+					  ;/*# END Menu-Start\View\_Records */
+					       /*# BEGIN Call\View\_Records */
+        CALLFRAME viewrecords ( viewrecords.audit_records=
+          select * from session.audit_records ); 
+						 /*# END Call\View\_Records */
+        IIfound = 1;
+    ELSEIF IIchoice = 'Extract' THEN
+					       /*# BEGIN Menu-Start\Extract */
+        if loaded_data=0
+        then
+                if load_data() !=1
+                then
+                        resume;
+                endif;
+        endif;
+        if loaded_data=0
+        then
+                message 'No records to extract'
+                with style=popup;
+        endif;
+						;/*# END Menu-Start\Extract */
+						     /*# BEGIN Call\Extract */
+        CALLFRAME extract ( ); 
+						       /*# END Call\Extract */
+        IIfound = 1;
+    ELSEIF IIchoice = 'QBF Query' THEN
+						  /*# BEGIN Call\QBF\_Query */
+        CALLPROC view_via_qbf ( table_name=table_name ); 
+						    /*# END Call\QBF\_Query */
+        IIfound = 1;
+    ENDIF;
+
+    IF (IIfound = 0) THEN
+        IF (IIfound = 0) THEN
+            MESSAGE '"' + IIchoice + '" is an unrecognized command.'
+            WITH STYLE = POPUP;
+	ENDIF;
+    ENDIF;
+
+    IF ((IIretval = 2) AND
+        (ii_frame_name('current') <> ii_frame_name('entry'))) THEN
+        /* Return to top (this is not the start frame) */
+         RETURN ;
+    ELSE
+        IIretval = 1;   /* restore default value */
+    ENDIF;
+END
+
+KEY FRSKEY7 (EXPLANATION = 'Search table field for a specified value') =
+BEGIN
+    IIint = CALLPROC find_record();
+END
+
+KEY FRSKEY5 (EXPLANATION = 'Scroll to top of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field'
+              + ' before selecting "Top".'
+              WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO 1;
+    ENDIF;
+END
+
+KEY FRSKEY6 (EXPLANATION = 'Scroll to bottom of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field before'
+          + ' selecting "Bottom".'
+          WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO END;
+    ENDIF;
+END
+
+'Help' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Display help for this frame'),
+        KEY FRSKEY1 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    HELPFILE 'Run queries against select audit log'
+    	'';
+END
+
+'TopFrame' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Return to top frame in application'),
+        KEY FRSKEY17 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    IIretval = 2;       /* return to top frame */
+							 /*# BEGIN Form-End */
+    callproc destroy_data();
+							  ;/*# END Form-End */
+    RETURN  ;
+END
+
+'End' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Return to previous frame'),
+        KEY FRSKEY3 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+							 /*# BEGIN Form-End */
+    callproc destroy_data();
+							  ;/*# END Form-End */
+    RETURN  ;
+END
+
+						       /*# BEGIN LocalProcs */
+PROCEDURE destroy_data() =
+BEGIN
+        if loaded_data>0
+        then
+                drop session.audit_records;
+                commit;
+                loaded_data=0;
+                set_forms field '' (invisible(extracted_rows)=1);
+        endif;
+        return 1;
+END;
+
+PROCEDURE load_data() =
+DECLARE
+        nrows=integer not null;
+        errno=integer not null;
+        status=integer not null;
+BEGIN
+        status=1;
+        status=callproc destroy_data();
+        if status!=1
+        then
+                message 'Error removing previous data'
+                with style=popup;
+                return status;
+        endif;
+        cmd=' declare global temporary table session.audit_records' +
+             ' as select * from '+tbl_name_owner+
+             ' where '+qual +
+             ' on commit preserve rows with norecovery';
+        message 'Finding selected audit records...';
+        execute immediate :cmd;
+        inquire_sql (errno=errorno, nrows=rowcount);
+        if errno=100
+        then
+                callproc beep();
+                message 'No records found'
+                with style=popup;
+                drop session.audit_records;
+                status=0;
+        elseif errno!=0
+        then
+                callproc beep();
+                message 'Error loading audit records'
+                with style=popup;
+                status=0;
+        else
+                loaded_data=nrows;
+                set_forms field '' (invisible(extracted_rows)=0);
+                extracted_rows=loaded_data;
+        endif;
+        commit;
+        return status;
+END
+							 /*# END LocalProcs */

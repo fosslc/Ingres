@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ Clients and servers present authorization certificates to the Name Server
+ for authentication.  The expiration time-out value limits the window in which 
+ an authorization certificate is valid.  The expiration window limits the 
+ time in which a certificate may be copied and attempted to be re-used by an 
+ unauthorized user.
+
+

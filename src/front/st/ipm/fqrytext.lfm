@@ -1,0 +1,8 @@
+COPYFORM:	6.4	1992_06_02 07:35:53 GMT  
+FORM:	fqrytext	display long queries	
+	78	18	0	0	1	0	2	9	0	0	0	0	0	128	0	1
+FIELD:
+	0	querytext	21	1218	0	1216	16	76	1	1	76	0	0		0	0	0	0	512	0	0		cf1216.76			0	0
+TRIM:
+	0	0	18:78:0	1	0	0	0
+	1	0	Query Text	2048	0	0	0

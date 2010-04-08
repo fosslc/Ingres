@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The audit_mechanism is the mechanism used for the auditing destination.
+
+ The INGRES mechanism will write to audit files in the Ingres files
+ subdirectory ($II_SYSTEM/ingres/files), using regular filesystem writes.
+
+ The OS mechanism uses OS audit trail features, if they exist.
+ The OS mechanism is normally only valid and meaningful for "trusted"
+ operating systems with built-in secure auditing features.
+
+ Default: INGRES

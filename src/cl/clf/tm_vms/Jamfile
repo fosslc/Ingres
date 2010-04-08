@@ -1,0 +1,28 @@
+#
+# Jamfile file for cl!clf!tm_vms
+#
+# History:
+#	28-apr-2005 (abbjo03)
+#	    Add tmsecs.c.
+#       14-jan-2009 (joea)
+#           Add tmhrnow.c.
+#       22-dec-2008 (stegr01)
+#           Replace .mar with .c
+#	15-jun-2009 (joea)
+#	    Reinstate .mar's for Alpha.
+
+SubDir ING_SRC cl clf tm_vms ;
+
+IISUBSYS cl clf tm_vms ;
+
+IILIBRARY COMPATLIB : tmmonthtab.roc tmtimestamp.c tmprfstat.c tmsecs.c
+        tmparse.c tm.c tmgettm.c tmhrnow.c ;
+
+if $(VERS) = axm_vms
+{
+    IILIBRARY COMPATLIB : tmtostr.mar tmconv.mar tmstamp.mar ;
+}
+else
+{
+    IILIBRARY COMPATLIB : tmtostr.c tmconv.c tmstamp.c ;
+}

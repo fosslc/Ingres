@@ -1,0 +1,490 @@
+/*
+**  txtfldcre.sc
+**
+**  Copyright (c) 2004 Ingres Corporation
+*/
+
+
+
+/*
+** txtfldcre.sc
+**
+**	Create the fields for the table frame driver.
+**
+**	The fields are entered with a sequence number.  The sequence
+**	number makes it easier to allocate table fields by ordering
+**	the columns after the table field that the columns belong
+**	to.  This routine reads the field entries in database order
+**	allocating what can be allocated, and adding the structure to
+**	an array which is indexed by sequence number.  After the initial
+**	retrieve the structures are in sequence order in the array and
+**	a second pass is made to allocate those things which depend on
+**	order.
+**
+** History:
+**  WRITTEN
+**	10/21/82 (jrc)
+**  RESURRECTED
+**	03/22/85 (dkh)
+**
+**	02/20/87 (dkh) - Added support for ADTs.
+**	19-jun-87 (bruceb)	Code cleanup.
+**	13-jul-87 (bruceb)	Changed memory allocation to use [FM]Ereqmem.
+**	08/14/87 (dkh) - ER changes.
+**	08/26/87 (dkh) - Changes for 8000 series error numbers.
+**	21-mar-88 (sylviap)
+**		Created .qsc.
+**	13-oct-88 (sylviap)
+**		Code clean-up.  Deleted buffer locv.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	17-apr-90 (bruceb)
+**		Lint changes; removed parameters in calls on FDwflalloc,
+**		FDwtblalloc and FDwcolalloc.
+**	19-feb-92 (leighb) DeskTop Porting Change:
+**		IIbreak() has no arguments; deleted bogus ones.
+**	12/12/92 (dkh) - Added support for edit masks.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+*/
+
+# include	<compat.h>
+# include	<st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<frserrno.h>
+# include	"fdfuncs.h"
+# include	<me.h>
+# include	<er.h>
+
+
+FUNC_EXTERN	FLDCOL	*FDnewcol();
+FUNC_EXTERN	i4	IIFDemask();
+
+typedef struct {
+	i4	type;
+	union {
+		FIELD	*vfd;
+		FLDCOL	*vcol;
+	} var;
+} FLDARR;
+
+# define	fdarrfld	var.vfd
+# define	fdarrcol	var.vcol
+
+FDtxtfldcre(frmid, ooid, frm, num, wins)		/* FDFRCREATE: */
+EXEC SQL BEGIN DECLARE SECTION;
+char	*frmid;				/* name of frame to look for */
+i4	ooid;
+EXEC SQL END DECLARE SECTION;
+FRAME	*frm;
+i4	num;				/* number of field entries */
+bool	wins;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	char 	name[FE_MAXNAME + 1];	/* name of frame */
+	i4	maxcol;			/* number of columns in frame */
+	i4 	maxlin;			/* number of lines in frame */
+	i4 	posy;			/* line position of frame */
+	i4 	posx;			/* column position of frame */
+	i4	flags;			/* flags for frame */
+
+	i2	seq;			/* sequence number of a field */
+	i4	datatype;		/* data type of a field */
+	i4	length;			/* length of a field (in bytes) */
+	i4	width;			/* width of field (char represent.) */
+	i4	datawidth;		/* width of the data window */
+	i4	datalin;		/* line position of data window */
+	i4	datacol;		/* column position of data window */
+	char	title[51];		/* tite for a field */
+	i4	titcol;			/* title column */
+	i4	titlin;			/* title line number */
+	i4	intrp;			/* interrupt value for a field */
+	char	defval[51];		/* default value for a field */
+	char	format[51];		/* format string */
+	char	valmsg[101];		/* validation message */
+	char	valchk[401];		/* validation check string */
+      	i4	type;			/* fields type info */
+	i4	subseq;			/* fields subseq */
+	i4	fld2flg;		/* second field flag */
+	i4	font;			/* field font */
+	i4	ptsz;			/* field point size */
+	i4	prec;
+	EXEC SQL END DECLARE SECTION;
+	char	*IICFLDS = ERx("ii_fields");
+	i4	errcnt;
+
+	char	*fmtstr;
+	i4	fmtsize;
+	i4	fmtlen;
+	PTR	blk;
+	FIELD	*tf;			/* temporary pointer to a field */
+	i4	i;			/* index into several arrays */
+	i4	frnsno;			/* index into non-seq fields */
+	i4	frfldno;		/* index into field array */
+	bool	fatal;			/* flag: any fatal errors? */
+	bool    inTable = FALSE;	/* has a table field hdr been read? */
+	bool	old = FALSE;
+	FLDHDR	*hdr;
+	FLDTYPE	*flty;
+	FLDVAL	*val;
+	FLDCOL	*col;
+	TBLFLD	*tbl;
+	i4	numcols = 0;
+	FLDHDR	*thdr = NULL;
+	FLDARR	*arr,
+		*ap;
+
+	/* old style */
+	if (num == 0 && (frm->frnsno != 0 || frm->frfldno != 0))
+	{
+		num = frm->frnsno + frm->frfldno;
+		old = TRUE;
+	}
+	else if (num == 0)	/* for bug 1498 (no fields) */
+	{
+		return (TRUE);
+	}
+	if ((arr = (FLDARR *)FEreqmem((u_i4)0, (u_i4)(num * sizeof(FLDARR)),
+	    TRUE, (STATUS *)NULL)) == NULL)
+	{
+		return (FALSE);
+	}
+
+	i = 0;				/* initialize field counter */
+	frnsno = 0;			/* initialize the non-seq counter */
+	frfldno = 0;
+
+
+	IIUIcnb_CatNolockBegin(IICFLDS);
+
+	EXEC SQL SELECT
+			flseq,		/* get sequence number of field */
+  			fldname,		/* name of the field */
+  			fldatatype,	/* data type of the field */
+  			fllength,	/* length of the field (in bytes) */
+  			flwidth,	/* width of the field (char rep) */
+  			flmaxlin,	/* number of lines in the field */
+  			flmaxcol,	/* number of columns in the field */
+  			flposy,		/* line position of the field */
+  			flposx,	/* column position of the field */
+  			fldatawidth,	/* width of the data window */
+  			fldatalin,	/* line position of the data window */
+  			fldatacol,	/* column position of the data window */
+  			fltitle,	/* title string for the data window */
+  			fltitcol,	/* column pos. of the title */
+  			fltitlin,	/* line pos. of the title */
+  			flintrp,	/* interrupt code for the field */
+  			fldflags,	/* flags for the field */
+  			fldefault,	/* default value of the field */
+  			flformat,	/* format string for the field */
+  			flvalmsg,	/* validation error msg for the field */
+  			flvalchk,	/* validation check for the field */
+  			fltype,	/* retrieve the type of field */
+  			fld2flags,	/* seconf field flags */
+  			fldfont,	/* field font */
+  			fldptsz,	/* field point size */
+  			flprec,	/* data type precision */
+  			flsubseq
+		INTO
+			:seq,
+  			:name,
+  			:datatype,
+  			:length,
+  			:width,
+  			:maxlin,
+  			:maxcol,
+  			:posy,
+  			:posx,
+  			:datawidth,
+  			:datalin,
+  			:datacol,
+  			:title,
+  			:titcol,
+  			:titlin,
+  			:intrp,
+  			:flags,
+  			:defval,
+  			:format,
+  			:valmsg,
+  			:valchk,
+  			:type,
+  			:fld2flg,
+  			:font,
+  			:ptsz,
+  			:prec,
+  			:subseq
+		FROM ii_fields
+		WHERE object_id = :ooid;
+	EXEC SQL BEGIN;
+		i++;
+		if (old)
+			ap = &arr[i];
+		else
+			ap = &arr[subseq];
+		STtrmwhite(name);
+		STtrmwhite(title);
+		STtrmwhite(defval);
+		STtrmwhite(format);
+		STtrmwhite(valmsg);
+		STtrmwhite(valchk);
+
+		ap->type = type;
+		if (type != FCOLUMN)
+		{
+			/* if sequence number > number of fields */
+			if (seq >= frm->frfldno)
+			{
+			    IIFDerror(CFFLSQ, (i4)2, frmid, name);
+			    IIbreak();
+			    IIUIcne_CatNolockEnd(IICFLDS);
+			    return (FALSE);
+			}
+			/* if negative sequence number */
+			/*   then field is a non-seq field */
+			if (seq < 0)
+			{
+			    /* test for non-seq overflow */
+			    if (frnsno >= frm->frnsno)
+			    {
+				IIFDerror(CFFLNS, 2, frmid, name);
+				IIbreak();
+				IIUIcne_CatNolockEnd(IICFLDS);
+				return(FALSE);
+			    }
+			    tf = frm->frnsfld[frnsno++] = FDnewfld(name,
+				(i4)seq, type);
+			}
+			/* else valid sequence number */
+			else
+			{
+			    frfldno++;
+			    /* allocate a new frame */
+			    tf = frm->frfld[seq] = FDnewfld(name, (i4)seq,
+				type);
+			}
+			ap->fdarrfld = tf;
+    		        if (type == FREGULAR)
+		        {
+		 	    hdr = &tf->fld_var.flregfld->flhdr;
+			    flty = &tf->fld_var.flregfld->fltype;
+			    val = &tf->fld_var.flregfld->flval;
+		        }
+		        else
+		        {
+		 	    tbl = tf->fld_var.fltblfld;
+			    hdr = &tbl->tfhdr;
+		        }
+			hdr->fhdflags = flags;
+			hdr->fhintrp = intrp;
+			hdr->fhd2flags = fld2flg;
+			hdr->fhdfont = font;
+			hdr->fhdptsz = ptsz;
+		}
+		else
+		{
+			col = FDnewcol(name, (i4)seq);
+			ap->fdarrcol = col;
+		  	hdr = &col->flhdr;
+			flty = &col->fltype;
+			hdr->fhdflags = flags;
+			hdr->fhd2flags = fld2flg;
+			hdr->fhdfont = font;
+			hdr->fhdptsz = ptsz;
+		}
+		hdr->fhseq = seq;	/* set field information */
+		hdr->fhmaxx = maxcol;
+		hdr->fhmaxy = maxlin;
+		hdr->fhposx = posx;
+		hdr->fhposy = posy;
+		hdr->fhtitle = FEsalloc(title);
+		hdr->fhtitx = titcol;
+		hdr->fhtity = titlin;
+		if (type == FTABLE)
+		{
+			tbl->tfrows = length;
+			tbl->tfcols = width;
+			tbl->tfwidth = datawidth;
+			tbl->tfstart = datalin;
+			if (FDwtblalloc(tbl) == FALSE)
+			{
+				IIFDerror(CFTBAL, 2, frmid, name);
+				IIbreak();
+				IIUIcne_CatNolockEnd(IICFLDS);
+				return (FALSE);
+			}
+		}
+		else
+		{
+			flty->ftdatatype = datatype;
+			flty->ftwidth = width;
+			flty->ftlength = length;
+			flty->ftprec = prec;
+			flty->ftdatax = datacol;
+			flty->ftdataln = datawidth;
+			flty->ftvalmsg = FEsalloc(valmsg);
+			flty->ftdefault = FEsalloc(defval);
+		/*
+		**  Code changed for bug fix 4424.  Code now also
+		**  stores away validation string even for a display
+		**  only field. (dkh)
+		**
+		**	if (STcompare(valchk, "") == 0 || seq < 0)
+		*/
+
+			if (STcompare(valchk, ERx("")) == 0)
+				flty->ftvalstr = NULL;
+			else
+				flty->ftvalstr = FEsalloc(valchk);
+
+			if (type == FREGULAR)
+			{
+				val->fvdatay = datalin;
+				/* allocate structs and window for the field */
+				if(FDwflalloc(tf, wins) == FALSE)
+				{
+					IIFDerror(CFFLAL, 2, frmid, name);
+					IIbreak();
+					IIUIcne_CatNolockEnd(IICFLDS);
+					return (FALSE);
+				}
+			}
+			if (STcompare(format, ERx("")) == 0)
+			{
+				IIFDerror(CFFLAL, 2, frmid, name);
+				IIbreak();
+				IIUIcne_CatNolockEnd(IICFLDS);
+				return(FALSE);
+			}
+			else
+			{
+				/*
+				**  We no longer need to adjust
+				**  the format with a leading '-'
+				**  since the converted forms
+				**  should be correct.
+				*/
+				fmtstr = format;
+
+				flty->ftfmtstr = FEsalloc(fmtstr);
+				fmtstr = flty->ftfmtstr;
+				if ((fmt_areasize(FEadfcb(), fmtstr,
+					&fmtsize) == OK) &&
+					((blk = MEreqmem((u_i4)0,
+					    (u_i4)fmtsize, TRUE,
+					    (STATUS *)NULL)) != NULL) &&
+					(fmt_setfmt(FEadfcb(), fmtstr, blk,
+						&(flty->ftfmt), &fmtlen) == OK))
+				{
+					;
+				}
+				else
+				{
+					IIFDerror(CFFLFMT, 2, frmid, name);
+					IIUIcne_CatNolockEnd(IICFLDS);
+					return (FALSE);
+				}
+				if (wins)
+				{
+					(void) IIFDemask(hdr, flty);
+				}
+			}
+		}
+	EXEC SQL END;
+
+	IIUIcne_CatNolockEnd(IICFLDS);
+
+	if(IItest_err())
+	{
+		return(FALSE);
+	}
+    	if (frfldno < frm->frfldno)
+    	{
+	    errcnt = frfldno;
+	    IIFDerror(CFFLTF, 2, frmid, &errcnt);
+	    return(FALSE);
+    	}
+    	if (frnsno < frm->frnsno)
+    	{
+	    errcnt = frnsno;
+	    IIFDerror(CFNSTF, 2, frmid, &errcnt);
+	    return(FALSE);
+    	}
+
+	/*
+	** Time to make second pass.
+	** This simply allocates the columns and makes sure all are present.
+	*/
+	for (i = 0, ap = arr; i < num; i++, ap++)
+	{
+
+		switch (ap->type)
+		{
+		  case FREGULAR:
+		  case FTABLE:
+			if (inTable)
+			{
+				if (tbl->tfcols != numcols)
+				{
+					IIFDerror(CFCOTF, 2, frmid,
+						thdr->fhdname);
+					return (FALSE);
+				}
+				inTable = FALSE;
+			}
+			if (ap->type == FTABLE)
+			{
+			 	tf = ap->fdarrfld;
+    		 	 	tbl = tf->fld_var.fltblfld;
+			 	thdr = &(tbl->tfhdr);
+				inTable = TRUE;
+				numcols = 0;
+			}
+			break;
+
+		  case FCOLUMN:
+			col = ap->fdarrcol;
+			hdr = &(col->flhdr);
+			if (!inTable)
+			{
+				IIFDerror(CFTBOC, 2, frmid, hdr->fhdname);
+				return (FALSE);
+			}
+			if (!(0 <= hdr->fhseq && hdr->fhseq <= tbl->tfcols))
+			{
+				IIFDerror(CFCOOS, 3, frmid, thdr->fhdname,
+					hdr->fhdname);
+				return (FALSE);
+			}
+			tbl->tfflds[hdr->fhseq] = col;
+			if (FDwcolalloc(tbl, col, wins) == FALSE)
+			{
+				IIFDerror(CFCLAL, 1, frmid);
+				return (FALSE);
+			}
+			numcols++;
+		}
+	}
+
+	/* no fatal parsing errors yet */
+	fatal = FDparse(frm);
+
+	/* if any fatal parse errors, abort */
+	if (fatal)
+	{
+		return(FALSE);
+	}
+	return (TRUE);
+}

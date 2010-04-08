@@ -1,0 +1,59 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abfuserd.hlp	help for ABF "Edit a USER Frame Definition" screen
+/#subtopic "Application Flow-Control Statements" vq4glafl.hlp
+/#subtopic "Database Statements" vq4gldb.hlp
+/#subtopic "Flow-Control Statements" vq4glflw.hlp
+/#subtopic "Forms Statements" vq4glfrm.hlp
+/#subtopic "Frame Structure" abffrmst.hlp
+/#subtopic "4GL Data Types" vq4gldt.hlp
+/#--
+You are looking at the definition of a 4GL-language Frame.  You may
+change the definition of the frame on the form and through some of the menu
+operations.  Within the running application, this frame will display the form
+shown in the Form Name field using the menu operations specified in the 4GL
+source file for this frame that you have created.  (The name of this source
+file is shown in the Source File field.) 
+
+Fill in the Return Type field with the datatype of the value that should be
+returned by this frame, if any.   Legal return types are any Ingres type,
+"string," or "none."  Legal return types are listed and may be specified
+through the Field menu item of this frame's Help operation.  A "string" or
+an Ingres return type may also be Nullable, which can be specified in the
+Nullable field.
+
+The Source File field specifies the file in which the 4GL specification for
+this frame may be found.  This will be filled in initially on frame creation,
+and may be modified.  The name used initially will be the same name as the
+frame unless that name would cause conflicts with other source files in the
+application, or the frame name is too long to be a file name on your system.
+If such problems were found, the name will be truncated if too long, or
+slightly modified if it would cause conflicts.
+
+The Static field specifies whether this frame's data will be saved between 
+calls.  Normally, this field should be set to "no".  If set to "yes", data
+can be entered on the form, and the next time the frame is called the form
+will be redisplayed with that data, rather than being cleared.
+
+If the current application uses some non-compiled forms, you can specify 
+whether this frame uses a compiled form or fetches its form from the database 
+at run-time.
+
+If this is a menu frame, you can specify which menu style to use.
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Rename                  Give the frame a new name.
+
+        LongRemark              Display and allow editing of the long remarks.
+
+	ListChoices             Display choices for the current field.
+
+        Cancel                  Ignore any changes and return to the previous 
+                                frame.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Save any changes and return to the previous 
+                                frame.

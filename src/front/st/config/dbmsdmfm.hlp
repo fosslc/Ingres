@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The resource dmf_memory is the size in bytes of the buffer cache.
+
+ This resource is a computed resource, for display purposes.  It should not
+ be set directly.  Use the dmf_cache_size, dmf_group_count, and
+ dmf_group_size resources to set a buffer cache size.

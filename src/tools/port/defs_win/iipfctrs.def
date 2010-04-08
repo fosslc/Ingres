@@ -1,0 +1,13 @@
+; History:
+;	22-Oct-1998 (wonst02)
+;	    Original, for NT performance monitoring.
+;	11-Jun-2004 (drivi01)
+;		Added ordinals.
+LIBRARY iipfctrs
+
+DESCRIPTION 'Performance Monitor Ingres Cache Measurements'
+
+EXPORTS
+    PFctrsOpen		@1
+    PFctrsCollect	@2
+    PFctrsClose		@3

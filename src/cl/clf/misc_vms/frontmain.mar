@@ -1,0 +1,40 @@
+	.title	main "RTI0 - RTI C program runtime prologue"
+;+
+;	Copyright (c) 1990 Ingres Corporation
+;
+;	Description:
+;		Begin to set up the C runtime environment for INGRES programs.
+;	History:
+;	    04-may-95 (albany)
+;	        Updated $code -> $code$ for AXP/VMS.
+;	    16-may-95 (albany)
+;	        Updated psect attributes to be in line with other
+;	        CL psects.
+;
+;+
+	.library	"sys$library:lib.mlb"
+	$IFDDEF		; Constants defining Image File Descriptors
+	$SSDEF		; Constants defining Image File Descriptors
+	IFD = 16	; Offset of IFD in argument list
+
+	.psect	$code$	pic,con,rel,lcl,shr,exe,nord,nowrt,novec,4
+;
+;	The flow of control in main() is:
+;
+;	Almost all the work which was once done here is now done in
+;	frontstart.c .  Here we simply get the image file name from the
+;	image file descriptor, and pass it to frontstart's IIcompatmain.
+
+	.entry	main,^m<>
+	pushal	compatmain		; push address of program's "main"
+	movl	IFD(ap),r0		; get address of Image File Descriptor
+	pushab	IFD$Q_CURPROG(r0)   	; push address of filename descriptor
+	calls	#2, G^IIcompatmain	; IIcompatmain(ifd_file, main_rtn)
+
+	; IIcompatmain should never return.  If it does, we'll call PCexit(FAIL)
+	pushl	#1 			;
+	calls	#1, G^PCexit		; PCexit(FAIL)
+	movl	#SS$_ABORT, R0		; Return ABORT
+	ret				; Just in case PCexit returns
+
+	.end	main

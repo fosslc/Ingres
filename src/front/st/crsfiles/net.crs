@@ -1,0 +1,290 @@
+--
+--  Copyright (c) 2004 Ingres Corporation 
+--  All rights reserved.
+--
+--  This file contains the configuration rules for INGRES/Net.
+--
+--# History:
+--#	18-jan-93 (tyler)
+--#		Created.
+--#	16-feb-93 (tyler)
+--#		Fixed several bugs in initial revision.
+--#	18-feb-93 (tyler)
+--#		Removed listen address initialization rules since this
+--#		is better handled in the Net setup scripts.
+--#	26-apr-93 (tyler)
+--#		Changed ii.*.gcc.*.ob_max to be non-derived.
+--#	04-aug-93 (tyler)
+--#		Added rules to initialize port (listen address) status
+--#		for Net server protocols.
+--#	19-oct-93 (tyler)
+--#		Removed ii.$.gcc.$.vms_uic (replaced by default defined
+--#		in all.crs).
+--#	22-nov-93 (tyler)
+--#		Added rule for ii.$.dbms.connect_sum which is required
+--#		when the DBMS is not installed.  Changed various gcc 
+--#		resource names.
+--#	24-feb-94 (tyler)
+--#		Added rule for SNA LU0 protocol default.  Fixed BUG 59539:
+--#		Add default status for Berkeley sockets.  Fixed BUG 59381:
+--#		Don't allow number of Net servers configured for startup
+--#		to be set > 1 for a particular definition.
+--#     04-may-94 (cmorris)
+--#             Changed sna_lu62.poll_level to sna_lu62.poll_rate to more
+--#             accurately reflect the meaning of the variable.
+--#     05-may-94 (joplin)
+--#		Reverted back to gcc quota values used in the 6.4 formulae
+--#	31-oct-94 (forky01)
+--#		Changed variable name to ii.$.gcc.$.sna_lu62_poll to match the
+--#		name checked by clf/gc/gcsunlu62.c
+--#	14-Nov-94 (GordonW)
+--#		default to one net server.
+--#	31-Jan-1995 (canor01)
+--#		Changed calculation of vms_buffer_limit to use a default
+--#		size instead of LRPSIZE, which is no longer accurate in
+--#		OpenVMS.
+--# 24-apr-96 (angusm)
+--#		Change startup count to more realistic values (bug 75215)
+--#	19-mar-1997 (rosga02)
+--#		Add Upgrade and Downgrade provs for SEVMS
+--#	02-feb-1998 (loera01) Bug 79056:
+--#		For VMS, change bogus tcp_ip (which VMS doesn't use) to 
+--#		tcp_dec.
+--#     01-Jun-98 (rajus01) 
+--#             Added new configuration strings for GCF security.
+--#	 5-Jun-98 (gordy)
+--#		Include the off settings for message_concat in VALID list.
+--#	26-Jul-98 (gordy)
+--#		Removed 'gcf' element from server mechanisms so it will 
+--#		appear in CBF.
+--#	22-sep-1998 (kinte01)
+--#		Have tcp_dec start by default on VMS platforms (93555)
+--#	 1-Oct-98 (gordy)
+--#		Added installation registry values.
+--#	28-apr-2000 (somsa01)
+--#		Added multiple product support.
+--#     27-Oct-2001 (hanje04)
+--#         Added missing ports for gcc protocols. Set to same value as
+--#         registry ports.
+--#	05-Nov-2001 (hanje04)
+--#	    Removed default registry ports as they should NOT be based on 
+--#	    II_INSTALLATION
+--#     19-apr-2001 (bolke01) bug# 47845
+--#             Added PRMGBL to gcn
+--#             Corrected sysnam ( was sysname)
+--#	16-jan-2003 (abbjo03)
+--#	    Increase VMS working set parameters.
+--#     12-Jul-2004 (hanje04)
+--#             Set registry values for config browsing API when
+--#             embed_installation = ON.
+--#	12-Jul-2004 (hanje04)
+--#		Replace 'hanje04-sles8' with $ introduce by above change.
+--#	12-Jul-2004 (hanje04)
+--#		Set gcc.registry_type to peer for embedded installs. Previously
+--#		thought default was equivalent to peer but apparently it's not.
+--#	18-Apr-2005 (drivi01)
+--#	    SIR: 114339
+--#	    Windows crsfiles are merged with generic.
+--#	27-Feb-2006 (hanje04)
+--#	    BUG 115799
+--#	    Remove references to embed_installation as it causes problems on 
+--#	    upgrade. All "embedded" settings are now done by MDB package.
+--#	28-Feb-2006 (hanje04)
+--#	    Add missing "
+--#     27-Sep-2006 (Ralph Loen) Bug 115671
+--#         Added wintcp.log_rem_host and tcp_ip.log_rem_host.
+--#     02-Feb-2007 (Ralph Loen) Bug 117590
+--#         Remove wintcp.log_rem_host and tcp_ip.log_rem host, as they are
+--#         no longer required.
+--#     03-Jun-2008 (Ralph Loen) SIR 120437
+--#         Extend valid startup count to 16.
+--#     05-Sep-2008 (lunbr01) Bug/Sir 119985
+--#         Change default statuses for all net protocols except "tcp_ip"
+--#         to OFF for Windows, making it the sole default.
+--#
+
+-- Startup count (platform-specific)
+# if defined(UNIX) || defined(VMS) || defined(NT_GENERIC)
+(PROG4PRFX).$.(PROG2PRFX)start.$.gcc:		1, MAX = 16;
+# else 
+(PROG4PRFX).$.(PROG2PRFX)start.$.gcc:		1, MAX = 1;
+# endif /* UNIX / VMS / NT_GENERIC */
+
+-- Net server parameters
+(PROG4PRFX).$.gcc.$.inbound_limit:	64;
+(PROG4PRFX).$.gcc.$.outbound_limit:	64;
+
+-- Encryption{mech, mode} initialization
+
+(PROG4PRFX).$.gcc.$.ib_encrypt_mode:	"optional", VALID = { "required", "on",
+							"optional", "off" };
+(PROG4PRFX).$.gcc.$.ob_encrypt_mode:     "optional", VALID = { "required", "on", 
+							"optional", "off" };
+(PROG4PRFX).$.gcc.$.ib_encrypt_mech:	"*";
+(PROG4PRFX).$.gcc.$.ob_encrypt_mech:	"*";
+(PROG4PRFX).$.gcc.$.mechanisms:		"";
+(PROG4PRFX).$.gcc.$.error_level:		4, VALID = { 6, 4, 1 };
+(PROG4PRFX).$.gcc.$.log_level:		4, VALID = { 6, 4, 1 };
+(PROG4PRFX).$.gcc.$.message_concat:	"true", VALID = {"true", "on", "false", "off"};
+(PROG4PRFX).$.gcc.$.registry_type: 	"default",
+					VALID = { "default", "none", "peer", 
+							"slave", "master" };
+
+
+-- maximum connections of all Net servers configured for start-up
+(PROG4PRFX).$.gcc.connect_max:		1,
+					REQUIRES (PROG4PRFX).$.gcc.%.inbound_limit,
+					REQUIRES (PROG4PRFX).$.gcc.%.outbound_limit,
+					REQUIRES (PROG4PRFX).$.(PROG2PRFX)start.%.gcc;
+
+-- protocol port status initialization
+# ifdef VMS
+(PROG4PRFX).$.gcc.$.decnet.status:	ON;
+(PROG4PRFX).$.gcc.$.tcp_dec.status:	ON;
+# else /* VMS */
+#ifndef NT_GENERIC
+(PROG4PRFX).$.gcc.$.decnet.status:	OFF;
+(PROG4PRFX).$.gcc.$.tcp_ip.status:	ON;
+#endif /* NT_GENERIC */
+# endif /* VMS */
+# ifndef NT_GENERIC
+(PROG4PRFX).$.gcc.$.async.status:	OFF;
+(PROG4PRFX).$.gcc.$.iso_oslan.status:	OFF;
+(PROG4PRFX).$.gcc.$.iso_x25.status:	OFF;
+(PROG4PRFX).$.gcc.$.sna_lu62.status:	OFF;
+(PROG4PRFX).$.gcc.$.sna_lu62.poll:	4000;
+# endif /*NT_GENERIC */
+# if ! defined(VMS) && ! defined(NT_GENERIC)
+(PROG4PRFX).$.gcc.$.sockets.status:	OFF;
+# endif /* VMS */
+# ifndef NT_GENERIC
+(PROG4PRFX).$.gcc.$.spx.status:		OFF;
+(PROG4PRFX).$.gcc.$.tcp_wol.status:	OFF;
+# endif /*NT_GENERIC */
+-- registry protocol initialization
+# ifdef VMS
+(PROG4PRFX).$.registry.decnet.port:	"";
+(PROG4PRFX).$.registry.decnet.status:	OFF;
+(PROG4PRFX).$.registry.tcp_dec.port:	"";
+(PROG4PRFX).$.registry.tcp_dec.status:	OFF;
+# elif NT_GENERIC
+(PROG4PRFX).$.registry.wintcp.status:       OFF;
+(PROG4PRFX).$.registry.wintcp.port:         IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                        "II"
+                                   ELSE
+                                        "`(PROG2PRFX)prsym II_INSTALLATION`"
+                                   ENDIF;
+(PROG4PRFX).$.registry.tcp_ip.status:       ON;
+(PROG4PRFX).$.registry.tcp_ip.port:         16903;
+(PROG4PRFX).$.registry.lanman.status:       OFF;
+(PROG4PRFX).$.registry.lanman.port:         IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                        "II"
+                                   ELSE
+                                        "`(PROG2PRFX)prsym II_INSTALLATION`"
+                                   ENDIF;
+(PROG4PRFX).$.registry.nvlspx.status:       OFF;
+(PROG4PRFX).$.registry.nvlspx.port:         IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                        "II"
+                                   ELSE
+                                        "`(PROG2PRFX)prsym II_INSTALLATION`"
+                                   ENDIF;
+# else /* VMS */
+(PROG4PRFX).$.registry.decnet.port:	"";
+(PROG4PRFX).$.registry.decnet.status:	OFF;
+(PROG4PRFX).$.registry.tcp_ip.port:	16903;
+(PROG4PRFX).$.registry.tcp_ip.status:	OFF;
+# endif /* VMS */
+# ifndef NT_GENERIC
+(PROG4PRFX).$.registry.async.port:	"";
+(PROG4PRFX).$.registry.async.status:	OFF;
+(PROG4PRFX).$.registry.iso_oslan.port:	"";
+(PROG4PRFX).$.registry.iso_oslan.status:	OFF;
+(PROG4PRFX).$.registry.iso_x25.port:	"";
+(PROG4PRFX).$.registry.iso_x25.status:	OFF;
+(PROG4PRFX).$.registry.sna_lu62.port:	"";
+(PROG4PRFX).$.registry.sna_lu62.status:	OFF;
+# ifndef VMS
+(PROG4PRFX).$.registry.sockets.port:	"";
+(PROG4PRFX).$.registry.sockets.status:	OFF;
+# endif /* VMS */
+(PROG4PRFX).$.registry.spx.port:		"";
+(PROG4PRFX).$.registry.spx.status:	OFF;
+(PROG4PRFX).$.registry.tcp_wol.port:	"";
+(PROG4PRFX).$.registry.tcp_wol.status:	OFF;
+# endif /*NT_GENERIC*/
+
+# ifdef VMS
+-- RUN qualifiers
+-- (PROG4PRFX).$.config.lrpsize:		`iigetsyi lrpsize`;
+(PROG4PRFX).$.config.ncp_buffer_size:	1504;
+(PROG4PRFX).$.gcc.config.connect_sum:	(PROG4PRFX).$.gcc.$.inbound_limit +
+					(PROG4PRFX).$.gcc.$.outbound_limit;
+(PROG4PRFX).$.gcc.$.vms_accounting:	ON;	
+(PROG4PRFX).$.gcc.$.vms_ast_limit:	7 * (PROG4PRFX).$.gcc.config.connect_sum + 20; 
+(PROG4PRFX).$.gcc.$.vms_buffer_limit:	(PROG4PRFX).$.gcc.config.connect_sum *
+				 ( 6 * ( (PROG4PRFX).$.config.ncp_buffer_size + 100 ) )
+					+ 16K + 5000;
+(PROG4PRFX).$.gcc.$.vms_enqueue_limit:	10 * (PROG4PRFX).$.gcc.config.connect_sum; 
+(PROG4PRFX).$.gcc.$.vms_error:		"NLA0:";
+(PROG4PRFX).$.gcc.$.vms_extent:		4000;	
+(PROG4PRFX).$.gcc.$.vms_file_limit:	3 * (PROG4PRFX).$.gcc.config.connect_sum + 10;
+(PROG4PRFX).$.gcc.$.vms_image:		"ii_system:[ingres.bin]iigcc.exe";
+(PROG4PRFX).$.gcc.$.vms_input:		"NLA0:";	
+(PROG4PRFX).$.gcc.$.vms_interval:	"";	
+(PROG4PRFX).$.gcc.$.vms_io_buffered:	6 * (PROG4PRFX).$.gcc.config.connect_sum + 10; 
+(PROG4PRFX).$.gcc.$.vms_io_direct:	2 * (PROG4PRFX).$.gcc.config.connect_sum + 50;
+(PROG4PRFX).$.gcc.$.vms_maximum_working_set: 4096; 
+(PROG4PRFX).$.gcc.$.vms_output:		"NLA0:";
+(PROG4PRFX).$.gcc.$.vms_page_file:	183 * (PROG4PRFX).$.gcc.config.connect_sum + 4500;
+(PROG4PRFX).$.gcc.$.vms_priority:	4;
+# ifdef SEVMSBUILD
+(PROG4PRFX).$.gcc.$.vms_privileges:	"(readall,prmmbx,sysnam,cmkrnl,sysprv,share,world,netmbx,tmpmbx,exquota,upgrade,downgrade)";
+# else
+(PROG4PRFX).$.gcc.$.vms_privileges:	"(readall,prmmbx,sysnam,cmkrnl,sysprv,share,world,netmbx,tmpmbx,exquota)";
+# endif /* SEVMSBUILD */
+(PROG4PRFX).$.gcc.$.vms_queue_limit:	2 * (PROG4PRFX).$.gcc.config.connect_sum + 10; 
+(PROG4PRFX).$.gcc.$.vms_working_set: 	2048;	
+# endif /* VMS */
+
+#ifdef NT_GENERIC
+-- protocol port status initialization
+(PROG4PRFX).$.gcc.$.wintcp.status:       OFF;
+(PROG4PRFX).$.gcc.$.wintcp.port:         IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                     "II"
+                                ELSE
+                                     "`(PROG2PRFX)prsym II_INSTALLATION`"
+                                ENDIF;
+(PROG4PRFX).$.gcc.$.tcp_ip.status:       ON;
+(PROG4PRFX).$.gcc.$.tcp_ip.port:         IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                     "II"
+                                ELSE
+                                     "`(PROG2PRFX)prsym II_INSTALLATION`"
+                                ENDIF;
+(PROG4PRFX).$.gcc.$.lanman.status:       OFF;
+(PROG4PRFX).$.gcc.$.lanman.port:         IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                     "II"
+                                ELSE
+                                     "`(PROG2PRFX)prsym II_INSTALLATION`"
+                                ENDIF;
+(PROG4PRFX).$.gcc.$.nvlspx.status:       OFF;
+(PROG4PRFX).$.gcc.$.nvlspx.port:         IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                     "II"
+                                ELSE
+                                     "`(PROG2PRFX)prsym II_INSTALLATION`"
+                                ENDIF;
+(PROG4PRFX).$.gcc.$.log_level:           4, VALID = { 6, 4, 1 };
+
+#endif /* NT_GENERIC */
+
+-- The following rules are required to initialize certain resources in 
+-- client installations. 
+(PROG4PRFX).$.dbms.connect_max:		0;
+(PROG4PRFX).$.dbms.connect_sum:		0;
+(PROG4PRFX).$.star.connect_max:		0;
+(PROG4PRFX).$.syscheck.rcp_segment:	0;
+
+# ifdef VMS
+(PROG4PRFX).$.syscheck.gblpages:		0;
+(PROG4PRFX).$.syscheck.virtualpagecnt:	0;
+(PROG4PRFX).$.syscheck.channelcnt:	0;
+# endif /* VMS */

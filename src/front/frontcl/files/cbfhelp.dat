@@ -1,0 +1,1148 @@
+#
+# Copyright (c) 2008 Ingres Corporation
+#
+#
+# The entries in this file associate configuration resource names with
+# help files and titles.
+#
+
+*.*.file:				missing.hlp
+*.*.title:				'Missing Help'
+
+c2.audit_mechanism.file:		c2audmec.hlp
+c2.audit_mechanism.title:		'Auditing Mechanism'
+
+c2.log_page_size.file:                  c2lpagsz.hlp
+c2.log_page_size.title:                 'Log Page Size'
+
+c2.max_log_size.file:			c2lmaxsz.hlp
+c2.max_log_size.title:			'Maximum Log Size'
+
+c2.on_error.file:			c2oneror.hlp
+c2.on_error.title:			'Auditing Error Handling'
+
+c2.security_auditing.file:	 	c2secaud.hlp	
+c2.security_auditing.title:		'Security Auditing'
+
+c2.on_switch_log.file:			c2swilog.hlp
+c2.on_switch_log.title:			'Security Switch Log Utility'
+
+c2.audit_writer_start.file:             c2wtstrt.hlp
+c2.audit_writer_start.title:            'Audit Writer DBMS Server Thread'
+
+c2.force_flush.file:                    c2flush.hlp
+c2.force_flush.title:                   'Flushing the Audit Log to Disk'
+
+c2.on_log_full.file:                    c2logful.hlp
+c2.on_log_full.title:                   'Audit Log Full'
+
+c2.shared_buffer_count.file:            c2shrbuf.hlp
+c2.shared_buffer_count.title:           'Shared Audit Record Buffers'
+
+cbf.general.file:			cbfmain.hlp	
+cbf.general.title:			'Configuration-By-Forms'
+
+gcf.mech.file:				gcfmech.hlp
+gcf.mech.title:				'Security Mechanisms'
+
+gcf.mechanism_location.file:		gcfmechloc.hlp
+gcf.mechanism_location.title:		'Dynamically-loaded Mechanism Location'
+
+gcf.remote_auth_error.file:		gcfremote.hlp
+gcf.remote_auth_error.title:		'Remote Authorization Error Handling'
+
+gcf.security_mechanism.file:		gcfsecuremech.hlp
+gcf.security_mechanism.title:		'Local Authentication Mechanism'
+
+gcf.mech.ingres.enabled.file:           gcfmechingenabled.hlp
+gcf.mech.ingres.enabled.title:          'Ingres Mechanism Enabled'
+ 
+gcf.mech.ingres.expiration_time.file:   gcfmechingexptime.hlp
+gcf.mech.ingres.expiration_time.title:  'Authorization Certificate Expiration Time'
+ 
+gcf.mech.ingres.expirations_required.file:   gcfmechingexpreq.hlp
+gcf.mech.ingres.expirations_required.title:  'Authorization Certificate Expirations Required'
+ 
+gcf.mech.kerberos.delegation.file:        gcfmechkerbdelegation.hlp
+gcf.mech.kerberos.delegation.title:       'Kerberos Name Server Delegation'
+ 
+gcf.mech.kerberos.domain.file:            gcfmechkerbdomain.hlp
+gcf.mech.kerberos.domain.title:           'Kerberos Domain'
+ 
+gcf.mech.kerberos.enabled.file:           gcfmechkerbenabled.hlp
+gcf.mech.kerberos.enabled.title:          'Kerberos Mechanism Enabled'
+ 
+gcf.mech.system.enabled.file:             gcfmechsysenabled.hlp
+gcf.mech.system.enabled.title:            'System Mechanism Enabled'
+ 
+gcf.mech.null.enabled.file:               gcfmechnullenabled.hlp
+gcf.mech.null.enabled.title:              'Null Mechanism Enabled'
+ 
+gcf.mech.kerberos.entry.file:            gcfmechkerbentry.hlp
+gcf.mech.kerberos.entry.title:           'Kerberos Module Entry Function'
+ 
+gcf.mech.kerberos.module.file:           gcfmechkerbmodule.hlp
+gcf.mech.kerberos.module.title:          'Kerberos Module'
+ 
+gcf.password_mechanism.file:          gcfpwdmech.hlp
+gcf.password_mechanism.title:         'Password Mechanism'
+ 
+gcf.remote_mechanism.file:            gcfremotemech.hlp
+gcf.remote_mechanism.title:           'Remote Authentication Mechanism'
+ 
+gcf.server_mechanism.file:            gcfservermech.hlp
+gcf.server_mechanism.title:           'Server Authentication Mechanism'
+ 
+gcf.user_mechanism.file:              gcfusermech.hlp
+gcf.user_mechanism.title:             'User Authentication Mechanism'
+ 
+gcf.restrict_pwd_auth.file:              gcfrestrictpwd.hlp
+gcf.restrict_pwd_auth.title:             'Restrict Password Authorization'
+ 
+gcf.restrict_rem_auth.file:              gcfrestrictrem.hlp
+gcf.restrict_rem_auth.title:             'Restrict Remote Authorization'
+ 
+gcf.restrict_srv_auth.file:              gcfrestrictsrv.hlp
+gcf.restrict_srv_auth.title:             'Server Password Authorization'
+ 
+gcf.restrict_usr_auth.file:              gcfrestrictusr.hlp
+gcf.restrict_usr_auth.title:             'Restrict User Authorization'
+
+gcn.cluster_mode.file:			missing.hlp
+gcn.cluster_mode.title:			'Name Server Cluster Mode'
+
+gcn.check_interval.file:		gcninter.hlp
+gcn.check_interval.title:		'Name Server Check-Alive Interval'
+
+gcn.check_type.file:			gcnchktype.hlp
+gcn.check_type.title:			'Check Type'
+
+gcn.check_timeout.file:			gcnbchktimeout.hlp
+gcn.check_timeout.title:		'Bed-Check Timeout Value'
+
+gcn.compress_point.file:		gcncomppoint.hlp
+gcn.compress_point.title:		'Compress Point'
+
+gcn.default_server_class.file:	        gcnsrvcl.hlp	
+gcn.default_server_class.title:		'Default Server Class'
+
+gcn.expire_interval.file:	        gcnexpint.hlp	
+gcn.expire_interval.title:		'Expire Interval'
+
+gcn.local_vnode.file:		        gcnlnode.hlp	
+gcn.local_vnode.title:			'Local Virtual Node'
+
+gcn.registry_type.file:			gcnregtype.hlp
+gcn.registry_type.title:		'Registry Type'
+
+gcn.remote_mechanism.file:		gcnrmech.hlp
+gcn.remote_mechanism.title:		'Remote Authorization Mechanism'
+
+gcn.remote_vnode.file:			gcnrnode.hlp
+gcn.remote_vnode.title:			'Default Remote Virtual Node'
+
+gcn.session_limit.file:		        gcnsessl.hlp
+gcn.session_limit.title:		'Name Server Session Limit'
+
+gcn.ticket_cache_size.file:             gcnticksz.hlp
+gcn.ticket_cache_size.title:            'Name Server Ticket Cache Size'
+
+gcn.ticket_expire.file:             	gcntickexp.hlp
+gcn.ticket_expire.title:            	'Name Server Ticket Expiration Time'
+
+gcn.timeout.file:	             	gcntimeout.hlp
+gcn.timeout.title:     		       	'Name Server Timeout'
+
+*.async_io.file:			async.hlp
+recovery.async_io.title:		'Recovery Asynchronous I/O'
+dbms.async_io.title:			'DBMS Server Asynchronous I/O'
+
+*.gather_write.file:			gather.hlp
+recovery.gather_write.title:		'Recovery Gather Write Operation'
+dbms.gather_write.title:		'DBMS Server Gather Write Operation'
+
+*.dmcm.file:				dmcm.hlp
+recovery.dmcm.title:			'Recovery Distributed Multi-Cache Management'
+dbms.dmcm.title:			'DBMS Distributed Multi-Cache Management'
+
+*.fd_affinity.file:			fdaffinity.hlp
+dbms.fd_affinity.title:			'DBMS File Descriptor Affinity'
+
+*.direct_io.file:			directio.hlp
+*.direct_io.title:			'Installation Direct I/O'
+
+*.di_zero_bufsize.file:			dizbufsize.hlp
+recovery.di_zero_bufsize.title:		'Recovery Server Zero-Buffer Size'
+dbms.di_zero_bufsize.title:		'DBMS Zero-Buffer Size'
+
+dbms.database_list.file:		dbmsdlst.hlp
+dbms.database_list.title:		'DBMS Server Access List'
+
+*.session_check_interval.file:		dbmssess.hlp
+dbms.session_check_interval.title:	'DBMS Session Check-Interval'
+rms.session_check_interval.title:	'RMS Gateway Session Check-Interval'
+
+dbms.txlogs.file:			dbmstxlg.hlp
+dbms.txlogs.title:			'Transaction Log Configuration'
+
+*.default_page_size.file:		dbmsdpgs.hlp
+dbms.default_page_size.title:		'Default Page Size Configuration'
+rms.default_page_size.title:		'Default Page Size Configuration'
+
+*.blob_etab_page_size.file:          	dbmsepgs.hlp
+dbms.blob_etab_page_size.title:         'Default Blob Etab Page Size Configuration'
+rms.blob_etab_page_size.title:          'Default Blob Etab Page Size Configuration'
+
+*.blob_etab_structure.file:          	dbmsestr.hlp
+dbms.blob_etab_structure.title:         'Default Blob Etab Structure Configuration'
+rms.blob_etab_structure.title:         'Default Blob Etab Structure Configuration'
+
+dbms.ambig_replace_64compat.file:	dbmsambi.hlp
+dbms.ambig_replace_64compat.title:	'DBMS Ambiguous Replace 6.4 Compatibility'
+
+*.max_tuple_length.file:		dbmsmtpl.hlp
+dbms.max_tuple_length.title:		'Max. Row Length Configuration'
+rms.max_tuple_length.title:		'Max. Row Length Configuration'
+
+*.active_limit.file:			dbmsalim.hlp
+dbms.active_limit.title:		'DBMS Active Connection Limit'
+recovery.active_limit.title:		'Recovery Active Connection Limit'
+rms.active_limit.title:			'RMS Active Connection Limit'
+
+dbms.buf_caches.file:			dbmsbufc.hlp
+dbms.buf_caches.title:    		'DBMS Buffer Caches'
+
+dbms.cache_dynamic.file:		dbmscady.hlp
+dbms.cache_dynamic.title:		'DBMS Dynamic Query Cache'
+
+*.cache_name.file:			cachname.hlp
+dbms.cache_name.title:			'DBMS Cache Name'
+rms.cache_name.title:			'RMS Cache Name'
+
+dbms.cache_sharing.file:		cachshar.hlp
+dbms.cache_sharing.title:		'DBMS Cache Sharing'
+
+rms.cache_sharing.file:			rmscachshar.hlp
+rms.cache_sharing.title:                'RMS Cache Sharing'
+
+dbms.dmcm.file:				dmcm.hlp
+dbms.dmcm.title:			'DBMS Distributed Multi-Cache'
+
+*.core_enabled.file:			dbmscore.hlp	
+dbms.core_enabled.title:		'DBMS Core Enabled'
+recovery.core_enabled.title:		'Recovery Core Enabled'
+star.core_enabled.title:		'Star Core Enabled'
+
+*.connect_limit.file:			dbmsclim.hlp	
+dbms.connect_limit.title:		'DBMS Connection Limit'
+star.connect_limit.title:		'Star Connection Limit'
+recovery.connect_limit.title:		'Recovery Server Connection Limit'
+rms.connect_limit.title:		'RMS Gateway Connection Limit'
+
+recovery.cp_timer.file:			reccptim.hlp
+recovery.cp_timer.title:		'Recovery Consistency Point Timer'
+
+*.cpu_statistics.file:			dbmscpus.hlp
+dbms.cpu_statistics.title:		'DBMS CPU Statistics'
+star.cpu_statistics.title:		'Star CPU Statistics'
+rms.cpu_statistics.title:		'RMS Gateway CPU Statistics'
+
+*.cursor_limit.file:			dbmscurs.hlp
+dbms.cursor_limit.title:		'DBMS Cursor Limit'
+star.cursor_limit.title:		'Star Cursor Limit'
+rms.cursor_limit.title:			'RMS Gateway Cursor Limit'
+
+*.cursor_update_mode.file:		dbmscrsr.hlp	
+dbms.cursor_update_mode.title:		'DBMS Cursor Update Mode'
+star.cursor_update_mode.title:		'Star Cursor Update Mode'
+rms.cursor_update_mode.title:		'RMS Gateway Cursor Update Mode'
+
+*.cursor_default_open.file:		dbmscrop.hlp	
+dbms.cursor_default_open.title:		'DBMS Cursor Open Mode'
+star.cursor_default_open.title:		'Star Cursor Open Mode'
+rms.cursor_default_open.title:		'RMS Gateway Cursor Open Mode'
+
+*.database_limit.file:			dbmsdlim.hlp	
+dbms.database_limit.title:		'DBMS Database Limit'
+recovery.database_limit.title:		'Recovery Server Database Limit'
+star.database_limit.title:		'Star Database Limit'
+rms.database_limit.title:		'RMS Gateway Database Limit'
+
+*.define_address.file:			dbmsdefs.hlp	
+dbms.define_address.title:		'II_DBMS_SERVER Symbol Definition'
+rms.define_address.title:		'II_DBMS_SERVER Symbol Definition'
+
+*.default_journaling.file:		dbmsjrnl.hlp	
+dbms.default_journaling.title:		'DBMS Default Journaling'
+
+dbms.dmf_build_pages.file:              dbmsdmbp.hlp
+dbms.dmf_build_pages.title:             'DBMS DMF Build Buffer Size'
+
+star.distributed_recovery.file:		starnrec.hlp
+star.distributed_recovery.title:	'Star Distributed Recovery'
+
+*.event_limit.file:			dbmsevnt.hlp
+dbms.event_limit.title:			'DBMS Event Limit'
+recovery.event_limit.title:		'Recovery Server Event Limit'
+rms.event_limit.title:			'RMS Gateway Event Limit'
+
+*.fallocate.file:			dbmsfalc.hlp
+recovery.fallocate.title:		'Recovery Server Use Fallocate'
+dbms.fallocate.title:			'DBMS Use Fallocate'
+
+*.fast_commit.file:			dbmsfast.hlp
+dbms.fast_commit.title:			'DBMS Fast Commit'
+
+*.gc_interval.file:			gcinterval.hlp
+*.gc_interval.title:			'Group-Commit Interval'
+
+*.gc_num_ticks.file:			gcnumticks.hlp
+*.gc_num_ticks.title:			'Group-Commit Tick Count'
+
+*.gc_threshold.file:			gcthresh.hlp
+*.gc_threshold.title:			'Group-Commit Threshold'
+
+*.hex_session_ids.file:			dbmsxsid.hlp
+*.hex_session_ids.title:		'Display IMA session IDs in hex'
+
+*.image_name.file:                      dbmsimag.hlp
+dbms.image_name.title:                  'DBMS Image Name'
+star.image_name.title:                  'Star Image Name'
+
+*.image_data_segments.file:             dbmsdseg.hlp
+dbms.image_data_segments.title:         'Data Segments in DBMS Server Image'
+
+*.log_esc_lpr_sc.file:			dbmslrsc.hlp
+dbms.log_esc_lpr_sc.title:		'Log escalations; locks/res. sys cats'
+rms.log_esc_lpr_sc.title:		'Log escalations; locks/res. sys cats'
+
+*.log_esc_lpr_ut.file:			dbmslrut.hlp
+dbms.log_esc_lpr_ut.title:		'Log escalations; locks/res. user tab'
+rms.log_esc_lpr_ut.title:		'Log escalations; locks/res. user tab'
+
+*.log_esc_lpt_sc.file:			dbmsltsc.hlp
+dbms.log_esc_lpt_sc.title:		'Log escalations; locks/trans. sys cats'
+rms.log_esc_lpt_sc.title:		'Log escalations; locks/trans. sys cats'
+
+*.log_esc_lpt_ut.file:			dbmsltut.hlp
+dbms.log_esc_lpt_ut.title:		'Log escalations; locks/trans. user tab'
+rms.log_esc_lpt_ut.title:		'Log escalations; locks/trans. user tab'
+
+*.log_readnolock.file:			dbmsrnlk.hlp
+dbms.log_readnolock.title:              'Log errors for readlock nolock'
+rms.log_readnolock.title:              'Log errors for readlock nolock'
+
+*.mechanisms.file:                      mechanisms.hlp
+*.mechanisms.title:			'Dynamically-loaded Mechanism List'
+
+dbms.name_service.title:		'DBMS Name Service'
+star.name_service.title:		'Star Name Service'
+recovery.name_service.title:		'Recovery Server Name Service'
+rms.name_service.title:			'RMS Gateway Name Service'
+
+*.opf_active_limit.file:		dbmsopfa.hlp
+dbms.opf_active_limit.title:		'DBMS OPF Active Users'
+star.opf_active_limit.title:		'Star OPF Active Users'
+rms.opf_active_limit.title:		'RMS Gateway OPF Active Users'
+
+*.opf_greedy_factor.file:		dbmsopfg.hlp
+dbms.opf_greedy_factor.title:		'DBMS OPF Greedy Enumeration Cost Factor'
+star.opf_greedy_factor.title:		'Star OPF Greedy Enumeration Cost Factor'
+rms.opf_greedy_factor.title:		'RMS Gateway OPF Greedy Enumeration Cost Factor'
+
+*.opf_inlist_thresh.file:		dbmsopfn.hlp
+*.opf_inlist_thresh.title:		'OPF IN LIST key limit threshold'
+
+*.opf_hash_join.file:			dbmsophj.hlp
+dbms.opf_hash_join.title:		'DBMS OPF Hash Join'
+star.opf_hash_join.title:		'Star OPF Hash Join'
+rms.opf_hash_join.title:		'RMS Gateway OPF Hash Join'
+
+*.opf_maxmemf.file:			dbmsopff.hlp
+dbms.opf_maxmemf.title:			'DBMS OPF Session Memory Limit'
+star.opf_maxmemf.title:			'Star OPF Session Memory Limit'
+rms.opf_maxmemf.title:			'RMS Gateway OPF Session Memory Limit'
+
+*.opf_memory.file:			dbmsopfm.hlp
+dbms.opf_memory.title:			'DBMS OPF Memory Limit'
+star.opf_memory.title:			'Star OPF Memory Limit'
+rms.opf_memory.title:			'RMS Gateway OPF Memory Limit'
+
+*.opf_new_enum.file:			dbmsenum.hlp
+*.opf_new_enum.title:			'DBMS OPF Greedy Enumeration'
+
+*.opf_old_cnf.file:			dbmsopon.hlp
+dbms.opf_old_cnf.title:			'DBMS Conjunctive-Normal-Form Transform'
+star.opf_old_cnf.title:			'Star Conjunctive-Normal-Form Transform'
+rms.opf_old_cnf.title:			'RMS Gateway Conjunctive-Normal-Form Transform'
+
+*.opf_old_subsel.file:			dbmsopfo.hlp
+dbms.opf_old_subsel.title:		'DBMS OPF subselect to outer join transform'
+star.opf_old_subsel.title:		'Star OPF subselect to outer join transform'
+rms.opf_old_subsel.title:		'RMS Gateway OPF subselect to outer join transform'
+
+*.opf_old_idxorder.file:		dbmsopfi.hlp
+dbms.opf_old_idxorder.title:		'DBMS OPF secondary index order'
+star.opf_old_idxorder.title:		'Star OPF secondary index order'
+rms.opf_old_idxorder.title:		'RMS Gateway OPF secondary index order'
+
+*.opf_pq_dop.file:			dbmspqdo.hlp
+*.opf_pq_dop.title:			'Parallel Query Thread Count'
+
+*.opf_pq_threshold.file:		dbmspqth.hlp
+*.opf_pq_threshold.title:		'Parallel Query Threshold'
+
+*.opf_stats_nostats_max.file:		dbmsopfs.hlp
+dbms.opf_stats_nostats_max.title:	'DBMS OPF Stats/No Stats Join Estimate Max'
+star.opf_stats_nostats_max.title:	'Star OPF Stats/No Stats Join Estimate Max'
+rms.opf_stats_nostats_max.title:	'RMS Gateway OPF Stats/No Stats Join Estimate Max'
+
+*.opf_stats_nostats_factor.file:	dbmsopfs.hlp
+dbms.opf_stats_nostats_factor.title:	'DBMS OPF Stats/No Stats Join Estimate Factor'
+star.opf_stats_nostats_factor.title:	'Star OPF Stats/No Stats Join Estimate Factor'
+rms.opf_stats_nostats_factor.title:	'RMS Gateway OPF Stats/No Stats Join Estimate Factor'
+
+*.opf_timeout_factor.file:              dbmsopft.hlp
+dbms.opf_timeout_factor.title:          'DBMS OPF Timeout Factor'
+star.opf_timeout_factor.title:          'Star OPF Timeout Factor'
+rms.opf_timeout_factor.title:           'RMS Gateway OPF Timeout Factor'
+
+*.opf_joinop_timeout.file:              dbmsopjt.hlp
+dbms.opf_joinop_timeout.title:          'DBMS OPF Joinop Timeout'
+star.opf_joinop_timeout.title:          'Star OPF Joinop Timeout'
+rms.opf_joinop_timeout.title:           'RMS Gateway OPF Joinop Timeout'
+
+*.opf_timeout_abort.file:               dbmsopja.hlp
+dbms.opf_timeout_abort.title:           'DBMS OPF Joinop Timeout Abort'
+star.opf_timeout_abort.title:           'Star OPF Joinop Timeout Abort'
+rms.opf_timeout_abort.title:            'RMS Gateway OPF Joinop Timeout Abort'
+
+*.opf_old_jcard.file:                   dbmsopfj.hlp
+dbms.opf_old_jcard.title:               'DBMS OPF Join Cardinality Routine'
+star.opf_old_jcard.title:               'Star OPF Join Cardinality Routine'
+rms.opf_old_jcard.title:                'RMS Gateway OPF Join Cardinality Routine'
+
+*.psf_maxmemf.file:			dbmspsmx.hlp
+*.psf_maxmemf.title:			'PSF Maximum Memory Fraction'
+
+*.psf_memory.file:			dbmspsfm.hlp	
+dbms.psf_memory.title:			'DBMS PSF Memory Limit'
+star.psf_memory.title:			'Star PSF Memory Limit'
+rms.psf_memory.title:			'RMS Gateway PSF Memory Limit'
+
+*.psf_vch_prec.file:			dbmspsfv.hlp	
+dbms.psf_vch_prec.title:		'DBMS PSF Varchar Precedence'
+star.psf_vch_prec.title:		'Star PSF Varchar Precedence'
+rms.psf_vch_prec.title:			'RMS Gateway PSF Varchar Precedence'
+
+*.pindex_bsize.file:			dbmspibs.hlp
+*.pindex_bsize.title:			'Parallel Index Buffer Size'
+
+*.pindex_nbuffers.file:			dbmspinb.hlp
+*.pindex_nbuffers.title:		'Parallel Index Buffer Count'
+
+*.psort_bsize.file:			dbmspsbs.hlp
+*.psort_bsize.title:			'Parallel Sort Buffer Size'
+
+*.psort_nthreads.file:			dbmspsnt.hlp
+*.psort_nthreads.title:			'Parallel Sort Thread Count'
+
+*.psort_rows.file:			dbmspsrt.hlp
+*.psort_rows.title:			'Parallel Sort Row Threshold'
+
+*.qef_dsh_memory.file:			dbmsqedm.hlp
+*.qef_dsh_memory.title:			'QEF General Memory Pool Size'
+
+*.qef_hash_mem.file:			dbmsqefh.hlp
+*.qef_hash_mem.title:			'QEF Hash Memory Session Limit'
+
+*.qef_hash_rbsize.file:			dbmsqhrb.hlp
+*.qef_hash_rbsize.title:		'QEF Hash Read Buffer Size'
+*.qef_hash_wbsize.file:			dbmsqhwb.hlp
+*.qef_hash_wbsize.title:		'QEF Hash Write Buffer Size'
+*.qef_hash_cmp_threshold.file:		dbmsqhrt.hlp
+*.qef_hash_cmp_hreshold.title:		'QEF Hash Compression Threshold'
+*.qef_hashjoin_min.file:		dbmsqhjn.hlp
+*.qef_hashjoin_min.title:		'QEF Hash-join Minimum Reservation'
+*.qef_hashjoin_max.file:		dbmsqhjx.hlp
+*.qef_hashjoin_max.title:		'QEF Hash-join Maximum Reservation'
+
+
+*.qef_max_mem_sleep.file:		dbmsqmms.hlp
+*.qef_max_mem_sleep.title:		'QEF Memory Wait Sleep Limit'
+
+*.qef_memory.file:                      dbmsqefm.hlp
+dbms.qef_memory.title:                  'QEF Memory Limit'
+
+*.qef_no_dependency_chk.file:           dbmsmdep.hlp
+*.qef_no_dependency_chk.title:          'QEF Modify Statement Dependency Check'
+
+*.qef_qep_mem.file:			dbmsqefd.hlp
+dbms.qef_qep_mem.title:			'DBMS QEF Data Segment Header Memory'
+star.qef_qep_mem.title:			'Star QEF Data Segment Header Memory'
+rms.qef_qep_mem.title:			'RMS Gateway QEF Data Segment Header Memory'
+
+*.qef_sort_mem.file:			dbmsqefs.hlp
+dbms.qef_sort_mem.title:		'DBMS QEF Sort Memory Session Limit'
+star.qef_sort_mem.title:		'Star QEF Sort Memory Session Limit'
+rms.qef_sort_mem.title:			'RMS Gateway QEF Sort Memory Session Limit'
+
+*.qef_sorthash_memory.file:		dbmsqesh.hlp
+*.qef_sorthash_memory.title:		'QEF Sort/Hash Memory Pool Size'
+
+*.query_flattening.file:		dbmsflat.hlp	
+dbms.query_flattening.title:		'DBMS Query Flattening'
+star.query_flattening.title:		'Star Query Flattening'
+rms.query_flattening.title:		'RMS Gateway Query Flattening'
+
+*.qflatten_aggregate.file:		dbmsflag.hlp
+dbms.qflatten_aggregate.title:		'DBMS Aggregate Subselect Flattening'
+star.qflatten_aggregate.title:		'Star Aggregate Subselect Flattening'
+rms.qflatten_aggregate.title:		'RMS Gateway Aggregate Subselect Flattening'
+
+*.qflatten_singleton.file:		dbmsflsi.hlp
+dbms.qflatten_singleton.title:		'DBMS Singleton Subselect Flattening'
+star.qflatten_singleton.title:		'Star Singleton Subselect Flattening'
+rms.qflatten_singleton.title:		'RMS Gateway Singleton Subselect Flattening'
+
+*.cardinality_check.file:		dbmscard.hlp
+dbms.cardinality_check.title:		'DBMS Singleton Subselect Cardinality Check'
+
+*.qsf_guideline.file:			dbmsqsfg.hlp
+*.qsf_guideline.title:			'QSF Memory Configuration Guideline'
+
+*.qsf_memory.file:			dbmsqsfm.hlp
+dbms.qsf_memory.title:			'DBMS QSF Memory Limit'
+star.qsf_memory.title:			'Star QSF Memory Limit'
+rms.qsf_memory.title:			'RMS Gateway QSF Memory Limit'
+
+*.quantum_size.file:			dbmsquan.hlp	
+dbms.quantum_size.title:		'DBMS Quantum Size'
+star.quantum_size.title:		'Star Quantum Size'
+rms.quantum_size.title:			'RMS Gateway Quantum Size'
+
+*.rdf_avg_ldbs.file:			starrdfa.hlp	
+star.rdf_avg_ldbs.title:		'Star RDF Average Local Database Tables'
+
+*.rdf_cache_ddbs.file:			starrdfd.hlp	
+star.rdf_cache_ddbs.title:		'Star RDF Distributed Database Cache Size'
+
+*.rdf_col_defaults.file:		dbmsrdfc.hlp
+*.rdf_col_defaults.title:		'DBMS RDF Table Columns'
+
+*.rdf_max_tbls.file:			dbmsrdft.hlp	
+dbms.rdf_max_tbls.title:		'DBMS RDF Maximum Tables'
+star.rdf_max_tbls.title:		'Star RDF Maximum Tables'
+rms.rdf_max_tbls.title:			'RMS Gateway RDF Maximum Tables'
+
+*.rdf_memory.file:			dbmsrdfm.hlp
+dbms.rdf_memory.title:			'DBMS RDF Memory Limit'
+star.rdf_memory.title:			'Star RDF Memory Limit'
+rms.rdf_memory.title:			'RMS Gateway RDF Memory Limit'
+
+*.rdf_tbl_cols.file:			dbmsrdfc.hlp
+dbms.rdf_tbl_cols.title:		'DBMS RDF Table Columns'
+star.rdf_tbl_cols.title:		'Star RDF Table Columns'
+rms.rdf_tbl_cols.title:			'RMS Gateway RDF Table Columns'
+
+*.rdf_tbl_synonyms.file:		dbmsrdfs.hlp
+dbms.rdf_tbl_synonyms.title:		'DBMS RDF Table Synonyms'
+star.rdf_tbl_synonyms.title:		'Star RDF Table Synonyms'
+rms.rdf_tbl_synonyms.title:		'RMS Gateway RDF Table Synonyms'
+
+dbms.rep_dq_lockmode.file:		dbmsrpdq.hlp
+dbms.rep_dq_lockmode.title:		'Replicator Distribution Queue Lockmode'
+
+dbms.rep_dt_maxlocks.file:		dbmsrpdt.hlp
+dbms.rep_dt_maxlocks.title:		'Replicator Distribution Thread Maxlocks'
+
+dbms.rep_iq_lockmode.file:		dbmsrpiq.hlp
+dbms.rep_iq_lockmode.title:		'Replicator Input Queue Lockmode'
+
+dbms.rep_qman_threads.file:		dbmsrepq.hlp
+dbms.rep_qman_threads.title:		'Replication Queue Management Threads'
+
+dbms.rep_sa_lockmode.file:		dbmsrpsa.hlp
+dbms.rep_sa_lockmode.title:		'Replicator Shadow/Archive Lockmode'
+
+dbms.rep_txq_size.file:			dbmsrept.hlp
+dbms.rep_txq_size.title:		'Replication Transaction Queue Size'
+
+dbms.result_structure.file:		dbmsress.hlp
+dbms.result_structure.title:		'DBMS Result Storage Structure'
+
+*.rule_depth.file:			dbmsrdep.hlp	
+dbms.rule_depth.title:			'DBMS Rule Depth'
+star.rule_depth.title:			'Star Rule Depth'
+rms.rule_depth.title:			'RMS Gateway Rule Depth'
+
+*.rule_del_prefetch.file:                dbmsrdel.hlp
+dbms.rule_del_prefetch.title:           'DBMS Rule Delete Prefetch'
+
+*.rule_upd_prefetch.file:               dbmsrupd.hlp
+dbms.rule_upd_prefetch.title:           'DBMS Rule Update Prefetch'
+
+*.scf_rows.file:			dbmsscfr.hlp	
+dbms.scf_rows.title:			'DBMS SCF Row Estimate'
+star.scf_rows.title:			'Star SCF Row Estimate'
+rms.scf_rows.title:			'RMS Gateway SCF Row Estimate'
+
+*.server_class.file:			dbmssrvr.hlp
+dbms.server_class.title:		'DBMS Server Class'
+rms.server_class.title:			'RMS Gateway Server Class'
+
+*.session_accounting.file:		dbmsacct.hlp
+dbms.session_accounting.title:		'DBMS Session Accounting'
+star.session_accounting.title:		'Star Session Accounting'
+rms.session_accounting.title:		'RMS Gateway Session Accounting'
+
+dbms.size_io_buf.file:			dbmssiob.hlp
+dbms.size_io_buf.title:			'DBMS/Slave I/O Buffer Size'
+	  
+*.sole_server.file:			dbmssole.hlp	
+dbms.sole_server.title:			'DBMS Sole Server'
+star.sole_server.title:			'Star Sole Server'
+rms.sole_server.title:			'RMS Gateway Sole Server'
+
+dbms.class_node_affinity.file:		dbmsnrst.hlp
+dbms.class_node_affinity.title:		'Node affinity of named server class'
+
+*.stack_size.file:			dbmsssiz.hlp	
+dbms.stack_size.title:			'DBMS Session Stack Size'
+star.stack_size.title:			'Star Session Stack Size'
+recovery.stack_size.title:		'Recovery Server Session Stack Size'
+rms.stack_size.title:			'RMS Gateway Session Stack Size'
+
+*.stack_caching.file:			dbmsstca.hlp
+*.stack_caching.title:			'Session Stack Caching'
+
+*.system_isolation.file:                dbmsisol.hlp
+dbms.system_isolation.title:            'DBMS System Isolation Default'
+rms.system_isolation.title:             'RMS Gateway System Isolation Default'
+
+*.system_lock_level.file:		dbmslklv.hlp
+dbms.system_lock_level.title:		'DBMS System Lock Level Default'
+rms.system_lock_level.title:		'RMS Gateway System Lock Level Default'
+
+*.system_maxlocks.file:			dbmslkmx.hlp
+dbms.system_maxlocks.title:		'DBMS System Maxlocks Default'
+rms.system_maxlocks.title:		'RMS Gateway System Maxlocks Default'
+
+*.system_readlock.file:			dbmslkrd.hlp
+dbms.system_readlock.title:		'DBMS System Readlock Default'
+rms.system_readlock.title:		'RMS Gateway System Readlock Default'
+
+*.system_timeout.file:			dbmslkto.hlp
+dbms.system_timeout.title:		'DBMS System Lock Timeout Default'
+rms.system_timeout.title:		'RMS Gateway System Lock Timeout Default'
+
+star.outbound_limit.file:		starobmx.hlp	
+star.outbound_limit.title:		'Star Outbound Connection Limit'	
+
+*.ulm_chunk_size.file:			dbmsulmc.hlp
+*.ulm_chunk_size.title:			'Utility Memory Allocation Chunk Size'
+
+*.unix_maximum_working_set.file:	missing.hlp	
+*.unix_maximum_working_set.title:	'UNIX Maximum Working Set'
+
+*.unix_priority.file:		        dbmsunxp.hlp
+*.unix_priority.title:			'UNIX Process Priority'
+
+*.vch_compression.file:		        vchcomp.hlp
+*.vch_compression.title:		'Varchar Compression'
+
+*.write_behind.file:			dbmswthd.hlp
+dbms.write_behind.title:		'DBMS Write Behind Threads'
+star.write_behind.title:		'Star Write Behind Threads'
+rms.write_behind.title:			'RMS Write Behind Threads'
+
+prefs.ingstart_syscheck.file:           syscheck.hlp
+prefs.ingstart_syscheck.title:          'Ingstart Syscheck'
+
+prefs.ingstop.file:                     ingstop.hlp
+prefs.ingstop.title:                    'Ingstop'
+
+prefs.cbf_syscheck.file:                cbfsysck.hlp
+prefs.cbf_syscheck.title:               'CBF Syscheck'
+
+*.cache_lock.file:			cachlock.hlp
+dbms.cache_lock.title:			'DBMS DMF Cache Lock'
+rms.cache_lock.title:                   'RMS DMF Cache Lock'
+
+*.cache_guideline.file:			dbmsdmgu.hlp
+*.cache_guideline.title:		'DMF Cache Configuration Guideline'
+
+*.dmf_db_cache_size.file:	        dbmsdmfc.hlp	
+dbms.dmf_db_cache_size.title:		'DBMS DMF Closed-Database Cache Size'
+rms.dmf_db_cache_size.title:		'RMS Gateway DMF Database Cache Size'
+
+*.dmf_int_sort_size.file:		dbmsints.hlp
+dbms.dmf_int_sort_size.title:		'DBMS DMF Internal-Sort Size'
+
+dbms.mustlog_db_list.file:		dbmsmlst.hlp
+dbms.mustlog_db_list.title:		'DBMS Server Must Log List'
+
+*.dmf_tbl_cache_size.file:		tcachsiz.hlp
+dbms.dmf_tbl_cache_size.title:		'DBMS DMF Closed-Table Cache Size'
+rms.dmf_tbl_cache_size.title:		'RMS Gateway DMF Table Cache Size'
+
+*.dmf_cache_size.file:			dbmscach.hlp
+dbms.dmf_cache_size.title:		'DBMS DMF Cache Size'
+rms.dmf_cache_size.title:               'RMS DMF Cache Size'
+
+*.dmf_free_limit.file:			dbmsdmff.hlp	
+dbms.dmf_free_limit.title:		'DBMS DMF Free Page Limit'
+rms.dmf_free_limit.title:               'RMS DMF Free Page Limit'
+
+*.dmf_group_count.file:			dbmsdmgr.hlp
+dbms.dmf_group_count.title:		'DBMS DMF Group Buffer Count'
+rms.dmf_group_count.title:              'RMS DMF Group Buffer Count'
+
+*.dmf_group_size.file:			dbmsdmfg.hlp	
+dbms.dmf_group_size.title:		'DBMS DMF Group Buffer Size'
+rms.dmf_group_size.title:               'RMS DMF Group Buffer Size'
+
+*.dmf_memory.file:			dbmsdmfm.hlp
+dbms.dmf_memory.title:			'DBMS DMF Memory Limit'
+rms.dmf_memory.title:                   'RMS DMF Memory Limit'
+
+*.dmf_modify_limit.file:		dbmsdmfl.hlp
+dbms.dmf_modify_limit.title:		'DBMS DMF Modified Page Limit'
+rms.dmf_modify_limit.title:             'RMS DMF Modified Page Limit'
+
+*.dmf_tcb_limit.file:			dbmstcbl.hlp
+*.dmf_tcb_limit.title:			'DMF Table Control Block Limit'
+
+*.dmf_wb_end.file:			dbmsdmfe.hlp
+dbms.dmf_wb_end.title:			'DBMS DMF Write Behind Sleep Limit'
+rms.dmf_wb_end.title:                   'RMS DMF Write Behind Sleep Limit'
+
+*.dmf_wb_start.file:			dbmsdmfs.hlp
+dbms.dmf_wb_start.title:		'DBMS DMF Write Behind Wake Up Limit'
+rms.dmf_wb_start.title:                 'RMS DMF Write Behind Wake Up Limit'
+
+dbms.dmf_separate.file:    		dbmsdmfa.hlp
+dbms.dmf_separate.title:		'DBMS DMF Separate'
+
+dbms.event_priority.file:		dbmsevpr.hlp
+dbms.event_priority.title:		'DBMS Event Thread Priority'
+
+*.dmf_write_behind.file:		dbmswthd.hlp
+dbms.dmf_write_behind.title:		'DBMS Write Behind Threads'
+star.dmf_write_behind.title:		'Star Write Behind Threads'
+
+*.log_writer.file:			dbmslogw.hlp
+dbms.log_writer.title:			'DBMS Log Writer'
+recovery.log_writer.title:		'Recovery Server Log Writer'
+rms.log_writer.title:                   'RMS Log Writer'
+
+gcc.error_level.file:			neterrlvl.hlp
+gcc.error_level.title:			'Net Server Error Level'
+
+gcc.ib_encrypt_mech.file:		netiencryptmech.hlp
+gcc.ib_encrypt_mech.title:		'Inbound Encryption Mechanism'
+
+gcc.ib_encrypt_mode.file:		netiencryptmode.hlp
+gcc.ib_encrypt_mode.title:		'Inbound Encryption Mode'
+
+gcc.inbound_limit.file:			netibmax.hlp
+gcc.inbound_limit.title:		'Net Server Inbound Connection Limit'
+
+gcc.log_level.file:			gccloglv.hlp
+gcc.log_level.title:			'Net Server Logging Level'
+
+gcc.mechanisms.file:			netmech.hlp
+gcc.mechanisms.title:			'Dynamically-loaded Mechanism List'
+
+gcc.message_concat.file:		netmsgconcat.hlp
+gcc.message_concat.title:		'Net Server Message Concatenation'
+
+gcc.ob_encrypt_mech.file:		netoencryptmech.hlp
+gcc.ob_encrypt_mech.title:		'Outbound Encryption Mechanism'
+
+gcc.ob_encrypt_mode.file:		netoencryptmode.hlp
+gcc.ob_encrypt_mode.title:		'Outbound Encryption Mode'
+
+gcc.outbound_limit.file:		netobmax.hlp
+gcc.outbound_limit.title:		'Net Server Outbound Connection Limit'
+
+gcc.protocols.file:			netprots.hlp
+gcc.protocols.title:			'Net Server Protocol Configuration'
+
+gcc.registry_type.file:			netregtype.hlp
+gcc.registry_type.title:		'Net Server Registry Type'
+
+gcd.client_timeout.file:		dastime.hlp
+gcd.client_timeout.title:		'Data Access Server Client Timeout'
+
+gcd.client_max.file:			dascmax.hlp
+gcd.client_max.title:			'Data Access Server Client Maximum'
+
+gcd.connect_pool_expire.file:		daspexp.hlp
+gcd.connect_pool_expire.title:		'Data Access Server Pool Expiration'
+
+gcd.connect_pool_size.file:		dascpsz.hlp
+gcd.connect_pool_size.title:		'Data Access Server Connect Pool Size'
+
+gcd.connect_pool_status.file:		dascps.hlp
+gcd.connect_pool_status.title:		'Data Access Server Connect Pool Status'
+
+gcd.protocols.file:			netprots.hlp
+gcd.protocols.title:			'Data Access Server Protocol Configuration'
+
+gcb.inbound_limit.file:			gcbibmax.hlp
+gcb.inbound_limit.title:		'Bridge Server Inbound Connection Limit'
+
+gcb.protocols.file:			gcbprots.hlp
+gcb.protocols.title:			'Bridge Server Protocol Configuration'
+
+gcb.crtvnodes.file:			gcbvnode.hlp
+gcb.crtvnodes.title:			'Bridge Vnode Create'
+
+ice.cgi-bin_dir.file:			icecgibn.hlp
+ice.cgi-bin_dir.title:			'Web Server CGI and Binary Location'
+  
+ice.cgi-bin_ref.file:			icecbref.hlp
+ice.cgi-bin_ref.title:			'URL reference to CGI-BIN Directory'
+
+ice.config_ws.file:			icecfws.hlp
+ice.config_ws.title:			'Configured Web Server'
+
+ice.config_ws_dir.file:			icecfloc.hlp
+ice.config_ws_dir.title:		'Web Server Configuration Files Location'
+
+ice.db_conn_timeout.file:		iceconnt.hlp
+ice.db_conn_timeout.title:		'Database Connection Timeout Value'
+
+ice.default_database.file:		icedefdb.hlp
+ice.default_database.title:		'Internet Communication Default Database'
+  
+ice.default_userid.file:		icedefid.hlp
+ice.default_userid.title:		'Internet Communication Default User Id'
+
+ice.html_home.file:			icehthom.hlp
+ice.html_home.title:			'HTML Document Root Directory'
+
+ice.server_name.file:			icesrver.hlp
+ice.server_name.title:			'Web Server Name and Port Number'
+
+icesvr.image_name.file:                 iceimage.hlp
+icesvr.image_name.title:                'ICE Server Image Name'
+
+icesvr.server_class.file:               iceclass.hlp
+icesvr.server_class.title:              'ICE Server Class'
+
+icesvr.client_lib.file:                 icecli.hlp
+icesvr.client_lib.title:               'ICE Server Client Library'
+
+icesvr.dictionary_class.file:           ddfclass.hlp
+icesvr.dictionary_class.title:          'ICE Server Repository Class'
+
+icesvr.dictionary_name.file:            ddfname.hlp
+icesvr.dictionary_name.title:           'ICE Server Repository Name'
+
+icesvr.dictionary_driver.file:          ddfddi.hlp
+icesvr.dictionary_driver.title:         'ICE Server Repository Driver'
+
+icesvr.dictionary_node.file:            ddfnode.hlp
+icesvr.dictionary_node.title:           'ICE Server Repository Node'
+
+icesvr.rights_table.file:               iceright.hlp
+icesvr.rights_table.title:              'ICE Server Rights Table'
+
+icesvr.users_table.file:                iceusers.hlp
+icesvr.users_table.title:               'ICE Server Users Table'
+
+icesvr.privilege_user.file:             icesysad.hlp
+icesvr.privilege_user.title:            'ICE Server System Administrator'
+
+icesvr.units_table.file:                iceunits.hlp
+icesvr.units_table.title:               'ICE Server Business Units Table'
+
+icesvr.documents_table.file:            icedocs.hlp
+icesvr.documents_table.title:           'ICE Server Documents Table'
+
+icesvr.locations_table.file:            icelocs.hlp
+icesvr.locations_table.title:           'ICE Server Locations Table'
+
+icesvr.extensions_table.file:           iceexts.hlp
+icesvr.extensions_table.title:          'ICE Server Document Extensions Table'
+
+icesvr.files_table.file:                icefiles.hlp
+icesvr.files_table.title:               'ICE Server Files Table'
+
+icesvr.req_timeout.file:                icerqtmo.hlp
+icesvr.req_timeout.title:               'ICE Server File Request'
+
+icesvr.user_session_table.file:         iceusess.hlp
+icesvr.user_session_table.title:        'ICE Server User Sessions Table'
+
+icesvr.system_timeout.file:             icesytmo.hlp
+icesvr.system_timeout.title:            'ICE Server System Time out'
+
+icesvr.db_conn_timeout.file:            icedbtmo.hlp
+icesvr.db_conn_timeout.title:           'ICE Server Database Connection'
+
+icesvr.docsession_table.file:           icedsess.hlp
+icesvr.docsession_table.title:          'ICE Server Document Session'
+
+icesvr.sess_timeout.file:               icesesto.hlp
+icesvr.sess_timeout.title:              'ICE Server Session Time out'
+
+icesvr.block_size.file:                 iceblksz.hlp
+icesvr.block_size.title:                'ICE Server Generated Page Block Size'
+
+icesvr.block_count.file:                iceblkct.hlp
+icesvr.block_count.title:               'ICE Server Generated Page Flush Count'
+
+icesvr.vars_table.file:                 icevars.hlp
+icesvr.vars_table.title:                'ICE Server Variables Table'
+
+icesvr.apps_table.file:                 iceapps.hlp
+icesvr.apps_table.title:                'ICE Server Applications Table'
+
+icesvr.html_home.file:                  icehome.hlp
+icesvr.html_home.title:                 'ICE Server Web Server HTML Home'
+
+icesvr.ignore_user_case.file:           icecase.hlp
+icesvr.ignore_user_case.title:          'ICE Server Ignore User name Case Flag '
+
+icesvr.app_dir.file:                    iceappdr.hlp
+icesvr.app_dir.title:                   'ICE Server Applications Directory'
+
+icesvr.allow_dsql.file:                 icedsql.hlp
+icesvr.allow_dsql.title:                'ICE Server Dynamic SQL Flag'
+
+icesvr.allow_exeapp.file:               iceexe.hlp
+icesvr.allow_exeapp.title:              'ICE Server Applications Flag'
+
+icesvr.allow_dbovr.file:                icedbovr.hlp
+icesvr.allow_dbovr.title:               'ICE Server Specify Database Flag'
+
+icesvr.default_dbuser.file:             icedbusr.hlp
+icesvr.default_dbuser.title:            'ICE Server Default Database User'
+
+icesvr.row_set.file:                    icerowst.hlp
+icesvr.row_set.title:                   'ICE Server Result Row Set'
+
+icesvr.set_size.file:                   icesetsz.hlp
+icesvr.set_size.title:                  'ICE Server Result Set Memory Size'
+
+icesvr.default_database.file:           icedefdb.hlp
+icesvr.default_database.title:          'ICE Server Default Database'
+
+rcp.lock_limit.file:			lcklockl.hlp
+rcp.lock_limit.title:			'Global Lock Limit'
+
+rcp.hash_size.file:			lckhsize.hlp
+rcp.hash_size.title:			'Locking System Hash Table Size'
+
+rcp.list_limit.file:			lcklistl.hlp
+rcp.list_limit.title:			'Global Lock List Limit'
+
+rcp.resource_hash.file:			lckrhash.hlp
+rcp.resource_hash.title:		'Lock Resource Hash Table Size'
+
+rcp.resource_limit.file:		rcpresli.hlp
+rcp.resource_limit.title:		'Global Locked Resource Limit'
+
+rcp.per_tx_limit.file:			lcktxlim.hlp
+rcp.per_tx_limit.title:			'Locks-Per-Transaction Limit'
+
+rcp.archiver_interval.file:		logarcin.hlp
+rcp.archiver_interval.title:		'Archiver Interval'
+
+rcp.archiver_refresh.file:		logarcrf.hlp
+rcp.archiver_refresh.title:		'Archiver Refresh Percent'
+
+rcp.block_size.file:			logblksz.hlp
+rcp.block_size.title:			'Log Block Size'
+
+rcp.buffer_count.file:			logbfcnt.hlp
+rcp.buffer_count.title:			'Logging System Buffer Count'
+
+rcp.cp_interval.file:			logcpint.hlp
+rcp.cp_interval.title:			'Logging Consistency Point Interval'
+
+rcp.cp_interval_mb.file:		logcpimb.hlp
+rcp.cp_interval_mb.title:		'Logging Consistency Point Interval'
+
+rcp.database_limit.file:		logdblim.hlp
+rcp.database_limit.title:		'Logging System Database Limit'
+
+rcp.force_abort_limit.file:		logfabrt.hlp
+rcp.force_abort_limit.title:		'Log Force Abort Limit'
+
+rcp.full_limit.file:			logfllim.hlp
+rcp.full_limit.title:			'Log Full Limit'
+
+rcp.lgk_memory_lock.file:		rcplgkml.hlp
+rcp.lgk_memory_lock.title:		'LG/LK Shared Memory Lock'
+
+rcp.tx_limit.file:			logtxlim.hlp
+rcp.tx_limit.title:			'Concurrent Transaction Limit'
+
+rcp.optimize_writes.file:		logoptim.hlp
+rcp.optimize_writes.title:		'Optimize Log Writes'
+
+rcp.readbackward_blocks.file:		logrbblk.hlp
+rcp.readbackward_blocks.title:		'Transaction rollback log blocks'
+
+rcp.readforward_blocks.file:		logrfblk.hlp
+rcp.readforward_blocks.title:		'Log read forward log blocks'
+
+secure.level.file:			seclevel.hlp
+secure.level.title:			'Default Security Attributes'
+
+secure.ome.file:			secome.hlp
+secure.ome.title:			'Object Management Extension'
+
+secure.role_password.file:		secrolps.hlp
+secure.role_password.title:		'Role Passwords'
+ 
+secure.roles.file:			secroles.hlp
+secure.roles.title:			'Application Roles'
+
+secure.row_audit_default.file:		secraudf.hlp
+secure.row_audit_default.title:		'Default Row Auditing Attribute'
+
+secure.row_audit_key.file:		secrauky.hlp
+secure.row_audit_key.title:		'Row Audit Key'
+
+secure.user_password.file:		secpaswd.hlp
+secure.user_password.title:		'User Passwords'
+
+*.vms_accounting.file:			vmsaccnt.hlp
+*.vms_accounting.title:			'VMS Accounting'
+
+*.vms_ast_limit.file:			vmsastlm.hlp
+*.vms_ast_limit.title:			'VMS AST Limit'
+
+*.vms_buffer_limit.file:		vmsbuflm.hlp
+*.vms_buffer_limit.title:		'VMS Buffer limit'
+
+*.vms_error.file:			vmserrfl.hlp
+*.vms_error.title:			'VMS Error File'
+
+*.vms_extent.file:			vmsexten.hlp
+*.vms_extent.title:			'VMS Extent'
+
+*.vms_file_limit.file:			vmsfillm.hlp
+*.vms_file_limit.title:			'VMS File Limit'
+
+*.vms_io_buffered.file:			vmsiobuf.hlp
+*.vms_io_buffered.title:		'VMS IO Buffered'
+
+*.vms_io_direct.file:			vmsiodir.hlp
+*.vms_io_direct.title:			'VMS IO Direct'
+
+*.vms_maximum_working_set.file:		vmsmaxws.hlp
+*.vms_maximum_working_set.title:	'VMS Maximum Working Set'
+
+*.vms_page_file.file:			vmspgfil.hlp
+*.vms_page_file.title:			'VMS Page File'
+
+*.vms_privileges.file:			vmsprivs.hlp
+*.vms_privileges.title:			'VMS Privileges'
+
+*.vms_queue_limit.file:			vmsquelm.hlp
+*.vms_queue_limit.title:		'VMS Queue Limit'
+
+*.vms_working_set.file:			vmsworks.hlp
+*.vms_working_set.title:		'VMS Working Set'
+
+*.vms_quantum.file:			vmsquant.hlp
+*.vms_quantum.title:			'VMS Quantum'
+
+*.vms_stack_size.file:			vmsstack.hlp
+*.vms_stack_size.title:			'VMS Stack Size'
+
+*.vms_uic.file:				vmsuic.hlp
+*.vms_uic.title:			'VMS UIC'
+
+*.vms_enqueue_limit.file:		vmsenqlm.hlp
+*.vms_enqueue_limit.title:		'VMS Enqueue Limit'
+
+*.vms_priority.file:			vmsprioi.hlp
+*.vms_priority.title:			'VMS Priority'
+
+*.sqlda_size.file:                    	gwsqldasz.hlp
+*.sqlda_size.title:                    	'sqlda Size'
+
+*.pst_max.file:                       	gwpstmax.hlp
+*.pst_max.title:                       	'Open Cursors per Transaction'
+
+*.empty_date.file:                    	gwdate.hlp
+*.empty_date.title:                    	'Empty Date'
+
+*.load_table_qualifier.file:		gwqual.hlp
+*.load_table_qualifier.title:		'Object Qualification Method'
+
+*.empty_date_return.file:		gwedretn.hlp
+*.empty_date_return.title:		'Return Empty Dates'
+
+*.squeeze_len.file:			gwsqueez.hlp
+*.squeeze_len.title:			'Squeeze Length'
+
+*.nls_date_format.file:		        gwnlsdate.hlp
+*.nls_date_format.title:		'Oracle NLS date format'
+
+*.multiple_open_cursors.file:		gwmltcur.hlp
+*.multiple_open_cursors.title:		'MSSQL multiple open cursors'
+
+*.union_zerolength_column_padding.file:  gwzeroln.hlp
+*.union_zerolength_column_padding.title: 'MSSQL union zero length padding'
+
+*.trace_file.file:			gwtrace_file.hlp
+*.trace_file.title:			'Gateway trace file'
+
+*.trace_init.file:			gwtrace_init.hlp
+*.trace_init.title:			'Gateway trace settings'
+
+*.trace_full.file:			gwtrace_full.hlp
+*.trace_full.title:			'Gateway trace headers'
+
+*.typecast_strlen.file:			gwtypecast_strlen.hlp
+*.typecast_strlen.title:		'Gateway default type cast length'
+
+*.varchar_comp.file:			gwvchcmp.hlp
+*.varchar_comp.title:			'Varchar Compression'
+
+*.blob_data.file:                       gwblobdt.hlp
+*.blob_data.title:                      'BLOB Data'
+
+*.blob_len.file:                        gwblobln.hlp
+*.blob_len.title:                       'BLOB Length'
+
+*.clob_len.file:                        gwclobln.hlp
+*.clob_len.title:                       'CLOB Length'
+
+*.dbevent_poll_rate.file:               gwdbevpl.hlp
+*.dbevent_poll_rate.title:              'Database Event Poll Rate'
+
+*.hex_len.file:				gwhex.hlp
+*.hex_len.title:			'Hex Length'
+
+dbms.date_type_alias.file:		dateingres.hlp
+dbms.date_type_alias.title:		'Is Date alias to Ingresdate or Ansidate types ? (deprecated)'
+
+config.date_alias.file:			dateingres.hlp
+config.date_alias.title:		'Is Date keyword aliased to Ingresdate, Ansidate, or not allowed (NONE) types ?'
+
+rms.ii_rms_rrl.file:			rmsrrl.hlp
+rms.ii_rms_rrl.title:   		'RMS read regardless lock'
+
+rms.ii_rms_readonly.file:    		rmsreadonly.hlp
+rms.ii_rms_readonly.title:   		'RMS serer read only option'
+
+rms.ii_rms_fab_size.file:    		rmsfabsize.hlp
+rms.ii_rms_fab_size.title:		'RMS FAB buffer count'
+
+rms.ii_rms_hash_size.file:    		rmshashsize.hlp
+rms.ii_rms_hash_size.title:   		'RMS hash table size'
+
+rms.ii_rms_buffer_rfa.file:    		rmsbufrfa.hlp
+rms.ii_rms_buffer_rfa.title:   		'RMS buffering RFA option'
+
+rms.ii_rms_close_file.file:		rmsclosefile.hlp
+rms.ii_rms_close_file.title:   		'RMS close file option'

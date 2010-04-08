@@ -1,0 +1,13 @@
+#
+# YAM MANIFEST file for front!frontcl!files_unix_win
+#
+
+IISUBSYS front frontcl files_unix_win ;
+
+IIFILES  startsql.dst startup.dst vt100f.map vt100i.map vt100nk.map
+  vt200i.map vt220.map ;
+
+IIFILE startup : startup.dst ;
+IIFILE startsql : startsql.dst ;
+
+

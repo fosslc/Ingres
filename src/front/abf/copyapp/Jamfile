@@ -1,0 +1,21 @@
+#
+# Jamfile file for front!abf!copyapp
+#
+
+SubDir ING_SRC front abf copyapp ;
+
+IISUBSYS front abf copyapp ;
+
+
+IIBINEXE copyapp : camain.c ;
+IINEEDLIBS copyapp :  COPYAPPLIB CAUTILLIB COPYUTILLIB
+	COPYFORMLIB GRAFLIB SHINTERPLIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB SHEMBEDLIB ;
+
+IIUNDEFS copyapp : II_copyright malloc ;
+
+IIMSGHDR erca.msg ;
+
+IILIBRARY COPYAPPLIB : caout.sc caerror.sc insrcs.qsc
+	cpapdata.c copyappl.c ;
+

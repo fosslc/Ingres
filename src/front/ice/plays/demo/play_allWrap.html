@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Shakespeare's Plays</title>
+</head>
+<body>
+<!-- #ICE VAR=`
+<FORM ACTION="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_allWrap.html]"
+	METHOD="POST">
+` -->
+
+<!-- To Do:
+	1/  Select * from plays
+	    Rows = 5
+	2/  If the count of rows (ii_rowcount) not
+	    equal to 5, display a link to the
+	    document: "play_allWrapSub.html"
+	3/  Declare and set 2 session variables,
+	    e_playTxn = name of the transaction
+	    e_playTxnCommitted = FALSE (we have
+	    not committed this transaction yet)
+	4/  Include the session control file
+	    play_SessionControl_h.html.
+	
+
+-->
+<!-- #ICE REPEAT 
+          DATABASE = `icetutor` 
+          SQL=`select * from plays` 
+          TRANSACTION=`Complete` 
+          CURSOR=`Works` 
+          ROWS=`5` 
+          TYPE=`TABLE`
+-->
+
+<!-- #ICE REPEAT IF ( `:ii_rowcount` != `5` )
+	THEN=`<p>
+	<b>
+<!-- #ICE VAR=``
+	<a href="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_allWrapSub.html]">
+`` -->
+        Re-start from the beginning
+        </a></b><p>`
+--> 
+
+<!-- #ICE DECLARE=`session.e_playTxn=Complete` -->
+<!-- #ICE DECLARE=`session.e_playTxnCommitted=FALSE` -->
+<p>
+<INPUT TYPE="submit" NAME="More" VALUE="More" ALT="Show more plays">
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</FORM>
+</body>
+</html>

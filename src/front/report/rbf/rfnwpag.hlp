@@ -1,0 +1,32 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You may specify whether or not a pagefeed should be generated whenever the 
+value of the break column changes.  The field on this form accepts a value
+of "yes" or "no".  You do not need to spell out the full word.  Type
+in enough of the word to make it distinct.
+
+
+The option is:
+
+        OPTION          DESCRIPTION
+        ------          -----------
+	New Page	If the value of this field is "yes" then a pagefeed
+			will be a generated whenever the break value changes.
+			A footer for the break column will be created if one
+			does not already exist.
+
+
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	OK		Submit the option specified and return to the 
+			main menu.
+
+	Cancel		Return to the main menu and do not record the 
+			option specified.
+
+	ListChoices	List all possible values for the current field.
+			
+        Help            Print this message.
+

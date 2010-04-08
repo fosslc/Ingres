@@ -1,0 +1,151 @@
+/*
+** Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+*/
+/*
+** Generic part file for Informix Gateway
+*/
+
+/*
+** History
+**	26-Apr-99 (GordonW)
+**		created.
+**	11-May-99 (GordonW)
+**		remove informix specific
+**	07-Jun-99 (kinte01)
+**		Update with VMS locations
+**	08-Jun-99 (kinte01/chash01)
+**		no iigwshut.exe for VMS. For VMS make iigwstop an
+**		executable
+**	17-Aug-99 (GordonW)
+**		Added gwalias, gwsetlogin and gwsetschema.
+**      25-jan-01 (chash01)
+**              vms gateways do not have gwalias gwsetlogin gwsetschema
+**      23-apr-2001 (chash01)
+**              add gwalias and gwsetlogin, still no gwsetschema,
+**              note gwalias and gwsetlogin on vms is in
+**	21-may-2001 (kinte01)
+**		Correct previous submission.  gwalias & gwsetlogin are
+**		script files and not executables. 
+**	12-oct-2001 (clach04)
+**		Added MR release notes for non-VMS platforms
+**	26-nov-2001 ( clach04)
+**		Removed gateway mnx files from 2.5 Unix as they are 
+**		no longer required (their existence actually causes problems).
+**	24-may-2002 (kinte01)
+**		Add iirungw executable for VMS only
+**	16-Jun-2003 (ahaal01)
+**		Added gateway mnx files for 2.5 hpb_us5 Unix as they are 
+**		required.
+**	12-May-2004 (ahaal01)
+**		Added ingres!files!english!messages files: messages.readme
+**		and messages.txt.
+**		(Re-)Added gateway mnx error message files for ALL platforms.
+**	21-May-2004 (clach04)
+**		Removed 2.1/0106 release notes
+**		Added readmes (text and html) as per new doc standard (i.e.
+**		release notes are now called readmes and follow a naming 
+**		standard).
+**	04-Jan-2005 (clach04)
+**              Removed gwalias.EX example file. Alias files are 
+**              depreciated.
+**	06-Jan-2005 (clach04)
+**		Added EAversion.rel (like Windows). This is a version
+**		file just like the Ingres version.rel.
+**  28-May-2008 (clach04)
+**      Removed unused/un-built (supposedly gateway) message.mnx files
+**      s13.mnx, s202.mnx
+**  02-Jun-2008 (clach04)
+**      Removed VMS files.
+**      Removed message directory "stuff" as this collides with fegeneric/basic.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART gateway
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+
+   BUILD_DIR (ING_BUILD)!bin
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwstart
+   }
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwshut
+   }
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE gwalias
+   }
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE gwsetlogin
+   }
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE gwsetschema
+   }
+
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY ingres!utility
+#endif
+
+   BUILD_DIR (ING_BUILD)!utility
+   SCRIPT iigwstop
+   SCRIPT gwecho
+
+/*
+** ingres!files!english
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY ingres!files!english
+#endif
+   BUILD_DIR (ING_BUILD)!files!english
+
+/*
+ clach04
+ Removed mnx files from 2.5 Unix as gateway messages
+ are in the large (slow) mnx files - errhelp now works under 2.5
+ Also under Solaris if these files exist all gateway error lookups FAIL
+
+ ahaal01
+ Added mnx files for 2.5 hpb_us5 Unix as gateway messages since they are
+ still required
+
+ clach04
+ Re-added mnx files for ALL platforms. The previous decision to remove them
+ was based on the fact that gateway messages had been in the fast and slow
+ message files for Ingres, apparently it was a mistake that the gateway
+ messages where in the fast and slow messages. Ingres (dbms and clients)
+ no longer have gateway messages in the fast and slow message files.
+*/
+   FILE s203.mnx
+
+
+   DIRECTORY ingres
+   BUILD_DIR (ING_BUILD)
+   FILE EAversion.rel
+
+   BUILD_DIR (ING_SRC)!gateway!gwf!release
+   FILE readme_Enterprise_Access.txt
+   FILE readme_Enterprise_Access.html

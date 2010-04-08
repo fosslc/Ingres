@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- NETUTIL, top frame, Virtual Node Name (vnode) tablefield subtopic
+/#--
+Upon entry to NETUTIL, this field displays a vertical list of all virtual
+node names for which either a login entry, a connection entry, or both, 
+is defined.  
+
+It should be noted that this tablefield does not correspond to any table 
+that is part of the actual database which is administered by NETUTIL.  
+It is merely an abstraction intended to make the user interface more 
+comprehensible.  Therefore, it is possible to create an entry in the 
+vnode tablefield with no corresponding detail information.  Although such 
+an entry will, in effect, disappear on exit from NETUTIL since there is 
+no place to record its existence.

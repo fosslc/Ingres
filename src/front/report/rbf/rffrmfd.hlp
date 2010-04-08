@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may specify if the formfeed character should 
+automatically be generated after each report page.
+
+To select a response, scroll to the desired option, and choose the 
+Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Yes		Generate formfeed characters in the report
+	No		Do not generate formfeed characters in the report
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select		If Yes, the report will contain a formfeed character
+			at the end of each report page.  If No, then the 
+			report will not contain formfeeds. 
+
+        Cancel          Return to the Report Options frame without selecting 
+			a response.
+
+        Help            Print this message.

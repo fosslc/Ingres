@@ -1,0 +1,19 @@
+#
+# Jamfile file for front!frontcl!gt
+#
+
+SubDir ING_SRC front frontcl gt ;
+
+IISUBSYS front frontcl gt ;
+
+
+IIMSGHDR ergt.msg ;
+
+IILIBRARY GTLIB : gtxws.c gtxact.c gtx.c gtws.c gtutil.c
+	gttexted.c gtstatus.c gtsflush.c gtscomp.c gtrstrct.c
+	gtputs.c gtplot.c gtninit.c gtmsgp.c gtlocdev.c gtinq.c
+	gtinit.c gthchar.c gtgkserr.c gtflrep.c gterror.c
+	gterase.c gtedit.c gtdvec.c gtdraw.c gtdmp.c gtdatset.c
+	gtchout.c gtcchdef.c gtbox.c ;
+
+IILIBRARY IMPFRAMELIBDATA : gtdata.c gtglob.c ;

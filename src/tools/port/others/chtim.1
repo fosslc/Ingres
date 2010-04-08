@@ -1,0 +1,56 @@
+.TH CHTIM l "10 August 1985"
+.SH NAME
+chtim \- change time stamps
+.SH SYNOPSIS
+.B chtim 
+[
+-sR
+]
+[
+-p proto-file
+]
+[
+-am time
+]
+files ...
+.SH DESCRIPTION
+The -a and -m flags mean to reset the access and modification
+times, respectively, to the following time.  The time can be in
+seconds since Jan 1, 1970; or in a conventional month, day, time, year,
+format (Example: "Aug 10 14:34:12 1985").  The user must use quotes
+for the date form.  If the user leaves out the year, 
+.I chtim
+will assume the user means the current year.  If the user leaves
+out the seconds field, 
+.I chtim
+assumes 00 seconds.  The month may be in lower-case, upper-case, or
+capitalized.
+.PP
+The -p flag means that the time stamps on the proto-file
+are to be used to reset the access and modification times on the files.
+.PP
+With a -s flag
+.I chtim 
+makes a report in shell script format.
+If the user redirects this output to a file, and later 
+.I sources
+that file, the original access and modification times of the files
+will be restored.
+.PP
+The -R flag says
+.I chtim
+should change or report time stamps recursively on subdirectories.
+Parent directories are changed after the child files so that the
+new access and modification times on the parent are not immediately
+reset to the current time.
+.PP
+By default,
+.I chtim
+only reports the time stamps of the files.
+.SH BUG
+Utimes sets the creation time to the current time.
+.SH "SEE ALSO"
+utimes(2), stat(2), ls(1)
+.SH AUTHOR
+Don Gworek (3 functions borrowed from Berkeley dump(8))
+

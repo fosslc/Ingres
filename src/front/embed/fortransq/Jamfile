@@ -1,0 +1,18 @@
+#
+# Jamfile file for front!embed!fortransq
+#
+
+SubDir ING_SRC front embed fortransq ;
+
+IISUBSYS front embed fortransq ;
+
+
+IIBINEXE esqlf : fsqmain.c ;
+IINEEDLIBS esqlf : FORTRANSQLIB FORTRANLIB EQUELLIB UGLIB 
+	FMTLIB AFELIB ADFLIB COMPATLIB ;
+IINEEDOBJ esqlf : eqglobs.c ugdata.c eqdata.c ;
+IIUNDEFS esqlf : tok_optab yylex yyparse ;
+
+IILIBRARY FORTRANSQLIB : forsq.sy fsqtoks.st fsqscan.c
+	forsqgen.c ;
+

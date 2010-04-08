@@ -1,0 +1,30 @@
+#
+# Jamfile file for front!frontcl!ft
+#
+#   20-Oct-2009 (hweho01)
+#     Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front frontcl ft ;
+
+IISUBSYS front frontcl ft ;
+
+IINOOPTIM mwrun.c : vax_vms ;
+IINOOPTIM insrt.c : i64_hpu ;
+
+IILIBRARY FTLIB : word.c vi.c strfld.c mwrun.c mwmsg.c mwmenu.c
+	mwhost.c mwget.c mwform.c mwfcmds.c mwcmds.c movetab.c move.c
+	mapping.c mapkey.c keys30.c itlnwin.c itlnprt.c itlndraw.c
+	itldopen.c itldclse.c invistf.c insrt.c getwin.c
+	funckeys.c ftwinerr.c ftvalid.c ftutil.c ftusrinp.c fttmout.c
+	fttest.c fttermsz.c fttermin.c ftsyndsp.c ftswpprn.c ftsvinpt.c
+	ftsubmu.c ftstrtch.c ftspace.c ftshell.c ftsetio.c ftsetda.c
+	ftscroll.c ftscrlfd.c ftrunnof.c ftrun.c ftrstore.c ftring.c
+	ftref.c ftredraw.c ftrange.c ftqbf.c ftptmenu.c ftprompt.c
+	ftprnscr.c ftpopup.c ftpanic.c ftnewfrm.c ftmushft.c ftmsg.c
+	ftmrkfld.c ftmaplbl.c ftmapfle.c ftlotus.c ftinstst.c ftinit.c
+	ftgtmenu.c ftgtctl.c ftgrt.c ftgetch.c ftfrprt.c ftfndwin.c
+	ftfldupd.c ftfkset.c fterror.c ftdmpscr.c ftdblutl.c
+	ftcrtrk.c ftclose.c ftclear.c ftbuild.c ftbrowse.c ftboxerr.c
+	ftbell.c ftattr.c ftaddfrs.c ftaddcom.c frcebrws.c fldstr.c ;
+
+IILIBRARY IMPFRAMELIBDATA : ftdata.c itdrloc.c ;

@@ -1,0 +1,80 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for kerberos
+*/
+
+/*
+** History
+**	26-apr-2000 (hanch04)
+**		Created
+**	09-jan-2001 (somsa01)
+**		Added support for other products.
+**      04-jan-2002 (loera01) SIR 106743
+**              Do not ship any third-party Kerberos shared libraries.
+**              Only ship Kerberos driver for supported platforms.
+**      17-jan-2002 (loera01) SIR 106858
+**              Add capability to configure Kerberos.
+**      04-Feb-2002 (loera01) Bug 107015
+**              Remove SETUP instruction; otherwise, edbcbuild or ingbuild
+**              will attempt to configure Kerberos.
+**	10-apr-2002 (kinte01)
+**		Update for VMS support of Kerberos
+**	10-jun-2003 (hayke02)
+**		Remove PRELOAD delshlibs to prevent Ingres shared object
+**		libraries being removed during a custom (re)install of Ingres
+**		Networking. This change fixes bug 109256.
+**	11-Jun-2004 (somsa01)
+**		Cleaned up code for Open Source.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**      12-Aug-2007 (Ralph Loen) SIR 118898
+**              Removed keberos.crs and kerberos.rfm.  Kerberos configuraiton 
+**              is now handled in all.crs along with the rest of the security 
+**              mechanism items.
+**      08-jan-2008 (bolke01)
+**              Bring VMS inline with UNIX and build into install directory
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART  kerberos
+
+# if defined(R_SHLIBS) && !defined(any_aix)
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY (PROD2NAME)!LIB_TGT
+#endif
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+# ifdef VMS
+      {
+      EXECUTABLE libgcskrb
+      PERMISSION s:re,o:rwed,g:re,w:re
+      }
+# else
+      {
+      EXECUTABLE libgcskrb.$SLSFX.2.0
+      PERMISSION s:re,o:rwed,g:re,w:re
+      }
+# endif
+
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY (PROD2NAME)!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+    SCRIPT (PROG1PRFX)sukerberos
+
+# endif /* defined(R_SHLIBS) && !aix */

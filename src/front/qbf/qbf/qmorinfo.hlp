@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This form provides additional information about the selected QBFName.
+Information on this form cannot be modified.  "Next" ("Previous") 
+will show the Details frame for the QBFName which appears after 
+(before) the current QBFName in the catalog table field.  "Next" 
+will advance to the top QBFName of the catalog table field if 
+the current QBFName is the last one, and similarly for "Previous".
+
+	Field Name              Description
+	----------               -----------
+	Name                    Name of the current QBFName.
+	Owner                   Owner of the current QBFName.
+	Created                 Date on which this QBFName was first created.
+	Modified                Date on which this QBFName was last altered.
+	Short Remark            One-line description of current QBFName.
+	Long Remark             Longer description of current QBFName.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        --------                --------
+	Next                    Show MoreInfo frame for next QBFName in the
+                                catalog table field.
+
+	Previous                Show MoreInfo frame for previous QBFName in 
+				the catalog table field.
+
+        Go                      Execute the current QBFName.  
+
+        Help                    Access the INGRES Help facility.
+
+        End                     Stop work on this frame and return to the
+                                frame that called it.

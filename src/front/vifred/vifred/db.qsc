@@ -1,0 +1,129 @@
+/*
+**  Copyright (c) 2004 Ingres Corporation
+*/
+
+/*
+** db.qsc 
+** contains most database access for the frame editor
+**
+** History:
+**	01/24/85 (drh)	Moved getFrmName and vfchknam routines into getfrmnam.qc
+**			and vfchknam.c, following peterk's cfe changes.
+**	01/27/85 (drh)	Eliminated alLastFrm routine, since it's now in
+**			writefrm.qc
+**	10/09/86 (sandyd) Saturn changes.  Added FEingres(), FEing_exit().
+**			Removed query on "usercode", "dba", "username".
+**	03/23/87 (dkh) -Added support for ADTs.
+**	10/20/86 (KY)  -- Change CH.h to CM.h.
+**	08/14/87 (dkh) - ER changes.
+**	12/18/87 (dkh) - Added call to FEendforms() if FEingres() fails.
+**	22-dec-87 (sylviap)
+**		Took out 'ifdef HACKFOR50'
+**		Changed from a .qc file to .qsc
+**	10-may-88 (sylviap)
+**		Added SQL COMMIT after FE call to release the 
+**		system catalogs.
+**	05/27/88 (dkh) - Added call to IIAFdsDmlSet() since the ADF_CB
+**			 is currently set to DB_QUEL by default.
+**	11-dec-1988 (danielt)
+**		removed commits
+**	14-dec-89 (bruceb)
+**		Pass role, group and password flags down to the server.
+**	12/15/89 (dkh) - VMS shared lib changes.
+**	02-may-90 (bruceb)
+**		Role flag isn't ever set.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# include	<compat.h>
+# include	<pc.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"decls.h"
+# include	<cm.h>
+# include	<er.h>
+# include	<uigdata.h>
+
+/*
+** invoke ingres
+*/
+
+FUNC_EXTERN	STATUS	FEingres();
+FUNC_EXTERN	VOID	FEing_exit();
+FUNC_EXTERN	DB_LANG	IIAFdsDmlSet();
+FUNC_EXTERN	char	*IIUIpassword();
+
+# ifndef FORRBF
+extern	i4	(*ExitFn)();
+FUNC_EXTERN	i4	vfexit();
+FUNC_EXTERN	i4	fdqbfmap();
+FUNC_EXTERN	STATUS	FErelexists();
+extern	bool	vfuseiicomp;
+# endif
+
+# ifndef FORRBF
+initdb(name)
+char	*name;
+{
+	char	*db;
+	char	*user;
+	char	*pipe;
+	char	*role;
+	char	*passwd;
+	char	*group;
+
+	db = name;
+	if (!Vfeqlcall)
+	{
+		/*
+		**  Set dml to DB_SQL since the ADF_CB is set to
+		**  DB_QUEL by default.
+		*/
+		_VOID_ IIAFdsDmlSet(DB_SQL);
+
+		/*
+		** "user" and "pipe" can point to empty strings,
+		** but they should not be passed as null pointers
+		** to FEingres(), since a null pointer terminates
+		** the argument list.
+		*/
+		user = (vfuserflag) ? vfuname : ERx("");
+		pipe = (Vfxpipe != NULL) ? Vfxpipe : ERx("");
+
+		role = ERx("");
+
+		IIVFpwPasswd = IIUIpassword(IIVFpwPasswd);
+		passwd = (IIVFpwPasswd != NULL) ? IIVFpwPasswd : ERx("");
+
+		group = (IIVFgidGroupID != NULL) ? IIVFgidGroupID : ERx("");
+
+		if (FEingres(db, user, pipe, role, passwd, group, NULL) != OK)
+		{
+			FEendforms();
+			PCexit(-1);
+		}
+
+	}
+	/*
+	** reset the exit function syserr calls
+	*/
+	ExitFn = vfexit;
+}
+# endif
+
+/*
+** exit ingres
+*/
+
+# ifndef FORRBF
+enddb()
+{
+	FEing_exit();
+}
+# endif

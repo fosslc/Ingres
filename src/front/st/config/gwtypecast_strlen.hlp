@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+ The typecast_strlen parameter specifies the default length used when
+ a string type cast is issued without a length specified. Some DBMS 
+ vendors require an explicit string result length. The typecast_strlen
+ parameter is used in cases where a length is required by the DBMS, but 
+ OpenSQL does not require one. For example, the type cast number 99.9 
+ to a varchar string type can be written without a specified length:
+
+ SELECT varchar(99.9)
+
+ The typecast_strlen parameter setting translates the above cast as:
+
+ SELECT varchar(99.9, typecast_strlen)
+
+ Default for typecast_strlen is 30. Minimum value is 1. Maximum value is
+ the maximum OpenSQL or maximum DBMS supported string length. 

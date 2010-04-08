@@ -1,0 +1,625 @@
+/*
+**	Copyright (c) 1989, 2004 Ingres Corporation
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<ug.h>
+#include	<uigdata.h>
+#include	<oosymbol.h>
+exec sql include	<abclass.sh>;
+#include	<oodefine.h>
+#include	"eram.h"
+
+/**
+** Name:	iammeth.qsc -	Application Object Methods.
+**
+** Description:
+**	Contains the application object (and component object) specific methods.
+**	Defines:
+**
+**	iiamAuthorized()	determine if user is authorized for object.
+**	iiamDestroy()		destroy object.
+**	iiamCkApplName()	check name for application.
+**	iiamCkFrmName()		check frame name for application.
+**	iiamCkProcName()	check procedure name for application.
+**	iiamCkGlobalName()	check global name for application.
+**	iiamCkRattName()	check attribute name for record definition.
+**	iiamDbApplName()	fetch application id by name.
+**	iiamDbRecordName()	fetch record (data structure) id by name.
+**	iiamDbGlobalName()	fetch global id by name.
+**
+** History:
+**	Revision 6.3/03/00  89/07  wong
+**	Added checkName and withName methods.
+**
+**	Revsion 6.2  89/02  wong
+**	Initial revision.
+**	(9/89) (bobm) add fid argument to IIAMcdCatDel call.
+**	10/90 (Mike S) See if name chekcs are rename checks
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	23-Aug-2009 (kschendel) 121804
+**	    Wrap call to IIAFckFuncName because it was being called with
+**	    the wrong number of parameters.  (gcc 4.3)
+**/
+
+GLOBALREF APPL_COMP	*IIamFrames;
+GLOBALREF APPL_COMP	*IIamProcs;
+
+OOID	iiamWithName();
+
+bool
+iiamAuthorized ( app )
+APPL	*app;
+{
+	return TRUE;
+}
+
+bool
+iiamDestroy ( obj )
+register APPL_COMP	*obj;
+{
+	OOID	fid = OC_UNDEFINED;
+	OOID	applid = obj->class == OC_APPL ? obj->ooid : obj->appl->ooid;
+
+	if ( obj->class != OC_APPL )
+		iiamRmComp( obj->appl, obj );
+
+	switch(obj->class)
+	{
+	case OC_OSLFRAME:
+	case OC_APPFRAME:
+	case OC_MUFRAME:
+	case OC_UPDFRAME:
+	case OC_BRWFRAME:
+		fid = ((USER_FRAME *) obj)->fid;
+		break;
+	case OC_OSLPROC:
+		fid = ((_4GLPROC *) obj)->fid;
+		break;
+	}
+
+	return (bool)( IIAMcdCatDel(applid, obj->ooid, fid, obj->class) == OK );
+}
+
+/*{
+** Name:	iiamCkApplName() -	Check Application Name.
+**
+** Description:
+**	Checks the legality of a new application name with respect to the name
+**	space of other applications.  Applications must be unique within an
+**	database.
+**
+**	If this is a rename check, we're chekcing special requirements on
+**	the name.  None exist for an application, so we return OC_UNDEFINED,
+**	which, not being nil, is success.
+**
+** Input params:
+**	obj	{APPL *}  The application being created.
+**	savename {char *} The name under which to create the application.
+**	rename	{nat}	Is this a rename check
+**
+** Returns:
+**	{OOID}	ID of object to be saved
+**		nil if error.
+**
+** Side Effects:
+**	existing object of same name may be fetched from database;
+**
+** History:
+**	07/89 (jhw) -- Written.
+*/
+OOID
+iiamCkApplName ( obj, savename, rename )
+APPL	*obj;
+char	*savename;
+i4	rename;
+{
+	if (rename)
+		return OC_UNDEFINED;
+
+	if ( !STequal(obj->name, savename) || !obj->data.inDatabase )
+	{ /* check for name clash in application namespace */
+	    if ( OOsnd(obj->class, _withName, savename) != nil )
+	    { /* already exists in DB ... */
+		IIUGerr( E_AM0020_ExistingAppl, UG_ERR_ERROR, 1, savename );
+		return nil;
+	    }
+	}
+
+	obj->name = FEtsalloc(obj->data.tag, savename);
+
+	return obj->ooid;
+}
+
+/*
+** Name:	checkName() -	Check Name Against System Functions.
+**
+** Description:
+**	Checks if a name conflicts with a system function and prompts
+**	for override in that case.
+**
+** Input:
+**	name	{char *}  The name (assumed to be a valid INGRES name.)
+**
+** Returns:
+**	{STATUS}  OK if the name does not conflict or it is to be overriden.
+**		  FAIL otherwise
+**
+** History:
+**	02/89 (jhw) -- Written.
+**	07/89 (jhw) -- Moved here from "abf!abcreate.qsc".
+*/
+
+static bool	ckSysName(char *, APPL_COMP *);
+static bool	ckFuncName(char *, APPL_COMP *);
+
+typedef struct {
+	bool		(*func)(char *, APPL_COMP *);
+	ER_MSGID	prompt;
+	APPL_COMP	**list;
+} _CHKFUNC;
+
+static _CHKFUNC
+	_ckFuncs[] = {
+		{ckFuncName, F_AM0001_ADFNameConflict,	NULL},
+		{ckSysName,	F_AM0003_SysFrmNameConflict,	&IIamFrames},
+		{ckSysName,	F_AM0002_SysProcNameConflict,	&IIamProcs},
+		NULL
+};
+
+static STATUS
+checkName ( name )
+char	*name;
+{
+	register _CHKFUNC	*fp;
+
+	for ( fp = _ckFuncs ; fp->func != NULL ; ++fp )
+	{
+		/* Check name against list */
+		if ((*fp->func)(name, ( fp->list != NULL ) ? *fp->list : NULL))
+		{ /* matches */
+			STATUS	status = OK;
+			char	ans[15+1];
+
+			do
+			{
+				if ( status != OK )
+					IIUGerr(status, UG_ERR_ERROR, 0);
+				(*IIUIfedata()->prompt_func)( ERget(fp->prompt),
+						0, (bool)FALSE, ans,
+						sizeof(ans)-1, 0
+				);
+			} while ( !IIUGyn(ans, &status)
+					&& status != E_UG0005_No_Response );
+
+			return status == E_UG0004_Yes_Response ? OK : FAIL;
+		}
+	}
+	return OK;
+}
+
+/*
+** Name:	ckSysName() -	Check Name Against System Frame/Procedures.
+**
+** Description:
+**	Checks if a name conflicts against a list of built-in system frame
+**	or procedure application components.
+**
+** Input:
+**	name	{char *}  The name (assumed to be a valid INGRES name.)
+**	objs	{APPL_COMP *}  The list of built-in system compoents to search.
+**
+** Returns:
+**	{bool}  TRUE if the name does conflict;
+**		FALSE otherwise.
+**
+** History:
+**	08/89 (jhw) -- Written.
+*/
+static bool
+ckSysName ( char *name, APPL_COMP *objs )
+{
+	register APPL_COMP	*comp;
+
+	for ( comp = objs ; comp != NULL ; comp = comp->_next )
+	{
+		if ( STequal(comp->name, name) )
+			return TRUE;
+	}
+	return FALSE;
+}
+
+
+/* Wrapper for AFE function name checker which only takes one param */
+static bool
+ckFuncName(char *name, APPL_COMP *notused)
+{
+    return IIAFckFuncName(name);
+}
+
+/*{
+** Name:	iiamCkFrmName() -	Check Frame Name for Application.
+**
+** Description:
+**	Checks the legality of a new frame name for an application frame object
+**	with respect to system functions and the name space of other frames for
+**	the application.  For the former, the user will be prompted to override
+**	the system function.  Frames must be unique within an application.
+**
+**	If it's a rename check, we're just doing the special checks in
+**	checkName.  If these succeeed, we'll return success.
+**
+**	Note:  Assumes that the name is a legal INGRES name.
+**
+** Input params:
+**	obj	{APPL_COMP *}  Application frame component being
+**				created or saved.
+**	savename {char *} The name under which to create or save the frame.
+**	rename	{nat}	Is this a rename check
+**
+** Returns:
+**	{OOID}	ID of object to be saved
+**		nil if error.
+**
+** Side Effects:
+**	Existing object of same name may be fetched from database;
+**
+** History:
+**	07/89 (jhw) -- Written.
+*/
+
+OOID
+iiamCkFrmName ( obj, savename, rename )
+APPL_COMP	*obj;
+char		*savename;
+i4		rename;
+{
+	/* Check against built-in system functions, frame, procedures */
+	if ( checkName(savename) != OK )
+		return nil;
+	if (rename)
+		return obj->ooid;
+
+	if ( !STequal(obj->name, savename) || !obj->data.inDatabase )
+	{ /* check for name clash in application namespace */
+	    if ( OOsnd(obj->class, _withName, savename, (char *)NULL,
+			obj->appl->ooid) != nil )
+	    { /* already exists in DB ... */
+		IIUGerr( E_AM0021_ExistingFrm, UG_ERR_ERROR, 1, savename );
+		return nil;
+	    }
+	}
+
+	obj->name = FEtsalloc(obj->data.tag, savename);
+
+	return obj->ooid;
+}
+
+/*{
+** Name:	iiamCkProcName() -	Check Procedure Name for Application.
+**
+** Description:
+**	Checks the legality of a new procedure name for an application procedure
+**	object with respect to system and ADT functions and the name space of
+**	other procedures for the application.  For the former, the user will be
+**	prompted to override the system or ADT function.  Procedures must be
+**	unique within an application.
+**
+**	If it's a rename check, we're just doing the special checks in
+**	checkName.  If these succeeed, we'll return success.
+**
+**	Note:  Assumes that the name is a legal INGRES name.
+**
+** Input params:
+**	obj	{APPL_COMP *}  Application procedure component being
+**				created or saved.
+**	savename {char *} The name under which to create or save the procedure.
+**	rename	{nat}	Is this a rename check
+**
+** Returns:
+**	{OOID}	ID of procedure to be saved
+**		nil if error.
+**
+** Side Effects:
+**	Existing object of same name may be fetched from database;
+**
+** History:
+**	07/89 (jhw) -- Written.
+*/
+
+OOID
+iiamCkProcName ( obj, savename, rename )
+APPL_COMP	*obj;
+char		*savename;
+i4		rename;
+{
+
+	/* Check against built-in system functions, frame, procedures */
+	if ( checkName(savename) != OK )
+		return nil;
+	if (rename)
+		return obj->ooid;
+
+	if ( !STequal(obj->name, savename) || !obj->data.inDatabase )
+	{ /* check for name clash in application name space */
+	    if ( OOsnd(obj->class, _withName, savename, (char *)NULL,
+			obj->appl->ooid) != nil )
+	    { /* already exists in DB ... */
+		IIUGerr( E_AM0022_ExistingProc, UG_ERR_ERROR, 1, savename );
+		return nil;
+	    }
+	}
+
+	obj->name = FEtsalloc(obj->data.tag, savename);
+
+	return obj->ooid;
+}
+
+/*{
+** Name:	iiamCkGlobalName() -	Check Global Name for Application.
+**
+** Description:
+**	Checks the legality of a new global name for an application record,
+**	global variable, or constant object with respect to the name space of
+**	other globals for the application.  Global variables and constants
+**	share the same name space; records have their own name space.
+**
+**	If it's a rename check, we're just doing the special checks in
+**	checkName, and forbidding leading "ii".  If these succeeed, we'll 
+**	return success.
+**
+**	Note:  Assumes that the name is a legal INGRES name.
+**
+** Input params:
+**	obj	{APPL_COMP *}  Application global component being
+**				created or saved.
+**	savename {char *} The name under which to create or save the global.
+**	rename	{nat}	Is this a rename check
+**
+** Returns:
+**	{OOID}	ID of global to be saved
+**		nil if error.
+**
+** Side Effects:
+**	Existing object of same name may be fetched from database;
+**
+** History:
+**	07/89 (jhw) -- Written.
+**	04-mar-92 (leighb) DeskTop Porting Change:
+**		Moved function declaration outside of calling function.
+**		This is so function prototypes will work.
+*/
+
+OOID
+iiamCkGlobalName ( obj, savename, rename )
+APPL_COMP	*obj;
+char		*savename;
+i4		rename;
+{
+	/* Check for `ii' prefix */
+	if ( STbcompare(ERx("ii"), 2, savename, 2, TRUE) == 0 )
+	{
+		IIUGerr( E_AM0025_BadNamePrefix, UG_ERR_ERROR, 1, savename );
+		return nil;
+	}
+
+	/* Check for record type conflict with ADF types */
+	if ( obj->class == OC_RECORD )
+	{
+		DB_DATA_VALUE	dbd;
+		DB_USER_TYPE	ut;
+
+		_VOID_ STlcopy(savename, ut.dbut_name, sizeof(ut.dbut_name)-1);
+		ut.dbut_kind = DB_UT_NOTNULL;
+
+		if ( afe_tychk(FEadfcb(), &ut, &dbd) == OK )
+		{
+			IIUGerr(E_AM0026_BadClassName, UG_ERR_ERROR,1,savename);
+			return nil;
+		}
+	}
+
+	/* Check against built-in system functions, frame, procedures */
+	if ( checkName(savename) != OK )
+		return nil;
+
+	if (rename)
+		return obj->ooid;
+
+	if ( !STequal(obj->name, savename) || !obj->data.inDatabase )
+	{ /* check for name clash in application name space */
+	    if ( OOsnd(obj->class, _withName, savename, (char *)NULL,
+			obj->appl->ooid) != nil )
+	    { /* already exists in DB ... */
+		IIUGerr( obj->class == OC_RECORD
+				? E_AM0024_ExistingRecord
+				: E_AM0023_ExistingGlobal,
+				UG_ERR_ERROR, 1, savename
+		);
+		return nil;
+	    }
+	}
+
+       	obj->name = FEtsalloc(obj->data.tag, savename);
+
+	return obj->ooid;
+}
+
+/*{
+** Name:	iiamDbApplName() -	Fetch Application by Name.
+**
+** Description:
+**	Return ID of named application.
+**
+** Input:
+**	class	{OO_CLASS *}  The class object for applications.
+**	appname	{char *}  The application name.
+**
+** Returns:
+**	{OOID}	ID of application if it exists.
+**		nil otherwise.
+**
+** History:
+**	07/89 (jhw) -- Written.
+*/
+OOID
+iiamDbApplName ( class, appname )
+EXEC SQL BEGIN DECLARE SECTION;
+OO_CLASS	*class;
+char		*appname;
+EXEC SQL END DECLARE SECTION;
+{
+EXEC SQL BEGIN DECLARE SECTION;
+	OOID	id;
+EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL SELECT object_id
+			INTO :id FROM ii_objects
+		WHERE object_name = :appname and object_class = :class->ooid;
+
+	return ( FEinqerr() != OK || FEinqrows() == 0 ) ? nil : id;
+}
+
+/*{
+** Name:	iiamDbRecordName() -	Fetch Class (Type Structure) by Name.
+**
+** Description:
+**	Return ID of named application class (record type) component.
+**
+** Input:
+**	class	{OO_CLASS *}  The class object for the record.
+**	name	{char *}  The record name.
+**	owner	{char *}  The owner of the class (ignored)
+**	appid	{OOID}	  The application ID.
+**
+** Returns:
+**	{OOID}	ID of record if it exists.
+**		nil otherwise.
+**
+** History:
+**	07/89 (jhw) -- Written.
+**	03/90 (jhw) -- Added 'owner' here too since it gets passed.
+*/
+OOID
+iiamDbRecordName ( class, name, owner, appid )
+OO_CLASS	*class;
+char		*name;
+char		*owner;	/* unused */
+OOID		appid;
+{
+	return iiamWithName( appid, name, (OOID *)NULL,
+	  	/* c1 =*/ class->ooid,
+	  	/* c2 =*/ OC_UNDEFINED,
+	  	/* c3 =*/ OC_UNDEFINED,
+	  	/* c4 =*/ OC_UNDEFINED,
+	  	/* c5 =*/ OC_UNDEFINED,
+	  	/* c6 =*/ OC_UNDEFINED
+	);
+}
+
+/*{
+** Name:	iiamCkRattName() -	Check Record Attribute Name.
+**
+** Description:
+**	Checks the legality of a new record attribute name with respect to 
+**	the name space of it's record definition.  Record attributes must be
+**	unique within a record definition.
+**
+**	If it's a rename check, we're doing special check for name validity.
+**	There are none for attribute names, so we'll return OC_UNDEFINED, which,
+**	not, being nil, is success.
+**
+** Input params:
+**	obj	{RECMEM *}  The record attribute being created.
+**	savename {char *} The name under which to create the record attribute.
+**	rename	{nat}	Is this a rename check
+**
+** Returns:
+**	{OOID}	ID of object to be saved
+**		nil if error.
+**
+** Side Effects:
+**	relies on a hack in iamratt.sc
+**
+** History:
+**	08/89 (billc) -- Written.
+*/
+OOID
+iiamCkRattName ( obj, savename, rename )
+APPL	*obj;
+char	*savename;
+i4	rename;
+{
+	if (rename)
+		return OC_UNDEFINED;
+
+	if ( !STequal(obj->name, savename) || !obj->data.inDatabase )
+	{ 
+		/* check for name clash in application namespace */
+		if ( OOsnd(obj->class, _withName, savename) != nil )
+		{ /* already exists in class definition ... */
+			IIUGerr( E_AM0028_ExistingRatt, UG_ERR_ERROR, 
+					1, savename 
+			);
+			return nil;
+		}
+	}
+
+	obj->name = FEtsalloc(obj->data.tag, savename);
+
+	return obj->ooid;
+}
+
+/*{
+** Name:	iiamDbGlobalName() -  Fetch Global by Name.
+**
+** Description:
+**	Return ID of named application global frame, procedure, variable or
+**	constant component.
+**
+** Input:
+**	class	{OO_CLASS *}  The class object for the global.
+**	name	{char *}  The global name.
+**	owner	{char *}  The owner of the global (ignored)
+**	appid	{OOID}	  The application ID.
+**
+** Returns:
+**	{OOID}	ID of global if it exists.
+**		nil otherwise.
+**
+** History:
+**	07/89 (jhw) -- Written.
+**	09/89 (jhw) -- Modified to share name space with frames, procedures,
+**		globals, and constants.
+**	02/90 (Mike S) -- OO is passing the owner name, even though we don't
+**			  really care.
+*/
+/*ARGSUSED*/
+OOID
+iiamDbGlobalName ( class, name, owner, appid )
+OO_CLASS	*class;
+char		*name;
+char		*owner;	/* unused */
+OOID		appid;
+{
+	return iiamWithName( appid, name, (OOID *)NULL,
+		/* c1 =*/ OC_APPLFRAME,
+	  	/* c2 =*/ OC_OSLPROC,
+	  	/* c3 =*/ OC_DBPROC,
+	  	/* c4 =*/ OC_HLPROC,
+	  	/* c5 =*/ OC_GLOBAL,
+	  	/* c6 =*/ OC_CONST
+	);
+}

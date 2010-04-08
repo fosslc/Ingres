@@ -1,0 +1,31 @@
+#
+# Jamfile file for front!misc!diag_unix_vms
+#
+#   History:
+#      20-Aug-2009 (horda03)
+#          Identify targets built on VMS without a .LOT file
+#      28-Jan-2010 (horda03) Bug 121811
+#          Build on Windows too.
+
+SubDir ING_SRC front misc diag ;
+
+IISUBSYS front misc diag ;
+
+
+IIBINEXE mkexcept : mkexcept.c ;
+IINEEDLIBS mkexcept :  DIAGLIB SHCOMPATLIB ;
+IIUNDEFS mkexcept :  malloc ;
+
+VMS_NO_LOT iiexcept ;
+IIBINEXE iiexcept : iiexcept.c ;
+IINEEDLIBS iiexcept :  SHCOMPATLIB ;
+IIUNDEFS iiexcept :  malloc ;
+
+IIBINEXE idbg : idbg.c ;
+IINEEDLIBS idbg :  DIAGLIB ULFLIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB ;
+IIUNDEFS idbg :  malloc ;
+
+IILIBRARY DIAGLIB : screen.sc scrview.lfm scrshow.lfm
+	scrmain.lfm screxprt.lfm scradd.lfm chkpriv.c ;
+

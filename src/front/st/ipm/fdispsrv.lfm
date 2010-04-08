@@ -1,0 +1,18 @@
+COPYFORM:	6.4	1995_12_01 19:57:24 GMT  
+FORM:	fdispsrv	server list	
+	72	10	0	0	1	0	7	9	0	0	0	0	0	192	0	6
+FIELD:
+	0	serverlist	0	6	0	5	8	72	2	0	1	1	0		1	1	0	1073758241	0	0	0					1	0
+	0	server	21	26	0	15	1	15	0	1	15	0	1	Server	1	-1	0	0	64	0	0		c15			2	1
+	1	service	21	10	0	8	1	8	0	17	8	0	17	Type	17	-1	0	0	0	0	0		c8			2	2
+	2	ssn_cur	30	4	0	8	1	8	0	26	8	0	26	Sessions	26	-1	0	0	0	0	0		+i8			2	3
+	3	act_cur	-30	5	0	7	1	7	0	35	7	0	35	Active	35	-1	0	0	0	0	0		+i7			2	4
+	4	database	-21	259	0	28	1	28	0	43	28	0	43	Database(s)	43	-1	0	0	64	0	0		c28			2	5
+TRIM:
+	0	0	3:72:0	1	0	0	0
+	1	0	Server List	2048	0	0	0
+	1	1	Name	0	0	0	0
+	17	1	Type	0	0	0	0
+	26	1	Sessions	0	0	0	0
+	36	1	Active	0	0	0	0
+	44	1	Connecting to database(s)	0	0	0	0

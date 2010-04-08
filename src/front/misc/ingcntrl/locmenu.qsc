@@ -1,0 +1,919 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<er.h>
+#include	<st.h>
+#include	<erfe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include        <generr.h>
+#include        <stdprmpt.h>
+#include	"eric.h"
+#include	"global.h"
+#include	"ictables.h"
+
+/*
+** Name:        locmenu.qsc -
+**
+** Description:
+**
+**      Defines:
+**		extendform
+**
+** History:
+**      ~1-Jan-90 (pete) - Allow selection of Help & End even when on
+**                      invalid field; check for unsaved changed when
+**                      user hits menuitem End.
+**      23-apr-1990 (pete)
+**              fix 6.3 bug 21342 with bad explanations for Help & End.
+**      19-oct-1990 (pete)
+**              Merge in changes done by Jennifer Lyerla in 9/89 for B1 proj.
+**	12-nov-1990 (pete)
+**		Other changes to make consistent with db.qsc & user.qsc.
+**		(display popup if end without saving; suppress menuitems
+**		if not enuf priv...) 
+**	4-aug-1992 (jonb)
+**		Change tricky loop code to slightly less tricky loop in
+**		order to avoid a compiler warning.
+**	7-dec-1992 (jonb)
+**		Add support for ML sorts.
+**	8-jul-1993 (kellyp)
+**		Corrected to set the value of rtn
+**	6-aug-1993 (kellyp)
+**		When returning a value from the picklist, place the value on
+**		on the current row if the current row is empty.  Otherwise,
+**		placfe the value at the end of the table.
+**	16-sep-1993 (kellyp)
+**		Switched the order of Alter and ListChoices in the way
+**		they appear in the menu line.
+**	20-sep-1993 (robf)
+**              Query standard catalog (iilocation_info) not internal catalog
+**	        (iilocations). This allows users without QUERY_SYSCAT priv
+**	22-nov-1993 (kellyp)
+**		Should not activate validation when save_menuitem is selected
+**		since this will bring up the error message twice.
+**		( fix to bug 56833 )
+**	        to use accessdb/catalogdb
+**	26-oct-1994 (juliet)
+**		Modified code such that user is able to extend database
+**		to a location for both data and work usages.
+**	25-jan-1995 (brogr02)
+**		Added check to make sure user has entered a usage type 
+**		(bug 66480)
+**  7-may-1996 (angusm)
+**      Add check to the "Alter" key from the 'Extend' screen for databases
+**		(function extnd_alter) to prevent user from altering all work 
+**		locations to Auxiliary Work locations (so that they no longer have 
+**		a work location defined). (bug 75683)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	09-Apr-2001 (jenjo02)
+**	    Add support for RAW locations.
+**	11-May-2001 (jenjo02)
+**	    "rawblocks" moved from iilocations to iiextend, "rawpct"
+**	    in iilocations replaces "rawblocks" as input field.
+**	28-feb-06 (hayke02)
+**	    In extnd_alter() we now restrict the (single row) query selecting
+**	    iiextend_info.status to a work or aux work row. This prevents
+**	    E_LQ006A when a location is used for both data and work/aux work.
+**	    This change fixes bug 102500, problem INGSRV 1263.
+*/
+
+FUNC_EXTERN     STATUS  iiicsdSelectDatabase();
+
+    EXEC SQL INCLUDE SQLCA ;
+    EXEC SQL WHENEVER SQLERROR CALL SQLPRINT ;
+
+GLOBALREF       bool    Mgr;
+GLOBALREF bool  IiicPrivSysadmin;  /* TRUE if user has SYSTEM_ADMIN privilege */
+GLOBALREF IIDATABASE Iidatabase;
+
+static	STATUS	extnd_init();
+static	i4	extnd_write();
+static	VOID	extnd_alter();
+
+##static        char    Extenddbfrm[] = ERx("extdb");      /* form name */
+##static        char    Loc_tbl[]  = ERx("dbloctbl"); 	/*table field*/
+
+
+static char *
+validate_location(loc_name, rpct)
+EXEC SQL BEGIN DECLARE SECTION;
+char *loc_name;
+i4   *rpct;
+EXEC SQL END DECLARE SECTION;
+{
+EXEC SQL BEGIN DECLARE SECTION;
+	i4 dbstat;
+	i4 rawpct;
+EXEC SQL END DECLARE SECTION;
+##	char dbname[FE_MAXNAME + 1];
+	i4 rtn;
+	char msg[256], lpstr[256];
+
+	STtrmwhite(loc_name);
+
+
+
+	/* lookup location name */
+	EXEC SQL SELECT i.status, i.raw_pct
+		INTO :dbstat, :rawpct
+		FROM iilocation_info i
+	        WHERE i.location_name = :loc_name;
+	if (FEinqerr() != OK || FEinqrows() == 0)
+	{
+	    IIUGerr(E_IC0049_Location_doesnt_exist,UG_ERR_ERROR,
+			1, (PTR)loc_name);
+	    return NULL;
+	}
+
+	*rpct = rawpct;
+
+	dbstat &= (DU_DBS_LOC | DU_WORK_LOC | DU_AWORK_LOC);
+	switch (dbstat)
+	{
+	    case 0:  /* Location can't be used as an extend target */
+		IIUGerr(E_IC004A_Location_is_not_avail, UG_ERR_ERROR, 
+				1, (PTR) loc_name);
+		return NULL;
+
+	    case DU_DBS_LOC: 	/* Extend for DB */
+		rtn=0;
+		break;
+
+	    case DU_WORK_LOC:	/* Extend for Work */
+		rtn=1;
+		break;
+
+	    case DU_AWORK_LOC:	/* Extend for Auxiliary Work */
+		rtn=2;
+		break;
+
+	    default:       /* Db or work, take your pick */
+##              GETFORM Extenddbfrm ( dbname = #dbname )
+
+		STprintf(msg, ERget(S_IC005A_select_extension_type), dbname);
+		STprintf(lpstr, ERx("%s;%s\n%s;%s\n%s;%s"),
+		    ERget(F_IC0030_ext_data), ERget(S_IC005B_ext_data),
+		    ERget(F_IC0033_ext_work), ERget(S_IC005C_ext_work),
+		    ERget(F_IC0032_ext_work_aux), ERget(S_IC005C_ext_work));
+
+		rtn = IIFDlpListPick( msg, lpstr, 0, -1, -1, 
+				      (char*)NULL, (char*)NULL, NULL, NULL );
+		if (rtn < 0)
+		    return NULL;
+		break;
+	}
+	switch (rtn)
+	{
+	  case 0:	return ERget(F_IC0030_ext_data);
+	  case 1:	return ERget(F_IC0033_ext_work);
+	  case 2:	return ERget(F_IC0032_ext_work_aux);
+	  default:	return NULL;
+	}
+}
+
+##static char	Ext_title[80] = ERx("");
+##static char	*Save_menuitem;
+##static char	*Listchoices_menuitem;
+##static char	*Alter_menuitem;
+##static char	*Mode;
+
+STATUS
+extendform (dname)
+##char	*dname;
+## {
+##  i4		err_row;
+##  STATUS	stat = OK;
+##  char 	loc_name[FE_MAXNAME+1];
+##  char 	usage[FE_MAXNAME+1];
+
+##  MESSAGE ERget(S_IC003F_Looking_up_Locations)
+
+    /*
+    ** The extenddb form has to be 'addform'ed each time we enter
+    ** to take a snapshot of iilocations.lname for validations.
+    ** This is an interface WIN as users selecting ListChoices
+    ** will be able to see a list of possible locations and select
+    ** from it.
+    */
+    if (IIUFgtfGetForm(IIUFlcfLocateForm(), Extenddbfrm) != OK)
+    {
+	IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_FATAL, 0);
+    }
+
+    /* User can make changes if running Accessdb (as opposed to Catalogdb) &
+    ** has SYSTEM_ADMIN Priv.
+    */
+
+    if (Ext_title[0] == EOS)
+    {
+	if (Mgr)
+	{
+	    STlcopy(ERget(S_IC0100_Acc_Extend_Title), Ext_title, 
+					sizeof(Ext_title));
+	}
+	else
+	{
+	    STlcopy(ERget(S_IC0101_Cat_Extend_Title), Ext_title, 
+					sizeof(Ext_title));
+	}
+	if (Mgr && IiicPrivSysadmin)
+	{
+	    Save_menuitem = ERget(FE_Save);
+	    Listchoices_menuitem = ERget(FE_Lookup);
+	    Alter_menuitem = ERget(F_IC0026_Alter);
+	    Mode = ERx("fill");
+	}
+	else
+	{
+	    Save_menuitem = ERx("");
+	    Listchoices_menuitem = ERx("");
+	    Alter_menuitem = ERx("");
+	    Mode = ERx("read");
+	}
+    }
+
+##  INITTABLE Extenddbfrm Loc_tbl Mode
+
+##  DISPLAY Extenddbfrm Mode
+
+##  INITIALIZE (#title = Ext_title)
+##  {
+	if (extnd_init(dname, Extenddbfrm, Loc_tbl) != OK)
+	{
+	    stat = FAIL;
+##	    BREAKDISPLAY
+	}
+##	RESUME FIELD Loc_tbl
+##  }
+
+##  ACTIVATE MENUITEM Save_menuitem
+##      (ACTIVATE = 0, EXPL = ERget(F_FE0117_SaveExpl)),
+##      FRSkey8 (ACTIVATE = 0):
+##  {
+        if (Save_menuitem[0] == EOS)
+        {
+            /* this was selected via the FRSkey */
+            FTbell();
+##          RESUME
+        }
+
+	err_row = extnd_write(dname, Iidatabase.own);
+	if (err_row > 0)	/* error occurred; put cursor on bad row */
+	{
+##	    SCROLL Extenddbfrm Loc_tbl TO err_row
+##	    RESUME FIELD Loc_tbl
+	}
+	else
+	{
+	    /* success */
+##	    BREAKDISPLAY
+	}
+##  }
+
+##  ACTIVATE MENUITEM Alter_menuitem (VALIDATE = 0, ACTIVATE = 0,
+##      EXPL = ERget(F_IC002A_AlterExpl))
+##  {
+##      char name[FE_MAXNAME + 1];
+ 
+##      INQUIRE_FRS FORM (name=FIELD);
+ 
+        if (Alter_menuitem[0] == EOS)   /* This was selected via the FRSkey */
+        {
+            FTbell();
+##          RESUME
+        }
+ 
+##      GETROW Extenddbfrm Loc_tbl ( loc_name = dbloc, usage = dbusage );
+	    
+	if (*loc_name == EOS)
+	{
+	    FTbell();
+##	    RESUME COLUMN Loc_tbl dbloc;
+	}
+
+	if (STequal(usage, ERget(F_IC0032_ext_work_aux)))
+	{
+	    extnd_alter(loc_name, F_IC0033_ext_work, DU_EXT_AWORK, DU_EXT_WORK);
+	}
+	else if (STequal(usage, ERget(F_IC0033_ext_work)))
+	{
+	    extnd_alter(loc_name, F_IC0032_ext_work_aux,
+			 DU_EXT_WORK, DU_EXT_AWORK );
+	}
+	else
+	{
+	    IIUGerr(E_IC005D_cant_alter, UG_ERR_ERROR, 0);
+	}
+ 
+##      RESUME NEXT;
+ 
+##  }
+
+##  ACTIVATE MENUITEM Listchoices_menuitem (VALIDATE = 0, ACTIVATE = 0,
+##      EXPL = ERget(FE_LookupExpl)),
+##      FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##  {
+##      char	tmpname[FE_MAXNAME + 1];
+##      char	tmplocnm[FE_MAXNAME + 1];
+
+        if (Listchoices_menuitem[0] == EOS)
+        {
+            /* this was selected via the FRSkey */
+            FTbell();
+##          RESUME
+        }
+##      INQUIRE_FRS FIELD "" (tmpname = NAME)
+        if (!STequal(tmpname, Loc_tbl))
+        {
+            IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##	    RESUME
+	}
+	icListPicks(ERget(F_IC0091_Location),
+			ERx("iilocation_info"), ERx("location_name"), tmpname);
+	if (tmpname[0] != EOS)
+	{
+##          char    *tmpusage;
+##	    i4  state = stNEW;
+##	    i4	rawblocks;
+##	    i2	rawblocks_ind;
+	    i4  rawpct;
+
+	    if ( NULL == (tmpusage = validate_location(tmpname, &rawpct)))
+##		RESUME
+	    
+	    /* Don't show "0" for rawblocks if rawpct == 0 */
+	    rawblocks = 0;
+	    if ( rawpct )
+		rawblocks_ind = 0;
+	    else
+		rawblocks_ind = -1;
+
+##          GETROW Extenddbfrm Loc_tbl (tmplocnm = #dbloc)
+	    if (STequal(tmplocnm, ERx("")))
+##          	PUTROW Extenddbfrm Loc_tbl 
+## 	            ( #dbloc = tmpname, #dbusage = tmpusage, 
+##			#rawblocks = rawblocks:rawblocks_ind)
+	    else
+	    {
+##          	LOADTABLE Extenddbfrm Loc_tbl 
+## 	            ( #dbloc = tmpname, #dbusage = tmpusage, _STATE = state,
+##			#rawblocks = rawblocks:rawblocks_ind)
+##	        SCROLL Extenddbfrm Loc_tbl TO END
+	    }
+
+##          SET_FRS FORM (CHANGE(Extenddbfrm) = 1)
+	}
+##  }
+
+
+##  ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##	VALIDATE = 0), FRSkey1 (VALIDATE=0):
+##  {
+	if (Mgr)
+	    FEhelp(ERx("icextfrm.hlp"), ERget(S_IC003E_Extenddb_Form));
+	else
+	    FEhelp(ERx("icext.hlp"), ERget(S_IC003E_Extenddb_Form));
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey3 (VALIDATE =0, ACTIVATE = 0):
+##  {
+        if (Mgr)
+        {
+            /* user is running Accessdb */
+##          i4      changed;
+
+##          INQUIRE_FRS FORM (changed = CHANGE)
+            if ( changed )
+            {
+                changed = CONFIRM(dname, ERget(F_IC001A_Database));
+                switch(changed)
+                {
+                case CONFCH_YES:
+                    if ((err_row = extnd_write(dname, Iidatabase.own)) > 0)
+		    {
+##	    		SCROLL Extenddbfrm Loc_tbl TO err_row
+##	    		RESUME FIELD Loc_tbl
+                    }
+                    /* fall through */
+                case CONFCH_NO:
+##                  BREAKDISPLAY
+                default:
+                    break;
+                }
+##              RESUME;
+            }
+        }
+##      BREAKDISPLAY
+##  }
+
+##  ACTIVATE COLUMN Loc_tbl ALL
+##  {
+##	i2   c1;
+##	char *tag;
+##	i4   rblocks;
+##	i2   rblocks_ind;
+	i4   rpct;
+
+##	INQUIRE_FRS ROW Extenddbfrm Loc_tbl (c1 = CHANGE(dbloc));
+
+	if (c1)
+	{
+##          GETROW Extenddbfrm Loc_tbl ( loc_name = dbloc );
+	    
+	    if (*loc_name == EOS)
+##		RESUME NEXT;
+
+	    if ( NULL == (tag = validate_location(loc_name, &rpct)))
+##		RESUME COLUMN Loc_tbl dbloc
+
+	    /* Don't show "0" for rawblocks if rawpct == 0 */
+	    rblocks = 0;
+	    if ( rpct )
+		rblocks_ind = 0;
+	    else
+		rblocks_ind = -1;
+
+##	    PUTROW Extenddbfrm Loc_tbl (dbusage=tag, 
+##			rawblocks=rblocks:rblocks_ind);
+	}
+##	RESUME NEXT;
+##  }
+
+##  FINALIZE
+    return stat;
+## }
+
+
+/*
+** Name:        extend_init
+**
+** Description: initialize Extenddbfrm tables and fields.
+**	Note:  User names are case sensitive!
+**
+** History:
+**	jul-14-1993 (kellyp)
+**	Added module description and corrected the logic which puts the
+**	location usage to include AUXILIARY WORK and not just DATABASE &
+**	WORK.
+**
+*/
+
+static STATUS
+extnd_init (db_nm, formname, tblname)
+EXEC SQL BEGIN DECLARE SECTION;
+##char	*db_nm;
+EXEC SQL END DECLARE SECTION;
+##char	*formname;
+##char	*tblname;
+## {
+EXEC SQL BEGIN DECLARE SECTION;
+##	char	*u_name;
+##  char locname[FE_MAXNAME+1];
+##i4    stat;
+##i4    rawstart;
+##i4    rawblocks;
+##i2	rawstart_ind, rawblocks_ind;
+##char  *tag;
+EXEC SQL END DECLARE SECTION;
+
+    if (STtrmwhite(db_nm) <= 0)
+	return FAIL;
+
+    /* select row from iidatabase */
+    if (iiicsdSelectDatabase(db_nm, &Iidatabase) != OK)
+	    return FAIL;
+
+    u_name = Iidatabase.own;
+
+##  PUTFORM formname (#dbname = db_nm, #dbowner = u_name)    
+
+    /*Load table */
+    EXEC SQL SELECT e.location_name, e.status, 
+		    e.raw_start, e.raw_blocks
+	INTO :locname, :stat,
+	     :rawstart, :rawblocks
+	FROM iiextend_info e, iilocation_info l 
+	WHERE e.status > 0 
+	    AND e.database_name = :db_nm
+	    AND e.location_name = l.location_name
+	ORDER BY e.location_name;
+    EXEC SQL BEGIN;
+##  {
+	if (stat & DU_EXT_DATA)
+		tag = ERget(F_IC0030_ext_data);
+	else if (stat & DU_EXT_WORK)
+		tag = ERget(F_IC0033_ext_work);
+	else if (stat & DU_EXT_AWORK)
+		tag = ERget(F_IC0032_ext_work_aux);
+
+	/* Reduce clutter, don't show rawblocks, rawstart if none */
+	if ( rawblocks == 0 )
+	{
+	    rawblocks_ind = -1;
+	    rawstart_ind = -1;
+	}
+	else
+	{
+	    rawblocks_ind = 0;
+	    rawstart_ind = 0;
+	}
+			
+##	LOADTABLE formname tblname (#dbloc = locname, #dbusage = tag, 
+##			#rawstart = rawstart:rawstart_ind,
+##			#rawblocks = rawblocks:rawblocks_ind)
+##  }
+    EXEC SQL END;
+
+    if (FEinqerr() != OK)
+	return FAIL;
+    return OK;
+## }
+/* EXTEND_WRITE -- validates and updates system catalogs.
+**
+**	return status:
+**		> 0	row number where and error occurred in
+**			a location name or data base name.
+**
+**			locationnames must exist in iilocations catalog.
+**			dbnames must exist in data base catalog.
+**			modification of names can only occurr to
+**			thoses that are not in use.
+**
+**		  0	OK
+**		< 0	FAIL
+**
+**
+**		On error the old data will be replaced ( if modification)
+**		or the cursor will point to incorrect new data.
+** History:
+**	24-oct-88 (kathryn)  	Bug# 2070
+**		Defined loc_name of form extenddb.frm to be nullable, and
+**		added variable loc_null to determine if location name on
+**		the form is null, when save command is entered.  Allowing
+**		loc_name to be null enables the user to move around the form
+**		rather than being held on the loc_name field until a valid
+**		location name is entered.
+**       27-sep-1989 (jennifer)
+**              change call from credbloc to have an internal database
+**		procedure to create the location and add it to a database.
+**	9-jul-91 (pete)
+**		If error occurs saving, then don't try to write out the
+**		new ext.bin file. Don't try to save empty new rows.
+**		Bug 38400.
+**	15-nov-1991 (pete)
+**		Add new argument, need_dbdir_flg, to procedure call:
+**		iiqef_add_location(). Definition of proc was changed in server.
+**	8-jul-1993 (kellyp)
+**		Set the value of need_dbdir_flg to 1. Corrected the logic to set
+**		the loc_stat value in the case of reextending.
+**	13-jul-1993 (kellyp)
+**		Corrected extnd_write(). Query needs to be further restricted by
+**		the database name.  Reversed change made on 7/8/93 to have a case
+**		for a location of type database for reextending.
+**	13-jul-1993 (kellyp)
+**		Reinstated change made on 7/8/93.
+**	18-jul-1993 (kellyp)
+**		Corrected misplaced ENDLOOP (bug 56895)
+**	22-nov-1993 (kellyp)
+**		Should not do another validation of the location (bug56833)
+**	26-oct-1994 (juliet)
+**		Modified code such that user is able to extend database to
+**		a location for both data and work usages.
+**	8-sep-1995 (angusm)
+**		Respect case-preference of installation: do not convert
+**		location name to lower-case. (bug 70947)
+*/
+static STATUS	gooddata();
+
+static i4
+##extnd_write (db_name, uname)
+EXEC SQL BEGIN DECLARE SECTION;
+char	*db_name;
+EXEC SQL END DECLARE SECTION;
+char	*uname;
+## {
+##	i4	state;
+##	i4	rec;
+	i4	badrow = 0;
+	bool	reextending;
+EXEC SQL BEGIN DECLARE SECTION;
+	i4	loc_usage;  /* 10-26-94, J. Thai */
+	i4	usage_or_oper;  /* 10-26-94, J. Thai */
+	char	area[DB_AREA_MAX+1];
+	i4	loc_stat;
+##	char	loc_name[FE_MAXNAME+1];
+##      char    loc_type[FE_MAXNAME+1];
+EXEC SQL END DECLARE SECTION;
+
+##	MESSAGE ERget(S_IC0041_Validating_DB_extens)
+
+##	UNLOADTABLE Extenddbfrm Loc_tbl (
+##	    loc_name = dbloc,
+##	    state = _STATE,
+##	    rec = _RECORD,
+##	    loc_type = dbusage
+##	)
+##	{
+
+/* bug 70947:
+   don't convert to lower-case:
+   don't even call IIUGlbo_lowerBEobject() - we are extending
+   to a location which has been picked from from those existing
+   in 'iilocations', so case is as it should be. Location name
+   is converted to correct case via IIUGlbo_lowerBEobject()
+   on creation. 
+*/
+		STtrmwhite(loc_name); 
+
+		switch(state)
+		{
+		 case stUNDEF:  
+		 case stUNCHANGED:
+		 case stDELETE:
+		 case stCHANGE:
+		    break;
+
+		 case stNEW:
+		    if (loc_name[0] == EOS)
+			    break;	/* empty new row -- skip it */
+
+		    reextending = FALSE;
+
+
+		    /* 
+		    ** 10-26-94, J. Thai, convert selected usage 
+		    ** string to an integer value. Modified the  
+		    ** sql select below, such that only the tuple
+		    ** which references the database name, the  
+		    ** location name specified, and the approp- 
+		    ** riate usage is selected.     
+		    */
+
+                    if (STequal(loc_type, ERget(F_IC0030_ext_data)))
+                        loc_usage = DU_EXT_DATA;
+
+                    else if (STequal(loc_type, ERget(F_IC0033_ext_work)))
+		        loc_usage = DU_EXT_WORK;
+
+                    else if (STequal(loc_type, ERget(F_IC0032_ext_work_aux)))
+		        loc_usage = DU_EXT_AWORK;
+
+		    else
+		    {
+			    IIUGerr(E_IC0154_Usage_required,
+					    UG_ERR_ERROR, 0);
+			    badrow = rec;
+##			    ENDLOOP;
+		    }
+
+		    usage_or_oper = (loc_usage | DU_EXT_OPERATIVE);
+		       
+		    EXEC SQL SELECT DISTINCT status
+			    INTO :loc_stat
+			    FROM iiextend_info
+			    WHERE location_name = :loc_name
+				AND database_name = :db_name
+		        	AND (status = :loc_usage
+				OR status = :usage_or_oper); 
+
+		    /* no duplicates allowed */
+		    if(FEinqerr() != OK)
+		    {
+			    IIUGerr(E_IC0046_Errors_extending_db, UG_ERR_ERROR,
+				2, db_name, loc_name);
+			    badrow = rec;
+##			    ENDLOOP
+		    }
+		    else if (FEinqrows() > 0)
+		    {
+			/*
+			** An entry may exist, however, if an extension
+			** was attempted and we crashed or failed. If
+			** the operable flag is 0, then this the case.
+			** We're attempting to 're-extend' the database.
+			** Set a flag so no other rows are appended.
+			*/
+
+			/* 10-26-94 (juliet) Modified error E_IC0042...
+			** text to specify that the location has been
+			** extended to the database for this usage already.
+			** Modified IIUGerr call parameters, added 
+			** location usage as error message argument. */
+
+			if (loc_stat & DU_EXT_OPERATIVE)
+			{
+			    IIUGerr(E_IC0042_Location_already_exis, 
+				    UG_ERR_ERROR, 3,
+				    loc_name, db_name, loc_type
+			    );
+			    break;
+			}
+			else
+			{
+			    reextending = TRUE;
+##				MESSAGE ERget(S_IC0043_Attempting_Re_Extend)
+			}
+		    }
+		    else
+		    {
+##			    MESSAGE ERget(S_IC0044_Creating_the_New_Exte)
+		    }
+
+		    EXEC SQL SELECT location_area
+			    INTO :area
+			    FROM iilocation_info
+			    WHERE location_name = :loc_name;
+		    if (FEinqerr() != OK)
+		    {
+			    IIUGerr(E_IC0045_Error_retrieving_area, 
+					    UG_ERR_ERROR, 1, loc_name);
+			    badrow = rec;
+##			    ENDLOOP;
+		    }
+
+		    STtrmwhite(area);
+
+		    /*
+		    ** Don't append this if we're re-extending:
+		    ** a row already exists in the iiextend catalog.
+		    */
+		    
+		    if (!reextending)
+		    {
+			if (STequal(loc_type, ERget(F_IC0030_ext_data)))
+			    loc_stat = DU_DBS_LOC;
+
+			else if (STequal(loc_type, ERget(F_IC0033_ext_work)))
+			    loc_stat = DU_WORK_LOC;
+
+			else if (STequal(loc_type, ERget(F_IC0032_ext_work_aux)))
+			    loc_stat = DU_AWORK_LOC;
+
+			else
+			    loc_stat = 0;
+
+			EXEC SQL EXECUTE PROCEDURE iiqef_add_location
+			      ( database_name = :db_name,
+				location_name = :loc_name,
+				access  = :loc_stat,
+				need_dbdir_flg = 1 );
+		    }
+
+		    if ( sqlca.sqlcode < 0 &&
+			 sqlca.sqlcode != (-E_GE0032_WARNING) )
+		    {    
+			IIUGerr(E_IC0046_Errors_extending_db, UG_ERR_ERROR, 
+				2, db_name, loc_name);
+			badrow = rec;
+##		    ENDLOOP;
+		    }
+
+		    break;
+
+		default:
+		    break;
+		}  
+##	}	    
+
+	return(badrow);
+## }
+
+
+static VOID
+extnd_alter(locnm, newtag, droptype, addtype)
+ER_MSGID newtag;
+EXEC SQL BEGIN DECLARE SECTION;
+char *locnm;
+i4  droptype;
+i4  addtype;
+EXEC SQL END DECLARE SECTION;
+##{
+EXEC SQL BEGIN DECLARE SECTION;
+##  char db_name[FE_MAXNAME+1];
+    i4 	 dbstat;
+	i4   checkwloc=(DU_EXT_OPERATIVE | DU_EXT_WORK);
+	i4   checkawloc=(DU_EXT_OPERATIVE | DU_EXT_AWORK);
+	i4	 checkcount=0;
+EXEC SQL END DECLARE SECTION;
+##  char *tagtext;
+ 
+
+##      GETFORM Extenddbfrm ( db_name = #dbname )
+
+    /* lookup location name */
+    EXEC SQL SELECT e.status
+	INTO :dbstat
+	FROM iiextend_info e
+	WHERE e.location_name = :locnm
+	AND e.database_name = :db_name
+	AND (e.status = :checkwloc OR e.status = :checkawloc);
+
+    if ((FEinqerr() == OK && FEinqrows() != 0))
+    {
+		/* check that at least one work loc will still be defined: bug 75683*/
+		EXEC SQL SELECT COUNT(*)
+		INTO :checkcount
+		FROM iiextend_info e
+		WHERE e.database_name = :db_name
+		AND e.status = :checkwloc;
+
+		if ((checkcount == 1 && 
+			 droptype == DU_EXT_WORK && addtype != DU_EXT_WORK) ||	
+			( sqlca.sqlcode < 0 && sqlca.sqlcode != (-E_GE0032_WARNING) ))
+		{    
+	    	IIUGerr(E_IC005F_cant_alter, UG_ERR_ERROR, 0);
+			return;
+		}
+
+ 
+	EXEC SQL EXECUTE PROCEDURE iiqef_alter_extension
+	    ( database_name = :db_name,
+	      location_name = :locnm,
+	      drop_loc_type = :droptype,
+	      add_loc_type  = :addtype );
+
+	if ( sqlca.sqlcode < 0 &&
+	     sqlca.sqlcode != (-E_GE0032_WARNING) )
+	{    
+	    IIUGerr(E_IC003C_cant_alter, UG_ERR_ERROR, 0);
+	    return;
+	}
+    }
+
+    tagtext = ERget(newtag);
+##  PUTROW Extenddbfrm Loc_tbl (#dbusage = tagtext);
+##}
+     
+
+/*
+**	GOODDATA -- validates data in row
+*/
+
+static STATUS
+gooddata (db, loc, uname)
+EXEC SQL BEGIN DECLARE SECTION;
+char	*db;
+char	*loc;
+char	*uname;
+EXEC SQL END DECLARE SECTION;
+{
+EXEC SQL BEGIN DECLARE SECTION;
+	char	temp[FE_MAXNAME+1];
+	i4	access;
+EXEC SQL END DECLARE SECTION;
+
+	if(!*db && !*loc)
+	{
+		return (OK);
+	}
+	if((!*db && *loc) || (*db && !*loc))
+	{
+		IIUGerr(E_IC0047_Missing_data, UG_ERR_ERROR, 0);
+		return (FAIL);
+	}
+
+	EXEC SQL SELECT database_name
+		INTO :temp
+		FROM iidatabase_info
+		WHERE name = :db
+		    AND database_owner = :uname;
+
+	if(FEinqerr() != OK || FEinqrows() <= 0)
+	{
+		IIUGerr(E_IC0048_db_not_belong_to_dba, UG_ERR_ERROR, 0);
+		return (FAIL);
+	}
+
+	EXEC SQL SELECT status
+		INTO :access
+		FROM iilocation_info
+		WHERE location_name = :loc;
+
+	if(FEinqerr() != OK || FEinqrows() <= 0)
+	{
+		IIUGerr(E_IC0049_Location_doesnt_exist, UG_ERR_ERROR, 
+				1, (PTR) loc);
+		return (FAIL);
+	}
+	if(!(access & (DU_DBS_LOC|DU_WORK_LOC|DU_AWORK_LOC)))
+	{
+		IIUGerr(E_IC004A_Location_is_not_avail, UG_ERR_ERROR, 
+				1, (PTR) loc);
+		return (FAIL);
+	}
+	return(OK);
+}
+

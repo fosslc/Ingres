@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqedglob.hlp, help for the pop-up asking which global component the user 
+/#-- would like to edit: Variables, Constants, or Record Type Definitions.
+/#-- 
+Move the cursor to the component type of your choice, then Select it.
+
+  * Variables:  Global variables apply throughout the application (local 
+    variables are defined for each frame or procedure individually).  Use
+    them for collecting and storing global state information used by frames.
+    Do not use them for passing parameter information between frames.
+
+  * Constants:  Use global constants for values that appear at various points 
+    throughout your application.  When you need to change the value, you only 
+    change it in the definition; the system displays and uses the new value
+    wherever it appears.
+
+  * Record Type Definitions:  Use records to collect related kinds of data and
+    then treat the grouped data as a single value.  Record attributes can be
+    Ingres datatypes, other records, or dynamic arrays of records.

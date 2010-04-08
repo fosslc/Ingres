@@ -1,0 +1,19 @@
+<!-- #ICE DECLARE=`session.incName=:incName` -->
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Include&previous=include3.html&next=if.html` -->
+
+To include the selected document, you must execute the macro below:
+<H4 CLASS="macro">
+
+<!-- #ICE REPEAT IF (`:incType` == `HTML` or `:incType` == `FACET`)
+THEN=`<!-- #ICE REPEAT IF (``:incVar`` == ````)
+			THEN=``&lt;!-- #ICE INCLUDE=````<!-- #ICE REPEAT INCLUDE=````docLabel.html```` -->```` --&gt;``
+			ELSE=``&lt;!-- #ICE INCLUDE=````<!-- #ICE REPEAT INCLUDE=````docLabel.html```` -->?:incVar```` --&gt;`` 
+			-->`
+ELSE=`<!-- #ICE REPEAT IF (``:incVar`` == ````)
+			THEN=``&lt;!-- #ICE INCLUDE=````:incName```` TYPE=````:incType```` --&gt;``
+			ELSE=``&lt;!-- #ICE INCLUDE=````:incName?:incVar```` TYPE=````:incType```` --&gt;`` 
+			-->`
+-->
+</H4>
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

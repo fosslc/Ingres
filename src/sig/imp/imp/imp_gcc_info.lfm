@@ -1,0 +1,28 @@
+COPYFORM:	6.4	2003_12_02 15:58:10 GMT  
+FORM:	imp_gcc_info		
+	55	15	0	0	17	0	6	9	0	0	0	0	0	193	0	17
+FIELD:
+	0	net_server	21	66	0	32	1	44	0	6	32	0	12	Net Server:	0	0	0	65808	64	0	0		c32			0	0
+	1	trace_level	-30	5	0	6	1	21	2	1	6	0	15	Trace Level  :	0	0	0	65552	0	0	0		-i6			0	1
+	2	pl_protocol	-30	5	0	6	1	21	3	1	6	0	15	Pl Protocol  :	0	0	0	65552	0	0	0		-i6			0	2
+	3	conn_count	-30	5	0	10	1	20	3	32	10	0	10	Total   :	0	0	0	66576	0	0	0		-i10			0	3
+	4	registry_mode	21	14	0	12	1	27	4	1	12	0	15	Registry Mode:	0	0	0	65552	0	0	0		c12			0	4
+	5	inbound_current	-30	5	0	10	1	20	4	32	10	0	10	Inbound :	0	0	0	66576	0	0	0		-i10			0	5
+	6	inbound_max	-30	5	0	10	1	20	5	32	10	0	10	I/B Max :	0	0	0	65552	0	0	0		-i10			0	6
+	7	outbound_current	-30	5	0	10	1	20	6	32	10	0	10	Outbound:	0	0	0	66576	0	0	0		-i10			0	7
+	8	ib_encrypt_mech	21	14	0	12	1	27	7	1	12	0	15	Inbound Mech :	0	0	0	65552	0	0	0		c12			0	8
+	9	outbound_max	-30	5	0	10	1	20	7	32	10	0	10	O/B Max :	0	0	0	65552	0	0	0		-i10			0	9
+	10	ib_encrypt_mode	21	14	0	12	1	27	8	1	12	0	15	Inbound Mode :	0	0	0	65552	0	0	0		c12			0	10
+	11	ob_encrypt_mech	21	14	0	12	1	27	9	1	12	0	15	Outbound Mech:	0	0	0	65552	0	0	0		c12			0	11
+	12	ob_encrypt_mode	21	14	0	12	1	27	10	1	12	0	15	Outbound Mode:	0	0	0	65552	0	0	0		c12			0	12
+	13	data_in	-30	5	0	12	1	22	10	32	12	0	10	Data In :	0	0	0	66576	0	0	0		-i12			0	13
+	14	data_out	-30	5	0	12	1	22	11	32	12	0	10	Data Out:	0	0	0	66576	0	0	0		-i12			0	14
+	15	msgs_in	-30	5	0	12	1	22	12	32	12	0	10	Msgs In :	0	0	0	66576	0	0	0		-i12			0	15
+	16	msgs_out	-30	5	0	12	1	22	13	32	12	0	10	Msgs Out:	0	0	0	66576	0	0	0		-i12			0	16
+TRIM:
+	0	6	6:29:1	1	0	0	0
+	2	6	Encryption	0	0	0	0
+	31	2	7:24:0	1	0	0	0
+	31	9	6:24:2	1	0	0	0
+	32	2	Connections	0	0	0	0
+	32	9	Traffic	0	0	0	0

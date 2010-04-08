@@ -1,0 +1,34 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- Server control help file 
+/#--
+You are looking at NETUTIL's network server control screen.
+
+This form consists of a single tablefield, which lists each 
+communication server currently operating on the host.  
+
+Menu Operations
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Quiesce         Quiesces the communication server or bridge server
+			under the cursor.
+                        Quiescing a communication server stops it when the last
+                        active connection goes away.
+                        Quiescing a bridge server stops it when the last
+                        active connection goes away.
+
+        QuiesceAll      Similar to Quiesce, but this operation 
+                        Quiesces every communication server and bridge 
+			server in the tablefield.
+
+        Stop            Stops the communication server or bridge server under
+			the cursor. 
+
+        StopAll         Similar to Stop, but this operation Stops 
+                        every communication server and  bridge server in 
+                        the tablefield.
+
+        Help            Displays this help screen.
+
+        End             Exit network server control.

@@ -1,0 +1,106 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmtbledt.hlp
+/#subtopic "Consistent Distributed Data Set" rmcdddef.hlp
+EDIT TABLE REGISTRATION DETAILS
+
+This form is used to change the registration information for a
+replicated table.
+
+To make a change, use the Tab key to move to the desired field and enter
+the new value.  To save the changed definition, select the Save
+operation.
+
+The fields on the left side of the form are:
+
+        FIELD NAME              DESCRIPTION
+        ----------              -----------
+        Name                    The table name.
+
+        Owner                   The owner of the table.
+
+        CDDS No                 The CDDS number to which the table has
+                                been assigned.  The CDDS name is
+                                displayed next to the number.  By
+                                default, tables are initially assigned
+                                to CDDS 0 (the Default CDDS).  You can
+                                specify a different CDDS in this field.
+                                Use ListChoices to see a list of defined
+                                CDDS's.
+
+        Unique Index Used       The unique storage structure or index
+                                used as primary key for replication.
+                                The default registration will select the
+                                base table storage structure if it is
+                                unique, or the first (alphabetically)
+                                unique secondary index.  You can
+                                override this selection here.  If the
+                                table has more than one secondary index,
+                                you can use ListChoices to list the
+                                indexes.
+
+        Horizontal Partition    The name of the lookup table for
+        Lookup                  horizontal partitioning.  The lookup
+                                table must have a column named
+                                'cdds_no'.  Use ListChoices to see a
+                                list of valid lookup tables.
+
+        Priority Collision      The name of the lookup table to
+        Resolution Lookup       determine priority collision resolution.
+                                The lookup table must have a column
+                                named 'dd_priority'.  Use ListChoices to
+                                see a list of valid lookup tables.
+
+        Columns Registered      The date and time that the columns in
+                                this table were last registered.  This
+                                field is not editable.
+
+        Support Objects         The date and time that the support
+        Created                 objects for this table were last
+                                created. This field is not editable.
+
+        Recording Enabled       The date and time that change recording
+                                was enabled for this table.  This field
+                                is not editable.
+
+
+The columns in the table field on the right are:
+
+        COLUMN NAME             DESCRIPTION
+        -----------             -----------
+        Column Registered       Indicates whether the column is
+                                registered for replication.  The default
+                                registration process registers all
+                                columns.  You can change this default by
+                                entering an 'n' for any column you do
+                                not want to replicate.  Note, however,
+                                that all the columns that are part of
+                                the key and those columns that are
+                                defined as NOT NULL NOT DEFAULT must be
+                                replicated.  To replicate a column that
+                                is not being replicated, enter a 'y' in
+                                this column.
+
+        Key Sequence            Indicates the sequence of the column in
+                                the table's unique storage structure or
+                                index.  Columns with a value of 0 are
+                                not part of the key.  This column is not
+                                editable.
+
+        Column Name             The name of the column.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Save            Save the definition and return to the Table
+                        Registration Summary screen.  If support objects
+                        exist, you will be prompted for confirmation
+                        since they will have to be recreated.
+
+        ListChoices     Display a list of acceptable values for the
+                        current field.
+
+        Help            Access the Help facility.
+
+        End             Return to the Table Registration Summary screen.

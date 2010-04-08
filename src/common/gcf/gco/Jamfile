@@ -1,0 +1,14 @@
+#
+# Jamfile file for common!gcf!gco
+#
+
+SubDir ING_SRC common gcf gco ;
+
+IISUBSYS common gcf gco ;
+
+
+IILIBRARY GCFLIB : gcopde.c
+	gcopdc.c
+	gcocomp.c ;
+
+IILIBRARY IMPGCFLIBDATA : gcood.c ;

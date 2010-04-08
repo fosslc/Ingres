@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2006 Ingres Corporation
+
+  The optimize_writes resource determines if physical log writes should
+  be optimized to write more than one log page at a time. 
+
+  This option is only available with single-partition log files.

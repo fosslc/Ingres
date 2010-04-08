@@ -1,0 +1,5 @@
+; History:
+;	14-aug-98 (thoda04) 
+;	    Created
+EXPORTS
+    iixa_switch                      @1 DATA

@@ -1,0 +1,87 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for sharelib64
+*/
+
+/*
+** History
+**	06-sep-2002 (somsa01)
+**	    Created from 32-bit version.
+**	21-Jan-2003 (hweho01)
+**          For the 32/64 hybrid build on AIX, the shared libraries  
+**          that require the library path to be loaded will have a   
+**          suffix '64' and reside in $II_SYSTEM/ingres/lib directory. 
+**          Because the alternate shared library path is not available.
+**      14-May-2003 (hanch04)
+**          Fix previous change for AIX.
+**	20-aug-2003 (somsa01)
+**	    Updated to use delshlib64.
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Hybrid add-on symbol changed, fix here.
+**	    Server-shared-libraries are now in bin so that setuid
+**	    and $ORIGIN can work together.
+*/
+/*
+** The naming of these .stb and .map files is a bit screwy; would be
+** nice to make the build names match the deliverable names someday.
+*/
+
+PART  sharelib64
+
+# ifdef R_SHLIBS
+   PRELOAD delshlib64
+# if defined(any_aix) && defined(conf_BUILD_ARCH_32_64)
+   BUILD_DIR (ING_BUILD)!lib
+   DIRECTORY (PROD2NAME)!lib
+      {
+      EXECUTABLE lib(PROG0PRFX)compat64.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)frame64.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)interp64.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)q64.1.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)api64.1.$SLSFX
+      PERMISSION s:re,o:rwed,g:re,w:re
+      }
+# else
+   BUILD_DIR (ING_BUILD)!lib!lp64
+   DIRECTORY (PROD2NAME)!lib!lp64
+      {
+      EXECUTABLE lib(PROG0PRFX)compat.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)frame.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)interp.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)q.1.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)api.1.$SLSFX
+      PERMISSION s:re,o:rwed,g:re,w:re
+      }
+# endif    /* aix hybrid */
+# endif /* R_SHLIBS */
+
+/* If using shared server libs, include them.  Notice these are in bin */
+
+# ifdef conf_SVR_SHL
+
+   BUILD_DIR (ING_BUILD)!bin!lp64
+   DIRECTORY (PROD2NAME)!bin!lp64
+     {
+      EXECUTABLE lib(PROG0PRFX)becompat.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)scf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)psf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)opf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)rdf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)qef.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)psf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)qsf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)dbutil.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)dmf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)gwf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)adf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)ulf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)tpf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)rqf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)gcf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)sxf.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)cuf.1.$SLSFX
+      }
+
+# endif /* conf_SVR_SHL */

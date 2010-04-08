@@ -1,0 +1,48 @@
+#
+# Name: iiname.all
+#
+# Description:
+#	This file defines the static name queues maintained by the 
+#	Name Server.
+#
+#	DO NOT ADD SERVER CLASSES TO THIS FILE!  The Name Server now 
+#	maintains server class (transient) name queues dynamically
+#	in a separate file (svrclass.nam).
+#
+#	Queue attributes:
+#
+#	    global/local	Global queues are shared in clustered
+#				environments.  Default is local.
+#
+#	    transient		Indicates a class for registered servers.  
+#				Default is non-transient.
+#
+#	    temporary		Queue is only maintained while Name Server
+#				is running.  Default is persistent.
+#
+#	    <number>		Number of subfields in the value field.
+#				Default is 1.
+#
+## History:
+##	 5-Jun-98 (gordy)
+##	    Removed server classes.
+##	14-Sep-98 (gordy)
+##	    Added the NMSVR class for installation registry.
+##	    This class is temporary since master negotiation
+##	    and re-registry are required each time the Name
+##	    Server starts up.
+##	15-Jul-04 (gordy)
+##	    LOGIN entries now have third sub-field: encoding version.
+##	 1-Mar-06 (gordy)
+##	    Removed SERVERS class.  The (duplicate) external server 
+##	    information stored in these class entries is now generated 
+##	    from the registered server entries.  Internal information
+##	    stored in these entries is now only maintained in memory.
+##
+NODE 	3	global
+LOGIN	3	global
+ATTR	2	global
+LTICKET	1	local
+RTICKET 1	local
+IINMSVR	1	local transient temporary
+NMSVR	1	local transient temporary

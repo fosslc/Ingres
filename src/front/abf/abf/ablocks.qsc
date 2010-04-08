@@ -1,0 +1,1012 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+# include	<nm.h>		/* 6-x_PC_80x86 */
+# include	<cv.h>		/* 6-x_PC_80x86 */
+#include	<st.h>
+#include	<er.h>
+#include	<tm.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<stdprmpt.h>
+##include	<ooclass.qsh>
+#include	<uigdata.h>
+#include	<abclass.h>
+#include	"erab.h"
+#include	<oodefine.h>
+
+/**
+** Name:	ablocks.qc -	ABF Lock Utilities Module.
+**
+** Description:
+**	Contains the lock checking / lock manipulation routines:
+**
+**	IIABcelCheckEditLock - check for lock on edit
+**	IIABcdlCheckDestroyLock - check for lock on destroy / remove
+**	IIABnelNewEditLock - new edit lock.
+**	IIABrlRemLock - remove locks.
+**	IIABffcFrameFlowChanged - flag FF change for other sessions
+**	IIABffsFrameFlowState - check FF state, query for update if changed.
+**	IIABlaLockAdm - lock admin screen
+**	IIABliLockInit - initialize locks.
+**
+** History:
+**	12/89 (bobm) initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	28-Mar-2005 (lakvi01)
+**	    Added oodefine.h for OO prototypes.
+**    25-Oct-2005 (hanje04)
+**        Add prototype for la_upd() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+*/
+
+OO_CLASS	*OOpclass();
+
+GLOBALREF char	*IIabExename;
+GLOBALREF bool	IIabVision;
+
+/*
+** Note on the semantics of the _fetch routines -
+** they are handlers that receive one row of a select, and return TRUE
+** to indicate that the select is to continue, or false to terminate
+** it.  The return code has nothing to do with the acceptability of
+** the data.
+*/
+static bool el_fetch();
+static bool ffs_fetch();
+static bool la_fetch();
+static bool det_fetch();
+static bool sd_fetch();
+static bool dest_fetch();
+static bool tree_fetch();
+static i4 la_upd (
+	OOID    applid);
+
+static i4  zap_it();
+
+static const
+##	char	_LockWarn[]	= ERx("ablockwarn"),
+##		_LockersTbl[]	= ERx("lockers"),
+##		_User[]		= ERx("user"),
+##		_Since[]	= ERx("since"),
+##		_LockAdmin[]	= ERx("ablokadm"),
+##		_ApplTbl[]	= ERx("apptab"),
+##		_LockTrace[]	= ERx("abloktr"),
+##		_LockDetail[]	= ERx("ablokdet"),
+##		_LockTbl[]	= ERx("locktab"),
+##		_Component[]	= ERx("comp"),
+##		_SessionID[]	= ERx("sessid"),
+##		_ApplID[]	= ERx("applid"),
+##		_ObjID[]	= ERx("objid");
+
+static const	char	_EntryAct[]	= ERx("entry"),
+			_WriteAct[]	= ERx("write");
+
+static char	Locker[FE_MAXNAME+1] = {EOS};
+static i4	Session = 0;
+
+/*
+** used to handle locks more than 1 week old - We don't want to
+** incur the DB overhead to remove them at the start of our session.
+** We filter them out when fetching, and set Kill_old if we need
+** to remove them at exit.  We are relying on string comparisons
+** of the date_gmt format here.
+*/
+static bool	Kill_old = FALSE;
+static char	Week_ago[26];
+
+##static i4	Detsid = 0;
+
+static APPL	*Treeapp = NULL;
+
+#define INITCHECK	if (Session == 0) IIABliLockInit()
+
+/*{
+** Name:	IIABliLockInit - initialize lock information
+**
+** Description:
+**	Initialize information for locking within this abf session.
+**	This is intended to be called explicitly at the beginning of
+**	abf, but INITCHECK makes sure it gets called anyway.  If not
+**	called at the beginning of abf, the start-of-session time will
+**	not be accurate.  We may accept this later on, if the start up
+**	penalty is too great.
+**
+** Input:
+**
+** Returns:
+**
+** History:
+**	12/89 (bobm) -- Written.
+*/
+
+VOID
+IIABliLockInit()
+{
+	SYSTIME now;
+
+	/*
+	** if it fails, set Session to 1 so that we don't keep trying
+	** to do this, even though there is then a possibility that
+	** we will be entering bogus sessions into the lock table.
+	*/
+	if (IIAMfsiFetchSessionId(&Session,Locker) != OK)
+	{
+		Session = 1;
+		IIUGerr(E_AB00A0_LockSet, UG_ERR_ERROR, 0);
+	}
+
+	/*
+	** get date_gmt format string for one week ago
+	*/
+	TMnow(&now);
+	now.TM_secs -= 604800L;
+	IIUGdfsDateFromSys( &now, Week_ago );
+
+	IIARiaForm(_LockWarn);
+	IIARiaForm(_LockAdmin);
+##	inittable _LockAdmin _ApplTbl READ  ( _SessionID = i4, _ApplID = i4 );
+	IIARiaForm(_LockDetail);
+##	inittable _LockDetail _LockTbl READ
+##			( _ObjID = i4, _SessionID = i4, _User = c32 );
+	IIARiaForm(_LockTrace);
+}
+
+/*{
+** Name:	IIABcelCheckEditLock - check for lock
+**
+** Description:
+**	Checks for edit locks on component user wishes to edit.  If a lock
+**	exists, user is given a chance to decide not to edit.  If user
+**	chooses to edit, a lock is placed on the component.  The component
+**	may actually be an entire application, in which case the lock
+**	type created, and the form used to display other users differs.
+**
+** Input:
+**	comp	- component being editted.
+**
+** Returns:
+**	{STATUS}  OK to go ahead and edit, or FAIL
+**
+** History:
+**	12/89 (bobm) -- Written.
+*/
+
+STATUS
+## IIABcelCheckEditLock( comp )
+APPL_COMP *comp;
+##{
+	STATUS		rval;
+	char		*how;
+	OO_CLASS	*ocl;
+	ER_MSGID	obj_lock_warn;
+##	i4		row_cnt;
+##	char		_warn[250+1];
+##	char		_desc[120];
+##	char		name[FE_MAXNAME];
+	i4		sid;
+
+	INITCHECK;
+
+	if (comp->class == OC_APPL)
+	{
+		how = _EntryAct;
+		obj_lock_warn =
+			(IIabVision) ? F_AB00B6_VappLocked : F_AB00B5_AppLocked;
+	}
+	else
+	{
+		how = _WriteAct;
+		obj_lock_warn = F_AB00B4_ObjectLocked;
+	}
+
+##	inittable _LockWarn _LockersTbl READ (_SessionID = i4);
+
+	if ( IIAMelExistingLocks(comp->ooid, el_fetch) != OK )
+	{
+		/*
+		** try to set a lock anyway.  Only give one error
+		** message, however.  We treat the "set" error as
+		** more serious.
+		*/
+		IIUGerr( ( IIAMclCreateLock(comp->ooid, Session, Locker, how)
+				!= OK ) ? E_AB00A0_LockSet : E_AB00A3_LockFetch,
+				UG_ERR_ERROR, 0
+		);
+		return OK;
+	}
+
+##	inquire_frs table _LockWarn ( row_cnt = datarows(_LockersTbl) );
+
+	if ( row_cnt == 0 )
+	{
+		if (IIAMclCreateLock(comp->ooid, Session, Locker, how) != OK)
+			IIUGerr(E_AB00A0_LockSet, UG_ERR_ERROR, 0);
+		return OK;
+	}
+
+	ocl = OOpclass(comp->class);
+	if (ocl == NULL)
+		_VOID_ STprintf(_desc,ERx("`%s'"),comp->name);
+	else
+		_VOID_ STprintf(_desc,ERx("%s: `%s'"),ocl->name,comp->name);
+
+	_VOID_ STprintf(_warn, ERget(F_AB00B3_LockInfo), ERget(obj_lock_warn));
+
+##	display _LockWarn READ with style = popup
+
+##	initialize ( desc = _desc, warning = _warn )
+
+##	activate menuitem ERget(FE_OK) (expl = ERget(F_AB00A1_OkExpl)), FRSkey4
+##	{
+		if (IIAMclCreateLock(comp->ooid, Session, Locker, how) != OK)
+			IIUGerr(E_AB00A0_LockSet, UG_ERR_ERROR, 0);
+		rval = OK;
+##		enddisplay;
+##	}
+
+##	activate menuitem ERget(FE_Cancel) (expl = ERget(F_AB00A2_CanExpl)),
+##				FRSkey9
+##	{
+		rval = FAIL;
+##		enddisplay;
+##	}
+
+##	activate menuitem ERget(FE_Delete) (expl = ERget(F_FE0111_DeleteExpl))
+##	{
+		row_cnt -= zap_it(_LockWarn, _LockersTbl, OC_UNDEFINED);
+		if (row_cnt <= 0)
+		{
+			if (IIAMclCreateLock(comp->ooid,
+					Session, Locker, how) != OK)
+				IIUGerr(E_AB00A0_LockSet, UG_ERR_ERROR, 0);
+			rval = OK;
+##			enddisplay;
+		}
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp)),
+##			FRSkey1:
+##	{
+		FEhelp(ERx("abedlock.hlp"), ERget(F_AB00A3_ELockHelp));
+##	}
+
+	return rval;
+##}
+
+/*{
+** Name: el_fetch
+**
+** static routine to process edit lock fetch - load them into tablefield,
+** and bump row count.
+*/
+static bool
+##el_fetch ( who, dstr, how, sid )
+##char	*who;
+##char	*dstr;
+char	*how;
+##OOID	sid;
+##{
+	if (STcompare(dstr,Week_ago) < 0)
+	{
+		Kill_old = TRUE;
+		return TRUE;
+	}
+
+##	loadtable _LockWarn _LockersTbl ( _User = who,
+##				_Since = dstr, _SessionID = sid );
+
+	return TRUE;
+##}
+
+/*{
+** Name:	IIABcdlCheckDestroyLock - check for lock on destroy/remove
+**
+** Description:
+**	Checks for locks on component user wishes to destroy.
+**
+**	If lock exists, either an advisory message might be given, or
+**	the operation may be prevented.  The advisory message is used
+**	for the "Remove" operation from Vision.  We may actually look
+**	for the entire subtree called by this component, and produce
+**	an advisory if any of them are being editted.  Only an edit of
+**	the component itself prevents the operation.
+**
+**	We return a flag to allow the caller to know whether or not we
+**	prompted the user.  This allows redundant confirmations to
+**	be suppressed.
+**
+** Input:
+**	app	- application
+**	comp	- component being clobbered.
+**	wtree	- include call tree.
+**	strict	- do not allow operation if locked.
+**
+** Returns:
+**	pdone	- returned TRUE if user was prompted, FALSE otherwise
+**
+**	{STATUS}  OK to go ahead, or FAIL
+**
+** History:
+**	12/89 (bobm) -- Written.
+*/
+
+STATUS
+##IIABcdlCheckDestroyLock( app, comp, wtree, strict, pdone )
+APPL *app;
+APPL_COMP *comp;
+bool wtree;
+bool strict;
+bool *pdone;
+##{
+	OO_CLASS	*ocl;
+	STATUS		rval;
+##	i4		row_cnt;
+##	char		_desc[120];
+
+	INITCHECK;
+
+	*pdone = FALSE;
+
+	/*
+	** cheap trick - we are using a row of this tablefield to
+	** format a date in dest_fetch.  Hence we init the table now.
+	** if dest_fetch uses the table we are returning.  We also
+	** use a getform in dest_fetch to recover _desc.
+	*/
+##	inittable _LockTrace _LockersTbl READ;
+
+	ocl = OOpclass(comp->class);
+	if (ocl == NULL)
+		STprintf(_desc, ERx("`%s'"),comp->name);
+	else
+		STprintf(_desc, ERx("%s: `%s'"),ocl->name,comp->name);
+
+	if (strict)
+	{
+##		putform _LockTrace ( desc = _desc );
+		if (IIAMelExistingLocks(comp->ooid,dest_fetch) != OK)
+		{
+			IIUGerr(E_AB00A3_LockFetch, UG_ERR_ERROR, 0);
+			return FAIL;
+		}
+##		inquire_frs table _LockTrace (row_cnt = datarows(_LockersTbl));
+
+		if ( row_cnt > 0 )
+			return FAIL;
+	}
+
+	if (! wtree)
+		return OK;
+
+	Treeapp = app;
+
+	IIABmstMarkSubTree(app,comp);
+
+	if (IIAMalApplLocks(app->ooid,tree_fetch) != OK)
+	{
+		IIUGerr(E_AB00A3_LockFetch, UG_ERR_ERROR, 0);
+		return OK;
+	}
+
+##	inquire_frs table _LockTrace ( row_cnt = datarows(_LockersTbl) );
+	if ( row_cnt == 0 )
+		return OK;
+
+	*pdone = TRUE;
+
+##	display _LockTrace READ with style = popup
+
+##	initialize ( desc = _desc )
+
+##	activate menuitem ERget(FE_OK) (expl = ERget(F_AB00A1_OkExpl)), FRSkey4:
+##	{
+		rval = OK;
+##		enddisplay;
+##	}
+
+##	activate menuitem ERget(FE_Cancel) (expl = ERget(F_AB00A2_CanExpl)),
+##				FRSkey9
+##	{
+		rval = FAIL;
+##		enddisplay;
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp)),
+##			FRSkey1:
+##	{
+		FEhelp(ERx("abloktr.hlp"), ERget(F_AB00B1_LockDestHelp));
+##	}
+
+	return rval;
+
+##}
+
+/*
+** Name:
+**
+** static routine to perform fetch for strict object lock.  This
+** prints the message, and terminates query once found.  We use the
+** form as a formatting mechanism, and a repository for the appropriate
+** item name.
+*/
+
+static bool
+dest_fetch(who,dstr)
+char *who;
+## char *dstr;
+##{
+##	char fd[25+1];
+##	char nbuf[120];
+
+	if (STcompare(dstr,Week_ago) < 0)
+	{
+		Kill_old = TRUE;
+		return TRUE;
+	}
+
+##	loadtable _LockTrace _LockersTbl ( _Since = dstr );
+##	getrow _LockTrace _LockersTbl 1 ( fd = _Since );
+##	getform _LockTrace (nbuf = desc);
+
+	IIUGerr(E_AB00A4_DestLock, 0, 3, nbuf, who, fd);
+
+	return FALSE;
+##}
+
+/*{
+** Name:	tree_fetch
+**
+** static routine to perform fetch for subtree check.  We are passed
+** all of the locked items in the application.  We filter out the
+** ones not marked as being in our subtree.
+*/
+
+static bool
+##tree_fetch(who,dstr,how,sid,oname,class,objid)
+##char *who;
+##char *dstr;
+char *how;
+OOID sid;
+##char *oname;
+OOID class;
+OOID objid;
+##{
+	APPL_COMP	*obj;
+
+	/*
+	** we would LIKE to call OOp(), but that may cause a nested
+	** query.
+	*/
+	for (obj = (APPL_COMP *) Treeapp->comps; obj != NULL; obj = obj->_next)
+		if (obj->ooid == objid)
+			break;
+
+	if (obj == NULL || (obj->flags & TREE_MARK) == 0)
+		return TRUE;
+
+	if (STcompare(dstr,Week_ago) < 0)
+	{
+		Kill_old = TRUE;
+		return TRUE;
+	}
+
+##	loadtable _LockTrace _LockersTbl (
+##		_User = who, frame = oname, _Since = dstr
+##	);
+
+	return TRUE;
+##}
+
+/*{
+** Name:	IIABnelNewEditLock - check for lock
+**
+** Description:
+**	Call to set an edit lock on newly created component, just prior
+**	to edit.  You COULD simply call CheckEditLock, but since the
+**	component is brand new, there wouldn't be any locks, and you'd
+**	be wasting a query.
+**
+** Input:
+**	objid - object id.
+**
+** Returns:
+**	{STATUS}  OK to go ahead and edit, or FAIL
+**
+** History:
+**	12/89 (bobm) -- Written.
+*/
+STATUS
+IIABnelNewEditLock(objid)
+OOID objid;
+{
+	if (IIAMclCreateLock(objid, Session, Locker, _WriteAct) != OK)
+		IIUGerr(E_AB00A0_LockSet, UG_ERR_ERROR, 0);
+}
+
+/*{
+** Name:	IIABrlRemLock - remove locks.
+**
+** Description:
+**	Remove lock or locks for this session.
+**
+** Input:
+**	objid - object id to remove lock on, or OC_UNDEFINED to remove
+**		all locks for this session.
+**
+**		OC_UNDEFINED is used on abf exit, so we also remove
+**		locks > 1 week old at this point if we encountered any.
+**
+** Returns:
+**	STATUS
+**
+** History:
+**	12/89 (bobm) -- Written.
+*/
+
+STATUS
+IIABrlRemLock(objid)
+OOID objid;
+{
+	STATUS rval;
+
+	INITCHECK;
+
+	if ((rval = IIAMdlDeleteLocks(objid, Session)) != OK)
+		IIUGerr(E_AB00A0_LockSet, UG_ERR_ERROR, 0);
+
+	/*
+	** if rval != OK, we probably failed due to DB errors.
+	** Don't bother with cleanup that would likely fail as well.
+	*/
+	if (rval == OK && objid == OC_UNDEFINED && Kill_old)
+	{
+		IIAMlcuLockCleanUp(Week_ago);
+		Kill_old = FALSE;
+	}
+
+	return rval;
+}
+
+/*{
+** Name:	IIABffcFrameFlowChanged
+**
+** Description:
+**	Use locks to flag changes to the frame flow diagram in
+**	other sessions
+**
+** Input:
+**	applid - application id.
+**
+** Returns:
+**	STATUS
+**
+** History:
+**	12/89 (bobm) -- Written.
+*/
+
+STATUS
+IIABffcFrameFlowChanged(applid)
+OOID applid;
+{
+	STATUS rval;
+
+	INITCHECK;
+
+	if ( (rval = IIAMcolChangeOtherLocks(applid, Session, ERx("refresh")))
+			!= OK )
+		IIUGerr(E_AB00A0_LockSet, UG_ERR_ERROR, 0);
+
+	return rval;
+}
+
+/*{
+** Name:	IIABffsFrameFlowState
+**
+** Description:
+**	Examine state of session lock on application to see if frame flow
+**	has changed.
+**
+** Input:
+**	appl	- application.
+**
+** Returns:
+**	TRUE - state has changed, and user has requested update.
+**
+** History:
+**	12/89 (bobm) -- Written.
+*/
+
+static bool Chg;
+
+bool
+IIABffsFrameFlowState(appl)
+APPL *appl;
+{
+	i4 cc;
+
+	INITCHECK;
+
+	/*
+	** if lock check somehow fails, punt!  We don't bother with
+	** an error message here because if this is failing it would
+	** be incredibly obnoxious to keep seeing the message periodically.
+	*/
+	Chg = FALSE;
+	_VOID_ IIAMelExistingLocks(appl->ooid,ffs_fetch);
+
+	if (!Chg)
+		return FALSE;
+
+	_VOID_ IIAMcslChangeSessLock(appl->ooid, Session, ERx("entry"));
+
+	cc = IIUFccConfirmChoice(CONF_GENERIC, ERx(""), ERx(""),
+		ERget(F_AB00A5_RCHelp), ERx("abfflst.hlp"), F_AB00A6_RTitle,
+		F_AB00A7_Yexp, F_AB00A8_Nexp, ERx(""), FALSE);
+
+	return (bool)( cc == CONFCH_YES );
+}
+
+/*{
+** Name: ffs_fetch
+**
+** static routine to look for application lock for a given session.
+** sets Chg to TRUE if needed, returns FALSE to terminate query when
+** record has been found.
+*/
+
+static bool
+ffs_fetch(who,dstr,how,sessid)
+char *who;
+char *dstr;
+char *how;
+i4	sessid;
+{
+	if (sessid != Session)
+		return TRUE;
+	if (!STequal(how, _EntryAct) )
+		Chg = TRUE;
+	return FALSE;
+}
+
+/*{
+** Name:	IIABlaLockAdm
+**
+** Description:
+**	screen to administer/list lock information.
+**
+** Input:
+**	applid - ID of application to restrict to, or OC_UNDEFINED
+**
+** Returns:
+**	none.
+**
+** History:
+**	12/89 (bobm) -- Written.
+*/
+
+static VOID	det_frame();
+
+VOID
+##IIABlaLockAdm(applid)
+OOID	applid;
+##{
+	i4	rows;
+##	char	tbuf[120];
+##	i4	old_to;
+##	i4	my_to;
+	char	*ptr;
+
+	INITCHECK;
+
+	my_to = 300;
+	NMgtAt(ERx("II_AFD_TIMEOUT"),&ptr);
+	if (ptr != NULL && *ptr != EOS)
+	{
+		_VOID_ CVan(ptr,&my_to);
+		if (my_to != 0 && my_to < 20)
+			my_to = 20;
+	}
+
+##	inquire_frs frs (old_to = timeout)
+##	set_frs frs (timeout = my_to)
+
+	IIUGmsg(ERget(S_AB00A1_LockRead), FALSE, 0);
+
+	IIUGfmt(tbuf, sizeof(tbuf)-1, ERget(F_AB00A9_LokTitle), 1, IIabExename);
+
+##	display _LockAdmin READ
+
+##	initialize ( title = tbuf )
+##	{
+		if ( (rows = la_upd(applid)) < 0 )
+##			breakdisplay;
+##	}
+
+##	activate timeout
+##	{
+		IIUGmsg(ERget(S_AB00A1_LockRead), FALSE, 0);
+		rows = la_upd(applid);
+##	}
+
+##	activate menuitem ERget(F_AB00A0_Refresh) (expl = ERget(F_AB00A4_RefExpl))
+##	{
+		IIUGmsg(ERget(S_AB00A1_LockRead), FALSE, 0);
+		rows = la_upd(applid);
+##	}
+
+##	activate menuitem ERget(FE_Delete) (expl = ERget(F_FE0111_DeleteExpl)):
+##	{
+##		set_frs frs (timeout = 0)
+		if ( rows == 0 )
+			IIUGerr(E_AB00A5_NoLocks, UG_ERR_ERROR, 0);
+		else
+			rows -= zap_it(_LockAdmin,_ApplTbl,OC_UNDEFINED);
+##		set_frs frs (timeout = my_to)
+##	}
+
+##	activate menuitem ERget(FE_MoreInfo) (expl = ERget(F_FE0107_ExplMoreInfo))
+##	{
+##		set_frs frs (timeout = 0)
+		if ( rows == 0 )
+			IIUGerr(E_AB00A5_NoLocks, UG_ERR_ERROR, 0);
+		else
+			det_frame();
+##		set_frs frs (timeout = my_to)
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp)),
+##			FRSkey1:
+##	{
+##		set_frs frs (timeout = 0)
+		FEhelp(ERx("ablokadm.hlp"), tbuf);
+##		set_frs frs (timeout = my_to)
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##			FRSkey3:
+##	{
+##		enddisplay
+##	}
+
+##	set_frs frs (timeout = old_to)
+
+##}
+
+/*
+** Name: zap_it
+**
+** static routine to allow DBA to zap locks for a any user session, or a user
+** to zap their own locks.
+**
+** get pertinent info from hidden columns of tablefield, delete from DB,
+** and remove tablefield row.  Returns number of rows removed.
+**
+** Called with oid = OC_UNDEFINED to delete all locks for a session, or
+** with the object id to delete locks on.
+**
+** History:
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to IIUIdbdata().  Also,
+**	    use the isdba field instead of doing STequal on user and dba.
+*/
+
+static i4
+##zap_it(fm,tbl,oid)
+## char *fm;
+## char *tbl;
+i4 oid;
+##{
+##	i4	sid;
+##	char	nm[FE_MAXNAME+1];
+
+
+##	getrow fm tbl ( sid = _SessionID, nm = _User );
+
+	if (sid == Session)
+	{
+		IIUGerr(E_AB00A6_OwnLock, UG_ERR_ERROR, 0);
+		return 0;
+	}
+
+	if ( ! STequal(nm,Locker) && ! IIUIdbdata()->isdba )
+	{
+		IIUGerr(E_AB02F7_LockOwner, UG_ERR_ERROR, 0);
+		return 0;
+	}
+
+	if ( IIUFccConfirmChoice(CONF_DELETE, ERx(""), ERget(F_AB00AA_Lock),
+				ERget(F_AB00AB_LDHelp), ERx("ablokdel.hlp"))
+			== CONFCH_YES )
+	{
+		IIUGmsg(ERget(S_AB00A2_LockDelete), FALSE, 0);
+		if ( IIAMdlDeleteLocks(oid, sid) == OK )
+		{
+##			deleterow fm tbl;
+			return 1;
+		}
+		IIUGerr(E_AB00A0_LockSet, UG_ERR_ERROR, 0);
+		return 0;
+	}
+
+	return 0;
+##}
+
+/*{
+** Name:	la_upd
+**
+** static routine to update lock listing screen.  Session / application
+** id are attached to tablefield to allow us to do the "details" screen
+*/
+static i4
+la_upd ( applid )
+OOID	applid;
+{
+##	i4	row_cnt;
+
+##	clear field _ApplTbl;
+
+	if ( IIAMalApplLocks(applid,la_fetch) != OK )
+	{
+		IIUGerr(E_AB00A3_LockFetch, UG_ERR_ERROR, 0);
+		return -1;
+	}
+
+##	inquire_frs table _LockAdmin ( row_cnt = datarows(_ApplTbl) );
+
+	return row_cnt;
+}
+
+/*{
+** Name:	la_fetch
+**
+** static routine to perform fetch for lock listing update.
+** We look explicitly for the locks on applications.
+*/
+static bool
+##la_fetch ( who, dstr, how, sid, oname, class, objid )
+##char	*who;
+##char	*dstr;
+char	*how;
+##i4	sid;
+##char	*oname;
+OOID	class;
+##OOID	objid;
+##{
+	if (class != OC_APPL)
+		return TRUE;
+
+##	loadtable _LockAdmin _ApplTbl ( _User = who, appl = oname,
+##			_Since = dstr, _SessionID = sid, _ApplID = objid
+##	);
+
+	return TRUE;
+##}
+
+/*
+** Name:	det_frame
+**
+** Details frame for locks for a given user session.
+**
+** History:
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to IIUIdbdata().  Also,
+**	    use the isdba field instead of doing STequal on user and dba.
+*/
+
+static VOID
+##det_frame()
+##{
+##	OOID	oid;
+##	char	*_delete;
+##	char	name[FE_MAXNAME+1];
+##	i4	row_cnt;
+
+##	getrow _LockAdmin _ApplTbl (
+##		Detsid = _SessionID, name = _User, oid = _ApplID
+##	);
+
+	/*
+	** the "delete" menuitem goes with the deletion of individual
+	** component locks.  Currently, we are not turning on this feature.
+	*/
+#ifdef UNLOCK_COMPONENTS
+	if (STequal(name,Locker) || IIUIdbdata()->isdba )
+		_delete = ERget(FE_Delete);
+	else
+		_delete = NULL;
+#else
+	_delete = NULL;
+#endif
+
+##	display _LockDetail READ with style = popup
+
+##	initialize ( _User = name )
+##	{
+##		clear field _LockTbl;
+
+		/*
+		** no error message - simply display empty table.  DB failure
+		** probably produced an error message already, anyway
+		*/
+		_VOID_ IIAMslSessionLocks(Detsid, sd_fetch);
+		_VOID_ IIAMalApplLocks(oid, det_fetch);
+
+##	}
+
+##	activate menuitem _delete (expl = ERget(F_FE0111_DeleteExpl))
+##	{
+##		getrow _LockDetail _LockTbl ( name = _Component, oid = _ObjID );
+		zap_it(_LockDetail, _LockTbl, oid);
+##		inquire_frs table _LockWarn ( row_cnt = datarows(_LockersTbl) );
+		if (row_cnt == 0)
+		{
+##			enddisplay;
+		}
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp)),
+##		FRSkey1:
+##	{
+		FEhelp(ERx("ablokdet.hlp"), ERget(F_AB00AE_LDetHelp));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3:
+##	{
+##		enddisplay;
+##	}
+
+##}
+
+static bool
+##sd_fetch ( who, dstr, how, id )
+char *who;
+## char *dstr;
+char *how;
+OOID id;
+##{
+	if (id != 0)
+		return TRUE;
+
+##	putform _LockDetail ( _Since = dstr );
+
+	return FALSE;
+##}
+
+static bool
+##det_fetch ( who, dstr, how, sid, oname, class, oid )
+## char	*who;
+## char	*dstr;
+## char	*how;
+## OOID	sid;
+##char	*oname;
+OOID	class;
+##OOID	oid;
+##{
+	if (sid == Detsid)
+	{
+		OO_CLASS	*ocl;
+
+		ocl = OOpclass(class);
+
+##		loadtable _LockDetail _LockTbl ( _Component = oname,
+##				type = ERx(ocl == NULL ? "?" : ocl->name),
+##				locktype = how, _Since = dstr, _ObjID = oid,
+##				_User = who, _SessionID = sid);
+	}
+
+	return TRUE;
+##}

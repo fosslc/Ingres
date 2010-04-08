@@ -1,0 +1,12 @@
+#
+# Jamfile file for testtool!sep!sepcl_win
+#
+
+SubDir ING_SRC testtool sep sepcl_win ;
+
+IISUBSYS testtool sep sepcl_win ;
+
+
+IITOOLSEXE sepchild : sepchild.c ;
+IINEEDLIBS sepchild : COMPATLIB ;
+

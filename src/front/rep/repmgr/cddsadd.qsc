@@ -1,0 +1,337 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <stdprmpt.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	cddsadd.qsc - add a CDDS
+**
+** Description:
+**	Defines
+**		cdds_add	- add a CDDS
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on cddsadd.osq in replicator library.
+**	14-nov-97 (joea)
+**		Correct call to IIUGerr.
+**	30-nov-98 (abbjo03)
+**		Generalize the mode lookup functions. Use new generic mode
+**		validation function. Add mode validation in Save menu, so that
+**		the default modes will be visible when we return to the CDDS
+**		Summary.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	16-oct-2001 (abbjo03)
+**	    Change READONLY to const.
+**/
+
+GLOBALREF
+##char	RMdb_display[];
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmcdds_detail"),
+##	*fcdds_no = ERx("cdds_no"),
+##	*fcdds_name = ERx("cdds_name"),
+##	*fcoll_mode = ERx("collision_mode"),
+##	*fcoll_mode_alpha = ERx("collision_mode_alpha"),
+##	*ferr_mode = ERx("error_mode"),
+##	*ferr_mode_alpha = ERx("error_mode_alpha");
+
+
+FUNC_EXTERN bool mode_valid(char *mode_name, const char *fint_mode,
+	char *mode_alpha);
+FUNC_EXTERN void mode_lookup(char *mode_name, const char *fint_mode,
+	const char *falpha_mode);
+
+
+/*{
+** Name:	cdds_add	- add a CDDS
+**
+** Description:
+**	Add CDDS Definition.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	cdds_no		- CDDS number
+**	cdds_name	- database name
+**	collision_mode	- collision mode
+**	coll_mode_alpha	- collision mode text
+**	error_mode	- error mode
+**	err_mode_alpha	- error mode text
+**
+** Returns:
+**	0	- no changes were made
+**	1	- changes were made and saved
+*/
+STATUS
+cdds_add(
+i2	*cdds_no,
+char	*cdds_name,
+i2	*collision_mode,
+char	*coll_mode_alpha,
+i2	*error_mode,
+char	*err_mode_alpha)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+##char	*cdds_name;
+##char	*coll_mode_alpha;
+##char	*err_mode_alpha;
+EXEC SQL END DECLARE SECTION;
+# endif
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4	cdds_exist;
+##	i2	cdds_num;
+##	i2	coll_mode;
+##	i2	err_mode;
+	EXEC SQL END DECLARE SECTION;
+##	i4	chng;
+##	char	objname[FE_MAXNAME+1];
+	STATUS	retval;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+	*coll_mode_alpha = *err_mode_alpha = EOS;
+##	display form_name fill
+##	initialize (db = RMdb_display)
+##	activate field fcdds_no
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+##			getform (cdds_num = fcdds_no)
+			if (cdds_num < 0 || cdds_num > 32767)
+			{
+				IIUGerr(E_RM0020_Invalid_cdds_no, UG_ERR_ERROR,
+					0);
+##				resume
+			}
+
+			/* Check for existing cdds_no */
+			EXEC SQL SELECT	COUNT(*)
+				INTO	:cdds_exist
+				FROM	dd_cdds
+				WHERE	cdds_no = :cdds_num;
+			if (cdds_exist)
+			{
+				i4	pcdds_no = cdds_num;
+
+				IIUGerr(E_RM0021_Cdds_no_in_use, UG_ERR_ERROR,
+					1, &pcdds_no);
+##				resume
+			}
+		}
+##		resume next
+##	}
+
+##	activate field fcdds_name
+##	{
+##		inquire_frs field form_name (chng = change)
+		if (chng)
+		{
+			/* Check for existing cdds_name */
+##			getform (cdds_name = fcdds_name)
+			STtrmwhite(cdds_name);
+			EXEC SQL SELECT	COUNT(*)
+				INTO	:cdds_exist
+				FROM	dd_cdds
+				WHERE	cdds_name = :cdds_name;
+			EXEC SQL COMMIT;
+			if (cdds_exist)
+			{
+				IIUGerr(E_RM0022_Cdds_name_in_use,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+		}
+##		resume next
+##	}
+
+##	activate field fcoll_mode
+##	{
+##		inquire_frs field form_name (chng = change)
+##		getform (coll_mode_alpha = fcoll_mode_alpha)
+		if (chng || *coll_mode_alpha == EOS)
+		{
+			if (!mode_valid(ERx("collision_mode"), fcoll_mode,
+				coll_mode_alpha))
+			{
+				IIUGerr(E_RM0023_Invalid_coll_mode,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+##			putform (fcoll_mode_alpha = coll_mode_alpha)
+		}
+##		resume next
+##	}
+
+##	activate field ferr_mode
+##	{
+##		inquire_frs field form_name (chng = change)
+##		getform (err_mode_alpha = ferr_mode_alpha)
+		if (chng || *err_mode_alpha == EOS)
+		{
+			if (!mode_valid(ERx("error_mode"), ferr_mode,
+				err_mode_alpha))
+			{
+				IIUGerr(E_RM0024_Invalid_err_mode,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+##			putform (ferr_mode_alpha = err_mode_alpha)
+		}
+##		resume next
+##	}
+
+##	activate menuitem ERget(FE_Save) (expl = ERget(F_FE0117_SaveExpl)),
+##		FRSkey8
+##	{
+##		validate
+##		getform (cdds_num = fcdds_no, cdds_name = fcdds_name,
+##			coll_mode = fcoll_mode,
+##			coll_mode_alpha = fcoll_mode_alpha,
+##			err_mode = ferr_mode, err_mode_alpha = ferr_mode_alpha)
+		if (*coll_mode_alpha == EOS)
+		{
+			if (!mode_valid(ERx("collision_mode"), fcoll_mode,
+				coll_mode_alpha))
+			{
+				IIUGerr(E_RM0023_Invalid_coll_mode,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+##			putform (fcoll_mode_alpha = coll_mode_alpha)
+		}
+		if (*err_mode_alpha == EOS)
+		{
+			if (!mode_valid(ERx("error_mode"), ferr_mode,
+				err_mode_alpha))
+			{
+				IIUGerr(E_RM0024_Invalid_err_mode,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+##			putform (ferr_mode_alpha = err_mode_alpha)
+		}
+
+		IIUGmsg(ERget(F_RM0009_Saving), FALSE, 0);
+		retval = 0;
+		EXEC SQL REPEATED INSERT INTO dd_cdds (cdds_no, cdds_name,
+				collision_mode, error_mode)
+			VALUES	(:cdds_num, :cdds_name,
+				:coll_mode, :err_mode);
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			retval = -1;
+		}
+		else if (db_config_changed(0) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			retval = -1;
+		}
+
+		if (retval)
+		{
+			FTbell();
+			IIUGerr(E_RM0009_Error_saving, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+		EXEC SQL COMMIT;
+		if (RPdb_error_check(0, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM000A_Error_committing, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+		*cdds_no = cdds_num;
+		*collision_mode = coll_mode;
+		*error_mode = err_mode;
+		retval = 1;
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(F_RM000A_Clear) (activate = 0, validate = 0,
+##		expl = ERget(F_RM000B_Clear_expl)), FRSkey16 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs form (chng = change)
+		if (chng && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM000B_Clear_form, S_RM000C_Yes_clear,
+			S_RM000D_No_clear, ERx(""), TRUE) != CONFCH_YES)
+##			resume
+
+##		clear field all
+##		set_frs form (change = 0)
+##		putform (db = RMdb_display)
+##		resume field cdds_no
+##	}
+
+##	activate menuitem ERget(FE_Lookup) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0116_LookupExpl)), FRSkey10 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs field form_name (objname = name)
+		if (STequal(objname, fcoll_mode))
+			mode_lookup(ERx("collision_mode"), fcoll_mode,
+				fcoll_mode_alpha);
+		else if (STequal(objname, ferr_mode))
+			mode_lookup(ERx("error_mode"), ferr_mode,
+				ferr_mode_alpha);
+		else
+			IIUFfieldHelp();
+##	}
+
+##	activate menuitem ERget(FE_Help) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1 (activate = 0,
+##		validate = 0)
+##	{
+		FEhelp(ERx("rmcddsad.hlp"), ERget(F_RM0030_Add_cdds));
+##	}
+
+##	activate menuitem ERget(FE_End) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0102_ExplEnd)), FRSkey3 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs form (chng = change)
+		if (chng && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM000E_End_no_save, S_RM000F_Yes_end,
+			S_RM0010_No_end, ERx(""), TRUE) != CONFCH_YES)
+##			resume
+
+		retval = 0;
+##		breakdisplay
+##	}
+
+	return (retval);
+##}

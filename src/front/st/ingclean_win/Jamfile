@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!st!ingclean_win
+#
+
+SubDir ING_SRC front st ingclean_win ;
+
+IISUBSYS front st ingclean_win ;
+
+
+IISLN ingclean.exe : ingclean.sln ;

@@ -1,0 +1,744 @@
+--
+--  Copyright (c) 1992, 2004  Ingres Corporation.  All rights reserved.
+--
+--  This file contains the configuration rules shared by INGRES/DBMS,
+--  INGRES/Net and INGRES/Star, INGRES/Bridge.
+--  Also it contains configuration rules for INGRES/JDBC Server.
+--
+--# History:
+--#	18-jan-93 (tyler)
+--#		Created.
+--#	16-feb-93 (tyler)
+--#		Fixed several bugs in initial revision.
+--#	18-feb-93 (tyler)
+--#		Increased swap space estimates for server related
+--#		processes.
+--#	01-03-93 (tyler)
+--#		Made changes required to get DBMS setup procedure working
+--#		on VMS.
+--#	26-apr-93 (tyler)
+--#		Improved comments and #ifdefs around platform-specific
+--#		rule source.
+--#	21-jun-93 (tyler)
+--#		Changed ii.$.dbms.$.cache_share to ii.$.dbms.$.cache_sharing.
+--#	23-jul-93 (tyler)
+--#		Moved createdb resource from dbms.crs since createdb work
+--#		over INGRES/Net.  Added resources which control configuration
+--#		system preferences.  Added ii.$.createdb.real_user_case
+--#		rule.
+--#	26-jul-93 (tyler)
+--#		Changed ii.$.prefs.syscheck_config to ii.$.prefs.syscheck.cbf
+--#		and changed ii.$.prefs.standards_fips_127-1 to
+--#		ii.$.prefs.fips_127-1_mode.
+--#	04-aug-93 (tyler)
+--#		Added rules for ii.$.gcn.max_sessions, ii.$.gcn.check_time,
+--#		and ii.$.gcn.def_server_class.  Changed reference to
+--#		ii.$.dmf.shared.$.memory to ii.$.dmf.$.$.memory since
+--#		the former isn't a rule symbol.  Removed unused ingstop
+--#		resources.
+--#	20-sep-93 (tyler)
+--#		Replaced VMS rule for ii.$.ingstop.privileges 
+--#		mistakenly removed in previous revision.
+--#	19-oct-93 (tyler)
+--#		Corrected wildly pessimistic Unix syscheck rules.
+--#		Added definition of II_INTERPLIB logical on VMS.
+--#		Changed ii.$.ingstart.uic to ii.$.*.*.vms_uic.
+--#		Changed ii.$.prefs.fips_127-1_mode to
+--#		ii.$.prefs.iso_entry_sql-93
+--#	22-nov-93 (tyler)
+--#		Improved DBMS swap space rule to depend on connect_limit
+--#		setting.  Modified some gcn resource names.  Change
+--#		...sql-93 to ...sql-92
+--#	 2-dec-93 (tomm)
+--#		Make /usr/ucb/vi just vi since every system does not have
+--#		a /usr/ucb directory and we want the default to work
+--#		everywhere
+--#	22-feb-94 (tyler)
+--#		Fixed BUG 59512: include the maximum number of gcc
+--#		connections + 14 in the syscheck file_limit resource
+--#		formula on Unix.
+--#	18-jan-94 (tomm)
+--#		My last change broke every platform.  ING_EDIT must be
+--#		set to a complete path name
+--#	28-feb-94 (vijay)
+--#		Tomm forgot a semicolon.
+--#	08-apr-94 (joplin)
+--#		Added VMS logical name for ii_c_compiler
+--#	05-may-94 (joplin)
+--#             Added gcn vms definitions
+--#     08-nov-94 (forky01)
+--#             Fixed BUG 63476: Rename ii.$.prefs.iso_entry_sql-92
+--#             to ii.$.fixed_prefs.iso_entry_sql-92 so that 
+--#             SQL-92 mode cannot be switched once set.  CBF reads all
+--#             preference variables by scanning for ".prefs.".  This
+--#             change would keep this variable from showing up in the
+--#             CBF preferences menu.
+--#     10-feb-95 (chech02)
+--#             Added rs4_us5 for AIX 4.1.
+--#	28-mar-95 (peeje01)
+--#		Crossintegration doublebyte label: 6500db_su4_us42
+--#     	18-apr-94 (mikehan)
+--#                 Change DOUBLE_BYTE to DOUBLEBYTE, and set
+--#                 ii.*.config.double_byte to ON when DOUBLEBYTE is set.
+--#     10-apr-95 (canor01)
+--#             made swap_space in kbytes to match changes in iisyslim
+--#	18-apr-95 (albany)
+--#		Make ii.$.lnm.ii_c_compiler default to DECC for Alpha.
+--#     25-apr-95 (wolf)
+--#             Re-instate the ii.*.setup.charset.decmulti resource that was
+--#		recently dropped, should fix bug 68280.  
+--#     05-jun-95 (peeje01)
+--#     	Add missing Doublebyte chinese charsets.
+--#	14-aug-95 (morayf)
+--#     	Add SCO v3.2 (odt_us5) and SCO v5.0 (sos_us5) to list of
+--#		platforms with vi in /usr/bin/vi.
+--#     07-sep-95 (rambe99)
+--#             Use /usr/bin/vi for ing_edit on sqs_ptx.
+--#     18-sep-95 (nick)
+--#		Yet more machines to the /usr/bin/vi list.
+--#	21-sep-95 (abowler)
+--#		Fix for 70999: added a default for gcn local vnode on Unix.
+--#     22-sep-95 (pursch)
+--#             Use /usr/bin/vi for ing_edit on pym_us5.
+--#		6-dec-95 (angusm)
+--#			add ibmpc437, ibmpc850, iso88585, iso88599, win1250
+--#			cross-integ from 6.4
+--#     12-feb-96 (morayf)
+--#             Use /usr/bin/vi for ing_edit on rmx_us5.
+--#	26-mar-95 (rcs)
+--#		Add wthai, whebrew, warabic, pchebrew and dosasmo
+--#	05-mar-96 (rajus01)
+--#		Added iigcb( Protocol bridge ) for swap-space requirements.
+--#		Added iigcb in file_limit calculations.
+--# 24-june-1996 (angusm)
+--#		Add ALT, CW, IBMPC866
+--#     3-oct-1996 (rodjo04)
+--#             Added  DEC Multinational Character set choice to
+--#             Alpha platform (axp_osf).
+--#	15-may-1997 (cohmi01)
+--#	    	Correct REQUIRES entry for syscheck.dmf_segment (bug 82345).
+--#     20-may-1997 (rosga02)
+--#             Added upgrade,downgrade privs for SEVMS
+--#	28-jul-1997 (walro03)
+--#		Use /usr/bin/vi for ing_edit on Tandem (ts2_us5).
+--#
+--#     02-feb-1998 (loera01)  But 79056:
+--#             Added ii_config and ii_dbms_config definitions, so that
+--#             client-only installations have access to this variable.
+--#	11-feb-1998 (kinte01) 
+--#		Previous integration overwrote change by rajus01 for bridge
+--#		configuration. Reinstating it. Previous change was VMS only.
+--#	23-feb-1998 (kinte01) 
+--#		Reapply change 422591 that was lost
+--#		11-Jan-96 (loera01)
+--#		Add API shared library.
+--#	10-mar-1998 (loera01) Bug 89538:
+--#		Added ii.*.gcn.ticket_cache_size.  The size of the ticket
+--#		queue is now configurable.
+--#     01-Jun-98 (rajus01) 
+--#             Added new configuration strings for GCF security.
+--#	 5-Jun-98 (gordy)
+--#		Added timeout value for Name Server.
+--#     15-jun-1998 (kinte01)
+--#             make DEC C the default compiler for VAX VMS also
+--#	16-Jun-1998 (thaal01) Bug 91342.
+--#		ii.$config.cluster_node, and ii.$.gcn_cluster_node moved here
+--#		from dbms.crs. Also inclomplete rule finsished.
+--#		These are required for VMS only.
+--#	01-Jul-1998 (hanch04)
+--#		Add missing ; for gcn param.
+--#	26-Jul-98 (gordy)
+--#		Changed GCS disabled param to enabled.  Removed 'gcf'
+--#		element from server mechanisms so it will appear in CBF.
+--#	28-Jul-98 (gordy)
+--#		Added GCN check_type for server bedchecks.
+--#	 1-Oct-98 (gordy)
+--#		Added GCN registry type.
+--#	17-Sep-1999 (bonro01)
+--#		Modified to support Unix Clusters.
+--#	10-may-1999 (walro03)
+--#		Remove obsolete version string odt_us5.
+--#     03-jul-1999 (podni01)
+--#             Added support for ReliantUNIX V 5.44 - rux_us5 (same as rmx_us5)
+--#     06-Mar-00 (rajus01) 
+--#             Added new configuration strings for JDBC server.
+--#	25-Apr-2000 (hanch04)
+--#		Moved JDBC config to jdbc.crs
+--#	28-Apr-2000 (somsa01)
+--#		Added ability for multiple products.
+--#     23-May-2000 (hweho01)
+--#             Added support for AIX 64-bit platform (ris_u64). 
+--#	21-May-2001 (hanje04)
+--#		Removed duplicate line introduced when change 448940 was
+--#		crossed from oping20 into main. (450256)
+--#	17-sep-2001 (abbjo03)
+--#		Add ISO-8859-15 and Windows 1252 as valid character sets.
+--#     19-apr-2001 (bolke01) bug# 47845
+--#		Added PRMGBL to gcn
+--#		Corrected sysnam ( was sysname)
+--#     02-apr-2002 (loera01)
+--#             Add definition of II_ODBCLIB.
+--#     18-oct-2002 (horda03) Bug 108966
+--#             Added NETMBX privilege.
+--#	12-dec-2002 (abbjo03)
+--#	    Remove definition of II_ODBCLIB.
+--#	15-jan-2003 (abbjo03)
+--#	    Increase VMS working set parameters.
+--#	22-Feb-2003 (wansh01)
+--#		added configuration for DAS server. 
+--#	19-mar-2004 (somsa01)
+--#	    i64_lnx uses /usr/bin/vi as the editor.
+--#	22-Jun-2004 (loera01) Bug 114725
+--#		On Windows, the mechanism location is in the "bin" directory,
+--#		not "lib".
+--#     12-Jul-2004 (hanje04)
+--#             Set registry values for config browsing API when 
+--#		embed_installation = ON.
+--#	12-Jul-2004 (hanje04)
+--#		Replace 'hanje04-sles8' with $ introduce by above change.
+--#	01-Oct-2004 (rajus01) Startrak Prob 148; Bug# 113165
+--#	    Added gcn.check_timeout to set the timeout value for GCN
+--#	    bedcheck messages.
+--#	02-Dec-2004 (bonro01)
+--#		Add missing character sets: CHINESET, CSGBK, CSGB2312,
+--#		PC857, KOI8
+--#	09-Dec-2004 (hanje04)
+--#	 	BUG 113101
+--#		gcn.registry_type should just default to none and should
+--#		no longer be dependent on embed_installation
+--#     20-Jan-2005 (Ralph.Loen@ca.com) Bug 113613
+--#             Make ii.$.gcf.mech.ingres.expiration_time default to 120
+--#             seconds instead of 10 seconds.
+--#	15-Jan-2005 (drivi01)
+--#		Added new cbf value ii.$.prefs.ingstop which if set passes
+--#		parameters to ingstop.
+--#	15-Mar-2005 (bonro01)
+--#	    a64_sol uses /usr/bin/vi as the editor.
+--#	13-Apr-2005 (hanje04)
+--#	    BUG 114292
+--#	    Linux uses /usr/bin/vi as editor.
+--#	24-May-2005 (bonro01)
+--#	    image_size was not being updated for RPM installs. The first RPM
+--#	    would create blank image_size entries that never got updated.
+--#	    Modify image_size config rules so that their value is recalculated
+--#	    after each package or component is installed.  The IF statement
+--#	    forces the values to be recalculated each time iigenres is executed.
+--#	25-May-2005 (bonro01)
+--#	    Fix typo from last change.
+--#     25-may-2005 (bolke01) sir 114136
+--#             Added TMPMBX to privileges 
+--#	29-may-2005 (abbjo03)
+--#	    Fix 25-may-2005 change so that privileges are all on one line.
+--#	18-Apr-2005 (drivi01)
+--#	    SIR: 114339
+--#	    Windows crsfiles are merged with generic.
+--#
+--#     25-Aug-2005 (loera01) Bug 113165 Problem INGNET 148
+--#         Bump up the default timeout for gcn.check_timeout to from
+--#         10 to 20.
+--#	25-Jan-2006 (drivi01)
+--#	    Added charsets WIN1253 and ISO88597.
+--#	24-Oct-2006 (drivi01)
+--#	    Removing  (PROG4PRFX).$.syscheck.(PROG1PRFX)jdbc_swap
+--#	    due to the fact that jdbc server is no longer supported.
+--#	12-Feb-2007 (bonro01)
+--#	    Remove JDBC package.
+--#	16-May-2007 (drivi01)
+--#	    Added UTF8 character sets.
+--#      3-Oct-2008 (hanal04) Bug 121002
+--#         int_rpl needs ING_EDIT to be set to /bin/vi not /usr/bin/vi
+--#      9-Nov-2008 (lunbr01) Bug 121002
+--#         Removed extraneous #endif introduced by prior change (#elif
+--#         doesn't need its own #endif).
+--#	22-Jun-2009 (kschendel) SIR 122138
+--#	    Update config symbols.
+--#      20-Oct-2009 (frima01) Bug 122277
+--#         Value of local vnode now retrieved from hostname command.
+--#      26-Oct-2009 (hweho01) Bug 122277
+--#         The local vnode entry is missing from config.dat if hostname    
+--#         command is used to retrieve the value of local vnode. Change
+--#         to use "iinethost -local" for that setting.     
+--#         Since VMS already uses iigetsyi to generate the host name,     
+--#         add "#else" before the statement.     
+--#	23-Mar-2010 (hanje04)
+--#	    SIR 123296
+--#	    Use full path when calling syscheck on UNIX
+--#
+--#
+-- configuration system preferences
+# ifdef NT_GENERIC
+(PROG4PRFX).$.prefs.(PROG2PRFX)start_syscheck:	OFF;
+# else
+(PROG4PRFX).$.prefs.(PROG2PRFX)start_syscheck:	ON;
+# endif /* NT_GENERIC */
+(PROG4PRFX).$.prefs.(PROG2PRFX)stop:	"none", VALID = { "-force", "-f", "-kill", "-k", "none" };
+(PROG4PRFX).$.fixed_prefs.iso_entry_sql-92:	OFF;
+
+# ifdef VMS
+(PROG4PRFX).*.ingstart.syscheck_command:	"@ii_system:[ingres.utility]iisyschk";
+# endif /* VMS */
+
+# ifdef UNIX
+(PROG4PRFX).*.(PROG2PRFX)start.syscheck_command:	"$(PRODLOC)/(PROD2NAME)/utility/(PROG0PRFX)syscheck";
+# endif /* UNIX */
+
+# ifdef UNIX
+(PROG4PRFX).$.prefs.cbf_syscheck:	ON;
+(PROG4PRFX).$.cbf.syscheck_mode:		(PROG4PRFX).$.prefs.cbf_syscheck;
+(PROG4PRFX).*.cbf.syscheck_command:	"$(PRODLOC)/(PROD2NAME)/utility/(PROG0PRFX)syscheck >/dev/null";
+# endif /* UNIX */
+
+
+-- createdb resources
+(PROG4PRFX).$.createdb.reg_id_case:	IF ( (PROG4PRFX).$.fixed_prefs.iso_entry_sql-92 == ON )
+					"upper"	
+				ELSE
+					"lower"	
+				ENDIF, VALID = { "upper", "lower" };	
+(PROG4PRFX).$.createdb.delim_id_case:	IF ( (PROG4PRFX).$.fixed_prefs.iso_entry_sql-92 == ON )
+					"mixed"	
+				ELSE
+					"lower"	
+				ENDIF, VALID = { "upper", "lower", "mixed" };	
+(PROG4PRFX).$.createdb.real_user_case:	(PROG4PRFX).$.createdb.reg_id_case,
+				VALID = { "upper", "lower", "mixed" };	
+
+-- ingstart resources
+(PROG4PRFX).$.(PROG2PRFX)start.syscheck_mode:	(PROG4PRFX).$.prefs.(PROG2PRFX)start_syscheck;
+# ifdef VMS
+(PROG4PRFX).$.*.*.vms_uic:		`@ii_system:[ingres.utility]iigetuic`;
+(PROG4PRFX).$.ingstart.privileges:	"OPER,SYSNAM,SYSPRV,WORLD,NETMBX,PRMMBX,SHARE,READALL,SYSLCK,EXQUOTA,SYSGBL,PRMGBL,TMPMBX";
+# endif /* VMS */
+
+-- ingstop resources
+# ifdef VMS
+(PROG4PRFX).$.ingstop.privileges:	"OPER,SYSNAM,SYSPRV,WORLD,NETMBX,PRMMBX,SHARE,READALL,SYSLCK,EXQUOTA,SYSGBL,PRMGBL,TMPMBX";
+# endif /* VMS */
+
+-- name server (gcn) resources 
+# ifdef VMS
+(PROG4PRFX).$.gcn.local_vnode:		`iigetsyi nodename`;
+(PROG4PRFX).$.gcn.*.vms_accounting:	ON;
+(PROG4PRFX).$.gcn.*.vms_ast_limit:	916;
+(PROG4PRFX).$.gcn.*.vms_buffer_limit:	689544;
+(PROG4PRFX).$.gcn.*.vms_enqueue_limit:	1280;
+(PROG4PRFX).$.gcn.*.vms_error:		"NLA0:";
+(PROG4PRFX).$.gcn.*.vms_extent:		16384;
+(PROG4PRFX).$.gcn.*.vms_file_limit:	394;
+(PROG4PRFX).$.gcn.*.vms_image:		"ii_system:[ingres.bin]iigcn.exe";
+(PROG4PRFX).$.gcn.*.vms_input:		"NLA0:";
+(PROG4PRFX).$.gcn.*.vms_interval:	"";
+(PROG4PRFX).$.gcn.*.vms_io_buffered:	778;
+(PROG4PRFX).$.gcn.*.vms_io_direct:	306;
+(PROG4PRFX).$.gcn.*.vms_maximum_working_set: 16384;
+(PROG4PRFX).$.gcn.*.vms_output:		"NLA0:";
+(PROG4PRFX).$.gcn.*.vms_page_file:	27924;
+(PROG4PRFX).$.gcn.*.vms_priority:	4;
+# ifdef SEVMSBUILD
+(PROG4PRFX).$.gcn.*.vms_privileges:      "(readall,prmmbx,sysnam,cmkrnl,sysprv,share,world,netmbx,tmpmbx,exquota,upgrade,downgrade)";
+# else
+(PROG4PRFX).$.gcn.*.vms_privileges:	"(readall,prmmbx,sysnam,cmkrnl,sysprv,share,world,netmbx,tmpmbx,exquota)";
+# endif /* SEVMSBUILD */
+(PROG4PRFX).$.gcn.*.vms_queue_limit:	261;
+(PROG4PRFX).$.gcn.*.vms_working_set:	2048;
+# else 
+(PROG4PRFX).$.gcn.local_vnode:          `(PROG1PRFX)nethost -local`;
+# endif /* VMS */
+(PROG4PRFX).$.gcn.session_limit:		16, MIN = 1;
+(PROG4PRFX).$.gcn.default_server_class:	"INGRES";
+(PROG4PRFX).$.gcn.remote_vnode:		"";
+(PROG4PRFX).$.gcn.timeout:		60;
+(PROG4PRFX).$.gcn.check_timeout:	20, MIN = 1, MAX = 60;
+(PROG4PRFX).$.gcn.check_type:		"connect,install,class";
+(PROG4PRFX).$.gcn.check_interval:	300, MIN = 10;	
+(PROG4PRFX).$.gcn.expire_interval:	300, MIN = 10;
+(PROG4PRFX).$.gcn.ticket_expire:		1800, MIN = 60;
+(PROG4PRFX).$.gcn.ticket_cache_size:	10, MIN = 1, MAX = 10;
+(PROG4PRFX).$.gcn.compress_point:	50, MIN = 0, MAX = 100;
+(PROG4PRFX).$.gcn.mechanisms:		"";
+(PROG4PRFX).$.gcn.registry_type:	"none", VALID = { "none", "slave",
+							 "peer", "master" };
+(PROG4PRFX).$.gcn.remote_mechanism:	"none";
+
+-- GCF/GCS resources
+
+(PROG4PRFX).$.gcf.security_mechanism:	"ingres";
+(PROG4PRFX).$.gcf.user_mechanism:	"default";
+(PROG4PRFX).$.gcf.restrict_usr_auth:	"false", VALID = { "true", "false" };
+(PROG4PRFX).$.gcf.password_mechanism:	"default";
+(PROG4PRFX).$.gcf.restrict_pwd_auth:	"false", VALID = { "true", "false" };
+(PROG4PRFX).$.gcf.server_mechanism:	"default";
+(PROG4PRFX).$.gcf.restrict_srv_auth:	"true", VALID = { "true", "false" };
+(PROG4PRFX).$.gcf.remote_mechanism:	"none";
+(PROG4PRFX).$.gcf.restrict_rem_auth:	"false", VALID = { "true", "false" };
+(PROG4PRFX).$.gcf.mechanisms:		"";
+# ifdef NT_GENERIC
+(PROG4PRFX).$.gcf.mechanism_location:	"`(PROG4PRFX)(PROG2PRFX)loc bin`";
+# else
+(PROG4PRFX).$.gcf.mechanism_location:	"`(PROG4PRFX)(PROG2PRFX)loc lib`";
+# endif
+(PROG4PRFX).$.gcf.remote_auth_error:	"ignore", VALID = {"ignore", "fail"};
+(PROG4PRFX).$.gcf.mech.ingres.enabled:	"true", VALID = { "true", "false" };
+(PROG4PRFX).$.gcf.mech.ingres.expirations_required:	"no", VALID = { "yes", "no" };
+(PROG4PRFX).$.gcf.mech.ingres.expiration_time:	120, MIN = 1;
+(PROG4PRFX).$.gcf.mech.system.enabled:	"true", VALID = { "true", "false" };
+(PROG4PRFX).$.gcf.mech.null.enabled:	"false", VALID = { "true", "false" };
+(PROG4PRFX).$.gcf.mech.kerberos.delegation:  "", VALID = { "on", "off", "" };
+(PROG4PRFX).$.gcf.mech.kerberos.domain:      `(PROG1PRFX)nethost`; 
+(PROG4PRFX).$.gcf.mech.kerberos.enabled:     "true", VALID = { "true", "false" };
+(PROG4PRFX).$.gcf.mech.kerberos.entry:       "gcs_kerberos", VALID = { "gcs_kerberos" };
+# ifdef NT_GENERIC
+(PROG4PRFX).$.gcf.mech.kerberos.module:      "(PROG1PRFX)libgcskrb", VALID = { "(PROG1PRFX)libgcskrb" };
+# else
+(PROG4PRFX).$.gcf.mech.kerberos.module:      "gcskrb", VALID = { "gcskrb" };
+# endif
+
+# ifdef VMS
+-- VMS logical settings
+(PROG4PRFX).$.lnm.ii_temporary: 		"SYS$SCRATCH";
+(PROG4PRFX).$.lnm.ii_config:             "II_SYSTEM:[INGRES.FILES]";
+(PROG4PRFX).$.lnm.ii_compatlib: 		"II_SYSTEM:[INGRES.LIBRARY]CLFELIB.EXE";
+(PROG4PRFX).$.lnm.ii_dbms_config:        "II_SYSTEM:[INGRES.FILES]";
+(PROG4PRFX).$.lnm.ii_libqlib: 		"II_SYSTEM:[INGRES.LIBRARY]LIBQFELIB.EXE";
+(PROG4PRFX).$.lnm.ii_framelib: 		"II_SYSTEM:[INGRES.LIBRARY]FRAMEFELIB.EXE";
+(PROG4PRFX).$.lnm.ii_interplib: 		"II_SYSTEM:[INGRES.LIBRARY]INTERPFELIB.EXE";
+(PROG4PRFX).$.lnm.ii_apilib: 		"II_SYSTEM:[INGRES.LIBRARY]APIFELIB.EXE";
+(PROG4PRFX).$.lnm.term_ingres: 		"vt200";
+(PROG4PRFX).$.gcn.cluster_mode:          (PROG4PRFX).$.config.cluster_mode;
+(PROG4PRFX).$.lnm.ii_c_compiler:         "DECC";
+# endif /* VMS */
+
+-- Cluster logical settings
+(PROG4PRFX).$.config.cluster_mode:       OFF;
+
+# ifndef VMS
+-- syscheck resources
+# ifdef NT_GENERIC
+(PROG4PRFX).*.config.syscheck:		"(PROG0PRFX)syscheck >nul"; -- supress output
+# else
+(PROG4PRFX).*.config.syscheck:		"(PROG0PRFX)syscheck >/dev/null"; -- supress output
+# endif
+(PROG4PRFX).$.dbms.file_limit:		IF( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) > 0 )
+					(PROG4PRFX).$.dbms.connect_max + 14
+				ELSE
+					0
+				ENDIF;
+(PROG4PRFX).$.gcc.file_limit:		IF( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcc ) > 0 )
+					(PROG4PRFX).$.gcc.connect_max + 14
+				ELSE
+					0
+				ENDIF;
+(PROG4PRFX).$.gcb.file_limit:		IF( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcb ) > 0 )
+					(PROG4PRFX).$.gcb.connect_max + 14
+				ELSE
+					0
+				ENDIF;
+(PROG4PRFX).$.star.file_limit:		IF( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.star ) > 0 )
+					(PROG4PRFX).$.star.connect_max * 9 + 2
+				ELSE
+					0
+				ENDIF;
+(PROG4PRFX).$.syscheck.dbms_segment:	IF ( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) > 0 )
+					8K * (PROG4PRFX).$.dbms.connect_max + 16K
+				ELSE
+					0
+				ENDIF;
+# endif /* VMS */
+(PROG4PRFX).$.syscheck.dmf_segment:	`(PROG1PRFX)resutl -dmf_max_seg`,
+					REQUIRES (PROG4PRFX).$.dbms.%.cache_sharing,
+					REQUIRES (PROG4PRFX).$.dbms.%.cache_name,
+					REQUIRES (PROG4PRFX).$.(PROG2PRFX)start.%.dbms,
+					REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p4k_status,
+					REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p8k_status,
+					REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p16k_status,
+					REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p32k_status,
+					REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p64k_status,
+					REQUIRES (PROG4PRFX).$.dbms.%.%.%.dmf_memory;
+(PROG4PRFX).$.syscheck.dmf_seg_num:      `(PROG1PRFX)resutl -dmf_seg_num`,
+					REQUIRES (PROG4PRFX).$.dbms.%.cache_sharing,
+					REQUIRES (PROG4PRFX).$.dbms.%.cache_name,
+					REQUIRES (PROG4PRFX).$.(PROG2PRFX)start.%.dbms;
+# ifndef VMS
+(PROG4PRFX).$.syscheck.file_limit:	IF( (PROG4PRFX).$.star.file_limit >
+					(PROG4PRFX).$.dbms.file_limit
+				)
+					IF( (PROG4PRFX).$.star.file_limit >
+						(PROG4PRFX).$.gcc.file_limit
+					)
+						(PROG4PRFX).$.star.file_limit
+					ELSE
+
+					IF( (PROG4PRFX).$.star.file_limit >
+						(PROG4PRFX).$.gcb.file_limit
+					)
+						(PROG4PRFX).$.star.file_limit
+					ELSE
+
+					IF( (PROG4PRFX).$.gcb.file_limit >
+						(PROG4PRFX).$.gcc.file_limit
+					)
+						(PROG4PRFX).$.gcb.file_limit
+					ELSE
+						(PROG4PRFX).$.gcc.file_limit
+
+					ENDIF
+
+					ENDIF
+						
+					ENDIF
+				ELSE
+					IF( (PROG4PRFX).$.dbms.file_limit >
+						(PROG4PRFX).$.gcc.file_limit
+					)
+						(PROG4PRFX).$.dbms.file_limit
+					ELSE
+
+					IF( (PROG4PRFX).$.dbms.file_limit >
+						(PROG4PRFX).$.gcb.file_limit
+					)
+						(PROG4PRFX).$.dbms.file_limit
+					ELSE
+
+					IF( (PROG4PRFX).$.gcb.file_limit >
+						(PROG4PRFX).$.gcc.file_limit
+					)
+						(PROG4PRFX).$.gcb.file_limit
+					ELSE
+						(PROG4PRFX).$.gcc.file_limit
+
+					ENDIF
+
+					ENDIF
+
+					ENDIF
+				ENDIF;
+(PROG4PRFX).$.syscheck.segments:		SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) +
+					(PROG4PRFX).$.syscheck.dmf_seg_num + 2;
+(PROG4PRFX).$.syscheck.semaphores:	30 * SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) + 5;
+(PROG4PRFX).$.syscheck.semaphore_sets:	SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) + 1;
+# ifndef NT_GENERIC
+(PROG4PRFX).*.image_size.(PROG1PRFX)merge:	IF( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) >= 0 )
+					`(PROG1PRFX)filsiz $(PRODLOC)/(PROD2NAME)/bin/(PROG1PRFX)merge`
+					ELSE "" ENDIF;
+(PROG4PRFX).*.image_size.(PROG1PRFX)gcc:	IF( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcc ) >= 0 )
+					`(PROG1PRFX)filsiz $(PRODLOC)/(PROD2NAME)/bin/(PROG1PRFX)gcc`
+					ELSE "" ENDIF;
+(PROG4PRFX).*.image_size.(PROG1PRFX)gcb:	IF( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcb ) >= 0 )
+					`(PROG1PRFX)filsiz $(PRODLOC)/(PROD2NAME)/bin/(PROG1PRFX)gcb`
+					ELSE "" ENDIF;
+(PROG4PRFX).*.image_size.(PROG1PRFX)gcn:	IF( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcc ) >= 0 )
+					`(PROG1PRFX)filsiz $(PRODLOC)/(PROD2NAME)/bin/(PROG1PRFX)gcn`
+					ELSE "" ENDIF;
+(PROG4PRFX).*.image_size.(PROG1PRFX)gcd:	IF( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcd ) >= 0 )
+					`(PROG1PRFX)filsiz $(PRODLOC)/(PROD2NAME)/bin/(PROG1PRFX)gcd`
+					ELSE "" ENDIF;
+(PROG4PRFX).$.syscheck.dbms_swap_mem:	`(PROG1PRFX)resutl -dbms_swap_mem`,
+                                        REQUIRES (PROG4PRFX).$.dbms.%.cache_sharing,
+                                        REQUIRES (PROG4PRFX).$.dbms.%.cache_name,
+                                        REQUIRES (PROG4PRFX).$.ingstart.%.dbms,
+                                        REQUIRES (PROG4PRFX).$.dbms.%.%.dmf_memory,
+                                        REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p4k_status,
+                                        REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p8k_status,
+                                        REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p16k_status,
+                                        REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p32k_status,
+                                        REQUIRES (PROG4PRFX).$.dbms.%.%.cache.p64k_status,
+                                        REQUIRES (PROG4PRFX).$.dbms.%.%.%.dmf_memory,
+					REQUIRES (PROG4PRFX).$.dbms.%.stack_size,
+					REQUIRES (PROG4PRFX).$.dbms.%.connect_limit;
+# endif
+(PROG4PRFX).$.syscheck.(PROG1PRFX)gcn_swap:	(PROG4PRFX).*.image_size.(PROG1PRFX)gcn + 200K;
+# ifdef NT_GENERIC
+(PROG4PRFX).$.syscheck.(PROG1PRFX)dbms_swap: 	IF ( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) > 0 )
+					-- recovery server
+					(PROG4PRFX).*.image_size.(PROG1PRFX)merge + 400K +
+					-- archiver process
+					1800K +
+					-- dbms servers
+					SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) *
+					((PROG4PRFX).*.image_size.(PROG1PRFX)merge + 600K)
+				ELSE
+					0
+				ENDIF;
+
+# else
+(PROG4PRFX).$.syscheck.(PROG1PRFX)dbms_swap: 	IF ( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) > 0 )
+					-- recovery server
+					(PROG4PRFX).*.image_size.(PROG1PRFX)merge + 400K +
+					-- archiver process
+					1800K +
+					-- dbms servers
+					SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.dbms ) *
+					((PROG4PRFX).*.image_size.(PROG1PRFX)merge + 600K) +
+					(PROG4PRFX).$.syscheck.dbms_swap_mem
+				ELSE
+					0
+				ENDIF;
+# endif /* NT_GENERIC */
+(PROG4PRFX).$.syscheck.(PROG1PRFX)gcc_swap: 	IF ( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcc ) > 0 )
+					SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcc ) *
+					((PROG4PRFX).*.image_size.(PROG1PRFX)gcc + 100K)
+				ELSE
+					0
+				ENDIF;
+(PROG4PRFX).$.syscheck.(PROG1PRFX)gcb_swap: 	IF ( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcb ) > 0 )
+					SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcb ) *
+					((PROG4PRFX).*.image_size.(PROG1PRFX)gcb + 100K)
+				ELSE
+					0
+				ENDIF;
+(PROG4PRFX).$.syscheck.(PROG1PRFX)gcd_swap: 	IF ( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcd ) > 0 )
+					SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.gcd ) *
+					((PROG4PRFX).*.image_size.(PROG1PRFX)gcd + 100K)
+				ELSE
+					0
+				ENDIF;
+(PROG4PRFX).$.syscheck.(PROG1PRFX)star_swap: 	IF ( SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.star ) > 0 )
+					SUM( (PROG4PRFX).$.(PROG2PRFX)start.%.star ) * 2M
+				ELSE
+					0
+				ENDIF;
+(PROG4PRFX).$.syscheck.swap_space_kb: 	((PROG4PRFX).$.syscheck.(PROG1PRFX)gcn_swap +
+					(PROG4PRFX).$.syscheck.(PROG1PRFX)dbms_swap +
+					(PROG4PRFX).$.syscheck.(PROG1PRFX)gcc_swap +
+					(PROG4PRFX).$.syscheck.(PROG1PRFX)gcb_swap +
+					(PROG4PRFX).$.syscheck.(PROG1PRFX)star_swap +
+					-- add swap for an application
+					2M) / 1024;
+# endif /* VMS */
+
+# ifndef VMS
+-- default environment settings 
+# ifdef NT_GENERIC
+(PROG4PRFX).*.setup.(PROG4PRFX)_installation:	IF("`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+							"II"
+						ELSE
+							"`(PROG2PRFX)prsym II_INSTALLATION`"
+						ENDIF;
+# else
+(PROG4PRFX).*.setup.(PROG4PRFX)_installation:	"(PROG3PRFX)";
+# endif /* NT_GENERIC */
+(PROG4PRFX).*.setup.(PROG4PRFX)_temporary:	"/tmp";
+# ifndef NT_GENERIC
+#if defined(int_rpl)
+(PROG4PRFX).*.setup.(PROG2PRFX)_edit:           "/bin/vi" ;
+#elif defined(any_hpux) || defined(any_aix) || defined(sparc_sol) || \
+      defined(sos_us5) || defined(dr6_us5) || defined(usl_us5) || \
+      defined(pym_us5) || defined(sqs_ptx) || defined(rmx_us5) || \
+      defined(ts2_us5) || defined(rux_us5) || \
+      defined(a64_sol) || defined(LNX)
+(PROG4PRFX).*.setup.(PROG2PRFX)_edit:		"/usr/bin/vi" ;
+#else
+(PROG4PRFX).*.setup.(PROG2PRFX)_edit:		"/usr/ucb/vi";
+#endif /*vi stuff */
+#endif /* NT_GENERIC */
+# endif /* VMS */
+
+# if defined(VMS) || defined(axp_osf)
+(PROG4PRFX).*.setup.(PROG4PRFX)_charset:		"DECMULTI", VALID =
+# else /* VMS || axp_osf */
+(PROG4PRFX).*.setup.(PROG4PRFX)_charset:		"ISO88591", VALID =
+# endif /* VMS || axp_osf */
+				{
+					"WTHAI",
+					"WIN1253",
+					"WIN1252",
+					"WIN1250",
+					"WHEBREW",
+					"WARABIC",
+					"THAI",
+					"SLAV852",
+					"PCHEBREW",
+# ifdef DOUBLEBYTE
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+						"SHIFTJIS" ELSE "" ENDIF,
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+						"KOREAN" ELSE "" ENDIF,
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+						"KANJIEUC" ELSE "" ENDIF,
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+					        "CHTEUC" ELSE "" ENDIF,
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+					        "CHTBIG5" ELSE "" ENDIF,
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+					        "CHTHP" ELSE "" ENDIF,
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+					        "CHINESES" ELSE "" ENDIF,
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+					        "CHINESET" ELSE "" ENDIF,
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+					        "CSGBK" ELSE "" ENDIF,
+					IF ( (PROG4PRFX).*.config.double_byte == ON )
+					        "CSGB2312" ELSE "" ENDIF,
+# endif /* DOUBLEBYTE */
+					"ISO88599",
+					"ISO88597",
+					"ISO88595",
+					"ISO88592",
+					"ISO88591",
+					"IS885915",
+					"IBMPC866",
+					"IBMPC850",
+					"IBMPC437",
+					"HPROMAN8",
+					"HEBREW",
+					"GREEK",
+					"ELOT437",
+					"DOSASMO",
+					"CW",
+					"ARABIC",
+					"PC857",
+					"KOI8",
+					"ALT",
+					"UTF8"
+# if defined(VMS) || defined(axp_osf)
+					, "DECMULTI"
+# endif /* VMS || axp_osf */
+				};
+
+# if defined(VMS) || defined(axp_osf)
+(PROG4PRFX).*.setup.charset.decmulti:	"DEC Multinational Characters";
+# endif /* VMS || axp_osf */
+
+# ifdef DOUBLEBYTE
+(PROG4PRFX).*.config.double_byte:	ON;
+(PROG4PRFX).*.setup.charset.shiftjis:	"Shiftjis";
+(PROG4PRFX).*.setup.charset.korean:	"Korean Characters";
+(PROG4PRFX).*.setup.charset.kanjieuc:	"Kanjieuc";
+(PROG4PRFX).*.setup.charset.chteuc:		"Chinese (EUC)";
+(PROG4PRFX).*.setup.charset.chtbig5:		"Chinese (Big 5)";
+(PROG4PRFX).*.setup.charset.chthp:		"Chinese (HP ROC15)";
+(PROG4PRFX).*.setup.charset.chineses:	"Chinese (PRC)";
+(PROG4PRFX).*.setup.charset.chineset:	"Traditional Chinese";
+(PROG4PRFX).*.setup.charset.csgbk:	"Chinese (GB)";
+(PROG4PRFX).*.setup.charset.csgb2312:	"Chinese (GB 2312)";
+# endif /* DOUBLEBYTE */
+(PROG4PRFX).*.setup.charset.win1250:	"Windows codepage 1250";
+(PROG4PRFX).*.setup.charset.win1252:	"Windows codepage 1252 (Latin 1)";
+(PROG4PRFX).*.setup.charset.win1253:	"Windows codepage 1253 (Greek Euro)";
+(PROG4PRFX).*.setup.charset.thai:	"Thai";
+(PROG4PRFX).*.setup.charset.slav852:	"Slavic 852";
+(PROG4PRFX).*.setup.charset.iso88591:	"ISO-8859-1";
+(PROG4PRFX).*.setup.charset.iso88592:	"ISO-8859-2";
+(PROG4PRFX).*.setup.charset.iso88595:	"ISO-8859-5";
+(PROG4PRFX).*.setup.charset.iso88597:	"ISO-8859-7";
+(PROG4PRFX).*.setup.charset.iso88599:	"ISO-8859-9";
+(PROG4PRFX).*.setup.charset.is885915:	"ISO-8859-15 (Latin 9)";
+(PROG4PRFX).*.setup.charset.ibmpc866:	"IBM PC 866 (Cyrillic)";
+(PROG4PRFX).*.setup.charset.ibmpc850:	"IBM PC 850";
+(PROG4PRFX).*.setup.charset.ibmpc437:	"IBM PC 437";
+(PROG4PRFX).*.setup.charset.pc857:	"IBM PC 857";
+(PROG4PRFX).*.setup.charset.hproman8:	"HP Roman 8";
+(PROG4PRFX).*.setup.charset.hebrew:	"Hebrew";
+(PROG4PRFX).*.setup.charset.greek:	"Greek";
+(PROG4PRFX).*.setup.charset.elot437:	"Elot 437";
+(PROG4PRFX).*.setup.charset.cw:		"Windows Cyrillic (CP 1251)";
+(PROG4PRFX).*.setup.charset.alt:	    "ALT (Cyrillic for DOS)";
+(PROG4PRFX).*.setup.charset.arabic:	"Arabic";
+(PROG4PRFX).*.setup.charset.warabic:	"Windows Arabic";
+(PROG4PRFX).*.setup.charset.pchebrew:	"IBM PC Hebrew";
+(PROG4PRFX).*.setup.charset.dosasmo:	"IBM PC Arabic";
+(PROG4PRFX).*.setup.charset.whebrew:	"Windows Hebrew";
+(PROG4PRFX).*.setup.charset.wthai  :	"Windows Thai";
+(PROG4PRFX).*.setup.charset.koi8:	"Windows Russian (Cyrillic)";
+(PROG4PRFX).*.setup.charset.utf8:	"UTF-8";
+

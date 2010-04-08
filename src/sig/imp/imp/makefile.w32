@@ -1,0 +1,54 @@
+#   Name:   makefile
+#
+#   Description:
+#       Makefile initializes the environment reqired to build the imp
+#       executable.
+#
+##  History:
+##      02-Jul-2002 (fanra01)
+##          Sir 108159
+##          Created.
+##      11-Nov-2002 (fanra01)
+##          Bug 109104
+##          imp built on Windows platform needs to use imadb.
+##          Make target database configurable via the environment.
+##		20-Sep-2005 (fanra01)
+##			Quote delimit II_SYSTEM as it may contain spaces.
+#
+
+# Database
+!if "$(DATABASE)" == ""
+DATABASE    = imadb
+!endif
+
+!MESSAGE TARGET DATABASE: $(DATABASE)
+
+DBDIR       = "$(II_SYSTEM)\ingres\data\default\$(DATABASE)"
+
+DEFN        = imp.sql
+
+all:    register
+
+register: database catalogs
+
+database:
+    if not exist $(DBDIR) createdb -u$$ingres $(DATABASE)
+
+catalogs: $(DEFN)
+	sql $(DATABASE) -u$$ingres < $**
+
+copyform: imp.forms
+    copyform -i $(DATABASE) $** > $@.txt
+
+compile: register copyform
+    nmake -a -f imp.mak
+
+clean:
+    del *.obj
+    del *.err
+    del *.c
+    del copyform.txt
+    del imp.lib
+    del imp.exe
+    del imp.map
+    del imp.pdb

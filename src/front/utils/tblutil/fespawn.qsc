@@ -1,0 +1,220 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<lo.h>
+#ifndef CMS
+#include	<si.h>
+#endif
+#include	<ut.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<ftdefs.h>
+#include	"ertu.h"
+#include	<cm.h>
+
+/**
+** Name:    fespawn.qc -	Spawn another frontend subsystem.
+**
+** Description:
+**	This file defines:
+**
+**	FEspawn()
+**
+** History:
+**	6/5/85 (prs)	Fix to bug 5525.  Change INGRES to QUEL.
+**	7/20/85 (prs)	Switch back to no-CFE definition.
+**	13-jun-86 (marian)	bug 9294
+**		Change swspawn() so the last page of reports are not
+**		cleared by a FTrestore().  Do a FTprtrestore(), print
+**		the message and then do a FTrestore().
+**	22-oct-1987 (peter)
+**		Change FEmsg to IIUGerr.
+**      05-jan-90 (sylviap)
+**              Added new parameter to UTexe.
+**      08-mar-90 (sylviap)
+**		Changed UTexe call to pass an CL_ERR_DESC.
+**	10-sep-92 (leighb) DeskTop Porting Change: For Tools for Windows only:
+**		Added call to IIload_frame to reload DLL's data segment.
+**	22-Jan-93 (fredb) hp9_mpe
+**		Porting changes: Pass a LOCATION containing the filename,
+**		"$STDLIST" to UTexe as the err_log parameter to prevent
+**		i/o from going into the bit bucket.
+**	01-Apr-93 (fredb) hp9_mpe
+**		Simplified above change as suggested by rdrane 29-mar-93:
+**		Use a LOCATION pointer set to $STDLIST or NULL depending
+**		on platform and remove ifdef'd UTexe calls.  Just pass the
+**		pointer in a generic UTexe call.
+**	06-Mar-97 (i4jo01)
+**		NT: For delimited identifiers, make sure we add escape
+**		sequences so that QBF/REPORT will still get the double
+**		quotes when they are started up.
+**      20-Oct-97 (fanra01)
+**              Updated UT to handle delimited identifiers for NT.  Removed
+**              NT_GENERIC section.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**/
+
+char	*IIxflag();
+char	*FEdbname();
+STATUS	FEtstrun();
+STATUS	FEtstmake();
+VOID	FEinames();
+VOID	FEtnames();
+
+STATUS
+FEspawn (subsys, format, argnum, args)
+char	*subsys;
+char	*format;
+i4	argnum;
+char	*args[];
+{
+    bool	testing = FALSE;
+    bool	testrun = FALSE;
+    bool	testmake = FALSE;
+    STATUS	status;
+    i4		otherargs = 2;
+    char	*dbname;
+    char	buf[256];
+    char	testbuf[256];
+    char	errbuf[ER_MAX_LEN];
+##  char	reply[80];
+    CL_ERR_DESC err_code;
+    LOCATION	*err_locp;
+    LOCATION	err_loc;
+    char	err_locb[MAX_LOC + 1];
+
+
+#ifdef hp9_mpe
+    err_locp = &err_loc;
+    STcopy( ERx("$STDLIST"), err_locb);
+    LOfroms( FILENAME, err_locb, err_locp);
+#else
+    err_locp = (LOCATION *)NULL;
+#endif
+
+    testbuf[0] = EOS;
+
+    if (FEtstrun() == OK)
+	testrun = TRUE;
+    if (FEtstmake() == OK)
+	testmake = TRUE;
+    dbname = FEdbname();
+
+    testing = testrun || testmake;
+
+    /*
+    ** Only interested if we're doing some sort of testing,
+    ** and about to spawn a FORMS based product. Report, Sreport,
+    ** Graph, and Rungraph aren't forms based. Should this information
+    ** be abstracted in FEformsbased(subsys) ?
+    */
+    if (testing &&
+	!STequal(subsys, ERx("report")) && !STequal(subsys, ERx("sreport")) &&
+	!STequal(subsys, ERx("graph")) && !STequal(subsys, ERx("rungraph")) )
+    {
+	if (testmake)
+	{
+	    FEinames(testbuf);
+	    otherargs++;
+	}
+	if (testrun)
+	{
+	    FEtnames(testbuf);
+	    otherargs++;
+	}
+	_VOID_ STprintf(buf, ERget(F_TU0007_UTexe_flags1), format);
+    }
+    else
+    {
+	_VOID_ STprintf(buf, ERget(F_TU0008_UText_flags2), format);
+    }
+    FTrestore(FT_NORMAL);
+    if (testing)
+    {
+	status = UTexe(UT_WAIT, err_locp, NULL, NULL, subsys,
+		&err_code, buf, argnum + otherargs, dbname, IIxflag(), testbuf,
+		args[0], args[1], args[2], args[3], args[4],
+		args[5], args[6], args[7], args[8], args[9]);
+    }
+    else
+    {
+	status = UTexe(UT_WAIT, err_locp, NULL, NULL, subsys,
+		&err_code, buf, argnum + otherargs, dbname, IIxflag(),
+		args[0], args[1], args[2], args[3], args[4],
+		args[5], args[6], args[7], args[8], args[9]);
+    }
+
+#ifdef	PMFEWIN3		 
+    IIload_framew();		 
+#endif				 
+
+#ifndef CMS
+    SIfprintf(stdout, ERx("\n"));
+    SIflush(stdout);
+#endif
+
+    if (status != OK)
+    {
+	if (status == FAIL)
+	{
+#ifndef CMS
+		FTprtrestore();
+##		prompt(ERget(S_TU0017_Press_RETURN_to_clear), reply)
+		FTrestore(FT_FORMS);
+# else
+		FTmore();
+#endif
+	}
+	else if (status == UTENOPROG)
+	{
+		FTrestore(FT_FORMS);
+		IIUGerr(E_TU0018_Subsys_not_available, UG_ERR_ERROR,
+			(i4) 1, (PTR) subsys);
+	}
+	else if (ERreport(status, errbuf) != OK)
+	{
+		FTrestore(FT_FORMS);
+		IIUGerr(E_TU0019_Cannot_start_subsys, UG_ERR_ERROR,
+			(i4) 2, (PTR) subsys, (PTR) &status);
+	}
+	else
+	{
+		FTrestore(FT_FORMS);
+##		clear screen
+		IIUGerr(E_TU0042_print_errbuf, 0, errbuf);
+	}
+    }
+    else
+    {
+	/* bug 9294
+	**	Check to see if this was a report, if so do a
+	**	FTprtrestore() so the last page of the report is
+	**	not cleared.
+	*/
+	if ( STequal(subsys, ERx("report")) )
+	{
+		FTprtrestore();
+	}
+	/* end of fix -- 9294 */
+
+	FTrestore(FT_FORMS);
+    }
+
+    FTfkset(FT_FUNCKEY);
+
+    return status;
+}

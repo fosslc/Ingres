@@ -1,0 +1,21 @@
+#
+# wgl_32s.hnt file for  front\utils\feds
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+objonly = dschar.obj 
+objonly = dsf8.obj 
+objonly = dsfdtype.obj 
+objonly = dsfield.obj 
+objonly = dsfldcol.obj 
+objonly = dsfldhdr.obj 
+objonly = dsfldval.obj 
+objonly = dsframe.obj 
+objonly = dsglob.obj 
+objonly = dsi4.obj 
+objonly = dsregfld.obj 
+objonly = dsstring.obj 
+objonly = dstblfld.obj 
+objonly = dstrim.obj 
+

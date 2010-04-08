@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The dmf_int_sort_size resource gives the threshold (in bytes to sort)
+  below which the disk-based sorter will attempt an in-memory sort.
+
+  If the disk sorter has decided on a parallel sort, the in-memory threshold
+  will apply to each child thread.
+
+  The default is 512 kb.

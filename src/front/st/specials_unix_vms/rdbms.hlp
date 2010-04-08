@@ -1,0 +1,18 @@
+Ingres RDBMS Package
+
+The Ingres RDMBS package includes the Ingres Intelligent
+DBMS and the Ingres Terminal Monitors.
+
+The Ingres Intelligent DBMS, the foundation of the Ingres
+product line, provides the power to manage today's critical information
+resources: data, knowledge, and objects.  Because of this unique
+ability, the Ingres Intelligent DBMS empowers organizations to
+model all aspects of their operations within the database engine
+itself, rather than within client application code.
+
+Ingres Terminal Monitor Tools, provide powerful forms-based and command
+line access for managing databases, tables, and data stored in
+relational and non-relational databases.  These open, portable tools
+are designed for use on client-server and host-based systems and
+support forms-based Interactive SQL and Interactive Quel languages
+and a Command Line Terminal Monitor.

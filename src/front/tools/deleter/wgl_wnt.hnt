@@ -1,0 +1,9 @@
+#
+# wgl_wnt.hnt file for front/tools/deleter
+#
+
+subsys = congui
+proto = false
+
+main = deleter.c
+

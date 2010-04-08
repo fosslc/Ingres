@@ -1,0 +1,27 @@
+d7|vt100k|vt-100k|pt100k|pt-100k|dec vt100 with everything:\
+	:Ge=ansi:Gp=ansi:Gh:Go:Gw:GC#68:GR#23:tc=vt100kNG:
+# use vt100kNG as basis for graphics terminals with ansi text modes
+dZ|vt100kNG|dec vt100 with everything except alpha graphics driver:\
+	:co#80:li#24:cl=\E[;H\E[2J:bs:cm=\E[%i%2;%2H:nd=\E[C:up=\E[A:\
+	:ce=\E[K:cd=\E[J:us=\E[4m:ue=\E[m:\
+	:is=\E>\E[?3l\E[?4l\E[?7l\E[?8h:ks=\E[?1h\E=:ke=\E[?1l\E>:\
+	:ku=\EOA:kd=\EOB:kr=\EOC:kl=\EOD:vs=\E[?7l:ve=\E[?7h:\
+	:ms:ld=\E)0:qa=j:qb=k:qc=l:qd=m:qe=n:qf=q:qg=t:qh=u:\
+	:qi=v:qj=w:qk=x:ls=\016:le=\017:cs=\E[%2;%2r:\
+	:bl=\E[5m:be=\E[m:bo=\E[1m:eb=\E[m:rv=\E[7m:re=\E[m:ea=\E[m:\
+	:za=\E[1;4;5;7m:zb=\E[1;4m:zc=\E[1;5m:zd=\E[1;7m:\
+	:ze=\E[4;5m:zf=\E[4;7m:zg=\E[5;7m:zh=\E[1;4;5m:\
+	:zi=\E[4;5;7m:zj=\E[1;5;7m:zk=\E[1;4;7m:es=\E[?7h:\
+	:ky:k0=\EOP:k1=\EOQ:k2=\EOR:k3=\EOS:sr=\EM:\
+	:k4=\EOw:k5=\EOx:k6=\EOy:k7=\EOm:k8=\EOt:k9=\EOu:kA=\EOv:\
+	:kB=\EOl:kC=\EOq:kD=\EOr:kE=\EOs:kF=\EOp:kG=\EOn:kH=\EOM:kn#18:
+D7|vt100NG|dec vt100 with no cursor/function keys (Graphics):\
+	:ky@:mf=frs.map:tc=vt100kNG:
+# Stripped vt100 used as ansi console on PC/Xenix (daveb)
+d1|vt100|vt-100|pt100|pt-100|dec vt100 with no cursor/function keys:\
+	:ky@:tc=vt100k:
+d0|septerm|vt100 without function keys or box characters for SEP:\
+	:ky@:ld=:ls=:le=:qa=+:qb=+:qc=+:qd=+:qe=+:qf=-:qg=|:qh=|:qi=-:qj=-:\
+	:qk=|:tc=vt100k:
+dt|vt100w|vt-100w|pt100w|pt-100w|dec vt100 132 cols:\
+	:co#132:li#24:is=\E>\E[?3h\E[?4l\E[?7h\E[?8h:cm=5\E[%i%2;%3H:tc=septerm:

@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This display gives help on the current screen and menu. The information
+is presented in a table field, which may be scrolled up and down using
+the appropriate scrolling function keys, or the menu items.
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Keys            Display a table of the mapping between the function
+                        and control keys, and their current definition.
+        SubTopics       If subtopics are available, display a selection of
+                        topics related to the current help topic.
+        PrevTopic       Display the previous topic, if any.
+        NextPage        Display the next page of help for this screen.
+                          Note that this menu command is the same as the
+                          scrollup function key.
+        PrevPage        Display the previous page of help for this screen.
+                          Note that this menu command is the same as the
+                          scrolldown function key.
+        Help            Display this message.
+        End             Return to the help screen.

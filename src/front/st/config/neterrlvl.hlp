@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Specifies the level at which the Net Server writes messages to the
+ error log.  Valid entries are 0 to 5.  Low entries write only the
+ high-level entries to the error log; high entries write more detailed
+ messages to the error log.
+ 
+ The default level is 4.

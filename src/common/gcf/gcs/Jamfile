@@ -1,0 +1,17 @@
+#
+# Jamfile file for common!gcf!gcs
+#
+
+SubDir ING_SRC common gcf gcs ;
+
+IISUBSYS common gcf gcs ;
+
+
+IIBINEXE gcsinfo : gcsinfo.c ;
+IINEEDLIBS gcsinfo : GCFLIB SHCOMPATLIB ;
+
+IILIBRARY GCFLIB : gcsutil.c gcssys.c gcsnull.c gcsing.c
+	gcscall.c ;
+
+IILIBRARY IMPGCFLIBDATA : gcsdata.c ;
+

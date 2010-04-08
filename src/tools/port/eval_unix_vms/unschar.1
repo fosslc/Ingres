@@ -1,0 +1,20 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/unschar.1,v 1.1 90/03/09 09:17:38 source Exp $
+.TH UNSCHAR 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+unschar \- See if processor has signed or unsigned characters
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B unschar
+[ -v ]
+.SH DESCRIPTION
+.I Unschar
+prints either ``signed'' or ``unsigned'' indicating the range of
+variables allowed in \fBchar\fP variables.
+.PP
+.B -v
+``verbose'' mode prints the program's name, indents the output one tab
+stop, and shows some internal status information.
+.SH "SEE ALSO"
+\fImaxvals(1)\fP

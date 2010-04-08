@@ -1,0 +1,120 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.		       
+*/
+
+/*
+**    Source   : ipm.odl
+**    Project  : INGRES II/ Monitoring.
+**    Author   : UK Sotheavut (uk$so01)
+**    Purpose  : type library source for ActiveX Control project
+**
+** History:
+**
+** 12-Nov-2001 (uk$so01)
+**    Created
+** 30-Jan-2004 (uk$so01)
+**    SIR #111701, Use Compiled HTML Help (.chm file)
+** 22-Sep-2004 (uk$so01)
+**    BUG #113104 / ISSUE 13690527, 
+**    Add method: short GetConnected(LPCTSTR lpszNode, LPCTSTR lpszDatabase)
+**    that return 1 if there is an SQL Session.
+*/
+
+
+
+#include <olectl.h>
+#include <idispids.h>
+
+
+[ uuid(AB474683-E577-11D5-878C-00C04F1F754A), version(1.0),
+  helpfile("ipm.hlp"),
+  helpstring("ipm ActiveX Control module"),
+  control ]
+library IPMLib
+{
+	importlib(STDOLE_TLB);
+	importlib(STDTYPE_TLB);
+
+	[ uuid(AB474684-E577-11D5-878C-00C04F1F754A),
+	  helpstring("Dispatch interface for Ipm Control"), hidden ]
+	dispinterface _DIpm
+	{
+		properties:
+			//{{AFX_ODL_PROP(CIpmCtrl)
+			[id(1)] long TimeOut;
+			[id(2)] long RefreshFrequency;
+			[id(3)] boolean ActivateRefresh;
+			[id(4)] boolean ShowGrid;
+			[id(DISPID_FONT), bindable] IFontDisp* Font;
+			[id(5)] long Unit;
+			[id(6)] long MaxSession;
+			//}}AFX_ODL_PROP
+
+		methods:
+			//{{AFX_ODL_METHOD(CIpmCtrl)
+			[id(7)] boolean Initiate(BSTR lpszNode, BSTR lpszServer, BSTR lpszUser, BSTR lpszOption);
+			[id(8)] void ExpandBranch();
+			[id(9)] void ExpandAll();
+			[id(10)] void CollapseBranch();
+			[id(11)] void CollapseAll();
+			[id(12)] void ExpandOne();
+			[id(13)] void CollapseOne();
+			[id(14)] boolean ExpressRefresh();
+			[id(15)] boolean ItemShutdown();
+			[id(16)] boolean ForceRefresh();
+			[id(17)] boolean OpenServer();
+			[id(18)] boolean CloseServer();
+			[id(19)] boolean ReplicationServerChangeNode();
+			[id(20)] boolean ResourceTypeChange(short nResType);
+			[id(21)] boolean NullResource(short bSet);
+			[id(22)] boolean InternalSession(short bSet);
+			[id(23)] boolean SystemLockList(short bSet);
+			[id(24)] boolean InactiveTransaction(short bSet);
+			[id(25)] boolean IsEnabledShutdown();
+			[id(26)] boolean IsEnabledOpenServer();
+			[id(27)] boolean IsEnabledCloseServer();
+			[id(28)] boolean IsEnabledReplicationChangeNode();
+			[id(29)] SCODE Loading(IUnknown* pStream);
+			[id(30)] SCODE Storing(IUnknown** ppStream);
+			[id(31)] void ProhibitActionOnTreeCtrl(short nYes);
+			[id(32)] boolean UpdateFilters(short* arrayFilter, short nArraySize);
+			[id(33)] void SearchItem();
+			[id(34)] void SetSessionStart(long nStart);
+			[id(35)] void SetSessionDescription(BSTR lpszSessionDescription);
+			[id(36)] void StartExpressRefresh(long nSeconds);
+			[id(37)] boolean SelectItem(BSTR lpszNode, BSTR lpszServer, BSTR lpszUser, BSTR lpszKey, VARIANT* pArrayItem, short nShowTree);
+			[id(38)] void SetErrorlogFile(BSTR lpszFullPathFile);
+			[id(39)] short FindAndSelectTreeItem(BSTR lpszText, long nMode);
+			[id(40)] long GetMonitorObjectsCount();
+			[id(41)] long GetHelpID();
+			[id(42)] void SetHelpFile(BSTR lpszFileWithoutPath);
+			//}}AFX_ODL_METHOD
+			[id(43), helpstring("method GetConnected")] SHORT GetConnected(BSTR lpszNode, BSTR lpszDatabase);
+	};
+
+	[ uuid(AB474685-E577-11D5-878C-00C04F1F754A),
+	  helpstring("Event interface for Ipm Control") ]
+	dispinterface _DIpmEvents
+	{
+		properties:
+			//  Event interface has no properties
+
+		methods:
+			//{{AFX_ODL_EVENT(CIpmCtrl)
+			[id(1)] void IpmTreeSelChange();
+			[id(2)] void PropertyChange();
+			//}}AFX_ODL_EVENT
+	};
+
+	[ uuid(AB474686-E577-11D5-878C-00C04F1F754A),
+	  helpstring("Ipm Control"), control ]
+	coclass Ipm
+	{
+		[default] dispinterface _DIpm;
+		[default, source] dispinterface _DIpmEvents;
+	};
+
+
+	//{{AFX_APPEND_ODL}}
+	//}}AFX_APPEND_ODL}}
+};

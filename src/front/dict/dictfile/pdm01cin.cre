@@ -1,0 +1,51 @@
+PHYSICAL_DATA_MODELLING 1 'Physical Data Model'
+METASCHEMA 1 Y
+END
+CREATE TABLE ii_dbd_acl
+    (
+        folder_id	integer NOT NULL,
+        entity_id	integer NOT NULL,
+        acl_sequence	integer NOT NULL,
+        access_rights	integer2 NOT NULL,
+        rightslist_id	integer NOT NULL
+    )
+
+CREATE TABLE ii_dbd_identifiers
+    (
+        folder_id	integer NOT NULL,
+        entity_id	integer NOT NULL,
+        identifier_id	integer NOT NULL,
+        identifier_name	varchar(32) NOT NULL,
+        rightslist_id	integer NOT NULL
+    )
+
+CREATE TABLE ii_dbd_locations
+    (
+        folder_id	integer NOT NULL,
+        entity_id	integer NOT NULL,
+        sequence	integer NOT NULL,
+        location_name	char(32) NOT NULL
+    )
+
+CREATE TABLE ii_dbd_rightslist
+    (
+        folder_id	integer NOT NULL,
+        entity_id	integer NOT NULL,
+        rightslist_id	integer NOT NULL,
+        identifier_id	integer NOT NULL,
+        rl_sequence	integer NOT NULL
+    )
+
+CREATE TABLE ii_dbd_table_char
+    (
+        folder_id	integer NOT NULL,
+        entity_id	integer NOT NULL,
+        structure	varchar(9) NOT NULL,
+        min_pages	integer NOT NULL,
+        max_pages	integer NOT NULL,
+        fillfactor	integer NOT NULL,
+        leaffill	integer NOT NULL,
+        nonleaffill	integer NOT NULL,
+        maxindexfill	integer NOT NULL
+    )
+

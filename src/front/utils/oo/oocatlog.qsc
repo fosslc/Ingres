@@ -1,0 +1,311 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+##include	<ooclass.qsh>
+##include	<oocat.qsh>
+##include	<oocatlog.qsh>
+## include	<uigdata.qsh>
+
+/**
+** Name:	oocatlog.qsc -	Visual Object Catalog Class Methods.
+**
+** Description:
+**	Defines the visual object catalog class methods:
+**
+**	IIOOctTFldInit() initialize visual object catalog table field.
+**	IIOOctRowLoad()	load row in visual object catalog table field.
+**	IIOOctInsertRow() insert row in visual object catalog table field.
+**	IIOOctPutRow()	put row in visual object catalog table field.
+**	IIOOctObjLoad()
+**
+** History:
+**	Revision 6.2  89/01  wong
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF i4	IIuserIndex;
+
+/*{
+** Name:	IIOOctTFldInit() -	Initialize Visual Object Catalog
+**							Table Field.
+** Description:
+**	Initializes the table field for the visual object catalog with
+**	respect to the FRS.  Specifically, this defines the hidden columns
+**	to be added to the visible ones.
+**
+** Input:
+**	self	{OO_CATALOG *}  The visual object catalog.
+**	mode	{char *}  The mode to which to initialize the table field,
+**				if NULL then default to UPDATE mode.
+**
+** History:
+**	01/89 (jhw) -- Restructured as object method from 'OBcatInit()'.
+*/
+VOID
+##IIOOctTFldInit ( self, mode )
+##register OO_CATALOG	*self;
+char			*mode;
+##{
+##	char	*rmode;
+
+	rmode = mode != NULL ? mode : ERx("update");
+
+##	INITTABLE self->c_form self->c_tfield rmode (
+##		_id		= i4,
+##		_class		= i4,
+##		_env		= i4,
+##		_is_current	= i4,
+##		_create_date	= c25,
+##		_altr_date	= c25,
+##	 	_altr_count	= i4,
+##		_last_altered_by = c32
+##	);
+##}
+
+VOID
+##IIOOctRowLoad ( self, row )
+##register OO_CATALOG	*self;
+##register OO_CATREC	*row;
+##{
+##	char	*owner = IIOOmapOwner(row->owner);
+
+##	LOADTABLE self->c_form self->c_tfield (
+##		_id		= row->id,
+##		_class		= row->class,
+##		_name		= row->name,
+##		_env		= row->env,
+##		_owner		= owner,
+##		_is_current	= row->is_current,
+##		_short_remark	= row->short_remark,
+##		_create_date	= row->create_date,
+##		_altr_date	= row->alter_date,
+##		_altr_count	= row->alter_cnt,
+##		_last_altered_by = row->altered_by
+##	);
+##}
+
+VOID
+##IIOOctInsertRow ( self, obj, rowno )
+##register OO_CATALOG	*self;
+##OO_OBJECT		*obj;
+##i4			rowno;
+##{
+##	INSERTROW self->c_form self->c_tfield rowno;
+	if ( rowno < self->c_maxrow )
+		++rowno;
+	IIOOctPutRow(self, obj, rowno );
+##}
+
+/*
+** History:
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+*/
+VOID
+##IIOOctPutRow ( self, obj, rowno )
+##register OO_CATALOG	*self;
+##register OO_OBJECT	*obj;
+##i4			rowno;
+##{
+##	char	*owner = IIOOmapOwner(obj->owner);
+##	char	*modifier = IIOOmapOwner(IIUIdbdata()->user);
+
+##	PUTROW self->c_form self->c_tfield rowno
+##	(
+##		_id		= obj->ooid,
+##		_name		= obj->name,
+##		_class		= obj->class,
+##		_short_remark	= obj->short_remark,
+##		_owner		= owner,
+##		_env		= obj->env,
+##		_is_current	= obj->is_current,
+##		_create_date	= obj->create_date,
+##		_altr_date	= obj->alter_date,
+##		_altr_count	= 1,
+##		_last_altered_by = modifier
+##	);
+##}
+
+/*{
+** Name:	IIOOctObjLoad() -	Load Objects Into a
+**						Catalog Form Table Field.
+** Description:
+**	Loads the descriptive attributes (including the name) of objects into a
+**	catalog form table field.  This method is the general, high performance
+**	case when database objects of a certain class, or range of classes, are
+**	to be displayed on the catalog form.  (Its performance is high because
+**	it uses a repeat query that is shared by many of the Front-Ends, and so
+**	should be used if at all possible in preference to redefining this
+**	method.)
+**
+**	It will retrieve either all objects (if the owner is not specified;
+**	this corresponds to a global namespace,) or only those objects that
+**	are owned by the owner or the DBA and will resolve any object name
+**	ambiguities in favor of displaying the object owned by the owner.
+**
+** Inputs:
+**	self		{OO_CATALOG *}  The catalog form object.
+**	subClasses	{bool}  Whether to display sub-classes.
+**	pattern		{char *}  Object names, which may be a QUEL pattern.
+**	owner		{char *}  The owner of the object to fetch, or all
+**					if empty or NULL.
+**	lastname	{char *}  The name of the object on the row on which
+**					the cursor was previously located.
+**	prevcursor	{nat *}  Row corresponding to the previous cursor row.
+**
+** History:
+**	10-22-1987 (danielt)
+**		Written (adapted from 'OBcatForm()'.)
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+*/
+
+static const char	_FetchAll[] = ERx("%");
+
+VOID
+IIOOctObjLoad ( self, subClasses, pattern, owner, lastname, prevcursor )
+OO_CATALOG	*self;
+bool		subClasses;
+EXEC SQL BEGIN DECLARE SECTION;
+char		*pattern;
+char		*owner;
+EXEC SQL END DECLARE SECTION;
+char		*lastname;
+i4		*prevcursor;
+{
+	i4		rows;
+	register i4	i,
+			j;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4		high,
+			low;
+	OO_CATREC	cs[2],
+			*csp[2];
+	UIDBDATA	*uidbdata;
+	EXEC SQL END DECLARE SECTION;
+
+	char	pattern_buf[FE_MAXNAME*DB_MAX_COLS+1];
+
+	uidbdata = IIUIdbdata();
+	if ( pattern == NULL || *pattern == EOS )
+		pattern = _FetchAll;
+	else
+	{ /* change the pattern matching to SQL */
+		i4	sql_wild;
+
+		STcopy(pattern, pattern_buf);
+		IIUGwildcard(pattern = pattern_buf, &sql_wild);
+	}
+
+	if ( subClasses )
+	{
+		low = self->c_class->ooid/100 * 100;
+		high  = low + 99;
+	}
+	else
+	{
+		high = low = self->c_class->ooid;
+	}
+
+	if ( owner == NULL || *owner == EOS )
+		owner = _FetchAll;
+
+	csp[0] = &cs[0];
+	csp[1] = &cs[1];
+
+	rows = 0;
+
+	/*
+	** Retrieve catalog rows.
+	**
+	** Order by both name and owner, the latter so that user and DBA
+	** objects will appear in lexical order as indicated by the
+	** 'IIuserIndex' (0 user precedes DBA; as setup by 'IIOOinit()').
+	** This is then used to distinguish user from DBA objects if the
+	** namespace is scoped by owner, otherwise just fetch all objects.
+	** (PeterK implemented this algorithm and J. Wong added the fetch
+	** all logic.)
+	*/
+	i = 0;
+	EXEC SQL REPEATED SELECT object_id, object_class, object_name, 
+			object_owner, object_env, is_current,
+			short_remark, create_date, alter_date,
+			'', alter_count, last_altered_by
+		INTO :*csp[i] FROM ii_objects
+	WHERE	object_name LIKE :pattern AND
+			object_class >= :low AND object_class <= :high AND
+		( object_owner LIKE :owner OR object_owner = :uidbdata->dba )
+	ORDER BY object_name, object_owner;
+	EXEC SQL BEGIN;
+		if ( i == 0 && owner != _FetchAll )
+			++i;
+		else
+		{
+			if ( owner == _FetchAll )
+				j = 0;
+			else if ( STequal(cs[0].name, cs[1].name) )
+			{
+				i = 0;
+				j = IIuserIndex;
+			}
+			else 
+			{
+				OO_CATREC	*ctmp;
+
+				/* swap */
+				ctmp = csp[0];
+				csp[0] = csp[1];
+				csp[1] = ctmp;
+				i = j = 1;
+			}
+			_send(catRowLoad, self)( self, csp[j] );
+
+#ifdef	FT3270
+			++rows;
+#else
+			/* Give feedback to user:  display catalog
+			** when it has a display full.
+			*/
+			if ( ++rows == self->c_maxrow )
+##				REDISPLAY;
+#endif
+
+			/* check whether this corresponds to the object/row on
+			** which the cursor was previously located ...
+			*/
+			if ( lastname != NULL && STequal(lastname, csp[j]->name) )
+			{
+				*prevcursor = rows;
+			}
+
+		}
+	EXEC SQL END;
+	if ( i > 0 )
+	{
+		_send(catRowLoad, self)( self, csp[0] );
+		++rows;
+		if ( lastname != NULL && STequal(lastname, csp[0]->name) )
+		{
+			*prevcursor = rows;
+		}
+	}
+}

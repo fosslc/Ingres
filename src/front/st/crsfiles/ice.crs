@@ -1,0 +1,74 @@
+--
+--  Copyright (c) 2004 Ingres Corporation 
+--
+--  This file contains the configuration rules for INGRES Internet Communication
+--  (UNIX version)
+--
+--# History:
+--#     27-feb-96 (harpa06)
+--#             Created.
+--#	12-jun-96 (harpa06)
+--#		Added db_conn_timeout for database connection idle timeout 
+--#		feature.
+--#		Added w_server_cfg_loc for accessing Web server configuration
+--#		files.
+--#		Moved output of tutorial into it's own directory.
+--#	09-jul-96 (harpa06)
+--#		Changed "block_query" to "allow_dsql_query" since this makes 
+--#		more sense. Also made sure that "server_name" remains a
+--#		string.
+--#	25-sen-96 (rosga02)
+--#		Change report writer default dir to "ca-ice.temp" for VMS
+--# 	26-dec-96 (harpa06)
+--#     	Renamed w_server_cfg_loc to config_ws_dir.
+--#
+--#     	Removed rw_dir[1-5]_location and rw_dir[1-5]_time. Output 
+--#		directories are created on the fly now in the form of:
+--#
+--#         	dirX_label
+--#         	dirX_location
+--#         	dirX_time
+--#
+--#     	where X = 0 to n.
+--#	04-mar-97 (harpa06)
+--#     	Added ii.%s.ice.security.allow_exeapp.
+--#	07-apr-97 (harpa06)
+--#		Added tutorial directory defaults.
+--#	12-dec-97 (harpa06)
+--#		Added ii.$.ice.security.force_passwd 
+
+-- default tutorial directories
+ii.$.ice.component.tutorial.dir:	"ca-ice", DIRECTORY;
+ii.$.ice.component.tutorial.dir.mcro:	"macro", DIRECTORY;
+ii.$.ice.component.tutorial.dir.dsql:	"dsql", DIRECTORY;
+
+                      
+-- allow execution of applications on the Web server
+ii.$.ice.security.allow_exeapp:		OFF;
+
+-- dynamic SQL single query blockage
+ii.$.ice.security.allow_dsqlq:		OFF;
+
+-- force users to use passwords for requests
+ii.$.ice.security.force_passwd:         ON;
+
+-- CGI-BIN references
+ii.$.ice.cgi-bin_ref:			"";
+ii.$.ice.cgi-bin_dir:			"", DIRECTORY;
+
+-- Web server configuration files location
+ii.$.ice.config_ws_dir:			"", DIRECTORY;
+
+-- default parameters
+ii.$.ice.default_database:		"icedb";
+ii.$.ice.default_userid:		"ingres";
+
+-- database connection idle timeout
+ii.$.ice.db_conn_timeout:		300;
+
+-- web server root document directory
+ii.$.ice.html_home:			"", DIRECTORY;
+
+-- web server name and IP address
+ii.$.ice.server_name:			"`iipmhost`";
+

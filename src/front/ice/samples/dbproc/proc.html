@@ -1,0 +1,50 @@
+<!--
+##{
+## History:
+##    04-May-1999 (peeje01)
+##        Replaced .exe with #cgi# for platform independance
+##}
+-->
+<HTML>
+<HEAD>
+<TITLE> Execute Procedure </TITLE>
+</HEAD>
+<BODY>
+<FORM ACTION="/ice-bin/oiice.#cgi#" METHOD="POST">
+<INPUT TYPE=hidden NAME="ii_success_url" VALUE="/ice-bin/oiice.#cgi#/icedbproc/result.html">
+
+<INPUT TYPE=hidden NAME="ii_procedure" VALUE="iceprocins">
+<INPUT TYPE=hidden NAME="ii_procvar_count" VALUE="4">
+
+<INPUT TYPE=hidden NAME="ii_procvar_name1" VALUE="val1">
+<INPUT TYPE=hidden NAME="ii_procvar_type1" VALUE="integer">
+<INPUT TYPE=hidden NAME="ii_procvar_length1" VALUE="4">
+
+<INPUT TYPE=hidden NAME="ii_procvar_name2" VALUE="val2">
+<INPUT TYPE=hidden NAME="ii_procvar_type2" VALUE="integer">
+<INPUT TYPE=hidden NAME="ii_procvar_length2" VALUE="4">
+
+<INPUT TYPE=hidden NAME="ii_procvar_name3" VALUE="val3">
+<INPUT TYPE=hidden NAME="ii_procvar_type3" VALUE="integer">
+<INPUT TYPE=hidden NAME="ii_procvar_length3" VALUE="4">
+
+<INPUT TYPE=hidden NAME="ii_procvar_name4" VALUE="val4">
+<INPUT TYPE=hidden NAME="ii_procvar_type4" VALUE="integer">
+<INPUT TYPE=hidden NAME="ii_procvar_length4" VALUE="4">
+
+Database: <INPUT TYPE=text NAME="ii_database" VALUE="icetutor">
+User: <INPUT TYPE=text NAME="ii_userid" VALUE="icedefdb">
+
+<TABLE>
+<TR>
+<TD>Value 1</TD><TD>Value 2</TD><TD>Value 3</TD><TD>Value 4</TD>
+</TR>
+<TD><INPUT TYPE=text NAME="ii_procvar_data1" VALUE=1></TD>
+<TD><INPUT TYPE=text NAME="ii_procvar_data2" VALUE=2></TD>
+<TD><INPUT TYPE=text NAME="ii_procvar_data3" VALUE=3></TD>
+<TD><INPUT TYPE=text NAME="ii_procvar_data4" VALUE=4></TD>
+</TR>
+</TABLE>
+<INPUT TYPE=SUBMIT VALUE="Execute">
+</FORM></BODY>
+</HTML>

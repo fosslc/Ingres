@@ -1,0 +1,14 @@
+COPYFORM:	6.4	2002_06_28 07:26:05 GMT  
+FORM:	imp_lg_databases		
+	88	23	0	0	2	0	0	9	0	0	0	0	0	64	0	9
+FIELD:
+	0	vnode	-21	23	0	20	1	52	0	0	20	0	32	Log Database Display for Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	logdb_tbl	0	8	0	7	12	78	2	0	1	3	0		1	1	0	1073741857	0	0	0					1	1
+	0	dbname	-21	53	0	15	1	15	0	1	15	0	1	DB Name	1	1	0	0	64	0	0		c15			2	2
+	1	dbstatus	-21	53	0	15	1	15	0	17	15	0	17	Status	17	1	0	0	64	0	0		c15			2	3
+	2	tx_count	-30	5	0	8	1	8	0	33	8	0	33	TX Cnt	33	1	0	0	0	0	0		+i8			2	4
+	3	begins	-30	5	0	8	1	8	0	42	8	0	42	Begin	42	1	0	0	0	0	0		+i8			2	5
+	4	ends	-30	5	0	8	1	8	0	51	8	0	51	End	51	1	0	0	0	0	0		+i8			2	6
+	5	reads	-30	5	0	8	1	8	0	60	8	0	60	Read	60	1	0	0	0	0	0		+i8			2	7
+	6	writes	-30	5	0	8	1	8	0	69	8	0	69	Write	69	1	0	0	0	0	0		+i8			2	8
+TRIM:

@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ This is the name of your configured Web server.
+
+ It is advisable that you do not edit this value here. To change this value,
+ please use the Ingres/ICE HTML configuration program.
+
+ This field is mandatory. Communication with your Ingres database will not
+ work without a valid entry in this field.

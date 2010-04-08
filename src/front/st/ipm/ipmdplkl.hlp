@@ -1,0 +1,155 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Lock List Display screen.  This screen displays an entry for
+each lock list in the Ingres lock system.  System locklists (NONPROTECT)
+are not displayed unless the "Display system locklists" option is set
+(see help on the Option Selection screen) or the -e flag is specified on
+the command line.
+
+This screen is useful for locating transactions which can't proceed because
+they are blocked from proceeding by another transaction.  Each transaction
+will be represented in the Lock List Display screen by a lock list.
+The session name (if any) is also displayed. To find waiting lock lists,
+<TAB> to the Status column and select the "Find" menuitem.  In response
+to the "Find" prompt, type "WAIT" then <CR>.  If there are any lock lists
+with blocked locks, the cursor will be placed on that lock list.  See the
+"Find" menuitem for more information.
+
+If the status is ENQWAIT, the lock list in question is waiting for a
+resource locked by another Ingres user on another node in the VAXcluster
+(VMS only).  In this case, invoke IPM on the other nodes and search for
+a lock list holding locks on the resource in contention.
+
+To view the locks for a given lock list, select the "Examine" menuitem.
+The submenu that appears allows the viewing of all locks for all lock lists
+or for a particular lock list.  When examining all locks for all lock lists,
+there can be a long delay before the Lock Detail Display screen appears
+because every database that has a lock on it must be opened to get table
+names.  Since locks from all lock lists are unsorted, each database may
+be opened and closed many times. For this reason, it is wise to examine
+locks for a single lock list.  Some lock lists contain locks from many
+databases in unsorted order -- the warning just mentioned applies here also.
+
+By selecting the "Options" menuitem, IPM options can be changed.  The only
+option that affects this screen is the "Display empty locklists" option If
+any options were changed for lock lists or resources, select the "Refresh"
+menuitem. See help on the Option Selection screen.
+
+Columns on this screen include:
+
+ID             Internal lock list identifier.
+
+Session        The name of the session or "<none>".  Only lock lists
+               belonging to user transactions have session names.
+
+Count          The total number of locks on the list currently.
+
+Logical        The number of logical locks on the list currently.
+
+MaxL           The total number of logical locks allowed to be on this
+               list.  For user transactions, this is the maximum number
+               of locks per lock list.  Some internal lock lists which
+               contain physical locks, exceed this number.
+
+Status         The state of the lock list when the locking information
+               was obtained.  The possible values are:
+
+               WAIT              Waiting for a lock.  This indicates
+                                 a blocked lock.  Use the "Block_Info"
+                                 menuitem to find the blocking lock.
+
+               NONPROTECT        Can be released without going through
+                                 recovery (system lock lists only)
+
+               ORPHAN            Lock list remaining without transaction.
+
+               EWAIT             Waiting on a system event.
+
+               RECOVER           Lock list taken over by the recovery process.
+
+               MASTER            Lock list owned by the recovery process.
+
+               ESET              Lock list set on wait queue for event.
+
+               EDONE             Event that the lock list is waiting on
+                                 is done.
+
+               NOINTERRUPT       Lock requests on this list are non-
+                                 interruptible.
+
+               The following statuses only apply on VAXcluster installations:
+
+               ENQWAIT           Waiting for VMS lock request
+
+               G_DEADLOCK_SEARCH Global deadlock search in progress.
+
+               STALL_ENQ         Lock requests are stalled for node
+                                 failure recovery.
+
+When the "More_Info" menuitem is selected, a popup containing an additional
+fields for the specified lock list is displayed.  The additional fields are:
+
+Transaction    The transaction identifier associated with this lock list.
+ID             This value corresponds to the "External TX ID" column on the
+               Log Transaction Display screen.
+
+Related lock   The related lock list identifier, if not a transaction
+list ID        lock list.
+
+Count          The number of related lock list identifiers that this lock list
+               must assure are released before this lock list can be released.
+
+Waiting        Internal resource block identifier of the lock that is
+resource list  currently blocked.
+ID
+
+Menuitems available on this screen include:
+
+Refresh        Queries the Ingres locking system for locking information.
+               Lock List and Resource information are obtained together
+               to ensure a consistent snapshot of the locking system.
+               After setting IPM Options, select this menuitem so the
+               locking information reflects the current options.  See
+               help on the Option Selection screen.
+
+More_Info      Place the cursor on the desired lock list and select this
+               menuitem.  Additional information for the lock list is
+               displayed on a popup screen.
+
+Examine        Displays a submenu which allows the viewing of the individual
+               locks in all displayed lock lists or a particular lock list.
+               The submenu choices are:
+
+               Current_List    Displays all the locks in the indicated lock
+                               list (the one the cursor was placed on).
+                               If table names need to be looked up, there may
+                               be a delay because a database must be opened.
+
+               Find            Searches any column in the scrolling area.
+                               <TAB> to the desired column, then
+                               select "Find".
+
+               End             Returns to the previous menu.
+
+Block_Info     If the lock list that the cursor is placed on contains a lock
+               which can't be granted, selecting this menuitem will display
+               the Blocking Lock Display screen.  The lock which is blocking
+               a lock in the current lock list is displayed along with all
+               other locks on that given resource.  The blocking transaction
+               is always listed first.  The blocked transactions are listed
+               after it.  If this menuitem is selected and the current lock
+               list does not have any blocked locks (locks waiting to be
+               granted), a popup message is displayed.
+
+Options        Displays the Option Selection screen.  The current option
+               settings are displayed.  Various options can be modified
+               and saved.
+
+Find           Searches a column in a scrolling region (tablefield).
+               If searching a text column, "Find" will locate all
+               occurrences wherever they are in the column.
+
+Help           Displays this screen.
+
+End            Returns to the Lock Info Menu screen.
+
+Quit           Exits IPM.

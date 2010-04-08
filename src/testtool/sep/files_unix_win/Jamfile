@@ -1,0 +1,18 @@
+#
+# Jamfile file for testtool!sep!files_unix_win
+#
+
+SubDir ING_SRC testtool sep files_unix_win ;
+
+IISUBSYS testtool sep files_unix_win ;
+
+
+
+FILE $(INGTOOLSFILES)/basickeys.sep : basickeys.sep ;
+FILE $(INGTOOLSFILES)/commands.sep : commands.sep ;
+FILE $(INGTOOLSFILES)/header.txt : header.txt ;
+FILE $(INGTOOLSFILES)/makelocs.key : makelocs.key ;
+FILE $(INGTOOLSFILES)/septerm.sep : septerm.sep ;
+FILE $(INGTOOLSFILES)/vt100.sep : vt100.sep ;
+FILE $(INGTOOLSFILES)/vt220.sep : vt220.sep ;
+

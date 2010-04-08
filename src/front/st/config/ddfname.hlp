@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The dictionary_name resource specifies the name of the database that the
+  ICE server will use as the repository.
+
+  Default: icesvr

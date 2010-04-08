@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Shakespeare's Plays Home Page</title>
+</head>
+<body>
+<center>
+<h1>Shakespeare's Plays Home Page</h1>
+</center>
+This is the home page for Shakespeare's plays hosted on the server globe
+<h2>
+View Shakespeare's Plays
+</h2>
+<!-- #ICE REPEAT INCLUDE=`plays[play_TxnCndCmt_h.html]` -->
+
+<ol>
+<!-- #ICE VAR=`
+<li> <a href="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_all.html]">All</a>
+` -->
+<!-- #ICE VAR=`
+<li> <a href="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_allWrap.html]">All (wrap to beginning)</a>
+` -->
+<!-- #ICE VAR=`
+<li> <a href="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_typeList.html]">By type (selector)</a>
+` -->
+<!-- #ICE VAR=`
+<li> <a href="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_typeLink.html]">By type (hyper-link)</a>
+` -->
+<!-- #ICE VAR=`
+<li> <a href="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_typeGLink.html]">By type (Graphical hyper-link)</a>
+` -->
+<!-- #ICE VAR=`
+<li> <a href="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_typeGSLink.html]">Switch by type (Graphical hyper-link)</a>
+` -->
+</ol>
+<!-- #ICE VAR=`
+<a href="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_shopHome.html]">Globe
+Shop</a>
+` -->
+<p>
+<a href="/ice/tutorialGuide/index.html">Tutorial</a>
+<p>
+<!-- #ICE VAR=`
+Please 
+<A HREF="/ice-bin/oiice.:http_api_ext/plays[play_login.html]?ii_action=disconnect">logout</A>,
+don't time out!
+` -->
+</body>
+</html>

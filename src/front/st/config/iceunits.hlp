@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The units_table resource specifies the number of buckets in the business
+  unit hash table. Modifying the size of this value will affect the speed of
+  lookup.
+
+  Default: 10

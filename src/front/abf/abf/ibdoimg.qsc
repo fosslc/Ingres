@@ -1,0 +1,272 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<ex.h>
+# include	<si.h>
+# include	<st.h>		 
+# include	<lo.h>
+# include	<ol.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<feconfig.h>
+# include	<ilerror.h>
+# include	<ft.h>
+# include	<ug.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<fdesc.h>
+# include	<abfrts.h>
+# include	<frmalign.h>
+# include	<iltypes.h>
+# include	<ioi.h>
+# include	<ifid.h>
+# include	<ilrf.h>
+# include	<ifrmobj.h>
+# include	<ooclass.h>
+# include	"erib.h"
+
+/**
+** Name:	ibdoimg.qsc - produce the image file.
+**
+** Description:
+**	The routine which actually produces the image file.
+*/
+
+# define IBE_FILOPEN	E_IB0003_Could_not_open
+# define IBE_RTTBAD	E_IB0004_RTT_format
+# define IBE_FRMGET	E_IB0005_Read_frame
+# define IBE_FRMWRITE	E_IB0006_write_frame
+# define IBE_ICLOSE	E_IB0007_write_trailer
+# define IBE_FOLD	E_IB0008_init_form
+# define IBE_FOSTR	E_IB0009_write_form
+# define IBE_INTERRUPT	E_IB000A_interrupt
+
+GLOBALREF bool	IIabfmFormsMode;
+
+static OLIMHDR Ohdr;
+static bool ImageOpen;
+
+static EX sig_catch();
+static VOID do_error();
+
+/*{
+** Name:	IIABdiDoImage - make image file.
+**
+** Description:
+**	Create an image file.  Opens a session with ILRF using the
+**	passed in run-time table file, opens the passed in image file,
+**	fetches the frames from the DB and writes them out to the
+**	image file.
+**
+** Inputs:
+**	rtt	run time table
+**	ifile	image file.
+**
+** Side effects:
+**	Message on error.
+**
+** Returns:
+**	OK or FAIL
+**
+** History:
+**	9/86 (rlm)	written
+**	10/86 (rlm)	forms added
+**	9/91 (bobm)	pulled into 6.4 abf for PC:
+**
+**			imgbld no longer a standalone executable.  This is
+**			now simply a routine called from abf, which passes in
+**			the runtime table.  No longer opens an ILRF session,
+**			gets its frames directly from IAOM.
+**
+**	11-mar-92 (leighb) DeskTop Porting Change: 
+**			get tag value for proc's as well as frames.
+**	05/02/92 (dkh) - Substituted IIfindfrm for RTfindfrm since the latter
+**			 returns a pointer to a structure that is private
+**			 to the forms system.
+**	08-jun-92 (leighb) DeskTop Porting Change:
+**		Changed 'errno' to 'errnum' cuz 'errno' is a macro in WIN/NT
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Aug-2009 (kschendel) 121804
+**	    Update some of the function declarations to fix gcc 4.3 problems.
+*/
+
+STATUS
+IIABdiDoImage(ifile, rtt)
+char *ifile;
+ABRTSOBJ *rtt;
+{
+	IFRMOBJ *frm;
+	ABRTSFO *fo;
+	i4 i;
+	i4 pos;
+	i2 tag;
+	char *framename;
+##	char *formname;
+	char fname[MAX_LOC];
+	EX_CONTEXT context;
+
+	/* don't want the forms system to construct validation trees */
+	FDsetparse(TRUE);
+
+	ImageOpen = FALSE;
+
+	IIUGmsg(ERget(S_IB0001_Building),FALSE,1,rtt->abroappl);
+
+	if (EXdeclare(sig_catch, &context) != OK)
+	{
+		if (ImageOpen)
+			IIOIidImgDelete(&Ohdr);
+		FDsetparse(FALSE);
+		EXdelete();
+		return FAIL;
+	}
+	if	(IIabfmFormsMode == FALSE)
+##		forms
+
+	/*
+	** open file for image.	 After this step, error cleanup includes
+	** deleting this file.	fname storage is valid during the entire
+	** time Stage = 2, allowing IIOIidImgDelete to work.  We replace
+	** fid identifiers for frames with their file positions, and fill
+	** in form positions in the runtime table.
+	*/
+	STcopy(ifile,fname);
+	if (IIOIioImgOpen(fname,ERx("w"),&Ohdr) != OK)
+		do_error(IBE_FILOPEN,3,ERget(F_IB0003_image),fname,ERget(F_IB0004_writing));
+
+	ImageOpen = TRUE;
+
+	/*
+	** loop through RTT, fetching frames from DB, and writing them
+	** out to the new image file.  Replace old i4 identifiers with
+	** position in image file after each frame is written.
+	*/
+	for (i = 0; i < rtt->abrofcnt; ++i)
+	{
+		if ((rtt->abroftab)[i].abrfrtype != OC_OSLFRAME ||
+				(rtt->abroftab)[i].abrfrnuser.abrfid <= 0 )
+			continue;
+
+		/*
+		** We could theoretically
+		** use a begin - end tag outside the entire for loop, but
+		** this is less prone to inadvertantly freeing something we
+		** hadn't intended to.
+		*/
+		tag = FEbegintag();
+
+		/*
+		** store OSL frame in the image file.
+		*/
+		framename = (rtt->abroftab)[i].abrfrname;
+		pos = (rtt->abroftab)[i].abrfrnuser.abrfid;
+		if (IIAMffFrmFetch(&frm,pos,tag) != OK)
+			do_error(IBE_FRMGET,1,framename);
+		if (IIOIfwFrmWrite(&Ohdr,frm,&pos) != OK)
+			do_error(IBE_FRMWRITE,2,framename,ifile);
+		(rtt->abroftab)[i].abrfrnuser.abrfid = pos;
+
+		/*
+		** store form.	We use FElocktag to allow us to remove the
+		** form from memory after storing it.  It will have been
+		** allocated using the current tag.
+		*/
+		if ((fo = (rtt->abroftab)[i].abrform) != NULL)
+		{
+			formname = fo->abrfoname;
+			fo->abrfosource = ABFOSIF;
+			/* FElocktag(TRUE); */
+##			forminit formname
+			/* FElocktag(FALSE); */
+			if (FEinqferr() != 0)
+				do_error(IBE_FOLD,1,formname);
+			if (IIOIfsFormStore(&Ohdr,IIfindfrm(formname),TRUE,&pos) != OK)
+				do_error(IBE_FOSTR,1,formname);
+			fo->abrfopos = pos;
+			IIdelfrm(formname);
+		}
+
+		FEendtag();
+
+		IIUGtagFree(tag);
+	}
+
+	/*
+	** now the 4GL procedures.
+	** use same tag strategy as above.
+	*/
+	for (i = 0; i < rtt->abropcnt; ++i)
+	{
+		tag = FEbegintag();		 
+		if ((rtt->abroptab)[i].abrplang != OLOSL ||
+				(rtt->abroptab)[i].abrpfid <= 0 )
+			continue;
+		framename = (rtt->abroptab)[i].abrpname;
+		pos = (rtt->abroptab)[i].abrpfid;
+		if (IIAMffFrmFetch(&frm,pos,tag) != OK)
+			do_error(IBE_FRMGET,1,framename);
+		if (IIOIfwFrmWrite(&Ohdr,frm,&pos) != OK)
+			do_error(IBE_FRMWRITE,2,framename,ifile);
+		(rtt->abroptab)[i].abrpfid = pos;
+		FEendtag();			 
+		IIUGtagFree(tag);		 
+	}
+
+	/*
+	** close the image file, which attaches the runtime table,
+	** and trailer information.
+	*/
+	Ohdr.rtt = rtt;
+	if (IIOIicImgClose(&Ohdr) != OK)
+		do_error(IBE_ICLOSE,1,ifile);
+
+	FDsetparse(FALSE);
+	EXdelete();
+	if	(IIabfmFormsMode == FALSE)
+##		endforms;
+	return OK;
+}
+
+/*
+** local routine for error.
+*/
+static VOID
+do_error(errnum,anum,arg1,arg2,arg3,arg4,arg5,arg6)		 
+ER_MSGID errnum;						 
+i4  anum;
+PTR arg1,arg2,arg3,arg4,arg5,arg6;
+{
+	if	(IIabfmFormsMode == FALSE)
+##		endforms;
+	IIUGerr(errnum,UG_ERR_ERROR,anum,arg1,arg2,arg3,arg4,arg5,arg6);		 
+	EXsignal(EXABFJMP, 0);
+}
+
+/*
+** let interrupts and EXABFJMP cause a FAIL return
+*/
+static EX
+sig_catch(exa)
+EX_ARGS *exa;
+{
+	switch(exa->exarg_num)
+	{
+	case EXINTR:
+	case EXQUIT:
+		IIUGerr(IBE_INTERRUPT,UG_ERR_ERROR,0);	/* FALL THROUGH */
+	case EXABFJMP:
+		return EXDECLARE;
+	default:
+		return EXRESIGNAL;
+	}
+}

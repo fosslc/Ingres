@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!st!rfapi
+#
+
+SubDir ING_SRC front st rfapi ;
+
+IISUBSYS front st rfapi ;
+
+if ! $(NT)
+{
+IILIBRARY RFAPILIB : rfapiutil.c rfapidata.c rfapi.c ;
+}
+

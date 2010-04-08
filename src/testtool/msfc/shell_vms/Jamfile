@@ -1,0 +1,13 @@
+#
+# Jamfile file for testtool!msfc!shell_vms
+#
+
+SubDir ING_SRC testtool msfc shell_vms ;
+
+IISUBSYS testtool msfc shell_vms ;
+
+IITOOLSSH msfcrun : msfcrun$(SUFSH) ;
+IITOOLSSH msfcset : msfcset$(SUFSH) ;
+IITOOLSSH msfcslv : msfcslv$(SUFSH) ;
+IITOOLSSH msfcsub : msfcsub$(SUFSH) ;
+

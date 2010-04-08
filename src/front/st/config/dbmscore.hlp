@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+
+  The core_enabled parameter indicates whether or not a core file
+  will be produced when a segmentation fault or SIGBUS occurs.
+  Core files will be supplied in the current working directory of
+  the relevant processes.
+

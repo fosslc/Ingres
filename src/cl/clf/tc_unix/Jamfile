@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!tc_unix
+#
+
+SubDir ING_SRC cl clf tc_unix ;
+
+IISUBSYS cl clf tc_unix ;
+
+
+IILIBRARY COMPATLIB : tcdata.c tc.c ;
+

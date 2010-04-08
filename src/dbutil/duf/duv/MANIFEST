@@ -1,0 +1,33 @@
+#
+# MANIFEST file for dbutil!duf!duv
+#
+
+SubDir ING_SRC dbutil duf duv ;
+
+IISUBSYS dbutil duf duv ;
+
+
+if ! $(NT)
+{
+   IIBINEXE upgradedb : upgradedb.qsc ;
+   if ! $(VMS)
+   {
+
+      IINEEDLIBS upgradedb : DBUTILLIB SQLCALIB GNLIB UFLIB RUNSYSLIB
+   	   RUNTIMELIB FDLIB FTLIB FEDSLIB LIBQSYSLIB LIBQLIB UGLIB FMTLIB
+	   AFELIB LIBQGCALIB CUFLIB GCFLIB ADFLIB COMPATLIB MALLOCLIB ;
+   }
+   else
+   {
+       IINEEDLIBS upgradedb : DBUTILLIB LIBQLIB LIBQGCALIB GCFLIB CUFLIB UGLIB AFELIBADFLIB COMPATLIB ;
+   }
+}
+else
+{
+   IIBINEXE ntupgrdb : upgradedb.qsc ;
+   IINEEDLIBS ntupgrdb : DBUTILLIB COMPATLIB SHEMBEDLIB SHLIBQLIB CUFLIB ;
+
+}
+IILIBRARY DBUTILLIB : duvdata.qsc doview.qsc duvfiles.c ;
+
+

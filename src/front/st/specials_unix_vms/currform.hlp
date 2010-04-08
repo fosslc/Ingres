@@ -1,0 +1,22 @@
+(PROG2PRFX)build - Currently Installed Components
+
+This screen provides the following information about each component that
+is currently installed.
+
+	Component	The name of the (PROD1NAME) component, or 
+			a component option that has been installed.
+
+	Version		The release and modification level of the installed
+			component.
+
+	Size		The amount of disk space occupied on (PRODLOC)
+			by this component's system files.
+
+	Ready?		If 'Yes' is displayed, the component is ready for use.
+			If 'No', then you must run the Setup program before
+			this component is ready for use.
+
+
+For more information concerning the installation of components using (PROG2PRFX)build,
+please refer to the (PROD1NAME) Installation Guide.
+

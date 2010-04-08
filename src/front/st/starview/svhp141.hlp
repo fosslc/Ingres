@@ -1,0 +1,30 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+BROWSE NODE
+
+This command lists network virtual nodes registered in the current
+distributed database. The SELECT command selects the highlighted row
+in the Node Name list and displays the Browse LDB popup form. 
+The TOP/BOTTOM commands move the cursor to the top/bottom 
+of the Node Name list respectively.  The FIND command searches
+for a specified string within the Node Name list.  The HELP command 
+displays this screen, and the END command returns to the Distributed Database
+Contents form.
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	Select		Select the highlighted row in the Node Name 
+			list, and display the Browse LDB popup form.
+
+	Top		Move the cursor to the top of the Node Name list.
+
+	Bottom		Move the cursor to the bottom of the Node Name list.
+
+	Find		Search for a specified string of characters
+			within the Node Name list.
+
+	Help		Display this screen.
+
+	End		Exit to Distributed Database Contents form.
+

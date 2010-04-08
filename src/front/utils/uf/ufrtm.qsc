@@ -1,0 +1,136 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<uf.h>
+#include	<ft.h>
+#include	"eruf.h"
+# include	<lqgdata.h>
+
+/**
+** Name:    fertm.c -	Front-End Utility Restore Terminal Mode Routine.
+**
+** Description:
+**	Contains the routine used to restore terminal modes.
+**
+**	IIUFrtmRestoreTerminalMode()		restore terminal modes.
+**
+** History:
+**	Revision 6.0  87/06/15  joe
+**	Initial Version.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+/*{
+** Name:	IIUFrtmRestoreTerminalMode  - restore the terminals mode.
+**
+** Description:
+**	TO USE THIS ROUTINE YOU MUST INCLUDE uf.h.
+**	
+**	This routine is used to change the terminal's mode from FORMS
+**	to NORMAL and back again.  It is called by programs like ABF
+**	and MENU which run in forms mode, but sometimes call other subsystems
+**	that must run in non FORMS mode.  This routine can be called
+**	by a program that is not in forms mode.  In those cases, it
+**	is a noop.  This feature is useful for ABF where part of its
+**	library is called by the ABFIMAGE routine which runs non-forms.
+**
+**	Depending on the value of mode, the program's terminal mode will
+**	be changed.  If mode is:
+**
+**		IIUFNORMAL		Sets the terminal's mode to that
+**					of a normal program.
+**
+**		IIUFFORMS		Sets the terminal's mode to that of
+**					of a forms program.  This will clear
+**					the screen when making the change.
+**
+**		IIUFPROMPT		Sets the terminal's mode to that of
+**					a forms program.  However, before
+**					clearing the screen it prompts the
+**					user so that any message left on
+**					the screen by the previously executed
+**					program can be viewed by the user before
+**					being erased.
+**
+**		IIUFMORE		This is like IIUFPROMPT, but it should
+**					be used after a call to a program that
+**					the CMS people would like to display
+**					a prompt for.  Admittedly, this mode
+**					is a strange one, but is needed since in
+**					some cases, CMS will prompt before
+**					clearing whereas the non-CMS version
+**					won't.  To change either to work like
+**					the other would cause distress for
+**					the user.
+**
+**	NOTE that this routine does care how you change the mode of
+**	the terminal.  It is perfectly okay to set the mode to
+**	FORMS and then set it to FORMS again.
+**
+** Input:
+**	mode	{nat}  The mode to change the terminal to.  One of:
+**			IIUFNORMAL
+**			IIUFFORMS
+**			IIUFPROMPT
+**			IIUFMORE
+** History:
+**	15-jun-1987 (Joe)
+**		First Written.
+**	11/02/90 (dkh) - Fixed bug 34251.  Put in special calls
+**			 to make sure prompting for user input
+**			 does not cause spurious screen redraws.
+**	11/02/90 (dkh) - Replaced IILIBQgdata with IILQgdata().
+*/
+
+VOID
+IIUFrtmRestoreTerminalMode (mode)
+i4	mode;
+{
+##  char	ans[FE_PROMPTSIZE];
+
+
+    if (!IILQgdata()->form_on)
+	return;
+    switch (mode)
+    {
+      case IIUFNORMAL:
+	FTrestore(FT_NORMAL);
+	break;
+
+      case IIUFPROMPT:
+# ifdef FT3270
+	FTmore();
+# else
+	FTprtrestore();
+	FTfrminvis();
+##	prompt (ERget(F_UF0000), ans)
+	FTfrmvis();
+	FTrestore(FT_FORMS);
+# endif /* FT3270 */
+	break;
+
+      case IIUFFORMS:
+	FTrestore(FT_FORMS);
+	break;
+
+      case IIUFMORE:
+# ifdef	FT3270
+	FTmore();
+# else
+	FTrestore(FT_FORMS);
+# endif /* FT3270 */
+	break;
+    }
+}

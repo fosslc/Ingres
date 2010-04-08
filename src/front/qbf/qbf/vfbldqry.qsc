@@ -1,0 +1,83 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+/*
+**	VFBLDQRY.QSC - Routine to build query string from
+**		       QDEF information.
+**
+**	This module contains the routine vfmqbldquery().
+**	The routine is passed the information collected
+**	during the query definition phase of MQBF. From
+**	this information a query is built for MQBF's
+**	query execution phase.
+**
+**	written 7/26/83 (NML)
+**		7/16/85 (scl) Support wide logical terminals in CMS
+**
+**	History
+**		01/23/86 (garyb) Change ifdef CMS to FT3270 for ASCII FT
+**			support.
+**		07/14/86 (scl) Remove special support for left-right scrolling
+**			 in CMS (FTmxcol) under 5.0
+**		08/13/87 (danielt)
+**			changed FEmsg() call to IIUGerr() for error message.
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**		02/22/89  (tom) Eliminated useless assignments
+**		9-feb-1994 (rdrane)
+**			Use IIUGfnFeName() to derive the form name so that we
+**			can support tables whose names are delimited identifiers
+**			(b57666).
+**
+**	Copyright (c) 2004 Ingres Corporation
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	<er.h>
+# include	"erqf.h"
+
+FRAME *
+vfmqbldquery(qdef)
+MQQDEF		*qdef;
+{
+	i4		tblwidth;
+
+	tblwidth = 0;
+
+	if (tblfield)
+	{
+		if (qdef_type == 1)
+			IIUGfnFeName(qdef->mqcr.name, mq_tbl);
+		else
+			STcopy(ERx("detailtbl"), mq_tbl);
+		tblwidth = mqgetwidth(qdef);
+
+		if (tblwidth == -1)
+			return NULL;
+
+		if (tblwidth == 0)
+		{
+			IIUGerr(E_QF00BF_Table_field_width_is_,0,0);
+			return NULL;
+		}
+# ifdef DEBUG
+		if (mq_debug)
+			SIfprintf(mqoutf,ERx("BLDQUERY:Tablefield width=%d\n"),tblwidth);
+# endif
+
+	}
+	return (mq_makefrm(qdef, tblwidth));
+}

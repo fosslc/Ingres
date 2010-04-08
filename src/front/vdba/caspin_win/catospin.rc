@@ -1,0 +1,49 @@
+/****************************************************************************
+ * Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+ ****************************************************************************/
+
+/****************************************************************************
+ * CATOSPIN.RC
+ *
+ * Resource file for the CA-Spin Custom Control DLL.
+ ****************************************************************************/
+
+#ifdef WIN16
+#include <ver.h>
+#endif
+
+#include <windows.h>
+#include "spindll.h"
+#include "spindlg.h"
+#ifndef MAINWIN
+#include "gv.rc"
+#endif
+
+STRINGTABLE
+    BEGIN
+     IDS_FULLNAME,          "CA-Spin Button Control"
+     IDS_SHORTNAME,         "CA-Spin"
+     IDS_VERTICAL,          "Vertical"
+     IDS_HORIZONTAL,        "Horizontal"
+     IDS_SPS_VERTICAL,      "SPS_VERTICAL | "
+     IDS_SPS_HORIZONTAL,    "SPS_HORIZONTAL | "
+     IDS_SPS_TEXTHASRANGE,  "SPS_TEXTHASRANGE | "
+     IDS_SPS_NOPEGNOTIFY,   "SPS_NOPEGNOTIFY | "
+     IDS_SPS_INVERTCHGBTN,  "SPS_INVERTCHGBTN | "
+     IDS_SPS_WRAPMINMAX,    "SPS_WRAPMINMAX | "
+     IDS_SPS_HASSTRINGS     "SPS_HASSTRINGS | "
+     IDS_SPS_HASSORTEDSTRS  "SPS_HASSORTEDSTRS | "
+     IDS_RANGEMAXERR,       "Range maximum must be greater the minimum."
+     IDS_RANGEPOSERR,       "Specified position is out of the range."
+     IDS_INVALIDPARMS,      "Parameters must be entered separated by commas with no spaces!"
+
+     IDS_DLL_ERR,           "Error! - CATO3SPN.DLL"
+     IDS_REGCLASS_ERR       "DllMain: RegisterClass failed"
+     IDS_INITPROC_ERR       "DllMain: CRT_INIT failed on Process Attach"
+     IDS_INITHREAD_ERR      "DllMain: CRT_INIT failed on Thread Attach"
+     IDS_KILLPROC_ERR       "DllMain: CRT_INIT failed on Process Detach"
+     IDS_KILLTHREAD_ERR     "DllMain: CRT_INIT failed on Thread Detach"
+     IDS_STYLEDLG_ERR       "Spin Style DialogBox failed"
+    END
+
+rcinclude catospin.dlg

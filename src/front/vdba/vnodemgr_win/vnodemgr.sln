@@ -1,0 +1,52 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vnodemgr", "vnodemgr.vcproj", "{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		AIX_Release|Win32 = AIX_Release|Win32
+		DBCS Debug|Win32 = DBCS Debug|Win32
+		DBCS Release|Win32 = DBCS Release|Win32
+		Debug|Win32 = Debug|Win32
+		Debug64|Win32 = Debug64|Win32
+		EDBC Debug|Win32 = EDBC Debug|Win32
+		EDBC Release|Win32 = EDBC Release|Win32
+		HPUX_Debug|Win32 = HPUX_Debug|Win32
+		HPUX_Release|Win32 = HPUX_Release|Win32
+		Linux_Release|Win32 = Linux_Release|Win32
+		Release|Win32 = Release|Win32
+		Release64|Win32 = Release64|Win32
+		Solaris_Release|Win32 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.AIX_Release|Win32.ActiveCfg = AIX_Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.AIX_Release|Win32.Build.0 = AIX_Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.DBCS Debug|Win32.ActiveCfg = DBCS Debug|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.DBCS Debug|Win32.Build.0 = DBCS Debug|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.DBCS Release|Win32.ActiveCfg = DBCS Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.DBCS Release|Win32.Build.0 = DBCS Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Debug|Win32.Build.0 = Debug|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Debug64|Win32.ActiveCfg = Debug64|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Debug64|Win32.Build.0 = Debug64|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.EDBC Debug|Win32.ActiveCfg = EDBC Debug|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.EDBC Debug|Win32.Build.0 = EDBC Debug|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.EDBC Release|Win32.ActiveCfg = EDBC Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.EDBC Release|Win32.Build.0 = EDBC Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.HPUX_Debug|Win32.ActiveCfg = HPUX_Debug|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.HPUX_Debug|Win32.Build.0 = HPUX_Debug|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.HPUX_Release|Win32.ActiveCfg = HPUX_Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.HPUX_Release|Win32.Build.0 = HPUX_Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Linux_Release|Win32.ActiveCfg = Linux_Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Linux_Release|Win32.Build.0 = Linux_Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Release|Win32.ActiveCfg = Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Release|Win32.Build.0 = Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Release64|Win32.ActiveCfg = Release64|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Release64|Win32.Build.0 = Release64|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Solaris_Release|Win32.ActiveCfg = Solaris_Release|Win32
+		{B17B35DA-8D5C-4CD4-8360-1FABFDCE2CA9}.Solaris_Release|Win32.Build.0 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

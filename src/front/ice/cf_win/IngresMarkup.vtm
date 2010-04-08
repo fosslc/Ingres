@@ -1,0 +1,66 @@
+##
+## Name: IngresMarkup.vtm
+##
+## Description:
+##      File contains the extension tags required to integrate with ColdFusion Studio.
+##
+## History:
+##      12-Feb-2000 (fanra01)
+##          Created for chika01.
+##      02-Oct-2000 (fanra01)
+##          Bug 102782
+##          Corrected caption.
+##      02-Oct-2000 (fanra01)
+##          Bug 102783
+##          Changed SQL keyword MARKUP option to HTML.
+##      02-Oct-2000 (fanra01)
+##          Bug 102786
+##          Replace all macro quote characters with grave quote delimiter.
+##      03-Oct-2000 (fanra01)
+##          Bug 102784
+##          Remove duplicate summary help for extension and server functions.
+##      21-Oct-2000 (fanra01)
+##          Bug 102995
+##          Change USERID option to USER.
+##
+<!-- -BEGIN- INGRES ICE MACRO TAGS -->
+<CAT CAPTION='Ingres ICE Macro Tags' DESC='ICE'>
+  <CAT CAPTION="Declare" ICON="Images/Custom.bmp">
+	<E CAPTION='DECLARE' VALUE='<CF_IceDeclare' DESC='<B>&lt;!-- #ICE [REPEAT] DECLARE=`[level.]variable_name=value` --&gt;<br><br>Assigns a value to a named variable, enabling the value to be re-used.<b><P>...'>
+  </CAT>
+
+  <CAT CAPTION="Var" ICON="Images/Custom.bmp">
+	<E CAPTION='VAR' VALUE='<CF_IceVar' DESC='<B>&lt;!-- #ICE [REPEAT] VAR=`HTML text with variables` --&gt;<br><br>Replaces a variable within a string with its actual value.<b><P>...'>
+  </CAT>
+
+  <CAT CAPTION="Sql" ICON="Images/Custom.bmp">
+	<E CAPTION='SQL' VALUE='<CF_IceSql' DESC='<B>&lt;!-- #ICE [REPEAT] SQL=`query`<br>[TYPE=`TABLE|SELECTOR|PLAIN|UNFORMATTED`]<br>[DATABASE=`database_name`]<br>[TRANSACTION=`transaction_name`]<br>[CURSOR=`cursor_name`]<br>[ROWS=`number_of_rows`]<br>[USER=`user_name`]<br>[PASSWORD=`password`]<br>[LINKS=`{column_name, URI}[,…]`]<br>[HEADERS=`{column_name, text}[,…]`]<br>[ATTR=`attribute`]<br>[EXT=`extension`]<br>[NULLVAR=`text`]<br>[HTML=`HTML text with variables`]<br>--&gt;<br><br>Executes the SQL query provided and returns the result as specified.<b><P>...'>
+  </CAT>
+
+  <CAT CAPTION="Commit" ICON="Images/Custom.bmp">
+	<E CAPTION='COMMIT' VALUE='<CF_IceCommit' DESC='<B>&lt;!-- #ICE COMMIT=`transaction_name`--&gt;<br><br>Commits a previously started transaction.<b><P>...'>
+  </CAT>
+
+  <CAT CAPTION="Rollback" ICON="Images/Custom.bmp">
+	<E CAPTION='ROLLBACK' VALUE='<CF_IceRollback' DESC='<B>&lt;!-- #ICE ROLLBACK=`transaction_name`--&gt;<br><br>Rolls back a previously started transaction.<b><P>...'>
+  </CAT>
+  
+  <CAT CAPTION="Switch" ICON="Images/Custom.bmp">
+	<E CAPTION='SWITCH' VALUE='<CF_IceSwitch' DESC='<B>&lt;!-- #ICE [REPEAT]<br>SWITCH=`switch_expression`<br>CASE `constant1 `=`result1 `<br>CASE `constant2 `=`result2 `<br>…<br>CASE `constantn `=`resultn `<br><br>[DEFAULT=`default_result`]<br>--&gt;<br><br>Tests the value of an expression against a number of constant values and executes an associated expression based on the value that matches.<b><P>...'>
+  </CAT>
+
+  <CAT CAPTION="Function" ICON="Images/Custom.bmp">
+	<E CAPTION='Extension FUNCTION' VALUE='<CF_IceExtFunction' DESC='<B>For Extension Functions<br>&lt;!-- #ICE [REPEAT] FUNCTION=<br>`[library_name.]function_name?{variable_name=value}[&...]`<br>[HTML=`HTML text with variables`]<br>--&gt<br><br>Invokes the specified Ingres/ICE extension function.<b><P>...'>
+	<E CAPTION='Server FUNCTION' VALUE='<CF_IceSerFunction' DESC='<B>For Server Functions<br>&lt;!-- #ICE [REPEAT]<br>FUNCTION=`server_function_name?action=action&property]<br>[=value][{&property=value}]`<br>--&gt<br><br>Invokes the specified Ingres/ICE server function.<b><P>...'>
+  </CAT>
+
+  <CAT CAPTION="If" ICON="Images/Custom.bmp">
+	<E CAPTION='IF' VALUE='<CF_IceIf' DESC='<B>&lt;!-- #ICE [REPEAT]<br>IF `condition`<br>THEN=`...`<br>[ELSE=`...`]<br>--&gt;<br><br>Evaluates a conditional expression.<b><P>...'>
+  </CAT>
+
+  <CAT CAPTION="Include" ICON="Images/Custom.bmp">
+	<E CAPTION='INCLUDE' VALUE='<CF_IceInclude' DESC='<B>&lt;!-- #ICE [REPEAT] INCLUDE=`[business_unit_name<br>’[’]document_name[’]’]?{variable_name=value}[&...]`<br>[TYPE=`HTML|MULTI|REPORT|EXE`]<br>--&gt;<br><br>Includes an Ingres/ICE HTML or macro document document into the current document.<b><P>...'>
+  </CAT>
+
+</CAT>
+<!-- -END- INGRES ICE MACRO TAGS -->

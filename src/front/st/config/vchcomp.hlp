@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The vch_compression resource specifies whether variable-length data types
+  such as varchar, byte-varying, or text are compressed, when sent to the
+  client from the DBMS server.  This option can be set to either ON (default)
+  or OFF.

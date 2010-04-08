@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to end the editing session.  Would you like to save your
+changes before leaving or end without saving.  The table field lists
+your choices:
+
+        Yes             Save changes, then end
+        No              End without saving changes
+
+The menu commands are:
+
+	Menu Command    SYNOPSIS
+	------------    -----------
+	Select          Choose the option indicated by the current line of
+	                the table field.  Indicates whether or not to save
+	                your changes.
+	
+	Cancel          Stay in the editing session. Do not end.
+	
+	Help            Access the Ingres Help facility.

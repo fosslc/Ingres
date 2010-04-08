@@ -1,0 +1,16 @@
+#
+# Jamfile file for back!ascf!asct
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC back ascf asct ;
+
+IISUBSYS back ascf asct ;
+
+if $(BUILD_ICE)
+{
+IILIBRARY ASCFLIB : asctmo.c asct.c ;
+
+IILIBRARY IMPICELIBDATA : asctdata.c ;
+}

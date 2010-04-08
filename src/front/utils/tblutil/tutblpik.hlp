@@ -1,0 +1,27 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#--  tutblpik.hlp	Help on choosing a table name from a list.
+In this screen you should choose a table from the list of table names by
+using arrow keys to place the cursor on the desired table and then select
+menuitem "Select".
+ 
+If you wish to leave this screen without choosing a table name from the
+list, then select menuitem "Cancel".
+ 
+If you wish to get more information about one of tables in the list,
+select menuitem "Details", and if you wish to create a new table,
+select menuitem "Create". (The "Details" and "Create" menuitems do not
+appear when this screen is called from the Tables Utility Examine or
+Create-a-Table screen).
+ 
+The menu commands are:
+ 
+        MENU COMMAND    DESCRIPTION
+        ------------    -----------
+	Select		Select the current table name and return it to
+			the previous screen.
+	Cancel		Return to previous screen. Do not Select a table.
+ 
+	Details		Get detailed information about a table. (not always
+			present)
+	Create		Create a new table. (not always present)
+	Help		Display this help text.

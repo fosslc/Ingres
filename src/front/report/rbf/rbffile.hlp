@@ -1,0 +1,55 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Please specify the name of the file to contain the report output and if you
+would like to wait for the report to complete execution.  You must enter a 
+file name before executing the report from this popup.  
+
+You also have the choice to either wait for the report to complete execution 
+or not.  If you choose NOT to wait ('no'), your cursor will return promptly 
+after starting the report execution.  You may then continue other functions 
+within RBF while your report is running.  Since the report will be running in
+non-interactive mode, ALL VARIABLES, IF ANY, MUST BE GIVEN VALUES before 
+execution.  This is done on the Declared Variables Frame.  This frame will 
+come up automatically if there are any declared variables that have a prompt
+associated with them.  Before running any report in non-interactive mode, 
+change any undeclared variables to declared (.DECLARE) variables.  Add the 
+WITH PROMPT clause if necessary.  Refer to the Report-Writer Reference Manual 
+for more information on declared variables.
+
+Report Writer will prompt for a report log if you choose not to wait for
+report completion.  The report statistics and any errors encountered during
+execution will be sent to this file.
+
+The fields on the popup are:
+
+        FIELD           DESCRIPTION
+        -----           -----------
+        File Name	Name of the file to contain the report output.
+
+	Wait for        If you enter 'yes' for this field, the report will
+	report to       execute interactively.  All status messages and error 
+	complete	messages, if any, will be displayed on the screen.  
+			While testing and developing a report, it is advisable
+			to run the report interactively.
+
+			If you enter 'no', the report will run simultaneously 
+			while you continue to run in RBF.  If there are any 
+			declared variables in the report, the Declared 
+			Variables Frame will prompt you to enter all variable 
+			values before executing the report.  After the report 
+			has been executed, check the report log to see if the 
+			report executed successfully.
+
+	Report Log      ** Only displayed when not waiting for the report to
+			** complete execution.
+			File name to send the report statistics and report 
+			errors, if any, encountered during execution.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	OK 		Send the report to the specified file.
+
+        Cancel          Return to 'Select a Destination' popup.
+
+        Help            Print this message.

@@ -1,0 +1,14 @@
+The opf_inlist_thresh resource controls when IN lists are considered too large
+to benefit from individual key lookups.
+
+The default of 18000 means that up to 18000 key lookups will be arranged to
+select records pertaining to this IN clause. If set to zero, the threshold is
+disabled and equivalence keys are built for each element. If set to non-zero,
+and the threshold value is exceeded, then the record selection, in the absence
+or other qualifications, may drop to a full scan or range key if supported.
+
+With large numbers of IN list elements, the cost of individual keys can be
+prohibitive and might not aid performance after all. Where possible, we
+recommend that large IN lists be avoided and the list elements be stored in a
+table instead.
+

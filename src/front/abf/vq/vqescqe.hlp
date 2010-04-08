@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescqe.hlp                Query-End escape code examples.
+The Query-End escape executes after the query has completed and there is
+no more data to show the user; for example, when the user continues to 
+select "NEXT" until all the data has been displayed. This escape only occurs 
+in Update and Browse frames.
+
+In Update and Browse frames where the Query Qualification frame behavior
+is set to 'Enabled', the Query-End escape is followed by a 4GL
+CLEAR FIELD ALL statement. If you do NOT want the CLEAR FIELD ALL
+statement to execute, add the following to the frame's Form-Start escape:
+
+        IIclear2 = 'n';
+
+Example of Query-End escape code:
+
+    To check how many rows were retrieved from the database:
+
+        INQUIRE_INGRES (rows = ROWCOUNT);

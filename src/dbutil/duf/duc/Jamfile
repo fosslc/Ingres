@@ -1,0 +1,24 @@
+#
+# Jamfile file for dbutil!duf!duc
+#
+#       4-apr-2008  (bolke01) 120219
+#          MANIFEST was not in sync with the .lot files for
+#          CREATEDB
+
+SubDir ING_SRC dbutil duf duc ;
+
+IISUBSYS dbutil duf duc ;
+
+
+IIBINEXE createdb : ducreate.qsc ;
+
+if ! $(VMS)
+{
+    IINEEDLIBS createdb : DBUTILLIB SHEMBEDLIB SHCOMPATLIB SHFRAMELIB ;
+    IINEEDLIBSW createdb : SHCUFLIB SHADFLIB ;
+}
+else
+{
+    IINEEDLIBS createdb : DBUTILLIB LIBQLIB LIBQGCALIB GCFLIB CUFLIB UGLIB AFELIB ADFLIB COMPATLIB ;
+}
+IILIBRARY DBUTILLIB : ducommon.qsc ducdata.c ;

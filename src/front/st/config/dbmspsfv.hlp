@@ -1,0 +1,5 @@
+
+  When set to ON, the psf_vch_prec resource causes PSF to give the varchar
+  datatype precedence over the char datatype.
+ 
+  The default value for psf_vch_prec is OFF.

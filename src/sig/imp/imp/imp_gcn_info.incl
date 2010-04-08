@@ -1,0 +1,62 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: imp_gcn_info.incl
+**
+## History:
+##      06-Apr-2004 (srisu02)
+##          Sir 108159
+##          Integrated changes made by flomi02
+*/
+/* Description of table imp_gcn_info from database imadb */
+  EXEC SQL DECLARE imp_gcn_info TABLE
+	(name_server	varchar(64) not null,
+	 default_class	varchar(64) not null,
+	 local_vnode	varchar(64) not null,
+	 remote_vnode	varchar(64) not null,
+	 cache_modified	integer not null,
+	 bedcheck_interval	integer not null,
+	 compress_point	integer not null,
+	 expire_interval	integer not null,
+	 hostname	varchar(12) not null,
+	 installation_id	varchar(2) not null,
+	 remote_mechanism	varchar(12) not null,
+	 ticket_cache_size	integer not null,
+	 ticket_expire	integer not null,
+	 ticket_lcl_cache_miss	integer not null,
+	 ticket_lcl_created	integer not null,
+	 ticket_lcl_expired	integer not null,
+	 ticket_lcl_used	integer not null,
+	 ticket_rmt_cache_miss	integer not null,
+	 ticket_rmt_created	integer not null,
+	 ticket_rmt_expired	integer not null,
+	 ticket_rmt_used	integer not null,
+	 timeout	integer not null,
+	 trace_level	integer not null);
+
+  struct gcninfo_ {
+	char	name_server[65];
+	char	default_class[65];
+	char	local_vnode[65];
+	char	remote_vnode[65];
+	long	cache_modified;
+	long	bedcheck_interval;
+	long	compress_point;
+	long	expire_interval;
+	char	hostname[13];
+	char	installation_id[3];
+	char	remote_mechanism[13];
+	long	ticket_cache_size;
+	long	ticket_expire;
+	long	ticket_lcl_cache_miss;
+	long	ticket_lcl_created;
+	long	ticket_lcl_expired;
+	long	ticket_lcl_used;
+	long	ticket_rmt_cache_miss;
+	long	ticket_rmt_created;
+	long	ticket_rmt_expired;
+	long	ticket_rmt_used;
+	long	timeout;
+	long	trace_level;
+  } gcninfo;

@@ -1,0 +1,66 @@
+/*
+	Test Name: zaa11.sep
+	Time: 20-MAR-1992 12:04:18
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa10.sep
+	Purpose	: Test SEP functionality
+	Input Files  : none
+	Output Files : none
+	Database     : Septools, created by zaa01.sep.
+	Tables       :
+	Synopsis     :	Test Labelled Canons.
+
+	History: 20-MAR-1992	(DonJ)	Created
+           6-Apr-1992	(DonJ)
+		Added UNIX canon for SEP V3.2b.
+          30-Jan-1996	(somsa01)
+		Added int.wnt platform.
+*/
+.if !SEPPARAMDB 
+? setenv SEPPARAMDB septools 
+<<
+environment variable was defined
+>>
+.endif 
+? sql SEPPARAMDB 
+<< if UNIX
+  What ???
+>>
+<<
+  Yo !
+>>
+<< if VMS
+ whaaaaaaaa ????
+>>
+<< if vax.vms
+INGRES VAX Version 6.4/02 (vax.vms/96) login 19-MAR-1992 21:42:09
+continue
+* 
+>>
+<< if su4.u42
+INGRES SunOS Version 6.4/02 (su4.u42/96) login Mon Apr  6 20:25:05 1992
+continue
+* 
+>>
+<< IF (int.wnt) 
+OpenIngres Microsoft Windows NT Version OpING 1.2/00 (int.wnt/02) login
+Tue Jan 30 09:56:27 1996
+continue
+* 
+>>
+* \q 
+<<
+INGRES Version 6.4/02 (vax.vms/96) logout
+19-MAR-1992 21:42:15
+>>
+<< IF (int.wnt) 
+OpenIngres Version OpING 1.2/00 (int.wnt/02) logout
+Tue Jan 30 09:56:48 1996
+>>
+
+
+Ending at: Tue Jan 30 09:57:04 1996

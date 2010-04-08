@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The cpu_statistics resource specifies whether all sessions will maintain
+  accurate CPU time data.  This resource is only relevant for internal-
+  threads servers;  servers running OS threads rely on the OS to maintain
+  session CPU time data.
+
+  Maintaining accurate CPU times for internal-thread sessions causes a
+  certain amount of overhead at each context switch.  Therefore, the default
+  is OFF.  If a session does something that requests CPU time, such as a
+  DBMSINFO('_cpu_ms') call, that session will start tracking CPU time;
+  but CPU time up to that point will not be accurate unless cpu_statistics
+  has been set ON.

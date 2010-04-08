@@ -1,0 +1,11 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Statement&previous=database&next=transaction.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` == ``)
+THEN=`You have not declared the database you want to run your query against. 
+			Click <A HREF="/ice-bin/oiice.:http_api_ext/iceTutorial/database.html">here</A> to set it.`
+ELSE=`<!-- #ICE DECLARE=``session.dbname=:dbname`` -->
+			Type the SQL query you want to execute on :dbname.<BR>
+			<TEXTAREA NAME="dbquery" COLS=70 ROWS=20>:dbquery</TEXTAREA>`
+-->
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+    

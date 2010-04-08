@@ -1,0 +1,255 @@
+#
+#   Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+#
+#   Project : graphical tool for ingres database administrator
+#
+#   Source : makefile
+#
+#        builds the application
+#
+#   Author : Emmanuel Blattes
+#
+#   History:
+#       02-Apr-96 (fanra01)
+#           Wrapped make environment with OpenIngres style makefile.
+
+!include ..\..\..\tools\port\make\make.ini
+
+INCLUDES    = \
+            ..\hdr\main.h       \
+            ..\hdr\dom.h        \
+            ..\hdr\sqlact.h     \
+            ..\hdr\resource.h   \
+            ..\hdr\winutils.h   \
+            tree.h              \
+            domdisp.h           \
+            ..\hdr\dbafile.h    \
+            ..\hdr\property.h   \
+            props.h
+
+INCLUDES2   = \
+            ..\hdr\dba.h        \
+            error.h             \
+            domdisp.h           \
+            ..\hdr\domdata.h    \
+            domdloca.h          \
+            ..\hdr\esltools.h   \
+            ..\hdr\tools.h      \
+            ..\hdr\dbaginfo.h   \
+            ..\hdr\dbaset.h     \
+            dbaparse.h          \
+            ..\hdr\rmcmd.h
+
+INCLUDES3   = \
+            sqltls.h            \
+            ..\hdr\dbatime.h    \
+            ..\hdr\settings.h
+
+all: vdba.w16 vdba.exe
+
+CFLAGS = \
+        $(DLL_OPTS)  \
+        $(CPUFLAGS)  \
+	$(OPTIM)     \
+	$(CDEBUG)    \
+        $(ALIGN)     \
+        $(MEM_MODEL) \
+        $(DATASEGLIMIT)\
+	$(MISCFLAGS) \
+	$(LISTFLAGS) \
+	$(COMPHDRS)  \
+	$(ERR_LVL)   \
+        $(PREPROCESS)\
+        $(PRODUCTION)\
+        $(PRODUCT)   \
+	-DDESKTOP    \
+	-DDEVL       \
+	-DWIN16
+	-D"$(DBCS)"  \
+	-D"$(RC_SOURCE)" \
+
+LIBDIR    = ..\..\lib16
+
+
+VDBA_LIB1 = \
+            $(LIBDIR)\lbtree.lib $(LIBDIR)\ingract.lib $(LIBDIR)\ingrswin.lib \
+            $(LIBDIR)\dbadlg.lib
+VDBA_LIB2 = \
+            $(LIBDIR)\ctl3d.lib \
+            $(LIBDIR)\catolist.lib $(LIBDIR)\catospin.lib \
+            $(LIBDIR)\catocntr.lib
+VDBA_LIB3 = \
+            $(LIBDIR)\vnode.lib $(LIBDIR)\catobal.lib $(LIBDIR)\catowizd.lib \
+            $(LIBDIR)\catostbx.lib
+
+
+LIBRARIES = $(VDBA_LIB1)
+
+TOOL_LIBS = \
+            copyutil.lib dl.lib fedsw.lib framew.lib frontcl.lib  + \
+            iiw3adf.lib iiw3cl.lib iiw3gcc.lib iiw3ing.lib iiw3libq.lib + \
+            iiw3prn.lib interpw.lib ooutil.lib sqlca.lib utils.lib
+
+SYST_LIBS = \
+            oldnames.lib llibcew.lib libw.lib commdlg.lib
+
+CMP_OBJS1 = \
+            main.obj \
+            dom.obj  \
+            domsplit.obj  \
+            dom2.obj  \
+            dom3.obj  \
+            sqlact.obj  \
+            sqlact2.obj  \
+            winutils.obj  \
+            tree.obj  \
+            tree2.obj
+CMP_OBJS2 = \
+            domdisp.obj  \
+            domdgetd.obj  \
+            domdbkrf.obj  \
+            domdmisc.obj  \
+            domdtls.obj  \
+            domdupdt.obj  \
+            domdfile.obj  \
+            tools.obj \
+            esltools.obj \
+            meter.obj
+CMP_OBJS3 = \
+            dbaparse.obj \
+            dbatls.obj \
+            dbagdet.obj \
+            $(ING_SRC)\front\vdba\winmain\dbaginfo.obj \
+            dbasqlpr.obj  \
+            $(ING_SRC)\front\vdba\winmain\dbamvcfg.obj  \
+            $(ING_SRC)\front\vdba\winmain\sqltls.obj  \
+            statbar.obj \
+            print.obj \
+            property.obj
+CMP_OBJS4 = \
+            dbatime.obj  \
+            settings.obj  \
+            dbaupd.obj \
+            dbamisc.obj \
+            $(ING_SRC)\front\vdba\winmain\rmcmdcli.obj \
+            cddsload.obj \
+            stmtwiz1.obj  \
+            stmtwiz2.obj  \
+!if "$(DBA_DATACOMPRESS)" == "1"
+            compress.obj
+!endif
+
+COMPOBJS = $(CMP_OBJS1) $(CMP_OBJS2) $(CMP_OBJS3) $(CMP_OBJS4)
+
+DEFFILE   = main.def
+
+RESRC_OBJ = \
+            $(DEFFILE) \
+            main.res
+
+main.res:       main.rc dbadlg1.rc ..\hdr\dlgres.h  $(INCLUDES) \
+                $(INCLUDES2) *.ico *.bmp
+	$(RC) $(RC_FLAGS) $(RCDEFINES) -r $*.rc
+
+dbamisc.obj:    dbamisc.c  $(INCLUDES)
+
+main.obj:       main.c  $(INCLUDES) ..\hdr\treelb.e
+
+dom.obj:        dom.c  print.e $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+domsplit.obj:   domsplit.c  print.e $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+dom2.obj:       dom2.c  $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+dom3.obj:       dom3.c  $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+sqlact.obj:     sqlact.c  $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+sqlact2.obj:    sqlact2.c  $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+winutils.obj:   winutils.c  $(INCLUDES)
+
+tree.obj:       tree.c  $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+tree2.obj:      tree2.c  $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+domdisp.obj:    domdisp.c  $(INCLUDES) ..\hdr\treelb.e
+
+domdgetd.obj:   domdgetd.c  $(INCLUDES2)
+
+domdbkrf.obj:   domdbkrf.c  $(INCLUDES2)
+
+domdmisc.obj:   domdmisc.c  $(INCLUDES2)
+
+cddsload.obj:   cddsload.c  $(INCLUDES2) cddsload.h
+
+domdtls.obj:    domdtls.c  $(INCLUDES2)
+
+domdupdt.obj:   domdupdt.c  $(INCLUDES2)
+
+domdfile.obj:   domdfile.c  $(INCLUDES2)
+
+tools.obj:      tools.c  $(INCLUDES2)
+
+meter.obj:      meter.c  $(INCLUDES2)
+
+esltools.obj:   esltools.c  $(INCLUDES2)
+
+dbatime.obj:    dbatime.c  $(INCLUDES) $(INCLUDES3)
+
+settings.obj:   settings.c  $(INCLUDES) $(INCLUDES3)
+
+dbaparse.obj:   dbaparse.c  $(INCLUDES2)
+
+dbaupd.obj:     dbaupd.c  $(INCLUDES2)
+
+dbatls.obj:     dbatls.c  $(INCLUDES2)
+
+dbagdet.obj:    dbagdet.c  $(INCLUDES2)
+
+dbasqlpr.obj:   dbasqlpr.c  $(INCLUDES2)
+
+statbar.obj:    statbar.c statbar.h
+
+print.obj:      print.c print.e $(INCLUDES) $(INCLUDES2)
+
+property.obj:   property.c $(INCLUDES)
+
+!if "$(DBA_DATACOMPRESS)" == "1"
+compress.obj : compress.c $(INCLUDES) compress.h
+!endif
+
+$(ING_SRC)\front\vdba\winmain\dbaginfo.obj : $(ING_SRC)\front\vdba\winmain\dbaginfo.c  $(INCLUDES2)
+  $(EMBEDCCOMP)
+
+$(ING_SRC)\front\vdba\winmain\sqltls.obj : $(ING_SRC)\front\vdba\winmain\sqltls.c  $(INCLUDES2)
+  $(EMBEDCCOMP)
+
+$(ING_SRC)\front\vdba\winmain\dbamvcfg.obj : $(ING_SRC)\front\vdba\winmain\dbamvcfg.c  $(INCLUDES2)
+  $(EMBEDCCOMP)
+
+$(ING_SRC)\front\vdba\winmain\rmcmdcli.obj : $(ING_SRC)\front\vdba\winmain\rmcmdcli.c  $(INCLUDES2)
+  $(EMBEDCCOMP)
+
+stmtwiz1.obj  : stmtwiz1.c  $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+stmtwiz2.obj  : stmtwiz2.c  $(INCLUDES) $(INCLUDES2) ..\hdr\treelb.e
+
+
+vdba.exe: $(COMPOBJS) $(LIBRARIES) $(RESRC_OBJ)
+    echo $(CMP_OBJS1) + > $*.lnk
+    echo $(CMP_OBJS2) + >>$*.lnk
+    echo $(CMP_OBJS3) + >>$*.lnk
+    echo $(CMP_OBJS4)   >>$*.lnk
+    echo $@             >>$*.lnk
+    echo $*.map         >>$*.lnk
+    echo $(TOOL_LIBS) + >>$*.lnk
+    echo $(SYST_LIBS) + >>$*.lnk
+    echo $(VDBA_LIB1) + >>$*.lnk
+    echo $(VDBA_LIB2) + >>$*.lnk
+    echo $(VDBA_LIB3)   >>$*.lnk
+    echo $(DEFFILE);    >>$*.lnk
+    $(LINK) @$*.lnk
+    rc -k -t main.res $@
+    $(TRANSFER) $@ $(TARGET_VDBA)
+    del $*.lnk

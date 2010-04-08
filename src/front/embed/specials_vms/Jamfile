@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!embed!specials_vms
+#
+
+SubDir ING_SRC front embed specials_vms ;
+
+IISUBSYS front embed specials_vms ;
+
+IISHLIBRARY $(SHQLIB) ;
+IINEEDLIBS $(SHQLIB) : LIBQ_LIBS SHCOMPATLIB ;

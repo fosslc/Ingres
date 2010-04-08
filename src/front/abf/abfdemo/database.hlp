@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+There are four options which can be chosen from the selection field.
+
+a  	Displays a text file which allows you to visualize the structure of
+	the data in the four tables in the database.
+
+b - d 	Runs QBF in "retrieve" mode on the named tables to allow you to see
+	the data in the table.
+
+
+Menu Commands:
+
+	Task_Assignments  - invokes QBF with a JoinDef between the Emp
+			    and Tasks tables.
+
+	4GL		  - allows you to inspect the 4GL code for the
+			    Database Frame.
+
+	End    		  - returns you to the preceding frame.
+
+	Quit   		  - exits the Project Management application.

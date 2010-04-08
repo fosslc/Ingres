@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+
+<extension
+         point="org.eclipse.ui.views">
+      <view
+            class="com.ingres.demoapp.ui.views.ProfileResultView"
+            icon="icons/PlaneSquareSymbol16.ico"
+            id="com.ingres.demoapp.ui.views.ProfileResultView"
+            name="Profile Result"/>
+      <view
+            class="com.ingres.demoapp.ui.views.RoutesView"
+            icon="icons/PlaneSquareSymbol16.ico"
+            id="com.ingres.demoapp.ui.views.RoutesView"
+            name="Found Routes"/>
+   </extension>
+
+   <extension
+         id="application"
+         point="org.eclipse.core.runtime.applications">
+      <application>
+         <run
+               class="com.ingres.demoapp.Application">
+         </run>
+      </application>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectives">
+      <perspective
+            name="Routes Perspective"
+            class="com.ingres.demoapp.ui.perspectives.RoutesPerspective"
+            id="com.ingres.demoapp.ui.perspectives.RoutesPerspective">
+      </perspective>
+            <perspective
+            name="Profile Perspective"
+            class="com.ingres.demoapp.ui.perspectives.ProfilePerspective"
+            id="com.ingres.demoapp.ui.perspectives.ProfilePerspective">
+      </perspective>
+      <perspective
+            name="Database Configuration Perspective"
+            class="com.ingres.demoapp.ui.perspectives.DatabaseConfigurationPerspective"
+            id="com.ingres.demoapp.ui.perspectives.DatabaseConfigurationPerspective">
+      </perspective>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors">
+      <editor
+            class="com.ingres.demoapp.ui.editors.DatabaseConfigurationEditor"
+            default="false"
+            icon="icons/PlaneSquareSymbol16.ico"
+            id="com.ingres.demoapp.ui.perspectives.editors.DatabaseConfigurationEditor"
+            name="Database Configuration Editor"/>
+      <editor
+            class="com.ingres.demoapp.ui.editors.UserProfileModifyEditor"
+            default="false"
+            icon="icons/PlaneSquareSymbol16.ico"
+            id="com.ingres.demoapp.ui.perspectives.editors.UserProfileModifyEditor"
+            name="About Me"/>
+      <editor
+            class="com.ingres.demoapp.ui.editors.UserProfileNewEditor"
+            default="false"
+            icon="icons/PlaneSquareSymbol16.ico"
+            id="com.ingres.demoapp.ui.perspectives.editors.UserProfileNewEditor"
+            name="Routes"/>
+      <editor
+            class="com.ingres.demoapp.ui.editors.RoutesCriteriaEditor"
+            default="false"
+            icon="icons/PlaneSquareSymbol16.ico"
+            id="com.ingres.demoapp.ui.editors.RoutesEditor"
+            name="Routes"/>
+   </extension>
+      <extension
+         id="product"
+         point="org.eclipse.core.runtime.products">
+      <product
+            application="com.ingres.demoapp.application"
+            name="Ingres Frequent Flyer">
+         <property
+               name="aboutImage"
+               value="images/logo.gif"/>
+         <property
+               name="aboutText"
+               value="IngresDemoApp&#x0A;Version 1.0.0&#x0A;Copyright © 2007&#x0A;Ingres Corporation&#x0A;&#x0A;Ingres Frequent Flyer Demonstration Application"/>
+         <property
+               name="windowImages"
+               value="icons/PlaneSquareSymbol16.gif,icons/PlaneSquareSymbol32.gif,icons/PlaneSquareSymbol48.gif,icons/PlaneSquareSymbol64.gif,icons/PlaneSquareSymbol128.gif"/>
+      </product>
+   </extension>
+   
+      <extension
+         point="org.eclipse.ui.commands">
+      <category
+            name="DemoApp"
+            id="com.ingres.demoapp.category">
+      </category>
+      <command
+            name="Load Configuration"
+            description="Loads a database configuration from xml"
+            categoryId="com.ingres.demoapp.category"
+            id="menu.configuration.load">
+      </command>
+      <command
+            name="Save Configuration"
+            description="Saves the configuration"
+            categoryId="com.ingres.demoapp.category"
+            id="menu.configuration.save">
+      </command>
+      <command
+            name="Save Configuration As"
+            description="Saves the configuration as"
+            categoryId="com.ingres.demoapp.category"
+            id="menu.configuration.saveas">
+      </command>
+      <command
+            name="Open Routes"
+            description="Opens the Routes perspective"
+            categoryId="com.ingres.demoapp.category"
+            id="menu.perspective.open.routes">
+      </command>
+      <command
+            name="Open Profile"
+            description="Opens the Profile perspective"
+            categoryId="com.ingres.demoapp.category"
+            id="menu.perspective.open.profile">
+      </command>
+      <command
+            name="Open Configuration"
+            description="Opens the Database Configuration perspective"
+            categoryId="com.ingres.demoapp.category"
+            id="menu.perspective.open.configuration">
+      </command>
+      
+      <command
+            name="Open Routes"
+            description="Opens the Routes perspective"
+            categoryId="com.ingres.demoapp.category"
+            id="toolbar.perspective.open.routes">
+      </command>
+            <command
+            name="Open Profile"
+            description="Opens the Profile perspective"
+            categoryId="com.ingres.demoapp.category"
+            id="toolbar.perspective.open.profile">
+      </command>
+            <command
+            name="Open Configuration"
+            description="Opens the Database Configuration perspective"
+            categoryId="com.ingres.demoapp.category"
+            id="toolbar.perspective.open.configuration">
+      </command>
+      
+   </extension>
+   
+
+</plugin>

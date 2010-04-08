@@ -1,0 +1,194 @@
+
+/*
+**	Report: htmlrbf
+**
+**		Last Modified: 1998_10_09 02:01:50 gmt  
+**		Level: 1
+*/
+
+.NAME	htmlrbf
+.SHORTREMARK	HTML tags in RBF
+.LONGREMARK
+Example of a report with HTML tags added in RBF
+.ENDREMARK
+.DECLARE
+	ii_rbf_date_fmt = varchar(255) with value 'd''03-feb-1901''',
+	ii_rbf_time_fmt = varchar(255) with value 'd''16:05:06''',
+	ii_rbf_pageno_fmt = varchar(255) with value '''\-zzzn \-'''
+.QUERY
+	SELECT  *
+	FROM	plays RBF
+		/* WIDTH  90
+		*  DO NOT MODIFY.  DOING SO MAY CAUSE REPORT TO BE UNUSABLE.
+		*/
+.SORT	title : a
+
+.HEADER	report
+	.FORMAT title(cf0.35)
+	.POSITION title(0,35)
+	.FORMAT playwright(c20)
+	.POSITION playwright(38,20)
+	.FORMAT acts(f13)
+	.POSITION acts(61,13)
+	.FORMAT type(c10)
+	.POSITION type(77,10)
+	.RM 90
+	.LEFT 
+	.PRINT current_time($ii_rbf_date_fmt)
+	.RIGHT 
+	.PRINT current_time($ii_rbf_time_fmt)
+	.NEWLINE 1
+	.TFORMAT title(cf0.35)
+	.NEED 4
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '<H3>ICE Tutorial - Example of publishing an existing report</H3>'
+		.NEWLINE 
+	.END BLOCK
+	.NEWLINE 1
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '<H3>Report on Table: plays</H3>'
+		.NEWLINE 
+	.END BLOCK
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '<HR>'
+		.NEWLINE 
+	.END BLOCK
+	.NEED 3
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '<STRONG>'
+		.NEWLINE 
+	.END BLOCK
+	.BEGIN BLOCK
+		.WITHIN title
+			.TOP 
+			.LINESTART 
+			.PRINT 'Title'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN playwright
+			.TOP 
+			.LINESTART 
+			.PRINT 'Playwright'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN acts
+			.TOP 
+			.LINESTART 
+			.TAB +9
+			.PRINT 'Acts'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN type
+			.TOP 
+			.LINESTART 
+			.PRINT 'Type'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+	.END BLOCK
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '</STRONG>'
+		.NEWLINE 
+	.END BLOCK
+
+.HEADER	page
+	.LEFT 
+	.PRINT current_time($ii_rbf_date_fmt)
+	.CENTER 
+	.PRINT 'Report: htmlrbf'
+	.RIGHT 
+	.PRINT current_time($ii_rbf_time_fmt)
+	.NEWLINE 1
+	.TFORMAT title(cf0.35)
+	.NEED 3
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '<STRONG>'
+		.NEWLINE 
+	.END BLOCK
+	.BEGIN BLOCK
+		.WITHIN title
+			.TOP 
+			.LINESTART 
+			.PRINT 'Title'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN playwright
+			.TOP 
+			.LINESTART 
+			.PRINT 'Playwright'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN acts
+			.TOP 
+			.LINESTART 
+			.TAB +9
+			.PRINT 'Acts'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+		.WITHIN type
+			.TOP 
+			.LINESTART 
+			.PRINT 'Type'
+			.NEWLINE 
+			.TOP 
+		.END WITHIN
+	.END BLOCK
+	.BEGIN BLOCK
+		.TAB 0
+		.PRINT '</STRONG>'
+		.NEWLINE 
+	.END BLOCK
+
+.FOOTER	page
+	.NEWLINE 1
+	.CENTER 
+	.PRINT page_number($ii_rbf_pageno_fmt)
+	.NEWLINE 1
+
+.HEADER	title
+	.TFORMAT title(cf0.35)
+
+.DETAIL
+	.NEED 4
+	.NEWLINE 1
+	.BEGIN BLOCK
+		.WITHIN title
+			.TOP 
+			.LINESTART 
+			.PRINT title(b35)
+			.NEWLINE 
+		.END WITHIN
+		.WITHIN playwright
+			.TOP 
+			.LINESTART 
+			.PRINT playwright
+			.NEWLINE 
+		.END WITHIN
+		.WITHIN acts
+			.TOP 
+			.LINESTART 
+			.PRINT acts
+			.NEWLINE 
+		.END WITHIN
+		.WITHIN type
+			.TOP 
+			.LINESTART 
+			.PRINT type
+			.NEWLINE 
+		.END WITHIN
+	.END BLOCK
+	.NEWLINE 1
+
+

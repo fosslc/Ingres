@@ -1,0 +1,414 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="EmptyRouteSearch" xml:space="preserve">
+    <value>No routes found. Try again.</value>
+  </data>
+  <data name="DepartAirportColumn" xml:space="preserve">
+    <value>Depart From</value>
+  </data>
+  <data name="ConnectInstanceHelp" xml:space="preserve">
+    <value>./Help/1664.html</value>
+  </data>
+  <data name="ProfileWelcome" xml:space="preserve">
+    <value>Welcome {0}</value>
+  </data>
+  <data name="EmptyResultsCaption" xml:space="preserve">
+    <value>No results found</value>
+  </data>
+  <data name="AnyDay" xml:space="preserve">
+    <value>_</value>
+  </data>
+  <data name="EmptyDatabase" xml:space="preserve">
+    <value>Database name is a required entry</value>
+  </data>
+  <data name="AirportNameCol1" xml:space="preserve">
+    <value>result_column0</value>
+  </data>
+  <data name="ProfileChangeButtonHelp" xml:space="preserve">
+    <value>./Help/1682.html</value>
+  </data>
+  <data name="EmptyHost" xml:space="preserve">
+    <value>Host name is a required entry</value>
+  </data>
+  <data name="ConnectHostHelp" xml:space="preserve">
+    <value>./Help/1664.html</value>
+  </data>
+  <data name="EmptyFirstName" xml:space="preserve">
+    <value>First name is a required entry</value>
+  </data>
+  <data name="EmptyRouteFlightDay" xml:space="preserve">
+    <value>A selection of at least one day is required</value>
+  </data>
+  <data name="ProfileRegionComboBox" xml:space="preserve">
+    <value>./Help/1568.html</value>
+  </data>
+  <data name="IATAColumn" xml:space="preserve">
+    <value>IATA Code</value>
+  </data>
+  <data name="ProfileRemoveButtonHelp" xml:space="preserve">
+    <value>./Help/1683.html</value>
+  </data>
+  <data name="EmptyProfileAirport" xml:space="preserve">
+    <value>Home airport missing</value>
+  </data>
+  <data name="DepartTimeColumn" xml:space="preserve">
+    <value>Depature Time</value>
+  </data>
+  <data name="RouteQuery" xml:space="preserve">
+    <value>SELECT route.rt_airline, airline.al_iatacode, airline.al_name, route.rt_flight_num, route.rt_depart_from, route.rt_arrive_to, route.rt_depart_at, route.rt_arrive_at, route.rt_arrive_offset, route.rt_flight_day FROM route, airline WHERE ((rt_depart_from = ? AND route.rt_arrive_to = ?){0}) AND route.rt_flight_day LIKE ?  AND route.rt_airline = airline.al_icaocode ORDER BY route.rt_airline, route.rt_depart_from, route.rt_flight_num</value>
+  </data>
+  <data name="DepartRegionComboBox" xml:space="preserve">
+    <value>./Help/1568.html</value>
+  </data>
+  <data name="EmptyRouteDepartCountry" xml:space="preserve">
+    <value>Country of departure is a required entry</value>
+  </data>
+  <data name="ProfileUpdateQuery" xml:space="preserve">
+    <value>UPDATE user_profile SET up_last = ?, up_first = ?, up_email = ?, up_airport = ? {0} WHERE up_email = ?</value>
+  </data>
+  <data name="HelpContents" xml:space="preserve">
+    <value>./Help/index.htm</value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="ConnectButton" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\ConnectButton.bmp;System.Drawing.Bitmap, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ProfileCountryComboBox" xml:space="preserve">
+    <value>./Help/1579.html</value>
+  </data>
+  <data name="EmptyInstance" xml:space="preserve">
+    <value>Ingres Instance Identifier is a required entry</value>
+  </data>
+  <data name="EmptyRouteArriveRegion" xml:space="preserve">
+    <value>Region of arrival is a required entry</value>
+  </data>
+  <data name="ExitButton" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\ExitButton.bmp;System.Drawing.Bitmap, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ProfileButton" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\ProfileButton.bmp;System.Drawing.Bitmap, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="AirportNameCol2" xml:space="preserve">
+    <value>result_column2</value>
+  </data>
+  <data name="RouteDeleteCaption" xml:space="preserve">
+    <value>Remove Route</value>
+  </data>
+  <data name="DepartAirportComboBox" xml:space="preserve">
+    <value>./Help/1569.html</value>
+  </data>
+  <data name="ImageAttribute" xml:space="preserve">
+    <value>, up_image = ?</value>
+  </data>
+  <data name="ProfileBlobPictureBox" xml:space="preserve">
+    <value>./Help/1680.html</value>
+  </data>
+  <data name="ConnectDefaultHelp" xml:space="preserve">
+    <value>./Help/1664.html</value>
+  </data>
+  <data name="ArrivingAirportComboBox" xml:space="preserve">
+    <value>./Help/1569.html</value>
+  </data>
+  <data name="AppConfig" xml:space="preserve">
+    <value>AppConfigDataSet.xml</value>
+  </data>
+  <data name="EmptyAirport" xml:space="preserve">
+    <value>Unable to locate an airport in this country. Select another country.</value>
+  </data>
+  <data name="RouteAirportNameHelp" xml:space="preserve">
+    <value>./Help/1620.html</value>
+  </data>
+  <data name="ConnectChangeHelp" xml:space="preserve">
+    <value>./Help/1665.html</value>
+  </data>
+  <data name="FlightDaysColumn" xml:space="preserve">
+    <value>On Days</value>
+  </data>
+  <data name="RouteResultHelp" xml:space="preserve">
+    <value>./Help/1583.html</value>
+  </data>
+  <data name="RouteGoButton" xml:space="preserve">
+    <value>./Help/1572.html</value>
+  </data>
+  <data name="SaveAsConfig" xml:space="preserve">
+    <value>Save Configuration File As</value>
+  </data>
+  <data name="DepartCountryComboBox" xml:space="preserve">
+    <value>./Help/1579.html</value>
+  </data>
+  <data name="FlightNumberColumn" xml:space="preserve">
+    <value>Flight Number</value>
+  </data>
+  <data name="RouteQueryRoundTripWhereClause" xml:space="preserve">
+    <value> OR (route.rt_depart_from = ? AND route.rt_arrive_to = ?) </value>
+  </data>
+  <data name="EmptyRouteArriveAirport" xml:space="preserve">
+    <value>Arriving airport is a required entry</value>
+  </data>
+  <data name="ConnectHelp" xml:space="preserve">
+    <value>./Help/1664.html</value>
+  </data>
+  <data name="EmptyEmail" xml:space="preserve">
+    <value>Email address is a required entry</value>
+  </data>
+  <data name="EmptyProfileList" xml:space="preserve">
+    <value>Unable to locate a profile.  Either there are no profiles or the connection to the target data source may have failed.</value>
+  </data>
+  <data name="ConnectStringCredentials" xml:space="preserve">
+    <value>UserID={0};Password={1};</value>
+  </data>
+  <data name="ProfileCaption" xml:space="preserve">
+    <value>Profiles</value>
+  </data>
+  <data name="ArriveAirportComboBox" xml:space="preserve">
+    <value>./Help/1569.html</value>
+  </data>
+  <data name="EmptyRouteArriveCountry" xml:space="preserve">
+    <value>Country of arrival is a required entry</value>
+  </data>
+  <data name="Display" xml:space="preserve">
+    <value>Ingres Error</value>
+  </data>
+  <data name="ConnectUserIdHelp" xml:space="preserve">
+    <value>./Help/1664.html</value>
+  </data>
+  <data name="ArriveCountryComboBox" xml:space="preserve">
+    <value>./Help/1579.html</value>
+  </data>
+  <data name="DatasourceCaption" xml:space="preserve">
+    <value>Datasource Instance</value>
+  </data>
+  <data name="AirlineColumn" xml:space="preserve">
+    <value>Airline</value>
+  </data>
+  <data name="ArriveAirportColumn" xml:space="preserve">
+    <value>Arrive To</value>
+  </data>
+  <data name="RouteHelp" xml:space="preserve">
+    <value>./Help/1613.html</value>
+  </data>
+  <data name="AppConfigSchema" xml:space="preserve">
+    <value>AppConfigDataSet.xsd</value>
+  </data>
+  <data name="EmptyRouteDepartRegion" xml:space="preserve">
+    <value>Region of departure is a required entry</value>
+  </data>
+  <data name="ProfileAirportComboBox" xml:space="preserve">
+    <value>./Help/1569.html</value>
+  </data>
+  <data name="ConnectDatabaseHelp" xml:space="preserve">
+    <value>./Help/1664.html</value>
+  </data>
+  <data name="ArriveTimeColumn" xml:space="preserve">
+    <value>Arrival Time</value>
+  </data>
+  <data name="ConnectString" xml:space="preserve">
+    <value>Host={0};Port={1};Database={2};</value>
+  </data>
+  <data name="RouteCaption" xml:space="preserve">
+    <value>Routes</value>
+  </data>
+  <data name="EmptyProfile" xml:space="preserve">
+    <value>The specified profile does not exist</value>
+  </data>
+  <data name="InstanceBase" xml:space="preserve">
+    <value>Ingres{0}</value>
+  </data>
+  <data name="PortAddress" xml:space="preserve">
+    <value>{0}7</value>
+  </data>
+  <data name="IngresBanner" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\IngresBanner.bmp;System.Drawing.Bitmap, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="EmptyLastName" xml:space="preserve">
+    <value>Last name is a required entry</value>
+  </data>
+  <data name="AirportColumn" xml:space="preserve">
+    <value>Airport Name</value>
+  </data>
+  <data name="RouteDeleteConfirm" xml:space="preserve">
+    <value>Flight: {0}{1} From: {2} To: {3} On: {4}</value>
+  </data>
+  <data name="DayOffsetColumn" xml:space="preserve">
+    <value>Days Later</value>
+  </data>
+  <data name="OpenConfig" xml:space="preserve">
+    <value>Open An Existing Configuration File</value>
+  </data>
+  <data name="ProfileEmailComboBox" xml:space="preserve">
+    <value>./Help/1670.html</value>
+  </data>
+  <data name="ProfileHelp" xml:space="preserve">
+    <value>./Help/1669.html</value>
+  </data>
+  <data name="ProfileAddButtonHelp" xml:space="preserve">
+    <value>./Help/1681.html</value>
+  </data>
+  <data name="ConnectDefinedHelp" xml:space="preserve">
+    <value>./Help/1664.html</value>
+  </data>
+  <data name="RoutesButton" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\RoutesButton.bmp;System.Drawing.Bitmap, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ConnectPasswordHelp" xml:space="preserve">
+    <value>./Help/1664.html</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="ErrorVersion" xml:space="preserve">
+    <value>The application requires a database with a later schema version.</value>
+  </data>
+  <data name="banner" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\banner.PNG;System.Drawing.Bitmap, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="EmptyRouteDepartAirport" xml:space="preserve">
+    <value>Departing airport is a required entry</value>
+  </data>
+  <data name="ArriveRegionComboBox" xml:space="preserve">
+    <value>./Help/1568.html</value>
+  </data>
+  <data name="NoPicture" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\NoPicture.bmp;System.Drawing.Bitmap, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="PlaneSquareSymbol" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\PlaneSquareSymbol.ico;System.Drawing.Icon, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="StartAirportCode" xml:space="preserve">
+    <value />
+  </data>
+  <data name="StartCountryCode" xml:space="preserve">
+    <value />
+  </data>
+  <data name="StartCountryName" xml:space="preserve">
+    <value>Select value…</value>
+  </data>
+  <data name="StartProfileEmail" xml:space="preserve">
+    <value>Select value…</value>
+  </data>
+  <data name="StartRegionPlace" xml:space="preserve">
+    <value>Select value…</value>
+  </data>
+  <data name="SQLSTATE08001" xml:space="preserve">
+    <value>An attempted database connection has failed.  Verify that the connection details are correct and that the target Ingres instance is running.
+Press OK to change the connection details and to retry the connection or press Cancel to exit the application.
+</value>
+  </data>
+</root>

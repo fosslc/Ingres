@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2005 Ingres Corporation
+  The di_zero_bufsize resource controls the size (in bytes) of the
+  buffer used for zeroing space on disk.
+
+  Disk space is zeroed when allocating or extending table files.
+  A larger zero-buffer may increase the chances of getting a more
+  contiguous file on disk, which can improve table-scanning performance.
+  The effects of a larger zero-buffer will depend on many operating
+  system related factors, such as filesystem allocation policies,
+  write request maximum size, concurrent activity, and so on.
+
+  A large zero-buffer size is only likely to be useful with tables that
+  have an equally large ALLOCATION= or EXTEND= setting.
+
+  This parameter is only used on Unix-like platforms;  it is not used
+  on Windows or VMS.
+
+  The default is 1 megabyte (1 MiB).

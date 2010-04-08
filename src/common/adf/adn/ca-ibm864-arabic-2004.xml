@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE characterMapping SYSTEM "charactermapping.dtd">
+<!--
+** Copyright (c) 2004 Ingres Corporation
+**
+** =============================================================================
+** ICU License - ICU 1.8.1 and later
+** COPYRIGHT AND PERMISSION NOTICE
+** 
+** Copyright (c) 1995-2003 International Business Machines Corporation and others
+** All rights reserved.
+** 
+** Permission is hereby granted, free of charge, to any person obtaining a
+** copy of this software and associated documentation files (the
+** "Software"), to deal in the Software without restriction, including
+** without limitation the rights to use, copy, modify, merge, publish,
+** distribute, and/or sell copies of the Software, and to permit persons
+** to whom the Software is furnished to do so, provided that the above
+** copyright notice(s) and this permission notice appear in all copies of
+** the Software and that both the above copyright notice(s) and this
+** permission notice appear in supporting documentation.
+** 
+** THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+** OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+** OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+** HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL
+** INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING
+** FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+** NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
+** WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+** 
+** Except as contained in this notice, the name of a copyright holder
+** shall not be used in advertising or otherwise to promote the sale, use
+* or other dealings in this Software without prior written authorization
+* of the copyright holder.
+** =============================================================================
+*/
+##
+## History:
+##      25-Jan-2004 (gupsh01)
+##          Created from ibm-864_X110-1999 .
+##
+-->
+<characterMapping id="ca-ibm864-arabic-2004" version="1">
+ <history>
+  <modified version="1" date="25-jan-2004"></modified>
+ </history>
+ <validity>
+  <state type="FIRST" next="VALID" s="00" e="FF" max="FFFF"/>
+ </validity>
+ <assignments sub="7F">
+  <!-- One to one mappings -->
+  <a u="0000" b="00"/>
+  <a u="0001" b="01"/>
+  <a u="0002" b="02"/>
+  <a u="0003" b="03"/>
+  <a u="0004" b="04"/>
+  <a u="0005" b="05"/>
+  <a u="0006" b="06"/>
+  <a u="0007" b="07"/>
+  <a u="0008" b="08"/>
+  <a u="0009" b="09"/>
+  <a u="000A" b="0A"/>
+  <a u="000B" b="0B"/>
+  <a u="000C" b="0C"/>
+  <a u="000D" b="0D"/>
+  <a u="000E" b="0E"/>
+  <a u="000F" b="0F"/>
+  <a u="0010" b="10"/>
+  <a u="0011" b="11"/>
+  <a u="0012" b="12"/>
+  <a u="0013" b="13"/>
+  <a u="0014" b="14"/>
+  <a u="0015" b="15"/>
+  <a u="0016" b="16"/>
+  <a u="0017" b="17"/>
+  <a u="0018" b="18"/>
+  <a u="0019" b="19"/>
+  <a u="001A" b="7F"/>
+  <a u="001B" b="1B"/>
+  <a u="001C" b="1A"/>
+  <a u="001D" b="1D"/>
+  <a u="001E" b="1E"/>
+  <a u="001F" b="1F"/>
+  <a u="0020" b="20" c=" "/>
+  <a u="0021" b="21" c="!"/>
+  <a u="0022" b="22" c="&quot;"/>
+  <a u="0023" b="23" c="#"/>
+  <a u="0024" b="24" c="$"/>
+  <a u="0025" b="25" c="%"/>
+  <a u="0026" b="26" c="&amp;"/>
+  <a u="0027" b="27" c="&apos;"/>
+  <a u="0028" b="28" c="("/>
+  <a u="0029" b="29" c=")"/>
+  <a u="002A" b="2A" c="*"/>
+  <a u="002B" b="2B" c="+"/>
+  <a u="002C" b="2C" c=","/>
+  <a u="002D" b="2D" c="-"/>
+  <a u="002E" b="2E" c="."/>
+  <a u="002F" b="2F" c="/"/>
+  <a u="0030" b="30" c="0"/>
+  <a u="0031" b="31" c="1"/>
+  <a u="0032" b="32" c="2"/>
+  <a u="0033" b="33" c="3"/>
+  <a u="0034" b="34" c="4"/>
+  <a u="0035" b="35" c="5"/>
+  <a u="0036" b="36" c="6"/>
+  <a u="0037" b="37" c="7"/>
+  <a u="0038" b="38" c="8"/>
+  <a u="0039" b="39" c="9"/>
+  <a u="003A" b="3A" c=":"/>
+  <a u="003B" b="3B" c=";"/>
+  <a u="003C" b="3C" c="&lt;"/>
+  <a u="003D" b="3D" c="="/>
+  <a u="003E" b="3E" c="&gt;"/>
+  <a u="003F" b="3F" c="?"/>
+  <a u="0040" b="40" c="@"/>
+  <a u="0041" b="41" c="A"/>
+  <a u="0042" b="42" c="B"/>
+  <a u="0043" b="43" c="C"/>
+  <a u="0044" b="44" c="D"/>
+  <a u="0045" b="45" c="E"/>
+  <a u="0046" b="46" c="F"/>
+  <a u="0047" b="47" c="G"/>
+  <a u="0048" b="48" c="H"/>
+  <a u="0049" b="49" c="I"/>
+  <a u="004A" b="4A" c="J"/>
+  <a u="004B" b="4B" c="K"/>
+  <a u="004C" b="4C" c="L"/>
+  <a u="004D" b="4D" c="M"/>
+  <a u="004E" b="4E" c="N"/>
+  <a u="004F" b="4F" c="O"/>
+  <a u="0050" b="50" c="P"/>
+  <a u="0051" b="51" c="Q"/>
+  <a u="0052" b="52" c="R"/>
+  <a u="0053" b="53" c="S"/>
+  <a u="0054" b="54" c="T"/>
+  <a u="0055" b="55" c="U"/>
+  <a u="0056" b="56" c="V"/>
+  <a u="0057" b="57" c="W"/>
+  <a u="0058" b="58" c="X"/>
+  <a u="0059" b="59" c="Y"/>
+  <a u="005A" b="5A" c="Z"/>
+  <a u="005B" b="5B" c="["/>
+  <a u="005C" b="5C" c="\"/>
+  <a u="005D" b="5D" c="]"/>
+  <a u="005E" b="5E" c="^"/>
+  <a u="005F" b="5F" c="_"/>
+  <a u="0060" b="60" c="`"/>
+  <a u="0061" b="61" c="a"/>
+  <a u="0062" b="62" c="b"/>
+  <a u="0063" b="63" c="c"/>
+  <a u="0064" b="64" c="d"/>
+  <a u="0065" b="65" c="e"/>
+  <a u="0066" b="66" c="f"/>
+  <a u="0067" b="67" c="g"/>
+  <a u="0068" b="68" c="h"/>
+  <a u="0069" b="69" c="i"/>
+  <a u="006A" b="6A" c="j"/>
+  <a u="006B" b="6B" c="k"/>
+  <a u="006C" b="6C" c="l"/>
+  <a u="006D" b="6D" c="m"/>
+  <a u="006E" b="6E" c="n"/>
+  <a u="006F" b="6F" c="o"/>
+  <a u="0070" b="70" c="p"/>
+  <a u="0071" b="71" c="q"/>
+  <a u="0072" b="72" c="r"/>
+  <a u="0073" b="73" c="s"/>
+  <a u="0074" b="74" c="t"/>
+  <a u="0075" b="75" c="u"/>
+  <a u="0076" b="76" c="v"/>
+  <a u="0077" b="77" c="w"/>
+  <a u="0078" b="78" c="x"/>
+  <a u="0079" b="79" c="y"/>
+  <a u="007A" b="7A" c="z"/>
+  <a u="007B" b="7B" c="{"/>
+  <a u="007C" b="7C" c="|"/>
+  <a u="007D" b="7D" c="}"/>
+  <a u="007E" b="7E" c="~"/>
+  <a u="007F" b="1C"/>
+  <a u="00A0" b="A0" c=" "/>
+  <a u="00A2" b="C0" c="¢"/>
+  <a u="00A3" b="A3" c="£"/>
+  <a u="00A4" b="A4" c="¤"/>
+  <a u="00A6" b="DB" c="¦"/>
+  <a u="00AB" b="97" c="«"/>
+  <a u="00AC" b="DC" c="¬"/>
+  <a u="00AD" b="A1" c="­"/>
+  <a u="00B0" b="80" c="°"/>
+  <a u="00B1" b="93" c="±"/>
+  <a u="00B7" b="81" c="·"/>
+  <a u="00BB" b="98" c="»"/>
+  <a u="00BC" b="95" c="¼"/>
+  <a u="00BD" b="94" c="½"/>
+  <a u="00D7" b="DE" c="×"/>
+  <a u="00F7" b="DD" c="÷"/>
+  <a u="03B2" b="90" c="β"/>
+  <a u="03C6" b="92" c="φ"/>
+  <a u="060C" b="AC" c="،"/>
+  <a u="061B" b="BB" c="؛"/>
+  <a u="061F" b="BF" c="؟"/>
+  <a u="0640" b="E0" c="ـ"/>
+  <a u="0660" b="B0" c="٠"/>
+  <a u="0661" b="B1" c="١"/>
+  <a u="0662" b="B2" c="٢"/>
+  <a u="0663" b="B3" c="٣"/>
+  <a u="0664" b="B4" c="٤"/>
+  <a u="0665" b="B5" c="٥"/>
+  <a u="0666" b="B6" c="٦"/>
+  <a u="0667" b="B7" c="٧"/>
+  <a u="0668" b="B8" c="٨"/>
+  <a u="0669" b="B9" c="٩"/>
+  <a u="200B" b="9F" c="​"/>
+  <a u="2219" b="82" c="∙"/>
+  <a u="221A" b="83" c="√"/>
+  <a u="221E" b="91" c="∞"/>
+  <a u="2248" b="96" c="≈"/>
+  <a u="2500" b="85" c="─"/>
+  <a u="2502" b="86" c="│"/>
+  <a u="250C" b="8D" c="┌"/>
+  <a u="2510" b="8C" c="┐"/>
+  <a u="2514" b="8E" c="└"/>
+  <a u="2518" b="8F" c="┘"/>
+  <a u="251C" b="8A" c="├"/>
+  <a u="2524" b="88" c="┤"/>
+  <a u="252C" b="89" c="┬"/>
+  <a u="2534" b="8B" c="┴"/>
+  <a u="253C" b="87" c="┼"/>
+  <a u="2592" b="84" c="▒"/>
+  <a u="25A0" b="FE" c="■"/>
+  <a u="FE7C" b="F1" c="ﹼ"/>
+  <a u="FE7D" b="F0" c="ﹽ"/>
+  <a u="FE80" b="C1" c="ﺀ"/>
+  <a u="FE81" b="C2" c="ﺁ"/>
+  <a u="FE82" b="A2" c="ﺂ"/>
+  <a u="FE83" b="C3" c="ﺃ"/>
+  <a u="FE84" b="A5" c="ﺄ"/>
+  <a u="FE85" b="C4" c="ﺅ"/>
+  <a u="FE8B" b="C6" c="ﺋ"/>
+  <a u="FE8D" b="C7" c="ﺍ"/>
+  <a u="FE8E" b="A8" c="ﺎ"/>
+  <a u="FE8F" b="A9" c="ﺏ"/>
+  <a u="FE91" b="C8" c="ﺑ"/>
+  <a u="FE93" b="C9" c="ﺓ"/>
+  <a u="FE95" b="AA" c="ﺕ"/>
+  <a u="FE97" b="CA" c="ﺗ"/>
+  <a u="FE99" b="AB" c="ﺙ"/>
+  <a u="FE9B" b="CB" c="ﺛ"/>
+  <a u="FE9D" b="AD" c="ﺝ"/>
+  <a u="FE9F" b="CC" c="ﺟ"/>
+  <a u="FEA1" b="AE" c="ﺡ"/>
+  <a u="FEA3" b="CD" c="ﺣ"/>
+  <a u="FEA5" b="AF" c="ﺥ"/>
+  <a u="FEA7" b="CE" c="ﺧ"/>
+  <a u="FEA9" b="CF" c="ﺩ"/>
+  <a u="FEAB" b="D0" c="ﺫ"/>
+  <a u="FEAD" b="D1" c="ﺭ"/>
+  <a u="FEAF" b="D2" c="ﺯ"/>
+  <a u="FEB1" b="BC" c="ﺱ"/>
+  <a u="FEB3" b="D3" c="ﺳ"/>
+  <a u="FEB5" b="BD" c="ﺵ"/>
+  <a u="FEB7" b="D4" c="ﺷ"/>
+  <a u="FEB9" b="BE" c="ﺹ"/>
+  <a u="FEBB" b="D5" c="ﺻ"/>
+  <a u="FEBD" b="EB" c="ﺽ"/>
+  <a u="FEBF" b="D6" c="ﺿ"/>
+  <a u="FEC3" b="D7" c="ﻃ"/>
+  <a u="FEC7" b="D8" c="ﻇ"/>
+  <a u="FEC9" b="DF" c="ﻉ"/>
+  <a u="FECA" b="C5" c="ﻊ"/>
+  <a u="FECB" b="D9" c="ﻋ"/>
+  <a u="FECC" b="EC" c="ﻌ"/>
+  <a u="FECD" b="EE" c="ﻍ"/>
+  <a u="FECE" b="ED" c="ﻎ"/>
+  <a u="FECF" b="DA" c="ﻏ"/>
+  <a u="FED0" b="F7" c="ﻐ"/>
+  <a u="FED1" b="BA" c="ﻑ"/>
+  <a u="FED3" b="E1" c="ﻓ"/>
+  <a u="FED5" b="F8" c="ﻕ"/>
+  <a u="FED7" b="E2" c="ﻗ"/>
+  <a u="FED9" b="FC" c="ﻙ"/>
+  <a u="FEDB" b="E3" c="ﻛ"/>
+  <a u="FEDD" b="FB" c="ﻝ"/>
+  <a u="FEDF" b="E4" c="ﻟ"/>
+  <a u="FEE1" b="EF" c="ﻡ"/>
+  <a u="FEE3" b="E5" c="ﻣ"/>
+  <a u="FEE5" b="F2" c="ﻥ"/>
+  <a u="FEE7" b="E6" c="ﻧ"/>
+  <a u="FEE9" b="F3" c="ﻩ"/>
+  <a u="FEEB" b="E7" c="ﻫ"/>
+  <a u="FEEC" b="F4" c="ﻬ"/>
+  <a u="FEED" b="E8" c="ﻭ"/>
+  <a u="FEEF" b="E9" c="ﻯ"/>
+  <a u="FEF0" b="F5" c="ﻰ"/>
+  <a u="FEF1" b="FD" c="ﻱ"/>
+  <a u="FEF2" b="F6" c="ﻲ"/>
+  <a u="FEF3" b="EA" c="ﻳ"/>
+  <a u="FEF5" b="F9" c="ﻵ"/>
+  <a u="FEF6" b="FA" c="ﻶ"/>
+  <a u="FEF7" b="99" c="ﻷ"/>
+  <a u="FEF8" b="9A" c="ﻸ"/>
+  <a u="FEFB" b="9D" c="ﻻ"/>
+  <a u="FEFC" b="9E" c="ﻼ"/>
+  <!-- Fallback mappings from Unicode to bytes -->
+  <fub u="00A7" b="15" c="§"/>
+  <fub u="00B6" b="14" c="¶"/>
+  <fub u="0621" b="C1" c="ء"/>
+  <fub u="0622" b="C2" c="آ"/>
+  <fub u="0623" b="C3" c="أ"/>
+  <fub u="0624" b="C4" c="ؤ"/>
+  <fub u="0625" b="C7" c="إ"/>
+  <fub u="0626" b="C6" c="ئ"/>
+  <fub u="0627" b="C7" c="ا"/>
+  <fub u="0628" b="C8" c="ب"/>
+  <fub u="0629" b="C9" c="ة"/>
+  <fub u="062A" b="CA" c="ت"/>
+  <fub u="062B" b="CB" c="ث"/>
+  <fub u="062C" b="CC" c="ج"/>
+  <fub u="062D" b="CD" c="ح"/>
+  <fub u="062E" b="CE" c="خ"/>
+  <fub u="062F" b="CF" c="د"/>
+  <fub u="0630" b="D0" c="ذ"/>
+  <fub u="0631" b="D1" c="ر"/>
+  <fub u="0632" b="D2" c="ز"/>
+  <fub u="0633" b="D3" c="س"/>
+  <fub u="0634" b="D4" c="ش"/>
+  <fub u="0635" b="D5" c="ص"/>
+  <fub u="0636" b="D6" c="ض"/>
+  <fub u="0637" b="D7" c="ط"/>
+  <fub u="0638" b="D8" c="ظ"/>
+  <fub u="0639" b="D9" c="ع"/>
+  <fub u="063A" b="DA" c="غ"/>
+  <fub u="0641" b="E1" c="ف"/>
+  <fub u="0642" b="E2" c="ق"/>
+  <fub u="0643" b="E3" c="ك"/>
+  <fub u="0644" b="E4" c="ل"/>
+  <fub u="0645" b="E5" c="م"/>
+  <fub u="0646" b="E6" c="ن"/>
+  <fub u="0647" b="E7" c="ه"/>
+  <fub u="0648" b="E8" c="و"/>
+  <fub u="0649" b="E9" c="ى"/>
+  <fub u="064A" b="FD" c="ي"/>
+  <fub u="0651" b="F1" c="ّ"/>
+  <fub u="066A" b="25" c="٪"/>
+  <fub u="066B" b="2C" c="٫"/>
+  <fub u="066C" b="2E" c="٬"/>
+  <fub u="066D" b="2A" c="٭"/>
+  <fub u="203C" b="13" c="‼"/>
+  <fub u="2190" b="1B" c="←"/>
+  <fub u="2191" b="18" c="↑"/>
+  <fub u="2192" b="1A" c="→"/>
+  <fub u="2193" b="19" c="↓"/>
+  <fub u="2194" b="1D" c="↔"/>
+  <fub u="2195" b="12" c="↕"/>
+  <fub u="21A8" b="17" c="↨"/>
+  <fub u="221F" b="1C" c="∟"/>
+  <fub u="2550" b="05" c="═"/>
+  <fub u="2551" b="06" c="║"/>
+  <fub u="2554" b="0D" c="╔"/>
+  <fub u="2557" b="0C" c="╗"/>
+  <fub u="255A" b="0E" c="╚"/>
+  <fub u="255D" b="0F" c="╝"/>
+  <fub u="2560" b="0A" c="╠"/>
+  <fub u="2563" b="08" c="╣"/>
+  <fub u="2566" b="09" c="╦"/>
+  <fub u="2569" b="0B" c="╩"/>
+  <fub u="256C" b="07" c="╬"/>
+  <fub u="25AC" b="16" c="▬"/>
+  <fub u="25B2" b="1E" c="▲"/>
+  <fub u="25BA" b="10" c="►"/>
+  <fub u="25BC" b="1F" c="▼"/>
+  <fub u="25C4" b="11" c="◄"/>
+  <fub u="263A" b="01" c="☺"/>
+  <fub u="263C" b="04" c="☼"/>
+  <fub u="266A" b="02" c="♪"/>
+  <fub u="266C" b="03" c="♬"/>
+  <fub u="FE86" b="C4" c="ﺆ"/>
+  <fub u="FE87" b="C7" c="ﺇ"/>
+  <fub u="FE88" b="A8" c="ﺈ"/>
+  <fub u="FE89" b="C6" c="ﺉ"/>
+  <fub u="FE8A" b="C6" c="ﺊ"/>
+  <fub u="FE8C" b="C6" c="ﺌ"/>
+  <fub u="FE90" b="A9" c="ﺐ"/>
+  <fub u="FE92" b="C8" c="ﺒ"/>
+  <fub u="FE94" b="C9" c="ﺔ"/>
+  <fub u="FE96" b="AA" c="ﺖ"/>
+  <fub u="FE98" b="CA" c="ﺘ"/>
+  <fub u="FE9A" b="AB" c="ﺚ"/>
+  <fub u="FE9C" b="CB" c="ﺜ"/>
+  <fub u="FE9E" b="AD" c="ﺞ"/>
+  <fub u="FEA0" b="CC" c="ﺠ"/>
+  <fub u="FEA2" b="AE" c="ﺢ"/>
+  <fub u="FEA4" b="CD" c="ﺤ"/>
+  <fub u="FEA6" b="AF" c="ﺦ"/>
+  <fub u="FEA8" b="CE" c="ﺨ"/>
+  <fub u="FEAA" b="CF" c="ﺪ"/>
+  <fub u="FEAC" b="D0" c="ﺬ"/>
+  <fub u="FEAE" b="D1" c="ﺮ"/>
+  <fub u="FEB0" b="D2" c="ﺰ"/>
+  <fub u="FEB2" b="BC" c="ﺲ"/>
+  <fub u="FEB4" b="D3" c="ﺴ"/>
+  <fub u="FEB6" b="BD" c="ﺶ"/>
+  <fub u="FEB8" b="D4" c="ﺸ"/>
+  <fub u="FEBA" b="BE" c="ﺺ"/>
+  <fub u="FEBC" b="D5" c="ﺼ"/>
+  <fub u="FEBE" b="EB" c="ﺾ"/>
+  <fub u="FEC0" b="D6" c="ﻀ"/>
+  <fub u="FEC1" b="D7" c="ﻁ"/>
+  <fub u="FEC2" b="D7" c="ﻂ"/>
+  <fub u="FEC4" b="D7" c="ﻄ"/>
+  <fub u="FEC5" b="D8" c="ﻅ"/>
+  <fub u="FEC6" b="D8" c="ﻆ"/>
+  <fub u="FEC8" b="D8" c="ﻈ"/>
+  <fub u="FED2" b="BA" c="ﻒ"/>
+  <fub u="FED4" b="E1" c="ﻔ"/>
+  <fub u="FED6" b="F8" c="ﻖ"/>
+  <fub u="FED8" b="E2" c="ﻘ"/>
+  <fub u="FEDA" b="FC" c="ﻚ"/>
+  <fub u="FEDC" b="E3" c="ﻜ"/>
+  <fub u="FEDE" b="FB" c="ﻞ"/>
+  <fub u="FEE0" b="E4" c="ﻠ"/>
+  <fub u="FEE2" b="EF" c="ﻢ"/>
+  <fub u="FEE4" b="E5" c="ﻤ"/>
+  <fub u="FEE6" b="F2" c="ﻦ"/>
+  <fub u="FEE8" b="E6" c="ﻨ"/>
+  <fub u="FEEA" b="F3" c="ﻪ"/>
+  <fub u="FEEE" b="E8" c="ﻮ"/>
+  <fub u="FEF4" b="EA" c="ﻴ"/>
+  <fub u="FEF9" b="9D" c="ﻹ"/>
+  <fub u="FEFA" b="9E" c="ﻺ"/>
+  <fub u="FF01" b="21" c="！"/>
+  <fub u="FF02" b="22" c="＂"/>
+  <fub u="FF03" b="23" c="＃"/>
+  <fub u="FF04" b="24" c="＄"/>
+  <fub u="FF05" b="25" c="％"/>
+  <fub u="FF06" b="26" c="＆"/>
+  <fub u="FF07" b="27" c="＇"/>
+  <fub u="FF08" b="28" c="（"/>
+  <fub u="FF09" b="29" c="）"/>
+  <fub u="FF0A" b="2A" c="＊"/>
+  <fub u="FF0B" b="2B" c="＋"/>
+  <fub u="FF0C" b="2C" c="，"/>
+  <fub u="FF0D" b="2D" c="－"/>
+  <fub u="FF0E" b="2E" c="．"/>
+  <fub u="FF0F" b="2F" c="／"/>
+  <fub u="FF10" b="30" c="０"/>
+  <fub u="FF11" b="31" c="１"/>
+  <fub u="FF12" b="32" c="２"/>
+  <fub u="FF13" b="33" c="３"/>
+  <fub u="FF14" b="34" c="４"/>
+  <fub u="FF15" b="35" c="５"/>
+  <fub u="FF16" b="36" c="６"/>
+  <fub u="FF17" b="37" c="７"/>
+  <fub u="FF18" b="38" c="８"/>
+  <fub u="FF19" b="39" c="９"/>
+  <fub u="FF1A" b="3A" c="："/>
+  <fub u="FF1B" b="3B" c="；"/>
+  <fub u="FF1C" b="3C" c="＜"/>
+  <fub u="FF1D" b="3D" c="＝"/>
+  <fub u="FF1E" b="3E" c="＞"/>
+  <fub u="FF1F" b="3F" c="？"/>
+  <fub u="FF20" b="40" c="＠"/>
+  <fub u="FF21" b="41" c="Ａ"/>
+  <fub u="FF22" b="42" c="Ｂ"/>
+  <fub u="FF23" b="43" c="Ｃ"/>
+  <fub u="FF24" b="44" c="Ｄ"/>
+  <fub u="FF25" b="45" c="Ｅ"/>
+  <fub u="FF26" b="46" c="Ｆ"/>
+  <fub u="FF27" b="47" c="Ｇ"/>
+  <fub u="FF28" b="48" c="Ｈ"/>
+  <fub u="FF29" b="49" c="Ｉ"/>
+  <fub u="FF2A" b="4A" c="Ｊ"/>
+  <fub u="FF2B" b="4B" c="Ｋ"/>
+  <fub u="FF2C" b="4C" c="Ｌ"/>
+  <fub u="FF2D" b="4D" c="Ｍ"/>
+  <fub u="FF2E" b="4E" c="Ｎ"/>
+  <fub u="FF2F" b="4F" c="Ｏ"/>
+  <fub u="FF30" b="50" c="Ｐ"/>
+  <fub u="FF31" b="51" c="Ｑ"/>
+  <fub u="FF32" b="52" c="Ｒ"/>
+  <fub u="FF33" b="53" c="Ｓ"/>
+  <fub u="FF34" b="54" c="Ｔ"/>
+  <fub u="FF35" b="55" c="Ｕ"/>
+  <fub u="FF36" b="56" c="Ｖ"/>
+  <fub u="FF37" b="57" c="Ｗ"/>
+  <fub u="FF38" b="58" c="Ｘ"/>
+  <fub u="FF39" b="59" c="Ｙ"/>
+  <fub u="FF3A" b="5A" c="Ｚ"/>
+  <fub u="FF3B" b="5B" c="［"/>
+  <fub u="FF3C" b="5C" c="＼"/>
+  <fub u="FF3D" b="5D" c="］"/>
+  <fub u="FF3E" b="5E" c="＾"/>
+  <fub u="FF3F" b="5F" c="＿"/>
+  <fub u="FF40" b="60" c="｀"/>
+  <fub u="FF41" b="61" c="ａ"/>
+  <fub u="FF42" b="62" c="ｂ"/>
+  <fub u="FF43" b="63" c="ｃ"/>
+  <fub u="FF44" b="64" c="ｄ"/>
+  <fub u="FF45" b="65" c="ｅ"/>
+  <fub u="FF46" b="66" c="ｆ"/>
+  <fub u="FF47" b="67" c="ｇ"/>
+  <fub u="FF48" b="68" c="ｈ"/>
+  <fub u="FF49" b="69" c="ｉ"/>
+  <fub u="FF4A" b="6A" c="ｊ"/>
+  <fub u="FF4B" b="6B" c="ｋ"/>
+  <fub u="FF4C" b="6C" c="ｌ"/>
+  <fub u="FF4D" b="6D" c="ｍ"/>
+  <fub u="FF4E" b="6E" c="ｎ"/>
+  <fub u="FF4F" b="6F" c="ｏ"/>
+  <fub u="FF50" b="70" c="ｐ"/>
+  <fub u="FF51" b="71" c="ｑ"/>
+  <fub u="FF52" b="72" c="ｒ"/>
+  <fub u="FF53" b="73" c="ｓ"/>
+  <fub u="FF54" b="74" c="ｔ"/>
+  <fub u="FF55" b="75" c="ｕ"/>
+  <fub u="FF56" b="76" c="ｖ"/>
+  <fub u="FF57" b="77" c="ｗ"/>
+  <fub u="FF58" b="78" c="ｘ"/>
+  <fub u="FF59" b="79" c="ｙ"/>
+  <fub u="FF5A" b="7A" c="ｚ"/>
+  <fub u="FF5B" b="7B" c="｛"/>
+  <fub u="FF5C" b="7C" c="｜"/>
+  <fub u="FF5D" b="7D" c="｝"/>
+  <fub u="FF5E" b="7E" c="～"/>
+  <fub u="FFE8" b="86" c="￨"/>
+  <fub u="FFE9" b="1B" c="￩"/>
+  <fub u="FFEA" b="18" c="￪"/>
+  <fub u="FFEB" b="1A" c="￫"/>
+  <fub u="FFEC" b="19" c="￬"/>
+  <fub u="FFED" b="FE" c="￭"/>
+  <!-- Fallback mappings from bytes to Unicode -->
+  <!-- NONE -->
+ </assignments>
+</characterMapping>

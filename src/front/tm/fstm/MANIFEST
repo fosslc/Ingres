@@ -1,0 +1,42 @@
+#
+# MANIFEST file for front!tm!fstm
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front tm fstm ;
+
+IISUBSYS front tm fstm ;
+
+
+if ! $(NT)
+{
+
+IIBINEXE itm : fstm.c ;
+IINEEDLIBS itm :  FSTMLIB QRLIB MALLOCLIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB ;
+}
+else
+{
+
+IIBINEXE fstm : fstm.c ;
+IINEEDLIBS fstm :  FSTMLIB QRLIB MALLOCLIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB SHEMBEDLIB SHADFLIB ;
+}
+IIUNDEFS itm : II_copyright malloc ;
+
+IIFORM fserrfrm.frm ;
+IIFORM quelcmds.frm ;
+
+File $(INGMSG)$(DFS)fserr.hlp : fserr.hlp ;
+File $(INGMSG)$(DFS)fsfile.hlp : fsfile.hlp ;
+File $(INGMSG)$(DFS)fslinedt.hlp : fslinedt.hlp ;
+File $(INGMSG)$(DFS)fsoutput.hlp : fsoutput.hlp ;
+File $(INGMSG)$(DFS)fsqinput.hlp : fsqinput.hlp ;
+File $(INGMSG)$(DFS)fssinput.hlp : fssinput.hlp ;
+
+IILIBRARY FSTMLIB : fssetup.qsc fsrun.qsc fstest.c fssave.c
+	fsrecfi.c fsrecbe.c fsdiag.c fsargs.c ;
+
+

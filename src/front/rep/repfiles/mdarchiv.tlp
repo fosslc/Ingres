@@ -1,0 +1,14 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+**
+** Name:	mdarchiv.tlp - modify archive template
+**
+** Description:
+**	Used to modify the storage structure of the archive table.
+##
+## History:
+##	16-dec-96 (joea)
+##		Created based on mdarchiv.tlp in replicator library.
+**/
+
+MODIFY $arc TO BTREE ON transaction_id, sourcedb, sequence_no

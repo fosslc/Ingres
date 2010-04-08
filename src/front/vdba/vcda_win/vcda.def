@@ -1,0 +1,25 @@
+;
+;    Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+;
+
+;    Source   : vcda.def : Declares the module parameters.
+;    Project  : INGRES II/ Visual Configuration Diff Control (vcda.ocx).
+;    Author   : UK Sotheavut (uk$so01)
+;
+; History:
+;
+; 02-Oct-2002 (uk$so01)
+;    Created
+;    SIR #109221, There should be a GUI tool for comparing ingres Configurations.
+; 114-Apr-2004 (uk$so01)
+;    SIR #111701, Use Compiled HTML Help (.chm file)
+;    Also eliminated some warnings under .NET
+;
+;
+LIBRARY      "VCDA.OCX"
+
+EXPORTS
+	DllCanUnloadNow      PRIVATE
+	DllGetClassObject    PRIVATE
+	DllRegisterServer    PRIVATE
+	DllUnregisterServer  PRIVATE

@@ -1,0 +1,23 @@
+.TH MKSYSDEP 1 "rti" "Copyright (c) 2004 Ingres Corporation" "Copyright (c) 2004 Ingres Corporation"
+.\" History:
+.\"	03-jul-90 (jonb)
+.\"		Written.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+mksysdep \- Creates the iisysdep shell header file
+.SH ORIGIN
+.Copyright (c) 2004 Ingres Corporation
+.SH SYNOPSIS
+.B mksysdep
+.SH DESCRIPTION
+The \fImksysdep\fP shell script creates another shell script file named iisysdep.sh.
+This file is a header, which is included at the beginning of all the install
+shell scripts.  The iisysdep file contains definitions of variables and
+commands with system-dependent values.
+.SH OPTIONS
+.TP
+.B none
+.SH FILES
+.TP
+.B $ING_SRC/admin/install/iisysdep.sh
+created by this script

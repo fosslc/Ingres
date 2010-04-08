@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqparsel.hlp, help for the Parameter selection 
+/#-- 
+Passing parameters is a way of moving information from a parent frame to a 
+child frame. Use this technique to be sure a user is working with the correct 
+data and to save the user from having to re-enter data.
+
+You first selected 'ListChoices,' which showed you a list of possible
+parameter source or destination fields or variables. You then selected the 
+type of item you want to list.
+
+On this menu, you pick the item you want to be the source or destination 
+parameter. The menuitems are:
+
+  Select        Select the item to be the source or destination
+		of the parameter passing.
+  Cancel        Cancel the selection request.
+  Help          Display this help text.

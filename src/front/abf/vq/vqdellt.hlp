@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqdellt.hlp, behind the popup that asks users whether they really want 
+/#-- to delete a Lookup table from a VQ.
+/#-- 
+If you choose "Yes" to delete the Lookup table, the system deletes the 
+table from the frame definition and from the Visual Query display.
+
+If you choose "No," the system displays the current frame definition again 
+without deleting anything.

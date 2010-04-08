@@ -1,0 +1,526 @@
+#! /bin/sh
+## bldenv
+##
+## Name: bldenv
+##
+## Purpose: Setup shell environment for building Ingres.
+## 
+## Requirements: 
+##	The following variable must be set before running this script:
+##
+##	ING_ROOT -	Root directory of source code. Must point 
+##			to the directory created when the source
+##			archive is unpacked or download.
+##
+##	The Ingres r3 build procedure is dependent on a number or third party
+##	libraries and headers. The following variables are used to point to 
+##	their locations.
+##
+##	XERCESCROOT - 	Location XERCES source code root directory
+##	XERCESLOC - Location of Apache Xerces C++ XML parser libraries.
+##	KRB5HDR - Location of Kerberos headers.
+##	GTKHDR - Headers needed to build GTK appllications. (uses pkg-config)
+##	PAXLOC - Location pax binary
+##
+########################################################3
+##
+##	History:
+##	    08-Jun-2004 (hanje04)
+##		created.
+##	    01-Aug-2004 (hanje04)
+##		Updated KRB5HDR to point Kerberos5
+##	    24-Aug-2004 (hanje04)
+##		Make sure user PATH is preserved.
+##	    4-sep-2004 (stephenb)
+##	  	Port to Solaris. Add su9_us5, add LD_LIBRARY_PATH_64
+##	    17-Nov-2004 (hanje04)
+##		Make sure $ING_BUILD/lib is foremost in LD_LIBRARY_PATH
+##	    14-Dec-2004 (bonro01)
+##		Added support for HP
+##	    04-Mar-2005 (hanje04)
+##	 	SIR 114034
+##	  	Add $ING_BUILD/lib/lp32 to LD_LIBRARY_PATH for reverse
+##		hybrid builds.
+##	    22-Mar-2005 (hanje04)
+##		For Itanium Linux we need a cross-compiler so prompt
+##	  	if we can't find it.
+##	    03-Feb-2005 (bonro01)
+##		Add support for Solaris AMD64 a64_sol
+##	    18-Apr-2005 (lazro01)
+##		Added support for UnixWare. 
+##	    18-Apr-2005 (hanje04)
+##		Add support for Max OS X (mg5_osx).
+##		Based on initial changes by utlia01 and monda07.
+##		Set DYLD_LIBRARY_PATH
+##	    11-Apr-2005 (hanje04)
+##	        Define TST_SEP so that sep can run from build area.
+##	    04-Aug-2005 (zicdo01)
+##		Remove check to build as ingres
+##	    30-Jun-2005 (hweho01)
+##		Added support for HP Tru64 (axp_osf). 
+##	    29-Sep-2005 (bonro01)
+##		Move uname -p to Solaris section.
+##		uname -p is not supported on all platforms.
+##	    15-Jan-2006 (hanje04)
+##	 	SIR 115662
+##		Update default install location to /opt/Ingres/IngresII
+##		for Ingres 2006 release
+##          15-May-2006 (hweho01)
+##              Updated build environment settings for AIX.
+##	    03-Jul-2006 (hweho01)
+##		For AIX and Tru64 platfroms:
+##		1) Check for GTARLOC. 
+##		2) Added library path for Tru64 platform. 
+##	    17-Oct-2006 (hanje04)
+##		SIR 116977
+##		Define GTKHDR, GTKCCLD for Linux platforms so GTK installer
+##		can be built.
+##       6-Nov-2006 (hanal04) SIR 117044
+##          Add int.rpl for Intel Rpath Linux build.
+##	6-Feb-2007 (bonro01)
+##		Update Kerberos headers to v5 r1.6
+##		Update KRB5HDR default to be similar to Windows default.
+##	21-Mar-2007 (hanje04)
+##	    SIR 117044
+##	    Don't build GTK or RPM stuff on RPL Linux. Also add warning
+##	    if rpm headers are needed and missing.
+##	23-Mar-2007 (hanje04)
+##	    SIR 117985
+##	    Add PowerPC Linux as valid platfom (ppc_lnx)
+##	 5-Apr-2007 (bonro01)
+##		Only require PAXLOC for Linux builds.
+##	26-Apr-2007 (hweho01)
+##	    GTARLOC is not required by AIX and Tru64 platforms for Ingres 
+##          2006 R2 release.
+##	31-May-2007 (hanje04)
+##	    SIR 118425
+##	    Bump Xerces version to 2.7
+##	25-Jul-2007 (hanje04)
+##	    SIR 118425
+##	    Correct Xerces directory we look for under $ING_ROOT to 
+##	    automatically set XERCESCROOT. Should be looking for the 2.7
+##	    source now not the 2.5 source.
+##	01-Jun-2007
+##	    BUG 119214
+##	    Fix up to build under Debian/Ubuntu Linux.
+##	04-Sep-2007 (hweho01)
+##	    For the build environment in AMD/Solaris 10.x, need to use   
+##          the build utilities such as ld in /usr/ccs/bin, it must    
+##          be put before /usr/ucb in the search path.  
+##	08-Oct-2007 (hanje04)
+##	    SIR 114907
+##	    .so is not always the shared library suffix. Replace with $slsfx
+##	    and define correctly for each platform.
+##	04-Feb-2008 (hanje04)
+##	    SIR S119978
+##	    Add suport for Intel OSX (int_osx). Aslo break setup out into 
+##	    a separate function as it was getting quite complex
+##	26-Feb-2008 (hanje04)
+##	    SIR S119978
+##	    Fix up environment for PPC OSX
+##    19-Mar-2008 (hanje04)
+##	  SIR 120861
+##        Make environment detection more inteligent. Search for xerces and
+##        kerberos in system locations and if they're not found suggest
+##        how they good be if package management is available.
+##    21-Apr-2008 (hanje04)
+##        Add auto detect suport for yum (Fedora)
+##    11-Sep-2008 (hanje04)
+##	  SIR 120861
+##	  If PAXLOC and KRB5HDR are set, make sure we use them.
+##    03-Sep-2008 (hanje04)
+##        If we're on FC9 we need Xerces 2.8. We really need a better way
+##        of determining the Xerces version.
+##    17-Dec-2008 (frima01)
+##        Moved all checks for prerequisites to precheck_functions,
+##        which determines all missing packages at once
+##        Added flag skipcheck to bypass precheck_functions
+##    15-May-2009 (hanje04)
+##	  Logic used to check for jam on OSX is backwards, correct.
+##	  Add /opt/local/bin to path
+##	  Bump deployment platform for 64bit build
+##    10-Aug-2009 (hanje04)
+##	  Bug 122571
+##	  Fix for Fedora 10 and up as part of RPM 4.6+ installer changes
+##	19-feb-2010 (stephenb)
+##		Don't re-set ING_TST if it's set already; this allows using
+##		alternate tests or test location.
+##	3-mar-2010 (stephenb)
+##		Undo last change because SE environments depend on this 
+##		script unconditionally re-seting ING_TST
+##    20-Jan-2010 (hanje04)
+##	  SIR 123296
+##	  Add support for LSB builds and fake out the environment by setting
+##	  II_CONFIG and II_ADMIN to II_SYSTEM/ingres/files
+##    17-Mar-2010 (hanje04)
+##	  SIR 123296
+##	  No GUI (gtk/rpm) for LSB Builds.
+##    29-Mar-2010 (hanje04)
+##	  Trac #570
+##	  Building in 'mock' (chroot build tool) revealed some minor
+##	  issues with the LSB build. Make sure installcmd gets set.
+##
+
+umask 002
+set +u 
+PATH=$PATH:/usr/local/bin
+
+xvers=27 # Xerces version
+config_string=unknown
+gtk_need=false
+rpm_need=false
+libxml2_need=false
+rpm=false
+deb=false
+conary=false
+yum=false
+yast=false
+lsb=false
+instcmd=""
+instcmd_len=0
+rhybrid=false
+unames=`uname -s`
+unamer=`uname -r`
+unamem=`uname -m`
+host=`uname -n`
+user=`whoami`
+slsfx=so
+msg="The following errors occured during setting up the Ingres build environment."
+msg_len=`expr "$msg" : '.*'`
+missing_msg="\n\nThe following neccessary packages could not be located.\n"
+missing_msg_len=`expr "$missing_msg" : '.*'`
+setenv_msg=""
+if [ -x /usr/ucb/fmt ] || [ -x /usr/bin/fmt ] ; then
+  fmt='fmt -80 -s'
+fi
+
+setup_osx()
+{
+    MACOSX_DEPLOYMENT_TARGET_ppc=10.3
+    GCCVERSION_ppc=3.3
+    MACOSX_DEPLOYMENT_TARGET_i386=10.5
+    GCCVERSION_i386=4.0
+    export MACOSX_DEPLOYMENT_TARGET_ppc
+    export GCCVERSION_ppc
+    export MACOSX_DEPLOYMENT_TARGET_i386
+    export GCCVERSION_i386
+    export PATH=${PATH}:/opt/local/bin
+    slsfx=dylib
+
+    # Check for darwin/mac ports, very useful for installing prereqs
+    if [ -x /opt/local/bin/port ]
+    then
+	/opt/local/bin/port installed jam | grep -q jam 1> /dev/null 2> /dev/null
+	if [ $? != 0 ]
+	then
+          msg=${msg}"\n\nWarning: Could not locate jam using darwinports."
+          msg=${msg}"\n\nTo install it run:"
+          msg=${msg}"\n\n\tsudo /usr/local/bin/port install jam"
+          msg=${msg}"\n\nand re-run this setup script."
+	fi
+	if [ -d "$XERCESCROOT" ] ; then
+	    xvers=3.0
+	    export XERCESLOC=$XERCESCROOT/src/.libs
+	elif ( /opt/local/bin/port installed xercesc | grep -q xerces )
+	then
+	    XERCESCROOT=/opt/local
+	    XERCESLOC=/opt/local/lib
+	    export XERCESCROOT
+	    export XERCESLOC
+	else
+          msg=${msg}"\n\nWarning: Could not locate Xerces C using darwinports."
+	  msg=${msg}"\n\nTo install it run:"
+          msg=${msg}"\n\n\tsudo /usr/local/bin/port install xercesc"
+          msg=${msg}"\n\nand re-run this setup script."
+	fi
+    else
+        msg=${msg}"Warning: Could not locate Darwin/Mac Ports."
+        msg=${msg}"This a package management utility for downloading and installing"
+        msg=${msg}"open source tools on Mac. The Ingres build process works best"
+	msg=${msg}"when the 3rd partyrequirments are installed using this tool."
+        msg=${msg}"\n\nFor more info go to http://darwinports.com/"
+    fi
+}
+
+# check for ING_ROOT
+
+[ -d "$ING_ROOT" ] ||
+{
+    msg=${msg}"\nThe variable ING_ROOT is not set properly. Please set ING_ROOT such that
+this script can be referenced as \$ING_ROOT/src/tools/port/jam/bldenv.\n"
+    printf "$msg"
+    return 1
+}
+
+. $ING_ROOT/src/tools/port/jam/precheck_functions
+
+# check for platform and set according flags
+
+case ${unames} in
+    Linux)
+	gtk_need=true
+	libxml2_need=true
+	include_flag=-I
+	
+	case ${unamem} in
+          i*86)
+		unamem=i386
+		config_string=int_lnx
+		;;
+          ia64)
+		config_string=i64_lnx
+		xcc_need=i686-unknown-linux-gnu
+		xcc_name=${xcc_need}-gcc
+		rhybrid=true
+		;;
+        x86_64)
+		config_string=a64_lnx
+		rhybrid=true
+		;;
+        ppc64)
+		config_string=ppc_lnx
+		;;
+	     *)
+		;;
+	esac
+	
+	# use LSB build if argument passed
+	if [ "$1" = "LSB" ] ; then
+	    config_string=${config_string}_LSB
+	    gtk_need=false
+	    rpm_need=false
+	    libxml2_need=false
+	fi
+	# determine release info
+	if [ -f /etc/distro-release ] ; then
+	    OSVER=RPATH
+	    grep -i "rpath\|foresight" /etc/distro-release
+	    if [ $? = 0 ] ; then
+		# config string ALWAYS int_rpl on rpath
+		config_string=int_rpl
+		gtk_need=false
+		rpm_need=false
+		conary=true
+		instcmd="conary update"
+	    fi    
+	elif [ -f /etc/debian_version ] ; then
+	    OSVER=DEBIAN
+	    # no rpm or GUI installer (yet) on
+	    # debian or ubuntu
+	    rpm_need=false
+	    gtk_need=false
+	    deb=true
+	    instcmd="apt-get install"
+	elif [ -r /etc/redhat-release ] ; then
+	    os=`cat /etc/redhat-release | cut -d' ' -f1`
+	    if [ "$os" = "Fedora" ] ; then
+		OSVER=FEDORA
+		rel=`cat /etc/redhat-release | cut -d' ' -f3`
+		if [ $rel -gt 8 ]
+		then
+			xvers=28
+		fi
+	    fi
+	    if [ -x /usr/bin/yum ] ; then
+		yum=true
+		instcmd="yum install"
+	    else
+		rpm=true
+		instcmd="rpm -Uvh"
+	    fi
+        elif [ -f /etc/SuSE-release ] ; then
+            OSVER=SUSE
+            yast=true
+            instcmd="yast -i"
+        fi
+	instcmd_len=`expr "$instcmd" : '.*'`
+	export OSVER	
+
+	# Default to rpm if it's there
+	if ! $conary && ! $deb && ! $yum && ! $rpm && \
+	    [ -x /bin/rpm -o -x /usr/bin/rpm ] ; then
+	    rpm=true
+	fi
+
+	export unamem #needed for debian builds
+	;;
+    SunOS)
+	unamep=`uname -p`
+	case ${unamep} in
+	 sparc)
+		config_string=su9_us5
+		;;
+	  i386)
+		config_string=a64_sol
+		;;
+	     *)
+		;;
+	esac
+	;;
+    HP-UX)
+        slsfx=sl
+	case ${unamem} in
+	  ia64)
+		config_string=i64_hpu
+		;;
+	  9000*)
+                cpubits=`getconf HW_CPU_SUPP_BITS`
+                if [ "$cpubits" = "64" ] ; then
+                    config_string=hp2_us5
+                else
+                    config_string=hpb_us5
+                fi
+		;;
+	  *)
+		;;
+	esac
+	;;
+    AIX)        config_string=r64_us5
+	;;
+    UnixWare)
+		config_string=usl_us5
+	;;
+    OSF1)
+		config_string=axp_osf
+	;;
+    Darwin)
+	case "${unamem}" in
+	    i386) config_string=int_osx ;;
+	    Power*) config_string=mg5_osx
+		    MACOSX_DEPLOYMENT_TARGET=10.3
+		    export MACOSX_DEPLOYMENT_TARGET
+		    # We need GCC v3.3 installed for building PPC binaries,
+		    # warn if it's not available
+		    if [ ! -x /usr/bin/gcc-3.3 ] ; then
+                      msg=${msg}"\n\nWARNING: Compiler version: GCC 3.3 not installed"
+                      msg=${msg}"\nGCC version 3.3 is required to build Ingres on OSX for PowerPC"
+		    fi # gcc version check
+		    ;;
+	esac
+	setup_osx
+	;;
+      *)
+	;;
+esac
+
+[ "$config_string" = "unknown" ] && { 
+  msg=${msg}"\n\n${unames} ${unamer} is an unrecognised platform."
+  msg=${msg}"\nPlease edit precheck_functions to add the appropriate platform informatio n."
+  return 1
+}
+
+# export environment variables
+# either if precheck succeeds or if skipcheck flag is passed
+
+[ "$1" = "skipcheck" ] || precheck || return 1
+
+# Ingres build area
+ING_SRC=${ING_ROOT}/src
+ING_BUILD=${ING_ROOT}/build
+II_MANIFEST_DIR=${ING_BUILD}/manifest
+II_SYSTEM=${ING_ROOT}/install/build
+II_ADMIN=${II_SYSTEM}/ingres/files
+II_CONFIG=${II_ADMIN}
+export ING_SRC
+export ING_BUILD
+export II_MANIFEST_DIR
+export II_SYSTEM
+export II_ADMIN
+export II_CONFIG
+
+# RPM variables for Linux only
+[ "${unames}" = "Linux" ] &&
+{
+    II_RPM_BUILDROOT=${ING_ROOT}/rpm
+    II_DEB_BUILDROOT=${ING_ROOT}/deb
+    II_RPM_PREFIX=/opt/Ingres/IngresII
+    export II_RPM_BUILDROOT
+    export II_DEB_BUILDROOT
+    export II_RPM_PREFIX
+}
+
+# ingtest area
+ING_TST=${ING_ROOT}/tst
+ING_TOOLS=${ING_ROOT}/tools
+TST_SEP=${ING_ROOT}/tools/files
+export ING_TST
+export ING_TOOLS
+export TST_SEP
+
+# Jam variables 
+export config_string
+ING_SRCRULES=${ING_SRC}/tools/port/jam/Jamrules
+export ING_SRCRULES
+
+# Execution path:
+
+pporigpath=$PATH
+if [ "$config_string" = "a64_sol" ] ;  then 
+pporigpath=/usr/ccs/bin:$pporigpath
+fi
+xpath1=.:${ING_BUILD}/bin:${ING_BUILD}/utility:\
+${II_SYSTEM}/ingres/bin:${II_SYSTEM}/ingres/utility:${ING_SRC}/bin:\
+${ING_TOOLS}/bin:${ING_TOOLS}/utility
+xpath2=/bin:/usr/bin:/usr/X11R6/bin
+# Path to X-compiler (needed for some ports)
+[ "${XCCLOC}" ] && xccpath=${XCCLOC}/bin:${XCCLOC}/${xcc_need}/bin
+
+PATH=${xpath1}:${pporigpath}:${xpath2}:${xccpath}
+export PATH
+
+# Directory path:
+CDPATH=.:..
+for d in back cl common dbutil gl front testtool tools admin
+do
+	[ -d $ING_SRC/$d ] && {
+	for dir in `ls -1 $ING_SRC/$d`
+	do
+	    CDPATH=$CDPATH:$ING_SRC/$d/$dir
+	done
+	}
+	CDPATH=$CDPATH:$ING_SRC/$d
+done
+
+CDPATH=$CDPATH:$ING_SRC/
+export CDPATH
+
+# Library path for X-complier
+[ "$XCCLOC" ] && xcc_ld_path=${XCCLOC}/lib
+
+if [ "${unames}" = Darwin ] ; then
+    if [ "$DYLD_LIBRARY_PATH" ] ; then
+	DYLD_LIBRARY_PATH=${ING_BUILD}/lib:${ING_BUILD}/lib/lp32:${LD_LIBRARY_PATH}
+	export DYLD_LIBRARY_PATH
+    else
+	DYLD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:${ING_BUILD}/lib:${ING_BUILD}/lib/lp32
+	export DYLD_LIBRARY_PATH
+    fi
+elif [ "${unames}" = "AIX" ] ; then
+        LIBPATH=${ING_BUILD}/lib:/lib:/usr/lib:/usr/ccs/lib
+        export LIBPATH
+elif [ "${unames}" = "OSF1" ] ; then
+        LD_LIBRARY_PATH=${ING_BUILD}/lib:/lib:/usr/lib
+        export LD_LIBRARY_PATH
+else
+    if [ "$LD_LIBRARY_PATH" ] ; then
+	LD_LIBRARY_PATH=${ING_BUILD}/lib:${ING_BUILD}/lib/lp32:${LD_LIBRARY_PATH}
+	export LD_LIBRARY_PATH
+    else
+	LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:${ING_BUILD}/lib:${ING_BUILD}/lib/lp32
+	export LD_LIBRARY_PATH
+    fi
+
+    if [ "$LD_LIBRARY_PATH_64" ] ; then
+	LD_LIBRARY_PATH_64=${ING_BUILD}/lib/lp64:${LD_LIBRARY_PATH}
+	export LD_LIBRARY_PATH_64
+    else
+	LD_LIBRARY_PATH_64=${ING_BUILD}/lib/lp64
+	export LD_LIBRARY_PATH_64
+    fi
+fi # Darwin
+
+if [ -z "$II_QUIET_BUILDENV" ] ; then
+   echo "Ingres build environment is now set"
+   echo "Your ING_ROOT variable is set to $ING_ROOT"
+fi
+

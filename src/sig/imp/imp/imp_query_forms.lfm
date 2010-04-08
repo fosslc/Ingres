@@ -1,0 +1,7 @@
+COPYFORM:	6.4	2002_06_28 07:25:58 GMT
+FORM:	imp_query_info		 
+	71	18	0	0	2	0	0	9	0	0	0	0	0	129	0	2
+FIELD:
+	0	lastquery	-21	563	0	560	9	71	0	0	70	1	1	Previously Running Query:	0	0	0	0	0	0	0		c560.70			0	0
+	1	query	-21	563	0	560	9	71	9	0	70	1	1	Currently Running Query:	0	0	0	0	0	0	0		c560.70			0	1
+TRIM:

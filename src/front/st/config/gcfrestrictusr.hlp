@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ The restrict_usr_auth setting determines which mechanism are used by default
+ to generate authentication certificates for user authorization.  Explicit
+ mechanisms other than those configured can be requested programatically to
+ generate certificates.  When unrestricted, the mechanism used to produce a
+ certificate is also used to validate the certificate.  Restricting
+ authentication means that only certificates produced by the configured
+ mechanism will be validated; others will automatically be rejected.
+
+

@@ -1,0 +1,109 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+*/
+
+/*
+**    Source   : ijactrl.odl , type library source for ActiveX Control project.
+**    Project  : Ingres Journal Analyser
+**    Author   : Sotheavut UK (uk$so01)
+**    Purpose  : This file will be processed by the Make Type Library (mktyplib) tool to
+**               produce the type library (IjaCtrl.tlb) that will become a resource in
+**               ijactrl.ocx.
+** History:
+**
+** 22-Dec-1999 (uk$so01)
+**    Created
+** 14-May-2001 (uk$so01)
+**    SIR #101169 (additional changes)
+**    Help management and put string into the resource files
+** 05-Sep-2003 (uk$so01)
+**    SIR #106648, Integrate libraries libwctrl.lib, libingll.lib in Ija
+**/
+
+#include <olectl.h>
+#include <idispids.h>
+
+[ uuid(C92B8424-B176-11D3-A322-00C04F1F754A), version(1.0),
+  helpfile("IjaCtrl.hlp"),
+  helpstring("IjaCtrl ActiveX Control module"),
+  control ]
+library IJACTRLLib
+{
+	importlib(STDOLE_TLB);
+	importlib(STDTYPE_TLB);
+
+	//  Primary dispatch interface for CIjaCtrl
+
+	[ uuid(C92B8425-B176-11D3-A322-00C04F1F754A),
+	  helpstring("Dispatch interface for IjaCtrl Control"), hidden ]
+	dispinterface _DIjaCtrl
+	{
+		properties:
+			// NOTE - ClassWizard will maintain property information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_PROP(CIjaCtrl)
+			[id(1)] OLE_COLOR TransactionDelete;
+			[id(2)] OLE_COLOR TransactionInsert;
+			[id(3)] OLE_COLOR TransactionAfterUpdate;
+			[id(4)] OLE_COLOR TransactionBeforeUpdate;
+			[id(5)] OLE_COLOR TransactionOther;
+			[id(6)] boolean PaintForegroundTransaction;
+			//}}AFX_ODL_PROP
+
+		methods:
+			// NOTE - ClassWizard will maintain method information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_METHOD(CIjaCtrl)
+			[id(7)] void SetMode(short nMode);
+			[id(8)] long AddUser(BSTR strUser);
+			[id(9)] void CleanUser();
+			[id(10)] void RefreshPaneDatabase(BSTR lpszNode, BSTR lpszDatabase, BSTR lpszDatabaseOwner);
+			[id(11)] void RefreshPaneTable(BSTR lpszNode, BSTR lpszDatabase, BSTR lpszDatabaseOwner, BSTR lpszTable, BSTR lpszTableOwner);
+			[id(12)] void SetUserPos(long nPos);
+			[id(13)] void SetUserString(BSTR lpszUser);
+			[id(14)] void SetAllUserString(BSTR lpszAllUser);
+			[id(15)] void AddNode(BSTR lpszNode);
+			[id(16)] void RemoveNode(BSTR lpszNode);
+			[id(17)] void CleanNode();
+			[id(18)] short GetMode();
+			[id(19)] void EnableRecoverRedo(boolean bEnable);
+			[id(20)] boolean GetEnableRecoverRedo();
+			[id(21)] long ShowHelp();
+			[id(22)] void SetHelpFilePath(BSTR lpszPath);
+			[id(23)] void SetSessionStart(long nStart);
+			[id(24)] void SetSessionDescription(BSTR lpszDescription);
+			//}}AFX_ODL_METHOD
+
+			[id(DISPID_ABOUTBOX)] void AboutBox();
+	};
+
+	//  Event dispatch interface for CIjaCtrl
+
+	[ uuid(C92B8426-B176-11D3-A322-00C04F1F754A),
+	  helpstring("Event interface for IjaCtrl Control") ]
+	dispinterface _DIjaCtrlEvents
+	{
+		properties:
+			//  Event interface has no properties
+
+		methods:
+			// NOTE - ClassWizard will maintain event information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_EVENT(CIjaCtrl)
+			//}}AFX_ODL_EVENT
+	};
+
+	//  Class information for CIjaCtrl
+
+	[ uuid(C92B8427-B176-11D3-A322-00C04F1F754A),
+	  helpstring("IjaCtrl Control"), control ]
+	coclass IjaCtrl
+	{
+		[default] dispinterface _DIjaCtrl;
+		[default, source] dispinterface _DIjaCtrlEvents;
+	};
+
+
+	//{{AFX_APPEND_ODL}}
+	//}}AFX_APPEND_ODL}}
+};

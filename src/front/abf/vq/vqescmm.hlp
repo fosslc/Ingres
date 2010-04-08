@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescmm.hlp	Menuline-Menuitem escape code help
+Menuline-Menuitems escape code enables you to add your own menuitems to the
+menuline without creating an associated frame or procedure. Your menuitem(s)
+will appear after the menuitems which call frames and procedures, and before
+standard Vision menuitems.
+
+Example:
+
+    To add a menuitem which clears all displayed fields:
+
+	'Clear' (VALIDATE = 0, ACTIVATE = 0,
+	    EXPLANATION = 'Clear all fields') =
+	BEGIN
+	    CLEAR FIELD ALL;
+	END

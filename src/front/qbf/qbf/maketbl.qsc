@@ -1,0 +1,344 @@
+/*
+** Copyright (c) 1983, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<cm.h>
+#include	<si.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<ft.h>
+#include	<fmt.h> 
+#include	<adf.h> 
+#include	<frame.h> 
+#include	<afe.h>
+#include	<qg.h>
+#include	<mqtypes.h>
+#include	"mqglobs.h"
+#include	"erqf.h"
+
+/**
+** Name:	maketbl.c -
+**	This file contains code to allow MQBF to create
+**	table fields.
+**
+**	mqtfbld()
+**	mqgetwidth()
+**	mqcalwidth()
+**
+**  Created: 6-1-83 (dkh)
+**	     12-14-83 (nml) - Stolen and modified for MQBF
+**	     07-16-85 (scl) - Allowed forms to be wider than terminal,
+**			and fixed 2 bugs which mattered only to CMS
+**	     03/22/87 (dkh) - Added support for ADTs.
+**	     07/14/86 (scl) Remove special support for left-right scrolling
+**		      in CMS (FTmxcol) under 5.0
+**	     13-aug-87 (danielt) changed FEmsg() calls to use IIUGerr().
+**	Revision 6.2  88/05  dave
+**	05/05/88 (dkh) - Capitalized Column Titles for Venus.
+**	20-jul-88 (kenl)
+**		Bug fix #2191.  Set attribute on column to mandatory if
+**		underlying column in table is NOT NULL NOT DEFAULT.
+**	12/31/88 (dkh) - Perf changes.
+**	01/89 wong  -- Merged 'mgcalwidth()' and 'mqgetwidth()'.
+**	01/11/89 (dkh) - Fixed mqtfbld() to correctly set the value
+**			 of linetot in the "for" loop.
+**	05/26/89 (Mike S) - Check for QBF or Emerald form generation.
+**	07/10/89 (Mike S) - format with FD routines
+**			    move MQTF definition to mqtypes.qsh
+**	17-apr-90 (bruceb)
+**		Lint changes.  Removed args in call on FDwtblalloc.
+**      09/04/90 (emerson) - Allow space for 3270 attributes around title.
+**      09/26/90 (emerson) - Don't display logical keys (bug 8593).
+**	1/91 (MikeS) - Generate query-only columns for Vision masters in a
+**			tablefiled
+**	13-dec-92 (daver)
+**		Throw it out if its not a supported datatype. The
+**		routine IIAFfedatatype() indicates this.
+**      13-oct-2008 (stial01)
+**              Limited support for object_key/table_key exported as byte
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	23-Aug-2009 (kschendel) 121804
+**	    Need afe.h to satisfy gcc 4.3.
+*/
+
+FUNC_EXTERN i4		FTspace();
+FUNC_EXTERN STATUS	afe_cancoerce();
+FUNC_EXTERN STATUS	fmt_sdeffmt();
+FUNC_EXTERN STATUS	IIFDmcMakeColumn();
+FUNC_EXTERN STATUS	IIFDgcGenColumn();
+
+extern		i4		mq_fgtype;	/* QBF or Emerald */
+
+static i4       _calWidth();
+
+static MQTF	mqcols[MQ_MAXCOLS] = {0};
+
+/*{
+** mqtfbld:
+**	Build the frame structures, etc. for a table
+**	field in VIFRED.
+*/
+
+FIELD *
+mqtfbld ( frame, name, seqno, twidth, numcols, numrows, atts, numatts )
+FRAME		*frame;
+char		*name;
+i4		seqno;
+i4		twidth;
+i4		numcols;
+i4		numrows;
+ATTRIBINFO	*atts[];
+i4		numatts;
+{
+	FIELD		*fld;
+	reg FLDHDR	*hdr;
+	TBLFLD		*tf;
+	i4		i;
+	i4		linetot;
+	i4		spacesize = 2 * FTspace();
+
+	static const char	_Empty[] = ERx("");
+
+#define			ROWWIDTH 1
+
+	fld = FDnewfld(name, seqno, FTABLE);
+	tf = fld->fld_var.fltblfld;
+	hdr = &tf->tfhdr;
+	hdr->fhtitle = _Empty;
+	hdr->fhdflags |= fdNOTFLINES|fdROWHLIT;
+	/*	Set VQLOCK for a Visual Query-created form */
+	if (mq_fgtype == MQFORM_VISION)
+		hdr->fhd2flags |= fdVQLOCK;
+
+	/*
+	**  fhposx is OK here since it will be
+	**  set by mq_makefrm (in makefrm.c)
+	**  later on. (dkh)
+	*/
+
+	hdr->fhposx = 0;
+	hdr->fhposy = 0;
+	hdr->fhmaxx = twidth;
+	hdr->fhmaxy = 4 + (numrows * ROWWIDTH);
+	tf->tfrows = numrows;
+	tf->tfcols = numcols;
+	tf->tfstart = 3;
+	tf->tfwidth = ROWWIDTH;
+	if ( !FDwtblalloc(tf) )
+	{
+		return NULL;
+	}
+	linetot = 1;
+	for ( i = 0 ; i < numcols ; ++i )
+	{
+		reg MQTF	*qp = &mqcols[i];
+		FLDCOL		*col;
+		reg FLDTYPE	*type;
+		reg ATTRIBINFO	*matt = atts[qp->attno];
+
+		/* Make sure its a supported type (BLOBS, UDTS are NOT!) */
+		if (!IIAFfedatatype(&matt->dbv) && !matt->lkeyinfo)
+			continue;
+
+		IIFDftFormatTitle(qp->title);	/* Format title */
+		IIFDgcGenColumn(qp, i, &matt->dbv, &col); /* Generate column */
+		tf->tfflds[i] = col;
+
+		hdr = &col->flhdr;
+		type = &col->fltype;
+		hdr->fhtitx = linetot + (spacesize / 2);   /* offset */
+		type->ftdatax = linetot + (spacesize / 2); /* data offset */
+		hdr->fhposx = linetot;			   /* column position*/
+		linetot += hdr->fhmaxx + 1;
+
+		/* Bug fix #2191
+		** Set column in tablefield to mandatory if underlying column
+		** in table is NOT NULL NOT DEFAULT.
+		*/
+		if (matt->mandfld)
+		{
+			hdr->fhdflags |= fdMAND;
+		}
+
+		/*
+		**	For QBF,
+		**	1.	Master join columns are reverse video.
+		**
+		**	For Vision,
+		**	1.	Lookup join columns are reverse video.
+		**	2.	Lookup columns are readonly for master-detail,
+		**		queryonly for masters-in-a-tablefield.
+		**      3.      All fields are marked VQLOCK.
+		*/
+
+		if (mq_fgtype == MQFORM_QBF)
+		{
+			if (matt->jpart == 1)
+			{ 
+				hdr->fhdflags |= fdRVVID;
+			}
+		}
+		else
+		{
+			if (matt->jpart == mqLU_JOIN_FIELD)
+			{
+				hdr->fhdflags |= fdRVVID;
+			}
+			else if (matt->ttype == mqIN_LU_DETAIL || 
+				     matt->ttype == mqIN_LU_MASTER)
+			{
+				if (qdef_type == mq1to1_JOIN)
+					hdr->fhdflags |= fdQUERYONLY;
+				else
+					hdr->fhd2flags |= fdREADONLY;
+			}
+			hdr->fhd2flags |= fdVQLOCK;	
+		}
+
+# ifdef DEBUG
+		if ( !FDwcolalloc(frame, tf, col, NOWIN) )
+		{
+			return NULL;
+		}
+# endif /* DEBUG */
+	} /* end for */
+	return fld;
+}
+
+/*{
+** mqgetwidth - This routine calculates the width of the
+**		table field that will be created for the
+**		default form. It scans the atts structure
+**		to do this and returns the number of columns
+**		in that table field.
+**		As a side effect, it also sets up the
+**		MQTF structure to create the table field.
+*/
+i4
+mqgetwidth ( qdef )
+MQQDEF	*qdef;
+{
+	return _calWidth( qdef, TRUE );
+}
+
+/*{
+** mqcalwidth - This routine calculates the width of the
+**		table field that will be created for the
+**		default form. It scans the atts structure
+**		to do this and returns the number of columns
+**		in that table field.
+**		Has no side effect.
+**
+** History:
+**	12-2-84 (kira) - used as a dummy routines to calculate size.
+**	01-89 (jhw) - Merged functionality with 'mqgetwidth()' again.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+i4
+mqcalwidth ( qdef )
+MQQDEF	*qdef;
+{
+	return _calWidth( qdef, FALSE );
+}
+
+/*
+** Name:	_calWidth() -	Calculate Width of Table Field for Default Form.
+**
+** Description:
+**	Calculates the width of the table field that will be created for the
+**	default form.  It scans the attributes structure to do this and
+**	returns the width of the number of columns in that table field.
+**
+**	As a side effect, it will also set up the MQTF structure to create
+**	the table field, if desired.
+**
+** Input:
+**	qdef	{MQQDEF *}  The query definition.
+**	build	{bool}  Whether to set up the MQTF structure.
+**
+** Returns:
+**	{nat}	The width of the table field.
+**
+** History:
+**	01/89 (jhw) -- Merged 'mqgetwidth()' and 'mqcalwidth()' functionality
+**			into this routine.
+**	7/89 (Mike S)	-- Abstracted out IIFDmcMakeColumn
+**      09/04/90 (emerson) - Allow space for 3270 attributes around title.
+**	13-dec-92 (daver)
+**		Make sure its a supported type (via IIAFfedatatype() )
+**		before even THINKING about doing any calculation shme.
+*/
+static i4
+_calWidth ( qdef, build )
+register MQQDEF	*qdef;
+bool		build;
+{
+	register i4	width;
+	register i4	i;
+	register i4	mqcntr = 0;
+	i4		spacesize = 2 * FTspace();
+
+	if (!tblfield)
+	{
+		return 0;
+	}
+
+	width = 1;
+	for ( i = 0 ; i < qdef->mqnumatts ; ++i )
+	{
+		register ATTRIBINFO	*matt = qdef->mqatts[i];
+
+		if ( matt->formfield[0] != EOS &&
+			matt->lkeyinfo == 0 &&
+			matt->intbl && matt->jpart != 0 &&
+			IIAFfedatatype(&matt->dbv)
+			)
+		{
+			i4		nmlen;
+			register MQTF	*mqptr;
+			i4		x;
+			
+			if ( mqcntr >= MQ_MAXCOLS )
+			{
+				if ( !build )
+				{
+					i4	max_cols = MQ_MAXCOLS;
+
+					IIUGerr(E_QF00A9_The_number_of_columns,
+						UG_ERR_ERROR,
+						1, (PTR)&max_cols
+					);
+				}
+				return 0;
+			}
+
+			mqptr = &(mqcols[mqcntr]);
+			if (IIFDmcMakeColumn(matt->formfield, matt->col, 
+					&matt->dbv, build, 0, mqptr, &x) != OK)
+			{
+				IIUGerr(E_QF006A_Could_not_get_format_,
+					UG_ERR_ERROR, 0
+				);
+				return -1;
+			}
+			if (build) mqptr->attno = i;
+			nmlen = STlength(matt->col) + spacesize;
+			x += spacesize;
+			width += max(nmlen, x) + 1;
+			++mqcntr;
+		}
+	} /* end for */
+	return width;
+}

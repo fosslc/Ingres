@@ -1,0 +1,30 @@
+.\" History:
+.\"	26-oct-93 (peterk)
+.\"		created
+.PU
+.TH BEINGRES 1 local
+.SH NAME
+beingres \-  run a shell or command as ingres
+.SH SYNOPSIS
+.ll +8
+.B beingres
+[
+.I command arg \&...
+]
+.ll -8
+.SH DESCRIPTION
+Run
+.I command
+as
+.B ingres.
+.I Command
+may be any executable file or command in the current
+.B $PATH.
+
+If no commands given, run the
+.B ingres
+login shell as
+.B ingres.
+.SH "SEE ALSO"
+su(1), be(local)
+

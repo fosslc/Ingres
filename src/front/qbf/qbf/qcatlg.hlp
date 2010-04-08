@@ -1,0 +1,35 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+     This form displays a list of all the Join Definitions (JoinDefs)
+     owned by you and by the database administrator.  To select a 
+     Join Definition for an operation, position the cursor over the 
+     row containing that Join Definition and select the operation 
+     you wish to perform.
+
+     Commands available in the JoinDefs Catalog are:
+
+        Command                 Function
+        -------                 --------
+        Create                  Create a new JoinDef.
+        Destroy                 Destroy the selected JoinDef.  This removes 
+                                the join definition and its name from the 
+                                database as well as the JoinDef catalog frame.
+        Edit                    Edit the selected JoinDef.  This allows you 
+                                to modify the JoinDef specification and 
+                                retain its name in the database.
+        Rename                  Rename the selected JoinDef. QBF prompts you 
+                                for the new name of the JoinDef.  If you 
+                                immediately depress the RETURN key, QBF 
+                                returns you to the form without changing the 
+                                JoinDef's name.  If you enter a correct name, 
+                                QBF changes the catalog in the database and 
+                                reflects that change on the Catalog form.
+        Go                      Execute the selected JoinDef (i.e. run the
+                                query associated with the JoinDef against
+                                data in the database).
+        MoreInfo                Show additional information about the selected
+                                JoinDef.
+        Find                    Find an entry containing the specified string.
+        Top                     Move to the top of the JoinDef display.
+        Bottom                  Move to the bottom of the JoinDef display.
+        Help                    Print this message. 
+        End                     Return to the QBF Start-Up Form.

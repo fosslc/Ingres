@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This menu option allows you to create new sections and delete existing
+sections in the Report Layout frame which correspond to various parts 
+of the report.  To create a section use the Create menu option.  To
+delete a section scroll to the section that you wish to delete and
+choose the Delete menu option.
+
+The menu commands are:
+
+	MENU COMMAND	SYNOPSIS
+	------------	--------
+	Create		Create a new section.  You will be given a list
+			of available sections to choose from.  You can create
+			a Report Header, a Report Footer, a Page Header,
+			a Page Footer, a Break Header for each sort(break)
+			column, and a Break Footer for each sort column.
+
+	Delete		Delete the section that is currently highlighted.
+
+	Help		Print this message.
+
+	End		Return to the Report Layout frame, saving
+			all changes.
+
+

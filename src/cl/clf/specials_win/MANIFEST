@@ -1,0 +1,19 @@
+#
+# MANIFEST file for cl!clf!specials_win
+#
+# History:
+#	25-Aug-2004 (drivi01)
+#	     Created.  Creates iilibcompat.dll and iilibcompatdata.dll.
+#	23-Jun-2008 (drivi01)
+#	     Remove IITOUCH for alarmwkp.def file.  
+#
+
+SubDir ING_SRC cl clf specials_win ;
+
+IISUBSYS cl clf specials_win ;
+
+IISHLIBRARY $(SHCOMPATLIB) : $(COMPATLIB) $(IMPCOMPATLIBDATA) ;
+IISHLIBRARY $(SHCOMPATLIBDATA) : $(COMPATLIBDATA) $(SHCOMPATLIB) ;
+
+
+

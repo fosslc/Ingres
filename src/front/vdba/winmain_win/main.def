@@ -1,0 +1,484 @@
+;
+;    Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+;
+;    Project : graphical tool for ingres database administrator
+;
+;    Source : main.def
+;
+;        def. file for the main application
+;
+;    Author : Emmanuel Blattes
+;
+;
+
+NAME         VDBA
+DESCRIPTION  'Ingres/Visual DBA'
+PROTMODE
+EXETYPE      WINDOWS
+STUB         'WINSTUB.EXE'
+
+CODE         PRELOAD MOVEABLE DISCARDABLE
+DATA         PRELOAD MOVEABLE MULTIPLE
+
+HEAPSIZE     1024      ; see iicr8def.bat
+STACKSIZE    36000     ; see iicr8def.bat
+
+
+SEGMENTS
+    MAIN_TEXT           PRELOAD    MOVABLE DISCARDABLE
+    DOM_TEXT            LOADONCALL MOVABLE DISCARDABLE
+    DOMSPLIT_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DOM2_TEXT           LOADONCALL MOVABLE DISCARDABLE
+    DOM3_TEXT           LOADONCALL MOVABLE DISCARDABLE
+    SQLACT_TEXT         LOADONCALL MOVABLE DISCARDABLE
+    SQLACT2_TEXT        LOADONCALL MOVABLE DISCARDABLE
+    WINUTILS_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    TREE_TEXT           LOADONCALL MOVABLE DISCARDABLE
+    TREE2_TEXT          LOADONCALL MOVABLE DISCARDABLE
+    DOMDISP_TEXT        LOADONCALL MOVABLE DISCARDABLE
+    DOMDATA_TEXT        LOADONCALL MOVABLE DISCARDABLE
+    DOMDGETD_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DOMDBKRF_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DOMDMISC_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DOMDTLS_TEXT        LOADONCALL MOVABLE DISCARDABLE
+    DOMDUPDT_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DOMDFILE_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    TOOLS_TEXT          LOADONCALL MOVABLE DISCARDABLE
+    ESLTOOLS_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    METER_TEXT          LOADONCALL MOVABLE DISCARDABLE
+    DBATIME_TEXT        LOADONCALL MOVABLE DISCARDABLE
+    SETTINGS_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DBAPARSE_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DBATLS_TEXT         LOADONCALL MOVABLE DISCARDABLE
+    DBAGDET_TEXT        LOADONCALL MOVABLE DISCARDABLE
+    DBAGINFO_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DBASET_TEXT         LOADONCALL MOVABLE DISCARDABLE
+    STATBAR_TEXT        LOADONCALL MOVABLE DISCARDABLE
+    PRINT_TEXT          LOADONCALL MOVABLE DISCARDABLE
+    PROPERTY_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DBASQLPR_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DBASQLV2_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    DBAMVCFG_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    SQLTLS_TEXT         LOADONCALL MOVABLE DISCARDABLE
+    RMCMDCLI_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    CDDSLOAD_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    STMTWIZ1_TEXT       LOADONCALL MOVABLE DISCARDABLE
+    STMTWIZ2_TEXT       LOADONCALL MOVABLE DISCARDABLE
+
+
+
+    ADDREPL             LOADONCALL MOVEABLE DISCARDABLE
+    ALTERDB             LOADONCALL MOVEABLE DISCARDABLE
+    ALTERGRO            LOADONCALL MOVEABLE DISCARDABLE
+    ALTERROL            LOADONCALL MOVEABLE DISCARDABLE
+    ALTERUSR            LOADONCALL MOVEABLE DISCARDABLE
+    AUDITDB             LOADONCALL MOVEABLE DISCARDABLE
+    AUDITDBF            LOADONCALL MOVEABLE DISCARDABLE
+    AUDITDBT            LOADONCALL MOVEABLE DISCARDABLE
+    CDDS                LOADONCALL MOVEABLE DISCARDABLE
+    CHANGEST            LOADONCALL MOVEABLE DISCARDABLE
+    CHKPT               LOADONCALL MOVEABLE DISCARDABLE
+    CNTUTIL             LOADONCALL MOVEABLE DISCARDABLE
+    COPYDB              LOADONCALL MOVEABLE DISCARDABLE
+    CRDBEVEN            LOADONCALL MOVEABLE DISCARDABLE
+    CREATEDB            LOADONCALL MOVEABLE DISCARDABLE
+    CREATGRO            LOADONCALL MOVEABLE DISCARDABLE
+    CREATIDX            LOADONCALL MOVEABLE DISCARDABLE
+    CREATLOC            LOADONCALL MOVEABLE DISCARDABLE
+    CREATROL            LOADONCALL MOVEABLE DISCARDABLE
+    CREATRUL            LOADONCALL MOVEABLE DISCARDABLE
+    CREATSYN            LOADONCALL MOVEABLE DISCARDABLE
+    CREATTBL            LOADONCALL MOVEABLE DISCARDABLE
+    CREATUSR            LOADONCALL MOVEABLE DISCARDABLE
+    CRINTEGR            LOADONCALL MOVEABLE DISCARDABLE
+    CRVIEW              LOADONCALL MOVEABLE DISCARDABLE
+    DBA                 LOADONCALL MOVEABLE DISCARDABLE
+    DBLOC               LOADONCALL MOVEABLE DISCARDABLE
+    DISPLAY             LOADONCALL MOVEABLE DISCARDABLE
+    FIND                LOADONCALL MOVEABLE DISCARDABLE
+    FINDOBJ             LOADONCALL MOVEABLE DISCARDABLE
+    GETDATA             LOADONCALL MOVEABLE DISCARDABLE
+    GNREFDBE            LOADONCALL MOVEABLE DISCARDABLE
+    GNREFPRO            LOADONCALL MOVEABLE DISCARDABLE
+    GNREFTAB            LOADONCALL MOVEABLE DISCARDABLE
+    GRANTDB             LOADONCALL MOVEABLE DISCARDABLE
+    GRANTDBE            LOADONCALL MOVEABLE DISCARDABLE
+    GRANTPRO            LOADONCALL MOVEABLE DISCARDABLE
+    GRANTROL            LOADONCALL MOVEABLE DISCARDABLE
+    GRANTTAB            LOADONCALL MOVEABLE DISCARDABLE
+    LEXICAL             LOADONCALL MOVEABLE DISCARDABLE
+    LOCSEL01            LOADONCALL MOVEABLE DISCARDABLE
+    MAIL                LOADONCALL MOVEABLE DISCARDABLE
+    MODIFSTR            LOADONCALL MOVEABLE DISCARDABLE
+    MSGHANDL            LOADONCALL MOVEABLE DISCARDABLE
+    OPENFILE            LOADONCALL MOVEABLE DISCARDABLE
+    OTMIZEDB            LOADONCALL MOVEABLE DISCARDABLE
+    POPULATE            LOADONCALL MOVEABLE DISCARDABLE
+    PROCEDUR            LOADONCALL MOVEABLE DISCARDABLE
+    PROFILE             LOADONCALL MOVEABLE DISCARDABLE
+    PROPAGAT            LOADONCALL MOVEABLE DISCARDABLE
+    RECONCIL            LOADONCALL MOVEABLE DISCARDABLE
+    REFER               LOADONCALL MOVEABLE DISCARDABLE
+    REFRESH2            LOADONCALL MOVEABLE DISCARDABLE
+    REFRSET             LOADONCALL MOVEABLE DISCARDABLE
+    REFSECUR            LOADONCALL MOVEABLE DISCARDABLE
+    RELOCATE            LOADONCALL MOVEABLE DISCARDABLE
+    ROLLFWD             LOADONCALL MOVEABLE DISCARDABLE
+    ROLLFREL            LOADONCALL MOVEABLE DISCARDABLE
+    RVKDB               LOADONCALL MOVEABLE DISCARDABLE
+    RVKGDB              LOADONCALL MOVEABLE DISCARDABLE
+    RVKGDBE             LOADONCALL MOVEABLE DISCARDABLE
+    RVKGPROC            LOADONCALL MOVEABLE DISCARDABLE
+    RVKGROL             LOADONCALL MOVEABLE DISCARDABLE
+    RVKGTAB             LOADONCALL MOVEABLE DISCARDABLE
+    RVKGVIEW            LOADONCALL MOVEABLE DISCARDABLE
+    RVKTABLE            LOADONCALL MOVEABLE DISCARDABLE
+    SALARM01            LOADONCALL MOVEABLE DISCARDABLE
+    SALARM02            LOADONCALL MOVEABLE DISCARDABLE
+    SAVEFILE            LOADONCALL MOVEABLE DISCARDABLE
+    SCHEMA              LOADONCALL MOVEABLE DISCARDABLE
+    SESSION             LOADONCALL MOVEABLE DISCARDABLE
+    SPCALC              LOADONCALL MOVEABLE DISCARDABLE
+    SPCFYCOL            LOADONCALL MOVEABLE DISCARDABLE
+    SQLTEST             LOADONCALL MOVEABLE DISCARDABLE
+    SQLWIZD             LOADONCALL MOVEABLE DISCARDABLE
+    SQLWZSEL            LOADONCALL MOVEABLE DISCARDABLE
+    STATDUMP            LOADONCALL MOVEABLE DISCARDABLE
+    SUBEDIT             LOADONCALL MOVEABLE DISCARDABLE
+    SVRDIS              LOADONCALL MOVEABLE DISCARDABLE
+    SYNOBJ              LOADONCALL MOVEABLE DISCARDABLE
+    SYSMOD              LOADONCALL MOVEABLE DISCARDABLE
+    TBLSTR              LOADONCALL MOVEABLE DISCARDABLE
+    UNLOADDB            LOADONCALL MOVEABLE DISCARDABLE
+    USR2GRP             LOADONCALL MOVEABLE DISCARDABLE
+    UTIL                LOADONCALL MOVEABLE DISCARDABLE
+    VERIFDB             LOADONCALL MOVEABLE DISCARDABLE
+    VNODESEL            LOADONCALL MOVEABLE DISCARDABLE
+    CDDSV11             LOADONCALL MOVEABLE DISCARDABLE
+
+    
+
+EXPORTS
+        FrameWndProc            @1      ; main window proc
+        DomMDIChildWndProc      @2      ; D.O.M. mdi doc proc
+        BaseOwnerProc           @3      ; subclass combobox
+        OtherOwnerProc          @4      ; subclass combobox
+        SystemProc              @5      ; subclass checkbox
+        SqlActMDIChildWndProc   @6      ; Sql activity mdi doc proc
+        StatBarWndProc          @7      ; Ribbon bar
+        PropertyMDIChildWndProc @8      ; Property mdi doc proc
+
+        DlgSpaceCalc                @9
+        DlgSpaceCalcDlgProc         @10
+        SubEditCntlProc             @11
+        EnumNumericEditCntls        @12
+        DlgCreateDB                 @13
+        DlgCreateDBDlgProc          @14
+        DlgCreateUser               @15
+        DlgCreateUserDlgProc        @16
+        DlgGetDBLocInfo             @17
+        DlgGetDBLocInfoDlgProc      @18
+        DlgServerDisconnect         @19
+        DlgServerDisconnectDlgProc  @20
+        DlgOpenFile                 @21
+        ; Emb : is this our assembly code problem ? DlgSaveFile                 @22
+        DlgFind                     @23
+        DlgFindWndProc              @24
+        DlgSysMod                   @25
+        DlgSysModDlgProc            @26
+        DlgAddReplConnection        @27
+        DlgAddReplConnectionDlgProc @28
+        DlgAlterDB                  @29
+        DlgAlterDBDlgProc           @30
+;        DlgRefresh                  @31
+;        DlgRefreshDlgProc           @32
+        DlgVnodeSelection           @33
+        DlgVnodeSelectionDlgProc    @34
+
+;DlgSQLTestPreferences        @35
+;DlgSQLTestPreferencesDlgProc @36
+;DlgCopyDB                    @37
+;DlgCopyDBDlgProc             @38
+;DlgTableSelect               @41
+;DlgTableSelectDlgProc        @42
+        
+        DlgCreateLocation             @43
+        DlgCreateLocationDlgProc      @44
+
+        DlgCreateIntegrity            @45
+        DlgCreateIntegrityDlgProc     @46
+
+        DlgCreateGroup                @47
+        DlgCreateGroupDlgProc         @48
+
+        DlgCreateDBevent              @49
+        DlgCreateDBeventDlgProc       @50
+
+        DlgCreateSecurityAlarm        @51
+        DlgCreateSecurityAlarmDlgProc @52
+
+        DlgCreateRule                 @53
+        DlgCreateRuleDlgProc          @54
+
+        DlgCreateSynonym              @55
+        DlgCreateSynonymDlgProc       @56
+
+        DlgCreateIndex                @57
+        DlgCreateIndexDlgProc         @58
+
+        DlgCreateRole                 @59
+        DlgCreateRoleDlgProc          @60
+
+        DlgCreateView                 @61
+        DlgCreateViewDlgProc          @62
+
+        DlgSession                    @63
+        DlgSessionDlgProc             @64
+
+        DlgRefreshSettings            @65
+        DlgRefreshSettingsDlgProc     @66
+
+        DlgCreateTable                @67
+        DlgCreateTableDlgProc         @68
+
+        DlgTableStructure             @69
+        DlgTableStructureDlgProc      @70
+
+        DlgReferences                 @71
+        DlgReferencesDlgProc          @72
+
+        DlgCreateSynonymOnObject      @73
+        DlgCreateSynonymObjDlgProc    @74
+
+        DlgCreateProcedure            @75
+        DlgCreateProcedureDlgProc     @76
+
+        DlgCreateSchema               @77
+        DlgCreateSchemaDlgProc        @78
+
+        DlgGrantTable                 @79
+        DlgGrantTableDlgProc          @80
+ 
+        DlgGrantProcedure             @81
+        DlgGrantProcedureDlgProc      @82
+   
+        DlgGrantDBevent               @83
+        DlgGrantDBeventDlgProc        @84
+
+        DlgGrantDatabase              @85
+        DlgGrantDatabaseDlgProc       @86
+
+        DlgRefresh2                   @87
+        DlgRefresh2DlgProc            @88
+
+        DlgGnrefTable                 @89
+        DlgGnrefTableDlgProc          @90
+
+        DlgGnrefProcedure             @91
+        DlgGnrefProcedureDlgProc      @92
+
+        DlgGnrefDBevent               @93
+        DlgGnrefDBeventDlgProc        @94
+
+        DlgRevokeOnTable              @95
+        DlgRevokeOnTableDlgProc       @96
+
+        DlgRevokeOnDatabase           @97
+        DlgRevokeOnDatabaseDlgProc    @98
+
+        DlgRefSecurity                @99
+        DlgRefSecurityAlarmDlgProc    @100
+
+        DlgMail                       @101
+        DlgMailDlgProc                @102
+
+        DlgAlterUser                  @103
+        DlgAlterUserDlgProc           @104
+
+        DlgAlterGroup                 @105
+        DlgAlterGroupDlgProc          @106
+
+        DlgAlterRole                  @107
+        DlgAlterRoleDlgProc           @108
+
+        DlgAddUser2Group              @109
+        DlgAddUser2GroupDlgProc       @110
+
+        DlgPopulateTable              @111
+        DlgPopulateTableDlgProc       @112
+
+        DlgAuditDB                    @113
+        DlgAuditDBDlgProc             @114
+
+        DlgAuditDBTable               @115
+        DlgAuditDBTableDlgProc        @116
+
+        DlgAuditDBFile                @117
+        DlgAuditDBFileDlgProc         @118
+
+        DlgOptimizeDB                 @119
+        DlgOptimizeDBDlgProc          @120
+
+        DlgSpecifyColumns             @121
+        DlgSpecifyColumnsDlgProc      @122
+
+        DlgVerifyDB                   @123
+        DlgVerifyDBDlgProc            @124
+
+        DlgCheckpoint                 @125
+        DlgCheckpointDlgProc          @126
+
+        DlgRollForward                @127
+        DlgRollForwardDlgProc         @128
+
+        DlgDisplayStatistics          @129
+        DlgDisplayStatisticsDlgProc   @130
+
+;        DlgTableCheck                 @131
+;        DlgTableCheckDlgProc          @132
+
+        DlgDisplay                    @133
+        DlgDisplayDlgProc             @134
+
+        DlgLocate                     @135
+        DlgLocateDlgProc              @136
+
+        DlgRvkgtab                    @137
+        DlgRvkgtabDlgProc             @138
+
+        DlgRvkgdb                     @139
+        DlgRvkgdbDlgProc              @140
+
+        DlgCreateProfile              @141
+        DlgCreateProfileDlgProc       @142
+
+
+
+        ;Not useful : DlgCopyDB                     @143
+        DlgCopyDBDlgProc              @144
+
+        ;Not useful : DlgUnLoadDB                   @145
+        DlgUnLoadDBDlgProc            @146
+
+
+        DlgRvkgdbe                    @147
+        DlgRvkgdbeDlgProc             @148
+
+        DlgRvkgview                   @149
+        DlgRvkgviewDlgProc            @150
+
+        DlgRvkgproc                   @151
+        DlgRvkgprocDlgProc            @152
+
+        DlgModifyStructure            @153
+        DlgModifyStructureDlgProc     @154   
+
+        DlgLocationSelection          @155
+        DlgLocationSelectionDlgProc   @156
+     
+        DlgChangeStorageStructure         @157
+        DlgChangeStorageStructureDlgProc  @158
+
+        DlgRelocate                   @159
+        DlgRelocateDlgProc            @160
+
+        DlgCreateSecurityAlarm2        @161
+        DlgCreateSecurityAlarm2DlgProc @162
+
+        ; sub-box for Procedure add
+        ProcedureSubAddDlgProc        @163
+
+        DlgReconciler                 @164
+        DlgReconcilerDlgProc          @165
+        
+        DlgPropagate                  @166
+        DlgPropagateDlgProc           @167
+
+        DlgMobileParam                @168
+        DlgMobileParamDlgProc         @169
+
+        OIDTCreateTable               @170
+        OIDTForeignKey                @171
+
+        OIDTEditor                    @172
+        OIDTCreateIndex               @173
+        OIDTCreateTrigger             @174
+        ;OIDTTriggerReference          @175
+        OIDTGrantTableOrView          @176
+        OIDTGrantDBAuthId             @177
+        OIDTGrantDBConnect            @178
+
+        DlgRollForwardRelocateDlgProc @179
+
+
+        ;
+        ; Reserved starting from 500 for Emb
+        ;
+
+        ; Print
+        PrintHookProc                 @501
+        PrintAbortProc                @502
+        PrintDlgProc                  @503
+        PrintPageSetupProc            @504
+        PrintEditSub                  @505
+
+        ; background task
+        RefreshBoxProc                @506
+
+        ; remote execution
+        ExecRemoteCmdDlgProc          @507
+        RemotePilotDlgProc            @508
+
+        ; Container exported functions
+        ContainerCellDraw             @511
+        GenericContainerCellDraw      @512
+        
+        ; sqlact special objects
+        DatabasesListProc             @521
+
+        ; preferences dlgprocs
+        StatusBarPrefDlgProc          @522
+        SqlTestPrefDlgProc            @523
+        ToolbarPrefDlgProc            @524
+        DomPrefDlgProc                @525
+
+        ; Doms
+        DomFiltersDlgProc             @526
+
+        ; environment save hook proc for custom dialog box and password
+        SaveEnvHookProc               @527
+        PasswordSaveEnvDlgProc        @528
+        VerifyEnvPasswordDlgProc      @529
+
+        ; statement wizard functions
+        StmtWizFuncChoiceDlgProc      @531
+        StmtWizFuncParamDlgProc       @532
+        StmtWizAggregParamDlgProc     @533
+        StmtWizComparParamDlgProc     @534
+        StmtWizAAEParamDlgProc        @535
+        StmtWizDbobjParamDlgProc      @536
+        StmtWizInParamDlgProc         @537
+
+        HookFilterFunc                @538 ; Message Filter for intercepting F1 Key
+        SqlErrorsDlgProc              @539 ; Display sql errors messages
+
+        ;  Ingres Desktop specific
+        DlgCreateOidtProc             @540 ; Procedure
+        DlgCreateOidtProcDlgProc      @541
+        OidtProcSubAddDlgProc         @542 ; Parameter or declare section for procedure
+        DlgCreateOidtEventDlgProc     @543 ; Event
+        DlgCreateOidtDbareaDlgProc    @544 ; Dbarea
+        DlgCreateOidtStogroupDlgProc  @545 ; Stogroup
+        DlgCreateOidtDatabaseDlgProc  @546 ; Database
+        UpdateTableStatisticsDlgProc  @547
+        UpdateIndexStatisticsDlgProc  @548
+        UpdateIndexStatistics2DlgProc @549
+        OidtUnloadDlgProc             @550  ; Unload
+        OidtLoadDlgProc               @551  ; Load
+        OIDTGrantExecuteDlgProc       @552  ; grant execute
+
+        OidtDownloadDlgProc           @554  ; IICOPY - Download portion
+        OidtRunScriptsDlgProc         @555  ; IICOPY - Run Scripts portion
+        OidtViewLogDlgProc            @556  ; IICOPY - Download in 2 steps : View Log between 2 steps
+        OidtViewLogEditorEnumProc     @557  ; for external editor to view log
+        OidtEdConfigDlgProc           @558  ; configure external editor to view log

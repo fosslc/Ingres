@@ -1,0 +1,90 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icprivs.hlp        Info on user privileges.
+/#--
+Ingres user privileges can be set with the CREATE USER and ALTER USER
+SQL statements, and through Accessdb.
+
+Each privilege may be active by default, or may be activated on request by
+using the SET SESSION SQL statement. 
+
+Within Accessdb the following values may be used for each privilege to
+indicate the usage:
+	'y' - active by default.
+	'r' - active on request.
+	'n' - not granted.
+
+Privileges may also be assigned to Ingres roles using the CREATE ROLE
+and ALTER ROLE Ingres/SQL statements, and to user profiles using the
+CREATE PROFILE and ALTER PROFILE Ingres/SQL statements.
+
+The following table describes the privileges that can be assigned a user in 
+Accessdb. 
+
+Privilege      	Details
+---------    	-------
+CREATEDB        Users with this privilege can create Ingres databases.
+
+SECURITY        Users with this privilege can:
+                o Use the "-u" flag to impersonate other Ingres users,
+                o Connect to any database with unlimited database privileges,
+                o Run Accessdb,
+		o Alter security attributes of users, roles and profiles.
+		o On B1 enabled Ingres systems access and regrade data with 
+		  a modified security policy.
+		o Alter Ingres security system catalogs.
+
+MAINTAIN_USERS  Users with this privilege can:
+		o Issue CREATE/ALTER/DROP USER statements to maintain users,
+                o Issue CREATE/ALTER/DROP GROUP statements to maintain groups,
+                o Issue CREATE/ALTER/DROP PROFILE statements to maintain 
+		  user profiles,
+                o Issue CREATE/ALTER/DROP ROLE statements to maintain roles,
+		o Issue GRANT/REVOKE on roles.
+                o Issue GRANT/REVOKE ... ON DATABASE statements for any
+                  database,
+                o Issue GRANT/REVOKE ... ON INSTALLATION statements,
+
+MAINTAIN_AUDIT o Issue ENABLE/DISABLE SECURITY_AUDIT statements.  Requires
+                  subscription to the optional security auditing feature
+                  of Ingres.
+	       o Issue ALTER SECURITY_AUDIT statements. Requires subscription
+		 to the optional security auditing features of Ingres.
+	       o Alter security auditing aspects of users, roles and profiles.
+
+MAINTAIN_LOCATIONS    Users with this privilege can issue CREATE/ALTER/DROP
+                LOCATION statements and can perform operations on locations
+                within Accessdb.
+                
+AUDITOR		Users with this privilege can query registered security 
+		audit logs through SQL, and perform maintenance operations
+		against security audit logs including:
+		o Issue REGISTER ... WITH DBMS=SXA statements.
+		o Issue REMOVE statements against SXA tables.
+		Requires subscription to the optional security features of
+		Ingres.
+
+OPERATOR        Users with this privilege can perform database backups.
+
+TRACE           Users with this privilege can issue Ingres/SQL SET 
+                statements which tell Ingres to display trace and debug 
+                information.  For example, users must have TRACE privilege 
+                to issue the following statements:
+
+                        SET [NO]PRINTQRY
+                        SET [NO]IO_TRACE
+                        SET [NO]LOCK_TRACE
+                        SET [NO]PRINTRULES
+                        SET [NO]RULES
+
+SESSION_SECURITY_LABEL 
+		Users with this privilege can issue Ingres/SQL
+		SET SESSION WITH SECURITY_LABEL statements, altering
+		their effective session security label on installations
+		supporting MLS.
+
+WRITE_UP	These privileges affect the application of the MLS/MAC 
+WRITE_DOWN      security policy on Ingres systems with B1 security
+WRITE_FIXED     enabled. See the Ingres Trusted Facilities Manual
+INSERT_UP       for more information on the privileges and their effect.
+INSERT_DOWN	
+

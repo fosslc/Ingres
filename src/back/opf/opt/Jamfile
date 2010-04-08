@@ -1,0 +1,14 @@
+#
+# Jamfile file for back!opf!opt
+#
+
+SubDir ING_SRC back opf opt ;
+
+IISUBSYS back opf opt ;
+
+
+IILIBRARY OPFLIB : opttxttree.c opttretx.c optstrace.c
+	optcotree.c optcall.c ;
+
+IILIBRARY IMPOPFLIBDATA : optdata.c ;
+

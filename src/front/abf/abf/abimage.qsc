@@ -1,0 +1,288 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<lo.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+##include	<abclass.qsh>
+/*
+#include	<abclass.h>
+*/
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<abfcnsts.h>
+#include	<abfcompl.h>
+#include	<abfglobs.h>
+#include	"abfgolnk.h"
+#include	"ablink.h"
+#include	"erab.h"
+
+/**
+** Name:	abfimage.qsc -	ABF Link Image Frame.
+**
+** Description:
+**  Contains the frame for the link image frame of ABF and an
+**  auxilliary routine fetching an application's default role.
+**  Defines:
+**
+**	IIABimage()	ABF link image frame.
+**  	IIABgrGtRole()  Fetches default role for an application.
+**
+** History:
+**	Revision 6.2  89/02  wong
+**	Added application object parameter and free of application.
+**
+**	Revision 6.0  88/01  wong
+**	Created from EQUEL source, "abimgfrm.qc".
+**  20/02/95  cwaldman (x-int angusm)
+**  Created IIABgrGtRole().
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	23-Aug-2009 (kschendel) 121804
+**	    Need abfglobs.h to satisfy gcc 4.3.
+**/
+
+/*{
+** Name:	IIABimage() -	ABF Link Image Frame.
+**
+** Description:
+**	Allow a user to build an executable image for an application.
+**	The resulting executable is a stand alone program that the user
+**	can run outside of ABF.
+**
+** Input:
+**	app	{APPL *}  The application object to be linked; may not
+**				be instantiated (i.e., ID is OC_UNDEFINED.)
+**	appname	{char *} The application to be linked.
+**	id	{OOID}  The application object ID.
+**
+** History:
+**	01/88 (jhw) -- Modified from EQUEL source for "abimgfrm.qc".
+**	11/89 (wolf) - Accept CMS format file ID "fn ft" and convert to "fn.ft".
+**	11/89 (jhw) -- Modified to pass error display function to
+**			'iiabImgLink()'.
+**	10/90 (Mike S) -- Removed previous change.  Error display logic is now
+**			in abapplnk.qsc
+**	11/90 (Mike S) -- Ignore roleid if Knowledge Management Extensions
+**			are of.
+**	19-sep-91 (leighb) Added ifdef so that when INTERPIMG is defined,
+**			Interpreted Images are the default.
+**	08-jun-92 (leighb) DeskTop Porting Change: 
+**			Changed 'INTERPIMG' to 'INTERPIMG_DEF' as per emerson.
+**	11-jan-93 (fraser)
+**			Restored 19-sep-91 history comment.  (Now, if 
+**			INTERPIMG_DEF is defined, interpreted images are
+**			the default.)
+**      17-jun-97 (dacri01)
+**                      Initialized *rolename to EOS in func IIABgrGtRole().
+**                      So now it returns NULL or a valid rolename.
+**                      Bug#83125.
+**      03-nov-97 (hweho01)
+**                      Fix the memory access violation error in   
+**                      IIABgrGtRole() routine by setting char. pointer
+**                      rol to a local static buffer space.
+**                      
+*/
+
+GLOBALREF 	char *IIabExename;
+GLOBALREF	char *IIabRoleID;
+GLOBALREF	bool IIabKME;
+GLOBALREF	i4  IIOIimageBld;		 
+
+#define _ImageExpl	F_AB0011_Image_expl
+#define _BatchImgExpl	F_AB0013_Bimg_expl
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+#define _EndExpl	F_FE0102_ExplEnd
+
+static const
+##		char	_ImgForm[]	= ERx("abfimage");
+
+VOID
+IIABimage(app, appname, caller)
+##APPL	*app;
+##char	*appname;
+i4	caller;
+{
+	STATUS	stat;
+##	char	executable[MAX_LOC+1];
+##	char 	roleid[FE_MAXNAME+1];
+	char 	password[FE_MAXNAME+1];
+	char	fullrole[2*FE_MAXNAME+2];
+
+	iiabifiImgFrmInit(_ImgForm);
+
+
+	/* if we are called from the application flow diagram.. then
+	   we need not read the application components.. they are 
+	   already up-to-date */
+	stat = 	(caller != ABUT_AFD)
+		? IIABappFetch(app, appname, OC_UNDEFINED, TRUE) 
+		: OK;
+
+	/* if we have bad status or there is no source directory.. return */
+	if (stat != OK || !IIABchkSrcDir(app->source, FALSE))
+	{
+		return;
+	}
+
+##	display	_ImgForm	/* default: FILL */
+
+##	initialize
+##	{
+##		char titlebuf[80];
+		
+		IIUGfmt(titlebuf, sizeof(titlebuf), ERget(F_AB00FF_BuildTitle), 
+			1, IIabExename);
+		if ( app->executable == NULL || *app->executable == EOS )
+		{
+			_VOID_ STprintf(executable, "%s%s", appname, ABIMGEXT);
+		}
+		else
+		{
+			STcopy(app->executable, executable);
+		}
+##		putform _ImgForm (#file = executable, #title = titlebuf)
+		if (IIabKME)
+		{
+##			putform _ImgForm (#role = app->roleid);
+		}
+		else
+		{
+##			set_frs field _ImgForm (invisible(#role) = 1)
+##                      clear field #role
+		}
+##	}
+
+##	activate menuitem ERget(FE_OK) (expl = ERget(_ImageExpl)), frskey4
+##	{
+		ABLNKARGS link_args;
+
+##		getform _ImgForm ( executable = #file, roleid = #role);
+#ifdef CMS
+		TOwscnme(executable);	/* accept "fn ft"; convert to "fn.ft" */
+#endif
+		if (*roleid == EOS)
+		{
+				*password = EOS;
+				IIabRoleID = ERx("");
+		}
+		else
+		{
+			bool newrole = !STequal(roleid, app->roleid);
+			char *prev_pwd = newrole ? NULL : app->password;
+
+			if (IIABgrpGetRolePwd(roleid, prev_pwd, password) != OK)
+##				resume
+			if (!newrole)
+			{
+				if (app->password == NULL ||
+				    !STequal(app->password, password))
+				{
+					app->password = FEtsalloc(app->data.tag,
+							  	  password);
+				}
+			}
+			IIabRoleID = STprintf(fullrole, ERx("-R%s/%s"), 
+					      roleid, password);
+
+		}
+# ifdef	INTERPIMG_DEF					  
+		IIOIimageBld = 1;		/* Build Interpreted Image */
+		_VOID_ IIABilnkImage(appname, OC_UNDEFINED, 
+						executable, ABF_OBJECTCODE);
+		IIOIimageBld = 0;		/* Reset Image-type flag */
+# else							 
+		link_args.link_type = ABLNK_IMAGE;
+		link_args.app = app;
+		link_args.executable = executable;
+		link_args.options = ABF_OBJECTCODE;
+		_VOID_ IIABlkaLinKApplication(&link_args);
+# endif	/* INTERPIMG_DEF */				 
+##		breakdisplay;
+##	}
+
+##/*	activate menuitem ERget(AB_BatchImg) (expl = ERget(_BatchImgExpl))
+##	{
+##		getform _ImgForm ( executable = #file );
+##		call abfimage (application = appname, #executable = executable);
+##		breakdisplay;
+##	}*/
+
+##	activate menuitem ERget(FE_Cancel) 
+##			  (expl = ERget(F_FE0103_ExplCancel), validate = 0),
+##			  FRSkey9 (validate = 0)
+##	{
+##		breakdisplay;
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl), validate=0),
+##			  FRSkey1 (validate = 0)
+##	{
+		FEhelp(ERx("abfimage.hlp"), ERget(S_AB0031_Building_Image));
+##	}
+
+	/* if the caller is the application catalog.. then we can
+	   free the structures.. all other cases expect the structures
+	   to be in memory */
+	if (caller == ABUT_APPCAT)
+	{
+		IIAMappFree(app);
+	}
+}
+
+/*
+** Cache initialization of this form.
+*/
+
+static bool _FormInit = FALSE;
+
+iiabifiImgFrmInit(fname)
+char *fname;
+{
+	if (!_FormInit)
+	{
+		_FormInit = TRUE;
+		IIARiaForm(_ImgForm);
+	}
+}
+
+char *
+IIABgrGtRole (app)
+char *app;
+{
+   char *rol;
+   static char buffer[FE_MAXNAME+1];
+   EXEC SQL BEGIN DECLARE SECTION;
+	char appname[FE_MAXNAME+1];
+	char rolename[FE_MAXNAME+1];
+   EXEC SQL END DECLARE SECTION;
+
+   _VOID_ STlcopy(app, appname, sizeof(appname)-1);
+   CVlower(appname);
+   *buffer = EOS;
+   rol = buffer;
+   *rolename = EOS;
+
+   EXEC SQL SELECT a.abf_arg5 INTO :rolename
+	    FROM ii_abfobjects a, ii_objects o
+	    WHERE o.object_name = :appname
+	    AND o.object_class = :OC_APPL
+	    AND o.object_id = a.object_id;
+
+   STcopy(rolename, rol);
+   
+   return (char *)rol;
+}

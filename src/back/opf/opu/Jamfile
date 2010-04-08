@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!opf!opu
+#
+
+SubDir ING_SRC back opf opu ;
+
+IISUBSYS back opf opu ;
+
+
+IILIBRARY OPFLIB : oputmemory.c opusmemory.c opuqtprint.c
+	opumemory.c opudealloc.c opucompare.c opualloc.c ;
+

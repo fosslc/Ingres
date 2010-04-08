@@ -1,0 +1,14 @@
+#
+# Jamfile file for back!gwf!gwrms_vms
+#
+#    22-dec-2008 (stegr01)
+#    Remove gwrmscvu.mar since the 2 functions that are 
+#    defined are never called on Alpha or Itanium
+
+SubDir ING_SRC back gwf gwrms_vms ;
+
+IISUBSYS back gwf gwrms_vms ;
+
+
+IILIBRARY GWRMSLIB : gwrmsnum.roc rmsmap.c gwtabi_rms.c gwrmsutl.c
+	gwrmsini.c gwrmsdt.c gwrmscvr.c gwrmscvi.c gwrms.c gw02rms.c ;

@@ -1,0 +1,18 @@
+#
+# Jamfile file for front!misc!delobj
+#
+
+SubDir ING_SRC front misc delobj ;
+
+IISUBSYS front misc delobj ;
+
+
+IIBINEXE delobj : delobj.c ;
+IINEEDLIBS delobj :  DELOBJLIB COPYUTILLIB COPYFORMLIB
+	MALLOCLIB SHINTERPLIB SHFRAMELIB SHQLIB SHCOMPATLIB
+	SHEMBEDLIB ;
+IIUNDEFS delobj :  malloc ;
+
+IILIBRARY DELOBJLIB : doxpname.qsc doifile.c dodelobj.c
+	dodelapp.c dobjcrk.c ;
+

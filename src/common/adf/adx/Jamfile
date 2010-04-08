@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!adf!adx
+#
+
+SubDir ING_SRC common adf adx ;
+
+IISUBSYS common adf adx ;
+
+
+IILIBRARY ADFLIB : adxhandler.c ;
+

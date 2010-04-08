@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- NETUTIL, top frame, Cursor movement subtopic
+/#--
+You may move among tablefields with the FRS tab key.  The menu items Create, 
+Destroy, and Edit apply to whichever table field the cursor is in when the 
+menu item is selected.  When a new entry is created in the vnode table, 
+NETUTIL will automatically prompt for information to fill in both of the 
+detail tablefields.  Detail records may be destroyed, edited, or new ones 
+created, with the appropriate menu choice.
+ 
+You may move within tablefields with standard FRS cursor commands, and move
+between the three tablefields with the FRS tab key.  When the cursor resides
+in a detail tablefield, the current vnode continues to be the same; when you 
+tab back to the vnode tablefield, the cursor repositions on the entry for the 
+current vnode.

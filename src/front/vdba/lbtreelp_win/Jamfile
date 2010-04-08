@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!lbtreelp_win
+#
+
+SubDir ING_SRC front vdba lbtreelp_win ;
+
+IISUBSYS front vdba lbtreelp_win ;
+
+
+IISLN lbtreelp.dll : lbtreelp.sln ;

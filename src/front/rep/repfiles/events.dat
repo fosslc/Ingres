@@ -1,0 +1,28 @@
+dd_delete	     0	           -4	     0	Outgoing delete event.
+
+dd_delete2	     0	           -4	     0	Incoming delete event.
+
+dd_distribute	     1	            0	     0	Activity alert for all servers not doing queue distribution.
+
+dd_go_server	     4	           -2	     1	Process the replication.
+
+dd_insert	     0	           -4	     0	Outgoing insert event.
+
+dd_insert2	     0	           -4	     0	Incoming insert event.
+
+dd_ping	     5	            0	     0	Do a monitor ping of the server.
+
+dd_server	     0	           -4	     1	Status DB event coming from each server.
+
+dd_set_server	     3	            0	     1	Set a server startup flag.
+
+dd_stop_server	     2	           -3	     1	Stop a server.
+
+dd_transaction	     0	           -4	     0	Outgoing transaction event.
+
+dd_transaction2	     0	           -4	     0	Incoming transaction event.
+
+dd_update	     0	           -4	     0	Outgoing update event.
+
+dd_update2	     0	           -4	     0	Incoming update event.
+

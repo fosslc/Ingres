@@ -1,0 +1,68 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icrodbfr.hlp        Help on Catalogdb's Info about a Database frame.
+/#subtopic "Group and Role Identifiers" icgrprol.hlp
+/#subtopic "Authorization Hierarchy" icauthhi.hlp
+/#--
+The "Information about a Database" frame displays information about a
+database that you own. The information displayed is read-only.
+
+	FIELD NAME     SYNOPSIS
+	------------    -----------
+	Database        Name of the database this form describes.
+
+	Owner           Your Ingres user name.
+	
+	Default         
+	  Access	This will be set to "private" if Createdb's "-p" flag
+	  		was specified when the database was created; it will 
+			be set to "public" if "-p" was not specified.
+	
+	                "public" means that any session can connect to the
+	                database, unless the NOACCESS database privilege is
+	                granted to one or more of the authorization identifiers
+	                (role, user, group, or public) that apply to the 
+			session.
+	
+	                "private" means that no session can connect to the 
+			database, unless the ACCESS database privilege is 
+			granted to one or more of the authorization identifiers
+			that apply to the session, or the user is the DBA or 
+			is the Ingres Security Administrator.
+	Database
+	  Location      Location name where database is stored.
+	
+	Checkpoint
+	  Location      Location name where database checkpoints are stored.
+	
+	Journal
+	  Location      Location name where database journals are stored.
+	
+	Work
+	  Location      Location name where database works are stored.
+
+	Dump
+	  Location      Location name where dump log files used for on-line 
+			backup are stored.
+	
+	Database        
+	  Type		"local" means the database is an Ingres or 
+			Ingres/Gateway database.
+	                "distributed" means the database is an Ingres/Star
+	                distributed database. (for databases of type 
+			"distributed", the name and node of the Coordinator 
+			Database (CDB) are also displayed).
+	
+	Authorization   
+	  Identifier	User authorization for access to this database. 
+			"yes" or "no" indicates if the Identifier is allowed or 
+			not allowed to access the database, respectively.
+
+The menu commands are:
+	
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Access		Display information about who may access your database.
+	
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

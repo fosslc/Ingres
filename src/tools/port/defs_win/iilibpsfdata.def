@@ -1,0 +1,16 @@
+;
+; History:
+;	25-Aug-2004 (drivi01)
+;	     Created.  Contains data symbols for psf.
+;	11-Jan-2005 (drivi01)
+;	     psf data shared library hasn't been created in jam build
+;	     up to this point, due to recent opf changes, Psf_srvblk
+;	     and Psf_init GLOBALDEFS must be exported in psf data library
+;	     to avoid opf inconsistency errors.
+;
+
+EXPORTS
+
+
+	Psf_srvblk	@5	DATA
+	Psf_init	@6	DATA

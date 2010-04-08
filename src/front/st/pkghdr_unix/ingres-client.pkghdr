@@ -1,0 +1,20 @@
+%summary_tag% %rpm_product%
+%pkgname_tag% %rpm_basename%%rpm_specname%
+%version_tag% %rpm_version%
+%release_tag% %rpm_release%
+%license_tag% %rpm_license%
+%group_tag% %rpm_group%
+%arch_tag% %deb_arch%
+%source_tag% none
+%patch_tag% none
+%maintainer_tag% %rpm_vendor%
+%url_tag% %rpm_url%
+%buildroot_tag% %rpm_buildroot%
+%rpmprereq_tag% /bin/su
+%rpmprereq_tag% /bin/sed
+%rpmprereq_tag% /bin/grep
+%rpmprereq_tag% %{__tar}
+%rpmprereq_tag% %{_bindir}/ipcs
+%rpmprereq_tag% %{__awk}
+%rpm_descrip_tag%
+%deb_descrip_tag% %product_name% Base Package

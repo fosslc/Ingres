@@ -1,0 +1,43 @@
+#  Copyright (c) 2007 Ingres Corporation
+#
+#
+#  Name: Jamdefs.i64_vms -- Variable definitions for Itanium OpenVMS
+#
+#  Description:
+#       Platform specific variable definitions for Itanium OpenVMS
+#
+# History:
+#       17-Dec-2008 (stegr01)
+#           Created.
+#       31-Dec-2009 (horda03)
+#           Add definition of EXESFX so that IINEEDOBJ can be used on VMS
+#       21-jan-2010 (joea)
+#           Remove LINKFLAGS.
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+VERS    = "i64_vms" ;
+AS	= macro ;
+ASMACH  =  ;
+CC 	?= "cc" ;
+CCDEBUG = "/DEBUG" ;
+CCMACH  ?= "/NOWARN" ;
+CCVERSFLAG = "/DEFINE=(I64_VMS)" ;
+
+EXESFX  = exe ;
+
+OPTIM   ?= "/OPTIM" ;
+IIOPTIM ?= "/OPTIM" ;
+NOOPTIM ?= "/NOOPTIM" ;
+
+CXX	= "cxx" ;
+CCLDFLAGS ?= "/NOSYSSHR" ;
+AWK	= gawk ;
+LEX	= flex ;
+#
+# for readme.html 
+#
+platform_string = "HP OpenVMS Itanium" ;
+extension_string = $(config_string) ;

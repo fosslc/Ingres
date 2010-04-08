@@ -1,0 +1,610 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<cm.h>
+# include	<cv.h>
+# include	<er.h>
+# include	<me.h>
+# include	<si.h>	/* Debug purposes only	*/
+# include	<st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include	<ui.h>
+## include	<ooclass.qsh>
+# include	<uigdata.h>
+# include	<er.h>
+# include	<erde.h>
+# include	"doglob.h"
+
+
+	static	VOID	do_dealloc_fd(FE_DEL *,FE_DEL **,bool);
+
+# ifdef	DO_DEBUG
+	static	VOID	dump_fd(FE_DEL *,nat);
+# endif
+
+/*
+** DO_XPAND_NAMES - For a given FE object name (or pattern) and owner, retrieve
+**			the associated object_ids and object_name from ii_objects.
+**			FE_DEL structures are added and chained in as required.
+**
+** Parameters:
+**	fd		Pointer to FE_DEL structure containing base FE object
+**			name or pattern.  This is always assumed to be the
+**			current end of the FE_DEL chain.
+**
+**	prev_fd		Address of pointer to previous FE_DEL structure in the
+**			chain.  If the current FE_DEL is a pattern which has a
+**			NULL expansion, then the current FE_DEL is deallocated
+**			and prev_fd used to reset the end of the chain.  If
+**			prev_fd is NULL, then the current fd is the chain head,
+**			and Ptr_fd_top is reset to NULL if deallocation occurs.
+**	del_obj_type	Type of object to be deleted (assumes OC_ values).
+**			If OC_OBJECT, then accept all object types, i.e., don't
+**			build a qualification string for object_type.
+**
+** Returns:
+**	Pointer to the current end of the FE_DEL chain.	If the current fd
+**	was the chain head and was deallocated, then this will be NULL.
+**
+** Called by:
+**	do_crack_cmd()
+**	do_if_parse()
+**
+** Side Effects:
+**	The data in the passed in FE_DEL structure is overwritten, and
+**	additional FE_DEL structures may be chained in.	The FE_DEL may
+**	also be deallocated.
+**
+** History:
+**	12-jan-1993 (rdrane)
+**		Written.
+**	11-feb-1993 (rdrane)
+**		Conditionally compile with debugging statements.
+**	25-jun-1993 (rdrane)
+**		Correct setting of owner_spec.	If we get it from
+**		IIUIdbdata(), then we must copy it over.  Otherwise,
+**		we attempt to MEfree() the IIUIdbdata() memory,
+**		and core dump.
+**	14-jan-1994 (rdrane)
+**		Ensure that all potential owner names have any embedded single
+**		quotes escaped to address a range of bugs regarding delimited
+**		identifiers containing embedded single quotes.
+**	25-oct-1994 (athda01)
+**		Ensure that all potential object names have any embedded Ingres
+**		escape characters (\) stripped before being used in the SQL
+**		statement containing the = operator, if IIUGscanwildcard returns
+**		FALSE.
+**	07-jan-1997 (pchang)
+**		Improved (simplified) the qualification string to prevent the
+**		query from running out of memory in the optimizer.  Issued the 
+**		correct error message in do_dealloc_fd() when no object can be 
+**		found while attempting to delete ALL (delobj) objects from the 
+**		database.  (B78813)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# define	PATTERN_MATCH_CMD	ERx(" object_name LIKE ")
+# define	PATTERN_EQUAL_CMD	ERx(" object_name = ")
+# define	PATTERN_MAX_LGTH	18
+
+# define	OWNER_CMD		ERx(" object_owner = ")
+# define	OWNER_STR_LGTH		16
+
+# define	NO_ESCAPE_CMD		ERx("")
+# define	ESCAPE_CMD		ERx(" ESCAPE ")
+# define	ESCAPE_STR_LGTH		8
+# define	ESCAPE_MAX_LGTH		13
+				/*
+				** Includes adding of UI_EWC_ESC_CHAR
+				** (in quotes) and following space.
+				*/
+
+# define	EQL_CLASS_CMD		ERx(" object_class = ")
+# define	MIN_CLASS_CMD		ERx(" object_class >= ")
+# define	MAX_CLASS_CMD		ERx(" object_class <= ")
+# define	CLASS_MAX_LGTH		17
+
+# define	SQUOTE_STR		ERx("'")
+# define	SQUOTE_STR_LGTH		1
+
+# define	DQUOTE_STR		ERx("\"")
+# define	DQUOTE_STR_LGTH		1
+
+# define	AND_STR			ERx(" AND ")
+# define	AND_STR_LGTH		5
+
+# define	OR_STR			ERx(" OR ")
+# define	OR_STR_LGTH		4
+
+# define	DOT_STR			ERx(".")
+# define	DOT_STR_LGTH		1
+
+# define	OPAREN_STR		ERx(" (")
+# define	CPAREN_STR		ERx(") ")
+# define	PAREN_MAX_LGTH		2
+
+				/*
+				** Sized to hold alphanumeric rep of 2 i4's
+				** linked by " AND ", preceeded by class,
+				** and enclosed in parenthesis.  There can be
+				** MAX_DO_OC of these, linked by  OR (-all
+				** case).
+				*/
+# define	OC_BUF_LGTH		((((2 * 13) + AND_STR_LGTH + \
+				 		 (2 * CLASS_MAX_LGTH) + \
+						PAREN_MAX_LGTH) * \
+					  MAX_DO_OC) + \
+					 (OR_STR_LGTH * (MAX_DO_OC - 1)))
+
+# define	Q_BUF_LGTH	((2 * FE_UNRML_MAXNAME) + \
+				 (2 * AND_STR_LGTH) + \
+				 (4 * SQUOTE_STR_LGTH) + PATTERN_MAX_LGTH + \
+			   		 OWNER_STR_LGTH + ESCAPE_MAX_LGTH + \
+				 OC_BUF_LGTH)
+
+FE_DEL *
+do_expand_name(FE_DEL *fd,FE_DEL **prev_fd,OOID del_obj_type)
+{
+EXEC SQL BEGIN DECLARE SECTION;
+	OOID	_ooid;
+	OOID	_ooclass;
+	char	_ooname[(FE_MAXNAME + 1)];
+	char	_ooowner[(FE_MAXNAME + 1)];
+	char	buf[(Q_BUF_LGTH + 1)];
+EXEC SQL END DECLARE SECTION;
+
+	bool	pattern_fail;
+	STATUS	dummy_status;	/* Satisfy picky LINTs	*/
+	i4	i;
+	i4	xpand_cnt;
+	char	*pattern_ptr;
+	char	*escape_ptr;
+	char	*name_escape_ptr;                         /* b63586 ATHDA01 */
+	char	*copy_name_ptr;                           /* b63586 ATHDA01 */
+	OBJ_DEL_DATA *odd_ptr;
+	FE_DEL	*cur_fd;
+	FE_DEL	*xpand_fd;
+	char	oc_buf[(OC_BUF_LGTH + 1)];
+	char	escape_buf[(ESCAPE_MAX_LGTH + 1)];
+	char	esc_chr_buf[2];
+	char	n_buf[(FE_UNRML_MAXNAME + 1)];
+	char	o_buf[(FE_UNRML_MAXNAME + 1)];
+
+
+	cur_fd = fd;			/* Init chain position		*/
+	xpand_cnt = 0;			/* Indicate none found		*/
+	pattern_fail = FALSE;		/* No expansion failures yet	*/
+	cur_fd->fd_type = del_obj_type;	/* Indicate base object type	*/
+
+	/*
+	** Set string rep of desired Object Classes.  Sub-strings area
+	** asssumed to include separating spaces, so none needed in the
+	** pattern string.  Be sure to include all known object types
+	** if the -all case!
+	*/
+	if  (del_obj_type == OC_OBJECT)
+	{
+		STcopy(OPAREN_STR,&oc_buf[0]);
+		i = PAREN_MAX_LGTH;
+		odd_ptr = &obj_dl_data[0];
+		while (TRUE)
+		{
+		    if (odd_ptr->low_ooid == odd_ptr->hi_ooid)
+			STprintf(&oc_buf[i], ERx(" %s%d "),
+				 EQL_CLASS_CMD, odd_ptr->low_ooid);
+		    else
+			STprintf(&oc_buf[i], ERx(" (%s%d%s%s%d%) "),
+				 MIN_CLASS_CMD, odd_ptr->low_ooid, AND_STR,
+				 MAX_CLASS_CMD, odd_ptr->hi_ooid);
+		    odd_ptr++;
+		    if  (odd_ptr->low_ooid != (OOID)0)
+		    {
+			STcat(&oc_buf[0],OR_STR);
+			i = STlength(&oc_buf[0]);
+			continue;
+		    }
+		    break;
+		}
+		STcat(&oc_buf[0],CPAREN_STR);
+	}
+	else
+	{
+		odd_ptr = &obj_dl_data[0];
+		while (odd_ptr->low_ooid != (OOID)0)
+		{
+			if  ((cur_fd->fd_type >= odd_ptr->low_ooid) &&
+			 	(cur_fd->fd_type <= odd_ptr->hi_ooid))
+			{
+					break;
+			}
+			odd_ptr++;
+		}
+		if  (odd_ptr->low_ooid == (OOID)0)
+		{
+			/*
+			** Internal Error!!!  We should do something
+			** about this ...
+			*/
+			do_dealloc_fd(cur_fd,prev_fd,pattern_fail);
+			return(*prev_fd);
+		}
+		if (odd_ptr->low_ooid == odd_ptr->hi_ooid)
+		    STprintf(&oc_buf[0], ERx(" %s%d "),
+			     EQL_CLASS_CMD, odd_ptr->low_ooid);
+		else
+		    STprintf(&oc_buf[0], ERx(" (%s%d%s%s%d) "),
+			     MIN_CLASS_CMD, odd_ptr->low_ooid, AND_STR,
+			     MAX_CLASS_CMD, odd_ptr->hi_ooid);
+	}
+
+	/*
+	** Handle any owner.objectname construct.	If the owner is not the
+	** invoker, then just fail the entire specification.  Normalize the
+	** owner specification in case its a delimited identifier.
+	*/
+	cur_fd->fd_name_info->owner_dest = MEreqmem(0,(FE_MAXNAME + 1),
+							  TRUE,NULL);
+	cur_fd->fd_name_info->name_dest = MEreqmem(0,(FE_MAXNAME + 1),
+							 TRUE,NULL);
+	cur_fd->fd_name_info->is_nrml = FALSE;
+	FE_decompose(cur_fd->fd_name_info);
+
+	if  (!cur_fd->fd_name_info->owner_spec)
+	{
+		_VOID_ STcopy(IIUIdbdata()->user,
+			 	 cur_fd->fd_name_info->owner_dest);
+	}
+
+	i =	IIUGdlm_ChkdlmBEobject(cur_fd->fd_name_info->owner_dest,
+					   cur_fd->fd_name_info->owner_dest,
+					   TRUE);
+	switch(i)
+	{
+	case UI_REG_ID:
+		cur_fd->fd_name_info->owner_dlm = FALSE;
+		break;
+	case UI_DELIM_ID:
+		cur_fd->fd_name_info->owner_dlm = TRUE;
+		break;
+	case UI_BOGUS_ID:
+	default:
+		do_dealloc_fd(cur_fd,prev_fd,pattern_fail);
+		return(*prev_fd);
+		break;
+	}
+
+	/*
+	** FE owner name is always stored in FE catalogs as lower case.
+	** Eventually, we're going to have to store it as reflected by suser
+	** if we hope to really support delimited identifiers!
+	*/
+	CVlower(cur_fd->fd_name_info->owner_dest);
+
+	if  ((!cur_fd->fd_name_info->owner_spec) &&
+		  (STcompare(IIUIdbdata()->user,
+			cur_fd->fd_name_info->owner_dest) != 0))
+	{
+		do_dealloc_fd(cur_fd,prev_fd,pattern_fail);
+		return(*prev_fd);
+	}
+
+	/*
+	** FE object name is not delimited ID, and is always lower cased!
+	*/
+	CVlower(cur_fd->fd_name_info->name_dest);
+	cur_fd->fd_name_info->name_dlm = FALSE;
+
+# ifdef	DO_DEBUG
+	dump_fd(cur_fd,10);
+# endif
+
+	pattern_ptr = PATTERN_EQUAL_CMD;	/* Assume plain vanilla names */
+	escape_ptr = NO_ESCAPE_CMD;
+	/*
+	** Check for any wildcards.  If there aren't any, then check to see
+	** the name is valid.	Note that wildcards with no "allow wildcards"
+	** flag will result in the names being treated as invalid!
+	*/
+	if  ((Dobj_wildcard) &&
+		  (IIUGscanwildcard(cur_fd->fd_name_info->name_dest,
+			 	  UI_EWC_ESC_CHAR)))
+	{
+# ifdef	DO_DEBUG
+		SIfprintf(stdout,ERx("has wildcards!\n"),NULL);
+		SIflush(stdout);
+# endif
+		pattern_ptr = PATTERN_MATCH_CMD;
+		pattern_fail = TRUE;
+		esc_chr_buf[0] = UI_EWC_ESC_CHAR;
+		esc_chr_buf[1] = EOS;
+		escape_ptr = &escape_buf[0];
+		STpolycat(5,
+			  ESCAPE_CMD,
+			  SQUOTE_STR,&esc_chr_buf[0],SQUOTE_STR,
+			  ERx(" "),
+			  escape_ptr);
+	}
+	
+/* b63586 - ATHDA01
+** Below starts a block of code added to strip any Ingres
+** escape characters (\) still embedded in the object name
+** to be used with the = operator in the SQL request.
+*/
+
+	else
+	{
+		name_escape_ptr = cur_fd->fd_name_info->name_dest;
+		copy_name_ptr = name_escape_ptr;
+		
+		while (*name_escape_ptr != EOS)
+		{
+
+			switch (*name_escape_ptr)
+			{
+
+			case	UI_EWC_ESC_CHAR:
+
+				CMnext(name_escape_ptr);
+				break;
+
+			default:
+
+				CMcpyinc(name_escape_ptr, copy_name_ptr);
+
+			}
+		}
+		CMcpychar(name_escape_ptr, copy_name_ptr);
+
+/*
+** b63586 - ATHDA01
+** end of code block added to strip Ingres escape character(s) from
+** the supplied object name.
+*/
+
+		if (FEchkname(cur_fd->fd_name_info->name_dest) != OK)
+
+
+		{
+			do_dealloc_fd(cur_fd,prev_fd,pattern_fail);
+			return(*prev_fd);
+		}
+	}
+
+# ifdef	DO_DEBUG
+	dump_fd(cur_fd,20);
+# endif
+
+	/*
+	** Ensure we escape any embedded single quotes!
+	*/
+	IIUIea_escapos(cur_fd->fd_name_info->name_dest,&n_buf[0]);
+	IIUIea_escapos(cur_fd->fd_name_info->owner_dest,&o_buf[0]);
+	STpolycat(12,
+			pattern_ptr,
+			SQUOTE_STR,&n_buf[0],SQUOTE_STR,
+			escape_ptr,AND_STR,
+			OWNER_CMD,
+			SQUOTE_STR,&o_buf[0],SQUOTE_STR,
+			AND_STR,
+			oc_buf,
+			&buf[0]);
+
+# ifdef	DO_DEBUG
+	SIfprintf(stdout,ERx("%s\n"),&buf[0]);
+	SIfprintf(stdout,
+			ERx("Max oc_buf lgth = %d; Actual oc_buf lgth = %d\n"),
+			OC_BUF_LGTH,STlength(&oc_buf[0]));
+	SIfprintf(stdout,
+			ERx("Max buf lgth = %d; Actual buf lgth = %d\n"),
+			Q_BUF_LGTH,STlength(&buf[0]));
+	SIflush(stdout);
+# endif
+
+	/*
+	** Yes, Virginia, there can be duplicate FE object names, but not to
+	** worry - we'll find and delete them all!  Multiple returned rows,
+	** whether from duplicates or wildcards, will expand the FE_DEL chain
+	** from the "base" FE_DEL (which will always be overwritten).
+	*/
+	EXEC SQL SELECT object_id,
+			object_class,
+			object_name,
+			object_owner
+		INTO
+			:_ooid,
+			:_ooclass,
+			:_ooname,
+			:_ooowner
+		FROM	ii_objects
+		WHERE	:buf;
+
+		EXEC SQL BEGIN;
+			/*
+			** After the 1st, chain in more FE_DEL's
+			*/
+			if  (++xpand_cnt > 1)
+			{
+				xpand_fd = (FE_DEL *)MEreqmem(0,sizeof(FE_DEL),
+							 	 TRUE,NULL);
+				cur_fd->fd_below = xpand_fd;
+				xpand_fd->fd_name_info =
+					(FE_RSLV_NAME *)MEreqmem(0,
+							sizeof(FE_RSLV_NAME),
+							TRUE,NULL);
+				/*
+				** Propagate explicit specification of owner.
+				*/
+				xpand_fd->fd_name_info->owner_spec =
+					cur_fd->fd_name_info->owner_spec;
+				cur_fd = xpand_fd;
+				cur_fd->fd_below = (FE_DEL *)NULL;
+			}
+			else
+			{
+				/*
+				** No, Virginia, there is no STfree(). But,
+				** STalloc() allegedly uses MEreqmem(), and so
+				** we can free it using MEfree().
+				*/
+				dummy_status = MEfree(
+					(PTR)cur_fd->fd_name_info->owner_dest);
+				dummy_status = MEfree(
+					(PTR)cur_fd->fd_name_info->name_dest);
+			}
+			cur_fd->fd_id = _ooid;
+			cur_fd->fd_type = _ooclass;
+			cur_fd->fd_name_info->name_dest = STalloc(_ooname);
+			cur_fd->fd_name_info->owner_dest = STalloc(_ooowner);
+			cur_fd->fd_name_info->is_nrml = TRUE;
+			cur_fd->fd_name_info->owner_dlm =
+				IIUGdlm_ChkdlmBEobject(
+					cur_fd->fd_name_info->owner_dest,
+					cur_fd->fd_name_info->owner_dest,
+					cur_fd->fd_name_info->is_nrml);
+
+# ifdef	DO_DEBUG
+			dump_fd(cur_fd,30);
+# endif
+
+		EXEC SQL END;
+
+	if  (xpand_cnt == 0)
+	{
+		/*
+		** NULL expansion of pattern or
+		** no such FE object
+		*/
+		do_dealloc_fd(cur_fd,prev_fd,pattern_fail);
+		return(*prev_fd);
+	}
+	else
+	{
+		return(cur_fd);
+	}
+}
+
+
+
+/*
+** DO_DEALLOC_FD - Deallocate the indicated FE_DEL structure on a failed
+**		   find expansion, or not owner (owner.objectname).
+**
+** Parameters:
+**	fd		Pointer to FE_DEL structure containing base FE object
+**			name or pattern.  This is always assumed to be the
+**			current end of the FE_DEL chain.
+**	prev_fd		Address of pointer to previous FE_DEL structure in the
+**			chain, used to reset the end of the chain.  If prev_fd
+**			is NULL, then the current fd is the chain head, and
+**			Ptr_fd_top is reset to NULL.
+**	pattern_fail	TRUE if original name specified a pattern which yielded
+**			no matches.
+**
+** Returns:
+**	Nothing.
+**
+** Called by:
+**	do_expand_name()
+**
+** History:
+**	12-jan-1993 (rdrane)
+**		Written.
+*/
+
+static
+VOID
+do_dealloc_fd(FE_DEL *fd,FE_DEL **prev_fd,bool pattern_fail)
+{
+    if (fd->fd_type == OC_OBJECT)
+    {
+	if (!Dobj_silent)
+	    IIUGerr(E_DE0011_Dobj_noall, UG_ERR_ERROR,
+		    1, fd->fd_name_info->owner_dest);
+    }
+    else
+    {
+	if  (!Dobj_silent)
+	{
+		if  (pattern_fail)
+		{
+			IIUGerr(E_DE000F_Dobj_nomatch,UG_ERR_ERROR,
+				2,Dobj_pr_str,
+				fd->fd_name_info->name);
+		}
+		else
+		{
+			IIUGerr(E_DE0010_Dobj_notfound,UG_ERR_ERROR,
+				3,Dobj_pr_str,
+				fd->fd_name_info->name_dest,
+				fd->fd_name_info->owner_dest);
+		}
+	}
+    }
+
+    _VOID_ MEfree((PTR)fd->fd_name_info->name);
+    _VOID_ MEfree((PTR)fd->fd_name_info->owner_dest);
+    _VOID_ MEfree((PTR)fd->fd_name_info->name_dest);
+    _VOID_ MEfree((PTR)fd->fd_name_info);
+    _VOID_ MEfree((PTR)fd);
+
+    if  (*prev_fd == (FE_DEL *)NULL)
+    {
+	Ptr_fd_top = (FE_DEL *)NULL;
+    }
+    else
+    {
+	(*prev_fd)->fd_below = (FE_DEL *)NULL;
+    }
+
+    return;
+}
+
+
+
+
+# ifdef	DO_DEBUG
+static
+VOID
+dump_fd(FE_DEL *fd_ptr,nat seq)
+{
+	char	*dlm_ptr;
+	char	*spec_ptr;
+
+
+	dlm_ptr = ERx("FALSE");
+	if  (fd_ptr->fd_name_info->owner_dlm)
+	{
+		dlm_ptr = ERx("TRUE");
+	}
+
+	spec_ptr = ERx("FALSE");
+	if  (fd_ptr->fd_name_info->owner_spec)
+	{
+		spec_ptr = ERx("TRUE");
+	}
+
+	SIfprintf(stdout,
+		ERx("(%d)\tID: %d\tType: %d\n\
+\tOriginal Name: %s; Owner: %s;\n\tName: %s\n\
+\tDelim: %s; Spec: %s; Below: 0x%08x\n"),
+			seq,fd_ptr->fd_id,fd_ptr->fd_type,
+			fd_ptr->fd_name_info->name,
+			fd_ptr->fd_name_info->owner_dest,
+			fd_ptr->fd_name_info->name_dest,
+			dlm_ptr,spec_ptr,fd_ptr->fd_below);
+
+	SIflush(stdout);
+
+	return;
+}
+# endif

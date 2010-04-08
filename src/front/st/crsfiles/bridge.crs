@@ -1,0 +1,126 @@
+--
+--  Copyright (c) 2004 Ingres Corporation
+--
+--  This file contains the configuration rules for INGRES/bridge.
+--
+--# History:
+--#	08-Feb-96 (rajus01)
+--#		Created. Culled from net.crs.
+--#     15-Oct-97 (kinte01)
+--#		Add VMS specific process parameters
+--#     28-apr-2000 (somsa01)
+--#		Added multiple product support.
+--#	03-may-2001 (somsa01)
+--#		Changed default startup count for Bridge server to zero.
+--#     01-aug-2001 (wansh01)
+--#             Changed default protocols status to OFF.
+--#             Moved default port from iisubr.sh to here and set it
+--#             to empty.
+--#	16-jan-2003 (abbjo03)
+--#	    Increase VMS working set parameters.
+--#	18-Apr-2005 (drivi01)
+--#	    SIR: 114339
+--#	    Windows crsfiles are merged with generic.
+--#     25-may-2005 (bolke01) sir 114136
+--#             Corrected sysnam was sysname
+--#     27-Sep-2006 (Ralph Loen) Bug 115671
+--#         Added wintcp.log_rem_host and tcp_ip.log_rem_host.
+--#     02-Feb-2007 (Ralph Loen) Bug 117590
+--#         Remove wintcp.log_rem_host and tcp_ip.log_rem host, as they are
+--#         no longer required.
+--#     05-Sep-2008 (lunbr01) Bug/Sir 119985
+--#         Change default statuses for all net protocols except "tcp_ip"
+--#         to OFF for Windows, making it the sole default.
+--#
+(PROG4PRFX).$.(PROG2PRFX)start.$.gcb:		0, MAX = 1;
+
+-- Bridge server parameters
+(PROG4PRFX).$.gcb.$.inbound_limit:	64;
+
+-- maximum connections of all Bridge servers configured for start-up
+(PROG4PRFX).$.gcb.connect_max:           1,
+					REQUIRES (PROG4PRFX).$.gcb.%.inbound_limit,
+					REQUIRES (PROG4PRFX).$.(PROG2PRFX)start.%.gcb;
+# ifndef NT_GENERIC
+
+-- protocol port status initialization
+# ifdef VMS
+(PROG4PRFX).$.gcb.$.tcp_dec.status:	OFF;
+# else  /* VMS */
+(PROG4PRFX).$.gcb.$.sockets.status:	OFF;
+# endif /* VMS */
+(PROG4PRFX).$.gcb.$.decnet.status:	OFF;
+(PROG4PRFX).$.gcb.$.async.status:	OFF;
+(PROG4PRFX).$.gcb.$.iso_oslan.status:	OFF;
+(PROG4PRFX).$.gcb.$.iso_x25.status:	OFF;
+(PROG4PRFX).$.gcb.$.sna_lu62.status:	OFF;
+(PROG4PRFX).$.gcb.$.sna_lu62.poll:	4000;
+(PROG4PRFX).$.gcb.$.tcp_ip.status:	OFF;
+(PROG4PRFX).$.gcb.$.tcp_ip.status.vnode:	OFF;
+(PROG4PRFX).$.gcb.$.spx.status:		OFF;
+(PROG4PRFX).$.gcb.$.tcp_wol.status:	OFF;
+--# set default Bridge server listen addresses
+(PROG4PRFX).$.gcb.$.async.port:		"";
+(PROG4PRFX).$.gcb.$.decnet.port:	"";
+(PROG4PRFX).$.gcb.$.iso_oslan.port:	"";		
+(PROG4PRFX).$.gcb.$.iso_x25.port:	"";
+(PROG4PRFX).$.gcb.$.sna_lu62.port:      "<none>";
+(PROG4PRFX).$.gcb.$.sockets.port:       "";
+(PROG4PRFX).$.gcb.$.spx.port:  		"";	
+(PROG4PRFX).$.gcb.$.tcp_ip.port:	"";
+(PROG4PRFX).$.gcb.$.tcp_ip.port.vnode:	"";
+(PROG4PRFX).$.gcb.$.tcp_wol.port:	"";
+# ifdef VMS
+-- RUN qualifiers
+(PROG4PRFX).$.config.ncp_buffer_size:	1504;
+(PROG4PRFX).$.gcb.config.connect_sum:	(PROG4PRFX).$.gcb.$.inbound_limit;
+
+(PROG4PRFX).$.gcb.$.vms_accounting:	ON;	
+(PROG4PRFX).$.gcb.$.vms_ast_limit:	7 * (PROG4PRFX).$.gcb.config.connect_sum + 20; 
+(PROG4PRFX).$.gcb.$.vms_buffer_limit:	(PROG4PRFX).$.gcb.config.connect_sum *
+				 ( 6 * ( (PROG4PRFX).$.config.ncp_buffer_size + 100 ) )
+					+ 16K + 5000;
+(PROG4PRFX).$.gcb.$.vms_enqueue_limit:	10 * (PROG4PRFX).$.gcb.config.connect_sum; 
+(PROG4PRFX).$.gcb.$.vms_error:		"NLA0:";
+(PROG4PRFX).$.gcb.$.vms_extent:		4000;	
+(PROG4PRFX).$.gcb.$.vms_file_limit:	3 * (PROG4PRFX).$.gcb.config.connect_sum + 10;
+(PROG4PRFX).$.gcb.$.vms_image:		"ii_system:[ingres.bin]iigcb.exe";
+(PROG4PRFX).$.gcb.$.vms_input:		"NLA0:";	
+(PROG4PRFX).$.gcb.$.vms_interval:	"";	
+(PROG4PRFX).$.gcb.$.vms_io_buffered:	6 * (PROG4PRFX).$.gcb.config.connect_sum + 10; 
+(PROG4PRFX).$.gcb.$.vms_io_direct:	2 * (PROG4PRFX).$.gcb.config.connect_sum + 50;
+(PROG4PRFX).$.gcb.$.vms_maximum_working_set: 4096; 
+(PROG4PRFX).$.gcb.$.vms_output:		"NLA0:";
+(PROG4PRFX).$.gcb.$.vms_page_file:	183 * (PROG4PRFX).$.gcb.config.connect_sum + 4500;
+(PROG4PRFX).$.gcb.$.vms_priority:	4;
+(PROG4PRFX).$.gcb.$.vms_privileges:	"(readall,prmmbx,sysnam,cmkrnl,sysprv,share,world,netmbx,tmpmbx,exquota)";
+(PROG4PRFX).$.gcb.$.vms_queue_limit:	2 * (PROG4PRFX).$.gcb.config.connect_sum + 10; 
+(PROG4PRFX).$.gcb.$.vms_working_set: 	2048;	
+# endif /* VMS */
+
+# ifdef VMS
+(PROG4PRFX).$.syscheck.gblpages:		0;
+(PROG4PRFX).$.syscheck.virtualpagecnt:	0;
+(PROG4PRFX).$.syscheck.channelcnt:	0;
+# endif /* VMS */
+
+#else
+-- protocol port status initialization
+(PROG4PRFX).$.gcb.$.wintcp.status:       OFF;
+(PROG4PRFX).$.gcb.$.wintcp.port:         IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+					"II"
+				ELSE
+					"`(PROG2PRFX)prsym II_INSTALLATION`"
+				ENDIF;
+(PROG4PRFX).$.gcb.$.tcp_ip.status:       ON;
+(PROG4PRFX).$.gcb.$.tcp_ip.port:         IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+					"II"
+				ELSE
+					"`(PROG4PRFX)concat -s(II_INSTALLATION) -s1`"
+				ENDIF;
+(PROG4PRFX).$.gcb.$.lanman.status:       OFF;
+(PROG4PRFX).$.gcb.$.lanman.port:         "";
+(PROG4PRFX).$.gcb.$.nvlspx.status:       OFF;
+(PROG4PRFX).$.gcb.$.nvlspx.port:         "";
+
+# endif /* NT_GENERIC */<<<<

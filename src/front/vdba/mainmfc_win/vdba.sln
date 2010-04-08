@@ -1,0 +1,52 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Vdba", "vdba.vcproj", "{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		AIX_Release|Win32 = AIX_Release|Win32
+		DBCS Debug|Win32 = DBCS Debug|Win32
+		DBCS Release|Win32 = DBCS Release|Win32
+		Debug|Win32 = Debug|Win32
+		EDBC_Debug|Win32 = EDBC_Debug|Win32
+		EDBC_Release|Win32 = EDBC_Release|Win32
+		HPUX_Debug|Win32 = HPUX_Debug|Win32
+		HPUX_Release|Win32 = HPUX_Release|Win32
+		Linux_Debug|Win32 = Linux_Debug|Win32
+		Linux_Release|Win32 = Linux_Release|Win32
+		Release|Win32 = Release|Win32
+		Solaris_Debug|Win32 = Solaris_Debug|Win32
+		Solaris_Release|Win32 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.AIX_Release|Win32.ActiveCfg = AIX_Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.AIX_Release|Win32.Build.0 = AIX_Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.DBCS Debug|Win32.ActiveCfg = DBCS Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.DBCS Debug|Win32.Build.0 = DBCS Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.DBCS Release|Win32.ActiveCfg = DBCS Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.DBCS Release|Win32.Build.0 = DBCS Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Debug|Win32.Build.0 = Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.EDBC_Debug|Win32.ActiveCfg = EDBC_Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.EDBC_Debug|Win32.Build.0 = EDBC_Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.EDBC_Release|Win32.ActiveCfg = EDBC_Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.EDBC_Release|Win32.Build.0 = EDBC_Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.HPUX_Debug|Win32.ActiveCfg = HPUX_Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.HPUX_Debug|Win32.Build.0 = HPUX_Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.HPUX_Release|Win32.ActiveCfg = HPUX_Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.HPUX_Release|Win32.Build.0 = HPUX_Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Linux_Debug|Win32.ActiveCfg = Linux_Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Linux_Debug|Win32.Build.0 = Linux_Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Linux_Release|Win32.ActiveCfg = Linux_Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Linux_Release|Win32.Build.0 = Linux_Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Release|Win32.ActiveCfg = Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Release|Win32.Build.0 = Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Solaris_Debug|Win32.ActiveCfg = Solaris_Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Solaris_Debug|Win32.Build.0 = Solaris_Debug|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Solaris_Release|Win32.ActiveCfg = Solaris_Release|Win32
+		{2188EEB8-2FEE-46C7-AC32-D456358CD6D1}.Solaris_Release|Win32.Build.0 = Solaris_Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

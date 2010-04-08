@@ -1,0 +1,1299 @@
+/*
+**Copyright (c) 2004 Ingres Corporation
+*/
+EXEC SQL include sqlca;
+
+#include    <compat.h>
+#include    <pc.h>
+#include    <gl.h>
+#include    <sl.h>
+#include    <iicommon.h>
+#include    <dbdbms.h>
+#include    <duf.h>
+
+#include    <er.h>
+#include    <duerr.h>
+
+#include    <duucatdef.h>
+#include    <duu.h>
+
+#include    <cs.h>
+#include    <lk.h>
+##include   <dudbms.qsh>
+#include    <dusdb.h>
+##include   <duenv.qsh>
+
+#include    <duustrings.h>
+
+#include    <cv.h>
+#include    <ex.h>
+#include    <si.h>
+#include    <st.h>
+#include    <me.h>
+#include    <ds.h>
+#include    <ut.h>
+
+#if defined(OS_THREADS_USED) && defined(VMS)
+#include <astmgmt.h>
+#endif
+
+/**
+**
+**  Name: DUSYSMOD.QSC -    contains main entry point and all equel
+**			    procedures specific to the database utility,
+**			    sysmod.
+**
+**  Description:
+**        This file contains the main entry point and all equel procedures
+**	that are specific to the Ingres database utility, sysmod.
+**
+**          main()		- main entry point to database utility, sysmod.
+**	    dus_dbenv_init()	- initialize the database enviroment.
+**	    dus_exit()		- sysmod exit handler.
+**	    dus_ingerr_handler() - handles Ingres errors encountered in
+**				  Equel statements.
+**	    dus_modify()	- modify the database's BE system catalogs.
+**	    dus_femodify()	- modify the database's Front-end system cats.
+**
+**  History:
+**      06-nov-86 (ericj)
+**          Initial creation.
+**	18-nov-88 (teg)
+**	    modified comments on call parameters (which had reflected 5.0
+**	    catalog names instead of 6.0 ones)
+**      15-may-1989 (teg)
+**          Local hdr include now lib hdr include.
+**      22-May-89 (teg)
+**          move local hdrs to lib.
+**	26-jun-89 (dds)
+**	    Added ULFLIB to ming hints.
+**	24-jul-90 (teresa)
+**	    changed dusysmod.qc to dusysmod.qsc and changed .qh include files
+**	    to .qsh
+**	11-may-90 (pete)
+**	    Add support for "modifyfe" utility for modifying front-end
+**	    catalogs. Check if can create temp files at startup.
+**	19-nov-90 (teresa)
+**	    remove setuid ming hint to fix bug 8543.
+**	01-aug-91 (rog)
+**	    Change the relstat query to handle the new, higher-order bit usage.
+**	30-sep-91 (teresa)
+**	    pick up ingres63p change 263285 from 6.4:
+**		14-aug-91 (teresa)
+**		    changed to connect as the dba for FE bug 38903.
+**	11-sep-92 (andre)
+**	    MSB in relstat is no longer being set - change
+**	    mod((relstat+1073741824+1073741824),x) back to mod(relstat,x)
+**	20-nov-92 (bonobo)
+**	    Added CUFLIB to list of MING hints
+**	01-dec-92 (robf)
+**	    Clean up SUPERUSER/-s handling. Now requires OPERATOR or 
+**	    SECURITY privileges. (really OPERATOR, but allow SECURITY
+**	    for backwards compatibility)
+**	25-may-1993 (bryanp)
+**	    Include <pc.h> before <lk.h> to pick up PID definition.
+**	8-aug-93 (ed)
+**	    unnest dbms.h
+**      31-jan-94 (mikem)
+**          Added include of <cs.h> before <lk.h>.  <lk.h> now references
+**          a CS_SID type.
+**	13-sep-96 (nick)
+**	    Fixed EX stuff.
+**      28-sep-96 (mcgem01)
+**          Global data moved to dusdata.c
+**	15-May-1997 (jenjo02)
+**	    In dus_ex_handler(), let the back end know of the interrupt 
+**	    via IIbreak() (bug 77674).
+**	20-may-97 (mcgem01)
+**	    Clean up compiler warnings.
+**	18-Dec-97 (gordy)
+**	    Added SQLCALIB to NEEDLIBS, now required by LIBQ.
+**      28-may-98 (stial01)
+**          Support VPS system catalogs.
+**	21-may-1999 (hanch04)
+**	    Replace STbcompare with STcasecmp,STncasecmp,STcmp,STncmp
+**      20-may-99 (chash01)
+**        17-mar-94 (chash01)
+**          Added support for sysmod'ing an RMS-Gateway.
+**        01-apr-94 (chash01)
+**          Exclude all but RMS-Gateway databases as targets of this utility.
+**	    (This is done in routine: dus_dbenv_init() using iidbdb.)
+**	    Note: Only this one check needs to be removed should you wish
+**	    to allow other databases to be processed by this utility.
+**
+**	    Formerly, sysmod did not accept fully-qualified dbnames:
+**	    dbname[/server_class].  In fact, for STAR you have to pass in
+**	    dbname not dbname/star or dbname/d.  I don't know why this is
+**	    not consistent with optimizedb/statdump but now dbname/rms
+**	    is accepted (and later checked that it is indeed an RMS/Gateway
+**	    database).  All other dbnames are kicked out at this time.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      07-nov-2001 (stial01)
+**          Pass page size to modifyfe, Added dus_validate_pagesize.
+**      01-Oct-2002 (hanje04)
+**          BUG 108823
+**          Include duu.h so that the duu functions are correctly prototyped.
+**          Having a default return type of i4 was causing problems on 64bit
+**          Linux (and potentially others) where there was no prototype and 
+**          the function was returning a char *.
+**	29-Sep-2004 (drivi01)
+**	    Updated NEEDLIBS to link dynamic library SHQLIB to replace
+**	    its static libraries. Added NEEDLIBSW hint which is used
+**	    for compiling on windows and compliments NEEDLIBS.
+**      23-feb-2005 (stial01)
+**          Explicitly set isolation level after connect
+**	21-Jul-2005 (drivi01)
+**	    Delimited effective user being set by sysmod via -u flag.
+**      07-oct-2009 (stegr01)
+**          Start the AST dispatcher thread here so we don't hang on
+**          Posix threaded Itanium OpenVMS
+**/
+/*
+NEEDLIBS =      DBUTILLIB SHQLIB ULFLIB COMPATLIB 
+
+NEEDLIBSW = 	SHEMBEDLIB CUFLIB
+
+OWNER =         INGUSER
+
+PROGRAM =       sysmod
+*/
+
+GLOBALREF char  iiduNoFeClients[]; /* special client name*/
+
+
+/*
+[@forward_type_references@]
+[@forward_function_references@]
+FUNC_EXTERN     char    *duu_xflag();
+FUNC_EXTERN	DU_STATUS	duu_chkenv();
+
+[@#defines_of_other_constants@]
+[@type_definitions@]
+*/
+
+
+/*
+** Definition of all global variables owned by this file.
+*/
+
+/*  The following variables are used by the sysmod exit handler and Ingres
+**  error handler to analyze or pass information about the program state.
+*/
+GLOBALREF DU_ENV              *Dus_dbenv;
+GLOBALREF DU_ERROR	      *Dus_errcb;
+GLOBALREF DUU_CATDEF	      *Dus_allcat_defs[DU_MAXCAT_DEFS];
+
+
+
+/*
+**  Definition of static variables and forward static functions.
+*/
+
+## STATIC   char    Dus_appl_flag[DU_APPL_FLAG_MAX];	/* Application intro
+							** flag for SCF.
+							*/
+
+static	char	Fecatmod[] = ERx("modifyfe");	/* name of FE modify program */
+/*
+[@function_definition@]...
+*/
+
+
+
+
+/*{
+** Name: main()	-   main entry point to the database utility, sysmod.
+**
+** Description:
+**        This program sysmods an existing database.  "Sysmoding" is
+**	the modification of the system catalog(s) to a predetermined
+**	storage structure with predetermined keys.
+**
+**	Usage:
+**		sysmod  [-w|+w] ["-fclient client"] dbname [sys_cat_name(s)]
+**			[sys_cat_name | client]
+**
+**	Positional parameters:
+**
+**		dbname	-   name of the database to be sysmoded.  You must
+**		    be the DBA for this database or have Ingres 
+**		    SECURITY or OPERATOR privilege.
+**		    A complete list of valid dbnames can be found in
+**		    dubdbmsmod.c (in globaldefs: Dub_00corecat_commands,
+**		    Dub_10dbmscat_commands, Dub_30iidbdbcat_commands.
+**
+**		"system catalog names"	-   These parameters are optional.
+**		    If none are given, all of the system catalogs will be
+**		    modified.  If one or more are given as an argument, only
+**		    those catalogs given will be modified.
+**		    Mixed in with actual system catalog names can be names of
+**		    front-end dictionary clients. (current
+**		    list of valid client names: "INGRES", "INGRES/DBD",
+**		    "VISIBUILD", "WINDOWS_4GL"). This information is passed
+**		    on to the program "modifyfe", which issues the actual
+**		    MODIFY commands on the desired front-end catalogs.
+**		    If only back-end and standard catalog names are specified,
+**		    then no front-end catalogs are modified (and "modifyfe" is
+**		    not called).
+**
+**		"client" - name of front-end dictionary client
+**                      ("ingres", "windows_4gl", "visibuild", "ingres/dbd")
+**
+**	Flags:
+**		-s
+**		    Obsolete: used to allow Ingres SUPERUSERS to sysmod
+**		    other people's databases.
+**
+**		-w | +w
+**		    If the '+w' flag is used, sysmod will wait for an
+**		    active database to become free.  The '-w' flag
+**		    will cause sysmod to exit if the database is active.
+**		    If no 'w' flag is given, the default action is that
+**		    of '-w'.
+**
+**
+** Inputs:
+**      argc                            The command line argument count.
+**	argv				The command line argument vector.
+**
+** Outputs:
+**	Returns:
+**	    not applicable.
+**	Exceptions:
+**
+** Side Effects:
+**	      The given database's system catalogs are modified to a
+**	    predetermined storage structure with predetermined keys.
+**
+** History:
+**      06-nov-86 (ericj)
+**          Initial creation.
+**	01-Mar-89 (teg)
+**	    Fixed incorrect parameter count for du_error() calls.
+**	02-Mar-89 (ming)
+**	    add star catalogs in titan path.
+**	15-May-1989 (teg)
+**	    titan / 6.2 merge, fix bug where iidatabase.dbservice used as
+**	    flag instead of bitmap.
+**	11-may-1990 (pete)
+**	    add support for calling new "modifyfe" utility to modify front-end
+**	    catalogs.
+**	27-aug-1990 (pete)
+**	    call duu_chkenv() at startup to check if can write temp files.
+**	16-apr-92 (teresa)
+**	    change control loop from "for" to "do" to appeaase sun4 compiler 
+**	    warnings.
+**	13-sep-96 (nick)
+**	    If we don't call EXsetclient(), we won't catch user interrupts.
+**      28-may-98 (stial01)
+**          main() Support VPS system catalogs.
+**      20-may-99 (chash01) rms_sysmod specifics
+**        17-mar-94 (chash01)
+**          Support for RMS-Gateway:  ## ingres open ... needs dbname to
+**          include "/rms" tail.  But ... other routines are sensitive to
+**          its absence so have to be discriminating.
+**       8-Sep-2005 (hanal04) Bug 107308
+**          A sysmod against iidbdb may fail when connecting to the named
+**          database because the GCA_RELEASE issued for the original connection
+**          to iidbdb may not have been processed by the DBMS server.
+**          As the GCA_SEND that sends the GCA_RELEASE is asynchronous
+**          we need to take a nap to ensure we do not block ourself
+**          when connecting to iidbdb for the second time.
+**	19-Apr-2007 (bonro01)
+**	    Exit with bad return code when dus_init() fails.
+**       6-Nov-2008 (hanal04) Bug 121190
+**          Use -Z flag when connecting to the named database. ING_SET 
+**          may contain commands not supported by QUEL (SET for example). 
+**      07-oct-2009 (stegr01)
+**          Start the AST dispatcher thread here so we don't hang on
+**          Posix threaded Itanium OpenVMS
+[@history_template@]...
+*/
+
+main(argc, argv)
+i4	    argc;
+char	    *argv[];
+{
+##  DU_ENV	    dus_dbenv;
+    DU_ERROR	    dus_errcb;
+    DUS_MODE_VECT   dus_modes;
+    EX_CONTEXT	    context;
+    char	    tmp_buf[DU_APPL_FLAG_MAX];
+##  char	    dus_ingwait_flag[4];
+##  char	    effective_dba[DB_MAXNAME+4];
+    /* Needed when opening RMS-gateway database (chash01) */
+##  char	    rms_gw_dbname[DB_MAXNAME + 4 + DU_TAIL_LEN];	
+
+    DU_STATUS	    dus_init();
+    DU_STATUS	    dus_get_args();
+    DU_STATUS	    dus_dbenv_init();
+    DU_STATUS	    dus_validate_sysmod();
+    DU_STATUS	    dus_modify();
+    DU_STATUS	    dus_femodify();
+    DU_STATUS	    dus_find_cats();
+    VOID	    dus_exit();
+    STATUS	    dus_ex_handler();
+    i4		    dus_ingerr_handler();
+
+    (void)EXsetclient(EX_INGRES_TOOL);
+
+    MEadvise(ME_INGRES_ALLOC);
+
+    /* Declare a sysmod exception handler. */
+    if (EXdeclare(dus_ex_handler, &context) != OK)
+    {
+	dus_exit(&dus_errcb);
+    }
+
+#if defined(OS_THREADS_USED) && defined(VMS)
+    IIMISC_initialise_astmgmt (NULL);
+#endif
+
+
+    /* Initial the SYSMOD application flag. */
+    CVla((i4) DBA_SYSMOD, tmp_buf);
+    STcopy(DU_1APPL_FLAG, Dus_appl_flag);
+    STcat(Dus_appl_flag, tmp_buf);
+
+    /* Set up equel error-handling procedure. */
+    IIseterr(dus_ingerr_handler);
+
+    /* Initialize global variables */
+    Dus_dbenv = &dus_dbenv;
+    Dus_errcb = &dus_errcb;
+
+    do		/* control loop */
+    {
+	/* Initialize the sysmod database utility data */
+	if (dus_init(&dus_modes, &dus_dbenv, &dus_errcb) != E_DU_OK)
+	{
+	    dus_errcb.du_status=E_DU_IERROR;
+	    break;
+	}
+
+	/* Process the command line to get all the necessary parameters */
+	if (dus_get_args(argc, argv, 
+			 &dus_modes, &dus_dbenv, &dus_errcb) != E_DU_OK)
+	    break;
+
+	/* Initialize the fields in dus_dbenv that are relevant to the
+	** database utility, sysmod.
+	*/
+	if (dus_dbenv_init(&dus_dbenv, &dus_errcb) != E_DU_OK)
+	    break;
+
+	/* check for write access for creating temp files */
+	if (duu_chkenv(DU_ENV_TWRITE) != E_DU_OK)
+	{
+            du_error(&dus_errcb, E_DU3513_NO_WRITE_ACCESS, 2,
+                            0, ERx("Sysmod"));
+	    break;
+	}
+
+	/* Print an intro message that the database is being sysmoded. */
+	if ( (dus_dbenv.du_dbservice & DU_1SER_DDB) == DU_1SER_DDB )
+	{
+            if (du_error(&dus_errcb, I_DU0500_STAR_UTIL_INTRO,4,
+		         0, DU_1SYSMODING, 0,dus_dbenv.du_ddbname) != E_DU_OK)
+		break;
+	}
+	else
+	{
+	    if (du_error(&dus_errcb, I_DU0010_UTIL_INTRO, 4,
+		         0, DU_1SYSMODING, 0, dus_dbenv.du_dbname) != E_DU_OK)
+		break;
+	}
+	/* Open the database to be sysmoded. */
+	if (dus_modes.dus_wait_flag)
+	    STcopy("+w", dus_ingwait_flag);
+	else
+	    STcopy("-w", dus_ingwait_flag);
+
+	if (!STcompare(DU_DBDBNAME, dus_dbenv.du_dbname))
+	    STcopy(DU_1DBA_DBDB_FLAG, effective_dba);
+	else
+	    STpolycat(4, ERx("-u"), ERx("\""),dus_dbenv.du_dba, ERx("\""), effective_dba);
+
+        /* 
+	** 17-mar-94 (chash01)
+	**   Need to open database with full dbname/rms if an RMS-gateway...
+	*/
+	if (dus_modes.dus_gw_flag == DU_GW_RMS_FLAG)
+	{
+	    STpolycat(2, dus_dbenv.du_dbname, DU_RMSTAIL,
+			 rms_gw_dbname);
+##          ingres Dus_appl_flag "-l" dus_ingwait_flag
+##              effective_dba rms_gw_dbname
+	}
+	else
+	{
+            if(STbcompare(dus_dbenv.du_dbname, STlength(dus_dbenv.du_dbname),
+                          DU_DBDBNAME, STlength(DU_DBDBNAME), TRUE) == 0)
+            {
+                PCsleep(500);
+            }
+## 	    ingres Dus_appl_flag "-l" "-Z" dus_ingwait_flag
+##	        effective_dba dus_dbenv.du_dbname
+	}
+	dus_dbenv.du_dbopen = TRUE;
+
+##	set session isolation level serializable
+
+	/* Find the catalogs that actually exist in the database to be
+	** sysmoded. Select back-end & standard catalogs only.
+	*/
+	if (dus_find_cats(&dus_errcb,(dus_dbenv.du_dbservice&DU_1SER_DDB))
+	!=E_DU_OK)
+	    break;
+
+	/* Validate the user's authority to run sysmod with the given
+	** parameters.
+	*/
+	if (dus_validate_sysmod(&dus_modes, &dus_dbenv, &dus_errcb)
+	    != E_DU_OK
+	   )
+	    break;
+
+	if (dus_validate_pagesize(dus_modes.dus_page_size) != E_DU_OK)
+	{
+	    du_error(&dus_errcb, E_DU3303_BAD_PAGESIZE, 2, 0, dus_modes.dus_page_size);
+	    break;
+	};
+
+	/* modify the back-end and standard catalogs. */
+	if (dus_modify(dus_modes.dus_page_size,
+			dus_modes.dus_all_catalogs,
+			(dus_dbenv.du_dbservice&DU_1SER_DDB),
+			&dus_errcb) != E_DU_OK)
+	    break;
+
+	/* modify the front-end catalogs. */
+	if (dus_femodify(&dus_modes, &dus_dbenv, &dus_errcb) != E_DU_OK)
+	    break;
+
+	/* Close the sysmoded database. */
+##	exit
+	dus_dbenv.du_dbopen = FALSE;
+    } while (0);	/* end control loop */
+
+    dus_exit(&dus_errcb);
+}
+
+/*{
+** Name: dus_femodify - modify the front-end catalogs.
+**
+** Description:
+**	This routine uses UTexe to call another executable: "modifyfe", which
+**	modifies the front-end catalogs.
+**
+** Inputs:
+**		dus_modes		Command line info.
+**		dus_dbenv		Database environment info.
+**		dus_errcb		DUF error-handling control block.
+**
+** Outputs:
+**	Returns:
+**	    E_DU_OK			Completed successfully.
+**
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**
+** History:
+**	14-may-90 (pete)
+**	    Initial version.
+**	10-jul-90 (pete)
+**	    Remove use of dus_modes->dus_client_flag.
+**	08-oct-91 (teresa)
+**	    Put in a check for "nofeclients" -- if that was specified, then
+**	    dont try to spawn upgradefe. (fix bug 40229)
+**	13-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+static  char    ut_args[] = ERx("database = %S, equel = %S, user = %S, page_size= %N");
+
+DU_STATUS
+dus_femodify(dus_modes, dus_dbenv, dus_errcb)
+DUS_MODE_VECT   *dus_modes;
+DU_ENV		*dus_dbenv;
+DU_ERROR	*dus_errcb;
+{
+        char    buf[256];
+        STATUS stat;
+        CL_ERR_DESC err_code;
+
+	if (STcompare(dus_modes->dus_client_name,iiduNoFeClients)==0)
+	{
+		/* user specified no front end catalogs, so just return */
+		return E_DU_OK;
+	}
+
+        if (dus_modes->dus_all_catalogs == TRUE)
+	{
+        	/* modify all FE catalogs. */
+		STcopy (ut_args, buf);
+	}
+        else if (dus_modes->dus_client_name[0] == EOS)
+        {
+                /* A catalog name was specified on command line
+		** (because dus_modes->dus_all_catalogs is FALSE),
+		** but it was NOT a dictionary client name; therefore
+		** we don't want to modify front-end catalogs.
+                */
+                return E_DU_OK;
+        }
+        else
+        {
+                /* dus_modes->dus_client_name contains a list of client names.
+		** pass them to modifyfe.
+		*/
+                STpolycat (2, ut_args, ERx(", client = %S"), buf);
+        }
+
+        /* modify the front-end catalogs */
+        stat = UTexe (UT_WAIT|UT_STRICT, NULL, NULL,
+                        NULL, Fecatmod, &err_code, buf,
+                        (dus_modes->dus_client_name[0] != EOS) ? 5 : 4,
+                        dus_dbenv->du_dbname,
+                        duu_xflag(dus_dbenv->du_dbname),
+                        dus_dbenv->du_usrinit,
+			dus_modes->dus_page_size,
+                        (dus_modes->dus_client_name[0] != EOS)
+                                 ? dus_modes->dus_client_name : NULL
+                     );
+
+        if (stat != OK)
+        {
+                /* something went wrong. Give warning & continue */
+
+                /* save CL err info from UTexe so "du_error" can see it */
+                STRUCT_ASSIGN_MACRO (err_code, dus_errcb->du_clsyserr);
+
+                du_error(dus_errcb, W_DU1031_NOMOD_FE_CAT, 2,
+			(i4 *) NULL, (PTR) Fecatmod);
+        }
+
+	return E_DU_OK;
+}
+
+/*{
+** Name: dus_dbenv_init() -	initialize the database environment.
+**
+** Description:
+**        This routine initializes the fields in the database enviroment
+**	struct that are relevant to sysmod and where the initializing
+**	data must come from database tables.
+**
+** Inputs:
+**      dus_dbenv			Database environment description.
+**	    .du_dbname			Name of database to be sysmoded.
+**	    .du_usrinit			Name of user trying to sysmod the
+**					database.
+**	dus_errcb			DUF error-handling control block.
+**
+** Outputs:
+**	*dus_dbenv
+**	    .du_usrstat			The Ingres status of the user attempting
+**					the sysmod.
+**	    .du_dba			The dba of the database to be sysmoded.
+**	Returns:
+**	    E_DU_OK			Completed successfully.
+**	    E_DU3001_USER_NOT_KNOWN	The user attempting the sysmod is
+**					not known to Ingres.
+**	    E_DU3020_DB_NOT_FOUND	The database to be sysmoded does
+**					not exist.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      The dbdb is opened and closed.
+**
+** History:
+**      07-nov-86 (ericj)
+**          Initial creation.
+**	20-dec-90 (teresa)
+**	    use SYSMOD application flag when connecting to iidbdb so that
+**	    we do not get aborted by any non-quel ing_set values.
+**	02-dec-94 (forky01)
+**	    Now converts userid based on dbservice flags, before searching
+**	    for user and checking access.  This change is required for FIPS
+**	    mode, as ingres is stored as INGRES.  Fixes bug 63799.
+**       7-Sep-2004 (hanal04) Bug 48179 INGSRV2543
+**          Use new -Z flag when connecting to iidbdb. ING_SET may contain
+**          commands that require the user to be the DBA. The user may be
+**          performing a sysmod of their own DB but this CONNECT to iidbdb
+**          will fail if the user is not $ingres.
+[@history_template@]...
+*/
+    DU_STATUS
+##  dus_dbenv_init(dus_dbenv, dus_errcb)
+##  DU_ENV	    *dus_dbenv;
+    DU_ERROR	    *dus_errcb;
+##  {
+	i4		found;
+
+	/* Open the dbdb so that it can be probed. */
+##	ingres DU_DBDBNAME Dus_appl_flag "-Z"
+	dus_dbenv->du_dbopen    = TRUE;
+
+##	set session isolation level serializable
+
+	/* Get the DBA of the database to be sysmoded and verify that
+	** the database exists.
+	*/
+	found	= FALSE;
+##	range of d is iidatabase
+##	retrieve unique (dus_dbenv->du_dba = d.own,
+##			 dus_dbenv->du_dbservice=d.dbservice)
+##	    where d.name = dus_dbenv->du_dbname
+##	{
+	    found   = TRUE;
+##	}
+	if (found)
+	    (VOID) STtrmwhite(dus_dbenv->du_dba);
+	else
+	    return(du_error(dus_errcb, E_DU3020_DB_NOT_FOUND, 2,
+			    0, dus_dbenv->du_dbname));
+
+	/* Determine type of user id casing and convert username to
+	** that mode.
+	*/
+	if ((dus_dbenv->du_dbservice & DU_REAL_USER_MIXED)
+	     != DU_REAL_USER_MIXED)
+	{
+	    if ((dus_dbenv->du_dbservice & DU_NAME_UPPER) ==
+	         DU_NAME_UPPER)
+	    {
+	        CVupper(dus_dbenv->du_usrinit);
+	        CVupper(dus_dbenv->du_xusrname);
+	        CVupper(dus_dbenv->du_dba);
+	    }
+	    else
+	    {
+ 	        CVlower(dus_dbenv->du_usrinit);
+	        CVlower(dus_dbenv->du_xusrname);
+	        CVlower(dus_dbenv->du_dba);
+	    }
+	}
+
+        /* If this were a distributed session, get node and database
+	** name from iistar_cdbs. */
+        if ((dus_dbenv->du_dbservice &DU_1SER_DDB) == DU_1SER_DDB)
+	{
+	    MEcopy((PTR)dus_dbenv->du_dbname, (u_i2)DB_MAXNAME,
+		   (PTR)dus_dbenv->du_ddbname);
+	    found = FALSE;
+##	    range of s is iistar_cdbs
+##	    retrieve unique (dus_dbenv->du_dbname = s.cdb_name)
+##		where s.ddb_name = dus_dbenv->du_ddbname and
+##		      s.ddb_owner = dus_dbenv->du_dba
+##	    {
+		found = TRUE;
+##	    }
+	    STtrmwhite(dus_dbenv->du_dbname);
+	}
+
+	/* Get the status of the user who is trying to sysmod this
+	** database.
+	*/
+	found	= FALSE;
+##	range of u is iiuser
+##	retrieve unique (dus_dbenv->du_usrstat	= u.status)
+##	    where u.name = dus_dbenv->du_usrinit
+##	{
+	    found   = TRUE;
+##	}
+	if (!found)
+	    return(du_error(dus_errcb, E_DU3001_USER_NOT_KNOWN, 2,
+			    0, dus_dbenv->du_usrinit));
+
+##	exit
+	dus_dbenv->du_dbopen	= FALSE;
+
+	return(E_DU_OK);
+##  }
+
+
+
+/*{
+** Name: dus_find_cats() -  find the system catalogs that exist in this db.
+**
+** Description:
+**        This routine retrieves the names of all the system catalogs
+**	in the database to be sysmoded (does not retrieve names of extended
+**	catalogs).  If a catalog exists, the
+**	DUS_EXISTS_CAT bit is set in the corresponding field of the
+**	dus_modes struct.  This routine assumes that the database has
+**	already been opened.
+**
+**      Note that if the database is distributed, the catalog information
+**      will retrieve from iidd_ddb_objects catalog.
+**
+** Inputs:
+**	dus_errcb			Sysmod error-handling control block.
+**	ddb_flag			value of (iidatabase.dbservice &
+**					    DU_1SER_DDB )
+**
+** Outputs:
+**      *dus_modes
+**	    .dus_xxx_cat		Here xxx stands for the system catalog
+**					name without the prepended "ii".  If
+**					the corresponding catalog in found in
+**					this database, the DUS_EXISTS_CAT bit
+**					will be set.
+**	*dus_errcb			If an error occurs, this block will be
+**					set by a call to du_error().
+**	Returns:
+**	    E_DU_OK			Successful completion.
+**	    W_DU1030_UNKNOWN_CATALOG_SY This is not a fatal error.  It will
+**					inform the user that a catalog exists
+**					which this utility doesn't know about.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    none
+**
+** History:
+**      18-nov-86 (ericj)
+**          Initial creation.
+**	1-mar-89 (mings)
+**	    add distributed catalogs to titan varient.
+**	15-may-89 (teg)
+**	    merge titan code and bugfix it.
+**	10-jul-90 (pete)
+**	    change query to exclude front-end cats.
+**	01-aug-91 (rog)
+**	    Change the relstat query to handle the new, higher-order bit usage.
+**	05-dec-94 (forky01)
+**	    Fix bug 65859 - Find system catalogs using case insensitive
+**	    compare, since the system catalog strings are stored in lower
+**	    case and FIPS mode uses upper case.
+**	04-Jan-07 (kibro01) b117114
+**	    Add gw07 catalogs since they are to be updated by sysmod when
+**	    they exist.
+[@history_template@]...
+*/
+
+DU_STATUS
+##  dus_find_cats(dus_errcb,ddb_flag)
+DU_ERROR	    *dus_errcb;
+i4		    ddb_flag;
+##  {
+##	char	    cat_name[DB_MAXNAME + 1];
+	i4	    i;
+	DUU_CATDEF   *catdef_p;
+
+
+    if ( (ddb_flag & DU_1SER_DDB) == DU_1SER_DDB )
+    {
+##	range of a is iidd_ddb_objects
+##	range of b is iidd_ddb_tableinfo
+##	retrieve unique (cat_name= a.object_name)
+##	    where a.system_object = "Y" and
+##	    (a.object_type = "L" or a.object_type = "T") and
+##	    b.object_base = a.object_base and b.local_type = "T"
+##	{
+		STtrmwhite(cat_name);
+
+	    for (i = 0; i < DU_MAXCAT_DEFS; i++)
+	    {
+		if (Dus_allcat_defs[i] == NULL)
+		    /* There's a set of catalog definitions missing. */
+		    continue;
+
+		for (catdef_p = Dus_allcat_defs[i];
+		     catdef_p->du_relname; 
+		     catdef_p++
+		    )
+		{
+		    /*
+		    ** Case insensitive compare to check system catalogs
+		    */
+		    if (!STcasecmp(catdef_p->du_relname, cat_name ))
+		    {
+			catdef_p->du_exists	= TRUE;
+			break;
+		    }
+		}
+
+		if (catdef_p->du_exists)
+		    break;
+	    }	/* end of while loop. */
+    
+	    if (i > DU_MAXCAT_DEFS)
+	        du_error(dus_errcb, W_DU1030_UNKNOWN_CATALOG_SY,
+			 2, 0, cat_name);
+##	}
+    }
+		
+/* NOTE: iidbcapabilities (a standard catalog) would be excluded by this query
+** without the OR clause below. It should be handled here, along with
+** other standard catalogs; the "modifyfe/upgradefe" facilities only
+** handle front-end catalogs. iirelation can't currently distinguish between
+** a standard catalog and a front-end catalog (they are both considered
+** "extended" catalogs).	(5/90 pete)
+** Add gw07 tables since they are considered front-end (kibro01) b117114
+*/
+##	retrieve (cat_name = iirelation.relid)		/* Retrieve: */
+##	/*  System catalogs */
+##	    where mod(iirelation.relstat, 2) = 1
+##	/*  excluding: views, */
+##	    and mod(iirelation.relstat/32, 2) = 0
+##	/*  indexes, */
+##	    and mod(iirelation.relstat/128, 2) = 0
+##	/*  and front-end cats*/
+##	    and (mod(iirelation.relstat/16384, 2) = 0
+##		OR iirelation.relid = "iidbcapabilities"
+##		OR iirelation.relid = "iisectype"
+##		OR iirelation.relid = "iiprivlist" 
+##		OR iirelation.relid = "iigw07_attribute" 
+##		OR iirelation.relid = "iigw07_index" 
+##		OR iirelation.relid = "iigw07_relation") 
+##	{
+	    (VOID) STtrmwhite(cat_name);
+
+	    for (i = 0; i < DU_MAXCAT_DEFS; i++)
+	    {
+		if (Dus_allcat_defs[i] == NULL)
+		    /* There's a set of catalog definitions missing. */
+		    continue;
+
+		for (catdef_p = Dus_allcat_defs[i];
+		     catdef_p->du_relname; 
+		     catdef_p++
+		    )
+		{
+		    /*
+		    ** Case insensitive compare to check system catalogs
+		    */
+		    if (!STcasecmp(catdef_p->du_relname, cat_name ))
+		    {
+			catdef_p->du_exists	= TRUE;
+			break;
+		    }
+		}
+
+		if (catdef_p->du_exists)
+		    break;
+	    }	/* end of while loop. */
+    
+	    if (i > DU_MAXCAT_DEFS)
+	        du_error(dus_errcb, W_DU1030_UNKNOWN_CATALOG_SY,
+			 2, 0, cat_name);
+##	}
+    
+	return(E_DU_OK);
+##  }
+
+
+
+/*{
+** Name: dus_exit() -	exit handler for database utility, sysmod.
+**
+** Description:
+**        This is the exit handling routine for the database utility,
+**	sysmod.  If the database it open, it is closed.  If an error
+**	has occured, the corresponding message is printed.  Finally,
+**	an informative "closing" message is printed.
+**
+** Inputs:
+**      dus_errcb                       Ptr to the error-handling control block.
+**	    .du_status			If the value is anything other than
+**					E_DU_OK, then the message in du_errmsg
+**					will be printed.
+**	    .du_errmsg			If .du_status != E_DU_OK, this is buffer
+**					containing formatted error message.
+**
+** Outputs:
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      A database, either the one being created or the dbdb, is closed.
+**	    
+** History:
+**      11-nov-86 (ericj)
+**          Initial creation.
+**	1-mar-89 (mings)
+**	    added distributed support in titan path (also removed fail PC
+**	    exit)
+**	15-may-89 (teg)
+**	    merged into mainline and cleanup up (restored pc fail exit, fixed
+**	    misuse of iidatabase.access as flag instead of bitmap)
+[@history_template@]...
+*/
+
+VOID
+##  dus_exit(dus_errcb)
+    DU_ERROR		*dus_errcb;
+##  {
+    DU_STATUS	    save_status;
+    bool	    failexit = FALSE;    
+
+    /* If the program is exiting because of a non-Ingres error,
+    ** print the formatted message.
+    */
+    save_status	= dus_errcb->du_status;
+    if (dus_errcb->du_status != E_DU_OK
+	&& dus_errcb->du_ingerr == DU_NONEXIST_ERROR
+       )
+    {
+	SIprintf("%s\n", dus_errcb->du_errmsg);
+	du_reset_err(dus_errcb);
+    }
+
+    if (Dus_dbenv->du_dbopen)
+    {
+##	exit
+	Dus_dbenv->du_dbopen	= FALSE;
+    }
+
+    switch(save_status)
+    {
+	case E_DU_IERROR:
+	case E_DU_UERROR:
+	    if ( (Dus_dbenv->du_dbservice & DU_1SER_DDB) == DU_1SER_DDB)
+		du_error(dus_errcb, W_DU1010_UTIL_ABORT, 4,
+		     0, DU_0SYSMOD, 0, Dus_dbenv->du_ddbname);
+	    else
+		du_error(dus_errcb, W_DU1010_UTIL_ABORT, 4,
+		     0, DU_0SYSMOD, 0, Dus_dbenv->du_dbname);
+	    failexit = TRUE;
+	    break;
+	    
+	case E_DU_OK:
+	case E_DU_WARN:
+	case E_DU_INFO:
+	    if ( (Dus_dbenv->du_dbservice & DU_1SER_DDB) == DU_1SER_DDB)
+		du_error(dus_errcb, I_DU0011_UTIL_SUCCESS, 4,
+		     0, DU_0SYSMOD, 0, Dus_dbenv->du_ddbname);
+	    else
+		du_error(dus_errcb, I_DU0011_UTIL_SUCCESS, 4,
+		     0, DU_0SYSMOD, 0, Dus_dbenv->du_dbname);
+	    break;
+    }
+
+    if (failexit)
+	PCexit(FAIL);
+    else
+	PCexit(OK);
+## }
+
+
+
+/*{
+** Name: dus_ex_handler() -	Exception handler for sysmod.
+**
+** Description:
+**        This is the exception handler for the database utility, sysmod.
+**	If the exception is generated by the user, a warning message
+**	is printed and the program is exited.  Any other exception will
+**	generate an utility warning message and resignal the exception.
+**
+** Inputs:
+**      ex_args                         EX_ARGS struct.
+**	    .ex_argnum			Tag for the exception that occurred.
+**
+** Outputs:
+**	Returns:
+**	    The signal is resignaled if it is not recognized.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      If the exception was a user interrupt, the program is
+**	    exited via a call to dus_exit().
+**
+** History:
+**      23-Oct-86 (ericj)
+**          Initial creation.
+**	13-sep-96 (nick)
+**	    Use EXmatch() to get exception type.
+**	15-May-1997 (jenjo02)
+**	    Let the back end know of the interrupt via IIbreak() (bug 77674).
+[@history_template@]...
+*/
+STATUS
+dus_ex_handler(ex_args)
+EX_ARGS		    *ex_args;
+{
+    STATUS	status;
+    switch (EXmatch(ex_args->exarg_num, 1, (EX)EXINTR))
+    {
+      case 1:
+	du_error(Dus_errcb, E_DU3600_INTERRUPT, 0);
+	status = EXDECLARE;
+	break;
+
+      default:
+	du_error(Dus_errcb, W_DU1010_UTIL_ABORT, 4,
+		 0, "Sysmoding", 0, Dus_dbenv->du_dbname);
+	status = EXRESIGNAL;
+	break;
+    }
+
+    IIbreak();
+    return(status);
+}
+
+
+
+/*{
+** Name: dus_ingerr_handler()	-   Error handler for Ingres errors
+**				    encountered by Equel statements.
+**
+** Description:
+**        This routine is used to handle Ingres errors that are generated
+**	as a result of Equel statements.  These errors will either be
+**	translated to a database utility error, reported and exited, or
+**	sent back to the program to handle itself.
+**	  This routine will be passed as an argument to IIseterr().
+**
+** Inputs:
+**      ing_error                       Ingres error number passed to this
+**					handler by Libq.
+**
+** Outputs:
+**	Returns:
+**	    0				Completed successfully.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	  This routine updates the fields, du_status, and du_ingerr in the
+**	DU_ERROR struct through the global pointer Dus_errcb.  This is done
+**	so that dus_exit() can properly handle program exit.
+**	  Also, this procedure may determine that a fatal Ingres error has
+**	occured, and call the exit handling procedure directly.
+**
+** History:
+**      11-nov-86 (ericj)
+**          Initial creation.
+[@history_template@]...
+*/
+/* {@fix_me@} */
+i4
+##  dus_ingerr_handler(ing_error)
+i4	    *ing_error;
+##  {
+##	char	    *err_msg;
+
+	/* Display the Ingres Equel error message and exit
+	** the program.
+	*/
+	err_msg	= Dus_errcb->du_errmsg;
+##	inquire_equel(err_msg	= errortext);
+	SIprintf("%s\n", err_msg);
+	Dus_errcb->du_status	= E_DU_UERROR;
+	Dus_errcb->du_ingerr	= *ing_error;
+	dus_exit(Dus_errcb);
+##  }
+
+
+/*{
+** Name: dus_modify() -	    modify the system catalogs.
+**
+** Description:
+**        This routine modifies a database's back-end and standard catalogs
+**	to a predetermined storage structure.  The catalogs to be modified
+**	are determined by the values set in dus_modes when the command line
+**	is parsed.
+**
+** Inputs:
+**      dus_modes                       Description of the command line
+**					parameters.
+**          .dus_page_size              Page size for modify command
+**	    .dus_all_catalogs		If true, all backend and standard
+**					catalogs are modified.
+**					If false, only the
+**					catalogs that correspond to the fields
+**					dus_xxx_cat with the DUS_PARAMETER_CAT
+**					bit set will be modified.
+**	    .dus_xxx_cat		Here xxx stands for some system catalog
+**					name without the prepended "ii".  If
+**					the DUS_PARAMETER_CAT bit is set, the
+**					corresponding system catalog will
+**					be modified.  No catalog will be
+**					modified unless the DUS_EXISTS_CAT bit
+**					is set in this field.
+**	    .dus_dbdb_flag		Is the "dbdb" being modified?
+**	ddb_flag			value of (iidatabase.dbservice &
+**					    DU_1SER_DDB )
+**
+**
+** Outputs:
+**	Returns:
+**	    E_DU_OK			Completed successfully.
+**	Exceptions:
+**	    Some Ingres/Equel error might be detected which will cause
+**	    the Ingres error handler for this utility to be called.
+**
+** Side Effects:
+**	    The back-end & standard catalogs specified by the user will
+**	    be modified to a predetermined storage structure.  The database
+**	    to be sysmoded is opened and closed.
+**
+** History:
+**      11-nov-86 (ericj)
+**          Initial creation.
+**	01-mar-89 (mings)
+**	    added star support in titan path
+**	15-may-89 (teg)
+**	    merged into mainline and cleaned up a bit. (pass flag instead of
+**	    whole structure, use iidatabase.dbservice as bitmask instead of
+**	    misuse as flag, etc)
+**	10-jul-90 (pete)
+**	    changed comments cause now only modifies back-end & standard cats
+**	    rather than all system cats.
+**      28-may-98 (stial01)
+**          dus_modify() Support VPS system catalogs.
+[@history_template@]...
+*/
+
+DU_STATUS
+dus_modify(page_size, all_cats, ddb_flag, dus_errcb)
+i4             page_size;
+i4		    all_cats;
+i4		    ddb_flag;
+DU_ERROR	    *dus_errcb;
+{
+##  char	*cp;
+    char	**cp_arr;
+    DUU_CATDEF	*catdef_p;
+    char        *where;
+    char        modbuf[256];
+    i4		i,j;
+
+    /*	Modify syntax:
+    **	    modify tablename | indexname to storage_structure [unique]
+    **		[on columnname [:sortorder] {, columnname [:sortorder]}]
+    **		[where [fillfactor=n] [, minpages=n] [, maxpages=n]
+    **		[, indexfill=n] [, maxindexfill=n]
+    */
+
+    IIlq_Protect(TRUE);
+    
+    for (i = 0; i < DU_MAXCAT_DEFS; i++)
+    {
+
+        /* If distributed database, we only need star catalogs */
+
+	if ( (ddb_flag != DU_1SER_DDB) &&
+	     (i == DU_DDB_CATS) )
+	    continue;
+			      
+	if (Dus_allcat_defs[i] == NULL)
+	    /* There's a set of catalog definitions missing. */
+	    continue;
+
+	for (catdef_p = Dus_allcat_defs[i];
+	     catdef_p->du_relname; 
+	     catdef_p++
+	    )
+	{
+	    if (catdef_p->du_exists
+		&& (all_cats || catdef_p->du_requested)
+	       )
+	    {
+		if (catdef_p->du_modify)
+		{
+		    cp = catdef_p->du_modify;
+
+		    if (du_error(dus_errcb, I_DU0100_MODIFYING_SY, 2,
+				 0, catdef_p->du_relname) != E_DU_OK
+		       )
+			return(dus_errcb->du_status);
+
+		    if (page_size != 0)
+		    {
+			cp = &modbuf[0];
+			if (STstrindex(catdef_p->du_modify, "where", 0, TRUE)
+			    || STstrindex(catdef_p->du_modify, "with", 0, TRUE))
+			    cp = STprintf(cp, "%s ,page_size=%d",
+					catdef_p->du_modify, page_size);
+			else
+			    cp = STprintf(cp, "%s with page_size=%d",
+					catdef_p->du_modify, page_size);
+		    }
+
+##		    IIstatement cp
+		}
+		if (catdef_p->du_index_cnt > 0)
+		{
+		    for (j = 1, cp_arr = catdef_p->du_index;
+			 j <= catdef_p->du_index_cnt; j++, cp_arr++
+			)
+		    {
+			cp  = *cp_arr;
+			if (page_size != 0)
+			{
+			    cp = &modbuf[0];
+			    if (STstrindex(*cp_arr, "where", 0, TRUE)
+				|| STstrindex(*cp_arr, "with", 0, TRUE))
+				cp = STprintf(cp, "%s ,page_size=%d",
+					    *cp_arr, page_size);
+			    else
+				cp = STprintf(cp, "%s with page_size=%d",
+					    *cp_arr, page_size);
+			}
+##			IIstatement cp
+		    }
+		}
+
+		continue;
+	    }
+	}
+
+    }	/* end of while loop. */
+
+    IIlq_Protect(FALSE);
+
+    return(E_DU_OK);
+}
+
+STATUS
+dus_validate_pagesize(page_size)
+{
+    exec sql begin declare section;
+	char	dbmsinfo_2k[32];
+	char	dbmsinfo_4k[32];
+	char	dbmsinfo_8k[32];
+	char	dbmsinfo_16k[32];
+	char	dbmsinfo_32k[32];
+	char	dbmsinfo_64k[32];
+    exec sql end declare section;
+
+    /* page size zero, means no page size change requested */
+    if (page_size == 0)
+	return (E_DU_OK);
+
+    exec sql select dbmsinfo('page_size_2k'), dbmsinfo('page_size_4k'),
+    dbmsinfo('page_size_8k'), dbmsinfo('page_size_16k'),
+    dbmsinfo('page_size_32k'), dbmsinfo('page_size_64k') into
+    :dbmsinfo_2k, :dbmsinfo_4k, :dbmsinfo_8k, :dbmsinfo_16k, 
+    :dbmsinfo_32k, :dbmsinfo_64k;
+
+    if(sqlca.sqlcode != 0)
+    {
+	return (E_DU_UERROR);
+    }
+
+    if ((page_size == 2048  && dbmsinfo_2k[0]  == 'Y') ||
+	(page_size == 4096  && dbmsinfo_4k[0]  == 'Y') ||
+	(page_size == 8192  && dbmsinfo_8k[0]  == 'Y') ||
+	(page_size == 16384 && dbmsinfo_16k[0] == 'Y') ||
+	(page_size == 32768 && dbmsinfo_32k[0] == 'Y') ||
+	(page_size == 65536 && dbmsinfo_64k[0] == 'Y'))
+	return (E_DU_OK);
+    else
+	return (E_DU_UERROR); 
+}

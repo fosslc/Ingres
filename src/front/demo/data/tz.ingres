@@ -1,0 +1,164 @@
+            6	    5AEST 	   40Australian Eastern Standard Time        	    510.00
+
+           14	    5CDT  	   40Central Daylight Time                   	    5-5.00
+
+           36	    5HAC  	   40Heure Avanc e du Centre                 	    5-5.00
+
+           41	    5HAST 	   40Hawaii-Aleutian Standard Time           	    6-10.00
+
+           61	    5NDT  	   40Newfoundland Daylight Time              	    5-2.50
+
+           69	    5R    	   40Romeo Time Zone                         	    5-5.00
+
+           79	    5WST  	   40Western Standard Time                   	    48.00
+
+            7	    5AKDT 	   40Alaska Daylight Time                    	    5-8.00
+
+           23	    5E    	   40Echo Time Zone                          	    45.00
+
+           33	    5GMT  	   40Greenwich Mean Time                     	    40.00
+
+           34	    5H    	   40Hotel Time Zone                         	    48.00
+
+           46	    5HNE  	   40Heure Normale de l'Est                  	    5-5.00
+
+           50	    5HNY  	   40Heure Normale du Yukon                  	    5-9.00
+
+           59	    5MST  	   40Mountain Standard Time                  	    5-7.00
+
+            8	    5AKST 	   40Alaska Standard Time                    	    5-9.00
+
+           18	    5CST  	   40Central Summer(Daylight) Time           	    510.50
+
+           19	    5CST  	   40Central Standard Time                   	    49.50
+
+           20	    5CST  	   40Central Standard Time                   	    5-6.00
+
+           31	    5F    	   40Foxtrot Time Zone                       	    46.00
+
+           48	    5HNR  	   40Heure Normale des Rocheuses             	    5-7.00
+
+           53	    5K    	   40Kilo Time Zone                          	    510.00
+
+           63	    5NST  	   40Newfoundland Standard Time              	    5-3.50
+
+            5	    5AEDT 	   40Australian Eastern Daylight Time        	    511.00
+
+           37	    5HADT 	   40Hawaii-Aleutian Daylight Time           	    5-9.00
+
+           42	    5HAT  	   40Heure Avanc e de Terre-Neuve            	    5-2.50
+
+           56	    5MDT  	   40Mountain Daylight Time                  	    5-6.00
+
+           68	    5Q    	   40Quebec Time Zone                        	    5-4.00
+
+            2	    5ACDT 	   40Australian Central Daylight Time        	    510.50
+
+           21	    5CXT  	   40Christmas Island Time                   	    47.00
+
+           75	    5W    	   40Whiskey Time Zone                       	    6-10.00
+
+           82	    5Z    	   40Zulu Time Zone                          	    40.00
+
+           28	    5EST  	   40Eastern Summer(Daylight) Time           	    511.00
+
+           29	    5EST  	   40Eastern Standard Time                   	    510.00
+
+           30	    5EST  	   40Eastern Standard Time                   	    5-5.00
+
+           39	    5HAP  	   40Heure Avanc e du Pacifique              	    5-7.00
+
+           55	    5M    	   40Mike Time Zone                          	    512.00
+
+           10	    5AWST 	   40Australian Western Standard Time        	    48.00
+
+           13	    5C    	   40Charlie Time Zone                       	    43.00
+
+           60	    5N    	   40November Time Zone                      	    5-1.00
+
+            3	    5ACST 	   40Australian Central Standard Time        	    49.50
+
+           24	    5EDT  	   40Eastern Daylight Time                   	    5-4.00
+
+           44	    5HNA  	   40Heure Normale de l'Atlantique           	    5-4.00
+
+           71	    5T    	   40Tango Time Zone                         	    5-7.00
+
+           73	    5UTC  	   40Coordinated Universal Time              	    40.00
+
+           81	    5Y    	   40Yankee Time Zone                        	    6-12.00
+
+           11	    5B    	   40Bravo Time Zone                         	    42.00
+
+           64	    5O    	   40Oscar Time Zone                         	    5-2.00
+
+           25	    5EEDT 	   40Eastern European Daylight Time          	    43.00
+
+           27	    5EET  	   40Eastern European Time                   	    42.00
+
+           47	    5HNP  	   40Heure Normale du Pacifique              	    5-8.00
+
+           67	    5PST  	   40Pacific Standard Time                   	    5-8.00
+
+           72	    5U    	   40Uniform Time Zone                       	    5-8.00
+
+           80	    5X    	   40X-ray Time Zone                         	    6-11.00
+
+           26	    5EEST 	   40Eastern European Summer Time            	    43.00
+
+           74	    5V    	   40Victor Time Zone                        	    5-9.00
+
+            1	    5A    	   40Alpha Time Zone                         	    41.00
+
+           35	    5HAA  	   40Heure Avanc e de l'Atlantique           	    5-3.00
+
+           52	    5IST  	   40Irish Summer Time                       	    41.00
+
+           54	    5L    	   40Lima Time Zone                          	    511.00
+
+           66	    5PDT  	   40Pacific Daylight Time                   	    5-7.00
+
+           12	    5BST  	   40British Summer Time                     	    41.00
+
+           32	    5G    	   40Golf Time Zone                          	    47.00
+
+           45	    5HNC  	   40Heure Normale du Centre                 	    5-6.00
+
+           76	    5WEDT 	   40Western European Daylight Time          	    41.00
+
+           78	    5WET  	   40Western European Time                   	    40.00
+
+            4	    5ADT  	   40Atlantic Daylight Time                  	    5-3.00
+
+           16	    5CEST 	   40Central European Summer Time            	    42.00
+
+           38	    5HAE  	   40Heure Avanc e de l'Est                  	    5-4.00
+
+           43	    5HAY  	   40Heure Avanc e du Yukon                  	    5-8.00
+
+           57	    5MESZ 	   40Mitteleurop ische Sommerzeit            	    42.00
+
+           58	    5MEZ  	   40Mitteleurop ische Zeit                  	    41.00
+
+           62	    5NFT  	   40Norfolk (Island) Time                   	    511.50
+
+           65	    5P    	   40Papa Time Zone                          	    5-3.00
+
+           15	    5CEDT 	   40Central European Daylight Time          	    42.00
+
+           17	    5CET  	   40Central European Time                   	    41.00
+
+           40	    5HAR  	   40Heure Avanc e des Rocheuses             	    5-6.00
+
+           70	    5S    	   40Sierra Time Zone                        	    5-6.00
+
+            9	    5AST  	   40Atlantic Standard Time                  	    5-4.00
+
+           22	    5D    	   40Delta Time Zone                         	    44.00
+
+           49	    5HNT  	   40Heure Normale de Terre-Neuve            	    5-3.50
+
+           51	    5I    	   40India Time Zone                         	    49.00
+
+           77	    5WEST 	   40Western European Summer Time            	    41.00
+

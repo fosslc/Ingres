@@ -1,0 +1,55 @@
+%prep
+
+%pre
+# RPM install option for PIF
+# PIF_RPM_UPDATE_OPTION= --nodeps --replacefiles --replacepkgs
+#Set environment from RPM info
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+export II_SYSTEM=$RPM_INSTALL_PREFIX
+export rpm_vers=%rpm_version%
+
+# CA_DEPS is used by CA-CS Utils to determine ingres dependancies and 
+# should not be changed without consulting Unicenter development.
+CA_DEPS="%rpm_basename%-abf-EI %rpm_basename%-bridge-EI %rpm_basename%-c2audit-EI %rpm_basename%-das-EI %rpm_basename%-esql-EI %rpm_basename%-jdbc-EI %rpm_basename%-net-EI %rpm_basename%-odbc-EI %rpm_basename%-ome-EI %rpm_basename%-qr_run-EI %rpm_basename%-rep-EI %rpm_basename%-star-EI %rpm_basename%-tuxedo-EI %rpm_basename%-vision-EI"
+unset BASH_ENV
+
+rc=0 # initialize return code
+
+exit $rc
+
+%post
+#Set environment from RPM info
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+export II_SYSTEM=$RPM_INSTALL_PREFIX
+instid=`$II_SYSTEM/ingres/bin/ingprenv II_INSTALLATION`
+
+rc=0 # initialize return code
+
+# Add setup to todo list
+sulist=%pkg_sulist%
+ifssave=$IFS
+IFS=:
+for script in ${sulist}
+do
+    echo $script >> /var/lib/ingres/${instid}/setup.todo
+done
+IFS=$ifssave
+
+exit 0
+
+%preun
+[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
+export II_SYSTEM=$RPM_INSTALL_PREFIX
+rc=0 # initialize return code
+
+# Check pre-un script is present, if it's not just exit
+[ -x $II_SYSTEM/ingres/utility/iigenpreun ] || exit 0
+if [ $1 = 0 ] ; then
+    $II_SYSTEM/ingres/utility/iigenpreun -r %rpm_basename% \
+        -v %rpm_version%-%rpm_release% -p %pkg_name% -s %pkg_sulist%
+fi
+
+exit 0
+
+%files
+

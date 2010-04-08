@@ -1,0 +1,29 @@
+This directory has a corresponding /test directory. It is:
+
+	/devsrc/62/front/abf/pete/test/fg
+
+To build a stand-alone framegen executable for testing:
+
+	% area front abf pete fg
+	% ming lib
+	% cd ../../test/fg
+	% ming lib
+	% ming framegen
+	% framegen mdupdate
+	
+    The above will create a file called mdupdate.osq in the directory:
+
+	/devsrc/62/front/install/emerald/abfsrc/pete/fgdemo
+
+    The contents of "mdupdate.osq" can be diffed against the previous
+    version of that file in "mdupdate_save.osq". Just typing "framegen"
+    will give a useage note.
+
+    There is an abf application called 'fgdemo' with frames that correspond
+    to each of the frames that 'framegen' can create.
+
+    To run against test versions of the templates, set II_TFDIR:
+
+	% setenv II_TFDIR /devsrc/62/front/abf/pete/src/fg
+
+    and then run framegen.

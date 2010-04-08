@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The define_address resource specifies whether the Ingres variable
+  II_DBMS_SERVER will be defined for DBMS servers created with this
+  definition.
+
+  On non-VMS systems, Ingres variables are created as entries in the
+  file $II_SYSTEM/ingres/files/symbol.tbl.  On VMS systems,
+  II_DBMS_SERVER is defined in the GROUP or SYSTEM logical name table.
+
+  If II_DBMS_SERVER is defined in the user's environment, all connection
+  requests to Ingres databases will be routed by default to the DBMS
+  server identified by the listen address stored in II_DBMS_SERVER.

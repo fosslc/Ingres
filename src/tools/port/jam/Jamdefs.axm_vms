@@ -1,0 +1,51 @@
+#  Copyright (c) 2004 Ingres Corporation
+#
+#
+#  Name: Jamdefs.axm_vms -- Variable definitions for Alpha OpenVMS
+#
+#  Description:
+#       Platform specific variable definitions for Alpha OpenVMS
+#
+# History:
+#       27-Jul-2004 (abbjo03)
+#           Created.
+#       22-dec-2004 (abbjo03)
+#	    Add VERS and NOOPTIM for IINOOPTIM rule.
+#	01-feb-2005 (abbjo03)
+#	    Add IIOPTIM as in other platforms.
+#	02-mar-2005 (abbjo03)
+#	    Add definition for AWK.
+#	03-apr-2006 (abbjo03)
+#	    Add platform_string and extension_string for the readme.
+#       16-Oct-2006 (hanal04) Bug 116866
+#           Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#           NOOPTIM does not strip this when explicitly set.
+#	15-nov-2006 (abbjo03)
+#	    Separate CCVERSFLAG from CCMACH.
+#       31-Dec-2009 (horda03)
+#           Add definition of EXESFX so that IINEEDOBJ can be used on VMS
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+VERS    = "axm_vms" ;
+AS	= macro ;
+ASMACH  = /ALPHA ;
+CC 	?= "cc" ;
+CCDEBUG = "/DEBUG" ;
+CCMACH  ?= "/FLOAT=IEEE /NOWARN" ;
+CCVERSFLAG = "/DEFINE=(AXM_VMS)" ;
+EXESFX  = exe ;
+OPTIM 	?= "/OPTIM" ;
+IIOPTIM ?= "/OPTIM" ;
+NOOPTIM ?= "/NOOPTIM" ;
+CXX	= "cxx" ;
+CCLDFLAGS ?= "/NOSYSSHR" ;
+AWK	= gawk ;
+LEX	= flex ;
+#
+# for readme.html 
+#
+platform_string = "HP OpenVMS Alpha" ;
+extension_string = $(config_string) ;

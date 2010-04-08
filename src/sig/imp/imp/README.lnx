@@ -1,0 +1,81 @@
+The program in this directory serves as an example of using Ingres and 
+the Ingres Management Architecture (IMA) to provide an ima equivalent
+of the ipm utility.
+
+This code is provided as an example only. It is an unsupported example 
+provided by Ingres Corporation to help customers who wish to use the IMA 
+facilities in Ingres. The code in this directory is Copyright (c) 
+Ingres Corporation. 
+
+Ingres Corporation accepts no responsibility for any damage or action 
+arising from the use of this code.
+
+For a discussion of IMA - see the Ingres System Reference Manual and 
+Advisor doc US-126867
+
+The program is written in embedded SQL with FRS calls. 
+
+Files in this directory:
+
+Makefile		Makefile for the utility - this file will need to 
+			be edited to add the relevant libraries for each 
+			platform. Change the LIBS line to contain the library 
+			list specified in the LDLIBMACH variable in the file:
+
+				$II_SYSTEM/ingres/utility/iisysdep 
+
+imp.forms		Copyform output of the forms used in the application
+
+
+imp.h
+imp_dmf.incl
+impcommon.sc
+impdbcon.sc
+impdmf.sc
+impfrs.sc
+impinter.sc
+impio.sc
+implocks.sc
+implog.sc
+impmain.sc
+impqsf.sc
+imprdf.sc
+impserver.sc
+impslave.sc
+impstart.sc
+impstatic.sc 		The source code files for the utility
+
+imp.sql 		SQL script to register the required tables
+
+To run all of the setup steps:
+
+% make all
+
+To run the setup steps individually:
+1. To setup the utility, as privileged INGRES user, register the 
+   imp IMA tables and procedures.
+
+% make register
+
+2. Copy the form in, then get a compiled version:
+
+% make copyform
+% make compform
+
+3. Build the application:
+
+% make imp
+
+
+
+To run the application, use
+
+% imp [database] [-rTIMEOUT_SECONDS]
+
+Where:
+
+database		is the name of the database containing the IMA tables.
+TIMEOUT_SECONDS		is the number of seconds for the refresh interval.
+
+The screen output is similar to ipm.
+

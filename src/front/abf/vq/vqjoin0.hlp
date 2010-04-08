@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqjoin0.hlp, help on Addjoin at the VQ Editor screen.
+/#-- 
+Columns that share the same name and datatype are considered "natural" joins, 
+even though they might contain different information (for instance, a 
+building address in a Master table and an employee address in a Detail table).
+
+  * Master and Detail tables are joined on EACH natural join.  Join columns 
+    in the Detail table are not displayed as fields on the form.  If your 
+    Master and Detail tables have more than one join, decide which join you 
+    want to keep and then remove the other joins to display those columns 
+    as fields on the form.  (You must leave at least one join in place.)
+
+  * Lookup tables are joined to their associated Master or Detail table on 
+    the FIRST natural join.  To change the join, first delete the default 
+    join, then specify a new one.
+
+To specify which columns you want to join:
+    1. Move the cursor to one of the join columns and select Set_Join_Column.  
+    2. Move your cursor to the other join column and select Set_Join_Column 
+       again.

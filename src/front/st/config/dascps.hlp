@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ 
+ The operational mode of the connection pool.  A value of 'OFF'
+ disables pooling.  A value of "ON" enables pooling unless explicitly
+ disabled by the client.  A value of "OPTIONAL" enables pooling but
+ only when requested by the client.

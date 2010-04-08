@@ -1,0 +1,201 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+**  Frame:         manageaudit
+**  Form:          manageaudit
+**  Description:   Manage and Configure the Security Audit system
+**
+**  Source File:   manageaudit.osq
+**  Frame Type:    Menu
+**  Template File: ntmenu.tf, Version: 1.4
+*/
+INITIALIZE =
+DECLARE
+							/*# BEGIN LocalVars */
+    /* Local Variables created by developer of frame */
+    connect_iidbdb = integer NOT NULL ,	/*  */
+    dbname = varchar(32) NOT NULL ,	/*  */
+    old_session = integer NOT NULL ,	/*  */
+							  /*# END LocalVars */
+						       /*# BEGIN LocalProcs */
+    /* Local Procedures created by developer of frame */
+    set_audit_state = PROCEDURE RETURNING none ,	/* Update audit_state  field */
+							 /*# END LocalProcs */
+
+    /* working variables needed by generated code */
+    IIobjname   = CHAR(32) NOT NULL,    /* Holds an object name */
+    IIchoice    = VARCHAR(80),          /* Menu item chosen */
+    IIfound     = INTEGER(4),           /* Was the chosen Menu item found */
+    IIint       = INTEGER(4)            /* General purpose integer */
+
+BEGIN
+    IIretval = 1;       /* Success. This built-in global is used for
+                        ** communication between frames.
+                        */
+    SET_FORMS FRS (TIMEOUT = 0);
+    SET_FORMS FRS (VALIDATE(NEXTFIELD) = 1, VALIDATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(NEXTFIELD) = 1, ACTIVATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(MENUITEM) = 1,  ACTIVATE(KEYS) = 1,
+        GETMESSAGES = 0);
+
+    INITTABLE iitf READ;
+    LOADTABLE iitf ( command = 'Change Log', 
+      explanation = 'Change the current security audit log'); 
+    LOADTABLE iitf ( command = 'Stop Auditing', 
+      explanation = 'Stop security auditing'); 
+    LOADTABLE iitf ( command = 'Restart Audit', 
+      explanation = 'Restart security auditing after stop'); 
+    LOADTABLE iitf ( command = 'Suspend Audit', 
+      explanation = 'Suspend auditing'); 
+    LOADTABLE iitf ( command = 'Resume Audit', 
+      explanation = 'Resume auditing after being suspended'); 
+    SCROLL iitf TO 1;
+						       /*# BEGIN Form-Start */
+    callproc set_audit_state();
+							;/*# END Form-Start */
+END
+
+
+'Select' (VALIDATE = 1, ACTIVATE = 1,
+         EXPLANATION = 'Select a command'),
+         KEY FRSKEY4 (VALIDATE = 1, ACTIVATE = 1) =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF (IIint != 1 OR IIobjname != 'iitf') THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'You can only "Select" when your cursor is in the' +
+                ' table field with the commands.'
+        WITH STYLE = POPUP;
+        RESUME;
+    ENDIF;
+    
+    INQUIRE_FORMS TABLE '' (IIint = DATAROWS(iitf));
+    IF (IIint = 0) THEN
+        RESUME;        /* No commands in tablefield */
+    ENDIF;
+
+    IIfound = 0;
+    IIchoice = iitf[].command;
+    IF IIchoice = 'Change Log' THEN
+						 /*# BEGIN Call\Change\_Log */
+        CALLPROC changelog ( ); 
+						   /*# END Call\Change\_Log */
+        IIfound = 1;
+					     /*# BEGIN Menu-End\Change\_Log */
+        callproc set_audit_state();
+					      ;/*# END Menu-End\Change\_Log */
+    ELSEIF IIchoice = 'Stop Auditing' THEN
+					      /*# BEGIN Call\Stop\_Auditing */
+        CALLPROC stopauditing ( ); 
+						/*# END Call\Stop\_Auditing */
+        IIfound = 1;
+					  /*# BEGIN Menu-End\Stop\_Auditing */
+        callproc set_audit_state();
+					   ;/*# END Menu-End\Stop\_Auditing */
+    ELSEIF IIchoice = 'Restart Audit' THEN
+					      /*# BEGIN Call\Restart\_Audit */
+        CALLPROC restartauditing ( ); 
+						/*# END Call\Restart\_Audit */
+        IIfound = 1;
+					  /*# BEGIN Menu-End\Restart\_Audit */
+        callproc set_audit_state();
+					   ;/*# END Menu-End\Restart\_Audit */
+    ELSEIF IIchoice = 'Suspend Audit' THEN
+					      /*# BEGIN Call\Suspend\_Audit */
+        CALLPROC suspendaudit ( ); 
+						/*# END Call\Suspend\_Audit */
+        IIfound = 1;
+					  /*# BEGIN Menu-End\Suspend\_Audit */
+        callproc set_audit_state();
+					   ;/*# END Menu-End\Suspend\_Audit */
+    ELSEIF IIchoice = 'Resume Audit' THEN
+					       /*# BEGIN Call\Resume\_Audit */
+        CALLPROC resumeauditing ( ); 
+						 /*# END Call\Resume\_Audit */
+        IIfound = 1;
+					   /*# BEGIN Menu-End\Resume\_Audit */
+        callproc set_audit_state();
+					    ;/*# END Menu-End\Resume\_Audit */
+    ENDIF;
+
+    IF (IIfound = 0) THEN
+        IF (IIfound = 0) THEN
+            MESSAGE '"' + IIchoice + '" is an unrecognized command.'
+            WITH STYLE = POPUP;
+	ENDIF;
+    ENDIF;
+
+    IF ((IIretval = 2) AND
+        (ii_frame_name('current') <> ii_frame_name('entry'))) THEN
+        /* Return to top (this is not the start frame) */
+         RETURN ;
+    ELSE
+        IIretval = 1;   /* restore default value */
+    ENDIF;
+END
+
+KEY FRSKEY7 (EXPLANATION = 'Search table field for a specified value') =
+BEGIN
+    IIint = CALLPROC find_record();
+END
+
+KEY FRSKEY5 (EXPLANATION = 'Scroll to top of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field'
+              + ' before selecting "Top".'
+              WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO 1;
+    ENDIF;
+END
+
+KEY FRSKEY6 (EXPLANATION = 'Scroll to bottom of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field before'
+          + ' selecting "Bottom".'
+          WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO END;
+    ENDIF;
+END
+
+'Help' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Display help for this frame'),
+        KEY FRSKEY1 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    HELPFILE 'Manage and Configure the Security Audit system'
+    	'';
+END
+
+'TopFrame' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Return to top frame in application'),
+        KEY FRSKEY17 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    IIretval = 2;       /* return to top frame */
+    RETURN  ;
+END
+
+'End' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Return to previous frame'),
+        KEY FRSKEY3 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    RETURN  ;
+END
+
+						       /*# BEGIN LocalProcs */
+PROCEDURE set_audit_state() =
+BEGIN
+     set session add privileges (maintain_audit);
+     select audit_log=dbmsinfo('security_audit_log'),
+            audit_state=dbmsinfo('security_audit_state');
+     commit;
+     set session with privileges=default;
+end;
+							 /*# END LocalProcs */

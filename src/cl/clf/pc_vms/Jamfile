@@ -1,0 +1,28 @@
+#
+# Jamfile file for cl!clf!pc_vms
+#
+# History:
+#	05-mar-2007 (abbjo03)
+#	    Add pctidx.c.
+#       22-dec-2008 (stegr01)
+#           Change pcsleep.mar to pcsleep.c
+#       10-nov-2009 (stegr01)
+#           Use assembler files for AXP and C files for Itanium
+
+SubDir ING_SRC cl clf pc_vms ;
+
+IISUBSYS cl clf pc_vms ;
+
+IILIBRARY COMPATLIB : pcwait.c pcspawn.c pcforcex.c pcexit.c pcendpipe.c
+        pccmdline.c pcalive.c pc.c pcpid.c pctidx.c ;
+
+if $(VERS) = axm_vms
+{
+   IILIBRARY COMPATLIB : pcsleep.mar ;
+}
+else
+{
+   IILIBRARY COMPATLIB : pcsleep.c ;
+}
+
+

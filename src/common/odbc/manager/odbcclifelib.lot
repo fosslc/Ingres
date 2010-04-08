@@ -1,0 +1,133 @@
+!
+! History:
+!    13-Mar-02 (loera01)
+!        Created.
+!    23-Jul-07 (Ralph Loen) SIR 117786
+!        Obsoleted MultiByteToWideChar() in favor of API conversion
+!        routines.
+!
+IDENT=odbcclilib
+GSMATCH=LEQUAL,0,0
+SYMBOL_VECTOR=(SQLAllocConnect=PROCEDURE,-
+    SQLAllocEnv=PROCEDURE,-
+    SQLAllocStmt=PROCEDURE,-
+    SQLBindCol=PROCEDURE,-
+    SQLCancel=PROCEDURE,-
+    SQLColAttribute=PROCEDURE,-
+    SQLConnect=PROCEDURE,-
+    SQLDescribeCol=PROCEDURE,-
+    SQLDisconnect=PROCEDURE,-
+    SQLError=PROCEDURE,-
+    SQLExecDirect=PROCEDURE,-
+    SQLExecute=PROCEDURE,-
+    SQLFetch=PROCEDURE,-
+    SQLFreeConnect=PROCEDURE,-
+    SQLFreeEnv=PROCEDURE,-
+    SQLFreeStmt=PROCEDURE,-
+    SQLGetCursorName=PROCEDURE,-
+    SQLNumResultCols=PROCEDURE,-
+    SQLPrepare=PROCEDURE,-
+    SQLRowCount=PROCEDURE,-
+    SQLSetCursorName=PROCEDURE,-
+    SQLSetParam=PROCEDURE,-
+    SQLTransact=PROCEDURE,-
+    SQLColAttributes=PROCEDURE,-
+    SQLTablePrivileges=PROCEDURE,-
+    SQLBindParam=PROCEDURE,-
+    SQLBindParameter=PROCEDURE,-
+    SQLColumns=PROCEDURE,-
+    SQLDriverConnect=PROCEDURE,-
+    SQLGetConnectOption=PROCEDURE,-
+    SQLGetData=PROCEDURE,-
+    SQLGetInfo=PROCEDURE,-
+    SQLGetStmtOption=PROCEDURE,-
+    SQLGetTypeInfo=PROCEDURE,-
+    SQLParamData=PROCEDURE,-
+    SQLPutData=PROCEDURE,-
+    SQLSetConnectOption=PROCEDURE,-
+    SQLSetStmtOption=PROCEDURE,-
+    SQLSpecialColumns=PROCEDURE,-
+    SQLStatistics=PROCEDURE,-
+    SQLTables=PROCEDURE,-
+    SQLColumnPrivileges=PROCEDURE,-
+    SQLDescribeParam=PROCEDURE,-
+    SQLExtendedFetch=PROCEDURE,-
+    SQLForeignKeys=PROCEDURE,-
+    SQLMoreResults=PROCEDURE,-
+    SQLNativeSql=PROCEDURE,-
+    SQLNumParams=PROCEDURE,-
+    SQLParamOptions=PROCEDURE,-
+    SQLPrimaryKeys=PROCEDURE,-
+    SQLProcedureColumns=PROCEDURE,-
+    SQLProcedures=PROCEDURE,-
+    SQLSetPos=PROCEDURE,-
+    SQLSetScrollOptions=PROCEDURE,-
+    SQLDataSources=PROCEDURE,-
+    SQLDrivers=PROCEDURE,-
+    SQLGetFunctions=PROCEDURE,-
+    SQLGetPrivateProfileString=PROCEDURE,-
+    SQLAllocHandle=PROCEDURE,-
+    SQLCloseCursor=PROCEDURE,-
+    SQLCopyDesc=PROCEDURE,-
+    SQLEndTran=PROCEDURE,-
+    SQLFetchScroll=PROCEDURE,-
+    SQLFreeHandle=PROCEDURE,-
+    SQLGetConnectAttr=PROCEDURE,-
+    SQLGetDescField=PROCEDURE,-
+    SQLGetDescRec=PROCEDURE,-
+    SQLGetDiagField=PROCEDURE,-
+    SQLGetDiagRec=PROCEDURE,-
+    SQLGetEnvAttr=PROCEDURE,-
+    SQLGetStmtAttr=PROCEDURE,-
+    SQLSetConnectAttr=PROCEDURE,-
+    SQLSetDescField=PROCEDURE,-
+    SQLSetDescRec=PROCEDURE,-
+    SQLSetEnvAttr=PROCEDURE,-
+    SQLSetStmtAttr=PROCEDURE,-
+    SQLColAttributeW=PROCEDURE,-
+    SQLConnectW=PROCEDURE,-
+    SQLDescribeColW=PROCEDURE,-
+    SQLErrorW=PROCEDURE,-
+    SQLGetDiagRecW=PROCEDURE,-
+    SQLGetDiagFieldW=PROCEDURE,-
+    SQLExecDirectW=PROCEDURE,-
+    SQLGetStmtAttrW=PROCEDURE,-
+    SQLDriverConnectW=PROCEDURE,-
+    SQLSetConnectAttrW=PROCEDURE,-
+    SQLGetCursorNameW=PROCEDURE,-
+    SQLPrepareW=PROCEDURE,-
+    SQLSetStmtAttrW=PROCEDURE,-
+    SQLSetCursorNameW=PROCEDURE,-
+    SQLGetConnectOptionW=PROCEDURE,-
+    SQLGetInfoW=PROCEDURE,-
+    SQLColumnsW=PROCEDURE,-
+    SQLGetTypeInfoW=PROCEDURE,-
+    SQLSetConnectOptionW=PROCEDURE,-
+    SQLSpecialColumnsW=PROCEDURE,-
+    SQLStatisticsW=PROCEDURE,-
+    SQLTablesW=PROCEDURE,-
+    SQLForeignKeysW=PROCEDURE,-
+    SQLNativeSqlW=PROCEDURE,-
+    SQLPrimaryKeysW=PROCEDURE,-
+    SQLProcedureColumnsW=PROCEDURE,-
+    SQLProceduresW=PROCEDURE,-
+    SQLSetDescFieldW=PROCEDURE,-
+    SQLGetDescFieldW=PROCEDURE,-
+    SQLGetDescRecW=PROCEDURE,-
+    SQLGetConnectAttrW=PROCEDURE,-
+    GetODBCTrace=PROCEDURE,-
+    isCLI=PROCEDURE)
+INGLIB:libodbccli.olb/lib
+INGLIB:libodbccfg.olb/lib
+INGLIB:libcompat.olb/include=(gv,gver,gcatrace)
+II_COMPATLIB/share
+II_APILIB/share
+psect_attr=ii_address_data,nowrt,shr,lcl
+cluster=ii_address_data
+collect=ii_address_data,ii_address_data
+psect_attr=sqlca,noshr,lcl
+!
+!psect_attr=II_ADDRESS_DATA,NOWRT,SHR,LCL
+!cluster=II_ADDRESS_DATA
+!collect=II_ADDRESS_DATA,II_ADDRESS_DATA
+!psect_attr=SQLCA,NOSHR,LCL

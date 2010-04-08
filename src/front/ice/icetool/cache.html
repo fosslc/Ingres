@@ -1,0 +1,138 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Cache&submit=&cancel=` -->
+<TABLE BORDER=1 WIDTH="90%" CELLPADDING=5 CELLSPACING=2>
+	<TR>
+		<TH ALIGN="CENTER"><A HREF="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext` -->/iceTools/cache.html?criteria=name">Name</A></TH>
+		<TH ALIGN="CENTER"><A HREF="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext` -->/iceTools/cache.html?criteria=location">Location</A></TH>
+		<TH ALIGN="CENTER"><A HREF="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext` -->/iceTools/cache.html?criteria=owner">Requester</A></TH>
+		<TH ALIGN="CENTER">counter</TH>
+		<TH ALIGN="CENTER"><A HREF="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext` -->/iceTools/cache.html?criteria=timeout">Timeout</A></TH>
+		<TH ALIGN="CENTER">Status</TH>
+		<TH ALIGN="CENTER">Request</TH>
+		<TH ALIGN="CENTER">Existing file</TH>
+		<TH ALIGN="CENTER">Remove</TH>
+	</TR>
+	</TR>
+
+<SCRIPT language="JavaScript">
+		var size
+		var position = 0
+		var sorted = -1
+
+		function makeArray(n) {
+			this.length = n
+			for (var i = 1; i <= n; i++) {
+				this[i] = 0
+			}
+			return this
+		}
+
+		function declareFiles (size) {
+			position = 0
+			files = new makeArray(size)
+		}
+
+		function createFile(key, name, loc_name, owner, req_count, timeout, status, file_counter, exist, in_use) 
+		{
+			this.key = key
+			this.name = name
+			this.loc_name = loc_name
+			this.owner = owner
+			this.req_count = req_count
+			this.timeout = timeout
+			this.status = status
+			this.file_counter = file_counter
+			this.exist = exist
+			this.in_use = in_use
+			this.next = -1
+		}
+	
+		function add(key, name, loc_name, owner, req_count, timeout, status, file_counter, exist, in_use) 
+		{
+			var sort = sorted
+			var previous = -1
+
+			files[position] = new createFile(key, name, loc_name, owner, req_count, timeout, status, file_counter, exist, in_use)
+
+			<!-- #ICE REPEAT IF (`:criteria` != `timeout`) 
+			THEN=`while (sort != -1
+						<!-- #ICE IF (``:criteria`` == ``location``)
+						THEN=`` && loc_name.toLowerCase() > files[sort].loc_name.toLowerCase()``
+						--><!-- #ICE IF (``:criteria`` == ``name``)
+						THEN=`` && name.toLowerCase() > files[sort].name.toLowerCase()``
+						--><!-- #ICE IF (``:criteria`` == ``owner``)
+						THEN=`` && owner.toLowerCase() > files[sort].owner.toLowerCase()``
+						-->)
+						{
+							previous = sort
+							sort = files[sort].next
+						}`
+			-->
+
+			files[position].next = sort
+			if (previous == -1)
+				sorted = position
+			else 
+				files[previous].next = position
+			position++
+		}
+
+		function setFile(name, suffix) 
+		{
+			document.forms[0].prefix.value = name
+			document.forms[0].suffix.value = suffix
+		}
+
+		function displayFiles() 
+		{
+			var first = sorted
+			var count = 0
+
+			while (first != -1) 
+			{
+				document.write('<TR><FORM ACTION="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext` -->/iceTools/actCache.html" METHOD="POST">');
+				document.write('<INPUT TYPE="HIDDEN" NAME="action" VALUE="delete">');
+				document.write('<INPUT TYPE="HIDDEN" NAME="fkey" VALUE="' + files[first].key + '">');
+				document.write('<TD ALIGN="CENTER">' + files[first].name + '</TD>')
+				document.write('<TD ALIGN="CENTER">' + files[first].loc_name + '</TD>')
+				document.write('<TD ALIGN="CENTER">' + files[first].owner + '</TD>')
+				document.write('<TD ALIGN="CENTER">' + files[first].req_count + '</TD>')
+				document.write('<TD ALIGN="CENTER">' + files[first].timeout + '</TD><TD ALIGN="CENTER">')
+				if (files[first].status == 1)
+					document.write('loading');
+				else
+					document.write('usable');
+				document.write('</TD><TD ALIGN="CENTER">' + files[first].file_counter + '</TD>')
+				document.write('<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" ' + files[first].exist + '></TD><TD ALIGN="CENTER">')
+				if (files[first].in_use != 'checked')
+					document.write('<INPUT TYPE="image" NAME="Remove" BORDER=0 SRC="<!-- #ICE INCLUDE=`delete.gif` -->">')
+				document.write('</TD></FORM></TR>')
+
+				first = files[first].next
+			}
+		}
+
+		function getFiles() {
+			<!-- #ICE FUNCTION=`ice_cache?action=select`
+				   HTML=`
+						add(':key', ':name', ':loc_name',':owner', :req_count, :timeout, :status, :file_counter, ':exist', ':in_use')
+						`
+			-->
+		}
+<!-- #ICE REPEAT IF (`:ii_status_number` == `0`)
+THEN=`declareFiles(:ii_rowcount);
+			getFiles();
+			displayFiles();
+			</SCRIPT></TABLE>`
+ELSE=`</SCRIPT></TABLE><p>You are not authorized to monitor the system. Please check with your administrator`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to run the report writer on the selected table.
+On this menu, you should select the basic style of the default
+report to be created.
+
+The three styles are:
+
+        Tabular         Produce a report which shows the name of each
+                        column in the table as a heading, and under
+                        each heading, lists the data for the column in
+                        columnar format. This will produce a report as wide
+                        as necessary to fit all columns in the table.
+
+        Wrap            Produce a Tabular report, but wrap the column
+                        headings and data at the screen width.
+
+        Block           Produce a report with titles and data displayed
+                        together in pairs. Useful for reports
+                        on tables with many columns, which cannot
+                        be displayed well as a tabular list.
+
+The menu commands are:
+
+        Tabular    Display in columns across the page.
+
+        Wrap       Display as tabular but wrap to the next line if needed.
+
+        Block      Display titles and data together.
+
+        Help       Access the INGRES Help facility.
+
+        End        Return to the table list, without running the
+                   report writer.

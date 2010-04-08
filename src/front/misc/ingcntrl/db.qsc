@@ -1,0 +1,1367 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<er.h>
+#include	<erfe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	<st.h>
+#include        <generr.h>
+#include        <stdprmpt.h>
+#include	"eric.h"
+#include	"global.h"
+##include       "ictables.qsh"
+/*
+fool ming:
+#include        "ictables.h"
+*/
+
+/**
+** NO_OPTIM = hp9_mpe
+**
+** Name:	db.qsc	-	Database info frame handling
+**
+** History:
+**	18-may-89 (mgw)
+**		Put quoted strings into ERx() calls for internationalization.
+**      27-sep-1989 (jennifer)
+**             Added new SQL statement support for B1/C2 security requirements.
+**             For this file GRANT ACCESS and REVOKE ACCESS to databases
+**	       statements replaced inserts/replaces into iilocation
+**	       catalog directly.
+**	       Also changed to use iidbpriv inplace of iidbaccess.
+**      ~1-Jan-90 (pete)
+**		Allow selection of Help & End even when on invalid field;
+**		check for unsaved changes when user hits menuitem End.
+**      23-apr-1990 (pete)
+**              fix 6.3 bug 21342 with bad explanations for Help & End.
+**      19-oct-1990 (pete)
+**              Merge in changes done by Jennifer Lyerla in 9/89 for B1 proj.
+**	8-nov-1990 (pete)
+**		Make changes as per FRC proposal for CHOTS/TMAC project.
+**      30-Jun-92 (fredb)
+**              Turn off optimization for MPE/iX (hp9_mpe) because we get a
+**              bus error with it on.
+**      27-jul-1992 (thomasm)
+**              Don't optimize this file on hp8
+**	4-Mar-1994 (fredv)
+**		Removed NO_OPTIM for hp8_us5. Believe it or not, NO OPTIM
+**		and -g both will cause bug B60048.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Aug-2009 (kschendel) 121804
+**	    Delete a couple conflicting extern definitions.
+**      30-Nov-2009 (hanal04) Bug 122970
+**          After E_IC0001 we should RESUME to prevent invalid DBA details
+**          being left in the "Database Access" form.
+**/
+
+EXEC SQL INCLUDE SQLCA;
+EXEC SQL WHENEVER SQLERROR CALL SQLPRINT;
+
+## GLOBALREF char	F_Maxname[];
+GLOBALREF       bool    Mgr;
+GLOBALREF bool  IiicPrivSecurity; /* TRUE if user has SECURITY privilege */
+
+EXEC SQL BEGIN DECLARE SECTION;
+## GLOBALREF IIUSER Iiuser;
+## GLOBALREF IIROLE Iirole;
+## GLOBALREF IIUSERGROUP Iiusergroup;
+## GLOBALREF IIDATABASE Iidatabase;
+## GLOBALREF IIDBPRIV Iidbpriv;
+EXEC SQL END DECLARE SECTION;
+
+GLOBALREF char  *IC_PublicUser;	/* "Public" */
+
+FUNC_EXTERN	STATUS	dbform();
+FUNC_EXTERN     STATUS  iiicsdSelectDatabase();
+FUNC_EXTERN     STATUS  iiicspSelectDbpriv();
+FUNC_EXTERN     STATUS  iiicsuSelectUser();
+FUNC_EXTERN     STATUS  iiicsgSelectUsergroup();
+FUNC_EXTERN     STATUS  iiicsrSelectRole();
+FUNC_EXTERN	char	*puborpriv();
+FUNC_EXTERN	STATUS	iiicvaValidateAuthId();
+FUNC_EXTERN	char	*IIICgtGetType();
+
+
+static	STATUS	loadPrivs();	/* function that loads privs into tbl field */
+static		STATUS	db_init();
+STATUS	dbaccform();
+static		STATUS	acc_init();
+static		STATUS	acc_write();
+static		STATUS	get_distdbinfo();
+
+##static	char	Dbfrm[]	= ERx("dbfrm");		  /* db form name */
+##static	char	Accessfrm[] = ERx("dbaccess");	  /* acc form name */
+##static	char	Access_tbl[]	= ERx("access_table"); /* table field */
+##static	char	Object_name[FE_MAXNAME+1];	  /* work area */
+##static	char	Form_add = FALSE;
+
+##static	char	Dbtitle[80] = ERx("");
+##static	char    *Dbmode;
+
+##static	char    *Create_menuitem;
+##static	char    *Edit_menuitem;
+##static	char    *Delete_menuitem;
+##static	char    *Save_menuitem;
+##static	char    *Listchoices_menuitem;
+
+##static	char    *Accmode;
+##static	char	Acctitle[80] = ERx("");
+
+static  char    Empty[] = ERx("");
+
+/*{
+** Name:        dbform() - Information about an INGRES Database display loop.
+**
+** Description:
+**	Runs the display loop for the "Information about an INGRES Database"
+**	screen of Accessdb/Catalogdb.
+**
+** Inputs:
+**	char	*dbname	- Name of database.
+**
+** Outputs:
+**      none.
+**
+** Returns:
+**      FAIL    - if error occurs.
+**      OK      - if all goes ok.
+**
+** Side Effects:
+**
+** History:
+**	8-nov-1990 (pete)
+**		Added this function documentation.
+*/
+STATUS
+dbform(dbname)
+char	*dbname;
+## {
+    STATUS  err = OK;
+
+    if (fchkdbname(dbname) != OK )
+	return FAIL;
+
+    if (!Form_add)
+    {
+	if (IIUFgtfGetForm(IIUFlcfLocateForm(), Dbfrm) != OK)
+	{
+	    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_ERROR, 0);
+	    return FAIL;
+	}
+	/* User can make changes if running Accessdb (as opposed to Catalogdb) &
+	** has SECURITY Priv.
+	*/
+	if (Mgr)
+	    STlcopy(ERget(S_IC0080_Accessdb_Db_Info), Dbtitle, sizeof(Dbtitle));
+	else
+	    STlcopy(ERget(S_IC0081_Catalogdb_Db_Info), Dbtitle, sizeof(Dbtitle));
+
+	if (Mgr && IiicPrivSecurity)
+	    Dbmode = ERx("update");
+	else
+	    Dbmode = ERx("read");
+	Form_add = TRUE;
+    }
+
+
+##  DISPLAY Dbfrm Dbmode
+##  INITIALIZE (#title = Dbtitle)
+##  {
+	if (db_init(dbname) != OK)
+	{
+	    err = FAIL;
+##	    BREAKDISPLAY
+	}
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##		VALIDATE = 0), FRSkey1 (VALIDATE=0):
+##  {
+	FEhelp(ERx("icdbfrm.hlp"), ERget(S_IC001D_db_form));
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##		VALIDATE = 0), FRSkey3 (VALIDATE=0):
+##  {
+##      BREAKDISPLAY
+##  }
+
+##  FINALIZE
+
+    return err;
+## }
+
+/*{
+** Name:	db_init - initialize entries on database screen.
+**
+** Description:
+**
+** Inputs:
+**	##char	*db_name	name of database.
+**
+** Outputs:
+**
+**	Returns:
+**		OK if database was found & user is authorized to look at it;
+**		FAIL otherwise.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	13-apr-1990	(pete)
+**		I added this function documentation + added support
+**		for the ii_dump location in iidatabase.dmpdev, which
+**		somehow got forgotten when ii_dump was implemented for 6.3
+**		(jupbug 9752). Also, simplify how WHERE clause in query
+**		of iidatabase is built.
+**	9-nov-90 (pete)
+**		Made changes for the CHOTS/TMAC security project.
+**	20-sep-93 (robf)
+**              Fix two existing bugs:
+**	        - "type" not always set, could AV depending on the stack
+**	        - Make type not-hidden for CDB/STAR databases
+**      14-jan-94 (huffman)
+**              type needs to be initlized to local.  AXP VMS cannot
+**              work with it uninitlized.
+*/
+
+static STATUS
+##db_init (db_name)
+##char	*db_name;
+##{
+##	char	*type;
+##	char	cdbnm[DB_GW1_MAXNAME+1];
+##	char	cdbnd[DB_GW1_MAXNAME+1];
+
+##	MESSAGE ERget(S_IC001E_Retrieving_db_info);
+
+	/* select row from iidatabase */
+	if (iiicsdSelectDatabase(db_name, &Iidatabase) != OK)
+		return FAIL;
+
+	*cdbnm = EOS;
+	*cdbnd = EOS;
+
+	/*
+	** Determine db type ("distributed" or "Star-CDB") and get
+	** corresponding string to display in Type field.
+	** If distributed, also get Coordinator DB info from iistar_cdbs catalog
+	*/
+##      SET_FRS FIELD Dbfrm (INVISIBLE(#cdb_name) = 1, 
+##			INVISIBLE(#cdb_node) = 1)
+	if ( Iidatabase.dbservice & DB_DISTRIBUTED ) 
+	{
+	    type = ERget(F_IC0010_Distributed);
+
+	    (void) get_distdbinfo(db_name, Iidatabase.own, cdbnm, cdbnd);
+
+	    /* make the cdb_name & cdb_node fields visible */
+##          SET_FRS FIELD Dbfrm (INVISIBLE(#cdb_name) = 0, 
+##			INVISIBLE(#cdb_node) = 0)
+##          SET_FRS FIELD Dbfrm (INVISIBLE(#type) = 1) 
+	}
+	else if (  Iidatabase.dbservice & DB_STAR_CDB ) 
+	{
+	    type = ERget(F_IC0012_Star_CDB);
+##          SET_FRS FIELD Dbfrm (INVISIBLE(#type) = 1) 
+	}
+	else 
+	{
+/*          type is a local db */
+            type = (char *)ERget(F_IC0011_Local) ;
+##          SET_FRS FIELD Dbfrm (INVISIBLE(#type) = 1) 
+	    type = ERx(""); /* So not empty */
+	
+	}
+
+##      PUTFORM Dbfrm ( #dbname         = db_name,
+##                      #ownname        = Iidatabase.own,
+##                      #dbdev          = Iidatabase.dbdev,
+##                      #ckpdev         = Iidatabase.ckpdev,
+##                      #wrkdev         = Iidatabase.sortdev,
+##                      #jnldev         = Iidatabase.jnldev,
+##                      #dmpdev         = Iidatabase.dmpdev, 
+##                      #type           = type, /* local, distrib, or cdb */
+##                      #cdb_name       = cdbnm,
+##                      #cdb_node       = cdbnd
+##      )
+	return OK;
+## }
+
+/*{
+** Name:        dbaccform() - Information about an INGRES Database display loop.
+**
+** Description:
+**
+** Inputs:
+**	char	*dbname	- Name of database.
+**
+** Outputs:
+**      none.
+**
+** Returns:
+**      FAIL    - if error occurs.
+**      OK      - if all goes ok.
+**
+** Side Effects:
+**
+** History:
+**	14-jul-1993 (kellyp)
+**	    Replaced ListChoices_menuitem with three menuitems for 
+**	    User, Group, & Role (b52705).
+**	21-jul-1993 (kellyp)
+**	    Corrected error messages for ListGroups and ListRoles.
+**	21-jul-1993 (kellyp)
+**	    Corrected the error made in the previous change of transposing
+**	    the error messages.
+**	4-aug-1993 (kellyp)
+**	    When returning a value from the picklist, place the value on the
+**	    current row if the current row is empty. Otherwise, place the
+**	    value at the end of the table. Access defaults to YES if the
+**	    database is PRIVATE and NO if the database is PUBLIC.
+**	6-aug-1993 (kellyp)
+**	    Added ListChoices menuitem.
+**	18-aug-1993 (kellyp)
+**	    Deleted ListUsers, ListGroups, ListChoices
+**	24-aug-1993 (kellyp)
+**	    Database access will not reflect Group and Role info.
+**	16-sep-1993 (kellyp)
+**	    Deleted IIUFfieldhelp
+**	18-nov-1993 (kellyp)
+**	    Should not allow giving/revoking access to/from DBA.
+**	    Not a meaning operation. (bug 56655)
+*/
+
+STATUS
+dbaccform(dbname)
+char	*dbname;
+## {
+    STATUS  err = OK;
+##  char    *type;	/* displayed access.type */
+
+    if (Acctitle[0] == EOS)
+    {
+	if (IIUFgtfGetForm(IIUFlcfLocateForm(), Accessfrm) != OK)
+	{
+	    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_ERROR, 0);
+	    return FAIL;
+	}
+	/* User can make changes if running Accessdb (as opposed to Catalogdb) &
+	** has SECURITY Priv.
+	*/
+	if (Mgr)
+	{
+	    STlcopy(ERget(S_IC0102_Acc_Dbaccess_Title), 
+					Acctitle, sizeof(Acctitle));
+	}
+	else
+	{
+	    STlcopy(ERget(S_IC0103_Cat_Dbaccess_Title), 
+					Acctitle, sizeof(Acctitle));
+	}
+
+	if (Mgr && IiicPrivSecurity)
+	{
+	    Create_menuitem = ERget(FE_Create);
+	    Edit_menuitem = ERget(FE_Edit);
+	    Delete_menuitem = ERget(FE_Delete);
+	    Save_menuitem = ERget(FE_Save);
+	    Listchoices_menuitem = ERget(FE_Lookup);
+	    Accmode = ERx("update");
+##          SET_FRS FIELD Accessfrm
+##              (DISPLAYONLY(#defaultaccess) = 0, UNDERLINE(#defaultaccess) = 1)
+
+	}
+	else
+	{
+	    /* User is either running Catalogdb, or Accessdb & with only
+	    ** MAINTAIN_LOCATIONS privilege.
+	    */
+	    Create_menuitem = Empty;
+	    Edit_menuitem = Empty;
+	    Delete_menuitem = Empty;
+	    Save_menuitem = Empty;
+	    Listchoices_menuitem = Empty;
+	    Accmode = ERx("read");
+##          SET_FRS FIELD Accessfrm
+##              (DISPLAYONLY(#defaultaccess) = 1, UNDERLINE(#defaultaccess) = 0)
+	}
+    }
+
+##  DISPLAY Accessfrm Accmode
+##  INITIALIZE (#title = Acctitle)
+##  {
+	if (acc_init(dbname) != OK)
+	{
+	    err = FAIL;
+##	    BREAKDISPLAY
+	}
+##  }
+
+
+##  ACTIVATE MENUITEM Delete_menuitem
+##      (VALIDATE = 0, ACTIVATE = 0, EXPL = ERget(F_IC0018_RowDeleteExpl)):
+##  {
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+        if (STequal(Object_name, Access_tbl))
+        {
+##          DELETEROW Accessfrm Access_tbl
+##          SET_FRS FORM (CHANGE(Accessfrm) = 1)
+        }
+        else
+            IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+
+##  ACTIVATE MENUITEM Save_menuitem
+##      (ACTIVATE = 0, EXPL = ERget(F_FE0117_SaveExpl)),
+##      FRSkey8 (ACTIVATE = 1):
+##  {
+        if (Save_menuitem[0] == EOS)
+        {
+            /* this was selected via the FRSkey */
+            FTbell();
+##          RESUME
+        }
+
+##	VALIDATE
+	if (acc_write(dbname) != OK) 
+	{
+##	    RESUME FIELD Access_tbl
+	}
+##	CLEAR FIELD Access_tbl
+##	BREAKDISPLAY
+##  }
+
+##  ACTIVATE MENUITEM Listchoices_menuitem (VALIDATE = 0, ACTIVATE = 0,
+##      EXPL = ERget(FE_LookupExpl)),
+##      FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##  {
+##      char    nm[FE_MAXNAME + 1];
+##      char    tmpname[FE_MAXNAME + 1];
+##      char    tmpaccess[FE_MAXNAME + 1];
+
+        if (Listchoices_menuitem[0] == EOS)
+        {
+            /* this was selected via the FRSkey */
+            FTbell();
+##          RESUME
+        }
+
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+	if (STequal(Object_name, ERx("defaultaccess")))
+	{
+	    char    msg[256];
+	    char    lpstr[2048];  
+	    char    *public = ERget(F_IC000C_public);
+	    char    *private = ERget(F_IC000D_private);
+##	    char    *choice;
+	    i4     rtn;
+
+	    STprintf(msg, ERget(S_IC0090_select_default_access), dbname);
+
+	    /* 
+	     * Slow message (or was it fast?) caused private message to
+	     * overwrite public due to usage of static static string.
+	     * so separate calls to ERget()
+	     *
+	     * STprintf(lpstr, ERx("%s;%s\n%s;%s"),
+             *	public, "Available to all but selected users.",
+	     * private, "Access denied to all but selected users.");
+	     */
+
+ 	    STprintf(lpstr, "%s;%s\n", public, ERget(S_IC0091_pub_exp));
+
+	    STcat( lpstr, private);
+	    STcat( lpstr, ";" );
+	    STcat( lpstr, ERget(S_IC0092_priv_exp));
+
+	    rtn = IIFDlpListPick(msg, lpstr, 0, -1, -1,
+		  ERget(S_IC0093_defacc_help_title), ERx("icdefacc.hlp"), 
+		  NULL, NULL );
+	    if (rtn >= 0)
+	    {
+		choice = (rtn == 0 ? public : private);
+##		PUTFORM Accessfrm ( #defaultaccess = choice )
+##	        SET_FRS FORM (CHANGE(Accessfrm) = 1)
+##              RESUME NEXT
+	    }
+##          RESUME FIELD #defaultaccess
+	}
+
+	else if (STequal(Object_name, Access_tbl))
+	{
+##          INQUIRE_FRS TABLE "" (Object_name = COLUMN)
+	    if (STequal(Object_name, ERx("uname")))
+	    {
+		icListPicks(ERget(F_IC001B_UserType), 
+				ERx("iiusers"), ERx("user_name"), nm);
+		if (nm[0] != EOS)
+		{
+##		    i4  state = stNEW;
+
+##          	    GETROW Accessfrm Access_tbl (tmpname = #uname)
+##          	    GETFORM Accessfrm (tmpaccess = #defaultaccess)
+		    if (STequal(tmpaccess, ERget(F_IC000D_private)))
+			STcopy(Yes, tmpaccess);
+		    else
+			STcopy(No, tmpaccess);
+
+		    if (STequal(tmpname, ERx("")))
+##          	    	PUTROW Accessfrm Access_tbl (#uname = nm, 
+##			    #type = ERget(F_IC001B_UserType),
+##			    #access = tmpaccess)
+		    else
+		    {
+##          	    	LOADTABLE Accessfrm Access_tbl (#uname = nm, 
+##			    #type = ERget(F_IC001B_UserType),
+##			    #access = tmpaccess, _STATE = state)
+##          	    	SCROLL Accessfrm Access_tbl TO END
+		    }
+##	    	    SET_FRS FORM (CHANGE(Accessfrm) = 1)
+		}
+		else
+		{
+##      	    RESUME COLUMN Access_tbl #uname
+		}
+	    }
+	}
+
+	else
+##		RESUME
+##  }
+
+
+
+
+##  ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0100_ExplFrameHelp),
+##		VALIDATE = 0), FRSkey1 (VALIDATE=0):
+##  {
+        if (Mgr)
+            FEhelp(ERx("icdbacc.hlp"), ERget(S_IC011D_dbacc_form));
+        else
+	    FEhelp(ERx("icroacc.hlp"), ERget(S_IC011D_dbacc_form));
+
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##		VALIDATE = 0), FRSkey3 (VALIDATE=0):
+##  {
+        if (Mgr)
+        {
+            /* user is running Accessdb */
+##          i4      changed;
+
+##          INQUIRE_FRS FORM (changed = CHANGE)
+            if ( changed )
+            {
+##              GETFORM Accessfrm ( Object_name = #dbname)
+
+                changed = CONFIRM(Object_name, ERget(F_IC001A_Database));
+                switch(changed)
+                {
+                case CONFCH_YES:
+##                  VALIDATE
+		    if (acc_write(Object_name) != OK) 
+		    {
+##	    		RESUME FIELD Access_tbl
+		    }
+##		    CLEAR FIELD Access_tbl
+                    /* fall through */
+                case CONFCH_NO:
+##                  BREAKDISPLAY
+                default:
+                    break;
+                }
+
+##              RESUME;
+            }
+        }
+##      BREAKDISPLAY
+##  }
+
+##  ACTIVATE FRSkey7
+##          (EXPL = ERget(F_FE0104_ExplFind)) /* ERget(FE_Find) */
+##  {
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+        if (STequal(Object_name, Access_tbl))
+            FEtabfnd(Accessfrm, Object_name);
+        else
+            IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+
+##  ACTIVATE FRSkey5
+##          (EXPL = ERget(F_FE0105_ExplTop))  /* ERget(FE_Top) */
+##  {
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+        if (STequal(Object_name, Access_tbl))
+##          SCROLL Accessfrm Object_name TO 1
+        else
+            IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+
+##  ACTIVATE FRSkey6
+##          (EXPL = ERget(F_FE0106_ExplBottom)) /*ERget(FE_Bottom) */
+##  {
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+        if (STequal(Object_name, Access_tbl))
+##          SCROLL Accessfrm Object_name TO END
+        else
+            IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+
+##  ACTIVATE COLUMN Access_tbl #uname:
+##  {
+	STATUS stat;
+##	i4	changed;
+##	i4	auth_type;
+##  	char    tmpaccess[FE_MAXNAME + 1];
+##      char    tmpname[FE_MAXNAME + 1];
+
+##      INQUIRE_FRS ROW "" "" (changed = CHANGE)
+        if (changed != 0)
+        {
+            /* User changed the Authorization Identifier value.
+	    ** Validate it.
+	    */
+##          GETROW Accessfrm Access_tbl (Object_name = #uname)
+
+	    if (STtrmwhite(Object_name) > 0)
+	    {
+# ifndef UNIX
+		/* User, Group & Role names are case sensitive on UNIX only */
+		IIUGlbo_lowerBEobject(Object_name);
+# endif
+
+		/* check type of & validate Authorization Identifier */
+		stat = iiicvaValidateAuthId(Object_name, &type, &auth_type);
+		if (stat != OK)
+		{
+		    if (stat == IC_INVALID)
+		    {
+			/* no such authorization identifier */
+			IIUGerr(E_IC006E_AuthId_DoesntExist, UG_ERR_ERROR, 1,
+						    Object_name);
+		    }
+##                  RESUME
+		}
+
+
+##          	GETFORM Accessfrm (tmpaccess = #defaultaccess,
+##			tmpname = #ownname)
+
+		if (STequal(tmpname, Object_name))
+		{
+		    IIUGerr(E_IC0001_Cannot_use_DBA, UG_ERR_ERROR, 0);
+##                  RESUME
+		}
+		if (STequal(tmpaccess, ERget(F_IC000D_private)))
+		    STcopy(Yes, tmpaccess);
+		else
+		    STcopy(No, tmpaccess);
+
+##              PUTROW Accessfrm Access_tbl (#type =type, #int_type = auth_type,
+##		    #access = tmpaccess)
+	    }
+
+            /* mark column so won't be validated next time */
+##          SET_FRS ROW '' '' (CHANGE = 0)
+        }
+	else
+##          RESUME NEXT
+##  }
+
+##  ACTIVATE COLUMN Access_tbl #access:
+##  {
+	STATUS	stat;
+##	i4	changed;
+##	char	*yorn = Empty;
+##	char	ybuf[128];
+
+##      INQUIRE_FRS ROW "" "" (changed = CHANGE)
+	if (changed != 0)
+        {
+            /* User entered, hopefully, yes or no.  */
+##          GETROW Accessfrm Access_tbl (Object_name = #uname, ybuf = #access)
+
+	    if (Object_name[0] != EOS)
+	    {
+		yorn = IIUGyn(ybuf, &stat) ? Yes : No;
+		if (stat == E_UG0007_Illegal_Response
+		    || stat == E_UG0006_NULL_Response)
+		{
+                    /* illegal yes/no response */
+                    IIUGerr(E_IC0130_Yes_or_No, UG_ERR_ERROR, 0);
+##                  RESUME
+		}
+##              PUTROW Accessfrm Access_tbl (#access = yorn)
+	    }
+	    else
+	    {
+##              PUTROW Accessfrm Access_tbl (#access = "")
+	    }
+##          SET_FRS ROW '' '' (CHANGE = 0)
+        }
+
+##      RESUME NEXT
+##  }
+
+##  FINALIZE
+
+    return err;
+## }
+
+/*{
+** Name:	acc_init - initialize entries on database access screen.
+**
+** Description:
+**
+** Inputs:
+**	##char	*db_name	name of database.
+**
+** Outputs:
+**
+**	Returns:
+**		OK if database was found & user is authorized to look at it;
+**		FAIL otherwise.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	13-apr-1990	(pete)
+**		I added this function documentation + added support
+**		for the ii_dump location in iidatabase.dmpdev, which
+**		somehow got forgotten when ii_dump was implemented for 6.3
+**		(jupbug 9752). Also, simplify how WHERE clause in query
+**		of iidatabase is built.
+**	9-nov-90 (pete)
+**		Made changes for the CHOTS/TMAC security project.
+**	17-mar-94 (michael)
+**              Added select on db_access field of iidbprivileges to correctly
+**              display private|public in defaultaccess field of "Access" form.
+**      19-Oct-98 (wanya01)
+**              Fix bug 93383.
+*/
+
+static STATUS
+##acc_init (db_name)
+
+EXEC SQL BEGIN DECLARE SECTION;
+##char	*db_name;
+EXEC SQL END DECLARE SECTION;
+
+##{
+        EXEC SQL BEGIN DECLARE SECTION;
+##	char	*d_global; 
+        EXEC SQL END DECLARE SECTION;
+##	char	*tb_mode;
+##	char	cdbnm[DB_GW1_MAXNAME+1];
+##	char	cdbnd[DB_GW1_MAXNAME+1];
+	int tmp;
+        int d_flag;
+
+##	MESSAGE ERget(S_IC001E_Retrieving_db_info);
+
+	/* select row from iidatabase */
+	if (iiicsdSelectDatabase(db_name, &Iidatabase) != OK)
+		return FAIL;
+
+	/*
+	** Load Grants into table field.
+	*/
+	tb_mode = Mgr ?  ERx("fill") : ERx("read");
+
+
+	/* create hidden versions of all displayed fields */
+##	INITTABLE Accessfrm Access_tbl tb_mode (#name_orig     = F_Maxname,
+##					    #int_type	   = i2,
+##					    #int_type_orig = i2,
+##					    #access_orig   = c4);
+
+        /* as a default, access is public and the iidpriv table is empty. 
+	 * set the bit on to reflect this default
+	 */
+	Iidbpriv.flags |= DB_ACCESS;
+        d_flag = 1;
+
+	/* select all grants for this database from iidbpriv */
+	(void) iiicspSelectDbpriv(db_name, &Iidbpriv, loadPrivs, &d_flag);
+
+	*cdbnm = EOS;
+	*cdbnd = EOS;
+
+        /* initialize access flag as a default */
+
+	/* set if database is "public" or "private"  */
+        if (d_flag)
+          d_global = ERget(F_IC000C_public);
+        else
+          d_global = ERget(F_IC000D_private);
+
+##	PUTFORM Accessfrm ( #dbname		= db_name,
+##			#ownname	= Iidatabase.own,
+##			#defaultaccess	= d_global,
+##			#orig_def_access= d_global
+##	)
+
+	return OK;
+## }
+
+
+/*{	acc_write	Write changes about a database to dbdb
+**
+**	Update database global access flag and make incremental changes
+**	to user authorization list
+**
+**	Returns:
+**		OK	database updated ok.
+**		FAIL	error updating database.
+**
+**	History:
+**
+**	12-mar-86 (marian)	bug # 7162
+**		Added 'and iidbaccess.dbname = Db_name'
+**		to the where clause of the delete commands so
+**		only the rows where it corresponds to the given
+**		databse are deleted.
+**	08-sep-87 (daver)
+**		Set the Database to be operative when changing
+**		to be global or private.
+**	30-nov-89 (jennifer) 
+**		Change iidbaccess to use new REVOKE statement.
+**	12-nov-1990 (pete)
+**		changed to handle sense of ACCESS/NOACCESS, authorization
+**		identifiers, rather than just users, and user Public. (CHOTS)
+**	19-jul-1991 (pete)
+**		Wrap CVlower(username) with "#ifndef UNIX", as done
+**		in ctrl.qsc. Bug 38718.
+**	4-apr-1992 (pete)
+**		Removed couple unneeded CVlower(u_name) calls in acc_write.
+**		One call was unnecessary, cause u_name not used in first
+**		unloadtable loop; second was redundant. These were probably
+**		bugs from integrating TMAC code line.
+**	22-jun-1993 (kellyp)
+**		Corrected REVOKE and GRANT access syntax (bug 52706)
+**	14-jul-1993 (kellyp)
+**		Corrected value for the GRANT statement.
+**	16-mar-1994 (michael)
+**		Added GRANT statements for modified default access of db.
+**		Was previously only flipping bits.
+*/
+static STATUS
+##acc_write (db_name)
+EXEC SQL BEGIN DECLARE SECTION;
+##char	*db_name;
+EXEC SQL END DECLARE SECTION;
+##{
+    STATUS      uval = OK;
+##  char	name_orig[FE_MAXNAME+1];	/* original name from dbase */
+##  i4		int_type_orig;	/* internal type. original from database*/
+##  char	access_orig[3 + 1];	/* original access from dbase */
+##  char	type[6 + 1];	/* displayed type */
+##  i4		int_type;	/* internal type; equivalent to displayed
+				** type.
+				*/
+##  char	access[3 +1];	/* displayed access */
+##  char	defaccess[20];
+##  char	origdefaccess[20];
+
+##  char	u_name[FE_MAXNAME+1];
+##  i4  	u_state;
+##  i4  	u_record;
+    EXEC SQL BEGIN DECLARE SECTION;
+    char        sbuffer[256];
+    EXEC SQL END DECLARE SECTION;
+
+    /* NOTE: assume all displayed values in table field are valid */
+
+##  MESSAGE ERget( S_IC0023_Updating_database );
+
+##  BEGIN TRANSACTION
+
+    /* Handle default (public vs. private) access. */
+##  GETFORM Accessfrm (defaccess = #defaultaccess, 
+##			origdefaccess = #orig_def_access);
+    if (!STequal(defaccess, origdefaccess))
+    {
+	EXEC SQL BEGIN DECLARE SECTION;
+	    i4	bit_n = DB_GLOBAL;
+	    i4	bit; /* specifies default access DB_PRIVATE */
+	EXEC SQL END DECLARE SECTION;
+
+	bit = (STequal(defaccess, ERx("private")) ? DB_PRIVATE : DB_GLOBAL);
+
+	if (bit == DB_PRIVATE) 
+	{
+	    STprintf(sbuffer, ERx("GRANT NOACCESS ON DATABASE %s TO PUBLIC"),
+                     db_name);
+            EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+        }
+        else
+	{
+	    STprintf(sbuffer, ERx("GRANT ACCESS ON DATABASE %s TO PUBLIC"),
+                     db_name);
+            EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+        }
+
+	iiuicw1_CatWriteOn();
+	EXEC SQL UPDATE iidatabase i 
+	    SET access = ((i.access / (2 * :bit_n)) * 2 * :bit_n) 
+			+ MOD(i.access, :bit_n) + :bit
+	    WHERE i.name = :db_name;
+	if (FEinqerr() != OK)
+	    uval = FAIL;
+	iiuicw0_CatWriteOff();
+	if (uval != OK)
+	    goto done;
+    }
+
+    /* Process stDELETE rows first (UNLOADTABLE delivers them last!). */
+##  UNLOADTABLE Accessfrm Access_tbl (
+##				u_name		= #uname,
+##				name_orig	= #name_orig,
+##				type		= #type,
+##				int_type_orig	= #int_type_orig,
+##				int_type	= #int_type,
+##				access		= #access,	
+##				access_orig	= #access_orig,	
+##				u_state		= _STATE,
+##				u_record	= _RECORD
+##				)
+##  {
+	switch (u_state)
+	{
+	  case stDELETE:
+	    /*
+	    ** Delete old user.
+	    **
+	    ** WITH THIS RELEASE, DBAs have unlimited privileges on their
+	    ** Databases, so ok to allow DBA privs to be REVOKED; code added
+	    ** for bug 21815 removed (bug 21815 was about problems when privs
+	    ** for DBA on privated dbase were deleted)  (pete)
+	    */
+	    if (int_type_orig != TYPE_PUBLIC)
+	    {
+	        STprintf(sbuffer,
+		   ERx("REVOKE %sACCESS ON DATABASE %s FROM %s %s"),
+		   access_orig[0] == Yes[0] ? Empty : No,
+		   db_name,
+		   IIICgtGetType(int_type_orig),  /* User, Group or Role */
+	    	   name_orig);
+	    }
+	    else
+	    {
+	        STprintf(sbuffer,
+		   ERx("REVOKE %sACCESS ON DATABASE %s FROM PUBLIC"),
+		  (access_orig[0] == Yes[0]) ? Empty : No,
+		   db_name);
+	    }
+
+	    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+            if (FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+            {
+                uval = FAIL;
+##              ENDLOOP
+            }
+	} 
+##  } 
+
+    if (uval == FAIL)
+	goto done;
+
+    /* process everything but stDELETE rows */
+##  UNLOADTABLE Accessfrm Access_tbl (
+##				u_name		= #uname,
+##				name_orig	= #name_orig,
+##				type		= #type,
+##				int_type_orig	= #int_type_orig,
+##				int_type	= #int_type,
+##				access		= #access,	
+##				access_orig	= #access_orig,	
+##				u_state		= _STATE,
+##				u_record	= _RECORD
+##				)
+##  {
+
+# ifndef UNIX
+	/* User, Group & Role names are case sensitive on UNIX only */
+        IIUGlbo_lowerBEobject(u_name);
+# endif
+
+	if (STtrmwhite(u_name) == 0)
+	    continue;
+
+	switch (u_state)
+	{
+	  case stCHANGE:
+	    /*
+	    ** Delete old Access, and then add new Access using Fall Thru...
+	    */
+	    if (int_type_orig != TYPE_PUBLIC)
+	    {
+	        STprintf(sbuffer,
+		   ERx("REVOKE %sACCESS ON DATABASE %s FROM %s %s"),
+		  (access_orig[0] == Yes[0]) ? Empty : No,
+		   db_name,
+		   IIICgtGetType(int_type_orig),  /* User, Group or Role */
+	    	   name_orig);
+	    }
+	    else
+	    {
+	        STprintf(sbuffer,
+		   ERx("REVOKE %sACCESS ON DATABASE %s FROM PUBLIC"),
+		  (access_orig[0] == Yes[0]) ? Empty : No,
+		   db_name);
+	    }
+	    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+            if (FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+            {
+                uval = FAIL;
+##              ENDLOOP
+            }
+
+	    /* stCHANGE, fall through ... */
+
+	  case stNEW:
+
+	    if (int_type != TYPE_PUBLIC)
+	    {
+
+	        STprintf(sbuffer,
+		    ERx("GRANT %sACCESS ON DATABASE %s TO %s %s"),
+		    (access[0] == Yes[0]) ? Empty : No,
+		    db_name,
+		    type,  /* User, Group or Role */
+		    u_name);
+	    }
+	    else
+	    {
+	    	STprintf(sbuffer,
+			ERx("GRANT %sACCESS ON DATABASE %s TO PUBLIC"),
+			(access[0] == Yes[0]) ? Empty : No,
+			db_name);
+	    }
+
+	    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+            if (FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+            {
+                uval = FAIL;
+##              ENDLOOP
+            }
+	    break;
+
+	} 
+
+##  } 
+
+done:
+    if (uval == OK)
+	EXEC SQL COMMIT WORK;
+    else
+        EXEC SQL ROLLBACK;
+
+    return uval;
+## }
+
+
+/*{
+** Name:	loadPrivs - load privileges into table field.
+**
+** Description:
+**	stuff rows into a table field.
+**
+** Inputs:
+**	IIDBPRIV *iidbpriv	structure full of good stuff to put into
+**				table field.
+** Outputs:
+**
+**	Returns:
+**		OK if row loaded ok; FAIL otherwise.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	9-nov-1990 (pete)
+**		Initial Version.
+*/
+static STATUS
+## loadPrivs(iidbpriv)
+## IIDBPRIV *iidbpriv;
+## {
+##  char	*type;
+##  char	*access;
+
+    if ((iidbpriv->control & DB_ACCESS) != 0)
+	/* this tuple specifies a Database ACCESS privilege */
+	access = ((iidbpriv->flags & DB_ACCESS) != 0) ? Yes : No;
+    else
+	return OK;	/* don't load this row. It probably specifies
+			** a DIO or CPU limit, or some other database
+			** priv. We only want Access privs.
+			*/
+
+    switch(iidbpriv->gtype)
+    {
+    case TYPE_USER:
+	type = ERget(F_IC001B_UserType);
+	break;
+    case TYPE_GROUP:
+	type = ERget(F_IC001C_GroupType);
+	break;
+    case TYPE_ROLE:
+	type = ERget(F_IC001D_RoleType);
+	break;
+    case TYPE_PUBLIC:
+	type = ERget(F_IC001E_PublicType);
+	STcopy(IC_PublicUser, iidbpriv->grantee);
+	break;
+    default:
+	type = ERget(F_IC001F_UnknownType);
+	break;
+    }
+
+##  LOADTABLE Accessfrm Access_tbl
+##	(
+##	#uname		= iidbpriv->grantee,
+##	#name_orig	= iidbpriv->grantee,
+##	#type		= type,
+##	#int_type	= iidbpriv->gtype,
+##	#int_type_orig	= iidbpriv->gtype,
+##	#access		= access,
+##	#access_orig	= access
+##	)
+
+    return OK;
+## }
+
+
+/*{
+** Name:	get_distdbinfo - get info on a distributed database.
+**
+** Description:
+**	Select info on the coordinator database name and node for a
+**	distributed database.
+**
+** Inputs:
+**	char *db_name	name of distributed database.
+**	char *d_ownname	owner of database.
+**	char *cdbnm	write name of CDB here.
+**	char *cdbnd	write node-name of CDB here.
+**
+** Outputs:
+**	Writes to *cdbnm & *cdbnd.
+**
+**	Returns:
+**		OK if CDB info found ok.
+**		FAIL otherwise.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	9-nov-1990 (pete)
+**		Added this function documentation & removed reference
+**		to a couple fields which were just "dynamic" field titles
+**		from the days before invisible fields.
+*/
+static STATUS
+get_distdbinfo (db_name, d_ownname, cdbnm, cdbnd)
+EXEC SQL BEGIN DECLARE SECTION;
+char *db_name;
+char *d_ownname;
+char *cdbnm;
+char *cdbnd;
+EXEC SQL END DECLARE SECTION;
+{
+	STATUS	stat = OK;
+
+	*cdbnm = EOS; /* if query fails, these will be empty strings. */
+	*cdbnd = EOS;
+
+	/* following should get an error if >1 CDB for a dist dbase */
+	EXEC SQL SELECT cdb_name, cdb_node
+		 INTO  :cdbnm, :cdbnd
+		 FROM  iistar_cdbs
+		 WHERE ddb_name  = :db_name
+		 AND   ddb_owner = :d_ownname;
+
+	if (sqlca.sqlcode < 0) 
+	{
+	    IIUGerr(E_IC0064_Err_getting_CDBinfo, UG_ERR_ERROR, 1, db_name);
+	    stat = FAIL;
+	}
+	else if (sqlca.sqlcode == 100 ) 
+	{
+	    IIUGerr(E_IC0065_No_CDB_info_found, UG_ERR_ERROR, 0);
+	    stat = FAIL;
+	}
+
+	return stat;
+}
+/*{
+** Name:	IIICgtGetType - convert numeric to string type name.
+**
+** Description:	convert numeric to string type name (User, Group, Role,
+**	Public).
+**
+** Inputs:
+**	i4	int_type_orig
+**
+** Outputs:
+**
+**	Returns:
+**		string type name equivalent of input arg.
+**
+** History:
+**	12-nov-1990 (pete)
+**		Initial version.
+*/
+char *
+IIICgtGetType(int_type_orig)
+i4	int_type_orig;
+{
+	char *type;
+
+	switch (int_type_orig)
+	{
+	case TYPE_USER:
+		type = ERget(F_IC001B_UserType);
+		break;
+	case TYPE_GROUP:
+		type = ERget(F_IC001C_GroupType);
+		break;
+	case TYPE_ROLE:
+		type = ERget(F_IC001D_RoleType);
+		break;
+	case TYPE_PUBLIC:
+		type = ERget(F_IC001E_PublicType);
+		break;
+	default:
+		type = ERget(F_IC001F_UnknownType);
+		break;
+	}
+
+	return type;
+}
+
+/*{
+** Name:   iiicvaValidateAuthId - validate Auth Id & return its Type.
+**
+** Description:
+**
+** Inputs:
+**	char	*name		Auth id name to be checked.
+**	char	**type		This routine writes the auth id type here.
+**	i4	*int_type	Internal numeric equivalent of "type". This
+**				routine writes to this.
+**
+** Outputs:
+**	Writes to parameters: "type" and "int_type".
+**
+** Returns:
+**	FAIL if error occurred during query; OK otherwise.
+**
+** Side Effects:
+**
+** History:
+**	12-nov-1990 (pete)
+**		Initial Version.
+*/
+STATUS
+iiicvaValidateAuthId(name, type, int_type)
+char	*name;
+char	**type;
+i4	*int_type;
+{
+	STATUS stat = OK;
+	i4	cnt;
+
+	/* see if it's Public */
+	if (STbcompare(name, 0, IC_PublicUser, 0, TRUE) == 0)
+	{
+            *type = IC_PublicUser;
+	    *int_type = TYPE_PUBLIC;
+	    goto done;
+	}
+
+	/* Assertion: it's not Public.
+	** See if it's a User.
+	*/
+	if (iiicsuSelectUser(name, &Iiuser) != OK)
+	{
+	    stat = FAIL;
+	    goto done;
+	}
+	else if (FEinqrows() > 0)
+	{
+	    /* Authorization Identifier is a User */
+            *type = ERget(F_IC001B_UserType);
+	    *int_type = TYPE_USER;
+	    goto done;
+	}
+
+	/* Assertion: it's not Public or User.
+	** See if it's a Group.
+	*/
+        cnt = iiicueUsergroupExists(name);
+        if (FEinqerr() != OK)
+	{
+	    stat = FAIL;
+	    goto done;
+	}
+        else if (cnt > 0)
+        {
+	    /* Authorization Identifier is a Group */
+            *type = ERget(F_IC001C_GroupType);
+	    *int_type = TYPE_GROUP;
+	    goto done;
+        }
+	
+	/* Assertion: it's not Public, User or Group.
+	** See if it's a Role.
+	*/
+        if (iiicsrSelectRole(name, &Iirole) != OK)
+	{
+	    stat = FAIL;
+	    goto done;
+	}
+        else if (FEinqrows() > 0)
+        {
+	    /* Authorization Identifier is a Role */
+            *type = ERget(F_IC001D_RoleType);
+	    *int_type = TYPE_ROLE;
+	    goto done;
+        }
+
+	/* Assertion:  Invalid name; it's not Public, User, Group or Role. */
+	stat = IC_INVALID;
+
+done:
+	if (stat == FAIL)
+            IIUGerr(E_IC006F_Retrieve_AuthError, UG_ERR_ERROR, 1, name);
+
+	return stat;
+}
+

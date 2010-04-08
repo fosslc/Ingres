@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The system_isolation resource specifies the default system setting used
+  to determine what transaction isolation level will be used.
+ 
+  You may override the default system isolation level with:
+	SET TRANSACTION ISOLATION LEVEL statement
+	SET SESSION ISOLATION LEVEL statement
+
+  The default system isolation setting can also be specified by 
+  SET SESSION ISOLATION LEVEL SYSTEM.
+ 
+  Possible values are SERIALIZABLE, REPEATABLE_READ, READ_COMMITTED and
+  READ_UNCOMMITTED. The default system isolation level is SERIALIZABLE.

@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+A Break Header or Footer must be associated with a sort (break) column.
+Scroll to the sort column that you wish to associate with the new 
+break section.
+
+The menu commands are as follows:
+
+	MENU COMMANDS   SYNOPSIS
+	-------------   --------
+	Select		Create the break section (header/footer)
+			for the highlighted sort column.
+
+	Cancel		Return to the previous frame,
+			no sort column is selected.
+
+	Help            Print this message.

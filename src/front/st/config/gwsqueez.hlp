@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+ For both MS SQL Server and DB2 UDB Gateways, the squeeze function
+ cannot both remove embedded white spaces and return a dynamic
+ length based on length of the parameter to the squeeze function.
+ Because of this limitation, a squeeze_len parameter is provided
+ to allow configuration of the number of bytes the squeeze
+ function will return.
+
+ Default for squeeze_len is 30 bytes.  
+
+ By specifying a squeeze_len of zero, only white spaces in the front 
+ and rear of the squeeze string are removed. None of the white spaces 
+ in the middle are removed. When squeeze_len is zero, the output string 
+ length returned by the squeeze function will be no longer than the 
+ input string length.
+

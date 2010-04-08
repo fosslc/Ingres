@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ This screen displays the various buffer caches available to the current 
+ Ingres installation.  The available buffer caches are for 2k, 4k, 8k, 16k, 
+ 32k, and 64k pages.
+
+ The 2k and 8k buffer caches are ON by default.  All other buffer caches
+ are OFF by default.
+
+ To modify a buffer cache's parameter settings, choose the "Configure"
+ menu item.
+
+ To toggle a buffer cache's status, choose the "Edit" menu item.

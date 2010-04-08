@@ -1,0 +1,77 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.r64_us5 -- Variable definitions for IBM/AIX 
+#
+#  Description:
+#       Platform specific variable definitions for AIX platform
+#
+# History:
+#	Jun-30-2005 (hweho01)
+#	    Initial creation
+#       30-Sep-2005 (hweho01)
+#         Define platform_string & extension_string for readme file.
+#       16-Oct-2006 (hanal04) Bug 116866
+#          Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#          NOOPTIM does not strip this when explicitly set.
+#       04-May-2007 (hweho01)
+#          Enable IIOPTIM for reset. 
+#       05-May-2009 (bonro01)
+#          Create server using iimerge.a
+#	24-Jun-2009 (kschendel) SIR 122138
+#	   Above has to be in VERS because config option needed too.
+#
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG 	= "-DNET_SSL -DAIX -D_REENTRANT -DMCC_HTTPD -DXP_UNIX -DSPAPI20" ;
+APACHE_API_FLAG 	= "-DAIX=43 -U__STR__" ;
+VERS 	= "axp_osf" ;
+ASMACH = "" ;
+CC   = "cc" ;
+CCDEBUG = "-g" ;
+CPP default = "/lib/cpp" ;
+CCMACH 		= "-signed -D_BSD -pthread -ieee" ;
+CCLDMACH	= "" ;
+CCLDSERVER 	= "" ;
+CCPICFLAG 	= "" ;
+SHLIBLD         = "ld" ;
+CCSHLDMACH      = "-shared" ;
+SLSFX 		= "so" ;
+LIBSFX 		= "a" ;
+OBJSFX 		= "o" ;
+CGISFX 		= "cgi" ;
+LDLIBPATH	= "/lib /usr/lib /usr/ccs/lib /usr/shlib" ;
+LIBMACH 	= "-ldnet_stub" ;
+LDLIBMACH	= "-ldnet_stub -lrt -lm -lbsd -laio -lpthread -lmach -lexc -lmld" ;
+LEVEL1_OPTIM 	= "-O1" ;
+OPTIM 	        = "" ;
+IIOPTIM         ?= "-O -Olimit 5000" ;
+NOOPTIM         = "-O0" ;
+LONGLONG	= long long ;
+SHELLHEADER 	= ""#!/bin/sh"" ;
+BSD42 default = -DBSD42 ;
+DIRENT default = -DDIRENT ;
+DIRFUNC default = -DDIRFUNC ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 default = -DSYS5 ;
+C++	= "cxx" ;
+C++FLAGS = "-D_REENTRANT" ;
+UNDEFFLAG  = "-u " ;
+XERC_DEFS	= "-DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET" ;
+XERC_LIBS	= "" ;
+DBMS_STACKSIZE = 131072 ;
+#
+#ICE File extensions
+#
+ICE_EXT = so ;
+CGI_EXT = cgi ;
+LEX = flex ;
+#
+# for readme.html 
+#
+platform_string = "HP Tru64" ;
+extension_string = $(config_string) ;
+

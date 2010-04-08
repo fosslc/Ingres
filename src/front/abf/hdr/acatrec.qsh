@@ -1,0 +1,107 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+/**
+** Name:	acatrec.sh -	ABF Objects Catalog Record Definitions File.
+**
+** History:
+**	Revision 6.0  87/03  bobm
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+/*}
+** Name:	ACATREC -	Linked List Entry of ABF Application Catalog.
+**
+** History:
+**	3/87 (bobm)	written
+**	2/88 (bobm)	6.0/0 - up version number to 2 to force OSL recompiles
+**	18-may-93 (davel)
+**		Added member to ACATDEP for depended-upon object owner.
+*/
+
+/* Cover for 'next' structure member since "next" is an ESQL keyword */
+#define next	_next
+
+EXEC SQL BEGIN DECLARE SECTION;
+/*
+** indices for the arg item of the CATREC structure
+**
+** AXAP - class OC_APPL
+** AXRW - class OC_RWFRAME
+** AXGB - class OC_GBFFRAME
+** AXRG - class OC_GRFRAME
+** AXQF - class OC_QBFFRAME
+** AXHL - class OC_HLPROC
+*/
+# define AXAP_EXNAME 0	/* executable name */
+# define AXAP_DEFST 1	/* default starting frame */
+# define AXAP_OPTFIL 2	/* options file */
+# define AXAP_QLANG 3	/* query language */
+# define AXRW_CMD 0	/* command line flags */
+# define AXRW_OUT 1	/* output device/file */
+# define AXGB_CMD 0	/* command line flags */
+# define AXGB_OUT 1	/* output device/file */
+# define AXRG_CMD 0	/* command line flags */
+# define AXRG_OUT 1	/* output device/file */
+# define AXQF_CMD 0	/* command line flags */
+# define AXQF_JDEF 1	/* joindef / table */
+# define AXHL_LANG 0	/* host language */
+# define AXOF_STATIC 0	/* user-frame static flag */
+
+#define	ACARGS	6
+
+
+typedef struct _acdp
+{
+	struct _acdp	*_next;	/* list link */
+
+	i4	deptype;	/* type of dependency */
+	i4	id;		/* id of related object */
+	char	*name;		/* name of related object */
+	i4	class;		/* class of related object */
+	char	*deplink;
+	i4	deporder;
+	char	*owner;		/* owner of related object */
+} ACATDEP;
+
+typedef struct _acr
+{
+	i4	ooid;
+	i4	class;
+	char	*name;
+	char	*owner;
+	i4	env;
+	i4	is_current;
+	char	*short_remark;
+	char	*create_date;
+	char	*alter_date;
+	char	*long_remark;
+	i4	alter_cnt;
+	char	*altered_by;
+	i4	applid;
+	char	*source;
+	char	*symbol;
+	/*DB_DT_ID*/ i2 retadf_type;
+	char	*rettype;
+	i4	retlength;
+	i2	retscale;
+	i2	version;
+
+	char	*arg[ACARGS];	/* specific arguments */
+	i4	flags;		/* Flags word */
+
+	struct _acr	*_next;	/* list link */
+	i2	tag;		/* memory storage tag for record */
+
+	ACATDEP	*dep_on;	/* list of depended-on objects */
+	ACATDEP *dep_by;	/* list of objects depending on */
+} ACATREC;
+
+EXEC SQL END DECLARE SECTION;

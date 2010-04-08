@@ -1,0 +1,106 @@
+/*
+**	FIND.QSC  -  The routines here are called to find
+**		     a specific table, attribute or join 
+**		     in the qdef. 
+**
+**	Routines:
+**		mqfintbl()
+**	 	mqfindatt()
+**		mqfindjoin()
+**
+**	Written: 7/14/83 (nml)
+**		9/26/84 (azad) added table name to mqfindtbl
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**		22-apr-88 (kenl)
+**			Fixed bug in mqfindjoin().  jnum is now initialized to
+**			a -1.
+**		10/14/90 (emerson)
+**			Deleted function mqfindjoin.  Due to changes I made
+**			elsewhere for bugs 8593 and 33795, it's no longer needed
+**		17-jan-95 (forky01)
+**			Added table_owner parameter to mqfindtbl for fixing
+**			bugs 60504 & 66070
+**
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	"mqeglobs.h"
+
+/*
+** mqfindtbl() - find a table with the specified table and/or range 
+**		 variable in the current set of tables.
+**		 Return its order number.
+*/
+i4
+mqfindtbl(qdef, table_name, rngvar, table_owner)
+MQQDEF	*qdef;
+char	*table_name;
+char	*rngvar;
+char    *table_owner;
+{       
+	RELINFO	*ctbl;
+	i4	i;
+	i4	ord_num;
+
+	ord_num = -1;
+
+	for (i = 0; i < qdef->mqnumtabs; i++)
+	{
+		ctbl = qdef->mqtabs[i];
+
+		if ((rngvar == NULL || 
+			STcompare(rngvar, ctbl->mqrangevar) == 0)
+		    &&
+		    (table_name == NULL ||
+			STcompare(table_name, ctbl->mqrelid) == 0)
+		    &&
+		    (table_owner == NULL ||
+			STcompare(table_owner, ctbl->mqrelown) == 0)
+		   )
+		{
+			ord_num = i;
+			break;
+		}
+	}
+	return(ord_num);
+}
+
+
+/*
+** mqfindatt - find an attribute in the current set of
+** 	       attributes and return its order number.
+*/
+i4
+mqfindatt(qdef, rng, col)
+MQQDEF	*qdef;
+char	*rng;
+char	*col;
+{
+	register ATTRIBINFO	*att;
+	i4		i;
+	i4		ret_num;
+
+	ret_num = -1;
+
+	for (i = 0; i < qdef->mqnumatts; i++)
+	{
+		att = qdef->mqatts[i];
+
+		if ((STcompare(rng, att->rvar) == 0) &&
+			(STcompare(col, att->col) == 0))
+		{
+			ret_num = i;
+			break;
+		}
+	}
+	return(ret_num);
+}

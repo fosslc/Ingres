@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+
+  The readforward_blocks resource specifies the number of log blocks
+  to be allocated by non-dbms server processes, such as the Archiver,
+  for reading the log file in a forward direction.
+  
+  The minimum and default value is 1.

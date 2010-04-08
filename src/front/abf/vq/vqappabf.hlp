@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation 
+/#-- vqappabf.hlp, when viewing the application report.
+/#-- 
+The application report gives you detailed information about an application.
+It is divided into two main sections:
+
+  * General information about the application.
+
+  * Details about each frame in the application.
+
+Select subtopics for a description of these report sections.
+/#subtopic 'Application Information' vqapinfo.hlp
+/#subtopic 'Frame Details' vqapfrdt.hlp

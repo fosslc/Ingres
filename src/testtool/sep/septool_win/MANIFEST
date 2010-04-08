@@ -1,0 +1,13 @@
+#
+# MANIFEST file for testtool!sep!septool
+#
+
+IISUBSYS testtool sep septool_win ;
+
+IITOOLSWNTEXE qawtl : qawtl.c ;
+IINEEDLIBS qawtl : COMPATLIB ;
+
+IITBIN altcompare.bat authnetu.bat cksepenv.bat clningtst.bat clntstdbs.bat 
+	ferun.bat makelocs.bat qasetuserfe.bat qasetusertm.bat run.bat 
+	sepcc.bat sepesqlc.bat sepfortr.bat seplib.bat seplnk.bat 
+	sepperuse.bat updperuse.bat netutilcmd.bat ;

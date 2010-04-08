@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!cuf!ccm
+#
+
+SubDir ING_SRC common cuf ccm ;
+
+IISUBSYS common cuf ccm ;
+
+
+IILIBRARY CUFLIB : ccmsrc.c ;
+

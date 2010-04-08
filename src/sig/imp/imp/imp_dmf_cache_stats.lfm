@@ -1,0 +1,45 @@
+COPYFORM:	6.4	2002_06_28 07:26:03 GMT  
+FORM:	imp_dmf_cache_stats		 
+	83	23	0	0	28	0	12	9	0	0	0	0	0	0	0	28
+FIELD:
+	0	server	21	27	0	25	1	33	2	32	25	0	8	Server:	0	0	0	66576	0	0	0		c25			0	0
+	1	hit_ratio	-21	48	0	45	1	45	19	32	45	0	0		0	0	0	1024	0	0	0		c45			0	1
+	2	hit_ratio_pct	-31	9	0	8	1	21	18	32	8	0	13	Hit Rate % :	0	0	0	0	0	0	0		+f8			0	2
+	3	force_count	30	4	0	13	1	26	16	2	13	0	13	Force      :	0	0	0	66576	0	0	0		+f13			0	3
+	4	io_wait_count	30	4	0	13	1	23	20	2	13	0	10	I/O     :	0	0	0	66576	0	0	0		+f13			0	4
+	5	free_buffer_count	30	4	0	13	1	24	8	33	13	0	11	Free     :	0	0	0	66576	0	0	0		+f13			0	5
+	6	group_buffer_size	30	4	0	5	1	7	2	9	5	0	2	x	0	0	0	66576	0	0	0		+f5			0	6
+	7	group_buffer_read_count	30	4	0	13	1	24	3	2	13	0	11	Reads    :	0	0	0	66576	0	0	0		+f13			0	7
+	8	group_buffer_write_count	30	4	0	13	1	24	4	2	13	0	11	Writes   :	0	0	0	66576	0	0	0		+f13			0	8
+	9	fix_count	30	4	0	13	1	26	12	2	13	0	13	Fix        :	0	0	0	66576	0	0	0		+f13			0	9
+	10	unfix_count	30	4	0	13	1	26	14	2	13	0	13	Unfix      :	0	0	0	66576	0	0	0		+f13			0	10
+	11	read_count	30	4	0	13	1	24	6	33	13	0	11	Reads    :	0	0	0	66576	0	0	0		+f13			0	11
+	12	write_count	30	4	0	13	1	24	7	33	13	0	11	Writes   :	0	0	0	66576	0	0	0		+f13			0	12
+	13	hit_count	30	4	0	13	1	26	13	2	13	0	13	Hit        :	0	0	0	66576	0	0	0		+f13			0	13
+	14	dirty_unfix_count	30	4	0	13	1	26	15	2	13	0	13	Unfix Dirty:	0	0	0	66576	0	0	0		+f13			0	14
+	15	free_group_buffer_count	30	4	0	13	1	24	5	2	13	0	11	Free     :	0	0	0	66576	0	0	0		+f13			0	15
+	16	fixed_buffer_count	30	4	0	13	1	24	9	33	13	0	11	Fixed    :	0	0	0	66576	0	0	0		+f13			0	16
+	17	fixed_group_buffer_count	30	4	0	13	1	24	6	2	13	0	11	Fixed    :	0	0	0	66576	0	0	0		+f13			0	17
+	18	modified_buffer_count	30	4	0	13	1	24	10	33	13	0	11	Dirty    :	0	0	0	66576	0	0	0		+f13			0	18
+	19	page_buffer_count	30	4	0	8	1	9	5	46	8	0	1	(	0	0	0	66576	0	0	0		+f8			0	19
+	20	flimit	30	4	0	13	1	24	14	33	13	0	11	Flimit   :	0	0	0	66576	0	0	0		+f13			0	20
+	21	mlimit	30	4	0	13	1	24	13	33	13	0	11	Mlimit   :	0	0	0	66576	0	0	0		+f13			0	21
+	22	wbstart	30	4	0	13	1	24	15	33	13	0	11	W/B start:	0	0	0	66576	0	0	0		+f13			0	22
+	23	wbend	30	4	0	13	1	24	16	33	13	0	11	W/B end  :	0	0	0	66576	0	0	0		+f13			0	23
+	24	cache	-21	48	0	45	1	45	22	32	45	0	0		0	0	0	1024	0	0	0		c45			0	24
+	25	modified_group_buffer_count	30	4	0	13	1	24	7	2	13	0	11	Dirty    :	0	0	0	66576	0	0	0		+f13			0	25
+	26	group_buffer_count	30	4	0	5	1	6	2	2	5	0	1	(	0	0	0	66576	512	0	0		+f5			0	26
+	27	page_size	30	4	0	13	1	24	3	32	13	0	11	Page Size:	0	0	0	0	0	0	0		-f13			0	27
+TRIM:
+	1	1	8:28:0	1	0	0	0
+	1	9	9:28:2	1	0	0	0
+	1	18	5:28:4	1	0	0	0
+	2	1	Group Buffers	0	0	0	0
+	2	9	Counts:	0	0	0	0
+	2	18	Waits:	0	0	0	0
+	17	2	pages)	0	0	0	0
+	32	5	7:26:1	1	0	0	0
+	32	12	6:26:3	1	0	0	0
+	32	21	Cache Contents (D=dirty, f=free)	0	0	0	0
+	33	5	Single Pages	0	0	0	0
+	55	5	)	0	0	0	0

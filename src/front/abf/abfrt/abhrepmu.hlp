@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame is used to generate a report.  If there are any fields on the
+form, you should fill them in with values that will be used as parameters
+in running the report.  Once you have filled in the fields, select the
+"Report" menu command to run the report.
+
+Select "End" if you want to return to the application without running the
+report.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Report                  Generate the report.
+
+        Help                    Print this message.
+
+        End                     Return to the previous frame.

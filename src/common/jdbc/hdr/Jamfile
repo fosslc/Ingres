@@ -1,0 +1,9 @@
+#
+# Jamfile file for common!jdbc!hdr
+#
+
+SubDir ING_SRC common jdbc hdr ;
+
+IISUBSYS common jdbc hdr ;
+
+

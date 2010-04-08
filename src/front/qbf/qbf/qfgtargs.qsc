@@ -1,0 +1,955 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<me.h>
+#include	<si.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<lo.h>
+#include	<fe.h>
+#include	<ui.h>
+#include	<ug.h>
+#include	<fmt.h>
+#include	<qg.h>
+##include	<mqtypes.qsh>
+#include	"mqglobs.h"
+#include	"mqstates.h"
+#include	"mqerrs.h"
+#include	"erqf.h"
+
+/**
+** Name:	qfgetargs.c - Get Arguments
+**
+** Description:
+**	This routine takes the arguments off the command line and sets
+**	their corresponding variables and flags throughout MQBF.
+**
+**	Arguments: argc - command line argument count
+**		   argv - command line arguments
+**		   qdef - initialized MQQDEF structure
+**
+**	Side Effects: various global flags are set
+**
+** History:
+**      26-mar-98 (dacri01)
+**              Stripped whitespace from argv for qbfname so that it would not
+**              fail the FEckname() because of trailing spaces.  Bug #87464.
+**
+**	Revision 6.5  12/92 (sylviap) -- continuing a very 'different' way of 
+**					 adding history....
+**	18-dec-92 (sylviap)
+**		Added -N flag for JoinDef editing specifically for RBF/VIFRED.
+**		RBF/VIFRED can now create joindef but we do not want to allow
+**		users to add data.  -N is exactly like -J except GO is disabled.
+**	16-aug-1993 (rdrane)
+**		Re-write significant portions of this routine to effect
+**		proper support of 6.5 owner.tablename constructs and
+**		delimited identifiers.  This addresses all/part of
+**		b54048, b51773, b51756, and b52570.
+**		Fix-up STcopy() instances to be STlcopy() instances so that
+**		command line and prompt input doesn't overrun the buffers!
+**	20-aug-1993 (rdrane)
+**		Move all DB connection logic here, since proper interpretation
+**		of command line arguments depends upon knowing the connection
+**		catalog level.
+**	27-aug-1993 (rdrane)
+**		Do the parsing in two passes - flags first, then names.  Since
+**		we now connect as soon as we see the DB name, we were missing
+**		any -G or -u specification if they followed the DB name
+**		(b54556).
+**	11/01/93 (dkh) - Fixed bug 56174.  If the form name for the -F flag
+**			 is passed as an separate argument, we need to
+**			 skip it on the second pass through the argument
+**			 vector so that it is not mistaken for a db or
+**			 object name.
+**	2-dec-1993 (rdrane)
+**		Promote qbfname to static global, and declare mq_db_connect()
+**		as also being static.  Part of fix for b54942.
+**	
+**	Revision 6.4  3/92 (mgw)
+**	9-mar-1992 (mgw) Bug #39408
+**		In -t, -f, and -j flags, don't set the mq_name flag
+**		saying we got a qdef->mqcr.name value unless the *argv
+**		for that arg is non-null so that things like qbf db -t ''
+**		bring up the proper frame to choose from.
+**	Revision 6.1  88/09  wong
+**	Accept '-j' and '-F' together.  Also, corrected for international
+**	support and generally cleaned up.
+**	05-dec-89 (kenl)
+**		Added -J flag for JoinDef editing.  Added +c flag for 
+**		database connection.
+**	21-dec-89 (kenl)
+**		Added -P, -R, and -G flags.
+**
+**	Revision 6.0  88/06/15  kenl
+**	07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh.  Modified code so that
+**			certain backend objects are NOT lowercased.  The
+**			lowercasing is left until we can determine whether
+**			the backend supports mixed-case object names.
+**	22-apr-88 (kenl)
+**		Added code to give error meesage when conflicting flags
+**		are used on command line.
+**	15-jun-88 (kenl)	bug 12751
+**		CVlower form name (mq_frame) when -F flag is used.
+**
+**	Revision 5.0  86/11  marian
+**	13-nov-86 (marian)	bug 10833
+**		Allow -m flag to be -M as well.
+**	18-nov-86 (marian)	bug 9753
+**		Set onetbl to false when the '-j' flag is given.
+**	10/20/86 (KY)  -- Changed CH.h to CM.h.
+**
+**	Revision 4.0  85/10/01  peter
+**	JRC - Jul. 31, 1985 -Changed calls to SIgetrec to FEprompt in
+**			     preparation for international stuff.
+**	PRS - Oct. 1, 1985  -Add prompt default for dbname.
+**
+**	Revision 2.0  83/02/28  nadene
+**	NML - Feb. 28, 1983
+**	NML - Feb. 15, 1984 -added -uusername flag.
+**	NML - Feb. 17, 1984 -took out -r, -a and -u flags (use -mmode instead)
+**			    -took out -e and -i flags for edit mode
+**	NML - Apr. 4,  1984 -added -Z flag for testing from switcher and ABF
+**			     and on VMS.
+**	29-may-1997 (canor01)
+**	    Clean up compiler warnings from CL prototypes.
+**	13-may-1999 (hayke02)
+**	    In the function mq_args(), we now do not set onetbl TRUE (to
+**	    indicate 'qbf <dbname> <tablename>' syntax) if mq_lookup is
+**	    TRUE (set if we find the -l flag). This prevents 'qbf <dbname>
+**	    -l <querytarget>' being misinterpretted as 'qbf <dbname>
+**	    <tablename>', which results in E_QF0120 if a joindef or qbfname
+**	    with name <querytarget> does exist. This change fixes bug
+**	    79348.
+**      Dec-6-2001 (rodjo04) bug 105731
+**          Report can send QBF a command line as QBF dabasename -t ''
+**          Now we should ignore if get an empty arg for the tablename.
+**      10-Jul-2002 (xu$we01)
+**	    Increasing the array t_buf and o_buf size to fix the SEGV caused 
+**	    by QBF dabasename -t on dgi_us5.
+**      22-Feb-2005 (hweho01)
+**          Initialize rslv_name structure in mq_args(), fix error 
+**          E_QF0181_InvalidName error on Linux. Star 13944983.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+static		bool	qbfname = FALSE;	/* -f flag */
+static		VOID	mq_db_connect();
+
+FUNC_EXTERN	char    *IIUIroleID();
+FUNC_EXTERN	char    *IIUIpassword();
+FUNC_EXTERN	bool	mq_rslv(MQQDEF *, FE_RSLV_NAME *);
+
+bool
+mq_args ( argc, argv, qdef )
+i4	argc;			/* argument count */
+char	**argv;			/* arguments */
+MQQDEF	*qdef;
+{
+	i4	targc;			/* working argument count */
+	char	**targv;		/* working argument pointer */
+	bool	form_name_detached = FALSE; /*
+					    **  Is the form name detached
+					    **  from the -F flag?
+					    */
+	char	*mode = NULL;		/* function to start QBF up in */
+	char	bufr[(FE_PROMPTSIZE + 1)];	/*
+						** Prompting input buffer.
+						** Must always be at least
+						** FE_MAXTABNAME bytes.
+						*/
+	char	*with_ptr;		/* pointer to with clause */
+	i4	len;
+					/*
+					** owner.tablename work areas
+					*/
+	FE_RSLV_NAME    rslv_name;
+	#ifdef dgi_us5
+	   char    o_buf[(FE_UNRML_MAXNAME + 33)];
+	   char    t_buf[(FE_UNRML_MAXNAME + 33)];
+	#else
+	   char    o_buf[(FE_UNRML_MAXNAME + 1)];
+	   char	   t_buf[(FE_UNRML_MAXNAME + 1)];
+	#endif /* dgi_us5 */
+
+
+	/*
+	** Prime the FE_RSLV_NAME structure for
+	** any calls we need to make...
+	*/
+        MEfill ( sizeof(FE_RSLV_NAME), 0, (PTR) &rslv_name ); 
+	rslv_name.owner_dest = &o_buf[0];
+	rslv_name.name_dest = &t_buf[0];
+
+	/*
+	** First loop through the arguments looking for flags
+	** (arguments which start with "+" or "-").
+	*/
+	targc = argc;
+	targv = argv;
+	while ( --targc > 0 )		/* check each argument */
+	{
+		switch (**++targv)	/* check first character of argument */
+		{
+		  case '-':		/* is it flag(s) '-' */
+			switch (*(*targv+1))
+			{
+# ifdef DEBUG
+			  case 'C':
+				if ( *(*targv + 2) != EOS )
+				{
+					STcopy(*targv + 2, mq_frame);
+					mq_cfrm = TRUE;
+				}
+				else if ( --targc <= 0 )
+				{
+					IIUGerr( NOCFORM, UG_ERR_ERROR, 0 );
+					return FALSE;
+				}
+				else
+				{
+					STcopy(*++targv, mq_frame);
+					mq_cfrm = TRUE;
+				}
+				break;
+
+			  case 'd':
+				mq_debug = TRUE;
+				break;
+# endif
+			  case 'e':
+				mq_noload = TRUE;
+				break;
+
+			  case 'f':	/* QBFName */
+				qbfname = TRUE;
+				break;
+
+			  case 'F':	/* Form */
+				if ( *(*targv + 2) != EOS )
+				{
+					STlcopy(*targv + 2,
+						mq_frame,FE_MAXNAME);
+				}
+				else if ( --targc <= 0 )
+				{
+					IIUGerr( NOFFORM, UG_ERR_ERROR, 0 );
+					return FALSE;
+				}
+				else
+				{
+					STlcopy(*++targv,
+						mq_frame,FE_MAXNAME);
+
+					form_name_detached = TRUE;
+				}
+				break;
+
+			  case 'G':	/* group id */
+			        IIQFgidGroupID = *targv;
+			        break;
+
+			  case 'j':	/* JoinDef */
+				mq_qflag = TRUE;
+				break;
+
+			  case 'J':	/* JoinDef editing */
+				mq_qflag = TRUE;
+				mq_editjoin = TRUE;
+				break;
+
+			  case 'l':
+			  case 'L':	/* lookup */
+				mq_lookup = TRUE;
+				break;
+
+			  case 'm':
+			  case 'M':		/* bug 10833 */
+				mode = *targv + 2;
+				break;
+
+			  case 'N':	/* JoinDef editing, but disable GO */
+				mq_qflag = TRUE;
+				mq_editjoin = TRUE;
+				mq_nogo = TRUE;
+				break;
+
+			  case 'p':
+				/* set QBF to prompt for missing arguments */
+				mq_prompt = TRUE;
+				break;
+
+			  case 'P':		/* user DBMS password */
+			  	IIQFpwPasswd = *targv;
+			        break;
+
+			  case 'R':	/* role id and maybe password */
+				IIQFrfRoleFlag = *targv;
+				if (IIQFrfRoleFlag[2] == EOS)
+				{
+					if (!mq_prompt)
+					{
+					    SIfprintf(stderr,
+					     ERget(S_QF015B_Missing_role_name));
+					    return FALSE;
+					}
+					FEprompt(ERget(S_QF015C_Role), TRUE,
+						FE_MAXNAME, bufr);
+					len = STlength(bufr);
+					IIQFrfRoleFlag = FEreqmem((u_i4)0,
+					    (u_i4)len + 3, (bool)FALSE, NULL);
+					IIQFrfRoleFlag[0] = '-';
+					IIQFrfRoleFlag[1] = 'R';
+					STcopy(bufr, IIQFrfRoleFlag + 2);
+				}
+				break;
+
+			  case 's':
+			  case 'S':
+				/* set QBF to silent (terse messages too) */
+				mq_terse = TRUE;
+				break;
+
+			  case 't':
+			  case 'T':
+			  /* set to use table field format
+			  ** with single table qdef
+			  */
+				mq_tflag = TRUE;
+				break;
+
+			  case 'u':		/* -uusername flag */
+				mquname = *targv;
+				mq_uflag = TRUE;
+				break;
+
+			  case 'X':
+				mq_xpipe = *targv;
+				break;
+
+			  case 'Z':
+				mq_ztest = *targv + 2;
+				mqztesting = TRUE;
+				break;
+
+			  case 'D':
+				STlcopy(*targv + 2,mq_otest,MAX_LOC);
+				break;
+
+			  case 'I':
+				mq_itest = *targv + 2;
+				break;
+
+			  default:	/* anything else is a bad flag */
+				IIUGerr( BADARG, UG_ERR_ERROR, 1, *targv );
+				return FALSE;
+			}
+			break;
+
+		  case '+':
+			switch (*(*targv + 1))
+			{
+                          case 'c':     /* set up WITH clause for CONNECT */
+                          case 'C':
+                                with_ptr = STalloc(*targv + 2);
+                                IIUIswc_SetWithClause(with_ptr);
+                                break;
+
+			  case 'p':	/* set QBF to no prompt */
+				mq_prompt = FALSE;
+				break;
+
+			  default:
+				IIUGerr( BADARG, UG_ERR_ERROR, 1, *targv );
+				return FALSE;
+			}
+			break;
+
+		default:
+			/*
+			** Any other characters signal dabatabse or
+			** name argument.  Process later (b54556)
+			*/
+			break;
+		}
+	}
+
+	/*
+	** Now loop through the arguments looking for non-flags
+	** (arguments which don't start with "+" or "-").
+	*/
+	targc = argc;
+	targv = argv;
+	while (--targc > 0)
+	{
+		switch(**++targv)
+		{
+		case '-':
+			/*
+			**  If the form name is detached from the
+			**  -F flag, then we want to skip over it
+			**  so that it is not taken to be a database
+			**  or object name.
+			*/
+			if (*(*targv + 1) == 'F' && form_name_detached)
+			{
+				targv++;
+				targc--;
+			}
+		case '+':
+			break;
+		default:
+ 			/*
+			** If database not found yet, set it
+			** and connect
+			*/
+			if ( mq_db[0] == EOS )
+			{
+				STlcopy(*targv,mq_db,DB_MAXNAME);
+				if  (!mq_equel)
+				{
+					mq_db_connect();
+				}
+			}
+			else if (!mq_name)
+			{
+                                if (**targv != EOS)       /* It is possible for report to send an */
+				{                          /* empty arg for a table name. ex ''  */
+					STtrmwhite(*targv);
+					rslv_name.name = *targv;
+					if  (!mq_rslv(qdef,&rslv_name))
+					{
+						return(FALSE);
+					}
+					mq_name = TRUE;
+				}
+			}
+			else
+			{	
+				/*
+				** A second name argument signals error!
+				*/
+				IIUGerr(TOOMANYARGS,UG_ERR_ERROR,1,*targv);
+				return FALSE;
+			}
+			break;
+		}
+	}
+
+	/*
+	** At this point, we should know what we're operating on,
+	** but may not know the name of the object.  If a name has been
+	** specified, mq_name will have been set to TRUE, and the MQQDEF
+	** mq_cr.owner and mq_cr.name fields will be valid.
+	** We cans screen some errors here, but can't handle a look-up
+	** with prompt unless we attempt to resolve the name entered here.
+	*/
+	if ( qbfname )
+	{ /* QBFName */
+		if ( mq_qflag || mq_tflag )
+		{ /* -j or -t also specified */
+			IIUGerr( E_QF0143_Conflicting_Flags, UG_ERR_ERROR, 0 );
+			return FALSE;
+		}
+		else if ( mq_frame[0] != EOS )
+		{ /* -F also specified */
+			IIUGerr( BOTHFLAGS, UG_ERR_ERROR, 0 );
+			return FALSE;
+		}
+
+		/*
+		** We need to ignore a delimited indication when a QBFname
+		** matches an SQL reserved word.  Note that we will unwittingly
+		** allow an explicitly delimited QBFname when it  matches an
+		** SQL reserved word. b57665
+		*/
+		if  ((rslv_name.name_dlm) &&
+		     (IIUGIsSQLKeyWord(rslv_name.name_dest)))
+		{
+			rslv_name.name_dlm = FALSE;
+		}
+
+		if  ((mq_name) &&
+		     ((rslv_name.owner_spec) || (rslv_name.name_dlm)))
+		{ /* owner.object or real-live delimited identifier */
+			IIUGerr(E_QF0181_InvalidName,UG_ERR_ERROR,
+				2,rslv_name.name,ERget(E_QF0184_QLit));
+			return FALSE;
+		}
+
+		if ( mq_lookup )
+		{
+			IIUGerr( ARGOVERRIDE, UG_ERR_ERROR,
+				2, ERx("-f"), ERx("-l")
+			);
+			mq_lookup = FALSE;
+		}
+
+		mq_forms = TRUE;	/* get forms from forms catalogs */
+		if  (mq_name)
+		{
+			STcopy(qdef->mqcr.name, qbf_name);
+			onetbl = FALSE;
+		}
+	}
+	else if ( mq_tflag )
+	{ /* table field format */
+		if ( mq_qflag )
+		{ /* -j also specified */
+			IIUGerr( E_QF0143_Conflicting_Flags, UG_ERR_ERROR, 0 );
+			return FALSE;
+		}
+		else if ( mq_frame[0] != EOS )
+		{ /* -F also specified */
+			IIUGerr( BOTHFLAGS, UG_ERR_ERROR, 0 );
+			return FALSE;
+		}
+
+		if ( mq_lookup )
+		{
+			IIUGerr( ARGOVERRIDE, UG_ERR_ERROR,
+				2, ERx("-t"), ERx("-l")
+			);
+			mq_lookup = FALSE;
+		}
+
+		if  (mq_name)
+		{
+			onetbl = TRUE;
+		}
+	}
+	else	/* could still be -j or -l or NOTHING! */
+	{
+		/*
+		** We need to ignore a delimited indication when a JoinDef
+		** name or look-up specification matches an SQL reserved word.
+		** Note that we will unwittingly allow an explicitly delimited
+		** QBFname or JoinDef name when it matches an SQL reserved
+		** word. b57665 and b57713
+		*/
+		if  (((mq_lookup) || (mq_editjoin)) && (rslv_name.name_dlm) &&
+		     (IIUGIsSQLKeyWord(rslv_name.name_dest)))
+		{
+			rslv_name.name_dlm = FALSE;
+		}
+			
+		if  ((mq_qflag) && (mq_name) &&
+		     ((rslv_name.owner_spec) ||
+		      (rslv_name.name_dlm)))
+		{ /* owner.object or explicitly delimited identifier */
+			IIUGerr(E_QF0181_InvalidName,UG_ERR_ERROR,
+				2,rslv_name.name,ERget(E_QF0183_JLit));
+			return FALSE;
+		}
+
+		if ( mq_lookup && mq_qflag )
+		{
+			IIUGerr( ARGOVERRIDE, UG_ERR_ERROR,
+				2, ERx("-j"), ERx("-l")
+			);
+			mq_lookup = FALSE;
+		}
+
+		if (mq_editjoin)
+		{
+			STcopy(qdef->mqcr.name, mq_joindef);
+		}
+
+		mq_forms = mq_both = ( *mq_frame != EOS );	/* Form */
+
+		if  ((!mq_qflag) && (!mq_lookup) && (mq_name))
+		{
+			onetbl = TRUE;
+		}
+		else
+		{
+			onetbl = FALSE;
+		}
+	}
+
+	/*
+	** If we didn't see a database name, prompt for one now and CONNECT.
+	** Note that we can't have had any name specification without having
+	** had a DB name!  Don't believe that we can get here if mq_equel is
+	** TRUE, but can't take chances just now ...
+	*/
+	if ( mq_db[0] == EOS )
+	{
+		if ( mq_prompt && FEprompt(ERget(FE_Database), TRUE,
+						sizeof(bufr)-1, bufr)
+				== OK && bufr[0] != EOS )
+		{
+			STlcopy(bufr,mq_db,DB_MAXNAME);
+			if  (!mq_equel)
+			{
+				mq_db_connect();
+			}
+		}
+		else
+		{
+			IIUGerr( NODB, UG_ERR_ERROR, 0 );
+			return FALSE;
+		}
+	}
+
+	if  (mq_lookup)
+	{
+		if  (!mq_name)
+		{
+			if  ((mq_prompt) &&
+			     (FEprompt(ERget(S_QF00D6_Name),TRUE,
+				       (sizeof(bufr) - 1),bufr) == OK) &&
+			     (bufr[0] != EOS))
+			{
+				rslv_name.name = &bufr[0];
+				if  (!mq_rslv(qdef,&rslv_name))
+				{
+					return(FALSE);
+				}
+				mq_name = TRUE;
+			}
+			else
+			{
+				IIUGerr(NONAME,UG_ERR_ERROR,0);
+				return FALSE;
+			}
+		}
+		/*
+		** If a lookup specifies a name that's owner.object
+		** or a delimited identifier, then force it to be treated
+		** as a table reference only.
+		*/
+		if  ((rslv_name.owner_spec) || (rslv_name.name_dlm))
+		{
+			IIUGerr(S_QF0186_TableOnly,UG_ERR_ERROR,
+			1,rslv_name.name);
+			mq_lookup = FALSE;
+			mq_tflag = TRUE;
+		}
+	}
+
+	if ( mode != NULL )
+	{
+	    if  (!mq_name)
+	    {
+		char	*q_prompt;
+		char	*e_prompt;
+
+		if (mq_prompt)
+		{
+		    if (mq_qflag)
+		    {
+			q_prompt = ERget(S_QF0042_JoinDef_Name_);
+			e_prompt = ERget(E_QF0183_JLit);
+		    }
+		    else if (qbfname)
+		    {
+			q_prompt = ERget(S_QF0043_QBFName_);
+			e_prompt = ERget(E_QF0184_QLit);
+		    }
+		    else
+		    {
+			q_prompt = ERget(F_QF000D_Table_name_);
+		    }
+
+		    if (FEprompt(q_prompt, TRUE, sizeof(bufr)-1, bufr)
+				== OK && bufr[0] != EOS )
+		    {
+			rslv_name.name = &bufr[0];
+			if  (!mq_rslv(qdef,&rslv_name))
+			{
+				return(FALSE);
+			}
+			if  (((mq_qflag) || (qbfname)) &&
+			     ((rslv_name.owner_spec) ||
+			      (rslv_name.name_dlm)))
+			{ /* owner.object or delimited identifier */
+				IIUGerr(E_QF0181_InvalidName,UG_ERR_ERROR,
+					2,rslv_name.name,e_prompt);
+				return FALSE;
+			}
+
+			mq_name = TRUE;
+			if (mq_qflag || qbfname)
+			{
+			    if (qbfname)
+			    {
+				STcopy(qdef->mqcr.name, qbf_name);
+			    }
+			    onetbl = FALSE;
+			}
+			else
+			{
+			    onetbl = TRUE;
+			}
+		    }
+		    else
+		    {
+			IIUGerr( MODEWONAME, UG_ERR_ERROR, 0 );
+			return FALSE;
+		    }
+		}
+	    }
+
+	    if ( *mode == EOS )
+	    {
+		if (mq_prompt)
+		{
+		    _VOID_ FEprompt(ERget(S_QF0090_Mode), FALSE,
+				sizeof(bufr)-1, mode = bufr
+		    );
+		}
+	    }
+	    len = STlength(mode);
+	    if ( STbcompare(mode, len, ERget(FE_Retrieve), 0, TRUE) == 0 )
+	    {
+		mq_func = mqBROWSE;	/* set QBF to RETRIEVE mode */
+	    }
+	    else if ( STbcompare(mode, len, ERget(FE_Append), 0, TRUE) == 0 )
+	    {
+		mq_func = mqAPPEND;	/* set QBF to APPEND mode */
+	    }
+	    else if ( STbcompare(mode, len, ERget(FE_Update), 0, TRUE) == 0 )
+	    {
+		mq_func = mqUPDATE;	/* set QBF to UPDATE mode */
+	    }
+	    else if ( STbcompare(mode, len, ERget(FE_All), 0, TRUE) == 0 )
+	    {
+		mq_func = mqALL;
+	    }
+	    else
+	    {
+		IIUGerr( MODEINVALID, UG_ERR_ERROR, 1, bufr );
+		return FALSE;
+	    }
+	}
+	return TRUE;
+}
+
+
+/*
+** Name:	mq_rslv - Resolve Argument Name Specification
+**
+** Description:
+**	This routine processes a non-flag argument (assumed to be an table,
+**	QBFName, or JoinDef name).  It handles breakup of owner.tablename
+**	constructs, recognition and normalization of delimited identifiers,
+**	and set-up of the MQQDEF.mq_cr name and owner fields.
+**
+**	QBF needs to hide synonyms, which is why we're using this aproach
+**	instead of simply calling FE_fullresolve() for tables.
+**
+**	Note that if were here because of mq_lookup, then none of the
+**	qbfname, mq_qflag, or mq_frame can be set (previously screened as
+**	errors).  Thus, an owner specification and/or delimited identifier
+**	may be passed back for a non-table.
+**
+** Inputs:
+**	qdef -		Pointer to the global MQQDEF structure
+**	rslv_name -	Pointer to an FE_RSLV_NAME structure to contain
+**			the results of the name resolution.  The name field
+**			is expected to already have been filled in.  The
+**			owner_dest and name_dest fields are likewise expected
+**			to point to valid buffers.  is_nrml is expected to be
+**			set appropriately.
+**			
+** Outputs:
+**	qdef -		mq_cr.owner and mq_cr.name set to normalized component
+**			values or EOS on no component/error.  Note that for
+**			FIPS databases, the casing will be incorrect for
+**			QBFNames and JoinDefs (all FE object names are forced
+**			lowercase).
+**	rslv_name -	owner_spec, owner_dlm, and name_dlm fields set
+**			appropriately.
+**
+** Returns:
+**	TRUE -		Name successfully decomposed, and all components are
+**			valid identifiers.  Note that this does not mean that
+**			the name is valid for QBFNames and JoinDefs, since they
+**			cannot have owner specifications nor be delimited
+**			identifiers (lookup case only).
+**	FALSE -		Owner or name component is a bogus identifier.
+**
+** History:
+**	16-aug-1993 (rdrane)
+**		Created.
+**	15-sep-1992 (rdrane)
+**		Fix typo.
+**	18-nov-1993 (rdrane)
+**		Allow for table owner to be $ingres.
+**	2-dec-1993 (rdrane)
+**		Don't resolve names unless we're sure that they're 
+**		tablenames (b54942).
+**	31-dec-1993 (rdrane)
+**		Use OpenSQL level to determine 6.5 syntax features support.
+**	2-mar-1994 (rdrane)
+**		Don't fail name if mq_frame is non-empty (aspect of b57713).
+*/
+
+bool
+mq_rslv(qdef,rslv_name)
+	MQQDEF	*qdef;
+	FE_RSLV_NAME	*rslv_name;
+{
+	i4	dlm;
+	char	*opensql_lvl;
+
+
+	qdef->mqcr.owner[0] = EOS;
+	qdef->mqcr.name[0] = EOS;
+
+	FE_decompose(rslv_name);
+
+	/*
+	** Unless we're at least 6.5, any owner specification is bogus!
+	** (We use opensql_lvl and the separate call to facilitate debugging)
+	*/
+	opensql_lvl = IIUIcsl_CommonSQLLevel();
+	if ((rslv_name->owner_spec) &&
+	    (STcompare(opensql_lvl,UI_LEVEL_65) < 0))
+	{
+		IIUGerr(E_QF0181_InvalidName,UG_ERR_ERROR,
+			2,rslv_name->name,ERget(E_QF0185_OLit));
+		return(FALSE);
+	}
+
+	/*
+	** Determine the component identifier types,
+	** and reflect the results in rslv_name.
+	*/
+	rslv_name->owner_dlm = FALSE;
+	rslv_name->name_dlm = FALSE;
+
+	/*
+	** At this point, if not a tablename (FE object name), disallow any
+	** owner specification, force lowercase, and pass through FEchkname().
+	** Otherwise, we'll fail on FE object names which match SQL reserved
+	** words (b54942).  Note that we shouldn't get into this block if
+	** we're in a lookup situation.  Ignore any mq_frame, since if we
+	** are here, then we've already processed the form name and are
+	** dealing with an override table name (aspect of b57713).
+	*/
+	if  ((qbfname) || (mq_qflag))
+	{
+		if  ((rslv_name->owner_spec) ||
+		     (FEchkname(rslv_name->name_dest) != OK))
+		{
+			IIUGerr(E_QF0181_InvalidName,UG_ERR_ERROR,
+				2,rslv_name->name,ERget(E_QF0185_OLit));
+			return(FALSE);
+		}
+		STcopy(rslv_name->name_dest,&qdef->mqcr.name[0]);
+		return(TRUE);
+	}
+
+	if  ((rslv_name->owner_spec) &&
+	     ((dlm = IIUGdlm_ChkdlmBEobject(rslv_name->owner_dest,
+					    &qdef->mqcr.owner[0],
+					    FALSE)) == UI_BOGUS_ID))
+	{
+		if  (STbcompare(rslv_name->owner_dest,0,
+				UI_FE_CAT_ID_65,0,TRUE) != 0)
+		{
+			IIUGerr(E_QF0181_InvalidName,UG_ERR_ERROR,
+				2,rslv_name->name,ERget(E_QF0185_OLit));
+			return(FALSE);
+		}
+		else
+		{
+			STcopy(UI_FE_CAT_ID_65,&qdef->mqcr.owner[0]);
+		}
+	}
+	if  ((rslv_name->owner_spec) && (dlm == UI_DELIM_ID))
+	{
+		rslv_name->owner_dlm = TRUE;
+	}
+
+	if ((dlm = IIUGdlm_ChkdlmBEobject(rslv_name->name_dest,
+			&qdef->mqcr.name[0],
+			FALSE)) == UI_BOGUS_ID)
+	{
+		IIUGerr(E_QF0181_InvalidName,UG_ERR_ERROR,
+			2,rslv_name->name,ERget(E_QF0185_OLit));
+		return(FALSE);
+	}
+	if  (dlm == UI_DELIM_ID)
+	{
+		rslv_name->name_dlm = TRUE;
+	}
+
+	return(TRUE);
+}
+
+/*
+** Name:	mq_db_connect - Effect Connection to Target Database
+**
+** Description:
+**		The routine assumes that the FRS has been started, as it
+**		will shut it down on failure to CONNECT.
+**		Failure to connect results in program exit.
+**
+** Inputs:
+**	None.
+**			
+** Outputs:
+**	None.
+**
+** Returns:
+**	Nothing.
+**
+** History:
+**	20-aug-1993 (rdrane)
+**		Created (actually, "lifted" from mqbfmain()).
+**	23-nov-1993 (rdrane)
+**		Don't call FEendforms() - the forms system is not yet active!
+**		This corrects bug 54968.
+*/
+
+static
+VOID
+mq_db_connect()
+{
+	char	*pipe;
+	char	*usernm;
+	char	*role;
+	char	*passwd;
+	char	*group;
+
+
+	pipe = (mq_xpipe != NULL) ? mq_xpipe : ERx("");
+	usernm = (mq_uflag && (mq_xpipe == NULL)) ? mquname : ERx("");
+
+	/*
+	** IIUIroleID() returns NULL if the user attempts to use the
+	** "-R<roleid>/<passwd>" syntax. Issue an error and exit.
+	*/
+	role = ERx("");
+	if  ((IIQFrfRoleFlag != NULL) &&
+	     ((role = IIUIroleID(IIQFrfRoleFlag)) == NULL))
+	{
+		IIUGerr(E_QF0173_BadArgument,UG_ERR_ERROR,1,IIQFrfRoleFlag);
+		IIUGerr(E_QF0174_R_FlagSyntax,UG_ERR_FATAL,0);
+	}
+
+	IIQFpwPasswd = IIUIpassword(IIQFpwPasswd);
+	passwd = (IIQFpwPasswd != NULL) ? IIQFpwPasswd : ERx("");
+
+	group = (IIQFgidGroupID != NULL) ? IIQFgidGroupID : ERx("");
+
+	if  (FEingres(mq_db,pipe,usernm,role,passwd,group,(char *)NULL) != OK)
+	{
+		FDerror(BADSTARTUP,0,ERx(""));
+		mqexit(-1);
+	}
+
+	return;
+}

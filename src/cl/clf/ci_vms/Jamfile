@@ -1,0 +1,12 @@
+#
+# Jamfile file for cl!clf!ci_vms
+#
+# History:
+#	29-oct-2008 (joea)
+#	    Remove civms.c.
+
+SubDir ING_SRC cl clf ci_vms ;
+
+IISUBSYS cl clf ci_vms ;
+
+IILIBRARY COMPATLIB : cicrypt.c ci.c ;

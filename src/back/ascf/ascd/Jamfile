@@ -1,0 +1,24 @@
+#
+# Jamfile file for back!ascf!ascd
+#
+# History:
+#	04-feb-2005 (abbjo03)
+#	    icesvr is not yet delivered on VMS.
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+#        20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entry that was generated incorrectly.
+
+SubDir ING_SRC back ascf ascd ;
+
+IISUBSYS back ascf ascd ;
+
+if $(BUILD_ICE)
+{
+IINOOPTIM ascdmain.c : dr6_us5 ;
+
+IIBINEXE icesvr : ascdmain.c ;
+IINEEDLIBS icesvr : SCFLIB DMFLIB ICELIB CUFLIB GCFLIB ULFLIB COMPATLIB ;
+
+IILIBRARY ASCFLIB : ascdstub.c ascdnote.c ascdinit.c ;
+}

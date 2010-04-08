@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  This form can be used to create vnode information for a supported 
+  protocols for the selected Ingres Bridge server definition.
+
+  For an Ingres Bridge server to use a supported protocol, it must have 
+  a valid listen address assigned to it which is unique with respect to
+  the listen addresses assigned to other Ingres Bridge servers for the
+  same protocol.
+
+  Refer to the Ingres Connectivity Guide for details on the syntax of
+  Ingres Bridge server listen addresses for specific protocols.

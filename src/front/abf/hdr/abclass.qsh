@@ -1,0 +1,688 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+##include	<ooclass.qsh>
+
+/**
+** Name:	abclass.qsh -	ABF Class Definitions File.
+**
+** Description:
+**	Contains the definitions of the application class structures.  This
+**	includes its component classes as well.  Defines:
+**
+**	APPL		application object.
+**	APPL_COMP	application component base object.
+**	FORM_REF	application form reference component object.
+**	USER_FRAME	application user frame component object.
+**	QBF_FRAME	application QBF frame component object.
+**	REPORT_FRAME	application report frame component object.
+**	GRAPH_FRAME	application graph frame component object.
+**	_4GLPROC	application 4GL procedure component object.
+**	DBPROC		application database procedure component object.
+**	HLPROC		application host-language procedure component object.
+**      CONSTANT        application constant object.
+**	GLOBVAR		application global variable object.
+**	RECDEF		application record definition object.
+**	RECMEM		application record attribute object.
+**	
+** History:
+**	Revision 6.2  89/01  wong
+**	Initial revision.
+**	20-sep-1989 kevinm (JupBug #7289)
+**	Added another member (dml) to the HLPROC structure to support creating
+**	procedures through the OtherLanguages menu item in ABF.
+**	12/10/89 (tom) - changed the comments bracketing the overlapping
+**		structure definitions so that they were correct..
+**		NOTE: this practice of overlapping structures on top of one
+**		      another use here should be discouraged. This procedure
+**		      is error prone and overly confusing.. if the first part
+**		      of a structure is to consist of another structure.. the
+**		      the embedded structure should actually be embedded rather
+**		      than just have it's members duplicated.
+**	6/20/90 (Mike S)
+**		Make dep_on a member of every APPL_COMP
+**	08-jan-92 (davel)
+**		modify CONSTANT structure to support a default constant
+**		value stored in the catalogs - this will be stored as
+**		value[0], thus requiring that the value array be sized
+**		at ER_MAXLANGUAGES+1.
+**	13-aug-92 (davel)
+**		Modified DB_DATA_DESC to correctly match a DB_DATA_VALUE,
+**		as lots of abf code relies on being able to cast a 
+**		(DB_DATA_DESC) * to a (DB_DATA_VALUE *).  Left the db_data
+**		as a char* though (instead of a PTR), as existing code
+**		is assuming this to be a char*.
+**	19-oct-92 (davel)
+**		Changed the APC_DEFAULT_LANGUAGE to " default" from "default",
+**		so that the default constants sort before any language-specific
+**		ones.
+**	04-dec-92 (davel)
+**		Reserve bit in the flags word for "decimals passed as decimal"
+**		for HLPROC.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	12-Jan-2005 (schka24)
+**	    Reflect changes to DB_DATA_VALUE in stupid DB_DATA_DESC struct.
+*/
+
+
+EXEC SQL BEGIN DECLARE SECTION;
+/*}
+** Name:	APPL -	Application Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+##	i4		env;
+##	char		*owner;		/* object creator */
+##	i4		is_current;
+##	char		*short_remark;
+##	char		*create_date;
+##	char		*alter_date;
+##	char		*long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	OO_OBJECT	*comps;		/* list of component objects */
+	i4		version;	/* version number */
+	char		modified[25+1];	/* modification time stamp */
+##	char		*source;	/* source-code directory */
+##	char		*executable;	/* default executable name */
+##	char		*start_name;	/* default start object name */
+##	char		*link_file;	/* link options filename */
+	u_i4		dml : 2;	/* application DML */
+	u_i4		start_proc : 1;
+	u_i4		batch : 1;
+	u_i4		has_meta : 1;
+##	char		*roleid;	/* Role application runs under */
+##	char		*password;	/* Password for role */
+##	i4		flags;		/* Flags word */
+EXEC SQL BEGIN EXCLUDE SECTION;
+# define	APC_DBFORMS	1	/* Some non-compiled forms  */
+# define	APC_DEFDBFORMS	2	/* Default to non-compiled forms  */
+
+/*
+** In VISION, the mask 0xF000 (bits 0x1000 - 0x8000) is reserved for default 
+** menu style. For translations of the various mask values, see APPL_COMP
+** below.
+*/
+EXEC SQL END EXCLUDE SECTION;
+##} APPL;
+
+/*}
+** Name:	DB_DATA_DESC -	Return-Type Data Value Descriptor.
+**
+** Description:
+**	Defines the data value type of a return value.  This structure
+**	should be identical to the DB_DATA_VALUE structure.
+**
+**	(schka24) Then why the DEVIL does the stupid thing exist?  DUH.
+*/
+##typedef struct {
+##	char	*db_data;
+##	i4	db_length;
+##	i2	db_datatype;
+##	i2	db_scale;
+##	i2	db_collID;
+##} DB_DATA_DESC;
+
+/*}
+** Name:	APPL_COMP -	Application Component Objects.
+*/
+
+##typedef struct _APPL_COMP {
+	/* Begin OO_OBJECT structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+	i4		env;
+##	char		*owner;		/* object creator */
+	i4		is_current;
+##	char		*short_remark;
+##	char		*create_date;
+##	char		*alter_date;
+##	char		*long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	struct _APPL_COMP *_next;
+	APPL		*appl;		/* application parent */
+	i4		version;	/* version number */
+	char		*locsym;	/* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+EXEC SQL BEGIN EXCLUDE SECTION;
+# define	APC_UFERRS	1	/* Unfixed compilation errors
+						   (only used for HLPROCs) */
+# define	TREE_MARK	2	/* used to mark subtrees -
+						runtime bit - catalog
+						value irrelevent */
+# define	CUSTOM_EDIT	4	/* bit to say that either:
+					   - a user frame/proc was edited 
+					   - an emerald frame was customized */
+# define	FORM_CUST	8	/* form is customized - used only
+					   within copyapp */
+# define	APC_OSLWARN	0x10	/* OSL compiler generated warnings but 
+					   no errors */
+# define	APC_DBFORM	0x20	/* Don't build a compiled form */
+
+# define	APC_PASSDEC	0x40	/* pass decimal values as packed 
+					   decimal? (only used for HLPROCs) */
+
+# define	APC_RECOMPILE	0x100	/* This frame must be recompiled.  One
+					   of the following bits tells why */
+# define	APC_RETCHANGE	0x200	/* The return type of a called 
+					   frame changed */
+# define	APC_GLOBCHANGE	0x400	/* A global or record definition used by
+					   this frame has changed */
+# define	APC_DEFCHANGE	0x800	/* The frame's definition has changed */
+
+# define 	APC_INVALID	(APC_RECOMPILE|APC_RETCHANGE|APC_GLOBCHANGE|APC_DEFCHANGE)
+
+/* The following block is VISION-only */
+# define	APC_MS_MASK	0xF000	/* Menu style mask */
+# define	APC_MS_CHOICES	16	/* Possible menu choices (4 bits) */
+# define	APC_MS_OFFSET	12	/* Menu style mask bit offset */
+# define	APC_MS1LINE	0x0000	/* Original, single-line menu */
+# define	APC_MSTAB	0x1000	/* Tablefield-style menu */
+
+EXEC SQL END EXCLUDE SECTION;
+
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+##} APPL_COMP;
+
+/*}
+** Name:	FORM_REF -	Application Form Reference Component Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+	i4		env;
+	char		*owner;		/* object creator */
+	i4		is_current;
+	char		*short_remark;
+	char		*create_date;
+	char		*alter_date;
+	char		*long_remark;
+	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP	*_next;
+	APPL		*appl;		/* application parent */
+	i4		version;	/* version number */
+	char		*locsym;	/* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+	char		*source;	/* source-code file name */
+	char		*symbol;	/* object-code symbol name */
+	i4		refs;		/* reference count */
+##} FORM_REF;
+
+/*}
+** Name:	USER_FRAME -	Application User Frame Component Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+	i4		env;
+##	char		*owner;		/* object creator */
+	i4		is_current;
+##	char		*short_remark;
+##	char		*create_date;
+##	char		*alter_date;
+##	char		*long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP	*_next;
+	APPL		*appl;		/* application parent */
+	i4		version;	/* version number */
+	char		*locsym;	/* local symbol (build only) */
+	char		*compdate;	/* Date of last failed compile attempt,
+					   if the source is not latter than 
+					   this date then a compile should 
+					   still fail so we don't try */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+##	DB_DATA_DESC	return_type;
+##	char		*source;	/* source-code file name */
+##	FORM_REF	*form;
+	char		*symbol;	/* object-code symbol name */
+	bool		is_static;	/* is the frame static? */
+	OOID		fid;
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	struct _metaframe *mf;		/* metaframe structure */
+EXEC SQL END EXCLUDE SECTION;
+##} USER_FRAME;
+
+/*}
+** Name:	QBF_FRAME -	Application QBF Frame Component Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+	i4		env;
+##	char		*owner;		/* object creator */
+	i4		is_current;
+##	char		*short_remark;
+##	char		*create_date;
+##	char		*alter_date;
+##	char		*long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP	*_next;
+	APPL		*appl;		/* application parent */
+	i4		version;	/* version number */
+	char		*locsym;	/* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+	OOID		qry_type;
+##	char		*qry_object;	/* name of the query_object */
+##	FORM_REF	*form;
+##	char		*cmd_flags;
+##} QBF_FRAME;
+
+/*}
+** Name:	REPORT_FRAME -	Application Report Frame Component Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+	i4		env;
+##	char		*owner;		/* object creator */
+	i4		is_current;
+##	char		*short_remark;
+##	char		*create_date;
+##	char		*alter_date;
+##	char		*long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP	*_next;
+	APPL		*appl;		/* application parent */
+	i4		version;	/* version number */
+	char		*locsym;	/* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+##	char		*report;	/* name of the report */
+##	char		*source;	/* source-code file name */
+##	FORM_REF	*form;
+##	char		*output;
+##	char		*cmd_flags;
+##} REPORT_FRAME;
+
+/*}
+** Name:	GRAPH_FRAME -	Application Graph Frame Component Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+	i4		env;
+##	char		*owner;		/* object creator */
+	i4		is_current;
+##	char		*short_remark;
+##	char		*create_date;
+##	char		*alter_date;
+##	char		*long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP	*_next;
+	APPL		*appl;		/* application parent */
+	i4		version;	/* version number */
+	char		*locsym;	/* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+##	char		*graph;		/* name of the graph */
+##	char		*output;
+##	char		*cmd_flags;
+##} GRAPH_FRAME;
+
+/*}
+** Name:	_4GLPROC -	Application 4GL Procedure Component Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+	i4		env;
+##	char		*owner;		/* object creator */
+	i4		is_current;
+##	char		*short_remark;
+##	char		*create_date;
+##	char		*alter_date;
+##	char		*long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP	*_next;
+	APPL		*appl;		/* application parent */
+	i4		version;	/* version number */
+	char		*locsym;	/* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+##	DB_DATA_DESC	return_type;
+##	char		*source;	/* source-code file name */
+	char		*symbol;	/* object-code symbol name */
+	OOID		fid;
+##} _4GLPROC;
+
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+	i4		env;
+##	char		*owner;		/* object creator */
+	i4		is_current;
+##	char		*short_remark;
+##	char		*create_date;
+##	char		*alter_date;
+##	char		*long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP	*_next;
+	APPL		*appl;		/* application parent */
+	i4		version;	/* version number */
+	char		*locsym;	/* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+##	DB_DATA_DESC	return_type;
+##} DBPROC;
+
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID		ooid;		/* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord	data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID		class;		/* class ID */
+##	char		*name;		/* object name */
+	i4		env;
+##	char		*owner;		/* object creator */
+	i4		is_current;
+##	char		*short_remark;
+##	char		*create_date;
+##	char		*alter_date;
+##	char		*long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP	*_next;
+	APPL		*appl;		/* application parent */
+	i4		version;	/* version number */
+	char		*locsym;	/* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+##	DB_DATA_DESC	return_type;
+##	char		*source;	/* source-code file name */
+##	char		*symbol;	/* object-code symbol name */
+	i4		ol_lang;	/* OL language type */
+	i4		dml;		/* DML for creation only */
+##} HLPROC;
+
+
+/*}
+** Name:        CONSTANT -       Application Global Constant Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+##	OOID            ooid;           /* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord        data;
+EXEC SQL END EXCLUDE SECTION;
+
+##	OOID            class;          /* class ID */
+##      char            *name;          /* object name */
+##	i4             env;
+##      char            *owner;         /* object creator */
+##	i4             is_current;
+##      char            *short_remark;
+##	char            *create_date;
+##      char            *alter_date;
+##      char            *long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP       *_next;
+	APPL            *appl;          /* application parent */
+	i4             version;        /* version number */
+	char            *locsym;        /* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+##	DB_DATA_DESC    data_type;	/* Constant's data type */
+##	char            *language;      /* Spoken language associated with this value */
+EXEC SQL BEGIN EXCLUDE SECTION;
+# define	APC_CONSTANT_LANGUAGE	ERx(" default")	/* default language */
+EXEC SQL END EXCLUDE SECTION;
+##	char            *value[ER_MAXLANGUAGES+1];/* Constant's value as a string */
+##} CONSTANT;
+
+/*}
+** Name:        GLOBVAR -       Application Global Variable Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID            ooid;           /* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord        data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID            class;          /* class ID */
+##      char            *name;          /* object name */
+	i4             env;
+##      char            *owner;         /* object creator */
+	i4             is_current;
+##      char            *short_remark;
+##	char            *create_date;
+##      char            *alter_date;
+##      char            *long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP       *_next;
+	APPL            *appl;          /* application parent */
+	i4             version;        /* version number */
+	char            *locsym;        /* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+##      DB_DATA_DESC    data_type;	/* Global's data type */
+
+##} GLOBVAR;
+
+/*}
+** Name:        RECMEM -       Application Record Attribute Object.
+*/
+##typedef struct _rec_mem {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID            ooid;           /* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord        data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID            class;          /* class ID */
+##      char            *name;          /* object name */
+	i4             env;
+##      char            *owner;         /* object creator */
+	i4             is_current;
+##      char            *short_remark;
+##	char            *create_date;
+##      char            *alter_date;
+##      char            *long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP       *_next;
+	APPL            *appl;          /* application parent */
+	i4             version;        /* version number */
+	char            *locsym;        /* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+
+##      DB_DATA_DESC    data_type;
+	APPL_COMP	*parent;	/* record definition parent */
+	struct _rec_mem	*next_mem;	/* next in list of record members */
+	i4		att_order;	/* order in the record */
+##} RECMEM;
+
+/*}
+** Name:        RECDEF -       Application Record Definition Object.
+*/
+##typedef struct {
+	/* Begin OO_OBJECT structure */
+	/* Begin APPL_COMP structure */
+	OOID            ooid;           /* object ID */
+
+EXEC SQL BEGIN EXCLUDE SECTION;
+	dataWord        data;
+EXEC SQL END EXCLUDE SECTION;
+
+	OOID            class;          /* class ID */
+##      char            *name;          /* object name */
+	i4             env;
+##      char            *owner;         /* object creator */
+	i4             is_current;
+##      char            *short_remark;
+##	char            *create_date;
+##      char            *alter_date;
+##      char            *long_remark;
+##	char		*altered_by;
+	/* End of OO_OBJECT */
+
+	APPL_COMP       *_next;
+	APPL            *appl;          /* application parent */
+	i4             version;        /* version number */
+	char            *locsym;        /* local symbol (build only) */
+	char		*compdate;	/* Date of last compile attempt */
+	i4		flags;		/* Flags word */
+	OO_OBJECT	*dep_on;	/* list of depended-on objects */
+	/* End of APPL_COMP */
+
+	RECMEM		*recmems;	/* list of record members */
+
+##} RECDEF;
+
+EXEC SQL END DECLARE SECTION;
+
+/* definition of one of the arguements to IIAButilities() 
+   which identify the caller, these arguments determine what the utility
+   functions will do in regard to loading and freeing of app. components */
+#define ABUT_AFD	1	/* called from the application flow diagram */
+#define ABUT_APPCAT	2	/* called from the application catalog */
+#define ABUT_FRMCAT	3	/* called from the frame catalog */
+
+

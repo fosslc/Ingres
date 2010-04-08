@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlvdata.hlp, subtopic 'Specifying datatypes' of main help screen for 
+/#-- Create a local Variable.
+/#-- 
+To specify a datatype, either type in your entry or select a datatype from 
+the list of choices. The following rules apply:
+
+  * Use a datatype consistent with the function of the local variable (for 
+    example, if the value of the hidden field is a name, use a character 
+    datatype).
+
+  * If you are using a record type array, do not include the string 
+    "ARRAY OF" in your record type name. Use the "Array?" field to 
+    indicate that the record type is an array.
+
+  * If you select a datatype from the list, you must edit the entry to 
+    replace any lower case text with a value. For example, if you 
+    select "I(length)," you must change "length" to a numeric value. 
+    Similarly, if you select a "TYPE OF" datatype, enter the actual names 
+    of the form, table, or table field you are using.

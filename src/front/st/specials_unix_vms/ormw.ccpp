@@ -1,0 +1,240 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Not-so-generic part file for OpenROAD runtime MAINWIN support files
+*/
+
+/*
+** History
+**	02-nov-1998 (dansa02)
+**		Created.  (Yes, this MAINWIN directory structure is ridiculous
+**		and non-portable.  We had no control over that.  And since
+**		this manifest was already so non-portable, there wasn't much
+**		point to using the $SLSFX shared library suffix mechanism.
+**		At least we isolated this mess into its own .ccpp file, which
+** 		will hopefully make porting modifications a bit cleaner.)
+*/
+
+PART   ormw
+
+   DIRECTORY ingres!mainwin
+   BUILD_DIR (ING_BUILD)!mainwin
+      FILE setup-mwuser
+      FILE setup-mwuser.csh
+      FILE setupmainwin.csh
+      FILE win.ini
+
+   DIRECTORY ingres!mainwin!afm
+   BUILD_DIR (ING_BUILD)!mainwin!afm
+      FILE Courier-Bold.afm
+      FILE Courier-BoldOblique.afm
+      FILE Courier-Oblique.afm
+      FILE Courier.afm
+      FILE Helvetica-Bold.afm
+      FILE Helvetica-BoldOblique.afm
+      FILE Helvetica-Oblique.afm
+      FILE Helvetica.afm
+      FILE Times-Bold.afm
+      FILE Times-BoldItalic.afm
+      FILE Times-Italic.afm
+      FILE Times-Roman.afm
+
+   DIRECTORY ingres!mainwin!bin-sunos5_optimized
+   BUILD_DIR (ING_BUILD)!mainwin!bin-sunos5_optimized
+      EXECUTABLE mwfwrapper
+      EXECUTABLE mwprip
+      EXECUTABLE mwregsvr
+      FILE mwregsvr.rxt
+      EXECUTABLE rpcss
+      EXECUTABLE winhlp32
+      FILE winhlp32.rxb
+      FILE winhlp32.rxt
+
+   DIRECTORY ingres!mainwin!bin
+   BUILD_DIR (ING_BUILD)!mainwin!bin
+      EXECUTABLE mwgetconfigname
+      EXECUTABLE mwregconvold
+      EXECUTABLE mwregedit
+      EXECUTABLE mwrmprops
+      EXECUTABLE mwshowprops
+      EXECUTABLE regedit4
+      EXECUTABLE regsvr
+      EXECUTABLE tibrowse
+      EXECUTABLE winhelp
+
+   DIRECTORY ingres!mainwin!lib-sparc_sunos5
+   BUILD_DIR (ING_BUILD)!mainwin!lib-sparc_sunos5
+      EXECUTABLE mwperl
+
+   DIRECTORY ingres!mainwin!lib-sunos5
+   BUILD_DIR (ING_BUILD)!mainwin!lib-sunos5
+      EXECUTABLE mwregedit
+      EXECUTABLE regedit4
+      EXECUTABLE tibrowse
+      FILE tibrowse.rxt
+
+   DIRECTORY ingres!mainwin!lib-sparc_sunos5!nls
+   BUILD_DIR (ING_BUILD)!mainwin!lib-sparc_sunos5!nls
+      FILE BIG5.nls
+      FILE KSC.nls
+      FILE PRC.nls
+      FILE PRCP.nls
+      FILE XJIS.nls
+      FILE c_037.nls
+      FILE c_10000.nls
+      FILE c_10001.nls
+      FILE c_10002.nls
+      FILE c_10003.nls
+      FILE c_10004.nls
+      FILE c_10005.nls
+      FILE c_10006.nls
+      FILE c_10007.nls
+      FILE c_10008.nls
+      FILE c_10010.nls
+      FILE c_10017.nls
+      FILE c_10029.nls
+      FILE c_10079.nls
+      FILE c_10081.nls
+      FILE c_10082.nls
+      FILE c_1026.nls
+      FILE c_1250.nls
+      FILE c_1251.nls
+      FILE c_1252.nls
+      FILE c_1253.nls
+      FILE c_1254.nls
+      FILE c_1255.nls
+      FILE c_1256.nls
+      FILE c_1257.nls
+      FILE c_1258.nls
+      FILE c_1361.nls
+      FILE c_20866.nls
+      FILE c_28592.nls
+      FILE c_29001.nls
+      FILE c_437.nls
+      FILE c_500.nls
+      FILE c_708.nls
+      FILE c_720.nls
+      FILE c_737.nls
+      FILE c_775.nls
+      FILE c_850.nls
+      FILE c_852.nls
+      FILE c_855.nls
+      FILE c_857.nls
+      FILE c_860.nls
+      FILE c_861.nls
+      FILE c_862.nls
+      FILE c_863.nls
+      FILE c_864.nls
+      FILE c_865.nls
+      FILE c_866.nls
+      FILE c_869.nls
+      FILE c_870.nls
+      FILE c_874.nls
+      FILE c_875.nls
+      FILE c_932.nls
+      FILE c_936.nls
+      FILE c_949.nls
+      FILE c_950.nls
+      FILE ctype.nls
+      FILE l_except.nls
+      FILE l_intl.nls
+      FILE locale.nls
+      FILE sortkey.nls
+      FILE sorttbls.nls
+      FILE unicode.nls
+
+   DIRECTORY ingres!mainwin!lib-sunos5_debug
+   BUILD_DIR (ING_BUILD)!mainwin!lib-sunos5_debug
+      FILE mainwin.rxb
+      FILE mainwin.rxt
+
+   DIRECTORY ingres!mainwin!lib-sunos5_debug!locale!de
+   BUILD_DIR (ING_BUILD)!mainwin!lib-sunos5_debug!locale!de
+      FILE mainwin.rxb
+      FILE mainwin.rxt
+
+   DIRECTORY ingres!mainwin!lib-sunos5_debug!locale!fr
+   BUILD_DIR (ING_BUILD)!mainwin!lib-sunos5_debug!locale!fr
+      FILE mainwin.rxb
+      FILE mainwin.rxt
+
+   DIRECTORY ingres!mainwin!lib-sunos5_optimized
+   BUILD_DIR (ING_BUILD)!mainwin!lib-sunos5_optimized
+      FILE atl.rxb
+      FILE atl.rxt
+      EXECUTABLE atl.tlb
+      FILE comcat.rxb
+      FILE comcat.rxt
+      FILE comctl32.rxb
+      FILE comctl32.rxt
+      FILE comdlg32.rxb
+      FILE comdlg32.rxt
+      FILE ftsrch.rxb
+      FILE ftsrch.rxt
+      EXECUTABLE libactxprxy.so
+      EXECUTABLE libadvapi32.so
+      EXECUTABLE libatl.so
+      EXECUTABLE libcomcat.so
+      EXECUTABLE libcomctl32.so
+      EXECUTABLE libcomdlg32.so
+      EXECUTABLE libcoolmisc.so
+      EXECUTABLE libftsrch.so
+      EXECUTABLE libmfc400s.so
+      EXECUTABLE libmw32.so
+      EXECUTABLE libmwicons.so
+      EXECUTABLE libntrtl.so
+      EXECUTABLE libole2ui.so
+      EXECUTABLE libole32.so
+      EXECUTABLE liboleaut32.so
+      EXECUTABLE libolepro32.so
+      EXECUTABLE libriched32.so
+      EXECUTABLE librpcltccm.so
+      EXECUTABLE librpcltscm.so
+      EXECUTABLE librpcrt4.so
+      EXECUTABLE librpcssp.so
+      EXECUTABLE libshell32.so
+      EXECUTABLE libshlwapi.so
+      EXECUTABLE libuuid.so
+      FILE mainwin.rxb
+      FILE mainwin.rxt
+      FILE mfc400s.rxb
+      FILE mfc400s.rxt
+      FILE mwicons.rxb
+      FILE mwicons.rxt
+      FILE ole2ui.rxt
+      FILE ole32.rxt
+      FILE olepro32.rxt
+      EXECUTABLE olepro32.tlb
+      EXECUTABLE regsvr
+      FILE regsvr.rxt
+      FILE riched32.rxt
+      FILE shell32.rxb
+      FILE shell32.rxt
+      FILE shlwapi.rxb
+      FILE shlwapi.rxt
+      EXECUTABLE stdole2.tlb
+      EXECUTABLE stdole32.tlb
+
+   DIRECTORY ingres!mainwin!lib-sunos5_optimized!locale!de
+   BUILD_DIR (ING_BUILD)!mainwin!lib-sunos5_optimized!locale!de
+      FILE mainwin.rxb
+      FILE mainwin.rxt
+
+   DIRECTORY ingres!mainwin!lib-sunos5_optimized!locale!fr
+   BUILD_DIR (ING_BUILD)!mainwin!lib-sunos5_optimized!locale!fr
+      FILE mainwin.rxb
+      FILE mainwin.rxt
+
+   DIRECTORY ingres!mainwin!lib
+   BUILD_DIR (ING_BUILD)!mainwin!lib
+      FILE mwgetconfigname
+      FILE mwregconvold
+      FILE mwregedit
+      FILE mwuseconfig.csh
+      FILE mwuseconfig.sh
+      FILE regsvr
+
+   DIRECTORY ingres!mainwin!system
+   BUILD_DIR (ING_BUILD)!mainwin!system
+      FILE registry.bin

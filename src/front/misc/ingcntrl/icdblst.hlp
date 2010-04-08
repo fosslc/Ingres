@@ -1,0 +1,35 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icdbtbl.hlp        Help on Catalogdb/Accessdb's Database Catalog.
+/#--
+The Database Catalog form displays all databases owned by the user.
+The table field is read-only.
+
+For each database the following is displayed:
+
+	Column Name     SYNOPSIS
+	-----------     -----------
+	Database Name   Name of database.
+	Owner           Name of Ingres user who owns database.
+
+Note:  The display is a table field and must be scrolled up and down to
+view its full contents.
+
+Each of the menu commands acts on a selected database.  To select
+a database, move the table field cursor to the desired database
+and then choose a menu item.
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Access		Show information about access to the database.
+	
+	Extend		View extensions used by the selected database.
+	
+	MoreInfo	View all locations used by the database.
+			If the database is a STAR database, show local and
+			control database information.
+	
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

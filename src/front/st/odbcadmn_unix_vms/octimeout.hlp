@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+/#-- ODBC configuration screen help file 
+/#--
+You are looking at iiodbcadmn's Driver Configuration Options Page.
+
+The iiodbcadmn screen consists of a single form with the
+following table field:
+
+  FIELD           SYNOPSIS
+  -----           --------
+       
+  timeout         The amount of time an ODBC connection object remains
+                  in the connection pool, in seconds.  Specify -1 for
+                  no (infinite) time out.  Specify 1 to 2,147,483,647
+                  (no commas) for finite time outs.  All other entries 
+                  are errors.

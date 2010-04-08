@@ -1,0 +1,362 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include       <ooclass.h>
+## include      <metafrm.qsh>
+## include      <abclass.qsh>
+# include       <erug.h>
+# include       <erfg.h>
+# include       "vqsecnam.h"
+# include       "ervq.h"
+
+/**
+** Name:	vqqparts.qsc -	Edit query parts.
+**
+** Description:
+**	This file defines:
+**
+**	IIVQeqpEditQueryParts	- Edit Query Parts.
+**
+** History:
+**	11/20/89 (Mike S) 	Initial Version	
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+/* extern's */
+FUNC_EXTERN VOID	FEhelp();
+FUNC_EXTERN STATUS	IIAMmfMetaFree();
+FUNC_EXTERN STATUS	IIAMmpMetaPopulate();
+FUNC_EXTERN STATUS	IIAMmuMetaUpdate();
+FUNC_EXTERN MFTAB 	*IIFGpt_pritbl();
+FUNC_EXTERN VOID        IIUGerr();
+FUNC_EXTERN bool 	IIVQcsqCheckSeq();
+FUNC_EXTERN char 	*IIVQgivGetIncVal();
+
+/* static's */
+static	init_done = FALSE;
+
+/* form, field, and column names */
+static const
+##	char 	_form[] = 	ERx("vqqparts"),
+##		_title[] = 	ERx("title"),
+##		_table[] = 	ERx("table"),
+##		_frame[] = 	ERx("frame"),
+##		_info[] = 	ERx("info"),
+##		_info_title[] = ERx("info_title"),
+##		_column[] = 	ERx("column"),
+##		_display[] = 	ERx("display"),
+##		_index[] = 	ERx("index"),
+##		_blank[] =	ERx(" ");
+
+/* Text pointers */
+static 
+##	char	*astitle,       /* Title for assignments */
+##              *dftitle,       /* Title for defaults */
+##              *qrtitle,       /* Title for query restrictions */
+##              *ascol,         /* Column title for assignments */
+##              *dfcol,         /* Column title for defaults */
+##              *qrcol;         /* Column title for query restrictions */
+
+/*{
+** Name:	IIVQeqpEditQueryParts   - Edit Query Parts.
+**
+** Description:
+**	This frame allows the user to edit the query restrictions and	
+**	assignments/defaults from the Visual Query.  It is called from	
+**	the Compilation Error frame to fix an error with a query part.
+**
+** Inputs:
+**	frame		USER_FRAME *	the frame whose VQ should be fixed
+**	esection	i4		error section (INSERT, SELECT, or
+**					DEFAULT)
+**	qsection	i4		query section (master or detail)
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		none
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**	The VQ may be loaded from the database.  It will be updated if
+**	the user changes anything.
+**
+** History:
+**	11/20/89 (Mike S)	Initial Version
+*/
+
+VOID IIVQeqpEditQueryParts(frame, esection, qsection)
+USER_FRAME	*frame;
+i4		esection;
+i4		qsection;
+{
+	/* Frame's metaframe */
+	METAFRAME	*metaframe = frame->mf;
+##	char		*framename = frame->name;
+	bool		wasinmem;	/* Was VQ in memory */
+	MFTAB		*table;		/* Table we're displaying info for */
+	MFCOL		*column;	/* Current column */
+	i4		num_changes = 0;/* Number of changes made */
+##	i4		i;
+
+##	char 		*colname;	/* column name */
+##	char		*info;		/* column info */
+##	char		*displayed;	/* Is column displayed */
+##	char		*tabname;	/* Table name */
+##	char		*disp;		/* Display flag */
+	TAGID	tag;			/* Tag for memory allocation */
+
+
+	/* Load the VQ into memory, if need be */
+	wasinmem = (metaframe->popmask & MF_P_VQ) != 0;
+	if (!wasinmem)
+	{
+		if (IIAMmpMetaPopulate(metaframe, MF_P_VQ) != OK)
+		{
+			return;
+		}
+	}
+
+	tag = metaframe->ptag[MF_PT_VQ];
+
+	/* Init the form, if need be, and get some text pointers */
+	if (!init_done)
+	{
+		IIARiaForm(_form);
+
+              	astitle = ERget(F_VQ003E_assgns_text);
+              	dftitle = ERget(F_VQ003F_defaults_text);
+              	qrtitle = ERget(F_VQ003C_rests_text);
+              	ascol = ERget(F_VQ003D_assgn_text);
+              	dfcol = ERget(F_VQ0040_detault_text);
+              	qrcol = ERget(F_VQ00C9_rest_text);
+
+		init_done = TRUE;
+	}
+
+
+	/* Fund table we're displaying */
+	if (qsection == EST_QMASTER)
+		table = IIFGpt_pritbl(metaframe, TAB_MASTER);
+	else
+		table = IIFGpt_pritbl(metaframe, TAB_DETAIL);
+
+	if (table == NULL)
+	{
+		IIUGerr(E_VQ0084_NoSuchSection, 0, 2, framename, 
+			ERget((qsection == EST_QMASTER) ? 
+			       F_FG0018_Master : 
+			       F_FG0019_Detail));
+		return;
+	}
+	tabname = table->name;
+
+	/* Set up titles and load the tablefield */
+##	inittable _form _info update (_index = i4)
+##	putform _form (_frame = framename, _table = tabname)
+
+	switch (esection)
+	{
+	    case EST_DEFAULT:
+		/* 
+		** We're doing defaults -- only displayed columns and those
+		** in variables
+		*/
+##		putform _form (_title = dftitle, _info_title = dfcol)
+		for (i = 0; i < table->numcols; i++)
+		{
+			column = table->cols[i];
+			if ((column->flags & (COL_USED|COL_VARIABLE)) == 0)
+				continue;
+			
+			colname = column->name;
+			info = column->info;
+			disp = IIVQgivGetIncVal(column);
+
+##			loadtable _form _info 
+##			    (_column = colname, _display = disp, 
+##			     _info = info, _index = i)	
+		}
+		break;
+	
+	    case EST_INSERT:
+		/* We're doing assignments -- only non-used columns */
+##		putform _form (_title = astitle, _info_title = ascol)
+		for (i = 0; i < table->numcols; i++)
+		{
+			column = table->cols[i];
+			if ((column->flags & (COL_USED|COL_VARIABLE)) != 0)
+				continue;
+			
+			colname = column->name;
+			info = column->info;
+			disp = IIVQgivGetIncVal(column);
+			
+##			loadtable _form _info 
+##			    (_column = colname, _display = disp, 
+##			     _info = info, _index = i)	
+		}
+		break;
+
+	    case EST_SELECT:
+		/* We're doing query restrictions */
+##		putform _form (_title = qrtitle, _info_title = qrcol)
+		for (i = 0; i < table->numcols; i++)
+		{
+			column = table->cols[i];
+			
+			colname = column->name;
+			info = column->info;
+			disp = IIVQgivGetIncVal(column);
+			
+##			loadtable _form _info 
+##			    (_column = colname, _display = disp, 
+##			     _info = info, _index = i)	
+		}
+	}
+
+	/* Run the display loop */
+##	display _form update
+
+##	activate scrolldown _info
+##	{
+		/* Avoid out-of-data message */
+##		i4 tfrec;
+
+##		getrow _form _info (tfrec = _RECORD)
+
+		if (1 != tfrec)
+		{
+##			scroll _form _info down
+		}
+##	}
+
+##	activate scrollup _info
+##	{
+		/* Avoid out-of-data message */
+##		i4 tfrec, tfrows;
+
+##		inquire_frs table _form (tfrows = datarows(_info))
+##		getrow _form _info (tfrec = _RECORD)
+
+		if (tfrows != tfrec)
+		{
+##			scroll _form _info up
+		}
+##	}
+
+
+##	activate column _info _info
+##	{
+##              char    buffer[133];    /* Buffer for info */
+##		i4	colindex;
+
+##		getrow _form _info (buffer = _info, colindex = _index)
+		table->cols[colindex]->info = STtalloc(tag, buffer);
+
+		/* Check if "sequenced" was entered invalidly */
+		if (!IIVQcsqCheckSeq(metaframe, table, table->cols[colindex]))
+		{
+##			putrow _form _info (_info = _blank)
+##			set_frs row _form _info (change(_info) = 1)
+##			resume
+		}
+		else
+		{
+##			resume next
+		}
+##	}
+
+##      activate menuitem ERget(FE_OK)
+##                      (expl = ERget(F_VQ0038_ChangesOK)),
+##                      FRSkey4 
+##	{
+##		i4	changed;	/* TRUE if info changed */
+##		char	buffer[133];	/* Buffer for info */
+
+		/* Replace anything which changed */
+##		unloadtable _form _info (buffer = _info, i = _index)
+##		{
+##			inquire_frs row _form _info (changed = change(_info))
+			if (changed)
+			{
+				table->cols[i]->info = STtalloc(tag, buffer);
+				num_changes++;
+			}	
+##		}
+
+##		clear field _info
+##              breakdisplay
+##	}
+
+##      /* Don't save changes and Quit */
+##      activate menuitem ERget(FE_Cancel) (expl = ERget(F_FE0109_ExplForget)),
+##                        FRSkey9
+##      {
+##		clear field _info
+##              breakdisplay
+##      }
+
+##	activate menuitem ERget(FE_Help)
+##                      (expl = ERget(F_FE0101_ExplKeyHelp)),
+##                      FRSkey1
+##	{
+		FEhelp(ERx("vqqparts.hlp"), ERget(S_VQ0027_EditVQInfo));
+##	}
+
+##      activate frskey5 (expl = ERget(F_FE0105_ExplTop))
+##      {
+                /* top */
+##             scroll _form _info to 1
+##      }
+
+##      activate frskey6 (expl = ERget(F_FE0106_ExplBottom))
+##      {
+                /* bottom */
+##              i4      no_rows;
+
+##              inquire_frs table _form (no_rows = datarows(_info))
+
+##              scroll _form _info to no_rows
+##      }
+
+##      activate frskey7 (expl = ERget(F_FE0104_ExplFind))
+##      {
+                /* find */
+                FEtabfnd(_form, _info);
+##      }
+
+
+	/* Update VQ, if anything changed */
+	if (num_changes > 0)
+	{
+		metaframe->state |= MFST_DOGEN;
+		_VOID_ IIAMmuMetaUpdate(metaframe, MF_P_VQ);
+		IIAMufqUserFrameQuick(metaframe->apobj);
+	}
+
+	/* Free it, if it wasn't in memory in the first place*/
+	if (!wasinmem)
+		_VOID_ IIAMmfMetaFree(metaframe, MF_P_VQ);
+
+	return;
+}		

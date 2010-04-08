@@ -1,0 +1,42 @@
+#
+# YAM MANIFEST file for sig!star!star
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#	20-Jul-2004 (hanje04)
+#	    Pass location argument to IISIGSH
+#	7-Aug-2004 (drivi01)
+#	    Added star.wri to the list of files to be copied.
+#	25-jan-2005 (abbjo03)
+#	    This has not been delivered on VMS.
+
+IISUBSYS sig star star ;
+
+
+if ! $(VMS)
+{
+IISIGEXE scheduler star : dualarm.sc ;
+IIUNDEFS scheduler : IIeqiqio ;
+if ! $(NT)
+{
+IINEEDLIBS scheduler : SQLCALIB TBACCLIB LIBQLIB LIBQGCALIB GCFLIB
+  FDLIB FTLIB FEDSLIB FMTLIB UILIB UGLIB AFELIB ADFLIB CUFLIB COMPATLIB
+  MALLOCLIB ;
+}
+else
+{
+IINEEDLIBS scheduler : COMPATLIB SHEMBEDLIB ;
+#IINEEDLIBS scheduler : SQLCALIB TBACCLIB IMPLIBQLIB LIBQGCALIB GCFLIB
+#  FDLIB FTLIB FEDSLIB FMTLIB UILIB UGLIB AFELIB ADFLIB CUFLIB COMPATLIB
+#  MALLOCLIB IMPADFLIBDATA IMPGCFLIBDATA IMPEMBEDLIBDATA EMBEDLIBDATA IMPLIBQLIBDATA ;
+}
+IISIGEXE wakeup star : duawkup.c ;
+IISETUID wakeup ;
+IINEEDLIBS wakeup : COMPATLIB MALLOCLIB ;
+
+IISIGSH iirunschd star : iirunschd.sh ;
+
+IISIGFILES star : iialarm.frm makestdcat.sh read.me star.wri ;
+}

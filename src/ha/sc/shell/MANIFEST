@@ -1,0 +1,22 @@
+#
+# Jamfile file for ha!sc!shell
+#
+
+SubDir ING_SRC ha sc shell ;
+
+IISUBSYS ha sc shell ;
+
+
+IISCHABINSH envfile : envfile.sh ;
+IISCHABINSH ingres_monitor_check : ingres_monitor_check.sh ;
+IISCHABINSH ingres_monitor_start : ingres_monitor_start.sh ;
+IISCHABINSH ingres_monitor_stop : ingres_monitor_stop.sh ;
+IISCHABINSH ingres_probe : ingres_probe.sh ;
+IISCHABINSH ingres_server_manager : ingres_server_manager.sh ;
+IISCHABINSH ingres_server_start : ingres_server_start.sh ;
+IISCHABINSH ingres_server_stop : ingres_server_stop.sh ;
+IISCHABINSH ingres_update : ingres_update.sh ;
+IISCHABINSH ingres_validate : ingres_validate.sh ;
+IIUTILSH install_scha : install_scha.sh ;
+IIUTILSH mkscagent : mkscagent.sh ;
+

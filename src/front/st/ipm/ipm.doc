@@ -1,0 +1,3611 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                 INGRES
+                             IPM Users Guide
+
+
+
+
+
+
+
+
+
+
+
+
+
+                         Release 6.3, February 1990
+
+What is IPM?
+============
+INGRES IPM is the INGRES Interactive Performance Monitor.  
+
+IPM is used to view different aspects of a running INGRES installation. It
+can be used to analyze INGRES locking and locking activity.  IPM can be
+used to view a running server and perform some actions on it.
+
+Used to view the INGRES locking system, this tool allows you to see what
+tables and/or pages within a table are locked.  From this, it is
+straightforward to determine where concurrency problems are occuring and
+who is causing them. 
+
+The user can also view information on the logging system.  Logging system
+statistics, processes, databases and transactions can be monitored. The
+logging header display has a diagram that shows a layout of the log file
+complete with markers showing the section in use.  Other information
+on log file size is also available. This information can give you a
+sense of the current state of the logging system in a running INGRES
+installation. 
+
+IPM can monitor the INGRES and STAR servers in an installation and
+obtain various pieces of related information.  INGRES superusers have
+the capability to terminate servers and/or sessions.  The status of
+each session can be shown also. 
+
+On VMS, IPM has a Process Resource Display which shows various JPI
+parameters (OS Resources) for a given server or other DBMS process. 
+
+How to install IPM
+==================
+IPM requires SYSPRV, CMKRNL and WORLD VMS privileges.  In order for non
+privileged accounts to use IPM, it must be installed as open with
+privs=(CMKRNL,SYSPRV,WORLD) 
+
+    $ INSTALL :== $INSTALL/COMMAND
+    $ INSTALL REPLACE -
+    _$ <full_dir_spec>:IPM.EXE/OPEN/PRIV=(SYSPRV,CMKRNL,WORLD)
+
+On UNIX, the executable needs to have the setuid bit turned on (or it must
+be run from the INGRES account). 
+
+IPM help files are found in II_SYSTEM:[INGRES.SIG.IPM] (on VMS) or
+$ING_HOME/ingres/sig/bin  (on UNIX).  The help files (*.txt) need to be
+moved to II_SYSTEM:[INGRES.FILES] (on VMS) or $ING_HOME/ingres/files (on
+UNIX).  This is where IPM expects to find them. 
+
+Starting IPM
+============
+IPM must be started as a foreign command in order to specify command line
+options in VMS.  If IPM is run using the VMS run command, the default
+command line options will be used.  To define IPM as a foreign command,
+issue the following command: 
+
+    $ IPM :== $<full_directory_spec>:IPM.EXE
+
+To invoke IPM (using default options), enter:
+
+    $ IPM <CR>   where <CR> is a carriage return
+
+When using IPM in UNIX, just type the image name (the directory where the image
+resides must be in the path or the image must be in the current directory).
+
+Logical Names used by IPM
+=========================
+
+    II_DBMS_SERVER  This logical/environment variable can be defined
+                    to point at a server that (usually) is not registered
+                    with the Name Server.  The list of servers displayed
+                    in IPM is obtained from the Name Server.  It may be
+                    desirable to obtain information on a non-registered
+                    server.  To do that, define II_DBMS_SERVER accordingly.
+                    The server name defined by II_DBMS_SERVER will be used
+                    by IPM.  Please reference the INGRES Installation and
+                    Operations (I & O) Guide.
+
+    For VMS:
+                   define II_DBMS_SERVER <server_name>
+
+    For Unix (C-shell)
+                   setenv II_DBMS_SERVER "server_name"
+
+    For Unix (Bourne shell)
+                   II_DBMS_SERVER="server_name"
+                   export II_DBMS_SERVER
+
+Other Documents
+===============
+There is additional documentation available which complements IPM.
+
+    1) The INGRES Release 6 I&O Guide.  Since IPM integrates lockstat,
+       logstat iimonitor and iinamu, please consult the appropriate
+       sections in the I & O Guide.
+
+Terms used in this document
+===========================
+Blocking   A blocking lock is a lock granted on a resource in such a way
+Lock       as to prevent another lock from being granted on that very same
+           resource.  For example, an exclusive lock on a table will 
+           prevent another shared or exclusive lock from being granted on
+           that table.
+
+Lock       A lock list contains one or more locks on resources in a given
+List       database or server(s).  Each session will have at least one
+           lock list.  When a session is in a transaction, that session
+           will have an additional lock list containing all the locks
+           acquired during the transaction.  The Lock List Display screen
+           allows the viewing of all lock lists in the INGRES locking system
+           on the current machine for the current installation.  Lock
+           lists that belong to user transactions will have an associated
+           session name displayed also (on the Lock List Display screen).
+           It is useful to view locks by lock list to see what transactions
+           are currently active.
+
+Physical   A physical lock is a lock that can span multiple transactions
+Lock       in any given session.  Table and database locks are held from
+           the point that they are acquired until the end of the session
+           in most cases.  Page locks are logical locks.  Logical locks
+           are usually acquired during a transaction and released during
+           a transaction or at commit time.
+
+Resource - a resource is any object in a database on which a lock can be
+           held.  A table is a resource, a page within a table is also a
+           resource.  Even a database is a resource since a lock can be
+           taken out on a database.  There is a Resource Display screen in
+           IPM which displays resources sorted by database.  Within a
+           database, table resources are displayed and below each table
+           resource, page resources for that table are displayed.  This
+           helps you determine how "busy" a database, table, or page is.
+           There are various options in IPM that allow you to determine how
+           many and what type of resources are displayed.
+
+Startup Options
+===============
+Various options can be specified on the command line when invoking IPM. 
+These options affect what information is displayed, the detail of
+information that is displayed and the format of the displayed information. 
+Most of the command line options can be changed without exiting IPM by
+invoking the Option Selection screen (Figure 2).  The options are: 
+
+    -ddbname    only report on resources for database 'dbname'
+    -e          also display system (NONPROTECT) locklists plus user locklists
+    -i          also display inactive transactions plus active transactions.
+    -l          report on ALL resource types (page, table, database, etc.)
+    -lrestype   report only on the specified resource type (a list is provided
+                below)
+    -n          print resources granted in NL (Null) mode
+    -t          report on a particular table (must specify a database name)
+    -rseconds   sets refresh time for various screens
+
+The default is to display database, open database, relation and page resources,
+active transactions and user lock lists for all databases in the current
+installation.  The options that affect the resources displayed only affect the
+Resource List Display.  The -e option is the only option that affects the Lock
+List Display.  The -i option affects the Log Transaction Display.
+
+The following resource types can be specified with the -l flag:
+
+        Resource Type    Explanation
+        -------------    -----------
+        database         Any users in a database will hold a database lock
+                         on that database
+
+        table            Any user in a table will hold a table lock on
+                         that table
+
+        page             Any user accessing a page in a table will hold a page 
+                         lock on that page.
+
+        createtable      Any user creating a table will hold a createtable
+                         lock on that table
+
+        svpage           Each page touched by a server on behalf of a session in
+                         that server will have a server page lock.
+
+        extend           This lock type is used while extending (adding a new
+                         page to) a file.  It prevents two processes from
+                         trying to add pages to the same file at the same time.
+
+        config           Used when accessing a database config file.  The
+                         config file holds database configuration information.
+
+        dbtblid          Used to manage temp-table id's.  This does not
+                         actually lock anything, but the lock value is used to
+                         store the next table id to use for temp tables.
+
+        svdatabase       Each database opened by a server will have a server
+                         database lock on it.
+
+        svtable          Each table touched by a session in a server will have a
+                         server table resource lock.
+
+        event            Used by INGRES processes that want to use the locking
+                         system as a means to signal events.  This does not
+                         actually lock anything.
+
+        control          This is a table control lock.  It is requested in
+                         order to perform MODIFY, INDEX, RELOCATE, DESTROY,
+                         and CREATE SQL commands.  This lock is also held by
+                         sessions reading a table with readlock=nolock set.
+
+        journal          This lock is used when accessing database journal
+                         files.  Held only by RCP (Recovery process) and ACP
+                         (Archiver process).
+
+        opendb           There is an open database resource lock for each open
+                         database in a server
+
+        checkpoint       Each database which has online backup running will have
+                         have a checkpoint resource lock on it.
+
+        ckpcluster       Same as checkpoint but for VAXcluster installations of
+                         INGRES.
+
+        buffermgr        Each multiserver data buffer holds a buffer manager
+                         lock.
+
+        bufmgrdb         Buffer manager database lock.  Used to determine
+                         the validity of cache contents.  When a database
+                         is opened by a server, the value in this lock is
+                         used to determine if the cached information for the
+                         database is valid.  Does'nt actually lock anything.
+
+        bufmgrtable      Used the same as the buffer manager database lock,
+                         but operates on tables rather than databases.
+
+        syscontrol       This type is used in conjunction with
+                         user defined abstract datatypes.
+
+All lock ids, transaction, and process ids are displayed in hexadecimal.
+
+Some options are incompatible with other options.  If you select options
+which are incompatible at startup, a message will be displayed indicating
+what the problem is. 
+
+Limitations
+===========
+Since IPM runs within an operating INGRES installation, a number of
+different conditions apply.  IPM incorporates IIMONITOR, IINAMU, LOCKSTAT
+and LOGSTAT.  Whatever permissions and requirements they have also apply to
+IPM. 
+
+Since IPM opens the iidbdb to get a list of databases and opens other
+databases to get table names, the INGRES installation must be in a state to
+allow database connections. 
+
+The Server Info area of IPM assumes the INGRES name server is running since
+IPM obtains a list of servers from it.  This is not the case when the
+II_DBMS_SERVER logical/environment variable is defined (as previously
+discussed).  The server that II_DBMS_SERVER points to must exist and be
+accepting connects.  Various screens in the Server Info area of IPM connect
+to an INGRES server as a monitor session.  
+
+IPM will stay connected as a monitor session from the time the 
+'Sessions' menuitem is selected on the Server List screen until the
+Server List screen is returned to.  This allows IPM to stay attached to
+a given server making refreshes more efficient.  When the 'Shutdown'
+menuitem is chosen in the Server List screen, the connection to the
+selected server will be maintained until the 'Hard_Shutdown' or 'End'
+menuitem in the shutdown submenu is selected.  This means the connection
+is maintained after issuing a soft shutdown, so that a hard shutdown
+can be done.  IPM previously would connect, issue a soft shutdown and
+disconnect.  At that point, it would be impossible to reconnect to
+issue a hard shutdown if, for example, the users were not logging out of
+Ingres.
+
+IPM must be running on the same machine as the INGRES installation that is
+to be monitored.  This also implies that IPM needs to be pointed at the
+desired INGRES installation like any frontend or embedded INGRES user
+program. 
+
+IPM Screen Summary
+==================
+Each screen in IPM will be covered in this section.  There are diagrams of
+each screen with sample data.  In a later section, some useful hints are 
+provided. 
+
+IPM utilizes popup screens where possible to make it easier to use.  This
+allows the context on the previous screens to be preserved because the new
+screen does not obscure the currently displayed data (where possible). 
+
+The Main Menu screen
+--------------------
+When IPM is started, this screen is displayed first:
+
+________________________________________________________________________________
+INGRES IPM Main Menu                  Database: <all databases selected>        
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+        +--------------+---------------------------------------------------+    
+        |Server_List   |Display a list of servers to examine               |    
+        |Lock_Info     |Display locks and related information              |    
+        |Log_Info      |Display information on the logging system          |    
+        |Options       |View/Change option settings                        |    
+        |Help          |Get help information for this screen               |    
+        |Quit          |Exit INGRES IPM                                    |    
+        |              |                                                   |    
+        +--------------+---------------------------------------------------+    
+                                                                                
+        Place the cursor on your choice and select "Go"                         
+                                                                                
+                                                                                
+                                                                                
+
+________________________________________________________________________________
+Figure 1 - IPM Main Menu screen
+--------
+
+This screen displays the main menu.  From here, information on servers,
+locking and logging can be viewed.  Also, the command line options
+specified at startup can be changed by selecting the 'Options' menuitem. 
+
+To select a given area, use the up/down arrow keys to place the cursor
+on the desired choice and hit the "Go" key.  Alternatively, the desired
+menuitem can be selected.  The valid menuitems are:
+
+    Menuitem     Description
+    --------     -----------
+    Server_List  Displays the Server Information screens.  This area of
+                 IPM allows you to see a list of servers (that are registered
+                 with the INGRES name server).  You can view session
+                 information, remove sessions and shutdown servers (providing
+                 you are an INGRES superuser).  Note that this area of IPM
+                 contains IIMONITOR functionality which is documented in the
+                 I & O Guide.  If II_DBMS_SERVER is defined, the server it
+                 points to is the server whose information is displayed.
+
+    Lock_Info    Displays a new set of menuitems and choices.  These
+                 can be selected to display information pertaining to the
+                 INGRES locking system.  Locking system summaries, lock lists
+                 and resources can be viewed.  This area of IPM is where
+                 concurrency analysis and viewing of locking activity is done.
+
+    Log_Info     Displays a new set of menuitems and choices to display
+                 information pertaining to the INGRES logging system.
+                 Logging system summaries, transaction lists, process
+                 and database lists can be viewed.  This area of IPM can
+                 be used to monitor transaction rates, log file activity,
+                 processes and databases in the logging system.
+
+    Options      View or set options which determine what resources are 
+                 displayed on the Resource Display screen.  Options which can
+                 be set include: display resources for database db_name,
+                 display resources with resource type of 'restype',
+                 display all resource types, display resources for table
+                 'tablename'.  Popup help listing available choices are
+                 available for resource and database names.  There are
+                 additional options which can be set.
+
+    Go           Instead of picking a menuitem, you can place the cursor
+                 on the desired option and select this menuitem instead.
+
+    Help         Displays INGRES help screens.
+
+    Quit         Exit IPM.
+
+
+Option Selection Screen
+-----------------------
+This screen allows you to view/modify IPM options.
+
+________________________________________________________________________________
+INGRES IPM Option Selection - Currently set options.                            
+                                                                                
+                                                                                
+  +----------------------------------+      +------------------------------+    
+  |Display null resources?          n|      |Display all resource types?  n|    
+  +----------------------------------+      +------------------------------+    
+  +----------------------------------+                                          
+  |Display specified resource type? n|       Type to display:                   
+  +----------------------------------+                                          
+  +----------------------------------+      +---------------------------------+ 
+  |Display locks for one DB?        n|      |Specify database (?<CR> for list)| 
+  |                                  |      |                                 | 
+  +----------------------------------+      +---------------------------------+ 
+  +----------------------------------+      +---------------------------------+ 
+  |Display locks for one table?     n|      |Specify a table name             | 
+  |                                  |      |                                 | 
+  +----------------------------------+      +---------------------------------+ 
+  +----------------------------------+      +---------------------------------+ 
+  |Display Refresh (seconds)      0  |      |Display system locklists?      n |
+  +----------------------------------+      +---------------------------------+ 
+  +----------------------------------+
+  |Display inactive transactions?   n|
+  +----------------------------------+
+
+________________________________________________________________________________
+Figure 2 - Option Selection Screen with sample data
+--------
+
+The Option Selection screen allows the runtime options for IPM to be viewed
+and changed.  Some options determine what resources will be displayed when
+the Resource Display screen is refreshed. 
+
+These options can also be specified on the command line when IPM is
+invoked.  By specifying appropriate options, detailed resource locking
+information down to the page level or a summary display of what databases
+are currently open can be viewed. 
+
+Some options are incompatible with other options.  When options are
+specified, the conflicting options (if any) are set appropriately.  When
+the changes are saved; if any options are set incorrectly, an error message
+will be displayed.  It makes no sense, for instance, to specify display of
+all resource types and specify display of table resource locks for table
+'x' since a table resource lock type is a subset of all resource types. 
+
+Below is a description of each option:
+
+    'Display null         If 'Y' is entered, any resources which are granted
+     resources'           null and qualify based on other specified options 
+                          are displayed.  Entering 'N' will suppress display
+                          of granted null resources.  Granted null relation
+                          locks show what tables were referenced during the
+                          database session: i.e. a granted null lock on 
+                          table 'x' indicates that a query was run against
+                          table 'x'.  Granted null locks don't block any
+                          access to the resource they are granted on.  'N'
+                          is the default unless a resource type is 
+                          specified.
+
+    'Display all          If 'Y' is entered, all INGRES resource types are
+     resource types'      displayed.  The default is to display only database,
+                          table, and page resources.
+
+    'Display specified    If 'Y' is entered, the resource to search for
+     resource type'       must be entered in the 'Type to display' field.
+                          'N' is the default.  Resource types of
+                          interest include:
+
+                                database 
+                                table 
+                                page 
+                                createtable 
+
+                          Other resource types exist.  The full list can be
+                          found in the "Startup Options" section of this
+                          document.  Entering a '?' in the 'Type to display'
+                          field and hitting '<CR>' will display a popup list.
+
+    'Display resources    To display resources for a specific database, enter
+     for one DB'          'Y' then enter the database name in the 'Specify
+                          database' field.  The default is 'N'.  Entering a
+                          '?' in the 'Specify database' field and hitting
+                          '<CR>' will display a popup list.
+
+    'Display resources    To display resources for a specific table, enter 'Y'
+     for one table'       then enter the table name in the 'Specify a table
+                          name' field.  A 'Y' must have also been entered in
+                          the 'Display resources for one DB' field.  The
+                          default is 'N'.
+
+    'Display Refresh'     To set a refresh time for the Lock Summary, Log 
+                          Summary and Log Header Display screens, enter a
+                          a number between 1 and 999 (seconds).  Entering
+                          a value greater than 0 will cause these displays
+                          to autorefresh (auto update) every 'n' seconds.  The
+                          default is not to refresh automatically.
+
+    'Display system       To display system lock lists in addition to user
+     locklists'           locklists, enter 'y'.  Any locklist with a status
+                          of 'NONPROTECT' is not displayed by default and
+                          is usually a system lock list.  
+
+    'Display inactive     To display inactive transactions in addition to 
+     transactions'        active transactions, enter 'y'.  Any transaction 
+                          with a status of 'INACTIVE' is not displayed by 
+                          default and is usually a system transaction.  User
+                          transactions which have been committed but not
+                          journalled will have a status of INACTIVE.
+
+Once the desired options have been specified, select the 'Save' menuitem.
+If the Options screen is called from the Lock List Display or Resource
+Display screens, the 'Refresh' menuitem should be selected on either of
+those screens to actually refresh the displays using the specified search
+criteria. 
+
+The menuitems available on this screen include:
+
+    Menuitem    Description
+    --------    -----------
+    Save        Saves the options which are shown and returns to the
+                previous screen.  
+
+    Forget      Ignore any changes made to the options and return to the
+                previous screen.
+
+    Restore     Resets all options to the state when the IPM Option 
+                Selection screen was entered and does not return to the
+                previous screen.  At this point any changes to the options
+                can be made.
+
+    Help        Displays the INGRES help screens.
+
+    Quit        Exit IPM.
+
+IPM Server Information screens
+------------------------------
+This area of IPM allows the user to view server lists, session lists and
+other related information.  An INGRES superuser can terminate servers or
+sessions, if desired. 
+
+The Server List screen
+----------------------
+________________________________________________________________________________
+INGRES IPM Main Menu                  Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Server List-------------------------------------+                  
+ |Name            Type       Database(s)                     |                  
+ |---------------+----------+--------------------------------|                  
+ |II_DBMS_BE_141 |INGRES    |*                               |                  
+ |               |          |                                |                  
+ |               |          |                                |                  
+ |               |          |                                | ------------+    
+ |               |          |                                |             |    
+ |               |          |                                |             |    
+ +---------------+----------+--------------------------------+ em          |    
+                                                                           |    
+        |Help          |Get help information for this screen               |    
+        |Quit          |Exit INGRES IPM                                    |    
+        |              |                                                   |    
+        +--------------+---------------------------------------------------+    
+                                                                                
+        Place the cursor on your choice and select "Go"                         
+                                                                                
+                                                                                
+
+________________________________________________________________________________
+Figure 3 - Server List screen
+--------
+
+The Server List screen displays a list of servers registered with the
+INGRES name server.  If II_DBMS_SERVER is set, the 'Name' field will
+contain the name of the server pointed to by II_DBMS_SERVER.  If a server
+registered with the INGRES name server was started up with a list of
+databases, one entry will appear for each database.  For example, if a
+server was given a list of 3 databases at startup, it would be listed 3
+times on the Server List screen. 
+
+The 'Name' field contains the name of the server.  The 'Type' field
+contains the type of server which is usually 'INGRES' but may be of type
+'STAR'.  Other types of servers may be running but they will not be
+displayed. 
+
+The 'Database(s)' field will either contain a '*' or a database name. A '*'
+signifies that the server can open any database in the current INGRES
+installation. 
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    More_Info      Displays the Server Detail screen.  The Server Detail screen
+                   contains information on the server that the cursor was
+                   positioned on.  The Server Detail screen is described
+                   later in this document (See Figure 4).
+
+    Sessions       Displays the Session List screen which shows all of the
+                   sessions for the server on which the cursor is positioned.
+                   The information displayed includes the session name and
+                   session id.  The Session List screen is described later in
+                   this document (See Figure 6).
+
+    Process_Info   Displays a screen which shows various job-process
+                   information for the server on which the cursor is positioned.
+                   Such information includes CPU time, Direct I/O, Buffered I/O,
+                   Enqueue limit, etc.  This display automatically refreshes
+                   (See Figure 5).  This menuitem is available on VMS only.
+
+    Shutdown       Displays a submenu.  The submenu allows an INGRES superuser
+                   to shut down a server in an orderly 'nice' way or minimal
+                   'hard' way.  Available submenu choices are:
+
+                   Menuitem       Description
+                   --------       -----------
+                   Soft_Shutdown  Same as 'set server shut' in
+                                  IIMONITOR.  Soft_Shutdown is preferred
+                                  providing it is OK to wait until the 
+                                  current sessions end before the server
+                                  stops.  After this menuitem is executed,
+                                  the connection to the server is maintained
+                                  and the submenu reappears.  This allows
+                                  the 'Hard_Shutdown' menuitem to be 
+                                  selected, if desired.  When the 'End'
+                                  menuitem is selected, the connection is
+                                  dropped and it is not possible to re-
+                                  connect to the server at all.
+
+                   Hard_Shutdown  Same as 'stop server' in IIMONITOR.
+                                  When in a hurry to stop a server, this
+                                  should be used instead of OS commands
+                                  like VMS stop or UNIX kill -9.  Executing
+                                  this menuitem will immediately stop the 
+                                  server and break out of the submenu.
+
+    Refresh        Queries the INGRES name server for a list of INGRES servers.
+                   If there are none, a message is printed and the Main Menu
+                   screen is displayed.  If II_DBMS_SERVER is set, the value
+                   that it contains is displayed.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Main Menu screen.
+
+    Quit           Exit IPM.
+
+
+The Server Detail screen
+------------------------
+________________________________________________________________________________
+INGRES IPM Main Menu                  Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Server List-------------------------------------+                  
+ |Name            Type       Database(s)                     |                  
+ |---------------+----------+--------------------------------|                  
+ |II_DBMS_BE_141 |INGRES    |*                               |                  
+ |                                                           |                  
+ | +INGRES IPM Server Detail----+                            |                  
+ | | +---------+-------+------+ |                            | ------------+    
+ | | |Sessions |Current|Max   | |                            |             |    
+ | | |---------+-------+------| |                            |             |    
+ + | |Total    | 10    | 57   | | ---------------------------+ em          |    
+   | |Active   | 0     | 57   | |                                          |    
+   | +---------+-------+------+ | nformation for this screen               |    
+   |   Ready Mask: 00008080     | S IPM                                    |    
+   |        State: 00000020     |                                          |    
+   |Idle Quantums: 324485/327697| -----------------------------------------+    
+   +----------------------------+                                               
+                                  hoice and select "Go"                         
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+
+Figure 4 - Server Detail popup screen with sample data
+--------
+
+The Server Detail screen displays information about the server that the
+cursor rested on when the Server List screen was displayed. 
+
+The boxed area shows the session count information.  Information on
+session counts include:
+
+        Total current sessions - the number of all sessions connected to the
+                specified server.
+        Total maximum sessions - the maximum number of sessions that the
+                specified server can handle.
+        Active current sessions - the number of sessions in a computable
+                state.  The active_sessions qualifier to the server startup
+                command currently has no effect on the number of computable
+                sessions allowed at any one time.  The server does not
+                yet provide a count of the number of active transactions to
+                IPM, therefore this number is always 0.
+        Active maximum sessions - the maximum number of sessions that can
+                be in a computable state.
+
+The maximum and active maximum sessions are determined at server startup.
+Please reference the INGRES I & O Guide for more information.
+
+The 'Ready Mask' is almost always '00008080' and the 'State' is '00000020'.
+The amount of CPU used is displayed in terms of Quanta used in the
+'Idle Quantums' field.
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Refresh        Queries the specified INGRES server for server detail
+                   information.  If the specified server no longer exists,
+                   a message is displayed.  
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Server List screen.
+
+    Quit           Exit IPM.
+
+Detailed Process Information screen
+-----------------------------------
+This screen displays detailed job/process information on the selected
+process (usually an INGRES server).  This screen can also be invoked from
+the Logging area of IPM.  In that case, the information displayed could be
+for a server, recovery process or an archiver.  When this screen is invoked
+from the Session List screen, the front end (or client) process information
+is displayed.  This will only work when front end is local and interactive.
+
+This feature is only available on VMS.
+_______________________________________________________________________________
+INGRES IPM Detailed Process Information                           12:00:20.95   
+PID: 2f200141           Owner PID: 0           Terminal:                        
+Name: II_DBMS_BE_141    Acct Name: <start>     Username: SYSTEM                 
+                                                                                
+CPU Time: 0:38:18.72      PRI: 7 /4    UIC: [1000,17  ]    Process State: HIB   
+Image Name: CONDOR$DUB5:[RPLUS_DEV.][INGRES.BIN]IID        Mode: OTHER          
+Subprocess Quota: 8                                                             
+                                           -- Buffered I/O Information --       
+    -- AST Information --          Limit: 110     Remain: 103    Total: 32906   
+Limit:  110    Remaining: 101      BYTLM: 48208        Byte Count Left: 48208   
+                                                                                
+ -- Lock Enqueue Information --            -- Direct I/O Information --         
+Limit: 30      Remaining: 24       Limit: 55      Remain: 55     Total: 33768   
+                                                                                
+  -- Page File Information --                -- Memory Information --           
+Limit: 63750   Remaining: 54596    Page Faults: 7557     Global Pg Cnt: 0       
+                                                                                
+ -- Open File Information --            -- Working Set Information --           
+Limit: 75      Remaining: 58       Default Size: 377      Current Size: 12124   
+                                   Quota: 754     Extent: 32800   Peak: 9398    
+ -- Timer Queue Information --                             Auth Extent: 32800   
+Limit: 55      Remaining: 53                          Current # of pgs: 9117    
+________________________________________________________________________________
+Figure 5 - Detailed Process Information screen
+--------
+
+The process whose information is displayed on the above screen is
+determined by what row the cursor rested on in the Server List screen, Log
+Process Display screen or Log Transaction Display screen. 
+
+By examining the Detailed Process Information screen, it is easy to
+determine if the quotas for the account that started this INGRES process
+are adequate. 
+
+The display is automatically refreshed.  The 'Display Refresh' field on the
+Options Display screen does not affect the refresh time of this screen. 
+
+Important displayed information includes:
+
+     Field              Description
+     -----              -----------
+     Process State      The VMS process state.
+
+     CPU Time           Cumulative CPU time.  
+	
+     Lock Enqueue Info  The important value is the Remaining field.  When
+                        this value reaches zero, it means that the server
+                        can't acquire any more locks.  This could lead to
+                        INGRES errors and/or lock escalation (which implies
+                        table level locking).  Lock escalation can cause
+                        serious concurrency problems.  This is a concern
+                        for INGRES installations on VAXClusters where INGRES
+                        uses the VMS Distributed Lock Manager (DLM).
+
+     Direct I/O Info    The Total field shows how many cumulative direct I/O
+                        requests were made.  This indicates how much disk I/O
+                        is being performed.
+
+     Open File Info     The Remaining field shows how many more files
+                        the process can open.  On queries which touch many
+                        tables, on databases with journals and queries which
+                        contain aggregates, the File Limit Quota (FILLM) can
+                        be exceeded if not set at recommended levels (see the
+                        INGRES I&O Guide).
+
+     Page Faults        Indicates if the working set sizes (also displayed)
+                        are sufficient.
+
+When the process which is being monitored is deleted, an appropriate
+message is displayed in the upper left corner of the form.  At any time,
+the current screen can be written to a file for later analysis.  This
+display is very useful for observing servers which are running large
+queries, MQTs (Multi Query Transactions) or users to ensure that there are
+sufficient OS resources.  For more information on JPI parameters, please
+reference the VMS System Services Manual, information on sys$getjpi system
+call.
+
+The Detailed Process Information screen has the following menuitems:
+
+    Menuitem      Description
+    --------      -----------
+    Print_Screen  Captures the current screen's contents.   This stops the
+                  screen refresh while writing the screen out.  When the
+                  screen is written to the file, the screen refresh resumes.
+
+    Help          Displays INGRES help screens.
+
+    End           Return to the previous screen.
+
+    Quit          Exit IPM.
+
+Session List screen
+-------------------
+This screen displays the sessions for the server that the cursor rested on
+when the 'Session_List' menuitem was selected on the Server List screen.
+
+________________________________________________________________________________
+INGRES IPM Main Menu                  Database: <all databases selected>      
+                                                                              
+ +INGRES IPM Server List-------------------------------------+                
+ |Name            Type       Database(s)                     |                
+ |---------------+----------+--------------------------------|                
+ |II_DBMS_F7_A9C |INGRES    |*                               |                
+ |                                                                            
+ |+INGRES IPM Session List---------------------------------------------------+
+ ||ID       Name            Database CS State             CS Mask            |
+ ||--------+---------------+--------+--------------------+-------------------|
+ ||   281cc| <idle job>    |<none>  |CS_COMPUTABLE       |                   |
+ +|  214ea0| <Fast Commit T|        |CS_EVENT_WAIT (LOG-I|CS_INTERRUPT_MASK  |
+  |  215ae0| <Write Behind |        |CS_EVENT_WAIT (LOCK)|CS_INTERRUPT_MASK  |
+  |  216720| <Write Behind |        |CS_EVENT_WAIT (LOCK)|CS_INTERRUPT_MASK  |
+  |  4cb620|tomt           |ipm63   |CS_EVENT_WAIT (BIO) |CS_INTERRUPT_MASK  |  
+  |  4d3920|tomt           |ipm63   |CS_EVENT_WAIT (LOCK)|CS_TIMEOUT_MASK, CS|  
+  |  41eff0|test63         |ipm63   |CS_EVENT_WAIT (DIO) |                   |
+  |  41db60|tomt           |<none>  |CS_COMPUTABLE       |                   |
+  |        |               |        |                    |                   |
+  |        |               |        |                    |                   |
+  +--------+---------------+--------+--------------------+-------------------+
+                                                                              
+________________________________________________________________________________
+Figure 6 - Session List popup screen
+--------
+
+The Session List screen displays all of the sessions for the selected
+server. Information displayed for each session includes the name, id, state
+and mask.  The state and mask columns contain useful information: 
+
+    Column      Description
+    ------      -----------
+    CS State    The state of the session.  If the session is waiting for
+                an event, the value CS_EVENT_WAIT is displayed along with
+                the the event type in parentheses e.g. (LOCK), (DIO) - disk
+                i/o, (BIO) - client [frontend] communications.  This column
+                is scrollable (there may be more data to the right).
+                Use the 'Find' menuitem to search this column.
+
+    CS Mask     If this column contains "CS_TIMEOUT_MASK", the session
+                may be waiting for a lock.  This column also scrolls.
+
+The displayed session name is the apparent username.  If the session was
+invoked with the -u flag, that username will be displayed (see the SQL
+Reference Guide - Chapter 4, SQL command).  To determine the real username
+of the session, select the 'More_Info' menuitem.
+
+The Session List screen has the following menuitems:
+
+    Menuitem        Description
+    --------        -----------
+    More_Info       Displays the Session Detail screen.  This screen displays
+                    information about the session indicated by the cursor
+                    position when this menuitem is selected.  The Session
+                    Detail screen is explained later in this document.
+                    (See Figure 7)
+
+    DBA_Operations  Displays a submenu which allows an INGRES superuser
+                    to delete the session on which the cursor is positioned.
+                    If the Delete sub-menuitem is selected, that session will
+                    be removed from the server and any open transactions it
+                    has are rolled back.
+
+    Refresh         Queries the specified INGRES server for a list of sessions
+                    and refreshes the display.  If the server no longer
+                    exists, a message is printed.
+
+    Help            Displays INGRES help screens.
+
+    End             Return to the Server List screen.
+
+    Quit            Exit IPM.
+
+Session Detail screen
+---------------------
+This screen displays detail information for the session that the
+cursor rested on when the 'More_Info' menuitem was selected on the Session
+List screen.
+
+________________________________________________________________________________
+INGRES IPM Main Menu                  Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Server List-------------------------------------+                  
+ |Name            Type       Database(s)                     |                  
+ |---------------+----------+--------------------------------|                  
+ |II_DBMS_F7_831 |INGRES    |*                               |                  
+ |                                                                              
+ |+INGRES IPM Session List---------------------------------------------------+  
+ ||ID       Name            Database CS State             CS Mask            |  
+ |+INGRES IPM Session Detail----------------------------------------------+ -|  
+ ||Real User: tomt               Terminal: lta23          PID: 64007a5    |  |  
+ +| Group Id:                     Role Id:                                |  |  
+  |                                                                       |  |  
+  |      DBA: tomt                          ------Server Facility------   |  |  
+  |                                         Name: <None>   ID: 00000000   |  |  
+  |             Application code: 00000000                                |  |  
+  |                     Activity:                                         |  |  
+  |        Log records processed:                                         |  |  
+  |          Current log address:                                         |  |  
+  |                                                                       |  |  
+  |Query: <none>                                                          | -+  
+  |                                                                       |     
+  +-----------------------------------------------------------------------+     
+                                                                                
+________________________________________________________________________________
+Figure 7 - Session Detail popup screen
+--------
+
+Information displayed includes the real username, the terminal, database
+name, DBA name and other server information.  The 'Current Server Facility'
+is usually '00000000'.  Occasionally, you may find this field contains another
+value.  If it is '00000006', this could mean this session is in the QEF
+facility of the server waiting for a lock or I/O.  The three letter mneumonic
+for the server facility is also shown.
+
+If the user running IPM is an Ingres superuser, the first 128 characters of
+the query currently running is displayed.  A current query is one being 
+processed by the DBMS not a query that has returned results and finished
+executing even though the user has not committed.
+
+On VMS, if the session is being run from a front end which is local and
+interactive (as opposed to batch), the front end's PID is displayed.  Using
+the 'Process_Info' menuitem, the front end JPI parameters can be observed
+using the IPM Detailed Process Information screen.
+
+If the specified session was started with the -u flag (to impersonate
+another user), the username field contains the name of the real user.
+
+The group and role ID (part of the optional Knowledge Management
+Extension package), if any, are displayed for the current session.
+
+When the session under observation is backing out due to any cause, the
+number of log records processed and the log address being processed in
+the process of the rollout will be displayed.  This allows visual confirmation
+that the server is indeed doing work on the rollout.  Periodic refreshes
+gives a measure of the progress in performing the rollout.  A session which
+is being rolled out should never be removed nor should the server containing
+that session be terminated in any way.
+
+The Activity field indicates the various states a session may be in.  The
+possible states are:
+
+    State                            Explaination
+    -----                            ------------
+    Aborting                         a normal abort is being performed.
+                                     (i.e. user issued a ROLLBACK,
+                                     deadlock, etc)
+
+    Performing force abort processing
+                                     indicates that an abort of an old
+                                     transaction is underway
+
+    Aborting on behalf of an interrupt
+                                     an abort is taking place due to an
+                                     interrupt (Control-C)
+
+    Aborting on behalf of a          an abort is taking place for a session
+    terminating session              which is terminating ungracefully
+
+    Terminating session              a session is terminating normally
+
+    Fetching IIDBDB information      a session that is starting up is 
+                                     retrieving IIDBDB information.  This
+                                     can show up for extended periods due
+                                     to locks on the IIDBDB or the logging
+                                     system is full.
+
+    Optimizing query                 shows up while the optimizer is at work
+
+The Session Detail screen has the following menuitems:
+
+    Menuitem        Description
+    --------        -----------
+    Refresh         Queries the specified INGRES server for new session
+                    detail for the specified session and refreshes the
+                    display.  If the server and/or session no longer
+                    exists, a message is printed.
+
+    Process_Info    Displays a screen which shows various job-process
+                    information for the front end which is being examined.
+                    The front end must be local and interactive (not in batch)
+                    in order for this option to work: a PID can't be obtained
+                    for a session's front end unless the front end is 'tied to'
+                    a terminal.  Information displayed includes CPU time,
+                    Direct I/O, Buffered I/O, Enqueue limit, etc.  This
+                    display automatically refreshes (See Figure 5).  This
+                    menuitem is available on VMS only.
+
+    Help            Displays INGRES help screens.
+
+    End             Return to the Session List screen.
+
+    Quit            Exit IPM.
+
+
+IPM Lock Information screens
+----------------------------
+This area of IPM allows the user to view lock lists, locks by resource and
+other related information.  This section of IPM is most useful for concurrency
+analysis/tuning of a running system.  The Lock List Display screen is most
+useful for locating concurrency bottlenecks.  The Resource List Display
+screen is useful for gauging the amount of activity in a database, table or
+page.  The Locking System Summary screen is useful for determining if locking
+parameters specified at build or rcpconfig time are adequate (see the
+INGRES I & O Guide).
+
+Lock Info Menu screen
+---------------------
+________________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+        +--------------+---------------------------------------------------+    
+        |Summary       |Display a Locking System summary                   |    
+        |Locks         |Display locklists and related information          |    
+        |Resources     |Display resource lists and related information     |    
+        |Refresh       |Get new snapshot of locking system information     |    
+        |Options       |View/Change option settings                        |    
+        |              |                                                   |    
+        |              |                                                   |    
+        +--------------+---------------------------------------------------+    
+                                                                                
+        Place the cursor on your choice and select "Go"                         
+                                                                                
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 8 - Lock Info Menu screen
+--------
+
+The Lock Info Menu screen is the top level screen for the Locking area of IPM.
+From here, various locking screens can be invoked.  When this screen is
+displayed, a snapshot of the INGRES locking system has been obtained.  This
+can account for some delay before this screen is displayed.  The Options
+specified at IPM startup or on the Options Selection screen (see Figure 2)
+will determine how much information is obtained from the INGRES locking system.
+
+To select a given area, use the up/down arrow keys to place the cursor
+on the desired choice and hit the "Go" key.  Alternatively, the desired
+menuitem can be selected.
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Summary        Displays the Locking System Summary screen.  Information
+                   on the INGRES locking system is displayed (lock list
+                   activity, deadlock counts and other data - see Figure 9)
+
+    Locks          Displays the Lock List Display screen.  All lock lists
+                   in the INGRES locking system are displayed.
+
+    Resources      Displays the Resource List Display screen.  All resources
+                   of interest that have locks on them are displayed.  The
+                   resources displayed depend on the setting of IPM options.
+
+    Refresh        Queries the INGRES locking system for locking information.
+                   Lock List and Resource information are obtained together
+                   to ensure a consistent snapshot of the locking system.
+                   After setting IPM Options, select this menuitem so the
+                   locking information reflects the set options.  See the
+                   Option Selection screen section of this document.
+
+    Options        Displays the Option Selection screen.  The current option
+                   settings are displayed.  They can be modified and saved.
+                   If any options for lock lists or resources were changed,
+                   select the 'Refresh' menuitem.  See the Option Selection
+                   screen section of this document.
+
+    Select         Instead of picking a menuitem, place the cursor on the
+                   desired option and select this menuitem instead.
+  
+    End            returns to the Main Menu screen.
+
+Locking System Summary screen
+-----------------------------
+________________________________________________________________________________
+ INGRES IPM Locking System Summary                                              
+                                                                                
+                                                                                
++--------Lock list information----------+  +-------Hash table sizes--------+    
+| Created:    48409     In use:       39|  |Lock: 511      Resource: 511   |    
+|Released:    48257  Remaining:      473|  +-------------------------------+    
+|              Total available:      512|   Resources in use: 288               
++---------------------------------------+                                       
+                                                                                
++------------------------------Lock information------------------------------+  
+|   Requested:   418826     Released:   273351               In use:      326|  
+|Re-requested:   209742    Cancelled:        4            Remaining:     4674|  
+|   Converted:   279534    Escalated:     3381      Total available:     5000|  
+|                                                                            |  
+| Deadlock search:     1684     Deadlock:        4     Convert wait:       27|  
+|Convert deadlock:        1                               Lock wait:     1653|  
+|                                                                            |  
+|Locks/Transaction: 256                                                      |  
++----------------------------------------------------------------------------+  
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 9 - Locking System Summary screen
+--------
+
+The Locking System Summary screen displays various pieces of information
+from the INGRES locking system.  By viewing the data on this screen, it is
+possible to determine which locking parameters need to be adjusted.
+Currently, there is no way to view the locking parameters used to configure
+the INGRES locking system from IPM.  Those parameters should be kept in a
+handy place when viewing this screen. 
+
+This screen will autorefresh the information if the -r flag was specified
+at startup or the 'Display Refresh' field on the Option Selection screen
+was changed to a number between 1 and 999 seconds (see Figure 2). 
+Autorefresh is desirable when monitoring this information as there is no
+need to select the 'Refresh' menuitem. 
+
+There are times when tests or benchmarks are being run and it is desirable
+to determine the locking system activity during the test.  By selecting the
+'Interval' menuitem then selecting the 'Start_Now' menuitem, the statistics
+displayed will be those accumulated since the start time.  In addition, if
+the Interval option was not previously enabled, the start time and current
+time fields appear in the upper right hand corner of the Locking System
+Summary screen (see Figure 10).  To reset the start time (which is the
+time when the 'Start_Now' menuitem is selected), just select the 'Interval'
+menuitem followed by the 'Start_Now' menuitem. 
+
+The start time and statistics obtained at the start time will remain
+unchanged until the 'Begin_Now' or 'Since_Startup' menuitems are selected
+or the user exits IPM.  This allows other IPM functions (e.g. logging,
+other locking or server information) to be used while accumulating
+statistics. When the Locking System Summary screen is displayed at a later
+time, the running totals since the start time are not lost. 
+
+When displaying statistics over an interval, the 'autorefresh' option
+should be set.  This causes the display to be automatically updated. 
+
+When this screen is displayed on VAXcluster installations of INGRES,
+additional fields are displayed (see Figure 11). 
+
+Fields of particular interest are the quantities of locks/lock lists
+remaining, in use and total available.  By observing these fields, it
+is easy to spot conditions when more locking system resources need
+to be made available by reconfiguring the locking system (via rcpconfig,
+see the Ingres Installation and Operations guide).
+
+Some of the fields of interest on the Locking System Summary screen are:
+
+    Field          Description
+    -----          -----------
+    Create lock    Indicates the number of times a lock list was created
+    list           on behalf of a server, session or transaction.
+
+    Release lock   Indicates the number of times a release of a lock list
+    list           occurred on behalf of a server, session or transaction.
+
+    Request lock   Indicates the number of new lock requests that the INGRES
+                   locking system processed.
+
+    Re-request     Gives the number of times an implicit lock conversion request
+    lock           was issued on a resource that the lock list already had
+                   locked.  Implicit lock conversions can occur when a request
+                   is made on a page for update that was previously requested
+                   for read.
+
+    Convert Lock   Shows the number of times an explicit lock conversion
+                   request is made to change  a lock mode on a physical lock
+                   from one mode to another.  These types of requests occur
+                   as a result of a physical lock being converted during an
+                   existing transaction to lower or higher modes.
+
+    Release Lock   Indicates the number of times a specific logical lock is
+                   released, as opposed to a full, partial, or physical lock
+                   release.
+
+    Escalate       Gives the number of times a partial release occurred to
+                   allow escalation of lock granularity from page to table
+                   level.
+
+    Lock Wait      Shows the number of times a new lock request had to wait
+                   to be granted.
+
+    Convert Wait   Gives the number of times an existing lock waited for
+                   conversion to a different lock mode.
+
+    Convert        Indicates the number of times a request for conversion
+    deadlock       turned into a deadlock.
+
+    Deadlock       Shows the number of times a deadlock search was initiated.
+    search
+
+    Deadlock       Shows the number of times that deadlock existed.
+
+    Cancel         Gives the number of times a lock request was cancelled due
+                   to a timeout or interrupt.
+
+The following fields appear only in VAXcluster installations
+(below the '--Global Locking Information--' label on the screen,
+See Figure 11):
+
+    Field          Description
+    -----          -----------
+    Enqueue        Indicates the number of times the VMS lock manager
+                   was called to map INGRES locks onto their VMS
+                   counterparts thru the use of VMS system calls.
+
+    Dequeue        Shows the number of times the VMS lock manager was
+                   called to de-queue VMS locks using VMS system calls
+                   that occurred as a result of a change in status of the
+                   corresponding INGRES lock.
+
+    Dlck search    Gives the number of pending global deadlock search
+    pending        requests.
+
+    Deadlock       Indicates the number of global deadlocks that existed.
+
+    Lock grant     Gives the number of global locks that were granted without
+    before srch    contention as a result of the lock request.
+
+    Dlck search    Indicates the number of times a global deadlock search
+    requests       was initiated
+
+    Dlck search    Shows the number of times the Cluster Server Process (CSP)
+    calls          requested deadlock search information.
+
+    Dlck messages  Shows the number of times a global deadlock message was
+    sent           built up and sent.
+
+    Con't dlck     Indicates the number of times a continue global deadlock
+    srch calls     search request was issued in response to an unresolved
+                   global contention problem.
+
+    Con't dlck     Shows the number of continue global deadlock search
+    msgs sent      messages that were sent due to an unresolved global
+                   contention problem.
+
+    Unsent dlck    Gives the number of unsent global deadlock search
+    srch rqsts     messages found.
+
+    Sent all       Gives the number of times that global deadlock search
+    dlck srch      requests were more than 50% of the total number of
+    rqsts          transactions.
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Refresh        Queries the INGRES locking system for locking summary
+                   information.  Even if the autorefresh option is set,
+                   this menuitem can still be selected at any time.
+
+    Interval       Displays a submenu which allows a start time to be set
+                   be set to begin measuring locking summary information.
+                   This allows display of summary information that occured
+                   since the selected start time.  Otherwise, the information
+                   displayed is activity since the INGRES locking system was
+                   started.  Choices available from the submenu are:
+
+                       Menuitem       Descriptions
+                       --------       ------------
+                       Since_Startup  Selecting this menuitem will display
+                                      summary information since system
+                                      startup.  This is the default.  If
+                                      the Interval option was enabled (see
+                                      the 'Begin_Now' menuitem and Figure 10),
+                                      the start and current time fields
+                                      disappear.
+
+                       Begin_Now      Selecting this menuitem will enable
+                                      the Interval option, clear all values
+                                      from the screen and display the start
+                                      time and current time fields (see Figure
+                                      10).  The next refresh of the
+                                      summary information will cause the
+                                      activity since the start time to be
+                                      be displayed.  The start time and
+                                      summary information at the start time
+                                      are maintained until the 'Since_Startup'
+                                      menuitem is selected or 'Begin_Now'
+                                      is selected again.
+
+                       End            Returns to the previous menu.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Lock Info Menu screen.
+
+    Quit           Exit IPM.
+
+The following screen (Figure 10) is how the screen appears when the
+Interval option is enabled.
+
+________________________________________________________________________________
+ INGRES IPM Locking System Summary            Current Time   Starting Time      
+                                                07:31:20       07:31:07         
+                                                                                
++--------Lock list information----------+  +-------Hash table sizes--------+    
+| Created:        0     In use:       39|  |Lock: 511      Resource: 511   |    
+|Released:        0  Remaining:      473|  +-------------------------------+    
+|              Total available:      512|   Resources in use: 293               
++---------------------------------------+                                       
+                                                                                
++------------------------------Lock information------------------------------+  
+|   Requested:       16     Released:       17               In use:      330|  
+|Re-requested:       80    Cancelled:        0            Remaining:     4670|  
+|   Converted:       13    Escalated:        0      Total available:     5000|  
+|                                                                            |  
+| Deadlock search:        0     Deadlock:        0     Convert wait:        0|  
+|Convert deadlock:        0                               Lock wait:        0|  
+|                                                                            |  
+|Locks/Transaction: 256                                                      |  
++----------------------------------------------------------------------------+  
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 10 - Locking System Summary screen with Interval option
+---------
+
+The screen shown in Figure 11 will be displayed instead of the screen in
+Figure 9 when IPM is running on a VAXcluster INGRES installation.
+
+________________________________________________________________________________
+ INGRES IPM Locking System Summary                                              
+                                                                                
++---------Lock list information---------+   +-------Hash table sizes--------+   
+| Created:    48289     In use:       38|   |Lock: 511      Resource: 511   |   
+|Released:    48138  Remaining:      474|   +-------------------------------+   
+|              Total available:      512|           Resources in use: 266       
++---------------------------------------+                                       
++-------------------------------Lock information------------------------------+ 
+|   Requested:   417764     Released:   272533                In use:      299| 
+|Re-requested:   208233    Cancelled:        4             Remaining:     4701| 
+|   Converted:   279071    Escalated:     3365       Total available:     5000| 
+|                                                  Locks/Transaction: 256     | 
+| Deadlock search:     1681       Deadlock:        4                          | 
+|Convert deadlock:        1   Convert wait:       27       Lock wait:     1650| 
++-----------------------------------------------------------------------------+ 
++--------------------------Global Locking Information-------------------------+ 
+|                   Enqueue:   234433                        Dequeue:   123423| 
+|   Deadlock search pending:        2                       Deadlock:        1| 
+|  Lock grant before search:        0       Deadlock search requests:       10| 
+|     Deadlock search calls:        7         Deadlock messages sent:       10| 
+| Con't deadlock srch calls:        8       Con't deadlock msgs sent:        0| 
+|Unsent deadlock srch rqsts:        0   Sent all deadlock srch rqsts:        0| 
++-----------------------------------------------------------------------------+ 
+                                                                                
+________________________________________________________________________________
+Figure 11 - Locking System Summary screen on a VAXcluster installation
+---------
+
+Lock List Display screen
+------------------------
+________________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Lock List Display---------------------------------------------+    
+ |                      -------Locks-------                                |    
+ |ID       Session      Count Logical MaxL  Status                         |    
+ |--------+------------+-----+-------+-----+-------------------------------|    
+ | 236000f|<none>      |1    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ | 29c0014|tomt        |2    |1      |256  |<none>                         |    
+ | 1660019|<none>      |1    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ |   1002c|<none>      |178  |0      |128  |NONPROTECT                     |    
+ |   1002d|<none>      |6    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ |   10030|<none>      |3    |0      |128  |NONPROTECT,MASTER,NOINTERRUPT  |    
+ | 6c3005e|<none>      |1    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ | 1b5005f|tomt        |2    |1      |256  |WAIT                           |    
+ |        |            |     |       |     |                               |    
+ |        |            |     |       |     |                               |    
+ |        |            |     |       |     |                               |    
+ |        |            |     |       |     |                               |    
+ |        |            |     |       |     |                               |    
+ |        |            |     |       |     |                               |    
+ |        |            |     |       |     |                               |    
+ +--------+------------+-----+-------+-----+-------------------------------+    
+________________________________________________________________________________
+Figure 12 - Lock List Display screen
+---------
+
+The Lock List Display screen contains an entry for each lock list in the
+INGRES lock system.  Lock lists which are system locklists (NONPROTECT) are
+not displayed unless the 'Display system locklists' option is set (see the
+Option Selection screen, Figure 2) or the -e flag is specified on the command
+line. 
+
+This screen is useful for locating transactions which can't proceed because
+they are blocked from proceeding by another transaction.  Each transaction
+will be represented in the Lock List Display screen by a lock list.  The
+session name (if any) is also displayed. To find waiting lock lists, <TAB>
+to the Status column and select the 'Find' menuitem.  In response to the
+'Find' prompt, type "WAIT" then <CR>.  If there are any lock lists with
+blocked locks, the cursor will be placed on that lock list.  See the 'Find'
+menuitem for more information. 
+
+If the status is ENQWAIT, the lock list in question is waiting for a
+resource locked by another INGRES user on another node in the VAXcluster
+(VMS only).  In this case, invoke IPM on the other nodes and search for
+a lock list holding locks on the resource in contention.
+
+To view the locks for a given lock list, select the 'Examine' menuitem. The
+submenu that appears allows the viewing of all locks for all lock lists or
+for a particular lock list.  When examining all locks for all lock lists,
+there can be a long delay before the Lock Detail Display screen appears
+because every database that has a lock on it must be opened to get table
+names.  Since locks from all lock lists are unsorted, each database may be
+opened and closed many times. For this reason, it is wise to examine locks
+for a single lock list.  Some lock lists contain locks from many databases
+in unsorted order - the warning just mentioned applies here also. 
+
+By selecting the 'Options' menuitem, IPM options can be changed.  The only
+option that affects this screen is the 'Display empty locklists' option If
+any options were changed for lock lists or resources, select the 'Refresh'
+menuitem. See the Option Selection screen section of this document (Figure
+2). 
+
+Columns of interest on the Lock List Display screen include:
+
+    Column         Description
+    ------         -----------
+    ID             Internal lock list identifier.
+
+    Session        The name of the session or "<none>".  Only lock lists
+                   belonging to user transactions have session names.
+
+    Count          The total number of locks on the list currently.
+
+    Logical        The number of logical locks on the list currently.
+
+    MaxL           The total number of logical locks allowed to be on this
+                   list.  For user transactions, this is the maximum number
+                   of locks per lock list.  Some internal lock lists which
+                   contain physical locks, exceed this number.
+
+    Status         Indicates the state of the lock list when the locking
+                   information was obtained.  The possible values are:
+
+                   Status               Description
+                   ------               -----------
+                   WAIT                 Waiting for a lock.  This indicates
+                                        a blocked lock.  Use the 'Block_Info'
+                                        menuitem to find the blocking lock.
+
+                   NONPROTECT           Can be released without going thru
+                                        recovery (system lock lists only)
+
+                   ORPHAN               Lock list remaining without
+                                        transaction.
+
+                   EWAIT                Waiting on a system event.
+
+                   RECOVER              Lock list taken over by the recovery
+                                        process.
+
+                   MASTER               Lock list owned by the recovery
+                                        process.
+
+                   ESET                 Lock list set on wait queue for event.
+
+                   EDONE                Event that the lock list is waiting on
+                                        is done.
+
+                   NOINTERRUPT          Lock requests on this list are non-
+                                        interruptable.
+
+                   The following statuses only apply on VAXcluster
+                   installations:
+
+                   ENQWAIT              Waiting for VMS lock request
+
+                   G_DEADLOCK_SEARCH    Global deadlock search in progress.
+
+                   STALL_ENQ            Lock requests are stalled for node
+                                        failure recovery.
+
+When the 'More_Info' menuitem is selected, a popup containing an additional
+fields for the specified lock list is displayed (see Figure 13).  The
+additional fields are:
+
+    Field          Description
+    -----          -----------
+    Transaction ID Indicates the transaction identifier associated with
+                   this lock list.  This value corresponds to the
+                   'External TX ID' column on the Log Transaction Display
+                   screen (see Figure 28).
+
+    Related lock   Related lock list identifier, if not a transaction
+    list ID        lock list.
+
+    Count          Indicates the number of related lock list identifiers
+                   that this lock list must assure are released before this
+                   lock list can be released.
+
+    Waiting        Internal resource block identifier of the lock that
+    resource list  is currently blocked.
+    ID
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Refresh        Queries the INGRES locking system for locking information.
+                   Lock List and Resource information are obtained together
+                   to ensure a consistent snapshot of the locking system.
+                   After setting IPM Options, select this menuitem so the
+                   locking information reflects the current options.  See
+                   the Option Selection screen section of this document.
+
+    More_Info      Place the cursor on the desired lock list and select this
+                   menuitem.  Additional information for the lock list 
+                   is displayed on a popup screen (see Figure 13).  
+
+    Examine        Displays a submenu which allows the viewing of the
+                   individual locks in all displayed lock lists or a 
+                   particular lock list.  The submenu choices are:
+
+                       Menuitem        Description
+                       --------        -----------
+                       Current_List    Displays the Lock Detail Display (Figure
+                                       15). All locks in the lock list where 
+                                       the cursor rests will be displayed.  If
+                                       table names need to be retrieved, there
+                                       may be a delay because a database must
+                                       be opened.
+
+                       Find            Allows a search to be done on any column
+                                       in the scrolling area.  <TAB> to the
+                                       desired column, then select 'Find'.
+
+                       End             Returns to the previous menu.
+
+    Block_Info     If the lock list on which the cursor rests contains
+                   a lock which can't be granted, selecting this menuitem will
+                   display the Blocking Lock Display screen.  The lock which
+                   is blocking a lock in the current lock list is displayed
+                   along with all other locks on that given resource (see
+                   Figure 14).  If this menuitem is selected and the current
+                   lock list does not have any locks waiting (to be granted),
+                   a popup message is displayed.
+
+    Options        Displays the Option Selection screen.  The current option
+                   settings are displayed.  Various options can be modified
+                   and saved.
+
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, 'Find' will locate all
+                   occurances wherever they are in the column.  Entering
+                   '.' will look for the next occurance of what you
+                   previously used 'Find' to search for.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Lock Info Menu screen.
+
+    Quit           Exit IPM.
+
+________________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Lock List Display---------------------------------------------+    
+ |                      -------Locks-------                                |    
+ |ID       Session      Count Logical MaxL  Status                         |    
+ |--------+------------+-----+-------+-----+-------------------------------|    
+ | 236000f|<none>      |1    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ | 29c0014|tomt        |2    |1      |256  |<none>                         |    
+ | 1660019|<none>      |1    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ |   1002c|<none>      |178  |0      |128  |NONPROTECT                     |    
+ |   1002d|<none>      |6    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ |   10030|<none>      |3    |0      |128  |NONPROTECT,MASTER,NOINTERRUPT  |    
+ | 6c3005e|<none>      |1    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ | 1b5005f|tomt        |2    |1      |256  |WAIT                           |    
+ |+More Info---------------------------------+                             |   
+ ||Transaction ID:       92c1cbda9a          |                             |    
+ ||Related Lock List ID: 236000f  Count: 0   |                             |    
+ ||Waiting Resource List ID: 1e40150         |                             |    
+ |+------------------------------------------+                             |    
+ |        |            |     |       |     |                               |    
+ |        |            |     |       |     |                               |    
+ +--------+------------+-----+-------+-----+-------------------------------+    
+________________________________________________________________________________
+Figure 13 - More Info popup screen for Lock List Display
+---------
+
+Blocking Lock Display screen
+----------------------------
+_______________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Lock List Display---------------------------------------------+    
+ |                      -------Locks-------                                |    
+ |ID       Session      Count Logical MaxL  Status                         |    
+ |--------+------------+-----+-------+-----+-------------------------------|    
+ | 236000f|<none>  +INGRES IPM Blocking Lock Display------------------------+   
+ | 29c0014|tomt    | Resource ID: 1e40150     Resource Type: Page           |   
+ | 1660019|<none>  | Granted: X               Convert: X                    |   
+ |   1002c|<none>  | DB Name: ipm                                           |   
+ |   1002d|<none>  | Table:   foo                               Page: 0     |   
+ |   10030|<none>  |--------+--------+------------+---+---+-----------------|   
+ | 6c3005e|<none>  |ID      |List ID |Session     |RQ |GR |State            |   
+ | 1b5005f|tomt    |--------+--------+------------+---+---+-----------------|   
+ |        |        | 39000c0| 29c0014|tomt        |  X|  X|GR               |   
+ |        |        | 20f0016| 1b5005f|tomt        |  S|  N|WT               |   
+ |        |        |        |        |            |   |   |                 |   
+ |        |        |        |        |            |   |   |                 |   
+ |        |        +--------+--------+------------+---+---+-----------------+   
+ |        |            |     |       |     |                               |    
+ |        |            |     |       |     |                               |    
+ +--------+------------+-----+-------+-----+-------------------------------+    
+________________________________________________________________________________
+Figure 14 - Blocking Lock Display popup screen
+---------
+
+The Blocking Lock Display screen helps locate bottleneck areas in the
+database.  If there are tables where concurrent access is not occuring
+(i.e. much waiting is occuring because a database session is performing
+table level locking or has page locks which escalate to table level locks),
+'Block_Info' can find the cause (the 'Block_Info' menuitem is found on the
+Lock List Display screen, Figure 12).  It can find the lock that is
+granted on a resource for which another lock is waiting. 
+
+For instance, suppose there is a lock list which is blocked (waiting or
+converting), 'Block_Info' finds the blocking lock.  It could either be a
+granted page lock on the same page or a granted table lock on the table
+which contains the page (the granted lock is known as a 'blocking lock'
+because it is blocking access to a resource).  All locks which are found
+are displayed in the scrolling area in the bottom area of the popup.  The
+upper portion of the popup contains information on the selected resource.
+The first lock in the scrolling area is the blocking lock.  All other
+(waiting) locks are displayed below it. 
+
+The easiest way to look for concurrency bottlenecks is to run IPM on the
+desired database.  Once the Lock List Display screen is displayed, <TAB>
+over to the 'Status' column.  Select the 'Find' menuitem.  In response to
+the 'String to search for' prompt, enter 'WAIT'.  If a waiting lock list is
+found, select the 'Block_Info' menuitem.  If the blocking lock is in the
+INGRES locking system in the current installation on the machine where IPM
+is running, 'Block_Info' will find it. 
+
+The information on the Blocking Lock Display screen includes:
+
+    Field          Description
+    -----          -----------
+    Resource ID    The resource block identifier of the resource that
+                   the blocking lock is held on.
+
+    Resource Type  The type of the resource.  A list can be found in
+                   this document where the Startup Options are explained.
+
+    Granted        This indicates the mode that this resource is
+                   granted in.  The possible modes are:
+
+                   Mode  Explanation
+                   ----  -----------
+                   S     Shared - used when reading
+
+                   IS    Intended shared - for table resource types,
+                         this means that there are shared page locks
+                         in this table.
+
+                   X     Exclusive - used when writing
+
+                   IX    Intended exclusive - same as intended shared
+                         except pages are exclusively locked
+
+                   N     Null - used to keep a lock without causing
+                         locking contention.  Its less expensive to
+                         convert a lock rather than drop and request a new
+                         one.
+
+                   SIX   Shared with intent to update.  Used with ESQL cursors.
+
+    Convert        This indicates the mode that this resource is converting to. 
+                   See the Mode list above.
+
+    DB Name        The name of the database.
+
+    Table          The table name this resource belongs to.  If the resource
+                   is not a table or page resource type, this field will not
+                   appear.
+
+    Page           The page number of this resource.  If the resource
+                   is not a page resource type, this field will not appear.
+
+The scrolling area contains the following columns:
+
+    Column         Description
+    ------         -----------
+    ID             The internal lock identifier for this lock.
+
+    List ID        The internal lock list identifier that this lock belongs
+                   to.
+
+    Session        The name of the session that this lock belongs to.
+
+    RQ             The mode the lock was requested in.  The possible modes
+                   are listed above in the explanation of the 'Granted'
+                   field.
+
+    GR             The mode the lock was granted in.  The possible modes
+                   are listed above.  Note that blocked locks will have
+                   different requested (RQ) and granted (GR) modes.
+
+    State          Current state of lock (GR = granted, WT = waiting)
+
+Limitations
+-----------
+If the lock that is being searched for is on another node in the cluster
+(VAXcluster only), that lock may not be visible on the current node.  Run
+IPM on the other nodes to find them. 
+
+The Blocking Lock Display screen has the following menuitems to choose from:
+
+    Menuitem       Description
+    --------       -----------
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, 'Find' will locate all
+                   occurances wherever they are in the column.  Entering
+                   '.' will look for the next occurance of what you
+                   previously used Find to search for.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Lock List Display screen.
+
+Lock Detail Display screen
+--------------------------
+________________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Lock List Display---------------------------------------------+    
+ |                      -------Locks-------                                |    
+ |ID       Session      Count Logical MaxL  Status                         |    
+ |--------+------------+-----+-------+-----+-------------------------------|    
+ | 236000f|<none>      |1    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ | 29c0014|tomt        |2    |1      |256  |<none>                         |    
+ |+INGRES IPM Lock Detail Display----------------------------------------------+
+ ||ID       RQ  GR  State  Lock Type   DB Table                              Pg|
+ ||--------+---+---+------+-----------+----------------------------------------|
+ || 5ed0122| IX| IX|GR PHY|Table      |ipm, TABLE: foo                         |
+ || 39000c0|  X|  X|GR    |Page       |                                       0|
+ ||        |   |   |      |           |                                        |
+ ||        |   |   |      |           |                                        |
+ ||        |   |   |      |           |                                        |
+ ||        |   |   |      |           |                                        |
+ ||        |   |   |      |           |                                        |
+ ||        |   |   |      |           |                                        |
+ |+--------+---+---+------+-----------+----------------------------------------+
+ |                                                                              
+ +--------+------------+-----+-------+-----+-------------------------------+    
+________________________________________________________________________________
+Figure 15 - Lock Detail Display popup screen
+---------
+
+The Lock Detail Display contains the individual locks for the selected
+lock list or all locks for all lock lists.  If a database can't be opened,
+the table id is displayed instead (the reltid and reltidx values for the
+table in the iirelation database catalog) for table and page type locks. 
+
+If this screen is displaying the locks for a particular lock list, the locks
+are displayed in the order in which they were acquired by the session that the
+lock list belongs to. 
+
+The columns on the Lock Detail Display are:
+
+    Column         Description
+    ------         -----------
+    ID             The internal Lock ID.
+
+    RQ             The mode the lock was requested in.  Possible values are:
+
+                   Mode  Explanation
+                   ----  -----------
+                   S     Shared - used when reading
+
+                   IS    Intended shared - for table resource types,
+                         this means that there are shared page resources
+                         in this table.
+
+                   X     Exclusive - used when writing
+
+                   IX    Intended exclusive - same as intended shared
+                         except pages are exclusively locked
+
+                   N     Null - used to keep a lock without causing
+                         locking contention.  Its less expensive to
+                         convert a lock rather than drop and request a new
+                         one.
+
+                   SIX   Shared with intent to update.  Used with ESQL cursors.
+
+    GR             The mode the lock is granted in (listed above).  Blocked
+                   (waiting) locks will have different modes for the RQ and 
+                   GR columns.
+
+    State          Current state of the lock (GR = granted, WT = waiting,
+                   PHYS() = this lock is a physical lock).  This column
+                   scrolls, so additional information may be to the right
+                   of the visible part.  Use the right arrow key to scroll
+                   the column.
+
+    Lock Type      The type of the resource.  A list can be found in
+                   this document where the Startup Options are explained
+
+    DB-Table-Pg    The database name, table name and/or page that this
+                   lock is held on is displayed.  The values are justified
+                   and formatted for easy reading.
+
+When the 'More_Info' menuitem is selected, a popup containing additional
+fields for the specified lock is displayed (see Figure 16).  The additional
+fields are: 
+
+    Field          Description
+    -----          -----------
+    Resource List  Internal Resource block identifier that this lock
+    ID             belongs to.
+
+    VMS Lock ID    The VMS lock ID assigned to this INGRES lock.
+                   (applies to VAXcluster installations only)
+
+    VMS Lock ID    The value contained in the VMS lock assigned to this INGRES
+    value          lock. (applies to VAXcluster installations only)
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    More_Info      Place the cursor on the desired lock and select this
+                   menuitem.  Additional information for that lock is
+                   displayed on a popup screen (see Figure 16).  
+
+    Resource_Info  All locks for the resource on which the cursor rests
+                   are displayed on the Resource Lock Display screen.
+                   This is useful to see how many other sessions have
+                   a lock on that resource e.g. what other locks are held
+                   for page 0 in table 'foo'?  Other information displayed
+                   includes the session name (if any) (See Figure 17).
+
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurances wherever they are in the column.  Entering
+                   '.' will look for the next occurance of what you
+                   previously used Find to search for.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Lock List Display screen.
+
+    Quit           Exit IPM.
+
+The screen in Figure 16 contains the additional information for each lock
+in the Lock Detail Display:
+________________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Lock List Display---------------------------------------------+    
+ |                      -------Locks-------                                |    
+ |ID       Session      Count Logical MaxL  Status                         |    
+ |--------+------------+-----+-------+-----+-------------------------------|    
+ | 236000f|<none>      |1    |0      |128  |NONPROTECT,NOINTERRUPT         |    
+ | 29c0014|tomt        |2    |1      |256  |<none>                         |    
+ |+INGRES IPM Lock Detail Display----------------------------------------------+
+ ||ID       RQ  GR  State  Lock Type   DB Table                              Pg|
+ ||--------+---+---+------+-----------+----------------------------------------|
+ || 5ed0122| IX| IX|GR PHY|Table      |ipm, TABLE: foo                         |
+ ||+More Info--------------------------+                                      0|
+ |||Resource List ID:  73b00ef         |                                       |
+ |||VMS Lock ID:       0               |                                       |
+ |||VMS Lock ID Value: 000000000       |                                       |
+ ||+-----------------------------------+                                       |
+ ||        |   |   |      |           |                                        |
+ ||        |   |   |      |           |                                        |
+ |+--------+---+---+------+-----------+----------------------------------------+
+ |                                                                              
+ +--------+------------+-----+-------+-----+-------------------------------+    
+________________________________________________________________________________
+Figure 16 - More Info popup screen for Lock Detail Display
+---------
+
+Resource Lock Display screen
+----------------------------
+________________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Lock List Display---------------------------------------------+    
+ |                      -------Locks-------                                |    
+ |ID       Session      Count Logical MaxL  Status                         |    
+ |--------+------- +INGRES IPM Resource Lock Display------------------------+   
+ | 236000f|<none>  | Resource ID: 1e40150     Resource Type: Page           |   
+ | 29c0014|tomt    | Granted: X               Convert: X                    |   
+ |+INGRES IPM Lock | DB Name: ipm                                           |--+
+ ||ID       RQ  GR | Table:   foo                               Page: 0     |Pg|
+ ||--------+---+-- |--------+--------+------------+---+---+-----------------|--|
+ || 5ed0122| IX| I |ID      |List ID |Session     |RQ |GR |State            |  |
+ || 39000c0|  X|   |--------+--------+------------+---+---+-----------------| 0|
+ ||        |   |   | 39000c0| 29c0014|tomt        |  X|  X|GR               |  |
+ ||        |   |   | 20f0016| 1b5005f|tomt        |  S|  N|WT               |  |
+ ||        |   |   |        |        |            |   |   |                 |  |
+ ||        |   |   |        |        |            |   |   |                 |  |
+ ||        |   |   +--------+--------+------------+---+---+-----------------+  |
+ ||        |   |   |      |           |                                        |
+ |+--------+---+---+------+-----------+----------------------------------------+
+ |                                                                              
+ +--------+------------+-----+-------+-----+-------------------------------+    
+                                                                                
+________________________________________________________________________________
+Figure 17 - Resource Lock Display popup screen
+---------
+
+The Resource Lock Display screen contains all the locks held on the
+resource that the specified lock on the Lock Detail Display screen belonged
+to.  If the specified lock belonged to page 0 of the 'foo' table, the
+Resource Lock Display screen will display all locks held on that same
+resource (page 0, 'foo' table). 
+
+For example, if the specified lock is a table lock, it is useful to see
+what other locks are held on that table.  It is an indication of how much
+activity is occuring there. 
+
+The information on the Resource Lock Display screen includes:
+
+    Field          Description
+    -----          -----------
+    Resource ID    The resource block identifier of the resource that
+                   the blocking lock is held on.
+
+    Resource Type  The type of the resource.  A list can be found in
+                   this document where the Option Selection screen
+                   is explained (see Figure 2).
+
+    Granted        This indicates the mode that this resource is
+                   granted in.  The possible modes are:
+
+                   Mode  Explanation
+                   ----  -----------
+                   S     Shared - used when reading
+
+                   IS    Intended shared - for table resource types,
+                         this means that there are shared page resources
+                         in this table.
+
+                   X     Exclusive - used when writing
+
+                   IX    Intended exclusive - same as intended shared
+                         except pages are exclusively locked
+
+                   N     Null - used to keep a lock without causing
+                         locking contention.  Its less expensive to
+                         convert a lock rather than drop and request a new
+                         one.
+
+                   SIX   Shared with intent to update.  Used with ESQL cursors.
+
+    Convert        This indicates the mode that this resource is converting to. 
+                   See the mode list above.
+
+    DB Name        The name of the database.
+
+    Table          The table name this resource belongs to.  If the resource
+                   is not a table or page resource type, this field will not
+                   appear.
+
+    Page           The page number of this resource .  If the resource
+                   is not a page resource type, this field will not appear.
+
+The scrolling area contains the following columns:
+
+    Column         Description
+    ------         -----------
+    ID             The internal lock identifier for this lock.
+
+    List ID        The internal lock list identifier that this lock belongs
+                   to.
+
+    Session        The name of the session that this lock belongs to.
+
+    RQ             The mode the lock was requested in.  The possible modes
+                   are listed above in the explanation of the 'Granted'
+                   field.
+
+    GR             The mode the lock was granted in.  The possible modes
+                   are listed above.  Note that blocked locks will have
+                   different requested (RQ) and granted (GR) modes.
+
+    State          Current state of lock (GR = granted, WT = waiting)
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurances wherever they are in the column.  Entering
+                   '.' will look for the next occurance of what you
+                   previously used Find to search for.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Lock Detail Display screen.
+
+Resource List Display screen
+----------------------------
+________________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Resource List Display-----------------------------------------+    
+ |Id       GR  CV  Lock Type   DB   Table                              Page|    
+ |--------+---+---+-----------+--------------------------------------------|    
+ | 1b9009d| IX| IX|Database   |ipm                                         |    
+ | 4d50108|  N|  X|DB_TBL_ID  |ipm                                         |    
+ | 73b00ef| IX| IX|Table      |     foo                                    |    
+ | 1e40150|  X|  X|Page       |                                           0|    
+ | 3d4015e|  N|  X|DB_TBL_ID  |linda                                       |    
+ | 15901c6| IX| IX|Database   |linda                                       |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ +--------+---+---+-----------+--------------------------------------------+    
+________________________________________________________________________________
+Figure 18 - Resource List Display screen
+---------
+
+The Resource List Display screen contains an entry for each resource that
+has one or more locks granted/requested on it.  The information displayed
+is sorted by database.  Page resources are listed under the table resource
+that they belong to (all pages for table 'x' in database 'test' are listed
+under the entry for table 'x').  The Database name is left justified in the
+'DB-Table-Page' column.  The database name is only printed when it changes.
+ The same applies for table names (table names are indented 5 spaces). 
+This makes the displayed information easy to read. 
+
+This screen allows high traffic areas to be found.  If there is much page
+locking in a given table, there will be many page type entries under the
+table entry of interest.  Of course, it is easier to select the 'Examine'
+menuitem by placing the cursor on the table entry of interest e.g. to see
+what and how many locks are on table 'test', place the cursor on that table
+resource entry then select the 'Examine' menuitem.   When the Lock Detail
+Display screen appears, there will be one lock for each session touching
+the 'test' table.  If many locks are displayed, it is an indication that
+this table is a potential contention source (should any session attempt to
+lock the table shared or exclusive, for example). 
+
+If a database can't be opened to display table names, "<can't find [x,y]>"
+will appear instead.  X is the reltid of the table and y is the reltidx of
+that table (reltid and reltidx are columns in the iirelation database
+catalog).  When a database can't be opened it may be because the database
+is locked exclusively by another session.  It can also be caused by another
+user accessing that database using a server started up with the -sole or
+/sole option (see the INGRES I & O Guide). 
+
+By selecting the 'Options' menuitem, various IPM options which affect what
+resources are displayed can be viewed or modified.  Please refer to the
+section describing the Option Selection screen (see Figure 2). After
+changing any of the options that affect the Resource List Display screen,
+it is a good idea to select the 'Refresh' menuitem so the resource
+information displayed reflects the changed options. 
+
+The only time it is not necessary to select the 'Refresh' menuitem is when
+the options just changed would result in a subset of the resource
+information currently displayed.  For example, all resources for database
+'test' may have been selected based on the the previous options.  If the
+new option settings would only select a specific resource type for that
+database, it is only necessary to return to the Lock Info Menu then select
+the 'Resources' menuitem.  In any event, selecting the 'Refresh' menuitem
+after changing the options will collect resource information based on the
+new option settings. 
+
+Columns of interest in the Resource List Display screen are:
+
+    Column         Description
+    ------         -----------
+    Id             The internal resource block identifier.
+
+    GR             This indicates the mode that this resource is
+                   granted in.  The possible modes are:
+
+                   Mode  Explanation
+                   ----  -----------
+                   S     Shared - used when reading
+
+                   IS    Intended shared - for table resource types,
+                         this means that there are shared page resources
+                         in this table.
+
+                   X     Exclusive - used when writing
+
+                   IX    Intended exclusive - same as intended shared
+                         except pages are exclusively locked
+
+                   N     Null - used to keep a lock without causing
+                         locking contention.  Its less expensive to
+                         convert a lock rather than drop and request a new
+                         one.
+
+                   SIX   Shared with intent to update.  Used with ESQL cursors.
+
+    CV             This indicates the mode that this resource is converting to. 
+                   (See the list above)
+
+    Lock Type      The type of the resource.  A list can be found in
+                   this document where the Startup Options are explained
+
+    DB-Table-Pg    The database name, table name and/or page that identifies
+                   this resource is displayed.  The values are justified
+                   and formatted for easy reading.
+
+When the 'More_Info' menuitem is selected, a popup containing additional
+fields for the specified resource is displayed (see Figure 19).  The
+additional fields are: 
+
+    Field          Description
+    -----          -----------
+    Value          Lock value associated with this resource
+
+    Invalid        Indicates if the value is valid or not.
+
+    Number of      This indicates the number of physical locks
+    locks          held on this resource.
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Refresh        Queries the INGRES locking system for locking information.
+                   Lock List and Resource information are obtained together
+                   to ensure a consistent snapshot of the locking system.
+                   After setting IPM Options, you should select this menuitem
+                   so the locking information reflects the options you set.
+                   See the Option Selection screen section of this document.
+
+    More_Info      Place the cursor on the desired resource and select this
+                   menuitem.  Additional information for that resource
+                   is displayed on a popup screen (including the number
+                   of physical locks, see Figure 19).  
+
+    Examine        Place the cursor on the desired resource and select this
+                   menuitem.  The Lock Detail Display screen is displayed.
+                   It contains information for all locks on that resource.
+                   Other information such as the session name is also shown
+                   (see Figure 20).
+
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurances wherever they are in the column.  Entering
+                   '.' will look for the next occurance of what you
+                   previously used Find to search for.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Lock Info Menu screen.
+
+    Quit           Exit IPM.
+
+________________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Resource List Display-----------------------------------------+    
+ |Id       GR  CV  Lock Type   DB   Table                              Page|    
+ |--------+---+---+-----------+--------------------------------------------|    
+ | 1b9009d| IX| IX|Database   |ipm                                         |    
+ | 4d50108|  N|  X|DB_TBL_ID  |ipm                                         |    
+ | 73b00ef| IX| IX|Table      |     foo                                    |    
+ | 1e40150|  X|  X|Page       |                                           0|    
+ | 3d4015e|  N|  X|DB_TBL_ID  |linda                                       |    
+ | 15901c6| IX| IX|Database   |linda                                       |    
+ |+More Info------------------+                                            |    
+ ||Value:   000000000         |                                            |    
+ ||Invalid:                   |                                            |    
+ ||Number of locks: 1         |                                            |    
+ |+---------------------------+                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ |        |   |   |           |                                            |    
+ +--------+---+---+-----------+--------------------------------------------+    
+________________________________________________________________________________
+Figure 19 - More Info popup screen for Resource List Display
+---------
+
+Lock Detail Display screen
+--------------------------
+________________________________________________________________________________
+INGRES IPM Lock Info Menu             Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Resource List Display-----------------------------------------+    
+ |Id       GR  CV  Lock Type   DB   Table                              Page|    
+ |--------+---+---+-----------+--------------------------------------------|    
+ | 1b9009d| IX| IX|Database   |ipm                                         |    
+ | 4d50108|  N|  X|DB_TBL_ID  |ipm                                         |    
+ | 73b00ef| IX| IX|Table      |     foo                                    |    
+ | 1e40150|  X|  X|Page       |                                           0|    
+ | 3d4015e|  N|  X +INGRES IPM Lock Detail Display--------------------------+   
+ | 15901c6| IX| IX |ID       List ID  Session      RQ  GR  State            |   
+ |        |   |    |--------+--------+------------+---+---+-----------------|   
+ |        |   |    | 39000c0| 29c0014|tomt        |  X|  X|GR               |   
+ |        |   |    | 20f0016| 1b5005f|tomt        |  S|  N|WT               |   
+ |        |   |    |        |        |            |   |   |                 |   
+ |        |   |    |        |        |            |   |   |                 |   
+ |        |   |    |        |        |            |   |   |                 |   
+ |        |   |    |        |        |            |   |   |                 |   
+ |        |   |    |        |        |            |   |   |                 |   
+ |        |   |    |        |        |            |   |   |                 |   
+ |        |   |    +--------+--------+------------+---+---+-----------------+   
+ |        |   |   |           |                                            |    
+ +--------+---+---+-----------+--------------------------------------------+    
+________________________________________________________________________________
+Figure 20 - Lock Detail Display popup screen
+---------
+
+The Lock Detail Display screen contains all the locks held on
+the specified resource.  The number of locks held on a resource indicates
+the amount of concurrent activity and points to potential concurrency
+bottlenecks.
+
+The information on the Lock Detail Display screen includes:
+
+    Column         Description
+    ------         -----------
+    ID             The internal lock identifier for this lock.
+
+    List ID        The internal lock list identifier that this lock belongs
+                   to.
+
+    Session        The name of the session that this lock belongs to.
+
+    RQ             The mode the lock was requested in.  The possible modes
+                   are listed below.
+
+                   Mode  Explanation
+                   ----  -----------
+                   S     Shared - used when reading
+
+                   IS    Intended shared - for table resource types,
+                         this means that there are shared page resources
+                         in this table.
+
+                   X     Exclusive - used when writing
+
+                   IX    Intended exclusive - same as intended shared
+                         except pages are exclusively locked
+
+                   N     Null - used to keep a lock without causing
+                         locking contention.  Its less expensive to
+                         convert a lock rather than drop and request a new
+                         one.
+
+                   SIX   Shared with intent to update.  Used with ESQL cursors.
+
+    GR             The mode the lock was granted in.  The possible modes
+                   are listed above.  Note that blocked locks will have
+                   different requested (RQ) and granted (GR) modes.
+
+    State          Current state of lock (GR = granted, WT = waiting)
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurances wherever they are in the column.  Entering
+                   '.' will look for the next occurance of what you
+                   previously used Find to search for.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Resource List Display screen.
+
+    Quit           Exit IPM.
+
+IPM Log Information screens
+----------------------------
+This area of IPM allows the user to view log summary information, header 
+information, log processes, transactions and databases.  This section of
+IPM is most useful for logging system analysis/tuning.  The Logging System
+Header is most useful for determining if the log file size is adequate.  
+Other logging system parameters set at IIBUILD time can be compared 
+against the Logging System Summary screen to see if they are sufficient.  
+
+Log Info Menu screen
+--------------------
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <no database selected>          
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+        +--------------+---------------------------------------------------+    
+        |Summary       |Display a Logging System summary                   |    
+        |Header        |Display the log file header                        |    
+        |Processes     |Display the active processes in the logging system |    
+        |Databases     |Display logging information on each open database  |    
+        |Transactions  |Display logging information on each transaction    |    
+        |Refresh       |Get new snapshot of logging system information     |    
+        |Options       |View/Change option settings                        |    
+        +--------------+---------------------------------------------------+    
+                                                                                
+        Place the cursor on your choice and select "Go"                         
+                                                                                
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 21 - Log Info Menu screen
+---------
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Summary        Displays the Logging System Summary screen.  Information
+                   on the INGRES logging system is displayed (transactions
+                   started and finished, Log I/O's and other data)
+
+    Header         Displays the Logging System Header screen.  Information
+                   shown includes force abort and log full points, and a
+                   diagram showing log file usage (and percent full).
+
+    Processes      Displays the Log Process Display screen which contains
+                   a list of all processes in the INGRES installation
+                   (DBMS server(s), and archiver and recovery processes).
+
+    Databases      Displays the Log Database Display screen which contains
+                   a list of all databases currently in the logging system.
+                   
+    Transactions   Displays the Log Transaction Display screen which contains
+                   a list of all transactions currently in the logging system.
+
+    Refresh        Queries the INGRES logging system for logging information.
+                   Process, database and transaction information are obtained
+                   together to ensure a consistent snapshot of the logging
+                   system.
+
+    Options        Displays the Option Selection screen.  The current option
+                   settings are displayed.  You are able to modify and
+                   save them.
+
+    Go             Instead of picking a menuitem, place the cursor
+                   on the desired option and select this menuitem instead.
+  
+    End            Returns to the Main Menu screen.
+
+Logging System Summary screen
+-----------------------------
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <all databases selected>        
+                                                                                
+  +INGRES IPM Logging System Summary---------------------------------+          
+  |                                                                  |          
+  |                                                                  |          
+  |      Database adds:     2256        Transaction begins:    46574 |          
+  |   Database removes:     2222          Transaction ends:    46531 |          
+  |                                                                  |          
+  |         Log writes:   423695                 Log waits:    62925 | ----+    
+  |    Log write I/O's:    47669           Log split waits:        0 |     |    
+  |     Log read I/O's:    56488            Log free waits:        0 |     |    
+  |                                        Log stall waits:       12 | tem |    
+  |         Log forces:    23530                                     | se  |    
+  |                                       Log group commit:    38321 |     |    
+  | Check commit timer:    25082           Log group count:    39929 |     |    
+  |        Timer write:    17882                                     |     |    
+  |                                         Kbytes written:   321092 | ----+    
+  |    Inconsistent DB:        0                                     |          
+  +------------------------------------------------------------------+          
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 22 - Logging System Summary screen
+---------
+
+The Logging System Summary screen displays various pieces of information
+from the INGRES logging system.  By viewing the data on this screen, it is
+possible to determine which logging parameters need to be adjusted.
+Currently, there is no way to view the logging parameters used to configure
+the INGRES logging system from IPM.  Those parameters should be kept in a
+handy place when viewing this screen. 
+
+This screen will autorefresh the information if the -r flag was specified
+at startup or the 'Display Refresh' field on the Option Selection screen
+was changed to a number between 1 and 999 seconds (see Figure 2).
+Autorefresh is desirable when monitoring this information as there is no
+need to select the 'Refresh' menuitem. 
+
+There are times when tests or benchmarks are being run and it is desirable
+to determine the logging system activity during the test.  By selecting the
+'Interval' menuitem then selecting the 'Start_Now' menuitem, the statistics
+displayed will be those accumulated since the start time.  In addition, if
+the Interval option was not previously enabled, the start time and current
+time fields appear in the upper right hand corner of the Logging System
+Summary screen (see Figure 23).  To reset the start time (which is the
+time when the 'Start_Now' menuitem is selected), just select the 'Interval'
+menuitem followed by the 'Start_Now' menuitem. 
+
+The start time and statistics obtained at the start time will remain
+unchanged until the 'Begin_Now' or 'Since_Startup' menuitems are selected
+or the user exits IPM.  This allows other IPM functions (e.g. locking,
+other logging or server information) to be used while accumulating
+statistics. When the Logging System Summary screen is displayed at a later
+time, the running totals since the start time are not lost. 
+
+When displaying statistics over an interval, the 'autorefresh' option
+should be set.  This causes the display to be automatically updated.
+
+Some of the fields of interest on the Logging System Summary screen are:
+
+    Field          Description
+    -----          -----------
+    Database add   Displays the number of databases added to the logging
+                   system.
+
+    Database       Indicates the number of databases removed from the
+    removes        logging system.  This means the last user of a database
+                   has disconnected from Ingres.  The number of databases
+                   currently open is the difference between 'Database add' and
+                   'Database removes'.
+
+    Transaction    Displays the number of transactions started.
+    begins
+
+    Transaction    Indicates the number of COMMITS or transactions ended.
+    ends           This value does not include FORCE-ABORT, LOG-FULL or any
+                   other Recovery initiated transaction ends, such as a 
+                   failover from the DBMS to the RCP on behalf of a
+                   transaction. The difference between 'Transaction begins' and 
+                   'Transaction ends' is the number of current transactions.
+
+    Log read       The number of read I/O's actually done to the log file.
+    I/O's          This is a physical read.
+
+    Log write      Displays the number of write I/O's actually done to the
+    I/O's          log file.  This is a physical write.
+
+    Log writes     Indicates the number of log write into non-paged pool on
+                   on VMS and shared memory on UNIX.  This is a memory to
+                   memory write.
+
+    Log forces     Displays the number of log force requests.  These occur
+                   under the following circumstances:
+
+                   - The buffer manager forces a specific log page to disk.
+                     This occurs during the consistency point (for fast commit)
+                     or before a transaction commit.
+
+                   - The buffer manager forces the last log buffer in the
+                     logging system to disk.  This occurs normally during the
+                     close of a table.
+
+                   - The RCP or DBMS server forces the last log record of a
+                     transaction to disk before recovering the transaction.
+
+    Log waits      The number of times any event wait condition requires a 
+                   log buffer write to stall.  These events encompass things
+                   like LOG-FULL, CP writing, RECOVERY, archiving required,
+                   FREE WAIT for log buffer, OPENDB wait, log buffer SPLIT
+                   WAIT, wait for log I/O to complete (the log buffer being
+                   written to the log file).
+
+    Log split      Indicates the number of times a log split operation is 
+    waits          delayed due to no free log buffers.  This should be watched
+                   because of the inability of the logging system to proceed
+                   with the log record split until a free buffer is available.
+                   Ways to reduce this are to increase the number of log
+                   buffers or increase their size.
+
+    Log free       The number of times all the log buffers are either in
+    waits          force mode or unavailable for writing.  Only one log buffer
+                   is written to at a time currently.  If this state is
+                   frequent (more than 5 per minute during busy times), than
+                   an increase in the number of log buffers may be the
+                   solution.  Remember that an increase in the number of
+                   buffers requires more memory
+                   (number_of_buffers * buffer_size).  This condition will
+                   affect throughput to the log file.  Please consult the
+                   INGRES I & O Guide for more information.
+
+    Log stall      Indicates the number of times stalled while making requests
+    waits          to the logging system.  This can occur while consistency
+                   points are being taken or during LOG-FULL conditions.
+                   This is acceptable (not in the LOG-FULL case) and these
+                   types of stalls only last for a fraction of a second. 
+                   If 100 sessions are stalled for one event, this count is
+                   incremented by 100.  The following statuses will be shown
+                   in the Logging System Header screen (Figure 24) depending
+                   on the causes of a Log stall wait:
+
+                   - LOGFULL, FORCE_ABORT - log file is full
+
+                   - LOGFULL, CPFLUSH - log file is overly full while executing
+                     a consistency point (CP).  The CP may have to completed
+                     before log space can be released.  The status LOGFULL,
+                     ARCHIVE may also be displayed as mentioned above.
+
+                   - LOGFULL, ARCHIVE - the log file becomes full and
+                     journalled transactions must be archived to free up log
+                     space.  When the archiver is done, log space is released.
+
+    Log group      Displays the number of times that multiple transactions
+    commit         are participating in a log buffer flush to the log file.
+                   The value is incremented every time a write to disk
+                   completes a group commit (piggyback write).
+
+    Log group      Indicates the number of transactions that are participating
+    count          in the flush to the log file.  If one group commit
+                   event writes on behalf of 10 sessions (threads), this
+                   number is incremented by 10.  The ratio between this 
+                   number and the Log group commit indicates how effective
+                   group commit is (e.g. group count/group commit indicates
+                   the number of threads' log write requests satisfied
+                   per group commit write)
+
+    Check commit   Indicates the number of times that the timer associated
+    timer          with the group commit completes.  This does not necessarily
+                   mean that a write to the log file has to occur because the
+                   log buffer that initiated the timer may have already been
+                   written due to being full.  This timer is only activated
+                   when there are multiple transactions active in the logging
+                   system so that group commit does not delay a single user for
+                   for no gain.
+
+                   The timer wakes up every 10 milliseconds and checks if there
+                   is a buffer waiting to be forced to the log file.  If a 
+                   buffer is found, the timer will wait for 20 additional
+                   milliseconds before calling the routine to write out the
+                   buffer.
+
+    Timer write    Indicates how many times a group commit timer check
+                   resulted in a group commit.
+
+    Inconsistent   Displays the number of inconsistent DB occurances.
+    DB             This number should be zero.  If it is not, the errlog.log
+                   file in II_SYSTEM:[INGRES.FILES] (VMS)  or
+                   $ING_HOME/ingres/files (UNIX) should be checked.  This
+                   can be caused by running IISTARTUPINIT after a system
+                   crash (this wipes out the log file necessary for recovery).
+                   Please consult the INGRES I & O Guide for more information.
+                   
+    Kbytes         Indicates the number of kilobytes written to the log 
+    written        file.
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Refresh        Queries the INGRES logging system for logging summary
+                   information.  Even if the autorefresh option is set,
+                   this menuitem can still be selected at any time.
+
+    Interval       Displays a submenu which allows a start time to be
+                   set to begin measuring logging summary information.
+                   This allows display of summary information that 
+                   occured since the selected start time.  Otherwise,
+                   the information displayed is activity since the INGRES
+                   logging system was started.  Choices
+                   available from the submenu are:
+
+                       Menuitem       Description
+                       --------       -----------
+                       Since_Startup  Selecting this menuitem will display
+                                      summary information since system
+                                      startup.  This is the default.  If
+                                      the Interval option was enabled (see
+                                      the 'Begin_Now' menuitem and Figure 23),
+                                      the start and current time fields
+                                      disappear.
+
+                       Begin_Now      Selecting this menuitem will enable
+                                      the Interval option, clear all values
+                                      from the screen and display the start
+                                      time and current time fields (see Figure
+                                      23).  The next refresh of the summary
+                                      information will cause the activity 
+                                      since the start time to be displayed.
+                                      The start time and summary information
+                                      at the start time are maintained until
+                                      the 'Since_Startup' menuitem is selected
+                                      or 'Begin_Now' is selected again.
+
+                       End            Returns to the previous menu.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Log Info Menu screen.
+
+    Quit           Exit IPM.
+
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <all databases selected>       
+                                                                                
+  +INGRES IPM Logging System Summary----Current Time--Starting Time--+          
+  |                                       07:24:52      07:24:19     |          
+  |                                                                  |          
+  |      Database adds:        0        Transaction begins:        7 |          
+  |   Database removes:        0          Transaction ends:        8 |          
+  |                                                                  |          
+  |         Log writes:      480                 Log waits:       25 | ----+    
+  |    Log write I/O's:       34           Log split waits:        0 |     |    
+  |     Log read I/O's:        0            Log free waits:        0 |     |    
+  |                                        Log stall waits:        0 | tem |    
+  |         Log forces:       17                                     | se  |    
+  |                                       Log group commit:       23 |     |    
+  | Check commit timer:       35           Log group count:       25 |     |    
+  |        Timer write:       21                                     |     |    
+  |                                         Kbytes written:      364 | ----+    
+  |    Inconsistent DB:        0                                     |          
+  +------------------------------------------------------------------+          
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 23 - Logging System Summary screen with Interval option
+---------
+
+Logging System Header screen
+----------------------------
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <all databases selected>        
+                                                                                
+  +INGRES IPM Logging System Header----------------------------------------+    
+  |Block count:     2048  CP interval:           716  +------Blocks-------+|    
+  |Block size:     16384  Abort interval:       1638  |In use:         486||    
+  |Buffer count:       8  Logfull interval:     1945  |Available:     1562||    
+  |                                                   +-------------------+|    
+  |Begin: <644508240:627:84>          CP:    <644508240:627:84>            |    
+  |End:   <644508240:1113:592>        Last Transaction ID: 93353a1d35      |    
+  |                                                                        |    
+  |Journal Window: <0,0,0>..<0,0,0>                                        |    
+  |Status:         ONLINE,ECPDONE                                          |    
+  |                                                                        |    
+  |+--------------------Log file Diagram-(% in use:  23)------------------+|    
+  ||                     >---------------->                               ||    
+  |+----------------------------------------------------------------------+|    
+  |                                                                        |    
+  |                                                                        |    
+  |                                                                        |    
+  |                                                                        |    
+  |                                                                        |    
+  |                                                                        |    
+  +------------------------------------------------------------------------+    
+________________________________________________________________________________
+Figure 24 - Logging System Header screen
+---------
+
+The Logging System Header screen displays information about the log file
+and the logging system.  The current state of the logging system as well as
+critical points in the log file are displayed.  The Log file Diagram displays
+a logical view of the log file in use.  The Log file Diagram starts at page
+1 of the log file through the page specified by the 'Block count' field. In
+this case, the upper end of the diagram represents page 2048.  The area of
+the diagram field covered by the arrow ('>----->') is the area of the log
+file in use (in this case from page 627 to 1113).  As the BOF and EOF
+(begin and end of file) move, so does the arrow.  Each position in the Log
+file Diagram represents 'Block count'/ 70 (For Figure 24, this would be
+2048/70 which is around 30 log file pages per position).  By using the
+'Examine' menuitem, it is possible to see what transactions occur in the
+range of pages covered by any position in the Log file Diagram field (see
+Figure 25).  This feature can be used to determine which transactions are
+the oldest and to some extent determine their order. 
+
+When the 'Examine' menuitem is selected, the Log file Diagram field is 
+highlighted and a caret symbol '^' is displayed marking the position of the
+log file currently being examined (see Figure 25).  The other fields which
+appear indicate the range of log file pages currently being examined as
+well as what transactions occur in that range.  By using the 'Next' and
+'Previous' menuitems, the caret symbol can be moved to any area of the Log
+file diagram covered by the arrow ('>----->').  By default, when the
+'Examine' menuitem is selected, the caret symbol appears at the BOF.  From
+there, the 'Next' menuitem can be selected until a user transaction appears
+in the scrolling area (see Figure 25).  This transaction is the oldest
+transaction in the log file and could/will prevent log file space from
+being reclaimed.  If it is desired to examine a particular position in the
+Log file Diagram field, this can be done by moving the cursor to that field
+then using the left or right arrow keys to place the cursor anywhere on the
+arrow and selecting the 'Examine' menuitem.
+
+When the 'Examine' menuitem is selected, a snapshot of the transactions as 
+well as the BOF and EOF is taken and used until the 'Examine' submenu is 
+exited.  This means to obtain the latest state of the logging system, exit 
+the 'Examine' submenu and select 'Examine' again.  If autorefresh is 
+enabled, it is suspended while using the 'Examine' option.  When the
+submenu is exited from, autorefresh is re-enabled.
+
+This screen can be displayed during benchmarks, tests or during the day to
+help the INGRES system administrator determine how close to FORCE_ABORT the
+log file gets.  The 'Blocks in use' field shows the actual number of blocks
+in use. If it is greater than the value in the 'Abort interval' field, a
+warning indicator is displayed.  The same occurs when the blocks in use
+exceeds the value in the 'Logfull interval' field.  Based on how close and
+often the percentage of log file in use approaches the Abort interval, the
+INGRES system administrator may decide to increase the size of the log
+file. 
+
+This screen will autorefresh the information if the -r flag was specified
+at startup or the 'Display Refresh' field on the Option Selection screen
+was changed to a number between 1 and 999 seconds (see Figure 2). 
+Autorefresh is desirable when monitoring this information as there is no
+need to select the 'Refresh' menuitem. 
+
+Fields of interest on the Logging System Header screen include:
+
+    Field          Description
+    -----          -----------
+    Block size     The log file block size in bytes.  This value is 
+                   specified when running IIBUILD or rcpconfig.  See the
+                   INGRES I & O Guide.
+
+    Block count    The number of blocks in the log file.  This value is 
+                   also specified when running IIBUILD or rcpconfig.
+
+    Buffer count   The number of log buffers.  These are the same size
+                   as the log file block size.
+
+    CP interval    A consistency point occurs when the log file size
+                   ('Blocks in use' field) reaches a multiple of this
+                   number.
+
+    Logfull        Indicates when LOG_FULL_LIMIT occurs.  When the
+    interval       'Blocks in use' field is equal to this value, all
+                   transaction activity is halted.  A warning field
+                   is displayed in the lower right hand corner.  This
+                   value is also determined when running IIBUILD or 
+                   rcpconfig.  Please see the INGRES I & O Guide.
+
+    Abort          Indicates when FORCE_ABORT occurs.  When the 'Blocks
+    interval       in use' field exceeds this value, the oldest transaction
+                   is aborted.  To find out which transaction is being 
+                   aborted, use the 'Log Transaction Display' screen 
+                   (Figure 29).  Tab to the 'Status' column, select the
+                   'Find' menuitem to look for the word 'FORCE'.  A warning
+                   indicator is also displayed.  Please refer to the INGRES
+                   I & O Guide.
+
+    Last           Displays the last transaction ID used.  This number
+    transaction    corresponds to the 'External TX ID' column on the
+    ID             Log Transaction Display screen and the 'Transaction
+                   ID' column on the Lock List Display screen.
+
+    Blocks in      Indicates the number of blocks in use in the log file.
+    use            This value is used for the 'Log file in use' bargraph.
+                   
+    Blocks         Displays the number of remaining pages
+    available
+
+    Begin          The logical beginning of file.  The number in between
+                   the two colons (in this case 627) represents the BOF.
+
+    CP             Displays the log file address of the last consistency
+                   point.
+
+    End            The logical end of file.  The number in between the two
+                   colons (in this case 1113) represents the EOF.  The
+                   difference between the numbers between the colons in the
+                   'Begin' and 'End' fields is displayed in the 'Blocks in
+                   use' field.
+
+    Journal        Indicates the log file address range where the archiver
+    window         will look for records to journal.
+
+    Status         Indicates the status of the logging and recovery systems.
+                   Valid status values include:
+
+                   Status           Description
+                   ------           -----------
+                   ONLINE           The logging and recovery systems are
+                                    operating OK.
+
+                   ECPDONE          A consistency point was taken.
+
+                   CPNEEDED         The logging system is about to take a
+                                    consistency point.
+
+                   LOGFULL          The log file is full.  The INGRES system
+                                    manager should determine the cause of this
+                                    and increase the log file size.  A warning
+                                    indicator is also displayed.
+
+                   FORCE_ABORT      The logging system is aborting the oldest
+                                    transaction.  The Log Transaction Display
+                                    screen can be used to find out which
+                                    transaction is being aborted.
+
+                   RECOVER          The recovery process is performing
+                                    recovery.
+
+                   ARCHIVE          The archiver process is archiving
+                                    journalled transactions to the journal
+                                    files.
+
+                   ACP_SHUTDOWN     The archiver is preparing to shutdown.
+                                    (This indicates that an 'rcpconfig/shutdown'
+                                    (VMS) or 'rcpconfig -shutdown' (UNIX) has
+                                    has been issued)
+
+                   IMM_SHUTDOWN     An immediate shutdown is occuring.  This
+                                    indicates that an 'rcpconfig/imm_shutdown'
+                                    (VMS) or 'rcpconfig -imm_shutdown' (UNIX)
+                                    has been issued)
+
+                   START_ARCHIVER   The archiver has died and must be restarted
+                                    by the INGRES system administrator.  The
+                                    archiver will not restart automatically.
+                                    If it is not restarted, the log file will
+                                    reach the LOG_FILE_FULL limit.
+
+                   PURGEDB          This status appears when a database has
+                                    been closed by the last user who had it
+                                    open; the archiver is archiving
+                                    transactions that belong to this database.
+
+    % in use       The percentage of the log file in use is displayed.
+
+    Log file       This depicts a logical view of the log file with the
+    Diagram        left side of the field representing page 1 and the right
+                   side representing 'Block count' pages (i.e. 2048 pages).
+                   Within this field is an arrow diagram ('>------>') which
+                   represents the portion of the log file in use.  If the
+                   portion of the log file in use only spans one position 
+                   in the field, an '*' is displayed.  As the EOF and BOF
+                   change, the arrow will move from left to right and wrap
+                   around the diagram.
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Refresh        Queries the INGRES logging system for logging system
+                   header information.  Even if the autorefresh option is set,
+                   this menuitem can still be selected at any time.
+
+    Examine        Allows examination of the transactions in the log file.
+                   The Log file Diagram is highlighted and a '^' (caret) 
+                   symbol appears in that field.  Any transactions occuring
+                   in the range of pages covered by the caret ('^') symbol
+                   are displayed in the scrolling area (see Figure 25). The
+                   range of log file pages being examined is also displayed.
+                   A submenu appears containing the following menuitems
+                   which allow the caret symbol to moved around on the 
+                   diagram.  It should be noted that until this submenu is
+                   exited, the information being displayed is a snapshot.
+
+                       Menuitem       Descriptions
+                       --------       ------------
+                       Next           Moves the caret symbol to the right by
+                                      one position.  Attempting to move beyond
+                                      the EOF will wraparound to the BOF.  Any
+                                      transactions occuring in the range
+                                      covered by the next position will be
+                                      displayed in the scrolling area.
+
+                       Previous       Moves the caret symbol to the left by
+                                      one position.  Attempting to move below
+                                      the BOF will wraparound to the EOF.  Any
+                                      transactions occuring in the range
+                                      covered by the previous position will be
+                                      displayed in the scrolling area.
+
+                       More_Info      Displays a popup (Figure 26) which shows
+                                      additional information for the 
+                                      transactions in the Transaction scrolling
+                                      area.  The cursor should be positioned on
+                                      a transaction of interest before this
+                                      menuitem is selected.
+
+                       End            Returns to the Logging System Header
+                                      screen main menu.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Log Info Menu screen.
+
+    Quit           Exit IPM.
+
+Logging System Header screen with transaction display
+-----------------------------------------------------
+INGRES IPM Log Info Menu              Database: <all databases selected>        
+                                                                                
+  +INGRES IPM Logging System Header----------------------------------------+    
+  |Block count:     2048  CP interval:           716  +------Blocks-------+|    
+  |Block size:     16384  Abort interval:       1638  |In use:         543||    
+  |Buffer count:       8  Logfull interval:     1945  |Available:     1505||    
+  |                                                   +-------------------+|    
+  |Begin: <644508240:627:84>          CP:    <644508240:627:84>            |    
+  |End:   <644508240:1170:72>         Last Transaction ID: 93353a1d56      |    
+  |                                                                        |    
+  |Journal Window: <0,0,0>..<0,0,0>                                        |    
+  |Status:         ONLINE,ECPDONE                                          |    
+  |                                                                        |    
+  |+--------------------Log file Diagram-(% in use:  26)------------------+|    
+  ||                     ^----------------->                              ||    
+  |+----------------------------------------------------------------------+|    
+  |   Transactions occuring in      Transaction ID   Session      Database |    
+  |   the log file between pages   +----------------+------------+--------+|    
+  |   994    and 1024   are        |93353a1ceb      |linda       |edwin   ||
+  |   displayed in the scrolling   |9357ae63c0      |tomt        |tomt772 ||    
+  |   area to the right ------->   |9357ae63b6      |$opendb     |tomt772 ||    
+  |                                |                |            |        ||    
+  +--------------------------------+----------------+------------+--------++    
+________________________________________________________________________________
+Figure 25 - Logging System Header screen
+---------
+
+Logging System Header screen with More Info Popup
+-------------------------------------------------
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <all databases selected>        
+                                                                                
+  +INGRES IPM Logging System Header----------------------------------------+    
+  |Block count:     2048  CP interval:           614  +------Blocks-------+|    
+  |Block size:     16384  Abort interval:       1638  |In use:          11||    
+  |Buffer count:       8  Logfull interval:     1945  |Available:     2037||    
+  |                         +More Info-----------------------------------------+
+  |Begin: <649024498:627:96>|+Page in log file+ +Logging Statistics-----------+|
+  |End:   <649024498:1170:72||First:    630   | |Write:      5   Split:      0||
+  |                         ||Last:     820   | |Force:      0   Wait:       0||
+  |Journal Window: <0,0,0>..||CP:       628   | +-----------------------------+|
+  |Status:         ONLINE,EC|+----------------+  Process ID: 64e0012c          |
+  |                         |Status: ACTIVE,PROTECT                            |
+  |+--------------------Log +--------------------------------------------------+
+  ||                     ^----------------->                              ||    
+  |+----------------------------------------------------------------------+|    
+  |   Transactions occuring in      Transaction ID   Session      Database |    
+  |   the log file between pages   +----------------+------------+--------+|    
+  |   994    and 1024   are        |93353a1ceb      |linda       |edwin   ||
+  |   displayed in the scrolling   |9357ae63c0      |tomt        |tomt772 ||    
+  |   area to the right ------->   |9357ae63b6      |$opendb     |tomt772 ||    
+  |                                |                |            |        ||    
+  +--------------------------------+----------------+------------+--------++    
+________________________________________________________________________________
+Figure 26 - Logging System Header screen with More Info popup
+---------
+
+Log Process Display screen
+--------------------------
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <no database selected>          
+                                                                                
+ +INGRES IPM Log Process Display-----------------------------------------------+
+ |ID       PID      Type    OpenDB Write    Force    Wait     Begin    End     |
+ |--------+--------+-------+------+--------+--------+--------+--------+--------|
+ |   1000b|2f200141|FCTDBMS|   10 |24760   |2093    |4936    |4904    |4894    |
+ |   1000e|2f200134|ARCHIV |    1 |30      |9       |2175    |11      |10      |
+ |   10011|2f20012f|RECOVER|    1 |159     |26      |2182    |1       |0       |
+ |        |        |       |      |        |        |        |        |        |
+ |        |        |       |      |        |        |        |        |        |
+ +--------+--------+-------+------+--------+--------+--------+--------+--------+
+                                                                                
+        |Databases     |Display logging information on each open database  |    
+        |Transactions  |Display logging information on each transaction    |    
+        |Refresh       |Get new snapshot of logging system information     |    
+        |Options       |View/Change option settings                        |    
+        +--------------+---------------------------------------------------+    
+                                                                                
+        Place the cursor on your choice and select "Go"                         
+                                                                                
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 27 - Log Process Display screen
+---------
+
+The Log Process Display screen displays the current processes in the
+logging system.  These include DBMS servers, the archiver and recovery
+processes. On VMS, the 'Process_Info' menuitem will invoke the Detailed
+Process Information screen (Figure 5).  Information available includes
+number of open databases and log write requests.  By viewing this screen,
+it is easy to determine (by process) how much logging activity is occurring
+for a DBMS server, for instance. 
+
+Columns of interest on the Log Process Display screen include:
+
+    Column         Description
+    ------         -----------
+    ID             Displays the internal PID of processes in the logging
+                   system.  This is not the operating system PID.
+
+    PID            Indicates the operating system PID for this process.
+
+    Type           Displays the type of process.  The valid types include:
+
+                   Type         Description
+                   ----         -----------
+                   FCTDBMS      The process is a DBMS server running
+                                with fast commit.
+
+                   ARCHIV       This process is the archiver for the
+                                current installation.
+
+                   RECOVER      The recovery process.
+
+                   DBMS         This process is a DBMS server.
+
+                   SBM          Server is attached to a shared data buffer.
+
+                   CKPDB        On line backup.
+
+    OpenDB         Indicates the number of database currently opened.
+
+    Write          Displays the number of log file write I/O requests
+                   made by this process.
+
+    Force          Indicates the number of log buffer forces requested.
+
+    Wait           Indicates how many times the current process waited
+                   to use the logging system.
+
+    Begin          Displays the number of transactions started by this
+                   process.
+
+    End            Indicates the number of transactions ended.  The difference
+                   between the value in this column and the value in the
+                   'Begin' column is the number of current transactions for
+                   this process.
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Refresh        Queries the INGRES logging system for logging information.
+                   Process, database and transaction information are obtained
+                   together to ensure a consistent snapshot of the logging
+                   system.
+
+    Process_Info   Displays a screen which shows various job-process
+                   information for the process on which the cursor is
+                   positioned.  Such information includes CPU time, Direct
+                   I/O, Buffered I/O, Enqueue limit, etc.  This display
+                   automatically refreshes.  This menuitem is available on
+                   VMS only.
+
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurances wherever they are in the column.  Entering
+                   '.' will look for the next occurance of what you
+                   previously used Find to search for.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Log Info Menu screen.
+
+    Quit           Exit IPM.
+
+Log Database Display screen
+---------------------------
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <no database selected>          
+                                                                                
+ +INGRES IPM Log Database Display--------------------------------------+        
+ |DB Name            Status          TX Cnt Begin  End    Read   Write |        
+ |------------------+---------------+------+------+------+------+------|        
+ |$recovery         |NOTDB          |     9|   110|    49|     0|   189|        
+ |linda             |FAST_COMMIT    |     0|    10|    10|     0|     5|        
+ |ipm               |FAST_COMMIT    |     2|    37|    35|     0|    16|        
+ |jrb70             |JOURNAL,FAST_CO|     1|    12|    11|     0|    21| --+    
+ |                  |               |      |      |      |      |      |   |    
+ |                  |               |      |      |      |      |      |   |    
+ |                  |               |      |      |      |      |      | m |    
+ |                  |               |      |      |      |      |      |   |    
+ |                  |               |      |      |      |      |      |   |    
+ |                  |               |      |      |      |      |      |   |    
+ +------------------+---------------+------+------+------+------+------+   |    
+                                                                         --+    
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 28 - Log Database Display screen
+---------
+
+The Log Database Display screen contains an entry for each active database.
+This makes it easy to monitor logging activity by database.  Information of
+use includes the number of transaction begins and ends as well as the
+number of log file write requests.  Based on this information, the DBA can
+spot databases with large amounts of logging activity. 
+
+The status of a database can also be determined.  See the information on
+the 'Status' field for a list of valid status values. 
+
+Columns of interest on the Log Database Display screen include:
+
+    Column         Description
+    ------         -----------
+    DB Name        The database name.
+
+    Status         Indicates the database status.  Valid statuses are:
+
+                   Status         Description
+                   ------         -----------
+                   NOTDB          The entry is not a database.
+
+                   FAST_COMMIT    This database is running with Fast Commit.
+
+                   JOURNAL        This database has journalling enabled.
+                       
+                   OPENDB_PEND    This database is about to be opened for the 
+                                  first user of that database.
+
+                   CLOSEDB_PEND   This database is about to be closed, the last
+                                  user in the database is exiting.
+
+                   EBACKUP        On line backup
+
+                   FBACKUP        On line backup
+
+                   CKPDB_PEND     On line backup for this database is about
+                                  to start.
+
+                   PURGE          This database is closed and the archiver is
+                                  archiving transactions for this database.
+
+    TX Cnt         Displays the number of currently open transactions.
+
+    Begin          Indicates how many transaction begins occurred.
+
+    End            Displays the number of transaction ends occurred.  The
+                   difference between the 'Begin' and 'End' columns is
+                   displayed in the 'TX Cnt' column.
+
+    Read           Indicates how many log file read requests were made.
+                   It is unusual for this value to be greater than 0
+                   for any entry except the '$recovery' entry.  Log
+                   file reads are usually done during transaction rollout.
+
+    Write          Displays the number of log file write requests made.
+
+When the 'More_Info' menuitem is selected, a popup containing additional
+fields for the specified database is displayed (see Figure 29).  The additional
+fields are:
+
+    Field          Description
+    -----          -----------
+    ID             The internal database ID for this database.
+
+    Owner          The DBA for this database.
+
+    Force          How many log file forces occurred for this databse.
+
+    Wait           Displays how many times transactions in this database
+                   had to wait to use the logging system.
+
+    Location       The database location.
+
+    Jnl Window     The range of log file addresses where there are transactions
+                   for this database that must be journalled.  This implies
+                   that journalling is enabled for this database.
+
+    Start Backup   Indicates the log file address where online backup for this
+                   database begins.
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Refresh        Queries the INGRES logging system for logging information.
+                   Process, database and transaction information are obtained
+                   together to ensure a consistent snapshot of the logging
+                   system.
+
+    More_Info      Place the cursor on the desired database and select this
+                   menuitem.  Additional information for that database
+                   is displayed on a popup screen (including the database
+                   location and journal window, see Figure 29).  
+
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurances wherever they are in the column.  Entering
+                   '.' will look for the next occurance of what you
+                   previously used Find to search for.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Log Info Menu screen.
+
+    Quit           Exit IPM.
+
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <no database selected>          
+                                                                                
+ +INGRES IPM Log Database Display--------------------------------------+        
+ |DB Name            Status          TX Cnt Begin  End    Read   Write |        
+ |------------------+---------------+------+------+------+------+------|        
+ |$recovery         |NOTDB          |     9|   110|    49|     0|   189|        
+ |linda             |FAST_COMMIT    |     0|    10|    10|     0|     5|        
+ |ipm               |FAST_COMMIT    |     2|    37|    35|     0|    16|        
+ |jrb70             |JOURNAL,FAST_CO|     1|    12|    11|     0|    21| --+    
+ |+More Info-----------------------------------------------------------+   |    
+ ||ID:   d70013  Owner: jrb           Force:        0  Wait:        2  |   |    
+ ||Location:     II_DATABASE:[INGRES.data.jrb70]                       | m |    
+ ||Jnl Window:   <629380860,1843,1272>..<629380860,1843,1272>          |   |    
+ ||Start Backup: <0,0,0>                                               |   |    
+ |+--------------------------------------------------------------------+   |    
+ +------------------+---------------+------+------+------+------+------+   |    
+                                                                         --+    
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 29 - More Info popup screen for Log Database Display
+---------
+
+Log Transaction Display screen
+------------------------------
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Log Transaction Display---------------------------------------+    
+ |External TX ID   Database     Session    Status             Write  Split |    
+ |----------------+------------+----------+------------------+------+------|    
+ |      92c1cbda8d|ipm         |tomt      |ACTIVE,PROTECT    |     5|     0|
+ |      92c1cbda9a|ipm         |tomt      |ACTIVE,PROTECT    |     2|     0|
+ |      93353a1ceb|edwin       |linda     |ACTIVE,PROTECT    |    16|     0|    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ +----------------+------------+----------+------------------+------+------+   
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 30 - Log Transaction Display screen
+---------
+
+The Log Transaction Display screen contains an entry for each transaction
+in the logging system.  By monitoring this screen, it is easy to observe
+the activity of each transaction and pinpoint those which are generating
+much logging system activity.  The status of each transaction is also
+displayed.  By using the 'Find' menuitem, it is easy to search for
+FORCE_ABORT transactions by tabbing to the 'Status' column and selecting
+the 'Find' menuitem.  The different status values are listed below. 
+
+On VMS, the Process_Info menuitem allows monitoring of the process that the
+selected transaction belongs to.  For instance, in multiserver
+installations, it is not necessary to determine what server a transaction
+belongs to.  Just place the cursor on the desired transaction and select
+the 'Process_Info' menuitem.  The Detailed Process Information screen is
+displayed (see Figure 5). 
+
+Note that once a transaction is committed, it no longer is in the logging
+system and when this screen is refreshed, will disappear from the display
+if it has committed between the last screen refresh and the current time.
+Transactions which have been committed and not yet journalled (and when
+fast commit is on) may still appear with a status of INACTIVE.  By default,
+INACTIVE transactions are not displayed.  The '-i' option or the 'Display
+inactive transactions' field on the Options Display screen (Figure 2) can
+be set to 'y' to force display of inactive transactions. 
+
+Columns of interest on the Log Transaction Display screen include:
+
+    Column         Description
+    ------         -----------
+    External TX    Displays the Transaction ID.  This column corresponds
+    ID             to the 'Transaction ID' field on the More Info popup
+                   screen for the Lock List display (Figure 13).
+
+    Database       Displays the name of the database that this transaction
+                   is running in.
+
+    Session        The session name running this transaction.  Session
+                   names beginning with '$' are internal transactions.
+
+    Status         The status of the transaction.  Valid statuses include:
+
+                   Status         Description
+                   ------         -----------
+                   INACTIVE       Not Active.  INGRES internal transactions
+                                  are usually in this state.
+
+                   ACTIVE         Active - user transactions are usually in
+                                  this state.  No COMMIT has been issued.
+
+                   PROTECT        Indicates that this transaction must be
+                                  recoverable.  User transactions always have
+                                  this status.
+
+                   NOABORT        Indicates that this transaction can't be
+                                  aborted due to FORCE_ABORT or LOG_FILE_FULL.
+                                  Distributed transactions have this status.
+
+                   RECOVER        This transaction has been taken over by the
+                                  recovery process.
+
+                   FORCE_ABORT    This transaction is being rolled out because
+                                  the log file reached the FORCE_ABORT limit.
+
+                   SESSION_ABORT  This transaction is being rolled out because
+                                  the session owning this transaction has
+                                  requested the abort.
+
+                   SERVER_ABORT   The server that this transaction belongs to
+                                  is aborting that transaction.
+
+                   DISTRIBUTED    Indicates that this transaction is a slave
+                                  transaction of a larger distributed
+                                  transaction.
+
+                   WILLING_COMMIT Indicates that this transaction is ready
+                                  to commit.  This applies to distributed
+                                  transactions only.
+
+                   RE-ASSOC       Indicates that this transaction's connection
+                                  to the master coordinating application has
+                                  been lost and the transaction is awaiting
+                                  reconnection in order to close the
+                                  transaction.
+
+                   MAN_ABORT      Indicates that this distributed transaction
+                                  was manually rolled out.
+
+                   MAN_COMMIT     Indicates that this distributed transaction
+                                  was manually committed.
+
+    Write          Displays the number of log file write I/O requests made
+                   by this transaction.
+
+    Split          Indicates the number of times a write to the log file
+                   needed to be split across more than one log file page
+                   and there was not a free buffer.  If this occurs
+                   frequently, the number or size of the log buffers should be
+                   increased to prevent throughput problems to the log file.
+
+When the 'More_Info' menuitem is selected, a popup containing additional
+fields for the specified transaction is displayed (see Figure 31).  The
+additional fields are:
+
+    Field          Description
+    -----          -----------
+    Internal TX    The internal transaction ID used by the logging
+    ID             system.
+
+    Dis TX ID      The distributed transaction ID that this transaction
+                   belongs to.
+
+    Session ID     The session ID of the session that owns this transaction.
+                   This ID corresponds to the 'ID' column on the Session List
+                   screen (Figure 7).
+
+    DB ID          The internal database ID used by the logging system.  This
+                   field corresponds to the 'ID' field on the More Info popup
+                   screen for the Log Database display (Figure 29).
+
+    Force          Indicates how many times this transaction has caused
+                   a log buffer to be forced to the log file.
+
+    Wait           Displays the number of times this transaction had to wait
+                   to use the logging system.
+
+    Internal PID   The internal PID used by the logging system for the process
+                   that this transaction belongs to.  This field corresponds
+                   to the 'ID' column on the Log Process Display screen
+                   (Figure 27).
+
+    PID            The operating system PID for the process that this
+                   transaction belongs to.  This field corresponds to the
+                   'PID' column on the Log Process Display screen (Figure 27).
+
+    First          Displays the log file address for the begin transaction
+                   marker for this transaction.  It is possible to determine
+                   the oldest transaction by viewing the middle number of this
+                   field.
+
+    Last           Displays the log file address for the last record written
+                   to the log file.
+
+    CP             Indicates when a consistency point is taken.
+
+The menuitems available on this screen include:
+
+    Menuitem       Description
+    --------       -----------
+    Refresh        Queries the INGRES logging system for logging information.
+                   Process, database and transaction information are obtained
+                   together to ensure a consistent snapshot of the logging
+                   system.
+
+    More_Info      Place the cursor on the desired transaction and select this
+                   menuitem.  Additional information for that transaction
+                   is displayed on a popup screen (including the first
+                   and last page address in the log file for this
+                   transaction, see Figure 31).  
+
+    Process_Info   Place the cursor on the desired transaction and select this
+                   menuitem.  A screen is displayed which shows various
+                   job-process information for the process that the transaction
+                   belongs to.  Such information includes CPU time, Direct
+                   I/O, Buffered I/O, Enqueue limit, etc.  This display
+                   automatically refreshes.  This menuitem is available on
+                   VMS only.
+
+    Find           Searches a column in a scrolling region (tablefield).
+                   If searching a text column, Find will locate all
+                   occurances wherever they are in the column.  Entering
+                   '.' will look for the next occurance of what you
+                   previously used Find to search for.
+
+    Help           Displays INGRES help screens.
+
+    End            Returns to the Log Info Menu screen.
+
+    Quit           Exit IPM.
+
+________________________________________________________________________________
+INGRES IPM Log Info Menu              Database: <all databases selected>        
+                                                                                
+ +INGRES IPM Log Transaction Display---------------------------------------+    
+ |External TX ID   Database     Session    Status             Write  Split |    
+ |----------------+------------+----------+------------------+------+------|    
+ |      92c1cbda8d|ipm         |tomt      |ACTIVE,PROTECT    |     5|     0|
+ |      92c1cbda9a|ipm         |tomt      |ACTIVE,PROTECT    |     2|     0|
+ |      93353a1ceb|edwin       |linda     |ACTIVE,PROTECT    |    16|     0|    
+ |+More Info------------------------------------------------------------------+ 
+ ||Internal TX ID: 38001c            Force: 4                   Wait: 2       | 
+ || Session ID: 71b500        Internal PID: 2c001d      External PID: 59a00ab1| 
+ ||Database ID: 70012            Dis TX ID: 00                                | 
+ ||First: <644508240,1015,11000>             Last: <644508240,1018,72>        | 
+ ||CP:    <644508240,627,84>                                                  | 
+ |+---------------------------------------------------------------------------+ 
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ |                |            |          |                  |      |      |    
+ +----------------+------------+----------+------------------+------+------+    
+                                                                                
+                                                                                
+________________________________________________________________________________
+Figure 31 - More Info popup screen for Log Transaction Display
+---------
+
+IPM Hints
+=========
+
+Q: How do I determine what servers are running in the Installation?
+
+A: Use the Server List screen (Figure 3) or the Log Process Display screen
+   (Figure 27). The Server List screen shows only servers registered with the
+   name server (unless II_DBMS_SERVER is defined).  The Log Process screen
+   shows all servers, the archiver and recovery processes in the current
+   installation. 
+
+Q: How do I view a list of sessions in a DBMS server?
+
+A: use the Server List screen (Figure 3), then select the 'Process_List'
+   menuitem to display the Session List screen.  From here, session detail
+   can be viewed, and INGRES superusers can remove unwanted sessions.
+
+Q: A server is "unreachable" and I want to monitor the state of the system.
+   Since IPM connects to a DBMS server, what do I do?
+
+A: Start a second server with the nonames option (/noname on VMS, -nonames 
+   on unix) so it is not registered with the name server (See the INGRES
+   I & O Guide).  Define II_DBMS_SERVER to point to the new server.  
+   Providing the new DBMS server started up properly, invoke IPM.  IPM will
+   connect to the new server allowing you to use IPM to determine the 
+   state of the INGRES system.  Note that the Server List screen will only
+   display information on the new server.  Use the 'Log_Info' and 
+   'Lock_Info' areas of IPM to view the state of the INGRES system.
+
+Q: Many users are complaining that their sessions are stalled.  They were
+   doing database updates/deletes/inserts and the response time is long.
+   How do I find out what's wrong?
+
+A: Use the Logging System Header screen (Figure 24) and check the 'Status'
+   field.  If you see any of the following, the delay is due to the logging
+   system being in the following states:
+
+   - LOGFULL, CPFLUSH - log file is overly full while executing a consistency
+     point (CP).  The CP may have to completed before log space can be
+     released.  The status LOGFULL, ARCHIVE may also be displayed as mentioned
+     above.
+
+   - LOGFULL, ARCHIVE - the log file becomes full and journalled transactions
+     must be archived to free up log space.  When the archiver is done, log
+     space is released.
+
+   - LOG_FULL - the log file has reached a limit where all database updates/
+     deletes/inserts are stalled until enough space is reclaimed.  The
+     Warning field in Figure 24 will also be visible.
+
+   - FORCE_ABORT - the logging system is backing out the oldest transaction.
+     While this should not block any other transactions in its own right, it
+     does take CPU cycles to back out.  The amount of CPU depends upon what
+     that transaction was doing when it was singled out for rollback.
+
+   Of course, those stalled sessions could be waiting on a lock.  The
+   question below answers what to do to find out if that is the cause.
+
+Q: How do I find concurrency problems? 
+
+A: Use the Lock List Display screen (Figure 12).  Use the 'Find' menuitem
+   on the 'Status' column to look for the word 'WAIT'.  Any lock lists with a
+   status of 'WAIT' are blocked from proceeding.  To determine what lock is
+   preventing that transaction from proceeding, select the 'Block_Info'
+   menuitem.  The Blocking Lock Display (Figure 14) scrolling area contains
+   the blocking lock (at the top) with all other waiting locks below it.
+   By noting the session name, it is possible to track down the user to
+   find the problem.  Use the 'Examine' menuitem on the Lock List Display
+   to view the individual locks for that lock list.
+
+Q: How do I determine how full and how close to FORCE_ABORT the log file is?
+
+A: use the Logging System Header screen (Figure 24).  The Log file diagram
+   shows how full the log file is and the 'Blocks in use' field shows exactly
+   how many blocks are in use.  Compare this value to 'Abort interval'
+   and 'Logfull interval' to determine how close to FORCE_ABORT and 
+   LOG_FILE_FULL the logging system is.  This is most useful when the
+   autorefresh option is set.
+
+Q: I am monitoring a busy system and I want to view the amount of locking
+   and logging resources being consumed during a certain period.  How do
+   I do that?
+
+A: Invoke IPM with the -r flag or set the autorefresh option on the
+   Option Selection screen (Figure 2).  Either way enables autorefresh.
+   Both the Locking System Summary and Logging System Summary screens allow
+   statistics to be collected over an interval whose starting point is
+   determined by selecting the 'Interval' menuitem (Figures 9 and 22).
+   Once the 'Start_Now' menuitem is selected from the Interval submenu,
+   a starting and current time is displayed (Figures 10 and 23).  The
+   starting times and statistics are saved until reset.  This allows you
+   to use other parts of IPM and view these screens to see the latest
+   cumulative locking and logging statistics.
+
+Q: How efficient is group commit in my installation?
+
+A: By using the Logging System Summary screen (Figure 22), you can
+   determine the efficiency of group commit.  The ratio of 'Log group count'
+   to 'Log group commit' indicates how many waiting transactions are
+   satisfied for each group commit operation.  10:1 would indicate
+   that 10 commits were satisfied with one group commit write.  Use
+   of the 'Interval' menuitem is helpful for observing this over
+   a short period of time.  Note that if the ratio approaches 1:1,
+   then potentially empty (near empty) log buffers are being written out
+   possibly wasting space in the log file.  You may want to decrease the
+   size of the log buffers, followed by the number of log buffers.
+
+Q: I want to see what transaction is preventing reclaimation of log file
+   space.  How do I do that?
+
+A: The Logging System Header screen (Figure 24) has a Log file diagram. 
+   This diagram depicts the log file as it logically appears.  The field
+   boundaries represent the physical begin and end of file.  The logical
+   begin and end are marked by '>' symbols.  By using the 'Examine' menuitem,
+   you can view the transactions that span the portion of the log file
+   represented by the '^' symbol on the Log file diagram field.  By using
+   the 'Next' and 'Previous' menuitems, you can logically step through the log
+   file until to find a user transaction.  All transactions found for the
+   current portion of the log file appear in the scrolling area on the bottom
+   right of the screen.  See Figure 25.  Once the offending transaction is
+   found, steps can be taken to remove (or commit) it.

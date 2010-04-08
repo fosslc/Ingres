@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!rep!hdr
+#
+
+SubDir ING_SRC front rep hdr ;
+
+IISUBSYS front rep hdr ;
+
+
+IISHHDR tbldef.h : tbldef.sh ;
+

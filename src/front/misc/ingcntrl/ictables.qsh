@@ -1,0 +1,90 @@
+/*
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+/**
+** Name:        ictables.qsh -  structures that map to tables used by Accessdb.
+**
+** Description:
+**	Descriptions of structures that map to tables in the iidbdb.
+**
+**	IIUSER		maps to iiuser catalog.
+**	IIUSERGROUP	maps to iiusergroup catalog.
+**	IIROLE		maps to iirole catalog.
+**	IIDATABASE	maps to iidatabase catalog.
+**	IIDBPRIV	maps to iidbpriv catalog.
+**
+** History:
+**	6-nov-90 (pete)
+**		Initial version.
+**	2-dec-1991 (pete)
+**              Change "fill1" to "dbflags" in IIDBPRIV to match 6.5
+**		table definition.
+**	20-sep-93 (robf)
+**              Update iiuser for new attributes
+**	20-jul-94 (robf)
+**              Added internal_flags and default_status to iiuser
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	12-Nov-2009 (kschendel) SIR 122882
+**	    make cmptlvl larger, it's the string-y version.
+**/
+
+EXEC SQL BEGIN DECLARE SECTION;
+##typedef struct {
+##	char	name[DB_MAXNAME+1];
+##	i4	gid;
+##	i4	mid;
+##	i4	status;
+##	char	default_group[DB_MAXNAME+1];
+##	char    profile [DB_MAXNAME+1];
+##      char    expire_date[26];
+##      i4 internal_flags;
+##	i4 default_status;
+##} IIUSER;
+
+##typedef struct {
+##	char	groupid[DB_MAXNAME+1];
+##	char	groupmem[DB_MAXNAME+1];
+##} IIUSERGROUP;
+
+##typedef struct {
+##	char	roleid[DB_MAXNAME+1];
+##	char	rolepass[DB_MAXNAME+1];
+##} IIROLE;
+
+/* Note that this comes from iidatabase_info, not iidatabase */
+##typedef struct {
+##	char	name[DB_MAXNAME+1];
+##	char	own[DB_MAXNAME+1];
+##	char	dbdev[DB_MAXNAME+1];
+##	char	ckpdev[DB_MAXNAME+1];
+##	char	jnldev[DB_MAXNAME+1];
+##	char	sortdev[DB_MAXNAME+1];
+##	i4	access;
+##	i4	dbservice;
+##	char	dbcmptlvl[10+1];
+##	i4	dbcmptminor;
+##	i4	db_id;
+##	char	dmpdev[DB_MAXNAME+1];
+##} IIDATABASE;
+
+##typedef struct {
+##	char	dbname[DB_MAXNAME+1];  /* Primary key part 3 */
+##	char	grantee[DB_MAXNAME+1];	/* Primary key part 1 */
+##	i4	gtype;  		/* Primary key part 2 */
+##	i4	dbflags;
+##	i4	control;
+##	i4	flags;
+##	i4	qrow_limit;
+##	i4	qdio_limit;
+##	i4	qcpu_limit;
+##	i4	qpage_limit;
+##	i4	qcost_limit;
+##} IIDBPRIV;
+
+EXEC SQL END DECLARE SECTION;

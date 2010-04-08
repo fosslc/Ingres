@@ -1,0 +1,35 @@
+Optional Standard Catalog Interface Catalog:
+
+The iiregistered_objects is going to become a star standard catalog for the
+next STAR release.  However, users may require the information from this catalog
+now, so a SIG script is being included to create catalog iiregistered_objects.
+This catalog ties registered objects (tables, views and secondary indexes that
+star may pick up when the user registers an ingres table) to the underlaying
+objects in the Local Database (LDB).
+
+    COL NAME	     DATA TYPE	DESCRIPTION
+    --------------   ---------	----------------------------------------------
+    ddb_object_name  char(32)	name of star registered object (the registered
+				object will be a table, view or index)
+    ddb_object_owner char(32)	owner of star registered object
+    register_date    char(25)	date object was registered
+    ldb_database     char(32)	name of LDB database that registered object
+				resides in
+    ldb_node	     char(32)	node that ldb_database resides on
+    ldb_dbmstype     char(32)	type of database ldb_database is ('INGRES',
+				'RMS', 'DB2','RDB'... etc).  This is the same 
+				types used by iinamu.
+    ldb_object_name  char(32)	name the LDB uses for the registered object
+    ldb_object_owner char(32)	owner of the registered object in the LDB
+    ldb_object_type  char(8)	Type of local object:  "T" for table, "V"
+				for view, "I" for index.
+
+If you wish to define this catalog, then assure a star server is up in your
+installation and execute the following sig command file:
+
+VMS:	@ii_system:[ingres.sig.star]makestdcat.com <star_dbname>
+
+UNIX:	chmod +x $II_SYSTEM/ingres/sig/makestdcat.sh
+	$II_SYSTEM/ingres/sig/makestdcat.sh <star_dbname>
+
+where star_dbname is the name of your distributed database.

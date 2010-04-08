@@ -1,0 +1,56 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+     This form is used to view and/or modify the join fields for the current
+     Join Definition.  The Join Information Table contains the join fields
+     for the Join Definition (JoinDef).  QBF chooses default join fields by
+     matching column names between the tables of the Join Definition.  You
+     may change or add to these values by entering the desired join pairs in
+     the Join Information Table.  The columns which participate in the join
+     pair are designated in the form table.column_name, where "table" should
+     be the table abbreviation if one has been given.  Otherwise the table
+     name itself should be used.  You may delete a join by clearing the Column
+     fields for the join pair.
+
+     The fields on this form are:
+
+     Field Name                 Description
+     ----------                 -----------
+     Column                     Designation of column to be used in join pair.
+     Join                       Type of join specified. QBF fills in this
+                                value for you.  Possible join types are:
+                                Master/Detail (MD), Detail/Master (DM),
+                                Master/Master (MM) or Detail/Detail (DD).
+     Column                     Designation of column to be used in join pair.
+
+     In addition to the Join Information, the form contains a table field
+     you can use to get help on a table in the database.  Help is obtained
+     by filling in the "Table" field with the table name or abbreviation for
+     which you want more information and selecting the GetTableDef menuitem.
+     This part of the form contains the following fields:
+
+     Field Name                 Description
+     ----------                 -----------
+     Table                      Field to specify a table name (or abbreviation)
+                                about which you need more information.
+     Column                     Column name in the table whose name is in
+                                the field "Table".
+     Data Type                  Data type of the column in table "Table".
+
+
+     The following commands are on the QBF Join Specification Form:
+
+     Command                    Function
+     -------                    --------
+     Rules                      Go to the Update and Delete Rules form.
+     GetTableDef                Get help on the table(s) specified.
+     Cancel                     Return to the QBF Table Entry form without
+                                modifying the join information.
+     ListChoices                Produce a list of available fields or tables 
+                                to choose from.
+     Help                       Print this message.
+     End                        Return to the QBF Table Entry form. Join
+                                information is modified to reflect the values
+                                currently in the Join Information table. Any 
+                                errors found in the new join specifications
+                                are reported by QBF. You are then asked to 
+                                correct them rather than returning to the 
+                                Table Entry form.

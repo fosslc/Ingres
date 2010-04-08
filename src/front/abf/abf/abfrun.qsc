@@ -1,0 +1,595 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#ifdef USEDY
+#include	<ex.h>
+#endif
+#include	<cm.h>		 
+#include	<st.h>
+#include	<nm.h>
+#include	<lo.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<feconfig.h>
+#include	<fedml.h>
+#include	<adf.h>
+#include	<ui.h>
+#include	<abftrace.h>
+#include	<abfcnsts.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<abclass.h>
+#include	<stdprmpt.h>
+#include	"abfgolnk.h"
+#include	"ablink.h"
+#include	<eqlang.h>
+#include	"erab.h"
+
+/**
+** Name:	abfrun.c -	ABF Run Frame Module.
+**
+** Description:
+**	Contains routines used to run a frame of the application being defined
+**	by ABF.	 Defines:
+**
+**	IIABarunApp()	build application and run frame.
+**
+**	NOTE:
+**		A lot of the strings in here are "fast" to avoid problems
+**		of wiping out slow-string buffers without doing a lot
+**		of 'STcopy()'s.  It is assumed that the EX arguments which
+**		get passed in to handlers may be slow string pointers.
+**
+** History:
+**  15-Feb-95 (nick) (x-int angusm)  
+**      Fixed bug 56774 - mismatched filename buffer lengths
+**	11-Nov-1993 (tad)
+**		Bug #56449
+**		Replaced %x with %p for pointer values where required.
+**	Revision 6.4
+**      18-Feb-93 (connie) Bug #48982
+**                give warning and let user decide whether to go on if
+**                hitting 'Go' at host language procedure
+**
+**	10-oct-92 (leighb) Load correct image name before calling ImageBld.
+**
+**	30-aug-91 (leighb) Revived ImageBld.
+**
+**	03/22/91 (emerson)
+**		Fix interoperability bug 36589:
+**		Change all calls to abexeprog to remove the 3rd parameter
+**		so that images generated in 6.3/02 will continue to work.
+**		(Generated C code may contain calls to abexeprog).
+**		This parameter was introduced in 6.3/03/00, but all calls
+**		to abexeprog specified it as TRUE.  See abfrt/abrtexe.c
+**		for further details.
+**	08/16/91 (emerson)
+**		Fix for bug 37878 in run_frame.
+**
+**	Revision 6.3/03/00
+**	11/90 (Mike S)	Ignore role id if Knowledge Management isn't present.
+**
+**	6/14/90 (Mike S)
+**	Remove handler declaration.
+**	Change "ifndef NODY" to "ifdef USEDY"
+**	
+**	Revision 6.2  88/09/12  kenl
+**	Updated comments surrounding autocommit on/off statements
+**	to reflect new SQLized version of ABF.
+**	Added 'test_image' parameter to 'IIABarunApp()' to be passed
+**	to 'run_frame().'  89/01  wong
+**	Interpreter changes.  89/02  bobm
+**
+**	Revision 6.1  88/11  wong
+**	Replaced IMTDY conditional logic with not NODY.
+**	89/03  wong  Corrected #3768 by checking new 'IIui1stAutoCom' flag.
+**
+**	Revision 6.0  87/07  wong
+**	Removed 'abrundef()' since it was identical to 'IIABarunApp()'.
+**	Modified 'run_handler()' to pop-up exception message and to use
+**	'adx_handler()' to determine math exception behavior.
+**	Added support for link/run test image.
+**
+**	Revision 2.0  82/07  joe
+**	Initial revision.
+**
+**	11/09/88 (dkh) - Fixed venus bug 3364.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+*/
+
+FUNC_EXTERN VOID	FTfrminvis();
+FUNC_EXTERN VOID	FTfrmvis();
+
+static VOID	run_frame();
+GLOBALREF	char *IIabRoleID;
+GLOBALREF	char *IIabUserName;
+GLOBALREF	char *IIabConnect;
+GLOBALREF	bool IIabKME;
+GLOBALREF	i4  IIOIimageBld;		 
+
+/*{
+** Name:	IIABarunApp() -	Build Application and Run Frame.
+**
+** Description:
+**	Build the application and then run it by prompting for a frame name
+**	and calling it.
+**
+** Input:
+**	app		{APPL *}  The application object.
+**	test_image	{ABLNKTST *}  The test mode image object.
+**	objname		{char *}  The name of the frame or procedure to run.
+**	type		{OOID}  The type of object with which to start.  
+**
+** Returns:
+**	{STATUS}  OK  On success,
+**		  FAIL	otherwise.
+**
+** Called by:
+**	abf(), 'IIABeditApp()', various.
+**
+** Trace Flags:
+**	ABTROUTENT, ABTROUTEXIT
+**
+** History:
+**	Written 7/26/82 (jrc)
+**	07/87 (jhw) -- Removed 'abrundef(),' which was functionally identical
+**			to this routine.
+**	16-feb-89 (mgw) Bug #4769
+**		Don't call FTfrminvis() or FTfrmvis() if there's no object
+**		yet to avoid access violation.
+**	30-aug-91 (leighb) Revived ImageBld:
+**		If IIOIimageBld != 0, build run-time-table file name, call
+**		IIABibImageBuild to build run-time-table file, don't
+**		erase run-time-table file at end.
+**	24-mar-92 (leighb) DeskTop Porting Change: Cleanup calls to LO.
+**	4-apr-92 (fraser)
+**		Supplied missing brace ("{") which was inadvertently removed.
+**  15-feb-95 (nick) (cross-int angusm)
+**      Altered declaration of filename prefix and suffix to be
+**      conditional on hp9_mpe - we need bigger buffers if we aren't
+**      this OS.
+**      18-Feb-1999 (hweho01)
+**          Changed EXCONTINUE to EXCONTINUES to avoid compile error of
+**          redefinition on AIX 4.3, it is used in <sys/context.h>.
+*/
+
+STATUS
+IIABarunApp ( app, test_image, objname, type )
+APPL		*app;
+ABLNKTST	*test_image;
+char		*objname;
+OOID		type;
+{
+	STATUS		rstat;
+	char		name[FE_MAXNAME+1];
+	char		rtt[MAX_LOC+1];
+	LOCATION	tloc;
+	LOCATION	loc;
+	char		dev[LO_DEVNAME_MAX+1];		 
+	char		path[LO_PATH_MAX+1];		
+#ifdef hp9_mpe 
+	char		fpre[LO_FPREFIX_MAX+1];		 
+	char		fsuf[LO_FSUFFIX_MAX+1];		 
+#else
+    char        fpre[LO_NM_LEN+1];
+    char        fsuf[(LO_EXT_LEN == 0 ? LO_NM_LEN : LO_EXT_LEN) + 1];
+#endif /* hp9_mpe */
+	char		ver[LO_FVERSION_MAX+1];		 
+	bool		is_top_form  = ( objname != NULL && *objname != EOS );
+	ABLNKARGS	link_args;
+	char		password[FE_MAXNAME+1];
+	char		fullrole[2*FE_MAXNAME+2];
+
+	char	*abinpname();
+
+#ifdef txROUT
+	if (TRgettrace(ABTROUTENT, -1))
+		abtrsrout(ERx("IIABarunApp"), ERx("app=0x%p"), (char *)app, (char *)NULL);
+#endif
+
+	/* Get role password, if need be */
+	if (!IIabKME || *app->roleid == EOS)
+	{
+		IIabRoleID = ERx("");
+	}
+	else
+	{
+		if (IIABgrpGetRolePwd(app->roleid, app->password, password) 
+			!= OK)
+		{
+			return OK;
+		}
+		if (app->password == NULL || !STequal(app->password, password))
+			app->password = FEtsalloc(app->data.tag, password);
+		IIabRoleID = STprintf(fullrole, ERx("-R%s/%s"), 
+				      app->roleid, password);
+	}
+
+	if (type == OC_HLPROC) /* hit 'Go' at host language procedure */
+	{
+	IIUGerr( S_AB0158_RunHostLangProc, UG_ERR_ERROR, 0, 0 );
+	switch(IIUFccConfirmChoice(CONF_GENERIC, ERx(""), ERx(""), 
+		ERget(F_AB00BF_CHelp), ERx("abfrunhl.hlp"),
+		F_AB00BC_Title,
+		F_AB00BD_Yestext,
+		F_AB00BE_Notext,
+		ERx(""), FALSE))
+	{
+	case CONFCH_YES:
+		break;
+	case CONFCH_NO:
+		return FAIL;
+	default:
+		break;
+	}
+	}
+
+	test_image->entry_frame = objname;
+
+	link_args.link_type = ABLNK_TEST;
+	link_args.app = app;
+	link_args.tstimg = test_image;
+	if ((rstat = IIABlkaLinKApplication(&link_args)) != OK )
+	{
+		return rstat;
+	}
+
+
+	/* Make run-time table file */
+	if (IIOIimageBld)		 
+	{
+		char *	p = rtt;					 
+
+		IIOIimageBld += test_image->hl_count;
+		IIOIsvTestImageName(test_image->abintexe);
+		if ( test_image->abintimage != NULL 			 
+		 && *test_image->abintimage != EOS)			 
+			STcopy( test_image->abintimage, p );		 
+		else
+			STcopy( app->name, p );
+		LOfroms(NODE & PATH & FILENAME, p, &loc);
+		LOdetail(&loc, dev, path, fpre, fsuf, ver);
+		LOcompose(dev, path, fpre, IMGBLDEXT, ver, &loc);
+		LOtos(&loc, &p);					 
+		if ( (rstat = IIABibImageBuild(app, p)) != OK )
+		{
+			IIUGerr( E_AB026D_rtt, UG_ERR_ERROR, 1, rtt );
+			return rstat;
+		}
+	}
+	else					 
+	{
+		if ( (rstat = NMloc(TEMP, PATH, (char *)NULL, &tloc)) != OK  ||
+        	     (rstat = LOuniq(ERx("i"), ERx("rtt"), &tloc)) != OK )
+			return FAIL;
+	        LOcopy(&tloc, rtt, &loc);
+		if ( (rstat = IIABtfTabFile(app, rtt)) != OK )
+		{
+			IIUGerr( E_AB026D_rtt, UG_ERR_ERROR, 1, rtt );
+			return rstat;
+		}
+	}					 
+
+	if ( objname == NULL || *objname == EOS )
+		objname = abinpname( ERget(S_AB0037_Frame_prompt), name,
+					sizeof(name)-1
+		);
+	if ( *objname != EOS )
+		run_frame(app, test_image, rtt, objname, type );
+
+	if (IIOIimageBld == 0)			 
+	{
+		LOpurge(&loc,0);       /* OK, now get rid of temporary file. */
+
+##		clear screen
+	}					 
+
+#ifdef txROUT
+	if (TRgettrace(ABTROUTEXIT, -1))
+		abtrerout(ERx("IIABarunApp"), (char *) NULL);
+#endif
+
+	return OK;
+}
+
+/*
+** These were moved form rtsdata to here and to abfmain to make
+** sharing the runtime system possible.	 These variables are
+** reference by old osl frames.	 They must be in the symbol
+** table for abf.
+*/
+GLOBALDEF i4	Abrret	= 0;
+GLOBALDEF i4	cAbrret	= 0;	/* 2.0 WSC compatibility */
+
+#ifdef USEDY
+/*
+** Name:	run_handler() -	ABF Run Frame Exception Handler.
+**
+** Description:
+**	Called when an exception is fired in the running application.
+**	Return as if it exited.
+**
+** Input:
+**	ex	{EX_ARGS}
+**
+** Returns:
+**	{EX}  EXRESIGNAL  For user-generated EXINTR, etc.
+**		  EXCONTINUES  For math exceptions when ignored.
+**		  EXDECLARE	  Otherwise.
+**
+** Called by:
+**	EX module.
+**
+** Side Effects:
+**	restores the environment to a consistent state.
+**
+** Error Messages:
+**
+** History:
+**	Stolen	7/19/82 (jrc) from the report writers r_exit routine.
+**	Modified 10/17/83 (nml) use EX now.
+**	07/87 (jhw) -- Modified to handle all exceptions by printing a message
+**			using 'IIboxerr()' and by using 'adx_handler()' for
+**			ADF math exceptions.
+*/
+static EX
+run_handler (ex)
+EX_ARGS *ex;
+{
+	EX	exarg_n;			/* the exception number */
+	char	buf[4096];			/* Buffer for messages */
+	EX	action = EXDECLARE;		/* for EXABFJMP */
+	char	*shrt = NULL;
+	char	*lng = NULL;
+
+	ADF_CB	*FEadfcb();
+
+	if (ex->exarg_num == EX_UNWIND)
+		return; /* unwind from EXRESIGNAL below */
+
+	IIresync();
+
+	exarg_n = ex->exarg_num;
+	if (exarg_n == EXINTR || exarg_n == EXKILL || exarg_n == EXQUIT)
+	{
+		if (exarg_n == EXINTR)
+		{
+			shrt = ERget(S_UG0032_Interrupt);
+			action = EXRESIGNAL;
+		}
+		else if (exarg_n == EXKILL)
+			shrt = ERget(S_UG0033_Termination);
+		else if (exarg_n == EXQUIT)
+			shrt = ERget(S_UG0034_Quit);
+		shrt = STprintf(buf, ERx("%s%s"), shrt,
+					ERget(F_AB008C_UserTerminate)
+		);
+	}
+	else if (exarg_n == EXFEMEM || exarg_n == EXFEBUG)
+	{
+		if (exarg_n == EXFEMEM)
+		{ /* front-end out of memory */
+			shrt = ERget(S_UG0036_NoMemory);
+			if (ex->exarg_num == 1)
+			{
+				shrt = STprintf(buf, ERx("%s.\0%s"), shrt, shrt);
+				lng = STprintf(buf + STlength(buf) + 1,
+						ERget(S_UG003B_Routine),
+						' ', ex->exarg_array[0]
+				);
+			}
+		}
+		else if (exarg_n == EXFEBUG)
+		{ /* front-end bug */
+			shrt = ERget(S_UG0037_BugCheck);
+			if (ex->exarg_count == 1)
+			{
+				shrt = STprintf(buf, ERx("%s.\0%s"), shrt, shrt);
+				lng = STprintf(buf + STlength(buf) + 1,
+						ERget(S_UG003C_BugMessage),
+						' ', ex->exarg_array[0]
+				);
+			}
+		}
+		if (lng != NULL)
+		{
+			STcat(lng, ERget(S_UG003F_Contact));
+			STcat(lng, ERget(F_AB008D_Terminating));
+		}
+	}
+	else if (ex->exarg_num != EXABFJMP)
+	{
+		register ADF_CB *cb;
+		DB_STATUS	stat;
+
+		stat = adx_handler(cb = FEadfcb(), ex);
+		if ( stat == E_DB_OK || (stat == E_DB_WARN &&
+			    cb->adf_errcb.ad_errcode == E_AD0115_EX_WRN_CONT) )
+		{
+			if (stat == E_DB_WARN)
+			{
+				i4	bufsize = sizeof(buf) - 1;
+
+				_VOID_ afe_errtostr(cb, lng = buf, &bufsize);
+				shrt = ERget(S_UG0039_Hardware_Exception);
+			}
+			action = EXCONTINUES;
+		}
+		else
+		{
+			if (EXsys_report(ex, (lng = buf)))
+				shrt = ERget(S_UG0039_Hardware_Exception);
+			else if (stat != E_DB_WARN &&
+				cb->adf_errcb.ad_errcode != E_AD0116_EX_UNKNOWN)
+			{ /* Math exception */
+				i4	bufsize = sizeof(buf) - 1;
+
+				_VOID_ afe_errtostr(cb, lng = buf, &bufsize);
+				shrt = ERget(S_UG0039_Hardware_Exception);
+			}
+			else
+			{
+				lng = STprintf(buf,
+					ERget(S_UG0038_UnknownException),
+					ex->exarg_num
+				);
+				lng = STcat(buf, ERget(S_UG003F_Contact));
+				shrt = ERget(S_UG003A_Software_Exception);
+			}
+			STcat(lng, ERget(F_AB008D_Terminating));
+		}
+	}
+
+	if (shrt != NULL)
+		IIboxerr(shrt, lng);
+
+	if (action != EXCONTINUES)
+	{
+		IIlang(hostC);
+		IIpopfrm(ERx("abfrappdef"));
+	}
+
+	return action;
+}
+#endif /* USEDY */
+
+/*
+** Name:	run_frame() -	Run the Application Test Image.
+**
+** Description:
+**	Run the application by spawning an interpreter, which may be the
+**	standard interpreter (iiinterp) or a specially-linked version
+**	containing the application's 3GL procedures.  The application gets
+**	run in different ways depending on the supported run environment and on
+**	the way the application test image was linked (passed as the 'abrunopt'
+**	member of the 'tstimg' object.)
+**
+**	If the -u flag or +c flag was specified on the original ABF command,
+**	they will be passed unchanged to the interpreter.
+**
+**	Note:  ABF will always run as SQL with QUEL transaction semantics,
+**	which has a normal mode of operation with autocommit ON.  The session
+**	for the application as run by the interpreter is now separate from
+**	the shared ABF session, and it will be started up with the correct
+**	transactions semantics for the application.
+**
+** Inputs:
+**	app	{APPL *}  The application to run.
+**	tstimg	{ABLNKTST *}  The test mode image object.
+**	objname {char *}  The name of the frame or procedure to run.
+**	type	{nat}  Whether to call a frame or procedure:  ABOFRM, ABOPROC.
+**
+** History:
+**	Written 7/26/82 (jrc)
+**	Modified 10/17/83 (nml) -use EX now.
+**	1-sep-1986 (Joe)
+**		Added code for ifdef.
+**	07/87 (jhw) -- Modifed to support NODY (execution of image instead of
+**			dynamic linking and execution.)
+**	12-sep-88 (kenl)
+**		Updated comments surrounding autocommit on/off statements
+**		to reflect new SQLized version of ABF.
+**	02-nov-1988 (jhw) -- Added 'type' parameter to support calling a
+**		procedure on start-up.
+**	03/89 (jhw)  Corrected #3768 by checking 'IIui1stAutoCom' (set by
+**		'FEingres()' as requested by 'IIabf()'.)
+**	12/89 (jhw)  Removed DBMS session state toggle since the interpreter
+**		now uses multiple sessions.  JupBug #8364.
+**	08/16/91 (emerson)
+**		Build -u and +c flags for the interpreter, if the new globals
+**		IIabUserName and IIabConnect contain non-empty strings.
+**		(Bug 37878).  Also removed 2 unused function declarations.
+**		Also moved general comments on transaction semantics
+**		into the function description, and changed the description
+**		to indicate it's the interpreter that gets spawned.
+**	30-aug-91 (leighb) Revived ImageBld:
+**		If IIOIimageBld != 0, build wrapper by running 'imgwrapr'
+**		instead for running 'iiinterp'.
+*/
+static VOID
+run_frame ( app, tstimg, rtt, objname, type )
+register APPL		*app;
+register ABLNKTST	*tstimg;
+char			*rtt;
+char			*objname;
+OOID			type;
+{
+	char	*objtype;	/* object type: "frame" or "procedure" */
+	char	fmt[128];	/* format argument to be passed to abexeprog
+				** (and thence to UTexe) */
+	char	*params[2];	/* optional parameters (-u and/or +c args)
+				** to be passed to abexeprog */
+	i4	i;		/* an index into the above array */
+
+#ifdef txROUT
+	if (TRgettrace(ABTROUTENT, -1))
+		abtrsrout(ERx("run_frame"), (char *) NULL);
+#endif
+
+	if ((type >= OC_APPLFRAME && type <= OC_APPLFRAME + 99) ||
+	     type == OC_UNDEFINED)
+	{
+		objtype = ERx("frame");
+	}
+	else
+	{
+		objtype = ERx("procedure");
+	}
+
+	i = 0;
+	fmt[0] = EOS;
+	if (IIOIimageBld)					 
+		(VOID) STcat(fmt, ERx("executable = %S, "));	 
+	else							 
+		(VOID) STcat(fmt, ERx("executable = %E, "));
+	(VOID) STcat(fmt, objtype);
+	(VOID) STcat(fmt, ERx(" = %S, application = %S, runtime = %S"));
+
+	/*
+	** Look for optional -u and +c flags from the original ABF command.
+	** If found, pass them on to the interpreter.
+	** IIabf in abf.c saved these in IIabUserName and IIabConnect.
+	** Note that ABF assumes that the utexe.def entry for ABF is set up
+	** so that the returned value for the -u flag (if any) will include
+	** the leading -u, but the returned value for the +c flag won't include
+	** the leading +c.
+	*/
+	if (IIabUserName != NULL && *IIabUserName != EOS)
+	{
+		(VOID) STcat(fmt, ERx(", user = %S"));
+		params[i] = IIabUserName + 2;
+		i++;
+	}
+	if (IIabConnect != NULL && *IIabConnect != EOS)
+	{
+		(VOID) STcat(fmt, ERx(", connect = %S"));
+		params[i] = IIabConnect;
+		i++;
+	}
+
+	if (IIOIimageBld)					 
+		abexeprog(ERx("imgwrapr"), fmt, i + 4,
+			  tstimg->abintexe, objname, app->name, rtt,
+			  params[0], params[1]);
+	else							 
+		abexeprog(ERx("interp"), fmt, i + 4,
+			  tstimg->abintexe, objname, app->name, rtt,
+			  params[0], params[1]);
+
+#ifdef txROUT
+	if (TRgettrace(ABTROUTEXIT, -1))
+		abtrerout(ERx("run_frame"), (char *) NULL);
+#endif
+}

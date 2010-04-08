@@ -1,0 +1,13 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Session Group&submit=actApp.html` -->
+		<TABLE BORDER=0>
+			<!-- #ICE FUNCTION=`session_grp?action=retrieve&sess_id=:sess_id`
+					 HTML=`
+								<INPUT TYPE="HIDDEN" NAME="id" VALUE=":sess_id">
+								<TR>
+								<TD>name: </TD>
+								<TD><INPUT SIZE="32" NAME="name" VALUE=":sess_name"></TD>
+								</TR>`
+			-->
+			<!-- #ICE REPEAT INCLUDE=`action.html` -->
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

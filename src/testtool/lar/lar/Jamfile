@@ -1,0 +1,36 @@
+#
+# Jamfile file for testtool!lar!lar
+#
+# History:
+#	09-feb-2005 (abbjo03)
+#	    Modifications to build on VMS.
+
+SubDir ING_SRC testtool lar lar ;
+
+IISUBSYS testtool lar lar ;
+
+
+if $(VMS)
+{
+    LARLIBS = LIBQLIB AFELIB LIBQGCALIB GCFLIB UGLIB ADFLIB CUFLIB COMPATLIB ;
+}
+else
+{
+    LARLIBS = LIBINGRES ;
+}
+
+IITOOLSEXE ckpdb1_load : ckpdbld.qc ;
+IINEEDLIBS ckpdb1_load : $(LARLIBS) ;
+
+IITOOLSEXE ckpdb_delapp : ckpdbda.qc ;
+IINEEDLIBS ckpdb_delapp : $(LARLIBS) ;
+
+IITOOLSEXE ckpdb1_check : ckpdbchk.qc ;
+IINEEDLIBS ckpdb1_check : $(LARLIBS) ;
+
+IITOOLSEXE ckpdb_append : ckpdbapp.qc ;
+IINEEDLIBS ckpdb_append : $(LARLIBS) ;
+
+IITOOLSEXE ckpdb_abort : ckpdbabt.qc ;
+IINEEDLIBS ckpdb_abort : $(LARLIBS) ;
+

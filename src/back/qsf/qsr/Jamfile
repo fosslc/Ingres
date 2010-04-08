@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!qsf!qsr
+#
+
+SubDir ING_SRC back qsf qsr ;
+
+IISUBSYS back qsf qsr ;
+
+IILIBRARY QSFLIB : qsr.c ;
+
+IILIBRARY IMPQSFLIBDATA : qsrdata.c ;
+

@@ -1,0 +1,77 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* UNIX FRS mapping file for sun-cmd with Function Keys */ 
+
+/* Menu Key */
+	menu = pf1 (R1)
+
+/* Help facility */
+	frskey1 = pf2 (R2)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (R3)
+
+/* Exit the system */
+	frskey2 = pf4 (R4)
+
+/* Go or execute function */
+	frskey4 = pf17 (R15)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = pf16 (R13)
+
+/* Forget and Undo */
+	frskey9 = pf15 (R11)
+
+/* Bring up List Choices */
+	frskey10 = pf12 (F9)
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlH (^H)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf13 (R6)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf14 (R9)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf18 (R5)
+
+/* Select second menu item */
+	menuitem2 = pf5 (F2)
+
+/* Select third menu item */
+	menuitem3 = pf6 (F3)
+
+/* Select fourth menu item */
+	menuitem4 = pf7 (F4)
+
+/* Select fifth menu item */
+	menuitem5 = pf8 (F5)
+
+/* Select sixth menu item */
+	menuitem6 = pf9 (F6)
+
+/* Select seventh menu item */
+	menuitem7 = pf10 (F7)
+
+/* Select eighth menu item */
+	menuitem8 = pf11 (F8)
+
+/* Move up one word within field */
+	nextword = controlU (^U)

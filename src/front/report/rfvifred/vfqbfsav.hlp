@@ -1,0 +1,48 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Save Form
+
+This form is used to save a new QBFName or to edit Name, Short or
+Long Remarks for an existing QBFName.  This form has the same appearance
+as the Catalog Details form, although the command menu is slightly
+different.  The Name field on this form may be modified, which will
+cause the current QBFName, when saved, to be saved as a new QBFName of
+the given name.  
+
+If a QBFName with the specified name, owned by either the current user 
+or the DBA, already exists in the database, you will be asked to confirm 
+your intention to save before proceeding.
+
+        Field Name              Description
+        ----------               -----------
+        Name                    Name of the current QBFName.
+
+        Owner                   Owner of the current QBFName.
+
+        Created                 Date on which this QBFName was first created.
+
+        Modified                Date on which this QBFName was last altered.
+
+        Short Remark            One-line description of current QBFName.
+
+        Long Remark             Longer description of current QBFName.
+
+	Table/Joindef Name	Table or Joindef name with which the QBFName 
+				is associated.
+
+	Form Name		Form name with which the QBFName is 
+				associated.
+
+The following commands are available on the Save Form:
+
+        Command                 Function
+        --------                --------
+        Save                    Store the current QBFName in the System
+                                Catalogs.  A valid name must be specified
+                                in the "Name" field.  After a successful
+                                save, this frame is exited.
+
+        Cancel                  Cancel the current save and any changes made
+                                on this form and return to the previous
+                                frame.
+
+        Help                    Print this message.

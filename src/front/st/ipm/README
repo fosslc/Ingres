@@ -1,0 +1,209 @@
+
+README - contains the getting started pieces of the IPM document.
+IPM user documentation can be found in ipm.doc.  
+
+What is IPM?
+============
+INGRES IPM is the INGRES Interactive Performance Monitor.  
+
+IPM is used to view different aspects of a running INGRES installation.
+It can be used to analyze INGRES locking and locking activity.  IPM
+can be used to view a running server and perform some actions on them.
+
+Used to view the INGRES locking system, this tool allows you to see what
+tables and/or pages within a table are locked.  From this, it is
+straightforward to determine where concurrency problems 
+are occuring and who is causing them.  
+
+The user can also view information on the logging system.  Logging
+system statistics, processes, databases and transactions can be monitored.
+The logging header display has a bar graph to show the percentage of
+log file used.  Other information on log file size is also available.
+This information can give you a sense of the current state of the
+logging system in a running INGRES installation.
+
+IPM can monitor the INGRES and STAR servers in an installation and
+obtain various pieces of related information.  INGRES superusers have
+the capability to terminate servers and/or sessions.  The states
+of sessions can be shown also.
+
+On VMS, IPM has a Process Resource Display which shows various JPI parameters
+for a given server or other DBMS process.
+
+How to build IPM
+================
+IPM requires SYSPRV, CMKRNL and WORLD VMS privileges.  If you want
+non privileged accounts to use IPM, you should install it as open
+with privs=(CMKRNL,SYSPRV,WORLD)
+
+    $ INSTALL :== $INSTALL/COMMAND
+    $ INSTALL REPLACE -
+    _$ <full_dir_spec>:IPM.EXE/OPEN/PRIV=(SYSPRV,CMKRNL,WORLD)
+
+On UNIX, the executable needs to have the setuid bit turned on
+(or it must be run from the INGRES account).
+
+The help files used by IPM are in the same directory as the executable.
+They end in .txt.  All *.txt help files should be moved to
+
+    II_SYSTEM:[INGRES.FILES] on VMS  or
+    $ING_HOME/ingres/files on UNIX.
+
+
+Logical Names used by IPM
+=========================
+
+    II_DBMS_SERVER  This logical/environment variable can be defined
+                    to point at a server that (usually) is not registered
+                    with the Name Server.  The list of servers displayed
+                    in IPM is obtained from the Name Server.  It may be
+                    desirable to obtain information on a non-registered
+                    server.  To do that, define II_DBMS_SERVER accordingly.
+		    The server name defined by II_DBMS_SERVER will be used
+                    by IPM.  Please reference the INGRES Installation and
+                    Operations guide.
+
+    For VMS:
+                   define II_DBMS_SERVER <server_name>
+
+    For Unix (C-shell)
+                   setenv II_DBMS_SERVER "server_name"
+
+    For Unix (Bourne shell)
+                   II_DBMS_SERVER="server_name"
+                   export II_DBMS_SERVER
+
+Starting IPM
+============
+IPM must be started as a foreign command in order to specify command 
+line options in VMS.  If you run IPM using the VMS run command, the default 
+command line options will be used.  To define IPM as a foreign  command,
+issue the following command:
+
+    $ IPM :== $<full_directory_spec>:IPM.EXE
+
+To invoke IPM (using default options), enter:
+
+    $ IPM <CR>   where <CR> is a carriage return
+
+When using IPM in UNIX, just type the image name (the directory where the image
+resides must be in the path or the image must be in the current directory).
+
+Other Documents
+===============
+There is additional documentation available which complements IPM.
+
+    1) The INGRES R6 I&O Guide.  Since IPM integrates lockstat, logstat
+       iimonitor and iinamu, please consult the appropriate sections in
+       the I & O Guide.
+
+
+Startup Options
+===============
+Various options can be specified on the command line when invoking
+IPM.  These options affect what information is displayed, the detail
+of information that is displayed and the format of the displayed
+information.  Most of the command line options can be changed without
+exiting IPM by invoking the Option Selection screen.  The options are: 
+
+    -ddbname	only report on resources for database 'dbname'
+    -e		also display locklists which contain no locks
+    -l		report on ALL resource types (page, table, database, etc.)
+    -lrestype	report only on the specified resource type (a list is provided
+                below)
+    -n		print resources granted in NL (Null) mode
+    -t		report on a particular table (must specify a database name)
+    -rseconds   sets refresh time for various screens
+
+The default is to display database, open database, relation and page resources
+for all databases in the current installation.  The options that affect
+the resources displayed only affect the Resource List Display.  The -e
+option is the only option that affects the Lock List Display.
+
+The following resource types can be specified with the -l flag:
+
+        Resource Type    Explaination
+        -------------    ------------
+	database         Any users in a database will hold a database resource
+                         lock on that database
+
+        table            Any user in a table will hold a table resource lock
+                         on that table
+
+        page             Any user accessing a page in a table will hold a page 
+                         resource lock on that page.
+
+        createtable      Any user creating a table will hold a createtable
+                         resource lock on that table
+
+        svpage           Each page touched by a server on behalf of a session in
+                         that server will have a server page resource lock.
+
+        extend           This lock type is used while extending (adding a new
+                         page to) a file.  It prevents two processes from
+                         trying to add pages to the same file at the same time.
+
+        config           Used when accessing a database config file.  The
+                         config file holds database configuration information.
+
+        dbtblid          Used to manage temp-table id's.  This does not
+                         actually lock anything, but the lock value is used to
+                         store the next table id to use for temp tables.
+
+        svdatabase       Each database opened by a server will have a server
+                         database resource lock on it.
+
+	svtable          Each table touched by a session in a server will have a
+                         server table resource lock.
+
+	event            Used by INGRES processes that want to use the locking
+                         system as a means to signal events.  This does not
+                         actually lock anything.
+
+        control          This is a table control lock.  It is requested in
+                         order to perform MODIFY, INDEX, RELOCATE, DESTROY,
+                         and CREATE SQL commands.  This lock is also held by
+                         sessions reading a table with readlock=nolock set.
+
+        journal          This lock is used when accessing database journal
+                         files.  Held only by RCP and ACP.
+
+All lock ids, transaction, and process ids are displayed in hexadecimal.
+
+Some options are incompatible with other options.  If you select options 
+which are incompatible at startup, a message will be displayed indicating 
+what the problem is.
+
+Limitations
+===========
+Since IPM runs within an operating INGRES installation, a number of
+different conditions apply.  IPM incorporates IIMONITOR, IINAMU, LOCKSTAT
+and LOGSTAT.  Whatever permissions and requirements they have also apply
+to IPM.
+
+Since IPM opens the iidbdb to get a list of databases and opens other
+databases to get table names, the INGRES installation must be in a state
+to allow database connections.
+
+The Server Info area of IPM assumes the INGRES name server is running
+since IPM obtains a list of servers from it.  This is not the case when
+the II_DBMS_SERVER logical/environment variable is defined (as previously
+discussed).  The server which is pointed to by II_DBMS_SERVER must exist
+and be accepting connects.  Various screens in the Server Info area of IPM
+will connect to an INGRES server as a monitor session.  Since a server
+won't allow more than one monitor session at a time, if IIMONITOR is
+running on the server that IPM is attempting to connect to, IPM will hang
+until the IIMONITOR session exits.  Likewise, when IPM is connected to a
+server as a monitor session, IIMONITOR can't be invoked against that server.
+
+IPM keeps any monitor sessions it initiates as short as possible.  IPM
+will connect to a specified server, get all the information it can and
+disconnect.  Only in the Session List screen, when the DBA_Operations
+menuitem is selected, does IPM stay connected to an INGRES server as
+a monitor session.  When the user exits that submenu, the connection is
+terminated.
+
+IPM must be running on the same machine as the INGRES installation that
+is to be monitored.  This also implies that IPM needs to be pointed
+at the desired INGRES installation like any frontend or embedded INGRES
+user program.

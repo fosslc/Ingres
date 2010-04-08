@@ -1,0 +1,12 @@
+;
+;  History:
+;	11-Jun-2004 (drivi01)
+;		Added ordinals.
+;	25-Aug-2004 (drivi01)
+;		Renamed from iirqfdata.def to iilibrqfdata.def.
+
+EXPORTS
+Rqf_facility			@1	DATA			
+ss00000_success			@2	DATA			
+ss50009_error_raised_in_dbproc	@3	DATA			
+ss5000g_dbproc_message		@4	DATA			

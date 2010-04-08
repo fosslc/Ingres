@@ -1,0 +1,33 @@
+RELEASE		OpenINGRES
+PACKAGE		patch#id
+ VERSION 	#ver	
+ VISIBLEPKG
+ STATE 		4
+PART   patch#id
+   PRELOAD	pfsave patch#id 
+   DELETE	pfrestore patch#id 
+   DIRECTORY ingres!bin
+   BUILD_DIR (ING_BUILD)!bin
+   {
+   PERMISSION s:rwed,o:rwed,g:re,w:re,setuid
+      EXECUTABLE iimerge
+      LINK cacheutil
+      LINK dmfacp
+      LINK dmfjsp
+      LINK dmfrcp
+      LINK iidbms
+      LINK iishowres
+      LINK iistar
+      LINK lartool
+      LINK lockstat
+      LINK logdump
+      LINK logstat
+      LINK rcpconfig
+      LINK rcpstat
+   }
+   DIRECTORY ingres!install
+   BUILD_DIR (II_MANIFEST_DIR)
+	FILE patch#id.hlp
+   DIRECTORY ingres!install!patch#id
+   BUILD_DIR (II_MANIFEST_DIR)
+   FILE patch.doc

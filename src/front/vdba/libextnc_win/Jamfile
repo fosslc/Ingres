@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!libextnc_win
+#
+
+SubDir ING_SRC front vdba libextnc_win ;
+
+IISUBSYS front vdba libextnc_win ;
+
+
+IISLN libextnc.lib : libextnc.sln ;

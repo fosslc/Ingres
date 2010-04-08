@@ -1,0 +1,27 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for sqltm
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+*/
+
+/*
+** Default directory: ingres/sig/sqltm
+*/
+
+PART  sqltm
+
+# ifdef VMS
+   BUILD_DIR (sig_path)!sqltm!sqltm
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!sig!sqltm
+# endif /* VMS */
+   DIRECTORY ingres!sig!sqltm
+      FILE read.me
+      EXECUTABLE sqltm

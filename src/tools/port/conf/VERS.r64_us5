@@ -1,0 +1,27 @@
+# This is the 32+64 bit hybrid build of IBM Power on AIX 5
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+
+#set: config32 rs4_us5
+#set: config64 r64_us5
+#set: option B64
+#set: option DBL
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
+BUILD_ICE = "" ;	##set: option BUILD_ICE (off)
+NO_KRB5HDR = TRUE ;	# Don't check for kerberos headers
+
+# Hybridization...
+# r64_us5 is normally a standard 32+64 hybrid build.
+BUILD_ARCH = "32+64" ;	#set: arch 32+64
+XERCES_ARCH ?= 32 ;
+
+PLATFORM_JAMDEFS = ibm_aix ;

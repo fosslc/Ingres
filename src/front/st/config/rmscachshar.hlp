@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The cache_sharing resource specifies whether the cache identified
+  by cache_name is shareable by other servers. This value is always
+  OFF for the RMS gateway since the RMS gateway by design does not
+  allow multiple servers.
+

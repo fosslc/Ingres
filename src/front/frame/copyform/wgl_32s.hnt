@@ -1,0 +1,9 @@
+#
+# wgl_32s.hnt file for  front\frame\copyform
+#
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+objonly = copyform.obj 
+

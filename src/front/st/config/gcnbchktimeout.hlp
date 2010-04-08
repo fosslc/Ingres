@@ -1,0 +1,5 @@
+Sets the maximum number of seconds for the Name Server to wait when checking 
+the status of a local server, such as the DBMS or Net Server. The Name Server 
+periodically checks whether the local servers are available for connections.  
+This activity is called "bedchecking".  The minimum setting is one second, 
+the maximum is sixty seconds, and the default is 20 seconds. 

@@ -1,0 +1,388 @@
+#!/bin/bash
+##	fast install program
+##
+##	18-apr-95 (hanch04)
+##		created.
+##      20-Nov-2006 (hanal04)
+##          Added int_rpl.
+##	29-Apr-2008 (thich01)
+##	    Massive rewrite for community installation and testing.
+##      10-Oct-2008 (thich01)
+##          Fix the productname from ingres2006 to ingres
+##	17-aug-2009 (stephenb)
+##	    Fix to cope with new VERS format as a result of Karls change
+##	3-Sep-2009 (bonro01)
+##	    Make the VERS override file optional.
+##	8-Feb-2010 (kiria01)
+##	    Restrict interest to 1st line of version.rel
+##	15-Mar-2010 (hanje04)
+##	    Set II_CONFIG and II_ADMIN appropriately for installation as
+##	    they are now set in the build environment.
+##	24-Mar-2010 (frima01)
+##	    Removed function keyword - not supported on all systems.
+
+usage()
+{
+    echo "Usage: createdbms installation_code"
+    trap - 0
+    exit 1
+}
+
+timestamp()
+{
+    case $1 in
+	begin) echo "Beginning $2 at `date`"
+		;;
+	  end) echo "Ending $2 at `date`"
+		;;
+	    *) date
+		;;
+    esac
+}
+
+err()
+{
+    echo "ERROR: $self failed"
+    timestamp end
+    trap - 0
+    exit $sec
+}
+    
+#
+# setup_tools - Unpack testing tools
+#
+setup_tools()
+{
+    if [ -z "$ING_TOOLS" ] 
+    then
+        echo "ING_TOOLS not set" 
+        return 1
+    fi
+
+    if [ ! -f "$ING_ROOT/release/tools.tar" ]
+    then
+        echo "ERROR: Cannot locate tools.tar"
+	err
+    fi
+
+    # Clear out any remnants
+    if [ -d "$ING_TOOLS" ]
+    then
+        rm -rf $ING_TOOLS/*
+    else
+        mkdir -p $ING_TOOLS
+    fi
+
+    trap err 1 ERR
+    # Unpack archive
+    pushd $ING_TOOLS > /dev/null
+    tar xf $ING_ROOT/release/tools.tar
+    popd > /dev/null
+}
+
+# If the user calls set_env.sh direct rather than through runbuild,
+# we should set BUILDTOOLS so we know where the other tools are
+PWD=`pwd`
+if [ -z ${BUILDTOOLS} ]
+then
+  if [ -d ./buildtools ]
+  then
+    BUILDTOOLS="${PWD}/buildtools"
+  elif [ `/bin/basename ${PWD}` == "buildtools" ]
+  then
+    BUILDTOOLS=${PWD}
+  else
+    echo "Error: I'm sorry, I can't find the buildtools directory"
+    echo "There are tools that I need from there."
+    echo "Please re-source set_env.sh from the root of the source tree."
+    echo "This is where README.txt and runbuild.sh are stored."
+    echo "I cannot continue."
+    exit 1
+ fi
+fi
+export BUILDTOOLS
+
+if [ -f ${BUILDTOOLS}/set_env.sh ]
+then
+  . ${BUILDTOOLS}/set_env.sh
+else
+  echo "Error, I cannot find the set_env.sh script"
+  echo "This is required to use createdbms"
+  echo "Please run createdbms from the root directory of the Ingres source"
+  exit 1
+fi
+
+# Verify ING_ROOT was set, should be by the set_env.sh call above.
+if [ -z "$ING_ROOT" ]
+then
+    echo "ING_ROOT must be set to run this script"
+    exit 1
+fi
+
+unames=`uname -s`
+unamem=`uname -m`
+
+# Verify a properly specified installation ID.
+case $1 in
+    [A-Z][A-Z,0-9])
+        II_INSTALLATION=$1
+	;;
+    *)
+        echo "$1 is an invalid installation ID"
+        usage
+        ;;
+esac
+
+# Verify the installation ID was specified.
+if [ -z "$II_INSTALLATION" ]
+then
+    echo "installation_code not specified"
+    usage
+fi
+
+export II_INSTALLATION
+
+# Create version information to find the appropriate tar file to install from.
+if [ ! -f $ING_ROOT/build/version.rel ]
+then
+    echo "No version information available.  Ensure a build has been"
+    echo "completed by executing $ING_ROOT/runbuild.sh."
+    exit 1
+fi
+
+set - `cat $ING_ROOT/build/version.rel`
+release=$2
+nptlbuild=`head -1 $ING_ROOT/build/version.rel |cut -d')' -f2`
+vers=`head -1 $ING_ROOT/build/version.rel | sed -e s:^.*\(:: -e s:/.*$::`
+buildno=`head -1 $ING_ROOT/build/version.rel | sed -e s:^.*/:: -e s:\).*$::`
+# ` Close for syntax highlighting. 
+
+case $vers in
+    int.lnx|\
+    int.rpl)
+	desc="pc-linux-ingbuild-i386"
+        ;;
+    a64.lnx)
+	desc="linux-ingbuild-x86_64"
+        ;;
+    i64.lnx)
+	desc="linux-ingbuild-ia64"
+        ;;
+    int.w32)
+        desc="win-x86"
+        ;;
+    a64.win)
+        desc="win-x86_64"
+        ;;
+    i64.win)
+        desc="win-ia64"
+        ;;
+    su9.us5)
+        desc="sun-solaris-sparc-32-64bit"
+        ;;
+    a64.sol)
+        desc="sun-solaris-x86-32-64bit"
+        ;;
+    r64.us5)
+        desc="ibm-powerpc-32-64bit"
+        ;;
+    hp2.us5)
+        desc="hp-hpux-pa-risc-32-64bit"
+        ;;
+    i64.hpu)
+        desc="hp-hpux-ia64-32-64bit"
+        ;;
+    axp.osf)
+        desc="hp-tru64-5.1"
+        ;;
+    axm.vms)
+        desc="hp-vms-alpha"
+        ;;
+    i64.vms)
+        desc="hp-vms-ia64"
+        ;;
+    usl.us5)
+        desc="unixware-x86"
+        ;;
+    mg5.osx)
+        desc="apple-darwin-powerpc"
+        ;;
+    int.osx)
+        desc="apple-darwin-i386"
+        ;;
+esac
+desc=gpl-$desc
+# Append NPTL if we need to
+if [ "$nptlbuild" = "NPTL" ] 
+then
+    desc="NPTL-${desc}"
+fi
+
+tardir=ingres-$release-$buildno-$desc
+
+# If the tar file does not exist run mksaveset to create it.
+if [ ! -f $ING_ROOT/release/$tardir/ingres.tar ]
+then
+   echo "Creating installation tar file."
+   mksaveset
+fi
+
+# If the test tools tar file does not exist, create it.
+if [ ! -f $ING_ROOT/release/tools.tar ]
+then
+   echo "Creating tools tar file."
+    pushd $ING_ROOT/release
+    tartools -a
+    tartools tools.tar
+    popd
+fi
+
+#Create the installation directory if it's not already there.
+if [ ! -d "$ING_ROOT/install/$II_INSTALLATION" ]
+then
+   echo "Creating installation instance directory."
+   mkdir ${ING_ROOT}/install/${II_INSTALLATION}
+else
+   echo "An installation at $ING_ROOT/install/$II_INSTALLATION already exists."
+   echo "Remove that installation, or choose another ID."
+   exit 1
+fi
+
+export II_SYSTEM=${ING_ROOT}/install/${II_INSTALLATION}
+export ING_TOOLS=$II_SYSTEM/tools
+
+if [ ! -f ${II_SYSTEM}/resp.txt ]
+then
+   echo "Creating resp.txt file."
+   cat << ! > $II_SYSTEM/resp.txt
+LOG_KBYTES=200000
+START_ON_BOOT=NO
+!
+fi
+
+if [ -z "$II_SYSTEM" ]
+then
+    echo "II_SYSTEM must be set to run this script"
+    exit 1
+fi
+
+if [ -z "$ING_TOOLS" ]
+then
+    echo "ING_TOOLS must be set to run this script"
+    exit 1
+fi
+
+INSTL=`echo $II_SYSTEM | sed s%$ING_ROOT%%g | sed s%/install/%%g`
+export II_MANIFEST_DIR=$II_SYSTEM/ingres/install
+export II_CONFIG=$II_SYSTEM/ingres/files
+export II_ADMIN=$II_SYSTEM/ingres/files
+echo "Installation parameters:"
+HOST=`hostname`
+echo "HOST=$HOST	II_INSTALLATION=$II_INSTALLATION	INSTALL=$INSTL"
+
+trap err 1 ERR
+
+timestamp begin "Ingbuild installation"
+
+case $unames in
+HP-UX)
+    case $unamem in
+        ia64)
+            if [ "$SHLIB_PATH" ]
+            then
+                SHLIB_PATH=$II_SYSTEM/ingres/lib/lp32:$SHLIB_PATH
+            else
+                SHLIB_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib/lp32
+            fi
+            export SHLIB_PATH
+            if [ "$LD_LIBRARY_PATH" ]
+            then
+                LD_LIBRARY_PATH=$II_SYSTEM/ingres/lib:$LD_LIBRARY_PATH
+            else
+                LD_LIBRARY_PATH=$II_SYSTEM/ingres/lib
+            fi
+            export LD_LIBRARY_PATH
+            ;;
+        *)
+            if [ "$SHLIB_PATH" ]
+            then
+                SHLIB_PATH=$II_SYSTEM/ingres/lib:$SHLIB_PATH
+            else
+                SHLIB_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+            fi
+            export SHLIB_PATH
+            if [ "$LD_LIBRARY_PATH" ]
+            then
+                LD_LIBRARY_PATH=$II_SYSTEM/ingres/lib/lp64:$LD_LIBRARY_PATH
+            else
+                LD_LIBRARY_PATH=$II_SYSTEM/ingres/lib/lp64
+            fi
+            export LD_LIBRARY_PATH
+            ;;
+    esac
+    ;;
+AIX)
+    if [ "$LIBPATH" ]
+    then
+        LIBPATH=$II_SYSTEM/ingres/lib:$II_SYSTEM/ingres/lib/lp64:$LIBPATH
+    else
+        LIBPATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib:$II_SYSTEM/ingres/lib/lp64
+    fi
+    export LIBPATH
+    ;;
+*)
+    if [ "$LD_LIBRARY_PATH" ]
+    then
+        LD_LIBRARY_PATH=$II_SYSTEM/ingres/lib:$LD_LIBRARY_PATH
+    else
+        LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
+    fi
+    export LD_LIBRARY_PATH
+    if [ "$LD_LIBRARY_PATH_64" ]
+    then
+        LD_LIBRARY_PATH_64=$II_SYSTEM/ingres/lib/lp64:$LD_LIBRARY_PATH_64
+    else
+        LD_LIBRARY_PATH_64=$II_SYSTEM/ingres/lib/lp64
+    fi
+    export LD_LIBRARY_PATH_64
+    ;;
+esac
+
+export II_DISTRIBUTION=$ING_ROOT/release/$tardir/ingres.tar
+
+if [ ! -d $II_SYSTEM/ingres ]
+then
+    mkdir $II_SYSTEM/ingres
+fi
+
+cd $II_SYSTEM/ingres
+tar xf $II_DISTRIBUTION install
+install/ingbuild -acceptlicense -exresponse -file=$II_SYSTEM/resp.txt $II_DISTRIBUTION
+
+timestamp end "Ingbuild installation"
+
+timestamp begin "test setup"
+
+cd $ING_ROOT
+
+setup_tools
+# Check tools exist
+if [ ! -x "$ING_TOOLS/bin/sep" ]
+then
+    echo "Failed to set up tools"
+    echo "Aborting"
+    exit 1
+fi
+
+timestamp end "test setup"
+
+if [ -f ${BUILDTOOLS}/root_setup.sh ]
+then
+   echo ""
+   echo "Run root_setup.sh as root to complete the installation."
+else
+   echo "Some setup as root still needs to be done, but the root_setup.sh"
+   echo "script is missing."
+fi
+
+exit 0

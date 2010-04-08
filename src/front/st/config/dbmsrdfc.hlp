@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The rdf_col_defaults resource specifies the number of entries in the
+  column default values cache in DBMS servers created with this definition.
+
+  The column default values cache holds value defaults (values other than
+  blank, zero, or null) as part of the Relation Definition Facility (RDF).
+
+  The deprecated resource rdf_tbl_cols means the same thing as the
+  rdf_col_defaults resource.  If both resources exist, rdf_col_defaults
+  is used and rdf_tbl_cols is ignored.
+
+  The default is 50.

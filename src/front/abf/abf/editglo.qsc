@@ -1,0 +1,1918 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<ex.h>
+#include	<st.h>
+#include	<lo.h>
+#include	<si.h>
+#include	<ol.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<fedml.h>
+##include	<abclass.qsh>
+#include	<abfdbcat.h>
+##include	<oocat.qsh>
+##include	<uigdata.qsh>
+#include	<oocatlog.h>
+#include	<oodefine.h>
+#include	<oosymbol.h>
+#include	<feconfig.h>
+#include	<abfcnsts.h>
+#include	<eqrun.h>
+#ifdef IMTDY
+#include	<fdesc.h>
+#include	<abfrts.h>
+#endif
+#include	<ilerror.h>
+#include	<dmchecks.h>
+##include	"abclinfo.qsh"
+##include	"abcatrow.qsh"
+#include	"abfgolnk.h"
+#include	"abfglobs.h"
+#include	"gncode.h"
+#include	"erab.h"
+
+/*
+fool ming:
+#include	<abclass.h>
+#include	<oocat.h>
+#include	"abclinfo.h"
+#include	"abcatrow.h"
+*/
+
+/**
+** Name:	editglo.qsc -		ABF Define Globals Frame.
+**
+** Description:
+**	Contains the global-variable definition frame routine for ABF, which
+**	allows users to define or modify globals.	 Defines:
+**
+**	IIABegEditGlobs()	ABF edit globals frame.
+**
+** History:
+**	6/89 billc - Initial revision.
+**	12-dec-1991 (kevinm)
+**		Remove spurous semi-colons.  The compiler on the dra_us5
+**		didn't like them.
+**	20-jan-92 (davel)
+**		Fixed bug 41920 in _c_catLoad().
+** 	6-Feb-92 (blaise)
+**		Added include abfglobs.h.
+**	16-oct-92 (davel)
+**		Minor change in _c_catLoad() (removed obsolete arg in call to
+**		iiabCopyConstants() ). 
+**      18-oct-1993 (kchin)
+**          	Since the return type of OOsnd() has been changed to PTR,
+**          	when being called in _createObj(), its return type needs to 
+**	    	be cast to the proper datatype.
+**      06-dec-93 (smc)
+**		Bug #58882
+**              Commented lint pointer truncation warning.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+*/
+
+char		*IIUGdmlStr();
+char		*UGcat_now();
+APPL_COMP	*iiabGetComp();
+COMP_CLASS_INFO	*iiabApCompClass();
+STATUS		iiabSvApp();
+i4		iiabCopyConstants();
+
+GLOBALREF char	*IIabExename;
+GLOBALREF bool	IIabWopt;
+GLOBALREF bool	abFnwarn;
+
+static const char	_ArrayOf[] = ERx("array of ");
+static const char	_DefaultLang[] = APC_CONSTANT_LANGUAGE;
+static bool	rec_changed; /* Has the record currently being edited changed */
+
+
+static STATUS 		_coInit();
+static VOID 		_gcatUpdate();
+static VOID 		_rcatUpdate();
+static STATUS 		_raInit();
+static STATUS 		_glCreate();
+static STATUS 		_coCreate();
+static STATUS 		_rcCreate();
+static STATUS 		_raCreate();
+static STATUS 		_rEdit();
+static STATUS 		_raEdit();
+static STATUS 		_glEdit();
+static STATUS		_coEdit();
+static STATUS		_raDestroy();
+static STATUS		_raEnd();
+static char 		*_TypeName();
+static APPL_COMP	*_ra_get();
+static APPL_COMP	*_createObj();
+
+static char	*_nullmsg();
+
+static STATUS objDisplay();
+
+/*{
+** Name:	IIABegEditGlobs() -	ABF Edit Globals Frame.
+**
+** Input:
+**	app		{APPL *}  The application.
+**	noload		{bool}  Expert mode; don't load the catalogs.
+**
+** Side Effects:
+**	Will change the ABF catalogs
+**
+** History:
+**	Written 6/7/89 (billc)
+**
+**	02-dec-91 (leighb) DeskTop Porting Change:
+**		Added routines to pass data across ABF/IAOM boundary.
+*/
+
+static VOID	_g_catInit();
+static VOID	_r_catInit();
+static VOID	_g_catLoad();
+static VOID	_ra_catLoad();
+static VOID	_gLoadTable();
+static VOID	_rLoadTable();
+static VOID	_gInsertRow();
+static VOID	_gPutRow();
+static VOID	_c_catInit();
+static VOID	_c_catLoad();
+static VOID	_cLoadTable();
+static VOID	_cInsertRow();
+static VOID	_cPutRow();
+
+/* Define CATALOG of functions for globals ("G") , classes ("R","M") and
+** constants ("C")
+*/
+
+static C_OO_CATALOG    _CcatClass =
+{
+    IIOOct0Init,
+    IIOOctEmpty,
+    IIOOctCheck,
+    IIOOctLoad,
+    IIOOctDestroy,
+    IIOOctRename,
+    IIOOctFetch,
+    NULL,
+    _c_catInit,
+    _c_catLoad,
+    _cLoadTable,
+    _cInsertRow,
+    _cPutRow
+};
+
+/* OO Catalog class for Global Variables. */
+static C_OO_CATALOG	_GcatClass =
+{
+	IIOOct0Init,
+	IIOOctEmpty,
+	IIOOctCheck,
+	IIOOctLoad,
+	IIOOctDestroy,
+	IIOOctRename,
+	IIOOctFetch,
+	NULL,
+	_g_catInit,
+	_g_catLoad,
+	_gLoadTable,
+	_gInsertRow,
+	_gPutRow
+};
+
+/* OO Catalog class for Class Definitions. */
+static C_OO_CATALOG	_RcatClass =
+{
+	IIOOct0Init,
+	IIOOctEmpty,
+	IIOOctCheck,
+	IIOOctLoad,
+	IIOOctDestroy,
+	IIOOctRename,
+	IIOOctFetch,
+	IIOOctMoreInfo,
+	_r_catInit,
+	_g_catLoad,
+	_rLoadTable,
+	_gInsertRow,
+	_gPutRow
+};
+
+/* OO Catalog class for Class Attributes. */
+static C_OO_CATALOG	_McatClass =
+{
+	IIOOct0Init,
+	IIOOctEmpty,
+	IIOOctCheck,
+	IIOOctLoad,
+	IIOOctDestroy,
+	IIOOctRename,
+	IIOOctFetch,
+	NULL,
+	_g_catInit,
+	_ra_catLoad,
+	_gLoadTable,
+	_gInsertRow,
+	_gPutRow
+};
+
+GLOBALDEF AB_CATALOG    iiabCcatalog =
+{
+    &_CcatClass,	/* Routines which do actual work */
+    ERx("abfconstants"),/* c_form   -- form name */
+    ERx("constants"),	/* c_tfield -- table field name */
+    NULL,		/* loaded at runtime with IIamConstCl, Associated class (see abclass.qsc (IAOM))*/	 
+    0, FALSE,		/* c_maxrow, c_noload */
+    OC_UNDEFINED,	/* Application id for cat. */
+    OC_UNDEFINED,	/* ID for current object */
+    FALSE ,		/* c_finited */
+
+
+	/* See AB_CMENU (abcatrow.qsh) for description of following: */
+
+	/* pseudo-menuitem for initialization. has title and explanation.*/
+    { _coInit, F_AB0358_ConstEdit_title, NULL, F_AB0356_Const_expl, NULL},
+
+	/* menuitem for create. */
+    { _coCreate, FE_Create, NULL, F_AB0359_CreateConst_expl, NULL },
+
+	/* menuitem for destroy. */
+    { NULL, FE_Destroy, NULL, F_AB0360_DestroyConst_expl, NULL },
+
+	/* menuitem for edit. */
+    { _coEdit, FE_Edit, NULL, F_AB0361_EditConst_expl, NULL  },
+
+	/* menuitem for end. */
+    { NULL, FE_End, NULL, F_FE0102_ExplEnd, NULL },
+
+	/* menuitem for quit. */
+    { NULL, 0, NULL, 0, NULL },
+
+    iiabGetComp,	/* (*c_getcomp)() function that retrieves a component */
+    ERx("abedtcon.hlp")	/* Help file name */
+};
+
+GLOBALDEF AB_CATALOG	iiabGcatalog =
+{
+	&_GcatClass,
+	ERx("abfglobals"),
+	ERx("globals"),
+	NULL,		/* loaded at runtime with IIamGlobCl */		 
+	0, FALSE,
+	OC_UNDEFINED, OC_UNDEFINED,
+	FALSE ,
+
+	/* func, menuitem		char  explanation	    char */
+
+	/* pseudo-menuitem for initialization. has title and explanation. */
+	{ NULL, F_AB0314_GloEdit_title, NULL, F_AB0304_Glob_expl, NULL},
+
+	/* menuitem for create. */
+	{ _glCreate, FE_Create, NULL, F_AB0315_CreateGlo_expl, NULL },
+
+	/* menuitem for destroy. */
+	{ NULL, FE_Destroy, NULL, F_AB0316_DestroyGlo_expl, NULL },
+
+	/* menuitem for edit. */
+	{ _glEdit, FE_Edit, NULL, F_AB0317_EditGlo_expl, NULL  },
+
+	/* menuitem for end. */
+	{ NULL, FE_End, NULL, F_FE0102_ExplEnd, NULL },
+
+	/* menuitem for quit. */
+	{ NULL, 0, NULL, 0, NULL },
+
+	iiabGetComp,
+	ERx("abedtglo.hlp")
+};
+
+/* ABF Catalog class for Class Definitions. */
+GLOBALDEF AB_CATALOG	iiabRcatalog =
+{
+	&_RcatClass,
+	ERx("abfrecords"),
+	ERx("records"),
+	NULL,		/* loaded at runtime with IIamRecCl */		 
+	0, FALSE,
+	OC_UNDEFINED, OC_UNDEFINED,
+	FALSE,
+
+	{ NULL, F_AB0336_RecEdit_title, NULL, F_AB0334_Rec_expl, NULL },
+	{ _rcCreate, FE_Create,	NULL, F_AB0337_CreateRec_expl, NULL },
+	{ NULL, FE_Destroy,	NULL, F_AB0338_DestroyRec_expl, NULL },
+	{ _rEdit, FE_Edit,	NULL, F_AB0339_EditRec_expl, NULL },
+	{ NULL, FE_End, 	NULL, F_FE0102_ExplEnd, NULL },
+	{ NULL, 0, 		NULL, 0, NULL },
+
+	iiabGetComp,
+	ERx("abedtcls.hlp")
+};
+
+/* ABF Catalog class for Class Attributes. */
+GLOBALDEF AB_CATALOG	iiabMcatalog =
+{
+	&_McatClass,
+	ERx("abfrecd"),
+	ERx("members"),
+	NULL,		/* loaded at runtime with IIamRAttCl */		 
+	0, FALSE,
+	OC_UNDEFINED, OC_UNDEFINED,
+	FALSE,
+
+	{ _raInit, F_AB006A_AReDef_title, NULL, F_AB0344_RAtt_expl, NULL },
+	{ _raCreate, FE_Create,	NULL, F_AB0347_InsertRAtt_expl, NULL },
+	{ _raDestroy, FE_Destroy,	NULL, F_AB0348_DeleteRAtt_expl, NULL },
+	{ _raEdit, FE_Edit,	NULL, F_AB0349_EditRAtt_expl, NULL },
+	{ _raEnd, FE_End, 	NULL, F_FE0102_ExplEnd, NULL },
+	{ NULL, 0, 		NULL, 0, NULL },
+
+	_ra_get,
+	ERx("abedtatt.hlp")
+};
+
+static STATUS
+##_coInit ( self, obj )
+##AB_CATALOG	*self;
+APPL_COMP	*obj;
+##{
+    /* ever since we got rid of the "language" field, this routine does
+    ** nothing. Leave in for now....
+    */
+    return OK;
+##}
+
+static VOID
+##_c_catInit ( self, mode )
+##AB_CATALOG	*self;
+char		*mode;
+##{
+##	char	*rmode;
+
+	rmode = (mode != NULL ? mode : ERx("update"));
+
+##	INITTABLE self->c_form self->c_tfield rmode (
+##		_id	         = i4,
+##		_class	         = i4,
+##		_env	         = i4,
+##		_owner	         = c32,
+##		_is_current      = i4,
+##		_create_date     = c25,
+##		_altr_date       = c25,
+##	 	_altr_count      = i4,
+##              _language	 = c32,
+##		_last_altered_by = c32
+##	);
+##}
+
+static VOID
+##_cLoadTable ( self, csp )
+##  AB_CATALOG	*self;
+##  AB_CATREC	*csp;
+##{
+##  char	*owner = IIOOmapOwner(csp->owner);
+##  AB_CONSTANT *constant = (AB_CONSTANT *) csp ;
+
+##  LOADTABLE self->c_form self->c_tfield (
+##	_id		 = constant->id,
+##	_class		 = constant->class,
+##	_name		 = constant->name,
+##	_env		 = constant->env,
+##	_owner		 = owner,
+##	_is_current	 = constant->is_current,
+##	_short_remark	 = constant->short_remark,
+##	_create_date	 = constant->create_date,
+##	_altr_date	 = constant->alter_date,
+##	_altr_count	 = constant->alter_cnt,
+##	_last_altered_by = constant->altered_by,
+##	_data_type	 = constant->type,
+##	_value		 = constant->value,
+##	_language	 = constant->language
+##  );
+##}
+
+/*
+** Name:	_c_catLoad() -	Load ABF Application Constants Catalogs.
+**
+** Description:
+**	Loads constants information from ii_objects and ii_abfobjects into
+**	Application Definition structure.
+**
+**	It should be noted that ii_abfobjects.abf_source contains the constant's
+**	value, and, ii_abfobjects.abf_arg1 contains the ascii representation of
+**	the user language code defined at the time the constant was defined.
+**
+** Input:
+**	self	{AB_CATALOG *}  the application whose constants are to be loaded.
+**
+** Side Effects:
+**
+** History:
+**	7-jan-92 (blaise)
+**	    Made a small change to the order of the where clause of the
+**	    select statement in this function (changed 'a OR b' to 'b OR a')
+**	    The DB2 gateway wasn't accepting the original version and the
+**	    change has no effect elsewhere.
+**	20-jan-92 (davel)  bug 41920
+**		Part of fix for bug 41920 - clear the tablefield before
+**		re-selecting and re-displaying constants rows if
+**		iiabCopyConstants() is called to insert a new set of
+**		constant entries for a newly encountered language.	
+**	16-oct-92 (davel)
+**		Remove obsolete arg from iiabCopyConstants().
+**	18-Jan-2005 (schka24)
+**	    DB_DATA_VALUE changed, select its components explicitly.
+*/
+
+static VOID
+##_c_catLoad ( self, pattern, lastname, prevrow )
+EXEC SQL BEGIN DECLARE SECTION;
+
+##  AB_CATALOG  *self;
+EXEC SQL END DECLARE SECTION;
+
+char	*pattern;
+char	*lastname;
+i4	*prevrow;
+##{
+    bool	constants;
+    bool	tryagain;
+    i4		nrows;
+    EXEC SQL BEGIN DECLARE SECTION;
+    OOID	applid;
+    OOID	class;
+    AB_CONSTANT constant_row;
+    char	pattern_buf[FE_MAXNAME*DB_MAX_COLS];
+##  char	*language;
+
+    DB_DATA_DESC	dbdv;
+    EXEC SQL END DECLARE SECTION;
+
+    char	db_data[FE_MAXNAME+1];
+
+    dbdv.db_data = db_data;
+    dbdv.db_collID = 0;
+
+    if ( pattern == NULL || *pattern == EOS )
+	STcopy( ERx("%"), pattern_buf );
+    else
+    { /* change the pattern matching to SQL */
+	i4	sql_wild;
+
+	STcopy( pattern, pattern_buf );
+	IIUGwildcard( pattern_buf, &sql_wild );
+    }
+
+    language = _DefaultLang;
+    class = self->c_class->ooid;
+    applid = self->c_appid;
+
+    do
+    {
+	constants = FALSE;
+	tryagain = FALSE;
+	nrows = 0;
+	EXEC SQL REPEATED
+		SELECT
+			ii_objects.object_id, object_class,
+			object_name, object_owner, object_env, is_current,
+			short_remark, create_date, alter_date,
+			'', alter_count, last_altered_by, rettype, '',
+			abf_source, abf_arg1,
+			rettype, retlength, retadf_type, retscale
+		    INTO :constant_row, :dbdv.db_data,
+			:dbdv.db_length, :dbdv.db_datatype, :dbdv.db_scale
+		FROM ii_objects, ii_abfobjects
+		WHERE ii_objects.object_name LIKE :pattern_buf AND
+			ii_objects.object_class = :class AND
+			ii_objects.object_id = ii_abfobjects.object_id AND
+			ii_abfobjects.applid = :applid AND
+			( ii_abfobjects.abf_arg1 = ''
+				OR ii_abfobjects.abf_arg1 = :language )
+		ORDER by object_name, object_owner;
+
+	EXEC SQL BEGIN;
+	{
+		STlcopy( dbdv.db_data, constant_row.type,
+				sizeof(constant_row.type) - 1
+		);
+		if ( STtrmwhite(constant_row.language) > 0 )
+			constants = TRUE;
+
+		_send(catRowLoad, self)( self, (AB_CATREC *) &constant_row );
+
+		if ( ++nrows == self->c_maxrow )
+##			REDISPLAY;
+		if ( lastname != NULL && STequal(lastname, constant_row.name)
+				&& prevrow != NULL )
+		{
+			*prevrow = nrows;
+		}
+	}
+	EXEC SQL END;
+
+	if (!constants && FEinqerr() == OK)
+	{
+		if (iiabCopyConstants( applid, language ) > 0)
+		{
+			_send(catEmpty, self)( self );
+			tryagain = TRUE;
+		}
+	}
+    } while ( tryagain );
+
+    if ( FEinqerr() != OK )
+	EXsignal(EXDECLARE, 0);
+##}
+
+static VOID
+##_cInsertRow ( self, obj, rowno )
+##AB_CATALOG  *self;
+##OO_OBJECT	*obj;
+##i4		rowno;
+##{
+##	INSERTROW self->c_form self->c_tfield rowno;
+	if ( rowno < self->c_maxrow )
+		++rowno;
+	_cPutRow(self, obj, rowno );
+##}
+
+static VOID
+##_cPutRow ( self, obj, rowno )
+##AB_CATALOG  *self;
+##OO_OBJECT	*obj;
+##i4		rowno;
+##{
+##  char	*owner = IIOOmapOwner(obj->owner);
+##  CONSTANT    *constant = (CONSTANT *)obj;
+##  char	*value;
+##  char	dtype[TYPE_LEN + 1];
+
+    value = constant->value[0];
+    STlcopy(constant->data_type.db_data, dtype, sizeof(dtype) - 1);
+
+##  PUTROW self->c_form self->c_tfield rowno (
+##	_name		 = constant->name,
+##	_id		 = constant->ooid,
+##	_class		 = constant->class,
+##	_env		 = constant->env,
+##	_owner		 = owner,
+##	_is_current	 = constant->is_current,
+##	_short_remark	 = constant->short_remark,
+##	_create_date	 = constant->create_date,
+##	_altr_date	 = constant->alter_date,
+##	_altr_count	 = 1,
+##	_last_altered_by = owner,
+##	_data_type	 = dtype,
+##	_value		 = value
+##  );
+##}
+
+/*
+** _*catUpdate 'methods' - Update a single row of the class catalog.
+**
+** Inputs:
+**	self		{AB_CATALOG*} descriptor for the catalog class.
+**	obj		{APPL_COMP*}  The specific object that's being changed.
+*/
+
+static VOID
+##_gcatUpdate ( self, obj )
+##AB_CATALOG *self;
+##APPL_COMP *obj;
+##{
+##	char 	*nmsg;
+##	char 	*typename;
+##	DB_DATA_DESC *desc;
+
+	if (obj->class == OC_RECMEM)
+		desc = &(((RECMEM *)obj)->data_type);
+	else if (obj->class == OC_GLOBAL)
+		desc = &(((GLOBVAR *)obj)->data_type);
+
+	typename = _TypeName(desc);
+	nmsg = _nullmsg(desc);
+
+##	PUTROW self->c_form self->c_tfield (
+##		_name		= obj->name,
+##		_short_remark	= obj->short_remark,
+##		_data_type 	= typename,
+##		_type		= typename,
+##		_nullable 	= nmsg
+##	);
+##}
+
+static VOID
+##_rcatUpdate ( self, rdef )
+##AB_CATALOG *self;
+##RECDEF *rdef;
+##{
+##	PUTROW self->c_form self->c_tfield (
+##		_name		= rdef->name,
+##		_short_remark	= rdef->short_remark
+##	);
+##}
+
+/*
+** _*_catInit 'methods' - Initialize a tablefield for a catalog class.
+**
+**	This pseudo-method sets up some hidden columns in the tablefield.
+**
+** Inputs:
+**	self		{AB_CATALOG*} descriptor for the catalog class.
+**	mode		{char*}  The mode of the tablefield.
+*/
+
+static VOID
+##_g_catInit ( self, mode )
+##AB_CATALOG	*self;
+char		*mode;
+##{
+##	char	*rmode;
+
+	rmode = (mode != NULL ? mode : ERx("update"));
+
+##	INITTABLE self->c_form self->c_tfield rmode (
+##		_id		= i4,
+##		_class		= i4,
+##		_env		= i4,
+##		_owner		= c32,
+##		_is_current	= i4,
+##		_create_date	= c25,
+##		_altr_date	= c25,
+##	 	_altr_count	= i4,
+##		_type		= c32,	/* class attributes only */
+##		_last_altered_by = c32
+##	);
+##}
+
+static VOID
+##_r_catInit ( self, mode )
+##AB_CATALOG	*self;
+char		*mode;
+##{
+##	char	*rmode;
+
+	rmode = (mode != NULL ? mode : ERx("update"));
+
+	/*
+	** create dummy columns for nullable and data_type, so we can re-use
+	** the other catalog methods for both globals and class defs.
+	*/
+##	INITTABLE self->c_form self->c_tfield rmode (
+##		_id		= i4,
+##		_class		= i4,
+##		_env		= i4,
+##		_owner		= c32,
+##		_is_current	= i4,
+##		_create_date	= c25,
+##		_altr_date	= c25,
+##	 	_altr_count	= i4,
+##		_last_altered_by = c32,
+##		_nullable	= c8,
+##		_type		= c32,
+##		_data_type	= c32
+##	);
+##}
+
+/*
+** _*_catLoad 'methods' - Load the catalog tablefield for a class.
+**
+** Inputs:
+**	self		{AB_CATALOG*} descriptor for the catalog class.
+**	pattern		{char*}	search pattern for object name.
+**	lastname	{char*}	accounting stuff for keeping track of rows.
+**	prevrow		{nat*}	more accounting stuff for keeping track of rows.
+*/
+
+static VOID
+_g_catLoad ( self, pattern, lastname, prevrow )
+EXEC SQL BEGIN DECLARE SECTION;
+AB_CATALOG	*self;
+EXEC SQL END DECLARE SECTION;
+char		*pattern;
+char		*lastname;
+i4		*prevrow;
+##{
+	i4		nrows = 0;
+EXEC SQL BEGIN DECLARE SECTION;
+	OOID		applid;
+	OOID		class;
+	AB_CATREC	row;
+	char		pattern_buf[FE_MAXNAME*DB_MAX_COLS];
+	char		symbol[FE_MAXNAME+1];
+	char		source[FE_MAXNAME+1];
+	DB_DATA_DESC	dbdv;
+EXEC SQL END DECLARE SECTION;
+	char		db_data[FE_MAXNAME+1];
+
+	dbdv.db_data = db_data;
+	dbdv.db_collID = 0;
+
+	if ( pattern == NULL || *pattern == EOS )
+		STcopy( ERx("%"), pattern_buf );
+	else
+	{ /* change the pattern matching to SQL */
+		i4	sql_wild;
+
+		STcopy( pattern, pattern_buf );
+		IIUGwildcard( pattern_buf, &sql_wild );
+	}
+
+	class = self->c_class->ooid;
+	applid = self->c_appid;
+
+	EXEC SQL REPEATED SELECT ii_objects.object_id, object_class,
+			object_name, object_owner, object_env, is_current,
+			short_remark, create_date, alter_date,
+			'', alter_count, last_altered_by, rettype, '',
+			abf_symbol, abf_source,
+			rettype, retlength, retadf_type, retscale
+		INTO :row, :symbol, :source, :dbdv.db_data,
+			:dbdv.db_length, :dbdv.db_datatype, :dbdv.db_scale
+		FROM ii_objects, ii_abfobjects
+	WHERE ii_objects.object_name LIKE :pattern_buf AND
+		ii_objects.object_class = :class AND
+		ii_objects.object_id = ii_abfobjects.object_id AND
+		ii_abfobjects.applid = :applid
+	ORDER by object_name, object_owner;
+	EXEC SQL BEGIN;
+	{
+		STlcopy(_nullmsg(&dbdv), row.nullable, sizeof(row.nullable)-1);
+		STlcopy(_TypeName(&dbdv), row.type, sizeof(row.type) - 1);
+
+		_send(catRowLoad, self)( self, &row );
+
+		if ( ++nrows == self->c_maxrow )
+##			REDISPLAY;
+		if ( lastname != NULL && STequal(lastname, row.name) &&
+				prevrow != NULL )
+		{
+			*prevrow = nrows;
+		}
+	}
+	EXEC SQL END;
+
+	if ( FEinqerr() != OK )
+		EXsignal(EXDECLARE, 0);
+##}
+
+static VOID
+##_ra_catLoad ( self, pattern, lastname, prevrow )
+EXEC SQL BEGIN DECLARE SECTION;
+##AB_CATALOG	*self;
+EXEC SQL END DECLARE SECTION;
+char		*pattern;
+char		*lastname;
+i4		*prevrow;
+##{
+	register RECMEM *rap;
+	register RECDEF *rec = (RECDEF*) OOp(iiabRcatalog.c_ooid);
+	i4		nrows = 0;
+
+	for ( rap = rec->recmems ; rap != NULL ; rap = rap->next_mem )
+	{
+		AB_CATREC	row;
+		DB_DATA_DESC *dbdv = &(rap->data_type);
+
+		STlcopy(rap->name, row.name, sizeof(row.name) - 1);
+
+		STlcopy(_nullmsg(dbdv), row.nullable, sizeof(row.nullable) - 1);
+		STlcopy(_TypeName(dbdv), row.type, sizeof(row.type) - 1);
+		STlcopy(rap->owner, row.owner, sizeof(row.owner) - 1);
+		STlcopy(rap->short_remark, row.short_remark,
+						sizeof(row.short_remark) - 1);
+		STlcopy(rap->create_date, row.create_date,
+						sizeof(row.create_date) - 1);
+		STlcopy(rap->alter_date, row.alter_date,
+						sizeof(row.alter_date) - 1);
+		STlcopy(rap->altered_by, row.altered_by,
+						sizeof(row.altered_by) - 1);
+		row.id = (OOID) rap->ooid;
+		row.class = (OOID) OC_RECMEM;
+		row.env = 0;
+		row.is_current = 0;
+
+		_send(catRowLoad, self)( self, &row );
+
+		if ( ++nrows == self->c_maxrow )
+##			REDISPLAY;
+		if (lastname != NULL && STequal(lastname, row.name)
+		  && prevrow != NULL)
+		{
+			*prevrow = nrows;
+		}
+	} /* end for */
+##}
+
+/*
+** _*LoadTable 'methods' - Load the catalog tablefield for a class.
+**
+** Inputs:
+**	self		{AB_CATALOG*} descriptor for the catalog class.
+**	csp		{AB_CATREC*}  struct describing what goes into the row.
+*/
+
+static VOID
+##_gLoadTable ( self, csp )
+##AB_CATALOG	*self;
+##AB_CATREC	*csp;
+##{
+##	char	*owner = IIOOmapOwner(csp->owner);
+
+##	LOADTABLE self->c_form self->c_tfield (
+##		_id		= csp->id,
+##		_class		= csp->class,
+##		_name		= csp->name,
+##		_env		= csp->env,
+##		_owner		= owner,
+##		_is_current	= csp->is_current,
+##		_short_remark	= csp->short_remark,
+##		_create_date	= csp->create_date,
+##		_altr_date	= csp->alter_date,
+##		_altr_count	= csp->alter_cnt,
+##		_last_altered_by = csp->altered_by,
+##		_data_type	= csp->type,
+##		_nullable	= csp->nullable
+##	);
+##}
+
+static VOID
+##_rLoadTable ( self, csp )
+##AB_CATALOG	*self;
+##AB_CATREC	*csp;
+##{
+##	char	*owner = IIOOmapOwner(csp->owner);
+##	char	dtype[TYPE_LEN + 1];
+
+	STlcopy(OOpclass(OC_RECORD)->name, dtype, sizeof(dtype) - 1);
+
+##	LOADTABLE self->c_form self->c_tfield (
+##		_id		= csp->id,
+##		_class		= csp->class,
+##		_name		= csp->name,
+##		_env		= csp->env,
+##		_owner		= owner,
+##		_is_current	= csp->is_current,
+##		_short_remark	= csp->short_remark,
+##		_create_date	= csp->create_date,
+##		_altr_date	= csp->alter_date,
+##		_altr_count	= csp->alter_cnt,
+##		_last_altered_by = csp->altered_by,
+##		_type		= dtype,
+##		_data_type	= csp->type,
+##		_nullable	= csp->nullable
+##	);
+##}
+
+/*
+** _*InsertRow 'methods' - Insert a row into the catalog tablefield for a class.
+**
+** Inputs:
+**	self		{AB_CATALOG*} descriptor for the catalog class.
+**	obj		{OO_OBJECT*}  struct describing what goes into the row.
+**	rowno		{nat}	the row number.
+*/
+
+static VOID
+##_gInsertRow ( self, obj, rowno )
+##AB_CATALOG	*self;
+##OO_OBJECT	*obj;
+##i4		rowno;
+##{
+##	INSERTROW self->c_form self->c_tfield rowno;
+	if ( rowno < self->c_maxrow )
+		++rowno;
+	_gPutRow(self, obj, rowno );
+##}
+
+/*
+** _*PutRow 'methods' - Put a row into the catalog tablefield for a class.
+**
+** Inputs:
+**	self		{AB_CATALOG*} descriptor for the catalog class.
+**	obj		{OO_OBJECT*}  struct describing what goes into the row.
+**	rowno		{nat}	the row number.
+*/
+
+static VOID
+##_gPutRow ( self, obj, rowno )
+##AB_CATALOG		*self;
+##register OO_OBJECT	*obj;
+##i4			rowno;
+##{
+##	char	*owner = IIOOmapOwner(obj->owner);
+##	char 	*nmsg;
+##	char	dtype[TYPE_LEN + 1];
+	DB_DATA_DESC *desc;
+
+	desc = NULL;
+	nmsg = ERx("");
+	dtype[0] = EOS;
+
+	if (obj->class == OC_RECMEM)
+	{
+		desc = &(((RECMEM *)obj)->data_type);
+	}
+	else if (obj->class == OC_GLOBAL)
+	{
+		desc = &(((GLOBVAR *)obj)->data_type);
+	}
+	else if (obj->class == OC_RECORD)
+	{
+		STlcopy(OOpclass(OC_RECORD)->name, dtype, sizeof(dtype) - 1);
+	}
+
+	if (desc != NULL)
+	{
+		nmsg = _nullmsg(desc);
+		STlcopy(_TypeName(desc), dtype, sizeof(dtype) - 1);
+	}
+
+##	PUTROW self->c_form self->c_tfield rowno (
+##		_name		= obj->name,
+##		_id		= obj->ooid,
+##		_class		= obj->class,
+##		_env		= obj->env,
+##		_owner		= owner,
+##		_is_current	= obj->is_current,
+##		_short_remark	= obj->short_remark,
+##		_create_date	= obj->create_date,
+##		_altr_date	= obj->alter_date,
+##		_altr_count	= 1,
+##		_last_altered_by = owner,
+
+##		_data_type	= dtype,
+##		_type		= dtype,
+##		_nullable	= nmsg
+##	);
+##}
+
+/*
+** What follows are AB_CATALOG 'methods'
+*/
+
+/*
+** _*_get 'methods' - given an object id, return a pointer to the object.
+**
+** Inputs:
+**	app		{APPL*}		Descriptor of the application.
+**	id		{OOID}  	Id of object to find.
+*/
+
+/* _ra_get -- get a class attribute */
+static APPL_COMP *
+##_ra_get ( app, id )
+##APPL *app;
+##OOID id;
+##{
+	RECMEM *rap = (RECMEM *) OOp(id);
+
+	return (APPL_COMP *) rap;
+##}
+
+/*
+** _*Init 'methods' - Initialization for specific catalog classes.
+**
+** Inputs:
+**	self		{AB_CATALOG*}	Descriptor of the class.
+**	obj		{APPL_COMP*}
+*/
+
+STATUS	IIAMraReadAtts();
+
+static STATUS
+##_raInit ( self, ratt )
+##AB_CATALOG *self;
+##RECMEM *ratt;
+##{
+##	RECDEF	*parent = (RECDEF*) OOp(iiabRcatalog.c_ooid);
+
+##	PUTFORM self->c_form (record_name = parent->name);
+
+	rec_changed = FALSE;
+
+	/* load the class attributes */
+	return IIAMraReadAtts(parent);
+##}
+
+/*
+** Name:	_rcCreate() -	Create Class Definition.
+**
+** Description:
+**	Object-creation actions specific to OC_RECORD objects.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	obj	{APPL_COMP *}  the object that we're creating.
+*/
+
+static const
+##	char Rec_cr_form[]	= ERx("abfreccreate");
+
+static bool	Rec_fi_form_inited = FALSE;
+
+static STATUS
+_rcCreate ( app, class, self )
+APPL	*app;
+OOID	class;
+AB_CATALOG *self;
+##{
+	RECDEF	*obj;
+	char	title[63+4];
+	RECDEF 	new;
+
+	new.class = class;
+	new.appl = app;
+
+	if ( !Rec_fi_form_inited )
+	{
+		IIARiaForm(Rec_cr_form);
+		Rec_fi_form_inited = TRUE;
+	}
+
+	IIUGfmt( title,sizeof(title)-1,ERget(F_AB031D_ARecCrt_title),
+		1,IIabExename
+	);
+
+	obj = (RECDEF *)_createObj((APPL_COMP *)&new, self, title, Rec_cr_form);
+	if (obj == NULL)
+		return FAIL;
+
+	self->c_ooid = obj->ooid;
+
+	/* Now do catalog edit on child class */
+	IIABcaCatalogEdit ( obj->appl, OC_RECMEM, self->c_noload, FALSE );
+
+	self->c_ooid = OC_UNDEFINED;
+
+	return OK;
+##}
+
+/*
+** Name:	_glCreate() -	Create an object.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	obj	{APPL_COMP *}  the object that we're creating.
+**
+*/
+
+static const
+##	char	Gl_cr_form[] = ERx("abfpartcreate");
+
+static bool	Gl_fi_form_inited = FALSE;
+
+static STATUS
+_glCreate ( app, class, self )
+APPL	*app;
+OOID	class;
+AB_CATALOG *self;
+##{
+	char	title[63+4];
+	GLOBVAR new;
+
+	new.class = class;
+	new.appl = app;
+
+	if ( !Gl_fi_form_inited )
+	{
+		IIARiaForm(Gl_cr_form);
+		Gl_fi_form_inited = TRUE;
+	}
+
+	IIUGfmt( title, sizeof(title)-1, ERget(F_AB031C_AGloCrt_title),
+			1, IIabExename
+	);
+
+	if ( _createObj( (APPL_COMP *)&new, self, title, Gl_cr_form ) == NULL )
+		return FAIL;
+	return OK;
+##}
+
+/*
+** Name:	_coCreate() -	Create an object.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	obj	{APPL_COMP *}  the object that we're creating.
+**
+*/
+
+static const char	Co_cr_form[] = ERx("abfconstedit");
+
+static bool		Co_fi_form_inited = FALSE;
+
+static STATUS
+##_coCreate ( app, class, self )
+APPL	*app;
+OOID	class;
+##AB_CATALOG *self;
+##{
+	CONSTANT	new;
+ 	char		title[63+4];
+
+	new.class = OC_CONST;
+	new.appl = app;
+
+	new.language = _DefaultLang;
+
+	new.data_type.db_datatype = DB_NODT;
+	new.data_type.db_length = 0;
+	new.data_type.db_scale = 0;
+	new.data_type.db_data = ERx("none");
+
+	if ( !Co_fi_form_inited )
+	{
+		IIARiaForm(Co_cr_form);
+		Co_fi_form_inited = TRUE;
+	}
+
+	IIUGfmt( title, sizeof(title)-1, ERget(F_AB031E_AConstCrt_title),
+		1, IIabExename
+	);
+
+	if ( _createObj( (APPL_COMP*)&new, self, title, Co_cr_form ) == NULL )
+		return FAIL;
+	return OK;
+##}
+
+/*
+** Name:	_raDestroy() -	Destroy Class Attribuge.
+**
+** Description:
+**	Object-destruction actions specific to OC_RECMEM objects.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	obj	{APPL_COMP *}  the object that we're creating.
+*/
+/*ARGSUSED*/
+static STATUS
+_raDestroy( class, self )
+{
+	rec_changed = TRUE;	/* Redo the dependencies */
+}
+
+/*
+** Name:	_raCreate() -	Create Class Attribuge.
+**
+** Description:
+**	Object-creation actions specific to OC_RECMEM objects.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	obj	{APPL_COMP *}  the object that we're creating.
+*/
+
+static const
+##	char	Ra_cr_form[] = ERx("abfpartcreate");
+static bool	Ra_fi_form_inited = FALSE;
+
+static STATUS
+##_raCreate ( app, class, self )
+APPL	*app;
+OOID	class;
+##AB_CATALOG *self;
+##{
+	RECDEF *parent = (RECDEF*) OOp(iiabRcatalog.c_ooid);
+	char	title[63+4];
+	RECMEM	new;
+	STATUS status;
+
+	if ( !Ra_fi_form_inited )
+	{
+		IIARiaForm(Ra_cr_form);
+		Ra_fi_form_inited = TRUE;
+	}
+
+	IIUGfmt( title, sizeof(title)-1, ERget(F_AB031F_ARattCrt_title),
+			1, IIabExename
+	);
+
+	new.class = OC_RECMEM;
+	new.appl = app;
+	new.parent = (APPL_COMP *) parent;
+
+	status = ( _createObj( (APPL_COMP *)&new, self, title, Ra_cr_form ) == 
+		  NULL)
+		? FAIL : OK;
+	if (status == OK)
+		rec_changed = TRUE;
+	return status;
+##}
+
+/*
+** Name:	_raEnd() -	End edit of record attributes
+**
+** Description:
+**	Edit-end actions specific to OC_RECMEM objects.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	dummy	{APPL_COMP *}
+*/
+/*ARGSUSED*/
+static STATUS
+_raEnd(self, dummy)
+AB_CATALOG *self;
+APPL_COMP *dummy;
+{
+	RECDEF *parent = (RECDEF*) OOp(iiabRcatalog.c_ooid);
+
+	if (rec_changed)
+	{
+		/* Redo the inter-record dependencies */
+		IIAMxrdRecordDependencies(parent);
+
+                /* Invalidate our callers */
+                IIAMxdsDepSearch((APPL_COMP *)parent, IIAM_zccCompChange,
+                                 (PTR)NULL);
+	}
+
+	return OK;
+}
+
+/*
+** Name:	_coEdit() -	Edit a Constant.
+**
+** Description:
+**	Object-edit actions specific to OC_CONST objects.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	obj	{APPL_COMP *}  the object that we're editing.
+**
+** History:
+** 	11/89 (jhw) - Copied from '_glEdit()'.
+*/
+
+static STATUS
+##_coEdit ( self, obj )
+##AB_CATALOG	*self;
+APPL_COMP	*obj;
+##{
+	((CONSTANT *)obj)->language = _DefaultLang;
+	IIABedtComp(obj->appl, obj, self);
+
+	_send(catPutRow, self)(self, obj, rowCURR);
+
+	return OK;
+##}
+
+/*
+** Name:	_glEdit() -	Edit a Global Variable.
+**
+** Description:
+**	Object-edit actions specific to OC_GLOBAL objects.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	obj	{APPL_COMP *}  the object that we're editing.
+**
+** Side Effects:
+**
+** History:
+** 	8/89 (billc) - first written.
+*/
+
+static STATUS
+_glEdit ( self, obj )
+AB_CATALOG *self;
+APPL_COMP *obj;
+##{
+	IIABedtComp( obj->appl, obj, self);
+
+	_gcatUpdate(self, obj);
+
+	return OK;
+##}
+
+/*
+** Name:	_rEdit() -	Edit a Class Definition.
+**
+** Description:
+**	Object-edit actions specific to OC_RECORD objects.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	obj	{APPL_COMP *}  the object that we're editing.
+**
+** Side Effects:
+**
+** History:
+** 	8/89 (billc) - first written.
+*/
+
+static STATUS
+_rEdit ( self, obj )
+AB_CATALOG *self;
+APPL_COMP *obj;
+##{
+	COMP_CLASS_INFO *cp;
+
+	/* edit class members */
+	IIABcaCatalogEdit( obj->appl, OC_RECMEM, self->c_noload, FALSE );
+
+	cp = iiabApCompClass(obj->class, FALSE /* no form init */);
+	_VOID_ (*cp->save)( obj->appl, obj );
+
+	_rcatUpdate(self, (RECDEF *) obj);
+
+	return OK;
+##}
+
+/*
+** Name:	_raEdit() -	Edit a Class Attribute.
+**
+** Description:
+**	Object-edit actions specific to OC_RECMEM objects.
+**
+** Input:
+**	self	{AB_CATALOG *}  the object description.
+**	obj	{APPL_COMP *}  the object that we're editing.
+**
+** Side Effects:
+**
+** History:
+** 	8/89 (billc) - first written.
+*/
+
+static STATUS
+_raEdit ( self, obj )
+AB_CATALOG *self;
+APPL_COMP *obj;
+##{
+	IIABedtComp( obj->appl, obj, self);
+
+	_gcatUpdate(self, obj);
+
+	rec_changed = TRUE;	/* Assume it changed */
+	return OK;
+##}
+
+/*
+** Name:	objDisplay() -   Global variable Create Frame Display.
+**
+** Description:
+**	Displays application component specific information on the create form.
+**
+** Inputs:
+**	id	{OOID}  The ID of the object being created.
+**	new     {APPL_COMP *}  The temporary application component.
+**
+** Returns:
+**	{STATUS}  OK
+**
+** History:
+**	06/89 (billc)  Written.
+*/
+
+static STATUS
+##objDisplay ( id, new, formname )
+OOID    id;
+APPL_COMP	*new;
+##char	*formname;
+##{
+##	SET_FRS field formname (
+##			underline(_name) = 1,
+##	/* sneaky trick, since we use same forms for create and edit. */
+##			displayonly(_name) = 0,
+##			invisible(_create_date) = 1,
+##			invisible(_owner) = 1,
+##			invisible(_altr_date) = 1,
+##			invisible(_last_altered_by) = 1
+##	);
+
+	switch (new->class)
+	{
+	  case OC_CONST:
+		{
+			/* sneaky trick, again.  Fixes US370. */
+##			SET_FRS FIELD formname (displayonly(_data_type) = 0);
+##			CLEAR FIELD _value, _data_type;
+			break;
+		}
+	  case OC_RECMEM:
+	  case OC_GLOBAL:
+		/* globals and class attributes can be nullable or
+		** can be arrays.  These are mutually exclusive.  
+		** We'll start off with 'nullable' shown.
+		*/
+		iiabTD_TypeDisplay(formname, 
+				(DB_DATA_DESC*)NULL, (i4) new->appl->dml
+			);
+		break;
+	  case OC_RECORD:
+	  default:
+		break;
+	}
+	return OK;
+##}
+
+/*
+** Name:	iiabCrGlobal() -       Create Application Data Object Component.
+**
+** Description:
+**	Initializes and writes the application catalog entry for a data
+**	component -- a class, class attribute, global variable, or constant.
+**	This is somewhat like f_create in abcreate.qsc.
+**
+** Inputs:
+**	id	{OOID}  The variable component object.
+**	name    {char *}  The object name.
+**	data	{PTR}  The temporary object used during the create.
+**
+** Outputs
+**	obj	{APP_VAR *}  The variable component object.
+**			data_type	{DB_DATA_DESC}  The data-type
+**								descriptor.
+**
+** History:
+*/
+
+static STATUS createCOcomp();
+static STATUS createGLcomp();
+static STATUS createRCcomp();
+static STATUS createRAcomp();
+
+STATUS
+iiabCrGlobal ( id, data )
+OOID	id;
+PTR	data;
+{
+	register APPL_COMP	*obj = (APPL_COMP *)OOp(id);
+	STATUS			stat;
+
+	switch (obj->class)
+	{
+	  case OC_GLOBAL:
+		stat = createGLcomp((GLOBVAR *) obj, data);
+		break;
+	  case OC_CONST:
+		stat = createCOcomp((CONSTANT *) obj, data);
+		break;
+	  case OC_RECORD:
+		stat = createRCcomp((RECDEF *) obj, data);
+		break;
+	  case OC_RECMEM:
+		stat = createRAcomp((RECMEM *) obj, data);
+		break;
+	  default:
+		stat = FAIL;
+		break;
+	}
+	if ( stat == OK )
+	{
+		/* Insert into ordered list of components */
+		IIAMinsComp(obj->appl, obj);
+	}
+	return stat;
+}
+
+/*
+** Name:	createCOcomp() -	Create Application Variable Component.
+**
+** Description:
+**	Initializes and writes the application catalog entry for a global var.
+**
+** Inputs:
+**	obj	{CONSTANT*}  The variable component object.
+**	data    {PTR ==> CONSTANT *}  The temporary object used during the
+**					create.
+**
+** Outputs
+**	obj	{APP_VAR *}  The variable component object.
+**			data_type	{DB_DATA_DESC}  The data-type
+**								descriptor.
+**
+** History:
+**	06/89 (jfried)  Cloned from Bill C's createGLcomp.
+*/
+
+static STATUS
+createCOcomp ( obj, data )
+CONSTANT	*obj;
+PTR		data;
+{
+    /* get the datatype info off the form (editutil.qsc) */
+    if ( iiabVG_ValueGet( obj, Co_cr_form ) != OK )
+	return FAIL;
+
+    return IIAMwrConst(obj);
+}
+
+/*
+** Name:	createGLcomp() -	Create Application Variable
+**						Component.
+** Description:
+**	Initializes and writes the application catalog entry for a global var.
+**
+** Inputs:
+**	obj	{GLOBVAR*}  The variable component object.
+**	data	{PTR ==> GLOBVAR *}  The temporary object used during the
+**					create.
+**
+** Outputs
+**	obj	{APP_VAR *}  The variable component object.
+**			data_type	{DB_DATA_DESC}  The data-type
+**								descriptor.
+**
+** History:
+**	06/89 (billc)  Written.
+*/
+
+static STATUS
+createGLcomp ( obj, data )
+GLOBVAR		*obj;
+PTR		data;
+{
+	/* initialize before iiabTG_TypeGet fills it in. */
+	obj->data_type.db_datatype = DB_NODT;
+	obj->data_type.db_length = 0;
+	obj->data_type.db_scale = 0;
+	obj->data_type.db_data = ERx("none");
+
+	/* get the datatype info off the form */
+  	if ( !iiabTG_TypeGet( (APPL_COMP*) obj, Gl_cr_form, &obj->data_type ) )
+	{
+		return FAIL;
+	}
+
+	return IIAMwrGlobal(obj);
+}
+
+/*
+** Name:	createRCcomp() -	Create Class Definition
+**						Component.
+** Description:
+**	Initializes and writes the application catalog entry for a Class Def.
+**
+** Inputs:
+**	obj	{RECDEF*}  The variable component object.
+**	data	{PTR ==> RECDEF *}  The temporary object used during the create.
+**
+** Outputs
+**	obj	{APP_VAR *}  The rec.def. component object.
+**
+** History:
+**	06/89 (billc)  Written.
+*/
+
+static STATUS
+createRCcomp ( obj, data )
+RECDEF	*obj;
+PTR	data;
+{
+	return IIAMwrRecord(obj);
+}
+
+/*
+** Name:	createRAcomp() -	Create Class Attribute
+**						Component.
+** Description:
+**	Initializes and writes the application catalog entry for a Class Att.
+**
+** Inputs:
+**	obj	{RECMEM*}  The variable component object.
+**	data	{PTR ==> RECMEM *}  The temporary object used during the create.
+**
+** Outputs
+**	obj	{APP_VAR *}  The rec.def. component object.
+**
+** History:
+**	06/89 (billc)  Written.
+*/
+
+static STATUS
+createRAcomp ( obj, data )
+RECMEM	*obj;
+PTR	data;
+{
+	RECDEF *parent = (RECDEF*) OOp(iiabRcatalog.c_ooid);
+	RECMEM	dummy;
+	RECMEM	*rp;
+##	AB_CATALOG	*self = &iiabMcatalog;
+
+	/* initialize before iiabTG_TypeGet fills it in. */
+	obj->data_type.db_datatype = DB_NODT;
+	obj->data_type.db_length = 0;
+	obj->data_type.db_scale = 0;
+	obj->data_type.db_data = ERx("none");
+
+	/* get the datatype info off the form */
+  	if ( !iiabTG_TypeGet( (APPL_COMP*) obj, Ra_cr_form, &obj->data_type ) )
+		return FAIL;
+
+	/* Insert the new object in the classes list. */
+	obj->next_mem = parent->recmems;
+	parent->recmems = obj;
+
+	/* att_order no longer used. */
+	obj->att_order = 0;
+
+	return IIAMwaWriteAtt( obj );
+}
+
+char	*UGcat_now();
+
+#define HELPEXPL	F_FE0100_ExplFrameHelp
+#define FORGETEXPL	F_FE0109_ExplForget
+#define BADNAME		E_UG000E_BadName
+
+/*
+** Name:	_createObj() -	Generic Create Data Object Routine.
+**
+** Description:
+**	Look familiar?  This duplicates a lot of code in editcomp.qsc, and
+**	all this stuff should probably be tucked in there.
+**	The OO material is all stolen directly from oo/oocreate.qsc.
+**
+** Output params:
+**	new	{APPL_COMP *}	- dummy, filled in with info for created object
+**	catalog {AB_CATALOG*}	- info on the current display catalog.
+**	title	{char *}	- title to put on the form.
+**	formname {char*}	- name of the form
+**
+** Returns:
+**	{APPL_COMP *}	-- the newly created object.
+**
+** Side Effects:
+**	displays Save sequence sub-menu; may invoke Save frame; object
+**	may be saved in database.
+**
+** History:
+**	12/89 (billc) -- Written.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+*/
+
+static APPL_COMP *
+##_createObj ( new, catalog, title, formname )
+##APPL_COMP   	*new;
+##AB_CATALOG	*catalog;
+##char		*title;
+##char		*formname;
+##{
+##	APPL_COMP		*obj = NULL;
+##	COMP_CLASS_INFO		*cp;
+##	UIDBDATA		*uidbdata;
+
+	uidbdata = IIUIdbdata();
+
+	new->ooid = OC_UNDEFINED;
+	new->data.tag = new->appl->data.tag ;
+	new->data.inDatabase = FALSE;
+
+	/*
+	** We'll cheat -- there is a useful datatype verification routine in
+	** this class's edit template, so get the template and use it.  This
+	** cheat takes advantage of the fact that we use the same form for
+	** editing and creating these things.  The edit routines do twiddle
+	** the form, so this is important.  (For classes, the forms are
+	** different, but we don't do a typecheck for classes.)
+	*/
+	cp = iiabApCompClass(new->class, FALSE /* no form init */);
+	if ( cp == NULL )
+		return NULL;
+
+##	DISPLAY formname	/* default:  FILL */
+##		WITH style = popup
+##	INITIALIZE
+##	{
+##		PUTFORM (
+##			_title = title,
+##			_name = _iiOOempty,
+##			_owner = uidbdata->user,
+##			_create_date = ERx(UGcat_now())
+##		);
+
+		/* Object specific attributes */
+		if ( objDisplay(new->ooid, new, formname) != OK )
+##			BREAKDISPLAY;
+
+##		RESUME FIELD _name;
+##	}
+
+##	ACTIVATE FIELD _name:
+##	{
+##		i4 change;
+
+##		INQUIRE_FRS FIELD _iiOOempty ( change = change(_name) );
+		if ( change != 0 )
+##		{
+##			char	name[FE_MAXNAME+1];
+
+##			GETFORM ( name = _name );
+			if ( FEchkname(name) != OK )
+			{
+				IIUGerr( BADNAME, UG_ERR_ERROR, 1, name);
+##				RESUME FIELD _name;
+			}
+##		}
+##		RESUME NEXT;
+##	}
+
+##	ACTIVATE FIELD cp->type_check:
+##	{ /* Validate a Data Type */
+##		i4	change;
+
+##		INQUIRE_FRS FIELD _iiOOempty ( change = change(cp->type_check) );
+		if ( change != 0 && cp->type_valid != NULL )
+##		{
+##			char	desc[FE_MAXNAME+1];
+			DB_DATA_VALUE   temp;
+
+			/* Note:  The Nullable field relies on an
+			** internal validation and is not relevant
+			** when validating the Data Type.
+			*/
+##			GETFORM ( desc = cp->type_check );
+			if ( STtrmwhite(desc) <= 0
+			  || (*cp->type_valid)(new, desc, &temp) != OK)
+			{
+				/* invalid Type */
+##				RESUME FIELD cp->type_check;
+			}
+##		}
+##		RESUME NEXT;    /* OK */
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_OK)
+##			( expl = catalog->c_create.m_expl,
+##				validate = 1, activate = 1),
+##			frskey4 (validate = 1, activate = 1)
+##	{
+		char	*srem;
+		char	*lrem;
+		OOID	newid;
+##		char	currname[FE_MAXNAME+1];
+##		char	buf[OOLONGREMSIZE+1];
+
+##		VALIDATE;
+
+##		GETFORM ( currname = _name );
+
+##		GETFORM (buf = _short_remark);
+		srem = STtrmwhite(buf) <= 0 ? _iiOOempty : STalloc(buf);
+
+		OOget_long_remark(formname, buf);
+		lrem = STtrmwhite(buf) <= 0 ? _iiOOempty : STalloc(buf);
+
+		if ( new->ooid == OC_UNDEFINED )
+		{ /* allocate new DB object */
+    		  	
+			/* lint truncation warning if size of ptr > OOID, 
+		      	   but code valid */
+			new->ooid = (OOID)OOsnd( new->class, _newDb, FALSE, currname,
+					0, uidbdata->user, 0,
+					srem, (char *)NULL, (char *)NULL, lrem
+			);
+			if ( new->ooid == nil )
+			{
+				obj = NULL;
+##				BREAKDISPLAY
+			}
+		}
+
+		obj = (APPL_COMP *)OOp(new->ooid);
+		/* for memory allocation */
+		obj->data.tag = new->data.tag;
+		obj->appl = new->appl;
+		obj->altered_by = uidbdata->user;
+
+		if (new->class == OC_RECMEM)
+		{
+			((RECMEM*)obj)->parent = ((RECMEM*)new)->parent;
+		}
+		else if (new->class == OC_CONST)
+		{
+			((CONSTANT*)obj)->language = ((CONSTANT*)new)->language;
+		}
+
+    		/* lint truncation warning if size of ptr > OOID, 
+		   but code valid */
+		if ((newid = (OOID)OOsnd( new->ooid, _confirmName, currname, FALSE ))
+		    == nil)
+##			RESUME FIELD _name;
+
+		new->ooid = newid;
+		if ( IIOOsave( &(new->ooid), (PTR)obj, iiabCrGlobal ) == OK )
+		{
+			/* update row on main catalog form */
+			_send(catInsertRow, catalog)( catalog, obj,
+				FEtbsins( catalog->c_form, catalog->c_tfield,
+					currname, _name, FALSE
+				)
+			);
+
+##			BREAKDISPLAY
+		}
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Forget)
+##			(expl = ERget(FORGETEXPL), validate = 0, activate = 0),
+##		FRSkey9 (validate = 0, activate = 0)
+##	{
+		obj = NULL;
+##		BREAKDISPLAY;
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Lookup) 
+##		      (expl = ERget(FE_LookupExpl), validate = 0, activate = 0),
+##		FRSkey10 ( validate = 0, activate = 0):
+##	{
+##		char		fld[FE_MAXNAME+1];
+		FLD_VALUE	fv;
+
+		fv._form = formname;
+		fv._field = fld;
+		fv._column = NULL;
+
+##		INQUIRE_FRS FORM ( fld = field );
+
+		if ( cp->type_check != NULL && STequal(fld, cp->type_check) )
+		{
+			IIUFhlpType( cp->types, cp->ntypes,
+					(bool)(new->class != OC_CONST), &fv
+			);
+		}
+		else
+		{
+			IIUFfldHelp(&fv);
+		}
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Help)
+##			(expl = ERget(HELPEXPL), validate = 0, activate = 0),
+##		FRSkey1 (expl = ERget(HELPEXPL), validate = 0, activate = 0):
+##	{
+		FEhelp( ERx("abcmpcrt.hlp"), title );
+##	}
+
+	catalog->c_ooid = new->ooid;
+	return obj;
+##}
+
+
+/*
+** _nullmsg -- handy utility for getting a string, "yes" or "no", depending
+**		on nullability of the given datatype.  strings are cached.
+*/
+
+static	char *_No;
+static	char *_Yes;
+
+static char *
+_nullmsg(dbdv)
+DB_DATA_DESC *dbdv;
+{
+	if (_Yes == NULL)
+	{
+		_Yes = ERget(F_UG0002_Yes2);
+		_No = ERget(F_UG0007_No2);
+	}
+
+	return ( dbdv->db_datatype == DB_NODT
+			|| dbdv->db_datatype == DB_DMY_TYPE
+			|| !AFE_NULLABLE(dbdv->db_datatype) ) ? _No : _Yes;
+}
+
+/*
+** _TypeName -- handy utility that, given a dbdv, returns a string
+**		description of the datatype.  useful, since we want to print
+**		'array of xxx'' if it is an array.
+*/
+static char typeBuffer[TYPE_LEN+1];
+
+static char 
+*_TypeName(dbdd)
+DB_DATA_DESC *dbdd;
+{
+	if (dbdd->db_datatype != DB_DMY_TYPE || dbdd->db_length == 0 )
+	{
+		/* If it's not an array, just return the data pointer */
+		return dbdd->db_data;
+	}
+	else
+	{
+		/* Construct "array of xxx" */
+		STprintf(typeBuffer, ERx("%s%s"), _ArrayOf, dbdd->db_data);
+		return typeBuffer;
+	}
+}

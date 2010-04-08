@@ -1,0 +1,32 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for setup-support
+*/
+
+/*
+** History
+**	27-Aug-2002 (hanch04)
+**	   Createdb from setupsup64.ccpp
+**	11-Jun-2004 (somsa01)
+**	   Cleaned up code for Open Source.
+*/
+
+PART  setupsup64
+
+/*
+** ingres!utility
+*/
+
+   DIRECTORY (PROD2NAME)!utility!lp64
+   BUILD_DIR (ING_BUILD)!utility!lp64
+      EXECUTABLE (PROG1PRFX)memkey
+      EXECUTABLE lgkmkey
+      EXECUTABLE cscleanup
+      {
+      PERMISSION s:rwed,o:rwed,g:re,w:re,setuid
+      	EXECUTABLE (PROG0PRFX)csreport
+      }
+      EXECUTABLE (PROG0PRFX)syscheck
+      EXECUTABLE csinstall

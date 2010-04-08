@@ -1,0 +1,32 @@
+#
+#   NMAKE makefile for ingract
+#
+#   History:
+#       03-Apr-96 (fanra01)
+#           Modified for building with OpenIngres.
+
+!include ..\..\..\tools\port\make\make.ini
+
+.c.obj:
+    $(CC) $(DLLCFLAGS) $(INCL_HDRS) -Fo$@ $*.c > %|pfF.err
+
+all:    ingract.dll
+
+nanbtn.obj: nanbtn.c ..\hdr\nanact.e
+
+nanact.res: nanact.rc drag.cur cursor.bmp sysmenu.bmp resource.h
+
+ingract.dll : nanbtn.obj nanact.res nanact.def nanact.lnk
+	$(LINKDLL) @<<
+nanbtn.obj +
+$(LIBDIR)\libentry
+$@
+$*.map
+libw +
+ldllcew +
+$(LIBDIR)\catobal.lib +
+oldnames
+nanact.def
+<<
+	rc nanact.res $@
+	implib $*.lib $@

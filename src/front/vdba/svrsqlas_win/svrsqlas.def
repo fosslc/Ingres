@@ -1,0 +1,30 @@
+;
+;  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+;
+
+;
+;    Source   : svrsqlas.def, Declares the module parameters for the DLL.
+;    Project  : SQL ASSISTANT 
+;    Author   : Sotheavut UK (uk$so01)
+;    Purpose  : Main dll
+;
+; History:
+;
+; 10-Jul-2001 (uk$so01)
+;    Created
+; 23-Oct-2001 (uk$so01)
+;    SIR #106057
+;    Rewrite SQL Assistent as an In-Process COM Server.
+;
+
+
+
+LIBRARY      "svrsqlas"
+DESCRIPTION  'svrsqlas Windows Dynamic Link Library'
+
+EXPORTS
+    ; Explicit exports can go here
+    DllGetClassObject PRIVATE
+    DllCanUnloadNow PRIVATE
+    DllRegisterServer PRIVATE
+    DllUnregisterServer PRIVATE

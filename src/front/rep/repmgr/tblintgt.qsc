@@ -1,0 +1,500 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <cm.h>
+# include <st.h>
+# include <cv.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	tblintgt.qsc - table integrity report screen
+**
+** Description:
+**	Defines
+**		tbl_integ		- table integrity report screen
+**		build_order_clause	- build order clause
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on tblinteg.osq in replicator library.
+**	14-jan-97 (joea)
+**		Change in fast message numbers to close gap.
+**	31-jan-97 (joea)
+**		Correct QUEL begin/end to SQL begin/end in loadtable of column
+**		names.
+**	12-feb-98 (joea)
+**		In build_order_clause, correct the test for inserting comma
+**		separators.  Order the sort_order tablefield by column_sequence
+**		so that the ORDER clause is prepared correctly. Only select
+**		replicated columns into the tablefield.
+**	05-jun-98 (padni01) bug 88184
+**		Assume databaseno1 to be the local database.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	18-Apr-2007 (kibro01) b117799
+**	    Ensure duplicate columns are not selected into ORDER BY clause
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+# define MAX_COLS	100
+
+
+GLOBALREF
+##char	RMdb_display[];
+
+GLOBALREF
+EXEC SQL BEGIN DECLARE SECTION;
+##i2	RMlocal_db_no;
+EXEC SQL END DECLARE SECTION;
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmtbl_integrity"),
+##	*tf_name = ERx("sort_order"),
+##	*ftbl_name = ERx("table_name"),
+##	*ftbl_owner = ERx("table_owner"),
+##	*fcdds_no = ERx("cdds_no"),
+##	*fcol_name = ERx("column_name"),
+##	*fsort_order = ERx("sort_order"),
+##	*fkey_seq = ERx("key_sequence"),
+##	*fdb_no_1 = ERx("databaseno1"),
+##	*fdb_no_2 = ERx("databaseno2"),
+##	*fdb_name_1 = ERx("dbname1"),
+##	*fdb_name_2 = ERx("dbname2"),
+##	*fbegin_time = ERx("begin_time"),
+##	*fend_time = ERx("end_time"),
+##	*trans_time = ERx("trans_time");
+
+
+FUNC_EXTERN STATUS table_integrity(i2 db1, i2 db2, i4 table_no, i2 cdds_no,
+	char *begin_time, char *end_time, char *order_clause, char *filename);
+static void build_order_clause(char *order_clause);
+
+
+/*{
+** Name:	tbl_integ	- table integrity report screen
+**
+** Description:
+**	Handles the sort_order tablefield for the table integrity report. When
+**	"Go" is selected, creates the table integrity report.
+**
+** Inputs:
+**	file_name		- file name
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	OK
+**	-1	- error running the report
+**	1	- no report run
+*/
+STATUS
+tbl_integ(
+char	*file_name)
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+	char	stmt[256];
+	i4	cnt;
+##	i2	db_no_1;
+##	i2	db_no_2;
+##	char	full_db_name[DB_MAXNAME*2+3];
+##	i2	cdds_no;
+	i4	tbl_no;
+##	char	tbl_name[DB_MAXNAME+1];
+##	char	tbl_owner[DB_MAXNAME+1];
+	char	cdds_name[DB_MAXNAME+1];
+	char	cdds_lookup_tbl[DB_MAXNAME+1];
+##	char	col_name[DB_MAXNAME+1];
+##	i4	key_seq;
+	i4	col_seq;
+##	char	begin_time[26];
+##	char	end_time[26];
+	EXEC SQL END DECLARE SECTION;
+##	i4	chng;
+##	char	msg[256];
+##	char	objname[FE_MAXNAME+1];
+	DBEC_ERR_INFO	errinfo;
+	STATUS	retval = 1;
+	char	order_clause[1024];
+	i4	i;
+	i4	row;
+	char	*p1, *p2, *pend;
+	char	list_row[36];
+	char	list_rows[2048];
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return (retval);
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name update
+
+##	display form_name fill
+##	initialize (db = RMdb_display)
+##	activate field ftbl_name
+##	{
+##		getform (tbl_name = ftbl_name)
+		EXEC SQL SELECT COUNT(*)
+			INTO	:cnt
+			FROM	dd_regist_tables
+			WHERE	table_name = :tbl_name;
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			IIUGerr(E_RM006F_Error_check_tbl_reg, UG_ERR_ERROR, 1,
+				tbl_name);
+##			resume
+		}
+		if (cnt == 0)
+		{
+			/* Check to see if this is a real table */
+			EXEC SQL SELECT	COUNT(*)
+				INTO	:cnt
+				FROM	iitables
+				WHERE	table_name = :tbl_name;
+			if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+			{
+				IIUGerr(E_RM006F_Error_check_tbl_reg,
+					UG_ERR_ERROR, 1, tbl_name);
+##				resume
+			}
+			if (cnt > 0)
+				IIUGerr(E_RM0070_Tbl_not_registered,
+					UG_ERR_ERROR, 0);
+			else
+				IIUGerr(E_RM0071_Tbl_not_exist, UG_ERR_ERROR,
+					0);
+##			resume
+		}
+		else if (cnt == 1)	/* Found exactly one table */
+		{
+##			set_frs field form_name (displayonly(ftbl_owner) = 1)
+			EXEC SQL SELECT	table_no, cdds_lookup_table,
+					table_owner, cdds_no
+				INTO	:tbl_no, :cdds_lookup_tbl,
+					:tbl_owner, :cdds_no
+				FROM	dd_regist_tables
+				WHERE	table_name = :tbl_name;
+			if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+			{
+				IIUGerr(E_RM006F_Error_check_tbl_reg,
+					UG_ERR_ERROR, 1, tbl_name);
+##				resume
+			}
+##			putform form_name (ftbl_owner = tbl_owner,
+##				fcdds_no = cdds_no)
+		}
+		else		/* More than one, present ListChoice */
+		{
+			*list_rows = EOS;
+			EXEC SQL SELECT table_owner
+				INTO	:tbl_owner
+				FROM	dd_regist_tables
+				WHERE	table_name = :tbl_name
+				ORDER	BY table_owner;
+			EXEC SQL BEGIN;
+				STtrmwhite(tbl_owner);
+				STprintf(list_row, ERx("%s\n"), tbl_owner);
+				STcat(list_rows, list_row);
+			EXEC SQL END;
+			EXEC SQL COMMIT;
+			row = IIFDlpListPick(ERget(F_RM00A2_Table_Owner),
+				list_rows, 3, -1, -1, NULL, NULL, NULL, NULL);
+			if (row >= 0)
+			{
+				p1 = list_rows;
+				pend = STindex(p1, ERx("\n"), 0);
+				for (i = 0; i < row; ++i)
+				{
+					p1 = CMnext(pend);
+					pend = STindex(p1, ERx("\n"), 0);
+				}
+				*pend = EOS;
+				STcopy(p1, tbl_owner);
+				EXEC SQL SELECT table_no, cdds_no,
+						cdds_lookup_table
+					INTO	:tbl_no, :cdds_no,
+						:cdds_lookup_tbl
+					FROM	dd_regist_tables
+					WHERE	table_name = :tbl_name
+					AND	table_owner = :tbl_owner;
+##				putform (ftbl_owner = tbl_owner,
+##					fcdds_no = cdds_no)
+			}
+			else
+			{
+##				resume
+			}
+		}
+
+		STtrmwhite(cdds_lookup_tbl);
+		if (*cdds_lookup_tbl == EOS)
+##			set_frs field form_name (displayonly(fcdds_no) = 1)
+		else
+##			set_frs field form_name (displayonly(fcdds_no) = 0)
+
+		EXEC SQL SELECT TRIM(vnode_name) + '::' + TRIM(database_name)
+			INTO	:full_db_name
+			FROM	dd_databases
+			WHERE	database_no = :RMlocal_db_no;
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM0030_Err_retrieve_db_name, UG_ERR_ERROR, 0);
+##			resume
+		}
+		EXEC SQL COMMIT;
+##		putform form_name (fdb_no_1 = RMlocal_db_no,
+##			fdb_name_1 = full_db_name)
+
+		/* Populate the sort_order tablefield */
+##		inittable form_name tf_name update
+		EXEC SQL SELECT DISTINCT c.column_name, r.key_sequence,
+				r.column_sequence
+			INTO	:col_name, :key_seq, :col_seq
+			FROM	iicolumns c, dd_regist_columns r,
+				dd_regist_tables t
+			WHERE	c.table_name = :tbl_name
+			AND	c.table_owner = :tbl_owner
+			AND	r.table_no = t.table_no
+			AND	c.column_name = r.column_name
+			AND	t.table_name = c.table_name
+			AND	t.table_owner = c.table_owner
+			AND	r.column_sequence != 0
+			ORDER	BY column_sequence;
+		EXEC SQL BEGIN;
+##			loadtable form_name tf_name (fcol_name = col_name,
+##				fkey_seq = key_seq)
+		EXEC SQL END;
+		EXEC SQL COMMIT;
+##		loadtable form_name tf_name (fcol_name = trans_time)
+##		resume next
+##	}
+
+##	activate field fcdds_no
+##	{
+##		getform (cdds_no = fcdds_no)
+		cnt = 0;
+		STprintf(stmt,
+			ERx("SELECT COUNT(*) FROM %s WHERE cdds_no = %d"),
+			cdds_lookup_tbl, (i4)cdds_no);
+		EXEC SQL EXECUTE IMMEDIATE :stmt INTO :cnt;
+		if (RPdb_error_check(DBEC_SINGLE_ROW, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM003D_Error_check_cdds, UG_ERR_ERROR, 0);
+##			resume
+		}
+		else if (cnt == 0)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM0072_Invalid_cdds_no, UG_ERR_ERROR, 0);
+##			resume
+		}
+		EXEC SQL COMMIT;
+##		resume next
+##	}
+
+##	activate field fdb_no_2
+##	{
+##		getform form_name (db_no_2 = fdb_no_2)
+##		inquire_frs field form_name (chng = change)
+		if (chng || db_no_2 == 0)
+		{
+			EXEC SQL SELECT TRIM(vnode_name) + '::' +
+					TRIM(database_name)
+				INTO	:full_db_name
+				FROM	dd_databases
+				WHERE	database_no = :db_no_2;
+			if (RPdb_error_check(DBEC_ZERO_ROWS_OK, &errinfo)
+				!= OK)
+			{
+				EXEC SQL ROLLBACK;
+				IIUGerr(E_RM0025_Error_check_db_no,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+			if (errinfo.rowcount == 0)
+			{
+				EXEC SQL ROLLBACK;
+				IIUGerr(E_RM0026_Invalid_db_no, UG_ERR_ERROR,
+					0);
+##				resume
+			}
+			EXEC SQL COMMIT;
+##			putform form_name (fdb_name_2 = full_db_name)
+		}
+##		resume next
+##	}
+
+##	activate menuitem ERget(FE_Go) (expl = ERget(F_RM00A3_Go_tbl_integ)),
+##		FRSkey4
+##	{
+##		validate
+##		getform (db_no_1 = fdb_no_1, db_no_2 = fdb_no_2,
+##			cdds_no = fcdds_no, begin_time = fbegin_time,
+##			end_time = fend_time)
+		IIUGmsg(ERget(F_RM00A4_Working), FALSE, 0);
+		build_order_clause(order_clause);
+
+		retval = table_integrity(db_no_1, db_no_2, tbl_no, cdds_no,
+			begin_time, end_time, order_clause, file_name);
+		EXEC SQL COMMIT;
+		if (retval != OK)
+			retval = -1;
+
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(FE_Lookup) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0116_LookupExpl)), FRSkey10 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs field form_name (objname = name)
+		if (STequal(objname, fcdds_no))
+		{
+			*list_rows = EOS;
+			STprintf(stmt,
+				ERx("SELECT DISTINCT d.cdds_no, d.cdds_name FROM %s t, dd_cdds d WHERE t.cdds_no = d.cdds_no ORDER BY cdds_no"),
+				cdds_lookup_tbl);
+			EXEC SQL EXECUTE IMMEDIATE :stmt
+				INTO	:cdds_no, :cdds_name;
+			EXEC SQL BEGIN;
+				STtrmwhite(cdds_name);
+				STprintf(list_row, ERx("%d;%s\n"), cdds_no,
+					cdds_name);
+				STcat(list_rows, list_row);
+			EXEC SQL END;
+			EXEC SQL COMMIT;
+			row = -1;
+			if (*list_rows != EOS)
+			{
+				row = IIFDlpListPick(NULL, list_rows, 3,
+					-1, -1, NULL, NULL, NULL, NULL);
+			}
+			else
+			{
+				IIUGerr(E_RM0073_No_valid_cdds, UG_ERR_ERROR,
+					0);
+##				resume
+			}
+			if (row >= 0)
+			{
+				p1 = list_rows;
+				pend = STindex(p1, ERx("\n"), 0);
+				for (i = 0; i < row; ++i)
+				{
+					p1 = CMnext(pend);
+					pend = STindex(p1, ERx("\n"), 0);
+				}
+				*pend = EOS;
+				p2 = pend = STindex(p1, ERx(";"), 0);
+				CMnext(pend);
+				STcopy(pend, cdds_name);
+				*p2 = EOS;
+				CVan(p1, &i);
+				cdds_no = (i2)i;
+##				putform (fcdds_no = cdds_no)
+##				set_frs form (change = 1)
+			}
+		}
+		else
+		{
+			IIUFfieldHelp();
+		}
+##	}
+
+##	activate menuitem ERget(FE_Help) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1 (activate = 0,
+##		validate = 0)
+##	{
+		FEhelp(ERx("rmtblint.hlp"), ERget(F_RM00A5_Tbl_integrity_rpt));
+##	}
+
+##	activate menuitem ERget(FE_End) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0102_ExplEnd)), FRSkey3 (activate = 0,
+##		validate = 0)
+##	{
+		retval = 1;
+##		breakdisplay
+##	}
+
+	return (retval);
+##}
+
+
+/*{
+** Name:	build_order_clause	- build order clause
+**
+** Description:
+**	builds the order by clause for the table integrity report
+**	based on the values off the table integrity screen
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	order_clause	- order clause
+**
+** Returns:
+**	none
+*/
+static void
+build_order_clause(
+char	*order_clause)
+##{
+##	char	col_name[DB_MAXNAME+1];
+##	i4	idx;
+##	short	null_ind;
+	i4	i;
+	i4	col_order[MAX_COLS];
+	char	col_names[MAX_COLS][DB_MAXNAME+1];
+	char	tmp[10];
+
+	*order_clause = EOS;
+	for (idx = 0; idx < MAX_COLS; idx++)
+		*col_names[idx] = EOS;
+
+	i = 0;
+##	unloadtable form_name tf_name (col_name = fcol_name,
+##		idx:null_ind = fsort_order)
+##	{
+		++i;
+		if (null_ind != -1)
+		{
+			STcopy(col_name, col_names[idx]);
+			col_order[idx] = i;
+		}
+##	}
+
+	for (idx = 0; idx < MAX_COLS; idx++)
+	{
+		if (*col_names[idx] != EOS)
+		{
+			STprintf(tmp, ERx("%d"), col_order[idx] + 3);
+			if (*order_clause != EOS)
+				STcat(order_clause, ERx(", "));
+			STcat(order_clause, tmp);
+		}
+	}
+##}

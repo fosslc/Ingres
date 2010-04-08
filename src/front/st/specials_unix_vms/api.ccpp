@@ -1,0 +1,128 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+**  Generic part file for API
+*/
+
+/*
+** History
+**	21-Apr-1995 (rajus01)
+**	    Created.
+**	18-may-1995 (wolf) 
+**	    Changes for VMS.
+**	29-sep-1997 (kinte01)
+**	    Changes for VMS for new location of iiapi.h
+**	28-jan-1998 (hanch04)
+**	    Added ifdef FULL_RELEASE.  This will not be defined
+**	    for the black box release of Ingres.
+**	28-apr-2000 (somsa01)
+**	    Enabled multiple product builds.
+**      08-may-2000 (hanch04)
+**        Added Makefiles
+**	29-nov-2000 (somsa01)
+**	    Added iiapicc.h and iiapidcc.h .
+**	02-mar-2001 (kinte01)
+**	    Changed to not distribute Makefile on VMS but instead
+**	    distribute appropriate VMS build scripts.
+**	15-Nov-2002 (wansh01)
+**	    Changed to include new set of api demo pgms and removed  
+**	    the old asc and syc demos. 
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	09-May-2005 (wansh01) 
+**	    Deleted iiapicc.h iiapidcc.h. bug # 114297  
+**	31-Oct-2007 (bonro01)
+**	    Add scrollable cursor demo from change 487706 to install.
+**      08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory  
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/ 
+
+PART	api  
+
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY (PROD2NAME)!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+   FILE iiapi.h
+   FILE iiapidep.h
+
+
+# ifdef FULL_RELEASE
+/*
+** ingres!{lib,library}
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY (PROD2NAME)!LIB_TGT
+#endif
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+# ifdef VMS
+      BUILD_FILE libiiapi.olb
+      FILE iiapi.olb
+# else /* VMS */
+   FILE lib(PROG1PRFX)api.a
+# endif /* VMS */
+
+/*
+** ingres!demo!api
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!demo!api
+#else
+	DIRECTORY (PROD2NAME)!demo!api
+#endif
+   BUILD_DIR (ING_BUILD)!demo!api
+    FILE apiaclnt.c
+    FILE apiaclnt.h
+    FILE apiademo.c
+    FILE apiademo.h
+    FILE apiasvr.c
+    FILE apiasvr.h
+    FILE apiautil.c
+    FILE apiautil.h
+    FILE apis2ph1.c
+    FILE apis2ph2.c
+    FILE apisauto.c
+    FILE apisblob.c
+    FILE apiscdel.c
+    FILE apiscomm.c
+    FILE apisconn.c
+    FILE apiscopy.c
+    FILE apiscupd.c
+    FILE apisdata.c
+    FILE apiserr.c
+    FILE apisinit.c
+    FILE apisname.c
+    FILE apisparm.c
+    FILE apisprbr.c
+    FILE apisprgt.c
+    FILE apisproc.c
+    FILE apisprrp.c
+    FILE apisrept.c
+    FILE apisroll.c
+    FILE apisscrl.c
+    FILE apisselc.c
+    FILE apissell.c
+# ifdef VMS
+   SCRIPT apibuild
+# else /* VMS */
+   FILE Makefile
+# endif /* VMS */
+
+# endif /* FULL_RELEASE */

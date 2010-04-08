@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2008 Ingres Corporation
+  The cache_dynamic parameter controls whether or not a server will
+  automatically compile the query plans of dynamic cursors into the 
+  shared cache. 
+
+  ON requests automatic caching. OFF is the default.

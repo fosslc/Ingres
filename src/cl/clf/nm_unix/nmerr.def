@@ -1,0 +1,8 @@
+2400: NM_PWDOPN: NMpathIng: Unable to open passwd file.~
+2401: NM_PWDFMT: NMpathIng: Bad passwd file format.~
+2402: NM_INGUSR: NMpathIng: There is no INGRES user in the passwd file.~
+2403: NM_INGPTH: NM[sg]tIngAt: No path returned for INGRES user.~
+2404: NM_STOPN: NM[sg]tIngAt: Unable to open symbol table.~
+2405: NM_STPLC: NMstIngAt: Unable to position to record in symbol table.~
+2406: NM_STREP: NMstIngAt: Unable to replace record in symbol table.~
+2407: NM_STAPP: NMstIngAt: Unable to append symbol to symbol table.~

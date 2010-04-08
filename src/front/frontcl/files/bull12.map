@@ -1,0 +1,106 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/*****************************************************************************/
+/*  Standard mapping file for BULL terminals with 12 function keys.          */
+/*      Last update:  13 May 1991                                            */
+/*  Function key layout is as follows:                                       */
+/*	pf1     (F1)  = Menu                                                     */
+/*	pf2     (F2)  = frskey1 (Help)                                           */
+/*	pf3     (F3)  = frskey3 (End)                                            */
+/*	pf4     (F4)  = frskey2 (Quit)                                           */
+/*	pf5     (F5)  = frskey4 (Go)                                             */
+/*	pf6     (F6)  = frskey5 (Top)                                            */
+/*	pf7     (F7)  = frskey6 (Bottom)                                         */
+/*	pf8     (F8)  = frskey7 (Find)                                           */
+/*	pf9     (F9)  = frskey8 (Save)                                           */
+/*	pf10    (F10) = frskey9 (Forget)                                         */
+/*  pf11-12 (F11-F12) = menuitems 1-2                                        */
+/*****************************************************************************/
+
+/* Menu Key */
+	menu = pf1  (F1)
+
+/* Help facility */
+	frskey1 = pf2 (F2)
+
+/* Quit from program  */
+	frskey2 = pf4 (F4) 
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (F3)  
+
+/* Go or execute function */
+	frskey4 = pf5 (F5)
+
+/* Put cursor on top of form or table field */
+	frskey5 = pf6 (F6)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= pf7 (F7)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= pf8 (F8)
+
+/* Save object in database */
+	frskey8 = pf9 (F9)
+
+/* Forget and Undo */
+	frskey9 = pf10 (F10)
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlU (^U)
+
+/* Move up one word within field */
+	nextword = controlB (^B)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Next screen or set of rows in table field */
+	scrollup = controlT (^T)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = controlY (^Y)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select menu items */
+	menuitem1 = pf11 (F11)
+	menuitem2 = pf12 (F12)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlH (Backspace)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)
+

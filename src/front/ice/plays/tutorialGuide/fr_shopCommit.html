@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Commit Purchases Transaction
+</title>
+</head>
+<body>
+<h1>
+Commit Purchases Transaction
+</h1>
+When the user confirms their purchases the confirmation must
+be reflected in the database by updating the
+<a href="fr_shopAdd.html#OrderStatus">status</a>
+of the order. The transaction as a whole must then
+be committed and signaled to the home page so
+that, if the user returns to the home page, they can
+start afresh with a new order number. Then we
+display the contents of the order, the cost, and
+the order number for reference.
+
+<h3>File: play_shopConfirm.html</h3>
+<p>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css"&gt;
+&lt;LINK HREF="&lt;!-- #ICE INCLUDE=`plays[play_styleSheet.css]` --&gt;" TYPE="text/css" REL="STYLESHEET"&gt;
+&lt;title&gt;Order Confirmed&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Order Nr: &lt;!-- #ICE VAR=`:e_orderNumber` --&gt; Confirmed&lt;/h1&gt;
+
+&lt;!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`update play_order
+    set status = 2
+    where order_nr = :e_orderNumber 
+    and user_id = ':ii_userid'`
+    TRANSACTION=`t_shopAdd`
+--&gt;
+&lt;!-- Commit the transaction --&gt;
+&lt;!-- #ICE COMMIT=`t_shopAdd` --&gt;
+&lt;!-- Set the transaction to 'complete' as it is now committed --&gt;
+<span class="macro">&lt;!-- #ICE DECLARE=`session.e_shopTxn=COMPLETE` --&gt;</span>
+
+&lt;!-- Show the products ordered: --&gt;
+&lt;p&gt;
+You have ordered the following:
+&lt;br&gt;
+&lt;!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+	select name, cost
+	from play_item, play_order
+	where id = product_id and
+            (order_nr = :e_orderNumber and user_id = ':ii_userid')`
+    TYPE=`TABLE`
+--&gt;
+
+&lt;!-- Show the total cost: --&gt;
+&lt;p&gt;
+The total value of your order is:
+&lt;br&gt;
+&lt;!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+         select sum(cost)
+	    from play_item
+	    where id = 
+		    (select product_id from play_order
+		    where order_nr = :e_orderNumber 
+		    and user_id = ':ii_userid')`
+    TRANSACTION=`t_shopConfirmList`
+    HEADERS=`col1, Total`
+    TYPE=`TABLE`
+--&gt;
+&lt;!-- Commit the transaction --&gt;
+&lt;!-- #ICE COMMIT=`t_shopConfirmList` --&gt;
+&lt;p&gt;
+&lt;!-- #ICE VAR=`Your order number &lt;b&gt;:e_orderNumber&lt;/b&gt; will now be processed.&lt;br&gt;
+Please quote this number in all correspondence` --&gt;
+&lt;p&gt;
+We suggest that you print this page for your
+records,
+&lt;p&gt;
+Thank you for your custom,
+&lt;br&gt;
+&lt;i&gt;Your Globe Heritage Team&lt;/i&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]` --&gt;
+&lt;!-- Standard Session Control --&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre></tt></div><p>
+When the status of the order has been updated in
+the play_order table, we commit the transaction,
+and then update the value of the session variable,
+<tt>e_shopTxn</tt> to 'COMPLETE'.
+<p><tt><pre>
+&lt;!-- #ICE DECLARE=`session.e_shopTxn=COMPLETE` --&gt;
+</pre></tt><p>
+This will cause
+the code in the shop home page to issue a new
+order number should the user return there.
+<p>
+If the user decides <i>not</i> to continue with
+their order they will proceed to 
+<a href="fr_shopRemove.html" target="page">
+empty
+</a>
+the contents of their bag.
+</body>
+</html>

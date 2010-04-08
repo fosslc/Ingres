@@ -1,0 +1,46 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abffrmst.hlp	help on Structure of an ABF frame. SQL.
+Example structure of a frame:
+
+    /* this is a comment */
+    INITIALIZE (
+	h_empno = integer NOT NULL;	/* hidden field */
+	)
+    DECLARE	/* hidden fields declared in this section are private;
+		** calling frames cannot pass values to them.
+		*/
+	h_empname = varchar(20) NOT NULL;
+    =
+    BEGIN
+    END
+    'Menuitem1' =
+    BEGIN
+	/* code to execute when user selects this menuitem */
+    END
+    'End' (VALIDATE = 0, ACTIVATE = 0,
+	   EXPLANATION = 'Return to calling frame'),
+	   KEY FRSKEY3 (VALIDATE = 0, ACTIVATE = 0) =
+    BEGIN
+	RETURN;
+    END
+    FIELD 'empno' =
+    BEGIN
+	/* code to execute when user leaves field 'empno' */
+    END
+    FIELD 'dependents.age' =
+    BEGIN
+	/* code to execute when user leaves column 'age' in
+	** table field 'dependents'
+	*/
+    END
+    BEFORE FIELD 'empname' =
+    BEGIN
+	/* code to execute when user enters field 'empname' */
+    END
+    ON TIMEOUT =
+    BEGIN
+	/* code to execute when user doesn't respond after 'n' seconds,
+	** where 'n' is set by a SET_FORMS statement.
+	** for example:   SET_FORMS FRS (TIMEOUT = 300);
+	*/
+    END

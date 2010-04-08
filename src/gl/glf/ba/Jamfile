@@ -1,0 +1,11 @@
+#
+# Jamfile file for gl!glf!ba
+#
+
+SubDir ING_SRC gl glf ba ;
+
+IISUBSYS gl glf ba ;
+
+
+IILIBRARY COMPATLIB : basrc.c ;
+

@@ -1,0 +1,194 @@
+'*********************************************************************************
+'**   Name:        CATOSPIN.FCC
+'**
+'**   Description: CA-FORMDEV CA-Spin Button FCC file
+'**
+'**   Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+'**
+'*********************************************************************************
+
+AddSys(_MacroDir, "c:\pluswdev\rlzincl")
+
+IF NOT QVAR(%%FCCCUST_RLZ, _Defined) THEN
+  RUN "fcccust"
+END IF
+
+IF NOT QVAR(%%CATOSPIN_RLZ, _Defined) THEN
+  RUN "catospin"
+END IF
+
+CCInfo.bitmap         = QSys(_ProgDir) + "catospin"
+CCInfo.DLL            = CASPINDLL
+CCInfo.Name           = "_CASpin"
+CCInfo.TextName       = "CA-Spin"
+CCInfo.FDOptionsFunc  = "FDOptionsFuncCASpin"
+CCInfo.FDGenerateFunc = "FDGenerateFuncCASpin"
+CCInfo.FDReadFunc     = "FDReadFuncCASpin"
+CCInfo.Val1           = SPS_ASYNCNOTIFY + SPS_VERTICAL
+CCInfo.Val2           = 0
+CCinfo.Str            = ""
+FormdevInstallControl(CCInfo)
+
+FUNC FDOptionsFuncCASpin(fam)
+     LOCAL font2
+
+    'Define the fonts
+     font2 = FontQUnique
+     FontNew(font2; "MS Sans Serif", 8, _Bold)
+
+     f.val1 = fam.val1
+     f.val2 = fam.val2
+     f.str = fam.str
+
+     AssignNamesCASpin ()
+
+     formCASpin = FormQUnique
+     FormNew(formCASpin; "CA-Spin Control Styles", _Close + _Title)
+     FormSetColor(_LightGray; _Background)
+     FormControl(_Size; 115 pxl, 15 pxl, 201 pxl, 328 pxl)
+     FormSetObject(CASpinobjs.ID_OK, _Button, "OK", font2, 12 pxl, 276 pxl, _Default, _Default)
+     FormSetObject(CASpinobjs.ID_CANCEL, _Button, "Cancel", font2, 117 pxl, 276 pxl, _Default, _Default)
+     FormSetColor(_LightGray; _Field)
+     FormSetObject(CASpinobjs.GroupBox_10, _GroupBox, "Orientation", font2, 12 pxl, 6 pxl, 175 pxl, 55 pxl)
+     FormSetObject(CASpinobjs.VERTICAL, _OptionButton, "Vertical", font2, 18 pxl, 30 pxl, _Default, _Default; 1, 1)
+     FormSetObject(CASpinobjs.HORIZONTAL, _OptionButton, "Horizontal", font2, 102 pxl, 30 pxl, _Default, _Default; 0, 1)
+     FormSetObject(CASpinobjs.GroupBox_40, _GroupBox, "Properties", font2, 12 pxl, 66 pxl, 175 pxl, 121 pxl)
+     FormSetObject(CASpinobjs.TEXTHASRANGE, _CheckBox, "Text Has Range", font2, 18 pxl, 90 pxl, _Default, _Default; 0, 2)
+     FormSetObject(CASpinobjs.NOPEGNOTIFY, _CheckBox, "No Peg Notifications", font2, 18 pxl, 114 pxl, _Default, _Default; _Notify, 0, 3)
+     FormSetObject(CASpinobjs.INVERTCHGBTN, _CheckBox, "Invert Change Buttons", font2, 18 pxl, 138 pxl, _Default, _Default; 0, 5)
+     FormSetObject(CASpinobjs.WRAPMINMAX, _CheckBox, "Wrap Around Range", font2, 18 pxl, 162 pxl, _Default, _Default; _Notify, 0, 4)
+     FormSetObject(CASpinobjs.GroupBox_110, _GroupBox, "String Styles", font2, 12 pxl, 192 pxl, 175 pxl, 73 pxl)
+     FormSetObject(CASpinobjs.HASSTRINGS, _CheckBox, "Has Strings", font2, 18 pxl, 216 pxl, _Default, _Default; _Notify, 0, 6)
+     FormSetObject(CASpinobjs.HASSORTEDSTRS, _CheckBox, "Has Sorted Strings", font2, 18 pxl, 240 pxl, _Default, _Default; _Notify, 0, 7)
+     FormSetColor(_White; _Field)
+
+     IF BitAnd(f.val1, SPS_VERTICAL)      : FormModifyObject(CASpinobjs.VERTICAL,_Normal;1)      : END IF
+     IF BitAnd(f.val1, SPS_HORIZONTAL)    : FormModifyObject(CASpinobjs.HORIZONTAL,_Normal;1)    : END IF
+     IF BitAnd(f.val1, SPS_NOPEGNOTIFY)   : FormModifyObject(CASpinobjs.NOPEGNOTIFY,_Normal;1)   : END IF
+     IF BitAnd(f.val1, SPS_WRAPMINMAX)    : FormModifyObject(CASpinobjs.WRAPMINMAX,_Normal;1)    : END IF
+     IF BitAnd(f.val1, SPS_TEXTHASRANGE)  : FormModifyObject(CASpinobjs.TEXTHASRANGE,_Normal;1)  : END IF
+     IF BitAnd(f.val1, SPS_INVERTCHGBTN)  : FormModifyObject(CASpinobjs.INVERTCHGBTN,_Normal;1)  : END IF
+     IF BitAnd(f.val1, SPS_HASSTRINGS)    : FormModifyObject(CASpinobjs.HASSTRINGS,_Normal;1)    : END IF
+     IF BitAnd(f.val1, SPS_HASSORTEDSTRS) : FormModifyObject(CASpinobjs.HASSORTEDSTRS,_Normal;1) : END IF
+
+     LOOP
+       SELECT CASE FormWait
+         CASE CASpinobjs.ID_OK
+           f.val1 = 0
+           f.val2 = 0
+           IF FormQNum(CASpinobjs.VERTICAL)      : f.val1 = BitOr(f.val1, SPS_VERTICAL)      : END IF
+           IF FormQNum(CASpinobjs.HORIZONTAL)    : f.val1 = BitOr(f.val1, SPS_HORIZONTAL)    : END IF
+           IF FormQNum(CASpinobjs.NOPEGNOTIFY)   : f.val1 = BitOr(f.val1, SPS_NOPEGNOTIFY)   : END IF
+           IF FormQNum(CASpinobjs.WRAPMINMAX)    : f.val1 = BitOr(f.val1, SPS_WRAPMINMAX)    : END IF
+           IF FormQNum(CASpinobjs.TEXTHASRANGE)  : f.val1 = BitOr(f.val1, SPS_TEXTHASRANGE)  : END IF
+           IF FormQNum(CASpinobjs.INVERTCHGBTN)  : f.val1 = BitOr(f.val1, SPS_INVERTCHGBTN)  : END IF
+           IF FormQNum(CASpinobjs.HASSTRINGS)    : f.val1 = BitOr(f.val1, SPS_HASSTRINGS)    : END IF
+           IF FormQNum(CASpinobjs.HASSORTEDSTRS) : f.val1 = BitOr(f.val1, SPS_HASSORTEDSTRS) : END IF
+
+           'Close the fonts
+           FontSelect(font2)
+           FontControl(_Close)
+           FormControl(_Close)
+           RETURN f
+
+         CASE CASpinobjs.ID_CANCEL
+           'Close the fonts
+           FontSelect(font2)
+           FontControl(_Close)
+           FormControl(_Close)
+           RETURN fam
+
+         CASE CASpinobjs.NOPEGNOTIFY
+           IF FormQNum(CASpinobjs.NOPEGNOTIFY) THEN
+             FormModifyObject(CASpinobjs.WRAPMINMAX,_Normal;0)
+           END IF
+
+         CASE CASpinobjs.WRAPMINMAX
+           IF FormQNum(CASpinobjs.WRAPMINMAX) THEN
+             FormModifyObject(CASpinobjs.NOPEGNOTIFY,_Normal;0)
+           END IF
+
+         CASE CASpinobjs.HASSTRINGS
+           IF FormQNum(CASpinobjs.HASSTRINGS) THEN
+             FormModifyObject(CASpinobjs.HASSORTEDSTRS,_Normal;0)
+           END IF
+
+         CASE CASpinobjs.HASSORTEDSTRS
+           IF FormQNum(CASpinobjs.HASSORTEDSTRS) THEN
+             FormModifyObject(CASpinobjs.HASSTRINGS,_Normal;0)
+           END IF
+       END SELECT
+     END LOOP
+END FUNC
+
+
+PROC AssignNamesCASpin ()
+     CASpinobjs.ID_OK = 10
+     CASpinobjs.ID_CANCEL = 20
+     CASpinobjs.GroupBox_10 = 30
+     CASpinobjs.VERTICAL = 40
+     CASpinobjs.HORIZONTAL = 50
+     CASpinobjs.GroupBox_40 = 60
+     CASpinobjs.TEXTHASRANGE = 70
+     CASpinobjs.NOPEGNOTIFY = 80
+     CASpinobjs.INVERTCHGBTN = 90
+     CASpinobjs.WRAPMINMAX = 100
+     CASpinobjs.GroupBox_110 = 110
+     CASpinobjs.HASSTRINGS = 120
+     CASpinobjs.HASSORTEDSTRS = 130
+END PROC
+
+
+FUNC FDGenerateFuncCASpin (fam)
+     LOCAL s
+     'Styles first, the flags
+
+     s = "SPS_ASYNCNOTIFY "
+
+     IF BitAnd(fam.val1, SPS_VERTICAL)      : s=s + "+ SPS_VERTICAL "      : END IF
+     IF BitAnd(fam.val1, SPS_HORIZONTAL)    : s=s + "+ SPS_HORIZONTAL "    : END IF
+     IF BitAnd(fam.val1, SPS_NOPEGNOTIFY)   : s=s + "+ SPS_NOPEGNOTIFY "   : END IF
+     IF BitAnd(fam.val1, SPS_WRAPMINMAX)    : s=s + "+ SPS_WRAPMINMAX "    : END IF
+     IF BitAnd(fam.val1, SPS_TEXTHASRANGE)  : s=s + "+ SPS_TEXTHASRANGE "  : END IF
+     IF BitAnd(fam.val1, SPS_INVERTCHGBTN)  : s=s + "+ SPS_INVERTCHGBTN "  : END IF
+     IF BitAnd(fam.val1, SPS_HASSTRINGS)    : s=s + "+ SPS_HASSTRINGS "    : END IF
+     IF BitAnd(fam.val1, SPS_HASSORTEDSTRS) : s=s + "+ SPS_HASSORTEDSTRS " : END IF
+     s = s + ", "
+
+     s = s + "w.IF_.ALLKEYS + w.IF_.MOSTKEYS + w.IF_.CUSTOM + w.IF_.NOTIFIES + w.IF_.TABSTOP"
+
+     RETURN s
+END FUNC
+
+
+FUNC GetCASpinModVal( StrMod )
+     LOCAL IntMod, Stmnt
+
+     IntMod = 0
+
+     IF Left$( StrMod, 3 ) = "SPS"
+       Stmnt = "IntMod = " + StrMod
+       EXECUTE Stmnt
+     END IF
+
+     RETURN IntMod
+END FUNC
+
+
+FUNC FDReadFuncCASpin(str)
+     LOCAL fam, commapos, i
+
+     fam.val1 = 0
+
+     commapos = FirstMatch( str, "," )
+
+     IF commapos > 0 THEN
+       FOR i = 1 to commapos
+         fam.val1 = BitOr(fam.val1, GetCASpinModVal( str[i] ) )
+       NEXT i
+     END IF
+
+     fam.val2 = 0
+     fam.str = ""
+     RETURN fam
+END FUNC

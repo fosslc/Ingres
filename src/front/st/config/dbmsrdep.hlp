@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The rule_depth resource specifies the maximum depth of rule nesting
+  supported by DBMS servers created with this definition.
+
+  The default is 20.

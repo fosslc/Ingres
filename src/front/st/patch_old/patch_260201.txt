@@ -1,0 +1,775 @@
+ 				        	      29-May-2002
+
+
+
+			  Ingres 2.6 Patch Notes 
+
+			  2.6/0201 (int.w32/00)
+
+			      Patch ID 8345
+
+
+
+	                    Table of Contents
+                            -----------------
+
+	Section 1 - General Notes
+	Section 2 - Installation Instructions
+	Section 3 - De-Installation Instructions
+	Section 4 - Special Notes
+	Section 5 - Ingres Corrections
+
+
+
+                         Section 1 - General Notes 
+                         -------------------------
+
+	a) Please read the complete document before installing this  
+	   patch. Ensure that the section Special Notes is examined, 
+           and an assessment made concerning the affect of notes 
+           headed 'ATTENTION and WARNING for the specific 
+           installation. These notes contain special instructions 
+           that should be followed if your installation uses the 
+           associated product or feature. 
+
+	b) This patch may be installed over the following release
+           version only : 
+         
+                2.6/0201 (int.w32/00)
+                2.6/0201 (int.w32/05)
+
+        c) Although the patch installer saves overwritten files by
+	   default, it is still recommended that a system backup is
+	   performed prior to the installation. 
+
+
+                      Section 2 - Installation Instructions
+                      -------------------------------------
+
+	Perform the following procedure to install the patch.
+
+	1. Login as the INGRES super-user using  the "ingres" account.
+
+        2. Stop all INGRES processes;
+
+	   a) If Ingres was started as a service then stop all related
+              Ingres service(s) under Control Panel \ Services.
+
+           b) If Ingres was not started as a service use:
+
+                ingstop
+
+	   c) if IVM is running, issue:
+
+	        ivm -stop
+
+	3. If patch supplied on CD media then load into drive.
+
+	4. If you have downloaded the patch from the CA WEB site or if
+           the CD you received contains a ZIP file, then you should 
+           first unZIP the ZIP file to a temporary directory on a hard 
+           drive.
+
+	5. Enter the following commands at a command prompt:
+
+	   cd <drive containing unzipped version of the patch>
+           install
+
+	6. Follow the instructions displayed on the screen to complete
+	   the patch installation.
+
+        7. Restart the INGRES installation.
+
+           a) If Ingres was stopped as a service then restart the
+              related Ingres service(s) under Control Panel \ Services.
+
+           b) If Ingres was shutdown using ingstop use:
+
+                Ingstart
+
+	During installation the following options are available :
+
+	1. 'Force execution of patch install even if cdimage 
+            verification fails'
+
+	   This option forces the patch to be installed despite the 
+           verification of the files to be installed failing. 
+           This option should only be used on the advice of CA 
+           technical support.
+
+	2. 'Backup files to be replaced in the installation'
+
+           Any files that will be replaced during the installation 
+           of this patch will be backed up to a specified directory. 
+           The default directory is %II_SYSTEM%\ingres\install\backup.
+
+	   It is recommended that this option be chosen as it allows 
+           the patch to be uninstalled should that prove necessary.
+
+	3. 'Install Patch'
+
+	   This option installs the patch.
+
+
+	4. 'View Patch Notes'
+
+	   This option allows you to view the patch notes for this 
+           patch release
+
+	5. 'Exit Installation'
+
+	   This option will terminate the patch installation without
+	   installing the patch
+
+	
+	
+                  Section 3 - De-Installation Instructions
+	          ----------------------------------------
+
+	Providing the patch was installed with the 'Backup.....' 
+        option checked the patch may be uninstalled using the 
+        following procedure.
+
+	1. Start the Windows Explorer
+
+	2. Locate the directory used as the backup during patch 
+           installation
+	   e.g. %II_SYSTEM%\ingres\install\backup
+
+	3. Click and hold on the Ingres directory
+	   e.g. %II_SYSTEM%\ingres\install\backup\pre-pNNNN\ingres
+	   where NNNN is the patch number
+
+	4. Drag this directory to the %II_SYSTEM% directory and 
+           release
+
+	5. Answer 'Yes to all' when prompted.
+	 
+	This sequence of steps moves the backup files back into 
+        the %II_SYSTEM% directory structure and overwrites those files 
+        that are already present.
+	
+	If you have multiple backup directories from multiple patch 
+        installations care should be taken when deciding which directory 
+        to use. For example, if patch 1 was installed, and then later 
+        patch 2 was installed, uninstalling using the patch 1 backup 
+        will cause both patch 1 and 2 to be uninstalled.
+
+	If you have any doubts please contact your local CA Technical 
+        Support.
+
+
+                            Section 4 - Special Notes
+                            -------------------------
+
+
+	There are no special notes for this patch.
+
+
+			  Section 5 - Ingres Corrections
+			  ------------------------------
+
+Specific problem(s) solved in this patch :
+
+	(GENERIC)
+	When attempting to create a view using a long varchar or long byte
+	column of a table, E_US1263 is received by the front end and
+	E_DM0072, E_DM9B07, and E_DM9028 are written to the error log.
+	(103857)
+
+	(GENERIC)
+	If the min aggregate is computed on a date column with a group of
+	rows whose only non-null values are the empty date, the result is
+	incorrectly computed to be "Dec. 31, 9999".
+	(107694)
+
+	(GENERIC)
+	A max or min aggregate function on a date column can produce a null
+	result. This should only happen for non-nullable date columns.
+	(107768)
+
+	(GENERIC)
+	Ingres would incorrectly report a licensing violation for an OLF based
+	on hardware capacity units, if more than one user would connect to a
+	DBMS server.
+	(107777)
+
+	(WINDOWS ONLY)
+	After applying patch 8279, the Ingres service does not start anymore.
+	This has been fixed.
+	(107784)
+
+Other problems solved in this patch:
+
+
+	(GENERIC)
+	The row producing procedure feature adds a "for" loop to the
+	procedure language to retrieve multiple rows from a select
+	statement. It also adds a "return row" statement to construct
+	row images to be sent to the caller. "result row" syntax is
+	added to the execute procedure statement of ESQL, along with
+	the ability to code a loop containing host language statements
+	in the same way as a select loop. Rows returned from the
+	procedure execution will drive the loop execution.
+	Slight correction of error detection - row procs called from
+	TM, dyn SQL or another procedure.
+	(101377)
+
+
+	(GENERIC)
+	Corrected the -aborted_transaction flag for auditdb to write correct
+	format for BT and ET records
+	(102521)
+
+        (NT-ONLY)
+        The NT Ingres installer now queries the operating system for
+        the timezone being used and then uses this information to set the 
+	default Ingres timezone.
+	(102772)
+
+	(GENERIC)
+	Attempting to pass a blob to a procedure invoked by a rule results
+	in an E_QE0002_INTERNAL_ERROR followed by a SIGBUS. A second attempt
+	to do such, resuts in the dbms server crashing.
+	(103156)
+
+
+	(GENERIC)
+	The ICE macro language has been redesigned. It is now well formed
+	according to the XML rules. In conjunction with the ICE DTD an
+	XML aware editor may be used to aid development of ICE pages.
+	(103810)
+
+
+	(UNIX)
+	IIMONITOR: remove <sid> where <sid> is an invalid session ID
+	results in a SIGSEGV in the DBMS.
+	(103872)
+
+
+	(GENERIC)
+	If you create a Global Temporary Table with the same name but a
+	different structure to an existing permanent table, then attempts
+	to use the table will cause E_OP0082 errors and a SIGSEGV in
+	opc_keyqual in the error log.
+	Bug is refixed. Original fix disabled 2.5 "model histograms for
+	global temporary tables" feature.
+	(104342)
+
+
+	(GENERIC)
+	Manipulation of a global temporary table which has the same name
+	as a permanent table may result in corruption of the permanent
+	table and/or E_DM0056 errors.
+	(104476)
+
+
+	(NT-ONLY)
+	Ingres now works in an environment where II_SYSTEM contains
+	embedded spaces.
+	(105212)
+
+
+	(UNIX)
+	The data to be imported is properly displayed and formatted during
+	'Part 2' if IIA on UNIX.
+	(105486))
+	
+	(GENERIC)
+	Support global temporary tables in the CallableStatement interface.
+	The following syntax is now supported for OpenSQL syntax:
+	
+	[execute procedure | callproc ] [schema.]procname ( param_name
+	    = session.global_temp_table)
+	
+	The following syntax is now supported for standard JDBC syntax:
+	
+	{ call [schema.]procname( session.global_temp_table ) }
+	
+	The "session." syntax is a keyword, and must always be
+	included.  The global_temp_table clause is the name of a global
+	temporary table that was created prior to the execution of the
+	database procedure.
+	(105521)
+
+
+	(GENERIC)
+	A "not in" subselect query used to run in a few seconds and now
+	takes a very long time, most of it CPU bound in OPF.
+	(105565)
+
+
+	(GENERIC)
+	New releases of Ingres that introduce additional reserved words
+	inevitably result in syntax errors in applications written long
+	before that use one of the reserved words as an entity name (table,
+	column, etc.). The request is to make Ingres parsers treat reserved
+	words in a context sensitive manner so they only cause errors when
+	used in an ambiguous context.
+	Apply changes to Ingres host language precompilers, too.
+	Change a GLOBALDEF to GLOBALREF.
+	(105811)
+
+
+	(GENERIC)
+	The documentation and implementation of float(n) columns seems to
+	incorporate a mixture of decimal digit precision (7 or less yields
+	a 4 byte float) and binary precision (53 or less yields a 8 byte
+	float). Both should be made consistent (either both in decimal
+	digits or both in binary digits).
+	Minor addition to make float(8) generate 4 byte float instead of 8.
+	Fix to length/precision computation to fix OP08A2 in 3.0.
+	(105957)
+
+
+	(GENERIC)
+	A query containing a "not in" subselect that references a union
+	view gets a OP0384 error and will not compile.
+	(105978)
+
+
+	(GENERIC)
+	complex query may hang in optimizer facility and doesn't come back.
+	On systems with internal threads the dbms server becomes unavailable
+	and eats all CPU. In a multiple dbms server environment the other
+	servers will hang some time later, no connect to the database is
+	possible(but the other servers are reachable with iimonitor).
+	To stop the system the dbms server has to be killed(kill -9),
+	often the recovery must be killed too.
+	Submitted to 2.6, too.
+	(106068)
+
+
+	(UNIX)
+	All text on first screen of IIA is now displayed correctly.
+	(106168)
+
+
+	(GENERIC)
+	In a multithreaded ESQL program resembling a terminal handler
+	with multiple threads connecting and disconnecting and issuing
+	a variety of SQL statements, on very fast CPUs, the program
+	tends to cause errors such as E_LQ00BF and E_LQ002E, and at
+	times these result in a SEGV.
+	(106240)
+
+
+	(GENERIC)
+	Added new option -param_file to copydb command to read the input
+	flags from a file.
+	
+	modified utexe.def for the new syntax.
+	Corrected usage message to reflect correct use of copydb -param_file
+	flag.
+	(106249)
+
+
+	(GENERIC)
+	Sysmod dbname -page_size=N does not change the page size for front
+	end catalogs.
+	(106305)
+
+
+	(GENERIC)
+	Server may hang, IIMONITOR shows sessions in a CS_MUTEX state
+	on RSB/LLB mutexes. Stack dump shows some threads in the
+	scavenge() function, others in LK_request_lock() and/or
+	LK_do_unlock().
+	(106306)
+
+
+	(GENERIC)
+	(HET NET) A FIRST class character set mapping has been defined
+	between the coded character sets ISO8859/1 and IBMPC850. This
+	should improve character throughput in this environment.
+	(106314)
+
+
+	(GENERIC)
+	Insert statements that assign values to byte columns using the
+	byte(nnn) function with integer data can produce incorrect data on
+	non-byte swapped machines. Likewise, any "=" predicate involving
+	a byte column may not qualify any rows.
+	(106378)
+
+
+	(UNIX)
+	VDBA's dependency on liblic98.so on UNIX has now been reolved.
+	(106401)
+
+
+	(UNIX)
+	At run-time, 'impxml' and 'ICETranslate' will properly resolve
+	the necessary shared libraries.
+	(106415)
+
+
+	(WINDOWS ONLY)
+	The new Ingres installer now works on Microsoft 64-bit operating
+	systems.
+	(106451)
+
+
+	(HP-UX ONLY)
+	After reaching the maximum number of sessions, as defined in the
+	"Preferences" dialog for Visual DBA, clicking the OK button on
+	the subsequent "Connection failure." dialog causes VDBA to crash
+	with a SIGABRT. This has been fixed.
+	(106479)
+
+
+	(GENERIC)
+	The Ingres documentation has been updated to reflect the changes
+	needed.
+	(106489)
+
+
+	(UNIX)
+	Fix various Raw location problems in 2.6 GA release.
+	Raw locations are now supported on HP-UX 11.x platforms.
+	(106501)
+
+
+	(GENERIC)
+	The "declare global tempoorary table as select first n ..."
+	statement doesn't apply the "first n" restriction. All rows are
+	inserted into the table. The same thing happens to "create table
+	as select first n" statements with nojournaling set.
+	(106516)
+
+
+	(NT ONLY)
+	The messaged logged in the Windows Event Log shows and error type
+	for an informative message and is also unable to locate the
+	resource where the message is located.
+	(106529)
+
+
+	(GENERIC)
+	Dbms server config parameters to enable/disable page types are
+	ignored.
+	(106530)
+
+
+	(GENERIC)
+	The like predicate currently only allows the pattern string to be
+	a character constant or host variable. ANSI SQL allows it to be any
+	character expression, including simple column references.
+	(106540)
+
+
+	(LINUX ONLY)
+	IIA no longer fails to read data from CSV files on Linux.
+	(106614)
+
+
+	(GENERIC)
+	References to "Release Notes" have been changed to "README".
+	(106617)
+
+
+	(GENERIC)
+	Advantage Ingres Product explorer is now up to date.
+	(106622)
+
+
+	(GENERIC)
+	The PTR field in DB_DATA_VALUE used to define GCA_COL_ATT
+	causes problems on 64-bit machines due to the change in
+	size of PTR types.  GCA failures result between 32-bit and
+	64-bit processes because the GCA_TDESCR message is built
+	with different data sizes.
+	
+	The PTR field in GCA_ELEMENT causes similar problems.
+	(106709)
+
+
+	(GENERIC)
+	In IIA, when using the "servers/INGRES" tree branch in Step 1 for
+	accessing the database, non-Ingres column types such as "money"
+	were not proposed in step 3.  This has been fixed.
+	(106737)
+
+
+	(GENERIC)
+	The printout of the site id heading is now "Site ID".
+	(106744)
+
+
+	(GENERIC)
+	Using alter table to create a referential constraint on a table
+	where the  Foreign Key Index Enforcement is set to <no index> no
+	more generates error  E_US0F09 Syntax error on '"no index"'
+	(106802)
+
+
+	(WINDOWS ONLY)
+	Executing "ingstart -help" causes an Accesss Violation. This has
+	been fixed.
+	(106814)
+
+
+	(DOCUMENTATION)
+	The Ingres Migration Guide has been updated to contain the
+	"Upgrading  Your Installation" secrion from the Readme.
+	(106835)
+
+
+	(GENERIC)
+	Fixed unicode collation algorithm ( combining characters case).
+	(106836)
+
+
+	(GENERIC)
+	IIA now works correctly if user puts a number of kB to pre-scan, in
+	the "[optional] Format Idendification on First [n] Kb of File"
+	control, which is bigger than the effective size of the file to be
+	imported.
+	(106844)
+
+
+	(WINDOWS ONLY)
+	Messages S_ST0540_cannot_run_rcpstat and
+	S_ST0543_cannot_run_rcpstat2 are now not printed when
+	starting/stopping Ingres via the Windows  Service Manager.
+	(106852)
+
+
+	(GENERIC)
+	Reading collation file is not thread safe, causing dbms server to
+	SEGV.
+	(106873)
+
+
+	(GENERIC)
+	"Alter Installation password" no more fails in VDBA.
+	(106906)
+
+
+	(GENERIC)
+	Selecting data from an nchar column, using Ingres/ICE, does not
+	produce the correct results.
+	(106926)
+
+
+	(GENERIC)
+	Row-producing procedures that return at least one varchar element
+	can (will?) cause a SEGV in the Ingres server.
+	(106935)
+
+
+	(UNIX)
+	ingbuild will no longer allow non-alphanumeric characters
+	in the II_SYSTEM path definition since they cause problems
+	in subsequent setup programs. Only alphabetic characters
+	(including accented), digits and underscore will be allowed.
+	(106947)
+
+
+	(GENERIC)
+	The list of privileges is now displayed correctly in the VDBA
+	"Create Profile" dialog under Windows 2000.
+	(106953)
+
+
+	(GENERIC)
+	The bug consists of 2 coding errors. In adu1dates.h, a series of
+	DEFINE constants are coded as decimal values, though they are
+	clearly intended to be hex. They are always used with & and |
+	operators and the values are powers of 2. If left as decimal
+	constants, some values overlap others and could lead to execution
+	errors. In adulldates.c, the  AD_DN_MONTHSPEC flag is not set in
+	the status field of a converted internal date in cases where there
+	clearly is a month value. Execution errors have been avoided by
+	dropping the status field in certain operations (like hash executed
+	on dates). But this is clearly wrong.
+	(106958)
+
+
+	(GENERIC)
+	When inserting data into a primary non unique btree, created with
+	noduplicates, page_size = 2048, the dbms server does duplicate row
+	checking and then inserts the key onto the wrong leaf page. A
+	subsequent select to retrieve the new row will return zero rows.
+	(106984)
+
+
+	(GENERIC)
+	E_SC0216, E_SC0206 followed by SIGSEGV in qso_destroy()
+	when a select cursor exceeds the MAXROW limit.
+	(106986)
+
+
+	(GENERIC)
+	E_CL1035_LK_EVENT_BAD_PARAM, E_CL103E_LK_REQUEST_BAD_PARAM,
+	E_DMA406_LG_WRITE_BAD_STAT (Phantom Resume) when creating
+	parallel indexes.  This may manifest itself as fatal server
+	errors in LK or LG.
+	(107008)
+
+
+	(GENERIC)
+	The DatabaseMetaData method getIdentifierQuoteString() returns a
+	double quote for IMS and VSAM gateways even though delimited
+	identifiers are not supported.  The JDBC spec indicates that a
+	space, ' ', should be returned in this case.
+	(107014)
+
+
+	(GENERIC)
+	Repeated selecting from a table containing unicode data eventually
+	causes an unhandled exception E_OP0901_UNKNOWN_EXCEPTION.
+	 Repeated selecting from a table containing unicode data eventually
+	 causes
+	  an unhandled exception E_OP0901_UNKNOWN_EXCEPTION. (More Changes).
+	crossing changes to 3.0
+	(107016)
+
+
+	(GENERIC)
+	Fixed min operation on NCHAR columns.
+	Fixed min operation on NVARCHAR column.
+	(107034)
+
+
+	(GENERIC)
+	JDBC driver tracing should include timestamps for performance
+	related issues.
+	(107037)
+
+
+	(GENERIC)
+	Sigbus doing comparison of NVCHR or NCHR data.
+	(107084)
+
+
+	(LINUX ONLY)
+	Installation will no longer fail if machines hostname is in UPPER
+	CASE
+	(107141)
+
+
+	(GENERIC)
+	The JDBC PreparedStatement method setTimestamp() when passed
+	a null parameter should send a SQL NULL value to the DBMS (as
+	documented in JDBC specification).
+	(107174)
+
+
+	(GENERIC)
+	Attempting to access the NULLABLE column of the result-set
+	produced by the JDBC method getColumns() using the method
+	getInt() results in an exception being thrown.
+	(107175)
+
+
+	(GENERIC)
+	Using JDBC BigDecimal for parameter values fails against the DB2
+	gateway.
+	(107184)
+
+
+	(GENERIC)
+	If the name server is not running, ingstart attempts to start the
+	dbms server without checking for other running processes mapped to
+	the shared memory segment.  It does an ipcclean, then starts the
+	recovery and dbms servers, etc.  As a result, two sets of servers
+	may be running, and data corruption is possible (see bug 101178).
+	Also, ingstop will then fail to stop all the servers, requiring
+	manual cleanup via OS commands.
+	(107199)
+
+
+	(WINDOWS ONLY)
+	If Ingres is running, and the uninstaller is invoked, after
+	closing WINSTART the uninstaller will hang forever in the
+	background doing nothing. This has been fixed.
+	(107214)
+
+
+	(GENERIC)
+	E_AD7004_BAD_BLOB, E_SC0216_QEF_ERROR, E_SC0206_CANNOT_PROCESS
+	errors selecting right(blob_column, 10) on an Ingres DOUBLEBYTE
+	installation, where blob_column is defined as long varchar.
+	(107224)
+
+
+	(GENERIC)
+	An ESQL program selecting rows from a table based on a "="
+	comparison of a NCHAR column with a w_char host variable value
+	could not find matching rows even though there were some. This
+	failure only occurred on a double byte server. The same test works
+	properly on a server without double byte enabled.
+	(107251)
+
+
+	(GENERIC)
+	JDBC driver throws ExceptionInInitializerError when running in Sun
+	1.4 browser plugin for Internet Explorer.
+	(107269)
+
+
+	(UNIX)
+	Ingstart no longer fails to start net server (iigcc) in client only
+	installation on UNIX.
+	(107278)
+
+
+	(GENERIC)
+	If there are spaces in the II_SYSTEM variable, there is no more
+	error generated by IJA when trying to view journals at the table
+	level, or to recover or redo transactions.
+	(107292)
+
+
+	(GENERIC)
+	The sql test in vdba now behaves correctly when we turn the setting
+	"Show the non-select statement" off and execute the non-select
+	statement.
+	(107333)
+
+
+	(GENERIC)
+	Very complex queries with large intermediate results and numerous
+	or'ed subselects each containing joins produce incorrect results
+	and, in some cases, QEF internal errors.
+	(107335)
+
+
+	(GENERIC)
+	implemented ifnull() function for nchar and nvarchar datatypes.
+	crossing changes from main to ingres26.
+	(107361)
+
+
+	(GENERIC)
+	Optimizedb failed (SEGV) due to memory overlay in GCA facility
+	(107364)
+
+
+	(GENERIC)
+	The Transaction Log branches now appear correctly in IVM
+	(107366)
+
+
+	(GENERIC)
+	icesvr memory size continually grows after each request from the
+	web server.
+	(107368)
+
+
+	(GENERIC)
+	Unecessary control locks taken on invalid table id 0 dduring
+	referential constraint processing.
+	(107371)
+
+
+	(GENERIC)
+	Server no longer crashes silently when performng a > 2K update
+	against a DB created with a custom collation sequence.
+	(107501)
+
+        (WINDOWS-ONLY)
+        The default value of Ingres character set should match the operating
+	system's current ANSI code page.
+

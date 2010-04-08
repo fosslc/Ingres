@@ -1,0 +1,76 @@
+/*
+** Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+*/
+
+/*
+** Generic part file for DB2 UDB Gateway
+** History
+**	11-mar-2002 (mofja02)
+**	    Created from sybase.ccpp.
+**	28-oct-2002 (mofja02)
+**	    Since creating this some names have changed from db2 to udb.
+**	22-nov-2002 (clach04)
+**	    Deleted  ingres!files!english (mnx files).
+**	    Deleted  gwalias.EX (example alias file)
+**	    Deleted  iigwstop
+**	    Deleted  iigwstart
+**	    These files are dealt with in the gateway.ccpp manifest.
+**	29-apr-2004 (ahaal01)
+**	    Deleted "setuid" from PERMISSION statement for iigwudbd.
+**	    Added PERMISSION statement for iigwudb.
+**      04-Jan-2005 (clach04)
+**          Removed setuid bit from udb daemon; gateways can run
+**          as anyone. Setuid is a potential security risk.
+*/
+
+PART db2udb
+    capability CI_DB2_GATEWAY
+
+/*
+** ingres!bin
+*/
+
+   DIRECTORY ingres!bin
+
+# ifdef VMS
+   BUILD_DIR (jpt_gwf_bin)
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!bin
+# endif /* VMS */
+   {
+      PERMISSION s:rwed,o:rwed,g:re,w:re
+      EXECUTABLE iigwudbd
+   }
+   {
+      EXECUTABLE iigwudb
+      PERMISSION s:rwed,o:rwed,g:re,w:re
+   }
+
+
+/*
+** ingres!utility
+*/
+
+   DIRECTORY ingres!utility
+# ifdef VMS
+   BUILD_DIR (front_path)!st!'front_vers'!src!dcl
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!utility
+# endif /* VMS */
+      SCRIPT SETUP iisudb2udb
+   SCRIPT iichkudb
+   EXECUTABLE iigwcatudb
+
+/*
+** ingres!files
+*/
+
+   DIRECTORY ingres!files
+# ifdef VMS
+   BUILD_DIR (front_path)!install!'front_vers'!files
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!files
+# endif /* VMS */
+      FILE db2udb.crs
+      FILE db2udb.rfm
+

@@ -1,0 +1,13 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Include&previous=include.html&next=include3.html` -->
+Several types of sources can be included in an HTML document.
+
+<H4 CLASS="question">
+What type of source do you want to include in an example HTML document?
+</H4>
+<H4 CLASS="choice">
+<INPUT TYPE="RADIO" NAME="incType" VALUE="HTML" <!-- #ICE IF (`:incType` == `HTML`) THEN=`checked` -->>HTML document<BR>
+<INPUT TYPE="RADIO" NAME="incType" VALUE="FACET" <!-- #ICE IF (`:incType` == `FACET`) THEN=`checked` -->>Facet document (multimedia documents)<BR>
+<INPUT TYPE="RADIO" NAME="incType" VALUE="REPORT" <!-- #ICE IF (`:incType` == `REPORT`) THEN=`checked` -->>Report source<BR>
+<INPUT TYPE="RADIO" NAME="incType" VALUE="EXE" <!-- #ICE IF (`:incType` == `EXE`) THEN=`checked` -->>Output of an executable<BR>
+</H4>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

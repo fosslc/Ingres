@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!scf!scu
+#
+
+SubDir ING_SRC back scf scu ;
+
+IISUBSYS back scf scu ;
+
+
+IILIBRARY SCFLIB : scuxsvc.c scumsvc.c scuisvc.c ;
+

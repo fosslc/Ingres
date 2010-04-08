@@ -1,0 +1,587 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\dp.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\dp.ico"
+IDI_ICON_EXCL           ICON    DISCARDABLE     "res\\excl.ico"
+IDI_ICON_INFO           ICON    DISCARDABLE     "res\\info.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_AUTH_PAGE DIALOGEX 0, 0, 320, 225
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "101",IDC_IMAGE,0,16,106,192
+    LTEXT           "This wizard will guide you in directly examining table/index data files.",
+                    IDC_AUTH_HEADER,115,16,202,19
+    EDITTEXT        IDC_EDIT_AUTH,115,111,199,12,ES_AUTOHSCROLL
+    LTEXT           "&Please enter the authorization string:",IDC_AUTH_TITLE,
+                    115,100,115,8
+END
+
+IDD_SPLASH DIALOGEX 0, 0, 320, 222
+STYLE DS_MODALFRAME | WS_POPUP
+EXSTYLE WS_EX_APPWINDOW
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LTEXT           "100",IDC_IMAGE,6,5,12,8
+END
+
+IDD_LOC_PAGE DIALOGEX 0, 0, 320, 225
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "&Retrieve table/index file information from the DBMS server",
+                    IDC_RADIO_CONNECT,"Button",BS_AUTORADIOBUTTON | 
+                    BS_MULTILINE | WS_TABSTOP,115,25,204,10
+    CONTROL         "&Provide table/index file(s) to examine",IDC_RADIO_FILE,
+                    "Button",BS_AUTORADIOBUTTON | BS_MULTILINE | WS_TABSTOP,
+                    115,126,204,10
+    EDITTEXT        IDC_EDIT_DBNAME,177,47,44,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_USERID,271,47,44,12,ES_AUTOHSCROLL
+    GROUPBOX        "&Connection Information",IDC_GROUP_CONNECT,115,35,204,
+                    86
+    CONTROL         "List1",IDC_LIST_TABLES,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,120,62,157,54,WS_EX_ACCEPTFILES
+    PUSHBUTTON      "&Add...",IDC_BUTTON_ADD2,281,73,34,14
+    PUSHBUTTON      "&Delete",IDC_BUTTON_DELETE2,281,93,34,14
+    GROUPBOX        "&Table/Index File Information",IDC_GROUP_FILEINFO,115,
+                    136,204,71
+    CONTROL         "List1",IDC_LIST_FILES,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,120,148,157,54,WS_EX_ACCEPTFILES
+    PUSHBUTTON      "&Add...",IDC_BUTTON_ADD,281,159,34,14
+    PUSHBUTTON      "&Delete",IDC_BUTTON_DELETE,281,179,34,14
+    LTEXT           "D&atabase Name:",IDC_DB_NAME,120,49,54,8
+    LTEXT           "&Connect ID:",IDC_CONN_ID,229,49,39,8
+    LTEXT           "101",IDC_IMAGE,0,16,106,192
+    LTEXT           "Please select a method for obtaining table/index file information:",
+                    IDC_LOC_HEADING,115,14,201,9
+END
+
+IDD_DIALOG_FILENAME DIALOG DISCARDABLE  0, 0, 186, 72
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Please enter the full path to the table file:",
+                    IDC_FILENAME_HEADER,9,11,129,8
+    EDITTEXT        IDC_EDIT_FILENAME,9,23,122,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,29,46,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,107,46,50,14
+    PUSHBUTTON      "&Browse...",IDC_BUTTON_BROWSE,135,22,42,14
+END
+
+IDD_OPTIONS_PAGE DIALOGEX 0, 0, 320, 225
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Ingres &release version of table/index file(s):",
+                    IDC_CHECK_RE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,
+                    41,152,10
+    COMBOBOX        IDC_COMBO_VERSION,270,40,45,40,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "&Print the page number every 'n' pages,  n =",
+                    IDC_CHECK_PN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,
+                    58,152,10
+    EDITTEXT        IDC_EDIT_MODPAGES,270,57,45,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN_MODPAGES,"msctls_updown32",
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,311,57,7,12
+    CONTROL         "Special &table file:",IDC_CHECK_II,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,76,152,10
+    COMBOBOX        IDC_COMBO_II,270,74,45,35,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "N&umber of Ingres pages in the base table: ",
+                    IDC_CHECK_TS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,
+                    93,152,10
+    EDITTEXT        IDC_EDIT_NUMPAGES,270,91,45,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "Number of b&ytes per row :",IDC_CHECK_RW,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,110,152,10
+    EDITTEXT        IDC_EDIT_NUMBYTES,270,108,45,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "&Transaction log file size (Megabytes):",IDC_CHECK_LB,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,127,152,10
+    EDITTEXT        IDC_EDIT_LOGSIZE,270,125,45,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "&Start at page number ",IDC_CHECK_PB,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,144,152,10
+    EDITTEXT        IDC_EDIT_START,270,142,45,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "St&op at page number",IDC_CHECK_PE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,161,152,10
+    EDITTEXT        IDC_EDIT_END,270,159,45,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "T&able/index page size (Kilobytes):",IDC_CHECK_PS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,178,152,10
+    COMBOBOX        IDC_COMBO_PAGESIZE,270,176,45,40,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "101",IDC_IMAGE,0,16,106,192
+    LTEXT           "Please select from the following table/index file options. Check all that apply.",
+                    IDC_OPTIONS_HEADING,115,16,204,17
+    CONTROL         "Set trace &points (comma separated):",IDC_CHECK_TP,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,195,152,10
+    EDITTEXT        IDC_EDIT_TRACEPT,270,193,45,12,ES_AUTOHSCROLL
+END
+
+IDD_DIALOG_TBNAME DIALOG DISCARDABLE  0, 0, 166, 62
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Please enter the table/index name:",IDC_TBNAME_HEADING,
+                    22,7,111,8
+    EDITTEXT        IDC_EDIT_STRUCTNAME,22,19,122,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,22,42,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,94,42,50,14
+END
+
+IDD_OPTIONS2_PAGE DIALOGEX 0, 0, 320, 225
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "101",IDC_IMAGE,0,16,106,192
+    LTEXT           "Please select from the following printout options. Check all that apply.",
+                    IDC_OPTIONS2_HEADING,115,15,204,17
+    CONTROL         "Byt&e swap shorts/ints/longs",IDC_CHECK_BS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,35,204,10
+    CONTROL         "&Print histogram of the current fillfactor per table/index by page type",
+                    IDC_CHECK_FF,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | 
+                    WS_TABSTOP,115,47,204,18
+    CONTROL         "Print &overflow chain page count in HASH tables",
+                    IDC_CHECK_OF,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,
+                    67,204,10
+    CONTROL         "&Make HEAP (for use on Ingres 6.4 table files ONLY)",
+                    IDC_CHECK_MH,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,
+                    80,204,10
+    CONTROL         "&Report data pages affected by Bug 79416",
+                    IDC_CHECK_BG79416RO,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,115,93,204,10
+    CONTROL         "&Update data pages affected by Bug 79416",
+                    IDC_CHECK_BG79416RW,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,115,106,204,10
+    CONTROL         "&For file input, don't perform file order checking",
+                    IDC_CHECK_FX,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,
+                    119,204,10
+    CONTROL         "Output &all pages in hex/ascii format",IDC_CHECK_OH,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,132,204,10
+    CONTROL         "Output &keys on leaf pages",IDC_CHECK_OK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,145,204,10
+    CONTROL         "Output &data on data pages",IDC_CHECK_OD,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,158,204,10
+    CONTROL         "Output &TIDs on data or leaf pages",IDC_CHECK_OT,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,171,204,10
+    CONTROL         "Output page &header structure",IDC_CHECK_OS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,184,204,10
+    CONTROL         "Output FHDR and FMAP &structures",IDC_CHECK_OM,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,197,204,10
+END
+
+IDD_OPTIONS3_PAGE DIALOGEX 0, 0, 320, 225
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "101",IDC_IMAGE,0,16,106,192
+    LTEXT           "Please select from the following check options. Check all that apply.",
+                    IDC_OPTIONS3_HEADING,115,16,204,17
+    CONTROL         "&Check page numbers within the table for correctness",
+                    IDC_CHECK_CK0,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,
+                    37,203,10
+    CONTROL         "Check &data page line table for duplicate offsets",
+                    IDC_CHECK_CK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,
+                    50,203,10
+    CONTROL         "Check &RRANGE for illogical values",IDC_CHECK_CK2,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,63,203,10
+    CONTROL         "Btree base tables: check &leaf TID usage for duplicates",
+                    IDC_CHECK_CK3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,
+                    76,203,10
+    CONTROL         "Btree tables: &Cross-reference check data rows with leaf pages (by TID only)",
+                    IDC_CHECK_CK4,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | 
+                    WS_TABSTOP,115,89,203,16
+    CONTROL         "Btree &secondaries: Cross-reference check any base table data rows with secondary index entries (by TID only)",
+                    IDC_CHECK_CK5,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | 
+                    WS_TABSTOP,115,108,203,16
+    CONTROL         "B&tree base: Cross-reference check any base table data rows with leaf page (by TID and KEY)",
+                    IDC_CHECK_CK8,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | 
+                    WS_TABSTOP,115,159,203,16
+    CONTROL         "Check &HEAP table page overflow pointers",IDC_CHECK_HC,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,115,178,203,10
+    CONTROL         "Check page &affected by E_DM93A7",IDC_CHECK_CK6,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,127,203,10
+    CONTROL         "Btr&ee secondaries: Cross-reference check any base table data rows with secondary index entries (by TID and KEY)",
+                    IDC_CHECK_CK7,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | 
+                    WS_TABSTOP,115,140,203,16
+END
+
+IDD_OPTIONS4_PAGE DIALOGEX 0, 0, 320, 225
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "101",IDC_IMAGE,0,16,106,192
+    LTEXT           "Please select from the following log options. Check all that apply.",
+                    IDC_OPTIONS4_HEADING,115,16,204,17
+    EDITTEXT        IDC_EDIT_OUTPUT_LOG,199,82,79,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_ERROR_LOG,199,98,80,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_OPTIONS_LOG,199,114,79,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_SQL_COPY,199,130,79,12,ES_AUTOHSCROLL
+    CONTROL         "S&et output log file:",IDC_CHECK_OUTFILE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,84,82,10
+    CONTROL         "Se&t error message file:",IDC_CHECK_ERRFILE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,99,82,10
+    CONTROL         "Set o&ptions file:",IDC_CHECK_OPTFILE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,115,82,10
+    CONTROL         "Set &SQL copy file:",IDC_CHECK_SQLFILE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,115,131,82,10
+    PUSHBUTTON      "B&rowse...",IDC_BUTTON_OUTFILE,282,82,35,12
+    PUSHBUTTON      "Br&owse...",IDC_BUTTON_ERRFILE,282,99,35,12
+    PUSHBUTTON      "Bro&wse...",IDC_BUTTON_OPTFILE,282,115,35,12
+    PUSHBUTTON      "Brow&se...",IDC_BUTTON_SQLFILE,282,130,35,12
+END
+
+IDD_WAIT_DIALOG DIALOGEX 0, 0, 200, 58
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "DP"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_AUTOPLAY | 
+                    WS_BORDER | WS_TABSTOP,17,17,20,20,WS_EX_CLIENTEDGE
+    LTEXT           "Static",IDC_WAIT_HEADING,54,23,130,8
+END
+
+IDD_FAIL_DIALOG DIALOG DISCARDABLE  0, 0, 200, 58
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    ICON            IDI_ICON_EXCL,IDC_STATIC,9,9,20,20
+    LTEXT           "Static",IDC_FAIL_HEADING,38,9,153,18
+    PUSHBUTTON      "&View Errors...",IDC_BUTTON_ERRFILE,9,38,50,14
+    PUSHBUTTON      "&OK",IDOK,141,38,50,14
+END
+
+IDD_SUCCESS_DIALOG DIALOG DISCARDABLE  0, 0, 200, 58
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "DP"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Static",IDC_SUCCESS_HEADING,38,9,152,18
+    PUSHBUTTON      "&View Output...",IDC_BUTTON_OUTFILE,8,38,55,14
+    PUSHBUTTON      "&OK",IDOK,137,38,55,14
+    PUSHBUTTON      "V&iew Errors...",IDC_BUTTON_ERRFILE,73,38,55,14
+    ICON            IDI_ICON_INFO,IDC_STATIC,9,9,20,20
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "\0"
+            VALUE "FileDescription", "dp MFC Application\0"
+            VALUE "FileVersion", "1, 0, 0, 1\0"
+            VALUE "InternalName", "dp\0"
+            VALUE "LegalCopyright", "Copyright (C) 1999\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "dp.EXE\0"
+            VALUE "ProductName", "dp Application\0"
+            VALUE "ProductVersion", "1, 0, 0, 1\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+100                     BITMAP  DISCARDABLE     "res\\Splash01.bmp"
+101                     BITMAP  DISCARDABLE     "res\\Block01.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_CLOCK_AVI           AVI     DISCARDABLE     "res\\clock.avi"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_DIALOGFAILURE       "Failure to create file dialog box."
+    IDS_STRUCTSIZE          "The lStructSize member of the initialization structure for the corresponding file dialog box is invalid."
+    IDS_INITIALIZATION      "The common dialog box function failed during initialization."
+    IDS_NOTEMPLATE          "The ENABLETEMPLATE flag was set in the Flags member of the initialization structure for the corresponding file dialog box, but  a corresponding template was not provided."
+    IDS_NOHINSTANCE         "The ENABLETEMPLATE flag was set in the Flags member of the initialization structure for the corresponding file dialog box, but  a corresponding instance handle was not provided."
+    IDS_LOADSTRFAILURE      "The file dialog box function failed to load a specified string."
+    IDS_FINDRESFAILURE      "The file dialog box function failed to find a specified resource."
+    IDS_LOADRESFAILURE      "The file dialog box function failed to load a specified string."
+    IDS_LOCKRESFAILURE      "The file dialog box function failed to lock a specified resource."
+    IDS_MEMALLOCFAILURE     "The file dialog box function was unable to allocate memory for internal structures."
+    IDS_MEMLOCKFAILURE      "The file dialog box function was unable to lock the memory associated with a handle."
+    IDS_NOHOOK              "The ENABLEHOOK flag was set in the Flags member of the initialization structure for the corresponding file dialog box, but  a pointer to a corresponding hook procedure was not provided."
+    IDS_SETUPFAILURE        "The PrintDlg function failed to load the required resources."
+    IDS_PARSEFAILURE        "The PrintDlg function failed to parse the strings in the [devices] section of the WIN.INI file."
+    IDS_RETDEFFAILURE       "The PD_RETURNDEFAULT flag was specified in the Flags member of the PRINTDLG structure, but the hDevMode or hDevNames member was not NULL."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_LOADDRVFAILURE      "The PrintDlg function failed to load the device driver for the specified printer."
+    IDS_GETDEVMODEFAIL      "The printer driver failed to initialize a DEVMODE structure."
+    IDS_INITFAILURE         "The PrintDlg function failed during initialization, and there is no more specific extended error code to describe the failure."
+    IDS_NODEVICES           "No printer drivers were found."
+    IDS_NODEFAULTPRN        "A default printer does not exist."
+    IDS_DNDMMISMATCH        "The data in the DEVMODE and DEVNAMES structures describes two different printers."
+    IDS_CREATEICFAILURE     "The PrintDlg function failed when it attempted to create an information context."
+    IDS_PRINTERNOTFOUND     "The [devices] section of the WIN.INI file did not contain an entry for the requested printer."
+    IDS_NOFONTS             "No fonts exist."
+    IDS_SUBCLASSFAILURE     "An attempt to subclass a list box failed because sufficient memory was not available."
+    IDS_INVALIDFILENAME     "A file name is invalid."
+    IDS_BUFFERTOOSMALL      "The buffer pointed to by the lpstrFile member of the OPENFILENAME structure is too small for the file name specified by the user."
+    IDS_UNKNOWNERROR        "An unknown error occurred while starting up the file dialog box."
+    IDS_TITLE               "DP"
+    IDS_INVALID_STRUCTNAME  "The first character of the table/index name must be\nalphabetic ('a'-'z') or an underscore('_')."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_WAIT_HEADING        "Examining table/index files..."
+    IDS_FAIL_HEADING        "There were errors encountered while running the DP command. Please examine the errors."
+    IDS_SUCCESS_HEADING     "DP was successful in examining the specified table/index files. Please examine the generated output."
+    IDS_NO_IISYSTEM         "The II_SYSTEM environment variable is not set."
+    IDS_NO_FILEEXIST        "The specified file does not exist!"
+    IDS_INVALID_AUTH        "You must provide a valid authorization string in order to use DP."
+    IDS_INVALID_AUTH2       "Your authorization string 'DP_AUTH' is invalid. Please enter a proper authorization string."
+    IDS_NO_DBNAME           "You must fill in the database name."
+    IDS_NEED_CONNUSER       "You must fill in the database connection id."
+    IDS_NEED_TABLES         "You must fill in at least one table/index name."
+    IDS_NEED_FILES          "You must provide the location of at least one table/index file."
+    IDS_BAD_FILEEDIT        "The edited file name does not exist. Please re-edit the file name."
+    IDS_NEED_OUTFILE        "You must enter an output log filename."
+    IDS_NEED_ERRFILE        "You must enter an error log filename."
+    IDS_NEED_OPTFILE        "You must enter an options log filename."
+    IDS_NEED_SQLFILE        "You must enter an SQL output filename."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_AUTH_HEADER         "This wizard will guide you in directly examining given table/index data files."
+    IDS_AUTH_TITLE          "&Please enter the authorization string (DP_AUTH):"
+    IDS_FILENAME_HEADER     "&Please enter the full path to the table file:"
+    IDS_BUTTON_BROWSE       "&Browse..."
+    IDS_OK                  "&OK"
+    IDS_CANCEL              "&Cancel"
+    IDS_TBNAME_HEADING      "&Please enter the table/index name:"
+    IDS_BUTTON_ERRFILE      "&View Errors..."
+    IDS_LOC_HEADING         "Please select a method for obtaining table/index file information:"
+    IDS_RADIO_CONNECT       "&Retrieve table/index file information from the DBMS server"
+    IDS_GROUP_CONNECT       "&Connection Information"
+    IDS_DB_NAME             "D&atabase Name:"
+    IDS_CONN_ID             "&Connect ID:"
+    IDS_BUTON_ADD           "&Add..."
+    IDS_BUTTON_DELETE       "&Delete"
+    IDS_RADIO_FILE          "&Provide table/index file(s) to examine"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_GROUP_FILEINFO      "&Table/Index File Information"
+    IDS_OPTIONS2_HEADING    "Please select from the following printout options. Check all that apply."
+    IDS_CHECK_BS            "Byt&e swap shorts/ints/longs"
+    IDS_CHECK_FF            "&Print histogram of the current fillfactor per table/index by page type"
+    IDS_CHECK_OF            "Print &overflow chain page count in HASH tables"
+    IDS_CHECK_MS            "&Make HEAP (for use on Ingres 6.4 table files ONLY)"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_CHECK_BG79416RO     "&Report data pages affected by Bug 79416"
+    IDS_CHECK_BG79416RW     "&Update data pages affected by Bug 79416"
+    IDS_CHECK_FX            "&For file input, don't perform file order checking"
+    IDS_CHECK_OH            "Output &all pages in hex/ascii format"
+    IDS_CHECK_OK            "Output &keys on leaf pages"
+    IDS_CHECK_OD            "Output &data on data pages"
+    IDS_CHECK_OT            "Output &TIDs on data or leaf pages"
+    IDS_CHECK_OS            "Output page &header structure"
+    IDS_CHECK_OM            "Output FHDR and FMAP &structures"
+    IDS_OPTIONS3_HEADING    "Please select from the following check options. Check all that apply."
+    IDS_CHECK_CK0           "&Check page numbers within the table for correctness"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_CHECK_CK1           "Check &data page line table for duplicate offsets"
+    IDS_CHECK_CK2           "Check &RRANGE for illogical values"
+    IDS_CHECK_CK3           "Btree base tables: check &leaf TID usage for duplicates"
+    IDS_CHECK_CK4           "Btree tables: &Cross-reference check data rows with leaf pages (by TID only)"
+    IDS_CHECK_CK5           "Btree &secondaries: Cross-reference check any base table data rows with secondary index entries (by TID only)"
+    IDS_CHECK_CK6           "Check page &affected by E_DM93A7"
+    IDS_CHECK_CK7           "Btr&ee secondaries: Cross-reference check any base table data rows with secondary index entries (by TID and KEY)"
+    IDS_CHECK_CK8           "B&tree base: Cross-reference check any base table data rows with leaf page (by TID and KEY)"
+    IDS_CHECK_HC            "Check &HEAP table page overflow pointers"
+    IDS_OPTIONS4_HEADING    "Please select from the following log options. Check all that apply."
+    IDS_CHECK_OUTFILE       "S&et output log file:"
+    IDS_CHECK_ERRFILE       "Se&t error message file:"
+    IDS_CHECK_OPTFILE       "Set o&ptions file:"
+    IDS_CHECK_SQLFILE       "Set &SQL copy file:"
+    IDS_BUTTON_OUTFILE      "B&rowse..."
+    IDS_BUTTON_ERRFILE2     "Br&owse..."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_BUTTON_OPTFILE      "Bro&wse..."
+    IDS_BUTTON_SQLFILE      "Brow&se..."
+    IDS_OPTIONS_HEADING     "Please select from the following table/index file options. Check all that apply."
+    IDS_CHECK_RE            "Ingres &release version of table/index file(s):"
+    IDS_CHECK_PN            "&Print the page number every 'n' pages,  n ="
+    IDS_CHECK_II            "Special &table file:"
+    IDS_CHECK_TS            "N&umber of Ingres pages in the base table: "
+    IDS_CHECK_RW            "Number of b&ytes per row :"
+    IDS_CHECK_LB            "&Transaction log file size (Megabytes):"
+    IDS_CHECK_PB            "&Start at page number "
+    IDS_CHECK_PE            "St&op at page number"
+    IDS_CHECK_PS            "T&able/index page size (Kilobytes):"
+    IDS_CHECK_TP            "Set trace &points (comma separated):"
+    IDS_BUTTON_OUTFILE2     "&View Output..."
+    IDS_BAD_NUMPAGES        "The number of pages provided must be greater than or equal to 1000."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\dp.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

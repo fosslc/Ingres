@@ -1,0 +1,638 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<cv.h>
+#include	<st.h>
+#include	<me.h>
+#include	<si.h>
+#include	<lo.h>
+#include	<ut.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<encoding.h>
+
+# include	<ds.h>
+# include	<feds.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<afe.h>
+# include	<ft.h>
+# include	<frame.h>
+# include	<tm.h>
+
+#include	<erm1.h>
+#include	<frmindex.h>
+
+static	PTR	encoded_form;
+static	i4	encoded_size;
+
+FUNC_EXTERN	DSTARRAY	*IIFDgfdGetFdDstab();
+FUNC_EXTERN	FRAME		*IICFrfReadForm();
+
+/**
+** Name:	frmindex.sc -	Form Index File Module.
+**
+** Description:
+**	Contains some of the routines of the Form Index file module that
+**	implement some of the methods for the Form Index file object (those used
+**	to insert, delete or replace forms in the Form Index file.)  Defines:
+**
+**	IIFDfiInsert()	insert form into form index file.
+**	IIFDfiDelete()	delete form from form index file.
+**	IIFDfixReplace()replace form in form index file.
+**	IIFDfiPrint()	print form index file index table.
+**
+** History:
+**	Revision 6.1  88/04/01  wong
+**	Modified to use Form Index file as class by abstracting ad-hoc code
+**	from "tools/formfile.qsc" and "tools/formindex.c" into method interface.
+**	07/28/88  dave - Put in special hook so that we call 'cf_rdobj()' to
+**		copy a form into the database.  This will allow us to get the
+**		name of the form from CopyForm instead of relying on the file
+**		name.
+**
+**	Revision 5.0K  86/12/20  Kobayashi
+**	Initial revision for 5.0 Kanji.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**
+**	02-nov-88 (bruceb)
+**		Move the 'commit' statement until after the query against
+**		rowcount.  Doing a rowcount after a commit risks getting back
+**		a -1 value.
+**
+**	08-jun-92 (leighb) DeskTop Porting Change:
+**		Changed 'errno' to 'errnum' cuz 'errno' is a macro in WIN/NT.
+**	11/03/92 (dkh) - Changed to not use DB connection for formindex.
+**	08/03/93 (dkh) - Fixed bug 53631.  Changed code to output null
+**			 bytes rather than random garbage for buffer space
+**			 not used by an encoded form.
+**	08/31/93 (dkh) - Fixed up compiler complaints due to prototyping.
+**	19-jun-95 (fanra01)
+**	    Desktop platforms should open files in binary mode using
+**	    SIfopen instead of SIopen.
+**	23-apr-96 (chech02)
+**	    cast arguments to the right data type for windows 3.1 port.
+**      03-jun-1999 (hanch04)
+**          Change SIfseek to use OFFSET_TYPE and LARGEFILE64 for files > 2gig
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      18-sep-2000 (hanch04)
+**          Replace STbcompare with STcasecmp,STncasecmp,STcmp,STncmp
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+STATUS	cf_rdobj();
+
+static bool	LoadCheck(/* char * */);
+static VOID	LoadForm(/* char * */);
+static VOID	InsertForm(/* char *, FORM_INDEX *, INDEX_ENTRY * */);
+
+/* local from "frame!frmiread.c" */
+
+bool	IIFDfiFind(/* FORM_INDEX, char *, INDEX_ENTRY ** */);
+
+/*{
+** Name:	IIFDfiInsert() -	Insert Form Into Form Index File.
+**
+** Description:
+**	Appends a new form in the Form Index file.  The form must not already
+**	exist in the Form Index file.  If the name has a ".frm" extension,
+**	assumes it is a CopyForm file that must be copied into the DB before
+**	being appended.
+**
+** Input:
+**	fip		{FORM_INDEX *}  The Form Index file.
+**	name	{char *}  The name of the form (or form source file.)
+**
+** Errors:
+**	E_M1001B_BadName		Invalid form name.
+**	E_M1001E_AlreadyExists	Form already exists in Form Index file.
+**
+** History:
+**	04/88 (jhw) -- Abstracted from old 'append_index()' (with 'InsertForm()'.)
+*/
+
+VOID
+IIFDfiInsert ( fip, name )
+register FORM_INDEX	*fip;
+char			*name;
+{
+	INDEX_ENTRY		*index;
+	register char	*cp;
+	char			buf[FE_MAXNAME + 1];
+
+	if ( name == NULL || *name == EOS )
+		return;
+
+	if ( LoadCheck(name) )
+	{ /* form file */
+		LoadForm( name, buf );
+	}
+	else
+	{ /* form name */
+		_VOID_ STlcopy( name, buf, sizeof(buf)-1 );
+	}
+
+	/* Check name */
+
+	if ( STtrmwhite( cp = buf ) <= 0 )
+		return;
+	else if ( FEchkname( cp ) != OK )
+	{
+		IIUGerr( E_M1001B_BadName, 0, 1, (PTR)cp );
+		return;
+	}
+	CVlower( cp );
+
+	if ( IIFDfiFind( fip, cp, &index ) )
+	{ /* already exists ... */
+		IIUGerr( E_M1001E_AlreadyExists, UG_ERR_ERROR, 1, (PTR)cp );
+	}
+	else
+	{ /* Add the form, if an entry is available. */
+		InsertForm( cp, fip, index );
+	}
+}
+
+/*{
+** Name:	IIFDfiDelete() -	Delete Form From Form Index File.
+**
+** Description:
+**	Deletes a form from the Form Index file by deleting its index entry from
+**	the index table.  A form is deleted by copying the following index entries
+**	into its index position starting with the entry after it.
+**
+** Input:
+**	fip	{FORM_INDEX *}  The Form Index file.
+**			index.itable	{INDEX_ENTRY []}  The index table.
+**	form	{char *}  The name of the form.
+**
+** Output:
+**	fip	{FORM_INDEX *}  The Form Index file.
+**			index.itable[]	{INDEX_ENTRY []}  The index table with an entry
+**												deleted.
+**
+** Errors:
+**	E_M1001B_BadName	Invalid form name.
+**	E_M1001D_NoForm		Form not found in Form Index file.
+**
+** History:
+**	20-Dec-86 (kobayashi) -- Written (as 'delete_index()'.)
+**	04/88 (jhw) -- Modified for Form Index class.
+*/
+VOID
+IIFDfiDelete ( fip, form )
+register FORM_INDEX	*fip;
+char			*form;
+{
+	if ( form != NULL  && *form != EOS )
+	{
+		INDEX_ENTRY	*indx;
+
+		/* Check name */
+		if ( FEchkname( form ) != OK )
+		{
+			IIUGerr( E_M1001B_BadName, 0, 1, (PTR)form );
+			return;
+		}
+
+		if ( !IIFDfiFind( fip, form, &indx ) )
+			IIUGerr( E_M1001D_NoForm, 0, 1, (PTR)form );
+		else
+		{
+			register i4	blksize;
+			register i4	offset;
+
+			FEmsg( ERget(S_M1001C_Deleting), FALSE, form );
+			if ( fip->lastindex !=
+						&(fip->index.itable[fip->index.header.indexsize]) )
+			{ /* sorted */
+				blksize = indx != fip->lastindex ? (fip->lastindex - indx) : 0;
+				--fip->lastindex;
+			}
+			else
+			{
+				blksize = (fip->lastindex - indx) - 1;
+			}
+			offset = indx->offset;
+			if ( blksize > 0 )
+			{
+				MEcopy( (PTR) (indx + 1),
+					(u_i2) (blksize * sizeof(*indx)),
+					(PTR) indx );
+				indx += blksize;
+			}
+
+			MEfill( (u_i2)FE_MAXNAME, EOS, (PTR)indx->frmname );
+			indx->offset = offset;
+
+			fip->write = TRUE;
+		}
+	}
+}
+
+/*{
+** Name:	IIFDfixReplace() -	Replace Form in Form Index File.
+**
+** Description:
+**	Inserts or replaces an encoded form in the Form Index file.  The index
+**	entry (and possibly the space for the encoded form) is reused.
+**
+** Input:
+**	fip		{FORM_INDEX *}  The Form Index file.
+**	name	{char *}  The name of the form.
+**
+** Errors:
+**	E_M1001B_BadName	Invalid form name.
+**
+** History:
+**	20-Dec-86 (kobayashi) -- Written (as 'modify_index()'.)
+**	04/88 (jhw) -- Modified for Form Index class.  (Check name; also reuse
+**					index entry, and hopefully space for form.)
+*/
+
+VOID
+IIFDfixReplace ( fip, name )
+register FORM_INDEX	*fip;
+char			*name;
+{
+	INDEX_ENTRY		*index;
+	register char	*cp;
+	char			buf[FE_MAXNAME + 1];
+
+	if ( name == NULL || *name == EOS )
+		return;
+
+	LoadForm( name, buf );
+
+	/* Check name */
+
+	if ( STtrmwhite( cp = buf ) <= 0 )
+		return;
+	else if ( FEchkname( cp ) != OK )
+	{
+		IIUGerr( E_M1001B_BadName, 0, 1, (PTR)cp );
+		return;
+	}
+	CVlower( cp );
+
+	_VOID_ IIFDfiFind( fip, cp, &index );
+	InsertForm( cp, fip, index );
+}
+
+/*{
+** Name:	IIFDfiPrint() -		Print Form Index File Index Table.
+**
+** Description:
+**	Prints the index table of the Form Index file.
+**
+**	Note:  This routine should not be called when the FRS is active.
+**
+** Input:
+**	fip	{FORM_INDEX *}  The Form Index file.
+**
+** History:
+**	20-Dec-86 (kobayashi) -- Written.
+**	04/88 (jhw) -- Modified for Form Index class.
+*/
+
+VOID
+IIFDfiPrint ( fip )
+register FORM_INDEX	*fip;
+{
+	register INDEX	*indx = &fip->index;
+	register i4	i;
+	char		fmt[32];
+
+	STcopy( ERget(S_M1001A_IndexInfo), fmt );
+	for (i = 0 ; i < indx->header.indexsize ; ++i)
+	{
+		if ( indx->itable[i].frmname[0] != EOS )
+		{
+			SIfprintf( stderr, fmt, i, indx->itable[i].frmname );
+		}
+	}
+	SIflush( stderr );
+}
+
+/*
+** Name:	InsertForm() -	Insert Form Into Form Index File.
+**
+** Description:
+**	Inserts an encoded form into the Form Index file.  The encoded form is
+**	retrieved from the database.  It is specified by name and possibly by
+**	object ID.  The passed in index entry is used (if not NULL,) otherwise
+**	and empty slot is allocated and used.  The space for the previous encoded
+**	form referenced by the index entry will be reused if it is large enough.
+**
+** Input:
+**	form	{char *}  The form name.
+**	fip		{FORM_INDEX *}  The Form Index file.
+**	indx	{INDEX_ENTRY *}  The index entry into which to enter the form
+**				 (if NULL allocate new entry.)
+**
+** History:
+**	11-sep-1987 (peter) -- Added check for duplicate name.
+**	04/88 (jhw) -- Modified extensively from old 'append_index()':
+**					Changed to get encoded form from DB (old "formfile.qsc"
+**					code;) reuse index entry and space for encoded form;
+**					and write encoded form in one chunk.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().  Also, changed STequal of
+**	    user and dba to reference of isdba.
+*/
+
+static VOID
+InsertForm ( form, fip, indx )
+char			*form;
+register FORM_INDEX		*fip;
+register INDEX_ENTRY	*indx;
+{
+	char	*block;
+
+	register char	*data;
+	i4		seqno;		/* sequence no. of encoded form row */
+	i4		binsize;	/* binary size of one row */
+	i4		totsize;	/* total binary size of form */
+	i4		write_size;
+	i4		fillsize;
+	char		filler[MAX_CFTXT + 1];
+	char		name[FE_MAXNAME + 1];
+	char		date[25 + 1];
+	SYSTIME		systime;
+
+	/* Get index entry */
+	if ( indx == NULL ||
+			indx >= &(fip->index.itable[fip->index.header.indexsize]) )
+	{ /* no more room ... */
+		i4	size = fip->index.header.indexsize;
+
+		IIUGerr( E_M10021_IndexFull, 0, 2, (PTR)&size, (PTR)form );
+		return;
+	}
+
+	if ((block = encoded_form) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation( ERx("IIFDfiInsertForm()") );
+	}
+	else
+	{
+		STcopy(form, name);
+		totsize = encoded_size;
+		TMnow(&systime);
+		TMstr(&systime, date);
+		{ /* Insert into Form Index file ... */
+			i4		iocnt;
+			FORM_HDR	hdr;
+			bool		replace = FALSE;
+			FILE		*fp = fip->fp;
+
+			if ( *indx->frmname != EOS )
+			{
+				if ( STequal(indx->frmname, name ) )
+					replace = TRUE;	/* replacing ... */
+				else
+				{ /* insertion into sorted list */
+					register char	*end;
+					register char	*new;
+					i4				offset;
+
+					/* save last offset to put into opened slot */
+					offset = (++fip->lastindex)->offset;
+
+					/* open slot -- copy backwards so not to overwrite */
+					new = (end = (char *)fip->lastindex) + sizeof(*indx);
+					while ( end > (char *)indx )
+						*--new = *--end;
+
+					indx->offset = offset;		/* offset into opened slot */
+				}
+			}
+			else if ( indx > fip->lastindex )
+			{
+				++fip->lastindex;	/* appending to sorted list */
+			}
+
+			if ( indx->offset != 0 )
+			{ /* Check if space for old form can be reused ... */
+
+				/* Get old form header */
+				SIfseek( fp, indx->offset, SI_P_START );
+				if ( fip->fhdrsize == sizeof(hdr) )
+					SIread( fp, (i4)sizeof(hdr), &iocnt, (PTR)&hdr );
+				else
+				{
+					SIread( fp, (i4)sizeof(hdr.frmname), &iocnt,
+							(PTR)hdr.frmname
+					);
+					SIread( fp, (i4)sizeof(hdr.totsize), &iocnt,
+							(PTR)&hdr.totsize
+					);
+				}
+
+				if ( hdr.totsize/MAX_CFTXT < totsize/MAX_CFTXT )
+					indx->offset = 0;	/* no room; append to end */
+			}
+
+			FEmsg( ERget( replace ? S_M1001F_Replacing : S_M10020_Appending),
+					FALSE, form
+			);
+
+			fip->write = (bool)( !replace || indx->offset == 0 );
+			if ( indx->offset != 0 )
+			{
+				SIfseek( fp, indx->offset, SI_P_START );	/* OK */
+			}
+			else
+			{ /* append to end ... */
+				OFFSET_TYPE toffset;
+
+				SIfseek( fp, (i4)0, SI_P_END );
+				toffset = SIftell( fp );
+				indx->offset = toffset ;
+			}
+
+			if ( !replace )
+			{ /* new index entry */
+				MEfill( (u_i2)FE_MAXNAME, EOS, (PTR)indx->frmname );
+				MEcopy( name, FE_MAXNAME, indx->frmname );
+				MEcopy( indx->frmname, FE_MAXNAME, hdr.frmname );
+			}
+
+			MEcopy( date, sizeof(hdr.date), hdr.date );
+			hdr.totsize = totsize;
+			if ( fip->fhdrsize == sizeof(hdr) )
+			{
+				SIwrite( (i4)sizeof(hdr), (PTR)&hdr, &iocnt, fp );
+			}
+			else
+			{ /* 6.01 or earlier ... */
+				SIwrite( (i4)sizeof(hdr.frmname), (PTR)hdr.frmname,
+							&iocnt, fp
+				);
+				SIwrite( (i4)sizeof(hdr.totsize), (PTR)&hdr.totsize,
+							&iocnt, fp
+				);
+				/*
+				** Version 6.01 Form Index files had encoded forms written
+				** out in multiple blocks each preceded by the block size
+				** similar to the way blocks are stored in the DB.  This is
+				** unnecessary overhead (mostly with respect to performance)
+				** and was changed for version 6.1.  Encoded forms are now
+				** written out as a single block with the total size as
+				** specified in the header.
+				** To support backwards compatibility if the Form Index file
+				** is version 6.01 write out the total size (redundantly)
+				** before writing out the encoded form as a single block.
+				*/
+				SIwrite( (i4)sizeof(hdr.totsize), (PTR)&hdr.totsize,
+								&iocnt, fp
+				);
+			}
+			write_size = ((totsize/MAX_CFTXT) + 1) * MAX_CFTXT;
+			SIwrite(totsize, (PTR)block, &iocnt, fp);
+
+			/*
+			**  Fill and write out NULL bytes rather than random
+			**  garbage for space not used by a form.
+			*/
+			if (fillsize = write_size - totsize)
+			{
+				MEfill((u_i2) fillsize, EOS, filler);
+				SIwrite(fillsize, (PTR) filler, &iocnt, fp);
+			}
+		}
+	}
+}
+
+/*
+** Name:	LoadCheck() -	Check Name for Form Source File.
+**
+** Description:
+**	Check if the input name specifies a form source file.  That is,
+**	does it have ".frm" as an extension.
+**
+** Input:
+**	name	{char }  The name to check.
+**
+** Returns:
+**	{bool}  TRUE if form source file name.
+**
+** History:
+**	04/88 (jhw) -- Written.
+*/
+
+static bool
+LoadCheck ( name )
+char	*name;
+{
+	register char	*cp = name;
+
+	while ( cp != NULL && *cp != EOS &&
+			(cp = STindex(cp, ERx("."), 0)) != NULL &&
+				!STequal(cp, ERx(".frm")) )
+		++cp;
+
+	return (bool)( cp != NULL && *cp != EOS );
+}
+
+/*
+** Name:	LoadForm() -	Load Form from Source File.
+**
+** Description:
+**	Copies a form from a file into the DB using CopyForm.  Also, copies the
+**	name of the form that was copied into the DB into the output form name
+**	buffer.
+**
+** Input:
+**	file	{char *}  The source file name containing the form.
+**
+** Output:
+**	form	{char []}  The address of a buffer to contain the name of the form
+**						(empty on error.)
+**
+** History:
+**	04/88 (jhw) -- Written.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+*/
+
+static VOID
+LoadForm ( file, form )
+char	*file;
+char	form[];
+{
+	FRAME		*frm;
+	SH_DESC		sh_desc;
+	char		filebuf[MAX_LOC + 1];
+	LOCATION	fileloc;
+	FILE		*fptr;
+	char		*block;
+	i4		count;
+	STATUS		stat;
+
+	if ((frm = IICFrfReadForm(file, form)) == NULL)
+	{
+		PCexit(OK);
+	}
+
+	sh_desc.sh_type = IS_FILE;
+	sh_desc.sh_reg.file.fp = NULL;
+	sh_desc.sh_keep = 0;
+
+	if (DSstore(&sh_desc, (i4)DS_FRAME, frm, IIFDgfdGetFdDstab()) != OK)
+	{
+		SIfprintf(stdout, ERx("Error converting frame.\n"));
+		PCexit(OK);
+	}
+
+	STcopy(sh_desc.sh_reg.file.name, filebuf);
+	if (LOfroms(PATH & FILENAME, filebuf, &fileloc) != OK)
+	{
+		SIfprintf(stdout, ERx("Couldn't create location to converted form file.\n"));
+		PCexit(OK);
+	}
+
+# ifdef DESKTOP
+	if (SIfopen(&fileloc, ERx("r"), SI_BIN, 0, &fptr) != OK)
+# else /* DESKTOP */
+	if (SIopen(&fileloc, ERx("r"), &fptr) != OK)
+# endif /* DESKTOP */
+	{
+		SIfprintf(stdout, ERx("Couldn't open converted form file.\n"));
+		PCexit(OK);
+	}
+
+	if ((block = (PTR) MEreqmem(0, (u_i4)sh_desc.size, TRUE,
+		(STATUS *)NULL)) == NULL)
+	{
+		SIfprintf(stdout, ERx("Couldn't allocate memory for converted form.\n"));
+		PCexit(OK);
+	}
+	stat = SIread(fptr, sh_desc.size, &count, block);
+	SIclose(fptr);
+	LOdelete(&fileloc);
+	if (stat != OK || count != sh_desc.size)
+	{
+		SIfprintf(stdout, ERx("Unable to read converted form from file.\n"));
+		PCexit(OK);
+	}
+
+	encoded_form = (PTR) block;
+	encoded_size = count;
+}

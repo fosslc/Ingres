@@ -1,0 +1,22 @@
+#
+# MANIFEST file for common!hdr!oldmsg
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	27-Oct-2004 (drivi01)
+#	    Moved oldmsg to oldmsg_unix_vms.
+
+
+SubDir ING_SRC common hdr oldmsg_unix_vms ;
+
+IISUBSYS common hdr oldmsg_unix_vms ;
+
+IIMNX_v3 fast_v3.mnx slow_v3.mnx : v3_generic.msg v3_specific.msg ;
+
+IIMNX_v2 fast_v2.mnx slow_v2.mnx : v2_generic.msg v2_other.msg ;
+
+IIMNX_v1 fast_v1.mnx slow_v1.mnx : v1_cat.msg ;
+
+IIMNX_v0 fast.mnx slow.mnx : v0_cat.msg ;

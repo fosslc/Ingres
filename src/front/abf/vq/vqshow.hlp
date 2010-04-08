@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqshow.hlp
+For each frame that needs to be changed in order to match the database, you
+must accept or reject all the proposed changes. To help you decide what you 
+want to do, you can look at both the before and after versions of the frame's
+Visual Query.
+
+OldVQ    Shows the frame's Visual Query as it is now, before you select OK to 
+         accept the changes.
+
+NewVQ    Shows the frame's Visual Query as it will be after you select OK to
+         accept the changes.
+
+When looking at either the old or the new Visual Query for a frame, you can 
+see the current table definition by moving the cursor to that table, then 
+selecting "TableDef." 

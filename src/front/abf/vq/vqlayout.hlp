@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlayout.hlp, subtopic 'Screen layout' behind main VQ Editor help screen.
+/#-- 
+Visual Query Editor        frame type    for displaying fields on the form
+Frame: addparts           /             /
+          +-----------<Append>+  Display on Form  for assigning column values
+          |parts              | /                /  in an insert, and supplying
+          |-------------------+-+-Assignment/Default----------+ default values
+          |part_no            |y|sequenced                    | on the form
+   join   |cur_price          |y|cur_price*1.07               |
+   /      |quantity           |y|125                          |
++-------a-|supplier_no        |y|                             |
+|         +-------------------+-+-----------------------------+
+|                                 Display on Form              allowing the 
+|         +-----------<Lookup>+  /  Order on Popup            / user to qualify
+|         |suppliers          | /  /    Qualification (y/n): n  the rows in the
+|         |-------------------+-+---+-Column Title---+          popup list
++-------a-|supplier_no        |n|2  |Supplier #   \  |
+          |name               |n|1  |Supplier      for changing the column
+          |region             |n|3  |Area          title in the lookup popup
+          +-------------------+-+-\-|----------------+
+                                    the order of the columns in the popup
+/#subtopic 'Layout description' vqlodesc.hlp

@@ -1,0 +1,10 @@
+This directory has a corresponding test directory, in "../../test/tblutil"
+directory, with the file "tblpik.qsc", that can be used for testing
+IITUtpTblPik() (Tables Utility ListPick). To test:
+
+        % area front utils petee tblutil        /* this sets TBLUTILLIB */
+	% cd ../../test/tblutil
+	% ming tblpik
+	% tblpik	/* Runs against database 'pete'.
+			** Enter a table name of "." to Quit.
+			*/

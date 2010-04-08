@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqprocs.hlp, main Edit Local Procedures help
+/#--
+Use 4GL local procedures to avoid writing several pieces of escape code for
+functions which need to be performed more than once in your frame; to make
+the generated code easier to read; or to incorporate a 4GL procedure without
+its own menuitem into your frame. A local procedure can be called only from
+the source file in which it appears.
+
+To use a local procedure, first Create it at the Edit Local Procedures screen;
+this will enable you to declare your procedure and enter the source code.
+Vision will insert the declaration and source code for the local procedure in
+the generated source file.
+
+You can use the value of the local procedure as follows:
+  * In 4GL escape code
+  * In an assigned value for a field on an Append frame
+  * To pass to another frame as a parameter

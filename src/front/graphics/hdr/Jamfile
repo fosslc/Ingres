@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!graphics!hdr
+#
+
+SubDir ING_SRC front graphics hdr ;
+
+IISUBSYS front graphics hdr ;
+
+
+IIMSGHDR ergp.msg errg.msg ervg.msg ;
+

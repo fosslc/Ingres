@@ -1,0 +1,89 @@
+#
+# Jamfile file for tools!port!eval
+#
+#	04-nov-2004 (abbjo03)
+#	    Change to build this on VMS too.
+#	07-jan-2005 (abbjo03)
+#	    Exclude man pages and sysint from VMS.
+#	17-dec-2008 (joea)
+#	    Remove byteswap.c and byteswap.1.
+#       20-Aug-2009 (horda03)
+#          Identify targets built on VMS without a .LOT file
+#
+
+SubDir ING_SRC tools port eval_unix_vms ;
+
+IISUBSYS tools port eval_unix_vms ;
+
+IINOOPTIM argloc.c : rmx_us5 pym_us5 ts2_us5 rux_us5 ;
+
+VMS_NO_LOT unschar tidswap stkorder stdlim sizeof salign regrest nullderef
+           maxvals maxstack maxproc maxfiles machine exedata endian 
+           byteswap bitsin argorder argloc argeval align addrfmt ;
+
+IITOOLSEXE unschar : unschar.c ;
+
+IITOOLSEXE tidswap : tidswap.c ;
+
+if $(UNIX)
+{
+IITOOLSEXE sysint : sysint.c ;
+}
+
+IITOOLSEXE stkorder : stkorder.c ;
+
+IITOOLSEXE stdlim : stdlim.c ;
+
+IITOOLSEXE sizeof : sizeof.c ;
+
+IITOOLSEXE salign : salign.c ;
+
+IITOOLSEXE regrest : regrest.c ;
+
+IITOOLSEXE nullderef : nullderef.c ;
+
+IITOOLSEXE maxvals : maxvals.c ;
+
+IITOOLSEXE maxstack : maxstack.c ;
+
+IITOOLSEXE maxproc : maxproc.c ;
+
+IITOOLSEXE maxfiles : maxfiles.c ;
+
+IITOOLSEXE machine : machine.c ;
+
+IITOOLSEXE exedata : exedata.c ;
+
+IITOOLSEXE endian : endian.c ;
+
+IITOOLSEXE bitsin : bitsin.c ;
+
+IITOOLSEXE argorder : argorder.c ;
+
+IITOOLSEXE argloc : argloc.c ;
+
+IITOOLSEXE argeval : argeval.c ;
+
+IITOOLSEXE align : align.c ;
+
+IITOOLSEXE addrfmt : addrfmt.c ;
+
+if $(UNIX)
+{
+IITMANFILES addrfmt.1
+align.1
+argeval.1
+argloc.1
+argorder.1
+bitsin.1
+endian.1
+machine.1
+maxfiles.1
+maxstack.1
+maxvals.1
+nullderef.1
+salign.1
+sizeof.1
+sysint.1
+unschar.1 ;
+}

@@ -1,0 +1,246 @@
+/*
+** Copyright 2010, Ingres Corporation
+**
+**	pslstoks.dat - token file for SQL
+**
+** Input file for pslscanprep.awk to produce pslsscantoks.h for inclusion
+** into pslsscan.c
+**
+** The numbers correspond to the indes into Key_index tables in the scanner.
+** The tokens need to be ordered according to then and alphabetically within
+** the lengths. Violations of this will be reported,
+**
+** History:
+**	18-Mar-2010 (kiria01) b123438
+**	    Created for sanity sake.
+*/
+
+/* Keywords of length 0, and other non-existent lengths */
+/* Keywords of length 2 */
+  1 as
+  2 at
+  3 by
+ 26 do
+ 27 if
+  4 in
+  5 is
+167 no
+  6 of
+  7 on
+  8 or
+  9 to
+/* Keywords of length 3 */
+102 add
+ 10 all
+ 11 and
+ 12 any
+ 63 asc
+ 13 avg
+ 57 end
+ 61 for
+ 14 max
+ 15 min
+ 16 not
+193 out
+157 row
+ 17 set
+ 64 sql
+ 18 sum
+162 top
+/* Keywords of length 4 */
+ 51 base
+155 case
+183 cast
+ 20 copy
+189 cube
+ 66 drop
+ 32 else
+202 free
+ 21 from
+108 full
+ 23 into
+109 join
+110 left
+ 67 like
+168 next
+ 68 null
+151 only
+ 59 open
+143 read
+124 rows
+ 25 save
+ 69 some
+ 33 then
+213 true
+ 24 user
+ 97 view
+114 when
+ 28 with
+ 70 work
+/* Keywords of length 5 */
+ 29 abort
+100 alter
+ 30 begin
+136 byref
+169 cache
+ 71 check
+ 60 close
+ 31 count
+166 cross
+170 cycle
+ 36 endif
+212 false
+ 99 fetch
+162 first
+ 72 grant
+ 73 group
+ 58 index
+111 inner
+194 inout
+159 leave
+144 level
+122 local
+ 74 order
+153 outer
+105 raise
+112 right
+171 start
+ 75 table
+ 76 union
+ 34 until
+ 87 using
+ 35 where
+ 37 while
+152 write
+/* Keywords of length 6 */
+150 column
+ 77 commit
+ 38 create
+ 78 cursor
+ 39 define
+ 40 delete
+ 39 elseif
+116 enable
+160 endfor
+206 ending
+ 96 escape
+163 except
+ 79 exists
+121 global
+ 80 having
+ 65 import
+ 81 insert
+ 41 modify
+120 module
+184 nullif
+203 offset
+ 82 option
+ 19 permit
+ 83 public
+165 rawpct
+103 remove
+106 repeat
+156 result
+ 42 return
+101 revoke
+190 rollup
+140 schema
+201 scroll
+ 84 select
+ 43 unique
+ 62 update
+ 85 values
+/* Keywords of length 7 */
+ 86 between
+126 cascade
+186 collate
+118 comment
+ 88 current
+172 currval
+ 44 declare
+129 default
+117 disable
+ 45 endloop
+ 46 execute
+130 foreign
+ 47 message
+113 natural
+173 nextval
+174 nocache
+175 nocycle
+176 noorder
+ 89 prepare
+131 primary
+177 restart
+125 session
+207 similar
+214 unknown
+192 without
+/* Keywords of length 8 */
+115 callproc
+185 coalesce
+ 90 continue
+ 91 describe
+ 92 distinct
+ 48 endwhile
+191 grouping
+210 identity
+200 interval
+178 maxvalue
+179 minvalue
+123 preserve
+107 register
+ 50 relocate
+106 repeated
+127 restrict
+ 93 rollback
+/* Keywords of length 9 */
+204 beginning
+145 committed
+141 copy_from
+142 copy_into
+158 endrepeat
+128 excluding
+208 generated
+ 94 immediate
+180 increment
+ 22 integrity
+164 intersect
+146 isolation
+ 49 procedure
+ 53 savepoint
+215 singleton
+161 substring
+187 symmetric
+119 temporary
+/* Keywords of length 10 */
+188 asymmetric
+134 constraint
+205 containing
+198 local_time
+181 nomaxvalue
+182 nominvalue
+211 overriding
+ 95 privileges
+133 references
+147 repeatable
+/* Keywords of length 11 */
+104 referencing
+137 system_user
+148 uncommitted
+/* Keywords of length 12 */
+195 current_date
+196 current_time
+135 current_user
+138 initial_user
+149 serializable
+139 session_user
+/* Keywords of length 13 */
+ 98 authorization
+/* Leywords of length 14 */
+209 auto_increment
+/* Keywords of length 15 */
+199 local_timestamp
+/* Keywords of length 17 */
+197 current_timestamp
+154 system_maintained

@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqmain.hlp, the main VQ Editor help screen.
+/#-- 
+The Visual Query Editor shows the structure of the query (frame definition)
+for the current frame.  To change the frame definition, edit the entries on 
+this screen or use the menu operations.  Subtopics explain the Visual Query 
+Editor in greater detail.
+  AddTable    Adds a Lookup table to the Visual Query.
+  DelTable    Removes a Lookup table from the Visual Query.
+  Edit        Lets you edit the form for a frame.
+  AddJoin     Adds a new join between tables.
+  DelJoin     Removes an existing join between tables.
+  NextTable   If there are more tables than can fit on the screen, moves the 
+              cursor to the first table not currently displayed.
+  TableDef    Displays details about the structure of the current table.
+  Utilities   Displays a selection of utility functions.
+  ZoomOut     Displays the Visual Query in compressed mode.
+  Help        Displays this help screen.
+  Cancel      Cancels your changes and displays the Application Flow Diagram.
+  End         Saves any changes to the Visual Query and displays the 
+              Application Flow Diagram.
+/#subtopic 'Editing Append frames' vqappend.hlp
+/#subtopic 'Editing Browse frames' vqbrows.hlp
+/#subtopic 'Editing Update frames' vqupdat.hlp
+/#subtopic 'Joins' vqjoins.hlp
+/#subtopic 'Lookup tables' vqlook.hlp
+/#subtopic 'Screen layout' vqlayout.hlp
+/#subtopic 'Scrolling' vqscroll.hlp

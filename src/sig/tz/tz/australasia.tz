@@ -1,0 +1,202 @@
+###############################################################################
+
+# Bill Allan 20-April-1996
+#
+# Updated timezone rules for Australia/New Zealand,
+# based on modifications made by Kathy Brown in 1994 based on rules
+# from George Sheppard of Sun MicroSystems.
+#
+# The file appended has been checked against information supplied by
+# appropriate government departments and is correct for 1996.
+# Future DST changes are based on legislation current in 1996 and may
+# change in future.
+#
+#
+# NOTE:
+#       Brokem Hill and district (in western NSW) observe the same
+#                   times as South Australia, including South Australian
+#                   Daylight Savings times. 
+#
+#       Lord Howe Island is 30 minutes ahead NSW during normal times
+#                   but during DST it advances only 30 minutes and so
+#                   the time is the same as NSW during DST.
+#
+#
+# Bill Allan - 05 Oct 1999
+#        DST is to start on 27-Aug-2000 so that the Olympic Games being
+#        held in Sydney (15-Sept-2000 to 01-Oct-2000) will be in DST.
+#        DST start times for 2001 will revert to the normally start
+#        dates in October
+#        The states involved are New South Wales, Victoria, Tasmania and
+#        Lord Howe Island.
+#        South Australia won't be changing.
+#        The other states don't have DST so they won't be changing.
+# Marius Ianculovici - 25 Oct 2005
+#        The end date for Daylight Savings in 2006 for Victoria, Tasmania,
+#        South Australia, New South Wales and ACT has been moved from the
+#        last Sunday in March to the first Sunday in April (2nd) to
+#        accommodate the Commonwealth Games.
+# Keith Hayden - 25 Nov 2006
+#        Add in Western Australia DST 3 year trial.
+#        (1) From the hour of 2 a.m. on 3 December 2006 until the hour of 3
+#        a.m. on 25 March 2007.
+#        (2) From the hour of 2 a.m. on 28 October 2007 until the hour of 3
+#        a.m. on 30 March 2008.
+#        (3) From the hour of 2 a.m. on 26 October 2008 until the hour of 3
+#        a.m. on 29 March 2009.
+#        This change fixes SIR 117176.
+#
+
+###############################################################################
+
+# AUSTRALIA
+
+# AUSTRALIA/NORTHERN TERRITORY
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/ausnorth          9:30    -       CST
+
+# AUSTRALIA/WESTERN AUSTRALIA
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/auswest           8:00    -       WST     1974 Oct lastSun 2:00
+                                8:00    1:00    WST     1975 Mar Sun>=1 3:00
+                                8:00    -       WST     1983 Oct lastSun 2:00
+                                8:00    1:00    WST     1984 Mar Sun>=1 3:00
+                                8:00    -       WST     1991 Nov 17 2:00
+                                8:00    1:00    WST     1992 Mar Sun>=1 3:00
+                                8:00    -       WST     2006 Dec 3 2:00
+                                8:00    1:00    WST     2007 Mar 25 3:00
+                                8:00    -       WST     2007 Oct 28 2:00
+                                8:00    1:00    WST     2008 Mar 30 3:00
+                                8:00    -       WST     2008 Oct 26 2:00
+                                8:00    1:00    WST     2009 Mar 29 3:00
+                                8:00    -       WST
+
+# AUSTRALIA/QUEENSLAND
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/qnslnd            10:00   -       EST     1971 Oct lastSun 2:00
+                                10:00   1:00    EST     1972 Feb lastSun 3:00
+                                10:00   -       EST     1989 Oct lastSun 2:00
+                                10:00   1:00    EST     1990 Mar Sun>=1 3:00
+                                10:00   -       EST     1990 Oct lastSun 2:00
+                                10:00   1:00    EST     1991 Mar Sun>=1 3:00
+                                10:00   -       EST     1991 Oct lastSun 2:00
+                                10:00   1:00    EST     1992 Mar Sun>=1 3:00
+                                10:00   -       EST
+
+# AUSTRALIA/SOUTH AUSTRALIA
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AS      1971    1985    -       Oct     lastSun 2:00    1:00    -
+Rule    AS      1972    1986    -       Mar     Sun>=1  3:00    0       -
+Rule    AS      1986    only    -       Oct     19      2:00    1:00    -
+Rule    AS      1987    1990    -       Mar     Sun>=15 3:00    0       -
+Rule    AS      1987    max     -       Oct     lastSun 2:00    1:00    -
+Rule    AS      1991    only    -       Mar     3       3:00    0       -
+Rule    AS      1992    only    -       Mar     22      3:00    0       -
+Rule    AS      1993    only    -       Mar     7       3:00    0       -
+Rule    AS      1994    only    -       Mar     20      3:00    0       -
+Rule    AS      1995    2005    -       Mar     lastSun 3:00    0       -
+Rule    AS      2006    only    -       Apr     Sun>=1  3:00    0       -
+Rule    AS      2007    max     -       Mar     lastSun 3:00    0       -
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/aussouth          9:30    AS      CST
+
+# AUSTRALIA/TASMANIA
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AT      1967    only    -       Oct     1       2:00    1:00    -
+Rule    AT      1968    only    -       Mar     31      3:00    0       -
+Rule    AT      1968    1985    -       Oct     lastSun 2:00    1:00    -
+Rule    AT      1969    1971    -       Mar     Sun>=8  3:00    0       -
+Rule    AT      1972    only    -       Feb     27      3:00    0       -
+Rule    AT      1973    1981    -       Mar     Sun>=1  3:00    0       -
+Rule    AT      1982    1983    -       Mar     lastSun 3:00    0       -
+Rule    AT      1984    1986    -       Mar     Sun>=1  3:00    0       -
+Rule    AT      1986    only    -       Oct     19      2:00    1:00    -
+Rule    AT      1987    1990    -       Mar     Sun>=15 3:00    0       -
+Rule    AT      1987    only    -       Oct     25      2:00    1:00    -
+Rule    AT      1988    1990    -       Oct     lastSun 2:00    1:00    -
+Rule    AT      1991    1999    -       Oct     Sun>=1  2:00    1:00    -
+Rule    AT      1991    2005    -       Mar     lastSun 3:00    0       -
+Rule    AT      2000    only    -       Aug     27      2:00    1:00    -
+Rule    AT      2001    max     -       Oct     Sun>=1  2:00    1:00    -
+Rule    AT      2006    only    -       Apr     Sun>=1  3:00    0       -
+Rule    AT      2007    max     -       Mar     lastSun 3:00    0       -
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/tsmni             10:00   AT      EST
+
+# AUSTRALIA/VICTORIA
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AV      1971    1985    -       Oct     lastSun 2:00    1:00    -
+Rule    AV      1972    only    -       Feb     27      3:00    0       -
+Rule    AV      1973    1985    -       Mar     Sun>=1  3:00    0       -
+Rule    AV      1986    1990    -       Mar     Sun>=15 3:00    0       -
+Rule    AV      1986    only    -       Oct     19      2:00    1:00    -
+Rule    AV      1987    1999    -       Oct     lastSun 2:00    1:00    -
+Rule    AV      1991    1994    -       Mar     Sun>=1  3:00    0       -
+Rule    AV      1995    2005    -       Mar     lastSun 3:00    0       -
+Rule    AV      2000    only    -       Aug     27      2:00    1:00    -
+Rule    AV      2001    max     -       Oct     lastSun 2:00    1:00    -
+Rule    AV      2006    only    -       Apr     Sun>=1  3:00    0       -
+Rule    AV      2007    max     -       Mar     lastSun 3:00    0       -
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/vctr              10:00   AV      EST
+
+# AUSTRALIA/NEW SOUTH WALES and the ACT (Canberra)
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AN      1971    1985    -       Oct     lastSun 2:00    1:00    -
+Rule    AN      1972    only    -       Feb     27      3:00    0       -
+Rule    AN      1973    1981    -       Mar     Sun>=1  3:00    0       -
+Rule    AN      1982    only    -       Apr     4       3:00    0       -
+Rule    AN      1983    1985    -       Mar     Sun>=1  3:00    0       -
+Rule    AN      1986    only    -       Mar     16      3:00    0       -
+Rule    AN      1986    only    -       Oct     19      2:00    1:00    -
+Rule    AN      1987    only    -       Mar     15      3:00    0       -
+Rule    AN      1987    1999    -       Oct     lastSun 2:00    1:00    -
+Rule    AN      1988    1989    -       Mar     Sun>=15 3:00    0       -
+Rule    AN      1990    1995    -       Mar     Sun>=1  3:00    0       -
+Rule    AN      1996    2005    -       Mar     lastSun 3:00    0       -
+Rule    AN      2000    only    -       Aug     27      2:00    1:00    -
+Rule    AN      2001    max     -       Oct     lastSun 2:00    1:00    -
+Rule    AN      2006    only    -       Apr     Sun>=1  3:00    0       -
+Rule    AN      2007    max     -       Mar     lastSun 3:00    0       -
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/nsw               10:00   AN      EST
+
+# AUSTRALIA/YANCOWINNA  
+Zone    astrl/yanco             9:30    AN      CST     1995 Mar lastSun 3:00
+                                9:30    AS      CST
+
+# AUSTRALIA/LORD HOWE ISLAND
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AL      1971    1985    -       Oct     lastSun 2:30    0:30    -
+Rule    AL      1972    only    -       Feb     27      3:00    0       -
+Rule    AL      1973    1981    -       Mar     Sun>=1  3:00    0       -
+Rule    AL      1982    only    -       Apr     4       3:00    0       -
+Rule    AL      1983    1985    -       Mar     Sun>=1  3:00    0       -
+Rule    AL      1986    only    -       Mar     16      3:00    0       -
+Rule    AL      1986    only    -       Oct     19      2:30    0:30    -
+Rule    AL      1987    only    -       Mar     15      3:00    0       -
+Rule    AL      1987    max     -       Oct     lastSun 2:30    0:30    -
+Rule    AL      1988    1989    -       Mar     Sun>=15 3:00    0       -
+Rule    AL      1990    1995    -       Mar     Sun>=1  3:00    0       -
+Rule    AL      1996    max     -       Mar     lastSun 3:00    0       -
+Rule    AL      2000    only    -       Aug     27      2:30    0:30    -
+Rule    AL      2001    max     -       Oct     lastSun 2:30    0:30    -
+Zone    astrl/lhi               10:30   AL      ???
+
+###############################################################################
+
+###############################################################################
+# New Zealand
+###############################################################################
+
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    NZ      1974    1988    -       Oct     lastSun 2:00    1:00    D
+# Rule  NZ      1989    max     -       Oct     Sun>=1  2:00    1:00    D
+Rule    NZ      1989    only    -       Oct     8       2:00    1:00    D #
+Rule    NZ      1990    max     -       Oct     Sun>=1  2:00    1:00    D #
+Rule    NZ      1975    1989    -       Mar     Sun>=1  3:00    0       S
+Rule    NZ      1990    max     -       Mar     Sun>=15 3:00    0       S
+# Zone  NAME                    GMTOFF  RULES/SAVE      FORMAT  [UNTIL]
+Zone    sp/nz                   12:00   NZ              NZ%sT   # New Zealand
+Zone    sp/nz-chat              12:45   -               NZ-CHAT # Chatham Island
+

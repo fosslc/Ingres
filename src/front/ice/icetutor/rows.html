@@ -1,0 +1,12 @@
+<!-- #ICE DECLARE=`session.cursor=:cursor` -->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Rows&previous=cursor.html&next=format.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`checkSQL.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`Enter the number of rows you want to view at a time:
+
+<!-- #ICE VAR=``<INPUT SIZE="5" NAME="rows" VALUE=":rows">`` -->`
+-->
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

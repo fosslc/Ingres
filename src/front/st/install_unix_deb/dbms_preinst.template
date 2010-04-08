@@ -1,0 +1,38 @@
+#
+## Copyright Ingres Corporation 2007. All Rights Reserved.
+##
+## Name: dbms_preinst.template
+##
+## Description:
+##	Template file for preinst script for DBMS DEB package. Not intended
+##	to be run manually.
+##
+## History:
+##	12-Jul-2007 (hanje04)
+##	    SIR 118420
+##	    Created.
+##
+. /usr/share/debconf/confmodule
+
+DEBUG_SHELL=''
+if [ -n "$DEBIAN_SCRIPT_DEBUG" ] ; then
+    set -v -x; DEBIAN_SCRIPT_TRACE=1;
+    DEBUG_SHELL='bash -v -x' 
+    
+fi
+${DEBIAN_SCRIPT_TRACE:+ echo "#42#DEBUG# RUNNING $0 $*" 1>&2 }
+
+export II_SYSTEM=%rpm_prefix%
+rc=0
+
+if [ "$1" = "upgrade" ] ; then
+    ${DEBUG_SHELL} $II_SYSTEM/ingres/utility/iidbmspreinst \
+	-r %rpm_basename% -v %rpm_version% -u
+    rc=$?
+elif  [ "$1" = "install" ] ; then
+    ${DEBUG_SHELL} $II_SYSTEM/ingres/utility/iidbmspreinst \
+	-r %rpm_basename% -v %rpm_version% 
+    rc=$?
+fi
+
+exit $rc

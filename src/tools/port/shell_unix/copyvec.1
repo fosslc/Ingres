@@ -1,0 +1,34 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/copyvec.1,v 1.1 90/03/09 09:18:22 source Exp $
+.TH COPYVEC 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History:
+.\"	17-jun-1989 (boba)
+.\"		Update for 6.1.
+.\"	31-jul-1989 (boba)
+.\"		Remove 5.0 text when added to ingresug.
+.\"		Change conf to tools/port/conf.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+copyvec \- copy deliverable VEC files from source tree to porting installation
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B copyvec
+.SH DESCRIPTION
+.I Copyvec
+copies all of the deliverable files from \fB$ING_SRC/vec31/usr/vec\fR
+to \fB$ING_BUILD/vec\fR.
+The files are then "chmod"d to their appropriate permissions for an 
+installation.  This tool makes up for the fact that the actuall building of
+the vec code is still done by 
+.I make
+rather than 
+.I ming.  
+.I Copyvec, 
+however, is invoke by the \fBMING\fR file in \fB$ING_SRC/vec/src\fR
+after invocation of the vec "maker" procedures.
+.SH FILES
+.br
+$ING_SRC/tools/port/conf/RELEASE - list of deliverable files (in cpp format)
+.SH BUGS
+.I Copyvec
+must be run by ingres or invoked by "ming" (which runs setuid ingres).

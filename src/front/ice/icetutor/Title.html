@@ -1,0 +1,53 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<!--
+##{
+## History:
+##      04-May-1999 (peeje01)
+##          Replaced .dll with #ext#
+##      28-Mar-2001 (fanra01)
+##          Bug 104363
+##          Updated session.dbquery to use plays table instead of icetable.
+##}
+-->
+
+<HEAD>
+<!-- #ICE DECLARE=`session.api=api` -->
+<!-- #ICE DECLARE=`session.dll=/ice-bin/oiice.#ext#` -->
+<!-- #ICE DECLARE=`session.secured=yes` -->
+<!-- #ICE DECLARE=`session.stored=yes` -->
+<!-- #ICE DECLARE=`session.basic=yes` -->
+<!-- #ICE DECLARE=`session.dbname=icetutor` -->
+<!-- #ICE DECLARE=`session.dbquery=select * from plays` -->
+<!-- #ICE DECLARE=`session.transaction=myTransaction` -->
+<!-- #ICE DECLARE=`session.cursor=myCursor` -->
+<!-- #ICE DECLARE=`session.rows=10` -->
+<!-- #ICE DECLARE=`session.head=` -->
+<!-- #ICE DECLARE=`session.links=` -->
+<!-- #ICE DECLARE=`session.attr=` -->
+<!-- #ICE DECLARE=`session.format=TABLE` -->
+<!-- #ICE DECLARE=`session.html=` -->
+<!-- #ICE DECLARE=`session.incType=HTML` -->
+<!-- #ICE DECLARE=`session.incName=` -->
+<!-- #ICE DECLARE=`session.incVar=` -->
+<!-- #ICE DECLARE=`session.ifCond=` -->
+<!-- #ICE DECLARE=`session.ifThen=<b>The expression evaluates to true.</b>` -->
+<!-- #ICE DECLARE=`session.ifElse=<b>The expression evaluates to false.</b>` -->
+</HEAD>
+
+<html>
+<BODY bgcolor="#FFFFFF" topmargin="0" leftmargin="0">
+<TABLE VALIGN="MIDDLE" WIDTH="100%" BORDER="0">
+	<TR>
+		<TD WIDTH="90%" >
+			<FONT SIZE="6">Ingres Web Deployment Option Tutorial</FONT>
+		</TD>
+		<TD>
+			<A HREF="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext` -->/iceTutorial/login.html?ii_action=disconnect" TARGET="_top">
+			<IMG BORDER="0" SRC="<!-- #ICE INCLUDE=`logout.gif` -->" ALT="Disconnect"></A>
+		</TD>
+	</TR>
+</TABLE>
+<HR>
+</body>
+</html>

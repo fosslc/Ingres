@@ -1,0 +1,44 @@
+#
+#  History:
+#	18-jan-2001 (somsa01)
+#	    Removed qsf_session.
+#	11-Jun-2004 (drivi01)
+#	    Added ordinals.
+#	25-Aug-2004 (drivi01)
+#	    Renamed from iiqsfnt.def to iilibqsf.def.
+#	01-Mar-2005 (drivi01)
+#	    Removing some functions due to change #475292.
+#       28-Jan-2010 (horda03) Bug 121811
+#           Add Evidence Set functions.
+#
+
+EXPORTS				
+qsd_obj_dump		@3				
+qsd_obq_dump		@4				
+qsf_call		@5				
+qsf_attach_inst		@6				
+qsf_detach_inst		@7				
+qsf_mo_attach		@8				
+qsf_trace		@9				
+qst_trcheck		@10				
+qsf_clrmem		@11				
+qsf_set_decay		@12				
+qso_chtype		@14				
+qso_create		@15				
+qso_destroy		@17				
+qso_destroyall		@18				
+qso_gethandle		@20				
+qso_getnext		@21				
+qso_info		@22				
+qso_just_trans		@23				
+qso_lock		@24				
+qso_palloc		@25				
+qso_rmvobj		@27				
+qso_setroot		@28				
+qso_trans_or_define	@29				
+qso_unlock		@30				
+qsr_shutdown		@31				
+qsr_startup		@32				
+qss_bgn_session		@33				
+qss_end_session		@34				
+qsd_lru_dump		@35

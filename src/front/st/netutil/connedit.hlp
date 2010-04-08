@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- Connection edit screen help file 
+/#--
+You are looking at NETUTIL's Connection data entry screen.
+
+This popup allows you to edit Connection data associated
+with a vnode.  This includes the type of connection (Global
+or Private), Network address, Protocol, and Listen Address.
+
+Menu Operations
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Save            Saves all edits.
+
+        ListChoices     List the choices possible for the Protocol
+			field.
+
+        Cancel          Cancels the edit operation without saving any
+                        potentially changed fields.
+
+        Help            Displays this help screen.

@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescfe.hlp        Form-End escape examples and help.
+The Form-End escape executes just before the frame or pop-up returns to 
+its caller.
+
+Example of Form-End escape code:
+
+    To stay in the current frame, rather than returning:
+
+        RESUME;         /* or "RESUME FIELD fieldname" */
+
+    (Note: Only use RESUME statements in Form-End escapes for frames 
+    that allow user query qualifications.)

@@ -1,0 +1,145 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <rpu.h>
+# include <targtype.h>
+# include "errm.h"
+
+/**
+** Name:	asgnshow.qsc - show server assignments
+**
+** Description:
+**	Defines
+**		svr_show_assignments - show server assignments
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on assgnsho.osq in replicator library.
+**	14-jan-97 (joea)
+**		Use RMtarg_get_descr instead of dd_target_types table.
+**	29-may-97 (joea)
+**		Ensure assignments are ordered by database, then CDDS.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF
+EXEC SQL BEGIN DECLARE SECTION;
+i2	RMlocal_db_no;
+EXEC SQL END DECLARE SECTION;
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmshow_assignment"),
+##	*tf_name = ERx("iitf"),
+##	*fserver_no = ERx("server_no"),
+##	*fcdds_no = ERx("cdds_no"),
+##	*fcdds_name = ERx("cdds_name"),
+##	*fdb_no = ERx("database_no"),
+##	*ffull_db_name = ERx("dbname"),
+##	*ftarget_type = ERx("target_type"),
+##	*ftarget_descr = ERx("short_description");
+
+
+/*{
+** Name:	svr_show_assignments - show server assignments
+**
+** Description:
+**	Show the DB/cdds's assigned to a particular server.
+**
+** Inputs:
+**	server_no	- server number
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+svr_show_assignments(
+i2	server_no)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+##i2	server_no;
+EXEC SQL END DECLARE SECTION;
+# endif
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i2	db_no;
+##	char	full_db_name[DB_MAXNAME*2+3];
+##	i2	cdds_no;
+##	char	cdds_name[DB_MAXNAME+1];
+	i2	target_type;
+	EXEC SQL END DECLARE SECTION;
+##	char	*target_descr;
+	DBEC_ERR_INFO	errinfo;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name read
+	EXEC SQL SELECT d.database_no,
+			TRIM(db.vnode_name) + '::' + TRIM(db.database_name),
+			c.cdds_no, c.cdds_name, d.target_type
+		INTO	:db_no, :full_db_name,
+			:cdds_no, :cdds_name, :target_type
+		FROM	dd_db_cdds d, dd_cdds c, dd_databases db
+		WHERE	d.server_no = :server_no
+		AND	d.database_no = db.database_no
+		AND	d.cdds_no = c.cdds_no
+		AND	d.database_no != :RMlocal_db_no
+		ORDER	BY 1, 3;
+	EXEC SQL BEGIN;
+		target_descr = RMtarg_get_descr(target_type);
+##		loadtable form_name tf_name (fdb_no = db_no,
+##			ffull_db_name = full_db_name, fcdds_no = cdds_no,
+##			fcdds_name = cdds_name, ftarget_descr = target_descr)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0013_No_data_found, UG_ERR_ERROR, 0);
+		return;
+	}
+	EXEC SQL COMMIT;
+
+##	display form_name read
+##	initialize (fserver_no = server_no)
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmasgsho.hlp"), ERget(F_RM008E_Show_svr_assign));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##}

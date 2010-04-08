@@ -1,0 +1,498 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+#include <compat.h>
+#include <me.h>		/* 6-x_PC_80x86 */
+#include <st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include <fe.h>
+#include <adf.h>
+#include <fmt.h>
+#include <rtype.h>
+#include <rglob.h>
+#include <cm.h>
+#include <ug.h>
+#include <er.h>
+#include <errw.h>
+
+
+static char	*SC_buf = NULL;		/* Buffer to hold setup/cleanup query */
+static i4	scbufsiz = MQ_DFLT;	/* Size of buffer */
+static i4	sclen = 0;		/* Current Length of buffer */
+
+static bool rscsnd();
+static VOID rscincbuf();
+
+/*
+**   R_SC_QRY - Process Setup and Cleanup queries
+**	
+**
+**	Parameters:
+**		code	Setup or Cleanup top List pointer
+**
+**	Returns:
+**		OK -	Success.
+**		FAIL -	Error detected.
+**
+**	Error Messages:
+**		None
+**
+**	History:
+**		6/22/89 (elein)	written
+**		8/16/89 (elein)
+**			Changed error message number for bad parameters
+**		10/27/89 (elein)
+**			Added continue on error check
+**
+**		03/16/92 (rdrane)
+**			Added code to treat "$" as variable token ID only if
+**			1st character of token (bug 40757).  Note that white
+**			space, semi-colon, comma, and quote (to handle: WHERE
+**			a = '$variable') are considered to be token delimiters.
+**			Note that comments will have already been stripped, so
+**			bug 40467 cannot occur for .SETUP or .CLEANUP.
+**			Restructured switch statement for efficiencies.
+**			Specifically added "qry_putchar" flag to avoid
+**			unnecessary duplication of code, and removed EOS case
+**			(the while checks EOS as a condition for continuation).
+**			Also, CMnmchar() considers underscore valid.
+**			Editorial changes to module to conform to coding
+**			conventions.  Added return type to function.
+**		19-oct-92 (rdrane)
+**			Customized IIUGbmaBadMemoryAllocation() text to
+**			disambiguate which may have occured.
+**		28-jan-1993 (rdrane)
+**			Do NOT treat backslash as special unless it is
+**			specifically escaping a parameter variable (it
+**			should only be meaningful for SQL in combination with
+**			LIKE predicates and when ESCAPE '\' is specified).
+**			This addresses bugs 46420 and 46569.
+**			Look for double quotes to allow for delimited
+**			identifiers beginning with a '$'.  Note that we will
+**			support substitution of compound construct items,
+**			e.g., $owner.$tablename.
+**			Converted r_error() err_num values to hex to
+**			facilitate lookup in msg file.
+**		04-apr-93 (essi)
+**			Fix for bug 51174. When attached to DB2; extra
+**			blanks were being sent after the semicolon. Any
+**			white space after the ';' is insignificant and
+**			could be removed in that context.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+i4
+r_sc_qry(Ptr_sc_top)
+	SC		*Ptr_sc_top; 
+{
+	register char	*tc;		/* Rcommand text pointer	*/
+		char	*qc;		/* Query buffer fast pointer	*/
+		char	*cp;		/* param name/value pointer	*/
+		SC	*tptr; 		/* Structure pointer		*/
+		char	*i_ptr;		/* Delim ID pointers		*/
+		char	*save_Tokchar;
+		bool	token_start = FALSE;	/*
+						** Next non-white space
+						** begins token string
+						*/
+		bool	in_quote = FALSE;
+		bool	error = FALSE;
+		bool	qry_putchar = FALSE; /* Add this char to buffer	*/
+		char	param[MAXPNAME+1];   /* parameter name		*/
+
+# define addtoqbuf(x)   (CMcpychar(x,qc),CMnext(qc))
+
+
+	if (Ptr_sc_top == NULL)		/* Ensure something to do ...	*/
+	{
+		return(OK);
+	}
+
+	if (SC_buf == NULL)
+	{
+        	if ((SC_buf = (char *)MEreqmem(0,(u_i4)(scbufsiz),TRUE,
+					       (STATUS *)NULL)) == NULL)
+		{
+			IIUGbmaBadMemoryAllocation(ERx("r_sc_qry - initial"));
+		}
+	}
+
+	qc = SC_buf;
+	sclen = scbufsiz;
+	for (tptr = Ptr_sc_top; (tptr != NULL) && (!error);
+	     tptr = tptr->sc_below)
+	{
+		/*
+		** Put command into buffer
+		*/
+		tc = tptr->sc_text;
+		token_start = TRUE;
+		/* repeat until end of sc_text */
+		while ((*tc != EOS) && (!error))
+		{
+			qry_putchar = FALSE;
+			switch(*tc)
+			{
+			case('\''):
+				in_quote = !in_quote;
+				/*
+				** Because we simply toggle, we can't be sure
+				** when we reach the end of the quoted string.
+				** As such, a following token must be
+				** explicitly delimited.
+				*/
+				if  (in_quote)
+				{
+					token_start = TRUE;
+				}
+				else
+				{
+					token_start = FALSE;
+				}
+				qry_putchar = TRUE;
+				break;
+
+			case('\"'):
+				if  (in_quote)
+				{
+					token_start = FALSE;
+					qry_putchar = TRUE;
+					break;
+				}
+				/*
+				** Capture the delimited ID intact so embedded
+				** characters don't confuse us.  Do NOT accept
+				** compound constructs in case we have
+				** "abc".$parameter.  We need to abuse Tokchar
+				** for r_g_ident()'s use.
+				*/
+				save_Tokchar = Tokchar;
+				Tokchar = tc;
+				i_ptr = r_g_ident(FALSE);
+				tc = Tokchar;
+				save_Tokchar = i_ptr;
+				while (*i_ptr != EOS)
+				{
+					addtoqbuf(i_ptr);
+					CMnext(i_ptr);
+				}
+				_VOID_ MEfree(save_Tokchar);
+				token_start = TRUE;
+				qry_putchar = FALSE;
+				break;
+
+			case('\\'):
+				/*
+				** Backslash is only meaningful to RW
+				** if it is escaping what may confused with
+				** a parameter variable.  For this to be TRUE,
+				** we must be at the start of a token.
+				*/
+				if  (token_start)
+				{
+					if  (*(tc + 1) == '$')
+					{
+						qry_putchar = FALSE;
+					}
+					else
+					{
+						qry_putchar = TRUE;
+					}
+					token_start = FALSE;
+					break;
+				}
+				qry_putchar = TRUE;
+				token_start = FALSE;
+				break;
+
+			case('$'):	/* possible parameter variable found */
+				if (!token_start)
+				{
+					qry_putchar = TRUE;
+					break;
+				}
+				token_start = FALSE;
+				CMnext(tc);		/* skip "$" */
+				cp = param;
+				while (CMnmchar(tc))
+				{
+					if (cp < &param[MAXPNAME])
+					{
+						CMcpychar(tc, cp);
+						CMnext(cp);
+					}
+					CMnext(tc);
+				}
+				CMcpychar(ERx(""), cp);
+
+				if (cp == param)
+				{	/* bad param name */
+					r_error(0x17, NONFATAL, tc, NULL);
+					error = TRUE;
+					break;
+				}
+
+				if ((cp = r_par_get(param)) == NULL)
+				{	/* couldn't find param */
+					r_error(0x3F0, NONFATAL, param, NULL);
+					error = TRUE;
+					break;
+				}
+
+				/* add param value to query */
+
+				while (*cp != EOS)
+				{
+					if (CMbytedec(sclen,cp) <= 0) 
+					{
+						rscincbuf(&qc);
+					}
+	   				addtoqbuf(cp);
+					CMnext(cp);
+				}
+				break;
+
+			case(';'):	/* semicolon -- send query */
+				if (!in_quote)
+				{
+					token_start = TRUE;
+					if (CMbytedec(sclen,ERx("")) <= 0) 
+					{
+						rscincbuf(&qc);
+					}
+					CMcpychar(ERx(""),qc);
+					CMnext(tc);
+					while (CMwhite(tc))
+					{
+						CMnext(tc);
+					}
+					if( (error = rscsnd()) == FALSE)
+					{
+						qc = SC_buf;
+					}
+
+				}
+				else
+				{
+					token_start = FALSE;
+					qry_putchar = TRUE;
+				}
+				break;
+
+			case('+'): /* bona fide token separators */
+			case('-'): /* Don't worry about "!" and  */
+			case('='): /* "^" since they must be     */
+			case('<'): /* followed by "=".		 */
+			case('>'):
+			case(','):
+			case('('):
+			case(')'):
+			case('.'):
+			case(':'):
+				token_start = TRUE;
+				qry_putchar = TRUE;
+				break;
+
+			default:	/* add character directly */
+				if (CMwhite(tc))
+				{
+					token_start = TRUE;
+				}
+				else
+				{
+					token_start = FALSE;
+				}
+				qry_putchar = TRUE;
+				break;
+			} /* end switch */
+
+			if (qry_putchar)
+			{
+				if (CMbytedec(sclen,tc) <= 0) 
+				{
+					rscincbuf(&qc);
+				}
+	   			addtoqbuf(tc);
+				CMnext(tc);
+			}
+
+		} /* end text line*/ 
+
+		/* add a blank at end of each line if we are not in a quote,
+		 * are not beginning a new command, and don't have an error.
+		 */
+		if ((!in_quote) && (qc != SC_buf) && (!error))
+		{
+			if (CMbytedec(sclen,ERx(" ")) <= 0) 
+			{
+				rscincbuf(&qc);
+			}
+			addtoqbuf(ERx(" "));
+			CMnext(tc);
+		}
+
+	} /* end for each element in linked list */
+
+	/*
+	** If the last semicolon was missing--give them the benefit of the
+	** doubt and send the query along unless we have mismatched quotes,
+	** or an error.
+	*/
+	if ((qc != SC_buf) && (!error))
+	{
+		if (in_quote)
+		{
+			CMcpychar(ERx(""),qc);
+			r_error(0x3EF, NONFATAL, SC_buf, NULL);
+			error = TRUE;
+		}
+		else
+		{
+			if (CMbytedec(sclen,ERx("")) <= 0) 
+			{
+				rscincbuf(&qc);
+			}
+			CMcpychar(ERx(""),qc);
+			CMnext(tc);
+			error = rscsnd();
+		}
+	}
+	if (error)
+	{
+		return(FAIL);
+	}
+	else
+	{
+		return(OK);
+	}
+
+}
+/*
+**   R_SCSND - Send setup or cleanup query to buffer
+**	
+**
+**	Parameters:
+**		none
+**
+**	Returns:
+**		TRUE - Error detected.
+**		FALSE - Success or error ignored.
+**
+**	Error Messages:
+**		None
+**
+**	History:
+**		6/22/89 (elein)	written
+**
+**		03/16/92 (rdrane)
+**			Added return type to function.
+*/
+static bool rscsnd()
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		char *setclean;
+	EXEC SQL END DECLARE SECTION;
+		
+	St_in_setup = TRUE;			
+	setclean = SC_buf;
+
+	EXEC SQL EXECUTE IMMEDIATE :setclean;
+
+	sclen = scbufsiz;
+	/* If an error occurred and setup continue is not set
+	**    return an error
+	** Otherwise
+	**    pretend no error occurred and return ok
+	*/
+	if (St_ing_error != 0 && St_setup_continue == FALSE)
+	{
+		St_in_setup = FALSE;			
+		r_error(0x3EE, NONFATAL, SC_buf, NULL);
+		return (TRUE); /* error */
+	}
+	else
+	{
+		St_ing_error = FALSE;
+	}
+	St_in_setup = FALSE;			
+	return (FALSE);	/* No error */
+
+}
+/*
+**   R_SCINCBUF - Increment setup/cleanup query buffer
+**
+**	Parameters:
+**		none
+**
+**	Returns:
+**		none.
+**
+**	Error Messages:
+**		None
+**
+**	History:
+**		6/22/89 (elein)	written
+**		19-oct-92 (rdrane)
+**			Customized IIUGbmaBadMemoryAllocation() text to
+**			disambiguate which may have occured.
+**		28-jan-1993 (rdrane)
+**			Declare routine as being static and explicitly
+**			returning nothing.
+*/
+static
+VOID
+rscincbuf(qc)
+char **qc;
+{
+	register char *tbuf;
+	register i4  i;
+
+	/*
+	** Ensure EOS on string
+	*/
+	CMcpychar(ERx(""),*qc);
+
+	/*
+	** Hold old buffer
+	*/
+	tbuf = SC_buf;
+
+	/*
+	** Get new buffer
+	*/
+       	if ((SC_buf = (char *)MEreqmem (0,
+		(u_i4)(scbufsiz*2), TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("r_sc_qry - subsequent"));
+	}
+
+	/*
+	** Copy old stuff to new buffer
+	** Reset the buffer size, the buffer pointer
+	** and current buffer length (bytes not characters here)
+	*/
+	sclen = STlcopy(tbuf, SC_buf, scbufsiz) ;
+	for (i=sclen, *qc = SC_buf; i > 0; i--)
+	{
+		CMnext(*qc);
+	}
+	sclen = scbufsiz;
+	CMbytedec(sclen,*qc);
+	scbufsiz = scbufsiz*2;
+
+	/*
+	** Free old buffer
+	*/
+	MEfree(tbuf);
+
+	return;
+}

@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!embed!esqlcobdemo
+#
+
+SubDir ING_SRC front embed esqlcobdemo ;
+
+IISUBSYS front embed esqlcobdemo ;
+
+
+FILE $(COBOLDEMO)/makefile : makefile.nt ;
+FILE $(COBOLDEMO)/cbldemo.scb : cbldemo.scb ;
+FILE $(COBOLDEMO)/demo.data : demo.data ;
+FILE $(COBOLDEMO)/demo.sql : demo.sql ;

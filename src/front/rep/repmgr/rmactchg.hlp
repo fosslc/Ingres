@@ -1,0 +1,66 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmactchg.hlp
+ACTIVATE CHANGE RECORDING
+
+This screen is used to enable or disable change recording on tables
+registered for replication.
+
+Only Full Peer CDDS and database targets are displayed on this screen.
+You can either activate (enable change recording) or deactivate (disable
+change recording) for a single CDDS at a given database, an entire CDDS
+across all databases, all CDDS's in a particular database or all CDDS's
+across all databases.  To activate or deactivate a particular table, use
+the Activation menuitem in the Tables Registration Summary.
+
+The columns on the list are:
+
+        COLUMN NAME             DESCRIPTION
+        -----------             -----------
+        No.                     The CDDS number.
+
+        CDDS Name               The name of the CDDS.
+
+        No.                     The database number.
+
+        Virtual Node /          The virtual node name plus the database
+        Database Name           name.
+
+        Stat                    The status of the activation procedure.
+
+                                This column is only visible after you
+                                select one of the first four menuitems.
+                                It will contain the word "done" after a
+                                successful activation, or "err" if
+                                errors were encountered.  This column
+                                only reflects actions taken since you
+                                entered the screen.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        ThisRow         Enable or disable change recording for the
+                        currently highlighted CDDS/database combination.
+                        A submenu will be displayed to allow you to
+                        choose between activation or deactivation.
+
+        CDDS            Enable or disable change recording for the
+                        currently highlighted CDDS across all databases
+                        where it is present.  A submenu will be
+                        displayed to allow you to choose between
+                        activation or deactivation.
+
+        Database        Enable or disable change recording for all CDDS's
+                        in the currently highlighted database.  A submenu
+                        will be displayed to allow you to choose between
+                        activation or deactivation.
+
+        All             Enable or disable change recording for all CDDS's
+                        in all databases where they may be present.  A
+                        submenu will be displayed to allow you to choose
+                        between activation or deactivation.
+
+        Help            Access the Help facility.
+
+        End             Return to the Configuration Menu.

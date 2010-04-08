@@ -1,0 +1,29 @@
+#
+# MANIFEST file for common!odbc!hdr
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC common odbc hdr ;
+
+IISUBSYS common odbc hdr ;
+
+
+if ! $(NT)
+{
+IICCPPFILE $(INGMANIFEST)$(DFS)ocfginfo.dat : ocfginfo.ccpp ;
+
+IIHDRCCPP sql.h : sql.ccpp ;
+IIFILE sql.h : <common!odbc!hdr>sql.h ;
+
+IIHDRCCPP sqlext.h : sqlext.ccpp ;
+IIFILE sqlext.h : <common!odbc!hdr>sqlext.h ;
+}
+else
+{
+IIDEFHDR $(INGFILES)/sql.h : sql.wnt ;
+IIDEFHDR $(INGFILES)/sqlext.h : sqlext.wnt ;
+}
+
+

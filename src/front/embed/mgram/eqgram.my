@@ -1,0 +1,6119 @@
+%{
+
+/* %L language - Which language are we using for symbol table? */
+
+# include 	<compat.h>
+# include	<er.h>
+# include	<me.h>
+# include	<si.h>
+# include	<st.h>
+# include	<cm.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<cv.h>
+# include	<iicommon.h>
+# include	<equel.h>
+# include	<eqlang.h>
+# include	<equtils.h>
+# include	<eqsym.h>
+# include	<eqgen.h>
+# include	<eqstmt.h>
+# include	<eqscan.h>
+# include	<eqgr.h>
+# include	<eqfw.h>	
+# include	<ereq.h>
+# include	<eqtgt.h>
+
+# define	gr_xsym	gr_nlsym  /* Overload nlsym for dyn-named EQUEL csrs */
+
+# if defined(hp3_us5)
+	# pragma OPT_LEVEL 1
+# endif /* hp3_us5 */
+%}
+
+/*
+** EQGRAM.Y - Equel Grammar
+**
+** History:	10-jan-1985 - Written. (ncg)
+**		30-jul-1985 - Added ACTIVATE FRSKEY. (ncg)
+**		03-sep-1985 - Added SET/INQUIRE statements. (ncg)
+**		29-aug-1986 - Added CURSOR statements. (mrw)
+**		18-sep-1986 - Added NULL indicator usage. (bjb)
+**		23-sep-1986 - Added INGRES/STAR statements. (ncg)
+**		22-apr-1988 - Added forms with clause to MESSAGE, PROMPT,
+**			      and DISPLAY.  (marge)
+**		16-may-1988 - Removed forms with clause support from 
+**			      DISPLAY SUBMENU.  (marge)			
+**		06-jun-1988 - Added Star statements - DIRECT [DIS]CONNECT. (ncg)
+**		22-jul-1988 - Changed fm_string to (new) fm_qstring so 
+**			      MESSAGE and PROMPT require quotes around string 
+**			      literals.  (marge)
+**		08-feb-1989 - Added dynamic cursor names (bjb)
+**		22-mar-1989 - Added NOT NULL NOT DEFAULT option to create table
+**			      statement. (teresa)		
+**		03-apr-1989 - Added extra argument to rep_close because of
+**			      ESQL change for IIsqMods. (teresa) 		
+**		31-jul-1988 - Fixed bug 6749 (SAVE command with variables
+**			      sent garbled query to DBMS). (barbara)
+**              11-may-1989 - Modifications for entry activation (teresa)
+**              08-aug-1989 - Modified for Emerald: added support for setting
+**                            the _STATE of a tablefield row and accept 
+**			      'ACTIVATE FRSKEY0' (iff -c command flag). (teresa)
+**              09-nov-1989   Add ability to parameterize FRS keys by adding
+**                            'ACTIVATE FRSKEY integer_variable'. (teresa)
+**		15-mar-1990 - Fixed bug 8447 (time is optional on SAVE
+**			      command). (barbara)
+**		24-mar-1990 - Fixed bug 9501 (allow plus or minus on constant
+**			      used in with null clause on COPY.) (bjb)
+**		08-jun-1990 - Add Decimal. (teresal)
+**		15-aug-1990 - Added with clause on loadtable and insertrow for
+**			      setting per value display attributes. (barbara)
+**		04-mar-1991 - Added SET SESSION syntax for 6.3/04. (barbara)
+**		22-mar-1991 - Flag old-style FRS statements as errors
+**			      rather than warnings. (teresal)
+**		04-apr-1991 - Added COPYHANDLER support for internal use only.
+**			      (barbara)
+**              19-apr-1991 - COPYHANDLER code generation change. (barbara)
+**	 	23-apr-1991 - Fixed bug ('function' was still being generated
+**			      in WITH clause handling).
+**      	29-Apr-92 (purusho)
+**          	     Amdahl C compiler cribs about # pragma OPT_LEVEL 1 starting
+**          		at column 1 and hence inserted a tab character
+**		22-jun-1992 - Changed SET syntax to accept SET USER 
+**			      ATHORIZATION SESSION (or SYSTEM) USER. (larrym)
+**		23-jul-1991 - Changed SET SESSION syntax to accept LRC
+**			      approved "WITH ON_ERROR = ROLLBACK TRANSACTION|
+**			      STATEMENT" (teresal)
+**	11-nov-1992 (lan)
+**		Added two new parameters to ret_add call.
+**	16-nov-1992 (lan)
+**		Added new arguments to db_var and rep_add calls.
+**	19-nov-1992 (lan)
+**		Put back the 6th argument to the ret_add call.
+**	08-jan-1993 (lan)
+**		Fixed bug where correct uses of mnemonic constants "off", "on",
+**		and "bell" in set_frs statements were not accepted.
+**		Also added COLUMN and FIELD to frs_constobj.
+**	11-jan-1993 (lan)
+**		Fixed bug where the statement "set_frs form (mode=read)"
+**		generated error E_EQ0066 on 'read'.
+**	12-jan-1993 (lan)
+**		Fixed problem where incorrect code was generated for constants
+**		"on", "off", and "bell" used in set_frs statements.
+**	07/28/93 (dkh) - Added support for the PURGETABLE and RESUME
+**			 NEXTFIELD/PREVIOUSFIELD statements.
+**      26-aug-93 (huffman)
+**                With the new II functions <me.h> is now needed in
+**                this file for c lib to build.
+**	12-mar-1996 (thoda04)
+**		Added cv.h and eqtgt.h for function prototype checking.
+**		Corrected rep_close() calls: FALSE, not NULL ptr.
+**		Corrected ecs_replace() call: FALSE, not NULL ptr.
+**		Corrected ecs_open() call: last parm = TRUE or FALSE, not ptr.
+**		Cast frs_parentname()'s last parm to proper type.
+**		Cast EQFWsuboption()'s last parm to proper type.
+**	26-Mar-1997 (jenjo02)
+**	        Allow MODIFY TABLE ... TO PRIORITY = <cache_priority>
+**      23-Mar-2001 (toumi01)
+**	    Add support for 'set transaction' statement to [E]QUEL. b94351.
+**	    This will allow db utilities written in quel to issue e.g.
+**	    SET TRANSACTION READ WRITE to override an installation level
+**	    isolation level setting of READ UNCOMMITTED.
+**	26-Mar-2001 (toumi01)
+**	    Modify 'set transaction' change to avoid making READ a keyword
+**	    and hence breaking other aspects of the QUEL grammar.
+**	27-Mar-2001 (toumi01)
+**	    Okay, I give up.  The esqlc 'set transaction' grammar will not
+**	    work with the very loose validation provided by eqc's grammar.
+**	    To avoid nasty problems by introducing new key words (especially
+**	    'read') into the quel grammar, and the massive changes that
+**	    that would trigger, simply continue the practice of using the
+**	    'set' rule with very loose validation.  Note that this allows:
+**		SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED (etc.)
+**	    and also
+**		SET TRANSACTION ISOLATION CHOCOLATE CREAM PIE
+**	    Of course, the latter will be flagged at run-time.
+**	    This change reverts this file to r14 with this new 'set' rule:
+**		set_param ql_id ql_id ql_id
+**	27-Mar-2001 (toumi01)
+**	    Duh!  End to this comedy of errors?  Fix above comment.
+**	30-oct-01 (inkdo01)
+**	    Enable "session.table" syntax in range statement, allowing 
+**	    global temp tables to be created in SQL then referenced from Quel.
+**	30-apr-02 (inkdo01)
+**	    Enable "session.table" syntax in append, delete and replace (for 
+**	    symmetry).
+**
+**
+** Copyright (c) 2004 Ingres Corporation
+**
+** Rules to apply when writing new grammar parts:
+**
+** 0. NEVER start a statement with a Null generator - causes Yacc error
+**    recovery to allow only that statement as the next rule on a syntax error.
+**
+** Conventions used in commenting the statements:
+** 
+** 0. Rule description comments must start at beginning of the line.
+** 1. CAPITALized words are reserved keywords.
+**    Clauses enclosed in [ brackets ] are optional.
+**    Clauses enclosed in { braces } can be repeated zero or more times;
+**	   if there is a '+' after the clause then one or more times.
+**    Clauses enclosed in < angle brackets > are groupings.
+**    The vertical bar '|' separates alternative objects.
+** 2. Stylized comments of statement descriptions must be one of the following:
+**    2.1. /* {white} ## STATEMENT 
+**    2.2. ** {white} ## STATEMENT
+**    2.3. ** Statement: ## STATEMENT
+**    2.4. Subparts of statements should have a '*' after the ##.
+** 3. Running eqstmt on this file (which has these stylized comments) will
+**    produce a list of all Equel statements. Usage: eqstmt input output
+** 4. All main rules are in alphabetical order.
+** 5. Note the sylized comments that begin with:
+**    /* %L object [begin|end]
+**    All these comments are used by the merging tool eqmerge.
+**    Usage: eqmerge [tokens|grammar|language] Gfile Lfile output.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+/* Quel keywords */
+%token	tABORT		tAPPEND		tCOPY 		
+	tCREATE		tDEFINE		tDELETE 	tDESTROY	
+	tHELP		tINDEX		tINTEGRITY	
+	tMODIFY		tPERMIT		tPRINT		
+	tREGISTER 	tRELOCATE	tRANGE		tREMOVE
+	tREPLACE	tRETRIEVE	
+	tSAVE		tSAVEPOINT	tSET		tSORT		
+	tNULL		tUNIQUE		tVIEW		tWITH		
+
+/* Special embedded Quel keywords */
+%token	tENDLOOP	tENDRETRIEVE	tEXIT		tIISTATEMENT
+	tINQ_EQUEL	tINGRES		tPARAM		tREPEAT
+	tSET_EQUEL	tCALL		tIIPRINTF
+
+/* Double keywords */
+%token	tBEG_XACT			/* Begin Transaction */
+	tEND_XACT			/* End Transaction */
+
+	tDEF_INTEGRITY	tDEF_LINK	/* Define xxx */
+	tDEF_PERMIT	tDEF_VIEW
+
+	tDES_INTEGRITY	tDES_PERMIT	/* Destroy xxx */
+	tDES_LINK	tDES_TABLE
+
+	tDIR_CONNECT	tDIR_DISCONNECT	/* Gateway direct statements */
+
+	tHLP_INTEGRITY	tHLP_PERMIT	/* Help xxx */
+	tHLP_VIEW
+
+	tCLS_CURSOR	tDEC_CURSOR	/* Cursor statements */
+	tDEL_CURSOR	tOPN_CURSOR
+	tREP_CURSOR	tRET_CURSOR
+
+/* Forms keywords */
+%token	tFORMS		tFORMINIT	tADDFORM	tFORMDATA	
+	tDISPLAY 	tINITIALIZE	tFINALIZE	tACTIVATE	
+	tPUTFORM	tGETFORM 	tGETOPER	tREDISPLAY	
+	tMESSAGE	tSLEEP		tCLEAR 		tHELPFILE	
+	tPROMPT		tSUBMENU	tVALIDATE	tRESUME
+	tENDFORMS 	tENDDISPLAY	tBREAKDISPLAY	tENDDATA
+	tSET_FRS	tINQ_FRS	tPUTOPER	tPRINTSCREEN
+	tHELP_FRS	tEND
+	tIIPROMPT	tIIMESSAGE
+
+/* Table Field keywords */
+%token 	tCLEARROW	tDELETEROW	tINSERTROW	tGETROW		
+	tPUTROW		tLOADTABLE	tINITTABLE	tVALIDROW	
+	tUNLOADTABLE	tSCROLL 	tTABLEDATA	tPURGETBL
+
+/* Equel noise keywords */
+%token	tALL		tBY		tFROM		tIN		
+	tINTO 		tIS		tOF		tON		
+	tTO 		tWHERE		tUNTIL		tAT		
+	tNOTRIM		tFOR		tAS
+
+/* Forms and Table Fields noise keywords */
+%token	tFIELD		tMENUITEM	tCOMMAND	tNEXT		
+	tSCREEN 	tUP		tDOWN		tOUT		
+	tCOLUMN		tSCROLLUP	tSCROLLDOWN
+
+/* Equel Constants and Special Objects from scanner (see tok_special) */
+%token	tINTCONST	tFLTCONST	/* Numeric constants from scanner */
+	tNAME		tSCONST		/* User names and string constants */
+	tHOSTCODE			/* Program code */
+	tINCLUDE			/* Include file (or Eof of one) */
+	tQUOTE				/* Token to trigger string constants */
+	tCOMMENT			/*       and comment skipping 	     */
+	tTERMINATE			/* Statement terminators */
+	tWHITESPACE			/* Whitespace */
+	tHEXCONST			/* Hex constant */
+	tDECCONST			/* Decimal constant */
+
+/* Equel Punctuation */
+%token	tCOMMA		tLPAREN		tRPAREN		tPERIOD
+	tDEREF 		tCOLON		tATSIGN
+
+/* Dummy tokens to support some rules defined in L */
+/* %L fake begin */
+%token 	tL_BLK_BEGIN	tL_BLK_END		/* Begin and End blocks */
+	tL_DECLARE
+/* %L fake end */
+
+/* %L tokens */
+
+/* Operators */
+%token	tARUOP			/* Arithmetic unary */
+	tBNDOP			/* Bounds - '>', etc */
+	tEQOP			/* Assignment/Equality operator */
+	tNEQOP			/* [In]Equality operator */
+	tLOGUOP		tLOGBOP	/* Logical - not, and, or */
+	tAGOP			/* Aggregate operator */
+	tMULOP tDIVOP tEXPOP	/* Arithmetic binary operators */
+
+/* Ascending precedence for [unary and binary] operators */
+%left	tNEQOP		tBNDOP	/* !=, <, >, ... */
+%left	tLOGBOP			/* And, Or */
+%left	tLOGUOP			/* Not */
+%left	tARUOP			/* + - (unary minus is %prec tUNARYOP) */
+%left	tMULOP tDIVOP tEXPOP	/* "*", "/", "**" */
+
+%left		tBINARYOP
+%nonassoc	tUNARYOP
+
+%start	program
+
+%{
+
+/* %L locals - Include L locals and gr structure */
+
+%}
+
+%%
+
+/* Program Control Structure */
+
+program:	program statement
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+	|	/* No statement */
+;
+statement:	ql_statement		/* Quel statements */
+		{
+		    if ((gr->gr_flag & GR_NOSYNC) == 0)
+		    {
+			if (gr->gr_flag & GR_REPEAT)
+			    rep_close( IISYNCUP, NULL, FALSE );
+			else
+			{
+			    if (gr->gr_flag & GR_COPY_PROG)
+			    /*
+			    ** If COPY FROM/INTO PROGRAM check that handler
+			    ** has been declared.
+			    */
+			    {
+				db_send();
+				if ((gr->gr_flag & GR_SEENCPYHND) == 0)
+				{
+				    er_write(E_EQ0091_COPYHANDLER, EQ_ERROR, 0);
+				    eqtl_init(IISETSQL);
+				    eqtl_add(ERx("0"), (PTR)0, (PTR)0, (PTR)0,
+					T_NONE, ERx("copyhandler"));
+				}
+				eqgen_tl(IISETSQL);
+				gr->gr_flag &= ~(GR_SEENCPYHND|GR_COPY_PROG);
+			    }
+			    db_close( IISYNCUP );
+			}
+		    }
+		    gr->gr_flag &= ~(GR_QUEL | GR_REPEAT | GR_NOSYNC);
+		    gen_eqstmt( G_CLOSE, (char *)0 );
+		}
+	|	libq_statement		/* Equel/Libq statements */
+		{
+		    gr->gr_flag &= ~GR_EQUEL;
+		    gen_eqstmt( G_CLOSE, (char *)0 );
+		}
+	|	cursor_statement
+		{
+		    if ((gr->gr_flag & GR_DECLCSR) == 0)
+			gen_eqstmt( G_CLOSE, (char *)0 );
+		    gr->gr_flag &= ~(GR_QUEL|GR_REPEAT|GR_NOSYNC|
+				     GR_CURSOR|GR_DECLCSR|GR_REPLCSR);
+		}
+	|	form_statement		/* Forms statements */
+		{
+		    gr->gr_flag &= ~GR_EQUEL;
+		    gen_eqstmt( G_CLOSE, (char *)0 );
+		}
+	|	tINCLUDE		/* Open/close an Include */
+		{
+		    if (*($1.s) == 'i')	/* "include" or "<EOF>" */
+			inc_push_file();
+		    else
+			inc_pop_file();
+		}
+	|	host_declare	/* Regular declarations and Equel DECLARE */
+	|	host_code	/* Defined by L */
+	|	error		/* Attempt to synchronize outputters */
+		{
+		    /*
+		    ** Cursors implement their own recovery;
+		    ** they just throw away whatever BE commands
+		    ** they've been buffering.
+		    ** QUEL statements make sure there's a syntax
+		    ** error in the BE commands and then flush it.
+		    ** QUEL and EQUEL commands (except for DECLARE CURSOR)
+		    ** then close off the host-language block.  DECLARE CURSOR
+		    ** is different as it does not generate any code, and thus
+		    ** never started a host-language block.
+		    */
+		    if (gr->gr_flag & GR_CURSOR)
+		    {
+			db_op( ERx("...ERR") );
+			db_send();
+			ecs_query( NULL, ECS_STOP_QUERY );	/* stop query */
+			if (gr->gr_flag & GR_REPEAT)
+			{
+			    rep_close( IICSQUERY, ecs_id_curcsr(), FALSE );
+			    ecs_query( NULL, ECS_END_QUERY ); 	/* end query */
+			}
+		    } else
+		    {
+			if (gr->gr_flag & GR_QUEL)
+			{
+			    db_op( ERx("...ERR") );
+			    if (gr->gr_flag & GR_REPEAT)
+				rep_close( IISYNCUP, NULL, FALSE );
+			    else
+				db_close( IISYNCUP );
+			}
+		    }
+
+		    if (gr->gr_flag & (GR_QUEL|GR_EQUEL|GR_CURSOR))
+			if ((gr->gr_flag & GR_DECLCSR) == 0)
+			    gen_eqstmt( G_CLOSE, (char *)0 );
+
+		    arg_free();
+		    id_free();
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		    gr_mechanism( GR_ERROR );
+		    gr->gr_flag &= ~(GR_QUEL|GR_REPEAT|GR_NOSYNC|
+				     GR_CURSOR|GR_DECLCSR|GR_REPLCSR);
+		}
+;
+
+/*
+** Equel generated block.  For example:
+**  	RETRIEVE ( target list )
+** 	{
+**	    user code
+** 	}
+*/
+
+block:		block_begin block_stmts block_close 
+		{
+		    lbl_exit_block();
+		    gr_mechanism( GR_BLOCK, GR_BLKFALSE ); /* Symtab updates */
+		}
+;
+block_begin:	block_open	
+		{
+		    lbl_enter_block();
+		    lbl_set_mode( gr->gr_mode );
+		    lbl_adset( LBL_NOLEV, gr->gr_adjective );
+		    gr->gr_mode = LBLmNONE;
+		    gr->gr_adjective = LBLaNONE;
+		    gr_mechanism( GR_BLOCK, GR_BLKTRUE ); /* Symtab updates */
+		    gr->gr_flag &= ~(GR_QUEL|GR_EQUEL);
+		}
+;
+block_stmts:	/* No statements */
+	|	block_stmts statement
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+;
+
+/* Quel rules - generate database statements */
+
+ql_statement:	abort
+	|	append	 
+	|	begin_xact
+	|	copy 
+	| 	create	 
+	|	delete 
+	| 	destroy	 
+	|	direct_stmt
+	|	end_xact
+	|	help 
+	|	iistatement
+	| 	index	 
+	| 	integrity	 
+	|	link
+	|	modify 
+	|	permit
+	|	print 
+	|	range 
+	|	relocate
+	|	register
+	|	register_ind
+	|	remove
+	|	replace 
+	|	retrieve 
+	|	retrieve_loop
+	|	save
+	|	savepoint 
+	|	set
+	|	view
+;
+
+/*
+** Equel statements that are not sent to the database as strings, but 
+** that generate a call style interface to take actions at runtime.
+** Calls are made either to Libq or the Forms runtime libraries.
+*/
+
+libq_statement: call		/* Libq statements */
+	|	endretrieve
+	|	endloop		/* Possibly Forms, but maybe not */
+	|	exit
+	|	iiprintf
+	|	ingres
+	|	inquire_equel
+	|	set_equel
+;
+
+/*
+** Equel Cursor Statments - These statements all get mapped to procedure calls
+** 			   in the Cursor Runtime library.
+*/
+
+cursor_statement:
+		csr_declare
+	|	csr_open
+	|	csr_retrieve
+	|	csr_replace
+	|	csr_delete
+	|	csr_close
+;
+
+form_statement:	addform		/* Forms statements */
+	|	breakdisplay
+	|	clear
+	|	display
+	|	enddata
+	|	enddisplay
+	|	endforms
+	|	formdata
+	|	forminit
+	|	forms
+	|	getform
+	|	getoper
+	|	help_frs
+	|	helpfile
+	|	iimessage
+	|	iiprompt
+	|	inquire_frs
+	|	message
+	|	printscreen
+	|	prompt
+	|	putform
+	|	redisplay
+	|	resume
+	|	set_frs
+	|	sleep
+	|	submenu
+	|	validate
+	|	clearrow	 /* Table field statements - subset of forms */
+	|	deleterow
+	|	getrow
+	|	inittable
+	|	insertrow
+	|	loadtable
+	|	putrow
+	|	scroll
+	|	tabledata
+	|	unloadtable
+	|	validrow
+	|	purgetable
+;
+
+
+/*
+** Quel (database) statements:
+**
+** Statements:	## Any database statement
+** Action:	Same as in Quel
+** Generates:	(C examples)
+**
+**	Keywords:		IIwritedb( "append" );
+**	Identifiers:		IIwritedb( "empno" );
+**	Variables:		IIsetdom( variable, type, bytes );
+**	       or:		IIwritedb( stringvar );
+**
+**	General form:		{ IIwritedb(); IIsetdom(); IIsyncup(); }
+**	Write out data to the database (IIwritedb and IIsetdom) and process it 
+**	when the syncronizing signal (IIsyncup) comes through.
+*/
+
+/* ## ABORT [ TO <name | number> ] */
+
+abort:		tABORT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    arg_int_add( IIxactABORT );
+		    gen_call( IIXACT );
+		    gr->gr_flag |= GR_NOSYNC;      /* No IIsync after this */
+		}
+	|	abort_to_key ql_id_int
+;
+abort_to_key:	tABORT tTO
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		    db_key( $2.s );
+		}
+;
+
+
+/* ## [REPEAT] APPEND [TO] [session.]table ( in target list ) [ WHERE qualification ] */
+
+append:		append_key ql_tonoise ql_id1 ql_in_tlist ql_wherequal	
+;
+append_key:	tAPPEND	
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+	|	tREPEAT tAPPEND
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sREPEAT, $2.s );
+		}
+;
+
+/* ## BEGIN TRANSACTION */
+
+begin_xact:	tBEG_XACT 	 /* Double token returned by scanner */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    arg_int_add( IIxactBEGIN );
+		    gen_call( IIXACT );
+		    gr->gr_flag |= GR_NOSYNC;      /* No IIsync after this */
+		}
+;
+
+/* ## COPY table ([copy format list]) FROM | INTO file [WITH with_clause] */
+
+copy: 		copy_key ql_id ql_lparen copy_tl ql_rparen copy_dir copy_loc
+		    ql_opt_with_clause
+;
+copy_key:	tCOPY
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+copy_tl:	ql_strvar		/* Format list in variable */
+	|	copy_tl1
+	|	/* No format list */
+;
+copy_tl1:	copy_elm
+	|	copy_tl1 ql_comma copy_elm
+;
+copy_elm:	ql_id ql_eq_ois copy_id copy_with
+;						/* Examples: 		   */
+copy_id:	copy_qid			/* c0nl 		   */
+	|	ql_sconst			/* "c0Z"		   */
+	|	copy_parens			/* text(0) or decimal(5,2) */
+	|	copy_parens ql_id		/* text(0)nl 		   */
+	|	copy_parens ql_sconst		/* text(0)"Z"		   */
+	|	copy_parens ql_null		/* text(0)null  	   */
+;
+copy_with:	/* EMPTY */
+	|	ql_with ql_null ql_lparen copy_const ql_rparen
+	|	ql_with ql_null
+;
+copy_const:	ql_constant
+	|	ql_aruop ql_constant
+;
+copy_parens:	copy_qid ql_lparen ql_int ql_rparen
+	|	copy_qid ql_lparen ql_int ql_comma ql_int ql_rparen
+;
+copy_qid:	ql_id
+;
+copy_dir:	tINTO
+		{
+		    db_key( $1.s );
+		}
+	| 	ql_from
+;
+copy_loc:	ql_sconst
+	|	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			db_var( DB_STRING, gr->gr_sym, gr->gr_id, (SYM *)0,
+				(char *)0, (char *)0 );
+			if (gr->gr_type != T_CHAR && gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0067_grSTRVAR, EQ_ERROR, 1,
+								gr->gr_id );
+		    }
+		    else if (!STbcompare(gr->gr_id, 0, ERx("program"), 0, TRUE))
+		    {
+			db_key(gr->gr_id);
+			gr->gr_flag |= GR_COPY_PROG;
+		    }
+		    else
+		    {
+			er_write( E_EQ0066_grSTR, EQ_ERROR, 1, gr->gr_id );
+			db_sconst( gr->gr_id );
+		    }
+		}
+;
+
+/* ## CREATE table ( create format target list ) [ WITH with_clause ] */
+
+create:		create_key ql_location ql_lparen create_tlist ql_rparen
+		  ql_opt_with_clause
+;
+create_key:	tCREATE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+ql_location:	ql_id 
+	|	ql_id ql_colon ql_id
+;
+create_tlist:	create_tl1
+	|	ql_strvar		/* Create list is variable */
+;
+create_tl1:	create_elm
+	|	create_tl1 ql_comma create_elm
+;
+create_elm:	ql_id ql_eq_ois create_desc create_null
+;
+create_desc:	create_qid
+	|	create_left ql_rparen
+	|	create_left ql_comma ql_int ql_rparen
+;
+create_left: 	create_qid ql_lparen ql_int 
+;
+create_qid:	ql_id
+;
+/* End of a create tlist item: [ WITH NULL | NOT NULL [WITH | NOT DEFAULT] ] */
+create_null:	ql_with ql_null
+	|	create_notnull 
+	|	create_notnull create_withdef
+	|	create_notnull create_notdef
+	|	/* EMPTY */
+;
+create_notnull:	tLOGUOP tNULL
+		{
+		    db_key( $1.s );
+		    db_key( $2.s );
+		    if (STbcompare($1.s, 0, ERx("not"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+						    ERx("CREATE"), ERx("NOT") );
+		}
+;
+create_withdef:	ql_with tNAME
+		{
+		    db_key( ERx("default") );
+		    if (STbcompare($2.s, 0, ERx("default"), 0, TRUE) != 0)
+			er_write(E_EQ0069_grBADWORD, EQ_ERROR, 3, $2.s,
+						ERx("CREATE"), ERx("DEFAULT") );
+		}
+;
+create_notdef:	tLOGUOP tNAME
+		{
+		    db_key( $1.s );
+		    db_key( ERx("default") );
+		    if (STbcompare($1.s, 0, ERx("not"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+						    ERx("CREATE"), ERx("NOT") );
+		    else
+		        if (STbcompare($2.s, 0, ERx("default"), 0, TRUE) != 0)
+		  	    er_write(E_EQ0069_grBADWORD, EQ_ERROR, 3, $2.s,
+						ERx("CREATE"), ERx("DEFAULT") );
+		}
+;
+
+/* ## [REPEAT] DELETE [FROM] [session.]table [ WHERE qualification ] */
+
+delete:		delete_key delnoise ql_id1 ql_wherequal	
+;
+delete_key:	tDELETE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+	|	tREPEAT tDELETE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sREPEAT, $2.s );
+		}
+;
+delnoise:	tFROM	
+	|	
+;
+
+/* 
+** ## DESTROY [TABLE] table_list
+** ## DESTROY < PERMIT | INTEGRITY > table < number list | ALL > 
+** ## DESTROY LINK link_list
+*/
+
+destroy:	destroy_key ql_idlist
+	|	destroy_permit_integ ql_id dest_list
+	|	destroy_link ql_idlist
+	|	destroy_link 			/* table = link */
+;
+destroy_key:	tDESTROY	
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+	|	tDES_TABLE	/* Double keyword */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+destroy_permit_integ:
+		tDES_INTEGRITY	/* Double keyword */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+	|	tDES_PERMIT	/* Double keyword */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+destroy_link:	tDES_LINK	/* Double keyword */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+dest_list:	ql_intlist
+	|	ql_all
+;
+
+/*
+** DIRECT statements for gateways and INGRES/STAR.
+**
+** Statement:  DIRECT CONNECT [WITH with_clause]
+**	       DIRECT DISCONNECT
+** Action:
+**		Send db statements to gateway.
+** Generates:
+**	-- DIRECT CONNECT WITH node = rabbit, database = neil;
+**	   IIwrite("direct connect node = rabbit, database = neil");
+**	   IIsyncup();
+*/
+direct_stmt:	dir_con_key ql_opt_with_clause
+	|	dir_dis_key
+;
+dir_con_key:	tDIR_CONNECT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+dir_dis_key:	tDIR_DISCONNECT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+/* ## END TRANSACTION */
+
+end_xact:	tEND_XACT 	 /* Double token returned by scanner */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    arg_int_add( IIxactCOMMIT );
+		    gen_call( IIXACT );
+		    gr->gr_flag |= GR_NOSYNC;      /* No IIsync after this */
+		}
+;
+
+/* ## HELP [ ALL | [ INTEGRITY|PERMIT|VIEW ] table list ] */
+/* As of 6.0, all help statements are unsupported. */
+
+help:		help_x
+		{
+		    er_write( E_EQ0076_grNOWUNSUPP, EQ_ERROR, 1, $1.s );
+		}
+;
+help_x:		help_key	
+	|	help_key ql_all
+	|	help_key ql_idlist
+	|	help_int_perm_view_op ql_idlist
+;
+help_key:	tHELP 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+help_int_perm_view_op:
+		tHLP_INTEGRITY 	/* Double keywords */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+	|	tHLP_PERMIT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+	|	tHLP_VIEW 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+/* ## IISTATEMENT stringvar - internal debugging */
+
+iistatement:	iistmt_key iistmt_operand
+;
+iistmt_key:	tIISTATEMENT	/* Not known to Quel */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		}
+;
+iistmt_operand:	ql_strvar
+	|	iistmt_const
+;
+iistmt_const: 	tSCONST 
+		{
+		    db_op( $1.s );
+		}
+;
+
+/* ## INDEX [UNIQUE] ON table IS name ( column list ) [WITH clause] */
+
+index:		index_key ql_opt_unique ql_on ql_id ql_eq_is ql_location
+		    ql_lparen ql_idlist ql_rparen
+		    ql_opt_with_clause
+;
+index_key:	tINDEX
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+/* ## DEFINE INTEGRITY [ON] table [IS] qualification */
+
+integrity:	definteg_key integ_noise ql_id ql_isnoise integ_qual
+;
+definteg_key:	tDEF_INTEGRITY	/* Double keyword */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+integ_noise:	tON
+	|	
+;
+integ_qual:	ql_qual
+	|	ql_strvar
+;
+
+/*
+** ## DEFINE LINK link_name [(column list)] [WITH with_clause]
+**	Note that DEFINE LINK is a double reserved word.
+*/
+
+link:		deflnk_key ql_id link_opt ql_opt_with_clause
+;
+deflnk_key:	tDEF_LINK	/* Double keyword */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+link_opt:	/* Empty */
+	|	ql_lparen ql_idlist ql_rparen
+;
+
+/*
+** ## MODIFY table TO structure [UNIQUE] [ON name list] [WHERE density list] 
+** ## MODIFY table TO PRIORITY = <cache_priority>
+*/
+
+modify:		modify_key ql_id ql_to mod_type ql_opt_unique mod_keys
+		mod_opt_qual
+;
+modify_key:	tMODIFY
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+mod_type:	ql_with_list
+        |	ql_id
+	|	tRELOCATE
+		{
+		    db_key( $1.s );
+		}
+;
+mod_keys:	ql_on mod_keylist
+	|
+;
+mod_keylist:	modkey
+	|	mod_keylist ql_comma modkey
+;
+modkey:		ql_id
+	|	ql_id ql_colon ql_id
+;
+mod_opt_qual:	mod_qual
+	|
+;
+mod_qual: 	ql_where ql_with_list
+	|	ql_with ql_with_list
+;
+
+/* 
+** ## DEFINE PERMIT permission {, permission} [ON | OF | TO] table 
+** ##               [ (column list) ] [TO <name | ALL> ] [AT <name | ALL> ]
+** ##               [FROM time TO time] [ON day TO day] [WHERE qualification]
+*/
+
+permit:		defperm_key perm_list on_of_to ql_id perm_tl 
+			    who_place_time_day ql_wherequal
+;
+defperm_key:	tDEF_PERMIT	/* Double keyword */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+perm_list:	permlistelm 
+	|	perm_list ql_comma permlistelm
+;
+permlistelm:	tRETRIEVE 
+		{
+		    db_key( $1.s );
+		}
+	|	tAPPEND 
+		{
+		    db_key( $1.s );
+		}
+	|	tDELETE 
+		{
+		    db_key( $1.s );
+		}
+	|	tREPLACE 
+		{
+		    db_key( $1.s );
+		}
+	|	ql_all
+	|	ql_strvar
+;
+on_of_to:	ql_on
+	|	ql_of
+	|	ql_to
+;
+perm_tl:	ql_lparen ql_idlist ql_rparen	/* Can also be in variable */
+	|	/* No target list */
+;
+who_place_time_day:	ql_strvar		/* Spec is in a variable */
+	|		perm_who perm_place perm_time perm_day
+;
+perm_who:	ql_to ql_id
+	|	ql_to ql_all
+	|	ql_to ql_sconst
+	|	/* Default is all */
+;
+perm_place:	perm_at ql_id
+	|	perm_at ql_all
+	|	/* Default is all */
+;
+perm_at:	tAT
+		{
+		    db_key( $1.s );
+		}
+;
+perm_time:	ql_from ql_int ql_colon ql_int ql_to ql_int ql_colon ql_int
+	|	/* No time specified */
+;
+perm_day:	ql_on ql_id ql_to ql_id
+	|	/* No day specified */
+;
+
+/* ## PRINT table list */
+
+print:		print_key ql_idlist 
+		{
+		    er_write( E_EQ0076_grNOWUNSUPP, EQ_ERROR, 1, $1.s );
+		}
+;
+print_key:	tPRINT
+		{ 
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+/* ## RANGE OF name IS TABLE { , name IS TABLE } */
+
+range:		range_key ql_of range_clause
+;
+range_key:	tRANGE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+range_clause:	range_elm
+	|	range_clause ql_comma range_elm
+;
+range_elm:	ql_id ql_eq_is ql_id
+	|	ql_id ql_eq_is ql_id ql_period ql_id
+;
+
+/* ## RELOCATE table TO place */
+
+relocate:	relocate_key ql_id ql_to ql_id
+;
+relocate_key:	tRELOCATE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+/*
++* ## REGISTER [TABLE|VIEW] name
+**	    [(col_name = format [IS 'ext_format']
+**	    {,col_name = format [IS 'ext_format']})]
+**	    AS LINK|IMPORT
+**	    [FROM source]
+**	    [WITH with_clause]
+**
+** ## REGISTER [UNIQUE] INDEX indexname ON tablename 
+**	    [(col_name [ASC|DESC] {, col_name [ASC|DESC]})]
+**	    AS LINK|IMPORT
+**	    [FROM source]
+**	    [WITH with_clause]
+-*
+** Notes:
+** 1) These statements create an INGRES STAR link or import a
+**	non-SQL gateway data object.
+** 2) TABLE/VIEW and LINK/IMPORT are not reserved words.
+** 3) The col_name clause, FROM source clause and WITH clause are 
+**	mandatory on the REGISTER .. AS IMPORT commands but 
+**	optional on the REGISTER .. AS LINK commands.  We leave it to 
+**	the DBMS to enforce the syntax.
+** 4) 'source' may be a name, a variable or a string-constant.
+*/	
+
+register:	reg_head reg_opt_cols reg_as reg_opt_from 
+		ql_opt_with_clause
+;
+reg_head:	reg_xhead
+	|	reg_xhead ql_id
+		{
+		    if (   (STbcompare($1.s, 0, ERx("table"), 0, TRUE) != 0)
+			&& (STbcompare($1.s, 0, ERx("view"), 0, TRUE) != 0)
+		       )
+		    {
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+				  ERx("REGISTER"), ERx("TABLE") );
+		    }
+		}
+reg_xhead:	reg_word ql_id
+		{
+		    $$.s = $2.s;
+		}
+;
+reg_word:	tREGISTER
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+reg_opt_cols:	/* Empty */
+	|	ql_lparen reg_col_list ql_rparen
+;
+reg_col_list:	reg_col_spec
+	|	reg_col_list ql_comma reg_col_spec
+;
+reg_col_spec:	create_elm reg_opt_ext
+	|	ql_id
+;
+reg_opt_ext:	/* Empty */
+	|	ql_is ql_sconst
+;
+reg_as:		ql_as tNAME
+		{
+		    if (  (STbcompare($2.s, 0, ERx("import"), 0, TRUE) != 0)
+			&&(STbcompare($2.s, 0, ERx("link"), 0, TRUE) != 0) 
+		       )
+		    {
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $2.s,
+					ERx("REGISTER"), ERx("LINK") );
+		        db_key( ERx("link") );
+		    }
+		    else
+		    {
+			db_key( $2.s );
+		    }
+		}
+;
+reg_opt_from:	/* Empty */
+	|	ql_from ql_sconst
+	|	ql_from host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			db_var( DB_STRING, gr->gr_sym, gr->gr_id, (SYM *)0,
+				(char *)0, (char *)0 );
+			if (gr->gr_type != T_CHAR && gr->gr_type != T_UNDEF )
+			    er_write( E_EQ0067_grSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		    else
+		    {
+			db_key( gr->gr_id );
+		    }
+		}
+;
+
+register_ind:	reg_ind_head ql_id ql_on ql_id reg_ind_opt_cols
+		reg_as reg_opt_from ql_opt_with_clause
+;
+reg_ind_head: 	tREGISTER tUNIQUE tINDEX
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		    db_key( ERx("unique") );
+		    db_key( ERx("index") );
+		}
+	|	tREGISTER tINDEX
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		    db_key( ERx("index") );
+		}
+;
+reg_ind_opt_cols: /* Empty */
+	|	ql_lparen reg_ind_col_list ql_rparen
+;
+reg_ind_col_list: ql_id ql_order_opt_sort
+	|	reg_ind_col_list ql_comma ql_id ql_order_opt_sort
+;
+
+/*
++* ##	REMOVE [TABLE|VIEW|INDEX] objname
+-*
+** Notes:
+**	This rule cannot use tNAME to represent the optional TABLE or VIEW 
+**	because ql_id also derives from tNAME and this would present a 
+**	shift/reduce conflict.
+*/
+
+remove:		remove_key remove_obj_id
+;
+remove_key:	tREMOVE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+remove_obj_id:	ql_id ql_id
+		{
+		    if (   (STbcompare($1.s, 0, ERx("table"), 0, TRUE) != 0)
+			&& (STbcompare($1.s, 0, ERx("view"), 0, TRUE) != 0)
+		       )
+		    {
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+				    ERx("REMOVE"), ERx("TABLE") );
+		    }
+		}
+	|	reg_index ql_id
+	|	ql_id
+;
+reg_index:	tINDEX
+		{
+		    db_key( ERx("index") );
+		}
+;
+
+/* ## [REPEAT] REPLACE [session.]table (in target list) [WHERE qualification] */
+
+replace:	replace_key ql_id1 ql_in_tlist ql_wherequal	
+;
+replace_key:	tREPLACE	
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+	|	tREPEAT tREPLACE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sREPEAT, $2.s );
+		}
+;
+
+/* 
+** Retrieve from one table to another table - No I/O.
+**
+** ## [REPEAT] RETRIEVE [INTO | TO] table [UNIQUE] (in target list)
+** ##			[WHERE qualification]
+** ##                   [SORT [BY] sort list]
+** ##			[WITH with_clause]
+*/
+
+retrieve:	retrieve_key ret_into tup_unique ql_in_tlist ql_wherequal
+		  ql_sortclause ql_opt_with_clause
+;
+retrieve_key:	tRETRIEVE 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+	|	tREPEAT tRETRIEVE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sREPEAT, $2.s );
+		}
+;
+ret_into:	ret_noise ql_location	
+;
+ret_noise:	tINTO
+	|	tTO	
+	|	
+;
+/* Returns value that is used by cursor statements */
+ql_sortclause:	sort_key sort_by sortlist
+		{
+		    $$.i = 1;
+		}
+	|	/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+;
+sort_key:	tSORT 
+		{
+		    db_key( $1.s );
+		}
+;
+sort_by:	ql_by
+	|
+;
+sortlist:	sortobj
+	|	sortlist ql_comma sortobj
+;
+sortobj:	sortvar
+	|	sortvar ql_colon ql_id
+;
+sortvar:	ql_id
+	|	ql_id ql_period ql_id	/* Do not use attrib (because of ALL) */
+;
+
+/*
+** Tuple Retrieve Loop - With program I/O
+**
+** Statement: 	## [REPEAT] RETRIEVE [UNIQUE] ( var=ql_expr {, var=ql_expr} )
+**		##                   [WHERE qualification] [SORT [BY] sort list]
+**		## {
+**			User Code
+**		## }
+** Action:	Retrieve information about each row into user variables.
+** Generates:	IIwritedb( "retrieve (var = e.name, ...) where ..." );
+**		IIretinit();
+**		if (IIerrtest() != 0) goto IIret_end1;
+**	IIret_beg1:
+**		while ( IInextget() != 0 ) {
+**		    IIretdom( vardesc, var ); ...
+**		    if (IIerrtest() != 0) goto IIret_beg1;
+**		    User Code
+**		}
+**		IIflush();
+**	IIret_end1:
+*/
+
+retrieve_loop:	retloop_head retloop_block 
+		{
+		    /* Close retrieve loop */
+		    gen_loop( G_CLOSE, L_RETBEG, L_RETFLUSH,
+			lbl_current(LBL_RET), IINEXTGET, C_0, 0 );
+		    gen_call( IIFLUSH );
+		    gen_label( G_NOLOOP, L_RETEND, lbl_current(LBL_RET) );
+		    gr->gr_flag |= GR_NOSYNC;      /* No IIsync after this */
+		    gr->gr_flag &= ~GR_RETRIEVE;   /* Done with Ret block */
+		}
+;
+retloop_head:	retrieve_key tup_unique tup_tlist ql_wherequal tup_sortclause
+		{
+		    i4	cur_ret;
+
+		    cur_ret = lbl_next( LBL_RET );
+		    gr->gr_mode = LBLmRETLOOP;
+		    if (gr->gr_flag & GR_REPEAT)
+		    {
+			gr->gr_flag &= ~GR_REPEAT;
+			rep_close( IIRETINIT, NULL, FALSE );
+		    }
+		    else
+			db_close( IIRETINIT );
+		    gen_if_goto( IIERRTEST, C_NOTEQ, 0, L_RETEND, cur_ret );
+		    gen_label( G_LOOP, L_RETBEG, cur_ret );
+		    gen_loop( G_OPEN, L_RETBEG, L_RETFLUSH, cur_ret,
+			      gr->gr_func, C_NOTEQ, 0 );
+		    ret_close();
+		    gen_if_goto( IIERRTEST, C_NOTEQ, 0, L_RETBEG, cur_ret );
+		    gr->gr_flag &= ~GR_QUEL;
+		    gr->gr_flag |= GR_RETRIEVE;	   /* Prevent nesting Quel */
+		}
+;
+tup_unique: 	tUNIQUE
+		{
+		    db_key( $1.s );
+		}
+	|	/* No Unique clause */
+;
+tup_tlist:	ql_lparen tup_tlist1 ql_rparen	 
+		{
+		    gr->gr_func = IINEXTGET;
+		}
+	|	ql_lparen ql_out_param ql_rparen
+		{
+		    gr->gr_func = IITUPGET;
+		}
+;
+tup_tlist1:	tup_elm 
+	| 	tup_tlist1 ql_comma tup_elm
+;
+tup_elm:	tup_var ql_eq_ois ql_expr	 
+	|	tup_var ql_eq_ois tNULL
+		{
+		    db_key( $3.s );
+		}
+;
+tup_var:	tup_atsign host_var qlfm_opt_ind 
+		{
+		    ret_add( gr->gr_sym, gr->gr_id, gr->gr_nlsym, gr->gr_nlid,
+				(char *)0, 0 );
+		}
+;
+tup_atsign:	tATSIGN				/* Allow for a common error */
+		{
+		    er_write( E_EQ0065_grRETREPEAT, EQ_ERROR, 0 );
+		}
+	|
+;
+tup_sortclause:	tupsort_gen ql_sortclause
+		{
+		    gr->gr_flag &= ~GR_TUPSORT;
+		}
+;
+tupsort_gen:	/* Ensure deref'ed variable names are printed as sent */
+		{
+		    gr->gr_flag |= GR_TUPSORT;
+		}
+;
+retloop_block:	/* No retrieve block */
+	|	block
+;
+
+/* ## SAVE table UNTIL < stringvar | <name|number> number number > */
+
+save:		save_key ql_id save_until save_date
+	|	save_key ql_id 
+;
+save_key:	tSAVE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+save_until:	tUNTIL
+		{
+		    db_key( $1.s );
+		}
+;
+save_date:	ql_strvar		/* Date in single variable */
+	|	ql_id_int ql_int 
+		{
+		    /* Bug #6749 - Need a space for run-time */
+		    db_op(ERx(" "));
+		}
+		ql_int		/* Rest of rule here */
+;
+
+/* ## SAVEPOINT < name | number > */
+
+savepoint:	savept_key ql_id_int
+;
+savept_key:	tSAVEPOINT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+/* ## SET function_value [[ON] [argument] [WHERE qualification]] */
+
+set:		set_key ql_id set_specs
+;
+set_key:	tSET 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		    gr->gr_func = DB_STRING;
+		}
+;
+set_specs:	/* No set arguments */
+	|	set_on					/* Autocommit on */
+	|	set_on set_param mod_opt_qual		/* Lockmode on x with */
+	|	set_param mod_opt_qual
+	|	set_param ql_id				/* trace point dmf001 */
+	|	set_param ql_id	ql_id	/* user athorization session user */
+	|	set_param ql_id	ql_id ql_id		/* set transaction */
+	|	mod_qual				/* SET SESSION */
+;
+/* Returns values used by set_param */
+set_on:		ql_on
+		{
+		    gr->gr_func = DB_ID;		/* ON tablename */
+		} 
+;
+set_param:	ql_iconst
+	|	ql_sconst
+	|	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			db_var(gr->gr_func, gr->gr_sym, gr->gr_id, (SYM *)0, 
+				(char *)0, (char *)0);
+			if (gr->gr_type != T_CHAR && gr->gr_type != T_INT &&
+			     gr->gr_type != T_UNDEF )
+			    er_write( E_EQ0060_grINTSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		    else
+			db_key( gr->gr_id );
+		}
+;
+
+/* ## DEFINE VIEW name (target list) [WHERE qualification] */
+
+view:		defview_key ql_id view_tlist ql_wherequal
+;
+defview_key:	tDEF_VIEW	/* Double keyword */
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+view_tlist:	ql_in_tlist
+	|	ql_lparen ql_strvar ql_rparen
+;
+
+/* 
+** Quel utility rules - all rules must begin with 'ql_' 
+*/
+
+/* Quel target lists, expressions and pieces of Quel qualifications */
+
+/* ## [ WHERE < Quel qualification | stringvar > ] */
+
+/* Returns 1 iff there was a where clause in a string var.  For cursors */
+ql_wherequal:	ql_where ql_qual
+		{
+		    $$.i = 0;
+		}
+	|	ql_where ql_strvar
+		{
+		    $$.i = 1;
+		}
+	|	/* Where clauses are always optional */
+		{
+		    $$.i = 0;
+		}
+;
+
+/* Quel qualification */
+
+ql_qual:	ql_lparen ql_qual ql_rparen		  /* ( Qual ) */
+	|	ql_loguop ql_qual	  %prec tLOGUOP   /* NOT Qual */
+	|	ql_qual ql_logbop ql_qual %prec tLOGBOP   /* <AND | OR> */
+	|	ql_expr ql_relop ql_expr	/* Complex Quel expression */
+	|	ql_expr ql_is ql_null_not tNULL		  /* constant NULL */
+		{
+		    db_key( $4.s );
+		}
+;
+ql_relop:	ql_neqop			/* Equality operators (eg !=) */
+	|	ql_eqop				/* Equal (ie =) */
+	|	ql_bndop			/* Bounds operators (eg >=) */
+;
+ql_null_not:	/* no not */
+	|	ql_loguop
+;
+/*
+** ql_expr returns:
+**	0:	constant
+**	1:	table.column
+**	2:	table.variable
+**	3:	expression
+** These values are used by cursor declaration statements.
+*/
+ql_expr:	ql_attribfcn			/* Attribute [ function ] */
+		{
+		    $$.i = $1.i;		/* Not really an expression */
+		}
+	|	ql_xexpr			/* Really an expression */
+		{
+		    $$.i = 3;
+		}
+;
+ql_xexpr:	ql_aggregate			/* Aggregate [ function ] */
+	|	ql_expr ql_arbop ql_expr %prec tMULOP      /* e.aa * e.bb */
+	|	ql_expr ql_aruop ql_expr %prec tARUOP      /* e.aa + e.bb */
+	|	ql_aruop ql_expr	 %prec tUNARYOP	   /* -e.aa */
+	|	ql_lparen ql_expr ql_rparen		   /* ( e.aa + e.bb ) */
+	|	ql_idparen ql_expr ql_rparen		/* sin( e.degree ) */
+	|	ql_idparen ql_expr ql_comma ql_expr ql_rparen
+	|	ql_idparen ql_expr ql_comma ql_expr ql_comma ql_expr ql_rparen
+	|	ql_idparen ql_rparen			/* _bintim() */
+;
+ql_idparen:	ql_func ql_lparen
+;
+ql_func:	ql_id
+;
+
+/* 
+** Aggregate expressions:
+** aggrop( expr [ BY expr {, expr} ] [ WHERE qualification ] )
+**
+** Examples:
+**  SUM( e.salary )
+**  SUM( e.salary WHERE e.name != "xx" )
+**  AVG( e.age BY e.dept )
+**  AVG( e.age BY e.dept WHERE e.name != "xx" )
+**  AVG( e.age BY e.dept ONLY WHERE e.name != "xx" )
+*/
+
+ql_aggregate:	ql_agop ql_lparen ql_expr ql_agby ql_only ql_wherequal ql_rparen
+;
+ql_agop:	tAGOP
+		{
+		    db_key( $1.s );
+		}
+;
+ql_agby:	/* No aggregate BY list -  simple   aggregate */
+	|	ql_by ql_exprlist   	/* function aggregate */
+;
+ql_exprlist:	ql_expr
+	|	ql_exprlist ql_comma ql_expr
+;
+ql_only:	tNAME
+		{
+		    if (STbcompare($1.s, 0, ERx("only"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+						    ERx("WHERE"), ERx("ONLY") );
+		    db_key( $1.s );
+		}
+	|	/* EMPTY */
+;
+
+/* Quel attributes */
+
+/*
+** Return values for cursors only (returned via ql_expr to cursor declaration):
+**	0: constant
+**	1: table.column
+**	2: table.variable
+*/
+ql_attribfcn:	ql_nonupd_fcn
+		{
+		    $$.i = 0;
+		}
+	|	ql_attribute		/* Simple attribute - name.name */
+		{
+		    /* Note that gr_sym will be left around after second name */
+		    $$.i = gr->gr_sym ? 2 : 1;
+		}
+;
+ql_nonupd_fcn:	ql_constant
+	|	ql_value		/* Name (eg username) or variable */
+	|	ql_notrim		/* Notrim(var) */
+	|	ql_reparg		/* @variable */
+		{
+		    if (gr->gr_flag & GR_REPEAT)
+		    {
+			if (gr->gr_nlsym)
+			    rep_add(gr->gr_sym,gr->gr_id,gr->gr_nlsym,
+					gr->gr_nlid,(char *)0);
+			else
+			    rep_add( gr->gr_sym,gr->gr_id,(SYM *)0,
+					(char *)0,(char *)0 );
+		    }
+		}
+;
+
+/*
+** Return values used only by cursor statements:
+**	the name of the column (NULL for "all" or variable, as in t.all or
+**	t.variable).
+**
+** Range variables not allowed in REPLACE CURSOR statements.
+*/
+ql_attribute:	ql_atthead ql_id	/* id.id */
+		{
+		    $$.s = gr->gr_sym ? (char *)0 : $2.s;
+		    if (gr->gr_flag & GR_REPLCSR)
+			er_write( E_EQ0413_csRANGEREPL, EQ_ERROR, 3, $1.s,
+							$2.s, ecs_namecsr() );
+		}
+	|	ql_atthead ql_all	/* id.all */
+		{
+		    $$.s = (char *)0;
+		    if (gr->gr_flag & GR_REPLCSR)
+			er_write( E_EQ0413_csRANGEREPL, EQ_ERROR, 3, $1.s,
+							$2.s, ecs_namecsr() );
+		}
+;
+ql_atthead:	ql_id ql_period
+		{
+		    if (gr->gr_flag & GR_CURSOR)
+		    {
+			/*
+			** Variables aren't table names so we don't add them.
+			** Note that this can give us cursors w/o any table
+			** names.  This shouldn't cause any trouble.  Note
+			** that gr_sym will be pointing at the table name if
+			** it was specified by a variable.
+			*/
+			if (!gr->gr_sym && ((gr->gr_flag & GR_REPLCSR) == 0))
+			    ecs_addtab( NULL, gr->gr_id );
+		    }
+		}
+;
+
+/* Quel value represented by a word or any type variable */
+
+ql_value:	host_name_var qlfm_opt_ind
+		{
+		    if (gr->gr_sym)
+		    {
+			db_var( DB_REG, gr->gr_sym, gr->gr_id, gr->gr_nlsym,
+				gr->gr_nlid, (char *)0 );
+		    }
+		    else
+		    {
+			if (gr->gr_nlsym)	/* Ignore indicator */
+			    er_write( E_EQ0072_grNONULL, EQ_ERROR, 0 );
+			db_key( gr->gr_id );
+		    }
+		}		
+;
+
+/* Repeat query parameter - @variable */
+
+ql_reparg:	ql_atsign host_var qlfm_opt_ind
+		{
+		    db_var( DB_REG, gr->gr_sym, gr->gr_id, gr->gr_nlsym,
+			    gr->gr_nlid, (char *)0 );
+		}
+	|	ql_atsign ql_notrim
+;
+ql_atsign:	tATSIGN
+		{
+		    if (gr->gr_flag & GR_REPEAT)
+			rep_param();
+		    else
+			er_write( E_EQ0376_repARG, EQ_ERROR, 0 );
+		}
+;
+
+/* Quel NOTRIM( stringvar ) - Don't trim blanks off variable at runtime */
+
+ql_notrim:	tNOTRIM tLPAREN host_var qlfm_opt_ind tRPAREN
+		{
+		    if (gr->gr_type == T_CHAR)
+		    {
+			db_var( DB_NOTRIM, gr->gr_sym, gr->gr_id, gr->gr_nlsym,
+				gr->gr_nlid, (char *)0 );
+		    }
+		    else 
+		    {
+			if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0067_grSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+			db_key( gr->gr_id );
+		    }
+		}
+;
+
+
+/* Quel and Forms indicator variable rule */
+
+qlfm_opt_ind:	/* no indicator */
+		{
+		    gr->gr_nlsym = (SYM *)0;	/* Initialize state vars */
+		    gr->gr_nlid = (char *)0;
+		    gr->gr_nltype = T_NONE; 
+		}
+	|	qlfm_ind_colon host_var
+		{
+		    SYM		*tmpsym;
+		    char	*tmpid;
+		    i4		tmptype;
+		    /*
+		    ** Assign indicator info to correct gr_state location
+		    */
+		    tmpsym = gr->gr_nlsym;
+		    tmpid = gr->gr_nlid;
+		    tmptype = gr->gr_nltype;
+		    gr->gr_nlsym = gr->gr_sym;
+		    gr->gr_nlid = gr->gr_id;
+		    gr->gr_nltype = gr->gr_type;
+		    gr->gr_sym = tmpsym;
+		    gr->gr_id = tmpid;
+		    gr->gr_type = tmptype;
+		    if (gr->gr_nltype != T_UNDEF)	/* Don't cascade errs */
+		    {
+			if (gr->gr_nltype != T_INT
+					    || sym_g_dsize(gr->gr_nlsym) != 2)
+			    er_write( E_EQ0073_grINDVAR, EQ_ERROR, 1,
+								gr->gr_nlid );
+		    }
+		}
+;
+
+qlfm_ind_colon:	tCOLON
+		{
+		    /* 
+		    ** Save away variable information 
+		    */
+		    gr->gr_nlsym = gr->gr_sym;
+		    gr->gr_nlid = gr->gr_id;
+		    gr->gr_nltype = gr->gr_type;
+		}
+;
+		
+/* General Quel operator classes */
+
+ql_logbop:	tLOGBOP			/* Logical - AND | OR */
+		{
+		    db_key( $1.s );
+		}
+;
+ql_loguop:	tLOGUOP			/* Logical - NOT */
+		{
+		    db_key( $1.s );
+		}
+;
+ql_bndop:	tBNDOP			/* Bounds operator - '>', '<=' etc. */
+		{
+		    db_op( $1.s );
+		}
+;
+ql_aruop:	tARUOP			/* Arith unary - '-', '+' */
+		{
+		    db_op( $1.s );
+		}
+;
+ql_arbop:	tMULOP			/* Arith binary - '*', '/', '**' */
+		{
+		    db_op( $1.s );
+		}
+	|	tDIVOP
+		{
+		    db_op( $1.s );
+		}
+	|	tEXPOP
+		{
+		    db_op( $1.s );
+		}
+;
+ql_eqop:	tEQOP
+		{
+		    db_op( $1.s );
+		}
+;
+ql_neqop:	tNEQOP			/* [In] equality operator */
+		{
+		    db_op( ERx("!=") );
+		}
+;
+
+/* 
+** Quel Input target list (ie: for APPEND ) 
+** ( name = expression { , name = expression } )
+*/
+
+ql_in_tlist:	ql_lparen ql_in_tl ql_rparen
+	|	ql_lparen ql_in_param ql_rparen
+		{
+		    if (gr->gr_flag & GR_REPLCSR)
+			ecs_chkupd( NULL, NULL, NULL );		/* check csr */
+		}
+;
+ql_in_tl:	ql_in_elm
+	|	ql_in_tl ql_comma ql_in_elm
+;
+ql_in_elm:	ql_xid ql_eq_oisby ql_expr
+	|	ql_attribute
+	|	ql_xid ql_eq_ois tNULL
+		{
+		    db_key( $3.s );
+		}
+;
+ql_xid:		ql_id
+		{
+		    if (gr->gr_flag & GR_REPLCSR)
+			ecs_chkupd( NULL, $1.s, gr->gr_sym );
+		}
+;
+
+/*
+** Quel WITH clause - ql_with_clause, ql_opt_with_clause:
+**
+** Syntax: WITH elem {, elem}
+**
+**	where elem is:
+**		id   |   left = right
+**
+**	where right is:
+**		id | int | sconst | (id {, id})
+*/
+ql_opt_with_clause:
+		ql_with_clause
+	|	/* No WITH clause */
+;
+ql_with_clause:
+		ql_with ql_with_list
+;
+ql_with_list:	ql_with_elm
+	|	ql_with_list ql_comma ql_with_elm
+;
+
+/*
+** ql_with_elm:
+** 		left = [UNIQUE] 
+**		       id | string_const | INGRES| int
+**		       | (id [ASC|DESC]{, id [ASC|DESC]})
+**		on_error = ROLLBACK TRANSACTION|STATEMENT
+**		string_variable
+**		[NO]JOURNALING
+**		[NO]DUPLICATES
+**		[NO]UPDATE
+*/
+ql_with_elm:	ql_with_left ql_eqop ql_with_right	/* name = value */
+		{
+		    gr->gr_flag &= ~GR_CPYHNDDEF;
+		}
+	|	ql_id					/* nojournaling */
+;
+ql_with_left:	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_CHAR)
+			    db_var( DB_ID, gr->gr_sym, gr->gr_id, (SYM *)0,
+				    (char *)0, (char *)0 );
+			else
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    db_key( gr->gr_id );
+			}
+		    }
+		    else	/* No variable - just a name */
+		    {
+			if (   gr->gr_flag & GR_COPY_PROG
+			    && STbcompare(gr->gr_id, 0, ERx("copyhandler"), 0,
+				TRUE) == 0)
+			    gr->gr_flag |= GR_CPYHNDDEF;
+			db_key( gr->gr_id );
+		    }
+		}
+;
+ql_with_right:	tINTCONST
+		{
+		    db_key( $1.s );
+		    if (gr->gr_flag & GR_CPYHNDDEF)	/* Turned off above */
+		    {
+			eqtl_init(IISETSQL);
+			eqtl_add($1.s, (PTR)0, (PTR)0, (PTR)0, T_INT,
+				ERx("copyhandler"));
+			gr->gr_flag |= GR_SEENCPYHND;
+		    }
+		}
+	|	ql_opt_unique ql_sconst
+	|	ql_opt_unique ql_varname ql_opt_name
+	|	tINGRES
+		{
+		    db_sconst( $1.s );
+		}
+	|	ql_lparen ql_with_idlist ql_rparen
+;
+ql_varname:	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			db_var( DB_STRING, gr->gr_sym, gr->gr_id, (SYM *)0,
+				(char *)0, (char *)0 );
+			if (gr->gr_type != T_INT && gr->gr_type != T_CHAR &&
+						    gr->gr_type != T_UNDEF )
+			    er_write( E_EQ0060_grINTSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		    else
+		    {
+			db_key( gr->gr_id );
+			if (gr->gr_flag & GR_CPYHNDDEF)
+			{
+			    eqtl_init(IISETSQL);
+			    eqtl_add(gr->gr_id, (PTR)0, (PTR)0, (PTR)0, T_NONE,
+					ERx("copyhandler"));
+			    gr->gr_flag |= GR_SEENCPYHND;
+			}
+		    }
+		}
+;
+/* Allow for WITH ON_ERROR = ROLLBACK TRANSACTION|STATEMENT.
+** Have to add an optional tNAME in this manner to avoid shift/reduce
+** conflict with ql_opt_unique.
+*/
+ql_opt_name:	tNAME
+		{
+		    db_key( $1.s );
+		}
+	|	/* Empty */
+;
+ql_with_idlist:	ql_id ql_order_opt_sort
+	|	ql_with_idlist ql_comma ql_id ql_order_opt_sort
+;
+
+/* Quel single token utility productions and punctuation */
+
+ql_all:		tALL
+		{
+		    db_key( $1.s );
+		}
+;
+ql_by:	 	tBY 
+		{
+		    db_key( $1.s );
+		}
+;
+ql_colon:	tCOLON
+		{
+		    db_op( $1.s );
+		}
+;
+ql_comma:	tCOMMA
+		{
+		    db_op(ERx(", "));	/* Need a space for run-time */
+		}
+;
+ql_from:	tFROM
+		{
+		    db_key( $1.s );
+		}
+;
+ql_as:		tAS
+		{
+		    db_key( $1.s );
+		}
+;
+
+/*
+** ql_eq_is is used in rules where we document the use of "is",
+** but we generate "=".  (Therefore we can't complain on "=".)
+** e.g. RANGE, INDEX statements.
+*/
+ql_eq_is:	tIS
+		{
+		    db_op( ERx("=") );
+		}
+	|	tEQOP
+		{
+		    db_op( ERx("=") );
+		}
+;
+
+/*
+** ql_eq_ois is used in rules where we have always allowed "=" and "is",
+** but the documented use is "=".  We complain if they use "is".
+** e.g. RETRIEVE, DECLARE CURSOR, COPY, CREATE, MODIFY, CALL statements.
+** This rule is also used on "= null" assignments in RETRIEVE and DECL CSR.
+*/
+ql_eq_ois:	tIS 
+		{
+		    db_op( ERx("=") );
+		    er_write( E_EQ0071_grASSGNOP, EQ_ERROR, 1, $1.s );
+		}
+	|	tEQOP
+		{
+		    db_op( ERx("=") );
+		}
+;
+
+/*
+** ql_eq_oisby is used in rules where we have previously allowed "=",
+** "is" and "by".  We now complain if they use "is" or "by".
+** e.g. REPLACE [CURSOR], APPEND, RETRIEVE INTO, DEFINE {VIEW|PERMIT},
+** DECLARE CURSOR.
+** This rule is also used on "= null" assignments.
+*/
+ql_eq_oisby:	ql_eq_ois
+	|	tBY
+		{
+		    db_op( ERx("=") );
+		    er_write( E_EQ0071_grASSGNOP, EQ_ERROR, 1, $1.s );
+		}
+;
+
+/*
+** ql_isnoise is used in rules where we document that the word "is"
+** is optional.  We don't generate anything.
+** e.g. DEFINE INTEGRITY.
+*/
+ql_isnoise:	tIS
+	|	/* Nothing */
+;
+
+/*
+** ql_is is used in rules where "is" must be used.
+** e.g. where clauses involving the keyword NULL -- "WHERE a.b IS NULL".
+*/
+ql_is:		tIS
+		{
+		    db_key( $1.s );
+		}
+;
+ql_lparen:	tLPAREN	
+		{
+		    db_op( $1.s );
+		}
+;
+ql_null:	tNULL
+		{
+		    db_key( $1.s );
+		}
+;
+ql_of:		tOF
+		{
+		    db_key( $1.s );
+		}
+;
+ql_on:		tON 
+		{
+		    db_key( $1.s );
+		}
+;
+ql_period:	tPERIOD
+		{
+		    db_op( $1.s );
+		}
+;
+ql_rparen:	tRPAREN	
+		{
+		    db_op( $1.s );
+		}
+;
+ql_to:		tTO 
+		{
+		    db_key( $1.s );
+		}
+;
+ql_tonoise:	tTO	
+		{
+		    db_key( $1.s );
+		}
+	|	
+;
+ql_where:	tWHERE 
+		{
+		    db_key( $1.s );
+		}
+;
+ql_with:	tWITH 
+		{
+		    db_key( $1.s );
+		}
+;
+ql_opt_unique:	tUNIQUE
+		{
+		    db_key( $1.s );
+		}
+	|	/* Empty */
+;
+
+ql_order_opt_sort:
+		/* EMPTY */
+	|	ql_order_sort
+;
+ql_order_sort: tNAME
+		{
+		    if (  (STbcompare($1.s, 0, ERx("asc"), 0, TRUE) != 0)
+			&&(STbcompare($1.s, 0, ERx("desc"), 0, TRUE) != 0)
+		       )
+		    {
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+					ERx("REGISTER INDEX"), ERx("ASC") );
+			db_key( ERx("asc") );
+		    }
+		    else
+		    {
+			db_key( $1.s );
+		    }
+		}
+;
+		
+/* General Quel value or variable objects */
+
+/* Any kind of a Quel literal constant */
+ql_constant:	ql_iconst
+	|	ql_fconst
+	|	ql_hconst
+	|	ql_sconst
+	|	ql_dconst
+;
+
+/* Quel floating-point constant */
+ql_fconst:	tFLTCONST
+		{
+		    db_key( $1.s );
+		}
+;
+
+/* Quel decimal constant */
+ql_dconst:	tDECCONST
+		{
+		    db_key( $1.s );
+		}
+;
+
+/* Quel hex constant */
+ql_hconst:	tHEXCONST
+		{
+		    db_hexconst($1.s);
+		}
+;
+
+
+/* Quel identifier object - name or string variable. */
+
+ql_id1:		ql_id
+	|	ql_id ql_period ql_id
+;
+
+/* Returns name of id - if gr_sym wasn't set then this should be the name */
+ql_id:		host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_CHAR)
+			    db_var( DB_ID, gr->gr_sym, gr->gr_id, (SYM *)0,
+				    (char *)0, (char *)0 );
+			else
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    db_key( gr->gr_id );
+			}
+		    }
+		    else	/* No variable - just a name */
+		    {
+			/* If tuple sort - send same name as used in tlist */
+			if (gr->gr_flag & GR_TUPSORT)
+			    db_attname( gr->gr_id, 0 );
+			else
+			    db_key( gr->gr_id );
+		    }
+		    $$.s = gr->gr_id;		/* for cursor rules */
+		}
+;
+
+/* Quel identifier list - name {, name} */
+
+ql_idlist:	ql_id
+	|	ql_idlist ql_comma ql_id
+;
+
+/* Quel integer constant */
+
+ql_iconst:	tINTCONST
+		{
+		    db_key( $1.s );
+		}
+;
+
+/* Quel integer constant or variable */
+
+ql_int:		ql_iconst
+	|	host_name_var
+		{
+		    if (gr->gr_sym && gr->gr_type == T_INT)
+			db_var( DB_STRING, gr->gr_sym, gr->gr_id, (SYM *)0,
+				(char *)0, (char *)0 );
+		    else
+		    {
+			if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0059_grINT, EQ_ERROR, 1, gr->gr_id );
+			db_key( gr->gr_id );
+		    }
+		}
+;
+
+/* Quel integer list - integer {, integer} */
+
+ql_intlist:	ql_int
+	|	ql_intlist ql_comma ql_int
+;
+
+/* Quel string constant sent as a constant */
+
+ql_sconst: 	tSCONST 
+		{
+		    db_sconst( $1.s );
+		}
+;
+
+/* Quel integer/string constant or variable sent as a keyword */
+
+ql_id_int:	ql_iconst
+	|	tSCONST 
+		{
+		    db_key( $1.s );
+		}
+	|	host_name_var
+		{
+		    i4		db_type;
+
+		    if (gr->gr_sym)
+		    {
+			db_type = gr->gr_type == T_CHAR ? DB_ID : DB_STRING;
+			db_var( db_type, gr->gr_sym, gr->gr_id, (SYM *)0,
+				(char *)0, (char *)0 );
+			if (gr->gr_type != T_INT && gr->gr_type != T_CHAR &&
+			     gr->gr_type != T_UNDEF )
+			    er_write( E_EQ0060_grINTSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		    else
+			db_key( gr->gr_id );
+		}
+;
+
+/* Quel string variable (usually replaces target list or qualification) */
+
+ql_strvar: 	host_name_var
+		{
+		    if (gr->gr_sym && gr->gr_type == T_CHAR)
+			db_var( DB_ID, gr->gr_sym, gr->gr_id, (SYM *)0,
+				(char *)0, (char *)0 );
+		    else
+		    {
+			if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0064_grQRSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+			db_key( gr->gr_id );
+		    }
+		}
+;
+
+/*
+** Equel Statements - Not just sent as strings to the database, but that
+** 		      interact with Libq.
+*/
+
+/* 
+** Statement:	## CALL system (name = val, name = val)
+** Action:	Call another system from within EQUEL.
+** Generates:	IIutsys( IIutPROG, system, NULL );
+**		IIutsys( IIutARG, name, value ); ...
+**		IIutsys( IIutEXE, NULL, NULL );
+*/
+
+call:		call_head call_prog call_tlist
+		{
+		    arg_int_add( IIutEXE );
+		    arg_str_add( ARG_CHAR, (char *)0 );
+		    arg_str_add( ARG_CHAR, (char *)0 );
+		    gen_call( IIUTSYS );
+		}
+call_head:	tCALL 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    arg_int_add( IIutPROG );
+		}
+;
+call_prog:	call_prog_args
+		{
+		    arg_str_add( ARG_CHAR, (char *)0 );
+		    gen_call( IIUTSYS );
+		}
+;
+call_prog_args:	fm_string
+	|	tINGRES
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+call_tlist:	call_lparen call_arglist tRPAREN 
+;
+call_lparen:	tLPAREN
+		{
+		    arg_int_add( IIutARG );
+		}
+;
+call_arglist:	call_elm
+	|	call_arglist call_comma call_elm
+;
+call_elm:	call_left fm_is fm_string
+		{
+		    gen_call( IIUTSYS );
+		}
+;
+call_left:	fm_string
+	|	tPARAM
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+	|	tCOMMAND
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+call_comma:	tCOMMA
+		{
+		    arg_int_add( IIutARG );
+		}
+;
+
+
+/* 
+** Statement:	## ENDRETRIEVE
+** Action:	Break out of retrieve loop, ending any other nested loops.
+** Generates:	IIbreak();
+**		goto IIret_end1;
+** Note:	May also generate breakout code of active Equel loops.
+*/
+
+endretrieve:	tENDRETRIEVE
+		{
+		    i4	ret_no;
+
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    if ((ret_no = lbl_gen(LBLmRETLOOP, TRUE)) == LBL_NOLEV)
+			er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2, $1.s,
+							    ERx("RETRIEVE") );
+		    else
+		    {
+			gen_call( IIBREAK );
+			gen_goto( G_IF, L_RETEND, 
+				  lbl_value(LBLmRETLOOP, ret_no) );
+		    }
+		}
+;
+
+/* 
+** Statement:	## ENDLOOP
+** Action:	End any Equel loop, other than a Display loop.
+** Generates:	[ Required loop breakout calls, ]
+**		goto label;
+*/
+
+endloop:	tENDLOOP
+		{
+		    i4	stop, stop_num, stop_mode;
+
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    stop = lbl_gen(LBLmRETLOOP|LBLmFORMDATA|LBLmTBLOOP, TRUE);
+		    if (stop != LBL_NOLEV)
+		    {
+			stop_mode = lbl_get_mode( stop );
+			stop_num = lbl_value( stop_mode, stop );
+
+			switch ( stop_mode )
+			{
+			  case LBLmRETLOOP:
+			    gen_call( IIBREAK );
+			    gen_goto( G_IF, L_RETEND, stop_num );
+			    break;
+
+			  case LBLmFORMDATA:
+			    gen_goto( G_IF, L_FDEND, stop_num );
+			    break;
+
+			  case LBLmTBUNLD:
+			  case LBLmTBDATA:
+			    gen_goto( G_IF, L_TBEND, stop_num );
+			    lbl_used( LBL_TBL );
+			    break;
+			}
+		    }
+		    else
+			er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2, $1.s,
+						    ERx("RETRIEVE/DISPLAY") );
+		}
+;
+
+/*
+** Statement:	## EXIT
+** Action:	Exit database.
+** Generates:	IIexit();
+*/
+
+exit:		tEXIT
+		{ 
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    gen_call( IIEXIT );
+		}
+;
+
+/*
+** Statement:	## IIPRINTF( string {, varying arg} )
+** Action:	Internal call to QAprintf for testing.
+** Generates:	QAprintf( string, args ... );
+*/
+
+iiprintf:	iiprintf_key iiprintf_args
+		{
+		    gen_call( QAPRINTF );
+		}
+;
+iiprintf_key:	tIIPRINTF
+		{ 
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		}
+;
+iiprintf_args:	tLPAREN iiprintf_list tRPAREN
+;
+iiprintf_list:	iiprintf_elm
+	|	iiprintf_list tCOMMA iiprintf_elm
+;
+iiprintf_elm:	host_name_var
+		{
+		    if (gr->gr_sym)
+			arg_var_add( gr->gr_sym, gr->gr_id );
+		    else
+			arg_str_add( ARG_CHAR, gr->gr_id );
+		}
+	|	fm_iconst
+		{
+		    arg_str_add( ARG_INT, $1.s );
+		}
+	|	fm_fconst
+		{
+		    arg_str_add( ARG_FLOAT, $1.s );
+		}
+	|	fm_dconst
+		{
+		    arg_str_add( ARG_PACK, $1.s );
+		}
+	|	fm_sconst
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+
+/*
+** Statement:	## INGRES { name }+
+** Action:	Open database.
+** Generates:	IIingopen( lang, args, ..., null );
+*/
+
+ingres:		ingres_key fm_string fm_varstrings
+		{
+		    gen_call( IIINGOPEN );
+		}
+;
+ingres_key:	tINGRES
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    arg_int_add( eq->eq_lang );
+		}
+;
+
+/* 
+** Statement:	## INQUIRE_EQUEL ( form output list )
+** Action:	Inquire about Libq information.
+** Generates:   IIeqinq( vardesc, var, object ); ...
+*/
+
+inquire_equel:	inqeq_key form_out_tl 
+;
+inqeq_key:	tINQ_EQUEL
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    gr->gr_func = IIEQINQ;
+		}
+;
+
+/* 
+** Statement:	## SET_EQUEL ( form input list )
+** Action:	Set runtime information with user data.
+** Generates:	IIeqset( object, valdesc, val ); 
+*/
+
+set_equel:	seteq_key form_in_tl 
+;
+seteq_key:	tSET_EQUEL
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sLIBQ, $1.s );
+		    gr->gr_func = IIEQSET;
+		}
+;
+
+/*
+** CURSOR statements:
+**
+** Statement:	## DECLARE CURSOR csr_name FOR [REPEAT]
+**		   RETRIEVE [UNIQUE] (target_list) [WHERE condition]
+**		   [SORT [BY] colname [:sortorder] {, colname [:sortorder]}]
+**		   [FOR [DEFERRED|DIRECT] UPDATE [OF (column_list)]]
+** Action:	Declare a cursor.
+** Generates:	Nothing.
+*/
+csr_declare:	csr_decl_head csr_decl_body
+		{
+		    db_send();			/* flush query to cursor */
+		    ecs_query( NULL, ECS_STOP_QUERY );	/* stop saving query */
+		    if (gr->gr_flag & GR_REPEAT)
+		    {
+			rep_close( IICSQUERY, ecs_id_curcsr(), FALSE );
+		      /* rep_close changed the output state. */
+			ecs_query( NULL, ECS_END_QUERY ); 	/* end query */
+		    }
+		}
+;
+
+csr_decl_head:	csr_decl_key csr_name
+		{
+		    ecs_declcsr( $2.s, gr->gr_sym );   /* sets current cursor */
+		    ecs_query( NULL, ECS_START_QUERY );	/* start saving query */
+		}
+;
+
+csr_decl_key:	tDEC_CURSOR
+		{
+		    gr->gr_flag |= GR_CURSOR|GR_DECLCSR;
+		    gr_mechanism( GR_EQSTMT, GR_sCURSOR, $1.s );
+		    /* $$.s = $1.s; */
+		}
+;
+
+csr_decl_body:	csr_decl_repeat csr_decl_retrieve csr_in_tlist ql_wherequal
+		    csr_decl_sort csr_decl_update
+		{
+		    if ($4.i)
+		    {
+			/*
+			** If the where clause is in a variable, then the
+			** cursor is updatable.  Additionally, if there wasn't
+			** an update clause, then pretend we saw
+			** "for update of (string_var)" since one may have been
+			** tacked onto the end of the where-variable.
+			*/
+			ecs_csrset( NULL, ECS_UPDATE|ECS_WHERE );
+			switch ($6.i)
+			{
+			  case 1:	/* Update clause, but no update list */
+			    break;
+			  case 0:	/* No update clause */
+			    ecs_csrset( NULL, ECS_UPDVAR );
+			    /* FALL THROUGH! */
+			  case 2:	/* Update clause with update list */
+			    ecs_fixupd( NULL );
+			    break;
+			}
+		    } else if ($6.i == 2)
+			ecs_fixupd( NULL );
+		}
+;
+
+csr_decl_sort:	ql_sortclause
+		{
+		    if ($1.i)
+			ecs_csrset( NULL, ECS_SORTED );
+		}
+
+csr_decl_retrieve:
+		tRETRIEVE
+		{
+		    db_key( $1.s );
+		}
+	|	tRETRIEVE tUNIQUE
+		{
+		    db_key( $1.s );
+		    db_key( $2.s );
+		    ecs_csrset( NULL, ECS_UNIQUE );
+		}
+
+csr_decl_repeat:
+		tFOR
+	|	tFOR tREPEAT
+		{
+		    ecs_csrset( NULL, ECS_REPEAT );
+		    gr->gr_flag |= GR_REPEAT;
+		    rep_begin( ERx("repeat"), ecs_id_curcsr() );
+		}
+;
+
+/*
+** Returns:
+**	0:	No update clause
+**	1:	Update clause, but no update list
+**	2:	Update clause with update list
+*/
+csr_decl_update:
+		/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+	|	csr_decl_for_update csr_decl_upd_list
+		{
+		    ecs_csrset( NULL, $1.i );
+		    $$.i = $2.i;
+		}
+;
+
+csr_decl_for_update:
+		csr_decl_for_key csr_decl_upd_type
+		{
+		    $$.i = $2.i;
+		}
+;
+
+csr_decl_for_key:
+		tFOR
+		{
+		    db_key( $1.s );
+		}
+;
+
+/*
+** UPDATE types:	"UPDATE", "DIRECT UPDATE", or "DEFERRED UPDATE"
+** Default:		"DEFERRED UPDATE"
+*/
+csr_decl_upd_type:
+		tNAME
+		{
+		    if (STbcompare($1.s, 0, ERx("update"), 0, TRUE) != 0)
+		    {
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+					ERx("DECLARE CURSOR"), ERx("UPDATE") );
+			db_key( ERx("update") );
+		    } else
+			db_key( $1.s );
+		    $$.i = ECS_UPDATE;
+		}
+	|	tNAME tNAME
+		{
+		    if (STbcompare($1.s, 0, ERx("direct"), 0, TRUE) == 0)
+		    {
+			$$.i = ECS_UPDATE|ECS_DIRECTU;
+			db_key( $1.s );
+		    } else if (!STbcompare($1.s, 0, ERx("deferred"), 0, TRUE))
+		    {
+			$$.i = ECS_UPDATE|ECS_DEFERRU;
+			db_key( $1.s );
+		    } else
+		    {
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+				    ERx("DECLARE CURSOR"), ERx("DEFERRED") );
+			$$.i = ECS_UPDATE|ECS_DEFERRU;
+			db_key( ERx("deferred") );
+		    }
+		    if (STbcompare($2.s, 0, ERx("update"), 0, TRUE))
+		    {
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $2.s,
+				    ERx("DECLARE CURSOR"), ERx("UPDATE") );
+			db_key( ERx("update") );
+		    } else
+			db_key( $2.s );
+		}
+;
+
+/* Returns 2 if there was an update list, else 1. */
+csr_decl_upd_list:
+		/* EMPTY */
+		{
+		    $$.i = 1;
+		}
+	|	ql_of ql_lparen csr_upd_col_list ql_rparen
+		{
+		    $$.i = 2;
+		}
+;
+
+csr_upd_col_list:
+		csr_upd_col_name
+	|	csr_upd_col_list ql_comma csr_upd_col_name
+;
+
+csr_upd_col_name:
+		csr_xupd_col_name
+	|	ql_atthead csr_xupd_col_name
+;
+csr_xupd_col_name:
+		ql_id
+		{
+		    i4		stat;		/* status of this column */
+		    i4		has_var;	/* csr had a var in tgt list? */
+
+		    /*
+		    ** Variables in the update list are always allowed;
+		    ** they always match any name in the target list.
+		    */
+		    if (gr->gr_sym)
+		    {
+		      /* Note that the cursor has a var in the update list. */
+			ecs_csrset( NULL, ECS_UPDVAR );
+		    } else	/* Column is just a plain name. */
+		    {
+			has_var =
+			   ecs_colupd( NULL, ERx(""),
+					    ECS_CHK|ECS_ISWILD) & ECS_EXISTS;
+			stat = ecs_colupd( NULL, $1.s, ECS_CHK );
+
+		      /* Column not mentioned in target list? */
+			if (!(stat & ECS_EXISTS))
+			{
+#if 0
+			  /* No vars in target list means an error. */
+			    if (!has_var)
+				er_write( E_EQ0406_csUPDXIST, EQ_ERROR, 2,
+							$1.s, ecs_namecsr() );
+#endif
+			  /* Add it in any case. */
+			    _VOID_ ecs_colupd( NULL, $1.s, ECS_ADD|ECS_UPD );
+			}
+#if 0
+			else if (stat & ECS_EXPR)
+			    er_write( E_EQ0403_csUPDEXPR, EQ_ERROR, 2, $1.s,
+							ecs_namecsr() );
+			else if (stat & ECS_MANY)
+			    er_write( E_EQ0404_csUPDMANY, EQ_ERROR, 2, $1.s,
+							ecs_namecsr() );
+			else if (stat & ECS_CONSTANT)
+			    er_write( E_EQ0405_csUPDCONST, EQ_ERROR, 2, $1.s,
+							ecs_namecsr() );
+#endif
+			else
+			    _VOID_ ecs_colupd( NULL, $1.s, ECS_CHK|ECS_UPD );
+		    }
+		}
+	|	ql_all
+		{
+		    er_write( E_EQ0411_csUPDALL, EQ_ERROR, 1, ecs_namecsr() );
+		}
+;
+
+/* csr_name - Cursor name in name form or string constant */
+csr_name:	tSCONST
+		{
+		    $$.s = $1.s;
+		    gr->gr_xsym = (SYM *)0;
+		}
+	|	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type != T_CHAR) 
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0067_grSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+			    gr->gr_sym = (SYM *)0;
+			}
+		    }
+		    /* xsym used by csr_open rule */
+		    gr->gr_xsym = gr->gr_sym;
+		    $$.s = gr->gr_id;
+		}
+;
+
+/* 
+** Cursor target list:
+**	( elm {, elm} )
+** where elm is
+**	id.id | id.all | host_string_var | name = expression
+*/
+
+csr_in_tlist:	ql_lparen csr_in_tl ql_rparen
+;
+csr_in_tl:	csr_in_elm
+	|	csr_in_tl ql_comma csr_in_elm
+;
+
+/*
+** Note that ql_expr returns:
+**	0:	constant
+**	1:	table.column
+**	2:	table.variable
+**	3:	expression
+** In either case (1) or (2), "table" could have been in a variable,
+** but that's already been taken care of.
+*/
+csr_in_elm:	ql_id ql_eq_oisby ql_expr
+		{
+		    switch ($3.i)
+		    {
+		      case 0:
+			_VOID_ ecs_colupd( NULL, $1.s, ECS_ADD|ECS_CONSTANT );
+			break;
+		      case 1:
+			_VOID_ ecs_colupd( NULL, $1.s, ECS_ADD );
+			break;
+		      case 2:
+			_VOID_ ecs_colupd( NULL, ERx(""), ECS_ADD|ECS_ISWILD );
+			break;
+		      default:
+			_VOID_ ecs_colupd( NULL, $1.s, ECS_ADD|ECS_EXPR );
+			break;
+		    }
+		}
+	|	ql_attribute
+		{
+		    /*
+		    ** "id.all" is allowed, but is like a variable replacing
+		    ** a portion of the target list.
+		    */
+		    if ($1.s)
+			_VOID_ ecs_colupd( NULL, $1.s, ECS_ADD );
+		    else
+			_VOID_ ecs_colupd( NULL, ERx(""), ECS_ADD|ECS_ISWILD );
+		}
+	|	ql_strvar
+		{
+		    _VOID_ ecs_colupd( NULL, ERx(""), ECS_ADD|ECS_ISWILD );
+		}
+	|	ql_id ql_eq_ois tNULL
+		{
+		    db_key( $3.s );
+		    _VOID_ ecs_colupd( NULL, $1.s, ECS_ADD|ECS_CONSTANT );
+		}
+;
+
+/*
+** Statement:	## OPEN CURSOR cursor-name [FOR READONLY]
+** Action:	Open a pre-declared cursor at run-time, and send it
+**		the stored query.
+** Generates:	if (IIcsOpen(cursor_name, number, number) != 0) {
+**		    IIwritedb( the-declare-text );
+**		    [IIwritedb( " for readonly " );]
+**		    IIcsQuery();
+**		}
+*/
+
+csr_open:	csr_openkey csr_name csr_readonly
+		{
+		    ecs_open( $2.s, gr->gr_id, gr->gr_sym, gr->gr_xsym?TRUE:FALSE );
+		    gr->gr_xsym = (SYM *)0;	/* Borrowed from gr_nlsym */
+		}
+;
+
+csr_openkey:	tOPN_CURSOR
+		{
+		    gr->gr_flag |= GR_CURSOR;
+		    gr_mechanism( GR_EQSTMT, GR_sCURSOR, $1.s );
+		}
+;
+
+csr_readonly:	/* EMPTY */
+		{
+		    gr->gr_id = (char *)0;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	tFOR tNAME
+		{
+		    if (STbcompare($2.s, 0, ERx("readonly"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $2.s,
+					ERx("OPEN CURSOR"), ERx("READONLY") );
+		    gr->gr_id = ERx(" for readonly ");
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	host_name_var
+		{
+		    if (!gr->gr_sym || gr->gr_type != T_CHAR)
+		    {
+			if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0064_grQRSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		}
+;
+
+/*
+** Statement:	## RETRIEVE CURSOR csr_name (target_list)
+** Action:	Fetch a row from the named cursor.
+** Generates:	if (IIcsRetrieve(cursor_name, number, number) != 0) {
+**		    IIcsGet( is_var, type, length, var ); ...
+**		    IIcsERetrieve();
+**		}
+*/
+
+csr_retrieve:	csr_rethead csr_ret_tlist
+		{
+		    ecs_eretrieve( NULL, 0 );	/* Didn't use an SQLDA! */
+		}
+;
+
+csr_rethead:	csr_retkey csr_name
+		{
+		    ecs_retrieve( $2.s, gr->gr_sym != (SYM *)0, 0, 0,
+					(SYM *) NULL, (char *) NULL );
+		    gr->gr_func = IICSRETRIEVE;
+		}
+;
+
+csr_retkey:	tRET_CURSOR
+		{
+		    gr->gr_flag |= GR_CURSOR;
+		    gr_mechanism( GR_EQSTMT, GR_sCURSOR, $1.s );
+		}
+;
+
+/* 
+** Cursor retrieve target list
+**	( host_var {, host_var} )
+**
+** Param retrieves use fm_out_param (host grammar must deal with this)
+** because it's just what we want, even though this has nothing to do
+** with the forms system.
+*/
+
+csr_ret_tlist:	tLPAREN csr_ret_tl tRPAREN
+	|	tLPAREN fm_out_param tRPAREN
+;
+csr_ret_tl:	cs_ret_elm
+	|	csr_ret_tl tCOMMA cs_ret_elm
+;
+cs_ret_elm:	host_var qlfm_opt_ind
+		{
+		    if (gr->gr_sym)
+		    {
+			ecs_get( gr->gr_id, gr->gr_sym, gr->gr_type,
+				 gr->gr_nlid, gr->gr_nlsym, (char *)0 );
+		    }
+		}
+;
+
+/*
+** Statement:	## REPLACE CURSOR csr_name (target_list)
+** Action:	Replace the current row of the named cursor.
+** Generates:	IIcsReplace(cursor_name, number, number);
+**		IIwritedb( text and variables ); ...
+**		IIcsEReplace();
+*/
+csr_replace:	csr_rephead ql_in_tlist
+		{
+		    ecs_replace( FALSE, NULL, FALSE );
+		}
+;
+
+csr_rephead:	csr_replkey csr_name
+		{
+		    ecs_replace( TRUE, $2.s, gr->gr_sym != (SYM *)0 );
+		    gr->gr_flag |= GR_REPLCSR;
+		}
+;
+
+csr_replkey:	tREP_CURSOR
+		{
+		    gr->gr_flag |= GR_CURSOR;
+		    gr_mechanism( GR_EQSTMT, GR_sCURSOR, $1.s );
+		}
+;
+
+/*
+** Statement:	## DELETE CURSOR csr_name
+** Action:	Delete the current row of the named cursor.
+** Generates:	IIcsDelete(cursor_name, number, number);
+*/
+
+csr_delete:	csr_delkey csr_name
+		{
+		    ecs_delete( $2.s, (char *)0, gr->gr_sym != (SYM *)0 );
+		}
+;
+
+csr_delkey:	tDEL_CURSOR
+		{
+		    gr->gr_flag |= GR_CURSOR;
+		    gr_mechanism( GR_EQSTMT, GR_sCURSOR, $1.s );
+		}
+;
+
+/*
+** Statement:	## CLOSE CURSOR csr_name
+** Action:	Close the named cursor.
+** Generates:	IIcsClose(cursor_name, number, number);
+*/
+
+csr_close:	csr_closekey csr_name
+		{
+		    ecs_close( $2.s, gr->gr_sym != (SYM *)0 );
+		}
+;
+
+csr_closekey:	tCLS_CURSOR
+		{
+		    gr->gr_flag |= GR_CURSOR;
+		    gr_mechanism( GR_EQSTMT, GR_sCURSOR, $1.s );
+		}
+;
+
+/*
+** Equel Forms Statments - These statements all get mapped to procedure calls
+** 			   in the Forms Runtime library.
+*/
+
+/* 
+** Statement:	## ADDFORM [ framepointer | filename ] 
+** Action:	Create form from user's compiled form.
+** Generates:	IIaddform( argument );
+** Note:	Most expect an external (FRAME *), but a filename is allowed.
+**		Binary filenames must be after EQ_ADD_FNAME is defined.
+*/
+
+addform:	addform_key addform_arg
+		{
+		    gen_call( IIADDFORM );
+		    gr->gr_flag &= ~GR_NOINDIR;
+		}
+;
+addform_key:	tADDFORM
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    gr->gr_flag |= GR_NOINDIR;
+		}
+;
+addform_arg:	host_var		   /* Integer pointer or string */
+		{
+		    if (gr->gr_sym)
+		    {
+			arg_var_add( gr->gr_sym, gr->gr_id );
+			if (gr->gr_type == T_CHAR)
+			{
+# ifndef EQ_ADD_FNAME
+			    er_write( E_EQ0061_grINTVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+# endif /* EQ_ADD_FNAME */
+			}
+			else if (gr->gr_type != T_INT)
+			    er_write( E_EQ0061_grINTVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }	
+		    else 		/* Error already sent if not variable */
+			arg_str_add( ARG_CHAR, gr->gr_id );
+		}
+	|	tSCONST
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+# ifndef EQ_ADD_FNAME
+		    er_write( E_EQ0061_grINTVAR, EQ_ERROR, 1, $1.s );
+# endif /* EQ_ADD_FNAME */
+		}
+;
+
+/* 
+** Statement:	## BREAKDISPLAY
+** Action:	Jump out of a display loop.
+** Generates:	[ Required loop breakout calls, ]
+**		goto IIfd_exit1;
+*/
+
+breakdisplay:	tBREAKDISPLAY
+		{
+		    i4	form_no;
+
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    if ((form_no = lbl_gen(LBLmDISPLAY, TRUE)) != LBL_NOLEV)
+			gen_goto( G_IF, L_FDEND, 
+				  lbl_value(LBLmDISPLAY, form_no) );
+		    else
+			er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2, $1.s,
+							    ERx("DISPLAY") );
+		}
+;
+
+/* 
+** Statement:	## CLEAR  < SCREEN  | FIELD <ALL | name list> >
+** Action:	Clear screen, all fields or specified field.
+** Generates:	IIclrscr(); or IIclrflds(); or
+**		IIclrfield( name ); ...
+*/
+
+clear:		tCLEAR tSCREEN
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    gen_call( IICLRSCR );
+		}
+	|	clear_field tALL
+		{
+		    gen_call( IICLRFLDS );
+		}
+	|	clear_field fm_stringlist
+;
+clear_field:	tCLEAR tFIELD
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    gr->gr_func = IIFLDCLEAR;
+		}
+;
+
+/*
+** Display Loop - 
+**
+**	The Display loop is made up of the initial DISPLAY call, INITIALIZING 
+**	the form, ACTIVATE statements, and FINALIZING the form.
+**	Example:
+**
+**		DISPLAY form query
+**		INITIALIZE ( fld = 1 )
+**		ACTIVATE MENUITEM "Help":
+**		{
+**		    HELPFILE "subject" "file.hlp"
+**		}
+**		ACTIVATE MENUITEM "End", COMMAND CONTROL_Z:
+**		{
+**		    BREAKDISPLAY
+**		}
+**		FINALIZE ( var = fld )
+**
+** Generates for complete Display Loop:
+**
+**	DISPLAY    -	if (IIdispfrm(form, mode) == 0) goto IIfd_exit1;
+**							-- or IInestmu
+**			goto IImu_init1;
+**		IIfd_init1:
+**	INITIALIZE -	if (IIfsetio(0) == 0) goto IIfd_exit1;
+**			Form Input Calls
+**		IIfd_begin1:
+**			while ( IIrunfrm() != 0 ) {	-- or IIrunnest()
+**	ACTIVATE   - 	    if (IIretval() == 1) {
+**				Activate 1
+**			    }
+**			    else if (IIretval() == 2) {
+**				Activate 2
+**			    }
+**			    else {
+**				goto IIfd_exit1;
+**			    }
+**	FINALIZE   -    }
+**		IIfd_final1:
+**			if (IIchkfrm() == 0) goto IIf_begin1;
+**			Form Output Calls.
+**			goto IIfd_exit1;
+**	This rule  -
+**		IImu_init1:
+**			Activate calls and menu building.
+**			goto IIfd_init1;
+**		IIfd_exit1:
+**			IIendfrm();	-- or IIendnest()
+*/
+
+/*
+** Final production of the DISPLAY block.
+** Generates:	IImu_init1:
+**			Activate calls and menu building.
+**			goto IIfd_init1;
+**		IIfd_exit1:
+**			IIendfrm();	-- or IIendnest()
+** NOTE: disp_init uses the return value from disp_head!
+*/
+
+display:	disp_head disp_init disp_active disp_final
+		{
+		    i4	cur_form = lbl_current( LBL_FORM );
+
+		    gen_label( G_NOLOOP, L_MUINIT, cur_form );
+		    act_close( cur_form );
+		    gen_goto( G_TERM, L_FDINIT, cur_form );
+		    gen_label( G_NOLOOP, L_FDEND, cur_form );
+		    if ($1.i)				/* display submenu */
+			gen_call( IIENDNEST );
+		    else				/* normal display */
+			gen_call( IIENDFRM );
+		    lbl_exit_block();
+		}
+;
+
+/* 
+** Statement: 	## DISPLAY form [ mode ] [ WITH option = value 
+**              ##	[(suboption=subvalue {, suboption=subvalue})]]
+**	 |
+** 		## DISPLAY [ SUBMENU ] form [ mode ] 
+**
+** Action: 	Display a form or submenu with the user's mode.
+** Generates:	if (IIdispfrm(form, mode) == 0) goto IIfd_exit1;
+**		goto IImu_init1;
+**	IIfd_init1:
+** or:		if (IInestmu() == 0) goto IIfd_exit1;
+**		goto IImu_init1;
+** Note: 	The Formdata type arguments are decommited.
+**		Used to support:    [ ( form output list ) ]
+** NOTE: disp_init uses the return value from disp_head!
+*/
+
+disp_head:	display_key fm_string disp_mode disp_tl fw_opt_with_clause
+		{
+		    i4	cur_form;
+
+		    cur_form = lbl_next( LBL_FORM );
+		    lbl_enter_block();
+		    gr->gr_mode = LBLmDISPLAY;
+		    lbl_set_mode( gr->gr_mode );
+		  /* mode is DISPLAY, and adjective is DISPLAY */
+		    lbl_adset( LBL_NOLEV, LBLaDISPLAY );
+		    lbl_a_reset();
+
+		    act_open();
+		    gen_if_goto( IIDISPFRM, C_EQ, 0, L_FDEND, cur_form );
+		    gen_goto( G_TERM, L_MUINIT, cur_form );
+		    gen_label( G_NOLOOP, L_FDINIT, cur_form );
+		    $$.i = 0;
+		}
+	|	display_key tSUBMENU 
+					/* display_key sets USEMODE *now* */
+		{
+		    i4	cur_form;
+
+		    cur_form = lbl_next( LBL_FORM );
+		  /* mode is DISPLAY, but adjective is NESTMU */
+		    lbl_enter_block();
+		    gr->gr_mode = LBLmDISPLAY;
+		    lbl_set_mode( gr->gr_mode );
+		    lbl_adset( LBL_NOLEV, LBLaNESTMU );
+		    lbl_a_reset();
+
+		    act_open();
+		    gen_if_goto( IINESTMU, C_EQ, 0, L_FDEND, cur_form );
+		    gen_goto( G_TERM, L_MUINIT, cur_form );
+		    gen_label( G_NOLOOP, L_FDINIT, cur_form );
+		    $$.i = 1;
+		}
+;
+display_key:	tDISPLAY
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    gr->gr_func = IIDISPFRM;
+		}
+;
+disp_mode:	tSCONST
+		{
+		    frs_mode( ERx("DISPLAY/INITTABLE"), $1.s );
+		}
+	|	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_CHAR)
+			    arg_var_add( gr->gr_sym, gr->gr_id );
+			else
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    arg_str_add( ARG_CHAR, gr->gr_id );
+			}
+		    }
+		    else
+			frs_mode( ERx("DISPLAY/INITTABLE"), gr->gr_id );
+		}
+	|	/* Default is Fill */
+		{
+		    arg_str_add( ARG_CHAR, ERx("f") );
+		}
+;
+disp_tl:	tLPAREN  /* targetlist tRPAREN */
+		{
+		    sc_eat( NULL, SC_NEST|SC_SEEN, ERx(")"), '(', ')' );
+		    er_write( E_EQ0051_grDISPTL, EQ_ERROR, 0 );
+		}
+	|
+;
+
+/* 
+** Statement:	## INITIALIZE [ ( form input list ) ]
+**		## {
+**			User code
+**		## }
+** Action:	Assign data to fields before displaying form.
+** Generates:	[ if (IIfsetio(0) == 0) goto IIfd_exit1;
+**		  IIsetfield( field, valdesc, val ); ...
+**		  User code  ]
+**	IIfd_begin1:
+**		while ( IIrunfrm() != 0 ) {	-- or IIrunnest()
+** Note:	The initialize statement is not attached to any While loop
+**		or If block, so the user block needs to be explicilty 
+** 		generated in block languages. The gr_mode flag is set
+**		temporarily for this purpose.  This cannot be solved by moving
+**		around rules because of a reduce/reduce conflict with the C
+**		left brace.
+** NOTE:	disp_init uses the return value from disp_head!
+*/
+
+disp_init:	initialize
+		{
+		    i4	func = IIRUNFRM;
+		    i4	cur_form = lbl_current( LBL_FORM );
+
+		    gen_label( G_LOOP, L_FDBEG, cur_form );
+		    if ($0.i)	/* disp_head was DISPLAY SUBMENU */
+			func = IIRUNNEST;
+		    gen_loop( G_OPEN, L_FDBEG, L_FDFINAL, cur_form, func, 
+			      C_NOTEQ, 0 );
+		}
+;
+initialize:	init_key form_opin_tl init_block
+	|	/* No initialize statement */
+;
+init_key:	tINITIALIZE
+		{
+		    arg_str_add( ARG_CHAR, (char *)0 );
+		    gen_if_goto( IIFSETIO, C_EQ, 0, L_FDEND,
+			lbl_current(LBL_FORM) );
+		    gr->gr_func = IISETFIELD;	/* In case of I/O */
+		    gr->gr_mode = LBLmDISPLAY;
+		}
+;
+init_block:	block
+	|	/* No initialize block */
+;
+
+/* 
+** Statement:   ## ACTIVATE [ BEFORE | AFTER ] FIELD < name | ALL > [:]
+**		## ACTIVATE MENUITEM string [:]
+**		## ACTIVATE < SCROLLUP | SCROLLDOWN > table [:]
+**              ## ACTIVATE [ BEFORE | AFTER ] COLUMN table < col | ALL > [:]
+** 		## ACTIVATE frskeyN | MENUITEM
+**		##	    [(explanation = string, validate = <on|off>)] [:]
+**		## {
+**			User Code
+**		## }
+**		Activate objects may be joined by commas.
+**
+**              Note: the following old-style syntax is no longer
+**              supported and will generate a preprocessor error.
+**
+**		## ACTIVATE COMMAND control_char [:]
+**
+** Action:	Define a block of user code to execute in the Display loop.
+** Generates:	if (IIretval() == 1) {
+**		    Activate block 1
+**		}
+**		else if (IIretval() == 2) {
+**		    Activate block 2
+**		}
+**		else {
+**		    goto IIfd_exit1;
+**		}
+** Note:	Alot of extra labels are passed to Gen to support labelled
+**		languages and the Else clause of the If-Then-Else block.
+*/
+
+disp_active:	act_list
+		{
+		    i4	cur_form = lbl_current( LBL_FORM );
+
+		    gen_else( G_OPEN, II0, C_0, 0, L_0, 0, L_0, 0 ); 
+		    gen_goto( G_IF, L_FDEND, cur_form );
+		    gen_else( G_CLOSE, IIRETVAL, C_0, 0, L_0, 0, 
+			      L_ACTEND, cur_form );
+		    gr->gr_flag |= GR_ACTIVATE;
+		}
+	|	/* No activate blocks */
+		{
+		    gr->gr_flag &= ~GR_ACTIVATE;
+		}
+;
+act_list:	act_block 
+	|	act_list act_block
+;
+act_block:	act_key act_stmt act_colon block
+		{
+		    gen_else( G_ELSE, IIRETVAL, C_0, 0, L_ACTELSE, 
+			lbl_current(LBL_INTR), L_ACTEND, lbl_current(LBL_FORM));
+		    gr->gr_mode = LBLmDISPLAY;
+		}
+;
+act_key:	tACTIVATE
+		{
+		    i4	cur_intr = lbl_next( LBL_INTR );
+
+		    gen_else( G_OPEN, IIRETVAL, C_EQ, cur_intr, L_ACTELSE,
+			cur_intr, L_ACTEND, lbl_current(LBL_FORM) );
+		    gr->gr_mode = LBLmDISPLAY;
+		    /* Reset activate argument list */
+		    act_args( FALSE, (char *)0, (char *)0, 0, (SYM *)0 );
+		}
+;
+act_colon:	tCOLON
+		{
+		    /* Reset activate argument list */
+		    act_args( FALSE, (char *)0, (char *)0, 0, (SYM *)0 );
+		}
+	|
+		{
+		    act_args( FALSE, (char *)0, (char *)0, 0, (SYM *)0 );
+		}
+;
+act_stmt:	act_elm 
+	|	act_stmt tCOMMA act_elm 
+;
+/*
+** SCROLL UP/DOWN, MENUITEM, and FRSKEY set gr->adjective so that the
+** following block will set its adjective, which is checked by RESUME NEXT
+** (a warning).
+*/
+act_elm:	act_entry tFIELD act_string
+		{
+		    act_add( ACT_FIELD, lbl_current(LBL_INTR), $1.i, $3.ip );
+		    gr->gr_adjective = LBLaFIELD;
+		}
+	|	tMENUITEM act_string act_args /* Later all ACT's have args */
+		{
+		    act_add( ACT_MENU, lbl_current(LBL_INTR), 0, $2.ip );
+		    gr->gr_adjective = LBLaMITEM;
+		}
+	|	tSCROLLUP act_string
+		{
+		    act_add( ACT_SCROLL, lbl_current(LBL_INTR), sclUP, $2.ip );
+		    gr->gr_adjective = LBLaSCROLL;
+		}
+	|	tSCROLLDOWN act_string
+		{
+		    act_add( ACT_SCROLL,lbl_current(LBL_INTR), sclDOWN, $2.ip );
+		    gr->gr_adjective = LBLaSCROLL;
+		}
+	|	act_entry tCOLUMN act_string act_string
+		{
+		    i4	cur_intr = lbl_current( LBL_INTR );
+
+		    act_add( ACT_COLUMN, cur_intr, $1.i, $3.ip );
+		    act_add( ACT_COLUMN, cur_intr, $1.i, $4.ip );
+		    gr->gr_adjective = LBLaCOLUMN;
+		}
+	|	tCOMMAND act_comm	
+		{
+		    /* Old-style syntax - no longer supported */
+                    er_write( E_EQ0076_grNOWUNSUPP, EQ_ERROR, 1,
+                                            ERx("ACTIVATE COMMAND") );
+		}
+	|	act_other 	/* Non-keyword activates */
+;
+act_entry:      /* Empty */
+		{
+		    $$.i = 0;
+		}
+	|	tNAME
+		{
+		    if (STbcompare($1.s, 0, ERx("after"), 0, TRUE) == 0)
+		    {
+			$$.i = 0;
+		    }	
+		    else 
+		    {
+			if (STbcompare($1.s, 0, ERx("before"), 0, TRUE) != 0)
+		            er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+				    ERx("ACTIVATE"), ERx("BEFORE") );
+			$$.i = 1;
+		    }
+		}
+;
+act_string:	tSCONST	
+		{
+		    $$.ip = act_string( $1.s );
+		}
+	|	tALL		/* Can be a Menu if not used with Field */
+		{
+		    $$.ip = act_string( $1.s );
+		}
+	|	host_name_var 
+		{
+		    if (gr->gr_sym)
+		    {
+			$$.ip = act_var( gr->gr_sym, gr->gr_id );
+			if (gr->gr_type != T_CHAR && gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0067_grSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		    else
+			$$.ip = act_string( gr->gr_id );
+		}
+;
+act_comm:	tNAME
+		{
+		    $$.s = $1.s;
+		}
+	|	tSCONST
+		{
+		    $$.s = $1.s;
+		}
+;
+/*
+** ACTIVATE TIMEOUT
+** ACTIVATE FRSKEY where n >= 1
+** ACTIVATE FRSKEY number
+** ACTIVATE FRSKEY may take a target list; ACTIVATE TIMEOUT may not.
+*/
+act_other:	tNAME act_args
+		{
+		    char	*s = $1.s;
+		    i4		keynum = 1;
+
+		    if (STbcompare(s, 7, ERx("timeout"), 7, TRUE) == 0)
+		    {
+			act_add(ACT_TIMEOUT, lbl_current(LBL_INTR),0,(i4 *)0);
+			/* Is this the only act_elm in this ACTIVATE? */
+			if (gr->gr_adjective == LBLaNONE)
+			    gr->gr_adjective = LBLaTIME;
+			if ($2.i == 1)
+			{
+			    er_write( E_EQ0309_actTARGET, EQ_ERROR, 1, 
+				    ERx("TIMEOUT") );
+			}
+		    }
+		    else if (STbcompare(s, 6, ERx("frskey"), 6, TRUE) == 0)
+		    {
+			if ((CVan(s+6, &keynum) == OK) && (keynum >= 0))
+		        {
+			    act_add( ACT_FRSKEY, lbl_current(LBL_INTR), 
+					keynum, (i4 *)0);
+			    gr->gr_adjective = LBLaFRSKEY;
+			}
+		        else
+			{
+			    er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, s,
+				    ERx("ACTIVATE"), ERx("FRSKEY1") );
+			}
+		    }
+		    else if (STbcompare(s, 8, ERx("control_"), 0, TRUE) == 0)
+		    {
+			er_write( E_EQ0070_grMISSWORD, EQ_ERROR, 2,
+				  ERx("COMMAND"), ERx("ACTIVATE") );
+		    }
+		    else
+		    {
+			er_write( E_EQ0301_actBAD, EQ_ERROR, 1, s );
+		    }
+		}
+	|	tNAME act_frsnum act_args
+		{
+		    char	*s = $1.s;
+
+		    /*
+		    ** ACTIVATE FRSKEY number
+		    */
+		    if (STbcompare(s, 0, ERx("frskey"), 0, TRUE) == 0)
+		    {
+			act_add( ACT_FRSKEY, lbl_current(LBL_INTR),
+					$2.i, (i4 *)0);
+			gr->gr_adjective = LBLaFRSKEY;
+		    }
+		    else
+		    {
+			er_write( E_EQ0301_actBAD, EQ_ERROR, 1, s );
+		    }
+		}
+;
+act_frsnum:	tINTCONST
+		{
+		    i4		keynum;
+
+		    if ((CVan($1.s, &keynum) == OK) && (keynum >= 0))
+		    {
+		        $$.i = keynum;	
+		    }
+		    else
+		    {
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+			    ERx("ACTIVATE"), ERx("FRSKEY1") );
+		    }
+		}
+	|	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type != T_INT && gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0061_grINTVAR, EQ_ERROR, 1,
+								gr->gr_id );
+		    }
+		    else
+		    {
+			gr->gr_type = T_INT;
+		    }
+		    act_num(ERx("frskey"), gr->gr_id, gr->gr_type, gr->gr_sym);
+		    $$.i = 1;
+		}
+;
+act_args:	/* No target list */
+		{
+		    $$.i = 0;
+		}
+	|	tLPAREN act_alist tRPAREN
+		{
+		    $$.i = 1;
+		}
+;
+act_alist:	act_aelm
+	|	act_alist tCOMMA act_aelm
+;
+act_aelm:	act_astr fm_is act_aval
+		{
+		    /* It will check for errors */
+		    act_args( TRUE, $1.s, $3.s, gr->gr_type, gr->gr_sym );
+		}
+;
+act_astr:	tNAME
+		{
+		    $$.s = $1.s;
+		}
+	|	tSCONST
+		{
+		    $$.s = $1.s;
+	    	}
+	|	tVALIDATE
+		{
+		    $$.s = $1.s;
+	    	}
+	|	tACTIVATE
+		{
+		    $$.s = $1.s;
+	    	}
+;
+act_aval:	tSCONST
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_CHAR;
+		    gr->gr_sym = NULL;
+	    	}
+	|	tINTCONST
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_INT;
+		    gr->gr_sym = NULL;
+	    	}
+	|	host_name_var 
+		{
+		    $$.s = gr->gr_id;
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type != T_CHAR && gr->gr_type != T_INT &&
+				gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0060_grINTSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		}
+;
+
+/* 
+** Statement:	## FINALIZE [ ( form output list ) ]
+** Action:	Store final field values into program variables.
+** Generates:   }  - close IIrunfrm() loop.
+**		[ if (IIFRitIsTimeout() != 0) goto IIFD_exit1; ]
+**	    IIfd_final1:
+**		if (IIchkfrm() == 0) goto IIfd_begin1;
+**		[ if (IIfsetio(0) == 0) goto IIfd_exit1;
+**		  IIretfield( vardesc, var, field ); ...   ]
+**		goto IIfd_exit1;
+*/
+
+disp_final:	final_gen finalize
+		{
+		    gen_goto( G_TERM, L_FDEND, lbl_current(LBL_FORM) );
+		}
+;
+final_gen:	/* Close main loop */
+		{
+		    i4	func = IIRUNFRM;
+		    i4	cur_form = lbl_current( LBL_FORM );
+
+		    if (lbl_adget(LBL_NOLEV) == LBLaNESTMU)
+			func = IIRUNNEST;
+		    gen_loop( G_CLOSE, L_FDBEG, L_FDFINAL, cur_form, 
+			      func, C_0, 0 );
+		    if ((gr->gr_flag & GR_ACTIVATE) == 0)
+			gen_if_goto( IIFRISTIME,C_NOTEQ, 0, L_FDEND, cur_form );
+		    gen_label( G_LOOP, L_FDFINAL, cur_form );
+		    gen_if_goto( IICHKFRM, C_EQ, 0, L_FDBEG, cur_form );
+		}
+;
+finalize:	final_key form_opout_tl
+	|	/* No finalize statement */
+;
+final_key:	tFINALIZE 
+		{
+		    arg_str_add( ARG_CHAR, (char *)0 );
+		    gen_if_goto( IIFSETIO, C_EQ, 0, L_FDEND,
+			lbl_current(LBL_FORM) );
+		    gr->gr_func = IIRETFIELD;
+		}
+;
+
+/* 
+** Statement:	## ENDDATA
+** Action:	Jump out of a Formdata loop.
+** Generates:	[ Required loop breakout calls, ]
+**		goto IIfd_exit1;	
+*/
+
+enddata:	tENDDATA
+		{
+		    i4	form_no;
+
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    if ((form_no = lbl_gen(LBLmFORMDATA, TRUE)) != LBL_NOLEV)
+			gen_goto( G_IF, L_FDEND, 
+				  lbl_value(LBLmFORMDATA, form_no) );
+		    else
+			er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2, $1.s,
+							    ERx("FORMDATA") );
+		}
+;
+
+/* 
+** Statement:	## ENDDISPLAY
+** Action:	End Display loop with validation.
+** Generates:	[ Required loop breakout calls, ]
+**		goto IIfd_final1;
+*/
+
+enddisplay:	tENDDISPLAY
+		{
+		    i4	form_no;
+
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    if ((form_no = lbl_gen(LBLmDISPLAY, TRUE)) != LBL_NOLEV)
+			gen_goto( G_IF, L_FDFINAL, 
+				  lbl_value(LBLmDISPLAY, form_no) );
+		    else
+			er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2, $1.s,
+							    ERx("DISPLAY") );
+		}
+;
+
+/* 
+** Statement:	## ENDFORMS
+** Action:	End forms system.
+** Generates:	IIendforms();
+*/
+
+endforms:	tENDFORMS
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    gen_call( IIENDFORMS );
+		}
+;
+
+/* 
+** Statement:	## FORMDATA form
+**		## {
+**			User Code
+**		## }
+**
+**		Note: the following old-style syntax is no longer
+**		supported and will generate a preprocessor error.
+**
+**		## FORMDATA form ( form output list )
+**
+** Action:	Retrieve information about current form into variables.
+** Generates:	if (IIdispfrm(form, "Names") == 0) goto IIfd_exit1;
+**		while ( IIfnames() != 0 ) {
+**		    [ IIfdata( vardesc, var, info ); ... ]
+**		    User Code
+**		}
+**	IIfd_exit1:
+**		IIendfrm();
+** Note: 	The IIfdata() arguments should be phased out as they were
+**		replaced by INQUIRE_FRS.
+*/
+
+formdata:	formd_init formd_opout_tl block
+		{
+		    i4	cur_form = lbl_current( LBL_FORM );
+
+		    gen_loop( G_CLOSE, L_FDBEG, L_FDEND, cur_form, IIFNAMES,
+			C_0, 0 );
+		    gen_label( G_LOOP, L_FDEND, cur_form );
+		    gen_call( IIENDFRM );
+		}
+;
+formd_init:	formdata_key fm_string
+		{
+		    i4	cur_form;
+
+		    cur_form = lbl_next( LBL_FORM );
+		    arg_str_add( ARG_CHAR, ERx("Names") );
+		    gen_if_goto( IIDISPFRM, C_EQ, 0, L_FDEND, cur_form);
+		    gen_loop( G_OPEN, L_FDBEG, L_FDEND, cur_form, IIFNAMES, 
+			      C_NOTEQ, 0 );
+		    gr->gr_func = IIFDATA;		/* In case of I/O */
+		    gr->gr_mode = LBLmFORMDATA;		/* In case of block */
+		}
+;
+formdata_key:	tFORMDATA
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+formd_opout_tl:	form_opout_tl
+		{
+		    if ($1.i)
+			er_write( E_EQ0077_grISUNSUPP, EQ_ERROR, 1,
+							    ERx("FORMDATA") );
+		}
+;
+
+/* 
+** Statement:	## FORMINIT form {, form }
+** Action:	Initialize form from database.
+** Generates:	IIforminit( form ); ...
+*/
+
+forminit:	forminit_key fm_stringlist
+;
+forminit_key:	tFORMINIT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    gr->gr_func = IIFORMINIT;
+		}
+;
+
+/* 
+** Statement:	## FORMS
+** Action:	Start forms system.
+** Generates:	IIforms( lang );
+*/
+
+forms:		tFORMS
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_int_add( eq->eq_lang );
+		    gen_call( IIFORMS );
+		}
+;
+
+/*
+** Statement:	## GETFORM [ form ] ( form output list )
+** Action:	Get data from fields into program variables.
+** Generates:	if (IIfsetio(form) != 0) {
+**		    IIretfield( vardesc, var, field ); ...
+**		}
+*/
+
+getform:	getform_init form_out_tl
+		{
+		    gen_if( G_CLOSE, IIFSETIO, C_0, 0 );
+		}
+;
+getform_init:	getform_key fm_opname
+		{
+		    gen_if( G_OPEN, IIFSETIO, C_NOTEQ, 0 );
+		    gr->gr_func = IIRETFIELD;
+		}
+;
+getform_key:	tGETFORM
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+
+/* 
+** Statement:	## GETOPER [ form ] ( intvar = field {, intvar = field} )
+**
+**		Note: GETOPER used as a command is no longer supported
+**		and will generate a preprocessor error.  GETOPER used
+**		as a function is supported.
+**	
+** Action:	Pass operator constants from fields to user int variables.
+** Generates:	if (IIfsetio(form) != 0) {
+**		    IIgetqry( vardesc, var, field ); ...
+**		}
+** Note:	This statement should be decommitted (is not documented).
+*/
+
+getoper:	getoper_init getoper_tl
+		{
+		    gen_if( G_CLOSE, IIFSETIO, C_0, 0 );
+		    er_write( E_EQ0076_grNOWUNSUPP, EQ_ERROR, 1,
+						    ERx("GETOPER") );
+		}
+;
+getoper_init:	getoper_key fm_opname
+		{
+		    gen_if( G_OPEN, IIFSETIO, C_NOTEQ, 0 );
+		}
+;
+getoper_key:	tGETOPER
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+getoper_tl:	tLPAREN getop_list tRPAREN
+;
+getop_list:	getop_elm
+	|	getop_list tCOMMA getop_elm
+;
+getop_elm:	getop_var fm_is fm_string
+		{
+			gen_call( IIGETQRY );
+		}
+;
+getop_var:	host_var qlfm_opt_ind
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_nlsym != (SYM *)0)
+			    arg_var_add( gr->gr_nlsym, gr->gr_nlid );
+			else
+			    arg_int_add( 0 );
+			arg_var_add( gr->gr_sym, gr->gr_id );
+			if (gr->gr_type != T_INT && gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0061_grINTVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		    /* else error already sent */
+		}
+;
+
+/*
+** Statement:	## HELP_FRS (SUBJECT = sub, FILE = filename)
+** Action:	Hooks up into internal FRS help utility.
+** Generates:	IIfrshelp( type, subject, filename );
+** Notes:	Currently hardcoded to use the above syntax, but may be expanded
+**		in the future to use a variety of target lists.
+*/
+
+help_frs:	help_frs_key help_frs_tlist
+;
+help_frs_key:	tHELP_FRS
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_int_add( 0 );		/* Dummy type right now */
+		}
+;
+help_frs_tlist:	tLPAREN hf_elm tCOMMA hf_elm tRPAREN
+		{
+		    if (STbcompare($2.s, 0, ERx("subject"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $2.s,
+					ERx("HELP_FRS"), ERx("SUBJECT") );
+		    else if (STbcompare($4.s, 0, ERx("file"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $4.s,
+					ERx("HELP_FRS"), ERx("FILE") );
+		    gen_call( IIFRSHELP );
+		}
+;
+hf_elm:		tNAME fm_is fm_string
+		{
+		    $$.s = $1.s;
+		}
+;
+
+
+
+/* 
+** Statement:	## HELPFILE subject [,] filename
+** Action:	Display screenfuls of user file.
+** Generates:	IIhelpfile( subject, filename );
+*/
+
+helpfile:	helpfile_key fm_string fm_opcomma fm_string
+		{
+		    gen_call( IIHELPFILE );
+		}
+;
+helpfile_key:	tHELPFILE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+
+/*
+** Statement:	## IIMESSAGE( string {, varying arg} )
+** Action:	Internal call to QAmessage for testing.
+** Generates:	QAmessage( string, args ... );
+*/
+
+iimessage:	iimessage_key iiprintf_args
+		{
+		    gen_call( QAMESSAGE );
+		}
+;
+iimessage_key:	tIIMESSAGE
+		{ 
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+
+/*
+** Statement:	## IIPROMPT( string {, varying arg} )
+** Action:	Internal call to QAprompt for testing.
+** Generates:	QAprompt( string, args ... );
+*/
+
+iiprompt:	iiprompt_key iiprintf_args
+		{
+		    gen_call( QAPROMPT );
+		}
+;
+iiprompt_key:	tIIPROMPT
+		{ 
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+
+/* 
+** Statement:	## INQUIRE_FRS { objects }+ ( inquire_frs-list )
+** Action:	Get form information into program variables.
+** Generates:	if ( IIinqset(obj, ... ) != 0 ) {
+**		    IIfrsinq( vardesc, var, info ); ...
+**		}
+** Notes:	
+**  1.  For backward compatible reasons it may generate either "old"
+**	calls or "new" calls, decided by module eqfrs.c.  To force
+**	YACC into using the "old" style a special character is backed up. 
+** 	See eqfrs.c for notes on use and syntax history.
+**  2.  Many of the sub-rules of this statement are common to SET_FRS too.
+*/
+
+inquire_frs:	inq_frs_head frs_lparen inq_targlist tRPAREN
+		{
+		    frs_close();
+		}
+;
+inq_frs_head:	inq_frs_key frs_object frs_parlist
+;
+frs_lparen:	tLPAREN		/* YACC must be synced up to backup up tMINUS */
+		{
+		    frs_head();
+		}
+;
+inq_frs_key:	tINQ_FRS
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    frs_inqset( FRSinq );
+		}
+;
+frs_object:	tSCONST
+		{
+		    frs_object( $1.s );
+		}
+	|	tNAME
+		{
+		    frs_object( $1.s );
+		}
+	|	tFIELD
+		{
+		    frs_object( $1.s );
+		}
+	|	tCOLUMN
+		{
+		    frs_object( $1.s );
+		}
+	/* Add tTABLE for ESQL */
+;
+frs_parlist:	/* No parent-names */
+	|	frs_parlist frs_parname
+;
+frs_parname:	tSCONST
+		{
+		    frs_parentname( $1.s, T_CHAR, (PTR)0 );
+		}
+	|	tINTCONST
+		{
+		    frs_parentname( $1.s, T_INT, (PTR)0 );
+		}
+	|	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type != T_CHAR && gr->gr_type != T_INT)
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    frs_parentname( gr->gr_id, T_CHAR, (PTR)0 );
+			}
+			else
+			    frs_parentname( gr->gr_id, gr->gr_type,(PTR)(gr->gr_sym) );
+		    }
+		    else
+			frs_parentname( gr->gr_id, T_CHAR, (PTR)0 );
+		}
+;
+/* 
+** INQUIRE_FRS target list:
+**		var = frs_const[(frs_name)], ...
+**
+**	Note: old-style inquire_frs syntax is no longer supported
+**	and will generate a preprocess error.
+*/
+inq_targlist:	inq_tlist
+	|	tARUOP /* inq_oldtlist */	/* See eqfrs.c for tARUOP */
+		{
+		    er_write( E_EQ0077_grISUNSUPP, EQ_ERROR, 1,
+						ERx("INQUIRE_FRS") );
+		    YYERROR;
+		}
+;
+inq_tlist:	inq_elm
+	|	inq_tlist tCOMMA inq_elm
+;
+inq_elm:	inq_var_is frs_constant
+;
+inq_var_is:	host_var qlfm_opt_ind fm_is
+		{
+		    frs_iqvar( gr->gr_id, gr->gr_type, gr->gr_sym,
+				gr->gr_nlid, gr->gr_nlsym );
+		}
+;
+frs_constant:	frs_constname
+		{
+		    frs_constant( $1.s, (char *)0, T_NONE, (SYM *)0 );
+		}
+	|	frs_constname tLPAREN tRPAREN
+		{
+		    er_write( E_EQ0054_grNOPARENS, EQ_ERROR, 0 );
+		    frs_constant( $1.s, (char *)0, T_NONE, (SYM *)0 );
+		}
+	|	frs_constname tLPAREN frs_constobj tRPAREN
+		{
+		    /* Should be an error */
+		    frs_constant( $1.s, $3.s, gr->gr_type, gr->gr_sym );
+		}
+;
+/* Host languages should look at the table in eqfrs.c (ie: PASCAL uses tTYPE) */
+frs_constname:	tNAME
+		{
+		    $$.s = $1.s;
+		}
+	|	tSCONST
+		{
+		    $$.s = $1.s;
+		}
+	|	tVALIDATE
+		{
+		    $$.s = $1.s;
+		}
+	|	tACTIVATE
+		{
+		    $$.s = $1.s;
+		}
+	|	tFIELD
+		{
+		    $$.s = $1.s;
+		}
+	|	tCOLUMN
+		{
+		    $$.s = $1.s;
+		}
+	|	tCOMMAND
+		{
+		    $$.s = $1.s;
+		}
+;
+frs_constobj:	tSCONST
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_CHAR;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	tINTCONST
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_INT;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	tSCROLLUP
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_CHAR;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	tSCROLLDOWN
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_CHAR;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	tCLEAR
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_CHAR;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	tMENUITEM
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_CHAR;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	tPRINTSCREEN
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_CHAR;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	tCOLUMN
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_CHAR;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	tFIELD
+		{
+		    $$.s = $1.s;
+		    gr->gr_type = T_CHAR;
+		    gr->gr_sym = (SYM *)0;
+		}
+	|	host_name_var
+		{
+		    $$.s = gr->gr_id;
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type != T_CHAR && gr->gr_type != T_INT)
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    gr->gr_type = T_CHAR;
+			    gr->gr_sym = (SYM *)0;
+			}
+		    }
+		    else
+			gr->gr_type = T_CHAR;
+		}
+;
+/* 
+** Comment out old-style inquire_frs syntax
+# ifdef OLD_STYLE_INQUIRE
+
+inq_oldtlist:	inq_oelm
+	|	inq_oldtlist tCOMMA inq_oelm
+;
+inq_oelm:	inq_outvar_is frs_ostring
+		{
+		    gen_call( IIFRSINQ );
+		}
+;
+inq_outvar_is:	host_var qlfm_opt_ind fm_is
+		{
+		    $$.i = gr->gr_type;
+		    if (gr->gr_nlsym != (SYM *)0)
+			arg_var_add( gr->gr_nlsym, gr->gr_nlid );
+		    else
+			arg_int_add( 0 );
+		    arg_var_add( gr->gr_sym, gr->gr_id );
+		}
+;
+frs_ostring:	tNAME
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+	|	tSCONST
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+	|	tFIELD
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+	|	tCOLUMN
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+# endif
+*/
+
+/* 
+** Statement: ## MESSAGE text [WITH option = value 
+**            ##	[(suboption=subvalue {, suboption=subvalue})]]
+**
+** Action:	Print message in area of a form indicated by with clause
+** Generates:	
+**		IIFRgpcontrol(...)
+**		IIFRgpset(id(p1),)
+** 		IImessage( text );
+** Note:	Can use the STprintf() style format for C - allow parenthesis.
+**		These parenthesis were also allowed for Fortran.  These old
+**		formats will not support the forms with clause.  
+*/
+message:    	message_key fm_qstring fw_opt_with_clause 
+        	{
+		    gen_call( IIMESSAGE ); 
+    		}
+;
+message_key:	tMESSAGE
+    		{
+            	    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+    	    	    gr->gr_func = IIMESSAGE;
+    		}
+;
+/*
+** Syntax: 
+**     WITH option = value [(suboption=subvalue {, suboption=subvalue})]
+**	  [ {, option = value [(suboption=subvalue {, suboption=subvalue})]}]
+**
+**	where 	option 	= style
+**	      	value 	= popup | fullscreen
+**
+**		suboption = startrow | startcolumn | rows | columns 
+**		subvalue  = sconst | iconst | ivar 
+**
+** Note:  gr->gr_func must have been set to the function
+**        owning the with clause
+*/
+fw_opt_with_clause: fw_with_clause
+		| 	/* No forms with clause */	
+;
+fw_with_clause: fw_with fw_option_list
+		{
+		    EQFW3glgen();	
+		}
+;
+fw_with:	tWITH
+		{
+		    EQFWopen(gr->gr_func);
+		}
+;
+fw_option_list: fw_option_clause 
+	    |   fw_option_list tCOMMA fw_option_clause
+;
+fw_option_clause:
+		fw_option fw_opt_suboption_list
+;
+/*
+**  STYLE = POPUP
+**  STYLE = FULLSCREEN
+*/
+fw_option: 	fw_option_lhs tEQOP fw_option_rhs
+		{
+		    EQFWwcoption($1.s, $3.s);
+		}
+;
+fw_option_lhs:	tNAME
+		{
+		    $$.s = $1.s;
+		}		
+ 	    |   tSCONST
+		{
+		    $$.s = $1.s;
+		}		
+;
+fw_option_rhs:	tNAME
+		{
+		    $$.s = $1.s;
+		}
+ 	    |   tSCONST
+		{
+		    $$.s = $1.s;
+		}		
+;
+fw_opt_suboption_list: tLPAREN fw_suboption_list tRPAREN 
+	|     	
+;
+fw_suboption_list:
+	    	fw_suboption
+	    |	fw_suboption_list tCOMMA fw_suboption	
+;
+/*
+** fw_suboption:
+**		fw_suboption_lhs = fw_suboption_rhs
+**
+**	where fw_suboption_lhs is:
+**		startrow | startcol | rows | columns 
+**
+**	where fw_suboption_rhs is:
+**		default | floating | iconst | ivar | none  
+**
+** NOTE: Validation of lhs-rhs-statement combinations is performed in the
+**	 EQFW routines and is based on tables found in that unit. 
+*/
+fw_suboption:	fw_suboption_lhs tEQOP fw_suboption_rhs
+	{
+		EQFWsuboption($1.s, gr->gr_type, gr->gr_id, (PTR)gr->gr_sym);
+	}
+;
+fw_suboption_lhs:	tNAME
+		{
+	    	    $$.s = $1.s;
+	        }
+ 	    |   tSCONST
+		{
+		    $$.s = $1.s;
+		}		
+;
+fw_suboption_rhs:  
+	     	fm_iconst
+	    	{
+	    	    gr->gr_sym = (SYM *)0;
+	    	    gr->gr_type = T_INT;
+	    	    gr->gr_id = $1.s;
+	    	}
+	|	fm_sconst
+	    	{
+	    	    gr->gr_sym = (SYM *)0;
+	    	    gr->gr_type = T_CHAR;
+	    	    gr->gr_id = $1.s;
+	    	}
+	|	fm_fconst
+	    	{
+	    	    gr->gr_sym = (SYM *)0;
+	    	    gr->gr_type = T_FLOAT;
+	    	    gr->gr_id = $1.s;
+	    	}
+	|	fm_dconst
+	    	{
+	    	    gr->gr_sym = (SYM *)0;
+	    	    gr->gr_type = T_PACKASCHAR;
+	    	    gr->gr_id = $1.s;
+	    	}
+        |    	host_name_var
+	    	{
+		    if (!gr->gr_sym)
+		    {
+			gr->gr_type = T_CHAR;
+		    }	
+		}
+;
+/* 
+** Statement:	## PRINTSCREEN [ ( file = file-name ) ]
+** Action:	Dump screen to a file.
+** Generates:	IIprnscr( file-name );
+*/
+
+printscreen:    printscr_key prnscr_tlist
+		{
+		    gen_call( IIPRNSCR );
+		}
+;
+printscr_key:	tPRINTSCREEN
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+prnscr_tlist:   tLPAREN prnscr_nm fm_is fm_string tRPAREN
+		{
+		    /* Should check that $2.s is "file" */
+		    if (STbcompare($2.s, 0, ERx("file"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $2.s,
+					ERx("PRINTSCREEN"), ERx("FILE") );
+		}
+	|	/* No file specified */
+		{
+		    arg_str_add( ARG_CHAR, (char *)0 );
+		}
+;
+prnscr_nm:	tNAME
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/* 
+** Statement:	## PROMPT [NOECHO] ( message, buffer )
+**          	##     [WITH option = value 
+**		##     [(suboption=subvalue {, suboption=subvalue})]]
+** Action:	Display message, store user response in buffer.
+** Generates:	
+**		IIFRgpcontrol(...)
+**		IIFRgpset(id(p1),)
+** 		IIdoprompt( message, buffer ); | IIneprompt( message, buffer );
+** Note:	Can use the STprintf() style format for C - allow parenthesis.
+**		These parenthesis were also allowed for Fortran.
+*/
+
+prompt:	     	prompt_key pr_noecho tLPAREN fm_qstring tCOMMA pr_buffer tRPAREN
+		fw_opt_with_clause
+		{
+		    gen_call( IINPROMPT );
+		}
+;
+prompt_key:	tPROMPT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    gr->gr_func = IINPROMPT;
+		}
+;
+pr_noecho:	tNAME
+		{
+		    if (STbcompare($1.s, 0, ERx("noecho"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+						ERx("PROMPT"), ERx("NOECHO") );
+		    arg_int_add( 1 );
+		}
+	|	/* Regular prompt */
+		{
+		    arg_int_add( 0 );
+		}
+;
+pr_buffer:	host_name_var qlfm_opt_ind
+		{
+		    /* Null indicator argument */
+		    if (gr->gr_nlsym)
+			arg_var_add( gr->gr_nlsym, gr->gr_nlid );
+		    else
+			arg_int_add( 0 );
+
+		    /* Prompt buffer argument */
+		    if (gr->gr_sym)
+		    {
+			if ((gr->gr_type == T_CHAR) || (gr->gr_type == T_DBV))
+			{
+			    arg_var_add( gr->gr_sym, gr->gr_id );
+			} else
+			{
+			    arg_str_add( ARG_CHAR, gr->gr_id );
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0067_grSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+			}
+		    } else
+		    {
+			arg_str_add( ARG_CHAR, gr->gr_id );
+			if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0067_grSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		}
+;
+
+/*
+** Statement:	## PUTFORM [ form ] ( form input list )
+** Action:	Pass data from program variables to fields.
+** Generates:	if (IIfsetio(form) != 0) {
+**		    IIsetfield( field, valdesc, val ); ...
+**		}
+*/
+
+putform:	putform_init form_in_tl
+		{
+		    gen_if( G_CLOSE, IIFSETIO, C_0, 0 );
+		}
+;
+putform_init:	putform_key fm_opname
+		{
+		    gen_if( G_OPEN, IIFSETIO, C_NOTEQ, 0 );
+		    gr->gr_func = IISETFIELD;
+		}
+;
+putform_key:	tPUTFORM
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+
+/* 
+** Statement:	## REDISPLAY
+** Action:	Display data in form before returning control to IIrunfrm.
+** Generates:	IIredisp();
+*/
+
+redisplay:	tREDISPLAY
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    gen_call( IIREDISP );
+		}
+;
+
+/* 
+** Statement:   ## RESUME [ FIELD name | COLUMN table col | NEXT | MENU |
+**                          ENTRY | NEXTFIELD | PREVIOUSFIELD ]
+** Action:	Exit Activate block and transfer control to specified object.
+** Generates:	[ Required loop breakout calls, ]
+**		IIresnext();	-- disallowed in ACTIVATE SCROLL UP/DOWN
+**	or:	IIresfld( field );
+**	or:	IIrescol( table, column );
+**	or:	IIresmu();
+**      or:     IIFRreResEntry();
+**	or:	IIFRgotofld(direction);
+**		goto IIfd_begin1;
+*/
+
+resume:		resume_key resume_args 
+		{
+		    i4	form_no;
+
+		    if ((form_no = lbl_gen(LBLmDISPLAY, TRUE)) != LBL_NOLEV)
+		    {
+			gen_goto( G_IF, L_FDBEG, 
+				  lbl_value(LBLmDISPLAY, form_no) );
+		    } else
+			er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2, $1.s,
+							    ERx("DISPLAY") );
+		}
+;
+resume_key:	tRESUME
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+/* Resume to display loop */
+resume_args:	/* EMPTY */
+	|	tNEXT
+		{
+		    i4		form_no;
+
+		    /* No RESUME NEXT unless we're in a DISPLAY loop. */
+		    if ((form_no = lbl_gen(LBLmDISPLAY, FALSE)) != LBL_NOLEV)
+		    {
+			switch (lbl_adget(form_no))
+			{
+			  /* 
+			  ** RESUME should not be allowed on activate SCROLL,
+			  ** FRSKEY or MENUITEM; however we don't give an
+			  ** error on LBLaSCROLL, LBLaFRSKEY and LBLaMITEM 
+			  ** for backward compatibility reasons.
+			  */ 
+			  case LBLaTIME:
+			    er_write( E_EQ0307_actRESNEXT, EQ_WARN, 1,
+						ERx("TIMEOUT") );
+			    break;
+			  default:
+			    break;
+			}
+			gen_call( IIRESNEXT );
+		    }
+		}
+	|	tFIELD fm_string
+		{
+		    gen_call( IIRESFLD );
+		}
+	|	tCOLUMN fm_string fm_string
+		{
+		    gen_call( IIRESCOL );
+		}
+	|	resume_name
+		{
+		    i4		stop;
+
+		    /* find the nearest DISPLAY or SUBMENU block, if any */
+		    stop = lbl_gen( LBLmDISPLAY|LBLmSUBMENU, FALSE );
+   
+		    if (STbcompare($1.s, 0, ERx("entry"), 0, TRUE) == 0)
+		    {
+			/* Warning if nearest block is not a DISPLAY block */
+			if ((stop != LBL_NOLEV)
+				&& (lbl_get_mode(stop) == LBLmSUBMENU))
+			    er_write( E_EQ0058_grINLOOP, EQ_WARN, 2,
+					ERx("RESUME ENTRY"), ERx("DISPLAY") );
+			else
+			    gen_call( IIFRRERESENTRY );
+		    }
+		    else if (STbcompare($1.s, 0, ERx("nextfield"), 0,
+			TRUE) == 0)
+		    {
+			/* Warning if nearest block is not a DISPLAY block */
+			if ((stop != LBL_NOLEV)
+				&& (lbl_get_mode(stop) == LBLmSUBMENU))
+			{
+			    er_write( E_EQ0058_grINLOOP, EQ_WARN, 2,
+					ERx("RESUME NEXTFIELD"),
+					ERx("DISPLAY") );
+			}
+			else
+			{
+			    arg_int_add( IIFRresNEXT );
+			    gen_call( IIFRNXTPRVFLD );
+			}
+		    }
+		    else if (STbcompare($1.s, 0, ERx("previousfield"), 0,
+			TRUE) == 0)
+		    {
+			/* Warning if nearest block is not a DISPLAY block */
+			if ((stop != LBL_NOLEV)
+				&& (lbl_get_mode(stop) == LBLmSUBMENU))
+			{
+			    er_write( E_EQ0058_grINLOOP, EQ_WARN, 2,
+					ERx("RESUME PREVIOUSFIELD"),
+					ERx("DISPLAY") );
+			}
+			else
+			{
+			    arg_int_add( IIFRresPREV);
+			    gen_call( IIFRNXTPRVFLD );
+			}
+		    }
+		    else
+		    {
+			if (STbcompare($1.s, 0, ERx("menu"), 0, TRUE) != 0)
+			    er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+						ERx("RESUME"), ERx("MENU") );
+			/* Error if nearest block is not a DISPLAY block */
+		        if ((stop != LBL_NOLEV)
+				&& (lbl_get_mode(stop) == LBLmSUBMENU))
+			    er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2,
+					ERx("RESUME MENU"), ERx("DISPLAY") );
+			else
+			    gen_call( IIRESMU );
+		    }
+		 }
+;
+resume_name:	tNAME 	/* extra rule to allow PL1 keyword ENTRY */
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/* 
+** Statement:	## SET_FRS { objects }+ ( set_frs-list )
+** Action:	Set form information from program values.
+** Generates:	if ( IIinqset(obj, ... ) != 0 ) {
+**		    IIfrsset( vardesc, var, info ); ...
+**		}
+** Notes:	See Notes for INQUIRE_FRS for special cases.
+*/
+
+set_frs:	set_frs_head frs_lparen setf_targlist tRPAREN
+		{
+		    frs_close();
+		}
+;
+set_frs_head:	set_frs_key frs_object frs_parlist
+;
+set_frs_key:	tSET_FRS
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    frs_inqset( FRSset );
+		}
+;
+/* 
+** SET_FRS target list:
+**		frs_const[(frs_name)] = value, ...
+**
+**	Note: old-style set_frs syntax will generate a
+**	preprocessor error.
+*/
+setf_targlist:	setf_tlist
+	|	tARUOP /* setf_oldtlist */	/* See eqfrs.c for tARUOP */
+		{
+		    er_write( E_EQ0077_grISUNSUPP, EQ_ERROR, 1,
+						    ERx("SET_FRS") );
+		    YYERROR;
+		}
+;
+setf_tlist:	setf_elm
+	|	setf_tlist tCOMMA setf_elm
+;
+setf_elm:	frs_constant fm_is setf_val
+;
+setf_val:	tSCONST
+		{
+		    frs_setval( form_sconst($1.s), T_CHAR, (SYM *)0,
+				(char *)0, (SYM *)0 );
+		}
+	|	tINTCONST
+		{
+		    frs_setval( $1.s, T_INT, (SYM *)0, (char *)0, (SYM *)0 );
+		}
+	|	tFLTCONST
+		{
+		    er_write( E_EQ0059_grINT, EQ_ERROR, 1, $1.s );
+		    frs_setval(ERx("0"), T_INT, (SYM *)0, (char *)0, (SYM *)0);
+		}
+	|	tDECCONST
+		{
+		    er_write( E_EQ0059_grINT, EQ_ERROR, 1, $1.s );
+		    frs_setval(ERx("0"), T_INT, (SYM *)0, (char *)0, (SYM *)0);
+		}
+	|	host_name_var qlfm_opt_ind
+		{
+		    /* 
+		    ** Only use null indicator information if we have
+		    ** a valid user variable
+		    */
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_FLOAT || gr->gr_type == T_UNDEF)
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0060_grINTSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+			    frs_setval( gr->gr_id, T_CHAR, (SYM *)0, 
+				        (char *)0, (SYM *)0 );
+			} else
+			    frs_setval( gr->gr_id, gr->gr_type, gr->gr_sym,
+					gr->gr_nlid, gr->gr_nlsym );
+		    }
+		    else
+		    {
+		        if (STbcompare(gr->gr_id,0,ERx("off"),0,TRUE)==0)
+			    frs_setval( ERx("0"), T_INT, (SYM *)0, (char *)0,
+					(SYM *)0 );
+			else if (STbcompare(gr->gr_id,0,ERx("bell"),0,TRUE)==0)
+			    frs_setval( ERx("2"), T_INT, (SYM *)0, (char *)0,
+					(SYM *)0 );
+		      	else
+			    frs_setval( gr->gr_id, T_CHAR, (SYM *)0, (char *)0,
+				    	(SYM *)0 );
+		    }
+		}
+	|	tON
+		{
+		    frs_setval( ERx("1"), T_INT, (SYM *)0, (char *)0,
+				(SYM *)0 );
+		}
+;
+/* 
+** Comment out old-style set_frs syntax
+# ifdef OLD_STYLE_SET
+setf_oldtlist:	setf_oelm
+	|	setf_oldtlist tCOMMA setf_oelm
+;
+setf_oelm:	frs_ostring fm_is fm_in_val
+		{
+		    gen_call( IIFRSSET );
+		}
+;
+
+# endif OLD_STYLE_SET
+*/
+
+/* 
+** Statement:	## SLEEP sec
+** Action:	Sleeps for sec seconds
+** Generates:	IIsleep( sec );
+*/
+
+sleep:		sleep_key fm_int
+		{
+		    gen_call( IISLEEP );
+		}
+;
+sleep_key:	tSLEEP
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+
+/*
+** Statement: 	## SUBMENU
+**		## ACTIVATE MENUITEM menu [:]
+**		   ...
+** Action:	Display nested menus, and menus without a form.
+**		These are plain submenus; nested menus are now truly
+**		recursive displays, and are part of the DISPLAY rules.
+** Generates:	goto IImu_init1;
+**	    IIfd_begin1:
+**		IIrunmu( 0 );
+**		if (IIretval() == 1) {
+**		    Activate 1
+**		}
+**		else if (IIretval() == 2) {
+**		    Activate 2
+**		}
+**		else {
+**		    goto IIfd_exit1;
+**		}
+**		goto IIfd_exit1;
+**	    IImu_init1:
+**		IImuonly();
+**		Activate menuitem calls.
+**		goto IIfd_begin1;
+**	    IIfd_exit:
+*/
+
+submenu:	submenu_head submenu_active
+		{
+		    i4	cur_form = lbl_current( LBL_FORM );
+
+		    gen_else( G_OPEN, II0, C_0, 0, L_0, 0, L_0, 0 ); 
+		    gen_goto( G_IF, L_FDEND, cur_form );
+		    gen_else( G_CLOSE, IIRETVAL, C_0, 0, L_0, 0, 
+			      L_ACTEND, cur_form );
+		    gen_goto( G_TERM, L_FDEND, cur_form );
+		    gen_label( G_NOLOOP, L_MUINIT, cur_form );
+		    gen_call( IIMUONLY );
+		    act_close( cur_form );
+		    gen_goto( G_TERM, L_FDBEG, cur_form );
+		    gen_label( G_NOLOOP, L_FDEND, cur_form );
+		}	
+;
+submenu_head:	tSUBMENU
+		{
+		    i4	cur_form = lbl_next( LBL_FORM );
+
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    gen_goto( G_TERM, L_MUINIT, cur_form );
+		    gen_label( G_NOLOOP, L_FDBEG, cur_form );
+		    arg_int_add( 0 );
+		    gen_call( IIRUNMU );
+		    lbl_a_reset();
+		    act_open();
+		}
+;
+submenu_active:	submu_actstmt
+	|	submenu_active submu_actstmt
+;
+submu_actstmt:	act_key submu_clause act_colon block 
+		{
+		    gen_else( G_ELSE, IIRETVAL, C_0, 0, L_ACTELSE, 
+			lbl_current(LBL_INTR), L_ACTEND, 
+			lbl_current(LBL_FORM) );
+		    gr->gr_mode = LBLmSUBMENU;
+		}
+;
+submu_clause:	submu_elm 
+		{
+		    gr->gr_mode = LBLmSUBMENU;	/* Not LBLmDISPLAY */
+		}
+	|	submu_clause tCOMMA submu_elm 
+		{
+		    gr->gr_mode = LBLmSUBMENU;	/* Not LBLmDISPLAY */
+		}
+;
+submu_elm:	tMENUITEM act_string act_args	
+		{
+		    act_add( ACT_MENU, lbl_current(LBL_INTR), 0, $2.ip );
+		}
+	|	act_other 	/* Non-keyword activates */
+;
+
+/* 
+** Statement:	## VALIDATE [ FIELD name ]
+** Action:	Validate data on form or field.
+** Generates:	if (IIvalfld(field) == 0) {
+**	or:	if( IIchkfrm() == 0 ) {
+**		    [ Break out of Equel loops ]
+**		    goto IIfd_begin1;
+**		}
+** Note:	May also generate breakout code of active Equel loops.
+*/
+
+validate:	validate_key validate_args
+		{
+		    i4	form_no;
+
+		    gen_if( G_OPEN, gr->gr_func, C_EQ, 0 );
+		    if ((form_no = lbl_gen(LBLmDISPLAY, TRUE)) != LBL_NOLEV)
+			gen_goto( G_NOTERM, L_FDBEG, 
+				  lbl_value(LBLmDISPLAY, form_no) );
+		    else
+			er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2, $1.s,
+							    ERx("DISPLAY") );
+		    gen_if( G_CLOSE, gr->gr_func, C_EQ, 0 );
+		}
+;
+validate_key:	tVALIDATE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+validate_args:	/* Validate the form */
+		{
+		    gr->gr_func = IICHKFRM;
+		}
+	|	tFIELD fm_string
+		{
+		    gr->gr_func = IIVALFLD;
+		}
+;
+
+/*
+** Equel Table Field Statements - These statements get mapped to calls
+** 			          in the Forms Runtime or Tbacc libraries.
+*/
+
+/*
+** Statement: 	## CLEARROW form table [row] [ ( column list ) ]
+** Action:	Clears columns of table field row. Clear row if no columns.
+** Generates:	if (IItbsetio(cmCLEAR, form, table, row) != 0) {
+** 		    IItclrrow();
+** 	or:	    IItclrcol( col ); ...
+**                      ...
+**                  IITBceColEnd();
+** 		}
+*/
+
+clearrow:	clearrow_init clearrow_tlist
+		{
+		    gen_call( IITBCECOLEND );
+		    gen_if( G_CLOSE, IITBSETIO, C_0, 0 );
+		}
+;
+clearrow_init:	clearrow_key fm_string fm_string fm_row
+		{
+		    gen_if( G_OPEN, IITBSETIO, C_NOTEQ, 0 );
+		    gr->gr_func = IITCLRCOL;
+		}
+;
+clearrow_key:	tCLEARROW
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_int_add( cmCLEARR );
+		}
+;
+clearrow_tlist:	tLPAREN fm_stringlist tRPAREN
+	|	tLPAREN tRPAREN
+		{
+		    gen_call( IITCLRROW );
+		}
+	|	/* No target list */
+		{
+		    gen_call( IITCLRROW );
+		}
+;
+
+/* 
+** Statement: 	## DELETEROW form table [row]
+**		    	  [ OUT ( form output list ) ]
+**			  [ IN  ( form  input list ) ]
+** Action:	Delete row specified by user.  IN / OUT target lists can 
+**		specify where data is coming from / going to. 
+** Generates:	if (IItbsetio(cmDELR, form, table, row) != 0) {
+**	OUT:	    [ IItcolret( vardesc, var, col ); ... ]
+**		    if (IItdelrow(INflag) != 0) {
+**	 IN:	        [ IItcolset( col, vardesc, var ); ... ]
+**		    }
+**		}
+** Note:	Code generated may vary based on the target lists.
+*/
+
+deleterow: 	delrow_init delr_out delr_in 
+		{
+		    /* Close inner and deleterow if blocks */
+		    gen_if( G_CLOSE, IITDELROW, C_0, 0 );
+		    gen_if( G_CLOSE, IITBSETIO, C_0, 0 );
+		}
+;
+delrow_init:	deleterow_key fm_string fm_string fm_row
+		{
+		    gen_if( G_OPEN, IITBSETIO, C_NOTEQ, 0 );
+		    gr->gr_func = IITCOLRET;	/* May be an Out list */
+		}
+;
+deleterow_key:	tDELETEROW
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_int_add( cmDELETER );
+		}
+;
+delr_out:	/* No Out list */
+	|	tOUT form_out_tl
+		{
+		    if (eq->eq_flags & EQ_VERSWARN)
+			er_write( E_EQ0078_grSTYUNSUPP, EQ_WARN, 1,
+						    ERx("DELETEROW ... OUT") );
+		}
+;
+delr_in:	/* No In list */
+		{
+		    arg_int_add( FALSE );
+		    gen_if( G_OPEN, IITDELROW, C_NOTEQ, 0 );
+		}
+	|	del_in_key form_in_tl
+		{
+		    if (eq->eq_flags & EQ_VERSWARN)
+			er_write( E_EQ0078_grSTYUNSUPP, EQ_WARN, 1,
+						    ERx("DELETEROW ... IN") );
+		}
+;
+del_in_key:	tIN 
+		{
+		    arg_int_add( TRUE );	/* In list */
+		    gen_if( G_OPEN, IITDELROW, C_NOTEQ, 0 );
+		    gr->gr_func = IITCOLSET;
+		}
+;
+
+/* 
+** Statement: 	## GETROW form table [row] ( form output list )
+** Action:	Fill user variables with table field data.
+** Generates:	if (IItbsetio(cmGETR, form, table, row) != 0) {
+**		    IItcolret( vardesc, var, col ); ...
+**                      ...
+**                  IITBceColEnd();
+**		}
+*/
+
+getrow:		getr_init form_out_tl
+		{
+		    gen_call( IITBCECOLEND );
+		    gen_if( G_CLOSE, IITBSETIO, C_0, 0 );
+		}
+;
+getr_init:	getrow_key fm_string fm_string fm_row
+		{
+		    gen_if( G_OPEN, IITBSETIO, C_NOTEQ, 0 );
+		    gr->gr_func = IITCOLRET;
+		}
+;
+getrow_key:	tGETROW
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_int_add( cmGETR );
+		}
+;
+
+/* 
+** Statement: 	## INITTABLE form table [ mode ] [ (col = type {, col = type}) ]
+** Action:	Initialize table field (with hidden columns) and table modes.
+** Generates:	if (IItbinit(form, table, mode) != 0) {
+**		    [ IIthidecol( col, ingtype ); ... ]
+**		    IItfill();
+**		}
+** Note:	If the target list is in a string variable then generate:
+**		    IIhidecol( strvar, null );
+*/
+
+inittable:	inittab_init inittab_tlist
+		{
+		    gen_call( IITFILL );
+		    gen_if( G_CLOSE, IITBINIT, C_0, 0 );
+		}
+;
+inittab_init:	inittable_key fm_string fm_string disp_mode
+		{
+		    gen_if( G_OPEN, IITBINIT, C_NOTEQ, 0 );
+		}
+;
+inittable_key:	tINITTABLE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+inittab_tlist: 	tLPAREN tRPAREN
+	|	tLPAREN inittab_tlist1 tRPAREN
+	|
+;
+inittab_tlist1:	fm_strvar
+		{
+		    arg_str_add( ARG_CHAR, (char *)0 );
+		    gen_call( IITHIDECOL );
+		}
+	|	inittab_hide
+;
+inittab_hide:	inithide_elm
+	|	inittab_hide tCOMMA inithide_elm
+;
+/*
+** BUG 3576 - Check that a mixture of variables and constants were not used
+** (ncg)      only within the format specification.  This is allowed:
+**			colvar = char(10)
+**	      but this is not:
+**			col    = typevar(10)
+**	      Clear gr_sym before parsing format rules.
+*/
+inithide_elm:	fm_string fm_is { gr->gr_sym = (SYM *)0; }
+			inithide_type inittype_mods inithide_null
+		{
+		    arg_str_add( ARG_CHAR,  id_getname() );
+		    id_free();
+		    gen_call( IITHIDECOL );
+
+		  /* Can't use literals and a variable too. */
+		    if (gr->gr_sym && ($5.i || $6.i))
+			er_write( E_EQ0074_grMISVAR, EQ_ERROR, 2, gr->gr_id,
+							    ERx("INITTABLE") );
+		}
+;
+/* Some host grammars add to this rule. */
+inithide_type:	init_string
+;
+inittype_mods:	/* EMPTY */
+		{
+		    $$.i = 0;		/* Paren not stuff present */
+		}
+	|	tLPAREN tINTCONST tRPAREN
+		{
+		    id_add( $1.s );
+		    id_add( $2.s );
+		    id_add( $3.s );
+		    $$.i = 1;		/* Paren stuff present */
+		}
+	|	tLPAREN tINTCONST tCOMMA tINTCONST tRPAREN   /* Decimal(p,s) */
+		{
+		    id_add( $1.s );
+		    id_add( $2.s );
+		    id_add( $3.s );
+		    id_add( $4.s );
+		    id_add( $5.s );
+		    $$.i = 1;		/* Paren stuff present */
+		}
+;
+init_string:	tSCONST
+		{
+		    id_add( form_sconst($1.s) );
+		}
+	|	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_CHAR)
+			    arg_var_add( gr->gr_sym, gr->gr_id );
+			else
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    id_add( gr->gr_id );
+			}
+		    }
+		    else
+			id_add( gr->gr_id );
+		}
+;
+/*
+** End of an inittable hidden column tlist item:
+**	[ WITH NULL | NOT NULL [WITH DEFAULT] ]
+*/
+inithide_null:	/* EMPTY */
+		{
+		    $$.i = 0;		/* No NULL clause */
+		}
+	|	tWITH tNULL
+		{
+		    id_add( ERx(" with null") );
+		    $$.i = 1;		/* With NULL clause */
+		}
+	|	init_notnull init_withdef
+		{
+		    if ($2.i == 0)
+			id_add( ERx(" not null") );
+		    else
+			id_add( ERx(" not null with default") );
+		    $$.i = 1;		/* With NULL clause */
+		}
+;
+init_notnull:	tLOGUOP tNULL
+		{
+		    if (STbcompare($1.s, 0, ERx("not"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $1.s,
+						ERx("INITTABLE"), ERx("NOT") );
+		}
+;
+init_withdef:	tWITH tNAME
+		{
+		    $$.i = 1;
+		    if (STbcompare($2.s, 0, ERx("default"), 0, TRUE) != 0)
+			er_write( E_EQ0069_grBADWORD, EQ_ERROR, 3, $2.s,
+					    ERx("INITTABLE"), ERx("DEFAULT") );
+		}
+	|	/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+;
+
+/*
+** Statement:	## PURGETABLE form table
+**
+** Action:	Moves deleted rows to the free list.
+**
+** Generates:	if (IItbsetio(cmPURGTBL, form, table, 0) != 0) {
+**		}
+*/
+
+purgetable:	purgetbl_key fm_string fm_string
+		{
+		    /*
+		    **  Add dummy argument for IItbsetio statement
+		    **  which is not used by purgetable.
+		    */
+		    arg_int_add( 0 );
+		    gen_if( G_OPEN, IITBSETIO, C_NOTEQ, 0 );
+		    gen_if( G_CLOSE, IITBSETIO, C_0, 0 );
+		}
+;
+
+purgetbl_key:	tPURGETBL
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s, NULL );
+		    arg_int_add( cmPURGE );
+		}
+;
+
+
+/* 
+** Statement: 	## INSERTROW form table [row] [ ( form input list ) ]
+**              ##        [with (ATTR(col) = ATTR_VAL {, ... }]
+** Action:  	Insert user data after row.
+** Generates:	if (IItbsetio(cmINSRTR, form, table, row) != 0) {
+**		    if (IItinsert() != 0) {
+**			IItcolset( col, valdesc, val ); ...
+**                      ...
+**                      [ IIFRsaSetAttrio
+**                      ( att, col, &ind, byref, type, len, var|val ); ... ]
+**                      IITBceColEnd();
+**		    }
+**		}
+*/
+
+insertrow:	insr_init form_opin_tl ld_with_clause
+		{
+		    /* Close inner and insertrow if blocks */
+		    gen_call( IITBCECOLEND );
+		    gen_if( G_CLOSE, IITINSERT, C_0, 0 );
+		    gen_if( G_CLOSE, IITBSETIO, C_0, 0 );
+		}
+;
+insr_init:	insertrow_key fm_string fm_string fm_row
+		{
+		    gen_if( G_OPEN, IITBSETIO, C_NOTEQ, 0 );
+		    gen_if( G_OPEN, IITINSERT, C_NOTEQ, 0 );
+		    gr->gr_func = IITCOLSET;
+		}
+;
+insertrow_key:	tINSERTROW
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_int_add( cmINSERTR );
+		}
+;
+
+/* 
+** Statement: 	## LOADTABLE form table ( form input list )
+**		##	[with (ATTR(col) = ATTR_VAL {, ... }]
+** Action:	Load new data onto the end of table field data set.
+** Generates:	if (IItbact(form, table, (loading)1) != 0) {
+**		    IItcolset( col, valdesc, val ); ...
+**                      ...
+**                  [ IIFRsaSetAttrio
+**                      ( att, col, &ind, byref, type, len, var|val );
+**                         ... ]
+**                  IITBceColEnd();
+**		}
+** Note:	The WITH clause supports setting cell attributes on the basis
+**		of the value being loaded into the table.
+*/
+		
+loadtable:	load_init form_in_tl ld_with_clause
+		{
+		    gen_call( IITBCECOLEND );
+		    gen_if( G_CLOSE, IITBACT, C_0, 0 );
+		}
+;
+load_init:	loadtable_key fm_string fm_string
+		{
+		    arg_int_add( TRUE );		/* Loading */
+		    gen_if( G_OPEN, IITBACT, C_NOTEQ, 0 );
+		    gr->gr_func = IITCOLSET;
+		}
+;
+loadtable_key:	tLOADTABLE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+ld_with_clause:	/* Empty */
+	|       ld_with tLPAREN setf_targlist tRPAREN
+;
+ld_with:        tWITH
+		{
+		    frs_inqset(FRSload);
+		    frs_object(ERx("row"));
+		}
+;
+
+/*
+** Statement: 	## PUTROW form table [row]  ( form input list )
+** Action:	Fill columns with user data.
+** Generates:	if (IItbsetio(cmPUTR, form, table, row) != 0) {
+**		    IItcolset( col, valdesc, val ); ...
+**                      ...
+**                  IITBceColEnd();
+**		}
+*/
+
+putrow:		putr_init form_in_tl
+		{
+		    gen_call( IITBCECOLEND );
+		    gen_if( G_CLOSE, IITBSETIO, C_0, 0 );
+		}
+;
+putr_init:	putrow_key fm_string fm_string fm_row 
+		{
+		    gen_if( G_OPEN, IITBSETIO, C_NOTEQ, 0 );
+		    gr->gr_func = IITCOLSET;
+		}
+;
+putrow_key:	tPUTROW
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_int_add( cmPUTR );
+		}
+;
+
+/* 
+** Statement: 	## SCROLL form table TO record
+**	      	## SCROLL form table < UP | DOWN >
+**		##   	             [ OUT ( form output list ) ]
+**		##	             [ IN  ( form  input list ) ]
+** Action:	Scroll to a specified record, or
+**		scroll table up or down using in / out target lists to
+**		specify where data is coming from / going to. 
+** Generates:	if (IItbsetio(cmSCROLL, form, table, rowNONE) != 0) {
+**		    IItbsmode( mode );
+**	OUT:	    [ IItcolret( vardesc, var, col ); ... ]
+**	 IN:	    if (IItscroll(INflag, recnum) != 0) {
+**		        [ IItcolset(col, cvar); ... ]
+**		    }
+**		}
+** Note: 	Code generated may vary from the above, based on the mode of
+**	  	scrolling and the target lists used.
+*/
+
+scroll:		scroll_init scroll_tlist
+		{
+		    /* Close inner and scroll if blocks */
+		    gen_if( G_CLOSE, IITSCROLL, C_0, 0 );
+		    gen_if( G_CLOSE, IITBSETIO, C_0, 0 );
+		}
+;
+scroll_init:	scroll_key fm_string fm_string
+		{
+		    arg_int_add( rowNONE );
+		    gen_if( G_OPEN, IITBSETIO, C_NOTEQ, 0 );
+		}
+;
+scroll_key:	tSCROLL
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_int_add( cmSCROLL );
+		}
+;
+scroll_tlist:	scroll_to scrollto_arg
+		{
+		    gen_if( G_OPEN, IITSCROLL, C_NOTEQ, 0 );
+		}
+	|	scroll_updown scroll_out scroll_in 
+		{
+		    if (($2.i || $3.i) && (eq->eq_flags & EQ_VERSWARN))
+			er_write( E_EQ0078_grSTYUNSUPP, EQ_WARN, 1,
+							ERx("SCROLL IN/OUT") );
+		}
+;
+scroll_to:	tTO 
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		    gen_call( IITBSMODE );
+		    arg_int_add( FALSE );	/* Ignore In flag */
+		}
+;
+scrollto_arg:	fm_int
+	|	tEND 
+		{
+		    arg_int_add( rowEND );
+		}
+;
+scroll_updown:	tUP 
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		    gen_call( IITBSMODE );
+		}
+	|	tDOWN 
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		    gen_call( IITBSMODE );
+		}
+;
+scroll_out:	/* No out list */
+		{
+		    $$.i = 0;
+		}
+	|	sc_out_key form_out_tl
+		{
+		    $$.i = 1;
+		}
+;
+sc_out_key:	tOUT
+		{
+		    gr->gr_func = IITCOLRET;
+		}
+;
+scroll_in:	/* No in list */
+		{
+		    arg_int_add( FALSE );
+		    arg_int_add( rowNONE );
+		    gen_if( G_OPEN, IITSCROLL, C_NOTEQ, 0 );
+		    $$.i = 0;
+		}
+	|	sc_in_key form_in_tl
+		{
+		    $$.i = 1;
+		}
+;
+sc_in_key:	tIN 
+		{
+		    arg_int_add( TRUE );	/* In list */
+		    arg_int_add( rowNONE );
+		    gen_if( G_OPEN, IITSCROLL, C_NOTEQ, 0 );
+		    gr->gr_func = IITCOLSET;
+		}
+;
+
+/* 
+** Statement:	## TABLEDATA 
+**		## {
+**			User code
+**		## }
+** Action:	Inside formdata - get Vifred info about current table field.
+** Generates:	while (IItdata() != 0) {
+**			User code (Inquire calls)
+**		}
+**	IItb_end1:
+**		IItdatend();
+*/	
+
+tabledata:	tabdata_init block
+		{
+		    i4	cur_table = lbl_current( LBL_TBL );
+
+		    /* Close tabledata loop */
+		    gen_loop( G_CLOSE, L_TBBEG, L_TBEND, cur_table, IITDATA,
+			      C_0, 0 );
+		    if (lbl_is_used(LBL_TBL))
+			gen_label( G_LOOP, L_TBEND, cur_table );
+		    gen_call( IITDATEND );
+		}
+tabdata_init:	tTABLEDATA
+		{
+		    i4	cur_table = lbl_next( LBL_TBL );
+
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    if (lbl_gen(LBLmFORMDATA, FALSE) == LBL_NOLEV)
+			er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2, $1.s,
+							    ERx("FORMDATA") );
+		    gr->gr_mode = LBLmTBDATA;
+		    gen_loop( G_OPEN, L_TBBEG, L_TBEND, cur_table, IITDATA, 
+			      C_NOTEQ, 0 );
+		}
+;
+
+/* 
+** Statement:	## UNLOADTABLE form table [ ( form output list ) ]
+**		## {
+**			User code
+**		## }
+** Action: 	Unload data set, allowing user intervention with each row.
+** Generates:	if (IItbact( form, table, (unload)0) == 0) goto IItb_end1; 
+**	        while ( IItunload() != 0 ) {
+**		   	IItcolret( vardesc, var, col ); ...
+**                      IITBceColEnd();
+**			User code ...
+**	        }
+**	IItb_end1:
+**		IItunend();
+*/	
+
+unloadtable:    unload_stmt block
+		{
+		    i4	cur_table = lbl_current( LBL_TBL );
+
+		    /* Close unloadtable loop */
+		    gen_loop( G_CLOSE, L_TBBEG, L_TBEND, cur_table, IITUNLOAD,
+			      C_0, 0 );
+		    gen_label( G_LOOP, L_TBEND, cur_table );
+		    gen_call( IITUNEND );
+		}
+;
+unload_stmt:    unload_init form_opout_tl
+		{
+		    gen_call( IITBCECOLEND );
+		}
+;
+unload_init:	unloadtab_key fm_string fm_string
+		{
+		    i4	cur_table = lbl_next( LBL_TBL );
+
+		  /* Nested unloadtable? */
+		    if (lbl_gen(LBLmTBUNLD,FALSE) != LBL_NOLEV)
+			er_write( E_EQ0068_grUNLOADTB, EQ_ERROR, 0 );
+		    gr->gr_mode = LBLmTBUNLD;
+		    arg_int_add( FALSE );		/* Unload flag */
+		    gen_if_goto( IITBACT, C_EQ, 0, L_TBEND, cur_table );
+		    gen_loop( G_OPEN, L_TBBEG, L_TBEND, cur_table, IITUNLOAD, 
+			      C_NOTEQ, 0 );
+		    gr->gr_func = IITCOLRET;
+		}
+;
+unloadtab_key:	tUNLOADTABLE
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		}
+;
+
+/*
+** Statement: 	## VALIDROW form table [row] [ ( column list ) ]
+** Action:	Validates columns of table row. Validate row if no columns.
+** Generates:	if (IItbsetio(cmVALIDR, form, table, row) != 0) {
+**     For row:	    IItvalrow();
+**     For columns: IItcolval( col1 );
+**		    IItcolval( col2 ); ...
+**
+**		    if (IItvalval(0) == 0) {
+**			[ Break out of Equel loops ]
+**		        goto IIfd_begin1;
+**		    }
+**		}
+*/
+
+validrow:	validrow_init validrow_tlist
+		{
+		    i4	stop_level;
+
+		    arg_int_add( 0 );
+		    gen_if( G_OPEN, IITVALVAL, C_EQ, 0 );
+		    if ((stop_level = lbl_gen(LBLmDISPLAY, TRUE)) == LBL_NOLEV)
+			er_write( E_EQ0058_grINLOOP, EQ_ERROR, 2, $1.s,
+							    ERx("DISPLAY") );
+		    else
+			gen_goto( G_NOTERM, L_FDBEG, 
+				  lbl_value(LBL_FORM, stop_level) );
+		    /* Close inner and validrow if blocks */
+		    gen_if( G_CLOSE, IITVALVAL, C_0, 0 );
+		    gen_if( G_CLOSE, IITBSETIO, C_0, 0 );
+		}
+;
+validrow_init:	validrow_key fm_string fm_string fm_row
+		{	
+		    gen_if( G_OPEN, IITBSETIO, C_NOTEQ, 0 );
+		    gr->gr_func = IITCOLVAL;
+		    $$.s = $1.s;
+		}
+;
+validrow_key:	tVALIDROW
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_int_add( cmVALIDR );
+		}
+;
+validrow_tlist:	tLPAREN fm_stringlist tRPAREN
+	|	tLPAREN tRPAREN
+		{
+		    gen_call( IITVALROW );
+		}
+	|	/* Default is whole row */
+		{
+		    gen_call( IITVALROW );
+		}
+;
+
+/* 
+** Form utility rules - all rules must begin with 'fm_' 
+*/
+
+/* Form string constant */
+
+fm_sconst:	tSCONST
+		{
+		    $$.s = form_sconst($1.s);
+		}
+;
+
+/* Form string constants (quotes are not required) or string variable */
+
+fm_string:	fm_sconst
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+	|	host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_CHAR)
+			    arg_var_add( gr->gr_sym, gr->gr_id );
+			else
+			{
+			    if (gr->gr_type != T_UNDEF)
+				er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    arg_str_add( ARG_CHAR, gr->gr_id );
+			}
+		    }
+		    else
+		    {
+			arg_str_add( ARG_CHAR, gr->gr_id );
+		    }
+		}
+;
+
+/*  Like fm_string, except that QUOTES ARE REQUIRED  (07/22/88 marge) */
+
+fm_qstring:	fm_sconst
+		{
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+	|	fm_strvar
+;
+
+/* Form string variable - either to receive data (PROMPT) or other use */
+
+fm_strvar:	host_name_var
+		{
+		    if (gr->gr_sym && gr->gr_type == T_CHAR)
+			arg_var_add( gr->gr_sym, gr->gr_id );
+		    else
+		    {
+			arg_str_add( ARG_CHAR, gr->gr_id );
+			if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0067_grSTRVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		}
+;
+
+/* 
+** Form string list - string { , string }
+** Note:	gr->gr_func must be set to whatever to call on each element.
+*/
+
+fm_stringlist:	fm_string
+		{
+		    gen_call( gr->gr_func );
+		}
+	|	fm_stringlist tCOMMA fm_string 
+		{
+		    gen_call( gr->gr_func );
+		}
+;
+
+/* 
+** Form varying string list - { string }
+** Note:	Just add each one as an argument (fm_string does this).
+*/
+
+fm_varstrings:	/* No strings */
+	|	fm_varstrings fm_string
+;
+
+/* Form integer constant */
+
+fm_iconst:	tINTCONST
+		{
+		    $$.s = $1.s;
+		}
+	|	tARUOP tINTCONST	%prec tUNARYOP
+		{
+		    char	ibuf[50];
+		    char	*s_int = $2.s;
+
+		    if (*($1.s) == '-')
+		    {
+			ibuf[0] = '-';
+			ibuf[1] = '\0';
+			s_int = str_add( STRNULL, STcat(ibuf, s_int) );
+		    }
+		    $$.s = s_int;
+		}
+;
+
+/* Form floating constant */
+
+fm_fconst:	tFLTCONST
+		{
+		    $$.s = $1.s;
+		}
+	|	tARUOP tFLTCONST	%prec tUNARYOP
+		{
+		    char	fbuf[50];
+		    char	*s_flt = $2.s;
+
+		    if (*($1.s) == '-')
+		    {
+			fbuf[0] = '-';
+			fbuf[1] = '\0';
+			s_flt = str_add( STRNULL, STcat(fbuf, s_flt) );
+		    }
+		    $$.s = s_flt;
+		}
+;
+
+/* Form decimal constant */
+
+fm_dconst:	tDECCONST
+		{
+		    $$.s = $1.s;
+		}
+	|	tARUOP tDECCONST	%prec tUNARYOP
+		{
+		    char	dbuf[50];
+		    char	*s_dec = $2.s;
+
+		    if (*($1.s) == '-')
+		    {
+			dbuf[0] = '-';
+			dbuf[1] = '\0';
+			s_dec = str_add( STRNULL, STcat(dbuf, s_dec) );
+		    }
+		    $$.s = s_dec;
+		}
+;
+
+/* Form integer constant or variable */
+
+fm_int:		fm_iconst
+		{
+		    arg_str_add( ARG_INT, $1.s );
+		}
+	|	tFLTCONST		/* Common error */
+		{
+		    er_write( E_EQ0059_grINT, EQ_ERROR, 1, $1.s );
+		    arg_int_add( 0 );
+		}
+	|	tDECCONST		/* Common error */
+		{
+		    er_write( E_EQ0059_grINT, EQ_ERROR, 1, $1.s );
+		    arg_int_add( 0 );
+		}
+	|	host_name_var
+		{
+		    if (gr->gr_sym && gr->gr_type == T_INT)
+			arg_var_add( gr->gr_sym, gr->gr_id );
+		    else
+		    {
+			arg_int_add( 0 );
+			if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0059_grINT, EQ_ERROR, 1, gr->gr_id );
+		    }
+		}
+;
+
+/*
+** General format of a Form in target list (ie: in PUTFORM ) is:
+**	( object = val { , object = val } )
+**
+**	object: < name | PUTOPER( name ) >
+**
+** Generates:	IIinfunc( object, valdesc, val ); ...
+** Note:	gr->gr_func must be set to the corresponding output function.
+*/
+
+form_opin_tl:	form_in_tl
+	|	tLPAREN tRPAREN 
+	|	/* No input list */
+;
+form_in_tl:	tLPAREN fm_in_tlist tRPAREN
+	|	tLPAREN fm_in_param tRPAREN
+;
+fm_in_tlist:	in_elm
+	|	fm_in_tlist tCOMMA in_elm
+;
+in_elm:		fm_string fm_is fm_in_val
+		{
+		    gen_call( gr->gr_func );
+		}
+	|	tPUTOPER tLPAREN fm_string tRPAREN fm_is fm_in_val
+		{
+		    switch ( gr->gr_func )
+		    {
+		      case IISETFIELD:
+		      case IITCOLSET:
+			arg_push();
+			arg_int_add( TRUE );
+			gen_call( IIPUTOPER );
+			switch (gr->gr_type)
+			{
+			  case T_INT:
+			  case T_DBV:
+			  case T_UNDEF:
+			    break;
+			  default:
+			    er_write( E_EQ0053_grFMINTFUNC, EQ_ERROR, 1, $1.s );
+			    break;
+			}
+		 	break;
+
+		      default:
+			er_write( E_EQ0052_grFMFUNC, EQ_ERROR, 1, $1.s );
+			break;
+		    }
+		    gen_call( gr->gr_func );
+		}
+	|	fm_string fm_is fm_null
+		{
+		    gen_call( gr->gr_func );
+		}
+;
+
+/* Input values and constants for the forms system */
+
+fm_in_val:	host_name_var qlfm_opt_ind
+		{
+		    /* Null indicator argument to IIput */
+		    if (gr->gr_nlsym)
+		    {
+			arg_var_add( gr->gr_nlsym, gr->gr_nlid );
+		    }
+		    else
+		    {
+			arg_int_add( 0 );
+		    }
+		    /* Data argument to IIput */
+		    if (gr->gr_sym)
+		    {
+			arg_var_add( gr->gr_sym, gr->gr_id );
+		    }
+		    else
+		    {
+			arg_str_add( ARG_CHAR, gr->gr_id );
+			er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1, gr->gr_id );
+		    }
+		}
+	|	fm_iconst
+		{
+		    arg_int_add( 0 );		/* No null indicator */
+		    arg_str_add( ARG_INT, $1.s );
+		    gr->gr_type = T_INT;
+		}
+	|	fm_fconst
+		{
+		    arg_int_add( 0 );		/* No null indicator */
+		    arg_str_add( ARG_FLOAT, $1.s );
+		    gr->gr_type = T_FLOAT;
+		}
+	|	fm_dconst
+		{
+		    arg_int_add( 0 );		/* No null indicator */
+		    arg_str_add( ARG_PACK, $1.s );
+		    gr->gr_type = T_PACKASCHAR;
+		}
+	|	fm_sconst
+		{
+		    arg_int_add( 0 );		/* No null indicator */
+		    arg_str_add( ARG_CHAR, $1.s );
+		    gr->gr_type = T_CHAR;
+		}
+;
+
+/*
+** This rule is used in input forms statements where target list is:
+**	( col = null, ... )
+** We store away two arguments: a null pointer for indicator (just a
+** zero) and a null pointer for data (a special SYM).  The code generator
+** expects this convention for I/O arguments.
+*/
+fm_null:	tNULL
+		{	
+		    arg_int_add( 0 );
+		    arg_var_add( gr->gr_null, ERx("null") ); 
+		}
+;
+/*
+** General format of a Form output target list (ie: in GETFORM ) is:
+**	( var = object {, var = object} )
+**
+**	object: < name | GETOPER( name ) >
+**
+** Generates:	IIoutfunc( vardesc, var, object ); ...
+** Note:	gr->gr_func must be set to the corresponding input function.
+*/
+ 
+form_opout_tl:	form_out_tl
+		{
+		    $$.i = 1;
+		}
+	|	tLPAREN tRPAREN 
+		{
+		    $$.i = 1;
+		}
+	|	/* No output target list */
+		{
+		    $$.i = 0;
+		}
+;
+form_out_tl:	tLPAREN fm_out_tlist tRPAREN
+	|	tLPAREN fm_out_param tRPAREN
+;
+fm_out_tlist:	out_elm
+	|	fm_out_tlist tCOMMA out_elm
+;
+out_elm:	fm_out_var fm_is fm_string
+		{
+		    gen_call( gr->gr_func );
+		}
+	|	fm_out_var fm_is tGETOPER tLPAREN fm_string tRPAREN
+		{
+		    switch ( gr->gr_func )
+		    {
+		      case IIRETFIELD:
+		      case IITCOLRET:
+			arg_push();
+			arg_int_add( TRUE );
+			gen_call( IIGETOPER );
+			if ($1.i != T_INT && $1.i != T_DBV && $1.i != T_UNDEF)
+			    er_write( E_EQ0053_grFMINTFUNC, EQ_ERROR, 1, $3.s );
+		 	break;
+
+		      default:
+			er_write( E_EQ0052_grFMFUNC, EQ_ERROR, 1, $3.s );
+			break;
+		    }
+		    gen_call( gr->gr_func );
+		}
+;
+
+fm_out_var:	host_var qlfm_opt_ind
+		{
+		    if (gr->gr_nlsym)
+			arg_var_add( gr->gr_nlsym, gr->gr_nlid );
+		    else
+			arg_int_add( 0 );
+		    arg_var_add( gr->gr_sym, gr->gr_id );
+		    $$.i = gr->gr_type;
+		}
+;
+
+/* Optional table field row number:  [ rownum ] */
+fm_row:		fm_int
+	|	/* No row specified - use current row */
+		{
+		    arg_int_add( rowCURR );
+		}
+;
+
+/* Optional form name on some I/O statements - $0 is always the keyword */
+fm_opname:	fm_string
+	|	/* No form name - use null in Display loop */
+		{
+		    arg_str_add( ARG_CHAR, (char *)0 );
+		    if (lbl_gen(LBLmDISPLAY, FALSE) == LBL_NOLEV)
+			er_write( E_EQ0056_grFORMNAME, EQ_ERROR, 1, $0.s );
+		}
+;
+
+/* Assignment operator */
+fm_is:		tIS
+		{
+		    er_write( E_EQ0071_grASSGNOP, EQ_ERROR, 1, $1.s );
+		}
+	|	tEQOP
+;
+
+/* Optional comma */
+fm_opcomma:	tCOMMA
+	|
+;
+
+/*
+** FAKE RULES THAT ARE DEFINED IN L BUT ARE HERE TO ALLOW YACC TO COMPLETE
+**
+** The L grammar must define the following rules:
+**  1. block_open and block_close 	- Open and close Equel blocks;
+**  2. ql_in_param and ql_out_param	- Quel in and out Param target lists;
+**  3. fm_in_param and fm_out_param	- Form in and out Param target lists;
+**  4. host_code			- Host program code;
+**  5. host_declare			- Host declarations;
+**  6. host_var and host_name_var	- Host variables and names;
+**	These last two rules must set gr_id, gr_sym and gr_type of the name or
+**      variable parsed;
+**  7. any other rules that need to be added for the language.
+*/
+
+/* %L fake begin */
+
+/* Block openning and closing */
+block_open:	tL_BLK_BEGIN
+;
+block_close:	tL_BLK_END
+;
+
+/* Quel Param statements */
+ql_in_param:	tPARAM tLPAREN /* args */ tRPAREN
+;
+ql_out_param:	tPARAM tLPAREN /* args */ tRPAREN
+;
+
+/* Form Param statements */
+fm_in_param:	tPARAM tLPAREN /* args */ tRPAREN
+;
+fm_out_param:	tPARAM tLPAREN /* args */ tRPAREN
+;
+
+/* Dummy L objects */
+host_var:	tNAME
+;
+host_name_var:	tNAME
+;
+host_declare:	tL_DECLARE
+;
+host_code:	tHOSTCODE
+;
+/* %L fake end */
+
+/* %L rules */
+%%
+
+/* %L mechanism */

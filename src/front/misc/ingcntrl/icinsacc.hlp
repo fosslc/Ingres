@@ -1,0 +1,51 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icinsacc.hlp        Help on Accessdb's Installation-Wide Access Grants.
+/#subtopic "Example Installation-Wide Access Grants" iciwaccg.hlp
+/#subtopic "Group and Role Identifiers" icgrprol.hlp
+/#subtopic "Authorization Hierarchy" icauthhi.hlp
+/#--
+This frame displays all Installation-Wide Access Grants and allows you to
+update the list (you must have the SECURITY user privilege to make updates).
+
+	TABLE FIELD
+	NAME        	SYNOPSIS
+	-------------   --------
+	Authorization   Name of User, Group, Role or word "Public", with
+	  Identifier    Installation-Wide Access to databases.
+	
+	Type            After entering an Authorization Identifier, Accessdb 
+			will check if it is the name of a User, Group, Role 
+			or the word "Public", and will fill in the "Type" 
+			column.
+	
+	Access          Authorize new access by entering the Authorization 
+			Identifier (name of a User, Group, Role, or the word 
+			"Public") and then indicate if the identifier should 
+			be allowed or not allowed installation-wide access by 
+			entering "yes" or "no" in the Access column.
+
+Change existing access by typing over values in an existing row, or by
+selecting Delete to remove existing access.
+                
+Once the table field contains the correct access entries, select "Save".
+
+See SubTopic Help for more info.
+
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Delete		Change existing access.
+	
+	Save            Save changes to Installation-Wide Access Grants
+	                and return to previous frame.
+	
+	ListChoices     Display a list of choices for the current field.
+	
+		(The above 3 menuitems will only appear if you have
+	        the SECURITY user permission)
+	
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

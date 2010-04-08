@@ -1,0 +1,38 @@
+.TH MKSPHGV 1 "Ingres" "Ingres Corporation" "Ingres Corporation"
+.\" History:
+.\"	25-Jan-1991 (andys)
+.\"		Written.
+.\"	29-Mar-1991 (jab)
+.\"		Copied to W4GL04 project library.
+.\"	12-Feb-1992 (jab)
+.\"		Modified to create w4glvers.h instead.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+mkw4vers \- make w4glvers.h in appropriate header directory.
+.SH ORIGIN
+ASK/Ingres Corporation
+.SH SYNOPSIS
+.B mkw4vers
+.SH DESCRIPTION
+.I Mkw4vers
+runs ccpp over the CONFIG file to find out the Windows\04GL version
+name. It writes strings containing this information into a file
+.I w4glvers.h
+so that these strings will be included in the Windows\04GL
+executables.
+.SH OPTIONS
+.TP
+none
+.SH FILES
+.TP
+.B $ING_SRC/front/w4gl/hdr/w4glvers.h
+is the file produced.
+.TP
+.B $ING_SRC/tools/port/conf/VERS
+gives config string.
+.SH "SEE ALSO"
+.BR mkgv(1),
+.BR ccpp(1)
+.SH BUGS
+.I Mkw4vers
+has no known bugs.

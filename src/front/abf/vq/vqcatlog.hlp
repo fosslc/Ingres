@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqcatlog.hlp, behind the applications catalog screen.
+/#-- 
+Vision is a system for developing applications that access Ingres databases.
+If you are a new user, you may wish to select the topic 'New user information' 
+from the SubTopics menu to find out more about Vision.  Help is available 
+at every screen in the system.
+
+This catalog screen lists all the applications in the current database.  
+  * To create a new application, select Create from the menu.
+  * To perform a menu operation on an existing application, move the cursor 
+    to the application name then select the operation from the menu. 
+
+  Create     Creates a new application. 
+  Destroy    Destroys an existing application.
+  Edit       Lets you modify an application.
+  Rename     Lets you change the name of an application.
+  MoreInfo   Displays additional information about an application.
+  Go         Runs an application to test it.
+  Utilities  Displays a menu of utility functions.
+  Quit       Ends the session.
+/#--
+/#subtopic 'New user information' vqnewusr.hlp
+/#subtopic 'Screen layout' vqcatlo.hlp

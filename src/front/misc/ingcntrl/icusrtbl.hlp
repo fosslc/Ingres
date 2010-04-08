@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icusrtbl.hlp       Help on Accessdb's "User Catalog" frame.
+/#--
+The Users Catalog frame displays a table field of all users authorized to use 
+Ingres.  The table field is read-only.  
+
+Note: The display is a table field and must be scrolled up and down to
+view its full contents.
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Create		Create a new user.
+	
+	Delete		Delete the selected user from the system.  
+			This operation will be disallowed if the user owns
+			a database.
+	
+	Edit		Examine or change information about the user.
+	
+	SQLscript	Create a script of SQL 'CREATE USER' commands,
+			one for every current user in the installation.
+			(This is useful for copying installations.)
+	
+	Help		Access the Ingres help facility.
+	
+	End		Return to the previous frame.

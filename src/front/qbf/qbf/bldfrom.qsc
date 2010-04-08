@@ -1,0 +1,178 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<qg.h>
+#include	<fmt.h>
+# include       <ui.h>
+##include	<mqtypes.qsh>
+#include	"mqstates.h"
+
+/**
+** Name:	bldfrom.c - builds FROM clause for QG SELECT of a Master row
+**
+** Description:
+**	Contains routines used to the build the FROM clause for a query
+**	from a query definition.  Defines:
+**
+**	IIqfAddFrom()		add tables in query definition into from.
+**	IIQFblfBldFrom()	build from clause for query definition.
+**
+** History:
+**	Revision 6.1  88/09  wong
+**	Abstracted 'IIqfAddFrom()'.
+**
+**	Revision 6.0  87/12/09  kenl
+**	Initial version.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+/*{
+** Name:	IIqfAddFrom() -		Add Tables in Definition into From.
+**
+** Description:
+**	Adds the tables in the query definition as part of a from clause
+**	into the from clause buffer.
+**
+** Input:
+**	qdef	{MQQDEF *}  The query definition object.
+**	type	{nat}  The type of tables to be added:
+**			mqIN_MASTER or mqIN_DETAIL.
+**	from	{char *}  The from clause buffer.
+**
+** History:
+**	09/88 (jhw)  Abstracted from above and 'IIqfGetQuery()'.
+**	23-nov-88 (kenl)
+**		Changed the FROM clause so the correlation name is not used
+**		if it is the same as the table name.  This fix comes from
+**		the IBM group (ham).
+**	18-jan-93 (daver)
+**		Added 6.5 owner.table support, and delim id support.
+**	31-dec-1993 (rdrane)
+**		Use OpenSQL level to determine 6.5 syntax features support.
+*/
+
+VOID
+IIqfAddFrom ( qdef, type, from )
+register MQQDEF	*qdef;
+register i4	type;
+char		*from;
+{
+	register i4	i;
+	register char	*cp = from;
+
+	for ( i = 0 ; i < qdef->mqnumtabs ; ++i )
+	{
+    		register RELINFO	*tabl = qdef->mqtabs[i];
+
+                /*
+                ** For 6.5 and beyond, it doesn't matter if we're using
+                ** a correlation name (mqrangevar) or not (we know if we are
+                ** if it differs from the table (mqrelid) name). Given the
+                ** 6.4 from clauses
+                **
+                **      FROM table1, table2
+                **      FROM table1 t1, table2 t2
+                **
+                ** in 6.5 this will have to become
+                **
+                **      FROM owner1.table1 table1, owner2.table2 table2
+                **      FROM owner1.table1 t1, owner2.table2 t2
+                **
+                ** This is because we must always prefix the column name
+                ** with the the rangevar/tablename (i.e., t1.col1) in case
+                ** the column appears in more than one table in the query
+                */
+		if ( tabl->mqtype == type )
+		{
+
+              		if  (STcompare(IIUIcsl_CommonSQLLevel(),UI_LEVEL_65)
+						 >= 0)
+                	{
+				char	unrml_owner[FE_UNRML_MAXNAME+1];
+				char	unrml_table[FE_UNRML_MAXNAME+1];
+				char	unrml_range[FE_UNRML_MAXNAME+1];
+
+				/* Quote these things, if necessary */
+				IIUGxri_id(tabl->mqrelown, unrml_owner);
+				IIUGxri_id(tabl->mqrelid, unrml_table);
+				IIUGxri_id(tabl->mqrangevar, unrml_range);
+
+				cp += STlength( STprintf( cp, ERx("%s.%s %s,"),
+							unrml_owner,
+							unrml_table,
+							unrml_range));
+                	}
+                	else
+                	{
+                        /*
+                        ** the pre-6.5 code fragment -- 6.4 and earlier
+                        ** will not accept owner.tablename!!
+                        */
+				if (STequal(tabl->mqrelid, tabl->mqrangevar))
+				{
+				    cp += STlength(STprintf( cp, ERx("%s,"),
+							tabl->mqrelid));
+				}
+				else
+				{
+				    cp += STlength(STprintf(cp,ERx("%s %s,"),
+							tabl->mqrelid,
+							tabl->mqrangevar));
+				}
+
+
+                	} /* else pre 6.5 */
+
+		} /* if tabl->mqtype == type */
+	} /* for each table in question */
+	*cp = EOS;
+}
+
+static bool	detail_added;
+
+STATUS
+IIQFblfBldFrom ( fname, bfvalue )
+char	*fname;
+PTR	bfvalue;
+{
+	char		*qfrom;
+	register i4	i;
+	register MQQDEF	*qdef = (MQQDEF *) bfvalue;
+
+	qfrom = ((QRY_SPEC *)qdef->mqqdesc->qg_from)->qs_var;
+
+	if (*qfrom == EOS)
+	{
+		detail_added = FALSE;
+
+		IIqfAddFrom( qdef, mqIN_MASTER, qfrom );
+	}
+
+	for ( i = 0 ; i < qdef->mqnumatts && !detail_added ; ++i )
+	{
+    		register ATTRIBINFO	*satt = qdef->mqatts[i];
+
+		/* If field is part of the Detail then locate
+		** the field name amongst all of the attribuites.
+		*/
+		if (satt->mdtype == mqIN_DETAIL
+			&& STequal(fname, satt->formfield) )
+		{ /* add all detail tables to FROM clause */
+			IIqfAddFrom(qdef, mqIN_DETAIL, qfrom+STlength(qfrom) );
+			detail_added = TRUE;
+		}
+	} /* end for */
+} 

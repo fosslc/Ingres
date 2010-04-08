@@ -1,0 +1,732 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<me.h> 
+#include	<cv.h> 
+#include	<st.h> 
+#include	<ol.h> 
+#include	<er.h> 
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ui.h>
+#include	<adf.h>
+#include	<eqrun.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<rtsdata.h>
+#include	<abrterr.h>
+#include	<uigdata.h>
+
+/**
+** Name:	inidb.sc -	ABF Run-Time System DBMS Start-up Module.
+**
+** Description:
+**	Contains the routine used to start-up DBMS access for ABF application
+**	images.  Defines:
+**
+**	IIARdbConnect()	initializes the database connection.
+**	IIARdbExit()	database disconnect.
+**
+** History:
+**	Revision 6.0  88/02  wong
+**	Also, changed to set-up connection directly, since 'FEingres()'
+**	closes transactions.
+**	Now supports additional flags passed to the DBMS.  87/06
+**
+**	Revision 6.1  88/08  wong
+**	Gateway changes:  Now calls 'IIUIdci_initcap()'.
+**	03/89  wong  Bugs 4360 & 4361 corrected:  Now uses 'IIUIsharedData()'
+**	etc. to set DBMS constants and commits on initial DBMS session startup.
+**
+**	Revision 6.3  89/11  wong
+**	Modified to use application session ID for DBMS connection.
+**
+**	Revision 6.5
+**	30-sep-92 (davel)
+**		Added routines to support user session connects and disconencts.
+**	06-nov-92 (davel)
+**		Modified shutdown procedure to disconnect all user sessions,
+**		and only shutdown session -1 if it exists.
+**	11-nov-92 (davel)
+**		Added IIARchsCheckSession() to initialize UI session data
+**		structures when non-4GL sessions are first encountered. Also
+**		add error checking.
+**	14-dec-92 (davel)
+**		Explicitly switch to ABRT_SESSION before disconnecting it 
+**		in dbms_exit().
+**	11-feb-93 (davel)
+**		Fix bug in connect: null out the last connect option.
+**	10-mar-93 (davel)
+**		Add support for connection name.  Also disallow disconnecting
+**		the current session if it is a non-user session (bug 49557).
+**	19-nov-93 (robf)
+**              Add support for DBMS password.
+**	12-may-1997(angusm)
+**	        SIR 82187: allow user-defined error handler to handle
+**	        failure of 2nd or subsequent connect in IIARndcNewDBConnect() 
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      29-Nov-1999 (hanch04)
+**          First stage of updating ME calls to use OS memory management.
+**          Make sure me.h is included.  Use SIZE_TYPE for lengths.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+[@history_template@]...
+*/
+
+GLOBALREF	bool	IIarNoDB;
+
+static STATUS 
+	validate_session(i4 *sess_id, char *conn_name, bool is_disconnect);
+static i4	cleanup();
+static VOID	dbms_exit();
+
+VOID	IIARdbExit();
+static char	*ARWithClause = NULL;	/* with clause for DBMS connect */
+FUNC_EXTERN ER_MSGID IILQfrserror(ER_MSGID errnum);
+
+/*{
+** Name:	IIARdbConnect() -	Initialize DBMS Connection.
+**
+** Description:
+**	Connects to a DBMS session and sets the exit clean-up routine.
+**	Once the DBMS session is accessed, the user name and DBA name
+**	are retrieved from the database, and the database name set.
+**
+**	Note:  This assumes that the DBMS transaction semantics are correct
+**	for the application's DML, even when called with a shared DBMS
+**	connection.  That is, sub-applications with different DMLs are not
+**	supported.
+**
+** Input:
+**	dbname	{char *}  The name of the database to open.
+**	usrname	{char *}  If non null is the -u flag for this call.
+**	xflag	{char *}  If non-null, the -X flag for this call.
+**	a3-a9	{char *}  Additional flags to be passed to the DBMS.
+**
+** Called by:
+**	'IIabf()', 'IIARmain()'.
+**
+** Side Effects:
+**	Opens the database connection and sets up IIUIgdata->'user', 
+** 	'dba', 'database', 'IIarDbname' and the exit clean-up routine.
+**
+** Exceptions:
+**	Exits on error.
+**
+** History:
+**	Written (jrc)
+**	15-oct-1986 (sandyd)
+**	Added FEingres() and FEnetname() for Saturn.
+**	  12/30/86 (a.dea) -- Zero fill display_dbname.
+**	06/12/87 (jhw) -- Added additional flags.
+**	02/03/88 (jhw) -- Changed to set-up directly, ala 'FEingres()'.
+**	19-aug-88 (marian)
+**		Changed select statement to reflect column name changes in
+**		standard catalogs.
+**	03/89 (jhw)  Bugs 4360 & 4361 corrected:  Now uses 'IIUIsharedData()'
+**	etc. to set DBMS constants and commits on initial DBMS session startup.
+**	11/89 (jhw)  Modified to use application session ID for DBMS connection.
+*/
+/* VARARGS3 */
+VOID
+IIARdbConnect ( dbname, usrname, xflag, a3, a4, a5, a6, a7, a8, a9 )
+char	*dbname;
+char	*usrname;
+char	*xflag;
+char	*a3,
+	*a4,
+	*a5,
+	*a6,
+	*a7,
+	*a8,
+	*a9;
+{
+	bool	appl;
+	DB_LANG	dml;
+	bool	isxflag;
+	STATUS	rval;
+
+	ADF_CB	*FEadfcb();
+
+	if ( xflag == NULL )
+		xflag = ERx("");
+	if ( usrname == NULL )
+		usrname = ERx("");
+
+	if ( (dml = FEadfcb()->adf_qlang) == DB_SQL )
+		IIsqInit((char *)NULL);
+	IILQsidSessID(ABRT_SESSION);
+
+	if (ARWithClause != NULL)
+	{
+		IIsqMods(2);
+	}
+
+	IIdbconnect(FEadfcb()->adf_qlang, OLC, dbname, xflag, usrname,
+						a3, a4, a5, a6, a7, a8, a9
+	);
+
+	if (ARWithClause != NULL)
+	{
+		IIsqParms(0, ARWithClause, 32, (char *)0, 0);
+		IIsqParms(2, (char *)0, 0, (char *)0, 0);
+	}
+
+	if ( FEinqerr() != OK )
+	{
+		abusrerr(NOSUCHDB, dbname, (char *)NULL);
+		abexcexit(FAIL);
+	}
+
+	FEset_exit(cleanup);
+
+	/* Get DB constants (including capabilities) */
+
+	isxflag = (xflag != NULL && *xflag != EOS);
+	rval = IIUIssdStoreSessionData(dbname, TRUE, isxflag , &appl);
+	if (rval != OK)
+	{
+	    IIARdbExit();
+	    abexcexit(FAIL);
+	}
+	/*
+	** If this isn't a shared session, then commit any queries run
+	** by IIUIssdStoreSessionData.
+	*/
+	if (!isxflag)
+	    exec sql commit work;
+
+	IIARsadSetArDbname(dbname);
+}
+
+/*{
+** Name:	IIARndcNewDBConnect() -	Create new DB connection.
+**
+** Description:
+**	Connects to a DBMS session.
+**	Once the DBMS session is accessed, the user name and DBA name
+**	are retrieved from the database, and the database name set.
+**
+** Input:
+**	dbname		{char *}  The name of the database to open.
+**	usrname		{char *}  If non null is the -u flag for this call.
+**	sess_id		{nat *}	  Session ID; NULL if not specified by user.
+**	conn_name 	{char *}  Connection Name.
+**	nopts 		{nat}	  Number of DBMS options
+**	opts		{char **} List of DBMS options.
+**	nwiths		{nat}	  Number of with clauses.
+**	withkeys	{char **} List of the with_clause LHS's.
+**	withtypes	{nat *}	  List of the types of the with_clause RHS's.
+**	withvals	{char **} List of the with_clause RHS values.
+**	dbms_password	{char *}  DBMS password, if applicable
+**
+** Called by:
+**	<codegen generated C code>, 'IIITconDBConnect()'
+**
+** Side Effects:
+**	Opens the database connection and sets up IIUIgdata->'user', 
+** 	'dba', 'database', and resets 'IIarDbname'.
+**
+** Exceptions:
+**
+** History:
+**	30-sep-92 (davel)
+**		Written.
+**	10-mar-93 (davel)
+**		Add connection name support.
+**	19-nov-93 (robf)
+**              Add dbms password support.
+**	12-may-1997 (angusm)
+**	SIR 82187: allow failure of second/subsequent db connection
+**	to be handled by user's error handler set via IIseterr().
+*/
+
+VOID
+IIARndcNewDBConnect (dbname, username, sess_id, conn_name,
+		nopts, opts, nwiths, withkeys, withtypes, withvals,
+		dbms_password)
+char	*dbname;
+char	*username;
+i4	*sess_id;
+char	*conn_name;
+i4	nopts;
+char	**opts;
+i4	nwiths;
+char	**withkeys;
+i4	*withtypes;
+char	**withvals;
+char	*dbms_password;
+{
+	bool	appl;
+	DB_LANG	dml;
+	STATUS	rval;
+	char	*dbmspwopt1;
+	char	*dbmspwopt2;
+	i4	e;
+
+	/* validate the sess_id and/or conn_name specification */
+	if ( validate_session(sess_id, conn_name, FALSE) != OK)
+		return;
+
+	if (username)
+	{
+		IIsqUser(username);
+	}
+	if (nwiths > 0)
+	{
+		IIsqMods(IImodWITH);
+	}
+	opts[nopts] = NULL;
+
+	/*
+	** If passed a dbms  password pass that on to the connection
+	*/
+	if(dbms_password)
+	{
+		dbmspwopt1="-dbms_password";
+		dbmspwopt2=dbms_password;
+	}
+	else
+	{
+		dbmspwopt1="";
+		dbmspwopt2="";
+	}
+	/* Issue the connect statement */
+	IIsqConnect( OLC, dbname, dbmspwopt1,dbmspwopt2,
+		opts[0], opts[1], opts[2], opts[3], opts[4], opts[5], 
+		opts[6], opts[7], opts[8], opts[9], opts[10], opts[11]);
+	if (nwiths > 0)
+	{
+		i4 i, code;
+
+		code = IIsqpINI;
+		for (i = 0; i < nwiths; i++)
+		{
+		    if (withtypes[i] == DB_CHR_TYPE)
+			IIsqParms(code, withkeys[i], DB_CHR_TYPE, 
+					withvals[i], 0);
+		    else
+			IIsqParms(code, withkeys[i], DB_INT_TYPE, 
+					(char *)0, *(i4 *)withvals[i]);
+
+		    if (i ==  0)
+			code = IIsqpADD;
+		}
+		IIsqParms(IIsqpEND, (char *)0, 0, (char *)0, 0);
+	}
+	e = FEinqerr();
+	if (  e != OK )
+	{
+		if (IILQfrserror(e) != OK)
+		    abusrerr(E_AR0069_ConnectError, (char *)NULL);
+		return;
+	}
+	rval = IIUIssdStoreSessionData(dbname, TRUE, FALSE, &appl);
+	if (rval != OK)
+	{
+		abusrerr(E_AR0069_ConnectError, (char *)NULL);
+	}
+	EXEC SQL COMMIT WORK;
+
+	IIARsadSetArDbname(dbname);
+	return;
+}
+/*{
+** Name:	IIARnddNewDBDisconnect() - Disconnect from new DB connection.
+**
+** Description:
+**	Connects to a DBMS session.
+**	Once the DBMS session is accessed, the user name and DBA name
+**	are retrieved from the database, and the database name set.
+**
+** Input:
+**	sess_id	{nat *}   Session to disconnect
+**	conn_name {char *}Connection name to disconnect.
+**
+** Note: only one of the two args above can be non-NULL.
+**
+** Called by:
+**	<codegen generated C code>, 'IIITdscDBDisconnect()'
+**
+** Side Effects:
+**	Opens the database connection and sets up IIUIgdata->'user', 
+** 	'dba', 'database', and clears 'IIarDbname'.
+**
+** Exceptions:
+**
+** History:
+**	30-sep-92 (davel)
+**		Written.
+**	10-mar-93 (davel)
+**		Add connection name support.
+*/
+VOID
+IIARnddNewDBDisconnect (sess_id, conn_name)
+i4	*sess_id;
+char	*conn_name;
+{
+	IIsqInit((PTR)NULL);
+
+	/* validate the sess_id and/or conn_name specification */
+	if (validate_session(sess_id, conn_name, TRUE) != OK)
+		return;
+
+	IIsqDisconnect();
+
+	/* clear IIarDbname to indicate no session is current */
+	IIARsadSetArDbname(NULL);
+
+	return;
+}
+
+/*{
+** Name:	IIARrsiRestoreSessID() - Restore session ID.
+**
+** Description:
+**	Switch back to specified session if a non-zero identifer is specified.
+**	If a session of zero is specified, then use the new LIBQ routine
+**	IILQncsNoCurSession() to restore back to situation where no session
+**	is current.
+**
+** Input:
+**	sess_id	{nat}	The session to switch to.
+**
+** Called by:
+**	interp!iltop.qsc, interp!ilcall.sc
+**
+** Side Effects:
+**	Changes current session in LIBQ.
+**
+** Exceptions:
+**
+** History:
+**	06-nov-92 (davel)
+**		Written.
+*/
+VOID
+IIARrsiRestoreSessID (sess_id)
+exec sql begin declare section;
+i4	sess_id;
+exec sql end declare section;
+{
+	VOID	IILQncsNoCurSession();
+
+	/* Switch to (saved) User/Application Session */
+	if (sess_id != 0)
+	{
+		EXEC SQL SET_INGRES ( SESSION = :sess_id );
+	}
+	else
+	{
+		IILQncsNoCurSession();
+	}
+}
+/*{
+** Name:	IIARchsCheckSession() - Check new DB session.
+**
+** Description:
+**	Check to see if current session has the UIdbdata() structures defined.
+**	This needs to be called whenever the session could have been switched,
+**	e.g. when SET_SQL "session" is issued, or after returning from
+**	a 3GL procedure.
+**
+** Input:
+**	NONE.
+**
+** Output:
+**	NONE.
+**
+** Returns:
+**	NONE.
+**
+** Side Effects:
+**	Calls IIUIdbdata(), which may issue queries to fill up the UI session
+**	data structures.  Transaction state will remain as it was 
+**	prior to calling (i.e. it will commit the queries iff
+**	no transaction is in progress).
+**
+**	If session is valid, reset IIArDbname to value of dbname for current
+**	session.
+**
+** Exceptions:
+**
+** History:
+**	11-nov-92 (davel)
+**		Written.
+**	20-feb-1996 (angusm)
+**		Modify to ensure that database name does not get lost if
+**		we have made database connection 6.4-style via an embedded
+**		procedure call, rather than 4GL connect. (bug 74375).
+**	7-oct-1996 (angusm)
+**		Move reset of IIArDbname to ensure that always gets reset.
+**		(bug 78725).
+*/
+VOID
+IIARchsCheckSession ()
+{
+	exec sql begin declare section;
+	i4	transact;
+	i4	sess_id;
+	char	dbname[DB_MAXNAME+1];
+	exec sql end declare section;
+
+	UIDBDATA *IIUIcddCheckDBdata();
+	UIDBDATA *IIUIdbdata();
+	PTR		dbtmp=NULL;
+
+	MEfill(sizeof(dbname), '\0', dbname); 
+	EXEC SQL INQUIRE_INGRES ( :transact = TRANSACTION );
+	EXEC SQL INQUIRE_INGRES ( :sess_id  = SESSION );
+	EXEC SQL INQUIRE_INGRES ( :dbname = CONNECTION_TARGET );
+
+	if (sess_id != 0)
+	{
+	    if (IIUIcddCheckDBdata() == NULL)
+	    {
+		/* we're connected to a session that has not had its UI
+		** session data structures initialized.  Call IIUIdbdata()
+		** to initialize the structures, and also set the ABFRT 
+		** current database name.  Then commit the queries
+		** if we were not in a transaction beforehand.
+		*/
+		/*
+		** bug 74375 : original processing will not pick
+		** up dbname for db connection made via ESQL call
+		*/
+
+		dbtmp = IIUIdbdata()->database;
+		if ( (dbname != NULL) && ((dbtmp == NULL) || (*dbtmp == EOS)) )
+			STcopy(dbname, dbtmp);
+
+		if (transact != 1)
+		{
+			EXEC SQL COMMIT WORK;
+		}
+	    }
+	    IIARsadSetArDbname(IIUIdbdata()->database);
+	}
+	else
+	{
+	    /* clear IIarDbname to indicate no session is current */
+	    IIARsadSetArDbname(NULL);
+	}
+	return;
+}
+
+/*
+** Name:	validate_session() - Validate session id and/or connection name.
+**
+** Description:
+**	Validate the session ID and/or the connection name specification for
+**	CONNECT and DISCONNECT statements.  The following validation takes 
+**	place:
+**
+**	1. If a session ID is specified, it must be positive.  There is one
+**	   exception:  if the validation is for a disconnect, the session ID
+**	   may be negative only if it is the value IIsqdisALL (-99), which is 
+**	   used to indicate a "disconnect all" statement.
+**
+**	2. If a connection name is specified, it must not begin with "ii-",
+**	   which is what all internally generated names begin with.
+**
+**	3. If neither a session ID nor a connection name is specified, and the
+**	   validation is for a disconnect statement, then we must currently be
+**	   connected to a user session (i.e. one with a positive session ID).
+**
+**	Note that it is currently impossible for a disconnect statement to have
+**	both a session ID and a connection name specified, also this routine
+**	doesn't check for that condition.
+**
+** Inputs:
+**	sess_id		{nat *}		session ID
+**	conn_name	{char *}	Connection name
+**	is_disconnect	{bool}		Is validate for a disconnect statement?
+**
+** Side Effects:
+**	Calls to IILQsidSessID and/or IILQcnConName.
+**
+** History:
+**	10-mar-93 (davel)
+**		Written.
+**	30-mar-93 (davel)
+**		Also disallow exactly "ii-" as a connection name.
+*/
+static STATUS
+validate_session(i4 *sess_id, char *conn_name, bool is_disconnect)
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4	current_sess_id;
+	EXEC SQL END DECLARE SECTION;
+
+	char  errorbuf[32];
+	char *reserved_conn_name = ERx("ii-");
+	i4  reserved_size = sizeof(ERx("ii-")) - 1;
+	char *stmt_type = is_disconnect ? ERx("Disconnect") : ERx("Connect");
+
+	/* check the session ID - the session ID can only be negative on a 
+	** disconnect, and then only if it is the value IIsqdisALL, which 
+	** indicates "disconnect all" 
+	*/
+	if (sess_id != NULL && *sess_id <= 0 && 
+			(!is_disconnect || *sess_id != IIsqdisALL ) )
+	{
+		CVna(*sess_id, errorbuf);
+		abusrerr( E_AR0067_BadSessionID, errorbuf, stmt_type,
+				(char *)NULL);
+		return FAIL;
+	}
+
+	/* check the connection name - must not begin with "ii-" */
+	if (conn_name != NULL 
+		&& (STlength(conn_name) >= reserved_size) 
+		&& (STbcompare(conn_name, reserved_size, 
+			reserved_conn_name, reserved_size, FALSE) == 0) )
+	{
+		abusrerr( E_AR0068_BadConnName, conn_name, stmt_type, 
+				(char *)NULL);
+		return FAIL;
+	}
+
+	/* if neither session ID nor conn_name are specified for a disconnect,
+	** validate that we're in a user session.
+	*/
+	if (conn_name == NULL && sess_id == NULL && is_disconnect)
+	{
+	    EXEC SQL INQUIRE_INGRES ( :current_sess_id  = SESSION );
+	    if (current_sess_id < 0)
+	    {
+		CVna( current_sess_id, errorbuf);
+		abusrerr( E_AR006B_DiscSystemSession, errorbuf, (char *)NULL);
+		return FAIL;
+	    }
+	    else if (current_sess_id == 0)
+	    {
+		abusrerr( E_AR006C_DiscNoSession, (char *)NULL);
+		return FAIL;
+	    }
+	}
+
+	/* now set the session ID */
+	if (sess_id != NULL)
+	{
+		IILQsidSessID(*sess_id);
+	}
+
+	/* set the connection name */
+	if (conn_name != NULL)
+	{
+		IILQcnConName(conn_name);
+	}
+	return OK;
+}
+
+
+#ifndef ABRT_SESSION
+exec sql begin declare section;
+#define	ABRT_SESSION	-1	/* defined in <abfrts.h>; this is for ESQL */
+exec sql end declare section;
+#endif
+
+/*
+** Name:	cleanup() -	Clean-Up DBMS on Exit.
+**
+** Description:
+**	Re-synchronize with the DBMS and then terminate connection.
+**
+** History:
+**	10/89 (jhw) -- Execute ROLLBACK to abort any transactions. JupBug #7946.
+**	11/89 (jhw) -- Set session before re-sync., etc.
+*/
+static i4
+cleanup()
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	i4 sess;
+	EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL inquire_ingres ( :sess = SESSION);
+	if (sess != 0)
+	{
+		/* we're connected to something: resync and rollback before
+		** shutting down everything.
+		*/
+		IIresync();
+		EXEC SQL ROLLBACK;
+	}
+
+	dbms_exit();
+}
+
+
+/*{
+** Name:	IIARdbExit() -	ABF Run-time DBMS Disconnect.
+**
+** Description:
+**	Terminates a connection with the DBMS (INGRES) on a database.
+**
+** Side Effects:
+**	Clears 'IIUIuser', 'IIUIdba', 'IIUIdatabase', and the exit clean-up routine.
+**
+** History:
+**	02/88 (jhw) -- Written.
+**	11/89 (jhw) -- Set session for disconnect.
+*/
+VOID
+IIARdbExit ()
+{
+	FEclr_exit(cleanup);
+
+	dbms_exit();
+}
+
+/*
+** Name:	dbms_exit() -	DBMS Disconnect.
+**
+** Description:
+**	Disconnects from the DBMS.
+**
+** Side Effects:
+**	Clears 'IIUIuser', 'IIUIdba' and 'IIUIdatabase'.
+**
+** History:
+**	02/88 (jhw) -- Written.
+**	11/89 (jhw) -- Disconnect from application DBMS connection session.
+*/
+static VOID
+dbms_exit ()
+{
+	EXEC SQL DISCONNECT ALL;
+	if (!IIarNoDB)
+	{
+		EXEC SQL SET_INGRES ( session = :ABRT_SESSION );
+		EXEC SQL DISCONNECT SESSION :ABRT_SESSION;
+	}
+
+	IIARsadSetArDbname(NULL);
+}
+
+/*{
+** Name:        IIARswc_SetWithClause() -       Set up WITH clause for connect.
+**
+** Description:
+**      Saves a pointer that points to a frontend-supplied WITH clause to be
+**      used when 'IIdbconnect()' is called for connection to a database.
+**
+** History:
+**      12/89 (kenl) -- Written.
+*/
+VOID
+IIARswc_SetWithClause(WithStr)
+char	*WithStr;
+{
+	ARWithClause = WithStr;
+}

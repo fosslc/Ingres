@@ -1,0 +1,771 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<er.h>
+#include	<st.h>
+#include	<me.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	<erug.h>
+#include        <generr.h>
+#include        <stdprmpt.h>
+#include	<ui.h>
+#include	"eric.h"
+#include	"global.h"
+
+
+/**
+** Name:	addlmenu.qc -	AccessDB Location Name Frame.
+**
+** Description:
+**	Contains the frame and associated code for creating and modifying
+**	location names.  Defines:
+**
+**	addlocform()	- create a location.
+**	editlocform()	- edit a Location.
+**
+** History:
+**	Revision 6.0  88/04  peterk
+**	16-sep-87 (daver) 
+**		Removed location deleting code, as locations can not be
+**		deleted in 6.0. Also made FE_MAXNAME form changes.
+**	03-nov-88 (kathryn)	bug# 3296
+**		Removed area_err(). When a new location name is being added
+**		and the area specified is not valid for the use specified, 
+**		the loc_info variable is no longer automatically changed from 
+**		_Yes to _No.  Also, If no is entered for all variables 
+**		(DB's, Jrnls, Chkpts) and a save is entered the user will now
+**		be prompted to ensure he wants to save a location that can't
+**		be used.
+**	12/04/88 (dkh) - Changed where clause to place variable on
+**			 right hand side of "=" operator.
+**	11-may-89 (mgw)
+**		Added TERMINATOR handling for II_DUMP location.
+**      27-sep-1989 (jennifer)
+**             Added new SQL statement support for B1/C2 security requirements.
+**             For this file CREATE LOCATION and ALTER LOCATION statements 
+**             replaced inserts/replaces into iilocation catalog directly.
+**	15-Dec-89 (pete) - Fix for jupbug 7992. Add (validate=0,activate=0) to
+**		End menuitem.
+**	~1-Jan-90 (pete) - Allow selection of Help & End even when on
+**			invalid field; check for unsaved changed when
+**			user hits menuitem End.
+**	11-apr-1990 (pete)
+**		change error message for bad location name to give more info.
+**	23-apr-1990 (pete)
+**		fix 6.3 bug 21342 with bad explanations for Help & End.
+**	19-oct-1990 (pete)
+**		Merge in changes done by Jennifer Lyerla in 9/89 for B1 proj.
+**	13-nov-1990 (pete)
+**		Make more changes to be consistent with work done in
+**		db.qsc & user.qsc.
+**	5-aug-1992 (jonb)
+**		Add quotes to CREATE LOCATION statement.
+**      7-dec-1992 (jonb)
+**              Change "Sort" locations to "work" locations, add support
+**              for ML sort.
+**      18-aug-1993 (kellyp)
+**              Added CANCEL menuitem to the CREATE screen.
+**	17-sep-1993 (kellyp)
+**		Removed CANCEL menuitem from the CREATE screen
+**	20-sep-1993 (robf)
+**              Query standard catalog (iilocation_info) not internal catalog
+**	        (iilocations). This allows users without QUERY_SYSCAT priv
+**	        to use accessdb/catalogdb
+**	20-dec-1994 (nanpr01)
+**		Bug # 66003 : allow changing and modifying the labels.
+**	05-may-1995 (harpa06)
+**		Allowed delimited location names to be created.
+**	16-aug-95 (emmag)
+**		Print an error when illegal location areas are specified.
+**	16-nov-95 (pchang)
+**		Rewrote location area verification code such that when creating
+**		/editing a new location, we now verify that the appropriate 
+**		Ingres paths have been correctly setup for the chosen usage of 
+**		the location.  (B72363)
+**		Fixed the problem of not being able to alter location specified
+**		with delimited names.
+**	01-Dec-1995 (mckba01)
+**		Change above also fixed 66298, and 66309, except when
+**		no usage type is specified for a location. In functions
+**		loc_write(), Store original area name and restore after 
+**		LOfroms to avoid displaying and translating incorrect 
+**		area name.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	09-Apr-2001 (jenjo02)
+**	    Add support for RAW locations.
+**	11-May-2001 (jenjo02)
+**	    "rawblocks" moved from iilocations to iiextend, "rawpct"
+**	    in iilocations replaces "rawblocks" as input field.
+**	23-May-2001 (jenjo02)
+**	    Removed LO, replacing chk_loc_area() with calls to
+**	    iiicaeAreaExists() which invokes a new internal procedure
+**	    in the server to test for the existence of location
+**	    paths. This (finally) allows non-Ingres, but privileged,
+**	    users to create and extend locations, just like the
+**	    documentation says.
+**	15-Oct-2001 (jenjo02)
+**	    Missing area directories are now made in the server
+**	    by CREATE/ALTER LOCATION, relieving us from the 
+**	    responsibility of checking existence.
+**    25-Oct-2005 (hanje04)
+**        Add prototype for check_loc_name() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**/
+
+    EXEC SQL INCLUDE SQLCA ;
+    EXEC SQL WHENEVER SQLERROR CALL SQLPRINT ;
+
+GLOBALREF       bool    Mgr;
+GLOBALREF bool  IiicPrivSysadmin;  /* TRUE if user has SYSTEM_ADMIN privilege */
+
+static STATUS	loc_init();
+static STATUS	loc_write();
+static STATUS	check_loc_name();
+
+EXEC SQL BEGIN DECLARE SECTION;
+##typedef struct {
+##		char	*li_databases;	/* 'y' if databases allowed */
+##		char	*li_journals;	/* 'y' if journals allowed */
+##		char	*li_checkpts;	/* 'y' if checkpoints allowed */
+##		char	*li_dumps;	/* 'y' if dumps allowed */
+##		char	*li_work;	/* 'y' if it's a work area */
+##		char	li_area[DB_AREA_MAX+1];	/* iilocations.area */
+##		bool	li_new;		/* TRUE if new loc'n*/
+##		i4	li_status;	/* iilocations.status */
+##		i4	li_rawpct;	/* iilocations.rawpct */
+##		i4	li_rawstart;	/* iiextend.rawstart */
+##		i4	li_rawblocks;	/* iilocations.rawblocks */
+##} LOC_INFO;
+EXEC SQL END DECLARE SECTION;
+
+##static	char	*NewLocfrm = ERx("locnew");
+##static	char	*OldLocfrm = ERx("nlocation");
+##static	char	*LocDbTbl = ERx("dbases");
+
+static		bool    Dmps_visible = TRUE;
+##static	char	*Save_menuitem = ERx(""); 
+##static	char	*Mode;
+
+/*}
+** Name:        LOC_USAGE - Location usage.
+*/
+typedef struct{
+        i4              id;     /* symbolic name of usage */
+        char            *name;  /* official INGRES/SQL name of loc usage */
+} LOC_USAGE;
+
+static LOC_USAGE Loc_usages[] =
+{
+        {DU_DBS_LOC,     ERx("DATABASE")},
+        {DU_JNLS_LOC,    ERx("JOURNAL")},
+        {DU_CKPS_LOC,    ERx("CHECKPOINT")},
+        {DU_DMPS_LOC,    ERx("DUMP")},
+        {DU_WORK_LOC,    ERx("WORK")},  
+        {0,    NULL}
+};
+
+static bool LocFrmInit = FALSE;
+##static	char		EditLocTitle[80] = ERx("");
+
+STATUS
+##addlocform ()
+##{
+##	LOC_INFO	loc_info;
+
+	if (!(Mgr && IiicPrivSysadmin))
+	    return FAIL;
+
+	if (!LocFrmInit)
+	{
+	    /* User can make changes if running Accessdb 
+	    ** (as opposed to Catalogdb) & has SYSTEM_ADMIN Priv.
+	    */
+	    if (IIUFgtfGetForm(IIUFlcfLocateForm(), NewLocfrm) != OK)
+		IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_FATAL, 0);
+
+	    LocFrmInit = TRUE;
+	}
+
+	if (loc_init(NewLocfrm, (char *) NULL, &loc_info) != OK)
+		return FAIL;
+
+##	DISPLAY NewLocfrm UPDATE WITH STYLE = POPUP
+##	INITIALIZE
+##	{
+##	    PUTFORM NewLocfrm (
+##			#locname = ERx(""),
+##			#area = loc_info.li_area,
+##			#dbs  = loc_info.li_databases,
+##			#jnls = loc_info.li_journals,
+##			#ckps = loc_info.li_checkpts,
+##			#dmps = loc_info.li_dumps,
+##			#work = loc_info.li_work,
+##			#rawpct = loc_info.li_rawpct
+##		        )
+
+##	    RESUME FIELD #locname
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Save)
+##          (ACTIVATE = 0, EXPL = ERget(F_FE0117_SaveExpl)),
+##          FRSkey8 (ACTIVATE = 0):
+##	{
+##		VALIDATE
+
+		if (loc_write(NewLocfrm, loc_info.li_new) == FAIL)
+##		    RESUME FIELD area
+##		BREAKDISPLAY
+##	}
+
+##  	ACTIVATE FIELD #locname
+##  	{
+##          char    l_name[FE_MAXNAME + 1];
+
+##          GETFORM NewLocfrm ( l_name = #locname )
+	    if (l_name[0] != EOS && check_loc_name(l_name) == OK)
+##		RESUME FIELD #area
+##  	}
+
+
+##	ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0101_ExplKeyHelp),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey1 (VALIDATE =0, ACTIVATE = 0):
+##	{
+	    FEhelp(ERx("icnlocfm.hlp"), ERget(S_IC0004_Add_Locations_Form));
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_End)
+##		(EXPL = ERget(F_FE0102_ExplEnd), VALIDATE = 0, ACTIVATE=0),
+##		FRSkey3 (VALIDATE=0, ACTIVATE=0):
+##	{
+##          i4      changed;
+
+            /* user is running Accessdb */
+##          INQUIRE_FRS FORM (changed = CHANGE)
+            if ( changed )
+            {
+##		char    l_name[FE_MAXNAME+1];
+
+##              GETFORM NewLocfrm ( l_name = #locname)
+
+                changed = CONFIRM(l_name, ERget(F_IC0021_Location));
+		if (changed == CONFCH_YES)
+                {
+##                  VALIDATE
+		    if (loc_write(NewLocfrm, loc_info.li_new) == FAIL)
+##		        RESUME FIELD #area
+		}
+		else if (changed != CONFCH_NO)
+		{
+##                  RESUME;
+		}
+	    }
+##          BREAKDISPLAY
+##	}
+
+##	FINALIZE
+	return OK;
+## }
+
+
+STATUS
+##editlocform (loc)
+EXEC SQL BEGIN DECLARE SECTION;
+##char	*loc;
+EXEC SQL END DECLARE SECTION;
+##{
+##	LOC_INFO	loc_info;
+##	i4 nrows;
+
+	if (EditLocTitle[0] == EOS)
+	{
+	    if (IIUFgtfGetForm(IIUFlcfLocateForm(), OldLocfrm) != OK)
+		    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_FATAL, 0);
+
+	    /* User can make changes if running Accessdb 
+	    ** (as opposed to Catalogdb) & has SYSTEM_ADMIN Priv.
+	    */
+	    if (Mgr && IiicPrivSysadmin)
+	    {
+		Save_menuitem = ERget(FE_Save);
+		Mode = ERx("update");
+		STlcopy(ERget(S_IC0097_Loc_Edit_Title), EditLocTitle, 
+					sizeof(EditLocTitle));
+	    }
+	    else
+	    {
+		Mode = ERx("read");
+		if (Mgr)
+		{
+		    STlcopy(ERget(S_IC0095_Loc_Info_Title), EditLocTitle, 
+					sizeof(EditLocTitle));
+		}
+		else
+		{
+		    STlcopy(ERget(S_IC0094_Loc_Info_Title), EditLocTitle, 
+					sizeof(EditLocTitle));
+		}
+	    }
+	}
+
+	if (loc_init(OldLocfrm, loc, &loc_info) != OK)
+		return FAIL;
+
+##	DISPLAY OldLocfrm Mode WITH STYLE = POPUP
+##      INITIALIZE (#title = EditLocTitle)
+##	{
+	    if (Mgr && IiicPrivSysadmin)
+	    {
+##		SET_FRS FIELD "" (UNDERLINE(#dbs) = 1, DISPLAYONLY(#dbs) = 0,
+##				UNDERLINE(#jnls) = 1, DISPLAYONLY(#jnls) = 0,
+##				UNDERLINE(#ckps) = 1, DISPLAYONLY(#ckps) = 0,
+##				UNDERLINE(#work) = 1, DISPLAYONLY(#work) = 0,
+##				UNDERLINE(#dmps) = 1, DISPLAYONLY(#dmps) = 0,
+##				UNDERLINE(#area) = 1, DISPLAYONLY(#area) = 0,
+##				INVISIBLE(#rawstart) = 1,
+##				INVISIBLE(#rawblocks) = 1,
+##				INVISIBLE(#rawpct) = 0,
+##				UNDERLINE(#rawpct) = 1, DISPLAYONLY(#rawpct) = 0)
+	    }
+	    else
+	    {
+##		SET_FRS FIELD "" (DISPLAYONLY(#dbs) = 1, UNDERLINE(#dbs) = 0,
+##				DISPLAYONLY(#jnls) = 1, UNDERLINE(#jnls) = 0,
+##				DISPLAYONLY(#ckps) = 1, UNDERLINE(#ckps) = 0,
+##				DISPLAYONLY(#work) = 1, UNDERLINE(#work) = 0,
+##				DISPLAYONLY(#dmps) = 1, UNDERLINE(#dmps) = 0,
+##				DISPLAYONLY(#area) = 1, UNDERLINE(#area) = 0,
+##				INVISIBLE(#rawstart) = 1,
+##				INVISIBLE(#rawblocks) = 1,
+##				INVISIBLE(#rawpct) = 0,
+##				DISPLAYONLY(#rawpct) = 1, UNDERLINE(#rawpct) = 0)
+	    }
+
+##	    PUTFORM OldLocfrm (
+##			#locname = loc,
+##			#area = loc_info.li_area,
+##			#dbs  = loc_info.li_databases,
+##			#jnls = loc_info.li_journals,
+##			#ckps = loc_info.li_checkpts,
+##			#dmps = loc_info.li_dumps,
+##			#work = loc_info.li_work,
+##			#rawpct = loc_info.li_rawpct,
+##			#rawstart = loc_info.li_rawstart,
+##			#rawblocks = loc_info.li_rawblocks
+##		        )
+
+##	    INQUIRE_FRS TABLE OldLocfrm (nrows = LASTROW(LocDbTbl));
+	    if (nrows != 0)
+	    {
+		/* Already extended to a database */
+##              SET_FRS FIELD OldLocfrm 
+##                          (DISPLAYONLY(#area) = 1, UNDERLINE(#area) = 0)
+
+		/* If extended raw location, can't change usage or rawpct */
+		if ( loc_info.li_rawblocks )
+##                  SET_FRS FIELD OldLocfrm 
+##                          (DISPLAYONLY(#dbs) = 1, UNDERLINE(#dbs) = 0,
+##                           DISPLAYONLY(#jnls) = 1, UNDERLINE(#jnls) = 0,
+##                           DISPLAYONLY(#ckps) = 1, UNDERLINE(#ckps) = 0,
+##                           DISPLAYONLY(#work) = 1, UNDERLINE(#work) = 0,
+##                           DISPLAYONLY(#dmps) = 1, UNDERLINE(#dmps) = 0,
+##                           DISPLAYONLY(#rawpct) = 1, UNDERLINE(#rawpct) = 0,
+##                           INVISIBLE(#rawstart) = 0,
+##                           INVISIBLE(#rawblocks) = 0)
+		else
+		    /* Cooked, not raw, hide raw fields */
+##                  SET_FRS FIELD OldLocfrm 
+##                          (INVISIBLE(#rawpct) = 1,
+##                           INVISIBLE(#rawstart) = 1,
+##                           INVISIBLE(#rawblocks) = 1)
+	    }
+##	    RESUME FIELD #dbs
+##	}
+
+##	ACTIVATE MENUITEM Save_menuitem
+##          (ACTIVATE = 0, EXPL = ERget(F_FE0117_SaveExpl)),
+##          FRSkey8 (ACTIVATE = 0):
+##	{
+##		VALIDATE
+		if (loc_write(OldLocfrm, loc_info.li_new) == FAIL)
+##			RESUME FIELD dbs
+##		BREAKDISPLAY
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0101_ExplKeyHelp),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey1 (VALIDATE =0, ACTIVATE = 0):
+##	{
+	    if (Mgr)
+		FEhelp(ERx("icelocfm.hlp"),ERget(S_IC0114_Edit_Locations_Form));
+	    else
+		FEhelp(ERx("icrlocfm.hlp"),
+				ERget(S_IC0115_Exam_Locations_Form));
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_End)
+##		(EXPL = ERget(F_FE0102_ExplEnd), VALIDATE = 0, ACTIVATE=0),
+##		FRSkey3 (VALIDATE=0, ACTIVATE=0):
+##	{
+##          i4      changed;
+
+            if (Save_menuitem[0] == EOS)
+##          	BREAKDISPLAY
+
+            /* user is running Accessdb */
+##          INQUIRE_FRS FORM (changed = CHANGE)
+            if ( changed != 0 )
+            {
+##		char    l_name[FE_MAXNAME+1];
+
+##              GETFORM OldLocfrm ( l_name = #locname)
+                changed = CONFIRM(l_name, ERget(F_IC0021_Location));
+		if (changed == CONFCH_YES)
+                {
+##                  VALIDATE
+		    if (loc_write(OldLocfrm, loc_info.li_new) == FAIL)
+##		        RESUME FIELD #area
+		}
+		else if (changed != CONFCH_NO)
+		{
+##                  RESUME;
+		}
+	    }
+##          BREAKDISPLAY
+##	}
+
+##	FINALIZE
+	return OK;
+## }
+
+
+
+/* loc_init -- initialize location form */
+
+static bool 	Dmp_checked = FALSE;
+
+static STATUS
+##loc_init (frmname, locname, linfo)
+EXEC SQL BEGIN DECLARE SECTION;
+##char			*frmname;
+##char			*locname;
+##register LOC_INFO	*linfo;
+EXEC SQL END DECLARE SECTION;
+## {
+EXEC SQL BEGIN DECLARE SECTION;
+##	char		loc_name[DB_MAXNAME+1];
+##	char	db_name[DB_MAXNAME+1];
+##	char	db_usage[4], work_usage[4], dump_usage[4],
+##	        jnl_usage[4], ckp_usage[4];
+EXEC SQL END DECLARE SECTION;
+	STATUS		stat;
+
+	/* If location 'ii_dump' exists, then make field "dmps" visible. */
+	if (!Dmp_checked)
+	{
+	    EXEC SQL SELECT location_name
+		INTO :loc_name
+		FROM iilocation_info
+		WHERE location_name = 'ii_dump' OR location_name = 'II_DUMP';
+	    if (FEinqerr() != OK)
+		return FAIL;
+	    if (FEinqrows() <= 0)
+	    {
+		/* make Dumps field Invisible */
+##              SET_FRS FIELD frmname (INVISIBLE(#dmps) = 1)
+		Dmps_visible = FALSE;
+	    }
+	    else
+	    {
+		/* make Dumps field visible */
+##              SET_FRS FIELD frmname (INVISIBLE(#dmps) = 0)
+		Dmps_visible = TRUE;
+	    }
+	    Dmp_checked = TRUE;
+	}
+
+	if (locname == NULL)
+	{
+	    /* new location being added */
+
+##          SET_FRS FIELD frmname (UNDERLINE(#locname) = 1,
+##					DISPLAYONLY(#locname) = 0)
+	    /* default status information */
+	    linfo->li_databases  = Yes;
+	    linfo->li_journals = No;
+	    linfo->li_checkpts = No;
+	    linfo->li_status	= 0;
+	    linfo->li_dumps = No;
+	    linfo->li_work = No;
+	    linfo->li_new   = TRUE;
+	    *linfo->li_area = EOS;
+	    linfo->li_rawpct   = 0;
+	    linfo->li_rawstart   = 0;
+	    linfo->li_rawblocks   = 0;
+	}
+	else
+	{
+##	    INITTABLE frmname LocDbTbl READ
+
+##          SET_FRS FIELD frmname (UNDERLINE(#locname) = 0,
+##					DISPLAYONLY(#locname) = 1)
+
+	    /* lookup location name */
+	    EXEC SQL SELECT location_area, data_usage, jrnl_usage, ckpt_usage,
+				work_usage, dump_usage, raw_pct
+		    INTO :linfo->li_area, 
+			  :db_usage, :jnl_usage, 
+			  :ckp_usage, :work_usage, :dump_usage,
+			  :linfo->li_rawpct
+		    FROM iilocation_info
+		    WHERE location_name = :locname;
+
+	    if ((stat = FEinqerr()) != OK)
+		    return stat;
+
+	    /* extract status bits (this could just as well use
+	    ** linfo->li_status)
+	    */
+	    linfo->li_databases = (*db_usage=='Y')  ? Yes : No;
+	    linfo->li_journals  = (*jnl_usage=='Y') ? Yes : No;
+	    linfo->li_checkpts  = (*ckp_usage=='Y') ? Yes : No;
+	    linfo->li_dumps     = (*dump_usage=='Y') ? Yes : No;
+	    linfo->li_work      = (*work_usage=='Y') ? Yes : No;
+
+	    linfo->li_new = FALSE;
+
+	    /* clear particular bits in status so can reset later according
+	    ** to what user enters on screen.
+	    */
+	    linfo->li_status=0;
+
+	    /* load dbases table */
+	    EXEC SQL SELECT database_name, raw_start, raw_blocks
+		    INTO :db_name, 
+			 :linfo->li_rawstart,
+			 :linfo->li_rawblocks
+		    FROM iiextend_info
+		    WHERE location_name = :locname
+		    ORDER BY database_name;
+	    EXEC SQL BEGIN;
+	    {
+##			LOADTABLE frmname LocDbTbl ( #dbname = db_name )
+	    }
+	    EXEC SQL END;
+	    if ((stat = FEinqerr()) != OK)
+		    return stat;
+	}
+	return OK;
+## }
+
+/* check_loc_name -- check a location name for validity. */
+
+static STATUS
+##check_loc_name (locname)
+EXEC SQL BEGIN DECLARE SECTION;
+##char			*locname;
+EXEC SQL END DECLARE SECTION;
+## {
+EXEC SQL BEGIN DECLARE SECTION;
+##	char	db_usage[4];
+EXEC SQL END DECLARE SECTION;
+	STATUS		stat;
+
+	/* make sure location name is legal */
+	if (STtrmwhite(locname) <= 0 || 
+            (IIUGdlm_ChkdlmBEobject(locname,NULL,FALSE)==UI_BOGUS_ID))
+	{
+	        i4      maxn = DB_MAXNAME;
+
+        	IIUGerr(E_IC002E_bad_name, 0, 2, (PTR) locname, (PTR)&maxn);
+		return FAIL;
+	}
+	IIUGlbo_lowerBEobject(locname);
+
+	/* lookup location name */
+	EXEC SQL SELECT data_usage
+		INTO :db_usage
+		FROM iilocation_info
+		WHERE location_name = :locname;
+
+	if ((stat = FEinqerr()) != OK)
+		return stat;
+	if (FEinqrows() > 0)
+	{
+		IIUGerr(E_IC0120_Loc_Already_Exists, UG_ERR_ERROR, 0);
+		return FAIL;
+	}
+	return OK;
+## }
+
+
+/* loc_write -- */
+
+static STATUS
+## loc_write (frmname, new)
+##	char	*frmname;
+bool	new;
+##{
+##	char	databases[4];
+##	char	journals[4];
+##	char	checkpts[4];
+##	char	dumps[4];
+##      char    wrk[4];
+##      char    usagebuf[512];	
+        i4      i;
+##	char	locname[DB_MAXNAME+1];
+##	char	area[DB_AREA_MAX+1];
+##	ER_MSGID	msgid;
+##	i4	rawpct;
+##	char	*bad_path;
+	char    *value = NULL;
+
+    EXEC SQL BEGIN DECLARE SECTION ;
+        char    sbuffer[1024];
+    EXEC SQL END DECLARE SECTION ;
+	i4 	loc_stat = 0, autocommit_off = FALSE;
+	char	crawpct[8];
+
+	if (new)
+	    msgid = S_IC0008_Location_Appended;
+	else
+	    msgid = S_IC0072_Location_Updated;
+
+##	GETFORM frmname ( area = #area, locname = #locname,
+##			   	databases = #dbs, journals = #jnls, 
+##				checkpts = #ckps,
+##			   	dumps = #dmps, wrk = #work,
+##			   	rawpct = #rawpct
+##					)
+
+	if ( *databases == *Yes )
+	    loc_stat |= DU_DBS_LOC;
+	if ( *journals == *Yes )
+	    loc_stat |= DU_JNLS_LOC;
+	if ( *checkpts == *Yes )
+	    loc_stat |= DU_CKPS_LOC;
+	if ( *wrk == *Yes )
+	    loc_stat |= DU_WORK_LOC;
+	if ( Dmps_visible && *dumps == *Yes )
+	    loc_stat |= DU_DMPS_LOC;
+
+	if (!new)   /* If this is an edit... */
+	{
+##	    i4  ch, chraw;
+
+##	    INQUIRE_FRS FIELD frmname (ch = CHANGE(#area),
+##				       chraw = CHANGE(#rawpct))
+	    if ( ch || chraw )
+	    {
+		/* we've changed the "area" or "rawpct" field in a location 
+		** definition.  This isn't supported by "alter location", 
+		** alas, so we'll use "drop location" and then create a whole
+		** new area. 
+		*/
+
+		/*
+		** ACCESSDB runs with autocommit ON. If the DROP LOCATION
+		** succeeds and the upcoming CREATE fails, the DROP
+		** will have been committed and we'll be left without
+		** a location. To preserve the original LOCATION in
+		** the event of CREATE failure, turn off autocommit,
+		** then turn it back on after the CREATE.
+		*/
+		EXEC SQL SET AUTOCOMMIT OFF;
+
+		STprintf(sbuffer, ERx("DROP LOCATION %s"), locname);
+		EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+		if (sqlca.sqlcode < 0 && sqlca.sqlcode != (-E_GE0032_WARNING)) 
+		{
+		    EXEC SQL SET AUTOCOMMIT ON;
+		    return (FAIL);
+		}
+
+		new = TRUE;
+		autocommit_off = TRUE;
+	    }
+	}
+
+	/* build comma-separated list of LOC_USAGEs */
+	for (i = 0, usagebuf[0] = EOS; Loc_usages[i].name != NULL; i++)
+	{
+	    if (loc_stat & Loc_usages[i].id)
+	    {
+		if (usagebuf[0] != EOS)
+		    STcat(usagebuf, ERx(",")); /*don't do this for first one*/
+
+		STcat(usagebuf, Loc_usages[i].name);
+	    }
+	}
+
+	if (new)
+	{
+	    /* CREATE new location */
+	    STprintf(sbuffer, ERx("CREATE LOCATION %s WITH AREA = '%s', "),
+		    locname, area);
+	}
+	else
+	{
+	    char qlocname[FE_MAXNAME + 1];
+
+	    /* ALTER existing location */
+	    STpolycat(3, ERx("\""), locname, ERx("\""), qlocname);
+	    STprintf(sbuffer, ERx("ALTER LOCATION %s WITH "), qlocname);
+	}
+
+	if (usagebuf[0] != EOS)
+	{
+	    STcat(sbuffer, ERx("USAGE = ("));
+	    STcat(sbuffer, usagebuf);
+	    STcat(sbuffer, ERx(")"));
+	}
+	else
+	{
+	    STcat(sbuffer, ERx("NOUSAGE"));
+	}
+
+	/* Append RAWPCT if new location */
+	if ( new && rawpct )
+	{
+	    STcat(sbuffer, ERx(", RAWPCT = "));
+	    CVna(rawpct, crawpct);
+	    STcat(sbuffer, crawpct);
+	}
+
+	EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+	if (sqlca.sqlcode < 0 && sqlca.sqlcode != (-E_GE0032_WARNING)) 
+	{
+	    if ( autocommit_off )
+	    {
+		/* Rollback the DROP LOCATION */
+		EXEC SQL ROLLBACK WORK;
+		EXEC SQL SET AUTOCOMMIT ON;
+	    }
+	    return (FAIL);
+	}
+
+	if ( autocommit_off )
+	{
+	    EXEC SQL COMMIT WORK;
+	    EXEC SQL SET AUTOCOMMIT ON;
+	}
+
+	/*
+	** Print message that loc has beeen updated or appended
+	** (bug 10758).
+	*/
+##	MESSAGE ERget(msgid);
+##	SLEEP 1
+
+	return (OK);
+##}

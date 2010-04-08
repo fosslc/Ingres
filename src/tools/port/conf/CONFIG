@@ -1,0 +1,1420 @@
+/*
+** CONFIG - C Proprocessor #defines for configuring source for porting 
+** 	INGRES.
+** 
+** You identify the machine to which you are porting by a seven 
+** character string, either:
+**		xxx_u42 (for Unix 4.2 BSD & lookalikes)
+**		xxx_us5 (for Unix System 5 & lookalikes)
+** You pick xxx yourself.
+**
+**	*Caution* This file is used in yypp, not ccpp, and yypp doesn't
+**	include bzarch.h.  Which means that you MUST NOT use the
+**	clever generic symbols that bzarch.h contains, any_aix and
+**	the like.  You can use actual config strings, and the
+**	conf_BUILD_ARCH_xx_yy symbols, and anything that readvers returns.
+**
+** R_ symbols control what source you get and what deliverables go on 
+** release tapes:
+**   R_ADA	EQUEL/ESQL ADA
+**   R_AUTHOR   Authorization string or'ing (baby unbundling)
+**   R_BASE	standard pieces (default)
+**   R_COBOL	EQUEL/ESQL COBOL (delivered to ALL COBOL ports)
+**   R_LPICOBOL	EQUEL/ESQL COBOL (LPI COBOL only)
+**   R_MFCOBOL	EQUEL/ESQL COBOL (Micro Focus COBOL only)
+**   R_DECCOBOL	EQUEL/ESQL COBOL (Digital COBOL only)
+**   R_CODE	include the source code directories (default)
+**   R_DUAL     specifying that this is a dual universe machine 
+**   R_DUALONLY	just build the common parts of a dual universe port
+**   R_EXCELAN  NET support for Excelan - includes REXEC daemon
+**   R_FORTRAN	EQUEL/ESQL FORTRAN
+**   R_HAS_DL   Does the CL support dynamic linking? (W4GL-specific, for now)
+**	 R_INGRES_XLIB	Do we build/provide our own X11 support (W4GL-specific)
+**   R_ITT	The International Translation Toolkit
+**   R_LU62     SNA/LU6.2 networking support, needs profiles
+**   R_ODT	Open Desktop for SCO
+**   R_PASCAL	EQUEL/ESQL PASCAL
+**   R_TST	include the test directories (default)
+**   R_REPLIC	Replicator
+**   R_SM	include source management scripts for connected ports
+**   R_SPLITLIB	Library libingres.a needs to be split into libingres[12].a
+**   R_STAR	STAR
+**   R_TSINET   ICL TSI networking support
+**   R_TUXEDO	includes tuxedo support.
+**   R_VIGRAPH	VIGRAPH
+**   R_3270	for additional IBM 3270 support on UTS
+**   R_TECHPUB	For generic I&O Guide and release notes (All port
+**		kits should get hits).
+**   R_CHECK	For BSDish, unportable installation checking tools
+**		syscheck and rcheck (delivered only in selected ports).
+**   R_IPM	For Interactive Performance Monitor (ipm). Some ports
+**		may not want this.
+**   R_STREAM	For pure Sys V.3 that require the Streams IPC Driver
+**   R_WVIEW	WindowView.
+**   R_IIMERGE  Partially linked iimerge to link with UDTs.
+**   R_IIMERGEX Executable iimerge for platforms which must send it.
+**   R_INGENABLE specific to dr[a|6]_us5 platforms used for ICL distribution
+**		of ingres production releases. 
+**   R_ITB      Include the code for the Ingres Transaction Benchmark
+**   R_SHADOW   The platform has shadow passwords, requiring ingvalidpw source.
+**   R_CONVACCT	Include the iiacct conversion utility, convacct, in the
+**		release.
+**   R_DECFORT  Include dec specific fortran "wrappers" in the release.
+**
+**   R_SHLIBS Include shared Ingres libraries instead of static libingres.a.
+**
+**   R_LIBMERGE Include libmerge.a to workaround SCO COFF limit on iimerge.o
+**
+**   R_OS_THREADS Support for operating-system threads (POSIX or SYSV).
+**
+**   R_DBMSNET		Ingres Networked DBMS server.
+**   R_DBMSSTAR		Ingres Networked DBMS server w/STAR.
+**   R_NETCLIENT	Ingres Networking extension.
+**   R_OLDMSG		INGRES 6.x Compatible Message Files.
+**   R_NET		Ingres Networking.
+**   R_BRIDGE		Ingres Protocol Bridge.
+**   R_STAR		Ingres Star Distributed DBMS.
+**   R_UADTSUP		Invisible uadt-build package.
+**   R_OME		Ingres Object Management extension.
+**   R_RMCMD		Ingres Remote Command processor.
+**   R_MAINWIN_VDBA	Ingres visual tools using Mainwin
+**   R_MIT_KERBEROS     Kerberos Support library
+**   R_APACHE           Ingres Apache ICE Support
+**   R_NETSCAPE         Ingres Netscape ICE Support
+**   R_ODBC             Ingres ODBC Drivers
+**   R_XERCES		Ingres tools dependent on Xerces support.
+**   R_RAAT		Supports the depreciated RAAT interface.
+**   R_PDFDOC           Ingres PDF Documentation
+**   R_CLUSTER		Ingres parallel cluster support
+**
+** GV_ symbols are used in gver.roc and for identifying releases:
+**   GV_ENV     environment string, usually vendor's name for OS
+**
+**              NOTE: GV_VER, GV_STAR_VER, and GV_W4GL_VER are no longer
+**                    defined in CONFIG! They are generated from your
+**                    VERS file and from the ING_VER, ING_STAR_VER, and
+**                    ING_W4GL_VER settings.
+** 6.4 leftovers, to disappear when W4GL starts using 6.5 installation
+** mechanisms:
+** RLS_ symbols control releases and the installation scripts; they all
+** have defaults set at the end of this file, if not already set:
+**   RLS_W4GL_COMP      true if compression is required Windows4GL releases.
+**                      (default false).
+**   RLS_TAPE	shell variable assignments for writing tapes, eval'ed in
+**		release/mkrelease.sh and inginstall/WRITEDIST.ING
+**		(prerls puts it there).  
+**		Used by writedist.ING for making release tape:
+**			TAPE1	rewinding 1600bpi tape device (/dev/rmt0)
+**			TAPE1N	non-rewinding 1600bpi tape device (/dev/nrmt0)
+**			TAPE2	rewinding 6250bpi tape device (/dev/rmt0)
+**			TAPE2N	non-rewinding 6250bpi tape device (/dev/nrmt0)
+**			CART	rewinding cartridge device (/dev/rst0)
+**			CARTN	non-rewinding cartridge device (/dev/nrst0)
+**			TSKIP	command to skip tape to second subfile (none)
+**			CSKIP	command to skip cartridge to second subfile 
+**				(none)
+**			TREWIND	command to rewind tape (none)
+**			CREWIND	command to rewind cartridge (none)
+**			CRETENSION command to retension cartridge before 
+**				writing (none)
+**			[TC]WEOF   command to write EOF on tape or cartridge.
+**			        This is only used where RLS_COMP is true.
+**			VERDIR	directory for file archives for verification
+**				(/install/61/verify/ingres)
+**		Used by w4prerls and writedist.w4g:
+**			TCMD	tape command: tar, cpio, wbak (tar)
+**			CCMD	cartridge command: tar, cpio, wbak (tar)
+**			TBLOCK	tape blocking factor for tar (20)
+**			CBLOCK	cartridge blocking factor for tar (20)
+*/
+/*
+** History:
+**	18-jun-92 (bonobo)
+**		Updated GV_VER for su4_u42 6.5 6/22/92 integration, and removed
+**		the R_STAR define until such time as 6.5 has star.
+**	08-oct-92 (sandyd)
+**		Yet another GV_VER update for su4_u42.
+**	05-nov-1992 (peterw)
+**		Added GV_W4GL_VER and R_HAS_DL to dr6_us5 and dra_us5 for 
+**		W4GLII releases. Added entry for dr6_uv1 (an ICL DRS6000 
+**		running SVR4 with V1+ security extensions).
+**	05-nov-92 (bonobo)
+**		Yet another GV_VER update for su4_u42.
+**	09-nov-92 (lauraw)
+**		Major CONFIG revampment:
+** 		GV_VER, GV_STAR_VER, and GV_W4GL_VER defines were removed
+**		for all platforms.
+**		ING_VER and ING_W4GL_VER were added at the top.
+**		ING_STAR_VER was added inside a comment, waiting for a call
+**		to action.
+**	09-nov-92 (lauraw)
+**		Removed pre-6.5 history.
+**		Defined ING_STAR_VER.
+**	11-nov-92 (lauraw)
+**		Fixed ING_W4GL_VER.
+**	19-nov-92 (cal)
+**		Defined R_INGENABLE for dra_us5 & dr6_us5 ICL platforms. 
+**		ingenable allows ICL distributions of our production 
+**		releases to merge II_AUTHORIZATION with their method of 
+**		one authirization string for each product.
+**	02-dec-92 (lauraw)
+**		Add R_SM symbol ("source management"). This symbol is the
+**		default for all ports, and indicates that the Ingres
+**		source management system (a.k.a. Piccolo) is available for
+**		the port and that the Piccolo-related build tools should
+**		be included in the source. For disconnected ports, R_SM
+**		is undefined in the "std_kit" definition.
+**	03-dec-92 (mikem)
+**	        su4_us5 port.  First stab at su4_us5 release definitions, these
+**		will probably change again before actual release goes out.
+**	14-dec-92 (lauraw)
+**		Removed GV_VER and GV_STAR_VER from mikem's solaris (su4_us5)
+**		configuration. (Remember, GV_VER and friends are now
+**		generated by mkgv.sh.)
+**	16-nov-92 (smc)
+**		Added DEC AXP OSF/1 entry "axp_osf".
+**	19-jan-93 (dianeh)
+**		Reinstated the R_STAR define for Sun.
+**	19-jan-93 (sweeney)
+**	        First crack at USL Destiny (usl_us5) SVR4.2.
+**	12-may-93 (vijay)
+**		Add R_SHLIBS and R_ADA for ris_us5.
+**	22-jul-93 (dianeh)
+**		Modified comments to coding standards and for easier
+**		sed-ibility for yapp.  NOTE: If you add comments to
+**		this file they must conform to this style (for multi-
+**		line comments).
+**	22-jul-93 (gillnh2o)
+**		Integrated changes making R_INGRES_XLIB a function of
+**		whether you've set option=X11R4 or option=X11R5 in
+**		your VERS file... Only doing this for the ports we're
+**		currently testing (HP/Sun/IBM/DEC). Also bumped 
+**		ING_W4GL_VER to 3.0/00.
+**	9-aug-93 (robf) definition
+**          Add su4_cmw for SunOS CMW 1.0
+**	24-aug-93 (dianeh)
+**		Removed obsolete RLS_ information -- the shell-scripts that
+**		used that information are all gone for 6.5; also removed a
+**		few obviously obsolete configuration string blocks (like for
+**		Sun 2 & 3) -- probably lots and lots more could go; added
+**		the #ifdef'd-on symbol as a comment to each #endif that didn't
+**		already have it as a comment; removed the R_CONVERT and R_FSGW
+**		symbols -- 5-to-6 conversion gone for 6.5; removed R_DECNET
+**		symbol -- Ultrix gone for 6.5; removed R_PCLINK -- gone for
+**		6.5. Note that all of this CONFIG stuff should be gone through
+**		again, and reconciled with the new release.dat file (replaces
+**		Manifest.ccpp) and the whole part-file/buildrel thing.
+**	27-sep-93 (jab)
+**		Undid Diane's change that removed the RLS_ information, for the
+**		following platforms: SunOS, Bull, DRx, RS/6000, and HP8. This is
+**		still used for the W4GL 3.0 platforms, and will be until early 1994
+**		at the earliest.
+**	13-sep-93 (dianeh)
+**		Removed more obsolete ports -- rtp_us5, ps2_us5, x370_us5,
+**		esa_osf, apl_us5, apu_us5, sqs_u42, sqs_us5, cvx_u42, x3bx_us5,
+**		vax_u43, vax_ulx, bul_us5, cls_us5, itg_us5, i39_vme, mat_us5,
+**		kih_us5, nix_us5, ix3_us5, arx_us5, arx_us5, con_us5, cn8_us5,
+**		rc9_us5, enc_us5, aco_u43, nc5_us5, crx_us5, cry_us5, ss3_us5,
+**		nec_us5, dib_us5.  Removed the note regarding adding an "x"
+**		to config strings beginning with a number because 1) there
+**		currently aren't any, and 2) if there should be some in the
+**		future, yapp will have replaced cpp, and yapp doesn't need it.
+**	14-oct-93 (tomm)
+**		Add R_SHLIBS to hp8 for Shared library support.
+**	14-oct-93 (vijay)
+**		Add R_SHADOW to hp8, and remove SHADOWX from supported defines.
+**		ingvalidpw executable is now shipped if r_shadow is defined.
+**	17-nov-93 (tomm)
+**		1. Change banner from SUN 4 SOLARIS 2.1 to SPARC SOLARIS.
+**		2. Change RS/6000 banner from AIX 3.1 to AIX
+**		3. Add R_SHLIBS for su4_us5
+**	24-nov-93 (vijay)
+**		Add R_TUXEDO to comments.
+**	23-Dec-93 (fredv)
+**		Include R_FORTRAN for su4_us5 (Sun4 Solaris).
+**	19-jan-94 (lauraw)
+**		INGRES major release is now 1.0. 
+**	19-jan-94 (arc)
+**		Add support for su4_cmw (Sun CMW).
+**	25-jan-94 (tomm)
+**		Solaris needs ADA.  Add it.
+**	08-feb-94 (ajc)
+**		added hp8_bls entries.
+**	08-feb-94 (vijay)
+**		Add tuxedo support to HP and AIX.
+**	22-feb-94 (lauraw)
+**		Change release id to 1.1/00 for the 29-apr-1994 release.
+**	11-apr-94 (ajc)
+**		updated hp8_bls entry
+**	12-apr-94 (arc)
+**		Remove VIGRAPH and WVIEW for Trusted Solaris
+**		and spurious duplicated entry for su4_cmw.
+**	06-jun-94 (lauraw)
+**		This codeline is now officially 2.0! Start with 2.0/00
+**		for the 06-jun mainline integration build.
+**	17-nov-94 (stephenb)
+**		Revert the version to 1.1 temporarily since we are handing
+**		this off to QA for testing.
+**	30-dec-94 (stephenb)
+**		Add support for tuxedo to sun solaris (su4_us5)
+**	14-dec-94 (tutto01)
+**		Changed release to 1.1/03 for QA fcs3 ship.
+**	04-jan-95 (chech02)
+**		Added rs4_us5 for AIX 4.1.
+**	4-jan-95 (hanch04)
+**		Added VIGRAPH support for su4_us5
+**	5-jan-95 (hanch04)
+**		Removed VIGRAPH support for su4_us5 hp8_us5
+**	7-feb-95 (hanch04)
+**		Change version back to 2.0/00 , remove VIGRAPH from
+**		 hp8_us5
+**	17-apr-95 (hanch04)
+**		changed version to 1.1/03 for ndmf-api branch
+**	18-apr-95 (hanch04)
+**		removed shlibs from hp8_us5
+**	31-mar-95 (canor01)
+**		Cleaned up embedded comment characters to cut down
+**		on noise generated by AIX cpp
+**	3-may-95 (holla02)
+**		Removed VIGRAPH and WVIEW for su4_u42.
+**      21-Nov-1994 (nive/walro03)
+**              Added support for dg8_us5 during OpenINGRES 1.1 port
+**	12-may-95 (johnst)
+**		Added usl_us5 entry for Unixware 2.0, cloned off dr6_us5.
+**	13-may-95 (smiba01)
+**		ICL DRS6000 ES+ (dr6_ues) entries based on dr6_*
+**		N.B. these changes are copied from this file (CONFIG)
+**		in the ingres63p library (01-nov-93 (ajc)) during the
+**		6.4 port of the ES product.
+**	1-may-95 (wadag01)
+**		Added odt_us5 6.4/05 changes but no wview and no streams.
+**		Also removed R_IIMERGE (due to COFF limitations the iimerge.o
+**		cannot be created on SCO - too many relocatable objects).
+**	1-june-95 (hanch04)
+**		shlibs should be there for main for hp8_us5
+**	7-june-95 (hanch04)
+**		Changes release ID to OpING 1.1/04 for GA release
+**	8-jun-95 (hanch04)
+**		VERSION no OpING
+**	19-june-95 (chimi03)
+**		Removed the R_INGRES_XLIB defines from the 
+**		hp8_us5 section.
+**	27-june-95 (morayf)
+**		Undid 1-may-95 change for odt_us5 with regard to R_IIMERGE
+**		as we DO now supply an iimerge.o (though its not the full
+**		linkable object other non-COFF platforms use !).
+**		Define a new ID (R_LIBMERGE) for delivering libmerge.a 
+**		on SCO containing the code normally in iimerge.o
+**      15-jul-95 (popri01)
+**              Added specific defines for nc4_us5
+**      25-jul-95 (allmi01)
+**              Added specific defines for dgi_us5
+**      11-Jul-1995 (walro03)
+**              Defined R_TUXEDO, removed R_VIGRAPH for dg8_us5.
+**	19-june-95 (hanch04)
+**		Changes release ID to OpING 1.1/05 for GA release
+**	19-june-95 (hanch04)
+**		Changes release ID to OpING 1.2/00 for GA release
+**	25-aug-95 (tutto01)
+**		Changes release ID to OpING 1.1/04 for NT release
+**	29-Aug-95 (wadag01)
+**		Removed R_FORTRAN from usl_us5 entry (as per PRDF).
+**	05-sep-95 (emmag)
+**		Change release ID back to OpING 1.2/00 for NT release.
+**	07-sep-95 (hanch04)
+**		Changes release ID to OpING 2.0/00 for main codeline 
+**      30-aug-1995 (pursch)
+**              Add pym_us5 specific defines.
+**              Don't include COBOL support.
+**              Add changes made by gmcquary in 6405 10-nov-92.
+**              Add cartridge support for pym_us5 and update to W4GL2.
+**              Add changes made by gmcquary in 6405 28-dec-92.
+**              Add 2nd tape drive for pym_us5.
+**              Add changes made by erickson in 6405 21-nov-1994.
+**              pym_us5: drop qa_kit 
+**              pym_us5: drop R_VIGRAPH
+**      02-Nov-95 (wadag01)
+**              SOLARIS x86 TRIAL
+**              Temporarily replaced the SPARC entry with x86.
+**      10-nov-1995 (murf)
+**              sui_us5 entry added.
+**	14-Nov-1995 (walro03)
+**		Add R_SHLIBS for DG/UX (dg8_us5).
+**	23-jan-96 (stephenb)
+**		Fix murf's sui_us5 update, he added a bogus su4_us5 entry
+**		indicating that it was solaris on intel.
+**	24-jan-96 (smiba01)
+**		Update GV_ENV for CMW (change to TS 1.2)
+**		Added Microfocus COBOL.
+**	27-Nov-1995 (spepa01)
+**		Add R_WVIEW to dr6_us5.
+**	12-Jan-1995 (wadag01)
+**		Added R_WVIEW to SCO OpenServer 5.0 (sos_us5) entry.
+**	14-feb-96 (smiba01)
+**		Added Microfocus and native cobol for dr6_ues.
+**	09-Dec-1995 (morayf)
+**		Add SNI RMx00 platform (rmx_us5) for OpING 1.2 port.
+**		Also changed pyr_us5 entry to pym_us5 (Pyramid).
+**	16-jan-1996 (toumi01; from 1.1 axp_osf port)
+**		Updated axp_osf definitions.
+**	02-Mar-1996 (morayf)
+**		pym_us5: Really drop R_VIGRAPH. Bring in line with rmx_us5.
+**		eg. We want COBOL (MF) support. No FORTRAN at present.
+**	01-Apr-1996 (kch)
+**		Changed version to 1.2/01 for Maintenance Release.
+**	25-apr-1996 (toumi01)
+**		Added new release id R_DECCOBOL (Digital Cobol) and
+**		included this product for axp_osf.
+**      07-May-1996 (mosjo01)
+**              Separated ris_us5 and rs4_us5 into separate #ifdef stmts
+**              to comply with mkgetlist.sh grep search for #ifdef stmts.
+**	20-jun-1996 (kch)
+**		The prefix for the release id has changed to OI to
+**		facilitate the TOPS system.
+**	6-june-96 (hanch04)
+**		Changes release ID to OpING 2.0/00 for development release
+**	25-jul-1996 (canor01)
+**		Add R_OS_THREADS for su4_us5.
+**	08-jan-97 (joea)
+**		Add R_REPLIC for Replicator support.
+**	09-jan-1997 (hanch04)
+**		Removed  R_OS_THREADS for su4_us5.
+**	25-feb-1997 (funka0)
+**		Added VERSION for JASMINE
+**	03-apr-1997 (popri01/hweho01)
+**		For Unixware (usl_us5) 2.0 port, enable 
+**		R_WVIEW (x-integ from 1.2/01), R_SHLIBS, 
+**		R_TUXEDO, and R_OS_THREADS.
+**	08-jul-1997 (canor01)
+**		Update Jasmine version.
+**	23-jun-1997 (walro03)
+**		Added R_TUXEDO and R_SHLIBS to ICL DRS 6000 (dr6_us5).
+**	28-jul-1997 (walro03)
+**		Add Tandem Integrity NonStop UX (ts2_us5).
+**      29-aug-1997 (musro02)
+**              Removed R_VIGRAPH R_WVIEW add R_SHLIBS RLS_TAPE for sqs_ptx.
+**      29-aug-1997 (mosjo01)
+**              Added TUXEDO and shared libraries to sos_us5
+**	24-sep-1997/12-may-1997 (bonro01/mosjo01)
+**		Added R_OS_THREADS for dg8_us5 and dgi_us5.
+**		And separated #ifdef for dgi_us5 and dg8_us5 to comply with
+**		mkgetlist.sh grep search for #ifdef stmts.
+**	24-Sep-1997 (kosma01)
+**		Added R_OS_THREADS for rs4_us5.
+**	04-Sep-1997 (bonro01)
+**		Add R_OS_THREADS for dg8_us5.
+**      18-Nov-1997 (hanch04)
+**              Changed version to 2.0/9712 for Maintenance Release.
+**	01-apr-1998 (walro03)
+**		Add OS Thread support for Tandem (ts2_us5).  Also remove
+**		WindowView and Fortran.
+**              Changed version to 2.5/00 for new release.
+**	28-Jan-1998 (hanch04)
+**		Add FULL_RELEASE to be the default when building
+**		a release with buildrel.  To build the black box 
+**		release, remove the define FULL_RELEASE.  Then
+**		run ming -F in front!st!specials
+**	10-Oct-1997 (funka01)
+**		Changed JAS_VERS to 9710.
+**	06-feb-1998 (matbe01)
+**		Added R_TUXEDO, R_STAR, and R_REPLIC to NCR (nc4_us5).
+**	16-Feb-1998 (toumi01)
+**		Add Linux (lnx_us5) new port.
+**       5-Mar-1998 (allmi01/linke01)
+**              Define R_TUXEDO and R_REPLIC for pym_us5.
+**      12-May-1998 (yeema01)
+**              Add R_HAS_DL for su4_us5.
+**      12-Mar-1998 (linke01)
+**              Defined Tuxedo and Replicator for Pyramid (pym_us5).
+**	16-apr-1998 (canor01)
+**		Added R_ORACLE, R_SYBASE and R_INFORMIX for Gateways.
+**	22-apr-1998 (hanch04)
+**	    Changed name from OI to Ingres
+**	11-Jun-1998 (hanch04)
+**		Changed version from OI to II
+**      16-apr-1998 (canor01)
+**              Added R_ORACLE, R_SYBASE and R_INFORMIX for Gateways.
+**	28-apr-1998 (allmi01)
+**		Updated sgi_us5 (silicon graphics IRIX) for 2.0 port.
+**	08-Jul-1998 (allmi01)
+**		Updated pre-compiler deliverables for dgi_us5 based
+**		on TOPS licenses sold. This remvoes all but C / C++
+**		and MicroFocus COBOL.
+**	10-Jul-1998 (merja01)
+**		Remove axp_osf gateway entries.  Not delivered on axp_osf.
+**	01-Aug-1998 (somsa01)
+**	    Only set version to II if INGRESII is defined.
+**	29-jul-1998 (walro03)
+**		01-apr-1998 change caused extra directories to be created in
+**		ING_BUILD on Tandem (ts2_us5).
+**	01-Aug-1998 (somsa01)
+**	    Only set version to II if INGRESII is defined.
+**	10-Aug-1998 (hanch04)
+**	 	removed R_ORACLE, R_SYBASE and R_INFORMIX for Gateways.
+**	20-Aug-1998 (muhpa01)
+**		Added hpb_us5 for HP-UX 11.00 port.
+**	05-nov-1998 (toumi01)
+**		Improve atomicity of package installation for the following,
+**		because these need to be excluded from the free Linux version:
+**		R_DBMSNET, R_DBMSSTAR, R_NETCLIENT, R_OLDMSG, R_NET,
+**		R_BRIDGE, R_STAR, R_UADTSUP, R_OME, R_SPATIAL, R_RMCMD.
+**	15-nov-1998 (dansa02)
+**		Added R_OPENROAD (when conf_W4GL) for OpenROAD 4.0.
+**	29-Dec-1998 (muhpa01)
+**		Drop support for WindowView on HP (hp8_us5 & hpb_us5) for
+**		Ingres 2.5 port.
+**	18-jan-1999 (matbe01)
+**		Add R_WVIEW to nc4_us5.
+**	09-mar-1999 (hayke02)
+**		Corrected OI 2.0 version number - this should be OI 2.0/9712
+**		for UNIX platforms.
+**	18-feb-1999 (popri01)
+**		Unixware now built on, and supports only UnixWare 7 and beyond.
+**	20-Mar-1999 (kosma01)
+**		Build R_WVIEW for sgi_us5.
+**		and build equel/esql for fortran.
+**	19-apr-1999 (hanch04)
+**		Remove R_WVIEW for all platforms
+**	10-May-1999 (rajus01)
+**		Add R_MIT_KERBEROS for kerberos support.
+**	10-may-1999 (walro03)
+**		Remove obsolete version string amd_us5, bii_bos, bu2_us5,
+**		bu3_us5, dpx_us5, dr3_us5, dr5_us5, dr6_ues, dr6_uv1, dra_us5,
+**		i39_vme, ib1_us5, mip_us5, pyr_u42, odt_us5, unc_us5, uni_us5.
+**	22-jun-1999 (musro02)
+**		For nc4_us5, add R_SHLIBS
+**      03-jul-1999 (podni01)
+**              Added support for ReliantUNIX V 5.44 - rux_us5 (same as rmx_u
+**      09-sep-1999 (hweho01)
+**              Further qualified gen level for TNG variant.
+**	09-sep-1999 (vande02)
+**		Add R_SHADOW for dgi_us5 and dg8_us5.
+**	01-oct-1999 (toumi01)
+**		Make product components for Linux conditional on:
+**		conf_LinuxCOMMERCIAL = full supported product
+**		conf_LinuxOPENBETA   = free open beta program version
+**		conf_LinuxSDK        = SDK version
+**		conf_TNG             = blackbox version for Unicenter TNG
+**		In this way the various build flavors can be controlled
+**		using the VERS file instead of sparse-branching this one.
+**	06-oct-1999 (toumi01)
+**		Change Linux config string from lnx_us5 to int_lnx.
+**	29-dec-1999 (mcgem01)
+**		Add <product>_VER for the other product clients.
+**      31-jan-2000 (hanch04)
+**              Added R_MAINWIN_VDBA for mainwin vdba
+**	18-feb-2000 (somsa01)
+**		Added R_MAINWIN_VDBA for HP.
+**	04-may-2000 (hanch04)
+**		Release for 2.5 GA is II 2.5/0006
+**	o4-may-2000 (hweho01)
+**		Added support for AIX 64-bit platform (ris_u64).
+**	26-apr-2000 (hayke02)
+**		Removed TNG (embedded Ingres). This change fixes bug 101325.
+**      05-Feb-2000 (linke01)
+**              change operating system version, and remove R_WVIEW
+**              for usl_us5
+**	08-aug-2000 (hayke02)
+**		Remove R_WVIEW for hp8_us5.
+**	16-may-2000 (mcgem01)
+**		Bump the other product release to <product version>.
+**	15-Jun-2000 (hanje04)
+**		Added entries for ibm_lnx - OS/390 Linux, to mimic int_lnx
+**		behavior and configuration
+**	23-aug-2000 (hanje04)
+**		Added '#define R_MIT_KERBEROS' for int_lnx to include
+**		Kerberos binaries in saveset.
+**	21-sep-2000 (hanch04)
+**		Release for 2.5 MR is II 2.5/0011
+**	11-Sep-2000 (hanje04)
+**		Added Alpha Linux (axp_lnx) to Intel Linux (int_lnx) CONFIG.
+**	19-apr-1999 (hanch04)
+**	    Added su9_us5
+**	09-jan-2001 (somsa01)
+**		Increased release id of other product to <product version> .
+**	20-Feb-2001 (wansh01)
+**		Added '#define R_MIT_KERBEROS' for sgi_us5 to include
+**		Kerberos binaries in saveset.
+**	21-Mar-2001 (ahaal01)
+**		Added '#define R_MIT_KERBEROS' and '#define R_MAINWIN_VDBA'
+**		for AIX (rs4_us5) to include Kerberos binaries and MainWin
+**		binaries in saveset.
+**
+**	02-Mar-2001 (hanch04)
+**		Release for 2.6 GA is II 2.6/0106
+**	19-mar-2001 (somsa01)
+**		Increased release id of other product to <product version> .
+**	18-Apr-2001 (bonro01)
+**		Added '#define R_MIT_KERBEROS' for rmx_us5 to include
+**	23-Apr-2001 (hweho01)
+**		Added '#define R_MIT_KERBEROS' for axp_osf.
+**	06-Jun-2001 (hanje04)
+**		SIR 104870
+**		Added #define R_APACHE and R_NETSCAPE for Solaris,
+**		HP and Linux.
+**      21-Mar-2001 (linke01)
+**              Added '#define R_MIT_KERBEROS' for sui_us5 to include
+**              Kerberos binaries in saveset.
+**	25-Apr-2001 (hweho01)
+**		Added '#define R_MIT_KERBEROS' for ris_u64 to include
+**		Kerberos binaries in saveset.
+**	08-AUG-2001 (hanje04)
+**		Added ADA support for Linux
+**	18-jul-2001 (stephenb)
+**	    	From allmi01 opriginal, add i64_aix
+**	30-may-2001 (devjo01)
+**		Added R_OS_THREADS for axp_osf.
+**	23-oct-2001 (devjo01)
+**	        Added R_APACHE, R_NETSCAPE for axp_osf.
+**	01-Nov-2001 (hanje04)
+**		Added R_MAINWIN_VDBA for Linux.
+**	06-Sep-2001 (bonro01)
+**		Added R_APACHE for Unixware.
+**	11-Nov-2001 (hanje04)
+**	    Incremented gen level to 0201
+**      02-Nov-2001 (hweho01)
+**              Added #define R_APACHE and R_NETSCAPE for AIX 32-bit
+**              platform (rs4_us5).
+**	11-dec-2001 (somsa01)
+**		Added hp2_us5, the 64-bit PA-RISC HP port.
+**	18-Jan-2002 (bonro01)
+**		Defined R_ODBC for ODBC library inclusion.
+**		Excluded ODBC library for Unixware.
+**	14-Mar-2002 (devjo01)
+**		Change GV_ENV for "AXP DEC UNIX" to "AXP Tru64 UNIX".
+**	29-Mar-2002 (xu$we01)
+**	    Added R_XERCES
+**	02-Apr-2002 (hanje04)
+**	    Removed undef of R_UADTSUP for Linux SDK and Beta because
+**	    shared library server requires contents for relinking server.
+**	    Also undefined R_MAINWIN_VDBA for SDK and Beta
+**	07-May-2002 (hanje04)
+**	    Added defn for i64_lnx (Itanium Linux)
+**	20-Jun-2002 (hanje04)
+**	    Incremented gen level to 0207 for Service Pack.
+**      24-Jun-2002 (hweho01)
+**          Removed R_MIT_KERBEROS for rs4_us5 platform, since the support  
+**          for Kerberos on AIX has been dropped.  Bug #106743. 
+**	31-Oct-2002 (hanje04)
+**	    Added support for AMD x86_64 Linux
+**	03-Dec-2002 (hanje04)
+**	    Bug 109210
+**	    Added R_TUXEDO for commercial Linux distributions.
+**      07-Jan-2003 (hweho01)
+**          Removed R_MAINWIN_50 for rs4_us5 platform.
+**	24-jan-2003 (devjo01)
+**	    Added R_RAAT to control inclusion of Record at a Time files.
+**	    These should only be included for those platforms which also
+**	    Support CA-ManMan, and CA-Masterpiece which use this
+**	    depreciated interface. (NT, Solaris, HP, Aix, Tru64).
+**      07-Apr-2003 (hanch04)
+**            Development release for 2.65 GA is II 2.65/0312
+**	09-may-2003 (abbjo03)
+**	    Remove ING_STAR_VER.
+**	13-May-2003 (hanje04)
+**	    Include everything apart from Visual Tools for Linux SDK which is
+**	    now limited to 5 net users.
+**	28-May-2003 (bonro01)
+**	    Added i64_hpu for HP/UX Itanium port.
+**	7-Aug-2003 (bonro01)
+**	    Removed i64_hpu support for TUXEDO, NETSCAPE, ODBC, KERBEROS
+**	26-Aug-2003 (bonro01)  Happy Birthday to me.
+**	    Added support for Apache to SGI port.
+**	26-Aug-2003 (bonro01)  Happy Birthday to me.
+**	    Added support for Apache to SGI port.
+**	03-Dec-2003 (hanje04)
+**	    Remove ADA and COBOL precompilers from AMD64 Linux as they aren't
+**	    supported.
+**	12-Dec-2003 (hanje04)
+**	    Tuxedo not supported on AMD64 Linux. (Yet)
+**	18-May-2004 (bonro01)
+**	    Added ODBC for i64_hpu.
+**      13-Jan-2004 (sheco02)
+**          Development release for 3.0 GA is II 3.0/0404.
+**      09-feb-2004 (hanch04)
+**          Added R_SUN_HACLUSTER and R_VERITAS_HACLUSTER
+**	09-Mar-2004 (bonro01)
+**	    Add R_PDFDOC for new documentation package.
+**	    Add R_INGBUILD to allow ingbuild and it's tools to be removed
+**	    easily at the end of Ingres 3 development.
+**	15-Apr-2004 (hanje04)
+**   	    Add R_CLUSTER for parallel cluster support on Linux
+**	11-Jun-2004 (somsa01)
+**	    CLeaned up code for Open Source.
+**	16-Jun-2004 (bonro01)
+**	    Remove R_INGBUILD.
+**	14-Jun-2004 (hanje04)
+**	    SIR 112535
+**	    Remove R_SPATIAL for Open Source.
+**	29-Jul-2004 (hanje04)
+** 	    Remove R_NETSCAPE for Open Source
+**	02-Sep-2004 (hanje04)
+**	    Remove references to LinuxCOMMERCIAL, LinuxOPENBETA and LinuxSDK 
+**	    etc. as there is now only one build. Open Source.
+**	    Also remove R_MAINWIN_VDBA as we no longer support it for ingres r3
+**	    Only define R_CLUSTER for CLUSTER_BUILD
+**	17-Sep-2004 (sheco02)
+**	    Change ING_VER & ING_W4GL_VER from genlevel 0404 to sublevel 3.0.1.
+**	04-nov-2004 (abbjo03)
+**	    Initial support of Alpha OpenVMS.
+**	22-Nov-2004 (hanje04)
+**	    Only include MDB is it's define in VERS.
+**	05-Jan-2005 (hanje04)
+**	    Update version info to 3.0.2
+**	7-Jan-2004 (schka24)
+**	    Release 3.0.2. coming up, change ver so that upgradedb knows
+**	    it's the right version.
+**      06-Jan-2005 (clach04)
+**          Added EA_VER; similar to ING_VER it contains the version string
+**          for Enterprise Access (to Oracle, DB2 UDB, etc.) also known as
+**          Gateways.
+**	15-feb-2005 (abbjo03)
+**	    Add R_MIT_KERBEROS, R_BASIC, R_RMS and RM_SHLIBS for axm_vms.
+**	16-Mar-2005 (bonro01)
+**	    Add support for Solaris AMD64 a64_sol
+**	18-Apr-2005 (hanje04)
+**	    Add support for Max OS X (mac_osx)
+**	    Based on initial changes by utlia01 and monda07.
+**	02-jun-2005 (abbjo03)
+**	    Add R_CLUSTER for axm_vms.
+**	08-Aug-2005 (drivi01)
+**	    Updated version info to 3.0.3.
+**	08-Aug-2005 (hweho01)
+**	    Add R_RAAT for axp_osf platform.
+**	31-Aug-2005 (clach04)
+**     Bumped EA version to current date.
+**	20-Sep-2005 (hanje04)
+**	    SIR 115239
+**	    Re-add ability to build R_SPATIAL. Define option=BUILD_SPATIAL in
+**	    tools!port!conf VERS to have it built. Also requires common!adf!ads
+**	    to be present.
+**	05-Jan-2006 (hanje04)
+**	    SIR 115662
+**	    Don't define R_PASCAL for Linux only supported on VMS
+**      17-Jan-2006 (hweho01)
+**          Update the version string for release 9.0.4. 
+**      01-Feb-2006 (hweho01)
+**          Modified ING_VER string to "II 9.0.4", need to maintain the
+**          compatibility with the previous releases.
+**  20-Apr-2006 (clach04)
+**      Bumped EA version to expected build date.  
+**      21-Apr-2006 (hweho01) 
+**          Defined R_SPATIAL for Linux and Unix platforms, it will not  
+**          depend on the option in VERS file.
+**      27-Apr-2006 (hweho01)
+**          Updated version string to "II 9.1.0" for new release.
+**       6-Nov-2006 (hanal04) SIR 117044
+**          Add int.rpl for Intel Rpath Linux build.
+**  22-Nov-2006 (wansh02)
+**      Bumped EA version to 2.7. 
+**	23-Jan-2007 (bonro01)
+**	    Update version string to "II 9.2.0" for Ingres 2006 Release 3
+**	22-Mar-2007 (hanje04)
+**	    SIR 117044
+**	    Include packman package for all Linux except rPath.
+**	23-Mar-2007 (hanje04)
+**	    SIR 117044
+**	    Exclude rPath Linux NOT regular Intel.
+**	23-Mar-2007 (hanje04)
+**	    SIR 117985
+**	    Add support for 64bit PowerPC Linux (ppc_lnx)
+**      31-May-2007 (hweho01) 
+**          Remove TUXEDO package for axp_osf platform. 
+**	14-Jun-2007 (bonro01)
+**	    Update version string to "II 9.3.0" for Ingres 2006 Release 4
+**	22-Aug-2007 (bonro01)
+**	    Add TUXEDO package for a64.lnx platform.
+**	10-Oct-2007 (hanje04)
+**	    Only define R_PACKMAN for platforms where it's been enabled in
+**	    Jamdefs.xxx_yyy.
+**	04-Feb-2008 (hanje04)
+**	    SIR S119978
+**	    Add support for Intel OSX.
+**	11-Aug-2008 (rajus01) SIR 120420
+**	    Added R_PAM. The change 492540 (PAM support in Ingres)
+**	    introduces build failures on platforms that don't support PAM. 
+**	    Hence the requirement for R_PAM.
+**      13-Aug-2008 (frima01) SIR 120420, SD issue 116370
+**          Added R_PAM to a64_sol as well.
+**  10-Oct-2008 (clach04)
+**      Bumped EA_VER gen level to current date. 2.7/0810
+**	18-Feb-2009 (frima01) Bug 101384
+**	   Enabled kerberos support for i64.hpu too 
+**	6-Mar-2009 (bonro01)
+**	    Add R_COBOL for a64_lnx.
+**	04-Jun-2009 (bonro01)
+**	    Update version string to "II 9.4.0" for Ingres 9.4 
+**	16-jun-2009 (joea)
+**	    Reinstate R_SPATIAL for VMS.
+**      17-jun-2009 (stegr01)
+**          Add config for Itanium OpenVMS
+**	20-Jun-2009 (kschendel) SIR 122138
+**	    CONFIG now sees config32 or config64 for hybrids, not both;
+**	    update conditional tests accordingly.
+**      20-Jun-2009 (hweho01)
+**          Update version string to "II 10.0.0" for Ingres 10.0. 
+**      30-Jul-2009 (hweho01)
+**          Correct the raat package error on su9_us5, R_RAAT should    
+**          be defined for hybrid build. 
+**  17-Dec-2009 (clach04)
+**      SIR 123077
+**      Bumped EA_VER gen level to current date. 2.7/0912
+**	18-Jan-2010 (frima01) SIR 122138
+**	    Enable Solaris Sparc 32bit components for hyprid builds.
+**	25-feb-2010 (joea)
+**	    Remove Ada for Itanium VMS.
+**	18-Mar-2010 (hanje04)
+**	    SIR 123296
+**	    No R_PACKMAN for LSB builds
+*/
+
+/*
+** These are #define'd unless you #undef them explicitly for your box.
+*/
+# define FULL_RELEASE
+# define ING_VER	 II 10.0.0
+# define ING_W4GL_VER	 II 10.0.0
+# define EA_VER		EA 3.0/1002
+
+# define R_CODE		/* give me the code */
+# define R_TST		/* give me the tests */
+# define R_BASE		/* give me the standard pieces for each */
+# define R_IIMERGE	/* give me iimerge.o */  
+# define R_ITB		/* give me the Ingres Transaction Benchmark */
+# define R_SM		/* give me the Piccolo-related shell scripts */
+
+# define R_DBMSNET
+# define R_DBMSSTAR
+# define R_NETCLIENT
+# define R_OLDMSG
+# define R_NET
+# define R_BRIDGE
+# define R_STAR
+# define R_UADTSUP
+# define R_OME
+# define R_RMCMD
+# define R_ODBC
+# define R_XERCES
+# define R_PDFDOC
+# define R_SPATIAL
+
+/*
+** Per box rules
+*/
+
+/* HP 9000/700, 9000/800 Series */
+# if defined(hp8_us5) || defined(hpb_us5) || defined(hp2_us5) || \
+     defined(i64_hpu)
+# define GV_ENV " HP-UX"
+# define R_FORTRAN
+# define R_COBOL
+# define R_MFCOBOL
+# define R_STAR
+# define R_CHECK
+# define R_IPM
+# define R_CONVACCT
+# define R_HAS_DL
+# define R_SHADOW
+# define R_PAM
+# define R_REPLIC
+# define R_SHLIBS
+# define RLS_TAPE CART=/dev/cart0/r CARTN=/dev/cart0/r CARTL=/dev/cart0/r \
+		  CCMD=tcio CBLOCK=20 \
+		  CUNLOAD=true \
+		  CSKIP= CREWIND= CRETENSION= \
+		  TAPE1=/dev/tape0/1600nr TAPE1N=/dev/tape0/1600nr \
+		  TAPE1L=/dev/tape0/1600r \
+		  TAPE2=/dev/tape0/6250nr TAPE2N=/dev/tape0/6250nr \
+		  TAPE2L=/dev/tape0/6250r \
+		  TCMD=tar TBLOCK=20 \
+		  TSKIP= TREWIND="mt -t /dev/tape0/6250r rew"
+# define RLS_MULTI	tape cart
+#if !defined(i64_hpu)
+# define R_TUXEDO
+# define R_RAAT
+#endif
+# define R_MIT_KERBEROS
+# define R_APACHE
+#if defined(conf_MAINWIN_VDBA)
+# define R_MAINWIN_VDBA
+#endif
+# endif /* hp-ux */
+
+# ifdef hp8_bls         /* HP 9000/800 BLS Series */
+# define GV_ENV " HP-UX/BLS"
+/* uncomment next line if DBL port */
+/*# define DOUBLEBYTE              */
+# define R_CONVERT
+# define R_CHECK
+# define R_IPM
+# define R_STAR
+# define R_INGRES_XLIB
+# define R_HAS_DL
+# define RLS_TAPE CART=/dev/rmt/0m CARTN=/dev/rmt/0mn CARTL=/dev/rmt/0m \
+                  CCMD=tcio CBLOCK=20 \
+                  CUNLOAD=true \
+                  CSKIP= CREWIND= CRETENSION= \
+                  TAPE1=/dev/rmt/0m TAPE1N=/dev/rmt/0mn \
+                  TAPE1L=/dev/rmt/0m \
+                  TCMD=tar TBLOCK=20 \
+                  DAT1=/dev/rmt/0m \
+                  DAT1N=/dev/rmt/0mn DREWIND="mt -t /dev/rmt/0m rew" \
+                  DCMD=tar DBLOCK=20 \
+                  TSKIP= TREWIND="mt -t /dev/rmt/0m rew"
+# define RLS_MULTI      tape cart
+# endif
+
+# ifdef i64_vms
+# define GV_ENV " Itanium OpenVMS"
+# define R_IPM
+# define R_CLUSTER
+# define R_DECNET
+# define R_MIT_KERBEROS
+# define R_BASIC
+# define R_COBOL
+# define R_FORTRAN
+# define R_PASCAL
+# define R_REPLIC
+# define R_RMS
+# define R_SHLIBS
+# undef  R_XERCES
+# endif /* i64_vms */
+
+# ifdef axm_vms
+# define GV_ENV " Alpha OpenVMS"
+# define R_IPM
+# define R_CLUSTER
+# define R_DECNET
+# define R_MIT_KERBEROS
+# define R_ADA
+# define R_BASIC
+# define R_COBOL
+# define R_FORTRAN
+# define R_PASCAL
+# define R_REPLIC
+# define R_RMS
+# define R_SHLIBS
+# undef  R_XERCES
+# endif /* axm_vms */
+
+# ifdef axp_osf
+# define GV_ENV " AXP Tru64 UNIX"
+# define R_STAR
+# define R_CHECK
+# define R_IPM
+# define R_CONVACCT
+# define R_SHADOW
+# define R_FORTRAN
+# define R_PCLINK
+# define R_DECNET
+# define R_COBOL
+# define R_MFCOBOL
+# define R_DECCOBOL
+# define R_ADA
+# define R_REPLIC
+# define R_SHLIBS
+# define R_OS_THREADS
+# define R_APACHE
+# define RLS_COMP false
+# define RLS_DISTSIZE 80000
+# define RLS_TAPE CART=/dev/rmt1l CARTN=/dev/nrmt1l CARTL=/dev/rmt1l \
+                  CCMD=tar CBLOCK=20 CSKIP="mt -f /dev/nrmt1l fsf 1" \
+                  CREWIND="mt -f /dev/nrmt1l rewind"
+# define R_MIT_KERBEROS
+# define R_RAAT
+# endif /* axp_osf */
+
+# ifdef su4_u42		/* SUN 4 (BSD) */
+# define GV_ENV " SunOS"
+# define R_FORTRAN
+# define R_ADA
+# define R_COBOL
+# define R_MFCOBOL
+# define R_CHECK
+# define R_STAR
+# define R_INGRES_XLIB
+# define R_HAS_DL
+# define R_REPLIC
+# define RLS_TAPE TAPE1=/dev/rmt0 TAPE1N=/dev/nrmt0 TAPEL=/dev/rmt0 \
+		CART=/dev/rst0 CARTN=/dev/nrst0 CARTL=/dev/rst0 \
+		TCMD=tar TBLOCK=20 TSKIP="mt -f /dev/nrmt0 fsf 1" TREWIND= \
+		CCMD=tar CBLOCK=120 CSKIP="mt -f /dev/nrst0 fsf 1" CREWIND= \
+		CRETENSION="mt -f /dev/rst0 retension" \
+		CWEOF="mt -f /dev/rst0 weof 1"
+# endif /* su4_u42 */
+
+# ifdef su4_cmw		/* SUN 4 CMW (BSD) */
+# define GV_ENV " Trusted Solaris 1.2"
+# define R_CHECK
+# define R_STAR
+# define R_INGRES_XLIB
+# define R_HAS_DL
+# define R_COBOL
+# define R_MFCOBOL
+# define RLS_TAPE TAPE1=/dev/rmt0 TAPE1N=/dev/nrmt0 TAPEL=/dev/rmt0 \
+		CART=/dev/rst0 CARTN=/dev/nrst0 CARTL=/dev/rst0 \
+		TCMD=tar TBLOCK=20 TSKIP="mt -f /dev/nrmt0 fsf 1" TREWIND= \
+		CCMD=tar CBLOCK=120 CSKIP="mt -f /dev/nrst0 fsf 1" CREWIND= \
+		CRETENSION="mt -f /dev/rst0 retension" \
+		CWEOF="mt -f /dev/rst0 weof 1"
+# endif /* su4_cmw */
+
+# ifdef sos_us5 /* New SCO OpenServer 5.0 */
+# define GV_ENV " SCO OpenServer 5.0 SysV"
+# define R_CHECK
+# define R_COBOL
+# define R_CONVACCT
+# define R_FORTRAN
+# define R_IIMERGEX
+# define R_IPM
+# define R_MFCOBOL
+# define R_SHADOW
+# define R_SHADOWX
+# define R_STAR
+# define R_REPLIC
+# define R_SHLIBS
+# define R_TUXEDO
+# define RLS_COMP false
+# define RLS_TAPE CART=/dev/rct0 CCMD=cpio
+# endif /* sos_us5 */
+
+# ifdef pym_us5		/* Pyramid 90, 9000, and MIServer series (ATT) */
+# define GV_ENV " OSx"
+# define R_COBOL
+# define R_MFCOBOL
+# define R_IPM
+# define R_SHADOW
+# define R_SHLIBS
+# define R_TUXEDO
+# define R_REPLIC
+# define R_STAR
+# define R_CONVACCT
+# undef R_TST
+# endif /* pym_us5 */
+
+
+# if defined(rmx_us5) || defined(rux_us5) /* SNI RMx00 */
+# define GV_ENV " Reliant Unix"
+# define R_COBOL
+# define R_MFCOBOL
+# define R_IPM
+# define R_SHADOW
+# define R_SHLIBS
+# define R_STAR
+# define R_CONVACCT
+# define R_REPLIC
+# define RLS_COMP true
+# define RLS_TAPE CART=/dev/ios0/rstape004
+# define R_MIT_KERBEROS
+# endif
+
+# ifdef sqs_ptx		/* Sequent Symmetry S27, S81 (PTX) */
+# define GV_ENV " PTX"
+# define R_FORTRAN
+# define R_COBOL
+# define R_MFCOBOL
+# define R_STAR
+# define R_REPLIC
+# define R_CONVACCT
+# define R_SHADOW
+# define R_SHLIBS
+# define RLS_TAPE CART=/dev/rmt/tm0 CARTN=dev/rts8 CARTL=/dev/rmt/tm0n \
+                  TAPE1=/dev/rmt/xt0 TAPE1N=/dev/rmt/xt0n \
+                  TAPE2=/dev/rmt/xt1 TAPE2N=/dev/rmt/xt1n \
+                  TMCD=tar CCMD=tar TBLOCK=20 CBLOCK=20
+# endif /* sqs_ptx */
+
+# ifdef ris_us5         /* IBM RS/6000 */
+# define GV_ENV " AIX"
+# define R_ADA
+# define R_FORTRAN
+# define R_COBOL
+# define R_MFCOBOL
+# define R_STAR
+# define R_CONVACCT
+# define R_SHADOW
+# define R_SHLIBS
+# define R_TUXEDO
+# define R_REPLIC
+# define R_RAAT
+# define RLS_TAPE CART=/dev/rmt0.4 CARTN=/dev/rmt0.5 CARTL=/dev/rmt0 \
+		  CCMD=cpio CBLOCK=20 CSKIP="tctl -f /dev/rmt0.5 fsf 1" \
+		  CREWIND="tctl -f /dev/rmt0.5 rewind"
+# endif /* ris_us5 */
+
+/* IBM RS/6000 AIX 4.1.x (identical to ris_us5) */
+# if defined(rs4_us5) || defined(r64_us5)
+# define GV_ENV " AIX"
+# define R_ADA
+# define R_FORTRAN
+# define R_COBOL
+# define R_MFCOBOL
+# define R_STAR
+# define R_CONVACCT
+# define R_SHADOW
+# define R_SHLIBS
+# define R_TUXEDO
+# define R_REPLIC
+# define R_OS_THREADS
+# define RLS_TAPE CART=/dev/rmt0.4 CARTN=/dev/rmt0.5 CARTL=/dev/rmt0 \
+		  CCMD=cpio CBLOCK=20 CSKIP="tctl -f /dev/rmt0.5 fsf 1" \
+		  CREWIND="tctl -f /dev/rmt0.5 rewind"
+# define R_APACHE
+# define R_RAAT
+#if defined(conf_MAINWIN_VDBA)
+# define R_MAINWIN_VDBA
+#endif
+# endif /* rs4_us5 */
+
+# ifdef ris_u64         /* IBM RS/6000 AIX 64-bit platform  */
+# define GV_ENV " AIX"
+# define R_STAR
+# define R_CONVACCT
+# define R_SHADOW
+# define R_SHLIBS
+# define R_TUXEDO
+# define R_REPLIC
+# define R_OS_THREADS
+# define R_MIT_KERBEROS
+# define RLS_TAPE CART=/dev/rmt0.4 CARTN=/dev/rmt0.5 CARTL=/dev/rmt0 \
+		  CCMD=cpio CBLOCK=20 CSKIP="tctl -f /dev/rmt0.5 fsf 1" \
+		  CREWIND="tctl -f /dev/rmt0.5 rewind"
+# endif /* ris_u64 */
+
+
+#if defined(su4_us5) || defined(su9_us5)	/* Generic SPARC Solaris */
+# define R_COBOL
+# define R_MFCOBOL
+# define R_FORTRAN
+# define R_IPM
+# define R_STAR
+# define R_AUTHOR
+# define R_SHADOW
+# define R_SHLIBS
+# define R_ADA
+# define R_TUXEDO
+# define R_REPLIC
+# define R_HAS_DL
+# define R_PAM
+
+/* 32-bit only if pure 32-bit, everything else runs 64-bit servers */
+#if defined(conf_BUILD_ARCH_32) || defined(conf_BUILD_ARCH_32_64)
+# define GV_ENV " SPARC SOLARIS"
+# define R_RAAT
+# define R_MIT_KERBEROS
+# define R_APACHE
+# define R_SUN_HACLUSTER
+# define R_VERITAS_HACLUSTER
+#else
+# define GV_ENV " SPARC SOLARIS 64 bit"
+# endif /* arch */
+
+#if defined(conf_MAINWIN_VDBA)
+# define R_MAINWIN_VDBA
+#endif
+# endif /* sparc solaris */
+
+# ifdef a64_sol         /* Sun Solaris for AMD64 compatible */
+# define GV_ENV " AMD64 SOLARIS"
+# define R_COBOL
+# define R_MFCOBOL
+# define R_FORTRAN
+# define R_IPM
+# define R_STAR
+# define R_AUTHOR
+# define R_SHADOW
+# define R_SHLIBS
+# define R_ADA
+# define R_TUXEDO
+# define R_REPLIC
+# define R_HAS_DL
+# define R_MIT_KERBEROS
+# define R_APACHE
+# define R_PAM
+# endif /* a64_sol */
+
+
+# ifdef dr6_us5         /* ICL UNICORN DRS/NX 6000 (SYS V REL 4) */
+# define GV_ENV " DRS6000 DRS/NX"
+# define R_INGENABLE
+# define R_HAS_DL
+# define R_IPM
+# define R_STAR
+# define R_REPLIC
+# define R_TUXEDO
+# define R_SHLIBS
+# define R_AUTHOR
+# define R_SHADOW
+# define R_COBOL
+# define R_MFCOBOL
+# define RLS_TAPE CART=/dev/rmt16120 CARTN=/dev/rmt16120n \
+                CARTL=/dev/rmt16120 \
+                CCMD=tar CBLOCK=20 CSKIP="mt -f /dev/rmt16120n fsf 1" \
+                CREWIND="mt -f /dev/rmt16120 rewind" \
+                CRETENSION="mt -f /dev/rmt16120 retension"
+# endif /* dr6_us5 */
+
+# ifdef dr4_us5	/* ICL DRS 400 E */
+# define GV_ENV "ICL"
+# define R_NETWORK
+# define RLS_TAPE TAPE=/dev/rmt0 TAPEN=/dev/rmt/nstr120 TAPEL=/dev/rmt0 \
+	 CMD=tar BLOCK=20 SKIP= REWIND=
+# endif /* dr4_us5 */
+
+# ifdef dg8_us5 /* Data General Port kit (DG/UX looks like System V) */
+# define GV_ENV " DG/UX"
+# define R_DGUX
+# define R_IPM
+# define R_CONVACCT
+# define R_FORTRAN
+# define R_ADA
+# define R_COBOL
+# define R_MFCOBOL
+# define R_CHECK
+# define R_STAR
+# define R_INGRES_XLIB
+# define R_HAS_DL
+# define R_TUXEDO
+# define R_REPLIC
+# define R_SHADOW
+# define R_SHLIBS
+# define RLS_COMP false
+# define RLS_DISTSIZE 80000
+# define RLS_TAPE CART=/dev/rmt/0 CARTN=/dev/rmt/0n \
+        CREWIND="mt -f /dev/rmt/0 rewind" \
+        CARTL=/dev/rmt/0 CCMD=tar CBLOCK=20
+# define R_OS_THREADS
+# endif /* dg8_us5 */
+
+# ifdef dgi_us5 /* Data General Port kit (DG/UX looks like System V) */
+# define GV_ENV " DG/UX"
+# define R_DGUX
+# define R_IPM
+# define R_CONVACCT
+# define R_MFCOBOL
+# define R_CHECK
+# define R_STAR
+# define R_INGRES_XLIB
+# define R_HAS_DL
+# define R_TUXEDO
+# define R_REPLIC
+# define R_SHADOW
+# define R_SHLIBS
+# undef  R_XERCES
+# define RLS_COMP false
+# define RLS_DISTSIZE 80000
+# define RLS_TAPE CART=/dev/rmt/0 CARTN=/dev/rmt/0n \
+        CREWIND="mt -f /dev/rmt/0 rewind" \
+        CARTL=/dev/rmt/0 CCMD=tar CBLOCK=20
+# define R_OS_THREADS
+# endif /* dgi_us5 */
+
+#ifdef sgi_us5 /* Silicon Graphics IRIX */
+# define GV_ENV " IRIX/System V "
+# define R_IPM
+# define R_SHLIBS
+# define R_STAR
+# define R_TUXEDO
+# define R_SHADOW
+# define R_REPLIC
+# define R_OS_THREADS
+# define R_FORTRAN
+# define R_MIT_KERBEROS
+# define R_APACHE
+# endif /* sgi_us5 */
+
+# ifdef nc4_us5 /* NCR Unix System V Port Kit */
+# define GV_ENV " NCR Unix System V"
+# define R_SHADOW
+# define R_HAS_DL
+# define R_COBOL
+# define R_MFCOBOL
+# define R_STAR
+# define R_TUXEDO
+# define R_REPLIC
+# define R_SHLIBS
+# endif /* nc4_us5 */
+
+# ifdef ts2_us5               /* Tandem NonStop UX */
+# define GV_ENV " NonStop UX"
+
+# define R_ABF
+# define R_BASE
+# define R_CODE
+# define R_EQUEL
+# define R_IIMERGE
+# define R_INGRES
+# define R_ITB
+# define R_TECHPUB
+# define R_TST
+# undef  R_SM 	/* Leave the piccolo-related tools off port kit tapes */
+
+# define R_COBOL
+# define R_MFCOBOL
+# define R_CONVERT
+# define R_SHADOW
+# define R_IPM
+# define R_STAR
+# define R_TUXEDO
+# define R_SHLIBS
+# define R_REPLIC
+# define R_OS_THREADS
+# endif /* ts2_us5 */
+
+# ifdef usl_us5         /* SCO Unixware 7  */
+# define GV_ENV " SCO UnixWare 7"
+# define R_COBOL
+# define R_MFCOBOL
+# define R_IPM
+# define R_STAR
+# define R_AUTHOR
+# define R_SHADOW
+# define R_INGENABLE
+# define R_HAS_DL
+# define R_TUXEDO
+# define R_REPLIC
+# define R_SHLIBS
+# define R_OS_THREADS
+# define R_APACHE
+# undef R_ODBC	/* not supported yet */
+# endif /* usl_us5 */
+
+# ifdef sui_us5         /* Sun Solaris 2.4 x86 */
+# define GV_ENV " x86 SOLARIS"
+# define R_COBOL
+# define R_MFCOBOL
+# define R_FORTRAN
+# define R_IPM
+# define R_STAR
+# define R_AUTHOR
+# define R_SHADOW
+# define R_SHLIBS
+# define R_ADA
+# define R_TUXEDO
+# define R_REPLIC
+# define R_OS_THREADS 
+# define R_MIT_KERBEROS
+# endif /* sui_us5 */
+
+# if defined(int_lnx) || defined(ibm_lnx) || defined(axp_lnx) || \
+     defined(i64_lnx) || defined(a64_lnx) || defined(int_rpl) || \
+     defined(ppc_lnx)
+ /* Linux Intel 2.0 */
+# define LNX
+# if defined(ppc_lnx) && defined(conf_PS3_BUILD)
+# define GV_ENV "\nSony PlayStation 3"
+# else
+# define GV_ENV " Linux"
+# endif
+# define R_IPM
+# define R_SHLIBS
+# define R_SHADOW
+# define R_MIT_KERBEROS
+# define R_PAM
+# define R_APACHE
+#if (defined(int_lnx) || defined(int_rpl)) && defined(conf_CLUSTER_BUILD)
+# define R_CLUSTER
+#endif
+#if !defined(a64_lnx)
+# define R_ADA
+#endif /* AMD64 Linux */
+# define R_COBOL
+# define R_TUXEDO
+# define R_FORTRAN
+# define R_REPLIC
+# define R_MIT_KERBEROS
+# if defined(conf_BUILD_MDB)
+# define R_MDB
+# endif /* config_BUILD_MDB */
+# if (defined(int_lnx) || defined(a64_lnx)) && ! defined(conf_LSB_BUILD)
+# define R_PACKMAN
+# endif /* ! rpath or LSB linux */
+# endif /* LINUX */
+
+# if defined(mg5_osx) || defined(int_osx)
+# define OSX
+# define GV_ENV " Mac OS X (Darwin)"
+# define R_IPM
+# define R_STAR
+# define R_SHLIBS
+# define R_TUXEDO
+# define R_REPLIC
+# define R_OS_THREADS 
+# define R_MIT_KERBEROS
+# endif /* Mac OS */
+
+
+
+# ifdef all_kit        /* Everything that could possibly be included in */
+                       /* a port kit.  Used for creating a client which */
+                       /* will be used as a staging area for creating   */
+                       /* port kit tapes.                               */
+                       /* This can also be copied and used as a         */
+                       /* template for creating new configurations.     */
+
+# define GV_ENV " ZZZ"
+
+# define std_kit       /* Include the standard set of things that are   */
+                       /* always included with a port kit.              */
+
+/* The rest of these are all the optional things that could be included */
+
+# define R_ADA
+# define R_AUTHOR
+
+# define R_COBOL    /* If used, must also define R_LPICOBOL or R_MFCOBOL */
+# define R_LPICOBOL    
+# define R_MFCOBOL
+
+# define R_FORTRAN
+# define R_ITT
+
+# define R_STAR
+
+# define R_VIGRAPH
+
+# endif /* all_kit */
+
+# ifdef std_kit        /* The standard set of things that are always    */
+                       /* included with every port kit.                 */
+# define R_ABF
+# define R_BASE
+# define R_CODE
+# define R_EQUEL
+# define R_IIMERGE
+# define R_INGRES
+# define R_ITB
+# define R_TECHPUB
+# define R_TST
+# undef  R_SM 	/* Leave the piccolo-related tools off port kit tapes */
+
+# endif /* std_kit */
+
+
+# ifdef qa_kit
+# undef R_CODE
+# define R_FORTRAN
+# define R_VIGRAPH
+# endif /* qa_kit */
+
+# ifdef cobol_kit
+# undef R_BASE
+# define R_COBOL
+# endif /* cobol_kit */
+
+# define R_INGRES
+# define R_EQUEL
+# define R_ABF
+
+/*
+** miscellany
+*/
+
+#if defined(conf_X11R4) || defined(conf_X11R5)
+# define R_INGRES_XLIB
+#endif  /* conf_X11R[45] */
+
+# if defined(conf_W4GL)
+# define R_OPENROAD
+# endif /* conf_W4GL */
+

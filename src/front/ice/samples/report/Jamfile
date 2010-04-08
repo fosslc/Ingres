@@ -1,0 +1,29 @@
+#
+# Jamfile file for front!ice!samples!report
+#
+#    06-Oct-2004 (hanje04)
+#	Remove grists as they are now added in IIICEFILE rule
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+#	17-Dec-2009 (bonro01)
+#	    Replace unix specific path separators
+
+SubDir ING_SRC front ice samples report ;
+
+IISUBSYS front ice samples report ;
+
+if $(BUILD_ICE)
+{
+IIICEFILE samples$(DFS)report$(DFS)blank.html : blank.html ;
+IIICEFILE samples$(DFS)report$(DFS)existing.rw : existing.rw ;
+IIICEFILE samples$(DFS)report$(DFS)htmlrbf.rw : htmlrbf.rw ;
+IIICEFILE samples$(DFS)report$(DFS)htmlwrite.rw : htmlwrite.rw ;
+IIICEFILE samples$(DFS)report$(DFS)htmlwvar.rw : htmlwvar.rw ;
+IIICEFILE samples$(DFS)report$(DFS)report.html : report.html ;
+IIICEFILE samples$(DFS)report$(DFS)report1.html : report1.html ;
+IIICEFILE samples$(DFS)report$(DFS)report2.html : report2.html ;
+IIICEFILE samples$(DFS)report$(DFS)report3.html : report3.html ;
+IIICEFILE samples$(DFS)report$(DFS)reportfr1.html : reportfr1.html ;
+IIICEFILE samples$(DFS)report$(DFS)reportfrm.html : reportfrm.html ;
+IIICEFILE samples$(DFS)report$(DFS)reporthdr.html : reporthdr.html ;
+}

@@ -1,0 +1,9 @@
+#
+# Jamfile file for testtool!sep!hdr
+#
+
+SubDir ING_SRC testtool sep hdr ;
+
+IISUBSYS testtool sep hdr ;
+
+

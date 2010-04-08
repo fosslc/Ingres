@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!xvcda_win
+#
+
+SubDir ING_SRC front vdba xvcda_win ;
+
+IISUBSYS front vdba xvcda_win ;
+
+
+IISLN vcda.exe : vcda.sln ;

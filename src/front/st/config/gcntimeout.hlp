@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Determines the time interval in which the Name Server waits ("listens") 
+ for incoming connections.  After the timeout period has been reached, 
+ the Name Server issues a new listen operation.

@@ -1,0 +1,100 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 1998 Ingres Corporation --> 
+<HTML>
+
+<!-- #ICE DECLARE=`session.cancel=secwelcome.html` -->
+
+<SCRIPT language="JavaScript">
+		var dbuser_count = 0
+		var role_count = 0
+		var db_count = 0
+		var user_count = 0
+		var profile_count = 0
+
+		function DBUserList(level) {
+			<!-- #ICE REPEAT FUNCTION=`dbuser?action=select`
+					 HTML=`
+			top.Main.iteminsert(level, 't', 1, 'd', :dbuser_id, ':dbuser_alias', '<!-- #ICE INCLUDE=``icon_dbu.gif`` -->', 'BLACK', 'secDBu.html?dbuser=:dbuser_id')`
+			-->
+		}
+		dbuser_count = <!-- #ICE VAR=`:ii_rowcount` -->
+
+		function RoleList(level) {
+			<!-- #ICE REPEAT FUNCTION=`role?action=select`
+					 HTML=`
+			top.Main.iteminsert(level, 't', 2, 'r', :role_id, ':role_name', '<!-- #ICE INCLUDE=``icon_role.gif`` -->', 'BLACK', 'secRole.html?role=:role_id')`
+			-->
+		}
+		role_count = <!-- #ICE VAR=`:ii_rowcount` -->
+
+		function DBList(level) {
+			<!-- #ICE REPEAT FUNCTION=`database?action=select`
+					 HTML=`
+			top.Main.iteminsert(level, 't', 4, 'c', :db_id, ':db_name', '<!-- #ICE INCLUDE=``icon_db.gif`` -->', 'BLACK', 'secDB.html?db=:db_id')`
+			-->
+		}
+		db_count = <!-- #ICE VAR=`:ii_rowcount` -->
+
+		function UserList(level) {
+			<!-- #ICE REPEAT FUNCTION=`user?action=select`
+					 HTML=`
+			top.Main.iteminsert(level, 't', 3, 'u', :user_id, ':user_name', '<!-- #ICE INCLUDE=``icon_user.gif`` -->', 'BLACK', 'secUser.html?user=:user_id')
+			top.Main.iteminsert(level+1, 'u', :user_id, 'uc', :user_id, 'database connection', '<!-- #ICE INCLUDE=``icon_dbs.gif`` -->', 'GRAY', 'secUserConns.html?user=:user_id', 'yes')
+			top.Main.iteminsert(level+1, 'u', :user_id, 'ur', :user_id, 'roles', '<!-- #ICE INCLUDE=``icon_roles.gif`` -->', 'GRAY', 'secUserRoles.html?user=:user_id', 'yes')
+
+			<!-- #ICE REPEAT FUNCTION=``user_database?action=select&ud_user_id=:user_id``
+					 HTML=``
+			top.Main.iteminsert(level+2, 'uc', :user_id, 'ucc', :ud_db_id, ':ud_db_name', '<!-- #ICE INCLUDE=````icon_db.gif```` -->', 'BLACK', 'secUserConn.html?user=:user_id&db=:ud_db_id')``
+			-->
+
+			<!-- #ICE REPEAT FUNCTION=``user_role?action=select&ur_user_id=:user_id``
+					 HTML=``
+			top.Main.iteminsert(level+2, 'ur', :user_id, 'urr', :ur_role_id, ':ur_role_name', '<!-- #ICE INCLUDE=````icon_role.gif```` -->', 'BLACK', 'secUserRole.html?user=:user_id&role=:ur_role_id')``
+			-->`
+			-->
+		}
+		user_count = (3 * <!-- #ICE VAR=`:ii_rowcount` -->)
+
+		function ProfileList(level) {
+			<!-- #ICE REPEAT FUNCTION=`profile?action=select`
+					 HTML=`
+			top.Main.iteminsert(level, 't', 5, 'p', :profile_id, ':profile_name', '<!-- #ICE INCLUDE=``icon_profile.gif`` -->', 'BLACK', 'secProfile.html?profile=:profile_id')
+			top.Main.iteminsert(level+1, 'p', :profile_id, 'pd', :profile_id, 'database connections', '<!-- #ICE INCLUDE=``icon_dbs.gif`` -->', 'GRAY', 'secProfConns.html?profile=:profile_id', 'yes')
+			top.Main.iteminsert(level+1, 'p', :profile_id, 'pr', :profile_id, 'roles', '<!-- #ICE INCLUDE=``icon_roles.gif`` -->', 'GRAY', 'secProfRoles.html?profile=:profile_id', 'yes')
+
+			<!-- #ICE REPEAT FUNCTION=``profile_database?action=select&pd_profile_id=:profile_id``
+					 HTML=``
+			top.Main.iteminsert(level+2, 'pd', :profile_id, 'pdd', :pd_db_id, ':pd_db_name', '<!-- #ICE INCLUDE=````icon_db.gif```` -->', 'BLACK', 'secProfConn.html?profile=:profile_id&db=:pd_db_id')``
+			-->
+
+			<!-- #ICE REPEAT FUNCTION=``profile_role?action=select&pr_profile_id=:profile_id``
+					 HTML=``
+			top.Main.iteminsert(level+2, 'pr', :profile_id, 'prr', :pr_role_id, ':pr_role_name', '<!-- #ICE INCLUDE=````icon_role.gif```` -->', 'BLACK', 'secProfRole.html?profile=:profile_id&role=:pr_role_id')``
+			-->`
+			-->
+		}
+		profile_count = profile_count + (3 * <!-- #ICE VAR=`:ii_rowcount` -->)
+
+
+		top.Main.declareMenu(5 + dbuser_count + role_count + user_count + db_count + profile_count, 10)
+
+		<!-- #ICE REPEAT VAR=`
+		top.Main.iteminsert(1, '', 0, 't', 1, 'Database Users', '<!-- #ICE INCLUDE=``icon_dbus.gif`` -->', 'GRAY', 'secDBus.html', 'yes')
+		top.Main.iteminsert(1, '', 0, 't', 4, 'Database Connections', '<!-- #ICE INCLUDE=``icon_dbs.gif`` -->', 'GRAY', 'secdbs.html', 'yes')
+		top.Main.iteminsert(1, '', 0, 't', 2, 'Roles', '<!-- #ICE INCLUDE=``icon_roles.gif`` -->', 'GRAY', 'secRols.html', 'yes')
+		top.Main.iteminsert(1, '', 0, 't', 3, 'WEB Users', '<!-- #ICE INCLUDE=``icon_users.gif`` -->', 'GRAY', 'secUses.html', 'yes')
+		top.Main.iteminsert(1, '', 0, 't', 5, 'Profiles', '<!-- #ICE INCLUDE=``icon_profiles.gif`` -->', 'GRAY', 'secProfiles.html', 'yes')
+		` -->
+
+		DBUserList(2)
+		RoleList(2)
+		UserList(2)
+		DBList(2)
+		ProfileList(2)
+		top.Main.display()
+</SCRIPT>
+
+<BODY>
+</BODY>
+</HTML>
+

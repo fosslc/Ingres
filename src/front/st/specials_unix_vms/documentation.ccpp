@@ -1,0 +1,103 @@
+/*
+** Copyright (c) 2004, 2005 Ingres Corporation
+*/
+/*
+** Generic part file for documentation
+*/
+
+/*
+** History
+**	06-Feb-2004 (bonro01)
+**		Created.
+**	29-Jul-2004 (hanje04)
+**		Updated for new document names.
+**	03-Sep-2004 (hanch04)
+**		Updated for new document names for open source.
+**	01-Feb-2005 (sheco02)
+**		Updated for new document names and directory for open source.
+**	01-Feb-2005 (sheco02)
+**		More updates for new pdf document.
+**	14-Mar-2005 (sheco02)
+**		Add Embedded version of bookshelf pdf file and other minor
+**		updates.
+**	24-May-2005 (sheco02)
+**		Bug 14567, Add/remove some pdf files under ingres!files!english
+**		and add new directories under ingres!files!english!INDEX.
+**	27-may-2005 (abbjo03)
+**	    Excluded Embedded documentation from VMS for the time being.
+**	09-aug-2005 (abbjo03)
+**	    Add RMS guide.
+**	03-Feb-2006 (bonro01)
+**	    Update documenation for Ingres 2006
+**	    Remove embedded documentation which was incorrectly added
+**	    to the standard documenation package.
+**	25-Oct-2006 (bonro01)
+**	    Update documenation for Ingres 2006 Release 2
+**	29-Nov-2006 (bonro01)
+**	    Update documenation for Ingres 2006 Release 2
+**	11-Dec-2006 (bonro01)
+**	    Update documenation for Ingres 2006 Release 2
+**	27-Aug-2008 (bonro01)
+**	    Update documentation for Ingres 9.2
+**	21-Oct-2008 (bonro01)
+**	    Fix PDF documenation directory.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	09-Mar-2010 (hanje04)
+**	    SIR 123296
+**	    Correct locations for documentation, should be under /usr/share/doc
+**	    for LSB builds
+*/
+
+PART   documentation
+
+/*
+** ingres!files!english
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!doc!ingres!english
+#else
+	DIRECTORY ingres!files!english
+#endif
+   BUILD_DIR (ING_BUILD)!files!english
+      FILE CharQueryRepUser.pdf
+      FILE CommandRef.pdf
+      FILE Connectivity.pdf
+      FILE DatabaseAdmin.pdf
+      FILE DistTransProcUser.pdf
+      FILE EmbedQUEL.pdf
+      FILE EmbedSQL.pdf
+      FILE FormAppDevUser.pdf
+      FILE Ing_Bookshelf.pdf
+      FILE ING_INDEX.PDX
+      FILE Ing_Install.pdf
+      FILE Ing_RelSum.pdf
+      FILE IntPerfMonUser.pdf
+      FILE Migration.pdf
+      FILE ObjMgmtExtUser.pdf
+      FILE OpenAPIUser.pdf
+      FILE OpenSQLRef.pdf
+      FILE QUELRef.pdf
+      FILE QuickStart_Linux.pdf
+      FILE QuickStart_Win.pdf
+      FILE ReplicatorUser.pdf
+      FILE Security.pdf
+      FILE SQLRef.pdf
+      FILE StarUser.pdf
+      FILE SysAdmin.pdf
+
+/*
+** ingres!files!english!ingres
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!doc!ingres!english!ING_INDEX
+#else
+	DIRECTORY ingres!files!english!ING_INDEX
+#endif
+   BUILD_DIR (ING_BUILD)!files!english!ING_INDEX
+      FILE index.idx
+      FILE index1.idx
+

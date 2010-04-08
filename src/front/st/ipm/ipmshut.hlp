@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Shutdown screen.  This screen allows you to shut down
+the indicated server (the one the cursor was resting on).  There are two
+different ways to shut down the indicated server:
+
+Soft_Shutdown  Same as "set server shut" in IIMONITOR.  Soft_Shutdown is
+               preferred providing it is OK to wait until the current
+               sessions end before the server stops.  After this menuitem
+               is executed, the connection to the server is maintained and
+               the submenu reappears.  This allows the "Hard_Shutdown"
+               menuitem to be selected, if desired.  When the "End"
+               menuitem is selected, the connection is dropped and it is
+               not possible to reconnect to the server at all.
+
+Hard_Shutdown  Same as "stop server" in IIMONITOR.  When in a hurry to
+               stop a server, use this instead of operating system commands
+               like VMS stop or UNIX kill -9.  Executing this menuitem will
+               immediately stop the server and break out of the submenu.

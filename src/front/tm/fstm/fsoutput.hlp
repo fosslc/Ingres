@@ -1,0 +1,26 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are currently in the "output phase" of the Interactive Terminal
+Monitor, in which you may scroll through the results of your query
+language request.
+
+You may scroll forwards or backwards using your SCROLLDOWN and SCROLLUP
+keys defined in your Key Definition File.  Likewise, you may scroll
+left and right using your SCROLLLEFT and SCROLLRIGHT keys.  You may also
+scroll to the top or bottom of the results.  Examine the Help for Keys if
+you need to know the current definitions.
+
+In addition, the following menu items are available for viewing the
+output.
+
+Menu Items
+
+      Print       Send the results to a printer.  You will be prompted
+		  for a printer name, the number of copies and a file name.
+
+      File        Save the results in a file.  You will be prompted for
+                  a file name.  
+ 
+      Help        Display this Help file.
+     
+      End         Return to the "input phase" of the Interactive
+                  Terminal monitor.

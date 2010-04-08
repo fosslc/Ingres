@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlkdisp.hlp, subtopic 'Displaying' of subtopic 'Lookup tables' behind 
+/#-- the main VQ Editor help screen.
+/#-- 
+You can specify the following aspects of the Lookup table and form display:
+
+  * The columns you want to display in the Lookup pop-up (default is none) 
+    and the order you want to display them in.
+    - To use the Lookup table for validating a user's entries, leave the 
+      "Order" columns blank.  The Lookup pop-up will not be displayed.
+    - To display one column on the Lookup pop-up, enter a "1" in the "Order" 
+      column next to the column name.  
+    - To display more than one column in the Lookup pop-up, specify the 
+      sequence by entering the appropriate numbers in the "Order" column.
+  * The column titles you want to display in the Lookup pop-up.
+    - With the column name highlighted, tab to the "Column Title" column
+      and enter a new title.
+  * The columns you want to display on the form.  
+    - To display the column on the form, enter a "y" in the "Display" field.  
+    - To create a local variable based on the column without displaying it on
+      the form, enter a "v" in the "Display" field. You can then use this
+      local variable when creating escape code.
+    - Columns can be displayed on the form without being displayed in  
+      the Lookup pop-up and vice versa. 

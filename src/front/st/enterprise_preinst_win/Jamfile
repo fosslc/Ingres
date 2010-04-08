@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!st!enterprise_preinst_win
+#
+
+SubDir ING_SRC front st enterprise_preinst_win ;
+
+IISUBSYS front st enterprise_preinst_win ;
+
+IISLN setup.exe : enterprise.sln ;
+

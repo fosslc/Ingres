@@ -1,0 +1,1193 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include       "rbftype.h"
+# include       "rbfglob.h"
+# include	<rglob.h>
+# include	<ug.h>
+# include	<si.h>
+# include	<cm.h>
+# include	<te.h>
+# include	<flddesc.h>
+# include 	<st.h>
+# include 	<uf.h>
+
+FUNC_EXTERN	char	*IIRFfwd_FullWord();
+FUNC_EXTERN	VOID	create_section();
+FUNC_EXTERN	bool	IIRFdso_DupSortOrder();
+FUNC_EXTERN VOID	AdjustSections();
+static		VOID	_rFagguHandler();
+static			FixSectionSeq();
+static		bool	BadSortOrder();
+bool 			IIRFIsBreakColumn();
+STATUS 			IIRFSetBrkOptions();
+STATUS 			IIRFSetNewPageOption();
+
+
+/*
+**   RFCOLOPTS - display and control the COPTIONS form to select
+**	the selection criteria and control the sort order of the
+**	columns.
+**
+**	Note that this fills in the fields of the Coptions form
+**	from the current COPT structure, which should be up to date.
+**
+**	Parameters:
+**		noUndo		Pointer to a boolean.  Set to TRUE if the
+**				Report Layout changes (due to break section
+**				re-ordering or deletion of a unique agg).
+**				This tells RFVIFRED to make Undo a NOP.
+**
+**	Returns:
+**		TRUE if any changes made, FALSE if not.
+**
+**	Side Effects:
+**		Fields in the COPT structure.
+**
+**	Called By:
+**		rFdisplay.
+**
+**	Trace Flags:
+**
+**	Error Messages:
+**		none.
+**
+**	History:
+**		6/2/82 (ps)	written.
+**		12/3/84 (rlk) - Rewritten to use 1 form containing a
+**				tablefield.
+**		26-nov-1986 (yamamoto)
+**			Modified for double byte characters.
+**		1/15/87 (rld)	change syntax of INQUIRE_FRS and SET_FRS calls.
+**		2/12/87 (rld)	changed to accomodate new agg structures.
+**		05-may-88 (marian)	bug 12071
+**			Lowercase 'X' so subsequent routines will know
+**			aggregates were requested.
+**		06/24/88 (dkh) - Fixed 5.0/05a integration to work in 6.1.
+**		20-dec-88 (sylviap)
+**			Performance changes - reads in colopts.frm.
+**      9/22/89 (elein) UG changes ingresug change #90045
+**	changed <rbftype.h> & <rbfglob.h> to "rbftype.h" & "rbfglob.h"
+**		21-aug-89 (cmr)	rewritten to support visible break 
+**				headers and footers.  Also reflects 
+**				changes to the coloptions form.  Break 
+**				out some COPT info into rfstruct.qsc.
+**		22-nov-89 (cmr)	after calling rFbreak() update str_brkcol.
+**		11/27/89  (martym) - Added parameter to indicate if rfvifred 
+**				should be called.
+**		08-jan-89 (cmr)	rewrite to support new user interface.
+**		28-jan-90 (cmr)	put in scrolling activations.
+**		08-feb-90 (cmr)	default for sort direction is 'a' (not blank).
+**		20-feb-90 (sylviap)
+**			Took out all abbreviations ("ascending", "descending",
+**			"none", "range", "value")
+**		15-mar-90 (cmr)
+**			Put in support to re-order break headers and/or
+**			footers whenever the sort sequences change. Most
+**			of the work is actually one in rfvifred.
+**		5/22/90 (martym)
+**			Added IIRFIsBreakColumn(), IIRFSetBrkOptions(),
+**			and IIRFSetNewPageOption().
+**	31-jul-90 (sylviap)
+**		Changed "clear screen" to "redisplay" so selecting the
+**		"Save" menuitem does not blank out the screen.
+**		03-aug-90 (cmr) fix for bugs 32080 and 32083
+**				Pass bool to create_section() to tell rfvifred 
+**				whether or not to initialize the line array.  
+**	04-sep-90 (sylviap)
+**		Added explanations to the activate menuitems. #32699
+**	18-sep-90 (sylviap)
+**		Added call to IIRFdso_DupSortOrder.
+**	12-oct-90 (steveh)
+**		Removed FTbell calls from up/down arrow operations.
+**		Although, there is no beep when the user attempts to
+**		move past the end/top of the list, the bell does not
+**		beep when a valid entry is made into the last column
+**		of the table field. (bug 32908)
+**	30-oct-1992 (rdrane)
+**		Ensure that unsupported datatype fields cannot be selected.
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+##i4 rFcoptions(noUndo)
+bool	*noUndo;
+##{
+	/* external declarations */
+##	GLOBALREF	char	*Ncoloptions;	/* STRUCTURE frame name */
+##	GLOBALREF	bool	alloc_opts;
+
+
+	/* internal declarations */
+##	char	attbuf[FE_MAXNAME + 1];		/* attribute name */
+##	char	criteria[6];
+##	char	direction[11];
+##	i2	sequence = 0;
+
+	register COPT	*copt;			/* COPT structure */
+	i4		i;
+	bool		adjust_sections = FALSE;
+	Sec_node	*n;
+	ATT		*att;
+##	i4		anychanges;		/* non-zero if changes made */
+##	i4		attord;			/* attribute ordinal */
+##	char		*attname;		/* attribute name */
+##	char		*form;
+##	char		colname[10];
+##	char            *fieldname;		/* field column name */
+	char		*prompt;
+##	char		*choices;
+	char		*help_scr;
+##	static char	*dir_tbl[2];		/* choices for sort direction */
+##	static char	*sel_tbl[3];		/* choices for selection crit */
+##	char		*fullwrd;		/* full word-no abbreviation */
+##	char		*srttbl;		/* tablename in form */
+##	char		*srtseq;		/* colname in table in form */
+##	char		*srtdir;		/* colname in table in form */
+##	char		*selval; 		/* colname in table in form */
+##	char		*srtcolname; 		/* colname in table in form */
+
+	/* start of routine */
+
+	Ncoloptions = F_COPTIONS;
+	srttbl = F_SRTTBL;
+	srtseq = F_SRTSEQ;
+	srtdir = F_SRTDIR;
+	selval = F_SELVAL;
+	srtcolname = F_COLNAM;
+
+	if ( !alloc_opts)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form = Ncoloptions) 
+			!= OK)
+		{
+			IIUGerr(ERget(E_RF002D_Cannot_locate_form), 0, 1, form);
+			return(FALSE);
+		}
+		alloc_opts = TRUE;
+		/* init 'choices' tables */
+		dir_tbl[0] = ERget (F_RF0025_sortup);
+		dir_tbl[1] = ERget (F_RF0026_sortdown);
+		sel_tbl[0] = ERget (F_RF000C_nosel);
+		sel_tbl[1] = ERget (F_RF000A_value);
+		sel_tbl[2] = ERget (F_RF000B_range);
+	}
+
+##	display Ncoloptions update
+##	initialize()
+##	{
+
+##		inittable Ncoloptions rfsrttbl update
+
+		/* First fill in the fields from the copt structure */
+		for(i = 1; i <= En_n_attribs; i++)
+		{
+			/* Get the attribute name, but
+			** Guard against unsupported datatype.
+			*/
+			if  ((att = r_gt_att(i)) == (ATT *)NULL)
+			{
+				continue;
+			}
+			attname = att->att_name;
+
+			/* fill in the sort attributes */
+
+			copt = rFgt_copt(i);
+			sequence = copt->copt_sequence;
+
+			if ( copt->copt_order == 'a' )
+			    	STcopy( dir_tbl[0], direction );
+			else
+			        STcopy( dir_tbl[1], direction );
+
+			switch ( copt->copt_select )
+			{
+			   case 'r':
+				STcopy( sel_tbl[2], criteria );
+				break;
+			   case 'v':
+			   	STcopy( sel_tbl[1], criteria );
+				break;
+			   default:
+				STcopy( sel_tbl[0], criteria );
+				break;
+			}
+				
+			/*	Load a row of the tablefield */
+
+##			loadtable Ncoloptions rfsrttbl
+##				(srtcolname = attname,
+##				 srtseq = sequence,
+##				 srtdir = direction,
+##				 selval = criteria)
+		}
+
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##			EXPL = ERget(FE_LookupExpl)), 
+##			FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##	{
+##		inquire_frs table Ncoloptions (colname=column)
+		if (STcompare (colname, srtseq) == 0)
+		{
+			choices   = ERget(S_RF006F_sort_seq);
+##			message choices with style = popup
+		}
+		else if (STcompare (colname, srtdir) == 0)
+		{
+                	/*
+			** Display Popup with the 'direction' options.  User 
+			** may choose ascending or descending.  
+			*/
+			help_scr  = ERget(S_RF0075_Sort_direction);
+			prompt    = ERget(F_RF0063_sort_dir_title);
+			choices   = ERget(F_RF0064_asc_desc);
+			i = IIFDlpListPick(prompt, choices, 0, 
+				LPGR_FLOAT, LPGR_FLOAT, help_scr, H_SRTDIR,
+				NULL,  NULL);
+			if (i >= 0)
+			{
+				/* put in what user selected from listpick */
+##				putrow Ncoloptions rfsrttbl(srtdir = dir_tbl[i])
+			}
+		}
+		else
+		{
+                	/*
+			** Display Popup with the 'selection criteria' options.
+			** User may choose none, value or range.  
+			*/
+			help_scr  = ERget(S_RF0076_Selection_criteria);
+			prompt    = ERget(F_RF0065_sel_crit_title);
+			choices   = ERget(F_RF0066_sel_crit_choices);
+			i = IIFDlpListPick(prompt, choices, 0, 
+				LPGR_FLOAT, LPGR_FLOAT, help_scr, H_SELVAL,
+				NULL,  NULL);
+			if (i >= 0)
+			{
+				/* put in what user selected from listpick */
+##				putrow Ncoloptions rfsrttbl(selval = sel_tbl[i])
+			}
+		}
+##		resume
+
+##	}
+
+##	activate menuitem ERget(FE_Help)(expl=ERget(F_FE0100_ExplFrameHelp),
+##              validate=0), FRSkey1 (validate = 0)
+##	{
+		FEhelp(H_COPTIONS, ERget(F_RF0013_Column_Options));
+##	}
+
+##	activate menuitem ERget(FE_End)(expl = ERget(F_RF0076_return_layout)),
+##              FRSkey3
+##	{
+##		validate
+
+##		inquire_frs form (anychanges = change(Ncoloptions))
+
+		/* Check for duplicate sort sequence */
+		if (!IIRFdso_DupSortOrder(FALSE, &attord))
+		{
+##                      scroll Ncoloptions rfsrttbl to attord
+##                      resume column rfsrttbl srtseq
+		}
+
+		/*
+		** If the sort order has changed then we need 
+		** to re-arrange the headers and/or footers.
+		*/
+		if ( BadSortOrder() )
+		{
+			AdjustSections();
+			*noUndo = TRUE;
+		}
+##		enddisplay
+##	}
+##	activate column srttbl srtseq:
+##	{
+##		getrow Ncoloptions rfsrttbl
+##			(attord = _RECORD,
+##			 sequence = srtseq,
+##			 direction = srtdir)
+
+		/* make sure that COPT is up to date */
+		copt = rFgt_copt(attord);
+		if ( sequence == 0 )
+		{
+			if ( copt->copt_brkhdr == 'y' || copt->copt_brkftr == 'y' )
+			{
+				IIUGerr(E_RF0073_Must_delete_hdr_ftr, 0, 0);
+				sequence = copt->copt_sequence;
+##				putrow Ncoloptions rfsrttbl
+##					( srtseq = sequence )
+##				resume column rfsrttbl srtseq
+			}
+			if ( copt->copt_sequence != 0 )
+			{
+				/* are there any unique aggs on this column? */
+				if ( copt->agu_list )
+				{
+					/* let the user decide what to do */
+					i = IIFDlpListPick( 
+					   ERget(F_RF006C_Unique_Aggs),
+					   ERget(F_RF006D_Unique_Aggs_Choices),
+					   0, LPGR_FLOAT, LPGR_FLOAT, 
+					   ERget(F_RF006E_Help_Unique_Aggs), 
+					   H_UNIQAGGS, NULL, NULL);
+					if ( i >= 0) /* delete or change */
+					{
+						_rFagguHandler(attord, copt, i);
+						*noUndo = TRUE;
+					}
+					else	/* Cancel */
+					{
+						sequence = copt->copt_sequence;
+##						putrow Ncoloptions rfsrttbl
+##							(srtseq = sequence)
+##						resume column rfsrttbl srtseq
+					}
+				}
+			}
+			copt->copt_sequence = 0;
+			copt->copt_break = 'n';
+			copt->copt_whenprint = 'a';
+			copt->copt_newpage = FALSE;
+		}
+		else
+		{
+			/* reset the seq in the break hdr and/or ftr */
+			FixSectionSeq( attord, sequence );
+			copt->copt_sequence = sequence;
+			copt->copt_break = 'y';
+		}
+
+##		resume next
+##	}
+
+##      activate column srttbl srtdir:
+##      {
+##              getrow Ncoloptions rfsrttbl
+##			(attord = _RECORD,	
+##                       direction = srtdir)
+		   
+  		copt = rFgt_copt( attord );
+
+		/* get the full word */
+		if ((fullwrd = 
+			IIRFfwd_FullWord(direction, 2, dir_tbl)) == NULL)
+		{
+			IIUGerr(E_RF007E_input_not_found, 0, 0); 
+##                      resume                         
+		}
+		else 
+		{ 
+			copt->copt_order = STcompare
+				(fullwrd, 
+				 ERget(F_RF0026_sortdown)) != 0 ? 'a' : 'd';
+##              	putrow Ncoloptions rfsrttbl (srtdir = fullwrd)
+##              	resume next
+		}
+##      }
+##      activate column srttbl selval:
+##      {
+##              getrow Ncoloptions rfsrttbl
+##			(attord = _RECORD,	
+##                       criteria = selval)
+		   
+  		copt = rFgt_copt( attord );
+
+		/* get the full word */
+		if ((fullwrd = 
+			IIRFfwd_FullWord (criteria, 3, sel_tbl)) == NULL)
+		{
+			IIUGerr(E_RF007E_input_not_found, 0, 0);
+##			resume
+		}
+		else
+		{
+			if (STcompare(fullwrd, ERget(F_RF000A_value)) == 0 )
+				copt->copt_select = 'v';
+			else 
+				if (!STcompare(fullwrd, ERget(F_RF000B_range)))
+					copt->copt_select = 'r';
+				else
+					copt->copt_select = 'n';
+##              	putrow Ncoloptions rfsrttbl (selval = fullwrd)
+##              	resume next
+		}
+##      }
+##	activate scrolldown rfsrttbl
+##	{
+		/* bug 32908: removed FTbell call to 
+		   avoid signaling error on valid input. */ 
+		if ( attord > 1 )
+		{
+##			scroll Ncoloptions rfsrttbl down
+		}
+		else
+		{
+##			resume
+		}
+##		resume field rfsrttbl
+##	}
+
+##	activate scrollup rfsrttbl
+##	{
+		/* bug 32908: removed FTbell call to 
+		   avoid signaling error on valid input. */ 
+		if ( attord < En_n_attribs )
+		{
+##			scroll Ncoloptions rfsrttbl up
+		}
+		else
+		{
+##			resume
+		}
+##		resume field rfsrttbl
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##      {
+		FEtabfnd(Ncoloptions, srttbl);
+##      }
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll Ncoloptions rfsrttbl to 1
+##	}
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll Ncoloptions rfsrttbl to end
+##	}
+
+##	finalize
+
+	return(anychanges);
+##}
+
+
+
+/*
+** FixSectionSeq() - For a given attribute, if there is an associated
+**		     break header and/or footer then update the sort 
+**		     sequence for the section(s).
+*/
+static
+FixSectionSeq( ord, sequence )
+i4	ord;
+i4   sequence;
+{
+	COPT	*copt;
+	Sec_node *n;
+
+	copt = rFgt_copt( ord );
+	if ( copt->copt_brkhdr != 'y' && copt->copt_brkftr != 'y' )
+		return;
+	for ( n = Sections.head; n; n = n->next )
+	{
+		if ( n->sec_type != SEC_BRKHDR && n->sec_type != SEC_BRKFTR )
+			continue;
+		if ( (n->sec_brkseq == copt->copt_sequence) &&
+			(n->sec_brkord == ord) )
+				n->sec_brkseq = sequence;
+	}
+}
+
+
+
+
+static bool
+/*
+** BadSortOrder() - returns TRUE if the Report Layout (Sections) is
+**		    out of date with respect to the sort order.
+**		    Otherwise it returns FALSE.
+*/
+BadSortOrder()
+{
+	Sec_node *n, *prev, *next;
+
+	for ( n = Sections.head; n ; n = n->next ) 
+	{
+		if ( n->sec_type != SEC_BRKHDR && n->sec_type != SEC_BRKFTR )
+			continue;
+		prev = n->prev;
+		next = n->next;
+		if ( prev && (prev->sec_brkseq > 0) 
+			&& (prev->sec_brkseq > n->sec_brkseq) )
+		{
+			return( TRUE );
+		}
+		if ( next && (next->sec_brkseq > 0) 
+			&& (next->sec_brkseq < n->sec_brkseq) )
+		{
+			return( TRUE );
+		}
+	}
+	return( FALSE );
+}
+
+
+
+/*
+** AdjustSections() - Re-order the break headers and footers to reflect
+**		      the correct sort order.  This routine constructs a 
+**		      sorted array of sort sequences and passes it to
+**		      RebuildLines(rfvifred), which does most of the work.
+*/
+VOID
+AdjustSections()
+{
+	i4	*sort_sequence, *s;
+	i4	numseq=0;
+	i4	i, j, temp, gap;
+	COPT	*copt;
+	TAGID	seq_tag;
+	
+	/*  allocate sort_sequence array */
+	seq_tag = FEgettag();
+	if ((sort_sequence = (i4 *)FEreqmem(seq_tag, En_n_attribs*sizeof(i4),
+		TRUE, (STATUS *) NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("AdjustSections"));
+	}
+
+	/* copy sort sequences into the sort_sequence array */
+	s = sort_sequence;
+	for ( i = 1; i <= En_n_attribs; i++ )
+	{
+		copt = rFgt_copt(i);
+		if ( copt->copt_sequence == 0 )
+			continue;
+		if ( copt->copt_brkhdr != 'y' && copt->copt_brkftr != 'y' )
+			continue;
+		*s++ = copt->copt_sequence;
+		numseq++;
+	}
+
+	s = sort_sequence;
+	/* Sort the sort sequences (shell sort from K&R) */
+	for ( gap = numseq/2; gap > 0; gap /= 2 )
+	{
+		for ( i = gap; i < numseq; i++ )
+		{
+			for ( j = i-gap; j >= 0 && s[j] > s[j+gap]; j -= gap )
+			{
+				temp = s[j];
+				s[j] = s[j+gap];
+				s[j+gap] = temp;
+			}
+		}
+	}
+	/* Rebuild the lines table */
+	RebuildLines( sort_sequence );
+
+	FEfree(seq_tag);
+}
+
+
+
+/*
+** rFagguHandler() - For each unique aggregate on the agu_list for this
+**		     attribute, call vifred to act on it (choice is
+**		     either to delete it or make in non-unique).
+*/
+static VOID
+_rFagguHandler(ord, copt, choice)
+COPT	*copt;
+i4	choice;
+{
+	LIST	*list;
+	FIELD	*fld;
+
+	list = copt->agu_list;
+	while (list)
+	{
+		fld = list->lt_field;
+		VifAgguHandler(ord, fld, choice);
+		list = list->lt_next;
+	}
+}
+
+
+
+/*
+** Name:    IIRFIsBreakColumn - Check to see if a column is a break 
+**			    	column or not.
+**                    
+**
+** Description:
+**        This module will return TRUE if the column (field) passed 
+**	  in is a break column; and FALSE if it is not a break column, 
+**        it is an aggregate or we are editing a Labels Style report.
+**
+** Parameters:
+**           fld  -  Field to check.
+**
+** Returns: 
+**           TRUE   -  If break column.
+**	     FALSE  -  If not break column.
+**
+** Called By:
+**           edit2com() "in RFVIFRED".
+**
+** Trace Flags:
+**           None.
+**
+** Side Effects:
+**           None.
+**
+** History:
+**	5/22/90 (martym)    Written for RBF.
+**	30-oct-1992 (rdrane)
+**		Ensure that unsupported datatype fields will always return
+**		FALSE.
+*/
+bool IIRFIsBreakColumn(fld)
+FIELD *fld;
+{
+	FLDHDR *FDgethdr();
+	COPT   *copt;			
+	i4    ord;
+
+	/*
+	** See if we have an aggregate first:
+	*/
+	if ( ((FDgethdr(fld))->fhd2flags & fdDERIVED) || 
+			(St_style == RS_LABELS))
+	{
+		return(FALSE);
+	}
+
+	
+	ord = r_mtch_att(fld->fldname);
+	/*
+	** Guard against unsupported datatype.
+	*/
+	if  (ord == A_ERROR)
+	{
+		return(FALSE);
+	}
+	copt = rFgt_copt(ord);
+
+	if (copt->copt_sequence > 0)
+		return(TRUE);
+	else
+		return(FALSE);
+
+}
+
+
+
+
+/*
+** Name:    IIRFSetBrkOptions - Set options on a break column.
+**                    
+**
+** Description:
+**
+** Parameters:
+**           	fld    		Field to check.
+**		noUndo		Set to TRUE if the Report Layout changes due to
+**				a section being created.  This tells RFVIFRED 
+**				to make Undo a NOP.
+**
+** Returns: 
+**           OK   -  If option set or operation canceled.
+**	     FAIL -  If option not set due to error.
+**
+** History:
+**         5/22/90 (martym)    Written for RBF.
+**	9-aug-1993 (rdrane)
+**		Add yes_str and no_str so we can get rid of the embedded string
+**		literals (internationalization).  At some point, we should get
+**		rid of the whole yn_tbl[] interface and use IIUGyn() directly.
+*/
+##STATUS IIRFSetBrkOptions(fld, noUndo)
+FIELD *fld;
+bool	*noUndo;
+##{
+
+##	GLOBALREF	char 	*Nrfbrkopt;
+##	GLOBALREF	bool	alloc_rfbrkopt;
+
+	COPT 		*copt;
+	i4  		ord;
+	Sec_node 	*n = (Sec_node *)NULL;
+	char 		sectitle [FE_MAXNAME + 16];
+	bool		canceled = FALSE;
+	bool		initialized;
+	
+##	char	*frm;
+##	char 	*fullword;
+##	char 	*fname;
+##	char 	*clname;
+##	char	*pralways;
+##	char 	*pronbreak;
+##	char	*pronpage;
+##	char	*isnewpage;
+##	char 	tmpstr [FE_MAXNAME + 1];
+##	char 	tmpbuff [FE_MAXNAME + 1];
+##	char	*choice;
+	char	*yes_str;
+	char	*no_str;
+
+
+	Nrfbrkopt = F_BRKOPT;
+	clname = F_BKCOLN;
+	pralways = F_PRNTAL;
+	pronbreak = F_PRNTBRK;
+	pronpage = F_PRNTPAGE;
+	isnewpage = F_NEWPAGE;
+	yes_str = yn_tbl[0];
+	no_str = yn_tbl[1];
+
+
+	fname = fld->fld_var.flregfld->flhdr.fhdname;
+	ord = r_mtch_att(fname);
+	copt = rFgt_copt(ord);
+
+	if (!alloc_rfbrkopt)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), frm = Nrfbrkopt) != OK)
+		{
+			IIUGerr(E_RF002D_Cannot_locate_form, 0, 1, frm);
+			return(FAIL);
+		}
+		alloc_rfbrkopt = TRUE;
+	}
+
+
+##	display Nrfbrkopt update
+##	initialize()
+##	{
+
+##		putform Nrfbrkopt (clname = fname)
+
+		STcopy(no_str, tmpstr);
+		if (copt->copt_whenprint == 'a')
+			STcopy(yes_str, tmpstr);
+##		putform Nrfbrkopt (pralways = tmpstr)
+
+		STcopy(no_str, tmpstr);
+		if (copt->copt_whenprint == 'b' || copt->copt_whenprint == 't')
+			STcopy(yes_str, tmpstr);
+##		putform Nrfbrkopt (pronbreak = tmpstr)
+
+		STcopy(no_str, tmpstr);
+		if (copt->copt_whenprint == 'p' || copt->copt_whenprint == 't')
+			STcopy(yes_str, tmpstr);
+##		putform Nrfbrkopt (pronpage = tmpstr)
+
+		STcopy(no_str, tmpstr);
+		if (copt->copt_newpage)
+			STcopy(yes_str, tmpstr);
+##		putform Nrfbrkopt (isnewpage = tmpstr)
+##	}
+
+
+##	activate field pralways
+##	{
+##		getform Nrfbrkopt (tmpstr = pralways)
+		if ((fullword = IIRFfwd_FullWord(tmpstr, 2, yn_tbl)) == NULL)
+		{
+			IIUGerr(E_RF007E_input_not_found, 0, 0);
+##			resume
+		}
+		else
+		{
+			if (STequal(fullword, yes_str))
+			{
+				STcopy(no_str, tmpstr);
+##				putform Nrfbrkopt (pronbreak = tmpstr)
+##				putform Nrfbrkopt (pronpage = tmpstr)
+			}
+			else	/* We have a "no" */
+			{
+##				getform Nrfbrkopt (tmpstr = pronbreak)
+##				getform Nrfbrkopt (tmpbuff = pronpage)
+				if (STequal(tmpstr, no_str) &&
+					STequal(tmpbuff, no_str))
+				{
+					STcopy(yes_str, tmpstr);
+##					putform Nrfbrkopt (pronbreak = tmpstr)
+##					putform Nrfbrkopt (pronpage = tmpstr)
+				}
+			}
+##			putform Nrfbrkopt (pralways = fullword)
+##			resume next
+   		}
+##	}
+
+
+##	activate field pronbreak
+##	{
+##		getform Nrfbrkopt (tmpstr = pronbreak)
+		if ((fullword = IIRFfwd_FullWord(tmpstr, 2, yn_tbl)) == NULL)
+		{
+			IIUGerr(E_RF007E_input_not_found, 0, 0);
+##			resume
+		}
+		else
+		{
+			if (STequal(fullword, no_str))
+			{
+##				getform Nrfbrkopt (tmpstr = pronpage)
+				if (STequal(tmpstr, no_str))
+				{
+					STcopy(yes_str, tmpstr);
+##					putform Nrfbrkopt (pralways = tmpstr)
+				}
+			}
+			else	/* We have a "yes" */
+			{
+##				getform Nrfbrkopt (tmpstr = pralways)
+				if (STequal(tmpstr, yes_str))
+				{
+					STcopy(no_str, tmpstr);
+##					putform Nrfbrkopt (pralways = tmpstr)
+				}
+			}
+##			putform Nrfbrkopt (pronbreak = fullword)
+##			resume next
+  		}
+##	}
+
+##	activate field pronpage
+##	{
+##		getform Nrfbrkopt (tmpstr = pronpage)
+		if ((fullword = IIRFfwd_FullWord(tmpstr, 2, yn_tbl)) == NULL)
+		{
+			IIUGerr(E_RF007E_input_not_found, 0, 0);
+##			resume
+		}
+		else
+		{
+			if (STequal(fullword, no_str))
+			{
+##				getform Nrfbrkopt (tmpstr = pronbreak)
+				if (STequal(tmpstr, no_str))
+				{
+					STcopy(yes_str, tmpstr);
+##					putform Nrfbrkopt (pralways = tmpstr)
+				}
+			}
+			else	/* We have a "yes" */
+			{
+##				getform Nrfbrkopt (tmpstr = pralways)
+				if (STequal(tmpstr, yes_str))
+				{
+					STcopy(no_str, tmpstr);
+##					putform Nrfbrkopt (pralways = tmpstr)
+				}
+			}
+##			putform Nrfbrkopt (pronpage = fullword)
+##			resume next
+		}
+##	}
+
+##	activate field isnewpage
+##	{
+##		getform Nrfbrkopt (tmpstr = isnewpage)
+		if ((fullword = IIRFfwd_FullWord(tmpstr, 2, yn_tbl)) == NULL)
+		{
+			IIUGerr(E_RF007E_input_not_found, 0, 0);
+##			resume
+		}
+		else
+		{
+##			putform Nrfbrkopt (isnewpage = fullword)
+##			resume next
+		}
+##	}
+
+##	activate menuitem ERget(FE_OK)(expl = ERget(F_RF0077_brk_options)),
+##		FRSkey4
+##	{
+
+		copt->copt_whenprint = ' ';
+##		getform Nrfbrkopt (tmpstr = pralways)
+		if (STequal(tmpstr, yes_str))
+			copt->copt_whenprint = 'a';
+
+##		getform Nrfbrkopt (tmpstr = pronbreak)
+		if (STequal(tmpstr, yes_str))
+			copt->copt_whenprint = 'b';
+
+##		getform Nrfbrkopt (tmpstr = pronpage)
+		if (STequal(tmpstr, yes_str))
+		{
+			if (copt->copt_whenprint == 'b')
+				copt->copt_whenprint = 't';
+			else
+				copt->copt_whenprint = 'p';
+		}
+
+##		getform Nrfbrkopt (tmpstr = isnewpage)
+		if (STequal(tmpstr, yes_str))
+			copt->copt_newpage = TRUE;
+		else
+			copt->copt_newpage = FALSE;
+
+##		breakdisplay
+##	}
+	 
+##	activate menuitem ERget(FE_Cancel)(expl = ERget(F_FE0103_ExplCancel),
+##              validate = 0, activate = 0), FRSkey9 (validate = 0,activate = 0)
+##	{
+		canceled = TRUE;
+##		breakdisplay
+##	}
+
+##      activate menuitem ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##                      EXPL = ERget(FE_LookupExpl)),
+##                      FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##      {
+
+##		inquire_frs field Nrfbrkopt (tmpstr = name)
+
+		if (STequal(tmpstr, pralways))
+			choice = ERget(S_RF008B_PrintAlways);
+		else
+		if (STequal(tmpstr, pronbreak))
+			choice = ERget(S_RF008C_PrintOnBreak);
+		else
+		if (STequal(tmpstr, pronpage))
+			choice = ERget(S_RF008D_PrintOnPageBreak);
+		else
+		if (STequal(tmpstr, isnewpage))
+			choice = ERget(S_RF008E_SetNewPage);
+
+##		message choice with style = popup
+##		resume 
+
+##      }
+
+##	activate menuitem ERget(FE_Help)(expl=ERget(F_FE0100_ExplFrameHelp),
+##              validate=0), FRSkey1 (validate = 0)
+##	{
+		FEhelp(H_BRKOPTS, ERget(F_RF0072_Break_Options));
+##	}
+
+##	finalize
+##	redisplay
+
+	if (canceled)
+		return(OK);
+
+	/*
+	** See if we need to create any sections to reflect the 
+	** choices made by the user:
+	*/
+	initialized = FALSE;
+	if (copt->copt_whenprint == 'b' || copt->copt_whenprint == 't')
+	{
+		if (copt->copt_brkhdr == 'n') 
+		{
+			copt->copt_brkhdr = 'y';
+			n = sec_node_alloc(SEC_BRKHDR, copt->copt_sequence, 0);
+			sec_list_insert(n, &Sections);
+			STcopy(fname, sectitle);
+			CMtoupper(sectitle, sectitle);
+			STcat(sectitle, ERget(F_RF003E_Break_Header));
+			n->sec_name = STalloc(sectitle);
+			n->sec_brkord = r_mtch_att(fname);
+			create_section(n, initialized);
+			initialized = TRUE;
+			*noUndo = TRUE;
+		}
+	}
+
+	if (copt->copt_whenprint == 'p' || copt->copt_whenprint == 't')
+	{
+		if (!(n = sec_list_find(SEC_PAGHDR, 0, &Sections)))
+		{
+			n = sec_node_alloc(SEC_PAGHDR, 0, 0);
+			sec_list_insert(n, &Sections);
+			STcopy(ERget(F_RF003A_Page_Header), sectitle);
+			n->sec_name = STalloc(sectitle);
+			n->sec_brkord = 0;
+			create_section(n, initialized);
+			initialized = TRUE;
+			*noUndo = TRUE;
+		}
+	}
+
+	if (copt->copt_newpage)
+	{
+		if (copt->copt_brkftr == 'n') 
+		{
+			copt->copt_brkftr = 'y';
+			n = sec_node_alloc(SEC_BRKFTR, copt->copt_sequence, 0);
+			sec_list_insert(n, &Sections);
+			STcopy(fname, sectitle);
+			CMtoupper(sectitle, sectitle);
+			STcat(sectitle, ERget(F_RF003F_Break_Footer));
+			n->sec_name = STalloc(sectitle);
+			n->sec_brkord = r_mtch_att(fname);
+			create_section(n, initialized);
+			initialized = TRUE;
+			*noUndo = TRUE;
+		}
+	}
+
+	return(OK);
+##}
+
+
+
+
+##STATUS IIRFSetNewPageOption(fld, noUndo)
+FIELD *fld;
+bool	*noUndo;
+##{
+
+##	GLOBALREF	char 	*Nrfnwpag;
+##	GLOBALREF	bool	alloc_rfnwpag;
+
+	COPT 		*copt;
+	i4  		ord;
+	Sec_node 	*n = (Sec_node *)NULL;
+	char 		sectitle [FE_MAXNAME + 16];
+	bool		canceled = FALSE;
+	
+##	char	*frm;
+##	char 	*fullword;
+##	char 	*fname;
+##	char 	*clname;
+##	char	*isnewpage;
+##	char 	tmpstr [FE_MAXNAME + 1];
+##	char	*choice;
+	char	*yes_str;
+	char	*no_str;
+
+	Nrfnwpag = F_PAGOPT;
+	clname = F_BKCOLN;
+	isnewpage = F_NEWPAGE;
+	yes_str = yn_tbl[0];
+	no_str = yn_tbl[1];
+
+
+	fname = fld->fld_var.flregfld->flhdr.fhdname;
+	ord = r_mtch_att(fname);
+	copt = rFgt_copt(ord);
+
+	if (!alloc_rfnwpag)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), frm = Nrfnwpag) != OK)
+		{
+			IIUGerr(E_RF002D_Cannot_locate_form, 0, 1, frm);
+			return(FAIL);
+		}
+		alloc_rfnwpag = TRUE;
+	}
+
+
+##	display Nrfnwpag update
+##	initialize()
+##	{
+
+##		putform Nrfnwpag (clname = fname)
+
+		STcopy(no_str, tmpstr);
+		if (copt->copt_newpage)
+			STcopy(yes_str, tmpstr);
+##		putform Nrfnwpag (isnewpage = tmpstr)
+##	}
+
+
+##	activate field isnewpage
+##	{
+##		getform Nrfnwpag (tmpstr = isnewpage)
+		if ((fullword = IIRFfwd_FullWord(tmpstr, 2, yn_tbl)) == NULL)
+		{
+			IIUGerr(E_RF007E_input_not_found, 0, 0);
+##			resume
+		}
+		else
+		{
+##			putform Nrfnwpag (isnewpage = fullword)
+##			resume next
+		}
+##	}
+
+##	activate menuitem ERget(FE_OK)(expl = ERget(F_RF0077_brk_options)),
+##              FRSkey4
+##	{
+
+##		getform Nrfnwpag (tmpstr = isnewpage)
+		if (STequal(tmpstr, yes_str))
+			copt->copt_newpage = TRUE;
+		else
+			copt->copt_newpage = FALSE;
+
+##		breakdisplay
+##	}
+	 
+##	activate menuitem ERget(FE_Cancel)(expl = ERget(F_FE0103_ExplCancel),
+##              validate = 0, activate = 0), FRSkey9 (validate = 0,activate = 0)
+##	{
+		canceled = TRUE;
+##		breakdisplay
+##	}
+
+##      activate menuitem ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##                      EXPL = ERget(FE_LookupExpl)),
+##                      FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##      {
+
+		choice = ERget(S_RF008E_SetNewPage);
+
+##		message choice with style = popup
+##		resume 
+
+##      }
+
+##	activate menuitem ERget(FE_Help)(expl=ERget(F_FE0100_ExplFrameHelp),
+##              validate=0), FRSkey1 (validate = 0)
+##	{
+		FEhelp(H_PAGOPTS, ERget(F_RF0072_Break_Options));
+##	}
+
+##	finalize
+##	redisplay
+
+	if (canceled)
+		return(OK);
+
+	/*
+	** See if we need to create any sections to reflect the 
+	** choices made by the user:
+	*/
+	if (copt->copt_newpage)
+	{
+		if (copt->copt_brkftr == 'n') 
+		{
+			copt->copt_brkftr = 'y';
+			n = sec_node_alloc(SEC_BRKFTR, copt->copt_sequence, 0);
+			sec_list_insert(n, &Sections);
+			STcopy(fname, sectitle);
+			CMtoupper(sectitle, sectitle);
+			STcat(sectitle, ERget(F_RF003F_Break_Footer));
+			n->sec_name = STalloc(sectitle);
+			n->sec_brkord = r_mtch_att(fname);
+			create_section(n, FALSE);
+			*noUndo = TRUE;
+		}
+	}
+
+	return(OK);
+
+##}

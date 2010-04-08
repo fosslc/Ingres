@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ The level parameter sets the default security attributes for the current 
+ installation.
+
+	
+ Choices are: C2

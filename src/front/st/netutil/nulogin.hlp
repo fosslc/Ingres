@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- NETUTIL, top frame, Login/password data tablefield subtopic
+/#--
+The Login/password data tablefield contains exactly two rows, because only 
+two authorizations may be defined for the current user on a vnode: one global
+entry, applicable to any user on the system, and one private entry for the
+current user.  (The password associated with each login is part of the
+authorization entry, but for security reasons passwords are not displayed on
+this tablefield, or anywhere else.)  A field in each row of the authorization
+table, headed Scope, contains a short explanation of the usage of the login
+displayed in that row.

@@ -1,0 +1,19 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: rbfreports
+**
+** Description: Call RBF to browse the indicated audit log
+**
+** History:
+**	23-mar-94 (robf)
+**	   Written
+*/
+procedure rbfreports (table_name=varchar(32) not null) = 
+declare
+	dbname=varchar(32) not null;
+{
+	call rbf(flags=:table_name);
+}
+

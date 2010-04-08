@@ -1,0 +1,14 @@
+#
+# Jamfile file for cl!clf!te_unix
+#
+
+SubDir ING_SRC cl clf te_unix ;
+
+IISUBSYS cl clf te_unix ;
+
+
+IILIBRARY COMPATLIB : tewrite.c tevalid.c tetm.c tetest.c
+	teswitch.c terestore.c teread.c teopen.c tename.c telock.c
+	tejobctrl.c teinflush.c tegtty.c teglob.c teget.c tegbf.c
+	teclose.c ;
+

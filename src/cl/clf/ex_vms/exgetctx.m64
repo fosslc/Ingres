@@ -1,0 +1,70 @@
+		.title	EXgetctx
+
+;
+; DESCRIPTION
+;
+;	This routine duplicates as much functionality of the OpenVMS library 
+;	routine	LIB$GET_CURR_INVO_CONTEXT as we need for Ingres exception 
+;	handling. The full call to that routine turns out to be very expensive.
+;	Here, we only fill in the information that we need.
+;
+; 
+; INPUTS
+;
+;	Parameter R16 = address of Invocation Context Block to be filled in
+;
+; OUTPUTS
+;
+;	Registers R2...R15, FP, SP, F2...F9 and RA are saved in
+;	the Invocation Context Block.
+;
+; RETURNS
+;
+;	Returns 0 in R0
+;
+; HISTORY
+;
+;	12-oct-95 (duursma)
+;	    Created.
+;
+
+
+		$LIBICBDEF
+
+		$routine EXgetctx, kind=null
+
+		$code_section
+ex_getctx::
+		
+		STQ	R26, LIBICB$Q_PROGRAM_COUNTER(R16) ; save Return Address
+
+		STQ	R2,  <2*8+LIBICB$Q_IREG>(R16)	   ; save R2 through R15
+		STQ	R3,  <3*8+LIBICB$Q_IREG>(R16)
+		STQ	R4,  <4*8+LIBICB$Q_IREG>(R16)
+		STQ	R5,  <5*8+LIBICB$Q_IREG>(R16)
+		STQ	R6,  <6*8+LIBICB$Q_IREG>(R16)
+		STQ	R7,  <7*8+LIBICB$Q_IREG>(R16)
+		STQ	R8,  <8*8+LIBICB$Q_IREG>(R16)
+		STQ	R9,  <9*8+LIBICB$Q_IREG>(R16)
+		STQ	R10, <10*8+LIBICB$Q_IREG>(R16)
+		STQ	R11, <11*8+LIBICB$Q_IREG>(R16)
+		STQ	R12, <12*8+LIBICB$Q_IREG>(R16)
+		STQ	R13, <13*8+LIBICB$Q_IREG>(R16)
+		STQ	R14, <14*8+LIBICB$Q_IREG>(R16)
+		STQ	R15, <15*8+LIBICB$Q_IREG>(R16)
+		STQ	FP,  <29*8+LIBICB$Q_IREG>(R16)	   ; save FP
+		STQ	SP,  <30*8+LIBICB$Q_IREG>(R16)	   ; save SP
+
+		STT	F2,  <2*8+LIBICB$Q_FREG>(R16)	   ; save F2 through F9
+		STT	F3,  <3*8+LIBICB$Q_FREG>(R16)
+		STT	F4,  <4*8+LIBICB$Q_FREG>(R16)
+		STT	F5,  <5*8+LIBICB$Q_FREG>(R16)
+		STT	F6,  <6*8+LIBICB$Q_FREG>(R16)
+		STT	F7,  <7*8+LIBICB$Q_FREG>(R16)
+		STT	F8,  <8*8+LIBICB$Q_FREG>(R16)
+		STT	F9,  <9*8+LIBICB$Q_FREG>(R16)
+		CLR	R0
+		RET	R26
+
+		$end_routine EXgetctx
+

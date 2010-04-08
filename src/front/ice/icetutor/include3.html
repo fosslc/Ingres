@@ -1,0 +1,33 @@
+<!-- #ICE REPEAT IF (`:incType` != ``)
+		 THEN=`<!-- #ICE DECLARE=``session.incType=:incType`` -->`
+-->
+
+<!-- #ICE REPEAT IF (`:incType` == `HTML` or `:incType` == `FACET`)
+THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?title=Include&previous=include2.html&next=include32.html`` -->
+To include a document, you need to know the name of the document and its
+Business Unit.<p>
+Please choose one of the currently defined Business Units:
+<SELECT NAME="doc_unit">
+<!-- #ICE FUNCTION=``unit?action=select``
+		 HTML=``<OPTION VALUE=":unit_id">:unit_name</OPTION>``
+-->
+</SELECT>`
+-->
+
+<!-- #ICE REPEAT IF (`:incType` == `REPORT`)
+THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?title=Include&previous=include2.html&next=include4.html`` -->
+What is the name of your report?
+<INPUT TYPE="HIDDEN" NAME="incParName" VALUE="">
+<INPUT TYPE="HIDDEN" NAME="first" VALUE="yes">
+<INPUT NAME="incName" VALUE="MyReport">`
+-->
+
+<!-- #ICE REPEAT IF (`:incType` == `EXE`)
+THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?title=Include&previous=include2.html&next=include4.html`` -->
+What is the name of your executable?
+<INPUT TYPE="HIDDEN" NAME="incParName" VALUE="">
+<INPUT TYPE="HIDDEN" NAME="first" VALUE="yes">
+<INPUT NAME="incName" VALUE="MyExecutable">`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+ PST stands for Prepared Statement Table. PST_MAX specifies the 
+ maximum number of open cursors per transaction. If too small a 
+ value is used, then additional overhead will be used to process 
+ queries. The larger this value is specified, the more virtual 
+ memory will be used by the gateway. The gateway uses the table  
+ to retain information for prepared statements. 
+
+ Default is 100 for Oracle and 128 for other gateways. 
+ The minimum value is 50 for all gateways.
+ The maximum value is 100 for Oracle and 255 for other gateways. 
+
+ If the table entries are used up or the prepared information no
+ longer needs to be retained in the gateway, the gateway will
+ release and reuse the entries for other statements. For a large 
+ application that uses REPEATED queries, performance will suffer 
+ when the table entries are used up and the statements need to be 
+ re-prepared, which defeats the purpose of REPEATED queries. In this 
+ case, you should break up large applications into smaller applications.
+ 

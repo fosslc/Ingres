@@ -1,0 +1,422 @@
+#!/bin/sh
+## precheck_functions
+##
+## Name: precheck_functions
+##
+## Purpose: Provide functions that check for the prerequisites needed
+##          for the Ingres build and compose an error message enumerating
+##          all missing packages.
+##
+## Usability:
+##      This script is meant to be used by the bldenv script that sets
+##      the shell environment for the Ingres build.
+##      bldenv calls the precheck function which calls all other
+##      prerequisite check functions.
+##
+########################################################3
+##
+##      History:
+##      17-Dec-2008 (frima01)
+##          Created by extracting the prerequisite checks from bldenv
+##          and adding functions to compose a qualified error message.
+##       4-Feb-2010 (hanal04) Bug 123216
+##          Resolve intermittent build failures caused bu HDRGTK being already
+##          set without xml2 header location.
+
+# check_for_file ENVVARIABLE string1 string2 ...
+# checks whether one of the given strings is a file
+# then sets the given ENVVARIABLE to the dirname of the file
+
+check_for_file ()
+{
+  [ "$1" ] &&
+  {
+    ENVVARIABLE=$1
+    shift
+    while [ $# -gt 0 ]
+    do
+      [ -f $1 ] && eval $ENVVARIABLE=`dirname $1` && \
+      export $ENVVARIABLE && return 0
+      shift
+    done
+  }
+  unset $ENVVARIABLE
+  return 1
+}
+
+# check_for_dir ENVVARIABLE string1 string2 ...
+# checks whether one of the given strings is a directory
+# then sets the given ENVVARIABLE to the directory
+
+check_for_dir ()
+{
+  [ "$1" ] &&
+  {
+    ENVVARIABLE=$1
+    shift
+    while [ $# -gt 0 ]
+    do
+      [ -d $1 ] && eval $ENVVARIABLE=$1 && \
+      export $ENVVARIABLE && return 0
+      shift
+    done
+  }
+  unset $ENVVARIABLE
+  return 1
+}
+
+# check_for_executable ENVVARIABLE executable
+# checks whether the given executable is in the path
+# then sets the given ENVVARIABLE to the directory
+
+check_for_executable ()
+{
+  [ "$1" ] && [ "$2" ] &&
+  {
+    OLDIFS=$IFS
+    IFS=':' 
+    for directory in $PATH
+    do
+      [ -x $directory/$2 ] && eval $1=$directory && \
+       export $1 && IFS=$OLDIFS && return 0
+    done
+  } 
+  unset $1
+  IFS=$OLDIFS
+  return 1
+}
+
+# check_for_availability EXECUTABLE
+# checks whether the given executable is in the path
+
+check_for_availability ()
+{
+  OLDIFS=$IFS
+  IFS=':' 
+  for directory in $PATH
+  do
+    [ -x $directory/$1 ] && IFS=$OLDIFS && return 0
+  done
+  IFS=$OLDIFS
+  return 1
+}
+
+# compose_msg pkg_name conary_pkg debian_pkg yum_pkg yast_pkg
+# expects instcmd and missing_msg to be defined
+# adds name of missing package to missing packages message
+# and adds package name to install command string
+
+compose_msg ()
+{
+[ "$1" ] && missing_msg=${missing_msg}"\n\t${1}"
+  if [ "$1" ] && [ "$2" ] && [ "$3" ] && [ "$4" ] && [ "$5" ]
+  then
+    if $conary ; then
+        instcmd=${instcmd}" "$2
+    elif $deb ; then
+        instcmd=${instcmd}" "$3
+    elif $yum ; then
+        instcmd=${instcmd}" "$4
+    elif $yast ; then
+        instcmd=${instcmd}" "$5
+    fi
+    return 0
+  else
+    return 1
+  fi
+}
+
+check_for_ing_root ()
+{
+  [ -d "$ING_ROOT" ] ||
+  {
+    msg=${msg}"\nThe variable ING_ROOT is not set properly. Please set"
+    msg=${msg}" ING_ROOT such that this script can be referenced as"
+    msg=${msg}" \$ING_ROOT/src/tools/port/jam/bldenv."
+    return 1
+  }
+  return 0
+}
+
+check_for_krb5_hdrs ()
+{
+  if [ `uname -s` != "AIX"  ]; then
+    # Check for system headers first
+    [ -d "${KRB5HDR}" ] ||
+    {
+      if [ -f /usr/include/gssapi/gssapi_generic.h ]; then
+      KRB5HDR=/usr/include
+      elif [ -f /usr/kerberos/include/gssapi/gssapi_generic.h ]; then
+      KRB5HDR=/usr/kerberos/include
+      fi
+      [ -d "${KRB5HDR}" ] && export KRB5HDR
+    } ||
+    check_for_dir KRB5HDR $ING_ROOT/Kerberos5 || 
+    {
+      compose_msg "Kerberos5 headers" krb5:devel libkrb5-dev krb5-devel krb5-devel
+    setenv_msg=${setenv_msg}"\nIf you do have Kerberos5 headers installed please set KRB5HDR to the include directory."
+      return 1
+    }
+  fi
+  return 0
+}
+
+check_for_xerces ()
+{
+  # Xerces code and library (hopefully)
+  # check system locations first
+  if [ -f /usr/include/xercesc/sax2/DefaultHandler.hpp ] ; then
+    XERCESCROOT=/usr
+  else
+    [ "$XERCESCROOT" ] || unset XERCESCROOT
+  fi
+  if $rhybrid ; then
+    if [ -f /usr/lib64/libxerces-c.${slsfx}.${xvers}.0 ] ; then
+        XERCESLOCHB=/usr/lib
+        XERCESLOC=/usr/lib64
+    fi
+  else
+    if [ -f /usr/lib/libxerces-c.${slsfx}.${xvers}.0 ] ; then
+        XERCESLOC=/usr/lib
+    fi
+    if [ -f /usr/lib64/libxerces-c.${slsfx}.${xvers}.0 ] ; then
+        XERCESLOCHB=/usr/lib64
+    fi
+  fi
+ 
+  [ "$XERCESCROOT" ] && [ -d ${XERCESCROOT}/src/xercesc -o \
+    -f ${XERCESCROOT}/include/xercesc/sax2/DefaultHandler.hpp ] ||
+  {
+    if [ -d ${ING_ROOT}/xerces-c-src_2_7_0/src/xercesc ] ; then
+      XERCESCROOT=${ING_ROOT}/xerces-c-src_2_7_0
+    else
+      [ "$XERCESCROOT" ] || unset XERCESCROOT
+    fi
+  }
+  
+  [ "$XERCESCROOT" ] && [ -d ${XERCESCROOT}/lib ] &&
+    [ x"$XERCESLOC" = "x" ] && XERCESLOC=${XERCESCROOT}/lib
+
+  [ "$XERCESCROOT" ] || 
+  {  
+    compose_msg "Xerces C headers" \
+    "xerces-c:{devel,devellib}" "libxerces${xvers}-dev" \
+    "xerces-c-devel" "Xerces-c-devel"
+    setenv_msg=${setenv_msg}"\nIn case you do have Xerces C headers installed please set XERCESCROOT to the directory which contains the include directory for the header files."
+  }
+
+  [ "$XERCESLOC" ] ||
+  {
+    compose_msg "Xerces C libraries" \
+    "xerces-c:{lib}" "libxerces${xvers}" \
+    "xerces-c" "Xerces-c"
+    setenv_msg=${setenv_msg}"\nIn case you do have Xerces C libraries installed please set XERCESLOC to the directory which contains the libraries."
+    setenv_msg=${setenv_msg}" You may also have to set XERCESLOCHB to the 64 bit respectively 32 bit version of Xerces C."
+    return 1
+  }
+   
+  [ "$XERCESCROOT" ] || return 1
+  
+  XERCVERS=$xvers
+  export XERCVERS
+  export XERCESCROOT
+  export XERCESLOC
+  [ "$XERCESLOCHB" ] && export XERCESLOCHB
+  return 0
+}
+
+# on Linux check for pax
+check_for_pax ()
+{
+  if [ `uname -s` = "Linux" ]; then
+    # use system pax if we can
+    [ -x "${PAXLOC}"/pax ] ||
+    check_for_executable PAXLOC pax || 
+    {
+      compose_msg pax pax pax pax pax
+      setenv_msg=${setenv_msg}"\nIf pax is already installed on your system"
+      setenv_msg=${setenv_msg}" please set PAXLOC to the directory of the executable."
+      return 1
+    }
+  fi
+  return 0
+}
+
+check_for_flex ()
+{
+  check_for_availability flex  ||
+  {
+    compose_msg flex flex flex flex flex 
+    return 1 
+  }
+  return 0
+}
+
+check_for_jam ()
+{
+  check_for_availability jam  || 
+  {
+    compose_msg jam jam jam jam boost-jam 
+    return 1 
+  }
+  return 0
+}
+
+# PAM is supported on int.lnx, a64.lnx, i64.lnx, ppc.lnx,
+# hp2.us5, hpb.us5, i64.hpu
+# su9_us5 and a64_sol
+check_for_pam()
+{
+  retval=0
+  case $config_string in
+    a64_sol | su9_us5 | hp2.us5 | hpb_us5 | i64_hpu | \
+    int_lnx | i64_lnx | ppc_lnx | a64_lnx)
+
+      # look for shared library, since the library extension 
+      # and version may be different, just look for libpam.*
+      libpamfound=1
+      for searchdir in /lib /usr/lib /usr/local/lib 
+      do
+        ls ${searchdir}/libpam.* 1> /dev/null 2> /dev/null
+	[ $? = 0 ] && libpamfound=0 && break
+      done
+      [ "$libpamfound" = 1 ] && 
+	compose_msg pam "pam:{lib}" libpam0g pam pam &&
+        retval=1
+
+      # look for headers 
+      check_for_file dummy /usr/include/security/pam_appl.h || 
+      {
+        compose_msg pam-devel "pam:{lib-devel}" "libpam0g-dev" "pam-devel"\
+        "pam-devel"
+      	retval=1
+      }
+      ;;
+  esac
+
+  unset dummy
+  return $retval
+}
+
+check_for_xcc ()
+{
+  [ "$xcc_need" ] && 
+  [ -z "$XCCLOC" ] && 
+  {
+    [ -x "${XCCLOC}/bin/${xcc_name}" ] ||
+    {
+      msg=${msg}"\nThe cross compiler ${xcc_need} could not be found.\n"
+      msg=${msg}"Please set XCCLOC such that \${XCCLOC}/bin/${xcc_name}."
+      return 1
+    }
+  }
+  return 0
+}
+
+check_for_gtk ()
+{
+    # pkg-config gives you the actual compile flags, we just want the
+    # include directories so strip out the -I
+    [ -z "${HDRXML2}" ] &&
+    {
+      hdrxml2=`xml2-config --cflags`
+      HDRXML2=`echo ${hdrxml2} | sed -e s,${include_flag},,g`
+      [ $? != 0 ] || export HDRXML2
+    }
+
+    [ -z "${HDRGTK}" ] &&
+    {
+      hdrgtk=`pkg-config --cflags gtk+-2.0 gthread-2.0`
+      HDRGTK=`echo ${hdrgtk} | sed -e s,${include_flag},,g`
+      [ $? != 0 ] || export HDRGTK
+    }
+    [ -z "${GTKCCLD}" ] &&
+    {
+      xml2ccld=`xml2-config --libs`
+      GTKCCLD="`pkg-config --libs gtk+-2.0 gthread-2.0` ${xml2ccld}"
+      [ $? != 0 ] || export GTKCCLD
+    }
+    if [ -z "${HDRGTK}" ] || [ -z "${GTKCCLD}" ] ; then
+      compose_msg pkg-config pkg-config pkg-config pkg-config pkgconfig
+      compose_msg "gtk2 >= 2.4" gtk2 libgtk2.0-0 gtk2 gtk2
+      compose_msg "gtk2-devel >= 2.4" gtk2-devel libgtk2.0-dev \
+                 gtk2-devel gtk2-devel
+      compose_msg pango-devel pango-devel libpango1.0-dev pango-devel \
+		 pango-devel
+      compose_msg cairo-devel cairo-devel libcairo-dev cairo-devel cairo-devel
+      compose_msg atk-devel atk-devel libatk1.0-dev atk-devel atk-devel
+      compose_msg xorg-x11-devel xorg-x11-devel xorg-dev  \
+                xorg-x11-devel xorg-x11-devel
+      compose_msg libxml2 libxml2 libxml2 libxml2 libxml2
+      compose_msg libxml2-devel libxml2-devel libxml2-devel libxml2-devel libxml2-devel
+      return 1
+    fi
+  return 0
+}
+
+check_for_libxml2 ()
+{
+    # check we have the rpm headers we need
+    [ -x /usr/bin/xml2-config ] ||
+    compose_msg "libxml2-devel" "libxml2-devel" "libxml2-devel" "libxml2-devel" "libxml2-devel"
+}
+
+precheck ()
+{
+  # Root of build/src tree. Must be set by hand
+  check_for_ing_root
+
+  # Kerberos headers
+  check_for_krb5_hdrs
+
+  # Xerces
+  check_for_xerces
+
+  # pax for Linux
+  check_for_pax
+
+  # jam
+  check_for_jam
+
+  # flex
+  check_for_flex
+
+  # pam on supporting platforms
+  check_for_pam
+
+  # cross compiler if needed
+  check_for_xcc
+
+  # gtk if needed
+  [ "$gtk_need" = "true" ] && check_for_gtk
+
+  # libxml2 if needed
+  [ "$libxml2_need" = "true" ] && check_for_libxml2
+
+  # check for errors
+
+  [ `expr "$missing_msg" : '.*'` -ne $missing_msg_len ] && 
+    msg=${msg}$missing_msg
+
+  [ `expr "$instcmd" : '.*'` -ne $instcmd_len ] &&
+  {
+    msg=${msg}"\n\nThese can be installed by running: \n\n\t"${instcmd}
+    msg=${msg}"\n\nas root.\n\nPlease install the missing packages or add"
+    msg=${msg}" them to your path if they are already installed and"
+    msg=${msg}" rerun this script."
+  }
+
+  [ `expr "$setenv_msg" : '.*'` -gt 0 ] && msg=${msg}"\n"$setenv_msg
+
+  [ `expr "$msg" : '.*'` -ne $msg_len ] &&
+  { 
+    msg=${msg}"\n\nIf this script still won't run clean please visit"
+    msg=${msg}" Ingres community wiki at http://community.ingres.com/wiki"
+    msg=${msg}"/Ingres_DBMS_Home or have a look at \$ING_ROOT/src/INSTALL."
+
+    printf "$msg" |eval $fmt 
+    return 1
+  } 
+
+  return 0
+}

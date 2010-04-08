@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vfderive.hlp       Help for the Vifred "Field Derivation" screen.
+/#subtopic "Derived Field Examples" vfderex.hlp
+The Field Derivation frame allows you to change the derivation formula for
+the field.  This field contains the same value as does the field of the same
+name on the Field Attributes frame.  The only difference is that in this
+frame the field is not scrollable, and all the text may be viewed at one time.
+
+
+The field descriptions are:
+
+        FIELD NAME              SYNOPSIS
+        ----------              --------
+	Derivation Formula      The value of the field is determined from
+				using this formula.
+
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to the main Field Attributes form.

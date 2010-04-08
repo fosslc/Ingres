@@ -1,0 +1,11 @@
+/#-- Help File: fgntlcmp.hlp
+/#-- Menu frame help file.
+This screen allows you to call another frame in the application.  The frames
+you can choose appear in a tablefield.  To call one, move the cursor to it
+and choose Select.
+
+  Select      Call the currently highlighted frame.
+  Help        Get help about this screen.
+  TopFrame    Return to the top frame in the application.
+              (optional menuitem; may not appear)
+  End         Return to the screen that called this one.

@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The app_dir resource specifies an operating system level directory path
+  to an application external to the ICE server.

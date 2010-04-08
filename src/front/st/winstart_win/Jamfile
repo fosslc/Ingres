@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!st!winstart_win
+#
+
+SubDir ING_SRC front st winstart_win ;
+
+IISUBSYS front st winstart_win ;
+
+
+IISLN winstart.exe : winstart.sln ;

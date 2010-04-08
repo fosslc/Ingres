@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+	The Employee Information Frame provides information about an
+	employee and the employee's dependents.  The main initial
+	menu operation, GetEmployee, queries the database based on
+	values entered into fields on the form by the user and then
+	displays a table field that lists the employee's dependents.
+	If the employee has no dependents the table field is made
+	invisible by this frame's 4GL code.
+
+Menu Commands:
+
+	GetEmployee       - retrieves employee and dependents from the
+			    database.
+
+	4GL		  - allows you to inspect the 4GL code for the
+			    Employee Information Frame.
+
+	End    		  - returns you to the preceding frame.
+
+	Quit   		  - exits the Project Management application.

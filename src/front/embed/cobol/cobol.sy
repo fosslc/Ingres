@@ -1,0 +1,1575 @@
+%{
+
+
+/* %L merge <eqgram.my> -- get the master grammar */
+/* %L fake begin */
+# include <eqgram.my>		-- fake out MING
+/* %L fake end */
+
+/* %L language begin - Must define EQ_PL1_LANG or EQ_EUC_LANG for eqsym.h */
+# define	EQ_PL1_LANG
+/* %L language end */
+
+# include 	<compat.h>
+# include	<er.h>
+# include	<si.h>
+# include	<equel.h>
+# include	<eqlang.h>
+# include	<equtils.h>
+# include	<eqsym.h>
+# include	<eqgen.h>
+# include	<eqstmt.h>
+# include	<eqscan.h>
+# include	<eqgr.h>
+# include	<ereq.h>
+# include	<ere4.h>
+
+%}
+
+/*
+**  Equel_Lang( Cobol )
+**
+**  Language dependent grammar for the Cobol statements that can be embedded in 
+**  Equel.  Basically parses Declarations and Usages of variables and constants.
+**
+**  Conflicts with the main grammar:
+**	1. The left paren that may be used as an array subscript or a Quel
+**	   left parn causes a shift-reduce conflict.  This will be no problem at
+**	   runtime as the semantics explicity back up the left paren if there 
+**	   is no array.
+**	2. The IN keyword causes shift-reduce conflicts, because of the IN
+**	   target list in table field statements. The shift resolution will
+**	   probably be correct.
+**	3. The level numbers that start a declaration caused many shift-reduce 
+**	   and a few reduce-reduce conflicts. This was solved by a special
+**	   lookup from sc_number when seeing an integer constant (in the same
+**	   way we lookup names from sc_word).  There is a local flag (that PL1
+**	   will also need) to tell if we are expecting a level number or an
+**	   integer.  The flag is gr->Cb_dec.
+**	   Set the flag for level:  Start of program, after host code, 
+**			   	    after ## declare, at end of declaration.
+**	   Reset the flag for int:  After GR_EQSTMT word and end of block.
+**
+** History:	13-mar-1985	- Rewritten for Equel/Cobol. (ncg)
+**		10-jul-1989	- Added the ability to specify COBOL data
+**				  declaration clauses in any order.  This
+**				  enhancement has been put into EQUEL so
+**				  it is consistent with ESQL's parsing of data
+**				  declaration statements. (teresa)
+**		30-Aug-89	- Added MPE/XL-specific filenames (bryanp)
+**		17-jul-90	- Added decimal support. (teresal)
+**		21-may-91	- Add ql_with_left rule to allow "KEY" in 
+**				  QUEL "with_clause": WITH KEY=(column_list). 
+**				  Bug 34993  (kathryn)
+**	16-nov-1992 (lan)
+**		Added arguments to db_var calls.
+**	11-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**      18-sep-1995 (sarjo01)
+**		Set default file extensions for NT_GENERIC
+**      11-jan-1996 (toumi01; from 1.1 axp_osf port)
+**              Added kchin's change (from 6.4) for axp_osf
+**              19-oct-93 - Changed type of arg1 and arg2 from i4
+**                          to PTR in gr_mechanism(), since they are
+**                          holding pointers, use of i4 could
+**                          result in truncation of 64-bit addresses.
+**                          (kchin)
+**	21-feb-1997 (walro03)
+**		Reapply OpIng changes: linke01's of 31-oct-96, bonro01's of
+**		09-dec-96:
+**		Cast arg1 in case GR_EQSTMT for ris_us5 and rs4_us5.
+**	28-Jul-1998 (kosma01)
+**		SGI IRIX 6.4 (sgi_us5) just ran into rs4_us5 arg1 cast
+**		problem described by walro03 above. I will make rs4_us5
+**		change generic.
+**
+** Copyright (c) 2004 Ingres Corporation
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+/* Fake Ingres words reserved for testing */
+%token  tFORMVAR	tFORMSTRING	tFORMINT
+  	tQUELVAR	tQUELSTRING	tQUELINT	
+	tQUELDOT 				/* Test e.name */
+
+/* Test misuse of Param statement */
+%token	tUSEINPARAM	tUSEOUTPARAM
+
+/* Noise word defined in G but required here */
+%token	tIS	tTO	tON	tBY	tIN	tOF
+
+/* Keywords and Constants defined in G but used here */
+%token	tNAME		tSCONST		tINTCONST	tFLTCONST
+  	tDEREF		
+  	tINCLUDE	/* Include filename - or Eof of file */
+	tDISPLAY	/* Usage is Display (not the Equel Display statement) */
+	tINDEX		/* Usage is Index */
+	tDECCONST	/* Decimal constant */
+
+/* Punctuation from G */
+%token	tLPAREN		tRPAREN		tCOMMA		tPERIOD
+
+/* Extra L tokens defined for G */
+%token	tPARAM		tARUOP
+
+/* Special L tokens required by G and scanner to fill tok_special */
+%token  tHOSTCODE	/* Host language */
+	tCOMMENT	/* Comment token to trigger skipping comments */
+	tQUOTE		/* Triggers reading strings */
+	tTERMINATE	/* Statement terminators */
+
+/* Special L tokens required by G and scanner to fill tok_ahead */
+%token	tBEGIN 		tBEGIN_XACT	/* Begin and End Transaction */
+	tEND 		tEND_XACT
+
+/* %L tokens begin - Cobol tokens to import into G */
+
+/* Extra Cobol punctuation */
+%token	tLBRACE		tRBRACE
+
+/* Special Cobol tokens - tokens without comments map to corresponding text */
+%token	tCBDECLARE	/* Equel ## declare */
+	tCBTYPE		/* Standard types are reserved */
+	tCBDIREC	/* Ascending or Descending */
+	tCBBLANK	/* When zero */
+	tCBCHARACTER	tCBDEPENDING		tCBFILLER	tCBINDEXED
+	tCBJUSTIFIED	tCBKEY			tCBOCCURS 	tCBPICTURE
+	tCBREDEFINES	tCBSEPARATE 		tCBSIGN 	tCBSYNC
+	tCBTIMES 	tCBLEAD_TRAIL	/* Leading or trailing */
+	tCBUSAGE 	tCBVALUE 		tCBWHEN 	tCBZERO
+	tCBBADTYPE
+
+	/* VMS dependent keywords */
+	tCBEXTERNAL 	tCBGLOBAL 		tCBREFERENCE
+
+	/* Special integer to return on decl numbers - determined by Cb_dec */
+	tCBDECINT
+
+/* %L tokens end */
+
+%nonassoc	tUNARYOP
+
+%start		program
+
+%{
+
+/* %L locals begin - Local variables and gr structure for Cobol */
+
+# include	<eqcob.h>
+# include	<ere4.h>
+
+struct	gr_state {
+	/* Members known to both G and L */
+	SYM	*gr_sym;
+	char	*gr_id;		/* Last full name used */
+	i4	gr_type;
+	i4	gr_flag;	/* Certain state information */
+	i4	gr_func;	/* I/O Function constant */
+	i4	gr_mode;	/* Mode of statement before entering block */
+	i4	gr_adjective;	/* Block modifier */
+	SYM	*gr_nlsym;	/* Symtab pointer to indicator var */
+	char	*gr_nlid;	/* Id of indicator var */
+	i4	gr_nltype;	/* Type of indicator var */
+	SYM	*gr_null;	/* Generic null symbol (for "= null" assgnmts */
+
+	/* Add L (Cobol) dependent members after this statement */
+	i4	Cb_rec;		/* Cobol record level (increments of 1) */
+	i4	Cb_usedec;	/* ## declare issued */
+	i4	Cb_dec;		/* In declaration for integer returns */
+	i4	Cb_csrdecl;	/* Last statement was DECLARE CURSOR? */
+	COB_SYM	Cb_sym;		/* Decalartion information */
+};
+GLOBALDEF struct gr_state _gr_local ZERO_FILL;
+GLOBALDEF struct gr_state *gr = &_gr_local;
+
+/* %L locals end */
+
+%}
+
+%%
+
+program:	program statement 
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+	|	
+;
+
+statement:	equel_usage 
+		{
+		    gen_eqstmt( G_CLOSE, (char *)0 );
+		}
+	|	tINCLUDE 
+		{
+		    if (*($1.s) == 'i')		/* "include" or "<EOF>" */
+			inc_push_file();
+		    else
+			inc_pop_file();
+		}
+	| 	host_declare	 
+	|	host_code
+	| 	error 
+		{
+		    gr_mechanism( GR_STMTFREE );
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+equel_usage:	formvar host_var 
+		{
+		    arg_var_add( gr->gr_sym, gr->gr_id );
+		    gen_call( IIINGOPEN );
+		}
+	|	formstring fm_stringlist		/* Forms string */
+		{
+		    gen_call( IIINGOPEN );
+		}
+	|	formint fm_int		/* Forms integer */
+		{
+		    gen_call( IIINGOPEN );
+		}
+	|	useinparam tLPAREN fm_in_param tRPAREN
+	|	useoutparam tLPAREN fm_out_param tRPAREN
+	|	quelvar host_var 
+		{
+		    db_var( DB_REG, gr->gr_sym, gr->gr_id,
+				(SYM *)0, (char *)0, (char *)0 );
+		    db_close( IISYNCUP );
+		}
+	|	queldot ql_id ql_period ql_id	/* Quel id.id */
+		{
+		    db_close( IISYNCUP );
+		}
+	|	quelstring ql_sconst		/* Quel string constant */
+		{
+		    db_close( IISYNCUP );
+		}
+	|	quelint ql_int
+		{
+		    db_close( IISYNCUP );
+		}
+;
+formvar:	tFORMVAR 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+formstring:	tFORMSTRING 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+formint:	tFORMINT 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		}
+;
+useinparam:	tUSEINPARAM
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		    gen_call( IIINGOPEN );
+		    gr->gr_func = IISETFIELD;
+		}
+;
+useoutparam:	tUSEOUTPARAM
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sFORMS, $1.s );
+		    arg_str_add( ARG_CHAR, $1.s );
+		    gen_call( IIINGOPEN );
+		    gr->gr_func = IIRETFIELD;
+		}
+;
+queldot:	tQUELDOT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+quelvar:	tQUELVAR
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+quelstring:	tQUELSTRING 
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+quelint:	tQUELINT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sQUEL, $1.s );
+		}
+;
+
+/* Equel objects */
+
+/*
+** fm_string - A forms string is expected.  Either a string constant a
+** 	      string variable or just a name is okay for the forms system.
+*/
+fm_string:	tSCONST	
+		{
+		    arg_str_add( ARG_CHAR, form_sconst($1.s) );
+		}
+	|	host_name_var 
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_CHAR)
+			    arg_var_add( gr->gr_sym, gr->gr_id );
+			else
+			{
+			    if (gr->gr_type != T_UNDEF)
+			    	er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    arg_str_add( ARG_CHAR, gr->gr_id );
+			}
+		    }
+		    else
+			arg_str_add( ARG_CHAR, gr->gr_id );
+		}
+;
+fm_stringlist:	fm_string
+	|	fm_stringlist fm_string
+;
+
+/* fm_int - Forms integer constant or variable */
+
+fm_int:		tINTCONST 
+		{
+		    arg_str_add( ARG_INT, $1.s );
+		}
+	|	host_name_var 
+		{
+		    if (gr->gr_sym)
+		    {
+			arg_var_add( gr->gr_sym, gr->gr_id );
+			if (gr->gr_type != T_INT && gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0061_grINTVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		    else
+		    {
+			arg_int_add( 11 );
+			er_write( E_EQ0059_grINT, EQ_ERROR, 1, gr->gr_id );
+		    }
+		}
+;
+/* ql_id - Quel id. Either a string variable or just a name (no quotes) */
+
+ql_id:		host_name_var
+		{
+		    if (gr->gr_sym)
+		    {
+			if (gr->gr_type == T_CHAR)
+			    db_var( DB_ID, gr->gr_sym, gr->gr_id,
+				(SYM *)0, (char *)0, (char *)0 );
+			else
+			{
+			    if (gr->gr_type != T_UNDEF)
+			    	er_write( E_EQ0062_grNAME, EQ_ERROR, 1,
+								    gr->gr_id );
+			    db_key( gr->gr_id );
+			}
+		    }
+		    else 	/* No variable - just a name */
+		    {
+			db_key( gr->gr_id );
+		    }
+		}
+;
+
+/* ql_sconst - Quel string constant or string variable */
+
+ql_sconst:	tSCONST 
+		{
+		    db_sconst( $1.s );
+		}
+	|	host_name_var 
+		{
+		    if (gr->gr_sym && gr->gr_type == T_CHAR)
+			db_var( DB_REG, gr->gr_sym, gr->gr_id,
+				(SYM *)0, (char *)0, (char *)0 );
+		    else
+		    {
+		        if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0066_grSTR, EQ_ERROR, 1, gr->gr_id );
+			db_key( gr->gr_id );
+		    }
+		}
+;
+/* ql_int - Quel integer constant or variable */
+
+ql_int:		tINTCONST 
+		{
+		    db_key( $1.s );
+		}
+	|	host_name_var 
+		{
+		    if (gr->gr_sym && gr->gr_type == T_INT)
+			db_var( DB_REG, gr->gr_sym, gr->gr_id,
+				(SYM *)0, (char *)0, (char *)0 );
+		    else
+		    {
+		        if (gr->gr_type != T_UNDEF)
+			    er_write( E_EQ0059_grINT, EQ_ERROR, 1, gr->gr_id );
+			db_key( gr->gr_id );
+		    }
+		}
+;
+ql_period:	tPERIOD
+		{
+		    db_op( $1.s );
+		}
+;
+
+/*
+** Cobol dependent grammar 
+*/
+
+/*
+** Connecting rules between a usage of a Cobol variables, names and string
+** constants and a equivalent Equel objects.
+**
+** Objects that must be defined by the L grammar for use by G:
+**
+** block_open and block_close - Block control syntax.
+** ql_in_param, ql_out_param, fm_in_param and fm_out_param Param target lists.
+** extra rules that may have alternative syntaxes for L.
+** host_code - Host code recognised, set L flags and print code.
+** host_declare - Host language declarations.
+** host_var - Host language variable.
+** host_name_var - Host language name or variable.
+** Note:
+**     Both host_var, and host_name_var must set gr->gr_sym, gr->gr_type and
+** gr->gr_id after freeing the current id space.  Callers above should be able 
+** to access gr->gr_sym, gr->gr_type, and gr->gr_id when wanting the variable.
+** The type of gr->gr_type should be the equivalent Equel type (C) not the 
+** host language type.
+**
+**     1. Cobol does not support Param statements.
+**     2. Cobol has a dummy statement, which to the user looks like a 
+**	  terminating period, but will generate some sort of period-terminated
+**	  statement.
+*/
+
+/* %L rules begin - Cobol independent grammar */
+
+/* 
+** G rules that must defined by L because of differences between
+** languages and systems.
+*/
+
+/* Equel block delimiters */
+
+block_open:	tLBRACE		/* Pascal uses tBEGIN */
+;
+block_close:	tRBRACE		/* Pascal uses tEND */
+		{
+		    gr->gr_flag &= ~GR_HOSTCODE;
+		}
+;
+
+/*
+** Param target lists.
+**
+** Syntax:	PARAM ( format, argvec )
+**
+** Generates:
+**		For Out lists:
+**		    IIoutfunc( targetlist, argvector );
+**		For In lists:
+**		    IIinfunc( targetlist, argvector );
+** Note:
+**    1. C and Fortran store raw user arguments for historical reasons. 
+**    2. Other languages are not yet implemented, but should use:
+**     		tPARAM tLPAREN string tCOMMA host_var tRPAREN
+**	 Remember to set GR_NOINDIR before parsing host_var.
+*/
+
+/* Quel Param target lists */
+
+ql_in_param:	ql_param_parens		/* Input param */
+		{
+		    gen_call( IIPARSET );
+		}
+;
+ql_out_param:	ql_param_parens		/* Output param */
+		{
+		    gen_call( IIPARRET );
+		}
+;
+ql_param_parens: tPARAM tLPAREN		/* args tRPAREN */
+		{
+		    db_send();
+		    sc_eat( id_add, SC_STRIP|SC_NEST|SC_SEEN, ERx(")"),
+								    '(', ')' );
+		    id_free();
+		    er_write( E_E4000D_hcbPARAM, EQ_ERROR, 0 );
+		}
+;
+
+/*
+** Form param target lists.
+*/
+
+fm_out_param:	fm_param_parens		/* Output param */
+		{
+		    gen_call( IIPARRET );
+		}
+;
+fm_in_param:	fm_param_parens		/* Input param */
+		{
+		    gen_call( IIPARSET );
+		}
+;
+fm_param_parens: tPARAM tLPAREN		/* args tRPAREN */
+		{
+		    sc_eat( id_add, SC_STRIP|SC_NEST|SC_SEEN, ERx(")"),
+								    '(', ')' );
+		    id_free();
+		    er_write( E_E4000D_hcbPARAM, EQ_ERROR, 0 );
+		}
+;
+
+/* 
+** Host code production
+**
+** The scanner has passed the full line of host language
+** code, as an argument.  The newline is included.
+*/
+host_code:	tHOSTCODE 
+		{
+		    if ((gr->gr_flag & GR_HOSTCODE) == 0)
+		    {
+			gen_line( ERx("host code") );
+			gr->gr_flag |= GR_HOSTCODE;
+		    }
+		    gr->Cb_dec = 1;   	/* Expect level number */
+		    gen_host( G_H_CODE, $1.s );
+		}
+;
+
+/*
+** Cobol period to terminate Equel statements.
+** Faked as a statement by the scanner when seeing a period followed by a 
+** new line.  Allows users to terminate If blocks and other blocks with
+** Equel statements.
+**
+** Note that "gen_term(TRUE)" will generate "CONTINUE.\n" if we aren't
+** in dot mode; this is illegal in declaration sections.  Real declarations
+** eat the terminating dot in "host_declare", but "DECLARE CURSOR" will
+** come through here.  We use "Cb_csrdecl" to remember if the last statement
+** was a DECLARE CURSOR (can't use GR_DECLCSR as EQGRAM has already turned
+** it off by the time we get here).  GR_EQSTMT sets the flag appropriately,
+** "host_declare" turns it off, and "INCLUDE" (in EQGRAM) ignores it, as
+** the previous statement will have set it appropriately.
+*/
+
+statement:	tTERMINATE
+		{
+		    if (gr->Cb_csrdecl == FALSE)
+			gen_term( TRUE );
+		}
+;
+		
+/*
+** "ASCENDING" and "DESCENDING" are allowed in MODIFY statements.
+** As these are keywords in COBOL, we must make a special allowance for 
+** them in a ql_id.
+*/
+
+ql_id:		tCBDIREC
+		{
+		    db_key( $$.s );
+		}
+;
+
+copy_qid:	tCBCHARACTER		/* From COPY statement */
+		{
+		    db_key( $1.s );
+		}
+;
+create_qid:	tCBCHARACTER		/* From CREATE statement */
+		{
+		    db_key( $1.s );
+		}
+;
+ql_func:	tCBCHARACTER		/* For left side of function */
+		{
+		    db_key( $1.s );
+		}
+;
+inithide_type:	tCBCHARACTER		/* From INITTABLE statement */
+		{
+		    id_add( $1.s );
+		}
+;
+ql_with_left:   tCBKEY			/* left side of with clause */
+		{
+			db_key( $1.s );
+		}
+;
+
+/* Cobol declarations */
+
+host_declare:	C_declaration
+		{
+		    gr->Cb_dec = 1;	   /* Expect level number */
+		    gr->Cb_csrdecl = FALSE;
+		}
+	|	tCBDECLARE
+		{
+		    gr->Cb_usedec = 1;	   /* Don't complain if twice! */
+		    gen_declare();
+		    gr->gr_flag |= GR_HOSTCODE;
+		    gr->Cb_dec  = 1;   /* Expect level number */
+		    gr->Cb_csrdecl = FALSE;
+		}
+;
+/* 
+** Cobol Declaration:
+**			level [ name | FILLER ]
+**			[ REDEFINES NAME ]
+**			[ [IS] EXTERNAL ]
+**			[ [IS] GLOBAL ]
+**			[ PICTURE [IS] pic_string ]
+**			[ [USAGE [IS]] cob_type ]
+**			[ SIGN clause ]
+**			[ SYNC clause ]
+**			[ JUSTIFIED clause ]
+**			[ BLANK clause ]
+**			[ VALUE clause ]
+**			[ OCCURS clause ]
+**			.
+** Note: EQUEL supports the ANSI standard COBOL data declaration format, i.e.,
+**       the above optional clauses can be in any order with the following
+**	 two exceptions:
+**		1) The optional name or FILLER clause must immediately follow
+**		   level number.
+**		2) The optional REDEFINES clause must immediately follow
+**		   the optional name or FILLER clause.
+**
+** C_name returns the name.
+** cob_rtoccurs returns TRUE/FALSE for array/no array.
+*/
+C_declaration:  C_level C_name C_clauses C_term
+		{
+		    register SYM	*sy, *psy;
+		    i4			eq_type, eq_len;
+		    register COB_SYM	*cs;
+
+		    /*
+		    ** Update global COB_SYM pointer with type info.
+		    ** Rules are :
+		    **  Picture and type - evaluate;
+		    **  Picture and no type - usage is display;
+		    **  No picture and type - better be allowed for that type;
+		    **  No picture and no type - record entry.
+ 		    */
+		    cob_use_type(cob_rtpic(), cob_rtusage(), &gr->Cb_sym);
+
+		    sy = symDcPL1( $2.s, gr->Cb_sym.cs_lev -1, 1, syFisVAR, 
+				   COBCLOSURE, 0 );
+		    if (sy == (SYM *)0)	/* Probably redeclaration */
+			break;
+		    /* 
+		    ** Cobol level, type, num-of-digits and scale are already 
+		    ** set, so copy into the SYM value field.
+		    */
+		    cs = cob_newsym();
+		    MEcopy( (char *)&gr->Cb_sym,(u_i2)sizeof(*cs),(char *)cs );
+		    sym_s_vlue( sy, cs );
+		    /* Set Equel type and length - will differ from Cobol */
+		    cob_to_eqtype( cs, &eq_type, &eq_len );
+		    sym_s_btype( sy, eq_type );
+		    sym_s_dsize( sy, eq_len );
+		    /* 
+		    ** If there was an Occurs clause or the parent was an
+		    ** array then set the array bit. 
+		    */
+		    if (cob_rtoccurs() && cs->cs_lev == 1) /* Occurs clause on level 01 */
+			er_write( E_E4000C_hcbOCCURS, EQ_WARN, 0 );
+		    psy = sym_g_parent( sy );
+		    if (cob_rtoccurs() || (psy && sym_g_dims(psy)))
+			sym_s_dims( sy, 1 );
+		}
+	|	C_level error
+		{
+		    gen_host( G_H_OP|G_H_NEWLINE, ERx("...DECLARE ERROR.") );
+		    id_free();
+		}
+;
+C_clauses:      C_dec_list 
+	|       /* No data declaration clauses */
+;
+C_dec_list:     C_dec_item
+	|       C_dec_list C_dec_item    /* recursive part */
+;
+C_dec_item:     C_global 
+	|       C_external
+	|       C_picture
+	|       C_usage 
+	|       C_sign
+	|       C_sync
+	|       C_justify
+	|       C_blank 
+	|       C_value
+	|       C_array_part
+;
+/*
+** Last token in a declaration is a period.
+*/
+C_term:		tTERMINATE	/* Special token returned by the scanner */
+		{
+		    gen_host( G_H_OP|G_H_NEWLINE, $1.s );
+		}
+	|	tPERIOD
+		{
+		    gen_host( G_H_OP|G_H_NEWLINE, $1.s );
+		}
+;
+
+/*
+** Level number:	integer
+**
+** Sets global Cb_sym.cs_lev.
+*/
+C_level:	tCBDECINT	/* Special token returned by gr_mechanism */
+		{
+		    i4		last_lev;	/* Last level number */
+		    i4		cur_lev;	/* Current level */
+
+		    cob_svinit();       /* init data decl save stuff */	
+		    CVan( $1.s, &cur_lev );
+		    last_lev = gr->Cb_sym.cs_lev;
+		    if (cur_lev == 77)
+			cur_lev = 1;
+		    else if (cur_lev > 49 )
+		    {
+			er_write( E_E40006_hcbLEVEL, EQ_ERROR, 1, $1.s );
+			if (cur_lev == 66 || cur_lev == 88)
+			    cur_lev = 1;
+		    }
+		    else if (cur_lev <= 0)
+		    {
+			er_write( E_E40006_hcbLEVEL, EQ_ERROR, 1, $1.s );
+			cur_lev = 1;
+		    }
+		    else if (cur_lev > last_lev 
+			&& gr->Cb_sym.cs_type != COB_RECORD)
+		    {
+			/* Parent node (if there is one) must be record type */
+			er_write( E_E40008_hcbNOPAR, EQ_ERROR, 1, $1.s );
+			cur_lev = 1;
+		    }
+		    if (cur_lev == 1 && cur_lev != last_lev)	/* Pop to 01 */
+		    {
+			/* Outdent declarations, and update Record level */
+			while (gr->Cb_rec > 0)
+			{
+			    gen_host( G_H_OUTDENT, (char *)0 );
+			    gr->Cb_rec--;
+			}
+		    }
+		    else if (cur_lev > last_lev)
+		    {
+			gr->Cb_rec++;
+			gen_host( G_H_INDENT, (char *)0 );
+		    }
+		    else if (cur_lev < last_lev && gr->Cb_rec > 0)
+		    {
+			gr->Cb_rec--;
+			gen_host( G_H_OUTDENT, (char *)0 );
+		    }
+		    gr->Cb_sym.cs_lev = (i1)cur_lev;
+		    if (cur_lev == 1)
+			gen_cob01( $1.s );	/* special AreaA output rtn */
+		    else
+			gen_host( G_H_KEY, $1.s );
+		}
+;
+
+/*
+** Name Clause:
+**		[ name | FILLER ]
+**		[ REDEFINES name ]
+**
+** C_dec_name returns pointer to the entry name gotten in C_dec_name 
+*/
+C_name:		C_dec_name tCBREDEFINES tNAME
+		{
+		    gen_host( G_H_KEY, $2.s );
+		    gen_host( G_H_KEY, $3.s );
+		    $$.s = $1.s;
+		}
+	|	C_dec_name
+		{
+		    $$.s = $1.s;
+		}
+;
+/* C_dec_name returns pointer to the entry name */
+C_dec_name:	tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    $$.s = $1.s;
+		}
+	|	tCBFILLER
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    /* If FILLER is used do not reenter the word */
+		    $$.s = ERx("");
+		}
+	|       /* No name clause default to FILLER */
+		{
+		    $$.s = ERx("");     /* Do not reenter the word */
+	        }
+;
+
+C_global:       C_is_noise tCBGLOBAL
+		{
+		    gen_host( G_H_KEY, $2.s );
+	 	}
+;
+C_external:     C_is_noise tCBEXTERNAL
+	 	{
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+/*
+** Cobol Picture:
+**			[PICTURE [IS] pic_string]
+**
+** Recognize the keyword PICTURE and eat till the end of the Picture string.
+** C_picture returns pointer to string with Picture clause.
+*/
+C_picture:	tCBPICTURE
+		{
+		    char	*pic;
+
+		    gen_host( G_H_KEY, $1.s );
+		    /* Strip off [Is] Picture string */
+		    if (pic = cob_picture())
+			gen_host( G_H_KEY, pic );
+		    cob_svpic(pic);     /* Save picture */
+		}
+;
+/*
+** Usage clause:
+**			[ [USAGE [IS]] cob_type ]
+**    Cob_types:	
+**			[ COMP types | DISPLAY | INDEX ]
+**
+** C_usage returns the COB_ type (constant) corresponding to the usage
+*/
+C_usage:	C_usage_is tCBTYPE
+		{
+		    gen_host( G_H_KEY, $2.s );
+		    cob_svusage(cob_type($2.s)); /* Determine Cobol Comp type */
+		}
+	|	C_usage_is tDISPLAY
+		{
+		    gen_host( G_H_KEY, $2.s );
+		    cob_svusage( COB_DISPLAY );
+		}
+	|	C_usage_is tINDEX
+		{
+		    gen_host( G_H_KEY, $2.s );
+		    cob_svusage( COB_INDEX );
+		}
+	|	C_usage_is tCBBADTYPE
+		{
+		    gen_host( G_H_KEY, $2.s );
+		    er_write( E_E40011_hcbUSAGE, EQ_ERROR, 1, $2.s );
+		    cob_svusage( COB_BADTYPE ); /* So we can ignore picture */
+		}
+;
+C_usage_is:	tCBUSAGE tIS
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tCBUSAGE 
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	/* No Usage word */
+;
+C_is_noise:	tIS
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	/* No IS word */
+;
+/*
+** Sign Clause:
+**		[SIGN [IS] {LEADING|TRAILING} [SEPARATE [CHARACTER]] ]
+*/
+C_sign:		C_sign_key C_is_noise C_lead_trail C_separate
+;
+C_sign_key:	tCBSIGN
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_lead_trail:	tCBLEAD_TRAIL
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_separate:	tCBSEPARATE tCBCHARACTER
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tCBSEPARATE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	/* No separate clause */
+;
+/*
+** Sync Clause:
+**		[SYNCHRONIZED [LEFT|RIGHT] ]
+*/
+C_sync:		C_sync_key C_left_right
+;
+C_sync_key:	tCBSYNC
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_left_right:	tNAME		/* Not reserved because of Quel */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		} 
+	|	/* No left right clause */
+;
+
+/*
+**			[ JUSTIFIED { LEFT | RIGHT } ]
+**			[ BLANK [WHEN] ZERO ]
+**			[ VALUE [IS] {constant | ZERO | EXTERNAL | REFERENCE} ]
+*/
+C_justify:	C_just_key C_left_right
+;
+C_just_key:	tCBJUSTIFIED
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_blank:	C_blank_key C_when_noise C_zero
+;
+C_blank_key:	tCBBLANK
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_when_noise:	tCBWHEN
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	/* Optional when keyword */
+;
+C_zero:		tCBZERO
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+/*
+** Value Clause:
+**		[ VALUE [IS] value ]
+**	value:
+**		{ constant | ZERO | EXTERNAL name | REFERENCE name }
+*/
+C_value:	C_value_key C_is_noise C_value_arg
+;
+C_value_key:	tCBVALUE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_value_arg:	tCBDECINT
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tARUOP tCBDECINT	%prec tUNARYOP
+		{
+		    gen_host( G_H_OP, ERx(" ") );
+		    gen_host( G_H_OP, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tFLTCONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tARUOP tFLTCONST	%prec tUNARYOP
+		{
+		    gen_host( G_H_OP, ERx(" ") );
+		    gen_host( G_H_OP, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tDECCONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tARUOP tDECCONST	%prec tUNARYOP
+		{
+		    gen_host( G_H_OP, ERx(" ") );
+		    gen_host( G_H_OP, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tSCONST
+		{
+		    gen_host( G_H_SCONST, $1.s );
+		}
+	|	tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	tCBEXTERNAL tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tCBREFERENCE tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	C_zero
+;
+
+/*
+** Occurs Clause:
+**
+**	Format 1:  [OCCURS num [TIMES] 
+**			[ {ASCENDING|DESCENDING} [KEY IS] name(s) ]
+**			[ INDEXED [BY] names(s) ] ]
+**
+**	Format 2:  [OCCURS min TO max [TIMES] DEPENDING [ON] name
+**			[ {ASCENDING|DESCENDING} [KEY IS] name(s) ]
+**			[ INDEXED [BY] names(s) ] ]
+**
+** cob_svoccurs saves true if there was an array, otherwise false
+*/
+C_array_part:	C_occurs C_frequency C_key C_indexed
+		{
+		    cob_svoccurs( TRUE );
+		}
+;
+C_occurs:	tCBOCCURS
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_frequency:	C_freq_int C_times
+	|	C_freq_int C_to C_freq_int C_times C_depend
+;
+C_freq_int:	tCBDECINT
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	C_zero		/* Bug 9945 */
+;
+C_times:	tCBTIMES
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	/* No Times word */
+;
+C_to:		tTO
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_depend:	C_depend_key C_dep_on C_idname
+;
+C_depend_key:	tCBDEPENDING
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_dep_on:	tON
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	/* No On word */
+;
+/*
+** Direction Key:
+**			[ {ASCENDING|DESCENDING} [KEY IS] name(s) ]
+*/
+C_key:		C_dir_key C_key_noise C_is_noise C_idlist
+	|	/* No direction key */
+;
+C_dir_key:	tCBDIREC
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_key_noise:	tCBKEY
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	/* No key clause */
+;
+C_idlist:	C_idname
+	|	C_idlist C_idname
+	|	C_idlist C_comma C_idname
+;
+C_idname:	tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_comma:	tCOMMA
+		{
+		    gen_host( G_H_OP, $1.s );
+		}
+;
+/*
+** Indexed Clause:
+**			[ INDEXED [BY] names(s) ] ]
+*/
+C_indexed:	C_indexed_key C_by_noise C_idlist
+	|	/* No indexed clause */
+;
+C_indexed_key:	tCBINDEXED
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+C_by_noise:	tBY
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	/* No by clause */
+;
+
+/* 
+** host_var - Host variable to receive data;
+** uses Cuse_var that returns a symbol table entry 
+*/
+host_var:	Cuse_var 
+		{
+		    COB_SYM	*cs;
+		    SYM		*sy;
+
+		    gr->gr_type = T_UNDEF;		/* Error default */
+		    if ((sy = $1.v) == (SYM *)0 )	/* Enter undefined */
+		    {
+			er_write(E_EQ0057_grHOSTVAR, EQ_ERROR, 1, id_getname());
+		    	sy = symDcPL1( id_getname(), 0, 1, syFisVAR, 
+				      COBCLOSURE, 0 );
+		    	if (sy)
+			{
+			    /* Enter default attributes - make it a string */
+		    	    cs = cob_newsym();
+			    cs->cs_lev = 1;
+			    cs->cs_type = COB_DISPLAY;
+			    cs->cs_slen = 10;
+			    sym_s_vlue( sy, cs );
+			    sym_s_btype( sy, T_UNDEF );
+			}
+		    }
+		    else
+		    {
+			cs = (COB_SYM *)sym_g_vlue( sy );
+			if (cs->cs_type == COB_NOTYPE)
+			    er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								id_getname() );
+			else if (cs->cs_type == COB_RECORD)
+			    er_write( E_E40005_hcbELEM, EQ_ERROR, 1,
+								id_getname() );
+			else
+			    gr->gr_type = sym_g_btype( sy );
+		    }
+		    gr->gr_sym = sy;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+;
+
+/* 
+** host_name_var - Host language variable or just a name;
+** uses Cuse_var that returns a symbol table entry 
+*/
+
+host_name_var:	Cuse_var
+		{
+		    if ($1.v)
+			gr->gr_type = sym_g_btype( $1.v );
+		    gr->gr_sym = $1.v;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+;
+/* Cref_name returned token if there was 'connector' clause */
+Cuse_var:	Cref_setup Cref_name
+		{
+		    COB_SYM	*cs;
+		    SYM		*sy;
+		    i4		stat;
+
+		    /* For PL1 Bit-Or in with syFisREVERSE */
+		    stat = symRsPL1( &sy, 1, syFisVAR );
+		    if (stat == syL_AMBIG)
+			er_write(E_E40001_hcbAMBIG, EQ_ERROR, 1, id_getname());
+		    /* Simple name will not have a 'connector' */
+		    else if (stat != syL_OK && $2.i)
+			er_write(E_E4000A_hcbNOVAR, EQ_ERROR, 1, id_getname());
+		    else if (sy)
+		    {
+			cs = (COB_SYM *)sym_g_vlue( sy );
+			if (cs->cs_type == COB_RECORD)
+			    er_write( E_E40005_hcbELEM, EQ_ERROR, 1,
+								id_getname() );
+		    }
+		    $$.v = sy;
+		}
+	|	tDEREF
+		{
+		    id_add( $1.s );
+		    $$.v = (SYM *)0;
+		}
+;
+Cref_setup:	/* Null rule to set up elliptical name stack */
+		{
+		    sym_f_init();
+		}
+;
+/* Cref_name returns TRUE if the Cobol connector (IN or OF) clause was used */
+Cref_name:	C_usename
+		{
+		    $$.i = FALSE;
+		}
+	|	Cref_name Cref_connect C_usename
+		{
+		    $$.i = TRUE;
+		}
+;			
+Cref_connect:	tIN
+		{
+		    id_key( $1.s );
+		}
+	|	tOF
+		{
+		    id_key( $1.s );
+		}
+;
+C_usename:	C_xname 
+	|	C_xname tLPAREN
+		{
+		    SYM		*sy = (SYM *)0;
+		    i4		stat;	/* Ignored */
+
+		    /*
+		    ** Lookup the entry here, even though we have not parsed
+		    ** the fully qualified path of names yet.  If at this point
+		    ** we have an ambiguous reference, that's okay 'cause most
+		    ** Cobol compilers will complain too! Reference must be 
+		    ** unambiguous by the time the left paren is seen.
+		    **
+		    ** 01 a pic s9(4) usage comp.
+		    ** 01 arr.
+		    **	 02 objs occurs 3 times.
+		    **     03 a pic s9(4) usage comp.
+		    **
+		    ** move 10 to a(2) in arr.  	! Ambiguous reference
+		    **
+		    */
+		    stat = symRsPL1( &sy, 1, syFisVAR );
+		    if (sy != (SYM *)0)
+		    {
+			/* 
+			** Is this an Equel array reference?  Base type 
+			** (Equel type is defined) and has array bit set.
+			*/
+			if (sym_g_btype(sy) != T_NONE && sym_g_dims(sy))
+			    sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"),
+								    '(', ')' );
+			else
+			    SC_PTR--;
+		    } else
+			SC_PTR--;
+		}
+;
+
+C_xname:	tNAME
+		{
+		    sym_fpush( sym_find($1.s) );
+		    id_add( $1.s );
+		}
+;
+
+/* %L rules end */
+
+%%
+
+/* %L mechanism begin - All the stuff to do with gr_mechanism() */
+
+GLOBALDEF GR_TYPES   gr_typetab[] = {
+		    /* Name *	Type		Length */
+		    (char *)0,  0, 		0
+	   };
+
+/*
+** Gr_mechanism - Language dependent utility called from within the grammar
+**		  or from outside.
+**
+** Parameters:	flag       - Which mechanism to choose.
+**		arg1, arg2 - Whatever is needed for the particular flag.
+** Returns:	None
+*/
+
+void
+gr_mechanism( flag, arg1, arg2 )
+i4	flag;
+PTR	arg1;			/* Extra arguments for particular cases */
+PTR	arg2;
+{
+    register SYM	*sy;
+    i4			yyequlex();
+
+    switch (flag)
+    {
+      case GR_EQINIT:
+	eq->eq_lang = EQ_COBOL;
+
+	eq->eq_in_ext = ERx("qcb");		/* Include files */
+# ifdef NT_GENERIC
+            eq->eq_out_ext = ERx("cbl");
+# endif
+# ifdef VMS
+	eq->eq_out_ext = ERx("lib");
+# endif 
+# ifdef UNIX
+	eq->eq_out_ext = ERx("cbl");
+# endif 
+# ifdef CMS
+	eq->eq_out_ext = ERx("cobol");
+# endif 
+# ifdef hp9_mpe
+	eq->eq_out_ext = ERx("cob");
+# endif
+
+	eq->eq_def_in = ERx("qcb");		/* Main source files */
+# ifdef NT_GENERIC
+        eq->eq_def_out = ERx("cbl");
+# endif
+# ifdef VMS
+	eq->eq_def_out = ERx("cob");
+# endif 
+# ifdef UNIX
+	eq->eq_def_out = ERx("cbl");
+# endif 
+# ifdef CMS
+	eq->eq_def_out = ERx("cobol");
+# endif 
+# ifdef hp9_mpe
+	eq->eq_def_out = ERx("cob");
+# endif
+
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->gr_id = ERx("");
+	gr->gr_flag = GR_HOSTCODE;
+
+      /* tell the world we're Embedded QUEL! */
+	dml->dm_lex = yyequlex;
+
+	gr->Cb_rec = 0;
+	gr->Cb_usedec = 0;
+	gr->Cb_dec = 1;			/* Expecting level number */
+	gr->Cb_sym.cs_lev = (i1)1;
+	gr->Cb_sym.cs_type = (i1)COB_NOTYPE;
+	gr->Cb_sym.cs_nlen = (i1)0;
+	gr->Cb_sym.cs_nscale = (i1)0;
+	gr->Cb_csrdecl = FALSE;
+
+	ecs_clear();
+	break;
+
+      case GR_SYMINIT:
+	{
+	    /* Enter declarations into Equel symbol table */
+	    extern	i4	(*sym_delval)();
+	    extern	i4	(*sym_prtval)();
+
+	    sym_init( (bool)TRUE );
+	    sym_delval = cob_clrsym;		/* Clr routine for COB_SYM */
+	    sym_prtval = cob_prtsym;		/* Prt routine for COB_SYM */
+
+	    sy = symDcPL1( ERx(".null"), 0, 1, syFisVAR|syFisSYS,
+				COBCLOSURE, SY_NORMAL );
+	    sym_s_btype( sy, T_NUL );
+	    sym_s_dsize( sy, sizeof(i4) );
+	    gr->gr_null = sy;
+	}
+	break;
+
+      case GR_LOOKUP:
+	/* How should we look up this name? Unused mechanism, return tNAME */
+	*(i4 *)arg2 = tNAME;
+	break;
+
+      case GR_NUMBER:
+	/* How should we look up this number - Level number or not ? */
+	if (gr->Cb_dec)
+	    *(i4 *)arg1 = tCBDECINT;
+	else
+	    *(i4 *)arg1 = tINTCONST;
+	break;
+
+      case GR_STMTFREE:
+	str_reset();
+	sym_f_init();		/* clear the sym stack ? */
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	break;
+
+      case GR_CLOSE:
+	break;
+
+      case GR_DUMP:
+	{
+	    register FILE	*f = eq->eq_dumpfile;
+	    register COB_SYM	*cs = &gr->Cb_sym;
+	    register i4	typ;
+	    static char		*cb_type_names[] = {
+		ERx("COMP"),			/* COB_COMP */
+		ERx("COMP-1"),		/* COB_1 */
+		ERx("COMP-2"),		/* COB_2 */
+		ERx("COMP-3"),		/* COB_3 */
+		ERx("COMP-4"),		/* COB_4 */
+		ERx("COMP-5"),		/* COB_5 */
+		ERx("COMP-6"),		/* COB_6 */
+		ERx("NO TYPE"),		/* COB_NOTYPE */
+		ERx("DISPLAY"),		/* COB_DISPLAY */
+		ERx("RECORD"),		/* COB_RECORD */
+		ERx("INDEX"),		/* COB_INDEX */
+		ERx("NUMERIC DISPLAY"),	/* COB_NUMDISP */
+		ERx("NUMERIC EDITED"),	/* COB_EDIT */
+		ERx("BAD TYPE")		/* COB_BADTYPE */
+	    };
+
+	    SIfprintf( f, ERx("GR_DUMP: gr_ \n") );
+	    SIfprintf( f,
+		       ERx("  sym = 0x%p, id = '%s', type = %d, flag = 0%o\n"),
+		       gr->gr_sym, gr->gr_id, gr->gr_type, gr->gr_flag );
+	    SIfprintf( f, ERx("  func = %d, mode = 0%o\n"),
+		       gr->gr_func, gr->gr_mode );
+	    SIfprintf( f, ERx("  Cb_rec = %d, Cb_usedec = %d, Cb_dec = %d\n"),
+		       gr->Cb_rec, gr->Cb_usedec, gr->Cb_dec );
+	    SIfprintf( f, ERx("Cb_csrdecl = %s\n"),
+			    gr->Cb_csrdecl ? ERx("TRUE") : ERx("FALSE") );
+	    SIfprintf( f, ERx("  Cb: cs_lev = %d, "),
+		       cs->cs_lev, cs->cs_type );
+	    typ = cs->cs_type & ~COB_NOSIGN;
+	    if (typ >= COB_COMP && typ <= COB_BADTYPE)
+	    {
+		if (cs->cs_type & COB_NOSIGN)
+		    SIfprintf( f, ERx("cs_type = '%s' (unsigned), "),
+			cb_type_names[typ] );
+		else
+		    SIfprintf( f, ERx("cs_type = '%s', "), cb_type_names[typ] );
+	    } else
+	    {
+		SIfprintf( f, ERx("cs_type = %d, "), cs->cs_type );
+	    }
+    	    if (gr->Cb_sym.cs_type == COB_DISPLAY)
+		SIfprintf( f, ERx("cs_slen = %d\n"), cs->cs_slen );
+	    else
+		SIfprintf( f, ERx("cs_nlen = %d, cs_nscale = %d\n"), 
+		           cs->cs_nlen, cs->cs_nscale );
+	    SIflush( f );
+	}
+	break;
+
+      case GR_BLOCK:		/* Enter/exit a block - None in Cobol */
+	gr->Cb_dec  = 0;			/* Not expecting level num */
+	break;
+	
+      case GR_EQSTMT:
+	{
+	    i4		mode = (i4)arg1;
+	    char	*kword = (char *)arg2;
+
+	    /* Turn off declarations flag and generate line directive */
+	    gr->gr_flag &= ~GR_HOSTCODE;
+	    gr->Cb_dec  = 0;			/* Not expecting level num */
+
+	    if (gr->gr_flag & GR_DECLCSR)
+	    {
+		gen_line( kword );
+		gr->Cb_csrdecl = TRUE;
+	    } else
+	    {
+		gen_eqstmt( G_OPEN, kword );
+		gr->Cb_csrdecl = FALSE;
+	    }
+
+	    /* Check if ## declare [forms] is required for certain languages */
+	    if (!gr->Cb_usedec)
+	    {
+		er_write( E_E40004_hcbDECLARE, EQ_ERROR, 1, kword );
+		gr->Cb_usedec = 1;
+	    }
+
+	    /*
+	    ** If Cb_rec is greater than 1, then we have just been 
+	    ** generating data declarations of level 02 and above at an 
+	    ** indented level.  If so, outdent.
+	    */
+	    while (gr->Cb_rec > 0)
+	    {
+		gen_host( G_H_OUTDENT, (char *)0 );
+		gr->Cb_rec--;
+	    }
+
+	    switch (mode)
+	    {
+	      case GR_sREPEAT:
+		gr->gr_flag |= GR_REPEAT;
+		rep_begin( kword, NULL );
+		/* FALL THROUGH */
+
+	      case GR_sQUEL:
+		if (gr->gr_flag & GR_RETRIEVE)
+		{
+		    gr->gr_flag &= ~GR_RETRIEVE;
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		}
+		gr->gr_flag |= GR_QUEL;
+		db_key( kword );
+		break;
+
+	      case GR_sLIBQ:
+	      case GR_sFORMS:
+		gr->gr_flag |= GR_EQUEL;
+		break;
+
+	      case GR_sCURSOR:
+		if (gr->gr_flag & GR_RETRIEVE)
+		{
+		    gr->gr_flag &= ~GR_RETRIEVE;
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		}
+		break;
+	    } /* switch mode */
+	} /* GR_EQSTMT */
+	break;
+
+      default:
+	break;
+    } /* switch flag */
+} /* gr_mechanism */
+/* %L mechanism end */

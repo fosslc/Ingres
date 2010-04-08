@@ -1,0 +1,47 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+## History:
+##      02-Apr-2004 (fanra01)
+##          Bug 112091
+##          Editorial changes from griel02.
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Create Directory
+</title>
+</head>
+<body>
+
+<h1>
+Create Directory
+</h1>
+This application will come under Web Deployment Option security and
+will not be visible to the HTTP server. We will
+therefore <i>not</i> create a directory under your
+web root directory for this application; rather we
+will choose one elsewhere in the file system.
+Later, we will
+register that location with the ICE server, which
+will then make the location visible through the HTTP
+server.
+<dl>
+<dt>UNIX
+<dd>cd <i>my/ice/root/directory</i>
+(for example: /usr/web/documents)
+<br>
+mkdir plays
+<br>
+cd plays
+<dt>Windows32
+<dd>cd <i>my\ICE\root\directory</i>
+(for example:  c:\)<br>
+mkdir plays
+<br>
+cd plays
+</dl>
+
+
+</body>
+</html>

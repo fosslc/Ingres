@@ -1,0 +1,8 @@
+#
+# wgl_wnt.hnt file for front\tools\yycase
+#
+
+subsys = congui
+proto = false
+main = yycase.c
+

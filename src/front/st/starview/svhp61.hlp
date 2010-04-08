@@ -1,0 +1,37 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+NodeHelp Command
+
+
+This command is used to select a virtual node from a list of
+virtual nodes. The selected node name is displayed in
+the Node Name field of the Object Selection Criteria form.
+The distributed objects displayed in the OBJECTS table field
+are limited to objects whose underlying object is on the selected node.  
+If asterisk ('*') is selected, all nodes are displayed.
+
+The SELECT command selects the highlighted node and returns automatically 
+to the Objects Selection Criteria form.  The TOP/BOTTOM commands move the 
+cursor to the top/bottom of the Node Name list respectively. The FIND 
+command searches for a specified string within the Node Name list. 
+The HELP command displays this screen, and the END command returns to 
+the Objects Selection Criteria form without changing the Node Name field.
+
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	Select		Select the highlighted node name, and return
+			to the Object Selection Criteria form.
+
+	Top		Move the cursor to the top of the Node Name list.
+
+	Bottom		Move the cursor to the bottom of the Node Name list.
+
+	Find		Search for a specified string of characters
+			within the Node Name list.
+
+	Help		Display this screen.
+
+	End		Exit to the Objects Selection Criteria form w/o
+			selecting a new node.

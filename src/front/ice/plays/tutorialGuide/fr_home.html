@@ -1,0 +1,92 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+## 13-Feb-2006 (fanra01)
+##     Bug 115751
+##     Minor editorial change.
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>Create the Home Page</title>
+</head>
+<body>
+<h1>Create the Home Page</h1>
+
+You must login to the ICE Server before you can
+access any pages held under its control. 
+
+<p>
+This page demonstrates the Web Deployment Option INCLUDE feature,
+which allows the page author to incorporate generic
+Web Deployment Option code on many pages.
+An example of its use would be to ensure that each page had a uniform style across the site.
+In our case, we use the INCLUDE file for
+another reason, that of including Web Deployment Option code to
+ensure any open transactions are closed.
+There is little else that is new other than a list
+of links to the various pages that demonstrate
+various HTML or Web Deployment Options features.
+
+<h3>File: play_home.html</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shakespeare's Plays Home Page&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;center&gt;
+&lt;h1&gt;Shakespeare's Plays Home Page&lt;/h1&gt;
+&lt;/center&gt;
+This is the home page for Shakespeare's plays hosted on the server &lt;font+3&gt;globe&lt;/font&gt;
+&lt;h2&gt;
+View Shakespeare's Plays
+&lt;/h2&gt;
+<span class="macro">&lt;!-- #ICE REPEAT INCLUDE=`plays[play_TxnCndCmt_h.html]` --&gt;</span>
+
+&lt;ol&gt;
+&lt;li&gt; &lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_all.html]"&gt;All&lt;/a&gt;
+&lt;li&gt; &lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_allWrap.html]"&gt;All (wrap to beginning)&lt;/a&gt;
+&lt;li&gt; &lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_typeList.html]"&gt;By type (selector)&lt;/a&gt;
+&lt;li&gt; &lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_typeLink.html]"&gt;By type (hyper-link)&lt;/a&gt;
+&lt;li&gt; &lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_typeGLink.html]"&gt;By type (Graphical hyper-link)&lt;/a&gt;
+&lt;li&gt; &lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_typeGSLink.html]"&gt;Switch by type (Graphical hyper-link)&lt;/a&gt;
+&lt;/ol&gt;
+&lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_shopHome.html]"&gt;Globe Shop&lt;/a&gt;
+&lt;p&gt;
+&lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_Tutorial.html]"&gt;Tutorial&lt;/a&gt;
+&lt;p&gt;
+Please 
+&lt;A HREF="/ice-bin/oiice.dll/plays[play_login.html]?ii_action=disconnect"&gt;logout&lt;/A&gt;,
+don't time out!
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+<p>
+The line that includes the extra code is:
+<p><tt><pre>
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_TxnCndCmt_h.html]` --&gt;
+</pre></tt><p>
+The syntax for specifing an include file is the
+same as for when one is linked to. Here the
+location is <b>plays</b> and the file name is
+<b>play_TxnCndCmt_h.html</b>. We need to specify
+the <tt>REPEAT</tt> keyword because there are Web Deployment Option
+macro statements to be evaluated in this file.
+</tt>
+
+<p>
+The next page is the 
+<a href="fr_account.html" target="page">new account</a> page.
+</body>
+</html>

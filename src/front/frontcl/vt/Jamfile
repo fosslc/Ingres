@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!frontcl!vt
+#
+
+SubDir ING_SRC front frontcl vt ;
+
+IISUBSYS front frontcl vt ;
+
+
+IIMSGHDR ervt.msg ;
+
+IILIBRARY VTLIB : vtxydraw.c vtundo.c vtputstr.c vtprev.c
+	vtnewfrm.c vthilite.c vtgetstr.c vtfplus.c vtextend.c vterase.c
+	vtdmpset.c vtdisptf.c vtdelstr.c vtdelfrm.c vtcursor.c
+	vtclarea.c vtbox.c vtaddcom.c ;
+
+IILIBRARY IMPFRAMELIBDATA : vtdata.c ;

@@ -1,0 +1,20 @@
+#
+# Jamfile file for front!st!pkghdr_unix
+#
+
+SubDir ING_SRC front st pkghdr_unix ;
+
+IISUBSYS front st pkghdr_unix ;
+
+IIDFILES rpmhdrs : ingres-abf.pkghdr ingres-dbms.pkghdr
+	ingres-documentation.pkghdr ingres-ice.pkghdr ingres-net.pkghdr
+	ingres-odbc.pkghdr ingres-rep.pkghdr ingres-spatial.pkghdr
+	ingres-star.pkghdr ingres.pkghdr ingres-i18n.pkghdr
+	ingres-32bit.pkghdr ingres-LICENSE.pkghdr ingres-client.pkghdr 
+	ingres-server.pkghdr ingres-devel.pkghdr ;
+
+IIDFILES debhdrs : ingres-abf.pkghdr ingres-dbms.pkghdr
+	ingres-documentation.pkghdr ingres-ice.pkghdr ingres-net.pkghdr
+	ingres-odbc.pkghdr ingres-rep.pkghdr ingres-spatial.pkghdr
+	ingres-star.pkghdr ingres.pkghdr ingres-i18n.pkghdr
+	ingres-32bit.pkghdr ingres-LICENSE.pkghdr ;

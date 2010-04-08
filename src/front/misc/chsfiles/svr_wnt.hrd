@@ -1,0 +1,202 @@
+###
+### makefile generated automatically by mknmake (3.02) for WNT.
+###	 date: Fri Nov 19 15:45:18 1993
+###	 path: D:\rplus\front\misc\chsfiles
+###
+
+##
+## Start of extra control macros for the make.ini file.
+##
+
+# Set to sub system type, (windows, console, posix).
+!IF "$(SUBSYS)" == ""
+SUBSYS = windows
+!ENDIF
+
+# Set to true for proto typing.
+!IF "$(PROTO_TYPE)" == ""
+PROTO_TYPE = false
+!ENDIF
+
+# Local flags for the compiler.
+!IF "$(LCL_CFLAGS)" == ""
+LCL_CFLAGS =
+!ENDIF
+
+# Ingres path structure.
+PART = front
+FACILITY = misc
+SUBSYSTEM = chsfiles
+LCLPATH = front\misc\chsfiles
+
+# DOS file system type.
+FS_FAT = 1
+FS_CASE = 0
+
+##
+## End of extra control macros for the make.ini file.
+##
+
+!include "$(ING_SRC)\tools\port\nmake\make.ini"
+!include "deps.mak"
+
+QSHFILES = 
+
+MSGFILES = 
+
+QHFILES = 
+
+SHFILES = 
+
+QSCFILES = 
+
+SCFILES = 
+
+QCFILES = 
+
+SYFILES = 
+
+STFILES = 
+
+LFILES = 
+
+YFILES = 
+
+YIFILES = 
+
+OBJFILES = 
+
+PROFILES = 
+
+PCFILES = 
+
+EXEFILES = 
+
+
+OBJONLY =
+
+
+all: hdr prh pc lib exe
+hdr: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES)
+prh:
+pc:
+lib: $(OBJONLY)
+exe:
+
+derive: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES) $(QSCFILES) \
+	 $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) $(LFILES) \
+	 $(YFILES) $(YIFILES)
+
+archive:
+atouch:
+
+
+##
+## Local install rule.
+##
+install:
+
+##
+## charset files
+##
+
+ING_SRC_CHSFILES = $(ING_SRC)\front\misc\chsfiles
+
+ING_BUILD_CHARSETS= $(ING_SRC)\ingres\files\charsets
+
+CHSFILES = arabic.chs chineses.chs chineset.chs decmulti.chs elot437.chs \
+	greek.chs hebrew.chs hproman8.chs iso88591.chs iso88592.chs \
+	kanjieuc.chs korean.chs shiftjis.chs slav852.chs thai.chs
+
+CHXFILES = \
+	$(ING_BUILD_CHARSETS)\arabic\desc.chx \
+	$(ING_BUILD_CHARSETS)\chineses\desc.chx \
+	$(ING_BUILD_CHARSETS)\chineset\desc.chx \
+	$(ING_BUILD_CHARSETS)\decmulti\desc.chx \
+	$(ING_BUILD_CHARSETS)\elot437\desc.chx \
+	$(ING_BUILD_CHARSETS)\greek\desc.chx \
+	$(ING_BUILD_CHARSETS)\hebrew\desc.chx \
+	$(ING_BUILD_CHARSETS)\hproman8\desc.chx \
+	$(ING_BUILD_CHARSETS)\iso88591\desc.chx \
+	$(ING_BUILD_CHARSETS)\iso88592\desc.chx \
+	$(ING_BUILD_CHARSETS)\kanjieuc\desc.chx \
+	$(ING_BUILD_CHARSETS)\korean\desc.chx \
+	$(ING_BUILD_CHARSETS)\shiftjis\desc.chx \
+	$(ING_BUILD_CHARSETS)\slav852\desc.chx \
+	$(ING_BUILD_CHARSETS)\thai\desc.chx 
+
+files : $(CHXFILES)
+
+##
+## files
+##
+
+# chiu 10/21/93 - the output shows up in wrong place.  use MV to correct it.
+# chiu 10/21/93 - replaces 15 rules with a single rule
+
+$(CHXFILES) : $(CHSFILES)
+!IF [$(TEST) -d $(ING_BUILD_CHARSETS)\$(?B) != 0]
+	!mkdir $(ING_BUILD_CHARSETS)\$(?B)
+!ENDIF
+	!chset_in $(?B) $?
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $(ING_BUILD_CHARSETS)\$(?B)\desc.chx
+
+#$(ING_BUILD_CHARSETS)\arabic\desc.chx: $(ING_SRC_CHSFILES)\arabic.chs
+#	chset_in arabic $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\chineses\desc.chx: $(ING_SRC_CHSFILES)\chineses.chs
+#	chset_in chineses $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\chineset\desc.chx: $(ING_SRC_CHSFILES)\chineset.chs
+#	chset_in chineset $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\decmulti\desc.chx: $(ING_SRC_CHSFILES)\decmulti.chs
+#	chset_in decmulti $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\elot437\desc.chx: $(ING_SRC_CHSFILES)\elot437.chs
+#	chset_in elot437 $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\greek\desc.chx: $(ING_SRC_CHSFILES)\greek.chs
+#	chset_in greek $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\hebrew\desc.chx: $(ING_SRC_CHSFILES)\hebrew.chs
+#	chset_in hebrew $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\hproman8\desc.chx: $(ING_SRC_CHSFILES)\hproman8.chs
+#	chset_in hproman8 $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\iso88591\desc.chx: $(ING_SRC_CHSFILES)\iso88591.chs
+#	chset_in iso88591 $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\iso88592\desc.chx: $(ING_SRC_CHSFILES)\iso88592.chs
+#	chset_in iso88592 $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\kanjieuc\desc.chx: $(ING_SRC_CHSFILES)\kanjieuc.chs
+#	chset_in kanjieuc $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\korean\desc.chx: $(ING_SRC_CHSFILES)\korean.chs
+#	chset_in korean $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\shiftjis\desc.chx: $(ING_SRC_CHSFILES)\shiftjis.chs
+#	chset_in shiftjis $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\slav852\desc.chx: $(ING_SRC_CHSFILES)\slav852.chs
+#	chset_in slav852 $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@
+#
+#$(ING_BUILD_CHARSETS)\thai\desc.chx: $(ING_SRC_CHSFILES)\thai.chs
+#	chset_in thai $(?F) 
+#	$(MV) $(II_SYSTEM)\ingres\files\$(?B).chx $@

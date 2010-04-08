@@ -1,0 +1,117 @@
+# ifdef comment
+
+  Copyright (c) 1985, 2003 Ingres Corporation
+
+  Name:	utcom.def -	UT Compilation Rules Definition File.
+
+	This file is used to create variant "utcom.def" files for
+	different target systems.  It specifies transformation rules
+	used to compile various types of source files into objects.
+
+	BEWARE:  BEGIN EACH LINE WITH TAB ONLY - Not spaces
+		 ENSURE that there are no blank characters at the end of the
+		 lines.
+
+	Create the file via:
+
+		ccpp utcom.ccpp > utcom.def
+
+  History:
+        24-Jul-95 (fanra01)
+            Branched for DESKTOP.
+	18-oct-95 (tutto01)
+	    Added axp_wnt.
+        21-nov-1996 (canor01)
+            Add "%F" (used for extra flags by UTcompile_ex()) to compile
+            scripts.
+        08-jan-1997 (canor01)
+            Add DFLAGS (misc definitions), at the moment containing definitions
+            specific to Jasmine.  Also add command line for C++ programs.
+	09-jan-1997 (canor01)
+	    Change file extension for c++ files.
+	14-jan-1997 (canor01)
+	    Add -DJASMINE flag for Jasmine.
+	07-feb-1997 (canor01)
+	    Add -DMETHODHEADER flag for Jasmine.
+	05-jun-1997 (jamka50)
+	    Add /MD /Zi /Od /Fd%I.pdb flag for c and cpp
+	16-jun-1997 (canor01)
+	    Removed redirection of output for C and C++.  This interferes
+	    with redirection in UTcompile().
+	11-jun-1997 (carolina)
+	    Remove /Fd%I.pdb flag.  This debugging flag is not necessary
+	12-jun-1997 (carolina)
+	    Remove redirection of compiler output to iitmp.err.  This
+            caused problems with sending the compiler errors to a file
+            specified in UTcompile_ex.
+	19-jun-1997 (canor01)
+	    Add entry for '.cc' files (non-standard extension for C++
+	    files to give better portability for files from Solaris).
+	03-sep-1997 (Saeid)
+	    Add DFLAGS to c and cc compiler lines and ifdef JASMINE.
+	15-sep-1997 (canor01)
+	    Remove "/Zi" flag (for debugging info) from defaults.
+	17-dec-1997 (canor01)
+	    Quote pathnames to support embedded spaces.
+	28-jan-1998 (canor01)
+	    Use command processor to process compile command so that
+	    passed environment variables will be parsed.
+	22-dec-1999 (somsa01)
+	    Changed int_wnt and axp_wnt to int_w32 and axp_w32, respectively.
+	09-feb-2001 (somsa01)
+	    Added i64_win for NT_IA64.
+	05-jun-2001 (mcgem01)
+	    Use /nologo on NT to suppress compiler copyright messages.
+	12-Sep-2003 (fanra01)
+	    Bug 110802
+	    Add entry for pre-processing embedded fortran and
+	    compiling fortran source.
+	02-oct-2003 (somsa01)
+	    Added a64_win for NT_AMD64.
+	24-feb-2005 (rigka01) bug 113028, problem INGCBT544
+	    change /source:"%N.for" to /source:%I.for in df command of
+	    sf entry 
+	14-jun-2004 (somsa01)
+	    Cleaned up code for Open Source.
+	09-may-2005 (rigka01) bug 113952, problem INGCBT556
+	    change /libs:static to /libs:dll for df commands
+
+# endif comment
+
+# ifndef DFLAGS
+# define DFLAGS
+# define CMDPROC
+# endif /* DFLAGS */
+
+#if defined(int_w32) || defined(axp_w32) || defined(i64_win) || defined(a64_win)
+qc
+	cd %D & %Eeqc -c -i4 -n.qh -o.h %N.qc
+	cd %D & cl.exe -c /nologo /Fo"%O" %N.c
+	cd %D & del %N.c
+sc
+	%Eesqlc -i4 -f"%I.c" "%I.sc"
+	cl.exe -c /nologo /Fo"%O" "%I.c"
+	del "%I.c"
+qf
+	cd %D & %Eeqf -i4 -n.qh -o.h %N.qf
+	cd %D & df /nologo /compile_only -D_WIN32=1 -D_X86_=1 /name:as_is /iface:nomixed_str_len_arg /iface:cref /libs:dll /traceback /warn:nogeneral %F /object:"%O" /source:"%N.for"
+	cd %D & del %N.for
+sf
+	%Eesqlf -i4 -f"%I.for" "%I.sf"
+	df /nologo /compile_only -D_WIN32=1 -D_X86_=1 /name:as_is /iface:nomixed_str_len_arg /iface:cref /libs:dll /traceback /warn:nogeneral %F /object:"%O" /source:%I.for
+oslsql
+	%Eoslsql -f%N "%I.osq" -o%N.c
+	cl.exe -c /nologo /Fo"%O" "%I.c"
+fmc
+	cl.exe -c /nologo /Fo"%O" "%I.fmc"
+cpp
+	CMDPROC cl.exe -c /nologo DFLAGS %F /Fo"%O" "%I.cpp"
+c
+	CMDPROC cl.exe -c /nologo DFLAGS %F /Fo"%O" "%I.c"
+cc
+	CMDPROC cl.exe -c /nologo /TP DFLAGS %F /Fo"%O" "%I.cc"
+for
+	df /nologo /compile_only -D_WIN32=1 -D_X86_=1 /name:as_is /iface:nomixed_str_len_arg /iface:cref /libs:dll /traceback /warn:nogeneral %F /object:"%O" /source:"%I.for"
+f
+	df /nologo /compile_only -D_WIN32=1 -D_X86_=1 /name:as_is /iface:nomixed_str_len_arg /iface:cref /libs:dll /traceback /warn:nogeneral %F /object:"%O" /source:"%I.f"
+#endif  /* int_w32, axp_w32, i64_win, a64_win */

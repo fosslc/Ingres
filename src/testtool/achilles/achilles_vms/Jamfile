@@ -1,0 +1,22 @@
+#
+# Jamfile file for testtool!achilles!achilles_vms
+#
+# History:
+#	10-feb-2005 (abbjo03)
+#	    Add accopier and valid_user as main programs.
+#       22-dec-2008 (stegr01)
+#           REmover syssrv.mar
+
+SubDir ING_SRC testtool achilles achilles_vms ;
+
+IISUBSYS testtool achilles achilles_vms ;
+
+IITOOLSEXE accopier : accopier.c ;
+IINEEDLIBS accopier : COMPATLIB ;
+
+IITOOLSEXE valid_user : valid_user.c ;
+IINEEDLIBS valid_user : COMPATLIB ;
+
+IILIBRARY ACHILLESLIB : readfile.c logentry.c alrmhdlr.c
+	accompat.c ;
+

@@ -1,0 +1,11 @@
+#
+# MANIFEST file for tools!port!hdr
+#
+#	04-nov-2004 (abbjo03)
+#	    Change to build this on VMS too.
+#
+
+IISUBSYS tools port hdr_unix_vms ;
+
+IIDEFAULT default.h ;
+IIGENERIC generic.h ;

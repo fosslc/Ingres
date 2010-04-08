@@ -1,0 +1,14 @@
+<SCRIPT language="JavaScript">
+			<!-- #ICE REPEAT FUNCTION=`user?action=:action&user_id=:id&user_name=:name&user_password1=:pass1&user_password2=:pass2&user_dbuser=:dbuser&user_comment=:com&user_administration=:fadm&user_security=:fsec&user_unit=:funit&user_timeout=:timeout&user_monitor=:fmonitor&user_authtype=:authtype`
+					 HTML=`
+			top.Main.item:action(2, 't', 3, 'u', :user_id, ':user_name', '<!-- #ICE INCLUDE=``icon_user.gif`` -->', 'BLACK', 'secUser.html?user=:user_id')
+			if (':action' == 'insert')
+			{
+				top.Main.iteminsert(3, 'u', :user_id, 'uc', :user_id, 'database connection', '<!-- #ICE INCLUDE=``icon_dbs.gif`` -->', 'GRAY', 'secUserConns.html?user=:user_id', 'yes')
+				top.Main.iteminsert(3, 'u', :user_id, 'ur', :user_id, 'roles', '<!-- #ICE INCLUDE=``icon_roles.gif`` -->', 'GRAY', 'secUserRoles.html?user=:user_id', 'yes')
+			}`
+			-->
+			top.Main.refresh()
+</SCRIPT>
+
+<!-- #ICE REPEAT INCLUDE=`result.html?submit=&cancel=&object=user` -->

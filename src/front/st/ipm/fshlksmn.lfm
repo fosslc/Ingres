@@ -1,0 +1,38 @@
+COPYFORM:	6.4	1992_06_01 19:14:02 GMT  
+FORM:	fshowlksummno	locking system summary NON VAXCLUSTER	 
+	78	20	0	0	26	0	7	9	0	0	0	0	0	0	0	26
+FIELD:
+	0	lkbs_per_xact	30	4	0	8	1	27	18	1	8	0	19	Locks/Transaction:	0	0	0	0	512	0	0		-i8			0	0
+	1	current_time	3	12	0	8	2	12	2	46	8	1	2	Current Time	0	0	0	16779264	512	0	0		d"16:05:06"			0	1
+	2	start_time	3	12	0	8	2	13	2	61	8	1	2	Starting Time	0	0	0	16779264	512	0	0		d"16:05:06"			0	2
+	3	createlst	30	4	0	8	1	17	5	2	8	0	9	Created:	0	0	0	0	512	0	0		+i8			0	3
+	4	destroy	30	4	0	8	1	18	6	1	8	0	10	Released:	0	0	0	0	512	0	0		+i8			0	4
+	5	llbs_inuse	30	4	0	8	1	16	5	24	8	0	8	In use:	0	0	0	256	512	0	0		+i8			0	5
+	6	llbs_remain	30	4	0	8	1	19	6	21	8	0	11	Remaining:	0	0	0	256	512	0	0		+i8			0	6
+	7	llb_size	30	4	0	8	1	25	7	15	8	0	17	Total available:	0	0	0	256	512	0	0		+i8			0	7
+	8	lkb_hash_size	30	4	0	6	1	12	6	44	6	0	6	Lock:	0	0	0	0	512	0	0		-i6			0	8
+	9	rsb_hash_size	30	4	0	6	1	16	6	59	6	0	10	Resource:	0	0	0	0	512	0	0		-i6			0	9
+	10	rsbs_inuse	30	4	0	8	1	26	9	51	8	0	18	Resources in use:	0	0	0	0	512	0	0		+i8			0	10
+	11	request	30	4	0	8	1	19	11	4	8	0	11	Requested:	0	0	0	0	512	0	0		+i8			0	11
+	12	re_request	30	4	0	8	1	22	12	1	8	0	14	Re-requested:	0	0	0	0	512	0	0		+i8			0	12
+	13	convert	30	4	0	8	1	19	13	4	8	0	11	Converted:	0	0	0	0	512	0	0		+i8			0	13
+	14	release	30	4	0	8	1	18	11	28	8	0	10	Released:	0	0	0	0	512	0	0		+i8			0	14
+	15	cancel	30	4	0	8	1	19	12	27	8	0	11	Cancelled:	0	0	0	0	512	0	0		+i8			0	15
+	16	escalate	30	4	0	8	1	19	13	27	8	0	11	Escalated:	0	0	0	256	512	0	0		+i8			0	16
+	17	lkbs_inuse	30	4	0	8	1	16	11	61	8	0	8	In use:	0	0	0	256	512	0	0		+i8			0	17
+	18	lkbs_remain	30	4	0	8	1	19	12	58	8	0	11	Remaining:	0	0	0	256	512	0	0		+i8			0	18
+	19	lkb_size	30	4	0	8	1	25	13	52	8	0	17	Total available:	0	0	0	256	512	0	0		+i8			0	19
+	20	dead_search	30	4	0	8	1	25	15	2	8	0	17	Deadlock search:	0	0	0	0	512	0	0		+i8			0	20
+	21	con_dead	30	4	0	8	1	26	16	1	8	0	18	Convert deadlock:	0	0	0	256	512	0	0		+i8			0	21
+	22	deadlock	30	4	0	8	1	18	15	32	8	0	10	Deadlock:	0	0	0	256	512	0	0		+i8			0	22
+	23	con_wait	30	4	0	8	1	22	15	55	8	0	14	Convert wait:	0	0	0	256	512	0	0		+i8			0	23
+	24	wait	30	4	0	8	1	19	16	58	8	0	11	Lock wait:	0	0	0	256	512	0	0		+i8			0	24
+	25	autorefresh	-21	25	0	22	1	35	0	41	22	0	13	Autorefresh:	0	0	0	16777216	512	0	0		c22			0	25
+TRIM:
+	0	4	5:41:0	1	0	0	0
+	0	10	10:78:2	1	0	0	0
+	1	0	INGRES IPM Locking System Summary	2048	0	0	0
+	9	4	Lock list information	0	0	0	0
+	31	10	Lock information	0	0	0	0
+	43	5	3:33:1	1	0	0	0
+	51	5	Hash table sizes	0	0	0	0

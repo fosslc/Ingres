@@ -1,0 +1,41 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Connection mode&previous=in.html&next=out.html` -->
+
+In order to create the connection using the options you specified, the following HTML syntax is used in the "Home" page.
+<p>
+<!-- #ICE REPEAT IF (`:basic` == `yes`)
+THEN=`
+<H4 CLASS="macro">
+&lt;FORM ACTION=":dll/<!-- #ICE REPEAT INCLUDE=``docLabel.html`` -->" METHOD="POST"&gt;
+<BLOCKQUOTE>
+&lt;INPUT TYPE=hidden NAME="ii_action" value="connect"&gt;<p>
+&lt;INPUT TYPE="SUBMIT" NAME="connect" ALT="Connect"&gt;
+</BLOCKQUOTE>
+&lt;/FORM&gt;
+</H4>
+<p>
+Reminder: Make sure HTTP Basic Authentication is set up correctly on the HTTP server!
+`
+ELSE=`
+<H4 CLASS="macro">
+&lt;FORM ACTION=":dll/<!-- #ICE REPEAT INCLUDE=``docLabel.html`` -->" METHOD="POST"&gt;
+<BLOCKQUOTE>
+&lt;INPUT TYPE=hidden NAME="ii_action" value="connect"&gt;<p>
+Name: &lt;INPUT SIZE=32 NAME="ii_userid"&gt;&lt;BR&gt;<p>
+Password: &lt;INPUT SIZE=32 TYPE=PASSWORD NAME="ii_password"&gt;&lt;BR&gt;<p>
+&lt;INPUT TYPE="SUBMIT" BORDER=0 NAME="connect" ALT="Connect"&gt;<p>
+</BLOCKQUOTE>
+&lt;/FORM&gt;
+</H4>
+`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

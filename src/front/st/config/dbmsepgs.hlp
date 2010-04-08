@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The blob extension table page size (blob_etab_page_size) of the dbms 
+  parameter is used during create table for tables having long datatypes.
+  Blob extension tables are created to hold the large object data.
+  Blob extension tables will be created with the blob etab page size
+  if it is a valid page size. If the blob etab page size is zero, blob
+  extension tables will be created with the same page size as the base table
+  page size.
+
+  The values for this parameter are 0, 2048(2K), 4096(4K), 8192(8K),
+  16384(16K), 32768(32K) and 65536(64K). The 64K option is not available
+  for the RMS gateway.
+
+  You must configure the corresponding cache in the dbms if you choose
+  a different value other than the default.
+
+  The default is 2048.

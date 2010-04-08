@@ -1,0 +1,23 @@
+		.title	CS_cactus_save
+;
+; History:
+;    14-jul-95 (dougb)
+;	Change routine type to "null" -- saving on useless prologue
+;	and epilogue.
+;
+; ---------------------------------------------------------------------------
+
+				$routine CS_cactus_save, kind=null
+
+				$linkage_section
+cscactusfp:		.address Cs_cactus_fp	; defined in CSHL.C
+
+				$code_section
+		.base	r27, $ls
+
+		ldq		r0, cscactusfp
+		stq		fp, (r0)	; store saved fp (of our caller) into an external variable
+
+		ret		r26
+
+		$end_routine	CS_cactus_save

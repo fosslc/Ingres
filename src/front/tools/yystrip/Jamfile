@@ -1,0 +1,16 @@
+#
+# Jamfile file for front!tools!yystrip
+#
+# 20-Aug-2009 (horda03)
+#    ystrip built on VMS without a .LOT file
+#
+
+SubDir ING_SRC front tools yystrip ;
+
+IISUBSYS front tools yystrip ;
+
+
+VMS_NO_LOT yystrip ;
+IIBINEXE yystrip : yystrip.c ;
+IINEEDLIBS yystrip :  COMPATLIB ;
+

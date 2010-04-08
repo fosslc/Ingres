@@ -1,0 +1,31 @@
+#
+# Jamfile file for testtool!mts!mts
+#
+# History:
+#	09-feb-2005 (abbjo03)
+#	    Modifications to build on VMS.
+
+SubDir ING_SRC testtool mts mts ;
+
+IISUBSYS testtool mts mts ;
+
+if $(VMS)
+{
+    MTSLIBS = LIBQLIB AFELIB LIBQGCALIB GCFLIB UGLIB ADFLIB CUFLIB COMPATLIB ;
+}
+else
+{
+    MTSLIBS = LIBINGRES ;
+}
+
+IITOOLSEXE mtsslave : mtsslave.sc ;
+IINEEDLIBS mtsslave : MTSLIB $(MTSLIBS) ;
+
+IITOOLSEXE mtscoord : mtscoord.sc ;
+IINEEDLIBS mtscoord : MTSLIB $(MTSLIBS) ;
+
+IITOOLSEXE getseed : getseed.sc ;
+IINEEDLIBS getseed : MTSLIB $(MTSLIBS) ;
+
+IILIBRARY MTSLIB : trl.sc merr.sc ;
+

@@ -1,0 +1,109 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+/* Create a table with one column of type intlist(5) */
+
+drop table ilist \g
+create table ilist (list intlist(5));
+help ilist;
+\p\g
+/* Place some values into this table -- these are converted to intlist
+	from character datatypes */
+
+insert into ilist values ('{1,2,3,4,5}');
+insert into ilist values ('{100, 200, 400, 800}');
+insert into ilist values ('{-2, -3}');
+insert into ilist values ('{-2, 3}');
+
+\p \g
+
+/* Also use the intlist function to convert a single integer into a list */
+insert into ilist values (intlist(1000));
+\p\g
+
+/* Display the resulting list on the screen */
+
+select * from ilist;
+\p\g
+/* Using the element function, print the first element in each list */
+
+select first = element(list, 1) from ilist;
+
+\p\g
+/* Determine the length of each list using the INGRES length()
+** function which has been enhanced to determine the lengths of
+** integer lists 
+*/
+select length = length(list), list from ilist;
+
+\p\g
+/* do the same, selecting only lists of length 2 */
+
+select length = length(list), list from ilist where length(list) = 2;
+
+\p\g
+
+/* Find the list which has 100 as its first member */
+
+select * from ilist where element(list, 1) = 100;
+\p\g
+
+/* Use keying based on lists */
+
+modify ilist to btree;
+\p\g
+/* With BTREE's, lists are stored in sorted order */
+
+select * from ilist;
+\p\g
+/* Note that list is used as a key */
+/* Also note that spaces make no difference in the format */
+set qep;
+select * from ilist where list = '{1,2,3,4,   5}';
+
+\p\g
+set noqep;
+
+select * from ilist where list > '{1,2,3,4,        5}';
+\p\g
+
+/* Find that row whose last element is 1000 */
+
+select * from ilist where element(list, length(list)) = 1000;
+\p\g
+
+/* Find the total of the lists -- this uses the new function total */
+
+select list, total = total(list) from ilist;
+\p\g
+/* Find those lists whose totals are >= 1000 */
+
+select list from ilist where total(list) >= 1000;
+\p\g
+/* And, the others */
+
+select list from ilist where total(list) < 1000;
+
+\p\g
+
+/* Demonstrate use of the + operator to concatenate lists */
+
+update ilist
+
+	set list = list + '{2000, 3000}'
+
+		where list = '{1000}';
+select * from ilist;
+\p\g
+
+/*
+** The locate() function determines the index of a element of a list
+** or zero if the element is not contained in the list.
+**
+** Find the list which contains the value 200
+*/
+
+select ind = locate(list, 200), list, value = element(list, locate(list, 200))
+	from ilist
+    where locate(list, 200) != 0;
+\p\g

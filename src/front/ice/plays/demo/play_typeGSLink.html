@@ -1,0 +1,48 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Graphical Switched Hyper Link to Shakespeare's Plays by type</title>
+</head>
+<body>
+<h1>Graphical Switched Hyper Link to Shakespeare's Plays by type</h1>
+
+<!-- to do: fill in with select from tool, use type UNFORMATTED
+            and then add HTML
+            to build hypertext links to this address:
+            "/ice-bin/oiice.<ext>/playgroup/plays[play_typeLinkSubSet.html]"
+            pass the type of the play as the
+	    variable to this page. 
+	    
+	    Use the appropriate image for the type
+	    of play (in the sub-directory
+	    images). Remember to add alternate text
+	    to the image.
+-->
+
+<!-- #ICE REPEAT INCLUDE=`plays[play_TxnCndCmt_h.html]` -->
+
+<!-- #ICE REPEAT
+	DATABASE = `icetutor`
+		SQL=`select distinct type from plays`
+	TRANSACTION=`t_type`
+        CURSOR=`c_type`
+        ROWS=`10`
+        TYPE=`UNFORMATTED`
+	HTML=`<p><!--
+		#ICE SWITCH=``:type``
+		CASE ``comedy``=``<a href=/ice-bin/oiice.:http_api_ext/playgroup/plays[play_typeLinkSubSet.html]?type=:type><img src="/ice-bin/oiice.:http_api_ext/playgroup/plays[comedy.gif]" alt="Laugh at  the Comedy plays"></a>``
+		CASE ``tragedy``=``<a href=/ice-bin/oiice.:http_api_ext/playgroup/plays[play_typeLinkSubSet.html]?type=:type><img src="/ice-bin/oiice.:http_api_ext/playgroup/plays[tragedy.gif]" alt="Be moved by the tragedy plays"></a>``
+		CASE ``history``=``<a href=/ice-bin/oiice.:http_api_ext/playgroup/plays[play_typeLinkSubSet.html]?type=:type><img src="/ice-bin/oiice.:http_api_ext/playgroup/plays[history.gif]" alt="Look back at the history plays"></a>``
+	-->`
+        -->
+<p>
+<!-- #ICE COMMIT=`t_type` -->
+
+<!-- #ICE DECLARE=`session.e_return=play_typeGSLink.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

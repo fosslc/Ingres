@@ -1,0 +1,94 @@
+#
+# Jamfile file for front!misc!ingcntrl
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front misc ingcntrl ;
+
+IISUBSYS front misc ingcntrl ;
+
+
+IIBINEXE unextenddb : unexdbmain.sc ;
+IINEEDLIBS unextenddb :  INGCNTRLLIB GNLIB MALLOCLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS unextenddb : II_copyright malloc ;
+
+IIBINEXE extenddb : exdbmain.sc ;
+IINEEDLIBS extenddb :  INGCNTRLLIB GNLIB MALLOCLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS extenddb : II_copyright malloc ;
+
+IIBINEXE ingcntrl : ingcntrl.qsc ;
+IINEEDLIBS ingcntrl :  INGCNTRLLIB MALLOCLIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS ingcntrl : II_copyright malloc ;
+
+IIBINSH accessdb : accessdb.sh ;
+IIBINSH catalogdb : catalogdb.sh ;
+
+IIMSGHDR eric.msg ;
+
+IIQSHHDR ictables.h : ictables.qsh ;
+
+IIFORM catamenu.frm ;
+IIFORM ctrlmenu.frm ;
+IIFORM dbacc.frm ;
+IIFORM dbfrm.frm ;
+IIFORM dbtblfrm.frm ;
+IIFORM extdb.frm ;
+IIFORM extenddb.frm ;
+IIFORM extens.frm ;
+IIFORM icdbpacc.frm ;
+IIFORM icinsacc.frm ;
+IIFORM location.frm ;
+IIFORM loclist.frm ;
+IIFORM locnew.frm ;
+IIFORM lpick.frm ;
+IIFORM nlocatio.frm ;
+IIFORM prvfrm.frm ;
+IIFORM pwdfrm.frm ;
+IIFORM usrfrm.frm ;
+IIFORM usrtbfrm.frm ;
+
+File $(INGMSG)$(DFS)icaccgr.hlp : icaccgr.hlp ;
+File $(INGMSG)$(DFS)icauthhi.hlp : icauthhi.hlp ;
+File $(INGMSG)$(DFS)iccats.hlp : iccats.hlp ;
+File $(INGMSG)$(DFS)icdbacc.hlp : icdbacc.hlp ;
+File $(INGMSG)$(DFS)icdbace.hlp : icdbace.hlp ;
+File $(INGMSG)$(DFS)icdbfrm.hlp : icdbfrm.hlp ;
+File $(INGMSG)$(DFS)icdblst.hlp : icdblst.hlp ;
+File $(INGMSG)$(DFS)icdbpacc.hlp : icdbpacc.hlp ;
+File $(INGMSG)$(DFS)icdbtbl.hlp : icdbtbl.hlp ;
+File $(INGMSG)$(DFS)icdefacc.hlp : icdefacc.hlp ;
+File $(INGMSG)$(DFS)icelocfm.hlp : icelocfm.hlp ;
+File $(INGMSG)$(DFS)icelstfr.hlp : icelstfr.hlp ;
+File $(INGMSG)$(DFS)iceusrfr.hlp : iceusrfr.hlp ;
+File $(INGMSG)$(DFS)icext.hlp : icext.hlp ;
+File $(INGMSG)$(DFS)icextfrm.hlp : icextfrm.hlp ;
+File $(INGMSG)$(DFS)icgrprol.hlp : icgrprol.hlp ;
+File $(INGMSG)$(DFS)icinsacc.hlp : icinsacc.hlp ;
+File $(INGMSG)$(DFS)iciwaccg.hlp : iciwaccg.hlp ;
+File $(INGMSG)$(DFS)iclpick.hlp : iclpick.hlp ;
+File $(INGMSG)$(DFS)iclstfrm.hlp : iclstfrm.hlp ;
+File $(INGMSG)$(DFS)icmgr.hlp : icmgr.hlp ;
+File $(INGMSG)$(DFS)icnlocfm.hlp : icnlocfm.hlp ;
+File $(INGMSG)$(DFS)icprivs.hlp : icprivs.hlp ;
+File $(INGMSG)$(DFS)icrextfr.hlp : icrextfr.hlp ;
+File $(INGMSG)$(DFS)icrlocfm.hlp : icrlocfm.hlp ;
+File $(INGMSG)$(DFS)icroacc.hlp : icroacc.hlp ;
+File $(INGMSG)$(DFS)icrodbfr.hlp : icrodbfr.hlp ;
+File $(INGMSG)$(DFS)icrusrfr.hlp : icrusrfr.hlp ;
+File $(INGMSG)$(DFS)icsavend.hlp : icsavend.hlp ;
+File $(INGMSG)$(DFS)icucats.hlp : icucats.hlp ;
+File $(INGMSG)$(DFS)icusr.hlp : icusr.hlp ;
+File $(INGMSG)$(DFS)icusrfrm.hlp : icusrfrm.hlp ;
+File $(INGMSG)$(DFS)icusrpwd.hlp : icusrpwd.hlp ;
+File $(INGMSG)$(DFS)icusrtbl.hlp : icusrtbl.hlp ;
+
+IILIBRARY INGCNTRLLIB : usertbl.qsc user.qsc stat.qsc
+	selects.qsc locmenu.qsc listloc.qsc instacc.qsc futil.qsc
+	dbpubacc.qsc db.qsc ctrl.qsc credbloc.qsc addlmenu.qsc util.c
+	ingdata.c ;
+

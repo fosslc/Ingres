@@ -1,0 +1,212 @@
+/*
+**      Copyright (c) 2004 Ingres Corporation
+*/
+#include	<compat.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<st.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<er.h>
+#include	<erfe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include        <stdprmpt.h>
+#include        <generr.h>
+#include	"eric.h"
+#include	"global.h"
+
+GLOBALREF       bool    Mgr;
+GLOBALREF bool  IiicPrivSysadmin;  /* TRUE if user has SYSTEM_ADMIN privilege */
+
+static VOID list_init();
+
+## static       char    Loclist_frm[]      = ERx("loclist");
+## static       char    Listing_tbl[]     = ERx("listing");
+## static 	char	*Create_menuitem;
+## static 	char	*Examine_menuitem;
+## static 	char	*Delete_menuitem;
+## static 	char	Loclist_title[80] = ERx("");
+
+    EXEC SQL INCLUDE SQLCA ;
+    EXEC SQL WHENEVER SQLERROR CALL SQLPRINT ;
+
+/*{
+** Name:	loclst_form -- listing of all locationnames and related stuff
+**
+** History:
+**	18-may-89 (mgw)
+**		Put string into ERx() call for internationalization
+** 	15-Dec-89 (pete) porting change 90971 - Form will core dump on PS/2 AIX
+**		if compiled with optimization (added "NO_OPTIM" line above).
+**	19-nov-90 (pete)
+**		Add Top,Bottom,Find FRSkeys.
+**	26-Aug-1993 (fredv)
+**		included <st.h>.
+**	20-sep-1993 (robf)
+**              Query standard catalogs (iilocation_info) not internal catalog
+**	        (iilocations). This allows users without QUERY_SYSCAT priv
+**	        to use accessdb/catalogdb
+**	05-may-1995 (harpa06)
+**		Fixed the problem of not being able to delete delimited
+**		location names.
+**	30-may-1995 (harpa06)
+**		If a user is trying to delete a location and it is being used
+**		by one or more databases, different error messages for the
+**		same illegal operation would be reported to the user. Now,
+**		only ONE error message is reported to the user if ANY location
+**		is used by one of more databases.
+**	10-may-1999 (walro03)
+**		Remove obsolete version string ps2_us5.
+*/
+
+loclst_form()
+## {
+EXEC SQL BEGIN DECLARE SECTION;
+## char	lname[FE_MAXNAME + 1];
+
+EXEC SQL END DECLARE SECTION;
+
+
+	if(Loclist_title[0] == EOS)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), Loclist_frm) != OK)
+			IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_FATAL, 0);
+
+		if (Mgr)
+		{
+		    STlcopy(ERget(S_IC0084_Accessdb_Loc_Info), Loclist_title,
+				sizeof(Loclist_title));
+		}
+		else
+		{
+		    STlcopy(ERget(S_IC0085_Catalogdb_Loc_Info), Loclist_title,
+				sizeof(Loclist_title));
+		}
+
+		if (Mgr && IiicPrivSysadmin)
+		{
+		    Create_menuitem = ERget(FE_Create);
+		    Examine_menuitem = ERget(FE_Edit);
+		    Delete_menuitem = ERget(FE_Delete);
+		}
+		else
+		{
+		    Examine_menuitem = ERget(FE_Examine);
+		    Create_menuitem = ERx("");
+		    Delete_menuitem = ERx("");
+		}
+	}
+
+##	DISPLAY Loclist_frm READ
+##	INITIALIZE (#title = Loclist_title)
+##	{
+	    list_init();
+##	}
+
+##      ACTIVATE MENUITEM Create_menuitem:
+##      {
+		if (addlocform() == OK)
+			list_init();
+##      }
+
+##      ACTIVATE MENUITEM Examine_menuitem:
+##      {
+##              GETROW Loclist_frm Listing_tbl (lname = locname);
+                if ( STtrmwhite(lname) > 0
+                     && editlocform(lname) == OK )
+		{
+			list_init();
+		}
+##      }
+
+##      ACTIVATE MENUITEM Delete_menuitem:
+##      {
+	    EXEC SQL BEGIN DECLARE SECTION;
+		char sbuffer[512];
+	    EXEC SQL END DECLARE SECTION;
+
+	    char qlname[FE_MAXNAME + 1];
+
+##          GETROW Loclist_frm Listing_tbl (lname = locname);
+	    if ( STtrmwhite(lname) > 0 && lname[0] != EOS )
+	    {
+		if (CONFCH_YES != IIUFccConfirmChoice(CONF_DELETE,
+			lname, ERget(F_IC0021_Location), NULL, NULL))
+##		    RESUME NEXT
+
+	        STpolycat(3, ERx("\""), lname, ERx("\""), qlname);
+		STpolycat(2, ERx("DROP LOCATION "), qlname, sbuffer);
+		EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+		if (sqlca.sqlcode >= 0 || sqlca.sqlcode == (-E_GE0032_WARNING)) 
+##		    DELETEROW Loclist_frm Listing_tbl
+	    }
+
+##	    RESUME NEXT
+
+##      }
+
+##	ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0101_ExplKeyHelp),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey1 (VALIDATE =0, ACTIVATE = 0):
+##	{
+	    if (Mgr)
+		FEhelp(ERx("iclstfrm.hlp"), ERget(S_IC003D_Location_Listing));
+	    else
+		FEhelp(ERx("icelstfr.hlp"), ERget(S_IC003D_Location_Listing));
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey3 (VALIDATE =0, ACTIVATE = 0):
+##	{
+##		BREAKDISPLAY
+##	}
+
+##      ACTIVATE FRSkey7
+##          (EXPL = ERget(F_FE0104_ExplFind)) /* ERget(FE_Find) */
+##      {
+            FEtabfnd(Loclist_frm, Listing_tbl);
+##      }
+
+##      ACTIVATE FRSkey5
+##          (EXPL = ERget(F_FE0105_ExplTop))  /* ERget(FE_Top) */
+##      {
+##          SCROLL Loclist_frm Listing_tbl TO 1
+##      }
+
+##      ACTIVATE FRSkey6
+##          (EXPL = ERget(F_FE0106_ExplBottom)) /*ERget(FE_Bottom) */
+##      {
+##          SCROLL Loclist_frm Listing_tbl TO END
+##      }
+##	FINALIZE
+## }
+
+
+/* LIST_INIT -- initialize listing of locations */
+
+static VOID
+list_init()
+## {
+EXEC SQL BEGIN DECLARE SECTION;
+##	char	loc_name[DB_MAXNAME+1];
+##	char	loc_area[DB_AREA_MAX+1];
+EXEC SQL END DECLARE SECTION;
+
+##	INITTABLE Loclist_frm Listing_tbl READ
+
+	/* get information into form */
+
+    	EXEC SQL SELECT location_name, location_area
+		INTO :loc_name, :loc_area
+		FROM iilocation_info
+		ORDER BY location_name;
+	EXEC SQL BEGIN;
+	{
+##		LOADTABLE Loclist_frm Listing_tbl (
+##		    locname = loc_name,
+##		    area = loc_area
+##		)
+	}
+	EXEC SQL END;
+## }
+

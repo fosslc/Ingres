@@ -1,0 +1,199 @@
+#
+#  Copyright (c) 2009 Ingres Corporation
+#
+#  Name: Jamdefs.hyb86_lnx -- Variable definitions for hybrid capable
+#	x86 or x86_64 Linux
+#
+#  Description:
+#       Platform specific variable definitions for hybrid capable Linux.
+#	This includes int_lnx, a64_lnx.  It can also be used for non-hybrid
+#	x86 Linux builds, such as int_rpl, although a wrapper will have to
+#	massage the resulting variables into non-hybrid form.
+#
+# History:
+#   06-Oct-2004 (hanje04)
+#	Define ICE_EXT=so
+#	Add header
+#   07-Jan-2005 (hanje04)
+#	 Fix up for GA build
+#   09-Mar-2005 (hanje04)
+#	Make AMD64 Linux a reverse hybrid build. To revert to a regular build
+#	unset VERS32
+#   26-Sep-2005 (toumi01)
+#	Added two new variables extension_config and platform_config.
+#	extension_config is equal to config_string on most platforms.
+#	platform_config is a GV_ENV value from gv.h in most cases.
+#   19-Oct-2005 (hanje04)
+#	Remove -fwritable-strings, not supported in gcc 4.0
+#   31-May-2005 (hanje04)
+#	NPTL is now the default Linux build
+#   21-Sep-2006 (toumi01)
+#	Define C++ like CXX to invoke g++ so that this file includes
+#	all the settings needed to override the compiler version.
+#   16-Oct-2006 (hanal04) Bug 116866
+#       Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#       NOOPTIM does not strip this when explicitly set.
+#   21-Mar-2007 (hanje04)
+#	SIR 117044
+#	Define BUILD_GTK_GUI and BUILD_GTK_INST so they are correctly
+#	built on this platform. They are now excluded by default.
+#    04-Apr-2007 (hanje04)
+#	SIR 117044
+#	Correct variable name, BUILD_PACKMAN should be BUILD_GTK_GUI.
+#    02-Oct-2007 (hanje04 for kschendel)
+#	BUG 118162
+#	Add -fno-omit-frame-pointer so that stack backtraces work.
+#	See cshl.c (clf/cs_unix), CS_lnx_stack_dump for more info.
+#        8-Oct-2007 (hanal04) Bug 119262
+#           Added archive iimerge.a alternative to shared library server.
+#    01-Feb-2008 (rapma01)
+#       BUG 119858
+#       Added linking to rtlib -lrt neccessary for using
+#       clock_gettime routine.    
+#       25-Jun-2008 (rajus01) SIR 120420, SD issue 116370
+#           Added PAMLIB to resolve symbols defined in PAM library.
+#    09-Sep-2008 (crogr01)
+#       BUG 120876
+#       Prevent the GUI installer from building on 64 bit Debian Linux and
+#       derivatives.
+#	19-Jun-2009 (kschendel) SIR 122138
+#	    Make a common platform Jamdefs for hybrid-capable linux on
+#	    x86 or x86_64.  Rework the hybridization scheme: this platform
+#	    Jamdefs produces xxx32 and xxx64 definitions, which the caller
+#	    selects along with BUILD_ARCH.
+#	16-Jul-2009 (bonro01)
+#	    These gcc 4.x updates where not intended to be submitted
+#	    yet.  Remove -O2 -fno-strict-aliasing -fwrapv
+#	17-Jul-2009 (kschendel)
+#	    The Datallegro edit history wasn't supposed to be there either.
+#	    Delete it.
+#	11-Aug-2009 (kschendel) SIR 122318
+#	    19-Jun edit broke large-file-awareness on 32-bit;  fix.
+#	    Delete even more Datallegro stuff that isn't supposed to be
+#	    in here (yet).
+#	11-Jan-2010 (bonro01)
+#	    Replace -lgcc_s with -shared-libgcc in LDLIBMACH32.
+#	    The RHEL4 gcc 32bit build environmnt does not have a 32bit shared
+#	    lib called gcc_s, it is called gcc_s_32.  In order to support
+#	    all RHEL releases we will use the gcc standard parameter of
+#	    -shared-libgcc which supplies the correct version.
+#	20-Feb-2010 (hanje04)
+#	    SIR 123296
+#	    Add support for LSB builds
+#	24-Mar-2010 (hanje04)
+#	    SIR 123296
+#	    Add LDORIGIN for LSB builds. Probably not the final setting but it
+#	    works for now
+#	28-Mar-2010 (hanje04)
+#	    SIR 123296
+#	    Remove debug flags, should not have been submitted.
+#
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG = -DXP_UNIX ;
+APACHE_API_FLAG = -DLINUX=2 ;
+
+VERS32	= "int_lnx" ;
+VERS64  = "a64_lnx" ;
+AS32 = $(AS) ;
+AS64 = $(AS) ;
+LD32 = $(LD) ;
+LD64 = $(LD) ;
+CCLD32 = $(CCLD) ;
+CCLD64 = $(CCLD) ;
+ASMACH32 = "--32" ;
+ASMACH64 = "--64" ;
+CD      = "cd" ;
+CC      default = "cc" ;
+CCDEBUG = "-g" ;
+CPP     default = "/lib/cpp" ;
+CCMACH32 = -DBUILD_ARCH32 -m32 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE ;
+CCMACH64 = -DBUILD_ARCH64 -m64 -fsigned-char -fno-strength-reduce -fno-omit-frame-pointer -Wno-write-strings -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
+
+# The -rdynamic here is probably not needed, but doesn't hurt.
+CCLDMACH32 = -m32 -rdynamic ;	# appropriate LDORIGIN gets tacked on
+CCLDMACH64 = -m64 -rdynamic ;
+
+# Note that this LDORIGIN is used for various distributed binaries,
+# but *NOT* for the dbms server.  The DBMS server is linked with iilink,
+# which uses an LDSRVORIGIN variable defined via mkdefault.sh via iisysdep.
+# Server-shared-library servers need to use an rpath of just $ORIGIN
+# for set-uid reasons, so there are various hoops;  but iilink takes
+# care of all that.
+if $(LSB_BUILD) = "TRUE"
+{
+    LDORIGIN = "-Wl,-rpath,/usr/lib/ingres" ;
+    LDORIGINLP32 = "" ;
+    LDORIGINLP64 = "" ;
+}
+else
+{
+    LDORIGIN = -Wl,-rpath,'$ORIGIN/../lib' ;
+    LDORIGINLP32 = -Wl,-rpath,'$ORIGIN/../../lib/lp32' ;
+    LDORIGINLP64 = -Wl,-rpath,'$ORIGIN/../../lib/lp64' ;
+}
+
+CCSHLDMACH32 = "-m32 -shared" ;
+CCSHLDMACH64 = "-m64 -shared" ;
+CCLDSERVER32 = "-melf_i386" ;
+CCLDSERVER64 = "-melf_x86_64" ;
+CCPICFLAG = -fPIC ;
+SLSFX = so ;
+LIBSFX = a ;
+OBJSFX = o ;
+MWSLSFX = so ;
+CGISFX = cgi ;
+LDLIBPATH64 = /usr/local/ssl/lib /lib64 /usr/lib64 /usr/local/lib64 ;
+LDLIBPATH32 = /lib /usr/lib /usr/local/lib ;
+LIBMACH = ;
+LDLIBMACH64 = -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s ;
+LDLIBMACH32 = -lpthread -lrt -lm -lc -lcrypt -ldl -shared-libgcc ;
+LD_ICE_FLAGS = ;
+ICE_EXT               = so ;
+CGI_EXT               = cgi ;
+OPTIM           = "" ;
+
+# Allow override of IIOPTIM in vers.
+# gcc 4.x can do -O2 -fno-strict-aliasing -fwrapv
+# -fno-strict-aliasing is required because Ingres violates the strictest
+# C aliasing rules in multiple places.  -fwrapv is needed for the ABF hashers,
+# which generate an overflowing int from an unsigned char sum.
+# Do not omit either option if -O2 is used, or bad code is generated.
+
+IIOPTIM         ?= "-O" ;
+NOOPTIM       ?= "-O0" ;
+IIL1OPTIM       ?= "-O1" ;
+SHELLHEADER = "#!/bin/bash" ;
+LEX = flex ;
+BSD42 default = -DBSD42 ;
+DIRENT default = -DDIRENT ;
+DIRFUNC default = -DDIRFUNC ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 default = -DSYS5 ;
+SYSGRAPHLIB = ;
+SYMLINK = test -h ;
+CXX = g++ ;
+C++ = g++ ;
+UNDEFFLAG  = "-u " ;
+CXX_DEFS = ;
+XERC_DEFS = -O -DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET ;
+
+if $(BUILD_ARCH) = "64" || $(BUILD_ARCH) = "64+32"
+{ 
+    DBMS_STACKSIZE = 262144 ;
+    platform_string = "NPTL Linux x86_64" ;
+}
+else
+{
+    DBMS_STACKSIZE = 131072 ;
+    platform_string = "NPTL Intel Linux" ;
+}
+extension_string = $(config_string)_nptl ;
+if $(OSVER) != DEBIAN
+{
+    BUILD_GTK_INST ?= TRUE ;
+}
+BUILD_GTK_GUI ?= TRUE ;
+PAMLIB ?= TRUE ;

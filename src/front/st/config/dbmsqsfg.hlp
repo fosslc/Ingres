@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The qsf_guideline resource controls the default size of the Query Storage
+  Facility (QSF) memory pool.  The possible values are:
+
+  small -  A low-memory setting suitable for lightly used installations
+           that do not use complex queries, views, or database procedures.
+
+  medium - An intermediate setting that allows for all but the most complex
+           queries, and is suitable for moderate user loads.
+
+  large -  A setting suitable for installations with many complex queries
+           and hundreds of users.
+
+  huge -   A very large memory setting, appropriate for dedicated servers
+	   with lots of memory supporting hundreds of users.
+
+  The qsf_guideline resource only controls the QSF memory default.
+  The qsf_memory setting can still be tuned to best suit the installation.
+
+
+  The default is "medium".

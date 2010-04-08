@@ -1,0 +1,56 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* UNIX FRS mapping file for VT100 with 4 Function Keys and Numeric Keypad */
+
+/* Menu Key */
+	menu = pf1 (PF1)
+
+/* Help facility */
+	frskey1 = pf2 (PF2)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (PF3)
+
+/* Exit the system */
+	frskey2 = pf4 (PF4)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Move cursor to next field - defined to controlI in frs.map */
+
+/* Move cursor to previous field - defined to controlP in frs.map */
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field - defined to controlR in frs.map */
+
+/* Switch between insert and overstrike mode - defined to controlE in frs.map */
+
+/* Redraw the screen - defined to controlW in frs.map */
+
+/* Delete the character under the cursor - defined to controlD in frs.map */
+
+/* Delete character immediately to left of cursor */
+/* defined to controlDEL in frs.map */
+
+/* Start default text editor on field - defined to controlV in frs.map */
+
+/* Move to first column of next row in table field */
+/* defined to controlN in frs.map */
+
+/* Clear out the rest of the field - defined to controlX in frs.map */
+
+/* Clear out the rest of the field, and move to next field */
+/* defined to controlM in frs.map */
+
+/* Auto-duplicate value while in fill mode - defined to controlA in frs.map */

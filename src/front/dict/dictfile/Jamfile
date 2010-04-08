@@ -1,0 +1,20 @@
+#
+# Jamfile file for front!dict!dictfile
+#
+
+SubDir ING_SRC front dict dictfile ;
+
+IISUBSYS front dict dictfile ;
+
+IIDFILES dictfiles : ad101cin.cre ad101mgw.mfy ad101min.mfy
+	ad102cin.cre ad102mgw.mfy ad102min.mfy ad103cin.cre
+	ad103mgw.mfy ad103min.mfy ad104cin.cre ad104mgw.mfy
+	ad104min.mfy ad105cin.cre ad105mgw.mfy ad105min.mfy 
+	ad201cin.cre ad201mgw.mfy ad201min.mfy
+	ad301cin.cre ad301mgw.mfy ad301min.mfy c6101cin.cre
+	c6101mgw.mfy c6101min.mfy cor01cin.cre cor01mgw.mfy
+	cor01min.mfy cor02cin.cre cor02mgw.mfy cor02min.mfy dbd1.cli
+	dbd2.cli dmd01cin.cre dmd01mgw.mfy dmd01min.mfy ingres1.cli
+	ingres2.cli ingres3.cli ingres4.cli msc01cin.cre msc01mgw.mfy
+	msc01min.mfy pdm01cin.cre pdm01mgw.mfy pdm01min.mfy prods.lst
+	vision1.cli vision2.cli vision3.cli w4gl1.cli w4gl2.cli ;

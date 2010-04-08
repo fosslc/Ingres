@@ -1,0 +1,57 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<oodefine.h>
+## include	<oocat.qsh>
+
+/**
+** Name:	ooisindb.qc	- test if object is in database
+**
+** Description:
+**	This file defines:
+**
+**	OOisInDb()	Tests whther object is stored in database by
+**			retrieving from ii_objects.
+**
+** History:
+**	6/22/87 (peterk) - created from routine in ob.qc
+**	10/23/1987 (danielt) - SQLized the retrieve loop
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+
+i4
+OOisInDb(self)
+EXEC SQL BEGIN DECLARE SECTION;
+OO_OBJECT *self;
+EXEC SQL END DECLARE SECTION;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	OOID	dummy_id;
+	EXEC SQL END DECLARE SECTION;
+    
+	i4	in_db = FALSE;
+
+	EXEC SQL REPEATED SELECT object_id
+	    INTO	:dummy_id
+	    FROM	ii_objects
+	    WHERE	object_id = :self->ooid;
+	EXEC SQL BEGIN;
+	    in_db = TRUE;
+	    EXEC SQL ENDSELECT;
+	EXEC SQL END;
+	return  (in_db);
+}

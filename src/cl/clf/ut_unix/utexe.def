@@ -1,0 +1,603 @@
+wrapsql	wrapsql	PROCESS	-	dbname
+	database	"%S"	2	Database?		%S
+oslsql	oslsql	PROCESS -+
+	database	-d'%S'
+	equel		-X%S
+	file		%S
+	frame		-f'%S'
+	fid		-#%N
+	output		-o%S
+	open		+wopen
+	symbol		-n'%S'
+	appid		-a%N
+	comp50		-5.0
+	nowarning	-w
+	errors		-l%S
+	vqerrors	-g%S
+	stderr		-e%S
+	illist		-t%S
+	flags		%S
+osl	osl	PROCESS
+	database	-d'%S'
+	equel		-X%S
+	file		%S
+	frame		-f'%S'
+	fid		-#%N
+	output		-o%S
+	symbol		-n'%S'
+	appid		-a%N
+	comp50		-5.0
+	nowarning	-w
+	errors		-l%S
+	stderr		-e%S
+	illist		-t%S
+	flags		%S
+fecvt60	fecvt60	PROCESS	-	dbname [-uuser] [-f filequantum] [-b batchsize] [-t]
+	database	'%S'	0	Database?	%S
+	user		-u%S	0	?		-u%-
+	filequantum	-f%N	0	?		-f%N
+	batchsize	-b%N	0	?		-b%N
+	terse_log	-t	0	?		-t
+	convto60	-c	0	?		-c
+vifred vifred	PROCESS
+	database	'%S'
+	equel		-X%S
+	user		-u'%S'
+	abfform		-F '%S'
+	form 		-f '%S'
+	table		-t '%S'
+	joindef		-j '%S'
+	compile 	-C%S
+	emptycat	-e
+	symbol		-S'%S'
+	flags		%S
+	connect		+c%S
+interp	%	PROCESS
+	database	-d'%S'
+	application	-a'%S'
+	frame		-f'%S'
+	equel		-X%S
+	user		-u'%S'
+	keystroke	-I%S
+	test		-Z%S
+	runtime		-r%S
+	procedure	-p'%S'
+	executable	%E
+	flags		%S
+	connect		+c'%S'
+report report	PROCESS
+	database	'%S'
+	equel		-X%S
+	user		-u'%S'
+	file		-f%S
+	printer		-o'%S'
+	copies		-n%N
+	silent		-s
+	report		-r '%S'
+	forcerep	-h
+	formfeed	+b
+	noformfeed	-b
+	pagelength	-v%N
+	brkfmt		+t
+	nobrkfmt	-t
+	mode		-m%S
+	mxline		-l%N
+	mxquer		-q%N
+	mxwrap		-w%N
+	sourcefile	-i%S
+	name		'%S'
+	param		"(%S)"
+	flags		%S
+	connect		+c%S
+	groupid		-G'%S'
+	password	-P
+sreport sreport	PROCESS
+	database	'%S'
+	equel		-X%S
+	user		-u'%S'
+	silent		-s
+	file		%S
+	flags		%S
+	connect		+c%S
+	groupid		-G'%S'
+	password	-P
+rbf	rbf	PROCESS	-+	dbname [report|table] [-uuser] [-r] [-s] [-e] [-m[tabular|wrap|block|indented|labels|column|default]] [-l{mxline}] [-GgroupID] [-P]
+	database	'%S'	0	Database?	%S
+	rpt_object	'%S'	0	Report or table?	%S
+	report		-r'%S'	0	EMPTY	-r%s
+	table		-table'%S'	0	EMPTY	-table%s
+	edit_restrict	-edit_restrict
+	emptycat	-e
+	equel		-X%S	0	EMPTY	-X%-
+	mode		-m%S	0	EMPTY	-m%s
+	mxline		-l%S	0	EMPTY	-l%s
+	silent		-s
+	user		-u'%S'	0	EMPTY	-u%-
+	groupid		-G'%S'	0	Group?	-G%-
+	password	-P	0
+	test		-Z%S
+	dump		-D%S
+	keystroke	-I%S
+	flags		%S
+	connect		+c%S
+rfedit	rfedit	PROCESS
+	pipe		-X%S
+	tfile		%S
+	ntrims		%N
+	nfields		%N
+	ds		%D
+qbf	qbf	PROCESS	-+	dbname [-e] [-mretrieve|update|append|all] [-uuser] [ -l name ] [ [name] [ [-j] [-F form] ] | [-t|-f] ] [-P] [-GgroupID]
+	database	'%S'	0	Database?		%S
+	equel		-X%S	0	?			-X%-
+	roleid		-R'%S'	0	Role?		-R%-
+	groupid		-G'%S'	0	Group?		-G%-
+	password	-P'%s'	0	Password?	-P%a
+	user		-u'%S'	0	?			-u%-
+	emptycat	-e
+	silent		-s
+	table		'%S'	0	Table?	%S
+	form		-F '%S'	0	?			-F%S
+	mode		-m%S	0	?			-m%S
+	qbfname		-f '%S'	0	?			-f
+	joindef		-j '%S'	0	?			-j
+	editjoindef	-J '%S'	0	?			-J
+	nogo		-N '%S'	0	?			-N
+	tblfld		-t '%S'	0	?			-t
+	lookup		-l '%S'	0	?			-l%S
+	entry		'%S' -f
+	test		-Z%S
+	dump		-D%S
+	keystroke	-I%S
+	flags		%S
+	connect		+c%S
+vigraph	vigraph	PROCESS	-+	dbname [-b | -g graph] [-e] [-uuser] [-P] [-GgroupID]
+	database	'%S'	1	Database?		%S
+	graph		-g'%S'	2	Graph?			-g%S
+	blank		-b	3	Create blank graph?	-b
+	emptycat	-e	4	Empty catalog?		-e
+	user		-u'%S'	5	?			-u%-
+	equel		-X%S	6	?			-X%-
+	groupid		-G'%S'	0	Group?		-G%-
+	password	-P	0
+	test		-Z%S
+	dump		-D%S
+	keystroke	-I%S
+	flags		%B	0	?			%?
+	connect		+c%S
+rungraph	rungraph	PROCESS	-+	dbname graph [-t table] [-d device] [-f file] [-p plevel] [-n] [-uuser] [-P] [-GgroupID] 
+	database	'%S'	0	Database?	%S
+	graph		'%S'	0	Graph?		%S
+	device		-d%S
+	file		-f%S
+	table		-t'%S'	0	?		-t%S
+	plevel		-p%N
+	prompt		-n
+	user		-u'%S'	0	?		-u%-
+	groupid		-G'%S'	0	Group?		-G%-
+	password	-P	0
+	equel		-X%S	0	?		-X%-
+	dump		-D%S
+	flags		%B	0	?		%?
+	connect		+c%S
+copydb	copydb	PROCESS	-	[-param_file=filename] | [ dbname [-c] [-row_labels] [-uusername] [-Ggroupid ] [-group_tab_idx] [-nologging] [-parallel] [-journal] [-P] [-source=dirname] [-dest=dirname] [-ddirname] [-with_tables] [-with_modify] [-nodependency_check] [-with_data] [-all] [-order_ccm] [-with_index] [-with_constr] [-with_views] [-with_synonyms] [-with_events] [-with_proc] [-with_reg] [-with_rules] [-with_alarms] [-with_comments] [-with_roles] [-with_sequences] [-no_seq] [-add_drop] [-infile=filename] [-outfile=filename] [-with_permits] [-relpath] [-no_loc] [-no_perm] [-noint] [-no_persist] [-no_repmod] [-no_rep] [-no_warn] [-online] {tablename|viewname}]
+	database	'%S'	0	Database?		%S
+	objname		'%S'	0	Table or View?		%100S
+	portable	-c	0	0
+	labels		-row_labels	0
+	language	-l%S	0	?
+	user		-u'%S'	0	?			-u%-
+	groupid		-G'%S'	0	Group?		-G%-
+	group_tab_idx	-group_tab_idx	0
+	nologging	-nologging	0
+	parallel	-parallel	0
+	concurrent_updates	-online	0
+	journal		-journal
+	password	-P	0	0
+	source		-source=%s	0	?
+	dest		-dest=%s	0	?
+	directory	-d%S	0	?
+	createonly	-with_tables	0	0
+	modifyonly	-with_modify	0	0
+	nodependencycheck	-nodependency_check	0	0
+	copyonly	-with_data	0	0
+	tableall	-all	0	0
+	orderccm	-order_ccm	0	0
+	indexonly	-with_index	0	0
+	constraintonly	-with_constr	0	0
+	viewonly	-with_views	0	0
+	synonymonly	-with_synonyms	0	0
+	eventonly	-with_events	0	0
+	sequencesonly	-with_sequences	0	0
+	nosequences	-no_seq		0	0
+	procedureonly	-with_proc	0	0
+	registrationonly	-with_reg	0	0
+	rulesonly	-with_rules	0	0
+	secalarmsonly	-with_alarms	0	0
+	commentsonly	-with_comments	0	0
+	rolesonly	-with_roles	0	0
+	dropincluded	-add_drop	0	0
+	infile	-infile=%S	0	?
+	outfile	-outfile=%S	0	?
+	permitsonly	-with_permits	0	0
+	relpath	-relpath	0	0
+	nolocations	-no_loc	0	0
+	nopermits	-no_perm	0	0
+	uninterrupted	-noint	0	0
+	nopersist	-no_persist	0	0
+	param_file	-param_file=%S	0	?
+	norepmod	-no_repmod	0	0
+	norep		-no_rep		0	0
+	no_warn		-no_warn	0
+unloaddb	unloaddb	PROCESS	-	dbname [-uuser] [-c] [-ddir] [-source=dir] [-dest=dir] [-P] [-GgroupID] [-row_labels] [-group_tab_idx] [-nologging] [-parallel] [-journal] [-no_seq]
+	database	%S	0	Database?
+	portable	-c	0
+	labels		-row_labels	0
+	language	-l%S	0	?
+	user		-u'%S'	0	?			-u%-
+	groupid		-G'%S'	0	Group?		-G%-
+	group_tab_idx	-group_tab_idx	0
+	nologging	-nologging	0
+	parallel	-parallel	0
+	journal		-journal
+	password	-P	0
+	source		-source=%s	0	?
+	dest		-dest=%s	0	?
+	directory	-d%S	0	?
+	viewonly	-with_views	0	0
+	procedureonly	-with_proc	0	0
+	rulesonly	-with_rules	0	0
+	sequencesonly	-with_sequences	0	0
+	nosequences	-no_seq		0	0
+	dropincluded	-add_drop	0	0
+	permitsonly	-with_permits	0	0
+	integonly	-with_integ	0	0
+	norep		-no_rep		0	0
+	uninterrupted	-noint		0	0
+copyform	copyform	PROCESS	-+	dbname file (form...|-q qbfname...|-j joindef...) [-uuser] [-s] |               -i dbname file [-uuser] [-r] [-s]
+	database	'%S'	0	Database?			%S
+	file		%S	0	Filename?
+	objname		%S	0	DUMMY				%100S
+	form		'%S'	0	Form? (end with RETURN)		%S
+	qbfname		'%S'	0	Qbfname? (end with RETURN)	%S
+	joindef		'%S'	0	Joindef? (end with RETURN)	%S
+	inform		-m	0	Specify Forms? [y/n]
+	inqbfname	-q	0	Specify Qbfnames? [y/n]
+	injoindef	-j	0	Specify Joindefs? [y/n]
+	inflag		-i	0
+	replace		-r	0
+	silent		-s	0
+	user		-u'%S'	0	?		-u%-
+	equel		-X%S	0	?		-X%-
+	connect		+c%S
+copygraph	copygraph	PROCESS	-+	in dbname [graph] [-ffile] [-uuser] [-P] [-GgroupID] | out dbname graph [-ffile] [-uuser] [-P] [-GgroupID]
+	inout		%S	0	Direction?
+	database	'%S'	0	Database?	%S
+	graph		'%S'	0	Graph?		%S
+	file		-f%S	0	?
+	replace		-r
+	user		-u'%S'	0	?		-u%-
+	equel		-X%S	0	?		-X%-
+	groupid		-G%S	0	Group?		-G%-
+	password	-P	0
+	connect		+c%S
+rtingres	rtingres	PROCESS
+	database	%S
+	equel		-X%S
+	user		-u'%S'
+	emptycat	-e
+	flags		%S
+ingmenu	ingmenu	PROCESS	-+	dbname [-e] [-uuser] [-P] [-GgroupID]
+	database	'%S'	1	Database?		%S
+	emptycat	-e	2	Empty catalog?		-e
+	user		-u'%S'	3	?			-u%-
+	equel		-X%S	4	?			-X%-
+	password	-P	0
+	test		-Z%S
+	dump		-D%S
+	keystroke	-I%S
+	flags		%B	0	?			%?
+	connect		+c%S
+	groupid		-G%S	0	Group?			-G%-
+tables	tables	PROCESS	-+	dbname [-e] [-uuser] [-P]
+	database	'%S'	1	Database?		%S
+	emptycat	-e	2	Empty catalog?		-e
+	user		-u'%S'	3	?			-u%-
+	equel		-X%S	4	?			-X%-
+	specflag	-f%N	5	?			-f%N
+	password	-P	0
+	test		-Z%S
+	dump		-D%S
+	keystroke	-I%S
+	flags		%B	0	?			%?
+	connect		+c%S
+ingres	ingres	PROCESS
+	database	'%S'
+	equel		-X%S
+	user		-u'%S'
+	flags		%S
+sql	sql 	PROCESS
+	database	'%S'
+	equel		-X%S
+	user		-u'%S'
+	flags		%S
+	connect		+c%S
+quel	quel	PROCESS
+	database	'%S'
+	equel		-X%S
+	user		-u'%S'
+	flags		%S
+iquel	iquel 	PROCESS
+	database	'%S'
+	equel		-X%S
+	user		-u'%S'
+	flags		%S
+isql	isql 	PROCESS
+	database	'%S'
+	equel		-X%S
+	user		-u'%S'
+	flags		%S
+	connect		+c%S
+abf	abf	PROCESS	-+	dbname [ application [ frame ] ] [-w] [-5.0] [+wopen] [-uuser] [-P] [-GgroupID]
+	database	'%S'	0	Database?		%S
+	equel		-X%S	0	?		-X%-
+	user		-u'%S'	0	User?			-u%-
+	application	'%S'	0	?			%S
+	frame		'%S'	0	?			%S
+	groupid		-G'%S'	0	Group?		-G%-
+	password	-P	0
+	emptycat	-e
+	open		+wopen
+	warning		-w
+	5.0		-5.0
+	test		-Z%S
+	dump		-D%S
+	keystroke	-I%S
+	trace		-t%S
+	flags		%S
+	connect		+c%S
+vision	vision	PROCESS	-+	dbname [ application [ frame ] ] [-w] [-5.0] [+wopen] [-uuser] [-P] [-GgroupID]
+	database	'%S'	0	Database?		%S
+	equel		-X%S	0	?		-X%-
+	user		-u'%S'	0	?			-u%-
+	application	'%S'	0	?			%S
+	frame		'%S'	0	?			%S
+	groupid		-G'%S'	0	Group?		-G%-
+	password	-P	0
+	emptycat	-e
+	open		+wopen
+	warning		-w
+	5.0		-5.0
+	test		-Z%S
+	dump		-D%S
+	keystroke	-I%S
+	trace		-t%S
+	flags		%S
+	connect		+c%S
+qexec	qexec	PROCESS
+	database	%S
+	equel		-X%S
+	tfile		%S
+	mqqdef		%D
+	retcode		%R
+writefrm	writefrm	PROCESS
+	database	-X%S
+	tfile		%S
+	ucode		-_U%S
+	vfform		-F%S
+	vfcompile	-C%S
+	frame		%D
+catalogs	catalogs	PROCESS
+	database	-X%S
+	tfile		%S
+	ucode		-_U%S
+	uname		-_N%S
+	dba		-_D%S
+qbfnames	qbfnames	PROCESS
+	database	-X%S
+	tfile		%S
+	form		-f%S
+	ucode		-_U%S
+	uname		-_N%S
+	dba		-_D%S
+compform	compform	PROCESS	-+	dbname form file [-uuser] [-m]
+	database	'%S'	1	Database?	%S
+	form		'%S'	2	Form Name?	%S
+	file		%S	3	File Name?	%S
+	user		-u'%S'	4	?		-u%-
+	macro		-m	5	?		-m
+	rti		-c	6	?		-c
+	equel		-X%S	7	?		-X%-
+	symbol		-S'%S'
+	connect		+c%S
+printform	printform	PROCESS	-+	dbname form file [-uuser] 
+	database	'%S'	1	Database?	%S
+	form		'%S'	2	Form Name?	%S
+	file		%S	3	File Name?	%S
+	user		-u'%S'	4	?		-u%-
+	equel		-X%S	7	?		-X%-
+	connect		+c%S
+compfrm	compfrm	PROCESS
+	database	-X%S
+	form		%S
+	file		-o%S
+	name		-N%S
+	compiled	-F%S
+	macro		-m
+	flags		%S
+	connect		+c%S
+rfedit	rfedit	PROCESS
+	pipe		-X%S
+	tfile		%S
+	ntrims		%N
+	nfields		%N
+	ds		%D
+application	%	PROCESS
+	database	-d'%S'
+	equel		-X%S
+	name		%C
+	executable	%E
+	frame		'%S'
+	flags		%S
+	param		-a %S
+imageapp	imageapp	PROCESS	-+	dbname application [-uuser] [-f][-w] [+wopen] [-5.0] [-oexecutable] [-P] [-GgroupID] [-RroleID] [-constants_file=fn]
+	database	'%S'	0	Database?	%S
+	application	'%S'	0	Application?	%S
+	force		-f	0	?		-f
+	executable	-o%S	0	?		-o%S
+	open		+wopen
+	warning		-w
+	5.0		-5.0
+	user		-u'%S'	0	?		-u%-
+	equel		-X%S	0	?		-X%-
+	roleid		-R'%S'	0	Role?		-R%-
+	groupid		-G'%S'	0	Group?		-G%-
+	password	-P	0
+	connect		+c%S
+	nocompile	-nocompile
+	compile		-compile
+	constants_file	-constants_file='%S'	0	?	-constants_file=%-
+	compileonly	-c	0	?		-c
+abfimage	imageapp	PROCESS	-+
+	database	'%S'
+	application	'%S'
+	force		-f
+	open		+wopen
+	warning		-w
+	5.0		-5.0
+	executable	-o%S
+	equel		-X%S
+	roleid		-R'%S'
+upgradefe	upgradefe	PROCESS	-+	database [-b] [-c] [-s] [-vversion] [-uuser] product {product}
+	database	'%S'	1	Database?		%S
+	client		%S	2	?			%100S
+	basecats	-b	0	?			-b
+	noupgrade	-c	0	?			-c
+	version		-v%N	0	?			-v%N
+	silent		-s	0
+	equel		-X%S	0	?			-X%-
+	user		-u'%S'	0	?			-u%-
+	connect		+c%S
+modifyfe	modifyfe	PROCESS	-+	database [-uuser] product {product}
+	database	'%S'	1	Database?		%S
+	client		%S	2	?			%100S
+	wait		+w	0	?			+w
+	nowait		-w	0	?			-w
+	equel		-X%S	0	?			-X%-
+	user		-u'%S'	0	?			-u%-
+	connect		+c%S
+	page_size	-page_size=%N	0	?		-page_size=%N
+dictupgrade	%	PROCESS	-+
+	executable	%E	0	?			%?
+	database	'%S'	1	Database?		%S
+	equel		-X%S	0	?			-X%-
+	user		-u'%S'	0	?			-u%-
+	connect		+c%S
+netutil	netutil	PROCESS	-+	[-uuser] [-vnode vnode] [-file file,file...]
+	user		-u%S
+	vnode		-vnode%S
+	file		-file%S
+repmgr	repmgr	PROCESS	-+	dbname [-uuser]
+	database	'%S'	0	Database?		%S
+	user		-u'%S'	0	?			-u%-
+repcat	repcat	PROCESS	-+	dbname [-uuser] [+w|-w]
+	database	'%S'	0	Database?		%S
+	user		-u'%S'	0	?			-u%-
+	wait		+w	0	?			+w
+	nowait		-w	0	?			-w
+repmod	repmod	PROCESS	-+	dbname [-uuser] [+w|-w]
+	database	'%S'	0	Database?		%S
+	user		-u'%S'	0	?			-u%-
+	wait		+w	0	?			+w
+	nowait		-w	0	?			-w
+repcfg	repcfg	PROCESS	-+	dbname obj_type action [-uuser] [-q] object {object}
+	database	'%S'	1	Database?			%S
+	obj_type	'%S'	2	Object type?			%S
+	action		'%S'	3	Action?				%S
+	object		'%S'	4	Object? (end with RETURN)	%100S
+	user		-u'%S'	0	?				-u%-
+	queue		-q	0	?				-q
+dereplic	dereplic	PROCESS	-+	dbname [-uuser]
+	database	'%S'	0	Database?		%S
+	user		-u'%S'	0	?			-u%-
+arcclean	arcclean	PROCESS	-+	dbname before_time [-uuser]
+	database	'%S'	0	Database?		%S
+	before_time	'%S'	0	Before time?		%S
+	user		-u'%S'	0	?			-u%-
+reconcil	reconcil	PROCESS	-+	dbname target_db cdds_values start_time [-uuser]
+	database	'%S'	0	Database?		%S
+	target_db	%N	0	Target database number?	%N
+	cdds_values	%S	0	CDDS values?		%S
+	start_time	%S	0	Start time?		%S
+	user		-u'%S'	0	?			-u%-
+repdbcfg	repdbcfg	PROCESS	-+	dbname cfg_file [-uuser]
+	database	'%S'	0	Database?		%S
+	config_file	%S	0	Config File?		%S
+	user		-u'%S'	0	?			-u%-
+convrep	convrep	PROCESS	-+	dbname [-uuser]
+	database	'%S'	0	Database?		%S
+	user		-u'%S'	0	?			-u%-
+ddgensup	ddgensup	PROCESS	-+	dbname table_no [-uuser]
+	database	'%S'	0	Database?		%S
+	table_no	%N	0	Table number?		%N
+	user		-u'%S'	0	?			-u%-
+ddgenrul	ddgenrul	PROCESS	-+	dbname table_no [-uuser]
+	database	'%S'	0	Database?		%S
+	table_no	%N	0	Table number?		%N
+	user		-u'%S'	0	?			-u%-
+ddmovcfg	ddmovcfg	PROCESS	-+	dbname target [-uuser]
+	database	'%S'	0	Database?		%S
+	target_db	%N	0	Target database number?	%N
+	user		-u'%S'	0	?			-u%-
+extenddb	extenddb	PROCESS	-+	-llocation [dbname...|-nodb] [-aarea_dir] [-Udata,ckp,jnl,dmp,work|awork] [-drop] [-alter] [-P] [-uuser] [-rraw_pct]
+	alter		-alter	0	?	-alter
+	area		-a%S	0	Area directory?		-a%S
+	locname		-l%S	0	Location name?		-l%S
+	database	'%S'	0	Database name(end with RETURN)?	%S
+	lusage		-U%S	0	Location usage(data,ckp,jnl,dmp,work|awork)?	-U%S
+	dbusage		-D%S	0	Database usage(data,work|awork)?	-D%S
+	rawpct		-r%N	0	Rawpct(0-100)?		-r%N
+	drop		-drop	0	?	-drop
+	nodb		-nodb	0	?	-nodb
+	user		-u'%S'	0	?	-u%-
+	password	-P
+unextenddb	unextenddb	PROCESS	-+	-llocation [dbname...] [-Udata,ckp,jnl,dmp,work|awork] [-P] [-uuser] 
+	locname		-l%S	0	Location name?		-l%S
+	database	'%S'	0	Database name(end with RETURN)?	%S
+	lusage		-U%S	0	Location usage(data,ckp,jnl,dmp,work|awork)?	-U%S
+	dbusage		-D%S	0	Database usage(data,work|awork)?	-D%S
+	user		-u'%S'	0	?	-u%-
+	password	-P
+genxml		genxml		PROCESS	-	dbname [-uuser] [-P] [-GgroupID] [-dest=dir] [-xmlfile=filename] [-dtdfile=filename] [-title_doctype=title] [-metadata_only] [-internal_dtd] [-referred_dtd] [{table}]
+	database	'%S'	0	Database?		%S
+	objname		'%S'	0	Table or View?		%100S
+	language	-l%S	0	?
+	user		-u'%S'	0	?			-u%-
+	groupid		-G'%S'	0	Group?		-G%-	
+	password	-P	0
+	dest		-dest=%S	0	?
+	xmlfile	-xmlfile=%S	0	?
+	dtdfile	-dtdfile=%S	0	?
+	title_doctype	-title_doctype=%S	0	?
+	metadata_only	-metadata_only	0	0
+	internal_dtd	-internal_dtd	0	0
+	referred_dtd	-referred_dtd	0	0
+	encode_off	-encode_off	0	0
+xmlimport		xmlimport		PROCESS	-	dbname [-uuser] [-P] [-GgroupID] [-debug] xmlfile 
+	database	'%S'	0	Database?		%S
+	xmlfile		'%S'	0	Xmlfile?		%S
+	user		-u'%S'	0	?			-u%-
+	groupid		-G'%S'	0	Group?		-G%-	
+	password	-P	0
+	debug		-debug		0	?	-debug
+convtouni		convtouni		PROCESS	-	dbname [-uuser] [-P] [-GgroupID] [-dest=dir] [-sqlfile=filename] [{table}] [{columns}]
+	database	'%S'	0	Database?		%S
+	param_file	-param_file=%S	0	?
+	colname		-col=%S	0	Column Name?	-col=%100S
+	objname		'%S'	0	Table or View?		%100S
+	language	-l%S	0	?
+	user		-u'%S'	0	?			-u%-
+	groupid		-G'%S'	0	Group?		-G%-	
+	password	-P	0
+	dest		-dest=%S	0	?
+	sqlfile		-sqlfile=%S	0	?
+	automodify	-automodify	0	0

@@ -1,0 +1,77 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* FRS mapping file for hp2392/hp2393 with Function Keys */
+
+/* Menu Key */
+	menu = pf1 (f1)
+
+/* Help facility */
+	frskey1 = pf2 (f2)
+
+/* Exit the system */
+	frskey2 = pf4 (f4)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (f3)
+
+/* Go or execute function */
+	frskey4 = pf8 (f8)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = pf5 (f5)
+
+/* Forget and Undo */
+	frskey9 = pf6 (f6)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = controlG (^G)
+
+/* Next screen or set of rows in table field */
+	scrollup = control F (^F)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlH (Backspace)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)

@@ -1,0 +1,55 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmdbadd.hlp
+ADD A REPLICATED DATABASE
+
+This form is used to define a database that will become part of your
+replication scheme.
+
+To complete this screen, enter the appropriate values for the desired
+database.  Use the Tab key to move from one field to the next. If you
+make an error, you can use the Clear operation to reset the entire form.
+To save the definition, select the Save operation.
+
+The fields on the form are:
+
+        FIELD NAME              DESCRIPTION
+        ----------              -----------
+        Database Number         A mandatory field to specify a unique
+                                number within the whole replication
+                                system.  The number assigned is used as
+                                part of the replicated transaction key
+                                for transactions originated from this
+                                database.  Valid range from 1 to 32,767.
+
+        Virtual Node Name       A mandatory field to specify the virtual
+                                node (vnode) name, as defined in the
+                                Ingres/Net netutil utility, used
+                                to connect to the database.
+
+        Database Name           The name of the database.
+
+        Database Owner          The owner (DBA) of the database.
+
+        DBMS Type               The type of DBMS, for example,
+                                Ingres or CA-Datacom.  Use
+                                ListChoices to view acceptable values.
+
+        Remarks                 A short comment.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Save            Save the definition and return to the Database
+                        Summary screen.
+
+        Clear           Reset the values entered.  You will be asked to
+                        confirm before the form is cleared.
+
+        ListChoices     Display a list of acceptable values for the
+                        current field.
+
+        Help            Access the Help facility.
+
+        End             Return to the Database Summary screen.

@@ -1,0 +1,9 @@
+(PROD1NAME) Data Access Server  
+
+The (PROD1NAME) Data Access Server will replace the existing JDBC
+server and will provide DBMS access to the existing
+EDBC JDBC driver, the new Ingres JDBC driver and the .NET Data
+Provider.
+
+The (PROD1NAME) Data Access Server supports several major protocols, including
+TCP/IP and DECnet.

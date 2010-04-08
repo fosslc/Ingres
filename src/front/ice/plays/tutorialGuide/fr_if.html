@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+    Using the IF Statement
+</title>
+</head>
+<body>
+
+<h1>
+Using the IF statement
+</h1>
+In the previous example, when the information in the table
+was exhausted, the page displayed the column headers and no
+rows. If you haven't seen this, you might like to try it now.
+<br>
+We would prefer the user to be presented with a way of
+resetting the cursor to the beginning of the result set again so as
+to be able to return to the beginning.
+<br>
+We choose to do this
+only when the number of rows returned is not 5 (the
+requested number). When there are more than 5 rows available
+the ICE server will always return 5 and set
+<i>ii_rowcount</i> accordingly. When there are fewer
+than 5 rows to return <i>ii_rowcount</i> will be set to the
+appropriate value. We can, therefore, test the inequality of
+ii_rowcount with 5. 
+<p>
+The select statement is as before but
+now we include the test. If we receive fewer than 5 rows
+(ii_rowcount != 5) we insert the HTML to visit another
+page which is a facsimilie of this page but commits the
+transaction before running exactly the same query. This
+allows us to
+restart from the beginning of the result set.
+<p>
+Our solution appears below:
+<h3>File: play_allWrap.html</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shakespeare's Plays&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;FORM ACTION="/ice-bin/oiice.dll/playgroup/plays[play_allWrap.html]"
+	METHOD="POST"&gt;
+
+&lt;!-- #ICE REPEAT 
+          DATABASE = `icetutor` 
+          SQL=`select * from plays` 
+          TRANSACTION=`Complete` 
+          CURSOR=`Works` 
+          ROWS=`5` 
+          TYPE=`TABLE`
+--&gt;
+
+<span class="macro">&lt;!-- #ICE IF ( `:ii_rowcount` != `5` )
+	THEN=`&lt;p&gt;
+	&lt;b&gt;
+	&lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_allWrapSub.html]"&gt;
+        Re-start from the beginning
+        &lt;/a&gt;&lt;/b&gt;&lt;p&gt;`
+--&gt; </span>
+
+&lt;!-- #ICE DECLARE=`session.e_playTxn=Complete` --&gt;
+&lt;!-- #ICE DECLARE=`session.e_playTxnCommitted=FALSE` --&gt;
+&lt;p&gt;
+&lt;INPUT TYPE="submit" NAME="More" VALUE="More" &gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/FORM&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+<p>
+The interesting part of the file is:
+<tt>
+<pre>
+&lt;!-- #ICE IF ( `:ii_rowcount` != `5` )
+	THEN=`&lt;p&gt;
+	&lt;b&gt;
+	&lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_allWrapSub.html]"&gt;
+        Re-start from the beginning
+        &lt;/a&gt;&lt;/b&gt;&lt;p&gt;`
+--&gt; 
+</pre>
+</tt>
+If the number of rows returned is <i>not</i> 5 then it must
+be less than 5. We must test the inequality here because the
+if statement performs <i>string</i> comparisons. If the
+number of rows is less than 5 (we have reached the end of
+the result set), we wish to give the user the oppertunity to
+visit a 'reset' page. The <tt>then</tt> branch of the
+<tt>if</tt> inserts the required link.
+<p>
+To start again, the first thing we must do is to
+commit the previous transaction:
+<tt>
+<pre>
+&lt;!-- #ICE COMMIT=`:e_playTxn` --&gt;
+</pre>
+</tt>
+<p>
+We then start <i>exactly
+the same</i> transaction again, giving the illusion that the
+user has visited the same file. Notice that the action on
+pressing the more button is to return to the original file.
+<p>
+Question: Could this functionality be achieved in one file?
+If not, why not?
+<h3>File: play_allWrapSub.html</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shakespeare's Plays&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+&lt;!-- #ICE COMMIT=`:e_playTxn` --&gt;
+
+&lt;!-- #ICE 
+          DATABASE = `icetutor` 
+          SQL=`select * from plays` 
+          TRANSACTION=`Complete` 
+          CURSOR=`Works` 
+          ROWS=`5` 
+          TYPE=`TABLE`
+--&gt;
+
+&lt;!-- #ICE DECLARE=`session.e_playTxn=Complete` --&gt;
+&lt;!-- #ICE DECLARE=`session.e_playTxnCommitted=FALSE` --&gt;
+
+&lt;FORM ACTION="/ice-bin/oiice.dll/playgroup/plays[play_allWrap.html]"
+	METHOD="POST"&gt;
+&lt;INPUT TYPE="submit" NAME="More" VALUE="More" &gt;
+&lt;/FORM&gt;
+
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+The next page shows how the Web Deployment Option can generate the tags needed
+for a
+<a href="fr_combo.html"
+target="page">combo</a> or list box.
+</body>
+</html>

@@ -1,0 +1,6 @@
+Ingres i18n (Internationalization Support)
+
+The Ingres i18n package is a set of additional message files and forms
+which have been translated to a number of different languages. This allows 
+the user to select a language other than English to be used when displaying 
+Ingres errors, informational messages and other written dialogues.

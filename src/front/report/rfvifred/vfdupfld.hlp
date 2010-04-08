@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The List of Fields in Current Form frame allows you to create a new field
+using the definition of an existing field in the current form that is
+being edited.  Move the cursor up/down the displayed list until the
+desired field is highlighted.  The list will scroll if there are more
+fields than currently displayed.  Choose the `Select' menuitem to create
+a new field.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+
+        Select                  The definition of the highlighted field
+                                is used as the basis for creating a
+                                new field.
+
+        Cancel                  Return to the Layout Frame of Vifred without
+                                creating a new field.
+
+        ListForms               Display a list of forms in the database
+                                that the user has access to.
+
+        Help                    Access the Ingres Help facility.

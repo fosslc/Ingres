@@ -1,0 +1,7 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcsq.olb/library/include=(csq,csqtoks), -
+INGLIB:libembedc.olb/lib, -
+INGLIB:libequel.olb/lib, INGLIB:libug.olb/lib, -
+INGLIB:libfmt.olb/lib, INGLIB:libafe.olb/lib, -
+INGLIB:libadf.olb/lib, INGLIB:libcompat.olb/lib

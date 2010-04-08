@@ -1,0 +1,9 @@
+  The opf_sort_factor resource specifies the factor by which query
+  "sort cost" estimates are adjusted.  The speed of the machine may
+  cause sort nodes estimates to be consistently too high or low.  If
+  necessary this factor may be reduced with caution.
+
+  Default is 100.  Any adjustment of this number will have an inversely
+  proportional effect on sort cost estimates.  i.e. setting it to 200 
+  will halve cpu estimates of sort cost nodes.
+

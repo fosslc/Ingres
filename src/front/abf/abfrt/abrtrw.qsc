@@ -1,0 +1,858 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+#include	<me.h>
+#include	<st.h>
+#include	<lo.h>
+#include	<nm.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<uf.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<abfcnsts.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+
+/**
+** Name:	abrtrw.qc -	ABF Run-time System Run a Report Frame.
+**
+** Description:
+**	Contains the runtime code that runs a Report frame.  Defines:
+**
+**	IIARrwfReport()		run a report frame.
+**	IIAR_Printer[]		printer string.
+**	IIAR_Terminal[]		terminal string.
+**
+** History:
+**	Revision 6.4
+**	03/11/91 (emerson)
+**		Integrated another set of DESKTOP porting changes.
+**	03/22/91 (emerson)
+**		Fix interoperability bug 36589:
+**		Change all calls to abexeprog to remove the 3rd parameter
+**		so that images generated in 6.3/02 will continue to work.
+**		(Generated C code may contain calls to abexeprog).
+**		This parameter was introduced in 6.3/03/00, but all calls
+**		to abexeprog specified it as TRUE.  See abfrt/abrtexe.c
+**		for further details.
+**
+**	Revision 6.1  88/05  wong
+**	Changed so that report is run directly if no form was specified.
+**
+**	Revision 6.0  87/07  wong
+**	Added support for passing parameters (any number.)
+**
+**	Revision 5.1  86/08/14  joe
+**	Extracted from "abfrts.qc" for PC overlay work.
+**
+**	Revision 2.0  82  joe
+**	Initial revision.
+**      24-sep-96 (hanch04)
+**              Global data moved to data.c
+**	19-dec-96 (chech02)
+**		removed READONLY from GLOBALREFs.
+**	10-Sep_1997 (thaal01)
+**		Above Change corrected, use GLOBALCONSTREF instead
+**      18-Feb-1999 (horda03)
+**              Revised the fix for Bug 80617, enclosing the
+**              text part of a parameter in ' causes the report
+**              command to fail. This is because ' provide a
+**              function on VMS platforms. On VMS platforms place
+**              " around the text of a report parameter. Bug 95356
+**      13-Apr-1999 (schte01)
+**              Modified #ifdef, #else, #endif to column 1.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      14-Mar-2001 (horda03)
+**              More problems with ' and " on VMS. Depending on how
+**              RunReport() is called (is there a Report Form
+**              associated with a Frame or not, a ' is used if a 
+**              Report Form is associated, " otherwise. Lets be
+**              consistent and use ". Modified FormParam(). This is
+**              Bug 95356, but now user frames calling reports.
+*/
+
+#define	IN	0
+#define OUT	1
+
+/* Messages */
+
+#define _Report_Frame	F_AR0001_Report_Frame
+#define _Batch		F_AR0002_Batch
+#define _RunRep_Expl	F_AR0003_RunReport_Explanation
+#define _Batch_Expl	F_AR0004_Batch_Explanation
+#define _Help_Title	S_AR0023_RW_Help_Title
+
+#define _Help_Expl	F_FE0100_ExplFrameHelp
+#define _End_Expl	F_FE0102_ExplEnd
+
+/*
+** Name:	IIAR_Output -	Report Frame Output Types.
+**
+** Description:
+**	Character buffers containing the allowable output types
+**	for a report frame.
+*/
+
+GLOBALCONSTREF char	IIAR_Printer[]	;
+GLOBALCONSTREF char	IIAR_Terminal[]	;
+
+/*{
+** Name:	IIARrwfReport() -	Run A Report Frame.
+**
+** Description:
+**	Call the report writer from ABF.
+**
+** Input:
+**	frm		{ABRTSFRM *}  The frame being called.
+**	param	{ABRTSPRM *}  The parameters.
+**
+** Called by:
+**	'abrtscall()'
+**
+** History:
+**	Written (jrc) 1982.
+**	07/87 (jhw)  Modified to support passing parameters.
+*/
+
+static VOID	FormParam();
+static VOID	RunReport();
+static VOID	ExtractPrm();
+static STATUS	ChkForm();
+
+/*:
+** Name:	buffer -	String Concatenation Buffer.
+**
+** Description:
+**	String concatenation class.  Supports creation of report parameter
+**	strings of any length by allocating larger buffers when required.
+**
+** History:
+**	02/88 (jhw) -- Written.
+*/
+static char	_Buf[ABBUFSIZE] = {EOS};
+typedef struct {
+	char	*buf;	/* the buffer */
+	char	*cur;	/* current end */
+	i4		size;	/* buffer size */
+
+#define	_endbuffer(bp)	{*(bp)->cur = EOS;}
+#define	_clrbuffer(bp)	{(bp)->cur = (bp)->buf; *(bp)->cur = EOS;}
+#define	_deletebuffer(bp) {if ((bp)->buf != _Buf) MEfree((bp)->buf);}
+#define	_newbuffer(bp)	{ (bp)->buf = _Buf; _clrbuffer((bp)); (bp)->size = sizeof(_Buf); }
+
+} buffer;
+
+static VOID
+_addbuffer (obj, field, value)
+register buffer		*obj;
+char				*field;
+char				*value;
+{
+	register char	*buf = obj->buf;
+	register char	*cur = obj->cur;
+	register i4	size = obj->size;
+
+	/* current + (not first ? "," : "") + field + "=" + value */
+
+	if ( (cur - buf) + (buf != cur ? 1 : 0) +
+			STlength(field) + 1 + STlength(value) >= size - 1 )
+	{ /* allocate new buffer */
+		if ( (buf = (char*)MEreqmem(0, size + ABBUFSIZE, FALSE, (STATUS*)NULL))
+					== NULL )
+			IIUGbmaBadMemoryAllocation(ERx("buffer.add()"));
+		STcopy(obj->buf, buf);
+		if (obj->buf != _Buf)
+			MEfree(obj->buf);
+		obj->cur = cur = buf + (obj->cur - obj->buf);
+		obj->buf = buf;
+		obj->size = size += ABBUFSIZE;
+	}
+
+	/*
+	** Do not put spaces around the equals sign, so that the parameter list
+	** within the command line will not be broken up by 'PCcmdline()'.
+	** Note: DG uses the colon to separate arguments.
+	*/
+	if (buf != cur)
+# ifndef DGC_AOS
+		*cur++ = ',';
+# else
+		*cur++ = ':';
+# endif
+
+	STpolycat(3, field, ERx("="), value, cur);
+	obj->cur += STlength(obj->cur);
+}
+
+VOID
+IIARrwfReport (frm, param)
+register ABRTSFRM	*frm;
+ABRTSPRM			*param;
+##{
+##	char	*formnm;
+	ABRTSFO	*form;
+	buffer	rwparams;
+
+	/* Set-up form */
+	if ( (form = frm->abrform) == NULL )
+		formnm = NULL;
+	else
+	{
+		formnm = form->abrfoname;
+		if ( iiarFormInit(frm) != OK )
+			return;
+	}
+
+	_newbuffer(&rwparams);
+
+	if ( formnm == NULL )
+	{ /* Run report directly */
+		/* Get parameters */
+		ExtractPrm( param, formnm, frm->abrfrname, ERget(_Report_Frame),
+					IN, &rwparams
+		);
+		RunReport( &(frm->abrfrrw), rwparams.buf/*, frm->abrfrrw.batch */ );
+	}
+	else if ( ChkForm(formnm) == OK )
+##	{ /* Run frame for report */
+##		char	*mode;
+##		char	*_batch;	/* batch menuitem */
+		bool	batch;		/* batch flag */
+
+		/*
+		** BUG 4741
+		**
+		** Display form in fill mode the first time through, so that
+		** default values will appear, then switch to update mode.
+		*/
+		mode = ERx("fill");
+
+		/* Setup for batch option */
+/*
+		if ( frm->abrfrrw.batch )
+		{
+			_batch = ERget(_Batch);
+			batch = FALSE;
+		}
+		else
+*/
+		{ /* batch report */
+			_batch = NULL;
+			batch = TRUE;
+		}
+
+		for (;;)
+		{
+			bool	run_report = FALSE;	/* has "report" been selected? */
+
+##			display formnm mode
+##			initialize
+##			{
+				/* Get parameters and display on form */
+				ExtractPrm( param, formnm, frm->abrfrname, ERget(_Report_Frame),
+							IN, &rwparams
+				);
+				mode = ERx("update");
+##			}
+
+##			activate menuitem ERget(FE_Report)
+##							(expl = ERget(_RunRep_Expl), validate = 1)
+##			{
+
+##				validate;	/* SIR #14246 */
+
+				/*
+				** Set the flag and breakdisplay.  Because it uses a
+				** FORMDATA statement, the operations associated with
+				** "report" must be performed outside the display loop.
+				** (For "Batch" as well.)
+				*/
+				run_report = TRUE;
+##				breakdisplay
+##			}
+
+##			activate menuitem _batch (expl = ERget(_Batch_Expl), validate = 1)
+##			{
+				run_report = TRUE;
+				batch = TRUE;
+##				breakdisplay
+##			}
+
+##			activate menuitem ERget(FE_Help)
+##							(expl = ERget(_Help_Expl), validate = 0),
+##					 FRSkey1 (validate = 0)
+##			{
+				FEhelp( hlpREPMU, ERget(_Help_Title) );
+##			}
+
+##			activate menuitem ERget(FE_End)
+##							(expl = ERget(_End_Expl), validate = 0),
+##		 			 FRSkey3 (validate = 0)
+##			{
+##				breakdisplay
+##			}
+
+			/* assert:  !run_report ==> End selected */
+
+			if ( !run_report )
+				break;
+			else
+			{
+				if ( form != NULL )
+					FormParam( formnm, &rwparams );
+##				clear screen
+				RunReport( &(frm->abrfrrw), rwparams.buf, batch );
+#ifndef FT3270
+##				clear screen
+#endif
+/*
+				if ( !frm->abrfrrw.continue )
+					break;
+				else
+*/
+				{ /* Reset for another run. */
+					_clrbuffer(&rwparams);
+					if ( _batch != NULL )
+						batch = FALSE;
+				}
+			}
+		} /* end for */
+		ExtractPrm( param, formnm, frm->abrfrname, ERget(_Report_Frame),
+					OUT, &rwparams
+		);
+##	} /* end frame */
+
+	_deletebuffer(&rwparams);
+##}
+
+/*
+** Name:	ChkForm() -	Check for Legal Form.
+**
+** Description:
+**	Checks to the form for a table field, which is not allowed.
+**
+** Inputs:
+**	form	{char *}  The form name.
+**
+** Returns:
+**	{STATUS}  OK, if valid form.
+**
+** History:
+**	04/89 (jhw)  Written.  (Corrects JupBug #5291.)
+*/
+static STATUS
+##ChkForm ( form )
+##char	*form;
+##{
+	bool	err = FALSE;
+
+##	formdata form
+##	{
+##		i4	istable;
+##		char	cfield[FE_MAXNAME+1];
+
+##		inquire_frs field "" ( cfield = name, istable = table );
+		if ( istable == 1 )
+		{
+			abusrerr(NOTBLFLD, cfield, (char *)NULL);
+			err = TRUE;
+##			endloop;
+		}
+##	}
+	return err ? FAIL : OK;
+##}
+
+/*
+** Name:	FormParam() -	Get Report Parameters from Form.
+**
+** Description:
+**	Get report parameters from the fields on the form.
+**
+** Input:
+**	form	{char *}  The name of the form to use.
+**	buf		{buffer *}  The buffer to hold the report parameters.
+**
+** Called by:
+**	'IIARrwfReport()'
+**
+** History:
+**	Written 9/10/82 (jrc)
+**	6/21/84 (agh) -- Removed parentheses around entire parameter list.
+**	07/08/85 (jhw) -- Collapsed several 'STcopy()'s and a "for" loop
+**			into an 'STpolycat()'.
+**	12/30/86 (agh) -- Removed spaces inserted into param string
+**			around an equals sign and between elements.
+**	07/87 (jhw) -- Changed to get buffer as parameter.
+**	08/89 (jhw) -- Now gets Null string from the ADF control block.
+**	11/17/89 (wolf) - Promote 5.0 fix for bug 14060--"escape" the
+**			double quotes on REPORT strings to avoid RW_1001
+**			error on CMS.
+**	01/15/97 (muhpa01) - with change 424349 made to utexe.def, double quotes
+**			on REPORT strings are now resulting in RW1001 errors - switch to
+**			single quotes here to be compatible
+**      12/10/98 (islsa01) - Fix for the bug #93812.      
+**                           Call STtrmwhite () to remove any trailing white
+**                           spaces for any string variables before the
+**                           RunReport () gets called.
+**      14-Mar-2001 (horda03).
+**              On VMS, use " as ' have a special meaning in DCL.
+*/
+static VOID
+##FormParam (form, buf)
+##char			*form;
+register buffer	*buf;
+##{
+	register ADF_CB		*cb;
+
+	ADF_CB	*FEadfcb();
+
+	cb = FEadfcb();
+
+##	formdata form
+##	{
+##		i4		type;
+##		short	nulli;
+##		char	cfield[FE_MAXNAME+1];
+##		char	cvar[DB_GW4_MAXSTRING+2+1];
+
+##		inquire_frs field "" ( cfield = name, type = type );
+		cvar[0] = EOS;
+		switch (type)
+		{
+		  case 0: /* table field */
+			abusrerr(NOTBLFLD, cfield, (char *)NULL);
+			break;
+
+		  case 1: /* integer */
+##		  {
+##			i4	ivar;
+
+##			getform form ( ivar:nulli = cfield );
+			if ( nulli != DB_EMB_NULL )
+				_VOID_ CVla(ivar, cvar);
+			break;
+##		  }
+
+		  case 2: /* float */
+##		  {
+##			f8	dvar;
+			i2	res_width;
+
+##			getform form ( dvar:nulli = cfield );
+			if ( nulli != DB_EMB_NULL )
+				_VOID_ CVfa(dvar, 25, 18, 'e',
+						cb->adf_decimal.db_decimal,
+						cvar, &res_width
+				);
+			break;
+##		  }
+
+		  case 3: /* string */
+##		  {
+#ifdef CMS
+#define	QUOTE_OFFSET	2	/* \" (escaped on CMS) */
+#else
+#define	QUOTE_OFFSET	1	/* " */
+#endif
+##			register char	*str = &cvar[QUOTE_OFFSET];
+
+##			getform form ( str:nulli = cfield );
+			if ( nulli != DB_EMB_NULL )
+			{
+                                STtrmwhite(str); 
+				/*
+				** BUG 856,843
+				*/
+				str = cvar;
+#ifdef VMS
+				*str = '"';
+#else
+#ifdef CMS
+				*str++ = '\\';	/* escape "; bug #14060 */
+#endif
+				*str = '\'';
+#endif /* VMS */
+				str = &cvar[STlength(cvar)];
+#ifdef VMS
+				*str++ = '"';
+#else
+#ifdef CMS
+				*str++ = '\\';	/* escape "; bug #14060 */
+#endif
+				*str++ = '\'';
+#endif /* VMS */
+				*str = EOS;
+			}
+			break;
+##		  }
+		} /* end switch */
+		/* Check for null */
+		if ( nulli == DB_EMB_NULL )
+		{ /* get Null string */
+			if ( cb->adf_nullstr.nlst_string != NULL
+					&& *cb->adf_nullstr.nlst_string != EOS )
+				STcopy(cb->adf_nullstr.nlst_string, cvar);
+		}
+
+		_addbuffer(buf, cfield, cvar);
+##	} /* end formdata */
+
+	_endbuffer(buf);
+##}
+
+/*
+** Name:	RunReport() -	Run Report to Specified Output.
+**
+** Description:
+**	Establish to which output device the report should be directed
+**	and then run the report.
+**
+** Input:
+**	rep		{ABRTSRW *}  The report frame structure.
+**				.abrrwname		{char *}  The report name.
+**				.abrrwcomline	{char *}  The report command line arguments.
+**				.abrrwoutput	{char *}  The name of the output device.
+**										If "printer", the output is printed; if
+**										"terminal" (default) sends it to the
+**										terminal.  Otherwise, it is taken as a
+**										file, and the output is placed in it.
+**	rwparams {char *}  The report parameters string.
+**	batch	{bool}  Whether the report should be batched.
+**
+** Called by:
+**	'IIARrwfReport()'
+**
+** History:
+**	18-oct-82 (jrc)
+**		Written.
+**	16-dec-86 (marian)	bug 10508
+**		Check for logical II_PRINT_DELETE to determine if a
+**		printer has been specified for reports.
+*/
+static VOID
+RunReport (rep, rwparams, batch)
+register ABRTSRW	*rep;
+char				*rwparams;
+bool				batch;	/* ignore for 6.0 */
+{
+	register char	*output;
+	bool			comline;
+	i4				nx;
+
+	static char	_Report[] = ERx("report");
+
+	output = rep->abrrwoutput;
+	comline = (rep->abrrwcomline == NULL || *(rep->abrrwcomline) == EOS);
+	nx = comline ? 3 : 4;
+
+	if (*output == EOS || STbcompare(output, 0, IIAR_Terminal, 0, TRUE) == 0)
+	{
+		abexeprog(_Report, comline ? ERx("report = %S, param = %S") :
+			ERx("report = %S, param = %S, flags = %S"),
+			nx - 1, rep->abrrwname, rwparams, rep->abrrwcomline
+		);
+	}
+	else if (STbcompare(output, 0, IIAR_Printer, 0, TRUE) == 0)
+	{
+		char		*cp;
+		char		*u_print;
+		LOCATION	loc;
+		LOCATION	tloc;
+		char		buf[MAX_LOC+1];
+
+		if ( NMloc(TEMP, PATH, NULL, &tloc) != OK  ||
+				LOuniq(ERx("abrw"), ERx("lis"), &tloc) != OK )
+			return;
+
+		LOcopy(&tloc, buf, &loc);
+		LOtos(&loc, &cp);
+		abexeprog(_Report, comline ? ERx("report = %S, param = %S, file = %S") : ERx("report = %S, param = %S, file = %S, flags = %S"),
+					nx, rep->abrrwname, rwparams, cp, rep->abrrwcomline
+		);
+		/*
+		** BUG 2456
+		** Pass a new argument to lpr to have it delete the file
+		** file after printing it.
+		*/
+
+		/* bug 10508
+		**   Determine if II_PRINT_DELETE is set.  If so pass the printer name.
+		*/
+		_VOID_ NMgtAt(ERx("II_PRINT_DELETE"), &u_print);
+		IIARprint(u_print, &loc, TRUE);
+	}
+	else
+	{
+		abexeprog(_Report, comline ? ERx("report = %S, param = %S, file = %S") :
+						ERx("report = %S, param = %S, file = %S, flags = %S"),
+			nx, rep->abrrwname, rwparams, rep->abrrwoutput, rep->abrrwcomline
+		);
+	}
+	IIUFrtmRestoreTerminalMode(IIUFMORE);
+}
+
+/*
+** Name:	ExtractPrm() -	Extract Parameters from Parameter List.
+**
+** Description:
+**	Extracts the arguments in a ABRTSPRM to a report parameter buffer
+**	and to the form.  The ABRTSPRM will be of version 6.0 or higher.
+**
+** Inputs:
+**	prm	{ABRTSPRM *}  The parameter structure for the call.
+**	form	{char *}  Form name.
+**	obj	{char *}  The name of the called object.
+**	kind	{char *}  A string describing the called object.
+**	dir	{nat}  The direction, IN or OUT.
+**
+** Output:
+**	buf	{buffer *} The report parameter buffer to be filled (dir == IN.)
+**
+** History:
+**	07/29/87 (jhw) -- Written.
+**	06/13/89 (jhw) -- Test for form before inquiring on field.  Bug #6410.
+**  12-Sep-1997 (rodjo04)
+**    Bug  80617  We will now delimit DB_CHR_TYPE values with single 
+**    quotes instead of double quotes as this layer is lost when passing to 
+**    report. 
+**  20-dec-2000 (rodjo04) bug 103473
+**   Fixed the above change by moving the #ifdef VMS to column one so that 
+**   this will compile correctly on axp.osf
+**	17-Jun-2004 (schka24)
+**	    Avoid buffer overrun on env variable.
+*/
+
+static bool	no_field = FALSE;
+
+#define	SIFLD	8154
+
+static i4
+catch_err (frserr)
+i4	*frserr;
+{
+	if (*frserr == SIFLD)
+		no_field = TRUE;
+	return no_field ? 0 : *frserr;
+}
+
+/*VARARGS5*/
+static VOID
+##ExtractPrm (prm, form, obj, kind, dir, buf)
+ABRTSPRM	*prm;
+##char		*form;
+char		*obj;
+char		*kind;
+i4		dir;
+buffer		*buf;
+##{
+##	register char   **fp;		/* pointer to formal name */
+	register ABRTSPV *ap;		/* pointer to actuals */
+	register i4	cnt;
+	ADF_CB		*cb;
+
+	ADF_CB	*FEadfcb();
+	i4	(*IIseterr())();
+
+	if (prm == NULL)
+	{
+		_clrbuffer(buf);
+		return;
+	}
+
+	cb = FEadfcb();
+
+	/* assert:  prm->pr_version > 1 */
+
+	cnt = prm->pr_argcnt;
+
+	for (fp = prm->pr_formals, ap = prm->pr_actuals ;
+			fp != NULL && cnt-- > 0 ; ++fp, ++ap)
+##	{
+##		DB_DATA_VALUE	*actual;
+##		i4		dttype;
+		bool		is_field;
+
+		if (*fp == NULL)
+		{
+			if (dir == IN)
+				abusrerr(POSTOOSL, obj, (char *)NULL);
+			break;
+		}
+
+		/* Fast check on return for `by reference' values */
+		if (dir == OUT && ap->abpvtype >= 0)
+			continue; /* no need to process if not `by reference' */
+
+		actual = (DB_DATA_VALUE *)ap->abpvvalue;
+
+		if ( form == NULL || *form == EOS )
+			is_field = FALSE;
+		else
+		{ /* form specified, inquire for field */
+			i4	(*save_func)();
+
+			no_field = FALSE;
+			save_func = IIseterr(catch_err);
+##			inquire_frs field form ( dttype = datatype( *fp ) );
+			_VOID_ IIseterr(save_func);
+			is_field = !no_field;
+		}
+
+		if (dir == OUT)
+		{
+			if ( AFE_NULLABLE_MACRO(dttype) &&
+				      !AFE_NULLABLE_MACRO(actual->db_datatype) )
+			{
+				/*
+				** Error if a possibly Null value is returned by
+				** reference to a field that is not Nullable.
+				*/
+				abusrerr(ABNULLBYREF, *fp, kind, (char *)NULL);
+			}
+			if (is_field && ap->abpvtype < 0)
+			{ /* by reference ... */
+##				getform form ( *actual = *fp );
+			}
+		}
+		else /* dir == IN */
+		{
+			if ( is_field )
+			{ /* display parameter in field */
+				DB_DATA_VALUE	fld;
+				bool		coerce;
+
+				if ( AFE_NULLABLE_MACRO(actual->db_datatype) &&
+						!AFE_NULLABLE_MACRO(dttype) )
+				{
+					/*
+					** Error if a possibly Null value is passed
+					** into a field that is not Nullable.
+					*/
+					abusrerr(ABNULLPRM, obj, kind, *fp, (char *)NULL);
+				}
+
+				fld.db_datatype = dttype;
+				if ( afe_cancoerce(cb, actual, &fld, &coerce) != OK )
+					FEafeerr(cb);
+				else if (!coerce)
+				{
+					DB_USER_TYPE	dtype;
+					DB_USER_TYPE	stype;
+
+					IIARtyoTypeOutput(actual, &dtype);
+					fld.db_length = sizeof(f8);
+					fld.db_prec = 0;
+					IIARtyoTypeOutput(&fld, &stype);
+					abusrerr(PRMTYPE, obj, kind, *fp,
+							dtype.dbut_name,
+							stype.dbut_name,
+							(char *) NULL
+					);
+				}
+				else
+				{
+##					putform form ( *fp = *actual );
+				}
+			}
+			else
+			{ /* get parameter for report */
+				DB_EMBEDDED_DATA	edv;
+				i4			ivar;
+				f8			fvar;
+				char			cvar[DB_GW4_MAXSTRING+2+1];
+
+				if (adh_dbtoev(cb, actual, &edv) != E_DB_OK)
+					FEafeerr(cb);
+				else
+				{
+					i2	nullf;
+
+					edv.ed_null = &nullf;
+					switch (edv.ed_type)
+					{
+					  case DB_INT_TYPE:
+						edv.ed_data = (PTR)&ivar;
+						edv.ed_length = sizeof(ivar);
+						break;
+
+					  case DB_FLT_TYPE:
+						edv.ed_data = (PTR)&fvar;
+						edv.ed_length = sizeof(fvar);
+						break;
+
+					  case DB_CHR_TYPE:
+						edv.ed_data = (PTR)cvar + 1;
+						edv.ed_length = sizeof(cvar) - 3;
+						break;
+					}
+					if (adh_dbcvtev(cb, actual, &edv) != OK)
+						FEafeerr(cb);
+					else
+					{
+						if (nullf == DB_EMB_NULL)
+						{
+							char	*cp;
+
+							NMgtAt(ERx("II_NULLSTRING"), &cp);
+							if (cp == NULL)
+							    *cvar = EOS;
+							else
+							    STlcopy(cp, cvar, sizeof(cvar)-1);
+						}
+						else switch (edv.ed_type)
+						{
+						  case DB_INT_TYPE:
+							CVla(ivar, cvar);
+							break;
+	
+						  case DB_FLT_TYPE:
+						  {
+							i2	res_width;
+
+							CVfa(fvar, 25, 18, 'e', cb->adf_decimal.db_decimal,
+									cvar, &res_width
+							);
+							break;
+						  }
+	
+						  case DB_CHR_TYPE:
+						  {
+							register i4	len;
+
+							/* Bug 95356: Can't use ' to enclose character types on VMS.
+							**            On VMS a ' in front of a word, causes the word
+							**            to be replaced by the value of the corresponding
+							**            DCL variable (Unless the ' is within quotes (")
+							*/
+#ifdef VMS
+								cvar[0] = '"';
+ 								cvar[len = STlength(cvar)] = '"';
+#else
+								cvar[0] = '\'';
+								cvar[len = STlength(cvar)] = '\'';
+#endif
+							cvar[len + 1] = EOS;
+							break;
+						  }
+						}
+						_addbuffer(buf, *fp, cvar);
+					}
+				}
+			} /* got report parameter */
+		} /* end IN */
+##	} /* end for */
+
+	_endbuffer(buf);
+##}

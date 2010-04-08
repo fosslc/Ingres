@@ -1,0 +1,112 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 1998 Ingres Corporation --> 
+
+<HTML>
+<HEAD>
+</HEAD>
+
+<BODY bgcolor="#FFFFFF" topmargin="0" leftmargin="0">
+<H1>Access definition</H1>
+<CENTER>
+<TABLE BORDER=1 WIDTH="90%" CELLPADDING=5 CELLSPACING=2>
+	<TR>
+		<TD ALIGN="CENTER">Role</TD>
+		<TD ALIGN="CENTER">Execute</TD>
+		<TD ALIGN="CENTER">Read</TD>
+		<TD ALIGN="CENTER">Update</TD>
+		<TD ALIGN="CENTER">Delete</TD>
+		<TD ALIGN="CENTER">Submit</TD>
+	<TR>
+	  <FORM ACTION="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext`-->/iceTools/actDocRole.html" METHOD="POST"> 
+			<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">
+			<INPUT TYPE="HIDDEN" NAME="ch_doc" VALUE="<!-- #ICE VAR=`:doc` -->">
+			<TD WIDTH="150">New: <SELECT NAME="ch_role_id">
+				 <OPTION VALUE="0"></OPTION>
+			<!-- #ICE FUNCTION=`role?action=select`
+					 HTML=`
+					 <OPTION VALUE=":role_id">:role_name</OPTION>`
+			-->
+			</SELECT></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_execute" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_read" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_update" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_delete" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="image" NAME="go" BORDER=0 SRC="<!-- #ICE INCLUDE=`submit.gif` -->"></TD>
+		</FORM>
+	</TR>
+	</TR>
+	<!-- #ICE REPEAT FUNCTION=`document_role?action=retrieve&dr_doc_id=:doc`
+			 HTML=`
+			 <TR><FORM ACTION="/ice-bin/oiice.:http_api_ext/iceTools/actDocRole.html" METHOD="POST"> 
+					<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">
+					<INPUT TYPE="HIDDEN" NAME="ch_doc" VALUE=":dr_doc_id">
+					<INPUT TYPE="HIDDEN" NAME="ch_role_id" VALUE=":dr_role_id">
+					<TD>:dr_role_name</TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_execute" VALUE="checked" :dr_execute></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_read" VALUE="checked" :dr_read></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_update" VALUE="checked" :dr_update></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_delete" VALUE="checked" :dr_delete></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="image" NAME="Submit" BORDER=0 SRC="<!-- #ICE INCLUDE=``update.gif`` -->"></TD>
+				</FORM></TR>`
+	-->
+</TABLE>
+
+<!-- #ICE REPEAT INCLUDE=`result.html?submit=&cancel=&object=access information for this file&name=&cancel=&submit=&action=accessed` -->
+
+<TABLE BORDER=1 WIDTH="90%" CELLPADDING=5 CELLSPACING=2>
+	<TR>
+		<TD ALIGN="CENTER">User</TD>
+		<TD ALIGN="CENTER">Execute</TD>
+		<TD ALIGN="CENTER">Read</TD>
+		<TD ALIGN="CENTER">Update</TD>
+		<TD ALIGN="CENTER">Delete</TD>
+		<TD ALIGN="CENTER">Submit</TD>
+	<TR>
+	  <FORM ACTION="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext`-->/iceTools/actDocUser.html" METHOD="POST"> 
+			<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">
+			<INPUT TYPE="HIDDEN" NAME="ch_doc" VALUE="<!-- #ICE VAR=`:doc` -->">
+			<TD WIDTH="150">New: <SELECT NAME="ch_user_id">
+				 <OPTION VALUE="0"></OPTION>
+			<!-- #ICE FUNCTION=`user?action=select`
+					 HTML=`
+					 <OPTION VALUE=":user_id">:user_name</OPTION>`
+			-->
+			</SELECT></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_execute" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_read" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_update" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_delete" VALUE="checked"></TD>
+			<TD ALIGN="CENTER"><INPUT TYPE="image" 	 NAME="Submit" BORDER=0 SRC="<!-- #ICE INCLUDE=`submit.gif` -->"></TD>
+		</FORM>
+	</TR>
+	</TR>
+	<!-- #ICE REPEAT FUNCTION=`document_user?action=retrieve&du_doc_id=:doc`
+			 HTML=`
+			 <TR><FORM ACTION="/ice-bin/oiice.:http_api_ext/iceTools/actDocUser.html" METHOD="POST"> 
+					<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">
+					<INPUT TYPE="HIDDEN" NAME="ch_doc" VALUE=":du_doc_id">
+					<INPUT TYPE="HIDDEN" NAME="ch_user_id" VALUE=":du_user_id">
+					<TD>:du_user_name</TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_execute" VALUE="checked" :du_execute></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_read" VALUE="checked" :du_read></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_update" VALUE="checked" :du_update></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="CHECKBOX" NAME="ch_delete" VALUE="checked" :du_delete></TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="image" NAME="Submit" BORDER=0 SRC="<!-- #ICE INCLUDE=``update.gif`` -->"></TD>
+				</FORM></TR>`
+	-->
+</TABLE>
+
+<!-- #ICE REPEAT INCLUDE=`result.html?submit=&cancel=&object=access information for this file&name=&cancel=&submit=&action=accessed` -->
+
+</CENTER>
+</BODY>
+</HTML>
+##
+## (DO NOT REMOVE)

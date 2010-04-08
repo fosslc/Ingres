@@ -1,0 +1,57 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescfs.hlp        Form-Start escape help & examples
+The Form-Start escape executes after the frame starts, but before the form 
+is displayed.
+
+Examples:
+
+    To SELECT information to hidden fields (h_name, h_status):
+
+        formname := SELECT h_name = e.name, h_status = e.status
+        FROM employees e
+        WHERE e.empno = :empno ;
+
+    If you do NOT want to clear all fields after each Save in an Append
+    frame and after each AddNew in an Update frame, add the following
+    statement to the frame's Form-Start Escape:
+
+        IIclear = 'n';
+
+        (In an Update frame, this statement should only be used when the
+        Visual Query specifies that master Inserts are allowed.)
+
+    If you do NOT want to clear all fields in an Update or Browse frame
+    after running the Select query (before returning back to Query mode),
+    add the following statement to the frame's Form-Start Escape:
+
+        IIclear2 = 'n';
+
+        (This statement should only be used in Update and Browse
+        frames where the 'Query Qualification' frame behavior is set
+        to 'Enabled'.)
+
+    To force the form to be displayed:
+        
+        REDISPLAY;
+
+    To change attributes of a field or column:
+
+        SET_FORMS FIELD '' (DISPLAYONLY(empno) = 1, INVISIBLE(salary) = 1);
+        SET_FORMS COLUMN '' 'iitf' (DISPLAYONLY(empno) = 1,
+                                    INVISIBLE(salary) = 1);
+    To change FRS runtime behavior:
+
+        SET_FORMS FRS (ACTIVATE(MENUITEM) = 1, VALIDATE(PREVIOUSFIELD) = 1);
+        SET_FORMS FRS (TIMEOUT = 30);
+
+    To set the form information:
+
+        SET_FORMS FORM (CHANGE = 1);
+        SET_FORMS FORM (MODE = 'READ'); /* FILL, UPDATE, READ, QUERY */
+
+    To specify that no locking is needed for lookup tables in the 
+    application's startup frame (for Ingres DBMS only):
+
+        SET LOCKMODE ON lookup_table1 WHERE READLOCK = NOLOCK;
+        SET LOCKMODE ON lookup_table2 WHERE READLOCK = NOLOCK;
+        ...

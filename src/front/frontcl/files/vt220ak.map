@@ -1,0 +1,128 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* This mapping file submitted by Corroon and Black */
+/* Not supported by Relational Technology */
+
+/* FRS Mapping file for VT220 with mapping to arrow keys possible */
+
+/* Menu Key */
+	menu = pf1 (PF1)
+
+/* Arrow keys mapped to pf keys - the termcap definition must not */
+/* include termcap capabilities ku, kd, kr and kl */
+
+/* Move up one line */
+	upline = pf27 (^)
+
+/* Move down one line */
+	downline = pf28 (V)
+
+/* Move right one space within a field */
+	rightchar = pf29 (->)
+
+/* Move left one space within a field */
+	leftchar = pf30 (<-)
+
+/* Help facility */
+	frskey1 = pf15 (Help)
+
+/* Exit the system */
+	frskey2 = pf4 (PF4)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (PF3)
+
+/* Go or execute function */
+	frskey4 = pf16 (Do)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= pf21 (Find)
+
+/* Save Function */
+	frskey8 = pf10 (F10)
+
+/* Undo and Forget Function */
+	frskey9 = pf2 (PF2)
+
+/* Bring up List Choices */
+	frskey10 = pf20 (F20)
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlH (^H)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf25 (Prev Screen)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf26 (Next Screen)
+
+/* Print contents of current screen to file or printer */
+	printscreen = pf8 (F8)
+
+/* Select first menu item */
+	menuitem1 = pf11 (F11)
+
+/* Select second menu item */
+	menuitem2 = pf12 (F12)
+
+/* Select third menu item */
+	menuitem3 = pf13 (F13)
+
+/* Select fourth menu item */
+	menuitem4 = pf14 (F14)
+
+/* Select fifth menu item */
+	menuitem5 = pf17 (F17)
+
+/* Select sixth menu item */
+	menuitem6 = pf18 (F18)
+
+/* Select seventh menu item */
+	menuitem7 = pf19 (F19)
+
+/* Remove character under cursor */
+	deletechar = pf23 (Remove)
+
+/* Switch between insert and overstrike */
+	mode = pf22 (Insert Here)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlDEL (Delete)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)

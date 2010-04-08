@@ -1,0 +1,23 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Web Deployment Option Variables (Set)&previous=vardef.html&next=varset2.html` -->
+<INPUT TYPE="HIDDEN" NAME="varcurrent" VALUE="">
+<INPUT TYPE="HIDDEN" NAME="varvalue" VALUE="">
+<INPUT TYPE="HIDDEN" NAME="isvar" VALUE="first">
+
+To set a variable with the Web Deployment Option macro language, you must use the "DECLARE" keyword. This keyword will allow you 
+to initialize a variable with a string or concatenated strings.
+<p>
+The following example will show you the "DECLARE" syntax. Please, answer these questions.
+<!-- #ICE REPEAT IF (`:secured` == `yes`)
+THEN=`
+<H4 CLASS="question">What type of variable do you want to declare?</H4>
+<H4 CLASS="choice">
+<INPUT TYPE="RADIO" NAME="level" VALUE="page" CHECKED>Page<BR>
+<INPUT TYPE="RADIO" NAME="level" VALUE="session">Session<BR>
+</H4><p>`
+ELSE=`<INPUT TYPE="HIDDEN" NAME="level" VALUE="page">`
+-->
+
+<H4 CLASS="question">What name do you want to give this variable?</H4>
+<H4 CLASS="choice"><INPUT SIZE="32" NAME="varname" VALUE="myVar"></H4>
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

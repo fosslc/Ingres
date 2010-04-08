@@ -1,0 +1,26 @@
+#
+# Jamfile file for cl!clf!pc_win
+#
+
+SubDir ING_SRC cl clf pc_win ;
+
+IISUBSYS cl clf pc_win ;
+
+
+IILIBRARY COMPATLIB : pcwait.c
+	pcunique.c
+	pctask.c
+	pctalive.c
+	pcsleep.c
+	pcfork.c
+	pcexsuid.c
+	pcexit.c
+	pccrash.c
+	pccmdlin95.c
+	pccmdlin.c
+	pcalive.c 
+	pcforcex.c
+	pctidx.c 
+	pcpriv.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : pcdata.c ;

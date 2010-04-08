@@ -1,0 +1,83 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Displaying a Subset of Rows
+</title>
+</head>
+<body>
+<h1>
+Displaying a Subset of Rows
+</h1>
+
+This document displays those plays required, as
+specified by the variable <tt>e_type</tt>. This is used in
+the where clause of the select statement:
+<tt><pre>
+          SQL=`select * from plays where type = ':e_type'`
+</pre></tt><p>
+We also include a link back to the type selection page:
+<tt><pre>
+&lt;A HREF="/ice-bin/oiice.dll/playgroup/plays[play_typeList.html]"&gt;Select a new play type&lt;/A&gt;
+</pre></tt><p>
+In every other respect, this document is identical to the
+first example we saw. We leave to the reader the exercise of extending this example to wrap
+around to the beginning when the end of the result set is
+reached.
+<h3>File: play_subSet.html</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shakespeare's Plays by Type&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Shakespeare's Plays by Type&lt;/h1&gt;
+
+&lt;FORM ACTION="/ice-bin/oiice.dll/playgroup/plays[play_subSet.html]"
+	METHOD="POST"&gt;
+&lt;!-- #ICE 
+          DATABASE = `icetutor` 
+          <span class="macro">SQL=`select * from plays where type = ':e_type'` </span>
+          TRANSACTION=`Complete` 
+          CURSOR=`Works` 
+          ROWS=`5` 
+          TYPE=`TABLE`
+          --&gt;
+&lt;!-- #ICE DECLARE=`session.e_playTxn=Complete` --&gt;
+&lt;!-- #ICE DECLARE=`session.e_playTxnCommitted=FALSE` --&gt;
+&lt;p&gt;
+<span class="macro">&lt;A HREF="/ice-bin/oiice.dll/playgroup/plays[play_typeList.html]"&gt;Select a new play type&lt;/A&gt;</span>
+&lt;p&gt;
+&lt;INPUT TYPE="submit" NAME="More" VALUE="More" ALT="Show More Plays of this type"&gt;
+&lt;/FORM&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div><p>
+In this example we have seen how we can communicate values
+between two (or more) Web Deployment Option HTML documents, presenting a simple
+refinement of search criteria to the user, based on data in
+the database.
+<p>
+In the next example we see how to achieve a similar effect,
+this time using 
+<a href="fr_textLink.html">hyper-links</a>
+instead of a combo box.
+
+</body>
+</html>

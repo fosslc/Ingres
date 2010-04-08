@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have selected DELETE in the QBF UPDATE function.  At this point, you 
+must specify which components of the displayed record(s) are to be deleted.
+
+Commands available are:
+
+        Command                 Function
+        _______                 ________
+
+        AllRows                 Delete all rows in the table field
+        Row                     Delete the row on which the cursor currently
+                                rests.
+        Help                    Print this message.
+        End                     Stop work in this frame and return to the 
+                                frame that called it.

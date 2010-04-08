@@ -1,0 +1,123 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<cu.h>
+# include	<er.h>
+# include	"ercu.h"
+# include	<si.h>
+
+/**
+** Name:	cujdout.c -    Copy a joindef out.
+**
+** Description:
+**	Copies a joindef to a copyutil file.
+**
+**
+** History:
+**	30-Jul-1987 (Joe)
+**		First Written
+**	2-Feb-1988 (Joe)
+**		Took out ranges, and made queries repeats
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	13-May-2005 (kodse01)
+**	    replace %ld with %d for old nat and long nat variables.
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+/* extern's */
+/* static's */
+
+/*{
+** Name:	IICUcjoCopyJoindefOut	-  Copy a joindef to a file.
+**
+** Description:
+**	Given a joindef name this copies the joindef's
+**	definition to a copyutil file.  The layout for the fields
+**	of the different joindef tables is given in the CURECORD
+**	for the joindef objects.
+**
+** Inputs:
+**	name		The name of the joindef to copy out.
+**
+**	class		The class of the joindef to copy out.
+**			This is not used in this routine.  We copy
+**			out any joindef we find.
+**
+**	notthereok	If this is TRUE, then the joindef not being
+**			there is not an error.  Otherwise it is an
+**			error.
+**
+**	fp		The file the output to.
+**
+** Outputs:
+**	Returns:
+**		OK if succeeded.
+**		If notthereok is false and the joindef is not present
+**		returns a failure status.
+**
+** History:
+**	30-jul-1987 (Joe)
+**		First Written
+**	2-Feb-1988 (Joe)
+**		Took out ranges, and made queries repeats
+**	05-sep-88 (kenl)
+**		Changed QUEL to SQL.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+*/
+STATUS
+IICUcjoCopyJoindefOut(name, class, notthereok, fp)
+char	*name;
+i4	class;
+bool	notthereok;
+FILE	*fp;
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+	i4	jdefid;
+	i4	qtype;
+	char	qinfo1[FE_MAXNAME+1];
+	char	qinfo2[FE_MAXNAME+1];
+	char	qinfo3[FE_MAXNAME+1];
+	char	qinfo4[FE_MAXNAME+1];
+    EXEC SQL END DECLARE SECTION;
+
+    STATUS	rval;
+
+	/*
+	** Write header records for object.
+	*/
+
+	if ((rval = cu_writeobj(OC_JOINDEF, 0, name, fp, &jdefid)) != OK)
+	{
+	    return (notthereok ? OK : rval);
+	}
+
+	EXEC SQL REPEATED SELECT
+		    qtype, qinfo1, qinfo2, qinfo3, qinfo4
+		 INTO
+		    :qtype, :qinfo1, :qinfo2, :qinfo3, :qinfo4
+		 FROM ii_joindefs
+		 WHERE object_id = :jdefid;
+	EXEC SQL BEGIN;
+	    SIfprintf(fp, ERx("\t%d\t%s\t%s\t%s\t%s\n"),
+		qtype,
+		qinfo1,
+		qinfo2,
+		qinfo3,
+		qinfo4);
+	EXEC SQL END;
+	return FEinqerr();
+}

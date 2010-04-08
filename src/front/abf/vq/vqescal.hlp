@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescbl.hlp	After-Lookup escape code help
+After-Lookup escape code runs after the CALLFRAME lookup() in the
+"ListChoices" menuitem.

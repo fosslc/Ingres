@@ -1,0 +1,14 @@
+#
+# OpenROAD makefile generation hints for common\gcf\gcc
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+#	01-aug-02 (dansa02)
+#		Adapted to Ingres 2.6 build.
+#	12-oct-04 (dansa02)
+#		Adapted for flat-linking instead of IngresII DLL structure.
+#
+objonly = iigcc.obj 
+objonly = iigcb.obj 
+

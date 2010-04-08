@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ This entry contains the Ingres userid to use if one is not
+ defined on an HTML form. If a value is not defined for this entry, one must
+ be defined on an HTML form for every Ingres request.
+
+ Default: ingres

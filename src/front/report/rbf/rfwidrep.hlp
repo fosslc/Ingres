@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may specify if you would like to create a report
+that goes beyond the -l setting.  The -l flag is used to set the maximum
+line length.  The chosen style cannot fit within the -l setting.  You
+may choose to override the -l flag or select another report style.
+
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Yes		Override the -l flag and create the report beyond
+			  the specified line length.
+	No		Do not create the report.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select	        Choose the specified option for creating the report.
+			
+        Cancel          Return to the Styles popup without selecting a 
+			create option.
+
+        Help            Print this message.

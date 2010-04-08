@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2005 Ingres Corporation
+
+  The result_structure resource sets the default result table storage
+  structure for CREATE TABLE AS SELECT statements.
+
+  The default storage structure is HEAP.

@@ -1,0 +1,16 @@
+#
+# Jamfile file for back!qef!qeq
+#
+
+SubDir ING_SRC back qef qeq ;
+
+IISUBSYS back qef qeq ;
+
+
+IILIBRARY QEFLIB : qeqvalid.c qeqprt.c qeqpart.c qeqddb.c
+	qeqcsr.c qeqagg.c qeq.c qeaschma.c qeasagg.c qearupd.c
+	qearollback.c qearetrow.c qeareplace.c qeardel.c qearaggf.c
+	qeaput.c qeaproj.c qeamessage.c qeaiproc.c qeahaggf.c
+	qeafetch.c qeaeximm.c qeaevent.c qeadmu.c qeadelete.c qeaddl.c
+	qeacommit.c qeacall.c qeaaggf.c ;
+

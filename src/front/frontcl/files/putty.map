@@ -1,0 +1,116 @@
+/* UNIX FRS mapping file for PUTTY terminal emulator */
+
+/* Menu Key */
+	menu = pf1 (f1)
+
+/* Help facility */
+	frskey1 = pf2 (f2)
+
+/* Exit the system */
+	frskey2 = pf4 (f4)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (f3)
+
+/* Go or execute function */
+	frskey4 = pf12 (f12)
+
+/* Put cursor on top of form or table field */
+	frskey5 = pf22 (Home)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= pf25 (End)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = pf21 (Ins)
+
+/* Forget and Undo */
+	frskey9 = pf24 (Del)
+
+/* Bring up List Choices */
+	frskey10 = pf10 (f10)
+
+/* Scroll page or form left */
+	scrollleft = controlO (^O)
+
+/* Scroll page or form right */
+	scrollright = controlU (^U)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf23 (PgUp)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf26 (PgDn)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf5 (f5)
+
+/* Select second menu item */
+	menuitem2 = pf6 (f6)
+
+/* Select third menu item */
+	menuitem3 = pf7 (f7)
+
+/* Select fourth menu item */
+	menuitem4 = pf8 (f8)
+
+/* Select fifth menu item */
+	menuitem5 = pf9 (f9)
+
+/* Select sixth menu item */
+	menuitem6 = pf15 (Sh-F5)
+
+/* Select seventh menu item */
+	menuitem7 = pf16 (Sh-F6)
+
+/* Select eighth menu item */
+	menuitem8 = pf17 (Sh-F7)
+
+/* Select ninth menu item */
+	menuitem9 = pf18 (Sh-F8)
+
+/* Select tenth menu item */
+	menuitem10 = pf19 (Sh-F9)
+
+/* Select eleventh menu item */
+	menuitem11 = pf20 (Sh-F10)
+
+/* Move cursor to next field - defined to controlI in frs.map */
+
+/* Move cursor to previous field - defined to controlP in frs.map */
+	previousfield = pf27 (Sh-Tab)
+
+/* Move up one word within field */
+	nextword = controlB (^B)
+
+/* Move back one word within field - defined to controlR in frs.map */
+
+/* Switch between insert and overstrike mode - defined to controlE in frs.map */
+
+/* Redraw the screen - defined to controlW in frs.map */
+
+/* Delete the character under the cursor - defined to controlD in frs.map */
+
+/* Delete character immediately to left of cursor */
+/* defined to controlDEL in frs.map */
+
+/* Start default text editor on field - defined to controlV in frs.map */
+
+/* Move to first column of next row in table field */
+/* defined to controlN in frs.map */
+
+/* Clear the field - defined to controlX in frs.map */
+
+/* Clear out the rest of the field, and move to next field */
+/* defined to controlM in frs.map */
+
+/* Auto-duplicate value while in fill mode - defined to controlA in frs.map */
+
+/* Escape to shell */
+	shell = pf13 (Sh-F3)

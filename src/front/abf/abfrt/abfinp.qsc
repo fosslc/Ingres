@@ -1,0 +1,76 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<cm.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<abfcnsts.h>
+
+/**
+** Name:    abfinp.qc -	ABF Run-Time System User Response Input Module.
+**
+** Description:
+**	Contains the input routines for user responses for the run-time
+**	system.  Defines:
+**
+**	abinpname()	inputs a name.
+**	abinpyon()	inputs a yes or no answer.
+**
+** History:
+**	Revision 6.0  87/08/24  wong
+**	Added buffer and size arguments to 'abinpname()'.  Modified to
+**	use new 'IIUGyn()' and 'IIUFask()' routines.
+**
+**	Revision 3.0
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+/*{
+** Name:    abinpname() -	Prompt for Name from Input.
+**
+** Input:
+**	prompt	{char *}  Prompt string.
+**	buf	{char []}  Buffer to hold input name.
+**	bsize	{u_i4}  Buffer size.
+**
+** Returns:
+**	{char *}  The address of the input name either 'buf' or
+**		  allocated using 'STalloc()'.
+**
+** History:
+**	08/87 (jhw) -- Added 'buf' and 'bsize' arguments; copy response into
+**		'buf'; modified to prompt using 'IIUFask()'.
+*	12/89 (jhw) -- Now use 'IIUFprompt()'.
+*/
+/*VARARGS2*/
+char *
+abinpname (prompt, buf, bsize)
+char	*prompt;
+char	buf[];
+u_i4	bsize;
+{
+    register char	*cp;
+    char		pbuf[FE_PROMPTSIZE + 1];
+
+    IIUFprompt( ERx("%0c : "), 1, (bool)FALSE, pbuf,
+		bsize == 0 ? ( sizeof(pbuf) - 1 ) : bsize,
+		1, prompt
+    );
+    for (cp = pbuf ; CMwhite(cp) ; CMnext(cp))
+	;
+    return (buf == NULL || bsize == 0)
+		? STalloc(cp) : (STlcopy(cp, buf, bsize), buf);
+}

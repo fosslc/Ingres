@@ -1,0 +1,42 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the main menu screen of IPM.  From here you can view information
+on servers, locking and logging.  Select the Options menuitem to change
+overall settings that affect display of all information.  Use the up/down
+arrow keys to place the cursor on your choice, then press the "Select" key.
+
+The following choices are available:
+
+Server List    Displays the registered servers currently running in your
+               Ingres installation.  From here you can view sessions of each
+               server, display what users are connected to which databases,
+               and so on.  If you are an Ingres superuser, you can remove
+               individual sessions and shutdown DBMS or STAR servers.
+
+               The server list is not available in standalone mode (the
+               -s option).
+
+Lock Info      Presents a menu pertaining to the Ingres locking system.
+               Choices from this menu will display locking system summaries,
+               lock lists, and locked resources (databases, tables, pages).
+               This is where concurrency analysis may be performed.
+
+Log Info       Presents a menu pertaining to the Ingres logging system.
+               Choices from this menu will display logging system summaries,
+               transaction lists, process and database lists.  This is where
+               transaction rates and transaction log file activity may be
+               monitored.
+
+The following menuitems are available:
+
+Select         Selects the indicated choice (Server List, Lock Info, or
+               Log Info.)
+
+Options        Presents a menu which allows you to view or set options.
+               Most options affect how much information IPM will display.
+               For instance, one option allows you to limit display of lock
+               resources to those for a specific database.  IPM provides
+               popup help for each option, listing available choices.
+
+Help           Displays this screen.
+
+Quit           Exits IPM.

@@ -1,0 +1,20 @@
+#
+# Jamfile file for cl!clf!er_vms
+#
+# History:
+#	16-nov-2004 (abbjo03)
+#	    Add IINeedObj for ercompile.
+#	24-nov-2004 (abbjo03)
+#	    Change IINeedObj to Depends.
+
+SubDir ING_SRC cl clf er_vms ;
+
+IISUBSYS cl clf er_vms ;
+
+IIBINEXE ercompile : ercomp.c ;
+IINEEDLIBS ercompile : COMPATLIB ;
+Depends ercompile$(SUFEXE) : $(FRONTMAIN) ;
+
+IILIBRARY COMPATLIB : erreport.c erreleas.c ermsghdr.c erlookup.c
+	erlangst.c erlangcd.c erintern.c erinit.c erget.c erexcep.c
+	erdepend.c erclose.c er.c ;

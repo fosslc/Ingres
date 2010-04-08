@@ -1,0 +1,36 @@
+#
+# YAM MANIFEST file for back!scf!udt
+#
+# History:
+#	21-jan-2005 (srisu02)
+#	    Add VMS specific section for invocations to install utility scripts
+#	23-feb-2005 (abbjo03)
+#	    Build UDT shared library on VMS.
+
+IISUBSYS back scf udt ;
+
+IICLSADT iiclsadt.c ;
+IIUSERADT iiuseradt.c ;
+
+IILIBRARY UDTLIB : iiclsadt.c iiuseradt.c ;
+
+
+if $(NT)
+{
+IISHLIBRARY $(SHUDTLIB) ;
+IINEEDLIBS $(SHUDTLIB) : UDTLIB ;
+
+FILE $(INGBIN)/$(SHUDTLIB:S=.dist) : $(SHUDTLIB) ;
+}
+else if $(VMS)
+{
+    IISHLIBRARY $(SHUDTLIB) ;
+    IINEEDLIBS $(SHUDTLIB) : UDTLIB ;
+
+    IILIBOBJECT iiclsadt.c ;
+    IILIBOBJECT iiuseradt.c ;
+
+    IILibSh ii_alladt_build : ii_alladt_build$(SUFSH) ;
+    IILibSh ii_clsadt_build : ii_clsadt_build$(SUFSH) ;
+    IILibSh ii_useradt_build : ii_useradt_build$(SUFSH) ;
+}

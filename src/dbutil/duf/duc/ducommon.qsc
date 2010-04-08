@@ -1,0 +1,6482 @@
+/* Copyright (c) 1990, 2005 Ingres Corporation
+**
+**
+*/
+
+#include    <compat.h>
+#include    <gl.h>
+#include    <pc.h>
+#include    <st.h>
+#include    <sl.h>
+#include    <iicommon.h>
+#include    <dbdbms.h>
+#include    <duf.h>
+#include    <er.h>
+#include    <usererror.h>
+#include    <duerr.h>
+
+#include    <cs.h>
+#include    <lk.h>
+##include   <dudbms.qsh>
+##include   <duenv.qsh>
+#include    <ducdb.h>
+#include    <me.h>
+#include    <nm.h>
+#include    <si.h>
+#include    <cui.h>
+#include    <st.h>
+##include   <dustar.qsh>
+#include    <tm.h>
+#include    <duucatdef.h>
+
+#include    <lo.h>
+#include    <pm.h>
+
+EXEC SQL include SQLCA;
+## int db_maxname_hostvar = DB_MAXNAME;
+
+/*
+**  Name: ducommon.qsc - createdb / convto60 shared routines
+**
+**  Description:
+**      This module is routines that used to be duplicated between createdb
+**	and convto60.  They are put into this module for build (link) purposes. 
+**
+**          duc_dbms_bld	    - Builds DBMS catalogs
+**	    duc_1makedbdb	    - Make and configure system catalogs 
+**				      specific to the "dbdb".
+**	    duc_6create_iidbdb_cats - Creates STAR system catalogs in iidbdb
+**	    duc_cpy_usrf	    - append all of the "users" file entries
+**				      to the "iiuser" table in the "iidbdb".
+**
+**  History:
+**	08-Mar-1991 (teresa)
+**	    initial creation
+**	16-sep-1992 (robf)
+**	    added catalogs for C2 Security Audit Gateway (SXA)
+**	09-nov-92 (rickh)
+**	    FIPS CONSTRAINTS improvements.
+**	25-sep-92 (rblumer)
+**	    merged with 9/8 integration changes:
+**	11-sep-92 (andre)
+**	    MSB in relstat is no longer being set - change
+**	    mod((relstat+1073741824+1073741824),x) back to mod(relstat,x)
+**	05-oct-92 (rblumer)
+**	    merge system_generated with system_use column,
+**          add 4 more standard catalogs for CONSTRAINTS.
+**      09-nov-92 (jrb)
+**          Change ING_SORTDIR to ING_WORKDIR and DU_SORTS_LOC to DU_WORK_LOC
+**	    and append tuple to iiextend for work locations and turn on new
+**          DU_EXT_DATA bit in iiextend for data locations.  ML Sorts Project.
+**	18-nov-92 (robf)
+**	    When REGISTERing iiaudit, add an explicit check for success
+**	    to make sure a diagnostic is issued.
+**	    Update creation of iisectype to correspond to new audit types
+**	    Make sure iiaudit includes object owner column
+**	05-dec-92 (rblumer)
+**	    add column_mandatory and column_default_value to iicolumns,
+**	    take deftype out of iidefault, get rid of iidefaults view.
+**	16-dec-92 (rickh)
+**	    Modify IIINTEGRITY immediately after you create it.  This allows
+**	    subsequent tables to be created with "NOT NULL" columns.  In the
+**	    brave, new FIPS CONSTRAINTS world, "NOT NULL" creates a constraint,
+**	    which in turn invokes QEF code that expects IIINTEGRITY to have
+**	    a key structure.
+**	14-jan-93 (rblumer)
+**	    iiprocedures.system_use now looks at bit 0x80 = 128, not 0x10 = 16.
+**	20-jan-93 (anitap)
+**	    Fixed bugs in duc_iischema() and duc_m9_schema(). Changed 
+**	    schema_name & schema_owner to 32. Added schema_idx to 
+**	    iischema.
+**	08-feb-93 (anitap)
+**	    Fixed bugs in duc_iischema() and duc_m9_schema().
+**	2-Feb-1993 (jpk)
+**	    Encapsulate creation and modify back to storage structure
+**	    of system catalogs so that upgradedb can call the same
+**	    function as createdb.
+**	20-feb-93 (rblumer)
+**	    add tuples to IIDEFAULT for DB_DEF_UNKNOWN, logical keys,
+**	    INITIAL_USER, and DBA; in IICOLUMNS, changed column_has_default
+**	    and column_defaults to be 4-valued; change position to key_position
+**	    in IIKEY and IIKEYS, as position is a reserved word in FULL SQL92.
+**	22-feb-93 (rickh)
+**	    Upped the length of the value string in IIDEFAULT by 1 byte.  This
+**	    forces (given the null indicator byte and the 2 byte length
+**	    descriptor) 4 byte alignment in our DBMS.H structure, which is good
+**	    for the secondary index (which has a concluding tidp column).
+**	2-mar-93 (rickh)
+**	    Add tuple to iischema, binding $ingres to its canonical schema id.
+**	07-mar-93 (rblumer)
+**	    added pp_ to all column names in iiprocedure, and key_ to all
+**	    columns in iikey, to following existing catalog conventions;
+**	    add 'and intnumber = 1' to WHERE clause for iiconstraints.
+**	9-mar-93 (rickh)
+**	    Added DB_DEF_ID_NEEDS_CONVERTING and DB_DEF_ID_UNRECOGNIZED
+**	    tuples to IIDEFAULT.
+**	23-mar-93 (rblumer)
+**	    check in iiconstraints should be 'intseq = 0', not 'intnumber = 1';
+**	    change column_defaults in iicolumns to handle calculated columns
+**	    in a backward-compatible way.
+**	24-mar-93 (rickh)
+**	    Extended the 07-mar-93 fix to add "key_" to the columns mentioned
+**	    in duc_modify_iikey and duc_v_iikeys.
+**	05-apr-93 (rblumer)
+**	    change iitables and iiindexes to use correct relstat2 bits for
+**	    unique_scope; changed views for iiref_constraints and
+**	    iiconstraint_indexes to use new way of joining iidbdepends
+**	    with iiintegrity. 
+**	13-apr-93 (rblumer)
+**	    in duc_1makedbdb, check status of duc_cpy_usrf and return if error.
+**	14-apr-93 (ralph)
+**	    DELIM_IDENT:
+**	    Special handling for non-standard case translation semantics
+**	    when creating the iidbdb in duc_1makedbdb.
+**	    Do case insensitive compares in duc_p5_alter_extension().
+**	    Initialize proc_own in duc_p5_alter_extension().
+**	24-may-1993 (bryanp)
+**	    Include <pc.h> before <lk.h> to pick up PID definition.
+**	02-jun-1993 (ralph)
+**	    DELIM_IDENT:
+**	    Pass in info on case translation semantics when creating iidbdb.
+**	    Remove delimiters in du_add_privd_user();
+**	    if the calls wants them, the caller should specify them.
+**	    Make search for relation name case insensitive in rel_exists().
+**	21-jul-93 (ralph)
+**	    DELIM-IDENT:
+**	    Add support for DU_REAL_USER_MIXED when creating the iidbdb.
+**	    Collapse all case translation flags for iidbdb creation into -G.
+*	04-aug-1993 (shailaja)
+**	    Unnested comments.
+**	8-aug-93 (ed)
+**	    unnest dbms.h
+**	09-nov-93 (rblumer)
+**	    iiqef_createdb has 2 new parameters: the translated and
+**	    untranslated database owner name.
+**	    added upper_case parameter to duc_iischema function call.
+**	    For iidatabase append, changed hard-coded $ingres ownername to be
+**	    upper/lower case depending on dbservice translation semantics.
+**	13-oct-93 (swm)
+**	    Bug #56448
+**	    Removed d_print() function because it accepts a variable number
+**	    of variable-sized arguments, which is not portable. It could
+**	    not become a varargs function as this practice is outlawed in
+**	    main line code.
+**	    Replaced invocations of the function with calls to SIprintf. This
+**	    works because SIprintf is a varargs function.
+**      31-jan-94 (mikem)
+**          Added include of <cs.h> before <lk.h>.  <lk.h> now references
+**          a CS_SID type.
+**      7-dec-1994 (andyw)
+**          Changed view to handle default work location for
+**          partial backup & recovery project
+**      12-Dec-1994 (liibi01) -- Cross integration from 6.4 (Bug 59255).
+**          Added update of create date for core catalogs to fix bug 59255.
+**	25-jan-1995 (medji01)
+**	    Backed out changes for bug fix 59255 applied during cross
+**	    integration from 6.4. This is this incorrect place for those
+**	    fixes, they have already been applied to dmmcre.c to fix bug
+**	    45676.
+**      01-mar-95 (harpa06)
+**          Bug #66957: Changed the Database version number to OPING1.1 from
+**          ING6.0
+**	10-nov-95 (nick)
+**	    Encapsulate iihistogram code.
+**	13-nov-95 (prida01)
+**	    Fix for bug 71292. Add iidd_stats code
+**	 4-apr-96 (nick)
+**	    Encapsulate iimulti_locations code here to allow calling from
+**	    both dui and upgradedb.
+**      06-mar-96 (nanpr01)
+**          Changed iitables, iiphysical_tables, iiindexes standard catalogue 
+**	    interface to return relation page size.
+**	 4-apr-96 (nick)
+**	    Encapsulate iimulti_locations code here to allow calling from
+**	    both dui and upgradedb.
+**	08-may-1996 (shero03)
+**	    Added iirange for RTree
+**	15-jul-1996 (angusm)
+**	    Intersolv ODBC v3.0 project: add new catalogs 'iiproc_params',
+**	    'iiproc_access' and alter definition of 'iiaccess'
+**	05-jul-96 (pchang)
+**	    Corrected user privilege constant for AUDITOR column for 
+**	    iiusers, iiprofiles and iiroles (b66257, b74261 & b75538).
+**      28-sep-96 (mcgem01)
+**	    Global data moved to ducdata.c
+**	23-oct-96 (hanch04)
+**	    Added reltotwid and relversion
+**	26-Mar-1997 (jenjo02)
+**	    Table priority project:
+**	    Added table cache priority to iitables.
+**	01-jun-1999 (kitch01)
+**	    As part of fix for bug 97040 move creation of iilog_help view
+**	    here as procedure duc_iilog_help(). This allows both createdb
+**	    and upgradedb to use this function.
+**	21-may-1999 (hanch04)
+**	    Replace STbcompare with STcasecmp,STncasecmp,STcmp,STncmp
+**      03-aug-1999 (stial01)
+**          Added duc_iietab(), duc_modify_iietab()
+**      02-Mar-2001 (hanch04)
+**          Bumped release id to external "II 2.6" internal 860 or 8.6
+**	02-Mar-2001 (jenjo02)
+**	    Added raw_blocks to iilocation_info view.
+**      16-apr-2001 (stial01)
+**          Added tups_per_page, keys_per_page, keys_per_leaf to iitables view
+**	17-apr-2001 (stial01)
+**          Change tableinfo to iitableinfo
+**	26-apr-2001 (horda03)
+**	    For every user defined in CONFIG.DAT, add an entry to IIUSER when
+**	    IIDBDB is created. (Bug 100039)
+**      27-apr-2001 (stial01)
+**          execute procedure iiqef_create_db with correct number of parameters
+**	11-May-2001 (jenjo02)
+**	    rawblocks moved from iilocations to iiextend, rawpct added 
+**	    to iilocations.
+**	23-May-2001 (jenjo02)
+**	    Added duc_p6_checklocarea() to install internal procedure
+**	    iiQEF_check_loc_area.
+**	15-Oct-2001 (jenjo02)
+**	    Deleted short-lived iiQEF_check_loc_area. Area directories
+**	    are now made by CREATE/ALTER LOCATION.
+**      24-0ct-2001 (stial01)
+**          Compare lowercase(dbp_name), in case SQL92 installation (b106147)
+**      09-jan-2002 (stial01)
+**          Added routines to create/drop/upgrade Standard catalog views
+**          (SIR 106745)
+**	02-Oct-2002 (hanch04)
+**	    If runing against a 64-bit server, then dbservice should be set 
+**	    to LP64.
+**	21-nov-2002 (somsa01)
+**	    On Windows, in duc_cpy_usrf(), create "administrator".
+**	29-jan-03 (inkdo01)
+**	    Overhauled column names in iisequences to be "compound" (and 
+**	    avoid use of reserved words).
+**      07-Apr-2003 (hanch04)
+**          Bumped release id to external "II 2.65" internal 865 or 8.65
+**	19-Dec-2003 (schka24)
+**	    Create partitioned-table catalogs; update iitables view with
+**	    partitioning columns.
+**      13-Jan-2004 (sheco02)
+**          Bumped release id to external "II 3.0" internal 900 or 9.00
+**	28-jan-2004 (somsa01)
+**	    Only manually create the "Administrator" user on Windows if
+**	    PMload() fails. Normally we take the users which are in
+**	    config.dat and add them to the iiuser table.
+**	29-Jan-2004 (schka24)
+**	    Ditch iipartition, turns out we don't need it.
+**	19-Feb-2004 (schka24)
+**	    Get num_rows and number_pages via iitableinfo because they are
+**	    computed inside DMF for partitioned masters.
+**      10-mar-2004 (rigka01)
+**	    Cross change 466625 for 109159 to avoid bug 111927/INGCBT516 
+**	20-Apr-2004 (bonro01)
+**	    Allow Ingres to be installed as a user other than 'ingres'
+**	29-Apr-2004 (gorvi01)
+**		Added DU_IIQEF_DEL_LOCATION constant. Added case for del_location
+**		internal procedure in duc_create_one_internal_proc.
+**	21-Jun-2004 (schka24)
+**	    Added standard catalog views for partitioning catalogs.
+**	7-Sep-2004 (schka24)
+**	    iiotables and iiocolumns have to be here for upgradedb.
+**	28-dec-04 (inkdo01)
+**	    Added "column_collid" to iicolumns.
+**	29-Dec-2004 (schka24)
+**	    Change iiprotect to btree; make all btree's fillfactor=100.
+**      23-feb-2005 (stial01)
+**          Explicitly set isolation level after connect
+**	19-Oct-2005 (schka24)
+**	    Cause view_base columns to return nothing (ie. 'N') as part
+**	    of integrating inifa01's change 479603 which removed the vbase
+**	    bit from iirelation.  N.B. it is OK to leave existing catalog
+**	    views alone since at present vbase is meaningless anyway.
+**	7-Nov-2005 (schka24)
+**	    We shouldn't have removed the B1 security columns from the SCI
+**	    views, breaks compatability with earlier releases.  Put 'em
+**	    back as dummy columns.  (For the security-label columns, use
+**	    a char.)
+**      17-Jan-2005 (hweho01)
+**          Changed table version to ING9.0. 
+**      01-Feb-2006 (hweho01)
+**          Modified table version string to "II9.0", need to maintain the
+**          compatibility with current/previous releases.
+**      27-Apr-2006 (hweho01)
+**          Changed table version to II9.1 for new release.  
+**	10-May-2006 (jenjo02)
+**	    Added "is_clustered" to DU_IITABLES, DU_IIPHYSICAL_TABLES views.
+**	30-May-2006 (jenjo02)
+**	    Backed out "is_clustered"; iistructure(relspec,relstat) modified to return
+**	    "clustered" as structure type.
+**	19-Sep-2006 (gupsh01)
+**	    Use ingresdate instead of date when creating the catalogs with
+**	    date columns.
+**      23-oct-2006 (stial01)
+**           Back out Ingres2007 change to iistructure()
+**      23-oct-2006 (stial01)
+**           Table version should not advance for ingres2006r2
+**	23-nov-2006 (dougi)
+**	    Reinstate view_base column to be based on relstat.
+**      11-Mar-2004 (hanal04) Bug 111923 INGSRV2751
+**          The view lgmo_xa_dis_tran_ids casts the branch_seqnum and
+**          branch_flags as INT2. These fields are i4's in 
+**          DB_XA_EXTD_DIS_TRAN_ID and all code other code references.
+**          If either value was greater than a MAXI2 the existing
+**          code would generate an interger overflow that was
+**          difficult to track down.
+**          This change will resolve the problem for newly created 
+**          iidbdb databases. Existing iidbdb's must drop the
+**          view lgmo_xa_dis_tran_ids replacing INT2 with INT4 in
+**          all cases. The grant seen below must also be reissued.
+**      22-Aug-2007 (kiria01) b118999
+**          Switch the charextract to use byteextract to ensure that
+**          only one byte was returned as opposed to 1 potentially
+**          multi-byte character.
+**	16-april-2008 (dougi)
+**	    iiproc_params filters out RPP result columns and new view
+**	    iiproc_rescols returns result columns AND parameters.
+**      16-may-2008 (stial01)
+**          Fixed iitables.table_version for upgraded tables
+**	15-june-2008 (dougi)
+**	    Add seql_flag, unordered_flag to iisequences for unordered
+**	    (random) sequences.
+**	5-aug-2008 (dougi)
+**	    Add columns to iiproc_params to denote parameter modes.
+**     24-oct-2008 (stial01)
+**          Modularize create objects for increased ingres names (SIR 121123)
+**          Use db_maxname_hostvar in QUEL create statements.
+**	13-nov-2008 (dougi)
+**	    Add "ident_flag" to iisequences for identity columns and 
+**	    "column_always_ident"/"column_bydefault_ident" to iicolumns, 
+**	    iiphysical_columns.
+**     16-nov-2008 (stial01)
+**          duc_create_catalog() verify catalog row size matches structure size
+**     03-dec-2008 (stial01)
+**          Added duc_ins_capabilities
+**      11-dec-2008 (stial01)
+**          Move tbl_lacks_col() and other upgradedb stuff to upgradedb.qsc
+**      06-jan-2009 (stial01)
+**          Added code to do substitution for ##DB_MAXNAME*2##
+**          duc_create_catalog() for SQL92 installations, lower(relid)
+**	05-Mar-2009 (kiria01) b121520
+**	    Put CHAR cast to results of BYTEEXTRACT to cover its return type
+**	    change.
+**     07-apr-2009 (stial01)
+**          Modify duc_create_catalog to support catalogs created with QUEL
+**     26-aug-2009 (joea)
+**         Add DB_DEF_ID_FALSE/TRUE to duc_init_iidefault.
+**	12-Nov-2009 (kschendel) SIR 122882
+**	    cmptlvl is now interpreted as integer, add magic string-izing
+**	    function to standard catalog views so that they still return
+**	    e.g. '10.0'.
+**	16-Nov-2009 (kschendel) SIR 122890
+**	    Comment updates re quel-first catalogs.
+**     24-nov-2009 (stial01)
+**          Remove consistency check for page type V5
+**      07-dec-2009 (joea)
+**          Rewrite duc_init_iidefault so that it can be used by both createdb
+**          and upgradedb and can be more easily updated if additional defaults
+**          become necessary.
+*/
+
+GLOBALREF	DU_ERROR	*Duc_errcb; 
+GLOBALREF DUC_CATDEF Duc_catdef[];
+GLOBALREF DUC_PROCDEF Duc_procdef[];
+
+FUNC_EXTERN	void		duc_create_catalog();
+FUNC_EXTERN	void		duc_modify_catalog();
+FUNC_EXTERN	void		duc_register_table();
+FUNC_EXTERN	void		duc_create_procedure();
+FUNC_EXTERN	DU_STATUS	duc_cpy_usrf();
+FUNC_EXTERN	DU_STATUS	sqlerr_handler();
+FUNC_EXTERN	DU_STATUS	duc_finish_dbdb_create();
+
+FUNC_EXTERN	void		duc_init_iisectype();
+FUNC_EXTERN	DU_STATUS	duc_iigwsxa(DU_ERROR *);
+FUNC_EXTERN	DU_STATUS	duc_iisecuritystate();
+FUNC_EXTERN DB_STATUS duc_init_iidefault(bool is_upgrade, DU_ERROR *errcb);
+FUNC_EXTERN	VOID		duc_iischema();
+FUNC_EXTERN	VOID		duc_iilgmo( DU_ERROR *duc_errcb );
+FUNC_EXTERN	VOID 		duc_init_iiprofile();
+FUNC_EXTERN	VOID 		duc_init_iietab();
+FUNC_EXTERN	VOID 		duc_iisesspriv();
+
+bool				proc_exists(char *proc_name);
+bool				rel_exists(char *rel_name);
+bool				view_exists(char *name);
+bool				check_tbl_colsize(char *tname, char *cname,
+				    i4		colsize);
+STATUS				ensure_not_exists(char *name);
+DU_STATUS			duc_create_specific_stdcat_view(
+				    char	*dbname,
+				    char	*viewname,
+				    bool	upcase);
+
+
+GLOBALREF	DUU_CATDEF	*Dus_allcat_defs[];	/* For pagesize mod */
+
+static 		VOID		duc_sqlerror();
+FUNC_EXTERN	VOID		duc_r_iiaudit();
+static		VOID		duc_v_iisecurity_alarms(bool is_dbdb);
+
+static		VOID		duc_v_iidd_ddb_views();
+static		VOID		duc_v_iidd_dbconstants();
+static		VOID		duc_v_iidd_physical_tables();
+static		VOID		duc_v_iidd_registered_objects();
+static		VOID		duc_quel_create(char *catalog);
+#define DU_ALL			1  /* create object in all databases */
+#define DU_IIDBDB		2  /* only create object in iidbdb */
+#define DU_STAR			3  /* only create object if star db */
+
+#define DU_IIPROC_ACCESS	101
+#define DU_IIPROC_PARAMS	102
+#define DU_IIAUDITTABLES	103
+#define DU_IISESSION_PRIVILEGES	104
+#define DU_STAR_CDBINFO		105
+#define DU_IIDATABASE_INFO	106
+#define DU_IIUSERS		107
+#define DU_IILOCATION_INFO	108
+#define DU_IIEXTEND_INFO	109
+#define DU_IIDBPRIVILEGES	110
+#define DU_IIPROFILES		111
+#define DU_IIROLES		112
+#define DU_IIROLEGRANTS		113
+#define DU_IISECURITY_STATE	114
+#define DU_IIPROC_RESCOLS	115
+#define DU_IIDBCONSTANTS	116
+#define DU_IITABLES		117
+#define DU_IICOLUMNS		118
+#define DU_IIPHYSICAL_COLUMNS	119
+#define DU_IIPHYSICAL_TABLES	120
+#define DU_IIVIEWS		121
+#define DU_IIINDEXES		122
+#define DU_IIINDEX_COLUMNS	123
+#define DU_IISTATS		124
+#define DU_IIHISTOGRAMS		125
+#define DU_IIINGRES_TABLES	126
+#define DU_IIMULTI_LOCATIONS	127
+#define DU_IIKEY_COLUMNS	128
+#define DU_IIEVENTS		129
+#define DU_IIPERMITS		130
+#define DU_IISECURITY_ALARMS	131
+#define DU_IIALT_COLUMNS	132
+#define DU_IIFILE_INFO		133
+#define DU_IILOG_HELP		134
+#define DU_IIPROCEDURES		135
+#define DU_IIREGISTRATIONS	136
+#define DU_IIDB_COMMENTS	137
+#define DU_IIDB_SUBCOMMENTS	138
+#define DU_IISYNONYMS		139
+#define DU_IIINTEGRITIES	140
+#define DU_IIRULES		141
+#define DU_IICONSTRAINTS	142
+#define DU_IIKEYS		143
+#define DU_IIREF_CONSTRAINTS	144
+#define DU_IICONSTRAINT_INDEXES	145
+#define DU_IIACCESS		146
+#define DU_IIDD_DDB_VIEWS	147
+#define DU_IIDD_DBCONSTANTS	148
+#define DU_IIDD_PHYSICAL_TABLES	149
+#define DU_IIDD_REGISTERED_OBJECTS	150
+#define DU_IISEQUENCES		151
+#define DU_IIDISTSCHEMES	152
+#define DU_IIDISTCOLS		153
+#define DU_IILPARTITIONS	154
+#define DU_IIOTABLES		155	/* Deprecated, but still in existence */
+#define DU_IIOCOLUMNS		156	/* Ditto */
+
+typedef struct _DU_OBJ
+{
+    char *du_objname;
+    i4   du_obj_id;
+    i4   du_dbflag;
+} DU_OBJ;
+
+DU_OBJ Du_stdcat [] = {
+{ "iiproc_access",	DU_IIPROC_ACCESS,	DU_ALL },
+{ "iiproc_params",	DU_IIPROC_PARAMS,	DU_ALL },
+{ "iiaudittables",	DU_IIAUDITTABLES,	DU_ALL },
+{ "iisession_privileges", DU_IISESSION_PRIVILEGES, DU_ALL },
+{ "iistar_cdbinfo",	DU_STAR_CDBINFO,	DU_IIDBDB},
+{ "iidatabase_info",	DU_IIDATABASE_INFO,	DU_IIDBDB},
+{ "iiusers",		DU_IIUSERS,		DU_IIDBDB},
+{ "iilocation_info",    DU_IILOCATION_INFO,	DU_IIDBDB},
+{ "iiextend_info",	DU_IIEXTEND_INFO,	DU_IIDBDB},
+{ "iidbprivileges",	DU_IIDBPRIVILEGES,	DU_IIDBDB},
+{ "iiprofiles",		DU_IIPROFILES,		DU_IIDBDB},
+{ "iiroles",		DU_IIROLES,		DU_IIDBDB},
+{ "iirolegrants",	DU_IIROLEGRANTS,	DU_IIDBDB},
+{ "iisecurity_state",   DU_IISECURITY_STATE,	DU_IIDBDB},
+{ "iiproc_rescols",	DU_IIPROC_RESCOLS,	DU_ALL },
+{ "iidbconstants",	DU_IIDBCONSTANTS,	DU_ALL},
+{ "iitables",		DU_IITABLES,		DU_ALL},
+{ "iicolumns",		DU_IICOLUMNS,		DU_ALL},
+{ "iiphysical_columns", DU_IIPHYSICAL_COLUMNS,	DU_ALL},
+{ "iiphysical_tables",  DU_IIPHYSICAL_TABLES,	DU_ALL},
+{ "iiviews",		DU_IIVIEWS,		DU_ALL},
+{ "iiindexes",		DU_IIINDEXES,		DU_ALL},
+{ "iiindex_columns",	DU_IIINDEX_COLUMNS,	DU_ALL},
+{ "iistats",		DU_IISTATS,		DU_ALL},
+{ "iihistograms",	DU_IIHISTOGRAMS,	DU_ALL},
+{ "iiingres_tables",	DU_IIINGRES_TABLES,	DU_ALL},
+{ "iimulti_locations",  DU_IIMULTI_LOCATIONS,	DU_ALL},
+{ "iikey_columns",	DU_IIKEY_COLUMNS,	DU_ALL},
+{ "iievents",		DU_IIEVENTS,		DU_ALL},
+{ "iipermits",		DU_IIPERMITS,		DU_ALL},
+{ "iisecurity_alarms",  DU_IISECURITY_ALARMS,	DU_ALL},
+{ "iialt_columns",	DU_IIALT_COLUMNS,	DU_ALL},
+{ "iifile_info",	DU_IIFILE_INFO,		DU_ALL},
+{ "iilog_help",		DU_IILOG_HELP,		DU_ALL},
+{ "iiprocedures",	DU_IIPROCEDURES,	DU_ALL},
+{ "iiregistrations",	DU_IIREGISTRATIONS,	DU_ALL},
+{ "iidb_comments",	DU_IIDB_COMMENTS,	DU_ALL},
+{ "iidb_subcomments",	DU_IIDB_SUBCOMMENTS,	DU_ALL},
+{ "iisynonyms",		DU_IISYNONYMS,		DU_ALL},
+{ "iiintegrities",	DU_IIINTEGRITIES,	DU_ALL},
+{ "iirules",		DU_IIRULES,		DU_ALL},
+{ "iiconstraints",	DU_IICONSTRAINTS,	DU_ALL},
+{ "iikeys",		DU_IIKEYS,		DU_ALL},
+{ "iiref_constraints",	DU_IIREF_CONSTRAINTS,	DU_ALL},
+{ "iiconstraint_indexes", DU_IICONSTRAINT_INDEXES, DU_ALL},
+{ "iiaccess",		DU_IIACCESS,		DU_ALL},
+{ "iidd_ddb_views",	DU_IIDD_DDB_VIEWS,	DU_STAR},
+{ "iidd_dbconstants",	DU_IIDD_DBCONSTANTS,	DU_STAR},
+{ "iidd_physical_tables", DU_IIDD_PHYSICAL_TABLES, DU_STAR},
+{ "iidd_registered_objects", DU_IIDD_REGISTERED_OBJECTS, DU_STAR},
+{ "iisequences",	DU_IISEQUENCES,		DU_ALL},
+{ "iidistschemes",	DU_IIDISTSCHEMES,	DU_ALL},
+{ "iidistcols",		DU_IIDISTCOLS,		DU_ALL},
+{ "iilpartitions",	DU_IILPARTITIONS,	DU_ALL},
+{ "iiotables",		DU_IIOTABLES,		DU_ALL},
+{ "iiocolumns",		DU_IIOCOLUMNS,		DU_ALL}
+};
+
+#define MAX_STDCAT_VIEWS sizeof(Du_stdcat)/sizeof(DU_OBJ)
+
+#define DU_IIQEF_CREATE_DB	200
+#define DU_IIQEF_ALTER_DB	201
+#define DU_IIQEF_DESTROY_DB	202
+#define DU_IIQEF_ADD_LOCATION	203
+#define DU_IIQEF_ALTER_EXTENSION 204
+#define DU_IIERROR		205
+#define DU_IIQEF_DEL_LOCATION	206
+
+DU_OBJ Du_dbprocs [] = {
+{ "iiqef_create_db",	DU_IIQEF_CREATE_DB,	DU_IIDBDB },
+{ "iiqef_alter_db",	DU_IIQEF_ALTER_DB,	DU_IIDBDB },
+{ "iiqef_destroy_db",	DU_IIQEF_DESTROY_DB,	DU_IIDBDB },
+{ "iiqef_add_location",	DU_IIQEF_ADD_LOCATION,	DU_IIDBDB },
+{ "iiqef_alter_extension",DU_IIQEF_ALTER_EXTENSION,DU_ALL },
+{ "iierror",		DU_IIERROR,		DU_ALL },
+{ "iiqef_del_location",	DU_IIQEF_DEL_LOCATION,	DU_IIDBDB },
+};
+
+#define MAX_INTERNAL_PROCS sizeof(Du_dbprocs)/sizeof(DU_OBJ)
+
+
+static		STATUS		duc_create_one_stdcat_view(
+				    char	*dbname,
+				    DU_OBJ	*view,
+				    bool	upcase);
+
+static		STATUS		duc_create_one_internal_proc(
+				    char	*dbname,
+				    DU_OBJ	*proc,
+				    bool	upcase);
+
+static DU_STATUS duc_find_cats();
+
+
+/*{
+** Name: duc_dbms_bld	- Build DBMS catalogs
+**
+** Description:
+**        This routine makes and configures all of the non-core system
+**      catalogs for a standard database.  These catalogs are made with 
+**      $ingres ownership.
+**	   This routine is moved here from ducreate.qsc because it is shared
+**	between createdb and convto60.
+**
+** Inputs:
+**      duc_dbenv                       Ptr to DU_ENV
+**	duc_errcb			Ptr to error-handling control block.
+**	convert_flag			TRUE -> called by convto60, so suppress
+**					    informative msgs to user
+**					FALSE -> called by createdb, so do not
+**					    suppress informative msgs to user
+**
+** Outputs:
+**      *duc_errcb                      If an error occurs, this struct will be
+**					set by a call to du_error().
+**	Returns:
+**	    E_DU_OK			Completed successfully.
+**	    D_DU_ERROR			an error was encountered while 
+**				        outputting an informative message.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	dbms catalogs are created and modified.  Informative messages may be
+**	output to user.
+**
+** History:
+**	01-mar-91 (teresa)
+**	    initial creation.  Lifted code from duc_makedb because that code
+**	    was common with convto60. The code is also removed from convto60
+**	    an replaced with a call to this routine.
+**	11-oct-91 (teresa)
+**	    moved functionality common to 6.5 upgradedb into seperate 
+**	    subroutines.
+**	15-sep-92 (andre)
+**	    change IIDBDEPENDS.i_qid and IIDBDEPENDS.qid to i4.
+**	16-sep-92 (robf)
+**	     add C2/Security Audit Gateway (SXA) catalog creation.
+**	09-nov-92 (rganski)
+**	    Added two new fields, sversion and shistlength, to iistatistics.
+**	    Part of Character Histogram Enhancements project.
+**	09-nov-92 (rickh)
+**	    29-jul-92 (rickh)
+**	    FIPS CONSTRAINTS improvements.  New tables:  iikey, iidefault.
+**	    New fields in iiintegrity & iirule.
+**	    20-aug-92 (rblumer)
+**		added 2 new default types: DBD_NOT_DEFAULT & DBD_NOT_SPECIFIED;
+**		changed length of defvalue in iidefault from 1000 to 1500.
+**	13-dec-92 (jpk)
+**	    create, modify iischema
+**	18-jan-93 (rganski)
+**	    Changed iistatistics.sversion to char[8].
+**	16-dec-92 (rickh)
+**	    Modify IIINTEGRITY immediately after you create it.  This allows
+**	    subsequent tables to be created with "NOT NULL" columns.  In the
+**	    brave, new FIPS CONSTRAINTS world, "NOT NULL" creates a constraint,
+**	    which in turn invokes QEF code that expects IIINTEGRITY to have
+**	    a key structure.
+**	23-dec-92 (rblumer)
+**	    changed name of column_mandatory to column_has_default 
+**	    and flipped Y and N values.
+**	06-jan-92 (rickh)
+**	    Removed the second call to duc_m9_schema.  We don't need two
+**	    indexes of the same name on iischema.
+**	10-Feb-1993 (jpk)
+**	    Encapsulate creation and modification of iidevices into
+**	    duc_iidevices and duc_modify_iidevices respectively,
+**	    similarly duc_iistatistics and duc_modify_iistatistics,
+**	    duc_iievent and duc_modify_iievent, duc_iidatabase and
+**	    duc_modify_iidatabase, duc_iirole and duc_modify_iirole,
+**	    duc_iiextend and duc_modify_iiextend, duc_iiusergroup
+**	    and duc_modify_iiusergroup.  Merged duc_iixpriv
+**	    into duc_modify_iipriv so secondary indices get rebuilt
+**	    whenever primary storage structure is remodified, similarly
+**	    duc_iixprocedure and duc_modify_iiprocedure, and duc_iixevent
+**	    and duc_modify_iievent.
+**	14-Feb-1993 (jpk)
+**	    Added call to duc_iigw07 and duc_modify_iigw07 to support
+**	    gateway infrastructure for registration of logging system
+**	    managed objects.
+**	02-mar-93 (andre)
+**	    created a function duc_iierror() to create an unternal dbproc
+**	    iierror() and to GRANT EXECUTE TO PUBLIC WITH GRANT OPTION on it
+**	13-nov-93 (rblumer)
+**	    added upper_case argument to duc_iischema function call.
+**	26-nov-93 (robf)
+**          Create iisecalarm catalog to hold security alarms
+**	19-jul-94 (robf)
+**          Correct integration problem, duc_iischema was getting called
+**          twice along the way.
+**	25-jan-1995 (medji01)
+**	    Backed out changes for bug fix 59255 applied during cross
+**	    integration from 6.4. This is this incorrect place for those
+**	    fixes, they have already been applied to dmmcre.c to fix bug
+**	    45676.
+**	10-nov-95 (nick)
+**	    Create duc_modify_iihistogram() and duc_iihistogram().
+**	15-jul-96 (angusm)
+**		Intersolv ODBC v 3.0 project: Add duc_v_iiproc_params(), 
+**		duc_v_iiproc_access().
+**	5-mar-02 (inkdo01)
+**	    Added duc_iisequence() and duc_modify_iisequence().
+**	19-dec-2003 (schka24)
+**	    Add create, modify for partitioning catalogs.
+**	3-jan-06 (dougi)
+**	    Add create, modify for iicolcompare catalog.
+**	25-oct-2006 (dougi)
+**	    Disable calls to create, modify iicolcompare 'til we're ready.
+*/
+DU_STATUS
+##duc_dbms_bld(duc_errcb, dbenv, convert_flag)
+DU_ERROR	*duc_errcb;
+##  DU_ENV	*dbenv;
+bool		convert_flag;
+##{
+	DU_STATUS	status;
+	i4		upper_case;
+
+	/* Now, make the rest of the system catalogs. */
+
+	if (! convert_flag)
+	{
+	    /* Print an informational message. */
+	    if ((du_error(duc_errcb, I_DU0201_CR_DBMS_CATS, 0))
+		!= E_DU_OK
+	       )
+		return(duc_errcb->du_status);
+	}
+
+
+##	set session isolation level serializable
+##	set nojournaling
+
+
+	/* finish up core catalogs */
+	/* The minpages are for an empty database */
+##	modify iirelation to hash with minpages=32
+##	modify iiattribute to hash with minpages=128
+##	modify iiindex to hash
+	duc_create_catalog("iidevices");
+
+	/* now start dbms catalogs */
+	duc_create_catalog("iiqrytext");
+	duc_create_catalog("iitree");
+
+	duc_modify_catalog("iitree");
+
+	duc_create_catalog("iiprotect");
+
+	duc_modify_catalog("iiprotect");
+
+	duc_create_catalog("iiintegrity");
+
+	duc_modify_catalog("iiintegrity");
+
+        duc_create_catalog("iisecalarm");
+	duc_modify_catalog("iisecalarm");
+
+	duc_create_catalog("iidbdepends");
+
+	duc_create_catalog("iistatistics");
+	duc_create_catalog("iihistogram");
+/*	duc_create_catalog("iicolcompare");	not just yet */
+
+	duc_create_catalog("iiprocedure");
+	duc_create_catalog("iiprocedure_parameter");
+	duc_modify_catalog("iiprocedure_parameter");
+
+	duc_create_catalog("iirule");
+
+	duc_create_catalog("iikey");
+
+	duc_create_catalog("iirange");
+
+	duc_create_catalog("iiextended_relation" ); 
+	duc_init_iietab();
+
+	duc_create_catalog("iidefault"); 
+        if (duc_init_iidefault(FALSE, duc_errcb) != OK)
+            return duc_errcb->du_status;
+
+	duc_create_catalog("iievent");
+
+	duc_create_catalog("iisequence");
+
+	/* Build partitioning catalogs */
+	duc_create_catalog("iidistscheme");
+	duc_create_catalog("iidistcol");
+	duc_create_catalog("iidistval");
+	duc_create_catalog("iipartname");
+
+	/* Print an informational message. */
+	if ((du_error(duc_errcb, I_DU0203_MOD_DBMS_CATS, 0))
+	    != E_DU_OK
+	   )
+	    return(duc_errcb->du_status);
+
+	duc_create_catalog("iidbms_comment");	/* build iidbms_comment */
+	duc_create_catalog("iisynonym");	/* build iisynonym */
+	duc_create_catalog("iipriv");		/* build IIPRIV */
+	duc_create_catalog("iisectype");
+	duc_init_iisectype();
+	_VOID_ duc_iigwsxa(duc_errcb);	/* build C2/SXA gateway catalogs */
+
+	upper_case = ((dbenv->du_dbservice & DU_NAME_UPPER) != 0);
+	duc_iisesspriv();	/* iisession_privileges */
+
+	duc_iischema(upper_case);	/* build iischema */
+	duc_modify_catalog("iischema");
+
+	duc_modify_catalog("iidbms_comment");
+	duc_modify_catalog("iisynonym");
+	duc_modify_catalog("iipriv");
+	duc_modify_catalog("iisectype");
+
+	duc_modify_catalog("iidevices");
+
+	duc_modify_catalog("iiqrytext");
+
+	duc_modify_catalog("iidbdepends");
+
+	duc_modify_catalog("iistatistics");
+
+	duc_modify_catalog("iihistogram");	
+
+/*	duc_modify_catalog("iicolcompare");	not yet /* modify back to hash */	
+
+	duc_modify_catalog("iiprocedure");
+	duc_modify_catalog("iirule");
+	duc_modify_catalog("iikey");
+	duc_modify_catalog("iidefault");
+
+	duc_modify_catalog("iirange");
+
+	duc_modify_catalog("iiextended_relation"); 
+
+	duc_modify_catalog("iievent");
+
+	duc_modify_catalog("iisequence");
+
+	/* Modify partitioning catalogs */
+	duc_modify_catalog("iidistscheme");
+	duc_modify_catalog("iidistcol");
+	duc_modify_catalog("iidistval");
+	duc_modify_catalog("iipartname");
+
+	return (E_DU_OK);
+##  }
+
+/*{
+** Name: duc_1makedbdb() -  make and configure system catalogs specific to
+**			    the "dbdb".
+**
+** Description:
+**        This routine makes and configures system catalogs that are
+**	specific to the "database database".
+**
+**	Note:  The create statements below must correspond to the
+**	structures defined in dudbms.qsh.  These structures are used
+**	by the DBMS to interpret tuples directly from data pages.
+**
+** Inputs:
+**      duc_errcb                       Createdb error-control block.
+**
+** Outputs:
+**      *duc_errcb                      If an error occurs, this block will be
+**					set by a call to du_error().
+**	Returns:
+**	    E_DU_OK			Completed successfully.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      The "dbdb" specific catalogs are made and modified.
+**
+** History:
+**      25-nov-86 (ericj)
+**          Initial creation.
+**      16-feb-1989 (edhsu)
+**          online backup modificatiion.
+**      17-apr-1989 (alexc)
+**          Modified for STAR.  Added creation definition for catalogs:
+**	    iistar_cdbs, iiddb_netcost, and iiddb_nodecosts.
+**      20-mar-89 (ralph)
+**          GRANT Enhancements, Phase 1:
+**          Create and modify iiusergroup and iiapplication_id catalogs
+**	10-may-89 (ralph)
+**	    GRANT Enhancements, Phase 2:
+**	    duc_1makedbdb() creates iidbpriv catalog.
+**	    changed iiapplication_id to iirole;
+**	    add new fields (default_group, reserved) to iiuser.
+**	12-sep-89 (ralph)
+**	    B1 Enhancements:
+**		Eliminate creation of iidbaccess.
+**		Add DB_ACCESS and UP_SYSCAT to iidbprivileges.
+**	16-jan-90 (ralph)
+**	    Add password attribute to the iiuser catalog.
+**      11-apr-90 (jennifer)
+**          Bug 20463 - Initialize iisecuritystate with all events
+**          set to off.
+**	08-aug-90 (ralph)
+**	    Add iisecurity_state, iiusers, and iilocation_info iidbdb views
+**	    Revised definition of iidbprivileges for DB_ADMIN & GLOBAL_USAGE.
+**	19-sep-1990 (Derek)
+**	    Make sure that iidbdb is owned by $ingres not user running createdb.
+**	15-jan-91 (ralph)
+**	    Rename attribute 'fill1' to 'dbflags' in table 'iidbpriv'
+**	2-apr-91 (teresa)
+**	    Moved to DUCOMMON.QSC because this logic is shared by convto60 and
+**	    createdb.
+**	09-nov-92 (jrb)
+**          Now turn on DU_EXT_DATA bit when adding tuple to iiextend for 
+**	    II_DATABASE, and also add another tuple for II_WORK to iiextend.
+**	    ML Sorts Project.
+**	7-Feb-1993 (jpk)
+**	    Stop reading in users file.  Retain call to duc_cpy_userf()
+**	    for now, it will minimally populate the iiuser table.  Add
+**	    dbenv parameter to duc_cpy_usrf() so it can get username
+**	    so on VMS it can drop a tuple into iiuser for the user
+**	    running createdb -S iidbdb.
+**	13-apr-93 (rblumer)
+**	    check status of duc_cpy_usrf and return if error.
+**	14-apr-93 (ralph)
+**	    DELIM_IDENT:
+**	    Special handling for non-standard case translation semantics
+**	    when creating the iidbdb in duc_1makedbdb.
+**	04-aug-1993 (shailaja)
+**	    Unnested comments.
+**	25-aug-93 (robf)
+**	   Create/modify iiprofile table
+**	09-nov-93 (rblumer)
+**	    For iidatabase append, 
+**	    changed hard-coded $ingres ownername to be upper/lower case
+**	    depending on dbservice translation semantics.
+**	27-March-1994 (jpk)
+**	    move rebuilding of index iidbid_idx to duc_modify_iidatabase()
+**	    not inline in the caller so upgradedb gets it too.
+**	    Similarly move rebuilding of index iicdbid_idx to
+**	    duc_6create_iidbdb_cats().
+**	12-Nov-2009 (kschendel) SIR 122882
+**	    cmptlvl is now integer.
+*/
+DU_STATUS
+duc_1makedbdb(du_dbenv, duc_errcb)
+DU_ENV		*du_dbenv;
+DU_ERROR	*duc_errcb;
+##  {
+##	int	row_cnt;
+##	char	database_name[DB_MAXNAME+4];
+##	char	owner[DB_MAXNAME+4];
+##	char	dbloc[DB_MAXNAME+4];
+##	char	jnlloc[DB_MAXNAME+4];
+##	char	sortloc[DB_MAXNAME+4];
+##	char	ckploc[DB_MAXNAME+4];
+##	char	dumploc[DB_MAXNAME+4];
+##	char	areaname[DB_AREA_MAX+4];
+##	char	err_msg[256];
+##	i4	db_access;
+##	i4	db_service;
+##	i4	status_value;
+##	i4	db_compat;
+##	i4	db_min_compat;
+	DU_STATUS stat;
+
+	/* Print an informational message. */
+	if ((du_error(duc_errcb, I_DU0202_CR_DBDB_CATS, 0)) != E_DU_OK)
+	    return(duc_errcb->du_status);
+
+	duc_create_catalog("iidatabase");
+
+/* table "iistar_cdbs" created for TITAN date: 01-JUL-88 */
+	duc_6create_iidbdb_cats("iistar_cdbs");
+
+/*
+**  New tables created for Distributed Optimizer.
+*/
+
+	duc_6create_iidbdb_cats("iiddb_netcost");
+
+	duc_6create_iidbdb_cats("iiddb_nodecosts");
+
+	duc_create_catalog("iiuser");
+	duc_modify_catalog("iiuser");
+
+	duc_create_catalog("iiprofile");
+	duc_init_iiprofile();
+	duc_modify_catalog("iiprofile");
+
+	duc_create_catalog("iiextend");
+
+	duc_create_catalog("iilocations");
+
+	duc_create_catalog("iiusergroup");
+
+	duc_create_catalog("iirole");
+
+	duc_create_catalog("iidbpriv");
+
+	duc_create_catalog("iirolegrant");
+	duc_modify_catalog("iirolegrant");
+
+	duc_create_catalog("iigw07_relation");
+	duc_create_catalog("iigw07_attribute");
+	duc_create_catalog("iigw07_index");
+
+	duc_modify_catalog("iidatabase");
+
+	duc_modify_catalog("iilocations");
+
+	duc_modify_catalog("iiextend");
+
+	duc_modify_catalog("iiusergroup");
+
+	duc_modify_catalog("iirole");
+
+	duc_modify_catalog("iigw07_relation");
+	duc_modify_catalog("iigw07_attribute");
+	duc_modify_catalog("iigw07_index");
+
+	duc_modify_catalog("iidbpriv");
+
+
+	/*
+	**  Populate database database catalogs to describe itself.
+	*/
+
+	STcopy(du_dbenv->du_dbname, database_name);
+	STcopy(du_dbenv->du_dbloc.du_locname, dbloc);
+	status_value = DU_EXT_OPERATIVE | DU_EXT_DATA;
+##	append iiextend(dname=database_name, lname=dbloc, status = status_value);
+
+##	inquire_equel(row_cnt=rowcount)
+	if (row_cnt != 1)
+	{
+	    return (du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+		0, "iiextend", 0, DU_DBDBNAME));
+	}
+
+	STcopy(du_dbenv->du_dbloc.du_area, areaname);
+	status_value = DU_DBS_LOC;
+##	append iilocations(lname=dbloc, area=areaname, status = status_value);
+
+      STcopy(du_dbenv->du_sortloc.du_locname, sortloc);
+      status_value = DU_EXT_OPERATIVE | DU_EXT_WORK;
+##    append iiextend(dname=database_name, lname=sortloc, status = status_value);
+
+
+##	inquire_equel(row_cnt=rowcount)
+	if (row_cnt != 1)
+	{
+	    return (du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+		0, "iilocations", 0, DU_DBDBNAME));
+	}
+
+	STcopy(du_dbenv->du_jnlloc.du_locname, jnlloc);
+	STcopy(du_dbenv->du_jnlloc.du_area, areaname);
+	status_value = DU_JNLS_LOC;
+##	append iilocations(lname=jnlloc, area=areaname, status = status_value);
+
+##	inquire_equel(row_cnt=rowcount)
+	if (row_cnt != 1)
+	{
+	    return (du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+		0, "iilocations", 0, DU_DBDBNAME));
+	}
+
+	STcopy(du_dbenv->du_dmploc.du_locname, dumploc);
+	STcopy(du_dbenv->du_dmploc.du_area, areaname);
+	status_value = DU_DMPS_LOC;
+##	append iilocations(lname=dumploc, area=areaname, status = status_value);
+
+##	inquire_equel(row_cnt=rowcount)
+	if (row_cnt != 1)
+	{
+	    return (du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+		0, "iilocations", 0, DU_DBDBNAME));
+	}
+
+	STcopy(du_dbenv->du_ckploc.du_locname, ckploc);
+	STcopy(du_dbenv->du_ckploc.du_area, areaname);
+	status_value = DU_CKPS_LOC;
+##	append iilocations(lname=ckploc, area=areaname, status = status_value);
+
+##	inquire_equel(row_cnt=rowcount)
+	if (row_cnt != 1)
+	{
+	    return (du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+		0, "iilocations", 0, DU_DBDBNAME));
+	}
+
+	STcopy(du_dbenv->du_sortloc.du_locname, sortloc);
+	STcopy(du_dbenv->du_sortloc.du_area, areaname);
+	status_value = DU_WORK_LOC;
+##	append iilocations(lname=sortloc, area=areaname, status = status_value);
+
+##	inquire_equel(row_cnt=rowcount)
+	if (row_cnt != 1)
+	{
+	    return (du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+		0, "iilocations", 0, DU_DBDBNAME));
+	}
+
+	stat = duc_cpy_usrf(duc_errcb, du_dbenv);
+	if (stat != E_DU_OK)
+	    return(stat);
+
+	duc_r_iiaudit();              /* register iiaudit catalog */
+
+	stat = duc_iisecuritystate(duc_errcb);
+	if (stat != E_DU_OK)
+		return stat;
+
+	db_access = du_dbenv->du_access;
+	db_service = du_dbenv->du_dbservice;
+	db_compat = DU_CUR_DBCMPTLVL;
+	db_min_compat = DU_1CUR_DBCMPTMINOR;
+
+	if (du_dbenv->du_dbservice & DU_NAME_UPPER)
+	    STcopy(ERx("$INGRES"), owner);
+	else
+	    STcopy(ERx("$ingres"), owner);
+
+##	append iidatabase(
+##		name = database_name,
+##		own = owner,
+##		dbdev = dbloc,
+##		jnldev = jnlloc,
+##		ckpdev = ckploc,
+##		sortdev = sortloc,
+##		dmpdev = dumploc,
+##		access = db_access,
+##		dbservice = db_service,
+##		dbcmptlvl = db_compat,
+##		dbcmptminor = db_min_compat,
+##		db_id = 1);
+
+	return(E_DU_OK);
+## }
+
+/*{
+** Name: duc_6create_iidbdb_cats	- Creates STAR system catalogs in
+**					    iidbdb.
+**
+** Description:
+**      Takes the name of the catalog, and creates it.
+**
+** Inputs:
+**      catalog_name                    Name of iidbdb catalog.
+**
+** Outputs:
+**	Returns:
+**	    E_DB_OK
+**	Exceptions:
+**	    None.
+**
+** Side Effects:
+**	    none.
+**
+** History:
+**      23-apr-1989 (alexc)
+**          Creation.
+**	08-mar-91 (teresa)
+**	    moved here from ducreate becuase it is also used by convto60.
+**	20-sep-91 (teresa)
+**	    pick up ingres63p 263287 from 6.4:
+**	      15-aug-91 (teresa)
+**		add call to duc_star_cdbinfo() to make standard catalog 
+**		iistar_cdbinfo
+**	27-March-1994 (jpk)
+**		move rebuilding of index so createdb and upgradedb get
+**		same results.
+[@history_template@]...
+*/
+duc_6create_iidbdb_cats(catalog_name)
+char	*catalog_name;
+{
+    if (!STcompare(catalog_name, "iistar_cdbs"))
+    {
+	duc_create_catalog("iistar_cdbs");
+
+##	index unique on iistar_cdbs is iicdbid_idx(cdb_id)
+##	    with structure=hash
+
+    }
+
+    if (!STcompare(catalog_name, "iiddb_netcost"))
+    {
+	duc_create_catalog("iiddb_netcost");
+    }
+
+    if (!STcompare(catalog_name, "iiddb_nodecosts"))
+    {
+	duc_create_catalog("iiddb_nodecosts");
+    }
+    return(E_DU_OK);
+}
+
+/*{
+**  Name: duc_cpy_usrf()	-   load "users" file entries into "user"
+**				    table of dbdb.
+**
+**  Description:
+**	This routine opens the "users" file in ING_UTILITY and reads in
+**	the entries appending them to the "user" table of the dbdb.  This
+**	is done when creating the dbdb.  
+**	  Note 1:   This routine assumes that the "dbdb" database has already
+**		    been opened.
+**	  Note 2:   It probably makes sense to move this functionality to
+**		    finddbs.
+**
+**  Inputs:
+**      duc_errcb                       Ptr to DU_ERRCB
+**	duc_dbenv			ptr to DUC_DBENV
+**
+**  Outputs:
+**      *duc_errcb			If an error occurs, this structure
+**					will be set by a call to du_error().
+**	
+**	Returns:
+**	    E_DU_OK			Completed successfully.
+**	    E_DU3170_BAD_USRF_OPEN	The "users" file could not be opened.
+**	    E_DU3172_BAD_USRF_RECORD	There was a bad users record in the
+**					"users" file.
+**	Exceptions:
+**	    none
+**
+**  Side Effects:
+**	    Opens and closes the "users" file in the ING_UTILITY
+**	    location.  Updates the "user" system catalog in the database,
+**	    "dbdb".
+**
+**  History:
+**      09-Oct-86 (ericj)
+**          Initial creation.
+**	02-apr-91 (teresa)
+**	    moved to ducommon.qsc from ducreate.qsc
+**	7-Feb-1993 (jpk)
+**	    Stop reading in users file.  Add dbenv parameter to pass username
+**	    so on VMS can drop a tuple into iiuser for the user who is
+**	    running createdb -S iidbdb.  If you have priv enough to create
+**	    the iidbdb, you have priv enough to be listed in it.  The question
+**	    of whether you have priv enough to create the iidbdb, however,
+**	    is not, should, and will be addressed.
+**	09-nov-93 (rblumer)
+**	    Use case-insensitive comparison for ingres, so that don't add 
+**	    ingres user in two different cases in FIPS iidbdb  (B55960).
+**	    Use case-translated version of name to pass to cui_idunorm.
+**	    When creating iidbdb with real_user_case on UNIX, need to add root
+**	    as a delimited username (since root is lower-cased and regid_case
+**	    could be upper).
+**	    Also return generic 'bad user' error if cui_idunorm gets an error.
+**	20-Feb-1994 (jpk)
+**	    Fix bugs 58905, 57759, and 58347: usernames of form ingresxx,
+**	    e.g. ingres65, are perfectly valid and should be added as
+**	    ingres users when they createdb the iidbdb.
+**      01-oct-2002 (zhahu02)
+**          Updated to be compiled fine. (b108842)
+**	21-nov-2002 (somsa01)
+**	    On Windows, create "administrator".
+**	28-jan-2004 (somsa01)
+**	    Only manually create the "Administrator" user on Windows if
+**	    PMload() fails. Normally we take the users which are in
+**	    config.dat and add them to the iiuser table.
+*/
+DU_STATUS
+## duc_cpy_usrf(duc_errcb, duc_dbenv)
+   DU_ERROR		*duc_errcb;
+## DU_ENV		*duc_dbenv;
+## {
+    FILE		*usrf;
+    char		ubuf[DU_MAXLINE + 1];
+    DU_STATUS		du_status = E_DU_OK;
+##  DU_USR		usr_rec;
+##  i4			row_cnt;
+##  i4			u_status = 0;
+    STATUS		du_brk_usr();
+    char		unnormal_user[2*DB_MAXNAME+2];
+    char		*username;
+    STATUS              status;
+    PM_SCAN_REC         state;
+
+    /* XXX get rid of users file */
+
+    if (du_add_privd_user("$ingres") < 0)
+    {
+	du_status = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iiuser", 0, DU_DBDBNAME);
+	return du_status;
+    }
+
+    /* add username of install user as a privileged user */
+    {
+	char		unnormal_user[2*DB_MAXNAME+3];
+	u_i4		unnormal_len;
+	u_i4		normal_len;
+	u_i4	mode = CUI_ID_DLM | CUI_ID_STRIP;
+	DB_STATUS	status;
+	DB_ERROR	error;
+
+	/*
+	** We must "unnormalize" the username!
+	*/
+	unnormal_len = sizeof(unnormal_user)-1;
+	normal_len = STlength(duc_dbenv->du_dba_target);
+	status = cui_idunorm((u_char *) duc_dbenv->du_dba_target, &normal_len,
+			     (u_char *) unnormal_user, &unnormal_len,
+			     mode, &error);
+
+	if (DB_FAILURE_MACRO(status))
+	{
+	    /* since can't look up DBMS error returned in error.err_code,
+	    ** use default 'bad username' error.
+	    */
+	    du_status = du_error(duc_errcb, E_DU3000_BAD_USRNAME, 
+				 2, 0, duc_dbenv->du_dba_target);
+	    return du_status;
+	}
+
+	unnormal_user[unnormal_len] = EOS;
+
+	if (du_add_privd_user(unnormal_user) < 0)
+	{
+	    du_status = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iiuser", 0, DU_DBDBNAME);
+	    return du_status;
+	}
+    }
+
+    /* Add any privileged users specified in CONFIG.DAT as Ingres users */
+    PMinit();
+
+    if (PMload( (LOCATION *) NULL, (PM_ERR_FUNC *) NULL) != OK)
+    {
+       /* Just add SYSTEM account - like we did before. */
+#ifdef VMS
+	if (du_add_privd_user("SYSTEM") < 0)
+	{
+	    du_status = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iiuser", 0, DU_DBDBNAME);
+	    return du_status;
+	}
+#endif
+#ifdef UNIX
+	/* if real_user_case is mixed,
+	** have to delimit root with double quotes
+	** or else it will be mapped to regid_case.
+	**  (do the same for ingres???  Will that work on VMS???
+	**                                              FIX ME rblumer 11/15/93)
+	*/
+	if (duc_dbenv->du_dbservice & DU_REAL_USER_MIXED)
+	    username = ERx("\"root\"");
+	else
+	    username = ERx("root");
+
+	if (du_add_privd_user(username) < 0)
+	{
+	    du_status = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iiuser", 0, DU_DBDBNAME);
+	    return du_status;
+	}
+#endif
+#ifdef NT_GENERIC
+	if (du_add_privd_user("administrator") < 0)
+	{
+	    du_status = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iiuser", 0, DU_DBDBNAME);
+	    return du_status;
+	}
+#endif
+    }
+    else
+    {
+       char *user_list = "ii.$.privileges.user.%";
+       char priv_user [2*DB_MAXNAME+2];
+       char *sea_str, *entry, *value;
+
+       PMsetDefault( 1, PMhost());
+
+       sea_str = PMexpToRegExp( user_list );
+
+       for (status = PMscan( sea_str, &state, NULL, &entry, &value);
+            status == OK;
+            status = PMscan( NULL, &state, NULL, &entry, &value))
+       {
+          username = (char *)PMgetElem( 4, entry );
+
+          if ( (STbcompare(ERx("$ingres"), 0, username, 0, TRUE) != 0) &&
+               (STbcompare(duc_dbenv->du_xusrname, 0, username, 0, TRUE) != 0) )
+          {
+             /* We haven't added this user before - so add it now.
+             ** May need to delimit "root".
+             */
+             if ( (duc_dbenv->du_dbservice & DU_REAL_USER_MIXED) &&
+                  (STbcompare(ERx("root"), 0, username, 0, TRUE) == 0) )
+             {
+                STprintf(unnormal_user, ERx( "\"%s\""), username);
+
+                username = unnormal_user;
+             }
+
+             if (du_add_privd_user(username) < 0)
+             {
+                PMfree();
+
+                du_status = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+                                     0, "iiuser", 0, DU_DBDBNAME);
+                return du_status;
+             }
+          }
+       }
+    }
+
+    PMfree();
+
+    return E_DU_OK;
+## }
+
+/*{
+** Name: sqlerr_handler()	-   Error handler for Ingres errors
+**				    encountered by SQL statements.
+**
+** Description:
+**	These errors will either be translated to a database utility error,
+**	reported and exited, or sent back to the program to handle itself.
+**
+** Inputs:
+**      ing_error                       Createdb error number.
+**	errcb				Ptr to executable's error control block
+**
+**
+** Outputs:
+**	Returns:
+**	    0				Completed successfully.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	  This routine updates the fields, du_status, and du_ingerr in the
+**	DU_ERROR struct through the global pointer Duc_errcb.  This is done
+**	so that duc_exit() can properly handle program exit.
+**	  Also, this procedure may determine that a fatal Ingres error has
+**	occured, and call the exit handling procedure directly.
+**
+** History:
+**	02-apr-91 (teresa)
+**	    Created.
+**	
+[@history_template@]...
+*/
+DU_STATUS
+##  sqlerr_handler(errcb, error)
+DU_ERROR    *errcb;
+i4	    error;
+##  {
+##	char	    *err_msg;
+
+	err_msg = errcb->du_errmsg;
+##	inquire_equel(err_msg = errortext);
+	SIprintf("%s\n", err_msg);
+	errcb->du_status	= E_DU_UERROR;
+	errcb->du_ingerr	= error;
+	return (E_DU_FATAL);
+
+##  }
+
+/*{
+** Name: duc_boot_dbdb() -  make and configure dbms catalogs specific to
+**			    the "dbdb".
+**
+** Description:
+**        This routine makes and configures DBMS catalogs that are
+**	specific to the "database database".
+**
+**	Note:  The create statements below must correspond to the
+**	structures defined in dudbms.qsh.  These structures are used
+**	by the DBMS to interpret tuples directly from data pages.
+**
+** Inputs:
+**      duc_dbenv			Control block containing a description
+**					of this installation
+**	appl_flag			Ptr to a char array to contain the
+**					  application flag.
+** Outputs:
+**	appl_flag			Initialized application flag.
+**	Returns:
+**	    E_DU_OK			Completed successfully.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      The "dbdb" specific dbms catalogs are made and modified.
+**
+** History:
+**	01-apr-91 (teresa)
+**		initial creation.
+**	10-feb-1993 (jpk)
+**	    support createdb over the net.
+**	02-jun-1993 (ralph)
+**	    DELIM_IDENT:
+**	    Pass in info on case translation semantics when creating iidbdb.
+**	21-jul-93 (ralph)
+**	    DELIM-IDENT:
+**	    Add support for DU_REAL_USER_MIXED when creating the iidbdb.
+**	    Collapse all case translation flags for iidbdb creation into -G.
+*/
+DU_STATUS
+##duc_boot_dbdb(duc_dbenv, appl_flag)
+##  DU_ENV	*duc_dbenv;
+##  char	*appl_flag;
+##{
+	char		tmp_buf[DU_APPL_FLAG_MAX];
+	/* construct name of form node::database, so 2 for "::" */
+##	char		node_dbname[GCC_L_NODE + DB_MAXNAME + 2 + 1];
+##	char		case_semantics[6];	/* "-Gxyz" */
+##	char		lp64[2];	/* Y or N */
+
+
+
+	    /* Define the default areas for the "dbdb" database */
+
+	    STcopy(ING_CKDIR, duc_dbenv->du_ckploc.du_area);
+	    STcopy(ING_DBDIR, duc_dbenv->du_dbloc.du_area);
+	    STcopy(ING_JNLDIR, duc_dbenv->du_jnlloc.du_area);
+	    STcopy(ING_WORKDIR, duc_dbenv->du_sortloc.du_area);
+	    STcopy(ING_DMPDIR,duc_dbenv->du_dmploc.du_area);
+
+	    /* Build the special application flag that will cause the
+	    ** server to boot the iiddbdb (make iidbdb.dir, config file and
+	    ** core catalogs).  However, do not actually do this until we
+	    ** verify that this user is authorized to boot ingres.
+	    */
+	    CVla((i4) DBA_CREATE_DBDBF1, tmp_buf);
+	    (VOID)STpolycat(2, DU_1APPL_FLAG, tmp_buf, appl_flag);
+	    
+	    /* this ingres connection will automatically create the iidbdb
+	    ** default data directory and will create the core catalogs
+	    ** NOTE:  be sure that duc_dbenv->dbdbnamePlusService is initialized
+	    **	      to the iidbdb name plus any special server type flag
+	    **	      (such as /rms for rms gw)
+	    */
+	    if (STlength(duc_dbenv->du_nodename) > 0)
+	    {
+		STpolycat(3, duc_dbenv->du_nodename, ERx("::"),
+		    duc_dbenv->dbdbnamePlusService, node_dbname);
+	    }
+	    else
+	    {
+		STcopy(duc_dbenv->dbdbnamePlusService, node_dbname);
+	    }
+
+	    /*
+	    ** When creating iidbdb, we pass the case translation masks
+	    ** in via the -G and -R flags.  The -G flag specifies the
+	    ** case translation semantics for delimited identifiers,
+	    ** and the -R flag specifies the case translation semantics
+	    ** for regular identifiers.  
+	    ** This is only done when creating the iidbdb;  other databases
+	    ** are created via iiqef_create_db, and the case translation
+	    ** masks are passed in via the dbservice parameter.
+	    */
+
+	    case_semantics[0] = '-';
+	    case_semantics[1] = 'G';
+	    if (duc_dbenv->du_dbservice & DU_DELIM_UPPER)
+		case_semantics[2] = 'U';
+	    else if (duc_dbenv->du_dbservice & DU_DELIM_MIXED)
+		case_semantics[2] = 'M';
+	    else
+		case_semantics[2] = 'L';
+
+	    if (duc_dbenv->du_dbservice & DU_NAME_UPPER)
+		case_semantics[3]= 'U';
+	    else
+		case_semantics[3]= 'L';
+
+	    if (duc_dbenv->du_dbservice & DU_REAL_USER_MIXED)
+		case_semantics[4] = 'M';
+	    else if (duc_dbenv->du_dbservice & DU_NAME_UPPER)
+		case_semantics[4] = 'U';
+	    else
+		case_semantics[4] = 'L';	
+	    case_semantics[5] = EOS;
+
+##	    ingres appl_flag DU_1DBA_DBDB_FLAG case_semantics node_dbname
+
+##	    set session isolation level serializable
+
+            /*
+            ** Check to see if this is a 64-bit server
+            */
+
+##          retrieve (lp64 = dbmsinfo("lp64"))
+
+            if (lp64[0] == 'Y')
+                duc_dbenv->du_dbservice |= DU_LP64;
+
+	    duc_dbenv->du_dbopen =   TRUE;
+	    return E_DU_OK;
+##}
+
+/*{
+** Name: duc_db_boot() -  make and configure dbms catalogs for a user db
+**
+** Description:
+**        This routine makes and configures DBMS catalogs that are
+**	required by the DBMS server for any user dtabase.
+**
+** Inputs:
+**      duc_dbenv			Control block containing a description
+**					of this installation
+**	need_dir_flg			Controls whether or not DMBS server
+**					  will create the DB default directory
+**					  or will expect it to already exist.
+**					  IF called from createdb, set to TRUE
+**					  IF called from convto60, set to FALSE
+** Outputs:
+**	Returns:
+**	    E_DU_OK			Completed successfully.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      The dbms catalogs are made and modified.
+**
+** History:
+**	01-apr-91 (teresa)
+**		initial creation.
+**	17-jan-91 (teresa)
+**		put dbservice into iiqef_create_db instead of having to call
+**		iiqef_alter_db.
+**	22-July-1993 (jpk)
+**		set value of dbservice correctly.
+**	09-nov-93 (rblumer)
+**		fill in new translated & untranslated owner name parameters.
+**	 4-mar-94 (robf)
+**              Ensure createdb privilege is active.
+**	15-nov-94 (forky01)
+**		remove unused parms to make it cleaner to call.  This is
+**		necessary because of a fix for BUG #53072, which requires
+**		this to be called from duc_get_dbid, to create the cdb in
+**		iidatabase prior to appending the ddb info to iistar_cdbs
+**	24-mar-2001 (stephenb)
+**	    	Add support for Unicode collation.
+*/
+DU_STATUS
+duc_db_boot(duc_errcb, duc_dbenv, need_dir_flg)
+DU_ERROR	*duc_errcb;
+DU_ENV		*duc_dbenv;
+i4		need_dir_flg;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	    char	dbname[DB_MAXNAME+4];
+	    i4		access;
+	    i4		service;
+	    char	db_loc[DB_MAXNAME+4];
+	    char	jnl_loc[DB_MAXNAME+4];
+	    char	ckp_loc[DB_MAXNAME+4];
+	    char	dmp_loc[DB_MAXNAME+4];
+	    char	srt_loc[DB_MAXNAME+4];
+	    char	collation[DB_MAXNAME+4];
+	    char	ucollation[DB_MAXNAME+4];
+	    char	trans_owner_name[DB_MAXNAME+4];
+	    char	untrans_owner_name[DB_MAXNAME+4];
+	    i4		needdir;
+	    i4		pcnt;
+	EXEC SQL END DECLARE SECTION;
+
+	access  = duc_dbenv->du_access;
+	service = duc_dbenv->du_dbservice;
+	(VOID) STcopy (duc_dbenv->du_dbname, dbname);
+	(VOID) STcopy (duc_dbenv->du_dbloc.du_locname,   db_loc);
+	(VOID) STcopy (duc_dbenv->du_jnlloc.du_locname,  jnl_loc);
+	(VOID) STcopy (duc_dbenv->du_ckploc.du_locname,  ckp_loc);
+	(VOID) STcopy (duc_dbenv->du_dmploc.du_locname,  dmp_loc);
+	(VOID) STcopy (duc_dbenv->du_sortloc.du_locname, srt_loc);
+
+	(VOID) STcopy (duc_dbenv->du_collation,  collation);
+	(VOID) STcopy (duc_dbenv->du_ucollation, ucollation);
+	(VOID) STcopy (duc_dbenv->du_dba_target, trans_owner_name);
+	(VOID) STcopy (duc_dbenv->du_xusrname,   untrans_owner_name);
+	needdir = need_dir_flg;
+	
+	exec sql set session add privileges (createdb);
+
+	exec sql select dbp_parameter_count into :pcnt from iiprocedure where 
+	lowercase(dbp_name) = 'iiqef_create_db';
+	if (sqlca.sqlcode < 0)
+	{
+	    /* we were unable to execute the internal procedure */
+	    sqlerr_handler(duc_errcb,E_DU200C_BAD_IPROC_EXECUTE);
+		return (E_DU_FATAL);
+	}
+
+	if (pcnt == 13)
+	{
+	    exec sql execute procedure iiQEF_create_db (
+		dbname		=   :dbname,
+		db_loc_name		=   :db_loc,
+		jnl_loc_name	=   :jnl_loc,
+		ckp_loc_name	=   :ckp_loc,
+		dmp_loc_name	=   :dmp_loc,
+		srt_loc_name	=   :srt_loc,
+		db_access		=   :access,
+		collation		=   :collation,
+		need_dbdir_flg	=   :needdir,
+		db_service		=   :service,
+		translated_owner_name	=   :trans_owner_name,
+		untranslated_owner_name	=   :untrans_owner_name,
+		ucollation		=   :ucollation);
+	}
+	else
+	{
+	    exec sql execute procedure iiQEF_create_db (
+		dbname		=   :dbname,
+		db_loc_name		=   :db_loc,
+		jnl_loc_name	=   :jnl_loc,
+		ckp_loc_name	=   :ckp_loc,
+		dmp_loc_name	=   :dmp_loc,
+		srt_loc_name	=   :srt_loc,
+		db_access		=   :access,
+		collation		=   :collation,
+		need_dbdir_flg	=   :needdir,
+		db_service		=   :service,
+		translated_owner_name	=   :trans_owner_name,
+		untranslated_owner_name	=   :untrans_owner_name);
+	}
+	if (sqlca.sqlcode < 0)
+	{
+	    /* we were unable to execute the internal procedure */
+	    sqlerr_handler(duc_errcb,E_DU200C_BAD_IPROC_EXECUTE);
+		return (E_DU_FATAL);
+	}
+	
+	return E_DU_OK;
+}
+
+/*{
+** Name:  duc_iidevices() -- build catalog IIDEVICES
+**
+** Description:
+**        Create catalog IIDEVICES
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+** Returns:
+**	none
+** Exceptions:
+**	none
+**
+** Side Effects:
+**	none
+**
+** History:
+**	29-jan-93 (jpk)
+**	    initial creation.  Encapsulated from duc_dbms_bld()
+**	    so that 6.5 upgradedb can call it.
+*/
+VOID
+duc_iidevices()
+{
+##	create iidevices (devrelid=i4, devrelidx=i4, devrelocid=i4,
+##			  devloc=char(db_maxname_hostvar))
+}
+
+
+/*{
+** Name:  duc_init_iisectype () -- init catalog iisectype
+**
+** Description:
+** Definition for iisectype base table.
+**
+** This base table will be created and populated in *every* database.
+** It is used by the iisecurity_state view to interpret the contents
+** of the iisecuritystate base table.  It is also used by the 
+** iisecurity_status view to interpret the output from dbmsinfo('secstate').
+**
+** Each tuple represents a defined security event, a security label, or
+** unknown security types, events or labels.  All defined security 
+** events are provided by Ingres.  The customer must provide tuples
+** for system- or site-specific security labels.
+**
+** Attribute definitions include:
+**
+**	sec_type -	The type of security item  represented by this
+**			tuple, including:
+**				`Event'	  - Security Event 
+**				`Unknown' - Unknown type
+**
+**	sec_name -	If sec_type is `Event', this is the name of the
+**			security event represented by the tuple.
+**
+**	sec_typenum -	Internal representation of sec_type, including:
+**				0	- Unknown
+**				1	- Event
+**
+**	sec_namenum -	Internal representation of sec_name.  For tuples
+**			with sec_type of `Unknown', this attribute is zero.
+**			For tuples with sec_type
+**			of event, this attribute contains:
+**				0	- Unknown
+**				1	- Database
+**				2	- Role
+**				3	- Procedure
+**				4	- Table
+**				5	- Location
+**				6	- View
+**				7	- Row
+**				8	- Security
+**				9	- User
+**				11	- Alarm
+**				12	- Rule
+**				13	- DbEvent
+**				14	- Installation
+**				15	- All
+**				16	- Resource
+**				17	- Query text
+**
+**	sec_index -	Contains the index (1-based) into the output of
+**			dbmsinfo('secstate') for the status of the associated
+**			security event.  This zero for unknown security
+**			events, or record types which are not security events.
+**
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	11-oct-91 (teresa)
+**	     initial creation.
+**	18-nov-92 (robf)
+**		Add INSTALLATION code. Also rework to make table-driven
+**		rather than multiple INSERTS.
+**	2-jul-93  (robf)
+**	     Add RESOURCE, QRYTEXT auditing
+**	04-aug-1993 (shailaja)
+**		Unnested comments.
+*/
+VOID
+duc_init_iisectype()
+{
+
+EXEC SQL BEGIN DECLARE SECTION;
+	typedef struct {
+		char *type;
+		char *name;
+		int  typenum;
+		int  namenum;
+		int  secindex;
+	} SECTYPE;
+
+	static SECTYPE sectypes[] = {
+{"Unknown", "Unknown", 0, 0, 0 },
+{"Event",   "Unknown", 1, 0, 0 },
+{"Event",   "Database", 1, 1, 2 },
+{"Event",   "Role", 	1, 2, 3 },
+{"Event",   "Procedure",1, 3, 4 },
+{"Event",   "Table",	1, 4, 5 },
+{"Event",   "Location",	1, 5, 6 },
+{"Event",   "View",	1, 6, 7 },
+{"Event",   "Row",	1, 7, 8 },
+{"Event",   "Security",	1, 8, 9 },
+{"Event",   "User",	1, 9, 10 },
+{"Event",   "Alarm",	1, 11,12 },
+{"Event",   "Rule",	1, 12,13 },
+{"Event",   "DbEvent",	1, 13,14 },
+{"Event",   "Installation", 1, 14,15 },
+{"Event",   "All",	1, 15,1 },
+{"Event",   "Resource",	1, 16,17 },
+{"Event",   "Query_text",	1, 17,18 } };
+
+	int rowno;
+EXEC SQL END DECLARE SECTION;
+
+	for ( rowno=0; rowno< sizeof(sectypes)/sizeof(SECTYPE); rowno++)
+	{
+		EXEC SQL REPEATED
+			 INSERT INTO iisectype (sec_type,sec_name,
+				 sec_typenum,sec_namenum,sec_index)
+			 VALUES (:sectypes[rowno].type,
+				 :sectypes[rowno].name,
+				 :sectypes[rowno].typenum,
+				 :sectypes[rowno].namenum,
+				 :sectypes[rowno].secindex);
+	}
+}
+
+/*{
+** Name:  duc_iisecuritystate() -- build catalog iisecuritystate
+**
+** Description:
+**        This routine makes the catalog iisecuritystate.
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+**	Returns:
+**	    status - E_DB_OK or error code
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	11-oct-91 (teresa)
+**		initial creation.
+*/
+DU_STATUS
+duc_iisecuritystate(duc_errcb)
+DU_ERROR	*duc_errcb;
+{
+##      i4		sec_type_var;
+##      i4		sec_state_var;
+##      i4		sec_id;
+##	i4		row_cnt;
+	DB_STATUS	stat;
+
+	duc_create_catalog("iisecuritystate");
+
+	/* Print an informational message. */
+	if ((du_error(duc_errcb, I_DU0204_MOD_DBDB_CATS, 0))
+	    != E_DU_OK
+	   )
+	    return(duc_errcb->du_status);
+
+        /*
+        **  Populate security state table to initial state of off.
+        **  For B1 this should probably be on.  Did not want to
+        **  have any special B1 flags in CREATEDB.
+        */
+
+        sec_type_var= 1;
+        sec_state_var = 0;
+
+        for (sec_id =1; sec_id <= 17; sec_id++)
+        {
+##          append iisecuritystate(type=sec_type_var, id=sec_id,
+##				   state = sec_state_var);
+##	    inquire_equel(row_cnt=rowcount)
+	    if (row_cnt != 1)
+	    {
+		return (du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+			0, "iisecuritystate", 0, DU_DBDBNAME));
+	    }
+        }
+	return E_DU_OK;
+}
+
+
+/*{
+** Name:  duc_init_iietab() -- init iiextended_relation
+**
+** Description:
+**        This routine inits the catalog iiextended_relation.
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	03-aug-1999 (stial01)
+**		initial creation.
+**      05-dec-2003 (ashco01) INGSRV2629, Bug 111419.
+**              Permission 'SELECT to PUBLIC with GRANT OPTION' granted
+**              on table after creation. This is performed by createdb but
+**              was not being perfomed when creating table during upgradedb
+**              from a pre-2.5 database.
+*/
+VOID
+duc_init_iietab()
+{
+        EXEC SQL
+        GRANT SELECT ON iiextended_relation
+		TO PUBLIC
+		WITH GRANT OPTION;
+}
+
+/*{
+** Name:  duc_init_iidefault() -- init iidefault catalog
+**
+** Description:
+**      Populates the iidefault catalog.  If called from createdb, new rows
+**      are inserted from the iidefaults array below.  If called from upgradedb,
+**      expected rows are first checked for existence and if not found, they're
+**      added.
+**
+** Inputs:
+**      is_upgrade   if TRUE, the caller is from upgradedb
+**	errcb        DUF error control block
+** Outputs:
+**	errcb        possibly updated control block
+**	Returns:
+**          OK
+**          E_DU241C_SELECT_ERR_UPGR_IIDEFAULT
+**          E_DU241D_INSERT_ERR_UPGR_IIDEFAULT
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	29-jul-92 (rickh)
+**		initial creation.
+**	26-oct-92 (rblumer)
+**	    split IS_LITERAL into QUOTED_LITERAL and UNQUOTED_LITERAL
+**	05-dec-92 (rblumer)
+**	    take deftype out of CREATE TABLE and INSERTs;
+**	    make defid1 and defid2 be NOT NULL columns.
+**	19-jan-93 (rblumer)
+**	    add DB_DEF_UNKNOWN canonical tuple, mainly for views;
+**	    add tuples for logical keys, INITIAL_USER, and DBA.
+**	22-feb-93 (rickh)
+**	    Upped the length of the value string in IIDEFAULT by 1 byte.  This
+**	    forces (given the null indicator byte and the 2 byte length
+**	    descriptor) 4 byte alignment in our DBMS.H structure, which is good
+**	    for the secondary index (which has a concluding tidp column).
+**	9-mar-93 (rickh)
+**	    Added DB_DEF_ID_NEEDS_CONVERTING and DB_DEF_ID_UNRECOGNIZED
+**	    tuples to IIDEFAULT.
+*/
+static struct { i4 id1; char *defvalue; } iidefaults[] =
+    {
+	{ DB_DEF_NOT_DEFAULT, NULL },
+	{ DB_DEF_NOT_SPECIFIED, NULL },
+	{ DB_DEF_UNKNOWN, NULL },
+	{ DB_DEF_ID_0, "0" },
+	{ DB_DEF_ID_BLANK, "' '" },
+	{ DB_DEF_ID_TABKEY, "\0\0\0\0\0\0\0\0" },
+	{ DB_DEF_ID_LOGKEY, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0" },
+	{ DB_DEF_ID_NULL, "NULL" },
+	{ DB_DEF_ID_USERNAME, "CURRENT_USER" },
+	{ DB_DEF_ID_CURRENT_DATE, "CURRENT_DATE" },
+	{ DB_DEF_ID_CURRENT_TIMESTAMP, "CURRENT_TIMESTAMP" },
+	{ DB_DEF_ID_CURRENT_TIME, "CURRENT_TIME" },
+	{ DB_DEF_ID_SESSION_USER, "SESSION_USER" },
+	{ DB_DEF_ID_SYSTEM_USER, "SYSTEM_USER" },
+	{ DB_DEF_ID_INITIAL_USER, "INITIAL_USER" },
+	{ DB_DEF_ID_DBA, "$DBA" },
+	{ DB_DEF_ID_FALSE, "FALSE" },
+	{ DB_DEF_ID_TRUE, "TRUE" },
+	{ DB_DEF_ID_NEEDS_CONVERTING, NULL },
+	{ DB_DEF_ID_UNRECOGNIZED, NULL},
+    };
+
+DB_STATUS
+duc_init_iidefault(
+    bool is_upgrade,
+    DU_ERROR *errcb)
+{
+    exec sql begin declare section;
+    i4 id1, dummy;
+    char *defvalue;
+    exec sql end declare section;
+    i4 i;
+
+    /* populate iidefault with the canonical defaults */
+
+    for (i = 0; i < sizeof(iidefaults) / sizeof(iidefaults[0]); ++ i)
+    {
+	id1 = iidefaults[i].id1;
+	if (is_upgrade)
+	{
+	    exec sql select 1 into :dummy from iidefault
+		     where defid1 = :id1 and defid2 = 0;
+	    if (sqlca.sqlcode < 0)
+		return du_error(errcb, E_DU241C_SELECT_ERR_UPGR_IIDEFAULT, 2,
+				sizeof(sqlca.sqlcode), sqlca.sqlcode);
+	}
+	if (!is_upgrade || sqlca.sqlcode == 100)
+	{
+	    defvalue = iidefaults[i].defvalue;
+	    if (defvalue)
+		exec sql insert into iidefault (defid1, defid2, defvalue)
+		    values (:id1, 0, :defvalue);
+	    else
+		exec sql insert into iidefault (defid1, defid2, defvalue)
+		    values (:id1, 0, NULL);
+	    if (sqlca.sqlcode < 0 || sqlca.sqlerrd[2] != 1)
+		return du_error(errcb, E_DU241D_INSERT_ERR_UPGR_IIDEFAULT, 2,
+				sizeof(sqlca.sqlcode), sqlca.sqlcode);
+	}
+    }
+
+    return OK;
+} /* end duc_init_iidefault */
+
+
+/*{
+** Name:  duc_iilgmo() -- register IMA table and define view on it for 2PC
+**
+** Description:
+**	For 2PC recovery in XA environments IMA provides useful
+**	information.  This routine registers the necessary
+**	tables and provides a useful view.  The view will be used
+**	by XA servers.
+**
+** Inputs:
+**	duc_errdb	PTR to error control block
+** Outputs:
+**	none
+** Returns:
+**	none
+** Exceptions:
+**	none
+** Side Effects:
+**	None
+**
+** History:
+**	30 January 1993 (jpk)
+**		initial creation.
+**	20 July 1993 (jpk)
+**		Added GRANT SELECT on lgmo_xa_dis_tran_ids TO PUBLIC.
+**	3 Jan 1994 (jpk)
+**		modified view definition of view lgmo_xa_dis_tran_ids
+**		as per larrym; new definition is a view with a room.
+**	28 March 1994 (jpk)
+**		modified view definition of view lgmo_xa_dis_tran_ids
+**		to work in FIPS iidbdb; can't use "$ingres" because
+**		in FIPS it's "$INGRES"; can't use $ingres without quotes
+**		because of esqlc bug 57353.  So omit $ingres.  Can
+**		add it back in for FCS2 if desired.
+*/
+VOID
+duc_iilgmo(duc_errcb)
+DU_ERROR	*duc_errcb;
+{
+    IIlq_Protect(TRUE);
+
+    /* force clean slate for upgradedb's sake */
+    if (rel_exists("lgmo_xa_dis_tran_ids"))
+    {
+	exec sql drop view lgmo_xa_dis_tran_ids;
+    }
+    if (rel_exists("lgmo_xa_dis_tran_ids"))
+    {
+	exec sql remove lgmo_lgd;
+    }
+    if (rel_exists("lgmo_lxb"))
+    {
+	exec sql remove lgmo_lxb;
+    }
+    if (rel_exists("lgmo_lpb"))
+    {
+	exec sql remove lgmo_lpb;
+    }
+    if (rel_exists("lgmo_ldb"))
+    {
+	exec sql remove lgmo_ldb;
+    }
+
+    duc_register_table("lgmo_lgd");
+    if (sqlca.sqlcode < 0)
+    {
+	sqlerr_handler(duc_errcb, W_DU186B_REGISTER_FAILED);
+    }
+
+    duc_register_table("lgmo_lpb");
+    if (sqlca.sqlcode < 0)
+    {
+	sqlerr_handler(duc_errcb, W_DU186B_REGISTER_FAILED);
+    }
+
+    duc_register_table("lgmo_ldb");
+    if (sqlca.sqlcode < 0)
+    {
+	sqlerr_handler(duc_errcb, W_DU186B_REGISTER_FAILED);
+    }
+
+    duc_register_table("lgmo_lxb");
+    if (sqlca.sqlcode < 0)
+    {
+	sqlerr_handler(duc_errcb, W_DU186B_REGISTER_FAILED);
+    }
+
+    duc_register_table("lgmo_xa_reduced_reg");
+    if (sqlca.sqlcode < 0)
+    {
+	sqlerr_handler(duc_errcb, W_DU186B_REGISTER_FAILED);
+    }
+
+    exec sql create view lgmo_xa_dis_tran_ids 
+    (xa_dis_tran_id,xa_seqnum,xa_flags,xa_database_name) 
+    AS SELECT  	
+    /* xa_dis_tran_id */
+    LEFT(
+	 TRIM(lxb_dis_tran_id_hexdump),
+	 LOCATE(TRIM(lxb_dis_tran_id_hexdump),':XA') + 2 
+	),
+    /* xa_seqnum */
+    INT4(LEFT(
+	 RIGHT(
+	       TRIM(lxb_dis_tran_id_hexdump), 
+	       (
+		LENGTH(TRIM(lxb_dis_tran_id_hexdump)) - 
+		LOCATE(TRIM(lxb_dis_tran_id_hexdump),':XA:')
+	       ) - 3
+	      ), 
+	 LOCATE(
+	        RIGHT( 
+		      TRIM(lxb_dis_tran_id_hexdump), 
+		      (
+		       LENGTH(TRIM(lxb_dis_tran_id_hexdump)) - 
+		       LOCATE(TRIM(lxb_dis_tran_id_hexdump), ':XA:')
+		      ) - 3
+	             ),
+		':'
+	       ) - 1
+        ) 
+    ),
+    /* xa_flags */
+    INT4( LEFT(
+         RIGHT( 
+	       RIGHT(
+		     TRIM(lxb_dis_tran_id_hexdump), 
+		     (
+		      LENGTH(TRIM(lxb_dis_tran_id_hexdump)) - 
+		      LOCATE(TRIM(lxb_dis_tran_id_hexdump),':XA:')
+		     ) - 3
+	            ), 
+	       LENGTH(
+	              RIGHT(
+		            TRIM(lxb_dis_tran_id_hexdump), 
+			    (
+			     LENGTH(TRIM(lxb_dis_tran_id_hexdump)) - 
+			     LOCATE(TRIM(lxb_dis_tran_id_hexdump),':XA:')
+			    ) - 3
+	                   )
+		     ) - 
+	       LOCATE(
+	              RIGHT(
+		            TRIM(lxb_dis_tran_id_hexdump), 
+		 	    (
+			     LENGTH(TRIM(lxb_dis_tran_id_hexdump)) - 
+			     LOCATE(TRIM(lxb_dis_tran_id_hexdump),':XA:')
+			    ) - 3
+	                   )
+		      ,':'
+	             ) 
+	      ),
+	      LOCATE(
+                     RIGHT( 
+	                   RIGHT(
+		                 TRIM(lxb_dis_tran_id_hexdump), 
+				 (
+				  LENGTH(TRIM(lxb_dis_tran_id_hexdump)) - 
+				  LOCATE(TRIM(lxb_dis_tran_id_hexdump),':XA:')
+				 ) - 3
+	                        ), 
+			   LENGTH(
+	                          RIGHT(
+		                        TRIM(lxb_dis_tran_id_hexdump), 
+					(
+					 LENGTH(TRIM(lxb_dis_tran_id_hexdump)) - 
+					 LOCATE(
+					        TRIM(lxb_dis_tran_id_hexdump),
+						':XA:'
+					       )
+					) - 3
+	                               )
+	                         ) - 
+	                   LOCATE(
+	                          RIGHT(
+		                        TRIM(lxb_dis_tran_id_hexdump), 
+					(
+					 LENGTH(TRIM(lxb_dis_tran_id_hexdump)) - 
+					 LOCATE(
+						TRIM(lxb_dis_tran_id_hexdump),
+						':XA:'
+					       )
+					) - 3
+	                               )
+		                  ,':'
+	                         )
+	                  ),
+		     ':EX'
+	            ) - 1
+        )    
+    ),
+    /* xa_database_name */
+    lxb_db_name
+FROM lgmo_xa_reduced_reg
+WHERE lxb_is_prepared='Y' AND 
+      lxb_is_xa_dis_tran_id='Y';
+
+    if (sqlca.sqlcode < 0)
+    {
+	    sqlerr_handler(duc_errcb, W_DU186B_REGISTER_FAILED);
+    }
+
+    exec sql commit;
+
+    exec sql grant select on lgmo_xa_dis_tran_ids to public;
+    if (sqlca.sqlcode < 0)
+    {
+	    sqlerr_handler(duc_errcb, W_DU186B_REGISTER_FAILED);
+    }
+
+    exec sql commit;
+}
+
+/*{
+** Name:  duc_iischema() -- build system catalog iischema
+**
+** Description:
+**        This routine makes the catalog iischema
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	13 December 1992 (jpk)
+**		initial creation.
+**	20-jan-93 (anitap)
+**	    Fixed bug. Changed schema_name and schema_owner to be 32 instead of
+**	    24. Added schema_idx.
+**	08-feb-93 (anitap)
+**	    Changed the columns in iischema to be non-nullable.
+**	2-mar-93 (rickh)
+**	    Add tuple to iischema, binding $ingres to its canonical schema id.
+**	09-nov-93 (rblumer)
+**	    Changed hard-coded $ingres schema name to be upper/lower case
+**	    depending on case-translation semantics.
+**	    Added upper_case flag to tell us which way to go.
+**	19-jul-94 (robf)
+**          Make sure error diagnostic on failure to insert is reported.
+*/
+VOID
+duc_iischema(upper_case)
+i4  upper_case;
+{
+    exec sql begin declare section;
+	i4	id1;
+	char	owner[DB_MAXNAME+1];
+    exec sql end declare section;
+
+    duc_create_catalog("iischema");
+
+    /* populate iischema with canonical schema ids */
+
+	if (upper_case)
+	    MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$INGRES"), ' ',
+		   sizeof(owner), owner);
+	else
+	    MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$ingres"), ' ',
+		   sizeof(owner), owner);
+
+	owner[sizeof(owner)-1] = EOS;
+    
+
+	id1 = DB_INGRES_SCHEMA_ID;
+	EXEC SQL INSERT INTO iischema
+		( schema_name, schema_owner, schema_id, schema_idx )
+	VALUES
+		( :owner,
+		  :owner,
+		  :id1,	  0 );
+	if(sqlca.sqlcode<0)
+	{
+		duc_sqlerror();
+	}
+}
+
+
+/*{
+** Name:  duc_v4_iisecurity_alarms() -- build catalog iisecurity_alarms
+**
+** Description:
+**        This routine makes the catalog iisecurity_alarms.
+**
+** Inputs:
+**	is_dbdb - TRUE if creating iidbdb
+** Outputs:
+**	none
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	11-oct-91 (teresa)
+**		initial creation.
+**	14-Jan-93 (jpk)
+**		modify definition to use gmt_timestamp
+**	26-oct-93 (andre)
+**	    creation date will be obtained by applying gmt_timestamp() to the
+**	    different iiprotect attribute - procrtime1 (proqryid1 will be based 
+**	    on id of the object)
+**
+**	    modified definition of iisecurity_alarms to take advantage of the 
+**	    fact that object name and owner are now available from IIPROTECT 
+**
+**	    qualification of the view must include "AND q.mode = 19" because it
+**	    is possible for a permit/security_alarm and integrity/constraint 
+** 	    defined on the same table to have identical query text id
+**	6-dec-93 (robf)
+**          Rewritten to reference iisecalarm instead of iiprotect,
+**	    also add new fields for named alarms, database alarms. 
+**	21-dec-93 (robf)
+**          Pick up dbevent name/owner from iievent via event id
+**      18-jul-94 (robf)
+**          Add error check, updated iidbdb definition since failed on
+**          upgradedb (assumed previous range variable r defined)
+*/
+static VOID
+duc_v_iisecurity_alarms(bool is_dbdb)
+{
+    if(is_dbdb)
+    {
+	/*
+	** DBDB, list table and database/installation alarms
+	*/
+EXEC SQL
+	CREATE VIEW iisecurity_alarms	(
+		alarm_name,
+		object_name, 
+		object_owner, 
+		object_type,
+		create_date, 
+		subject_type,
+		security_user, 
+		security_number, 
+		dbevent_name,
+		dbevent_owner,
+		dbevent_text,
+		text_sequence, 
+		text_segment)
+	AS SELECT
+		a.alarm_name,
+		r.relid, 
+		r.relowner, 
+		char(a.obj_type),
+ 		gmt_timestamp(a.alarm_txtid1),
+		char(byteextract('UGRP',int4(a.subj_type)+1)),
+		a.subj_name, 
+		int2(a.alarm_num), 
+		e.event_name,
+		e.event_owner,
+		a.event_text,
+		int2(q.seq)+1, 
+		q.txt
+	FROM 
+		iirelation r,
+		iiqrytext q, 
+		iisecalarm a left join iievent e
+		ON e.event_idbase=a.event_id1
+		AND e.event_idx=a.event_id2
+	WHERE 
+		r.reltid=a.obj_id1
+		AND r.reltidx=a.obj_id2
+		AND a.alarm_txtid1=q.txtid1
+		AND a.alarm_txtid2=q.txtid2
+		AND a.obj_type='T'
+	UNION ALL
+	SELECT
+		a.alarm_name,
+		a.obj_name,
+		d.own,
+		'D',
+ 		gmt_timestamp(a.alarm_txtid1),
+		char(byteextract('UGRP',int4(a.subj_type)+1)),
+		a.subj_name, 
+		int2(a.alarm_num), 
+		e.event_name,
+		e.event_owner,
+		a.event_text,
+		int2(q.seq)+1, 
+		q.txt
+	FROM 
+		iiqrytext q, 
+		iidatabase  d,
+		iisecalarm a left join iievent e
+		ON e.event_idbase=a.event_id1
+		AND e.event_idx=a.event_id2
+	WHERE 
+		    d.name=a.obj_name
+		AND a.alarm_txtid1=q.txtid1
+		AND a.alarm_txtid2=q.txtid2
+		AND a.obj_name!=''
+		AND a.obj_type='D'
+	UNION ALL
+	SELECT
+		a.alarm_name,
+		'',	/* Empty for installation */
+		'',	/* Empty for installation */
+		'I',
+ 		gmt_timestamp(a.alarm_txtid1),
+		char(byteextract('UGRP',int4(a.subj_type)+1)),
+		a.subj_name, 
+		int2(a.alarm_num), 
+		e.event_name,
+		e.event_owner,
+		a.event_text,
+		int2(q.seq)+1, 
+		q.txt
+	FROM 
+		iiqrytext q, 
+		iisecalarm a left join iievent e
+		ON e.event_idbase=a.event_id1
+		AND e.event_idx=a.event_id2
+	WHERE 
+		    a.alarm_txtid1=q.txtid1
+		AND a.alarm_txtid2=q.txtid2
+		AND a.obj_name=''
+		AND a.obj_type='D';
+    }
+    else
+    {
+	/*
+	** Regular databases, list just table alarms
+	*/
+EXEC SQL
+	CREATE VIEW iisecurity_alarms	(
+		alarm_name,
+		object_name, 
+		object_owner, 
+		object_type,
+		create_date, 
+		subject_type,
+		security_user, 
+		security_number, 
+		dbevent_name,
+		dbevent_owner,
+		dbevent_text,
+		text_sequence, 
+		text_segment)
+	AS SELECT
+		a.alarm_name,
+		r.relid, 
+		r.relowner, 
+		char(a.obj_type),
+ 		gmt_timestamp(a.alarm_txtid1),
+		char(byteextract('UGRP',int4(a.subj_type)+1)),
+		a.subj_name, 
+		int2(a.alarm_num), 
+		e.event_name,
+		e.event_owner,
+		a.event_text,
+		int2(q.seq)+1, 
+		q.txt
+	FROM 
+		iirelation r, 
+		iiqrytext q, 
+		iisecalarm a left join iievent e
+		ON e.event_idbase=a.event_id1
+		AND e.event_idx=a.event_id2
+	WHERE 
+		r.reltid=a.obj_id1
+		AND r.reltidx=a.obj_id2
+		AND a.alarm_txtid1=q.txtid1
+		AND a.alarm_txtid2=q.txtid2
+		AND a.obj_type='T';
+    }
+    if(sqlca.sqlcode<0)
+    {
+	/*
+	** Print SQL error message if present.
+	*/
+	duc_sqlerror();
+    }
+}
+
+/*{
+** Name: mk_idxname - Build a star INDEX name from base and index id.
+**
+** Description:
+**      This converts a table base id to ascii, a table index id to
+**	ascii, then builds a star index name as:
+**	    ddx_<base_id>_<index_id>
+**	and places the index name into the string provided by the caller.
+**
+**	example:
+**	    call with base=500, index = 721
+**	    builds index name:	ddx_500_721
+**
+** Inputs:
+**	base	-  int containing table base id
+**	index	-  int containing table index id
+**	name	-  pointer to char string long enought to hold name (ie,
+**			DB_MAXNAME+1)
+**
+** Outputs:
+**      *name	-   name of star index identifier as built from base and index
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    none
+**
+** History:
+**	26-jun-90 (teresa)
+**	    initial creation.
+*/
+VOID
+mk_idxname (name, base, index)
+char	*name;
+int	base;
+int	index;
+{
+#define	    PREFIX  "iiddx_"
+#define	    PREFIX_SIZE 6
+    char    base_str[DB_MAXNAME];
+    char    index_str[DB_MAXNAME];
+    i4	    b_len, i_len;
+
+    CVna (base,base_str);
+    CVna (index,index_str);
+    b_len = STtrmwhite (base_str);
+    i_len = STtrmwhite (index_str);
+    if ( (PREFIX_SIZE + b_len + i_len + 1) > DB_MAXNAME )
+    {
+	/* Name is too long to fix into string, so use shorter version */
+	(VOID) STpolycat( 2, PREFIX, index_str, name);
+    }
+    else
+    {	/* the usual case */
+	(VOID) STpolycat( 4, PREFIX, base_str, "_", index_str, name);
+    }
+}
+
+/*{
+** Name:  duc_register_starcats() - Register star catalogs
+**
+** Description:
+**        This routine populates star catalogs with information from the CDB
+**	so that star will be able to map its catalogs to CDB catalogs.  It
+**	populates the following catalogs:
+**		iidd_tables
+**		iidd_columns
+**		iidd_ddb_objects
+**		iidd_ddb_tbleinfo
+**	also, it populates information about secondary indexes (if any) for
+**	these tables.
+**
+**	The information of what to populate is table driven, and the tables
+**	can be found in header file dustar.qsh.
+**
+** Inputs:
+**	object_base	starting object base
+**	map		array of DU_link_object_entry structures, used to
+**			populate the star catalogs
+**	idx_map		array of DU_index_object_entry structures, used to
+**			populate the star catalogs with secondary index info
+**	cdbname		name of the CDB
+**	duc_errcb	ERROR CONTROL BLOCK
+**
+** Outputs:
+**	err_cb->du_errmsg	- formatted error message if error is
+*				  encountered
+**	Returns:
+**	    E_DU_OK
+**	    E_DU_ERROR
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      iidd_ddb_object_base is incremented
+**
+** History:
+**	14-oct-91 (teresa)
+**		initial creation.
+*/
+
+DU_STATUS
+##duc_register_starcats(object_base, map, idx_map, cdbname, duc_errcb)
+i4			object_base;
+DU_link_object_entry    map[];
+DU_index_object_entry   idx_map[];
+char			*cdbname;
+DU_ERROR		*duc_errcb;
+##{
+    i4		object_index=0;
+##  char *DU_ii_name, *DU_iidd_name, *DU_obj_type, *DU_loc_type;
+##  char *DU_ldbidx_nam;
+##  i4	 DU_object_base, DU_index;
+##  i4	 obj_base;
+##  i4	 row_cnt;
+    DU_STATUS	stat;
+    /*
+    **	Initialize "iidd_ddb_*" tables in CDB.
+    */
+
+
+    for (object_index = 0;
+	STcompare((char *)(map[object_index].ii_name), "");
+	object_index++, object_base++)
+    {
+	DU_ii_name	= map[object_index].ii_name;
+	DU_iidd_name	= map[object_index].iidd_name;
+	DU_obj_type	= map[object_index].obj_type;
+	DU_loc_type	= map[object_index].loc_type;
+	DU_object_base	= object_base;
+
+	/* Initialize iidd_tables and substitute iidd_name into ii_name */
+
+##	repeat append to iidd_tables 
+##		(
+##		table_name	= @DU_ii_name,
+##		table_owner	= iitables.table_owner,
+##		create_date	= iitables.create_date,
+##		alter_date	= iitables.alter_date,
+##		table_type	= iitables.table_type,
+##		table_subtype	= iitables.table_subtype,
+##		table_version	= iitables.table_version,
+##		system_use	= "S",
+##		table_stats	= iitables.table_stats,
+##		table_indexes	= iitables.table_indexes,
+##		is_readonly	= iitables.is_readonly,
+##		num_rows	= iitables.num_rows,
+##		storage_structure= iitables.storage_structure,
+##		is_compressed	= iitables.is_compressed,
+##		duplicate_rows	= iitables.duplicate_rows,
+##		unique_rule	= iitables.unique_rule,
+##		number_pages	= iitables.number_pages,
+##		overflow_pages	= iitables.overflow_pages,
+##		row_width	= iitables.row_width,
+##		expire_date	= iitables.expire_date,
+##		modify_date	= iitables.modify_date,
+##		location_name	= iitables.location_name,
+##		table_integrities= " ",
+##		table_permits	= " ",
+##		all_to_all	= "Y",
+##		ret_to_all	= "Y",
+##		is_journalled	= iitables.is_journalled,
+##		view_base	= iitables.view_base,
+##		multi_locations	= iitables.multi_locations,
+##		table_ifillpct	= iitables.table_ifillpct,
+##		table_dfillpct	= iitables.table_dfillpct,
+##		table_lfillpct	= iitables.table_lfillpct,
+##		table_minpages	= iitables.table_minpages,
+##		table_maxpages	= iitables.table_maxpages,
+##		table_relstamp1	= iitables.table_relstamp1,
+##		table_relstamp2	= iitables.table_relstamp2,
+##		table_reltid	= iitables.table_reltid,
+##		table_reltidx	= iitables.table_reltidx,
+##		table_pagesize	= iitables.table_pagesize,
+##		table_relversion= iitables.table_relversion,
+##		table_reltotwid = iitables.table_reltotwid
+##		)
+##	    where iitables.table_name = @DU_iidd_name
+
+##	inquire_equel(row_cnt   = rowcount)
+	if (row_cnt == 0)
+	{
+	    /* Bad append to table, %0c, in database, %1c. */
+	    stat = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iidd_tables", 0, cdbname);
+	}
+ 
+##	repeat append to iidd_columns
+##		(
+##		table_name	= @DU_ii_name,
+##		table_owner	= iicolumns.table_owner,
+##		column_name	= iicolumns.column_name,
+##		column_datatype = iicolumns.column_datatype,
+##		column_length	= iicolumns.column_length,
+##		column_scale	= iicolumns.column_scale,
+##		column_nulls	= iicolumns.column_nulls,
+##		column_defaults	= iicolumns.column_defaults,
+##		column_sequence	= iicolumns.column_sequence,
+##		key_sequence	= iicolumns.key_sequence,
+##		sort_direction	= iicolumns.sort_direction,
+##		column_ingdatatype = iicolumns.column_ingdatatype
+##		)
+##	    where iicolumns.table_name = @DU_iidd_name
+
+##	inquire_equel(row_cnt   = rowcount)
+	if (row_cnt == 0)
+	{
+	    /* Bad append to table, %0c, in database, %1c. */
+	    stat = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iidd_columns", 0, cdbname);
+	}
+ 
+##	repeat append to iidd_ddb_tableinfo
+##		(
+##		object_base	= @DU_object_base,
+##		object_index	= 0,
+##		local_type	= @DU_loc_type,
+##		table_name	= @DU_iidd_name,
+##		table_owner	= iitables.table_owner,
+##		table_date	= iitables.create_date, 
+##	        table_alter	= iitables.alter_date,
+##		table_relstamp1 = iitables.table_relstamp1,
+##		table_relstamp2 = iitables.table_relstamp2,
+##		columns_mapped  = "N", 
+##		ldb_id		= 1
+##		)
+##	      where iitables.table_name = @DU_iidd_name
+
+##	inquire_equel(row_cnt   = rowcount)
+	if (row_cnt == 0)
+	{
+	    /* Bad append to table, %0c, in database, %1c. */
+	    stat = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iidd_ddb_tableinfo",
+				0, cdbname);
+	}
+ 
+##	repeat append to iidd_ddb_objects
+##		(
+##		object_name	= @DU_ii_name,
+##		object_owner    = iitables.table_owner,
+##		object_base	= @DU_object_base,
+##		object_index    = 0,
+##		qid1		= 0, 
+##		qid2		= 0,
+##		create_date     = date_gmt(date("now")), 
+##		object_type	= @DU_obj_type,
+##		alter_date	= date_gmt(date("now")),
+##		system_object   = "Y",
+##		to_expire	= "N"
+##		) 
+##	      where iitables.table_name = @DU_iidd_name
+
+##	inquire_equel(row_cnt   = rowcount)
+	if (row_cnt == 0)
+	{
+	    /* Bad append to table, %0c, in database, %1c. */
+	    stat = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iidd_ddb_objects", 0, cdbname);
+	}
+ 
+    }
+    DU_object_base++;
+##  replace iidd_ddb_object_base( object_base = DU_object_base )
+
+
+    /* now populate CDB catalogs to propogate any indexes from System
+    ** catalogs put into CDB catalogs */
+
+    for (object_index = 0, DU_index = DU_object_base;
+	STcompare((char *)(idx_map[object_index].loctab_name), "");
+	object_index++, DU_index++)
+    {
+	DU_ii_name	= idx_map[object_index].loctab_name;
+	DU_iidd_name	= idx_map[object_index].link_name;
+	DU_ldbidx_nam 	= idx_map[object_index].locidx_name;
+	DU_obj_type	= "L",
+	DU_loc_type	= "I";
+
+	/* Initialize iidd_tables and substitute iidd_name into ii_name */
+
+##	retrieve (obj_base = iidd_ddb_objects.object_base) where
+##	    iidd_ddb_objects.object_name = DU_ii_name
+
+	mk_idxname (DU_iidd_name, obj_base, DU_index);
+
+##	repeat append to iidd_tables 
+##		(
+##		table_name	= @DU_iidd_name,
+##		table_owner	= iitables.table_owner,
+##		create_date	= iitables.create_date,
+##		alter_date	= iitables.alter_date,
+##		table_type	= iitables.table_type,
+##		table_subtype	= iitables.table_subtype,
+##		table_version	= iitables.table_version,
+##		system_use	= "S",
+##		table_stats	= iitables.table_stats,
+##		table_indexes	= iitables.table_indexes,
+##		is_readonly	= iitables.is_readonly,
+##		num_rows	= iitables.num_rows,
+##		storage_structure= iitables.storage_structure,
+##		is_compressed	= iitables.is_compressed,
+##		duplicate_rows	= iitables.duplicate_rows,
+##		unique_rule	= iitables.unique_rule,
+##		number_pages	= iitables.number_pages,
+##		overflow_pages	= iitables.overflow_pages,
+##		row_width	= iitables.row_width,
+##		expire_date	= iitables.expire_date,
+##		modify_date	= iitables.modify_date,
+##		location_name	= iitables.location_name,
+##		table_integrities= iitables.table_integrities,
+##		table_permits	= iitables.table_permits,
+##		all_to_all	= "Y",
+##		ret_to_all	= "Y",
+##		is_journalled	= iitables.is_journalled,
+##		view_base	= iitables.view_base,
+##		multi_locations	= iitables.multi_locations,
+##		table_ifillpct	= iitables.table_ifillpct,
+##		table_dfillpct	= iitables.table_dfillpct,
+##		table_lfillpct	= iitables.table_lfillpct,
+##		table_minpages	= iitables.table_minpages,
+##		table_maxpages	= iitables.table_maxpages,
+##		table_relstamp1	= iitables.table_relstamp1,
+##		table_relstamp2	= iitables.table_relstamp2,
+##		table_reltid	= iitables.table_reltid,
+##		table_reltidx	= iitables.table_reltidx,
+##		table_pagesize	= iitables.table_pagesize,
+##		table_relversion= iitables.table_relversion,
+##		table_reltotwid = iitables.table_reltotwid
+##		)
+##	    where iitables.table_name = @DU_ldbidx_nam 
+
+##	inquire_equel(row_cnt   = rowcount)
+	if (row_cnt == 0)
+	{
+	    /* Bad append to table, %0c, in database, %1c. */
+	    stat = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iidd_tables", 0, cdbname);
+	}
+ 
+##	repeat append to iidd_columns
+##		(
+##		table_name	= @DU_iidd_name,
+##		table_owner	= iicolumns.table_owner,
+##		column_name	= iicolumns.column_name,
+##		column_datatype = iicolumns.column_datatype,
+##		column_length	= iicolumns.column_length,
+##		column_scale	= iicolumns.column_scale,
+##		column_nulls	= iicolumns.column_nulls,
+##		column_defaults	= iicolumns.column_defaults,
+##		column_sequence	= iicolumns.column_sequence,
+##		key_sequence	= iicolumns.key_sequence,
+##		sort_direction	= iicolumns.sort_direction,
+##		column_ingdatatype = iicolumns.column_ingdatatype
+##		)
+##	    where iicolumns.table_name = @DU_ldbidx_nam
+
+##	inquire_equel(row_cnt   = rowcount)
+	if (row_cnt == 0)
+	{
+	    /* Bad append to table, %0c, in database, %1c. */
+	    stat = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iidd_columns", 0, cdbname);
+	}
+ 
+##	repeat append to iidd_ddb_tableinfo
+##		(
+##		object_base	= @DU_object_base,
+##		object_index	= @DU_index,
+##		local_type	= @DU_loc_type,
+##		table_name	= @DU_ldbidx_nam,
+##		table_owner	= iitables.table_owner,
+##		table_date	= iitables.create_date, 
+##	        table_alter	= iitables.alter_date,
+##		table_relstamp1 = iitables.table_relstamp1,
+##		table_relstamp2 = iitables.table_relstamp2,
+##		columns_mapped  = "N", 
+##		ldb_id		= 1
+##		)
+##	      where iitables.table_name = @DU_ldbidx_nam
+
+##	inquire_equel(row_cnt   = rowcount)
+	if (row_cnt == 0)
+	{
+	    /* Bad append to table, %0c, in database, %1c. */
+	    stat = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iidd_ddb_tableinfo",
+				0, cdbname);
+	}
+ 
+##	repeat append to iidd_ddb_objects
+##		(
+##		object_name	= @DU_iidd_name,
+##		object_owner    = iitables.table_owner,
+##		object_base	= @DU_object_base,
+##		object_index    = @DU_index,
+##		qid1		= 0, 
+##		qid2		= 0,
+##		create_date     = date_gmt(date("now")), 
+##		object_type	= @DU_obj_type,
+##		alter_date	= date_gmt(date("now")),
+##		system_object   = "Y",
+##		to_expire	= "N"
+##		) 
+##	      where iitables.table_name = @DU_ldbidx_nam
+
+##	repeat append to iidd_indexes
+##		(
+##		index_name	= @DU_iidd_name,
+##		index_owner	= iiindexes.index_owner,
+##		create_date     = date_gmt(date("now")), 
+##		base_name	= iiindexes.base_name,
+##		base_owner	= iiindexes.base_owner,
+##		storage_structure = iiindexes.storage_structure,
+##		is_compressed   = iiindexes.is_compressed,
+##		unique_rule	= iiindexes.unique_rule,
+##		index_pagesize	= iiindexes.index_pagesize
+##		) 
+##	      where iiindexes.index_name = @DU_ldbidx_nam
+
+
+##	inquire_equel(row_cnt   = rowcount)
+	if (row_cnt == 0)
+	{
+	    /* Bad append to table, %0c, in database, %1c. */
+	    stat = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iidd_indexes", 0,cdbname);
+	}
+
+##	repeat append to iidd_index_columns
+##		(
+##		index_name	= @DU_iidd_name,
+##		index_owner	= iiindex_columns.index_owner,
+##		column_name	= iiindex_columns.column_name,
+##		key_sequence	= iiindex_columns.key_sequence,
+##		sort_direction	= iiindex_columns.sort_direction
+##		) 
+##	      where iiindex_columns.index_name = @DU_ldbidx_nam
+
+
+##	inquire_equel(row_cnt   = rowcount)
+	if (row_cnt == 0)
+	{
+	    /* Bad append to table, %0c, in database, %1c. */
+	    stat = du_error(duc_errcb, E_DU3200_BAD_APPEND, 4,
+				0, "iidd_index_columns", 
+				0, cdbname);
+	}
+
+    }
+    DU_index++;
+##  replace iidd_ddb_object_base(object_base = DU_index)
+
+    return (E_DU_OK);
+##}
+
+
+/*{
+** Name:  duc_r_iiaudit -- build catalog iiaudit
+**
+** Description:
+**
+**	Definition for the iipermits registration.
+**
+**	NOTE: iigwsxa MUST have been called prior to this otherwise
+**	      the REGISTER will fail
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	08-oct-92 (robf)
+**	   initial creation.
+**	18-nov-92 (robf)
+**	   Add check for failure just in case global error handling
+**	   doesn't pick it up.
+**	9-jul-93 (robf)
+**         Added detailinfo/detailnum/sessionid/objectlabel fields
+**	23-dec-93 (robf)
+**         Added querytext_sequence
+**	18-jul-94 (robf)
+**         Initialiaze errcb flags values, this was causing errors in
+**         upgradedb to get lost.
+*/
+VOID
+duc_r_iiaudit()
+{
+	/*
+	**	This is an iidbdb-only catalog right now
+	*/
+	duc_register_table("iiaudit");
+
+	if (sqlca.sqlcode<0)
+	{
+	    /*
+	    **	REGISTER went wrong so make sure a diagnostic is
+	    **	issued. 
+	    */
+	    duc_sqlerror();
+	}
+
+}
+
+/*{
+** Name:  duc_iigwsxa() - Create catalogs for C2 Security Audit Gateway (SXA)
+**
+** Description:
+**        This routine creates the various catalogs required for
+**	  the C2 Security Audit Gateway (SXA):
+**	  It populates the following catalogs:
+**		iigw06_relation
+**		iigw06_attribute
+** Inputs:
+**	duc_errcb - Error control block.
+**
+** Outputs:
+**	Returns:
+**	    E_DU_OK
+**	    E_DU_ERROR
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      tables/views are created
+**
+** History:
+**	16-sep-92 (robf)
+**		initial creation.
+**	18-dec-92 (robf)
+**		Updated attribute names in iigw06_attribute to 32.
+**	16-feb-94 (robf)
+**              AUDITOR privilege is needed to view audit logs, not SECURITY.
+*/
+
+DU_STATUS 
+duc_iigwsxa(duc_errcb)
+DU_ERROR	*duc_errcb;
+{
+	DB_STATUS stat;
+	stat=E_DB_OK;
+	/*
+	**	Create base gateway catalogs
+	*/
+	duc_create_catalog("iigw06_relation");
+
+	if ( sqlca.sqlcode<0)
+	{
+		/*
+		**	
+		*/
+/*	xxx	SIprintf("about to emit E_DU3204_BAD_CREATE\n");*/
+		stat = du_error(duc_errcb, E_DU3204_BAD_CREATE, 2,
+				0, "iigw06_relation");
+/*		SIprintf("emitted E_DU3204_BAD_CREATE, returning\n");*/
+		return E_DB_ERROR;
+	}
+
+	duc_create_catalog("iigw06_attribute");
+
+	if ( sqlca.sqlcode<0)
+	{
+		/*
+		**	
+		*/
+		stat = du_error(duc_errcb, E_DU3204_BAD_CREATE, 2,
+				0, "iigw06_attribute");
+		return E_DB_ERROR;
+	}
+
+	/*
+	**	Modify the tables. We MUST do this before trying to
+	**	issue the REGISTER statement below or GWF will fail
+	**	with a positioning error.
+	*/
+	duc_modify_catalog("iigw06_relation");
+	duc_modify_catalog("iigw06_attribute");
+
+	return E_DB_OK;
+	         
+}
+
+/*{
+** Name:  du_add_privd_user - add a privileged user.
+**
+** Description:
+**      Add a user with full privs.  Used for initially populating
+**	the user table.  Constructs a "create user" statement.
+**
+** Inputs:
+**	user_name	name of user to add
+** Outputs:
+**	none
+** Returns:
+**	value of sqlcode returned by the server after the create user stmt
+** Exceptions:
+**	none
+**
+** Side Effects:
+**	none
+**
+** History:
+**	19-feb-93 (jpk)
+**	    initial creation
+**	02-jun-93 (ralph)
+**	    DELIM_IDENT:
+**	    Remove delimiters in du_add_privd_user();
+**	    if the calls wants them, the caller should specify them.
+**	6-jul-93 (robf)
+**	    Added new privileges
+*/
+int
+du_add_privd_user(user_name)
+char *user_name;
+{
+    exec sql begin declare section;
+	char        sbuffer[256];
+    exec sql end declare section;
+
+    IIlq_Protect(TRUE);
+    STprintf(sbuffer, "create user %s with privileges =\
+(createdb, trace, security, maintain_locations, operator, maintain_audit,\
+auditor, maintain_users)",
+	user_name);
+
+    EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+    if (sqlca.sqlcode < 0)
+    {
+	/* XXX this should be msg-ized! */
+	SIprintf("]==> <%s> returns %d\n", sbuffer, sqlca.sqlcode);
+    }
+    else
+    {
+	exec sql commit;
+    }
+    return sqlca.sqlcode;
+}
+
+/*{
+** Name: check_tbl_colsize -	checks named column in named table for
+**	the supplied column size.
+**
+** Description:
+**	
+**	Read iiattribute for named table and column and compare column size
+**	with supplied column size. This is used to verify the version of
+**	a catalog, one of whose columns is changing in size (like iisequence
+**	when BIGINT sequence support was added).
+**
+** Inputs:
+**	table name
+**	column name
+**	column size to check
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	TRUE if column sizes match, FALSE otherwise
+**
+** History:
+**	12-june-2008 (dougi)
+**	    Written for iisequence upgrade to support bigint.
+*/
+bool
+check_tbl_colsize(tname, cname, colsize)
+exec sql begin declare section;
+char	*tname;
+char	*cname;
+exec sql end declare section;
+{
+    exec sql begin declare section;
+    i4	oldcolsize;
+    exec sql end declare section;
+
+    exec sql select attfrml into :oldcolsize
+	from iiattribute a, iirelation r where
+	lowercase(r.relid) = :tname and lowercase(r.relowner) = '$ingres'
+	and lowercase(a.attname) = :cname and a.attrelid = r.reltid
+	and a.attrelidx = r.reltidx;
+
+    if (colsize == oldcolsize)
+    {
+	return TRUE;
+    }
+    else
+    {
+	return FALSE;
+    }
+    /* NOTREACHED */
+}
+
+/*{
+** Name: rel_exists - return whether table, view, or index already exists in db
+**
+** Description:
+**
+**	Modularize idempotency checks.  If table, view, or index already exists
+**	in database, don't re-build it.  This routine counts
+**	on nothing being right other than iirelation.  It verifies
+**	both that the table exists and that it's owned by $ingres.
+**
+** Inputs:
+**	rel_name	name of table, view, or index to check for
+**
+** Returns:
+**	TRUE if table, view, or index exists and is owned by $ingres
+**	FALSE otherwise
+**
+** Outputs:
+**	none
+**
+** History:
+**	1-mar-1993 (jpk)
+**	    Wrote.
+**	11-jun-1993 (ralph)
+**	    DELIM_IDENT:
+**	    Make search for relation name case insensitive in rel_exists().
+**	    We can get away with this because we own the tables,
+**	    and we know we don't introduce namespace collision
+**	    when treating names insensitively.
+**	21-jun-1993 (robf)
+**	    Made a repeated select per comment
+*/
+bool
+rel_exists(rel_name)
+exec sql begin declare section;
+char	*rel_name;
+exec sql end declare section;
+{
+	exec sql begin declare section;
+	    i4	cnt;
+	exec sql end declare section;
+
+	exec sql repeated select count (reltid) into :cnt from iirelation where
+	    lowercase(relid) = lowercase(:rel_name) and
+	    lowercase(relowner) = '$ingres';
+
+	/* actually if iirelation is unique on (relid, relowner), cnt
+	** could only be 0 or 1, but to make this function robust, the
+	** test is simply if 1 or more matches are found
+	*/
+	if (cnt > 0)
+	{
+	    return TRUE;
+	}
+	else
+	{
+	    return FALSE;
+	}
+}
+
+/*{
+** Name: view_exists - return whether view already exists in db
+**
+** Description:
+**
+**	Modularize idempotency checks.  If view already exists
+**	in database, don't re-build it.  If not, don't drop it.
+**
+** Inputs:
+**	name		view to check for
+**	owner		owner of view
+**
+** Returns:
+**	TRUE if view exists
+**	FALSE otherwise
+**
+** Outputs:
+**	none
+**
+** History:
+**	10-aug-1993 (jpk)
+*/
+bool
+view_exists(name)
+exec sql begin declare section;
+char	*name;
+exec sql end declare section;
+{
+	exec sql begin declare section;
+	    i4	cnt;
+	exec sql end declare section;
+
+	exec sql select count (reltid) into :cnt from iirelation where
+	    lowercase(relid) = lowercase(:name) and
+	    lowercase(relowner) = '$ingres' and
+	    char(byteextract('TVI', (mod((relstat/32), (2))
+			+(2*(mod((relstat/128), (2)))))+1)) = 'V';
+
+	return (cnt > 0);
+}
+
+
+/*{
+** Name: ensure_not_exists - drop table or view if it exists
+**
+** Description:
+**
+**	Modularize idempotency checks.  If table or view already
+**	exists in database, drop it.  Since this is meant for
+**	createdb and upgradedb use, ownership of the table is
+**	assumed to be $ingres (owner is ignored for tables).
+**	Similarly caller is responsible for setting session
+**	authorization first, again presumably to $ingres.
+**
+** Inputs:
+**	name		table or view to check for
+**	owner		owner of view
+**	type		T or V
+**
+** Returns:
+**	TRUE if view exists
+**	FALSE otherwise
+**
+** Outputs:
+**	none
+**
+** History:
+**	10-aug-1993 (jpk)
+*/
+STATUS
+ensure_not_exists(name)
+char	*name;
+{
+	exec sql begin declare section;
+	    i4	cnt;
+	char	buff[DB_MAXNAME + 50];	/* drop table|view objname */
+	exec sql end declare section;
+	bool    exists;
+
+	exec sql select count (reltid) into :cnt from iirelation where
+	    lowercase(relid) = lowercase(:name) and
+	    lowercase(relowner) = '$ingres';
+
+	if (cnt > 0)
+	{
+	    STprintf(buff, "drop %s", name);
+	    EXEC SQL EXECUTE IMMEDIATE :buff;
+	    if (sqlca.sqlcode<0)
+		duc_sqlerror();
+	    return ((sqlca.sqlcode < 0) ? FAIL : OK);
+	}
+	else
+	    return (OK);
+}
+
+
+/*{
+** Name:  duc_init_iiprofile() -- init catalog iiprofile
+**
+** Description:
+**      This routine makes the catalog iiprofile
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	25-aug-93 (robf)
+**		initial creation.
+*/
+VOID
+duc_init_iiprofile()
+##{
+	/*
+	** This is the "default" profile
+	*/
+##	append to iiprofile (name="")
+##}
+
+/*{
+** Name:  duc_iisesspriv() -- build catalog iisessionpriv
+**
+** Description:
+**      This routine makes the catalog iisession_privivileges plus
+**	the lookup table iiprivlist
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	9-sep-93 (robf)
+**		initial creation.
+*/
+VOID
+duc_iisesspriv()
+##{
+exec sql begin declare section;
+char *privlist[] = {
+	"MAINTAIN_AUDIT",
+	"MAINTAIN_USERS",
+	"MAINTAIN_LOCATIONS",
+	"SECURITY",
+	"OPERATOR",
+	"AUDITOR",
+	"CREATEDB",
+	"TRACE",
+	"INSERT_UP",
+	"INSERT_DOWN",
+	"WRITE_UP",
+	"WRITE_DOWN",
+	"WRITE_FIXED",
+	0
+	};
+	int priv;
+exec sql end declare section;
+
+	duc_create_catalog("iiprivlist");
+	
+	for(priv=0;privlist[priv]; priv++)
+	{
+		exec sql repeat insert into iiprivlist (privname)
+				values(:privlist[priv]);
+	}
+
+	exec sql commit;
+##}
+
+
+/*
+** Name: duc_sqlerror
+**
+** Description:
+**    Format and print an INGRES error. This differs from other handlers
+**    like duc_sqlerr_handler() in that this routine simply extracts and
+**    prints the last sqlerror, with no side effects like exiting the
+**    program or requiring specific control blocks to be passed. This allows
+**    it to be used in both createdb and upgradedb.
+**
+** History:
+**	18-jul-94 (robf)
+**          Added to help trace upgradedb errors
+*/
+static VOID
+duc_sqlerror()
+{
+exec sql begin declare section;
+	char emesg[ER_MAX_LEN+1];
+exec sql end declare section;
+
+	/* Get the error text */
+	exec sql inquire_sql(:emesg=errortext);
+
+	/* and print */
+	SIprintf("%s\n",emesg);
+	SIflush(stdout);
+}
+
+
+/*
+** Name:	duc_v_iidd_ddb_views	- create star iidd_ddb_views.
+**
+** Description:
+**	This routine creates the star std catalog for iiviews. In most cases,
+**	the star standard catalog is a table in the CDB that maps to the std 
+**	catalog.  The mapping is done by joining iidd_ddb_objects.object_base
+**	with iidd_ddb_tableinfo.object_base and iidd_ddb_objects.object_index
+**	with iidd_ddb_object_index.  The name that the FEs use to see the
+**	standard catalogs are in iidd_ddb_objects.object_name, and the
+**	name that STAR maps the catalog to is in iidd_ddb_tableinfo.table_name.
+**	In most cases, the mapping is just changing the "ii" prefix to "iidd_".
+**	However, that is NOT the case with iiviews, which maps to iidd_ddb_views
+**
+**	example:
+**		   iidd_ddb_objects:
+**		  +------------+--------------+-------------------+
+**		  |object_base | object_index | object_name       |
+**		  +------------+--------------+-------------------+
+**		  | 528	       | 0	      | iitables          |
+**		  | 529        | 0	      | iiviews		  |
+**		  | 540	       | 0            | iiobjects	  |
+**		  | :	       | :            | :      :          |
+**		  +------------+--------------+-------------------+
+**
+**		  iidd_ddb_tableinfo:
+**		  +------------+--------------+-------------------+
+**		  |object_base | object_index | table_name        |
+**		  +------------+--------------+-------------------+
+**		  | 528	       | 0	      | iidd_tables       |
+**		  | 529        | 0	      | iidd_ddb_views    |
+**		  | 540	       | 0            | iidd_objects	  |
+**		  | :	       | :            | :      :          |
+**		  +------------+--------------+-------------------+
+**
+**		  STAR would translate iitables to iidd_tables and
+**		  STAR would translate iiviews to iidd_ddb_views and
+**		  STAR would translate iiobjects to iidd_objects
+**
+**	The reason that the iiviews catalog maps differently is because the
+**	iidd_views catalog contains query text for views that are created.
+**	However, it does not contain text for registered views.  The FEs
+**	do not know the difference between a created view and a registered
+**	view, nor should they.  So, we create a union view between
+**	iidd_views and iidd_registrations, and map the fe std catalog
+**	iiviews to this union view.
+**	
+** Inputs:
+**	none.
+** Outputs:
+**	none.
+**
+** Returns:
+**	E_DB_OK
+**
+** History:
+**	20-jun-90 (teresa)
+**	   initial creation to solve bug 30502
+*/
+static VOID
+duc_v_iidd_ddb_views()
+{
+DU_ERROR	*duc_errcb;
+
+	exec sql CREATE VIEW iidd_ddb_views (
+	    table_name, table_owner, view_dml, check_option,
+	    text_sequence, text_segment)
+	AS SELECT
+	    table_name, table_owner, view_dml, check_option,
+	    text_sequence, text_segment
+	FROM iidd_views
+	UNION ALL SELECT
+	    object_name, object_owner, object_dml, ' ',
+	    text_sequence,text_segment
+	FROM iidd_registrations WHERE object_type = 'V';
+}
+
+
+/*
+** Name:	duc_v_iidd_dbconstants	- create star iidd_dbconstants.
+**
+** Description:
+**	This routine creates the star std catalog iidd_dbconstants.
+**      The definition of this catalog in standard catalog interface is 
+**      define as user_name = char(32), dba_name = char(32) and
+**	system_owner = char(32)
+**	
+** Inputs:
+**	none.
+** Outputs:
+**	none.
+**
+** Returns:
+**	E_DB_OK
+**
+** History:
+**      09-nov-2001 (stial01)
+**         moved here from ducreate
+*/
+static VOID
+duc_v_iidd_dbconstants()
+{
+##  define view iidd_dbconstants
+##	    ( user_name    =  dbmsinfo("username"), 
+##	      dba_name     =  dbmsinfo("dba"),
+##	      system_owner = "$ingres                         ")
+}
+
+/*{
+** Name:  duc_iidd_physical_tables () -- build catalog IIDD_PHYSICAL_TABLES
+**
+** Description:
+**        Create catalog IIDD_PHYSICAL_TABLES
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+** Returns:
+**	none
+** Exceptions:
+**	none
+**
+** Side Effects:
+**	none
+**
+** History:
+**      06-mar-96 (nanpr01)
+**	    initial creation.  Encapsulated from duc_1create_iidd_catalogs()
+**	    so that 2.0 upgradedb can call it.
+**	23-oct-96 (hanch04)
+**	    Added reltotwid and relversion.
+**	11-nov-96 (nanpr01)
+**	    fixup reltotwid and relversion.
+*/
+static VOID
+duc_v_iidd_physical_tables()
+{
+##  define view iidd_physical_tables (
+##	iidd_tables.table_name, iidd_tables.table_owner,
+##	iidd_tables.table_stats, iidd_tables.table_indexes,
+##	iidd_tables.is_readonly, iidd_tables.num_rows,
+##	iidd_tables.storage_structure, iidd_tables.is_compressed,
+##	iidd_tables.duplicate_rows, iidd_tables.unique_rule, 
+##	iidd_tables.number_pages, iidd_tables.overflow_pages,
+##	iidd_tables.row_width, iidd_tables.table_pagesize, 
+##  iidd_tables.table_relversion, iidd_tables.table_reltotwid)
+}
+
+/*{
+** Name:  duc_v_iidd_registered_objects -- build catalog iidd_registered_objects
+**
+** Description:
+**
+**	This routine builds the STAR standard catalog iiregistered_objects
+**	as a view in the CDB.  It assumes that we are connected to the CDB
+**	via a local server.
+**
+**
+** Inputs:
+**	none
+** Outputs:
+**	none
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**	16-oct-91 (teresa)
+**		initial creation.
+**	13-octo-93 (jpk)
+**		get rid of consistency checks.  It's up to the caller
+**		to call for a star db and not other sorts of dbs.
+*/
+static VOID
+duc_v_iidd_registered_objects()
+{
+    exec sql begin declare section;
+	i4	    cnt;
+    exec sql end declare section;
+
+
+#if	0
+    /* consistency checks - assure that the underlaying catalogs exist.
+    ** if not, return silently 
+    */
+    exec sql select count(relid) into :cnt from iirelation where relid =
+	'iidd_ddb_objects';
+    if (cnt == 0 ) 
+    {
+	d_print("duc_v_iidd_registered_objects: returning from pt 1\n");
+	return;	/* this is not a distribted database, or this catalog would
+		** exist */
+    }
+    exec sql select count(relid) into :cnt from iirelation where relid =
+	'iidd_ddb_ldbids';
+    if (cnt == 0 ) 
+    {
+	d_print("duc_v_iidd_registered_objects: returning from pt 2\n");
+	return;	/* this is not a distribted database, or this catalog would
+		** exist */
+    }
+    exec sql select count(relid) into :cnt from iirelation where relid =
+	'iidd_ddb_tableinfo';
+    if (cnt == 0 ) 
+    {
+	d_print("duc_v_iidd_registered_objects: returning from pt 3\n");
+	return;	/* this is not a distribted database, or this catalog would
+		** exist */
+    }
+#endif
+
+    /* now create the iidd_registered_objects view */
+      EXEC SQL
+      create view iidd_registered_objects (
+	    ddb_object_name,
+	    ddb_object_owner,
+	    register_date,
+	    ldb_database,
+	    ldb_node,
+	    ldb_dbmstype,
+	    ldb_object_name,
+	    ldb_object_owner,
+	    ldb_object_type)
+      as select  
+	    object_name,
+	    object_owner,
+	    create_date,
+	    ldb_database,
+	    ldb_node,
+	    ldb_dbms,
+	    table_name,
+	    table_owner,
+	    local_type
+      from iidd_ddb_objects, iidd_ddb_ldbids, iidd_ddb_tableinfo where
+	    iidd_ddb_objects.object_base=iidd_ddb_tableinfo.object_base and
+	    iidd_ddb_objects.object_index=iidd_ddb_tableinfo.object_index and
+	    iidd_ddb_tableinfo.ldb_id=iidd_ddb_ldbids.ldb_id and
+	    (system_object='N' or system_object=' ') and
+	    object_type = 'L';
+}
+
+STATUS
+duc_drop_stdcat_views(
+char            *dbname,
+bool		star_flag)
+{
+    bool	is_iidbdb;
+    i4		i;
+    STATUS	status;
+    exec sql begin declare section;
+	char        sbuffer[256];
+    exec sql end declare section;
+
+    if (!STcompare(dbname, DU_DBDBNAME))
+	is_iidbdb = TRUE;
+    else 
+	is_iidbdb = FALSE;
+
+    /*
+    ** Drop in reverse order of create,
+    ** but this is not strictly necessary since standard catalogs
+    ** are not view on views
+    */
+    for (i = MAX_STDCAT_VIEWS - 1; i >= 0; i--)
+    {
+	if (Du_stdcat[i].du_dbflag == DU_IIDBDB && !is_iidbdb)
+	    continue;
+	if (Du_stdcat[i].du_dbflag == DU_STAR && !star_flag)
+	    continue;
+	if (!rel_exists(Du_stdcat[i].du_objname))
+	    continue;
+	STprintf(sbuffer, "drop view %s\n", Du_stdcat[i].du_objname);
+	EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+	/* Ignore drop errors */
+    }
+    exec sql commit;
+}
+
+
+/*
+** Name:  duc_grant_stdcat_views - grant permits to recreated views
+**
+** Description:
+**        This is similar to duc_create_stdcat_view, except it
+**        grants lost permits for the recreated views.
+**
+** Inputs:
+**      none
+** Outputs:
+**      none
+** Returns:
+**      none
+**
+** Side Effects:
+**      none
+**
+** History:
+**      14-nov-03 (wanfr01)
+**          initial creation.
+*/
+
+STATUS
+duc_grant_stdcat_views(
+char            *dbname,
+bool            star_flag)
+{
+    i4          i;
+    STATUS      status;
+    exec sql begin declare section;
+        char        sbuffer[256];
+    exec sql end declare section;
+
+    for (i = MAX_STDCAT_VIEWS - 1; i >= 0; i--)
+    {
+        if (!rel_exists(Du_stdcat[i].du_objname))
+            continue;
+        STprintf(sbuffer, "grant select on  %s to public with grant option\n", Du_stdcat[i].du_objname);
+        EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+        if (sqlca.sqlcode < 0)
+        {
+            /* XXX this should be msg-ized! */
+            /* This routine will blindly attempt to grant select to quel
+               permits, so ignore those errors */
+            if (sqlca.sqlerrd[0] != 3598)
+                SIprintf("]==> <%s> returns %d\n", sbuffer, sqlca.sqlcode);
+        }
+    }
+    exec sql commit;
+}
+
+
+STATUS
+duc_upgrade_stdcat_views(
+char            *dbname,
+bool		upcase,
+bool		star_flag)
+{
+    bool	is_iidbdb;
+    i4		i;
+    STATUS	status;
+
+    if (!STcompare(dbname, DU_DBDBNAME))
+	is_iidbdb = TRUE;
+    else 
+	is_iidbdb = FALSE;
+
+    for (i = 0; i < MAX_STDCAT_VIEWS; i++)
+    {
+	if (Du_stdcat[i].du_dbflag == DU_IIDBDB && !is_iidbdb)
+	    continue;
+	if (Du_stdcat[i].du_dbflag == DU_STAR && !star_flag)
+	    continue;
+	if (!view_exists(Du_stdcat[i].du_objname))
+	    status = duc_create_one_stdcat_view(dbname, &Du_stdcat[i], upcase);
+    }
+    exec sql commit;
+}
+
+STATUS
+duc_create_stdcat_views(
+char            *dbname,
+bool		upcase)
+{
+    bool	is_iidbdb;
+    i4		i;
+    STATUS	status;
+
+    if (!STcompare(dbname, DU_DBDBNAME))
+	is_iidbdb = TRUE;
+    else 
+	is_iidbdb = FALSE;
+
+    for (i = 0; i < MAX_STDCAT_VIEWS; i++)
+    {
+	if (Du_stdcat[i].du_dbflag == DU_IIDBDB && !is_iidbdb)
+	    continue;
+	/* Star views get created AFTER star catalogs */
+	if (Du_stdcat[i].du_dbflag == DU_STAR)
+	    continue;
+	status = duc_create_one_stdcat_view(dbname, &Du_stdcat[i], upcase);
+    }
+    exec sql commit;
+}
+
+
+DU_STATUS
+duc_create_specific_stdcat_view(char *dbname, char *viewname, bool upcase)
+{
+    i4 i;
+    STATUS status;
+    exec sql begin declare section;
+    char sql_view[DB_MAXNAME+1];		/* esql and ansi don't play */
+    exec sql end declare section;
+
+    STcopy(viewname, sql_view);
+    for (i = 0; i < MAX_STDCAT_VIEWS; ++i)
+    {
+	if (STcompare(viewname, Du_stdcat[i].du_objname) == 0)
+	{
+	    status = duc_create_one_stdcat_view(dbname, &Du_stdcat[i], upcase);
+	    if (status == OK)
+	    {
+		exec sql grant select on :sql_view to public with grant option;
+		return (E_DU_OK);
+	    }
+	    return (E_DU_IERROR);
+	}
+    }
+    return (E_DU_IERROR);
+}
+
+STATUS
+duc_create_star_views(
+char            *dbname,
+bool		upcase)
+{
+    i4		i;
+    STATUS	status;
+
+    for (i = 0; i < MAX_STDCAT_VIEWS; i++)
+    {
+	if (Du_stdcat[i].du_dbflag == DU_STAR)
+	    status = duc_create_one_stdcat_view(dbname, &Du_stdcat[i], upcase);
+	else
+	    continue;
+    }
+    exec sql commit;
+}
+
+static STATUS
+duc_create_one_stdcat_view(
+char		*dbname,
+DU_OBJ		*view,
+bool		upcase)
+{
+    bool	is_iidbdb;
+
+    if (!STcompare(dbname, DU_DBDBNAME))
+	is_iidbdb = TRUE;
+    else 
+	is_iidbdb = FALSE;
+
+    switch (view->du_obj_id)
+    {
+	case DU_IIPROC_ACCESS:
+	{
+	    EXEC SQL create view iiproc_access
+	    AS SELECT
+	    object_name=p.probjname,             
+	    object_owner=p.probjowner, permit_grantor=p.prograntor,         
+	    object_type=p.probjtype,
+	    create_date=gmt_timestamp(p.procrtime1),     
+	    permit_user=p.prouser, permit_depth=p.prodepth,
+	    permit_number=int2(p.propermid), text_sequence=int2(q.seq) +1,
+	    text_segment=q.txt
+	    FROM iiqrytext q, iiprotect p
+	    WHERE p.proqryid1=q.txtid1 AND p.proqryid2=q.txtid2 
+	    AND q.mode=19 
+	    AND mod((p.proopset/128), (2))=0  
+	    AND p.probjtype = 'P'; 
+
+	    break;
+	}
+
+	case DU_IIPROC_PARAMS:
+	{
+	    EXEC SQL create view iiproc_params
+	    AS 
+	    SELECT procedure_name = p1.dbp_name,
+	    procedure_owner = p1.dbp_owner,
+	    param_name = p2.pp_name,
+	    param_sequence = p2.pp_number,
+	    param_datatype = uppercase(iitypename(ii_ext_type(p2.pp_datatype,
+		p2.pp_length))),
+	    param_datatype_code = p2.pp_datatype,
+	    param_length = iiuserlen(ii_ext_type(p2.pp_datatype, p2.pp_length),
+		(ii_ext_length(p2.pp_datatype, p2.pp_length)*65536) 
+		+p2.pp_precision),
+	    param_scale =int4(mod( p2.pp_precision, (256))),
+	    param_nulls=char(byteextract('YN',  (mod(p2.pp_flags,2))+1)),
+	    param_defaults=char(byteextract('YN', (mod((p2.pp_flags/2),(2)))+1)),
+	    param_default_val=squeeze(d.defvalue),
+	    param_input=char(byteextract('NY',  (mod(p2.pp_flags/4,2))+1)),
+	    param_output=char(byteextract('NY',  (mod(p2.pp_flags/8,2))+1)),
+	    param_inout=char(byteextract('NY',  (mod(p2.pp_flags/16,2))+1))
+	    FROM iiprocedure p1 , iiprocedure_parameter p2 , iidefault d
+	    WHERE (p2.pp_procid1 = p1.dbp_id and p2.pp_procid2 = p1.dbp_idx)
+	    AND (p2.pp_defid1 = d.defid1 and p2.pp_defid2 = d.defid2)
+	    AND (mod(p2.pp_flags/32, 2) <> 1);
+
+	    break;
+	}
+
+	case DU_IIPROC_RESCOLS:
+	{
+	    EXEC SQL create view iiproc_rescols
+	    AS 
+	    SELECT procedure_name = p1.dbp_name,
+	    procedure_owner = p1.dbp_owner,
+	    rescol_name = p2.pp_name,
+	    rescol_sequence = p2.pp_number,
+	    rescol_datatype = uppercase(iitypename(ii_ext_type(p2.pp_datatype,
+		p2.pp_length))),
+	    rescol_datatype_code = p2.pp_datatype,
+	    rescol_length = iiuserlen(ii_ext_type(p2.pp_datatype, p2.pp_length),
+		(ii_ext_length(p2.pp_datatype, p2.pp_length)*65536) 
+		+p2.pp_precision),
+	    rescol_scale =int4(mod( p2.pp_precision, (256))),
+	    rescol_nulls=char(byteextract('YN',  (mod(p2.pp_flags,2))+1)),
+	    rescol_param=char(byteextract('YN',  (mod(p2.pp_flags/32,2))+1)),
+	    rescol_defaults=char(byteextract('YN', (mod((p2.pp_flags/2),(2)))+1)),
+	    rescol_default_val=squeeze(d.defvalue)
+	    FROM iiprocedure p1 , iiprocedure_parameter p2 , iidefault d
+	    WHERE (p2.pp_procid1 = p1.dbp_id and p2.pp_procid2 = p1.dbp_idx)
+	    AND (p2.pp_defid1 = d.defid1 and p2.pp_defid2 = d.defid2);
+
+	    break;
+	}
+
+	case DU_IIAUDITTABLES:
+	{
+	    EXEC SQL CREATE VIEW iiaudittables
+	    AS SELECT
+		    table_name=r.relid,
+		    table_owner=r.relowner,
+		    g.audit_log,
+		    register_date = gmt_timestamp(g.reg_date)
+	    FROM iirelation r, iigw06_relation g
+	    WHERE r.reltid=g.reltid AND   r.reltidx=g.reltidx
+	    AND   session_priv('auditor') = 'Y';
+
+	    break;
+	}
+
+	case DU_IISESSION_PRIVILEGES:
+	{
+	    exec sql CREATE VIEW iisession_privileges
+	    (priv_name, priv_access)
+	    AS SELECT privname, session_priv(privname)
+	    FROM iiprivlist
+	    WHERE session_priv(privname)!='N'
+	    OR    dbmsinfo('security_priv')='Y';
+
+	    exec sql GRANT SELECT on iisession_privileges to public;
+
+	    break;
+	}
+
+	case DU_STAR_CDBINFO:
+	{
+	    exec sql CREATE VIEW iistar_cdbinfo (
+		ddb_name, ddb_owner, cdb_name, cdb_owner,
+		cdb_node, cdb_dbms, cdb_create_date)
+	    AS SELECT
+                ddb_name, ddb_owner, cdb_name, cdb_owner,
+		cdb_node, cdb_dbms, create_date
+	    FROM iistar_cdbs;
+	    
+	    break;
+	}
+
+	case DU_IIDATABASE_INFO:
+	{
+	    exec sql CREATE VIEW iidatabase_info (
+	    database_name, database_owner, data_location,
+	    work_location, ckp_location, jnl_location, dump_location,
+	    compat_level, compat_level_minor, database_service,
+	    security_label, access, database_id )
+	    AS SELECT
+	    name, own, dbdev, sortdev, ckpdev, jnldev, dmpdev,
+	    iicmptversion(dbcmptlvl),
+	    dbcmptminor, dbservice, char('        '), access, db_id
+	    FROM iidatabase;
+
+	    break;
+	}
+
+	case DU_IIUSERS:
+	{
+	    EXEC SQL CREATE VIEW iiusers (
+		    user_name,
+		    createdb,
+		    trace,
+		    audit_all,
+		    security,
+		    maintain_locations,
+		    operator,
+		    maintain_users,
+		    maintain_audit,
+		    auditor,
+		    audit_query_text,
+		    expire_date,
+		    profile_name,
+		    lim_sec_label,
+		    default_group,
+		    internal_status,
+		    internal_def_priv,
+		    internal_flags)
+	    AS SELECT
+		    u.name,
+		    char(byteextract('NRY', mod((u.status         ),2)+
+				      mod((u.default_priv         ),2)+1)),
+		    char(byteextract('NRY', mod((u.status/16      ),2)+
+				      mod((u.default_priv/16      ),2)+1)),
+		    char(byteextract('NY',  mod((u.status/1024    ),2)+1)),
+		    char(byteextract('NRY', mod((u.status/32768   ),2)+
+				      mod((u.default_priv/32768   ),2)+1)),
+		    char(byteextract('NRY', mod((u.status/2048    ),2)+
+				      mod((u.default_priv/2048    ),2)+1)),
+		    char(byteextract('NRY', mod((u.status/512     ),2)+
+				      mod((u.default_priv/512     ),2)+1)),
+		    char(byteextract('NRY', mod((u.status/65536   ),2)+
+				      mod((u.default_priv/65536   ),2)+1)),
+		    char(byteextract('NRY', mod((u.status/16384   ),2)+
+				      mod((u.default_priv/16384   ),2)+1)),
+		    char(byteextract('NRY', mod((u.status/8192    ),2)+
+				      mod((u.default_priv/8192    ),2)+1)),
+		    char(byteextract('NY',  mod((u.status/16777216),2)+1)),
+		    u.expire_date,
+		    u.profile_name,
+		    char('        '),
+		    u.default_group,
+		    u.status,
+		    u.default_priv,
+		    u.flags_mask
+	    FROM iiuser u;
+	    break;
+	}
+
+	case DU_IILOCATION_INFO:
+	{
+	    EXEC SQL CREATE VIEW iilocation_info(
+		location_name,
+		data_usage,
+		jrnl_usage,
+		ckpt_usage,
+		work_usage,
+		dump_usage,
+		awork_usage,
+		location_area,
+		security_label,
+		raw_pct,
+		status)
+	    AS SELECT
+		l.lname,
+		char(byteextract('NY', mod((l.status/8    ),(2))+1)),
+		char(byteextract('NY', mod((l.status/64   ),(2))+1)),
+		char(byteextract('NY', mod((l.status/512  ),(2))+1)),
+		char(byteextract('NY', mod((l.status/16   ),(2))+1)),
+		char(byteextract('NY', mod((l.status/2    ),(2))+1)),
+		char(byteextract('NY', mod((l.status/32   ),(2))+1)),
+		l.area,
+		char('        '),
+		l.rawpct,
+		status
+	    FROM iilocations l;
+
+	    break;
+	}
+
+	case DU_IIEXTEND_INFO:
+	{
+	    /*
+	    ** View extensions to databases/locations which are visible to
+	    ** the user. Note this assumes iidatabase_info and iilocation_info
+	    ** are configured appropriately to display locations/databases to
+	    ** the user.
+	    */
+	    exec sql CREATE VIEW iiextend_info
+	    ( location_name,  database_name,status, raw_start, raw_blocks)
+	    AS SELECT e.lname, e.dname, e.status, e.rawstart, e.rawblocks
+	    FROM iiextend e, iidatabase_info d, iilocation_info l
+	    WHERE e.lname=l.location_name and e.dname=d.database_name;
+
+	    break;
+	}
+
+	case DU_IIDBPRIVILEGES:
+	{
+##	    range of d is iidbpriv
+##	    DEFINE VIEW iidbprivileges (
+##              #database_name  =d.dbname,
+##              grantee_name    =d.grantee,
+##              gr_type         =char(byteextract(" UGRP", (d.gtype+2))),
+##              cr_tab          =char(byteextract("UNY",
+##                                      (mod((d.control/256 ),(2))+
+##                                       mod((d.flags  /256 ),(2))+1))),
+##              cr_proc         =char(byteextract("UNY",
+##                                      (mod((d.control/512 ),(2))+
+##                                       mod((d.flags  /512 ),(2))+1))),
+##              lk_mode         =char(byteextract("UNY",
+##                                      (mod((d.control/1024),(2))+
+##                                       mod((d.flags  /1024),(2))+1))),
+##              #db_access      =char(byteextract("UNY",
+##                                      (mod((d.control/2048),(2))+
+##                                       mod((d.flags  /2048),(2))+1))),
+##              up_syscat       =char(byteextract("UNY",
+##                                      (mod((d.control/4096),(2))+
+##                                       mod((d.flags  /4096),(2))+1))),
+##              db_admin        =char(byteextract("UNY",
+##                                      (mod((d.control/8192),(2))+
+##                                       mod((d.flags  /8192),(2))+1))),
+##              global_usage    =char(byteextract("UNY",
+##                                      (mod((d.control/16384),(2))+
+##                                       mod((d.flags  /16384),(2))+1))),
+##              qry_io_lim      =d.qdio_limit,
+##              qry_io          =char(byteextract("UNY",
+##                                      (mod((d.control/2   ),(2))+
+##                                       mod((d.flags  /2   ),(2))+1))),
+##              qry_row_lim     =d.qrow_limit,
+##              qry_row         =char(byteextract("UNY",
+##                                      (mod((d.control     ),(2))+
+##                                       mod((d.flags       ),(2))+1))),
+##              sel_syscat      =char(byteextract("UNY",
+##                                      (mod((d.control/32768),(2))+
+##                                       mod((d.flags  /32768),(2))+1))),
+##              tbl_stats       =char(byteextract("UNY",
+##                                      (mod((d.control/65536),(2))+
+##                                       mod((d.flags  /65536),(2))+1))),
+##              idle_time	=char(byteextract("UNY",
+##                                      (mod((d.control/131072),(2))+
+##                                       mod((d.flags/131072 ),(2))+1))),
+##              idle_time_lim	=d.idle_time_limit,
+##              conn_time	=char(byteextract("UNY",
+##                                      (mod((d.control/262144),(2))+
+##                                       mod((d.flags/262144),(2))+1))),
+##              conn_time_lim 	=d.connect_time_limit,
+##              sess_prio	=char(byteextract("UNY",
+##                                      (mod((d.control/524288),(2))+
+##                                       mod((d.flags/524288),(2))+1))),
+##              sess_prio_lim   =d.priority_limit
+##	    )
+
+	    break;
+	}
+
+	case DU_IIPROFILES:
+	{
+	    EXEC SQL CREATE VIEW iiprofiles (
+		profile_name,
+		createdb,
+		trace,
+		audit_all,
+		security,
+		maintain_locations,
+		operator,
+		maintain_users,
+		maintain_audit,
+		auditor,
+		audit_query_text,
+		expire_date,
+		lim_sec_label,
+		default_group,
+		internal_status)
+	    AS SELECT
+		p.name,
+		char(byteextract('NRY', mod((p.status         ),2)+
+				  mod((p.default_priv         ),2)+1)),
+		char(byteextract('NRY', mod((p.status/16      ),2)+
+				  mod((p.default_priv/16      ),2)+1)),
+		char(byteextract('NY',  mod((p.status/1024    ),2)+1)),
+		char(byteextract('NRY', mod((p.status/32768   ),2)+
+				  mod((p.default_priv/32768   ),2)+1)),
+		char(byteextract('NRY', mod((p.status/2048    ),2)+
+				  mod((p.default_priv/2048    ),2)+1)),
+		char(byteextract('NRY', mod((p.status/512     ),2)+
+				  mod((p.default_priv/512     ),2)+1)),
+		char(byteextract('NRY', mod((p.status/65536   ),2)+
+				  mod((p.default_priv/65536   ),2)+1)),
+		char(byteextract('NRY', mod((p.status/16384   ),2)+
+				  mod((p.default_priv/16384   ),2)+1)),
+		char(byteextract('NRY', mod((p.status/8192    ),2)+
+				  mod((p.default_priv/8192    ),2)+1)),
+		char(byteextract('NY',  mod((p.status/16777216),2)+1)),
+		p.expire_date,
+		char('        '),
+		p.default_group,
+		p.status
+	    FROM iiprofile p
+	    WHERE p.name!='';
+
+	    break;
+	}
+
+	case DU_IIROLES:
+	{
+	    EXEC SQL CREATE VIEW iiroles (
+		role_name,
+		createdb,
+		trace,
+		audit_all,
+		security,
+		maintain_locations,
+		operator,
+		maintain_users,
+		maintain_audit,
+		auditor,
+		audit_query_text,
+		security_label,
+		lim_sec_label,
+		internal_status,
+		internal_flags)
+	    AS SELECT
+		r.roleid,
+		char(byteextract('NY', mod((r.rolestatus          ),2)+1)),
+		char(byteextract('NY', mod((r.rolestatus/16       ),2)+1)),
+		char(byteextract('NY', mod((r.rolestatus/1024     ),2)+1)),
+		char(byteextract('NY', mod((r.rolestatus/32768    ),2)+1)),
+		char(byteextract('NY', mod((r.rolestatus/2048     ),2)+1)),
+		char(byteextract('NY', mod((r.rolestatus/512      ),2)+1)),
+		char(byteextract('NY', mod((r.rolestatus/65536    ),2)+1)),
+		char(byteextract('NY', mod((r.rolestatus/16384    ),2)+1)),
+		char(byteextract('NY', mod((r.rolestatus/8192     ),2)+1)),
+		char(byteextract('NY', mod((r.rolestatus/16777216 ),2)+1)),
+		char('        '), char('        '),
+		r.rolestatus,
+		r.roleflags
+	    FROM iirole r;
+
+	    break;
+	}
+
+	case DU_IIROLEGRANTS:
+	{
+	    exec sql CREATE VIEW iirolegrants
+	    ( role_name, gr_type, grantee_name, admin_option)
+	    AS SELECT
+			rgr_rolename,
+			char(byteextract(' UGRP', (rgr_gtype+2))),
+			rgr_grantee,
+			char(byteextract('NY',rgr_flags+1))
+	    FROM iirolegrant rg, iirole r
+	    WHERE rg.rgr_rolename=r.roleid;
+
+	    break;
+	}
+
+	case DU_IISECURITY_STATE:
+	{
+	    EXEC SQL CREATE VIEW iisecurity_state
+		(type, name, state, number)
+	    AS SELECT 
+		ifnull(t.sec_type,'Unknown'),
+		ifnull(t.sec_name,'Unknown'),
+		char(byteextract('DE', s.state + 1)),
+		s.id
+	    FROM iisecuritystate s
+	    LEFT JOIN
+		iisectype t
+	    ON
+		s.type	= t.sec_typenum
+	    AND	s.id	= t.sec_namenum
+	    WHERE session_priv('maintain_audit')='Y'
+	    AND   s.id!=10;   /* Level auditing doesn't show up here */
+
+	    break;
+	}
+
+	case DU_IIDBCONSTANTS:
+	{
+##              char  owner[DB_MAXNAME+1];
+
+	    if (upcase)
+		MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$INGRES"), ' ',
+		       sizeof(owner), owner);
+	    else
+		MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$ingres"), ' ',
+		       sizeof(owner), owner);
+	    owner[sizeof(owner)-1] = EOS;
+
+##	    define view iidbconstants
+##	    (user_name = username, dba_name = dba, system_owner = owner)
+
+	    break;
+	}
+
+	case DU_IITABLES:
+	{
+	    /*
+	    ** Need to calculate table_subtype here from r.relstat.  
+	    ** Valid subtypes are:
+	    ** "N" (native), "I" (import (gateway)), "L" (link (star)).  
+	    ** At the moment we account for "N" and "I" but not for "L"...
+	    **
+	    ** There are only 4 characters in the byteextract definition of
+	    ** system_use, because the result of the mod's in system_use should 
+	    ** never be more than 4 (even though the mathematical limit is 6). 
+	    ** 4 is the upper limit because the relstat 0x01 and 0x4000 bits 
+	    ** should never be set at the same time as the relstat2 0x10 bit.
+	    **          
+	    */
+	    exec sql create view iitables as select
+	    relid table_name,
+	    relowner table_owner,     
+	    gmt_timestamp(relcreate) create_date,
+	    gmt_timestamp(relcreate) alter_date,
+	    char(byteextract('TVIP', 
+		(mod((relstat/32), 2)+(2*mod((relstat/128), 2))+
+		 (3*mod((relstat2/32768), 2)) )+1)) table_type,
+	    char(byteextract('NI', mod((relstat/8388608), (2))+1)) table_subtype,
+	    'II'+iicmptversion(relcmptlvl) table_version,
+	    char(byteextract('USSG', (mod(relstat,(2)))+(mod((relstat/16384), (2)))
+		+(3*mod((relstat2/16), (2)))+1)) system_use,
+	    char(byteextract('NY', mod((relstat/1048576), (2))+1)) table_stats,
+	    char(byteextract('NY', mod((relstat/131072), (2))+1)) table_indexes,
+	    char(byteextract('NY', mod((relstat2/128), (2)) + 1)) is_readonly,
+	    char(byteextract('NY', mod((relstat2/256), (2)) + 1)) concurrent_access,
+	    iitblstat(int4(iitableinfo('num_rows',reltid,reltidx))) num_rows,
+	    uppercase(iistructure(relspec)) storage_structure,      
+	    char(byteextract('NYH', 
+		    (mod((relstat/512), (2))+(int1(relcomptype/7)))+1)) is_compressed,
+	    char(byteextract('NY', mod((relstat/1024), (2))+1)) key_is_compressed,
+	    char(byteextract('UD', mod((relstat/2097152), (2))+1)) duplicate_rows,
+	    char(byteextract('DU',  mod((relstat/65536), (2))+1)) unique_rule,
+	    iitblstat(int4(iitableinfo('num_pages',reltid,reltidx))) number_pages,
+	    iitblstat(iitotal_overflow_pages(reltid, reltidx)) overflow_pages,
+	    int4(relwid) row_width,
+	    relsave expire_date,
+	    gmt_timestamp(relmoddate) modify_date,
+	    relloc location_name,
+	    char(byteextract('NY', mod((relstat/8), (2))+1)) table_integrities,       
+	    char(byteextract('NY', mod((relstat/4), (2))+1)) table_permits,
+	    char(byteextract('YN', mod((relstat/4096), (2))+1)) all_to_all,
+	    char(byteextract('YN', mod((relstat/8192), (2))+1)) ret_to_all,
+	    char(byteextract('NYC', (2*mod((relstat/32768), (2)))+
+		    mod((relstat/262144), (2))+1)) is_journalled,
+	    char(byteextract('NY', mod((relstat/64), (2))+1)) view_base,  
+	    char(byteextract('NY', mod((relstat/4194304), (2))+1)) multi_locations,
+	    relifill table_ifillpct,
+	    reldfill table_dfillpct,
+	    rellfill table_lfillpct,
+	    relmin table_minpages,      
+	    relmax table_maxpages,
+	    relstamp1 table_relstamp1,
+	    relstamp2 table_relstamp2,
+	    reltid table_reltid,
+	    reltidx table_reltidx,
+	    char(byteextract(' RS', (mod((relstat/65536), (2))
+		    + mod((relstat2/64), (2)))+1)) unique_scope,
+	    relallocation allocation_size,
+	    relextend extend_size,
+	    iitblstat(iitotal_allocated_pages(reltid, reltidx)) allocated_pages,
+	    char(' ') label_granularity,
+	    char(byteextract('NY', mod(relstat2/8388608,2)+1)) row_security_audit,
+	    char('        ') security_label,
+	    relpgsize table_pagesize,
+	    relversion table_relversion,
+	    int4(reltotwid) table_reltotwid,
+	    reltcpri table_reltcpri,
+	    iitblstat(int4(iitableinfo('tups_per_page', reltid, reltidx))) tups_per_page,
+	    iitblstat(int4(iitableinfo('keys_per_page', reltid, reltidx))) keys_per_page,
+	    iitblstat(int4(iitableinfo('keys_per_leaf', reltid, reltidx))) keys_per_leaf,
+	    relnparts phys_partitions,
+	    relnpartlevels partition_dimensions
+	    from iirelation;
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+
+
+	    break;
+	}
+
+	case DU_IICOLUMNS:
+	{
+	    /*
+	    ** NOTE: the COLUMN_HAS_DEFAULT column maps the attdefid1 field onto
+	    ** a 4-valued column.  It maps 0 to 1, 1 to 3, 2 to 4, and all other
+	    ** (positive) numbers to 5.  These numbers are then mapped to chars
+	    ** using byteextract():  1 to 'N', 3 to 'U', 4 to ' ', and 5 to 'Y'.
+	    ** Attdefid1 values > 2^31 become negative numbers in SQL, 
+	    ** and most are mapped to 6 or 7, so extra 'Y' characters have
+	    ** been put into the column definition.
+	    ** But -2 and -1 map to larger numbers and so are not handled
+	    ** correctly.
+	    **	
+	    ** The same numeric mapping is used for the COLUMN_DEFAULTS column,
+	    ** only with a different alphabetic mapping on the numbers.
+	    ** The COLUMN_DEFAULTS column also has an additional element to take
+	    ** into account whether the column is nullable or not; this is for 
+	    ** backward compatibility with calculated columns in views, which 
+	    ** show N for nullable columns and Y for not-nullable columns. 
+	    ** Thus the final mapping from attdefid1 to COLUMN_DEFAULTS is:  
+	    ** 0 to 'N', 1 to 'N', 2 to 'N' if nullable or 'Y' if not nullable,
+	    ** and all other values to 'Y'.
+	    ** Note that the only default-id value that changes due to
+	    ** nullability is 2 (which is DB_DEF_ID_UNKNOWN and is only used
+	    ** for calculated columns [at least in non-gateway catalogs]). 
+	    **
+	    ** 10/05/92   rickh,rblumer
+	    **      
+	    ** In the future, we will need to have a KNOWN_NOT_NULLABLE field in
+	    ** the COLUMNS table of the SQL92 INFO_SCHEMA catalog.  It will be
+	    ** denoted by the 2nd bit in the attflag column.  We have decided 
+	    ** not to put this into the INGRES IICOLUMNS view at this time,
+	    ** but may decide to add it in the future.
+	    */
+	    EXEC SQL CREATE VIEW  iicolumns
+	    AS SELECT
+	    table_name      = r.relid,
+	    table_owner     = r.relowner,
+	    column_name     = a.attname,
+	    column_datatype = uppercase(iitypename(ii_ext_type(a.attfrmt, 
+							       a.attfrml))),
+	    column_length   = iiuserlen(ii_ext_type(a.attfrmt, a.attfrml), 
+				 (ii_ext_length(a.attfrmt, a.attfrml)*65536)
+				 +a.attfrmp),
+	    column_scale    = int4(mod(a.attfrmp, (256))),
+	    column_collid   = a.attcollid,
+	    column_nulls    = char(byteextract('NY', 
+				  abs(((a.attfrmt/abs(a.attfrmt))-1)/2)+1)),
+	    column_defaults = char(byteextract('NNNNYYYY',
+				   float8(d.defid1)*5/
+				   (d.defid1+(float8(7)/float8(10)))+1
+				   + (((a.attfrmt/abs(a.attfrmt))+1)/2))),
+	    column_sequence = int4(a.attid),      
+	    key_sequence    = int4(a.attkdom),                 
+	    sort_direction  = char(byteextract('AD', mod((a.attflag/8), (2))+1)),
+	    column_ingdatatype       = ii_ext_type(a.attfrmt, a.attfrml),
+	    column_internal_datatype = uppercase(iitypename(a.attfrmt)),
+	    column_internal_length   = iiuserlen(a.attfrmt, 
+					(a.attfrml*65536)+a.attfrmp),
+	    column_internal_ingtype  = a.attfrmt,
+	    column_system_maintained = char(byteextract('NY',
+					mod((a.attflag/64),(2)) +1)),
+	    column_updateable = char(byteextract('YNNN  ',
+					((2*mod((r.relstat/128),(2)))
+					+(4*mod((r.relstat/32),(2)))
+					+ mod((a.attflag/64),(2))) + 1)),
+	    column_has_default = char(byteextract('N U YYY',
+					float8(d.defid1)*5/
+					(d.defid1+(float8(7)/float8(10)))+1)),
+	    column_default_val = d.defvalue,
+	    security_audit_key = char(byteextract('NY',mod(a.attflag/8192,2)+1)),
+	    column_always_ident    = char(byteextract('NY',(mod(a.attflag/512,2)+1))),
+	    column_bydefault_ident = char(byteextract('NY',(mod(a.attflag/1024,2)+1)))
+	    FROM  iirelation r,  iiattribute a, iidefault d
+	    WHERE 
+	      a.attrelid  = r.reltid AND a.attrelidx = r.reltidx
+	      AND a.attdefid1 = d.defid1 AND a.attdefid2 = d.defid2
+	      AND a.attver_dropped = 0
+	      AND mod(a.attflag/128,2)=0;
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+
+	    break;
+	}
+
+	case DU_IIPHYSICAL_COLUMNS:
+	{
+	    /*
+	    ** iiphysical columns is identical to iicolumns 
+	    ** (and MUST be kept in sync)
+	    ** except that it shows both visible and hidden columns.
+	    */
+	    EXEC SQL CREATE VIEW  iiphysical_columns
+	    AS SELECT
+	    table_name      = r.relid,
+	    table_owner     = r.relowner,
+	    column_name     = a.attname,
+	    column_datatype = uppercase(iitypename(ii_ext_type(a.attfrmt, 
+        						   a.attfrml))),
+	    column_length   = iiuserlen(ii_ext_type(a.attfrmt, a.attfrml), 
+        			     (ii_ext_length(a.attfrmt, a.attfrml)*65536)
+        			     +a.attfrmp),
+	    column_scale    = int4(mod(a.attfrmp, (256))),
+	    column_collid   = a.attcollid,
+	    column_nulls    = char(byteextract('NY', 
+        			      abs(((a.attfrmt/abs(a.attfrmt))-1)/2)+1)),
+	    column_defaults = char(byteextract('NNNNYYYY',
+                                       float8(d.defid1)*5/
+                                       (d.defid1+(float8(7)/float8(10)))+1
+                                       + (((a.attfrmt/abs(a.attfrmt))+1)/2))),
+	    column_sequence = int4(a.attid),      
+	    key_sequence    = int4(a.attkdom),                 
+	    sort_direction  = char(byteextract('AD', mod((a.attflag/8), (2))+1)),
+	    column_ingdatatype       = ii_ext_type(a.attfrmt, a.attfrml),
+	    column_internal_datatype = uppercase(iitypename(a.attfrmt)),
+	    column_internal_length   = iiuserlen(a.attfrmt, 
+					     (a.attfrml*65536)+a.attfrmp),
+	    column_internal_ingtype  = a.attfrmt,
+	    column_system_maintained = char(byteextract('NY',
+					       mod((a.attflag/64),(2)) +1)),
+	    column_updateable = char(byteextract('YNNN  ',
+					((2*mod((r.relstat/128),(2)))
+					  +(4*mod((r.relstat/32),(2)))
+					  + mod((a.attflag/64),(2))) + 1)),
+	    column_has_default = char(byteextract('N U YYY',
+                                       float8(d.defid1)*5/
+                                       (d.defid1+(float8(7)/float8(10)))+1)),
+	    column_default_val = d.defvalue,
+	    security_audit_key = char(byteextract('NY',mod(a.attflag/8192,2)+1)),
+	    column_always_ident    = char(byteextract('NY',(mod(a.attflag/512,2)+1))),
+	    column_bydefault_ident = char(byteextract('NY',(mod(a.attflag/1024,2)+1)))
+	    FROM  iirelation r, iiattribute a, iidefault d
+	    WHERE a.attrelid  = r.reltid AND a.attrelidx = r.reltidx
+	    AND a.attdefid1 = d.defid1 AND a.attdefid2 = d.defid2;
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+
+	    break;
+	}
+
+	case DU_IIPHYSICAL_TABLES:
+	{
+##	    range of r is iirelation
+##	    DEFINE VIEW iiphysical_tables(
+##	    table_name = r.relid,
+##	    table_owner = r.relowner,
+##	    table_stats = char(byteextract("NY",
+##		    mod((r.relstat/1048576),(2)) + 1)),
+##	    table_indexes = char(byteextract("NY",
+##		    mod((r.relstat/131072),(2)) + 1)),
+##	    is_readonly   = char(byteextract("NY", mod((r.relstat2/128), (2)) + 1)),
+##	    concurrent_access = char(byteextract("NY", mod((r.relstat2/256), (2)) + 1)),
+##	    num_rows = int4(r.reltups),
+##	    storage_structure = uppercase(iistructure(r.relspec)),
+##  	    is_compressed     = char(byteextract("NY",
+##		(mod((r.relstat/512), (2)))+1)),
+##  	    key_is_compressed=char(byteextract("NY",
+##			mod((r.relstat/1024), (2))+1)),
+##  	    duplicate_rows=char(byteextract("UD", 
+##			mod((r.relstat/2097152),(2))+1)),
+##	    unique_rule = char(byteextract("DU",
+##			mod((r.relstat/65536),(2)) + 1)),
+##	    number_pages = int4(r.relpages),
+##	    overflow_pages = iitotal_overflow_pages(r.reltid, r.reltidx),
+##          row_width=int4(r.relwid),
+##	    allocation_size = r.relallocation,
+##	    extend_size = r.relextend,
+##	    allocated_pages = iitotal_allocated_pages(r.reltid, r.reltidx),
+##	    label_granularity = char(" "),
+##	    row_security_audit = char(byteextract("NY", mod(r.relstat2/8388608,2)+1)),
+##	    security_label = char("        "),
+##	    table_pagesize = r.relpgsize,
+##          table_relversion = r.relversion,
+##          table_reltotwid   = int4(r.reltotwid) )
+##	    WHERE mod((r.relstat/32),(2))=0
+
+	    break;
+	}
+
+	case DU_IIVIEWS:
+	{
+##	    range of r is iirelation
+##	    range of q is iiqrytext
+##	    DEFINE VIEW iiviews (
+##	    table_name = r.relid,
+##	    table_owner = r.relowner,
+##	    view_dml = char(byteextract("QS", (mod((q.status/2),(2)) + 1))),
+##	    check_option = char(byteextract("NY", (mod(q.status,(2)) + 1))),
+##	    text_sequence = q.seq + 1,
+##	    text_segment = q.txt)
+##	    WHERE r.relqid1 = q.txtid1 AND r.relqid2 = q.txtid2
+
+	    break;
+	}
+
+	case DU_IIINDEXES:
+	{
+##	    range of i is iiindex
+##	    range of r is iirelation
+##	    range of rb is iirelation
+##	    DEFINE VIEW iiindexes(
+##	    index_name  = r.relid,
+##	    index_owner = r.relowner,
+##	    create_date = gmt_timestamp(r.relcreate),
+##	    base_name   = rb.relid,
+##	    base_owner  = rb.relowner,
+##	    storage_structure = uppercase(iistructure(r.relspec)),
+##	    is_compressed = char(byteextract("NY", mod((r.relstat/512),(2)) + 1)),
+##  	    key_is_compressed = char(byteextract("NY", mod((r.relstat/1024), (2))+1)),
+##	    unique_rule       = char(byteextract("DU", mod((r.relstat/65536),(2))+1)),
+##  	    unique_scope = char(byteextract(" RS", (mod((r.relstat/65536), (2))
+##					 + mod((r.relstat2/64), (2)))+1)),
+##	    system_use = char(byteextract("USSG",
+##			     (mod(r.relstat,(2)))+(mod((r.relstat/16384), (2)))
+##					+(3*mod((r.relstat2/16), (2)))+1)),
+##  	    persistent = char(byteextract("NY", mod((r.relstat2/4),(2))+1)),
+##	    index_pagesize = r.relpgsize )
+##	    WHERE r.reltid = i.baseid AND r.reltidx = i.indexid
+##	    AND   rb.reltid = i.baseid AND rb.reltidx = 0
+
+	    break;
+	}
+
+	case DU_IIINDEX_COLUMNS:
+	{
+##	    range of r is iirelation
+##	    range of a is iiattribute
+##	    DEFINE VIEW iiindex_columns (
+##	    index_name = r.relid,
+##	    index_owner = r.relowner,
+##	    column_name = a.attname,
+##	    key_sequence = int2(a.attkdom),
+##	    sort_direction = char(byteextract("AD",mod((a.attflag/8),(2))+1)) )
+##	    WHERE a.attkdom > 0
+##	    AND  r.reltid = a.attrelid AND r.reltidx = a.attrelidx
+##	    AND  a.attname != "tidp" AND a.attname != "TIDP"
+##	    AND  r.reltidx != 0
+
+	    break;
+	}
+
+	case DU_IISTATS:
+	{
+	    exec sql CREATE VIEW iistats (table_name, 
+			table_owner, 
+			column_name, 
+			create_date, 
+			num_unique, 
+			rept_factor, 
+			has_unique, 
+			pct_nulls, 
+			num_cells, 
+			column_domain, 
+			is_complete, 
+			stat_version, 
+			hist_data_length)
+	    AS SELECT r.relid, 
+		r.relowner, 
+		IFNULL(a.attname, 'IICOMPOSITE'),
+		date_gmt(z.sdate), 
+		float4(z.snunique), 
+		float4(z.sreptfact),
+		char(byteextract('NY', z.sunique+1)), 
+		float4(snull), 
+		int2(snumcells),
+		z.sdomain, 
+		char(byteextract('NY', z.scomplete+1)), 
+		z.sversion,
+		z.shistlength
+	    FROM ((iirelation r inner join iistatistics z 
+		on z.stabbase = r.reltid and z.stabindex = r.reltidx) 
+	    left join iiattribute a 
+		on r.reltid = a.attrelid and r.reltidx = a.attrelidx and 
+		z.satno = a.attid)
+	    WHERE DBMSINFO('table_statistics') <> 'N';
+
+	    break;
+	}
+
+	case DU_IIHISTOGRAMS:
+	{
+
+	    exec sql CREATE VIEW iihistograms 
+	    (table_name,  table_owner, column_name, text_sequence, text_segment)
+	    AS SELECT r.relid, 
+		r.relowner, 
+		IFNULL(a.attname, 'IICOMPOSITE'),
+		z.hsequence+1, 
+		z.histogram
+	    FROM ((iirelation r inner join iihistogram z 
+		on z.htabbase = r.reltid and z.htabindex = r.reltidx) 
+	    left join iiattribute a on r.reltid = a.attrelid and 
+		r.reltidx = a.attrelidx and z.hatno = a.attid)
+	    WHERE DBMSINFO('table_statistics') <> 'N';
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+
+	    break;
+	}
+
+	case DU_IIINGRES_TABLES:
+	{
+##	    range of r is iirelation
+##	    DEFINE VIEW iiingres_tables (
+##	    table_name = r.relid,
+##	    table_owner = r.relowner,
+##	    expire_date = gmt_timestamp(r.relsave),
+##	    table_integrities = char(byteextract("NY",
+##	    mod((r.relstat/8),(2)) + 1)),
+##	    table_permits = char(byteextract("NY",
+##	    mod((r.relstat/4),(2)) + 1)),
+##	    all_to_all = char(byteextract("YN", mod((r.relstat/4096),(2)) + 1)),
+##	    ret_to_all = char(byteextract("YN", mod((r.relstat/8192),(2)) + 1)),
+##	    row_width = int4(r.relwid),
+##	    is_journalled = char(byteextract("NYC",
+##	    (2*mod((r.relstat/32768),(2)))+
+##	    mod((r.relstat/262144), (2)) + 1)),
+##	    view_base = char(byteextract("NY", mod((r.relstat/64),(2)) + 1)),
+##	    modify_date = gmt_timestamp(r.relmoddate),
+##	    table_ifillpct = int2(r.relifill),
+##	    table_dfillpct = int2(r.reldfill),
+##	    table_lfillpct = int2(r.rellfill),
+##	    table_minpages = int4(r.relmin),
+##	    table_maxpages = int4(r.relmax),
+##	    location_name = char(r.relloc),
+##	    table_reltid = r.reltid,
+##	    table_reltidx = r.reltidx)
+
+	    break;
+	}
+
+	case DU_IIMULTI_LOCATIONS:
+	{
+##	    range of r is iirelation
+##	    range of d is iidevices
+##	    define view iimulti_locations (
+##	    table_name = r.relid,
+##	    table_owner = r.relowner,
+##	    loc_sequence = d.devrelocid,
+##	    location_name = d.devloc)
+##	    WHERE d.devrelid = r.reltid AND d.devrelidx = r.reltidx
+##	    AND   length(d.devloc) != 0
+
+	    break;
+	}
+
+	case DU_IIKEY_COLUMNS:
+	{
+##	    range of a is iiattribute
+##	    range of r is iirelation
+##	    DEFINE VIEW iikey_columns (
+##	    table_name = r.relid,
+##	    table_owner = r.relowner,
+##	    column_name = a.attname,
+##	    key_sequence = int2(a.attkdom),
+##	    sort_direction=text("A"))
+##	    WHERE a.attkdom > 0
+##	    AND   a.attrelid = r.reltid AND a.attrelidx = r.reltidx
+
+	    break;
+	}
+
+	case DU_IIEVENTS:
+	{
+##	    DEFINE VIEW iievents
+##          (
+##              iievent.event_name,
+##              iievent.event_owner,
+##              text_sequence = int2(iiqrytext.seq) + 1,
+##              text_segment = iiqrytext.txt,
+##		security_label = char("        ")
+##          )
+##          WHERE iiqrytext.txtid1 = iievent.event_qryid1
+##            AND iiqrytext.txtid2 = iievent.event_qryid2
+
+	    break;
+	}
+
+	case DU_IIPERMITS:
+	{
+	    EXEC SQL CREATE VIEW  iipermits
+	    AS SELECT 
+	    object_name  = p.probjname, 
+	    object_owner = p.probjowner, 
+	    permit_grantor = p.prograntor, 
+	    object_type   = p.probjtype, 
+	    create_date =  gmt_timestamp(p.procrtime1),
+	    permit_user =  p.prouser, 
+	    permit_depth = p.prodepth, 
+	    permit_number =  int2(p.propermid), 
+	    text_sequence = int2(q.seq) + 1, 
+	    text_segment = q.txt 
+	    FROM iiqrytext q, iiprotect p
+	    WHERE p.proqryid1 = q.txtid1 AND p.proqryid2 = q.txtid2
+	    AND q.mode = 19 AND mod((p.proopset/128),(2))=0;
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+
+	    break;
+	}
+
+	case DU_IISECURITY_ALARMS:
+	{
+	    duc_v_iisecurity_alarms(is_iidbdb);
+	    break;
+	}
+
+	case DU_IIALT_COLUMNS:
+	{
+	    /*
+	    ** iialt_columns - This view gives column information about unique
+	    ** secondary indexes for a table. 
+	    ** The table_name and table_owner are for the base table
+	    ** The other 3 columns are for the unique secondary index
+	    ** defined on that table. The 'tidp' column is not shown.
+	    */
+	    EXEC SQL CREATE VIEW iialt_columns
+		(table_name, table_owner, key_id, column_name, key_sequence)
+	    AS SELECT
+		r1.relid, r1.relowner, r2.reltidx, a.attname, int2(a.attkdom)
+	    FROM iirelation r1, iirelation r2, iiattribute a
+	    WHERE r1.relidxcount > 0
+	    AND  r1.reltid = r2.reltid AND r2.reltidx != 0
+	    AND  MOD(r2.relstat/65536, (2)) = 1
+	    AND  r2.reltid  = a.attrelid AND r2.reltidx = a.attrelidx
+	    AND  a.attname != 'tidp'  AND a.attname != 'TIDP' ;
+
+	    break;
+	}
+
+	case DU_IIFILE_INFO:
+	{
+	    /* This view gives the physical filenames associated with a
+	    ** table for each location that the table exists in.
+	    **
+	    ** This is used primarily by tech support, but may be made
+	    ** available to the customer, upon request.
+	    */
+	    EXEC SQL 
+	    CREATE VIEW iifile_info(
+		    table_name,
+		    owner_name,
+		    file_name,
+		    file_ext,
+		    location,
+		    base_id,
+		    index_id)
+	    /* non index tables default location */
+	    AS
+	    SELECT r.relid, r.relowner, ii_tabid_di(reltid,reltidx),
+	    't00', r.relloc, r.reltid, r.reltidx
+	    FROM iirelation r
+	    WHERE r.reltidx = 0 and ( mod((r.relstat/32),(2)) = 0)
+	    
+	    UNION ALL
+	    /* index tables default location */
+	    SELECT r.relid, r.relowner, ii_tabid_di(reltid,reltidx),
+	    't00', r.relloc, r.reltid, r.reltidx
+	    FROM iirelation r
+	    WHERE r.reltidx != 0
+
+	    UNION ALL
+	    /* extended locations for non index tables, if any */
+	    SELECT r.relid, r.relowner, ii_tabid_di(reltid,reltidx),
+	    't'+char(byteextract('0123456789abcdef',
+	    mod((d.devrelocid/16),(16)) +1))
+	    +char(byteextract('0123456789abcdef'
+	    ,mod((d.devrelocid),(16)) +1)),
+	    d.devloc, r.reltid, r.reltidx
+	    FROM iirelation r, iidevices d
+	    WHERE r.reltidx = 0 and 
+	    (mod((r.relstat/32),(2)) = 0) 
+	    and d.devrelid = r.reltid and d.devrelidx = r.reltidx
+	    and ( mod((r.relstat/4194304),(2)) != 0)
+
+	    UNION ALL
+	    /* extended locations for index tables, if any */
+	    SELECT r.relid, r.relowner, ii_tabid_di(reltid,reltidx),
+	    't'+char(byteextract('0123456789abcdef',
+	    mod((d.devrelocid/16),(16)) +1))
+	    +char(byteextract('0123456789abcdef',
+	    mod((d.devrelocid),(16)) +1)),
+	    d.devloc, r.reltid, r.reltidx
+	    FROM iirelation r, iidevices d
+	    WHERE r.reltidx != 0 and  
+	    (mod((r.relstat/4194304),(2)) != 0)
+	    and d.devrelid = r.reltid and d.devrelidx = r.reltidx;
+
+	    break;
+	}
+
+	case DU_IILOG_HELP:
+	{
+
+##	    range of r is iirelation
+##	    range of a is iiattribute
+##	    DEFINE VIEW iilog_help
+##		(table_name = r.relid,
+##		table_owner = r.relowner,
+##		create_date = gmt_timestamp(r.relcreate),
+##		table_type = char(byteextract("TVI", 
+##			(mod((r.relstat/32),
+##			(2))+(2*(mod((r.relstat/128), 
+##			(2)))))+1)+"       "),
+##		table_subtype = char("N"),
+##		table_version = char("II9.0"),
+##		system_use = char(byteextract("USS", 
+##		    (mod(r.relstat, (2)))
+##		    +(mod((r.relstat/16384),(2)))+1)),
+##		column_name = a.attname,
+##		column_datatype = iitypename(a.attfrmt),
+##		column_length = iiuserlen(a.attfrmt, (a.attfrml*65536)
+##			+a.attfrmp),
+##		column_nulls = char(byteextract("NY",
+##			(abs((a.attfrmt/abs(a.attfrmt))-1)/2)+1)),
+##		column_defaults = char(byteextract("YN", mod(a.attflag, (2))
+##			+1+(abs((a.attfrmt/abs(a.attfrmt))-1)/2))),
+##		column_sequence = int2(a.attid),
+##		key_sequence = int2(a.attkdom))
+##		WHERE a.attrelid = r.reltid and a.attrelidx = r.reltidx
+
+	    break;
+	}
+
+	case DU_IIPROCEDURES:
+	{
+##	    range of q is iiqrytext
+##	    range of p is iiprocedure
+##	    DEFINE VIEW iiprocedures
+##		(
+##		procedure_name  = p.dbp_name,
+##		procedure_owner = p.dbp_owner,
+##		create_date = gmt_timestamp(p.dbp_create_date),
+##		proc_subtype  = "N",
+##		text_sequence = int2(q.seq)+1,
+##		text_segment  = q.txt,
+##  	        system_use    = char(byteextract("UG", mod((p.dbp_mask1/128),(2))+1)),
+##  	        row_proc      = char(byteextract("NY", mod((p.dbp_mask1/1024),(2))+1)),
+##		security_label = char("        ")
+##		)
+##	    WHERE q.txtid1 = p.dbp_txtid1  AND q.txtid2 = p.dbp_txtid2
+	    break;
+	}
+
+    case DU_IIREGISTRATIONS:
+	{
+##	    range of r is iirelation
+##	    range of q is iiqrytext
+##	    DEFINE VIEW iiregistrations(
+##	    object_name = r.relid,
+##	    object_owner = r.relowner,
+##	    object_dml = char(byteextract("QS", (mod((q.status/2), (2)) + 1))),
+##	    object_type = char(byteextract("TVI",
+##	        (mod ((r.relstat/32), (2)) +
+##	        (2 * (mod((r.relstat/128), (2))))) + 1) + " "),
+##	    object_subtype = char(byteextract("LL I", q.mode - 99)),
+##	    text_sequence = q.seq + 1,
+##	    text_segment = q.txt)
+##	    WHERE r.relqid1 = q.txtid1 AND r.relqid2 = q.txtid2
+##	    AND (q.mode = 100  or  q.mode = 101  or  q.mode = 103)
+	    /*
+	    **  q.mode = DB_CRT_LINK = 100 for CREATE...AS LINK
+	    **			(obsolete but still accepted)
+	    **	   = DB_REG_LINK = 101 for REGISTER...AS LINK
+	    **			(how we want users to express it)
+	    **	   = DB_REG_IMPORT = 103 for REGISTER...AS IMPORT
+	    */
+
+	    break;
+	}
+
+	case DU_IIDB_COMMENTS:
+	{
+	    EXEC SQL CREATE VIEW iidb_comments
+	    	(object_name, object_owner, object_type,
+	    	short_remark, text_sequence, long_remark)
+	    AS SELECT
+		relid, relowner, char('T'),
+		short_remark, text_sequence + 1, long_remark
+	    FROM iirelation, iidbms_comment
+	    WHERE  reltid=comtabbase
+	    AND reltidx=comtabidx AND comtype=1;
+
+	    break;
+	}
+
+	case DU_IIDB_SUBCOMMENTS:
+	{
+	    EXEC SQL CREATE VIEW iidb_subcomments
+		(object_name, object_owner, subobject_name, subobject_type,
+		short_remark,  text_sequence,long_remark)
+	    AS SELECT
+		relid, relowner, attname, char('C'),
+		short_remark,  text_sequence + 1, long_remark
+	    FROM iirelation, iidbms_comment, iiattribute
+	    WHERE reltid=comtabbase AND reltidx=comtabidx
+	    AND attintl_id=comattid
+	    AND attrelid=reltid AND attrelidx=reltidx
+	    AND comtype=2;
+
+	    break;
+	}
+
+	case DU_IISYNONYMS:
+	{
+	    EXEC SQL CREATE VIEW iisynonyms
+		(synonym_name, synonym_owner, table_name, table_owner)
+	    AS SELECT synonym_name, synonym_owner, relid, relowner
+	    FROM iirelation, iisynonym
+	    WHERE reltid = syntabbase AND reltidx = syntabidx;
+
+	    break;
+	}
+
+	case DU_IIINTEGRITIES:
+	{
+##	    range of i is iiintegrity
+##	    range of r is iirelation
+##	    range of q is iiqrytext
+##	    DEFINE VIEW iiintegrities (
+##	        table_name = r.relid,
+##	        table_owner = r.relowner,
+##		create_date = 
+##		    gmt_timestamp(i.cons_create_date),
+##	        integrity_number = int2(i.intnumber),
+##	        text_sequence = int2(q.seq) + 1,
+##	        text_segment = q.txt)
+##	    WHERE r.reltid = i.inttabbase AND r.reltidx = i.inttabidx
+##	    AND   q.txtid1 = i.intqryid1 AND q.txtid2 = i.intqryid2
+##	    AND   q.mode = 20 AND i.consflags = 0
+
+	    break;
+	}
+
+	case DU_IIRULES:
+	{
+	    EXEC SQL CREATE VIEW iirules
+	    AS SELECT
+	    rule_name        = i.rule_name,
+	    rule_owner       = i.rule_owner,
+	    table_name       = r.relid,
+	    text_sequence    = int2(q.seq) + 1,
+	    text_segment     = q.txt,
+	    system_use       = char(byteextract('UG', mod((i.rule_flags/8), (2))+1))
+	    FROM iirelation r,
+		    (	iirule i LEFT JOIN iiqrytext q
+			    ON
+				    q.txtid1 = i.rule_qryid1
+				    AND   q.txtid2 = i.rule_qryid2
+		    )
+	    WHERE r.reltid = i.rule_tabbase AND r.reltidx = i.rule_tabidx;
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+
+	    break;
+	}
+
+	case DU_IICONSTRAINTS:
+	{
+	    EXEC SQL CREATE VIEW iiconstraints
+	    AS SELECT
+		constraint_name = i.consname,
+		schema_name     = r.relowner,
+		table_name      = r.relid,
+		constraint_type = char(byteextract('UC R    P', mod(i.consflags,16))),
+		create_date     = gmt_timestamp(i.cons_create_date),
+		text_sequence   = q.seq+1,
+		text_segment    = q.txt,
+		system_use      = char(byteextract('UG', mod(i.consflags/32, 2)+1))
+	    FROM  iiintegrity i, iirelation r, iiqrytext q
+	    WHERE i.inttabbase = r.reltid AND i.inttabidx = r.reltidx
+		AND i.intqryid1 = q.txtid1 AND i.intqryid2 = q.txtid2
+		AND q.mode = 20
+		AND i.consflags != 0  AND i.intseq = 0;
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+
+	    break;
+	}
+
+	case DU_IIKEYS:
+	{
+	    EXEC SQL CREATE VIEW iikeys
+	    AS SELECT
+		constraint_name = i.consname,
+		schema_name     = r.relowner,
+		table_name      = r.relid,
+		column_name     = a.attname,
+		key_position    = k.key_position
+	    FROM  iiintegrity i, iirelation r, iiattribute a, iikey k
+	    WHERE k.key_consid1 = i.consid1 AND k.key_consid2 = i.consid2
+	    AND i.inttabbase = r.reltid AND i.inttabidx = r.reltidx
+	    AND i.inttabbase = a.attrelid  AND i.inttabidx = a.attrelidx
+	    AND k.key_attid = a.attintl_id;
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+
+	    break;
+	}
+
+	case DU_IIREF_CONSTRAINTS:
+	{
+	    EXEC SQL CREATE VIEW iiref_constraints
+	    AS SELECT
+		ref_constraint_name    = i.consname,
+		ref_schema_name        = r.relowner,
+		ref_table_name         = r.relid,
+		unique_constraint_name = j.consname,
+		unique_schema_name     = s.relowner,
+		unique_table_name      = s.relid
+	    FROM
+		iiintegrity i,
+		iirelation r,
+		iidbdepends d,
+		iiintegrity j,
+		iirelation s
+	    WHERE
+		    d.dtype = 149 /* DB_CONS */ 
+		AND d.itype = 149 /* DB_CONS */
+		AND d.deid1 = i.inttabbase AND d.deid2 = i.inttabidx
+		                           AND d.qid   = i.intnumber
+		AND i.inttabbase = r.reltid AND i.inttabidx = r.reltidx
+		AND d.inid1 = j.inttabbase AND d.inid2 = j.inttabidx
+		                           AND d.i_qid = j.intnumber
+		AND j.inttabbase = s.reltid AND j.inttabidx = s.reltidx;
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+	    break;
+	}
+
+	case DU_IICONSTRAINT_INDEXES:
+	{
+	    EXEC SQL CREATE VIEW iiconstraint_indexes
+	    AS SELECT
+		constraint_name = i.consname,
+		schema_name     = r.relowner,
+		index_name      = r.relid
+	    FROM  iiintegrity i, iirelation r, iidbdepends d
+	    WHERE
+		    d.dtype =  10 /* DB_INDEX */ 
+                AND d.itype = 149 /* DB_CONS */
+		AND i.inttabbase = d.inid1 AND i.inttabidx = d.inid2
+		                           AND i.intnumber = d.i_qid
+		AND d.deid1 = r.reltid AND d.deid2 = r.reltidx;
+
+	    if(sqlca.sqlcode<0)
+	    {
+		duc_sqlerror();
+	    }
+
+	    break;
+	}
+
+	case DU_IIACCESS:
+	{
+	    EXEC SQL CREATE VIEW  iiaccess AS
+	    SELECT
+	    table_name  = r.relid,
+	    table_owner = r.relowner,
+	    table_type  =
+    	    char(byteextract('TVI',(mod((r.relstat/32), (2))
+    	    	+(2*(mod((r.relstat/128), (2)))))+1)),
+	    system_use = char(byteextract('USSG',
+                         (mod(r.relstat,(2)))+(mod((r.relstat/16384), (2)))
+                          +(3*mod((r.relstat2/16), (2)))+1)),
+	    permit_user = p.prouser,
+	    permit_type = iipermittype(p.proopset,0)
+	    FROM iirelation r, iiprotect p
+	    WHERE r.reltid = p.protabbase 
+	    AND (mod((p.proopset/128), 2) = 0);
+
+	    break;
+	}
+
+	case DU_IIDD_DDB_VIEWS:
+	{
+	    duc_v_iidd_ddb_views();
+	    break;
+	}
+
+	case DU_IIDD_DBCONSTANTS:
+	{
+	    duc_v_iidd_dbconstants();
+	    break;
+	}
+
+	case DU_IIDD_PHYSICAL_TABLES:
+	{
+	    duc_v_iidd_physical_tables();
+	    break;
+	}
+
+	case DU_IIDD_REGISTERED_OBJECTS:
+	{
+	    duc_v_iidd_registered_objects();
+	    break;
+	}
+
+	case DU_IISEQUENCES:
+	{
+	    /* Note the naughty use of explicit constants for the data type codes. 
+	    ** There's not much to be done, since the references are contained
+	    ** inside the SQL code. */
+	    EXEC SQL CREATE VIEW iisequences ( seq_name,
+			seq_owner,
+			create_date,
+			modify_date,
+			data_type, 
+			seq_length,
+			seq_precision,
+			start_value,
+			increment_value,
+			next_value,
+			min_value,
+			max_value,
+			cache_size,
+			start_flag,
+			incr_flag,
+			min_flag,
+			max_flag,
+			restart_flag,
+			cache_flag,
+			cycle_flag,
+			order_flag,
+			seql_flag,
+			unordered_flag,
+			ident_flag)
+	    AS SELECT seq_name, seq_owner, seq_create, seq_modify,
+		CASE WHEN seq_type = 10 THEN 'decimal'	   WHEN seq_length = 4 
+			THEN 'integer'	ELSE 'integer8'   END,
+		seq_length, seq_prec,
+		CASE WHEN seq_type = 30 THEN seq_start_int ELSE seq_start_dec END,
+		CASE WHEN seq_type = 30 THEN seq_incr_int  ELSE seq_incr_dec  END,
+		CASE WHEN seq_type = 30 THEN seq_next_int  ELSE seq_next_dec  END,
+		CASE WHEN seq_type = 30 THEN seq_min_int   ELSE seq_min_dec   END,
+		CASE WHEN seq_type = 30 THEN seq_max_int   ELSE seq_max_dec   END,
+		seq_cache,
+		char(byteextract(' Y',mod(seq_flag/1024, 2)+1)),
+		char(byteextract(' Y',mod(seq_flag/2048, 2)+1)),
+		char(byteextract(' NY',mod(seq_flag/128, 2)+mod(seq_flag/4, 2)*2+1)),
+		char(byteextract(' NY',mod(seq_flag/64, 2)+mod(seq_flag/2, 2)*2+1)),
+		char(byteextract(' Y',mod(seq_flag/4096, 2)+1)),
+		char(byteextract(' NY',mod(seq_flag/256, 2)+mod(seq_flag/8, 2)*2+1)),
+		char(byteextract('NY',mod(seq_flag/1, 2)+1)),
+		char(byteextract('NY',mod(seq_flag/16, 2)+1)),
+		char(byteextract('NY',mod(seq_flag/8192, 2)+1)),
+		char(byteextract('NY',mod(seq_flag/16384, 2)+1)),
+		char(byteextract('NY',mod(seq_flag/65536, 2)+1))
+	    FROM iisequence;
+	    break;
+	}
+
+	case DU_IIDISTSCHEMES:
+	{
+	    EXEC SQL CREATE VIEW iidistschemes AS
+		SELECT r.relid AS table_name,
+		    r.relowner AS table_owner,
+		    d.levelno AS dimension,
+		    d.ncols AS partitioning_columns,
+		    d.nparts AS logical_partitions,
+		    CASE d.distrule
+			WHEN 0 THEN 'AUTOMATIC'
+			WHEN 1 THEN 'HASH'
+			WHEN 2 THEN 'LIST'
+			WHEN 3 THEN 'RANGE'
+			ELSE '?'
+		    END AS partition_rule
+		FROM iirelation r, iidistscheme d
+		WHERE d.mastid = r.reltid AND d.mastidx = r.reltidx;
+	    break;
+	}
+
+
+	case DU_IIDISTCOLS:
+	{
+	    EXEC SQL CREATE VIEW iidistcols AS
+		SELECT r.relid AS table_name,
+		    r.relowner AS table_owner,
+		    d.levelno AS dimension,
+		    a.attname AS column_name,
+		    d.colseq AS column_sequence,
+		    UPPERCASE(IITYPENAME(II_EXT_TYPE(a.attfrmt,a.attfrml))) AS column_datatype
+		FROM iirelation r, iidistcol d, iiattribute a
+		WHERE d.mastid = r.reltid AND d.mastidx = r.reltidx
+		    AND a.attrelid = r.reltid AND a.attrelidx = r.reltidx
+		    AND a.attid = d.attid;
+	    break;
+	}
+
+	case DU_IILPARTITIONS:
+	{
+	    EXEC SQL CREATE VIEW iilpartitions AS
+		SELECT r.relid AS table_name,
+		    r.relowner AS table_owner,
+		    d.levelno AS dimension,
+		    d.partseq AS logical_partseq,
+		    d.partname AS partition_name,
+		    IFNULL(v.valseq,0) AS value_sequence,
+		    IFNULL(v.colseq,0) AS column_sequence,
+		    CASE v.oper
+			WHEN 0 THEN '<'
+			WHEN 1 THEN '<='
+			WHEN 2 THEN '='
+			WHEN 4 THEN '>='
+			WHEN 5 THEN '>'
+			WHEN 6 THEN 'DEFAULT'
+			ELSE ' '
+		    END AS operator,
+		    v.distvalue AS value
+		FROM iirelation r JOIN iipartname d
+		    ON d.mastid = r.reltid AND d.mastidx = r.reltidx
+		  LEFT JOIN iidistval v
+		    ON v.mastid = d.mastid AND v.mastidx = d.mastidx
+			AND v.levelno = d.levelno AND v.partseq = d.partseq;
+	    break;
+	}
+
+	case DU_IIOTABLES:
+	{
+	    /* Ancient, deprecated iitables */
+##	    range of r is iirelation
+##	    define view iiotables(
+##		table_name = r.relid,
+##		table_owner = r.relowner,
+##		create_date = gmt_timestamp(r.relcreate),
+##		alter_date = gmt_timestamp(r.relcreate),
+##		table_type = char(byteextract("TVI",
+##		    (mod((r.relstat/32),(2))+
+##		    (2*(mod((r.relstat/128),(2))))) + 1)
+##		    + "       "),
+##		table_subtype = char("N"),
+##		table_version = char("II9.0"),
+##		system_use = char(byteextract("USS",
+##		    (mod(r.relstat,(2)))+
+##		    (mod((r.relstat/16384),(2))) + 1)))
+	    break;
+	}
+
+	case DU_IIOCOLUMNS:
+	{
+##	    range of a is iiattribute
+##	    range of r is iirelation
+##	    define view iiocolumns (
+##		table_name = r.relid,
+##		table_owner = r.relowner,
+##		column_name = a.attname,
+##		create_date = gmt_timestamp(r.relcreate),
+##		alter_date = gmt_timestamp(r.relcreate),
+##		column_datatype = uppercase(iitypename(a.attfrmt)),
+##		column_length = iiuserlen(a.attfrmt, (a.attfrml * 65536) + a.attfrmp),
+##		column_scale = int2(mod(a.attfrmp,(256))),
+##		column_nulls = char(byteextract("NY",
+##			(abs((a.attfrmt/abs(a.attfrmt))-1)/2) + 1)),
+##		column_defaults = char(byteextract("YN",
+##		    mod(a.attflag,(2)) + 1 + (abs((a.attfrmt/abs(a.attfrmt))-1)/2))),
+##		column_sequence = int2(a.attid),
+##		key_sequence = int2(a.attkdom * 
+##			(mod((r.relstat/65536),(2)))))
+##	    where a.attrelid=r.reltid  
+##		and   a.attrelidx=r.reltidx
+	    break;
+	}
+
+	default:
+	{
+	    printf("Unknown view %s\n", view->du_objname);
+	    break;
+	}
+
+    } /* end switch */
+}
+
+
+static STATUS
+duc_create_one_internal_proc(
+char		*dbname,
+DU_OBJ		*proc,
+bool		upcase)
+{
+    exec sql begin declare section;
+	char        buf[256];
+    exec sql end declare section;
+    DU_ERROR		duc_errcb;
+
+    IIlq_Protect(TRUE);
+
+    switch (proc->du_obj_id)
+    {
+	case DU_IIQEF_CREATE_DB:
+	{
+	    duc_create_procedure("iiqef_create_db");
+	    break;
+	}
+
+	case DU_IIQEF_ALTER_DB:
+	{
+	    duc_create_procedure("iiqef_alter_db");
+	    break;
+	}
+
+	case DU_IIQEF_DESTROY_DB:
+	{
+	    duc_create_procedure("iiqef_destroy_db");
+	    break;
+	}
+
+	case DU_IIQEF_ADD_LOCATION:
+	{
+	    duc_create_procedure("iiqef_add_location");
+	    break;
+	}
+
+	case DU_IIQEF_ALTER_EXTENSION:
+	{
+	    duc_create_procedure("iiqef_alter_extension");
+	    break;
+	}
+
+	case DU_IIERROR:
+	{
+	    if (!proc_exists("iierror"))
+	    {
+		duc_create_procedure("iierror");
+	    }
+
+	    break;
+	}
+
+	case DU_IIQEF_DEL_LOCATION:
+	{
+	    duc_create_procedure("iiqef_del_location");
+	    break;
+	}
+
+	default:
+	{
+	    printf("Unknown procedure %s\n", proc->du_objname);
+	    break;
+	}
+    }
+
+    if (sqlca.sqlcode < 0)
+    {
+	if (sqlerr_handler(&duc_errcb,E_DU200C_BAD_IPROC_EXECUTE) == E_DU_FATAL)
+	{
+	    IIlq_Protect(FALSE);
+	    return (E_DU_FATAL);
+	}
+    }
+
+    STprintf(buf, "GRANT EXECUTE ON PROCEDURE %s TO PUBLIC", proc->du_objname);
+    EXEC SQL EXECUTE IMMEDIATE :buf;
+    if (sqlca.sqlcode < 0)
+    {
+	IIlq_Protect(FALSE);
+	if (sqlerr_handler(&duc_errcb,E_DU200C_BAD_IPROC_EXECUTE) == E_DU_FATAL)
+	    return (E_DU_FATAL);
+    }
+
+    IIlq_Protect(FALSE);
+    return (E_DU_OK);
+}
+
+
+bool
+proc_exists(proc_name)
+exec sql begin declare section;
+char	*proc_name;
+exec sql end declare section;
+{
+    exec sql begin declare section;
+	i4	cnt;
+    exec sql end declare section;
+
+    exec sql repeated select count (*) into :cnt from iiprocedure 
+	    where lowercase(dbp_name) = :proc_name
+	    and lowercase(dbp_owner) = '$ingres';
+
+    if (cnt > 0)
+	return TRUE;
+    else
+	return (FALSE);
+}
+
+STATUS
+duc_drop_internal_procs(
+char            *dbname,
+bool		star_flag)
+{
+    bool	is_iidbdb;
+    i4		i;
+    STATUS	status;
+    exec sql begin declare section;
+	char        sbuffer[256];
+    exec sql end declare section;
+
+    if (!STcompare(dbname, DU_DBDBNAME))
+	is_iidbdb = TRUE;
+    else 
+	is_iidbdb = FALSE;
+
+    /* Drop in reverse order of create */
+    for (i = MAX_INTERNAL_PROCS - 1; i >= 0; i--)
+    {
+	if (Du_dbprocs[i].du_dbflag == DU_IIDBDB && !is_iidbdb)
+	    continue;
+	if (Du_dbprocs[i].du_dbflag == DU_STAR && !star_flag)
+	    continue;
+	if (!proc_exists(Du_dbprocs[i].du_objname))
+	    continue;
+	STprintf(sbuffer, "drop procedure %s\n", Du_dbprocs[i].du_objname);
+	EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+	if (sqlca.sqlcode < 0)
+	{
+	    /* XXX this should be msg-ized! */
+	    SIprintf("]==> <%s> returns %d\n", sbuffer, sqlca.sqlcode);
+	}
+    }
+    exec sql commit;
+}
+
+STATUS
+duc_upgrade_internal_procs(
+char            *dbname,
+bool		upcase,
+bool		star_flag)
+{
+    bool	is_iidbdb;
+    i4		i;
+    STATUS	status;
+
+    if (!STcompare(dbname, DU_DBDBNAME))
+	is_iidbdb = TRUE;
+    else 
+	is_iidbdb = FALSE;
+
+    for (i = 0; i < MAX_INTERNAL_PROCS; i++)
+    {
+	if (Du_dbprocs[i].du_dbflag == DU_IIDBDB && !is_iidbdb)
+	    continue;
+	if (Du_dbprocs[i].du_dbflag == DU_STAR && !star_flag)
+	    continue;
+	if (!proc_exists(Du_dbprocs[i].du_objname))
+	    status = duc_create_one_internal_proc(dbname, &Du_dbprocs[i],upcase);
+    }
+    exec sql commit;
+    return (E_DU_OK);
+}
+
+STATUS
+duc_create_internal_procs(
+char            *dbname,
+bool		upcase,
+bool		star_flag)
+{
+    bool	is_iidbdb;
+    i4		i;
+    STATUS	status;
+
+    if (!STcompare(dbname, DU_DBDBNAME))
+	is_iidbdb = TRUE;
+    else 
+	is_iidbdb = FALSE;
+
+    for (i = 0; i < MAX_INTERNAL_PROCS; i++)
+    {
+	if (Du_dbprocs[i].du_dbflag == DU_IIDBDB && !is_iidbdb)
+	    continue;
+	if (Du_dbprocs[i].du_dbflag == DU_STAR && !star_flag)
+	    continue;
+	status = duc_create_one_internal_proc(dbname, &Du_dbprocs[i], upcase);
+    }
+    exec sql commit;
+}
+
+/*{
+** Name: duc_modify_pagesize() -     modify the system catalogs.
+**
+** Description:
+**        This routine modifies a database's back-end and standard catalogs
+**      to a predetermined storage structure.  The catalogs to be modified
+**      are determined by the values set in dus_modes when the command line
+**      is parsed.
+**
+** Inputs:
+**	page_size		Page size to modify to
+**	star_flag		TRUE if a star database
+**	err_cb			DU_ERROR * place to return error codes
+**
+**
+** Outputs:
+**      Returns:
+**          E_DU_OK                     Completed successfully.
+**      Exceptions:
+**          Some Ingres/Equel error might be detected which will cause
+**          the Ingres error handler for this utility to be called.
+**
+** Side Effects:
+**         The back-end & standard catalogs are modified to a predetermined
+**         storage structure.
+**
+** History: 
+**         21-Apr-2004-(nansa02)
+**         Created from sysmod.
+**	11-Sep-2004 (schka24)
+**	    Move to common so that upgradedb can use it.
+**
+*/ 
+
+DU_STATUS
+duc_modify_pagesize(i4 page_size, bool star_flag, DU_ERROR *duc_errcb)
+{
+##  char	*cp;
+    char	**cp_arr;
+    DUU_CATDEF	*catdef_p;
+    char        *where;
+    char        modbuf[256];
+    i4		i,j;
+ 
+    IIlq_Protect(TRUE);
+    if (duc_find_cats(page_size, duc_errcb, star_flag) != E_DU_OK)
+	return (E_DU_IERROR);
+
+    for (i = 0; i < DU_MAXCAT_DEFS ; i++)
+    {
+
+	/* If not a distributed database, skip Star catalogs */
+	if ( ! star_flag && (i == DU_DDB_CATS) )
+	    continue;
+
+	if (Dus_allcat_defs[i] == NULL)
+      /* There's a set of catalog definitions missing. */
+	    continue;
+
+	for (catdef_p = Dus_allcat_defs[i];
+	     catdef_p->du_relname;
+	     catdef_p++
+	    )
+	{
+	    if (catdef_p->du_exists)
+		 
+	    {
+		if (catdef_p->du_modify)
+		{
+		    cp = catdef_p->du_modify;
+
+		    if (du_error(duc_errcb, I_DU0100_MODIFYING_SY, 2,
+				 0, catdef_p->du_relname) != E_DU_OK
+		       )
+			return(duc_errcb->du_status);
+
+		    if (page_size != 0)
+		    {
+			cp = &modbuf[0];
+			if (STstrindex(catdef_p->du_modify, "where", 0, TRUE)
+			    || STstrindex(catdef_p->du_modify, "with", 0, TRUE))
+			    cp = STprintf(cp, "%s ,page_size=%d",
+					catdef_p->du_modify, page_size);
+		      else
+			    cp = STprintf(cp, "%s with page_size=%d",
+					catdef_p->du_modify, page_size);
+		    }
+
+##		    IIstatement cp
+		}
+		if (catdef_p->du_index_cnt > 0)
+		{
+		    for (j = 1, cp_arr = catdef_p->du_index;
+			 j <= catdef_p->du_index_cnt; j++, cp_arr++
+			)
+		    {
+			cp  = *cp_arr;
+			if (page_size != 0)
+			{
+			    cp = &modbuf[0];
+			    if (STstrindex(*cp_arr, "where", 0, TRUE)
+				|| STstrindex(*cp_arr, "with", 0, TRUE))
+				cp = STprintf(cp, "%s ,page_size=%d",
+					    *cp_arr, page_size);
+			    else
+				cp = STprintf(cp, "%s with page_size=%d",
+					    *cp_arr, page_size);
+			}
+##			IIstatement cp
+		    }
+		}
+
+		continue;
+	    }
+	}
+
+    }	/* end of while loop. */
+
+    IIlq_Protect(FALSE);
+
+    return(E_DU_OK);
+}
+
+/*{
+** Name: duc_find_cats() -  find the system catalogs that exist in this db.
+**
+** Description:
+**	This routine retrieves the names of all the system catalogs
+**	in the database that are not already the specified page size.
+**	Extended catalogs (ii_xxx style) are skipped.  The database
+**	should already be open.
+**
+**      Note that if the database is distributed, the catalog information
+**      will retrieve from iidd_ddb_objects catalog.
+**
+** Inputs:
+**	page_size			Desired page size
+**      duc_errcb                       Sysmod error-handling control block.
+**      ddb_flag                        value of (iidatabase.dbservice &
+**                                          DU_1SER_DDB )
+**
+** Outputs:
+**      *duc_modes
+**      *duc_errcb                      If an error occurs, this block will be
+**                                      set by a call to du_error().
+**      Returns:
+**          E_DU_OK                     Successful completion.
+**          W_DU1030_UNKNOWN_CATALOG_SY This is not a fatal error.  It will
+**                                      inform the user that a catalog exists
+**                                      which this utility doesn't know about.
+**      Exceptions:
+**          none
+**
+** Side Effects:
+**          none
+**
+** History :
+**          21-Apr-2004 (nansa02)
+**            Created from sysmod.
+**
+*/
+
+DU_STATUS
+##  duc_find_cats(page_size,duc_errcb,star_flag)
+## i4 page_size;
+DU_ERROR *duc_errcb;
+i4 star_flag;
+##  {
+##	char	    cat_name[DB_MAXNAME + 1];
+	i4	    i;
+	DUU_CATDEF   *catdef_p;
+
+
+    if ( star_flag )
+    {
+##	range of a is iidd_ddb_objects
+##	range of b is iidd_ddb_tableinfo
+##	retrieve unique (cat_name= a.object_name)
+##	    where a.system_object = "Y" and
+##	    (a.object_type = "L" or a.object_type = "T") and
+##	    b.object_base = a.object_base and b.local_type = "T"
+##	{
+		STtrmwhite(cat_name);
+
+	    for (i = 0; i < DU_MAXCAT_DEFS; i++)
+	    {
+		if (Dus_allcat_defs[i] == NULL)
+		    /* There's a set of catalog definitions missing. */
+		    continue;
+
+		for (catdef_p = Dus_allcat_defs[i];
+		     catdef_p->du_relname;
+		     catdef_p++
+		    )
+		{
+		    /*
+		    ** Case insensitive compare to check system catalogs
+		    */
+		    if (!STcasecmp(catdef_p->du_relname, cat_name ))
+		    {
+			catdef_p->du_exists	= TRUE;
+			break;
+		    }
+		}
+
+		if (catdef_p->du_exists)
+		    break;
+	    }	/* end of while loop. */
+
+	    if (i > DU_MAXCAT_DEFS)
+	        du_error(duc_errcb, W_DU1030_UNKNOWN_CATALOG_SY,
+			 2, 0, cat_name);
+##	}
+    }
+
+/* NOTE: iidbcapabilities (a standard catalog) would be excluded by this query
+** without the OR clause below. It should be handled here, along with
+** other standard catalogs; the "modifyfe/upgradefe" facilities only
+** handle front-end catalogs. iirelation can't currently distinguish between
+** a standard catalog and a front-end catalog (they are both considered
+** "extended" catalogs).	(5/90 pete)
+*/
+##	retrieve (cat_name = iirelation.relid)		/* Retrieve: */
+##	/*  System catalogs */
+##	    where mod(iirelation.relstat, 2) = 1
+##	    and iirelation.relpgsize != page_size
+##	/*  excluding: views, */
+##	    and mod(iirelation.relstat/32, 2) = 0
+##	/*  indexes, */
+##	    and mod(iirelation.relstat/128, 2) = 0
+##	/*  and front-end cats*/
+##	    and (mod(iirelation.relstat/16384, 2) = 0
+##		OR iirelation.relid = "iidbcapabilities"
+##		OR iirelation.relid = "iisectype"
+##		OR iirelation.relid = "iiprivlist")
+##	{
+	    (VOID) STtrmwhite(cat_name);
+
+	    for (i = 0; i < DU_MAXCAT_DEFS; i++)
+	    {
+		if (Dus_allcat_defs[i] == NULL)
+		    /* There's a set of catalog definitions missing. */
+		    continue;
+
+		for (catdef_p = Dus_allcat_defs[i];
+		     catdef_p->du_relname;
+		     catdef_p++
+		    )
+		{
+		    /*
+		    ** Case insensitive compare to check system catalogs
+		    */
+		    if (!STcasecmp(catdef_p->du_relname, cat_name ))
+		    {
+			catdef_p->du_exists	= TRUE;
+			break;
+		    }
+		}
+
+		if (catdef_p->du_exists)
+		    break;
+	    }	/* end of while loop. */
+
+	    if (i > DU_MAXCAT_DEFS)
+	        du_error(duc_errcb, W_DU1030_UNKNOWN_CATALOG_SY,
+			 2, 0, cat_name);
+##	}
+
+	return(E_DU_OK);
+##  }
+
+VOID
+duc_register_table(char *catalog)
+{
+    duc_create_catalog(catalog);
+}
+
+/*
+** Name: duc_create_catalog
+**
+** Description:
+**
+**	Modularize creation of system catalogs. 
+**      Find the create statement for the specified catalog,
+**      fix DB_MAXNAME references in the query and then execute it
+** 
+** Inputs:
+**	catalog		Catalog name
+**
+** Returns:
+**      none
+**
+** Outputs:
+**	none
+**
+** History:
+**      24-oct-2008 (stial01)
+**       Created.
+*/
+VOID
+duc_create_catalog(char *catalog)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char *qry;
+    i4 errorno;
+    char errortext[256];
+    char *catname;
+    i4		relwid;
+    i4		relpgtype;
+    i4		relpgsize;
+    i4		relatts;
+    EXEC SQL END DECLARE SECTION;
+    DUC_CATDEF *catdef;
+    char *fix_maxname;
+    char *buf = NULL;
+    char maxbuf[20];
+    char max2buf[20];
+    i4	 len;
+    STATUS	memstat;
+
+    qry = NULL;
+    for (catdef = &Duc_catdef[0]; catdef->catname; catdef++)
+    {
+	if (!STcmp(catdef->catname, catalog))
+	    break;
+    }
+
+    if (!catdef->catname)
+    {
+	SIprintf("Can't find create for %s\n", catalog);
+	return;
+    }
+
+    if (!catdef->create)
+    {
+	/* MUST create with QUEL */
+	duc_quel_create(catalog);
+	return;
+    }
+
+    qry = catdef->create;
+
+    /* Check for ##DB_MAXNAME or ##DB_MAXNAME*2 */
+    fix_maxname = STstrindex(qry, "##DB_MAXNAME", 0, 0);
+
+    if (fix_maxname)
+    {
+	CVla((i4)DB_MAXNAME, maxbuf);
+	CVla((i4)DB_MAXNAME*2, max2buf);
+	buf = (char *) MEreqmem(0, STlength(qry) + 1, TRUE, &memstat);
+	if (!buf || memstat != OK)
+	    exit(0);
+	STcopy(qry, buf); 
+
+	for ( ; ; )
+	{
+	    fix_maxname = STstrindex(buf, "##DB_MAXNAME", 0, 0);
+	    if (!fix_maxname)
+		break;
+
+	    if (!MEcmp(fix_maxname, "##DB_MAXNAME##", 14))
+	    {
+		MEmove(STlength(maxbuf), maxbuf, ' ', 14, fix_maxname);
+		continue;
+	    }
+	    else if (!MEcmp(fix_maxname, "##DB_MAXNAME*2##", 16))
+	    {
+		MEmove(STlength(max2buf), max2buf, ' ', 16, fix_maxname);
+		continue;
+	    }
+	}
+	qry = buf;
+    }
+
+    if (STbcompare(qry, 8, "Register", 8, TRUE))
+    {
+	exec sql execute immediate :qry;
+	if (sqlca.sqlcode)
+	{
+	    EXEC SQL INQUIRE_SQL(:errorno = ERRORNO, :errortext = ERRORTEXT);
+
+	    /* upgradedb may not have dropped the catalog */
+	    ensure_not_exists(catalog);
+
+	    /* try again */
+	    exec sql execute immediate :qry;
+	}
+
+	/*
+	** Catalog relwid should match the size of the corresponding structure
+	** Also catalogs should not have rows spanning pages,
+	** if that happens we should require a bigger page size
+	** For now, print a warning
+	*/
+	if (sqlca.sqlcode == 0)
+	{
+	    catname = catdef->catname;
+	    exec sql select relwid, relpgsize, relpgtype, relatts
+		into :relwid, :relpgsize, :relpgtype, :relatts
+		from iirelation where lowercase(relid) = :catname;
+	    if (relwid > relpgsize || (catdef->size && relwid > catdef->size))
+	    {
+		/* structure my have extra bytes for alignment */
+		SIprintf("WARNING %s relwid %d (%d) pagesize %d pagetype %d\n",
+		catname, relwid, catdef->size, relpgsize, relpgtype);
+	    }
+	    if (relatts != catdef->columns)
+	    {
+		SIprintf("INTERNAL ERROR: Fix DUC_CATDEF for %s (%d %d)\n",
+			catdef->catname, catdef->columns, relatts);
+	    }
+	}
+    }
+    else
+    {
+	/*
+	** execute immediate REGISTER table stores query in iiqrytext
+	** "execute immediate register table..."
+	** Caller seems to check sqlcode, so we won't do it here
+	*/
+	IIsqInit(&sqlca);
+	IIwritio(0,(short*)0,1,32,0,qry);
+	IIsyncup((char *)0,0);
+    }
+
+    if (buf)
+	MEfree(buf);
+
+    return;
+}
+
+/*
+** Name: duc_modify_catalog
+**
+** Description:
+**
+**	Modularize modify system catalog.
+**      Find the modify statement for the specified catalog and execute it.
+**
+** Inputs:
+**	catalog		Catalog name
+**
+** Returns:
+**      none
+**
+** Outputs:
+**	none
+**
+** History:
+**      24-oct-2008 (stial01)
+**       Created.
+*/
+VOID
+duc_modify_catalog(char *catalog)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char *qry;
+    EXEC SQL END DECLARE SECTION;
+    DUC_CATDEF *catdef;
+
+    qry = NULL;
+    for (catdef = &Duc_catdef[0]; catdef->catname; catdef++)
+    {
+	if (!STcmp(catdef->catname, catalog))
+	    break;
+    }
+
+    if (!catdef->catname)
+    {
+	SIprintf("Can't find modify for %s\n", catalog);
+	return;
+    }
+
+    /* Some catalogs have index but no modify statement */
+    if (catdef->modify)
+    {
+	qry = catdef->modify;
+	exec sql execute immediate :qry;
+    }
+   
+    if (catdef->index1)
+    {
+       qry = catdef->index1;
+       exec sql execute immediate :qry;
+    }
+
+    if (catdef->index2)
+    {
+       qry = catdef->index2;
+       exec sql execute immediate :qry;
+    }
+
+    return;
+}
+
+/*
+** Name: duc_create_procedure
+**
+** Description:
+**
+**	Modularize creation of internal database procedures.
+**      Find the create procedure statement for the specified procedure,
+**      fix DB_MAXNAME references in the query and then execute it
+**
+** Inputs:
+**	procedure	Procedure name
+**
+** Returns:
+**      none
+**
+** Outputs:
+**	none
+**
+** History:
+**      24-oct-2008 (stial01)
+**       Created.
+*/
+VOID
+duc_create_procedure(char *procedure)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char *qry;
+    EXEC SQL END DECLARE SECTION;
+    DUC_PROCDEF *procdef;
+    char *fix_maxname;
+    char *buf = NULL;
+    char maxbuf[20];
+    char max2buf[20];
+    i4	 len;
+    STATUS	memstat;
+
+    qry = NULL;
+    for (procdef = &Duc_procdef[0]; procdef->procname; procdef++)
+    {
+	if (!STcmp(procdef->procname, procedure))
+	    break;
+    }
+
+    if (!procdef->procname || !procdef->procdef)
+    {
+	SIprintf("Can't find procedure definition for %s\n", procedure);
+	return;
+    }
+
+    qry = procdef->procdef;
+
+    /* Check for ##DB_MAXNAME or ##DB_MAXNAME*2 */
+    fix_maxname = STstrindex(qry, "##DB_MAXNAME", 0, 0);
+
+    if (fix_maxname)
+    {
+	CVla((i4)DB_MAXNAME, maxbuf);
+	CVla((i4)DB_MAXNAME*2, max2buf);
+	buf = (char *) MEreqmem(0, STlength(qry) + 1, TRUE, &memstat);
+	if (!buf || memstat != OK)
+	    exit(0);
+	STcopy(qry, buf); 
+
+	for ( ; ; )
+	{
+	    fix_maxname = STstrindex(buf, "##DB_MAXNAME", 0, 0);
+	    if (!fix_maxname)
+		break;
+
+	    if (!MEcmp(fix_maxname, "##DB_MAXNAME##", 14))
+	    {
+		MEmove(STlength(maxbuf), maxbuf, ' ', 14, fix_maxname);
+		continue;
+	    }
+	    else if (!MEcmp(fix_maxname, "##DB_MAXNAME*2##", 16))
+	    {
+		MEmove(STlength(max2buf), max2buf, ' ', 16, fix_maxname);
+		continue;
+	    }
+	}
+	qry = buf;
+    }
+
+    exec sql execute immediate :qry;
+
+    if (buf)
+	MEfree(buf);
+
+    return;
+}
+
+/*
+** Name: duc_ins_capabilities
+**
+** Description: Insert a row to iidbcapabilities
+**
+**
+** Inputs:
+**      capabilitiy
+**      value
+**
+** Returns:
+**      none
+**
+** Outputs:
+**	none
+**
+** History:
+**      26-nov-2008 (stial01)
+**       Created.
+*/
+VOID
+duc_ins_capabilities(char *capabilities, char *value)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char *cap;
+    char *val;
+    EXEC SQL END DECLARE SECTION;
+
+    cap = capabilities;
+    val = value;
+    exec sql insert into iidbcapabilities (cap_capability,cap_value)
+	 values (:cap, :val); 
+}
+
+
+
+/*{
+** Name:  duc_quel_create
+**
+** Description:
+**        This routine creates a catalog with QUEL
+**
+**	When SQL92 compliance was first done, the plan was to translate
+**	NOT NULL declarations into CHECK constraints.  Had that been
+**	followed through on, it would have created a chicken-and-egg
+**	situation with catalogs wanting NOT NULL columns.  So, the
+**	original notion was that catalogs holding constraints would
+**	have to be created in QUEL.  These catalogs were:
+**		iidevices, iiqrytext, iitree, iiprotect, iiintegrity
+**
+**	As it happens, NOT NULL ended up meaning what it always meant,
+**	and there really isn't any real requirement for these catalogs
+**	to be done in QUEL.  Some are still done that way, mostly
+**	out of inertia.
+** 
+** NOTE: some of these create statements use db_maxname_hostvar !!!
+** 
+** Inputs:
+**	none
+** Outputs:
+**	none
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	      None
+**
+** History:
+**      07-apr-2009
+**          Created (from code in other routines)
+*/
+static VOID
+duc_quel_create(char *catalog)
+{
+
+	if (!STcmp(catalog, "iidevices"))
+	{
+##	create iidevices (devrelid=i4, devrelidx=i4, devrelocid=i4,
+##			  devloc=char(db_maxname_hostvar))
+	}
+
+	else if (!STcmp(catalog, "iiqrytext"))
+	{
+##	create iiqrytext(txtid1=i4, txtid2=i4, mode=i4, seq=i4,
+##			 status=i4, txt=varchar(240))
+
+	}
+
+	else if (!STcmp(catalog, "iitree"))
+	{
+##	create iitree(treetabbase=i4, treetabidx=i4,treeid1=i4, treeid2=i4, 
+##		      treeseq=i2, treemode=i2, treevers=i2,
+##		      treetree=varchar(1024))
+	}
+
+	else if (!STcmp(catalog, "iiprotect"))
+	{
+##	create iiprotect(
+##		protabbase=i4,		protabidx=i4,
+##		propermid=i2,		proflags=i2,
+##		protodbgn=i2,		protodend=i2,
+##		prodowbgn=i2,		prodowend=i2,
+##		proqryid1=i4,		proqryid2=i4,
+##		protreeid1=i4,		protreeid2=i4,
+##		procrtime1=i4,		procrtime2=i4,
+##		proopctl=i4,		proopset=i4,
+##		provalue=i4,		prodepth=i2,
+##		probjtype=char(1),	probjstat=char(1),
+##		probjname=char(db_maxname_hostvar),
+##		probjowner=char(db_maxname_hostvar),
+##		prograntor=char(db_maxname_hostvar),
+##		prouser=char(db_maxname_hostvar),	proterm=char(16),
+##		profill3=i2,		progtype=i2,	
+##		proseq=i4,
+##		prodomset1=i4,          prodomset2=i4,		
+##		prodomset3=i4, 		prodomset4=i4,		
+##		prodomset5=i4, 		prodomset6=i4,		
+##		prodomset7=i4, 		prodomset8=i4,		
+##		prodomset9=i4, 		prodomseta=i4,		
+##		prodomset11=i4,		prodomset12=i4,		
+##		prodomset13=i4,		prodomset14=i4,		
+##		prodomset15=i4,		prodomset16=i4,		
+##		prodomset17=i4,		prodomset18=i4,		
+##		prodomset19=i4,		prodomset20=i4,		
+##		prodomset21=i4,		prodomset22=i4,		
+##		prodomset23=i4,		prodomset24=i4,		
+##		prodomset25=i4,		prodomset26=i4,		
+##		prodomset27=i4,		prodomset28=i4,		
+##		prodomset29=i4,		prodomset30=i4,		
+##		prodomset31=i4,		prodomset32=i4,		
+##		prodomset33=i4,
+##		proreserve=char(32))
+	}
+
+	else if (!STcmp(catalog, "iiintegrity"))
+	{
+##      create iiintegrity(inttabbase=i4, inttabidx=i4,
+##                         intqryid1=i4, intqryid2=i4, inttreeid1=i4,
+##                         inttreeid2=i4, intresvar=i2, intnumber=i2,
+##                         intseq=i4,
+##                         intdomset1=i4, 
+##                         intdomset2=i4, intdomset3=i4, intdomset4=i4, 
+##                         intdomset5=i4, intdomset6=i4, intdomset7=i4, 
+##                         intdomset8=i4, intdomset9=i4, intdomseta=i4,
+##                         intdomset11=i4, intdomset12=i4, intdomset13=i4,
+##                         intdomset14=i4, intdomset15=i4, intdomset16=i4,
+##                         intdomset17=i4, intdomset18=i4, intdomset19=i4,
+##                         intdomset20=i4, intdomset21=i4, intdomset22=i4,
+##                         intdomset23=i4, intdomset24=i4, intdomset25=i4,
+##                         intdomset26=i4, intdomset27=i4, intdomset28=i4,
+##                         intdomset29=i4, intdomset30=i4, intdomset31=i4,
+##                         intdomset32=i4, intdomset33=i4,
+##			   consname=char(db_maxname_hostvar),
+##                         consid1=i4,
+##                         consid2=i4,
+##			   consschema_id1=i4,
+##			   consschema_id2=i4,
+##			   consflags=i4, cons_create_date=i4,
+##			   consdelrule=i2, consupdrule=i2,
+##                         intreserve=char(28))
+	}
+}

@@ -1,0 +1,200 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	"mqeglobs.h"
+# include	"mqqg.h"
+
+
+/**
+** Name:	qsutils.qsc  -    Utilities to deal with QRY_SPEC arrays.
+**
+** Description:
+**	This file contains routines to deal with QRY_SPEC arrays.
+**	The routines were moved from bldwhere.qc.
+**
+** History:
+**	14-may-1987 (Joe)
+**		Moved from bldwhere.qc
+**	13-jul-87 (bab)	Changed memory allocation to use [FM]Ereqmem.
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh
+**	10-aug-88 (kenl)
+**		Added routine IIQFqsv_QGvalgen().  This routine is required
+**		for support of reading detail of M-D where one of the join
+**		columns is NULL.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+FUNC_EXTERN STATUS 	mqbldwhere();
+FUNC_EXTERN STATUS 	IIQFbwv_buildVALGEN();
+
+qs_text(tag, nqspec, qs, text)
+i2			tag;
+i4			*nqspec;
+register QRY_SPEC	*qs;
+char			*text;
+{
+	qs += (*nqspec)++;
+	qs->qs_var = (PTR) FEtsalloc(tag, text);
+	qs->qs_type = QS_TEXT;
+}
+
+qs_add(nqthere, qthere, naddq, addqs)
+register i4		*nqthere;
+register QRY_SPEC	*qthere;
+register i4		naddq;
+register QRY_SPEC	*addqs;
+{
+	qthere += (*nqthere);
+	(*nqthere) += naddq;
+	while (naddq-- > 0)
+	{
+	    STRUCT_ASSIGN_MACRO(*addqs, *qthere);
+	    qthere++;
+	    addqs++;
+	}
+}
+
+qs_count(qspecs)
+QRY_SPEC	*qspecs;
+{
+	register i4	n = 0;
+	while ((qspecs++)->qs_type != QS_END)
+	    n++;
+	return n;
+}
+
+qs_end(tag, n, qs)
+i2	tag;
+i4	n;
+QRY_SPEC	*qs;
+{
+	qs += n;
+	qs->qs_var = NULL;
+	qs->qs_type = QS_END;
+}
+
+qs_value(tag, n, qs, val)
+i2	tag;
+i4	*n;
+QRY_SPEC	*qs;
+DB_DATA_VALUE	*val;
+{
+	qs += (*n)++;
+	qs->qs_var = (PTR) val;
+	qs->qs_type = QS_VALUE;
+}
+
+
+/*{
+** Name:	IIQFqsv_QSvalgen	- Add a QS_VALGNSV QRY_SPEC to array.
+**
+** Description:
+**	This routine builds a QS_VALGNSV QRY_SPEC to point to
+**	a list of QUERY SPECS.  This is the NO SAVE version of VALGEN.
+**
+**	It then adds this new QRY_SPEC to an array of QRY_SPECs.
+**
+** Inputs:
+**	tag		{i2} A tag to allocate any new dynamic memory under.
+**
+**	n		{nat *} The number of elements in the array.
+**
+**	qvalspec	(QRY_SPEC **) An array of QRY_SPECs.
+**
+** Outputs:
+**	n		{nat *} Will be incremented by one.
+**
+**	qs		{QRY_SPEC **} An array of QRY_SPECs.  The
+**			QRY_SPEC made here will be put at the end
+**			of this array.
+** Side Effects:
+**	Allocates dynamic memory.
+**
+** History:
+**	10-aug-88 (kenl)
+**		Initial Version.
+*/
+VOID
+IIQFqsv_QSvalgen(tag, n, qs, qvalspec)
+i2	tag;
+i4	*n;
+QRY_SPEC	*qs;
+QRY_SPEC	*qvalspec;
+{
+	QSGEN		*qggen;
+
+	qs += (*n)++;
+	qggen = (QSGEN *)FEreqmem((u_i4)tag, (u_i4)sizeof(*qggen),
+	    FALSE, (STATUS *)NULL);
+	qggen->qsg_value = (PTR) qvalspec;
+	qggen->qsg_gen = IIQFbwv_buildVALGEN;
+	qs->qs_var = (PTR) qggen;
+	qs->qs_type = QS_VALGEN | QS_VALGNSV;
+}
+
+/*{
+** Name:	qs_gen		- Add a QS_VALGEN QRY_SPEC to array.
+**
+** Description:
+**	This routine copies an initialized MQQG_GEN structure into
+**	dynamic memory, and builds a QS_VALGEN QRY_SPEC to point to
+**	the new copy.
+**
+**	It then adds this new QRY_SPEC to an array of QRY_SPECs.
+**
+** Inputs:
+**	tag		{i2} A tag to allocate any new dynamic memory under.
+**
+**	n		{nat *} The number of elements in the array.
+**
+**	gen		{MQQG_GEN *} An initialized MQQG_GEN structure to
+**			point a QRY_SPEC at.
+**
+** Outputs:
+**	n		{nat *} Will be incremented by one.
+**
+**	qs		{QRY_SPEC **} An array of QRY_SPECs.  The
+**			QRY_SPEC made here will be put at the end
+**			of this array.
+** Side Effects:
+**	Allocates dynamic memory.
+**
+** History:
+**	13-may-1987 (Joe)
+**		Initial Version.
+**	<manual entries>
+*/
+VOID
+qs_gen(tag, n, qs, gen)
+i2		tag;
+i4		*n;
+QRY_SPEC	*qs;
+MQQG_GEN	*gen;
+{
+	MQQG_GEN	*newgen;
+	QSGEN		*qggen;
+
+	qs += (*n)++;
+	newgen = (MQQG_GEN *)FEreqmem((u_i4)tag, (u_i4)sizeof(*gen),
+	    FALSE, (STATUS *)NULL);
+	STRUCT_ASSIGN_MACRO(*gen, *newgen);
+	qggen = (QSGEN *)FEreqmem((u_i4)tag, (u_i4)sizeof(*qggen),
+	    FALSE, (STATUS *)NULL);
+	qggen->qsg_value = (PTR) newgen;
+	qggen->qsg_gen = mqbldwhere;
+	qs->qs_var = (PTR) qggen;
+	qs->qs_type = QS_VALGEN;
+}

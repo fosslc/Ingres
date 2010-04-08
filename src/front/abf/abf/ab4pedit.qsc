@@ -1,0 +1,272 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+#include	<tm.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<adf.h>
+#include	<afe.h>
+##include	<abclass.qsh>
+##include	<oocat.qsh>
+#include        <dmchecks.h>
+##include	"abclinfo.qsh"
+#include	"abfglobs.h"
+#include	"gncode.h"
+#include	"erab.h"
+
+/**
+** Name:	ab4pedit.qc -	ABF 4GL Procedure Component Edit Module.
+**
+** Description:
+**	Contains the definition of the component class edit information
+**	structure for the application 4GL procedure component objects.  Defines:
+**
+**	iiAB4GLProc	ABF 4GL procedure component class edit information.
+**
+** History:
+**	Revision 6.2  89/02  wong
+**	Initial revision.
+**
+**	02-dec-91 (leighb) DeskTop Porting Change:
+**		Added routines to pass data across ABF/IAOM boundary.
+** 6-Feb-92 (blaise)
+**	Added include abfglobs.h.
+**
+** 16-Nov-92 (donc)
+**	Modified COMP_CLASS_INFO initialilization to accomodate fix for bug 44162.
+**
+**	Revision 6.5
+**
+**	04-dec-92 (davel)
+**		In _display(), make new _passdec field invisible.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**/
+
+STATUS	iiabTstComp();
+STATUS	iiabSrEdit();
+STATUS	iiabSrCompile();
+STATUS	iiabSfilePrint();
+STATUS	iiabVerifyType();
+
+static VOID	_display();
+static STATUS	_save();
+static VOID	_destroy();
+static STATUS	_print();
+
+/*:
+** Name:	iiAB4GLProc -	ABF 4GL Procedure Component Class Information.
+**
+** Description:
+**	Defines additional class information for the 4GL procedure component
+**	objects for editing.
+*/
+
+#define _NewEditExpl	F_AB0052_NewEdit_expl
+#define _GoExpl		F_AB0054_GoProc_expl
+#define _EditExpl	F_AB0058_Edit_expl
+#define _CompileExpl	F_AB005C_Compile_expl
+#define _EmptyExpl	F_AB005E_Empty_expl
+#define _PrintExpl	F_AB005F_Print_expl
+
+GLOBALDEF const COMP_CLASS_INFO iiAB4GLProc = {
+	OC_OSLPROC,
+	ERx("abfprocd"), ERx("ab4glpro.hlp"), ERx("ab4glpmi.hlp"), 2,
+	F_AB0060_A4PDef_title,
+	F_AB0044_A4PDet_title,
+	-1,	NULL,	/* all types legal */
+	{NULL,	NULL},	_return_type,	_srcfile,  NULL, NULL, 	/* Fields */
+	/*{iiabNxtEdit,	AB_NewEdit,	_NewEditExpl,	0},	/* NextEdit */
+	{iiabTstComp,	FE_Go,		_GoExpl,	4},    /* Go, FRSkey4 */
+	{iiabSrEdit,	FE_Edit,	_EditExpl,	0},	/* Edit */
+	{iiabSrCompile,	FE_Compile,	_CompileExpl,	0},	/* Compile */
+	{NULL,		0,		_EmptyExpl,	0},	/* FormEdit */
+	{_print,	FE_Print,	_PrintExpl,	0},	/* Print */
+	_display, _save, _destroy, iiabVerifyType
+};
+
+static VOID
+##_display ( proc )
+##register _4GLPROC	*proc;
+##{
+##	char	*formname = iiAB4GLProc.form;
+##	i4	notnullable;
+##	i4	warning;
+##	char	title[63+1];
+
+	GLOBALREF char	*IIabExename;
+
+	IIUGfmt(title,sizeof(title)-1,ERget(iiAB4GLProc.title), 1, IIabExename);
+
+##	putform formname (
+##			_title = title,
+##			_language = ERx("4GL"),
+##			_srcfile = proc->source,
+##			_return_type = proc->return_type.db_data,
+##			_nullable = ERget(
+##			    AFE_NULLABLE_MACRO(proc->return_type.db_datatype)
+##					? F_UG0002_Yes2 : F_UG0007_No2
+##			),
+##			/* turn off validations! */
+##			_library = ERget(F_UG0007_No2),
+##			_symbol = ERx("!")
+##	);
+	/*
+	** Turn off 'symbol' and 'library'; turn on 'srcfile', which may
+	** also have been display-only for a library procedure.  Also, turn
+	** off 'nullable' field for return type "none" but make it enterable
+	** since host-language procedures may have made it display-only.
+	** Turn off "pass decimal as what type" field.
+	** Finally, toggle 'warning' depending on whether function name
+	** conflicts with system names.
+	*/
+	notnullable = ( proc->return_type.db_datatype == DB_NODT );
+	warning = !IIAFckFuncName(proc->name);
+##	set_frs field formname (
+##			invisible(_symbol) = 1,
+##			invisible(_library) = 1,
+##			invisible(_srcfile) = 0,
+##			displayonly(_srcfile) = 0,
+##			underline(_srcfile) = 1,
+##			invisible(_nullable) = notnullable,
+##			displayonly(_nullable) = 0,
+##			underline(_nullable) = 1,
+##			invisible(_passdec) = 1,
+##			invisible(_warning) = warning
+##	);
+##}
+
+/*
+** Name:	_save() -	Save a 4GL Procedure Component Definition
+**					from the Form.
+** Description:
+**	Saves the attributes for a 4GL procedure component object from the
+**	component definition form for this class.  This checks if any values
+**	changed before modifying the object's attributes and only then writing
+**	the object to the database.
+**
+**	The values that can be changed are the source-code file and the return
+**	type.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**	proc	{_4GLPROC *}  The 4GL procedure component object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw)  Written.
+**	05/90 (jhw)  Added long remark check for save.
+*/
+
+static STATUS
+##_save ( app, proc )
+APPL		*app;
+##_4GLPROC	*proc;
+##{
+##	char	*formname = iiAB4GLProc.form;
+##	i4	src_change;
+##	i4	srem_change;
+
+	STATUS	IIAMwr4GLProc();
+
+##	inquire_frs field formname (
+##			src_change = change(_srcfile),
+##			srem_change = change(_short_remark)
+##	);
+
+	/* Fields should have been validated already. */
+
+	if ( src_change == 1 )
+##	{
+##		char	source[48+1];
+
+##		getform formname ( source = _srcfile );
+		if ( !STequal(proc->source, source) )
+		{
+			iiabNewFileName(proc->source, source);
+			proc->source = FEtsalloc( proc->data.tag, source );
+			if ((proc->flags & APC_RECOMPILE) == 0)
+				proc->flags |= (APC_RECOMPILE|APC_DEFCHANGE);
+			proc->data.dirty = TRUE;
+		}
+##	}
+
+	if ( iiabGetRetType( iiAB4GLProc.form, proc->data.tag,
+				&proc->return_type ) )
+	{
+		/* Invalidate our callers */
+		IIAMxdsDepSearch((APPL_COMP *)proc, IIAM_zccCompChange,
+				 (PTR)NULL);
+
+		if ((proc->flags & APC_RECOMPILE) == 0)
+			proc->flags |= (APC_RECOMPILE|APC_DEFCHANGE);
+		proc->data.dirty = TRUE;
+	}
+
+	if ( srem_change != 0 )
+##	{ /* short remark */
+		char	*cp;
+##		char	short_remark[OOSHORTREMSIZE+1];
+
+##		set_frs field formname ( change(_short_remark) = 0 );
+##		getform formname ( short_remark = _short_remark );
+		if ( ! STequal(proc->short_remark, short_remark)
+			&& (cp = FEtsalloc(proc->data.tag, short_remark))
+				!= NULL )
+		{
+			proc->short_remark = cp;
+			proc->data.dirty = TRUE;
+		}
+##	}
+
+	_VOID_ IIOOckLongRemark((OO_OBJECT *)proc);
+
+	return proc->data.dirty ? iiabSvComp((APPL_COMP *)proc, IIAMwr4GLProc )
+				: OK;
+##}
+
+/*
+** Name:	_destroy() -	Destroy a 4GL Procedure Component Object.
+**
+** Description:
+**	ABF specific destroy simply removes names for the object.
+**
+** Input:
+**	proc	{_4GLPROC *}  The 4GL procedure component.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+static VOID
+_destroy ( proc )
+_4GLPROC	*proc;
+{
+	iiabRmObjLoc(proc->source);	/* remove any objects or timestamps */
+	iiabNewFileName(proc->source, (char *)NULL);	/* clear object name */
+	IIGNdnDeleteName(AGN_OPROC, proc->symbol);
+}
+
+static STATUS
+_print ( appl, proc )
+APPL		*appl;
+_4GLPROC	*proc;
+{
+	return iiabSfilePrint(appl, proc->source);
+}

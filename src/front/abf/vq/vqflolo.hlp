@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqflolo.hlp, subtopic 'Screen layout' behind the main AFD help screen.
+/#-- 
+Application Flow Diagram 
+Editing: orderentry            +-------Changed-+ <--frame status
+         /                     |  orderentry   |
+    application name           +---+----<Menu>-+     expansion indicator
+                                   |             indicates hidden peer frames
+                                   |                             /
+  menuitem   +--------------+--------------+----------------+-->
+  text-->  NewOrder       FindOrder      ChangeOrder      Report
+             |              |              |                |
+          +--+--------+  +--+---Error-+  +-+---Changed-+  +-+--------+
+          | neworder  |  | findorder  |  | changeorder |  |  report  |
+          +---<Append>+  +----<Browse>+  +-+---<Update>+  +--<Report>+
+ indicates--> |                            |       \
+ hidden       V            +---------------+      frame type
+ child frames            ShowOrders 
+                           |
+                       +---+----New-+
+                       |  showorder <--frame name
+                       +----<Browse>+
+/#subtopic 'Layout description' vqfldesc.hlp

@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!hdr!hdr_vms
+#
+
+SubDir ING_SRC cl hdr hdr_vms ;
+
+IISUBSYS cl hdr hdr_vms ;
+
+IIBZARCH bzarch.h ;
+
+IIGV gv.h ;

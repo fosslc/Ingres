@@ -1,0 +1,26 @@
+#
+# Jamfile file for back!dmf!dml
+#
+#    20-Oct-2009 (hweho01)
+#      Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back dmf dml ;
+
+IISUBSYS back dmf dml ;
+
+IINOOPTIM dmcstart.c : dr6_us5 ;
+IINOOPTIM dmcadd.c : dr6_us5 i64_aix ;
+
+
+IILIBRARY DMFLIB : dmxsvpt.c dmxsecure.c dmxresume.c dmxcommit.c 
+	dmxbegin.c dmxabort.c dmtshow.c dmtscost.c dmtopen.c
+	dmtdelete.c dmtcreate.c dmtclose.c dmtalter.c dmsseq.c
+	dmsiiseq.c dmrunfix.c dmrthreads.c dmrreplace.c dmrput.c
+	dmrpos.c dmrload.c dmrget.c dmrdump.c dmrdelete.c
+	dmralter.c dmragg.c dmpe.c dmhfile.c dmcwrite.c
+	dmcstusr.c dmcstop.c dmcstart.c dmcshow.c dmcrepq.c
+	dmcread.c dmcrcvry.c dmcopen.c dmclwrt.c dmcgcmt.c dmcfast.c
+	dmcfabrt.c dmcend.c dmcdel.c dmccptmr.c dmcclose.c dmccdead.c
+	dmcbegin.c dmcalter.c dmcadd.c dmxxa.c dmttbllock.c ;
+
+IILIBRARY IMPDMFLIBDATA : dmldata.c ;

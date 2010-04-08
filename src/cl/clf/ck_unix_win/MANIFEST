@@ -1,0 +1,26 @@
+#
+# MANIFEST file for cl!clf!ck_unix_win
+#
+
+SubDir ING_SRC cl clf ck_unix_win ;
+
+IISUBSYS cl clf ck_unix_win ;
+
+if ! $(NT)
+{
+IIBINSH cktmpl_wrap : cktmpl_wrap.sh ;
+
+IICCPPFILE $(INGFILES)/cktmpl.def : cktmpl.ccpp ;
+IICCPPFILE $(INGFILES)/cktmpl_cpio.def : cktmpl_cpio.ccpp ;
+IICCPPFILE $(INGFILES)/cktmpl_ocfs.def : cktmpl_ocfs.ccpp ;
+IICCPPFILE $(INGFILES)/cktmpl_wrap.tpl : cktmpl_wrap.ccpp ;
+}
+else
+{
+
+IICCPPFILE $(INGFILES)/cktmpl.def : cktmpl.ccpp ;
+
+}
+IILIBRARY COMPATLIB : cksubst.c ckspawn.c ckerror.c ck.c ;
+
+

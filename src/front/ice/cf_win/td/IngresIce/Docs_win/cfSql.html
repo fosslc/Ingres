@@ -1,0 +1,3320 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word 9">
+<meta name=Originator content="Microsoft Word 9">
+<link rel=File-List href="./cfsql_files/filelist.xml">
+<title>SQL Keyword</title>
+<!--[if gte mso 9]><xml>
+ <o:DocumentProperties>
+  <o:Author>Raymond Fan</o:Author>
+  <o:Template>Normal</o:Template>
+  <o:LastAuthor>Raymond Fan</o:LastAuthor>
+  <o:Revision>3</o:Revision>
+  <o:TotalTime>5</o:TotalTime>
+  <o:Created>1999-12-16T17:10:00Z</o:Created>
+  <o:LastSaved>2000-10-21T07:59:00Z</o:LastSaved>
+  <o:Pages>8</o:Pages>
+  <o:Words>1476</o:Words>
+  <o:Characters>8139</o:Characters>
+  <o:Company>Ingres Corporation</o:Company>
+  <o:Lines>303</o:Lines>
+  <o:Paragraphs>136</o:Paragraphs>
+  <o:CharactersWithSpaces>9564</o:CharactersWithSpaces>
+  <o:Version>9.2720</o:Version>
+ </o:DocumentProperties>
+</xml><![endif]-->
+<style>
+<!--
+ /* Font Definitions */
+@font-face
+	{font-family:Courier;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:modern;
+	mso-font-format:other;
+	mso-font-pitch:fixed;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:"Tms Rmn";
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:roman;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:AvantGarde;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:swiss;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:ZapfDingbats;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:2;
+	mso-generic-font-family:decorative;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:0 268435456 0 0 -2147483648 0;}
+@font-face
+	{font-family:"Arial Narrow";
+	panose-1:2 11 5 6 2 2 2 3 2 4;
+	mso-font-charset:0;
+	mso-generic-font-family:swiss;
+	mso-font-pitch:variable;
+	mso-font-signature:647 0 0 0 159 0;}
+@font-face
+	{font-family:"Bookman Old Style";
+	panose-1:2 5 6 4 5 5 5 2 2 4;
+	mso-font-charset:0;
+	mso-generic-font-family:roman;
+	mso-font-pitch:variable;
+	mso-font-signature:647 0 0 0 159 0;}
+@font-face
+	{font-family:Palatino;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-alt:"Book Antiqua";
+	mso-font-charset:0;
+	mso-generic-font-family:roman;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:StoneSerif;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:auto;
+	mso-font-format:other;
+	mso-font-pitch:auto;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:Line-Draw;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:decorative;
+	mso-font-format:other;
+	mso-font-pitch:auto;
+	mso-font-signature:3 0 0 0 1 0;}
+ /* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{mso-style-parent:"";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	font-family:"Times New Roman";
+	mso-fareast-font-family:"Times New Roman";}
+h1
+	{mso-style-next:Normal;
+	margin-top:.5in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:18.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:1;
+	tab-stops:48.0pt;
+	font-size:16.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-font-kerning:0pt;
+	mso-bidi-font-weight:normal;}
+h2
+	{mso-style-parent:"Heading 1";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:14.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:2;
+	tab-stops:48.0pt;
+	font-size:12.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+h3
+	{mso-style-parent:"Heading 2";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:3;
+	tab-stops:48.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+h4
+	{mso-style-parent:"Heading 3";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:4;
+	tab-stops:48.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+h5
+	{mso-style-next:"Normal Indent";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	mso-outline-level:5;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-bidi-font-weight:normal;}
+h6
+	{mso-style-next:"Normal Indent";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	mso-outline-level:6;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	font-weight:normal;
+	text-decoration:underline;
+	text-underline:single;}
+p.MsoHeading7, li.MsoHeading7, div.MsoHeading7
+	{mso-style-next:"Normal Indent";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	mso-outline-level:7;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.MsoHeading8, li.MsoHeading8, div.MsoHeading8
+	{mso-style-next:"Normal Indent";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	mso-outline-level:8;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.MsoHeading9, li.MsoHeading9, div.MsoHeading9
+	{mso-style-next:"Normal Indent";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	mso-outline-level:9;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.MsoIndex1, li.MsoIndex1, div.MsoIndex1
+	{mso-style-update:auto;
+	mso-style-next:"Index 2";
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoIndex2, li.MsoIndex2, div.MsoIndex2
+	{mso-style-update:auto;
+	mso-style-parent:"Index 1";
+	mso-style-next:"Index 3";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.25in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoIndex3, li.MsoIndex3, div.MsoIndex3
+	{mso-style-update:auto;
+	mso-style-parent:"Index 2";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoIndex4, li.MsoIndex4, div.MsoIndex4
+	{mso-style-update:auto;
+	mso-style-parent:"Index 3";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.75in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoIndex5, li.MsoIndex5, div.MsoIndex5
+	{mso-style-update:auto;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoIndex6, li.MsoIndex6, div.MsoIndex6
+	{mso-style-update:auto;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.25in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoIndex7, li.MsoIndex7, div.MsoIndex7
+	{mso-style-update:auto;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoToc1, li.MsoToc1, div.MsoToc1
+	{mso-style-update:auto;
+	mso-style-next:"TOC 2";
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:6.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right dotted 5.4in;
+	font-size:16.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.MsoToc2, li.MsoToc2, div.MsoToc2
+	{mso-style-update:auto;
+	mso-style-parent:"TOC 1";
+	mso-style-next:Normal;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:2.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right dotted 5.4in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoToc3, li.MsoToc3, div.MsoToc3
+	{mso-style-update:auto;
+	mso-style-parent:"TOC 2";
+	mso-style-next:Normal;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:2.0pt;
+	margin-left:.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right dotted 5.4in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoToc4, li.MsoToc4, div.MsoToc4
+	{mso-style-update:auto;
+	mso-style-parent:"TOC 3";
+	mso-style-next:Normal;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:2.0pt;
+	margin-left:.5in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right dotted 5.4in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoToc5, li.MsoToc5, div.MsoToc5
+	{mso-style-update:auto;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:.5in;
+	margin-bottom:0in;
+	margin-left:2.0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:dotted 5.75in right blank 6.0in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoToc6, li.MsoToc6, div.MsoToc6
+	{mso-style-update:auto;
+	mso-style-parent:"TOC 1";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:.5in;
+	margin-bottom:6.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right dotted 5.4in left 5.75in right blank 6.0in;
+	font-size:20.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.MsoToc7, li.MsoToc7, div.MsoToc7
+	{mso-style-update:auto;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:.5in;
+	margin-bottom:0in;
+	margin-left:3.0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:dotted 5.75in right blank 6.0in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoToc8, li.MsoToc8, div.MsoToc8
+	{mso-style-update:auto;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:.5in;
+	margin-bottom:0in;
+	margin-left:3.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:dotted 5.75in right blank 6.0in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoNormalIndent, li.MsoNormalIndent, div.MsoNormalIndent
+	{margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.75in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoFootnoteText, li.MsoFootnoteText, div.MsoFootnoteText
+	{margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoHeader, li.MsoHeader, div.MsoHeader
+	{margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 48.0pt 420.0pt;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoFooter, li.MsoFooter, div.MsoFooter
+	{margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 5.5in;
+	border:none;
+	mso-border-top-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:1.0pt 0in 0in 0in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MsoIndexHeading, li.MsoIndexHeading, div.MsoIndexHeading
+	{mso-style-next:"Index 1";
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:12.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	border:none;
+	mso-border-bottom-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:0in 0in 1.0pt 0in;
+	font-size:12.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.MsoCaption, li.MsoCaption, div.MsoCaption
+	{mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+span.MsoFootnoteReference
+	{mso-ansi-font-size:8.0pt;
+	mso-text-raise:3.0pt;
+	vertical-align:super;}
+p.MsoMacroText, li.MsoMacroText, div.MsoMacroText
+	{mso-style-parent:"";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	tab-stops:24.0pt 48.0pt 1.0in 96.0pt 120.0pt 2.0in 168.0pt 192.0pt 3.0in;
+	font-size:10.0pt;
+	font-family:"Arial Narrow";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+a:link, span.MsoHyperlink
+	{color:blue;
+	text-decoration:underline;
+	text-underline:single;}
+a:visited, span.MsoHyperlinkFollowed
+	{color:purple;
+	text-decoration:underline;
+	text-underline:single;}
+p.Leadin, li.Leadin, div.Leadin
+	{mso-style-name:Leadin;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	text-indent:-24.0pt;
+	mso-pagination:widow-orphan lines-together;
+	mso-list:l0 level1 lfo2;
+	tab-stops:list 0in;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.NormalLeadin, li.NormalLeadin, div.NormalLeadin
+	{mso-style-name:NormalLeadin;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalLeft, li.NormalLeft, div.NormalLeft
+	{mso-style-name:NormalLeft;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	text-indent:-1.5in;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.table, li.table, div.table
+	{mso-style-name:table;
+	margin:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.extraspace, li.extraspace, div.extraspace
+	{mso-style-name:"extra space";
+	mso-style-next:Normal;
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.GlossaryTerm, li.GlossaryTerm, div.GlossaryTerm
+	{mso-style-name:GlossaryTerm;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.headerfirst, li.headerfirst, div.headerfirst
+	{mso-style-name:"header first";
+	mso-style-parent:Header;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 48.0pt 420.0pt;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.headereven, li.headereven, div.headereven
+	{mso-style-name:"header even";
+	mso-style-parent:Header;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 78.0pt 408.0pt;
+	border:none;
+	mso-border-bottom-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:0in 0in 3.0pt 0in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.copyright, li.copyright, div.copyright
+	{mso-style-name:copyright;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.Important, li.Important, div.Important
+	{mso-style-name:Important;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.headerodd, li.headerodd, div.headerodd
+	{mso-style-name:"header odd";
+	mso-style-parent:Header;
+	margin:0in;
+	margin-bottom:.0001pt;
+	text-align:right;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 5.5in;
+	border:none;
+	mso-border-bottom-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:0in 0in 3.0pt 0in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.codefirst, li.codefirst, div.codefirst
+	{mso-style-name:codefirst;
+	mso-style-next:Normal;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.crop1, li.crop1, div.crop1
+	{mso-style-name:crop1;
+	mso-style-parent:"";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	mso-element:frame;
+	mso-element-frame-hspace:9.0pt;
+	mso-element-frame-vspace:9.0pt;
+	mso-element-wrap:around;
+	mso-element-anchor-vertical:page;
+	mso-element-anchor-horizontal:page;
+	mso-element-left:9.05pt;
+	mso-element-top:.05pt;
+	mso-height-rule:exactly;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.crop2, li.crop2, div.crop2
+	{mso-style-name:crop2;
+	mso-style-parent:crop1;
+	mso-style-next:Normal;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-line-height-alt:1.2pt;
+	mso-pagination:widow-orphan;
+	mso-element:frame;
+	mso-element-frame-hspace:9.0pt;
+	mso-element-frame-vspace:9.0pt;
+	mso-element-wrap:around;
+	mso-element-anchor-vertical:page;
+	mso-element-anchor-horizontal:page;
+	mso-element-left:549.05pt;
+	mso-element-top:.05pt;
+	mso-height-rule:exactly;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.crop3, li.crop3, div.crop3
+	{mso-style-name:crop3;
+	mso-style-parent:crop1;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-line-height-alt:1.2pt;
+	mso-pagination:widow-orphan;
+	mso-element:frame;
+	mso-element-frame-hspace:9.0pt;
+	mso-element-frame-vspace:9.0pt;
+	mso-element-wrap:around;
+	mso-element-anchor-vertical:page;
+	mso-element-anchor-horizontal:page;
+	mso-element-left:9.05pt;
+	mso-element-top:720.05pt;
+	mso-height-rule:exactly;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.crop4, li.crop4, div.crop4
+	{mso-style-name:crop4;
+	mso-style-parent:crop1;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-line-height-alt:1.2pt;
+	mso-pagination:widow-orphan;
+	mso-element:frame;
+	mso-element-frame-hspace:9.0pt;
+	mso-element-frame-vspace:9.0pt;
+	mso-element-wrap:around;
+	mso-element-anchor-vertical:page;
+	mso-element-anchor-horizontal:page;
+	mso-element-left:549.05pt;
+	mso-element-top:720.05pt;
+	mso-height-rule:exactly;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.MessageText, li.MessageText, div.MessageText
+	{mso-style-name:MessageText;
+	mso-style-parent:"Heading 3";
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	tab-stops:48.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.footereven, li.footereven, div.footereven
+	{mso-style-name:"footer even";
+	mso-style-parent:Footer;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 5.5in;
+	border:none;
+	mso-border-top-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:1.0pt 0in 0in 0in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.anotherline, li.anotherline, div.anotherline
+	{mso-style-name:"another line";
+	mso-style-next:Normal;
+	margin-top:2.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-line-height-alt:6.0pt;
+	mso-pagination:widow-orphan lines-together;
+	border:none;
+	mso-border-top-alt:solid gray .75pt;
+	padding:0in;
+	mso-padding-alt:1.0pt 0in 0in 0in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.chaptertitle, li.chaptertitle, div.chaptertitle
+	{mso-style-name:"chapter title";
+	mso-style-parent:"Heading 1";
+	mso-style-next:"another line";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:6.0pt;
+	margin-bottom:.0001pt;
+	line-height:28.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	tab-stops:48.0pt;
+	font-size:24.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.BeforeTip, li.BeforeTip, div.BeforeTip
+	{mso-style-name:BeforeTip;
+	mso-style-next:Normal;
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tip, li.tip, div.tip
+	{mso-style-name:tip;
+	mso-style-next:Normal;
+	margin-top:6.0pt;
+	margin-right:9.35pt;
+	margin-bottom:6.0pt;
+	margin-left:117.35pt;
+	text-indent:-9.35pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.35pt;
+	background:#D9D9D9;
+	mso-shading:white;
+	mso-pattern:gray-15 auto;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalTable, li.NormalTable, div.NormalTable
+	{mso-style-name:NormalTable;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.GlossaryText, li.GlossaryText, div.GlossaryText
+	{mso-style-name:GlossaryText;
+	mso-style-next:Normal;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.continuedTop, li.continuedTop, div.continuedTop
+	{mso-style-name:continuedTop;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	page-break-before:always;
+	mso-pagination:widow-orphan lines-together;
+	font-size:8.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.continuedBottom, li.continuedBottom, div.continuedBottom
+	{mso-style-name:continuedBottom;
+	mso-style-next:Normal;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	text-align:right;
+	mso-pagination:widow-orphan lines-together;
+	font-size:8.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.code, li.code, div.code
+	{mso-style-name:code;
+	mso-style-parent:codefirst;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.footerodd, li.footerodd, div.footerodd
+	{mso-style-name:"footer odd";
+	mso-style-parent:Footer;
+	margin:0in;
+	margin-bottom:.0001pt;
+	text-align:right;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 5.5in;
+	border:none;
+	mso-border-top-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:1.0pt 0in 0in 0in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.code0, li.code0, div.code0
+	{mso-style-name:code+;
+	mso-style-parent:code;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.75in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:2.0in 2.25in 2.5in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.codefirst0, li.codefirst0, div.codefirst0
+	{mso-style-name:codefirst+;
+	mso-style-parent:codefirst;
+	mso-style-next:code+;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.75in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:2.0in 2.25in 2.5in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.NormalNotHelp, li.NormalNotHelp, div.NormalNotHelp
+	{mso-style-name:NormalNotHelp;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.label1, li.label1, div.label1
+	{mso-style-name:label1;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.crop6, li.crop6, div.crop6
+	{mso-style-name:crop6;
+	mso-style-parent:crop3;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-line-height-alt:1.2pt;
+	mso-pagination:widow-orphan;
+	mso-element:frame;
+	mso-element-frame-hspace:9.0pt;
+	mso-element-frame-vspace:9.0pt;
+	mso-element-wrap:around;
+	mso-element-anchor-vertical:page;
+	mso-element-anchor-horizontal:page;
+	mso-element-left:18.05pt;
+	mso-element-top:648.05pt;
+	mso-height-rule:exactly;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.crop5, li.crop5, div.crop5
+	{mso-style-name:crop5;
+	mso-style-parent:crop4;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-line-height-alt:1.2pt;
+	mso-pagination:widow-orphan;
+	mso-element:frame;
+	mso-element-frame-width:1.5in;
+	mso-element-frame-height:2.0in;
+	mso-element-frame-hspace:9.0pt;
+	mso-element-frame-vspace:9.0pt;
+	mso-element-wrap:around;
+	mso-element-anchor-vertical:page;
+	mso-element-anchor-horizontal:page;
+	mso-element-left:486.05pt;
+	mso-element-top:648.05pt;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.chapternumbertoc, li.chapternumbertoc, div.chapternumbertoc
+	{mso-style-name:"chapter number \(toc\)";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.chaptertitletoc, li.chaptertitletoc, div.chaptertitletoc
+	{mso-style-name:"chapter title \(toc\)";
+	mso-style-parent:"chapter title";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:6.0pt;
+	margin-bottom:.0001pt;
+	line-height:28.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	tab-stops:48.0pt;
+	font-size:24.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.screen, li.screen, div.screen
+	{mso-style-name:screen;
+	mso-style-parent:code;
+	mso-style-next:code;
+	margin-top:0in;
+	margin-right:6.0pt;
+	margin-bottom:0in;
+	margin-left:114.0pt;
+	margin-bottom:.0001pt;
+	line-height:8.0pt;
+	mso-pagination:none;
+	border:none;
+	mso-border-alt:solid windowtext 1.5pt;
+	padding:0in;
+	mso-padding-alt:6.0pt 6.0pt 6.0pt 6.0pt;
+	mso-border-shadow:yes;
+	font-size:6.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	letter-spacing:-.2pt;
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.screenfirst, li.screenfirst, div.screenfirst
+	{mso-style-name:screenfirst;
+	mso-style-parent:codefirst;
+	mso-style-next:screen;
+	margin-top:6.0pt;
+	margin-right:6.0pt;
+	margin-bottom:0in;
+	margin-left:114.0pt;
+	margin-bottom:.0001pt;
+	line-height:8.0pt;
+	mso-pagination:none;
+	border:none;
+	mso-border-alt:solid windowtext 1.5pt;
+	padding:0in;
+	mso-padding-alt:6.0pt 6.0pt 6.0pt 6.0pt;
+	mso-border-shadow:yes;
+	font-size:6.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	letter-spacing:-.2pt;}
+p.tableright, li.tableright, div.tableright
+	{mso-style-name:"table \(right\)";
+	mso-style-parent:table;
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tableleft, li.tableleft, div.tableleft
+	{mso-style-name:"table \(left\)";
+	mso-style-parent:table;
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalIndent, li.NormalIndent, div.NormalIndent
+	{mso-style-name:"Normal Indent+";
+	mso-style-parent:"Normal Indent";
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:2.0in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.TableIndent, li.TableIndent, div.TableIndent
+	{mso-style-name:"Table Indent";
+	mso-style-parent:"Normal Indent";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:21.0pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tableindentright, li.tableindentright, div.tableindentright
+	{mso-style-name:"table indent \(right\)";
+	mso-style-parent:"Table Indent";
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:21.0pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tableindentleft, li.tableindentleft, div.tableindentleft
+	{mso-style-name:"table indent \(left\)";
+	mso-style-parent:"Table Indent";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:.25in;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalIndent0, li.NormalIndent0, div.NormalIndent0
+	{mso-style-name:"Normal Indent++";
+	mso-style-parent:"Normal Indent+";
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:2.25in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.code1, li.code1, div.code1
+	{mso-style-name:code++;
+	mso-style-parent:code+;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:2.0in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:2.25in 2.5in 2.75in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.codefirst1, li.codefirst1, div.codefirst1
+	{mso-style-name:codefirst++;
+	mso-style-parent:codefirst+;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:2.0in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:2.25in 2.5in 2.75in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.syntaxfirst, li.syntaxfirst, div.syntaxfirst
+	{mso-style-name:syntaxfirst;
+	mso-style-parent:codefirst;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:6.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:6.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablesyntax, li.tablesyntax, div.tablesyntax
+	{mso-style-name:"table syntax";
+	mso-style-parent:syntaxfirst;
+	margin-top:6.0pt;
+	margin-right:6.0pt;
+	margin-bottom:0in;
+	margin-left:6.0pt;
+	margin-bottom:.0001pt;
+	line-height:6.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:6.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.syntax, li.syntax, div.syntax
+	{mso-style-name:syntax;
+	mso-style-parent:code;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:6.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:6.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.Param, li.Param, div.Param
+	{mso-style-name:Param;
+	mso-style-parent:syntax;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-line-height-alt:6.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:.75in 1.5in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.GlossaryText2, li.GlossaryText2, div.GlossaryText2
+	{mso-style-name:GlossaryText2;
+	mso-style-parent:GlossaryText;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.Topic, li.Topic, div.Topic
+	{mso-style-name:Topic;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.TopicHead, li.TopicHead, div.TopicHead
+	{mso-style-name:TopicHead;
+	mso-style-parent:"Heading 3";
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:6.0pt;
+	margin-left:0in;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	tab-stops:48.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.footernr, li.footernr, div.footernr
+	{mso-style-name:"footer\/nr";
+	mso-style-parent:Footer;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 5.5in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.headernr, li.headernr, div.headernr
+	{mso-style-name:"header\/nr";
+	mso-style-parent:"header first";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 48.0pt 420.0pt;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalTableIndent, li.NormalTableIndent, div.NormalTableIndent
+	{mso-style-name:NormalTableIndent;
+	mso-style-parent:NormalTable;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.25in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:.25in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.dt, li.dt, div.dt
+	{mso-style-name:dt;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	text-indent:-1.5in;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.TopicFirst, li.TopicFirst, div.TopicFirst
+	{mso-style-name:TopicFirst;
+	mso-style-parent:Topic;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalIndentTableFirst, li.NormalIndentTableFirst, div.NormalIndentTableFirst
+	{mso-style-name:NormalIndentTableFirst;
+	mso-style-parent:NormalTableIndent;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.25in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:.25in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.Query, li.Query, div.Query
+	{mso-style-name:Query;
+	mso-style-parent:Important;
+	margin-top:12.0pt;
+	margin-right:12.0pt;
+	margin-bottom:0in;
+	margin-left:12.0pt;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	border:none;
+	mso-border-alt:double windowtext 6.75pt;
+	padding:0in;
+	mso-padding-alt:12.0pt 12.0pt 12.0pt 12.0pt;
+	font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecode, li.tablecode, div.tablecode
+	{mso-style-name:"table code";
+	mso-style-parent:code;
+	margin:0in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecodefirst, li.tablecodefirst, div.tablecodefirst
+	{mso-style-name:"table codefirst";
+	mso-style-parent:"table code";
+	mso-style-next:"table code";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.date1, li.date1, div.date1
+	{mso-style-name:date1;
+	mso-style-parent:crop1;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	mso-element:frame;
+	mso-element-frame-hspace:9.0pt;
+	mso-element-frame-vspace:9.0pt;
+	mso-element-wrap:around;
+	mso-element-anchor-vertical:page;
+	mso-element-anchor-horizontal:margin;
+	mso-element-left:outside;
+	mso-element-top:36.05pt;
+	mso-height-rule:exactly;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.date2, li.date2, div.date2
+	{mso-style-name:date2;
+	mso-style-parent:crop5;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-line-height-alt:1.2pt;
+	mso-pagination:widow-orphan;
+	mso-element:frame;
+	mso-element-frame-hspace:9.0pt;
+	mso-element-frame-vspace:9.0pt;
+	mso-element-wrap:around;
+	mso-element-anchor-vertical:page;
+	mso-element-anchor-horizontal:margin;
+	mso-element-left:outside;
+	mso-element-top:720.05pt;
+	mso-height-rule:exactly;
+	font-size:10.0pt;
+	font-family:"Tms Rmn";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.dt2, li.dt2, div.dt2
+	{mso-style-name:dt2;
+	mso-style-parent:dt;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:3.0in;
+	margin-bottom:.0001pt;
+	text-indent:-1.5in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:3.0in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.CaptionFull, li.CaptionFull, div.CaptionFull
+	{mso-style-name:CaptionFull;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.ContinuedTopFull, li.ContinuedTopFull, div.ContinuedTopFull
+	{mso-style-name:ContinuedTopFull;
+	margin:0in;
+	margin-bottom:.0001pt;
+	page-break-before:always;
+	mso-pagination:widow-orphan lines-together;
+	font-size:8.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.CaptionIndent, li.CaptionIndent, div.CaptionIndent
+	{mso-style-name:CaptionIndent;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.75in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:.25in .5in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.Normaldt, li.Normaldt, div.Normaldt
+	{mso-style-name:"Normal dt";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalIndentdt, li.NormalIndentdt, div.NormalIndentdt
+	{mso-style-name:"Normal Indent dt";
+	mso-style-parent:"Normal Indent";
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.75in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.parttitle, li.parttitle, div.parttitle
+	{mso-style-name:"part title";
+	mso-style-parent:"chapter title";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:6.0pt;
+	margin-bottom:.0001pt;
+	text-align:right;
+	line-height:34.0pt;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	tab-stops:48.0pt;
+	font-size:30.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.partnumber, li.partnumber, div.partnumber
+	{mso-style-name:"part number";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	text-align:right;
+	line-height:34.0pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:30.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.Note, li.Note, div.Note
+	{mso-style-name:Note;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	border:none;
+	mso-border-top-alt:solid windowtext .75pt;
+	mso-border-bottom-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:6.0pt 0in 6.0pt 0in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.Note0, li.Note0, div.Note0
+	{mso-style-name:Note+;
+	mso-style-parent:Note;
+	mso-style-next:"Normal Indent";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.75in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	border:none;
+	mso-border-top-alt:solid windowtext .75pt;
+	mso-border-bottom-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:6.0pt 0in 6.0pt 0in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.CalloutNew, li.CalloutNew, div.CalloutNew
+	{mso-style-name:CalloutNew;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:.25in .5in;
+	font-size:7.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.dd, li.dd, div.dd
+	{mso-style-name:dd;
+	mso-style-parent:"TOC 2";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:2.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right dotted 5.4in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.dd2, li.dd2, div.dd2
+	{mso-style-name:dd2;
+	mso-style-parent:dd;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:2.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right dotted 5.4in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.ShortcutKeyHead, li.ShortcutKeyHead, div.ShortcutKeyHead
+	{mso-style-name:ShortcutKeyHead;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Arial;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.ShortcutKey, li.ShortcutKey, div.ShortcutKey
+	{mso-style-name:ShortcutKey;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.ShortcutKeyLast, li.ShortcutKeyLast, div.ShortcutKeyLast
+	{mso-style-name:ShortcutKeyLast;
+	mso-style-parent:ShortcutKey;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.dt2b, li.dt2b, div.dt2b
+	{mso-style-name:dt2b;
+	mso-style-parent:dt2;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:3.0in;
+	margin-bottom:.0001pt;
+	text-indent:-1.5in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:3.0in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.Body, li.Body, div.Body
+	{mso-style-name:Body;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:6.0pt;
+	margin-left:1.5in;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in 2.5in 2.75in 3.0in 3.25in 3.5in 3.75in 4.0in 4.25in 4.5in 4.75in 5.0in 5.25in 5.5in 5.75in 6.0in 6.25in;
+	font-size:10.0pt;
+	font-family:StoneSerif;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.footereven8x11, li.footereven8x11, div.footereven8x11
+	{mso-style-name:"footer even 8x11";
+	mso-style-parent:"footer even";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 6.5in;
+	border:none;
+	mso-border-top-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:1.0pt 0in 0in 0in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.footerodd8x11, li.footerodd8x11, div.footerodd8x11
+	{mso-style-name:"footer odd 8x11";
+	mso-style-parent:"footer odd";
+	margin:0in;
+	margin-bottom:.0001pt;
+	text-align:right;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 6.5in;
+	border:none;
+	mso-border-top-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:1.0pt 0in 0in 0in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalTableIndent0, li.NormalTableIndent0, div.NormalTableIndent0
+	{mso-style-name:NormalTableIndent+;
+	mso-style-parent:NormalTableIndent;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:.25in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tableindent0, li.tableindent0, div.tableindent0
+	{mso-style-name:"table indent+";
+	mso-style-parent:"Table Indent";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:39.0pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tableindentleft0, li.tableindentleft0, div.tableindentleft0
+	{mso-style-name:"table indent+ \(left\)";
+	mso-style-parent:"table indent \(left\)";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:.5in;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tableindentright0, li.tableindentright0, div.tableindentright0
+	{mso-style-name:"table indent+ \(right\)";
+	mso-style-parent:"table indent \(right\)";
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:39.0pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:240.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.TableTitle, li.TableTitle, div.TableTitle
+	{mso-style-name:TableTitle;
+	mso-style-next:Normal;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:8.0pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:8.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Arial;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-style:italic;
+	mso-bidi-font-style:normal;}
+p.tabletext, li.tabletext, div.tabletext
+	{mso-style-name:tabletext;
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.labelparagraph, li.labelparagraph, div.labelparagraph
+	{mso-style-name:"label paragraph";
+	mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.Statement, li.Statement, div.Statement
+	{mso-style-name:Statement;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.25in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:27.0pt .5in 45.0pt 1.4in decimal 4.0in 5.0in;
+	border:none;
+	mso-border-alt:solid windowtext .75pt;
+	padding:0in;
+	mso-padding-alt:1.0pt 1.0pt 1.0pt 1.0pt;
+	font-size:8.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tablelist1, li.tablelist1, div.tablelist1
+	{mso-style-name:"table list1";
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.25in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:11.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.crop, li.crop, div.crop
+	{mso-style-name:crop;
+	mso-style-parent:Header;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-line-height-alt:1.2pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:right 48.0pt 420.0pt;
+	mso-element:frame;
+	mso-element-frame-hspace:9.0pt;
+	mso-element-frame-vspace:9.0pt;
+	mso-element-wrap:auto;
+	mso-element-anchor-vertical:page;
+	mso-element-anchor-horizontal:column;
+	mso-element-left:outside;
+	mso-element-top:bottom;
+	mso-height-rule:exactly;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Line-Draw;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.label, li.label, div.label
+	{mso-style-name:label;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:11.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.label2, li.label2, div.label2
+	{mso-style-name:label2;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.footnote, li.footnote, div.footnote
+	{mso-style-name:footnote;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tip1, li.tip1, div.tip1
+	{mso-style-name:tip1;
+	mso-style-parent:"";
+	margin-top:6.0pt;
+	margin-right:9.35pt;
+	margin-bottom:6.0pt;
+	margin-left:117.35pt;
+	text-indent:-9.35pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.35pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.chapternumber2, li.chapternumber2, div.chapternumber2
+	{mso-style-name:"chapter number 2";
+	margin-top:4.0pt;
+	margin-right:0in;
+	margin-bottom:14.0pt;
+	margin-left:0in;
+	text-align:center;
+	mso-pagination:widow-orphan lines-together;
+	font-size:36.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:"Bookman Old Style";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	color:white;
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.chapternumber1, li.chapternumber1, div.chapternumber1
+	{mso-style-name:"chapter number 1";
+	mso-style-next:"chapter number 2";
+	margin-top:20.0pt;
+	margin-right:0in;
+	margin-bottom:4.0pt;
+	margin-left:0in;
+	text-align:center;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	color:white;
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.chapternumber2toc, li.chapternumber2toc, div.chapternumber2toc
+	{mso-style-name:"chapter number 2 \(toc\)";
+	mso-style-parent:"chapter number 2";
+	margin-top:4.0pt;
+	margin-right:0in;
+	margin-bottom:14.0pt;
+	margin-left:0in;
+	text-align:center;
+	mso-pagination:none;
+	font-size:36.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:"Bookman Old Style";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	color:white;
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.chapternumber1toc, li.chapternumber1toc, div.chapternumber1toc
+	{mso-style-name:"chapter number 1 \(toc\)";
+	mso-style-parent:"chapter number 1";
+	mso-style-next:"chapter number 2 \(toc\)";
+	margin-top:20.0pt;
+	margin-right:0in;
+	margin-bottom:4.0pt;
+	margin-left:0in;
+	text-align:center;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	color:white;
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.chapternumber3, li.chapternumber3, div.chapternumber3
+	{mso-style-name:"chapter number 3";
+	mso-style-parent:"chapter number 1";
+	margin-top:40.0pt;
+	margin-right:0in;
+	margin-bottom:46.0pt;
+	margin-left:0in;
+	text-align:center;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	color:white;
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.H1, li.H1, div.H1
+	{mso-style-name:H1;
+	mso-style-next:Normal;
+	margin-top:5.0pt;
+	margin-right:0in;
+	margin-bottom:5.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:2;
+	layout-grid-mode:char;
+	font-size:24.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:"Times New Roman";
+	mso-fareast-font-family:"Times New Roman";
+	mso-font-kerning:18.0pt;
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.NormalPicture, li.NormalPicture, div.NormalPicture
+	{mso-style-name:NormalPicture;
+	mso-style-parent:NormalLeft;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	text-indent:-1.5in;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tablecolhd, li.tablecolhd, div.tablecolhd
+	{mso-style-name:"table colhd";
+	mso-style-parent:table;
+	mso-style-next:table;
+	margin:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecolhdleft, li.tablecolhdleft, div.tablecolhdleft
+	{mso-style-name:"table colhd \(left\)";
+	mso-style-parent:"table colhd";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecolhdleftdt, li.tablecolhdleftdt, div.tablecolhdleftdt
+	{mso-style-name:"table colhd \(left\) dt";
+	mso-style-parent:"table colhd \(left\)";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecolhdright, li.tablecolhdright, div.tablecolhdright
+	{mso-style-name:"table colhd \(right\)";
+	mso-style-parent:"table colhd";
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.NormalIndentTable, li.NormalIndentTable, div.NormalIndentTable
+	{mso-style-name:NormalIndentTable;
+	mso-style-parent:NormalTableIndent;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.25in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:.25in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalIndentTable0, li.NormalIndentTable0, div.NormalIndentTable0
+	{mso-style-name:NormalIndentTable+;
+	mso-style-parent:NormalIndentTable;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:.25in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.NormalTableIndentFirst, li.NormalTableIndentFirst, div.NormalTableIndentFirst
+	{mso-style-name:NormalTableIndentFirst;
+	mso-style-parent:NormalIndentTable;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.25in;
+	margin-bottom:.0001pt;
+	text-indent:-.25in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:.25in;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+span.callout
+	{mso-style-name:callout;
+	mso-ansi-font-size:7.0pt;
+	mso-ascii-font-family:AvantGarde;
+	mso-hansi-font-family:AvantGarde;
+	color:windowtext;}
+@page Section1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.25in 1.0in 1.25in;
+	mso-header-margin:.5in;
+	mso-footer-margin:.5in;
+	mso-paper-source:0;}
+div.Section1
+	{page:Section1;}
+ /* List Definitions */
+@list l0
+	{mso-list-id:101996236;
+	mso-list-type:simple;
+	mso-list-template-ids:-1606243496;}
+@list l0:level1
+	{mso-level-number-format:bullet;
+	mso-level-style-link:Leadin;
+	mso-level-text:\F0DE;
+	mso-level-tab-stop:0in;
+	mso-level-number-position:left;
+	margin-left:1.5in;
+	text-indent:-24.0pt;
+	mso-ansi-font-size:12.0pt;
+	font-family:Symbol;}
+@list l1
+	{mso-list-id:2099515384;
+	mso-list-type:simple;
+	mso-list-template-ids:1449822384;}
+@list l1:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:.25in;
+	mso-level-number-position:left;
+	margin-left:.25in;
+	text-indent:-.25in;
+	mso-ansi-font-size:6.0pt;
+	font-family:ZapfDingbats;}
+ol
+	{margin-bottom:0in;}
+ul
+	{margin-bottom:0in;}
+-->
+</style>
+</head>
+
+<body lang=EN-GB link=blue vlink=purple style='tab-interval:.5in'>
+
+<div class=Section1>
+
+<h2 style='line-height:14.0pt;mso-line-height-rule:exactly'><a
+name="_Toc429385981"><span lang=EN-US style='mso-ansi-language:EN-US'>S</span></a><span
+lang=EN-US style='mso-ansi-language:EN-US'>QL Keyword</span><!--[if supportFields]><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-element:field-begin'></span>
+tc &quot;<br clear=all style='page-break-before:always'>
+SQL Keyword&quot; \L 3 </span><![endif]--><!--[if supportFields]><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-element:field-end'></span></span><![endif]--><span
+lang=EN-US style='mso-ansi-language:EN-US'><o:p></o:p></span></h2>
+
+<h4 style='line-height:12.0pt;mso-line-height-rule:exactly'><span lang=EN-US
+style='mso-ansi-language:EN-US'>Purpose<o:p></o:p></span></h4>
+
+<p class=MsoNormal style='mso-outline-level:1'><span lang=EN-US
+style='mso-ansi-language:EN-US'>Executes the SQL query provided and returns the
+result as specified.<o:p></o:p></span></p>
+
+<h4 style='line-height:12.0pt;mso-line-height-rule:exactly'><span lang=EN-US
+style='mso-ansi-language:EN-US'>Syntax<o:p></o:p></span></h4>
+
+<p class=MsoNormal style='tab-stops:1.75in'><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='mso-ansi-language:EN-US'>&lt;!-- #ICE</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'> [<b style='mso-bidi-font-weight:
+normal'>REPEAT</b>]<br>
+<span style='mso-tab-count:1'>                                          </span><b
+style='mso-bidi-font-weight:normal'>SQL</b>=</span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>query</span></i><b style='mso-bidi-font-weight:normal'><span lang=EN-US
+style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'> <br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>TYPE=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><b
+style='mso-bidi-font-weight:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>TABLE</span></b><span lang=EN-US style='mso-ansi-language:EN-US'>|<b
+style='mso-bidi-font-weight:normal'>SELECTOR</b>|<b style='mso-bidi-font-weight:
+normal'>PLAIN</b>|<b style='mso-bidi-font-weight:normal'>UNFORMATTED</b></span><b
+style='mso-bidi-font-weight:normal'><span lang=EN-US style='font-family:Courier;
+mso-ansi-language:EN-US'>`</span></b><span lang=EN-US style='mso-ansi-language:
+EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>DATABASE=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>database_name</span></i><b style='mso-bidi-font-weight:normal'><span
+lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>TRANSACTION=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>transaction_name</span></i><b style='mso-bidi-font-weight:normal'><span
+lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>CURSOR=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>cursor_name</span></i><b style='mso-bidi-font-weight:normal'><span
+lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>ROWS=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>number_of_rows</span></i><b style='mso-bidi-font-weight:normal'><span
+lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>USER=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>user_name</span></i><b style='mso-bidi-font-weight:normal'><span
+lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>PASSWORD=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>password</span></i><b style='mso-bidi-font-weight:normal'><span
+lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>LINKS=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>{<i style='mso-bidi-font-style:normal'>column_name,
+URI</i>}[<b style='mso-bidi-font-weight:normal'>,</b>…]</span><b
+style='mso-bidi-font-weight:normal'><span lang=EN-US style='font-family:Courier;
+mso-ansi-language:EN-US'>`</span></b><span lang=EN-US style='mso-ansi-language:
+EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>HEADERS=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>{<i style='mso-bidi-font-style:normal'>column_name,
+text</i>}[<b style='mso-bidi-font-weight:normal'>,</b><i style='mso-bidi-font-style:
+normal'>…</i>]</span><b style='mso-bidi-font-weight:normal'><span lang=EN-US
+style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>ATTR=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>attribute</span></i><b style='mso-bidi-font-weight:normal'><span
+lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>EXT=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>extension</span></i><b style='mso-bidi-font-weight:normal'><span
+lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>NULLVAR=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>text</span></i><b style='mso-bidi-font-weight:normal'><span lang=EN-US
+style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<span style='mso-tab-count:1'>                                          </span>[<b
+style='mso-bidi-font-weight:normal'>MARKUP=</b></span><b style='mso-bidi-font-weight:
+normal'><span lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><i
+style='mso-bidi-font-style:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'>HTML text with variables</span></i><b style='mso-bidi-font-weight:normal'><span
+lang=EN-US style='font-family:Courier;mso-ansi-language:EN-US'>`</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'>]<br>
+<b style='mso-bidi-font-weight:normal'>--&gt;</b><o:p></o:p></span></p>
+
+<h4 style='line-height:12.0pt;mso-line-height-rule:exactly'><span lang=EN-US
+style='mso-ansi-language:EN-US'>Description<o:p></o:p></span></h4>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>The value
+of the SQL keyword, <i style='mso-bidi-font-style:normal'>query</i>, is
+specified by one or more SQL statement(s).<span style="mso-spacerun: yes"> 
+</span>The SQL keyword also provides a variety of options.<span
+style="mso-spacerun: yes">  </span>Ingres/ICE executes the SQL statement(s) and
+formats the results as specified by the TYPE option.<span style="mso-spacerun:
+yes">  </span>If the statement is not a select, a message is displayed.<span
+style="mso-spacerun: yes">  </span>The message can be specified using the
+ii_success_message and ii_error_message HTML variables.<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>The SQL
+statement may contain parameter markers of the form <b style='mso-bidi-font-weight:
+normal'>:</b><i style='mso-bidi-font-style:normal'>variable</i>, where<i
+style='mso-bidi-font-style:normal'> variable </i>is a defined HTML
+variable.<span style="mso-spacerun: yes">  </span>HTML variables are defined
+using the &lt;INPUT&gt; tag.<span style="mso-spacerun: yes">  </span>Note that
+variables set in an HTML form are not defined until that form is submitted;
+variables defined in a form on the same page as an Ingres/ICE macro will not be
+defined.<o:p></o:p></span></p>
+
+<table border=0 cellspacing=0 cellpadding=0 style='border-collapse:collapse;
+ mso-padding-alt:0in 6.0pt 0in 6.0pt'>
+ <tr>
+  <td width=144 valign=top style='width:1.5in;padding:0in 6.0pt 0in 6.0pt'>
+  <p class=label1>Options and Parameters</p>
+  </td>
+  <td width=392 valign=top style='width:294.0pt;padding:0in 6.0pt 0in 6.0pt'>
+  <p class=NormalTable>The following table lists the parameter and options used
+  with the SQL keyword:</p>
+  </td>
+ </tr>
+</table>
+
+<p class=extraspace><span lang=EN-US style='mso-ansi-language:EN-US'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></span></p>
+
+<table border=1 cellspacing=0 cellpadding=0 style='margin-left:108.4pt;
+ border-collapse:collapse;border:none;mso-border-top-alt:solid windowtext 1.5pt;
+ mso-border-bottom-alt:solid windowtext 1.5pt;mso-padding-alt:0in 0in 0in 0in'>
+ <tr>
+  <td width=192 valign=top style='width:2.0in;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdleft>Parameter and Options</p>
+  </td>
+  <td width=192 valign=top style='width:2.0in;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdright>Description</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=192 valign=top style='width:2.0in;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><i style='mso-bidi-font-style:normal'>query<o:p></o:p></i></p>
+  </td>
+  <td width=192 valign=top style='width:2.0in;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies one or more SQL statement(s).</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=192 valign=top style='width:2.0in;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>TYPE</b>=<b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span>TABLE</b>|<b
+  style='mso-bidi-font-weight:normal'>SELECTOR</b>|<br>
+  <b style='mso-bidi-font-weight:normal'>PLAIN</b>|<b style='mso-bidi-font-weight:
+  normal'>UNFORMATTED</b><b style='mso-bidi-font-weight:normal'><span
+  style='font-family:Courier'>`</span></b></p>
+  </td>
+  <td width=192 valign=top style='width:2.0in;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies the type of HTML formatting for the output.</p>
+  <p class=tableright>See the TYPE option description in this section for
+  information on the valid choices.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=192 valign=top style='width:2.0in;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>DATABASE=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>database_name</i><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span><o:p></o:p></b></p>
+  </td>
+  <td width=192 valign=top style='width:2.0in;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies the database to which the query will be
+  directed.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=192 valign=top style='width:2.0in;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>TRANSACTION=<br>
+  </b><b style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>transaction_name</i><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span><o:p></o:p></b></p>
+  </td>
+  <td width=192 valign=top style='width:2.0in;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies a unique name for a transaction.</p>
+  <p class=tableright>See the TRANSACTION option description in this section
+  for more information.</p>
+  </td>
+ </tr>
+</table>
+
+<p class=tableright style='margin-left:1.5in;tab-stops:246.0pt 5.5in'><b
+style='mso-bidi-font-weight:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></span></b></p>
+
+<span lang=EN-US style='font-size:10.0pt;font-family:Palatino;mso-fareast-font-family:
+"Times New Roman";mso-bidi-font-family:"Times New Roman";mso-ansi-language:
+EN-US;mso-fareast-language:EN-US;mso-bidi-language:AR-SA'><br clear=all
+style='mso-special-character:line-break;page-break-before:always'>
+</span>
+
+<p class=extraspace><![if !supportEmptyParas]>&nbsp;<![endif]><span lang=EN-US
+style='mso-ansi-language:EN-US'><o:p></o:p></span></p>
+
+<table border=1 cellspacing=0 cellpadding=0 style='margin-left:108.4pt;
+ border-collapse:collapse;border:none;mso-border-top-alt:solid windowtext 1.5pt;
+ mso-border-bottom-alt:solid windowtext 1.5pt;mso-padding-alt:0in 0in 0in 0in'>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdleft>Parameter and Options</p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdright>Description</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>CURSOR=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>cursor_name</i><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:
+  normal'><o:p></o:p></i></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies a unique name for a cursor.<span
+  style="mso-spacerun: yes">  </span>If not used, a cursor is created by
+  specifying the number of rows required (using the ROWS option).</p>
+  <p class=tableright>This option may only be specified when associated with a
+  transaction (i.e., the TRANSACTION option is also specified).<span
+  style="mso-spacerun: yes">  </span>There is a limitation of one cursor per
+  transaction.</p>
+  <p class=tableright>See the CURSOR option description in this section for
+  more information.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>ROWS=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>number_of_rows</i><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span><o:p></o:p></b></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies the number of rows for retrieval with the
+  cursor.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>USER=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>user_name</i><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:
+  normal'><o:p></o:p></i></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies the name of the Ingres/ICE database user with
+  which to associate the query.<span style="mso-spacerun: yes">  </span>The
+  actual Ingres user the alias maps to runs the query.</p>
+  <p class=tableright>This option must be specified with the PASSWORD option as
+  a pair.</p>
+  <p class=tableright><b style='mso-bidi-font-weight:normal'><span
+  style='font-family:AvantGarde'>Note:<span style="mso-spacerun: yes">  </span></span></b>This
+  option is provided for backward compatibility with Ingres/ICE 2.0 and is not
+  recommended.</p>
+  </td>
+ </tr>
+</table>
+
+<p class=tableright style='margin-left:1.5in;tab-stops:246.0pt 5.5in'><b
+style='mso-bidi-font-weight:normal'><span lang=EN-US style='mso-ansi-language:
+EN-US'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></span></b></p>
+
+<span lang=EN-US style='font-size:10.0pt;font-family:Palatino;mso-fareast-font-family:
+"Times New Roman";mso-bidi-font-family:"Times New Roman";mso-ansi-language:
+EN-US;mso-fareast-language:EN-US;mso-bidi-language:AR-SA'><br clear=all
+style='mso-special-character:line-break;page-break-before:always'>
+</span>
+
+<p class=extraspace><![if !supportEmptyParas]>&nbsp;<![endif]><span lang=EN-US
+style='mso-ansi-language:EN-US'><o:p></o:p></span></p>
+
+<table border=1 cellspacing=0 cellpadding=0 style='margin-left:108.4pt;
+ border-collapse:collapse;border:none;mso-border-top-alt:solid windowtext 1.5pt;
+ mso-border-bottom-alt:solid windowtext 1.5pt;mso-padding-alt:0in 0in 0in 0in'>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdleft>Parameter and Options</p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdright>Description</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>PASSWORD=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>password</i><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:
+  normal'><o:p></o:p></i></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies the password for the user specified with the
+  USER option.</p>
+  <p class=tableright><b style='mso-bidi-font-weight:normal'><span
+  style='font-family:AvantGarde'>Note:<span style="mso-spacerun: yes">  </span></span></b>This
+  option is provided for backward compatibility with Ingres/ICE 2.0 and is not
+  recommended.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>LINKS=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b>{<i
+  style='mso-bidi-font-style:normal'>column_name, URI</i>}[<b style='mso-bidi-font-weight:
+  normal'>,</b>…]<b style='mso-bidi-font-weight:normal'><span style='font-family:
+  Courier'>`</span></b><i style='mso-bidi-font-style:normal'><o:p></o:p></i></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Generates a hypertext link to the URI for each item in
+  the column.<span style="mso-spacerun: yes">   </span></p>
+  <p class=tableright>This option may only be specified when TYPE is not
+  UNFORMATTED.</p>
+  <p class=tableright>See the LINKS option description in this section for more
+  information.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>HEADERS=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b>{<i
+  style='mso-bidi-font-style:normal'>column_name, text</i>}[<b
+  style='mso-bidi-font-weight:normal'>,</b>…]<b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:
+  normal'><o:p></o:p></i></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Allows the definition of the text used in column
+  headers.<span style="mso-spacerun: yes">  </span>By default, the SQL column
+  name is used.</p>
+  <p class=tableright>This option may only be specified when TYPE is not
+  UNFORMATTED.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>ATTR=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>attribute</i><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:
+  normal'><o:p></o:p></i></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies a string representing any valid HTML attribute
+  in the context of the TYPE option.</p>
+  <p class=tableright>This option may only be specified when TYPE is not
+  UNFORMATTED.</p>
+  <p class=tableright>See the ATTR option description in this section for more
+  information.</p>
+  </td>
+ </tr>
+</table>
+
+<span lang=EN-US style='font-size:10.0pt;font-family:Palatino;mso-fareast-font-family:
+"Times New Roman";mso-bidi-font-family:"Times New Roman";mso-ansi-language:
+EN-US;mso-fareast-language:EN-US;mso-bidi-language:AR-SA'><br clear=all
+style='mso-special-character:line-break;page-break-before:always'>
+</span>
+
+<p class=extraspace><![if !supportEmptyParas]>&nbsp;<![endif]><span lang=EN-US
+style='mso-ansi-language:EN-US'><o:p></o:p></span></p>
+
+<table border=1 cellspacing=0 cellpadding=0 style='margin-left:108.4pt;
+ border-collapse:collapse;border:none;mso-border-top-alt:solid windowtext 1.5pt;
+ mso-border-bottom-alt:solid windowtext 1.5pt;mso-padding-alt:0in 0in 0in 0in'>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdleft>Parameter and Options</p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdright>Description</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>EXT=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>extension</i><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:
+  normal'><o:p></o:p></i></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies an extension that overrides the extension used
+  for the temporary file when referring to a binary object.<span
+  style="mso-spacerun: yes">  </span>It is only valid when the output of a
+  query contains a single column of binary objects.</p>
+  <p class=tableright>This option applies to all extracted binary columns.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>NULLVAR=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>text</i><b style='mso-bidi-font-weight:
+  normal'><span style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:
+  normal'><o:p></o:p></i></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext .75pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies the text that should be used when parsing a
+  macro and the variable does not exist.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=184 valign=top style='width:138.0pt;border:none;border-bottom:solid windowtext 1.5pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><b style='mso-bidi-font-weight:normal'>MARKUP=</b><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'>HTML text with variables</i><b
+  style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+  style='mso-bidi-font-style:normal'><o:p></o:p></i></p>
+  </td>
+  <td width=200 valign=top style='width:150.0pt;border:none;border-bottom:solid windowtext 1.5pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Specifies a format string containing markup tags and
+  column names.</p>
+  <p class=tableright>When using this option, the TYPE option must be set to
+  UNFORMATTED.</p>
+  <p class=tableright>See the MARKUP option description in this section for
+  more information.</p>
+  </td>
+ </tr>
+</table>
+
+<p class=NormalLeft><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+10.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'>TYPE Option<span
+style='mso-tab-count:1'>                         </span></span><span
+lang=EN-US style='mso-ansi-language:EN-US'>The TYPE option</span><span
+lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:10.0pt;font-family:AvantGarde;
+mso-ansi-language:EN-US'> s</span><span lang=EN-US style='mso-ansi-language:
+EN-US'>pecifies the type of HTML formatting for the output.<span
+style="mso-spacerun: yes">  </span>The available values are:<o:p></o:p></span></p>
+
+<p class=MsoNormalIndent style='mso-list:l1 level1 lfo4;tab-stops:list 1.75in left 240.0pt'><![if !supportLists]><span
+lang=EN-US style='font-size:6.0pt;mso-bidi-font-size:10.0pt;font-family:ZapfDingbats;
+mso-ansi-language:EN-US'>n<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><![endif]><span lang=EN-US style='mso-ansi-language:EN-US'>TABLE
+(default)—formats the result rows as an HTML table.<span style="mso-spacerun:
+yes">  </span>The column headers are the names of the result columns.<span
+style="mso-spacerun: yes">  </span>Each table cell contains a single item in
+the result set.<span style="mso-spacerun: yes">  </span>If the result set
+contains Binary Large Objects (BLOBs), Ingres/ICE writes the BLOBs to temporary
+files and generates &lt;IMG&gt; tags to refer to them, indicating that the
+files contain image data.<span style="mso-spacerun: yes">  </span>This output
+type supports the LINKS option.<o:p></o:p></span></p>
+
+<p class=MsoNormalIndent style='mso-list:l1 level1 lfo4;tab-stops:list 1.75in left 240.0pt'><![if !supportLists]><span
+lang=EN-US style='font-size:6.0pt;mso-bidi-font-size:10.0pt;font-family:ZapfDingbats;
+mso-ansi-language:EN-US'>n<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><![endif]><span lang=EN-US style='mso-ansi-language:EN-US'>SELECTOR—formats
+the results using the HTML SELECT tag.<span style="mso-spacerun: yes"> 
+</span>If the query contains multiple columns, the columns in each row are
+concatenated.<span style="mso-spacerun: yes">  </span>This output type does not
+support the LINKS option.<o:p></o:p></span></p>
+
+<p class=MsoNormalIndent style='mso-list:l1 level1 lfo4;tab-stops:list 1.75in left 240.0pt'><![if !supportLists]><span
+lang=EN-US style='font-size:6.0pt;mso-bidi-font-size:10.0pt;font-family:ZapfDingbats;
+mso-ansi-language:EN-US'>n<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><![endif]><span lang=EN-US style='mso-ansi-language:EN-US'>PLAIN—formats
+each row of the result set as a paragraph.<span style="mso-spacerun: yes"> 
+</span>If the result set contains BLOBs, Ingres/ICE writes the BLOBs to
+temporary files and generates &lt;IMG&gt; tags to refer to them, indicating
+that the files contain image data.<span style="mso-spacerun: yes">  </span>This
+output type is particularly useful for placing images on a page.<span
+style="mso-spacerun: yes">  </span>This output type supports the LINKS option.<o:p></o:p></span></p>
+
+<p class=MsoNormalIndent style='mso-list:l1 level1 lfo4;tab-stops:list 1.75in left 240.0pt'><![if !supportLists]><span
+lang=EN-US style='font-size:6.0pt;mso-bidi-font-size:10.0pt;font-family:ZapfDingbats;
+mso-ansi-language:EN-US'>n<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><![endif]><span lang=EN-US style='mso-ansi-language:EN-US'>UNFORMATTED—outputs
+the data with no HTML formatting or separators.<span style="mso-spacerun:
+yes">  </span>If the result set contains BLOBS, Ingres/ICE writes the BLOBs to
+temporary files and places the URIs of the files on the output page.<span
+style="mso-spacerun: yes">  </span>This output type is useful when you want to
+embed references to BLOBs in another HTML tag, for example, to fetch a
+background image for a page from a database.<o:p></o:p></span></p>
+
+<table border=0 cellspacing=0 cellpadding=0 style='border-collapse:collapse;
+ mso-padding-alt:0in 6.0pt 0in 6.0pt'>
+ <tr>
+  <td width=144 valign=top style='width:1.5in;padding:0in 6.0pt 0in 6.0pt'>
+  <p class=label1>TRANSACTION Option</p>
+  </td>
+  <td width=392 valign=top style='width:294.0pt;padding:0in 6.0pt 0in 6.0pt'>
+  <p class=NormalTable>The TRANSACTION option allows the association of a name
+  with a transaction.</p>
+  </td>
+ </tr>
+</table>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>When writing
+Ingres/ICE queries, “auto commit” is the default action.<span
+style="mso-spacerun: yes">  </span>Queries are committed if they complete
+successfully.<span style="mso-spacerun: yes">  </span>With applications that
+require browsing and selecting items from a list (like a shopping cart), it is
+necessary to maintain a transaction over many pages and only commit the
+transaction when the user has completed.<span style="mso-spacerun: yes"> 
+</span>A transaction is completed with either the COMMIT or the ROLLBACK option
+with the transaction name.</span><span lang=EN-US style='font-size:9.0pt;
+mso-bidi-font-size:12.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'><o:p></o:p></span></p>
+
+<p class=NormalLeft><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+10.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'>CURSOR Option<span
+style='mso-tab-count:1'>                 </span></span><span lang=EN-US
+style='mso-ansi-language:EN-US'>The CURSOR option specifies a unique name for a
+cursor.<span style="mso-spacerun: yes">  </span>When used, a <i
+style='mso-bidi-font-style:normal'>named</i> cursor is created which allows the
+full result set to be displayed page-by-page until the transaction is
+ended.<span style="mso-spacerun: yes">  </span>If not specified, an <i
+style='mso-bidi-font-style:normal'>anonymous</i> cursor is created and which is
+closed when the rows have been returned.<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>Using this
+option, a number of rows on a page is defined by the Web author, which reduces
+the volume of data that is transmitted and the amount of time the browser
+spends waiting for the data.</span><span lang=EN-US style='font-size:9.0pt;
+mso-bidi-font-size:12.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'><o:p></o:p></span></p>
+
+<span lang=EN-US style='font-size:10.0pt;font-family:Palatino;mso-fareast-font-family:
+"Times New Roman";mso-bidi-font-family:"Times New Roman";mso-ansi-language:
+EN-US;mso-fareast-language:EN-US;mso-bidi-language:AR-SA'><br clear=all
+style='page-break-before:always'>
+</span>
+
+<p class=NormalLeft><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+10.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'>LINKS Option<span
+style='mso-tab-count:1'>                       </span></span><span lang=EN-US
+style='mso-ansi-language:EN-US'>The value of the LINKS option has the form <b
+style='mso-bidi-font-weight:normal'>`</b><i style='mso-bidi-font-style:normal'>column_name</i>,<i
+style='mso-bidi-font-style:normal'>URI</i><b style='mso-bidi-font-weight:normal'>`</b>.<span
+style="mso-spacerun: yes">  </span>For example:<o:p></o:p></span></p>
+
+<p class=codefirst style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>`type,http://www.foo.com/typeinfo.html`<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>This would
+generate links to the URI for each item in the type column in the result set
+http://www.foo.com/typeinfo.html.<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>You can
+specify as many comma-separated column and URI pairs as you require.<span
+style="mso-spacerun: yes">  </span>As Ingres/ICE processes the result set, for
+each item in a LINKS column, it generates a hyperlink tag to the specified URI
+for each item in the column.<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>To enable
+the referenced page to determine which item was clicked on, Ingres/ICE sets an
+HTML variable.<span style="mso-spacerun: yes">  </span>The variable has the
+same name as the column name, and its value is the value clicked on.<span
+style="mso-spacerun: yes">  </span>The referenced page can use this variable,
+typically by making it a parameter in another SQL statement.<span
+style="mso-spacerun: yes">  </span>You cannot generate links for a BLOB column.<o:p></o:p></span></p>
+
+<p class=NormalLeft><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+10.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'>ATTR Option<span
+style='mso-tab-count:1'>                         </span></span><span
+lang=EN-US style='mso-ansi-language:EN-US'>The ATTR option allows the user to
+change the appearance of the page by specifying HTML attributes that will be
+applied to the generated HTML.<span style="mso-spacerun: yes"> 
+</span>Ingres/ICE does not parse the value—it simply passes it through to the
+output page.<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>Valid
+values for the ATTR option include any HTML that is legal in the context of the
+specified output type, specified by the TYPE option:<o:p></o:p></span></p>
+
+<p class=extraspace><span lang=EN-US style='mso-ansi-language:EN-US'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></span></p>
+
+<table border=0 cellspacing=0 cellpadding=0 style='margin-left:108.4pt;
+ border-collapse:collapse;mso-padding-alt:0in 0in 0in 0in'>
+ <thead>
+  <tr>
+   <td width=120 valign=top style='width:1.25in;border:none;border-top:solid windowtext 1.5pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tablecolhdleft>Value of TYPE Option</p>
+   </td>
+   <td width=264 valign=top style='width:2.75in;border:none;border-top:solid windowtext 1.5pt;
+   padding:0in 0in 0in 0in'>
+   <p class=tablecolhdright>Use of ATTR Option</p>
+   </td>
+  </tr>
+ </thead>
+ <tr>
+  <td width=120 valign=top style='width:1.25in;border:none;border-top:solid windowtext 1.5pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableleft>TABLE</p>
+  </td>
+  <td width=264 valign=top style='width:2.75in;border:none;border-top:solid windowtext 1.5pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableright>Specify the table border width, color, cell spacing, alignment,
+  or any of the other HTML table attributes.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=120 valign=top style='width:1.25in;border-top:solid windowtext .75pt;
+  border-left:none;border-bottom:solid windowtext .75pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tableleft>SELECTOR</p>
+  </td>
+  <td width=264 valign=top style='width:2.75in;border-top:solid windowtext .75pt;
+  border-left:none;border-bottom:solid windowtext .75pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tableright>Specify the name of the HTML variable into which the
+  browser will place the selected value.</p>
+  </td>
+ </tr>
+</table>
+
+<p class=tableright style='margin-left:1.5in;tab-stops:2.75in 5.5in'><span
+lang=EN-US style='mso-ansi-language:EN-US'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></span></p>
+
+<span lang=EN-US style='font-size:10.0pt;font-family:Palatino;mso-fareast-font-family:
+"Times New Roman";mso-bidi-font-family:"Times New Roman";mso-ansi-language:
+EN-US;mso-fareast-language:EN-US;mso-bidi-language:AR-SA'><br clear=all
+style='mso-special-character:line-break;page-break-before:always'>
+</span>
+
+<p class=extraspace><![if !supportEmptyParas]>&nbsp;<![endif]><span lang=EN-US
+style='mso-ansi-language:EN-US'><o:p></o:p></span></p>
+
+<table border=0 cellspacing=0 cellpadding=0 style='margin-left:108.4pt;
+ border-collapse:collapse;mso-padding-alt:0in 0in 0in 0in'>
+ <thead>
+  <tr>
+   <td width=120 valign=top style='width:1.25in;border-top:solid windowtext 1.5pt;
+   border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+   padding:0in 0in 0in 0in'>
+   <p class=tablecolhdleft>Value of TYPE Option</p>
+   </td>
+   <td width=264 valign=top style='width:2.75in;border-top:solid windowtext 1.5pt;
+   border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+   padding:0in 0in 0in 0in'>
+   <p class=tablecolhdright>Use of ATTR Option</p>
+   </td>
+  </tr>
+ </thead>
+ <tr>
+  <td width=120 valign=top style='width:1.25in;border:none;border-bottom:solid windowtext .75pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableleft>PLAIN</p>
+  </td>
+  <td width=264 valign=top style='width:2.75in;border:none;border-bottom:solid windowtext .75pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableright>Specify the attributes for image output.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=120 valign=top style='width:1.25in;border:none;border-bottom:solid windowtext 1.5pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft>UNFORMATTED</p>
+  </td>
+  <td width=264 valign=top style='width:2.75in;border:none;border-bottom:solid windowtext 1.5pt;
+  mso-border-top-alt:solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>Not available.</p>
+  </td>
+ </tr>
+</table>
+
+<p class=NormalLeft><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+10.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'>MARKUP Option<span
+style='mso-tab-count:1'>                  </span></span><span lang=EN-US
+style='mso-ansi-language:EN-US'>The MARKUP option provides the ability to
+describe a line of HTML or markup language syntax and embed within it variable
+placeholders.<span style="mso-spacerun: yes">  </span>This enables a developer to
+program using HTML tools that provide WYSIWYG rendering.<span
+style="mso-spacerun: yes">  </span>The Ingres/ICE macros can then be added
+using the HTML already generated.<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>This
+removes dependence of Ingres/ICE on knowledge of HTML or other markup syntax
+when building output.</span><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+12.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'><o:p></o:p></span></p>
+
+<p class=NormalLeft><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+10.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'>REPEAT Option</span><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>                   </span>See
+the FUNCTION keyword for information on the REPEAT option.<o:p></o:p></span></p>
+
+<h4 style='line-height:12.0pt;mso-line-height-rule:exactly'><span lang=EN-US
+style='mso-ansi-language:EN-US'>Example<o:p></o:p></span></h4>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>The
+following examples show several different uses of the SQL macro keyword and a
+sample of the source output:<o:p></o:p></span></p>
+
+<p class=codefirst style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;!-- #ICE<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>SQL=`select
+* from icetable` <o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>DATABASE
+= `iceTutorial` <o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>TRANSACTION=`myTransaction`
+<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>CURSOR=`myCursor`
+<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>ROWS=`10`
+<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>TYPE=`TABLE`<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>--&gt;<o:p></o:p></span></p>
+
+<p class=codefirst style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;!-- #ICE <br>
+<span style='mso-tab-count:1'>   </span>SQL=`select * from icetable`<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>DATABASE
+= `iceTutorial` <o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>TRANSACTION=`myTransaction`
+<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>CURSOR=`myCursor`
+<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>ROWS=`10`
+<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>TYPE=`TABLE`<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>HEADERS=`i_title,Category`
+<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>LINKS=`i_title,www.uri.com`
+<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>ATTR=`border=1`
+<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>--&gt;<o:p></o:p></span></p>
+
+<b style='mso-bidi-font-weight:normal'><span lang=EN-US style='font-size:9.0pt;
+mso-bidi-font-size:10.0pt;font-family:Courier;mso-fareast-font-family:"Times New Roman";
+mso-bidi-font-family:"Times New Roman";mso-ansi-language:EN-US;mso-fareast-language:
+EN-US;mso-bidi-language:AR-SA'><br clear=all style='page-break-before:always'>
+</span></b>
+
+<p class=codefirst style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;!-- #ICE<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:1'>   </span>SQL
+= `select title,lastname from <o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:2'>       </span>book,author,bookauthor
+where book.bookid = <o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:2'>       </span>bookauthor.bookid
+and bookauthor.authid = <o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'><span style='mso-tab-count:2'>       </span>author.authid`<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='font-size:8.0pt;mso-bidi-font-size:10.0pt;font-family:"Courier New";
+mso-ansi-language:EN-US'>--&gt;<o:p></o:p></span></p>
+
+<p class=NormalLeft><span lang=EN-US style='font-size:9.0pt;mso-bidi-font-size:
+10.0pt;font-family:AvantGarde;mso-ansi-language:EN-US'>Source Output<span
+style='mso-tab-count:1'>                      </span></span><span lang=EN-US
+style='mso-ansi-language:EN-US'>An example of the generated ouput produced by
+the Ingres/ICE server follows:<o:p></o:p></span></p>
+
+<p class=codefirst style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TABLE&gt;&lt;TR&gt;<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TH&gt;title&lt;/TH&gt;<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TH&gt;lastname&lt;/TH&gt;<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;/TR&gt;<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TR&gt;<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TD&gt;Hamlet<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TD&gt;Shakespeare<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;/TR&gt;<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TR&gt;<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TD&gt;Macbeth<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TD&gt;Shakespeare<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;/TR&gt;<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;TR&gt;<o:p></o:p></span></p>
+
+<p class=code style='line-height:9.0pt;mso-line-height-rule:exactly'><span
+lang=EN-US style='mso-ansi-language:EN-US'>&lt;/TABLE&gt;<o:p></o:p></span></p>
+
+<h4 style='line-height:12.0pt;mso-line-height-rule:exactly'><span lang=EN-US
+style='mso-ansi-language:EN-US'>See Also<o:p></o:p></span></h4>
+
+<p class=MsoNormal style='mso-outline-level:1'><span lang=EN-US
+style='mso-ansi-language:EN-US'>COMMIT keyword, ROLLBACK keyword<o:p></o:p></span></p>
+
+<p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></span></p>
+
+</div>
+
+</body>
+
+</html>

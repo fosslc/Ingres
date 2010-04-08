@@ -1,0 +1,76 @@
+-CLQ	CLQ	Activate all targets for this server
+
+-CTO	CTO0	Set Connection Timeout to not timeout
+
+-CTO	CTO1800	Set Connection Timeout to 30 minutes
+
+-CTO	CTO60	Set Connection Timeout to 1 minute
+
+-EMX	EMX100	Shutdown Server after 100 errors
+
+-EMX	EMX200	shutdown Server after 200 errors
+
+-EMX	EMX50	Shutdown Server after 50 errors
+
+-EVT	EVT0	No event timeout to process replication.
+
+-EVT	EVT30	Process the replication after 30 seconds.
+
+-EVT	EVT3600	Process the replication after 1 hour.
+
+-LGL	LGL0	Do not log any information.
+
+-LGL	LGL1	Log Only Errors
+
+-LGL	LGL2	Log Errors and important information.
+
+-LGL	LGL3	Log down to warnings.
+
+-MLE	MLE	Send mail messages on error.
+
+-MON	MON	Have the servers send database events to the replication monitor.
+
+-NLR	NLR	Have the server use READLOCK=NOLOCK on base, shadow and archive tables
+
+-NML	NML	Do not send mail messages on server error.
+
+-NMO	NMO	Do not send database events to the replication monitor.
+
+-NQT	NQT	Unquiet the replication server.
+
+-NSR	NSR	Enable rule checking on server startup.
+
+-ORT	ORT100	Check Closed Databases after 100 replication cycles.
+
+-ORT	ORT50	Check Closed Databases after 50 replication cycles.
+
+-PTL	PTL0	Do not print any logging information.
+
+-PTL	PTL1	Print errors to standard output.
+
+-PTL	PTL2	Print errors and important information to standard output.
+
+-PTL	PTL3	Print warnings to standard output.
+
+-QCD	QCDn	Quiet CDDS Number n (system will prompt)
+
+-QDB	QDBn	Quiet Database number n (system will prompt)
+
+-QIT	QIT	Quiet the Server.
+
+-SCR	SCR	Skip Unique Index Check
+
+-TOT	TOT120	Set Ingres Timeout to 120 Seconds
+
+-TOT	TOT300	Set Ingres Timeout to 5 Minutes
+
+-TOT	TOT60	Set Ingres Timeout to 60 Seconds
+
+-TPC	TPC0	Set Two Phase Commit Off
+
+-TPC	TPC1	Set Two Phase Commit On
+
+-UCD	UCDn	Unquiet CDDS Number n (system will prompt)
+
+-UDB	UDBn	Unquiet Database number n (system will prompt)
+

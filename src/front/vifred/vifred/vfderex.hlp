@@ -1,0 +1,47 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vfderex.hlp      Subtopic Help for Vifred "Derived Field Examples"
+Examples of Derived Field formulas:
+
+    Table Field aggregates:
+
+        COUNT(tableFieldName[*].column)
+        SUM(tableFieldName[*].column)
+        AVG(tableFieldName[*].column)
+        MAX(tableFieldName[*].column)
+        MIN(tableFieldName[*].column)
+
+    Numeric field derivations:
+
+        Simple fields:
+            (field1 + field2) / 2.0
+            field1**2
+            (field1 - field2) * (field3 - field4)
+            SUM(orderItems[*].price)
+
+        Table fields:
+            (tableFieldName.column1 + tableFieldName.column2) / 2
+            order_items.price * order_items.quantity
+            order_items.price * .90
+            order_items.price + '$5.00'
+
+    Date field derivations:
+
+        'today' + '30 days'
+        order_date + '1 yrs 2 mos 3 days 12 hrs 24 mins 48 secs'
+        order_items.ship_date - '7 days'
+
+    Character field derivations:
+
+        lastname + ', ' + firstname
+
+Restrictions:
+        Derivation formulas cannot reference hidden table field columns,
+        or hidden 4gl fields.
+
+        You cannot mix references to both table field columns and simple
+        fields in the same derivation formula. The only exception is that
+        a simple field derivation formula may reference a table field
+        aggregate (for example:   simple_field + COUNT(tblfld[*].column) ).
+
+        Money and non-numeric constants must be enclosed in single quotes
+        (for example '$5.00', '12-oct-1997', 'Europe').

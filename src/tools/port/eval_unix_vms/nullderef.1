@@ -1,0 +1,24 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/nullderef.1,v 1.1 90/03/09 09:17:35 source Exp $
+.TH NULLDEREF 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+nullderef \- Show results of dereferencing a NULL pointer
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B nullderef
+[ -v ]
+.SH DESCRIPTION
+.I nullderef
+dereferences a NULL pointer and reports the results, either as ``OK'' or
+``Illegal.''
+.PP
+.B -v
+``verbose'' mode prints the program's name, indents output one tab
+stop, and prints the value at NULL if it is possible to determine.
+.SH "SEE ALSO"
+\fIalign(1)\fP
+.SH BUGS
+.I Nullderef
+catches SIGBUS, SIGILL, and SIGSEGV.  If some other signal is sent on an
+access violation the program will core dump.

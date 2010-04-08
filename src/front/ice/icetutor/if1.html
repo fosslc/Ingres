@@ -1,0 +1,50 @@
+<!-- #ICE REPEAT IF (`:ifOperator` != `OR` and `:ifOperator` != `AND`) 
+THEN=`<!-- #ICE DECLARE=``page.ifOperator=`` -->` 
+ELSE=`<!-- #ICE DECLARE=``page.ifOperator= :ifOperator`` -->` 
+-->
+
+<!-- #ICE DECLARE=`session.ifCond=:ifCond:ifOperator` -->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Conditions&previous=if.html&next=if2.html` -->
+
+A conditional expression consists of a list of boolean expressions. 
+As shown in this page, parentheses and four operators can be used in a conditional expression. Only two literals 
+can be compared in an expression - numeric comparison is not supported.
+<p>
+<H4 CLASS="question">You will now create an example of a conditional expression. You can use the parentheses to create
+a compound comparison statement.
+Please fill in the following fields to create a comparison:</H4>
+<H4 CLASS="choice">
+<TABLE>
+	<TR>
+		<TD ALIGN="CENTER">
+			<INPUT TYPE="CHECKBOX" NAME="ifOpen"><FONT SIZE="10">(</FONT>
+		</TD>
+		<TD ALIGN="LEFT">
+			<BR>name: <INPUT NAME="ifI1Name" VALUE=""><BR>
+			<FONT SIZE="2"> is it a variable name? 
+			<INPUT TYPE="RADIO" NAME="ifParI1" VALUE="yes">Yes
+			<INPUT TYPE="RADIO" NAME="ifParI1" VALUE="no" CHECKED>No
+			</FONT>
+		</TD>
+		<TD ALIGN="CENTER">
+			<INPUT TYPE="RADIO" NAME="ifSign" VALUE="==" CHECKED>==<BR>
+			<INPUT TYPE="RADIO" NAME="ifSign" VALUE="!=">!=<BR>
+			<INPUT TYPE="RADIO" NAME="ifSign" VALUE="&lt;">&lt;<BR>
+			<INPUT TYPE="RADIO" NAME="ifSign" VALUE="&gt;">&gt;<BR>
+		</TD>
+		<TD ALIGN="RIGHT">
+			<BR>name: <INPUT NAME="ifI2Name" VALUE=""><BR>
+			<FONT SIZE="2">is it a variable name?
+			<INPUT TYPE="RADIO" NAME="ifParI2" VALUE="yes">Yes
+			<INPUT TYPE="RADIO" NAME="ifParI2" VALUE="no" CHECKED>No
+			</FONT>
+		</TD>
+		<TD ALIGN="CENTER">
+			<FONT SIZE="10">)</FONT><INPUT TYPE="CHECKBOX" NAME="ifClose">
+		</TD>
+	</TR>
+</TABLE>
+</H4>
+The current expression is :  (<!-- #ICE VAR=`:ifCond` -->)
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

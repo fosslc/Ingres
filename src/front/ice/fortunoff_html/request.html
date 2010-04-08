@@ -1,0 +1,38 @@
+<html>
+
+<head>
+<title></title>
+</head>
+
+<BODY BGCOLOR=ffffff>
+
+<FORM ACTION="/ice-bin/oiice.#ext#/fortunoff/inscommand.html" METHOD="POST" target="ArtComment">
+<INPUT TYPE=hidden NAME="session" value=<!-- #ICE SQL=`select ':session'` TYPE=`UNFORMATTED`-->>
+<INPUT TYPE=hidden NAME="category" value=<!-- #ICE SQL=`select ':category'` TYPE=`UNFORMATTED`-->>
+<INPUT TYPE=hidden NAME="prodId" value=<!-- #ICE SQL=`select ':prodId'` TYPE=`UNFORMATTED`-->>
+<INPUT TYPE=hidden NAME="ii_success_message" value="Command Added">
+<INPUT TYPE=hidden NAME="ii_error_message" value="Could Not Add Command">
+<TABLE BORDER=0 width=490>
+<!-- #ICE
+SQL=`select '<TR align=CENTER><TD colspan=2 ><IMG SRC="', image, '"></TD></TR>' from articleComment where category = :category`
+ TYPE=`UNFORMATTED`
+-->
+<!-- #ICE
+SQL=`select '<TR align=CENTER>
+					<TD><IMG WIDTH=120 HEIGHT=120 SRC="', a.image, '"></TD>
+					<TD align=center><h2>', a.item, '</h2></TD>
+			</TR><TR align=CENTER>
+					<TD colspan=2>', a.description, '(', a.productcode, ')</TD>
+			 </TR><TR align=center>
+					<TD colspan=2>Quantity:<INPUT TYPE=text NAME="quantity" size = 5 value=1> <B>$', a.price, '</B></TD>
+			</TR>' from articles a where a.productcode=':prodId'`
+ TYPE=`UNFORMATTED`
+-->
+<TR align=CENTER><TD colspan=3>
+<INPUT TYPE=image NAME="Enter" border=0 src="<!-- #ICE SQL=`select image from images where name = 'addcart3.gif'` TYPE=`UNFORMATTED`-->">
+</TD></TR>
+</TABLE>
+</FORM>
+
+</body>
+</html>

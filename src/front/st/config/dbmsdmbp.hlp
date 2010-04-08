@@ -1,0 +1,15 @@
+ The resource dmf_build_pages is the size, in pages, of the build
+ buffer used when loading a table.
+
+ Table load occurs when doing a bulk copy, a MODIFY, or a create table
+ as select (in bulk-load mode).  Table loading does not use the DMF
+ buffer cache;  instead, a private buffer is used.  This resource
+ sets the size of that private buffer.  (The page size is the table's
+ page size.)
+
+ If a partitioned table is being loaded, keep in mind that a build buffer
+ is needed for each partition.  Make sure that you have enough memory
+ for <number of partitions> * <dmf_build_pages> * <table pagesize>
+ bytes.
+
+ The default value is 16 pages.

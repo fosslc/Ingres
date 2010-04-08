@@ -1,0 +1,20 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: view_via_qbf
+**
+** Description: Call QBF to browse the indicated audit log
+**
+** History:
+**	17-feb-94 (robf)
+**	   Written
+*/
+procedure view_via_qbf (table_name=varchar(32) not null) = 
+declare
+	cmd=varchar(128) not null;
+	dbname=varchar(32) not null;
+{
+	call qbf(table=:table_name, flags='-mretrieve');
+}
+

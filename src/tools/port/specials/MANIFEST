@@ -1,0 +1,44 @@
+#
+# Jam MANIFEST file for tools!port!specials
+#
+# History:
+#    23-Jul-2004 (hanje04)
+#	Copy pax to build area and add comments
+#	Generate version.rel
+#    07-Oct-2004 (drivi01)
+#	Don't need to do anything with PAX on windows.
+#	03-dec-2004 (abbjo03)
+#	    pax is only needed on Unix.
+#    08-Dec-2004 (drivi01)
+#	Moved creation of version.rel file from IIGV rule
+#	to IIVERSREL rule, similar to unix. IIVERSREL is 
+#	generic now.
+#    13-Feb-2006 (hweho01)
+#       Copy gtar (GNU tar version 1.15.1) to build area 
+#       for AIX platform.
+#    31-May-2006 (hweho01)
+#       Copy gtar (GNU tar version 1.15.1) to build area 
+#       for HP Tru64 platform.
+#     4-Apr-2007 (hanal04) Bug 118027
+#       Build what we install.
+#    5-Apr-2007 (bonro01)
+#	Remove pax from Unix platforms; pax is only required
+#	for Linux.
+#    26-Apr-2007 (hweho01)
+#	Remove gtar for AIX and Tru64 platforms. 
+#    11-Jun-2007 (bonro01)
+#       Include pax for Linux int_rpl platform also.
+
+IISUBSYS tools port specials ;
+
+IIINGDIRS MKIDIRDONE ;
+if $(UNIX)
+{
+  if $(VERS) = int_lnx || $(VERS) = a64_lnx || $(VERS) = i64_lnx || $(VERS) = int_rpl
+   {
+    IICPEXE $(INGBIN)/pax : $(PAXLOC)/pax ;
+   }
+}
+
+IIVERSREL VERSREL ;
+

@@ -1,0 +1,133 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/*****************************************************************************/
+/*  BULL FRS mapping file for vtu0010 terminal with 8 function keys.         */
+/*      Last update:  17 May 1991                                            */
+/*  Function key layout is as follows:                                       */
+/*	pf1  (F1)  = Menu                                                        */
+/*	pf2  (F2)  = frskey1 (Help)                                              */
+/*	pf3  (F3)  = frskey3 (End)                                               */
+/*	pf4  (F4)  = frskey2 (Quit)                                              */
+/*	pf5  (F5)  = frskey4 (Go)                                                */
+/*	pf6  (F6)  = frskey5 (Top)                                               */
+/*	pf7  (F7)  = frskey6 (Bottom)                                            */
+/*	pf8  (F8)  = frskey7 (Find)                                              */
+/*****************************************************************************/
+
+/* Menu Key */
+	menu = pf1 (F1)
+
+/* Help facility */
+	frskey1 = pf2 (F2)
+
+/* Quit from program */
+	frskey2	= pf4 (F4)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (F3)
+
+/* Go or execute function */
+	frskey4 = pf5 (F5)
+
+/* Put cursor on top of form or table field */
+	frskey5 = pf6 (F6)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= pf7 (F7)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= pf8 (F8)
+
+/* Save object in database */
+/*	frskey8 = unmapped */
+
+/* Forget and Undo */
+/*	frskey9 = unmapped */
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlU (^U)
+
+/* Next screen or set of rows in table field */
+	scrollup = controlT (^T)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = controlY (^Y)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select menu items */
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Move up one word within field */
+	nextword = controlB (^B)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlH (Backspace)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)
+
+/* Turn off unused pf's -- needed to avoid lower level from showing through */
+pf11 = off
+pf12 = off
+pf13 = off
+pf14 = off
+pf15 = off
+pf16 = off
+pf17 = off
+pf18 = off
+pf19 = off
+pf20 = off
+pf21 = off
+pf22 = off
+pf23 = off
+pf24 = off
+pf25 = off
+pf26 = off
+pf27 = off
+pf28 = off
+pf29 = off
+pf30 = off
+pf31 = off
+pf32 = off
+pf33 = off
+pf34 = off
+pf35 = off
+pf36 = off
+pf37 = off
+pf38 = off
+pf39 = off
+pf40 = off
+

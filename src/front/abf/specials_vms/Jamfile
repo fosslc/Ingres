@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!abf!specials_vms
+#
+#       31-Dec-2009 (horda03)
+#            Correct VMS library dependancies.
+
+SubDir ING_SRC front abf specials_vms ;
+
+IISUBSYS front abf specials_vms ;
+
+IISHLIBRARY $(SHINTERPLIB) ;
+IINEEDLIBS $(SHINTERPLIB) : INTERP_LIBS SHCOMPATLIB SHLIBQLIB SHFRAMELIB ;

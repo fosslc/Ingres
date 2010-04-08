@@ -1,0 +1,100 @@
+.TH CONTEXT 1 "6 June 1985"
+.\" $Header: /cmlib1/ingres63p.lib/unix/tools/port/others/context.1,v 1.1 90/03/09 09:18:05 source Exp $
+.SH NAME
+context \- find context of lines
+.SH SYNOPSIS
+.B context
+[
+.B nr_of_lines
+]
+.PP
+.SH DESCRIPTION
+.I Context
+finds the context of located text. It accepts for example
+cc(1) diagnostics as standard input and gives you the context.
+.SH OPTIONS
+If the optional argument; a number `nr_of_lines' is given,
+context(1) prints that much context before
+and after the line in question.
+.SH EXAMPLES
+.nf
+% cc foo.c |& context
+**************
+* "foo.c", line 5: warning: old-fashioned initialization: use =
+*****
+  
+  main() {
+  	int i;
+* 	long ix.v;
+  	
+  	i = getpid();
+  	if (ix_v = getchar() == EOF)
+
+**************
+* "foo.c", line 5: syntax error
+*****
+  
+  main() {
+  	int i;
+* 	long ix.v;
+  	
+  	i = getpid();
+  	if (ix_v = getchar() == EOF)
+
+**************
+* "foo.c", line 5: warning: old-fashioned initialization: use =
+*****
+  
+  main() {
+  	int i;
+* 	long ix.v;
+  	
+  	i = getpid();
+  	if (ix_v = getchar() == EOF)
+
+**************
+* "foo.c", line 5: v undefined
+*****
+  
+  main() {
+  	int i;
+* 	long ix.v;
+  	
+  	i = getpid();
+  	if (ix_v = getchar() == EOF)
+
+**************
+* "foo.c", line 8: ix_v undefined
+*****
+  	long ix.v;
+  	
+  	i = getpid();
+* 	if (ix_v = getchar() == EOF)
+  		exit(1);
+  	exit(0);
+  }
+
+
+%
+.fi
+.SH "SEE ALSO"
+cc(1), grep(1)
+.SH AUTHOR
+**Copyright (c) 2004 Ingres Corporation
+
+This program, and any documentation for it, is copyrighted by North Coast
+Programming.  It may be copied for non-commercial use only, provided that
+any and all copyright notices are preserved.
+
+Please report any bugs and/or fixes to:
+
+.nf
+North Coast Programming
+6504 Chestnut Road
+Independence, OH 44131
+
+\&...decvax!cwruecmp!ncoast!bsa
+ncoast!bsa@Case.CSNet
+
+This manual page by ..decvax!mcvax!enea!tut!jty (Jyrki Yli-Nokari), to
+whom I give many thanks.

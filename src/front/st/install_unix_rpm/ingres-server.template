@@ -1,0 +1,32 @@
+%pre
+
+%post
+. %{_datadir}/ingres/ingenv.bashrc || :
+
+# Add setup to todo list
+sulist=%pkg_sulist%
+ifssave=$IFS
+IFS=:
+for script in ${sulist}
+do
+    echo $script >> %{_var}/lib/ingres/setup.todo
+done
+IFS=$ifssave
+
+exit 0
+
+%preun
+. %{_datadir}/ingres/ingenv.bashrc || :
+
+# Check pre-un script is present, if it's not just exit
+iigenpreun="%{_libexecdir}/ingres/utility/iigenpreun"
+[ -x $iigenpreun ] || exit 0
+if [ $1 = 0 ] ; then
+    $iigenpreun -r %rpm_basename% \
+        -v %rpm_version%-%rpm_release% -p %pkg_name% -s %pkg_sulist%
+fi
+
+exit 0
+
+%files
+

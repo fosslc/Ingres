@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!abf!ioi
+#
+
+SubDir ING_SRC front abf ioi ;
+
+IISUBSYS front abf ioi ;
+
+
+IILIBRARY IOILIB : ioitrl.c ioitcrt.c ioiswap.c ioirttw.c
+	ioirttr.c ioirtt.c ioiopen.c ioiftch.c ioifrmw.c ioifrmr.c
+	ioifrm.c ioifost.c ioifold.c ioidel.c ioicls.c ;
+

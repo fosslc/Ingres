@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The resource dmf_separate allows the buffer cache to be allocated in a
+ separate piece of memory.  By default dmf_separate is OFF, signifying
+ the buffer cache is allocated in one piece of memory with the 2k buffer
+ cache.

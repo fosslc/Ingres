@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!treedll_win
+#
+
+SubDir ING_SRC front vdba treedll_win ;
+
+IISUBSYS front vdba treedll_win ;
+
+
+IISLN catolbox.dll : catolbox.sln ;

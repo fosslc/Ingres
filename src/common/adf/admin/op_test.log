@@ -1,0 +1,38 @@
+INGRES TERMINAL MONITOR -- Copyright (c) 1981, 1990 Ingres Corporation
+INGRES SunOS Version 6.3/01 (su4.u42/01) login Thu Jun  7 14:17:31 1990
+
+continue
+* * * * * * * * * * * * * * * * * /* SQL Startup File */
+/*
+** Demonstrate the new functions for computing the
+**	x and y coordinates, the distance from two
+**	points (with the other being the origin),
+**	the slope between two points,
+**	and the midpoint of a line between two points.
+*/
+
+select name,
+	point,
+	x_coord=x_coord(point),
+	y_coord=y_coord(point),
+	distance=distance('(0,0)', point),
+	slope = slope('(0,0)', point),
+	midpoint = midpoint('(0,0)', point)
+from op
+	where point > ord_pair(0,0)
+Executing . . .
+
+
++----------+--------------------------+-----------+-----------+-----------+-----------+--------------------------+
+|name      |point                     |x_coord    |y_coord    |distance   |slope      |midpoint                  |
++----------+--------------------------+-----------+-----------+-----------+-----------+--------------------------+
+|(1,1)     |(      1.000,       1.000)|      1.000|      1.000|      1.414|      1.000|(      0.500,       0.500)|
+|(2,-3)    |(      2.000,      -3.000)|      2.000|     -3.000|      3.606|     -1.500|(      1.000,      -1.500)|
++----------+--------------------------+-----------+-----------+-----------+-----------+--------------------------+
+(2 rows)
+continue
+* 
+Your SQL statement(s) have been committed.
+
+INGRES Version 6.3/01 (su4.u42/01) logout
+Thu Jun  7 14:17:31 1990

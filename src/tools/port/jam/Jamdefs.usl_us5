@@ -1,0 +1,86 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.usl_us5 -- Variable definitions for UnixWare
+#
+#  Description:
+#	Platform specific variable definitions for UnixWare 
+#
+#  History:
+#	15-Dec-2004 (lazro01)
+#	Created.
+#	23-May-2005 (srisu02)
+#       Corrected OPTIM, IIOPTIM values so that ingres gets built in Release 
+#	mode
+#       16-Oct-2006 (hanal04) Bug 116866
+#           Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#           NOOPTIM does not strip this when explicitly set.
+#       05-May-2009 (bonro01)
+#           Create server using iimerge.a
+#	19-Jun-2009 (kschendel) SIR 122138
+#	    Remove a few unused things such as 64-bit symbol dirt.
+#
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG 	= "-DNET_SSL -DUNIXWARE -K PIC -DUnixWare -b elf -D_REENTRANT -DMCC_HTTPD -DXP_UNIX -DSPAPI20" ;
+APACHE_API_FLAG 	= "-DUW=700 -DUSE_HSREGEX -DUSE_EXPAT" ;
+VERS 	= "usl_us5" ;
+CD = "cd" ;
+CC = "cc" ;
+CCDEBUG = "-g" ;
+CPP = "/lib/cpp" ;
+CCMACH 	= "-Xt -DSYSV -DSVR4 -DSVR4_0 -D_REENTRANT -K thread,pentium" ;
+CCLDMACH 	= "-Qy -K thread" ;
+C++LDMACH 	= "-Qy" ;
+CCSHLDMACH	= "-G" ;
+CCLDSERVER 	= "" ;
+CCPICFLAG 	= "-K PIC" ;
+SLSFX 		= "so" ;
+OBJSFX		= "o" ;
+LIBSFX		= "a" ;
+MWSLSFX 	= "so" ;
+CGISFX 	= "cgi" ;
+LDLIBPATH 	= "/usr/ccs/lib /usr/lib" ;
+LIBMACH 	= "-lelf -lgen -lm" ;
+LDLIBMACH 	= "-YP,/usr/ccs/lib:/usr/lib -lnsl -lsocket -lgen -lm -lelf -ldl -K thread" ;
+C++LDLIBMACH 	= "-lnsl -lsocket -lgen -lm -lelf -ldl -lthread -lgcc" ;
+LD_ICE_FLAGS 	= "-Wl,-Bexport" ;
+ICE_EXT		= so ;
+CGI_EXT		= cgi ;
+LONGLONG	= long long ;
+OPTIM 	        = "" ;
+IIOPTIM		?= "-O" ;
+IINOOPTIM 	?= "-O0" ;
+IIL1OPTIM 	?= "-O1" ;
+SHELLHEADER 	= ""#!/bin/sh"" ;
+BSD42 default = -DBSD42 ;
+LEX = flex ;
+DIRENT = "-DDIRENT" ;
+DIRFUNC = "-DDIRFUNC" ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 = "-DSYS5" ;
+C++		= "g++" ;
+C++FLAGS	= "-DUNIXWARE -D__UNIXWARE__" ;
+CXX	= "g++" ;
+CXX_DEFS	= "-DUNIXWARE" ;
+UNDEFFLAG  = "-u " ;
+XERC_DEFS	= "-DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET" ;
+XERC_LIBS	= "" ;
+DBMS_STACKSIZE = 131072 ;
+platform_string = "SCO UnixWare" ;
+extension_string = $(config_string) ;
+
+# Override Unixware variable RELOCATE in Jambase rules
+# because the Jambase action for C does specify -o and it
+# works for the current Unixware compiler, so relocating the
+# object is not necessary.
+# Apparently the Jambase action for C++ is missing the -o flag
+# so we override the action here.
+RELOCATE = "" ;
+actions C++
+{
+        $(C++) -c -o $(<) $(C++FLAGS) $(CCDEFS) $(CCHDRS) $(>)
+}

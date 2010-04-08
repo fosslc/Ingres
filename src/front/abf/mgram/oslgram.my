@@ -1,0 +1,8377 @@
+%{
+/*
+** Copyright (c) 1986, 2008 Ingres Corporation
+*/
+#ifndef VMS
+#include 	<stdio.h>
+#endif
+#include	<compat.h>
+#include	<cm.h>
+#include	<me.h>
+#include	<si.h>
+#include	<st.h>
+#include	<lo.h>
+#include	<er.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<iicommon.h>
+#include	<adf.h>
+#ifndef ADE_CHK_TYPE
+#define ADE_CHK_TYPE(itype, type) ((itype) == (type) || (itype) == -(type))
+#endif
+#include	<fe.h>
+#include	<afe.h>
+#include	<fdesc.h>
+#include	<oslconf.h>
+#include	<oserr.h>
+#include	<osglobs.h>
+#include	<osfiles.h>
+#include	<ossym.h>
+#include	<ostree.h>
+#include	<osquery.h>
+
+#include	<iltypes.h>
+#include	<ilops.h>
+#include	<ilmenu.h>
+
+#include	<osloop.h>
+
+#include	<osfrs.h>
+#include	<frscnsts.h>
+#include	<eqsym.h>
+#include	<eqgen.h>
+#include	<eqfw.h>
+
+#include	<oskeyw.h>
+#include	<osmem.h>
+
+#if defined(hp3_us5)
+	#pragma OPT_LEVEL 1
+#endif /* hp3_us5 */
+
+#if defined(i64_win)
+#pragma optimize("", off)
+#endif
+
+# if defined(DESKTOP)
+# define frs_head    osfrs_head
+# define frs_error   osfrs_error
+# endif
+
+GLOBALREF	bool		yyreswd;
+# define	YYRETRY		1
+# define	YYRETRYTOKEN	ID
+
+/*
+NO_OPTIM = ris_us5 rs4_us5 i64_aix
+*/
+
+/**
+** Name:	oslgram.y - OSL Interpreted Frame Object Translator Grammar.
+**
+** Description:
+**	Contains the YACC grammar (LALR(1)) for the OSL interpreted frame object
+**	translator independent of the data manipulation language, QUEL or SQL.
+**	This file should be merged using "eqmerge" with either "quel/quel.y"
+**	or "sql/sql.y" to obtain the complete grammar for OSL/QUEL or OSL/SQL,
+**	respectively.  The complete grammar defines either:
+**
+**	quel()	OSL/QUEL interpreted frame object translator.
+**	sql()	OSL/SQL interpreted frame object translator.
+**
+** History:
+**	Revision 5.1  86/10/17	wong
+**	Initial revision.
+**	10-feb-89 (marian)
+**		Add conversion warning messages for begin/end transaction,
+**		and abort for oslsql.
+**	9/90 (Mike S)
+**		Add declaration for osfrs_old. Porting change 130906 from
+**		griffin
+**	11/24/90 (emerson)
+**		Change calling sequence for osqrydot (for bug 34590).
+**	01/13/91 (emerson)
+**		Fixes for bug 34837.  See productions for if_expr,
+**		else_if_expr, and while_expr.
+**	23-jan-1991 (mgw) Bug 33236
+**		Only quote single character delimiters in copy formats,
+**		not multi-char delimiters such as in "text(0)nl".
+**	02/24/91 (emerson)
+**		Fixes for bug 36068.  See productions for callf_par_ele,
+**		position_ele, and keyword_ele.  Note that:
+**		(1) 6.3/02 supported CALLPROC x (y.ALL), but didn't allow
+**		    any other parameters to be passed to x.
+**		(2) 6.3/03/00 erroneously disallows this construction.
+**		(3) 6.3/03/01 allows this construction.  It also allows
+**		    other parameters to be passed to x, and it allows
+**		    "z = y.ALL" in place of "y.ALL" (z is ignored).
+**		(4) 6.3/01 (and possibly earlier) through 6.3/03/01
+**		    allow "z = y.ALL" in the parameters of a CALLFRAME.
+**		    Although the documentation says that z must be the name
+**		    of the called frame, in fact z is ignored.
+**		    Perhaps future releases should give a warning if z
+**		    is not the name of the called frame or procedure.
+**	02/25/91 (emerson)
+**		Fix for bug 36084.  See production for OSLvalue.
+**	04/07/91 (emerson)
+**		Modifications for local procedures.
+**	04/22/91 (emerson)
+**		Fix SubMState logic to handle nested submenus.
+**		Add support for alerters.
+**	05/07/91 (emerson)
+**		More modifications for local procedures:
+**		Don't allow RESUME, VALIDATE, and VALIDROW
+**		in a local procedure unless they're inside a DISPLAY SUBMENU.
+**		Also disallow nested local procedures.
+**	09-may-1991 (mgw & davel) Bug 34530
+**		Re-wrote copy_null's "WITH NULLK '(' constant ')'" case to
+**		properly handle all the various constant strings.
+**	07/22/91 (emerson)
+**		Fixes for bug 38753: When call_name is a variable rather than
+**		a literal, its node doesn't have a valid n_value, and it's
+**		not appropriate to call osframesym or osprocsym.
+**	07/25/91 (emerson)
+**		Fix for bug 38849: Don't allow a CALLPROC of a system function.
+**	07/26/91 (emerson)
+**		Change alertevent to dbevent (per LRC 7-3-91).
+**	02-aug-1991 (davel)
+**		Fix for bug 35665 - Disallow table fields in productions below
+**		OSLvalue (i.e. Table fields not valid as R.H.S. argument).
+**	08/02/91 (emerson)
+**		Fix for bug 31342: Enclose copy formats of c0x and d0x
+**		(where x represents any single character) in quotes or
+**		apostrophes.
+**	08/06/91 (emerson)
+**		Issue a warning if the system function DBMSINFO is used
+**		in an expression (bug 21745).
+**	08/06/91 (emerson)
+**		Allow menu explanations to be specified as global constants
+**		as well as string literals (bug 35460).
+**	09-aug-1991 (davel)
+**		Fix for bug 35806 - correct arguments passed to oschktypes()
+**		in the insrow_ele production (they were in wrong order).
+**	08/15/91 (emerson)
+**		Fixes for bug 35468: Created the empty disallow_repeat
+**		production, and used it after OSLcol_var in several places.
+**		Also refined an error message in qualification processing.
+**		Also changed the qry production to reflect the fact that
+**		RepeatState may now change during the parse of the qry.
+**	08/18/91 (emerson)
+**		Fixes for bug 38001: call_frame and call_proc weren't
+**		restoring FormObj = FormSym in the case where there
+**		was no assignment of the return value.
+**      08/19/91 (johnr)
+**              Added hp3_us5 pragma to use the highest possible
+**              optimization level and avoid a compiler failure in hp-ux 8.0
+**	08/26/91 (emerson)
+**		Fix a serious problem in the fix (08/02/91) that DaveL and I
+**		came up with for bug 35665. See OSLcol_var and OSLnocol_var.
+**	10/04/91 (emerson)
+**		Replaced calls to osblkSID and osblkclose by calls to
+**		new osblkbreak (for bugs 34788, 36427, 40195, 40196).
+**	10/08/91 (emerson)
+**		Allow labels to be assigned to UNLOADTABLE statements,
+**		submenu statements, and attached queries.  (SIR 40233).
+**	12/14/91 (emerson)
+**		Fixes for bug 40908 in ingres_int and ingres_ref.
+**	12/14/91 (emerson)
+**		Part of fix for bug 38940 in inittable.
+**	30-dec-1991 (davel)
+**		Fix bugs 37388 and 41635 - change var_colon production
+**		to always use FormSym in the osdotnode() call.
+**	13-apr-92  (vijay)
+**		Add NO_OPTIM for ris_us5. else compile bombs.
+**	29-apr-92  (vijay)
+**		Oops, no optim hint cannot be a single line comment in .yf
+**		files since it is grepped out and appended to the .c file
+**		with comments around. Incidentally, the compile error is
+**		'system	resource has been exhausted'. (?)
+**	29-apr-92 (purusho)
+**          Amdahl C compiler cribs about # pragma OPT_LEVEL 1 starting
+**          at column 1 and hence inserted a tab character
+**	24-jul-92 (sweeney)
+**	    add NO_OPTIM for apl_us5 - compiler fails when building
+**	    quel.o and sql.o binaries in ../quel and ../sql with:
+**	    Fatal error in /usr/apollo/lib/cc
+**	    Status 023
+**	14-sep-92 (davel)
+**		Fixed bug 46472 - ostmpbeg() and ostmpend() statements
+**		were incorrectly placed in IF, ELSEIF, and WHILE statements.
+**		The ostmpbeg() should be issued before the OSLcondition, and the
+**		ostmpend() should be issued before the IL code (for IF
+**		and WHILE) is generated.
+**	09/20/92 (emerson)
+**		Fixes for bugs 38299, 44004, 44056, 46646 in "var_colon: COLID".
+**		Changes in the way iiosQrNext is used (for bug 46761).
+**		Several changes for bugs 39582 and 34846:
+**		Changed calling sequence to osqrygen; it now sets
+**		the "top of loop" sid for a SELECT loop.
+**		Don't generate IL_QRYBRK after calling osqrgen;
+**		osqrgen now does it when necessary.
+**		Pass the IL fragment that computes the query target list
+**		l-values to osmknode when building a tkQUERY node.
+**		Replace the n_sub field by the N_ROW bit for tablefield nodes.
+**		Changed calling sequence to osqrydot again.
+**		Also, the interface to osqryidchk has changed slightly.
+**	27-apr-93 (essi)
+**		Generate compile-time error (rather than run-time) for field
+**		names that are not on the form (bug 48349). This should only
+**		apply to VALIDROW, CLEAR FIELD and CLEARROW.
+**      05-Aug-93 (DonC) Bugs 53779 and 53747
+**              Fix to bug 48349 broke SQL/and QUEL DDL statements that use
+**              the ing_name_list production. Restored the production to its
+**              former self and re-implemented a fix for 48349 by introducing
+**              the production ing_field_list.
+**
+**	Revision 6.5
+**	28-apr-92 (davel)
+**		Added support for 6.5 DBMS features.
+**	25-aug-92 (davel)
+**		Added rule for execute_procedure.
+**	24-sep-92 (davel)
+**		Changes required to SET statement now that SESSION is a keyword.
+**	06-oct-92 (davel)
+**		Add support for SET_INGRES and INQUIRE_INGRES for keyword 
+**		SESSION (which is now a reserved word).
+**	12-nov-92 (davel)
+**		Generate IL_CHKCONNECT after SET_INGRES "SESSION".
+**	07-jan-93 (sylviap)
+**		Added support for the new FRS statement:
+**		   inquire_forms (int_var = exists(FORM_NAME));
+**		Needed something special because EXISTS is already a keyword.
+**	02-feb-93 (davel)
+**		Added support for WITH clause for insertrow and loadtable
+**		statements (for cell attribute support).
+**	09-feb-93 (davel)
+**		Added support for SET_4GL and INQUIRE_4GL.
+**	11-feb-93 (davel)
+**		Added OFF as a reserved word, and allow ON or OFF as a valid
+**		set_forms, set_ingres, or set_4gl value as a synonym for
+**		1 or 0 respectively.
+**	23-feb-93 (davel)
+**		Fixed bug 49823 - added 'opt_ingres_str' rule.
+**	25-feb-93 (davel)
+**		Fixed bug 49878 (on dbevent syntax).
+**	11-mar-93 (davel)
+**		Add set_connection as one of the form_stmt statements, which is
+**		a little goofy, but it can't be a db_stmt as an extra 
+**		IL_ENDLIST gets generated.  So we lump it in with set_ingres
+**		which is its next closest cousin.  Also include the 
+**		set_connection rule here rather than in sql.sy.
+**	24-mar-93 (davel)
+**		Fix bug 50675 - several grammar errors for DBMS statement
+**		support.
+**	19-apr-93 (davel)
+**		Fix 51331 - allow SESSION as owner in qual_table_ref (required 
+**		by DECLARE GLOBAL TEMPORARY TABLE).
+**	17-may-93 (davel)
+**		Fix bug 51700 - allow "type of table x.y" as a record 
+**		declaration.
+**	27-apr-93 (essi)
+**		Generate compile-time error (rather than run-time) for field
+**		names that are not on the form (bug 48349). This should only
+**		apply to VALIDROW, CLEAR FIELD and CLEARROW.
+**	05-Aug-93 (DonC)
+**		Fix to bug 48349 broke SQL/and QUEL DDL statements that use
+**		the ing_name_list production. Restored the production to its
+**		former self and re-implemented a fix for 48349 by introducing
+**		the production ing_field_list.
+**	09-sep-93 (essi)
+**		Backed out changes of 27-apr-93 and 05-Aug-93. They just caused
+**		more problems than solved.
+**	17-jun-93 (essi)
+**		Fix bug 52810. Allow keyword parameters to start the
+**		parameter list too. 
+**	03-aug-1993 (mgw)
+**		Added handling for LONG VARCHAR(0) etc. COPY format.
+**	07/28/93 (dkh) - Added support for the PURGETABLE and RESUME
+**			 NEXTFIELD/PREVIOUSFIELD statements.
+**    23-Aug-93 (DonC) Bug 53868
+**            Add OUTOFDATAMESSAGE = BELL support.
+**      30-aug-93 (huffman)
+**            add include <me.h>
+**    3-sep-93 (DonC)
+**	      Change of 23-Aug-93 broke the compilation of constructs using
+**	      set_value where the RHS contained a variable. I removed the
+**	      change. 
+**    09-sep-93 (essi)
+**	      Backed out changes of 27-apr-93 and 05-Aug-93. They just caused
+**	      more problems than solved.
+**    15-sep-93 (DonC) Bug 53868
+**            Add OUTOFDATAMESSAGE = BELL support the right way.
+**    20-sep-93 (DonC) 
+**	      Add COPY, CREATE TABLE support for BYTE(x) and BYTE VARYING(x)
+**    09-sep-93 (essi)
+**	      Backed out changes of 27-apr-93 and 05-Aug-93. They just caused
+**	      more problems than solved.
+**    22-nov-93 (robf)
+**            Add enhanced support for SET SESSION statement, including
+**	      ADD/DROP PRIVILEGES clauses and more WITH options.
+**    09-dec-93 (lan)
+**	      Fix bug #47930 - Use of LOADTABLE in a 4GL procedure is not
+**	      allowed and should be caught by the 4GL compiler.
+**    11-may-94 (robf)
+**             Rearrange some productions between here and sql.my to
+**	       avoid "rule never reduced" errors when compiling quel.my
+**    09-feb-95 (chech02)
+**           Added rs4_us5 for AIX 4.1.   
+**    07-feb-95 (wolf) 
+**	      Inclusion of stdio.h causes compiler warnings on VAX/VMS and
+**	      outright errors on Alpha/VMS.  Bracket it with ifdefs.
+**    22-Jun-95 (fanra01)
+**            Modified the names of the calls to frs_head and frs_error.
+**            These symbols conflict with ones defined already in eqgenfrs.c
+**            in embed!equel.
+**	  18-dec-1995 (angusm)
+**		  Remove redundant force of token to lowercase in tbl_col_name
+**		  rule - can cause rejection of valid token "_state" if present
+**		  in both uppercase and lowercase in source (bug 71314)
+**    11-jan-1996 (toumi01; from 1.1 axp_osf port)
+**            Added kchin's change for axp_osf
+**            11-jan-94 (kchin)
+**            Added axp_osf to the NO_OPTIM list to avoid problem
+**            introduced by optimizer into 4gl compiler (oslsql,osl).
+**     3-dec-1996 (rodjo04)
+**            bug 79308: Put back "Hack attack" that was removed 18-dec-1995
+**            (bug 71314). Modified it so that when symbol "_state" was read,
+**            the hack would not be applied. Added new boolean function
+**            is_state(). is_state() will return TRUE if the token read is
+**            "_state" (case insensitive).
+**     16-Sep-1997 (rodjo04)
+**         (bug 85516) Added 'NOT NULLK WITH DEFAULT' and 
+**         'NOT NULLK NOT DEFAULT' to null_clause: to correct 
+**         quel syntax.
+**	10-may-1999 (walro03)
+**		Remove obsolete version string apl_us5.
+**     06-Jul-1999 (schte01)
+**         Remove NO_OPTIM for axp_osf.
+**	21-Apr-1999 (consi01) Bug 95433 INGCBT 186
+**	    Correct a typo in the fix for bug 85516. Changed output string
+**	    from "not null with default" to "not null not default".
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	16-aug-2001 (toumi01)
+**	    speculative i64_aix NO_OPTIM change for beta xlc_r - FIXME !!!
+**	27-dec-2001 (somsa01)
+**	    Added NO_OPTIM for i64_win to avoid 4gl compiler problems
+**	    (oslsql, osl).
+**	15-feb-2002 (toumi01)
+**	    Support keyword retry for ABF to avoid keyword problems.
+**	13-jan-2005 (abbjo03)
+**	    Change yyreswd to GLOBALREF since it's GLOBALDEF'd in libequel.
+**	29-Jan-2007 (kiria01) b117277
+**	    Changed method of recognising SET RANDOM_SEED so that the
+**	    functionality can both set the seed on the DBMS and within the
+**	    local context.
+**      13-Dec-2007 (hanal04) Bug 119519
+**          Reset FormObj for next statement at the end of execute_procedure:
+**          This is in-line with a similar reset performed in call_proc: for
+**          Bug 38001.
+**	21-Jan-2008 (kiria01) b119806
+**	    Extended grammar for postfix operators beyond IS NULL and corrected
+**          the operator priority tags
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**      27-May-2009 (hanal04) Bug 122106
+**          Correct SET RANDOM_SEED when we do not have a seed value.
+**          We expect an osvalref to a constant. Passing 0 leads to 0 being
+**          used as an osvalref to a constant and we pick up spurious
+**          length values when executing IICGslpSetRndGen().
+**	24-Aug-2009 (kschendel) 121804
+**	    Some definitions now in oslconf.h, delete here.
+*/
+
+
+/* %L Configuration */
+
+char	*osstring();
+char	*oshexvchar();
+OSSYM	*osframesym();
+OSSYM	*osprocsym();
+STATUS	osblkbreak();
+OSNODE	*osblkqry();
+bool	osblkutbl();
+OSNODE	*osformall();
+OSNODE	*ostabfall();
+OSNODE	*osall();
+OSNODE	*iiosRefGen();
+VOID	osdbtle();
+VOID	osdbsqltle();
+VOID	osdbwith();
+VOID	osdbqtle();
+VOID	osdblist();
+VOID	osdbsrtkey();
+VOID	op_vch_change();
+char	*osnodename();
+OSSYM	*osnodesym();
+char	*osldform();
+char	*osldtable();
+OSNODE	*os_ta_check();
+bool	osfrs_old();
+OSSYM	*osformdecl();
+OSSYM	*osobjinit();
+VOID	ostmpinit();
+VOID	ostmpnewproc();
+OSSYM	*osdefineproc();
+VOID	osendproc();
+VOID	oschkundefprocs();
+PTR	iiIGspStartProc();
+VOID	iiIGepEndProc();
+VOID	frs_insrow_with(void);
+FUNC_EXTERN bool	oschktypes(DB_DT_ID, DB_DT_ID);
+FUNC_EXTERN OSSYM *	osdeclare(OSSYM *form, char *name, char *attr,
+				char *fmt, char *length, char *scale,
+				char *null, i4 flags, bool isproc);
+
+/* State flags */
+
+static bool	ProcState = FALSE;	/* source is for a proc (not a frame) */
+static bool	LocalProcState = FALSE;	/* in a local procedure */
+static bool	CallState = FALSE;	/* in callframe statement (bug check) */
+static bool	QryState = FALSE;	/* in query retrieve */
+static bool	QloopState = FALSE;	/* in query loop */
+static bool	RetInState = FALSE;	/* in retrieve loop */
+static bool	ActState = FALSE;	/* in activation */
+static bool	RepeatState = FALSE;	/* in repeat query */
+static i4	DeclareFlags = 0;	/* context-sensitive declaration flags*/
+static bool	SetSession = FALSE;	/* SET_INGRES "SESSION" specified */
+
+/*
+** Keep track of what kind of submenu we're in (if any).
+** Possible kinds are DISPLAY_MENU and RUN_SUBMENU.
+**
+** Since submenus can be nested, we need a stack.
+** I use 31 of the bits of SubMState as a stack.
+** Assuming submenus aren't nested more than 31 deep
+** (more will be flagged as an error), SubMState will be set as follows:
+**
+** SubMState = 1		initially.
+** SubMState = SubMState*2 + 1	when initiating a DISPLAY_MENU.
+** SubMState = SubMState*2	when initiating a RUN_MENU.
+** SubMState = SubMState/2	when terminating either kind of submenu.
+**
+** Thus,
+**
+** SubMState == 1		indicates we're not in either kind of submenu.
+** SubMState is even		indicates we're in a RUN_MENU.
+** SubMState is odd and > 1	indicates we're in a DISPLAY_MENU.
+*/
+static u_i4	SubMState = 1;
+
+/*
+** Keep track of whether there's a display loop that we can jump to the top of.
+**
+** DispLoopCount = 1 intially, for a frame.
+** DispLoopCount = 0 intially, for a procedure or local procedure.
+** DispLoopCount is incremented when we open a DISPLAY SUBMENU.
+** DispLoopCount is decremented when we close a DISPLAY SUBMENU.
+**
+** Thus, there's a display loop that we can jump to the top of
+** if and only if DispLoopCount > 0.
+*/
+static	i4	DispLoopCount = 1;
+
+/*
+** Keep track of information about the current menu or submenu.
+** Each variable allows for 1 bit of information for each level of
+** nested submenu, up to a depth of 31.  The low-order bit
+** always represents the current submenu (as for SubMState above).
+*/
+static u_i4	SubMInAlert = 0;	/* In an alerter activation block? */
+static u_i4	SubMGotNonAlert = 0;	/* Found non-alerter activation block?*/
+
+static bool	AllowForm = TRUE;
+static bool	FormSpecified = FALSE;
+
+/* Symbol table entry for top routine's form */
+
+static OSSYM	*FormSym = NULL;
+
+/*
+** Symbol table entry for "form" for current routine
+** (frame, proc, or local proc)
+*/
+static OSSYM	*LocalFormSym = NULL;
+
+/* Symbol table entry for query retrieve form object */
+
+static OSSYM	*FormObj = NULL;
+
+static OSNODE	*QryTarget = NULL;
+
+/* Pointer to "fragment" of IL which assigns a selected row into its targets */
+
+static PTR	TargListFrag = NULL;
+
+/* Holding area for the label of a SELECT loop or attached query */
+
+static char	*QueryLabel = NULL;
+
+/* Symbol table entry for array or tablefield being operated on by
+** INSERTROW, CLEARROW, etc.
+*/
+
+static OSSYM	*TableObj = NULL;
+
+/* Name of current frame (not form) or procedure */
+
+static char	*FrmProcName = NULL;
+
+/* Activation Options List */
+
+static ILREF	ActOpt[OPT_MAX] = {0, 0, 0};
+
+/* FRS With Clause Statement Type */
+
+static i4	FrsStmt = 0;
+
+/* Syntax Error Flags */
+static bool	OpErr = FALSE;		/* operation in statement context */
+
+/* %L Statics */
+
+/* Parser Debug */
+#define YYDEBUG 1
+
+static const char	_SyntaxError[]	= ERx("syntax error");
+static const char	_IsNull[]	= ERx("is null");
+static const char	_IsInteger[]	= ERx("is integer");
+static const char	_IsDecimal[]	= ERx("is decimal");
+static const char	_IsFloat[]	= ERx("is float");
+static const char	_IsNotNull[]	= ERx("is not null");
+static const char	_IsNotInteger[]	= ERx("is not integer");
+static const char	_IsNotDecimal[]	= ERx("is not decimal");
+static const char	_IsNotFloat[]	= ERx("is not float");
+%}
+
+/*
+**	Yacc grammar and semantic rules for OSL, QUEL and SQL.
+**
+**	The grammar is organized in the following manner:
+**
+**		a) control structure
+**		b) query statements
+**		c) call statements
+**		d) EQUEL/Forms statements
+**		e) DML dependent statements
+**		f) common DML transaction and DDL statements.
+**		g) expressions
+**		h) special objects (references)
+**
+**	Within a single classification, objects may be grouped with major
+**	objects ordered alphabetically within groups, and minor objects grouped
+**	with the major object to which they belong.
+*/
+
+%{
+#define YACC	1
+%}
+
+/*
+** Name:	TOKENS -	OSL Tokens.
+**
+** Description:
+**	These are the tokens recognized by the OSL grammar.
+*/
+	/* OSL Control Keywords */
+%token	ALL	/* special case QUEL/RTI/SQL keyword */
+	ARRAY_OF
+	BEGIN
+	BYREF
+	CALL
+	CALLF
+	CALLP
+	DECLARE
+	DEREFERENCE
+	DISPLAY_MENU
+	DO
+	ELSE
+	ELSEIF
+	ENDIF
+	ENDLOOP
+	END
+	ENDWHILE
+	EXE_PROC
+	EXIT
+	FIELD
+	FIELD_ENTRY
+	FIELD_EXIT
+	IF
+	INITIALIZE
+	KEY
+	MODE
+	NEXT
+	NULLK
+	ON_DBEVENT
+	PROCEDURE
+	PROCEDURE_RETURNING
+	CLASS_OF
+	REPEAT
+	RETURN
+	RUN_MENU
+	QUALIFICATION
+	SESSION
+	SYSTEM
+	THEN
+	USER
+	WHILE
+	WITH
+
+/* %L tokens */
+%token	COPY
+	DEFAULT
+	FROM
+	INTO
+	AS
+	IS
+	ON
+        BELL_TOK
+	OFF
+	OWNER_INGRES
+	RELOCATE
+	SAVE
+	SET
+	TO
+	UNTIL
+	WHERE
+
+%token	TABLE		/* special case for <frs_object> in OSL/SQL */
+%token	UPDATE		/* special case for <mode_val> in OSL/SQL */
+%token	ESCAPE		/* special case for escape clause in OSL/SQL */
+%token	ROLLBACK	/* special case for <with_key> in OSL/SQL */
+%token	GRANT		/* special case for <with_key> in OSL/SQL */
+%token	GROUP		/* special case for <with_key> in OSL/SQL */
+
+%token	ASC		/* special cases for REGISTER. reserved only in SQL */
+	DESC
+
+	/* SET command tokens */
+%token	USER_AUTH
+	SYSTEM_USER
+	SESSION_USER
+	SESSION_GROUP
+	SESSION_ROLE
+	ADD_PRIVILEGES		
+	DROP_PRIVILEGES	
+
+	/* Language-independent STAR commands/keywords */
+%token	DIR_CONNECT
+ 	DIR_DISCONNECT
+ 	DIR_EXECUTE
+ 	IMMEDIATE
+	REGISTER
+	REG_TABLE /* Hack attack!  "table" not reserved in QUEL. */
+	REM_TABLE
+	REG_VIEW
+	REM_VIEW
+	REMOVE
+
+	/* Forms system keywords */
+%token	CLEAR
+	EXISTS
+	HELPFILE
+	HELP_FORMS
+	MESSAGE
+	NOECHO
+	PRINTSCREEN
+	PROMPT
+	REDISPLAY
+	RESUME
+	RESENTRY
+	RESNEXT
+	RESMENU
+	RESNFLD
+	RESPFLD
+	SCREEN
+	SCROLL
+	SLEEP
+	VALIDATE
+
+	/* INQUIRE and SET */
+%token	INQ_FORMS
+	INQ_INGRES
+	SET_FORMS
+	SET_INGRES
+	INQ_4GL
+	SET_4GL
+	SET_CONNECTION
+	SET_RANDOM_SEED
+
+	/* Table field statements */
+%token	CLEARROW
+	DELETEROW
+	INITTABLE
+	INSERTROW
+	VALIDROW
+	LOADTABLE
+	UNLOADTABLE
+	PURGETBL
+
+	/* identifiers */
+%token	COLID
+	ID
+
+	/* constants */
+%token	FCONST
+	ICONST
+	SCONST
+	XCONST
+	DCONST
+
+	/* operators */
+%token	AND
+	EXP
+	GTE
+	LIKE
+	LTE
+	NOT
+	NOTLIKE
+	NOTEQ
+	OR
+
+%token	LSQBRK
+	RSQBRK
+	COLEQ
+
+	/* define ascending precedence for operators */
+%left	AND OR	LBOP
+%nonassoc '<' '>' '=' NOTEQ GTE LTE LIKE ROP
+%left	'+' '-' BOP
+%left	'*' '/' BOPH
+%left	EXP
+%right	NOT UOP
+%nonassoc UOP_POSTFIX
+
+/*
+** Name:	YACC Types
+*/
+
+%union {
+	char		*st_name;
+#ifdef YACC
+	OSSYM		*st_sym;
+	OSNODE		*st_node;
+	OSTLIST		*st_tlist;
+	OSSRTNODE	*st_srtlist;
+	OSQRY		*st_qry;
+#endif
+	i4		st_nat;
+};
+
+
+%type	<st_name>	ID		COLID		DEREFERENCE	NULLK
+			SCONST		XCONST		ICONST		FCONST
+			DCONST		IS		OWNER_INGRES
+			EXIT		END		RETURN
+			CLEAR		PRINTSCREEN	REDISPLAY	RESUME
+			RESENTRY	RESNEXT		RESMENU		RESNFLD
+			VALIDATE	FIELD		NEXT		SCROLL
+			CLEARROW	DELETEROW	INSERTROW	VALIDROW
+			INITTABLE	UNLOADTABLE	LOADTABLE	MODE
+			NOT		AND		OR		PURGETBL
+			SYSTEM		USER		SESSION		RESPFLD
+			INTO		FROM		KEY		DEFAULT
+			TABLE		UPDATE		ROLLBACK	INDEX
+			PROCEDURE	ASC		DESC
+			GRANT		GROUP		EXISTS		RELOCATE
+			id_or_colid
+			id_or_sconst	set_ingres_id
+			act_const	act_frskey	act_opt_val
+			act_fld		act_col		activate_opt
+			boph		bop		EXP
+			lbop		relop		likeop		is_postfix_op
+			frs_constname	frs_newconst
+			decl_scale	loop_label	scroll_dir
+			copy_dir	copy_delim	
+			curly_end
+			register_type	register_key	remove_key
+			opt_asc_or_desc
+			reg_obj_type
+			record_decl
+			decl_null	null_clause	default_clause
+			sys_sess_user	owner_str
+
+%type	<st_node>	OSLexpr		OSLprimary	OSLcondition
+			OSLname		OSLname_all
+			OSLvalue	colid_ref
+			OSLvar		var_nocolon
+			OSLcol_var	OSLnocol_var	var_colon
+			OSLstrexpr	OSLintexpr
+			param_lhs
+			row_number	opt_row_number
+			callassign	qual_table_ref	qual_id
+			constant	escape		constant_or_null
+			uconstant	uconstant_or_null
+			uconstant_int	constant_str	
+			column_list	col_name_list
+			ingres_name	ingres_int	ingres_qname
+			ing_name_list	ing_int_list	opt_ingres_str
+			ingres_ref	ingres_str	keyword_assign
+			query		query_menu_head query_loop_head
+			query_ele	query_menu_start
+			param_query	param_query_ele
+			call_name	callf_param	callf_par_list
+			callf_par_ele	callp_param	callp_par_list
+			func_param	position_list	position_ele
+			keyword_list	keyword_ele
+			subsys_param	sub_par_list	sub_ele
+			act_menu	act_timeout	decl_attr
+			table_name	tbl_col_name
+			unload_tlist	unload_tl	unload_var
+			insrow_tlist	insrow_list	insrow_ele
+			insrow_with_clause
+			opt_table_column_list	tbl_col_list
+			inittab		tab_mode_val	mode_key	mode_val
+			scroll_table	scroll_table_opt	scroll_row
+			set_forms_tl	set_list_var
+			set_option	set_conn_value
+			set_expr	set_value	set_value_onoff
+			inq_forms_tl	inq_list_var    
+			frs_constant	frs_constobj
+			inq_ingres_tl	inq_ingres_var
+			set_ingres_tl   set_ingres_var
+			set_random_seed_key
+			qualification	qual_list	qual_ele
+			copy_format	copy_null
+			location_name	int_list_all	format
+			with_key	with_item_list	with_item
+			owner_id	modify_to
+			is_clause	opt_on_clause	opt_reg_from_clause
+			like_pattern	set_sess_with_rhs
+			set_rollback_clause set_sess_with_lhs
+
+%type	<st_tlist>	copy_tl		copy_list	copy_list_elm
+			lock_list	lock_list_elm
+			mod_with_clause
+			with_clause	with_body	with_element
+			opt_col_spec_list reg_col_spec_list	reg_col_spec
+			set_sess_with_list set_sess_with_elem
+
+%type	<st_srtlist>	key_list	modkeys
+
+%type	<st_qry>	qry		qry_body	query_loop_start
+
+%type	<st_sym>	inq_var
+			qual_ref
+			unloadtab_head
+
+%type	<st_nat>	DISPLAY_MENU	RUN_MENU
+			act_opt_key	act_field
+			act_opt_expl	act_on_exception
+			noecho		unique_clause
+			array_decl	proc_returning
+			opt_not
+
+/* %L types */
+%%
+/*;
+** Name:	driver -	The start production.
+**
+** History:
+**	04/07/91 (emerson)
+**		Modifications for local procedures:
+**		Added the local_proc_list production.
+**		Added check for undefined local procedures at end of program.
+**		Also moved to common stuff (e.g. calls to osFree and os_output)
+**		from the frame and procedure productions up here under driver.
+**		I also moved the call to osFree to the bottom; it frees
+**		all tag-zero memory, and it made me nervous to do that
+**		before calling os_output, oserrsummary, and osdepwrite.
+**		(They write out information from various data structures).
+*/
+driver:		frame_or_proc local_proc_list
+		{
+			oschkundefprocs(FormSym);
+			if (osErrcnt == 0 || osDebugIL)
+			{
+				os_output();
+			}
+			oserrsummary(FormSym);
+			if (osErrcnt == 0)
+			{
+				osdepwrite();
+			}
+			osFree();
+		}
+	|	/* empty */
+		{
+			oscerr(OSEEMPTY, 0);
+		}
+;
+frame_or_proc:	frame
+	|	procedure
+;
+local_proc_list: local_proc_list local_proc
+	|	/* empty */
+;
+
+/*
+** Name:	frame -	An OSL frame.
+**
+** Generates:  (through 'IGendMenu()')
+**		IL_BEGMENU no_of_activations
+**		IL_MENUITEM | IL_KEYACT | IL_FLDACT | IL_COLACT ...
+**		IL_ENDMENU initSID
+**
+** Side Effects:
+**	Stack  ==>	|display SID	Becomes ==>	...
+**			|init SID
+**			|menu SID (set)
+**			...
+*/
+frame:		init_section oplist end_submenu
+		{
+			register IGSID	*initSID;
+
+			IGpopSID();		/* throw away display SID */
+			osendblock();
+			initSID = IGpopSID();
+			IGsetSID(IGpopSID());	/* menu SID */
+			IGendMenu(IL_BEGMENU, initSID);	/* end main menu */
+			iiIGepEndProc(LocalFormSym->s_rdesc);
+			osendproc(LocalFormSym);
+		}
+;
+/*
+** Name:	init_section -	Initialization Section
+**
+** Syntax:
+**	INITIALIZE [ '(' <decl_list> ')' ] [ '=' '{' <stmt_list> '}' ]
+**
+** Generates:
+**		object prologue code
+**		ILDISPLOOP
+**		table field(s) initialization code (through 'ostabsinit()'.)
+**
+** Side Effects:
+**	Stack set up through the empty production for 'init_start'.
+**
+**	Stack ==>	|display SID	(set)
+**			|initialize SID
+**			|menu SID
+**			...
+**
+**	04/07/91 (emerson)
+**		Modifications for local procedures.
+**		Also reworked productions to collapse frame initialization
+**		into a single place: the new empty production for init_start.
+*/
+init_section:	init_start init_head stmt_block semic_option
+		{
+			IGsetSID(IGtopSID());	/* display SID */
+			IGgenStmt(IL_DISPLOOP, (IGSID *)NULL, 0);
+		}
+	|	init_start
+		{
+			ostabsinit(FormSym);
+			IGgenStmt(IL_INITIALIZE, (IGSID *)NULL, 0);
+
+			IGsetSID(IGtopSID());	/* display SID */
+			IGgenStmt(IL_DISPLOOP, (IGSID *)NULL, 0);
+		}
+;
+init_head:	INITIALIZE decl_sec '=' local_sec
+		{
+			ostabsinit(FormSym);
+			IGgenStmt(IL_INITIALIZE, (IGSID *)NULL, 0);
+		}
+;
+
+/*
+** Name:	init_start - Initialize for Frame Processing
+**
+** Generates:
+**		ILSTHD	line_no
+**		object prologue code
+**
+** Side Effects:
+**	Stack set up.
+**
+**	Stack ==>	|display SID
+**			|initialize SID
+**			|menu SID
+**			...
+*/
+init_start:	/* empty */
+		{
+			OSSYM	*framesym;
+			PTR	rdesc;
+
+			iiIGstmtInit();
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			FrmProcName = osFrm;
+			rdesc = iiIGspStartProc(0, NULL);
+			ostmpinit();
+			ostmpnewproc();
+			framesym = osobjinit(osFrm, osForm, OSFRAME);
+			FormObj = FormSym = LocalFormSym =
+				osformdecl(osForm, TRUE, &framesym->s_dbdt);
+			LocalFormSym->s_rdesc = rdesc;
+
+			IGpushSID(IGinitSID());	/* menu SID */
+			IGgenStmt(IL_DISPLAY, IGtopSID(), 0);
+			IGpushSID(IGinitSID());	/* initialization loop SID */
+			IGsetSID(IGtopSID());
+			IGpushSID(IGinitSID());	/* display loop SID */
+			osblock(LP_DISPLAY, IGtopSID(),
+					iiIG_string(ERx("$DISPLAY")));
+			IGbgnMenu();
+		}
+;
+
+/*
+** Name:	procedure - OSL Procedure.
+**
+**	An OSL procedure may appear more than once in a file.
+**	If there's no frame, the first procedure is the main procedure
+**	(non-terminal "procedure").
+**	All remaining procedures are local procedures ("local_proc").
+**
+** Syntax:
+**	PROCEDURE <id_or_sconst> '(' <decl_list> ')' '=' '{' <stmt_list> '}'
+**
+** History:
+**	04/07/91 (emerson)
+**		Modifications for local procedures: Added local_proc,
+**		local_proc_head, local_proc_decl, and proc_decls productions.
+**  08-apr-98 (rodjo04) bug 90148
+**      Added call to CVlower to ensure that the symbol is first forced
+**      to lowercase and then entered into the symbol table.
+*/
+procedure:	proc_head proc_decls stmt_block semic_option
+		{
+			IGgenStmt(IL_RETPROC, (IGSID *)NULL, 1, (ILREF)0);
+			iiIGepEndProc(LocalFormSym->s_rdesc);
+			osendproc(LocalFormSym);
+		}
+;
+proc_head:	PROCEDURE id_or_sconst
+		{
+			OSSYM	*procsym;
+			PTR	rdesc;
+            CVlower($2);
+			iiIGstmtInit();
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			ProcState = TRUE;
+			FrmProcName = osFrm;
+			if (*osFrm != EOS
+				&& STbcompare(osFrm, 0, $2, 0, TRUE) != 0)
+			{
+				osuerr( OSXPROC, 2, (PTR)osFrm, (PTR)$2 );
+			}
+			rdesc = iiIGspStartProc(0, NULL);
+			ostmpinit();
+			ostmpnewproc();
+			procsym = osobjinit(osFrm, $2, OSPROC);
+			FormObj = FormSym = LocalFormSym =
+				osformdecl($2, FALSE, &procsym->s_dbdt);
+			LocalFormSym->s_rdesc = rdesc;
+			DispLoopCount = 0;
+		}
+;
+local_proc:	local_proc_head proc_decls stmt_block semic_option
+		{
+			IGgenStmt(IL_RETPROC, (IGSID *)NULL, 1, (ILREF)0);
+			iiIGepEndProc(LocalFormSym->s_rdesc);
+			osendproc(LocalFormSym);
+		}
+;
+local_proc_head: PROCEDURE id_or_sconst
+		{
+			ILREF	ilref;
+                       
+            CVlower($2);
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			LocalProcState = TRUE;
+			FrmProcName = $2;
+			LocalFormSym = osdefineproc($2, FormSym);
+			LocalFormSym->s_rdesc = iiIGspStartProc(
+					IGsetConst(DB_CHA_TYPE, $2),
+					LocalFormSym->s_parent->s_rdesc);
+			ostmpnewproc();
+			DispLoopCount	= 0;
+			SubMState	= 1;
+			SubMInAlert	= 0;
+			SubMGotNonAlert	= 0;
+		}
+;
+proc_decls:	decl_sec '=' local_sec
+		{
+			IGgenStmt(IL_INITIALIZE, (IGSID *)NULL, 0);
+		}
+;
+
+/* Semicolon or comma separator */
+semic_or_comma:	';'
+	|	','
+;
+
+/*
+** Name:	decl_sec -	Implicit Declaration Section of INITIALIZE
+**				or Procedure.
+**
+** Description:
+**	A possibly empty or missing parenthesis-enclosed, comma-seperated list
+**	of declarations.
+*/
+decl_sec:	'(' decl_list ')'
+	|
+		'(' ')'
+	|
+		/* empty */
+;
+decl_list:	decl_list semic_or_comma decl_elm
+	|	decl_list semic_or_comma
+	|	decl_elm
+;
+
+/*
+** Name:	local_sec -	DECLARE Section of INITIALIZE or Procedure.
+**
+** Description:
+**	A possibly empty or missing parenthesis-enclosed, comma-seperated list
+**	of declarations.  These cannot be targets of passed parameters, so are
+**	not writeable by the outside world.  - hence they are locals.
+*/
+local_sec:	declare_kw decl_list
+		{
+			DeclareFlags &= ~FDF_LOCAL;
+		}
+	|
+		/* empty */
+;
+declare_kw:	DECLARE
+		{
+			DeclareFlags |= FDF_LOCAL;
+		}
+;
+
+/*
+** Name:	decl_elm -	OSL Declaration or OSL Constant Definition.
+**
+** Syntax:
+**	ID [ '.' ID ] '=' ID [ '(' ICONST [ ',' ICONST ] ')' ]
+**					[ WITH | NOT NULL ]
+**	ID = [ ARRAY OF ] ID | TYPE OF FORM ID | TYPE OF TABLE FIELD ID . ID
+**				| TYPE OF TABLE ID [ WITH | NOT NULL ]
+** History:
+**	04/07/91 (emerson)
+**		Modifications for local procedures:
+**		If PROCEDURE RETURNING specified, set new 9th parm
+**		for osdeclare to TRUE.  Also boiled down and orthogonalized
+**		the productions; certain invalid combinations that were being
+**		reported as syntax errors (e.g. X = ARRAY OF CHAR(9)) are now
+**		being passed to osdeclare, which will give a better message.
+*/
+decl_elm:	decl_attr '=' proc_returning array_decl ID decl_null
+		{
+			if ( $1 != NULL )
+			{
+				i4 flags = DeclareFlags;
+
+				if ($4)
+					flags |= FDF_ARRAY;
+
+				(VOID)osdeclare( LocalFormSym, $1->n_name,
+						$1->n_attr, $5,
+						(char *)NULL, (char *)NULL,
+						$6, flags,
+						(bool)$3
+				);
+				ostrfree($1);
+			}
+		}
+	| 	decl_attr '=' proc_returning array_decl
+				CLASS_OF record_decl decl_null
+		{
+			if ( $1 != NULL && $6 != NULL )
+			{
+				i4 flags = DeclareFlags;
+
+				if ($4)
+					flags |= FDF_ARRAY;
+
+				(VOID)osdeclare( LocalFormSym, $1->n_name,
+						$1->n_attr, $6,
+						(char *)NULL, (char *)NULL,
+						$7, flags,
+						(bool)$3
+				);
+				ostrfree($1);
+			}
+		}
+	|	decl_attr '=' proc_returning array_decl
+				ID '(' ICONST decl_scale ')' decl_null
+		{
+			if ($1 != NULL)
+			{
+				i4 flags = DeclareFlags;
+
+				if ($4)
+					flags |= FDF_ARRAY;
+
+				(VOID)osdeclare( LocalFormSym, $1->n_name,
+						$1->n_attr, $5,
+						$7, $8,
+						$10, flags,
+						(bool)$3
+				);
+				ostrfree($1);
+			}
+		}
+	|	decl_attr '=' PROCEDURE
+		{
+			if ($1 != NULL)
+			{
+				(VOID)osdeclare( LocalFormSym, $1->n_name,
+						$1->n_attr, ERx("none"),
+						(char *)NULL, (char *)NULL,
+						(char *)NULL, DeclareFlags,
+						(bool)TRUE
+				);
+				ostrfree($1);
+			}
+		}
+/*
+** Name:	const_defn -	OSL Constant Definition.
+**
+** Syntax:
+**	ID = SCONST | XCONST | ICONST | FCONST | DCONST | NULLK
+*/
+	|	decl_attr '=' uconstant_or_null
+		{
+			yyerror(_SyntaxError);
+			_VOID_ ossymundef($1->n_name, LocalFormSym);
+			ostrfree($3);
+			ostrfree($1);
+		}
+;
+decl_attr:	ID '.' ID
+		{
+			if (ProcState || LocalProcState)
+			{
+				oscerr(E_OS016F_InProcOrLocalProc,
+						1, ERget(_ColumnDecl));
+				$$ = NULL;
+			}
+			else
+			{
+				u_ptr[0].u_cp = $1;
+				u_ptr[1].u_cp = $3;
+				$$ = osmknode(ATTR, &u_ptr[0], &u_ptr[1],
+							(U_ARG*)NULL);
+			}
+		}
+	|	COLID '.' ID
+		{
+			if (ProcState || LocalProcState)
+			{
+				oscerr(E_OS016F_InProcOrLocalProc,
+						1, ERget(_ColumnDecl));
+				$$ = NULL;
+			}
+			else
+			{
+				u_ptr[0].u_cp = $1;
+				u_ptr[1].u_cp = $3;
+				$$ = osmknode(ATTR, &u_ptr[0], &u_ptr[1],
+							(U_ARG*)NULL);
+			}
+		}
+	|	ID
+		{
+			u_ptr[0].u_cp = $1;
+			u_ptr[1].u_cp = NULL;
+			$$ = osmknode(ATTR, &u_ptr[0], &u_ptr[1], (U_ARG*)NULL);
+		}
+;
+decl_scale:	/* empty */
+		{
+			$$ = NULL;
+		}
+	|	',' ICONST
+		{
+			$$ = $2;
+		}
+;
+decl_null:	/* empty */
+		{
+			$$ = NULL;
+		}
+	|	WITH NULLK
+		{
+			$$ = ERx("with null");
+		}
+	|	NOT NULLK decl_default
+		{
+			$$ = ERx("not null");
+		}
+;
+array_decl:	/* empty */
+		{
+			$$ = FALSE;
+		}
+	|	ARRAY_OF
+		{
+			$$ = TRUE;
+		}
+;
+proc_returning:	/* empty */
+		{
+			$$ = FALSE;
+		}
+	|	PROCEDURE_RETURNING
+		{
+			/*
+			** Local procedures within local procedures
+			** can be allowed by changing the #if 1 below to #if 0.
+			*/
+#if 1
+			if (LocalProcState)
+			{
+				oscerr(E_OS016D_NestedLocalProc, 0);
+			}
+#endif
+			$$ = TRUE;
+		}
+;
+record_decl:	TABLE ID
+		{
+			$$ = osldtable($2, (char *)NULL);
+		}
+	|	TABLE ID '.' ID
+		{
+			$$ = osldtable($4, $2);
+		}
+	|	TABLE FIELD ID '.' ID
+		{
+			$$ = osldform($3, $5);
+		}
+	|	TABLE FIELD ID
+		{
+			$$ = osldform(FormSym->s_name, $3);
+		}
+	|	ID ID
+		{
+			$$ = $2;
+			if (!osw_compare(ERx("form"), $1))
+				yyerror(_SyntaxError);
+			$$ = osldform($2, (char*)NULL);
+		}
+;
+
+/* `noise':  Default clause is meaningless for OSL declarations */
+decl_default:	WITH DEFAULT
+	|	NOT DEFAULT
+	|	/* empty */
+;
+
+/*
+** Name:	oplist -	Operations List.
+**
+** Description:
+**	The main body of a OSL frame consist of a list of operations.
+*/
+oplist:		oplist op
+	|
+		op
+;
+op:		activations '=' stmt_block semic_option
+		{
+			SubMInAlert &= ~1;
+		}
+	|	error
+		{
+			i4	line;
+
+			line = osscnlno();
+			oscerr(OSEHEADER, 1, (PTR)&line);
+
+			SubMInAlert &= ~1;
+
+		} '=' stmt_block semic_option
+;
+
+/*
+** Name:	activations -	The activations for an operation.
+**
+** Side Effects:
+**	Stack ==>	|operation SID	(set)	Becomes ==>	...
+**			...
+*/
+activations:	activate_list
+		{
+			if (ActState)
+				IGsetSID(IGpopSID() /* operation SID */);
+			ActState = FALSE;
+		}
+;
+activate_list:	activate_ele
+	|	activate_list ',' activate_ele
+;
+
+/*
+** Name:	activate_ele -	Activation List Element.
+**
+** Syntax:
+**	ID | SCONST | EXIT | END | RETURN
+**		[ '(' VALIDATE '=' ICONST [ ',' EXPLANATION '=' SCONST ] ')' ]
+**	KEY ID | SCONST
+**		[ '(' VALIDATE '=' ICONST [ ',' EXPLANATION '=' SCONST ] ')' ]
+**	[ BEFORE | AFTER ] FIELD ID | SCONST | ALL [ '.' ID | SCONST | ALL ]
+**	ON TIMEOUT [ ICONST ]
+**	ON DBEVENT
+**
+** Assumptions:
+**	Stack ==>	|operation SID
+**			...
+** History:
+**	08/06/91 (emerson)
+**		Allow menu explanations to be specified as global constants
+**		as well as string literals (bug 35460).
+**		This required that menu activation options be ILREFs
+**		instead of character strings; also see ilg!igmenu.c.
+*/
+activate_ele:	act_menu activate_opt
+		{
+			IGactivate( OLMENU, (PTR)osvalref($1), $2,
+					IGtopSID() /* operation SID */
+			);
+			SubMGotNonAlert |= 1;
+		}
+	|	act_key act_frskey activate_opt
+		{
+			if ( $2 != NULL )
+				IGactivate( OLKEY, $2, $3,
+						IGtopSID()/* operation SID */
+				);
+			else
+			{ /* no FRSkey */
+				i4	line = osscnlno();
+				oscerr(OSEHEADER, 1, (PTR)&line);
+			}
+			SubMGotNonAlert |= 1;
+		}
+	|	act_field act_fld act_col
+		{
+			register char	*cp;
+
+			if ( $3 == NULL &&
+				      (cp = STindex($2, ERx("."), 0)) == NULL )
+			{ /* field */
+				if ( !osw_compare(_All, $2) )
+				{
+					osfldcheck(FormSym, $2);
+				}
+				IGactivate($1 ? OLFLD_ENTRY : OLFIELD, $2,
+						(PTR)NULL,
+						IGtopSID() /* operation SID */
+				);
+			}
+			else
+			{ /* should be table field . column */
+				char	buf[OSBUFSIZE];
+				char	*table;
+				char	*column;
+
+				if ( $3 != NULL )
+				{
+					table = $2;
+					column = $3;
+				}
+				else
+				{
+					_VOID_ STlcopy($2, buf, cp - $2);
+					table = iiIG_string(buf);
+					STcopy(cp+1, buf);
+					column = iiIG_string(buf);
+				}
+				if ( !osw_compare(_All, column) )
+					oscolcheck(FormSym, table, column);
+				else
+					_VOID_ ostblcheck(FormSym, table);
+				IGactivate( $1 ? OLCOL_ENTRY : OLCOLUMN, table,
+						column,
+						IGtopSID() /* operation SID */
+				);
+			}
+			SubMGotNonAlert |= 1;
+		}
+	|	act_on_exception act_timeout
+		{
+			if ( !ActState )
+			{ /* 1st activation in list */
+				IGpushSID(IGinitSID()); /* operations SID */
+				IGstartStmt(osscnlno(), IL_LB_MENU);
+				ActState = TRUE;
+			}
+			if ( $1 != -1 )
+			{
+				if ( $1 == OLALERTER )
+				{
+					if ( $2 != NULL )
+					{
+						yyerror(_SyntaxError);
+					}
+					if ( ( SubMState & 1 ) == 0 )
+					{ /* In RUN_MENU */
+						oscerr(E_OS017D_BabSubmAct, 0);
+					}
+					SubMInAlert |= 1;
+				}
+				else if ( $1 == OLTIMEOUT )
+				{
+					if ( $2 != NULL
+						&& $2->n_token != tkICONST )
+					{
+						yyerror(_SyntaxError);
+					}
+					SubMGotNonAlert |= 1;
+				}
+
+				IGactivate( $1, $2, (PTR)NULL,
+					IGtopSID() /* operations SID */
+				);
+			}
+		}
+	|	error '{' { i4  line = osscnlno();
+				oscerr(OSEHEADER, 1, (PTR)&line);} activate_opt
+;
+
+activate_opt:	'(' act_opt_init act_opt_list ')'
+		{
+			$$ = (PTR)ActOpt;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+act_opt_init:	/* empty */
+		{
+			ActOpt[OPT_EXPL]  = 0;
+			ActOpt[OPT_VAL]   = FRS_UF;
+			ActOpt[OPT_ACTIV] = FRS_UF;
+		}
+;
+act_opt_list:	act_opt_ele
+	|	act_opt_list ',' act_opt_ele
+	|	error
+	|	act_opt_list ',' error
+;
+act_opt_ele:	act_val_key '=' act_opt_val
+		{
+			if ( ActOpt[OPT_VAL] == FRS_UF ) 
+			{
+				if ( *($3+1) == EOS )
+				{
+					if ( *$3 == '0' )
+					{
+						ActOpt[OPT_VAL] = FRS_NO;
+					}
+					else if ( *$3 == '1' )
+					{
+						ActOpt[OPT_VAL] = FRS_YES;
+					}
+				}
+				if ( ActOpt[OPT_VAL] == FRS_UF )
+				{
+					frs_error( E_EQ0306_actARGS, EQ_ERROR,
+						2, ERx("validate"), $3 );
+				}
+			}
+		}
+	|	act_opt_key '=' act_opt_expl
+		{
+			if ( $1 != 0 )
+			{
+				if ( $1 != tkSCONST )
+				{
+					yyerror(_SyntaxError);
+				}
+				else if ( ActOpt[OPT_EXPL] == 0 )
+				{
+					ActOpt[OPT_EXPL] = $3;
+				}
+			}
+		}
+	|	act_opt_key '=' act_opt_val
+		{
+			if ( $1 != 0 )
+			{
+				if ( $1 != tkICONST )
+				{
+					yyerror(_SyntaxError);
+				}
+				else if ( ActOpt[OPT_ACTIV] == FRS_UF )
+				{
+					if ( *($3+1) == EOS )
+					{
+						if ( *$3 == '0' )
+						{
+							ActOpt[OPT_ACTIV] =
+							    FRS_NO;
+						}
+						else if ( *$3 == '1' )
+						{
+							ActOpt[OPT_ACTIV] =
+							    FRS_YES;
+						}
+					}
+					if ( ActOpt[OPT_ACTIV] == FRS_UF )
+					{
+						frs_error( E_EQ0306_actARGS,
+							   EQ_ERROR, 2,
+							   ERx("activate"),
+							   $3 );
+					}
+				}
+			}
+		}
+;
+act_val_key:	VALIDATE
+		{
+			if ( ActOpt[OPT_VAL] != FRS_UF )
+			{
+				yyerror(_SyntaxError);
+			}
+		}
+;
+act_opt_key:	ID
+		{
+			if (osw_compare(_Explanation, $1))
+			{
+				if ( ActOpt[OPT_EXPL] != 0 )
+				{
+					yyerror(_SyntaxError);
+				}
+				$$ = tkSCONST;
+			}
+			else if (osw_compare(_Activate, $1))
+			{
+				if ( ActOpt[OPT_ACTIV] != FRS_UF )
+				{
+					yyerror(_SyntaxError);
+				}
+				$$ = tkICONST;
+			}
+			else
+			{
+				yyerror(ERx("VALIDATE, EXPLANATION, ACTIVATE"));
+				$$ = 0;
+			}
+		}
+;
+
+act_opt_val:	ICONST
+		{
+			$$ = $1;
+		}
+	|	ON
+		{
+			$$ = ERx("1");
+		}
+	|	OFF
+		{
+			$$ = ERx("0");
+		}
+        |	BELL_TOK
+		{
+			$$ = ERx("2");
+		}
+	|	ID
+		{
+			static const char	_True[]		= ERx("true"),
+						_False[]	= ERx("false");
+
+			if ( osw_compare(_True, $1) )
+				$$ = ERx("1");
+			else if ( osw_compare(_False, $1) )
+				$$ = ERx("0");
+			else
+			{
+				yyerror(_SyntaxError);
+				$$ = ERx("0");
+			}
+		}
+;
+act_opt_expl:	SCONST
+		{
+			$$ = IGsetConst( DB_CHR_TYPE,
+					 osstring( FALSE, $1, osldml ) );
+		}
+	|	COLID
+		{
+			OSSYM	*sym;
+
+			sym = osfld( FormSym, $1, OSOBJUNDEF );
+			$$ = sym->s_ilref;
+			if ( sym->s_kind != OSACONST )
+			{
+				yyerror( _SyntaxError );
+			}
+		}
+;
+
+
+act_menu:	id_or_sconst
+		{
+			if (!ActState)
+			{ /* 1st activation in list */
+				IGpushSID(IGinitSID()); /* operations SID */
+				IGstartStmt(osscnlno(), IL_LB_MENU);
+				ActState = TRUE;
+			}
+			$$ = osmkconst(tkSCONST, osstring( FALSE, $1, osldml ));
+		}
+	|	act_const
+		{
+			if (!ActState)
+			{ /* 1st activation in list */
+				IGpushSID(IGinitSID()); /* operations SID */
+				IGstartStmt(osscnlno(), IL_LB_MENU);
+				ActState = TRUE;
+			}
+			$$ = osmkconst(tkSCONST, $1);
+		}
+	|	COLID
+		{
+			if (!ActState)
+			{ /* 1st activation in list */
+				IGpushSID(IGinitSID()); /* operations SID */
+				IGstartStmt(osscnlno(), IL_LB_MENU);
+				ActState = TRUE;
+			}
+
+			$$ = osvalnode(FormSym, $1);
+			if ( $$->n_sym->s_kind != OSACONST )
+				yyerror(_SyntaxError);
+		}
+;
+act_const:	EXIT
+		{
+			$$ = $1;
+		}
+	|	END
+		{
+			$$ = $1;
+		}
+	|	RETURN
+		{
+			$$ = $1;
+		}
+;
+
+act_key:	KEY
+		{
+			if (!ActState)
+			{ /* 1st activation in list */
+				IGpushSID(IGinitSID()); /* operations SID */
+				IGstartStmt(osscnlno(), IL_LB_MENU);
+				ActState = TRUE;
+			}
+		}
+;
+act_frskey:	id_or_sconst
+		{
+			register i4	keyval;
+
+			if ((keyval = frsck_key($1)) == 0)
+			{
+				yyerror(ERx("FRSKEYn"));
+				$$ = NULL;
+			}
+			else if (keyval < 0)
+			{
+				char	key_max[24];
+
+				CVna(Fsi_KEY_PF_MAX, key_max);
+				frs_error(E_EQ0157_fsNUM, EQ_ERROR,
+						2, ERx("FRSKEY"), key_max
+					);
+				$$ = iiIG_string(ERx("1"));
+			}
+			else
+			{
+				char	buf[24];
+
+				CVna(keyval, buf);
+				$$ = iiIG_string(buf);
+			}
+		}
+;
+
+act_field:	FIELD begin_field_act
+		{
+			$$ = FALSE;
+		}
+	|	FIELD_EXIT begin_field_act
+		{
+			$$ = FALSE;
+		}
+	|	FIELD_ENTRY begin_field_act
+		{
+			$$ = TRUE;
+		}
+;
+begin_field_act: /* empty */
+		{
+			if ( ( SubMState & 1 ) == 0 ) /* In RUN_MENU */
+			{
+				oscerr( E_OS017D_BabSubmAct, 0 );
+			}
+
+			if (!ActState)
+			{ /* 1st activation in list */
+				IGpushSID(IGinitSID()); /* operations SID */
+				IGstartStmt(osscnlno(), IL_LB_MENU);
+				ActState = TRUE;
+			}
+		}
+;
+act_fld:	id_or_sconst
+		{
+			$$ = $1;
+		}
+	|	ALL
+		{
+			$$ = _All;
+		}
+;
+act_col:	'.' id_or_sconst
+		{
+			$$ = $2;
+		}
+	|	'.' ALL
+		{
+			$$ = _All;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+act_on_exception:	ON ID
+		{
+			if ( osw_compare(ERx("timeout"), $2) )
+			{
+				$$ = OLTIMEOUT;
+			}
+			else
+			{
+				yyerror(ERx("TIMEOUT"));
+				$$ = -1;
+			}
+		}
+	|	ON_DBEVENT
+		{
+			$$ = OLALERTER;
+		}
+;
+act_timeout:	ICONST
+		{
+			$$ = osmkconst(tkICONST, $1);
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+/**-
+** Statement section.
+**
+** Includes:
+**	stmt_block	stmt_list	semic_option	semicolon
+**	curly_begin	curly_end	stmt
+*/
+/*;
+** Name:	stmt_block -	A statement block.
+**
+** Syntax:
+**	'=' '{' <stmt_list> '}'
+**
+** Generates (for frames):
+**		ILGOTO	displaySID
+**
+** Assumptions (for frames or sub-menus):
+**	Stack  ==>	|display SID
+**			|initialize SID
+**			|menu SID
+**			...
+*/
+stmt_block:	curly_begin stmt_list curly_end
+		{
+			if ( !( ProcState || LocalProcState ) || SubMState > 1 )
+			{
+				IGstartStmt(osscnlno(), IL_LB_NONE);
+				IGgenStmt( IL_GOTO,
+					IGtopSID() /* display/menu loop SID */,
+					0
+				);
+			}
+		}
+;
+
+/*::
+** Name:	stmt_list - A Statement List.
+**
+** Syntax:
+**	<stmt_list> ';' <stmt>
+**	<stmt>
+*/
+stmt_list:	stmt_list semicolon { ostmpbeg(); osclrrefs(FormSym); } stmt
+		{
+			osgenputs();
+			ostmpend();
+		}
+	|	{ ostmpbeg(); osclrrefs(FormSym); } stmt
+		{
+			osgenputs();
+			ostmpend();
+		}
+	|	error_oper stmt
+;
+
+/* Optional semicolon separator */
+semic_option:	';'
+	|	/* empty */
+;
+/* Semicolon separator */
+semicolon:	';'
+	|
+		error {oscerr(OSESEMIC, 0);}
+	|
+		error_oper
+;
+
+curly_begin:	BEGIN
+	|	'{'
+;
+
+curly_end:	END
+		{
+			$$ = $1;
+		}
+	|	'}'
+		{
+			$$ = ERx("}");
+		}
+;
+
+/* Operation error (invalid in statement context) */
+error_oper:	error activate_opt more_err_acts '=' {operr();}
+			curly_begin stmt_list curly_end
+	|	error curly_begin {operr();} stmt_list curly_end
+;
+more_err_acts:	',' activate_list
+	|	/* empty */
+;
+
+stmt:		/* empty */
+	|
+		KEY {yyerror(_SyntaxError);} act_frskey {YYERROR;}
+	|
+		FIELD {yyerror(_SyntaxError);} act_fld act_col {YYERROR;}
+	|
+		FIELD_ENTRY {yyerror(_SyntaxError);} act_fld act_col {YYERROR;}
+	|
+		FIELD_EXIT {yyerror(_SyntaxError);} act_fld act_col {YYERROR;}
+	|
+		act_on_exception {yyerror(_SyntaxError);} act_timeout {YYERROR;}
+	|
+		osl_stmt
+	|
+		call_stmt
+	|
+		query_block
+	|
+		db_stmt
+		{
+			osdbflush();
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+		}
+	|
+		sub_menu
+	|
+		form_stmt
+;
+
+/**:
+** Name:	osl_stmt -	OSL Control Statements.
+**
+*/
+osl_stmt:	if_stmt
+	|	while_stmt
+	|	endloop_stmt
+	/*	assignment statement	*/
+/*::
+** Name:	assign_stmt -	OSL Assignment Statement.
+**
+** Syntax:
+**	ID ':=' <OSLexpr>
+**	ID [ '[' <OSLexpr> ']' ] '.' ID ':=' <OSLexpr>
+**
+**	04/07/91 (emerson)
+**		Do type check when right-hand side is a call of
+**		a defined procedure (whether or not it's a local procedure).
+*/
+	|	OSLvar assign_op OSLexpr	/* assignment statement */
+		{
+
+			/* Special case:  Generate code for procedure calls
+			** even if the procedure is not defined at this time.
+			*/
+			if ( !osiserr($1) )
+			{
+				if ($1->n_flags & N_READONLY)
+				{
+					oscerr(OSASNOVAR, 1, osnodename($1));
+				}
+				else if (  (  $3->n_token == tkPCALL
+				           && (  $3->n_psym == NULL
+					      || $3->n_psym->s_kind == OSUNDEF
+					      )
+				           )
+				        || oschktypes($3->n_type, $1->n_type)
+				        )
+				{ /* generate assignment */
+					if (AFE_NULLABLE_MACRO($3->n_type)
+					  && !AFE_NULLABLE_MACRO($1->n_type))
+					{
+						if ($3->n_token == tkNULL)
+							oscerr(OSNULLEXPR, 0);
+						else
+							oswarn(OSNULLCHK, 0);
+					}
+
+					osevalexpr($3, osnodesym($1));
+					osvardisplay($1);
+				}
+				else
+				{
+					oscerr(OSASNTYPES, 0);
+				}
+			}
+			ostrfree($1);
+			ostrfree($3);
+
+			FormObj = FormSym;
+		} /* end assignment statement */
+;
+
+/*::
+** Name:	if_stmt	-	The IF statement.
+**
+** Syntax:
+**	IF <OSLcondition> THEN <stmt_list>
+**	[ ELSEIF <OSLcondition> THEN <stmt_list> ] ...
+**	[ ELSE <stmt_list> ]
+**	ENDIF
+**
+** Side Effects:
+**	Stack  ==>	|end SID (set)	Becomes ==>	...
+**			...
+*/
+if_stmt:	if_part else_part
+		{
+			IGsetSID(IGpopSID());	/* end SID */
+		}
+;
+
+/*;
+** Name:	if_part -	IF clause of IF statement.
+**
+** Generates:
+**		ILGOTO	endSID
+**
+** Side Effects:
+**	Stack ==>	|else SID (set) Becomes ==>	|end SID
+**			|end SID			...
+**			...
+*/
+if_part:	if_expr stmt_list
+		{
+			register IGSID	*elseSID = IGpopSID();
+
+			IGgenStmt(IL_GOTO, IGtopSID() /* end SID */, 0);
+			IGsetSID(elseSID);
+		}
+;
+
+/*;
+** Name:	if_expr -	Condition of IF clause.
+**
+** Generates:
+**		code for <OSLcondition>
+**		ILIF	tmp elseSID
+**
+** Assumptions:
+**	Stack ==>	|else SID
+**			|end SID
+**			...
+**
+** Side Effects:
+**	Opens and closes a temp block.
+**
+** History:
+**	01/13/91 (emerson)
+**		Insert call to osgenputs after generating IL to evaluate
+**		the logical expression (but before generating the IF).
+**		This will generate a PUTFORM for each parameter passed
+**		by reference to a procedure within the logical expression.
+**		(Bug 34837).
+**	14-sep-92 (davel)
+**		Fixed bug 46472 - moved ostmpend() to before the IL_IF
+**		generation, and moved the ostmpbeg() in front of OSLcondition.
+**		Similar changes are made in the WHILE and ELSEIF rules.
+*/
+if_expr:	if_key {ostmpbeg();} OSLcondition then_key
+		{
+			ILREF	refer;
+
+			refer = osvalref($3);
+			osgenputs();
+			ostmpend();
+			IGgenStmt(IL_IF, IGtopSID() /* else SID */, 1, refer);
+		}
+;
+
+/*;
+** Name:	if_key -	IF keyword.
+**
+** Generates:
+**		ILSTHD	line_no
+**
+** Side Effects:
+**	Stack ==>	|else SID
+**			|end SID
+**			...
+*/
+if_key:		IF
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGpushSID(IGinitSID());		/* end SID */
+			IGpushSID(IGinitSID());		/* else SID */
+		}
+;
+
+/*
+** Name:	then_key -	THEN Keyword for IF Statement.
+**
+** Description:
+**	Catches missing THEN keyword.
+*/
+then_key:	THEN
+	|	error {yyerror(ERx("THEN"));}
+;
+
+/*;
+** Name:	else_part - Further clauses of IF statement.
+*/
+else_part:	else_if_part else_part
+	|
+		else_head ENDIF
+	|
+		else_head curly_end
+		{ /* Error! */
+			i4	line = osscnlno();
+
+			oscerr(OSENDIF, 2, (PTR)&line, $2);
+			YYERROR;
+		}
+	|
+		ENDIF
+	|
+		curly_end
+		{ /* Error! */
+			i4	line = osscnlno();
+
+			oscerr(OSENDIF, 2, (PTR)&line, $1);
+			YYERROR;
+		}
+;
+
+/*;
+** Name:	else_if_part -	ELSEIF clause of IF statement.
+**
+** Generates:
+**		ILGOTO	endSID
+**
+** Side Effects:
+**	Stack ==>	|else SID (set) Becomes ==>	|end SID
+**			|end SID			...
+**			...
+*/
+else_if_part:	else_if_expr stmt_list
+		{
+			register IGSID	*elseSID = IGpopSID();
+
+			IGgenStmt(IL_GOTO, IGtopSID() /* end SID */, 0);
+			IGsetSID(elseSID);
+		}
+;
+
+/*;
+** Name:	else_if_expr -	Condition of ELSEIF clause.
+**
+** Generates:
+**		code for condition
+**		ILIF	tmp elseSID
+**
+** Assumptions:
+**	Stack ==>	|new else SID
+**			|end SID
+**			...
+**
+** Side Effects:
+**	Opens and closes a temp block.
+**
+** History:
+**	01/13/91 (emerson)
+**		Insert call to osgenputs after generating IL to evaluate
+**		the logical expression (but before generating the IF).
+**		This will generate a PUTFORM for each parameter passed
+**		by reference to a procedure within the logical expression.
+**		(Bug 34837).
+**	14-sep-92 (davel)
+**		Fixed bug 46472 - moved ostmpend() to before the IL_IF
+**		generation, and moved the ostmpbeg() in front of OSLcondition.
+**		Similar changes are made in the WHILE and IF rules.
+*/
+else_if_expr:	else_if_key {ostmpbeg();} OSLcondition then_key
+		{
+			ILREF	refer;
+
+			refer = osvalref($3);
+			osgenputs();
+			ostmpend();
+			IGgenStmt(IL_IF, IGtopSID() /* else SID */, 1, refer);
+		}
+;
+
+/*;
+** Name:	else_if_key -	ELSEIF keyword.
+**
+** Generates:
+**		ILSTHD	line_no
+**
+** Side Effects:
+**	Stack ==>	|end SID	Becomes ==>	|new else SID
+**			...				|end SID
+**							...
+*/
+else_if_key:	ELSEIF
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGpushSID(IGinitSID());		/* new else SID */
+		}
+;
+
+/*;
+** Name:	else_head - ELSE clause of IF statement.
+**
+** Generates:
+**	Nothing, since the code falls through to the `end' SID that is set
+**	when this production is reduced as part of the <if_stmt> production.
+*/
+else_head:	else_key stmt_list
+;
+
+/*;
+** Name:	else_key -	ELSE Keyword.
+**
+** Generates:
+**		ILSTHD	line_no
+*/
+else_key:	ELSE
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:	while_stmt -	The WHILE statement.
+**
+** Syntax:
+**	[ ID : ] WHILE <OSLcondition> DO <stmt_list> ENDWHILE
+**
+** Generates:
+**	whileSID: code for <OSLcondition>
+**		ILIF tmp endSID
+**	==>	ILGOTO	whileSID
+**		code for <stmt_list>
+**	endSID:
+**
+** Side Effects:
+**	Stack ==>	|end SID (set)	Becomes ==>	...
+**			|while SID
+**			...
+*/
+while_stmt:	while_head while_expr stmt_list ENDWHILE
+			
+		{
+			register IGSID	*endSID = IGpopSID();
+
+			IGgenStmt(IL_GOTO, IGpopSID() /* while SID */, 0);
+			IGsetSID(endSID);
+			osendblock();
+		}
+;
+/*;
+** Name:	while_expr -	Condition for WHILE statement.
+**
+** Generates:
+**		code for <OSLcondition>
+**		ILIF	tmp endSID
+**
+** Assumptions:
+**	Stack ==>	|end SID
+**			|while SID
+**			...
+**
+** Side Effects:
+**	Opens and closes a temp block.
+**
+** History:
+**	01/13/91 (emerson)
+**		Insert call to osgenputs after generating IL to evaluate
+**		the logical expression (but before generating the IF).
+**		This will generate a PUTFORM for each parameter passed
+**		by reference to a procedure within the logical expression.
+**		(Bug 34837).
+**	31-jul-92 (edf)
+**		Made a call to op_vch_change to convert the string to
+**		VARCHAR. This was handled correctly in expressions, but
+**		when used singly as in "return 'text  '", the blanks
+**		were being removed due to CHAR typing. (Bug 44485).
+**	14-sep-92 (davel)
+**		Fixed bug 46472 - moved ostmpend() to before the IL_IF
+**		generation, and moved the ostmpbeg() in front of the
+**		OSLcondition. Similar changes are made in the IF
+**		and ELSEIF rules.
+*/
+while_expr:	{ostmpbeg();} OSLcondition do_key
+		{
+			ILREF	refer;
+
+			refer = osvalref($2);
+			osgenputs();
+			ostmpend();
+			IGgenStmt(IL_IF, IGtopSID() /* end SID */, 1, refer);
+		}
+;
+do_key:		DO
+	|	error {yyerror(ERx("DO"));}
+;
+
+/*
+** Name:	while_head -	Label ID and Keyword of WHILE statement.
+**
+** Generates:
+**		ILSTHD	line_no
+**
+** Side Effects:
+**	Stack ==>	|end SID
+**			|while SID	(set)
+**			...
+**
+**	Also, sets the SID of the label identifier to be the `end' SID.
+*/
+while_head:	loop_label WHILE
+		{
+			IGpushSID(IGinitSID());		/* while SID */
+			IGsetSID(IGtopSID());
+			IGstartStmt(osscnlno(), IL_LB_WHILE);
+			IGpushSID(IGinitSID());		/* end SID */
+			osblock(LP_WHILE, IGtopSID(), $1);
+		}
+;
+
+/*;
+** Name:	loop_label -	Label ID of WHILE, UNLOADTABLE, RUN SUBMENU,
+**				or DISPLAY SUBMENU statement.
+*/
+loop_label:	ID ':'
+		{
+			$$ = $1;
+		}
+	|
+		/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+/*::
+** Name:	endloop_stmt -	The ENDLOOP statement.
+**
+** Syntax:
+**	ENDLOOP [ ID ]
+**
+** Generates:
+**	<code to clean up intervening loops>
+**	ILGOTO	endSID | idSID
+**
+*/
+endloop_stmt:	endloop_key
+		{
+			if (osblkbreak(LP_NONDISPLAY, (char *)NULL) != OK)
+			{
+				oscerr(OSENDLOOP, 0);
+			}
+		}
+	|	endloop_key ID
+		{
+			_VOID_ osblkbreak(LP_LABEL, $2);
+		}
+;
+endloop_key:	ENDLOOP
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/**:
+** Name:	call_stmt - OSL Call Statements.
+**
+*/
+call_stmt:	call_frame
+	|	call_proc
+	|	execute_procedure
+	|	call_system
+	|	call_subsystem
+	|	return
+	/*	exit	*/
+/*::
+** Name:	exit -			EXIT Statement.
+**
+** Syntax:
+**	EXIT
+*/
+	|	EXIT
+		{
+			_VOID_ osblkbreak(LP_NONE, (char *)NULL);
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGgenStmt(IL_EXIT, (IGSID *)NULL, 0);
+		}
+;
+
+/*::
+** Name:	return -		RETURN Statement.
+**
+** Syntax:
+**	RETURN [ <OSLexpr> ]
+**	04/07/91 (emerson)
+**		Modifications for local procedures:
+**		Get return type from OSFORM symbol table entry
+**		instead of calling osobjtype; use FrmProcName instead of odFrm
+**		in error messages.
+*/
+return:		return_key
+		{
+			DB_DT_ID	rettype;
+
+			_VOID_ osblkbreak(LP_NONE, (char *)NULL);
+			rettype = LocalFormSym->s_type;
+			if (rettype != DB_NODT && osCompat > 5)
+				oswarn(OSRETTYPE, 1, FrmProcName);
+			if (ProcState || LocalProcState)
+			{
+				IGgenStmt(IL_RETPROC, (IGSID *)NULL,
+					1, (ILREF)0);
+			}
+			else
+			{
+				IGgenStmt(IL_RETFRM, (IGSID *)NULL,
+					1, (ILREF)0);
+			}
+		}
+	|	return_key OSLexpr
+		{
+			DB_DT_ID	rettype;
+
+			_VOID_ osblkbreak(LP_NONE, (char *)NULL);
+			rettype = LocalFormSym->s_type;
+			if ( rettype == DB_NODT )
+				oscerr(OSNORETYPE, 1, FrmProcName);
+
+			if ( $2->n_type != DB_NODT )
+			{ /* valid return expression */
+				if ( !oschktypes($2->n_type, rettype) )
+					oscerr(OSBADRET, 1, FrmProcName);
+				else if ( !AFE_NULLABLE(rettype) )
+				{
+					if ( $2->n_token == tkNULL )
+						oscerr(OSNULLRET, 1,
+								FrmProcName);
+					else if ( AFE_NULLABLE($2->n_type) )
+						oswarn(OSNULRETWARN, 1,
+								FrmProcName);
+				}
+
+				/*
+				** more dangerous magic: character constants
+				** must be of type varchar. Bug 44485.
+				*/
+				op_vch_change($2);
+
+				if (ProcState || LocalProcState)
+				{
+					IGgenStmt(IL_RETPROC, (IGSID *)NULL,
+						1, osvarref($2));
+				}
+				else
+				{
+					IGgenStmt(IL_RETFRM, (IGSID *)NULL,
+						1, osvarref($2));
+				}
+			}
+		}
+;
+return_key:	RETURN
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/**-
+** Call (Sub)System Statements.
+**
+** Includes:
+**	call_system	call_subsystem
+*/
+call_key:	CALL
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+/*::
+** Name:	call_system -	CALL SYSTEM Statement.
+**
+** Syntax:
+**	CALL SYSTEM [ <OSLexpr> ]
+*/
+call_system:	call_key SYSTEM
+		{
+			IGgenStmt(IL_CALSYS, (IGSID *)NULL, 1, 0);
+		}
+	|	call_key SYSTEM OSLstrexpr
+		{
+			IGgenStmt(IL_CALSYS, (IGSID *)NULL, 1, osvalref($3));
+		}
+;
+
+/*::
+** Name:	call_subsystem -	CALL Subsystem Statement.
+**
+** Syntax:
+**	CALL <ingres_name> [ '(' [ <sub_par_list> ] ')' ]
+*/
+call_subsystem: call_key ingres_name subsys_param
+		{
+			ossubsys($2, $3);
+		}
+;
+subsys_param:	'(' sub_par_list ')'
+		{
+			$$ = $2;
+		}
+	|	'(' ')'
+		{
+			$$ = NULL;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+sub_par_list:	sub_par_list ',' sub_ele
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	sub_ele
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+sub_ele:	ingres_name '=' OSLexpr
+		{
+			if ( AFE_NULLABLE_MACRO($3->n_type) )
+				oswarn( $3->n_token == tkNULL
+					? OSNULLEXPR : OSNULVCHK, 0
+				);
+			u_ptr[0].u_cp = ERx(":=");
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(ASNOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	MODE '=' OSLexpr
+		{
+			if ( AFE_NULLABLE_MACRO($3->n_type) )
+				oswarn( $3->n_token == tkNULL
+					? OSNULLEXPR : OSNULVCHK, 0
+				);
+			u_ptr[0].u_cp = ERx(":=");
+			u_ptr[1].u_nodep = osmkident( $1, (OSNODE *)NULL );
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(ASNOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	TABLE '=' OSLexpr
+		{
+			if ( AFE_NULLABLE_MACRO($3->n_type) )
+				oswarn( $3->n_token == tkNULL
+					? OSNULLEXPR : OSNULVCHK, 0
+				);
+			u_ptr[0].u_cp = ERx(":=");
+			u_ptr[1].u_nodep = osmkident( $1, (OSNODE *)NULL );
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(ASNOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+
+/**-
+** Call Frame/Procedure Statements.
+**
+** Includes:
+**	call_frame	call_proc
+*/
+callassign:	OSLvar assign_op
+		{
+			if ($1->n_flags & N_READONLY)
+				$$ = NULL;
+			else
+				$$ = $1;
+		}
+	|	/* empty */
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			$$ = NULL;
+		}
+;
+call_name:	ingres_name
+		{
+			$$ = $1;
+		}
+	|	SCROLL
+		{
+			$$ = osmkident( $1, (OSNODE *)NULL );
+			$$->n_type = DB_CHA_TYPE;	/* special case */
+		}
+;
+/*::
+** Name:	call_frame -	CALL FRAME Statement.
+**
+** Syntax:
+**	[ <OSLvar> ':=' ] CALLFRAME <ingres_name>
+**					[ '(' [ <callf_par_list> ] ')' ]
+**
+** History:
+**      01/90 (jhw) -- Reset 'FormObj' for next statement.  JupBug #6675.
+**		('FormObj' gets set by the <OSLvar> rule.)
+**	04/07/91 (emerson)
+**		Modifications for local procedures:
+**		Call new function osframesym instead of old osobjsym;
+**	07/22/91 (emerson)
+**		Fix for bug 38753: When call_name is a variable rather than
+**		a literal, its node doesn't have a valid n_value, and it's
+**		not appropriate to call osframesym.
+**	08/18/91 (emerson)
+**		Fix for bug 38001: FormObj was left NULL in the case where
+**		there was no assignment of the return value.
+*/
+call_frame:	callassign callf_key call_name callf_param with_frs
+		{
+			register OSNODE	*node;
+
+			if ($3->n_token == tkID)
+			{
+				u_ptr[0].u_symp = osframesym($3->n_value, TRUE);
+			}
+			else
+			{
+				u_ptr[0].u_symp = (OSSYM *)NULL;
+			}
+			u_ptr[1].u_nodep = $3;
+			u_ptr[2].u_nodep = $4;
+			node = osmknode(tkFCALL, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			if ($1 == NULL)
+			{
+				if ( node->n_type != DB_NODT && osCompat > 5
+						&& osUser )
+					oswarn(OSEXPRETVAL, 1, node->n_fsym->s_name);
+				/* build param structure and call frame */
+				osgencall(node, (OSSYM *)NULL);
+			}
+			else
+			{ /* assignment */
+				register OSSYM	*var = osnodesym($1);
+
+				if (node->n_type != DB_NODT)
+					node->n_fsym->s_ref |= OS_OBJREF;
+				else
+				{
+					register OSSYM	*frame = node->n_fsym;
+
+					if ( frame != NULL )
+					{
+					    if ( frame->s_kind == OSUNDEF )
+						frame->s_ref |= OS_OBJREF;
+					    else
+						oscerr( OSNORETVAL,
+							1, frame->s_name
+						);
+					}
+				}
+
+				if (osiserr($1))
+					var = NULL;
+				else if (node->n_type != DB_NODT
+				  && !oschktypes(node->n_type, $1->n_type) )
+				{
+					oscerr(OSASNTYPES, 0);
+					var = NULL;
+				}
+
+				/* build param structure and call frame */
+				osgencall(node, var);
+				if (var != NULL)
+					osvardisplay($1);
+				ostrfree($1);
+			}
+			FormObj = FormSym;
+			ostrfree(node);
+		}
+;
+callf_key:	CALLF
+		{
+			FrsStmt = IIDISPFRM;
+		}
+;
+/* Note:  'CallState' used for #9133 bug check */
+callf_param:	'(' {CallState = TRUE;} callf_par_list ')'
+		{
+			CallState = FALSE;
+			$$ = $3;
+		}
+	|	'(' ')'
+		{
+			$$ = NULL;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+callf_par_list: callf_par_list par_list_sep callf_par_ele
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = $3;
+			$$ = osmknode(COMMA, (U_ARG*)NULL, &u_ptr[0], &u_ptr[1]);
+		}
+	|	callf_par_ele
+		{
+			$$ = $1;
+		}
+;
+callf_par_ele:	param_query
+		{
+			$$ = $1;
+		}
+	|	param_lhs assign_op position_ele
+		{
+			/* ID [ '.' ID ] assign_op ... */
+			/* save flag since 'osvarref()' frees node */
+			bool		byref = $3->n_token == tkBYREF;
+
+			if ($1->n_token != ATTR
+			  || ($3->n_token == DOTALL && $1->n_attr != NULL))
+			{
+				osuerr(OSNULLCONST, 1, ERx("attribute"));
+			}
+
+			if ($3->n_token == DOTALL)
+			{
+				$$ = $3;
+				ostrfree($1);
+			}
+			else
+			{
+				$$ = osmkassign(
+					IGsetConst(DB_CHA_TYPE,
+						$1->n_attr == NULL
+						? $1->n_name : $1->n_attr),
+					osvarref($3), byref
+				);
+			}
+		}
+;
+
+/*::
+** Name:	execute_procedure - EXECUTE PROCEDURE Statement.
+**
+** Syntax:
+**	[ <OSLvar> ':=' ] EXECUTE PROCEDURE
+**		<ingres_name> [ '(' [ <callp_par_list> ] ')' ]
+**
+*/
+execute_procedure:	callassign EXE_PROC qual_id callp_param
+		{
+			register OSNODE	*node;
+			register OSSYM	*var;
+
+			u_ptr[0].u_symp = (OSSYM *)NULL;
+			u_ptr[1].u_nodep = $3;
+			u_ptr[2].u_nodep = $4;
+			node = osmknode(tkEXEPROC, &u_ptr[0], &u_ptr[1], 
+								&u_ptr[2]);
+			if ( $1 == NULL 
+			  || osiserr($1) || $1->n_flags & N_READONLY
+			   )
+			{
+				var = (OSSYM *)NULL;
+			}
+			else if ( !oschktypes(node->n_type, $1->n_type) )
+			{
+				oscerr(OSASNTYPES, 0);
+				var = (OSSYM *)NULL;
+			}
+			else
+			{
+				var = osnodesym($1);
+			}
+			osgencall(node, var);
+			if (var != NULL)
+				osvardisplay($1);
+                        FormObj = FormSym;
+			ostrfree($1);
+			ostrfree(node);
+		}
+;
+/*::
+** Name:	call_proc - CALL PROCEDURE Statement.
+**
+** Syntax:
+**	[ <OSLvar> ':=' ] CALL PROCEDURE
+**		<ingres_name> [ '(' [ <callp_par_list> ] ')' ]
+**
+** (Note that CALL PROCEDURE is optional through the <OSLexpr> syntax.)
+**
+** Note <keyword_assign> is equivalent to "<ingres_name> <assign_op>" but
+** has the <ingres_name> rules expanded directly to avoid "reduce/reduce"
+** conflicts with <OSLvalue> from <OSLexpr> from <position_ele>.
+**
+** History:
+**      01/90 (jhw) -- Reset 'FormObj' for next statement.  JupBug #6675.
+**		('FormObj' gets set by the <OSLvar> rule.)
+**	04/07/91 (emerson)
+**		Modifications for local procedures:
+**		Call new function osprocsym instead of old osobjsym;
+**		it will look for a local procedure before looking for
+**		a "regular" procedure.
+**	07/22/91 (emerson)
+**		Fix for bug 38753: When call_name is a variable rather than
+**		a literal, its node doesn't have a valid n_value, and it's
+**		not appropriate to call osprocsym.
+**	07/25/91 (emerson)
+**		Fix for bug 38849: Don't allow a CALLPROC of a system function.
+**		(It was causing a bus error in osgencall, because osgencall
+**		expects a tkPCALL node, but osmknode builds an OP or UNARYOP
+**		node for a system function).
+**	08/18/91 (emerson)
+**		Fix for bug 38001: FormObj was left NULL in the case where
+**		there was no assignment of the return value.
+**  29-jun-98 (rodjo04) bug 90148
+**      Added call to CVlower to ensure that the symbol is first
+**      forced to lowercase and then entered into the symbol table.
+**  18-aug-98 (rodjo04)
+**      Amemded above fix by calling CVlower() only if n_value is
+**      a constant, and not a variable.
+*/
+
+call_proc:	callassign CALLP call_name callp_param
+		{
+			register OSNODE	*node;
+			char	*proc_name;
+              
+      			if ($3->n_token == tkID)
+			{
+				CVlower($3->n_value);
+				proc_name = $3->n_value;
+				u_ptr[0].u_symp = osprocsym(proc_name, TRUE);
+			}
+			else
+			{
+				proc_name = NULL;
+				u_ptr[0].u_symp = (OSSYM *)NULL;
+			}
+			u_ptr[1].u_nodep = $3;
+			u_ptr[2].u_nodep = $4;
+			node = osmknode(tkPCALL, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			/*
+			** If osmknode set node->n_token to something other
+			** than tkPCALL, it's because it (osmknode) decided
+			** that call_name represented a system (ADF) function.
+			** This is an error:  CALLPROC may only be used
+			** to call a procedure.
+			*/
+			if (node->n_token != tkPCALL)
+			{
+				oscerr( E_OS0267_CallProcSysFunc, 1,
+					proc_name );
+			}
+			/* Type Check */
+			else if ($1 == NULL)
+			{
+				if (node->n_type != DB_NODT && osCompat > 5
+						&& osUser)
+					oswarn(OSEXPRETVAL, 1, node->n_psym->s_name);
+				/* build param structure and call procedure */
+				osgencall(node, (OSSYM *)NULL);
+			}
+			else
+			{
+				register OSSYM	*var = osnodesym($1);
+
+				if (node->n_type != DB_NODT)
+				{
+					node->n_psym->s_ref |= OS_OBJREF;
+				}
+				else
+				{
+					register OSSYM	*proc = node->n_psym;
+
+					if ( proc != NULL )
+					{
+					    if ( proc->s_kind == OSUNDEF )
+						proc->s_ref |= OS_OBJREF;
+					    else
+						oscerr( OSNORETVAL,
+							1, proc->s_name
+						);
+					}
+				}
+
+				if (osiserr($1) || $1->n_flags & N_READONLY)
+				{
+					var = NULL;
+				}
+				else if (node->n_type != DB_NODT
+				  && !oschktypes(node->n_type, $1->n_type) )
+				{
+					oscerr(OSASNTYPES, 0);
+					var = NULL;
+				}
+
+				/* Generate code for procedure call */
+				osgencall(node, var);
+
+				if (var != NULL)
+					osvardisplay($1);
+				ostrfree($1);
+			}
+			FormObj = FormSym;
+			ostrfree(node);
+		}
+;
+callp_param:	'(' callp_par_list ')'
+		{
+			$$ = $2;
+		}
+	|	'(' ')'
+		{
+			$$ = NULL;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+callp_par_list: position_list par_list_sep keyword_list
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = $3;
+			$$ = osmknode(COMMA, (U_ARG *)NULL, &u_ptr[0], &u_ptr[1]);
+		}
+	|	keyword_list par_list_sep position_list
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			$$ = osmknode(COMMA, (U_ARG *)NULL, &u_ptr[0], &u_ptr[1]);
+		}
+
+	|	position_list
+		{
+			$$ = $1;
+		}
+	|	keyword_list
+		{
+			$$ = $1;
+		}
+;
+
+position_list:	position_list par_list_sep position_ele
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = $3;
+			$$ = osmknode( COMMA, (U_ARG*)NULL, &u_ptr[0],
+					&u_ptr[1]
+			);
+		}
+	|	position_ele
+		{
+			$$ = $1;
+		}
+;
+position_ele:	OSLexpr
+		{
+			$$ = $1;
+		}
+	|	BYREF '(' OSLvalue ')'
+		{
+			if ( $3->n_flags & N_READONLY )
+			{
+				oscerr(OSFNARG, 0);
+				u_ptr[0].u_symp = ossymundef(ERx("*BYREF"),
+						FormSym);
+			}
+			else
+			{
+				osmarkput($3);
+				u_ptr[0].u_symp = osnodesym($3);
+			}
+			$$ = osmknode( tkBYREF, (U_ARG*)NULL, &u_ptr[0], (U_ARG*)NULL);
+		}
+	|	OSLname_all
+		{
+			u_ptr[0].u_nodep = $1;
+			$$ = osmknode(DOTALL, &u_ptr[0],
+					(U_ARG*)NULL, (U_ARG*)NULL);
+		}
+;
+
+keyword_list:	keyword_list par_list_sep keyword_ele
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = $3;
+			$$ = osmknode( COMMA, (U_ARG *)NULL, &u_ptr[0],
+					&u_ptr[1]
+			);
+		}
+	|	keyword_ele
+		{
+			$$ = $1;
+		}
+;
+keyword_ele:	keyword_assign position_ele
+		{
+			/*
+			** Note that this rule is used for a CALLPROC.
+			** We don't generate code to do an assign if r.h.s.
+			** is of the form x.ALL; we simply ignore the l.h.s.
+			** (as is currently done for x.ALL in a CALLFRAME;
+			** perhaps we should verify that l.h.s. is the name
+			** of the called frame or procedure for both CALLFRAME
+			** and CALLPROC).
+			*/
+			if ($2->n_token == DOTALL)
+			{
+				$$ = $2;
+				ostrfree($1);
+			}
+			else
+			{
+				/* save flag since 'osvarref()' frees node */
+				bool	byref = $2->n_token == tkBYREF;
+
+				$$ = osmkassign(osvalref($1), osvarref($2),
+						byref);
+			}
+		}
+;
+keyword_assign: ID assign_op
+		{
+			$$ = osmkconst( tkSCONST, $1 );
+		}
+	|	SCONST assign_op
+		{
+			$$ = osmkconst( tkSCONST, $1 );
+		}
+	|	OSLcol_var assign_op
+		{
+			if ($1->n_type != DB_NODT && !oschkstr($1->n_type))
+				oscerr(OSNOTSTR, 1, ERget(_PrmKeyWord));
+			$$ = $1;
+		}
+;
+
+par_list_sep:	semic_or_comma
+;
+
+/**:
+** Name:	query_block -	OSL Query Statements.
+**
+*/
+/*::
+** Name:	query_single -	Query Singleton Statement.
+**
+** Syntax:
+**	<query>
+**
+** Generates:
+**		code for <query>
+**		ILQRYBRK qvar
+*/
+query_block:	query
+		{
+			osqrygen( $1, OS_QRYSTMT, !ProcState,
+				  (IGSID *)NULL, (IGSID *)NULL );
+			ostrfree($1);
+		}
+	/*	query_menu	*/
+/*::
+** Name:	query_menu -	Query Attached Menu Statement.
+**
+** Syntax:
+**	<query> '{' <oplist> '}'
+**
+** Generates:  (from <query_menu_head>)
+**		code for <query> (... QRYGEN qvar unique endquerySID)
+**		ILGOTO	menuSID
+**	initSID:
+**		code for initialization <stmt_block> (if any)
+**	submenuSID:
+**		ILMENULOOP
+**		code for <oplist>
+**	(through 'IGendMenu()' and directly ...)
+**	menuSID:
+**		ILBEGDISPMU no_of_activations
+**		ILMENUITEM | IL_KEYACT | IL_FLDACT | IL_COLACT ...
+**		ILENDMENU initSID
+**	endsubmenuSID:
+**		ILPOPSUBMU
+**	endquerySID:
+**
+** Side Effects:
+**	Stack  ==>	|submenu loop SID	Becomes ==>	...
+**			|initcode SID
+**			|menu SID (set)
+**			|end submenu SID (set)
+**			|end query SID (set)
+**			...
+*/
+	|	query_menu_head submenu_init oplist curly_end end_submenu
+		{
+			IGSID	*initcodeSID;
+
+			DispLoopCount -= 1;
+
+			_VOID_ IGpopSID(); 	/* discard MENULOOP SID */
+			initcodeSID = IGpopSID();
+
+			IGsetSID(IGpopSID());	/* BEGIN-DISPLAY SID */
+			IGendMenu(IL_BEGDISPMU, initcodeSID);
+
+			IGsetSID(IGpopSID());	/* end submenu SID */
+			osendblock();		/* sub-menu */
+			osendblock();		/* query */
+
+			IGgenStmt(IL_POPSUBMU, (IGSID *)NULL, 0);
+			IGsetSID(IGpopSID());	/* end query SID */
+			ostrfree($1);
+		}
+/*	|	query_loop	*/
+/*::
+** Name:	query_loop -	Query Loop Statement.
+**
+** Syntax:
+**	[ ID : ] <qry> '{' <stmt_list> '}'
+**
+** Generates:
+**		code for <query> (... QRYGEN qvar unique endquerySID)
+**	qwhileSID:
+**		code for <stmt_list>
+**	==>	ILQRYNEXT|ILM_BRANCH_ON_SUCCESS whileSID qvar FALSE
+**	endquerySID:
+**
+** Side Effects:
+**	Stack ==>	|query loop SID Becomes	 ==>	...
+**			|end query SID (set)
+**			...
+*/
+	|	query_loop_head stmt_list curly_end
+		{
+			register IGSID	*endwhileSID = IGpopSID();
+
+			iiosQrNext($1, endwhileSID, (bool)FALSE);
+			IGsetSID(IGpopSID() /* end query SID */);
+			osendblock();
+			ostrfree($1);
+
+			QloopState = FALSE;
+			OpErr = FALSE;
+		}
+	|	qry
+		{
+			register OSNODE *qry;
+
+			u_ptr[0].u_symp = FormSym;
+			u_ptr[1].u_nodep = osmknode( VALUE, &u_ptr[0],
+						(U_ARG *)NULL, (U_ARG *)NULL );
+			u_ptr[1].u_nodep->n_flags |= N_READONLY;
+			u_ptr[0].u_p = TargListFrag;
+			u_ptr[2].u_qrynodep = $1;
+			qry = osmknode(tkQUERY,&u_ptr[0],&u_ptr[1],&u_ptr[2]);
+			TargListFrag = NULL;
+			osqrygen( qry, OS_QRYSTMT, !ProcState,
+				  (IGSID *)NULL, (IGSID *)NULL );
+			ostrfree(qry);
+		}
+/*	|	next	*/
+/*::
+** Name:	next -		NEXT Query Statement.
+**
+** Generates:
+**		ILQRYNEXT okSID qvar msgon
+**		<code to clean up intervening loops>
+**		ILGOTO endquerySID|endsubmenuSID
+**		okSID:
+**		<code to recompute SELECT targets>
+**
+** Syntax:
+**	NEXT
+*/
+	|	NEXT
+		{
+			IGSID		*qrySID;
+			register OSNODE	*qry = osblkqry(&qrySID);
+
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			iiosQrNext( qry, (IGSID *)NULL,
+				    (bool)(qry == NULL || SubMState > 1) );
+		}
+;
+
+/*
+** Name:	query_menu_head -	Query Submenu Head Statement.
+**
+** Generates:
+**		code for <query> (... QRYGEN qvar unique endquerySID)
+**
+** Side Effects:
+**	Stack ==>	|menu SID
+**			|end submenu SID
+**			|end query SID
+**			...
+*/
+query_menu_head: query_menu_start
+		{
+			SubMState |= 1;
+			DispLoopCount += 1;
+
+			IGpushSID(IGinitSID());		/* end retrieve SID */
+			osqrygen( $1, OS_SUBMENU, !ProcState,
+				  IGtopSID(), (IGSID *)NULL );
+			IGpushSID(IGinitSID());		/* end submenu SID */
+			osblock(LP_QUERY, IGtopSID(), QueryLabel, $1);
+			IGpushSID(IGinitSID());		/* menu SID */
+
+			IGgenStmt(IL_GOTO, IGtopSID(), 0);
+			$$ = $1;
+		}
+;
+query_menu_start: ID ':' query curly_begin begin_submenu
+		{
+			QueryLabel = $1;
+			$$ = $3;
+		}
+	|	query curly_begin begin_submenu
+		{
+			QueryLabel = NULL;
+			$$ = $1;
+		}
+;
+/*
+** Name:	submenu_init -	Submenu Initialization Statement.
+**
+** Generates:
+**		code for initialization <stmt_block> (if any)
+**	submenu:
+**	==>	ILMENULOOP
+**
+** Assumptions:
+**	Stack ==>	|menu SID
+**			...
+**
+** Side Effects:
+**	Stack ==>	|submenu loop SID (set)
+**			|initcode SID (set)
+**			|menu SID (set)
+**			...
+*/
+submenu_init: submenu_init_key '=' stmt_block semic_option
+		{
+			IGsetSID(IGtopSID());		/* menu SID */
+			IGstartStmt(osscnlno(), IL_LB_WHILE);
+			IGgenStmt(IL_MENULOOP, (IGSID *)NULL, 0);
+		}
+	|	/* empty */
+		{
+			IGpushSID(IGinitSID());		/* init code SID */
+			IGsetSID(IGtopSID());
+			IGstartStmt(osscnlno(), IL_LB_WHILE);
+
+			IGpushSID(IGinitSID());		/* menu SID */
+			IGbgnMenu();
+			osblock(LP_DISPLAY, IGtopSID(), (char *) NULL);
+
+			IGsetSID(IGtopSID());		/* menu SID */
+			IGgenStmt(IL_MENULOOP, (IGSID *)NULL, 0);
+		}
+;
+submenu_init_key: INITIALIZE
+		{
+			IGpushSID(IGinitSID());		/* init code SID */
+			IGsetSID(IGtopSID());
+			IGstartStmt(osscnlno(), IL_LB_WHILE);
+
+			IGpushSID(IGinitSID());		/* menu SID */
+			IGbgnMenu();
+			osblock(LP_DISPLAY, IGtopSID(), (char *) NULL);
+		}
+;
+
+/*
+** Name:	query_loop_head -	Query Loop Head Statement.
+**
+** Generates:  (through 'osqrygen()')
+**		code for <qry> (... QRYGEN qvar unique endquerySID)
+**		qwhileSID:
+**
+** Side Effects:
+**	Stack ==>	|query loop SID (set)
+**			|end query SID
+**			...
+*/
+query_loop_head: query_loop_start
+		{
+			IGSID	*endsid, *topsid;
+
+			u_ptr[0].u_symp = FormSym;
+			u_ptr[1].u_nodep = osmknode( VALUE, &u_ptr[0],
+						(U_ARG *)NULL, (U_ARG *)NULL );
+			u_ptr[1].u_nodep->n_flags |= N_READONLY;
+			u_ptr[0].u_p = TargListFrag;
+			u_ptr[2].u_qrynodep = $1;
+			$$ = osmknode(tkQUERY, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			TargListFrag = NULL;
+			endsid = IGinitSID();		/* end query SID */
+			IGpushSID(endsid);
+			topsid = IGinitSID();		/* query loop SID */
+			IGpushSID(topsid);
+			osqrygen( $$, OS_QRYLOOP, !ProcState,
+				  endsid, topsid );
+			osblock(LP_QWHILE, endsid, QueryLabel, $$);
+
+			QloopState = TRUE;
+		}
+;
+query_loop_start: ID ':' qry curly_begin
+		{
+			QueryLabel = $1;
+			$$ = $3;
+		}
+	|	qry curly_begin
+		{
+			QueryLabel = NULL;
+			$$ = $1;
+		}
+;
+
+/*::
+** Name:	query -		Form Object Query RETRIEVE/SELECT Statement.
+**
+** Description:
+**	A retrieve into an form object, either a single retrieve or a
+**	master-detail retrieve.
+**
+** Syntax:
+**	<query_ele>
+**	<query_ele> <query_ele>
+*/
+query:		query_ele
+		{
+			$$ = $1;
+		}
+	|	query_ele query_ele
+		{
+			$1->n_child = $2;
+			$$ = $1;
+		}
+;
+
+/*::
+** Name:	query_ele -		Form Query RETRIEVE/SELECT Statement.
+**
+** Syntax:
+**	ID [ '.' ID ] ':=' <qry>
+*/
+query_ele:	OSLvar assign_op qry
+		{
+			u_ptr[0].u_p = TargListFrag;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_qrynodep = $3;
+			$$ = osmknode(tkQUERY, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			TargListFrag = NULL;
+		}
+;
+param_query:	param_query_ele
+		{
+			$$ = $1;
+		}
+	|	param_query_ele param_query_ele
+		{
+			$1->n_child = $2;
+			$$ = $1;
+		}
+;
+
+param_query_ele:	param_lhs assign_op qry
+		{
+			u_ptr[0].u_p = TargListFrag;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_qrynodep = $3;
+			$$ = osmknode(tkQUERY, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			TargListFrag = NULL;
+		}
+;
+
+/*
+** Name:	qry -	Query RETRIEVE/SELECT Statement.
+**
+** Description:
+**	A <qry> is an optional REPEAT followed by a <qry_body>, which is
+**	DML dependent.
+*/
+qry:		REPEAT {RepeatState = TRUE;} qry_body
+		{
+			$3->qn_repeat = RepeatState; /*may have been set FALSE*/
+			$$ = $3;
+
+			FormObj = FormSym;
+			RepeatState = FALSE;
+		}
+	|	qry_body
+		{
+			$1->qn_repeat = FALSE;
+			$$ = $1;
+
+			FormObj = FormSym;
+		}
+;
+
+/**:
+** Name:	menu_stmt -	OSL SubMenu Statements.
+*/
+sub_menu:	/* display_menu */
+
+/*::
+** Name:	display_menu -	Display SubMenu Statement.
+**
+** Syntax:
+**	DISPLAY MENU '{' <oplist> '}'
+**
+** Generates:
+**		ILGOTO	menuSID
+**	initcodeSID:
+**		<initialize-block code>
+**	submenuSID:
+**		ILMENULOOP
+**		code for <oplist>
+**	(through 'IGendMenu()' and directly ...)
+**	menuSID:
+**		ILBEGDISPMU no_of_activations
+**		ILMENUITEM | IL_KEYACT | IL_FLDACT | IL_COLACT ...
+**		ILENDMENU initcodeSID
+**	endsubmenuSID:
+**		ILPOPSUBMU
+**
+** Side Effects:
+**	Stack  ==>	|submenu loop SID	Becomes ==>	...
+**			|init code SID
+**			|menu SID (set)
+**			|end submenu SID (set)
+**			...
+*/
+		display_menu_key curly_begin submenu_init oplist curly_end
+			end_submenu
+		{
+			register IGSID	*initcodeSID;
+
+			DispLoopCount -= 1;
+
+			_VOID_ IGpopSID(); 	/* discard menuloop SID */
+			initcodeSID = IGpopSID();
+
+			IGsetSID(IGpopSID());	/* BEGINMENU SID */
+			IGendMenu(IL_BEGDISPMU, initcodeSID);
+
+			IGsetSID(IGpopSID());	/* end submenu SID */
+			osendblock();		/* sub-menu */
+			osendblock();		/* sub-menu end */
+
+			IGgenStmt(IL_POPSUBMU, (IGSID *)NULL, 0);
+		}
+	|	/* run_menu */
+/*::
+** Name:	run_menu -	Run SubMenu Statement.
+**
+** Syntax:
+**	RUN MENU '{' <oplist> '}'
+**
+** Generates:
+**		<initialize-block code>
+**		ILGOTO	menuSID
+**	submenuSID:
+**		ILSUBMENU
+**		code for <oplist>
+**	(through 'IGendMenu()' and directly ...)
+**	menuSID:
+**		ILBEGSUBMU no_of_activations
+**		ILMENUITEM | IL_KEYACT | IL_FLDACT | IL_COLACT ...
+**		ILENDMENU submenuSID
+**	endsubmenuSID:
+**
+** Side Effects:
+**	Stack  ==>	|menu SID (set)		Becomes ==>	...
+**			|submenu loop SID
+**			|end submenu SID (set)
+**			...
+*/
+		run_menu_key curly_begin runsub_init oplist curly_end
+			end_submenu
+		{
+			IGsetSID(IGpopSID());	/* menu SID */
+			IGendMenu(IL_BEGSUBMU, IGpopSID());/* submenu top SID */
+			IGsetSID(IGpopSID());	/* end submenu SID */
+			osendblock();		/* sub-menu end */
+		}
+;
+
+/*
+** Name:	display_menu_key
+**
+** Generates:
+**	==>	ILGOTO	menuSID (directly or from <stmt_block>)
+**
+** Side Effects:
+**	Stack ==>	|menu SID
+**			|end submenu SID
+**			...
+*/
+display_menu_key: loop_label DISPLAY_MENU begin_submenu
+		{
+			SubMState |= 1;
+			DispLoopCount += 1;
+
+			IGpushSID(IGinitSID());		/* end submenu SID */
+			osblock(LP_DISPMENU, IGtopSID(), $1);
+			IGpushSID(IGinitSID());		/* menu SID */
+			IGgenStmt(IL_GOTO, IGtopSID(), 0);
+		}
+;
+
+/*
+** Name:	run_menu_key
+**
+** Side Effects:
+**	Stack ==>	|end submenu SID
+**			...
+*/
+run_menu_key:	loop_label RUN_MENU begin_submenu
+		{
+			IGpushSID(IGinitSID());		/* end submenu SID */
+			osblock(LP_RUNMENU, IGtopSID(), $1);
+		}
+;
+
+begin_submenu:	/* empty */
+		{
+			if ( SubMState > 0x7FFFFFFF )
+			{
+				SubMState &= 0x7FFFFFFF;
+				oscerr( E_OS017C_SubmTooDeep, 0 );
+			}
+			SubMState	<<= 1;
+			SubMInAlert	<<= 1;
+			SubMGotNonAlert	<<= 1;
+		}
+;
+
+end_submenu:	/* empty */
+		{
+			if ( ( SubMGotNonAlert & 1 ) == 0 )
+			{
+				oscerr( E_OS017F_MissingActs, 0 );
+			}
+			SubMState	>>= 1;
+			SubMInAlert	>>= 1;
+			SubMGotNonAlert	>>= 1;
+		}
+;
+
+/*
+** Name:	runsub_init -	Run Submenu Initialization Statement.
+**			This is the same as submenu_init, but with a
+**			different stack of SIDs.
+**
+** Generates:
+**		<initialize-block code, possibly empty>
+**	menuloopSID:
+**		SUBMENU
+**
+** Assumptions:
+**	Stack ==>	|end submenu SID
+**			...
+**
+** Side Effects:
+**	Note:  This stack is different than that for DISPLAY MENU.
+**
+**	Stack ==>	|menu SID
+**			|submenu loop SID (set)
+**			|end submenu SID
+**			...
+*/
+runsub_init: runsub_init_key '=' stmt_block semic_option
+		{
+			register IGSID	*menuSID;
+
+			/* re-arrange the stack here. */
+			menuSID = IGpopSID();		/* menu SID */
+
+			IGpushSID(IGinitSID());		/* submenu loop SID */
+			IGsetSID(IGtopSID());
+
+			IGpushSID(menuSID);		/* re-push menu SID */
+			IGgenStmt(IL_SUBMENU, (IGSID *)NULL, 0);
+			IGbgnMenu();
+		}
+	|	/* empty */
+		{
+			register IGSID	*menuSID;
+
+			menuSID = IGinitSID();		/* menu SID */
+			IGgenStmt(IL_GOTO, menuSID, 0);
+			IGpushSID(IGinitSID());		/* submenu loop SID */
+			IGsetSID(IGtopSID());
+			IGpushSID(menuSID);		/* push menu SID */
+			IGgenStmt(IL_SUBMENU, (IGSID *)NULL, 0);
+			IGbgnMenu();
+		}
+;
+runsub_init_key: INITIALIZE
+		{
+			IGpushSID(IGinitSID());		/* menu SID */
+		}
+;
+/**:
+** Name:	form_stmt - OSL Forms System Statements.
+*/
+form_stmt:	clear
+	|	clearrow
+	|	deleterow
+	|	helpfile
+	|	help_forms
+	|	inittable
+	|	inq_forms
+	|	inq_ingres	/* the only EQUEL run-time statement */
+	|	inq_4gl
+	|	insertrow
+	|	loadtable
+	|	message
+	|	mode
+	|	printscreen
+	|	prompt
+	|	redisplay
+	|	resume
+	|	set_connection
+	|	set_forms
+	|	set_ingres
+	|	set_4gl
+	|	set_random_seed
+	|	scroll
+	|	sleep
+	|	unloadtable
+	|	validate
+	|	validrow
+	|	purgetable
+;
+
+/**-
+** General OSL Forms System Statements.
+**
+** Includes:
+**	clear	helpfile	help_forms	message		printscreen
+**	prompt	redisplay	resume		scroll		sleep
+**	validate
+*/
+/*::
+** Name:	clear -		CLEAR Statement.
+**
+** Syntax:
+**	CLEAR SCREEN
+**	CLEAR FIELD ALL
+**	CLEAR FIELD <ing_name_list>
+**
+** Generates:
+**		ILSTHD	line_no
+**		ILCLRSCR | ILCLRALL |
+**		[ code for <ingres_name> ]
+**		ILCLRFLD ref
+**		...
+*/
+clear:		clear_key SCREEN
+		{
+			IGgenStmt(IL_CLRSCR, (IGSID *)NULL, 0);
+		}
+	|	clear_key FIELD ALL
+		{
+			IGgenStmt(IL_CLRALL, (IGSID *)NULL, 0);
+		}
+	|	clear_key FIELD ing_name_list
+		{
+			osevallist($3, clrfld);
+		}
+;
+clear_key:	CLEAR
+		{
+			if (ProcState)
+				oscerr(OSINPROC, 1, $1);
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:	helpfile -	HELPFILE Statement.
+**
+** Syntax:
+**	HELPFILE <ingres_name> <OSLexpr>
+**
+** Generates:
+**		ILSTHD	line_no
+**		[ code for <ingres_name> ]
+**		[ code for <OSLexpr> ]
+**		ILHLPFILE ref expr
+*/
+helpfile:	helpfile_key ingres_name OSLstrexpr
+		{
+			IGgenStmt(IL_HLPFILE, (IGSID *)NULL,
+					2, osvalref($2), osvalref($3)
+				);
+		}
+;
+helpfile_key:	HELPFILE
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:	help_forms -	HELPFORMS Statement.
+**
+** Syntax:
+**	HELPFORMS '(' SUBJECT '=' <OSLexpr> ',' FILE '=' <OSLexpr> ')'
+**
+** Generates:
+**		ILSTHD	line_no
+**		[ code for <OSLexpr> ]
+**		[ code for <OSLexpr> ]
+**		ILHLPFORMS expr1 expr2
+*/
+help_forms:	help_forms_key '(' subject '=' OSLstrexpr ','
+						file '=' OSLstrexpr ')'
+		{
+			IGgenStmt(IL_HLPFORMS, (IGSID *)NULL,
+				2, osvalref($5), osvalref($9)
+				);
+		}
+;
+help_forms_key: HELP_FORMS
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+subject:	id_or_sconst
+		{
+			if (!osw_compare(_Subject, $1))
+				yyerror(ERx("SUBJECT"));
+		}
+;
+
+/*::
+** Name:	message -	MESSAGE Statement.
+**
+** Syntax:
+**	MESSAGE <OSLexpr> [ WITH ... ]
+**
+** Generates:
+**		ILSTHD	line_no
+**		[ code for <OSLexpr> ]
+**		ILMESSAGE expr
+*/
+message:	message_key OSLstrexpr with_frs
+		{
+			IGgenStmt(IL_MESSAGE, (IGSID *)NULL, 1, osvalref($2));
+		}
+;
+message_key:	MESSAGE
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			FrsStmt = IIMESSAGE;
+		}
+;
+
+/*::
+** Name:	prompt -	PROMPT Statement.
+**
+** Syntax:
+**	<OSLvar> ':=' PROMPT [ NOECHO ] <OSLexpr> [ WITH ... ]
+**
+** Generates:
+**		ILSTHD	line_no
+**		[ code for <OSLexpr> ]
+**		ILPROMPT expr
+**
+** History:
+**      01/90 (jhw) -- Reset 'FormObj' for next statement.  JupBug #6675.
+**		('FormObj' gets set by the <OSLvar> rule.)
+*/
+prompt:		OSLvar assign_op prompt_key noecho OSLstrexpr with_frs
+		{
+			if ( !($1->n_flags & N_READONLY))
+			{
+				if (!oschkstr($1->n_type))
+					oscerr(OSVARPSTR, 0);
+				else
+				{
+					IGgenStmt($4 ? IL_NEPROMPT : IL_PROMPT,
+						(IGSID*)NULL, 2,
+						$1->n_ilref, osvalref($5)
+						);
+					osvardisplay($1);
+				}
+			}
+			else
+			{
+				ostrfree($5);
+			}
+			ostrfree($1);
+			FormObj = FormSym;
+		}
+;
+prompt_key:	PROMPT
+		{
+			FrsStmt = IINPROMPT;
+		}
+;
+noecho:		NOECHO
+		{
+			$$ = TRUE;
+		}
+	|	/* empty */
+		{
+			$$ = FALSE;
+		}
+;
+
+/*::
+** Name:	printscreen -	PRINTSCREEN Statement.
+**
+** Syntax:
+**	PRINTSCREEN [ '(' FILE '=' <OSLexpr> ')' ]
+**
+** Generates:
+**		ILSTHD	line_no
+**		[ code for <OSLexpr> ]
+**		ILPRNTSCR expr
+*/
+printscreen:	printscr_key '(' file '=' OSLstrexpr ')'
+		{
+			IGgenStmt(IL_PRNTSCR, (IGSID *)NULL, 1, osvalref($5));
+		}
+	|	printscr_key
+		{
+			IGgenStmt(IL_PRNTSCR, (IGSID *)NULL, 1, 0);
+		}
+;
+printscr_key:	PRINTSCREEN
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+file:		id_or_sconst
+		{
+			if (!osw_compare(_File, $1))
+				yyerror(ERx("FILE"));
+		}
+;
+
+/*::
+** Name:	redisplay - REDISPLAY Statement.
+**
+** Syntax:
+**	REDISPLAY
+**
+** Generates:
+**		ILSTHD	line_no
+**		ILREDISPLAY
+*/
+redisplay:	REDISPLAY
+		{
+			if (ProcState)
+				oscerr(OSINPROC, 1, $1);
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGgenStmt(IL_REDISPLAY, (IGSID *)NULL, 0);
+		}
+;
+
+/*::
+** Name:	resume -	RESUME Statement.
+**
+** Syntax:
+**	RESUME
+**	RESUME NEXT
+**	RESUME MENU
+**	RESUME FIELD <ingres_name>
+**	RESUME FIELD ID '.' ID
+**	RESUME NEXTFIELD
+**	RESUME PREVIOUSFIELD
+**
+** Generates:
+**		ILSTHD	line_no
+**		RESUME |
+**		RESMENU |
+**		RESNEXT |
+**		RESFLD ref |
+**		RESCOL ref ref |
+**		RESNFLD |
+**		RESPFLD
+**
+** History:
+**	01/90 (jhw) -- Don't generate GOTO unless its a frame.  JupBug #9247.
+*/
+resume:		resume_key res_list
+		{
+			if (DispLoopCount > 0)
+			{
+				_VOID_ osblkbreak(LP_DISPLAY, (char *)NULL);
+			}
+		}
+|		resume_keyword res_extra_chk
+		{
+			if (DispLoopCount > 0)
+			{
+				_VOID_ osblkbreak(LP_DISPLAY, (char *)NULL);
+			}
+		}
+;
+resume_key:	RESUME
+		{
+			if (DispLoopCount == 0)
+			{
+				oscerr(E_OS016E_NotInDisplayLoop, 1, $1);
+			}
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+res_list:	FIELD ingres_name res_extra_chk
+		{
+			register char	*cp;
+
+			if ($2->n_token == tkID &&
+				(cp = STindex($2->n_value, ERx("."), 0)) != NULL)
+			{
+				char	buf[OSBUFSIZE];
+				char	*table;
+				char	*column;
+
+				STlcopy($2->n_value, buf, cp - $2->n_value);
+				table = iiIG_string(buf);
+				STcopy(cp+1, buf);
+				column = iiIG_string(buf);
+				resumecolumn(table, osmkident(column, (OSNODE *)NULL));
+			}
+			else
+			{
+				if ($2->n_token == tkID)
+				{
+					osfldcheck(FormSym, $2->n_value);
+				}
+				IGgenStmt(IL_RESFLD, (IGSID *)NULL, 1, osvalref($2));
+			}
+		}
+	|	FIELD ID '.' ingres_name res_extra_chk
+		{
+			resumecolumn($2, $4);
+		}
+	|	/* empty */
+		{
+			IGgenStmt(IL_RESUME, (IGSID *)NULL, 0);
+		}
+;
+resume_keyword:	RESENTRY
+		{
+			if (DispLoopCount == 0)
+			{
+				oscerr(E_OS016E_NotInDisplayLoop, 1, $1);
+			}
+			IGgenStmt(IL_RESENTRY, (IGSID *)NULL, 0);
+		}
+	|	RESNEXT
+		{
+			if (DispLoopCount == 0)
+			{
+				oscerr(E_OS016E_NotInDisplayLoop, 1, $1);
+			}
+			IGgenStmt(IL_RESNEXT, (IGSID *)NULL, 0);
+		}
+	|	RESMENU
+		{
+			if (DispLoopCount == 0)
+			{
+				oscerr(E_OS016E_NotInDisplayLoop, 1, $1);
+			}
+			IGgenStmt(IL_RESMENU, (IGSID *)NULL, 0);
+		}
+	|	RESNFLD
+		{
+			if (DispLoopCount == 0)
+			{
+				oscerr(E_OS016E_NotInDisplayLoop, 1, $1);
+			}
+			IGgenStmt(IL_RESNFLD, (IGSID *)NULL, 0);
+		}
+	|	RESPFLD
+		{
+			if (DispLoopCount == 0)
+			{
+				oscerr(E_OS016E_NotInDisplayLoop, 1, $1);
+			}
+			IGgenStmt(IL_RESPFLD, (IGSID *)NULL, 0);
+		}
+;
+res_extra_chk:	/* empty */
+		{
+			/*
+			** RESUME with operands is not allowed
+			** inside an alerter activation.
+			*/
+			if ( SubMInAlert & 1 )
+			{
+				oscerr( E_OS017E_BadResInAlert, 0 );
+			}
+		}
+;
+
+/*::
+** Name:	scroll -	SCROLL TO Statement.
+**
+** Syntax:
+**	SCROLL [ <ingres_name> ] <ingres_name> TO <OSLintexpr> | END
+**	SCROLL [ <ingres_name> ] <ingres_name> UP | DOWN
+**
+** Note:  Form name is not optional from within procedures.
+**
+** Generates:
+**		ILSTHD	line_no
+*/
+scroll:		scroll_key ingres_name scroll_table_opt TO scroll_row
+		{
+			if ( $3 == NULL )
+				scroll( (OSNODE *)NULL, $2, $5 );
+			else
+				scroll( $2, $3, $5 );
+		}
+	|	scroll_key ingres_name scroll_table scroll_dir
+		{
+			char	*dir;
+			bool	up;
+			OSNODE	*row;
+			char	buf[16];
+
+			if (( $4 == NULL && $3->n_token != tkID ) )
+			{
+				yyerror( ERx("TO, UP, DOWN") );
+				ostrfree($2);
+				ostrfree($3);
+				break;
+			}
+			dir = ( $4 == NULL ) ? $3->n_value : $4;
+			if ( !(up = osw_compare( ERx("up"), dir )) &&
+				!osw_compare( ERx("down"), dir) )
+			{
+				yyerror( ERx("UP, DOWN") );
+				ostrfree($2);
+				ostrfree($3);
+				break;
+			}
+			row = osmkconst( tkICONST,
+				iiIG_string( STprintf(buf, ERx("%d"),
+							up ? rowUP : rowDOWN
+					)
+				)
+			);
+			if ( $4 == NULL )
+			{
+				if ( ProcState )
+					oscerr( OSINPROC, 1, 
+						ERx("SCROLL <table field>") );
+				scroll( (OSNODE *)NULL, $2, row );
+			}
+			else
+				scroll( $2, $3, row );
+		}
+;
+scroll_key:	SCROLL
+		{
+			IGstartStmt( osscnlno(), IL_LB_NONE );
+		}
+;
+scroll_table:	ingres_name
+		{
+			$$ = $1;
+		}
+;
+scroll_table_opt:	scroll_table
+		{
+			$$ = $1;
+		}
+	|	/* empty */
+		{
+			if ( ProcState )
+				oscerr( OSINPROC, 1, ERx("SCROLL <table field>") );
+			$$ = NULL;
+		}
+;
+scroll_row:	OSLintexpr
+		{
+			$$ = $1;
+		}
+	|	END
+		{
+			char	buf[16];
+
+			$$ = osmkconst( tkICONST,
+				iiIG_string( STprintf(buf, ERx("%d"), rowEND) )
+			);
+		}
+;
+scroll_dir:	ID
+		{
+			$$ = $1;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+
+/*::
+** Name:	sleep -		SLEEP Stateement.
+**
+** Syntax:
+**	SLEEP <OSLintexpr>
+**
+** Generates:
+**		ILSTHD	line_no
+**		[ code for <OSLintexpr> ]
+**		ILSLEEP ref
+*/
+sleep:		sleep_key OSLintexpr
+		{
+			IGgenStmt(IL_SLEEP, (IGSID *)NULL, 1, osvalref($2));
+		}
+;
+sleep_key:	SLEEP
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:	validate -	VALIDATE Statement.
+**
+** Syntax:
+**	VALIDATE
+**	VALIDATE FIELD <ingres_name>
+**
+** Generates:
+**		ILSTHD	line_no
+**		ILVALIDATE bSID |
+**		[ code for <ingres_name> ]
+**		ILVALFLD tmp bSID
+**		[ code to end any loops ]
+**		GOTO displaySID
+**	bSID:
+*/
+validate:	validate_key
+		{
+			IGSID	*xSID;
+
+			IGgenStmt(IL_VALIDATE, (xSID = IGinitSID()), 0);
+			if (DispLoopCount > 0)
+			{
+				_VOID_ osblkbreak(LP_DISPLAY, (char *)NULL);
+			}
+			IGsetSID(xSID);
+		}
+	|	validate_key FIELD ingres_name
+		{
+			IGSID	*xSID;
+
+			if ($3->n_token == tkID)
+				osfldcheck(FormSym, $3->n_value);
+			IGgenStmt(IL_VALFLD, (xSID = IGinitSID()), 1, osvalref($3));
+			if (DispLoopCount > 0)
+			{
+				_VOID_ osblkbreak(LP_DISPLAY, (char *)NULL);
+			}
+			IGsetSID(xSID);
+		}
+;
+validate_key:	VALIDATE
+		{
+			if (ProcState)
+			{
+				oscerr(OSINPROC, 1, $1);
+			}
+			if (DispLoopCount == 0)
+			{
+				oscerr(E_OS016E_NotInDisplayLoop, 1, $1);
+			}
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/**-
+** OSL Forms System Table-Field/Array Statements.
+**
+** Includes:
+**	clearrow	deleterow	insertrow	validrow
+**	inittable	unloadtable
+**
+**	table_name, tbl_col_name	(used only here.)
+*/
+
+table_name: 	SCONST opt_row_number
+		{
+			$$ = osvalnode(FormSym, $1);
+			if ($2 != NULL)
+				$$ = osarraynode($$, $2, TRUE);
+			$$ = os_ta_check(FormSym, $$);
+			if (!osiserr($$))
+				TableObj = osnodesym($$);
+		}
+	|	var_colon
+		{ /* variable with a ':' */
+			$$ = $1;
+			if (!oschkstr($1->n_type))
+				oscerr(OSNOTSTR, 1, ERget(_TblFldName));
+			else if ( AFE_NULLABLE_MACRO($1->n_type) )
+				oswarn(OSNULVCHK, 0);
+		}
+	|	{AllowForm = FALSE;} var_nocolon
+		{ /* variable - could be tblfld or array */
+			$$ = os_ta_check(FormSym, $2);
+			if (!osiserr($$))
+				TableObj = osnodesym($$);
+		}
+;
+
+tbl_col_name:	ingres_name
+		{
+			if ($1->n_token == tkID && TableObj != NULL)
+			{
+				if (ossympeek($1->n_value, TableObj) != NULL)
+				{
+				     /* Hack Put back  - bug 79308 */
+
+                     if (TableObj->s_type == DB_DMY_TYPE)
+                     {
+                         /*  HACK ATTACK - must be lowercase
+                         **  in our string constants table.
+                         */
+
+                         if ( !is_state($1->n_value) )
+                         {
+                             CVlower($1->n_value);
+                         }
+
+                     }
+				}
+				else if (TableObj->s_type == DB_DMY_TYPE)
+				{
+					oscerr( OSNOTMEM,
+						2, $1->n_value, TableObj->s_name
+					);
+					$1->n_flags |= N_ERROR;
+				}
+				else
+				{
+					/* tablefield, but no such column. */
+					oscerr( OSNOCOL,
+						3, TableObj->s_parent->s_name,
+							TableObj->s_name,
+							$1->n_value
+					);
+					$1->n_flags |= N_ERROR;
+				}
+
+			}
+			$$ = $1;
+		}
+;
+
+/*::
+** Name:	clearrow -	CLEARROW Statement.
+**
+** Syntax:
+**	CLEARROW <table_name> [ <row_number> ] [ '(' <ing_name_list> ')' ]
+**
+** Generates:
+**		ILSTHD	line_no
+**		[ code for <table_name> ]
+**		[ code for <row_number> ]
+**		CLRROW table row
+**		[ TL1ELM VALUE ]
+**		[ ... ]
+**		ENDLIST
+*/
+clearrow:	clearrow_key table_name opt_table_column_list
+		{
+			osrowops(FormSym, (IGSID*)NULL, IL_CLRROW, $2);
+			if ($3 != NULL)
+				osevallist($3, ostl1elm);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+			TableObj = NULL;
+		}
+;
+clearrow_key:	CLEARROW
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+opt_table_column_list:	'(' tbl_col_list ')'
+		{
+			$$ = $2;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+tbl_col_list:	tbl_col_list ',' tbl_col_name
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	tbl_col_name
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+/*::
+** Name:	deleterow - DELETEROW Statement.
+**
+** Syntax:
+**	DELETEROW <table_name> [ <row_number> ]
+**
+** Generates:
+**		ILSTHD	line_noe
+**		[ code for <table_name> ]
+**		[ code for <row_number> ]
+**		DELROW table row
+*/
+deleterow:	deleterow_key table_name
+		{
+			osrowops(FormSym, (IGSID*)NULL, IL_DELROW, $2);
+			TableObj = NULL;
+		}
+;
+deleterow_key:	DELETEROW
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+/*::
+** Name:	purgetable - PURGETABLE Statement.
+**
+** Syntax:
+**	PURGETABLE <table_name>
+**
+** Generates:
+**		ILSTHD	line_noe
+**		[ code for <form_name> ]
+**		[ code for <table_name> ]
+**		PURGETABLE form table
+*/
+purgetable:	purgetable_key ingres_name ingres_name
+		{
+			if ($3 == NULL)
+			{
+				oscerr(E_OS0270_NoPurgeTableName, 0);
+			}
+			if ($3->n_token == tkID && ($2 == NULL ||
+				($2->n_token == tkID &&
+				  STbcompare(FormSym->s_name, 0, $2->n_value,
+				  0, TRUE) == 0)))
+			{
+				(void) ostblcheck(FormSym, $3->n_value);
+			}
+			IGgenStmt(IL_PURGETBL, (IGSID *) NULL, 2,
+				$2 == NULL ? 0 : osvalref($2), osvalref($3));
+
+		}
+;
+purgetable_key:	PURGETBL
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+/*::
+** Name:	loadtable - LOADTABLE Statement.
+**
+** Syntax:
+**	LOADTABLE <loadtable_name> [ '(' <insrow_list> ')' ]
+**
+** Generates:
+*/
+loadtable:	loadtable_key table_name insrow_tlist insrow_with_clause
+		{
+			if (osiserr($2))
+			{
+				; /* We've already output an error */
+			}
+			else if (  ($2->n_token == TABLE && $2->n_flags & N_ROW)
+				|| ($2->n_token == VALUE && $2->n_sexpr != NULL)
+				|| ($2->n_token == ARRAYREF) )
+			{
+			    	oscerr(OSLDTBLIDX, 0);
+			}
+			else if ($3 == NULL)
+			{
+				/* LOADTABLE must have a list */
+			    	oscerr(OSLDTBLEMP, 0);
+			}
+			else
+			{
+				if ($4 == NULL)
+				{
+				    osrowops(FormSym, (IGSID*)NULL, 
+					IL_LOADTABLE, $2);
+				    osevallist($3, ostl2elm);
+				    IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+				}
+				else
+				{
+				    osrowops(FormSym, (IGSID*)NULL, 
+					IL_LOADTABLE|ILM_HAS_CELL_ATTR, $2);
+				    osevallist($3, ostl2elm);
+				    IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+				    osevallist($4, frs_gen);
+				    IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+				}
+				TableObj = NULL;
+			}
+		}
+;
+loadtable_key:	LOADTABLE
+		{
+			if (ProcState)			/* Fix bug #47930 */
+				oscerr(OSINPROC, 1, $1);
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:	insertrow - INSERTROW Statement.
+**
+** Syntax:
+**	INSERTROW <table_name> [ <row_number> ] [ '(' <insrow_list> ')' ]
+**
+** Generates:
+*/
+insertrow:	insertrow_key table_name insrow_tlist insrow_with_clause
+		{
+			if ($4 == NULL)
+			{
+			    osrowops(FormSym, (IGSID*)NULL, IL_INSROW, $2);
+			    if ($3 != NULL)
+				osevallist($3, ostl2elm);
+			    IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+			}
+			else
+			{
+			    osrowops(FormSym, (IGSID*)NULL, 
+				IL_INSROW|ILM_HAS_CELL_ATTR, $2);
+			    if ($3 != NULL)
+				osevallist($3, ostl2elm);
+			    IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+			    osevallist($4, frs_gen);
+			    IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+			}
+			TableObj = NULL;
+		}
+;
+insertrow_key:	INSERTROW
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+insrow_with_clause:	insrow_with_key '(' set_forms_tl ')'
+		{
+			$$ = $3;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+insrow_with_key:	WITH
+		{
+			frs_insrow_with();
+		}
+;
+insrow_tlist:	'(' insrow_list ')'
+		{
+			$$ = $2;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+insrow_list:	insrow_list ',' insrow_ele
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	insrow_ele
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+insrow_ele:	tbl_col_name '=' OSLexpr
+		{
+			if ( $1->n_token == tkID && TableObj != NULL
+				&& !osiserr($1) )
+			{
+				OSSYM 	*sym = ossympeek($1->n_value, TableObj);
+
+				if ($1->n_flags & N_READONLY)
+				{
+					oscerr(OSASNOVAR, 1, osnodename($1));
+				}
+				else if ( sym != NULL )
+				{
+					if (!oschktypes($3->n_type,sym->s_type))
+					{
+						oscerr(OSASNTYPES, 0);
+					}
+					else if ( AFE_NULLABLE_MACRO($3->n_type)
+					  && !AFE_NULLABLE_MACRO(sym->s_type) )
+					{
+						if ($3->n_token == tkNULL)
+							oscerr(OSNULLEXPR, 0);
+						else
+							oswarn(OSNULLCHK, 0);
+					}
+				}
+			}
+			$$ = osmkassign(osvalref($1), osvarref($3), FALSE);
+		}
+;
+/*::
+** Name:	validrow -	VALIDROW Statement.
+**
+** Syntax:
+**	VALIDROW <table_name> [ <row_number> ] [ '(' <ing_name_list> ')' ]
+**
+** Generates:
+**		ILSTHD	line_no
+**		[ code for <table_name> ]
+**		[ code for <row_number> ]
+**		VALROW bSID table row
+**		[ TL1ELM VALUE ]
+**		[ ... ]
+**		ENDLIST
+**		[ code to end any loops ]
+**		GOTO displaySID
+**	bSID:
+*/
+validrow:	validrow_key table_name opt_table_column_list
+		{
+			IGSID	*xSID = IGinitSID();;
+
+			osrowops(FormSym, xSID, IL_VALROW, $2);
+			if ($3 != NULL)
+				osevallist($3, ostl1elm);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+			if (DispLoopCount > 0)
+			{
+				_VOID_ osblkbreak(LP_DISPLAY, (char *)NULL);
+			}
+			IGsetSID(xSID);
+			TableObj = NULL;
+		}
+;
+validrow_key:	VALIDROW
+		{
+			if (ProcState)
+			{
+				oscerr(OSINPROC, 1, $1);
+			}
+			if (DispLoopCount == 0)
+			{
+				oscerr(E_OS016E_NotInDisplayLoop, 1, $1);
+			}
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:	inittable - INITTABLE Statement.
+**
+** Syntax:
+**	INITTABLE <ingres_name> [ <mode_val> ]
+**
+** Generates:
+**		ILSTHD	line_no
+**		[ code for <ingres_name> ]
+**		[ code for <mode_val> ]
+**		ILINITTAB name mode
+**		[ possible list of hidden columns ]
+**		ILENDLIST
+**
+** Note:  Uses <mode_val> from Set/Inquire productions below.
+**
+** History:
+**	12/14/91 (emerson)
+**		Part of fix for bug 38940: If mode_val is omitted,
+**		generate an ILREF pointing to "f" instead of an ILREF of 0.
+**		See IIOitInittableExec in interp!ilftfld.c for details.
+*/
+inittable:	inittab tab_mode_val
+		{
+			register char *table;
+			ILREF	ref1, ref2;
+
+			/* save table name since 'osvalref()' frees node */
+			table = ($1->n_token == tkID) ? $1->n_value : NULL;
+			ref1 = osvalref($1);
+			if ($2 == NULL)
+				ref2 = IGsetConst(DB_CHA_TYPE, ERx("f"));
+			else
+				ref2 = osvalref($2);
+			IGgenStmt(IL_INITTAB, (IGSID *)NULL, 2, ref1, ref2);
+			if (table != NULL)
+				oshidcol(FormSym, table);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+		}
+;
+inittab:	inittab_key ingres_name
+		{
+			if ($2->n_token == tkID)
+				_VOID_ ostblcheck(FormSym, $2->n_value);
+			else
+				oswarn(OSTABINIT, 0);
+			$$ = $2;
+		}
+;
+inittab_key:	INITTABLE
+		{
+			if (ProcState)
+				oscerr(OSINPROC, 1, $1);
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+tab_mode_val:	mode_val
+		{
+			if ($1 != NULL && $1->n_token == tkID)
+				$1->n_value =
+				 iiIG_string(frsck_mode(ERx("INITTABLE"), $1->n_value));
+			$$ = $1;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+/*::
+** Name:	unloadtable -	UNLOADTABLE Statement.
+**
+** Syntax:
+**	UNLOADTABLE <id_or_sconst> [ '(' <unload_tl> ')' ] '{' <stmt_list> '}'
+*/
+unloadtable:	unloadtab_head curly_begin stmt_list curly_end
+		{
+			if ($1 != NULL)
+			{
+				osclrunld($1);
+				IGgenStmt(IL_GOTO, IGpopSID() /*unload SID*/,0);
+			}
+			IGsetSID(IGpopSID());	/* end SID */
+			osendblock();
+		}
+;
+unloadtab_head: unloadtable_key table_name unload_tlist
+		{
+			IGSID	*endSID = IGtopSID();
+			OSSYM *sym = NULL;
+
+			if ( !osiserr($2) )
+			{
+				OSSYM	*osunload();
+
+				/* There's an IGpushSID hidden in here. */
+				sym = osunload(TableObj, endSID, $2);
+			}
+			if (sym != NULL)
+				osgenunldcols(sym);
+			osevallist($3, ostl2elm);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+			osgenputs();
+			$$ = sym;
+			TableObj = NULL;
+		}
+;
+unloadtable_key: loop_label UNLOADTABLE
+		{
+			if (osblkutbl())
+				oscerr(OSNESTUNLD, 0);
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGpushSID(IGinitSID());	/* end SID () */
+			osblock(LP_UNLOADTBL, IGtopSID(), $1);
+		}
+;
+unload_tlist:	'(' unload_tl ')'
+		{
+			$$ = $2;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+unload_tl:	unload_var
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	unload_tl ',' unload_var
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+unload_var:	OSLname '=' tbl_col_name
+		{
+			if ( !osiserr($3)
+			  && $3->n_token == tkID
+			  && TableObj != NULL
+			  && !osiserr($1) )
+			{
+				OSSYM 	*sym = ossympeek($3->n_value, TableObj);
+
+				if ( sym != NULL )
+				{
+					if (!oschktypes(sym->s_type,$1->n_type))
+						oscerr(OSASNTYPES, 0);
+					else if (AFE_NULLABLE_MACRO(sym->s_type)
+					    && !AFE_NULLABLE_MACRO($1->n_type))
+						oswarn(OSNULLCHK, 0);
+				}
+			}
+			osmarkput($1);
+			u_ptr[1].u_symp = osnodesym($1);
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(tkASSIGN, (U_ARG*)NULL, &u_ptr[1], &u_ptr[2]);
+		}
+;
+
+/**-
+** OSL Forms System Set/Inquire Statements.
+**
+** Includes:
+**	mode	inq_forms	set_forms
+**
+**	mode_val	(used here and by <inittable> above.)
+**
+**	(used only here)
+**	frs_object	frs_parlist	frs_constant	frs_constobj
+**	frs_parname	frs_constname
+*/
+/*
+** Set/Inquire FRS Shared Productions.
+*/
+frs_object:	id_or_sconst
+		{
+			frs_object($1);
+		}
+	|	FIELD
+		{
+			frs_object($1);
+		}
+	|	TABLE
+		{
+			frs_object($1);
+		}
+;
+frs_parlist:	/* empty -- No parent-names */
+	|	frs_parlist frs_parname
+;
+frs_parname:	ingres_ref
+		{
+			if ($1->n_token == tkID)
+				frs_parentname($1->n_value, T_CHAR, (PTR)NULL);
+			else if ( $1->n_token == tkICONST )
+			{ /* should be row number */
+				frs_parentname( $1->n_const, T_INT, (PTR)NULL );
+			}
+			else
+			{ /* variable reference */
+				frs_parentname(ERx(""), osfrs_basetype($1->n_type),
+					(PTR)osnodesym($1)
+				);
+			}
+			ostrfree($1);
+		}
+;
+frs_constant:	frs_constname
+		{
+			$$ = osfrs_constant($1, (OSNODE *)NULL);
+		}
+	|	frs_newconst ')'
+		{
+			$$ = osfrs_constant($1, (OSNODE *)NULL);
+		}
+	|	frs_newconst frs_constobj ')'
+		{
+			$$ = osfrs_constant($1, $2);
+		}
+;
+/* recognize as `new' style syntax */
+frs_newconst:	frs_constname '('
+		{
+			if (osfrs_old())
+				yyerror(_SyntaxError);
+			$$ = $1;
+		}
+;
+frs_constname:	id_or_sconst
+		{
+			$$ = $1;
+		}
+	|	MODE
+		{
+			$$ = $1;
+		}
+	|	VALIDATE
+		{
+			$$ = $1;
+		}
+	|	FIELD
+		{
+			$$ = $1;
+		}
+	|	TABLE
+		{
+			$$ = $1;
+		}
+	|	EXISTS
+		{
+			$$ = $1;
+		}
+;
+frs_constobj:	ingres_ref
+		{
+			$$ = $1;
+		}
+	|	CLEAR
+		{
+			$$ = osmkconst( tkSCONST, $1 );
+		}
+	|	PRINTSCREEN
+		{
+			$$ = osmkconst( tkSCONST, $1 );
+		}
+	|	MODE		/* Added for JupBug #20809. */
+		{
+			$$ = osmkconst( tkSCONST, $1 );
+		}
+;
+
+/*::
+** Name:	mode -		MODE Statement.
+**
+** Syntax:
+**	MODE <mode_val>
+**
+** Generates:
+**		ILSTHD	line_no
+**		ILSETFRS form NULL NULL 0
+**		ILINQELM
+**		ENDLIST
+*/
+mode:		mode_key mode_val
+		{
+			if ($2 != NULL && $2->n_token == tkID)
+				$2->n_value =
+				  iiIG_string(frsck_mode(ERx("MODE"), $2->n_value));
+			IGgenStmt(IL_MODE, (IGSID *)NULL, 1, osvalref($2));
+		}
+;
+mode_key:	MODE
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+mode_val:	ingres_name
+		{
+			$$ = $1;
+		}
+	|	UPDATE
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;	/* special case */
+		}
+;
+
+/*::
+** Name:	inq_forms - INQUIRE_FORMS Statement.
+**
+** Syntax:
+**	INQUIRE_FORMS <frs_object> [ <frs_parlist> ] '(' <inq_forms_tl> ')'
+**
+** Generates:
+**		ILSTHD	line_no
+**		[code for ..
+**		IL_INQFRS parent1 parent2 row object_value
+**		INQELM value object row ?
+**		ENDLIST
+*/
+inq_forms:	inq_forms_head '(' inq_forms_tl ')'
+		{
+			frs_head();
+			osevallist($3, frs_gen);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+		}
+;
+inq_forms_key:	INQ_FORMS
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			frs_inqset(FRSinq);
+		}
+;
+inq_forms_head: inq_forms_key frs_object frs_parlist
+		{
+			frs_style();	/* recognize style semantically */
+		}
+;
+inq_forms_tl:	inq_list_var
+		{
+			if ($1 != NULL)
+			{
+				u_ptr[0].u_nodep = $1;
+				u_ptr[1].u_nodep = NULL;
+				u_ptr[2].u_nodep = NULL;
+				$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			}
+			else
+			{
+				$$ = NULL;
+			}
+		}
+	|	inq_forms_tl ',' inq_list_var
+		{
+			if ($3 != NULL)
+			{
+				u_ptr[0].u_nodep = $3;
+				u_ptr[1].u_nodep = $1;
+				u_ptr[2].u_nodep = NULL;
+				$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			}
+			else
+			{
+				$$ = $1;
+			}
+		}
+;
+inq_list_var:	inq_var '=' frs_constant
+		{
+			OSNODE 	*n = NULL;
+
+			if ( $1 != NULL && $3 != NULL )
+			{
+				if ( $3->n_token == FRSCONST )
+                		{ /* `new' style */
+					$3->n_inqvar = $1;
+					n = $3;
+				}
+				else
+				{ /* `old' style */
+					n = osmkassign( $1->s_ilref,
+							osvalref($3), FALSE
+					);
+				}
+			}
+			$$ = n;
+		}
+;
+inq_var:	OSLname
+		{
+			OSSYM 	*sym = osnodesym($1);
+
+			frs_iqset(sym);
+			osmarkput($1);
+
+			if (osiserr($1))
+				$$ = NULL;
+			else
+				$$ = sym;
+		}
+;
+
+/*::
+** Name:	set_forms - SET_FORMS Statement.
+**
+** Syntax:
+**	SET_FORMS <frs_object> [ <frs_parlist> ] '(' <set_forms_tl> ')'
+**
+** Generates:
+**		ILSTHD	line_no
+**		[code for ..
+**		IL_SETFRS parent1 parent2 row object_value
+**		INQELM value object row ?
+**		ENDLIST
+*/
+set_forms:	set_forms_head '(' set_forms_tl ')'
+		{
+			frs_head();
+			osevallist($3, frs_gen);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+		}
+;
+set_forms_key:	SET_FORMS
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			frs_inqset(FRSset);
+		}
+;
+set_forms_head: set_forms_key frs_object frs_parlist
+		{
+			frs_style();	/* recognize style semantically */
+		}
+;
+set_forms_tl:	set_list_var
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	set_forms_tl ',' set_list_var
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+set_list_var:	frs_constant '=' set_value
+		{
+			if ($1 == NULL)
+				ostrfree($3);
+			else
+			{
+				if ($1->n_token == FRSCONST)
+				{ /* `new' style */
+					$1->n_setref = osfrs_setval($3);
+				}
+				else
+				{ /* `old' style */
+					$1 = osmkassign(osvalref($1), osvarref($3), FALSE);
+				}
+			}
+			$$ = $1;
+		}
+
+/*::
+** Name:	inq_ingres -	INQUIRE_INGRES Statement.
+**
+** Syntax:
+**	INQUIRE_INGRES '(' <OSLname> '=' <id_or_sconst> [ ',' ... ] ')'
+*/
+inq_ingres:	inq_ingres_key '(' inq_ingres_tl ')'
+		{
+			IGgenStmt(IL_INQING, (IGSID *)NULL, 0);
+			osevallist($3, ostl2elm);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+		}
+;
+inq_ingres_key: INQ_INGRES
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+inq_ingres_tl:	inq_ingres_var
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	inq_ingres_tl ',' inq_ingres_var
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+inq_ingres_var: OSLname '=' set_ingres_id
+		{
+			if ($1->n_flags & N_READONLY)
+			{
+				$$ = NULL;
+			}
+			else
+			{
+				osmarkput($1);
+				u_ptr[1].u_symp = osnodesym($1);
+				u_ptr[2].u_nodep = osmkconst( tkSCONST, $3 );
+				$$ = osmknode(tkASSIGN, (U_ARG*)NULL,
+						&u_ptr[1], &u_ptr[2]
+				);
+			}
+		}
+;
+
+/*::
+** Name:    set_ingres -    SET_INGRES Statement.
+**
+** Syntax:
+**  SET_INGRES '(' <id_or_sconst> '=' <OSLexpr> [ ',' ... ] ')'
+*/
+set_ingres: set_ingres_key '(' set_ingres_tl ')'
+		{
+			IGgenStmt(IL_SETING, (IGSID *)NULL, 0);
+			osevallist($3, ostl2elm);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+			if (SetSession)
+			{
+				IGgenStmt(IL_CHKCONNECT, (IGSID *)NULL, 0);
+			}
+		}
+;
+set_ingres_key: SET_INGRES
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			SetSession = FALSE;
+		}
+;
+set_ingres_tl:  set_ingres_var
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|   set_ingres_tl ',' set_ingres_var
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+set_ingres_var: set_ingres_id '=' set_expr
+		{
+			$$ = osmkassign( IGsetConst(DB_CHA_TYPE, $1),
+						osvarref($3), FALSE
+			);
+		}
+;
+set_ingres_id:	id_or_sconst
+		{
+			$$ = $1;
+		}
+	|	SESSION
+		{
+			SetSession = TRUE;
+			$$ = $1;
+		}
+;
+
+set_expr:	OSLexpr
+		{
+			$$ = $1;
+		}
+	|	set_value_onoff
+		{
+			$$ = $1;
+		}
+;
+
+set_value:	OSLprimary
+		{
+			$$ = $1;
+		}
+	|	set_value_onoff
+		{
+			$$ = $1;
+		}
+;
+
+set_value_onoff:	ON
+		{
+			$$ = osmkconst(tkICONST, ERx("1"));
+		}
+	|	OFF
+		{
+			$$ = osmkconst(tkICONST, ERx("0"));
+		}
+        |	BELL_TOK 	
+		{
+                     	$$ = osmkconst(tkICONST, ERx("2"));
+		}
+;
+
+/*::
+** Name:	set_connection - SET CONNECTION statement.
+**
+** Syntax:
+**	SET CONNECTION <set_value>
+**
+** Note: this fakes a SET_SQL call, using "connection_name" as the SET keyword.
+*/
+set_connection:	set_conn_key set_conn_value
+	{
+		IGgenStmt(IL_SETING, (IGSID *)NULL, 0);
+		u_ptr[0].u_nodep = $2;
+		u_ptr[1].u_nodep = NULL;
+		u_ptr[2].u_nodep = NULL;
+		u_ptr[0].u_nodep = osmknode(NLIST, &u_ptr[0], 
+						&u_ptr[1], &u_ptr[2]);
+		osevallist(u_ptr[0].u_nodep, ostl2elm); 
+		IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+		IGgenStmt(IL_CHKCONNECT, (IGSID *)NULL, 0);
+	}
+;
+set_conn_key:	SET_CONNECTION
+	{
+		IGstartStmt(osscnlno(), IL_LB_NONE);
+	}
+;
+
+set_conn_value:	ingres_str
+	{
+		$$ = osmkassign( IGsetConst(DB_CHA_TYPE, 
+				ERx("connection_name")), osvarref($1), FALSE);
+	}
+;
+/*::
+** Name:	inq_4gl -	INQUIRE_4GL Statement.
+**
+** Syntax:
+**	INQUIRE_4GL '(' <OSLname> '=' <id_or_sconst> [ ',' ... ] ')'
+**
+**	Note: this uses the inq_ingres target list rules!  This is fine for
+**	now, as no keyword validation is done at compile time.
+*/
+inq_4gl:	inq_4gl_key '(' inq_ingres_tl ')'
+		{
+			IGgenStmt(IL_INQ4GL, (IGSID *)NULL, 0);
+			osevallist($3, ostl2elm);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+		}
+;
+inq_4gl_key: INQ_4GL
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:    set_4gl -    SET_4GL Statement.
+**
+** Syntax:
+**  SET_4GL '(' <id_or_sconst> '=' <OSLexpr> [ ',' ... ] ')'
+**
+**	Note: this uses the set_ingres target list rules!  This is fine for
+**	now, as no keyword validation is done at compile time.
+*/
+set_4gl: set_4gl_key '(' set_ingres_tl ')'
+		{
+			IGgenStmt(IL_SET4GL, (IGSID *)NULL, 0);
+			osevallist($3, ostl2elm);
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+		}
+;
+set_4gl_key: SET_4GL
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:    set_random_seed -    SET_RANDOM_SEED Statement.
+**
+** Note:	Unlike all other commands, this one needs to be executed
+**		both locally and on the DBMS - we therefore generate
+**		intemediate code for the DB commmand, and then generate
+**		the code for the abf side.
+** Syntax:
+**  SET_RANDOM_SEED [ <OSLintexpr> ]
+**
+*/
+set_random_seed: set_random_seed_key
+		{
+                        OSNODE  *izero;
+
+			IGgenStmt(QUEL ? IL_SET : IL_SETSQL, (IGSID *)NULL, 0);
+			osdbstr(ERx("random_seed"));
+			osdbflush();
+			IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+                        izero = osmkconst(tkICONST, ERx("0"));
+			IGgenStmt(IL_SET_RANDOM, (IGSID *)NULL, 1, osvalref(izero));
+		}
+	|	set_random_seed_key OSLintexpr
+		{
+			if (tkIS_CONST_MACRO($2->n_token)) {
+				IGgenStmt(QUEL ? IL_SET : IL_SETSQL, (IGSID *)NULL, 0);
+				osdbstr(ERx("random_seed "));
+				/*
+				** We could do 'osdbeval($2);' to achieve what we want
+				** except it will quietly free the $2 expr that we need
+				** for the IL_SET_RANDOM.
+				*/
+				osdbstr($2->n_const);
+				osdbflush();
+				IGgenStmt(IL_ENDLIST, (IGSID *)NULL, 0);
+				IGstartStmt(osscnlno(), IL_LB_NONE);
+			}
+			IGgenStmt(IL_SET_RANDOM, (IGSID *)NULL, 1, osvalref($2));
+		}
+;
+set_random_seed_key: SET_RANDOM_SEED
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/**-
+** Forms Statement WITH Options Clause
+**
+**	Used with <message>, <prompt> and <call_frame>.
+**
+** Includes:
+**	with_frs
+*/
+/*
+** Name:	with_frs -	FRS With Options Clause.
+**
+** Syntax:
+**	WITH ID '=' ID [ '(' ID '=' <ingres_ref> [ ',' ... ] ')' ]
+*/
+with_frs:	WITH {_VOID_ EQFWopen( FrsStmt );} frs_options
+		{
+			frs_optgen();
+		}
+	|	/* empty */
+;
+frs_options:	frs_option
+	|	frs_options ',' {yyerror(_SyntaxError);} frs_option
+;
+frs_option:	frs_wcoption frs_suboptions
+;
+frs_wcoption:	ID '=' ID
+		{
+			EQFWwcoption($1, $3);
+		}
+;
+frs_suboptions:	'(' frs_list ')'
+	|	/* empty */
+;
+frs_list:	frs_suboption
+	|	frs_list ',' frs_suboption
+;
+frs_suboption:	ID '=' ingres_ref
+		{
+			if ( $3->n_token == tkSCONST ||
+					$3->n_token == tkICONST ||
+					$3->n_token == tkFCONST ||
+					$3->n_token == tkDCONST )
+			{ /* a constant */
+				EQFWsuboption( $1, $3->n_type, $3->n_const, (PTR)NULL );
+			}
+			else if ( $3->n_token == tkID )
+			{ /* an ID constant */
+				EQFWsuboption( $1, DB_CHR_TYPE, $3->n_value, (PTR)NULL );
+			}
+			else
+			{ /* a variable reference */
+				OSSYM *sym = osnodesym($3);
+
+				if ( AFE_NULLABLE_MACRO($3->n_type) )
+					oswarn(OSNULVCHK, 0);
+				EQFWsuboption( $1,
+					AFE_NULLABLE_MACRO($3->n_type)
+						? ( - $3->n_type ) : $3->n_type,
+						sym->s_name, (PTR)sym
+				);
+			}
+		}
+		|	ID '=' DEFAULT
+			{
+				EQFWsuboption( $1, DB_CHR_TYPE, $3, (PTR)NULL );
+			}
+;
+
+/* %L rules */
+
+/**-
+** Database DML Transaction Statements.
+**
+** Includes:
+**	abort	savepoint	transaction
+*/
+/*::
+** Name:	abort -		DBMS ABORT Statement.
+**
+** Syntax:
+**	ABORT [ [ TO ] <ingres_ref> ]
+*/
+abort:		abort_key
+		{
+			IGgenStmt(IL_ABORT, (IGSID *)NULL, 0);
+		}
+	|	abort_key to_noise ingres_ref
+		{
+			IGgenStmt(IL_ABORT, (IGSID *)NULL, 0);
+			osdbeval($3);
+		}
+;
+abort_key:	ABORT
+		{
+			if ( SQL )
+			{
+				/* not supported in future SQL... */
+				oswarn(OSXACTWRN, 1, ERx("ABORT TRANSACTION"));
+
+				/* and not part of Open SQL. */
+				osOpenwarn(ERx("ABORT TRANSACTION"));
+			}
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+to_noise:	TO	/* DBMS noise */
+	|	/* empty */
+;
+
+/*::
+** Name:	savepoint -		DBMS SAVEPOINT Statement.
+**
+** Syntax:
+**	SAVEPOINT <ingres_ref>
+**
+** History:
+**	03/90 (jhw) -- Generate IL_SAVPT_SQL instead for SQL.  JupBug #4567.
+*/
+savepoint:	savepoint_key ingres_ref
+		{
+			IGgenStmt( QUEL ? IL_SAVEPOINT : IL_SAVPT_SQL,
+					(IGSID *)NULL, 0
+			);
+			osdbeval($2);
+		}
+;
+savepoint_key:	SAVEPOINT
+		{
+			if ( SQL )
+				osOpenwarn(ERx("SAVEPOINT"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:	transaction -	DBMS Transaction Statements.
+**
+** Syntax:
+**	BEGIN TRANSACTION | END TRANSACTION
+*/
+transaction:	BEGINTRANSACTION
+		{
+			if ( SQL )
+			{
+				/* not supported in future SQL... */
+				oswarn(OSXACTWRN, 1, ERx("BEGIN TRANSACTION"));
+
+				/* and not part of Open SQL. */
+				osOpenwarn(ERx("BEGIN TRANSACTION"));
+			}
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGgenStmt(IL_BEGTRANS, (IGSID *)NULL, 0);
+		}
+	|	ENDTRANSACTION
+		{
+			if ( SQL )
+			{
+				/* not supported in future SQL... */
+				oswarn(OSXACTWRN, 1, ERx("END TRANSACTION"));
+
+				/* and not part of Open SQL. */
+				osOpenwarn(ERx("END TRANSACTION"));
+			}
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGgenStmt(IL_ENDTRANS, (IGSID *)NULL, 0);
+		}
+;
+
+/**-
+** Database Data Definition (DDL) Statements.
+**
+** Includes:
+**	location_name	int_list_all	format		null_clause
+**	default_clause	unique_clause	with_clause
+**	copy		modify		relocate	save	set
+*/
+/*
+** Name:	location_name -	DBMS Location Name Production.
+**
+** Description:
+**	Production for location name of table in Ingres.
+*/
+location_name:	qual_table_ref
+		{
+			$$ = $1;
+		}
+	|	ingres_name ':' qual_table_ref
+		{
+			u_ptr[0].u_cp = ERx(":");
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(DML|OP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	ingres_name colid_ref
+		{
+			u_ptr[0].u_cp = ERx(":");
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $2;
+			$$ = osmknode(DML|OP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+
+colid_ref:
+    	COLID
+    	{
+    	    $$ = osmkident( $1, (OSNODE *)NULL );
+    	}
+    |	COLID '.' ID
+        {
+            u_ptr[0].u_nodep = osmkident( $1, (OSNODE *)NULL );
+            u_ptr[1].u_nodep = osmkident($3, (OSNODE *)NULL);
+    	    u_ptr[1].u_nodep->n_type = DB_CHA_TYPE;  /* see ingres_name def. */
+            $$ = osmknode(DOT|DML, (U_ARG*)NULL, &u_ptr[0], &u_ptr[1]);
+        }
+;
+
+/*
+** Name:	int_list_all -	DBMS Ingres Integer List or ALL.
+**
+** Description:
+**	A production for a list of Ingres integer references or ALL
+**	used by the DESTROY or DROP PERMIT and INTEGRITY statements
+**	for both QUEL and SQL.
+*/
+int_list_all:	ing_int_list
+		{
+			$$ = $1;
+		}
+	|	ALL
+		{
+			$$ = NULL;
+		}
+;
+
+/*
+** Name:	format -	DBMS Format Production.
+**
+** Description:
+**	Production for
+*/
+format:		ingres_name
+		{
+			$$ = $1;
+		}
+	|	ID '(' ICONST ')'
+		{
+			char	buf[OSBUFSIZE];
+
+			_VOID_ STprintf(buf, ERx("%s(%s)"), $1, $3);
+			$$ = osmkident( iiIG_string(buf), (OSNODE *)NULL );
+		}
+	|	ID '(' ICONST ',' ICONST ')'
+		{
+			char	buf[OSBUFSIZE];
+
+			_VOID_ STprintf(buf, ERx("%s(%s,%s)"), $1, $3, $5);
+			$$ = osmkident( iiIG_string(buf), (OSNODE *)NULL );
+		}
+	|	ID ID '(' ICONST ')' 
+		{
+			char	buf[OSBUFSIZE];
+			(VOID) STprintf(buf, ERx("%s %s(%s)"), $1, $2, $4 );
+			$$ = osmkident( iiIG_string(buf), (OSNODE *)NULL );
+		}
+	|	ID ID 
+		{
+			char	buf[OSBUFSIZE];
+			(VOID) STprintf(buf, ERx("%s %s"), $1, $2 );
+			$$ = osmkident( iiIG_string(buf), (OSNODE *)NULL );
+		}
+;
+/*
+** Name:	null_clause -	DBMS NULL Clause Production.
+**
+*/
+null_clause:	WITH NULLK
+		{
+			$$ = ERx("with null");
+		}
+	|	NOT NULLK
+		{
+			$$ = ERx("not null");
+		}
+        |       NOT NULLK WITH DEFAULT
+                {
+                        if ( SQL )
+                                osOpenwarn(ERx("... WITH DEFAULT"));
+                        $$ = ERx("not null with default");
+                }
+        |       NOT NULLK NOT DEFAULT
+                {
+                        if ( SQL )
+                                osOpenwarn(ERx("... WITH DEFAULT"));
+                        $$ = ERx("not null not default");
+                }
+
+
+;
+default_clause: WITH DEFAULT
+		{
+			if ( SQL )
+				osOpenwarn(ERx("... WITH DEFAULT"));
+			$$ = ERx("with default");
+		}
+	|	NOT DEFAULT
+		{
+			if ( SQL )
+				osOpenwarn(ERx("... NOT DEFAULT"));
+			$$ = ERx("not default");
+		}
+;
+
+/*
+** Name:	unique_clause -	DBMS UNIQUE Keyword Clause.
+**
+** Description:
+**	Optional UNIQUE keyword production for "CREATE INDEX" (SQL),
+**	"RETRIEVE" and "RETRIEVE INTO" (QUEL), and "MODIFY".
+*/
+unique_clause:	UNIQUE
+		{
+			$$ = TRUE;
+		}
+	|	/* empty */
+		{
+			$$ = FALSE;
+		}
+;
+
+/*
+** Name:	with_clause -	DBMS Database Object With Clause.
+**
+** Description:
+**	Optional WITH clause for DDL statements.
+**
+** Syntax:
+**  WITH ingres_name
+**	[ '=' [ UNIQUE ] <ID>
+**		| <quoted_string>
+**		| '(' ingres_ref [ ASC | DESC ] ',' ... ')'
+**	]
+**
+** DDL Specific Instances as of 6.5
+** ================================
+** SQL:
+**
+**	ALTER ROLE ... WITH
+**		NOPASSWORD
+**		PASSWORD = 'rolepass'
+**	ALTER USER ... WITH		<== 6.5
+**		GROUP = 'groupname'
+**		NOPASSWORD
+**		PASSWORD = 'password'
+**		PRIVILEGES = ( ... )
+**	COPY [TABLE] ... INTO | FROM 'filename[,type]' WITH
+**		ON_ERROR = TERMINATE | CONTINUE
+**		ERROR_COUNT = n
+**		ROLLBACK = ENABLED | DISABLED
+**		LOG = 'filename'
+**	CREATE GROUP ... WITH
+**		USERS = ( 'userid' {, ...} )
+**	CREATE INDEX ... WITH
+**		KEY = ( columnname {, ...} )
+**		STRUCTURE = CBTREE | BTREE | CISAM | ISAM | CHASH | HASH
+**		FILLFACTOR = n
+**		MINPAGES = n
+**		MAXPAGES = n
+**		LEAFFILL = n
+**		NONLEAFFILL = n
+**		LOCATION = ( locationname {, ...} )
+**		ALLOCATION = n
+**		EXTEND = n
+**	CREATE ROLE ... WITH
+**		NOPASSWORD
+**		PASSWORD = 'rolepass'
+**	CREATE TABLE ... WITH
+**		LOCATION = ( locationname {, ...} )
+**		[NO]JOURNALING
+**		[NO]DUPLICATES
+**		ALLOCATION = n
+**		EXTEND = n
+**	CREATE VIEW ... WITH
+**		CHECK OPTION
+**	CREATE USER ... WITH		<== 6.5
+**		GROUP = 'groupname'
+**		NOPASSWORD
+**		PASSWORD = 'password'
+**		PRIVILEGES = ( ... )
+**	MODIFY ... WITH
+**		FILLFACTOR = n
+**		MINPAGES = n
+**		MAXPAGES = n
+**		LEAFFILL = n
+**		NONLEAFFILL = n
+**		NEWLOCATION = ( locationname {, ...} )
+**		OLDLOCATION = ( locationname {, ...} )
+**		LOCATION = ( locationname {, ...} )
+**		ALLOCATION = n
+**		EXTEND = n
+**
+** QUEL:
+**
+**	COPY  ... INTO | FROM "filename[,type]" WITH
+**		ON_ERROR = TERMINATE | CONTINUE
+**		ERROR_COUNT = n
+**		ROLLBACK = ENABLED | DISABLED
+**		LOG = "filename"
+**	CREATE ... WITH
+**		LOCATION = ( locationname {, ...} )
+**		[NO]JOURNALING
+**		[NO]DUPLICATES
+**	INDEX ... WITH
+**		KEY = ( columnname {, ...} )
+**		STRUCTURE = CBTREE | BTREE | CISAM | ISAM | CHASH | HASH
+**		FILLFACTOR = n
+**		MINPAGES = n
+**		MAXPAGES = n
+**		LEAFFILL = n
+**		NONLEAFFILL = n
+**		LOCATION = ( locationname {, ...} )
+**		ALLOCATION = n
+**		EXTEND = n
+**	MODIFY ... WITH
+**		FILLFACTOR = n
+**		MINPAGES = n
+**		MAXPAGES = n
+**		LEAFFILL = n
+**		NONLEAFFILL = n
+**		NEWLOCATION = ( locationname {, ...} )
+**		OLDLOCATION = ( locationname {, ...} )
+**		LOCATION = ( locationname {, ...} )
+**		ALLOCATION = n
+**		EXTEND = n
+**	RETRIEVE INTO ... WITH
+**		KEY = ( columnname {, ...} )
+**		STRUCTURE = CBTREE | BTREE | CISAM | ISAM | CHASH | HASH
+**		[NO]JOURNALING
+**		[NO]DUPLICATES
+**		LOCATION = ( locationname {, ...} )
+**		FILLFACTOR = n
+**		MINPAGES = n
+**		MAXPAGES = n
+**		NONLEAFFILL = n
+**		LEAFFILL = n
+**		INDEXFILL = n
+**		MAXINDEXFILL = n
+**		ALLOCATION = n
+**		EXTEND = n
+*/
+with_clause:	WITH with_body
+		{
+			$$ = $2;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+with_body:	with_element
+		{
+			$$ = $1;
+		}
+	|	with_body ',' with_element
+		{
+			$$ = osaddtlist($1, $3);
+		}
+;
+
+with_element:	with_key '=' unique_clause with_item
+		{
+			OSNODE *t1 = $4;
+			OSNODE *t2 = (OSNODE *) NULL;
+
+			if ($3)
+			{
+				t1 = osmkident(ERx("unique"), (OSNODE *) NULL);
+				t2 = $4;
+			}
+			$$ = osmaketle($1, t1, t2);
+		}
+	|	with_key '=' '(' with_item_list ')'
+		{
+			u_ptr[1].u_nodep = $4;
+			$$ = osmaketle( $1,
+				osmknode(PARENS, (U_ARG*)NULL, &u_ptr[1],
+					(U_ARG*)NULL),
+				(OSNODE*)NULL
+			);
+		}
+	|	with_key
+		{
+			$$ = osmaketle($1, (OSNODE *) NULL, (OSNODE *) NULL);
+		}
+;
+with_item_list:	with_item_list ',' with_item
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = $3;
+			$$ = osmknode(COMMA, (U_ARG *)NULL, &u_ptr[0], &u_ptr[1]);
+		}
+	|	with_item
+		{
+			$$ = $1;
+		}
+;
+with_item:	ingres_ref opt_asc_or_desc
+		{
+			if ($2 == NULL)
+				$$ = $1;
+			else
+			{
+				u_ptr[0].u_nodep = $1;
+				u_ptr[1].u_nodep = osmkident($2, (OSNODE *)NULL);
+				$$ = osmknode(BLANK, (U_ARG *)NULL,
+							&u_ptr[0], &u_ptr[1]
+				);
+			}
+		}
+	|	UPDATE	/* special case: can appear in WITH clause rhs */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+		}
+	|	ALL	/* special case: can appear in WITH clause rhs */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+		}
+	|	KEY	/* special case: can appear in WITH clause rhs */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+		}
+;
+
+with_key:	ingres_name
+		{
+			$$ = $1;
+		}
+	/* special cases:  can appear in WITH clause left-hand side */
+	|	KEY	/* 4GL; [CREATE] INDEX | RETRIEVE INTO ... WITH KEY = */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;
+		}
+	|	TABLE	/* SQL only */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;
+		}
+	|	ROLLBACK /* SQL only; COPY [TABLE] ... WITH ROLLBACK = ... */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;
+		}
+	|	GRANT	/* SQL only */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;
+		}
+	|	GROUP	/* SQL only; CREATE|ALTER USER ... WITH GROUP = ... */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;
+		}
+	|	UPDATE	/* SQL only */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;
+		}
+	|	INDEX	/* SQL only */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;
+		}
+;
+opt_asc_or_desc: /* empty */
+		{
+			$$ = NULL;
+		}
+	|	ID
+		{
+			/* We'd better be in QUEL. */
+			if (!osw_compare(ERx("asc"), $1)
+			 && !osw_compare(ERx("desc"), $1))
+				yyerror(_SyntaxError);
+			$$ = $1;
+		}
+	|	ASC
+		{
+			$$ = $1;
+		}
+	|	DESC
+		{
+			$$ = $1;
+		}
+;
+
+/*::
+** Name:	copy -	DBMS COPY Statement.
+**
+** Syntax:
+**	COPY <ingres_name> '('
+**	  [ <ingres_name> '=' <ingres_name> [ WITH NULL [ '(' <constant> ')' ] ]
+**			[ ',' ... ] ] ')'
+**		INTO | FROM <OSLexpr> [ WITH ID '=' <ingres_ref> [ ',' ... ] ]
+**
+** History:
+**	03/90 (jhw) -- Generate IL_COPY_SQL instead for SQL.  JupBug #9734.
+**	08/02/91 (emerson)
+**		Fix for bug 31342: Enclose copy formats of c0x and d0x
+**		(where x represents any single character) in quotes or
+**		apostrophes.  Also made some cosmetic changes.
+*/
+copy:		copy_key qual_table_ref '(' copy_tl ')' copy_dir OSLstrexpr
+			with_clause
+		{
+			ILREF	fres = 0;
+
+			/* pass file directly as semantic value (w/o '\\') */
+			fres = osvarref($7);
+
+			IGgenStmt(QUEL ? IL_COPY :IL_COPY_SQL, (IGSID*)NULL, 0);
+			osdbeval($2);
+			osdbstr(ERx("("));
+			if ($4 != NULL)
+				osevaltlist($4, osdbtle); /* copy target list */
+			osdbstr(ERx(")"));
+			osdbstr($6);
+			osdbflush();
+			IGgenStmt(IL_DBVAR, (IGSID *)NULL, 1, fres);/* string val */
+			osdbwith($8);	/* optional with clause */
+		}
+;
+copy_key:	COPY
+		{
+			if ( SQL )
+				osOpenwarn(ERx("COPY"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+copy_dir:	INTO
+		{
+			$$ = $1;
+		}
+	|	FROM
+		{
+			$$ = $1;
+		}
+;
+copy_tl:	/* empty */
+		{
+			$$ = NULL;
+		}
+	|	copy_list
+		{
+			$$ = $1;
+		}
+;
+copy_list:	copy_list_elm
+		{
+			$$ = $1;
+		}
+	|	copy_list ',' copy_list_elm
+		{
+			$$ = osaddtlist($1, $3);
+		}
+;
+copy_list_elm:	ingres_name '=' copy_format copy_null
+		{
+			$$ = osmaketle($1, $3, $4);
+		}
+;
+copy_format:	ingres_name
+		{
+			$$ = $1;
+
+			/*
+			** Hack for bug 31342:
+			**
+			** The INGRES DBMS requires that a copy format
+			** of c0<delim> or d0<delim> be enclosed
+			** in quotes (QUEL) or apostrophes (SQL),
+			** in the case where <delim> is a 1-character
+			** delimiter, so we force quotes or apostrophes
+			** in precisely those 2 cases.
+			**
+			** A cleaner approach would have been to emit
+			** exactly what the user entered: that is, to
+			** restore the enclosing quotes or apostrophes
+			** if the copy format came in as an SCONST.
+			** However, that could break existing applications.
+			** For example, if the user specifies a copy format
+			** of 'char(0)', we currently strip off the apostrophes,
+			** which produces a legal format: char(0).  If we were
+			** to restore the apostrophes, the DBMS would reject
+			** the copy format.
+			*/
+			if ($1->n_token == tkID)
+			{
+				char	*format_string = $1->n_value;
+
+				if (  STlength(format_string) == 3
+				   && format_string[1] == '0'
+				   && (  format_string[0] == 'c'
+				      || format_string[0] == 'd'
+				      )
+				   )
+				{
+					char	buf[OSBUFSIZE];
+
+					(VOID) STprintf(buf, ERx("%s%s%s"),
+							osQuote, format_string,
+							osQuote);
+					$$ = osmkident( iiIG_string(buf),
+							(OSNODE *)NULL );
+				}
+			}
+		}
+	|	ID '(' ICONST ')' copy_delim
+		{
+			char	buf[OSBUFSIZE];
+
+			if ($5 == NULL)
+			{
+				(VOID) STprintf(buf, ERx("%s(%s)"), $1, $3);
+			}
+			else if (STlength($5) == 1)
+			{
+				(VOID) STprintf(buf, ERx("%s(%s)%s%s%s"),
+						$1, $3, osQuote, $5, osQuote);
+			}
+			else
+			{
+				(VOID) STprintf(buf, ERx("%s(%s)%s"),
+						$1, $3, $5);
+			}
+			$$ = osmkident( iiIG_string(buf), (OSNODE *)NULL );
+		}
+	/* Add handling for LONG VARCHAR(0), BYTE VARYING copy format etc. */
+	|	ID ID '(' ICONST ')' copy_delim
+		{
+			char	buf[OSBUFSIZE];
+
+			if ($6 == NULL)
+			{
+				(VOID) STprintf(buf, ERx("%s %s(%s)"),
+				                $1, $2, $4);
+			}
+			else if (STlength($6) == 1)
+			{
+				(VOID) STprintf(buf, ERx("%s %s(%s)%s%s%s"),
+						$1, $2, $4, osQuote, $6,
+				                osQuote);
+			}
+			else
+			{
+				(VOID) STprintf(buf, ERx("%s %s(%s)%s"),
+						$1, $2, $4, $6);
+			}
+			$$ = osmkident( iiIG_string(buf), (OSNODE *)NULL );
+		}
+;
+copy_delim:	id_or_sconst
+		{
+			$$ = $1;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+copy_null:	WITH NULLK
+		{
+			$$ = osmkident( ERx("with null"), (OSNODE *)NULL );
+		}
+	|	WITH NULLK '(' uconstant ')'
+		{
+			/* 
+			 * Bug 34530 - re-written to produce the correct
+			 * "with null(...)" string for all the various
+			 * constant types.
+			 */
+
+			char	buf[OSBUFSIZE]; /* put "with null (...)" here */
+			char	xcstr[2];	/* the "X" in "(X'3939')" */
+			i4	ntk;		/* token type of $4 */
+			char	*qstr;		/* osQuote in string, else "" */
+
+			xcstr[0] = xcstr[1] = EOS;
+			ntk = $4->n_token;
+			qstr = osQuote;
+
+			if ( ntk == tkXCONST )
+				xcstr[0] = 'X';
+			else if ( ntk == tkFCONST 
+			       || ntk == tkICONST 
+			       || ntk == tkDCONST 
+				)
+				qstr = ERx("");
+			else if ( ntk != tkSCONST )
+			{
+				/* syntax error */
+				oscerr(E_OS0132_BadWithNull, 1, $4->n_const);
+			}
+
+			STprintf(buf, ERx("with null(%s%s%s%s)"), xcstr,
+								  qstr,
+								  $4->n_const,
+								  qstr);
+			$$ = osmkident( iiIG_string(buf), (OSNODE *)NULL );
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+/*::
+** Name:	modify -	QUEL MODIFY Statement.
+**
+** Syntax:
+**	MODIFY <ingres_name> TO <ingres_name> [ UNIQUE ]
+**		[ ON <key> [ ',' <key> ] ]
+**		[ WHERE|WITH ID '=' <ingres_ref> [ ',' ... ] ]
+*/
+modify:		modify_key qual_table_ref TO modify_to unique_clause modkeys
+			mod_with_clause
+		{
+			IGgenStmt(QUEL ? IL_MODIFY : IL_SQLMODIFY, (IGSID*)NULL, 0);
+			osdbeval($2);
+			osdbstr(ERx(" to "));
+			osdbeval($4);
+			if ($5)
+				osdbstr(ERx(" unique "));
+			if ($6 != NULL)
+			{ /* modify key list */
+				osdbstr(ERx(" on "));
+				osevalsklist($6, osdbsrtkey, osldml);
+			}
+			if ($7 != NULL)
+			{ /* modify fill list */
+				osdbstr(ERx(" where "));
+				osevaltlist($7, osdbtle);
+			}
+		}
+;
+modify_key:	MODIFY
+		{
+			if ( SQL )
+				osOpenwarn(ERx("MODIFY"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+modify_to:	ingres_name
+		{
+			$$ = $1;
+		}
+	|	RELOCATE	/* special keywords */
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+		}
+;
+modkeys:	ON key_list
+		{
+			$$ = $2;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+mod_with_clause:/* empty */
+		{
+			$$ = NULL;
+		}
+	|	WHERE with_body
+		{
+			$$ = $2;
+		}
+	|	WITH with_body
+		{
+			$$ = $2;
+		}
+;
+
+/*::
+** Name:	relocate -	DBMS RELOCATE Statement.
+**
+** Syntax:
+**	RELOCATE <ingres_name> TO <ingres_name>
+*/
+relocate:	relocate_key ingres_name TO ingres_name
+		{
+			IGgenStmt(IL_RELOCATE, (IGSID *)NULL, 0);
+			osdbeval($2);
+			osdbstr(ERx(" to "));
+			osdbeval($4);
+		}
+;
+relocate_key:	RELOCATE
+		{
+			if ( SQL )
+				osOpenwarn(ERx("RELOCATE"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:	save -	DBMS SAVE Statement.
+**
+** Syntax:
+**	SAVE <ingres_name> UNTIL <ingres_ref> <ingres_int> <ingres_int>
+*/
+save:		save_key ingres_name UNTIL ingres_ref ingres_int ingres_int
+		{
+			IGgenStmt(IL_SAVE, (IGSID *)NULL, 0);
+			osdbeval($2);
+			osdbstr(ERx(" until "));
+			osdbeval($4);
+			osdbstr(ERx(" "));
+			osdbeval($5);
+			osdbstr(ERx(" "));
+			osdbeval($6);
+		}
+	|	save_key ingres_name
+		{
+			IGgenStmt(IL_SAVE, (IGSID *)NULL, 0);
+			osdbeval($2);
+		}
+;
+save_key:	SAVE
+		{
+			if ( SQL )
+				osOpenwarn(ERx("SAVE"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+
+/*::
+** Name:	set -	DBMS SET Statements.
+**
+** Syntax:
+**	SET <ingres_name>
+**	SET <ingres_name> <ingres_ref>
+**	SET <ingres_name> ON
+**	SET <ingres_name> [ ON <ingres_name> ]
+**	SET <ingres_name> <ingres_ref> <ingres_ref>  
+** 	SET <ingres_name> <ingres_name> <ingres_name> = ROLLBACK <ingres_name>
+**	SET USER AUTHORIZATION <ingres_name> | SYSTEM USER | SESSION USER
+**	SET GROUP <ingres_name> | SESSION GROUP
+**	SET ROLE <ingres_name> [WITH PASSWORD='aaaa']
+**	SET <ingres_name> <ingres_name> | ON <ingres_name>
+**		WHERE <ingres_name> '=' <ingres_ref> [ ',' ... ]
+*/
+set:	set_key set_option
+		{
+			osdbeval($2);
+		}
+	|	set_key set_option ingres_ref 
+		{
+			osdbeval($2);
+			osdbstr(ERx(" "));
+			osdbeval($3);
+		} set_opt_with
+		/* SET AUTOCOMMIT ON */
+	|	set_key set_option ON
+		{
+			osdbeval($2);
+			osdbstr(ERx(" on"));
+		}
+		/* SET AUTOCOMMIT OFF */
+	|	set_key set_option OFF
+		{
+			osdbeval($2);
+			osdbstr(ERx(" off"));
+		}
+		/* SET [NO]JOURNALING ON ... */
+	|	set_key set_option ON qual_table_ref
+		{
+			osdbeval($2);
+			osdbstr(ERx(" on "));
+			osdbeval($4);
+		}
+
+	|	set_key set_option ingres_name ingres_name
+		{
+			osdbeval($2);
+			osdbstr(ERx(" "));
+			osdbeval($3);
+			osdbstr(ERx(" "));
+			osdbeval($4);
+		}
+		/* SET SESSION [ADD/DROP PRIVILEGES ( priv, priv )] 
+		**	[WITH with_list] 
+		*/
+	|	set_key_session set_sess_tail
+	 	/* SET ROLE SESSION ROLE */
+	|	set_key set_option SESSION_ROLE
+		{
+			osOpenwarn(ERx("SET ROLE"));
+			osdbeval($2);
+			osdbstr(ERx(" session role"));
+		}
+
+	 	/* SET GROUP SESSION GROUP */
+	|	set_key GROUP SESSION_GROUP
+		{
+			osOpenwarn(ERx("SET GROUP"));
+			osdbstr(ERx(" group session group"));
+		}
+
+	 	/* SET GROUP <ingres_name> */
+	|	set_key GROUP ingres_name
+		{
+			osOpenwarn(ERx("SET GROUP"));
+			osdbstr(ERx(" group "));
+			osdbeval($3);
+		}
+
+	 	/* SET USER AUTHORIZATION <ingres_name> */
+	|	set_key USER_AUTH ingres_name
+		{
+			osOpenwarn(ERx("SET USER AUTHORIZATION"));
+			osdbstr(ERx(" user authorization "));
+			osdbeval($3);
+		}
+
+	 	/* SET USER AUTHORIZATION SYSTEM USER | SESSION USER */
+	|	set_key USER_AUTH sys_sess_user
+		{
+			osOpenwarn(ERx("SET USER AUTHORIZATION"));
+			osdbstr(ERx(" user authorization "));
+			osdbstr($3);
+		}
+
+		/* SET CACHE ID WHERE ... */
+	|	set_key set_option ingres_name WHERE lock_list
+		{
+			osdbeval($2);
+			osdbstr(ERx(" "));
+			osdbeval($3);
+			osdbstr(ERx(" where "));
+			osevaltlist($5, osdbtle);	/* lock list */
+		}
+		/* SET LOCKMODE SESSION | ON <ingres_name> ... */
+	|	set_key set_option SESSION WHERE lock_list
+		{
+			osdbeval($2);
+			osdbstr(ERx(" session where "));
+			osevaltlist($5, osdbtle);	/* lock list */
+		}
+	|	set_key set_option ON qual_table_ref WHERE lock_list
+		{
+			osdbeval($2);
+			osdbstr(ERx(" on "));
+			osdbeval($4);
+			osdbstr(ERx(" where "));
+			osevaltlist($6, osdbtle);	/* lock list */
+		}
+;
+set_key:	SET
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGgenStmt(QUEL ? IL_SET : IL_SETSQL, (IGSID *)NULL, 0);
+		}
+;
+
+set_key_session:	SET SESSION
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGgenStmt(QUEL ? IL_SET : IL_SETSQL, (IGSID *)NULL, 0);
+			osdbstr(ERx("session"));
+		}
+;
+set_opt_with:   WITH set_sess_with_list
+		{
+			osdbwith($2);
+		}
+	|
+		/* empty */
+	;
+/*
+** set_sess_tail - tailing options from SET SESSION
+** The intent here is at least one of the ADD/DROP/WITH clauses must be
+** given.
+*/
+set_sess_tail:  adp_privs_req
+	     |  adp_privs_req set_sess_with
+	     |  set_sess_with
+;
+set_sess_with:	WITH set_sess_with_list
+		{
+			osdbwith($2);
+		}
+;
+/*
+** set_sess_with_list - SET SESSION WITH-clause
+*/
+set_sess_with_list:	set_sess_with_elem
+		{
+			$$ = $1;
+		}
+	     |  
+		set_sess_with_list ',' set_sess_with_elem
+		{
+			$$ = osaddtlist($1, $3);
+		}
+
+;
+set_sess_with_elem: set_sess_with_lhs '=' set_sess_with_rhs
+		/* SET SESSION WITH SECURITY_LABEL='xxx'  */
+		{
+			$$ = osmaketle($1, $3, (OSNODE *)NULL);
+		}
+	|	set_sess_with_lhs 
+		/* SET SESSION WITH NOPRIVILEGES/NODESCRIPTION */
+		{
+			$$ = osmaketle($1, (OSNODE *) NULL,
+						(OSNODE *)NULL);
+		}
+	|	set_sess_with_lhs '=' '(' with_item_list ')'
+		{
+			u_ptr[1].u_nodep = $4;
+			$$ = osmaketle( $1,
+				osmknode(PARENS, (U_ARG*)NULL, &u_ptr[1],
+					(U_ARG*)NULL),
+				(OSNODE*)NULL
+			);
+		}
+	|	set_sess_with_lhs '=' set_rollback_clause
+	 	/* SET SESSION WITH ON_ERROR = ROLLBACK STATEMENT|TRANSACTION */
+		{
+			$$ = osmaketle($1,  $3,
+					(OSNODE *)NULL);
+		}
+;
+
+set_sess_with_lhs: ID
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+		}
+	|	OSLcol_var disallow_repeat
+		{
+			if (!oschkstr($1->n_type))
+				oscerr(OSNOTSTR, 1, ERget(_FrsName));
+			else if ( AFE_NULLABLE_MACRO($1->n_type) )
+				oswarn(OSNULVCHK, 0);
+			$$ = $1;
+		}
+;
+set_sess_with_rhs: ingres_ref 
+			{$$=$1;}
+
+		| ALL
+			{ $$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;	/* special case */
+			}
+		| DEFAULT
+			{ $$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;	/* special case */
+			}
+;
+
+set_rollback_clause: ROLLBACK ingres_name
+		{
+			u_ptr[0].u_nodep = osmkident($1, (OSNODE*)NULL);
+			u_ptr[1].u_nodep = $2;
+			$$ = osmknode( BLANK, (U_ARG*)NULL,
+					&u_ptr[0], &u_ptr[1]);
+		}
+;
+set_option:	ingres_name
+		{
+                        if (osChkSQL && $1->n_token == tkID
+			  && STbcompare($1->n_value, 0, ERx("autocommit"), 0,
+					FALSE) != 0
+				)
+			{
+				char	buf[OSBUFSIZE];
+
+				osOpenwarn( STprintf( buf, ERx("SET %s"),
+							$1->n_value
+						)
+				);
+			}
+			$$ = $1;
+		}
+;
+sys_sess_user:	SYSTEM_USER
+		{
+			$$ = ERx("system user");
+		}
+	|	SESSION_USER
+		{
+			$$ = ERx("session user");
+		}
+;
+lock_list:	lock_list_elm
+		{
+			$$ = $1;
+		}
+	|	lock_list ',' lock_list_elm
+		{
+			$$ = osaddtlist($1, $3);
+		}
+;
+lock_list_elm:	ingres_name '=' ingres_ref
+		{
+			$$ = osmaketle($1, $3, (OSNODE *)NULL);
+		}
+	|	ingres_name '=' SYSTEM
+		{
+			$$ = osmaketle($1, osmkident($3, (OSNODE *) NULL),
+						(OSNODE *)NULL);
+		}
+	|	ingres_name '=' SESSION
+		{
+			$$ = osmaketle($1, osmkident($3, (OSNODE *) NULL),
+						(OSNODE *)NULL);
+		}
+	|	ingres_name '=' TABLE	/* SQL only */
+		{
+			$$ = osmaketle($1, osmkident($3, (OSNODE *) NULL),
+						(OSNODE *)NULL);
+		}
+;
+
+/*
+** adp_privs_req - handle ADD/DROP PRIVILEGES. Only one of these
+**	       clauses is allowed. This is used by the SET SESSION
+**	       statement, and also by the SQL ALTER USER/PROFILE statements
+*/
+
+
+adp_privs_req: add_privs_kw db_lparen db_ingname_list db_rparen
+	|
+	drop_privs_kw db_lparen db_ingname_list db_rparen
+	;
+
+add_privs_kw: ADD_PRIVILEGES 
+		{  osdbstr(ERx(" add privileges "));}
+;		
+drop_privs_kw: DROP_PRIVILEGES 
+		{  osdbstr(ERx(" drop privileges "));}
+;
+db_ingname:	ingres_name
+	{
+	    osdbeval($1);
+	}
+;
+db_ingname_list:	db_ingname
+	|		db_ingname_list db_comma db_ingname
+;
+db_lparen:	'('
+	{
+	    osdbstr(ERx("("));
+	}
+;
+db_rparen:	')'
+	{
+	    osdbstr(ERx(")"));
+	}
+;
+db_comma:	','
+	{
+	    osdbstr(ERx(","));
+	}
+;
+/**-
+** STAR Statements.
+**
+** Includes:
+**	direct connect, direct disconnect, direct execute immediate (SQL only),
+**	register, remove
+*/
+/*::
+** Name: direct execute immediate - STAR version of EXECUTE IMMEDIATE
+**
+** Syntax:
+**	DIRECT EXECUTE IMMEDIATE <ingres_qname>
+**		[ WITH ID '=' <ingres_ref> [ ',' ... ] ]
+*/
+direct_execute:	dir_ex_key ingres_qname with_clause
+		{
+			IGgenStmt(IL_DIREXIMM, (IGSID *)NULL, 0);
+			osdbeval($2);
+			osdbwith($3);	/* optional with clause */
+		}
+;
+dir_ex_key:	DIR_EXECUTE IMMEDIATE
+		{
+			/*
+			**  In Quel, error recovery is awful for unrecognized
+			**  2nd words of double-keywords.  So it's much
+			**  prettier if we catch it here.  This should be fixed.
+			*/
+			if (QUEL)
+				yyerror(_SyntaxError);
+			else
+				osOpenwarn(ERx("DIRECT EXECUTE IMMEDIATE"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+		}
+;
+/*::
+** Name: direct connect - STAR "DIRECT CONNECT" command.
+**
+** Syntax:
+**	DIRECT CONNECT [ WITH ID '=' <ingres_ref> [ ',' ... ] ]
+*/
+
+direct_connect:	DIR_CONNECT with_clause
+		{
+			if ( SQL )
+				osOpenwarn(ERx("DIRECT CONNECT"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGgenStmt(IL_DIRCONN, (IGSID *)NULL, 0);
+			osdbwith($2);	/* optional with clause */
+		}
+;
+
+/*::
+** Name: direct disconnect - STAR "DIRECT DISCONNECT" command.
+**
+** Syntax:
+**	DIRECT DISCONNECT
+*/
+
+direct_disconnect:	DIR_DISCONNECT
+		{
+			if ( SQL )
+				osOpenwarn(ERx("DIRECT DISCONNECT"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGgenStmt(IL_DIRDIS, (IGSID *)NULL, 0);
+		}
+;
+
+/*::
+** Name: register - STAR "REGISTER {TABLE,INDEX,VIEW,PROCEDURE}" command.
+**
+** Syntax:
+**	REGISTER  [ TABLE | INDEX | VIEW | PROCEDURE ] <obj_name>
+**	[ ON <ingres_name> ]
+**	[ <col_name> <EQ> <format> [ IS <string> ]
+**			{, <col_name> <EQ> <format> [ IS <string> ]
+**	AS LINK | IMPORT
+**	[ FROM <source> ]
+**	[ WITH <with_clause> ]
+**
+** where <EQ> is empty for SQL, '=' for QUEL.  REGISTER PROCEDURE in SQL only.
+*/
+register:	register_key ingres_name opt_on_clause opt_col_spec_list
+			AS register_type /* link or import */
+			opt_reg_from_clause
+			with_clause
+		{
+			IGgenStmt(IL_REGISTER, (IGSID *)NULL, 0);
+
+			/* <empty>, TABLE, INDEX, VIEW, or PROCEDURE(SQL) */
+			if ($1 != NULL)
+			{
+				osdbstr($1);
+				osdbstr(ERx(" "));
+			}
+
+			/* object name */
+			osdbeval($2);
+
+			/* the optional ON <name> */
+			if ($3 != NULL)
+			{
+				osdbstr(ERx(" on "));
+				osdbeval($3);
+			}
+
+			/* the optional formatlist */
+			if ($4 != NULL)
+			{
+				osdbstr(ERx("("));
+				if (QUEL)
+					osevaltlist($4, osdbtle);
+				else
+					osevaltlist($4, osdbsqltle);
+				osdbstr(ERx(")"));
+			}
+
+			osdbstr(ERx(" as "));
+			osdbstr($6);
+
+			/* optional FROM clause */
+			if ($7 != NULL)
+			{
+				osdbstr(ERx(" from "));
+				osdbeval($7);
+			}
+
+			osdbwith($8);	/* optional WITH clause */
+		}
+;
+register_key:	REGISTER reg_obj_type
+		{
+			if ( SQL )
+				osOpenwarn(ERx("REGISTER"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			$$ = $2;
+		}
+	|	REG_TABLE /* QUEL only */
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			$$ = ERx("table");
+		}
+	|	REG_VIEW
+		{
+			osOpenwarn(ERx("REGISTER"));
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			$$ = ERx("view");
+		}
+;
+reg_obj_type:	/* empty */
+		{
+			$$ = NULL;
+		}
+	|	INDEX
+		{
+			$$ = $1;
+		}
+	|	UNIQUE INDEX
+		{
+			$$ = ERx("unique index");
+		}
+	|	TABLE /* SQL only.  RE[GM]_TABLE does it in QUEL. */
+		{
+			$$ = $1;
+		}
+	|	PROCEDURE /* SQL only. */
+		{
+			$$ = $1;
+		}
+;
+register_type:	ID
+		{
+			if ( !osw_compare(ERx("import"), $1)
+					&& !osw_compare(ERx("link"), $1) )
+			{
+				yyerror(_SyntaxError);
+			}
+			$$ = $1;
+		}
+;
+opt_on_clause: /* empty */
+		{
+			$$ = NULL;
+		}
+	|	ON ingres_name
+		{
+			$$ = $2;
+		}
+;
+opt_col_spec_list:
+	/* empty */
+	{
+		$$ = NULL;
+	}
+    |	'(' reg_col_spec_list ')'
+	{
+		$$ = $2;
+	}
+;
+reg_col_spec_list:
+	reg_col_spec
+	{
+		$$ = $1;
+	}
+    |   reg_col_spec_list ',' reg_col_spec
+	{
+		$$ = osaddtlist($1, $3);
+	}
+;
+reg_col_spec :
+	column_spec			/* REGISTER ... AS IMPORT ... */
+	{
+		$$ = $1;
+	}
+    |	column_spec is_clause		/* REGISTER ... AS IMPORT ... */
+	{
+		if ( $1->tl_dim == NULL )
+			$1->tl_dim = $2;
+		else
+		{
+			OSNODE *tmp;
+
+			u_ptr[0].u_nodep = $1->tl_dim;
+			u_ptr[1].u_nodep = $2;
+			$1->tl_dim = osmknode( BLANK, (U_ARG *)NULL,
+						&u_ptr[0], &u_ptr[1]
+			);
+		}
+		$$ = $1;
+	}
+    |	ingres_name			/* REGISTER ... AS LINK ... */
+	{
+		$$ = osmaketle($1, (OSNODE *)NULL, (OSNODE *)NULL);
+	}
+;
+is_clause:	IS ingres_qname
+		{
+			u_ptr[0].u_nodep = osmkident($1, (OSNODE *) NULL);
+			u_ptr[1].u_nodep = $2;
+			$$ = osmknode( BLANK, (U_ARG *) NULL,
+						&u_ptr[0], &u_ptr[1]
+			);
+		}
+;
+opt_reg_from_clause:	/* empty */
+		{
+			$$ = NULL;
+		}
+	|	FROM qual_table_ref
+		{
+			$$ = $2;
+		}
+;
+
+/*::
+** Name: remove - STAR "REMOVE {TABLE,INDEX,VIEW}" command.
+**
+** Syntax:
+**	REMOVE [ TABLE | INDEX | VIEW ] <obj_name>
+*/
+remove:		remove_key qual_table_ref
+		{
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			IGgenStmt(IL_REMOVE, (IGSID *)NULL, 0);
+
+			/* <empty>, TABLE, INDEX, or VIEW */
+			if ($1 != NULL)
+			{
+				osdbstr($1);
+				osdbstr(ERx(" "));
+			}
+
+			/* object name */
+			osdbeval($2);
+		}
+;
+remove_key:	REMOVE reg_obj_type
+		{
+			if ( SQL )
+				osOpenwarn(ERx("REMOVE"));
+			$$ = $2;
+		}
+	|	REM_TABLE /* QUEL only */
+		{
+			$$ = ERx("table");
+		}
+	|	REM_VIEW
+		{
+			if ( SQL )
+				osOpenwarn(ERx("REMOVE"));
+			$$ = ERx("view");
+		}
+;
+
+
+/**-
+** OSL Expressions.
+**
+** Note:  The OSL parser recognizes expressions in two different
+** contexts; database (QUEL or SQL) context, and OSL context.
+*/
+
+/*::
+** Name:	OSLexpr -	OSL Expressions.
+**
+**	04/07/91 (emerson)
+**		Modifications for local procedures:
+**		When expression is a procedure call,
+**		call new function osprocsym instead of old osobjsym;
+**		it will look for a local procedure before looking for
+**		a "regular" procedure.
+**	07/22/91 (emerson)
+**		Fix for bug 38753: When call_name is a variable rather than
+**		a literal, its node doesn't have a valid n_value, and it's
+**		not appropriate to call osprocsym.
+**	08/06/91 (emerson)
+**		Issue a warning if the system function DBMSINFO is used
+**		in an expression (bug 21745).
+*/
+OSLexpr:	OSLexpr boph OSLexpr	%prec BOPH
+		{
+			u_ptr[0].u_cp = $2;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(OP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	OSLexpr bop OSLexpr	%prec BOP
+		{
+			u_ptr[0].u_cp = $2;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(OP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	OSLexpr EXP OSLexpr
+		{
+			u_ptr[0].u_cp = _Exp;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(OP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	'(' OSLexpr ')'
+		{
+			$$ = $2;
+		}
+	|	'-' OSLexpr	%prec UOP
+		{
+			u_ptr[0].u_cp = _UnaryMinus;
+			u_ptr[1].u_nodep = $2;
+			$$ =
+			  osmknode(UNARYOP, &u_ptr[0], &u_ptr[1], (U_ARG*)NULL);
+		}
+	|	call_name '(' func_param ')'
+		{
+			register OSNODE	*proc;
+			char	*proc_name;
+
+			if ($1->n_token == tkID)
+			{
+				proc_name = $1->n_value;
+				u_ptr[0].u_symp = osprocsym($1->n_value, TRUE);
+			}
+			else
+			{
+				proc_name = NULL;
+				u_ptr[0].u_symp = (OSSYM *)NULL;
+			}
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $3;
+			proc = osmknode(tkPCALL, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			if ( proc->n_token == tkPCALL )
+			{
+				if ( proc->n_psym != NULL )
+				{
+					if ( proc->n_psym->s_kind == OSUNDEF
+						|| proc->n_type != DB_NODT )
+					{
+						proc->n_psym->s_ref |=
+							OS_OBJREF;
+					}
+					else
+					{
+						oscerr( OSNORETVAL,
+							1, proc->n_proc->n_const
+						);
+					}
+				}
+			}
+			else	/* osmknode determined that the specified
+				** procedure is a system (ADF) function.
+				** See if it's DBMSINFO.
+				*/
+			{
+				if ( STbcompare(proc_name, 0,
+					ERx("dbmsinfo"), 0, TRUE) == 0 )
+				{
+					oswarn(E_OS0269_BadDbmsinfo);
+				}
+			}
+
+			$$ = proc;
+		}
+	|	OSLprimary
+		{
+			$$ = $1;
+		}
+;
+
+OSLprimary:	constant_or_null
+		{
+			/* Translate strings */
+			if ( $1->n_token == tkSCONST )
+				$1->n_const = osstring( FALSE, $1->n_const, osldml);
+			else if ( $1->n_token == tkXCONST )
+				$1->n_const = oshexvchar($1->n_const);	/* SQL only */
+			$$ = $1;
+		}
+	|	OSLvalue
+		{
+			$$ = $1;
+		}
+;
+
+func_param:	callp_par_list
+		{
+			$$ = $1;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+/*
+** Name:	row_number -	Table Field Row Reference Production.
+**
+** Note:  Can only be used where there is not both rules of the form
+** "ID row_number '.' ID" and "ID'.'ID" or "ID LSQBRK OSLintexpr RSQBRK '.' ID",
+** otherwise a "shift/reduce" conflict results.
+*/
+
+opt_row_number:	row_number
+		{
+			$$ = $1;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+row_number:	LSQBRK OSLintexpr RSQBRK
+		{
+			$$ = $2;
+		}
+	|	LSQBRK RSQBRK
+		{
+			$$ = NULL;
+		}
+;
+
+OSLstrexpr:	OSLexpr
+		{
+			if ( $1->n_token == tkNULL ||
+				( $1->n_type != DB_NODT &&
+					!oschkstr($1->n_type) ) )
+			{ /* not a string! */
+				oscerr(OSNOTSTRX, 0);
+			}
+			$$ = $1;
+		}
+;
+
+OSLintexpr:	OSLexpr
+		{
+			if ( !ADE_CHK_TYPE($1->n_type, DB_INT_TYPE) &&
+					$1->n_type != DB_NODT )
+				oscerr(OSNOTINT, 0);
+			$$ = $1;
+		}
+;
+
+/*::
+** Name:	OSLcondition -	OSL Logical Expressions.
+**
+** Description:
+**	An OSL logical expression, recognized for <if_stmt> and <while_stmt>.
+*/
+OSLcondition:	'(' OSLcondition ')'
+		{
+			$$ = $2;
+		}
+	|	OSLcondition lbop OSLcondition	%prec LBOP
+		{
+			u_ptr[0].u_cp = $2;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(LOGOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	NOT OSLcondition	%prec UOP
+		{
+			u_ptr[0].u_cp = _Not;
+			u_ptr[1].u_nodep = $2;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(LOGOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	OSLexpr relop OSLexpr	%prec ROP
+		{
+			u_ptr[0].u_cp = $2;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $3;
+			$$ = osmknode(RELOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	OSLexpr is_postfix_op	%prec UOP_POSTFIX
+		{
+			u_ptr[0].u_cp = $2;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(RELOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	OSLexpr likeop like_pattern escape   %prec ROP
+		{
+			u_ptr[0].u_cp = $2;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = $3;
+
+			$$ = osmknode(RELOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			if ( $4 != NULL )
+			{ /* SQL only because ESCAPE is not a keyword in QUEL */
+				u_ptr[0].u_cp = _Escape;
+				u_ptr[1].u_nodep = $$;
+				u_ptr[2].u_nodep = $4;
+				$$ = osmknode(RELOP, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+			}
+		}
+;
+like_pattern:	constant
+		{
+			/* Translate strings */
+			if ( $1->n_token == tkSCONST )
+				$1->n_const = osstring( TRUE, $1->n_const, osldml);
+			else if ( $1->n_token == tkXCONST )
+				$1->n_const = oshexvchar($1->n_const);  /* SQL only */
+			else
+			{
+				/* not a string! */
+				oscerr(OSNOTSTRX, 0);
+			}
+			$$ = $1;
+		}
+	|   OSLvalue
+		{
+			if ( $1->n_token == tkNULL
+			  || ( $1->n_type != DB_NODT && !oschkstr($1->n_type) ) )
+			{
+				/* not a string! */
+				oscerr(OSNOTSTRX, 0);
+			}
+			if ( QUEL )
+			{ /* Must encode dynamic value for pattern-match */
+				U_ARG   encode;
+				U_ARG   utmp;
+
+				/* Note:  ADE_PMENCODE operates on its argument
+				** translating pattern-match characters (and escapes)
+				** into the internal pattern-match representation.
+				** So, variables must be copied into a temporary
+				** before applying ADE_PMENCODE and the LIKE operators.
+				*/
+                		encode.u_cp = ERx("varchar");
+				utmp.u_nodep = $1;
+				utmp.u_nodep = osmknode(UNARYOP, &encode,
+						&utmp, (U_ARG *)NULL);
+
+				encode.u_cp = _PMEncode;
+				$$ = osmknode(UNARYOP, &encode,
+						&utmp, (U_ARG *)NULL);
+			}
+			else
+			{
+				$$ = $1;
+			}
+		}
+;
+
+/**-
+** Constant, Operator, etc. Productions.
+**
+** Includes:
+**	constant	boph		bop		lbop		relop
+**	likeop		escape		is_postfix_op		
+**	constant_or_null		uconstant	uconstant_or_null
+*/
+constant:	SCONST
+		{
+			$$ = osmkconst(tkSCONST, $1);
+		}
+	|	XCONST	/* SQL only */
+		{
+			if (QUEL)
+				yyerror(_SyntaxError);
+			$$ = osmkconst(tkXCONST, $1);
+		}
+	|	ICONST
+		{
+			$$ = osmkconst(tkICONST, $1);
+		}
+	|	FCONST
+		{
+			$$ = osmkconst(tkFCONST, $1);
+		}
+	|	DCONST
+		{
+			$$ = osmkconst(tkDCONST, $1);
+		}
+;
+uconstant:	constant
+		{
+			$$ = $1;
+		}
+	|	'-' ICONST
+		{
+			char    buf[OSBUFSIZE];
+
+			buf[0] = '-'; STcopy( $2, buf + 1 );
+			$$ = osmkconst(tkICONST, iiIG_string(buf));
+		}
+	|	'-' FCONST
+		{
+			char    buf[OSBUFSIZE];
+
+			buf[0] = '-'; STcopy( $2, buf + 1 );
+			$$ = osmkconst(tkFCONST, iiIG_string(buf));
+		}
+	|	'-' DCONST
+		{
+			char    buf[OSBUFSIZE];
+
+			buf[0] = '-'; STcopy( $2, buf + 1 );
+			$$ = osmkconst(tkDCONST, iiIG_string(buf));
+		}
+;
+constant_or_null:	constant
+		{
+			$$ = $1;
+		}
+	|	NULLK
+		{
+			$$ = osmkconst(tkNULL, $1);
+		}
+;
+uconstant_or_null:	uconstant
+		{
+			$$ = $1;
+		}
+	|	NULLK
+		{
+			$$ = osmkconst(tkNULL, $1);
+		}
+;
+constant_str:	SCONST
+		{
+			$$ = osmkconst(tkSCONST, $1);
+		}
+;
+uconstant_int:	ICONST
+		{
+			$$ = osmkconst(tkICONST, $1);
+		}
+	|	'-' ICONST
+		{
+			char	buf[64];
+
+			buf[0] = '-'; STcopy( $2, buf + 1 );
+			$$ = osmkconst(tkICONST, iiIG_string(buf));
+		}
+;
+
+boph:		'*'
+		{
+			$$ = _Mul;
+		}
+	|	'/'
+		{
+			$$ = _Div;
+		}
+;
+
+bop:		'+'
+		{
+			$$ = _Plus;
+		}
+	|	'-'
+		{
+			$$ = _Minus;
+		}
+;
+
+lbop:		AND
+		{
+			$$ = _And;
+		}
+	|	OR
+		{
+			$$ = _Or;
+		}
+;
+
+relop:		'<'
+		{
+			$$ = _Less;
+		}
+	|	'>'
+		{
+			$$ = _Greater;
+		}
+	|	'='
+		{
+			$$ = _Equal;
+		}
+	|	LTE
+		{
+			$$ = _LessEqual;
+		}
+	|	GTE
+		{
+			$$ = _GreatrEqual;
+		}
+	|	NOTEQ
+		{
+			$$ = _NotEqual;
+		}
+;
+
+likeop:		LIKE
+		{
+			$$ = _Like;
+		}
+	|	NOTLIKE
+		{
+			$$ = _NotLike;
+		}
+;
+
+/* Note:  Only OSL/SQL should recognize the ESCAPE keyword (and hence,
+** the escape production.)  OSL/QUEL should not support the ESCAPE
+** clause for the LIKE operators.
+*/
+escape:		ESCAPE SCONST
+		{
+			$$ = osmkconst(tkSCONST, $2);
+		}
+	|	ESCAPE XCONST
+		{
+			$$ = osmkconst(tkXCONST, $2);
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+
+/*
+** Name:	qualification -	OSL QUALIFICATION Predicate Production.
+**
+** Syntax:
+**	QUALIFICATION '(' ID '.' ID '=' [ ':' ] ID[.ID] [ ',' ... ] ')'
+**
+** History:
+**	07/90 (jhw) -- Check that only visible fields are specified. Bug #30784.
+**	12/90 (Mike S) -- Allow qualification in tablefields
+**	08/15/91 (emerson)
+**		Put out a more informative message if the QUALIFICATION function
+**		is used in a repeated query.  Also make it just a warning
+**		(and mark the query non-repeatable).
+*/
+qualification:	qual_key '(' qual_list ')'
+		{
+			u_ptr[0].u_nodep = $3;
+			$$ = osmknode(NPRED, &u_ptr[0], (U_ARG*)NULL, (U_ARG*)NULL);
+		}
+;
+qual_key:	QUALIFICATION
+		{
+			if ( RepeatState )
+			{
+				oswarn( E_OS015B_QualRepeat, 0 );
+				RepeatState = FALSE;
+			}
+		}
+;
+qual_list:	qual_list ',' qual_ele
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	qual_ele
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+qual_ele:	ID '.' ID '=' qual_ref
+		{
+			u_ptr[0].u_cp = $1;
+			u_ptr[1].u_cp = $3;
+			u_ptr[2].u_symp = $5;
+			$$ = osmknode(PREDE, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	ID '=' qual_ref
+		{
+			register OSSYM	*sym;
+
+			if (QUEL)
+				oscerr(OSQUALID, 0);
+			u_ptr[0].u_cp = $1;
+			u_ptr[1].u_cp = NULL;
+			u_ptr[2].u_symp = $3;
+			$$ = osmknode(PREDE, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+qual_ref:	id_or_colid
+		{
+			register OSSYM  *sym;
+
+			/* Get the symbol table entry, if possible */
+			sym = osfld(FormSym, $1, OSRHSUNDEF);
+			if ( sym->s_kind == OSVAR )
+				oscerr(OSHIDPRED, 1, $1);
+			else if ( sym->s_kind != OSFIELD )
+				oscerr(OSBADQUAL, 1, $1);
+			$$ = sym;
+		}
+	|	id_or_colid '.' ID
+		{
+			register OSSYM  *sym;
+
+			/* 
+			** ostab will issue an error message if this isn't a
+			** valid tablefield/column pair.
+			*/
+			sym = ostab(FormSym, $1, $3);
+			if ( sym->s_kind == OSHIDCOL)
+				oscerr(OSHIDCOLPRED, 2, $1, $3);
+			$$ = sym;
+		}
+;
+
+id_or_colid :	ID
+		{
+			$$ = $1;
+		}
+
+	|	COLID
+		{
+			$$ = $1;
+		}
+;
+
+/**-
+** OSL References.
+**
+** Includes:
+**	OSLvar		OSLvalue		OSLname
+*/
+/*
+** Name:	OSLvar -	OSL Name as Reference in an Assignment.
+**
+** Description:
+**	A reference to an OSL field object (hidden or table field column) that
+**	is unambiguously an OSL object reference not dereferenced by ":" in an
+**	assignment statement.
+**	This is an LHS of an assignment.
+*/
+
+OSLvar:		var_nocolon
+		{ /* Note:  FORM was allowed */
+			OSSYM	*idsym;
+
+			IGstartStmt(osscnlno(), IL_LB_NONE);
+			idsym = osqryobjchk(FormSym, $1);
+			if ( idsym != NULL )
+			{
+				FormObj = idsym;
+				if ( FormObj != FormSym
+					       && FormObj->s_kind != OSTABLE )
+					QryTarget = $1;
+				$$ = iiosRefGen($1, TRUE /* assign */);
+			}
+			else
+			{
+				$$ = os_lhs($1);
+				FormObj = osnodesym($$);
+			}
+		}
+;
+param_lhs:	ID
+		{
+			u_ptr[0].u_cp = $1;
+			u_ptr[1].u_cp = NULL;
+			$$ = osmknode(ATTR, &u_ptr[0], &u_ptr[1], (U_ARG*)NULL);
+			FormObj = NULL;
+		}
+	|	ID '.' ID
+		{
+			u_ptr[0].u_cp = $1;
+			u_ptr[1].u_cp = $3;
+			$$ = osmknode(ATTR, &u_ptr[0], &u_ptr[1], (U_ARG*)NULL);
+			FormObj = NULL;
+		}
+;
+
+/*
+** Name:	OSLname_all
+*/
+
+OSLname_all:	var_nocolon '.' ALL
+		{ /* Note:  FORM was allowed */
+			$$ = osall(FormSym, $1);
+		}
+;
+
+assign_op:	COLEQ
+	|	'='
+;
+
+/*
+** Name:	OSLname -	OSL Name as Reference.
+**
+** Description:
+**	A reference to an OSL field object (hidden or table field column) that
+**	is unambiguously an OSL object reference not dereferenced by ":".
+**	This is an LHS.
+*/
+OSLname:	{AllowForm = FALSE;} var_nocolon
+		{
+			$$ = os_lhs($2);
+		}
+;
+/*
+** Name:	OSLvalue -	OSL Name as Value.
+**
+** Description:
+**	A reference to an OSL field object (hidden or table field column) value
+**	with optional dereferencing by `:'.  Generates code to access the value
+**	on the form (i.e., transfer from), if necessary.  This is a value
+**	reference, i.e., this is not a reference to assign to the data (not a
+**	LHS.)
+**
+** History:
+**	02/25/91 (emerson)
+**		Fix for bug 36084: When a form contained a field with the same
+**		name, an error was reported.  Instead, the field should be used.
+**		Note on the fix:  I wanted to stick {AllowForm = FALSE;}
+**		in front of var_nocolon, as is done in the productions for
+**		table_name and OSLname, but that causes shift/reduce conflicts.
+**		So instead, if the production for var_nocolon sets
+**		FormSpecified = TRUE, I undo what var_nocolon did (by freeing
+**		the node it created for FormSym), and do what it would have
+**		done if AllowForm had been FALSE.
+**	02-aug-1991 (davel)
+**		Added production OSLnocol_var for parallelism, and to make 
+**		it easier to catch illegal table field references used with 
+**		or without colons as the fix for bug 35665.  
+**	08/26/91 (emerson)
+**		Fix a serious problem in the fix (08/02/91) that DaveL and I
+**		came up with for bug 35665: Segmentation Violation in the
+**		compiler if a r.h.s. contained a record.attribute (or an
+**		array[row].attribute).  The problem was that the references
+**		to $1->n_sym in OSLcol_var and OSLnocol_var were invalid
+**		in the case where $1 wasn't a VALUE or ATTR node.  Fix:
+**		Don't check for $1->n_sym->s_kind == OSTABLE unless
+**		$1->n_token == VALUE.
+**	30-dec-1991 (davel)
+**		Fix bugs 37388 and 41635 - change var_colon production
+**		to always use FormSym in the osdotnode() call (in the case
+**		of var_colon '.' ID).  The problem is that FormObj was
+**		being passed if in a query, and FormObj is null if in a 
+**		callframe statement.  FormSym seems correct in all instances,
+**		including the one described in bug 41635.
+**	09/20/92 (emerson)
+**		Revamp "var_colon: COLID" rule to fix bugs 38299, 44004, 44056,
+**		and 46646.  There used to be a bunch of logic that attempted
+**		to handle references to ":y" in "x = SELECT :y = DMLexpr FROM t"
+**		or in "x = SELECT DMLexpr AS :y FROM t":  In some cases,
+**		y was being interpreted as a child of x rather than as a child
+**		of the current form or procedure (i.e. as a field or variable).
+**		But such references were never documented as legal syntax,
+**		and the logic was incomplete and caused problems when a COLID
+**		appeared in a DMLexpr in a SELECT target list.  So the
+**		"var_colon: COLID" rule now *always* treats y as a child of
+**		the current form or procedure.  The "target_name: var_colon"
+**		rule in sql.sy will now flag an error if "x = SELECT :y =
+**		DMLexpr FROM t" or "x = SELECT DMLexpr AS :y FROM t" is coded,
+**		unless x is the name of the form or procedure being compiled.
+*/
+OSLvalue:	OSLnocol_var
+		{
+			$$ = $1;
+		}
+	| 	OSLcol_var
+		{
+			$$ = $1;
+		}
+;
+
+/**-
+** Unambiguous OSL Variable References.
+**
+** Description:
+**	These productions give an unambiguous reference to an OSL variable
+**	that can never be taken for anything else (as "ID" can in different
+**	contexts; for example, see <ingres_name>.)  This is achieved by
+**	dereferencing the identifier with a `:' at the lexical level and
+**	recognizing the resultant token here.
+*/
+
+/*
+** OSLcol_var.
+** first element is always a COLID.
+** This is not an LHS.
+*/
+OSLcol_var:	var_colon
+		{
+			if (  $1->n_token == VALUE
+			   && $1->n_sym->s_kind == OSTABLE )
+			{  /* table field illegal in this context */
+				oscerr (E_OS0268_BadTblFld, 1, 
+					$1->n_sym->s_name);
+			}
+			$$ = osval($1);
+		}
+;
+OSLnocol_var:	var_nocolon
+		{
+			if ( FormSpecified )
+			{
+				ostrfree($1);
+				$1 = osvalnode(FormSym, FormSym->s_name);
+				FormSpecified = FALSE;
+			}
+			if (  $1->n_token == VALUE
+			   && $1->n_sym->s_kind == OSTABLE )
+			{  /* table field illegal in this context */
+				oscerr (E_OS0268_BadTblFld, 1, 
+			   		$1->n_sym->s_name);
+			}
+			$$ = osval($1);
+		}
+;
+
+/*
+** utility rules
+*/
+
+var_nocolon:	ID
+		{
+			if ( !AllowForm || STbcompare( FormSym->s_name, 0,
+							$1, 0, TRUE) != 0 )
+			{ /* form not allowed or not the form */
+				$$ = osvalnode(FormSym, $1);
+				AllowForm = TRUE;
+				FormSpecified = FALSE;
+			}
+			else
+			{ /* special case:  form name */
+				u_ptr[0].u_symp = FormSym;
+				$$ = osmknode( VALUE, &u_ptr[0],
+						(U_ARG *)NULL, (U_ARG *)NULL
+				);
+				$$->n_flags |= N_READONLY;
+				FormSpecified = TRUE;
+			}
+		}
+	|	var_nocolon '.' ID
+		{
+			if ( $1->n_token != VALUE || $1->n_sym != FormSym )
+			{
+				if ( FormSpecified )
+				{
+					oscerr(E_OS025A_BadFormRef, 0);
+					FormSpecified = FALSE;
+				}
+				$$ = osdotnode(FormSym, $1, $3);
+			}
+			else
+			{ /* <form> . ID */
+				OSSYM	*sym;
+
+				if ( (sym = ossympeek($3, FormSym))
+							!= NULL
+						&& sym->s_kind == OSTABLE )
+				{ /* <form> . <tblfld> */
+					ostrfree($1);
+					$$ = osvalnode(FormSym, $3);
+				}
+				else if ( (sym =
+					ossympeek(FormSym->s_name, FormSym))
+							!= NULL
+						&& sym->s_kind == OSTABLE )
+				{ /* <tblfld> . <col> */
+					ostrfree($1);
+					$$ = osdotnode(FormSym,
+							osvalnode(FormSym,
+								FormSym->s_name
+							), $3
+					);
+					FormSpecified = FALSE;
+				}
+				else
+				{
+					oscerr( OSNOTBLFLD,
+							2, $3, $1->n_sym->s_name
+					);
+					ostrfree($1);
+					$$ = osvalnode(FormSym, $3);
+				}
+			}
+		}
+	|	var_nocolon row_number
+		{
+			if ( $1->n_token == VALUE && $1->n_sym == FormSym )
+			{ /* cannot be form */
+				ostrfree($1);
+				$1 = osvalnode(FormSym, FormSym->s_name);
+				FormSpecified = FALSE;
+			}
+			$$ = osarraynode($1, $2, FALSE);
+		}
+;
+var_colon:	COLID
+		{
+			$$ = osvalnode(FormSym, $1);
+		}
+	|	var_colon '.' ID
+		{
+			$$ = osdotnode(FormSym, $1, $3);
+		}
+	|	var_colon row_number
+		{
+			$$ = osarraynode($1, $2, TRUE);
+		}
+;
+
+/**-
+** OSL Ingres References.
+**
+** Includes:
+**	id_or_sconst	ingres_name	ingres_qname
+**	ing_name_list	column_list	col_name_list
+**	ingres_int	ing_int_list	ingres_ref
+**	qual_table_ref	owner_id	disallow_repeat
+*/
+
+/*
+** Name:	id_or_sconst -	An Ingres Constant.
+**
+** Description:
+**	A constant name valid in an Ingres DB or Forms statement context within
+**	OSL.  This is interpreted as a literal name of the DB or Forms System
+**	object.	 It is either an identifier or a quoted string.
+*/
+id_or_sconst:	ID
+		{
+			$$ = $1;
+		}
+	|	SCONST
+		{
+			$$ = $1;
+		}
+;
+
+/*
+** Name:	ingres_name -	An INGRES (4GL) Name.
+**
+** Description:
+**	A name valid in an DML, DDL, or Forms statement context within an OSL
+**	frame or procedure.  This is either the literal name of the DB or Forms
+**	System object, or is an unambiguous OSL (string) variable reference.  In
+**	particular, both "ID" and "SCONST" are taken to be a literal identifier
+**	(string) that is the name of the object.
+*/
+ingres_name: 	id_or_sconst
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;	/* special case */
+		}
+	|	OSLcol_var disallow_repeat
+		{
+			if (!oschkstr($1->n_type))
+				oscerr(OSNOTSTR, 1, ERget(_FrsName));
+			else if ( AFE_NULLABLE_MACRO($1->n_type) )
+				oswarn(OSNULVCHK, 0);
+			$$ = $1;
+		}
+;
+
+/*
+** Name:	ingres_qname -	A Qualified INGRES (4GL) Name.
+**
+** Description:
+**	A qualified name valid in an DML, DDL, or Forms statement context within
+**	an OSL frame or procedure.  This is either the literal or qualified 
+**	(quoted) name of the DB or Forms System object, or is an unambiguous OSL
+**	(string) variable reference.  Unlike <ingres_name> qualified names must
+**	include the quotes with which they were specified, and any variable
+**	references must also be quoted to guarantee that they are qualified.
+*/
+ingres_qname:	ID
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+		}
+	|	SCONST
+		{
+			$$ = osmkconst(tkSCONST, $1);
+		}
+	|	OSLcol_var disallow_repeat
+		{
+			if ($1 == NULL || !oschkstr($1->n_type))
+				oscerr(OSNOTSTR, 1, ERget(_FrsName));
+			else if ( AFE_NULLABLE_MACRO($1->n_type) )
+				oswarn(OSNULVCHK, 0);
+			$$ = $1;
+		}
+;
+
+/*
+** Name:	ing_name_list -	A List of Ingres Names.
+**
+** Description:
+**	A comma separated list of Ingres names.
+*/
+ing_name_list:	ing_name_list ',' ingres_name
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	ingres_name
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+
+/*
+** Name:	column_list -	Parenthesized Column Name List.
+*/
+column_list:	ingres_name
+		{
+			$$ = $1;
+		}
+	|	column_list ',' ingres_name
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = $3;
+			$$ = osmknode(COMMA, (U_ARG*)NULL, &u_ptr[0], &u_ptr[1]);
+		}
+;
+col_name_list:	'(' column_list ')'
+		{
+			u_ptr[0].u_nodep = $2;
+			$$ = osmknode(PARENS, (U_ARG*)NULL, &u_ptr[0], (U_ARG*)NULL);
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+/*
+** Name:	ingres_int -	An Ingres Integer.
+**
+** Description:
+**	An integer valid in an Ingres DB or Forms statement context within an
+**	OSL frame or procedure.	 This is either an integer constant or is an
+**	unambiguous OSL (integer) variable reference.
+**
+**	(General OSL variable references of the form "ID ..." could be accepted
+**	here, but for consistency, and since in certain cases both integers and
+**	name references can be accepted, dereferencing is required here as well)
+**
+** History:
+**	12/14/91 (emerson)
+**		When building a parse tree node for '-' ICONST, don't
+**		make it point to a string in an automatic variable (buf);
+**		instead, call iiIG_string to make a permanent copy of the
+**		string in the string table.  (Fix for bug 40908).
+*/
+ingres_int:	uconstant_int
+		{
+			$$ = $1;
+		}
+	|	OSLcol_var disallow_repeat
+		{
+			if ($1 == NULL || !ADE_CHK_TYPE($1->n_type, DB_INT_TYPE))
+				oscerr(OSNOTINT, 0);
+			else if ( AFE_NULLABLE_MACRO($1->n_type) )
+				oswarn(OSNULVCHK, 0);
+			$$ = $1;
+		}
+;
+
+/*
+** Name:	ing_int_list -	A List of Ingres Integers.
+**
+** Description:
+**	A comma separated list of Ingres integers.
+*/
+ing_int_list:	ing_int_list ',' ingres_int
+		{
+			u_ptr[0].u_nodep = $3;
+			u_ptr[1].u_nodep = $1;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+	|	ingres_int
+		{
+			u_ptr[0].u_nodep = $1;
+			u_ptr[1].u_nodep = NULL;
+			u_ptr[2].u_nodep = NULL;
+			$$ = osmknode(NLIST, &u_ptr[0], &u_ptr[1], &u_ptr[2]);
+		}
+;
+ingres_str:	constant_str
+		{
+			$$ = $1;
+		}
+	|	OSLcol_var disallow_repeat
+		{
+			if ( !oschkstr($1->n_type) )
+				oscerr(OSNOTSTR, 0);
+			else if ( AFE_NULLABLE_MACRO($1->n_type) )
+				oswarn(OSNULVCHK, 0);
+			$$ = $1;
+		}
+;
+
+opt_ingres_str:	ingres_str
+		{
+			$$ = $1;
+		}
+	|	/* empty */
+		{
+			$$ = NULL;
+		}
+;
+
+/*
+** Name:	ingres_ref -	An Ingres Reference.
+**
+** Description:
+**	Either an Ingres name or an Ingres integer.  Note that only string
+**	or integer types are allowed.
+**
+** History:
+**	12/14/91 (emerson)
+**		When building a parse tree node for '-' ICONST, don't
+**		make it point to a string in an automatic variable (buf);
+**		instead, call iiIG_string to make a permanent copy of the
+**		string in the string table.  (Fix for bug 40908).
+*/
+ingres_ref:	id_or_sconst
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+			$$->n_type = DB_CHA_TYPE;	/* special case */
+		}
+	|	OSLcol_var disallow_repeat
+		{
+			if ( !ADE_CHK_TYPE($1->n_type, DB_INT_TYPE) &&
+					!oschkstr($1->n_type) )
+				oscerr(OSNOTREF, 0);
+			else if ( AFE_NULLABLE_MACRO($1->n_type) )
+				oswarn(OSNULVCHK, 0);
+			$$ = $1;
+		}
+	|	uconstant_int
+		{
+			$$ = $1;
+		}
+;
+
+qual_table_ref:
+    	ingres_name
+        {
+    	    $$ = $1;
+        }
+    |	owner_id '.' ID   	/* Owner . Table/View */
+        {
+            u_ptr[0].u_nodep = $1;
+    	    u_ptr[0].u_nodep->n_type = DB_CHA_TYPE; /* see ingres_name def. */
+            u_ptr[1].u_nodep = osmkident($3, (OSNODE *)NULL);
+    	    u_ptr[1].u_nodep->n_type = DB_CHA_TYPE;  /* see ingres_name def. */
+            $$ = osmknode(DOT|DML, (U_ARG*)NULL, &u_ptr[0], &u_ptr[1]);
+        }
+;
+
+owner_id:	ID
+        	{
+			$$ = osmkident($1, (OSNODE *)NULL);
+		}
+	|	OWNER_INGRES
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+		}
+	|	SESSION
+		{
+			$$ = osmkident($1, (OSNODE *)NULL);
+		}
+;
+qual_id:
+    	ingres_name
+        {
+    	    $$ = $1;
+        }
+    |	owner_str '.' ID   	/* Owner.object - as an Identifier, not a DOT */
+        {
+	    char    buf[OSBUFSIZE];
+
+	    _VOID_ STprintf(buf, ERx("%s.%s"), $1, $3);
+	    $$ = osmkident( iiIG_string(buf), (OSNODE *)NULL);
+	    $$->n_type = DB_CHA_TYPE;		/* special case */
+        }
+;
+
+owner_str:	ID
+        	{
+			$$ = $1;
+		}
+	|	OWNER_INGRES
+		{
+			$$ = $1;
+		}
+;
+/*
+** Name:	disallow_repeat -	Invalid variable ref in a REPEAT query
+**
+** Description:
+**	This empty production is used to flag invalid variable references
+**	in REPEAT queries.  It typically follows a reference to OSLcol_var.
+**	If disallow_repeat occurs (directly or indirectly) within a REPEAT
+**	query, the query will be made non-repeatable.  (A warning will be
+**	issued).
+**
+**	Disallow_repeat is appropriate for such things as entire WHERE
+**	clauses or names of DBMS objects such as tables and columns.
+**	(These would all cause unpredictable results in a REPEAT query:
+**	if the contents of the variable change and the query is re-executed,
+**	the change may or may not take effect, depending on whether the
+**	query plan happens to get rebuilt).
+**
+**	Disallow_repeat is used after OSLcol_var in the ingres_name and
+**	ingres_ref productions, because they represent INGRES names, and
+**	names of DBMS objects such as tables and columns are all INGRES names.
+**	Note that the ingres_name and ingres_ref productions are *not*
+**	used in portions of repeatable queries where variable references
+**	*are* allowed (e.g. DMLprimary in DMLexpr).  [When ingres_name and
+**	ingres_ref are used outside a query, or in a query that can't be
+**	made repeatable, the disallow_repeat production has no effect, because
+**	RepeatState is always FALSE outside of potentially repeatable queries.]
+**
+**	I've also used disallow_repeat in the ingres_qname and ingres_int
+**	productions, even though they don't seem to be currently used
+**	in repeatable queries.  They're similar to ingres_name and ingres_ref,
+**	and if they ever *are* used in repeatable queries, they too should,
+**	if specified as a variable reference, cause the query to be made
+**	non-repeatable.
+**
+**	Note that global constants are currently treated like true variables;
+**	that is, a global constant in a forbidden context will make the query
+**	non-repeatable.  This is because global string constants can come
+**	in different flavors for different languages, which could cause
+**	trouble with shared query plans in a multilingual installation.
+**	A possible future enhancement would be to mark such a query as
+**	"repeatable, but language-dependent".  At execution time, the ABF
+**	runtime system would, for such a query, take the constant query ID
+**	generated at compile time and add some sort of language code to it
+**	before shipping it to the DBMS.
+**
+** History:
+**	08/15/91 (emerson)
+**		Created (for bug 35468).
+*/
+disallow_repeat: /* empty */
+		{
+			if ( RepeatState )
+			{
+				oswarn( E_OS015A_BadRepeat, 0 );
+				RepeatState = FALSE;
+			}
+		}
+;
+
+/*
+** opt_not - simply return indication of whether present.
+*/
+opt_not:	NOT
+		{
+			$$ = 1;
+		}
+	|	/* empty */
+		{
+			$$ = 0;
+		}
+;
+/*
+** ip_postfix_op - previously nullop
+**
+** This section of the grammer parses out the postfix IS operators
+** which include the IS NULL and IS OF ( datatype ) forms.
+**
+** This rule returns the actual ADF POSTFIX operator name that will
+** later be looked up for the ADF operator routine.
+*/
+is_postfix_op:	IS opt_not NULLK
+		{
+			$$ = ($2 == 0) ? _IsNull : _IsNotNull;
+		}
+	|
+		IS opt_not ID
+		{
+		    if ( SQL )
+		    {
+			if (osw_compare(ERx("integer"), $3))
+				$$ = ($2 == 0) ? _IsInteger : _IsNotInteger;
+			else if (osw_compare(ERx("decimal"), $3))
+				$$ = ($2 == 0) ? _IsDecimal : _IsNotDecimal;
+			else if (osw_compare(ERx("float"), $3))
+				$$ = ($2 == 0) ? _IsFloat : _IsNotFloat;
+			else
+				yyerror(ERx("IS datatype error"));
+		    }
+		    else
+			yyerror(ERx("IS datatype error"));
+		}
+	|
+		IS opt_not OF db_lparen ID db_rparen
+		{
+		    if ( SQL )
+		    {
+			if (osw_compare(ERx("integer"), $5))
+				$$ = ($2 == 0) ? _IsInteger : _IsNotInteger;
+			else if (osw_compare(ERx("decimal"), $5))
+				$$ = ($2 == 0) ? _IsDecimal : _IsNotDecimal;
+			else if (osw_compare(ERx("float"), $5))
+				$$ = ($2 == 0) ? _IsFloat : _IsNotFloat;
+			else
+				yyerror(ERx("IS datatype error"));
+		    }
+		    else
+			yyerror(ERx("IS datatype error"));
+		}
+;
+%%
+
+/* %L Routines */
+
+static
+clrfld (expr)
+OSNODE	*expr;
+{
+	IGgenStmt(IL_CLRFLD, (IGSID *)NULL, 1, osvalref(expr));
+}
+
+static
+resumecolumn (table, column)
+char	*table;
+OSNODE	*column;
+{
+	if (column->n_token == tkID || column->n_token == tkSCONST)
+	{
+		char *p = (column->n_token == tkID ? column->n_value : column->n_const);
+
+		oscolcheck(FormSym, table, p);
+		IGgenStmt(IL_RESCOL, (IGSID *)NULL,
+			2, IGsetConst(DB_CHA_TYPE, table),
+				IGsetConst(DB_CHA_TYPE, p)
+		);
+		ostrfree(column);
+	}
+	else
+	{
+		IGgenStmt(IL_RESCOL, (IGSID *)NULL,
+			2, IGsetConst(DB_CHA_TYPE, table), osvalref(column)
+		);
+	}
+}
+
+osevallist (list, func)
+OSNODE		*list;
+register i4	(*func)();
+{
+	register OSNODE	*lp;
+
+	for (lp = list ; lp != NULL ; lp = lp->n_next)
+	{
+		if (lp->n_ele != NULL)
+		{
+			(*func)(lp->n_ele, (lp->n_next != NULL));
+			lp->n_ele = NULL;	/* freed by "(*func)()" */
+		}
+	}
+
+	if (list != NULL)
+		ostrfree(list);
+}
+
+ostl1elm (elp)
+register OSNODE *elp;
+{
+	IGgenStmt(IL_TL1ELM, (IGSID *)NULL, 1, osvalref(elp));
+	ostrfree(elp);
+}
+
+ostl2elm (elp)
+register OSNODE *elp;
+{
+	if (elp->n_token == tkASSIGN)
+		IGgenStmt(IL_TL2ELM, (IGSID *)NULL,
+			2, elp->n_lhs->s_ilref, osvalref(elp->n_rhs)
+			);
+	else if (elp->n_token == TLASSIGN)
+		IGgenStmt(IL_TL2ELM, (IGSID *)NULL, 2, elp->n_coln, elp->n_tlexpr);
+	ostrfree(elp);
+}
+
+operr ()
+{
+	if (!OpErr)
+	{
+		oscerr(QloopState ? OSEERROP : OSEINVOP, 0);
+		if (QloopState)
+			OpErr = TRUE;
+	}
+}
+
+static
+scroll ( form, table, row )
+register OSNODE	*form;
+register OSNODE	*table;
+OSNODE		*row;
+{
+	if ( table->n_token == tkID && ( form == NULL ||
+			(form->n_token == tkID &&
+			STbcompare( FormSym->s_name, 0, form->n_value, 0,
+						TRUE) == 0 ) ) )
+		_VOID_ ostblcheck( FormSym, table->n_value );
+
+	IGgenStmt( IL_SCROLL, (IGSID *)NULL,
+			3, form == NULL ? 0 : osvalref( form ),
+				osvalref( table ), osvalref( row )
+	);
+}
+
+/* History:
+**	02/90 (jhw) -- Moved out of 'IGoutput()' in "ilg!igoutput.c" where
+**		bobm had put it; now ILG does not have any dependencies on OSL.
+*/
+static
+os_output ()
+{
+	i4		iflags;
+	char		lbuf[MAX_LOC+1];
+	LOCATION	loc;
+	LOINFORMATION	inf;
+
+	/*
+	** Get date on source file for 'IIAMwcWrtCommit()'.  If we can't, simply
+	** pass in epoch date so that IL will just get stamped with "now" (file
+	** assumed very old.)
+	*/
+	iflags = LO_I_LAST;
+	if ( osIfile == stdin || STlcopy(osIfilname, lbuf, sizeof(lbuf)) == 0
+		|| LOfroms(PATH&FILENAME, lbuf, &loc) != OK
+			|| LOinfo(&loc, &iflags, &inf) != OK
+				|| !(iflags & LO_I_LAST) )
+	{
+		inf.li_last.TM_secs = 0;
+	}
+
+	IGoutput(osFid, (osDebugIL ? osOfile : NULL), &inf.li_last, &osIGframe);
+}
+
+/*
+** Name:        is_state -       Test for symbol _STATE
+**
+** Description:
+**      This returns TRUE if the passed in string is _STATE
+**      (case insensitive). Otherwise it will return FALSE.
+**
+*/
+
+is_state(char *name)
+{
+   char buf[50];
+
+   STcopy(name,buf);
+   CVlower(buf);
+
+   if  (STcompare(buf,"_state") == 0)
+       return TRUE;
+   else
+       return FALSE;
+}
+

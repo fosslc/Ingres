@@ -1,0 +1,27 @@
+.TH CLNTSTDBS 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History:
+.\"	19-jan-1990 (boba)
+.\"		Written.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+clntstdbs \- clean up databases left by \fIsep\fP tests
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B clntstdbs
+[ -a ]
+.SH DESCRIPTION
+.I Clntstdbs
+destroys all databases created by the \fIsep\fP tests.
+If -a is specified, the basis databases will be destroyed as well.
+.SH OPTIONS
+.TP
+.B -a
+``all'' removes basis databases as well
+.SH "SEE ALSO"
+.BR clningtst(1),
+.BR clntstabf(1)
+.SH BUGS
+.I Clntstdbs
+assumes that the tests databases are owned by the "testenv" user
+and conform to the \fIxx\fPa\fInn\fP* naming convention.

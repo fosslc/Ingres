@@ -1,0 +1,11 @@
+ Setting class_node_affinity to ON only has effect for named DBMS
+ server classes in a clustered installation.  If set to ON, instances of 
+ the server class will only be able to start up on one node in the
+ cluster.  Server classes using this option can only open databases
+ (excepting iidbdb) not currently opened by other classes, and databases
+ opened by a server class using this option cannot be opened by other
+ server classes.
+ 
+ The benefit of these restrictions is that most operations on a database
+ can be performed without communication with other nodes, increasing
+ efficiency.

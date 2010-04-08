@@ -1,0 +1,29 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have decided to create a procedure component for an application and
+must now choose the type of procedure that you wish to create.  You can
+specify the type by positioning the cursor on the row of the table field
+that describes the type of procedure that you want and then choosing the
+Select menu item.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        Select                  Choose the type described by the current row
+                                of the table field as the type of procedure
+                                that that you wish to create.  You will then
+                                go to a frame where you can specify the name
+                                of the procedure component that you want to
+                                create.
+
+        OtherLanguages          The original list of procedure types contains
+                                all the embedded languages that your site is 
+                                licensed to use.  OtherLanguages gives you a 
+                                list of all supported languages.  If you
+				choose from this list, it is assumed that you
+				are not using an embedded language.
+
+        Cancel                  Cancel the Create operation and return
+                                to the previous frame.
+
+        Help                    Access the Ingres Help facility.

@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The row_audit_default parameter indicated the default row auditing attribute
+ when creating tables.
+
+
+ Choices are: ON OFF

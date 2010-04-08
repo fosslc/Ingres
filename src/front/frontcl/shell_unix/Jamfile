@@ -1,0 +1,22 @@
+#
+# Jamfile file for front!frontcl!shell_unix
+#
+
+SubDir ING_SRC front frontcl shell_unix ;
+
+IISUBSYS front frontcl shell_unix ;
+
+
+IIBINSH abf : abf.sh ;
+IIBINSH abfimage : abfimage.sh ;
+IIBINSH esqlcc : esqlcc.sh ;
+IIBINSH imageapp : imageapp.sh ;
+IIBINSH ingres : ingres.sh ;
+IIBINSH ingsql : ingsql.sh ;
+IIBINSH iquel : iquel.sh ;
+IIBINSH isql : isql.sh ;
+IIBINSH quel : quel.sh ;
+IIBINSH query : query.sh ;
+IIBINSH sql : sql.sh ;
+IIBINSH vision : vision.sh ;
+

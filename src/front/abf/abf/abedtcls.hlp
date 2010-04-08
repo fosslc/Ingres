@@ -1,0 +1,42 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at a catalog of all user-defined record types defined for
+the application.  The table field lists the names of all the record types
+along with their descriptive short remarks.
+
+To create a new record type, use the Create menu operation.  To perform one
+of the menu operations on an existing record type, first position the cursor
+on the row containing the name of the record type of interest by using the
+cursor keys or the table field scrolling keys.  After the cursor has been
+positioned on the row containing the record type of interest, select the
+desired menu operation.
+
+The menu options are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Create          Create a definition of a new record type.
+                        If the record type does not exist, it will be
+                        created and you will be placed in the definition
+                        frame for the record type.
+
+        Destroy         Destroy the record type you have selected.
+                        You will be asked to confirm this decision.  You may
+                        only destroy a record type that you are authorized
+                        to modify.
+
+        Edit            Edit the selected record type definition.
+                        Calls Edit a Record Type Definition catalog frame
+                        for the selected record type where you can create,
+                        destroy, or modify its attributes.
+
+        Rename          Rename the record type you have selected. 
+                        Prompts you for the new name of the record type and
+                        then changes its name in the database if it is a new
+                        and legal name.  If you press the RETURN key without
+                        entering a name, the operation will be cancelled. 
+			You may only rename a record type that you are
+			authorized to modify.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the application catalog frame.

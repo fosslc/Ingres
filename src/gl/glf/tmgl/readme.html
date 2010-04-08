@@ -1,0 +1,640 @@
+<html><head><!-- Created with DOC2HTML, v610 (12/21/2006) --><title>Ingres Daylight Saving Time Update</title>
+
+
+
+<meta http-equiv="Content-Type" content="text-html; charset=utf-8">
+<style>
+<!--
+A:link                       { text-decoration: underline; font-weight: bold; color: #336699  }
+A:visited                    { text-decoration: underline; font-weight: bold; color: #336699  }
+BODY                         { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-size: 80%; font-weight: normal; color: 00000  }
+TABLE                        { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-size: 100%; color: 000000; }
+P                            { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-weight: normal; color: #000000  }
+H1                           { font-size: 180%; font-weight: bold; color: #336699  }
+H2                           { font-size: 155%; font-weight: normal; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; color: #336699  }
+H3                           { font-size: 130%; font-weight: bold; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; color: #336699  }
+H4                           { font-size: 130%; font-weight: bold; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; color: #336699  }
+ol, ul ol, ul ul ol          { list-style-type: decimal; list-style-image : none; }
+ol ol, ul ol ol, ol ul ol    { list-style-type: lower-alpha; list-style-image: none; }
+ul, ol ul, ol ol ul          { list-style-type: disc; list-style-image: none; }
+ul ul, ol ul ul, ul ol ul    { list-style-type: circle; list-style-image: none;}
+ul ul ul                     { list-style-type: square; list-style-image: none; }
+ol ol ol                     { list-style-type: upper-roman; list-style-image: none; }
+B                            { font-weight: bold  }
+STRONG                       { font-weight: bold  }
+I                            { font-style: italic  }
+EM                           { font-style: italic  }
+INPUT                        { color: #336699; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-size: 90%; } /* Special */
+TEXTAREA                     { color: #336699; font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-size: 90%; } /* Special */
+BLOCKQUOTE                   { font-size: 80%; }
+PRE                          { font-family: "courier new", courier, monospace; font-size: 100%  }
+table, td                    { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-weight: normal; color: #000000; vertical-align: top; border: 1px solid #EBEBEB; border-collapse: collapse; font-size: 12px; padding: 2px;}
+table.invis, td.invis        { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-weight: normal; color: #000000; vertical-align: middle; border: 0px; border-collapse: collapse; font-size: 12px; padding: 2px;}
+th                           { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; font-weight: bold; color: #000000; vertical-align: top; border: 1px solid #FFFFFF; background-color: #006699; color:#FFFFFF; text-align: left; padding: 2px;}
+tr.alt                       { background-color : #F1F5FA;}
+.computerassoc               { font-family: Verdana, "Bitstream Vera Sans", Arial, Helvetica, Sans Serif; color: #FFFFFF; text-decoration: none; background-color: #336699; font-size: 130%; font-weight: bold; }
+hr                           { color: #CCCCCC; height:1px; }
+-->
+</style></head><body>
+<table border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="computerassoc">Ingres</td></tr></tbody></table>
+<h1><a name="ingres_daylight_saving_time_update">Ingres Daylight Saving Time Update</a></h1>
+<p>
+</p><hr>
+<nobr>
+<p><b><a href="#overview">1.0  Overview</a></b>
+</p><p><b><a href="#updating_your_installation">2.0  Updating Your Installation</a></b>
+<br><a href="#using_timezone_tool_iizic">2.1  Using Timezone Tool iizic</a>
+<br><a href="#using_timezone_tool_iizck">2.2  Using Timezone Tool iizck</a>
+<br><a href="#new_iizic_and_iizck_tools">2.3  New iizic and iizck Tools</a>
+<br><a href="#updating_the_installation_timezone_files">2.4  Updating the Installation Timezone Files</a>
+</p><p><b><a href="#replacing_all_timezone_files">3.0  Replacing All Timezone Files</a></b>
+</p><p><b><a href="#selective_update_of_timezone_files">4.0  Selective Update of Timezone Files</a></b>
+</p><p><b><a href="#additional_reference_material">5.0  Additional Reference Material</a></b>
+</p></nobr>
+<p>
+</p><hr>
+<h2><a name="overview">1.0  Overview</a></h2>
+<p>This document explains how and when to make changes to the Ingres 
+Timezone files using time zone changes in North America (2007) and 
+Australia (2006) as examples.
+</p><p>Adjusting an Ingres installation for the revised Daylight
+Saving Time (DST) of North America (effective 11<sup>th</sup> March,
+2007) and Western Australia (effective now) is required if
+the following Timezones are used. This document is relevant to all
+operating systems for which a supported Ingres release
+exists.  
+</p><p>In our example the following Timezones have changed.
+</p><p>
+<b>North America</b>
+</p><p>
+alaska
+</p><p>
+atlantic
+</p><p>
+central
+</p><p>
+eastern
+</p><p>
+mountain
+</p><p>
+nwfdlnd
+</p><p>
+pacific
+</p><p>
+yukon 
+</p><p><b>Western Australia</b> 
+</p><p>
+auswest
+</p><p>
+</p><hr>
+<h2><a name="updating_your_installation">2.0  Updating Your Installation</a></h2>
+<p>
+</p><hr>
+<h3><a name="using_timezone_tool_iizic">2.1  Using Timezone Tool iizic</a></h3>
+<p>Ingres has made a new World Timezone file available that
+can be used to update all supported Ingres releases on all
+platforms. The updates can be applied to your installation
+by updating the Timezone files from the Timezone Data File
+<b>iiworld.tz</b> using the Ingres Timezone tool <b>iizic</b>. To verify
+the update was successful, use the Ingres Timezone tool
+<b>iizck</b>. For Hybrid Releases of Ingres either a 64bit or
+32bit version of <b>iizic</b> is required in addition to the one
+included with the distribution.
+</p><p>
+</p><hr>
+<h3><a name="using_timezone_tool_iizck">2.2  Using Timezone Tool iizck</a></h3>
+<p>The <b>iizck</b> Timezone tool can be used to check the current
+settings of the Timezone files for the Timezones that have
+changed, before and after any update is performed.  For
+Hybrid Releases of Ingres either a 64bit or 32bit version
+of <b>iizck</b> is required in addition to the one included with
+the distribution.
+</p><p>
+</p><hr>
+<h3><a name="new_iizic_and_iizck_tools">2.3  New iizic and iizck Tools</a></h3>
+<p>If your Ingres distribution is in either of the tables
+below you may need to download the new 64bit or 32bit
+Timezone tools, <b>iizic</b> and <b>iizck</b>, for your platform.  
+</p><p>The following Ingres Hybrid 32/64 bit Releases were not
+shipped with the 64bit versions of the Timezone tools until January 2007.
+These are available on the Ingres Download site by
+following the links provided.
+</p><p>Table 1 – Hybrid Releases
+</p><p><table border="1">
+<tbody><tr>
+<th align="left" valign="top">
+<b>Operating System</b>
+</th>
+<th align="left" valign="top">
+Ingres Release Platform String
+</th>
+<th align="left" valign="top">
+Ingres 2.6 <br>
+gen level
+</th>
+<th align="left" valign="top">
+Ingres r3 <br>
+ii3.0.3
+</th>
+<th align="left" valign="top">
+Ingres 2006<br>
+ii9.0.4
+</th>
+</tr>
+<tr>
+<td>
+Solaris  (SPARC64)  
+</td>
+<td>
+<a href="ftp://ftp.ingres.com/pub/ingres/su9_us5/dst/utility/lp64" target="_blank"><b><u>su9.us5</u></b></a>
+</td>
+<td>
+0207  
+<p>
+0305  
+</p><p>
+0604
+</p></td>
+<td>
+Build 211
+</td>
+<td>
+Build 105
+</td>
+</tr>
+<tr class="alt">
+<td>
+HP-UX (PA-RISC)
+</td>
+<td>
+<a href="ftp://ftp.ingres.com/pub/ingres/hp2_us5/dst/utility/lp64" target="_blank"><b><u>hp2.us5</u></b></a>
+</td>
+<td>
+0207  
+<p>
+0305  
+</p><p>
+0604
+</p></td>
+<td>
+Build 211
+</td>
+<td>
+Build 105
+</td>
+</tr>
+<tr>
+<td>
+IBM-AIX
+</td>
+<td>
+<a href="ftp://ftp.ingres.com/pub/ingres/r64_us5/dst/utility/lp64/" target="_blank"><b><u>r64.us5</u></b></a>
+</td>
+<td>
+0207   
+<p>
+0305  
+</p><p>
+0604
+</p></td>
+<td>
+Build 211
+</td>
+<td>
+Build 105
+</td>
+</tr>
+</tbody></table>
+</p><p>For releases in the above table the location of the World
+Timezone files is $II_SYSTEM/ingres/files/zoneinfo, and the
+64bit versions are located in the lp64 directory below this.
+</p><p>The following Ingres Hybrid 64/32 bit Releases are were not
+shipped with the 32bit versions of the Timezone tools until January 2007.  
+These are available on the Ingres Download site by
+following the links provided.
+</p><p>Table 2 – Reverse Hybrid Releases
+</p><p><table border="1">
+<tbody><tr>
+<th align="left" valign="top">
+<b>Operating System</b>
+</th>
+<th align="left" valign="top">
+Ingres Release Platform String
+</th>
+<th align="left" valign="top">
+Ingres 2.6<br>
+ gen level
+</th>
+<th align="left" valign="top">
+Ingres r3 <br>
+ii3.0.3
+</th>
+<th align="left" valign="top">
+Ingres 2006<br>
+ii9.0.4
+</th>
+</tr>
+<tr>
+<td>
+ Linux (x86_64) 
+</td>
+<td>
+<a href="ftp://ftp.ingres.com/pub/ingres/a64_lnx/dst/utility/lp32/" target="_blank"><b><u>a64.lnx</u></b></a>
+</td>
+<td>
+0305
+<p>
+0604
+</p></td>
+<td>
+Build 211
+</td>
+<td>
+Build 105
+</td>
+</tr>
+<tr class="alt">
+<td>
+Itanium Linux
+</td>
+<td>
+<a href="ftp://ftp.ingres.com/pub/ingres/i64_lnx/dst/utility/lp32/" target="_blank"><b><u>i64.lnx</u></b></a>
+</td>
+<td>
+0305
+<p>
+0604
+</p></td>
+<td>
+Build 211
+</td>
+<td>
+Build 105
+</td>
+</tr>
+<tr>
+<td>
+Itanium HP-UX
+</td>
+<td>
+<a href="ftp://ftp.ingres.com/pub/ingres/i64_hpu/dst/utility/lp32/" target="_blank"><b><u>i64.hpu</u></b></a>
+</td>
+<td>
+0305
+<p>
+0604
+</p></td>
+<td>
+Build 211
+</td>
+<td>
+Build 105
+</td>
+</tr>
+</tbody></table>
+</p><p>For releases in the above table the location of the World
+Timezone files is $II_SYSTEM/ingres/files/zoneinfo, and the
+32bit versions are located in the lp32 directory below this.
+</p><p>
+</p><hr>
+<h3><a name="updating_the_installation_timezone_files">2.4  Updating the Installation Timezone Files</a></h3>
+<p>The <b>iizic</b> Timezone tool is used to convert the Timezone
+data file into the installation's Timezone files. The tool
+can be used to replace all of the Timezone files or, by
+providing an alternative directory, only specific files.&nbsp;
+<i>Note: additional actions are required if only a select
+number of files are to be changed.</i>
+</p><p>For platforms that are listed in Table 1 above, the 64 bit
+Timezone files are located in the lp64 directory under the
+standard location of the Timezone files. To replace these,
+the 64bit version of the Timezone tools must be used. These
+need to be run with the full path name.
+</p><p>E.g. $II_SYSTEM/ingres/utility/lp64/iizic
+</p><p>For platforms that are listed in Table 2 above, the 32 bit
+Timezone files are located in the lp32 directory under the
+standard location of the Timezone files. To replace these,
+the 32bit version of the Timezone tools must be used. These
+need to be run with the full path name.
+</p><p>E.g. $II_SYSTEM/ingres/utility/lp32/iizic
+</p><p>
+</p><hr>
+<h2><a name="replacing_all_timezone_files">3.0  Replacing All Timezone Files</a></h2>
+<p><b>To replace all Timezone files</b>
+</p><ol>
+<p></p><li>Open a command window or shell which has the Ingres
+environment configured for the Ingres installation to be
+patched and change the current directory to the Ingres
+System directory:
+<pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - cd %II_SYSTEM%\ingres<br>
+Unix/Linux&nbsp; - cd $II_SYSTEM/ingres<br>
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - set default II_SYSTEM:[ingres]
+</pre>
+<p></p></li><li>Create a temporary working directory.
+<p>Create a temporary directory into which the Timezone data
+file (<b>iiworld.tz</b>) will be copied. This directory and
+contents can be deleted once all steps are completed.
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; -&nbsp;&nbsp; mkdir temptz<br>
+Unix/Linux&nbsp; -&nbsp;&nbsp; mkdir temptz<br>
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&nbsp;&nbsp; create/directory [.TEMPTZ]
+</pre>
+<p><u>Unix/Linux platforms only</u>. For the platforms which also
+have 64bit or 32bit Timezone files:
+</p><pre>Unix        -&nbsp;&nbsp; mkdir temptz/lp64
+</pre>
+<p>or
+</p><pre>Unix/Linux&nbsp; -&nbsp;&nbsp; mkdir temptz/lp32
+</pre>
+<p></p></li><li>New Timezone data file
+<p>Place the new Timezone data file in the above directory,
+this will be used by all versions of the <b>iizic</b> Timezone
+tool.
+</p><p><u>Unix platforms only</u>. For the platforms which also have
+64bit or 32bit Timezone files.
+</p><p>Download the new Timezone tools (<b>iizic</b> and <b>iizck</b>) from the
+Ingres website to the required directory if they are not already present:
+</p><p>Download Solaris (SPARC64) tools <a href="ftp://ftp.ingres.com/pub/ingres/su9_us5/dst/utility/lp64" target="_blank">su9.us5</a>
+</p><p>Download HP-UX (PA-RISC) tools <a href="ftp://ftp.ingres.com/pub/ingres/hp2_us5/dst/utility/lp64" target="_blank">hp2.us5</a>
+</p><p>Download IBM-AIX tools <a href="ftp://ftp.ingres.com/pub/ingres/r64_us5/dst/utility/lp64/" target="_blank">r64.us5</a>
+</p><p>to $II_SYSTEM/ingres/utility/lp64 
+</p><p>or
+</p><p>Download Linux(x86_64) tools  <a href="ftp://ftp.ingres.com/pub/ingres/a64_lnx/dst/utility/lp32/" target="_blank">a64.lnx</a>
+</p><p>Download Linux(Itanium) tools <a href="ftp://ftp.ingres.com/pub/ingres/i64_lnx/dst/utility/lp32/" target="_blank">i64.lnx</a>
+</p><p>Download HP-UX(Itanium)tools  <a href="ftp://ftp.ingres.com/pub/ingres/i64_hpu/dst/utility/lp32/" target="_blank">i64.hpu</a>
+</p><p>to $II_SYSTEM/ingres/utility/lp32
+</p><p>It will be necessary to set the protection on these tools
+if they have been downloaded. The following
+commands can be used to achieve this.
+</p><pre>chmod 755 $II_SYSTEM/ingres/utility/lp64/iizck
+
+chmod 755 $II_SYSTEM/ingres/utility/lp64/iizic
+</pre>
+<p>or
+</p><pre>chmod 755 $II_SYSTEM/ingres/utility/lp32/iizck
+
+chmod 755 $II_SYSTEM/ingres/utility/lp32/iizic
+</pre>
+<p></p></li><li>Stop Ingres.
+<p>Shutdown the Ingres installation using ingstop, or if using
+the Ingres Visual Manager, then Ingres can be stopped in
+the normal way by clicking on the Red traffic light icon.
+</p><p></p></li><li>Save ALL Timzeone files.
+<p>These are found at:
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - %II_SYSTEM%\ingres\files\zoneinfo\*\*
+
+Unix/Linux&nbsp; - $II_SYSTEM/ingres/files/zoneinfo/*/*
+
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - II_SYSTEM:[ingres.files.zoneinfo...]*.;
+</pre>
+<p>We suggest that these files be backed up by creating an
+archive file:
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - Use Windows tools to create a zip file of the <br>
+              %II_SYSTEM%\ingres\files\zoneinfo
+
+Unix/Linux&nbsp; - tar cvf zoneinfo.tar $II_SYSTEM/ingres/files/zoneinfo
+
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - backup II_SYSTEM:[ingres.files.zoneinfo...]*.; zoneinfo.bck/sav
+</pre>
+<p></p></li><li>Update Timezone files.
+<p>To update ALL Timezone files, use the <b>iizic</b> Timezone tool
+with the Timezone data file.
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - iizic iiworld.tz
+
+Unix/Linux&nbsp; - iizic iiworld.tz
+
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - iizic iiworld.tz
+</pre>
+<p><u>Unix/Linux platforms only</u>. For the platforms which also
+have 64bit or 32bit Timezone files:
+</p><p>To update ALL of the 64bit or 32bit Timezone files, use the
+<b>iizic</b> Timezone tool with the Timezone data file.
+</p><pre>$II_SYSTEM/ingres/utility/lp64/iizic iiworld.tz
+</pre>
+<p>or
+</p><pre>$II_SYSTEM/ingres/utility/lp32/iizic iiworld.tz
+</pre>
+<p></p></li><li>Check that the changes are good.
+<p>Using the <b>iizck</b> Timezone tool, confirm that the changes
+have been applied correctly.
+</p><p>The example here is for the AUSWEST Timezone changes. The
+same would apply for each of the changed NORTH-AMERICA (NA)
+Timezone files.
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - iizck -f %II_SYSTEM%\ingres\files\zoneinfo\astrl\auswest
+
+Unix/Linux&nbsp; - iizck -f $II_SYSTEM/ingres/files/zoneinfo/astrl/auswest
+
+Unix 64bit  - $II_SYSTEM/ingres/utility/lp64/iizck -f $II_SYSTEM/ingres/files/zoneinfo/lp64/astrl/auswest
+
+Unix/Linux&nbsp;32bit - $II_SYSTEM/ingres/utility/lp32/iizck -f $II_SYSTEM/ingres/files/zoneinfo/lp32/astrl/auswest
+
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - iizck -f II_SYSTEM:[ingres.files.zoneinfo.astrl]auswest.;
+</pre>
+<p>Original file details:
+</p><pre>Timezone name:&nbsp;&nbsp;&nbsp;&nbsp; &lt;unknown&gt;<br>
+Timezone file:&nbsp;&nbsp;&nbsp;&nbsp; /II_SYSTEM/ingres/files/zoneinfo/astrl/auswest<br>
+--------------------------------------------------------------------------<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Period Begin&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; GMT offset<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (YYYY_MM_DD HH:MM)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Minute)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1974_10_27 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 540&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1975_03_02 03:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 480&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1983_10_30 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 540&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1984_03_04 03:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 480&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1991_11_17 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 540&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1992_03_01 03:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 480&nbsp;&nbsp;&nbsp;&nbsp; WST
+</pre>
+<p>New file details:
+</p><pre>Timezone name:&nbsp;&nbsp;&nbsp;&nbsp; &lt;unknown&gt;<br>
+Timezone file:&nbsp;&nbsp;&nbsp;&nbsp; /II_SYSTEM/ingres/files/zoneinfo/astrl/auswest<br>
+--------------------------------------------------------------------------<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Period Begin&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; GMT offset<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (YYYY_MM_DD HH:MM)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Minute)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1974_10_27 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 540&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1975_03_02 03:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 480&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1983_10_30 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 540&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1984_03_04 03:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 480&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1991_11_17 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 540&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1992_03_01 03:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 480&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2006_12_03 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 540&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_03_25 03:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 480&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_10_28 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 540&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2008_03_30 03:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 480&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2008_10_26 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 540&nbsp;&nbsp;&nbsp;&nbsp; WST<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2009_03_29 03:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 480&nbsp;&nbsp;&nbsp;&nbsp; WST
+</pre>
+<p>The example here is for the NORTH-AMERICA (NA) Timezone
+files showing only the existence of the 2007 setting for
+brevity.  
+</p><p><b>Note:</b> The same file differences will exist for the 64bit
+and 32bit versions of these files.
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - iizck -f %II_SYSTEM%\ingres\files\zoneinfo\na\pacific<br>
+Unix/Linux&nbsp; - iizck -f $II_SYSTEM/ingres/files/zoneinfo/na/pacific<br>
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - iizck -f II_SYSTEM:[ingres.files.zoneinfo.na]pacific.;
+</pre>
+<p>Original file details: <i>Note:  A Windows command example
+only is shown</i>
+</p><pre>    iizck -f c:\temp\na\pacific | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_04_01 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -420&nbsp;&nbsp;&nbsp; PDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_10_28 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -480&nbsp;&nbsp;&nbsp; PST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\eastern | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_04_01 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -240&nbsp;&nbsp;&nbsp; EDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_10_28 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -300&nbsp;&nbsp;&nbsp; EST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\alaska | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_04_01 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -480&nbsp;&nbsp;&nbsp; AKDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_10_28 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -540&nbsp;&nbsp;&nbsp; AKST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\central | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_04_01 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -300&nbsp;&nbsp;&nbsp; CDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_10_28 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -360&nbsp;&nbsp;&nbsp; CST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\mountain | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_04_01 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -360&nbsp;&nbsp;&nbsp; MDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_10_28 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -420&nbsp;&nbsp;&nbsp; MST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\nwfdlnd | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_04_01 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -150&nbsp;&nbsp;&nbsp; NDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_10_28 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -210&nbsp;&nbsp;&nbsp; NST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\yukon | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_04_01 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -420&nbsp;&nbsp;&nbsp; YDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_10_28 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -480&nbsp;&nbsp;&nbsp; YST
+</pre>
+<p>New file details:
+</p><pre>&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\pacific | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_03_11 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -420&nbsp;&nbsp;&nbsp; PDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_11_04 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -480&nbsp;&nbsp;&nbsp; PST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\eastern | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_03_11 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -240&nbsp;&nbsp;&nbsp; EDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_11_04 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -300&nbsp;&nbsp;&nbsp; EST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\alaska | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_03_11 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -480&nbsp;&nbsp;&nbsp; AKDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_11_04 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -540&nbsp;&nbsp;&nbsp; AKST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\central | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_03_11 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -300&nbsp;&nbsp;&nbsp; CDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_11_04 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -360&nbsp;&nbsp;&nbsp; CST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\mountain | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_03_11 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -360&nbsp;&nbsp;&nbsp; MDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_11_04 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -420&nbsp;&nbsp;&nbsp; MST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\nwfdlnd | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_03_11 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -150&nbsp;&nbsp;&nbsp; NDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_11_04 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -210&nbsp;&nbsp;&nbsp; NST<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp; iizck -f c:\temp\na\yukon | grep 2007<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_03_11 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -420&nbsp;&nbsp;&nbsp; YDT<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2007_11_04 02:00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -480&nbsp;&nbsp;&nbsp; YST
+</pre>
+<p></p></li><li>Restart Ingres.
+<p>Use ingstart to restart Ingres, or if using Ingres Visual
+Manager, then Ingres can be restarted in the normal way by
+clicking on the Green traffic light icon.
+</p><p></p></li><li>Clean-up
+<p>Delete the temporary directory and contents.
+</p><p>You may wish to keep this directory and the Timezone data
+file for reference.
+</p></li></ol>
+<p>
+</p><hr>
+<h2><a name="selective_update_of_timezone_files">4.0  Selective Update of Timezone Files</a></h2>
+<p>Should there be a need to replace only the essential
+Timezone files, then using the same steps as above (Steps
+1-5) and the following additional steps will allow
+individual Timezone files to be replaced.
+</p><ol>
+<p></p><li>Initial setup for selectively updating Timezone files
+<p>Follow steps 1 to 5 above.
+</p><p></p></li><li>Create the new Timezone files
+<p>To write Timezone files to a separate directory structure
+so as not to overwrite the existing ones use the following
+<b>iizic</b> command.
+</p><pre><b>iizic</b> {\b–}<b>d</b> <i>directoryname</i> iiworld.tz
+</pre>
+<p>where <i>directoryname</i> is the full path to the directory that
+was created in Step 2.
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - iizic –d %II_SYSTEM%\ingres\temptz&nbsp; iiworld.tz
+
+Unix/Linux&nbsp; - iizic –d $II_SYSTEM/ingres/temptz&nbsp;&nbsp; iiworld.tz
+
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - iizic –d II_SYSTEM:[ingres.temptz]&nbsp; iiworld.tz
+</pre>
+<p><u>Unix/Linux platforms only</u>. For the platforms which also
+have 64bit or 32bit Timezone files.
+</p><pre>$II_SYSTEM/ingres/utility/lp64/iizic –d <i>directoryname64</i> iiworld.tz
+</pre>
+<p>or
+</p><pre>$II_SYSTEM/ingres/utility/lp32/iizic –d <i>directoryname32</i> iiworld.tz
+</pre>
+<p>where <i>directorynameNN</i> is the full path to an alternative
+64bit/32bit directory that was created in Step 2.
+</p><p></p></li><li>Check that the changes are correct
+<p>Using the <b>iizck</b> Timezone tool, look at the files which were
+created.
+</p><p>The example here is for the AUSWEST Timezone changes. The
+same would apply for each of the changed NORTH-AMERICA (NA)
+Timezone files.
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - iizck -f %II_SYSTEM%\ingres\temptz\astrl\auswest
+
+Unix/Linux&nbsp; - iizck -f $II_SYSTEM/ingres/temptz/astrl/auswest
+
+Unix 64bit  - $II_SYSTEM/ingres/utility/lp64/iizck -f $II_SYSTEM/ingres/files/zoneinfo/lp64/astrl/auswest
+
+Unix/Linux&nbsp;32bit - $II_SYSTEM/ingres/utility/lp32/iizck -f $II_SYSTEM/ingres/files/zoneinfo/lp32/astrl/auswest
+
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - iizck -f II_SYSTEM:[ingres.temptz.astrl]auswest.;
+</pre>
+<p></p></li><li>Select the new Timezone files to use
+<p>Change to the <i>directoryname</i> directory and copy the required
+files to the system location.  Note: for the Hybrid
+releases of Ingres where either the 64bit or 32bit versions
+of the files also exist, these must also be copied,
+replacing the <i>directoryname</i> with <i>directoryname</i>64 and
+setting the appropriate target location.
+</p><p>To copy the North American files:
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - cp %II_SYSTEM%\ingres\temptz\na\*  %II_SYSTEM%\ingres\files\zoneinfo\na\
+
+Unix/Linux&nbsp; - cp $II_SYSTEM/ingres/temptz/na/*  $II_SYSTEM/ingres/files/zoneinfo/na/
+
+Unix 64 bit – cp $II_SYSTEM/ingres/temptz/lp64/na/*  $II_SYSTEM/ingres/files/zoneinfo/lp64/na
+
+Linux/Unix 32bit - cp $II_SYSTEM/ingres/temptz/lp32/na/*  $II_SYSTEM/ingres/files/zoneinfo/lp32/na/
+
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - copy II_SYSTEML[ingres.temptz.na]*.* II_SYSTEM:[ingres.files.zoneinfo.na]
+</pre>
+<p>To copy the changed Australian West file:
+</p><pre>Windows&nbsp;&nbsp;&nbsp;&nbsp; - cp %II_SYSTEM%\ingres\temptz\astrl\auswest %II_SYSTEM%\ingres\files\zoneinfo\astrl\auswest
+
+Unix/Linux&nbsp; - cp $II_SYSTEM/ingres/temptz/astrl/auswest $II_SYSTEM/ingres/files/zoneinfo/astrl/auswest
+
+Unix 64 bit – cp $II_SYSTEM/ingres/temptz/lp64/astrl/auswest $II_SYSTEM/ingres/files/zoneinfo/lp64/astrl/auswest
+
+Linux/Unix 32bit  - cp $II_SYSTEM/ingres/temptz/lp32/astrl/auswest $II_SYSTEM/ingres/files/zoneinfo/lp32/astrl/auswest
+
+VMS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - copy II_SYSTEML[ingres.temptz.astrl]auswest II_SYSTEM:[ingres.files.zoneinfo.astrl]auswest.;
+</pre>
+<p></p></li><li>Restart Ingres
+<p>Use ingstart to restart Ingres, or if using Ingres Visual
+Manager, then Ingres can be restarted in the normal way by
+clicking on the green traffic light icon.
+</p><p></p></li><li>Clean-up
+<p>Delete the temporary directory and contents.
+</p><p>You may wish to keep this directory and the Timezone data
+file for reference.
+</p></li></ol>
+<p>
+</p><hr>
+<h2><a name="additional_reference_material">5.0  Additional Reference Material</a></h2>
+<p>For more information on using the iizic command to
+customize Timezone files, see the iizic command description
+in the Ingres <i>Command</i> <i>Reference Guide</i> (cmdref.pdf).
+</p><p>
+</p><hr>
+<font size="-2">
+Copyright © 2007 Ingres. All rights reserved.
+</font>
+</body></html>

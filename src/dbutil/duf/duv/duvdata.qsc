@@ -1,0 +1,44 @@
+/*
+**Copyright (c) 2004 Ingres Corporation
+*/
+
+#include        <compat.h>
+#include	<si.h>
+#include        <er.h>
+#include        <lo.h>
+#include        <gl.h>
+#include        <sl.h>
+#include        <ex.h>
+#include        <iicommon.h>
+#include	<dbdbms.h>
+#include	<duf.h>
+#include        <duerr.h>
+#include        <duvstrings.h>
+#include        <duvcommon.h>
+#include	<duvfiles.h>
+#include        <duve.h>
+##include	<dudbms.qsh>
+##include       <upgradedb.qsh>
+
+
+/*
+** Name:        duvdata.c
+**
+** Description: Global data for duv facility.
+**
+** History:
+**
+**      28-sep-96 (mcgem01)
+**          Created.
+**	08-jan-97 (chech02)
+**	    Added include <si.h>.
+*/
+
+/* duvfiles.c */
+
+GLOBALDEF DU_FILE             Duv_statf ZERO_FILL;
+GLOBALDEF DU_FILE             Duv_dbf ZERO_FILL;
+GLOBALDEF DUV_CONV_STAT       Duv_conv_status ZERO_FILL;
+
+/* upgradedb.qsc */
+GLOBALDEF DU_UPGRADE_CB upgr_cb ZERO_FILL;

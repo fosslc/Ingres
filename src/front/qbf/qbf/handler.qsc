@@ -1,0 +1,45 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	<ex.h>
+
+/*
+**	HANDLER.QSC
+**
+**	written (Nov. 84, Azad) to do qbf-specific cleanup
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+*/
+
+i4
+mqhandler(ex)
+EX_ARGS	*ex;
+{
+	if (ex->exarg_num == EXINTR || ex->exarg_num == EXKILL || ex->exarg_num == EXQUIT)
+	{
+		mqcleanup();
+		return(FDhandler(ex));
+	}
+	return(EXRESIGNAL);
+}
+
+mqcleanup()
+{
+	if (Upd_exists)
+	{
+		SIclose(mq_tfile);
+		mqwrtdel();	/* delete temporary update file */
+	}
+	if (QG_mqqry != NULL )
+	{
+		IIQG_free(QG_mqqry);	/* delete query */
+	}
+	return(OK);
+}

@@ -1,0 +1,877 @@
+<?xml encoding='UTF-8' ?>
+
+<!-- 
+**  Copyright (C) 2000, 2001 Ingres Corporation All Rights Reserved.
+**
+##  History:
+##    15-Dec-2000 (peeje01)
+##      SIR 103810
+##      Created
+##    01-Jun-2001 (peeje01)
+##      SIR 103810
+##      Sort out comments. Remove i3ce_comment & i3ce_hyperlink elements
+##      to bring DTD & parser into agreement.
+##    26-Jul-2001 (peeje01)
+##      SIR 103096
+##      Add types xml and xmlpdata to i3ce_relation
+##      Add elements i3ce_xml and i3ce_xmlpdata to i3ce_sql
+##    08-Aug-2002 (peeje01)
+##      Bug 106445
+##      Re-architect i3ce_if syntax to allow for defined and expression tests
+##      Add elements i3ce_conditionExpression, i3ce_conditionDefined
+##      There is no support for AND/OR/NOT in this change.
+##    
+##
+-->
+<!-- Entities -->
+<!--
+** i3ce_topElements are those elements that have an
+** indepentent existance in a document. All other elements are
+** children of the top elements.
+-->
+<!ENTITY % i3ce_topElements "i3ce_commit | i3ce_if | i3ce_switch | i3ce_declare | i3ce_function | i3ce_include | i3ce_query | i3ce_rollback | i3ce_var | i3ce_extend | i3ce_system ">
+
+<!--
+** i3ce_topnamelist are those types that control the
+** automatic formatting of the results from an SQL statement.
+-->
+<!ENTITY % i3ce_typenamelist "i3ce_table| i3ce_selector| i3ce_plain| i3ce_unformatted|i3ce_xml|i3ce_xmlpdata">
+
+<!--
+** i3ce_conditionalOperatorList lists legal conditional operators.
+-->
+<!ENTITY % i3ce_conditionalOperatorList "==|!=|>">
+
+<!ENTITY % i3ce_eq "i3ce_equals">
+
+<!ENTITY % i3ce_neq "i3ce_notEqual">
+
+<!ENTITY % i3ce_lt "i3ce_lessThan">
+
+<!ENTITY % i3ce_gt "i3ce_greaterThan">
+
+<!--
+** Allowed content for the i3ce_extend element.
+-->
+<!ENTITY % i3ce_extend.content "( i3ce_Attributes , i3ce_Children )">
+
+<!--
+**  List of types allowed with the include keyword. Not
+** currently used.
+-->
+<!ENTITY % i3ce_includeTypeList "i3ce_itHtml | i3ce_itMulti | i3ce_itReport | i3ce_itExe">
+
+<!--
+** List of scope types for variables
+-->
+<!ENTITY % i3ce_scopeTypeList "page | session | server ">
+
+<!-- Elements -->
+<!--
+** The abstract element, i3ce_ICERoot is the 'root' element
+** that includes the actual ICE elements that may exist in a
+** document.
+-->
+<!ELEMENT i3ce_ICERoot  (%i3ce_topElements; )+>
+
+<!--
+** Name: i3ce_declare
+**
+** Purpose: 
+**     Declare an ICE variable
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_name : The name of the variable
+**     i3ce_scope: The scope of the variable: page, session,
+**         server. The default is 'page'
+**     i3ce_value: The value the variable should take
+**
+** See Also:
+**     i3ce_var
+**
+-->
+<!ELEMENT i3ce_declare EMPTY>
+<!ATTLIST i3ce_declare  i3ce_name  CDATA  #REQUIRED
+                        i3ce_scope  (%i3ce_scopeTypeList; )  'page'
+                        i3ce_value CDATA  #REQUIRED >
+<!--
+** Name: i3ce_query
+**
+** Purpose: 
+**     Introduce a query
+**
+** Sub-elements:
+**     i3ce_sql 
+**
+** Attributes;
+**     i3ce_database: Name of the database (if not using the default)
+**     i3ce_vnode   : The database vnode name
+**     i3ce_class   : The server class
+**     i3ce_user    : The user name
+**     i3ce_password: The user's password
+**
+** See Also:
+**     i3ce_sql
+**
+-->
+<!ELEMENT i3ce_query  (i3ce_sql )>
+<!ATTLIST i3ce_query  i3ce_database CDATA  #IMPLIED
+                      i3ce_vnode    CDATA  #IMPLIED
+                      i3ce_class    CDATA  #IMPLIED
+                      i3ce_user     CDATA  #IMPLIED
+                      i3ce_password CDATA  #IMPLIED >
+<!--
+** Name: i3ce_sql
+**
+** Purpose: 
+**     Specify the query
+**
+** Sub-elements:
+**      i3ce_statement 
+**      i3ce_rowsPerRequest? 
+**      i3ce_links? 
+**      i3ce_headers? 
+**      i3ce_attribute? 
+**      i3ce_extension? 
+**      i3ce_nullvar? 
+**      i3ce_html? 
+**      i3ce_xml? 
+**      i3ce_xmlpdata? 
+**      i3ce_relation_display 
+**      N.B. ? denotes optional elements
+**
+** Attributes:
+**     i3ce_transaction: Transaction Name
+**     i3ce_cursor     : Cursor Name
+**
+** See Also:
+**     i3ce_commit, i3ce_rollback
+**
+-->
+<!ELEMENT i3ce_sql  (i3ce_statement , i3ce_rowsPerRequest? , i3ce_links? , i3ce_headers? , i3ce_attribute? , i3ce_extension? , i3ce_nullvar? , i3ce_html? , i3ce_xml? , i3ce_xmlpdata? , i3ce_relation_display )>
+<!ATTLIST i3ce_sql  i3ce_transaction CDATA  #IMPLIED
+                    i3ce_cursor      CDATA  #IMPLIED >
+<!--
+** Name: i3ce_query
+**
+** Purpose: 
+**     Specify the text of the statement
+**
+** Sub-elements:
+**     None.
+**
+** Attributes:
+**     None.
+**
+** See Also:
+**
+**
+-->
+<!ELEMENT i3ce_statement  (#PCDATA )>
+
+<!--
+** Name: i3ce_links
+**
+** Purpose: 
+**     Delimit a list of links
+**
+** Sub-elements:
+**     i3ce_link+
+**      N.B. + denotes one or more occurrences
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_link
+**
+-->
+<!ELEMENT i3ce_links  (i3ce_link+ )>
+
+<!--
+** Name: i3ce_link
+**
+** Purpose: 
+**     Specify a link
+**
+** Description:
+**     A variable, named after the column, is instantiated
+**     with the column value for each row. This variable is passed
+**     to the target of the link when the link is activated.
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_column: The column name
+**     i3ce_target: The target document
+**         server. The default is 'page'
+**     i3ce_value: The value the variable should take
+**
+** See Also:
+**     i3ce_var
+**
+-->
+<!ELEMENT i3ce_link EMPTY>
+<!ATTLIST i3ce_link  i3ce_column CDATA  #REQUIRED
+                     i3ce_target CDATA  #IMPLIED >
+<!--
+** Name: i3ce_headers
+**
+** Purpose: 
+**     Delimit a list of header
+**
+** Sub-elements:
+**     i3ce_header+
+**      N.B. + denotes one or more
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_header
+**
+-->
+<!ELEMENT i3ce_headers  (i3ce_header+ )>
+
+<!--
+** Name: i3ce_header
+**
+** Purpose: 
+**     Specify an alternate column title
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_column: The name of the column
+**     i3ce_text  : The column alias
+**
+** See Also:
+**     i3ce_attribute
+**
+-->
+<!ELEMENT i3ce_header EMPTY>
+<!ATTLIST i3ce_header  i3ce_column CDATA  #REQUIRED
+                       i3ce_text   CDATA  #IMPLIED >
+<!--
+** Name: i3ce_attribute
+**
+** Purpose: 
+**     Specify an HTML attribute
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_extend
+**
+-->
+<!ELEMENT i3ce_attribute ANY>
+
+<!--
+** Name: i3ce_extension
+**
+** Purpose: 
+**     Specify a file extension
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_name : The name of the extension
+**
+** See Also:
+**     i3ce_extend
+**
+-->
+<!ELEMENT i3ce_extension EMPTY>
+<!ATTLIST i3ce_extension  i3ce_name CDATA  #REQUIRED >
+<!--
+** Name: i3ce_nullvar
+**
+** Purpose: 
+**     Specify a value to replace NULLs with on input
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_value: The value to replace NULLs with
+**
+** See Also:
+**
+-->
+<!ELEMENT i3ce_nullvar EMPTY>
+<!ATTLIST i3ce_nullvar  i3ce_value CDATA  #REQUIRED >
+<!--
+** Name: i3ce_html
+**
+** Purpose: 
+**     Specify HTML string to customise output
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_extend, i3ce_xml, i3ce_xmlpdata
+**
+-->
+<!ELEMENT i3ce_html ANY>
+
+<!--
+** Name: i3ce_rowsPerRequest
+**
+** Purpose: 
+**     Specify the number of rows to return per request
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_rowcount: The required number of rows
+**
+** See Also:
+**
+-->
+<!ELEMENT i3ce_rowsPerRequest EMPTY>
+<!ATTLIST i3ce_rowsPerRequest  i3ce_rowcount CDATA  #REQUIRED >
+<!--
+** Name: i3ce_relation_display
+**
+** Purpose: 
+**     Declare an ICE variable
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_typename: The type of the display
+**         The type can be one of:
+**             i3ce_table
+**             i3ce_selector
+**             i3ce_plain
+**             i3ce_unformatted
+**             i3ce_xml
+**             i3ce_xmlpdata
+**
+** See Also:
+**     i3ce_var
+**
+-->
+<!ELEMENT i3ce_relation_display EMPTY>
+
+<!-- Remove the #FIXED from relation_display -->
+<!-- <!ATTLIST i3ce_relation_display  i3ce_typename  (%i3ce_typenamelist; )  #FIXED 'i3ce_table' > -->
+<!ATTLIST i3ce_relation_display i3ce_typename  (%i3ce_typenamelist; )  "i3ce_table">
+
+<!--
+** Name: i3ce_Attributes
+**
+** Purpose: 
+**     Delimit a list of attributes
+**
+** Sub-elements:
+**     i3ce_Attribute*
+**      N.B. * denotes zero or more occurrences
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_Attribute
+**
+-->
+<!ELEMENT i3ce_Attributes  (i3ce_Attribute* )>
+
+<!--
+** Name: i3ce_Attribute
+**
+** Purpose: 
+**     Delimit an Attribute List for a child element
+**
+** Sub-elements:
+**     i3ce_AttributeName
+**     i3ce_AttributeValue
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_Attributes
+**
+-->
+<!ELEMENT i3ce_Attribute  (i3ce_AttributeName , i3ce_AttributeValue )>
+
+<!--
+** Name: i3ce_AttributeName
+**
+** Purpose: 
+**     Specify an Attribute
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_AttributeValue, i3ce_Attributes
+**
+-->
+<!ELEMENT i3ce_AttributeName ANY>
+
+<!--
+** Name: i3ce_AttributeValue
+**
+** Purpose: 
+**     Specify an Attribute value
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_AttributeName, i3ce_Attributes
+**
+-->
+<!ELEMENT i3ce_AttributeValue ANY>
+
+<!--
+** Name: i3ce_children
+**
+** Purpose: 
+**     Delimit a child list
+**
+** Sub-elements:
+**     i3ce_Child*
+**      N.B. * denotes zero or more occurrences
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_Child
+**
+-->
+<!ELEMENT i3ce_Children  (i3ce_Child* )>
+
+<!--
+** Name: i3ce_Child
+**
+** Purpose: 
+**     Specify a child element
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_Children, i3ce_Attributes
+**
+-->
+<!ELEMENT i3ce_Child ANY>
+
+<!--
+** Name: i3ce_var
+**
+** Purpose: 
+**     Introduce an ICE variable to the document
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_name: The name of the variable
+**
+** See Also:
+**     i3ce_declare
+-->
+<!ELEMENT i3ce_var EMPTY>
+<!ATTLIST i3ce_var  i3ce_name CDATA  #REQUIRED >
+<!--
+** Name: i3ce_commit
+**
+** Purpose: 
+**     Commit a transaction
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_transaction: Name of the transaction
+**
+** See Also:
+**     i3ce_sql
+**
+-->
+<!ELEMENT i3ce_commit EMPTY>
+<!ATTLIST i3ce_commit  i3ce_transaction CDATA  #REQUIRED >
+<!-- User Function Support -->
+<!--** Name: i3ce_function
+**
+** Purpose: 
+**     Call an ICE User Extension Function
+**
+** Sub-elements:
+**     i3ce_parameters?
+**     i3ce_html?
+**      N.B. ? denotes optional elements
+**
+** Attributes:
+**     i3ce_name    : The name of the function
+**     i3ce_location: The name of the function's business unit
+**
+** See Also:
+**     i3ce_include, i3ce_system
+**
+-->
+<!ELEMENT i3ce_function  (i3ce_parameters , i3ce_html? )>
+<!ATTLIST i3ce_function  i3ce_name     CDATA  #REQUIRED
+                         i3ce_location CDATA  #IMPLIED >
+<!--
+** Name: i3ce_parameters
+**
+** Purpose: 
+**     Delimit a parameter list
+**
+** Sub-elements:
+**     i3ce_parameter*
+**      N.B. * denotes zero or more occurrences
+**
+** Attributes:
+**     None
+**
+** See Also:
+**
+-->
+<!ELEMENT i3ce_parameters  (i3ce_parameter* )>
+
+<!--
+** Name: i3ce_parameters
+**
+** Purpose: 
+**     Specify a parameter
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_name : The name of the parameter
+**     i3ce_value: The value the parameter
+**
+** See Also:
+**
+-->
+<!ELEMENT i3ce_parameter EMPTY>
+<!ATTLIST i3ce_parameter  i3ce_name  CDATA  #REQUIRED
+                          i3ce_value CDATA  #REQUIRED >
+<!-- Conditional Support -->
+<!--
+** Name: i3ce_if
+**
+** Purpose: 
+**     Evaluate a conditional expression
+**
+** Sub-elements:
+**      i3ce_condition 
+**      i3ce_then 
+**      i3ce_else?
+**      N.B. ? denotes optional elements
+**
+** Attributes:
+**     i3ce_name : The name of the variable
+**     i3ce_scope: The scope of the variable: page, session,
+**         server. The default is 'page'
+**     i3ce_value: The value the variable should take
+**
+** See Also:
+**     i3ce_switch
+**
+-->
+<!ELEMENT i3ce_if  (i3ce_condition , i3ce_then , i3ce_else? )>
+
+<!--
+** Name: i3ce_condition
+**
+** Purpose: 
+**     Specify a simple conditional expression
+**     Either specify a boolean expression
+**     Or specify a test for the existance of a variable
+**
+** Sub-elements:
+**     Either: i3ce_conditionExpression 
+**         Or: i3ce_conditionDefined
+**
+** Attributes:
+**    None.
+**
+** See Also:
+**    i3ce_if
+-->
+<!ELEMENT i3ce_condition (i3ce_conditionExpression | i3ce_conditionDefined)>
+
+<!--
+** Name: i3ce_then
+**
+** Purpose: 
+**     Then branch of i3ce_if statement
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_else
+**
+-->
+<!ELEMENT i3ce_then ANY>
+
+<!--
+** Name: i3ce_else
+**
+** Purpose: 
+**     Else branch of i3ce_if statement
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_then
+**
+-->
+<!ELEMENT i3ce_else ANY>
+
+<!--
+** Name: i3ce_include
+**
+** Purpose: 
+**     Include a document or document fragment
+**
+** Sub-elements:
+**     i3ce_parameters?
+**      N.B. ? denotes optional elements
+**
+** Attributes:
+**     i3ce_name    : The name of the document
+**     i3ce_location: The name of the document's business unit
+**     i3ce_type    : The type of the document
+**     i3ce_process : Boolean: if 'true' the sub document is parsed
+**
+** See Also:
+**     i3ce_function
+**
+-->
+<!ELEMENT i3ce_include  (i3ce_parameters+ )>
+<!ATTLIST i3ce_include  i3ce_name     CDATA  #REQUIRED
+                        i3ce_location CDATA  #IMPLIED
+                        i3ce_type      (%i3ce_includeTypeList; )  'i3ce_itHtml'
+                        i3ce_process   (true | false )  'true' >
+<!--
+** Name: i3ce_rollback
+**
+** Purpose: 
+**     Rollback a transaction
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_transaction: The name of the transaction to rollback
+**
+** See Also:
+**     i3ce_commit, i3ce_query
+**
+-->
+<!ELEMENT i3ce_rollback EMPTY>
+<!ATTLIST i3ce_rollback  i3ce_transaction CDATA  #REQUIRED >
+<!--
+** Name: i3ce_switch
+**
+** Purpose: 
+**     Declare a switch statement
+**
+** Sub-elements:
+**     i3ce_case+ 
+**     i3ce_default
+**      N.B. + denotes one or more occurrences
+**
+** Attributes:
+**     i3ce_value: The switch expression
+**
+** See Also:
+**     i3ce_if, i3ce_case, i3ce_default
+**
+-->
+<!ELEMENT i3ce_switch  (i3ce_case+ , i3ce_default )>
+<!ATTLIST i3ce_switch  i3ce_value CDATA  #REQUIRED >
+<!--
+** Name: i3ce_case
+**
+** Purpose: 
+**     Label a case in a switch statement
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     i3ce_value: The value the variable should match
+**
+** See Also:
+**     i3ce_switch, i3ce_default, i3ce_if
+**
+-->
+<!ELEMENT i3ce_case ANY>
+<!ATTLIST i3ce_case  i3ce_value CDATA  #REQUIRED >
+<!--
+** Name: i3ce_default
+**
+** Purpose: 
+**     Default case in a switch statement
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**
+** See Also:
+**     i3ce_switch, i3ce_case, i3ce_if
+**
+-->
+<!ELEMENT i3ce_default ANY>
+
+<!--
+** Name: i3ce_extend
+**
+** Purpose: 
+**     Specify out of hierarchy element
+**
+** Sub-elements:
+**     i3ce_Attributes 
+**     i3ce_Children
+**
+** Attributes:
+**     i3ce_tagname : The name of the sub-element
+**
+** See Also:
+**     i3ce_Children, i3ce_Attributes
+**
+-->
+<!ELEMENT i3ce_extend %i3ce_extend.content;>
+<!ATTLIST i3ce_extend  i3ce_tagName CDATA  #IMPLIED >
+<!-- System Function Support -->
+<!--** Name: i3ce_system
+**
+** Purpose: 
+**     Call a System ICE Function
+**
+** Sub-elements:
+**     i3ce_parameters?
+**     i3ce_html?
+**      N.B. ? denotes optional elements
+**
+** Attributes:
+**     i3ce_name    : The name of the function
+**     i3ce_action  : The action for the function to carry out
+**
+** See Also:
+**     i3ce_function, i3ce_include
+**-->
+<!ELEMENT i3ce_system  (i3ce_parameters , i3ce_html? )>
+<!ATTLIST i3ce_system  i3ce_name   CDATA  #REQUIRED
+                       i3ce_action CDATA  #IMPLIED >
+<!--
+** Name: i3ce_xml
+**
+** Purpose: 
+**     Specify XML string to customise output literal characters are converted to CDATA
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_html, i3ce_xmlpdata, i3ce_extend
+**
+-->
+<!ELEMENT i3ce_xml ANY>
+
+<!--
+** Name: i3ce_xmlpdata
+**
+** Purpose: 
+**     Specify XML string to customise output literal characters are left unchanged
+**
+** Sub-elements:
+**     Any
+**
+** Attributes:
+**     None
+**
+** See Also:
+**     i3ce_xml, i3ce_html, i3ce_extend
+**
+-->
+<!ELEMENT i3ce_xmlpdata ANY>
+
+<!--
+** Name: i3ce_conditionExpression
+**
+** Purpose: 
+**     Specify a simple conditional expression
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_condlhs: Conditional expression left hand side
+**     i3ce_condop : Conditional operator
+**     i3ce_condrhs: Conditional expression right hand side
+**
+** See Also:
+**     i3ce_conditionDefined
+**
+-->
+<!ELEMENT i3ce_conditionExpression EMPTY>
+
+<!ATTLIST i3ce_conditionExpression  i3ce_condlhs CDATA  #REQUIRED
+                                    i3ce_condop  CDATA  #REQUIRED
+                                    i3ce_condrhs CDATA  #REQUIRED >
+<!--
+** Name: i3ce_conditionDefined
+**
+** Purpose: 
+**     Test for the existance of an ICE variable
+**
+** Sub-elements:
+**     None
+**
+** Attributes:
+**     i3ce_name: The name of the variable to test for
+**
+** See Also:
+**     i3ce_conditionExpression
+**-->
+<!ELEMENT i3ce_conditionDefined EMPTY>
+
+<!ATTLIST i3ce_conditionDefined  i3ce_name CDATA  #REQUIRED >

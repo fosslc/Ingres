@@ -1,0 +1,10 @@
+#
+# Jamfile file for sig!ima!ima
+#
+
+SubDir ING_SRC sig ima ima ;
+
+IISUBSYS sig ima ima ;
+
+IISIGFILES ima : Makefile README.DOC ima.wri iomon.form
+	iomon.sc iomon.sql ;

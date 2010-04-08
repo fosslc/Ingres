@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The opf_maxmemf is a non-zero integer representing the percentage of the
+  OPF memory pool (opf_memory) which can be obtained by any single OPF
+  session.
+
+  The default value for opf_maxmemf is 50 (50%).

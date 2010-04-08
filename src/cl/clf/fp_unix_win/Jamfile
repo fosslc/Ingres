@@ -1,0 +1,25 @@
+#
+# Jamfile file for cl!clf!fp_unix_win
+#
+
+SubDir ING_SRC cl clf fp_unix_win ;
+
+IISUBSYS cl clf fp_unix_win ;
+
+
+IIBINEXE fptest : fptest.c ;
+IINEEDLIBS fptest : COMPATLIB ;
+
+IILIBRARY COMPATLIB : fpsqrt.c
+	fpsin.c
+	fprand.c
+	fppow.c
+	fppk.c
+	fpmath.c
+	fpln.c
+	fpipow.c
+	fpexp.c
+	fpcos.c
+	fpceil.c
+	fpatan.c ;
+

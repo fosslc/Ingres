@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The sole_server resource specifies whether databases opened by DBMS 
+  servers created with this definition will accept connections from
+  other DBMS servers.

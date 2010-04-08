@@ -1,0 +1,12 @@
+#
+# Jamfile file for cl!clf!fp_vms
+#
+
+SubDir ING_SRC cl clf fp_vms ;
+
+IISUBSYS cl clf fp_vms ;
+
+IIBINEXE fptest : fptest.c ;
+IINEEDLIBS fptest : COMPATLIB ;
+
+IILIBRARY COMPATLIB : fp.c fprand.c fppk.c ;

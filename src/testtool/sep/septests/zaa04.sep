@@ -1,0 +1,194 @@
+/*
+	Test Name: zaa04.sep
+	Time: 18-AUG-1991 12:17:07
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa04.sep
+	Purpose	: Test SEP functionality
+	Input Files  : none
+	Output Files : none
+	Database     : Septools, created by zaa01.SEP.
+	Tables       : date_forms, created and destroyed by this test.
+	Synopsis     :	Tests date masking SEP functionality.
+
+	History: 18-AUG-1991	Created				DONJ
+           5-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+           4-NOV-1992	(DonJ)
+		Changed tokenizer slightly so token tables come out slightly
+		different than they did before.
+          21-Aug-1993	(Author)
+*/
+.if !SEPPARAMDB
+? setenv SEPPARAMDB septools
+<<
+environment variable was defined
+>>
+.endif
+? sql -s SEPPARAMDB 
+<<
+
+>>
+<<
+Terminal Monitor could not connect to database
+>> ABORT
+* set autocommit on;\g
+<<
+>>
+* drop table date_forms;\g
+<<
+>>
+<<
+E_US0AC1 DROP: 'date_forms' does not exist or is not owned by you.
+    (27-NOV-1991 17:43:12)
+
+>>
+* create table date_forms ( date_1 date, date_2 c30 );\g
+<<
+
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '10-NOV-1991','10-NOV-1991');\g-
+ 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '10-Nov-1991','10-Nov-1991');\g-
+ 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '10-nov-1991','10-nov-1991');\g-
+ 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','10/NOV/1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','10/Nov/1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','10/nov/1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','NOV/10/1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','Nov/10/1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','nov/10/1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','NOV-10-1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','Nov-10-1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','nov-10-1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '11-10-1991','11-10-1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','1991-11-10');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '11-10-91','11-10-91');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '11/10/91','11/10/91');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','91/11/10');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','NOVEMBER 11, 1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','November 11, 1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','november 11, 1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','NOV 11, 1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','Nov 11, 1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '','nov 11, 1991');\g 
+<<
+(1 row)
+>>
+* insert into date_forms ( date_1, date_2 ) values ( '11-NOV-91','11-NOV-91');\g 
+<<
+(1 row)
+>>
+* select * from date_forms;\g 
+<<
+
++-------------------------+------------------------------+
+|date_1                   |date_2                        |
++-------------------------+------------------------------+
+|10-dec-1991              |12-NOV-1991                   |
+|10-nov-1991              |13-Nov-1991                   |
+|10-nov-1991              |10-nov-1971                   |
+|                         |10/SEP/1991                   |
+|                         |10/Nov/1991                   |
+|                         |10/nov/1991                   |
+|                         |NOV/10/1991                   |
+|                         |Nov/10/1991                   |
+|                         |nov/10/1991                   |
+|                         |NOV-10-1991                   |
+|                         |Nov-10-1991                   |
+|                         |nov-10-1991                   |
+|10-nov-1991              |11-10-1991                    |
+|                         |1891-11-10                    |
+|10-nov-1991              |11-10-61                      |
+|10-nov-1991              |11/10/91                      |
+|                         |91/11/10                      |
+|                         |SEPTEMBER 11, 1991            |
+|                         |November 11, 1991             |
+|                         |november 11, 1991             |
+|                         |NOV 11, 1991                  |
+|                         |Nov 11, 1991                  |
+|                         |nov 11, 1991                  |
+|11-nov-1991              |11-NOV-91                     |
++-------------------------+------------------------------+
+(24 rows)
+>>
+* drop table date_forms;\g
+<<
+>>
+* \q
+<<
+~
+>>
+
+
+Ending at: Sat Aug 21 18:28:13 1993

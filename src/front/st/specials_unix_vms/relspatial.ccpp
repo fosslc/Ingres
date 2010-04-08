@@ -1,0 +1,72 @@
+/*
+** Copyright (c) 2006 Ingres Corporation 
+*/
+/*
+** Generic contents file for spatial release
+/
+ 
+/*
+** History
+**	29-mar-2006 (hweho01)
+**	   Created for spatial object release on Unix.
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Hybrid add-on symbol changed, fix here.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+# ifdef R_SPATIAL
+
+RELEASE Ingres
+
+PACKAGE spatialpack
+
+    VISIBLEPKG
+    INCLUDE spatial 
+
+
+PACKAGE spatial
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+   PART spatial
+     DEFINITION spatial.prt
+
+# ifdef conf_BUILD_ARCH_32_64
+   PART spatial64
+     DEFINITION spatial64.prt
+# endif
+
+/*
+** The installation utility package
+*/
+
+PACKAGE install 
+
+   INVISIBLE
+
+   INCLUDE messages
+   INCLUDE frs 
+
+   DIRECTORY ingres!install
+
+   PART messages
+      DEFINITION messages.prt
+
+   PART install
+      DEFINITION install.prt
+
+   PART frs
+      DEFINITION frs.prt
+
+
+# endif /* R_SPATIAL */
+/*
+** Warning: the installation package must be the last thing in this file. 
+*/

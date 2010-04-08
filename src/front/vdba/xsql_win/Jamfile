@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!xsql_win
+#
+
+SubDir ING_SRC front vdba xsql_win ;
+
+IISUBSYS front vdba xsql_win ;
+
+
+IISLN vdbasql.exe : xsql.sln ;

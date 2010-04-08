@@ -1,0 +1,36 @@
+<!-- #ICE REPEAT IF (`:format` == `TABLE` or `:format` == `PLAIN`)
+THEN=`
+	<!-- #ICE REPEAT INCLUDE=``begin.html?title=Links&previous=format.html&next=links2.html`` -->
+	<!-- #ICE REPEAT INCLUDE=``checkSQL.html`` -->
+	<!-- #ICE REPEAT IF (``:dbname`` != ```` and ``:dbquery`` != ````)
+		THEN=``
+			The "LINKS" keyword is used to generate links. As Ingres Web Deployment Option processes the result set, for each item in a LINKS 
+			column, it generates a hyperlink tag to the specified URL. To enable the referenced page to determine which item 
+			was clicked on, Ingres Web Deployment Option sets an HTML variable. The variable has the same name as the column name, and 
+			its value is the value clicked on. The referenced page can use this variable, typically by making it a parameter 
+			in another SQL statement.<p>
+			Please choose a column name and enter a URL to link it to:
+
+			<table>
+			<tr><td align=right>
+			Column Name:</td>
+			<td><SELECT NAME="name">
+			<OPTION VALUE="">none
+
+			<!-- #ICE 
+			SQL=````:dbquery```` 
+			DATABASE=````:dbname```` 
+			HTML=````<OPTION VALUE=":ColumnName">:ColumnName````
+			TYPE=````UNFORMATTED```` 
+			ROWS=````0```` 
+			-->
+			</SELECT>
+
+			</td></tr>
+			<tr><td align=right>URL:</td><td><INPUT SIZE="32" NAME="value" VALUE=""></td></tr>
+			</table>
+			<!-- #ICE REPEAT INCLUDE=````sqlResult.html```` -->``
+	-->
+	<!-- #ICE REPEAT INCLUDE=``end.html`` -->`
+ELSE=`<!-- #ICE REPEAT INCLUDE=``attr.html`` -->`
+-->

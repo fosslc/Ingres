@@ -1,0 +1,13 @@
+mv floatbar.e floatbar.h
+mv nanact.e   nanact.h
+mv nanerr.e   nanerr.h
+mv nanmem.e   nanmem.h
+mv selwin.e   selwin.h
+mv treelb.e   treelb.h
+mwprepro
+mv floatbar.h floatbar.e
+mv nanact.h   nanact.e
+mv nanerr.h   nanerr.e
+mv nanmem.h   nanmem.e
+mv selwin.h   selwin.e
+mv treelb.h   treelb.e

@@ -1,0 +1,30 @@
+#
+# Jamfile file for front!frontcl!termdr
+#
+#   20-Oct-2009 (hweho01)
+#     Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front frontcl termdr ;
+
+IISUBSYS front frontcl termdr ;
+
+
+IINOOPTIM crtty.c : i64_hpu ;
+
+
+IIMSGHDR ertd.msg ;
+
+IILIBRARY FTLIB : winstr.c winmsg.c windex.c trecover.c
+	tputs.c touchwin.c totop.c tgoto.c termsize.c
+	termcap.c tdtmputl.c tdprnwin.c tdmove.c tdfplus.c
+	tddblutl.c sextend.c scroll.c sbox.c restore.c refresh.c
+	overwrt.c onewin.c nomacro.c newwin.c mvprintw.c mvfix.c
+	longname.c locator.c keys.c itxout.c itxin.c itout.c itinit.c
+	itin.c itgetent.c insch.c initscr.c hilite.c getch.c extend.c
+	erase.c endwin.c dumpwin.c dispattr.c delwin.c delch.c crtty.c
+	crput.c clrtoeol.c clrtobot.c clear.c box.c addch.c ;
+
+IILIBRARY IMPFRAMELIBDATA : termdrdata.c termdr.c ;
+
+
+IILIBOBJECT termdr.c ;

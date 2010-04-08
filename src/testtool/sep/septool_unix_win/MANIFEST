@@ -1,0 +1,71 @@
+#
+# MANIFEST file for testtool!sep!septool_unix_win
+#
+
+IISUBSYS testtool sep septool_unix_win ;
+
+if ! $(NT)
+{
+IITOOLSEXE tac : tac.c ;
+
+IITOOLSEXE qawtl : qawtl.c ;
+IINEEDLIBS qawtl : LIBINGRES ;
+
+IITOOLSEXE qasetuser  : qasetuser.c ;
+IINEEDLIBS qasetuser  : LIBINGRES ;
+
+IITOOLSEXE qasetplab : qasetplab.c ;
+IINEEDLIBS qasetplab : LIBINGRES ;
+
+IITOOLSSH altcompare : altcompare.sh ;
+IITOOLSSH authnetu : authnetu.sh ;
+IITOOLSSH cksepenv : cksepenv.sh ;
+IITOOLSSH clningtst : clningtst.sh ;
+IITOOLSSH clntstabf : clntstabf.sh ;
+IITOOLSSH clntstdbs : clntstdbs.sh ;
+IITOOLSSH ferun : ferun.sh ;
+IITOOLSSH makelocs : makelocs.sh ;
+IITOOLSSH netutilcmd : netutilcmd.sh ;
+IITOOLSSH qasetlab : qasetlab.sh ;
+IITOOLSSH qasetuserfe : qasetuserfe.sh ;
+IITOOLSSH qasetusertm : qasetusertm.sh ;
+IITOOLSSH resettimezone : resettimezone.sh ;
+IITOOLSSH run : run.sh ;
+IITOOLSSH sepada : sepada.sh ;
+IITOOLSSH sepcc : sepcc.sh ;
+IITOOLSSH sepcob : sepcob.sh ;
+IITOOLSSH sepesqlc : sepesqlc.sh ;
+IITOOLSSH sepfortr : sepfortr.sh ;
+IITOOLSSH seplib : seplib.sh ;
+IITOOLSSH seplnk : seplnk.sh ;
+IITOOLSSH sepperuse : sepperuse.sh ;
+IITOOLSSH updperuse : updperuse.sh ;
+
+IITMANFILES altcompare.1
+clningtst.1
+clntstabf.1
+clntstdbs.1
+sepperuse.1
+tac.1
+updperuse.1 ;
+}
+else
+{
+    IITOOLSWNTEXE tac : tac.c ;
+
+    IITOOLSWNTEXE qasetuser  : qasetuser.c ;
+    IINEEDLIBS qasetuser : LIBINGRES ;
+
+    IITOOLSWNTEXE qasetuserfe  : qasetuser.c ;
+    IINEEDLIBS qasetuserfe : LIBINGRES ;
+
+    IITOOLSWNTEXE qasetusertm  : qasetuser.c ;
+    IINEEDLIBS qasetusertm : LIBINGRES ;    
+
+
+
+    IITMANFILES altcompare.1 clningtst.1 clntstdbs.1 sepperuse.1
+        tac.1 updperuse.1 ;
+
+}
+

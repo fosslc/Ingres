@@ -1,0 +1,120 @@
+/* Copyright (c) 2004 Ingres Corporation */
+
+/* FRS Mapping File for ICL 6402L Terminals */
+
+/* Go to the menu line (the Menu Key) */
+	menu = pf1 (F1)
+
+/* Go to the next field on the form */
+	nextfield = controlI (Tab)
+
+/* Go to the previous field on the form */
+	previousfield = pf2 (Ctrl+num .)
+
+/* Move forward one word within a field */
+	nextword = pf3 (Func&W)
+
+/* Move backward one word within a field */
+	previousword = pf4 (Func&R)
+
+/* Switch between insert and overstrike mode */
+	mode = pf5 (Char Ins)
+
+/* Redraw the screen */
+	redraw = pf6 (Ctrl+num 3)
+
+/* Delete character under cursor */
+	deletechar = pf7 (Char Del)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlDEL (Del)
+
+/* Start text editor on field */
+	editor = pf8 (Func&V)
+
+/* Move to first column of next row */
+	newrow = pf9 (Home)
+
+/* Clear field or menu input */
+	clear = pf10 (Line Del)
+
+/* Clear rest of field, beginning from current cursor position */
+	clearrest = controlZ (Ctrl+num 1)
+
+/* Scroll up in current table field or form, leaving cursor on same field */
+	scrollup = pf11 (F5)
+
+/* Scroll down in current table field or form, leaving cursor on same field */
+	scrolldown = pf12 (F4)
+
+/* Scroll form left, leaving cursor on same field */
+	scrollleft = pf13 (Shift&->)
+
+/* Scroll form right, leaving cursor on same field */
+	scrollright = pf14 (Shift&<-)
+
+/* Auto-duplicate field value */
+	duplicate = pf15 (Func&Y)
+
+/* Send a copy of the form currently displayed to a file or the printer */
+	printscreen = pf16 (Ctrl+num ,) 
+
+/* Select first menu item */
+	menuitem1 = pf17 (F6)
+
+/* Select second menu item */
+	menuitem2 = pf18 (F7)
+
+/* Select third menu item */
+	menuitem3 = pf19 (F8)
+
+/* Select fourth menu item */
+	menuitem4 = pf20 (F9)
+
+/* Select fifth menu item */
+	menuitem5 = pf21 (Shift&F4)
+
+/* Select sixth menu item */
+	menuitem6 = pf22 (Shift&F5)
+
+/* Select seventh menu item */
+	menuitem7 = pf23 (Shift&F6)
+
+/* Select eighth menu item */
+	menuitem8 = pf24 (Shift&F7)
+
+/* Select ninth menu item */
+	menuitem9 = pf25 (Shift&F8)
+
+/* Select tenth menu item */
+	menuitem10 = pf26 (Shift&F9) 
+
+/* Access INGRES help facility */
+	frskey1 = pf27 (F2)
+
+/* Exit the system */
+	frskey2	= pf28 (F3)
+
+/* Exit the frame, returning to previous frame */
+	frskey3	= pf29 (F10)
+
+/* Execute function */
+	frskey4 = controlM (Enter)
+
+/* Move to top of table field */
+	frskey5 = pf30 (Shift&UP)
+
+/* Move to bottom of table field */
+	frskey6	= controlJ (Shift&DOWN)
+
+/* Search table field for specified string */
+	frskey7	= pf31 (Func&S)
+
+/* Save object in database */
+	frskey8 = pf32 (F11)
+
+/* Undo last action or forget changes made in frame */
+	frskey9 = pf33 (Func&U)
+
+/* Listchoices menu selection */
+	frskey10 = pf34 (Shift&F10)

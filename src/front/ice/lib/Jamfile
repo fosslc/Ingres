@@ -1,0 +1,9 @@
+#
+# Jamfile file for front!ice!lib
+#
+
+SubDir ING_SRC front ice lib ;
+
+IISUBSYS front ice lib ;
+
+

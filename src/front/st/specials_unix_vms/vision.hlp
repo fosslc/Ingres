@@ -1,0 +1,15 @@
+Vision
+
+Ingres Vision is the premier tool for rapid development of open, portable,
+character-based applications.  Vision combines the productivity of a
+4GL, the production power of a 3GL, an advanced user interface,
+automatic code generation capabilities, and customizable code templates
+which allow rapid development of applications that run against
+relational and non-relational database systems from Ingres Corporation, 
+IBM, and Hewlett Packard.
+
+Vision applications can be deployed both as traditional, host-based
+terminal applications, or as client-server applications under Microsoft
+Windows, Unix, and VMS.  When deployed under Microsoft Windows, Vision
+applications support pull-down menus, button bars, and other mouse-driven
+graphical user interface features.

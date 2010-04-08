@@ -1,0 +1,43 @@
+(.) CVaf = 0, CVfa = 0, 2345.4 = 2345.400 = 2345.400
+(.) CVaf = 66817, CVfa = 0, 2345,4 = 2345.400 = 2345.400
+(,) CVaf = 0, CVfa = 0, 2345,4 = 2345,400 = 2345,400
+
+CVfa(g10.2) 123.456, rc = 0, result = < 1.23e+002>
+CVfa(e10.2) 123.456, rc = 0, result = < 1.23e+002>
+CVfa(n10.2) 123.456, rc = 0, result = <123.46>
+CVfa(f10.2) 123.456, rc = 0, result = <123.46>
+
+CVfa(G10.2) 123456, rc = 0, result = < 1.23E+005>
+CVfa(E10.2) 123456, rc = 0, result = < 1.23E+005>
+CVfa(N10.2) 123456, rc = 0, result = <123456.00>
+CVfa(F10.2) 123456, rc = 0, result = <123456.00>
+
+CVfa(G10.2) 12345678, rc = 0, result = < 1.23E+007>
+CVfa(E10.2) 12345678, rc = 0, result = < 1.23E+007>
+CVfa(N10.2) 12345678, rc = 0, result = < 1.23E+007>
+CVfa(F10.2) 12345678, rc = 66820, result = <**********>
+
+CVfa(g8.2) -134.65, rc = 66820, result = <********>
+CVfa(e8.2) -134.65, rc = 66820, result = <********>
+CVfa(n8.2) -134.65, rc = 0, result = <-134.65>
+CVfa(f8.2) -134.65, rc = 0, result = <-134.65>
+
+CVfa(g8.2) 134.65, rc = 66820, result = <********>
+CVfa(e8.2) 134.65, rc = 66820, result = <********>
+CVfa(n8.2) 134.65, rc = 0, result = <134.65>
+CVfa(f8.2) 134.65, rc = 0, result = <134.65>
+
+CVfa(g10) -123, rc = 0, result = <-123     >
+CVfa(e10) -123, rc = 0, result = <-1230e-001>
+CVfa(n10) -123, rc = 0, result = <-123>
+CVfa(f10) -123, rc = 0, result = <-123>
+
+CVfa(g10.2) 12.45, rc = 0, result = <12.45     >
+CVfa(e10.2) 12.45, rc = 0, result = < 1.24e+001>
+CVfa(n10.2) 12.45, rc = 0, result = <12.45>
+CVfa(f10.2) 12.45, rc = 0, result = <12.45>
+
+CVfa(G10.3) 0.0008, rc = 0, result = <8.000E-004>
+CVfa(E10.3) 0.0008, rc = 0, result = <8.000E-004>
+CVfa(N10.3) 0.0008, rc = 0, result = <8.000E-004>
+CVfa(F10.3) 0.0008, rc = 0, result = <0.001>

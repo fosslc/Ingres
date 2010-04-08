@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This popup displays the full prompt for a declared variable.  Enter the
+desired value for the variable.  This value will be passed up to the 
+Declared Report Variable frame when you leave this popup.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	OK 		Return to the Declared Report Variables frame, passing 
+			up the value entered. 
+
+	Cancel 		Return to the Declared Report Variables frame,
+			without passing up any value entered. 
+
+        Help            Print this message.

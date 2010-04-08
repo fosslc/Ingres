@@ -1,0 +1,12 @@
+#
+# Jamfile file for dbutil!duf!duu
+#
+
+SubDir ING_SRC dbutil duf duu ;
+
+IISUBSYS dbutil duf duu ;
+
+
+IILIBRARY DBUTILLIB : duuinpth.c duuinits.c duugetusr.c
+	duuerror.c duuchknm.c ;
+

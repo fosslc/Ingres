@@ -1,0 +1,557 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<er.h>
+#include	<erfe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	<st.h>
+#include        <generr.h>
+#include        <stdprmpt.h>
+#include	"eric.h"
+#include	"global.h"
+##include       "ictables.qsh"
+/*
+fool ming:
+#include        "ictables.h"
+*/
+
+/**
+** Name:	dbpubacc.qsc	-	Access Grants
+**
+** Defines:
+**	IIICdpDBPublicAccess		- Database Public Access.
+**
+** History:
+**	15-nov-1990 (pete)
+**		Initial Version.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototypes for dbpub_init() & dbpub_write() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**/
+
+EXEC SQL INCLUDE SQLCA ;
+EXEC SQL WHENEVER SQLERROR CALL SQLPRINT ;
+
+## GLOBALREF char	F_Maxname[];
+GLOBALREF       bool    Mgr;
+GLOBALREF bool  IiicPrivSecurity; /* TRUE if user has SECURITY privilege */
+
+EXEC SQL BEGIN DECLARE SECTION ;
+## GLOBALREF IIDBPRIV Iidbpriv;
+## GLOBALREF IIDATABASE Iidatabase;
+EXEC SQL END DECLARE SECTION ;
+GLOBALREF	char	*IC_allDBs;	/* "all databases" */
+
+FUNC_EXTERN     STATUS  iiicspSelectDbpriv();
+FUNC_EXTERN     STATUS  iiicsdSelectDatabase();
+FUNC_EXTERN     STATUS  iiicsp2SelectDbpriv2();
+
+FUNC_EXTERN	STATUS	iiicvaValidateAuthId();
+FUNC_EXTERN	STATUS	IIICdpDBPublicAccess();
+FUNC_EXTERN     char    *IIICgtGetType();
+
+static		STATUS	dbacc_write();
+static		STATUS	loadDBPubPrivs();
+static		STATUS	dbpub_init();
+static		STATUS	dbpub_write();
+
+
+##static	char	Dbpacc_frm[]	= ERx("icdbpacc"); /* Databases with
+							   ** Public Access.
+							   */
+##static	char	Dbacc_tbl[]	= ERx("db_access"); /* tblfld */
+##static	bool	DbaccFormAdd = FALSE;
+
+##static	char	Object_name[FE_MAXNAME+1];	  /* work area */
+
+static  char    Empty[] = ERx("");
+
+/*{
+** Name:        IIICdpDBPublicAccess() - Databases with Grants to PUBLIC.
+**
+** Description:
+**	Maintain list of Databases with PUBLIC access.
+**
+** Inputs:
+**	NONE
+**
+** Outputs:
+**
+** Returns:
+**      FAIL    - if error occurs.
+**      OK      - if all goes ok.
+**
+** Side Effects:
+**
+** History:
+**	15-nov-1990 (pete)
+**		Initial Version.
+*/
+STATUS
+IIICdpDBPublicAccess()
+## {
+    STATUS  err = OK;
+##  char    *save_menuitem;
+##  char    *delete_menuitem;
+##  char    *listchoices_menuitem;
+##  i4	    work_nat;	/* working var */
+##  char    *mode;
+##  char	tmpname[FE_MAXNAME + 1];
+
+    if (!DbaccFormAdd)
+    {
+	if (IIUFgtfGetForm(IIUFlcfLocateForm(), Dbpacc_frm) != OK)
+	{
+	    IIUGerr(S_IC0059_Get_Form_Error, UG_ERR_ERROR, 0);
+	    return FAIL;
+	}
+	DbaccFormAdd = TRUE;
+    }
+
+    /* User can make changes if running Accessdb (as opposed to Catalogdb) &
+    ** has SECURITY Priv.
+    */
+    if (Mgr && IiicPrivSecurity)
+    {
+        save_menuitem = ERget(FE_Save);
+        delete_menuitem = ERget(FE_Delete);
+        listchoices_menuitem = ERget(FE_Lookup);
+	mode = ERx("update");
+    }
+    else
+    {
+	/* User is running Accessdb with only SYSTEM_ADMIN privilege. */
+        save_menuitem = Empty;
+        delete_menuitem = Empty;
+        listchoices_menuitem = Empty;
+	mode = ERx("read");
+    }
+
+##  DISPLAY Dbpacc_frm mode
+##  INITIALIZE
+##  {
+	if (dbpub_init() != OK)
+	{
+	    err = FAIL;
+##	    BREAKDISPLAY
+	}
+##  }
+
+##  ACTIVATE MENUITEM delete_menuitem
+##      (VALIDATE = 0, ACTIVATE = 0, EXPL = ERget(F_IC0018_RowDeleteExpl)):
+##  {
+##      INQUIRE_FRS FIELD "" (Object_name = NAME)
+        if (STequal(Object_name, Dbacc_tbl))
+        {
+##          DELETEROW Dbpacc_frm Dbacc_tbl
+##          SET_FRS FORM (CHANGE(Dbpacc_frm) = 1)
+        }
+        else
+            IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+
+##  ACTIVATE MENUITEM save_menuitem
+##      (ACTIVATE = 1, EXPL = ERget(F_FE0117_SaveExpl)),
+##      FRSkey8 (ACTIVATE = 1):
+##  {
+        if (save_menuitem[0] == EOS)
+        {
+            /* this was selected via the FRSkey */
+            FTbell();
+##          RESUME
+        }
+
+##	VALIDATE
+	if (dbpub_write() != OK) {
+##	    RESUME FIELD Dbacc_tbl
+	}
+##	BREAKDISPLAY
+##  }
+
+##  ACTIVATE MENUITEM listchoices_menuitem (VALIDATE = 0, ACTIVATE = 0,
+##      EXPL = ERget(FE_LookupExpl)),
+##      FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##  {
+        if (listchoices_menuitem[0] == EOS)
+        {
+            /* this was selected via the FRSkey */
+            FTbell();
+##          RESUME
+        }
+##      INQUIRE_FRS FIELD "" (tmpname = NAME)
+        if (STequal(tmpname, Dbacc_tbl))
+        {
+            icListPicks(ERget(FE_Database),
+                            ERx("iidatabase"), ERx("name"), tmpname);
+            if (tmpname[0] != EOS)
+            {
+##              LOADTABLE Dbpacc_frm Dbacc_tbl ( #database = tmpname )
+##              SET_FRS FORM (CHANGE(Dbpacc_frm) = 1)
+##		RESUME COLUMN Dbacc_tbl #access
+            }
+        }
+        else
+            IIUGerr(E_IC006C_NotOnTableField, UG_ERR_ERROR, 0);
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_Help) (expl = ERget(F_FE0101_ExplKeyHelp),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey1 (VALIDATE =0, ACTIVATE = 0):
+##  {
+        FEhelp(ERx("icdbpacc.hlp"), ERget(S_IC0075_DBPublicAccess));
+##  }
+
+##  ACTIVATE MENUITEM ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd),
+##      VALIDATE = 0, ACTIVATE = 0), FRSkey3 (VALIDATE =0, ACTIVATE = 0):
+##  {
+        if (Mgr)
+        {
+            /* user is running Accessdb */
+##          i4      changed;
+
+##          INQUIRE_FRS FORM (changed = CHANGE)
+            if ( changed )
+            {
+                changed = CONFIRM(ERget(F_IC0023_DBPublicAcc), Empty);
+                switch(changed)
+                {
+                case CONFCH_YES:
+##                  VALIDATE
+		    if (dbpub_write() != OK) 
+		    {
+##	    		RESUME FIELD Dbacc_tbl
+		    }
+                    /* fall through */
+                case CONFCH_NO:
+##                  BREAKDISPLAY
+                default:
+                    break;
+                }
+
+##              RESUME;
+            }
+        }
+
+##      BREAKDISPLAY
+
+##  }
+
+##  ACTIVATE FRSkey7
+##          (EXPL = ERget(F_FE0104_ExplFind)) /* ERget(FE_Find) */
+##  {
+	FEtabfnd(Dbpacc_frm, Dbacc_tbl);
+##  }
+
+##  ACTIVATE FRSkey5
+##          (EXPL = ERget(F_FE0105_ExplTop))  /* ERget(FE_Top) */
+##  {
+##	SCROLL Dbpacc_frm Dbacc_tbl TO 1
+##  }
+
+##  ACTIVATE FRSkey6
+##          (EXPL = ERget(F_FE0106_ExplBottom)) /*ERget(FE_Bottom) */
+##  {
+##	SCROLL Dbpacc_frm Dbacc_tbl TO END
+##  }
+
+##  ACTIVATE COLUMN Dbacc_tbl #database:
+##  {
+##      INQUIRE_FRS ROW '' '' (work_nat = CHANGE)
+        if (work_nat == 1)
+        {
+            /* user has changed this value. validate it */
+
+##          GETROW Dbpacc_frm Dbacc_tbl (Object_name = database)
+
+	    /* database names are never case sensitive */
+            IIUGlbo_lowerBEobject(Object_name);
+
+	    if (!STequal(IC_allDBs, Object_name))
+	    {
+                /* get Database info */
+		if (iiicsdSelectDatabase(Object_name, &Iidatabase) != OK)
+                {
+                    /* no such database */
+##                  RESUME
+                }
+	    }
+
+            /* mark column so won't be validated next time */
+##          SET_FRS ROW '' '' (CHANGE = 0)
+        }
+
+##      RESUME NEXT
+##  }
+
+##  FINALIZE
+
+    return err;
+## }
+
+/*{
+** Name:	dbpub_init - initialize entries in db_access tbl field.
+**
+** Description:
+**
+** Inputs:
+**
+** Outputs:
+**
+**	Returns:
+**		OK if all went well.
+**		FAIL otherwise.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	15-nov-90 (pete)
+**		Initial Version.
+*/
+static STATUS
+##dbpub_init()
+##{
+	STATUS	loadDBPubPrivs(); /* function that loads privs into tbl field */
+
+##	MESSAGE ERget(S_IC0077_Retrieving_DBPubAcc);
+
+	/* create hidden versions of all displayed fields */
+##	INITTABLE Dbpacc_frm Dbacc_tbl ERx("fill") (
+##					    #database_orig = F_Maxname,
+##					    #access_orig   = c3);
+
+	/* Select PUBLIC Database grants (gtype=3). */
+	_VOID_ iiicsp2SelectDbpriv2(3, &Iidbpriv, loadDBPubPrivs);
+
+	return OK;
+## }
+
+/*{
+** Name:	loadDBPubPrivs - load Public Database Grants into table field.
+**
+** Description:
+**	Load table field with GRANT ACCESS ON DATABASE TO PUBLIC type rows from
+**	iidbpriv into a table field.
+**
+** Inputs:
+**	IIDBPRIV *iidbpriv	structure full of good stuff to put into
+**				table field.
+** Outputs:
+**
+**	Returns:
+**		OK if row loaded ok; FAIL otherwise.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**
+** History:
+**	15-nov-1990 (pete)
+**		Initial Version.
+*/
+static STATUS
+## loadDBPubPrivs(iidbpriv)
+## IIDBPRIV *iidbpriv;
+## {
+##  char	*access;
+
+    if ((iidbpriv->control & DB_ACCESS) != 0)
+	/* this tuple specifies a Database ACCESS privilege */
+	access = ((iidbpriv->flags & DB_ACCESS) != 0) ? Yes : No ;
+    else
+	return OK;	/* don't load this row. It probably specifies
+			** a DIO or CPU limit, or some other database
+			** priv. We only want Access privs.
+			*/
+
+    if (iidbpriv->dbname[0] == EOS)
+    {
+	/* empty dbname = GRANT ON INSTALLATION TO PUBLIC */
+	STcopy (IC_allDBs, iidbpriv->dbname);
+    }
+
+##  LOADTABLE Dbpacc_frm Dbacc_tbl
+##	(
+##	#database		= iidbpriv->dbname,
+##	#database_orig		= iidbpriv->dbname,
+##	#access			= access,
+##	#access_orig		= access
+##	)
+
+    return OK;
+## }
+
+
+/*{	dbpub_write	Write changes about Public GRANTs to dbdb
+**
+**	Unload table field and issue GRANT/REVOKE statements.
+**
+**	Returns:
+**		OK	database updated ok.
+**		FAIL	error updating database.
+**
+**	History:
+**	15-nov-1990 (pete)
+**		Initial version.
+*/
+static STATUS
+##dbpub_write ()
+##{
+    STATUS      uval = OK;
+##  char	dbname_orig[FE_MAXNAME+1];	/* original name from dbase */
+##  char	db_name[FE_MAXNAME+1];		/* database name */
+##  char	access_orig[3 +1];	/* original access from dbase */
+##  char	access[3 +1];	/* displayed access */
+
+##  i4  	db_state;
+    EXEC SQL BEGIN DECLARE SECTION ;
+    char        sbuffer[256];
+    EXEC SQL END DECLARE SECTION ;
+
+    /* NOTE: assume all displayed values in table field are valid */
+
+##  MESSAGE ERget(S_IC0078_UpdatePubAccGrnts);
+
+##  BEGIN TRANSACTION
+
+    /* process stDELETE rows */
+##  UNLOADTABLE Dbpacc_frm Dbacc_tbl (db_name = #database, access = #access,
+##                                  dbname_orig = #database_orig,
+##                                  access_orig = #access_orig,
+##                                  db_state = _STATE)
+##  {
+        sbuffer[0] = EOS;
+
+        switch (db_state)
+        {
+        case stDELETE:
+            /* Delete the Access, with the original database name */
+	    if (STbcompare(IC_allDBs, 0, dbname_orig, 0, TRUE) != 0)
+            {
+                /* REVOKE from particular database */
+
+                STprintf(sbuffer,
+                        ERx("REVOKE %sACCESS ON DATABASE %s FROM PUBLIC"),
+		  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"),
+                        dbname_orig);
+            }
+	    else
+	    {
+                /* blank database name means ON INSTALLATION */
+
+                STprintf(sbuffer,
+                        ERx("REVOKE %sACCESS ON INSTALLATION FROM PUBLIC"),
+                  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"));
+	    }
+
+            EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+            if ( FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+            {
+                uval = FAIL;
+##              ENDLOOP
+            }
+
+            break;
+        }
+
+##  }   /* end of UNLOADTABLE */
+
+    if (uval == FAIL)
+        goto done;
+
+    /* process all but stDELETE statements */
+##  UNLOADTABLE Dbpacc_frm Dbacc_tbl (db_name = #database, access = #access,
+##                                  dbname_orig = #database_orig,
+##                                  access_orig = #access_orig,
+##                                  db_state = _STATE)
+##  {
+        sbuffer[0] = EOS;
+
+        switch (db_state)
+        {
+
+        case stCHANGE:
+            /* Delete old access, and add new one */
+	    if (STbcompare(IC_allDBs, 0, dbname_orig, 0, TRUE) != 0)
+            {
+                /* REVOKE from particular database */
+
+                STprintf(sbuffer,
+                        ERx("REVOKE %sACCESS ON DATABASE %s FROM PUBLIC"),
+                  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"),
+                        dbname_orig);
+            }
+	    else
+	    {
+                STprintf(sbuffer,
+                        ERx("REVOKE %sACCESS ON INSTALLATION FROM PUBLIC"),
+                  (access_orig[0] == Yes[0]) ? Empty : ERx("NO"));
+	    }
+
+            EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+            if ( FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+            {
+                uval = FAIL;
+##              ENDLOOP
+            }
+
+            /* fall through */
+
+        case stNEW:
+
+            if (db_name[0] != EOS)
+            {
+		if (STbcompare(IC_allDBs, 0, db_name, 0, TRUE) == 0)
+		{
+		    /* Issue GRANT ON INSTALLATION */
+                    STprintf(sbuffer,
+                        ERx("GRANT %sACCESS ON INSTALLATION TO PUBLIC"),
+                        (access[0] == Yes[0]) ? Empty : ERx("NO"));
+		}
+		else
+		{
+                    STprintf(sbuffer,
+                        ERx("GRANT %sACCESS ON DATABASE %s TO PUBLIC"),
+                        (access[0] == Yes[0]) ? Empty : ERx("NO"),
+                        db_name);
+		}
+
+                EXEC SQL EXECUTE IMMEDIATE :sbuffer;
+                if ( FEinqerr() != OK && sqlca.sqlcode != (-E_GE0032_WARNING))
+                {
+                        uval = FAIL;
+##                      ENDLOOP
+                }
+            }
+
+            break;
+
+        default:
+            break;
+        }
+
+##  }   /* end of UNLOADTABLE */
+
+done:
+    if (uval == OK)
+	EXEC SQL COMMIT WORK;
+    else
+        EXEC SQL ROLLBACK;
+
+    return uval;
+## }

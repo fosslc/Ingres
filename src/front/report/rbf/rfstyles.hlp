@@ -1,0 +1,44 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to create a new report or produce the default report
+for a specified table or view.  On this menu, you should select the basic
+style of the report.  Not all styles area always available.  The 'Indented'
+and 'Label' styles are only available for report creation.  And the
+'Master/Detail' style is only available for creation of a report based
+on a JoinDef which is a master/detail JoinDef.  All the styles displayed
+on your selection form are available.
+
+The styles are:
+
+        Tabular         Produces a report which lists the name of each
+                        column in the table with column headings, and the
+                        data for each column in columnar format.  This
+                        will produce a report as wide as necessary to 
+                        fit all columns in the table.
+
+        Wrap            Produces a columnar report, but wraps the column
+                        headings and data at the screen width.
+
+        Block           Produces a report that lists the report as pairs
+                        of column names and data, in non-column format.
+                        Useful for reports on tables which contain many
+                        columns, and cannot be displayed well in a 
+                        columnar list.
+
+	Indented        Produces a report with hierarchical control breaks.
+
+	Labels		Produces a report similar to a mailing list.
+			Multiple blocks of data run across the page.
+
+	Master/Detail   Produces a report with Master data presented
+	                in a break header and Detail data is presented
+			in columnar format.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Select          Create or run a report of selected style.
+
+        Cancel          Return to previous frame.
+
+        Help            Print this message.

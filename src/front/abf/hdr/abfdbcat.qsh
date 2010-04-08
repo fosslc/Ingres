@@ -1,0 +1,119 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+/**
+** Name:	abfdbcat.sh -	ABF DB Catalog Record Definitions File.
+**
+** History:
+**	Revision 6.0  87/03  bobm
+**	Initial revision.
+**	2/88 (bobm)	6.0/0 - up version number to 2 to force OSL recompiles
+**
+**	Revision 6.2  89/01  wong
+**	Changed to be one-to-one map with retrieved attributes, renamed as
+**	ABF_DBCAT from ACATREC.
+**	10/89 (Mike S)	Add flags word
+**
+**	Revision 6.5
+**	24-aug-92 (davel)
+**		incremented version to 3, and added #defines for previous
+**		version numbers.  Version was incremented to allow for 
+**		changes to global constant objects in release 6.5.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+EXEC SQL BEGIN DECLARE SECTION;
+/*
+** version number to stamp catalog records
+*/
+# define ACAT_VERSION 3
+# define ACAT_VERSION_REL_50 1
+# define ACAT_VERSION_REL_60 2
+# define ACAT_VERSION_REL_65 3
+
+/*}
+** Name:	ABF_DBCAT -	ABF Application DB Catalog Entry.
+**
+** Description:
+**	The database catalog entry for the application components, which is a
+**	subclass of the OO_CATREC object.
+**
+**	CAUTION:
+**		This is used as the target of a "select" without
+**		explicitly naming the items - DO NOT change without
+**		taking care of queries in iaom.
+*/
+typedef struct {
+	i4	ooid;
+	i4	class;
+	char	*name/*[ FE_MAXNAME+1 ]*/;
+	char	*owner/*[ DB_MAXNAME+1 ]*/;
+	i4	env;
+	i4	is_current;
+	char	*short_remark/*[ OOSHORTREMSIZE+1 ]*/;
+	char	*create_date/*[ OODATESIZE+1 ]*/;
+	char	*alter_date/*[ OODATESIZE+1 ]*/;
+	char	*long_remark/*[ OOLONGREMSIZE+1 ]*/;
+	i4	alter_cnt;
+	char	*altered_by/*[ DB_MAXNAME+1 ]*/;
+	i4	applid;
+EXEC SQL BEGIN EXCLUDE SECTION;
+#define	ABFSRC_SIZE	180
+EXEC SQL END EXCLUDE SECTION;
+	char	*source/*[ ABFSRC_SIZE+1 ]*/;
+	char	*symbol/*[ FE_MAXNAME+1 ]*/;
+	/*DB_DT_ID*/ i2 retadf_type;
+	char	*rettype/*[ FE_MAXNAME+1 ]*/;
+	i4	retlength;
+EXEC SQL BEGIN EXCLUDE SECTION;
+#define				START_FRAME	0x0	/* start frame */
+#define				START_PROC	0x1	/* start procedure */
+#define				APPL_BATCH	(0x2|START_PROC)
+EXEC SQL END EXCLUDE SECTION;
+	i2	retscale;
+	i2	version;
+EXEC SQL BEGIN EXCLUDE SECTION;
+#define ABFARGS		6
+#define	ABFARG_SIZE	48
+#define AppExecutable	arg0
+#define AppStartName	arg1
+#define AppLinkFile	arg2
+#define AppDML		arg3
+#define AppRole		arg4
+#define RepCmd		arg0
+#define RepOutput	arg1
+#define GBFCmd		arg0
+#define GBFOutput	arg1
+#define GraphCmd	arg0
+#define GraphOutput	arg1
+#define QBFCmd		arg0
+#define QBFQryType	arg1
+#define HostLanguage	arg0
+#define UserStatic	arg0
+#define Compdate	arg3
+#define UserFormgen	arg4
+#define UserGendate	arg5
+#define ConstLanguage	arg0
+
+EXEC SQL END EXCLUDE SECTION;
+	char	*arg0/*[ ABFARG_SIZE+1 ]*/;
+	char	*arg1/*[ ABFARG_SIZE+1 ]*/;
+	char	*arg2/*[ ABFARG_SIZE+1 ]*/;
+	char	*arg3/*[ ABFARG_SIZE+1 ]*/;
+	char	*arg4/*[ ABFARG_SIZE+1 ]*/;
+	char	*arg5/*[ ABFARG_SIZE+1 ]*/;
+	char	*dname/*[ FE_MAXNAME+1 ]*/;
+	char	*dlink/*[ FE_MAXNAME+1 ]*/;
+	i4	flags;
+	i4	deptype;
+	i4	deporder;
+	i4	dclass;
+} ABF_DBCAT;
+
+EXEC SQL END DECLARE SECTION;

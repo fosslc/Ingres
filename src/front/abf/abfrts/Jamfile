@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!abf!abfrts
+#
+# History:
+#	21-jan-2005 (abbjo03)
+#	    Remove unused ABFRTS library.
+
+SubDir ING_SRC front abf abfrts ;
+
+IISUBSYS front abf abfrts ;
+
+IIAbfObj abfmain.c abfimain.c ;

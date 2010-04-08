@@ -1,0 +1,670 @@
+COPYFORM:	6.4	2003_12_02 15:58:10 GMT  
+FORM:	imp_lk_list		
+	187	23	0	0	2	0	0	9	0	0	0	0	0	64	0	17
+FIELD:
+	0	vnode	-21	33	0	30	1	59	0	0	30	0	29	Lock List Display for Vnode:	0	0	0	0	512	0	0		c30			0	0
+	1	locktbl	0	15	0	15	19	172	2	0	1	3	0		1	1	0	1073741857	0	0	0					1	1
+	0	scb_pid	-30	5	0	4	1	6	0	1	4	0	1	scbpid	1	1	0	16777216	0	0	0		-i4			2	2
+	1	pid	-30	5	0	4	1	4	0	8	4	0	8	pid	8	1	0	16777216	0	0	0		-i4			2	3
+	2	sid	-21	28	0	12	1	12	0	13	12	0	13	sid	13	1	0	16777216	64	0	0		c12			2	4
+	3	computed_id	-21	11	0	8	1	8	0	26	8	0	26	ID	26	1	0	0	512	0	0		c8			2	5
+	4	id_id	-30	5	0	6	1	6	0	35	6	0	35	id_id	35	1	0	16777216	0	0	0		-i6			2	6
+	5	id_instance	-30	5	0	4	1	11	0	42	4	0	42	id_instance	42	1	0	16777216	0	0	0		-i4			2	7
+	6	username	-21	17	0	14	1	14	0	54	14	0	54	Session	54	1	0	0	512	0	0		c14			2	8
+	7	database	-21	33	0	8	1	8	0	69	8	0	69	Database	69	1	0	0	64	0	0		c8			2	9
+	8	lkb_count	-30	5	0	4	1	5	0	78	4	0	78	Count	78	1	0	0	512	0	0		-i4			2	10
+	9	llkb_count	-30	5	0	4	1	7	0	84	4	0	84	Logical	84	1	0	0	512	0	0		-i4			2	11
+	10	max_lkb	-30	5	0	4	1	4	0	92	4	0	92	MaxL	92	1	0	0	512	0	0		-i4			2	12
+	11	llb_status	-21	28	0	25	1	25	0	97	25	0	97	Status	97	1	0	0	512	0	0		c25			2	13
+	12	state	-21	23	0	20	1	20	0	123	20	0	123	State	123	1	0	16777216	0	0	0		c20			2	14
+	13	wait_reason	-21	23	0	20	1	20	0	144	20	0	144	wait_reason	144	1	0	16777216	0	0	0		c20			2	15
+	14	server	-21	67	0	5	1	6	0	165	5	0	165	server	165	1	0	16777216	64	0	0		c5			2	16
+TRIM:
+FORM:	imp_lk_menu		
+	83	23	0	0	2	0	2	9	0	0	0	0	0	0	0	5
+FIELD:
+	0	vnode	-21	23	0	20	1	27	0	56	20	0	7	Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	imp_menu	0	3	0	3	5	68	5	9	1	1	0		1	1	0	1073758241	0	0	0					1	1
+	0	item_number	-30	5	0	4	1	4	0	1	4	1	1		1	-1	0	16777216	0	0	0		-i4			2	2
+	1	short_name	-21	18	0	15	1	15	0	6	15	1	6		6	-1	0	0	0	0	0		c15			2	3
+	2	long_name	-21	48	0	45	1	45	0	22	45	1	22		22	-1	0	0	0	0	0		c45			2	4
+TRIM:
+	0	0	IMP - Locking System Menu	0	0	0	0
+	9	12	Place the cursor on your choice and press "Select"	0	0	0	0
+FORM:	imp_lock_summary		
+	80	23	0	0	24	0	19	9	0	0	0	0	0	0	0	24
+FIELD:
+	0	vnode_name	-21	23	0	20	1	20	0	34	20	0	0		0	0	0	0	512	0	0		c20			0	0
+	1	ll_created	-30	5	0	8	1	17	3	2	8	0	9	Created:	0	0	0	0	512	0	0		+i8			0	1
+	2	ll_inuse	-30	5	0	8	1	16	3	24	8	0	8	In use:	0	0	0	256	512	0	0		+i8			0	2
+	3	lock_tbl_size	-30	5	0	8	1	14	3	44	8	0	6	Lock:	0	0	0	0	512	0	0		+i8			0	3
+	4	res_tbl_size	-30	5	0	8	1	18	3	59	8	0	10	Resource:	0	0	0	0	512	0	0		+i8			0	4
+	5	ll_released	-30	5	0	8	1	18	4	1	8	0	10	Released:	0	0	0	0	512	0	0		+i8			0	5
+	6	ll_remaining	-30	5	0	8	1	19	4	21	8	0	11	Remaining:	0	0	0	256	512	0	0		+i8			0	6
+	7	ll_total	-30	5	0	8	1	25	5	15	8	0	17	Total available:	0	0	0	256	512	0	0		+i8			0	7
+	8	res_in_use	-30	5	0	8	1	26	5	48	8	0	18	Resources in use:	0	0	0	0	512	0	0		-i8			0	8
+	9	locks_requested	-30	5	0	8	1	19	9	4	8	0	11	Requested:	0	0	0	0	512	0	0		+i8			0	9
+	10	locks_released	-30	5	0	8	1	18	9	29	8	0	10	Released:	0	0	0	0	512	0	0		+i8			0	10
+	11	locks_in_use	-30	5	0	8	1	16	9	60	8	0	8	In use:	0	0	0	256	512	0	0		+i8			0	11
+	12	locks_rerequested	-30	5	0	8	1	22	10	1	8	0	14	Re-requested:	0	0	0	0	512	0	0		+i8			0	12
+	13	locks_cancelled	-30	5	0	8	1	19	10	28	8	0	11	Cancelled:	0	0	0	0	512	0	0		+i8			0	13
+	14	locks_remaining	-30	5	0	8	1	19	10	57	8	0	11	Remaining:	0	0	0	256	512	0	0		+i8			0	14
+	15	locks_converted	-30	5	0	8	1	19	11	4	8	0	11	Converted:	0	0	0	0	512	0	0		+i8			0	15
+	16	locks_escalated	-30	5	0	8	1	19	11	28	8	0	11	Escalated:	0	0	0	256	512	0	0		+i8			0	16
+	17	locks_total	-30	5	0	8	1	25	11	51	8	0	17	Total available:	0	0	0	256	512	0	0		+i8			0	17
+	18	deadlock_search	-30	5	0	8	1	25	13	2	8	0	17	Deadlock search:	0	0	0	0	512	0	0		+i8			0	18
+	19	deadlock	-30	5	0	8	1	18	13	29	8	0	10	Deadlock:	0	0	0	256	512	0	0		+i8			0	19
+	20	convert_wait	-30	5	0	8	1	22	13	54	8	0	14	Convert wait:	0	0	0	256	512	0	0		+i8			0	20
+	21	convert_deadlock	-30	5	0	8	1	26	14	1	8	0	18	Convert deadlock:	0	0	0	256	512	0	0		+i8			0	21
+	22	lock_wait	-30	5	0	8	1	19	14	57	8	0	11	Lock wait:	0	0	0	256	512	0	0		+i8			0	22
+	23	locks_per_tx	-30	5	0	8	1	31	16	1	8	0	23	Locks per Transaction:	0	0	0	0	512	0	0		-i8			0	23
+TRIM:
+	0	0	Locking System Summary for Vnode:	0	0	0	0
+	0	2	5:1:1	1	0	0	0
+	0	2	1:9:0	1	0	0	0
+	0	6	1:41:9	1	0	0	0
+	0	8	1:32:10	1	0	0	0
+	0	8	10:1:11	1	0	0	0
+	0	17	1:77:14	1	0	0	0
+	9	2	Lock List Information	0	0	0	0
+	30	2	1:11:2	1	0	0	0
+	32	8	Lock information	0	0	0	0
+	40	2	5:1:3	1	0	0	0
+	43	2	3:1:4	1	0	0	0
+	43	2	1:9:5	1	0	0	0
+	43	4	1:35:8	1	0	0	0
+	48	8	1:29:12	1	0	0	0
+	52	2	Hash Table Sizes	0	0	0	0
+	68	2	1:10:6	1	0	0	0
+	76	8	10:1:13	1	0	0	0
+	77	2	3:1:7	1	0	0	0
+FORM:	imp_main_menu		
+	83	23	0	0	2	0	2	9	0	0	0	0	0	0	0	5
+FIELD:
+	0	vnode	-21	23	0	20	1	27	0	56	20	0	7	Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	imp_menu	0	3	0	3	5	68	5	9	1	1	0		1	1	0	1073758241	0	0	0					1	1
+	0	item_number	-30	5	0	4	1	4	0	1	4	1	1		1	-1	0	16777216	0	0	0		-i4			2	2
+	1	short_name	-21	18	0	15	1	15	0	6	15	1	6		6	-1	0	0	0	0	0		c15			2	3
+	2	long_name	-21	48	0	45	1	45	0	22	45	1	22		22	-1	0	0	0	0	0		c45			2	4
+TRIM:
+	0	0	IMP - IMA based installation monitor (v2)	0	0	0	0
+	9	12	Place the cursor on your choice and press "Select"	0	0	0	0
+FORM:	imp_server_list	Server list for the new IMA based IPM-like tool	
+	67	15	2	4	2	0	1	9	0	0	0	0	0	128	0	6
+FIELD:
+	0	gcn_entry_tbl	0	10	0	4	14	66	1	0	1	3	0		1	1	0	1073741857	0	0	0					1	0
+	0	serveraddress	-21	18	0	15	1	15	0	1	15	0	1	Name	1	1	0	0	0	0	0		c15			2	1
+	1	serverclass	-21	11	0	8	1	8	0	17	8	0	17	Type	17	1	0	0	0	0	0		c8			2	2
+	2	numsessions	-30	5	0	4	1	8	0	26	4	0	26	Sessions	26	1	0	0	0	0	0		-i4			2	3
+	3	serverdblist	-21	33	0	30	1	30	0	35	30	0	35	Connecting to database(s)	35	1	0	0	0	0	0		c30			2	4
+	1	vnode	-21	23	0	20	1	20	0	22	20	0	0		0	0	0	0	512	0	0		c20			0	5
+TRIM:
+	0	0	Server List on Vnode:	0	0	0	0
+FORM:	imp_server_parms		
+	78	19	0	0	20	0	8	9	0	0	0	0	0	128	0	20
+FIELD:
+	0	server	21	37	0	35	1	58	1	1	35	0	23	Parameters for server:	0	0	0	65552	512	0	0		c35			0	0
+	1	cursors	30	4	0	13	1	22	16	10	13	0	9	Cursors:	0	0	0	65552	512	0	0		-f13			0	1
+	2	svr_state	21	13	0	11	1	22	2	1	11	0	11	Svr State:	0	0	0	65552	512	0	0		c11			0	2
+	3	capabilities	21	47	0	45	1	59	10	2	45	0	14	Capabilities:	0	0	0	65552	512	0	0		c45			0	3
+	4	cursor_flags	-21	33	0	30	1	44	17	5	30	0	14	Cursor Flags:	0	0	0	65552	512	0	0		c30			0	4
+	5	fastcommit	-21	6	0	3	1	16	12	3	3	0	13	Fast Commit:	0	0	0	65552	512	0	0		c3			0	5
+	6	connects	30	4	0	13	1	26	7	2	13	0	13	Connections:	0	0	0	65552	512	0	0		-f13			0	6
+	7	wbehind	30	4	0	13	1	28	14	1	13	0	15	Write Behinds:	0	0	0	65552	512	0	0		-f13			0	7
+	8	listen_fails	30	4	0	13	1	27	5	34	13	0	14	Listen Fails:	0	0	0	65552	512	0	0		-f13			0	8
+	9	shut_state	21	9	0	7	1	23	2	26	7	0	16	Shutdown State:	0	0	0	65552	512	0	0		c7			0	9
+	10	listen_state	21	8	0	6	1	20	4	34	6	0	14	Listen State:	0	0	0	65552	512	0	0		c6			0	10
+	11	server_name	21	18	0	16	1	29	5	2	16	0	13	Server Name:	0	0	0	65552	512	0	0		c16			0	11
+	12	max_connects	30	4	0	13	1	31	7	30	13	0	18	Max. Connections:	0	0	0	65552	512	0	0		-f13			0	12
+	13	name_service	-21	6	0	3	1	17	4	1	3	0	14	Name Service:	0	0	0	65552	512	0	0		c3			0	13
+	14	res_connects	30	4	0	13	1	31	8	30	13	0	18	Res. Connections:	0	0	0	65552	512	0	0		-f13			0	14
+	15	rule_depth	30	4	0	13	1	25	14	35	13	0	12	Rule Depth:	0	0	0	65552	512	0	0		-f13			0	15
+	16	nostar_recov	-21	6	0	3	1	17	13	33	3	0	14	2PC recovery:	0	0	0	65552	512	0	0		c3			0	16
+	17	nousers	30	4	0	13	1	25	8	3	13	0	12	Max. Users:	0	0	0	65552	512	0	0		-f13			0	17
+	18	soleserver	-21	6	0	3	1	16	13	3	3	0	13	Sole Server:	0	0	0	65552	512	0	0		c3			0	18
+	19	incons_risk	-21	6	0	3	1	16	12	34	3	0	13	Incons Risk:	0	0	0	65552	512	0	0		c3			0	19
+TRIM:
+	0	0	4:64:0	1	0	0	0
+	0	3	7:1:1	1	0	0	0
+	0	3	1:64:2	1	0	0	0
+	0	9	7:1:5	1	0	0	0
+	0	9	1:64:4	1	0	0	0
+	0	15	4:64:7	1	0	0	0
+	63	3	7:1:3	1	0	0	0
+	63	9	7:1:6	1	0	0	0
+FORM:	imp_server_popup		
+	32	13	0	0	5	0	10	9	0	0	0	0	0	129	0	5
+FIELD:
+	0	current_sessions	30	4	0	4	1	4	4	16	4	0	0		0	0	0	0	0	0	0		-i4			0	0
+	1	max_sessions	-30	5	0	4	1	4	4	24	4	0	0		0	0	0	0	0	0	0		-i4			0	1
+	2	server_type	-21	23	0	20	1	26	8	0	20	0	6	Type:	0	0	0	0	0	0	0		c20			0	2
+	3	server_dblist	-21	33	0	30	1	30	11	0	30	0	0		0	0	0	0	0	0	0		c30			0	3
+	4	server_name	-21	13	0	10	1	16	7	0	10	0	6	Name:	0	0	0	0	0	0	0		c10			0	4
+TRIM:
+	0	0	Server Detail	0	0	0	0
+	0	10	Connecting to:	0	0	0	0
+	4	1	5:26:0	1	0	0	0
+	4	3	1:26:3	1	0	0	0
+	5	2	Sessions	0	0	0	0
+	5	4	Total	0	0	0	0
+	14	1	5:1:1	1	0	0	0
+	15	2	Current	0	0	0	0
+	23	1	5:1:2	1	0	0	0
+	24	2	Max	0	0	0	0
+FORM:	imp_session_detail		 
+	76	19	0	0	19	0	0	9	0	0	0	0	0	129	0	19
+FIELD:
+	0	session_id	-21	21	0	18	1	38	0	0	18	0	20	Detail for session:	0	0	0	0	0	0	0		c18			0	0
+	1	server_addr	-21	28	0	25	1	33	0	40	25	0	8	Server:	0	0	0	0	0	0	0		c25			0	1
+	2	session_name	-21	23	0	20	1	34	1	0	20	0	14	Session Name:	0	0	0	0	0	0	0		c20			0	2
+	3	terminal	-21	13	0	10	1	20	1	39	10	0	10	Terminal:	0	0	0	0	0	0	0		c10			0	3
+	4	state_description	-21	33	0	30	1	37	2	2	30	0	7	State:	0	0	0	0	0	0	0		c30			0	4
+	5	mask	-21	33	0	30	1	36	2	40	30	0	6	Mask:	0	0	0	0	0	0	0		c30			0	5
+	6	ruser	-21	23	0	20	1	31	4	0	20	0	11	Real User:	0	0	0	0	0	0	0		c20			0	6
+	7	database	-21	23	0	20	1	30	4	39	20	0	10	Database:	0	0	0	0	0	0	0		c20			0	7
+	8	euser	-21	23	0	20	1	31	5	0	20	0	11	Eff. User:	0	0	0	0	0	0	0		c20			0	8
+	9	dba	-21	23	0	20	1	25	5	44	20	0	5	DBA:	0	0	0	0	0	0	0		c20			0	9
+	10	group_id	-21	23	0	20	1	31	6	0	20	0	11	 Group Id:	0	0	0	0	0	0	0		c20			0	10
+	11	dblock	-21	23	0	20	1	30	6	39	20	0	10	 DB Lock:	0	0	0	0	0	0	0		c20			0	11
+	12	role	-21	23	0	20	1	29	7	2	20	0	9	Role Id:	0	0	0	0	0	0	0		c20			0	12
+	13	facility_desc	-21	43	0	40	1	57	9	1	40	0	17	Server Facility:	0	0	0	0	0	0	0		c40			0	13
+	14	app_code	-30	5	0	4	1	22	10	0	4	0	18	Application Code:	0	0	0	0	0	0	0		-i4			0	14
+	15	activity	-21	43	0	40	1	50	11	8	40	0	10	Activity:	0	0	0	0	0	0	0		c40			0	15
+	16	activity_detail	-21	53	0	50	1	67	12	1	50	0	17	Activity Detail:	0	0	0	0	0	0	0		c50			0	16
+	17	query	-21	183	0	180	3	75	16	0	60	0	15	Running Query:	0	0	0	0	0	0	0		c180.60			0	17
+	18	lastquery	-21	183	0	180	3	75	13	0	60	0	15	Previous Query:	0	0	0	0	0	0	0		c180.60			0	18
+TRIM:
+FORM:	imp_session_list	IMP session list	
+	78	15	3	2	2	0	1	9	0	0	0	0	0	192	0	11
+FIELD:
+	0	svr_sess_tbl	0	10	0	9	14	78	1	0	1	3	0		1	1	0	1073741857	0	0	0					1	0
+	0	session_id	-21	25	0	12	1	12	0	1	12	0	1	ID	1	1	0	0	64	0	0		c12			2	1
+	1	session_name	-21	15	0	9	1	9	0	14	9	0	14	Name	14	1	0	0	64	0	0		c9			2	2
+	2	terminal	-21	9	0	6	1	6	0	24	6	0	24	TTY	24	1	0	0	0	0	0		c6			2	3
+	3	database	-21	11	0	8	1	8	0	31	8	0	31	Database	31	1	0	0	0	0	0		c8			2	4
+	4	query	-21	43	0	13	1	13	0	40	13	0	40	Running Query	40	1	0	0	64	0	0		c13			2	5
+	5	state	-21	8	0	5	1	5	0	54	5	0	54	State	54	1	0	0	0	0	0		c5			2	6
+	6	facility	-21	6	0	3	1	3	0	60	3	0	60	Fac	60	1	0	0	0	0	0		c3			2	7
+	7	cputime	-30	5	0	6	1	6	0	64	6	0	64	CPU	64	1	0	0	0	0	0		-i6			2	8
+	8	dio	-30	5	0	6	1	6	0	71	6	0	71	DIO	71	1	0	0	0	0	0		-i6			2	9
+	1	server_name	-21	23	0	20	1	20	0	25	20	0	0		0	0	0	0	512	0	0		c20			0	10
+TRIM:
+	0	0	Session List for server:	0	0	0	0
+FORM:	imp_lk_tx		
+	52	4	0	0	4	0	1	9	0	0	0	0	0	129	0	4
+FIELD:
+	0	tx_id	-21	33	0	30	1	46	1	0	30	0	16	Transaction ID:	0	0	0	0	512	0	0		c30			0	0
+	1	related_lock_list_id	-21	18	0	15	1	37	2	0	15	0	22	Related Lock List ID:	0	0	0	0	512	0	0		c15			0	1
+	2	related_count	-30	5	0	4	1	11	2	40	4	0	7	Count:	0	0	0	0	512	0	0		-i4			0	2
+	3	waiting_resource_list_id	-21	18	0	15	1	41	3	0	15	0	26	Waiting Resource List ID:	0	0	0	0	512	0	0		c15			0	3
+TRIM:
+	0	0	More Info:	1024	0	0	0
+FORM:	imp_lk_locks		
+	78	13	0	0	1	0	1	9	0	0	0	0	0	192	0	10
+FIELD:
+	0	lock_details	0	8	0	9	12	78	1	0	1	3	0		1	1	0	1073741857	0	0	0					1	0
+	0	computed_id	-21	11	0	8	1	8	0	1	8	0	1	ID	1	1	0	0	0	0	0		+c8			2	1
+	1	lkb_rq_state	-21	5	0	2	1	2	0	10	2	0	10	RQ	10	1	0	0	0	0	0		+c2			2	2
+	2	lkb_gr_state	-21	11	0	8	1	8	0	13	8	0	13	State	13	1	0	0	0	0	0		c8			2	3
+	3	lkb_type	-21	23	0	10	1	10	0	22	10	0	22	Lock Type	22	1	0	0	64	0	0		c10			2	4
+	4	lkb_db	-21	13	0	10	1	10	0	33	10	0	33	DB	33	1	0	0	0	0	0		c10			2	5
+	5	lkb_table	-21	18	0	15	1	15	0	44	15	0	44	Table	44	1	0	0	0	0	0		c15			2	6
+	6	lkb_page	-30	5	0	10	1	10	0	60	10	0	60	Page	60	1	0	0	0	0	0		-i10			2	7
+	7	lkb_rsb_id_id	-30	5	0	1	1	1	0	71	1	0	71		71	1	0	16777216	0	0	0		-i1			2	8
+	8	lkb_row	-30	5	0	4	1	4	0	73	4	0	73	Row	73	1	0	0	0	0	0		-i4			2	9
+TRIM:
+	0	0	Lock Detail Display	131072	0	0	0
+FORM:	imp_res_locks		
+	69	15	0	0	9	0	1	9	0	0	0	0	0	64	0	17
+FIELD:
+	0	resource_id	-21	15	0	12	1	25	2	2	12	0	13	Resource ID:	0	0	0	0	512	0	0		c12			0	0
+	1	convert	-21	13	0	10	1	19	2	43	10	0	9	Convert:	0	0	0	0	512	0	0		c10			0	1
+	2	resource_type	-21	13	0	10	1	25	3	0	10	0	15	Resource Type:	0	0	0	0	512	0	0		c10			0	2
+	3	granted	-21	13	0	10	1	19	3	43	10	0	9	Granted:	0	0	0	0	512	0	0		c10			0	3
+	4	dbname	-21	23	0	20	1	29	4	6	20	0	9	DB Name:	0	0	0	0	512	0	0		c20			0	4
+	5	res_lock_tbl	0	5	0	8	9	69	6	0	1	3	0		1	1	0	1073741857	0	0	0					1	5
+	0	resource_id	-21	11	0	8	1	8	0	1	8	0	1	ID	1	1	0	0	0	0	0		+c8			2	6
+	1	list_id	-21	11	0	8	1	8	0	10	8	0	10	List ID	10	1	0	0	0	0	0		+c8			2	7
+	2	session_name	-21	23	0	20	1	20	0	19	20	0	19	Session	19	1	0	0	0	0	0		c20			2	8
+	3	request_mode	-21	6	0	3	1	3	0	40	3	0	40	RQ	40	1	0	0	0	0	0		+c3			2	9
+	4	grant_state	-21	18	0	15	1	15	0	44	15	0	44	State	44	1	0	0	0	0	0		c15			2	10
+	5	session_id	-21	35	0	1	1	2	0	60	1	0	60	Sd	60	1	0	16777216	64	0	0		c1			2	11
+	6	server	-21	67	0	1	1	2	0	63	1	0	63	Se	63	1	0	16777216	64	0	0		c1			2	12
+	7	scb_pid	-30	5	0	1	1	2	0	66	1	0	66	Sc	66	1	0	16777216	0	0	0		-i1			2	13
+	6	table_name	-21	23	0	20	1	27	5	8	20	0	7	Table:	0	0	0	0	512	0	0		c20			0	14
+	7	page_number	-30	5	0	9	1	22	4	43	9	0	13	Page Number:	0	0	0	0	512	0	0		-i9			0	15
+	8	row_number	-30	5	0	4	1	17	5	43	4	0	13	Row Number :	0	0	0	0	0	0	0		-i4			0	16
+TRIM:
+	0	0	Resource Lock Display	131072	0	0	0
+FORM:	imp_res_list		
+	79	25	0	0	1	0	2	9	0	0	0	0	0	64	0	10
+FIELD:
+	0	lock_details	0	16	0	9	20	79	3	0	1	3	0		1	1	0	1073741857	0	0	0					1	0
+	0	computed_id	-21	11	0	8	1	8	0	1	8	0	1	ID	1	1	0	0	0	0	0		+c8			2	1
+	1	rsb_gr_state	-21	5	0	2	1	2	0	10	2	0	10	GR	10	1	0	0	0	0	0		+c2			2	2
+	2	rsb_cv_state	-21	5	0	2	1	2	0	13	2	0	13	CV	13	1	0	0	0	0	0		c2			2	3
+	3	rsb_type	-21	15	0	12	1	12	0	16	12	0	16	Lock Type	16	1	0	0	0	0	0		c12			2	4
+	4	rsb_db	-21	23	0	14	1	14	0	29	14	0	29	DB	29	1	0	0	64	0	0		c14			2	5
+	5	rsb_table	-21	25	0	16	1	16	0	44	16	0	44	Table	44	1	0	0	64	0	0		c16			2	6
+	6	rsb_page	-30	5	0	8	1	8	0	61	8	0	61	Page	61	1	0	0	0	0	0		-i8			2	7
+	7	lkb_rsb_id_id	-30	5	0	1	1	3	0	70	1	0	70	Res	70	1	0	16777216	0	0	0		-i1			2	8
+	8	rsb_row	-30	5	0	4	1	4	0	74	4	0	74	Row	74	1	0	0	0	0	0		-i4			2	9
+TRIM:
+	0	0	IMP Locking System Monitor	0	0	0	0
+	0	2	Resource List Display	131072	0	0	0
+FORM:	imp_lg_summary		
+	80	23	0	0	22	0	2	9	0	0	0	0	0	0	0	22
+FIELD:
+	0	vnode	-21	23	0	20	1	58	0	0	20	0	38	IMP Logging System Monitor for Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	db_adds	-30	5	0	8	1	23	4	10	8	0	15	Database Adds:	0	0	0	0	512	0	0		+i8			0	1
+	2	tx_begins	-30	5	0	8	1	28	4	40	8	0	20	Transaction Begins:	0	0	0	0	512	0	0		+i8			0	2
+	3	db_removes	-30	5	0	8	1	26	5	7	8	0	18	Database Removes:	0	0	0	0	512	0	0		+i8			0	3
+	4	tx_ends	-30	5	0	8	1	26	5	42	8	0	18	Transaction Ends:	0	0	0	0	512	0	0		+i8			0	4
+	5	log_writes	-30	5	0	8	1	20	7	13	8	0	12	Log Writes:	0	0	0	256	512	0	0		+i8			0	5
+	6	log_waits	-30	5	0	8	1	19	7	49	8	0	11	Log Waits:	0	0	0	0	512	0	0		+i8			0	6
+	7	log_write_ios	-30	5	0	8	1	25	8	8	8	0	17	Log Write I/O's:	0	0	0	256	512	0	0		+i8			0	7
+	8	log_split_waits	-30	5	0	8	1	25	8	43	8	0	17	Log Split Waits:	0	0	0	256	512	0	0		+i8			0	8
+	9	log_read_ios	-30	5	0	8	1	24	9	9	8	0	16	Log Read I/O's:	0	0	0	256	512	0	0		+i8			0	9
+	10	log_free_waits	-30	5	0	8	1	24	9	44	8	0	16	Log Free Waits:	0	0	0	256	512	0	0		+i8			0	10
+	11	log_stall_waits	-30	5	0	8	1	25	10	43	8	0	17	Log Stall Waits:	0	0	0	0	512	0	0		+i8			0	11
+	12	log_forces	-30	5	0	8	1	20	11	13	8	0	12	Log Forces:	0	0	0	0	512	0	0		+i8			0	12
+	13	log_group_commit	-30	5	0	8	1	26	12	42	8	0	18	Log Croup Commit:	0	0	0	0	512	0	0		+i8			0	13
+	14	check_commit_timer	-30	5	0	8	1	28	13	5	8	0	20	Check Commit Timer:	0	0	0	0	512	0	0		+i8			0	14
+	15	log_group_count	-30	5	0	8	1	25	13	43	8	0	17	Log Group Count:	0	0	0	0	512	0	0		+i8			0	15
+	16	timer_write	-30	5	0	8	1	21	14	12	8	0	13	Timer Write:	0	0	0	256	512	0	0		+i8			0	16
+	17	kbytes_written	-30	5	0	8	1	24	15	44	8	0	16	Kbytes Written:	0	0	0	0	512	0	0		+i8			0	17
+	18	inconsistent_db	-30	5	0	8	1	25	16	8	8	0	17	Inconsistent DB:	0	0	0	256	512	0	0		+i8			0	18
+	19	block_size	-30	5	0	6	1	19	17	47	6	0	13	Buffer Size:	0	0	0	0	512	0	0		+i6			0	19
+	20	avgtxnsize	-30	5	0	6	1	20	19	46	6	0	14	Avg Txn Size:	0	0	0	256	2560	0	0		+i6		(kbytes_written * 1024)/(tx_ends + (0** tx_ends))	0	20
+	21	bufferutilisation	-31	9	0	3	1	29	18	37	3	0	26	Buffer Utilisation(%):	0	0	0	256	2560	0	0		+i3		(kbytes_written * 102400.00) /((log_write_ios + (0**log_write_ios)) * block_size)	0	21
+TRIM:
+	0	2	19:72:0	1	0	0	0
+	4	2	Logging System Summary	0	0	0	0
+FORM:	imp_lg_menu		
+	83	23	0	0	2	0	2	9	0	0	0	0	0	0	0	5
+FIELD:
+	0	vnode	-21	23	0	20	1	27	0	56	20	0	7	Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	imp_menu	0	5	0	3	7	68	5	9	1	1	0		1	1	0	1073758241	0	0	0					1	1
+	0	item_number	-30	5	0	4	1	4	0	1	4	0	1		1	-1	0	16777216	0	0	0		-i4			2	2
+	1	short_name	-21	18	0	15	1	15	0	6	15	0	6		6	-1	0	0	0	0	0		c15			2	3
+	2	long_name	-21	48	0	45	1	45	0	22	45	0	22		22	-1	0	0	0	0	0		c45			2	4
+TRIM:
+	0	0	IMP - Logging System Menu	0	0	0	0
+	9	12	Place the cursor on your choice and press "Select"	0	0	0	0
+FORM:	imp_lg_header		
+	80	23	0	0	18	0	4	9	0	0	0	0	0	0	0	18
+FIELD:
+	0	vnode	-21	23	0	20	1	58	0	0	20	0	38	IMP Logging System Monitor for vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	block_count	-30	5	0	8	1	21	3	3	8	0	13	Block Count:	0	0	0	0	512	0	0		+i8			0	1
+	2	logfull_interval	-30	5	0	8	1	26	3	26	8	0	18	Logfull Interval:	0	0	0	256	512	0	0		+i8			0	2
+	3	reserved	-30	5	0	8	1	18	3	59	8	0	10	Reserved:	0	0	0	256	512	0	0		+i8			0	3
+	4	block_size	-30	5	0	8	1	20	4	4	8	0	12	Block Size:	0	0	0	0	512	0	0		+i8			0	4
+	5	abort_interval	-30	5	0	8	1	24	4	28	8	0	16	Abort Interval:	0	0	0	256	512	0	0		+i8			0	5
+	6	in_use	-30	5	0	8	1	16	4	61	8	0	8	In Use:	0	0	0	256	512	0	0		+i8			0	6
+	7	buffer_count	-30	5	0	8	1	22	5	2	8	0	14	Buffer Count:	0	0	0	0	512	0	0		+i8			0	7
+	8	cp_interval	-30	5	0	8	1	21	5	31	8	0	13	CP Interval:	0	0	0	256	512	0	0		+i8			0	8
+	9	available	-30	5	0	8	1	19	5	58	8	0	11	Available:	0	0	0	256	512	0	0		+i8			0	9
+	10	bof	-30	5	0	8	1	21	7	3	8	0	13	Begin (BOF):	0	0	0	0	512	0	0		+i8			0	10
+	11	previous_cp	-30	5	0	8	1	21	7	31	8	0	13	Previous CP:	0	0	0	0	512	0	0		+i8			0	11
+	12	eof	-30	5	0	8	1	19	8	5	8	0	11	End (EOF):	0	0	0	0	512	0	0		+i8			0	12
+	13	next_cp	-30	5	0	8	1	26	8	26	8	0	18	Expected Next CP:	0	0	0	256	512	0	0		+i8			0	13
+	14	emergency_status	-21	18	0	15	3	17	9	58	15	1	1		1	1	0	16777473	512	0	0		c15			0	14
+	15	status	-21	43	0	40	1	48	10	8	40	0	8	Status:	0	0	0	0	512	0	0		c40			0	15
+	16	log_pct	-30	5	0	3	1	44	13	18	3	0	41	Log File Diagram (% in use or reserved):	0	0	0	0	512	0	0		+i3			0	16
+	17	barchart	-21	73	0	70	1	70	14	4	70	0	0		0	0	0	0	512	0	0		c70			0	17
+TRIM:
+	3	13	3:72:1	1	0	0	0
+	56	2	5:22:0	1	0	0	0
+	62	13	)	0	0	0	0
+	63	2	Blocks	0	0	0	0
+FORM:	imp_lg_address		
+	69	10	0	0	5	0	6	9	0	0	0	0	0	129	0	5
+FIELD:
+	0	bof	-21	28	0	25	1	38	2	2	25	0	13	Begin (BOF):	0	0	0	0	512	0	0		c25			0	0
+	1	eof	-21	28	0	25	1	36	3	4	25	0	11	End (EOF):	0	0	0	0	512	0	0		c25			0	1
+	2	last_tx_id	-21	23	0	20	1	20	3	45	20	0	0		0	0	0	0	512	0	0		c20			0	2
+	3	prev_cp	-21	28	0	25	1	38	4	2	25	0	13	Previous CP:	0	0	0	0	512	0	0		c25			0	3
+	4	jnl_window	-21	58	0	55	1	55	8	2	55	0	0		0	0	0	0	512	0	0		c55			0	4
+TRIM:
+	1	1	5:40:0	1	0	0	0
+	1	7	3:57:2	1	0	0	0
+	2	1	Log address for	0	0	0	0
+	2	7	Journal Window	0	0	0	0
+	44	2	3:22:1	1	0	0	0
+	45	2	Last Transaction ID	0	0	0	0
+FORM:	imp_lg_processes		
+	82	23	0	0	2	0	0	9	0	0	0	0	0	64	0	11
+FIELD:
+	0	vnode	-21	23	0	20	1	51	0	0	20	0	31	Log Process Display for Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	process_tbl	0	7	0	9	11	79	2	0	1	3	0		1	1	0	1073741857	0	0	0					1	1
+	0	computed_id	-21	11	0	8	1	8	0	1	8	0	1	ID	1	1	0	0	0	0	0		+c8			2	2
+	1	pid	-30	5	0	8	1	8	0	10	8	0	10	PID	10	1	0	0	0	0	0		+i8			2	3
+	2	process_type	-21	103	0	9	1	9	0	19	9	0	19	Type	19	1	0	0	64	0	0		c9			2	4
+	3	open_db	-30	5	0	4	1	4	0	29	4	0	29	DBs	29	1	0	0	0	0	0		+i4			2	5
+	4	writes	-30	5	0	8	1	8	0	34	8	0	34	Write	34	1	0	0	0	0	0		-i8			2	6
+	5	forces	-30	5	0	8	1	8	0	43	8	0	43	Force	43	1	0	0	0	0	0		-i8			2	7
+	6	waits	-30	5	0	8	1	8	0	52	8	0	52	Wait	52	1	0	0	0	0	0		-i8			2	8
+	7	begins	-30	5	0	8	1	8	0	61	8	0	61	Begin	61	1	0	0	0	0	0		-i8			2	9
+	8	ends	-30	5	0	8	1	8	0	70	8	0	70	End	70	1	0	0	0	0	0		-i8			2	10
+TRIM:
+FORM:	imp_lg_databases		
+	88	23	0	0	2	0	0	9	0	0	0	0	0	64	0	9
+FIELD:
+	0	vnode	-21	23	0	20	1	52	0	0	20	0	32	Log Database Display for Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	logdb_tbl	0	8	0	7	12	78	2	0	1	3	0		1	1	0	1073741857	0	0	0					1	1
+	0	dbname	-21	53	0	15	1	15	0	1	15	0	1	DB Name	1	1	0	0	64	0	0		c15			2	2
+	1	dbstatus	-21	53	0	15	1	15	0	17	15	0	17	Status	17	1	0	0	64	0	0		c15			2	3
+	2	tx_count	-30	5	0	8	1	8	0	33	8	0	33	TX Cnt	33	1	0	0	0	0	0		+i8			2	4
+	3	begins	-30	5	0	8	1	8	0	42	8	0	42	Begin	42	1	0	0	0	0	0		+i8			2	5
+	4	ends	-30	5	0	8	1	8	0	51	8	0	51	End	51	1	0	0	0	0	0		+i8			2	6
+	5	reads	-30	5	0	8	1	8	0	60	8	0	60	Read	60	1	0	0	0	0	0		+i8			2	7
+	6	writes	-30	5	0	8	1	8	0	69	8	0	69	Write	69	1	0	0	0	0	0		+i8			2	8
+TRIM:
+FORM:	imp_lg_transactions		
+	124	23	0	0	2	0	0	9	0	0	0	0	0	64	0	10
+FIELD:
+	0	vnode	-21	23	0	20	1	55	0	0	20	0	35	Log Transaction Display for Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	log_txtbl	0	15	0	8	19	115	2	0	1	3	0		1	1	0	1073741857	0	0	0					1	1
+	0	ext_tx_id	-21	35	0	16	1	16	0	1	16	0	1	External Tx ID	1	1	0	0	64	0	0		c16			2	2
+	1	username	-21	35	0	10	1	10	0	18	10	0	18	User Name	18	1	0	0	64	0	0		c10			2	3
+	2	database	-21	35	0	10	1	10	0	29	10	0	29	Database	29	1	0	0	64	0	0		c10			2	4
+	3	status	-21	53	0	16	1	16	0	40	16	0	40	Status	40	1	0	0	64	0	0		c16			2	5
+	4	writes	-30	5	0	6	1	6	0	57	6	0	57	Write	57	1	0	0	0	0	0		+i6			2	6
+	5	splits	-30	5	0	6	1	6	0	64	6	0	64	Split	64	1	0	0	0	0	0		+i6			2	7
+	6	session_id	-21	35	0	32	1	32	0	71	32	0	71	session_id	71	1	0	16777216	0	0	0		c32			2	8
+	7	server_pid	-30	5	0	4	1	10	0	104	4	0	104	server_pid	104	1	0	16777216	0	0	0		-i4			2	9
+TRIM:
+FORM:	imp_client_info		
+	43	12	0	0	6	0	1	9	0	0	0	0	0	129	0	6
+FIELD:
+	0	client_host	-21	23	0	20	1	29	3	3	20	0	9	on host:	0	0	0	0	512	0	0		c20			0	0
+	1	client_tty	-21	23	0	20	1	30	4	2	20	0	10	Terminal:	0	0	0	0	512	0	0		c20			0	1
+	2	client_user	-21	23	0	20	1	30	2	2	20	0	10	Username:	0	0	0	0	512	0	0		c20			0	2
+	3	client_pid	-21	23	0	20	1	25	5	7	20	0	5	Pid:	0	0	0	0	512	0	0		c20			0	3
+	4	client_info	-21	123	0	120	4	36	8	6	30	0	6	Info:	0	0	0	0	512	0	0		c120.30			0	4
+	5	client_connection	-21	63	0	60	2	42	6	0	30	0	12	Requesting:	0	0	0	0	512	0	0		c60.30			0	5
+TRIM:
+	0	0	Client Connection Information	0	0	0	0
+FORM:	imp_server_diag		
+	20	16	0	0	12	0	10	9	0	0	0	0	0	128	0	12
+FIELD:
+	0	gca_field	-21	6	0	3	1	3	1	8	3	0	0		0	0	0	0	0	0	0		c3			0	0
+	1	scf_field	-21	6	0	3	1	3	3	8	3	0	0		0	0	0	0	0	0	0		c3			0	1
+	2	psf_field	-21	6	0	3	1	3	5	2	3	0	0		0	0	0	0	0	0	0		c3			0	2
+	3	opf_field	-21	6	0	3	1	3	5	8	3	0	0		0	0	0	0	0	0	0		c3			0	3
+	4	qef_field	-21	6	0	3	1	3	5	14	3	0	0		0	0	0	0	0	0	0		c3			0	4
+	5	rdf_field	-21	6	0	3	1	3	7	2	3	0	0		0	0	0	0	0	0	0		c3			0	5
+	6	qsf_field	-21	6	0	3	1	3	7	8	3	0	0		0	0	0	0	0	0	0		c3			0	6
+	7	adf_field	-21	6	0	3	1	3	7	14	3	0	0		0	0	0	0	0	0	0		c3			0	7
+	8	sxf_field	-21	6	0	3	1	3	9	4	3	0	0		0	0	0	0	0	0	0		c3			0	8
+	9	gwf_field	-21	6	0	3	1	3	9	12	3	0	0		0	0	0	0	0	0	0		c3			0	9
+	10	dmf_field	-21	6	0	3	1	3	11	8	3	0	0		0	0	0	0	0	0	0		c3			0	10
+	11	di_field	-21	11	0	8	1	8	13	6	8	0	0		0	0	0	0	0	0	0		c8			0	11
+TRIM:
+	0	0	13:19:0	1	0	0	0
+	0	2	1:19:1	1	0	0	0
+	0	4	1:19:2	1	0	0	0
+	0	6	1:19:5	1	0	0	0
+	0	8	1:19:6	1	0	0	0
+	0	10	1:19:8	1	0	0	0
+	0	12	3:19:9	1	0	0	0
+	6	4	5:1:3	1	0	0	0
+	9	8	3:1:7	1	0	0	0
+	12	4	5:1:4	1	0	0	0
+FORM:	imp_dmf_cache_stats		 
+	83	23	0	0	37	0	11	9	0	0	0	0	0	0	0	37
+FIELD:
+	0	page_size	30	4	0	13	1	26	0	13	13	0	13	Page Size  :	0	0	0	256	512	0	0		-f13			0	0
+	1	server	21	27	0	25	1	33	0	40	25	0	8	Server:	0	0	0	65808	512	0	0		c25			0	1
+	2	group_buffer_count	30	4	0	5	1	6	2	15	5	0	0		6	0	0	65552	512	0	0		+n5			0	2
+	3	group_buffer_size	30	4	0	4	1	6	2	21	4	0	2	x	0	0	0	65552	0	0	0		-n4			0	3
+	4	buffer_count	-30	5	0	12	1	28	2	52	12	0	16	Total Pages   :	0	0	0	0	512	0	0		-f12			0	4
+	5	group_buffer_read_count	30	4	0	13	1	24	3	1	13	0	11	Reads    :	0	0	0	66576	512	0	0		+f13			0	5
+	6	cache_status	-30	5	0	3	1	11	3	30	3	0	8	Status:	0	0	0	1024	512	0	0		-i3			0	6
+	7	group_buffer_write_count	30	4	0	13	1	24	4	1	13	0	11	Writes   :	0	0	0	66576	0	0	0		+f13			0	7
+	8	free_group_buffer_count	30	4	0	13	1	24	5	1	13	0	11	Free     :	0	0	0	66576	512	0	0		+f13			0	8
+	9	page_buffer_count	30	4	0	9	1	24	5	31	9	0	15	Single Buffers	0	0	0	65552	512	0	0		-f9			0	9
+	10	fixed_group_buffer_count	30	4	0	13	1	24	6	1	13	0	11	Fixed    :	0	0	0	66576	512	0	0		+f13			0	10
+	11	read_count	30	4	0	13	1	24	6	31	13	0	11	Reads    :	0	0	0	66576	512	0	0		+f13			0	11
+	12	modified_group_buffer_count	30	4	0	13	1	24	7	1	13	0	11	Dirty    :	0	0	0	66576	512	0	0		+f13			0	12
+	13	write_count	30	4	0	13	1	24	7	31	13	0	11	Writes   :	0	0	0	66576	512	0	0		+f13			0	13
+	14	pages_still_valid	-30	5	0	8	1	21	7	58	8	0	13	Still Valid:	0	0	0	1024	512	0	0		-f8			0	14
+	15	free_buffer_count	30	4	0	13	1	24	8	31	13	0	11	Free     :	0	0	0	66576	512	0	0		+f13			0	15
+	16	pages_invalid	-30	5	0	8	1	21	8	58	8	0	13	Invalid    :	0	0	0	1024	512	0	0		-f8			0	16
+	17	fixed_buffer_count	30	4	0	13	1	24	9	31	13	0	11	Fixed    :	0	0	0	66576	512	0	0		+f13			0	17
+	18	fix_count	30	4	0	13	1	26	10	1	13	0	13	Fix        :	0	0	0	66576	512	0	0		+f13			0	18
+	19	modified_buffer_count	30	4	0	13	1	24	10	31	13	0	11	Dirty    :	0	0	0	66576	512	0	0		+f13			0	19
+	20	hit_count	30	4	0	13	1	26	11	1	13	0	13	Hit        :	0	0	0	66576	512	0	0		+f13			0	20
+	21	unfix_count	30	4	0	13	1	26	12	1	13	0	13	Unfix      :	0	0	0	66576	512	0	0		+f13			0	21
+	22	dirty_unfix_count	30	4	0	13	1	26	13	1	13	0	13	Unfix Dirty:	0	0	0	66576	512	0	0		+f13			0	22
+	23	mlimit	30	4	0	13	1	24	13	31	13	0	11	Mlimit   :	0	0	0	65552	512	0	0		+f13			0	23
+	24	force_count	30	4	0	13	1	26	14	1	13	0	13	Force      :	0	0	0	66576	512	0	0		+f13			0	24
+	25	flimit	30	4	0	13	1	24	14	31	13	0	11	Flimit   :	0	0	0	65552	512	0	0		+f13			0	25
+	26	wbstart	30	4	0	13	1	24	15	31	13	0	11	W/B start:	0	0	0	65552	512	0	0		+f13			0	26
+	27	wbend	30	4	0	13	1	24	16	31	13	0	11	W/B end  :	0	0	0	65552	512	0	0		+f13			0	27
+	28	free_buffer_waiters	-30	5	0	13	1	26	17	1	13	0	13	Free Buffer:	0	0	0	1024	512	0	0		+f13			0	28
+	29	io_wait_count	30	4	0	13	1	26	18	1	13	0	13	I/O        :	0	0	0	66576	512	0	0		+f13			0	29
+	30	hit_ratio_pct	-31	9	0	8	1	21	18	30	8	0	13	Hit Rate % :	0	0	0	0	512	0	0		-f8			0	30
+	31	bm_gwait	-30	5	0	13	1	26	19	1	13	0	13	Group      :	0	0	0	1024	0	0	0		+f13			0	31
+	32	hit_ratio	-21	48	0	45	1	45	19	30	45	0	0		0	0	0	1024	512	0	0		c45			0	32
+	33	fc_wait	-30	5	0	13	1	26	20	1	13	0	13	FC         :	0	0	0	1024	0	0	0		+f13			0	33
+	34	bm_mwait	-30	5	0	13	1	26	21	1	13	0	13	MWait      :	0	0	0	1024	0	0	0		+f13			0	34
+	35	cache	-21	48	0	45	1	45	22	30	45	0	0		0	0	0	1024	512	0	0		c45			0	35
+	36	cachesize	-30	5	0	11	1	27	3	52	11	0	16	Cache Size (k):	0	0	0	0	2560	0	0		-"zzz,zzz,zzz"		(page_size * buffer_count) / 1024	0	36
+TRIM:
+	0	2	7:28:0	1	0	0	0
+	0	9	7:28:3	1	0	0	0
+	0	16	7:28:5	1	0	0	0
+	1	2	Group Buffers	0	0	0	0
+	1	9	Counts:	0	0	0	0
+	1	16	Waits:	0	0	0	0
+	30	5	7:26:1	1	0	0	0
+	30	12	6:26:4	1	0	0	0
+	30	21	Cache Contents (D=dirty, f=free)	0	0	0	0
+	57	6	4:23:2	1	0	0	0
+	58	6	Pages	0	0	0	0
+FORM:	imp_dmfcache		
+	23	9	22	3	1	0	1	9	0	0	0	0	0	129	0	2
+FIELD:
+	0	cache	0	4	0	1	8	15	1	4	1	3	0		0	0	0	1073741857	0	0	0					1	0
+	0	page_size	30	4	0	13	1	13	0	1	13	3	1	Page Size	1	1	0	65552	0	0	0		-f13			2	1
+TRIM:
+	3	0	Select Cache Size	0	0	0	0
+FORM:	ima_qsf_cache_stats		
+	80	30	0	0	24	0	14	9	0	0	0	0	0	0	0	24
+FIELD:
+	0	server	21	32	0	30	1	63	0	1	30	0	33	QSF Cache Statistics for Server:	0	0	0	65536	512	0	0		c30			0	0
+	1	qsr_bkts_used	30	4	0	13	1	32	8	38	13	0	19	Buckets in use   :	0	0	0	65536	512	0	0		-f13			0	1
+	2	qsr_bmaxobjs	30	4	0	13	1	38	10	38	13	0	25	Most ever in any bucket:	0	0	0	65536	512	0	0		-f13			0	2
+	3	qsr_decay_factor	30	4	0	13	1	30	21	1	13	0	17	Decay Factor   :	0	0	0	65536	512	0	0		-f13			0	3
+	4	qsr_memleft	30	4	0	13	1	40	3	1	13	0	27	Memory (remaining/total) :	0	0	0	65536	512	0	0		-f13			0	4
+	5	qsr_memtot	30	4	0	13	1	16	3	41	13	0	3	/	0	0	0	65536	512	0	0		-f13			0	5
+	6	qsr_mx_index	30	4	0	13	1	30	15	1	13	0	17	Indexed Objects:	0	0	0	65536	512	0	0		-f13			0	6
+	7	qsr_mx_named	30	4	0	13	1	30	14	1	13	0	17	Named Objects  :	0	0	0	65536	512	0	0		-f13			0	7
+	8	qsr_mx_rsize	30	4	0	13	1	27	20	38	13	0	14	Qsr Mx Rsize:	0	0	0	65536	512	0	0		-f13			0	8
+	9	qsr_mx_size	30	4	0	13	1	28	19	38	13	0	15	Qsr Mx Size:	0	0	0	65536	512	0	0		-f13			0	9
+	10	qsr_mx_unnamed	30	4	0	13	1	30	13	1	13	0	17	Unnamed Objects:	0	0	0	65536	512	0	0		-f13			0	10
+	11	qsr_mxbkts_used	30	4	0	13	1	32	9	38	13	0	19	Peak buckets used:	0	0	0	65536	512	0	0		-f13			0	11
+	12	qsr_mxobjs	30	4	0	13	1	30	16	1	13	0	17	Total Objects  :	0	0	0	65536	512	0	0		-f13			0	12
+	13	qsr_mxsess	30	4	0	13	1	32	14	38	13	0	19	Peak Sessions    :	0	0	0	65536	512	0	0		-f13			0	13
+	14	qsr_named_requests	30	4	0	13	1	30	19	1	13	0	17	Object Requests:	0	0	0	65536	512	0	0		-f13			0	14
+	15	qsr_nbuckets	30	4	0	13	1	32	7	38	13	0	19	Hash Buckets     :	0	0	0	65536	512	0	0		-f13			0	15
+	16	qsr_no_destroyed	30	4	0	13	1	30	20	1	13	0	17	Objs Destroyed :	0	0	0	65536	512	0	0		-f13			0	16
+	17	qsr_no_index	30	4	0	13	1	30	9	1	13	0	17	Indexed Objects:	0	0	0	65536	512	0	0		-f13			0	17
+	18	qsr_no_named	30	4	0	13	1	30	8	1	13	0	17	Named Objects  :	0	0	0	65536	512	0	0		-f13			0	18
+	19	qsr_no_unnamed	30	4	0	13	1	30	7	1	13	0	17	Unnamed Objects:	0	0	0	65536	512	0	0		-f13			0	19
+	20	qsr_nobjs	30	4	0	13	1	30	10	1	13	0	17	Total Objects  :	0	0	0	65536	512	0	0		-f13			0	20
+	21	qsr_nsess	30	4	0	13	1	32	13	38	13	0	19	Current Sessions :	0	0	0	65536	512	0	0		-f13			0	21
+	22	pct_used	31	4	0	6	1	23	4	1	6	0	17	Percentage used:	0	0	0	0	512	0	0		-f6.2			0	22
+	23	bar_chart	21	52	0	50	1	50	4	26	50	0	0		0	0	0	1024	512	0	0		c50			0	23
+TRIM:
+	0	2	4:78:0	1	0	0	0
+	0	6	6:33:1	1	0	0	0
+	0	12	6:33:3	1	0	0	0
+	0	18	5:33:5	1	0	0	0
+	1	2	QSF Pool Information:	0	0	0	0
+	1	6	QSF Object Information:	0	0	0	0
+	1	12	QSF Peak Object Information:	0	0	0	0
+	1	18	QSF LRU Information:	0	0	0	0
+	37	6	6:40:2	1	0	0	0
+	37	12	4:34:4	1	0	0	0
+	37	18	4:31:6	1	0	0	0
+	38	6	QSF Bucket Information:	0	0	0	0
+	38	12	QSF Session Information:	0	0	0	0
+	38	18	Misc Statistics:	0	0	0	0
+FORM:	ima_qsf_dbp		
+	210	22	0	0	2	0	0	9	0	0	0	0	0	0	0	7
+FIELD:
+	0	ima_qsf_dbp	0	16	0	5	20	72	2	0	1	3	0		0	0	0	1073741857	0	0	0					1	0
+	0	dbp_name	21	32	0	30	1	30	0	1	30	0	1	Name	1	1	0	65552	0	0	0		c30			2	1
+	1	dbp_owner	21	12	0	10	1	10	0	32	10	0	32	Owner	32	1	0	65552	0	0	0		c10			2	2
+	2	dbp_dbname	-21	13	0	10	1	10	0	43	10	0	43	DB	43	1	0	0	0	0	0		c10			2	3
+	3	dbp_size	30	4	0	8	1	8	0	54	8	0	54	Size	54	1	0	65552	0	0	0		+f8			2	4
+	4	dbp_usage_count	30	4	0	8	1	8	0	63	8	0	63	Usage	63	1	0	65552	0	0	0		+f8			2	5
+	1	server	-21	33	0	30	1	69	0	0	30	0	39	Database Procedures in QSF for Server:	0	0	0	0	512	0	0		c30			0	6
+TRIM:
+FORM:	ima_qsf_rqp		
+	185	22	0	0	2	0	0	9	0	0	0	0	0	0	0	6
+FIELD:
+	0	ima_qsf_rqp	0	16	0	4	20	61	2	0	1	3	0		0	0	0	1073741857	0	0	0					1	0
+	0	rqp_name	21	32	0	30	1	30	0	1	30	0	1	Name	1	1	0	65552	0	0	0		c30			2	1
+	1	rqp_dbname	-21	13	0	10	1	10	0	32	10	0	32	DB	32	1	0	0	0	0	0		c10			2	2
+	2	rqp_size	30	4	0	8	1	8	0	43	8	0	43	Size	43	1	0	65552	0	0	0		+f8			2	3
+	3	rqp_usage_count	30	4	0	8	1	8	0	52	8	0	52	Usage	52	1	0	65552	0	0	0		+f8			2	4
+	1	server	-21	33	0	30	1	64	0	0	30	0	34	Repeat Queries in QSF for Server:	0	0	0	0	512	0	0		c30			0	5
+TRIM:
+FORM:	ima_rdf_cache_info		
+	71	8	0	0	7	0	0	9	0	0	0	0	0	129	0	7
+FIELD:
+	0	server	21	32	0	30	1	57	0	0	30	0	27	RDF cache Info for Server:	0	0	0	66576	0	0	0		c30			0	0
+	1	max_defaults	30	4	0	13	1	27	7	0	13	0	14	Max Defaults:	0	0	0	66576	0	0	0		-f13			0	1
+	2	state_string	21	62	0	60	1	67	2	0	60	0	7	State:	0	0	0	66576	0	0	0		c60			0	2
+	3	cache_size	30	4	0	13	1	25	5	2	13	0	12	Cache Size:	0	0	0	66576	0	0	0		-f13			0	3
+	4	max_tables	30	4	0	13	1	25	5	42	13	0	12	Max Tables:	0	0	0	66576	0	0	0		-f13			0	4
+	5	max_qtrees	30	4	0	13	1	25	6	2	13	0	12	Max Qtrees:	0	0	0	66576	0	0	0		-f13			0	5
+	6	max_ldb_descs	30	4	0	13	1	28	6	40	13	0	15	Max Ldb Descs:	0	0	0	66576	0	0	0		-f13			0	6
+TRIM:
+FORM:	ima_dio		
+	90	18	0	0	3	0	0	9	0	0	0	0	0	0	0	8
+FIELD:
+	0	server	-21	23	0	20	1	53	0	0	20	0	33	Relative I/O monitor for Server:	0	0	0	0	512	0	0		c20			0	0
+	1	ima_dio	0	8	0	5	12	79	3	0	1	3	0		1	1	0	33	0	0	0					1	1
+	0	session_id	-21	16	0	13	1	13	0	1	13	0	1	Session	1	1	0	0	0	0	0		c13			2	2
+	1	terminal	-21	9	0	6	1	6	0	15	6	0	15	Tty	15	1	0	0	0	0	0		c6			2	3
+	2	username	-21	18	0	15	1	15	0	22	15	0	22	User	22	1	0	0	0	0	0		c15			2	4
+	3	barchart	-21	38	0	35	1	35	0	38	35	0	38		38	1	0	0	0	0	0		c35			2	5
+	4	io_rate	-30	5	0	4	1	4	0	74	4	0	74	I/O	74	1	0	0	0	0	0		+i4			2	6
+	2	highval	-30	5	0	4	1	17	15	61	4	0	13	High Value :	0	0	0	0	512	0	0		+i4			0	7
+TRIM:
+FORM:	ima_di_slave_info		
+	69	14	0	0	2	0	0	9	0	0	0	0	0	129	0	12
+FIELD:
+	0	ima_di_slave_info	0	8	0	10	12	69	2	0	1	3	0		0	0	0	33	0	0	0					1	0
+	0	di_slaveno	30	4	0	3	1	5	0	1	3	0	1	Slave	1	1	0	65552	0	0	0		+f3			2	1
+	1	di_dio	30	4	0	7	1	7	0	7	7	0	7	I/Os	7	1	0	65552	0	0	0		+f7			2	2
+	2	di_reads	30	4	0	7	1	7	0	15	7	0	15	Reads	15	1	0	65552	0	0	0		+f7			2	3
+	3	di_writes	30	4	0	7	1	7	0	23	7	0	23	Writes	23	1	0	65552	0	0	0		+f7			2	4
+	4	di_stime_tm_secs	30	4	0	5	1	5	0	31	5	0	31	Sys s	31	1	0	65552	0	0	0		+f5			2	5
+	5	di_stime_tm_msecs	30	4	0	5	1	6	0	37	5	0	37	Sys ms	37	1	0	65552	0	0	0		+f5			2	6
+	6	di_utime_tm_secs	30	4	0	5	1	5	0	44	5	0	44	Usr s	44	1	0	65552	0	0	0		+f5			2	7
+	7	di_utime_tm_msecs	30	4	0	5	1	6	0	50	5	0	50	Usr ms	50	1	0	65552	0	0	0		+f5			2	8
+	8	cpu_tm_secs	30	4	0	5	1	5	0	57	5	0	57	Sec	57	1	0	65552	0	0	0		+f5			2	9
+	9	cpu_tm_msecs	30	4	0	5	1	5	0	63	5	0	63	Msec	63	1	0	65552	0	0	0		+f5			2	10
+	1	server	-21	23	0	20	1	53	0	0	20	0	33	DI Slave information for server:	0	0	0	0	512	0	0		c20			0	11
+TRIM:
+FORM:	imp_query_info		 
+	71	18	0	0	2	0	0	9	0	0	0	0	0	129	0	2
+FIELD:
+	0	lastquery	-21	563	0	560	9	71	0	0	70	1	1	Previously Running Query:	0	0	0	0	0	0	0		c560.70			0	0
+	1	query	-21	563	0	560	9	71	9	0	70	1	1	Currently Running Query:	0	0	0	0	0	0	0		c560.70			0	1
+TRIM:
+FORM:	imp_transaction_detail		
+	62	15	0	0	21	0	2	9	0	0	0	0	0	193	0	21
+FIELD:
+	0	lxb_tran_id	20	32	0	20	1	33	0	0	20	0	13	Transaction:	0	0	0	65808	64	0	0		c20			0	0
+	1	lxb_status	20	60	0	54	1	62	1	0	54	0	8	Status:	0	0	0	65552	64	0	0		c54			0	1
+	2	vnode	21	62	0	20	1	27	0	35	20	0	7	Vnode:	0	0	0	65552	64	0	0		c20			0	2
+	3	lxb_user_name	20	100	0	16	1	27	3	2	16	0	11	User Name:	0	0	0	65552	64	0	0		c16			0	3
+	4	lxb_stat_write	30	4	0	17	1	25	3	35	17	0	8	Writes:	0	0	0	65552	0	0	0		-f17			0	4
+	5	lxb_db_name	20	32	0	12	1	22	4	3	12	0	10	Database:	0	0	0	65552	64	0	0		c12			0	5
+	6	lxb_reserved_space	30	4	0	17	1	27	4	33	17	0	10	Reserved:	0	0	0	65552	0	0	0		-f17			0	6
+	7	lxb_db_owner	20	32	0	16	1	26	5	3	16	0	10	DB Owner:	0	0	0	65536	64	0	0		c16			0	7
+	8	lxb_stat_split	30	4	0	17	1	24	5	36	17	0	7	Split:	0	0	0	65552	0	0	0		-f17			0	8
+	9	lxb_sid	21	34	0	16	1	28	6	1	16	0	12	Session Id:	0	0	0	65552	64	0	0		c16			0	9
+	10	lxb_stat_force	30	4	0	17	1	24	6	36	17	0	7	Force:	0	0	0	65552	0	0	0		-f17			0	10
+	11	lxb_pid	30	4	0	13	1	25	7	1	13	0	12	Process Id:	0	0	0	65552	0	0	0		-f13			0	11
+	12	lxb_stat_wait	30	4	0	17	1	23	7	37	17	0	6	Wait:	0	0	0	65552	0	0	0		-f17			0	12
+	13	lxb_first_lga	20	25	0	25	1	41	10	1	25	0	16	First Log Addr:	0	0	0	65552	0	0	0		c25			0	13
+	14	lxb_wait_reason	20	30	0	30	3	16	9	45	15	1	1	Wait Reason:	0	0	0	65552	0	0	0		cf30.15			0	14
+	15	lxb_last_lga	20	25	0	25	1	40	11	2	25	0	15	Last Log Addr:	0	0	0	65552	0	0	0		c25			0	15
+	16	lxb_last_lsn	20	30	0	25	1	35	12	7	25	0	10	Last LSN:	0	0	0	65552	64	0	0		c25			0	16
+	17	lxb_is_prepared	20	1	0	1	1	15	14	27	1	0	14	Txn Prepared?	0	0	0	65552	0	0	0		c1			0	17
+	18	lxb_id_instance	30	4	0	8	1	21	8	0	8	0	13	Id Instance:	0	0	0	16842768	0	0	0		-f8			0	18
+	19	lxb_id_id	30	4	0	7	1	14	14	44	7	0	7	Id Id:	0	0	0	16842768	0	0	0		-f7			0	19
+	20	lxb_is_xa_dis_tran_id	20	1	0	1	1	24	14	0	1	0	23	Distributed Trans Id?	0	0	0	65552	0	0	0		c1			0	20
+TRIM:
+	0	9	5:44:1	1	0	0	0
+	32	2	7:30:0	1	0	0	0
+FORM:	imp_transaction_hexdump		
+	66	7	0	0	1	0	3	9	0	0	0	0	0	129	0	1
+FIELD:
+	0	lxb_dis_tran_id_hexdump	-21	353	0	378	7	55	0	11	54	0	1		0	0	0	0	0	0	0		c350.54			0	0
+TRIM:
+	0	0	Distributed	0	0	0	0
+	0	1	Transaction	0	0	0	0
+	0	2	Hex Dump:	0	0	0	0
+FORM:	imp_gcn_info		
+	76	16	0	0	23	0	1	9	0	0	0	0	0	193	0	23
+FIELD:
+	0	name_server	21	66	0	30	1	43	2	1	30	0	13	Name Server:	0	0	0	66576	64	0	0		c30			0	0
+	1	default_class	21	66	0	20	1	35	3	0	20	0	15	Default Class:	0	0	0	66576	64	0	0		c20			0	1
+	2	local_vnode	21	66	0	20	1	33	4	1	20	0	13	Local Vnode:	0	0	0	66576	64	0	0		c20			0	2
+	3	remote_vnode	21	66	0	20	1	34	5	0	20	0	14	Remote Vnode:	0	0	0	66576	64	0	0		c20			0	3
+	4	cache_modified	30	4	0	13	1	29	6	0	13	0	16	Cache Modified:	0	0	0	66576	0	0	0		-f13			0	4
+	5	bedcheck_interval	30	4	0	13	1	32	6	40	13	0	19	Bedcheck Interval:	0	0	0	66576	0	0	0		-f13			0	5
+	6	compress_point	30	4	0	13	1	29	7	0	13	0	16	Compress Point:	0	0	0	66576	0	0	0		-f13			0	6
+	7	expire_interval	30	4	0	13	1	30	7	40	13	0	17	Expire Interval:	0	0	0	66576	0	0	0		-f13			0	7
+	8	hostname	21	14	0	12	1	22	8	4	12	0	10	Hostname:	0	0	0	66576	0	0	0		c12			0	8
+	9	installation_id	21	4	0	2	1	19	8	40	2	0	17	Installation Id:	0	0	0	66576	0	0	0		c2			0	9
+	10	remote_mechanism	21	14	0	12	1	30	9	0	12	0	18	Remote Mechanism:	0	0	0	66576	0	0	0		c12			0	10
+	11	ticket_cache_size	30	4	0	13	1	32	9	40	13	0	19	Ticket Cache Size:	0	0	0	66576	0	0	0		-f13			0	11
+	12	ticket_expire	30	4	0	13	1	28	10	0	13	0	15	Ticket Expire:	0	0	0	66576	0	0	0		-f13			0	12
+	13	ticket_lcl_cache_miss	30	4	0	13	1	36	10	40	13	0	23	Ticket Lcl Cache Miss:	0	0	0	66576	0	0	0		-f13			0	13
+	14	ticket_lcl_created	30	4	0	13	1	33	11	0	13	0	20	Ticket Lcl Created:	0	0	0	66576	0	0	0		-f13			0	14
+	15	ticket_lcl_expired	30	4	0	13	1	33	11	40	13	0	20	Ticket Lcl Expired:	0	0	0	66576	0	0	0		-f13			0	15
+	16	ticket_lcl_used	30	4	0	13	1	30	12	0	13	0	17	Ticket Lcl Used:	0	0	0	66576	0	0	0		-f13			0	16
+	17	ticket_rmt_cache_miss	30	4	0	13	1	36	12	40	13	0	23	Ticket Rmt Cache Miss:	0	0	0	66576	0	0	0		-f13			0	17
+	18	ticket_rmt_created	30	4	0	13	1	33	13	0	13	0	20	Ticket Rmt Created:	0	0	0	66576	0	0	0		-f13			0	18
+	19	ticket_rmt_expired	30	4	0	13	1	33	13	40	13	0	20	Ticket Rmt Expired:	0	0	0	66576	0	0	0		-f13			0	19
+	20	ticket_rmt_used	30	4	0	13	1	30	14	0	13	0	17	Ticket Rmt Used:	0	0	0	66576	0	0	0		-f13			0	20
+	21	timeout	30	4	0	13	1	22	14	45	13	0	9	Timeout:	0	0	0	66576	0	0	0		-f13			0	21
+	22	trace_level	30	4	0	13	1	26	15	1	13	0	13	Trace Level:	0	0	0	66576	0	0	0		-f13			0	22
+TRIM:
+	31	0	Name Server Information	0	0	0	0
+FORM:	imp_gcc_info		
+	55	15	0	0	17	0	6	9	0	0	0	0	0	193	0	17
+FIELD:
+	0	net_server	21	66	0	32	1	44	0	6	32	0	12	Net Server:	0	0	0	65808	64	0	0		c32			0	0
+	1	trace_level	-30	5	0	6	1	21	2	1	6	0	15	Trace Level  :	0	0	0	65552	0	0	0		-i6			0	1
+	2	pl_protocol	-30	5	0	6	1	21	3	1	6	0	15	Pl Protocol  :	0	0	0	65552	0	0	0		-i6			0	2
+	3	conn_count	-30	5	0	10	1	20	3	32	10	0	10	Total   :	0	0	0	66576	0	0	0		-i10			0	3
+	4	registry_mode	21	14	0	12	1	27	4	1	12	0	15	Registry Mode:	0	0	0	65552	0	0	0		c12			0	4
+	5	inbound_current	-30	5	0	10	1	20	4	32	10	0	10	Inbound :	0	0	0	66576	0	0	0		-i10			0	5
+	6	inbound_max	-30	5	0	10	1	20	5	32	10	0	10	I/B Max :	0	0	0	65552	0	0	0		-i10			0	6
+	7	outbound_current	-30	5	0	10	1	20	6	32	10	0	10	Outbound:	0	0	0	66576	0	0	0		-i10			0	7
+	8	ib_encrypt_mech	21	14	0	12	1	27	7	1	12	0	15	Inbound Mech :	0	0	0	65552	0	0	0		c12			0	8
+	9	outbound_max	-30	5	0	10	1	20	7	32	10	0	10	O/B Max :	0	0	0	65552	0	0	0		-i10			0	9
+	10	ib_encrypt_mode	21	14	0	12	1	27	8	1	12	0	15	Inbound Mode :	0	0	0	65552	0	0	0		c12			0	10
+	11	ob_encrypt_mech	21	14	0	12	1	27	9	1	12	0	15	Outbound Mech:	0	0	0	65552	0	0	0		c12			0	11
+	12	ob_encrypt_mode	21	14	0	12	1	27	10	1	12	0	15	Outbound Mode:	0	0	0	65552	0	0	0		c12			0	12
+	13	data_in	-30	5	0	12	1	22	10	32	12	0	10	Data In :	0	0	0	66576	0	0	0		-i12			0	13
+	14	data_out	-30	5	0	12	1	22	11	32	12	0	10	Data Out:	0	0	0	66576	0	0	0		-i12			0	14
+	15	msgs_in	-30	5	0	12	1	22	12	32	12	0	10	Msgs In :	0	0	0	66576	0	0	0		-i12			0	15
+	16	msgs_out	-30	5	0	12	1	22	13	32	12	0	10	Msgs Out:	0	0	0	66576	0	0	0		-i12			0	16
+TRIM:
+	0	6	6:29:1	1	0	0	0
+	2	6	Encryption	0	0	0	0
+	31	2	7:24:0	1	0	0	0
+	31	9	6:24:2	1	0	0	0
+	32	2	Connections	0	0	0	0
+	32	9	Traffic	0	0	0	0

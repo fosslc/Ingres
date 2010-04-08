@@ -1,0 +1,9 @@
+(PROD1NAME) JDBC Driver and JDBC Server 
+
+The (PROD1NAME) JDBC driver is a pure Java client that communicates with
+the JDBC server for database information.
+
+The (PROD1NAME) JDBC Server enables communication between the JDBC client
+and dababase Servers. 
+
+The (PROD1NAME) JDBC Server currently supports TCP/IP protocol only.       

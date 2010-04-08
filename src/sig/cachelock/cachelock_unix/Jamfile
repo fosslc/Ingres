@@ -1,0 +1,10 @@
+#
+# Jamfile file for sig!cachelock!cachelock_unix
+#
+
+SubDir ING_SRC sig cachelock cachelock_unix ;
+
+IISUBSYS sig cachelock cachelock_unix ;
+
+IISIGFILES cachelock : cachelock.c cachelock.hm cachelock.hn
+	memtest.c read.me ;

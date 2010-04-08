@@ -1,0 +1,16 @@
+#
+# Jamfile file for front!ice!fortunoff_load
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC front ice fortunoff_load ;
+
+IISUBSYS front ice fortunoff_load ;
+
+if $(BUILD_ICE)
+{
+IIBINEXE fortunoff : fortunoff.sc ;
+IINEEDLIBS fortunoff :  LIBINGRES SHCOMPATLIB ;
+IIUNDEFS fortunoff :  malloc ;
+}

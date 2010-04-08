@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- NETUTIL, top frame, Attribute data tablefield subtopic
+/#--
+The attribute tablefield contains the attribute entries for the current
+vnode, i.e. the one on which the top tablefield's cursor is resting.  The
+attribute tablefield is updated automatically as the user moves the cursor
+through the attribute tablefield.

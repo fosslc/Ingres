@@ -1,0 +1,64 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame contains a table field listing all the applications in the database.
+The Name column lists the application names while the Owner column lists either
+the username of the creator, or DBA for applications created by the DBA.  The
+Short Remark column lists a short description of each application.
+
+To create a new application, use the Create menu operation.  To perform one
+of the menu operations on an existing application, first position the cursor
+on the row containing the name of the application of interest by using the
+cursor keys, the table field scrolling keys, or the Find, Top, or Bottom 
+control and function keys. After the cursor has been positioned on the row
+containing the application of interest, select the desired menu operation.
+
+The menu operations are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Create          Create a new application.  You will be allowed
+                        to specify the name and some other descriptive
+                        information for the application through the
+                        Application Create frame.
+
+        Destroy         Delete the application you have selected from 
+                        the database.  You will be asked to confirm this 
+                        decision. 
+
+        Edit            Edit the selected application.  Go to the Edit an
+                        Application frame where you can change the application
+                        definition by adding or modifying the application's
+                        components.
+
+        Rename          Change the name of the application you have selected.
+                        You are prompted for the new name of the application.
+                        If you immediately depress the RETURN key without
+                        entering a name, the command is cancelled and the
+                        cursor returns to the table field.  If you enter a 
+			legal name, the name of the application is changed in 
+			the database. 
+
+        MoreInfo        Display additional information on the selected
+                        application.  This operation brings up a new frame
+                        whose form shows the creation and last modification
+                        time of the selected application, as well as its full
+			short and long descriptions.  You may change and save
+			the short and long descriptions in the database at this
+			point.
+
+        Go              Run the application.  This allows you to test the
+                        application before you have finished defining it, or
+                        before you create an executable image.  The components
+                        of the application will be recompiled if necessary.
+                        You will then be prompted for the name of a frame with
+                        which to begin execution.  Pressing just the RETURN
+                        key in response to this prompt will cancel this
+                        command.
+
+        Utilities       Bring up a submenu of utility functions to perform
+                        on the selected application or in general.  You can
+                        create an executable image of the application, or
+                        access other Ingres interfaces using INGRES/Menu.
+
+        Help            Access the Ingres Help facility.
+
+        Quit            Exit the program.

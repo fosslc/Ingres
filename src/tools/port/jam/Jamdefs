@@ -1,0 +1,2708 @@
+#
+#  Copyright (c) 2004, 2010 Ingres Corporation
+#
+#
+#  Name: Jamdefs -- Generic variable definitions for Jamrules
+#
+#  Description:
+#	Every thing apart from rules and actions are should defined in this 
+#	file. Rules and actions should only be defined in Jambase or Jamrules.
+#
+#	This generic Jamdefs is included near the start of Jamrules.
+#	It in turn includes VERS, and then the platform Jamdefs.
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           Created.
+#	14-Jul-2004 (hanje04)
+#	    Add SCPPLIB
+#	14-Jul-2004 (drivi01)
+#		Updated variables to work on windows.
+#		Modified libraries and library names
+#		for windows build.
+#	18-Jul-2004 (drivi01)
+#		Added libraries and variables to the directories
+#		for ice apache and microsoft shared libraries,
+#		as well as udt shared library.
+#	19-aug-2004 (drivi01)
+#		Added PERFMON library for perfwiz successful 
+#		compilation.
+#	19-Jul-2004 (drivi01)
+#		Added data libraries for Unix which will
+#		point to corresponding libraries in the directories
+#		to ensure generic Jamfiles.  Added OBJSFX to generalize
+#		Jamrules that target objects to work for both windows and
+#		Unix.
+#	20-Jul-2004 (hanje04)
+#	    Remove SCPPLIB, LEXLIB and CPPLIB
+#	    Update XERCESLIB for version 2.5
+#	21-Jul-2004 (hanje04)
+#	    Add support for AMD64 Linux (a64_lnx)
+#	    Add catch for PAXLOC and KRB5HDR being defined. Echo warning
+#	    but don't bail.
+#	    Define VERSREL to be version.rel
+#	29-Jul-2004 (hanje04)
+#	    Remove SDLIB.
+#	01-Aug-2004 (hanje04)
+#	    Move all build and test tools to $(ING_TOOLS) instead of 
+#	    $(ING_SRC)/bin.
+#	    Replace .so woth $(SLSFX) in shared libs.
+#	    Define Kerberos and tgnapi shared libraries.
+#	01-Aug-2004 (hanje04)
+#	    Use XERCESCROOT to set HDRSAX instead of $(ING_CODE)
+# 	2-aug-2004 (stephenb)
+#	    fix HDRCL and HDRCLF for platform in directory name
+#	17-Aug-2004 (bonro01)
+#	    Add rules for 64-bit Hybrid builds.
+#	25-Aug-2004 (drivi01)
+#	    Modified directories to point to correct location due
+#	    to modified directory structure. On windows HDRSAX points
+#	    to $(ING_CODE)/front/ice/SAX.
+#	25-Aug-2004 (drivi01)
+#	    Added an if loop to check for existance of XERCESCROOT,
+#	    and modified PAXLOC and KRB5HDR to be checked only on
+#	    non-windows platforms. Modified HDRCLF to point to
+#	    hdr_unix_win and hdr_unix in cl/clf, fixed XERCES 
+#	    variable names.
+#	26-Aug-2004 (drivi01)
+#	    Modified the way LINKFLAGS are being set for odbc
+#	    and fixed IIRCTORES to LOCATE .res file it creates,
+#	    as well as added the dependency for building perfwiz.
+#	27-Aug-2004 (lakvi01)
+#	    Corrected INGTOOLSMAN, INGTOOLSFILES, INGTOOLSWNTBIN on
+#	    windows.
+#	27-Aug-2004 (kodse01)
+#	    Added the missing brace at the end.
+#	30-Aug-2004 (kodse01)
+#	    Default file modes now apply to Windows also for eliminating
+#	    Chmod errors.
+#	30-aug-2004 (stephenb)
+#	    Remove local declaration of VERS. It is already declared in
+#	    the platform specific include file, and it breaks a hybrid
+#	    build
+#	31-Aug-2004 (kodse01)
+#	    Added INGVDBA and VDBA Libraries for Windows.
+#	02-Aug-2004 (kodse01)
+#	    Added more VDBA Libraries for Windows. Added $(LIBQSYSLIB) to
+#	    INGRES_LIBS
+#	4-sep-2004 (stephenb)
+# 	    reconstrcucting link paradigm: add _LINKFLAGS variables. Also
+#	    add HDRABF64
+#	07-Aug-2004 (drivi01)
+#	    Added more directory variables and more library variables.
+#	10-sep-2004 (somsa01)
+#	    Updated new names for cato3cnt (ingr3cnt) and cato3spn (ingr3spn).
+#	13-Sep-2004 (drivi01)
+#	    Added new odbc library ingodbc.lib and renamed iiice.dll
+#	    back to oiice.dll and iilibddi.dll to oiddi.dll.  Added
+#	    some system libraries wtih NOCARE tag since we don't build them.
+#	14-Sep-2004 (drivi01)
+#	    Took out iilibinterpdata.lib from libingres.lib.
+#	14-sep-2004 (stephenb)
+#	    Fix up libarry bunches for shared library dependencis, add 64-bit
+#	    versions. Also remove HDRABF64, it's taken care of in mkidir
+#	15-sep-2004 (stephenb)
+#	    Fix typo in previous submission
+#	16-sep-2004 (stephenb)
+#	    Remove ULTRACEOBJ, we don't need it
+#	16-Sep-2004 (bonro01)
+#	    Fix MTSLIBHB directory.
+#	22-Sep-2004 (bonro01)
+#	    Add rules for HP builds.
+#	22-Sep-2004 (drivi01)
+#	    Added variable for path to gv.rc (INGGV).
+#	    Added variable for path to icezip.
+#	    Cleaned up the file.
+#	24-sep-2004 (abbjo03)
+#	    Add executable script suffixes. Correct HDRCL and HDRCLF for VMS.
+#	24-Sep-2004 (hanje04)
+#	    BUG 113127
+#	    Replace UDT objects (.o's) with shared library
+#	    Define SHDEMOUDTLIB
+#	29-Sep-2004 (drivi01)
+#	    Added COPYFORMLIB and EQUELLLIB to collection of LIBQ_LIBS on unix.
+#	    Added new variable ICELIB which represents all static libraries
+#	    that are needed to build icesvr on unix.
+#	    Added new variable INTERP_ABF which is used for linking shared
+#	    library on unix and static libraries on windows.
+#	30-Sep-2004 (drivi01)
+#	    Added some dummy IMPORT libraries to remove undefined warnings.
+#	    fixed tools/port/hdr directory to be tools/port/hdr_unix.
+#	05-Aug-2004 (drivi01)
+#	    Took out ABFRTLIB out of LIBQ_LIB b/c its symbols aren't exported.
+#	10-Oct-2004 (hanch04)
+#	    Removed LDLIBMACH from LINKFLAGS.  Added it to LINKLIBS.
+#	07-Oct-2004 (drivi01)
+#	    Moved LIBSFX, SLSFX, OBJSFX and etc. assignment to platform 
+#	    specific Jamdefs. Modified some directory pathes that were changed
+#	    after propagation of jam branch changes into ingresr30.
+#	08-Oct-2004 (drivi01)
+#	    Changed direction of slashes in a path to ice directories on windows.
+#	14-Oct-2004 (drivi01)
+#	    Changed $(XERCESCROOT)/src to $(XERCESCROOT)/include to avoid
+#	    download of two xerces packages (source and binaries), b/c
+#	    $(XERCESCROOT)/src contains the same headers as $(XERCESCROOT)/include.
+#	15-Oct-2004 (bonro01)
+#	    Add 64-bit library names for the variables added by the
+#	    Windows jam build.
+#	15-Oct-2004 (bonro01)
+#	    Add missing slash for $(SUFHB)/libtblutil.a
+#	15-Oct-2004 (drivi01)
+#	    Added library names for enterprise dlls on windows.
+#	18-Oct-2004 (bonro01)
+#	    Restore SHQLIBHB name to $(SUFHB)/libq.1.$(SLSFX)
+#	    Add 64-bit shared library names COPYUTILLIBHB, COPYFORMLIBHB,
+#	    and TBLUTILLIBHB for FRAME_LIBSHB
+#	20-Oct-2004 (bonro01)
+#	    Correct SHQLIB alias
+#	27-Oct-2004 (drivi01)
+#	    All bat directories on windows were renamed to shell_win, therefore
+#	    INGBAT variable reflects new location.
+#	27-Oct-2004 (hanje04)
+#	    Define BYACCPATTERN for determing header in .yi files.
+#	    This excludes local (e.g #include "pslsgram.h") headers
+#	    which cause a cyclic depenency on pslsgram.yi and pslgram.yi.
+#	    Remove PATH from EQSQLCA and EQSQLDA, LOCATE is used to define
+#	    location in IIEsqlHdr
+#	28-Oct-2004 (schka24)
+#	    Fix oldmsg for dir change, fix typo (licicetrans -> libicetrans).
+#	28-Oct-2004 (drivi01)
+#	    Moved defines for VDBA targets below include statement for 
+#	    Jamdefs.int_w32 so that it knows definitions of suffixes.
+#	28-Oct-2004 (hanje04)
+#	    Actually DO remove PATH from EQSQLCA and EQSQLDA, LOCATE is used 
+#	    to define ocation in IIEsqlHdr. Previous change was lost.
+#	28-Oct-2004 (drivi01)
+#	    front/ice/microsoft directory moved to front/ice/microsoft_win.
+#	29-Oct-2004 (drivi01)
+#	    front/ice/microsoft moved to microsoft_win, however 
+#	    II_SYSTEM/ingres/ice/microsoft stays the same.
+#	02-nov-2004 (abbjo03)
+#	    Change SUFXSH to an empty string on UNIX so that Jam will not
+#	    discard the result when it combines it with a file name/path.
+#	02-nov-2004 (abbjo03)
+#	    Initial set of changes to build on axm_vms.
+#	04-nov-2004 (abbjo03)
+#	    Changes to build bzarch.h on VMS.
+#	05-nov-2004 (abbjo03)
+#	    Changes to build the CL on VMS.
+#	05-nov-2004 (abbjo03)
+#	    Add cl/hdr/hdr to HDRCL and cl/clf/hdr to HDRCLF on Unix/Windows.
+#	    Provide separate definition of COMPATLIB for Unix and VMS.
+#	12-nov-2004 (drivi01)
+#	    Modified build process to build thinclient and preinstall 
+#	    directories. Added new variables such as INGPREINSTALL and 
+#	    THINCLIENT to point to new target directories, as well as 
+#	    created a variable to reference iigetver.dll. Also, predefined 
+#	    new list collections of the files that will be placed in 
+#	    thinclient directory and preinstall directory.
+#	15-Nov-2004 (drivi01)
+#	    INGTIMESTAMP got moved into an else loop which is inaccessible to
+#	    WINDOWS, redefined INGTIMESTAMP.
+#	16-nov-2004 (abbjo03)
+#	    Redefine INGBIN and add FRONTMAIN for VMS.
+#	24-nov-2004 (abbjo03)
+#	    Changes needed to build eqc on VMS.
+#	29-nov-2004 (drivi01)
+#	    Jam is case sensitive modified fast_v4.mnx and slow_v4.mnx to be
+#	    lower case in THIN_CLIENT_MNX_E
+#	01-dec-2004 (abbjo03)
+#	    Changes needed to build esqlc and the hdrs target on VMS.
+#	01-dec-2004 (hweho01)
+#           Added support for AIX platform.
+#	03-dec-2004 (abbjo03)
+#	    Replace bulk of non-portable constructs that prevent Jam build on
+#	    VMS.
+#	13-dec-2004 (abbjo03)
+#	    Additional changes for building on VMS: Xerces, old message files,
+#	    byacc.
+#	24-dec-2004 (shaha03)
+#	    SIR #113754 Added support for i64_hpu.
+#       30-Dec-2004 (hweho01)
+#           Added misc. changes for AIX platform: 
+#           1) Kerberos is not suppported on AIX ( Bug #106743 ), avoid  
+#              warning msg "KRB5HDR" from jam during the build.
+#           2) Added link flag for 64-bit xerces and oiddi libraries.
+#       05-jan-2005 (abbjo03)
+#	    Add SUFSL, HDRCL_V and HDRCLF_V for VMS. Split LIBQXALIB from
+#	    LIBQ_LIBS since it's not built on VMS. Add initial group of shared
+#	    libraries to be built on VMS.
+#	10-jan-2005 (abbjo03)
+#	    Add ALLREVS for removing files portably.
+#	11-Jan-2005 (drivi01)
+#	    Added new data dll iilibpsfdata.dll which will be now built
+#	    along with iilibpsf.dll.
+#	11-jan-2005 (abbjo03)
+#	    On VMS, the SQLCA is delivered as a standalone object. Add support
+#	    for BASIC and Pascal precompilers.
+#	18-Jan-2005 (kodse01)
+#	    Add support for Itanium Linux (i64_lnx).
+#	27-jan-2005 (abbjo03)
+#	    Remove unused URS library.
+#	07-feb-2005 (abbjo03)
+#	    Reinstate SQLCALIB usage on VMS, even though the library will NOT
+#	    be used, its Jam dependencies can substitute for the dependencies
+#	    needed on VMS for the iisqlca object.
+#	10-Feb-2005 (drivi01)
+#	    Added a variable hdr directory path in front/st/hdr.
+#	10-Feb-2005 (bonro01)
+#	    Fix HDRSTRESS and add POOLLIB for test tools.
+#	15-Feb-2005 (shaha03)
+#    	    Corrected string value for SHAPILIB_LINKFLAG and 
+#	    SHAPILIB_LINKFLAG64 variable.
+#	23-feb-2005 (abbjo03)
+#	    Add RMS Gateway library and ODBC shared library for VMS.
+#	03-Mar-2005 (drivi01)
+#	    Added ING_BUILD directories for 7 languages supported.
+#	07-Mar-2005 (drivi01)
+#	    Added i18n.msg file that will contain messages from all msg
+#	    files for each language other than english.
+#	09-Mar-2005 (toumi01)
+#	    Add LIBDATALDR for Linux build of dataldr utility.
+#	    Add ESQLCFLAGSMULTI for non-NT dataldr esqlc processing.
+#	09-Mar-2005 (hanje04)
+#	    SIR 114034
+#	    Add support for reverse hyrid builds. All variables that 
+#	    previously ended in 64 (e.g. VERS64) now end in HB (e.g. VERSHB).
+#	    In the case of the regular hybrid builds, the old variables are
+#	    now used to set the new variables.
+#	    For reverse hybrid builds, variables ending in 32 (e.g VERS32)
+#	    are set in the platform specific Jamdefs file and are used to
+#	    set the HB varirables.
+#	    If VERS64 is set, it is assumed to be a regular hybrid, if VERS32
+#	    is set then it is assumed to be a reverse hybrid. Both cannot be
+#	    set at the same time.
+#	    The string "lp64" has been replaced with a $(SUFHB)
+#	    which is set based whether VERS64 of VERS32 is set. 
+#	    Add server shared libraries and hybrid eqivalents.
+#	15-Mar-2005 (hanje04)
+#	    SIR 114034
+#	    Correct typo in definition of SHPSFLIBHB.
+#	15-Mar-2005 (hanje04)
+#	    Remove duplicate defn. of SHPSFLIBHB. GGGGGGGR!
+#	15-Mar-2005 (hanje04)
+#	    Add SHQSFLIBHB.
+#	17-Mar-2005 (lazro01)
+#	    Added support for UnixWare.
+#	16-Feb-2005 (bonro01)
+#	    Porting changes for Solaris AMD64 a64_sol
+#	16-Mar-2005 (hanje04)
+#	    Correct definition of SUFHB for hybrid builds.
+#	21-Mar-2005 (hanje04)
+#	    Correct definitions of SHAPILIB.
+#	23-Mar-2005 (hanje04)
+#	    Define more hybrid variables need for Itanium Linux
+#	28-Mar-2005 (drivi01)
+#	    Modified C++FLAGS to be assigned CCFLAGS without
+#	    default.  The default assignment of CCFLAGS to C++FLAGS
+#	    broke compilation of a lot of .cpp files on windows.
+#	29-mar-2005 (abbjo03)
+#	    Redo the definitions of HDRSTRESS and CONFDIR using FDirName so
+#	    that they work on VMS.
+#	04-Apr-2005 (lakvi01)
+#	    Ported for Windows AMD64 architecture (a64_win).
+#	05-Apr-2005 (gorvi01)
+#	    Added config_string for Windows Itanium (i64_win).
+#	18-Apr-2005 (lazro01)
+#	    Changes for C++FLAGS to be assigned CCFLAGS in all platforms
+#	    except UnixWare.
+#       18-Apr-2005 (hanje04)
+#           Add support for Max OS X (mg5_osx).
+#           Based on initial changes by utlia01 and monda07.
+#	20-Apr-2005 (lakvi01)
+#	    Added DLLMODE as a mode in which dll's should be made on 
+#	    Windows.
+#	11-Apr-2005 (hanje04)
+#	    Define INGTOOLSFILES for UNIX
+#       20-apr-2004 (loera01)  SIR 114358
+#           Made check for KRB5HDR generic except for 64-bit AIX.
+#       29-apr-2005 (srisu02)  
+#           Corrected SHAPILIBHB for AIX
+#	06-May-2005 (drivi01)
+#	    Renamed libiiodbc back to libodbc on windows.
+#	19-may-2005 (abbjo03)
+#	    Add LIBMODE definition for VMS.
+#	25-May-2005 (kodse01)
+#	    Made SHNEWORDERLIB and SHOIDDILIB generic for UNIX platforms.
+#	26-Jul-2005 (fanra01)
+#	    Bug 90455
+#	    Add script suffix definition for Windows.
+#	01-Aug-2005 (fanra01)
+#	    Bug 90455
+#	    Backout SUFSH definition for Windows. Windows platform uses both
+#	    .sh and .bat suffixes.
+#	28-Jun-2005 (hweho01)
+#	    Added support for HP Tru64 Unix (axp_osf).
+#           Added ARDEMOUDTLIB for UDT archive file.
+#	07-Sep-2005 (bonro01)
+#	    Add IMP application to Ingres installation.
+#	    Rename IMPLIB to SIGIMPLIB to avoid confusion with windows
+#	    import libraries.
+#	20-Sep-2005 (hanje04)
+#	    SIR 115239
+#	    Re-add defines for SPATLIB and SPATLIBHB.
+#	22-Sep-2005 (drivi01)
+#	    Added new variable ING_README to point to II_SYSTEM.
+#	    Added a check to verify that extension_string and
+#	    platform_string exist in environment.
+#   	03-Oct-2005 (bonro01)
+#	    Support for Sun High Availability Clusters.
+#	19-Oct-2005 (drivi01)
+#	    Replaced Unix slashes "/" with $(DFS) for INGTOOLS and
+#	    INGTIMEZONE and INGVDBA variables.
+#	20-Oct-2005 (hanje04)
+#	    Correct XERCESCLIB for Mac OSX.
+#	26-Oct-2005 (hanje04)
+#	    Define SHSPATLIB for UNIX
+#	27-Dec-2005 (drivi01)
+#	    Added another static library called PATCHLIB (libpatch.lib).
+#	27-Dec-2005 (drivi01)
+#	    Added another static library called PATCHLIB (libpatch.lib).
+#       04-Feb-2006 (hweho01)
+#           Removed the 64-bit shared library names entries for AIX.          
+#	03-Mar-2006 (hanje04)
+#	    BUG 115796
+#	    Define PTOOLSBIN from PTOOLSROOT for building patchtools
+#	31-Mar-2006 (drivi01)
+#	    Added -o flag to eqc facility to stop it from updating .sh
+#	    files and causing unnecessary rebuilds on windows.
+#     19-Apr-2006 (hanje04)
+#	    BUG 115796
+#	    Add IIPatchHtml for creating patch notes templates for an arbitrary
+#	    build from the generic templates under $PTOOLSROOT
+#	28-apr-2006 (drivi01)
+#	    Updated path for INGMSICE and INGTOOLSWNTBIN to have
+#	    proper directory structure.
+#	    Reordered FRAME_LIBS and LIBQ_LIBS on behalf of hanje04 
+#	    due to a previously masked dependency problem.
+#	04-May-2006 (drivi01)
+#	    Dotnet binaries should go into 
+#	    II_SYSTEM\ingres\dotnet\assembly\v1.1
+#	06-jun-2006 (drivi01)
+#	    Add libspat.lib on Windows.
+#       19-jun-2006 (Ralph Loen) SIR 115708
+#           Rename SHODBCMGRLIB to ingodbc.dll, instead of caiioc35.dll.
+#	31-Jul-2006 (hweho01)
+#	    For axp_osf and r64_us5 platforms, issue warning if GTARLOC  
+#	    is not defined.  
+#       19-Apr-2006 (bolke01) Bug 115796
+#           Add PT_ libraries definitions ( for Patchtools ) 
+#           Add HDR definitions for patchtools
+#           Add  PTOOLSLIB.
+#	25-Sep-2006 (drivi01) SIR 116656
+#	    Added new directory to Jamdefs for .Net data provider 2.0.
+#	    Added definitions for the new dotnet libraries as well as
+#	    moved old libraries from windows specific jamdefs to generic
+#	    where they belong.
+#	19-Oct-2006 (hanje04)
+#	    SIR 116907
+#	    Add library definitions RFAPILIB and RFAPILIBHB for response
+#	    file api.
+#	20-Oct-2006 (hanje04)
+#	    SIR 116977
+#	    Define HDR and link variables for Linux GUI installer and Ingres
+#	    package manager.
+#		HDRRPM - Include directory for RPM headers
+#		RPMCCLD - Link flags for rpm libraries used by Linux
+#			installer.
+#		HDRGTK - Include directories for GTK. Set using ${HDRGTK}
+#			which is set by the bldenv script.
+#		GTKCCLD - Link flags for GTK libraries used by Linux
+#			GUI installer and Ingres package manager. Also set
+#			using evironment variable of the same name, set in
+#			 bldenv script.
+#	    Also define GINSTALLLIB, RPMINSTALLLIB (no HB versions required)
+#	    because we ONLY build the default version.
+#        6-Nov-2006 (hanal04) SIR 117044
+#           Add int.rpl for Intel Rpath Linux build.
+#	08-Nov-2006 (drivi01)
+#	    SIR 116833
+#	    Added directory variable INGCSHDEMO to define destination
+#	    location in II_SYSTEM for C# demo.
+#	03-Jan-2007 (clach04)
+#	    Added Enterprise Access (gateway) specific variables that are
+#	    used in central Jamrules file.
+#        6-Nov-2006 (hanal04) SIR 117044
+#           Add int.rpl for Intel Rpath Linux build.
+#	 20-Feb-2007 (drivi01)
+#	    Add deffinition for new installer dll esqlcmm.dll.
+#	 22-Feb-2007 (drivi01)
+#	    Add deffinition for new installer dll vdbamm.dll.
+#	 19-Mar-2007 (drivi01)
+#	    Added INGWININST to the list of folders.
+#	20-Oct-2006 (hanje04)
+#	    SIR 117044
+#	    Only define RPM and GTK flags if we are configured to build them
+#	    in Jamdefs.abc_xyz
+#	23-Mar-2007 (hanje04)
+#	    SIR 117985
+#	    Add support for 64bit PowerPC Linux (ppc_lnx)
+#	5-Apr-2007 (bonro01)
+#	    Only require PAXLOC for Linux builds.
+#	 09-Apr-2007 (drivi01)
+#	    Remove duplicate entry of ingodbc.dll.
+#	26-Apr-207 (hweho01)
+#	    For Ingres 2006 R2, GTARLOC is no long required by r64_us5 and 
+#	    axp_osf. 
+#	3-May-2007 (bonro01)
+#	    Rename Solaris HA cluster files from CA to Ingres
+#	04-May-2007 (hweho01)
+#	    Added ARSPATLIB for axp_osf platform. 
+#	17-May-2007 (upake01)
+#           Added path INSTLVMS for [src.front.st.install_vms]
+#	31-May-2007 (hanje04)
+#	    SIR 118425
+#	    Bump default xerces version to 2.7 (27).
+#	29-Jun-2007 (drivi01)
+#	    Update the binary names for xerces version 
+#	    2.7 on windows.
+#        8-Oct-2007 (hanal04) Bug 119262
+#           Added archive iimerge.a alternative to shared library server.
+#       19-Oct-2007 (Ralph Loen) Bug 119329
+#           SHODBCMGRLIB_LINKFLAG should be "-liiodbc.1", not "-lodbc.1". 
+#   12-Nov-2007 (clach04)
+#       Removed Enterprise Access (gateway) specific variables, these
+#       variables are now in the gateway tree.    
+#   06-Dec-2007 (drivi01)
+#	Remove LIBQXA library from the list of binaries built into 
+#	libingres.lib speicifed in INGRES_LIBS and replace it with
+#	IMPXALIB instead.  Basically static libqxa is being replaced
+#	with iilibxa.dll. 
+#	04-Feb-2008 (hanje04)
+#	    SIR S119978
+#	    Add support for Intel OSX.
+#	11-Mar-2008 (smeke01) b120071
+#	    Amended Jam use of Cygwin gawk & sed so that output is DOS
+#	    format. Also Cygwin does not supply egrep, so use grep -E.
+#	    All done using a USE_CYGWIN switch so as to not affect other
+#	    Windows Unix toolsets.
+#       08-Jan-2008 (bolke01)
+#           Changed definitions for VMS builds  of Patchtools
+#	11-Mar-2008 (smeke01) b120071
+#	   Amended Jam use of Cygwin gawk & sed so that output is DOS
+#	   format. Also Cygwin does not supply egrep, so use grep -E.
+#	   All done using a USE_CYGWIN switch so as to not affect other
+#	   Windows Unix toolsets.
+#       12-Jun-2008 (rapma01)
+#	    Changed the Ingres Net library name defined in GCCLIB and 
+#	    GCCLIBHB from gcc to iigcc to avoid confusion with the 
+#	    gnu compiler library.
+#	02-Jul-2008 (thoda04)
+#	    Updated dotnet build directory to .NET data provider 2.1.
+#       22-Sep-2008 (frima01) Bug 119329
+#           Changed SHODBCMGRLIB_LINKFLAG64 from -lodbc64.1 to -liiodbc64.1
+#	05-Nov-2008 (drivi01)
+#	    Add NOCARE for htmlhelp.lib so it could be added to IINEEDLIBS
+#	    rule in Jamfile as a dependency.
+#	04-Feb-2009 (bonro01)
+#	    Define SUFRB to be the opposite of SUFHB so that it can be used
+#	    with the DBMSEXE rule to set the proper iilink parameter for
+#	    the non-Hybrid server.
+#	23-Feb-2009 (drivi01)
+#	    Remove static ABFRTLIB from libingres.lib, iilibframe.dll
+#	    already exports the symbols, link abf applications dynamically.
+#	26-Feb-2009 (drivi01)
+#	    binaddr.txt should not be updated by jam after the first time
+#	    it is created.
+#	23-Apr-2009 (drivi01)
+#	    Overwrite HDRPATTERN variable, as the 2.3.5 version of
+#	    jam doesn't do a thorough job of scanning for headers on 
+#	    Windows.  Submit for all platforms to eliminate ambiguity
+#	    across different versions of jam.
+#	07-may-2009 (stegr01)
+#	    Updated for Itanium VMS
+#	19-Jun-2009 (kschendel) SIR 122138
+#	    Clean up the hybrid mechanism a bit: the BUILD_ARCH jam variable
+#	    defined in VERS will specify what hybrids to build, if any,
+#	    in a hybrid-capable platform.  The platform jamdefs will define
+#	    xxx32 and xxx64 strings, and we'll select the right one here.
+#	    Use PLATFORM_JAMDEFS from vers to choose the platform specific
+#	    Jamdefs, rather than config_string.  Wrap some ICE stuff in
+#	    the (new) BUILD_ICE conditional.  Add missing SHQSFLIBHB.
+#	17-Jul-2009 (kschendel) SIR 122138
+#	    Repair embarrassing chicken-and-egg problem with VERS when working
+#	    with a tree that doesn't have any VERS yet.
+#	26-Jul-2009 (hanje04)
+#	    BUG 122395
+#	    Remove librpmdb from GUI installer link falgs to stop build issues
+#	    against RPM 4.6 and higher
+#       12-Aug-2009 (horda03)
+#           Add symbols for VMS files used to build shared libraries.
+#           When these files change, the shared libraries need to be rebuilt.
+#	21-Aug-2009 (drivi01)
+#	    Add a chm file name for VDBA tools as a definition.
+#	24-Aug-2009 (bonro01)
+#	    Make the VERS override file optional.
+#	25-Aug-2009 (hanje04)
+#	    BUG 122571
+#	    Remove RPMHDR and RPMCCLD defs, no longer need. (using python
+#	    module)
+#	25-Jan-2010 (kschendel) b123194
+#	    INGICE and XERCVERS used before definition, fix.
+#	    Always set XERCVERS with default-assign (windows wasn't) since
+#	    it really ought to be set by something in the outside world, such
+#	    as bldenv, or VERS, or platform jamdefs.
+#	19-Feb-2010 (bonro01) b123194
+#	    Correct build problem caused by previous change.
+#	    Don't eliminate WCHART.  Make /Zc:wchar_t- the default for xerces
+#	    2.7 and make the default unset for all newer xerces versions.
+#	20-Feb-2010 (hanje04)
+#	    SIR 123296
+#	    Add support for LSB builds which use versioned shared libraries
+#           HDRGTK being set to a value that does not include the xml2
+#        4-Feb-2010 (hanal04) Bug 123216
+#           Resolve intermittent build failures caused bu HDRGTK being already
+#           set without xml2 header location.
+#	
+#####
+# VARIABLE DEFINITIONS for LIBBRARY VARIABLE DEFINITIONS and EXCEPTIONS
+#
+# LIB     - postfix for all Libraries
+#
+# SH      - prefix for all Shared Libraries
+#           i.e.  case SH*LIB* is allowed
+#
+# PT_     - prefix for PatchTools Libraries
+#           i.e.  case PT_*LIB is allowed
+#####
+#
+# Defaults for values normally defined in Jamdefs.$(PLATFORM_JAMDEFS), but not 
+# defaulted in Jambase.
+#
+
+AS	default = as ;
+ASFLAGS	default = ;
+AR_X	default = ar -x ;
+CPP 	default = /lib/cpp ; 
+VERS 	default = ;
+ECHO 	default = echo ;
+CAT 	default = cat ;
+SHLIBLD default = cc ;
+
+
+if $(VMS)
+{
+    ALLREVS = ";*" ;		# All versions of a file
+    DFS = "" ;			# Directory-file separator
+    PIPE = pipe ;
+    RMFLAGS = ;
+    TOUCH = create ;
+}
+else
+{
+    ALLREVS = "" ;		# All versions of a file (only-one)
+    DFS = $(SLASH) ;		# Directory-file separator
+    PIPE = ;
+    RMFLAGS = -rf ;
+    TOUCH ?= touch ;
+}
+
+if $(NT)
+{
+	MSILIB = msi.lib ;
+}
+
+
+#
+# Executable script suffixes
+#
+if $(VMS)
+{
+    SUFSH = .dcl ;
+    SUFXSH = .com ;
+}
+else
+{
+    SUFXSH = "" ;
+    SUFSH = .sh ;
+}
+
+# May get overridden by platform vers or jamdefs:
+
+DBMS_UDT = "-nosol -noudt" ;
+
+#
+# Pull in platform dependent defines from VERS
+# This also must define at least PLATFORM_JAMDEFS to indicate that
+# a proper VERS was included, as well as giving the platform Jamdefs suffix.
+#
+_file = [ GLOB $(ING_VERSDIR) : VERS ] ;
+if $(_file) = ""
+{
+    include $(ING_VERSDIR)VERS.$(config_string) ;
+    VERSFILE = VERS.$(config_string) ;
+}
+else
+{
+    include $(ING_VERSDIR)VERS ;
+    VERSFILE = VERS ;
+}
+if ! $(PLATFORM_JAMDEFS)
+{
+    ECHO "!!!!!!!ERROR!!!!!!!" ;
+    ECHO "There is no PLATFORM_JAMDEFS defined in " $(VERSFILE) ;
+    ECHO "Either the $(VERSFILE) is missing or the VERS syntax has changed" ;
+    EXIT ;
+}
+
+#
+# Pull in platform dependent defines from Jamdefs.$(PLATFORM_JAMDEFS)
+#
+
+include $(ING_JAM)Jamdefs.$(PLATFORM_JAMDEFS) ;
+if ! $(JAMDEFS_INCLUDED)
+{
+    ECHO "!!!!!!!ERROR!!!!!!!" ;
+    ECHO "Missing platform Jamdefs:" $(ING_JAM)Jamdefs.$(PLATFORM_JAMDEFS) ;
+    ECHO "Make sure that PLATFORM_JAMDEFS is correct in " $(VERSFILE) ;
+    EXIT ;
+}
+
+if ! $(VMS)
+{
+if ! $(XERCESLOC) 
+{ 
+   ECHO "!!!!!!!!ERROR!!!!!!!!!!!" ;
+   ECHO "XERCESLOC not defined" ;
+   ECHO "Variable must point to the location of the Xerces C XML parser libaray" ;
+   ECHO "for build to proceed" ;
+   EXIT ;
+}
+
+if ! $(XERCESCROOT) 
+{ 
+   ECHO "!!!!!!!!ERROR!!!!!!!!!!!" ;
+   ECHO "XERCESCROOT not defined" ;
+   ECHO "Variable must point to the location of the Xerces source code" ;
+   ECHO "for build to proceed" ;
+   EXIT ;
+}
+
+if ! $(NT)
+{	
+	if $(PAX_CHECK)
+	{
+	  if ! $(PAXLOC)
+	  {
+	     ECHO "!!!!!!!!WARNING!!!!!!!!!!!" ;
+	     ECHO "PAXLOC not defined" ;
+	  }
+	}
+}
+else
+{
+	if $(USE_CYGWIN) = TRUE
+	{
+	  ECHO "Using Cygwin Jam definitions" ;
+	  EGREP = "grep -E" ;
+	  SEDARGS = -b ;
+	  AWKARGS = "-v \"ORS=\\\\r\\\\n\"" ;
+	}
+	else
+	{
+	  EGREP = egrep ;
+	}
+}
+
+if ! $(KRB5HDR) && ! $(NO_KRB5HDR)
+{
+    ECHO "!!!!!!!!WARNING!!!!!!!!!!!" ;
+    ECHO "KRB5HDR not defined" ;
+}
+
+
+if ! $(platform_string) || ! $(extension_string)
+{
+    ECHO "!!!!!!!!WARNING!!!!!!!!!!!" ;
+    ECHO "platform_string or extension_string are not defined" ;
+    ECHO "Generic readme will NOT look/work as expected!!!!!" ;
+}
+
+if ! $(LIBSFX) || ! $(SLSFX) || ! $(OBJSFX)
+{
+	ECHO "!!!!!!!!ERROR!!!!!!!!!!!" ;
+	ECHO "LIBSFX, SLSFX or OBJSFX is not defined" ;
+	ECHO "Variables must be defined in platform specific Jamdefs and must" ;
+	ECHO "contain archive suffix, shared library suffix and object suffix"
+	ECHO "respectively. (i.e. LIBSFX = a ; )" ;
+	EXIT ;
+}
+# Set default version for shared libraries. Override in VERS file
+    SLVERS ?= 1 ;
+}
+
+if $(VMS)
+{
+    LIBSFX = olb ;
+    SUFSL = .exe ;
+}
+
+# Set up proper variables for hybrid-capable platforms.  The platform
+# jamdefs for these platforms will set up XXX32 and XXX64, and we use
+# the BUILD_ARCH variable from VERS to decide what to do.
+
+if $(BUILD_ARCH)
+{
+    local _xerc = $(XERCESLOC) ;
+    local _xerchb = $(XERCESLOCHB) ;
+    local _xercswap = FALSE ;
+
+    if ! $(XERCES_ARCH)
+    {
+	ECHO "!!!! ERROR !!!!" ;
+	ECHO "Hybrid-capable platforms must define XERCES_ARCH" ;
+	ECHO "to be the type (32-bit or 64-bit) of the xerces-c" ;
+	ECHO "library in $(XERCESLOC)." ;
+	EXIT ;
+    }
+
+    # Unless externally specified, assume that alternate bit-ness versions
+    # of xerces are in lp32 / lp64 subdirectories under $XERCESLOC.
+    # Please note that the choice of lp32 vs lp64 is based on XERCES_ARCH,
+    # and *not* BUILD_ARCH!  XERCES_ARCH depends on the setup of the
+    # build machine, while BUILD_ARCH is all about the build results.
+
+    if ! $(XERCESLOCHB)
+    {
+	if $(XERCES_ARCH) = 32
+	{
+	    _xerchb = $(XERCESLOC)/lp64 ;
+	}
+	else
+	{
+	    _xerchb = $(XERCESLOC)/lp32 ;
+	}
+	XERCESLOCHB = $(_xerchb) ;
+    }
+
+    if $(BUILD_ARCH) = "32" || $(BUILD_ARCH) = "32+64"
+    {
+	VERS = $(VERS32) ;
+	AS = $(AS32) ;
+	LD = $(LD32) ;
+	CCLD = $(CCLD32) ;
+	ASMACH = $(ASMACH32) ;
+	CCMACH = $(CCMACH32) ;
+	CCLDMACH = $(CCLDMACH32) $(LDORIGIN) ;
+	LDLIBPATH = $(LDLIBPATH32) ;
+	LDLIBMACH = $(LDLIBMACH32) ;
+	CCLDSERVER = $(CCLDSERVER32) ;
+	CCSHLDMACH = $(CCSHLDMACH32) ;
+	ASCPPFLAGS = -DBUILD_ARCH32 $(ASCPPFLAGS32) ;
+	ASM4FLAGS = $(ASM4FLAGS32) ;
+	C++FLAGS = $(C++FLAGS32) ;
+	if $(XERCES_ARCH) = 64
+	{
+	    _xercswap = TRUE ;
+	}
+    }
+    else
+    {
+	VERS = $(VERS64) ;
+	AS = $(AS64) ;
+	LD = $(LD64) ;
+	CCLD = $(CCLD64) ;
+	ASMACH = $(ASMACH64) ;
+	CCMACH = $(CCMACH64) ;
+	CCLDMACH = $(CCLDMACH64) $(LDORIGIN) ;
+	LDLIBPATH = $(LDLIBPATH64) ;
+	LDLIBMACH = $(LDLIBMACH64) ;
+	CCLDSERVER = $(CCLDSERVER64) ;
+	CCSHLDMACH = $(CCSHLDMACH64) ;
+	ASCPPFLAGS = -DBUILD_ARCH64 $(ASCPPFLAGS64) ;
+	ASM4FLAGS = $(ASM4FLAGS64) ;
+	C++FLAGS = $(C++FLAGS64) ;
+	if $(XERCES_ARCH) = 32
+	{
+	    _xercswap = TRUE ;
+	}
+    }
+    if $(_xercswap) = TRUE
+    {
+	# Need to get primary xerces lib from "hybrid" xerces location.
+	# example, building pure 32-bit int_lnx on what is normally a
+	# 64-bit machine.
+	XERCESLOC = $(_xerchb) ;
+	XERCESLOCHB = $(_xerc) ;
+    }
+
+    if $(BUILD_ARCH) = "32+64"
+    {
+	VERSHB = $(VERS64) ;
+	ASHB = $(AS64) ;
+	LDHB = $(LD64) ;
+	CCLDHB = $(CCLD64) ;
+	ASMACHHB = $(ASMACH64) ;
+	CCMACHHB = $(CCMACH64) ;
+	CCLDMACHHB = $(CCLDMACH64) $(LDORIGINLP64) ;
+	LDLIBPATHHB = $(LDLIBPATH64) ;
+	LDLIBMACHHB = $(LDLIBMACH64) ;
+	CCLDSERVERHB = $(CCLDSERVER64) ;
+	CCSHLDMACHHB = $(CCSHLDMACH64) ;
+	SUFHB = lp64 ;
+	SUFRB = lp32 ;
+	HB_ENABLE_VAR = II_LP64_ENABLED ;
+	ASCPPFLAGSHB = -DBUILD_ARCH64 $(ASCPPFLAGS64) ;
+	ASM4FLAGSHB = $(ASM4FLAGS64) ;
+	C++FLAGSHB = $(C++FLAGS64) ;
+    }
+    if $(BUILD_ARCH) = "64+32"
+    {
+	VERSHB = $(VERS32) ;
+	ASHB = $(AS32) ;
+	LDHB = $(LD32) ;
+	CCLDHB = $(CCLD32) ;
+	ASMACHHB = $(ASMACH32) ;
+	CCMACHHB = $(CCMACH32) ;
+	CCLDMACHHB = $(CCLDMACH32) $(LDORIGINLP32) ;
+	LDLIBPATHHB = $(LDLIBPATH32) ;
+	LDLIBMACHHB = $(LDLIBMACH32) ;
+	CCLDSERVERHB = $(CCLDSERVER32) ;
+	CCSHLDMACHHB = $(CCSHLDMACH32) ;
+	SUFHB = lp32 ;
+	SUFRB = lp64 ;
+	HB_ENABLE_VAR = II_LP32_ENABLED ;
+	ASCPPFLAGSHB = -DBUILD_ARCH32 $(ASCPPFLAGS32) ;
+	ASM4FLAGSHB = $(ASM4FLAGS32) ;
+	C++FLAGSHB = $(C++FLAGS32) ;
+    }
+}
+
+# ING_CODE is alternate paths to find source
+# We reset ING_CODE to point to both now
+
+ING_CODE = $(ING_SRC) ;
+
+# Set CCFLAGS and LINKFLAGS to values defined in Jamdefs.$(config_string)
+CCFLAGS = $(CCMACH) ;
+CCFLAGSHB = $(CCMACHHB) ;
+
+# Make the possibly unwarranted assumption that c++ likes what cc likes
+if ! $(C++FLAGS)
+{
+    C++FLAGS = $(CCFLAGS) ;
+}
+if ! $(C++FLAGSHB)
+{
+    C++FLAGSHB = $(CCFLAGSHB) ;
+}
+
+LINKFLAGS = $(CCLDMACH) ;
+LINKFLAGSHB = $(CCLDMACHHB) ;
+
+ASFLAGS = $(ASMACH) ;
+ASFLAGSHB = $(ASMACHHB) ;
+
+# Assembly files don't see bzarch, so this is one case where the
+# config string has to be defined on the command line.
+ASCPPFLAGS = -D$(VERS) $(ASCPPFLAGS) ;
+ASCPPFLAGSHB = -D$(VERSHB) $(ASCPPFLAGSHB) ;
+
+CCVERSFLAG default = -D$(VERS) ;
+CCVERSFLAGHB default = -D$(VERSHB) ;
+
+#
+# Overide default file modes
+#
+#if ! $(NT)
+#{
+DIRMODE   = 755 ;
+if $(VMS)
+{
+    LIBMODE   = $(FILEMODE) ;
+}
+else
+{
+    EXEMODE   = 755 ;
+    DLLMODE   = 755 ;
+    LIBMODE   = 644 ;
+}
+#}
+#
+# Header directories
+#
+
+HDRABFM		= [ FDirName $(ING_SRC) front abf mgram ] ;
+HDRAIF		= [ FDirName $(ING_SRC) common aif hdr ] ;
+HDRAPACHE	= [ FDirName $(ING_SRC) front ice apache include ] ;
+HDRBACK  	= [ FDirName $(ING_SRC) back hdr hdr ] ;
+HDRCL_ALL	= [ FDirName $(ING_SRC) cl hdr hdr ] ;
+HDRCL_UW	= $(ING_CODE)/cl/hdr/hdr_unix_win ;
+HDRCL_W         = $(ING_CODE)/cl/hdr/hdr_win ;
+HDRCL_U		= $(ING_CODE)/cl/hdr/hdr_unix ;
+HDRCL_V		= [ FDirName $(ING_SRC) cl hdr hdr_vms ] ;
+HDRCLF_ALL	= [ FDirName $(ING_SRC) cl clf hdr ] ;
+HDRCLF_UW	= $(ING_CODE)/cl/clf/hdr_unix_win ;
+HDRCLF_W	= $(ING_CODE)/cl/clf/hdr_win ;
+#HDRCLF_U	= $(ING_CODE)/cl/clf/hdr_unix ;
+HDRCLF_V	= [ FDirName $(ING_SRC) cl clf hdr_vms ] ;
+switch $(VERS)
+{
+    case *_vms :  HDRCL           = $(HDRCL_ALL) $(HDRCL_V) ;
+		  HDRCLF          = $(HDRCLF_ALL) $(HDRCLF_V) ;
+    case *_w*  :  HDRCL           = $(HDRCL_W) $(HDRCL_UW) $(HDRCL_ALL) ;
+		  HDRCLF          = $(HDRCLF_UW) $(HDRCLF_W) $(HDRCLF_ALL) ;
+    case * :      HDRCL           = $(HDRCL_U) $(HDRCL_UW) $(HDRCL_ALL) ;
+		  HDRCLF          = $(HDRCLF_UW) $(HDRCLF_ALL) ;
+}
+HDRCOMMON	= [ FDirName $(ING_SRC) common hdr hdr ] ;
+HDRDMF		= [ FDirName $(ING_SRC) back dmf hdr ] ;
+HDREMBED	= [ FDirName $(ING_SRC) front embed hdr ] ;
+HDREMBEDM	= [ FDirName $(ING_SRC) front embed mgram ] ;
+HDRFRONT	= [ FDirName $(ING_SRC) front hdr hdr ] ;
+HDRFRONTCL	= [ FDirName $(ING_SRC) front frontcl hdr ] ;
+HDRFRONTCLF	= [ FDirName $(ING_SRC) front frontcl files ] ;
+HDRGCF		= [ FDirName $(ING_SRC) common gcf hdr ] ;
+HDRGCS		= [ FDirName $(ING_SRC) common gcf gcs ] ;
+HDRGL		= [ FDirName $(ING_SRC) gl hdr hdr ] ;
+HDRDRV		= [ FDirName $(ING_SRC) common odbc driver ] ;
+HDRICE		= [ FDirName $(ING_SRC) front ice hdr ] ;
+HDRST		= [ FDirName $(ING_SRC) front st hdr ] ;
+HDRSCF		= [ FDirName $(ING_SRC) back scf hdr ] ;
+HDRODBC		= [ FDirName $(ING_SRC) common odbc hdr ] ;
+HDRTOOLS	= [ FDirName $(ING_SRC) tools port hdr_unix_vms ] ;
+
+HDRSTRESS	= [ FDirName $(ING_SRC) tst stress gcf esql ] ;
+
+#
+#set HDRPATTERN
+#
+HDRPATTERN 	= "^[ 	]*#[ 	]*include[ 	]*[<\"]([^\">]*)[\">].*$" ;
+
+#
+# patchtools headers
+
+HDRPTOOLSEXEC   = [ FDirName $(PTOOLSROOT) tools exec hdr ] ;
+
+#
+# Old message headers
+OLDMSG		= [ FDirName $(ING_SRC) common hdr oldmsg_unix_vms ] ;
+
+#
+# Package manager and GUI installer headers 
+if $(BUILD_GTK_GUI)
+{
+    HDRGTK = $(HDRGTK) ;
+    HDRXML2 = $(HDRXML2) ;
+    GTKCCLD = $(GTKCCLD) ;
+}
+
+if $(VMS)
+{
+    ING_BUILDROOT = $(ING_BUILD)[000000] ;
+    ING_README = $(II_SYSTEM)[000000] ;
+}
+else
+{
+    ING_BUILDROOT = $(ING_BUILD) ;
+    ING_README = $(II_SYSTEM) ;
+}
+
+# 
+# Boiler plate environment script for LSB builds
+#
+if $(LSB_BUILD)
+{
+    LSBENV = ". /usr/share/ingres/ingenv.bashrc" ;
+}
+else
+{
+    LSBENV = "" ;
+}
+
+#
+# Default locations for libraries, executables, etc.
+#
+ADVISORFILES = $(ING_BUILD)/advisor ;
+INGICEBIN    = [ FDirName $(ING_BUILD) ice bin ] ;
+INGAPACHEICE = [ FDirName $(ING_BUILD) ice bin apache ] ;
+INGBAT	     = $(ING_SRC)/tools/port/shell_win ;
+INGGV	     = $(ING_SRC)/cl/clf/gv_win ;
+INGWININST   = [ FDirName $(ING_SRC) front st ] ;
+INGDEMO      = [ FDirName $(ING_BUILD) demo ] ;
+INGDEMOAPI   = [ FDirName $(ING_BUILD) demo api ] ;
+INGDEFS	     = $(ING_SRC)/tools/port/defs_win ;
+INGFILES     = [ FDirName $(ING_BUILD) files ] ;
+INGICE       = [ FDirName $(ING_BUILD) ice ] ;
+# Can define this now that INGICE is set
+HDRPLAYSRC	= $(INGICE)/plays/src ;
+INGBIN	     = [ FDirName $(ING_BUILD) bin ] ;
+if $(VMS)
+{
+   LIB_BLD   = library ;
+   LIB_TGT   = library ;
+}
+else
+{
+   LIB_BLD   = lib ;
+   LIB_TGT   = lib ;
+}
+INGLIB	     = [ FDirName $(ING_BUILD) $(LIB_BLD) ] ;
+INGUTIL      = [ FDirName $(ING_BUILD) utility ] ;
+INGINSTALL   = $(ING_BUILD)/install ;
+INGMANIFEST  = [ FDirName $(ING_BUILD) manifest ] ;
+INGMSICE     = [ FDirName $(ING_BUILD) ice bin microsoft ] ;
+INGMACRO     = $(ING_BUILD)/ice/tutorials/macro ;
+INGDSQL	     = $(ING_BUILD)/ice/tutorials/dsql ;
+INSTLVMS     = [ FDirName $(ING_SRC) front st install_vms ] ;
+UDTDEMO      = [ FDirName $(INGDEMO) udadts ] ;
+COBOLDEMO    = $(INGDEMO)/cobol ;
+ESQLCDEMO    = $(INGDEMO)/esqlc ;
+INGCOL       = [ FDirName $(INGFILES) collation ] ;
+INGMSG       = [ FDirName $(INGFILES) english ] ;
+INGDEU	   = [ FDirName $(INGFILES) deu ] ;
+INGESN	   = [ FDirName $(INGFILES) esn ] ;
+INGFRA	   = [ FDirName $(INGFILES) fra ] ;
+INGITA	   = [ FDirName $(INGFILES) ita ] ;
+INGJPN	   = [ FDirName $(INGFILES) jpn ] ;
+INGPTB	   = [ FDirName $(INGFILES) ptb ] ;
+INGSCH       = [ FDirName $(INGFILES) sch ] ;
+INGCHARSETS  = [ FDirName $(INGFILES) charsets ] ;
+INGUCHARMAPS = [ FDirName $(INGFILES) ucharmaps ] ;
+INGMESSAGE   = [ FDirName $(INGFILES) english messages ] ;
+INGZONE      = [ FDirName $(INGFILES) zoneinfo ] ;
+INGDOTNET    = $(ING_BUILD)/dotnet/assembly/v1.1 ;
+INGDOTNET2   = [ FDirName $(ING_BUILD) dotnet assembly v2.1 ] ;
+INGCSHDEMO   = [ FDirName $(ING_BUILD) demo csharp travel app ] ;
+SCHABIN	     = $(ING_BUILD)/opt/Ingres/IngresSCAgent/bin ;
+SCHAETC	     = $(ING_BUILD)/opt/Ingres/IngresSCAgent/etc ;
+if $(NT)
+{
+INGTOOLSFILES = $(ING_TOOLS)$(DFS)files ;
+INGTOOLSWNTBIN  = $(ING_TOOLS)$(DFS)bin ;
+INGVDBA = $(ING_BUILD)$(DFS)vdba ;
+INGICEZIP = $(II_SYSTEM)\\icezip ;
+INGTOOLSBIN  = $(ING_SRC)$(DFS)bin ;
+INGTOOLSLIB  = $(ING_SRC)$(DFS)lib ;
+INGPREINSTALL = $(ING_ROOT)\\preinstall ;
+THINCLIENT    = $(ING_ROOT)\\thinclient ;
+INGTHINCLIENT = $(ING_ROOT)\\thinclient\\ingres ;
+INGTIMEZONEZIP = $(ING_SRC)$(DFS)gl$(DFS)glf$(DFS)tmgl ;
+}
+else
+{
+    INGTOOLSBIN	  = [ FDirName $(ING_TOOLS) bin ] ;
+    INGTOOLSLIB   = [ FDirName $(ING_TOOLS) lib ] ;
+    INGTOOLSFILES = [ FDirName $(ING_TOOLS) files ] ;
+}
+INGTIMESTAMP = $(ING_BUILDROOT) ;
+INGTOOLSMAN  = [ FDirName $(ING_TOOLS) man1 ] ;
+CONFDIR      = [ FDirName $(ING_SRC) tools port conf ] ;
+INGSIG       = [ FDirName $(ING_BUILD) sig ] ;
+INGSIGSTAR   = [ FDirName $(INGSIG) star ] ;
+INGSIGAUDIT  = [ FDirName $(INGSIG) auditmgr ] ;
+
+# Hybrid directories
+INGBINHB	= [ FDirName $(INGBIN) $(SUFHB) ] ;
+INGUTILHB	= [ FDirName $(INGUTIL) $(SUFHB) ] ;
+INGLIBHB	= [ FDirName $(INGLIB) $(SUFHB) ] ;
+INGTOOLSBINHB	= [ FDirName $(INGTOOLSBIN) $(SUFHB) ] ;
+INGTOOLSLIBHB	= [ FDirName $(INGTOOLSLIB) $(SUFHB) ] ;
+
+# Vec locations (obsolescent)
+
+VECSRC		= $(ING_SRC)/vec31/src ;
+VECUSR		= $(ING_SRC)/vec31/usr ;
+VECBIN		= $(VECUSR)/bin ;
+VECHDR		= $(VECSRC)/include ;
+VECINC		= $(VECUSR)/include ;
+VECLIB		= $(VECUSR)/lib ;
+VECUSRDATA	= $(VECUSR)/data ;
+INGVECDATA	= $(ING_BUILD)/vec/data ;
+
+#
+# Patchtools Directories
+#
+PTOOLSBIN	= [ FDirName $(PTOOLSROOT) bin ] ;
+PTOOLSLIB	= [ FDirName $(PTOOLSROOT) lib ] ;
+
+# Patch notes
+PNOTETMPLTS	= [ FDirName $(ING_ROOT) templates ] ;
+PRELEASE	= "Ingres 2006 Release 2" ;
+GENLEVEL	?= "" ;
+SPLEVEL		?= "" ;
+
+MSGDIRS = common/hdr/hdr front/abf/abf front/abf/abfimage
+	front/abf/abfrt front/abf/cautil front/abf/codegen
+	front/abf/copyapp front/abf/hdr front/abf/iaom front/abf/ilrf
+	front/abf/impexp front/abf/vq front/dict/dictutil
+	front/embed/dclgen front/embed/hdr front/frame/compfrm
+	front/frame/copyform front/frame/frame front/frame/hdr
+	front/frame/printform front/frame/runtime front/frame/tbacc
+	front/frame/valid front/frontcl/gt front/frontcl/hdr
+	front/frontcl/libqsys front/frontcl/mt front/frontcl/termdr
+	front/frontcl/vt front/graphics/hdr front/hdr/hdr
+	front/misc/copydb front/misc/hdr front/misc/ingcntrl
+	front/misc/ingmenu front/misc/tables front/misc/unloaddb
+	front/misc/xferdb front/qbf/qbf front/report/copyrep
+	front/report/hdr front/report/rbf front/report/rfvifred
+	front/report/sreport front/st/hdr front/tm/fstm front/tm/monitor
+	front/tm/qr front/utils/copyutil front/utils/oo
+	front/utils/tblutil front/utils/uf front/vifred/vifred 
+	w4gl/hdr/hdr ;
+
+#
+# Files that have to be hardwired.
+#
+EQDEF		= $(INGFILES)$(DFS)eqdef.h ;
+EQSQLCA		= eqsqlca.h ;
+EQSQLDA		= eqsqlda.h ;
+SLOWMNX		= $(INGMSG)$(DFS)slow_v4.mnx ;
+FASTMNX 	= $(INGMSG)$(DFS)fast_v4.mnx ;
+CIUTILDONE	= $(INGTIMESTAMP)/ciutil.done ;
+MKIDIRDONE	= $(INGTIMESTAMP)$(DFS)mkidir.done ;
+BINADDR		= binaddr.txt ;
+
+if $(VMS)
+{
+    FECATMSG	= fe_cat.msg ;
+}
+else
+{
+    FECATMSG	= fe.cat.msg ;
+}
+INTMSG	= i18n.msg ;
+BYACCPAR	= $(INGTOOLSLIB)$(DFS)byacc.par ;
+IYACCPAR	= $(INGTOOLSLIB)$(DFS)iyacc.par ;
+VERSREL		= version.rel ;
+
+#
+# MKIDIRDONE is marked NOUPDATE for Windows
+#
+if $(NT) 
+{ 
+NOUPDATE $(MKIDIRDONE) ; 
+NOUPDATE $(BINADDR) ;
+}
+
+
+
+
+# VDBA Libraries
+if $(NT)
+{
+CATO3CNTLIB	= ingr3cnt$(SUFLIB) ;
+CATO3SPNLIB	= ingr3spn$(SUFLIB) ;
+CATOLBOXLIB	= catolbox$(SUFLIB) ;
+DBADLG1LIB	= dbadlg1$(SUFLIB) ;
+INGRSWINLIB	= ingrswin$(SUFLIB) ;
+LBTREELPLIB	= lbtreelp$(SUFLIB) ;
+LIBEXTNCLIB	= libextnc$(SUFLIB) ;
+LIBGUIDSLIB	= libguids$(SUFLIB) ;
+LIBINGLLLIB	= libingll$(SUFLIB) ;
+LIBMONLIB	= libmon$(SUFLIB) ;
+LIBTREELIB	= libtree$(SUFLIB) ;
+LIBWCTRLLIB	= libwctrl$(SUFLIB) ;
+MAINLIBLIB	= mainlib$(SUFLIB) ;
+SVRIIALIB	= svriia$(SUFLIB) ;
+SVRSQLASLIB	= svrsqlas$(SUFLIB) ;
+TKANIMATLIB	= tkanimat$(SUFLIB) ;
+TKSPLASHLIB	= tksplash$(SUFLIB) ;
+
+# SHARED LIBRARIES
+SHCATO3CNTLIB	= ingr3cnt.$(SLSFX) ;
+SHCATO3SPN	= ingr3spn.$(SLSFX) ;
+SHCATOLBOXLIB	= catolbox.$(SLSFX) ;
+SHINGRSWINLIB	= ingrswin.$(SLSFX) ;
+SHLBTREELPLIB	= lbtreelp.$(SLSFX) ;
+SHSVRIIALIB	= svriia.$(SLSFX) ;
+SHSVRSQLASLIB	= svrsqlas.$(SLSFX) ;
+SHTKANIMATLIB	= tkanimat.$(SLSFX) ;
+SHTKSPLASHLIB	= tksplash.$(SLSFX) ;
+
+SHGETVERLIB 	= iigetver.$(SLSFX) ;
+
+#CHM Files
+SQLASSIS	= sqlassis.$(CHMSFX) ;
+}
+
+
+
+
+#
+##
+## INGRES libraries
+##
+#
+#$ING_SRC/lib
+#
+if $(NT)
+{
+ACHILLESLIB	= libachilles$(SUFLIB) ;
+ACHSCLIB	= libach$(SUFLIB) ;
+AMTSLIB		= libamts$(SUFLIB) ;
+BYACCLIB	= libbyacc$(SUFLIB) ;
+CALLTLIB	= libcallt$(SUFLIB) ;
+CPPLIB		= libcpp$(SUFLIB) ;
+CTSLIB		= libcts$(SUFLIB) ;
+GTARLIB 	= libgtar$(SUFLIB) ;
+LEXLIB		= liblex$(SUFLIB) ;
+LISTEXECLIB	= liblistexec$(SUFLIB) ;
+MTSLIB		= libmts$(SUFLIB) ;
+SEPLIB		= libsep$(SUFLIB) ;
+SEPCLLIB	= libsepcl$(SUFLIB) ;
+SEPDIFFLIB	= libsepdiff$(SUFLIB) ;
+YACCLIB		= libyacc$(SUFLIB) ;
+}
+else
+{
+ACHILLESLIB	= $(INGTOOLSLIB)$(DFS)libachilles$(SUFLIB) ;
+ACHILLESLIBHB	= $(INGTOOLSLIBHB)$(DFS)libachilles$(SUFLIB) ;
+ACHSCLIB	= $(INGTOOLSLIB)$(DFS)libach$(SUFLIB) ;
+ACHSCLIBHB	= $(INGTOOLSLIBHB)$(DFS)libach$(SUFLIB) ;
+AMTSLIB		= $(INGTOOLSLIB)/libamts$(SUFLIB) ;
+AMTSLIBHB	= $(INGTOOLSLIBHB)$(DFS)libamts$(SUFLIB) ;
+BYACCLIB	= $(INGTOOLSLIB)$(DFS)libbyacc$(SUFLIB) ;
+BYACCLIBHB	= $(INGTOOLSLIBHB)$(DFS)libbyacc$(SUFLIB) ;
+CALLTLIB	= $(INGTOOLSLIB)/libcallt$(SUFLIB) ;
+CALLTLIBHB	= $(INGTOOLSLIBHB)$(DFS)libcallt$(SUFLIB) ;
+CTSLIB		= $(INGTOOLSLIB)$(DFS)libcts$(SUFLIB) ;
+CTSLIBHB	= $(INGTOOLSLIBHB)$(DFS)libcts$(SUFLIB) ;
+GTARLIB 	= $(INGTOOLSLIB)/libgtar$(SUFLIB) ;
+GTARLIBHB 	= $(INGTOOLSLIBHB)$(DFS)libgtar$(SUFLIB) ;
+LISTEXECLIB	= $(INGTOOLSLIB)$(DFS)liblistexec$(SUFLIB) ;
+LISTEXECLIBHB	= $(INGTOOLSLIBHB)$(DFS)liblistexec$(SUFLIB) ;
+MTSLIB		= $(INGTOOLSLIB)$(DFS)libmts$(SUFLIB) ;
+MTSLIBHB	= $(INGTOOLSLIBHB)$(DFS)libmts$(SUFLIB) ;
+POOLLIB         = $(INGTOOLSLIB)$(DFS)libpool$(SUFLIB) ;
+POOLLIBHB       = $(INGTOOLSLIBHB)$(DFS)libpool$(SUFLIB) ;
+SEPLIB		= $(INGTOOLSLIB)$(DFS)libsep$(SUFLIB) ;
+SEPLIBHB	= $(INGTOOLSLIBHB)$(DFS)libsep$(SUFLIB) ;
+SEPCLLIB	= $(INGTOOLSLIB)$(DFS)libsepcl$(SUFLIB) ;
+SEPCLLIBHB	= $(INGTOOLSLIBHB)$(DFS)libsepcl$(SUFLIB) ;
+SEPDIFFLIB	= $(INGTOOLSLIB)$(DFS)libsepdiff$(SUFLIB) ;
+SEPDIFFLIBHB	= $(INGTOOLSLIBHB)$(DFS)libsepdiff$(SUFLIB) ;
+YACCLIB		= $(INGTOOLSLIB)$(DFS)libyacc$(SUFLIB) ;
+YACCLIBHB	= $(INGTOOLSLIBHB)$(DFS)libyacc$(SUFLIB) ;
+}
+
+#
+#$ING_BUILD/lib
+#
+if $(VMS)
+{
+    FRONTMAIN = $(INGLIB)frontmain.obj ;
+}
+
+if $(NT) 
+{
+COMPATLIB	= libcompat$(SUFLIB) ;
+COMPATLIBDATA   = libcompatdata$(SUFLIB) ;
+ABFIMAGELIB	= libabfimage$(SUFLIB) ;
+ABFLIB		= libabf$(SUFLIB) ;
+ABFRTLIB	= libabfrt$(SUFLIB) ;
+ABFRTLIBSUB	= libabfrtsub$(SUFLIB) ;
+ABFRTSLIB	= libabfrts$(SUFLIB) ;
+ACMLIB		= libacm$(SUFLIB) ;
+ADALIB		= libada$(SUFLIB) ;
+ADASQLIB	= libadasq$(SUFLIB) ;
+ADFLIB		= libadf$(SUFLIB) ;
+ADFLIBDATA	= libadfdata$(SUFLIB) ;
+AFELIB		= libafe$(SUFLIB) ;
+AIFLIB		= libaif$(SUFLIB) ;
+APILIB		= libapi$(SUFLIB) ;
+APACHELIB	= libapapi$(SUFLIB) ;
+AITLIB		= libait$(SUFLIB) ;
+ASCFLIB		= libascf$(SUFLIB) ;
+AWSFLIB		= libawsf$(SUFLIB) ;
+C_APILIB	= libicecapi$(SUFLIB) ;
+CAUTILLIB	= libcautil$(SUFLIB) ;
+CLIB		= libembedc$(SUFLIB) ;
+COBOLLIB	= libcobol$(SUFLIB) ;
+COBOLSQLIB	= libcobolsq$(SUFLIB) ;
+CODEGENLIB	= libcodegen$(SUFLIB) ;
+COMPFRMLIB	= libcompfrm$(SUFLIB) ;
+CONFIGLIB	= libconfig$(SUFLIB) ;
+COPYAPPLIB	= libcopyappl$(SUFLIB) ;
+COPYFORMLIB	= libcopyform$(SUFLIB) ;
+COPYGRLIB	= libcopygr$(SUFLIB) ;
+COPYLIB		= libcopy$(SUFLIB) ;
+COPYREPLIB	= libcopyrep$(SUFLIB) ;
+COPYUTILLIB	= libcopyutil$(SUFLIB) ;
+CSQLIB		= libcsq$(SUFLIB) ;
+CUFLIB		= libcuf$(SUFLIB) ;
+CUFLIBDATA	= libcufdata$(SUFLIB) ;
+DATALDRLIB	= libdataldr$(SUFLIB) ;
+DBUTILLIB	= libdbutil$(SUFLIB) ;
+DBUTILLIBDATA	= libdbutildata$(SUFLIB) ;
+DDFLIB		= libddf$(SUFLIB) ;
+DDFCOMLIB	= libddfcom$(SUFLIB) ;
+DDILIB		= libddi$(SUFLIB) ;
+DELETERLIB	= libdeleter$(SUFLIB) ;
+DELOBJLIB	= libdelobj$(SUFLIB) ;
+DIAGLIB		= libdiag$(SUFLIB) ;
+DICTUTILLIB	= libdictutil$(SUFLIB) ;
+DMFLIB		= libdmf$(SUFLIB) ;
+DMFLIBDATA	= libdmfdata$(SUFLIB) ;
+DPLIB		= libdp$(SUFLIB) ;
+DUVLIB		= libduv$(SUFLIB) ;
+DUSLIB		= libdus$(SUFLIB) ;
+EMBEDLIB	= libembed$(SUFLIB) ;
+EMBEDLIBDATA	= libembeddata$(SUFLIB) ;
+EQUELLIB	= libequel$(SUFLIB) ;
+FDLIB		= libfd$(SUFLIB) ;
+FEDSLIB		= libfeds$(SUFLIB) ;
+FGLIB		= libfg$(SUFLIB) ;
+FMTLIB		= libfmt$(SUFLIB) ;
+FORMINDEXLIB	= libformindex$(SUFLIB) ;
+FORTRANLIB	= libfortran$(SUFLIB) ;
+FORTRANSQLIB	= libfortransq$(SUFLIB) ;
+FRAMELIBDATA	= libframedata$(SUFLIB) ;
+FSTMLIB		= libfstm$(SUFLIB) ;
+FTLIB		= libft$(SUFLIB) ;
+GCCLIB		= libiigcc$(SUFLIB) ;
+GCDLIB		= libgcd$(SUFLIB) ;
+GCFLIB		= libgcf$(SUFLIB) ;
+GCFLIBDATA	= libgcfdata$(SUFLIB) ;
+GCNLIB		= libgcn$(SUFLIB) ;
+GCNEXTLIB	= libgcnext$(SUFLIB) ;
+GENERATELIB	= libgenerate$(SUFLIB) ;
+GNLIB		= libgn$(SUFLIB) ;
+GRAFLIB		=  ;
+GTLIB		= libgt$(SUFLIB) ;
+GWFLIB		= libgwf$(SUFLIB) ;
+GWFLIBDATA	= libgwfdata$(SUFLIB) ;
+IAOMLIB		= libiaom$(SUFLIB) ;
+ICECLILIB	= libiceclient$(SUFLIB) ;
+ICECONFLIB	= $(C_APILIB) ;
+ICELIB		= libice$(SUFLIB) ;
+ICELIBDATA	= libicedata$(SUFLIB) ;
+ICETRANSLATELIB = libicetrans$(SUFLIB) ;
+ILGLIB		= libilg$(SUFLIB) ;
+ILRFLIB		= libilrf$(SUFLIB) ;
+SIGIMPLIB	= libsigimp$(SUFLIB) ;
+IPMLIB		= libipm$(SUFLIB) ;
+IMPXMLLIB	= libimpxml$(SUFLIB) ;
+IMPEXPLIB	= libimpexp$(SUFLIB) ;
+INGCNTRLLIB	= libingcntrl$(SUFLIB) ;
+INGMENULIB	= libingmenu$(SUFLIB) ;
+INGRESLIB	= libingres$(SUFLIB) ;
+LIBINGRES	= $(INGRESLIB) ;
+INSTALLLIB	= libinstall$(SUFLIB) ;
+INTERPLIB	= libinterp$(SUFLIB) ;
+INTERPLIBDATA	= libinterpdata$(SUFLIB) ;
+IOILIB		= libioi$(SUFLIB) ;
+IPMLIB		= libipm$(SUFLIB) ;
+JDBCLIB		= libjdbc$(SUFLIB) ;
+JNILIB		= libjni$(SUFLIB) ;
+LIBQGCALIB	= libqgca$(SUFLIB) ;
+LIBQLIB		= libq$(SUFLIB) ;
+LIBQLIBDATA	= libqdata$(SUFLIB) ;
+LIBQSYSLIB	= libqsys$(SUFLIB) ;
+LIBQTXXALIB	= libqtxxa$(SUFLIB) ;
+LIBQXALIB	= libqxa$(SUFLIB) ;
+MICROSOFTLIB	= libmicrosoft$(SUFLIB) ;
+MONITORLIB	= libmonitor$(SUFLIB) ;
+MTLIB		= libmt$(SUFLIB) ;
+NETUTILLIB	= libnetutil$(SUFLIB) ;
+NETSCAPELIB	= libnsapi$(SUFLIB) ;
+NEWORDERLIB	= libplay_NewOrder$(SUFLIB) ;
+OOLIB		= liboo$(SUFLIB) ;
+OPFLIB		= libopf$(SUFLIB) ;
+OPFLIBDATA	= libopfdata$(SUFLIB) ;
+OSLLIB		= libosl$(SUFLIB) ;
+ODBCLIB		= libodbc$(SUFLIB) ;
+ODBCCFGLIB	= libodbccfg$(SUFLIB) ;
+ODBCMGRLIB	= libodbccli$(SUFLIB) ;
+ODBCDRIVERLIB	= libodbcdriver$(SUFLIB) ;
+PERFMONLIB	= libperfmon$(SUFLIB) ;
+PRINTFORMLIB	= libprintform$(SUFLIB) ;
+PSFLIB		= libpsf$(SUFLIB) ;
+PSFLIBDATA	= libpsfdata$(SUFLIB) ;
+PATCHLIB		= libpatch$(SUFLIB) ;
+QBFLIB		= libqbf$(SUFLIB) ;
+QEFLIB		= libqef$(SUFLIB) ;
+QEFLIBDATA	= libqefdata$(SUFLIB) ;
+QRLIB		= libqr$(SUFLIB) ;
+QSFLIB		= libqsf$(SUFLIB) ;
+QSFLIBDATA	= libqsfdata$(SUFLIB) ;
+QUELLIB		= libquel$(SUFLIB) ;
+RAATLIB		= libraat$(SUFLIB) ;
+RBFLIB		= librbf$(SUFLIB) ;
+RDFLIB		= librdf$(SUFLIB) ;
+RDFLIBDATA	= librdfdata$(SUFLIB) ;
+REPORTLIB	= libreport$(SUFLIB) ;
+REPCOMNLIB	= librepcomn$(SUFLIB) ;
+REPMGRLIB	= librepmgr$(SUFLIB) ;
+REPSERVLIB	= librepserv$(SUFLIB) ;
+RFVIFREDLIB	= librfvifred$(SUFLIB) ;
+RMCMDLIB	= librmcmd$(SUFLIB) ;
+RQFLIB		= librqf$(SUFLIB) ;
+RQFLIBDATA	= librqfdata$(SUFLIB) ;
+RUNGRAPHLIB	= librungraph$(SUFLIB) ;
+RUNSYSLIB	= librunsys$(SUFLIB) ;
+RUNTIMELIB	= libruntime$(SUFLIB) ;
+SAWLIB          = libsaw$(SUFLIB) ;
+SCFLIB		= libscf$(SUFLIB) ;
+SCFLIBDATA	= libscfdata$(SUFLIB) ;
+SDLIB		= libsd$(SUFLIB) ;
+SETUPLIB	= libsetup$(SUFLIB) ;
+SIGLIB		= libsig$(SUFLIB) ;
+SQLCALIB	= libsqlca$(SUFLIB) ;
+SQLLIB		= libsql$(SUFLIB) ;
+SREPORTLIB	= libsreport$(SUFLIB) ;
+STARVIEWLIB	= libstarview$(SUFLIB) ;
+SXFLIB		= libsxf$(SUFLIB) ;
+SXFLIBDATA	= libsxfdata$(SUFLIB) ;
+TBLUTILLIB	= libtblutil$(SUFLIB) ;
+TNGAPILIB	= libtngapi$(SUFLIB) ;
+TPFLIB		= libtpf$(SUFLIB) ;
+TPFLIBDATA	= libtpfdata$(SUFLIB) ;
+UDTLIB		= libudt$(SUFLIB) ;
+UFLIB		= libuf$(SUFLIB) ;
+UGLIB		= libug$(SUFLIB) ;
+UILIB		= libui$(SUFLIB) ;
+ULFLIB		= libulf$(SUFLIB) ;
+ULFLIBDATA	= libulfdata$(SUFLIB) ;
+UTILLIB		= libutil$(SUFLIB) ;
+VIFREDLIB	= libvifred$(SUFLIB) ;
+VIGRAPHLIB	= libvigraph$(SUFLIB) ;
+VQLIB		= libvq$(SUFLIB) ;
+VTLIB		= libvt$(SUFLIB) ;
+WVIEWLIB	= libwview$(SUFLIB) ;
+XFERDBLIB	= libxferdb$(SUFLIB) ;
+XTERMR4LIB	= libxtermr4$(SUFLIB) ;
+SPATLIB 	= libspat$(SUFLIB) ;
+}
+else
+{
+ABFIMAGELIB	= $(INGLIB)$(DFS)libabfimage$(SUFLIB) ;
+ABFIMAGELIBHB	= $(INGLIBHB)$(DFS)libabfimage$(SUFLIB) ;
+ABFLIB		= $(INGLIB)$(DFS)libabf$(SUFLIB) ;
+ABFLIBHB	= $(INGLIBHB)$(DFS)libabf$(SUFLIB) ;
+ABFRTLIB	= $(INGLIB)$(DFS)libabfrt$(SUFLIB) ;
+ABFRTLIBHB	= $(INGLIBHB)$(DFS)libabfrt$(SUFLIB) ;
+ABFRTSLIB	= $(INGLIB)$(DFS)libabfrts$(SUFLIB) ;
+ABFRTSLIBHB	= $(INGLIBHB)$(DFS)libabfrts$(SUFLIB) ;
+ACMLIB		= $(INGLIB)$(DFS)libacm$(SUFLIB) ;
+ACMLIBHB	= $(INGLIBHB)$(DFS)libacm$(SUFLIB) ;
+ADALIB		= $(INGLIB)$(DFS)libada$(SUFLIB) ;
+ADALIBHB	= $(INGLIBHB)$(DFS)libada$(SUFLIB) ;
+ADASQLIB	= $(INGLIB)$(DFS)libadasq$(SUFLIB) ;
+ADASQLIBHB	= $(INGLIBHB)$(DFS)libadasq$(SUFLIB) ;
+ADFLIB		= $(INGLIB)$(DFS)libadf$(SUFLIB) ;
+ADFLIBHB	= $(INGLIBHB)$(DFS)libadf$(SUFLIB) ;
+AFELIB		= $(INGLIB)$(DFS)libafe$(SUFLIB) ;
+AFELIBHB	= $(INGLIBHB)$(DFS)libafe$(SUFLIB) ;
+AIFLIB		= $(INGLIB)/libaif$(SUFLIB) ;
+AIFLIBHB	= $(INGLIBHB)$(DFS)libaif$(SUFLIB) ;
+APILIB		= $(INGLIB)$(DFS)libiiapi$(SUFLIB) ;
+APILIBHB	= $(INGLIBHB)$(DFS)libiiapi$(SUFLIB) ;
+APACHELIB	= $(INGLIB)$(DFS)libapapi$(SUFLIB) ;
+APACHELIBHB	= $(INGLIBHB)$(DFS)libapapi$(SUFLIB) ;
+AITLIB		= $(INGLIB)$(DFS)libait$(SUFLIB) ;
+AITLIBHB	= $(INGLIBHB)$(DFS)libait$(SUFLIB) ;
+ASCFLIB		= $(INGLIB)$(DFS)libascf$(SUFLIB) ;
+ASCFLIBHB	= $(INGLIBHB)$(DFS)libascf$(SUFLIB) ;
+AWSFLIB		= $(INGLIB)$(DFS)libawsf$(SUFLIB) ;
+AWSFLIBHB	= $(INGLIBHB)$(DFS)libawsf$(SUFLIB) ;
+BASICLIB	= $(INGLIB)$(DFS)libbasic$(SUFLIB) ;
+BASICSQLIB	= $(INGLIB)$(DFS)libbasicsq$(SUFLIB) ;
+C_APILIB	= $(INGLIB)$(DFS)liboiicecapi$(SUFLIB) ;
+C_APILIBHB	= $(INGLIBHB)$(DFS)liboiicecapi$(SUFLIB) ;
+CAUTILLIB	= $(INGLIB)$(DFS)libcautil$(SUFLIB) ;
+CAUTILLIBHB	= $(INGLIBHB)$(DFS)libcautil$(SUFLIB) ;
+CLIB		= $(INGLIB)$(DFS)libembedc$(SUFLIB) ;
+CLIBHB		= $(INGLIBHB)$(DFS)libembedc$(SUFLIB) ;
+COBOLLIB	= $(INGLIB)$(DFS)libcobol$(SUFLIB) ;
+COBOLLIBHB	= $(INGLIBHB)$(DFS)libcobol$(SUFLIB) ;
+COBOLSQLIB	= $(INGLIB)$(DFS)libcobolsq$(SUFLIB) ;
+COBOLSQLIBHB	= $(INGLIBHB)$(DFS)libcobolsq$(SUFLIB) ;
+CODEGENLIB	= $(INGLIB)$(DFS)libcodegen$(SUFLIB) ;
+CODEGENLIBHB	= $(INGLIBHB)$(DFS)libcodegen$(SUFLIB) ;
+COMPATLIB	= $(INGLIB)$(DFS)libcompat$(SUFLIB) ;
+COMPATLIBHB	= $(INGLIBHB)$(DFS)libcompat$(SUFLIB) ;
+COMPFRMLIB	= $(INGLIB)$(DFS)libcompfrm$(SUFLIB) ;
+COMPFRMLIBHB	= $(INGLIBHB)$(DFS)libcompfrm$(SUFLIB) ;
+CONFIGLIB	= $(INGLIB)$(DFS)libconfig$(SUFLIB) ;
+CONFIGLIBHB	= $(INGLIBHB)$(DFS)libconfig$(SUFLIB) ;
+COPYAPPLIB	= $(INGLIB)$(DFS)libcopyappl$(SUFLIB) ;
+COPYAPPLIBHB	= $(INGLIBHB)$(DFS)libcopyappl$(SUFLIB) ;
+COPYFORMLIB	= $(INGLIB)$(DFS)libcopyform$(SUFLIB) ;
+COPYFORMLIBHB	= $(INGLIBHB)$(DFS)libcopyform$(SUFLIB) ;
+COPYGRLIB	= $(INGLIB)/libcopygr$(SUFLIB) ;
+COPYGRLIBHB	= $(INGLIBHB)$(DFS)libcopygr$(SUFLIB) ;
+COPYLIB		= $(INGLIB)$(DFS)libq$(SUFLIB) ;
+COPYLIBHB	= $(INGLIBHB)$(DFS)libq$(SUFLIB) ;
+COPYREPLIB	= $(INGLIB)$(DFS)libcopyrep$(SUFLIB) ;
+COPYREPLIBHB	= $(INGLIBHB)$(DFS)libcopyrep$(SUFLIB) ;
+COPYUTILLIB	= $(INGLIB)$(DFS)libcopyutil$(SUFLIB) ;
+COPYUTILLIBHB	= $(INGLIBHB)$(DFS)libcopyutil$(SUFLIB) ;
+CSQLIB		= $(INGLIB)$(DFS)libcsq$(SUFLIB) ;
+CSQLIBHB	= $(INGLIBHB)$(DFS)libcsq$(SUFLIB) ;
+CUFLIB		= $(INGLIB)$(DFS)libcuf$(SUFLIB) ;
+CUFLIBHB	= $(INGLIBHB)$(DFS)libcuf$(SUFLIB) ;
+DATALDRLIB	= $(INGLIB)$(DFS)libdataldr$(SUFLIB) ;
+DATALDRLIBHB	= $(INGLIBHB)$(DFS)libdataldr$(SUFLIB) ;
+DBUTILLIB	= $(INGLIB)$(DFS)libdbutil$(SUFLIB) ;
+DBUTILLIBHB	= $(INGLIBHB)$(DFS)libdbutil$(SUFLIB) ;
+DDFLIB		= $(INGLIB)$(DFS)libddf$(SUFLIB) ;
+DDFLIBHB	= $(INGLIBHB)$(DFS)libddf$(SUFLIB) ;
+DDFCOMLIB       = $(INGLIB)$(DFS)libddf$(SUFLIB) ;
+DDFCOMLIBHB     = $(INGLIBHB)$(DFS)libddf$(SUFLIB) ;
+DDILIB		= $(INGLIB)$(DFS)libddi$(SUFLIB) ;
+DDILIBHB	= $(INGLIBHB)$(DFS)libddi$(SUFLIB) ;
+DELETERLIB	= $(INGLIB)$(DFS)libdeleter$(SUFLIB) ;
+DELETERLIBHB	= $(INGLIBHB)$(DFS)libdeleter$(SUFLIB) ;
+DELOBJLIB	= $(INGLIB)$(DFS)libdelobj$(SUFLIB) ;
+DELOBJLIBHB	= $(INGLIBHB)$(DFS)libdelobj$(SUFLIB) ;
+DIAGLIB		= $(INGLIB)$(DFS)libdiag$(SUFLIB) ;
+DIAGLIBHB	= $(INGLIBHB)$(DFS)libdiag$(SUFLIB) ;
+DICTUTILLIB	= $(INGLIB)$(DFS)libdictutil$(SUFLIB) ;
+DICTUTILLIBHB	= $(INGLIBHB)$(DFS)libdictutil$(SUFLIB) ;
+DMFLIB		= $(INGLIB)$(DFS)libdmf$(SUFLIB) ;
+DMFLIBHB	= $(INGLIBHB)$(DFS)libdmf$(SUFLIB) ;
+EQUELLIB	= $(INGLIB)$(DFS)libequel$(SUFLIB) ;
+EQUELLIBHB	= $(INGLIBHB)$(DFS)libequel$(SUFLIB) ;
+FDLIB		= $(INGLIB)$(DFS)libfd$(SUFLIB) ;
+FDLIBHB		= $(INGLIBHB)$(DFS)libfd$(SUFLIB) ;
+FEDSLIB		= $(INGLIB)$(DFS)libfeds$(SUFLIB) ;
+FEDSLIBHB	= $(INGLIBHB)$(DFS)libfeds$(SUFLIB) ;
+FGLIB		= $(INGLIB)$(DFS)libfg$(SUFLIB) ;
+FGLIBHB		= $(INGLIBHB)$(DFS)libfg$(SUFLIB) ;
+FMTLIB		= $(INGLIB)$(DFS)libfmt$(SUFLIB) ;
+FMTLIBHB	= $(INGLIBHB)$(DFS)libfmt$(SUFLIB) ;
+FORMINDEXLIB	= $(INGLIB)$(DFS)libformindex$(SUFLIB) ;
+FORMINDEXLIBHB	= $(INGLIBHB)$(DFS)libformindex$(SUFLIB) ;
+FORTRANLIB	= $(INGLIB)$(DFS)libfortran$(SUFLIB) ;
+FORTRANLIBHB	= $(INGLIBHB)$(DFS)libfortran$(SUFLIB) ;
+FORTRANSQLIB	= $(INGLIB)$(DFS)libfortransq$(SUFLIB) ;
+FORTRANSQLIBHB	= $(INGLIBHB)$(DFS)libfortransq$(SUFLIB) ;
+FSTMLIB		= $(INGLIB)$(DFS)libfstm$(SUFLIB) ;
+FSTMLIBHB	= $(INGLIBHB)$(DFS)libfstm$(SUFLIB) ;
+FTLIB		= $(INGLIB)$(DFS)libft$(SUFLIB) ;
+FTLIBHB		= $(INGLIBHB)$(DFS)libft$(SUFLIB) ;
+GCCLIB		= $(INGLIB)$(DFS)libiigcc$(SUFLIB) ;
+GCCLIBHB	= $(INGLIBHB)$(DFS)libiigcc$(SUFLIB) ;
+GCDLIB		= $(INGLIB)$(DFS)libgcd$(SUFLIB) ;
+GCDLIBHB	= $(INGLIBHB)$(DFS)libgcd$(SUFLIB) ;
+GCFLIB		= $(INGLIB)$(DFS)libgcf$(SUFLIB) ;
+GCFLIBHB	= $(INGLIBHB)$(DFS)libgcf$(SUFLIB) ;
+GCNLIB		= $(INGLIB)$(DFS)libgcn$(SUFLIB) ;
+GCNLIBHB	= $(INGLIBHB)$(DFS)libgcn$(SUFLIB) ;
+GCNEXTLIB	= $(INGLIB)/libgcnext$(SUFLIB) ;
+GCNEXTLIBHB	= $(INGLIBHB)$(DFS)libgcnext$(SUFLIB) ;
+GENERATELIB	= $(INGLIB)$(DFS)libgenerate$(SUFLIB) ;
+GENERATELIBHB	= $(INGLIBHB)$(DFS)libgenerate$(SUFLIB) ;
+GINSTALLLIB	= $(INGLIB)$(DFS)libginstall$(SUFLIB) ;
+GNLIB		= $(INGLIB)$(DFS)libgn$(SUFLIB) ;
+GNLIBHB		= $(INGLIBHB)$(DFS)libgn$(SUFLIB) ;
+GRAFLIB		= $(INGLIB)$(DFS)libgraf$(SUFLIB) ;
+GRAFLIBHB	= $(INGLIBHB)$(DFS)libgraf$(SUFLIB) ;
+GTLIB		= $(INGLIB)$(DFS)libgt$(SUFLIB) ;
+GTLIBHB		= $(INGLIBHB)$(DFS)libgt$(SUFLIB) ;
+GWFLIB		= $(INGLIB)$(DFS)libgwf$(SUFLIB) ;
+GWFLIBHB	= $(INGLIBHB)$(DFS)libgwf$(SUFLIB) ;
+GWRMSLIB	= $(INGLIB)$(DFS)libgwrms$(SUFLIB) ;
+IAOMLIB		= $(INGLIB)$(DFS)libiaom$(SUFLIB) ;
+IAOMLIBHB	= $(INGLIBHB)$(DFS)libiaom$(SUFLIB) ;
+ICECLILIB	= $(INGLIB)$(DFS)libiceclient$(SUFLIB) ;
+ICECLILIBHB	= $(INGLIBHB)$(DFS)libiceclient$(SUFLIB) ;
+ICECONFLIB	= $(C_APILIB) ;
+ICECONFLIBHB	= $(C_APILIBHB) ;
+ARMERGELIB	= $(INGLIB)$(DFS)iimerge$(SUFLIB) ;
+ARMERGELIBHB	= $(INGLIBHB)$(DFS)iimerge$(SUFLIB) ;
+LIBARMERGE	= $(ARMERGELIB) ;
+LIBARMERGEHB	= $(ARMERGELIBHB) ;
+ILGLIB		= $(INGLIB)$(DFS)libilg$(SUFLIB) ;
+ILGLIBHB	= $(INGLIBHB)$(DFS)libilg$(SUFLIB) ;
+ILRFLIB		= $(INGLIB)$(DFS)libilrf$(SUFLIB) ;
+ILRFLIBHB	= $(INGLIBHB)$(DFS)libilrf$(SUFLIB) ;
+SIGIMPLIB	= $(INGLIB)/libsigimp$(SUFLIB) ;
+SIGIMPLIBHB	= $(INGLIBHB)$(DFS)libsigimp$(SUFLIB) ;
+IMPXMLLIB	= $(INGLIB)$(DFS)libimpxml$(SUFLIB) ;
+IMPXMLLIBHB	= $(INGLIBHB)$(DFS)libimpxml$(SUFLIB) ;
+IPMLIB		= $(INGLIB)/libipm$(SUFLIB) ;
+IPMLIBHB	= $(INGLIBHB)$(DFS)libipm$(SUFLIB) ;
+IMPEXPLIB	= $(INGLIB)$(DFS)libimpexp$(SUFLIB) ;
+IMPEXPLIBHB	= $(INGLIBHB)$(DFS)libimpexp$(SUFLIB) ;
+INGCNTRLLIB	= $(INGLIB)$(DFS)libingcntrl$(SUFLIB) ;
+INGCNTRLLIBHB	= $(INGLIBHB)$(DFS)libingcntrl$(SUFLIB) ;
+INGMENULIB	= $(INGLIB)$(DFS)libingmenu$(SUFLIB) ;
+INGMENULIBHB	= $(INGLIBHB)$(DFS)libingmenu$(SUFLIB) ;
+INGRESLIB	= $(INGLIB)$(DFS)libingres$(SUFLIB) ;
+INGRESLIBHB	= $(INGLIBHB)$(DFS)libingres$(SUFLIB) ;
+LIBINGRES	= $(INGRESLIB) ;
+LIBINGRESHB	= $(INGRESLIBHB) ;
+INSTALLLIB	= $(INGLIB)$(DFS)libinstall$(SUFLIB) ;
+INSTALLLIBHB	= $(INGLIBHB)$(DFS)libinstall$(SUFLIB) ;
+INTERPLIB	= $(INGLIB)$(DFS)libinterp$(SUFLIB) ;
+INTERPLIBHB	= $(INGLIBHB)$(DFS)libinterp$(SUFLIB) ;
+ICETRANSLATELIB = $(INGLIB)$(DFS)libicetrans$(SUFLIB) ;
+ICETRANSLATELIBHB = $(INGLIBHB)$(DFS)libicetrans$(SUFLIB) ;
+IOILIB		= $(INGLIB)$(DFS)libioi$(SUFLIB) ;
+IOILIBHB	= $(INGLIBHB)$(DFS)libioi$(SUFLIB) ;
+IPMLIB		= $(INGLIB)$(DFS)libipm$(SUFLIB) ;
+IPMLIBHB	= $(INGLIBHB)$(DFS)libipm$(SUFLIB) ;
+JDBCLIB		= $(INGLIB)$(DFS)libjdbc$(SUFLIB) ;
+JDBCLIBHB	= $(INGLIBHB)$(DFS)libjdbc$(SUFLIB) ;
+JNILIB		= $(INGLIB)/libjni$(SUFLIB) ;
+JNILIBHB	= $(INGLIBHB)$(DFS)libjni$(SUFLIB) ;
+LIBQGCALIB	= $(INGLIB)$(DFS)libqgca$(SUFLIB) ;
+LIBQGCALIBHB	= $(INGLIBHB)$(DFS)libqgca$(SUFLIB) ;
+LIBQLIB		= $(INGLIB)$(DFS)libq$(SUFLIB) ;
+LIBQLIBHB	= $(INGLIBHB)$(DFS)libq$(SUFLIB) ;
+LIBQSYSLIB	= $(INGLIB)$(DFS)libqsys$(SUFLIB) ;
+LIBQSYSLIBHB	= $(INGLIBHB)$(DFS)libqsys$(SUFLIB) ;
+LIBQTXXALIB	= $(INGLIB)$(DFS)libiitux$(SUFLIB) ;
+LIBQTXXALIBHB	= $(INGLIBHB)$(DFS)libiitux$(SUFLIB) ;
+LIBQXALIB	= $(INGLIB)$(DFS)libqxa$(SUFLIB) ;
+LIBQXALIBHB	= $(INGLIBHB)$(DFS)libqxa$(SUFLIB) ;
+MONITORLIB	= $(INGLIB)$(DFS)libmonitor$(SUFLIB) ;
+MONITORLIBHB	= $(INGLIBHB)$(DFS)libmonitor$(SUFLIB) ;
+MTLIB		= $(INGLIB)$(DFS)libmt$(SUFLIB) ;
+MTLIBHB		= $(INGLIBHB)$(DFS)libmt$(SUFLIB) ;
+NETUTILLIB	= $(INGLIB)$(DFS)libnetutil$(SUFLIB) ;
+NETUTILLIBHB	= $(INGLIBHB)$(DFS)libnetutil$(SUFLIB) ;
+NETSCAPELIB	= $(INGLIB)/libnsapi$(SUFLIB) ;
+NETSCAPELIBHB	= $(INGLIBHB)$(DFS)libnsapi$(SUFLIB) ;
+NEWORDERLIB	= $(INGLIB)/libplay_NewOrder$(SUFLIB) ;
+NEWORDERLIBHB	= $(INGLIBHB)$(DFS)libplay_NewOrder$(SUFLIB) ;
+OOLIB		= $(INGLIB)$(DFS)liboo$(SUFLIB) ;
+OOLIBHB		= $(INGLIBHB)$(DFS)liboo$(SUFLIB) ;
+OPFLIB		= $(INGLIB)$(DFS)libopf$(SUFLIB) ;
+OPFLIBHB	= $(INGLIBHB)$(DFS)libopf$(SUFLIB) ;
+OSLLIB		= $(INGLIB)$(DFS)libosl$(SUFLIB) ;
+OSLLIBHB	= $(INGLIBHB)$(DFS)libosl$(SUFLIB) ;
+ODBCDRIVERLIB	= $(INGLIB)$(DFS)libodbcdriver$(SUFLIB) ;
+ODBCDRIVERLIBHB	= $(INGLIBHB)$(DFS)libodbcdriver$(SUFLIB) ;
+ODBCCFGLIB	= $(INGLIB)$(DFS)libodbccfg$(SUFLIB) ;
+ODBCCFGLIBHB	= $(INGLIBHB)$(DFS)libodbccfg$(SUFLIB) ;
+ODBCMGRLIB	= $(INGLIB)$(DFS)libodbccli$(SUFLIB) ;
+ODBCMGRLIBHB	= $(INGLIBHB)$(DFS)libodbccli$(SUFLIB) ;
+PASCALLIB	= $(INGLIB)$(DFS)libpascal$(SUFLIB) ;
+PASCALSQLIB	= $(INGLIB)$(DFS)libpascalsq$(SUFLIB) ;
+PRINTFORMLIB	= $(INGLIB)$(DFS)libprintform$(SUFLIB) ;
+PRINTFORMLIBHB	= $(INGLIBHB)$(DFS)libprintform$(SUFLIB) ;
+PSFLIB		= $(INGLIB)$(DFS)libpsf$(SUFLIB) ;
+PSFLIBHB	= $(INGLIBHB)$(DFS)libpsf$(SUFLIB) ;
+QBFLIB		= $(INGLIB)$(DFS)libqbf$(SUFLIB) ;
+QBFLIBHB	= $(INGLIBHB)$(DFS)libqbf$(SUFLIB) ;
+QEFLIB		= $(INGLIB)$(DFS)libqef$(SUFLIB) ;
+QEFLIBHB	= $(INGLIBHB)$(DFS)libqef$(SUFLIB) ;
+QRLIB		= $(INGLIB)$(DFS)libqr$(SUFLIB) ;
+QRLIBHB		= $(INGLIBHB)$(DFS)libqr$(SUFLIB) ;
+QSFLIB		= $(INGLIB)$(DFS)libqsf$(SUFLIB) ;
+QSFLIBHB	= $(INGLIBHB)$(DFS)libqsf$(SUFLIB) ;
+QUELLIB		= $(INGLIB)$(DFS)libquel$(SUFLIB) ;
+QUELLIBHB	= $(INGLIBHB)$(DFS)libquel$(SUFLIB) ;
+RAATLIB		= $(INGLIB)$(DFS)libraat$(SUFLIB) ;
+RAATLIBHB	= $(INGLIBHB)$(DFS)libraat$(SUFLIB) ;
+RBFLIB		= $(INGLIB)$(DFS)librbf$(SUFLIB) ;
+RBFLIBHB	= $(INGLIBHB)$(DFS)librbf$(SUFLIB) ;
+RDFLIB		= $(INGLIB)$(DFS)librdf$(SUFLIB) ;
+RDFLIBHB	= $(INGLIBHB)$(DFS)librdf$(SUFLIB) ;
+REPORTLIB	= $(INGLIB)$(DFS)libreport$(SUFLIB) ;
+REPORTLIBHB	= $(INGLIBHB)$(DFS)libreport$(SUFLIB) ;
+REPCOMNLIB	= $(INGLIB)$(DFS)librepcomn$(SUFLIB) ;
+REPCOMNLIBHB	= $(INGLIBHB)$(DFS)librepcomn$(SUFLIB) ;
+REPMGRLIB	= $(INGLIB)$(DFS)librepmgr$(SUFLIB) ;
+REPMGRLIBHB	= $(INGLIBHB)$(DFS)librepmgr$(SUFLIB) ;
+REPSERVLIB	= $(INGLIB)$(DFS)librepserv$(SUFLIB) ;
+REPSERVLIBHB	= $(INGLIBHB)$(DFS)librepserv$(SUFLIB) ;
+RFVIFREDLIB	= $(INGLIB)$(DFS)librfvifred$(SUFLIB) ;
+RFVIFREDLIBHB	= $(INGLIBHB)$(DFS)librfvifred$(SUFLIB) ;
+RFAPILIB	= $(INGLIB)$(DFS)librfapi$(SUFLIB) ;
+RFAPILIBHB	= $(INGLIBHB)$(DFS)librfapi$(SUFLIB) ;
+RMCMDLIB	= $(INGLIB)$(DFS)librmcmd$(SUFLIB) ;
+RMCMDLIBHB	= $(INGLIBHB)$(DFS)librmcmd$(SUFLIB) ;
+RPMINSTALLLIB	= $(INGLIB)$(DFS)librpminstall$(SUFLIB) ;
+RQFLIB		= $(INGLIB)$(DFS)librqf$(SUFLIB) ;
+RQFLIBHB	= $(INGLIBHB)$(DFS)librqf$(SUFLIB) ;
+RUNGRAPHLIB	= $(INGLIB)/librungraph$(SUFLIB) ;
+RUNGRAPHLIBHB	= $(INGLIBHB)$(DFS)librungraph$(SUFLIB) ;
+RUNSYSLIB	= $(INGLIB)$(DFS)librunsys$(SUFLIB) ;
+RUNSYSLIBHB	= $(INGLIBHB)$(DFS)librunsys$(SUFLIB) ;
+RUNTIMELIB	= $(INGLIB)$(DFS)libruntime$(SUFLIB) ;
+RUNTIMELIBHB	= $(INGLIBHB)$(DFS)libruntime$(SUFLIB) ;
+SAWLIB          = $(INGLIB)$(DFS)libsaw.a ;
+SAWLIBHB	= $(INGLIBHB)$(DFS)libsaw.a ;
+SCFLIB		= $(INGLIB)$(DFS)libscf$(SUFLIB) ;
+SCFLIBHB	= $(INGLIBHB)$(DFS)libscf$(SUFLIB) ;
+SETUPLIB	= $(INGLIB)$(DFS)libsetup$(SUFLIB) ;
+SETUPLIBHB	= $(INGLIBHB)$(DFS)libsqlca$(SUFLIB) ;
+SPATLIB		= $(INGLIB)$(DFS)libspat$(SUFLIB) ;
+SPATLIBHB	= $(INGLIBHB)$(DFS)libspat$(SUFLIB) ;
+SQLCALIB	= $(INGLIB)$(DFS)libsqlca$(SUFLIB) ;
+SQLCALIBHB	= $(INGLIBHB)$(DFS)libsqlca$(SUFLIB) ;
+SQLLIB		= $(INGLIB)$(DFS)libsql$(SUFLIB) ;
+SQLLIBHB	= $(INGLIBHB)$(DFS)libsql$(SUFLIB) ;
+SREPORTLIB	= $(INGLIB)$(DFS)libsreport$(SUFLIB) ;
+SREPORTLIBHB	= $(INGLIBHB)$(DFS)libsreport$(SUFLIB) ;
+STARVIEWLIB	= $(INGLIB)$(DFS)libstarview$(SUFLIB) ;
+STARVIEWLIBHB	= $(INGLIBHB)$(DFS)libstarview$(SUFLIB) ;
+SXFLIB		= $(INGLIB)$(DFS)libsxf$(SUFLIB) ;
+SXFLIBHB	= $(INGLIBHB)$(DFS)libsxf$(SUFLIB) ;
+TBLUTILLIB	= $(INGLIB)$(DFS)libtblutil$(SUFLIB) ;
+TBLUTILLIBHB	= $(INGLIBHB)$(DFS)libtblutil$(SUFLIB) ;
+TNGAPILIB	= $(INGLIB)$(DFS)libtngapi$(SUFLIB) ;
+TNGAPILIBHB	= $(INGLIBHB)$(DFS)libtngapi$(SUFLIB) ;
+TPFLIB		= $(INGLIB)$(DFS)libtpf$(SUFLIB) ;
+TPFLIBHB	= $(INGLIBHB)$(DFS)libtpf$(SUFLIB) ;
+UDTLIB		= $(INGLIB)$(DFS)libudt$(SUFLIB) ;
+UDTLIBHB	= $(INGLIBHB)$(DFS)libudt$(SUFLIB) ;
+UFLIB		= $(INGLIB)$(DFS)libuf$(SUFLIB) ;
+UFLIBHB		= $(INGLIBHB)$(DFS)libuf$(SUFLIB) ;
+UGLIB		= $(INGLIB)$(DFS)libug$(SUFLIB) ;
+UGLIBHB		= $(INGLIBHB)$(DFS)libug$(SUFLIB) ;
+UILIB		= $(INGLIB)$(DFS)libui$(SUFLIB) ;
+UILIBHB		= $(INGLIBHB)$(DFS)libui$(SUFLIB) ;
+ULFLIB		= $(INGLIB)$(DFS)libulf$(SUFLIB) ;
+ULFLIBHB	= $(INGLIBHB)$(DFS)libulf$(SUFLIB) ;
+UTILLIB		= $(INGLIB)$(DFS)libutil$(SUFLIB) ;
+UTILLIBHB	= $(INGLIBHB)$(DFS)libutil$(SUFLIB) ;
+VIFREDLIB	= $(INGLIB)$(DFS)libvifred$(SUFLIB) ;
+VIFREDLIBHB	= $(INGLIBHB)$(DFS)libvifred$(SUFLIB) ;
+VIGRAPHLIB	= $(INGLIB)/libvigraph$(SUFLIB) ;
+VIGRAPHLIBHB	= $(INGLIBHB)$(DFS)libvigraph$(SUFLIB) ;
+VQLIB		= $(INGLIB)$(DFS)libvq$(SUFLIB) ;
+VQLIBHB		= $(INGLIBHB)$(DFS)libvq$(SUFLIB) ;
+VTLIB		= $(INGLIB)$(DFS)libvt$(SUFLIB) ;
+VTLIBHB		= $(INGLIBHB)$(DFS)libvt$(SUFLIB) ;
+WVIEWLIB	= $(INGLIB)/libwview$(SUFLIB) ;
+WVIEWLIBHB	= $(INGLIBHB)$(DFS)libwview$(SUFLIB) ;
+XFERDBLIB	= $(INGLIB)$(DFS)libxferdb$(SUFLIB) ;
+XFERDBLIBHB	= $(INGLIBHB)$(DFS)libxferdb$(SUFLIB) ;
+XTERMR4LIB	= $(INGLIB)/libxtermr4$(SUFLIB) ;
+XTERMR4LIBHB	= $(INGLIBHB)$(DFS)libxtermr4$(SUFLIB) ;
+
+ARDEMOUDTLIB    = libdemoudt.a ;
+ARSPATLIB       = libspat.a    ;
+}
+#
+# Patchtools Libraries
+#
+# The Prefix PT_ has beed reserved for All Patch tools libraries.
+
+PT_UTILITYLIB      = libptutility$(SUFLIB) ;
+PT_DETELIB         = libptdete$(SUFLIB) ;
+PT_FIXESLIB        = libptfixes$(SUFLIB) ;
+
+#
+# Server Shared libraries
+#
+if $(NT)
+{
+SHICELIB	= iilibice.$(SLSFX) ;
+SHICE		= ice.$(SLSFX) ;
+SHICELIBDATA	= iilibicedata.$(SLSFX) ;	
+SHICEAPILIB	= iiiceapi.$(SLSFX) ;
+SHICEAPILIBDATA	= iiiceapidata.$(SLSFX) ;
+SHADFLIB   	= iilibadf.$(SLSFX) ;
+SHADFLIBDATA   	= iilibadfdata.$(SLSFX) ;
+SHDMFLIB   	= iilibdmf.$(SLSFX) ;
+SHDMFLIBDATA   	= iilibdmfdata.$(SLSFX) ;
+SHSCFLIB        = iilibscf.$(SLSFX) ;
+SHSCFLIBDATA    = iilibscfdata.$(SLSFX) ;
+SHQEFLIB	= iilibqef.$(SLSFX) ;
+SHQEFLIBDATA	= iilibqefdata.$(SLSFX) ;
+SHPSFLIB        = iilibpsf.$(SLSFX) ;
+SHPSFLIBDATA    = iilibpsfdata.$(SLSFX) ;
+SHOPFLIB        = iilibopf.$(SLSFX) ;
+SHOPFLIBDATA    = iilibopfdata.$(SLSFX) ;
+SHRDFLIB        = iilibrdf.$(SLSFX) ;
+SHRDFLIBDATA    = iilibrdfdata.$(SLSFX) ;
+SHQSFLIB        = iilibqsf.$(SLSFX) ;
+SHQSFLIBDATA    = iilibqsfdata.$(SLSFX) ;
+SHTPFLIB        = iilibtpf.$(SLSFX) ;
+SHTPFLIBDATA    = iilibtpfdata.$(SLSFX) ;
+SHRQFLIB        = iilibrqf.$(SLSFX) ;
+SHRQFLIBDATA    = iilibrqfdata.$(SLSFX) ;
+SHGCFLIB        = iilibgcf.$(SLSFX) ;
+SHGCFLIBDATA    = iilibgcfdata.$(SLSFX) ;
+SHGWFLIB        = iilibgwf.$(SLSFX) ;
+SHGWFLIBDATA    = iilibgwfdata.$(SLSFX) ;
+SHSXFLIB        = iilibsxf.$(SLSFX) ;
+SHSXFLIBDATA    = iilibsxfdata.$(SLSFX) ;
+SHCUFLIB        = iilibcuf.$(SLSFX) ;
+SHCUFLIBDATA    = iilibcufdata.$(SLSFX) ;
+SHDBUTILLIB     = iilibdbutil.$(SLSFX) ;
+SHDBUTILLIBDATA = iilibdbutildata.$(SLSFX) ;
+SHULFLIB        = iilibulf.$(SLSFX) ;
+SHULFLIBDATA    = iilibulfdata.$(SLSFX) ;
+SHDDFLIB	= iilibddf.$(SLSFX) ;
+SHDDFLIBDATA	= iilibddfdata.$(SLSFX) ;
+SHDDILIB	= oiddi.$(SLSFX) ;
+SHDDILIBDATA	= oiddidata.$(SLSFX) ;
+
+#
+#import libraries
+#
+IMPICELIB	= iilibice$(SUFLIB) ;
+IMPICELIBDATA	= iilibicedata$(SUFLIB) ;
+IMPICEAPILIB	= iiiceapi$(SUFLIB) ;
+IMPICEAPILIBDATA = iiiceapidata$(SUFLIB) ;
+IMPADFLIB	= iilibadf$(SUFLIB) ;
+IMPADFLIBDATA	= iilibadfdata$(SUFLIB) ;
+IMPDMFLIB	= iilibdmf$(SUFLIB) ;
+IMPDMFLIBDATA	= iilibdmfdata$(SUFLIB) ;
+IMPSCFLIB	= iilibscf$(SUFLIB) ;
+IMPSCFLIBDATA	= iilibscfdata$(SUFLIB) ;
+IMPQEFLIB	= iilibqef$(SUFLIB) ;
+IMPQEFLIBDATA	= iilibqefdata$(SUFLIB) ;
+IMPPSFLIB	= iilibpsf$(SUFLIB) ;
+IMPPSFLIBDATA	= iilibpsfdata$(SUFLIB) ;
+IMPOPFLIB	= iilibopf$(SUFLIB) ;
+IMPOPFLIBDATA	= iilibopfdata$(SUFLIB) ;
+IMPRDFLIB	= iilibrdf$(SUFLIB) ;
+IMPRDFLIBDATA	= iilibrdfdata$(SUFLIB) ;
+IMPQSFLIB	= iilibqsf$(SUFLIB) ;
+IMPQSFLIBDATA	= iilibqsfdata$(SUFLIB) ;
+IMPTPFLIB	= iilibtpf$(SUFLIB) ;
+IMPTPFLIBDATA	= iilibtpfdata$(SUFLIB) ;
+IMPRQFLIB	= iilibrqf$(SUFLIB) ;
+IMPRQFLIBDATA	= iilibrqfdata$(SUFLIB) ;
+IMPGCFLIB	= iilibgcf$(SUFLIB) ;
+IMPGCFLIBDATA	= iilibgcfdata$(SUFLIB) ;
+IMPGWFLIB	= iilibgwf$(SUFLIB) ;
+IMPGWFLIBDATA	= iilibgwfdata$(SUFLIB) ;
+IMPSXFLIB	= iilibsxf$(SUFLIB) ;
+IMPSXFLIBDATA	= iilibsxfdata$(SUFLIB) ;
+IMPCUFLIB	= iilibcuf$(SUFLIB) ;
+IMPCUFLIBDATA	= iilibcufdata$(SUFLIB) ;
+IMPDBUTILLIB	= iilibdbutil$(SUFLIB) ;
+IMPDBUTILLIBDATA	= iilibdbutildata$(SUFLIB) ;
+IMPULFLIB	= iilibulf$(SUFLIB) ;
+IMPULFLIBDATA	= iilibulfdata$(SUFLIB) ;
+IMPDDFLIB	= iilibddf$(SUFLIB) ;
+IMPDDFLIBDATA	= iilibddfdata$(SUFLIB) ;
+IMPDDILIB	= oiddi$(SUFLIB) ;
+IMPDDILIBDATA	= oiddidata$(SUFLIB) ;
+#
+#LOOP BACK
+#
+IMPICELIBDATAL	= $(ICELIBDATA) ;
+IMPADFLIBDATAL  = $(ADFLIBDATA) ;
+IMPDMFLIBDATAL 	= $(DMFLIBDATA) ;
+IMPSCFLIBDATAL  = $(SCFLIBDATA) ;
+IMPQEFLIBDATAL	= $(QEFLIBDATA) ;
+IMPPSFLIBDATAL  = $(PSFLIBDATA) ;
+IMPOPFLIBDATAL  = $(OPFLIBDATA) ;
+IMPRDFLIBDATAL  = $(RDFLIBDATA) ;
+IMPQSFLIBDATAL  = $(QSFLIBDATA) ;
+IMPTPFLIBDATAL  = $(TPFLIBDATA) ;
+IMPRQFLIBDATAL  = $(RQFLIBDATA) ;
+IMPGCFLIBDATAL  = $(GCFLIBDATA) ;
+IMPGWFLIBDATAL  = $(GWFLIBDATA) ;
+IMPSXFLIBDATAL  = $(SXFLIBDATA) ;
+IMPCUFLIBDATAL  = $(CUFLIBDATA) ;
+IMPDBUTILLIBDATAL = $(DBUTILLIBDATA) ;
+IMPULFLIBDATAL  = $(ULFLIBDATA) ;
+
+
+
+#
+#enterprise_dll shared libs
+#
+SHDBMSMM	= dbmsmm.$(SLSFX) ;
+SHDBMSNETMM	= dbmsnetmm.$(SLSFX) ;
+SHNETMM		= netmm.$(SLSFX) ;
+SHICEMM		= icemm.$(SLSFX) ;
+SHREPMM		= repmm.$(SLSFX) ;
+SHJDBCMM	= jdbcmm.$(SLSFX) ;
+SHVISIONMM	= visionmm.$(SLSFX) ;
+SHSTARMM	= starmm.$(SLSFX) ;
+SHODBCMM	= odbcmm.$(SLSFX) ;
+SHORMM		= ormm.$(SLSFX) ;
+SHSETUPMM	= setupmm.$(SLSFX) ;
+SHDOCMM		= docmm.$(SLSFX) ;
+SHDOTNETDPMM	= dotnetdpmm.$(SLSFX) ;
+SHESQLCMM	= esqlcmm.$(SLSFX) ;
+SHVDBAMM	= vdbamm.$(SLSFX) ;
+
+IMPDBMSMM	= dbmsmm$(SUFLIB) ;
+IMPDBMSNETMM	= dbmsnetmm$(SUFLIB) ;
+IMPNETMM	= netmm$(SUFLIB) ;
+IMPICEMM	= icemm$(SUFLIB) ;
+IMPREPMM	= repmm$(SUFLIB) ;
+IMPJDBCMM	= jdbcmm$(SUFLIB) ;
+IMPVISIONMM	= visionmm$(SUFLIB) ;
+IMPSTARMM	= starmm$(SUFLIB) ;
+IMPODBCMM	= odbcmm$(SUFLIB) ;
+IMPORMM		= ormm$(SUFLIB) ;
+IMPSETUPMM	= setupmm$(SUFLIB) ;
+IMPDOCMM	= docmm$(SUFLIB) ;
+IMPDOTNETDPMM	= dotnetdpmm$(SUFLIB) ;
+IMPESQLCMM	= esqlcmm$(SUFLIB) ;
+IMPVDBAMM	= vdbamm$(SUFLIB) ;
+
+COMMONMMLIB	= commonmm$(SUFLIB) ;
+
+}
+else
+{
+SHADFLIB   	= libadf.$(SLVERS).$(SLSFX) ;
+SHBECOMPATLIB   = libbecompat.$(SLVERS).$(SLSFX) ;
+SHDMFLIB   	= libdmf.$(SLVERS).$(SLSFX) ;
+SHSCFLIB        = libscf.$(SLVERS).$(SLSFX) ;
+SHQEFLIB	= libqef.$(SLVERS).$(SLSFX) ;
+SHPSFLIB        = libpsf.$(SLVERS).$(SLSFX) ;
+SHOPFLIB        = libopf.$(SLVERS).$(SLSFX) ;
+SHRDFLIB        = librdf.$(SLVERS).$(SLSFX) ;
+SHQSFLIB        = libqsf.$(SLVERS).$(SLSFX) ;
+SHTPFLIB        = libtpf.$(SLVERS).$(SLSFX) ;
+SHRQFLIB        = librqf.$(SLVERS).$(SLSFX) ;
+SHGCFLIB        = libgcf.$(SLVERS).$(SLSFX) ;
+SHGWFLIB        = libgwf.$(SLVERS).$(SLSFX) ;
+SHSXFLIB        = libsxf.$(SLVERS).$(SLSFX) ;
+SHCUFLIB        = libcuf.$(SLVERS).$(SLSFX) ;
+SHDBUTILLIB     = libdbutil.$(SLVERS).$(SLSFX) ;
+SHULFLIB        = libulf.$(SLVERS).$(SLSFX) ;
+
+
+
+#
+# This is an attempt to generalize Jamfiles on Windows and Linux
+#
+IMPCOMPATLIBDATA   = $(COMPATLIB) ;
+IMPCOMPATLIBDATAHB = $(COMPATLIBHB) ;
+IMPADFLIBDATA   = $(ADFLIB) ;
+IMPADFLIBDATAHB = $(ADFLIBHB) ;
+IMPDMFLIBDATA   = $(DMFLIB) ;
+IMPDMFLIBDATAHB = $(DMFLIBHB) ;
+IMPSCFLIBDATA   = $(SCFLIB) ;
+IMPSCFLIBDATAHB = $(SCFLIBHB) ;
+IMPQEFLIBDATA	= $(QEFLIB) ;
+IMPQEFLIBDATAHB	= $(QEFLIBHB) ;
+IMPOPFLIBDATA   = $(OPFLIB) ;
+IMPOPFLIBDATAHB = $(OPFLIBHB) ;
+IMPPSFLIBDATA	= $(PSFLIB) ;
+IMPPSFLIBDATAHB = $(PSFLIBHB) ;
+IMPRDFLIBDATA   = $(RDFLIB) ;
+IMPRDFLIBDATAHB = $(RDFLIBHB) ;
+IMPQSFLIBDATA   = $(QSFLIB) ;
+IMPQSFLIBDATAHB = $(QSFLIBHB) ;
+IMPTPFLIBDATA   = $(TPFLIB) ;
+IMPTPFLIBDATAHB = $(TPFLIBHB) ;
+IMPRQFLIBDATA   = $(RQFLIB) ;
+IMPRQFLIBDATAHB = $(RQFLIBHB) ;
+IMPGCFLIBDATA   = $(GCFLIB) ;
+IMPGCFLIBDATAHB = $(GCFLIBHB) ;
+IMPGWFLIBDATA   = $(GWFLIB) ;
+IMPGWFLIBDATAHB = $(GWFLIBHB) ;
+IMPSXFLIBDATA   = $(SXFLIB) ;
+IMPSXFLIBDATAHB = $(SXFLIBHB) ;
+IMPDBUTILLIBDATA   = $(DBUTILLIB) ;
+IMPDBUTILLIBDATAHB = $(DBUTILLIBHB) ;
+IMPULFLIBDATA   = $(ULFLIB) ;
+IMPULFLIBDATAHB = $(ULFLIBHB) ;
+IMPICELIBDATA 	= $(ASCFLIB) ;
+IMPICELIBDATAHB	= $(ASCFLIBHB) ;
+
+# Dummy import libraries
+IMPINTERPLIBDATA   = $(INTERPLIB) ;
+IMPINTERPLIBDATAHB = $(INTERPLIBHB) ;
+IMPEMBEDLIBDATA    = $(LIBQLIB) ;
+IMPEMBEDLIBDATAHB  = $(LIBQLIBHB) ;
+IMPFRAMELIBDATA    = $(FDLIB) ;
+IMPFRAMELIBDATAHB  = $(FDLIBHB) ;
+IMPLIBQLIBDATA     = $(LIBQLIB) ;
+IMPLIBQLIBDATAHB   = $(LIBQLIBHB) ;
+
+SHADFLIB_LINKFLAG   	= -ladf.$(SLVERS) ;
+SHBECOMPATLIB_LINKFLAG  = -lbecompat.$(SLVERS) ;
+SHDMFLIB_LINKFLAG  	= -ldmf.$(SLVERS) ;
+SHSCFLIB_LINKFLAG       = -lscf.$(SLVERS) ;
+SHQEFLIB_LINKFLAG	= -lqef.$(SLVERS) ;
+SHPSFLIB_LINKFLAG       = -lpsf.$(SLVERS) ;
+SHOPFLIB_LINKFLAG       = -lopf.$(SLVERS) ;
+SHRDFLIB_LINKFLAG       = -lrdf.$(SLVERS) ;
+SHQSFLIB_LINKFLAG       = -lqsf.$(SLVERS) ;
+SHTPFLIB_LINKFLAG       = -ltpf.$(SLVERS) ;
+SHRQFLIB_LINKFLAG       = -lrqf.$(SLVERS) ;
+SHGCFLIB_LINKFLAG       = -lgcf.$(SLVERS) ;
+SHGWFLIB_LINKFLAG       = -lgwf.$(SLVERS) ;
+SHSXFLIB_LINKFLAG       = -lsxf.$(SLVERS) ;
+SHCUFLIB_LINKFLAG       = -lcuf.$(SLVERS) ;
+SHDBUTILLIB_LINKFLAG    = -ldbutil.$(SLVERS) ;
+SHULFLIB_LINKFLAG       = -lulf.$(SLVERS) ;
+}
+
+#
+# Client Shared libraries
+#
+
+if $(NT)
+{
+#
+#dlls  libq
+#
+SHAPILIB	= iilibapi.$(SLSFX) ;
+SHAPILIBDATA	= iilibapidata.$(SLSFX) ;
+SHCOMPATLIB	= iilibcompat.$(SLSFX) ;
+SHCOMPATLIBDATA	= iilibcompatdata.$(SLSFX) ;
+SHEMBEDLIB	= iilibembed.$(SLSFX) ;
+SHEMBEDLIBDATA	= iilibembeddata.$(SLSFX) ;
+SHLIBQLIB	= iilibq.$(SLSFX) ;
+SHQLIB		= $(SHLIBQLIB) ;
+SHLIBQLIBDATA	= iilibqdata.$(SLSFX) ;
+SHQLIBDATA	= $(SHLIBQLIBDATA) ;
+SHFRAMELIB      = iilibframe.$(SLSFX) ;
+SHFRAMELIBDATA	= iilibframedata.$(SLSFX) ;
+SHINTERPLIB     = iilibinterp.$(SLSFX) ;
+SHINTERPLIBDATA = iilibinterpdata.$(SLSFX) ;
+SHNEWORDERLIB 	= play_NewOrder.$(SLSFX) ;
+SHNEWORDERLIBDATA = play_NewOrderdata.$(SLSFX) ;
+SHODBCDRIVERLIB = caiiod35.$(SLSFX) ;
+SHODBCCFGLIB	= caiioc35.$(SLSFX) ;
+SHODBCMGRLIB	= ingodbc.$(SLSFX) ;
+SHODBCTRACELIB  = caiiodtr.$(SLSFX) ;
+SHODBCROLIB	= caiiro35.$(SLSFX) ;
+SHAPACHELIB	= iiiceapapi.$(SLSFX) ;
+SHICEMSLIB	= iiicems.$(SLSFX) ;
+SHAPACHELIBDATA	= iiiceapapidata.$(SLSFX) ;
+SHGENICE	= oiice.$(SLSFX) ;
+SHUDTLIB	= iilibudt.$(SLSFX) ;
+SHUDTLIBDATA	= iilibudtdata.$(SLSFX) ;
+SHTNGAPILIB 	= iilibutil.$(SLSFX) ;
+SHTNGAPILIBDATA = iilibutildata.$(SLSFX) ;
+SHXALIB		= iilibxa.$(SLSFX) ;
+SHXALIBDATA     = iilibxadata.$(SLSFX) ;
+SHPERFMONLIB	= iipfctrs.$(SLSFX) ;
+SHPERFMONLIBDATA = iipfctrsdata.$(SLSFX) ;
+SHGCSKRBLIB     = iilibgcskrb.$(SLSFX) ;
+SHGSSAPILIB     = gssapi32.$(SLSFX) ;
+SHGSSAPILIBDATA = gssapi32data.$(SLSFX) ;
+
+#
+#import libraries
+#
+IMPAPILIB		= iilibapi$(SUFLIB) ;
+IMPAPILIBDATA		= iilibapidata$(SUFLIB) ;
+IMPCOMPATLIB		= iilibcompat$(SUFLIB) ;
+IMPCOMPATLIBDATA	= iilibcompatdata$(SUFLIB) ;
+IMPEMBEDLIB		= iilibembed$(SUFLIB) ;
+IMPEMBEDLIBDATA		= iilibembeddata$(SUFLIB) ;
+IMPLIBQLIB		= iilibq$(SUFLIB) ;
+IMPQLIB			= $(IMPLIBQLIB) ;
+IMPLIBQLIBDATA		= iilibqdata$(SUFLIB) ;
+IMPQLIBDATA		= $(IMPLIBQLIBDATA) ;
+IMPFRAMELIB		= iilibframe$(SUFLIB) ;
+IMPFRAMELIBDATA		= iilibframedata$(SUFLIB) ;
+IMPINTERPLIB     	= iilibinterp$(SUFLIB) ;
+IMPINTERPLIBDATA     	= iilibinterpdata$(SUFLIB) ;
+IMPNEWORDERLIB		= play_NewOrder$(SUFLIB) ;
+IMPNEWORDERLIBDATA	= play_NewOrderdata$(SUFLIB) ;
+IMPODBCDRIVERLIB 	= caiiod35$(SUFLIB) ;
+IMPODBCCFGLIB		= caiioc35$(SUFLIB) ;
+IMPODBCMGRLIB		= ingodbc$(SUFLIB) ;
+IMPODBCTRACELIB  	= caiiodtr$(SUFLIB) ;
+IMPODBCROLIB		= caiiodro$(SUFLIB) ;
+IMPAPACHELIB		= iiiceapapi$(SUFLIB) ;
+IMPAPACHELIBDATA	= iiiceapapidata$(SUFLIB) ;
+IMPICEMSLIB		= iiicems$(SUFLIB) ;
+IMPICEMSLIBDATA		= iiicemsdata$(SUFLIB) ;
+IMPGENICE		= oiice$(SUFLIB) ;
+IMPUDTLIB		= iilibudt$(SUFLIB) ;
+IMPUDTLIBDATA		= iilibudtdata$(SUFLIB) ;
+IMPTNGAPILIB 		= iilibutil$(SUFLIB) ;
+IMPTNGAPILIBDATA 	= iilibutildata$(SUFLIB) ;
+IMPXALIB		= iilibxa$(SUFLIB) ;
+IMPXALIBDATA     	= iilibxadata$(SUFLIB) ;		
+IMPPERFMONLIB		= iipfctrs$(SUFLIB) ;
+IMPPERFMONLIBDATA 	= iipfctrsdata$(SUFLIB) ;
+IMPGCSKRBLIB            = iilibgcskrb$(SUFLIB) ;
+IMPGSSAPILIB            = gssapi32$(SUFLIB) ;
+IMPGSSAPILIBDATA        = gssapi32data$(SUFLIB) ;
+#
+#due to windows complicated dependencies these used to loop back to regular libraries.
+#
+IMPAPILIBDATAL		= $(APILIB) ;
+IMPCOMPATLIBL 		= $(COMPATLIB) ;
+IMPCOMPATLIBDATAL 	= $(COMPATLIBDATA) ;
+IMPLIBQLIBL		= $(LIBQLIB) ;
+IMPQLIBL		= $(IMPLIBQLIBL) ;
+IMPLIBQLIBDATAL		= $(LIBQLIBDATA) ;
+IMPQLIBDATAL		= $(IMPLIBQLIBDATAL) ;
+IMPEMBEDLIBL		= $(EMBEDLIB) ;
+IMPEMBEDLIBDATAL	= $(EMBEDLIBDATA) ;
+IMPFRAMELIBDATAL	= $(FRAMELIBDATA) ;
+IMPINTERPLIBDATAL     	= $(INTERPLIBDATA) ;
+
+}
+else if $(VMS)
+{
+    SHCOMPATLIB		= clfelib$(SUFSL) ;
+    SHQLIB		= libqfelib$(SUFSL) ;
+    SHFRAMELIB		= framefelib$(SUFSL) ;
+    SHINTERPLIB		= interpfelib$(SUFSL) ;
+    SHAPILIB		= apifelib$(SUFSL) ;
+    SHGCSKRBLIB		= libgcskrb$(SUFSL) ;
+    SHODBCDRIVERLIB	= odbcfelib$(SUFSL) ;
+    SHODBCROLIB	        = odbcrofelib$(SUFSL) ;
+    SHODBCMGRLIB        = odbcclifelib$(SUFSL) ;
+    SHUDTLIB		= iiuseradt$(SUFSL) ;
+
+    COMPAT_LOT_DIR	= [ FDirName $(ING_SRC) cl clf specials_vms ] ;
+    COMPAT_LOT		= $(COMPAT_LOT_DIR)$(DFS)clfelib.lot ;
+
+    LIBQ_LOT_DIR	= [ FDirName $(ING_SRC) front embed specials_vms ] ;
+    LIBQ_LOT		= $(LIBQ_LOT_DIR)$(DFS)libqfelib.lot ;
+
+    FRAME_LOT_DIR	= [ FDirName $(ING_SRC) front frame specials_vms ] ;
+    FRAME_LOT		= $(FRAME_LOT_DIR)$(DFS)framefelib.lot ;
+
+    INTERP_LOT_DIR	= [ FDirName $(ING_SRC) front abf specials_vms ] ;
+    INTERP_LOT		= $(INTERP_LOT_DIR)$(DFS)interpfelib.lot ;
+
+    API_LOT_DIR		= [ FDirName $(ING_SRC) common aif specials_vms ] ;
+    API_LOT		= $(API_LOT_DIR)$(DFS)apifelib.lot ;
+
+    LIBGCSKRB_LOT_DIR	= [ FDirName $(ING_SRC) common gcf drivers krb5 ] ;
+    LIBGCSKRB_LOT	= $(LIBGCSKRB_LOT_DIR)$(DFS)libgcskrb.lot ;
+
+    ODBC_LOT_DIR	= [ FDirName $(ING_SRC) common odbc driver ] ;
+    ODBC_LOT		= $(ODBC_LOT_DIR)$(DFS)odbcfelib.lot ;
+
+    ODBCRO_LOT_DIR	= [ FDirName $(ING_SRC) common odbc driver ] ;
+    ODBCRO_LOT		= $(ODBCRO_LOT_DIR)$(DFS)odbcrofelib.lot ;
+
+    ODBCCLI_LOT_DIR	= [ FDirName $(ING_SRC) common odbc manager ] ;
+    ODBCCLI_LOT		= $(ODBCCLI_LOT_DIR)$(DFS)odbcclifelib.lot ;
+
+    IIUSERADT_LOT_DIR	= [ FDirName $(ING_SRC) back scf udt ] ;
+    IIUSERADT_LOT	= $(IIUSERADT_LOT_DIR)$(DFS)iiuseradt.lot ;
+}
+else # Unix
+{
+SHAPACHELIB	= oiice.$(SLVERS).$(SLSFX) ;
+SHCOMPATLIB     = libcompat.$(SLVERS).$(SLSFX) ;
+SHQLIB          = libq.$(SLVERS).$(SLSFX) ;
+SHEMBEDLIB	= SHQLIB ;
+SHFRAMELIB      = libframe.$(SLVERS).$(SLSFX) ;
+SHINTERPLIB     = libinterp.$(SLVERS).$(SLSFX) ;
+SHNETSCAPELIB   = oiicens.$(SLVERS).$(SLSFX) ;
+SHAPILIB        = libiiapi.$(SLVERS).$(SLSFX) ;
+SHODBCDRIVERLIB    = libiiodbcdriver.$(SLVERS).$(SLSFX) ;
+SHODBCMGRLIB	= libiiodbc.$(SLVERS).$(SLSFX) ;
+SHNEWORDERLIB = libplay_NewOrder.$(SLSFX).2.0 ;
+SHOIDDILIB = liboiddi.$(SLSFX).2.0 ;
+SHGCSKRBLIB = libgcskrb.$(SLSFX).2.0 ;
+SHTNGAPILIB = liboiutil.$(SLVERS).$(SLSFX) ;
+SHSPATLIB = libspat.$(SLVERS).$(SLSFX) ;
+SHDEMOUDTLIB    = libdemoudt.$(SLVERS).$(SLSFX) ;
+
+#
+# Hybrid shared libraries.
+#
+SHCOMPATLIBHB   = $(SUFHB)/libcompat.$(SLVERS).$(SLSFX) ;
+SHQLIBHB        = $(SUFHB)/libq.$(SLVERS).$(SLSFX) ;
+SHFRAMELIBHB    = $(SUFHB)/libframe.$(SLVERS).$(SLSFX) ;
+SHINTERPLIBHB   = $(SUFHB)/libinterp.$(SLVERS).$(SLSFX) ;
+SHAPILIBHB      = $(SUFHB)/libiiapi.$(SLVERS).$(SLSFX) ;
+SHODBCDRIVERLIBHB  = $(SUFHB)/libiiodbcdriver.$(SLVERS).$(SLSFX) ;
+SHODBCMGRLIBHB	= $(SUFHB)/libiiodbc.$(SLVERS).$(SLSFX) ;
+# Server shared libraries
+SHBECOMPATLIBHB = $(SUFHB)/libbecompat.$(SLVERS).$(SLSFX) ;
+SHSCFLIBHB     = $(SUFHB)/libscf.$(SLVERS).$(SLSFX) ;
+SHPSFLIBHB     = $(SUFHB)/libpsf.$(SLVERS).$(SLSFX) ;
+SHOPFLIBHB     = $(SUFHB)/libopf.$(SLVERS).$(SLSFX) ;
+SHRDFLIBHB     = $(SUFHB)/librdf.$(SLVERS).$(SLSFX) ;
+SHQEFLIBHB     = $(SUFHB)/libqef.$(SLVERS).$(SLSFX) ;
+SHQSFLIBHB     = $(SUFHB)/libqsf.$(SLVERS).$(SLSFX) ;
+SHDBUTILLIBHB  = $(SUFHB)/libdbutil.$(SLVERS).$(SLSFX) ;
+SHTPFLIBHB     = $(SUFHB)/libtpf.$(SLVERS).$(SLSFX) ;
+SHGCFLIBHB     = $(SUFHB)/libgcf.$(SLVERS).$(SLSFX) ;
+SHSXFLIBHB     = $(SUFHB)/libsxf.$(SLVERS).$(SLSFX) ;
+SHCUFLIBHB     = $(SUFHB)/libcuf.$(SLVERS).$(SLSFX) ;
+SHGWFLIBHB     = $(SUFHB)/libgwf.$(SLVERS).$(SLSFX) ;
+SHDMFLIBHB     = $(SUFHB)/libdmf.$(SLVERS).$(SLSFX) ;
+SHULFLIBHB     = $(SUFHB)/libulf.$(SLVERS).$(SLSFX) ;
+SHADFLIBHB     = $(SUFHB)/libadf.$(SLVERS).$(SLSFX) ;
+SHRQFLIBHB     = $(SUFHB)/librqf.$(SLVERS).$(SLSFX) ;
+
+SHCOMPATLIB_LINKFLAG    = -lcompat.$(SLVERS) ;
+SHQLIB_LINKFLAG         = -lq.$(SLVERS) ;
+SHFRAMELIB_LINKFLAG     = -lframe.$(SLVERS) ;
+SHINTERPLIB_LINKFLAG    = -linterp.$(SLVERS) ;
+SHAPILIB_LINKFLAG       = -liiapi.$(SLVERS) ;
+SHODBCDRIVERLIB_LINKFLAG   = -lodbcdriver.$(SLVERS) ;
+SHODBCMGRLIB_LINKFLAG	= -liiodbc.$(SLVERS) ;
+SHNEWORDERLIB_LINKFLAG	= -lplay_NewOrder.$(SLVERS) ;
+SHOIDDILIB_LINKFLAG	= -loiddi.$(SLVERS) ;
+SHGCSKRBLIB_LINKFLAG	= -lgcskrb.$(SLVERS) ;
+SHTNGAPILIB_LINKFLAG	= -loiutil.$(SLVERS) ;
+if $(VERS64) = r64_us5
+{
+ SHCOMPATLIB_LINKFLAG64      = -lcompat64.1 ;
+ SHQLIB_LINKFLAG64           = -lq64.1 ;
+ SHFRAMELIB_LINKFLAG64       = -lframe64.1 ;
+ SHINTERPLIB_LINKFLAG64      = -linterp64.1 ;
+ SHAPILIB_LINKFLAG64         = -liiapi64.1 ;
+ SHODBCDRIVERLIB_LINKFLAG64  = -lodbcdriver64.1 ;
+ SHODBCMGRLIB_LINKFLAG64     = -liiodbc64.1 ;
+ SHNEWORDERLIB_LINKFLAG64    = -lplay_NewOrder.1 ;
+ SHOIDDILIB_LINKFLAG64       = -loiddi64.1 ;
+}
+}
+
+
+#
+#
+#DOTNET DLLS/XML
+#
+SHCLIENT 	= Ca.Ingres.Client.DLL ;
+SHCLIENTXML	= Ca.Ingres.Client.XML ;
+SHPROVIDER	= Ca.Ingres.Advantage.DLL ;
+SHVDESIGN	= Ca.Ingres.VSDesign.DLL ;
+SHSUPPORT	= Ca.Ingres.Support.DLL ;
+
+
+#
+# Dotnet
+#
+INGSUPPORT   = Ca.Ingres.Support.DLL ;
+INGCLIENTDLL = Ca.Ingres.Client.DLL ;
+INGCLIENTXML = Ca.Ingres.Client.xml ;
+INGVSDESIGN  = Ca.Ingres.VSDesign.DLL ;
+
+#
+#Dotnet 2.0
+#
+INGSUPPORT2	= Ingres.Support.dll ;
+INGCLIENTDLL2	= Ingres.Client.dll ;
+INGCLIENTXML2	= Ingres.Client.xml ;
+INGVSDESIGN2	= Ingres.VSDesign.dll ;
+INGINSTALL2	= Ingres.Install.dll ;
+
+
+#
+# Xerces shared library
+#
+if ! $(NT)
+{
+    XERCVERS ?= 27 ; # default to 25 if not set elsewhere
+    SHXERCESLIB = libxerces-c.$(SLSFX) ;
+    SHXERCESLIB_LINKFLAG = -lxerces-c ;
+    SHXERCESLIBHB = $(SUFHB)/libxerces-c.$(SLSFX) ;
+    if $(VERS64) = r64_us5
+    {
+	XERCESCLIB = libxerces-c$(XERCVERS).0.$(SLSFX) ;
+	SHXERCESLIB_LINKFLAG64 = -lxerces-c ;
+    }
+    else if $(VERS) = mg5_osx || $(VERS) = int_osx
+    {
+	switch $(XERCVERS)
+	{
+	    case 3*	: XERCESCLIB = libxerces-c-$(XERCVERS).$(SLSFX) ;
+	    case *	: XERCESCLIB = libxerces-c.$(XERCVERS).$(SLSFX) ;
+	}
+    }
+    else
+    {
+	XERCESCLIB = libxerces-c.$(SLSFX).$(XERCVERS).0 ;
+    }
+}
+else
+{
+    XERCVERS ?= 2_7 ;
+    XERCESCLIB = xerces-c_$(XERCVERS).$(SLSFX) ;
+    switch $(XERCVERS)
+    {
+	case 2_7  : SHXERCESLIB = xerces-c_2.lib ;
+		WCHART = /Zc:wchar_t- ;
+	case 3* : SHXERCESLIB = xerces-c_3.lib ;
+	case *  : SHXERCESLIB = xerces-c_2.lib ;
+    }
+}
+
+# HDRSAX uses Xerces definitions, can define now.
+if $(VMS)
+{
+    # VMS needs UNIX syntax to find <xercesc/dir/filename> includes
+    HDRSAX	= \"/XERCESCROOT/include\" ;
+}
+else if $(NT)
+{
+    # dunno about unix, but on Windows it's always include, 3.x or not.
+    HDRSAX	= [ FDirName $(XERCESCROOT) include ] ;
+}
+else
+{
+    switch $(XERCVERS)
+    {
+	case 3*	: HDRSAX	= [ FDirName $(XERCESCROOT) src ] ;
+	case *	: HDRSAX	= [ FDirName $(XERCESCROOT) include ] ;
+    }
+}
+
+# Special object needed by SHQLIB
+
+ODBCROOBJ = getro.o ;
+ODBCRWOBJ = getrw.o ;
+
+#
+# Windows4GL libraries:
+# All commented out to work around JAM limitation on numbers of variables(?)
+#
+#CDTLIB		= $(INGLIB)/libcdt$(SUFLIB) ;
+#CTLIB		= $(INGLIB)/libct$(SUFLIB) ;
+#DATMODLIB	= $(INGLIB)/libdatmod$(SUFLIB) ;
+#DBOBJLIB	= $(INGLIB)/libdbobj$(SUFLIB) ;
+#DEBUGGERLIB	= $(INGLIB)/libdebugger$(SUFLIB) ;
+#DEVDEFSLIB	= $(INGLIB)/libdevdefs$(SUFLIB) ;
+#DEVELOPLIB	= $(INGLIB)/libdevelop$(SUFLIB) ;
+#IMGMAKELIB	= $(INGLIB)/libimgmake$(SUFLIB) ;
+#OELIB		= $(INGLIB)/liboe$(SUFLIB) ;
+#OMCORELIB	= $(INGLIB)/libomcore$(SUFLIB) ;
+#EXEOBJLIB	= $(INGLIB)/libexeobj$(SUFLIB) ;
+#PAWSLIB	= $(INGLIB)/libpaws$(SUFLIB) ;
+#PROTOLIB	= $(INGLIB)/libproto$(SUFLIB) ;
+#QRYOBJLIB	= $(INGLIB)/libqryobj$(SUFLIB) ;
+#RPTOBJLIB	= $(INGLIB)/librptobj$(SUFLIB) ;
+#SRCOBJLIB	= $(INGLIB)/librsrcobj$(SUFLIB) ;
+#RUNDEFSLIB	= $(INGLIB)/librunsdef$(SUFLIB) ;
+#SPHREXESLIB	= $(INGLIB)/libsphrexes$(SUFLIB) ;
+#SRCOBJLIB	= $(INGLIB)/libsrcobj$(SUFLIB) ;
+#SYMTABLIB	= $(INGLIB)/libsymtab$(SUFLIB) ;
+#USER3GLLIB	= $(INGLIB)/libuser3gl$(SUFLIB) ;
+#W4GLEXEOBJLIB	= $(INGLIB)/libexeobj$(SUFLIB) ;
+#W4GLFRSSTUBLIB	= $(INGLIB)/libfrsstub$(SUFLIB) ;
+#W4GLILGLIB	= $(INGLIB)/libilg$(SUFLIB) ;
+#W4GLILRFLIB	= $(INGLIB)/libilrf$(SUFLIB) ;
+#W4GLINTERPLIB	= $(INGLIB)/libinterp$(SUFLIB) ;
+#W4GLIOILIB	= $(INGLIB)/libioi$(SUFLIB) ;
+#W4GLLIB	= $(INGLIB)/libw4gl$(SUFLIB) ;
+#W4GLMGRAMLIB	= $(INGLIB)/libmgram$(SUFLIB) ;
+#W4GLOSLLIB	= $(INGLIB)/libosl$(SUFLIB) ;
+#W4GLRTLIB  	= $(INGLIB)/libw4glrt$(SUFLIB) ;
+#W4GLRUNTLIB	= $(INGLIB)/librunt$(SUFLIB) ;
+#W4GLSPHREXESLIB	= $(INGLIB)/libsphrexes$(SUFLIB) ;
+#W4GLSQLLIB	= $(INGLIB)/libsql$(SUFLIB) ;
+#W4GLSYMTABLIB	= $(INGLIB)/libsymtab$(SUFLIB) ;
+#W4GLUSER3GLLIB	= $(INGLIB)/libuser3gl$(SUFLIB) ;
+#W4ILGLIB   	= $(INGLIB)/libw4ilg$(SUFLIB) ;
+#W4ILRFLIB	= $(INGLIB)/libw4ilrf$(SUFLIB) ;
+#W4INTERPLIB	= $(INGLIB)/libw4interp$(SUFLIB) ;
+#W4IOILIB	= $(INGLIB)/libw4ioi$(SUFLIB) ;
+#W4SQLLIB	= $(INGLIB)/libw4sql$(SUFLIB) ;
+#WCMOTIFLIB	= $(INGLIB)/libwcmotif$(SUFLIB) ;
+#WCXTLIB	= $(INGLIB)/libwcxt$(SUFLIB) ;
+#WCLIB		= $(WCXTLIB) $(WCMOTIFLIB) ;
+#WINSYSLIB	= $(INGLIB)/lib1_2Xm$(SUFLIB) 
+#		  $(INGLIB)/lib5Xaw$(SUFLIB) 
+#		  $(INGLIB)/lib5Xmu$(SUFLIB) 
+#		  $(INGLIB)/lib5Xext$(SUFLIB) 
+#		  $(INGLIB)/lib5Xt$(SUFLIB) 
+#		  $(INGLIB)/lib5X$(SUFLIB) ;
+
+
+# Motif and X11 Libraries
+#
+#X5LIB		= $(INGLIB)/lib5X$(SUFLIB) ;
+#XAU5LIB		= $(INGLIB)/lib5Xau$(SUFLIB) ;
+#XAW5LIB		= $(INGLIB)/lib5Xaw$(SUFLIB) ;
+#XDMCP5LIB	= $(INGLIB)/lib5Xdmcp$(SUFLIB) ;
+#XMU5LIB		= $(INGLIB)/lib5Xmu$(SUFLIB) ;
+#XT5LIB		= $(INGLIB)/lib5Xt$(SUFLIB) ;
+#XM1_2LIB	= $(INGLIB)/lib1_2Xm$(SUFLIB) ;
+#MRM1_2LIB	= $(INGLIB)/lib1_2Mrm$(SUFLIB) ;
+#XEXT5LIB	= $(INGLIB)/lib5Xext$(SUFLIB) ;
+
+#
+# "Special" libraries
+#
+SPEC_MSWLIB	= $(INGLIB)/libspec_msw$(SUFLIB) ;
+
+#
+# VEC locations and libraries (obsolescent)
+#
+
+CCHARTLIB	= $(VECLIB)/libcchart$(SUFLIB) ;
+DRVLIB		= $(VECLIB)/libdrv$(SUFLIB) ;
+GCAPLIB		= $(VECLIB)/libgcap$(SUFLIB) ;
+GKS0BLIB	= $(VECLIB)/libgks0b$(SUFLIB) ;
+VDILIB		= $(VECLIB)/libvdi$(SUFLIB) ;
+VECUTILLIB	= $(VECLIB)/libutil$(SUFLIB) ;
+
+# 
+# Headers that Ingres depends on but not we don't own. e.g TUXEDO headers
+#
+
+HDRTUXEDO	= $(TUXEDODIR)/include ;
+
+#
+# Common IILINKLIB libraries (i.e. we don't build 'em)
+#
+
+CURSESLIB	= -lcurses ;
+LLEXLIB		= -ll ;
+
+
+#
+# Library bunches
+#
+INTERP_LIBS   = $(ILRFLIB) $(IOILIB) $(IAOMLIB) $(INTERPLIB) ;
+
+FRAME_LIBS    = $(ABFRTLIB) $(GENERATELIB) $(OOLIB)
+		$(UFLIB) $(RUNSYSLIB) $(RUNTIMELIB) $(FDLIB) $(MTLIB)
+		$(VTLIB) $(FTLIB) $(FEDSLIB) $(COPYFORMLIB) $(TBLUTILLIB) 
+		$(COPYUTILLIB) ;
+
+LIBQ_LIBS     = $(LIBQSYSLIB) $(UILIB) $(LIBQLIB) $(COPYLIB) $(LIBQGCALIB)
+		$(GCFLIB) $(UGLIB) $(FMTLIB) $(AFELIB) $(ADFLIB)
+		$(CUFLIB) $(EQUELLIB) ;
+
+if ! $(VMS)
+{
+    LIBQ_LIBS += $(SQLCALIB) $(LIBQXALIB) ;
+}
+
+COMPAT_LIBS   = $(COMPATLIB) ;
+
+#
+# For purposes of generic Jamfiles, share ice library (ICELIB) that doesn't exist
+# on Linux is equal to static libraries that become a shared library on windows.
+#
+if ! $(NT) && $(BUILD_ICE)
+{
+ICELIB = $(PSFLIB) $(OPFLIB) $(GWFLIB) $(RDFLIB) $(QEFLIB) $(QSFLIB) $(DMFLIB)
+	 $(QEFLIB) $(ASCFLIB) $(AWSFLIB) $(ADFLIB) $(DDFLIB) $(RQFLIB)
+	 $(SXFLIB) $(TPFLIB) $(APILIB) ;
+ICELIBHB = $(PSFLIBHB) $(OPFLIBHB) $(GWFLIBHB) $(RDFLIBHB) $(QEFLIBHB) $(QSFLIBHB) $(DMFLIBHB)
+	 $(QEFLIBHB) $(ASCFLIBHB) $(AWSFLIBHB) $(ADFLIBHB) $(DDFLIBHB) $(RQFLIBHB)
+	 $(SXFLIBHB) $(TPFLIBHB) $(APILIBHB) ;
+}
+
+if $(NT)
+{
+	FRAME_LIBS	= $(LIBQSYSLIB) $(ABFRTLIB) $(GENERATELIB) $(OOLIB)
+			  $(UFLIB) $(RUNSYSLIB) $(RUNTIMELIB) $(FDLIB) $(MTLIB) 			  
+			  $(VTLIB) $(FTLIB) $(FEDSLIB) $(TBLUTILLIB) $(COPYUTILLIB)
+			  $(COPYFORMLIB) $(TBLUTILLIB) ;
+
+	EMBED_LIBS	= $(CLIB) $(EQUELLIB) $(UGLIB) $(FMTLIB) $(AFELIB) 
+			  $(ADFLIB) $(LIBQGCALIB) $(LIBQLIB) $(SQLCALIB) ;
+
+	LIBQ_LIBS 	= $(UILIB) $(COPYLIB) $(GCFLIB) $(CUFLIB) ;
+	
+	COMPAT_LIBS	= $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) ;
+	
+	DATA_LIBS	= $(IMPFRAMELIBDATA) $(IMPLIBQLIBDATA) 
+			  $(IMPADFLIBDATA) $(IMPGCFLIBDATA) $(IMPEMBEDLIBDATA) ;
+			  #$(IMPINTERPLIBDATA) ;
+
+	INDEP_LIBS	= $(ABFLIB) $(RAATLIB) $(UTILLIB) $(LIBQSYSLIB) ;
+	INDEP_DLLS	= $(IMPADFLIB) $(IMPCUFLIB) $(IMPGCFLIB) $(IMPXALIB) ;
+	SHARED_LIBS	= $(IMPEMBEDLIB) $(IMPLIBQLIB) $(IMPFRAMELIB) ;
+}
+
+if ! $(NT)
+{
+	INTERP_ABF = $(SHINTERPLIB) ;
+}
+else
+{
+	INTERP_ABF = $(INTERP_LIBS) ;
+}
+
+API_LIBS      = $(APILIB) ;
+
+if $(BUILD_ICE)
+{
+    OIICENS_LIBS  = $(NETSCAPELIB) $(ICECLILIB) $(GCFLIB) $(DDFLIB) ;
+
+    OIICEAP_LIBS  = $(APACHELIB) $(ICECLILIB) $(GCFLIB) $(DDFLIB) ;
+
+    OIICEAPI_LIBS = $(ICECONFLIB) $(C_APILIB) $(ICECONFLIB) $(ICECLILIB) ;
+}
+
+ODBCDRV_LIBS  = $(ODBCDRIVERLIB) ;
+
+INODESMGR_LIBS = $(GCNEXTLIB) $(JNILIB) ;
+
+ODBCCFG_LIBS = $(ODBCFGLIB) ;
+#
+# 64-bit versions
+#
+INTERP_LIBSHB   = $(ILRFLIBHB) $(IOILIBHB) $(IAOMLIBHB) $(INTERPLIBHB) ;
+
+FRAME_LIBSHB    = $(LIBQSYSLIBHB) $(ABFRTLIBHB) $(GENERATELIBHB) $(OOLIBHB)
+		$(UFLIBHB) $(RUNSYSLIBHB) $(RUNTIMELIBHB) $(FDLIBHB) $(MTLIBHB)
+		$(VTLIBHB) $(FTLIBHB) $(FEDSLIBHB) $(COPYFORMLIBHB)
+		$(TBLUTILLIBHB) $(COPYUTILLIBHB) ;
+
+LIBQ_LIBSHB     = $(UILIBHB) $(LIBQLIBHB) $(COPYLIBHB) $(LIBQGCALIBHB)
+		$(GCFLIBHB) $(UGLIBHB) $(FMTLIBHB) $(AFELIBHB) $(ADFLIBHB)
+		$(CUFLIBHB) $(SQLCALIBHB) $(LIBQXALIBHB) $(EQUELLIBHB) ;
+
+COMPAT_LIBSHB   = $(COMPATLIBHB) ;
+
+API_LIBSHB      = $(APILIBHB) ;
+
+if $(BUILD_ICE)
+{
+    OIICENS_LIBSHB  = $(NETSCAPELIBHB) $(ICECLILIBHB) $(GCFLIBHB) $(DDFLIBHB) ;
+
+    OIICEAP_LIBSHB  = $(APACHELIBHB) $(ICECLILIBHB) $(GCFLIBHB) $(DDFLIBHB) ;
+}
+
+ODBCDRV_LIBSHB  = $(ODBCDRIVERLIBHB) ;
+
+INODESMGR_LIBSHB = $(GCNEXTLIBHB) $(JNILIBHB) ;
+
+ODBCCFG_LIBSHB = $(ODBCCFGLIBHB) ;
+
+# For compatibility with ming NEEDLIBS picked up by mkjam
+COMPAT	      = $(COMPATLIB) ;
+SHCOMPAT      = $(SHCOMPATLIB) ; #to match windows import library
+SHCOMPATDATA  = $(SHCOMPATLIBDATA) ;  #to match windows
+COMPATHB      = $(COMPATLIBHB) ;
+
+INGRES_LIBS   = $(INTERP_LIBS) $(FRAME_LIBS) $(LIBQ_LIBS) $(COMPAT_LIBS) ;
+if $(NT)
+{	
+	INGRES_LIBS	= $(INTERP_LIBS) $(INDEP_LIBS) $(INDEP_DLLS) $(SHARED_LIBS) $(COMPAT_LIBS) $(DATA_LIBS) 			  $(LIBQSYSLIB) ;
+	PREINSTALL_LIBS = $(SHADFLIB) $(SHADFLIBDATA) 
+			  $(SHCOMPATLIB) $(SHCOMPATLIBDATA)
+			  $(SHEMBEDLIB) $(SHEMBEDLIBDATA)
+			  $(SHLIBQLIB) $(SHLIBQLIBDATA)
+			  $(SHFRAMELIB) $(SHFRAMELIBDATA)
+			  $(SHGCFLIB) $(SHGCFLIBDATA)
+			  $(SHAPILIB) $(SHCUFLIB)
+			  $(SHTNGAPILIB) $(SHGETVERLIB) ;
+
+	THIN_CLIENT_EXE	= iigcc.exe iigcn.exe iigcstop.exe iinamu.exe 
+			  ingprenv.exe ingsetenv.exe ingunset.exe ingwrap.exe 
+			  ipsetp.exe sif.exe syscheck.exe iiconcat.exe 
+			  iigenres.exe iigetenv.exe iigetres.exe iiingloc.exe 
+			  iipmhost.exe iiremres.exe iiresutl.exe iirun.exe 
+			  iirundbms.exe iisetres.exe iivalres.exe ingprsym.exe 
+			  ingstart.exe ingstop.exe ipcclean.exe ;
+
+	THIN_CLIENT_LIBS = $(SHADFLIBDATA) $(SHADFLIB) $(SHAPILIB) 
+			   $(SHCOMPATLIBDATA) $(SHCOMPATLIB) $(SHCUFLIB) 
+			   $(SHEMBEDLIBDATA) $(SHEMBEDLIB) $(SHLIBQLIBDATA) 
+			   $(SHLIBQLIB) $(SHFRAMELIBDATA) $(SHFRAMELIB) 
+			   $(SHGCFLIBDATA) $(SHGCFLIB) ;
+			
+	THIN_CLIENT_CRS  = all.crs das.crs dayfile dayfile.dst default.rfm 
+			   net.crs net.rfm startsql startsql.dst startup 
+			   startup.dst termcap tng.crs tng.rfm tz.crs ;
+	
+	THIN_CLIENT_CHARS = chineset.xlt gcccset.nam gcccset.xlt japanese.xlt ;
+
+	THIN_CLIENT_CHARS_DIRS_CH = alt arabic chineses chineset chtbig5  
+			chteuc chthp csgb2312 csgbk cw decmulti dosasmo 
+			elot437 greek hebrew hproman8 ibmpc437 ibmpc850 
+			ibmpc866 is885915 iso88591 iso88592 iso88595 
+			iso88599 kanjieuc korean pc857 pchebrew shiftjis 
+			slav852 thai utf8 warabic whebrew win1250 win1252 
+			wthai ;
+
+	THIN_CLIENT_CHARS_DIRS_ZO = asia astrl europe gmt mideast na sa 
+				    seasia sp ;
+
+	THIN_CLIENT_MNX_E = fast_v4.mnx slow_v4.mnx ;
+	THIN_CLIENT_MNX_N = iiname.all ; 
+
+	
+
+	
+}
+
+
+#
+# In-house program flags
+#
+COMPFORMFLAGS = -c ;
+if $(VMS)
+{
+    ERCOMPFLAGS = -q$(HDRCOMMON)sqlstate.h ;
+    ERCOMPFLAGS_v2 = -g$(OLDMSG)v2_generr.h ;
+}
+else
+{
+    ERCOMPFLAGS = -q$(HDRCOMMON)/sqlstate.h ;
+    ERCOMPFLAGS_v2 = -g$(OLDMSG)/v2_generr.h ;
+}
+LEXFLAGS = -n ;
+if $(NT)
+{
+BYACCFLAGS = -l -s -rPSS_SESBLK -wTRdisplay -npss_yacc -e\"PSQ_CB *\" psq_cb ;
+EQCFLAGS = -c -n.qh -o.h ;
+ESQLCFLAGS = -c -n.sh -o.h -o ;
+ESQLCFLAGO = "" ;
+QSHTOSHFLAGS = -c -n.qsh -o.sh -o ;
+}
+else
+{
+    if $(VMS)
+    {
+    BYACCFLAGS = -s \"-rPSS_SESBLK\" \"-wTRdisplay\" \"-npss_yacc\" \"-ePSQ_CB *\" psq_cb ;
+    }
+    else
+    {
+    BYACCFLAGS = -s -rPSS_SESBLK -wTRdisplay -npss_yacc -e'PSQ_CB *' psq_cb ;
+    }
+EQCFLAGS = -c -n.qh -o.h -o ;
+ESQLCFLAGS = -c -n.sh -o.h -o ;
+QSHTOSHFLAGS = -c -n.qsh -o.sh -o ;
+ESQLCFLAGSMULTI = -multi ;
+}
+MAKEFLAGS = -f Makefile ;
+NETSCAPE_API_FLAG = -DXP_UNIX ;
+# EQLPATTERN subsumes HDRPATTERN
+BYACCPATTERN = "^##*[ 	]*include[ 	]*[<\](.*)[\>].*$" ;
+EQLPATTERN = "^##*[ 	]*include[ 	]*[<\"](.*)[\">].*$" ;
+ESQLPATTERN = "^[ 	]*EXEC SQL INCLUDE[ 	]*'(.*)'" 
+	      "^[ 	]*EXEC SQL INCLUDE[ 	]*<(.*)>" 
+	      "^[ 	]*exec sql include[ 	]*<(.*)>" 
+	      "^[ 	]*EXEC SQL INCLUDE[ 	]*([A-Za-z]*)"
+	      "^[ 	]*exec sql include[ 	]*([A-Za-z]*)" ;
+DUMMYDB = feworkdb ;
+
+
+#
+#DATA files that won't be made on windows
+#
+NOCARE $(CUFLIBDATA) ;
+NOCARE $(IMPCUFLIBDATA) ;
+NOCARE $(SHCUFLIBDATA) ;
+#NOCARE $(PSFLIBDATA) ;
+#NOCARE $(IMPPSFLIBDATA) ;
+#NOCARE $(SHPSFLIBDATA) ;
+NOCARE $(APILIBDATA) ;
+NOCARE $(IMPAPILIBDATA) ;
+NOCARE $(SHAPILIBDATA) ;
+NOCARE $(NEWORDERLIBDATA) ;
+NOCARE $(IMPNEWORDERLIBDATA) ;
+NOCARE $(SHNEWORDERLIBDATA) ;
+NOCARE $(IMPICEAPLIBDATA) ;
+NOCARE $(SHICEAPLIBDATA) ;
+NOCARE $(IMPAPACHELIBDATA) ;
+NOCARE $(SHAPACHELIBDATA) ;
+NOCARE $(SHICEMSLIBDATA) ;
+NOCARE $(IMPICEMSLIBDATA) ;
+NOCARE $(IMPICEAPILIBDATA) ;
+NOCARE $(SHICEAPILIBDATA) ;
+NOCARE $(IMPUDTLIBDATA) ;
+NOCARE $(SHUDTLIBDATA) ;
+#NOCARE $(OO) ;
+NOCARE $(IMPTNGAPILIBDATA) ;
+NOCARE $(IMPXALIBDATA) ;
+NOCARE $(IMPPERFMONLIBDATA) ;
+NOCARE $(IMPDDFLIBDATA) ;
+NOCARE $(IMPDDILIBDATA) ;
+NOCARE $(SHGSSAPILIBDATA) ;
+NOCARE $(IMPGSSAPILIBDATA) ;
+#
+# System libraries that should already be in a path
+# this loop is here to prevent jam from complaining that it doesn't
+# know to make these if one of these is used in a Jamfile.
+#
+if $(NT)
+{
+	NOCARE $(CLUSAPI) ;
+	NOCARE $(MSILIB) ;
+	NOCARE $(ODBCLIBS) ;
+	NOCARE $(ODBC32LIB) ;
+	NOCARE $(APACHECORE) ;
+	NOCARE $(GDILIB) ;
+	NOCARE $(VERSIONLIB) ;
+	NOCARE $(NETAPILIB) ;
+	NOCARE $(MORELIB) ;
+	NOCARE $(RPCLIB) ;
+	NOCARE $(HTMLHELPLIB) ;
+}
+

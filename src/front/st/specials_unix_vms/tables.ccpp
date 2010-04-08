@@ -1,0 +1,53 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** History
+**	03-nov-1993 (kellyp)
+**		Removed support map files in VOLUME E.
+**	10-jan-1993 (ricka)
+**		3 help files not being delivered, and should be
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+PART  tables
+
+   BUILD_DIR (ING_BUILD)!files!english
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY ingres!files!english
+#endif
+      FILE tucccrt.hlp
+      FILE tuccdest.hlp
+      FILE tucreate.hlp
+      FILE tudefaults.hlp
+      FILE tudflprm.hlp
+      FILE tukeys.hlp
+      FILE tumovesm.hlp
+      FILE tutblinf.hlp
+      FILE tutbllst.hlp
+      FILE tutblpik.hlp
+      FILE tutblprm.hlp
+      FILE tutblqbf.hlp
+      FILE tutblrep.hlp
+      FILE tudtypes.hlp
+      FILE tunames.hlp
+      FILE tunulls.hlp
+   BUILD_DIR (ING_BUILD)!bin
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+      EXECUTABLE tables
+# ifdef VMS
+   BUILD_DIR (ING_BUILD)!debug
+   DIRECTORY ingres!debug
+      FILE tables.stb
+# endif /* VMS */

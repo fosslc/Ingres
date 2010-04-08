@@ -1,0 +1,37 @@
+#
+# Jamfile file for cl!clf!gc_win
+#
+
+SubDir ING_SRC cl clf gc_win ;
+
+IISUBSYS cl clf gc_win ;
+
+
+IIBINEXE gctest : gctest.c ;
+IINEEDLIBS gctest : COMPAT ;
+IINEEDRES $(SHCOMPATLIB) : gcpasswd.res ;
+
+IIBINEXE apitestmt : apitestmt.c ;
+IINEEDLIBS apitestmt : COMPATLIB APILIB CUFLIB ;
+
+IILIBRARY COMPATLIB : win_tcp.c
+	tcp_ip.c
+	nvlspx.c
+	iilmgnbi.c
+	gcwinsock2.c
+	gcwinsck.c
+	gcpport.c
+	gcpinit.c
+	gcpasswd.c
+	gcfcl.c
+	gccevnt.c
+	gccdrv.c
+	gcccl.c
+	gcatrace.c
+	gcaclw95.c
+	gcacl.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : gcdata.c	gccptbl.c ;
+
+IIRCTORES gcpasswd.rc ;
+IICPEXE $(INGLIB)/gcpasswd.res : gcpasswd.res ;

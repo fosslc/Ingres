@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlocklp.hlp, help on listpick of settings for Locks Held on Displayed
+/#-- Data frame behaviour
+/#-- 
+Move the cursor to the setting you want to use, and press Select.
+
+  * When the setting is "None" the locks are released immediately after the
+    data is retrieved.
+  * When the setting is "Dbms", the locks are held until after the user has
+    finished updating the data.  The data cannot be updated by anyone
+    else until the locks are released.
+  * When the setting is "Optimistic", no locks are held, but a user cannot
+    save a record (the change will be lost) if another user has updated it
+    since the first user retrieved the record from the database.

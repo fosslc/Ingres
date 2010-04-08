@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlvnam.hlp, subtopic 'Naming local variables' of main help screen for 
+/#-- Create local variables.
+/#-- 
+Here are some guidelines for naming local variables: 
+
+  * Use no more than 65 characters for the name.
+
+  * Start the name with "h_" to indicate a local variable (for example, 
+    h_empno).
+
+  * Do not begin the name with the string "iih_". Ingres reserves this.
+
+  * If this is a hidden column in a table field, include the table field 
+    name at the beginning of the local variable name (for example, 
+    detailtbl.h_empno).
+
+  * Do not assign a name that is already used for a displayed column. 
+    (You can use the name of a non-displayed column.)
+

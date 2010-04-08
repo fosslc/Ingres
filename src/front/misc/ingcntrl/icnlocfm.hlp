@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icnlocfm.hlp       Create Locations.
+/#--
+The "Create a Location" frame allows you to create 
+LocationName - Area mappings.
+
+LocationNames specify Areas (disk volumes or directories) that can be made 
+available for database data, journals, checkpoints, work, or online backup 
+dumps.  Once the LocationName - Area mapping is established, database tables, 
+journals, checkpoints, or online backup dumps can reside on the established 
+Area. 
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Save            Make the new LocationName available to the system.
+
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

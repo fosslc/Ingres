@@ -1,0 +1,30 @@
+# Pure 32-bit build of the hpb/hp2 hybrid capable platform.
+# Double-byte enabled.
+# PA-RISC HP-UX 11i
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+
+#set: config32 hpb_us5
+#set: config64 hp2_us5
+#set: option DELIM_TEST
+#set: option B64
+#set: option DBL
+##set: option MAINWIN_VDBA (off)
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;		#set: option SVR_AR
+BUILD_ICE = "TRUE" ; 		#set: option BUILD_ICE
+
+# Hybridization...
+# The hpb-us5 build is pure 32-bit.
+BUILD_ARCH = "32" ; 		#set: arch 32
+XERCES_ARCH ?= 32 ;
+
+PLATFORM_JAMDEFS = hppx_hpux ;

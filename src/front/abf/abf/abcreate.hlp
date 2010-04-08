@@ -1,0 +1,39 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have chosen to create a new application.  This frame allows you to 
+supply information about the application so that it can be created.
+
+The Name field specifies the name of the application and must be unique
+among all the applications in the database.  
+
+The Language field specifies the default query language for the application, 
+and the query language transaction semantics with which the application will 
+start up.  This can either be QUEL or SQL, but can only be changed if your 
+installation supports both query languages.
+
+The Source-Code Directory field specifies the path name of the directory that 
+will contain source specification files for the application.  By default, 
+this will be the directory from which you started.  You can change this 
+to any directory to which you can both read and write.
+
+The Short and Long Remarks fields allow you to enter descriptions of the
+application.
+
+In VISION, a field appears which specifies which style to use for the menus 
+in Menu Frames.  Its value will determine the default style for all newly 
+created menu frames in this application.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        OK                      Create the application and go to the
+                                Edit an Application frame where the
+                                application components can be defined.
+
+        Cancel                  Cancel the Create operation and return
+                                to the previous frame.
+
+        ListChoices             Show and select legal values for the current 
+                                field.
+
+        Help                    Access the Ingres Help facility.

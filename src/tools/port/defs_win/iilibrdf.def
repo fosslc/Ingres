@@ -1,0 +1,137 @@
+#
+#  History:
+#	18-jan-2001 (somsa01)
+#	    Removed rdu_adfcb, rdu_gcb, rdu_gsvcb.
+#   	28-Jan-2004 (fanra01)
+#           Add export of new rdp functions.
+#	11-Jun-2004 (drivi01)
+#	    Added ordinals.
+#	25-Aug-2004 (drivi01)
+#	    Renamed from iirdfnt.def to iilibrdf.def.
+#	28-Oct-2005 (drivi01)
+#	    Removed reference to function rdd_baseviewchk.
+#	31-Jul-2006 (bonro01)
+#	    Removed rdd_ddbunfix(@65) infoblk_invalidate(@94)
+#	    and name_invalidate(@96)
+#	30-Oct-2008 (jonj)
+#	    SIR 120874: Removed rdu_ierror, rdu_warn,
+#	    added rduIerrorFcn, rduWarnFcn
+
+EXPORTS
+rdd_defsearch		@1				
+rdf_bgn_session		@2				
+rdf_call		@3				
+rdf_release		@4				
+rdf_clusterinfo		@26				
+rdf_ddb			@27				
+rdf_ddbinfo		@28				
+rdf_gldbinfo		@29				
+rdf_iidbdb		@30				
+rdf_ldbplus		@31				
+rdf_localtab		@32				
+rdf_netnode_cost	@33				
+rdf_open_cdbasso	@34				
+rdf_sysowner		@35				
+rdf_tabinfo		@36				
+rdf_userlocal		@37				
+rdf_usrstat		@38				
+rdf_usuper		@39				
+rdf_end_session		@40				
+rdf_gdesc		@41				
+rdu_gsemaphore		@42				
+rdu_rsemaphore		@43				
+rdu_shwdmfcall		@44				
+rdd_gtreetuple		@45				
+rdd_streequery		@46				
+rdf_getinfo		@47				
+rdf_readtuples		@48				
+rdr_tuple		@49				
+rdu_qclose		@50				
+rdu_qget		@51				
+rdu_qmclose		@52				
+rdu_qopen		@53				
+rdu_qtalias		@54				
+rdu_qtclass		@55				
+rdu_txtcopy		@56				
+rdd_alterdate		@57							
+rdd_begin		@59				
+rdd_caps		@60				
+rdd_commit		@61				
+rdd_cvobjtype		@62				
+rdd_cvstorage		@63				
+rdd_cvtype		@64				
+rdd_fetch		@66				
+rdd_flush		@67				
+rdd_gattr		@68				
+rdd_getcolno		@69				
+rdd_getobjinfo		@70				
+rdd_ghistogram		@71				
+rdd_gindex		@72				
+rdd_gldbdesc		@73				
+rdd_gmapattr		@74				
+rdd_gobjbase		@75				
+rdd_gobjinfo		@76				
+rdd_gstats		@77				
+rdd_idxcount		@78				
+rdd_lcltab_exists	@79				
+rdd_ldbsearch		@80				
+rdd_ldbtab		@81				
+rdd_localstats		@82				
+rdd_objinfo		@83				
+rdd_query		@84				
+rdd_relinfo		@85				
+rdd_rtrim		@86				
+rdd_schemachk		@87				
+rdd_stampupd		@88				
+rdd_tab_init		@89				
+rdd_tableupd		@90				
+rdd_username		@91				
+rdd_vdata		@92				
+rdf_initialize		@93				
+invalidate_relcache	@95				
+rdf_avg_get		@97				
+rdf_invalidate		@98				
+rdr_killtree		@99				
+rdf_mo_init		@100				
+rdf_qtext_to_tuple	@101				
+rdf_qtree_to_tuple	@102				
+rdf_report		@103				
+rdf_shutdown		@104				
+rdf_startup		@105				
+rdf_state_get		@106				
+rdf_terminate		@107				
+rdf_trace		@108				
+rdt_clear_cache		@109				
+rdf_unfix		@110				
+rdf_update		@111				
+rdu_qrytext_to_tuple	@112				
+rdu_treenode_to_tuple	@113				
+rdd_resetsem		@114				
+rdd_setsem		@115				
+rdf_exception		@116				
+rdu_com_checksum	@117				
+rdu_cstream		@118				
+rdu_currtime		@119				
+rdu_dstream		@120				
+rdu_ferror		@121				
+rdu_i_deulh		@122				
+rdu_i_dulh		@123				
+;rdu_ierror		@124				
+rdu_init_info		@125				
+rdu_iulh		@126				
+rdu_malloc		@127				
+rdu_master_infodump	@128				
+rdu_private		@129				
+rdu_r_deulh		@130				
+rdu_r_dulh		@131				
+rdu_rulh		@132				
+rdu_setname		@133				
+;rdu_warn		@134				
+rdu_xlock		@135				
+rdu_xor			@136			
+rdp_update_partdef	@137				
+rdp_copy_partdef	@138				
+rdp_build_partdef	@139				
+rduIerrorFcn    	@140				
+rduWarnFcn		@141				
+

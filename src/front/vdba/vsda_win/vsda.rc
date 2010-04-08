@@ -1,0 +1,469 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+#include "rctools.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_VSDA                BITMAP                  "res\\vsdactl.bmp"
+IDB_VSD_TABLE           BITMAP                  "res\\trftable.bmp"
+IDB_VSD_FOLDER          BITMAP                  "res\\trffoldr.bmp"
+IDB_VSD_VIEW            BITMAP                  "res\\trfview.bmp"
+IDB_VSD_DATABASE        BITMAP                  "res\\trfdbase.bmp"
+IDB_VSD_EMPTY           BITMAP                  "res\\trfempty.bmp"
+IDB_VSD_PROCEDURE       BITMAP                  "res\\trfproc.bmp"
+IDB_VSD_DBEVENT         BITMAP                  "res\\trfdbeve.bmp"
+IDB_VSD_SYNONYM         BITMAP                  "res\\trfsynon.bmp"
+IDB_VSD_INDEX           BITMAP                  "res\\trfindex.bmp"
+IDB_VSD_RULE            BITMAP                  "res\\trfrule.bmp"
+IDB_VSD_INTEGRITY       BITMAP                  "res\\trfinteg.bmp"
+IDB_VSD_INSTALLATION    BITMAP                  "res\\trfinsta.bmp"
+IDB_VSD_GROUP           BITMAP                  "res\\trfgroup.bmp"
+IDB_VSD_USER            BITMAP                  "res\\trfuser.bmp"
+IDB_VSD_ROLE            BITMAP                  "res\\trfrole.bmp"
+IDB_VSD_PROFILE         BITMAP                  "res\\trfprofi.bmp"
+IDB_VSD_LOCATION        BITMAP                  "res\\trflocat.bmp"
+IDB_VSD_DISCARD         BITMAP                  "res\\trfdiscd.bmp"
+IDB_VSD_GRANTEE_INSTALLATION BITMAP                  "res\\ginstall.bmp"
+IDB_VSD_GRANTEE_DATABASE BITMAP                  "res\\gdatabas.bmp"
+IDB_VSD_GRANTEE_TABLE   BITMAP                  "res\\gtable.bmp"
+IDB_VSD_GRANTEE_VIEW    BITMAP                  "res\\gview.bmp"
+IDB_VSD_GRANTEE_PROCEDURE BITMAP                  "res\\gproc.bmp"
+IDB_VSD_GRANTEE_DBEVENT BITMAP                  "res\\gdbevent.bmp"
+IDB_VSD_ALARM_DATABASE  BITMAP                  "res\\adatabas.bmp"
+IDB_VSD_ALARM_INSTALLATION BITMAP                  "res\\ainstall.bmp"
+IDB_VSD_ALARM_TABLE     BITMAP                  "res\\atable.bmp"
+IDB_VSD_TABLE_STAR_NATIVE BITMAP                  "res\\starntbl.bmp"
+IDB_VSD_TABLE_STAR_LINK BITMAP                  "res\\starltbl.bmp"
+IDB_VSD_VIEW_STAR_LINK  BITMAP                  "res\\starlviw.bmp"
+IDB_VSD_VIEW_STAR_NATIVE BITMAP                  "res\\starnviw.bmp"
+IDB_VSD_PROCEDURE_STAR  BITMAP                  "res\\starproc.bmp"
+IDB_VSD_DATABASE_DISTRIBUTED BITMAP                  "res\\distdata.bmp"
+IDB_VSD_DATABASE_COORDINATOR BITMAP                  "res\\coordata.bmp"
+IDB_VSD_INDEX_STAR_LINK BITMAP                  "res\\starinde.bmp"
+IDB_VSD_SEQUENCE        BITMAP                  "res\\trfsequ.bmp"
+IDB_VSD_GRANTEE_SEQUENCE BITMAP                  "res\\grseq.bmp"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PROPPAGE_VSDA DIALOG  0, 0, 250, 62
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Properties of VSDA.OCX Control are not impemented.",
+                    IDC_STATIC,7,25,229,16
+END
+
+IDD_DIFFERENT_LIST DIALOGEX 0, 0, 301, 156
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_TABSTOP,7,28,287,112,WS_EX_CLIENTEDGE
+    CONTROL         "Group by Object",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,133,14,69,10
+    LTEXT           "Detail for ",IDC_STATIC_DEPT1,1,15,31,8
+    EDITTEXT        IDC_EDIT1,34,14,24,12,ES_AUTOHSCROLL | ES_READONLY | 
+                    ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN1,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,55,14,10,12
+    LTEXT           "level(s) of objects",IDC_STATIC_DEPT2,64,15,59,8
+    LTEXT           "",IDC_STATIC_DIFF_COUNT,7,143,287,12,SS_SUNKEN
+    LTEXT           "No Selected Item",IDC_STATIC_SELECTED_ITEM,6,1,288,12,
+                    SS_CENTERIMAGE,WS_EX_DLGMODALFRAME
+    CTEXT           "<No difference>",IDC_STATIC_NODIFFERENCE,207,16,67,8,
+                    SS_CENTERIMAGE | NOT WS_VISIBLE
+END
+
+IDD_DIFFERENT_DETAIL DIALOGEX 0, 0, 404, 126
+STYLE DS_SETFONT | WS_CHILD | WS_CAPTION
+CAPTION "Detail of Difference"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+END
+
+IDD_DIFFERENCE_DETAIL_PAGE DIALOGEX 0, 0, 281, 137
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Static",IDC_STATIC1,7,0,267,12,0,WS_EX_DLGMODALFRAME
+    EDITTEXT        IDC_EDIT1,7,11,267,119,ES_MULTILINE | ES_AUTOHSCROLL | 
+                    ES_READONLY | WS_VSCROLL | WS_HSCROLL
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_PROPPAGE_VSDA, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 243
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 55
+    END
+
+    IDD_DIFFERENT_LIST, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 294
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 155
+    END
+
+    IDD_DIFFERENT_DETAIL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 397
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 119
+    END
+
+    IDD_DIFFERENCE_DETAIL_PAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 274
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 130
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_POPUP_DISCARD MENU 
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Discard Branch",              ID_POPUP_DISCARD
+        MENUITEM "Un-Discard Branch",           ID_POPUP_UNDISCARD
+        MENUITEM SEPARATOR
+        MENUITEM "Access in VDBA Windows...",   ID_POPUP_ACCESSVDBA
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_VSDA                "Vsda Control"
+    IDS_VSDA_PPG            "Vsda Property Page"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_VSDA_PPG_CAPTION    "General"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_OWNERxITEM          "[%s].%s"
+    IDS_INVITATION          "<Please select the groups of objects to be compared, and press the ""Compare"" Button>"
+    IDS_TITLE_ANIMATE_INSTALLATION "Comparing Installations"
+    IDS_TITLE_ANIMATE_DATABASE_SCHEMA "Comparing Database Schemas"
+    IDS_TITLE_STORE_INSTALLATION "Saving Installation Information"
+    IDS_TITLE_STORE_DATABASE_SCHEMA "Saving Database Schema Information"
+    IDS_TAB_OBJECT          "Object"
+    IDS_TAB_TYPE            "Type"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_POPUP_DISCARD        "Discard the item and its sub-branches"
+    ID_POPUP_UNDISCARD      "Restore item and its sub-branches to normal state."
+    ID_POPUP_ACCESSVDBA     "Access in Vdba Windows\nLaunch Vdba"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TAB_DIFF            "Difference"
+    IDS_TAB_SCHEMA1         "Schema 1"
+    IDS_TAB_SCHEMA2         "Schema 2"
+    IDS_TAB_GROUP_DIFF1     "Object Level Differences"
+    IDS_TAB_GROUP_DIFF2     "Sub-branch Objects Differences"
+    IDS_DIFFPROPERTY_CAPTION 
+                            "Ingres Visual Database Object Differences Analyzer %1"
+    IDS_NODETAIL_DIFFERENCExTHISITEM "N/A"
+    IDS_DIFFERENCES_IN_SUBBRANCHES "<Difference(s) in sub-branches>"
+    IDS_NO_SELECTED_ITEM4DETAIL "No Selected Detail Line."
+    IDS_COMPARISON_ABORTED  "The comparison has been interrupted."
+    IDS_MSG_NODIFF_4WRITE   "There is no difference to be saved."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_COMPARE_WRONGTYPE 
+                            "Database Schema(s) cannot be compared with an installation\n\nIf you select <installation> for a group of objects, it must be selected also for the other group."
+    IDS_MSG_COMPARE_WRONGTYPE_INSTALLATIONxFILE 
+                            "The specified file does not contain <Installation> information."
+    IDS_MSG_COMPARE_WRONGTYPE_SCHEMAxFILE 
+                            "The specified file contains <Installation> information and cannot be compared with a database schema."
+    IDS_MSG_COMPARE_WRONGTYPE_FILExFILE 
+                            "The specified files are not compatible.\nYou can only compare <Installation> file with <Installation> file or <Schema> file with <Schema> file."
+    IDS_MSG_COMPARE_WRONGTYPE_SCHEMA 
+                            "You can only compare one schema (the <Default Schema> or a specific one) with one schema, or <All Schemas> with <All Schemas>"
+    IDS_MSG_II_SYSTEM_NOT_DEFINED "II_SYSTEM is not defined."
+    IDS_MSG_FAIL_2_STOREDATA "Failed to store Installation or Schema to file."
+    IDS_MSG_FAIL_2_COMPAREDATA "Failed to compare Installation or Schema."
+    IDS_MSG_COMPARE_WRONGTYPE_DATABASE 
+                            "Cannot Compare a non-Star Database with a Star Database."
+    IDS_MSG_OBJ_DIFF        "Objects with Differences: %d.    Total Lines: %d"
+    IDS_MSG_WAIT_DB         "List of Databases..."
+    IDS_MSG_WAIT_GENERAL    "General information..."
+    IDS_MSG_WAIT_USERS      "List of Users..."
+    IDS_MSG_WAIT_GROUPS     "List of Groups..."
+    IDS_MSG_WAIT_ROLES      "List of Roles..."
+    IDS_MSG_WAIT_PROFILES   "List of Profiles..."
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Ingres Visual Database Object Differences Analyzer"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_WAIT_LOCATIONS  "List of Locations..."
+    IDS_MSG_WAIT_GRANTEES   "List of Grantees..."
+    IDS_MSG_WAIT_SEC_ALARMS "List of Security Alarms..."
+    IDS_MSG_WAIT_INDICES    "List of Indexes..."
+    IDS_MSG_WAIT_RULES      "List of Rules..."
+    IDS_MSG_WAIT_INTEGRITIES "List of Integrities..."
+    IDS_MSG_WAIT_SECURITY_ALARMS "List of Security Alarms..."
+    IDS_MSG_WAIT_TABLES     "List of Tables..."
+    IDS_MSG_WAIT_VIEWS      "List of Views..."
+    IDS_MSG_WAIT_PROCEDURES "List of Procedures..."
+    IDS_MSG_WAIT_SEQUENCES  "List of Sequences..."
+    IDS_MSG_WAIT_DB_EVENTS  "List of Database Events..."
+    IDS_MSG_WAIT_SYNONYMS   "List of Synonyms..."
+    IDS_NOT_FETCHED         "<Not fetched for comparison>"
+    IDS_FILE_ERROR          "Compound file error: <%d>"
+    IDS_MISSING_OBJ         "Missing object"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_AVAILABLE           "Available"
+    IDS_NOT_AVAILABLE       "N/A"
+    IDS_MISSING_MEMBERS     "Missing Members"
+    IDS_MISSING_COLUMN      "Missing Column"
+    IDS_MISSING_PRIM_KEY    "Missing Primary Key"
+    IDS_MISSING_UNIQUE_KEY  "Missing Unique Key"
+    IDS_MISSING_FOREIGN_KEY "Missing Foreign Key"
+    IDS_MISSING_CHECK       "Missing Check"
+    IDS_MISSING_PRIV        "Missing Privileges"
+    IDS_MISSING_ALARM       "Missing Alarm Actions"
+    IDS_TYPE_QUERY_TXT      "Query Text"
+    IDS_TYPE_ALL_EVENT      "All Event"
+    IDS_TYPE_LIMIT_SEC      "Limit Security Label"
+    IDS_TYPE_DEF_GROUP      "Default Group"
+    IDS_TYPE_DEF_PROF       "Default Profile"
+    IDS_TYPE_EXT_PASSWORD   "External Password"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TYPE_EXP_DATE       "Expire Date"
+    IDS_TYPE_DATA_USAGE     "Data Usage"
+    IDS_TYPE_JNL_USAGE      "Journal Usage"
+    IDS_TYPE_CHECKPOINT_USAGE "Check Point Usage"
+    IDS_TYPE_WORK_USAGE     "Work Usage"
+    DS_TYPE_DUMP            "Dump Usage"
+    IDS_TYPE_LOC_AREA       "Location Area"
+    IDS_TYPE_OWNER          "Owner"
+    IDS_TYPE_READ_ONLY      "Read Only"
+    IDS_TYPE_PRIVATE        "Private"
+    IDS_TYPE_DB_TYPE        "Database Type"
+    IDS_TYPE_UNICODE        "Unicode Enabled"
+    IDS_TYPE_CHECKPOINT_LOC "Checkpoint Location"
+    IDS_TYPE_DTA_LOC        "Data Location"
+    IDS_TYPE_JNL_LOC        "Journal Location"
+    IDS_TYPE_DUMP_LOC       "Dump Location"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TYPE_WORK_LOC       "Work Location"
+    IDS_TYPE_SEC_LABEL      "Security Label"
+    IDS_TYPE_STOR_STRUCT    "Storage Structure"
+    IDS_TYPE_PAGE_SIZE      "Page Size"
+    IDS_TYPE_EXTEND         "Extend"
+    IDS_TYPE_ALLOC          "Allocation"
+    IDS_TYPE_ALLOCATED_PAGES "Allocated Pages"
+    IDS_TYPE_UNIQUE_SCOPE   "Unique Scope"
+    IDS_TYPE_UNIQUE_RULE    "Unique Rule"
+    IDS_TYPE_COMPRESS       "Compress"
+    IDS_TYPE_KEY_COMPRESS   "Key Compress"
+    IDS_TYPE_FILL_FACTOR    "Fill Factor"
+    IDS_TYPE_LEAFFILL       "LeafFill"
+    IDS_TYPE_NON_LEAFFILL   "Non LeafFill"
+    IDS_TYPE_MIN_PAGE       "Min Page"
+    IDS_TYPE_MAX_PAGE       "Max Page"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TYPE_NUM_COLS       "Number of Columns"
+    IDS_TYPE_ORDER_COLS     "Order of Columns"
+    IDS_TYPE_COL_ATTRIB     "Column Attribute"
+    IDS_TYPE_PRIMARY_KEY    "Primary Key Text"
+    IDS_TYPE_TBL_PHYSICALLY "Table Physically Consistent"
+    IDS_TYPE_TBL_LOGICALLY  "Table Logically Consistent"
+    IDS_TYPE_TBL_RECOVERY   "Table Level Recovery Permitted"
+    IDS_TYPE_JOURNALING     "Journaling"
+    IDS_TYPE_DUP_ROW        "Duplicated Row"
+    IDS_TYPE_ESTIMATE_ROW   "Estimated Row Count"
+    IDS_TYPE_COMMENT        "Comment"
+    IDS_TYPE_STATEMENT      "Statement"
+    IDS_TYPE_CHECK_OPT      "Check Option"
+    IDS_TYPE_LANGUAGE       "Language"
+    IDS_TYPE_TYPE           "Type"
+    IDS_TYPE_DEC_PREC       "Decimal Precision"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TYPE_CYCLE          "Cycle"
+    IDS_TYPE_ORDER          "Order"
+    IDS_TYPE_MAX_VAL        "Max Value"
+    IDS_TYPE_MIN_VAL        "Min Value"
+    IDS_TYPE_LOCATION       "Location(s)"
+    IDS_TYPE_CACHE_PRIORITY "Cache Priority"
+    IDS_TYPE_PERSISTENT     "Persistent"
+    IDS_TYPE_START_WITH     "Start With"
+    IDS_TYPE_INCREMENT_BY   "Increment By"
+    IDS_TYPE_NEXT_VALUE     "Next Value"
+    IDS_TYPE_SYNONYM_ON     "Synonym on"
+    IDS_TYPE_SUBJECT_TYPE   "Subject Type"
+    IDS_TYPE_SECURITY_USER  "Security user"
+    IDS_TYPE_ALARM_CONDITION "Alarm condition"
+    IDS_TYPE_CACHE          "Cache"
+    IDS_TYPE_ALARM_RAISES   "Alarm raises DBevent"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_USER                "%s (users)"
+    IDS_USER_DEFAULT        "%s (users, default)"
+    IDS_COMPARE_SECURITY    "compare security alarm %s <--> %s \n"
+    IDS_COMPARE_GRANTEE     "compare grantee %s <--> %s \n"
+    IDS_COMPARE_TBL         "compare table [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_VIEW        "compare view [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_PROC        "compare procedure [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_SEQ         "compare sequence [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_DBEVEVNT    "compare dbevent [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_SYNONYM     "compare synonym [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_INDEX       "compare index [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_RULE        "compare rule [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_INTEGRITY   "compare integrity [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_DB          "compare database [%s].%s <--> [%s].%s \n"
+    IDS_COMPARE_USER        "compare user %s <--> %s \n"
+    IDS_COMPARE_GROUP       "compare group %s <--> %s \n"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_COMPARE_ROLE        "compare role %s <--> %s \n"
+    IDS_COMPARE_PROFILE     "compare profile %s <--> %s \n"
+    IDS_COMPARE_LOC         "compare location %s <--> %s \n"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "#include ""rctools.h""\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "1 TYPELIB ""vsda.tlb""\r\n"
+    "#include ""rctools.rc""         // custom controls \r\n"
+    "#include ""gv.rc""\r\n"
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+1 TYPELIB "vsda.tlb"
+#include "rctools.rc"         // custom controls 
+#include "gv.rc"
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

@@ -1,0 +1,15 @@
+;
+; History:
+;	17-may-2001 (somsa01)
+;	    Created.
+;	03-Aug-2001 (penga03)
+;	    Added ingres_rollback_ice.
+;	21-Aug-2001 (penga03)
+;	    Added ingres_unset_ice_reg_entries.
+;
+EXPORTS
+    ingres_remove_ice_files
+    ingres_set_ice_reg_entries
+    ingres_rollback_ice
+    ingres_unset_ice_reg_entries
+

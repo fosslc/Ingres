@@ -1,0 +1,12 @@
+! History:
+!	25-jan-2005 (abbjo03)
+!	    Build with the shared CL.
+!       04-Jan-2009 (horda03)
+!           Build like IIJOBDEF to include
+!           SystemCfgPrefix symbol.
+!
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/include=(gver)	! for II_copyright
+INGLIB:libutil.olb/library
+INGLIB:libcompat.olb/library

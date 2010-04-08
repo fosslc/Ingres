@@ -1,0 +1,538 @@
+/*
+**    Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<me.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<adf.h>
+# include	<fe.h>
+# include	<ft.h>
+# include	<ug.h>
+# include	<er.h>
+# include	<ex.h>
+# include	<st.h>
+# include	<oocat.h>
+exec sql include <ooclass.sh>;
+# include	<oodefine.h>
+# include	<abclass.h>
+# include	<ilerror.h>
+# include	<metafrm.h>
+
+# include	"ervq.h"
+# include	"vqloc.h"
+# include       <adf.h>
+# include       <fmt.h>
+# include       <frame.h>
+# include	<flddesc.h>
+
+/*
+** Name:	vqimport.qsc - import a frame
+**
+** Description:
+**
+** 	This file defines:
+**		IIVQimport() - import a frame
+**
+** History:
+**	5-jan-93 (blaise)
+**		Initial Version
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**      11-jan-1996 (toumi01; from 1.1 axp_osf port) (muhpa01)
+**              Changed type of appframe (in list_appls()) and frframe (in
+**              list_frames()) from i4 to PTR for portability (axp_osf port)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      29-Nov-1999 (hanch04)
+**          First stage of updating ME calls to use OS memory management.
+**          Make sure me.h is included.  Use SIZE_TYPE for lengths.
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+[@history_template@]...
+*/
+
+/* # defines */
+# define MAX_APPS	1000
+
+/* GLOBALDEFs & GLOBALREFs */
+GLOBALREF APPL	*IIVQappl;	/* the current application */
+
+/* externs */
+FUNC_EXTERN i4		IIFRrlpRunListPick();
+FUNC_EXTERN i4		IIVQfcsFrameCompSort();
+FUNC_EXTERN i4		IIVQcfCopyFrame();
+
+/* statics */
+static TAGID	lptag = 0;
+
+## static char sel_form[]	= ERx("sel");
+## static char _col1[]		= ERx("c1");
+## static char _col2[]		= ERx("c2");
+## static char _col3[]		= ERx("c3");
+
+static DB_DATA_VALUE dbv1 = 		/* the name of the frame/application */
+{
+	NULL,
+	FE_MAXNAME,
+	DB_CHR_TYPE,
+	0
+};
+static DB_DATA_VALUE dbv2 =		/* the type of frame */ 
+{
+	NULL,
+	14,
+	DB_CHR_TYPE,
+	0
+};
+static DB_DATA_VALUE dbv3 =		/* the short remark */ 
+{
+	NULL,
+	OOSHORTREMSIZE,
+	DB_CHR_TYPE,
+	0
+};
+
+/* field descriptors for popup form generation - list of applications */
+static FLD_DESC appfd[2] = 
+{
+	{
+		_col1,			/* column name */
+		NULL,			/* title */
+		&dbv1,			/* data type */
+		16			/* maximum display width */
+	},
+	{
+		_col2,			/* column name */
+		NULL,			/* title */
+		&dbv3,			/* data type */
+		30			/* maximum display width */
+	}
+};
+
+/* field descriptors for popup form generation - list of frames */
+static FLD_DESC frfd[3] = 
+{
+	{
+		_col1,			/* column name */
+		NULL,			/* title */
+		&dbv1,			/* data type */
+		16			/* maximum display width */
+	},
+	{
+		_col2,			/* column name */
+		NULL,			/* title */
+		&dbv2,			/* data type */
+		14			/* maximum display width */
+	},
+	{
+		_col3,			/* column name */
+		NULL,			/* title */
+		&dbv3,			/* data type */
+		30			/* maximum display width */
+	}
+};
+
+static OOID	list_appls();
+static i4	list_frames();
+static PTR	loc_alloc();
+
+
+/*{
+** Name:	IIVQimport - import a frame
+**
+** Description:
+**	Create selection lists of applications and frames within the 
+**	selected application, then duplicate the selected frame into the
+**	current application.
+**
+** Inputs:
+**
+** Outputs:
+**	Returns:
+**		i4 - always VQ_DONE for now.
+** History:
+**	5-jan-93 (blaise)
+**		Initial version.
+*/
+i4
+IIVQimport()
+{
+	OOID		newappid = 0;
+	OOID		newfrmid = 0;
+	char		newappname[FE_MAXNAME+1];
+	i4		status = VQ_DONE;
+	i4		choice;
+	APPL		app;
+	USER_FRAME	*array[1];
+	APPL_COMP	*comp;
+	APPL_COMP	*compptr;
+	bool		resume = FALSE;
+
+	/* get memory tag */
+	if (lptag == 0)
+		lptag = FEgettag();
+
+	/*
+	** Loop to bring up a selection list of application names and a
+	** selection list of frame names. This loop will repeat only if the
+	** user selects an application with no append, browse or update
+	** frames.
+	*/
+	for (;;)
+	{
+		/* Bring up selection list of application names */
+		if((newappid = list_appls(&choice, newappname)) < 0 ||
+			choice < 0)
+		{
+			return(VQ_DONE);
+		}
+
+		/* fetch the application object */
+		MEfill(sizeof(app), '\0', (PTR)&app);
+
+		app.ooid = newappid;
+		app.class = OC_APPL;
+		app.data.inDatabase = FALSE;
+		app.data.dbObject = TRUE;
+		app.comps = NULL;
+
+		if (IIAMapFetch(&app, OC_UNDEFINED, TRUE) != OK)
+			return (VQ_DONE);
+
+		/* Bring up selection list of frame names */
+		comp = (APPL_COMP*)(&app)->comps;
+		if ((status = list_frames(newappname, comp, &choice, &newfrmid))
+								== VQ_NONE)
+		{
+			/*
+			** The application selected has no append, browse or
+			** update frames. Give an error and re-display the
+			** list of applications.
+			*/
+			IIUGerr(E_VQ00EF_No_Import_Frames, UG_ERR_ERROR,0);
+		}
+		else if (status & VQ_ERRF || status & VQ_ERRM)
+		{
+			return(VQ_DONE);
+		}
+		else if (choice < 0)	/* the user selected "Cancel" */
+			return (status);
+		else
+			break;
+	}
+
+	/* Get the APPL_COMP structure for the selected frame */
+	for (compptr = comp;
+		compptr != (APPL_COMP*)NULL && compptr->ooid != newfrmid;
+		compptr = compptr->_next)
+	{
+		;
+	}
+
+	comp = compptr;
+
+	/* Now copy the frame.
+	** Start by copying comp into a single-element array in order
+	** to pass the right type of argument to IIVQcfCopyFrame()
+	*/
+	array[0] = (USER_FRAME *)loc_alloc(lptag, sizeof(USER_FRAME), NULL);
+	array[0] = (USER_FRAME *)comp;
+	array[0]->mf = (METAFRAME *)loc_alloc(lptag, sizeof(METAFRAME), NULL);
+	MEfill(sizeof(METAFRAME), '\0', (PTR)array[0]->mf);
+	array[0]->mf->apobj = (OO_OBJECT *)comp;
+	status = IIVQcfCopyFrame((PTR)array, 0, &resume);
+	FEfree(lptag);
+	if ((status & VQ_ERRM) || (status & VQ_ERRF))
+		return(VQ_DONE);
+	else
+		return(status);
+}
+
+/*
+** Name:	list_appls - create listpick of applications
+**
+** Description:
+**	Displays a listpick of all applications in the database, except for
+**	the one we're currently editing. The listpick contains the application
+**	name and short remark.
+**
+** Inputs:
+**
+** Outputs:
+**	choice		- (i4*) numeric choice from list
+**	appname		- (char*) name of selected application
+** Returns:
+**	OOID object id of selected application
+**
+** History:
+**	5-jan-93 (blaise)
+**		Initial version
+**	
+*/
+static OOID
+list_appls(choice, appname)
+i4	*choice;
+char	*appname;
+{
+##	char	**appls;
+##	char	**remarks;
+##	i4	ids[MAX_APPS];
+	char	*appptr;
+	char	*remptr;
+	i4	count = 0;
+	i4	i;
+	i4	status;
+	OOID	newappid = 0;
+	exec sql begin declare section;
+	char	appbuf[FE_MAXNAME+1];
+	char	rembuf[OOSHORTREMSIZE+1];
+	i4	id;
+	OOID	currappid;
+	exec sql end declare section;
+##	PTR	appframe;
+
+	/* allocate arrays for application names & short remarks */
+	appls = (char **)loc_alloc(lptag, sizeof(char *)*MAX_APPS, NULL);
+	remarks = (char **)loc_alloc(lptag, sizeof(char *)*MAX_APPS, NULL);
+
+	/*
+	** select application names & short remarks into the arrays - select
+	** all applications except the one we're currently editing
+	*/
+	currappid = IIVQappl->ooid;
+	exec sql repeated select
+			object_id, object_name, short_remark
+		into :id, :appbuf, :rembuf
+		from ii_objects
+		where object_class = :OC_APPL
+		and object_id != :currappid
+		order by object_name;
+	exec sql begin;
+	{
+		/*
+		** stop after the MAX_APPth application (in case we ever
+		** get there!)
+		*/
+		if (count >= MAX_APPS)
+		{
+			exec sql endselect;
+		}
+		appptr = (char *)loc_alloc(lptag, 0, appbuf);
+		remptr = (char *)loc_alloc(lptag, 0, rembuf);
+		ids[count] = id;
+		appls[count] = appptr;
+		remarks[count++] = remptr;
+		++appptr;
+		++remptr;
+	}
+	exec sql end;
+
+	/* make default form */
+	appfd[0].title = ERget(F_VQ0165_Appl_Name);
+	appfd[1].title = ERget(F_VQ00F6_Frame_Desc);
+	if (IIFRmdfMakeDefaultForm(ERget(F_VQ0166_Select_Imp_App),
+		sel_form, TRUE, 2, appfd, min(15, count), (FRAME **)&appframe) != OK)
+	{
+		FEfree(lptag);
+		IIUGerr(E_VQ006E_Bad_Sel_Form, UG_ERR_ERROR, 0);
+		return(-1);
+	}
+
+##	addform appframe
+##	inittable sel_form sel_form read
+
+	for (i = 0; i < count; i++)
+	{
+		/*
+		** load the options into the constructed table field:
+		**	_col1 = application name
+		**	_col2 = short remark
+		*/
+##		loadtable sel_form sel_form (
+##			_col1 = appls[i],
+##			_col2 = remarks[i]
+##		)
+	}
+
+	/* display the listchoices popup of application names */
+	*choice = IIFRrlpRunListPick(sel_form, sel_form, -1, -1,
+		ERget(F_VQ0164_import_prmpt), ERx("vqimlpap.hlp"),
+		(i4(*)())NULL, (char *)NULL);
+	if (*choice >= 0)
+	{
+		STcopy(appls[*choice], appname);
+		newappid = ids[*choice];
+	}
+	IIdelfrm(sel_form);
+	FEfree(lptag);
+	return(newappid);
+}
+
+/*
+** Name:	list_frames - create listpick of frames
+**
+** Description:
+**	Displays a listpick of all append, browse and update frames in the
+**	application the user wants to import a frame from. The listpick
+**	displays the frame name, type and short remark.
+**
+** Inputs:
+**	appname		- (char*) name of application
+**	comp		- (APPL_COMP*) component objects for this application
+**
+** Outputs:
+**	choice		- (i4*) numeric choice from list
+**	frmid		- (OOID*) object id of selected frame
+** Returns:
+**	VQ_NONE - no append, browse or update frames
+**	VQ_ERRF - error creating form for listpick
+**	VQ_CONT - OK
+**
+** History:
+**	5-jan-93 (blaise)
+**		Initial version
+**	
+*/
+static i4
+list_frames(appname, comp, choice, frmid)
+char		*appname;
+APPL_COMP	*comp;
+i4		*choice;
+OOID		*frmid;
+{
+	i4		count;
+	i4		i;
+	APPL_COMP	**frames;
+	APPL_COMP	*compptr;
+##	char		*frame_name;
+##	char		*frame_type;
+##	char		*frame_desc;
+##	PTR		frframe;
+	char		formtitle[FE_PROMPTSIZE+1];
+
+	compptr = comp;
+	/*
+	** go through the application components, counting the append, browse
+	** and update frames.
+	*/
+	for (count = 0; compptr != (APPL_COMP*)NULL; compptr = compptr->_next)
+	{
+		if (compptr->class == OC_APPFRAME ||
+			compptr->class == OC_UPDFRAME ||
+			compptr->class == OC_BRWFRAME)
+		{
+			count++;
+		}
+	}
+
+	/* error if there are no append, browse or update frames */
+	if (count == 0)
+	{
+		return(VQ_NONE);
+	}
+
+	/* allocate an array for the frames */
+	frames = (APPL_COMP**)loc_alloc(lptag, sizeof(APPL_COMP*)*count, NULL);
+
+	/* fill in the allocated array */
+	compptr = comp;
+	for (i = 0; i < count; compptr = compptr->_next)
+	{
+		if (compptr->class == OC_APPFRAME ||
+			compptr->class == OC_BRWFRAME ||
+			compptr->class == OC_UPDFRAME)
+		{
+			((USER_FRAME*)compptr)->mf->flags &= ~MF_MARKED;
+			frames[i++] = compptr;
+		}
+	}
+
+	/* sort the array of frames */
+	IIUGqsort((char*) frames, count, sizeof(APPL_COMP*),
+		IIVQfcsFrameCompSort);
+
+	/* set up form title and column titles for listpick */
+	frfd[0].title = ERget(F_VQ00F4_Frame_Name);
+	frfd[1].title = ERget(F_VQ00F5_Frame_Type);
+	frfd[2].title = ERget(F_VQ00F6_Frame_Desc);
+	STprintf(formtitle, "%s%s", ERget(F_VQ0167_Select_Imp_Frame), appname);
+
+	/* make default form for listpick */
+	if (IIFRmdfMakeDefaultForm(formtitle, sel_form, TRUE, 3, frfd,
+		min(15, count), &frframe) != OK)
+	{
+		FEfree(lptag);
+		IIUGerr(E_VQ006E_Bad_Sel_Form, UG_ERR_ERROR, 0);
+		return(VQ_ERRF);
+	}
+
+##	addform frframe
+##	inittable sel_form sel_form read
+
+	for (i = 0; i < count; i++)
+	{
+		/*
+		** Load the options (frame name, frame type, short remark)
+		** into the constructed table field.
+		*/
+		frame_name = frames[i]->name;
+		frame_type = OOpclass(frames[i]->class)->name;
+		frame_desc = frames[i]->short_remark;
+
+##		loadtable sel_form sel_form (
+##			_col1 = frame_name,
+##			_col2 = frame_type,
+##			_col3 = frame_desc
+##		)
+	}
+
+	/* display the listchoices popup of frame names */
+	*choice = IIFRrlpRunListPick(sel_form, sel_form, -1, -1,
+		ERget(F_VQ0164_import_prmpt), ERx("vqimlpfr.hlp"),
+		(i4(*)())NULL, (char *)NULL);
+	if (*choice >= 0)
+	{
+		*frmid = frames[*choice]->ooid;
+	}
+	IIdelfrm(sel_form);
+	return(VQ_CONT);
+}
+
+/*
+** loc_alloc() - allocate memory on a tag and, if str argument is non-null,
+** copy str to allocated memory.
+**
+** History:
+**	5-jan-93 (blaise)
+**	        Copied from iammpop.sc
+*/
+static PTR
+loc_alloc(tag,size,str)
+u_i4	tag;
+i4	size;
+char	*str;
+{
+	PTR mem;
+
+	if (str != NULL)
+		size = STlength(str)+1;
+
+	mem = FEreqmem((u_i4)tag, (u_i4)size, FALSE, (STATUS *)NULL);
+	if (mem == NULL)
+	{
+		FEfree(tag);
+		EXsignal(EXFEMEM,1, "iiamMeta()");
+	}
+
+	if (str != NULL)
+		STcopy(str,(char *) mem);
+
+	return (mem);
+}

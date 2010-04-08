@@ -1,0 +1,54 @@
+CORE 1 'Required for <=6.3 Ingres'
+END
+CREATE TABLE ii_app_cntns_comp
+    (
+        app_id	integer NOT NULL,
+        comp_id	integer NOT NULL,
+        comp_type	varchar(32) NOT NULL
+    )   WITH NODUPLICATES
+
+CREATE TABLE ii_client_dep_mod
+    (
+        client_name	    varchar(32) NOT NULL,
+        client_version	    integer NOT NULL,
+        module_name	    varchar(32) NOT NULL,
+        module_version	    integer NOT NULL,
+        short_remark	    varchar(60) NOT NULL
+    )
+
+CREATE TABLE ii_dict_modules
+    (
+        module_name	varchar(32) NOT NULL,
+        module_version	integer NOT NULL,
+        short_remark	varchar(60) NOT NULL
+    )
+
+CREATE TABLE ii_entities
+    (
+        entity_id	integer NOT NULL,
+        folder_id	integer NOT NULL,
+        base_entity_id	integer NOT NULL,
+        entity_type	varchar(32) NOT NULL,
+        entity_name	varchar(32) NOT NULL,
+        branch_name	varchar(32) NOT NULL,
+        version_number	integer NOT NULL,
+        partition_name	varchar(32) NOT NULL,
+        qual_ind	varchar(32) NOT NULL,
+        instance_level	char(1) NOT NULL,
+        added_by	varchar(32) NOT NULL,
+        create_date	char(25) NOT NULL,
+        short_remark	varchar(60) NOT NULL,
+        entity_origin	varchar(32) NOT NULL,
+        implement_lock	char(1) NOT NULL,
+        system_lock	char(1) NOT NULL
+    )
+
+CREATE TABLE ii_locks
+    (
+        entity_id	integer NOT NULL,
+        session_id	integer NOT NULL,
+        locked_by	varchar(32) NOT NULL,
+        lock_date	char(25) NOT NULL,
+        lock_type	varchar(16) NOT NULL
+    )
+

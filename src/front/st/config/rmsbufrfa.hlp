@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+II_RMS_BUFFER_RFA informs the server that the Record File Address (RFA) 
+associated with an RMS record should be buffered.  This should only be defined 
+as "yes" with a positive logical definition of II_RMS_READONLY"

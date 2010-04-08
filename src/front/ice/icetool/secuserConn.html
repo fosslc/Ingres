@@ -1,0 +1,12 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=WEB User/Database release&submit=actUserConn.html` -->
+		<INPUT TYPE="HIDDEN" NAME="action" VALUE="delete">
+		<INPUT TYPE="HIDDEN" NAME="user_id" VALUE="<!-- #ICE VAR=`:user` -->">
+		<INPUT TYPE="HIDDEN" NAME="db_id" VALUE="<!-- #ICE VAR=`:db` -->">
+		Do you want to release the following user/database connection association :
+		<BLOCKQUOTE>
+		The user is <!-- #ICE FUNCTION=`user?action=retrieve&user_id=:user`
+					 HTML=`:user_name <INPUT TYPE="HIDDEN" NAME="name" VALUE=":user_name">` --><p>
+		The database connection is <!-- #ICE FUNCTION=`database?action=retrieve&db_id=:db`
+					 HTML=`:db_name`	-->
+		</BLOCKQUOTE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

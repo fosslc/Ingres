@@ -1,0 +1,26 @@
+# This is a sample makefile showing how to compile and link an esqlc
+# application under Microsoft Windows NT and Windows '95.
+
+# The sample program name is called tmdemo, but you may want to change this
+# to match your particular situation.  You may have more than one source
+# file.
+
+# Note that our esqlc library is designed to work with the C runtime DLL, 
+# NOT the statically linked library.
+
+all: tmdemo.exe
+
+# compile your source file
+# first do esqlc to 'c'
+tmdemo.c: tmdemo.sc
+	esqlc tmdemo.sc
+
+# now call the Microsoft compiler to get the object file
+tmdemo.obj: tmdemo.c
+	cl -I $(II_SYSTEM)\ingres\files -c  -D_MT -D_DLL  -D_X86_=1 tmdemo.c
+
+# finally link our library and object files to get an executable
+tmdemo.exe:  tmdemo.obj 
+	link /OUT:tmdemo.exe /subsystem:console /entry:mainCRTStartup /MAP:tmdemo.map \
+	tmdemo.obj $(II_SYSTEM)\ingres\lib\ingres.lib msvcrt.lib
+

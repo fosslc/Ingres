@@ -1,0 +1,29 @@
+#
+# Jamfile file for cl!clf!tm_win
+#
+
+SubDir ING_SRC cl clf tm_win ;
+
+IISUBSYS cl clf tm_win ;
+
+
+IILIBRARY COMPATLIB : tmyrsize.c
+	tmtimestamp.c
+	tmtime.c
+	tmsubtr.c
+	tmstr.c
+	tmstart.c
+	tmsecs.c
+	tmprfstat.c
+	tmparse.c
+	tminit.c
+	tmhrnow.c
+	tmformat.c
+	tmend.c
+	tmcvtsecs.c
+	tmcpu.c
+	tmcmp.c
+	tmbreak.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : tmmonthtab.roc
+	tmdata.c ;

@@ -1,0 +1,27 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescme.hlp                Menu-End escape code examples.
+Each menuitem specified in the Application Flow Diagram can have a
+Menu-End escape. The Menu-End escape executes after the CALLFRAME
+or CALLPROC statement.
+
+Menu-End escape code examples:
+
+    To check a global variable set by the called frame as a return code:
+
+        IF (G_stat != 1) THEN
+            CALLPROC beep();    /* 4gl built-in procedure */
+            MESSAGE 'Error occurred in called frame.' WITH STYLE = POPUP;
+            RESUME;
+        ENDIF;
+
+    To see if the user selected the "TopFrame" menuitem on the called frame:
+
+        /* "TopFrame" sets the built-in global IIretval to 2 */
+        IF (IIretval = 2) THEN
+            CALLPROC beep();    /* 4gl built-in procedure */
+            MESSAGE 'Sorry, you cannot select TopFrame, because you have'
+                  + ' not finished working in this frame.'
+                  WITH STYLE = POPUP;
+            IIretval = 1;       /* turn it off till TopFrame pressed again*/
+            RESUME;
+        ENDIF;

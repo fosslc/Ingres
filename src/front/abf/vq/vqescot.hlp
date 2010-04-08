@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescot.hlp	On-Timeout escape code help
+On-Timeout escape code runs when timeout occurs. The default timeout period is 
+300 seconds. You can change this default for the whole application, by editing
+the template file intopdef.tf and changing the value of the substitution
+variable $_timeout_seconds; or you can change the default for an individual
+frame by writing form-start escape code which resets the timeout.
+
+Vision generates code which sets the timeout period, and the beginning and end
+of the timeout activation block; you do not have to enter an ON TIMEOUT
+statement, or BEGIN and END statements around your code block.
+
+A frame which does not have any On-Timeout escape code will have a timeout
+period of 0; it will not inherit its parent's timeout period.
+
+Example:
+    On-Timeout escape code to clear the screen; any user input followed by
+    RETURN reactivates the screen.
+
+    CLEAR SCREEN;
+    SET_FORMS FRS (TIMEOUT = 0);
+    USER_INP = PROMPT 'Hit RETURN to continue....';
+    SET_FORMS FRS (TIMEOUT = $_timeout_seconds);
+    REDISPLAY;

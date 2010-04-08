@@ -1,0 +1,91 @@
+--  Copyright (c) 2007 Ingres Corporation
+--
+--  This file contains the configuration rules for the INGRES
+--  security auditing sub-system.
+--
+--# History:
+--#	19-oct-93 (tyler)
+--#		Created.
+--#     2-feb-94 (robf)
+--#             Added new rules for secure 2.0
+--#	1-mar-94 (robf)
+--#             Add audit_mechanism (not LRC approved yet)
+--#	7-apr-94 (robf)
+--#             The first two audit file names default to "".
+--#             updated to default to recommended values in ingres/files.
+--#	        echo has problems on HP, so use a custom utility
+--#	6-may-94 (robf)
+--#             Added new C2 and security options
+--#	12-may-94 (robf)
+--#	        Added POLYINSTANTIATE option.
+--#	30-nov-1995 (canor01)
+--#	        Change audit.1 and audit.2 from EXEC_TEXT to EXEC_TEXT_STR
+--#		types (add double quotes)
+--#	08-nov-1996 (canor01)
+--#		Change "ingres" in security labels to "ca" to match
+--#		changes in security code.
+--#	26-jun-1997 (nanpr01)
+--#		Changing max_log_size to less that 100 causes E_CL2530_CS_PARAM,
+--#		E_SX104A_SXAP_BAD_MAXFILE error.
+--#	23-Jan-2006 (kschendel)
+--#		Change "ca" back to "ingres".
+--#     07-Sep-2007 (Ralph Loen)  Bug 119094
+--#             Remove user_password and role_password items related to B1 
+--#             security.
+
+
+
+-- secure resources
+
+ii.$.secure.level:	"C2", VALID = { "C2" };
+ii.$.secure.ome:	ON;
+
+--# Force to be derived 
+ii.$.secure.row_audit_key: "OPTIONAL",
+			   VALID = { "OPTIONAL", "AUTOMATIC" };
+ii.$.secure.row_audit_default: OFF;
+ii.$.secure.ome: ON;
+ii.$.secure.user_password:	"OPTIONAL", VALID = { "OPTIONAL" };
+ii.$.secure.roles: 	ON;
+ii.$.secure.role_password:  IF ( ii.$.secure.roles == OFF )
+				UNDEFINED
+			   ELSE
+				"OPTIONAL"
+			   ENDIF, VALID = { "OPTIONAL" };
+-- c2 security auditing resources 
+--# Don't make this derived since users may want to change it
+ii.*.c2.security_auditing:	OFF;
+ii.*.c2.audit_mechanism:	"INGRES", VALID = { "INGRES", "SYSTEM" };
+ii.*.c2.on_error:		"STOPAUDIT", VALID = { "STOPAUDIT",
+					"SHUTDOWN" };
+ii.*.c2.on_log_full:		"SUSPEND",
+				  VALID = { "SUSPEND", "STOPAUDIT",
+					"SHUTDOWN" };
+ii.*.c2.on_switch_log:		"";
+ii.*.c2.max_log_size:		1600, MIN=100;
+ii.*.c2.log_page_size:		2, VALID = { 2, 4, 8, 16 };
+ii.*.c2.audit_writer_start:	IF ( ii.*.c2.shared_buffer_count < 10 )
+					ii.*.c2.shared_buffer_count
+				ELSE
+					10
+				ENDIF, MIN=0, MAX=ii.*.c2.shared_buffer_count;
+ii.*.c2.force_flush:		IF ( ii.*.c2.shared_buffer_count>0 )
+					ON
+				ELSE
+					UNDEFINED
+				ENDIF;
+ii.*.c2.shared_buffer_count:	IF ( ii.$.dbms.$.connect_limit < 5 )
+					10
+				ELSE
+				   ii.$.dbms.$.connect_limit * 2
+				ENDIF, MIN=0;
+-- Default log files
+# ifdef VMS
+ii.*.c2.audit_log_1:		"II_CONFIG:audit.1";
+ii.*.c2.audit_log_2:		"II_CONFIG:audit.2";
+# else
+ii.*.c2.audit_log_1:		"`iiaudloc audit.1`";
+ii.*.c2.audit_log_2:		"`iiaudloc audit.2`";
+# endif
+ii.*.c2.log.audit_log_1:	ii.*.c2.audit_log_1;	
+ii.*.c2.log.audit_log_2:	ii.*.c2.audit_log_2;	

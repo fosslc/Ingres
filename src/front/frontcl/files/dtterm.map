@@ -1,0 +1,109 @@
+/* Copyright (c) 2005 Ingres Corporation */
+/* FRS mapping file for Sun DTTERM under CDE */
+
+/* Menu Key */
+	menu = pf1 (F1)
+
+/* Help facility */
+	frskey1 = pf2 (F2)
+
+/* Exit the system */
+	frskey2 = pf4 (F4)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (F3)
+
+/* Go or execute function */
+	frskey4 = pf16 (Enter)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = pf18 (0)
+
+/* Forget and Undo */
+	frskey9 = pf19 (.)
+
+/* Bring up List Choices */
+	frskey10 = pf20 (Find)
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlH (^H)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf14 (-)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf15 (+)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf5 (F5)
+
+/* Select second menu item */
+	menuitem2 = pf6 (F6)
+
+/* Select third menu item */
+	menuitem3 = pf7 (F7)
+
+/* Select fourth menu item */
+	menuitem4 = pf8 (F8)
+
+/* Select fifth menu item */
+	menuitem5 = pf9 (F9)
+
+/* Select sixth menu item */
+	menuitem6 = pf10 (F10)
+
+/* Select seventh menu item */
+	menuitem7 = pf12 (/)
+
+/* Select eighth menu item */
+	menuitem8 = pf13 (*)
+
+/* Select ninth menu item */
+	menuitem9 = pf17 (5)
+
+/* Type-5 and -6 kbds don't have the k= key or I'd use it */
+
+/* Move cursor to next field - defined to controlI in frs.map */
+
+/* Move cursor to previous field - defined to controlP in frs.map */
+
+/* Move up one word within field - defined to controlB in frs.map */
+
+/* Move back one word within field - defined to controlR in frs.map */
+
+/* Switch between insert and overstrike mode - defined to controlE in frs.map */
+
+/* Redraw the screen - defined to controlW in frs.map */
+
+/* Delete the character under the cursor - defined to controlD in frs.map */
+
+/* Delete character immediately to left of cursor */
+/* defined to controlDEL in frs.map */
+
+/* Start default text editor on field - defined to controlV in frs.map */
+
+/* Move to first column of next row in table field */
+/* defined to controlN in frs.map */
+
+/* Clear the field */
+	clear = controlU (^U)
+
+/* Clear out the rest of the field, and move to next field */
+/* defined to controlM in frs.map */
+
+/* Auto-duplicate value while in fill mode - defined to controlA in frs.map */

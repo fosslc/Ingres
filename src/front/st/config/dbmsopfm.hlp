@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The opf_memory resource specifies the maximum amount of memory which
+  can be allocated by the Optimizer Facility (OPF) within DBMS servers
+  created with this definition.

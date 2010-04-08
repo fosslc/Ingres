@@ -1,0 +1,66 @@
+/****************************************************************************
+ * Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+ ****************************************************************************/
+
+/****************************************************************************
+ * CATOCNTR.RC
+ *
+ * Resource file for the Container Custom Control DLL.
+ ****************************************************************************/
+
+#ifdef WIN16
+#include <ver.h>
+#endif
+
+#include <windows.h>
+#include "cntdll.h"
+#include "cntdlg.h"
+#ifndef MAINWIN
+#include "gv.rc"
+#endif
+
+ContainerIcon        ICON   catocntr.ico
+
+
+STRINGTABLE
+    BEGIN
+     IDS_FULLNAME,          "CA-Container Custom Control"
+     IDS_SHORTNAME,         "CA-Container"
+     IDS_CREDITS,           "CA-San Diego"
+     IDS_RANGEERROR,        "Specified position is out of the range."
+     IDS_CTS_READONLY,      "CTS_READONLY | "
+     IDS_CTS_SINGLESEL,     "CTS_SINGLESEL | "
+     IDS_CTS_MULTIPLESEL,   "CTS_MULTIPLESEL | "
+     IDS_CTS_EXTENDEDSEL,   "CTS_EXTENDEDSEL | "
+     IDS_CTS_BLOCKSEL,      "CTS_BLOCKSEL | "
+     IDS_CTS_SPLITBAR,      "CTS_SPLITBAR | "
+     IDS_CTS_TABSTOP,       "WS_TABSTOP | "
+     IDS_CTS_GROUP,         "WS_GROUP | "
+     IDS_CTS_VISIBLE,       "WS_VISIBLE | "
+     IDS_CTS_VERTSCROLL,    "CTS_VERTSCROLL | "
+     IDS_CTS_HORZSCROLL,    "CTS_HORZSCROLL | "
+     IDS_CTS_HASBORDER,     "WS_BORDER | "
+     IDS_CTS_HASDLGFRAME,   "WS_DLGFRAME | "
+     IDS_CTS_HASCAPTION,    "WS_CAPTION | "
+     IDS_CTS_SYSMENU,       "WS_SYSMENU | "
+     IDS_CTS_INTEGRALWIDTH  "CTS_INTEGRALWIDTH | "
+     IDS_CTS_INTEGRALHEIGHT "CTS_INTEGRALHEIGHT | "
+     IDS_CTS_EXPANDLASTFLD  "CTS_EXPANDLASTFLD | "
+     IDS_FONT_FACENAME,     "MS Shell Dlg"  // Font face name
+     IDS_FONT_POINTSIZE,    "8"             // Font point size
+     IDS_FONT_WEIGHT,       "400"           // FW_NORMAL     (from windows.h)     
+     IDS_FONT_FAMILY,       "0"             // FF_DONTCARE   (from windows.h)
+     IDS_FONT_PITCH,        "0"             // DEFAULT_PITCH (from windows.h)
+     IDS_FONT_CHARSET,      "0"             // ANSI_CHARSET  (from windows.h)
+     IDS_FONT_DEFAULT,      "12"            // ANSI_VAR_FONT (from windows.h)
+
+     IDS_DLL_ERR,           "Error! - CATO3CNT.DLL"
+     IDS_REGCLASS_ERR       "DllMain: RegisterClass failed"
+     IDS_INITPROC_ERR       "DllMain: CRT_INIT failed on Process Attach"
+     IDS_INITHREAD_ERR      "DllMain: CRT_INIT failed on Thread Attach"
+     IDS_KILLPROC_ERR       "DllMain: CRT_INIT failed on Process Detach"
+     IDS_KILLTHREAD_ERR     "DllMain: CRT_INIT failed on Thread Detach"
+     IDS_STYLEDLG_ERR       "Container Style DialogBox failed"
+    END
+
+rcinclude catocntr.dlg

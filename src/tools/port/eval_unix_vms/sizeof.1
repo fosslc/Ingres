@@ -1,0 +1,30 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/sizeof.1,v 1.1 90/03/09 09:17:37 source Exp $
+.TH SIZEOF 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+sizeof \- Show the sizeof `C' data types
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B sizeof
+[ char ][ double ][ float ][ int ][ long ][ ptr ][ short ][ -v ]
+.SH DESCRIPTION
+.I Sizeof
+prints the sizeof() value for each of the selected types.  If no types
+are chosen, values for all types are printed.  The default output on a
+Pyramid is:
+.br
+.nf
+
+	sizeof char 1
+	sizeof short 2
+	sizeof int 4
+	sizeof long 4
+	sizeof float 4
+	sizeof double 8
+	sizeof ptr 4
+.fi
+.PP
+.B -v
+``verbose'' mode prints the program's name and indents other output one
+tab stop.

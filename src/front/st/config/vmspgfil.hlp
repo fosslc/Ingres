@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  Specifies the maximum number of pages that can be allocated in the
+  paging file for the process. The paging file quota is the amount
+  of secondary storage available during execution of the image.

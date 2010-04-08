@@ -1,0 +1,34 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/mkman.1,v 1.1 90/03/09 09:18:31 source Exp $
+.TH MKMAN 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History
+.\"	31-jul-1989 (boba)
+.\"		Change to new tools directory structure for ingresug.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+mkman \- make a man page
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B mkman
+program
+.SH DESCRIPTION
+.I Mkman
+will help you write that much needed "man page" for your new tool.
+.PP
+.I Mkman
+will copy a generic "man page" template to ./\fIprogram\fR.1, then alternate 
+between editing \fIprogram\fR.1 (using $EDITOR or \fIvi\fR for default)
+and displaying \fIprogram\fR.1 via "nroff -man".
+.PP
+If \fIprogram\fR.1 already exists,
+\fImkman\fR will go directly into the edit/display cycle.
+.SH FILES
+.br
+$ING_SRC/tools/port/shell/mantmplt.1 is the generic man page
+.SH "SEE ALSO"
+man(1)
+.SH BUGS
+The generic template contains text like
+"what it does", "does whatever it does", and  "is used for this"
+that should be replaced with meaningful text.  Be sure to proof read
+the nroff'd man page carefully before quitting.

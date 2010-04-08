@@ -1,0 +1,83 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for JDBC server
+*/
+
+/*
+** History
+**	08-Mar-2000 (rajus01)
+**	   Created.
+**	28-Mar-2000 (hanch04)
+**	    Changed to jdbc
+**	28-Mar-00 (gordy)
+**	    Added library components.
+**	25-Apr-2000 (hanch04)
+**	    Added jdbc.crs, jdbc.rfm and iisujdbc
+**	26-apr-2000 (somsa01)
+**	    Updated to handle build of different products.
+**	06-mar-2001 (kinte01)
+**	    Change location of VMS build directory for files targeted
+**	    to ingres!lib & location of jdbc executable
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**      08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART  jdbc
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY (PROD2NAME)!bin
+#endif
+   BUILD_DIR (ING_BUILD)!bin
+      EXECUTABLE (PROG1PRFX)jdbc
+
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY (PROD2NAME)!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT SETUP (PROG1PRFX)sujdbc
+
+/*
+** ingres!lib
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+#else
+	DIRECTORY (PROD2NAME)!LIB_TGT
+#endif
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+      FILE edbc.jar
+      FILE EdbcInfo.class
+      FILE DrvInfo.class
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY (PROD2NAME)!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+      FILE jdbc.crs
+      FILE jdbc.rfm

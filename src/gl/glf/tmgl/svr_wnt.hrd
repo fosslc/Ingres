@@ -1,0 +1,157 @@
+###
+### makefile generated automatically by mknmake (3.02) for WNT.
+###	 date: Tue Nov 23 14:03:50 1993
+###	 path: D:\rplus\gl\glf\tmgl
+###
+
+##
+## Start of extra control macros for the make.ini file.
+##
+
+# Set to sub system type, (windows, console, posix).
+!IF "$(SUBSYS)" == ""
+SUBSYS = windows
+!ENDIF
+
+# Set to true for proto typing.
+!IF "$(PROTO_TYPE)" == ""
+PROTO_TYPE = false
+!ENDIF
+
+# Local flags for the compiler.
+!IF "$(LCL_CFLAGS)" == ""
+LCL_CFLAGS =
+!ENDIF
+
+# Ingres path structure.
+PART = gl
+FACILITY = glf
+SUBSYSTEM = tmgl
+LCLPATH = gl\glf\tmgl
+
+# DOS file system type.
+FS_FAT = 1
+FS_CASE = 0
+
+##
+## End of extra control macros for the make.ini file.
+##
+
+!include "$(ING_SRC)\tools\port\nmake\make.ini"
+!include "deps.mak"
+
+QSHFILES = 
+
+MSGFILES = 
+
+QHFILES = 
+
+SHFILES = 
+
+QSCFILES = 
+
+SCFILES = 
+
+QCFILES = 
+
+SYFILES = 
+
+STFILES = 
+
+LFILES = 
+
+YFILES = 
+
+YIFILES = 
+
+OBJFILES = tmtz.obj 
+
+PROFILES = 
+
+PCFILES = 
+
+TMGLLIB = $(LIBNAME) 
+
+EXEFILES = iizck.exe iizic.exe 
+
+
+OBJONLY =
+
+
+$(OBJFILES): $(QSCFILES) $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) \
+	 $(LFILES) $(YFILES) $(YIFILES)
+
+
+all: hdr prh pc lib exe
+hdr: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES)
+prh:
+pc:
+lib: $(TMGLLIB) $(OBJONLY)
+exe: $(EXEFILES)
+
+derive: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES) $(QSCFILES) \
+	 $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) $(LFILES) \
+	 $(YFILES) $(YIFILES)
+
+archive: atouch lib
+atouch:
+	$(TOUCH) $(OBJFILES)
+	$(SLEEP) 2
+
+
+##
+## Local .lib rule.
+##
+$(TMGLLIB): $(OBJFILES)
+!IF [$(TEST) -f $(TMGLLIB)] == 0
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS) $@
+$(OBJFILES)
+<<KEEP
+!ELSE
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS)
+$(OBJFILES)
+<<KEEP
+!ENDIF
+	$(LIB_CMD) @lib.rf6 > lib.er6 2>&1
+
+
+##
+## Custom .exe rule.
+##
+iizck_deps = \
+	iizck.obj
+
+iizck.exe: $(iizck_deps)
+	@echo >nul @<<iizck.rf7
+$(LFLAGS) /OUT:iizck.exe
+$(iizck_deps)
+$(IICOMPATLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @iizck.rf7 > iizck.er7 2>&1
+
+
+##
+## Custom .exe rule.
+##
+iizic_deps = \
+	iizic.obj
+
+iizic.exe: $(iizic_deps)
+	@echo >nul @<<iizic.rf7
+$(LFLAGS) /OUT:iizic.exe
+$(iizic_deps)
+$(IICOMPATLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @iizic.rf7 > iizic.er7 2>&1
+
+
+##
+## Local install rule.
+##
+install: all
+	$(CP) *.exe $(ING_BUILD)\bin
+

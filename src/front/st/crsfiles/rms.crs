@@ -1,0 +1,335 @@
+--
+--  Copyright (c) 1999, 2009 Ingres Corporation 
+--                           All Rights Reserved
+--
+--  This file contains the configuration rules for the RMS GW Server.
+--
+--# History:
+--#	04-aug-99 (kinte01)
+--#		Created from dbms.crs.
+--#     04-nov-02 (chash01)
+--#             Add more rms gw tuple/cache parameters 
+--#     12-nov-02 (chash01)
+--#             Add rms cache name
+--#     23-jan-03 (chash01) integrate bug 109055 fixes
+--#
+--#     08-sep-03 (chash01)
+--#             update according to dbms.crs
+--#     21-oct-03 (chash01)
+--#             modify tuple size/cache size/page asze to max 32k
+--#     28-jan-04 (chash01)
+--#             enlarge stack_size to 128k
+--#     09-Apr-04 (gorvi01)
+--#		Updated system_timout to indicate indefinite wait.
+--#		Minimum Value of -1 with SIGNED_INT constraint 
+--#		indicates indefinte wait.
+--#     02-aug-2005 (abbjo03)
+--#         Set vms_page_file to 2 billion.
+--#     14-feb-2008 (upake01)
+--#         Set vms_file_limit to have a minimum value of 320.
+--#	08-May-2008 (jonj)
+--#	    "system_timeout" cannot assume a negative value, corrupted by
+--#	    change 468009, above. A value of zero means "wait indefinitely".
+--#     14-May-2008 (Ralph Loen) Bug 117737
+--#         Added ii.$.rms.$.mechanisms with a default value of "none".
+--#	12-mar-2009 (joea)
+--#	    Turn 8k cache on so that the iidbdb can be accessed.
+--#	20-Jul-2009 (thaju02) B122325
+--#	    Added SIZETYPE constraint for dmf_memory.
+
+ii.*.config.server_host:	`iipmhost`;
+
+-- start-up resources 
+ii.$.ingstart.$.rms:		1;
+
+-- rms resources 
+ii.$.rms.$.max_tuple_length:	2008, MIN = 0, MAX = 32660;
+ii.$.rms.$.default_page_size:	2048, POWER2, MIN = 2048, MAX = 32767;
+ii.$.rms.$.blob_etab_page_size: 2048, VALID={32768,16384,8192,4096,2048,0};
+ii.$.rms.$.blob_etab_structure: "BTREE", VALID={ "BTREE", "HASH", "ISAM" };
+ii.$.rms.$.active_limit:        ii.$.rms.$.connect_limit, MIN = 5,
+					MAX = ii.$.rms.$.connect_limit;
+ii.$.rms.$.ambig_replace_64compat:
+				IF ( ii.$.fixed_prefs.iso_entry_sql-92 == ON )
+					OFF
+				ELSE
+					OFF	
+				ENDIF;
+
+ii.$.rms.$.association_timeout: 0, MIN = 0;
+ii.$.rms.$.cache_lock:		OFF;	
+ii.$.rms.$.cache_name:		"cach_rms";
+ii.$.rms.$.cache_sharing: 	"OFF", VALID={ "OFF" }; 
+ii.$.rms.$.connect_limit: 	32, MIN = 5, MAX = 10000;
+ii.$.rms.$.cpu_statistics: 	IF ( ii.$.rms.$.session_accounting == ON )
+					ON
+				ELSE
+					OFF
+				ENDIF;
+ii.$.rms.$.cursor_limit: 	16;
+ii.$.rms.$.cursor_update_mode:	IF ( ii.$.fixed_prefs.iso_entry_sql-92 == ON )
+					"DIRECT"
+				ELSE
+					"DEFERRED"	
+				ENDIF, VALID = { "DEFERRED", "DIRECT" };
+ii.$.rms.$.database_limit: 	ii.$.rms.$.connect_limit + 1, MIN = 10;
+ii.$.rms.$.define_address:	IF ( ii.$.rms.$.name_service == OFF )
+					ON
+				ELSE
+					OFF
+				ENDIF;
+
+-- ii.$.rms.$.detach_process:	ON;
+-- dmf_hash_size is TCB hash_size and has nothing to do with dmf cache.
+ii.$.rms.$.dmf_hash_size:	256, POWER2; 
+ii.$.rms.$.dmf_tbl_cache_size: 40;
+ii.$.rms.$.dmf_db_cache_size:	40;
+ii.$.rms.$.event_limit:        80; 
+ii.$.rms.$.event_priority:	8;
+ii.$.rms.$.dmcm:               	OFF;
+ii.$.rms.$.fast_commit:		OFF;
+ii.$.rms.$.hex_session_ids:	OFF;
+
+ii.$.rms.$.log_readnolock:     OFF;
+ii.$.rms.$.log_writer:		1;
+
+ii.$.rms.$.log_esc_lpr_sc:   OFF;
+ii.$.rms.$.log_esc_lpr_ut:   OFF;
+ii.$.rms.$.log_esc_lpt_sc:   OFF;
+ii.$.rms.$.log_esc_lpt_ut:   OFF;
+
+ii.$.rms.$.mechanisms:       "none";
+
+ii.$.rms.$.opf_active_limit:	0.5 * ii.$.rms.$.connect_limit, MIN = 1;
+ii.$.rms.$.opf_memory:		200000 * ii.$.rms.$.opf_active_limit, SIZETYPE;
+ii.$.rms.$.opf_timeout_factor: 10, MIN = 1, MAX = 100;
+ii.$.rms.$.opf_joinop_timeout: 0, MIN = 0;
+ii.$.rms.$.opf_timeout_abort:  0, MIN = 0;
+ii.$.rms.$.opf_old_jcard:	OFF;
+ii.$.rms.$.opf_old_cnf:		OFF;
+ii.$.rms.$.opf_old_subsel:	OFF;
+ii.$.rms.$.opf_maxmemf:		50;
+ii.$.rms.$.opf_stats_nostats_max:	OFF; 
+ii.$.rms.$.opf_hash_join:	OFF;
+ii.$.rms.$.name_service: 	ON;
+ii.$.rms.$.psf_memory:		102400 * ii.$.rms.$.connect_limit, SIZETYPE;
+ii.$.rms.$.qef_qep_mem: 	2560, MIN = 1000, MAX = 3700000;
+ii.$.rms.$.qef_sort_mem:	200K, MIN = 1;
+ii.$.rms.$.query_flattening:	ON;
+ii.$.rms.$.qflatten_aggregate:	IF ( ii.$.rms.$.query_flattening == ON )
+					ON
+				ELSE
+					OFF
+				ENDIF;
+ii.$.rms.$.qflatten_singleton:	IF ( ii.$.rms.$.query_flattening == OFF ||
+					ii.$.fixed_prefs.iso_entry_sql-92 == ON
+				)
+					OFF
+				ELSE
+					ON
+				ENDIF;
+ii.$.rms.$.vms_quantum:		"00:00:01";
+ii.$.rms.$.qsf_memory:		80000 * ii.$.rms.$.connect_limit + 100000, SIZETYPE;
+ii.$.rms.$.rdf_max_tbls:	300;
+-- The following should match RDF_BLKSIZ (back!rdf!hdr!rdfint.h)
+ii.$.rms.$.config.rdf_blksiz: 32K;
+ii.$.rms.$.rdf_memory:		340 * ii.$.rms.$.config.rdf_blksiz, MIN = 4K, SIZETYPE;
+ii.$.rms.$.rdf_tbl_cols: 	15;
+ii.$.rms.$.rdf_tbl_synonyms: 	1;
+--
+-- does RMS gateway needs the next two"
+--
+ii.$.rms.$.rep_qman_threads: 	1;
+ii.$.rms.$.rep_txq_size: 	50;
+ii.$.rms.$.rule_depth:		20;
+ii.$.rms.$.session_check_interval:  30, MIN=0;
+ii.$.rms.$.server_class:	"RMS";
+ii.$.rms.$.stack_caching:	OFF;
+ii.$.rms.$.stack_size:		128K, MIN=128K;
+ii.$.rms.$.scf_rows:		20;
+ii.$.rms.$.session_accounting:	OFF;
+
+ii.$.rms.$.sole_server:         ON;
+--ii.$.rms.$.sxf_memory:		10000 * ii.$.rms.$.connect_limit + 10000,
+--					MIN = 10000;
+--ii.$.rms.$.sxf_memory:		10000 + 5K * ii.$.rms.$.audit_session_limit +
+--					2K * ii.$.rms.$.audit_session_limit *
+--					ii.$.rms.$.audit_log_limit;
+ii.$.rms.$.system_isolation:   "serializable", 
+					VALID = { "read_uncommitted", 
+					"read_committed", 
+					"repeatable_read", 
+					"serializable" };
+ii.$.rms.$.system_maxlocks:    10;
+ii.$.rms.$.system_readlock:    "shared", VALID ={"nolock","exclusive","shared"};
+ii.$.rms.$.system_timeout:     0, MIN = 0;
+
+ii.$.rms.$.vch_compression:	ON;
+
+-- run command qualifiers
+ii.$.rms.$.vms_accounting:	ON;
+ii.$.rms.$.vms_ast_limit:	2 * ii.$.rms.$.connect_limit + 5; 
+ii.$.rms.$.vms_buffer_limit:	ii.$.config.acp_factor *
+					( ii.$.config.channelcnt -
+					4 * ii.$.rms.$.connect_limit ),
+					MIN=227000;
+ii.$.rms.$.vms_enqueue_limit:	UNDEFINED;
+ii.$.rms.$.vms_error:		"ii_system:[ingres.files]iirms.error";
+ii.$.rms.$.vms_extent:		`iigetsyi wsmax`;	
+ii.$.rms.$.vms_file_limit:	10 * ii.$.rms.$.connect_limit, MIN=320;
+--ii.$.rms.$.vms_input:		"\'f$trnlnm(\"TT\")\'";
+--ii.$.rms.$.vms_interval:	"";	
+ii.$.rms.$.vms_io_buffered:	2 * ii.$.rms.$.connect_limit + 5; 
+ii.$.rms.$.vms_io_direct:	ii.$.rms.$.connect_limit + 4;
+ii.$.rms.$.vms_image:		"ii_system:[ingres.bin]iirms.exe";
+ii.$.rms.$.vms_maximum_working_set: 2000; 
+--ii.$.rms.$.vms_output:		"\'f$trnlnm(\"TT\")\'";
+ii.$.rms.$.vms_page_file:	2000000000;
+ii.$.rms.$.vms_priority:	4, MIN = 0, MAX = 31;
+# ifdef SEVMSBUILD
+ii.$.rms.$.vms_privileges:	"(netmbx,prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem,downgrade,upgrade)";
+# else
+ii.$.rms.$.vms_privileges:	"(netmbx,prmmbx,sysprv,world,readall,syslck,share,exquota,sysgbl,shmem)";
+# endif /* SEVMSBUILD */
+ii.$.rms.$.vms_queue_limit:	ii.$.rms.$.connect_limit + 5; 
+ii.$.rms.$.vms_working_set: 	1000;
+
+-- sum of all connect_limit values of all DBMS servers configured for
+-- start-up
+ii.$.rms.connect_sum:		`iiresutl -dbms_sum`,
+					REQUIRES ii.$.ingstart.%.rms,
+					REQUIRES ii.$.rms.%.connect_limit;
+-- maximum connect_limit of all DBMS servers configured for start-up
+ii.$.rms.connect_max:		`iiresutl -dbms_max`,
+					REQUIRES ii.$.rms.%.connect_limit,
+					REQUIRES ii.$.ingstart.%.rms;
+-- required for syscheck rules before Star is installed 
+ii.$.star.connect_max:		0;
+
+ii.$.rms.$.$.config.dmf_connect: 32;
+--
+-- ii.$.dbms.$.$.config.dmf_connect dependencies are handled as a
+-- special-case by the configuration rule inference engine.  When
+-- ii.$.dbms.%.connect is changed, the appropriate instance
+-- of ii.$.dbms.$.$.dmf_connect is modified as necessary and its
+-- derived resources are recomputed.
+--
+-- shareable rms (dmf) cache resources 
+--
+ii.$.rms.$.$.cache.p2k_status:  ON;
+ii.$.rms.$.$.dmf_write_behind: ON;
+ii.$.rms.$.$.dmf_cache_size:	4 * ii.$.rms.$.$.config.dmf_connect + 128;
+ii.$.rms.$.$.dmf_free_limit:	ii.$.rms.$.$.dmf_cache_size / 32;	
+ii.$.rms.$.$.dmf_group_count:	ii.$.rms.$.$.config.dmf_connect / 4 + 4;
+ii.$.rms.$.$.dmf_group_size:	8;
+ii.$.rms.$.$.dmf_modify_limit:	0.75 * ii.$.rms.$.$.dmf_cache_size, MIN = 10;
+ii.$.rms.$.$.dmf_wb_start:	ii.$.rms.$.$.dmf_modify_limit - (0.15 *
+					ii.$.rms.$.$.dmf_cache_size);
+ii.$.rms.$.$.dmf_wb_end:	IF ( 0.5 * ii.$.rms.$.$.dmf_cache_size >=
+					ii.$.rms.$.$.dmf_wb_start
+				)
+					0.5 * ii.$.rms.$.$.dmf_wb_start
+				ELSE
+					0.5 * ii.$.rms.$.$.dmf_cache_size
+				ENDIF;
+ii.$.rms.$.$.dmf_memory:	2K * (ii.$.rms.$.$.dmf_group_count *
+					ii.$.rms.$.$.dmf_group_size +
+					ii.$.rms.$.$.dmf_cache_size),
+				SIZETYPE;
+
+ii.$.rms.$.$.cache.p4k_status:     OFF;
+ii.$.rms.$.$.p4k.dmf_write_behind: ON;
+ii.$.rms.$.$.p4k.dmf_cache_size:   4 * ii.$.rms.$.$.config.dmf_connect + 128;
+ii.$.rms.$.$.p4k.dmf_free_limit:   ii.$.rms.$.$.p4k.dmf_cache_size/32;	
+ii.$.rms.$.$.p4k.dmf_group_count:  ii.$.rms.$.$.config.dmf_connect / 4 + 4;
+ii.$.rms.$.$.p4k.dmf_group_size:   8;
+ii.$.rms.$.$.p4k.dmf_modify_limit: 0.75 * ii.$.rms.$.$.p4k.dmf_cache_size, MIN = 10;
+ii.$.rms.$.$.p4k.dmf_wb_start:     ii.$.rms.$.$.p4k.dmf_modify_limit - (0.15 *
+					ii.$.rms.$.$.p4k.dmf_cache_size);
+ii.$.rms.$.$.p4k.dmf_wb_end:	    IF ( 0.5 * ii.$.rms.$.$.p4k.dmf_cache_size >= ii.$.rms.$.$.p4k.dmf_wb_start )
+					0.5 * ii.$.rms.$.$.p4k.dmf_wb_start
+				    ELSE
+				     	0.5 * ii.$.rms.$.$.p4k.dmf_cache_size
+				    ENDIF;
+ii.$.rms.$.$.p4k.dmf_memory: 	    4K * (ii.$.rms.$.$.p4k.dmf_group_count *
+					ii.$.rms.$.$.p4k.dmf_group_size +
+					ii.$.rms.$.$.p4k.dmf_cache_size),
+				    SIZETYPE;
+ii.$.rms.$.$.p4k.dmf_separate:	    OFF;
+
+ii.$.rms.$.$.cache.p8k_status:	    ON;
+ii.$.rms.$.$.p8k.dmf_write_behind: ON;
+ii.$.rms.$.$.p8k.dmf_cache_size:   4 * ii.$.rms.$.$.config.dmf_connect + 128;
+ii.$.rms.$.$.p8k.dmf_free_limit:   ii.$.rms.$.$.p8k.dmf_cache_size / 32;
+ii.$.rms.$.$.p8k.dmf_group_count:  ii.$.rms.$.$.config.dmf_connect / 4 + 4;
+ii.$.rms.$.$.p8k.dmf_group_size:   8;
+ii.$.rms.$.$.p8k.dmf_modify_limit: 0.75 * ii.$.rms.$.$.p8k.dmf_cache_size, MIN = 10;
+ii.$.rms.$.$.p8k.dmf_wb_start:     ii.$.rms.$.$.p8k.dmf_modify_limit - 
+					 (0.15 * 
+					 ii.$.rms.$.$.p8k.dmf_cache_size);
+ii.$.rms.$.$.p8k.dmf_wb_end:       IF ( 0.5 * ii.$.rms.$.$.p8k.dmf_cache_size >= ii.$.rms.$.$.p8k.dmf_wb_start )
+                                          0.5 * ii.$.rms.$.$.p8k.dmf_wb_start
+                                    ELSE
+                                          0.5 * ii.$.rms.$.$.p8k.dmf_cache_size
+                                    ENDIF;
+ii.$.rms.$.$.p8k.dmf_memory:	    8K * (ii.$.rms.$.$.p8k.dmf_group_count *
+                                        ii.$.rms.$.$.p8k.dmf_group_size +
+                                        ii.$.rms.$.$.p8k.dmf_cache_size),
+				    SIZETYPE;
+ii.$.rms.$.$.p8k.dmf_separate:	    OFF;
+
+ii.$.rms.$.$.cache.p16k_status:    OFF;
+ii.$.rms.$.$.p16k.dmf_write_behind: ON;
+ii.$.rms.$.$.p16k.dmf_cache_size:  4 * ii.$.rms.$.$.config.dmf_connect + 128;
+ii.$.rms.$.$.p16k.dmf_free_limit:  ii.$.rms.$.$.p16k.dmf_cache_size / 32;
+ii.$.rms.$.$.p16k.dmf_group_count: ii.$.rms.$.$.config.dmf_connect / 4 + 4;
+ii.$.rms.$.$.p16k.dmf_group_size:  8;
+ii.$.rms.$.$.p16k.dmf_modify_limit:0.75 * ii.$.rms.$.$.p16k.dmf_cache_size, MIN = 10;
+ii.$.rms.$.$.p16k.dmf_wb_start:    ii.$.rms.$.$.p16k.dmf_modify_limit - 
+				     (0.15 * ii.$.rms.$.$.p16k.dmf_cache_size);
+ii.$.rms.$.$.p16k.dmf_wb_end:	    IF ( 0.5 * ii.$.rms.$.$.p16k.dmf_cache_size >= ii.$.rms.$.$.p16k.dmf_wb_start )
+                                          0.5 * ii.$.rms.$.$.p16k.dmf_wb_start
+				    ELSE
+                                          0.5 * ii.$.rms.$.$.p16k.dmf_cache_size
+				    ENDIF;
+ii.$.rms.$.$.p16k.dmf_memory:      16K * (ii.$.rms.$.$.p16k.dmf_group_count * 
+					ii.$.rms.$.$.p16k.dmf_group_size + 
+					ii.$.rms.$.$.p16k.dmf_cache_size),
+				   SIZETYPE;
+ii.$.rms.$.$.p16k.dmf_separate:    OFF;
+
+ii.$.rms.$.$.cache.p32k_status:    OFF;
+ii.$.rms.$.$.p32k.dmf_write_behind: ON;
+ii.$.rms.$.$.p32k.dmf_cache_size:  4 * ii.$.rms.$.$.config.dmf_connect + 128;
+ii.$.rms.$.$.p32k.dmf_free_limit:  ii.$.rms.$.$.p32k.dmf_cache_size / 32;
+ii.$.rms.$.$.p32k.dmf_group_count: ii.$.rms.$.$.config.dmf_connect / 4 + 4;
+ii.$.rms.$.$.p32k.dmf_group_size:  8;
+ii.$.rms.$.$.p32k.dmf_modify_limit:0.75 * ii.$.rms.$.$.p32k.dmf_cache_size, MIN = 10;
+ii.$.rms.$.$.p32k.dmf_wb_start:    ii.$.rms.$.$.p32k.dmf_modify_limit - (0.15 * ii.$.rms.$.$.p32k.dmf_cache_size);
+ii.$.rms.$.$.p32k.dmf_wb_end:	    IF ( 0.5 * ii.$.rms.$.$.p32k.dmf_cache_size >= ii.$.rms.$.$.p32k.dmf_wb_start )
+					  0.5 * ii.$.rms.$.$.p32k.dmf_wb_start
+				    ELSE
+					  0.5 * ii.$.rms.$.$.p32k.dmf_cache_size
+				    ENDIF;
+ii.$.rms.$.$.p32k.dmf_memory:      32K * (ii.$.rms.$.$.p32k.dmf_group_count * 
+					ii.$.rms.$.$.p32k.dmf_group_size + 
+					ii.$.rms.$.$.p32k.dmf_cache_size),
+				   SIZETYPE;
+ii.$.rms.$.$.p32k.dmf_separate:    OFF;
+
+ii.$.rms.$.ii_rms_fab_size:        16;
+ii.$.rms.$.ii_rms_hash_size:       7;
+ii.$.rms.$.ii_rms_rrl:		    OFF;
+ii.$.rms.$.ii_rms_readonly:        OFF;
+ii.$.rms.$.ii_rms_buffer_rfa:      OFF;
+ii.$.rms.$.ii_rms_close_file:      OFF;
+
+ii.$.syscheck.virtualpagecnt:	ii.$.rms.connect_sum * 1275;
+ii.$.syscheck.channelcnt:	ii.$.rms.connect_sum * 4 +
+					ii.$.rms.$.vms_file_limit;
+-- the following over-estimates dmf shared memory requirements
+ii.$.syscheck.gblpages:		( ii.$.syscheck.rcp_segment +
+					ii.$.syscheck.dmf_seg_num *
+					ii.$.syscheck.dmf_segment +
+					512 - 1 ) / 512;
+                     

@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How a New Profile Is Added </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="Profile function">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body  onload="if (isTOCLoaded()) {expand('3405');expand('3326');expand('3319');highlight('3307')}">
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="profile_load.htm" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="profile_remove.htm" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How a New Profile Is Added</h4>
+<p class="bodytext">Clicking the Add button submits the forms data and sends it by POST to the server.</p>
+<p class="bodytext">The values are processed at the beginning of <a href="showSource.php?file=profile" target="_blank">profile.php</a>. They are put in a new array, which is given to the method addNew of class <a href="showSource.php?file=ProfileModel" target=_"blank">ProfileModel</a>.</p>
+<p class="bodytext">In this method, we first do a select count(*) on the table to check whether an entry with the given email address already exists.</p>
+<p class="bodytext">If the entry does not exist, we check whether the user has uploaded a file. If he has done so, $credits['up_image'] will have a value different from empty string (which is the case if he has not).</p>
+<p class="bodytext">The first case is more interesting because we will put the image into the BLOB column here. So we first read the binary content of the file into a variable:</p>
+<p class="codefirst">$handle = fopen($credits['up_image'],&quot;rB&quot;);</p>
+<p class="code">$image = stream_get_contents($handle);</p>
+<p class="code">fclose($handle);</p>
+<p class="bodytext">Then we define a string to store which SQL type corresponds to the content of the variable. The column &quot;up_image&quot; is type long byte, so we take &quot;B&quot;.</p>
+<p class="codefirst">$sqltypes = &quot;B&quot;;</p>
+<p class="bodytext">Now we put the variable into an array. (The name of the index does not have to correspond to the column name.)</p>
+<p class="codefirst">$params = array (&quot;up_image&quot; =&gt; $image);</p>
+<p class="bodytext">The last thing to declare is our SQL statement:</p>
+<p class="codefirst">$sql=&quot;INSERT INTO user_profile(up_id, up_airport, up_email, up_first,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;up_last, up_image)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;VALUES ( next value for UP_ID,'&quot;.$credits['up_airport'].&quot;',</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'&quot;.$credits['up_email'].&quot;',</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'&quot;.addslashes($credits['up_first']).&quot;',</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'&quot;.addslashes($credits['up_last']).&quot;',</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;?)&quot;;</p>
+<p class="bodytext">The placeholder &quot;?&quot; in the query indicates that Ingres should insert the value from the array $params. This is shown in the query:</p>
+<p class="codefirst">$this-&gt;DBConn-&gt;query($sql,$params,$sqltypes);</p>
+<p class="bodytext">The query method of the <a href="showSource.php?file=DBConnection" target="_blank">DBConnection</a> class simply calls the ingres_query() function and adds the link parameter.</p>
+<p class="note"><strong class="bold">Note: </strong>You can use more than one placeholder, as you can see in the doSearch method of the class <a href="showSource.php?file=RoutesModel" target="_blank">RoutesModel</a>.</p>
+<p class="bodytext">We put the call to query in a try catch block so we can issue a rollback if an exception is thrown after the query has failed. If no exception is caught, we issue a COMMIT to make the change available to others.</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2007 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

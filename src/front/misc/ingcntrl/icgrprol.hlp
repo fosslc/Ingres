@@ -1,0 +1,37 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icgrprol.hlp       Info on Groups and Roles.
+/#--
+Group and role identifiers are unique, user-defined names. A group identifier
+is used to apply GRANTs to a list of Ingres users associated with the group.
+A role identifier is used to associate GRANTs with applications.
+
+Group and role identifiers are tools that the DBA can use to simplify control
+of database access.
+
+When you begin an Ingres session, the privileges in effect for that session
+are derived from the privileges defined for your user identifier and Public.
+If you include the -G and/or -R flag on the connect statement command line,
+then the privileges for the specified group (-G) and/or role (-R) are also
+in effect for the session.
+
+Note that it is possible to define a default group identifier for a user.
+If you have a default group identifier defined for your user id, when you
+begin an Ingres session without specifying a group identifier, your
+default group identifier is automatically applied to the session. Default
+group identifiers can be defined in Accessdb.
+
+Group identifiers are created and dropped with the CREATE GROUP and DROP
+GROUP statements, respectively. Their user lists can be specified as part
+of the CREATE GROUP statement and can be changed or removed using the
+ALTER GROUP statement. You can view existing groups and group members
+by connecting to the iidbdb database and running the SQL statement:
+"SELECT * FROM iiusergroup".
+
+Role identifiers are created and dropped with the CREATE ROLE and DROP
+ROLE statements, respectively. The ALTER ROLE statement allows you to
+change or remove the password of a role identifier. You can view existing
+role identifiers by connecting to the iidbdb database and running the
+SQL statement: "SELECT roleid FROM iirole".
+
+See the Ingres/SQL Reference Manual for more information on Group
+and Role identifiers.

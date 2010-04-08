@@ -1,0 +1,316 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ooclass.h>
+# include	<oosymbol.h>
+# include	<oodefine.h>
+# include	<er.h>
+# include	"ercu.h"
+# include	<cu.h>
+# include       <me.h>
+# include	<si.h>
+# include	<st.h>
+# include	<uigdata.h>
+
+/**
+** Name:	cuencode.qc	- Routines to handle encodings.
+**
+** Description:
+**	This file contains routines to deal with encodings.
+**
+**	cu_encadd	Add an encoded object to the DB.
+**
+**	cu_encwrite	Write an encoded object to the DB.
+**
+** History:
+**	10-aug-1987 (Joe)
+**		Initial Version
+**      3-aug-92 (fraser)
+**          Changed _flushAll to ii_flushAll.
+**      27-jan-93 (leighb)
+**              Allocate "estring" instead of putting it on the stack.
+**              Stack overflowed on PC with estring on stack.
+**      9-feb-93 (blaise)
+**              Changed _flush, etc. to ii_flush because of conflict with
+**              Microsoft C library.
+**	6-jun-93 (blaise)
+**		Cast memory allocation added in above change to avoid
+**		compiler warnings
+**      12-oct-93 (daver)
+**              Casted parameters to STindex() to avoid compiler warnings
+**              when this CL routine became prototyped.
+**      18-oct-1993 (kchin)
+**          	Since the return type of OOsnd() has been changed to PTR,
+**          	when being called in cu_encadd(), its return
+**          	type needs to be cast to the proper datatype.
+**      06-dec-93 (smc)
+**		Bug #58882
+**      	Commented lint pointer truncation warning.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	13-May-2005 (kodse01)
+**	    replace %ld with %d for old nat and long nat variables.
+**/
+
+/* # define's */
+/*
+** This is the current length of an encoding line.
+*/
+# define	CURSIZE		CU_LINEMAX - 4
+
+/* GLOBALDEF's */
+
+/* extern's */
+
+FUNC_EXTERN i4   	FEinqerr();
+FUNC_EXTERN char	*IICUrtoRectypeToObjname();
+
+/* static's */
+
+/*{
+** Name:	cu_encadd	- Add an encoded object to the db.
+**
+** Description:
+**	Given the class and size of the detail lines for an encoding,
+**	and the file that the line came from, this routine adds the encoding
+**	given in the copy file to the DB.
+**
+** Inputs:
+**	class		The class of the object encoded by the encoding.
+**
+**	size		The size of the encoding lines.
+**
+**	addfunc		The pre-add function to call.
+**
+**	conflict	The conflict structure.
+**
+**	fp		The file pointer to continue to read lines from
+**
+**	objname		Contains the name of the object.
+** 
+** Outputs:
+**	objname		Will contain the name of the object
+**			added to the database.
+**
+**	id		Will contain the id of the object that was added.
+**
+** Outputs:
+**	Returns:
+**		STATUS of add.
+**
+** Side Effects:
+**	Will read lines from the file.  After the routine returns, the
+**	next read will read the first line after the encoding.
+**
+** History:
+**	10-aug-1987 (Joe)
+**		Initial Version.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	26-jul-93 (blaise)
+**	    Preparing for internationalization: replaced literal "Classid"
+**	    with a message string.
+**      12-oct-93 (daver)
+**              Casted parameters to STindex() to avoid compiler warnings
+**              when this CL routine became prototyped.
+*/
+STATUS
+cu_encadd(class, size, addfunc, conflict, fp, objname, id, addobj)
+i4		class;
+i4		size;
+STATUS		(*addfunc)();
+CUCONFLICT	*conflict;
+FILE		*fp;
+char		*objname;
+i4		*id;
+bool		*addobj;
+{
+    STATUS	rval = OK;
+    u_char      *estring;
+    u_char	buf[CU_LINEMAX+1];
+    u_char	*ep;
+    bool	newline;
+    OO_OBJECT	*obj;
+    OOID	grold;
+    OOID	enid;
+    OOID	dcid;
+    OO_ENCODING	*en;
+    i4		count;
+    u_char	c;
+    i4	errp;	/* For errors */
+    char	*classname;
+    char	classbuf[30];
+    u_char	*cp;
+
+    /*
+    ** Loop exit is inside loop
+    */
+    if ((classname = IICUrtoRectypeToObjname(class)) == NULL)
+    {
+	STprintf(classbuf, "(%s = %d)", ERget(F_CU0014_CLASSID), class);
+	classname = classbuf;
+    }
+    ep = estring =
+	(u_char *)MEreqmem((u_i4)0, (u_i4)(10*ESTRINGSIZE), FALSE, NULL);
+    newline = TRUE;
+    count = 0;
+    for (;;)
+    {
+	c = SIgetc(fp);
+	if (newline)
+	{
+	    if (c != '\t')
+		break;
+	    newline = FALSE;
+            continue;
+	}
+	count++;
+	if (c == '\n' && count > CURSIZE)
+	    count = 0;
+	else
+	    *ep++ = c;
+	newline = c == '\n';
+    }
+    buf[0] = c;
+    SIgetrec(&buf[1], CU_LINEMAX-1, fp);
+    if ((cp = (u_char *) STindex((char *)buf, (char *)"\n", (i4)0)) != NULL)
+	*cp = EOS;
+    if (!STequal(buf, "END"))
+    {
+	IIUGerr(E_CU0012_BAD_ENCODE_END, 0, 3, (PTR) objname, (PTR) classname,
+			(PTR) buf);
+	MEfree(estring);
+	return E_CU0012_BAD_ENCODE_END;
+    }
+    /*
+    ** The last character put in the buffer is a newline
+    ** it is not part of the encoded string.
+    */
+    *(--ep) = EOS;
+
+    /* lint truncation warning if size of ptr > OOID, but code valid */
+    enid = (OOID)OOsnd(OC_ENCODING, _new, -1, 0, FALSE, estring, 0);
+    en = (OO_ENCODING *)OOp(enid);
+    en->data.inDatabase = FALSE;
+    en->data.dbObject = TRUE;
+    /* lint truncation warning if size of ptr > int, but code valid */
+    if ((dcid = (OOID)OOsnd(enid, _decode, TRUE)) == nil)
+    {
+	IIUGerr(E_CU0010_BAD_ENCODE, 0, 2, (PTR) objname, (PTR) classname);
+	MEfree(estring);
+	return E_CU0010_BAD_ENCODE;
+    }
+
+    obj = (OO_OBJECT *)OOp(dcid);
+    obj->owner = IIUIdbdata()->user;
+    obj->name = objname;
+
+    if (addfunc != NULL)
+    {
+	iiuicw1_CatWriteOn();  /* In case it got turned off */
+	(*addfunc)(class, objname);
+    }
+
+    /* If object exists, it must be deleted first */
+    /* lint truncation warning if size of ptr > int, but code valid */
+    if ((grold = (OOID)OOsnd(class, _withName, objname, IIUIdbdata()->user, NULL))
+	!= nil)
+    {
+	if (conflict->cucheck)
+	{
+	    rval = (*conflict->cuconflict)(class, objname);
+	    IICUscsSetConflictState(rval, conflict);
+	}
+	if (!conflict->cureplace)
+	{
+	    *addobj = FALSE;
+	    MEfree(estring);
+	    return OK;
+	}
+	OOsnd(grold, _destroy);
+    }
+    obj->create_date = obj->alter_date = "now";
+    if (OOsnd(obj->ooid, ii_flushAll) == nil)
+    {
+	IIUGerr(E_CU0011_BAD_SAVE, 0, 2, (PTR) objname, (PTR) classname);
+	MEfree(estring);
+	return E_CU0011_BAD_SAVE;
+    }
+    *id = obj->ooid;
+    MEfree(estring);
+    return OK;
+}
+
+/*{
+** Name:	cu_encwrite	- Write an encoding to the file
+**
+** Description:
+**	This writes an encoded object to the file.
+**
+** Inputs:
+**	name		The name of the object.
+**
+**	rectype		The rectype of the encoding.
+**
+**	class		The class of the encoding.
+**
+**	string		The encoding string.
+**
+**	fp		The file to write to.
+**
+** Outputs:
+**	Returns:
+**		STATUS of write.
+**
+** History:
+**	10-aug-1987 (Joe)
+**		Initial Version.
+*/
+STATUS
+cu_encwrite(name, rectype, class, string, fp)
+char	*name;
+i4	rectype;
+OOID	class;
+u_char	*string;
+FILE	*fp;
+{
+    u_char	*ep;
+    i4		count;
+    bool	newline = TRUE;
+
+    cu_wrenc(name, rectype, class, CURSIZE, fp);
+    count = 0;
+    for (ep = string; *ep != EOS; ep++)
+    {
+	if (newline)
+	{
+	    SIputc('\t', fp);
+	    newline = FALSE;
+	}
+	if (count >= CURSIZE)
+	{
+	    SIputc('\n', fp);
+	    SIputc('\t', fp);
+	    count = 0;
+	}
+	SIputc(*ep, fp);
+	count++;
+	newline = *ep == '\n';
+    }
+    /*
+    ** Always put out a newline
+    */
+    SIputc('\n', fp);
+    cu_wrend(fp);
+    return OK;
+}

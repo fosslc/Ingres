@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Graphical Hyperlinks
+</title>
+</head>
+<body>
+<h1>
+Graphical Hyperlinks
+</h1>
+Our first attempt at building a hyperlink list of play
+types was simple and effective but we would much rather use
+a graphical link to do this. In the second of this series of
+examples we build a link by embedding the HTML tags directly
+in the
+select statement.
+<br>
+We set the return address as before.
+<h3>File: play_typeGLink.html</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Graphical Hyper Link to Shakespeare's Plays by type&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Graphical Hyper Link to Shakespeare's Plays by type&lt;/h1&gt;
+
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_TxnCndCmt_h.html]` --&gt;
+
+&lt;!-- #ICE REPEAT
+          DATABASE = `icetutor` 
+          <span class="macro">SQL=`select distinct
+              '&lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_typeLinkSubSet.html]?type=', type, '"&gt;
+	      &lt;img src="/ice-bin/oiice.dll/playgroup/plays[', type, '.gif]" alt="', type, '"&gt;
+	      &lt;/a&gt;'
+		from plays`</span>
+          TRANSACTION=`t_type` 
+          CURSOR=`c_type` 
+          ROWS=`-1` 
+          TYPE=`PLAIN`
+          --&gt;
+&lt;!-- #ICE COMMIT=`t_type` --&gt;
+&lt;!-- #ICE DECLARE=`session.e_return=play_typeGLink.html` --&gt;
+
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+<p>
+The first thing we notice is that the <tt>select</tt>
+statement has become far more complicated than it was. We
+are making use of the ability to embed static text within
+the statement to embed the tags for a hyperlink. We select
+the <span class="hiy">type</span> column three times in all. First, to pass in as the
+value of the variable passed to the target document; second
+as the name of the image file (we hard code the extension);
+and finally, as the alternative text to the image as follows:
+<p><tt><pre>
+SQL=`select distinct
+'&lt;a href="/ice-bin/oiice.dll/playgroup/plays[play_typeLinkSubSet.html]?type=', <span class="hiy">type</span>, '"&gt;
+    &lt;img src="/ice-bin/oiice.dll/playgroup/plays[', <span class="hiy">type</span>, '.gif]" alt="', <span class="hiy">type</span>, '"&gt;
+    &lt;/a&gt;'
+    from plays`
+</pre></tt><p>
+The first line introduces the select. The second line sets
+up the hyperlink anchor tag with the variable <tt>type</tt>
+and passes the contents of the type column as the value. The
+third line again uses the contents of the type column in two
+places, the first as the name of the image file (with the hard
+coded extension) and the second as the alternate text for
+the image.
+<p>
+Both the link and the value of the HTML variable
+<tt>type</tt> are built dynamically in this document. We
+note that, although in this case the image files are
+constrained to have the same names as the various play
+types, this is
+<ul>
+    <li>Not necessarily a bad thing
+    <li>Easily changed by joining with an image table
+</ul>
+<p>
+We set the value of the session variable <tt>e_return</tt>
+so as to re-use the display document from before.
+<p>
+This document achieved the aim of dynamically creating a set of graphical hyper
+links but at the expense of placing HTML code within the
+select statement. We would prefer to abstract the HTML away
+from the SQL and this is made possible by the HTML and
+<a href="fr_imageSwitchLink.html"
+target="page">SWITCH</a>
+keywords.
+</body>
+</html>

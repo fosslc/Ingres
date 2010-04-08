@@ -1,0 +1,75 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The form layout frame allows you to move the cursor around the form, 
+either to position the location of new components, or to select existing
+components of the form for further editing.  The cursor movement commands 
+are single character commands, listed in Help for Keys.
+
+To create new components on the form, simply position the cursor to the 
+location on the screen where you want the new component created, select 
+the "Create" menu command, and follow the submenu appropriate to that type 
+of component.
+
+To change aspects of existing components, position the cursor to anywhere
+on the component, and select the appropriate menu command.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Create          Create a new component at the current cursor
+                        position.  A submenu will be displayed containing
+                        the types of components from which to choose.
+                        If the new component will overlap some existing
+                        components, VIFRED will move these components
+                        out of the way.
+
+        Delete          Delete the selected component, or the blank line 
+                        that the cursor is on.
+
+        Edit            Edit the selected component.  A submenu is brought
+                        up for fields while a new frame is displayed for
+                        table fields.
+
+        Move            Prepare to move the selected component to a new 
+                        location on the screen.  A submenu will be brought
+                        up containing options for movement, and the component
+                        will blink until the move operation is complete.
+
+        Undo            Undo the last command that changed the form in any
+                        way.  You can Undo the last undo as well.
+
+        Order           Change the sequencing of fields within the form.
+
+        Save            Save the form in the database.
+
+        FormAttr        Change the default attributes to be associated 
+                        with this form.  Form attributes such as whether 
+                        the form will cover the entire screen, or just
+                        "Pop up" in a boxed window are among the types of
+                        attributes that you can set using this option.
+
+        Location        Display the current (screen relative) location
+                        of the cursor.
+
+        GroupMove       Move a group of components together as a group.
+                        Components are selected by completely enclosing
+                        them within a bounding box.  The bounding box
+                        is defined by an upper left and a lower right
+                        corner.  The cursor location at the time this
+                        menuitem was selected serves as one corner of
+                        the bounding box.
+
+        Rulers          Allows one to adjust the display of rulers and
+                        straight edges to help with aligning components
+                        on the same row or column.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the previous form.  If you have not
+                        saved the form, you will be asked to confirm this
+                        decision.
+
+        Quit            Exit from VIFRED.  If you have not saved the form,
+                        you will be asked to confirm this decision.
+                        (This command is not available when VIFRED is called
+                        from ABF or Vision.)

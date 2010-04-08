@@ -1,0 +1,15 @@
+#
+# Jamfile file for front!frontcl!runsys
+#
+
+SubDir ING_SRC front frontcl runsys ;
+
+IISUBSYS front frontcl runsys ;
+
+
+IILIBRARY RUNSYSLIB : iixaddfr.c iiwtbacc.c iiwrunt.c
+	iivtbacc.c iivrunt.c iiv4runt.c iiuftbU.c iiuftbM.c iiuftbL.c
+	iiuftb.c iiufrunt.c iiufrunU.c iiufrunM.c iiufrunL.c iiufg4U.c
+	iiufg4M.c iiufg4L.c iiufg4.c iimffrs.c iidgfrun.c iidgcrun.c
+	iiacfrs.c ;
+

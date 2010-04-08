@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!opf!opx
+#
+
+SubDir ING_SRC back opf opx ;
+
+IISUBSYS back opf opx ;
+
+
+IILIBRARY OPFLIB : opxerror.c opxcinter.c opxcall.c ;
+

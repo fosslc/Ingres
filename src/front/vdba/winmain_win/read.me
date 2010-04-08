@@ -1,0 +1,130 @@
+OpenIngres/Visual DBA for Windows NT
+
+Release Notes
+June 1997
+
+Version 2.0, June 1997
+
+
+Welcome to OpenIngres/Visual DBA!
+
+This file contains important information that may not be included in 
+the general OpenIngres 2.0 release notes.
+
+* SQL Error Information:
+
+	OpenIngres Visual DBA displays an abbreviated error message
+	popup when an SQL error is encountered. To view the complete
+	error message - type CTRL-E.
+
+* Supported environment:
+    
+	This version of OpenIngres/Visual DBA for Windows NT is 
+	primarily designed to operate with OpenIngres 2.0 for 
+	Windows NT. Some functionality may be absent when 
+	administering OpenIngres installations of earlier 
+	releases. In particular, the performance monitor 
+	functionality will only operate against a local or remote
+	OpenIngres 2.0 Installation.
+
+* QUEL Support
+
+	OpenIngres/Visual DBA is primarily designed to operate with
+	OpenIngres installations using SQL. Views defined in QUEL 
+	will not be displayed.
+
+* Required DLL
+
+	If OpenIngres/Visual DBA fails to start because of a missing
+	CTL3D32.DLL, copy the CTL3D32.DL$ from the VDBA directory into
+	your windows system directory, renaming it to CTL3D32.DLL
+
+* Copying a tabe with populate
+
+        You should be aware that copying a table with populate does a 
+	"COPY INTO" of the table rows into a local temporary file, followed 
+	by a "COPY FROM" into the new table, and then removes the 
+	temporary file.
+
+* Execution of Remote Commands 
+
+	Some of the options and/or dialogs in OpenIngres/Visual DBA 
+	result in the launch of an Operating System level command on 
+	the server. These "remote commands" are performed by a remote 
+	command daemon or service, "rmcmd" on behalf of Visual DBA.
+
+	The rmcmd utility is setup and controlled by the following 
+	files:
+
+     	rmcmdgen.exe: 	Generates new system objects (tables, views, 
+			and procedures) in the iidbdb database. 
+			Normally executed by the install process.
+
+     	rmcmdrmv.exe: 	Removes the system objects.
+
+     	rmcmd.exe   : 	The remote command daemon. This daemon should
+			be started by the OpenIngres administrator 
+			('ingres') on the server, once the OpenIngres 
+			installation is running. On Windows/NT, rmcmd
+			may also operate as a service. In this case,
+			it should be started from the Windows/NT 
+			services dialog (from the control panel)
+	
+     	rmcmdstp.exe : 	Stops the rmcmd process (not as a service)
+
+     	rmcservi.exe : 	Install/de-install rmcmd as a Windows/NT
+			service. Options are:
+
+				rmcservi install
+				rmcservi remove
+
+	Please note that these executables should be run by the 
+	OpenIngres system administrator 'ingres'.
+
+* RMCMD as a Windows/NT Service
+
+	The rmcmd executable may run as a Windows/NT service. In this 
+	case, the service name is "OpenIngres VisualDBA RMCMD". 
+          
+	Problems with the service are often be due to environmental 
+	problems. To reset the environment (which is normally set up 
+	at install time) type:
+		rmcservi remove
+		rmcmdenv <path> 
+			to specify (for the service) the path where 
+			the rmcmd commands are installed 
+		rmcservi install
+
+* Remote Command Restrictions
+
+	By default, only the INGRES user can use the remote commands 
+	from OpenIngres/Visual DBA. It is possible for other users to 
+	execute commands, with the following notes and restrictions:
+
+	The command will be launched by the INGRES user with the 
+	-uusername option (described in the system reference manual), 
+	where the username specified is the username used to connect 
+	to OpenIngres/Visual DBA. This restriction means that OpenIngres
+	commands which do not support the -u option are not supported.
+
+     	To allow a user other than the 'ingres' user to be able to
+	execute the remote commands issue the following SQL statements
+	while connected to the iidbdb as the 'ingres' user:
+
+		grant select,insert,update,delete on
+			remotecmdinview
+		to <user>
+		
+		grant select,insert,update,delete on
+			remotecmdoutview
+		to <user>
+
+		grant select,insert,update,delete on
+			remotecmdview
+		to <user>
+
+		grant execute on procedure launchremotecmd to <user>
+		grant execute on procedure sendrmcmdinput to <user>
+
+	Note that NO grants should be made to the underlying 
+	tables directly.

@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation 
+/#-- vqapflo.hlp, subtopic which details application flow information in the
+/#-- application report.
+/#-- 
+In the application report, the application flow section shows an indented
+list that represents the application flow diagram.  Child frames are shown 
+indented below the parent frame.  The menuitem text is shown within the 
+brackets ([]) and is followed by the frame type and the frame name.  
+Example:
+
+(Menuitem Text)
+     |        (Frame Type)
+     |             |         (Frame Name)
+     |             |               |
+     V             V               V
+[-- TOP --] -> Menu Frame: application_example
+  [NewOrder] -> Append Frame: neworder
+    [AddCustomer] -> Append Frame: addcustomer
+    [UpdateCustomer] -> Update Frame: updatecustomer
+  [Reports] -> Menu Frame: reports
+    [Orders] -> Report Frame: orders
+    [Customers] -> Report Frame: customers

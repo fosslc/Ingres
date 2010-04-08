@@ -1,0 +1,101 @@
+--
+--  Copyright (c) 2004 Ingres Corporation
+--
+--  This file contains the configuration for INGRES/JDBC Server.
+--
+--# History:
+--#     06-Mar-00 (rajus01) 
+--#             Added new configuration strings for JDBC server.
+--#	25-Apr-2000 (hanch04)
+--#	    Moved from all.crs
+--#	27-apr-2000 (somsa01)
+--#	    Added rule to set up the JDBC port id.
+--#	28-apr-2000 (somsa01)
+--#	    Added ability for multiple products.
+--#	09-May-2000 (rajus01)
+--#	    The default listen port is set by the Ingres/EDBC JDBC server 
+--#	    setup script file (iisujdbc.sh).
+--#	06-Mar-2001 (kinte01)
+--#	    Set default tcpip on VMS to tcp_dec.
+--#	08-Mar-2001 (kinte01)
+--#	    Add VMS specific process resources
+--#	18-Jun-2001 (hanje04)
+--#	    Changed default startup count to 0 to stop problems with 
+--#	    jdbc server starting befor setup has been run during installation 
+--#	07-Nov-2001 (loera01) SIR 106307 
+--#	    Set default startup count to zero.
+--#	04-Nov-2002 (somsa01)
+--#	    Integrated mcgem01's fixes from Windows version;
+--#	    Added valid values for connect_pool_status and set default
+--#	    values for NULL values.
+--#	16-jan-2003 (abbjo03)
+--#	    Increase VMS working set parameters.
+--#	25-Oct-2004 (rajus01) Star problem # EDJDBC 93
+--#	    SIR 112181 added support for negative, decimal value handling in
+--#	    CBF. Cross integrated these CBF changes and modified the 
+--#	    JDBC config parameters client_max, connect_pool_size to
+--#	    use the new config rule (SIGNED_INT).
+--#	18-Apr-2005 (drivi01)
+--#	    SIR: 114339
+--#	    Windows crsfiles are merged with generic.
+--#     25-may-2005 (bolke01) sir 114136
+--#             Corrected sysnam was sysname
+--#
+-- JDBC server resources
+
+-- Startup count (platform-specific)
+# if defined(UNIX) || defined(VMS) || defined(NT_GENERIC)
+(PROG4PRFX).$.(PROG2PRFX)start.$.jdbc:            0, MAX = 8;
+# else
+(PROG4PRFX).$.(PROG2PRFX)start.$.jdbc:            0, MAX = 1;
+# endif /* UNIX / VMS / NT_GENERIC */
+
+(PROG4PRFX).$.jdbc.*.client_max:		-1, MIN = -1, SIGNED_INT;
+(PROG4PRFX).$.jdbc.*.client_timeout:		0;
+(PROG4PRFX).$.jdbc.*.connect_pool_expire:	0;
+(PROG4PRFX).$.jdbc.*.connect_pool_size:		-1, MIN = -1, SIGNED_INT;
+(PROG4PRFX).$.jdbc.*.connect_pool_status:	"optional",
+						VALID = { "on", "off", "optional" };
+# if defined(VMS)
+(PROG4PRFX).$.jdbc.*.protocol:			"tcp_dec";
+# elif NT_GENERIC
+(PROG4PRFX).$.jdbc.*.protocol:			"wintcp";
+# else
+(PROG4PRFX).$.jdbc.*.protocol:			"tcp_ip";
+# endif /* VMS */
+# ifdef NT_GENERIC
+(PROG4PRFX).$.jdbc.*.port:                       IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                             "II"
+                                        ELSE
+					     "`(PROG4PRFX)concat -s(II_INSTALLATION) -s7`"
+                                        ENDIF;
+# else
+(PROG4PRFX).$.jdbc.*.port:			"";
+# endif
+
+-- jdbc process resources 
+# ifdef VMS
+(PROG4PRFX).$.jdbc.*.vms_accounting:	ON;
+(PROG4PRFX).$.jdbc.*.vms_ast_limit:	916;
+(PROG4PRFX).$.jdbc.*.vms_buffer_limit:	689544;
+(PROG4PRFX).$.jdbc.*.vms_enqueue_limit:	1280;
+(PROG4PRFX).$.jdbc.*.vms_error:		"NLA0:";
+(PROG4PRFX).$.jdbc.*.vms_extent:		16384;
+(PROG4PRFX).$.jdbc.*.vms_file_limit:	394;
+(PROG4PRFX).$.jdbc.*.vms_image:		"ii_system:[ingres.bin]iijdbc.exe";
+(PROG4PRFX).$.jdbc.*.vms_input:		"NLA0:";
+(PROG4PRFX).$.jdbc.*.vms_interval:	"-1";
+(PROG4PRFX).$.jdbc.*.vms_io_buffered:	778;
+(PROG4PRFX).$.jdbc.*.vms_io_direct:	306;
+(PROG4PRFX).$.jdbc.*.vms_maximum_working_set: 16384;
+(PROG4PRFX).$.jdbc.*.vms_output:		"NLA0:";
+(PROG4PRFX).$.jdbc.*.vms_page_file:	27924;
+(PROG4PRFX).$.jdbc.*.vms_priority:	4;
+# ifdef SEVMSBUILD
+(PROG4PRFX).$.jdbc.*.vms_privileges:      "(readall,prmmbx,sysnam,cmkrnl,sysprv,share,world,netmbx,tmpmbx,exquota,upgrade,downgrade)";
+# else
+(PROG4PRFX).$.jdbc.*.vms_privileges:	"(readall,prmmbx,sysnam,cmkrnl,sysprv,share,world,netmbx,tmpmbx,exquota)";
+# endif /* SEVMSBUILD */
+(PROG4PRFX).$.jdbc.*.vms_queue_limit:	261;
+(PROG4PRFX).$.jdbc.*.vms_working_set:	2048;
+# endif /* VMS */

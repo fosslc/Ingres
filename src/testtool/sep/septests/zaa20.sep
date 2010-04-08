@@ -1,0 +1,51 @@
+/*
+	Test Name: newtest.sep
+	Time: Thu Dec  2 16:58:10 1993
+	User Name: ingres
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename:
+	Purpose	:
+	Input Files  :
+	Output Files :
+	Database     :
+	Tables       :
+	Synopsis     :
+
+ History:  2-Dec-1993	(Author)	Created
+*/
+? echo "This is not a DIFF"
+<<
+This is not a DIFF
+>>
+.if DIFFS != 0
+? echo "There are DIFFS"
+<<
+There are DIFFS
+>>
+.else
+? echo "There are no DIFFS"
+<<
+There are no DIFFS
+>>
+.endif
+? echo "This IS A DIFF"
+<<
+ryryryryryryryry
+>>
+.if DIFFS != 0
+? echo "There are DIFFS"
+<<
+There are DIFFS
+>>
+.else
+? echo "SEP thinks that there are no DIFFS, but there are !!!!!!!!!"
+<<
+There are no DIFFS
+>>
+.endif
+
+
+Ending at: Thu Dec  2 17:00:45 1993

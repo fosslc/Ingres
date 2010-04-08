@@ -1,0 +1,192 @@
+#
+# Jamfile file for front!abf!vq
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front abf vq ;
+
+IISUBSYS front abf vq ;
+
+IINOOPTIM vqlocals.qsc : nc4_us5 ;
+
+IIMSGHDR ervq.msg ;
+
+IIQSHHDR vqffldlp.h : vqffldlp.qsh ;
+
+IIFORM newfr.frm ;
+IIFORM newlup.frm ;
+IIFORM newmi.frm ;
+IIFORM newvq.frm ;
+IIFORM vqapprep.frm ;
+IIFORM vqcmper2.frm ;
+IIFORM vqcmperr.frm ;
+IIFORM vqedectf.frm ;
+IIFORM vqhlparm.frm ;
+IIFORM vqlcreat.frm ;
+IIFORM vqlisfil.frm ;
+IIFORM vqlocals.frm ;
+IIFORM vqlocks.frm ;
+IIFORM vqmarkfm.frm ;
+IIFORM vqparms.frm ;
+IIFORM vqpcreat.frm ;
+IIFORM vqprocs.frm ;
+IIFORM vqqparts.frm ;
+IIFORM vqrecapp.frm ;
+
+File $(INGMSG)$(DFS)vq4glafl.hlp : vq4glafl.hlp ;
+File $(INGMSG)$(DFS)vq4gldb.hlp : vq4gldb.hlp ;
+File $(INGMSG)$(DFS)vq4gldet.hlp : vq4gldet.hlp ;
+File $(INGMSG)$(DFS)vq4gldt.hlp : vq4gldt.hlp ;
+File $(INGMSG)$(DFS)vq4glex.hlp : vq4glex.hlp ;
+File $(INGMSG)$(DFS)vq4glflw.hlp : vq4glflw.hlp ;
+File $(INGMSG)$(DFS)vq4glfrm.hlp : vq4glfrm.hlp ;
+File $(INGMSG)$(DFS)vqapflo.hlp : vqapflo.hlp ;
+File $(INGMSG)$(DFS)vqapfrdt.hlp : vqapfrdt.hlp ;
+File $(INGMSG)$(DFS)vqapinfo.hlp : vqapinfo.hlp ;
+File $(INGMSG)$(DFS)vqappabf.hlp : vqappabf.hlp ;
+File $(INGMSG)$(DFS)vqappend.hlp : vqappend.hlp ;
+File $(INGMSG)$(DFS)vqapprep.hlp : vqapprep.hlp ;
+File $(INGMSG)$(DFS)vqassign.hlp : vqassign.hlp ;
+File $(INGMSG)$(DFS)vqbrows.hlp : vqbrows.hlp ;
+File $(INGMSG)$(DFS)vqcatlo.hlp : vqcatlo.hlp ;
+File $(INGMSG)$(DFS)vqcatlog.hlp : vqcatlog.hlp ;
+File $(INGMSG)$(DFS)vqcmper2.hlp : vqcmper2.hlp ;
+File $(INGMSG)$(DFS)vqcmperr.hlp : vqcmperr.hlp ;
+File $(INGMSG)$(DFS)vqcompfr.hlp : vqcompfr.hlp ;
+File $(INGMSG)$(DFS)vqcompre.hlp : vqcompre.hlp ;
+File $(INGMSG)$(DFS)vqconcur.hlp : vqconcur.hlp ;
+File $(INGMSG)$(DFS)vqcreafr.hlp : vqcreafr.hlp ;
+File $(INGMSG)$(DFS)vqcusted.hlp : vqcusted.hlp ;
+File $(INGMSG)$(DFS)vqdefval.hlp : vqdefval.hlp ;
+File $(INGMSG)$(DFS)vqdelfr.hlp : vqdelfr.hlp ;
+File $(INGMSG)$(DFS)vqdeljo.hlp : vqdeljo.hlp ;
+File $(INGMSG)$(DFS)vqdellt.hlp : vqdellt.hlp ;
+File $(INGMSG)$(DFS)vqdelrul.hlp : vqdelrul.hlp ;
+File $(INGMSG)$(DFS)vqdestfr.hlp : vqdestfr.hlp ;
+File $(INGMSG)$(DFS)vqdupfrm.hlp : vqdupfrm.hlp ;
+File $(INGMSG)$(DFS)vqeceend.hlp : vqeceend.hlp ;
+File $(INGMSG)$(DFS)vqedectf.hlp : vqedectf.hlp ;
+File $(INGMSG)$(DFS)vqedfr.hlp : vqedfr.hlp ;
+File $(INGMSG)$(DFS)vqedglob.hlp : vqedglob.hlp ;
+File $(INGMSG)$(DFS)vqedit.hlp : vqedit.hlp ;
+File $(INGMSG)$(DFS)vqedlogl.hlp : vqedlogl.hlp ;
+File $(INGMSG)$(DFS)vqedlptf.hlp : vqedlptf.hlp ;
+File $(INGMSG)$(DFS)vqedmen.hlp : vqedmen.hlp ;
+File $(INGMSG)$(DFS)vqedmnu.hlp : vqedmnu.hlp ;
+File $(INGMSG)$(DFS)vqescae.hlp : vqescae.hlp ;
+File $(INGMSG)$(DFS)vqescafc.hlp : vqescafc.hlp ;
+File $(INGMSG)$(DFS)vqescafe.hlp : vqescafe.hlp ;
+File $(INGMSG)$(DFS)vqescal.hlp : vqescal.hlp ;
+File $(INGMSG)$(DFS)vqescas.hlp : vqescas.hlp ;
+File $(INGMSG)$(DFS)vqescbfe.hlp : vqescbfe.hlp ;
+File $(INGMSG)$(DFS)vqescbl.hlp : vqescbl.hlp ;
+File $(INGMSG)$(DFS)vqescde.hlp : vqescde.hlp ;
+File $(INGMSG)$(DFS)vqescds.hlp : vqescds.hlp ;
+File $(INGMSG)$(DFS)vqescfe.hlp : vqescfe.hlp ;
+File $(INGMSG)$(DFS)vqescfil.hlp : vqescfil.hlp ;
+File $(INGMSG)$(DFS)vqescfld.hlp : vqescfld.hlp ;
+File $(INGMSG)$(DFS)vqescfs.hlp : vqescfs.hlp ;
+File $(INGMSG)$(DFS)vqesclin.hlp : vqesclin.hlp ;
+File $(INGMSG)$(DFS)vqescme.hlp : vqescme.hlp ;
+File $(INGMSG)$(DFS)vqescmm.hlp : vqescmm.hlp ;
+File $(INGMSG)$(DFS)vqescmnu.hlp : vqescmnu.hlp ;
+File $(INGMSG)$(DFS)vqescms.hlp : vqescms.hlp ;
+File $(INGMSG)$(DFS)vqescod.hlp : vqescod.hlp ;
+File $(INGMSG)$(DFS)vqescot.hlp : vqescot.hlp ;
+File $(INGMSG)$(DFS)vqescqe.hlp : vqescqe.hlp ;
+File $(INGMSG)$(DFS)vqescqnd.hlp : vqescqnd.hlp ;
+File $(INGMSG)$(DFS)vqescqs.hlp : vqescqs.hlp ;
+File $(INGMSG)$(DFS)vqesctyp.hlp : vqesctyp.hlp ;
+File $(INGMSG)$(DFS)vqescue.hlp : vqescue.hlp ;
+File $(INGMSG)$(DFS)vqescum.hlp : vqescum.hlp ;
+File $(INGMSG)$(DFS)vqescus.hlp : vqescus.hlp ;
+File $(INGMSG)$(DFS)vqexpres.hlp : vqexpres.hlp ;
+File $(INGMSG)$(DFS)vqfblist.hlp : vqfblist.hlp ;
+File $(INGMSG)$(DFS)vqfldesc.hlp : vqfldesc.hlp ;
+File $(INGMSG)$(DFS)vqflolo.hlp : vqflolo.hlp ;
+File $(INGMSG)$(DFS)vqfloscr.hlp : vqfloscr.hlp ;
+File $(INGMSG)$(DFS)vqfrmflo.hlp : vqfrmflo.hlp ;
+File $(INGMSG)$(DFS)vqfvars.hlp : vqfvars.hlp ;
+File $(INGMSG)$(DFS)vqimlpap.hlp : vqimlpap.hlp ;
+File $(INGMSG)$(DFS)vqimlpfr.hlp : vqimlpfr.hlp ;
+File $(INGMSG)$(DFS)vqinsdel.hlp : vqinsdel.hlp ;
+File $(INGMSG)$(DFS)vqinsdir.hlp : vqinsdir.hlp ;
+File $(INGMSG)$(DFS)vqinslup.hlp : vqinslup.hlp ;
+File $(INGMSG)$(DFS)vqjoin0.hlp : vqjoin0.hlp ;
+File $(INGMSG)$(DFS)vqjoin1.hlp : vqjoin1.hlp ;
+File $(INGMSG)$(DFS)vqjoins.hlp : vqjoins.hlp ;
+File $(INGMSG)$(DFS)vqlayout.hlp : vqlayout.hlp ;
+File $(INGMSG)$(DFS)vqlisfil.hlp : vqlisfil.hlp ;
+File $(INGMSG)$(DFS)vqlkadd.hlp : vqlkadd.hlp ;
+File $(INGMSG)$(DFS)vqlkdel.hlp : vqlkdel.hlp ;
+File $(INGMSG)$(DFS)vqlkdisp.hlp : vqlkdisp.hlp ;
+File $(INGMSG)$(DFS)vqlkins.hlp : vqlkins.hlp ;
+File $(INGMSG)$(DFS)vqlkjoin.hlp : vqlkjoin.hlp ;
+File $(INGMSG)$(DFS)vqlkqual.hlp : vqlkqual.hlp ;
+File $(INGMSG)$(DFS)vqlkrmov.hlp : vqlkrmov.hlp ;
+File $(INGMSG)$(DFS)vqlkrule.hlp : vqlkrule.hlp ;
+File $(INGMSG)$(DFS)vqlocal.hlp : vqlocal.hlp ;
+File $(INGMSG)$(DFS)vqlocklp.hlp : vqlocklp.hlp ;
+File $(INGMSG)$(DFS)vqlodesc.hlp : vqlodesc.hlp ;
+File $(INGMSG)$(DFS)vqlook.hlp : vqlook.hlp ;
+File $(INGMSG)$(DFS)vqlpcols.hlp : vqlpcols.hlp ;
+File $(INGMSG)$(DFS)vqlpcre.hlp : vqlpcre.hlp ;
+File $(INGMSG)$(DFS)vqlpedit.hlp : vqlpedit.hlp ;
+File $(INGMSG)$(DFS)vqlpeend.hlp : vqlpeend.hlp ;
+File $(INGMSG)$(DFS)vqlpex.hlp : vqlpex.hlp ;
+File $(INGMSG)$(DFS)vqlpfil.hlp : vqlpfil.hlp ;
+File $(INGMSG)$(DFS)vqlvclas.hlp : vqlvclas.hlp ;
+File $(INGMSG)$(DFS)vqlvcre.hlp : vqlvcre.hlp ;
+File $(INGMSG)$(DFS)vqlvdata.hlp : vqlvdata.hlp ;
+File $(INGMSG)$(DFS)vqlvedit.hlp : vqlvedit.hlp ;
+File $(INGMSG)$(DFS)vqlvnam.hlp : vqlvnam.hlp ;
+File $(INGMSG)$(DFS)vqmain.hlp : vqmain.hlp ;
+File $(INGMSG)$(DFS)vqmarkfm.hlp : vqmarkfm.hlp ;
+File $(INGMSG)$(DFS)vqmvparm.hlp : vqmvparm.hlp ;
+File $(INGMSG)$(DFS)vqnedesc.hlp : vqnedesc.hlp ;
+File $(INGMSG)$(DFS)vqnemitx.hlp : vqnemitx.hlp ;
+File $(INGMSG)$(DFS)vqnetabl.hlp : vqnetabl.hlp ;
+File $(INGMSG)$(DFS)vqnewfr.hlp : vqnewfr.hlp ;
+File $(INGMSG)$(DFS)vqnewmi.hlp : vqnewmi.hlp ;
+File $(INGMSG)$(DFS)vqnewsmi.hlp : vqnewsmi.hlp ;
+File $(INGMSG)$(DFS)vqnewtyp.hlp : vqnewtyp.hlp ;
+File $(INGMSG)$(DFS)vqnewusr.hlp : vqnewusr.hlp ;
+File $(INGMSG)$(DFS)vqnewvq.hlp : vqnewvq.hlp ;
+File $(INGMSG)$(DFS)vqnxtmas.hlp : vqnxtmas.hlp ;
+File $(INGMSG)$(DFS)vqolcols.hlp : vqolcols.hlp ;
+File $(INGMSG)$(DFS)vqparam.hlp : vqparam.hlp ;
+File $(INGMSG)$(DFS)vqparsel.hlp : vqparsel.hlp ;
+File $(INGMSG)$(DFS)vqprocs.hlp : vqprocs.hlp ;
+File $(INGMSG)$(DFS)vqpstdir.hlp : vqpstdir.hlp ;
+File $(INGMSG)$(DFS)vqqparts.hlp : vqqparts.hlp ;
+File $(INGMSG)$(DFS)vqqualpr.hlp : vqqualpr.hlp ;
+File $(INGMSG)$(DFS)vqquery.hlp : vqquery.hlp ;
+File $(INGMSG)$(DFS)vqquitvq.hlp : vqquitvq.hlp ;
+File $(INGMSG)$(DFS)vqrecapd.hlp : vqrecapd.hlp ;
+File $(INGMSG)$(DFS)vqrecapp.hlp : vqrecapp.hlp ;
+File $(INGMSG)$(DFS)vqremfr.hlp : vqremfr.hlp ;
+File $(INGMSG)$(DFS)vqscroll.hlp : vqscroll.hlp ;
+File $(INGMSG)$(DFS)vqselcfr.hlp : vqselcfr.hlp ;
+File $(INGMSG)$(DFS)vqselpfr.hlp : vqselpfr.hlp ;
+File $(INGMSG)$(DFS)vqseqfld.hlp : vqseqfld.hlp ;
+File $(INGMSG)$(DFS)vqshow.hlp : vqshow.hlp ;
+File $(INGMSG)$(DFS)vqsort.hlp : vqsort.hlp ;
+File $(INGMSG)$(DFS)vqupdat.hlp : vqupdat.hlp ;
+File $(INGMSG)$(DFS)vqupdrul.hlp : vqupdrul.hlp ;
+File $(INGMSG)$(DFS)vqutilty.hlp : vqutilty.hlp ;
+
+IILIBRARY VQLIB : vqesctyp.roc vqshow.qsc vqselcmp.qsc
+	vqrecfrm.qsc vqrecapp.qsc vqqparts.qsc vqprocs.qsc vqparms.qsc
+	vqobjhlp.qsc vqmaktab.qsc vqmakfrm.qsc vqlocals.qsc
+	vqlisfil.qsc vqimport.qsc vqfrbeha.qsc vqffldlp.qsc
+	vqescedt.qsc vqedectf.qsc vqdloop.qsc vqcurfld.qsc vqcomprs.qsc
+	vqcmperr.qsc vqapprep.qsc ff.qsc vqvalid.c vqtype.c vqsecprs.c
+	vqrenesc.c vqpatmat.c vqnewtab.c vqmfaloc.c vqmakafd.c
+	vqkeywrd.c vqjoinck.c vqglobs.c vqescmen.c vqerrfil.c vqerr.c
+	vqedform.c vqedcode.c vqdata.c vqcatloc.c vqask.c vqalias.c
+	makfnam.c ;
+

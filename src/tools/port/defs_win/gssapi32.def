@@ -1,0 +1,20 @@
+; Ingres configurator DEF file for Windows - GSS API stub
+
+EXPORTS
+
+    GSS_C_NT_HOSTBASED_SERVICE      DATA
+
+    gss_accept_sec_context  
+    gss_acquire_cred        
+    gss_delete_sec_context  
+    gss_display_name       
+    gss_display_status     
+    gss_import_name         
+    gss_init_sec_context    
+    gss_inquire_cred        
+;    gss_nt_service_name    
+    gss_release_buffer      
+    gss_release_cred        
+    gss_release_name        
+    gss_unwrap              
+    gss_wrap                

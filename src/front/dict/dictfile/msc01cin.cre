@@ -1,0 +1,229 @@
+METASCHEMA 1 'Dictionary Metaschema'
+DATA_MODEL 1 Y
+END
+CREATE TABLE ii_atttype
+    (
+        entity_id	integer NOT NULL,
+        folder_id	integer NOT NULL,
+        entity_name	varchar(32) NOT NULL,
+        branch_name	varchar(32) NOT NULL,
+        version_number	integer NOT NULL,
+        partition_name	varchar(32) NOT NULL,
+        qual_ind	varchar(32) NOT NULL,
+        instance_level	char(1) NOT NULL,
+        added_by	varchar(32) NOT NULL,
+        create_date	char(25) NOT NULL,
+        short_remark	varchar(60) NOT NULL,
+        entity_origin	varchar(32) NOT NULL,
+        implement_lock	char(1) NOT NULL,
+        system_lock	char(1) NOT NULL,
+        base_entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        ent_rel_id	integer NOT NULL,
+        domain_id	integer NOT NULL,
+        key_sequence	integer2 NOT NULL,
+        att_sequence	integer2 NOT NULL,
+        sequence_parameter 	char(1) NOT NULL,
+        sys_maintained  	char(1) NOT NULL
+    )
+
+CREATE TABLE ii_defaults
+    (
+        max_occur_dflt	integer NOT NULL,
+        curr_database	char(32) NOT NULL,
+        standard_mode	char(1) NOT NULL,
+        security_level	char(1) NOT NULL
+    )
+
+CREATE TABLE ii_databases
+    (
+        entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        node_name	char(32) NOT NULL,
+        database_name	char(32) NOT NULL
+    )
+
+CREATE TABLE ii_domains
+    (
+        entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        super_domain	integer NOT NULL,
+        data_type	varchar(32) NOT NULL,
+        domain_length	integer NOT NULL,
+        domain_scale	integer NOT NULL,
+        domain_nulls	char(1) NOT NULL,
+        domain_defaults	char(1) NOT NULL,
+        unique_att	char(1) NOT NULL,
+        input_format	varchar(32) NOT NULL,
+        output_format	varchar(32) NOT NULL,
+        field_label	varchar(64) NOT NULL,
+        report_title	varchar(64) NOT NULL,
+        report_format	varchar(32) NOT NULL,
+        default_value	varchar(32) NOT NULL,
+        domain_constraint	varchar(512) NOT NULL,
+        domain_diagnostic	varchar(512) NOT NULL,
+        max_occurances	integer NOT NULL
+    )
+
+CREATE TABLE ii_enttype
+    (
+        entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        super_type	integer NOT NULL,
+        duplicate_atts	char(1) NOT NULL,
+        may_connect	char(1) NOT NULL,
+        entity_class	char(1) NOT NULL,
+        start_name	varchar(32) NOT NULL,
+        system_gen	char(1) NOT NULL
+    )
+
+CREATE TABLE ii_joinspecs
+    (
+        entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        join_group	integer NOT NULL,
+        ent_rel_id	integer NOT NULL,
+        sql_att_id	integer NOT NULL,
+        enttype_position	integer NOT NULL
+    )
+
+CREATE TABLE ii_key_info
+    (
+        entity_id	integer NOT NULL,
+        folder_id	integer NOT NULL,
+        entity_name	varchar(32) NOT NULL,
+        branch_name	varchar(32) NOT NULL,
+        version_number	integer NOT NULL,
+        partition_name	varchar(32) NOT NULL,
+        qual_ind	varchar(32) NOT NULL,
+        instance_level	char(1) NOT NULL,
+        added_by	varchar(32) NOT NULL,
+        create_date	char(25) NOT NULL,
+        short_remark	varchar(60) NOT NULL,
+        entity_origin	varchar(32) NOT NULL,
+        implement_lock	char(1) NOT NULL,
+        system_lock	char(1) NOT NULL,
+        base_entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        sql_table_id	integer NOT NULL,
+        key_type	char(1) NOT NULL,
+        key_unique	char(1) NOT NULL,
+        key_active	char(1) NOT NULL
+    )
+
+CREATE TABLE ii_key_map
+    (
+        entity_id	integer NOT NULL,
+        folder_id	integer NOT NULL,
+        entity_name	varchar(32) NOT NULL,
+        branch_name	varchar(32) NOT NULL,
+        version_number	integer NOT NULL,
+        partition_name	varchar(32) NOT NULL,
+        qual_ind	varchar(32) NOT NULL,
+        instance_level	char(1) NOT NULL,
+        added_by	varchar(32) NOT NULL,
+        create_date	char(25) NOT NULL,
+        short_remark	varchar(60) NOT NULL,
+        entity_origin	varchar(32) NOT NULL,
+        implement_lock	char(1) NOT NULL,
+        system_lock	char(1) NOT NULL,
+        base_entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        keyinfo_id	integer NOT NULL,
+        attribute_id	integer NOT NULL,
+        sequence	integer NOT NULL,
+        key_type	char(1) NOT NULL
+    )
+
+CREATE TABLE ii_limits
+    (
+        integer_limit	integer NOT NULL,
+        line_count_limit	integer NOT NULL,
+        line_length_limit	integer NOT NULL
+    )
+
+CREATE TABLE ii_rel_cncts_ent
+    (
+        rel_id	integer NOT NULL,
+        entity_id	integer NOT NULL,
+        enttype_position	integer NOT NULL,
+        min_cardinality	integer NOT NULL,
+        max_cardinality	integer NOT NULL,
+        dependent	char(1) NOT NULL
+    )
+
+CREATE TABLE ii_reltype
+    (
+        entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        rel_class_id	integer NOT NULL,
+        inverse_name	char(32) NOT NULL,
+        rel_degree	integer NOT NULL,
+        delete_rules	char(1) NOT NULL,
+        update_rules	char(1) NOT NULL,
+        sequenced_rel	char(1) NOT NULL
+    )
+
+CREATE TABLE ii_sqlatts
+    (
+        entity_id	integer NOT NULL,
+        folder_id	integer NOT NULL,
+        entity_name	varchar(32) NOT NULL,
+        branch_name	varchar(32) NOT NULL,
+        version_number	integer NOT NULL,
+        partition_name	varchar(32) NOT NULL,
+        qual_ind	varchar(32) NOT NULL,
+        instance_level	char(1) NOT NULL,
+        added_by	varchar(32) NOT NULL,
+        create_date	char(25) NOT NULL,
+        short_remark	varchar(60) NOT NULL,
+        entity_origin	varchar(32) NOT NULL,
+        implement_lock	char(1) NOT NULL,
+        system_lock	char(1) NOT NULL,
+        base_entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        sql_table_id	integer NOT NULL,
+        attribute_id	integer NOT NULL,
+        sequence_num	integer NOT NULL,
+        reference_rate	integer NOT NULL,
+        update_rate	integer NOT NULL
+    )
+
+CREATE TABLE ii_sqltables
+    (
+        entity_id	integer NOT NULL,
+        last_altered_by	varchar(32) NOT NULL,
+        alter_date	char(25) NOT NULL,
+        alter_count	integer NOT NULL,
+        table_name	char(32) NOT NULL,
+        table_owner	char(32) NOT NULL,
+        table_type	char(8) NOT NULL,
+        table_subtype	char(8) NOT NULL,
+        table_version	char(8) NOT NULL,
+        system_use	char(8) NOT NULL,
+        ent_rel_id	integer NOT NULL,
+        repeat_type	char(1) NOT NULL,
+        retrieve_rate	integer NOT NULL,
+        replace_rate	integer NOT NULL,
+        insert_rate	integer NOT NULL,
+        delete_rate	integer NOT NULL
+    )
+

@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abchstyl.hlp, help for the confirmation pop-up allowing existing
+/#-- menu frames to be changed to the new menu style default
+/#-- 
+You have just entered a new default style for Menu frames.
+If you wish all existing frames to be changed to the new 
+style, select "Yes"; if you wish existing frames to keep their current
+style, select "No".

@@ -1,0 +1,891 @@
+/*
+** CK command template file
+**
+**
+** This file is processed with `ccpp', which calls the C preprocessor.
+** The file generates `cktmpl.def', which specifies commands used for
+**
+** the fifth character must be a colon ':'
+**
+** the rest of the line is a command to run after the following substitutions
+** have been made:
+**
+** With Partial recovery the following as also been implemented
+**
+** %A   - Specify checkpoint path and file_name
+** %B   - Physical datafile in the ../ingres/data/default/xxx
+** %C   - Checkpoint pathname
+** %D   - Physical pathname of data ../ingres/data/default/xxx
+** %E   - Physical path and file_name of table to extract
+** %F   - Checkpoint filename
+** %G   - Total number of checkpoint files
+** %H   - Number of tables in a location
+** %I   - User specified string
+** %J0  - either REDO or UNDO processing
+**   1  - First journal file
+**   2  - Last journal file
+**   3  - Journal pathname
+**   4  - Journal filename
+** %K   - Checkpoint file number
+** %N   - Total number of locations be operated on
+** %M   - Current location number of operated on
+** %P   - Location size in number of blocks 
+** %O   - Offset of location in number of blocks 
+** %Q   - Blocksize
+** %T   - Device number (assending!)
+** %U0  - First Dump file
+**   1  - Last Dump file
+**   2  - Pathname of dump file
+**   3  - Dump filename
+** %X   - Table name
+**
+** History:
+**	28-dec-88 (anton)
+**	    Created.
+**	04-jan-89 (roger)
+**	    Converted handmade cktmpl.def to ccpp file.
+**	15-mar-89 (arana)
+**	    Added check for pyr_u42.
+**	13-Apr-1989 (fredv)
+**	    Added an entry for rtp_us5.
+**	18-May-89 (GordonW)
+**	    Make the SUN version the default and the RT the exception.
+**	22-May-89 (markd)
+**	    Added entry for sqs_us5.  Also changed so specialized
+**	    cases define HAVE_CKTMPL, and put default case at end.
+**	07-aug-89 (russ)
+**	    Add entry for odt_us5.
+**      08-Aug-89 (John Morris of HP)
+**          Add entry for hp8_us5.
+**	24-Aug-89  (John Morris of HP)
+**		Oops.  Had to change "echo" to "/bin/echo".
+**	18-sep-89 (russ)
+**	    Adding special commands for floppies on odt_us5.
+**	27-sep-89 (arana)
+**	    Added special case for pyr_us5 to use /usr/bin/tar.
+**	22-nov-89 (swm)
+**	    Added dr6_us5.
+**	26-jan-90 (russ)
+**	    Add entry for sco_us5, same as odt_us5.
+**	31-Jan-90 (kerry)
+**	    Added arx_us5
+**	16-feb-1990 (mikem)
+**        Added an entry for su4_u42.
+**	16-apr-1990 (kimman)
+**        Added an entry for ds3_ulx.
+**	09-may-1990 (blaise)
+**	    Integrated 61 and ingresug changes into 63p library.
+**	22-may-90 (blaise)
+**	    Removed duplicate ifdefs (rtp_us5, sqs_us5, odt_us5, hp8_us5,
+**	    pyr_us5). Removed sun || pyr_u42 || ds3_ulx ifdef, since it's
+**	    the same as the default case.
+**	04-feb-91 (rog)
+**	    Added hp3_us5 to hp8_us5 entry.
+**	25-mar-91 (kirke)
+**	    tar has moved to /bin/tar in HP-UX 8.0.  If you build under
+**	    any previous version of HP-UX, use /usr/bin/tar.
+**      24-jun-91 (hhsiung)
+**          add entry for bull using /usr/bin/tar for tape.
+**          /bin/cpio for disk.
+**      09-feb-94 (ajc)
+**          Modified to include hp8_bls.
+**	23-apr-1994 (rmuth)
+**	    b44422, The WS[D|T] entries use '*' to indicate what files to
+**	    copy, on databases with lots of files this fails as it
+**	    overruns the command line length. The fix is to use  '.'
+**	    instead.
+**	01-dec-1994 (andyw)
+**	    Partial Backup & Recovery Enhancements:
+**		re-write checkpoint template file to add Additional arguments
+**		have been added to the prompts in order that table level
+**		recovery and future enhancements can implement them.
+**
+**		Changed the THREE letter code to FOUR letters
+**		1st: - The type of operation being carried out
+**		    I  = Begin Table Level Recovery (initialize only)
+**		    F  = End Table Level Recovery (comments only)
+**	 	    B  = Begin Operation ckpdb/rolldb
+**		    P  = Pre-Work on the Operation ckpdb/rolldb
+**		    E  = End Operation ckpdb/rolldb
+**		    W  = Work on the Operation ckpdb/rolldb
+**
+**		2nd:- The type of direction associated to the operation
+**		    S  = Save (checkpoint)
+**	 	    R  = Restore (rollforward)
+**		    J  = Journal (Journal processing)
+**		    U  = Dump (Dump processing)
+**		    D  = Delete (delete file process)
+**		    C  = Snapshot (Check snapshot exists rollforward)
+**
+**		3rd: - The device to be used
+**		    T  = Tape device
+**	    	    D  = Disk device
+**
+**		4th:- Granularity
+**		    D  = Database level
+**		    A  = All databases
+**		    T  = Table Level (within a single database)
+**		    R  = Raw location (Database and Table level same)
+**
+**	28-dec-1994 (shero03)
+**	    Use * in tar command in lieu of .
+**	    This will save just the member name in the tar file
+**	    the . gives ./member which does restore properly
+**	06-jan-1995 (shero03)
+**	    Added Partial Checkpoint support
+**	23-mar-1995 (shero03)
+**	    Bug B67410
+**	    Actually delete all the files in the directory for WDDD and WDTD
+**	16-may-1995 (thaju02)
+**	    Bug #68809.
+**	    Under #ifdef (hp8_us5), modified WRDT entry from /etc/echo to
+**	    /bin/echo.
+**	07-jun-1995 (hanch04)
+**	    bug 69209, BRTT should specify tape instead of disk.
+**	12-jul-1995 (morayf)
+**	    SCO odt_us5 bug found on ckpdb -m where tar paths were wrong
+**	    in 4 places preventing checkpoint to tape/floppy. Also corrected
+**	    spelling of 'first' in message to user !
+**	13-jul-95 (tutto01)
+**	    Changed NT_GENERIC to int_wnt.
+**	24-jul-1995 (thaju02)
+**	    Bug #52556 - Modified command lines where operation = W (work),
+**	    direction = S (ckpdb) or R (rollforward), device = T (tape),
+**	    and granularity = D (database) or T (table).  The command
+**	    line '...mount tape %N and press return...' was changed
+**	    to '...mount tape %M...' for database granularity and to
+**	    '...mount tape %K...' for table granularity.  Previously 
+**	    command line echoed '...mount tape 0 and press return...',
+**	    where the tape device number was always 0.  Now we increment
+**	    tape number.
+**	22-aug-1995 (canor01)
+**	    Bug #70778 - int_wnt file was missing the IRDT line, which,
+**	    though just an echo, caused the rollforwarddb to fail.
+**	18-oct-95 (tutto01)
+**	    Added axp_wnt.
+**	06-dec-1995 (morayf)
+**	    Added rmx_us5 for SNI RM400/600, like dr6_us5.
+**	17-feb-1996 (canor01)
+**	    Windows NT - must use full path on the delete, just changing
+**	    directory doesn't work if current directory is another drive.
+**	    Also, set "quiet" switch so there is no prompt on delete.
+**	26-feb-1996 (nick)
+**	    Change 'rm *.*' to 'rm -f *' - this works.  #74128
+**	 2-apr-96 (nick)
+**	    Reorder history entries - at some point a porting integration
+**	    screwed these up.
+**	08-may-96 (sarjo01)
+**	    For bugs 76099, 76105, 76253: new wrapper exe's for xcopy and
+**          ntbackup to fix various problems (Windows NT).
+**	20-May-1996 (hanch04)
+**	    Added a pre work definition, this will allow the
+**	    checkpoint or rollward of multiple locations in parallel
+**		    P  = Pre-Work on the Operation ckpdb/rolldb
+**	05-nov-1996 (hanch04)
+**	    Update missing PSDT command
+**	15-nov-1996 (canor01)
+**	    Must quote pathnames for int_wnt, to support embedded spaces.
+**	23-dec-1998 (somsa01)
+**	    For Windows NT, we need to simulate the "/bin/true" which is
+**	    executed for WJDA, WJTA, WUDA, and WUTA on UNIX platforms.
+**	    Thus, just place a dummy echo to nul.  (Bug #94711)
+**	19-feb-1999 (hanch04)
+**	    Added commands for checkpointing raw locations.
+**	    Same command used for table and database level.
+**	10-nov-1999 (somsa01)
+**	    Added ESTD, ESDD, ESTT, and ESDT for NT.
+**	22-dec-1999 (somsa01)
+**	    Changed int_wnt and axp_wnt to int_w32 and axp_w32, respectively.
+**	03-may-2000 (cucjo01)
+**	    Changed 'echo dummy> nul' to 'iitrue' (a program that mimic's
+**	    the UNIX 'true' command) since the current method fails on
+**	    Windows 2000.
+**	21-oct-1999 (hayke02)
+**	    17-Aug-98 (wanya01)
+**	    Change message EEDE and add message ESTD, ESDD for NT to make
+**	    it consistent with same message on other platform.
+**	09-feb-2001 (somsa01)
+**	    Added i64_win for NT_IA64.
+**	22-Mar-2001 (jenjo02)
+**	    Changed physical path for raw devices from %D to %E.
+**	07-mar-2002 (somsa01)
+**	    For Windows, supply quotes around %C to support wierd characters
+**	    in path names.
+**	09-jun-2003 (somsa01)
+**	    To reduce the number of DIFFs, removed printing of quotes in
+**	    echo statements on Windows. They are only needed when sending
+**	    strings to other commands (such as ckxcopy).
+**	02-oct-2003 (somsa01)
+**	    Added a64_win for NT_AMD64.
+**	02-Feb-2005 (hanje04)
+**	    BUG 113830
+**	    iseek and oseek are not supported options to dd on Linux
+**	18-May-2005  (hanje04)
+**	    Add support for Mac OS X
+**	12-Feb-2008 (hanje04)
+**	    SIR S119978
+**	    Replace mg5_osx with generic OSX
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	    Drop a couple ancient mystery configs.
+**      29-Jan-2010 (hanal04) SIR 116377
+**          Add use of -E flag on Solaris and Tru64 tar commands to provide
+**          support for archiving large files. All supported versions
+**          of Solaris and Tru64 provide support for the -E option under
+**          II 9.2.x.
+**      29-Jan-2010 (hanal04) Bug 123322
+**          Add missing block size from previous change for SIR 116377.
+*/
+
+# ifdef hp8_bls
+/*
+** BLS version uses GTAR not TAR
+*/
+BSTD:   /bin/echo beginning checkpoint to tape %C of %N locations
+BSDD:   /bin/echo beginning checkpoint to disk %C of %N locations
+ESTD:   /bin/echo ending checkpoint to tape %C of %N locations
+ESDD:   /bin/echo ending checkpoint to disk %C of %N locations
+PSTD:   /bin/echo mount tape %M and press return; read foo; 
+WSTD:   cd %D; /usr/bin/tar cbf 20 %C *
+PSDD:   /bin/echo executing checkpoint to disk
+WSDD:   cd %D; gtar cf %A *
+BSTT:   /bin/echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   /bin/echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   /bin/echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   /bin/echo PARTIAL: ending checkpoint to disk %C of %N locations
+PSTT:   /bin/echo PARTIAL: mount tape %K and press return; read foo;
+WSTT:   cd %D; /usr/bin/tar cbf 20 %C %B
+PSDT:   /bin/echo executing checkpoint to disk %C of %N locations
+WSDT:   cd %D; gtar cf %A %B
+
+BRDD:   /bin/echo beginning restore of disk %C of %N locations
+BRTD:   /bin/echo beginning restore of tape %C of %N locations
+BRDT:   /bin/echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   /bin/echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   /bin/echo beginning restore of journals
+BJTA:   /bin/echo beginning restore of journals
+BUDA:   /bin/echo beginning restore of dumps
+BUTA:   /bin/echo beginning restore of dumps
+
+PRDD:   /bin/echo executing restore to disk %C of %N locations
+WRDD:   cd %D; gtar xf %A
+PRTD:   /bin/echo mount tape %M and press return; read foo;
+WRTD:   cd %D; /usr/bin/tar xf %C
+PRDT:   /bin/echo restoring table %X in database location %D;
+WRDT:   cd %D; gtar xf %A %B
+PRTT:   /bin/echo mount tape %K and press return; read foo;
+WRTT:   cd %D; /usr/bin/tar xf %C %B
+WJDA:   /bin/true
+WJTA:   /bin/true
+WUDA:   /bin/true
+WUTA:   /bin/true
+WCDA:   /bin/echo Checking database snapshot for table level recovery
+WCTA:   /bin/echo Checking database snapshot for table level recovery
+WDDD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDTD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDDT:   /bin/echo deleting table %X in database location %D
+WDTT:   /bin/echo deleting table %X in database location %D
+
+IRDT:   /bin/echo beginning table level recovery
+IRTT:   /bin/echo beginning table level recovery
+
+FRDT:   /bin/echo ending table level recovery
+FRTT:   /bin/echo ending table level recovery
+
+EETE:   /bin/echo done with tape operations
+EEDE:   /bin/echo done with disk operations
+# define HAVE_CKTMPL
+# endif /* hp8_bls */
+
+# ifdef sqs_us5
+/*
+** Symmetry "cktmpl.def"  We use tar from bsd, /.bin/tar
+*/
+BSTD:   /bin/echo beginning checkpoint to tape %C of %N locations
+BSDD:   /bin/echo beginning checkpoint to disk %C of %N locations
+ESTD:   /bin/echo ending checkpoint to tape %C of %N locations
+ESDD:   /bin/echo ending checkpoint to disk %C of %N locations
+PSTD:   /bin/echo mount tape %M and press return; read foo;
+WSTD:   cd %D; /.bin/tar cbf 20 %C *
+PSDD:   /bin/echo executing checkpoint to disk
+WSDD:   cd %D; /.bin/tar cf %A *
+BSTT:   /bin/echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   /bin/echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   /bin/echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   /bin/echo PARTIAL: ending checkpoint to disk %C of %N locations
+PSTT:   /bin/echo PARTIAL: mount tape %K and press return; read foo;
+WSTT:   cd %D; /usr/bin/tar cbf 20 %C %B
+PSDT:   /bin/echo executing checkpoint to disk %C of %N locations
+WSDT:   cd %D; /.bin/tar cf %A %B
+
+BRDD:   /bin/echo beginning restore of disk %C of %N locations
+BRTD:   /bin/echo beginning restore of tape %C of %N locations
+BRDT:   /bin/echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   /bin/echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   /bin/echo beginning restore of journals
+BJTA:   /bin/echo beginning restore of journals
+BUDA:   /bin/echo beginning restore of dumps
+BUTA:   /bin/echo beginning restore of dumps
+
+PRDD:   /bin/echo executing restore to disk %C of %N locations
+WRDD:   cd %D; /.bin/tar xf %A
+PRTD:   /bin/echo mount tape %M and press return; read foo;
+WRTD:   cd %D; /.bin/tar xf %C
+PRDT:   /bin/echo restoring table %X in database location %D;
+WRDT:   cd %D; /.bin/tar xf %A %B
+PRTT:   /bin/echo mount tape %K and press return; read foo;
+WRTT:   cd %D; /.bin/tar xf %C %B
+WJDA:   /bin/true
+WJTA:   /bin/true
+WUDA:   /bin/true
+WUTA:   /bin/true
+WCDA:   /bin/echo Checking database snapshot for table level recovery
+WCTA:   /bin/echo Checking database snapshot for table level recovery
+WDDD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDTD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDDT:   /bin/echo deleting table %X in database location %D
+WDTT:   /bin/echo deleting table %X in database location %D
+
+IRDT:   /bin/echo beginning table level recovery
+IRTT:   /bin/echo beginning table level recovery
+
+FRDT:   /bin/echo ending table level recovery
+FRTT:   /bin/echo ending table level recovery
+
+EETE:   /bin/echo done with tape operations
+EEDE:   /bin/echo done with disk operations
+# define HAVE_CKTMPL
+#endif	 /* sqs_us5 */
+
+# if defined(odt_us5) || defined(sco_us5)
+/*
+** odt_us5
+*/
+BSTD:   /bin/echo beginning checkpoint to tape %C of %N locations
+BSFD:   /bin/echo beginning checkpoint to tar device %C of %N locations
+BSDD:   /bin/echo beginning checkpoint to disk %C of %N locations
+PSTD:   /bin/echo please insert first floppy disk or cartridge tape and press return; read foo;
+WSTD:   cd %D; /usr/bin/tar cbf 20 %C *
+PSFD:   /bin/echo please insert first floppy disk or cartridge tape and press return; read foo; 
+WSFD:   cd %D; /usr/bin/tar c%C *
+PSDD:   /bin/echo executing checkpoint to disk
+WSDD:   cd %D; /usr/bin/tar cf %A *
+ESTD:   /bin/echo ending checkpoint to tape %C of %N locations
+ESFD:   /bin/echo ending checkpoint to tar device %C of %N locations
+ESDD:   /bin/echo ending checkpoint to disk %C of %N locations
+BSTT:   /bin/echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   /bin/echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   /bin/echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   /bin/echo PARTIAL: ending checkpoint to disk %C of %N locations
+PSTT:   /bin/echo PARTIAL: please insert first floppy disk or cartridge tape and press return; read foo;
+WSTT:   cd %D; /usr/bin/tar cbf 20 %C %B
+PSFT:   /bin/echo PARTIAL: please insert first floppy disk or cartridge tape and press return; read foo;
+WSFT:   cd %D; /usr/bin/tar c%C %B
+PSDT:   /bin/echo executing checkpoint to disk %C of %N locations
+WSDT:   cd %D; /usr/bin/tar cf %A %B
+
+BRDD:   /bin/echo beginning restore of disk %C of %N locations
+BRTD:   /bin/echo beginning restore of tape %C of %N locations
+BRDT:   /bin/echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   /bin/echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   /bin/echo beginning restore of journals
+BJTA:   /bin/echo beginning restore of journals
+BUDA:   /bin/echo beginning restore of dumps
+BUTA:   /bin/echo beginning restore of dumps
+
+PRDD:   /bin/echo executing restore to disk %C of %N locations
+WRDD:   cd %D; /usr/bin/tar xf %A
+PRTD:   /bin/echo please insert first floppy disk or cartridge tape tape %N and press return; read foo;
+WRTD:   cd %D; /usr/bin/tar xf %C
+PRFD:   /bin/echo please insert first floppy disk or cartridge tape tape %N and press return; read foo;
+WRFD:   cd %D; /usr/bin/tar x%C
+PRDT:   /bin/echo executing restore to disk %C of %N locations
+WRDT:   cd %D; /usr/bin/tar xf %A %B
+PRTT:   /bin/echo please insert first floppy disk or cartridge tape %N and press return; read foo;
+WRTT:   cd %D; /usr/bin/tar xf %C %B
+PRFT:   /bin/echo please insert first floppy disk or cartridge tape %N and press return; read foo;
+WRFT:   cd %D; /usr/bin/tar x%C %B
+WJDA:   /bin/true
+WJTA:   /bin/true
+WUDA:   /bin/true
+WUTA:   /bin/true
+WCDA:   /bin/echo Checking database snapshot for table level recovery
+WCTA:   /bin/echo Checking database snapshot for table level recovery
+WDDD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDTD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDDT:   /bin/echo deleting table %X in database location %D
+WDTT:   /bin/echo deleting table %X in database location %D
+
+IRDT:   /bin/echo beginning table level recovery
+IRTT:   /bin/echo beginning table level recovery
+
+FRDT:   /bin/echo ending table level recovery
+FRTT:   /bin/echo ending table level recovery
+
+EETE:   /bin/echo done with tape operations
+EEDE:   /bin/echo done with disk operations
+# define HAVE_CKTMPL
+# endif	 /* odt_us5 || sco_us5 */
+
+# if defined(any_hpux) || defined(hp3_us5)
+/*
+** hpux and hp3_us5
+*/
+BSTD:   /bin/echo beginning checkpoint to tape %C of %N locations
+BSDD:   /bin/echo beginning checkpoint to disk %C of %N locations
+ESTD:   /bin/echo ending checkpoint to tape %C of %N locations
+ESDD:   /bin/echo ending checkpoint to disk %C of %N locations
+PSTD:   /bin/echo please insert first tape and press return; read foo;
+WSTD:   cd %D; /bin/tar cbf 20 %C *
+PSDD:   /bin/echo executing checkpoint to disk
+WSDD:   cd %D; /bin/tar cf %A *
+BSTT:   /bin/echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   /bin/echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   /bin/echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   /bin/echo PARTIAL: ending checkpoint to disk %C of %N locations
+PSTT:   /bin/echo PARTIAL: mount tape %K and press return; read foo;
+WSTT:   cd %D; /bin/tar cbf 20 %C %B
+PSDT:   /bin/echo executing checkpoint to disk %C of %N locations
+WSDT:   cd %D; /bin/tar cf %A %B
+
+BRDD:   /bin/echo beginning restore of disk %C of %N locations
+BRTD:   /bin/echo beginning restore of tape %C of %N locations
+BRDT:   /bin/echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   /bin/echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   /bin/echo beginning restore of journals
+BJTA:   /bin/echo beginning restore of journals
+BUDA:   /bin/echo beginning restore of dumps
+BUTA:   /bin/echo beginning restore of dumps
+
+PRDD:   /bin/echo executing restore to disk %C of %N locations
+WRDD:   cd %D; /bin/tar xf %A
+PRTD:   /bin/echo please insert first tape %N and press return; read foo;
+WRTD:   read foo; cd %D; /bin/tar xf %C
+PRDT:   /bin/echo restoring table %X in database location %D;
+WRDT:   cd %D; /bin/tar xf %A %B
+PRTT:   /bin/echo please insert first tape %N and press return; read foo;
+WRTT:   cd %D; /bin/tar xf %C %B
+WJDA:   /bin/true
+WJTA:   /bin/true
+WUDA:   /bin/true
+WUTA:   /bin/true
+WCDA:   /bin/echo Checking database snapshot for table level recovery
+WCTA:   /bin/echo Checking database snapshot for table level recovery
+WDDD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDTD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDDT:   /bin/echo deleting table %X in database location %D
+WDTT:   /bin/echo deleting table %X in database location %D
+
+IRDT:   /bin/echo beginning table level recovery
+IRTT:   /bin/echo beginning table level recovery
+
+FRDT:   /bin/echo ending table level recovery
+FRTT:   /bin/echo ending table level recovery
+
+EETE:   /bin/echo done with tape operations
+EEDE:   /bin/echo done with disk operations
+# define HAVE_CKTMPL
+# endif	 /* hpux and hp3_us5 */
+
+# if defined(pyr_us5) || defined(sos_us5)
+/*
+**  In att universe, use /usr/bin/tar.
+*/
+BSTD:   echo beginning checkpoint to tape %C of %N locations
+BSDD:   echo beginning checkpoint to disk %C of %N locations
+ESTD:   echo ending checkpoint to tape %C of %N locations
+ESDD:   echo ending checkpoint to disk %C of %N locations
+PSTD:   echo mount tape %M and press return; read foo; cd %D;
+WSTD:   cd %D; /usr/bin/tar cbf 20 %C *
+PSDD:   echo executing checkpoint to disk
+WSDD:   cd %D; /usr/bin/tar cf %A *
+BSTT:   echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   echo PARTIAL: ending checkpoint to disk %C of %N locations
+PSTT:   echo PARTIAL: mount tape %K and press return; read foo;
+WSTT:   cd %D; /usr/bin/tar cbf 20 %C %B
+PSDT:   echo executing checkpoint to disk %C of %N locations
+WSDT:   cd %D; /usr/bin/tar cf %A %B
+
+BRDD:   echo beginning restore of disk %C of %N locations
+BRTD:   echo beginning restore of tape %C of %N locations
+BRDT:   echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   echo beginning restore of journals
+BJTA:   echo beginning restore of journals
+BUDA:   echo beginning restore of dumps
+BUTA:   echo beginning restore of dumps
+
+PRDD:   echo executing restore to disk %C of %N locations
+WRDD:   cd %D; /usr/bin/tar xf %A
+PRTD:   echo mount tape %M and press return; read foo;
+WRTD:   cd %D; /usr/bin/tar xf %C
+PRDT:   echo restoring table %X in database location %D;
+WRDT:   cd %D; /usr/bin/tar xf %A %B
+PRTT:   echo mount tape %K and press return; read foo; cd %D;
+WRTT:   cd %D; /usr/bin/tar xf %C %B
+WJDA:   /bin/true
+WJTA:   /bin/true
+WUDA:   /bin/true
+WUTA:   /bin/true
+WCDA:   echo Checking database snapshot for table level recovery
+WCTA:   echo Checking database snapshot for table level recovery
+WDDD:   echo deleting files in location %D; cd %D; rm -f *
+WDTD:   echo deleting files in location %D; cd %D; rm -f *
+WDDT:   echo deleting table %X in database location %D
+WDTT:   echo deleting table %X in database location %D
+
+IRDT:   echo beginning table level recovery
+IRTT:   echo beginning table level recovery
+
+FRDT:   echo ending table level recovery
+FRTT:   echo ending table level recovery
+
+EETE:   echo done with tape operations
+EEDE:   echo done with disk operations
+# define HAVE_CKTMPL
+# endif	 /* pyr_us5 */
+
+
+
+# ifdef dr3_us5
+/*
+** use /usr/bin/tar
+*/
+BSTD:   echo beginning checkpoint to tape %C of %N locations; sleep 5
+BSDD:   echo beginning checkpoint to disk %C of %N locations; sleep 5
+ESTD:   echo ending checkpoint to tape %C of %N locations
+ESDD:   echo ending checkpoint to disk %C of %N locations
+PSTD:   echo mount tape %M and press return; read foo;
+WSTD:   cd %D; /usr/bin/tar cbf 20 %C *
+PSDD:   echo executing checkpoint to disk
+WSDD:   cd %D; /usr/bin/tar cf %A *
+BSTT:   echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   echo PARTIAL: ending checkpoint to disk %C of %N locations
+PSTT:   echo PARTIAL: mount tape %K and press return; read foo;
+WSTT:   cd %D; /usr/bin/tar cbf 20 %C %B
+PSDT:   echo executing checkpoint to disk %C of %N locations
+WSDT:   cd %D; /usr/bin/tar cf %A %B
+
+BRDD:   echo beginning restore of disk %C of %N locations; sleep 5
+BRTD:   echo beginning restore of tape %C of %N locations; sleep 5
+BRDT:   echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   echo beginning restore of journals; sleep 5
+BJTA:   echo beginning restore of journals; sleep 5
+BUDA:   echo beginning restore of dumps; sleep 5
+BUTA:   echo beginning restore of dumps; sleep 5
+
+PRDD:   echo executing restore to disk %C of %N locations
+WRDD:   cd %D; /usr/bin/tar xf %A
+PRTD:   echo mount tape %M and press return; read foo;
+WRTD:   cd %D; /usr/bin/tar xf %C
+PRDT:   echo restoring table %X in database location %D;
+WRDT:   cd %D; /usr/bin/tar xf %A %B
+PRTT:   echo mount tape %K and press return; read foo;
+WRTT:   cd %D; /usr/bin/tar xf %C %B
+WJDA:   /bin/true
+WJTA:   /bin/true
+WUDA:   /bin/true
+WUTA:   /bin/true
+WCDA:   echo Checking database snapshot for table level recovery; sleep 5
+WCTA:   echo Checking database snapshot for table level recovery; sleep 5
+WDDD:   echo deleting files in location %D; cd %D; rm -f *
+WDTD:   echo deleting files in location %D; cd %D; rm -f *
+WDDT:   echo deleting table %X in database location %D; sleep 5
+WDTT:   echo deleting table %X in database location %D; sleep 5
+
+IRDT:   echo beginning table level recovery; sleep 5
+IRTT:   echo beginning table level recovery; sleep 5
+
+FRDT:   echo ending table level recovery; sleep 5
+FRTT:   echo ending table level recovery; sleep 5
+
+EETE:   echo done with tape operations; sleep 5
+EEDE:   echo done with disk operations; sleep 5
+# define HAVE_CKTMPL
+#endif	 /* dr3_us5*/
+
+/*
+**  dr6_us5 and rmx_us5
+*/
+# if defined(dr6_us5) || defined(rmx_us5)
+BSTD:   echo beginning checkpoint to tape %C of %N locations
+BSDD:   echo beginning checkpoint to disk %C of %N locations
+ESTD:   echo ending checkpoint to tape %C of %N locations
+ESDD:   echo ending checkpoint to disk %C of %N locations
+PSTD:   echo mount tape %M and press return; read foo;
+WSTD:   cd %D; /usr/sbin/tar cbf 20 %C *
+PSDD:   echo executing checkpoint to disk
+WSDD:   cd %D; /usr/sbin/tar cf %A *
+BSTT:   echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   echo PARTIAL: ending checkpoint to disk %C of %N locations
+PSTT:   echo PARTIAL: mount tape %K and press return; read foo;
+WSTT:   cd %D; /usr/sbin/tar cbf 20 %C %B
+PSDT:   echo executing checkpoint to disk %C of %N locations
+WSDT:   cd %D; /usr/sbin/tar cf %A %B
+
+BRDD:   echo beginning restore of disk %C of %N locations
+BRTD:   echo beginning restore of tape %C of %N locations
+BRDT:   echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   echo beginning restore of journals
+BJTA:   echo beginning restore of journals
+BUDA:   echo beginning restore of dumps
+BUTA:   echo beginning restore of dumps
+
+PRDD:   echo executing restore to disk %C of %N locations
+WRDD:   cd %D; /usr/sbin/tar xf %A
+PRTD:   echo mount tape %M and press return; read foo;
+WRTD:   cd %D; /usr/sbin/tar xf %C
+PRDT:   echo restoring table %X in database location %D;
+WRDT:   cd %D; /usr/sbin/tar xf %A %B
+PRTT:   echo mount tape %K and press return; read foo;
+WRTT:   cd %D; /usr/sbin/tar xf %C %B
+WJDA:   /bin/true
+WJTA:   /bin/true
+WUDA:   /bin/true
+WUTA:   /bin/true
+WCDA:   echo Checking database snapshot for table level recovery
+WCTA:   echo Checking database snapshot for table level recovery
+WDDD:   echo deleting files in location %D; cd %D; rm -f *
+WDTD:   echo deleting files in location %D; cd %D; rm -f *
+WDDT:   echo deleting table %X in database location %D
+WDTT:   echo deleting table %X in database location %D
+
+IRDT:   echo beginning table level recovery
+IRTT:   echo beginning table level recovery
+
+FRDT:   echo ending table level recovery
+FRTT:   echo ending table level recovery
+
+EETE:   echo done with tape operations
+EEDE:   echo done with disk operations
+# define HAVE_CKTMPL
+# endif	 /* dr6_us5 */
+
+# if defined(int_w32) || defined(axp_w32) || defined(i64_win) || defined(a64_win)
+BSTD:    echo Beginning checkpoint to tape %C of %N locations.
+BSDD:    echo Beginning checkpoint to disk %C of %N locations.
+ESTD:    echo Ending checkpoint to tape %C of %N locations
+ESDD:    echo Ending checkpoint to disk %C of %N locations
+BRTD:    echo Beginning restore of tape %C of %N locations.
+BRDD:    echo Beginning restore of disk %C of %N locations.
+BSTT:    echo PARTIAL: Beginning checkpoint to tape %C of %N locations.
+BSDT:    echo PARTIAL: Beginning checkpoint to disk %C of %N locations.
+ESTT:    echo PARTIAL: Ending checkpoint to tape %C of %N locations
+ESDT:    echo PARTIAL: Ending checkpoint to disk %C of %N locations
+BRTT:    echo PARTIAL: Beginning restore of tape %C of %N locations.
+BRDT:    echo PARTIAL: Beginning restore of disk %C of %N locations.
+BJDA:    echo beginning restore of journals
+BJTA:    echo beginning restore of journals
+BUDA:    echo beginning restore of dumps
+BUTA:    echo beginning restore of dumps
+WJDA:    iitrue
+WJTA:    iitrue
+WUDA:    iitrue
+WUTA:    iitrue
+WCDA:    echo Checking database snapshot for table level recovery
+WCTA:    echo Checking database snapshot for table level recovery
+PSTD:    echo executing checkpoint
+WSTD:    ckntbkup "%C" %N "%D" BACKUP
+PSDD:    echo executing checkpoint
+WSDD:    ckxcopy  "%D" "%A" BACKUP
+PSTT:    echo executing checkpoint to tape %C of %N locations
+WSTT:    ckntbkup "%C" %N "%D" BACKUP PARTIAL %B
+PSDT:    echo executing checkpoint to disk %C of %N locations
+WSDT:    ckxcopy  "%D" "%A" BACKUP PARTIAL %B
+PRTD:    echo executing restore from tape
+WRTD:    ckntbkup "%C" %N "%D" RESTORE
+PRDD:    echo executing restore from disk
+WRDD:    ckxcopy  "%D" "%A" RESTORE
+PRTT:    echo executing restore from tape
+WRTT:    ckntbkup "%C" %N "%D" RESTORE PARTIAL %B
+PRDT:    echo executing restore from disk 
+WRDT:    ckxcopy  "%D" "%A" RESTORE PARTIAL %B
+
+WDDD:    echo deleting files in location %D & del /Q "%D\*.*"
+WDTD:    echo deleting files in location %D & del /Q "%D\*.*"
+WDDT:    echo deleting table %X in database location %D
+WDTT:    echo deleting table %X in database location %D
+
+IRDT:    echo beginning table level recovery
+IRTT:    echo beginning table level recovery
+
+FRDT:    echo ending table level recovery
+FRTT:    echo ending table level recovery
+
+EETE:    echo Done with tape operations.
+EEDE:    echo Done with disk checkpoint operations.
+# define HAVE_CKTMPL
+# endif /* int_w32, axp_w32, i64_win, a64_win */
+
+# ifdef OSX
+/*
+**  Mac OS X
+**
+** No /bin only /usr/bin
+*/
+BSTD:   echo beginning checkpoint to tape %C of %N locations
+BSDD:   echo beginning checkpoint to disk %C of %N locations
+ESTD:   echo ending checkpoint to tape %C of %N locations
+ESDD:   echo ending checkpoint to disk %C of %N locations
+PSTD:   echo mount tape %M and press return; read foo;
+WSTD:   cd %D; /usr/bin/tar cbf 20 %C *
+PSDD:   /bin/echo executing checkpoint to disk
+WSDD:   cd %D; /usr/bin/tar cf %A *
+BSTT:   echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   echo PARTIAL: ending checkpoint to disk %C of %N locations
+WSTT:   echo PARTIAL: mount tape %K and press return; read foo;
+PSTT:   cd %D; /usr/bin/tar cbf 20 %C %B
+PSDT:   /bin/echo executing checkpoint to disk %C of %N locations
+WSDT:   cd %D; /usr/bin/tar cf %A %B
+
+BRDD:   echo beginning restore of disk %C of %N locations
+BRTD:   echo beginning restore of tape %C of %N locations
+BRDT:   echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   echo beginning restore of journals
+BJTA:   echo beginning restore of journals
+BUDA:   echo beginning restore of dumps
+BUTA:   echo beginning restore of dumps
+
+PRDD:   echo executing restore to disk %C of %N locations
+WRDD:   cd %D; /usr/bin/tar xf %A
+PRTD:   echo mount tape %M and press return; read foo;
+WRTD:   cd %D; /usr/bin/tar xf %C
+PRDT:   echo restoring table %X in database location %D;
+WRDT:   cd %D; /usr/bin/tar xf %A %B
+PRTT:   echo mount tape %K and press return; read foo;
+WRTT:   cd %D; /usr/bin/tar xf %C %B
+WJDA:   /usr/bin/true
+WJTA:   /usr/bin/true
+WUDA:   /usr/bin/true
+WUTA:   /usr/bin/true
+WCDA:   echo Checking database snapshot for table level recovery
+WCTA:   echo Checking database snapshot for table level recovery
+WDDD:   echo deleting files in location %D; cd %D; rm -f *
+WDTD:   echo deleting files in location %D; cd %D; rm -f *
+WDDT:   echo deleting table %X in database location %D
+WDTT:   echo deleting table %X in database location %D
+
+IRDT:   echo beginning table level recovery
+IRTT:   echo beginning table level recovery
+
+FRDT:   echo ending table level recovery
+FRTT:   echo ending table level recovery
+
+EETE:   echo done with tape operations
+EEDE:   echo done with disk operations
+# define HAVE_CKTMPL
+# endif	 /* osx */
+
+# ifndef HAVE_CKTMPL
+/*
+** default "cktmpl.def"
+*/
+/*
+** DEFINITIONS FOR PARTIAL BACKUP DMFCPP
+*/
+BSTD:	/bin/echo beginning checkpoint to tape %C of %N locations
+BSDD:	/bin/echo beginning checkpoint to disk %C of %N locations
+ESTD:   /bin/echo ending checkpoint to tape %C of %N locations
+ESDD:   /bin/echo ending checkpoint to disk %C of %N locations
+PSTD:	/bin/echo mount tape %M and press return; read foo; 
+# ifdef su4_us5 || axp_osf
+WSTD:   cd %D; /bin/tar cbfE 20 %C *
+# else
+WSTD:	cd %D; /bin/tar cbf 20 %C *
+# endif
+PSDD:   /bin/echo executing checkpoint to disk 
+# ifdef su4_us5 || axp_osf
+WSDD:	cd %D; /bin/tar cfE %A *
+# else
+WSDD:	cd %D; /bin/tar cf %A *
+# endif
+PSDR:   /bin/echo executing checkpoint to disk 
+# ifdef LNX
+WSDR:	dd if=%E of=%A count=%P bs=%Q
+PSTR:	/bin/echo mount tape %M and press return; read foo; 
+WSTR:	dd if=%E of=%C count=%P bs=%Q
+# else
+WSDR:	dd if=%E of=%A iseek=%S count=%P bs=%Q
+PSTR:	/bin/echo mount tape %M and press return; read foo; 
+WSTR:	dd if=%E of=%C iseek=%S count=%P bs=%Q
+# endif
+BSTT:   /bin/echo PARTIAL: beginning checkpoint to tape %C of %N locations
+BSDT:   /bin/echo PARTIAL: beginning checkpoint to disk %C of %N locations
+ESTT:   /bin/echo PARTIAL: ending checkpoint to tape %C of %N locations
+ESDT:   /bin/echo PARTIAL: ending checkpoint to disk %C of %N locations
+PSTT:   /bin/echo PARTIAL: mount tape %K and press return; read foo;
+# ifdef su4_us5 || axp_osf
+WSTT:   cd %D; /bin/tar cbfE 20 %C %B
+# else
+WSTT:   cd %D; /bin/tar cbf 20 %C %B
+# endif
+PSDT:   /bin/echo executing checkpoint to disk %C of %N locations
+# ifdef su4_us5 || axp_osf
+WSDT:   cd %D; /bin/tar cfE %A %B
+# else
+WSDT:   cd %D; /bin/tar cf %A %B
+# endif
+
+/*
+** DEFINITIONS FOR PARTIAL RECOVERY DMFRFP
+*/
+BRDD:	/bin/echo beginning restore of disk %C of %N locations
+BRTD:	/bin/echo beginning restore of tape %C of %N locations
+BRDT:   /bin/echo PARTIAL: beginning restore of disk %C of %N locations
+BRTT:   /bin/echo PARTIAL: beginning restore of tape %C of %N locations
+BJDA:   /bin/echo beginning restore of journals
+BJTA:   /bin/echo beginning restore of journals
+BUDA:   /bin/echo beginning restore of dumps
+BUTA:   /bin/echo beginning restore of dumps
+PRDD:   /bin/echo executing restore to disk %C of %N locations
+WRDD:	cd %D; /bin/tar xf %A
+PRTD:	/bin/echo mount tape %M and press return; read foo; 
+WRTD:	cd %D; /bin/tar xf %C
+PRDT:	/bin/echo restoring table %X in database location %D;
+WRDT:	cd %D; /bin/tar xf %A %B
+PRTT:	/bin/echo mount tape %K and press return; read foo; 
+WRTT:	cd %D; /bin/tar xf %C %B
+PRDR:   /bin/echo executing restore to disk %C of %N locations
+# ifdef LNX
+WRDR:	dd if=%A of=%E count=%P bs=%Q
+PRTR:	/bin/echo mount tape %M and press return; read foo; 
+WRTR:	dd if=%A of=%C count=%P bs=%Q
+# else
+WRDR:	dd if=%A of=%E oseek=%S count=%P bs=%Q
+PRTR:	/bin/echo mount tape %M and press return; read foo; 
+WRTR:	dd if=%A of=%C oseek=%S count=%P bs=%Q
+# endif
+
+WJDA:	/bin/true
+WJTA:	/bin/true
+WUDA:   /bin/true
+WUTA:   /bin/true
+WCDA:   /bin/echo Checking database snapshot for table level recovery
+WCTA:   /bin/echo Checking database snapshot for table level recovery
+WDDD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDTD:   /bin/echo deleting files in location %D; cd %D; rm -f *
+WDTR:   /bin/true
+WDDT:   /bin/echo deleting table %X in database location %D
+WDTT:   /bin/echo deleting table %X in database location %D
+
+IRDT:   /bin/echo beginning table level recovery
+IRTT:   /bin/echo beginning table level recovery
+
+FRDT:	/bin/echo ending table level recovery
+FRTT:	/bin/echo ending table level recovery
+
+EETE:	/bin/echo done with tape operations
+EEDE:	/bin/echo done with disk operations
+# define HAVE_CKTMPL
+#endif	 /* Default case */

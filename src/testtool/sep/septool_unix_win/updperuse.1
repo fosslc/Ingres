@@ -1,0 +1,76 @@
+.TH UPDPERUSE 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History:
+.\"	23-dec-1991 (boba)
+.\"		Create man page based on old qaperuse man page.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+updperuse \- Examine changes made to SEP scripts.
+.SH ORIGIN
+Ingres, An ASK Company
+.SH SYNOPSIS
+.B "updperuse { -o \fIorig-testenv\fP | -l \fIorig-label\fP } [ -n \fInew-testenv\fP ] [ -b ]"
+.SH DESCRIPTION
+.I Upderuse
+displays the difference between the original and final versions of each
+SEP script in the \fInew-testenv\fP directory tree
+that has changed from the version in the \fIorig-testenv\fP
+directory tree or from the version in Piccolo identified by 
+\fIorig-label\fP.
+Either an original directory tree root or Piccolo label must be specified.
+If \fB-n\fP \fInew-testenv\fP is not specified, \fB$ING_TST\fP is assumed.
+.PP
+If \fB-b\fP is specified, the directory trees are processed in \fIbatch\fP
+mode, culling out scripts that have not changed so that successive
+interactive invocation will only process scripts known to have changed.
+This is especially useful with the \fB-l\fP option, since each comparison
+requires that the original version of the file be extracted from Piccolo.
+.PP
+For each script that has changed, the difference is generated via
+\fIaltcompare\fP and displayed via \fImore\fR.
+After a difference has been displayed, the user is given a menu of the following
+options:
+.TP
+.B
+h)elp
+Print this message.
+.TP
+.B
+n)ext
+Go to next
+.I altcompare
+(default).
+.TP
+.B a)ltcompare
+Show this
+.I altcompare
+again.
+.TP
+.B d)iff
+Show difference (with \fIdiff\fP rather than \fIaltcompare\fP) between old and new script.
+.TP
+.B v)iew
+Run view against both old and new scripts.
+.TP
+.B o)k
+Mark difference as OK in \fB$ING_TST/UPDOK\fP so it won't be seen again.
+.TP
+.B s)hell
+Launch a \fB$SHELL\fP, \fIcsh\fP default.
+.TP
+.B b)ye
+Exit \fIupdperuse\fP.
+.SH FILES
+.TP
+.B $ING_TST/UPDOK
+is a running list of scripts found by \fIupdperuse\fP to have no
+differences or deemed by the user to have acceptable differences.
+.SH "SEE ALSO"
+.BR altcompare(1),
+.BR sepperuse(1)
+.SH BUGS
+.I Altcompare
+always scans all SEP scripts with no way to specify a subset of the
+\fB*.sep\fP files to scan.  Most audits, however, are done once all tests are
+run.  Also, most scripts are only changed after they have been run and
+in preparation for audit, so
+the ability to select scripts to examine has not yet been a high priority.

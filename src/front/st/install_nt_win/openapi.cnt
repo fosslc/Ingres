@@ -1,0 +1,309 @@
+:Base openapi.hlp
+:Title CA-OpenIngres OpenAPI User Guide
+:Index CA-OpenIngres OpenAPI User Guide=openapi.hlp
+1 CA-OpenIngres OpenAPI User Guide
+2 Preface
+3 Overview=C00_ASYN0000000
+3 What is CA-OpenIngres/OpenAPI?=C00_ASYN0000005
+3 Before You Begin=C00_ASYN0000010
+3 Audience=C00_ASYN0000015
+3 Contents=C00_ASYN0000020
+3 Conventions
+4 Overview=C00_ASYN0000025
+4 Syntax=C00_ASYN0000030
+4 CA-OpenIngres/OpenAPI Code Examples=C00_ASYN0000035
+3 Related Manuals
+3 Overview=C00_ASYN0000040
+2 Chapter 1:  Introduction
+3 Overview=C01_ASYN0000005
+3 Product Description
+4 Overview=C01_ASYN0000010
+4 Application Programming Interfaces=C01_ASYN0000015
+4 Relationship to Other Application Programming Interfaces=C01_ASYN0000020
+4 CA-OpenIngres/OpenAPI Interface=C01_ASYN0000025
+3 Function Summary
+4 Overview=C01_ASYN0000030
+3 Concepts
+4 Overview=C01_ASYN0000035
+4 Parameter Block=C01_ASYN0000040
+4 Callback and Closure=C01_ASYN0000045
+4 Asynchronous Processing=C01_ASYN0000050
+4 Synchronous Processing=C01_ASYN0000055
+4 Handles=C01_ASYN0000060
+4 Connections=C01_ASYN0000065
+4 Transactions=C01_ASYN0000070
+4 SQL Statements=C01_ASYN0000075
+4 Data Retrieval=C01_ASYN0000080
+4 Cursors=C01_ASYN0000085
+4 Database Events=C01_ASYN0000090
+4 SQL Syntax
+5 Overview=C01_ASYN0000095
+5 Describe=C01_ASYN0000100
+5 Execute=C01_ASYN0000105
+5 Declare/Open Cursor=C01_ASYN0000110
+5 Cursor Delete=C01_ASYN0000115
+5 Cursor Update=C01_ASYN0000120
+5 Execute Procedure=C01_ASYN0000125
+5 Repeat Queries=C01_ASYN0000130
+4 Query Parameters
+5 Overview=C01_ASYN0000135
+4 Unformatted Data
+5 Overview=C01_ASYN0000140
+4 Data Conversion
+5 Overview=C01_ASYN0000145
+4 Backward Compatibility
+5 Overview=C01_ASYN0000150
+2 Chapter 2:  CA-OpenIngres/OpenAPI Function Reference
+3 Overview=C02_ASYN0000005
+3 Generic Parameters
+4 Generic Parameters=C02_ASYN0000010
+4 Description=C02_ASYN0000015
+3 Managing Memory for Data Input and Output
+4 Overview=C02_ASYN0000020
+3 IIapi_cancel()
+4 Overview=C02_ASYN0000025
+4 Syntax=C02_ASYN0000030
+4 Description=C02_ASYN0000035
+4 Parameters=C02_ASYN0000040
+3 IIapi_catchEvent()
+4 Overview=C02_ASYN0000045
+4 Syntax=C02_ASYN0000050
+4 Description=C02_ASYN0000055
+4 Parameters=C02_ASYN0000060
+3 IIapi_close()
+4 Overview=C02_ASYN0000065
+4 Syntax=C02_ASYN0000070
+4 Description=C02_ASYN0000075
+4 Parameters=C02_ASYN0000080
+3 IIapi_commit()
+4 Overview=C02_ASYN0000085
+4 Syntax=C02_ASYN0000090
+4 Description=C02_ASYN0000095
+4 Parameters=C02_ASYN0000100
+3 IIapi_connect()
+4 Overview=C02_ASYN0000105
+4 Syntax=C02_ASYN0000110
+4 Description=C02_ASYN0000115
+4 Parameters=C02_ASYN0000120
+3 IIapi_convertData()
+4 Overview=C02_ASYN0000125
+4 Syntax=C02_ASYN0000130
+4 Description=C02_ASYN0000135
+4 Parameters=C02_ASYN0000140
+3 IIapi_disconnect()
+4 Overview=C02_ASYN0000145
+4 Syntax=C02_ASYN0000150
+4 Description=C02_ASYN0000155
+4 Parameters=C02_ASYN0000160
+3 IIapi_getColumns()
+4 Overview=C02_ASYN0000165
+4 Syntax=C02_ASYN0000170
+4 Description=C02_ASYN0000175
+4 Parameters=C02_ASYN0000180
+3 IIapi_getCopyMap()
+4 Overview=C02_ASYN0000185
+4 Syntax=C02_ASYN0000190
+4 Description=C02_ASYN0000195
+4 Parameters=C02_ASYN0000200
+3 IIapi_getDescriptor()
+4 Overview=C02_ASYN0000205
+4 Syntax=C02_ASYN0000210
+4 Description=C02_ASYN0000215
+4 Parameters=C02_ASYN0000220
+3 IIapi_getErrorInfo()
+4 Overview=C02_ASYN0000225
+4 Syntax=C02_ASYN0000230
+4 Description=C02_ASYN0000235
+4 Parameters=C02_ASYN0000240
+3 IIapi_getQueryInfo()
+4 Overview=C02_ASYN0000245
+4 Syntax=C02_ASYN0000250
+4 Description=C02_ASYN0000255
+4 Parameters=C02_ASYN0000260
+3 IIapi_initialize()
+4 Overview=C02_ASYN0000265
+4 Syntax=C02_ASYN0000270
+4 Description=C02_ASYN0000275
+4 Parameters=C02_ASYN0000280
+3 IIapi_modifyConnect()
+4 Overview=C02_ASYN0000285
+4 Syntax=C02_ASYN0000290
+4 Description=C02_ASYN0000295
+4 Parameters=C02_ASYN0000300
+3 IIapi_prepareCommit()
+4Overview=C02_ASYN0000305
+4 Syntax=C02_ASYN0000310
+4 Description=C02_ASYN0000315
+4 Parameters=C02_ASYN0000320
+3 IIapi_putColumns()
+4 Overview=C02_ASYN0000325
+4 Syntax=C02_ASYN0000330
+4 Description=C02_ASYN0000335
+4 Parameters=C02_ASYN0000340
+3 IIapi_putParms()
+4 Overview=C02_ASYN0000345
+4 Syntax=C02_ASYN0000350
+4 Description=C02_ASYN0000355
+4 Parameters=C02_ASYN0000360
+3 IIapi_query()
+4 Overview=C02_ASYN0000365
+4 Syntax=C02_ASYN0000370
+4 Description=C02_ASYN0000375
+4 Parameters=C02_ASYN0000380
+3 IIapi_registerXID()
+4 Overview=C02_ASYN0000385
+4 Syntax=C02_ASYN0000390
+4 Description=C02_ASYN0000395
+4 Parameters=C02_ASYN0000400
+3 IIapi_releaseXID()
+4 Overview=C02_ASYN0000405
+4 Syntax=C02_ASYN0000410
+4 Description=C02_ASYN0000415
+4 Parameters=C02_ASYN0000420
+3 IIapi_rollback()
+4 Overview=C02_ASYN0000425
+4 Syntax=C02_ASYN0000430
+4 Description=C02_ASYN0000435
+4 Parameters=C02_ASYN0000440
+3 IIapi_savePoint()
+4 Overview=C02_ASYN0000445
+4 Syntax=C02_ASYN0000450
+4 Description=C02_ASYN0000455
+4 Parameters=C02_ASYN0000460
+3 IIapi_setConnectParam()
+4 Overview=C02_ASYN0000465
+4 Syntax=C02_ASYN0000470
+4 Description=C02_ASYN0000475
+4 Parameters=C02_ASYN0000480
+3 IIapi_setDescriptor()
+4 Overview=C02_ASYN0000485
+4 Syntax=C02_ASYN0000490
+4 Description=C02_ASYN0000495
+4 Parameters=C02_ASYN0000500
+3 IIapi_terminate()
+4 Overview=C02_ASYN0000505
+4 Syntax=C02_ASYN0000510
+4 Description=C02_ASYN0000515
+4 Parameter=C02_ASYN0000520
+3 IIapi_wait()
+4 Overview=C02_ASYN0000525
+4 Syntax=C02_ASYN0000530
+4 Description=C02_ASYN0000535
+4 Parameters=C02_ASYN0000540
+2 Chapter 3:  CA-OpenIngres/OpenAPI Common Data Types
+3 Overview=C03_ASYN0000000
+3 Common CA-OpenIngres/OpenAPI Data Structures
+4 Overview=C03_ASYN0000010
+4 IIAPI_COPYINFO
+5 Overview=C03_ASYN0000015
+5 Syntax=C03_ASYN0000020
+5 Description=C03_ASYN0000025
+5 Parameters for IIAPI_CDATADESCR=C03_ASYN0000030
+4 IIAPI_COPYMAP
+5 Overview=C03_ASYN0000035
+5 Syntax=C03_ASYN0000040
+5 Description=C03_ASYN0000045
+4 IIAPI_DATAVALUE
+5 Overview=C03_ASYN0000050
+5 Syntax=C03_ASYN0000055
+5 Description=C03_ASYN0000060
+4 IIAPI_DESCRIPTOR
+5 Overview=C03_ASYN0000065
+5 Syntax=C03_ASYN0000070
+5 Description=C03_ASYN0000075
+5 Parameters for IIAPI_DESCRIPTOR=C03_ASYN0000080
+4 IIAPI_FDATADESCR
+5 Overview=C03_ASYN0000085
+5 Syntax=C03_ASYN0000090
+5 Description=C03_ASYN0000095
+5 Parameters for IIAPI_FDATADESCR=C03_ASYN0000100
+4 IIAPI_II_DIS_TRAN_ID
+5 Overview=C03_ASYN0000105
+5 Syntax=C03_ASYN0000110
+5 Description=C03_ASYN0000115
+5 Parameters for IIAPI_II_DIS_TRAN_ID=C03_ASYN0000120
+4 IIAPI_II_DT_ID
+5 Overview=C03_ASYN0000125
+5 Syntax=C03_ASYN0000130
+5 Description=C03_ASYN0000135
+4 IIAPI_II_TRAN_ID
+5 Overview=C03_ASYN0000140
+5 Syntax=C03_ASYN0000145
+5 Description=C03_ASYN0000150
+5 Parameters for IIAPI_II_TRAN_ID=C03_ASYN0000155
+4 IIAPI_QUERYTYPE
+5 OverviewE=C03_ASYN0000160
+5 Syntax=C03_ASYN0000165
+5 Description=C03_ASYN0000170
+4 IIIAPI_SVR_ERRINFO
+5 IIIAPI_SVR_ERRINFO=C03_ASYN0000175
+5 Syntax=C03_ASYN0000180
+5 Description=C03_ASYN0000185
+5 Parameters for IIAPI_SVR_ERRINFO=C03_ASYN0000190
+4 IIAPI_TRAN_ID
+5 Overview=C03_ASYN0000195
+5 Syntax=C03_ASYN0000200
+5 Description=C03_ASYN0000205
+3 Common CA-OpenIngres/OpenAPI DataTypes
+4 Overview=C03_ASYN0000210
+4 IIAPI_STATUS=C03_ASYN0000215
+4 II_BOOL=C03_ASYN0000220
+4 II_CHAR=C03_ASYN0000225
+4 II_FLOAT4=C03_ASYN0000230
+4 II_FLOAT8=C03_ASYN0000235
+4 II_INT=C03_ASYN0000240
+4 II_INT1=C03_ASYN0000245
+4 II_INT2=C03_ASYN0000250
+4 II_INT4=C03_ASYN0000255
+4 II_LONG=C03_ASYN0000260
+4 II_PTR=C03_ASYN0000265
+4 II_UCHAR=C03_ASYN0000270
+4 II_UINT1=C03_ASYN0000275
+4 II_UINT2=C03_ASYN0000280
+4 II_UINT4=C03_ASYN0000285
+4 II_ULONG=C03_ASYN0000290
+4 II_VOID=C03_ASYN0000295
+2 Chapter 4:  Creating an Application with CA-OpenIngres/OpenAPI
+3 Overview=C04_ASYN0000005
+3 Creating a CA-OpenIngres/OpenAPI Application
+4 Overview=C04_ASYN0000010
+4 Header Files=C04_ASYN0000015
+4 Library=C04_ASYN0000020
+4 Environment Variables
+5 Overview=C04_ASYN0000025
+5 II_API_TRACE=C04_ASYN0000030
+5 II_API_LOG=C04_ASYN0000035
+3 Sample Code
+4 Overview=C04_ASYN0000040
+4 General Information=C04_ASYN0000045
+4 Synchronous Sample Code=C04_ASYN0000050
+4 Asynchronous Sample Code=C04_ASYN0000055
+2 Chapter 5:  Error Handling
+3 Overview=C05_ASYN0000005
+3 Handling Errors
+4 Overview=C05_ASYN0000010
+4 Status Checking=C05_ASYN0000015
+4 CA-OpenIngres/OpenAPI Errors Codes=C05_ASYN0000020
+4 SQLSTATE Values and Descriptions=C05_ASYN0000025
+2 Appendix A:  Mapping of SQL to CA-OpenIngres/OpenAPI 
+3 Overview=AA_ASYN0000005
+3 Mapping of SQL to CA-OpenIngres/OpenAPI=AA_ASYN0000010
+2 Appendix B:  Queries, Parameters, and Query Data Correlation
+3 Overview=AB_ASYN0000005
+3 Queries and Parameters=AB_ASYN0000010
+3 Query Data Correlation=AB_ASYN0000015
+2 Appendix C:  CA-OpenIngres Data Types
+3 Overview=AC_ASYN0000005
+3 CA-OpenIngres Data Types=AC_ASYN0000010
+3 Data Type Descriptions=AC_ASYN0000015
+2 Appendix D:  CA-OpenIngres/OpenAPI Support Levels
+3 Overview=AD_ASYN0000005
+3 CA-OpenIngres/OpenAPI Support Levels=AD_ASYN0000010
+3 CA-OpenIngres/OpenAPI Versions=AD_ASYN0000015
+2 Appendix E:  Using Repeat Queries with CA-OpenIngres/OpenAPI
+3 Overview=AE_ASYN0000005
+3  Repeat Queries=AE_ASYN0000010
+3  Repeat Query ID=AE_ASYN0000015
+3  Query Parameters
+4 Overview=AE_ASYN0000020
+4 Repeat Query Parameters=AE_ASYN0000025

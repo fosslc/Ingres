@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The dictionary_node resource specifies the node name of where the server
+  repository is located.  On a local machine this node may be blank.

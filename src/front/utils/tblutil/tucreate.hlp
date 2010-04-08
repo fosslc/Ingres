@@ -1,0 +1,47 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- tucreate.hlp	Help for the Tables Utility "Create a Table" screen.
+/#subtopic "Naming Rules" tunames.hlp
+/#subtopic "Data Types" tudtypes.hlp
+/#subtopic "Keys, Nulls, Defaults" tunulls.hlp
+Use this form to create a new table in the database.
+
+To create a new table, fill in information about the table
+and its columns, and then select the "End" menu command.
+
+        Menu Command            Description
+        ------------            -----------
+        Insert                  Insert a blank row above the cursor.
+
+        Delete                  Delete the row on which the cursor is
+                                currently positioned.
+
+        Blank                   Clear the form and place the cursor on
+                                the table name field.
+
+        Move                    Select the current row for a move to a
+                                new position.  After selecting "Move",
+				move the cursor to the new position
+				for the column, and select "Place".
+
+        GetTableDef             Add the column names and formats of
+                                an existing table to those already in
+                                the table field.  You will be prompted
+                                for the name of an existing table.
+
+	EditDefault		Edit the user defined default value for
+				the current column. If the current column
+				does not have a user defined default value,
+				this will create one and change the column's
+				"Default" indicator to "value".
+
+	ListChoices		When invoked on the 'Data Type' column of
+				the table field, this operation will display
+				a list of data types for you to choose from.
+
+        Help                    Access the INGRES Help facility.
+
+        Cancel                  Return to previous screen. Do not create
+				a new table.
+
+        End                     Create a new table in the database and
+				return to the previous screen.

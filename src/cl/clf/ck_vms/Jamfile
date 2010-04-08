@@ -1,0 +1,23 @@
+#
+# Jamfile file for cl!clf!ck_vms
+#
+# History:
+#	18-feb-2005 (abbjo03)
+#	    Add cktmpl.def and associated scripts.
+
+SubDir ING_SRC cl clf ck_vms ;
+
+IISUBSYS cl clf ck_vms ;
+
+IILIBRARY COMPATLIB : cksubst.c ckspawn.c ckerror.c ck.c ;
+
+IIFILE cktmpl.def : <cl!clf!ck_vms>cktmpl.def ;
+
+IICkpScript ckp_tape_setup : ckp_tape_setup$(SUFSH) ;
+IICkpScript ckp_to_disk : ckp_to_disk$(SUFSH) ;
+IICkpScript ckp_to_tape : ckp_to_tape$(SUFSH) ;
+IICkpScript rollfwd_delete_files : rollfwd_delete_files$(SUFSH) ;
+IICkpScript rollfwd_delete_tables : rollfwd_delete_tables$(SUFSH) ;
+IICkpScript rollfwd_from_disk : rollfwd_from_disk$(SUFSH) ;
+IICkpScript rollfwd_from_tape : rollfwd_from_tape$(SUFSH) ;
+IICkpScript rollfwd_tape_setup : rollfwd_tape_setup$(SUFSH) ;

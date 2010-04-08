@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The resource dmf_free_limit is the number of free pages that the buffer
+  manager will try to keep available in the cache. Dirty pages are written
+  when this limit is reached and new pages are needed.
+
+  The default is 1/32 of the cache size.

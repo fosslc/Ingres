@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!st!wincluster_win
+#
+
+SubDir ING_SRC front st wincluster_win ;
+
+IISUBSYS front st wincluster_win ;
+
+
+IISLN wincluster.exe : wincluster.sln ;

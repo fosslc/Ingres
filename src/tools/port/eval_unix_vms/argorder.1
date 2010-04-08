@@ -1,0 +1,44 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/argorder.1,v 1.1 90/03/09 09:17:31 source Exp $
+.TH ARGORDER 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+argorder \- Show relative position of arguments
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B argorder
+[ -v ]
+.SH DESCRIPTION
+.I Argorder
+tries to reveal the location of arguments passed to a function.  It
+calls a function with two arguments, which compares their addresses and
+prints either:
+.nf
+
+	left above right
+.fi
+.PP
+or:
+.nf
+
+	right above left
+.fi
+.PP
+.B -v
+``verbose'' output indents the output one tab stop and shows some
+internal details.  This is the output on the Pyramid:
+.nf
+
+	argorder:
+		&left = 0x1ff51100
+		&right = 0x1ff51104
+		(Consult the stack order to interpret this.)
+		right above left
+.fi
+.SH "SEE ALSO"
+\fIargeval(1)\fP, \fIargloc(1)\fP, \fIstackorder(1)\fP
+.SH BUGS
+.I Argorder
+assumes that it is legal to take the addresses of arguments.  This
+might not be true on machines that place arguments in non-mapped
+registers.

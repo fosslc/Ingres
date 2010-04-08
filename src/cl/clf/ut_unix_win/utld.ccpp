@@ -1,0 +1,286 @@
+/*
+** Copyright (c) 1987, 2004 Ingres Corporation
+**
+** Name:	utld.ccpp - UT Loader Rules Definition File
+*/
+
+/*
+** Description:
+**	This file is used to create variant "utld.def" files for
+**	different target systems.  It specifies rules used to link
+**	objects.
+**
+**	Create the file via:
+**
+**		ccpp utld.ccpp > utld.def
+**
+**	If a two letter word beginning with the character '%' is read
+**	from the file, it is interpreted as follows:
+**
+**		%O - the name of the output file is substituted
+**		%D - the name of the directory containing the
+**		     object files is substituted
+**		%i - the input files, the list of object files
+**		     from the objs[] argument, is substituted
+**		     (with relative path names)
+**		%L - the libraries, the list of libraries from
+**		     the usrlist[] argument, is substituted
+**		%% - the character '%' is substituted
+*/
+
+/*
+** History:    $Log-for RCS$
+**	02-dec-87 (russ)
+**		File initially created.
+**	31-may-90 (blaise)
+**	    Integrated changes from 61 and ingresug:
+**		Add machine-specific code for rtp_us5, dr3_us5, dr4_us5,
+**		sco_us5, ps2_us5, sur_u42, dr6_us5, hul_ul5, x3bx_us5, vax_ulx.
+**	25-july-1990 (jonb)
+**		In an optomistic attempt to make this platform-independent,
+**		use /bin/cc instead of /bin/ld for loading, and use the
+**		LDLIB variable from default.h instead of specific lists
+**		of libraries.
+**	13-jan-1991 (seng)
+**		Add entry for ris_us5.
+**	14-oct-93 (tomm)
+**		su4_us5: Changed /bin/cc to cc - cc must be in the user's path
+**	13-dec-93 (dianeh)
+**		Changed the "#if 0" to C-style comments to accommodate the new
+**		portable preprocessor, yapp; also, removed the "historical"
+**		per-platform ifdefs section -- if they ever need to be 
+**		retrieved, that's what source-management is for.  Also updated
+**		the comment-block discussing mkdefault to a more current truth.
+**	13-dec-93 (dianeh)
+**		This revision is so I can associate the A-bug number (#57812)
+**		to the fix, in piccolo.
+**      10-feb-94 (ajc)
+**              Added hp8_bls specific entry.
+**	31-mar-94 (arc)
+**		Add entry for Trusted Solaris 1.1 (su4_cmw).
+**		Remove spurious ')' for hp8_bls entry.
+**	15-dec-1995 (murf)
+**		Added entry for Solaris on Intel (sui_us5).
+**	13-dec-95 (morayf)
+**		Added entry for SNI RMx00 (rmx_us5). Uses dynamic linking
+**		and its own library path. Also added Pyramid (pym_us5) in
+**		similar fashion.
+**	28-jul-1997 (walro03)
+**		For Tandem NonStop (ts2_us5), force the compile to come from
+**		/usr/ucb/cc.
+**	30-Jul-1997 (kosma01)
+**		When OpenIngres 2.0 is built with USED_OS_THREADS on the 
+**		AIX 4.1 platform it calls certain pthread functions even if 
+**		II_THREAD_TYPE is set to INTERNAL. To support pthread 
+**		functions, an executable must be linked with crt0_r.o and 
+**		the pthread lib, libpthread, and the reentrant c lib, libc_r. 
+**		xlc_r and xlC_r are aliases for the C compiler and C++ 
+**		compiler that compile and link for pthreads and reentrancy.
+**	1-apr-1998 (popri01)
+**		In Unixware we need to resolve thread references even for non-
+**		threaded apps.  Add the thread flag.
+**	26-may-1998 (bobmart)
+**		Added entry for hp8_us5; this platform needs loader flag 
+**		"-Wl,+s" in order to produce a shlib-linked binary that can
+**		execute on systems other than the one used for linking,
+**		providing "SHLIB_PATH" is properly set.
+**	07-nov-1998 (musro02)
+**              Added entry for sqs_ptx; this platform currently needs the
+**              bsd flavor of the socket library and with DYNIX 4.4 the abi
+**              flavor became the default.
+**	23-Mar-1999 (kosma01)
+**		All Ingres code is mips3, (marketing). 
+**	08-Jun-1999 (toumi01)
+**		Add entry for Linux (lnx_us5); this platform's cc command
+**		is in /usr/bin and not /bin.
+**      26-jun-1999 (popri01)
+**              Siemens (rmx_us5) needs the thread flag, like Unixware.
+**      03-jul-99 (podni01)
+**              Added support for ReliantUNIX V 5.44 - rux_us5 (same as rmx_us5)
+**	06-oct-1999 (toumi01)
+**		Change Linux config string from lnx_us5 to int_lnx.
+**	11-Oct-1999 (hweho01)
+**              Added entry for AIX 64-bit platform (ris_u64).
+**      10-Jan-2000 (hanal04) Bug 99965 INGSRV1090.
+**              Correct rux_us5 changes that were applied using the rmx_us5
+**              label.
+**	14-Jun-2000 (hanje04)
+**		Added suport for OS/390 Linux - ibm_lnx (same as int_lnx)
+**      02-Nov-2000 (hweho01)
+**              Removed the reference of libbsd.a for axp_osf,
+**              because it is not available in OS release 5.0A
+**	23-jul-2001 (stephenb)
+**	 	Add support for i64_aix
+**	04-Dec-2001 (hanje04)
+**	    Add IA64 Linux to linux defs.
+**	14-mar-2002 (devjo01)
+**		Somewhere along the line, output line for axp_osf had
+**		gotten split into two lines, breaking ABF links.
+**	20-Feb-2003 (hanje04)
+**		Use int_lnx defines for all Linux's (LNX)
+**      14-apr-2004 (zhahu02)
+**              Updated for usl_us5 (b112148/INGSRV2791).
+**      31-aug-2004 (sheco02)
+**          X-integrate change 468380 to main.
+**      22-Sep-2004 (hanje04)
+**              SIR 111413
+**              Enable support for Intel Linux build running on AMD64 Linux.
+**              If running under AMD64 Linux, we need to tell the compiler to
+**              create 32bit binaries and not 64bit.
+**      15-Mar-2005 (bonro01)
+**		Added support for Solaris AMD64 a64_sol.
+**	03-Jun-2005 (hanje04)
+**		Add support for Mac OS X. Use LNX as Mac also uses GCC
+**	03-Oct-2005 (hanje04)
+**	        Mac OSX has a noisy linker, so only print output if it
+**	        fails.
+**       6-Nov-2006 (hanal04) SIR 117044
+**          Add int.rpl for Intel Rpath Linux build.
+**	30-Mar-2007 (hanje04)
+**	    SIR 117985
+**	    Need to use CCLDMACH in link line for PowerPC Linux. Not sure
+**	    why we don't for other Linuxes
+**	14-Feb-2008 (hanje04)
+**	    SIR S119978
+**	    Update includes for renamed header
+**       3-Feb-2009 (hanal04) Bug 121585 and Bug 120738
+**              Add -m31 to CFLAGS for ibm_lnx. This will prevent s390x
+**              instalaltions defaulting to -m64 which will be
+**              incompatible with the -m31 built shared libraries.
+**	20-Jun-2009 (kschendel) SIR 122138
+**	    Hybrid config symbols changed, fix here.
+**	    This is a ccpp'ed file, and as such, the BUILD_ARCHxx
+**	    definitions will be for the primary (if hybrid capable).
+**	08-Sept-2009 (frima01) SIR 122138
+**	    Removed obsolete hp8_us5 section.
+**	18-Sept-2009 (frima01) SIR 122138
+**	    Removed unsupported -m64 flag from i64.lnx.
+*/
+
+# if defined(gotit)
+# undef gotit
+# endif
+
+# if defined(rmx_us5) && !defined(gotit)
+# define gotit
+cd %D; cc -Xt -dy -YP,/usr/ccs/lib:/usr/lib:/usr/ucblib -o %O %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# endif
+
+# if defined(rux_us5) && !defined(gotit)
+# define gotit
+cd %D; cc -Xt -dy -Kthread -o %O %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# endif
+
+
+/* For Solaris, mkdefault.sh defines CCSUN32/64 symbols for arch.
+** Older Sun compilers need -xarch and don't understand -m32/64.
+** Newer compilers (studio 12 and later) understand both, but issue
+** annoying "deprecated" warnings when -xarch seen.
+*/
+# if defined(sparc_sol)
+# define gotit
+# if defined(BUILD_ARCH32)
+cd '%D' ; cc -o %O CCSUN32 %i %L LDLIB  -lm 2>&1 | sed '/[Ww]arning/'d
+# else
+cd '%D' ; cc -o %O CCSUN64 %i %L LDLIB  -lm 2>&1 | sed '/[Ww]arning/'d
+# endif
+# endif
+
+# if defined(a64_sol) && !defined(gotit)
+# define gotit
+# if defined(BUILD_ARCH32)
+cd '%D' ; cc -o %O CCSUN32 %i %L LDLIB  -lm 2>&1 | sed '/[Ww]arning/'d
+# else
+cd '%D' ; cc -o %O CCSUN64 %i %L LDLIB  -lm 2>&1 | sed '/[Ww]arning/'d
+# endif
+# endif
+
+# if defined(any_hpux)
+# define gotit
+# if defined(BUILD_ARCH64)
+cd '%D' ; /bin/cc -Wl,+s -o %O +DD64 %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# else
+cd '%D' ; /bin/cc -Wl,+s -o %O %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# endif
+# endif
+
+# if defined(sui_us5) && !defined(gotit)
+# define gotit
+cd '%D' ; cc -o %O %i %L LDLIB  -lm 2>&1 | sed '/[Ww]arning/'d
+# endif
+
+# if defined(ts2_us5) && !defined(gotit)
+# define gotit
+cd '%D' ; /usr/ucb/cc -o %O %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# endif
+
+# if defined(rs4_us5) || defined(r64_us5)
+# define gotit
+# if defined(BUILD_ARCH32)
+cd '%D' ; xlc_r -o %O %i %L LDLIB  -lm 2>&1 | sed '/[Ww]arning/'d
+# else
+cd '%D' ; xlc_r -q64 -o %O %i %L LDLIB  -lm 2>&1 | sed '/[Ww]arning/'d
+# endif
+# endif
+
+# if defined(usl_us5) && !defined(gotit)
+# define gotit
+cd '%D' ; /bin/cc -o %O -K thread  %i %L LDLIB 2>&1 | sed '/[Ww][Aa][Rr][Nn][Ii][Nn][Gg]/'d
+# endif
+
+# if defined(sqs_ptx) && !defined(gotit)
+# define gotit
+cd '%D' ; /bin/cc -o %O %i -L/usr/lib/bsd-socket %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# endif
+
+# if defined(sgi_us5) && !defined(gotit)
+# define gotit
+cd '%D' ; /bin/cc -mips3 -o %O %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# endif
+
+# if defined(ibm_lnx)
+# define gotit
+cd '%D' ; /usr/bin/cc -m31 -o %O %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# elif defined(ppc_lnx)
+# define gotit
+cd '%D' ; /usr/bin/cc -o %O -m64 %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# elif defined(LNX) && defined(BUILD_ARCH64)
+# define gotit
+# if defined(i64_lnx)
+cd '%D' ; /usr/bin/cc -o %O %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# else
+cd '%D' ; /usr/bin/cc -o %O -m64 %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# endif
+# elif defined(LNX)
+# define gotit
+cd '%D' ; /usr/bin/cc -o %O -m32 %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# endif
+
+
+# if defined(OSX) && \
+    !defined(gotit)
+# define gotit
+cd '%D' ; if ! /usr/bin/cc -o %O %i %L LDLIB > /tmp/utccld$$.out 2>&1 ; then  cat /tmp/utccld$$.out ; fi ; rm -f /tmp/utccld$$.out
+# endif
+
+# if defined(axp_osf)
+# define gotit
+cd '%D' ; /bin/cc -o %O %i %L -lrt -lm -laio -lpthread -lmach -lexc -lmld 2>&1 | sed '/[Ww]arning/'d
+# endif
+
+/*
+/*
+** The per-platform library list is denoted LDLIB; it's maintained in 
+** tools/port/shell/mkdefault.sh, and comes to us via tools/port/hdr/default.h,
+** the relevant parts of which are prepended to this file by the MINGH rule 
+** that runs this file through ccpp.
+**
+** Note that the command below will suppress all warning messages from 
+** cc (which should be pretty irrelevant) and from ld (which might not
+** be).  The sed may have to be massaged for particular platforms if
+** this is not acceptable.
+*/
+
+# if !defined(gotit)
+cd '%D' ; /bin/cc -o %O %i %L LDLIB 2>&1 | sed '/[Ww]arning/'d
+# endif

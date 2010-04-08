@@ -1,0 +1,39 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmmailca.hlp
+MAIL NOTIFICATION LIST
+
+This screen is used to change e-mail addresses that are set up to
+receive Replicator error messages.  You can add new addresses, update
+or delete existing ones.  The mail notification list for each Replicator
+installation must be set up separately while logged on to that machine.
+
+The column of the list is:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        Mail Address    The e-mail address of a person who should
+                        receive Replicator error messages.  If the
+                        Replicator Server will be running on the same
+                        machine as the user, you may only need to enter
+                        the user account.  Otherwise, you may have to
+                        enter routing information.  For example,
+
+                        UNIX
+                                smith@lon
+
+                        VMS
+                                lon::smith.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Save            Save the changes to the list and return to the
+                        Configuration Menu.
+
+        RowDelete       Delete the currently highlighted row.
+
+        Help            Access the Help facility.
+
+        End             Return to the Configuration Menu.

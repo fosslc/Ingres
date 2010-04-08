@@ -1,0 +1,30 @@
+<!ELEMENT characterMappingAliases (mapping*)>
+<!--
+** DTD file for XML formatted alias table for xml.
+** Ref: http://www.unicode.org/unicode/reports/tr22 CharacterMapping-3.dtd.
+**
+-->
+
+<!ELEMENT mapping (display*, alias*, bestFit*)>
+<!ATTLIST mapping
+    id CDATA #REQUIRED
+>
+
+<!ELEMENT display EMPTY>
+<!ATTLIST display
+    xml:lang CDATA #REQUIRED
+    name CDATA #REQUIRED
+>
+
+<!ELEMENT alias EMPTY>
+<!ATTLIST alias
+    name CDATA #REQUIRED
+    preferredBy CDATA #IMPLIED
+>
+
+<!ELEMENT bestFit EMPTY>
+<!ATTLIST bestFit 
+    id CDATA #REQUIRED
+    matchingA CDATA #REQUIRED
+    matchingB CDATA #REQUIRED
+>

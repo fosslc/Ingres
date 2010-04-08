@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqnewvq.hlp, behind the popup asking for menuitem, description, and 
+/#-- tables when creating Append, Browse, or Update type frames.
+/#-- 
+Enter the menuitem text and a short description of the frame.  For frames 
+that query the database, also specify the table(s) you want to use.  
+
+  * The system uses the first 12 characters of the menuitem text to name 
+    the frame.
+  * Enter a short description.  It will appear throughout your application, 
+    wherever a reference to this frame exists.
+  * You must designate a Master table for the frame's Visual Query; a
+    Detail table is optional.
+    - Once you save your specifications, you cannot change the table 
+      information.
+    - If you make any changes to the underlying structure of your tables, 
+      you can use the 'Reconcile' operation under the 'Utilities' menuitem
+      to reconcile the Visual Query with the changes.
+  * If you do not specify a Detail table, you can have the Master data 
+    displayed in either the table field or simple fields format. 
+/#subtopic 'Menuitem text' vqnemitx.hlp
+/#subtopic 'Description' vqnedesc.hlp
+/#subtopic 'Tables' vqnetabl.hlp

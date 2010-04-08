@@ -1,0 +1,25 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are running the ACCESSDB program.  In this program, you can control 
+access to Ingres, specify which databases maybe accessed by which 
+Authorized Identifiers (users or public) and display summary 
+information about all users or databases.  In addition, you can add 
+LocationNames to the system and extend databases to other areas (disk volumes 
+or directories).
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Databases       List all databases.
+			View or change information about individual databases.
+	
+	Locations       List all locations.
+	                Create/Modify/Delete a location definition.
+	
+	Users           List all users.
+	                Create/Modify/Delete an Ingres user
+	                Specify which databases a user may access.
+	
+	Help            Access the Ingres help facility.
+	
+	Quit            Exit from ACCESSDB.

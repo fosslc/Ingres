@@ -1,0 +1,74 @@
+<HTML>
+<HEAD>
+<TITLE></TITLE>
+</HEAD>
+<BODY BGCOLOR=ffffff>
+
+<FORM ACTION="/ice-bin/oiice.#cgi#/fortunoff/insbill.html" METHOD="POST" target="main">
+<INPUT TYPE=hidden NAME="session" value="<!-- #ICE SQL=`select ':session'` TYPE=`UNFORMATTED`-->">
+<INPUT TYPE=hidden NAME="ii_success_message" value="Command Added">
+<INPUT TYPE=hidden NAME="ii_error_message" value="Could Not Add Command">
+<CENTER>
+<h2>Billing Information</h2>
+<TABLE BORDER=0 CELLPADDING=5 width=650>
+<!-- #ICE
+SQL=`select '<TR><TD align=right>First/Middle/Last Name: </TD><TD><INPUT TYPE=text NAME="name" size=32 value=', name, 
+			'></TD><TD align=right>Email Address: </TD><TD><INPUT TYPE=text NAME="Email" size=32 value=', Email,
+			'></TR><TR><TD align=right>Company Name: </TD><TD><INPUT TYPE=text NAME="company" size=32 value=', company, 
+			'></TR><TR><TD align=right>Address: </TD><TD colspan=3><textarea NAME="address" rows=2 cols=100 value=', address,
+			'></textarea></TD></TR><TR><TD align=right>City: </TD><TD><INPUT TYPE=text NAME="city" size=32 value=', city,
+			'></TD><TD align=right>State of Province: </TD><TD><INPUT TYPE=text NAME="state" size=32 value=', state,
+			'></TD></TR><TD align=right>Zip Code: </TD><TD><INPUT TYPE=text NAME="zip" size=32 value=', zip,
+			'></TD><TD align=right>Country: </TD><TD><INPUT TYPE=text NAME="country" size=32 value=', country,
+			'></TD></TR><TD align=right>Day Phone: </TD><TD><INPUT TYPE=text NAME="dayPhone" size=32 value=', dayPhone,
+			'></TD><TD align=right>Night Phone: </TD><TD><INPUT TYPE=text NAME="nightPhone" size=32 value=', nightPhone,
+			'></TD></TR>' from bill where sess=':session'`
+ TYPE=`UNFORMATTED`
+-->
+</TABLE>
+</CENTER>
+<hr>
+<CENTER>
+<h2>Credit Card Info</h2>
+<TABLE BORDER=0>
+<!-- #ICE
+SQL=`select '<TR><TD  align=right>Credit Card Type: </TD><TD><INPUT TYPE=text NAME="cardType" size=32 value=', cardType,
+			'></TR><TR><TD  align=right>Credit Card Number: </TD><TD><INPUT TYPE=text NAME="cardNumber" size=32 value=', cardNumber,
+			'></TR><TR><TD  align=right>Credit Card Exp: </TD><TD><INPUT TYPE=text NAME="cardexp" size=32 value=', cardexp,
+			'></TR>' from bill where sess=':session'`
+ TYPE=`UNFORMATTED`
+-->
+</TABLE>
+</CENTER>
+<hr>
+<CENTER>
+<h2>Shipping Information</h2>
+(if different than billing information)
+
+<TABLE BORDER=0>
+<!-- #ICE
+SQL=`select '</TR><TD  align=right>First/Middle/Last Name: </TD><TD><INPUT TYPE=text NAME="shname" size=32 value=', shname, 
+			'></TR><TR><TD  align=right>Address: </TD><TD colspan=3><textarea NAME="shaddress" rows=2 cols=100 value=', shaddress,
+			'></textarea></TR><TR><TD  align=right>City: </TD><TD><INPUT TYPE=text NAME="shcity" size=32 value=', shcity,
+			'><TD  align=right>State of Province: </TD><TD><INPUT TYPE=text NAME="shstate" size=32 value=', shstate,
+			'></TR><TR><TD  align=right>Zip Code: </TD><TD><INPUT TYPE=text NAME="shzip" size=32 value=', shzip,
+			'><TD  align=right>Country: </TD><TD><INPUT TYPE=text NAME="shcountry" size=32 value=', shcountry,
+			'></TR>' from bill where sess=':session'`
+ TYPE=`UNFORMATTED`
+-->
+</TABLE>
+</CENTER>
+<hr>
+<CENTER>
+<!-- #ICE
+SQL=`select 'Special shipping Instructions:<br><textarea NAME="Inst" rows=3 cols=100 value=', Inst,'></textarea>' from bill where sess=':session'`
+ TYPE=`UNFORMATTED`
+-->
+<hr>
+<INPUT TYPE=image NAME="Enter" border=0 src="<!-- #ICE SQL=`select image from images where name = 'process3.gif'` TYPE=`UNFORMATTED`-->">
+
+</CENTER>
+</FORM>
+
+</BODY>
+</HTML>

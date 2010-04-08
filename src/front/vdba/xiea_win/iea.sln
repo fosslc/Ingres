@@ -1,0 +1,25 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iea", "iea.vcproj", "{C5C3D733-AE7E-4C2A-8DAC-EA20CC558E91}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		DebugU|Win32 = DebugU|Win32
+		Release|Win32 = Release|Win32
+		ReleaseU|Win32 = ReleaseU|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5C3D733-AE7E-4C2A-8DAC-EA20CC558E91}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C5C3D733-AE7E-4C2A-8DAC-EA20CC558E91}.Debug|Win32.Build.0 = Debug|Win32
+		{C5C3D733-AE7E-4C2A-8DAC-EA20CC558E91}.DebugU|Win32.ActiveCfg = DebugU|Win32
+		{C5C3D733-AE7E-4C2A-8DAC-EA20CC558E91}.DebugU|Win32.Build.0 = DebugU|Win32
+		{C5C3D733-AE7E-4C2A-8DAC-EA20CC558E91}.Release|Win32.ActiveCfg = Release|Win32
+		{C5C3D733-AE7E-4C2A-8DAC-EA20CC558E91}.Release|Win32.Build.0 = Release|Win32
+		{C5C3D733-AE7E-4C2A-8DAC-EA20CC558E91}.ReleaseU|Win32.ActiveCfg = ReleaseU|Win32
+		{C5C3D733-AE7E-4C2A-8DAC-EA20CC558E91}.ReleaseU|Win32.Build.0 = ReleaseU|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

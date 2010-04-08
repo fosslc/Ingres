@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!rep!repfiles
+#
+
+SubDir ING_SRC front rep repfiles ;
+
+IISUBSYS front rep repfiles ;
+
+IIDFILES rep : crarchiv.tlp crshadow.tlp
+	delproc1.tlp delproc2.tlp events.dat flagvals.dat insproc1.tlp
+	insproc2.tlp ixshadow.tlp mdarchiv.tlp mdshadow.tlp
+	optnvals.dat svrflags.dat updproc1.tlp updproc2.tlp ;

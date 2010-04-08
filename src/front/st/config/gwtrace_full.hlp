@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+ The trace_full parameter determines whether each trace entry has full trace
+ information. Full tracing provides time stamp and session information.
+
+ The following values are allowed:
+
+        false - Full tracing is disabled. (This is the default.)
+
+        true  - Full tracing is enabled.<<<<

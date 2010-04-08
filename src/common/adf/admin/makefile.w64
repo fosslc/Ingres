@@ -1,0 +1,29 @@
+CC          = cl -c
+DLL         = "$(II_SYSTEM)\ingres\bin"
+INC         = "$(II_SYSTEM)\ingres\files"
+!IF "$(USESPATIAL)" != ""
+SPATLIB =	"$(II_SYSTEM)\ingres\lib\libspat64.lib"
+!ELSE
+SPATLIB =	"$(II_SYSTEM)\ingres\lib\iiclsadt.obj"
+!ENDIF
+CCFLAGS= -DIA64=1 -D_IA64_ -DNT_GENERIC /O2 /G2 -D_DLL -D_MT /nologo -MD /Wp64 -DNT_IA64 -I.\ -I$(INC)
+TARGETDLL   = iilibudt64.dll
+LIBS        = msvcrt.lib kernel32.lib user32.lib \
+		"$(II_SYSTEM)\ingres\lib\libingres64.lib"\
+		$(SPATLIB) 
+	
+OBJS        = common.obj cpx.obj intlist.obj op.obj zchar.obj \
+		numeric.obj nvarchar.obj
+EXTRAOBJS   = iicvpk.obj iimhpk.obj
+DEF         = iilibudt64.def
+LINK        = link
+LINKFLAGS   = /NOLOGO /DLL /DEF:$(DEF) /MACHINE:IA64
+
+all: $(OBJS) $(TARGETDLL)
+
+$(OBJS): 
+    $(CC) $(CCFLAGS) $**
+
+$(TARGETDLL):
+    $(LINK) $(LINKFLAGS) /OUT:$@ $(OBJS) $(EXTRAOBJS) $(LIBS)
+    copy $@ $(DLL)

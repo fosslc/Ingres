@@ -1,0 +1,23 @@
+#
+# wgl_32s.hnt file for front/frontcl/libqsys
+#
+# Note: The wgl_32s.ini file contains a special case for this
+#	directory.  CFLAGS3 is used to compile this directory.
+#
+# History:
+#	07-Jul-2007 (wridu01)
+#		Ignore all iiuf*.c when building against 
+#		ingres!w4er codeline
+
+ignore= iiuflbqL.c
+ignore= iiuflbqM.c
+ignore= iiuflbqU.c
+ignore= iiuflibq.c
+ignore= iiufsql.c
+ignore= iiufsqlL.c
+ignore= iiufsqlM.c
+ignore= iiufsqlU.c
+ignore= iiufutil.c
+ignore= iiufutlL.c
+ignore= iiufutlM.c
+ignore= iiufutlU.c

@@ -1,0 +1,206 @@
+!History:
+!	23-feb-1998 (kinte01)
+!		Added IIapi_createEnvHndl, IIapi_deleteEnvHndl,
+!		IIapi_getEnvHndl, IIapi_isEnvHndl. Changed those
+!		those that no longer appear to be needed to spares.
+!	24-jul-1998 (kinte01)
+!		Added IIapi_autocommit and iiapi_getevent
+!	16-feb-2001 (kinte01)
+!		o Remove IIapi_connstatemgr, IIapi_dispatcheval,
+!		  IIapi_createeventcb, IIapi_processeventcb,
+!		  IIapi_createeventhndl, IIapi_deleteeventhndl,
+!		  IIapi_iseventhndl, IIapi_eventstatemgr, 
+!		  IIapi_lieventdispatch, IIapi_createopqueentry,
+!		  IIapi_stmtstatemgr, IIapi_printcstate, 
+!		  IIapi_printtstate, IIapi_printsstate, IIapi_printestate,
+!		  IIapi_transtatemgr, IIapi_uieventdispatch
+!		o Add IIapi_ns_init, IIapi_jas_init, IIapi_sql_init, 
+!		  IIapi_validnsdescriptor
+!	19-jun-2001 (kinte01)
+!		Add support for multiple product build
+!	01-mar-2002 (kinte01)
+!		Add the SAW routines
+!       01-apr-2002 (loera01)
+!               Removed reference to static compatlib modules, and linked
+!               against II_LIBQLIB rather than gcflib, cuflib, etc.
+!	09-may-2003 (abbjo03)
+!	    Increment major/minor version id to 126,0 for 2.6/0305. Clean up
+!	    unused and commented out entries.
+!	07-jun-2004 (abbjo03)
+!	    Remove IIapi_jas_init.
+!	06-jan-2005 (abbjo03)
+!	    Changes to build with Jam and mkshlibs.
+!	02-feb-2007 (upake01)
+!           Added IIapi_xaRollback, IIapi_xaCommit, IIapi_xaPrepare,
+!                 IIapi_xaEnd & IIapi_xaStart
+!       15-may-2008 (Ralph Loen) Bug 120384
+!           Added IIapi_scroll and IIapi_position.
+!	11-Aug-08 (gordy) Bug 120761
+!	    Added IIapi_getColumnInfo.
+!       21-Aug-2008 (Ralph Loen) Bug 120761
+!           Moved IIapi_getColumnInfo to the bottom of the PROCEDURE
+!           declaration.
+!
+IDENT=aiflib
+GSMATCH=LEQUAL,126,0
+SYMBOL_VECTOR=(	IIapi_initADF=PROCEDURE,-
+		IIapi_termADF=PROCEDURE,-
+		IIapi_createConnHndl=PROCEDURE,-
+		IIapi_deleteConnHndl=PROCEDURE,-
+		IIapi_isConnHndl=PROCEDURE,-
+		IIapi_getConnHndl=PROCEDURE,-
+		IIapi_setConnParm=PROCEDURE,-
+		IIapi_clearConnParm=PROCEDURE,-
+		IIapi_getConnIdHndl=PROCEDURE,-
+		IIapi_getAPILength=PROCEDURE,-
+		IIapi_getGCALength=PROCEDURE,-
+		IIapi_getBLOBLength=PROCEDURE,-
+		IIapi_cnvtDescr2GDV=PROCEDURE,-
+		IIapi_cnvtDataValue2GDV=PROCEDURE,-
+		IIapi_cnvtDataValue2GCATuple=PROCEDURE,-
+		IIapi_cnvtBLOB2GCATuple=PROCEDURE,-
+		IIapi_cnvtGDV2Descr=PROCEDURE,-
+		IIapi_cnvtGDV2DataValue=PROCEDURE,-
+		IIapi_loadColumns=PROCEDURE,-
+		IIapi_checkBLOBSegment=PROCEDURE,-
+		IIapi_setDispatchFlag=PROCEDURE,-
+		IIapi_clearDispatchFlag=PROCEDURE,-
+		IIapi_createErrorHndl=PROCEDURE,-
+		IIapi_serverError=PROCEDURE,-
+		IIapi_localError=PROCEDURE,-
+		IIapi_getErrorHndl=PROCEDURE,-
+		IIapi_cleanErrorHndl=PROCEDURE,-
+		IIapi_clearAllErrors=PROCEDURE,-
+		IIapi_errorStatus=PROCEDURE,-
+		IIapi_createGCAError=PROCEDURE,-
+		IIapi_createGCAAttention=PROCEDURE,-
+		IIapi_createGCAClose=PROCEDURE,-
+		IIapi_createGCAFetch=PROCEDURE,-
+		IIapi_createGCAParm=PROCEDURE,-
+		IIapi_createGCAMdassoc=PROCEDURE,-
+		IIapi_createGCAResponse=PROCEDURE,-
+		IIapi_createGCAAck=PROCEDURE,-
+		IIapi_createGCAQuery=PROCEDURE,-
+		IIapi_createGCASecure=PROCEDURE,-
+		IIapi_createGCATuple=PROCEDURE,-
+		IIapi_gen2IntSQLState=PROCEDURE,-
+		IIapi_createIdHndl=PROCEDURE,-
+		IIapi_deleteIdHndl=PROCEDURE,-
+		IIapi_isIdHndl=PROCEDURE,-
+		IIapi_liDispatch=PROCEDURE,-
+		IIapi_initGCA=PROCEDURE,-
+		IIapi_termGCA=PROCEDURE,-
+		IIapi_connGCA=PROCEDURE,-
+		IIapi_disconnGCA=PROCEDURE,-
+		IIapi_sndGCA=PROCEDURE,-
+		IIapi_rcvNormalGCA=PROCEDURE,-
+		IIapi_rcvExpediteGCA=PROCEDURE,-
+		IIapi_reserveGCABuffer=PROCEDURE,-
+		IIapi_releaseGCABuffer=PROCEDURE,-
+		IIapi_isBLOB=PROCEDURE,-
+		IIapi_initAPI=PROCEDURE,-
+		IIapi_termAPI=PROCEDURE,-
+		IIapi_appCallback=PROCEDURE,-
+		IIapi_serviceOpQue=PROCEDURE,-
+		IIapi_createStmtHndl=PROCEDURE,-
+		IIapi_deleteStmtHndl=PROCEDURE,-
+		IIapi_isStmtHndl=PROCEDURE,-
+		IIapi_getStmtHndl=PROCEDURE,-
+		IIapi_createSavePtHndl=PROCEDURE,-
+		IIapi_deleteSavePtHndl=PROCEDURE,-
+		IIapi_isSavePtHndl=PROCEDURE,-
+		IIapi_createTranHndl=PROCEDURE,-
+		IIapi_deleteTranHndl=PROCEDURE,-
+		IIapi_isTranHndl=PROCEDURE,-
+		IIapi_getTranHndl=PROCEDURE,-
+		IIapi_createTranName=PROCEDURE,-
+		IIapi_deleteTranName=PROCEDURE,-
+		IIapi_isTranName=PROCEDURE,-
+		IIapi_initTrace=PROCEDURE,-
+		IIapi_termTrace=PROCEDURE,-
+		IIapi_printEvent=PROCEDURE,-
+		IIapi_printStatus=PROCEDURE,-
+		IIapi_tranID2Str=PROCEDURE,-
+		IIapi_nopDisplay=PROCEDURE,-
+		IIapi_uiDispatch=PROCEDURE,-
+		IIapi_validParmCount=PROCEDURE,-
+		IIapi_validPColCount=PROCEDURE,-
+		IIapi_validGColCount=PROCEDURE,-
+		IIapi_validDescriptor=PROCEDURE,-
+		IIapi_cancel=PROCEDURE,-
+		IIapi_catchEvent=PROCEDURE,-
+		IIapi_close=PROCEDURE,-
+		IIapi_commit=PROCEDURE,-
+		IIapi_connect=PROCEDURE,-
+		IIapi_convertData=PROCEDURE,-
+		IIapi_disconnect=PROCEDURE,-
+		IIapi_getCopyMap=PROCEDURE,-
+		IIapi_getColumns=PROCEDURE,-
+		IIapi_getDescriptor=PROCEDURE,-
+		IIapi_getErrorInfo=PROCEDURE,-
+		IIapi_getQueryInfo=PROCEDURE,-
+		IIapi_initialize=PROCEDURE,-
+		IIapi_modifyConnect=PROCEDURE,-
+		IIapi_prepareCommit=PROCEDURE,-
+		IIapi_putColumns=PROCEDURE,-
+		IIapi_putParms=PROCEDURE,-
+		IIapi_query=PROCEDURE,-
+		IIapi_registerXID=PROCEDURE,-
+		IIapi_releaseXID=PROCEDURE,-
+		IIapi_rollback=PROCEDURE,-
+		IIapi_savePoint=PROCEDURE,-
+		IIapi_setConnectParam=PROCEDURE,-
+		IIapi_setDescriptor=PROCEDURE,-
+		IIapi_terminate=PROCEDURE,-
+		IIapi_wait=PROCEDURE,-
+		IIapi_createEnvHndl=PROCEDURE,-
+		IIapi_deleteEnvHndl=PROCEDURE,-
+		IIapi_getEnvHndl=PROCEDURE,-
+		IIapi_isEnvHndl=PROCEDURE,-
+		IIapi_autocommit=PROCEDURE,-
+		IIapi_getevent=PROCEDURE,-
+		IIapi_ns_init=PROCEDURE,- 
+		SPARE, -			! IIapi_jas_init
+		IIapi_sql_init=PROCEDURE,- 
+		IIapi_validnsdescriptor=PROCEDURE,-
+		IIapi_releaseEnv=PROCEDURE,-
+		IIapi_setEnvParam=PROCEDURE,-
+		IIapi_formatData=PROCEDURE,-
+		IIapi_abort=PROCEDURE,-
+		IIsw_cancelevent=PROCEDURE,-
+		IIsw_catchevent=PROCEDURE,-
+		IIsw_close=PROCEDURE,-
+		IIsw_commit=PROCEDURE,-
+		IIsw_connect=PROCEDURE,-
+		IIsw_dbconnect=PROCEDURE,-
+		IIsw_disconnect=PROCEDURE,-
+		IIsw_execprocedure=PROCEDURE,-
+		IIsw_geteventinfo=PROCEDURE,-
+		IIsw_getrowcount=PROCEDURE,-
+		IIsw_initialize=PROCEDURE,-
+		IIsw_preparecommit=PROCEDURE,-
+		IIsw_query=PROCEDURE,-
+		IIsw_queryrepeated=PROCEDURE,-
+		IIsw_raiseevent=PROCEDURE,-
+		IIsw_registerxid=PROCEDURE,-
+		IIsw_releasexid=PROCEDURE,-
+		IIsw_rollback=PROCEDURE,-
+		IIsw_selectloop=PROCEDURE,-
+		IIsw_selectlooprepeated=PROCEDURE,-
+		IIsw_selectsingleton=PROCEDURE,-
+		IIsw_selectsingletonrepeated=PROCEDURE,-
+		IIsw_setconnparam=PROCEDURE,-
+		IIsw_terminate=PROCEDURE,-
+		IIsw_waitevent=PROCEDURE,-
+		IIapi_xaRollback=PROCEDURE,-
+		IIapi_xaCommit=PROCEDURE,-
+		IIapi_xaPrepare=PROCEDURE,-
+		IIapi_xaEnd=PROCEDURE,-
+		IIapi_xaStart=PROCEDURE,-
+		IIapi_position=PROCEDURE,-
+		IIapi_scroll=PROCEDURE,-
+		IIapi_getColumnInfo=PROCEDURE)
+INGLIB:libsaw/library, -
+INGLIB:libiiapi/library, -
+II_LIBQLIB/share, -
+II_COMPATLIB/share

@@ -1,0 +1,306 @@
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<SCRIPT language="JavaScript">
+		var menuTable
+		var menuLevel
+		var position = 0
+		var table_length = 0
+		var level_length = 0
+		var head = '<STYLE>\nBODY {Arial;color:white;font-size="10pt";}\nA:link	{color: black;}\n</STYLE>\n'
+		var bodyProperties = 'bgcolor="#FFFFFF"'
+
+		function print(text)
+		{
+			<!-- #ICE VAR=`:menuWindow` -->.document.write(text)
+		}
+
+		function makeArray(n) {
+			this.length = n
+			for (var i = 1; i <= n; i++) {
+				this[i] = 0
+			}
+			return this
+		}
+
+		function itemLevel()
+		{
+			this.first = 0
+			this.last = 0
+			this.isbranch = false
+		}
+
+		function declareMenu (item_size, level_size) {
+			table_length = item_size
+			level_length = level_size + 1
+			menuTable = new makeArray(table_length)
+			menuLevel = new makeArray(level_length)
+			for (var i = 1; i <= level_length; i++)
+				menuLevel[i] = new itemLevel()
+		}
+
+		function itemList(type, id, name, icon, textColor, link, sorted)
+		{
+			this.type = type
+			this.id = id
+			this.name = name
+			this.first = 0
+			this.next = 0
+			this.levelNext = 0
+			this.right = 0
+			this.opened = false
+			this.icon = icon
+			this.textColor = textColor
+			this.link = link
+			this.sorted = sorted
+		}
+
+		function attach(level, number, ftype, father) 
+		{
+			var father_pos;
+
+			last = menuLevel[level].last
+			if (level > 1 && level <= level_length)
+			{
+				var current = menuLevel[level-1].first
+				while (current != 0)
+				{
+					if (  ftype == menuTable[current].type &&
+								father == menuTable[current].id )
+					{
+							var sort = 0
+							var previous = 0
+
+							if (menuTable[current].sorted == 'yes')
+									sort = menuTable[current].first
+
+							while (sort != 0 &&
+										 menuTable[number].name > menuTable[sort].name)
+							{
+									previous = sort
+									sort = menuTable[sort].next
+							}
+
+							if (previous == 0)
+							{
+								menuTable[number].next = menuTable[current].first
+								menuTable[current].first = number
+							}
+							else 
+							{
+								menuTable[previous].next = number
+								menuTable[number].next = sort
+							}
+							current = 0
+					}
+					else
+						current = menuTable[current].levelNext
+				}
+			}
+			else
+				if (last != 0)
+					menuTable[last].next = number
+
+			if (last == 0)
+				menuLevel[level].first = number
+			else
+				menuTable[last].levelNext = number
+			menuLevel[level].last = number
+		}
+
+		function iteminsert(level, ftype, father, type, id, name, icon, textColor, link, sorted)
+		{
+			position++
+			menuTable[position] = new itemList(type, id, name, icon, textColor, link, sorted)
+			attach(level, position, ftype, father)
+		}
+
+		function displayMenu(item, level, last) 
+		{
+			var first = menuTable[item].first
+						
+			print('<tr>\n')
+			for (var i = 1; i < level; i++)
+			{
+				if (menuLevel[i].isbranch == false)
+					print('<td WIDTH=15><IMG SRC="<!-- #ICE INCLUDE=`empty.gif` -->"></td>\n')
+				else
+					print('<td WIDTH=15><IMG SRC="<!-- #ICE INCLUDE=`nobranch.gif` -->"></td>\n')
+			}
+			
+			if (last == true) 
+			{
+				if (first != 0 && menuTable[item].opened == true)
+					print('<td WIDTH=15><A HREF="javascript:<!-- #ICE VAR=`:menuFrame` -->.setStatus(' + item + ', false); <!-- #ICE VAR=`:menuFrame` -->.refresh()"><IMG BORDER=0 SRC="<!-- #ICE INCLUDE=`lastopened.gif` -->"></A></td>\n')
+				else 
+				{
+					if (first == 0)
+						print('<td WIDTH=15><IMG SRC="<!-- #ICE INCLUDE=`lastleaf.gif` -->"></td>\n')
+					else
+						print('<td WIDTH=15><A HREF="javascript:<!-- #ICE VAR=`:menuFrame` -->.setStatus(' + item + ', true); <!-- #ICE VAR=`:menuFrame` -->.refresh()"><IMG BORDER=0 SRC="<!-- #ICE INCLUDE=`lastclosed.gif` -->"></A></td>\n')
+				}
+			}
+			else
+			{
+				if (first != 0 && menuTable[item].opened == true)
+					print('<td WIDTH=15><A HREF="javascript:<!-- #ICE VAR=`:menuFrame` -->.setStatus(' + item + ', false); <!-- #ICE VAR=`:menuFrame` -->.refresh()"><IMG BORDER=0 SRC="<!-- #ICE INCLUDE=`opened.gif` -->"></A></td>\n')
+				else 
+				{
+					if (first == 0)
+						print('<td WIDTH=15><IMG SRC="<!-- #ICE INCLUDE=`leaf.gif` -->"></td>\n')
+					else
+						print('<td WIDTH=15><A HREF="javascript:<!-- #ICE VAR=`:menuFrame` -->.setStatus(' + item + ', true); <!-- #ICE VAR=`:menuFrame` -->.refresh()"><IMG BORDER=0 SRC="<!-- #ICE INCLUDE=`closed.gif` -->"></A></td>\n')
+				}
+			}
+
+			print('<td WIDTH=15><IMG SRC="' + menuTable[item].icon + '"></td>\n')
+			print('<td WIDTH=3></td>\n') 
+			if (menuTable[item].link != '')
+				print('<td><A HREF="/ice-bin/oiice.<!-- #ICE VAR=`:http_api_ext` -->/iceTutorial/' + menuTable[item].link + '" TARGET="<!-- #ICE VAR=`:infoWindow` -->"><FONT COLOR="' + menuTable[item].textColor + '">' + menuTable[item].name + '</FONT></A></td>\n')
+			else
+				print('<td><FONT COLOR="' + menuTable[item].textColor + '">' + menuTable[item].name + '</FONT></td>\n')
+			print('</tr>\n')
+
+			if (menuTable[item].next == 0)
+				menuLevel[level].isbranch = false
+			
+			if (menuTable[item].opened == true && first > 0)
+			{
+				print('</table>\n<table CELLPADDING=0 CELLSPACING=0>\n');
+				menuLevel[level + 1].isbranch = true
+				while (menuTable[first].next != 0) 
+				{
+					displayMenu(first, level + 1, false)
+					first = menuTable[first].next
+				}
+				displayMenu(first, level + 1, true)
+				print('</table>\n<table CELLPADDING=0 CELLSPACING=0>\n');
+			}
+		}
+
+		function display() {
+			var first = menuLevel[1].first
+
+			print('<HTML>\n<HEAD>\n')
+			print(head);
+			print('</HEAD>\n<BODY ' + bodyProperties + '>\n')
+			print('<SCRIPT language="JavaScript">\n');
+			print('<' + '/SCRIPT>\n');
+
+			print('<table CELLPADDING=0 CELLSPACING=0>\n')
+			menuLevel[1].isbranch = true
+			while (menuTable[first].levelNext != 0) 
+			{
+				displayMenu(first, 1, false)
+				first = menuTable[first].levelNext
+			}
+			menuLevel[1].isbranch = false
+			displayMenu(first, 1, true)
+
+			print('</table>\n')
+			print('</BODY>\n</HTML>\n')
+		}
+
+		function setStatus(item, value) {
+			menuTable[item].opened = value
+		}
+
+		function refresh() {
+			<!-- #ICE VAR=`:menuWindow` -->.document.open()
+			display()
+			<!-- #ICE VAR=`:menuWindow` -->.document.close()
+		}
+
+		function detach(level, i)
+		{
+			if (i <= position)
+			{
+				for (var j = 1; j <= position; j++)
+				{
+					if (menuTable[j].first == i)
+					{
+						menuTable[j].first = menuTable[i].next
+						if (menuTable[j].first == 0)
+							menuTable[j].opened = false;
+					}
+					if (menuTable[j].next == i)
+						menuTable[j].next = menuTable[i].next
+				}
+
+				if (menuLevel[level].first == i)
+						menuLevel[level].first = menuLevel[level].next
+				else
+						for (var j = menuLevel[level].first; j != 0;)
+						{
+							if (menuTable[j].levelNext == i)
+							{
+									menuTable[j].levelNext = menuTable[i].levelNext
+									if (menuLevel[level].last == i)
+										menuLevel[level].last = j
+									j = 0
+							}
+							else
+									j = menuTable[j].levelNext
+						}
+			}
+		}
+
+		function itemfind(level, type, id)
+		{
+			var i = menuLevel[level].first;
+
+			while (i != 0 && (menuTable[i].type != type || menuTable[i].id != id)) 
+				i++
+			return (i)
+		}
+
+		function itemdelete(level, ftype, father, type, id, name, icon, textColor, link, sorted)
+		{
+			var i = itemfind(level, type, id);
+			if (i != 0)
+			{
+				detach(level, i)
+				menuTable[i].type = ''
+				menuTable[i].id = 0
+				menuTable[i].name = ''
+				menuTable[i].first = 0
+				menuTable[i].next = 0
+				menuTable[i].levelNext = 0
+				menuTable[i].right = 0
+				menuTable[i].opened = 0
+				menuTable[i].icon = ''
+				menuTable[i].textColor = ''
+				menuTable[i].link = ''
+				menuTable[i].sorted = ''
+			}
+		}
+
+		function itemupdate(level, ftype, father, type, id, name, icon, textColor, link, sorted)
+		{
+			var i = itemfind(level, type, id);
+			if (i != 0)
+			{
+				detach(level, i)
+				if (name != '' && name != menuTable[i].name)
+					menuTable[i].name = name
+				if (icon != '' && icon != menuTable[i].icon)
+					menuTable[i].icon = icon
+				if (textColor != '' && textColor != menuTable[i].textColor)
+					menuTable[i].textColor = textColor
+				if (link != '' && link != menuTable[i].link)
+					menuTable[i].link = link
+				attach(level, i, ftype, father)
+			}
+		}
+
+		function tree(number) 
+		{
+			var first = menuTable[number].first
+
+			while (first != 0) 
+			{
+				print(menuTable[first].name + '(' + first + ') <br>')
+				tree(first)
+				first = menuTable[first].next
+			}
+		}
+
+</script>

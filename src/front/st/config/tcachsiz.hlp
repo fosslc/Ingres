@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+ Defines the number of entries in the buffer manager closed-table cache.
+ 
+ It determines how many tables will be cached even though they are 
+ closed ( to enable pages relating to these to remain in cache even though 
+ they are not in use ).  This caching mechanism is only needed when running
+ with multiple private caches.
+
+ If the DBMS servers are running in sole-server or shared cache modes,
+ closed tables are not automatically purged from memory unless they are
+ iidbdb catalogs or core system catalogs.  Therefore, this resource
+ will be of little interest to most non-cluster installations.
+
+
+ Default: 40

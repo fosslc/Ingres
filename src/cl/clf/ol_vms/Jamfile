@@ -1,0 +1,21 @@
+#
+# Jamfile file for cl!clf!ol_vms
+#
+#    22-dec-2008 (stegr01)
+#       Itanium VMS port.
+
+SubDir ING_SRC cl clf ol_vms ;
+
+IISUBSYS cl clf ol_vms ;
+
+IILIBRARY COMPATLIB : ollang.roc ol.c ;
+
+if $(VERS) = axm_vms
+{
+   IILIBRARY COMPATLIB : olcall.m64 ;
+}
+else
+{
+   IILIBRARY COMPATLIB : olcall.c ;
+}
+

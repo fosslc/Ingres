@@ -1,0 +1,66 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame contains a table field listing all forms in the database
+owned by you or by the DBA.  The "Name" column lists the form names
+while the "Owner" column either lists your username, or "DBA" for
+forms owned by the DBA.  The "Short Remark" column lists a short
+description of each form.
+
+To create a new form, use the "Create" menu command.  To perform one
+of the menu operations on an existing form, first position the cursor
+to the row containing the name of the form of interest by using the
+cursor keys or the table field scrolling keys.  After the cursor has
+been positioned on the row containing the form of interest, select the
+menu command.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Create          Create a new form.  You will be further prompted
+                        to determine how to create the form.
+
+        Destroy         Deletes the form you have selected from the database.
+                        VIFRED verifies that you own the form and then removes
+                        that form from the forms catalogs.  You will be
+                        asked to confirm this decision.  You may only destroy
+                        forms that you own.
+
+        Edit            Edit the selected form.  Go to the VIFRED layout
+                        frame to allow you to change the form.
+
+        Rename          Changes the name of the form you have selected.
+                        VIFRED prompts you for the new name of the form.
+                        If you immediately depress the RETURN key,
+                        VIFRED cancels the command and returns your
+                        cursor to the table field.  If you enter
+                        a correct name, VIFRED changes the name of
+                        the form in the database.  You may only rename
+                        forms that you own.
+
+        MoreInfo        Display additional information on the selected
+                        form.  This command brings up a new form that
+                        shows the creation and last modification time
+                        of the form as well as the full short and long
+                        descriptions for the selected form.  You may
+                        change and save the short and long descriptions
+                        in the database at this point.
+
+        Utilities       Brings up a submenu of utility functions to perform
+                        on the selected form.  You can compile the form,
+                        print it to a listable file, or manipulate the
+                        QBFNames associated with the form.
+
+        Go              Invoke QBF on the selected form.  If a QBFName
+                        that has the same name as the selected form is
+                        found in the database, VIFRED will invoke QBF
+                        with the found QBFName.  Otherwise, VIFRED
+                        will prompt for the name of a table in the
+                        database to use with the selected form when
+                        QBF is invoked.  Pressing just the RETURN key
+                        in response to this prompt will cancel this
+                        command.  The entered table name must exist
+                        in the database in order for QBF to be invoked.
+
+        Help            Access the Ingres Help facility.
+
+        Quit            Exits from VIFRED.

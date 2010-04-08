@@ -1,0 +1,27 @@
+# i64_hpu is a 64+32 reverse hybrid build of the Itanium HP-UX platform.
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+#	27-Aug-2009 (frima01) SIR 122138
+#	    Changed BUILD_ARCH and XERCES_ARCH to 64+32 and 64.
+
+
+#set: config32 i64_hpu
+#set: config64 i64_hpu
+#set: option DELIM_TEST
+#set: option DBL
+#set: option B64
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;		#set: option SVR_AR
+BUILD_ICE = "TRUE" ;		#set: option BUILD_ICE
+
+BUILD_ARCH = "64+32" ; 		#set: arch 64+32
+XERCES_ARCH ?= 64 ;
+
+PLATFORM_JAMDEFS = i64_hpu ;

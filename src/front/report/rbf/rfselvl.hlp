@@ -1,0 +1,26 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may choose the selection criteria for the current 
+column.  During report execution, the selection criteria specifies 
+how the report will prompt for values of this column.  The data reported 
+will be based on the values entered by the user.
+
+To specify a selection criteria, scroll to the desired selection, and choose 
+the Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	None		Do not prompt for any value.
+	Value		Prompt for a specific value.
+	Range		Prompt for a minimum and a maximum values.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select	        During the report execution, prompt for values of 
+			the current column using the specified criteria.
+			
+        Cancel          Return to the Column Options frame without selecting 
+			a selection criteria.
+
+        Help            Print this message.

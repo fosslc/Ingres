@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This popup form is asking you to enter a default value for the current
+column. The value you enter will depend on the datatype of the current
+column, but it should never be greater than 1000 characters long.
+
+Once you have entered a default value, select menuitem "OK".
+If you wish to leave this screen without entering a default value,
+then select menuitem "Cancel".
+
+The menu commands are:
+
+        MENU COMMAND    DESCRIPTION
+        ------------    -----------
+	OK		A default value has been entered. Use this value as
+			the default value for this column when this table is
+			created.
+	Cancel		Cancel this operation, and return to prior
+			screen.
+	Help		Display this help file.

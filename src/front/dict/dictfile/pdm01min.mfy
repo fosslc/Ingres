@@ -1,0 +1,16 @@
+MODIFY ii_dbd_acl to BTREE UNIQUE ON
+    folder_id, entity_id, acl_sequence
+
+MODIFY ii_dbd_identifiers TO BTREE UNIQUE
+    ON folder_id, entity_id, identifier_id
+
+MODIFY ii_dbd_locations to BTREE UNIQUE
+    ON folder_id, entity_id, sequence
+
+MODIFY ii_dbd_rightslist TO BTREE UNIQUE
+    ON folder_id, entity_id, rightslist_id,
+        identifier_id, rl_sequence
+
+MODIFY ii_dbd_table_char to BTREE UNIQUE ON
+    folder_id, entity_id
+

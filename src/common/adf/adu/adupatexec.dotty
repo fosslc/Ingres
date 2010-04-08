@@ -1,0 +1,977 @@
+/*
+** adupatexec.dotty - Pattern match state diagram
+**
+** History:
+**	28-May-2008 (kiria01) SIR120473
+**	   Created for large object LIKE support
+**	30-Dec-2008 (kiria01) SIR120473
+**	   Provide FNDLIT to relieve thrashing contexts with
+**	   ...%LIT... type scans.
+**	08-Jan-2009 (kiria01) SIR120473
+**	    Revise prior PAT_FNDLIT chnage to stop it skipping text that
+**	    had part matched the pattern.
+**	30-May-2009 (kiria01) b122128
+**	    Allow fast path for PAT_LIT and PAT_FNDLIT when we are in the
+**	    end (or only) block.
+**	    Add PAT_ENDLIT for when pat pinned on LHS.
+*/
+/*ALL*/	digraph "PatMat" {
+/*ALL*/	node [shape=ellipse,fontname="Times-Roman"]
+rankdir=TB
+/*ALL*/	concentrate=false
+/*ALL*/	{rank=min;START}
+/*ALL*/	{rank=max;SUCCESS;FAIL1;FAIL;FAILm1}
+ratio=1
+size="6,6"
+/*ALL*/	edge [labeldistance=2]
+/*ALL*/
+/*ALL*/	START [label="START",comment="REFER",fontstyle=bold,shape=circle]
+/*ALL*/	SUCCESS [label="BRANCH\nSUCCESS",comment="0",fontstyle=bold,shape=circle]
+/*ALL*/	FAIL1 [label="BRANCH\nFAIL >",comment="1",fontstyle=bold,shape=circle]
+/*ALL*/	FAIL [label="BRANCH\nFAIL ?",comment="last_diff",fontstyle=bold,shape=circle]
+/*ALL*/	FAILm1 [label="BRANCH\nFAIL <",comment="-1",fontstyle=bold,shape=circle]
+
+/*ALL*/	START->GetPatOP
+
+/*ALL*/	GetPatOP [label="get pat op",comment="STATELOOP",shape=hexagon]
+GetPatOP->PAT_NOP	[label="NOP",		comment=" 0"]
+GetPatOP->PAT_CASE	[label="CASE",		comment=" 1"]
+GetPatOP->PAT_LABEL	[label="LABEL",		comment=" 2"]
+GetPatOP->PAT_JUMP	[label="JUMP",		comment=" 3"]
+GetPatOP->PAT_FOR_N_M	[label="FOR",		comment=" 4"]
+GetPatOP->PAT_NEXT	[label="NEXT",		comment=" 5"]
+GetPatOP->PAT_NEXT_W	[label="NEXT_W",	comment=" 6"]
+GetPatOP->PAT_COMMENT	[label="COMMENT",	comment=" 7"]
+GetPatOP->PAT_FINAL	[label="FINAL",		comment=" 8"]
+GetPatOP->PAT_BUGCHK	[label="BUGCHK",	comment=" 9"]
+GetPatOP->PAT_MATCH	[label="MATCH",		comment="10"]
+GetPatOP->PAT_NOMATCH	[label="NOMATCH",	comment="11"]
+GetPatOP->PAT_TRACE	[label="TRACE",		comment="12"]
+GetPatOP->PAT_NOTRACE	[label="NOTRACE",	comment="13"]
+GetPatOP->PAT_BOS	[label="^^",		comment="14"]
+GetPatOP->PAT_EOS	[label="$$",		comment="15"]
+GetPatOP->PAT_BOW	[label="\<",		comment="16"]
+GetPatOP->PAT_EOW	[label="\>",		comment="17"]
+GetPatOP->PAT_BOM	[label="\(",		comment="18"]
+GetPatOP->PAT_EOM	[label="\)",		comment="19"]
+GetPatOP->PAT_BEGIN	[label="^",		comment="20"]
+GetPatOP->PAT_END	[label="$",		comment="21"]
+GetPatOP->PAT_LIT	[label="literal",	comment="22"]
+GetPatOP->PAT_ANY_1	[label=".",		comment="23"]
+GetPatOP->PAT_ANY_N	[label=".{n}",		comment="24"]
+GetPatOP->PAT_ANY_0_W	[label=".*",		comment="25"]
+GetPatOP->PAT_ANY_1_W	[label=".+",		comment="26"]
+GetPatOP->PAT_ANY_N_W	[label=".{n,}",		comment="27"]
+GetPatOP->PAT_ANY_N_M	[label=".{n,m}",	comment="28"]
+GetPatOP->PAT_SET_1	[label="[]",		comment="29"]
+GetPatOP->PAT_SET_N	[label="[]{n}",		comment="30"]
+GetPatOP->PAT_SET_0_W	[label="[]*",		comment="31"]
+GetPatOP->PAT_SET_1_W	[label="[]+",		comment="32"]
+GetPatOP->PAT_SET_N_W	[label="[]{n,}",	comment="33"]
+GetPatOP->PAT_SET_N_M	[label="[]{n,m}",	comment="34"]
+GetPatOP->PAT_BSET_1	[label="[]",		comment="35"]
+GetPatOP->PAT_BSET_N	[label="[]{n}",		comment="36"]
+GetPatOP->PAT_BSET_0_W	[label="[]*",		comment="37"]
+GetPatOP->PAT_BSET_1_W	[label="[]+",		comment="38"]
+GetPatOP->PAT_BSET_N_W	[label="[]{n,}",	comment="39"]
+GetPatOP->PAT_BSET_N_M	[label="[]{n,m}",	comment="40"]
+GetPatOP->PAT_NSET_1	[label="[^]",		comment="41"]
+GetPatOP->PAT_NSET_N	[label="[^]{n}",	comment="42"]
+GetPatOP->PAT_NSET_0_W	[label="[^]*",		comment="43"]
+GetPatOP->PAT_NSET_1_W	[label="[^]+",		comment="44"]
+GetPatOP->PAT_NSET_N_W	[label="[^]{n,}",	comment="45"]
+GetPatOP->PAT_NSET_N_M	[label="[^]{n,m}",	comment="46"]
+GetPatOP->PAT_NBSET_1	[label="[^]",		comment="47"]
+GetPatOP->PAT_NBSET_N	[label="[^]{n}",	comment="48"]
+GetPatOP->PAT_NBSET_0_W	[label="[^]*",		comment="49"]
+GetPatOP->PAT_NBSET_1_W	[label="[^]+",		comment="50"]
+GetPatOP->PAT_NBSET_N_W	[label="[^]{n,}",	comment="51"]
+GetPatOP->PAT_NBSET_N_M	[label="[^]{n,m}",	comment="52"]
+GetPatOP->PAT_FNDLIT	[label="fndlit",	comment="53"]
+GetPatOP->PAT_ENDLIT	[label="endlit",	comment="54"]
+
+/*ALL*/ GetPatOP->PAT_FINAL [label="no",comment="default"]
+
+/*ALL*/ PAT_FINAL [label="ch avail?",comment="CHAV",style=bold]
+/*ALL*/ PAT_FINAL->SUCCESS[taillabel="no"]
+/*ALL*/ PAT_FINAL->FAIL1[taillabel="yes"]
+/*###############################################################################*/
+
+PAT_NOP [label="NOP",comment="REFER",shape=box]
+PAT_NOP->GetPatOP[]
+
+PAT_CASE [label="CASE",comment="CASE",shape=box]
+PAT_CASE->GetPatOP[]
+
+PAT_LABEL [label="LABEL",comment="LABEL",shape=box]
+PAT_LABEL->GetPatOP[]
+
+PAT_JUMP [label="JUMP",comment="JUMP",shape=box]
+PAT_JUMP->GetPatOP[]
+
+PAT_FOR_N_M [label="FOR",comment="FOR",shape=box]
+PAT_FOR_N_M->GetPatOP[]
+
+PAT_NEXT [label="NEXT",comment="NEXT",shape=box]
+PAT_NEXT->GetPatOP[]
+
+PAT_NEXT_W [label="NEXT_W",comment="NEXT_W",shape=box]
+PAT_NEXT_W->GetPatOP[]
+
+PAT_COMMENT [label="COMMENT",comment="COMMENT",shape=box]
+PAT_COMMENT->GetPatOP[]
+
+PAT_BUGCHK [label="BUGCHK",comment="PAT_BUGCHK",shape=box]
+PAT_BUGCHK->GetPatOP[]
+
+PAT_MATCH [label="MATCH",comment="REFER",shape=box]
+PAT_MATCH->SUCCESS[]
+
+PAT_NOMATCH [label="NOMATCH",comment="REFER",shape=box]
+PAT_NOMATCH->FAIL1[]
+
+PAT_TRACE [label="TRACE",comment="PAT_TRACE",shape=box]
+PAT_TRACE->GetPatOP[]
+
+PAT_NOTRACE [label="NOTRACE",comment="PAT_NOTRACE",shape=box]
+PAT_NOTRACE->GetPatOP[]
+
+PAT_BOS [label="At BOS?",comment="PAT_BOS"]
+PAT_BOS->FAILm1[taillabel="no"]
+PAT_BOS->GetPatOP[taillabel="yes"]
+
+PAT_EOS [label="At EOS?",comment="PAT_EOS"]
+PAT_EOS->FAILm1[taillabel="no"]
+PAT_EOS->GetPatOP[taillabel="yes"]
+
+PAT_BOW [label="At Beginning\nof word?",comment="PAT_BOW"]
+PAT_BOW->FAILm1[taillabel="no"]
+PAT_BOW->GetPatOP[taillabel="yes"]
+
+PAT_EOW [label="At End\nof word?",comment="PAT_EOW"]
+PAT_EOW->FAILm1[taillabel="no"]
+PAT_EOW->GetPatOP[taillabel="yes"]
+
+PAT_BOM [label="Tag start",comment="PAT_BOM",shape=box]
+PAT_BOM->GetPatOP[taillabel="yes"]
+
+PAT_EOM [label="Tag end",comment="PAT_EOM",shape=box]
+PAT_EOM->GetPatOP[]
+
+PAT_BEGIN [label="At BEGIN?",comment="PAT_BEGIN"]
+PAT_BEGIN->FAILm1[taillabel="no"]
+PAT_BEGIN->GetPatOP[taillabel="yes"]
+
+PAT_END [label="At END?",comment="PAT_END"]
+PAT_END->FAILm1[taillabel="no"]
+PAT_END->GetPatOP[taillabel="yes"]
+
+PAT_LIT [label="Init literal\nloop state",shape=box,comment="PATINIT"]
+PAT_LIT->PAT_LIT_EndChk
+
+/* If EOF seen then we can dispense with stall logic and use fast */
+/* comparisons */
+PAT_LIT_EndChk [label="EOF seen?",comment="EOFSEEN"]
+PAT_LIT_EndChk->PAT_LIT_Loop[taillabel="no"]
+PAT_LIT_EndChk->PAT_LIT_F_Loop[taillabel="yes"]
+
+PAT_LIT_F_Loop [label="Room for PAT?",comment="PATROOM"]
+PAT_LIT_F_Loop->FAILm1[taillabel="no"]
+PAT_LIT_F_Loop->PAT_LIT_F_ChMat[taillabel="yes"]
+
+PAT_LIT_F_ChMat [label="full pat match?",comment="CMPWHLPAT"]
+PAT_LIT_F_ChMat->PAT_LIT_F_Act[comment="CYC",taillabel="yes"]
+PAT_LIT_F_ChMat->FAIL1[taillabel="no"]
+
+PAT_LIT_F_Act [label="ch+=patlen",shape=box,comment="CHSKPPAT"]
+PAT_LIT_F_Act->GetPatOP
+
+
+/* If EOF not seen then stall logic is required and the slower compares */
+PAT_LIT_Loop [label="More LITPAT?",comment="MOREPAT"]
+PAT_LIT_Loop->GetPatOP[taillabel="no"]
+PAT_LIT_Loop->PAT_LIT_ChAv[taillabel="yes"]
+
+PAT_LIT_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_LIT_ChAv->FAILm1[taillabel="no"]
+PAT_LIT_ChAv->PAT_LIT_ChMat[taillabel="yes"]
+
+PAT_LIT_ChMat [label="ch pat match?",comment="DIFFPAT"]
+PAT_LIT_ChMat->PAT_LIT_Act[comment="CYC",taillabel="yes"]
+PAT_LIT_ChMat->FAIL[taillabel="no"]
+
+PAT_LIT_Act [label="ch++\npat++",shape=box,comment="CHINC_PATINC"]
+PAT_LIT_Act->PAT_LIT_Loop
+
+
+PAT_FNDLIT [label="Init literal\nloop state",shape=box,comment="PATINIT"]
+PAT_FNDLIT->PAT_FNDLIT_EndChk
+
+/* If EOF seen then we can dispense with stall logic and use fast */
+/* comparisons */
+PAT_FNDLIT_EndChk [label="EOF seen?",comment="EOFSEEN"]
+PAT_FNDLIT_EndChk->PAT_FNDLIT_Loop[taillabel="no"]
+PAT_FNDLIT_EndChk->PAT_FNDLIT_F_Loop[taillabel="yes"]
+
+PAT_FNDLIT_F_Loop [label="Room for PAT?",comment="PATROOM"]
+PAT_FNDLIT_F_Loop->FAILm1[taillabel="no"]
+PAT_FNDLIT_F_Loop->PAT_FNDLIT_F_ChMat[taillabel="yes"]
+
+PAT_FNDLIT_F_ChMat [label="full pat match?",comment="CMPWHLPAT"]
+PAT_FNDLIT_F_ChMat->PAT_FNDLIT_F_Act[comment="CYC",taillabel="yes"]
+PAT_FNDLIT_F_ChMat->PAT_FNDLIT_F_Act1[taillabel="no"]
+
+PAT_FNDLIT_F_Act [label="ch+=patlen",shape=box,comment="CHSKPPAT"]
+PAT_FNDLIT_F_Act->GetPatOP
+
+PAT_FNDLIT_F_Act1 [label="ch++",shape=box,comment="CHINC"]
+PAT_FNDLIT_F_Act1->PAT_FNDLIT_F_Loop
+
+
+/* If EOF not seen then stall logic is required and the slower compares */
+PAT_FNDLIT_Loop [label="More LITPAT?",comment="MOREPAT"]
+PAT_FNDLIT_Loop->GetPatOP[taillabel="no"]
+PAT_FNDLIT_Loop->PAT_FNDLIT_ChAv[taillabel="yes"]
+
+PAT_FNDLIT_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_FNDLIT_ChAv->FAILm1[taillabel="no"]
+PAT_FNDLIT_ChAv->PAT_FNDLIT_ChMat[taillabel="yes"]
+
+PAT_FNDLIT_ChMat [label="ch pat match?",comment="DIFFPAT"]
+PAT_FNDLIT_ChMat->PAT_FNDLIT_Act[comment="CYC",taillabel="yes"]
+PAT_FNDLIT_ChMat->PAT_FNDLIT_NotYet[taillabel="no"]
+
+PAT_FNDLIT_Act [label="ch++\npat++",shape=box,comment="CHINC_PATINC"]
+PAT_FNDLIT_Act->PAT_FNDLIT_Loop
+
+PAT_FNDLIT_NotYet [label="Reset literal",shape=box,comment="PATRESET"]
+PAT_FNDLIT_NotYet->PAT_FNDLIT_Loop
+
+
+PAT_ENDLIT [label="Init literal\nloop state",shape=box,comment="PATINIT"]
+PAT_ENDLIT->PAT_ENDLIT_EndChk
+
+/* If EOF seen then we can dispense with stall logic and use fast */
+/* comparisons */
+PAT_ENDLIT_EndChk [label="EOF close?",comment="EOFCLOSE",style=bold]
+PAT_ENDLIT_EndChk->FAILm1[taillabel="no"]
+PAT_ENDLIT_EndChk->PAT_ENDLIT_EndChk2[taillabel="yes"]
+
+PAT_ENDLIT_EndChk2 [label="EOF seen?",comment="EOFSEEN",style=bold]
+PAT_ENDLIT_EndChk2->PAT_ENDLIT_Act[taillabel="no"]
+PAT_ENDLIT_EndChk2->PAT_ENDLIT_F_Act[taillabel="yes"]
+
+PAT_ENDLIT_F_Act [label="Position read",shape=box,comment="ENDPOS"]
+PAT_ENDLIT_F_Act->PAT_ENDLIT_F_ChMat
+
+PAT_ENDLIT_F_ChMat [label="full pat match?",comment="CMPWHLPAT"]
+PAT_ENDLIT_F_ChMat->SUCCESS[comment="CYC",taillabel="yes"]
+PAT_ENDLIT_F_ChMat->FAIL1[taillabel="no"]
+
+
+/* If EOF not seen then stall logic is required and the slower compares */
+PAT_ENDLIT_Act [label="Position read",shape=box,comment="ENDPOS"]
+PAT_ENDLIT_Act->PAT_ENDLIT_Loop
+
+PAT_ENDLIT_Loop [label="More ENDPAT?",comment="MOREPAT"]
+PAT_ENDLIT_Loop->GetPatOP[taillabel="no"]
+PAT_ENDLIT_Loop->PAT_ENDLIT_ChAv[taillabel="yes"]
+
+PAT_ENDLIT_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_ENDLIT_ChAv->FAILm1[taillabel="no"]
+PAT_ENDLIT_ChAv->PAT_ENDLIT_ChMat[taillabel="yes"]
+
+PAT_ENDLIT_ChMat [label="ch pat match?",comment="DIFFPAT"]
+PAT_ENDLIT_ChMat->PAT_ENDLIT_Act2[comment="CYC",taillabel="yes"]
+PAT_ENDLIT_ChMat->FAIL[taillabel="no"]
+
+PAT_ENDLIT_Act2 [label="ch++\npat++",shape=box,comment="CHINC_PATINC"]
+PAT_ENDLIT_Act2->PAT_ENDLIT_Loop
+
+/************* ANY **************/
+
+PAT_ANY_1 [label="ch avail?",comment="CHAV",style=bold]
+PAT_ANY_1->PAT_ANY_1_Act[comment="ACYC",taillabel="yes"]
+PAT_ANY_1->FAILm1[taillabel="no"]
+
+PAT_ANY_1_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_ANY_1_Act->GetPatOP
+
+PAT_ANY_N [label="Init set\nloop state",shape=box,comment="N0"]
+PAT_ANY_N->PAT_ANY_N_ChN
+
+PAT_ANY_N_ChN [label="N > 0?",comment="NGT0"]
+PAT_ANY_N_ChN->GetPatOP[taillabel="no"]
+PAT_ANY_N_ChN->PAT_ANY_N_ChAv[taillabel="yes"]
+
+PAT_ANY_N_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_ANY_N_ChAv->PAT_ANY_N_Act[comment="CYC",taillabel="yes"]
+PAT_ANY_N_ChAv->FAILm1[taillabel="no"]
+
+PAT_ANY_N_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_ANY_N_Act->PAT_ANY_N_ChN
+
+PAT_ANY_0_W [label="Fork",shape=triangle]
+PAT_ANY_0_W->GetPatOP[label="parent",color=red]
+PAT_ANY_0_W->PAT_ANY_0_W_ChAv[label="child",color=blue]
+
+PAT_ANY_0_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_ANY_0_W_ChAv->PAT_ANY_0_W_Act[comment="CYC",taillabel="yes"]
+PAT_ANY_0_W_ChAv->FAILm1[taillabel="no"]
+
+PAT_ANY_0_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_ANY_0_W_Act->PAT_ANY_0_W
+
+PAT_ANY_1_W [label="ch avail?",comment="CHAV",style=bold]
+PAT_ANY_1_W->PAT_ANY_1_W_Act[comment="ACYC",taillabel="yes"]
+PAT_ANY_1_W->FAILm1[taillabel="no"]
+
+PAT_ANY_1_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_ANY_1_W_Act->PAT_ANY_1_W_Fork
+
+PAT_ANY_1_W_Fork [label="Fork",shape=triangle]
+PAT_ANY_1_W_Fork->GetPatOP[label="parent",color=red]
+PAT_ANY_1_W_Fork->PAT_ANY_1_W_ChAv[label="child",color=blue]
+
+PAT_ANY_1_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_ANY_1_W_ChAv->PAT_ANY_1_W_Act2[comment="CYC",taillabel="yes"]
+PAT_ANY_1_W_ChAv->GetPatOP[tailport=s,taillabel="no"]
+
+PAT_ANY_1_W_Act2 [label="ch++",shape=box,comment="CHINC"]
+PAT_ANY_1_W_Act2->PAT_ANY_1_W_Fork
+
+PAT_ANY_N_W [label="Init loop\ncounter",shape=box,comment="N0"]
+PAT_ANY_N_W->PAT_ANY_N_W_ChN
+
+PAT_ANY_N_W_ChN [label="N > 0?",comment="NGT0"]
+PAT_ANY_N_W_ChN->PAT_ANY_N_W_Fork[taillabel="no"]
+PAT_ANY_N_W_ChN->PAT_ANY_N_W_ChAv[taillabel="yes"]
+
+PAT_ANY_N_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_ANY_N_W_ChAv->PAT_ANY_N_W_Act[comment="CYC",taillabel="yes"]
+PAT_ANY_N_W_ChAv->FAILm1[taillabel="no"]
+
+PAT_ANY_N_W_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_ANY_N_W_Act->PAT_ANY_N_W_ChN
+
+
+PAT_ANY_N_W_Fork [label="Fork",shape=triangle]
+PAT_ANY_N_W_Fork->GetPatOP[label="parent",color=red]
+PAT_ANY_N_W_Fork->PAT_ANY_N_W_ChAv2[label="child",color=blue]
+
+PAT_ANY_N_W_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_ANY_N_W_ChAv2->PAT_ANY_N_W_Act2[comment="CYC",taillabel="yes"]
+PAT_ANY_N_W_ChAv2->GetPatOP[tailport=s,taillabel="no",comment="Not sure??"]
+
+PAT_ANY_N_W_Act2 [label="ch++",shape=box,comment="CHINC"]
+PAT_ANY_N_W_Act2->PAT_ANY_N_W_Fork
+
+
+PAT_ANY_N_M [label="Init loop\ncounters",shape=box,comment="NM0"]
+PAT_ANY_N_M->PAT_ANY_N_M_ChN
+
+PAT_ANY_N_M_ChN [label="N > 0?",comment="NGT0"]
+PAT_ANY_N_M_ChN->PAT_ANY_N_M_ChM[taillabel="no"]
+PAT_ANY_N_M_ChN->PAT_ANY_N_M_ChAv[taillabel="yes"]
+
+PAT_ANY_N_M_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_ANY_N_M_ChAv->PAT_ANY_N_M_Act[comment="CYC",taillabel="yes"]
+PAT_ANY_N_M_ChAv->FAILm1[taillabel="no"]
+
+PAT_ANY_N_M_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_ANY_N_M_Act->PAT_ANY_N_M_ChN
+
+PAT_ANY_N_M_ChM [label="M > 0?",comment="MGT0"]
+PAT_ANY_N_M_ChM->GetPatOP[taillabel="no"]
+PAT_ANY_N_M_ChM->PAT_ANY_N_M_Act2[taillabel="yes"]
+
+PAT_ANY_N_M_Act2 [label="m--",shape=box,comment="MDEC"]
+PAT_ANY_N_M_Act2->PAT_ANY_N_M_Fork
+
+PAT_ANY_N_M_Fork [label="Fork",shape=triangle]
+PAT_ANY_N_M_Fork->GetPatOP[label="parent",color=red]
+PAT_ANY_N_M_Fork->PAT_ANY_N_M_ChAv2[label="child",color=blue]
+
+PAT_ANY_N_M_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_ANY_N_M_ChAv2->PAT_ANY_N_M_Act3[comment="CYC",taillabel="yes"]
+PAT_ANY_N_M_ChAv2->FAILm1[taillabel="no"]
+
+PAT_ANY_N_M_Act3 [label="nch++",shape=box,comment="CHINC"]
+PAT_ANY_N_M_Act3->PAT_ANY_N_M_ChM
+
+/************* SET **************/
+
+PAT_SET_1 [label="ch avail?",comment="CHAV",style=bold]
+PAT_SET_1->FAILm1[taillabel="no"]
+PAT_SET_1->PAT_SET_1_Mat[taillabel="yes"]
+
+PAT_SET_1_Mat [label="ch in set?",comment="CHINSET"]
+PAT_SET_1_Mat->PAT_SET_1_Act[comment="CYC",taillabel="yes"]
+PAT_SET_1_Mat->FAILm1[taillabel="no"]
+
+PAT_SET_1_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_SET_1_Act->GetPatOP
+
+
+PAT_SET_N [label="Init set\nloop state",shape=box,comment="N0"]
+PAT_SET_N->PAT_SET_N_ChN
+
+PAT_SET_N_ChN [label="N > 0?",comment="NGT0"]
+PAT_SET_N_ChN->GetPatOP[taillabel="no"]
+PAT_SET_N_ChN->PAT_SET_N_ChAv[taillabel="yes"]
+
+PAT_SET_N_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_SET_N_ChAv->FAILm1[taillabel="no"]
+PAT_SET_N_ChAv->PAT_SET_N_Mat[taillabel="yes"]
+
+PAT_SET_N_Mat [label="ch in set?",comment="CHINSET"]
+PAT_SET_N_Mat->PAT_SET_N_Act[comment="CYC",taillabel="yes"]
+PAT_SET_N_Mat->FAILm1[taillabel="no"]
+
+PAT_SET_N_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_SET_N_Act->PAT_SET_N_ChN
+
+
+PAT_SET_0_W [label="Fork",shape=triangle]
+PAT_SET_0_W->GetPatOP[label="parent",color=red]
+PAT_SET_0_W->PAT_SET_0_W_ChAv[label="child",color=blue]
+
+PAT_SET_0_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_SET_0_W_ChAv->FAILm1[taillabel="no"]
+PAT_SET_0_W_ChAv->PAT_SET_0_W_Mat[taillabel="yes"]
+
+PAT_SET_0_W_Mat [label="ch in set?",comment="CHINSET"]
+PAT_SET_0_W_Mat->PAT_SET_0_W_Act[comment="CYC",taillabel="yes"]
+PAT_SET_0_W_Mat->FAILm1[taillabel="no"]
+
+PAT_SET_0_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_SET_0_W_Act->PAT_SET_0_W
+
+
+PAT_SET_1_W [label="ch avail?",comment="CHAV",style=bold]
+PAT_SET_1_W->FAILm1[taillabel="no"]
+PAT_SET_1_W->PAT_SET_1_W_Mat[taillabel="yes"]
+
+PAT_SET_1_W_Mat [label="ch in set?",comment="CHINSET"]
+PAT_SET_1_W_Mat->PAT_SET_1_W_Act[comment="ACYC",taillabel="yes"]
+PAT_SET_1_W_Mat->FAILm1[taillabel="no"]
+
+PAT_SET_1_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_SET_1_W_Act->PAT_SET_1_W_Fork
+
+PAT_SET_1_W_Fork [label="Fork",shape=triangle]
+PAT_SET_1_W_Fork->GetPatOP[label="parent",color=red]
+PAT_SET_1_W_Fork->PAT_SET_1_W_ChAv[label="child",color=blue]
+
+PAT_SET_1_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_SET_1_W_ChAv->PAT_SET_1_W_Mat[comment="CYC",taillabel="yes"]
+PAT_SET_1_W_ChAv->GetPatOP[tailport=s,taillabel="no",labeldistance=2]
+
+
+PAT_SET_N_W [label="Init loop\ncounter",shape=box,comment="N0"]
+PAT_SET_N_W->PAT_SET_N_W_ChN
+
+PAT_SET_N_W_ChN [label="N > 0?",comment="NGT0"]
+PAT_SET_N_W_ChN->PAT_SET_N_W_Fork[taillabel="no"]
+PAT_SET_N_W_ChN->PAT_SET_N_W_ChAv[taillabel="yes"]
+
+PAT_SET_N_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_SET_N_W_ChAv->FAILm1[taillabel="no"]
+PAT_SET_N_W_ChAv->PAT_SET_N_W_Mat[taillabel="yes"]
+
+PAT_SET_N_W_Mat [label="ch in set?",comment="CHINSET"]
+PAT_SET_N_W_Mat->PAT_SET_N_W_Act[comment="CYC",taillabel="yes"]
+PAT_SET_N_W_Mat->FAILm1[taillabel="no"]
+
+PAT_SET_N_W_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_SET_N_W_Act->PAT_SET_N_W_ChN
+
+PAT_SET_N_W_Fork [label="Fork",shape=triangle]
+PAT_SET_N_W_Fork->GetPatOP[label="parent",color=red]
+PAT_SET_N_W_Fork->PAT_SET_N_W_ChAv2[label="child",color=blue]
+
+PAT_SET_N_W_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_SET_N_W_ChAv2->GetPatOP[taillabel="no",comment="Not sure??"]
+PAT_SET_N_W_ChAv2->PAT_SET_N_W_Mat2[taillabel="yes"]
+
+PAT_SET_N_W_Mat2 [label="ch in set?",comment="CHINSET"]
+PAT_SET_N_W_Mat2->PAT_SET_N_W_Act2[comment="CYC",taillabel="yes"]
+PAT_SET_N_W_Mat2->FAILm1[taillabel="no"]
+
+PAT_SET_N_W_Act2 [label="ch++",shape=box,comment="CHINC"]
+PAT_SET_N_W_Act2->PAT_SET_N_W_Fork
+
+
+PAT_SET_N_M [label="Init loop\ncounters",shape=box,comment="NM0"]
+PAT_SET_N_M->PAT_SET_N_M_ChN
+
+PAT_SET_N_M_ChN [label="N > 0?",comment="NGT0"]
+PAT_SET_N_M_ChN->PAT_SET_N_M_ChM[taillabel="no"]
+PAT_SET_N_M_ChN->PAT_SET_N_M_ChAv[taillabel="yes"]
+
+PAT_SET_N_M_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_SET_N_M_ChAv->FAILm1[taillabel="no"]
+PAT_SET_N_M_ChAv->PAT_SET_N_M_Mat[taillabel="yes"]
+
+PAT_SET_N_M_Mat [label="ch in set?",comment="CHINSET"]
+PAT_SET_N_M_Mat->PAT_SET_N_M_Act[comment="CYC",taillabel="yes"]
+PAT_SET_N_M_Mat->FAILm1[taillabel="no"]
+
+PAT_SET_N_M_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_SET_N_M_Act->PAT_SET_N_M_ChN
+
+PAT_SET_N_M_ChM [label="M > 0?",comment="MGT0"]
+PAT_SET_N_M_ChM->GetPatOP[taillabel="no"]
+PAT_SET_N_M_ChM->PAT_SET_N_M_Act2[taillabel="yes"]
+
+PAT_SET_N_M_Act2 [label="m--",shape=box,comment="MDEC"]
+PAT_SET_N_M_Act2->PAT_SET_N_M_Fork
+
+PAT_SET_N_M_Fork [label="Fork",shape=triangle]
+PAT_SET_N_M_Fork->GetPatOP[label="parent",color=red]
+PAT_SET_N_M_Fork->PAT_SET_N_M_ChAv2[label="child",color=blue]
+
+PAT_SET_N_M_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_SET_N_M_ChAv2->FAILm1[taillabel="no"]
+PAT_SET_N_M_ChAv2->PAT_SET_N_M_Mat2[taillabel="yes"]
+
+PAT_SET_N_M_Mat2 [label="ch in set?",comment="CHINSET"]
+PAT_SET_N_M_Mat2->PAT_SET_N_M_Act3[comment="CYC",taillabel="yes"]
+PAT_SET_N_M_Mat2->FAILm1[taillabel="no"]
+
+PAT_SET_N_M_Act3 [label="nch++",shape=box,comment="CHINC"]
+PAT_SET_N_M_Act3->PAT_SET_N_M_ChM
+
+/************* SET **************/
+
+PAT_BSET_1 [label="ch avail?",comment="CHAV",style=bold]
+PAT_BSET_1->FAILm1[taillabel="no"]
+PAT_BSET_1->PAT_BSET_1_Mat[taillabel="yes"]
+
+PAT_BSET_1_Mat [label="ch in set?",comment="CHINBSET"]
+PAT_BSET_1_Mat->PAT_BSET_1_Act[comment="CYC",taillabel="yes"]
+PAT_BSET_1_Mat->FAILm1[taillabel="no"]
+
+PAT_BSET_1_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_BSET_1_Act->GetPatOP
+
+
+PAT_BSET_N [label="Init set\nloop state",shape=box,comment="N0"]
+PAT_BSET_N->PAT_BSET_N_ChN
+
+PAT_BSET_N_ChN [label="N > 0?",comment="NGT0"]
+PAT_BSET_N_ChN->GetPatOP[taillabel="no"]
+PAT_BSET_N_ChN->PAT_BSET_N_ChAv[taillabel="yes"]
+
+PAT_BSET_N_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_BSET_N_ChAv->FAILm1[taillabel="no"]
+PAT_BSET_N_ChAv->PAT_BSET_N_Mat[taillabel="yes"]
+
+PAT_BSET_N_Mat [label="ch in set?",comment="CHINBSET"]
+PAT_BSET_N_Mat->PAT_BSET_N_Act[comment="CYC",taillabel="yes"]
+PAT_BSET_N_Mat->FAILm1[taillabel="no"]
+
+PAT_BSET_N_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_BSET_N_Act->PAT_BSET_N_ChN
+
+
+PAT_BSET_0_W [label="Fork",shape=triangle]
+PAT_BSET_0_W->GetPatOP[label="parent",color=red]
+PAT_BSET_0_W->PAT_BSET_0_W_ChAv[label="child",color=blue]
+
+PAT_BSET_0_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_BSET_0_W_ChAv->FAILm1[taillabel="no"]
+PAT_BSET_0_W_ChAv->PAT_BSET_0_W_Mat[taillabel="yes"]
+
+PAT_BSET_0_W_Mat [label="ch in set?",comment="CHINBSET"]
+PAT_BSET_0_W_Mat->PAT_BSET_0_W_Act[comment="CYC",taillabel="yes"]
+PAT_BSET_0_W_Mat->FAILm1[taillabel="no"]
+
+PAT_BSET_0_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_BSET_0_W_Act->PAT_BSET_0_W
+
+
+PAT_BSET_1_W [label="ch avail?",comment="CHAV",style=bold]
+PAT_BSET_1_W->FAILm1[taillabel="no"]
+PAT_BSET_1_W->PAT_BSET_1_W_Mat[taillabel="yes"]
+
+PAT_BSET_1_W_Mat [label="ch in set?",comment="CHINBSET"]
+PAT_BSET_1_W_Mat->PAT_BSET_1_W_Act[comment="ACYC",taillabel="yes"]
+PAT_BSET_1_W_Mat->FAILm1[taillabel="no"]
+
+PAT_BSET_1_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_BSET_1_W_Act->PAT_BSET_1_W_Fork
+
+PAT_BSET_1_W_Fork [label="Fork",shape=triangle]
+PAT_BSET_1_W_Fork->GetPatOP[label="parent",color=red]
+PAT_BSET_1_W_Fork->PAT_BSET_1_W_ChAv[label="child",color=blue]
+
+PAT_BSET_1_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_BSET_1_W_ChAv->PAT_BSET_1_W_Mat[comment="CYC",taillabel="yes"]
+PAT_BSET_1_W_ChAv->GetPatOP[tailport=s,taillabel="no",labeldistance=2]
+
+
+PAT_BSET_N_W [label="Init loop\ncounter",shape=box,comment="N0"]
+PAT_BSET_N_W->PAT_BSET_N_W_ChN
+
+PAT_BSET_N_W_ChN [label="N > 0?",comment="NGT0"]
+PAT_BSET_N_W_ChN->PAT_BSET_N_W_Fork[taillabel="no"]
+PAT_BSET_N_W_ChN->PAT_BSET_N_W_ChAv[taillabel="yes"]
+
+PAT_BSET_N_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_BSET_N_W_ChAv->FAILm1[taillabel="no"]
+PAT_BSET_N_W_ChAv->PAT_BSET_N_W_Mat[taillabel="yes"]
+
+PAT_BSET_N_W_Mat [label="ch in set?",comment="CHINBSET"]
+PAT_BSET_N_W_Mat->PAT_BSET_N_W_Act[comment="CYC",taillabel="yes"]
+PAT_BSET_N_W_Mat->FAILm1[taillabel="no"]
+
+PAT_BSET_N_W_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_BSET_N_W_Act->PAT_BSET_N_W_ChN
+
+PAT_BSET_N_W_Fork [label="Fork",shape=triangle]
+PAT_BSET_N_W_Fork->GetPatOP[label="parent",color=red]
+PAT_BSET_N_W_Fork->PAT_BSET_N_W_ChAv2[label="child",color=blue]
+
+PAT_BSET_N_W_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_BSET_N_W_ChAv2->GetPatOP[taillabel="no",comment="Not sure??"]
+PAT_BSET_N_W_ChAv2->PAT_BSET_N_W_Mat2[taillabel="yes"]
+
+PAT_BSET_N_W_Mat2 [label="ch in set?",comment="CHINBSET"]
+PAT_BSET_N_W_Mat2->PAT_BSET_N_W_Act2[comment="CYC",taillabel="yes"]
+PAT_BSET_N_W_Mat2->FAILm1[taillabel="no"]
+
+PAT_BSET_N_W_Act2 [label="ch++",shape=box,comment="CHINC"]
+PAT_BSET_N_W_Act2->PAT_BSET_N_W_Fork
+
+
+PAT_BSET_N_M [label="Init loop\ncounters",shape=box,comment="NM0"]
+PAT_BSET_N_M->PAT_BSET_N_M_ChN
+
+PAT_BSET_N_M_ChN [label="N > 0?",comment="NGT0"]
+PAT_BSET_N_M_ChN->PAT_BSET_N_M_ChM[taillabel="no"]
+PAT_BSET_N_M_ChN->PAT_BSET_N_M_ChAv[taillabel="yes"]
+
+PAT_BSET_N_M_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_BSET_N_M_ChAv->FAILm1[taillabel="no"]
+PAT_BSET_N_M_ChAv->PAT_BSET_N_M_Mat[taillabel="yes"]
+
+PAT_BSET_N_M_Mat [label="ch in set?",comment="CHINBSET"]
+PAT_BSET_N_M_Mat->PAT_BSET_N_M_Act[comment="CYC",taillabel="yes"]
+PAT_BSET_N_M_Mat->FAILm1[taillabel="no"]
+
+PAT_BSET_N_M_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_BSET_N_M_Act->PAT_BSET_N_M_ChN
+
+PAT_BSET_N_M_ChM [label="M > 0?",comment="MGT0"]
+PAT_BSET_N_M_ChM->GetPatOP[taillabel="no"]
+PAT_BSET_N_M_ChM->PAT_BSET_N_M_Act2[taillabel="yes"]
+
+PAT_BSET_N_M_Act2 [label="m--",shape=box,comment="MDEC"]
+PAT_BSET_N_M_Act2->PAT_BSET_N_M_Fork
+
+PAT_BSET_N_M_Fork [label="Fork",shape=triangle]
+PAT_BSET_N_M_Fork->GetPatOP[label="parent",color=red]
+PAT_BSET_N_M_Fork->PAT_BSET_N_M_ChAv2[label="child",color=blue]
+
+PAT_BSET_N_M_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_BSET_N_M_ChAv2->FAILm1[taillabel="no"]
+PAT_BSET_N_M_ChAv2->PAT_BSET_N_M_Mat2[taillabel="yes"]
+
+PAT_BSET_N_M_Mat2 [label="ch in set?",comment="CHINBSET"]
+PAT_BSET_N_M_Mat2->PAT_BSET_N_M_Act3[comment="CYC",taillabel="yes"]
+PAT_BSET_N_M_Mat2->FAILm1[taillabel="no"]
+
+PAT_BSET_N_M_Act3 [label="nch++",shape=box,comment="CHINC"]
+PAT_BSET_N_M_Act3->PAT_BSET_N_M_ChM
+
+/************* NSET **************/
+
+PAT_NSET_1 [label="ch avail?",comment="CHAV",style=bold]
+PAT_NSET_1->FAILm1[taillabel="no"]
+PAT_NSET_1->PAT_NSET_1_Mat[taillabel="yes"]
+
+PAT_NSET_1_Mat [label="ch not in set?",comment="CHNINSET"]
+PAT_NSET_1_Mat->PAT_NSET_1_Act[comment="CYC",taillabel="yes"]
+PAT_NSET_1_Mat->FAILm1[taillabel="no"]
+
+PAT_NSET_1_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_NSET_1_Act->GetPatOP
+
+
+PAT_NSET_N [label="Init set\nloop state",shape=box,comment="N0"]
+PAT_NSET_N->PAT_NSET_N_ChN
+
+PAT_NSET_N_ChN [label="N > 0?",comment="NGT0"]
+PAT_NSET_N_ChN->GetPatOP[taillabel="no"]
+PAT_NSET_N_ChN->PAT_NSET_N_ChAv[taillabel="yes"]
+
+PAT_NSET_N_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NSET_N_ChAv->FAILm1[taillabel="no"]
+PAT_NSET_N_ChAv->PAT_NSET_N_Mat[taillabel="yes"]
+
+PAT_NSET_N_Mat [label="ch not in set?",comment="CHNINSET"]
+PAT_NSET_N_Mat->PAT_NSET_N_Act[comment="CYC",taillabel="yes"]
+PAT_NSET_N_Mat->FAILm1[taillabel="no"]
+
+PAT_NSET_N_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_NSET_N_Act->PAT_NSET_N_ChN
+
+
+PAT_NSET_0_W [label="Fork",shape=triangle]
+PAT_NSET_0_W->GetPatOP[label="parent",color=red]
+PAT_NSET_0_W->PAT_NSET_0_W_ChAv[label="child",color=blue]
+
+PAT_NSET_0_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NSET_0_W_ChAv->FAILm1[taillabel="no"]
+PAT_NSET_0_W_ChAv->PAT_NSET_0_W_Mat[taillabel="yes"]
+
+PAT_NSET_0_W_Mat [label="ch not in set?",comment="CHNINSET"]
+PAT_NSET_0_W_Mat->PAT_NSET_0_W_Act[comment="CYC",taillabel="yes"]
+PAT_NSET_0_W_Mat->FAILm1[taillabel="no"]
+
+PAT_NSET_0_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_NSET_0_W_Act->PAT_NSET_0_W
+
+
+PAT_NSET_1_W [label="ch avail?",comment="CHAV",style=bold]
+PAT_NSET_1_W->FAILm1[taillabel="no"]
+PAT_NSET_1_W->PAT_NSET_1_W_Mat[taillabel="yes"]
+
+PAT_NSET_1_W_Mat [label="ch not in set?",comment="CHNINSET"]
+PAT_NSET_1_W_Mat->PAT_NSET_1_W_Act[comment="ACYC",taillabel="yes"]
+PAT_NSET_1_W_Mat->FAILm1[taillabel="no"]
+
+PAT_NSET_1_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_NSET_1_W_Act->PAT_NSET_1_W_Fork
+
+PAT_NSET_1_W_Fork [label="Fork",shape=triangle]
+PAT_NSET_1_W_Fork->GetPatOP[label="parent",color=red]
+PAT_NSET_1_W_Fork->PAT_NSET_1_W_ChAv[label="child",color=blue]
+
+PAT_NSET_1_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NSET_1_W_ChAv->PAT_NSET_1_W_Mat[comment="CYC",taillabel="yes"]
+PAT_NSET_1_W_ChAv->GetPatOP[tailport=s,taillabel="no",labeldistance=2]
+
+
+PAT_NSET_N_W [label="Init loop\ncounter",shape=box,comment="N0"]
+PAT_NSET_N_W->PAT_NSET_N_W_ChN
+
+PAT_NSET_N_W_ChN [label="N > 0?",comment="NGT0"]
+PAT_NSET_N_W_ChN->PAT_NSET_N_W_Fork[taillabel="no"]
+PAT_NSET_N_W_ChN->PAT_NSET_N_W_ChAv[taillabel="yes"]
+
+PAT_NSET_N_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NSET_N_W_ChAv->FAILm1[taillabel="no"]
+PAT_NSET_N_W_ChAv->PAT_NSET_N_W_Mat[taillabel="yes"]
+
+PAT_NSET_N_W_Mat [label="ch not in set?",comment="CHNINSET"]
+PAT_NSET_N_W_Mat->PAT_NSET_N_W_Act[comment="CYC",taillabel="yes"]
+PAT_NSET_N_W_Mat->FAILm1[taillabel="no"]
+
+PAT_NSET_N_W_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_NSET_N_W_Act->PAT_NSET_N_W_ChN
+
+PAT_NSET_N_W_Fork [label="Fork",shape=triangle]
+PAT_NSET_N_W_Fork->GetPatOP[label="parent",color=red]
+PAT_NSET_N_W_Fork->PAT_NSET_N_W_ChAv2[label="child",color=blue]
+
+PAT_NSET_N_W_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_NSET_N_W_ChAv2->GetPatOP[taillabel="no",comment="Not sure??"]
+PAT_NSET_N_W_ChAv2->PAT_NSET_N_W_Mat2[taillabel="yes"]
+
+PAT_NSET_N_W_Mat2 [label="ch not in set?",comment="CHNINSET"]
+PAT_NSET_N_W_Mat2->PAT_NSET_N_W_Act2[comment="CYC",taillabel="yes"]
+PAT_NSET_N_W_Mat2->FAILm1[taillabel="no"]
+
+PAT_NSET_N_W_Act2 [label="ch++",shape=box,comment="CHINC"]
+PAT_NSET_N_W_Act2->PAT_NSET_N_W_Fork
+
+
+PAT_NSET_N_M [label="Init loop\ncounters",shape=box,comment="NM0"]
+PAT_NSET_N_M->PAT_NSET_N_M_ChN
+
+PAT_NSET_N_M_ChN [label="N > 0?",comment="NGT0"]
+PAT_NSET_N_M_ChN->PAT_NSET_N_M_ChM[taillabel="no"]
+PAT_NSET_N_M_ChN->PAT_NSET_N_M_ChAv[taillabel="yes"]
+
+PAT_NSET_N_M_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NSET_N_M_ChAv->FAILm1[taillabel="no"]
+PAT_NSET_N_M_ChAv->PAT_NSET_N_M_Mat[taillabel="yes"]
+
+PAT_NSET_N_M_Mat [label="ch not in set?",comment="CHNINSET"]
+PAT_NSET_N_M_Mat->PAT_NSET_N_M_Act[comment="CYC",taillabel="yes"]
+PAT_NSET_N_M_Mat->FAILm1[taillabel="no"]
+
+PAT_NSET_N_M_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_NSET_N_M_Act->PAT_NSET_N_M_ChN
+
+PAT_NSET_N_M_ChM [label="M > 0?",comment="MGT0"]
+PAT_NSET_N_M_ChM->GetPatOP[taillabel="no"]
+PAT_NSET_N_M_ChM->PAT_NSET_N_M_Act2[taillabel="yes"]
+
+PAT_NSET_N_M_Act2 [label="m--",shape=box,comment="MDEC"]
+PAT_NSET_N_M_Act2->PAT_NSET_N_M_Fork
+
+PAT_NSET_N_M_Fork [label="Fork",shape=triangle]
+PAT_NSET_N_M_Fork->GetPatOP[label="parent",color=red]
+PAT_NSET_N_M_Fork->PAT_NSET_N_M_ChAv2[label="child",color=blue]
+
+PAT_NSET_N_M_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_NSET_N_M_ChAv2->FAILm1[taillabel="no"]
+PAT_NSET_N_M_ChAv2->PAT_NSET_N_M_Mat2[taillabel="yes"]
+
+PAT_NSET_N_M_Mat2 [label="ch not in set?",comment="CHNINSET"]
+PAT_NSET_N_M_Mat2->PAT_NSET_N_M_Act3[comment="CYC",taillabel="yes"]
+PAT_NSET_N_M_Mat2->FAILm1[taillabel="no"]
+
+PAT_NSET_N_M_Act3 [label="nch++",shape=box,comment="CHINC"]
+PAT_NSET_N_M_Act3->PAT_NSET_N_M_ChM
+
+/************* NSET **************/
+
+PAT_NBSET_1 [label="ch avail?",comment="CHAV",style=bold]
+PAT_NBSET_1->FAILm1[taillabel="no"]
+PAT_NBSET_1->PAT_NBSET_1_Mat[taillabel="yes"]
+
+PAT_NBSET_1_Mat [label="ch not in set?",comment="CHNINBSET"]
+PAT_NBSET_1_Mat->PAT_NBSET_1_Act[comment="CYC",taillabel="yes"]
+PAT_NBSET_1_Mat->FAILm1[taillabel="no"]
+
+PAT_NBSET_1_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_NBSET_1_Act->GetPatOP
+
+
+PAT_NBSET_N [label="Init set\nloop state",shape=box,comment="N0"]
+PAT_NBSET_N->PAT_NBSET_N_ChN
+
+PAT_NBSET_N_ChN [label="N > 0?",comment="NGT0"]
+PAT_NBSET_N_ChN->GetPatOP[taillabel="no"]
+PAT_NBSET_N_ChN->PAT_NBSET_N_ChAv[taillabel="yes"]
+
+PAT_NBSET_N_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NBSET_N_ChAv->FAILm1[taillabel="no"]
+PAT_NBSET_N_ChAv->PAT_NBSET_N_Mat[taillabel="yes"]
+
+PAT_NBSET_N_Mat [label="ch not in set?",comment="CHNINBSET"]
+PAT_NBSET_N_Mat->PAT_NBSET_N_Act[comment="CYC",taillabel="yes"]
+PAT_NBSET_N_Mat->FAILm1[taillabel="no"]
+
+PAT_NBSET_N_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_NBSET_N_Act->PAT_NBSET_N_ChN
+
+
+PAT_NBSET_0_W [label="Fork",shape=triangle]
+PAT_NBSET_0_W->GetPatOP[label="parent",color=red]
+PAT_NBSET_0_W->PAT_NBSET_0_W_ChAv[label="child",color=blue]
+
+PAT_NBSET_0_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NBSET_0_W_ChAv->FAILm1[taillabel="no"]
+PAT_NBSET_0_W_ChAv->PAT_NBSET_0_W_Mat[taillabel="yes"]
+
+PAT_NBSET_0_W_Mat [label="ch not in set?",comment="CHNINBSET"]
+PAT_NBSET_0_W_Mat->PAT_NBSET_0_W_Act[comment="CYC",taillabel="yes"]
+PAT_NBSET_0_W_Mat->FAILm1[taillabel="no"]
+
+PAT_NBSET_0_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_NBSET_0_W_Act->PAT_NBSET_0_W
+
+
+PAT_NBSET_1_W [label="ch avail?",comment="CHAV",style=bold]
+PAT_NBSET_1_W->FAILm1[taillabel="no"]
+PAT_NBSET_1_W->PAT_NBSET_1_W_Mat[taillabel="yes"]
+
+PAT_NBSET_1_W_Mat [label="ch not in set?",comment="CHNINBSET"]
+PAT_NBSET_1_W_Mat->PAT_NBSET_1_W_Act[comment="ACYC",taillabel="yes"]
+PAT_NBSET_1_W_Mat->FAILm1[taillabel="no"]
+
+PAT_NBSET_1_W_Act [label="ch++",shape=box,comment="CHINC"]
+PAT_NBSET_1_W_Act->PAT_NBSET_1_W_Fork
+
+PAT_NBSET_1_W_Fork [label="Fork",shape=triangle]
+PAT_NBSET_1_W_Fork->GetPatOP[label="parent",color=red]
+PAT_NBSET_1_W_Fork->PAT_NBSET_1_W_ChAv[label="child",color=blue]
+
+PAT_NBSET_1_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NBSET_1_W_ChAv->PAT_NBSET_1_W_Mat[comment="CYC",taillabel="yes"]
+PAT_NBSET_1_W_ChAv->GetPatOP[tailport=s,taillabel="no",labeldistance=2]
+
+
+PAT_NBSET_N_W [label="Init loop\ncounter",shape=box,comment="N0"]
+PAT_NBSET_N_W->PAT_NBSET_N_W_ChN
+
+PAT_NBSET_N_W_ChN [label="N > 0?",comment="NGT0"]
+PAT_NBSET_N_W_ChN->PAT_NBSET_N_W_Fork[taillabel="no"]
+PAT_NBSET_N_W_ChN->PAT_NBSET_N_W_ChAv[taillabel="yes"]
+
+PAT_NBSET_N_W_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NBSET_N_W_ChAv->FAILm1[taillabel="no"]
+PAT_NBSET_N_W_ChAv->PAT_NBSET_N_W_Mat[taillabel="yes"]
+
+PAT_NBSET_N_W_Mat [label="ch not in set?",comment="CHNINBSET"]
+PAT_NBSET_N_W_Mat->PAT_NBSET_N_W_Act[comment="CYC",taillabel="yes"]
+PAT_NBSET_N_W_Mat->FAILm1[taillabel="no"]
+
+PAT_NBSET_N_W_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_NBSET_N_W_Act->PAT_NBSET_N_W_ChN
+
+PAT_NBSET_N_W_Fork [label="Fork",shape=triangle]
+PAT_NBSET_N_W_Fork->GetPatOP[label="parent",color=red]
+PAT_NBSET_N_W_Fork->PAT_NBSET_N_W_ChAv2[label="child",color=blue]
+
+PAT_NBSET_N_W_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_NBSET_N_W_ChAv2->GetPatOP[taillabel="no",comment="Not sure??"]
+PAT_NBSET_N_W_ChAv2->PAT_NBSET_N_W_Mat2[taillabel="yes"]
+
+PAT_NBSET_N_W_Mat2 [label="ch not in set?",comment="CHNINBSET"]
+PAT_NBSET_N_W_Mat2->PAT_NBSET_N_W_Act2[comment="CYC",taillabel="yes"]
+PAT_NBSET_N_W_Mat2->FAILm1[taillabel="no"]
+
+PAT_NBSET_N_W_Act2 [label="ch++",shape=box,comment="CHINC"]
+PAT_NBSET_N_W_Act2->PAT_NBSET_N_W_Fork
+
+
+PAT_NBSET_N_M [label="Init loop\ncounters",shape=box,comment="NM0"]
+PAT_NBSET_N_M->PAT_NBSET_N_M_ChN
+
+PAT_NBSET_N_M_ChN [label="N > 0?",comment="NGT0"]
+PAT_NBSET_N_M_ChN->PAT_NBSET_N_M_ChM[taillabel="no"]
+PAT_NBSET_N_M_ChN->PAT_NBSET_N_M_ChAv[taillabel="yes"]
+
+PAT_NBSET_N_M_ChAv [label="ch avail?",comment="CHAV",style=bold]
+PAT_NBSET_N_M_ChAv->FAILm1[taillabel="no"]
+PAT_NBSET_N_M_ChAv->PAT_NBSET_N_M_Mat[taillabel="yes"]
+
+PAT_NBSET_N_M_Mat [label="ch not in set?",comment="CHNINBSET"]
+PAT_NBSET_N_M_Mat->PAT_NBSET_N_M_Act[comment="CYC",taillabel="yes"]
+PAT_NBSET_N_M_Mat->FAILm1[taillabel="no"]
+
+PAT_NBSET_N_M_Act [label="n--\nch++",shape=box,comment="NDEC_CHINC"]
+PAT_NBSET_N_M_Act->PAT_NBSET_N_M_ChN
+
+PAT_NBSET_N_M_ChM [label="M > 0?",comment="MGT0"]
+PAT_NBSET_N_M_ChM->GetPatOP[taillabel="no"]
+PAT_NBSET_N_M_ChM->PAT_NBSET_N_M_Act2[taillabel="yes"]
+
+PAT_NBSET_N_M_Act2 [label="m--",shape=box,comment="MDEC"]
+PAT_NBSET_N_M_Act2->PAT_NBSET_N_M_Fork
+
+PAT_NBSET_N_M_Fork [label="Fork",shape=triangle]
+PAT_NBSET_N_M_Fork->GetPatOP[label="parent",color=red]
+PAT_NBSET_N_M_Fork->PAT_NBSET_N_M_ChAv2[label="child",color=blue]
+
+PAT_NBSET_N_M_ChAv2 [label="ch avail?",comment="CHAV",style=bold]
+PAT_NBSET_N_M_ChAv2->FAILm1[taillabel="no"]
+PAT_NBSET_N_M_ChAv2->PAT_NBSET_N_M_Mat2[taillabel="yes"]
+
+PAT_NBSET_N_M_Mat2 [label="ch not in set?",comment="CHNINBSET"]
+PAT_NBSET_N_M_Mat2->PAT_NBSET_N_M_Act3[comment="CYC",taillabel="yes"]
+PAT_NBSET_N_M_Mat2->FAILm1[taillabel="no"]
+
+PAT_NBSET_N_M_Act3 [label="nch++",shape=box,comment="CHINC"]
+PAT_NBSET_N_M_Act3->PAT_NBSET_N_M_Fork
+
+/************* Core **************/
+
+/*EOF*/
+/*ALL*/}

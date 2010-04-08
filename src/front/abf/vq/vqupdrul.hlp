@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqupdrul.hlp, help for the Frame Behavior pop-up for Update Integrity
+/#-- Rule
+/#-- 
+The Update Integrity Rule controls whether updates can be made to the join
+columns if detail rows exist.  The selections are described below:
+
+   CASCADE  - Any changes made to the join columns in the master will be 
+	      propagated to the details.  
+
+   RESTRICT - Changes are not allowed in the join columns.
+
+   DBMS     - Vision assumes there are DBMS rules and procedures to handle 
+	      the update of the detail row join column(s). This option does 
+	      not create the DBMS rules and procedures, it only supports the 
+	      existence of them by not generating code to update detail row 
+	      join column(s).
+
+Move the cursor to the desired option and choose "Select".

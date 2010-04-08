@@ -1,0 +1,200 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmmonitr.hlp
+REPLICATION MONITOR
+
+This screen is used to monitor Replicator Server activity.  You can also
+start, stop, and ping a server from this screen as well as issue database
+events to override the server startup flags.
+
+For all active servers, this screen shows the total number of outgoing
+and incoming records, the total number of transactions associated with
+the incoming and outgoing records, and the queue activity for each
+database that the servers are supporting.  Note that these counts are
+transient and may include transactions that were rolled back.
+
+This screen uses the FRS time-out feature to determine when to look for
+server activity.  No status information retrieval is attempted until the
+keyboard has been idle for five seconds.
+
+The fields on the screen are:
+
+        FIELD NAME      DESCRIPTION
+        ----------      -----------
+        Server          The server number.  Only Replicator Servers who
+                        have been assigned targets are listed.
+
+        Status          This displays status messages for a server.
+                        When you start a server, it shows "Starting
+                        Replicator Server".  When a server completes is
+                        startup procedures a message formatted as
+                        follows is shown:
+
+                        Active, n errors, Ping n, db n vnode::dbname
+
+                        A server is either active or quiet.  An active
+                        server processes distributed transactions as
+                        they are created or received.  A quiet server
+                        only processes transactions in response to a
+                        Go database event.
+
+                        If a server is not running or if it is hung up,
+                        the screen does not display a status.  If the
+                        server is processing a batch of replicated
+                        transactions, it does not display a status until
+                        it is finished processing the current batch.
+                        However, the display will continue to reflect
+                        the server's incrementing incoming and outgoing
+                        record counts.
+
+                        After the status, the number of level 1 errors
+                        (configuration, time-out, transmissions, and
+                        fatal errors) the server has encountered is
+                        displayed.  If the number of errors reaches the
+                        -EMX startup flag value, the server will shut
+                        down.  The default -EMX value is 100.
+
+                        Following the error count, the number of times
+                        the server has been "ping'd" is shown.  Use the
+                        Ping operation to determine which servers are
+                        alive.  A ping sends a database event that in
+                        turn requests the server to send back a database
+                        event.  If the event increases the ping number
+                        of the server, this indicates the server is
+                        alive.
+
+                        The last items on the Status line are the
+                        database number, virtual node, and database name
+                        of the database the server is connected to.
+
+                        When you select Stop, the message "Shutting
+                        down the Replicator Server" is displayed.  When
+                        the server completes shutting down, "The Server
+                        has shutdown" is shown.
+
+        Outgoing        Number of records that have been processed and
+        Records         transmitted by the Replicator Servers attached
+                        to this source database.  A replicated command
+                        that is successfully executed and then rolled
+                        back is reflected in the count.  The Inserts,
+                        Updates, Deletes, Total and Transactions fields
+                        only accumulate while the Monitor screen is
+                        displayed.
+
+        Incoming        Number of records that have arrived at this
+        Records         database from other replicated databases.  A
+                        replicated command that is successfully executed
+                        and then rolled back is reflected in the count.
+                        The Inserts, Updates, Deletes, Total and
+                        Transactions fields only accumulate while the
+                        Monitor screen is displayed.
+
+        Queues          Contains queue information only if you select
+                        the Queues operation.  When selected, this box
+                        displays in the Input and Distribution fields, a
+                        snapshot count of the records that are currently
+                        in the database's input queue and distribution
+                        queue.
+
+                        Note:  This information does not update
+                        automatically; it is only updated when you use
+                        the Queues operation.
+
+        Activity        The display area under the three boxes gives
+        Display         additional information on the transactions
+                        processed in the following formats:
+
+                        db_no  vnode::dbname  owner.table    count
+                        db_no  vnode::dbname  Transactions   count
+
+                        For example:
+
+                        11  sfo::west  'testenv.tab1'   9
+                        11  sfo::west  Transactions     6
+
+                        In the first format, the owner.table field
+                        reflects the activity that occurred on the table
+                        of that name.  The count field reflects both the
+                        incoming records sent to this database from the
+                        target indicated in db_no field, as well as the
+                        outgoing records sent to the target by table
+                        from this database.
+
+                        In the first example, assume you have run
+                        Replicator Manager against database 20.  There
+                        are 9 records with activity on table 'tab1' that
+                        have either been incoming from database 11 to
+                        database 20 or outgoing from database 20 to
+                        database 11.
+
+                        If the second format, the count field reflects
+                        the number of transactions that the servers on
+                        this database have successfully executed on that
+                        database.
+
+                        In the second example, assume you have run
+                        Replicator Manager against database 20.  There
+                        are 6 transactions that the server on database
+                        20 has successfully executed on database 11.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Server          Presents the following submenu commands:
+
+            Start       Start the currently highlighted server.  To
+                        start, a server must have one or more database
+                        assignments (see ShowAssign command) and a
+                        configuration file (see EditConfig command).
+                        Only one server with a given server number can
+                        be running at one time.
+
+                        If startup is successful, an Active/Quiet
+                        message (see Status above) will be displayed
+                        beside the server number.
+
+            Stop        Shut down the currently highlighted server.
+                        Before a server is stopped, it will complete
+                        current processing, or transmitting any current
+                        replicated transaction.
+
+                        If shutdown is successful, a confirmation
+                        message will be displayed beside the server
+                        number.
+
+            EditConfig  Edit the configuration file for the currently
+                        highlighted server.
+
+            ShowAssign  Display the current database and CDDS
+                        assignments for the currently highlighted
+                        server.
+
+            Cancel      Return to the other menu commands.
+
+        Ping            Raise a dd_ping database event on running
+                        servers.  Within a few seconds, the count on the
+                        Ping field of the servers' status lines
+                        increments by one.  If the count does not
+                        increment, the servers are not alive or are busy.
+                        Each event sent to a server also increments the
+                        ping count.  The first time that you enter the
+                        Monitor screen a dd_ping event is raised for you.
+
+        Queues          Display a current snapshot of the count of items
+                        in the input and distribution queues.
+
+        Events          Raise a database event directed at one or all of
+                        the running servers, in particular to modify
+                        server parameters.  A screen listing the
+                        possible events will be displayed.
+
+        Shell           Escape to the operating system.  To return to
+                        Replicator Manager from an operating system
+                        shell, type "logout" or "exit"
+
+        Clear           Clear all displayed fields.
+
+        Help            Access the Help facility.
+
+        End             Return to the Main Menu.

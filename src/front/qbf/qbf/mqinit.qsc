@@ -1,0 +1,316 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	"mqeglobs.h"
+# include	<me.h>
+# include	<er.h>
+# include	"erqf.h"
+
+/**
+** Name:
+**	mqinit.qsc
+**
+** Description:
+**	Initialization and memory management routines for QBF.
+**
+** Routines:
+**	mq_free(qdef)
+**	mq_reinit(0, qdef)
+**	mqqdefinit(qdef)
+**	mqglobinit()
+**	mqistruct()
+**
+** History:
+**	3/30/87 (peterk) - created by merging dmisc.c and istruct.c
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh
+**	22-apr-88 (kenl)
+**		Added initialization of allow_updates.
+**	23-nov-88 (kenl)
+**		Added initialization of allow_appends.  From IBM group (ham).
+**	05-dec-89 (kenl)
+**		Added initialization of mq_editjoin.
+**	10/11/90 (esd)
+**		Replaced global variable allow_appends and allow_updates
+**		by IIQFnkaNoKeyForAppends and IIQFnkuNoKeyForUpdates
+**		(with opposite sense) because the names are misleading:
+**		we now have other reasons for disallowing appends
+**		(certain joins on logical keys), and we might have
+**		other reasons for disallowing appends or updates
+**		in the future.  Keeping separate flags allows us
+**		to give specific error messages.  (bug 8593).
+**	10/11/90 (emerson)
+**		Initialize global variables IIQFsmmSystemUserLkeyMM,
+**		IIQFsmdSystemUserLkeyMD, and IIQFsddSystemUserLkeyDD
+**		for logical key support (bug 8593).
+**	18-dec-92 (sylviap)
+**		Added initialization of mq_nogo.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+FUNC_EXTERN VOID	mqqdefinit();
+
+/*{
+** Name:	mq_free() - Free space used in MQQDEF structure.
+**
+** Description:
+**	Free space allocated for relations, attributes and joins
+**	for the qdef just finished.
+**
+** Inputs:
+**	MQQDEF	*qdef;
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	STATUS	- return value from MEfree;
+**
+** Side Effects:
+**	global memory pointed to by members of MQQDEF is freed,
+**	and members of MQQDEF are re-initialized.
+**
+** History:
+**	??? (?) - created.
+**	3/30/87 (peterk) - added STATUS returns.
+*/
+STATUS
+mq_free(qdef)
+MQQDEF	*qdef;
+{
+	i4	i;
+	STATUS	stat;
+
+	/* free up old space since a new qdef will be defined */
+	for (i = 0; i < qdef->mqnumtabs; i++)
+	{
+		if ((stat = MEfree(qdef->mqtabs[i])) != OK)
+		    return stat;
+	}
+
+	for (i = 0; i < qdef->mqnumatts; i++)
+	{
+		if ((stat = MEfree(qdef->mqatts[i])) != OK)
+		    return stat;
+	}
+
+	for (i = 0; i < qdef->mqnumjoins; i++)
+	{
+		if ((stat = MEfree(qdef->mqjoins[i])) != OK)
+		    return stat;
+	}
+
+	FEfree(qdef->mqtag);
+	/* reinitialize the mqbf struct */
+	mqqdefinit(qdef);
+
+	return(OK);
+}
+
+
+/*
+** mq_reinit() - Routine to reinitialize various globals
+**		 and qdef struct before starting a new qdef
+*/
+mq_reinit(id, qdef)
+OOID	id;
+MQQDEF	*qdef;
+{
+	mqglobinit();
+	mq_free(qdef);
+}
+
+mqglobinit()
+{
+	qdef_type = -1;
+	mq_forms = FALSE;
+	mq_qflag = FALSE;
+	mq_editjoin = FALSE;
+	mq_nogo = FALSE;
+	mq_frame[0] = '\0';
+	mq_tbl[0] = '\0';
+	onetbl = FALSE;
+	mq_forms = FALSE;
+	mq_tids[0] = '\0';
+	mq_mwhereend = 0;
+	mq_dwhereend = 0;
+	any_views = FALSE;
+	IIQFnkuNoKeyForUpdates = FALSE;
+	IIQFnkaNoKeyForAppends = FALSE;
+	IIQFsmmSystemUserLkeyMM = FALSE;
+	IIQFsmdSystemUserLkeyMD = FALSE;
+	IIQFsddSystemUserLkeyDD = FALSE;
+	any_cats = FALSE;
+	mq_both = FALSE;
+	mq_cfrm = FALSE;
+	mqnummasters = 0;
+	mqnumdetails = 0;
+	mq_qown[0] = '\0';
+	mq_lookup = FALSE;
+	mq_deffrm = FALSE;
+
+	return(TRUE);
+}
+
+
+/*{
+** Name:	mqistruct() - alloc and init MQQDEF structure.
+**
+** Input params:
+**	none
+**
+** Output params:
+**	none
+**
+** Returns:
+**	(MQQDEF *)	- ptr to globally allocated MQQDEF struct.
+**
+** Side Effects:
+**	calls mqglobinit() to initialize QBF global variables.
+**
+** History:
+**	??? (??) - created
+**	3/30/87 (peterk) - added initialization of global vars.
+*/
+
+MQQDEF	*
+mqistruct()
+{
+	MQQDEF	*qdef;
+	i2	i;
+
+	qdef = NULL;
+	if ((qdef = (MQQDEF *)MEreqmem((u_i4)0, (u_i4)sizeof(struct mqqdef),
+	    TRUE, (STATUS *)NULL)) == NULL)
+	{
+		FDerror(ERRALLOC, 0, ERx(""));
+		return(NULL);
+	}
+	qdef->mqtag = FEgettag();
+	mqqdefinit(qdef);
+	mqglobinit();
+	return(qdef);
+}
+
+/*{
+** Name:	mqqdefinit() - (re-)initialize MQQDEF structure.
+**
+** Description:
+**	<comments>
+**
+** Input params:
+**	MQQDEF	*qdef;	structure to be (re-)initialized
+**
+** Output params:
+**	MQQDEF	*qdef;	(re-)initialized structure.
+**
+** Returns:
+**	(VOID)
+**
+** History:
+**	??? (??) - created
+**	3/87 (peterk) - added new 6.0 MQQDEF structure members.
+*/
+
+VOID
+mqqdefinit(qdef)
+MQQDEF	*qdef;
+{
+	i4	i;
+
+	qdef->mqcr.id = -1;
+	*qdef->mqcr.name = *qdef->mqcr.owner = *qdef->mqcr.short_remark = 0;
+	*qdef->mqcr.create_date = *qdef->mqcr.alter_date = 0;
+	*qdef->mqcr.long_remark = 0;
+	qdef->mqmrecl = 0;
+	qdef->mqdrecl = 0;
+	qdef->mqnumtabs = 0;
+	qdef->mqnumatts = 0;
+	qdef->mqnumjoins = 0;
+	for (i = 0; i < MQ_MAXRELS; i++)
+	{
+		qdef->mqtabs[i] = NULL;
+	}
+	for (i = 0; i < MQ_MAXJOINS; i++)
+	{
+		qdef->mqjoins[i] = NULL;
+	}
+	for (i = 0; i < MQ_MAXATTS; i++)
+		qdef->mqatts[i] = NULL;
+}
+
+
+# ifndef	PCINGRES
+mqdebug(qdef)
+MQQDEF		*qdef;
+{
+	i4	i;
+
+	SIprintf(ERx("counts: tables = %d, atts = %d, joins =%d\n"),
+			qdef->mqnumtabs, qdef->mqnumatts, qdef->mqnumjoins);
+	SIflush(stdout);
+
+	SIprintf(ERx("TABLES: table...range\n"));
+	SIflush(stdout);
+
+	for (i = 0; i < MQ_MAXRELS && qdef->mqtabs[i] != NULL; i++)
+	{
+		SIprintf
+		(
+			ERx("%s	  %s	%s\n"),
+			qdef->mqtabs[i]->mqrelid,
+			qdef->mqtabs[i]->mqrelown,
+			qdef->mqtabs[i]->mqrangevar
+		);
+		SIflush(stdout);
+	}
+
+	SIprintf(ERx("ATTS: rv ... col ... formfield ...jpart ... intbl\n"));
+	SIflush(stdout);
+
+	for (i = 0; i < MQ_MAXATTS && qdef->mqatts[i] != NULL; i++)
+	{
+		SIprintf
+		(
+			ERx("%s	   %s	 %d    %d    %d\n"),
+			qdef->mqatts[i]->rvar,
+			qdef->mqatts[i]->col,
+			qdef->mqatts[i]->formfield,
+			qdef->mqatts[i]->jpart,
+			qdef->mqatts[i]->intbl
+		);
+		SIflush(stdout);
+	}
+
+	SIprintf(ERx("JOINS: rv1 ... col1 ... rv2 ... col2\n"));
+	SIflush(stdout);
+
+	for (i = 0; i < MQ_MAXJOINS && qdef->mqjoins[i] != NULL; i++)
+	{
+		SIprintf
+		(
+			ERx("%s	   %s	 %s    %s\n"),
+			qdef->mqjoins[i]->rv1,
+			qdef->mqjoins[i]->col1,
+			qdef->mqjoins[i]->rv2,
+			qdef->mqjoins[i]->col2
+		);
+		SIflush(stdout);
+	}
+	SIflush(stdout);
+	return(OK);
+}
+# endif /* PCINGRES */

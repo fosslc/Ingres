@@ -1,0 +1,46 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have selected to send the query results to a printer.  Please specify 
+the printer, the number of copies to be printed and the file name to contain 
+the results.
+
+The output will first be sent to the specified file and then sent to the 
+printer.  The file will be sent to the system default printer if 'default' 
+is entered as the printer name.  You may override the default printer by
+specifying another printer name.  The maximum number of copies allowed 
+is 999.  You may also specify a full directory pathname with your file name.
+After printing the results, this file will be deleted.  
+
+You have the option of printing all the results (OK) or printing just the 
+results that have been viewed (PrintPartial).  For large queries, unless
+you have viewed the last screen, you will get only partial results of the
+query.  For small queries, partial results may end up being the complete
+dataset.
+
+The fields on the popup are:
+ 
+	FIELD           DESCRIPTION
+	-----           -----------
+	Printer     	Name of the printer to send the output results.
+			  
+	Copies          Number of copies of the output results to be printed.
+
+	File Name	Name of the file to contain the output results.
+
+
+The menu commands are as follows:
+
+
+      MENU COMMANDS	SYNOPSIS
+      -------------	--------
+
+      OK       		Print the complete output results at the specified 
+			printer.  If the query has not yet been run to
+			completion, the program will first finish executing 
+			the query before sending the results to the printer.
+
+      PrintPartial    	Send the results seen thus far to the printer.  
+
+      Cancel		Return back to the Output Browser without printing
+			the results.
+
+      Help        	Display this Help file.

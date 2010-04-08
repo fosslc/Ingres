@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqedlogl.hlp, help for pop-up that offers list of edit options (local/ 
+/#-- global objects) at frame parameters screen.
+/#-- 
+You can use local variables (hidden fields) or global objects (variables, 
+constants, or record types) in your parameter statement. 
+
+If you need to create one of these objects now, select the object from the 
+list. The system then displays the screen for creating the type of object 
+you selected.
+
+For more information about local and global objects, select an object from 
+the list and then press Help. A help screen is available at the 'Edit' 
+screen for each type of object. 

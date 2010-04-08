@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+/#-- ODBC configuration screen help file 
+/#--
+You are looking at iiodbcadmin's Alternate Driver Path Page.
+
+The iiodbcadmin screen consists of a single form with an entry
+field for specifying an alternate path for the ODBC driver configuration 
+file.  Enter the path of the target file.  Do not enter a file name.
+
+All menu items apply to whichever tablefield contains the cursor when the 
+item is activated.  The menu operations are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+	Save            When data on the this page has been modified, a 
+			popup menu appears asking for confirmation on whether 
+			the specified path should be saved.  Entering "Y" 
+			causes the path to be referenced in further 
+			iiodbcadmin operations.
+
+        Help            Displays this help screen.
+
+        End             Exit iiodbcadmin.

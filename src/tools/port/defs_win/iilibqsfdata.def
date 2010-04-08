@@ -1,0 +1,9 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;		Added ordinals.
+;	25-Aug-2005 (drivi01)
+;	   	Renamed iiqsfdata.def to iilibqsfdata.def.
+;
+
+EXPORTS
+Qsr_scb		@1	DATA			

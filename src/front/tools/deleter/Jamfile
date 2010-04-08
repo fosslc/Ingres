@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!tools!deleter
+#
+
+SubDir ING_SRC front tools deleter ;
+
+IISUBSYS front tools deleter ;
+
+
+IIBINEXE deleter : deleter.c ;
+IINEEDLIBS deleter : DELETERLIB  SHCOMPATLIB SHEMBEDLIB SHFRAMELIB
+	SHQLIB SHINTERPLIB COPYUTILLIB ;
+IIUNDEFS deleter : II_copyright  ;
+
+IILIBRARY DELETERLIB : dlgen.qsc dldelobj.qsc dlapp.qsc
+	dlabfdir.c ;
+

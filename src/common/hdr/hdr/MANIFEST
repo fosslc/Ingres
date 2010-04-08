@@ -1,0 +1,66 @@
+#
+# MANIFEST file for common!hdr!hdr
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#	22-jul-2004 (somsa01)
+#	    Updated for Windows JAM build.
+#	01-Aug-2004 (hanje04)
+#	    Remove sql.h and sqlext.h, shouldn't be here.
+#	30-nov-2004 (abbjo03)
+#	    Use FECATMSG variable instead of fe.cat.msg literal.
+#	06-Apr-2005 (hanje04)
+#	    Remove iiapicc.h, removed from code.
+#	03-Jul-2006 (jonj)
+#	    Move xa.h here from front!embed!hdr, delete xa.h
+#	    from front!frontcl!files
+
+
+IISUBSYS common hdr hdr ;
+
+if $(NT)
+{
+IIMSGHDR eradf.msg eraif.msg erclf.msg ercuf.msg erddf.msg erdmf.msg
+	erduf.msg ergcf.msg erglf.msg ergwf.msg erjdbc.msg erodbc.msg
+	eropf.msg erpsf.msg erqef.msg erqsf.msg errdf.msg errqf.msg
+	erscf.msg ersxf.msg ertpf.msg erulf.msg erurs.msg erusf.msg
+	erwsf.msg ;
+
+IIFSMNX fast_v4.mnx slow_v4.mnx : eradf.msg eraif.msg erclf.msg erdmf.msg 
+	erddf.msg erduf.msg ergcf.msg erglf.msg ergwf.msg eropf.msg erpsf.msg 
+	erqef.msg erqsf.msg errdf.msg errqf.msg erscf.msg ersxf.msg ertpf.msg 
+	erulf.msg erurs.msg erusf.msg erwsf.msg erjdbc.msg erodbc.msg ercuf.msg
+	erdo.msg ereo.msg erom.msg erpw.msg erse.msg ersm.msg erw4.msg erwc.msg
+	erwn.msg erwr.msg $(FECATMSG) ;
+}
+else
+{
+IIMSGHDR erscf.msg erusf.msg erclf.msg erddf.msg erglf.msg erodbc.msg
+	erurs.msg erwsf.msg ;
+
+  if $(VMS)
+  {
+IIFSMNX fast_v4.mnx slow_v4.mnx : eradf.msg eraif.msg erclf.msg erdmf.msg 
+	erddf.msg erduf.msg ergcf.msg erglf.msg ergwf.msg eropf.msg erpsf.msg 
+	erqef.msg erqsf.msg errdf.msg errqf.msg erscf.msg ersxf.msg ertpf.msg 
+	erulf.msg erusf.msg erwsf.msg erjdbc.msg erodbc.msg
+	$(FECATMSG) ;
+  }
+  else
+  {
+IIFSMNX fast_v4.mnx slow_v4.mnx : eradf.msg eraif.msg erclf.msg erdmf.msg 
+	erddf.msg erduf.msg ergcf.msg erglf.msg ergwf.msg eropf.msg erpsf.msg 
+	erqef.msg erqsf.msg errdf.msg errqf.msg erscf.msg ersxf.msg ertpf.msg 
+	erulf.msg erurs.msg erusf.msg erwsf.msg erjdbc.msg erodbc.msg ercuf.msg
+	$(FECATMSG) ;
+  }
+}
+
+IIFECAT $(FECATMSG) ;
+
+IIQSHHDR dudbms.h : dudbms.qsh ;
+#IISHHDR dudbms.h : dudbms.qsh ;
+
+IIFILES raat.h generr.h sqlstate.h iiapi.h xa.h ;

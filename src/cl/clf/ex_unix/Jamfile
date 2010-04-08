@@ -1,0 +1,19 @@
+#
+# Jamfile file for cl!clf!ex_unix
+#
+# History:
+#       02-Mar-2007 (hweho01)
+#         Removed the source files that were in the IINOOPTIM list  
+#       incorrectly. 
+#
+
+SubDir ING_SRC cl clf ex_unix ;
+
+IISUBSYS cl clf ex_unix ;
+
+IINOOPTIM exstack.c : rs4_us5 ris_u64 i64_aix ;
+
+IILIBRARY COMPATLIB : symbol.c object.c exsysrep.c exstack.c
+	exsignal.c exsetup.c exmatch.c exintr.c exdump.c exdelete.c
+	evset.c ;
+

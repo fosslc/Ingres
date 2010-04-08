@@ -1,0 +1,40 @@
+:
+# ingmfcobol - sample script to preprocess, compile and link
+#    a single MicroFocus Cobol program with INGRES Embedded/SQL using
+#    INGRES 6.4 and DG/UX 5.4
+#
+# This script takes as its only argument the name of an ESQL/COBOL module
+# (without the .scb extension).
+
+# Run the INGRES/SQL COBOL Preprocessor in the ELF environment
+TARGET_BINARY_INTERFACE=m88kdguxelf
+export TARGET_BINARY_INTERFACE
+esqlcbl $1
+
+# Run the MFCOBOL compiler in the COFF environment (which MFCOBOL 1.20 requires)
+# and partially link the resulting COFF object.
+COBDIR="/usr/opt/mfcobol"
+export COBDIR
+TARGET_BINARY_INTERFACE=m88kdguxcoff
+export TARGET_BINARY_INTERFACE
+cob -x -c $1.cbl
+cob -r -x -o $1.r $1.o
+
+TARGET_BINARY_INTERFACE=m88kdguxelf
+export TARGET_BINARY_INTERFACE
+LD_LIBRARY_PATH=.
+export LD_LIBRARY_PATH
+
+# If you have other shared ELF objects to include, modify USR_OBJ.
+USR_OBJ=""
+ING_OBJ="iimfdata.o iimflibq.o iimffrs.o $II_SYSTEM/ingres/lib/libingres.a"
+
+# Create a shared library with the INGRES and user shared ELF objects.
+ld -G -o libingmf.so $USR_OBJ $ING_OBJ
+
+# Link together the users COBOL module, the shared library, and other
+# required libraries.
+ld -o $1 /lib/crt0.o -L. $1.r -lingmf /lib/gcc/gnulib -lm -lc -lstaticdgc \
+-lm -lc
+rm $1.r
+

@@ -1,0 +1,28 @@
+#
+# Jamfile file for cl!clf!ut_vms
+#
+#    22-dec-2008 (stegr01)
+#       Change .mar to .c
+#   10-nov-2009 (stegr01)
+#      Use assembler files for AXP and C files for Itanium
+
+SubDir ING_SRC cl clf ut_vms ;
+
+IISUBSYS cl clf ut_vms ;
+
+IIFILE utcom.def : utcom_axm.def ;
+IIFILE utexe.def : utexe.def ;
+
+IILIBRARY COMPATLIB : utprint.c utlnk.c utexe.c utetable.c
+        uterror.c utedit.c utdeffil.c utcomp.c ut.c ;
+
+if $(VERS) = axm_vms
+{
+   IILIBRARY COMPATLIB : utedcall.mar ;
+}
+else
+{
+   IILIBRARY COMPATLIB : utedcall.c ;
+}
+
+

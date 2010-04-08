@@ -1,0 +1,431 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word 9">
+<meta name=Originator content="Microsoft Word 9">
+<link rel=File-List href="./cfSwitch_files/filelist.xml">
+<title>SWITCH Keyword</title>
+<!--[if gte mso 9]><xml>
+ <o:DocumentProperties>
+  <o:Author>Kawing Chiu</o:Author>
+  <o:LastAuthor>Kawing Chiu</o:LastAuthor>
+  <o:Revision>1</o:Revision>
+  <o:TotalTime>1</o:TotalTime>
+  <o:Created>1999-12-16T17:09:00Z</o:Created>
+  <o:LastSaved>1999-12-16T17:10:00Z</o:LastSaved>
+  <o:Pages>3</o:Pages>
+  <o:Words>186</o:Words>
+  <o:Characters>1062</o:Characters>
+  <o:Company>Ingres Corporation</o:Company>
+  <o:Lines>8</o:Lines>
+  <o:Paragraphs>2</o:Paragraphs>
+  <o:CharactersWithSpaces>1304</o:CharactersWithSpaces>
+  <o:Version>9.2720</o:Version>
+ </o:DocumentProperties>
+</xml><![endif]-->
+<style>
+<!--
+ /* Font Definitions */
+@font-face
+	{font-family:Courier;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:modern;
+	mso-font-format:other;
+	mso-font-pitch:fixed;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:AvantGarde;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:swiss;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:Palatino;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-alt:"Book Antiqua";
+	mso-font-charset:0;
+	mso-generic-font-family:roman;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+ /* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{mso-style-parent:"";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	font-family:"Times New Roman";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+h1
+	{mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:1;
+	font-size:16.0pt;
+	font-family:Arial;
+	mso-font-kerning:16.0pt;}
+h2
+	{mso-style-parent:"Heading 1";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:14.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:2;
+	tab-stops:48.0pt;
+	font-size:12.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+h3
+	{mso-style-parent:"Heading 2";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:3;
+	tab-stops:48.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+h4
+	{mso-style-parent:"Heading 3";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:4;
+	tab-stops:48.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+p.NormalLeft, li.NormalLeft, div.NormalLeft
+	{mso-style-name:NormalLeft;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	text-indent:-1.5in;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.extraspace, li.extraspace, div.extraspace
+	{mso-style-name:"extra space";
+	mso-style-next:Normal;
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan lines-together;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.codefirst, li.codefirst, div.codefirst
+	{mso-style-name:codefirst;
+	mso-style-next:Normal;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.code, li.code, div.code
+	{mso-style-name:code;
+	mso-style-parent:codefirst;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecolhdright, li.tablecolhdright, div.tablecolhdright
+	{mso-style-name:"table colhd \(right\)";
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tablecolhdleft, li.tablecolhdleft, div.tablecolhdleft
+	{mso-style-name:"table colhd \(left\)";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+p.tableright, li.tableright, div.tableright
+	{mso-style-name:"table \(right\)";
+	margin-top:3.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:3.0pt;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+p.tableleft, li.tableleft, div.tableleft
+	{mso-style-name:"table \(left\)";
+	margin-top:3.0pt;
+	margin-right:3.0pt;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:9.0pt 1.0in 3.0in 300.0pt;
+	font-size:10.0pt;
+	font-family:Palatino;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+@page Section1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.25in 1.0in 1.25in;
+	mso-header-margin:.5in;
+	mso-footer-margin:.5in;
+	mso-paper-source:0;}
+div.Section1
+	{page:Section1;}
+-->
+</style>
+</head>
+
+<body lang=EN-US style='tab-interval:.5in'>
+
+<div class=Section1>
+
+<h2><a name="_Toc429385980">S</a>WITCH Keyword<!--[if supportFields]><span
+style='mso-element:field-begin'></span> tc &quot;<br clear=all
+style='page-break-before:always'>
+SWITCH Keyword&quot; \L 3 <![endif]--><!--[if supportFields]><span
+style='mso-element:field-end'></span><![endif]--></h2>
+
+<h4>Purpose</h4>
+
+<p class=MsoNormal>Tests the value of an expression against a number of
+constant values and executes an associated expression based on the value that
+matches.</p>
+
+<h3>Syntax<!--[if supportFields]><span style='mso-element:field-begin'></span>
+tc &quot;Syntax&quot; \L 4 <![endif]--><!--[if supportFields]><span
+style='mso-element:field-end'></span><![endif]--></h3>
+
+<p class=MsoNormal><b style='mso-bidi-font-weight:normal'>&lt;!-- #ICE </b>[<b
+style='mso-bidi-font-weight:normal'>REPEAT</b>] <br>
+<span style='mso-tab-count:1'>            </span><b style='mso-bidi-font-weight:
+normal'>SWITCH=</b><b style='mso-bidi-font-weight:normal'><span
+style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:normal'>switch_expression</i><b
+style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span><br>
+</b><span style='mso-tab-count:1'>            </span><b style='mso-bidi-font-weight:
+normal'>CASE </b><b style='mso-bidi-font-weight:normal'><span style='font-family:
+Courier'>`</span></b><i style='mso-bidi-font-style:normal'>constant<sub>1</sub></i><b
+style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span>=</b><b
+style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+style='mso-bidi-font-style:normal'>result<sub>1</sub></i><b style='mso-bidi-font-weight:
+normal'><span style='font-family:Courier'>`</span><br>
+</b><span style='mso-tab-count:1'>            </span><b style='mso-bidi-font-weight:
+normal'>CASE </b><b style='mso-bidi-font-weight:normal'><span style='font-family:
+Courier'>`</span></b><i style='mso-bidi-font-style:normal'>constant<sub>2</sub></i><b
+style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span>=</b><span
+style='font-family:Courier'>`</span><i style='mso-bidi-font-style:normal'>result<sub>2</sub></i><b
+style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span><br>
+</b><span style='mso-tab-count:1'>            </span>…<b style='mso-bidi-font-weight:
+normal'><br>
+</b><span style='mso-tab-count:1'>            </span><b style='mso-bidi-font-weight:
+normal'>CASE </b><b style='mso-bidi-font-weight:normal'><span style='font-family:
+Courier'>`</span></b><i style='mso-bidi-font-style:normal'>constant<sub>n</sub></i><b
+style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span>=</b><b
+style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b><i
+style='mso-bidi-font-style:normal'>result<sub>n</sub></i><b style='mso-bidi-font-weight:
+normal'><span style='font-family:Courier'>`</span><br>
+</b><span style='mso-tab-count:1'>            </span>[<b style='mso-bidi-font-weight:
+normal'>DEFAULT=</b><b style='mso-bidi-font-weight:normal'><span
+style='font-family:Courier'>`</span></b><i style='mso-bidi-font-style:normal'>default_result</i><b
+style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span></b>]<br>
+<b style='mso-bidi-font-weight:normal'>--&gt;</b></p>
+
+<b style='mso-bidi-font-weight:normal'><span style='font-size:10.0pt;
+font-family:AvantGarde;mso-fareast-font-family:"Times New Roman";mso-bidi-font-family:
+"Times New Roman";mso-ansi-language:EN-US;mso-fareast-language:EN-US;
+mso-bidi-language:AR-SA'><br clear=all style='page-break-before:always'>
+</span></b>
+
+<h4>Description</h4>
+
+<p class=MsoNormal>The following table lists the parameters used with the
+SWITCH keyword:</p>
+
+<p class=extraspace><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></p>
+
+<table border=1 cellspacing=0 cellpadding=0 style='margin-left:108.4pt;
+ border-collapse:collapse;border:none;mso-border-top-alt:solid windowtext 1.5pt;
+ mso-border-bottom-alt:solid windowtext 1.5pt;mso-padding-alt:0in 0in 0in 0in'>
+ <tr>
+  <td width=128 valign=top style='width:96.0pt;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdleft>Parameter</p>
+  </td>
+  <td width=256 valign=top style='width:192.0pt;border-top:solid windowtext 1.5pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tablecolhdright>Description</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=128 valign=top style='width:96.0pt;border:none;border-bottom:solid windowtext .75pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableleft><i style='mso-bidi-font-style:normal'>switch_expression<o:p></o:p></i></p>
+  </td>
+  <td width=256 valign=top style='width:192.0pt;border:none;border-bottom:solid windowtext .75pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableright>The value you want to compare to the constant
+  values.<span style="mso-spacerun: yes">  </span>It is usually an expression
+  containing one or more variables.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=128 valign=top style='width:96.0pt;border:none;mso-border-top-alt:
+  solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableleft><i style='mso-bidi-font-style:normal'>constant<sub>n</sub><o:p></o:p></i></p>
+  </td>
+  <td width=256 valign=top style='width:192.0pt;border:none;mso-border-top-alt:
+  solid windowtext .75pt;padding:0in 0in 0in 0in'>
+  <p class=tableright>A constant value to be compared to the <i
+  style='mso-bidi-font-style:normal'>switch_expression</i>.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=128 valign=top style='width:96.0pt;border:none;border-top:solid windowtext .75pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableleft><i style='mso-bidi-font-style:normal'>result<sub>n</sub><o:p></o:p></i></p>
+  </td>
+  <td width=256 valign=top style='width:192.0pt;border:none;border-top:solid windowtext .75pt;
+  padding:0in 0in 0in 0in'>
+  <p class=tableright>A resulting value.<span style="mso-spacerun: yes"> 
+  </span>It can be any markup text, including variables and Ingres/ICE macro
+  commands.</p>
+  </td>
+ </tr>
+ <tr>
+  <td width=128 valign=top style='width:96.0pt;border-top:solid windowtext .75pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tableleft><i style='mso-bidi-font-style:normal'>default_result<o:p></o:p></i></p>
+  </td>
+  <td width=256 valign=top style='width:192.0pt;border-top:solid windowtext .75pt;
+  border-left:none;border-bottom:solid windowtext 1.5pt;border-right:none;
+  padding:0in 0in 0in 0in'>
+  <p class=tableright>The default resulting value, if none of the compared
+  values match the <i style='mso-bidi-font-style:normal'>switch_expression</i>.</p>
+  </td>
+ </tr>
+</table>
+
+<p class=NormalLeft><span style='font-size:9.0pt;mso-bidi-font-size:10.0pt;
+font-family:AvantGarde'>REPEAT Option</span><span style='mso-tab-count:1'>                   </span>See
+the FUNCTION keyword for information on the REPEAT option.</p>
+
+<h4>Example</h4>
+
+<p class=MsoNormal>The following example results in the string “Ingres II”
+appearing in the document if the variable product is set to “I”:</p>
+
+<p class=codefirst>&lt;!-- #ICE SWITCH= `:product`</p>
+
+<p class=code><span style='mso-tab-count:1'>   </span>CASE `D`=`Unicenter TND`</p>
+
+<p class=code><span style='mso-tab-count:1'>   </span>CASE `I`=`Ingres II`</p>
+
+<p class=code><span style='mso-tab-count:1'>   </span>CASE `J`=`Jasmine`</p>
+
+<p class=code><span style='mso-tab-count:1'>   </span>CASE `U`=`Unicenter TNG`</p>
+
+<p class=code><span style='mso-tab-count:1'>   </span>DEFAULT=`CA product`</p>
+
+<p class=code>--&gt;</p>
+
+<h4>See Also</h4>
+
+<p class=MsoNormal style='mso-outline-level:1'>IF keyword</p>
+
+<span style='font-size:12.0pt;font-family:"Times New Roman";mso-fareast-font-family:
+"Times New Roman";mso-bidi-font-family:"Times New Roman";mso-ansi-language:
+EN-US;mso-fareast-language:EN-US;mso-bidi-language:AR-SA'><br clear=all
+style='mso-special-character:line-break;page-break-before:always'>
+</span>
+
+<p class=MsoNormal><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></p>
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The qef_hash_mem resource sets the maximum amount of memory that one
+  session can use for performing hash operations in the Query Execution
+  Facility (QEF).  Hash operations include hash joins and hash aggregation.
+
+  The total QEF hash memory limit server-wide is controlled by the
+  related qef_sorthash_memory resource.
+
+  The default is 20 Mb.

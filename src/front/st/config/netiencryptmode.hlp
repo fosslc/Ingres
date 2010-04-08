@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Inbound Net encryption mode.  Set to one of the following values:
+    off - Encryption is neither requested nor allowed.
+    optional - Encryption may occur but is not requested.
+    on - Encryption is requested if possible (if both ends support it).
+    required - Encryption must always occur.
+

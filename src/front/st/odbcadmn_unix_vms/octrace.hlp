@@ -1,0 +1,31 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+/#-- ODBC configuration screen help file 
+/#--
+You are looking at iiodbcadmin's ODBC Tracing Page.
+
+The iiodbcadmin screen consists of a single form with three
+fields.  
+
+The ODBC Tracing field shows the tracing status.  OFF means tracing is
+disabled.  ON means tracing is enabled.
+
+The Driver Manager entry field is read-only.  It shows the driver
+manager specified when iisuodbc or iiodbcinst was
+executed.
+
+The Path entry field lists the current path and file name path for the ODBC 
+tracing.  Enter the path and file name of the ODBC trace file.
+
+The menu operations are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Set Tracing     Toggles the ODBC Tracing entry to ON or OFF.
+
+	Save            Saves the path and file name used for 
+			ODBC tracing.
+
+        Help            Displays this help screen.
+
+        End             Exit iiodbcadmin.

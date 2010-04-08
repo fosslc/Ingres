@@ -1,0 +1,56 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+/#-- ODBC configuration screen help file 
+/#--
+You are looking at iiodbcadmin's main menu.
+
+The iiodbcadmin screen consists of a single form with a table
+listing the ODBC data source definitions found in the configuration path 
+definition.  Only Ingres data source definitions are displayed.
+
+The Path field lists the default path for the ODBC configuration files.
+If the Ingres ODBC driver was installed with a path other than the
+default, the Path field will display as "ALTERNATE".  Otherwise, the
+default path is "SYSTEM".  The "ALTERNATE" and "SYSTEM" paths indicate
+the system-level definitions for the Ingres ODBC driver.  User-level
+paths may be specified via the "Files" menu option.
+
+All menu items apply to whichever tablefield contains the cursor when the 
+item is activated.  The menu operations are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+
+        Create          Create a DSN definition.  The iiodbcadmin
+                        utility will provide popup displays for the
+			data source name and driver name.  After
+			successfully selecting the data source name and
+			driver name, iiodbcadmin will display
+			the ODBC Data Source Configuration Page.
+
+        Destroy         The entry under the cursor is destroyed.  Your must 
+                        respond to a "Do you really mean it"  prompt.
+                        If the response is positive, the entry under the 
+                        cursor is destroyed.  Whenever a DSN entry is 
+                        destroyed, all detail entries for the same DSN are 
+                        automatically destroyed as well.
+
+        Edit            Modify a DSN definition.  The ODBC Data Source
+                        Configuration Page will be displayed for the entry 
+                        under the cursor.
+
+        Test            Test an ODBC connection.  The configuration data 
+                        supplied in the ODBC Data Source Configuration Page 
+                        will be used to attempt a connection to the database.  
+                        A display popup will indicate success or failure of 
+                        the connection attempt.
+ 
+	Drivers         Lists installed Ingres ODBC drivers via the 
+                 	Installed Drivers Page.  ODBC tracing may be
+			enabled in the Installed Drivers Page.
+
+        Files           Displays a menu pop-up for selecting user, system, 
+			or alternate configuration paths.
+
+        Help            Displays this help screen.
+
+        End             Exit iiodbcadmin.

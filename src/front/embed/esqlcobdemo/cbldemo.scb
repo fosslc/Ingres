@@ -1,0 +1,59 @@
+      *
+      *  Ingres COBOL/Embedded SQL Demo Application
+      *
+      *  Selects and Displays Records from DEMO_PERSONNEL table where
+      *    CITY = 'BOSTON'
+      *
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. CBLDEMO.
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       INPUT-OUTPUT SECTION.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       EXEC SQL INCLUDE SQLCA END-EXEC.
+       EXEC SQL BEGIN DECLARE SECTION END-EXEC.
+       01 PER-NUMBER PIC 9(9) USAGE COMP-5. 
+       01 PER-NAME   PIC X(24).
+       01 PER-STREET PIC X(24).
+       01 PER-CITY   PIC X(15).
+       01 PER-STATE  PIC X(2).
+       01 PER-ZIP    PIC X(5).
+       01 PER-SSN    PIC X(9).
+       01  DBNAME PIC X(8) VALUE 'D1234567'.
+       EXEC SQL END DECLARE SECTION END-EXEC.
+       01  WK-CODE     PIC S9(9) USAGE COMP-5 VALUE ZERO.
+           88  SQL-END             VALUE 100.
+       PROCEDURE DIVISION.
+           EXEC SQL WHENEVER SQLERROR GO TO SQL-ERROR-RTN END-EXEC.
+	   ACCEPT DBNAME FROM COMMAND-LINE.
+           DISPLAY 'DATABASE NAME: ' DBNAME. 
+           EXEC SQL
+               CONNECT :DBNAME 
+           END-EXEC.
+           EXEC SQL
+               SELECT 
+		     NUMBER,NAME,STREET,CITY,STATE,ZIP,SSN
+               INTO
+                     :PER-NUMBER,:PER-NAME,:PER-STREET,:PER-CITY,
+                     :PER-STATE,:PER-ZIP,:PER-SSN
+               FROM
+                     DEMO_PERSONNEL 
+               WHERE
+                     CITY = 'BOSTON'
+	       ORDER BY
+                     CITY, NAME;
+           EXEC SQL BEGIN;
+               DISPLAY PER-NAME,PER-STREET,PER-CITY,
+                       PER-STATE,PER-ZIP.
+           EXEC SQL END;
+           DISPLAY 'DONE'.
+           STOP RUN. 
+
+       SQL-ERROR-RTN.
+           MOVE SQLCODE TO WK-CODE.
+           IF (SQLCODE IS LESS THAN 0)
+              DISPLAY 'SQLCODE =' WK-CODE '(MINUS)'
+           ELSE
+              DISPLAY 'SQLCODE =' WK-CODE.
+           STOP RUN.

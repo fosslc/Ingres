@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- icelstfr.hlp       Create/Examine/Update Locations.
+/#--
+This frame displays all locations and their areas.  You may examine
+LocationName - Area mappings.
+
+Location Names specify Areas (disk volumes or directories) that
+can be made available for database data, journals, checkpoints,
+or online backup dumps.  Once the LocationName - Area mapping is
+established, database tables, journals, checkpoints, or online
+backup dumps can reside on the established Area.
+
+The menu commands are:
+
+	MENU COMMANDS	SYNOPSIS
+	-------------	--------
+	Examine         Examine the selected LocationName in detail.
+	
+	Help            Access the Ingres help facility.
+	
+	End             Return to the previous frame.

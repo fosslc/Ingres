@@ -1,0 +1,18 @@
+#
+# Jamfile file for common!adf!adc
+#
+#    20-Oct-2009 (hweho01)
+#      Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC common adf adc ;
+
+IISUBSYS common adf adc ;
+
+IINOOPTIM adchelem.c : usl_us5  ;
+
+IILIBRARY ADFLIB : adcvalchk.c adctm.c adcpart.c adcminmaxdv.c
+	adclenchk.c adckout.c adckeybld.c adcisnull.c adcisminmax.c
+	adchmin.c adchmax.c adchgdtln.c adchelem.c adchdec.c
+	adchashprep.c adcgetempty.c adcdfchk.c adcdbtoev.c adcdate.c
+	adccvinto.c adccompr.c adccompare.c ;
+

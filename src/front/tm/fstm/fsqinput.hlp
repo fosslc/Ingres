@@ -1,0 +1,504 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The Interactive Terminal Monitor (IQUEL) is an interactive interface
+for executing QUEL statements and viewing the output.
+
+You are currently in the "input phase" of IQUEL; the input form is
+a simple table field into which you may type QUEL statements.
+When you are ready to execute your QUEL input simply retrieve the
+"Go" or "Complete" menu items.  When the output is returned from the
+database backend it will be displayed in the "output phase", which
+will allow you to scroll through the results.
+     
+     (NOTE -- Help for the QUEL query language syntax is available
+      below the description of Menu Commands shown here.  Simply 
+      scroll down another page for more information).
+
+Menu Items
+----------     
+      Go          Submit the QUEL statements to the backend for
+                  execution. The first "page" of output will be
+                  displayed as soon as it arrives from the backend.
+                  As you scroll forward the remaining pages will be
+                  displayed.  (See "Complete".)
+     
+      Resume      Return to the output phase to continue viewing the
+                  results from a previous request.
+     
+      Complete    Submit the QUEL statements to the backend for
+                  execution. Don't display any of the results until
+                  the entire request is complete and all output has
+                  been returned to IQUEL. (See "Go".)
+     
+      Blank       Delete all the QUEL statements from the input
+                  table field.
+     
+      Edit        Edit the contents of the input table field using the
+                  system editor.
+     
+      File        Displays a submenu to READ or WRITE a file into or
+                  from the input table field.   WRITE dumps the contents
+                  of the table field into a file.  READ loads the
+                  contents of a file into the table field.  For both
+                  subcommands you will be prompted for the name of
+                  the file.
+
+      OnError	  Displays a pop-up form indicating what will happen if 
+		  an error is encountered on one of your QUEL statements.
+		  TERMINATE ends the processing of these statements.  
+		  CONTINUE does not stop processing, the remaining statements 
+		  will be executed. You may change this option by selecting
+		  the appropriate setting.
+
+      LineEdit    Displays a submenu to Insert, Delete, Split, or Join
+		  lines in the input screen.
+     
+      Help        Display this Help file
+     
+      Quit        Exit from IQUEL
+     
+=============================================================================
+Help - QUEL Summary of Commands
+
+Help is available on the following QUEL commands.  Simply search for the
+command of interest, preceded by "HELP -", for detailed information.  For
+example, for help on RETRIEVE, search for "HELP - Retrieve"
+
+   ABORT                   DELETE                  PRINT
+   APPEND		   DESTROY	   	   RANGE
+   BEGIN TRANSACTION	   DESTROY INTEGRITY       REPLACE
+   COPY                    DESTROY PERMIT          RETRIEVE
+   CREATE                  END TRANSACTION         SAVE
+   DEFINE INTEGRITY        HELP                    SAVEPOINT
+   DEFINE PERMIT           INDEX                   SET
+   DEFINE VIEW	           MODIFY
+
+Help is also available on the following general topics:
+
+      datatypes 	    	 set_functions 		type_functions
+      numeric_functions		 string_functions
+=========================================================================
+HELP - ABORT.   Undo some or all of a multi-statement transaction.
+
+The syntax of the ABORT statement is:
+
+        ABORT [TO savepoint_name]
+
+Examples:
+        begin transaction
+        append to emp (name = "jones", sal = 1000, bdate = 1923)
+        abort
+
+        begin transaction
+        append to emp (name = "jones", sal = 10000, bdate = 1923)
+        savepoint lastsave
+        append to emp (name = "smith", sal = 13000, bdate = 1914)
+        abort to lastsave
+
+=========================================================================
+HELP - APPEND.  Insert rows into a table.
+
+The syntax of an APPEND statement is:
+        [repeat] APPEND [to] tablename  
+        ( column = expression {, column = expression} )
+        [WHERE qualification]
+
+Examples:
+
+        append to sp (sno = "s1", pno = "p1", qty = 900)
+
+        append to sp (s.sno)
+                where s.city = "london" or s.city = "paris"
+=========================================================================
+HELP - BEGIN TRANSACTION.  Declare start of multi statement transaction.
+
+The syntax of the BEGIN TRANSACTION statement is:
+
+        BEGIN TRANSACTION
+
+Example:
+
+        begin transaction
+        append to emp (name = "jones", sal = 10000, bdate = 1923)
+        append to emp (name = "smith", sal = 23000, bdate = 1943)
+        end transaction
+
+=========================================================================
+HELP - COPY.  Copy date from/into a table from/into a file.
+	
+The syntax of the COPY statement is:
+
+        COPY tablename 
+                ( columnname = format [WITH NULL (value)]
+		{, columnname = format [WITH NULL (value)] } )
+                 INTO | FROM  "file_specification"
+		[WITH with_clause]
+Examples:
+
+        copy employee ( eno = integer2, ename = vchar(10) )
+                from "myfile.in";
+
+        copy employee ( ename=d0comma, eno=d0comma )
+                into "myfile.out";
+
+=========================================================================
+HELP - CREATE.  Create a new base table.
+
+The syntax of a CREATE statement is:
+        CREATE tablename 
+        [ ( column = format {, column = format } ) ]
+        [ WITH with_clause ]
+
+Example:
+
+        create sample ( col1 = i4, col2 = text(6), col3 = f8 )
+
+Additional help is available on "datatypes" and on RETRIEVE.
+
+=========================================================================
+HELP - DEFINE INTEGRITY.  Define integrity constraints on a base table.
+
+The syntax of a DEFINE INTEGRITY statement is:
+
+        DEFINE INTEGRITY ON rangevar IS qualification 
+
+Examples:
+
+        define integrity on p is p.pno = "p1" or p.pno = "p2"
+                or p.pno = "p3" or p.pno = "p4" or p.pno = "p5"
+
+        define integrity on sp is sp.qty > 0 and sp.qty < 10000
+
+=========================================================================
+HELP - DEFINE PERMIT.  Define permissions for a base table.
+
+The syntax of a DEFINE PERMIT statement is:
+
+        DEFINE PERMIT oplist { ON | OF | TO } rangevar
+        [ ( columnname {, columnname } ) ]
+        TO user_name
+        [ AT terminal ]
+        [ FROM time TO time ]
+        [ ON day TO day ]
+        [ WHERE search_condition ] 
+
+Example:
+
+        define permit retrieve, replace, append on test to johndoe
+
+=========================================================================
+HELP - DEFINE VIEW.  Define a virtual table.
+
+The syntax of a DEFINE VIEW statement is:
+        DEFINE VIEW viewname
+        ( [column =] expression {, [column =] expression } )
+        [ WHERE qualification ]
+
+Examples:
+        define view pcolors ( p.partno, p.partcolor )
+
+        define view notparis (sp.all)
+                where any(sp.sno by s.sno
+                    where sp.sno = s.sno and s.city="paris") = 0
+
+=========================================================================
+HELP - DELETE.  Delete rows from a table.
+
+The syntax of a DELETE statement is:
+        DELETE rangevar 
+        [ WHERE search_condition ] 
+
+Examples:
+
+        delete sp where sp.pno = "p1"
+
+        delete p;       (deletes all rows from p)
+
+        delete sp where sp.sno = s.sno and s.city = "paris"
+
+        delete p where 11 <= p.weight and p.weight <= 13
+
+=========================================================================
+HELP - DESTROY.  Destroy one or more tables, indexes or views.
+
+The syntax of a DESTROY statement is:
+        DESTROY tablename|indexname|viewname {, tablename|indexname|viewname }
+
+Example:
+
+        destroy p, s, sp
+
+=========================================================================
+HELP - DESTROY INTEGRITY.  Destroy one or more integrity constraints.
+
+The syntax of a DESTROY INTEGRITY statement is:
+
+        DESTROY INTEGRITY tablename integer {, integer } | ALL 
+
+where the integer arguments are those displayed by a 
+"HELP INTEGRITY tablename" statement. 
+
+Example:
+
+        destroy integrity job 0, 4, 5
+
+=========================================================================
+HELP - DESTROY PERMIT.  Destroy one or more permissions.
+
+The syntax of a DESTROY PERMIT statement is:
+
+        DESTROY PERMIT tablename 
+        integer {, integer } | ALL 
+
+where the integer arguments are those displayed by a 
+"HELP PERMIT tablename" statement.
+
+Example:
+
+        destroy permit job all
+
+=========================================================================
+HELP - END TRANSACTION.  Stop in-progress transaction, and commit its
+                         replaces to the database.
+
+The syntax of the END TRANSACTION statement is:
+
+        END TRANSACTION
+
+Example:
+
+        begin transaction
+        append to emp (name = "jones", sal = 10000, bdate = 1923)
+        append to emp (name = "smith", sal = 23000, bdate = 1943)
+        end transaction
+
+=========================================================================
+HELP - HELP.  Get information about tables, views, permits or integrities.
+
+The syntax of the help command is:
+
+        HELP [ALL | tablename {, tablename}]
+        HELP VIEW viewname {, viewname}
+        HELP PERMIT tablename {, tablename}
+        HELP INTEGRITY tablename {, tablename}
+
+Examples:
+
+        help all
+        help view job, employee
+        help integrity job
+        help permit employee, dept
+
+=========================================================================
+HELP - INDEX.  Create an index on an existing base table.
+
+The syntax of an INDEX statement is:
+        INDEX [UNIQUE] ON tablename IS [locationname:]indexname
+        ( columnname {, columnname } )
+
+Examples:
+
+        index on parts is pidx ( pno )
+
+        index on sp is spidx ( sno, pno )
+
+=========================================================================
+HELP - MODIFY.  Convert the storage structure of a table or index.
+
+The syntax of a MODIFY statement is:
+
+        MODIFY tablename|indexname TO 
+	storage_structure | MERGE | RELOCATE | REORGANIZE | TRUNCATED
+	[UNIQUE]
+        [ ON column [:ASCENDING|DESCENDING ]
+        {, column [:ASCENDING|DESCENDING ] } ]
+        [ WITH with_clause]
+
+Examples:
+
+        modify p to isam on pno;
+
+        modify sp to chash on sno, pno with minpages = 16;
+
+=========================================================================
+HELP - PRINT.   Print table(s).
+	
+The syntax of a PRINT statement is:
+	
+	PRINT tablename {,tablename}
+
+Examples:
+	
+	print my_tablename
+
+	print my_tablename,your_tablename
+	
+=========================================================================
+HELP - RANGE.  Declare a range variable.
+
+The syntax of a RANGE statement is:
+	
+        RANGE of range_var IS tablename {, range_var IS tablename}
+
+Example:
+
+        range of x is s, y is sp
+
+A tablename itself is also considered a valid rangevar as if
+declared by the statement:
+
+        range of tablename is tablename
+        
+=========================================================================
+HELP - REPLACE.  Update values of columns in a table.
+
+The syntax of a REPLACE statement is:
+        REPLACE rangevar
+        (column = expression {, column = expression })
+        [ WHERE search_condition ]
+
+Examples:
+
+        replace sp (qty = sp.qty/2) where sp.sno="s1"
+
+        replace sp (qty = sqrt(sp.qty)) where sp.sno =
+                s.sno and s.city = "athens"
+
+=========================================================================
+HELP - RETRIEVE.  Select data from the database for display on your screen.
+
+The syntax of a RETRIEVE statement is:
+        RETRIEVE [INTO tablename|UNIQUE]
+        ([column =] expression {, [column =] expression })
+        [ WHERE search_condition]
+        [ SORT [BY] column[:ASCENDING|DESCENDING]
+        	{, column[:ASCENDING|DESCENDING] } ]
+        [ ORDER [BY] column[:ASCENDING|DESCENDING]
+        	{, column[:ASCENDING|DESCENDING] } ]
+	[WITH with-clause]
+
+Examples:
+        retrieve (sp.pno, sp.sno)
+
+        range of x is p, y is s
+        retrieve (x.pno, y.sno)
+            where x.color="red"
+
+        retrieve (sp.pno, s = sum(sp.qty by sp.pno where sp.sno != "s1"))
+            where sno != "s1"
+
+=========================================================================
+HELP - SAVE.  Save a base table until a specified date.
+
+The syntax of the SAVE statement is:
+
+        SAVE tablename UNTIL month day year
+
+Examples:
+
+        save mytable until 12 27 1982
+
+        save yourtable until JAN 1 1985
+
+=========================================================================
+HELP - SAVEPOINT.  Declare a savepoint marker within a transaction.
+
+The syntax of the SAVEPOINT statement is:
+
+        SAVEPOINT savepoint_name 
+
+Example:
+
+        begin transaction
+        append to emp (name = "jones", sal = 10000, bdate = 1923)
+        savepoint lastsave
+        append to emp (name = "smith", sal = 13000, bdate = 1914)
+        abort to lastsave
+
+=========================================================================
+HELP - SET.  Set INGRES session option.
+
+The syntax of a SET statement is:
+        SET JOURNALING | NOJOURNALING [ON tablename]
+        SET JOINOP | NOJOINOP
+        SET RET_INTO "HEAP | CHEAP | HEAPSORT | CHEAPSORT |
+                              HASH | CHASH | ISAM | CISAM | BTREE | CBTREE"
+        SET LOCKMODE SESSION | ON tablename
+            WHERE [LEVEL = PAGE | TABLE | SESSION | SYSTEM]
+            [, READLOCK = NOLOCK | SHARED | EXCLUSIVE | SESSION | SYSTEM]
+            [, MAXLOCKS = n | SESSION | SYSTEM]
+            [, TIMEOUT = n | SESSION | SYSTEM]
+
+=========================================================================
+HELP - Datatypes.   QUEL valid datatypes.
+
+QUEL datatypes include:
+
+                        cn              ( n is the maximum character length )
+                        text(n)         ( n is the maximum text length )
+                        i4
+                        i2
+                        i1
+                        f8
+                        f4
+                        date
+                        money
+
+=========================================================================
+HELP - Set_functions.  Functions on sets of values.
+
+QUEL set functions include:
+
+                        COUNT( column_name)
+                        COUNTU( column_name)
+                        SUM( column_name )
+                        SUMU( column_name )
+                        AVG( column_name )
+                        AVGU( column_name )
+                        MIN( column_name )
+                        MAX( column_name )
+
+=========================================================================
+HELP - Numeric_functions.  Functions on numeric values.
+
+Numeric functions include:
+                        abs( n )  
+                        atan( n ) 
+                        cos( n )  
+                        exp( n )  
+                        log( n )
+                        mod( n, b )
+                        sin( n )
+                        sqrt( n )
+=========================================================================
+HELP - Type_functions.   Functions to convert between datatypes.
+
+Type functions include:
+
+                        ascii( expr )
+                        date( expr )
+                        dow( expr )     convert absolute day to day of week
+                        float4( expr )
+                        float8( expr )
+                        int1( expr )
+                        int2( expr )
+                        int4( expr )
+                        interval( x, y )
+                        money( expr )
+                        text( expr )
+=========================================================================
+HELP - String_functions.  Functions on string variables.
+
+String functions include:
+
+                        concat( string1, string2 )
+                        left( string1, length )
+                        length( string )
+                        locate( string1, string2 )
+                        lowercase( string )
+                        pad( string )
+                        right( string, length )
+                        shift( string, n_places )
+                        size( string )
+                        squeeze( string )
+                        trim( string )
+                        uppercase( string )

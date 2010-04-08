@@ -1,0 +1,3 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+II_RMS_CLOSE_FILE determines whether a file is closed after the last 
+session terminates that was accessing the file.

@@ -1,0 +1,79 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/argloc.1,v 1.1 90/03/09 09:17:30 source Exp $
+.TH ARGLOC 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+argloc \- Show where function arguments are stashed
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B argloc
+[ -v ]
+.SH DESCRIPTION
+.I Argloc
+tries to reveal the location of arguments passed to a function.  
+The following arguments are passed to a function:
+.IP "int" 16
+A regular integer.
+.IP "char *"
+A Character pointer.
+.IP "BUFFER"
+A structure containing a BUFSIZ character array.
+.IP "BUFFER *"
+A pointer to a BUFFER structure.
+.IP "BITFIELDS"
+A structure containing two four-bit bitfields.
+.IP "BITFIELDS *"
+A pointer to a BITFIELDS structure.
+.IP "ANYTYPE"
+A union containing elements of each of the integral base types:  char,
+short, int, long and char *.
+.IP "ANYTYPE *"
+A pointer to an ANYTYPE union.
+.LP
+The program prints the address of each argument, and for pointers,
+prints the value of the pointer.  It also allocates an instance of each
+structure using \fImalloc()\fP and prints the value of the pointer.
+.LP
+Examining the address should reveal whether the structures and unions
+are passed directly on the stack, fudged on the stack or passed in
+allocated space.  This is the output on a Pyramid:
+.br
+.nf
+	
+	integer arg:
+		&i		= 0x1ff51100
+	
+	char * arg:
+		&s		= 0x1ff51104	s	= 0x0
+	
+	structure with char array:
+		&buff		= 0x1ff4f288
+		&buffptr	= 0x1ff51108	buffptr	= 0x1ff4faa0
+		&newbuf		= 0x1ff51140	newbuf	= 0x67c0
+	
+	structure with small bitfields:
+		&bits		= 0x1ff4fa88
+		&bitsptr	= 0x1ff5110c	bitsptr	= 0x1ff4fa9c
+		&newbits	= 0x1ff51144	newbits	= 0x6fc8
+	
+	structure with one int:
+		&integer	= 0x1ff4fa8c
+		&intptr		= 0x1ff51110	intptr	= 0x1ff4fa98
+		&newint		= 0x1ff51148	newint	= 0x6fd4
+	
+	any type union:
+		&any		= 0x1ff4fa90
+		&anyptr		= 0x1ff51114	anyptr	= 0x1ff4fa94
+		&newany		= 0x1ff5114c	newany	= 0x6fe0
+.fi
+.PP
+.B -v
+``verbose'' output prints the program's name and indents the output one
+tab stop.
+.SH "SEE ALSO"
+\fIstackorder(1)\fP
+.SH BUGS
+.I Argorder
+assumes that it is legal to take the addresses of all arguments.  This
+might not be true on machines that place arguments in non-mapped
+registers.

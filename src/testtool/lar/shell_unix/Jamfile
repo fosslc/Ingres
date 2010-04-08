@@ -1,0 +1,11 @@
+#
+# Jamfile file for testtool!lar!shell_unix
+#
+
+SubDir ING_SRC testtool lar shell_unix ;
+
+IISUBSYS testtool lar shell_unix ;
+
+
+IITOOLSSH ckpdbtst : ckpdbtst.sh ;
+

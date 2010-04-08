@@ -1,0 +1,14 @@
+/#-- Help File:         fgmdappp.hlp
+/#-- Master detail Append frame.
+This screen allows you to add new data to the database. Enter the new
+data and select "Save".
+
+  Save        Insert new data into database.
+  RowDelete   Delete current row from table field.
+  RowInsert   Open new row in table field.
+  Clear       Clear every field on the screen.
+  ListChoices Show valid values for current field. 
+  Help        Get help about this screen.
+  TopFrame    Return to the top frame in the application.
+  End         Stop work on this screen and return to the
+              screen that called it.

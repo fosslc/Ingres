@@ -1,0 +1,57 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Link generated sub-set of Shakespeare's Plays by type</title>
+</head>
+<body>
+<center>
+<h1>Link generated sub-set of Shakespeare's Plays by type</h1>
+</center>
+
+<!-- To Do:
+	    Add the select statement:
+            "select * from plays where type = ':type'"
+	    - the variable :type is passed to this
+	      document by the invoker.
+
+            Specify output to be table
+
+	    Use the session variable :play_txn to
+	    define the name of the transaction in
+	    the SQL statement. HINT: You will need to
+	    use the REPEAT keyword.
+
+	    Commit the transaction at once (using
+	    the :play_txn variable).
+-->
+<!-- #ICE VAR=`
+<FORM ACTION="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_typeLinkSubSet.html]"
+	METHOD="GET">
+` -->
+<!-- #ICE DECLARE=`session.e_playTxn=Complete` -->
+<!-- #ICE DECLARE=`session.e_playTxnCommitted=FALSE` -->
+<!-- #ICE REPEAT
+          DATABASE = `icetutor` 
+          SQL=`select * from plays where type = ':type'` 
+          TRANSACTION=`Complete` 
+          CURSOR=`Works` 
+          ROWS=`5` 
+          TYPE=`TABLE`
+-->
+<p>
+<!-- #ICE VAR=`
+<A HREF="/ice-bin/oiice.:http_api_ext/playgroup/plays[:e_return]">
+Select a new play type
+</A>
+` -->
+<p>
+<INPUT TYPE="submit" NAME="More" VALUE="More" ALT="Show more plays">
+<!-- #ICE VAR=`<INPUT TYPE="hidden" NAME="type" VALUE=":type">` -->
+</FORM>
+
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

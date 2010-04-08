@@ -1,0 +1,102 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	 <st.h> 
+
+/**
+** Name:	mqgetfmt.qsc - get FMT info for QBF
+**
+** Description:
+**	This file defines:
+**
+**	mqgetFmt()	- get format info from DB_DATA_VALUE
+**
+** History:
+**	3/31/87 (peterk) - created based on mqbffmt.c
+**	13-jul-87 (bab)	Changed memory allocation to use [FM]Ereqmem.
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	07-mar-2001 (somsa01)
+**	    Changed maxcharwidth from 10000 to FE_FMTMAXCHARWIDTH.
+**/
+
+# define	MQ_MAXCHARWIDTH		72	/* max prec. for char fmts */
+
+/*{
+** Name:	mqgetFmt	- get format info for DB_DATA_VALUE
+**
+** Description:
+**	Calls fmt_* routines to get format string, FMT structure,
+**	and display size info for a DB_DATA_VALUE.
+**
+** Inputs:
+**	DB_DATA_VALUE	*dbv;	
+**
+** Outputs:
+**	char	**fmtstr;	ptr to resultant format string
+**	i4	*rows;		ptr to number of rows in display
+**	i4	*cols;		ptr to number of columns in display
+**
+** Returns:
+**	FMT	*fmt;		ptr to FMT structure.
+**
+** Side Effects:
+**	global memory is allocated
+**
+** History:
+**	3/31/87 (peterk) - created for 6.0 FMT changes; combines
+**		code from old routines mqtoFmtStr() and mqchkFmt().
+**	07-mar-2001 (somsa01)
+**	    Changed maxcharwidth from 10000 to FE_FMTMAXCHARWIDTH.
+*/
+
+FMT *
+mqgetFmt(att, fmtstr, rows, cols)
+ATTRIBINFO	*att;
+char	**fmtstr;
+i4	*rows, *cols;
+{
+	DB_DATA_VALUE	*dbv = &att->dbv;
+	ADF_CB	*adfcb, *FEadfcb();
+	char	buffer[MAX_FMTSTR];
+	i4	size;
+	PTR	fmtwksp;
+	FMT	*fmt;
+	i4	charwidth = att->intbl? FE_FMTMAXCHARWIDTH: MQ_MAXCHARWIDTH;
+
+	adfcb = FEadfcb();
+	
+	if (fmt_deffmt(adfcb, dbv, charwidth, FALSE, buffer) != OK)
+	{
+		*buffer = '\0';
+	}
+	*fmtstr = STalloc(buffer);
+
+	if (**fmtstr == '\0')
+	    return NULL;
+
+
+	if (fmt_areasize(adfcb, *fmtstr, &size) != E_DB_OK ||
+	    (fmtwksp = FEreqmem((u_i4)0, (u_i4)size, TRUE,
+		(STATUS *)NULL)) == NULL ||
+	    fmt_setfmt(adfcb, *fmtstr, fmtwksp, &fmt, NULL) != E_DB_OK)
+		return NULL;
+
+	if (fmt_size(adfcb, fmt, dbv, rows, cols) != E_DB_OK)
+	    return NULL;
+
+	return fmt;
+}

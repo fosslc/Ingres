@@ -1,0 +1,63 @@
+#
+#  Copyright (c) 2007 Ingres Corporation
+#
+#  Name: Jamdefs.ppc_lnx -- Variable definitions for PowerPC Linux
+#
+#  Description:
+#       Platform specific variable definitions for PowerPC Linux
+#
+# History:
+#   23-Mar-2007 (hanje04)
+#	Created.
+#        8-Oct-2007 (hanal04) Bug 119262
+#           Added archive iimerge.a alternative to shared library server.
+#       25-Jun-2008 (rajus01) SIR 120420, SD issue 116370
+#           Added PAMLIB to resolve symbols defined in PAM library.
+#    
+NETSCAPE_API_FLAG = -DXP_UNIX ;
+APACHE_API_FLAG = -DLINUX=2 ;
+VERS    = "ppc_lnx" ;
+ASMACH  = "-a64" ;
+CD      = "cd" ;
+CC      default = "gcc" ;
+CCDEBUG = "-g" ;
+CPP     default = "/lib/cpp" ;
+CCMACH = -m64 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
+CCLDMACH = -m64 -rdynamic ;
+CCSHLDMACH      = "-m64 -shared" ;
+CCLDSERVER = -melf64ppc ;
+CCPICFLAG = -fPIC ;
+SLSFX = so ;
+LIBSFX = a ;
+OBJSFX = o ;
+MWSLSFX = so ;
+CGISFX = cgi ;
+LDLIBPATH = /lib64 /usr/lib64 /usr/local/lib64 ;
+LIBMACH = ;
+LDLIBMACH = -lpthread -lm -lc -lcrypt -ldl -lgcc_s ;
+LD_ICE_FLAGS = ;
+ICE_EXT               = so ;
+CGI_EXT               = cgi ;
+OPTIM           = "" ;
+IIOPTIM         ?= "-O" ;
+NOOPTIM       ?= "-O0" ;
+IIL1OPTIM       ?= "-O1" ;
+SHELLHEADER = "#!/bin/bash" ;
+LEX = flex ;
+BSD42 default = -DBSD42 ;
+DIRENT default = -DDIRENT ;
+DIRFUNC default = -DDIRFUNC ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 default = -DSYS5 ;
+SYSGRAPHLIB = ;
+SYMLINK = test -h ;
+CXX = g++ ;
+C++ = g++ ;
+UNDEFFLAG  = "-u " ;
+CXX_DEFS = ;
+XERC_DEFS = -O -DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET ;
+DBMS_STACKSIZE = 262144 ;
+XERCVERS = 27 ;
+platform_string = "Linux on PowerPC" ;
+extension_string = $(config_string) ;
+PAMLIB 	= TRUE ;

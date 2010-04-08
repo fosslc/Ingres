@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqpstdir.hlp, behind the popup asking which direction to insert a frame.
+/#-- 
+The system is asking you where, in relation to the current frame, you want 
+to insert the frame.  (The current frame is the one your cursor was on when 
+you selected Insert.)
+
+  * To insert the frame as a peer frame, select Right or Left.
+
+  * To insert the frame as a child frame, select Down if there are no other 
+    child frames.  If other child frames already exist, you must place the
+    frame as the peer of one of them. To do this:
+    - Select Cancel.
+    - Move the cursor to one of the child frames.
+    - Select Insert.
+    - Select Right or Left.
+
+  * To select a different current frame, use Cancel to end this operation,
+    then move the cursor to the desired frame and select Insert again.

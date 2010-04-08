@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!vnodemgr_win
+#
+
+SubDir ING_SRC front vdba vnodemgr_win ;
+
+IISUBSYS front vdba vnodemgr_win ;
+
+
+IISLN ingnet.exe : vnodemgr.sln ;

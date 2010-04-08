@@ -1,0 +1,1414 @@
+<HTML>
+<HEAD>
+<!-- Created with DOC2HTML, 426 (05/20/02) -->
+<title>Patch 8902 for Advantage Ingres 2.6 on Windows </title>
+<style>
+<!--
+A:link                       {  text-decoration: underline; font-size: 12px; font-weight: bold; color: #000080  }
+A:hover                      {  text-decoration: underline; font-size: 12px; font-weight: bold; color: blue  }
+A:active                     {  text-decoration: underline; font-size: 12px; font-weight: bold; color: #006666  }
+A:visited                    {  text-decoration: underline; font-size: 12px; font-weight: bold; color: blue  }
+BODY                         {  font-family: arial, helvetica; font-size: 13px; font-weight: normal; color: 00000  }
+P                            {  font-family: arial, helvetica; font-size: 13px; font-weight: normal; color: #000000  }
+TD                           {  font-family: arial, helvetica; font-size: 13px; font-weight: normal; color: #000000  }
+TH                           {  font-family: arial, helvetica; font-size: 13px; font-weight: bold; color: #000000  }
+H1                           {  font-size: 23px; font-weight: bold; color: #000080  }
+H2                           {  font-size: 20px; font-family: arial, helvetica; font-weight: normal; color: #000080  }
+H3                           {  font-size: 16px; font-family: arial, helvetica; font-weight: bold; color: #000080  }
+H4                           {  font-size: 16px; font-weight: bold; font-family: arial, helvetica; color: #000000  }
+ol, ul ol, ul ul ol          {  list-style-type: decimal; list-style-image : none; }
+ol ol, ul ol ol, ol ul ol    {  list-style-type: lower-alpha; list-style-image: none; }
+ul, ol ul, ol ol ul          {  list-style-type: disc; list-style-image: none; }
+ul ul, ol ul ul, ul ol ul    {  list-style-type: circle; list-style-image: none;}
+ul ul ul                     {  list-style-type: square; list-style-image: none; }
+ol ol ol                     {  list-style-type: upper-roman; list-style-image: none; }
+B                            {  font-weight: bold  }
+STRONG                       {  font-weight: bold  }
+I                            {  font-style: italic  }
+EM                           {  font-style: italic  }
+INPUT                        {  color: #000088; font-family: arial; font-size: 10px; } /* Special */
+TEXTAREA                     {  color: #000088; font-family: arial; font-size: 10px; } /* Special */
+BLOCKQUOTE                   {  font-size: 10px; }
+PRE                          {  font-family: "courier new", courier, monospace; font-size: 13px  }
+-->
+</style>
+</HEAD>
+<BODY>
+<h1><a name="patch_8902_for_advantage_ingres_2.6_on_windows">Patch 8902 for Advantage Ingres 2.6 on Windows</a></h1>
+<p>
+<hr>
+<font size=-1>
+<nobr>
+<br><a href="#patch_8902_for_advantage_ingres_2.6_on_windows">Patch 8902 for Advantage Ingres 2.6 on Windows</a>
+<br>&nbsp;&nbsp;<a href="#welcome">1.0  Welcome</a>
+<br>&nbsp;&nbsp;<a href="#installation_considerations">2.0  Installation Considerations</a>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#installation_on_windows_platforms">2.1  Installation on Windows platforms</a>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#de_installation_on_windows_platforms">2.2  De-installation on Windows Platforms</a>
+<br>&nbsp;&nbsp;<a href="#general_considerations">3.0  General Considerations</a>
+<br>&nbsp;&nbsp;<a href="#contacting_technical_support">4.0  Contacting Technical Support</a>
+</nobr>
+</font>
+<p>
+<hr>
+<h2><a name="welcome">1.0  Welcome</a></h2>
+<p>Welcome to Patch 8902 for Advantage Ingres 2.6 on windows.
+This patch may be installed over any Advantage Ingres 2.6 Windows 
+release, currently including 2.6/0201 and 2.6/0207.
+This Readme contains important information about patch 8902 
+, including how to install it on Windows
+platforms, a list of all the problems that the patch
+addresses, and technical support contact information. You
+can connect to the Advantage Ingres Relational Database
+product page at <a href="http://esupport.ca.com/">http://esupport.ca.com</a>.
+<p>
+<hr>
+<h2><a name="installation_considerations">2.0  Installation Considerations</a></h2>
+<p>
+<hr>
+<h3><a name="installation_on_windows_platforms">2.1  Installation on windows platforms</a></h3>
+<p>To install this patch on windows platforms:
+<ol>
+	<p><li> Login as the INGRES super-user using  the "ingres" account.
+
+        <p><li> Stop all INGRES processes;
+
+	 <p>  a) If Ingres was started as a service then stop all related
+              Ingres service(s) under Control Panel \ Services.
+
+           <p>b) If Ingres was not started as a service use:
+
+                ingstop
+
+	  <p> c) if IVM is running, issue:
+
+	        ivm -stop
+
+	<p><li> If patch supplied on CD media then load into drive.
+
+	<p><li> If you have downloaded the patch from the CA WEB site or if
+           the CD you received contains a ZIP file, then you should 
+           first unZIP the ZIP file to a temporary directory on a hard 
+           drive.
+
+	<p><li> Enter the following commands at a command prompt:
+
+	   cd <drive containing unzipped version of the patch>
+           install
+
+	<p><li> Follow the instructions displayed on the screen to complete
+	   the patch installation.
+
+        <p><li> Restart the INGRES installation.
+
+        <p>   a) If Ingres was stopped as a service then restart the
+              related Ingres service(s) under Control Panel \ Services.
+
+          <p> b) If Ingres was shutdown using ingstop use:
+
+                Ingstart
+</ol>
+<p>
+<p>During installation the following options are available :
+<ol>
+	<p><li> 'Force execution of patch install even if cdimage 
+            verification fails'
+
+	   This option forces the patch to be installed despite the 
+           verification of the files to be installed failing. 
+           This option should only be used on the advice of CA 
+           technical support.
+
+	<p><li> 'Backup files to be replaced in the installation'
+
+           Any files that will be replaced during the installation 
+           of this patch will be backed up to a specified directory. 
+           The default directory is %II_SYSTEM%\ingres\install\backup.
+
+	   It is recommended that this option be chosen as it allows 
+           the patch to be uninstalled should that prove necessary.
+
+	<p><li> 'Install Patch'
+
+	   This option installs the patch.
+
+
+	<p><li> 'View Patch Notes'
+
+	   This option allows you to view the patch notes for this 
+           patch release
+
+	<p><li> 'Exit Installation'
+
+	   This option will terminate the patch installation without
+	   installing the patch
+
+</ol>
+<p>
+<hr>
+<h3><a name="de_installation_on_windows_platforms">2.2  De-installation on Windows Platforms</a></h3>
+<p>Provided the patch was installed with the 'Backup.....' option checked
+        you can uninstall the patch by using the following procedure.
+<ol>
+<p><li>Start the WindowsNT Explorer
+<p><li>Locate the directory used as the backup during patch installation
+           e.g. %II_SYSTEM%\ingres\install\backup
+<p><li>Click and hold on the Ingres directory
+           e.g. %II_SYSTEM%\ingres\install\backup\pre-pNNNN\ingres
+           where NNNN is the patch number
+<p><li>Drag this directory to the %II_SYSTEM% directory and release
+<p><li>Answer 'Yes to all' when prompted.
+<p>This sequence of steps moves the backup files back into the %II_SYSTEM%
+	directory structure and overwrites those files that are already present.
+<p>If you have multiple backup directories from multiple patch 
+	installations care should be taken when deciding which directory to 
+	use. For example, if you installed patch 1 and then installed a later 
+	patch, patch 2, but decided to uninstall using the patch 1 backup 
+	then this will cause both patch 1 and 2 to be uninstalled.
+<p>If you have any doubts please contact your local CA Technical Support.
+</ol>
+<hr>
+<h2><a name="general_considerations">3.0  General Considerations</a></h2>
+<p>The following reported problems have been resolved with
+this patch. For reference, each problem is listed
+with its published patch number, and the operating systems
+to which it applies.
+<p>
+<hr>
+<h3><a name="48904_vms">48904  (VMS)</a></h3>
+<p>
+	Several errors and Server crashes were caused when a
+	DBMS thread was resumed before the async operation
+	it was waiting for completed. Typical errors are
+	E_CL0605 and E_CL0607.
+<p>
+<hr>
+<h3><a name="74960_generic">74960  (Generic)</a></h3>            
+<p>
+        Fixed AUDITDB so that it will not get the errors E_DM1201_ATP_WRITING_A
+UDIT
+        or E_DM1212_ATP_DISPLAY if the current table compression type does not
+        match the table compression type for a particular journal record for th
+at
+        table.
+<p>
+<hr>
+<h3><a name="92366_generic">92366  (Generic)</a></h3>            
+<p>
+        ABF/REPORT/SQL: Calculations which involve the division of a packed
+        decimal datatype by an integer datatype may fail with E_AD1127
+        (packed decimal overflow).
+
+        When two decimals are being multiplied, it is assumed that the
+        precision number indicates the exact number of significant digits
+        of the decimal causing an overflow or unnecessary truncation.
+<p>
+<hr>
+<h3><a name="97545_generic">97545  (Generic)</a></h3>    
+<p>
+        4GL call frame/report commands can fail with error E_RW100A
+        when passing parameters via the utexe system. This is caused
+        by strings being incorrectly delimited on some platforms.
+<p>
+<hr>
+<h3><a name="92366_generic">92366  (Generic)</a></h3>    
+<p>
+        Hash joins are well known to be an alternative to sort merge join.
+        A properly implemented hash join algorithm will always perform at
+        least as well as an equivalent sort merge join, and usually much
+        better.
+<p>
+<hr>
+<h3><a name="102195_generic">102195  (Generic)</a></h3>    
+<p>
+	Attempting to delete a location associated with a business unit using an
+	invalid location identifier with the Ingres/ICE C API results in an abruptly
+	released association.
+<p>
+<hr>
+<h3><a name="104299_generic">104299  (Generic)</a></h3>    
+<p>
+	If II_THREAD_TYPE is set to INTERNAL, DBMS server may under unusual
+	circumstances loop endlessly within the group page buffer manager,
+	causing sessions connected to the server to hang.  No error messages
+	are produced, and IIMONITOR and IPM will both also hang.
+<p>
+<hr>
+<h3><a name="106306_generic">106306  (Generic)</a></h3>    
+<p>
+	Server may hang, IIMONITOR shows sessions in a CS_MUTEX state
+	on RSB/LLB mutexes. Stack dump shows some threads in the
+	scavenge() function, others in LK_request_lock() and/or
+	LK_do_unlock().
+<p>
+<hr>
+<h3><a name="106436_unix">106436  (UNIX)</a></h3>    
+<p>
+	PERFORMANCE: Performance degradation since upgrading to
+	Ingres II on a single processor machine running with
+	internal threads and IO slaves on an OS threaded release.
+	Tests show best results obtained when using zero IO slaves.
+<p>
+<hr>
+<h3><a name="106953_generic">106953  (Generic)</a></h3>    
+<p>
+	The list of privileges is now displayed correctly in the VDBA "Create Profile"
+	dialog under Windows 2000.
+<p>
+<hr>
+<h3><a name="107776_generic">107776  (Generic)</a></h3>    
+<p>
+	E_DM002A returned to RAAT on an IIraat_table_open call if
+	internal threads are enabled.
+<p>
+<hr>
+<h3><a name="107863_generic">107863  (Generic)</a></h3>    
+<p>
+	XA global transaction may be rolled back if first updating
+	statement of any participating transaction aborts, possibly
+	resulting in lost updates.
+<p>
+<hr>
+<h3><a name="108520_generic">108520  (Generic)</a></h3>    
+<p>
+	Division of two decimal type constants returns incorrect result.
+	For example, select sum(3.0)/sum(6.0) returns 0, rather than
+	the expected value of 0.5.
+<p>
+<hr>
+<h3><a name="108774_generic">108774  (Generic)</a></h3>    
+<p>	
+	Query with many outer joins involving non-nullable columns
+	fails with "E_AD1012 An attempt to place a null value in a
+	non-nullable datatype."
+<p>
+<hr>
+<h3><a name="108794_generic">108794  (Generic)</a></h3>    
+<p>
+	Queries that use a collation table to make case insensitive queries may
+	experience an "E_OP03A2 consistency check" error if optimizedb has been
+	run against the database.
+<p>
+<hr>
+<h3><a name="108852_generic">108852  (Generic)</a></h3>    
+<p>
+	Select using btree index is slower and reads more leaf pages than expected 
+	after a lot of keys have been deleted.
+<p>
+<hr>
+<h3><a name="108906_generic">108906  (Generic)</a></h3>    
+<p>
+	Fixed aggregate function for DATE and C datatypes to work in the report footer.
+<p>
+<hr>
+<h3><a name="108930_generic">108930  (Generic)</a></h3>    
+<p>	
+	Queries with "not in" subselects in which both comparands are expressions
+	can produce very slow query plans. For example, "select ... from ... 
+	where a+b not in (select c+d ...".
+<p>
+<hr>
+<h3><a name="108937_generic">108937  (Generic)</a></h3>    
+<p>
+	Fixed unloaddb and copydb to generate views in the correct order,
+	when transfering data from a 6.4 database to a 2.6 installation.
+<p>
+<hr>
+<h3><a name="108945_generic">108945  (Generic)</a></h3>    
+<p>
+	Fixed the order for generating permissios when unloading a 6.4 database
+	from a 2.6 installation.
+<p>
+<hr>
+<h3><a name="108997_generic">108997  (Generic)</a></h3>    
+<p>
+	Fixed the usermod to give out usermod usage message 
+	when the input string is just a - character.
+<p>
+<hr>
+<h3><a name="109004_generic">109004  (Generic)</a></h3>    
+<p>
+	Released control of param argument of the report in utexe.def to the user.
+<p>
+<hr>
+<h3><a name="109014_generic">109014  (Generic)</a></h3>    
+<p>
+	The ODBC driver returns SQL_NO_DATA for catalog function
+	calls as SQLTables or SQLColumns if the table_name or 
+	column_name contains an underscore and the length of 
+	table_name or column_name is 32 characters long.
+<p>
+<hr>
+<h3><a name="109015_generic">109015  (Generic)</a></h3>    
+<p>
+	Syscheck will run the 32-bit version if the 64-bit version can not be found.
+<p>
+<hr>
+<h3><a name="109027_generic">109027  (Generic)</a></h3>    
+<p>
+	Using Tuxedo for distributed transaction management, The following errors are
+	reported in the errlog.log: E_DM904A_FATAL_EXCEPTION, preceded by other errors
+	indicating failure to PREPARE/SECURE or failure to ROLLBACK a distributed
+	transaction. The errors can occur if a Tuxedo TMS server sends a rollback
+	for a transaction while another Tuxedo TMS server is preparing the same
+	transaction. Other erros might include: E_DMA406_LG_WRITE_BAD_STAT,
+	E_DM9370_DM0L_SECURE, E_DM9505_DMXE_WILLING_COMMIT, E_DM9503_DMXE_ABORT.
+<p>
+<hr>
+<h3><a name="109043_windows">109043  (Windows)</a></h3>    
+<p>
+	Cannot find the help files for some Ingres GUI tools , for instance, winstart, iilink, etc., when pressing F1. This has been fixed.
+<p>
+<hr>
+<h3><a name="109052_generic">109052  (Generic)</a></h3>    
+<p>
+	Upgradedb 32 bit database to 64 bit 2.6 Ingres succeeds, but then a table 
+	insert fails with E_RD0132_QUERY_TREE consistency check - Invalid tree node
+	read in from catalogs. The problem happens if the upgraded table has a 
+	check constraint. During upgradedb (of trees) the check constraint which
+	has a stored query tree should have been dropped and recreated but it wasn't.
+	After applying this fix, upgradedb will drop and recreate check constraints
+	if necessary.
+<p>
+<hr>
+<h3><a name="109058_generic">109058  (Generic)</a></h3>    
+<p>
+	If ING_SET, ING_SYSTEM_SET, or ING_SET_DBNAME have create, delete, drop, update, insert, modify, or select statements assigned to it, that statement will not be executed, it will output a warning explaining that ING_SET, ING_SYSTEM_SET, or ING_SET_DBNAME is expecting a set statement and prompt a user to set variable to a valid statement.
+<p>
+<hr>
+<h3><a name="109059_unix">109059  (UNIX)</a></h3>    
+<p>
+	MKRAWLOG fails with message "Symbol II_LOG_FILE_NAME must be
+	defined." on hosts with fully qualified hostnames (i.e., "a.b.c").
+	This has been fixed.
+<p>
+<hr>
+<h3><a name="109061_unix">109061  (UNIX)</a></h3>    
+<p>
+	Non-numeric values can be specified for JDBC configuration parameters
+	which do not have an initial value but are supposed to be numeric
+	values. This has been fixed.
+<p>
+<hr>
+<h3><a name="109069_generic">109069  (Generic)</a></h3>    
+<p>
+	 Fixed ingsetenv on Windows to prompt only for value if
+	 first parameter is provided.
+	Modified ingsetenv on Unix to prompt for parameters if none
+	are provided.
+<p>
+<hr>
+<h3><a name="109079_generic">109079  (Generic)</a></h3>    
+<p>
+	Registered files password.html and user.html in the ICE business unit
+	icetutor do not exist.
+<p>
+<hr>
+<h3><a name="109082_generic">109082  (Generic)</a></h3>    
+<p>
+	XML cannot be displayed from the dynamic SQL console.  The message Cannot
+	view XML input style sheet. Please correct the error and then click the
+	refresh button, or try again later is returned.
+<p>
+<hr>
+<h3><a name="109084_generic">109084  (Generic)</a></h3>    
+<p>
+	UNLOAD operations such as copydb and unloaddb, in character mode,
+	will now produce copy.in and copy.out scripts which are generic
+	to platforms.
+<p>
+<hr>
+<h3><a name="109085_windows">109085  (Windows)</a></h3>    
+<p>
+	COPY IN of variable length data (i.e., varchar) which fails
+	(i.e., due to a bad data file) causes the database to become
+	inconsistent. This has been fixed.
+<p>
+<hr>
+<h3><a name="109093_hpux">109093  (HPUX)</a></h3>    
+<p>
+	VDBA can now be used to properly create HTTP type ICE locations
+	when using 64 bit Ingres as the server.
+<p>
+<hr>
+<h3><a name="109109_unix">109109  (UNIX)</a></h3>    
+<p>
+	WriteBehind threads are in DI io_sem mutex wait state an inordinate
+	amount of the time.
+<p>
+<hr>
+<h3><a name="109113_generic">109113  (Generic)</a></h3>    
+<p>
+	User is not to remove the value of a parameter via cbf which has a null default value.
+<p>
+<hr>
+<h3><a name="109120_hpux">109120  (HPUX)</a></h3>    
+<p>
+	Performance enhancements have been made to OS threading in Ingres
+	on HP-UX.
+<p>
+<hr>
+<h3><a name="109124_generic">109124  (Generic)</a></h3>    
+<p>
+	Poor Ingres performance and CPU utilization when running under Tru64 UNIX
+	on Non-Uniform Memory Access (NUMA) architecture hardware (GS series).
+<p>
+<hr>
+<h3><a name="109131_generic">109131  (Generic)</a></h3>    
+<p>
+	Sessions hang in LKevent awaiting the arrival of free
+	cache buffers.
+<p>
+<hr>
+<h3><a name="109133_generic">109133  (Generic)</a></h3>    
+<p>
+	Creating an ICE web user with an ivalid negative database user id
+	can cause an exception in the ice server process.
+<p>
+<hr>
+<h3><a name="109137_generic">109137  (Generic)</a></h3>    
+<p>
+	Micro Focus COBOL programs calling Ingres database procedures may
+	terminate with a SEGV.
+<p>
+<hr>
+<h3><a name="109197_generic">109137  (Generic)</a></h3>
+<p>
+	A very simple query (one table, though the problem will occur with
+	any number of tables) generates a plan that ignores an obvious
+	secondary index in favour of a full table scan. In general, this bug 
+	results in suboptimal plans, usually plans that ignore the use of
+	obvious secondary index choices.
+<p>
+<hr>
+<h3><a name="109148_generic">109148  (Generic)</a></h3>    
+<p>
+	Fixed dbms error handling for ENABLE SECURITY_AUDIT statement.
+<p>
+<hr>
+<h3><a name="109159_windows">109159  (Windows)</a></h3>    
+<p>
+	"administrator" is now created as a privileged user when IIDBDB
+	is created.
+<p>
+<hr>
+<h3><a name="109161_generic">109161  (Generic)</a></h3>    
+<p>
+	Increasing memory consumption by w4gldev process (memleaks) and
+	frequent crashes using OR 4.1. This has been fixed.
+
+<p>
+<hr>
+<h3><a name="76918_generic">76918 (Generic)</a></h3>
+<p>
+        The ESQLCBL and EQCBL precompilers do not allow for the option of using
+        either free format (a.k.a. terminal format) or fixed format (a.k.a.
+        ANSI format) on Unix and Windows systems.
+<p>
+<hr>
+<h3><a name="81256_generic">81256 (Generic)</a></h3>
+<p>
+        Blanks may be lost in strings containing many blanks when the strings are
+        copied out and then copied back into a database via copydb or unloadb/reloaddb.
+        For some strings, an extra blank may appear.
+<p>
+<hr>
+<h3><a name="83616_generic">83616 (Generic)</a></h3>
+<p>
+        TUXEDO: INGRES/TMS process can fail on attempted
+        rollback if transaction failure is due to
+        (TUXEDO) transaction timeout period being
+        exceeded.Error seen is "E_LQ00D1 - error
+        at the TM-RM's XA interface....the error code
+        is: transaction demarcation call: invalid XN THRD state
+        return value is XA_ER_RMERR
+        NOTE: INGRES/TMS servers and application servers should
+        be rebuilt when applying patches with this fix.
+<p>
+<hr>
+<h3><a name="98808_generic">98808 (Generic)</a></h3>
+<p>
+        The OLAP amendment to SQL '99 includes several categories of
+        feature enhancements. It incorporates numerous new scalar functions
+        (some of which are already in Ingres), new unary aggregate functions,
+        new binary aggregate functions and a "window" facility for computing
+        "moving" aggregates. This SIR requested the implementation of all
+        but the "windowing" capability.
+<p>
+<hr>
+<h3><a name="99420_generic">99420 (Generic)</a></h3>
+<p>
+        Executing the command "ingstart -gateway_type" where
+        gateway_type is oracle, rdb, sybase, mssql, or informix
+        results in the message "No definition found for specified
+        configuration name".
+<p>
+<hr>
+<h3><a name="99691_generic">99691 (Generic)</a></h3>
+<p>
+        Add support for Shared XA Transactions
+<p>
+<hr>
+<h3><a name="102222_generic">102222 (Generic)</a></h3>
+<p>
+	The Ingres/ICE C programming API returns no error when attempting to update
+	or retrieve an association between a business unit or a role.
+<p>
+<hr>
+<h3><a name="102251_generic">102251 (Generic)</a></h3>
+<p>
+	The INGSTART utility now prints out a GCC's port information when
+	starting up a GCC. It also waits for a GCC to accept connections
+	before continuing on.
+<p>
+<hr>
+<h3><a name="103303_linux">103303 (Linux)</a></h3>
+<p>
+	ingbuild no longer requires 'uncompress' to be present, in order to unpack 
+	the ingres saveset.
+<p>
+<hr>
+<h3><a name="103694_generic">103694 (Generic)</a></h3>
+<p>
+	Added new data type long nvarchar for support of unicode long
+	types in Ingres.
+	VDBA displays correctly contents of UNICODE data type columns
+	in SQL/Test and DOM "rows" right pane tabs.
+	VDBA now supports unicode constants in the where clause of
+	select statements, and in insert statements in SQL/Test. The
+	syntax for such a constant is U'unicodestring'.
+	Corrected substring function for unicode datatypes.
+	Corrected the coercion between unicode data types, nvarchar
+	and nchar.
+	When using a unicode constant in a VDBA SQL/Test window, the syntax
+	is now N'unicodestring' instead of U'unicodestring'.
+<p>
+<hr>
+<h3><a name="103776_generic">103776 (Generic)</a></h3>
+<p>
+	Updating key columns of data that contain no corresponding shadow 
+	table entries results in inserting a second row into the target 
+	database.
+<p>
+<hr>
+<h3><a name="104292_generic">104292 (Generic)</a></h3>
+<p>
+	Linking an embedded Cobol program which uses a blob data handler fails
+	with errors LNK2001: unresolved external symbol _IILQlpd_LoPutD,
+	_IILQled_LoEndD, _IILQlgd_LoGetD
+<p>
+<hr>
+<h3><a name="104342_generic">104342 (Generic)</a></h3>
+<p>
+	If you create a Global Temporary Table with the same name but a
+	different structure to an existing permanent table, attempts
+	to use the table will cause E_OP0082 errors and a SIGSEGV in 
+	opc_keyqual in the error log.
+<p>
+<hr>
+<h3><a name="104506_generic">104506 (Generic)</a></h3>
+<p>
+	The Ingres/ICE server does not start if the installation is
+	configured for SQL92 compatibility.
+<p>NOTE: In an SQL-92 enabled configuration please do the following after
+installing this patch to get the resolution to this bug to take effect:
+<ol><li> destroydb icesvr
+<li> destroydb -uicedbuser icetutor
+<li> Edit '$II_SYSTEM/ingres/files/config.dat' to remove the 'COMPLETE' entry from
+ii.&lt;CONFIG_HOST&gt;.config.icesvr.ii260207su4us503
+<li> run 'iisuice' to reconfigure the icesvr.
+</ol>
+<p>
+<hr>
+<h3><a name="104624_generic">104624 (Generic)</a></h3>
+<p>
+	TUXEDO: INGRES/TMS process can fail on attempted
+	rollback if transaction failure is due to
+	(TUXEDO) transaction timeout period being exceeded.
+	Error seen is "E_LQ00D1 - error at the TM-RM's XA interface.
+	transaction demarcation call: invalid XN THRD state
+	Return value is XA_ER_RMERR.
+	INGRES/TMS servers and application servers should
+	be rebuilt when applying patches with this fix.
+<p>
+<hr>
+<h3><a name="104907_generic">104907 (Generic)</a></h3>
+<p>
+	Loading statistics on certain tables fails with E_OP093F for some of 
+	the fields.
+	E_OP093F Actual number of cells retrieved (xx) differs from the 
+	number of cells declared (yy).
+<p>
+<hr>
+<h3><a name="104297_unix">104927 (UNIX)</a></h3>
+<p>	
+	The DBMS server crashes when inserting 46 characters into a long
+	byte column when the page_size is 8K and the stack_size is the
+	default (65536). This has been fixed.
+<p>
+<hr>
+<h3><a name="105011_generic">105011 (Generic)</a></h3>
+<p>
+	The transform of "not exists" to outer join is too restrictive. Doesn't
+	even work when simple restriction predicate is ANDed to correlation predicate.
+	The transform is not applied in other cases when it should. Specifically, if the
+	where clause contains other restriction predicates, the flattening potential is
+	sometimes missed.
+<p>
+<hr>
+<h3><a name="105710_generic">105710 (Generic)</a></h3>
+<p>
+	Right outer hash joins produce extraneous results.
+<p>
+<hr>
+<h3><a name="106003_generic">106003 (Generic)</a></h3>
+<p>
+	If a hash join is performed in which the join columns are varchar
+	or text type and one or more of the columns has trailing blanks
+	though a matching value does not (or the number of trailing blanks
+	is different), pairs of matching rows may not be found.
+	Change to trim only for varchar (and nvarchar). Trailing blanks 
+	are significant for TEXT.
+
+<p>
+<hr>
+<h3><a name="106063_generic">106063 (Generic)</a></h3>
+<p>
+	In VDBA Performace Monitor, when trying to start a replicaton server (or
+	selecting the "Startup Settings" tab )  before the runrepl.opt file has
+	been created, there is no more the misleading"Permissions Error [...]"
+	message instead of  the  "Cannot Access [...]" one.
+
+<p>
+<hr>
+<h3><a name="106318_generic">106318 (Generic)</a></h3>
+<p>
+	IMA tables 'ima_qsf_rqp' and ima_qsf_dbp' return no rows on
+	a select on 64 bit OS only.  Problem can be seen when a new 
+	database is created then, sql imadb, select * from ima_qsf_rqp,
+	select * from ima_qsf_dbp.  No rows will be returned.
+<p>
+<hr>
+<h3><a name="106445_generic">106445 (Generic)</a></h3>
+<p>	
+	The ICE XML Macro language if statement now supports testing
+	if a variable is defined. 
+	The ICE XML Macro language now allows the following equality tests:
+	    equals:       ==
+	    not equal:    !=
+	    greater than: >
+	    less than:    <
+<p>
+<hr>
+<h3><a name="106589_Win32">106589 (WIN32)</a></h3>
+<p>	
+	Performance over Ingres/Net on Windows is significantly slower
+	(approximately 4x) in Ingres II using OpenROAD 4x (or other applications)
+	against gateways or Ingres than it was using OpenROAD 3.5 and drivers.
+	Also, response time in the application over Ingres/Net is much slower (2-10
+	times) than running locally.  The response time differences are most
+	notable in batch-like operations (eg, an application that runs 1000s of
+	simple updates or queries).
+<p>
+<hr>
+<h3><a name="106770_generic">106770 (Generic)</a></h3>
+<p>
+	Server hangs with threads waiting for free buffers.
+<p>
+<hr>
+<h3><a name="106821_generic">106821 (Generic)</a></h3>
+<p>
+	running "verifydb -mruninteractive -sdbname dbname -odbms_catalogs" 
+	against a database with constraints containing the
+	"WITH (INDEX = BASE TABLE STRUCTURE)" clause incorrectly gives 
+	errors: S_DU1693_MISSING_INDEXTUP and S_DU0320_DROP_FROM_IIINTEGRITY.
+<p>
+<hr>
+<h3><a name="107026_generic">107026 (Generic)</a></h3>
+<p>	
+	A query of the form 'select <aggregate> from ... group by <aggregate>
+	...' results in E_OP0082 consistency check and the database server
+	either crashes or becomes unresponsive.
+
+<p>
+<hr>
+<h3><a name="107269_generic">107269 (Generic)</a></h3>
+<p>
+	JDBC driver throws ExceptionInInitializerError when running in Sun 1.4 browser plugin for Internet Explorer.
+<p>
+<hr>
+<h3><a name="107273_generic">107273 (Generic)</a></h3>
+<p>
+	A query with a where clause containing more than one instance of
+	restriction predicate collections in the form of "(a = v1 and
+	b = v2 and ...) or (a = v3 and b = v4 and ...) or ..." may result
+	in a SEGV in QEF.
+
+<p>
+<hr>
+<h3><a name="107345_generic">107345 (Generic)</a></h3>
+<p>
+	Poor query plan chosen for a query following an outer
+	join query in the same transaction.
+<p>
+<hr>
+<h3><a name="107587_generic">107587 (Generic)</a></h3>
+<p>
+	VisualDBA and ingnet now support the new DB2UDB Enterprise Access Gateway.
+	IVM and VCBF now support the new DB2UDB Enterprise Access Gateway.
+<p>
+<hr>
+<h3><a name="107715_generic">107715 (Generic)</a></h3>
+<p>
+	When compiling a C++ file with passing integer parameters to a procedure, can receive:
+	"C2664: 'IIpLQprvProcValio': cannotconvert parameter 7 from 'int *' to 'char *'.
+	Type pointed to are unrelated; conversion requires reinterpret-cast, C-style cast or function-style cast."
+<p>
+<hr>
+<h3><a name="107763_generic">107763 (Generic)</a></h3>
+<p>
+	Corrected the handling of unicode normalization in case of unicode coercion to character data.
+	More normalization added (e.g. when coercing from other types to Unicode and
+	when referencing constants in where comparisons).
+	Still more fine tuning of Unicode normalization.
+	More normalization changes.
+<p>
+<hr>
+<h3><a name="107843_generic">107843 (Generic)</a></h3>
+<p>	
+	Unable to use CBF to configure the gateways because
+	the gateway parameters are not displayed.
+<p>
+<hr>
+<h3><a name="107884_generic">107884 (Generic)</a></h3>
+<p>
+	ADA precompiler does not recognise 'short_short_integer' as a declared
+	type. Works fine on VMS 2.0, but fails on 2.6 Linux (0201 GA) with:-
+	E_E60003 The ADA identifier 'Short_Short_Integer' is not a declared
+	type.
+	
+<p>
+<hr>
+<h3><a name="107914_generic">107914 (Generic)</a></h3>
+<p>
+	In a multiple dbms installation with internal thread type
+	and group buffers, running large update transactions,
+	a dbms server may appear to hang with 99% cpu.
+<p>
+<hr>
+<h3><a name="107918_generic">107918 (Generic)</a></h3>
+<p>
+	Gateway server class "db2udb" is not supported in ODBC.
+<p>
+<hr>
+<h3><a name="108004_generic">108004 (Generic)</a></h3>
+<p>
+	The schema names returned by the JDBC meta-data method getSchemas()
+		are now in the proper form to be used as parameters to other meta-
+			data methods.
+<p>
+<hr>
+<h3><a name="108017_generic">108017 (Generic)</a></h3>
+<p>
+	The user environment variable II_CKTMPL_FILE can be use to set
+	the location of the checkpoint template file.
+<p>
+<hr>
+<h3><a name="108087_generic">108087 (Generic)</a></h3>
+<p>
+	qbf databasename -t will no longer cause SEGV on DG/UX.
+<p>
+<hr>
+<h3><a name="108124_unix">108124 (UNIX)</a></h3>
+<p>
+	Fix the errors in starview which failed with selecting the SQL and TESTNODE. 
+<p>
+<hr>
+<h3><a name="108191_generic">108191 (Generic)</a></h3>
+<p>
+	The configuration of an Apache web server for use with Ingres/ICE can
+	be simplified by providing the Ingres/ICE configuration file that
+	can either be included in the Apache configuration or appended to it.
+<p>
+<hr>
+<h3><a name="108203_generic">108203 (Generic)</a></h3>
+<p>
+	Fixed unicode to local character conversion for UTF8 encoding
+	in API conversion case.
+<p>
+<hr>
+<h3><a name="108207_generic">108207 (Generic)</a></h3>
+<p>
+	The Ingres/ICE C programming API returns no error when attempting to update
+	or retieve an association between a document and a role.
+
+<p>
+<hr>
+<h3><a name="108229_generic">108229 (Generic)</a></h3>
+<p>
+	A hash outer join with enough rows in the outer source of the join to
+	overflow onto disk can omit some of the non-joined rows from the outer
+	join.
+<p>
+<hr>
+<h3><a name="108271_generic">108271 (Generic)</a></h3>
+<p>
+	OpenAPI will now correctly retrieve char() and varchar() columns
+	which are longer than 32000 characters in length.
+<p>
+<hr>
+<h3><a name="108281_generic">108281 (Generic)</a></h3>
+<p>
+	Fixed the handing of decompostion entries in the unicode collation table
+<p>
+<hr>
+<h3><a name="108286_generic">108286 (Generic)</a></h3>
+<p>
+	JDBC Driver protocol errors will no longer occur when closing
+	a result-set which contains a blob that was not accessed with
+	a getXXX() result-set method.
+
+<p>
+<hr>
+<h3><a name="108288_generic">108288 (Generic)</a></h3>
+<p>
+	The JDBC meta-data method getPrimaryKeys() will now return keyed
+	table structure information if no explicit primary key is declared
+	for the table.
+<p>
+<hr>
+<h3><a name="108300_generic">108300 (Generic)</a></h3>
+<p>
+	The ODBC routine SQLGetTypeInfo() returns an error for the datatype 
+	arguments SQL_TIMESTAMP, SQL_DATE, and SQL_TIME, if the driver is 
+	initialized as version 2. 
+<p>
+<hr>
+<h3><a name="108301_generic">108301 (Generic)</a></h3>
+<p>
+	The ODBC fetches data incorrectly for a table containing more than 
+	one large object: the contents of the last large object column in the 
+	row are displayed for prior large object columns.
+<p>
+<hr>
+<h3><a name="108302_generic">108302 (Generic)</a></h3>
+<p>
+	The Installation guide has been replace with the Getting Started Guide.
+
+<p>
+<hr>
+<h3><a name="108314_generic">108314 (Generic)</a></h3>
+<p>
+	When inserting a database definition into the Ingres/ICE repository
+	using the Ingres/ICE C programming API, no error is returned when an
+	invalid database user is associated with the definition.
+<p>
+<hr>
+<h3><a name="108316_unix">108316 (UNIX)</a></h3>
+<p>
+	'Move Log to Journals' button in IJA on UNIX now works correctly
+<p>
+<hr>
+<h3><a name="108321_linux">108321 (Linux)</a></h3>
+<p>
+	On Linux ipcclean not catches both versions of 'resource deleted' from ipcrm
+<p>
+<hr>
+<h3><a name="108322_Tru64">108322 (Tru64)</a></h3>
+<p>
+	Occasionally an INTEGRITY, RULE, or CONSTRAINT might not be applied,
+	or an obsolete version applied, because of a problem in managing the
+	RDF cache on platforms where the size of a pointer is greater than
+	four bytes.
+<p>
+<hr>
+<h3><a name="108329_generic">108329 (Generic)</a></h3>
+<p>
+	Executing the example database procedure from the Ingres/ICE Example Database
+	Procedure page causes a 'partner abruptly released association' error
+	message.
+<p>
+<hr>
+<h3><a name="108337_generic">108337 (Generic)</a></h3>
+<p>
+	optimizedb -zh <dbname> -r<tablename>                                    
+	may show statistics count 0 for both cell0 and cell1, and gives bad qep.
+<p>
+<hr>
+<h3><a name="108339_generic">108339 (Generic)</a></h3>
+<p>
+	The ice server databases will be upgraded when installing an upgrade
+	version of Ingres.
+<p>
+<hr>
+<h3><a name="108345_generic">108345 (Generic)</a></h3>
+<p>
+	VDBA/SqlTest no more returns a "cannot open cursor" message instead of
+	providing the sql error when trying to execute "select * from tab1 where
+	colx1=N'1'" where n1 is numeric column.
+<p>
+<hr>
+<h3><a name="108346_generic">108346 (Generic)</a></h3>
+<p>
+	The width of the VDBA Sql/Test database combobox has been increased,
+	In order to allow to display 24 (average) characters.
+<p>
+<hr>
+<h3><a name="108347_generic">108347 (Generic)</a></h3>
+<p>
+	Replicator Server: In some cases Replicator may silently fail to
+	replicate all transaction rows to a target yet the distribution
+	queue gets cleared normally.
+<p>
+<hr>
+<h3><a name="108350_generic">108350 (Generic)</a></h3>
+<p>
+	The "set [no]optimizeonly" statement currently requires the executing 
+	user to have tracepoint authorization. This is not consistent with other
+	OPF set statements (e.g. set [no]qep) that do NOT require tp auth. The
+	requirement for tp auth should be removed from "set [no]optimizeonly".
+<p>
+<hr>
+<h3><a name="108352_generic">108352 (Generic)</a></h3>
+<p>
+	When retrieving a database definition from the Ingres/ICE repository
+	using the Ingres/ICE C programming API, no error is returned when an
+	invalid database identifier is supplied.
+<p>
+<hr>
+<h3><a name="108356_generic">108356 (Generic)</a></h3>
+<p>
+	USERMOD fails when executed with II_TEMPODARY set to an embedded
+	spaced location with "E_US1A22 Database name starting with
+	'files\' contains invalid characters.". This has been fixed.
+<p>
+<hr>
+<h3><a name="108381_generic">108381 (Generic)</a></h3>
+<p>
+	When creating / altering a User or Role definition with VDBA, there is
+	now  a password checking between the password and confirm password controls.
+<p>
+<hr>
+<h3><a name="108382_generic">108382 (Generic)</a></h3>
+<p>
+	Retrieval or deletion of values from the Ingres/ICE repository using the
+	programming API does not return an error when the requested value does not
+	exist.
+<p>
+<hr>
+<h3><a name="108387_generic">108387 (Generic)</a></h3>
+<p>
+	A restriction applied on a column from a union view in which
+	the column from one of the underlying selects is nullable and
+	from another is not null can produce the wrong number of rows.	
+<p>
+<hr>
+<h3><a name="108398_generic">108398 (Generic)</a></h3>
+<p>
+	If Replicator and Enhanced Security are installed and enabled
+	(also requires C2 Security), and the Replicator distribution
+	queue manager threads attempt to move rows from the input queue
+	to the distribution queue, the DBMS server crashes with error
+	E_SX000D_INVALID_SESSION A SXF request specified an invalid
+	session identifier.
+<p>
+<hr>
+<h3><a name="108402_generic">108402 (Generic)</a></h3>
+<p>
+	RBF does not show ANY and COUNT as aggregates for a "c" datatype.
+<p>
+<hr>
+<h3><a name="108408_generic">108408 (Generic)</a></h3>
+<p>
+	IIA now works correctly when specifying the [...]identification on 
+	first <N> kB of file option with the DBF file.
+<p>
+<hr>
+<h3><a name="108419_generic">108419 (Generic)</a></h3>
+<p>
+	Use of the "like '%'" predicate on a NCHAR column should return all
+	rows, but doesn't return any.
+	fixed adunchar.c to include aduucol.h, missed in a previous integration.
+<p>
+<hr>
+<h3><a name="108421_generic">108421 (Generic)</a></h3>
+<p>
+	We now have Embedded Ingres versions of the SQL Reference Guide and the
+	System Administrators Guide.
+<p>
+<hr>
+<h3><a name="108426_generic">108426 (Generic)</a></h3>
+<p>
+	You can use the y-umlaut (0xFF) character for table names.
+<p>
+<hr>
+<h3><a name="108428_unix">108428 (UNIX)</a></h3>
+<p>
+	Suppress CI error codes, and add timestamps for licensing error
+	messages sent to errlog.log.
+<p>
+<hr>
+<h3><a name="1083439_generic">108439 (Generic)</a></h3>
+<p>
+	Previously an exception could occur in LG_abort_transaction trying to abort
+	an XA transaction after a logfull condition. This will no longer occur.
+<p>
+<hr>
+<h3><a name="108442_generic">  108442 (Generic)</a></h3>
+<p>
+	IIA now does not propose the duplicated solutions 
+	when importing the CSV file where the fields are quoted.
+<p>
+<hr>
+<h3><a name="108465_Win32">108465 (Win32)</a></h3>
+<p>
+	Scrolling up (using the "scrolldown" key, usually mapped to PageUp)
+	on Windows platforms behaves differently than on UNIX. On a form
+	that is longer than two screenfuls, instead of scrolling a screenful
+	minus one line, on Windows vifred scrolls up about a screenful and
+	a half and places the cursor in the middle of the screen (on UNIX
+	the cursor is placed at the top of the screen).
+<p>
+<hr>
+<h3><a name="108466_generic">108466 (Generic)</a></h3>
+<p>
+	E_DMA455_LGREAD_HDR_READ error during rollback of XA transaction.
+<p>
+<hr>
+<h3><a name="108471_generic">108471 (Generic)</a></h3>
+<p>
+	Modified messages US0F1C and US0F80 to correct SET TRANSACTION syntax.
+<p>
+<hr>
+<h3><a name="108475_generic">108475 (Generic)</a></h3>
+<p>
+	Ingres JDBC Driver result-set method getString() will now return a zero-
+	length string for date columns which contain an Ingres 'empty' date value.
+	A data truncation warning is also generated which can be accessed with
+	the getWarnings() method after getString() is called.
+<p>
+<hr>
+<h3><a name="108477_unix">108477 (UNIX)</a></h3>
+<p>
+	Application connecting to the ICESVR using the ICE C API will
+	no longer SEGV if the ICESVR isn't running.
+<p>
+<hr>
+<h3><a name="108480_generic">108480 (Generic)</a></h3>
+<p>
+	The Getting Started Guide has a new font which will not make it look
+	"fuzzy".
+<p>
+<hr>
+<h3><a name="108501_generic">108501 (Generic)</a></h3>
+<p>
+	fixed unicode comparison when comparing strings with all blanks. 
+<p>
+<hr>
+<h3><a name="108528_Tru64">108528 (Tru64)</a></h3>
+<p>
+	Enable iimonitor "stacks" function for Tru64 under INTERNAL threads.
+<p>
+<hr>
+<h3><a name="108542_generic">108542 (Generic)</a></h3>
+<p>
+	Concatenating varchar variables and columns in excess of 2044
+	characters causes error E_RW0027_size_too_large. 
+<p>
+<hr>
+<h3><a name="108551_generic">108551 (Generic)</a></h3>
+<p>
+	An Ingres instance (installation) configured forINTERNAL threads, 
+	DMCM (Distributed Multi-Cache Management), and multiple DBMS servers
+	would have sessions hang in LKEVENT state.
+<p>
+<hr>
+<h3><a name="108554_generic">108554 (Generic)</a></h3>
+<p>
+	JDBC driver now supports UTF8 character set for query text,
+	query parameters and query results.  
+<p>
+<hr>
+<h3><a name="108555_generic">108555 (Generic)</a></h3>
+<p>
+	The min and max functions will return the correct values when applied
+	to varchar fields in all instances.
+<p>
+<hr>
+<h3><a name="108560_generic">108560 (Generic)</a></h3>
+<p>
+	When running Ingres with Tuxedo, the following errors were seen in the
+	tuxedo log:
+	    ERROR: Service xa_start returned XAER_RMERR
+	    ERROR: Service xa_start returned XAER_PROTO
+	These errors will no longer occur.
+	NOTE that the number of transaction entries allocated per application server
+	in the Ingres-Tuxedo shared memory segment used to be 
+	    II_TUX_XN_MAX/II_XA_SESSION_CACHE_LIMIT
+	but it is now
+	    II_TUX_XN_MAX/II_TUX_AS_MAX
+	which allows tuxedo users to lower II_XA_SESSION_CACHE_LIMIT and increase
+	the number of transaction entries allocated per application server.
+<p>
+<hr>
+<h3><a name="108589_generic">108589 (Generic)</a></h3>
+<p>
+	extenddb -lexistent_locname -aexistent_loc -U{...} -alter -r0 -nodb 
+	fails with error message E_IC0120 A location with that name already 
+	exists.
+<p>
+<hr>
+<h3><a name="108604_HPUX">108604 (HPUX)</a></h3>
+<p>
+	Visual DBA can now be used to populate a database.
+<p>
+<hr>
+<h3><a name="108606_generic">108606 (Generic)</a></h3>
+<p>
+	Tuxedo server may crash or get the following error during shutdown:
+	E_CX0003 Unable to free memory: cl_status = 70155 for control block = cx_cb_p.
+	This will no longer happen after relinking application and tms servers.
+<p>
+<hr>
+<h3><a name="108640_generic">108640 (Generic)</a></h3>
+<p>
+	Fixed SIGBUS error when unload a star database on DG/UX.
+<p>
+<hr>
+<h3><a name="108642_generic">108642 (Generic)</a></h3>
+<p>
+	A replicator server now can be started from VDBA if not logged under the
+	Ingres userid.
+<p>
+<hr>
+<h3><a name="108643_generic">108643 (Generic)</a></h3>
+<p>
+	ICESVR no longer fails to open msql.html and help.html.
+
+<p>
+<hr>
+<h3><a name="108645_generic">108645 (Generic)</a></h3>
+<p>
+	There is no more problem in VDBA  if in [V]CBF, the name server
+	local_vnode parameter is different from the host name.
+<p>
+<hr>
+<h3><a name="108648_unix">108648 (UNIX)</a></h3>
+<p>
+	Fixed the upgrade failure problem caused by the mismatch of transaction    
+	log file sizes.  The problem happened during upgrade from 2.0 to 2.6/0207. 
+<p>
+<hr>
+<h3><a name="108681_generic">108681 (Generic)</a></h3>
+<p>
+	GCC process memory will no longer grow without bounds when
+	executing a database procedure via JDBC where a procedure
+	parameter has been registered as an output parameter without
+	providing an input value.
+<p>
+<hr>
+<h3><a name="108684_generic">108684 (Generic)</a></h3>
+<p>
+	When using the tables option in the VDBA rollforward or checkpoint
+	dialogs, the execution of the command no more fails if more than one
+	table is selected.
+
+<p>
+<hr>
+<h3><a name="108692_generic">108692 (Generic)</a></h3>
+<p>
+	ISO 8859/15 (Latin + Euro sign) has been corrected from IS885015 to IS885915
+<p>
+<hr>
+<h3><a name="108710_generic">108710 (Generic)</a></h3>
+<p>
+	Fixed mkrawlog script error checking problem.
+<p>
+<hr>
+<h3><a name="108745_generic">108745 (Generic)</a></h3>
+<p>
+	OpenAPI now requires intialization at IIAPI_VERSION_3
+	and connections at IIAPI_LEVEL_2 before Unicode data-
+	types are permitted to be used.
+<p>
+<hr>
+<h3><a name="108746_linux">108746 (Linux)</a></h3>
+<p>
+	Optimization of complex query takes a very long time when the system is
+	running under load (Linux OS threading).
+	
+<p>
+<hr>
+<h3><a name="108746_generic">108752 (generic)</a></h3>
+<p>
+	Suppress E_DM9580_CONFIG_DBSERVICE_ERROR from being written to the errlog.log
+	during upgradedb.
+<p>
+<hr>
+<h3><a name="108760_generic">108760 (Generic)</a></h3>
+<p>
+	When the DBMS is installed with the SQL92 compliant option, VDBA no more
+	fails when trying to launch a remote command.
+<p>
+<hr>
+<h3><a name="108769_generic">108769 (Generic)</a></h3>
+<p>
+	The image used on the login screen of the ICE Administration Tool requires
+	updating to reflect new branding.
+<p>
+<hr>
+<h3><a name="108782_generic">108782 (Generic)</a></h3>
+<p>
+	When choosing the 64-bit DBMS with a 64-bit kernel,
+	it will create the databases in 64-bit mode.
+<p>
+<hr>
+<h3><a name="108783_generic">108783 (Generic)</a></h3>
+<p>
+	cbf will now work in the 64-bit installion.
+<p>
+<hr>
+<h3><a name="108819_generic">108819 (Generic)</a></h3>
+<p>
+	When autocommit is enabled, the ODBC does not always recover from 
+	query errors.           
+<p>
+<hr>
+<h3><a name="108828_generic">108828 (Generic)</a></h3>
+<p>
+	The Apache server will start when loading the Ingres ice shared lib.
+<p>
+<hr>
+<h3><a name="108829_generic">108829 (Generic)</a></h3>
+<p>
+	RAAT programs will not be able to connect to a 64-bit server.
+<p>
+<hr>
+<h3><a name="108848_Unixware">108848 (Unixware)</a></h3>
+<p>
+	Suppress WARNINGS during abfimage compilation.
+<p>
+<hr>
+<h3><a name="108853_generic">108853 (Generic)</a></h3>
+<p>
+	fixed OPF not to generate normalization instructions when long nvarchar data is
+	coerced to nvarchar. Also fixed the length calculation for coercion from unicode
+	data to non unicode data. added a new instruction for adf to flush output buffer
+	before it is full.
+	fixed the length calculation for coercion for nchar and nvarchar cases.
+	Fixed length calculation for normalization result data for nullable unicode
+	types.
+<p>
+<hr>
+<h3><a name="108864_generic">108864 (Generic)</a></h3>
+<p>
+	A Solaris 64-bit DBMS server will not startup running with internal threads
+	even if II_THREAD_TYPE is set to internal.  This has been disabled.
+<p>
+<hr>
+<h3><a name="108868_generic">108868 (Generic)</a></h3>
+<p>
+	Gateway branches are now displayed correctly in IVM and VCBF.
+<p>
+<hr>
+<h3><a name="108871_generic">108871 (Generic)</a></h3>
+<p>
+	E_US14E4 Invalid options have been specified for a non fast-load COPY.
+	This error would happen after doing unloaddb, and then trying to reload 
+	back into a journaled database. This problem has been fixed.
+<p>
+<hr>
+<h3><a name="108876_generic">108876 (Generic)</a></h3>
+<p>
+	Error message E_US1594 reports table name and composite key length, except
+	when one of the columns is greater than the maximum btree key length, in 
+	which case it reports column name and column length. This message will now
+	consistently print table name and composite key length.
+<p>
+<hr>
+<h3><a name="108878_unix">108878 (UNIX)</a></h3>
+<p>
+	When performing an insert as select ina a star database where the source
+	table is in a remote database being accessed through a VNODE, the GCC
+	will no longer become hung should the OS IPC buffer subsystem become full.
+<p>
+<hr>
+<h3><a name="108880_generic">108880 (Generic)</a></h3>
+<p>
+	E_DM9049_UNKNOWN_EXCEPTION in the dbms server (and then the RCP server)
+	In the errlog.log you will also see the following stack dump:
+	aduucmp, adt_kkcmp, dmv_compare_key, dmve_bid_check, dmve_btput
+	The errors happen during REDO or UNDO (rollback) of an update to a btree table
+	with NCHAR/NVARCHAR data, where the NCHAR/NVARCHAR column is part of the
+	btree key. With this fix the exception will no longer occur.
+<p>
+<hr>
+<h3><a name="108883_generic">108883 (Generic)</a></h3>
+<p>
+	In the VDBA properties pane for a user, and in the "Alter User" dialog
+	box, the Ingres user now appears as having the rmcmd privileges.
+<p>
+<hr>
+<h3><a name="108920_HPUX">108920 (HPUX)</a></h3>
+<p>
+	The ICE demos do not work against a 64 bit ICE Server.
+<p>
+<hr>
+<h3><a name="108932_generic">108932 (Generic)</a></h3>
+<p>
+	The maximum cache size for the buffer manager is now limited to 
+	the maximum memory size of the operation system.  Large caches can be 
+	allocated for the 2k, 4k, 8k, 16k, 32k, and 64k page size caches in CBF.
+<p>
+<hr>
+<h3><a name="108944_generic">108944 (Generic)</a></h3>
+<p>
+	E_DMA464_LGREAD_BADFORMAT reported by Archiver.
+<p>
+<hr>
+<h3><a name="108958_generic">108958 (Generic)</a></h3>
+<p>
+	precomiling a COBOL program with a db procedure that produces no rows,
+	always get message "E_EQ0317  There are 0 argument(s), statement
+	requires more"
+<p>
+<hr>
+<h3><a name="108962_generic">108962 (Generic)</a></h3>
+<p>
+	The CACHEUTIL banner text is now displayed properly.
+<p>
+<hr>
+<h3><a name="108693_Win32">108963 (Win32)</a></h3>
+<p>
+	The "LIST" output from CACHEUTIL now does not wrap around by one
+	character.
+<p>
+<hr>
+<h3><a name="108970_generic">108970 (Generic)</a></h3>
+<p>
+	AuditDB reports E_DM1206_ATP_TOO_MANY_TX and
+	E_DM1205_ATP_NO_BT_FOUND errors when the -b and/or -e
+	options (timestamp constraints) are used.
+<p>
+<hr>
+<h3><a name="108981_generic">108981 (Generic)</a></h3>
+<p>
+	In a database procedure with a local variable called "result", the statement
+	"return result;" causes a US0979 error. The same procedure compiled without 
+	incident on all earlier releases of Ingres.
+<p>
+<hr>
+<h2><a name="contacting_technical_support">4.0  Contacting Technical Support</a></h2>
+<p>For further technical assistance with this product,
+contact Technical Support at <a href="http://esupport.ca.com/">http://esupport.ca.com</a>
+for a complete list of locations and phone
+numbers. Technical support is available 24 hours a day, 7
+days a week.
+<p>
+<hr>
+<font size=-2>
+&copy; 2002 Computer Associates International, Inc. (CA)
+<br>All trademarks, trade names, service marks, and logos referenced
+herein belong to their respective companies.
+</font>
+</BODY>
+</HTML>

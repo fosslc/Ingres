@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!utils!generate
+#
+
+SubDir ING_SRC front utils generate ;
+
+IISUBSYS front utils generate ;
+
+
+IILIBRARY GENERATELIB : qgv0.qsc qg.qsc qgv0osl.c qgqbf.c
+	qgosl.c ;
+

@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!pe_win
+#
+
+SubDir ING_SRC cl clf pe_win ;
+
+IISUBSYS cl clf pe_win ;
+
+
+IILIBRARY COMPATLIB : pe.c ;
+

@@ -1,0 +1,810 @@
+/*
+**	MAKEFRM.QSC  - Routine to create a frame from a given
+**		       mqbf qdef.
+**
+**	Routines:
+**	     mq_makefrm()
+**
+**	Returns:
+**	     mq_makefrm() returns a pointer to the frame just
+**	     created.
+**
+**	Written: 11/23/83 (nml) -Actually stolen from qbf and
+**				 modified for mqbf structures.
+**
+**  History:
+**	10-22-84 (dkh)
+**		Made changes for FT and the attribute byte problem
+**		for IBM 3270s.	Changes made were minimal since
+**		the code allocates spaces between fields and
+**		the title and data portion of a field.	There
+**		currently are 4 blank spaces between adjacent
+**		fields on a line and 1 blank space between the
+**		title and data portion of a field.  If the
+**		number of attribute byte exceeds these limits
+**		we must make more changes.
+**		Field titles and trims are allowed to be on
+**		first column if the last column of previous
+**		line is blank, which is the case if the above
+**		holds.	Only exception may be 1st line, 1st column.
+**	07-16-85 (scl) Support wide logical terminals in CMS
+**	14-oct-86 (bab)
+**		disallow creation of table fields with too many cols.
+**	07/14/86 (scl) Remove special support for left-right scrolling
+**		 in CMS (FTmxcol) under 5.0
+**	03/22/87 (dkh) - Added support for ADTs.
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	12-aug-87 (danielt) changed FEmsg() calls to use IIUGerr()
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh
+**	05-jan-88 (kenl)
+**		Added CVlower of form name, in case the form name was
+**		derived from a case-sensitive table name.
+**	04/25/88 (dkh) - Changed to create more orderly forms for Venus.
+**	05/17/88 (dkh) - Capitalized all chars of a table name.
+**	05/27/88 (dkh) - Enhanced alignment algorithm so that beginning
+**			 of a field is also the beginning of the title.
+**	20-jul-88 (kenl)
+**		When creating a default form, add the mandatory attribute
+**		to a field whose underlying table column is NOT NULL NOT
+**		DEFAULT.  The field 'mandfld' in the ATTRIBINFO structure
+**		indicates this condition.  Bug fix #2191.
+**	08/20/88 (dkh) - Fixed problem with created fields being 1
+**			 column larger than needed.
+**	08/21/88 (dkh) - Fixed venus bug 3168.
+**	12/31/88 (dkh) - Perf changes.
+**	05/26/89 (Mike S) - 
+**		Modularize title-generation routines.
+**		Check for QBF or Emerald form generation.
+**	07/08/89 (Mike S)
+**		Call IIFDffFormatField to format each field;
+**		and IIFDftFormatTitle to format a title.
+**	07/28/89 (Mike S)
+**		Create form with no more lines than it neds.
+**		General cleanup.
+**	8/25/89 (Mike S) Add form title for emerald
+**	12/19/89 (dkh) - VMS shared lib changes.
+**	4/5/90 (Mike S) Remove table-list titles for Emerald
+**	6/27/90 (martym) - Changed to make editable fields that 
+**			   are not in reverse-video underlined.
+**      09/12/90 (emerson) - Set fdFRMSTRTCHD for new form if FTspace() > 0;
+**			 set frversion in new form.
+**      09/26/90 (emerson) - Don't display logical keys (bug 8593).
+**	11/02/90 (dkh) - Replaced IILIBQgdata with IILQgdata().
+**	13-dec-92 (daver)
+**		Toss out columns which are of an unsupported type (i.e.,
+**		BLOBS or UDTs). Generate a information message about the
+**		column being ignored.
+**	09-mar-93 (connie) Bug #46785
+**		Returned error E_QF008C_No_valid_type if no displayable
+**		columns are found in the table
+**	23-mar-93 (connie) Bug #46785
+**		Use defined constant UG_ERR_ERROR for all IIUGerr() calls
+**	4-aug-1993 (rdrane)
+**		Display the unsupported datatype column name with the rvar.
+**		Not sure if we'll ever get here with such a column -
+**		mqgetattrib() removes these columns from the ATTR array ...
+**	31-jan-1994 (rdrane)
+**		Use IIUGfnFeName() to derive the form name so that we can
+**		support tables whose names are delimited identifiers (b57666).
+**	17-jan-1995 (forky01)
+**		Add extra parameter in call to mqfindtbl which is called from
+**		title_1table() to fix bug 60504 & 66070.
+**
+**	Copyright (c) 2004 Ingres Corporation
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      13-oct-2008 (stial01)
+**          Limited support for object_key/table_key exported as byte
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	23-Aug-2009 (kschendel) 121804
+**	    Need afe.h to satisfy gcc 4.3.
+*/
+
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<st.h>
+# include	<me.h>
+# include	<er.h>
+# include	<cm.h>
+# include	<nm.h>
+# include	<iicommon.h>
+# include	<adf.h>
+# include	<fe.h>
+# include	<afe.h>
+# include	<lqgdata.h>
+## include	"mqbf.qsh"
+# include 	"erqf.h"
+# include	<ug.h>
+# include 	<trimtxt.h>
+
+/* Form title */
+
+FUNC_EXTERN	STATUS		afe_cancoerce();
+FUNC_EXTERN	STATUS		fmt_sdeffmt();
+FUNC_EXTERN	STATUS		fmt_deffmt();
+FUNC_EXTERN	i4		FTspace();
+FUNC_EXTERN	STATUS		IIFDffFormatField();
+FUNC_EXTERN	FIELD		*mqtfbld();
+FUNC_EXTERN	VOID		FTterminfo();
+
+GLOBALREF	i4		mq_fgtype;
+GLOBALREF	TRIMTXT		*mq_frmtitle;
+
+/* Form creation parameters */
+
+# define	COLSIZE		40
+		/* Create columns of simplefields 40 characters wide */
+# define	TITLESZ		12
+		/* Justify field titles up to 12 characters */
+# define	TFOHD		4
+		/* Overhead of a table field with column titles -- 4 lines */
+# define	MXFRMHT		22
+		/* We don't want to create a form with more than 22 lines */
+# define	MINTFHT		8
+		/* We will alays display at least 8 tablefield rows */
+
+# define	DEF_WIDTH	80	/* Default form width */
+
+static	i4	maxwidth = COLSIZE;
+static	i4	title_sz = TITLESZ;
+static	i4	havesize = FALSE;
+static	i4	term_cols;
+
+static VOID add_form_title();
+static VOID title_1table();
+static VOID title_alltables();
+static i4   trim_in_title();
+static VOID set_field_flags();
+
+FRAME *
+mq_makefrm(qdef, tblwidth)
+MQQDEF	*qdef;
+i4	tblwidth;
+{
+    /* Convenience pointers */
+    register ATTRIBINFO **atts = qdef->mqatts;
+    i4	numrels = 	qdef->mqnumtabs;
+    i4	numatts = 	qdef->mqnumatts;
+    register ATTRIBINFO *matt;
+    register FRAME	*frm;
+    FIELD		*fld;
+    register FLDHDR	*hdr;
+
+    i4		nolines;		/* number of lines in a frame */
+    i4		linetot;		/* total length of field */
+    i4		i;			/* loop counter */
+    i4		nmlen;			/* length of field name (title) */
+    i4		toffset;		/* Offset to start of title */
+    i4		dispflds;		/* # of fields displayed for qdef */
+    i4		fldno;			/* current field seq. no. */
+    i4		usetbl;			/* Number of columns in tablefield */
+    i4		numrows;		/* Actual number of rows in tf */
+    char	title[81];		/* title buffer */
+    char	frmname[FE_MAXNAME+1];	/* name of frame to alloc */
+    char	lasttbl[FE_MAXNAME+1];	/* Last table trim was added for */
+    char	*rng;			/* current table name */
+    i4		cols;			/* screen width */
+    i4		spacesize;		/* Columns a space takes up */
+    bool	usesimple;		/* Are any simplefields used ? */
+
+    /*
+    **	Get width of form.  If the form system is active, we'll ask it.
+    ** 	Otherwise, we'll use a default.
+    */
+    if (IILQgdata()->form_on)
+    {
+        FT_TERMINFO	terminfo;
+
+    	FTterminfo(&terminfo);
+    	term_cols = terminfo.cols;
+    }
+    else
+    {
+	term_cols = DEF_WIDTH;
+    }
+    cols = term_cols;
+    spacesize = max(1, FTspace());
+
+# ifdef DEBUG
+    if (!havesize)
+    {
+    	char		*fmtstr;
+    	char		fmtbuf[200];
+	i4		ival;
+
+	havesize = TRUE;
+	NMgtAt(ERx("II_DEFFLD_WIDTH"), &fmtstr);
+	if (fmtstr != NULL && *fmtstr != EOS)
+	{
+	    STcopy(fmtstr, fmtbuf);
+	    if (CVan(fmtbuf, &ival) == OK && ival > 0)
+	    {
+		maxwidth = ival;
+	    }
+	}
+	NMgtAt(ERx("II_DEFTITLE_SIZE"), &fmtstr);
+	if (fmtstr != NULL && *fmtstr != EOS)
+	{
+	    STcopy(fmtstr, fmtbuf);
+	    if (CVan(fmtbuf, &ival) == OK && ival > 0)
+	    {
+		title_sz = ival;
+	    }
+	}
+    }
+# endif /* DEBUG */
+
+    linetot = 0;	/* initialize total length of current line */
+    dispflds = 0;	/* begin with no fields to display */
+    usetbl = 0;		/* No tf columns yet */	
+
+
+    /*
+    **	This section calculates the total number of lines
+    **	for the frame.	This depends on the number of fields,
+    **	the length of the fields, and their data types.
+    */
+    for(i = 0; i < numatts; i++)		/* for each field */
+    {
+	matt = atts[i];
+
+	/* 
+	** Issue a warning here if the type is an unsupported one!
+	** NEED TO check this error message ... is it OK?
+	*/
+	if (!IIAFfedatatype(&matt->dbv) && !matt->lkeyinfo)
+	{
+		IIUGerr(E_QF0176_Not_supported_type, UG_ERR_ERROR, 2,
+			matt->rvar,matt->col);
+		continue;
+	}
+	if (matt->jpart == 0)
+		continue;		/* field not displayed */
+	if (matt->formfield[0] == EOS)
+		continue;		/* No field name */
+	if (matt->lkeyinfo != 0)
+		continue;		/* logical key */
+
+	if (matt->intbl && (matt->jpart != 0) && tblfield)
+	{
+		/* a tavblefield column */
+		usetbl++;
+		if (usetbl > MQ_MAXCOLS)
+		{
+    			i4 	max_cols = MQ_MAXCOLS;
+			IIUGerr(E_QF005C_Unable_to_create_tabl,
+				UG_ERR_ERROR,1, (PTR) &max_cols);
+			return(NULL);
+		}
+		continue;
+	}
+	dispflds++;
+    }
+    if (usetbl != 0)
+	dispflds++;		/* Add one for table field */
+
+    if ( dispflds == 0 )
+	{ /* no valid columns for building the default form */
+		IIUGerr(E_QF008C_No_valid_type, UG_ERR_ERROR, 0);
+		return(NULL);
+	}
+
+    /* Get form name */
+    if (STcompare(qdef->mqcr.name, ERx("")) == 0)
+    {
+	STcopy(ERget(S_QF005D_notgiven), frmname);
+	STcopy(ERget(S_QF005E_notgiven), qdef->mqcr.name);
+	STcopy(ERget(S_QF005F_notgiven), mq_frame);
+    }
+    else
+    {
+	STcopy(qdef->mqcr.name, frmname);
+	/*
+	** In addition to having a case-sensitive backend, we may be
+	** basing the formname off of a delimited identifier (b57666)!
+	*/
+	IIUGfnFeName(qdef->mqcr.name,frmname);
+	STcopy(frmname,mq_frame);
+    }
+    frm = FDnewfrm(frmname);		/* get space for the new frame*/
+
+    /*
+    **  If we're in an environment in which FTspace returns a positive value
+    **  (which, incidentally, should always be 1) then indicate that
+    **  the form we're abou to build will leave room for attribute bytes.
+    */
+    if (FTspace() > 0) frm->frmflags |= fdFRMSTRTCHD;
+
+    /*
+    **  Make sure vfcursor doesn't clear the fdFRMSTRTCHD bit.
+    */
+    frm->frversion = FRMVERSION;
+
+    frm->frmode = fdcmINSRT;		/* set default input mode to INSERT */
+    frm->frfldno = dispflds;		/* the number of attributes is
+					** the number of fields
+					*/
+    frm->frtrimno = numrels + trim_in_title(mq_frmtitle);
+    					/* Trim is the name(s) of the table(s)
+					** plus the form title.
+					*/
+
+    /* the width is the width of the screen or table field */
+    frm->frmaxx = max(cols, tblwidth);
+
+    if (!FDfralloc(frm))			/* allocate the frame junk */
+	return (NULL);
+
+    /*
+    ** Initialize everything to empty or 0.  "nolines" is set to -2 because
+    ** the title routines will skip line -1 and put the first title on line 0.
+    */
+    STcopy(ERx(""), lasttbl);
+    linetot = 0;
+    frm->frtrimno = 0;
+    fldno = 0;
+    nolines = -2;
+
+    /* Display form title, if any */
+    if (mq_frmtitle != NULL)
+	add_form_title(mq_frmtitle, frm, &nolines);
+
+    /* For Emerald, create no master-section title */
+    if (mq_fgtype == MQFORM_VISION)
+    {
+	nolines +=2;
+    }
+
+    /* Start Field Loop */
+    for (i = 0, usesimple = FALSE; i < numatts; i++)
+    {
+	matt = atts[i];
+	if (matt->jpart == 0)
+		continue;		/* this field isn't displayed */
+	if (matt->intbl && (matt->jpart !=0) && (usetbl != 0))
+		continue;		/* This will be in the tablefield */
+	if (matt->formfield[0] == EOS)
+		continue;		/* no field name */
+	if (matt->lkeyinfo != 0)
+		continue;		/* logical key */
+	if (!IIAFfedatatype(&matt->dbv) && !matt->lkeyinfo) /* NOT a supported type! */
+		continue;
+
+	usesimple = TRUE;
+	/*
+	**	For QBF, each new table gets a separate title line.
+	*/
+	if (mq_fgtype == MQFORM_QBF)
+	{
+		rng= matt->rvar;
+		if ((STcompare(rng, lasttbl)) != 0)
+		{
+			/* A new table; create a title line */
+			STcopy(rng, lasttbl);
+			title_1table(qdef, frm, rng, &nolines, &linetot);
+		}
+
+	}
+	
+	STcopy(matt->col, title);	/* get the title for the field */
+
+	/*
+	**  If field title is small enough to be aligned, align it.
+	*/
+	if ((nmlen = STlength(IIFDftFormatTitle(title))) < title_sz)
+	{
+		toffset = title_sz - nmlen;
+		nmlen = title_sz;
+	}
+	else
+	{
+		toffset = 0;
+	}
+	STcat(title, ERx(":"));
+	nmlen += spacesize + 1;
+
+	/* Create field */
+	if (IIFDffFormatField(matt->formfield, fldno, nolines, linetot + nmlen, 
+			      linetot + toffset, title, cols, (i4)0, 
+			      &matt->dbv, toffset, 0, &fld) != OK)
+	{
+		IIUGerr(E_QF0156_Could_not_create_defa, UG_ERR_ERROR, 0);
+		return (NULL);
+	}
+	frm->frfld[fldno] = fld;	/* Put field in frame structure */
+
+	/* Get position of next field. */
+	hdr = &(fld->fld_var.flregfld->flhdr);
+	if (hdr->fhmaxy > 1)
+	{
+		/* We just generated a wrap field; go to next line. */
+		nolines = hdr->fhposy + hdr->fhmaxy;	/* Past current field */
+		linetot = 0;				/* Column 0 */
+	}
+	else
+	{
+		nolines = hdr->fhposy;			/* Current line */
+		linetot = ((hdr->fhposx + hdr->fhmaxx)/maxwidth + 1) * maxwidth;
+							/* next column */
+		if (cols - linetot < maxwidth)
+		{
+			/*
+			** If there aren't "maxwidth" columns left on screen,
+			** go to next line.
+			*/
+			linetot = 0;
+			nolines++;
+		}
+	}
+	
+	/* Set field flags */
+	set_field_flags(matt, hdr, numatts, atts);
+
+# ifdef JUNK
+	if(!FDflalloc(frm, fld))	/* allocate the field space */
+	    return (NULL);
+# endif
+	fldno++;
+    }
+    /* End Field Loop */
+
+    /* Set form length */
+    if (linetot == 0)
+	frm->frmaxy = nolines;		/* Last line is empty */
+    else
+	frm->frmaxy = nolines + 1;	/* Last line is being used */
+	
+    /*
+    ** now that all regular fields are set up in the form,
+    ** the table field is put at the end
+    */
+    if (usetbl != 0)
+    {
+	if (mq_fgtype == MQFORM_VISION)
+	{
+		if (usesimple)
+			nolines += 2;
+	}
+	else
+	{
+		title_alltables(qdef, frm, TRUE, &nolines);  /* Create title */
+	}
+
+	/* 
+	** We will always display at least MINTFROWS rows.  We will
+	** show as many as we can without extending the form past
+	** MXFRMHT rows.
+	*/
+	numrows = max(MINTFHT, MXFRMHT - TFOHD - nolines);
+
+	/*
+	** mqtfbld now checks to make sure that unsupported columns
+	** (BLOB, UDT) do not end up in table fields 
+	*/
+	if ((fld = mqtfbld(frm, mq_tbl, fldno, tblwidth, usetbl,
+			    numrows, atts, numatts)) == NULL)
+	{
+		/* problem creating tbl field */
+		FDerror(MQTBLCREATE, 0, ERx(""));
+		return(NULL);
+	}
+
+	frm->frfld[fldno] = fld;
+
+	/*
+	**   If the tablefield is wider than the *actual*
+	**   terminal screen then force start in column 0;
+	**   otherwise center in the screen.
+	*/
+	hdr = &fld->fld_var.fltblfld->tfhdr;
+        hdr->fhposx = max((term_cols - tblwidth)/2, 0);
+	hdr->fhposy = nolines;
+
+    	/* Adjust form height */
+    	frm->frmaxy = hdr->fhposy + hdr->fhmaxy;
+
+    }
+
+    return (frm);	/* return the pointer to the field */
+}
+
+/*
+**	Create a one-table-per-line title line.
+*/
+static VOID 
+title_1table( qdef, frm, rng, nolines, linetot )
+MQQDEF 	*qdef;		/* Query definition */
+FRAME	*frm;		/* Frame being created */
+char	*rng;		/* Range variable for table */
+i4	*nolines;	/* Lines on frame */
+i4	*linetot;	/* Columns on current line */
+{
+	i4  tablnum;	/* Table index number */
+    	char title[81];	/* title buffer */
+	i4  start;	/* Start column for title */
+	char *ptr;
+
+	/*
+	**	Form title line "TABLENAME TABLE"
+	*/
+	tablnum = mqfindtbl(qdef, NULL, rng, NULL);
+	STcopy(qdef->mqtabs[tablnum]->mqrelid, title);
+	for (ptr = title; *ptr != EOS; CMnext(ptr))
+	{
+		CMtoupper(ptr, ptr);
+	}
+	STcat(title, ERx(" "));
+	STcat(title, ERget(FE_Table));
+
+	/*
+	**	Create new trim field centered in the form
+	*/
+	start = max((term_cols - STlength(title)) / 2, 0);
+	*nolines += 2;
+
+	/*
+	**	Ajust frame structure
+	*/
+	frm->frtrim[frm->frtrimno] = FDnewtrim(title, *nolines, start);
+	frm->frtrimno++;
+	*nolines += 2;
+	*linetot = 0;
+}
+	
+/*
+**	Create title lines for all tables in the section
+*/
+static VOID
+title_alltables( qdef, frm, tfield, nolines )
+MQQDEF 	*qdef;		/* Query definition */
+FRAME	*frm;		/* Frame being created */
+bool	tfield;		/* tablefield section ? */
+i4	*nolines;	/* Lines in frame */
+{
+	char	title[81];	/* title line buffer */
+	char	afmtstr[200];	/* big buffer */
+	bool	useit;		/* TRUE if we use this table */
+	i4	tables = 0;	/* Number of tables used */
+	char	*ptr;
+	char	*tcomma;
+	i4	i;
+
+	*title = EOS;
+	*nolines +=2;
+	for (i = 0; i < qdef->mqnumtabs; i++)
+	{
+		/*
+		**	If we're creating a tablefield title, we know there is
+		**	a tablefield, so:
+		**	1.	If we have a master-master join (qdef_type == 1)
+		**		we use all tables.
+		**	2.	If we have a master-detail join, we use only
+		**		detail tables (mqtype != 0).
+		**
+		**	We won't currently be called to create a simplefield
+		**	title, since QBF uses separate titles for each table and
+		**	Emerald doesn't use titles.
+		**	1.	We include master tables (mqtype == 0). 
+		**
+		**	Also skip tables with no name.
+		*/
+		if (tfield)
+		{
+			useit = qdef_type || qdef->mqtabs[i]->mqtype;
+			if (*qdef->mqtabs[i]->mqrelid == EOS) useit = FALSE;
+		}
+		else
+		{
+			useit = !(qdef->mqtabs[i]->mqtype);
+			if (*qdef->mqtabs[i]->mqrelid == EOS) useit = FALSE;
+		}
+
+		if (useit)
+		{
+			tables++;
+
+			/*
+			** If the title line is getting too big, output it
+			** (in upper case)
+			*/
+			if (STlength(title) >=term_cols)
+			{
+				for (ptr = title; *ptr != EOS; CMnext(ptr))
+				{
+					CMtoupper(ptr, ptr);
+				}
+				/* need a new trim line */
+				frm->frtrim[frm->frtrimno] =
+				    FDnewtrim(title, *nolines, 0);
+
+				frm->frtrimno++;
+				*nolines += 1;
+				title[0] = '\0';
+			}
+			/* Add on the next title */
+			STcat(title, qdef->mqtabs[i]->mqrelid);
+			tcomma = title + STlength(title);
+			STcat(title, ERx(", "));
+		}
+	}
+	*tcomma = '\0';
+
+	/* Uppercase the last title line */
+	for (ptr = title; *ptr != EOS; CMnext(ptr))
+	{
+		CMtoupper(ptr, ptr);
+	}
+
+	/*
+	** Add the word "table" (or "tables"). If need be, put it on a
+	** separate line.
+	*/
+	STcopy(ERget((tables == 1) ? S_QF0157_TABLE_ : S_QF0155_TABLES_	), 
+	       afmtstr);
+	if (STlength(title) + STlength(afmtstr) >= term_cols)
+	{
+		frm->frtrim[frm->frtrimno] = FDnewtrim(title, *nolines, 0);
+		frm->frtrimno++;
+		*nolines++;
+		STcopy(afmtstr, title);
+	}
+	else
+	{
+		STcat(title, ERx(" "));
+		STcat(title, afmtstr);
+	}
+
+	/* Output the last line */
+	frm->frtrim[frm->frtrimno] = FDnewtrim(title, *nolines, 0);
+	frm->frtrimno++;
+	*nolines += 2;
+}
+
+/*
+**	Set field flags
+*/
+static VOID
+set_field_flags(matt, hdr, numatts, atts)
+ATTRIBINFO	*matt;		/* Query attribute */
+FLDHDR		*hdr;		/* Field header */
+i4		numatts;	/* Number of attributes in query */
+ATTRIBINFO	**atts;		/* All attributes for query */
+{
+	register ATTRIBINFO	*jatt;
+	i4			j;
+
+	/* Bug fix #2191
+	** Set field attribute to mandatory if underlying column is
+	** NOT NULL NOT DEFAULT.
+	*/
+	if (matt->mandfld)
+	{
+		hdr->fhdflags |= fdMAND;
+	}
+
+	if (mq_fgtype == MQFORM_QBF)
+	{
+		/*
+		**	For QBF, 
+		**	1.	Join fields are reverse video.
+		**	2.	Join fields in master-master or 
+		**		master-detail joins are query-only if they're
+		**		not updatable.
+		**	3.	QBF fields that are not table-fields, are 
+		**		editable, and are not in reverse video are 
+		**		underlined.
+		*/
+
+		hdr->fhdflags |= fdUNLN;
+		if (matt->jpart == 1)	
+		{
+			hdr->fhdflags |= fdRVVID;	/* rev video on join */
+			hdr->fhdflags &= ~fdUNLN;
+			if (!matt->opupdate &&
+		    	!(matt->ttype == 1 && qdef_type == 0))
+			{
+		    	    /* All Update? must be "NO" for this join field
+		    	    ** in order to be query only
+		    	    */
+				hdr->fhdflags |= fdQUERYONLY;
+				for (j = 0; j < numatts; j++)
+				{
+					jatt = atts[j];
+					if (jatt->jpart == 0 && 
+					    jatt->opupdate &&
+				    	    STcompare(matt->formfield,
+				    		jatt->formfield) == 0)
+					{
+						hdr->fhdflags &= ~fdQUERYONLY;
+						break;
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		/*
+		**	For Emerald,
+		**	1.	Master-detail joins fields are bold.
+		**	2.	Lookup join fields are reverse video.
+		**	3.	Lookup simplefields are query-only.
+		**	4.	All fields are marked VQLOCK.
+		**	5.	All simplefields are underlined.
+		**	6.	Sequenced fields are query-only.
+		*/
+		if ((matt->jpart == mqJOIN_FIELD) ||
+		    (matt->jpart == mq2_JOIN_FIELD))
+			hdr->fhdflags |= fdCHGINT;
+		if ((matt->jpart == mqLU_JOIN_FIELD) ||
+		    (matt->jpart == mq2_JOIN_FIELD))
+			hdr->fhdflags |= fdRVVID;
+		if (matt->ttype == mqIN_LU_MASTER ||
+		    matt->ttype == mqIN_LU_DETAIL)
+			hdr->fhdflags |= fdQUERYONLY;
+		hdr->fhd2flags |= fdVQLOCK;
+		hdr->fhdflags |= fdUNLN;
+
+		/*
+		** Note that we use the opupdate field to indicate a 
+		** sequenced field.  This is a kludge.
+		*/
+		if (matt->opupdate != 0)
+			hdr->fhdflags |= fdQUERYONLY;
+	}
+}
+
+/*
+**	Add trim for form title
+*/
+static VOID
+add_form_title(trimtxt, frm, nolines)
+TRIMTXT *trimtxt;	/* Form title trim */
+FRAME	*frm;		/* Frame being created */
+i4	*nolines;	/* Current line number (output) */
+{
+	i4	maxrow = -1;	/* Highest row used */
+
+	for ( ; trimtxt != NULL; trimtxt = trimtxt->next)
+	{
+		register TRIM *trim;
+
+		/* Add a piece of trim */
+		trim = frm->frtrim[frm->frtrimno] = 
+			FDnewtrim(trimtxt->string, trimtxt->row, 
+				  trimtxt->column);
+		trim->trmflags &= ~fdCOLOR;
+		trim->trmflags |= fd2COLOR;
+		frm->frtrimno++;
+		maxrow = max(maxrow, trimtxt->row);
+
+	}
+
+	*nolines = maxrow;
+	return;
+}
+
+/*
+**	Count pieces of trim in title
+*/
+static i4
+trim_in_title(title)
+TRIMTXT	*title;		/* Title trim */
+{
+	i4 i;
+
+	for (i = 0; title != NULL; title = title->next)
+		i++;		/* Another piece of trim */
+
+	return (i);
+}
+
+

@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+  The opf_pq_partthreads resource controls the number of threads that
+  will be used to process partitions of a partitioned table. Parallelizing
+  a partitioned table access is considered to consume one thread from 
+  the separately defined degree of parallelism, but will actually 
+  create as many threads as defined by this parameter.
+
+  The default is 8 threads per partitioned table access.

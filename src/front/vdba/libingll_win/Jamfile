@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!libingll_win
+#
+
+SubDir ING_SRC front vdba libingll_win ;
+
+IISUBSYS front vdba libingll_win ;
+
+
+IISLN libingll.lib : libingll.sln ;

@@ -1,0 +1,27 @@
+MODIFY ii_abfclasses TO BTREE UNIQUE ON class_id, catt_id
+
+modify ii_abfdependencies to btree on object_id
+
+modify ii_abfobjects to cbtree on applid,object_id
+
+modify ii_encoded_forms to cbtree unique on object_id,cfseq
+
+modify ii_fields to cbtree unique on object_id,flsubseq
+
+modify ii_forms to btree unique on object_id
+
+modify ii_gropts to cbtree unique on object_id
+
+modify ii_joindefs to cbtree unique on object_id,qtype
+
+modify ii_qbfnames to cbtree unique on object_id
+
+modify ii_rcommands to cbtree unique on object_id,rcotype,rcosequence
+
+modify ii_reports to btree unique on object_id
+
+MODIFY ii_sequence_values TO HASH UNIQUE ON sequence_key
+    WHERE minpages = 32, fillfactor = 1
+
+modify ii_trim to cbtree on object_id,trim_col,trim_lin
+

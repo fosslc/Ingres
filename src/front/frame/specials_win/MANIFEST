@@ -1,0 +1,24 @@
+#
+# MANIFEST file for front!frame!specials_win
+#
+# History :
+#	13-Sep-2004 (drivi01)
+#		Cleaned up build process for iilibframe.dll
+#	15-Jan-2008 (drivi01)
+#	        Update IINEEDOBJ rule to use oosymbol.roc as a source.
+#	15-Feb-2008 (bonro01)
+#		Fix problem caused by last change 490473.
+#
+
+SubDir ING_SRC front frame specials_win ;
+
+IISUBSYS front frame specials_win ;
+
+
+IISHLIBRARY $(SHFRAMELIBDATA) : $(SHFRAMELIB) $(FRAMELIBDATA) ;
+
+IISHLIBRARY $(SHFRAMELIB) : $(IMPFRAMELIBDATA) $(FRAME_LIBS) $(IMPCOMPATLIB)
+	$(IMPCOMPATLIBDATA) $(SHLIBQLIBDATA) $(IMPLIBQLIB) $(IMPADFLIB) $(IMPADFLIBDATA)
+	$(IMPEMBEDLIB) $(IMPEMBEDLIBDATA) $(TBLUTILLIB) $(IAOMLIB) $(COPYFORMLIB) ;
+IINEEDOBJ $(SHFRAMELIB) : oosymbol.roc ;
+

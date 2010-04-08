@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The psort_nthreads resource controls the number of worker threads used
+  when parallel sorting.
+
+  A machine with many CPU's and large sorts may benefit from more worker
+  threads.  Too many threads will not help sorting and may even be slower
+  due to contention.
+
+  The default is 2 worker threads.

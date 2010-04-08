@@ -1,0 +1,1393 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+#include	<ci.h>
+#include	<st.h>
+#include	<ol.h>
+#include	<lo.h>
+#include	<ut.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ft.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<fmt.h>
+#include	<si.h>
+##include	<abclass.qsh>
+##include	<oocat.qsh>
+#include	<oocatlog.h>
+#include	<oosymbol.h>
+#include	<oodefine.h>
+#include	<metafrm.h>
+#include	<uigdata.h>
+#include	<flddesc.h>
+##include	"abclinfo.qsh"
+##include	"abcatrow.qsh"
+#include	"gncode.h"
+#include	"erab.h"
+/*
+fool ming:
+#include	<abclass.h>
+#include	<oocat.h>
+#include	"abclinfo.h"
+#include	"abcatrow.h"
+*/
+
+GLOBALREF char	*IIutExtensions[_OLMAX+1][3];
+GLOBALREF bool  IIabAbf;
+
+#define IIUTextension(dml, ol_type) \
+ 	((ol_type) < OLC || (ol_type) > _OLMAX \
+ 		? NULL : IIutExtensions[ol_type][dml])
+
+/**
+** Name:	abcreate.qsc -		ABF Create Component Object Frame.
+**
+** Description:
+**	Contains the application definition frame routine for ABF, which allows
+**	users to define or modify applications.	 Defines:
+**
+**	IIABcreateComp()	ABF create component object frame.
+**
+** History:
+**	Revision 6.2  89/01  wong
+**	Initial revision.
+**	89/09/20  wong  Added a menu item (OtherLanguages) that allows users
+**	that don't have EQL licenses to create host language procedures
+**	available to them.  JupBug #7289.
+**
+**	11-march-91 (blaise)
+**	    Integrated desktop porting changes.
+**	4-aug-92 (blaise)
+**	    Modified the IIUTextension macro; it was using ">" and "<" in
+**	    a way which was invalid under ansi C.
+**
+**	Revision 6.5
+**	07-dec-92 (davel)
+**		Set APC_PASSDEC flags bit in createHLProc() according to
+**		the 3GL capability for native decimal support.  Modified 
+**		OL interface to use the new OLang_info to determine if a 
+**		language is defined.
+**	03-sep-93 (connie) Bug #49745
+**	    Removed the number limit of 30 unique source file names in each
+**	    process to synchronize with the creation of unique form names
+**      18-oct-1993 (kchin)
+**          Since the return type of OOsnd() has been changed to PTR,
+**          when being called in IIABmdoMakeDefaultObj(), its return
+**          type needs to be cast to the proper datatype.
+**      30-dec-1994 (harpa06)
+**          Bug #66131 - Temporarily disabled VIGRAPH feature from ABF 
+**          menus
+**      28-jan-1995 (harpa06)
+**          Bug #66521 - Since VIGRAPH *will* be supported, I re-enabled the
+**          "Create a GRAPH Frame" feature. The fact of it being labeled as a
+**          bug since it was disabled is because I forgot to re-enable the 
+**          feature before QA got to it.
+**      21-feb-1995 (harpa06)
+**	    Backed out bug #66521. VIGRAPH is no longer in the product.
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	07-feb-2003 (abbjo03)
+**	    Remove PL/1 as a supported language.
+**      11-Jun-2004 (hanch04)
+**          Removed reference to CI for the open source release.
+**	28-Mar-2004 (lakvi01)
+**	    Properly prototype _selectObject. 
+**    25-Oct-2005 (hanje04)
+**        Add prototype for do_init() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	26-Aug-2009 (kschendel) 121804
+**	    Need ft.h, fmt.h to satisfy gcc 4.3.
+*/
+FORM_REF	*IIAMformRef();
+FORM_REF	*IIAMfaFormAlloc();
+LOCATION        *iiabMkLoc();
+char		*iiabGenName();
+AB_CATALOG	*iiabGtCatClass();
+STATUS		iiabSvApp();
+
+char		*IIAMufnUniqFormName();
+char		*UGcat_now();
+static		do_init();
+
+static bool	NoDBWrite = FALSE;
+
+static const
+##		char	_createForm[]	= ERx("abfcompcreate"),
+##			_crselectForm[]	= ERx("abfcomptypeselect"),
+##			_selectForm[]	= ERx("abfcompselect"),
+##			_useTblFld[]	= ERx("usage");
+
+
+GLOBALREF char *IIabExename;
+
+/*}
+** Name:	COMP_DESC -	Component Creation Description.
+**
+** Description:
+**	Defines the frame and procedure component creation descriptions.
+*/
+typedef struct {
+	OOID		class;
+	i4		language;
+	i4		capability[2];
+	ER_MSGID	desc;
+	ER_MSGID	title;
+} COMP_DESC;
+
+static COMP_DESC	_FrmDesc[] = {
+	{OC_OSLFRAME,	0, {CI_OSLQUEL,	CI_OSLSQL},
+		F_AB0020_AUFCrt_desc, F_AB0030_AUFCrt_title},
+	{OC_RWFRAME,	0, {CI_REPORT,	CI_RBF},
+		F_AB0021_ARFCrt_desc, F_AB0031_ARFCrt_title},
+	{OC_QBFFRAME,	0, {CI_QBF,	CI_QBF},
+		F_AB0022_AQFCrt_desc, F_AB0032_AQFCrt_title},
+	{OC_MUFRAME,	0, {CI_VISION,	CI_VISION},
+		F_AB0020_AUFCrt_desc, F_AB0030_AUFCrt_title},
+	{OC_APPFRAME,	0, {CI_VISION,	CI_VISION},
+		F_AB0020_AUFCrt_desc, F_AB0030_AUFCrt_title},
+	{OC_UPDFRAME,	0, {CI_VISION,	CI_VISION},
+		F_AB0020_AUFCrt_desc, F_AB0030_AUFCrt_title},
+	{OC_BRWFRAME,	0, {CI_VISION,	CI_VISION},
+		F_AB0020_AUFCrt_desc, F_AB0030_AUFCrt_title},
+	{OC_UNDEFINED}
+};
+
+static COMP_DESC	_EqProcDesc[] = {
+	{OC_OSLPROC,	OLOSL,		{CI_OSLQUEL,	CI_OSLSQL},
+		F_AB0024_A4PCrt_desc, F_AB0034_A4PCrt_title},
+	{OC_DBPROC,	OLSQL,		{CI_SQL_TM,	CI_SQL_TM},
+		F_AB0025_ADBCrt_desc, F_AB0035_ADBCrt_title},
+	{OC_HLPROC,	OLC,		{CIeqC,	CIesqC},
+		F_AB0026_ACPCrt_desc, F_AB0036_ACPCrt_title},
+	{OC_HLPROC,	OLFORTRAN,	{CIeqFORTRAN,	CIesqFORTRAN},
+		F_AB0027_AFPCrt_desc, F_AB0037_AFPCrt_title},
+	{OC_HLPROC,	OLPASCAL,	{CIeqPASCAL,	CIesqPASCAL},
+		F_AB0028_APPCrt_desc, F_AB0038_APPCrt_title},
+	{OC_HLPROC,	OLCOBOL,	{CIeqCOBOL,	CIesqCOBOL},
+		F_AB0029_AcPCrt_desc, F_AB0039_AcPCrt_title},
+	{OC_HLPROC,	OLBASIC,	{CIeqBASIC,	CIesqBASIC},
+		F_AB002A_ABPCrt_desc, F_AB003A_ABPCrt_title},
+/* No EQL/ESQL ADA support yet
+	{OC_HLPROC,	OLADA,		{CIeqADA,	CIesqADA},
+		F_AB002B_AAPCrt_desc, F_AB003B_AAPCrt_title},
+*/
+	{OC_UNDEFINED}
+};
+
+static COMP_DESC	_ProcDesc[] = {
+	{OC_HLPROC,	OLC,		{CI_ABF,	CI_ABF},
+		F_AB0026_ACPCrt_desc, F_AB0036_ACPCrt_title},
+	{OC_HLPROC,	OLFORTRAN,	{CI_ABF,	CI_ABF},
+		F_AB0027_AFPCrt_desc, F_AB0037_AFPCrt_title},
+	{OC_HLPROC,	OLPASCAL,	{CI_ABF,	CI_ABF},
+		F_AB0028_APPCrt_desc, F_AB0038_APPCrt_title},
+	{OC_HLPROC,	OLCOBOL,	{CI_ABF,	CI_ABF},
+		F_AB0029_AcPCrt_desc, F_AB0039_AcPCrt_title},
+	{OC_HLPROC,	OLBASIC,	{CI_ABF,	CI_ABF},
+		F_AB002A_ABPCrt_desc, F_AB003A_ABPCrt_title},
+	{OC_HLPROC,	OLADA,		{CI_ABF,	CI_ABF},
+		F_AB002B_AAPCrt_desc, F_AB003B_AAPCrt_title},
+	{OC_UNDEFINED}
+};
+
+/*{
+** Name:	IIABcreateComp() -	Create an Application Component Frame.
+**
+** Description:
+**	Displays the first frame of the Application Component create sequence.
+**	Initializes the application object entry for an application that is
+**	being created, and displays some initial values on the Create form.
+**
+** Input:
+**	app	{APPL *}  The application.
+**	id	{OOID}  Application object ID.
+**	catalog	{OO_CATALOG *}  The catalog display object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	01/89 (jhw) -- Written.
+**	01/89 (jhw) - Written.
+**	09/89 (jhw) - Modified to position at upper-right hand corner of screen.
+*/
+
+#define _FrameExpl	F_AB001C_Frame_expl
+#define _ProcedureExpl	F_AB001D_Proc_expl
+#define _SelectExpl	F_FE0108_ExplSelect
+#define _ForgetExpl	F_FE0109_ExplForget
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+#define _OtherLangExpl	F_AB002D_OtherLang_expl
+  
+#define AB_Other	F_AB002E_Other
+
+
+#define _CrtSelectTitle	F_AB0019_AFPCrt_title
+
+#define _FrameDesc	F_AB001E_Frame_desc
+#define _ProcedureDesc	F_AB001F_Procedure_desc
+#define _GlobalDesc	F_AB0315_CreateGlo_expl
+#define _ConstantDesc	F_AB0359_CreateConst_expl
+#define _RecordDesc	F_AB0337_CreateRec_expl
+
+static STATUS	crDisplay();
+static STATUS	f_create();
+static STATUS	crInit();
+static STATUS	_selectObject(APPL *, OOID *, OOID, OO_CATALOG *, STATUS (*)());
+
+static VOID	fix_file();
+static VOID	place_holder();
+static i4	crchoice();
+static i4	selpchoice();
+
+static bool	_inited = FALSE;
+
+/*
+** LISTPICK data for IIABcreateComp.
+**
+** Crpick data, help title / help file filled in at run time
+*/
+typedef struct
+{
+	APPL *app;
+	OOID *id;
+	OO_CATALOG *catalog;
+	STATUS rval;
+} CR_LP;
+
+static const LISTMENU Crmen[] =
+{
+	{ FE_Select,	_SelectExpl,	LPB_CRSELECT,	4 },
+	{ FE_Forget,	_ForgetExpl,	LPB_QUIT,	9 },
+	{ FE_Help,	_HelpExpl,	LPB_HELP,	1 },
+	{ 0,		0,		LPB_FIND,	7 },
+	{ 0,		0,		LPB_TOP,	5 },
+	{ 0,		0,		LPB_BOTTOM,	6 }
+};
+
+static const
+	UF_HELP _CreateHelp = { _CrtSelectTitle, ERx("abcmppik.hlp") };
+
+static LISTPICK Crpick =
+{
+	_crselectForm, _useTblFld, 4, 2,
+	0, NULL, NULL, sizeof(Crmen)/sizeof(Crmen[0]), Crmen,
+	crchoice, NULL, 0
+};
+
+/*
+** LISTPICK data for _selectObject
+**
+** Selmen "other" title filled in at run time.
+** Selpick data, help title / help file filled in at run time
+*/
+
+## typedef struct
+## {
+	STATUS (*icept)();
+	bool other;
+	STATUS rval;
+	OOID *id;
+	OO_CATALOG *catalog;
+	APPL *app;
+## } SEL_LP;
+
+/*
+** "Other" item filled in at run time.  Don't rearrange without taking
+** care of OTHERIDX
+*/
+static LISTMENU Selpmen[] =
+{
+	{ FE_Select,	_SelectExpl,	LPB_CRSELECT,	4 },
+	{ AB_Other,	_OtherLangExpl,	LPB_QUIT,	0 },
+	{ FE_Forget,	_ForgetExpl,	LPB_QUIT,	9 },
+	{ FE_Help,	_HelpExpl,	LPB_HELP,	1 },
+	{ 0,		0,		LPB_FIND,	7 },
+	{ 0,		0,		LPB_TOP,	5 },
+	{ 0,		0,		LPB_BOTTOM,	6 }
+};
+
+# define OTHERIDX 1	/* MUST match entry of Selpmen for "Other" */
+
+static LISTPICK Selpick =
+{
+	_selectForm, _useTblFld, LPGR_FLOAT, LPGR_FLOAT,
+	0, NULL, NULL, sizeof(Selpmen)/sizeof(Selpmen[0]), Selpmen,
+	selpchoice, NULL, 0
+};
+
+STATUS
+IIABcreateComp ( app, id, catalog )
+APPL		*app;
+OOID		*id;
+OO_CATALOG	*catalog;
+{
+	CR_LP	lp;
+
+	if ( !_inited )
+		do_init();
+
+	if ( app->batch )
+		lp.rval = _selectObject( app, id, OC_APPLPROC, catalog, NULL );
+	else
+##	{
+##		char	title[80+1];
+
+		lp.rval = OK;
+		lp.app = app;
+		lp.id = id;
+		lp.catalog = catalog;
+
+		Crpick.data = (PTR) &lp;
+		Crpick.hfile = _CreateHelp.file;
+		Crpick.htitle = title;
+
+		IIUGfmt( title, sizeof(title)-1, ERget(_CreateHelp.title),
+				1, IIabExename
+		);
+
+##		putform _crselectForm ( _title = title )
+
+		IIFRclpCallListPick(&Crpick, (i4 *)NULL);
+##	}
+
+	return *id == OC_UNDEFINED ? FAIL : lp.rval;
+}
+
+static
+crchoice(dat,ret,res,idx)
+PTR dat;
+i4  ret;
+bool *res;
+i4  idx;
+{
+	CR_LP	*lp;
+##	OOID	type;
+
+	lp = (CR_LP *) dat;
+
+	switch(Crmen[idx].title)
+	{
+	case FE_Select:
+##		GETROW _crselectForm _useTblFld ( type = _class );
+
+		if ( type == OC_GLOBAL || type == OC_CONST
+					|| type == OC_RECORD )
+		{
+			AB_CATALOG	*self;
+
+			self = iiabGtCatClass( type, TRUE );
+			if ( self->c_create.m_func != NULL )
+			{
+				lp->rval = (*self->c_create.m_func)(
+							lp->app, type, self
+				);
+			}
+		}
+		else
+		{
+			lp->rval = _selectObject( lp->app, lp->id,
+					type, lp->catalog, NULL );
+		}
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
+static VOID
+##_loadSelect ( name, desc, title, class, language )
+char		*name;
+ER_MSGID	desc;
+##i4	title;
+##OOID		class;
+##i4		language;
+##{
+##	char	buf[FE_MAXNAME+1];
+
+	if ( class < OC_APPLFRAME || class > OC_APPLFRAME + 100 )
+		STcopy(name, buf);
+	else
+	{
+		STlcopy(name, buf, (STindex(name, ERx(" "), 0) - name));
+		CVupper(buf);
+	}
+##	LOADTABLE _selectForm _useTblFld (
+##			usage = buf,
+##			description = ERget(desc),
+##			_title = title,	
+##			_class = class,
+##			#language = language
+##	);
+##}
+
+static
+selpchoice(dat,ret,res,idx)
+PTR dat;
+i4  ret;
+bool *res;
+i4  idx;
+##{
+	SEL_LP	*lp;
+## 	OOID	nclass;
+## 	i4	title;
+## 	i4	lang;
+	HLPROC	new;
+
+        lp = (SEL_LP *) dat;
+
+	switch ( Selpmen[idx].title )
+	{
+	case FE_Select:
+##		GETROW _selectForm _useTblFld (
+##			nclass = _class,
+##			title = _title,
+##			lang = language
+##		);
+		new.ooid = *(lp->id);
+		new.class = nclass;
+		new.appl = lp->app;
+		if ( nclass == OC_HLPROC )
+		{
+			new.ol_lang = lang;
+			new.dml = lp->other ? DB_NOLANG : (lp->app)->dml;
+		}
+		if (lp->icept == NULL)
+		{
+			char	tbuf[63+1];
+
+			IIUGfmt(tbuf,sizeof(tbuf)-1,ERget(title),1,IIabExename);
+
+			lp->rval = IIOOcreateFrame( lp->id, nclass,
+				lp->catalog, _createForm, tbuf,
+				(PTR)&new, crDisplay, f_create, crInit,
+				(MENUPARAM *)NULL, ERx("abcmpcrt.hlp")
+			);
+		}
+		else
+			lp->rval = (*(lp->icept))(&new);
+		break;
+	case FE_Forget:
+		lp->rval = FAIL;
+		break;
+	case AB_Other:
+		/* assert:  class != OC_APPLFRAME */
+		lp->other = TRUE;
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+##}
+
+static const
+	UF_HELP	_FrmCrtHelp = { F_AB001A_AFrmCrt_title, ERx("abfrmpik.hlp") },
+		_ProcCrtHelp = { F_AB001B_AProcCrt_title, ERx("abpropik.hlp") },
+		_VQProcHelp = { F_AB001B_AProcCrt_title, ERx("abhlpik.hlp") };
+
+static STATUS
+##_selectObject ( app, id, class, catalog, icept )
+APPL		*app;
+OOID		*id;
+OOID		class;
+OO_CATALOG	*catalog;
+STATUS		(*icept)();
+##{
+	UF_HELP	*help;
+	i4	_other;
+	SEL_LP	lp;
+##	char	title[63+1];
+
+	COMP_DESC	*cdp;
+
+	bool	IIUIdcn_ingres();
+
+	lp.rval = OK;
+	lp.other = FALSE;
+	lp.icept = icept;
+	lp.catalog = catalog;
+	lp.id = id;
+	lp.app = app;
+
+	/*
+	** fill in variable parts of Selpick.
+	*/
+	Selpick.data = (PTR) &lp;
+	switch (class)
+	{
+	case OC_APPLFRAME:
+		help = &_FrmCrtHelp;
+		break;
+	case OC_APPLPROC:
+		help = &_ProcCrtHelp;
+		break;
+	default:
+		help = &_VQProcHelp;
+		break;
+	}
+	IIUGfmt(title, sizeof(title)-1, ERget(help->title), 1, IIabExename);
+	Selpick.htitle = title;
+	Selpick.hfile = help->file;
+  
+ 	do
+ 	{ /* loop twice for other languages */
+
+##		INITTABLE _selectForm _useTblFld UPDATE
+##			( _class = i4, language = i4, _title = i4 );
+
+		_other = ( class == OC_APPLFRAME || lp.other ) ? 0 : AB_Other;
+
+		Selpmen[OTHERIDX].title = _other;
+
+		if (class == OC_APPLFRAME)
+		{
+			for ( cdp = _FrmDesc ; cdp->class != OC_UNDEFINED ;
+					++cdp )
+			{
+				if ( cdp->capability[app->dml-1] != CI_VISION
+						)
+				{
+					register OO_OBJECT	*cp;
+
+					cp = OOp(cdp->class);
+					_loadSelect( cp->name, cdp->desc,
+						cdp->title, cp->ooid,
+						cdp->language
+					);
+				}
+			}
+		}
+		else if ( _other != 0 )
+		{
+			for ( cdp = _EqProcDesc ; cdp->class != OC_UNDEFINED ;
+					++cdp )
+			{
+				register char	*lang;
+
+				if (class == OC_HLPROC &&
+						cdp->class != OC_HLPROC)
+					continue;
+
+				/* Check both capability and supported languages
+				** in case the capability is turned on but the
+				** language is not supported.
+				*/
+  				if ( ( OLang_info(cdp->language)
+ 						& OL_I_DEFINED )
+					&& ( cdp->class != OC_DBPROC
+						|| IIUIdcn_ingres() ) )
+  				{
+					lang = OLanguage(cdp->language);
+ 					_loadSelect( lang,
+						cdp->desc, cdp->title,
+						cdp->class, cdp->language
+					);
+				}
+			}
+		}
+ 		else
+ 		{ /* other languages */
+ 			for ( cdp = _ProcDesc ; cdp->class != OC_UNDEFINED ;
+ 					++cdp )
+ 			{
+ 				register char	*lang;
+
+				if (class == OC_HLPROC &&
+						cdp->class != OC_HLPROC)
+					continue;
+ 
+				if ( OLang_info(cdp->language) & OL_I_DEFINED )
+ 				{ /* only supported interfaces */
+ 					lang = OLanguage(cdp->language);
+ 					_loadSelect( lang,
+ 						cdp->desc, cdp->title,
+ 						cdp->class, cdp->language
+ 					);
+ 				}
+ 			}
+ 		}
+##		putform _crselectForm ( _title = title );
+
+		IIFRclpCallListPick(&Selpick, (i4 *)NULL);
+
+	} while ( _other != 0 && lp.other );
+	
+	return lp.rval;
+##}
+
+/*
+** Name:	crDisplay() - 	Application Component Create Frame Display.
+**
+** Description:
+**	Displays application component specific information on the create form.
+**	This is only the type field, which displays the type of the application
+**	component.
+**
+** Inputs:
+**	id	{OOID}  The ID of the object being created.
+**	data	{PTR ==> HLPROC *}  The temporary application component.
+**
+** Returns:
+**	{STATUS}  OK
+**
+** History:
+**	01/89 (jhw)  Written.
+*/
+static STATUS
+crDisplay ( id, data )
+OOID	id;
+PTR	*data;
+##{
+	register HLPROC	*new = (HLPROC *)data;
+##	char		type[24+1];
+
+	if ( new->class == OC_HLPROC )
+	{
+		STcopy(OLanguage(new->ol_lang), type);
+	}
+	else
+	{
+		char	*cp = OOpclass(new->class)->name;
+
+		STlcopy( cp, type, (u_i4)(STindex(cp, ERx(" "), 0) - cp) );
+	}
+
+##	putform _createForm ( #type = type )
+
+	return OK;
+##}
+
+/*
+** History:
+**	02/89 (jhw) -- Written.
+**	09/89 (jhw) -- Always generate form reference names.  JupBug #7948.
+*/
+static STATUS
+crInit ( id, data )
+OOID	id;
+PTR	data;
+{
+	register APPL_COMP	*comp = (APPL_COMP *)OOp(id);
+	register APPL_COMP	*new = (APPL_COMP *)data;
+	STATUS			stat = OK;
+	char			*formname;
+
+	comp->data.tag = new->appl->data.tag;	/* for memory allocation */
+
+	comp->appl = new->appl;
+	formname = comp->name;
+
+	switch ( comp->class )
+	{
+	  case OC_OSLPROC:
+		return IIAMfaFidAdd(comp->name, _, _, &((_4GLPROC *)comp)->fid);
+	  case OC_MUFRAME:
+	  case OC_APPFRAME:
+	  case OC_UPDFRAME:
+	  case OC_BRWFRAME:
+		formname = IIAMufnUniqFormName(formname,comp->data.tag);
+		if (formname == NULL)
+			return FAIL;
+		IIAMamAttachMeta((USER_FRAME *)comp);
+		/* fall through */
+	  case OC_OSLFRAME:
+		stat = IIAMfaFidAdd( comp->name, _, _,
+				&((USER_FRAME *)comp)->fid
+		);
+		/* fall through ... */
+	  case OC_OLDOSLFRAME:
+		((USER_FRAME *)comp)->form = IIAMformRef(new->appl, formname);
+ 		iiabFoRefNames(((USER_FRAME *)comp)->form);
+		break;
+	} /* end switch */
+	return stat;
+}
+
+/*
+** Name:	f_create() -	Create Application Component Object Entry.
+**
+** Description:
+**	Writes the application catalogs entry for an application component
+**	object when it is created.
+**
+**	This routine is called from the Create frame of the OO module
+**	("IIOOcreateFrame()",) which is passed this routine when it is executed.
+**
+** Input:
+**	id	{OOID}  Application object ID.
+**	data	{PTR ==> APPL_COMP *}  Application component specific data.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw) -- Written.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+*/
+static STATUS	createHLProc();
+static STATUS	create4GLProc();
+static STATUS	createDBProc();
+static STATUS	create4GLFrm();
+static STATUS	createRepFrm();
+static STATUS	createQBFFrm();
+static STATUS	createGBFFrm();
+
+static STATUS
+f_create ( id, data )
+OOID	id;
+PTR	*data;
+{
+	STATUS		iiabCrGlobal();
+
+	register APPL_COMP	*obj = (APPL_COMP *)OOp(id);
+	STATUS			stat;
+
+	obj->altered_by = IIUIdbdata()->user;
+	switch (obj->class)
+	{
+	  case OC_GLOBAL:
+	  case OC_CONST:
+	  case OC_RECORD:
+	  case OC_RECMEM:
+		/* iiabCrGlobal will do all the work for us. */ 
+		return iiabCrGlobal(id, data);
+
+	  case OC_MUFRAME:
+	  case OC_APPFRAME:
+	  case OC_UPDFRAME:
+	  case OC_BRWFRAME:
+		IIAMamAttachMeta(obj);	/* fall through */
+	  case OC_OSLFRAME:
+		stat = create4GLFrm(obj, data);
+		break;
+	  case OC_OSLPROC:
+		stat = create4GLProc(obj, data);
+		break;
+	  case OC_DBPROC:
+		stat = createDBProc(obj, data);
+		break;
+	  case OC_HLPROC:
+		stat = createHLProc(obj, data);
+		break;
+	  case OC_GBFFRAME:
+	  case OC_GRFRAME:
+		stat = createGBFFrm(obj, data);
+		break;
+	  case OC_QBFFRAME:
+		stat = createQBFFrm(obj, data);
+		break;
+	  case OC_RWFRAME:
+		stat = createRepFrm(obj, data);
+		break;
+	  default:
+		stat = FAIL;
+		break;
+	}
+
+	if ( stat == OK )
+	{ /* Insert into ordered list of components */
+		IIAMinsComp(obj->appl, obj);
+	}
+
+	return stat;
+}
+
+
+/*
+** Name:	createHLProc() -	Create Host-Language Procedure
+**						Component.
+** Description:
+**	Initializes and writes the application catalog entry for a host-language
+**	procedure component.  The initialization sets the host-language,
+**	return type (non-Nullable integer,) symbol, and default source-code
+**	file for the procedure.
+**
+** Inputs:
+**	obj	{HLPROC *}  The host-language procedure component object.
+**			name	{char *}  The object name.
+**	data	{PTR ==> HLPROC *}  The temporary object used during the create.
+**			ol_lang	{OL_TYPE}  The host-language type.
+**
+** Outputs
+**	obj	{HLPROC *}  The host-language procedure component object.
+**			ol_lang		{OL_TYPE}  The host-language type.
+**			return_type	{DB_DATA_DESC}  The return type
+**								descriptor.
+**			symbol		{char *}  The symbol name.
+**			source		{char *}  The source-code file name.
+**
+** History:
+**	02/89 (jhw)  Written.
+**	03/90 (jhw)  Check for compilable languages.
+**	07-dec-92 (davel)
+**		Set APC_PASSDEC flags bit () according to
+**		the 3GL capability for native decimal support.
+*/
+
+static STATUS
+createHLProc ( obj, data )
+register HLPROC	*obj;
+PTR		*data;
+{
+	register HLPROC	*new = (HLPROC *)data;
+	register char	*ext;
+
+	obj->ol_lang = new->ol_lang;
+	obj->return_type.db_datatype = DB_INT_TYPE;	/* never Nullable */
+	obj->return_type.db_length = sizeof(i4);
+	obj->return_type.db_scale = 0;
+	obj->return_type.db_data = ERx("integer");
+	obj->symbol = obj->name;
+	obj->compdate = ERx("");
+
+	/* initialize "pass decimal values as what type" flag to pass
+	** as floats.  This will NOT be the default for 3GL languages
+	** which have native decimal support...
+	*/
+	if (OLang_info(obj->ol_lang) & OL_I_HAS_DECIMAL)
+	{
+		obj->flags |= APC_PASSDEC;
+	}
+	else
+	{
+		obj->flags &= ~APC_PASSDEC;
+	}
+
+	/* Check for compilable languages.  At this point only callable
+	** languages could have been selected, however, a language may
+	** be callable without being compilable, e.g., Ada.
+	*/
+
+	ext = IIUTextension(DB_NOLANG, obj->ol_lang);
+	if ( ext == NULL || *ext == EOS )
+		obj->source = _;	/* not compilable */
+	else
+		obj->source = iiabGenName( obj->appl->data.tag, obj->name,
+					   IIUTextension(new->dml, obj->ol_lang)
+		);
+
+	if (NoDBWrite)
+		return OK;
+
+	return IIAMwrHLProc(obj);
+}
+
+/*
+** History:
+**	02/89 (jhw)  Written.
+**	07/89 (jhw)  Use 'AFE_MKNULL()' to set nullability (which accounts
+**			for the length as well.)  JupBug #7102.
+*/
+static STATUS
+create4GLProc ( obj, data )
+register _4GLPROC	*obj;
+PTR			*data;
+{
+	DB_LANG	dml = obj->appl->dml;
+
+	obj->return_type.db_datatype = DB_INT_TYPE;
+  	obj->return_type.db_length = sizeof(i4);
+	if ( dml == DB_SQL )
+		AFE_MKNULL(&obj->return_type);	/* SQL default:  Null */
+	obj->return_type.db_scale = 0;
+	obj->return_type.db_data = ERx("integer");
+	obj->compdate = ERx("");
+	IIGNgnGenName(AGN_OPROC, obj->name, &obj->symbol);
+	obj->source = iiabGenName( obj->appl->data.tag, obj->name,
+					IIUTextension(dml, OLOSL)
+	);
+
+	if (NoDBWrite)
+		return OK;
+
+	return IIAMwr4GLProc(obj);
+}
+
+static STATUS
+createDBProc ( obj, data )
+register DBPROC	*obj;
+PTR		*data;
+{
+	obj->return_type.db_datatype = DB_INT_TYPE;	/* not yet Nullable */
+	obj->return_type.db_length = sizeof(i4);
+	obj->return_type.db_scale = 0;
+	obj->return_type.db_data = ERx("integer");
+
+	if (NoDBWrite)
+		return OK;
+
+	return IIAMwrDBProc(obj);
+}
+
+/*
+** History:
+**	01/90 (jhw) -- Increment reference count for form.  JupBug #9533.
+**	2/91 (Mike S) -- Set menu-style flag
+*/
+static STATUS
+create4GLFrm ( obj, data )
+register USER_FRAME	*obj;
+PTR			*data;
+{
+	obj->return_type.db_datatype = DB_NODT;
+	obj->return_type.db_length = 0;
+	obj->return_type.db_scale = 0;
+	obj->return_type.db_data = ERx("none");
+
+	/* FID and Form reference were generated in 'crInit()' */
+	++obj->form->refs;	/* form is now referenced by this frame. */
+
+	IIGNgnGenName(AGN_OFRAME, obj->name, &obj->symbol);
+	obj->source = iiabGenName(obj->appl->data.tag, obj->name,
+					IIUTextension(obj->appl->dml, OLOSL)
+	);
+	obj->is_static = FALSE;
+
+	/* Get default for DB/compiled form */
+	if ((obj->appl->flags & (APC_DBFORMS|APC_DEFDBFORMS)) == 
+			      (APC_DBFORMS|APC_DEFDBFORMS))
+	{
+		obj->flags |= APC_DBFORM;
+	}
+	else
+	{
+		obj->flags &= ~APC_DBFORM;
+	}
+
+	/* Set menu-style flag */
+	if (obj->class == OC_MUFRAME)
+	{
+		obj->flags &= ~APC_MS_MASK;
+		obj->flags |= (obj->appl->flags & APC_MS_MASK);
+	}
+
+	if (obj->class != OC_OSLFRAME)
+		fix_file(obj);
+
+	if (NoDBWrite)
+		return OK;
+
+	return IIAMwrUserFrame(obj);
+}
+
+/*
+** for metaframe types, we assure a unique file name in the source directory,
+** and generate an initial "placeholder", also stamping our generation date.
+** If we can't seem to do it, let it go - we don't want to refuse to create
+** the frame for this reason.
+*/
+static VOID
+fix_file(obj)
+USER_FRAME *obj;
+{
+	LOCATION *sloc;
+
+	for(;;)
+	{
+		sloc = iiabMkLoc( obj->appl->source, obj->source );
+		if (LOexist(sloc) != OK)
+		{
+			place_holder(obj,sloc);
+			return;
+		}
+		obj->source = iiabGenName(obj->appl->data.tag, obj->name,
+				IIUTextension(obj->appl->dml, OLOSL));
+	}
+}
+
+static VOID
+place_holder(obj,loc)
+USER_FRAME *obj;
+LOCATION *loc;
+{
+	FILE *fp;
+	LOINFORMATION loinfo;
+	i4	liflags;
+	char	dbuf[40];
+
+	if (SIfopen(loc, ERx("w"), SI_TXT, 80, &fp) != OK)
+		return;
+
+	/*
+	** although this file should never really get used, write out
+	** something that will compile.  Stamp gendate on object using
+	** the file date so that file-server / host clock discrepencies
+	** don't hurt us.  If we can't get that date, just use "now", and
+	** hope there aren't any discrepencies.
+	*/
+	SIfprintf(fp,ERx("'%s',key FRSKEY3 = { return; }\n"),ERget(FE_End));
+	SIclose(fp);
+
+	liflags = LO_I_LAST;
+	if (LOinfo(loc, &liflags, &loinfo) != OK)
+		TMnow(&(loinfo.li_last));
+	
+	IIUGdfsDateFromSys(&(loinfo.li_last),dbuf);
+
+	(obj->mf)->gendate = FEtsalloc( obj->data.tag, dbuf );
+	(obj->mf)->state |= MFST_DOGEN | MFST_DOFORM | MFST_NEWFR;
+}
+
+static STATUS
+createRepFrm ( obj, data )
+register REPORT_FRAME	*obj;
+PTR			*data;
+{
+	obj->report = obj->name;
+	obj->form = NULL;
+	obj->source = _;
+	obj->cmd_flags = _;
+	obj->output = _;
+
+	/* Get default for DB/compiled form */
+	if ((obj->appl->flags & (APC_DBFORMS|APC_DEFDBFORMS)) == 
+			      (APC_DBFORMS|APC_DEFDBFORMS))
+	{
+		obj->flags |= APC_DBFORM;
+	}
+	else
+	{
+		obj->flags &= APC_DBFORM;
+	}
+
+
+	if (NoDBWrite)
+		return OK;
+
+	return IIAMwrRepFrame(obj);
+}
+
+/*
+** History:
+**	04-jan-90 (kenl)
+**		Modified createQBFFrm() to make default 'Query Object Type'
+**		be JoinDef.  Form and object name are initialized to blank.
+**	12-jun-90 (Mike S)
+**		Default joindef name to frame name, so if we don't go
+**		through the edit screen, or cancel out of it.
+*/
+static STATUS
+createQBFFrm ( obj, data )
+register QBF_FRAME	*obj;
+PTR			*data;
+{
+	obj->qry_object = obj->name;
+	obj->qry_type = OC_JOINDEF;
+	obj->form = IIAMfaFormAlloc( obj->appl, _ );
+	obj->cmd_flags = _;
+
+	if (NoDBWrite)
+		return OK;
+
+	return IIAMwrQBFFrame(obj);
+}
+
+static STATUS
+createGBFFrm ( obj, data )
+register GRAPH_FRAME	*obj;
+PTR			*data;
+{
+	obj->graph = obj->name;
+	obj->output = _;
+	obj->cmd_flags = _;
+
+	if (NoDBWrite)
+		return OK;
+
+	return IIAMwrGraphFrame(obj);
+}
+
+/*{
+** Name - IIABmdoMakeDefaultObj 
+**
+** Description:
+**	non-interactively create a "defaulted" object.  If it
+**	returns fail, it will have displayed an appropriate error
+**	message.  If a "metaframe" type, the attached metaframe structure
+**	will have been allocated, together with its first level arrays.
+**
+** Inputs:
+**	app - application.
+**	name - name for new object
+**	class - class of new object
+**	ctx - catalog context.
+**
+**	ol_lang, dml - for HLPROC's.  Irrelevent for everything else.
+**
+** Outputs:
+**	aobj - new object.
+**
+**	Returns:
+**		STATUS.
+** History:
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**      06-dec-93 (smc)
+**	    Bug #58882
+**          Commented lint pointer truncation warning.
+*/
+STATUS
+IIABmdoMakeDefaultObj(app,name,class,ctx,aobj,ol_lang,dml)
+APPL *app;
+char *name;
+OOID class;
+PTR ctx;
+OO_OBJECT **aobj;
+i4  ol_lang;
+i4  dml;
+{
+	STATUS		stat;
+	OOID		id;
+	char		*nowstr;
+	HLPROC		new;
+
+	nowstr = UGcat_now();
+    	/* lint truncation warning if size of ptr > OOID, but code valid */
+	id = (OOID)OOsnd( class, _newDb, FALSE, name, 0,
+				IIUIdbdata()->user, 0, _, nowstr, nowstr, _
+	);
+	if ( id == nil )
+		return FAIL;
+
+	new.ooid = id;
+	new.class = class;
+	new.appl = app;
+	new.ol_lang = ol_lang;
+	new.dml = dml;
+
+	if (crInit(id, (PTR) &new) != OK)
+		return FAIL;
+
+    	/* lint truncation warning if size of ptr > OOID, but code valid */
+	if ( (id = (OOID)OOsnd( id, _confirmName, name, FALSE )) == nil )
+		return FAIL;
+
+	NoDBWrite = TRUE;
+	stat = f_create(id, (PTR) &new);
+	NoDBWrite = FALSE;
+	if (stat != OK)
+		return stat;
+
+	*aobj = OOp(id);
+	if (ctx != NULL)
+	{
+		OO_CATALOG	*catalog = (OO_CATALOG *) ctx;
+
+		_send(catInsertRow, catalog)(catalog, *aobj,
+			FEtbsins( catalog->c_form, catalog->c_tfield,
+				name, _name, FALSE)
+		);
+	}
+
+	return OK;
+}
+
+/*{
+** Name - IIABcpvCreateProcVision
+**
+** Description:
+**	Entry to create procedure from INGRES/VISION.  Actually, this is
+**	an entry to the abf popup selections.
+**
+** Inputs:
+**	appl - application.
+**	type - type of object to create (should only be OC_HLPROC,
+**		OC_APPLPROC, or OC_APPLFRAME)
+**	icept - intercept routine for object creation:
+**
+**		(*icept)(new)
+**		HLPROC *new;
+**
+**		This routine will be called instead of the normal IIOOcreate
+**		call used by abf, if non-NULL.
+**
+**	ctx - context pointer given to frame flow entry.
+**		or NULL for calls from iiabCompile via "go" or "image".
+**
+** Outputs:
+**
+**	Returns:
+**		STATUS
+*/
+
+STATUS
+IIABcpvCreateProcVision( appl, type, icept, ctx )
+APPL		*appl;
+OOID		type;
+STATUS		(*icept)();
+PTR		*ctx;
+{
+	OOID	id;
+	STATUS	rval;
+	OO_OBJECT	*new;
+
+	if ( !_inited )
+		do_init();
+
+	rval = _selectObject( appl, &id, type , (OO_CATALOG *) ctx, icept );
+
+	return id == OC_UNDEFINED ? FAIL : rval;
+}
+
+static
+do_init()
+{
+	IIARiaForm(_crselectForm);
+	IIARiaForm(_selectForm);
+	IIARiaForm(_createForm);
+
+##	INITTABLE _crselectForm _useTblFld READ (_class = i4);
+##	LOADTABLE _crselectForm _useTblFld (
+##		usage = ERget(FE_Frame),
+##		description = ERget(_FrameDesc),
+##		class = OC_APPLFRAME
+##	);
+##	LOADTABLE _crselectForm _useTblFld (
+##		usage = ERget(FE_Procedure),
+##		description = ERget(_ProcedureDesc),
+##		class = OC_APPLPROC
+##	);
+/*******
+**	Remove these; no one knows they're here, and they don't work.
+**	9/28/90 Mike S
+
+** ##	LOADTABLE _crselectForm _useTblFld (
+** ##		usage = ERget(AB_Globals),
+** ##		description = ERget(_GlobalDesc),
+** ##		_class = OC_GLOBAL
+** ##	);
+** ##	LOADTABLE _crselectForm _useTblFld (
+** ##		usage = ERget(AB_Consts),
+** ##		description = ERget(_ConstantDesc),
+** ##		_class = OC_CONST
+** ##	);
+** ##	LOADTABLE _crselectForm _useTblFld (
+** ##		usage = ERget(AB_Records),
+** ##		description = ERget(_RecordDesc),
+** ##		_class = OC_RECORD
+** ##	);
+*******/
+
+	_inited = TRUE;
+}
+
+/*{
+** Name:	iiabCrVQEntry() -	Create Application VQ Entry Frame.
+**
+** Description:
+**	Display the create frame for a VQ menu frame.  Once the user has created
+**	it, then make it the entry frame for the application.
+**
+** History:
+**	11/89 (bobm) -- Written.
+**	05/90 (jhw) -- Moved here and changed to call 'IIOOcreateFrame()'.
+**	08/90 (tom) -- Arguments changed to allow for the possibility
+**			of the "Catalog" menuitem.
+*/
+#define _NewTopTitle	F_AB0091_NewTop
+
+static const
+##	char		_NewTopForm[] = ERx("abfcreatevq");
+
+static bool	_1stAddTopF = TRUE;
+
+/* 
+   this function is called in response to the user invoking the
+   "Catalog" menuitem in the IIOOcreateFrame function.. we want
+   to force IIOOcreateFrame to return a value to indicate that
+   the user invoked this menuitem, so we jam the return value,
+   and return FAIL 
+*/
+
+# define GOTO_CATALOG 2269	/* for now it merely important that
+				   this not be == OK or FAIL */
+
+static STATUS
+cat_func(id, ptr, ret_val)
+OOID	id;
+PTR	ptr;
+STATUS	*ret_val;
+{
+	*ret_val = GOTO_CATALOG;
+	return FAIL;
+}
+
+/* menu parameter array to send to the
+   oocreate function. must set up the menuitem string 
+   dynamically from the message file */
+MENUPARAM menup[2] = 
+{
+	{ NULL, 0, cat_func },
+	{ NULL }		/* null terminator */
+};
+
+
+STATUS
+iiabCrVQEntry(app, catalog, usr_frm)
+APPL		*app;
+AB_CATALOG	*catalog;
+USER_FRAME	**usr_frm;
+{
+	USER_FRAME	new;
+	STATUS		ret_val;
+
+	if (_1stAddTopF)
+	{
+		IIARiaForm(_NewTopForm);
+		_1stAddTopF = FALSE;
+
+		/* allow "Catalog" menuitem if we are ABF capable */
+		menup[0].mpstring = 
+			(IIabAbf == TRUE)
+				? ERget(FE_Catalog)
+				: NULL ;
+	}
+
+	new.ooid = OC_UNDEFINED;
+	new.class = OC_MUFRAME;
+	new.appl = app;
+	
+	if ((ret_val = IIOOcreateFrame(&new.ooid, OC_MUFRAME, catalog,
+				_NewTopForm, ERget(_NewTopTitle),
+				(PTR)&new, (STATUS (*)())NULL, f_create, crInit,
+				menup, ERx("abnewtop.hlp"))) == OK)
+	{
+		if ((*usr_frm = (USER_FRAME *)OOp(new.ooid)) != NULL)
+		{
+			app->start_proc = FALSE;
+			app->start_name = FEtsalloc(
+					app->data.tag, (*usr_frm)->name);
+			app->data.dirty = TRUE;
+			_VOID_ IIOOsave(&(app->ooid), (PTR)app, iiabSvApp);
+		}
+	}
+	else
+	{
+		*usr_frm = NULL;
+	}
+
+	return ret_val;
+}

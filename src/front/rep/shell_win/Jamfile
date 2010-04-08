@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!rep!shell_win
+#
+
+SubDir ING_SRC front rep shell_win ;
+
+IISUBSYS front rep shell_win ;
+
+IIBINBAT rpgensql.bat ;
+
+

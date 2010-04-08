@@ -1,0 +1,23 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for config64
+*/
+
+/*
+** History
+**	05-sep-2002 (somsa01)
+**	    Created from 32-bit version.
+**	24-sep-2002 (hanch04)
+**	    Need BUILD_DIR to tell buildrel where to get exe.
+*/
+
+PART   config64
+
+/*
+** ingres!utility!lp64
+*/
+   DIRECTORY (PROD2NAME)!utility!lp64
+   BUILD_DIR (ING_BUILD)!utility!lp64
+      EXECUTABLE (PROG0PRFX)cbf

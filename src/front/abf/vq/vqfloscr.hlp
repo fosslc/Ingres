@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqfloscr.hlp, subtopic 'Scrolling' behind the main AFD help screen.
+/#-- 
+To select a frame, use one of these methods:
+  * Use the arrow keys.
+  * Select Find and enter all or part of the frame name, then press Enter.
+
+To expand the diagram, select a frame. 
+  * The system displays the parent frame and up to four of the child frames 
+    (or more if you have a large screen monitor). 
+  * Scroll vertically or horizontally to see more frames.
+
+To scroll vertically, use the arrow keys. 
+  * If the parent frame scrolls off the top of the screen, its name will be 
+    displayed in the upper-right corner.
+  * If a frame scrolls off the bottom of the screen, the "V" expansion 
+    indicator appears.
+
+To scroll horizontally, use the arrow keys.
+  * If a frame scrolls off the screen to the right or the left, the ">" or 
+    "<" expansion indicator will appear.

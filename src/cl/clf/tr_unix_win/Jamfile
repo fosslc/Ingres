@@ -1,0 +1,12 @@
+#
+# Jamfile file for cl!clf!tr_unix_win
+#
+
+SubDir ING_SRC cl clf tr_unix_win ;
+
+IISUBSYS cl clf tr_unix_win ;
+
+IINOOPTIM tr.c : dg8_us5 ;
+
+IILIBRARY COMPATLIB : tr.c ;
+

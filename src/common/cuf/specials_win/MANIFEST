@@ -1,0 +1,16 @@
+#
+# MANIFEST file for common!cuf!specials_win
+#
+
+SubDir ING_SRC common cuf specials_win ;
+
+IISUBSYS common cuf specials_win ;
+
+
+##IISHLIBRARY $(SHCUFLIBDATA) : $(SHCUFLIB) $(CUFLIBDATA) ;
+##IISHLIBRARY $(SHCUFLIB) : $(IMPCUFLIBDATA) $(CUFLIB) ;
+
+
+
+
+IISHLIBRARY $(SHCUFLIB) : $(CUFLIB) $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) ;

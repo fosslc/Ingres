@@ -1,0 +1,124 @@
+/* Copyright (c) 2005 Ingres Corporation */
+/* FRS mapping file for gnome-terminal on Sun Java Desktop */
+/* This mapping is for Sun Type-5/Type-6 keyboards */
+
+/* Menu Key */
+	menu = pf1 (Esc-1)
+
+/* Help facility */
+	frskey1 = pf2 (F2)
+
+/* Exit the system */
+	frskey2 = pf4 (F4)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (F3)
+
+/* Go or execute function */
+	frskey4 = pf12 (Enter)
+
+/* Put cursor on top of form or table field */
+	frskey5 = controlK (^K)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= controlJ (^J)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = pf13 (0)
+
+/* Forget and Undo */
+	frskey9 = pf14 (.)
+
+/* Bring up List Choices */
+	frskey10 = pf17 (Find)
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlH (^H)
+
+/* Previous screen or set of rows in table field */
+/* Can't use keypad - and +, only type4 kbd maps the - key! */
+	scrolldown = pf10 (Sh-Up)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf11 (Sh-Down)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf5 (F5)
+
+/* Select second menu item */
+	menuitem2 = pf6 (F6)
+
+/* Select third menu item */
+	menuitem3 = pf7 (F7)
+
+/* Select fourth menu item */
+	menuitem4 = pf8 (F8)
+
+/* Select fifth menu item */
+	menuitem5 = pf9 (F9)
+
+/* Select sixth menu item */
+	menuitem6 = pf23 (Sh-F5)
+
+/* Select seventh menu item */
+	menuitem7 = pf24 (Sh-F6)
+
+/* Select eighth menu item */
+	menuitem8 = pf25 (Sh-F7)
+
+/* Select ninth menu item */
+	menuitem9 = pf26 (Sh-F8)
+
+/* Select tenth menu item */
+	menuitem10 = pf27 (Sh-F9)
+
+/* Select 11th menu item */
+	menuitem11 = pf30 (Ctl-F5)
+
+/* Select 12th menu item */
+	menuitem12 = pf31 (Ctl-F6)
+
+/* Move cursor to next field - defined to controlI in frs.map */
+
+/* Move cursor to previous field  */
+	previousfield = pf18 (Sh-Tab)
+
+/* Move up one word within field */
+	nextword = pf37 (Sh-Right)
+
+/* Move up one word within field */
+	previousword = pf36 (Sh-Left)
+
+/* Switch between insert and overstrike mode - defined to controlE in frs.map */
+
+/* Redraw the screen - defined to controlW in frs.map */
+
+/* Delete the character under the cursor - defined to controlD in frs.map */
+
+/* Delete character immediately to left of cursor */
+/* defined to controlDEL in frs.map */
+
+/* Start default text editor on field - defined to controlV in frs.map */
+
+/* Move to first column of next row in table field */
+/* defined to controlN in frs.map */
+
+/* Clear the field */
+	clear = controlU (^U)
+
+/* Clear out the rest of the field, and move to next field */
+/* defined to controlM in frs.map */
+
+/* Auto-duplicate value while in fill mode - defined to controlA in frs.map */
+
+/* Escape to shell */
+	shell = controlB (^B)

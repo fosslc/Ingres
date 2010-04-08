@@ -1,0 +1,7 @@
+#
+# YAM MANIFEST file for cl!clf!hdr
+#
+
+IISUBSYS cl clf hdr_unix_win ;
+
+IICLSECRET clsecret.h ;

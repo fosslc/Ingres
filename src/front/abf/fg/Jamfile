@@ -1,0 +1,105 @@
+#
+# Jamfile file for front!abf!fg
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front abf fg ;
+
+IISUBSYS front abf fg ;
+
+
+File $(INGMSG)$(DFS)fgmdappp.hlp : fgmdappp.hlp ;
+File $(INGMSG)$(DFS)fgmdbnnp.hlp : fgmdbnnp.hlp ;
+File $(INGMSG)$(DFS)fgmdbnqp.hlp : fgmdbnqp.hlp ;
+File $(INGMSG)$(DFS)fgmdbrsq.hlp : fgmdbrsq.hlp ;
+File $(INGMSG)$(DFS)fgmdbxnp.hlp : fgmdbxnp.hlp ;
+File $(INGMSG)$(DFS)fgmdbxqp.hlp : fgmdbxqp.hlp ;
+File $(INGMSG)$(DFS)fgmdunnp.hlp : fgmdunnp.hlp ;
+File $(INGMSG)$(DFS)fgmdunqp.hlp : fgmdunqp.hlp ;
+File $(INGMSG)$(DFS)fgmdupda.hlp : fgmdupda.hlp ;
+File $(INGMSG)$(DFS)fgmdupdq.hlp : fgmdupdq.hlp ;
+File $(INGMSG)$(DFS)fgmduxnp.hlp : fgmduxnp.hlp ;
+File $(INGMSG)$(DFS)fgmduxqp.hlp : fgmduxqp.hlp ;
+File $(INGMSG)$(DFS)fgmsappp.hlp : fgmsappp.hlp ;
+File $(INGMSG)$(DFS)fgmsbnnp.hlp : fgmsbnnp.hlp ;
+File $(INGMSG)$(DFS)fgmsbnqp.hlp : fgmsbnqp.hlp ;
+File $(INGMSG)$(DFS)fgmsbrsq.hlp : fgmsbrsq.hlp ;
+File $(INGMSG)$(DFS)fgmsbxnp.hlp : fgmsbxnp.hlp ;
+File $(INGMSG)$(DFS)fgmsbxqp.hlp : fgmsbxqp.hlp ;
+File $(INGMSG)$(DFS)fgmsunnp.hlp : fgmsunnp.hlp ;
+File $(INGMSG)$(DFS)fgmsunqp.hlp : fgmsunqp.hlp ;
+File $(INGMSG)$(DFS)fgmsupda.hlp : fgmsupda.hlp ;
+File $(INGMSG)$(DFS)fgmsupdq.hlp : fgmsupdq.hlp ;
+File $(INGMSG)$(DFS)fgmsuxnp.hlp : fgmsuxnp.hlp ;
+File $(INGMSG)$(DFS)fgmsuxqp.hlp : fgmsuxqp.hlp ;
+File $(INGMSG)$(DFS)fgmtbrsq.hlp : fgmtbrsq.hlp ;
+File $(INGMSG)$(DFS)fgmtupdq.hlp : fgmtupdq.hlp ;
+File $(INGMSG)$(DFS)fgntlcmp.hlp : fgntlcmp.hlp ;
+File $(INGMSG)$(DFS)fgntmnup.hlp : fgntmnup.hlp ;
+
+File $(INGMSG)$(DFS)iimain.tf : iimain.tf ;
+File $(INGMSG)$(DFS)inclear.tf : inclear.tf ;
+File $(INGMSG)$(DFS)indbevnt.tf : indbevnt.tf ;
+File $(INGMSG)$(DFS)inddel.tf : inddel.tf ;
+File $(INGMSG)$(DFS)indeadlk.tf : indeadlk.tf ;
+File $(INGMSG)$(DFS)indins.tf : indins.tf ;
+File $(INGMSG)$(DFS)indoc.tf : indoc.tf ;
+File $(INGMSG)$(DFS)indserr.tf : indserr.tf ;
+File $(INGMSG)$(DFS)induerr.tf : induerr.tf ;
+File $(INGMSG)$(DFS)indupd.tf : indupd.tf ;
+File $(INGMSG)$(DFS)inend.tf : inend.tf ;
+File $(INGMSG)$(DFS)inendsub.tf : inendsub.tf ;
+File $(INGMSG)$(DFS)inirmn.tf : inirmn.tf ;
+File $(INGMSG)$(DFS)inlookup.tf : inlookup.tf ;
+File $(INGMSG)$(DFS)inmdammn.tf : inmdammn.tf ;
+File $(INGMSG)$(DFS)inmdanmn.tf : inmdanmn.tf ;
+File $(INGMSG)$(DFS)inmddlmn.tf : inmddlmn.tf ;
+File $(INGMSG)$(DFS)inmdel.tf : inmdel.tf ;
+File $(INGMSG)$(DFS)inmdsnmn.tf : inmdsnmn.tf ;
+File $(INGMSG)$(DFS)inmdsvmn.tf : inmdsvmn.tf ;
+File $(INGMSG)$(DFS)inmins.tf : inmins.tf ;
+File $(INGMSG)$(DFS)inmsammn.tf : inmsammn.tf ;
+File $(INGMSG)$(DFS)inmsanmn.tf : inmsanmn.tf ;
+File $(INGMSG)$(DFS)inmsdlmn.tf : inmsdlmn.tf ;
+File $(INGMSG)$(DFS)inmsserr.tf : inmsserr.tf ;
+File $(INGMSG)$(DFS)inmssnmn.tf : inmssnmn.tf ;
+File $(INGMSG)$(DFS)inmssvmn.tf : inmssvmn.tf ;
+File $(INGMSG)$(DFS)inmsuerr.tf : inmsuerr.tf ;
+File $(INGMSG)$(DFS)inmtammn.tf : inmtammn.tf ;
+File $(INGMSG)$(DFS)inmtanmn.tf : inmtanmn.tf ;
+File $(INGMSG)$(DFS)inmtdlmn.tf : inmtdlmn.tf ;
+File $(INGMSG)$(DFS)inmtserr.tf : inmtserr.tf ;
+File $(INGMSG)$(DFS)inmtsnmn.tf : inmtsnmn.tf ;
+File $(INGMSG)$(DFS)inmtsvmn.tf : inmtsvmn.tf ;
+File $(INGMSG)$(DFS)inmtuerr.tf : inmtuerr.tf ;
+File $(INGMSG)$(DFS)inmupd.tf : inmupd.tf ;
+File $(INGMSG)$(DFS)innxmn.tf : innxmn.tf ;
+File $(INGMSG)$(DFS)inrdelmn.tf : inrdelmn.tf ;
+File $(INGMSG)$(DFS)inrinsmn.tf : inrinsmn.tf ;
+File $(INGMSG)$(DFS)inseqfld.tf : inseqfld.tf ;
+File $(INGMSG)$(DFS)intblfnd.tf : intblfnd.tf ;
+File $(INGMSG)$(DFS)intimout.tf : intimout.tf ;
+File $(INGMSG)$(DFS)intimset.tf : intimset.tf ;
+File $(INGMSG)$(DFS)intop.tf : intop.tf ;
+File $(INGMSG)$(DFS)intopdef.tf : intopdef.tf ;
+File $(INGMSG)$(DFS)mdappend.tf : mdappend.tf ;
+File $(INGMSG)$(DFS)mdbrowse.tf : mdbrowse.tf ;
+File $(INGMSG)$(DFS)mdupdate.tf : mdupdate.tf ;
+File $(INGMSG)$(DFS)msappend.tf : msappend.tf ;
+File $(INGMSG)$(DFS)msbrowse.tf : msbrowse.tf ;
+File $(INGMSG)$(DFS)msupdate.tf : msupdate.tf ;
+File $(INGMSG)$(DFS)mtappend.tf : mtappend.tf ;
+File $(INGMSG)$(DFS)mtbrowse.tf : mtbrowse.tf ;
+File $(INGMSG)$(DFS)mtupdate.tf : mtupdate.tf ;
+File $(INGMSG)$(DFS)ntmenu.tf : ntmenu.tf ;
+
+IILIBRARY FGLIB : framegen.c fgvars.c fgutils.c fgusrmnu.c
+	fgusresc.c fgundchg.c fgtitle.c fgsectn.c fgscform.c fgquery.c
+	fgqrest.c fgqlstr.c fgqerr.c fgqclaus.c fgprocs.c fgnulkey.c
+	fglupval.c fglstr.c fglookup.c fgloadmi.c fginit.c fgifutl.c
+	fghidfld.c fghelp.c fghdrdoc.c fgflddef.c fgfixupf.c fgerr.c
+	fgdmp.c fgdefram.c fgdefmnu.c fgdeclar.c fgdata.c fgcpvtoh.c
+	fgclrcb.c fgchkchg.c ;
+

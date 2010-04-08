@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The pindex_nbuffers resource controls the number of exchange buffers
+  used for parallel index creation.  Exchange buffers are filled by
+  the parent thread which is scanning the base table, and read by
+  the child threads which are extracting the data needed for the
+  secondary indexes.
+
+  The default is 3 buffers.

@@ -1,0 +1,502 @@
+#
+# Copyright (c) 2009 Ingres Corporation
+#
+# This file contains the units of measure displayed for resource names
+# in the forms-based configuration utility.
+#
+*.*.*.*:				unknown
+*.*.*.*.*:				unknown
+*.*.*.*.*.*:				unknown
+*.*.*.*.active_limit:			connections
+*.*.*.*.async_io:			boolean
+*.*.*.*.blob_data:                      string
+*.*.*.*.blob_len:                     bytes
+*.*.*.*.cache_dynamic:			boolean
+*.*.*.*.cache_name:			string
+*.*.*.*.cache_sharing:			boolean
+*.*.*.*.cardinality_check:		boolean
+*.*.*.*.clob_len:                     bytes
+*.*.*.*.class_node_affinity:		boolean
+*.*.*.*.connect_limit:			connections
+*.*.*.*.core_enabled:			boolean
+*.*.*.*.cpu_statistics:		boolean
+*.*.*.*.cursor_limit:			cursors
+*.*.*.*.cursor_update_mode:		string
+*.*.*.*.cursor_default_open:		string
+*.*.*.date_alias:		string	
+*.*.*.*.date_type_alias:		'DEPRECATED - do not use!'
+*.*.*.*.database_limit:		databases
+*.*.*.*.default_journaling:		boolean
+*.*.*.*.define_address:		boolean
+*.*.*.direct_io:			boolean
+*.*.*.*.distributed_recovery:		boolean
+*.*.*.*.di_zero_bufsize:		bytes
+*.*.*.*.dmcm:				boolean
+*.*.*.*.empty_date:			date
+*.*.*.*.event_limit:			events
+*.*.*.*.event_priority:			priority
+*.*.*.*.fallocate:			boolean
+*.*.*.*.fast_commit:			boolean
+*.*.*.*.fd_affinity:			'file, thread'
+*.*.*.*.gather_write:			boolean
+*.*.*.*.gc_interval:			milliseconds
+*.*.*.*.gc_num_ticks:			intervals
+*.*.*.*.gc_threshold:			transactions
+*.*.*.*.hex_session_ids:		boolean
+*.*.*.*.image_name:			string
+*.*.*.*.log_writer:			threads
+*.*.*.*.log_esc_lpr_sc:		boolean
+*.*.*.*.log_esc_lpr_ut:		boolean
+*.*.*.*.log_esc_lpt_sc:		boolean
+*.*.*.*.log_esc_lpt_ut:		boolean
+*.*.*.*.log_readnolock:                boolean
+*.*.*.mechanisms:                      'mechanism list'
+*.*.*.*.mechanisms:                    'mechanism list'
+*.*.*.*.name_service:			boolean
+*.*.*.*.num_slaves:			processes
+*.*.*.*.outbound_limit:		connections
+*.*.*.*.opf_active_limit:		connections
+*.*.*.*.opf_greedy_factor:		'scaling factor'
+*.*.*.*.opf_inlist_thresh:		'elements'
+*.*.*.*.opf_hash_join:			boolean
+*.*.*.*.opf_maxmemf:			'percentage of memory pool'
+*.*.*.*.opf_memory:			bytes
+*.*.*.*.opf_new_enum:			boolean
+*.*.*.*.opf_old_jcard:			boolean
+*.*.*.*.opf_old_cnf:			boolean
+*.*.*.*.opf_old_idxorder:		boolean
+*.*.*.*.opf_old_subsel:			boolean
+*.*.*.*.opf_pq_dop:			threads
+*.*.*.*.opf_pq_threshold:		n/a
+*.*.*.*.opf_pq_partthreads:		threads
+*.*.*.*.opf_stats_nostats_max:		boolean
+*.*.*.*.opf_stats_nostats_factor:	'scaling factor'
+*.*.*.*.opf_timeout_factor:		n/a
+*.*.*.*.opf_joinop_timeout:		milliseconds
+*.*.*.*.opf_timeout_abort:		milliseconds
+*.*.*.*.pindex_bsize:			rows
+*.*.*.*.pindex_nbuffers:		buffers
+*.*.*.*.psf_maxmemf:			'percentage of memory pool'
+*.*.*.*.psf_memory:			bytes
+*.*.*.*.psort_bsize:			rows
+*.*.*.*.psort_nthreads:			threads
+*.*.*.*.psort_rows:			rows
+*.*.*.*.qef_dsh_memory:			bytes
+*.*.*.*.qef_hash_mem:			bytes
+*.*.*.*.qef_hash_rbsize:		bytes
+*.*.*.*.qef_hash_wbsize:		bytes
+*.*.*.*.qef_hash_cmp_threshold:		bytes
+*.*.*.*.qef_hashjoin_min:		bytes
+*.*.*.*.qef_hashjoin_max:		bytes
+*.*.*.*.qef_max_mem_sleep:		seconds
+*.*.*.*.qef_memory:                     bytes
+*.*.*.*.qef_no_dependency_chk:          boolean
+*.*.*.*.qef_qep_mem:			bytes
+*.*.*.*.qef_sort_mem:			bytes
+*.*.*.*.qef_sorthash_memory:		bytes
+*.*.*.*.query_flattening:		boolean
+*.*.*.*.qflatten_aggregate:		boolean
+*.*.*.*.qflatten_singleton:		boolean
+*.*.*.*.qsf_guideline:			string
+*.*.*.*.qsf_memory:			bytes
+*.*.*.*.quantum_size:			milliseconds
+*.*.*.*.rdf_avg_ldbs:			'local databases'
+*.*.*.*.rdf_cache_ddbs:		'distributed databases'
+*.*.*.*.rdf_col_defaults:		entries
+*.*.*.*.rdf_max_tbls:			tables
+*.*.*.*.rdf_memory:			bytes
+*.*.*.*.rdf_tbl_cols:			entries
+*.*.*.*.rdf_tbl_synonyms:		'table synonyms'
+*.*.*.*.rep_dq_lockmode:		string
+*.*.*.*.rep_dt_maxlocks:		locks
+*.*.*.*.rep_iq_lockmode:		string
+*.*.*.*.rep_qman_threads:		threads
+*.*.*.*.rep_sa_lockmode:		string
+*.*.*.*.rep_txq_size:			'queue entries'
+*.*.*.*.result_structure:		'storage structure name'
+*.*.*.*.rule_del_prefetch:		boolean
+*.*.*.*.rule_depth:			nest-levels
+ii.*.*.*.rule_upd_prefetch:             boolean
+ii.*.*.*.psf_vch_prec:                  boolean
+*.*.*.*.scf_rows:			rows
+*.*.*.*.server_class:			string
+*.*.*.*.session_accounting:		boolean
+*.*.*.*.size_io_buf:			bytes
+*.*.*.*.sole_server:			boolean
+*.*.*.*.stack_size:			bytes
+*.*.*.*.system_isolation:              string
+*.*.*.*.system_lock_level:		string
+*.*.*.*.system_maxlocks:		integer
+*.*.*.*.system_readlock:		string
+*.*.*.*.system_timeout:		seconds
+*.*.*.*.table_auto_structure:		boolean
+*.*.*.*.unix_maximum_working_set:	bytes
+*.*.*.*.unix_priority:			priority
+*.*.*.*.session_check_interval:	seconds
+*.*.*.*.stack_caching:			boolean
+*.*.*.*.max_tuple_length:		bytes
+*.*.*.*.dmcm:                   	boolean
+*.*.*.*.ulm_chunk_size:			bytes
+*.*.dbms.*.ambig_replace_64compat:     boolean
+*.*.dbms.*.cache_lock:			boolean
+*.*.dbms.*.default_page_size:		bytes
+*.*.dbms.*.blob_etab_page_size:        bytes
+*.*.dbms.*.blob_etab_structure:        string
+*.*.dbms.*.vch_compression:		boolean
+*.*.dbms.*.dmf_build_pages:            'data pages'
+*.*.dbms.*.dmf_db_cache_size:		'entries'
+*.*.dbms.*.dmf_tbl_cache_size:		'entries'
+*.*.dbms.*.dmf_int_sort_size:		bytes
+*.*.dbms.*.dmf_tcb_limit:		'entries'
+*.*.dbms.*.degree_of_parallelism:	threads
+*.*.dbms.*.image_data_segments:		'segments (256Mb)'
+*.*.dbms.*.*.cache_guideline:		string
+*.*.dbms.*.*.dmf_write_behind:		boolean
+*.*.dbms.*.*.dmf_cache_size:		'data pages'
+*.*.dbms.*.*.dmf_free_limit:		'data pages'
+*.*.dbms.*.*.dmf_group_count:		'group buffers'
+*.*.dbms.*.*.dmf_group_size:		'data pages'
+*.*.dbms.*.*.dmf_modify_limit:		'data pages'
+*.*.dbms.*.*.dmf_wb_end:		'data pages'
+*.*.dbms.*.*.dmf_wb_start:		'data pages'
+*.*.dbms.*.*.dmf_memory:		'bytes'
+*.*.dbms.*.*.cache.p4k_status: 	boolean
+*.*.dbms.*.*.p4k.dmf_write_behind:	boolean
+*.*.dbms.*.*.p4k.dmf_cache_size:	'data pages'
+*.*.dbms.*.*.p4k.dmf_free_limit:	'data pages'
+*.*.dbms.*.*.p4k.dmf_group_count:	'group buffers'
+*.*.dbms.*.*.p4k.dmf_group_size:	'data pages'
+*.*.dbms.*.*.p4k.dmf_modify_limit:	'data pages'
+*.*.dbms.*.*.p4k.dmf_wb_end:   	'data pages'
+*.*.dbms.*.*.p4k.dmf_wb_start: 	'data pages'
+*.*.dbms.*.*.p4k.dmf_memory:   	'bytes'
+*.*.dbms.*.*.p4k.dmf_separate:   	boolean
+*.*.dbms.*.*.cache.p8k_status: 	boolean
+*.*.dbms.*.*.p8k.dmf_write_behind:	boolean
+*.*.dbms.*.*.p8k.dmf_cache_size:	'data pages'
+*.*.dbms.*.*.p8k.dmf_free_limit:	'data pages'
+*.*.dbms.*.*.p8k.dmf_group_count:	'group buffers'
+*.*.dbms.*.*.p8k.dmf_group_size:	'data pages'
+*.*.dbms.*.*.p8k.dmf_modify_limit:	'data pages'
+*.*.dbms.*.*.p8k.dmf_wb_end:   	'data pages'
+*.*.dbms.*.*.p8k.dmf_wb_start:  	'data pages'
+*.*.dbms.*.*.p8k.dmf_memory:   	'bytes'
+*.*.dbms.*.*.p8k.dmf_separate:   	boolean
+*.*.dbms.*.*.cache.p16k_status: 	boolean
+*.*.dbms.*.*.p16k.dmf_write_behind:	boolean
+*.*.dbms.*.*.p16k.dmf_cache_size:	'data pages'
+*.*.dbms.*.*.p16k.dmf_free_limit:	'data pages'
+*.*.dbms.*.*.p16k.dmf_group_count:	'group buffers'
+*.*.dbms.*.*.p16k.dmf_group_size:	'data pages'
+*.*.dbms.*.*.p16k.dmf_modify_limit:	'data pages'
+*.*.dbms.*.*.p16k.dmf_wb_end:   	'data pages'
+*.*.dbms.*.*.p16k.dmf_wb_start:	'data pages'
+*.*.dbms.*.*.p16k.dmf_memory:  	'bytes'
+*.*.dbms.*.*.p16k.dmf_separate:   	boolean
+*.*.dbms.*.*.cache.p32k_status:	boolean
+*.*.dbms.*.*.p32k.dmf_write_behind:	boolean
+*.*.dbms.*.*.p32k.dmf_cache_size:	'data pages'
+*.*.dbms.*.*.p32k.dmf_free_limit:	'data pages'
+*.*.dbms.*.*.p32k.dmf_group_count:	'group buffers'
+*.*.dbms.*.*.p32k.dmf_group_size:	'data pages'
+*.*.dbms.*.*.p32k.dmf_modify_limit:	'data pages'
+*.*.dbms.*.*.p32k.dmf_wb_end:   	'data pages'
+*.*.dbms.*.*.p32k.dmf_wb_start:	'data pages'
+*.*.dbms.*.*.p32k.dmf_memory:  	'bytes'
+*.*.dbms.*.*.p32k.dmf_separate:   	boolean
+*.*.dbms.*.*.cache.p64k_status:	boolean
+*.*.dbms.*.*.p64k.dmf_write_behind:	boolean
+*.*.dbms.*.*.p64k.dmf_cache_size:	'data pages'
+*.*.dbms.*.*.p64k.dmf_free_limit:	'data pages'
+*.*.dbms.*.*.p64k.dmf_group_count:	'group buffers'
+*.*.dbms.*.*.p64k.dmf_group_size:	'data pages'
+*.*.dbms.*.*.p64k.dmf_modify_limit:	'data pages'
+*.*.dbms.*.*.p64k.dmf_wb_end:  	'data pages'
+*.*.dbms.*.*.p64k.dmf_wb_start:	'data pages'
+*.*.dbms.*.*.p64k.dmf_memory:   	'bytes'
+*.*.dbms.*.*.p64k.dmf_separate:   	boolean
+*.*.gcc.*.ib_encrypt_mech:		'*, mechanism name'
+*.*.gcc.*.ib_encrypt_mode:		'off, optional, on, required'
+*.*.gcc.*.inbound_limit:		connections
+*.*.gcc.*.ob_encrypt_mech:		'*, mechanism name'
+*.*.gcc.*.ob_encrypt_mode:		'off, optional, on, required'
+*.*.gcc.*.outbound_limit:		connections
+*.*.gcc.*.error_level:			integer
+*.*.gcc.*.log_level:			integer
+*.*.gcc.*.message_concat:		'true or false'
+*.*.gcc.*.registry_type:		'installation type'
+*.*.gcc.*.*.port:			'listen address'
+*.*.gcc.*.*.status:			boolean
+*.*.registry.*.port:			'listen address'
+*.*.registry.*.status:			boolean
+*.*.registry.*.local_host:		string
+*.*.gcb.*.inbound_limit:             	connections
+*.*.gcb.*.*.port:			'listen address'
+*.*.gcb.*.*.status:			boolean
+*.*.gcf.mechanism_location:		'directory path'
+*.*.gcf.password_mechanism:		'none, default, mechanism name'
+*.*.gcf.remote_auth_error:		'ignore or fail'
+*.*.gcf.remote_mechanism:		'none, default, mechanism name'
+*.*.gcf.restrict_pwd_auth:		'true or false'
+*.*.gcf.restrict_rem_auth:		'true or false'
+*.*.gcf.restrict_srv_auth:		'true or false'
+*.*.gcf.restrict_usr_auth:		'true or false'
+*.*.gcf.security_mechanism:		'null, default, mechanism name'
+*.*.gcf.server_mechanism:		'none, default, mechanism name'
+*.*.gcf.user_mechanism:			'none, default, mechanism name'
+*.*.gcf.mech.*.enabled:			'true or false'
+*.*.gcf.mech.ingres.expirations_required:	'yes or no'
+*.*.gcf.mech.ingres.expiration_time:	seconds
+*.*.gcn.cluster_mode:			boolean
+*.*.gcn.check_type:			string
+*.*.gcn.check_timeout:			seconds
+*.*.gcn.check_interval:			seconds
+*.*.gcn.compress_point:			integer
+*.*.gcn.default_server_class:		string
+*.*.gcn.expire_interval:		seconds
+*.*.gcn.local_vnode:			'virtual node'
+*.*.gcn.registry_type:			'installation type'
+*.*.gcn.remote_mechanism:		'none, default, mechanism name'
+*.*.gcn.remote_vnode:			'virtual node'
+*.*.gcn.session_limit:			'sessions'
+*.*.gcn.ticket_cache_size:		'tickets'
+*.*.gcn.ticket_expire:			seconds
+*.*.gcn.timeout:			seconds
+*.*.icesvr.*.client_lib:               'client library'
+*.*.icesvr.*.dictionary_node:          'virtual node'
+*.*.icesvr.*.dictionary_name:          'database name'
+*.*.icesvr.*.dictionary_class:         'server class'
+*.*.icesvr.*.dictionary_driver:        'database library'
+*.*.icesvr.*.rights_table:             'entries'
+*.*.icesvr.*.users_table:              'entries'
+*.*.icesvr.*.privilege_user:           'repository owner'
+*.*.icesvr.*.ignore_user_case:         boolean
+*.*.icesvr.*.units_table:              'entries'
+*.*.icesvr.*.documents_table:          'entries'
+*.*.icesvr.*.locations_table:          'entries'
+*.*.icesvr.*.extensions_table:         'entries'
+*.*.icesvr.*.files_table:              'entries'
+*.*.icesvr.*.req_timeout:              seconds
+*.*.icesvr.*.html_home:                'full directory path'
+*.*.icesvr.*.user_session_table:       'entries'
+*.*.icesvr.*.system_timeout:           seconds
+*.*.icesvr.*.db_conn_timeout:          seconds
+*.*.icesvr.*.default_dbuser:           'guest user'
+*.*.icesvr.*.docsession_table:         'entries'
+*.*.icesvr.*.sess_timeout:             seconds
+*.*.icesvr.*.row_set:                  tuples
+*.*.icesvr.*.set_size:                 kilobytes
+*.*.icesvr.*.block_size:               bytes
+*.*.icesvr.*.block_count:              blocks
+*.*.icesvr.*.app_dir:                  'full directory path'
+*.*.icesvr.*.allow_dsql:               boolean
+*.*.icesvr.*.allow_exeapp:             boolean
+*.*.icesvr.*.allow_dbovr:              boolean
+*.*.icesvr.*.vars_table:               'entries'
+*.*.icesvr.*.apps_table:               'entries'
+*.*.ice.cgi-bin_dir:			'full directory path'
+*.*.ice.cgi-bin_ref:			'URL reference'
+*.*.ice.config_ws:			string
+*.*.ice.config_ws_dir:			'full directory path'
+*.*.ice.db_conn_timeout:		seconds
+*.*.ice.default_database:		'database name'
+*.*.ice.default_userid:		userid
+*.*.ice.html_home:			'full directory path'
+*.*.ice.server_name:			'HTTP server name'
+*.*.recovery.*.cp_timer:		'seconds'
+*.*.rcp.dmf_cache_size:		'buffers'
+*.*.rcp.dmf_cache_size4k:		'buffers'
+*.*.rcp.dmf_cache_size8k:		'buffers'
+*.*.rcp.dmf_cache_size16k:		'buffers'
+*.*.rcp.dmf_cache_size32k:		'buffers'
+*.*.rcp.dmf_cache_size64k:		'buffers'
+*.*.rcp.lock.lock_limit:		locks
+*.*.rcp.lock.hash_size:		'hash buckets'
+*.*.rcp.lock.list_limit:		'lock lists'
+*.*.rcp.lock.resource_hash:		'hash buckets'
+*.*.rcp.lock.resource_limit:		'locked resources'
+*.*.rcp.lock.per_tx_limit:		locks
+*.*.rcp.log.archiver_interval:		'consistency points'
+*.*.rcp.log.archiver_refresh:		'percentage of log'
+*.*.rcp.log.block_size:		'1024 byte segments'
+*.*.rcp.log.buffer_count:		'log buffers'
+*.*.rcp.log.cp_interval:		'percentage of log'
+*.*.rcp.log.cp_interval_mb:		'Mb (1048576 bytes)'
+*.*.rcp.log.database_limit:		databases
+*.*.rcp.log.dual_log_1:		'directory path'
+*.*.rcp.log.dual_log_2:		'directory path'
+*.*.rcp.log.dual_log_3:		'directory path'
+*.*.rcp.log.dual_log_4:		'directory path'
+*.*.rcp.log.dual_log_5:		'directory path'
+*.*.rcp.log.dual_log_6:		'directory path'
+*.*.rcp.log.dual_log_7:		'directory path'
+*.*.rcp.log.dual_log_8:		'directory path'
+*.*.rcp.log.dual_log_9:		'directory path'
+*.*.rcp.log.dual_log_10:		'directory path'
+*.*.rcp.log.dual_log_11:		'directory path'
+*.*.rcp.log.dual_log_12:		'directory path'
+*.*.rcp.log.dual_log_13:		'directory path'
+*.*.rcp.log.dual_log_14:		'directory path'
+*.*.rcp.log.dual_log_15:		'directory path'
+*.*.rcp.log.dual_log_16:		'directory path'
+*.*.rcp.log.dual_log_name:		'file specification'
+*.*.rcp.log.force_abort_limit:		'percentage of log'
+*.*.rcp.log.full_limit:		'percentage of log'
+*.*.rcp.log.lgk_memory_lock:		boolean
+*.*.rcp.log.log_file_1:		'directory path'
+*.*.rcp.log.log_file_2:		'directory path'
+*.*.rcp.log.log_file_3:		'directory path'
+*.*.rcp.log.log_file_4:		'directory path'
+*.*.rcp.log.log_file_5:		'directory path'
+*.*.rcp.log.log_file_6:		'directory path'
+*.*.rcp.log.log_file_7:		'directory path'
+*.*.rcp.log.log_file_8:		'directory path'
+*.*.rcp.log.log_file_9:		'directory path'
+*.*.rcp.log.log_file_10:		'directory path'
+*.*.rcp.log.log_file_11:		'directory path'
+*.*.rcp.log.log_file_12:		'directory path'
+*.*.rcp.log.log_file_13:		'directory path'
+*.*.rcp.log.log_file_14:		'directory path'
+*.*.rcp.log.log_file_15:		'directory path'
+*.*.rcp.log.log_file_16:		'directory path'
+*.*.rcp.log.log_file_name:		'file specification'
+*.*.rcp.log.log_file_parts:		'number of partions'
+*.*.rcp.log.tx_limit:			transactions
+*.*.rcp.log.optimize_writes:		boolean
+*.*.rcp.log.readbackward_blocks:	'log blocks'
+*.*.rcp.log.readforward_blocks:		'log blocks'
+*.*.rms.*.ambig_replace_64compat:	boolean
+*.*.rms.*.blob_etab_page_size:        bytes
+*.*.rms.*.blob_etab_structure:        string
+*.*.rms.*.cache_lock:			boolean
+*.*.rms.*.cache_sharing:		string
+*.*.rms.*.default_page_size:		bytes
+*.*.rms.*.vch_compression:		boolean
+*.*.rms.*.dmf_db_cache_size:		'data pages'
+*.*.rms.*.dmf_tbl_cache_size:		'data pages'
+*.*.rms.*.dmf_hash_size:		'hash buckets'
+*.*.rms.*.ii_rms_close_file:           boolean
+*.*.rms.*.ii_rms_readonly:            boolean
+*.*.rms.*.ii_rms_rrl:                 boolean
+*.*.rms.*.ii_rms_buffer_rfa:          boolean
+*.*.rms.*.ii_rms_fab_size:            integer
+*.*.rms.*.ii_rms_hash_size:           integer
+*.*.rms.*.*.dmf_write_behind:		boolean
+*.*.rms.*.*.dmf_cache_size:		'data pages'
+*.*.rms.*.*.dmf_free_limit:		'data pages'
+*.*.rms.*.*.dmf_group_count:		'group buffers'
+*.*.rms.*.*.dmf_group_size:		'data pages'
+*.*.rms.*.*.dmf_modify_limit:		'data pages'
+*.*.rms.*.*.dmf_wb_end:		'data pages'
+*.*.rms.*.*.dmf_wb_start:		'data pages'
+*.*.rms.*.*.dmf_memory:		'bytes'
+*.*.rms.*.*.cache.p8k_status: 	boolean
+*.*.rms.*.*.p8k.dmf_write_behind:	boolean
+*.*.rms.*.*.p8k.dmf_cache_size:	'data pages'
+*.*.rms.*.*.p8k.dmf_free_limit:	'data pages'
+*.*.rms.*.*.p8k.dmf_group_count:	'group buffers'
+*.*.rms.*.*.p8k.dmf_group_size:	'data pages'
+*.*.rms.*.*.p8k.dmf_modify_limit:	'data pages'
+*.*.rms.*.*.p8k.dmf_wb_end:   	'data pages'
+*.*.rms.*.*.p8k.dmf_wb_start:  	'data pages'
+*.*.rms.*.*.p8k.dmf_memory:   	'bytes'
+*.*.rms.*.*.p8k.dmf_separate:   	boolean
+*.*.rms.*.*.cache.p16k_status: 	boolean
+*.*.rms.*.*.p16k.dmf_write_behind:	boolean
+*.*.rms.*.*.p16k.dmf_cache_size:	'data pages'
+*.*.rms.*.*.p16k.dmf_free_limit:	'data pages'
+*.*.rms.*.*.p16k.dmf_group_count:	'group buffers'
+*.*.rms.*.*.p16k.dmf_group_size:	'data pages'
+*.*.rms.*.*.p16k.dmf_modify_limit:	'data pages'
+*.*.rms.*.*.p16k.dmf_wb_end:   	'data pages'
+*.*.rms.*.*.p16k.dmf_wb_start:	'data pages'
+*.*.rms.*.*.p16k.dmf_memory:  	'bytes'
+*.*.rms.*.*.p16k.dmf_separate:   	boolean
+*.*.rms.*.*.cache.p32k_status:	boolean
+*.*.rms.*.*.p32k.dmf_write_behind:	boolean
+*.*.rms.*.*.p32k.dmf_cache_size:	'data pages'
+*.*.rms.*.*.p32k.dmf_free_limit:	'data pages'
+*.*.rms.*.*.p32k.dmf_group_count:	'group buffers'
+*.*.rms.*.*.p32k.dmf_group_size:	'data pages'
+*.*.rms.*.*.p32k.dmf_modify_limit:	'data pages'
+*.*.rms.*.*.p32k.dmf_wb_end:   	'data pages'
+*.*.rms.*.*.p32k.dmf_wb_start:	'data pages'
+*.*.rms.*.*.p32k.dmf_memory:  	'bytes'
+*.*.rms.*.*.p32k.dmf_separate:   	boolean
+*.*.prefs.ingstop:		string
+*.*.prefs.*:				boolean
+*.*.c2.security_auditing:		boolean
+*.*.c2.audit_mechanism:		'audit destination'
+*.*.c2.audit_writer_start:		'buffers'
+*.*.c2.shared_buffer_count:		'buffers'
+*.*.c2.audit_write_start:		'buffers'
+*.*.c2.log_page_size:			'kilobytes'
+*.*.c2.force_flush:			boolean
+*.*.c2.on_error:			'audit action'
+*.*.c2.max_log_size:			kilobytes
+*.*.c2.on_log_full:			'audit action'
+*.*.c2.on_switch_log:		 	'file specification'
+*.*.c2.audit_log_1:	 		'file specification'
+*.*.c2.audit_log_2:		 	'file specification'
+*.*.gcf.mech.kerberos.delegation:       'on or off'
+*.*.gcf.mech.kerberos.domain:           'hostname'
+*.*.gcf.mech.kerberos.enabled:          'true or false'
+*.*.gcf.mech.kerberos.entry:            'object entry point'
+*.*.gcf.mech.kerberos.module:           'Kerberos library'
+*.*.secure.level:			'security level'
+*.*.secure.delete_down:		'security policy'
+*.*.secure.row_audit_key:		'audit key default'
+*.*.secure.row_audit_default:		boolean
+*.*.secure.ome:			boolean
+*.*.secure.user_password:		'password default'
+*.*.secure.roles:			boolean
+*.*.secure.role_password:		'password default'
+*.*.*.*.vms_accounting:		boolean
+*.*.*.*.vms_ast_limit:			integer
+*.*.*.*.vms_buffer_limit:		bytes
+*.*.*.*.vms_error:			'file specification'
+*.*.*.*.vms_extent:			'VMS pages'
+*.*.*.*.vms_file_limit:		'open files'
+*.*.*.*.vms_io_buffered:		integer
+*.*.*.*.vms_io_direct:			integer
+*.*.*.*.vms_maximum_working_set:	'VMS pages'
+*.*.*.*.vms_page_file:			'VMS pages'
+*.*.*.*.vms_privileges:		'VMS privileges'
+*.*.*.*.vms_queue_limit:		integer
+*.*.*.*.vms_working_set:		'VMS pages'
+*.*.*.*.vms_quantum:			'VMS time format'
+*.*.*.*.vms_stack_size:		bytes
+*.*.*.*.vms_uic:			'user identification'
+*.*.*.*.vms_enqueue_limit:		integer
+*.*.*.*.vms_priority:			integer
+*.*.*.*.sqlda_size:			elements
+*.*.*.*.pst_max:			statements
+*.*.*.*.varchar_comp:			boolean
+*.*.*.*.empty_date:			date
+*.*.*.*.wintcp.status:                 boolean
+*.*.*.*.decnet.status:                 boolean
+*.*.*.*.lanman.status:                 boolean
+*.*.*.*.nvlspx.status:                 boolean
+*.*.*.tng_installation:		boolean
+*.*.*.tng_user:			boolean
+*.*.gcd.*.client_max:             	integer
+*.*.gcd.*.client_timeout:               minutes
+*.*.gcd.*.connect_pool_expire:          minutes
+*.*.gcd.*.connect_pool_size:            integer
+*.*.gcd.*.connect_pool_status:        'off, optional, on'
+*.*.gcd.*.*.port:			'listen address'
+*.*.gcd.*.*.status:			boolean
+*.*.gateway.*.connect_max:             connections
+*.*.gateway.*.dbevent_poll_rate:       seconds
+*.*.gateway.*.empty_date:              date
+*.*.gateway.*.empty_date_return:       string
+*.*.gateway.*.load_table_qualifier:    string
+*.*.gateway.*.squeeze_len:             bytes
+*.*.gateway.*.trace_file:              'file specification'
+*.*.gateway.*.trace_init:              string
+*.*.gateway.*.trace_full:              'true or false'
+*.*.gateway.*.typecast_strlen:         'number of characters'
+*.*.gateway.oracle.nls_date_format:    string
+*.*.gateway.mssql.multiple_open_cursors:    boolean
+*.*.gateway.mssql.union_zerolength_column_padding: bytes 
+*.*.gateway.*.hex_len:             bytes

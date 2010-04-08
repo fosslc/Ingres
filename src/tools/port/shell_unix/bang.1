@@ -1,0 +1,52 @@
+.\"	$Header: /m/roach/fe4/user/sandyd/projects/ingres65_fixup/ingres65/unix/tools/port/shell/RCS/bang.1,v 1.1 92/04/17 10:34:51 sandyd Exp $
+.TH BANG 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History:
+.\"	19-jun-1989 (boba)
+.\"		Updated for 6.1.
+.\"	09-jan-1990 (boba)
+.\"		Remove "admin" option and add warning about cold builds.
+.\"		Change ming to mk.
+.\"	14-jan-1990 (boba)
+.\"		Add "sig" option.
+.\"	15-jan-1990 (boba)
+.\"		Add "tests" option.  Though this will soon become "testtool",
+.\"		leave it as "tests" for consistency with the current 6.2
+.\"		documentation.  Bang will accept either "tests" or "testtool".
+.\"	30-aug-1990 (jonb)
+.\"		Add paragraph explaining the OUT file numbering convention.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+bang \- build another INGRES
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B bang
+[ cl | common | embed | back | front | tech | tests | sig ]
+.SH DESCRIPTION
+.I Bang
+will issue all \fImk\fP commands necessary to build the specified parts of
+INGRES.  If no part is specified, all parts are built.  All \fImk\fP output
+is piped through \fImouf\fR.  
+
+\fIBang\fR leaves an output file in every subsystem directory which 
+contains source that is built from.  These files are named \fBOUTn\fR,
+where "n" is a sequential number assigned to each run of \fIbang\fR.
+The current value of the count is kept in \fB$ING_SRC/.bang_count\fR.
+If this file is not found, the count will be restarted at 1.
+.SH "SEE ALSO"
+mk(1)
+.br
+mouf(1)
+.SH BUGS
+.I Bang
+will go ahead and try to build executables, even if the build of
+the corresponding libraries has failed, thus attempting a second build
+of the libraries.  This is due to the fact that \fImk\fP does not
+return an error status appropriate for determining "failure" of a given
+\fImk\fP command.
+.P
+Also, 
+.I bang 
+cannot be used for a "cold build" on a new installation
+as it starts the server with "iistartup" rather than the interactive
+"iistartup -init".

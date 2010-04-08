@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+The event_priority specifies the priority of the EVENT session.
+
+The priority of a session is used to determine which session will be
+scheduled. The scheduler selects the next session to execute from the
+list of COMPUTABLE (i.e. sessions which have work to perform). The
+COMPUTABLE session with the highest priority will be  scheduled.
+
+Sessions with the same priority are scheduled on a round-robin basis. 

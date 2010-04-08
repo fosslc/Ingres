@@ -1,0 +1,175 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for Replicator.
+*/
+
+/*
+** History
+**	30-dec-96 (joea)
+**		Created.
+**	24-jan-97 (hanch04)
+**		Removed librepl2.a
+**	11-dec-97 (joea)
+**		Remove imagerep, RepServer build scripts, templates and
+**		libraries.
+**	23-dec-97 (joea)
+**		Add repserv executable.
+**      28-may-98 (kinte01)
+**              Added rpsrvr.com.
+**      28-may-1998 (kinte01)
+**              Modified the location for iisurep on VMS to pick up SED
+**              stripped version
+**	15-dec-98 (abbjo03)
+**		Add new repcfg utility.
+**	28-may-98 (kinte01)
+**		Removed librepl2.olb
+**		Only include scripts (rpcomp) if not VMS as
+**		these are not required on VMS platforms
+**		Added rpsrvr.com.
+**	28-may-1998 (kinte01)
+**          	Modified the location for iisurep on VMS to pick up SED 
+**	    	stripped version
+**	23-apr-99 (abbjo03)
+**		Add rsstatd executable.
+**	02-nov-1999 (kinte01)
+**		Added Event Propogator for Clustered Ingres (100171)
+**	29-oct-2001 (abbjo03)
+**	    Add sig/rpclean.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	08-Mar-2010 (hanje04)
+**	    SIR 123296
+**	    Correct location for rpclean, rpserver in LSB_BUILD
+*/
+
+PART  rep
+    capability CI_REPLICATOR
+
+/*
+** ingres!bin
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+   BUILD_DIR (ING_BUILD)!bin
+      EXECUTABLE repmgr
+      EXECUTABLE rsstatd
+      EXECUTABLE repcat
+      EXECUTABLE repmod
+      EXECUTABLE repcfg
+      EXECUTABLE arcclean
+      EXECUTABLE dereplic
+      EXECUTABLE reconcil
+      EXECUTABLE repdbcfg
+      EXECUTABLE convrep
+      SCRIPT rpgensql
+      SCRIPT rpserver
+# ifdef VMS
+      SCRIPT rpsrvr
+# endif
+      EXECUTABLE ddgenrul
+      EXECUTABLE ddgensup
+      EXECUTABLE ddmovcfg
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!bin
+#endif
+      EXECUTABLE repserv
+
+/*
+** ingres!utility
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY ingres!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT SETUP iisurep
+
+/*
+** ingres!files!rep
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!rep
+#else
+	DIRECTORY ingres!files!rep
+#endif
+   BUILD_DIR (ING_BUILD)!files!rep
+      FILE crarchiv.tlp
+      FILE crshadow.tlp
+      FILE delproc1.tlp
+      FILE delproc2.tlp
+      FILE insproc1.tlp
+      FILE insproc2.tlp
+      FILE ixshadow.tlp
+      FILE mdarchiv.tlp
+      FILE mdshadow.tlp
+      FILE updproc1.tlp
+      FILE updproc2.tlp
+      FILE events.dat
+      FILE flagvals.dat
+      FILE optnvals.dat
+      FILE svrflags.dat
+
+/*
+** ingres!files!english
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY ingres!files!english
+#endif
+   BUILD_DIR (ING_BUILD)!files!english
+      FILE rmactchg.hlp
+      FILE rmasgsho.hlp
+      FILE rmcddbty.hlp
+      FILE rmcdddef.hlp
+      FILE rmcddsad.hlp
+      FILE rmcddsed.hlp
+      FILE rmcddstb.hlp
+      FILE rmcddsum.hlp
+      FILE rmcfgmen.hlp
+      FILE rmcolmod.hlp
+      FILE rmcrtins.hlp
+      FILE rmdbadd.hlp
+      FILE rmdbedit.hlp
+      FILE rmdbsumm.hlp
+      FILE rmdppdef.hlp
+      FILE rmedfile.hlp
+      FILE rmerrmod.hlp
+      FILE rmevents.hlp
+      FILE rmevtsnd.hlp
+      FILE rmmaills.hlp
+      FILE rmmonitr.hlp
+      FILE rmmovcfg.hlp
+      FILE rmpaths.hlp
+      FILE rmrepmgr.hlp
+      FILE rmreport.hlp
+      FILE rmtargty.hlp
+      FILE rmtbledt.hlp
+      FILE rmtblint.hlp
+      FILE rmtblsum.hlp
+
+/*
+** ingres!sig!rpclean
+*/
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!sig!rpclean
+#else
+	DIRECTORY ingres!sig!rpclean
+#endif
+   BUILD_DIR (ING_BUILD)!sig!rpclean
+      FILE readme.txt
+      EXECUTABLE rpclean

@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!frame!hdr
+#
+
+SubDir ING_SRC front frame hdr ;
+
+IISUBSYS front frame hdr ;
+
+
+IIMSGHDR erfi.msg erm1.msg ;
+

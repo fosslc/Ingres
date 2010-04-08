@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescqnd.hlp               Query-New-Data escape code examples.
+The Query-New-Data escape executes after each set of new data is placed
+on the screen; for example, after the user selects "Go" or "Next." This
+escape only occurs in Update and Browse frames.  Examples:
+
+    To SELECT information to a table field:
+
+        formname.tblfldName := SELECT name = e.name, status = e.status
+        FROM employees e
+        WHERE e.empno = :empno ;
+
+    To assign a sequence number to every row in the table field 'iitf':
+
+        IIint = 0;      /* integer variable */
+        UNLOADTABLE iitf
+        BEGIN
+            IIint = IIint + 1;
+            iitf.sequence = IIint;
+        END;

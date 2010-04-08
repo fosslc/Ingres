@@ -1,0 +1,45 @@
+.TH SYMLINK 1 "ask" "ASK Group" "ASK Group"
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+symlink \- report if and how a file is a symlink
+.SH ORIGIN
+ASK Group
+.SH SYNOPSIS
+.B symlink
+[\fB\-ltR\fR]
+.I file
+.SH DESCRIPTION
+Report if a file is a symlink.  Options allow for displaying the
+link target, showing the fully expanded pathname of the file
+or its target if a link, or recursively following links to their
+ultimate target.
+.PP
+Returns exit status 0 for a symlink, 1 for a non-symlinked file
+or directory, -1 for an error.  If neither -l or -t options
+are specified, output the number of symlinks encountered (0 for a
+regular file, 1 for a symlink, 1 or more for a symlink recursively
+followed.)
+.PP
+.IP Options:
+.nf
+-t	show a trace of symlinks, e.g., foo -> /bar
+-l	list full path of file or target
+-R	follow symlinks recursively
+.SH DIAGNOSTICS
+\fISymlink\fR works by executing lstat(2) and readlink(2) on files and
+symlinks and chdir(2) and getcwd(3) on their directories.  Errors
+are reported if these operations fail.
+.PP
+NOTE:  It is possible to get different exit status on the same
+file argument depending on options chosen. 
+.PP
+E.g., if foo is symlinked to non-existent target bar (foo -> bar),
+.IP
+symlink foo
+.PP
+will return "1" and succeed with exit status 0.  However,
+.IP
+symlink -R foo
+.PP
+will report an error and fail with exit status -1, since the attempt
+to recursively follow symlinks requires an lstat of bar which fails.

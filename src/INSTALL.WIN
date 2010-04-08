@@ -1,0 +1,407 @@
+
+		Building and Installing Ingres ® on Windows
+
+
+  Note: This is a living document; for the latest version please see
+  http://www.ingres.com/.
+
+  Introduction
+  ------------
+
+  Ingres is renowned for its ease of installation and administration.
+  And, as you are about to see, it can also be compiled quickly and
+  easily on Windows with the Jam build tool (an enhanced replacement for
+  nmake).  The Ingres product itself is advanced, complex, and full
+  featured, and the build process requires a very specific build order
+  because of bootstrapping issues (for example, the esqlc SQL precompiler must
+  be built, and parts of Ingres are in turn built with esqlc).  However,
+  the Jam build definitions enable a simple (from the programmer's point
+  of view) build process by automatically detecting and handling these
+  build prerequisite issues.  
+
+  As of this writing, the version of Jam that
+  has been used and tested in-house is "FT Jam".  For more information on
+  Jam, see http://www.perforce.com/jam/jam.html and
+  http://freetype.sourceforge.net/jam/. Follow the SourceForge download link at
+  https://sourceforge.net/project/showfiles.php?group_id=3157&package_id=19789 
+  to obtain a copy of FT Jam. A modified copy of FT Jam 2.5.2 can also be 
+  downloaded from http://www.ingres.com products download page (recommended).  
+  If you decide to acquire a copy of FT Jam 2.5.2 from SourceForge, you will 
+  need to update jam.h in a source bundle to have MAXLINE=8190 for NT because 
+  the MAXLINE in the original package is set too low for Ingres in an attempt 
+  to accommodate older versions of Windows. The FT Jam bundle available on the
+  Ingres download page already contains this fix.  If you decide to use the
+  previous version of FT Jam, it will work as it is on the SourceForge 
+  download page.
+        
+  Adobe Reader is required to view the Ingres documentation in PDF format. 
+  Adobe Reader can be found at http://www.adobe.com/.
+
+  These instructions describe building Ingres on Windows.  However, the
+  same basic techniques are used for building the product on all Unix
+  and Linux variants, as well as VMS.  For example, should an adventurous
+  individual decide to port Ingres to another operating system,
+  the same basic techniques would apply.
+
+
+  Hardware prerequisites
+  ----------------------
+
+  Ingres can be built on a PC running Windows 2000, Windows
+  XP Professional, or Windows Server 2003 (for example, a machine with a
+  2.6 GHz processor and 1 GB RAM) in just over an hour.  However, it is
+  possible to build, install, and run Ingres on less powerful machines. Ingres
+  recommends at least a Pentium 4 2.6 GHz processor (or equivalent) and at
+  least 512 MB RAM.  Free disk space of at least 2 GB is recommended.
+
+
+  Software prerequisites
+  ----------------------
+
+  Ingres has been developed and tested at Ingres Corporation
+  with Windows XP Professional and Windows Server 2003, along with the
+  Microsoft Visual Studio 2008 Professional compiler and Cygwin 
+  (http://www.cygwin.com) or the MKS Toolkit (http://www.mks.com).  In 
+  addition, the Flex software package must be downloaded and installed 
+  (http://gnuwin32.sourceforge.net/). Alternatively, you can add the Flex
+  package available from Cygwin to the default package. As of this writing, 
+  installing the MKS Toolkit or Cygwin in an embedded spaced path does not 
+  work properly with building Ingres.  Please ensure that paths to the MKS 
+  Toolkit, Cygwin, or Flex binaries do not contain spaces and that their 
+  values are located at the beginning of the System environment PATH variable.  
+  If you decide to use Cygwin to build Ingres, ensure that you also obtained 
+  egrep on top of the default package. The default package of Cygwin contains 
+  link.exe, which interferes with link.exe from Visual Studio. Verify that it 
+  is either removed or is in the PATH after Visual Studio version of link.exe.
+
+  Ingres has a zipping tool, which is used during the build process on
+  Windows. This tool, cazipxp, is provided with Ingres source. 
+
+  The Microsoft .NET Framework 2.0 or later is required for the Ingres 
+  .NET Data Provider version 2.1.  This package can be downloaded from 
+  http://www.microsoft.com/. Verify that Microsoft Windows SDK v6.0A was
+  installed by the Visual Studio 2008 compiler installer.
+
+
+  Software prerequisites for packaging a CD image
+  -----------------------------------------------
+
+  If you want to package the build into an installable image, then
+  you will also need more software. Keep in mind that this software
+  is not required for the build to be used as an Ingres instance.
+
+  InstallShield 12.0 is used to package a build into a CD image.  
+  More information can be found at http://www.acresso.com/.
+
+  There are Microsoft redistributable DLLs that will need to be
+  packaged.  The redistributables should have been installed with
+  Visual Studio 2008 compiler to C:\Windows\WinSxS or can be obtained from
+  http://www.microsoft.com/.  The installed redistributables will be
+  packaged by InstallShield for redistribution with the Ingres image.
+
+  The Microsoft .NET Framework 2.0 Redistributable package is
+  no longer shipped with the Ingres CD image but should be obtained 
+  from Microsoft and installed if you are planning on using Ingres .NET
+  Data Provider in your application development.
+
+
+  Preparing to build
+  ------------------
+
+  The build process requires the following tools be installed:
+
+      o Microsoft Visual Studio 2008 Professional
+      o Microsoft Visual Studio 2008 SDK 1.1 (if Ingres .NET Data Provider 2.1
+                                              is to be built)
+      o Microsoft Windows SDK v6.0A (should be installed with Visual Studio 2008
+                                    if correct setup packages are selected)
+      o Cygwin or MKS Toolkit
+      o Microsoft .NET Framework 2.0 or later
+      o Flex
+      o Jam
+      o cazipxp
+
+  Note: Ingres Database Server does not require Ingres .NET Data Provider 2.1 
+  and the Frequent Flyer Demo for proper operation; these are additional 
+  components intended to extend functionality of Ingres or provide guidance for 
+  developers.  Most Ingres Database Server components can still be built and 
+  installed if Microsoft Visual Studio 2008 or VS 2008 SDK are not available. 
+
+  The Ingres build tree can be located in any directory, EXCEPT in an
+  embedded spaced path, which may cause the build not to work properly.  The
+  root of this build tree is known as ING_ROOT, and many build environment
+  variables are assigned relative to this setting.  Example: If the 
+  ingres10 directory is located in the root of the C drive, then ING_ROOT 
+  is C:\ingres10.  Most of this environment setup is automated by the 
+  bldenv script (located in %ING_ROOT%\src\tools\port\jam).
+
+  The documentation files README, INSTALL.WIN, TESTING, and so on are located
+  in ING_ROOT, as are a number of subdirectories used for Ingres building
+  and testing:
+
+	ingresr10
+	|-- Kerberos5/		Kerberos headers
+	|-- build/		output of Ingres build process
+	|-- cazipxp/		cazipxp redistributable
+	|-- cdimage/		staging area for Ingres install media
+	|-- mergemodules/	staging area for Ingres Merge Modules
+	|-- release/		staging area for InstallShield generated binaries
+	|-- src/		Ingres source tree
+			
+		|-- INSTALL.WIN		this file
+		|-- LICENSE		Ingres License
+		|-- README		general introduction
+
+	...
+	|-- tools/		Ingres test tool executables
+	|-- xerces-c-windows_2000-msvc_60/  Xerces C headers and library
+
+
+  Note: Xerces and Kerberos5 need not be located in this tree; see below for
+  details.  Some of the directories are created during the build process.
+
+
+  Build configuration
+  -------------------
+
+  The building of Ingres is conditional upon many environmental factors
+  (for example: Does the operating system support IEEE floats? What is the
+  bit length of an integer? Are POSIX threads supported?).  Most of
+  these settings are already configured in the Ingres code base (using
+  platform conditional #ifdef expressions) or are automatically detected
+  by the build process.  A few settings, especially in a file called
+  %ING_ROOT%\src\tools\port\conf\VERS, can be set by the programmer who is
+  building Ingres to control product options and identification.  The VERS
+  file generated by the bldenv.bat script (see "Building Ingres" section
+  below) can be used as-is.  However, should you build modified versions of
+  the source code, you should change the "build=" setting in VERS so that
+  the product identification (visible in various sign-on and log messages)
+  clearly distinguishes the version that your user is running.
+
+  For example, a setting of "build=118" in VERS would yield a message
+  like this:
+
+  C:\>  sql iidbdb
+  INGRES TERMINAL MONITOR Copyright 2009 Ingres Corporation
+  Ingres Microsoft Windows Version II 10.0.0 (int.w32/118) login
+  Thu Aug 27 16:48:20 2009
+
+
+  Ingres facilities (in 150 words or less)
+  ----------------------------------------
+
+  The Ingres source tree is grouped by major component, further subdivided
+  by Ingres facility.  You do not need to know this to compile Ingres,
+  but understanding it should make watching the build messages more fun,
+  and will help with problem resolution should the product not build
+  cleanly for any reason.  The major components include "back" (DBMS
+  engine), "cl" (OS compatibility layer), "gl" (other less OS sensitive
+  low level functions), "front" (user front ends), "common" (shared by
+  back and front), and "dbutil" (DBMS utilities).  Facilities in back
+  include "opf" (optimizer), "qef" (query execution), and "dmf" (data
+  management); facilities in the cl include "me" (memory management),
+  "cs and csmt" (context switching internal and POSIX), and "handy"
+  (various handy things); facilities in front include "qbf" (Query-By-
+  Forms), "rep" (replication), and "embed" (language precompilers);
+  facilities in common include "adf" (data abstraction),
+  "gcf" (network communication), and "jdbc" (java support).
+
+
+  Building Ingres
+  ---------------
+
+  Open a Command Prompt and unzip the Ingres source code build tree.
+  The ingresr10 directory at the root of this build tree is the ING_ROOT
+  location mentioned above.  For ease of setup, you can use a
+  "Visual Studio 2008 Command Prompt"; the shortcut to this Command
+  Prompt is located in the Program folder of Microsoft Visual Studio 2008.
+
+  Please make sure paths to any other Ingres instances on your machine are
+  NOT reflected in the PATH environment variable so that binaries from
+  other Ingres instances are not picked up during the build process.
+
+  In addition to the Ingres source code itself, you will need the Xerces
+  2.7 headers and binaries (which provide the XML link between Ingres
+  and the Apache web server), and you will need the Kerberos network
+  authentication protocol headers.  Both of these components are included with
+  Ingres source code for your convenience.  Alternatively, you may already have
+  these components installed on your system, or can find them at the 
+  following web sites:
+
+	Xerces:		http://xml.apache.org/ and 
+                        http://archive.apache.org/dist/xml/xerces-c/
+	Kerberos:	http://web.mit.edu/kerberos/www/ and
+                        http://web.mit.edu/kerberos/www/oldnews.html
+  
+  The version of Xerces available with Ingres source may include only the source
+  code.  Note that if you decide to use Xerces source included with Ingres
+  source or download Xerces as source from apache.org, you must build the
+  Xerces C binaries before you proceed with the Ingres build.  The Xerces
+  build process is straightforward and well documented; please see
+  the instructions in the xerces-c-windows_2000-msvc_60 directory.  
+  Alternatively, you will be able to download a binary version of Xerces for 
+  your system from the apache.org site.  Please make sure that the binaries 
+  and source are located in the same root Xerces directory.
+ 
+
+  When all of the necessary components have been downloaded (Ingres source
+  tree, Xerces and Kerberos components, all building prerequisites), you are
+  ready to begin the actual Ingres build process.  First change directory to 
+  ING_ROOT. Then, run a script to set up the build environment. You can set
+  some required environment variables before invoking the script or can allow it
+  to prompt you for any needed values.  For example:
+
+	cd src/tools/port/jam
+	bldenv.bat
+
+  If you have downloaded the Xerces and Kerberos components to the 
+  ING_ROOT tree, the script will automatically set up the environment 
+  variables that point to this.  However, if it is located elsewhere on 
+  your system, you will be prompted for the path.
+
+  The bldenv script establishes other variables necessary for the compiling
+  of Ingres, based on the user-supplied values.  Some environment variables
+  of note are:
+
+  ING_SRCRULES	Jam build rules for Ingres
+  ING_BUILD	location of built components (programs, libraries, and so on)
+  ING_TST	path to the Ingres test tool source and test scripts
+  ING_TOOLS	path to the Ingres test tool executables
+  II_SYSTEM	run-time Ingres root location for the build process
+  TERM_INGRES	terminal setting for Ingres front end tools such as ABF
+  VSREBUILD	When set to "ON", tells jam to always rebuild all Visual
+		Studio projects in the source tree.  When VSREBUILD is set
+		to "OFF" or not set, Visual Studio projects will only be rebuilt
+		if one of the dependency libraries was updated, or the solution
+                (.sln) file was updated, or the project (.vcproj) file was
+                updated.
+  MSVCLoc       path to the location of Microsoft Visual Studio 2008 
+  CAZIPXP	root directory of where cazipxp binary is located
+
+  Note that the PATH settings are also modified for the build process.
+
+  Next, bootstrap the build.  This includes building mkjam and mkjams,
+  which automate the creation of Jamfiles, and then invoking mkjams to
+  set up the build tree:
+
+	cd %ING_SRC%\tools\port\jam
+	jam
+	cd %ING_SRC%
+	mkjams
+
+  You are now ready to compile Ingres.  This is done with the following
+  command:
+
+	jam
+
+  Because of the voluminous output of the build process and because you
+  may want to examine the full output, it is wise to redirect the jam
+  output to a file.  For example:
+
+	jam > jam.out 2>&1
+
+  In another Command Prompt, you can tail the output file:
+
+	tail -f jam.out
+
+
+  Auditing the build
+  ------------------
+
+  Some warning messages are expected during the build process (for
+  explanations of some of these, see the Ingres building FAQ at
+  http://www.ingres.com).
+
+  How can you tell, then, if the build was successful?  First, look at
+  the final messages issued by jam.  Jam should report a (large) number
+  of targets "updated", and should NOT report any targets as "failed"
+  or "skipped".
+
+  You should also run a script to check the status of the build
+  process for Ingres itself and for its testing tools.  To be sure that
+  the building of all Ingres components is successful, use the buildrel
+  script's audit option:
+
+	buildrel -a
+
+  If the Ingres build is successful, buildrel will report select missing
+  file(s) if CAZIPXP variable was not pointing at the correct locations of 
+  these file(s) :
+
+	cazipxp.exe		- This utility needs to be copied to
+				  %ING_BUILD%\bin for it to be
+				  picked up.
+
+  The "missing" file is ONLY required if you are packaging the build
+  into a CD image. It is not necessary when utilizing a build as an
+  Ingres instance (see the "Installing Ingres" section below).
+  
+  As a final auditing step, make sure that all the files needed for
+  Ingres acceptance testing were correctly built:
+
+  	tartools -a
+
+  If this command reports no missing files, your build is complete!
+
+
+  Packaging Ingres
+  ----------------
+
+  Ingres can be packaged for installation as an MSI package. This
+  requires the use of InstallShield Developer 12.0. The buildrel script
+  will generate a CD image in the %II_CDIMAGE_DIR% location, which is by
+  default set to the %ING_ROOT%\cdimage directory.
+
+  First, set up a staging area for this assembly process.  Typically,
+  you would want to name this staging directory based on the "build="
+  line in %ING_SRC%\tools\port\conf\VERS.  For example, if the VERS file
+  contains the line build=00 you would use the following commands:
+
+	mkdir %ING_ROOT%\release\r00
+	mkdir %ING_ROOT%\cdimage\r00
+	mkdir %ING_ROOT%\mergemodules\r00
+	SET II_RELEASE_DIR=%ING_ROOT%\release\r00
+	SET II_CDIMAGE_DIR=%ING_ROOT%\cdimage\r00
+	SET II_MM_DIR=%ING_ROOT%\mergemodules\r00
+	buildrel > buildrel.out 2>&1
+
+  This will generate an installable CD image. It will also generate a set
+  of Merge Modules, which will be located in %II_MM_DIR%.
+
+
+  Installing Ingres
+  -----------------
+
+  To install Ingres from the CD image generated, please refer to the
+  "Quick Start Guide" for Windows in file 
+  %ING_SRC%\tools\techpub\pdf\qs_windows.pdf.
+
+  Important: Do not use the same Command Prompt for both building and
+  installing Ingres, as problems will result because of conflicting
+  environment variables.  For installing and running Ingres, open another
+  Command Prompt and then run the CD image install.
+
+  Alternatively, you can turn your %ING_ROOT%\build area into a useable
+  Ingres instance. The following command can be used to do this:
+
+	jam -sII_INSTALLATION=<instance identifier> install      
+        or alternatively, run
+        fasti <instance identifier> {clean}
+
+  Once complete, you will have a working Ingres instance from your build.
+  Note that if you have set up a prior Ingres instance in your build area,
+  this command will clean up the prior instance and prepare a new one.
+
+
+  Testing Ingres
+  --------------
+
+  The open source Ingres tree contains a limited set of acceptance tests
+  to verify the integrity of your Ingres build.  For this automated
+  testing the Ingres installation should be located in %ING_ROOT%\tstinst.
+  Alternatively, you can turn your %ING_ROOT%\build area into an Ingres
+  instance and use it instead (see prior section for information).
+
+  For further information about the acceptance tests please see the file
+  named TESTING.
+

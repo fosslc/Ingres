@@ -1,0 +1,99 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;		Added ordinals.
+;	25-Aug-2005 (drivi01)
+;		Renamed from iirqfnt.def to iilibrqf.def.
+;		Contains symbols for rqf directories.
+;	26-Feb-2010 (bonro01)
+;	    Removed functions for change 503092 bug 121665.
+
+EXPORTS
+rqf_abort		@1				
+rqf_begin		@2				
+rqf_call		@3				
+rqf_check_interrupt	@4				
+rqf_cleanup		@5				
+rqf_close		@6				
+rqf_cluster_info	@7				
+rqf_commit		@8				
+rqf_connect		@9				
+rqf_continue		@10				
+rqf_cp_get		@11				
+rqf_define		@12				
+rqf_delete		@13				
+rqf_disconnect		@14				
+rqf_end			@15				
+rqf_endret		@16				
+rqf_fetch		@17				
+rqf_format		@18				
+rqf_interrupt		@19				
+rqf_invoke		@20				
+rqf_invproc		@21				
+rqf_ldb_arch		@22				
+rqf_modify		@23				
+rqf_neednl		@24				
+rqf_nt_fetch		@25				
+rqf_open_cursor		@26				
+rqf_query		@27				
+rqf_restart		@28				
+rqf_s_begin		@29				
+rqf_s_end		@30				
+rqf_secure		@31				
+rqf_set_option		@32				
+rqf_set_trace		@33				
+rqf_shutdown		@34				
+rqf_startup		@35				
+rqf_t_fetch		@36				
+rqf_td_get		@37				
+rqf_term_assoc		@38				
+rqf_transfer		@39				
+rqf_update		@40				
+rqf_write		@41				
+rqu_check_assoc		@42				
+rqu_client_trace	@43				
+rqu_cluster_info	@44				
+rqu_col_desc_fetch	@45				
+rqu_convert_data	@46				
+rqu_create_tmp		@47				
+rqu_dbg_error		@48				
+rqu_dmp_dbdv		@49				
+rqu_dmp_gcaqry		@50				
+rqu_dmp_tdesc		@51				
+rqu_dump_gca_msg	@52				
+rqu_end_all_assoc	@53				
+rqu_error		@54				
+rqu_fetch_data		@55				
+rqu_find_lid		@56				
+;rqu_fmt_read		@57				
+;rqu_format_write	@58				
+rqu_gca_error		@59				
+rqu_gccall		@60				
+rqu_gcmsg_type		@61				
+rqu_get_reply		@62				
+rqu_get_rpdata		@63				
+rqu_getqid		@64				
+rqu_ingres_priv		@65				
+rqu_interrupt		@66				
+rqu_mod_assoc		@67				
+rqu_new_assoc		@68				
+rqu_put_data		@69				
+rqu_put_iparms		@70				
+rqu_put_moddata		@71				
+rqu_put_parms		@72				
+rqu_put_pparms		@73				
+rqu_put_qtxt		@74				
+rqu_putcid		@75				
+rqu_putdb_val		@76				
+rqu_putflush		@77				
+rqu_putformat		@78				
+rqu_putinit		@79				
+rqu_putqid		@80				
+rqu_relay		@81				
+rqu_release_assoc	@82				
+rqu_rxiack		@83				
+rqu_sdc_chkintr		@84				
+rqu_send		@85				
+rqu_set_option		@86				
+rqu_td_save		@87				
+rqu_txinterrupt		@88				
+rqu_xsend		@89				

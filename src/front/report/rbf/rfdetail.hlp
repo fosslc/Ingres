@@ -1,0 +1,43 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Catalog Details Form
+
+     This form provides additional details about a selected report.
+     All fields are display-only except for the Short and Long Remarks
+     fields, which may be updated.  A "Save" command is provided on the menu
+     to store any updated information in the database.  "Next" ("Previous")
+     will show the Details frame for the report which appears after (before)
+     the current report in the main catalog table field.  "Next" will advance
+     to the top report of the catalog table field if the current report is
+     the last one, and similarly for "Previous".
+
+        FIELD			DESCRIPTION
+        -----                   -----------
+        Name                    Name of the current report.
+        Owner                   Owner of the current report.
+        Created                 Date on which this report was first created.
+        Modified                Date on which this report was last altered.
+        Short Remark            One-line description of current report.
+        Long Remark             Longer description of current report.
+	RBF Editable		States if the current report can be edited 
+				in RBF, or if the report was created using 
+				SREPORT, therefore cannot be edited in RBF.
+	Data Table		Data table or JoinDef associated with report.
+				If the name is followed by a "(JD)", then
+				the report is based on a JoinDef.
+	Query Language		Database language (sql or quel) used in 
+				retrieving the data for the report.
+
+     The following commands are available on the Catalog Details Form:
+
+        MENU COMMANDS           SYNOPSIS     
+        -------------           --------
+	Next                    Show report information for next report in the
+                                main catalog frame.
+	Previous                Show report information for previous report 
+				in the main catalog frame.
+        Save                    Store the current report information in the 
+				System Catalogs.  
+        Go                      Execute the current report.
+        Help                    Print this message.
+        End                     Stop work on this frame and return to the
+                                main catalog frame.

@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The cp_interval_mb defines the interval in MiB (2**20 or 1048576 bytes)
+  between consistency points.  This is the amount of transaction log file
+  space that must be written before a consistency point is signalled.
+
+  The default is 40 Mb (scaled down if the transaction log is smaller
+  than 320 Mb).

@@ -1,0 +1,6 @@
+ii_system:[ingres.library]iiapi.olb/lib,-
+ii_system:[ingres.library]cuf.olb/lib,-
+ii_system:[ingres.library]adf.olb/lib,-
+ii_system:[ingres.library]gcf.olb/lib,-
+ii_system:[ingres.library]cl.olb/lib,-
+sys$share:calic.olb/lib

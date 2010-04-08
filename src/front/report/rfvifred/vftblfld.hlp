@@ -1,0 +1,98 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vftblfld.hlp       VIFRED Help on Edit a Table Field
+/#subtopic "Display Format Examples" vfformat.hlp
+This frame is used to create or edit a table field.  The fields at
+the top of the form represent information about the table field
+as a whole, and the list at the bottom of the form holds information
+about each of the columns within the selected table field.
+
+If you are creating a new table field, fill in the appropriate
+information about the table field, and select the "End" menu
+command to commit the table field to the form.
+
+The meanings of the fields at the top of the form are:
+
+        FIELD NAME              SYNOPSIS
+        ----------              --------
+        Name of Table Field     Internal name to use for the table field.
+                                Whenever validation checks are specified
+                                for columns in the table field, they must
+                                be specified with the format "table.column"
+
+        Number of Rows          Number of displayed rows in the table field.
+
+        Display Lines           Enter "y" if you want lines between the
+                                rows in the table field to be displayed,
+                                or "n" if you do not.
+
+        Highlight Current Row   Enter "y" if you want the current row
+                                (the one the cursor is on) to be displayed
+                                in reverse video.  A "n" turns off the
+                                highlighting.
+
+        Display Column Titles   Enter an "n" if you do not want column
+                                titles to be displayed at the top of
+                                each column.  The default value is "y",
+                                which displays the column titles.
+
+        Invisible Field         Enter "y" if you do not want the table field
+				to be initially displayed on the form.  The
+                                default value is "n", which specifies that
+                                the field is to be displayed.
+
+
+The rows within the table field (called column descriptor in the rest
+of this help text) represent columns in the table field component for 
+your form.  Simply add new column descriptors to the table field by
+filling in the rows in the form, or use the menu commands for more
+advanced editing.  The columns for each descriptor have the following 
+interpretations:
+
+        FIELD NAME              SYNOPSIS
+        ----------              --------
+        Title of a Column       Title to use at the top of the column
+                                for the table field.
+
+        Column Internal Name    Internal name of the column.  This is
+                                used to match column names in JoinDefs
+                                or tables in QBF, or can be used by
+                                a 3GL or a 4GL programmer for
+                                special actions.
+
+        Display Format          Valid data display format for the data
+                                window for this column.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Insert                  Insert a new column descriptor immediately
+                                before the current cursor position.  A
+                                default name and data format is filled in.
+
+        Delete                  Delete the selected column descriptor.
+
+        EditAttr                Go to the field attribute frame to edit
+                                field attributes for the selected column
+                                descriptor.
+
+        Move                    Select the current column descriptor to
+                                move to another position in the table.
+                                This brings up a submenu to determine
+                                the new position.
+
+        GetTableDef             Prompts for the name of an existing table
+                                in the database.  The columns of the 
+                                selected table are used to fill in default
+                                column descriptors in the table -- one for
+                                each column in the table.
+
+        Cancel                  Return to the Form Layout form, without
+                                creating the new table field (on a create)
+                                or without making the specified changes 
+                                (on an edit).
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to the Form Layout frame, creating 
+                                a new or modified table field.

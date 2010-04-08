@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The check_interval option tells the name server the timeout between checking 
+ for active servers. If the server is not active, the name server will remove 
+ the inactive server name.
+
+
+ Default: 300 seconds (5 minutes)
+

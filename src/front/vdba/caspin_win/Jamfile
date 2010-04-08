@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!caspin_win
+#
+
+SubDir ING_SRC front vdba caspin_win ;
+
+IISUBSYS front vdba caspin_win ;
+
+
+IISLN ingr3spn.dll : caspin.sln ;

@@ -1,0 +1,28 @@
+#
+# Jamfile file for front!abf!iaom
+#
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front abf iaom ;
+
+IISUBSYS front abf iaom ;
+
+IINOOPTIM iamdec.qsc : sgi_us5 ;
+
+IIMSGHDR eram.msg ;
+
+IIQSHHDR iamdmtyp.h : iamdmtyp.qsh ;
+
+IILIBRARY IAOMLIB : iamratt.sc iamout.sc iammpop.sc iamlocks.sc
+	iamildat.sc iamfutil.sc iamfradd.sc iamfadd.sc iamdpad.sc
+	iamdmint.sc iamdmchk.sc iamdbses.sc iamcupd.sc iamcread.sc
+	iamcdel.sc iamcadd.sc iamdmdat.roc iamtprt.qsc iamoid.qsc
+	iammeth.qsc iamfrem.qsc iamfchk.qsc iamdec.qsc iamwrop.c
+	iamwrite.c iamtok.c iamsystm.c iamset.c iamprint.c
+	iammeta.c iammerr.c iamlist.c iamglob.c iamftch.c iamform.c
+	iamfconv.c iametbl.c iameprc.c iamenc.c iamdump.c iamdtbl.c
+	iamdprc.c iamdmtrv.c iamdm.c iamclrc.c iamcget.c iamapget.c
+	iamapfre.c iamalgn.c iamabort.c abfiaom.c abclass.c ;
+
+IILIBRARY IMPINTERPLIBDATA : iamtname.c ;

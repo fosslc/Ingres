@@ -1,0 +1,213 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>		/* 6-x_PC_80x86 */
+#include	<tm.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+##include	"mqbf.qsh"
+#include 	"erqf.h"
+
+/**
+** Name:	bldquery.qc -	Build Query Module.
+**
+** Description:
+**	This module contains the routine mqbldquery().
+**	The routine is passed the information collected
+**	during the query definition phase of MQBF. From
+**	this information a query is built for MQBF's
+**	query execution phase from the QDEF information.
+**
+**	Returns:  1  -all OK, proceed building the QDEF.
+**		  0  -resume to name field of Table Entry form and
+**				don't proceed with QDEF building yet.
+**		  -1 -major problem encountered, return to start-up menu,
+**				leaving out of Table Entry form.
+**
+** History:
+**	Revision 6.1
+**		88/09  wong  Merged duplicate error messages.
+**	20-apr-89 (kenl)	bug 5394
+
+**
+**	Revision 6.0
+**	08/13/87 (danielt) various message extraction changes
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh
+**	11-apr-1988 (danielt)
+**		added COMMIT WORK statement after ## forminit to release locks
+**		on forms catalogs.
+**	02-oct-88 (kenl)
+**		Removed COMMIT.  We now use QUEL transaction semantics.
+**
+**	Revision 5.0
+**	01/23/86 (garyb) changed ifdef CMS to FT3270 for ASCII FT support.
+**	07/14/86 (scl) Remove special support for left-right scrolling
+**			 in CMS (FTmxcol) under 5.0
+**
+**	Revision 3.0
+**	7/16/85 (scl) Support left-right scrolling in CMS
+**
+**	Revision 2.0
+**	written 7/26/83 (NML)
+**	modified 12/15/84 (kira)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+##extern char	mq_frame[];
+
+i4
+mqbldquery(mq_qdef, tblwidth)
+MQQDEF	*mq_qdef;
+i4	*tblwidth;
+##{
+	*tblwidth = 0;
+
+	if ( mq_forms )
+	{
+		STATUS	frm_err = OK;
+
+		if ( !mq_cfrm )
+		{
+##			MESSAGE ERget(S_QF0010_InitForm);
+
+# ifdef DEBUG
+			if (mq_debug)
+			{
+				SIfprintf( mqoutf,
+			      ERx("MQBLDQUERY: before forminit, msecs = %d\n"),
+					TMcpu()
+				);
+			}
+# endif
+
+##			FORMINIT mq_frame;
+			/* now release locks on forms catalogs */
+
+# ifdef DEBUG
+			if (mq_debug)
+			{
+				SIfprintf( mqoutf,
+				ERx("MQBLDQUERY: after forminit, msecs = %d\n"),
+					TMcpu()
+				);
+			}
+# endif
+
+			if ( (frm_err = FEinqferr()) != OK )
+			{
+				FDerror(NOFRMNM, 1, mq_frame);
+			}
+		}
+
+		/*
+		** the final step before going to query execution
+		** phase is to correlate attributes with form fields
+		** This is only needed for the VIFRED form stored in
+		** the db with the current qdef (ie: used -f qbfname).
+		*/
+# ifdef DEBUG
+		if ( mq_debug && frm_err == OK )
+		{
+			SIfprintf( mqoutf,
+			     ERx("MQBLDQUERY: before mqfrmqdesc, msecs = %d\n"),
+				TMcpu()
+			);
+		}
+# endif
+		if ( frm_err != OK || !mqfrmqdesc(mq_qdef) )
+		{ /* problem with form or correlating attributes with fields */
+			/*  bug 5394
+			**  If we have an error and no table fields are
+			**  being referenced, make sure mq_tbl points to EOS.
+			*/
+			if (!tblfield)
+			{
+				mq_tbl[0] = EOS;
+			}
+
+			mq_forms = FALSE;
+			mq_frame[0] = EOS;
+			if ( IIUFver(ERget(S_QF0011_UseDefaultFormQ), 0) )
+			{
+##				MESSAGE ERget(S_QF0012_InitDefaultForm);
+			}
+			else
+			{
+				if ( frm_err != OK)
+				{
+					return -1;
+				}
+				else
+				{
+					return 0;
+				}
+			}
+		}
+		else if ( !mqjpartchk(mq_qdef) )
+		{ /* master/detail join fields found in table field */
+			return -1;
+		}
+
+# ifdef DEBUG
+		if ( mq_debug && frm_err == OK )
+		{
+			SIfprintf( mqoutf,
+			     ERx("MQBLDQUERY: after mqfrmqdesc, msecs = %d\n"),
+				TMcpu()
+			);
+		}
+# endif
+	}
+
+	if ( !mq_forms )
+	{ /* default form */
+		if (tblfield)
+		{
+			register i4	width;
+
+			STcopy(ERx("mqbftbl"), mq_tbl);
+			if ( (width = mqcalwidth(mq_qdef)) <= 0 )
+			{
+				return 0;
+			}
+			else if ( width == 1 )
+			{
+				mq_tbl[0] = EOS;
+				tblfield = FALSE;
+			}
+# ifdef DEBUG
+			if (mq_debug)
+			{
+				SIfprintf( mqoutf,
+					ERx("BLDQUERY:Tablefield width=%d\n"),
+					width
+				);
+			}
+# endif
+			*tblwidth = width;
+		}
+		mq_deffrm = TRUE;
+	}
+	/*
+	** now that we're sure of what fields will be displayed,
+	** set up the QDESC structures.
+	*/
+/**
+ **	it is now set in qexec part of the program
+ **
+ **/
+
+	return 1;
+##}

@@ -1,0 +1,50 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for sigstar
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	04-aug-1993 (dianeh)
+**		Moved scheduler, wakeup, iirunschd, and iialarm.frm from
+**		star.ccpp to here.
+**	26-aug-1993 (dianeh)
+**		Braced the setuid permission so it's only for wakeup.
+**      14-apr-1994 (joplin)
+**              Added Read permission for executables.
+**      07-mar-1995 (wolf) 
+**              read.me and makestdcat script are obsolete.  Remove from 
+**		VMS now, deal with Unix versions after the 1.1/03 release.
+**		Perhaps by then, scheduler and wakeup will build on VMS.
+**	10-mar-1995 (hanch04)
+**		removed makestdcat
+*/
+
+/*
+** Default directory: ingres/sig/star
+*/
+
+PART  sigstar
+
+# ifdef VMS
+   BUILD_DIR (sig_path)!star!star
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!sig!star
+# endif /* VMS */
+   DIRECTORY ingres!sig!star
+# ifndef VMS
+      FILE read.me
+  {
+   PERMISSION s:rwed,o:rwed,g:re,w:re,setuid
+      EXECUTABLE wakeup
+  }
+      EXECUTABLE scheduler
+      FILE makestdcat.sh
+      FILE iialarm.frm
+      SCRIPT iirunschd
+# endif /* VMS */
+

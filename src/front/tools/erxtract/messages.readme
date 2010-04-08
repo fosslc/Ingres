@@ -1,0 +1,122 @@
+##
+## History
+##	??-??-??
+##		Created.
+##	10-mar-93
+##		Added History; fixed occurances of message.txt to messages.txt;
+##		added a #ifdef for the location of the file (MINGH now sed's
+##		and cpp's the file); removed the re-reference to the file
+##		location; cleaned up some of the line-lengths.
+##	01-oct-93
+##		Format nits.
+##	11-dec-1995 (canor01)
+##		Add format for DESKTOP platforms
+##
+
+Overview
+ 
+This file is intended as a reference and help for INGRES users when 
+they encounter errors in the use of INGRES.  Use this file in
+conjunction with the list of the INGRES error messages, which is
+contained in the messages.txt file located in the following directory:
+
+#ifdef DESKTOP
+	%II_SYSTEM%\ingres\files\english\messages 
+#else
+#ifdef VMS
+	ii_system:[ingres.files.english.messages]
+#else
+	$II_SYSTEM/ingres/files/english/messages 
+#endif
+#endif
+ 
+
+Intended Audience
+ 
+This file is designed for all INGRES users. 
+ 
+ 
+Introduction
+ 
+What Is an Error Message?
+ 
+An error message is the message that INGRES displays for the user 
+or returns to an application when an error occurs. An error message 
+comprises an error code and message text. Error messages from SQL 
+or from the SQL Gateway bear a time and date stamp.
+ 
+ 
+The Error Code
+ 
+An error code has at least two parts, and often three parts, separated 
+by underscores. The first part of the code is the error prefix (E_), 
+and is common to all error codes. The second part of the error code 
+consists of one or two letters, followed by a hexadecimal number 
+and sometimes more numbers and letters. The third part of the error 
+code, when present, is either a decimal number or a series of 
+letters which serve as an abbreviated indication of the error. 
+The error facility code is the first one or two letters in the 
+second part of the error code. A facility code indicates an error's 
+origin. The hexadecimal number in the second part of an error code 
+represents a value returned to an application for use in 
+error-handling. The decimal number in the third part of an error 
+code is equivalent in value to the hexadecimal number in the code's 
+second part. All errors for which an application might check belong 
+to the US facility code message category.
+ 
+ 
+Error Message Text
+ 
+Error message text is a one-line summary of the error, often followed
+by an explanation. In the Error Message file, messages.txt, the error
+summary line appears immediately after its error code entry.  In the
+text of the summary line, variables (%1c and %2c are two examples)
+replace the numbers and object names that INGRES provides when errors
+occur.  For example, the error summary for E_US157C_5500 says:
+"MODIFY: table %0c does not exist." If this error occurs, INGRES
+replaces the variable %0c with the actual table name before
+displaying the message or returning it to an application. The
+variables themselves give an indication of what object will replace them.
+ 
+  *  The letter c indicates a character data type object.
+ 
+  *  The letter d indicates a numeric data type object. 
+     
+Many error messages provide explanations and recommendations for error
+correction. Explanations are divided into three sections:
+ 
+  *  Explanation:  an expanded error description
+ 
+  *  System Status:  the state of the system after the error 
+ 
+  *  Recommendations:  suggested solutions to the error
+ 
+ 
+Viewing an Error Message
+ 
+If you are working in one of the forms-based user interfaces 
+(ABF or QBF, for example), error messages appear on a single 
+line across the bottom of your screen. The error text appears 
+first, followed by the error code. When the text extends 
+beyond a single line, INGRES prompts you to press the Help 
+key to see the remainder of the message and the error code. 
+To clear the error message from the screen, press the Return 
+key. When you are not working in a forms-based user interface, 
+INGRES displays the error code first, followed by the entire 
+message text. Error messages are not automatically displayed 
+in embedded applications; application developers must provide 
+program code for such display. For more information, see 
+Programming Error-Handling in Embedded Applications below.
+ 
+ 
+Programming Error-Handling in Embedded Applications
+ 
+Embedded programs always return error numbers and message text 
+(without the complete description) to the application. To use, 
+display, or print this information, programmers must provide an 
+error-handling mechanism. Embedded SQL provides statements you 
+can use to write error-handling mechanisms. These statements 
+are inquire_ingres, inquire_frs, and the whenever statements. 
+See the INGRES/Embedded SQL User's Guide and Reference Manual
+for more information about these statements and error-handling 
+in embedded applications.

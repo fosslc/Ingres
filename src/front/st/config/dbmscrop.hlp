@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The cursor_default_open resource specifies 
+            the default open mode for cursor  
+
+  Valid values :
+        UPDATE          Default open mode is update
+	READONLY        Default open mode is readonly

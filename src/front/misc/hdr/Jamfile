@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!misc!hdr
+#
+
+SubDir ING_SRC front misc hdr ;
+
+IISUBSYS front misc hdr ;
+
+
+IIMSGHDR ermc.msg ;
+
+IIQSHHDR xf.h : xf.qsh ;
+

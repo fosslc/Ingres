@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!gcf!admin
+#
+
+SubDir ING_SRC common gcf admin ;
+
+IISUBSYS common gcf admin ;
+
+
+IILIBRARY GCFLIB : gcadm.c gcadmsm.c gcadmutl.c ;
+

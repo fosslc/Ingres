@@ -1,0 +1,20 @@
+/#-- Help File: fgmsuxnp.hlp
+/#-- Master in simple fields update frame, with Next, no Qual, primary help.
+This screen allows you to browse and change data. Select "Next" to
+browse data. To change data, update the information on the form and
+then select "Save".
+
+  Next        Get the next master record and its associated
+              detail records.
+  Save        Update database with current screen data.
+  AddNew      Treat the current screen data as new information,
+              rather than as an update of existing information
+              and save this new information to the database.
+              (optional menuitem; may not appear)
+  Delete      Delete current screen of data from Database.
+              (optional menuitem; may not appear)
+  ListChoices Show valid values for current field. 
+  Help        Get help about this screen.
+  TopFrame    Return to the top frame in the application.
+  End         Stop work on this screen and return to the
+              screen that called it.

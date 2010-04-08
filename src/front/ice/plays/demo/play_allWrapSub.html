@@ -1,0 +1,41 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Shakespeare's Plays</title>
+</head>
+<body>
+
+<!-- To Do:
+    1/ Commit the previous transaction
+    2/ Start a new one (exactly the same text as
+       the previous one)
+    3/ Use the same form elements to return to the
+       previous page
+-->
+<!-- #ICE COMMIT=`:e_playTxn` -->
+
+<!-- #ICE 
+          DATABASE = `icetutor` 
+          SQL=`select * from plays` 
+          TRANSACTION=`Complete` 
+          CURSOR=`Works` 
+          ROWS=`5` 
+          TYPE=`TABLE`
+-->
+
+<!-- #ICE DECLARE=`session.e_playTxn=Complete` -->
+<!-- #ICE DECLARE=`session.e_playTxnCommitted=FALSE` -->
+
+<!-- #ICE VAR=`
+<FORM ACTION="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_allWrap.html]"
+	METHOD="POST">
+` -->
+<INPUT TYPE="submit" NAME="More" VALUE="More" ALT="Show more plays">
+</FORM>
+
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

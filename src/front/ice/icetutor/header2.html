@@ -1,0 +1,14 @@
+<!-- #ICE REPEAT 
+IF (`:name` != ``)
+THEN=`
+		<!-- #ICE REPEAT IF (``:head`` == ````)
+		THEN=``<!-- #ICE DECLARE=````session.head=:name,:value```` -->``
+		ELSE=``<!-- #ICE DECLARE=````session.head=:head,:name,:value```` -->``
+		-->`
+-->
+
+<!-- #ICE REPEAT
+IF (`:name` != ``)
+THEN=`<!-- #ICE REPEAT INCLUDE=``header.html`` -->`
+ELSE=`<!-- #ICE REPEAT INCLUDE=``sqlFinal.html`` -->`
+-->

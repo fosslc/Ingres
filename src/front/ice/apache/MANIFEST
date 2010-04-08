@@ -1,0 +1,43 @@
+#
+# MANIFEST file for front!ice!apache
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	18-Aug-2004 (drivi01)
+#	    For windows only modified a build of apache ice 
+#	    shared library.
+#	7-Aug-2004 (drivi01)
+#	    Added copying of ice.conf to the apache demo directory.
+#	08-dec-2004 (abbjo03)
+#	    Use DFS and SLASH as directory/file separators for portability.
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+
+SubDir ING_SRC front ice apache ;
+
+IISUBSYS front ice apache ;
+
+if $(BUILD_ICE)
+{
+
+IILIBRARY APACHELIB : apapi.c ;
+if ! $(NT)
+{
+IISHLIBRARY $(SHAPACHELIB) ;
+IINEEDLIBS $(SHAPACHELIB) : APACHELIB ;
+}
+else
+{
+IISHICEAPACHE $(SHAPACHELIB) : $(OIICEAP_LIBS) $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA)
+	$(IMPGCFLIB) $(IMPGCFLIBDATA) ;
+
+IISHLIBRARY $(SHICEAPILIB) ;
+IINEEDLIBS $(SHICEAPILIB) : GCFLIB COMPATLIB DDFLIB OIICEAPI_LIBS ;
+
+}
+
+IIICEFILE bin$(SLASH)apache$(DFS)ice.conf : ice.conf ;
+}

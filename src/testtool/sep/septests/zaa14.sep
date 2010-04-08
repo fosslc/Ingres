@@ -1,0 +1,602 @@
+/*
+	Test Name: zaa14.sep
+	Time: Fri Mar  6 13:49:38 1992
+	User Name: testenv
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename:
+	Purpose	:
+	Input Files  :
+	Output Files :
+	Database     :
+	Tables       :
+	Synopsis     :
+
+ History:  6-Mar-1992	(Author)	Created
+	  30-Jan-1996	(somsa01)	Added NT_GENERIC stuff.
+*/
+.if !SEPPARAMDB
+? setenv SEPPARAMDB septools
+<<
+environment variable was defined
+>>
+.endif
+.if NT_GENERIC
+? delobj SEPPARAMDB -report zaa14
+<<
+~
+>>
+.else
+? deleter SEPPARAMDB -rzaa14 
+<<
+~
+>>
+.endif
+? fill zaa14.rw 
+!!
+.name zaa14 
+.shortremark Testing query select distinct
+.query
+	select qemgr, qedept, count(distinct qediv) as qe_div
+	     from qeemp 
+	     where qemgr = 'Clark'
+	     group by qemgr, qedept
+.format qe_div, qemgr, qedept
+.header report
+	.newline 2
+	.ce .pr "Report zaa14 on Table: qeemp" 
+	.nl 2
+	.U .RT qe_div .PR "qe_div" .LT qemgr .PR "qe_mgr" .LT qedept 
+	   .PR "qe_dept" 
+	.NOU
+	.newline 2
+.detail
+	.PR qe_div .T+15 .PR qemgr, qedept
+	.NL 2 
+!!
+? sreport SEPPARAMDB zaa14.rw 
+<<
+INGRES SREPORT -- Copyright (c) 1981, 1992 Ingres Corporation
+File 'zaa14.rw': Start of specifications for Report 'zaa14'.
+Adding specifications for report 'zaa14' to database 'septools'...
+>>
+? report SEPPARAMDB -fzaa14.out zaa14 
+<<
+INGRES REPORT -- Copyright (c) 1981, 1992 Ingres Corporation
+Reading report specifications and preparing query . . .
+Retrieving data . . .
+>>
+? type zaa14.out 
+<<
+
+
+         Report zaa14 on Table: qeemp
+
+       ______               ______    _______       qe_div               qe_mgr    -
+qe_dept
+
+            1               Clark     admin
+
+            2               Clark     sales
+
+
+>>
+<<
+
+
+         Report zaa14 on Table: qeemp
+
+       ______               ______    _______       qe_div               qe_mgr    -
+qe_dept
+
+            1               Clark     admin
+
+            2               Clark     sales
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+>>
+? delete zaa14.out 
+<<
+file was deleted
+>>
+? copyrep SEPPARAMDB zaa14a.out zaa14 
+<<
+INGRES COPYREP -- Copyright (c) 1984, 1992 Ingres Corporation
+Writing report 'zaa14' specs to file 'zaa14a.out'.
+>>
+? type zaa14a.out 
+<<
+
+/*
+**	Report: zaa14
+**
+**		Last Modified: 1992_03_06 21:50:30 gmt  
+*/
+
+.NAME	zaa14
+.SHORTREMARK	Testing query select distinct
+.QUERY
+	SELECT  qemgr, qedept, count (distinct qediv) as qe_div
+	FROM	qeemp
+	WHERE	qemgr = 'Clark'
+
+	group by qemgr, qedept
+
+.HEADER	report
+	.FORMAT qe_div,qemgr,qedept
+	.NEWLINE 2
+	.CE 
+	.PR "Report zaa14 on Table: qeemp"
+	.NL 2
+	.U 
+		.RT qe_div
+		.PR "qe_div"
+		.LT qemgr
+		.PR "qe_mgr"
+		.LT qedept
+		.PR "qe_dept"
+	.NOU 
+	.NEWLINE 2
+
+.DETAIL
+	.PR qe_div
+	.T +15
+	.PR qemgr,qedept
+	.NL 2
+
+
+>>
+? delete zaa14a.out 
+<<
+file was deleted
+>>
+? rbf -e SEPPARAMDB 
+<<
+
+%%     
+%% INGRES RBF -- Copyright (c) 1982, 1992 Ingres Corporation
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|RBF - Report Catalog                                                            |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Preview  Utilities  Go  >            |
+__________________________________________________________________________________
+@@
+>>
+^^ zaa14`ESC'
+<<
+
+%% MENU KEY selected
+
+%% CHANGED FIELD Name
+##
+__________________________________________________________________________________
+|RBF - Report Catalog                                                            |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |zaa14                   |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|_  Create  Destroy  Edit  Rename  MoreInfo  Preview  Utilities  Go  >            |
+__________________________________________________________________________________
+@@
+>>
+^^ go`CR'`ESC'
+<<
+
+%% MENU RESPONSE: Go
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Preview  Utilities  Go  >
+%% MENU AT POSITION `7' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `7' is "Go"
+
+%% Retrieving RBF Report catalogs . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|RBF - Report Catalog                                                            |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |zaa14                   |        |                                          | |
+| |+-----------------------------+  |                                          | |
+| ||Select a Destination         |  |                                          | |
+| ||-----------------------------|  |                                          | |
+| ||_Default|To the screen or file|  |                                          | |
+| ||Printer|To the printer       |  |                                          | |
+| ||File   |To a file            |  |                                          | |
+| |+-----------------------------+  |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ select`CR'`ESC'
+<<
+
+%%     ##
+__________________________________________________________________________________
+|                                Report Name: zaa14                              |
+|End of Output                                                         Line 1/20 |
+|_                                                                                |
+|                                                                                |
+|         Report zaa14 on Table: qeemp                                           |
+|                                                                                |
+|       qe_div               qe_mgr    qe_dept                                   |
+|       ------               ------    -------                                   |
+|                                                                                |
+|            1               Clark     admin                                     |
+|                                                                                |
+|            2               Clark     sales                                     |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|--------------------------------------------------------------------------------|
+|  Print  File  Help  End                                                        |
+__________________________________________________________________________________
+@@
+>>
+^^ end`CR'
+<<
+
+%% MENU RESPONSE: End
+%% MENU RESPONSE: Select
+%% MENU:   Select  Cancel  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "Select"
+
+%% Running report 'zaa14'. . .
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|RBF - Report Catalog                                                            |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Preview  Utilities  Go  >            |
+__________________________________________________________________________________
+@@
+>>
+^^ zaa14`ESC'
+<<
+
+%% MENU KEY selected
+
+%% CHANGED FIELD Name
+##
+__________________________________________________________________________________
+|RBF - Report Catalog                                                            |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |zaa14                   |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|_  Create  Destroy  Edit  Rename  MoreInfo  Preview  Utilities  Go  >            |
+__________________________________________________________________________________
+@@
+>>
+^^ util`CR'archive`CR'zaa14.arc`ESC'
+<<
+
+%% MENU RESPONSE: Utilities
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Preview  Utilities  Go  >
+%% MENU AT POSITION `6' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `6' is "Utilities"
+
+%% MENU RESPONSE: Archive
+%% MENU:   Archive  Help  End
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "Archive"
+
+%% Retrieving Report catalogs . . .
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|RBF - Report Catalog                                                            |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |zaa14                   |        |                                          | |
+| |+--------------------------------+                                          | |
+| ||RBF - Archiving a Report        |                                          | |
+| ||                                |                                          | |
+| ||Enter the file name to contain  |                                          | |
+| ||the archived report.            |                                          | |
+| ||                                |                                          | |
+| ||File name: _                     |                                          | |
+| |+--------------------------------+                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  OK  Cancel  Help                                                              |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+
+%% CHANGED FIELD File name:
+##
+__________________________________________________________________________________
+|RBF - Report Catalog                                                            |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |zaa14                   |        |                                          | |
+| |+--------------------------------+                                          | |
+| ||RBF - Archiving a Report        |                                          | |
+| ||                                |                                          | |
+| ||Enter the file name to contain  |                                          | |
+| ||the archived report.            |                                          | |
+| ||                                |                                          | |
+| ||File name: zaa14.arc            |                                          | |
+| |+--------------------------------+                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|_  OK  Cancel  Help                                                              |
+__________________________________________________________________________________
+@@
+>>
+^^ ok`CR'`ESC'
+<<
+
+%% MENU RESPONSE: OK
+%% MENU:   OK  Cancel  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "OK"
+
+%% Writing 'zaa14' to file 'zaa14.arc'. . .
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|RBF - Report Catalog                                                            |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Preview  Utilities  Go  >            |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ quit`CR'
+<<
+
+%% MENU RESPONSE: Quit
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Preview  Utilities  Go  >
+%% MENU AT POSITION `10' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `10' is "Quit"
+>>
+? type zaa14.arc 
+<<
+
+/*
+**	Report: zaa14
+**
+**		Last Modified: 1992_03_06 21:50:30 gmt  
+*/
+
+.NAME	zaa14
+.SHORTREMARK	Testing query select distinct
+.QUERY
+	SELECT  qemgr, qedept, count (distinct qediv) as qe_div
+	FROM	qeemp
+	WHERE	qemgr = 'Clark'
+
+	group by qemgr, qedept
+
+.HEADER	report
+	.FORMAT qe_div,qemgr,qedept
+	.NEWLINE 2
+	.CE 
+	.PR "Report zaa14 on Table: qeemp"
+	.NL 2
+	.U 
+		.RT qe_div
+		.PR "qe_div"
+		.LT qemgr
+		.PR "qe_mgr"
+		.LT qedept
+		.PR "qe_dept"
+	.NOU 
+	.NEWLINE 2
+
+.DETAIL
+	.PR qe_div
+	.T +15
+	.PR qemgr,qedept
+	.NL 2
+
+
+>>
+? delete zaa14.arc 
+<<
+file was deleted
+>>
+
+
+Ending at:  6-MAR-1992 14:14:56

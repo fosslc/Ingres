@@ -1,0 +1,43 @@
+//
+// MAINMFC.RC2 - resources Microsoft Visual C++ does not edit directly
+//
+
+#ifdef APSTUDIO_INVOKED
+	#error this file is not editable by Microsoft Visual C++
+#endif //APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Add manually edited resources here...
+
+/////////////////////////////////////////////////////////////////////////////
+
+/* History:
+**
+**  29-Jan-2003 (noifr01)
+**      (SIR 108139) changing the resources through the resource editor was
+**      losing a hand-edited section. Moved that section to the .rc2 file 
+**      (at a place that as already #ifndef'ed MAINWIN)
+*/ 
+
+#include <dlgs.h>
+
+#ifdef MAINWIN
+#define MAINLIB
+#define WIN32
+#define _WIN32
+#include "resource.h"   // "../../hdr/work/resource.h"
+#include "catospin.h"   // "../../hdr/work/catospin.h"
+#include "main.rc"      // "../../winmain/work/main.rc"
+#include "dbadlg1.rc"   // "../../winmain/work/dbadlg1.rc"
+
+#else
+
+#include "resource.h"
+#include "catospin.h"
+#include "main.rc"
+#include "dbadlg1.rc"
+
+#include "gv.rc"
+#endif
+

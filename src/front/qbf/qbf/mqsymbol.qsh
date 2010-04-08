@@ -1,0 +1,54 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+/**
+** Name:	mqstrings.qh -- string constants used by QBF.
+**
+** Description:
+**	This file declares string constants as global character arrays
+**	which may be referred to many times in the code while
+**	incurring storage in data space only once.  The character
+**	array variables themselves do not occupy space.  This
+**	technique is particularly effective for dealing with names
+**	of forms and fields which typically must be mentioned numerous
+**	times in Equel code.  It is also effective for error messages
+**	which may occur in several places.
+**
+** History:
+**	2-23-87 (peterk) - Created.
+**/
+
+EXEC SQL BEGIN DECLARE SECTION;
+## extern char	_abbr [];
+## extern char	_chgdisp [];
+## extern char	_col1 [];
+## extern char	_col2 [];
+## extern char	_form_type [];
+## extern char	_ii_joindefs [];
+## extern char	_ii_qbfnames [];
+## extern char	_iiqbfinfo [];
+## extern char	_mqbfjoin [];
+## extern char	_mqbfops [];
+## extern char	_mqbftbls [];
+## extern char	_mqchange [];
+## extern char	_mqcrjoin [];
+## extern char	_mqdops [];
+## extern char	_mqjdup [];
+## extern char	_mqnewjoin [];
+## extern char	_mquops [];
+## extern char	_qdefname [];
+## extern char	_qinfo1 [];
+## extern char	_qinfo2 [];
+## extern char	_qinfo3 [];
+## extern char	_qinfo4 [];
+## extern char	_qowner [];
+## extern char	_qtype [];
+## extern char	_role [];
+## extern char	_table [];
+## extern char	_tables [];
+## extern char	_tblfmt [];
+## extern char	_tbljoins [];
+## extern char	_titletotwid [];
+## extern char	_totwidth [];
+EXEC SQL END DECLARE SECTION;

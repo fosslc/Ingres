@@ -1,0 +1,14 @@
+#
+# Jamfile file for front!graphics!graf_unix_vms
+#
+
+SubDir ING_SRC front graphics graf_unix_vms ;
+
+IISUBSYS front graphics graf_unix_vms ;
+
+
+IILIBRARY GRAFLIB : mapview.qsc grnameok.qsc grclass.qsc
+	qryutil.c mapframe.c maperr.c mapdef.c mapaerr.c grstore.c
+	grrdfile.c grprofil.c grlgchk.c grencode.c grdfcmp.c grcoerce.c
+	graxdt1.c gr.c ;
+

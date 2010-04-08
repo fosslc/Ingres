@@ -1,0 +1,838 @@
+/*
+**	Copyright (c) 2009 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<me.h>
+exec sql include	<ui.sh>;
+# include	<adf.h>
+# include	<afe.h>
+# include	<ug.h>
+
+/**
+** Name:	feattacc.sc -	Attribute Information access a la cursor.
+**
+** Description:
+**	Presents a generalized cursor-like implementation for access to
+**	attribute information.  Since this is based on an EQUEL retrieve loop
+**	rather than a cursor, only one database access may be active at a time.
+**	Defines:
+**
+**	iiuiAttrInfo()	Allows access to attribute information through
+**			OPEN, FETCH, and CLOSE operations.
+**
+** History:
+**	Revision 6.4
+**	11/08/90 (emerson)
+**		Modify iiuiAttrInfo to bypass bug 33761.
+**
+**	Revision 6.3  90/04  wong
+**	Re-wrote as object interface and added 'attr_name' OPEN parameter.
+**	Also, replaced FE_ATT_SOURCE in FE_ATT_QBLK with FE_ATT_INFO and moved
+**	'FEatt_trnslt()' (load) logic here from "featt.qsc".
+**	19-apr-1990 (pete) Added support for 5 new columns that were added for
+**			version 6.3. These columns are selected from "iicolumns"
+**			into FE_ATT_SOURCE only when
+**			IIUIdcl_logkeys() is TRUE. New columns: sort_direction,
+**			column_internal_datatype, column_internal_length,
+**			column_internal_ingtype, column_system_maintained.
+**			This change built on the work Jon did on 4/18/90. 
+**			(jupbug 9355).
+**
+**	29-mar-1986 (rdesmond)
+**		first created for Jupiter release.
+**	18-aug-1988 (peter)
+**		update column names in catalogs for 6.1.
+**	11/19/88 (dkh) - Fixed to check correct nulli element for
+**			 the datatype and keysequence -> sequence
+**			 in order clause of second query.
+**	12/06/88 (dkh) - Changed to not due "end select" for "close" if
+**			 we completed retrieve loop.
+**	9/20/90 (teresal) - Added support for decimal data types. Precision
+**			 info is stored in FE_ATT_INFO external length,
+**			 scale is stored in FE_ATT_INFO scale.
+**	25-mar-91 (kirke)
+**		Removed register keyword from FE_ATT_SOURCE atti in
+**		iiuiAttrInfo().  register is meaningless here.
+**	10-oct-91 (seg)
+**		Changed "errno" to "errnum" to avoid naming conflict with
+**		c runtime library
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	14-Jan-2009 (kiria01) b120451
+**	    Added missing parameters to IIUIgdt_GetDefaultType() call
+**	    and added missing code for the identity support.
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for db objects, DB_IITYPE_LEN for iitypename() result
+**	25-Feb-2009 (drivi01)
+**	    Fixup nilli array to be of length 20. This change is 
+**	    related to change for bug 120451 in this file.
+**/
+
+/*{
+** Name:	iiuiAttrInfo() -  cursor-like access to attribute information.
+**
+** Description:
+**	This function presents a cursor-like abstraction to access attribute
+**	information. It is called in one of three modes: OPEN, FETCH
+**	or CLOSE.  When called in OPEN mode, a query must be specified.
+**	The query parameters are relation name, param target list, param
+**	address list, qualification and sort field(s).  When called in
+**	OPEN mode, the first tuple is returned.  For each call in FETCH
+**	mode, the next tuple is returned or, if the end of the set has been
+**	reached, a flag to that effect.  Note that the end-of-set flag
+**	can be set returned from the OPEN operation.
+**
+** Inputs:
+**	blk	{FE_ATT_QBLK *}  Attribute query block.
+**	mode	{nat}	The mode in which the function is to operate:
+**			{MODE_OPEN | MODE_FETCH | MODE_CLOSE }
+**	table_name	Name of table for which to retrieve attribute info.
+**	table_owner	Owner of table for which to retrieve attribute info.
+**	attr_name	{char *}  (Optional) name of attribute for which to
+**					fetch info.
+**
+** Outputs:
+**	blk	{FE_ATT_QBLK *}  Attribute query block.
+**		    .current_rec	{FE_ATT_SOURCE *}  structure in which to
+**						return the attribute info
+**		    .status	{STATUS} Status of query, also set before
+**			return; this field is significant only to this
+**			procedure and should not be interpreted external to it:
+**			{ STATUS_CLOSED | STATUS_OPEN | STATUS_DONE }
+** Returns:
+**	{STATUS}  OK			successful
+**		  E_UI0002_EOS		no more tuples in active set
+**		  E_UI0001_BLOCK_CLOSED	query block is not open (from status)
+**		  other			dbms error
+**
+** History:
+**	30-nov-1987 (rdesmond)
+**		first created for Jupiter release.
+**	02-dec-1987 (rdesmond)
+**		Put @ in before table_name and table_owner in where clause.
+**	05-jan-1988 (rdesmond)
+**		removed EQUEL range statement.
+**	20-jan-1988 (danielt)
+**		SQLized database access
+**	19-aug-1988 (peter)
+**		Update catalog column names for 6.1.
+**	27-dec-1988 (danielt)
+**		put back select of datatype string.
+**	01-mar-1989 (wolf)
+**		Add column_nulls to SELECT
+**	18-apr-1990 (jhw)  Rewrote.
+**	31-oct-1990 (jhw)  Process type, length check directly through ADF not
+**		'afe_ctychk()' since column scale cannot be used to determine
+**		whether the length and scale specify precision and scale for
+**		a decimal type.  Bug #34262.
+**	11/08/90 (emerson)
+**		Replace NULL or empty string in attr_name by a single-blank
+**		string; replace empty strings in WHERE clauses by a single-blank
+**		string.  (This provides a bypass for bug 33761).
+**	25-mar-91 (kirke)
+**		Removed register keyword from FE_ATT_SOURCE atti.
+**		register is meaningless in this case and causes an error
+**		on some platforms.
+**	10-oct-91 (seg)
+**		Changed "errno" to "errnum" to avoid naming conflict with
+**		c runtime library
+**	19-jul-93 (rogerl)
+**		Augment such that return value includes string default value.
+**		Change size of 'big_default' to DBMS mnemonic
+**      11-Nov-2008 (hanal04) Bug 110029
+**              In iiuiAttrInfo() initialise atti.big_default to be a NULL
+**              terminated string. Some selects from iicolumns will not
+**              assign a value leaving uninitialised values present. STcopy()
+**              will trash the stack if the buffer is not null terminated.
+*/
+EXEC SQL BEGIN DECLARE SECTION;
+typedef struct
+{
+	char    table_name[DB_MAXNAME + 1];
+	char    table_owner[DB_MAXNAME + 1];
+	char    column_name[DB_MAXNAME + 1];
+	char	column_datatype[DB_IITYPE_LEN + 1];
+	i4	column_length;
+	i4	column_scale;
+	char	column_nulls[2];
+	char	column_defaults[2];
+	i4	column_sequence;
+	i4	key_sequence;
+	char	sort_direction[2];
+	i2	column_ingdatatype;
+	char	column_internal_datatype[DB_IITYPE_LEN + 1];
+	i2	column_internal_length;
+	i2	column_internal_ingtype;
+	char	column_system_maintained[2];
+	char    column_has_default[2];
+	/* NEED TO change to something smaller once using left(20,default) */
+	char    big_default[ DB_MAX_COLUMN_DEFAULT_LENGTH + 1 ];
+	char	always_ident[2];
+	char	bydefault_ident[2];
+} FE_ATT_SOURCE;
+EXEC SQL END DECLARE SECTION;
+ 
+
+DB_STATUS
+iiuiAttrInfo ( blk, mode, table_name, table_owner, attr_name )
+register FE_ATT_QBLK	*blk;
+i4			mode;
+EXEC SQL BEGIN DECLARE SECTION;
+char			*table_name;
+char			*table_owner;
+char			*attr_name;
+EXEC SQL END DECLARE SECTION;
+{
+	STATUS			errnum;
+	EXEC SQL BEGIN DECLARE SECTION;
+	FE_ATT_SOURCE	atti;
+	i2			nulli[20];
+	EXEC SQL END DECLARE SECTION;
+
+        /* NULL terminate big_default. Some selects leave the uninitiatlised
+        ** value present and allow STcopy() to trash the stack.
+        */
+        atti.big_default[0] = EOS;
+/*
+** This function must break into and out of the fetch loop in an
+** unorthodox manner; however, it works.
+*/
+
+	switch(mode)
+	{
+	  case MODE_FETCH:
+		if ( blk->status == STATUS_DONE )
+		    return E_UI0002_EOS;	/* No more records */
+		if ( blk->status == STATUS_CLOSED )
+		    return E_UI0001_BLOCK_CLOSED;	/* illegal request */
+		/* 
+		** Okay. This gets tricky. In the begining, (6.2 and
+		** earlier), iicolumns was defined and unchanging. Logical keys
+		** were introduced in 6.3, and iicolumns changed. This meant
+		** that seperate queries had to be issued; 6.2 query which
+		** excluded logical key info, and the 6.3 query which included
+		** it. In order to keep the same processing (after the "process"
+		** goto), the _62compat and _63compat gotos were introduced. The
+		** _62compat goto sets the null indicators for those fields
+		** which support logical keys in 63 but don't exist in 62 (thus
+		** making it "look" like the columns exist, but are just NULL).
+		** 
+		** The same thing happends in 6.5, as iicolumns expands to
+		** support user defined defaults. Now, the _62compat goto has to
+		** set the null indicators for the logical keys columns AND the 
+		** user-defined default columns; the _63compat goto has to set
+		** the nulli's for just the user-defined columns; and the
+		** _65compat goto doesn't have to do anything, since its query
+		** includes them all.
+		** 
+		** Whew. Hey, don't blame me, it was "rewritten" in 1990.
+		*/
+		
+		if ( !IIUIdcl_logkeys() )
+		{
+			goto _62compat;
+		}
+		else if (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_65) < 0)
+		{
+			goto _63compat;
+		}
+		else 
+		{
+			goto _65compat;
+		}
+		/*NOT REACHED*/
+	  case MODE_OPEN:
+                /* set name of relation */
+                STcopy(table_name, blk->current_rec.table_name);
+                /* set owner of relation */
+                STcopy(table_owner, blk->current_rec.owner);
+
+		if ( attr_name == NULL || attr_name[0] == EOS )
+			attr_name = ERx(" ");
+		if ( !IIUIdcl_logkeys() )
+		{ /* 6.2 and prior compatibility */
+			/* EXEC SQL DECLARE iiatt_fetch CURSOR FOR ... */
+			EXEC SQL REPEATED SELECT
+					column_name,
+					column_datatype,
+					column_length,
+			 		column_scale,
+					column_nulls,
+					column_defaults,
+					column_sequence,
+					key_sequence,
+					sort_direction,
+					column_ingdatatype
+				INTO
+					:atti.column_name:nulli[2],
+					:atti.column_datatype:nulli[3],
+					:atti.column_length:nulli[4],
+					:atti.column_scale:nulli[5],
+					:atti.column_nulls:nulli[6],
+					:atti.column_defaults:nulli[7],
+					:atti.column_sequence:nulli[8],
+					:atti.key_sequence:nulli[9],
+					:atti.sort_direction:nulli[10],
+					:atti.column_ingdatatype:nulli[11]
+				FROM iicolumns
+				WHERE table_name = :table_name
+					AND table_owner = :table_owner
+					AND ( :attr_name = ' '
+						OR column_name = :attr_name )
+				ORDER BY column_sequence;
+			EXEC SQL BEGIN;
+			/* EXEC SQL OPEN ii_attfetch FOR READONLY; */
+			blk->status = STATUS_OPEN;
+			/*
+			** Set these to DB_EMB_NULL. This will clue us in 
+			** later that we don't have the values from the 
+			** database because they're not supported in this 
+			** version
+			*/
+			nulli[12] = nulli[13] = nulli[14] = nulli[15] =
+		 	    nulli[16] = nulli[17] = nulli[18] = nulli[19] =
+				DB_EMB_NULL;
+			goto process;
+		_62compat:
+			nulli[12] = nulli[13] = nulli[14] = nulli[15] =
+		 	    nulli[16] = nulli[17] = nulli[18] = nulli[19] = 
+				DB_EMB_NULL;
+			EXEC SQL END;
+		}
+		else if (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_65) < 0)
+		{ /* logical key support, but before 6.5 */
+			/* EXEC SQL DECLARE iiatt_fetch CURSOR FOR ... */
+			EXEC SQL REPEATED SELECT
+					column_name,
+					column_datatype,
+					column_length,
+			 		column_scale,
+					column_nulls,
+					column_defaults,
+					column_sequence,
+					key_sequence,
+                        		sort_direction,
+					column_ingdatatype,
+		                        column_internal_datatype,
+               				column_internal_length,
+                       			column_internal_ingtype,
+		                        column_system_maintained
+				INTO
+					:atti.column_name:nulli[2],
+					:atti.column_datatype:nulli[3],
+					:atti.column_length:nulli[4],
+					:atti.column_scale:nulli[5],
+					:atti.column_nulls:nulli[6],
+					:atti.column_defaults:nulli[7],
+					:atti.column_sequence:nulli[8],
+					:atti.key_sequence:nulli[9],
+					:atti.sort_direction:nulli[10],
+					:atti.column_ingdatatype:nulli[11],
+					:atti.column_internal_datatype:nulli[12],
+					:atti.column_internal_length:nulli[13],
+					:atti.column_internal_ingtype:nulli[14],
+					:atti.column_system_maintained:nulli[15]
+				FROM iicolumns
+				WHERE table_name = :table_name
+					AND table_owner = :table_owner
+					AND ( :attr_name = ' '
+						OR column_name = :attr_name )
+				ORDER BY column_sequence;
+			EXEC SQL BEGIN;
+				/* EXEC SQL OPEN ii_attfetch FOR READONLY; */
+				blk->status = STATUS_OPEN;
+		 		nulli[16] = nulli[17] = nulli[18] = nulli[19] = DB_EMB_NULL;
+				goto process;
+		_63compat:
+		 	nulli[16] = nulli[17] = nulli[18] = nulli[19] = 
+				DB_EMB_NULL;
+			EXEC SQL END;
+		} /* end 63 & 64 support */
+		else	/* 6.5 supports user-defined defaults AND logkeys */
+		{
+                        EXEC SQL REPEATED 
+			SELECT	
+				column_name,
+                                column_datatype,
+                                column_length,
+                                column_scale,
+                                column_nulls,
+                                column_defaults,
+                                column_sequence,
+                                key_sequence,
+                                sort_direction,
+                                column_ingdatatype,
+                                column_internal_datatype,
+                                column_internal_length,
+                                column_internal_ingtype,
+                                column_system_maintained,
+/* NEW */                       column_has_default,
+/* NEW */                       column_default_val,
+				column_always_ident,
+				column_bydefault_ident
+                        INTO    
+				:atti.column_name:nulli[2],
+                                :atti.column_datatype:nulli[3],
+                                :atti.column_length:nulli[4],
+                                :atti.column_scale:nulli[5],
+                                :atti.column_nulls:nulli[6],
+                                :atti.column_defaults:nulli[7],
+                                :atti.column_sequence:nulli[8],
+                                :atti.key_sequence:nulli[9],
+                                :atti.sort_direction:nulli[10],
+                                :atti.column_ingdatatype:nulli[11],
+                                :atti.column_internal_datatype:nulli[12],
+                                :atti.column_internal_length:nulli[13],
+                                :atti.column_internal_ingtype:nulli[14],
+                                :atti.column_system_maintained:nulli[15],
+/* NEW */                       :atti.column_has_default:nulli[16],
+/* NEW */                       :atti.big_default:nulli[17],
+				:atti.always_ident:nulli[18],
+				:atti.bydefault_ident:nulli[19]
+                        FROM iicolumns
+
+                        WHERE 	table_name = :table_name
+                        AND table_owner = :table_owner
+                        AND ( :attr_name = ' ' OR column_name = :attr_name )
+
+                        ORDER BY column_sequence;
+
+                        EXEC SQL BEGIN;
+                        /* EXEC SQL OPEN ii_attfetch FOR READONLY; */
+                        blk->status = STATUS_OPEN;
+
+                        goto process;
+		_65compat:
+			;
+			EXEC SQL END;
+		} /* end 6.5 support */
+		if ( (errnum = FEinqerr()) != OK )
+			blk->status = STATUS_CLOSED;	/* closed on error */
+		else if ( blk->status != STATUS_CLOSED )
+		{ /* No more records */
+			blk->status = STATUS_DONE;
+			return E_UI0002_EOS;
+		}
+		return errnum;
+	  process:
+	  {
+		register FE_ATT_INFO	*info = &blk->current_rec;
+		ADF_CB			*cb;
+		DB_DATA_VALUE		dbvalue;
+		DB_DATA_VALUE		dblength;
+
+		ADF_CB	*FEadfcb();
+
+		/* EXEC SQL FETCH iiatt_fetch INTO ... */
+		if ( nulli[2] == DB_EMB_NULL )
+			*info->column_name = EOS;
+		else
+		{
+			_VOID_ STtrmwhite(atti.column_name);
+			STcopy(atti.column_name, info->column_name);
+		}
+		info->extern_length =
+			( nulli[4] == DB_EMB_NULL ) ? 0 : atti.column_length;
+		info->scale = nulli[5] == DB_EMB_NULL ? 0 : atti.column_scale;
+
+		/*
+		** 'column_ingdatatype' is ALWAYS -1 for Gateways.  Therefore,
+		** the assignment to 'info->nulls' cannot depend on the data-
+		** type as for INGRES, but must be done differently where this
+		** is true.
+		*/
+		cb = FEadfcb();
+		if ( nulli[11] == DB_EMB_NULL || atti.column_ingdatatype == -1 )
+		{ /* gateways */
+			ADI_DT_NAME	tname;
+
+			info->nulls =
+				(bool)( nulli[6] != DB_EMB_NULL
+						&& atti.column_nulls[0] == 'Y');
+
+			if ( nulli[3] == DB_EMB_NULL )
+			{ /* shouldn't happen */
+				*atti.column_datatype = EOS;
+				*tname.adi_dtname = EOS;
+			}
+			else
+			{
+				if ( STtrmwhite(atti.column_datatype) <= 0 )
+					*info->type = EOS;
+				else
+				{
+					STcopy(atti.column_datatype,info->type);
+					CVlower(atti.column_datatype);
+				}
+				STlcopy( atti.column_datatype, tname.adi_dtname,
+						DB_MAXNAME-1
+				);
+			}
+ 
+			/* determine datatype */
+			if (adi_tyid(cb, &tname, &(dbvalue.db_datatype)) != OK)
+			{
+				FEafeerr(cb);
+				return FAIL;
+			}
+			if ( info->nulls )
+				AFE_MKNULL(&dbvalue);
+
+			info->adf_type = dbvalue.db_datatype;
+		}
+		else
+		{ /* INGRES DBMS */
+			info->adf_type = atti.column_ingdatatype;
+			info->nulls = (bool)AFE_NULLABLE(info->adf_type);
+			info->defaults = (bool)(atti.column_defaults[0] == 'Y');
+
+			dbvalue.db_datatype = info->adf_type;
+		}
+
+		/* determine internal length, etc. */
+		if ( AFE_DATATYPE(&dbvalue) != DB_DEC_TYPE )
+		{
+			dbvalue.db_length = info->extern_length;
+			dbvalue.db_prec = 0;
+		}
+		else
+		{ /* decimal type */
+			dbvalue.db_length =
+				DB_PREC_TO_LEN_MACRO(info->extern_length);
+			dbvalue.db_prec =
+			   DB_PS_ENCODE_MACRO(info->extern_length, info->scale);
+		}
+		if ( adc_lenchk(cb, TRUE, &dbvalue, &dblength) != OK )
+		{
+			FEafeerr(cb);
+			return;
+		}
+		info->intern_length = dblength.db_length;
+		info->intern_prec = dblength.db_prec;
+
+		info->seq = ( nulli[8] == DB_EMB_NULL )
+				? 0 : atti.column_sequence;
+		info->keyseq = ( nulli[9] == DB_EMB_NULL )
+					? 0 : atti.key_sequence;
+		if ( nulli[10] == DB_EMB_NULL )
+			*info->sort_direction = EOS;
+		else
+			STcopy(atti.sort_direction, info->sort_direction);
+		if ( nulli[12] == DB_EMB_NULL )
+			*info->column_internal_datatype = EOS;
+		else
+		{
+			_VOID_ STtrmwhite(atti.column_internal_datatype);
+			STcopy( atti.column_internal_datatype,
+				info->column_internal_datatype
+			);
+		}
+		info->column_internal_length =
+			( nulli[13] == DB_EMB_NULL )
+					? 0 : atti.column_internal_length;
+		info->column_internal_ingtype =
+			( nulli[14] == DB_EMB_NULL )
+				? 0 : atti.column_internal_ingtype;
+		if ( nulli[15] == DB_EMB_NULL )
+			*info->column_system_maintained = EOS;
+		else
+		{
+			STcopy( atti.column_system_maintained,
+				info->column_system_maintained
+			);
+		}
+
+		/*
+		** nulli[16] and nulli[17] are for column_has_default, and
+		** default_type, respectively, introduced in 6.5. If they
+		** are DB_EMB_NULL, it means that we're running in an older
+		** database, which does not support this stuff yet
+		*/
+		if ( nulli[16] == DB_EMB_NULL)
+		{
+			*info->column_has_default = EOS;
+		}
+		else
+		{
+                        STcopy(atti.column_has_default, 
+					info->column_has_default);
+		}
+		if (nulli[18] == DB_EMB_NULL)
+		    atti.always_ident[0] = 'N';
+		if (nulli[19] == DB_EMB_NULL)
+		    atti.bydefault_ident[0] = 'N';
+		/*
+		** This is fun. The actually default value CAN be NULL! It
+		** only doesn't exist then if both column_has_default AND 
+		** default value are null. Only then, similar to the context of 
+		** DB_EMB_NULL, above, can we safely set default_type to EOS.
+		** Otherwise, call the routine to figure it all out!
+		*/
+		/* either set output default value to EOS or to the actual
+		** default value.  all this other stuff serves to tell the
+		** caller whether there should or shouldn't be a default -
+		*/
+		if ((nulli[17] == DB_EMB_NULL) && (nulli[16] == DB_EMB_NULL))
+		{
+			*info->default_type = EOS;
+			atti.big_default[0] = EOS;
+		}
+		else
+		{
+                        IIUIgdt_GetDefaultType(atti.big_default,
+				nulli[17],
+                                atti.column_has_default,
+				atti.column_nulls,
+                                info->default_type,
+                                atti.always_ident,
+                                atti.bydefault_ident);
+
+			    /* and snag the value so we can use it in caller
+			    ** if necessary
+			    */
+			STcopy(atti.big_default, info->default_value);
+		}
+
+		break;
+	  }
+ 
+	  case MODE_CLOSE:
+		if ( blk->status == STATUS_OPEN )
+		{
+			IIbreak();
+		}
+		blk->status = STATUS_CLOSED;
+		return OK;
+	} /* end switch */
+
+	return OK;
+}
+
+
+/*
+** Name: IIUIgdt_GetDefaultType     -- get the default type 
+**
+** Description:
+**	This routine gets the 10 character default string used for
+** display in the terminal monitor and tables utility when describing a
+** column. Previous to 6.5 this could be either "yes", "no", or "n/a" (for
+** gateways); 6.5 introduces user-defined defaults, and the values "user",
+** "null", and "value" (for those user-defined default values).
+**
+** Given the following create table statement:
+** 
+** create table demo_defaults_ooh_boy (
+**         nnone int not  null,
+**         nnot  int not  null not  default,
+**         nwith int not  null with default,
+**         nw_ch varchar(8) not  null with default,
+**         ynone int with null,
+**	   plain int,
+**         ynot  int with null not  default,
+**         ywith int with null with default,
+**         yw_ch int with null with default,
+**	   zip   int default null,
+**	   who default user,
+**	   title default '''Member of Technical Staff'''))
+**
+** Here is what would be stored in IICOLUMNS, and the generated DEFAULT TYPE:
+** 
+** +-------------+------+-----------+---------------------------+------------+
+** |column_name  |nulls |has_default|column_default_val         |DEFAULT TYPE|
+** +-------------+------+-----------+---------------------------+------------+
+** |nnone        |N     |U          |    <null value>           | no         |
+** |nnot         |N     |Y          |    <null value>           | no         |
+** |nwith        |N     |N          |0                          | yes        |
+** |nw_ch        |N     |N          |' '                        | yes        |
+** |ynone        |Y     |U          |    <null value>           | null       |
+** |plain        |Y     |U          |    <null value>           | null       |
+** |ynot         |Y     |Y          |    <null value>           | no         |
+** |ywith        |Y     |N          |0                          | yes        |
+** |yw_ch        |Y     |N          |' '                        | yes        |
+** |zip          |Y     |N          |NULL                       | null       |
+** |who          |Y     |N          |USER                       | user       |
+** |title        |Y     |N          |'Member of Technical Staff'| value      |
+** +-------------+------+-----------+---------------------------+------------+
+** 
+** Inputs:
+**	source		{char  *} Actual source of the default value
+**			itself (direct from the database). Once working, 
+**			this won't be a 1500 byte buffer, but a smaller, 
+**			20 character field returned to us by that nifty 
+**			left(string,20) dbms function.
+**
+**	nullind 	{nat} Standard null inicator; this one's for the
+**			default value source string. Needed 'cause sometimes
+**			the default value is the null value, which takes on
+**			its own semantics (as defined by ANSI).
+**
+**	has_default	{char[2]} Two character field direct from the
+**			database. Either 'Y', 'N', 'U', or ' ' (gateway)
+**	nulls		{char[2]} Two character field direct from the
+**			database. Either 'Y' or 'N'
+**	default_type	{char  *} Pointer to a buffer to put the 10
+**			character default type. 
+**	always_ident	{char[1]} One char field direct from the database.
+**			Either 'Y' or 'N' (or maybe nothing).
+**	bydefault_ident	{char[1]} One char field direct from the database.
+**			Either 'Y' or 'N' (or maybe nothing).
+** Outputs:
+**	default_type	{char  *} The actual default type. For the initial 
+**			6.5 release, possible strings are:
+**				yes no user value null n/a
+** Returns:
+**	None.
+**
+** History:
+**	12-dec-1992 (daver)
+**		First written.
+**	11-jan-1992 (daver)
+**		Changed mandatory to has_default, and the semantics
+**		which follow, as the LRC feels it is clearer, and they 
+**		always know best.
+**	13-nov-2008 (dougi)
+**	    Add support for sequence defaults and identity columns.
+*/
+VOID
+IIUIgdt_GetDefaultType(	char	*source,
+			i4	nullind,
+			char	*has_default,
+			char	*nulls,
+			char	*default_type,
+			char	*always_ident,
+			char	*bydefault_ident)
+{
+	char	temp[21];
+	bool	seq_default = FALSE;
+
+	/*
+	** This won't be necessary once the left(20,string) function from the
+	** DBMS really only returns 20 characters!
+	*/
+	STlcopy(source,temp,20);
+
+	/* Is default literal "next value for"? */
+	if (MEcmp(temp, "next value for", 14) == 0)
+	    seq_default = TRUE;
+	/* null value in default_type */
+	if (nullind == DB_EMB_NULL)
+	{
+		if (nulls[0] == 'Y')
+		{
+			/*
+			** ANSI forces us to define the "default" case
+			** this way.
+			** e.g.: create table t (col1 integer )
+			*/
+			if (has_default[0] == 'U') 
+			{
+				/*  "  null  "  */
+				STcopy(ERget(F_UI0006_Null), default_type);
+			}
+			/*
+			** Must supply a value to the column in an insert
+			** statement, but it could be the NULL value
+			** create table t (c integer WITH NULL NOT DEFAULT)
+			*/
+			else if (has_default[0] == 'N')
+			{
+				/*   "    no  "  */
+				STcopy(ERget(F_UI0005_No), default_type);
+			}
+			/*
+			** Anything else got put in by a gateway which can't
+			** determine defaults, or is an impossible condition
+			*/
+			else
+			{
+				/*   "   n/a  "  */
+				STcopy(ERget(F_UI0009_N_A), default_type);
+			}
+		}
+		else if (nulls[0] == 'N') 
+		{
+			/*
+			** This is the only case that should show up if
+			** nulls is N. Has_default is N if:
+			**   create table t (c integer NOT NULL NOT DEFAULT)
+			** and if U if:
+			**   create table t (c integer NOT NULL)
+			** in either case, set defaults to "no"
+			*/
+			if ((has_default[0] == 'N') || (has_default[0] == 'U'))
+			{
+				/*   "    no  "  */
+				STcopy(ERget(F_UI0005_No), default_type);
+			}
+			/*
+			** Anything else got put in by a gateway which can't
+			** determine defaults, or is an impossible condition
+			*/
+			else
+			{
+				/*   "   n/a  "  */
+				STcopy(ERget(F_UI0009_N_A), default_type);
+			}
+		} /* end else nulls = N */
+	} /* end if len == 0, indicating a null value in default_type */
+
+	/* identity column */
+	else if (always_ident[0] == 'Y' || bydefault_ident[0] == 'Y')
+	{
+		/*  "identity"  */
+		STcopy(ERget(F_UI000A_Ident), default_type);
+	}
+
+	/* plain ol' sequence default */
+	else if (seq_default)
+	{
+		/*  "sequence"  */
+		STcopy(ERget(F_UI000B_Seq), default_type);
+	}
+		
+	/* create table t (col1 varchar(40) DEFAULT USER ) */
+	else if (STequal(temp, "CURRENT_USER"))
+	{
+		/*  "  user  "  */
+		STcopy(ERget(F_UI0007_User), default_type);
+	}
+	/* create table t (col1 varchar(40) DEFAULT NULL ) */
+	else if (STequal(temp, "NULL"))
+	{
+		/*  "  null  "  */
+		STcopy(ERget(F_UI0006_Null), default_type);
+	}
+	/* these are the ingres defaults, previously noted as "yes" ;
+	** 0 is for an integer field, blank for a character...
+	**   create table t (col1 integer WITH DEFAULT, 
+	**                   col2 varchar(20) WITH DEFAULT)
+	*/
+	else if ( STequal(temp, "0") || STequal(temp,"' '") )
+	{
+		/*    "   yes  "  */
+		STcopy(ERget(F_UI0004_Yes), default_type);
+	}
+	/* Put other defaults here as they come in. For now, this is
+	** it. SYSTEM_USER, INITIAL_USER, DATETIME, etc, will all go
+	** here someday. But for now, if its not one of the above, 
+	** its gotta be a user-defined default!
+	**  create table t (title varchar(20) DEFAULT "Member of Tech Staff")
+	*/
+	else
+	{
+		/*   " value  "  */
+		STcopy(ERget(F_UI0008_Value), default_type);
+	}
+}

@@ -1,0 +1,22 @@
+#
+# YAM file for front!embed
+#
+
+
+IIINCLUDE front embed ada ;
+IIINCLUDE front embed adasq ;
+IIINCLUDE front embed c ;
+IIINCLUDE front embed cobol ;
+IIINCLUDE front embed cobolsq ;
+IIINCLUDE front embed copy ;
+IIINCLUDE front embed csq ;
+IIINCLUDE front embed dclgen ;
+IIINCLUDE front embed equel ;
+IIINCLUDE front embed fortran ;
+IIINCLUDE front embed fortransq ;
+IIINCLUDE front embed hdr ;
+IIINCLUDE front embed libq ;
+IIINCLUDE front embed libqgca ;
+IIINCLUDE front embed libqxa ;
+IIINCLUDE front embed raat ;
+IIINCLUDE front embed sqlca ;

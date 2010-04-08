@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  Specifies that the created process be a detached process and
+  assigns it a user identification code (UIC).  Specify the UIC by
+  using standard UIC format.

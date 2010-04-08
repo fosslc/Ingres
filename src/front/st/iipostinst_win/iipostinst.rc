@@ -1,0 +1,495 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\iipostinst.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_POSTINSTALLATION DIALOGEX 0, 0, 328, 190
+STYLE DS_ABSALIGN | DS_SETFONT | DS_MODALFRAME | DS_SETFOREGROUND | 
+    DS_CENTER | WS_CHILD | WS_CAPTION
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    LTEXT           "Please wait while the Ingres installation is completed...",
+                    IDC_MSG,117,9,176,8,0,WS_EX_TRANSPARENT
+    CONTROL         "Animate1",IDC_ANIMATE1,"SysAnimate32",ACS_TRANSPARENT | 
+                    ACS_AUTOPLAY,298,1,30,12
+    LTEXT           "",IDC_OUTPUT,120,27,208,157,0,WS_EX_STATICEDGE
+    LTEXT           "Click Next to complete the Ingres installation.",IDC_MSG2,117,
+                    9,176,8,NOT WS_VISIBLE,WS_EX_TRANSPARENT
+END
+
+IDD_WAIT_DIALOG DIALOGEX 0, 0, 214, 58
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Ingres Intelligent Database"
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_CENTER | 
+                    ACS_TRANSPARENT | ACS_AUTOPLAY | WS_TABSTOP,4,7,42,44
+    LTEXT           "Configuring Ingres...",IDC_TEXT,55,20,135,8
+END
+
+IDD_SUMMARY DIALOGEX 0, 0, 327, 190
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+EXSTYLE WS_EX_TRANSPARENT | WS_EX_CLIENTEDGE
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    LTEXT           "Ingres Installation Completed",
+                    IDC_SUMMARY_TITLE1,116,4,165,28,0,WS_EX_TRANSPARENT
+    LTEXT           "Ingres has been successfully installed. Click Finish to exit the installation wizard. ",
+                    IDC_STATIC_SUCCESS,116,45,167,22,0,WS_EX_TRANSPARENT
+    LTEXT           "102",IDC_IMAGE1,275,6,52,39,0,WS_EX_TRANSPARENT
+    GROUPBOX        "",IDC_STATIC_GROUPBOX,116,63,218,109,0,
+                    WS_EX_TRANSPARENT
+    LTEXT           "Installation Summary:",IDC_SUMMARY_TITLE2,120,70,118,10,
+                    0,WS_EX_TRANSPARENT
+    LTEXT           "Ingres installation location:",IDC_STATIC_LOCTITLE,120,
+                    81,131,9,0,WS_EX_TRANSPARENT
+    LTEXT           "C:\\Program Files\\Ingres\\IngresII",IDC_STATIC_PATH,
+                    120,91,163,9,0,WS_EX_TRANSPARENT
+    LTEXT           "Instance Name:   Ingres",IDC_STATIC_ID_TITLE,120,101,82,
+                    9,0,WS_EX_TRANSPARENT
+    LTEXT           "An Ingres installation is called an ""instance"" and is identified  with a static string ""Ingres"" followed by a two-character code. An instance consists of the selected product components installed in a unique location on your computer.",
+                    IDC_STATIC_BLOCK,120,120,210,34,WS_DISABLED,
+                    WS_EX_TRANSPARENT
+    CONTROL         "Run Ingres Launch Pad",IDC_LAUNCH_PAD,"Button",
+                    BS_AUTOCHECKBOX | BS_FLAT | NOT WS_VISIBLE | WS_TABSTOP,
+                    116,175,90,12,WS_EX_TRANSPARENT
+    PUSHBUTTON      "IDB_BITMAP_INFO",IDC_BUTTON_INFO,211,176,14,11,
+                    BS_BITMAP | NOT WS_VISIBLE
+    LTEXT           "II",IDC_STATIC_ID,202,101,29,9,0,WS_EX_TRANSPARENT
+    LTEXT           "More than one instance of Ingres can be installed on the machine as long as each has a unique instance code.",
+                    IDC_STATIC_BLOCK2,120,152,210,18,WS_DISABLED,
+                    WS_EX_TRANSPARENT
+    CONTROL         "",IDC_RICHEDIT_SUMMARY,"RichEdit20A",ES_MULTILINE | 
+                    ES_READONLY | NOT WS_VISIBLE | WS_BORDER | WS_VSCROLL,
+                    116,75,210,96
+    LTEXT           "Installation wizard has encountered a problem during configuration.  Click Finish to exit the wizard.",
+                    IDC_STATIC_ERROR,116,46,210,20,NOT WS_VISIBLE
+    LTEXT           "Ingres installation failed",
+                    IDC_SUMMARY_TITLE_FAILED,116,4,165,13,NOT WS_VISIBLE
+    LTEXT           "104",IDC_IMAGE2,286,6,41,31,NOT WS_VISIBLE
+    LTEXT           "User databases were upgraded",IDC_STATIC_UDBUPGRADED,
+                    120,110,164,9,0,WS_EX_TRANSPARENT
+    LTEXT           "User databases were not upgraded",
+                    IDC_STATIC_UDBUPGRADED2,120,110,164,9,0,
+                    WS_EX_TRANSPARENT
+END
+
+IDD_DIALOG_INFO DIALOGEX 0, 0, 293, 169
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Launch Pad Information"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Launch Pad",IDC_STATIC,7,7,279,153
+    CONTROL         177,IDC_LAUNCH_PAD,"Static",SS_BITMAP,83,15,197,126
+    LTEXT           "Launch Pad is intended to provide guidance to novice and experienced users in completing their tasks. It will guide you through the steps required to complete a task.",
+                    IDC_STATIC,14,20,65,104
+    PUSHBUTTON      "Done",IDC_BUTTON1,236,146,50,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+100                     BITMAP                  "res\\ingsplash.bmp"
+101                     BITMAP                  "res\\Block01.bmp"
+102                     BITMAP                  "res\\success.bmp"
+IDB_BITMAP_INFO         BITMAP                  "res\\infoblue.bmp"
+IDB_BITMAP_LAUNCHPAD    BITMAP                  "res\\launchpad.bmp"
+104                     BITMAP                  "res\\failed.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_POSTINSTALLATION, DIALOG
+    BEGIN
+        RIGHTMARGIN, 326
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 189
+    END
+
+    IDD_WAIT_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 207
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 51
+    END
+
+    IDD_SUMMARY, DIALOG
+    BEGIN
+        RIGHTMARGIN, 326
+    END
+
+    IDD_DIALOG_INFO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 286
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 160
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\iipostinst.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_CLOCK_AVI           AVI                     "res\\clock.avi"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_TITLE               "Ingres %s Configuration"
+    IDS_AREYOUSURE          "Are you sure you want to exit?"
+    IDS_DELETE20DATABASEFOLDER "OpenIngres 2.0 Database"
+    IDS_DELETE20NETWORKINGFOLDER "OpenIngres 2.0 Networking"
+    IDS_DELETE20TOOLSFOLDER "OpenIngres 2.0 Tools"
+    IDS_READRNS             "Would you like to read the README now?"
+    IDS_DELETE20OPENROADFOLDER "OpenIngres 2.0 OpenROAD"
+    IDS_DELETE12DATABASEFOLDER "CA-OpenIngres 1.2 Database"
+    IDS_DELETE12NETWORKINGFOLDER "CA-OpenIngres 1.2 Networking"
+    IDS_DELETE12TOOLSFOLDER "CA-OpenIngres 1.2 Tools"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ADDOSUER            "Creating an OS user '%s' (password '%s')... \t"
+    IDS_APACHEINSTALLED     "This machine already has a copy of Apache HTTP Server installed. Therefore, in order to use the Ingres/ICE demos, the following line must added to your httpd.conf file: \n\t%s\nPlease make sure to restart Apache HTTP Server after this change."
+    IDS_OPENPORTAL          "Opening CleverPath Portal Demonstration Page...\t"
+    IDS_DOWNLOAD_NONENG_ADOBE 
+                            "Please obtain the correct version of the Adobe Acrobat Reader from http://www.adobe.com."
+    IDS_APACHEINSTALLED2    "You have chosen Apache HTTP Server, in order to use the Ingres/ICE demos, the following line must added to your httpd.conf file: \n\t%s\nPlease make sure to restart Apache HTTP Server after this change."
+    IDS_DATEFORMATS         "Ingres Setup Wizard Log File.\r\nInstallation completed on: %A, %B %d, %Y - %H:%M:%S"
+    IDS_DATEFORMATF         "Ingres Setup Wizard Log File.\r\nInstallation failed on: %A, %B %d, %Y - %H:%M:%S"
+    IDS_INSTALLJRE          "Installing Java Runtime...\t\t\t\t"
+    IDS_INSTALL_ENG_ACROBAT "The locale setting of the target machine does not match the language version of the Adobe Acrobat Reader packaged with this version of Ingres. Do you want to install it anyway?"
+    IDS_LOADDEMODB          "Loading Demonstration Database Data...\t"
+    IDS_SUCCEEDED2          "Ingres installation complete!"
+    IDS_TITLE_DBA           "Ingres DBA Tools %s Configuration"
+    IDS_ADDING_VNODES	    "Adding Virtual Nodes...\t\t"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_DELETE12OPENROADFOLDER "[DeleteGroup(""CA-OpenIngres 1.2 OpenROAD"")]"
+    IDS_REMOVE_FOLDERS      "Removing existing Ingres folders...\t\t"
+    IDS_SUCCEEDED           "Ingres %s installation complete."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_PROBLEMS            "There were some problems during installation.\nYou may have to reinstall Ingres.\nPlease read the file %s\\ingres\\files\\install.log for more information.\n\nDo you want to read this file now ?"
+    IDS_DONE                "\tDone\n"
+    IDS_FAILED              "\tFailed\n"
+    IDS_SETTINGCONF         "Setting Ingres Configuration...\t\t"
+    IDS_STARTINGSERVER      "Starting Ingres...\t\t\t\t"
+    IDS_STOPPINGSERVER      "Stopping Ingres...\t\t\t"
+    IDS_SPACE               "Size"
+    IDS_DISK                "Drive"
+    IDS_TYPE                "Type"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_LABELDBMSSERVER     "Ingres DBMS Server"
+    IDS_LABELINGRESNET      "Ingres/Net"
+    IDS_LABELINGRESSTAR     "Ingres/Star"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_LABELESQLC          "Ingres Embedded SQL/C"
+    IDS_LABELESQLCOBOL      "Ingres Embedded SQL/COBOL"
+    IDS_LABELINFORMIXGATEWAY "Ingres/Enterprise Access to Informix"
+    IDS_LABELSQLSERVERGATEWAY 
+                            "Ingres/Enterprise Access to Microsoft SQL Server"
+    IDS_LABELTOOLS          "Ingres Querying and Reporting Tools"
+    IDS_LABELVISION         "Ingres/Vision"
+    IDS_LABELREPLICATOR     "Ingres/Replicator"
+    IDS_LABELICE            "Ingres/ICE"
+    IDS_LABELOPENROADDEV    "OpenROAD Development"
+    IDS_CREATING_ING_ABFDIR "Creating ABF Directory...\t\t\t"
+    IDS_ABF_SETUP_COMPLETE  "Vision has been configured successfully."
+    IDS_ABF_SETUP_FAILED    "Failed to configure Vision."
+    IDS_ABF_SETUP           "Configuring Vision."
+    IDS_STAR_NEEDS_DBMS     "To Install Ingres/STAR, you must also install the Ingres DBMS."
+    IDS_LABELOPENROADRUN    "OpenROAD Runtime"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INST_LOC_MESSAGE    "Ingres will be installed on: %s"
+    IDS_UPGRADE_INSTALLATION 
+                            "The installation directory you have chosen contains an existing Ingres installation.  This installation will be treated as an upgrade, and settings from the existing installation will be used.  Before performing the upgrade you must read and follow the upgrade process described in the Ingres Migration Guide.\n\nDo you wish to continue?"
+    IDS_INSTALL_ACROBAT     "The Ingres on-line documentation is shipped as a series of PDF documents.  You will need an Adobe Acrobat Reader in order to view these files.  Would you like to install the Adobe Acrobat Reader Version 7.0 now?"
+    IDS_ANSISQL92_MESSAGE   "Please note:  Selecting the ANSI/ISO Entry SQL-92 option means that ingres will enforce the ANSI/ISO standards for case sensitivity.  This measns that user names, database names, etc. will be case sensitive.  If you want the SQL functionality of outer join, ANSI constraints, but do not want case sensitivity, do not select this option.  Note that this option cannot be changed after installation."
+    IDS_CLUSTER_SIZE_TOO_LARGE 
+                            "Warning:  The file system on drive %c: has a cluster size of %i bytes.  Due to the limitations of the FAT file system, the installation will require an additional 25 megabytes of free disk space.  Do you want to continue anyway?  Press ""Yes"" to continue, or ""No"" to go back and change the destination drive."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_AVAILABLE           "Available"
+    IDS_SIZE                "Size"
+    IDS_FILESYSTEM          "File System"
+    IDS_LABEL               "Label"
+    IDS_GATEDESC            "Ingres"
+    IDS_FINISH              "&Finish"
+    IDS_AGREE               "I A&gree"
+    IDS_INGRESOPENFOLDER    "[ShowGroup(""Ingres II"",1)]"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_SETTINGENV          "Setting Ingres Environment...\t\t"
+    IDS_NOTENOUGHSPACE      "Drive '%s' does not have enough free space.\nDo you want to continue anyway?"
+    IDS_PERCENT             "%d%%"
+    IDS_SIZEFORMAT          "%8.1f MB"
+    IDS_ZEROSIZE            "0 MB"
+    IDS_ALREADYRUNNING      "Ingres Setup Wizard is already running."
+    IDS_SERVERRUNNING       "Ingres is still running. Please stop Ingres and re-install."
+    IDS_SIZEFORMAT2         "%8.2f GB"
+    IDS_NOTENOUGHSPACEFORLOGFILE 
+                            "There is not enough space for the transaction log file.  The maximum space left over for the transaction log file after installation is %s MB.  Do you want to continue anyway?"
+    IDS_SETENVIRONMENTVARIABLES "Setting Environment Variables...\t\t"
+    IDS_REBOOT              "You must restart your computer before using Ingres.\nRestart now?"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_SEPARATOR           "\r\n******************************************************************************\r\n"
+    IDS_DATEFORMAT          "Ingres Setup Wizard Log File.\r\nInstallation started on: %A, %B %d, %Y - %H:%M:%S"
+    IDS_SERVICE             "Installing Ingres Services...\t\t"
+    IDS_SERVICENAME         "Ingres_Database"
+    IDS_UINSTKEY            "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Ingres"
+    IDS_INGRES              "Ingres"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_CANNOTWRITE         "ERROR : Cannot write line: '%s' to file: '%s'"
+    IDS_CANNOTWRITEREGISTRY "ERROR : Cannot write registry entry: '%s\\%s, rc=%i"
+    IDS_CREATESYSDB         "Creating System Databases...\t\t"
+    IDS_CREATELOGFILE       "Creating Transaction Log File...\t\t"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_LABELDOC            "Ingres Online Documentation"
+    IDS_LOADIMA             "Loading IMA Performance Data...\t\t"
+    IDS_LOADPERFMON         "Loading Performance Monitor Data...\t"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_REGSVR              "regsvr32.exe"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_LABELSYBASEGATEWAY  "Ingres/Enterprise Access to Sybase"
+    IDS_LABELORACLEGATEWAY  "Ingres/Enterprise Access to Oracle"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_LOADICE             "Loading Ingres ICE Server Data...\t\t"
+    IDS_CONFIGURINGICE      "Configuring Ingres ICE Server...\t\t"
+    IDS_CREATEICEDB         "Creating Ingres ICE Databases...\t\t"
+    IDS_CREATEICEDBUSER     "Creating User 'icedbuser'...\t\t"
+    IDS_USINGRESPONSEFILE   "Unattended installation activated; using response file '%s'."
+    IDS_UPDATELOGFILE       "Updating Transaction Log File...\t\t"
+    IDS_UPDATESYSDB         "Updating System Databases...\t\t"
+    IDS_USERFORMAT          "Installation started by: '%s'"
+    IDS_SETTINGFILEASSOCIATIONS 
+                            "Setting file associations in the registry for .log files..."
+    IDS_UPGRADEINSTALLATION "Installation has detected an upgrade install."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_UPGRADEDATABASESNOW "Since this is an upgrade installation, you must upgrade all of the databases in the installation.  Would you like to upgrade the databases now?  Press ""Yes"" to upgrade the databases automatically, or ""No"" to manually upgrade them later."
+    IDS_ERRORUPGRADINGDATABASES 
+                            "An error occured upgrading the databases.  Would you like to view the log file '%s' now?"
+    IDS_UPGRADEDATABASES    "Updating User Databases...\t\t"
+    IDS_CANNOTFINDLOGFILE   "Cannot find log file '%s'; creating a new transaction log..."
+    IDS_MOVINGLOGFILE       "Moving transaction log file from '%s' to '%s' for upgrade."
+    IDS_READINGRESPONSEFILE "Reading contents of response file '%s'..."
+    IDS_CANCEL_WAITDLG      "Are you sure you want to cancel?"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MISSING_ACT_AS_OS_PRIVILEGE 
+                            "Error:  You must have the Advanced User Rights ""Act as part of the operating system"" and ""Log on as a service"", then re-logon to Windows in order for Ingres to accept incoming connections.  Please refer to the Installation Guide for information about granting these rights.  Do you want to continue anyway?  Press ""Yes"" to continue, or ""No"" to return to the previous dialog."
+    IDS_PROBLEMEXECUTINGINSTALLER 
+                            "Error:  There was a problem executing the installer.  Do you want to continue and configure Ingres anyway?  Press ""Yes"" to configure Ingres, or ""No"" to exit the installation."
+    IDS_USER_CONTINUED_WITHOUT_PRIVILEGE 
+                            "\r\nWarning:  The user chose to continue the installation even though they did not have the proper privileges for the Ingres service.  [ %s ]"
+    IDS_DISPLAYINGUSERENVIRONMENT "Displaying User Environment..."
+    IDS_LABELVDBA           "Ingres Visual DBA"
+    IDS_LABELEMBEDDEDCOMPONENTS "Embedded Ingres Components"
+    IDS_WRITINGREGISTRYENTRY_SZ "Writing registry entry: '%s\\%s'='%s'"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_REMOVINGINGRESODBCDRIVER "Removing Ingres ODBC driver from system."
+    IDS_SETTINGUPINGRESODBC "Setting Up Ingres ODBC Environment..."
+    IDS_WRITINGREGISTRYENTRY_DW "Writing registry entry: '%s\\%s'=%i"
+    IDS_REMOVINGINGRESODBCREADONLYDRIVER 
+                            "Removing Ingres ODBC read-only driver from system."
+    IDS_CANNOTFIND_ODBCCP32 "Error:  Cannot find the ODBCCP32.DLL library."
+    IDS_CANNOTFIND_SQLREMOVEDRIVER 
+                            "Error:  Cannot find the SQLRemoveDriver() function in ODBCCP32.DLL."
+    IDS_COMMANDLINE         "Command line used: '%s'."
+    IDS_REMOVINGOLDFILES    "Removing old directories"
+    IDS_PRESTARTUP          "Warning:  Ingres has detected the value of """"IngresPreStartupRunPrg"""" in the response file and will execute this program prior to starting Ingres for the first time..."
+    IDS_LEAVINGINGRESRUNNING 
+                            "Warning:  Ingres has detected the value of """"LeaveIngresRunningInstallIncomplete"""" in the response file and has been left running at the end of the installation.  Ingres must be stopped and restarted before being used...\r\n"
+    IDS_LABELJDBC           "Ingres JDBC Package"
+    IDS_CHECKPOINTINGDATABASES "Checkpointing all databases"
+    IDS_LABELODBC           "Ingres ODBC Driver"
+    IDS_REGISTERCONTROLS    "Registering ActiveX controls required by the GUI tools..."
+    IDS_DELETEINGRESIIFOLDER "Ingres II"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_LABELESQLFORTRAN    "Ingres Embedded SQL/Fortran"
+    IDS_ERRORSTARTINGBROWSER "Error starting HTML browser."
+    IDS_UPDATEICEDB         "Updating Ingres ICE Databases...\t"
+    IDS_DELETEOLDDOCFOLDER  "Ingres II Online Documentation"
+    IDS_SDKTITLE            "Ingres SDK Configuration"
+    IDS_CREATEOTHERDBUSERS  "Creating Users 'portaldba', 'timregs' and 'orspo_runas'...\t"
+    IDS_CREATEOTHERDB       "Creating Ingres SDK Databases ...\t"
+    IDS_UPDATEOTHERDB       "Updating Ingres SDK Databases ...\t"
+    IDS_INSTALLPORTAL       "Installing CleverPath Portal...\t\t\t"
+    IDS_INSTALLFTREES       "Installing CleverPath Forest And Trees...\t\t"
+    IDS_INSTALLOPENROAD     "Installing OpenROAD...\t\t"
+    IDS_SDKSUCCEEDED        "Ingres SDK installation complete."
+    IDS_STARTPORTAL         "Starting Ingres and CleverPath Portal...\t"
+    IDS_FINISHMSG           "Please wait while the Ingres SDK installation is completed."
+    IDS_INSTALLAPACHE       "Installing Apache HTTP Server...\t\t\t"
+    IDS_STARTAPACHE         "Starting Apache HTTP Server...\t\t\t"
+END
+
+STRINGTABLE
+BEGIN
+     IDS_BI_CONFIG	    "Configuring Business Intelligence System..."
+     IDS_CM_CONFIG	    "Configuring Content Management System..."
+     IDS_TXN_CONFIG	    "Configuring Transactional System...\t"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\iipostinst.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "gv.rc"
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

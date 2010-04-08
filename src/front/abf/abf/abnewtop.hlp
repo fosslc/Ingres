@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abnewtop.hlp, help for popup that let's you define an Vision starting
+/#-- frame for an ABF application.
+/#--
+On this popup you may enter the name of a new menu frame that Vision will
+use as the starting frame for your application.  You my also choose to
+select the 'Catalog' menuitem (assuming you have purchased ABF) if you
+wish to edit this application using the ABF Frame Catalog. 
+
+Although initially the top frame of the Application Flow Diagram is a menu
+frame, it is possible to change this by changing the 'Default starting frame'
+of the Application to any Vision frame type. The 'Default starting frame'
+can be changed by going to the 'Application Catalog', positioning on the
+application, and invoking the 'MoreInfo', then 'Defaults' menuitems.
+
+After you create the new menu frame, you can use the 'Insert' menuitem 
+from the Application Flow Diagram editor to attach your existing
+ABF frames to the Vision frame.
+
+  OK            Creates the new Vision menu frame.
+  Cancel        Go back to the Application Catalog.
+  Catalog	Go directly to the ABF Frame Catalog.
+                (only present if you have purchased ABF)
+  Help          Displays this help text.

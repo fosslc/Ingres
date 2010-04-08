@@ -1,0 +1,60 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcddbty.hlp
+/#subtopic "Consistent Distributed Data Set" rmcdddef.hlp
+/#subtopic "CDDS Target Types" rmtargty.hlp
+CDDS DATABASES AND DATABASES
+
+This form is used to specify the databases in which the CDDS is present,
+the replication support for the CDDS at that database, and the number of
+the Replicator Server that will transmit replications to that database.
+
+To complete this screen, enter the appropriate values for the CDDS.  Use
+the Tab key to move from one column to the next.  Use the Newrow key or
+the arrow keys to move between lines.  To remove a database, use the
+RowDelete operation.  To save the definition, select the Save operation.
+
+The columns on the list are:
+
+        COLUMN NAME             DESCRIPTION
+        -----------             -----------
+        DB No                   A database number where the CDDS is
+                                located.
+
+        Vnode/Database Name     The virtual node name and the database
+                                name. This field is automatically filled
+                                in when the database number is entered.
+
+        Type                    The CDDS Target Type at this database.
+                                Possible values are:
+
+                                1  Full Peer
+                                2  Protected Read-only
+                                3  Unprotected Read-only
+
+                                Select the Subtopics menuitem for more
+                                information.
+
+        Description             Description of the CDDS Target Type.
+                                This field is automatically filled in
+                                when you specify the Target Type.
+
+        Server                  The Replicator Server number assigned to
+                                propagate transactions to that database
+                                within the CDDS.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Save            Save the definition and return to the CDDS
+                        Summary screen.
+
+        RowDelete       Delete the currently highlighted row.
+
+        ListChoices     Display a list of acceptable values for the
+                        current column.
+
+        Help            Access the Help facility.
+
+        End             Return to the CDDS Summary screen.

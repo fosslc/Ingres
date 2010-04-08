@@ -1,0 +1,24 @@
+#
+# wgl_32s.hnt file for cl/clf/handy
+#
+# Note: The wgl_32s.ini file contains a special case for this
+#	directory.  CFLAGS3 is used to compile this directory.
+#
+# History:
+#	10-may-94 (brett)
+#		Set up this hint file for the Win32s build.
+#	16-Feb-2007 (wridu01)
+#		Modified to facilitate ingres!w4er build against
+#		th8 ingres!ingres2006r2 codeline
+#	07-Jul-2007 (wridu01)
+#		Ignore ingpwutil.c and ingvalidpam.c when building against 
+#		ingres!w4er codeline
+
+ignore= bsshmio.c 
+ignore= itimer.c 
+ignore= cldio.c 
+ignore= clpoll.c 
+ignore= diremul.c 
+ignore= ftok.c 
+ignore= ingpwutil.c
+ignore= ingvalidpam.c

@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ This is the database connection timeout value.
+
+ If a user connected to a specified database has not requested any database
+ activity before the timeout value has been reached, the user is 
+ automatically disconnected and must reconnect before processing continues.
+ This field is used when the internet communication server is loaded with a
+ Web server.
+
+ Default: 300 seconds (5 minutes)

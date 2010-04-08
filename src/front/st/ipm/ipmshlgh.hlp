@@ -1,0 +1,201 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Logging System Header screen.  This screen displays
+information about the transaction log file and the Ingres logging system.
+The current state of the logging system as well as critical points in
+the log file are displayed.  The Log file Diagram displays a logical
+view of the log file in use.  The Log file Diagram starts at page 1
+of the log file through the page specified by the "Block count" field.
+The area of the diagram field covered by the arrow (">----->") is the
+area of the log file in use.  As the BOF and EOF (begin and end of file)
+move, so does the arrow.  The diagram uses plus signs ("+++>----->")
+to display logfile space reserved for use by the recovery system.
+
+This screen can be displayed during benchmarks, tests or during the day to
+help the Ingres system administrator determine how close to FORCE_ABORT the
+log file gets.  The "Blocks in use" field shows the actual number of blocks
+in use. If it is greater than the value in the "Abort interval" field, IPM
+will display a warning indicator.  The same occurs when the blocks in use
+exceeds the value in the "Logfull interval" field.  Based on how close and
+often the percentage of log file in use approaches the Abort interval, the
+Ingres system administrator may decide to increase the size of the log file.
+
+This screen will autorefresh the information if the -r flag was specified at
+startup or the "Display Refresh" field on the Option Selection screen was
+changed to a number between 1 and 999 seconds.  Autorefresh is desirable
+when monitoring this information.
+
+When the "Examine" menuitem is selected, the Log file Diagram field is
+highlighted and a caret symbol "^" is displayed marking the position of
+the log file currently being examined.  The other fields which appear
+indicate the range of log file pages currently being examined as well as
+what transactions occur in that range.  By using the "Next" and "Previous"
+menuitems, the caret symbol can be moved to any area of the Log file
+diagram covered by the arrow (">----->").  By default, when the "Examine"
+menuitem is selected, the caret symbol appears at the BOF.  From there,
+the "Next" menuitem can be selected until a user transaction appears in
+the scrolling area.  This transaction is the oldest transaction in the
+log file and could/will prevent log file space from being reclaimed.
+
+You can also examine a particular position in the Log file by moving the
+cursor to the Log file Diagram, using the arrow keys to place the cursor
+anywhere on the arrow, and selecting the "Examine" menuitem.  This will
+also pop up the range of log file pages with transactions.
+
+When you select the "Examine" menuitem, a snapshot of the transactions
+as well as the BOF and EOF is taken and used until the "Examine" submenu
+is exited.  You can obtain the latest state of the logging system by
+exiting the "Examine" submenu and select "Examine" again.  If autorefresh
+is enabled, it is suspended while using the "Examine" option.  When the
+submenu is exited from, autorefresh is re-enabled.
+
+Fields on the this screen include:
+
+Block size     The log file block size in bytes.  This value is specified when
+               running IIBUILD or rcpconfig.  See the Ingres
+               Installation Guide.
+
+Block count    The number of blocks in the log file.  This value is also
+               specified when running IIBUILD or rcpconfig.  Multiply by the
+               block size to get the log file size in bytes.
+
+Buffer count   The number of log buffers.  These are the same size as the log
+               file block size.
+
+CP interval    A consistency point occurs when the log file size ("Blocks in
+               use" field) reaches a multiple of this number.
+
+Logfull        The logging system parameter LOG_FULL_LIMIT.  When the "Blocks
+interval       in use" field is equal to this value, all transaction activity
+               is halted.  A warning field is displayed in the lower right
+               corner.  This value is also determined when running IIBUILD or 
+               rcpconfig.  Please see the Ingres Installation Guide.
+
+Abort          The logging system parameter FORCE_ABORT.  When the "Blocks in
+interval       use" field exceeds this value, the oldest transaction is
+               aborted.  To find out which transaction is being aborted, use
+               the "Log Transaction Display" screen.  Tab to the "Status"
+               column, select the "Find" menuitem to look for the word
+               "FORCE".  A warning indicator is also displayed.  Please refer
+               to the Ingres Installation Guide.
+
+Last           The last transaction ID used.  This number corresponds to the
+transaction    "External TX ID" column on the Log Transaction Display screen
+ID             and the "Transaction ID" column on the Lock List Display.
+
+Blocks in      The number of blocks in use in the log file.  This value is
+use            used for the "Log file in use" bargraph.
+                   
+Blocks         The number of remaining blocks in the log file.
+available
+
+Begin (BOF)    The logical beginning of file.  The position in the logfile
+               that holds the newest transaction.
+
+CP             The log file address of the last consistency point.  The
+               position in the logfile where the last CP was taken.
+
+End (EOF)      The logical end of file.  The position in the logfile that
+               holds the oldest uncommitted transaction.  The difference
+               between the BOF and EOF is the % in use, also displayed in the
+               "Blocks in use" field.
+
+Journal        The log file address range where the archiver will look for
+window         records to journal.
+
+Status         Indicates the status of the logging and recovery systems.
+               Valid status values include:
+
+               ONLINE           The logging and recovery systems are OK.
+
+               ECPDONE          A consistency point was taken.
+
+               CPNEEDED         The logging system is about to take a
+                                consistency point.
+
+               LOGFULL          The log file is full.  The Ingres system
+                                manager should determine the cause of this
+                                and increase the log file size.  A warning
+                                indicator is also displayed.
+
+               FORCE_ABORT      The logging system is aborting the oldest
+                                transaction.  The Log Transaction Display
+                                screen can be used to find out which
+                                transaction is being aborted.
+
+               RECOVER          The recovery process is performing recovery.
+
+               ARCHIVE          The archiver process is archiving journaled
+                                transactions to the journal files.
+
+               ACP_SHUTDOWN     The archiver is preparing to shutdown.  (This
+                                indicates that an "rcpconfig/shutdown" (VMS)
+                                or "rcpconfig -shutdown" (UNIX) has been
+                                performed).
+
+               IMM_SHUTDOWN     An immediate shutdown is occurring.  This
+                                indicates that an "rcpconfig/imm_shutdown"
+                                (VMS) or "rcpconfig -imm_shutdown" (UNIX)
+                                has been issued).
+
+               START_ARCHIVER   The archiver has died and must be restarted
+                                by the Ingres system administrator.  The
+                                archiver will not restart automatically.  If
+                                it is not restarted, the log file will reach
+                                the LOG_FILE_FULL limit.
+
+               PURGEDB          This status appears when a database has been
+                                closed by the last user who had it open; the
+                                archiver is archiving transactions that belong
+                                to this database.
+
+% in use       The percentage of the log file in use is displayed.
+
+Log file       This depicts a logical view of the log file with the left side
+Diagram        representing page 1 and the right side representing "Block
+               count" pages.  An arrow diagram (">------>") represents the
+               portion of the log file in use.  If the portion of the log file
+               in use only spans one position an "*" is displayed.  As the EOF
+               and BOF change, the arrow will move from left to right and wrap
+               around the diagram.
+
+Menuitems available on this screen include:
+
+Refresh        Queries the Ingres logging system for logging system
+               header information.  Even if the autorefresh option is set,
+               this menuitem can still be selected at any time.
+
+Examine        Allows examination of the transactions in the log file.  The
+               Log File Diagram is highlighted and a "^" (caret) symbol
+               appears in that field.  Any transactions occurring in the range
+               of pages covered by the caret symbol are displayed in the
+               scrolling area.  The range of log file pages being examined is
+               also displayed.  A submenu appears containing the following
+               menuitems which allow you to move the caret symbol around on
+               the diagram.  Until you exit this submenu, the information
+               displayed is a snapshot.
+
+               Next           Moves the caret symbol to the right by one
+                              position.  Moving beyond EOF will wrap around
+                              to BOF.  Any transactions occurring in the range
+                              covered by the next position will be displayed
+                              in the scrolling area.
+
+               Previous       Moves the caret symbol to the left.  Moving
+                              beyond BOF will wrap around to EOF.  Any
+                              transactions occurring in the range covered by
+                              the previous position will be displayed in the
+                              scrolling area.
+
+               More_Info      Displays a popup which shows additional
+                              information for the transactions in the
+                              Transaction scrolling area.  The cursor should
+                              be placed on a transaction of interest
+                              before this menuitem is selected.
+
+               End            Returns to the Logging System Header screen.
+
+Help           Displays this screen.
+
+End            Returns to the Log Info Menu screen.
+
+Quit           Exit IPM.

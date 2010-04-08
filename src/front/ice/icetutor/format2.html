@@ -1,0 +1,12 @@
+<!-- #ICE REPEAT IF (`:format` != ``)
+		 THEN=`<!-- #ICE DECLARE=``session.format=:format`` -->`
+-->
+
+<!-- #ICE REPEAT IF (`:format` == `UNFORMATTED`)
+		 THEN=`<!-- #ICE REPEAT INCLUDE=``formatHtml.html`` -->`
+		 ELSE=`<!-- #ICE DECLARE=``session.head=`` -->
+					 <!-- #ICE DECLARE=``session.links=`` -->
+					 <!-- #ICE DECLARE=``session.attr=`` -->
+					 <!-- #ICE REPEAT INCLUDE=``links.html`` -->`
+-->
+		 

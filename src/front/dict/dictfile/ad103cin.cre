@@ -1,0 +1,205 @@
+APPLICATION_DEVELOPMENT_1 3 'Base Ingres Catalogs'
+APPLICATION_DEVELOPMENT_1 2 Y
+END
+CREATE TABLE ii_abfclasses
+    (
+        appl_id	integer NOT NULL,
+        class_id	integer NOT NULL,
+        catt_id	integer NOT NULL,
+        class_order 	smallint NOT NULL,
+        adf_type	integer NOT NULL,
+        type_name	varchar(32) NOT NULL, 
+        adf_length	integer NOT NULL,
+        adf_scale	integer NOT NULL
+    )   WITH NODUPLICATES
+
+
+CREATE TABLE ii_abfdependencies
+    (
+        object_id	integer NOT NULL,
+        abfdef_applid	integer WITH NULL,
+        abfdef_name	varchar(32) NOT NULL,
+        abfdef_owner	varchar(32) NOT NULL,
+        object_class	integer NOT NULL,
+        abfdef_deptype	integer NOT NULL,
+        abf_linkname	varchar(32) WITH NULL,
+        abf_deporder	integer WITH NULL
+    )   WITH NODUPLICATES
+
+CREATE TABLE ii_abfobjects
+    (
+        applid	integer NOT NULL,
+        object_id	integer NOT NULL,
+        abf_source	varchar(180) NOT NULL,
+        abf_symbol	varchar(32) NOT NULL,
+        retadf_type	smallint NOT NULL,
+        rettype	varchar(32) NOT NULL,
+        retlength	integer NOT NULL,
+        retscale	integer NOT NULL,
+        abf_version	smallint NOT NULL,
+        abf_flags	integer WITH NULL,
+        abf_arg1	varchar(48) NOT NULL,
+        abf_arg2	varchar(48) NOT NULL,
+        abf_arg3	varchar(48) NOT NULL,
+        abf_arg4	varchar(48) NOT NULL,
+        abf_arg5	varchar(48) NOT NULL,
+        abf_arg6	varchar(48) NOT NULL
+    )   WITH NODUPLICATES
+
+
+IGNORE_NEXT_ERROR ALL
+
+CREATE TABLE ii_encoded_forms  
+    (
+        object_id	integer NOT NULL,
+        cfseq	smallint NOT NULL,
+        cfdatsize	integer NOT NULL,
+        cftotdat	integer NOT NULL,
+        cfdata	varchar(1960) NOT NULL
+    )
+    WITH SECURITY_AUDIT=(TABLE,NOROW)
+
+IGNORE_NEXT_ERROR ALL
+
+CREATE TABLE ii_encoded_forms  
+    (
+        object_id	integer NOT NULL,
+        cfseq	smallint NOT NULL,
+        cfdatsize	integer NOT NULL,
+        cftotdat	integer NOT NULL,
+        cfdata	varchar(1960) NOT NULL
+    )
+
+
+CREATE TABLE ii_fields
+    (
+        object_id	integer NOT NULL,
+        flseq	smallint NOT NULL,
+        fldname	varchar(32) NOT NULL,
+        fldatatype	smallint NOT NULL,
+        fllength	smallint NOT NULL,
+        flprec	smallint NOT NULL,
+        flwidth	smallint NOT NULL,
+        flmaxlin	smallint NOT NULL,
+        flmaxcol	smallint NOT NULL,
+        flposy	smallint NOT NULL,
+        flposx	smallint NOT NULL,
+        fldatawidth	smallint NOT NULL,
+        fldatalin	smallint NOT NULL,
+        fldatacol	smallint NOT NULL,
+        fltitle	varchar(50) NOT NULL,
+        fltitcol	smallint NOT NULL,
+        fltitlin	smallint NOT NULL,
+        flintrp	smallint NOT NULL,
+        fldflags	integer NOT NULL,
+        fld2flags	integer NOT NULL,
+        fldfont	smallint NOT NULL,
+        fldptsz	smallint NOT NULL,
+        fldefault	varchar(50) NOT NULL,
+        flformat	varchar(50) NOT NULL,
+        flvalmsg	varchar(100) NOT NULL,
+        flvalchk	varchar(240) NOT NULL,
+        fltype	smallint NOT NULL,
+        flsubseq	smallint NOT NULL
+    )
+
+CREATE TABLE ii_forms
+    (
+        object_id	integer NOT NULL,
+        frmaxcol	smallint NOT NULL,
+        frmaxlin	smallint NOT NULL,
+        frposx	smallint NOT NULL,
+        frposy	smallint NOT NULL,
+        frfldno	smallint NOT NULL,
+        frnsno	smallint NOT NULL,
+        frtrimno	smallint NOT NULL,
+        frversion	smallint NOT NULL,
+        frscrtype	smallint NOT NULL,
+        frscrmaxx	smallint NOT NULL,
+        frscrmaxy	smallint NOT NULL,
+        frscrdpix	smallint NOT NULL,
+        frscrdpiy	smallint NOT NULL,
+        frflags	integer NOT NULL,
+        fr2flags	integer NOT NULL,
+        frtotflds	integer NOT NULL
+    )
+
+CREATE TABLE ii_gropts
+    (
+        object_id	integer NOT NULL,
+        plotdev	varchar(16) NOT NULL,
+        plotloc	varchar(120) NOT NULL,
+        fc	char(2) NOT NULL,
+        mainlevel	smallint NOT NULL,
+        editlevel	smallint NOT NULL,
+        layerlevel	smallint NOT NULL,
+        plotlevel	smallint NOT NULL,
+        dtrunc	smallint NOT NULL,
+        vig_flags	integer NOT NULL
+    )
+
+CREATE TABLE ii_joindefs	
+    (
+        object_id	integer NOT NULL,
+        qtype	integer NOT NULL,
+        qinfo1	varchar(32) NOT NULL,
+        qinfo2	varchar(32) NOT NULL,
+        qinfo3	varchar(32) NOT NULL,
+        qinfo4	varchar(32) NOT NULL,
+        qinfo5	varchar(32) WITH NULL
+    )
+
+CREATE TABLE ii_qbfnames	
+    (
+        object_id	integer NOT NULL,
+        relname	varchar(32) NOT NULL,
+        relowner	varchar(32) WITH NULL,
+        frname	varchar(32) NOT NULL,
+        qbftype	smallint NOT NULL
+    )
+
+CREATE TABLE ii_rcommands	
+    (
+        object_id	integer NOT NULL,
+        rcotype	char(2) NOT NULL,
+        rcosequence	smallint NOT NULL,
+        rcosection	varchar(12) NOT NULL,
+        rcoattid	varchar(32) NOT NULL,
+        rcocommand	varchar(12) NOT NULL,
+        rcotext	varchar(100) NOT NULL
+    )
+
+CREATE TABLE ii_reports	
+    (
+        object_id	integer NOT NULL,
+        reptype	char(1) NOT NULL,
+        repacount	smallint NOT NULL,
+        repscount	smallint NOT NULL,
+        repqcount	smallint NOT NULL,
+        repbcount	smallint NOT NULL
+    )
+
+IGNORE_NEXT_ERROR 30100 2753
+
+DROP TABLE ii_sequence_values
+
+CREATE TABLE ii_sequence_values
+    (
+        sequence_owner	VARCHAR(32) NOT NULL,
+        sequence_table	VARCHAR(32) NOT NULL,
+        sequence_column	VARCHAR(32) NOT NULL,
+        sequence_value	INTEGER NOT NULL
+    )
+
+CREATE TABLE ii_trim
+    (
+        object_id	integer NOT NULL,
+        trim_col	smallint NOT NULL,
+        trim_lin	smallint NOT NULL,
+        trim_trim	varchar(150) NOT NULL,
+        trim_flags	integer NOT NULL,
+        trim2_flags	integer NOT NULL,
+        trim_font	smallint NOT NULL,
+        trim_ptsz	smallint NOT NULL
+    )   WITH NODUPLICATES
+

@@ -1,0 +1,79 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ To enable Ingres 6.4-style applications to function with minimal
+ changes, the gateway allows access to DBA objects in the host DBMS
+ without prefixing the object with the DBA name; that is, in Ingres
+ 6.4, a user can access DBA objects (provided the appropriate
+ grant/permits have been created). For example, in a table, simply
+ referencing the object eliminates the need to prefix the object with
+ the DBA name. The gateway achieves this by adding the appropriate
+ prefix - that is, the database administrator's name - to the object
+ name. When a user accesses an object that is NOT owned by the user,  
+ the DBA name is prefixed so that the user may access the object. 
+
+
+ Valid parameters are:
+ 
+ 
+ USER
+ 
+ This is the default. It behaves in the same way as the base 2.1 gateway
+ and caches the names of the tables owned by the user. If an object is
+ accessed that is NOT owned by the user, it is prefixed by the DBA
+ name. Note: Selecting against (unqualified) public objects (such as
+ the "v$version" table) in Oracle will fail with this setting if the
+ DBA is NOT "public."
+ 
+ 
+ DBA
+ 
+ DBA caches table names owned by the database administrator. If a
+ non-DBA owned object is accessed (without a qualifying schema), it is
+ passed to the HOST DBMS unmodified; otherwise, if a DBA object is
+ accessed, it is qualified with the DBA name. Note: Selection against
+ public objects is possible with this setting in Oracle.
+ 
+ 
+ NONE
+ 
+ NONE is the simplest case and objects are NEVER qualified by the
+ gateway; no caching of table names is performed. Note: (Unqualified)
+ selects against DBA owned tables will fail. Note: Selection against
+ public objects is possible with this setting in Oracle. This behaves
+ in the same way as and supersedes the config.dat parameter
+ NO_QUALIFIER. Important! NO_QUALIFIER is no longer a valid parameter
+ in the config.dat.
+ 
+ 
+ USER_PUBLIC (Oracle Only)
+ 
+ USER_PUBLIC is an Oracle specific value and is similar to the USER
+ setting; it caches table names owned by the user and those that are
+ public. If an object is accessed that is NOT owned by the user OR
+ public, it is prefixed by the database administrator's name. This
+ allows access to public tables.
+ 
+ This parameter may have an impact on performance, particularly for
+ connection times to the gateway. For instance, connecting to an
+ Oracle 8i server across SQL Net (with a slow network) can be up to
+ 10 times slower when using USER_PUBLIC.  However, this performance
+ problem does not usually occur if the gateway server is on the same
+ machine as the host DBMS. The amount of memory used by the gateway
+ will also be affected - although not significantly - based on the
+ number of table names being cached by the selected option. Choosing
+ between the various options for load_table_qualifier should be based
+ on functionality and simple benchmarks (that is, how long does it
+ take to connect to the gateway). In general, if you have problems
+ with the default setting:
+
+
+   - Use the default USER setting if there is a large number of
+   DBA-owned tables compared to the number of user-owned tables.
+
+   - Use the DBA setting if there is a large number of user-owned
+   tables compared to the number of DBA-owned tables (for Oracle, use
+   this option instead of USER_PUBLIC). This option is also useful
+   when accessing tables created using an application with multiple
+   sessions.
+
+   - Use the NONE setting if using Informix or if all SQL queries are
+   fully qualified when querying non-user owned tables.

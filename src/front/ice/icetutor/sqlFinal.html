@@ -1,0 +1,21 @@
+<!-- #ICE REPEAT IF (`:format` == `UNFORMATTED`)
+		 THEN=`
+				<!-- #ICE DECLARE=``page.prev=formatHtml`` -->
+				<!-- #ICE DECLARE=``session.html=:html`` -->`
+		 ELSE=`
+				<!-- #ICE DECLARE=``page.prev=header`` -->`
+-->
+
+<!-- #ICE REPEAT IF (`:transaction` == ``)
+THEN=`<!-- #ICE REPEAT INCLUDE=``begin.html?title=The result is&previous=:prev.html&next=recursive.html`` -->`
+ELSE=`<!-- #ICE REPEAT INCLUDE=``begin.html?title=The result is&previous=:prev.html&next=commit.html`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`checkSQL.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`<!-- #ICE REPEAT INCLUDE=``sqlResult.html`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+

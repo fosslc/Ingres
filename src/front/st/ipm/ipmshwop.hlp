@@ -1,0 +1,101 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Option Selection screen.  This screen allows you to view
+and change IPM runtime options.  Most options control what resources will
+be displayed when the Resource Display screen is refreshed.
+
+These options can also be specified on the command line when IPM is invoked.
+By specifying appropriate options, you can view detailed resource locking
+information down to the page level or a summary display of what databases
+are currently open.
+
+Some options are incompatible with other options.  It makes no sense, for
+instance, to specify display of all resource types but limit display of
+table resource locks to locks held on a specific table.  A table resource
+lock type is a subset of all resource types.
+
+When you specify options, IPM sets related options (if any) appropriately.
+When you save the settings, IPM checks if any options are set incorrectly,
+and displays an error message if so.
+
+Below is a description of each option:
+
+Display null resources    By default, IPM suppresses display of granted null
+                          resources.  (Granted null relation locks show what
+                          tables were referenced during the database session:
+                          i.e. a granted null lock on table "x" indicates that
+                          a query was run against table "x".  Granted null
+                          locks don't block any access to the resource they
+                          are granted on.)  If set to "Y", IPM displays any
+                          resources which are granted null and which qualify 
+                          based on other specified options are displayed.  "N"
+                          is the default unless a resource type is specified.
+
+Display all               By default, IPM displays database, open database,
+resource types            relation and page resources.  If set to "Y", IPM
+                          will display all Ingres resource types.
+
+Display specified         By default, IPM displays database, open database,
+resource type             relation and page resources.  If set to "Y", you may
+                          enter the resource to display for in the "Type to
+                          display" field.  Resource types of interest include:
+                                database 
+                                table 
+                                page 
+                                createtable 
+                          Other resource types exist.  Enter a "?" in the
+                          "Type to display" field and enter RETURN to display
+                          a popup list of resource types.
+
+Display resources         By default, IPM displays resources for all databases
+for one DB                in the installation.  If set to "Y", you may enter
+                          the database in the "Specify database" field.
+                          Enter a "?" in the "Specify database" field and hit
+                          RETURN to display a popup list of databases.
+
+Display resources         By default, IPM displays resources for all
+for one table             tables.  If set to "Y", you may enter the
+                          table name in the "Specify a table name" field.
+                          You must also set the "Display resources for one DB"
+                          field to "Y".
+
+Display Refresh           By default, IPM displays "snapshots" of your 
+                          Ingres installation.  If set to a number 
+                          greater than zero, IPM automatically refreshes the 
+                          display.  Select a number between 1 and 999 to 
+                          specify autorefresh (auto update) every "n" seconds 
+                          on the Lock Summary, Log Summary and Log Header 
+                          Display screens.
+
+Display system            By default, IPM displays user locklists only.  A
+locklists                 locklist with a status of "NONPROTECT" is usually
+                          a system lock list.  If set to "Y", IPM also
+                          displays system lock lists.
+
+Display inactive          By default, IPM displays active transactions only.
+transactions              A transaction with a status of "INACTIVE" is not
+                          displayed by default and is usually a system
+                          transaction.  User transactions which have been
+                          committed but not journaled have a status of
+                          INACTIVE.  If set to "Y", IPM also displays inactive
+                          transactions
+
+Once the desired options have been specified, select the "OK" menuitem.
+If the Options screen is called from the Lock List Display or Resource
+Display screens, select the "Refresh" menuitem to re-run the search with
+the new specified search criteria.
+
+The following menuitems are available:
+
+OK          Saves the options which are shown and returns to the previous
+            screen.  
+
+Cancel      Ignores any changes made to the options and returns to the
+            previous screen.
+
+Defaults    Resets all options to the state when the IPM Option Selection
+            screen was entered.  Does not return to the previous screen.
+            At this point any changes to the options can be made.
+
+Help        Displays this screen.
+
+Quit        Exits IPM.

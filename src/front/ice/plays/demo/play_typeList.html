@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Select a Type: Shakespeare's Plays</title>
+</head>
+<body>
+<h1>Select a Type: Shakespeare's Plays</h1>
+<!-- #ICE VAR=`
+<FORM ACTION="/ice-bin/oiice.:http_api_ext/playgroup/plays[play_subSet.html]"
+	METHOD="POST">
+` -->
+
+<!-- #ICE REPEAT INCLUDE=`plays[play_TxnCndCmt_h.html]` -->
+
+<!-- #ICE DECLARE=`session.e_type='select play type'` -->
+<!-- #ICE REPEAT
+	DATABASE = `icetutor` 
+	SQL=`select distinct type from plays` 
+	TRANSACTION=`t_typeList` 
+	CURSOR=`Works` 
+	ROWS=`10`
+	TYPE=`SELECTOR`
+	ATTR=`NAME=e_type` 
+-->
+<!-- #ICE COMMIT=`t_typeList` -->
+<p>
+<INPUT TYPE="submit" NAME="Display" VALUE="Display" ALT="Show  Plays of this type">
+</FORM>
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

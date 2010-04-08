@@ -1,0 +1,475 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<me.h>
+# include	<cm.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<st.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+## include	<ooclass.qsh>
+# include	<oodefine.h>
+# include	"ooldef.h"
+## include	<oosymbol.qsh>
+# include	<ooproc.h>
+# include	"eroo.h"
+
+/**
+** Name:	ooschema.qc - routines dealing with dynamic class
+**				schema re-definition.
+**
+** Description:
+**	The routines in this file are not normally loaded at runtime
+**	in conventional ObjectUtility-based applications.  They
+**	used by ObjectUtility tools and special programs such as
+**	'classout'.
+**
+**	This file defines:
+**
+** History:
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	12/19/89 (dkh) - VMS shared lib changes - Added include of ooldef.h
+**      22-oct-90 (sandyd)
+**              Fixed #include of local ooldef.h to use "" instead of <>.
+**	8-feb-93 (blaise)
+**		Changed _flush, etc. to ii_flush because of conflict with
+**		Microsoft C library.
+**	27-jan-93 (blaise)
+**		The previous change changed all tabs in this file to spaces;
+**		changed back to tabs again.
+**      18-oct-1993 (kchin)
+**          	Since the return type of OOsnd() and OOsndSuper() have been 
+**		changed to PTR, when being called, their return types need to 
+**		be cast to the proper datatypes.
+**	25-Aug-1993 (fredv)
+**		Included <st.h>.
+**	15-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**      06-dec-93 (smc)
+**		Bug #58882
+**          	Commented lint pointer truncation warning.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	25-Aug-2009 (kschendel) 121804
+**	    Need ooproc.h to satisfy gcc 4.3.
+**/
+
+FUNC_EXTERN char	*STalloc();
+static STATUS		fetchMasters(), fetchDetails(), fetchAttribs();
+static OO_REFERENCE	*allocRefsCol();
+
+## static char		_attribute[] = ERx("attribute");
+## static char		_attid[] = ERx("attid");
+## static char		_attrelid[] = ERx("attrelid");
+## static char		_iiakindof[] = ERx("iiakindof");
+## static char		_xid[] = ERx("id");
+## static char		_xclass[] = ERx("class");
+## static char		_xname[] = ERx("name");
+
+## static char		*O1table, *O2table, *O3table, *O4table;
+
+##Cdestroy(self)
+##OO_CLASS	*self;
+##{
+	if (OOsndSuper(self, _destroy) == FALSE)
+		return(FALSE);
+
+##	RANGE of _iiakindof is _iiakindof
+##	DELETE _iiakindof where _iiakindof._class = self->ooid
+
+##	DESTROY self->table_name
+
+	return(TRUE);
+##}
+
+## OOID
+## Cfetch(p)
+## OO_CLASS	*p;
+## {
+##	i4	n;
+##	i4	cnt = 0;
+##	char	methname[51];
+##	char	procname[51];
+	register i4	i;
+##	OO_METHOD	*s;
+
+#ifdef DDEBUG
+	D(ERx("Cfetch(x%p)"), p);
+#endif /* DDEBUG */
+
+	O1table = O1->table_name;
+	O2table = O2->table_name;
+	O3table = O3->table_name;
+	O4table = O4->table_name;
+
+	n = fetchAt(p, OC_CLASS);
+	p = (OO_CLASS*)OOp(n);
+
+	p->subClasses = UNKNOWN;	/* init as UNKNOWN reference */
+	p->instances = UNKNOWN;		/* init as UNKNOWN reference */
+
+	/* retrieve methods info */
+##	range of O4table is O4table
+##	retrieve ( cnt = count(O4table._id where O4table.#mclass = n))
+	if ( cnt != 0 )
+	{
+		STATUS	stat;
+
+                /* Lint truncation warning if size of ptr > OOID,
+                ** but code valid. 
+                */
+		p->methods = (OOID)OOsnd(OC_COLLECTION, _new, UNKNOWN, cnt);
+		if ((s = (OO_METHOD *)MEreqmem((u_i4)0,
+		    (u_i4)(cnt * sizeof(OO_METHOD)), FALSE, &stat)) == NULL)
+		{
+		    IIUGerr(E_OO0030_MEreqmem_err_Cfetch, UG_ERR_ERROR, 1, &stat);
+		    return nil;
+		}
+
+		i = 0;
+##		range of O1table is O1table
+##		retrieve (
+##			s[i].ooid	= O4table._id,
+##			methname	= O1table._name,
+##			procname	= O4table.#procname,
+##			s[i].argcount	= O4table.#argcount,
+##			s[i].defaultperm = O4table.#defaultperm,
+##			s[i].keepstatus = O4table.#keepstatus,
+##			s[i].fetchlevel = O4table.#fetchlevel,
+##			s[i].classmeth	= O4table.#classmeth
+##		) where O4table.#mclass = n and O1table._id = O4table._id
+##		{
+			if (i >= cnt) {
+				tooMany(O4->name, p->name);
+##				endretrieve
+			}
+			OOhash(s[i].ooid, &s[i]);
+			s[i].data.levelbits = 03;	/* levels 0,1 */
+			s[i].class = OC_METHOD;
+			if ((s[i].name = STalloc(methname)) == NULL) {
+			    IIUGerr( E_OO0031_STalloc_err_Cfetch, UG_ERR_ERROR,
+					0
+				);
+			    return nil;
+			}
+			s[i].mclass = n;
+			s[i].entrypt = 0;
+			if ((s[i].procname = STalloc(procname)) == NULL) {
+			    IIUGerr(E_OO0032_STalloc_err_Cfetch, UG_ERR_ERROR,
+					0
+				);
+			    return nil;
+			}
+			OOsnd(p->methods, _atPut, i, s[i].ooid);
+			i++;
+##		}
+		if ( i > cnt || iiooInqResult(ERx("RETRIEVE"), O4table) != OK )
+			return nil;
+		if (i < cnt) {
+			tooFew(O4->name, p->name);
+			return nil;
+		}
+	}
+	else
+	    p->methods = nil;
+
+	/* retrieve references info */
+	if (fetchMasters(p) != OK || fetchDetails(p) != OK)
+		return nil;
+
+	/* retrieve attribute info */
+	if (fetchAttribs(p) != OK)
+		return nil;
+
+	BTsetF(1, p->data.levelbits);	/* level 1 */
+	return(p->ooid);
+## }
+
+
+static STATUS
+## fetchAttribs(p)
+## OO_CLASS	*p;
+## {
+##	OO_ATTRIB	*a;
+##	i4	cnt;
+##	char	name[13];
+	register i4	i = 0;
+
+	/* search attribute table for fields */
+##	range of _attribute is _attribute
+##	retrieve (cnt = count(_attribute._attid
+##	    where _attribute._attrelid = p->table_name and _attribute.#attname != p->surrogate))
+	if (cnt) {
+	    STATUS stat;
+
+	    /* Lint truncation warning if size of ptr > OOID,
+	    ** but code valid. 
+	    */
+	    p->attributes = (OOID)OOsnd(OC_COLLECTION, _new, UNKNOWN, cnt);
+	    if ((a = (OO_ATTRIB *)MEreqmem((u_i4)0,
+		(u_i4)(cnt * sizeof(OO_ATTRIB)), FALSE,
+		&stat)) == NULL)
+	    {
+		IIUGerr( E_OO0033_MEreqmem_err_Cfetch, UG_ERR_ERROR, 1, &stat );
+		return FAIL;
+	    }
+
+	    i = 0;
+##	    retrieve (
+##		a[i].attnum	= _attribute._attid,
+##		name		= trim(_attribute.#attname),
+##		a[i].frmt	= _attribute.#attfrmt,
+##		a[i].frml	= _attribute.#attfrml
+##	    ) where _attribute._attrelid = p->table_name and _attribute.#attname != p->surrogate
+##		and _attribute.#attowner = usercode
+##	    sort by #attnum
+##	    {
+		if((a[i].name = STalloc(name)) == NULL) {
+		    IIUGerr( E_OO0034_STalloc_err_Cfetch, UG_ERR_ERROR, 0 );
+		    return FAIL;
+		}
+		OOsnd(p->attributes, _atPut, i, &a[i]);
+		i++;
+##	    }
+	    if ( iiooInqResult(ERx("RETRIEVE"), ERx("attribute")) != OK )
+		return FAIL;
+	}
+	else
+	    p->attributes = nil;
+
+	return OK;
+## }
+
+   static OO_REFERENCE*
+## allocRefsCol(class, which, pp, components, cntp)
+## OOID class;
+## char *which;
+register OOID	*pp;
+i4	components;	/* if TRUE allocate memory for collection
+			** components as well.
+			*/
+i4	*cntp;
+## {
+##	i4		cnt;
+	OO_REFERENCE	*r;
+	STATUS		stat;
+
+##	range of O3table is O3table
+##	retrieve (cnt = count(O3table._id where O3table.which = class))
+
+	/* Lint truncation warning if size of ptr > OOID,
+	** but code valid. 
+	*/
+	*pp = cnt? (OOID)OOsnd(OC_COLLECTION, _new, UNKNOWN, cnt): nil;
+	if (components && cnt)
+	{
+	    if ((r = (OO_REFERENCE *)MEreqmem((u_i4)0,
+		(u_i4)(cnt * sizeof(OO_REFERENCE)), FALSE, &stat)) == NULL)
+	    {
+		IIUGerr( E_OO0035_MEreqmem_err_Cfetch, UG_ERR_ERROR, &stat );
+	    }
+	}
+	*cntp = cnt;
+	return r;
+## }
+
+static STATUS
+fetchMasters(class)
+OO_CLASS	*class;
+{
+##	i4		classn = class->ooid;
+	register OOID	col;
+##	register	OO_REFERENCE	*r;
+##	i4		cnt;
+##	char		name[51], conn[13];
+	register i4	i;
+	char		*_masterRefs = ERx("masterRefs");
+
+	/* retrieve master references info */
+
+	r = allocRefsCol(classn, ERx("master"), &class->masterRefs, TRUE, &cnt);
+	col = class->masterRefs;
+	if (col != nil ) {
+		i = 0;
+##		range of O1table is O1table	/* ii_objects */
+##		retrieve (
+##			r[i].ooid	= O3table._id,
+##			name	= O1table._name,
+##			r[i].master	= O3table.#master,
+##			r[i].mdelete	= O3table.#mdelete,
+##			r[i].moffset	= O3table.#moffset,
+##			conn	= O3table.#connector,
+##			r[i].detail	= O3table.#detail,
+##			r[i].ddelete	= O3table.#ddelete,
+##			r[i].doffset	= O3table.#doffset
+##		) where O3table.#master = classn and O1table._id = O3table._id
+##		{
+			if (i >= cnt) {
+				tooMany(_masterRefs, class->name);
+##				endretrieve
+			}
+			OOhash(r[i].ooid, (OO_OBJECT*)&r[i]);
+			r[i].data.levelbits = 03;	/* levels 0,1 */
+			r[i].class = OC_REFERENCE;
+			if ((r[i].name = STalloc(name)) == NULL) {
+			    IIUGerr(E_OO0036_STalloc_err_fetchMast, UG_ERR_ERROR,
+					0
+				);
+			    return FAIL;
+			}
+			if ((r[i].connector = STalloc(conn)) == NULL) {
+			    IIUGerr(E_OO0037_STalloc_err_fetchMast, UG_ERR_ERROR,
+					0
+				);
+			    return FAIL;
+			}
+			OOsnd(col, _atPut, i, r[i].ooid);
+			i++;
+##		}
+		if ( i > cnt || iiooInqResult(ERx("RETRIEVE"), O3table) != OK )
+			return FAIL;
+		if (i < cnt) {
+			tooFew(_masterRefs, class->name);
+			return FAIL;
+		}
+	}
+	return OK;
+}
+
+static STATUS
+fetchDetails(class)
+OO_CLASS	*class;
+##{
+##	OOID	classn;
+	register OOID	col;
+##	i4	cnt, ooid;
+	register i4	i;
+	char	*_detailRefs = ERx("detailRefs");
+
+	/* retrieve detail reference ooid's */
+
+	classn = class->ooid;
+	(VOID) allocRefsCol(classn, ERx("detail"), &class->detailRefs, FALSE, &cnt);
+	col = class->detailRefs;
+	if (col != nil ) {
+		i = 0;
+##		range of O1table is O1table
+##		retrieve (
+##			ooid	= O3table._id
+##		) where O3table.#detail = classn
+##		{
+			if (i >= cnt) {
+				tooMany(_detailRefs, class->name);
+##				endretrieve
+			}
+			OOsnd(col, _atPut, i, ooid);
+			i++;
+##		}
+		if ( i > cnt || iiooInqResult(ERx("RETRIEVE"), O3table) != OK )
+			return FAIL;
+		if (i < cnt) {
+			tooFew(_detailRefs, class->name);
+			return FAIL;
+		}
+	}
+	return OK;
+##}
+
+## CnameOk(self, name)
+## OO_CLASS	*self;
+## char *name;
+## {
+##	i4	anyOther;
+	O1table = O1->table_name;
+	O2table = O2->table_name;
+	if (!CMupper(name)) {
+		IIUGerr( E_OO0038_NameMustBeCapitalized, UG_ERR_ERROR, 0 );
+		return FALSE;
+	}
+
+	/* check name uniqueness */
+##	range of O2table is O2table
+##	range of O1table is O1table
+##	retrieve( anyOther = any(O2table._id where O2table._id = O1table._id and
+##			O1table._name = name))
+	if (anyOther) {
+		IIUGerr( E_OO0039_Class_already_exists, UG_ERR_ERROR, 1, name );
+		return FALSE;
+	}
+
+	return TRUE;
+## }
+
+OOID
+Crename(self, newname)
+register OO_CLASS	*self;
+register char	*newname;
+{
+	if (OOsndSelf(self, _nameOk, newname) == FALSE)
+		return nil;
+	else
+	     /* Lint truncation warning if size of ptr > OOID,
+	     ** but code valid. 
+	     */
+	     return (OOID)OOsndSuper(self, _rename, newname);
+}
+
+OOID
+## CsubClass(self, name, remarks, table, surrogate, keepstatus)
+## OO_CLASS	*self;
+## char		*name;
+   char		*remarks, *table, *surrogate;
+   i4		keepstatus;
+## {
+##	register OO_CLASS	*aClass;
+	register OOID	aClassid;
+
+	if (OOsndSelf(self, _nameOk, name) == FALSE)
+		return nil;
+
+	/* Lint truncation warning if size of ptr > OOID,
+	** but code valid. 
+	*/
+	aClassid = (OOID)OOsnd(self->class, _newDb, FALSE, name, 0, _, 1, remarks,
+	    NULL, NULL, NULL);
+
+	aClass = (OO_CLASS*)OOp(aClassid);
+	aClass->super = self->ooid;
+	aClass->table_name = table;
+	aClass->surrogate = surrogate;
+	aClass->keepstatus = keepstatus;
+	aClass->level = self->level + 1;
+	aClass->hasarray = self->hasarray;
+
+	/* retrieve of size of new part of struct for class */
+##	RANGE OF _attribute is _attribute
+##	RETRIEVE (aClass->memsize = 4 *
+##		(max(_attribute._attid where
+##		    _attribute._attrelid = aClass->table_name and _attribute.#attowner = #usercode) - 1 +
+##		count(_attribute._attid where
+##		    _attribute._attrelid=aClass->table_name and
+##		    _attribute.#attowner=#usercode and _attribute.#attfrmt=31)))
+	aClass->memsize += self->memsize;
+	/*
+	BTsetF(1, aClass->data.levelbits);
+	*/
+	OOsnd(aClass, ii_flushAll);
+
+	/* record akindof hierarchy for new class */
+##	RANGE of _iiakindof is _iiakindof;
+##	APPEND to _iiakindof(_xclass = aClass->ooid, _iiakindof = _iiakindof.#akindof)
+##		WHERE _iiakindof._class = self->ooid;
+##	APPEND to _iiakindof(_xclass = aClass->ooid, _iiakindof = aClass->ooid);
+
+	return aClassid;
+## }

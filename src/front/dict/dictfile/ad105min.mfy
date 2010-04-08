@@ -1,0 +1,40 @@
+MODIFY ii_abfclasses TO BTREE UNIQUE ON class_id, catt_id
+    with fillfactor = 100
+
+modify ii_abfdependencies to btree on abfdef_applid, object_id
+    with fillfactor = 100
+
+modify ii_abfobjects to btree on applid,object_id
+    with compression=(data)
+
+modify ii_encoded_forms to btree unique on object_id,cfseq
+    with compression=(data)
+
+modify ii_fields to btree unique on object_id,flsubseq
+    with compression=(data)
+
+modify ii_forms to btree unique on object_id
+    with fillfactor = 100
+
+modify ii_gropts to btree unique on object_id
+    with compression=(data)
+
+modify ii_joindefs to btree unique on object_id,qtype
+    with compression=(data)
+
+modify ii_qbfnames to btree unique on object_id
+    with compression=(data)
+
+modify ii_rcommands to btree unique on object_id,rcotype,rcosequence
+    with compression=(data)
+
+modify ii_reports to btree unique on object_id
+    with fillfactor = 100
+
+MODIFY ii_sequence_values 
+    TO HASH UNIQUE ON sequence_owner, sequence_table, sequence_column
+    WHERE minpages = 32, fillfactor = 1
+
+modify ii_trim to btree on object_id,trim_col,trim_lin
+    with compression=(data)
+

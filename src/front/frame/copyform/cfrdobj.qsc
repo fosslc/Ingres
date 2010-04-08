@@ -1,0 +1,727 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<st.h>
+# include	<si.h>
+# include	<lo.h>
+# include	<nm.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<uf.h>
+# include	<ug.h>
+# include	<cf.h>
+# include	<me.h>
+#include	"ercf.h"
+
+
+/*{
+** Name:	CF_RDOBJ - read in a file containing form-related definitions
+**
+** Description:
+**	Reads an intermediate file containing definitions for one or more forms,
+**	qbfnames and/or joindefs, and writes them to the open database.
+**
+** Input params:
+**	filename	name of file containing specs.
+**	username	username of owner of db.
+**	replace		TRUE if forms to be replaced without prompt.
+**
+** Output params:
+**	none
+**
+** Returns:
+**	OK		completed successfully.
+**	FAIL		did not complete successfully.
+**
+** Exceptions:
+**	none
+**
+** Side Effects:
+**	none
+**
+** Pseudocode:
+**	open intermediate file.
+**	read first record of intermediate file.
+**	IF version incompatible
+**		close intermediate file.
+**		create new format intermediate file (cf_convto60).
+**		open new intermediate file.
+**		read first record of intermediate file.
+**	ENDIF
+**
+**	IF there is an object name clash
+**		resolve user overwrite intentions.
+**		IF overwrite not desired
+**			return.
+**		ENDIF
+**	ENDIF
+**
+**	WHILE not end of file
+**		read record.
+**		determine record type.
+**		write record to appropriate catalog.
+**
+**	END PROCEDURE
+**
+** History:
+**	8/2/83 (ps)	written.
+**	10/5/84 (agh)	Eliminated reference to fldummy field in fdfields
+**			catalog.
+**	06/12/85 (jrc)	Modified to look for versions after the names of the
+**			catalogs.  Currently only knows about version 3.0 or
+**			no version present.  Only the QBFMAP is changed.
+**	06/12/85 (scl)	Restructured some stuff to make it easier for CMS to
+**			massage the filenames. (Also changed the temp
+**			filenames so they will not exceed 8 characters.)
+**	10/27/85 (prs)	Change cf_readln to SIgetrec.
+**	11/04/85 (prs)	Fix bugs with reading in files.
+**	17-Apr-87 (rld) Modified to use new FE catalogs (ii_..); tuple must
+**			be placed in ii_objects for each form, qbfname and
+**			joindef to be copied.  Fixed to correctly resolve
+**			namespace for associated qbfnames and joindefs.
+**			(Previously qbfnames and joindefs were copied only
+**			if they has the same owner as the form).
+**	19-nov-1987 (rdesmond) Fixed strange memory stomping bug by placing
+**			definition of inlist at beginning of decl list.
+**	22-dec-1987 (rdesmond)
+**			moved begin transaction statement after file
+**			conversion so temp file from conversion may be 
+**			deleted (no deletes within multi-statement transaction).
+**	03-mar-1988 (rdesmond)
+**			changed timing of 'begin transaction' and 
+**			'end transaction'.  Transaction now begins for each
+**			object in cf_addobj() and ends in this procedure.
+**	07/28/88 (dkh) - Put in special hook so that formindex can
+**			 find out the name of the form that was copied in.
+**			 Declaration of Cf_silent and Cfversion moved here
+**			 from copyform.c
+**	08/02/88 (dkh) - Moved Cfversion and Cf_silent back to copyform.c.
+**	09/03/88 (dkh) - Reduced size of temporary filename for portability.
+**	01/25/90 (dkh) - Changes for new LO on VMS.
+**	07/06/90 (dkh) - Added error message if input file is empty.
+**	07/11/90 (dkh) - Put in check for bad input so we know when
+**			 an input with bad data was specified. 
+**	08/11/91 (dkh) - Fixed bug 39055.
+**	08/18/93 (dkh) - Changed code to eliminate compile problems on NT.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      29-Nov-1999 (hanch04)
+**          First stage of updating ME calls to use OS memory management.
+**          Make sure me.h is included.  Use SIZE_TYPE for lengths.
+**      06-feb-2009 (stial01)
+**          Define copyform record buffer with size COPYFORM_MAX_REC
+**      07-apr-2009 (stial01)
+**        Added cf_editobj to fix DB_MAXNAME dependencies in the forms we 
+**        add to rtiforms.fnx during build (jam)
+[@history_template@]...
+*/
+
+
+GLOBALREF char	Cfversion[];
+GLOBALREF bool	Cf_silent;
+
+
+STATUS
+cf_rdobj(filename, username, replace, formname)
+char	*filename;
+char	*username;
+bool	replace;
+char	*formname;
+{
+	/* internal declarations */
+
+	FORMINFO	in_array[MAX_OBJNAMES];
+	FORMINFO	*inlist;
+	i4		incount;
+	i4		max_objs = MAX_OBJNAMES;
+	i4		validinput;
+	char		inbuf[COPYFORM_MAX_REC];/* character buffer */
+	char		yorn[6];		/* Buffer for prompt */
+	char		objname[FE_MAXNAME+1];
+	char		*short_remark;
+	char		*long_remark;
+	OOID		class;
+	OOID		curr_id;
+	i4		rectype;
+	bool		goodcopy;
+	bool		conversion;
+	i4		msgptr;
+
+	LOCATION	tloc;
+	LOCATION	loc_forms;
+	FILE		*fd_forms;
+	char		loc_buf[MAX_LOC + 1];
+	char		file_locbuf[MAX_LOC + 1];
+	char		*new_filename;
+	char		*orig_fname;
+
+	if (formname)
+	{
+	    *formname = EOS;
+	}
+
+	inlist = &(in_array[0]);
+
+	orig_fname = filename;
+
+	/* start of routine */
+	IIUIendXaction();
+
+	/* Open intermediate file */
+	STcopy(filename, file_locbuf);
+	LOfroms(PATH & FILENAME, file_locbuf, &loc_forms);
+	if (SIopen(&loc_forms, ERx("r"), &fd_forms) != OK)
+	{
+	    IIUGerr(E_CF0000_CANNOT_OPEN_FILE, 0, 1, filename);
+	    return (FAIL);
+	}
+
+	/* get first record */
+	if (SIgetrec(inbuf, COPYFORM_MAX_REC, fd_forms) == ENDFILE)
+	{
+		IIUGerr(E_CF0024_EMPTY, 0, 1, filename);
+		return (FAIL);
+	}
+
+	/* Check if file is appropriate version */
+	if (STbcompare(inbuf, 11, ERx("COPYFORM:\t6"), 11, FALSE) == 0)
+	{
+		conversion = FALSE;
+	}
+	else
+	{
+		/* Incompatible version, must convert first */
+		SIclose(fd_forms);
+
+		/* generate new file name and get location */
+		NMloc(TEMP, PATH, NULL, &tloc);
+		LOuniq(ERx("cfr"), ERx("cnv"), &tloc);
+		LOcopy(&tloc, loc_buf, &loc_forms);
+		LOtos(&loc_forms, &new_filename);
+
+		/* convert file to new format */
+		if ((cf_convto60(filename, new_filename) != OK)
+
+		/* Open converted intermediate file */
+		|| (SIopen(&loc_forms, ERx("r"), &fd_forms) != OK)
+
+		/* get first record */
+		|| (SIgetrec(inbuf, COPYFORM_MAX_REC, fd_forms) == ENDFILE)
+
+		/* Check if file is appropriate version */
+		|| (STbcompare(inbuf, 11, ERx("COPYFORM:\t6"), 11, FALSE) != 0))
+		{
+		    IIUGerr(E_CF0008_CANNOT_CONVERT_FILE, 0, 1, new_filename);
+		    return (FAIL);
+		}
+
+		/* set flag so new file can be deleted */
+		conversion = TRUE;
+
+		filename = new_filename;
+	}
+
+	/* scan away first token */
+	cf_gettok(inbuf);
+
+	if (!replace)
+		/* check if any of the objects already exist in database */
+		if (cf_conflict(filename, username))
+		{
+		    FEprompt(ERget(F_CF0000_OVERWRITE_PROMPT), FALSE, 5, yorn);
+		    if(!IIUGyn(yorn, (STATUS *)NULL))
+			return (FAIL);
+		}
+
+	class = 0;
+	incount = 0;
+	validinput = FALSE;
+
+	for(;;)
+	{
+	    /* read until end of file reached */
+	    rectype = (SIgetrec(inbuf, COPYFORM_MAX_REC, fd_forms) == ENDFILE) ?
+	      RT_EOF : cf_rectype(inbuf);
+
+	    /* new object encountered (or EOF), write appropriate message */
+	    if ((rectype == RT_QBFHDR || rectype == RT_JDEFHDR ||
+	      rectype == RT_FORMHDR || rectype == RT_EOF) && (class != 0))
+	    {
+		/*
+		** End the transaction for this object, which was begun in
+		** cf_addobj().
+		*/
+		IIUIendXaction();
+		if (goodcopy)
+		{
+		    /* previous object was copied */
+		    switch(class)
+		    {
+			case OC_QBFNAME:
+			    msgptr = S_CF0009_COPIED_QBFNAME;
+			    break;
+			case OC_JOINDEF:
+			    msgptr = S_CF0010_COPIED_JOINDEF;
+			    break;
+			case OC_FORM:
+			    msgptr = S_CF0011_COPIED_FORM;
+			    break;
+		    }
+		    /* print status message */
+		    if (!Cf_silent)
+			FEmsg(ERget(msgptr), (bool)FALSE, objname);
+		}
+		else
+		{
+		    /* previous object was not copied */
+		    switch(class)
+		    {
+			case OC_QBFNAME:
+			    msgptr = E_CF0012_CANNOT_COPY_QBFNAME;
+			    break;
+			case OC_JOINDEF:
+			    msgptr = E_CF0013_CANNOT_COPY_JOINDEF;
+			    break;
+			case OC_FORM:
+			    msgptr = E_CF0014_CANNOT_COPY_FORM;
+			    break;
+		    }
+		    /* print error message */
+		    IIUGerr(msgptr, 0, 1, objname);
+		}
+	    }
+
+	    if (rectype == RT_EOF)
+	    /* end of file */
+		break;
+
+	    /* add tuple to appropriate relation */
+	    switch(rectype)
+	    {
+		case RT_QBFHDR:
+		case RT_JDEFHDR:
+		case RT_FORMHDR:
+		    validinput = TRUE;
+		    cf_gettok(inbuf);
+		    STcopy(cf_gettok(NULL), objname);
+		    /* determine ooclass for ii_object access */
+		    switch(rectype)
+		    {
+			case RT_QBFHDR:
+			    class = OC_QBFNAME;
+			    break;
+			case RT_JDEFHDR:
+			    class = OC_JOINDEF;
+			    break;
+			case RT_FORMHDR:
+			    class = OC_FORM;
+			    /* save formname to compile later */
+
+			    /*
+			    **  Check to see if we need to allocate a bigger
+			    **  array if there are more objects than the
+			    **  static array.
+			    */
+			    if (incount >= max_objs)
+			    {
+				PTR		pointer;
+				PTR		oldarray;
+				PTR		newarray;
+				u_i4	size;
+				u_i4	oldsize;
+				u_i2		cpsize;
+
+
+				oldsize = sizeof(FORMINFO) * max_objs;
+				size = oldsize + oldsize;
+				if ((pointer = (PTR) MEreqmem((u_i4) 0, size,
+					(bool) TRUE, NULL)) == NULL)
+				{
+					/*
+					**  Can't allocate more memory.
+					**  Give error and return FAIL.
+					*/
+					IIUGbmaBadMemoryAllocation(ERx("cfrdobj()"));
+					if (inlist != &(in_array[0]))
+					{
+						MEfree(inlist);
+					}
+					return(FAIL);
+				}
+				newarray = pointer;
+				oldarray = (PTR) inlist;
+
+				/*
+				**  Copy contents of old array to new array.
+				*/
+				while(oldsize > 0)
+				{
+					cpsize = (oldsize <= MAXI2) ? oldsize : MAXI2;
+					MEcopy(oldarray, cpsize, newarray);
+					oldsize -= cpsize;
+					oldarray = (PTR) ((char *) oldarray + 
+						cpsize);
+					newarray = (PTR) ((char *) newarray +
+						cpsize);
+				}
+
+				/*
+				**  Free up old array if it was dynamically
+				**  allocated.
+				*/
+				if (inlist != &(in_array[0]))
+				{
+					MEfree(inlist);
+				}
+
+				/*
+				**  Set new count for maximum objects that
+				**  array can hold and reassign pointers.
+				*/
+				max_objs += max_objs;
+				inlist = (FORMINFO *) pointer;
+			    }
+			    inlist[incount].name = STalloc(objname);
+			    break;
+		    }
+		    short_remark = cf_gettok(NULL);
+		    long_remark = cf_gettok(NULL);
+		    goodcopy = TRUE;
+		    if (cf_addobj(class, objname, username,
+		      short_remark, long_remark, &curr_id) != OK)
+			goodcopy = FALSE;
+		    if (class == OC_FORM)
+			inlist[incount++].id = curr_id;
+		    break;
+		case RT_QBFDET:
+		case RT_JDEFDET:
+		case RT_FORMDET:
+		case RT_FIELDDET:
+		case RT_TRIMDET:
+		    validinput = TRUE;
+		    if (cf_adddet(rectype, inbuf, curr_id) != OK)
+			goodcopy = FALSE;
+		    break;
+	    }
+	}
+	/* close intermediate file */
+	SIclose(fd_forms);
+
+	if (conversion)
+	    /* delete converted intermediate file */
+	    LOdelete(&loc_forms);
+
+	IIUIendXaction();
+
+	/*
+	**  If we didn't find any good input, then the input
+	**  file was either be corrupted or was not in copyform format.
+	**  We just put out an error message and exit with FAIL.
+	**  Note that the checking for validinput is (very) simple
+	**  and assumes people are not malicious about trashing things.
+	**  The checking can be fooled with liitle effort.
+	*/
+
+	if (!validinput)
+	{
+		IIUGerr(E_CF0025_BADFILE, 0, 1, orig_fname);
+
+		/*
+		**  Free up any dynamically allocated array before
+		**  returning.
+		*/
+		if (inlist != &(in_array[0]))
+		{
+			MEfree(inlist);
+		}
+		return(FAIL);
+	}
+
+	/* compile forms */
+	if (incount != 0)
+	{
+	    cfcompile(inlist, incount);
+
+	    /*
+	    **  If from formindex, copy the name of form
+	    **  into "formname" so formindex can use it.
+	    **  We are of course assuming that formindex
+	    **  is only called with copyform files that
+	    **  contain only one form.
+	    */
+	    if (formname)
+	    {
+		STcopy(inlist[0].name, formname);
+	    }
+	}
+
+
+	/*
+	**  Free up any dynamically allocated array before
+	**  returning.
+	*/
+	if (inlist != &(in_array[0]))
+	{
+		MEfree(inlist);
+	}
+	return (OK);
+}
+
+/*{
+** Name:	CF_EDITOBJ - read/edit/write a form file
+**
+** Description:
+**	Reads/edit/write a form file
+**      Added to edit DB_MAXNAME dependencies in forms added to rtiforms.fnx
+**      during the build (jam)
+**
+** Input params:
+**	filename	name of input form file
+**      fileout         name of output form file
+**
+** Output params:
+**	none
+**
+** Returns:
+**	OK		completed successfully.
+**	FAIL		did not complete successfully.
+**
+** Exceptions:
+**	none
+**
+** Pseudocode:
+**	open input file
+**      open output form file
+**	read first record of input form file
+**	IF version incompatible
+**          exit, this is an unexpected error for forms added to rtiforms.fnx
+**          during the build
+**	WHILE not end of file
+**		read record from input form file
+**		determine record type.
+**                  RT_FIELDDET - check/fix DB_MAXNAME dependencies 
+**		write record to output form file
+**	END PROCEDURE
+**
+** History:
+**    26-mar-2009 (stial01)
+**       (created)
+*/
+STATUS
+cf_editobj(filename, fileout)
+char	*filename;
+char    *fileout;
+{
+    char	*fldname;
+    i4		flag2;
+    i4		fllength;
+    i4		fldatawidth;
+    i4		scrollsz;
+    i4		newscrollsz;
+    i4		fldtype;
+    i4		i;
+    i4		j;
+    char	ascii_scrollsz[20];
+    char	ascii_flag2[20];
+    char	*token[40];
+    i4		i4array[40];
+    i4		flds = 0;
+    i4		eflds = 0;
+    i4		count;
+    char	*buf;
+    char	inbuf[COPYFORM_MAX_REC];
+    char	outbuf[COPYFORM_MAX_REC];
+    i4		rectype;
+    LOCATION	inloc;
+    LOCATION	outloc;
+    FILE	*fd_in;
+    FILE	*fd_out;
+    char	in_locbuf[MAX_LOC + 1];
+    char	out_locbuf[MAX_LOC + 1];
+    char	formname[FE_MAXNAME+1];
+
+    if (!filename || !fileout)
+    {
+	printf("cf_editobj requires filename and fileout args\n");
+	return (FAIL);
+    }
+
+#ifdef DEBUG
+    printf("Editing maxname in form %s %s\n", filename,fileout);
+#endif
+
+    /* Open input form file */
+    STcopy(filename, in_locbuf);
+    LOfroms(PATH & FILENAME, in_locbuf, &inloc);
+    if (SIopen(&inloc, ERx("r"), &fd_in) != OK)
+    {
+	IIUGerr(E_CF0000_CANNOT_OPEN_FILE, 0, 1, filename);
+	return (FAIL);
+    }
+
+    /* Open output form file */
+    STcopy(fileout, out_locbuf);
+    LOfroms(PATH & FILENAME, out_locbuf, &outloc);
+# ifdef hp9_mpe
+    if (SIfopen(&outloc, ERx("w"), SI_TXT, 252, &fd_out) != OK)
+# else
+    if (SIopen(&outloc, ERx("w"), &fd_out) != OK)
+# endif
+    {
+	IIUGerr(E_CF0000_CANNOT_OPEN_FILE, 0, 1, fileout);
+	FEing_exit();
+	PCexit(-1);
+    }
+
+    /* get first record */
+    if (SIgetrec(inbuf, COPYFORM_MAX_REC, fd_in) == ENDFILE)
+    {
+	IIUGerr(E_CF0024_EMPTY, 0, 1, filename);
+	return (FAIL);
+    }
+
+    /* Check if file is appropriate version */
+    if (STbcompare(inbuf, 11, ERx("COPYFORM:\t6"), 11, FALSE))
+    {
+	/* No need to convert INGRES forms so no code was added for it */
+	printf("Conversion required for %s\n", filename);
+	PCexit(-1);
+    }
+
+    /* Write the header record */
+    buf = inbuf;
+    if (SIwrite(STlength(buf), buf, &count, fd_out) != OK)
+	return (FAIL);
+
+    formname[0] = '\0';
+
+    for(;;)
+    {
+	buf = inbuf;
+	MEfill(sizeof(token), '\0', token);
+	MEfill(sizeof(i4array), '\0', i4array);
+
+	/* read until end of file reached */
+	rectype = (SIgetrec(inbuf, COPYFORM_MAX_REC, fd_in) == ENDFILE) ?
+	  RT_EOF : cf_rectype(inbuf);
+
+	if (rectype == RT_EOF)
+	/* end of file */
+	    break;
+
+	buf = inbuf;
+	if (rectype == RT_FORMHDR)
+	{
+	    STcopy(inbuf, outbuf);
+	    buf = outbuf;
+	    cf_gettok(inbuf);
+	    STcopy(cf_gettok(NULL), formname);
+	}
+	else if (rectype == RT_FIELDDET)
+	{
+	    flds++;
+	    STcopy(inbuf, outbuf);
+	    buf = outbuf;
+
+
+	    /*
+	    ** parse input string, destroys input str replace
+	    */
+	    cf_gettok(inbuf);
+	    for (i=0;(token[i] = cf_gettok((char *)NULL)) != NULL ; ++i)
+	    {
+		;
+	    }
+
+	    IIUGatoi(token[2],(PTR) &i4array[2],sizeof(i4));
+	    IIUGatoi(token[3],(PTR) &i4array[3],sizeof(i4));
+	    IIUGatoi(token[5],(PTR) &i4array[5],sizeof(i4));
+	    IIUGatoi(token[10],(PTR) &i4array[10],sizeof(i4));
+	    IIUGatoi(token[18],(PTR) &i4array[18],sizeof(i4));
+
+	    fldname = token[1];
+	    fldtype = i4array[2];
+	    scrollsz = i4array[3];
+	    fllength = i4array[5];
+	    fldatawidth = i4array[10];
+	    flag2 = i4array[18];
+
+	    /* Point to new copies of scrollsz, flag2, they may change */
+	    STcopy(token[3], ascii_scrollsz);
+	    token[3] = ascii_scrollsz;
+	    STcopy(token[18], ascii_flag2);
+	    token[18] = ascii_flag2;
+
+	    if (fllength >= 32 &&
+		(abs(fldtype) == DB_VCH_TYPE 
+		|| abs(fldtype) == DB_TXT_TYPE
+		|| abs(fldtype) == DB_CHR_TYPE
+		|| abs(fldtype) == DB_CHA_TYPE))
+	    {
+		/* 
+		** some of these fields already had scroll Y
+		** e.g. len 32, wid 34, scroll len 66
+		*/
+		newscrollsz = scrollsz;
+		if (!MEcmp(fldname, "db_maxname_", 11) && STlength(fldname)>11)
+		{
+		    /* fix fldname */
+		    token[1] = fldname+11;
+
+		    if (fllength <=40 && scrollsz <= fllength*2)
+		    {
+			eflds++;
+			if (scrollsz > 60)
+			    newscrollsz = scrollsz + 2*(128-32);
+			else
+			    newscrollsz = scrollsz + (128-32);
+
+#define cf_fdSCRLFD 0100 /* should be same as fdSCRLFD in frame.h */
+			/* set scroll flag */
+			if (newscrollsz > fllength)
+			    flag2 |= cf_fdSCRLFD;
+			CVla(newscrollsz, ascii_scrollsz);
+			CVla(flag2, ascii_flag2);
+		    }
+		}
+
+		printf("%s %s %s (%d,%d) (scrollsz %d %s %d)\n",
+		    formname, fldname, token[22], 
+		    fldtype, fllength, scrollsz,
+		    scrollsz==newscrollsz ? "==" : "->", newscrollsz);
+
+		/* rebuild output from tokens */
+		outbuf[0] = '\0';
+		for ( j = 0; j < i; j++)
+		{
+		    STcat(outbuf, ERx("\t"));
+		    STcat(outbuf,token[j]);
+		}
+	    
+		STcat(outbuf, ERx("\n"));
+		buf = outbuf;
+		}
+	}
+
+	if (SIwrite(STlength(buf), buf, &count, fd_out) != OK)
+	    return (FAIL);
+    }
+
+    SIclose(fd_in);
+    SIclose(fd_out);
+#ifdef  DEBUG
+    printf("%s flds fixed %d/%d\n",formname,eflds,flds);
+#endif
+    
+    return (OK);
+}

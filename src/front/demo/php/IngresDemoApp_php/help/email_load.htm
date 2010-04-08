@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How the Email Address Select Box Is Loaded </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="Ajax, SELECT statement, UTF-8, xajax">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body  onload="if (isTOCLoaded()) {expand('3405');expand('3326');expand('3319');highlight('3305')}">
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="profile_form.htm" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="profile_load.htm" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How the Email Address Select Box Is Loaded</h4>
+<p class="bodytext">The Email Address select box can assume two styles depending on the mode of the page: </p>
+<ul class="listbullet"><li class="listbullet">When adding a new profile, the email address is entered as a text in the Email Address input field.</li><li class="listbullet">When modifying an existing profile, the email address becomes a select box where the list of email addresses is retrieved from the user_profile table.</li></ul><p class="bodytext">The function <a href="showSource.php?file=profileAJAX" target="_blank">xajax_loadEmail</a> generates the HTML code for a select box. The data for this box is loaded from the database by <a href="showSource.php?file=ProfileModel" target="_blank">ProfileModel</a>::getMailaddresses.</p>
+<p class="bodytext">This class method sets up the query string and passes it as a parameter to the query method of its instance of the <a href="showSource.php?file=DBConnection" target="_blank">DBConnection</a> class.</p>
+<p class="bodytext">After the query is sent, the method gets the result by a call to the method getResultArray of <a href="showSource.php?file=DBConnection" target="_blank">DBConnection</a>. Its result is a two dimensional array. Each row of the array is an array where, in addition to storing the data in numeric indices, data is also stored in associative indices, using the column names as keys.</p>
+<p class="bodytext">Thus, the values in the result set can be accessed through the index &quot;up_email&quot;. The method generates a new array with only one entry for each fetched mail address and converts the encoding of the mail address string from UTF-16LE to UTF-8.</p>
+<p class="codefirst">function getMailAddresses()</p>
+<p class="code">{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;$this-&gt;DBConn-&gt;query(&quot;SELECT up_email from user_profile&quot;);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;$resultArray = $this-&gt;DBConn-&gt;getResultArray();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;$mailaddresses = array();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;foreach($resultArray as $key =&gt; $emailaddress)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$mailaddresses[$key]['up_email'] =</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iconv(&quot;UTF-16LE&quot;,&quot;UTF -8&quot;,$emailaddress['up_email']);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;return $mailaddresses;</p>
+<p class="code">}</p>
+<p class="bodytext">The Ajax function <a href="showSource.php?file=profileAJAX" target="_blank">loadValuesforNewProfile</a> processes the returned array into a string containing the HTML code for the select box. This String is assigned to the innerHTML attribute of the DOM Node &quot;mailaddress&quot;. This node is a &lt;div&gt; Element with the id &quot;mailaddress&quot;.</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2007 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

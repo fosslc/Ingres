@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame allows you to Archive the currently selected report to a text 
+file.  You may archive reports created by RBF or through SREPORT.  
+Archiving a report corresponds to the function performed by the COPYREP 
+operating system command.
+
+One useful function of archiving a report is to write out an RBF report
+to a text file for further editing, and re-entry of the report using
+SREPORT.  While these reports may no longer be edited using RBF, you
+can often go beyond the power of RBF in developing customized reports.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Archive         Write out the report writer commands for this report
+                        to a file.  You will be prompted for a file name.
+
+        Help            Print this message.
+
+        End             Return to the Report catalog frame.

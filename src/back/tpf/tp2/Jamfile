@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!tpf!tp2
+#
+
+SubDir ING_SRC back tpf tp2 ;
+
+IISUBSYS back tpf tp2 ;
+
+
+IILIBRARY TPFLIB : tp2util.c tp2rcvr.c tp2main.c tp2dbgs.c
+	tp2cats.c ;
+

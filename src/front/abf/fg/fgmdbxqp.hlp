@@ -1,0 +1,10 @@
+/#-- Help File: fgmdbxqp.hlp
+/#-- Master detail browse frame, Next menuitem, user Qual, primary help.
+This screen allows you to browse data. Select "Next" to browse
+selected data.
+
+  Next        Get the next master record and its associated
+              detail records.
+  Help        Get help about this screen.
+  TopFrame    Return to the top frame in the application.
+  End         Stop browsing data and enter a new query.

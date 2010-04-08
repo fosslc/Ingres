@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+To create an aggregate you must choose the aggregate function you
+wish to use and whether or not it is to be cumulative.  Unique
+aggregates are available for sort (break) columns only because a
+unique aggregate is calculated only when a break occurs rather than
+for each row in the detail, which is the case for non-unique aggregates.
+If the aggregate is cumulative then the value refers to all data rows 
+processed since the start of the report.  
+
+The menu commands are as follows:
+
+	MENU COMMANDS   SYNOPSIS
+	-------------   --------
+	Select		Create the aggregate based on the aggregate
+			function that is highlighted and the column
+			selected in the previous frame.
+
+	Cancel		Return to the previous frame,
+			no aggregate is created.
+
+	Help            Print this message.

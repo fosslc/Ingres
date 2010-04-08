@@ -1,0 +1,32 @@
+<!--
+##{
+## History:
+##    04-May-1999 (peeje01)
+##        Replaced .exe with #cgi# for platform independance
+##}
+-->
+<HTML>
+<HEAD>
+<TITLE>Execute Application</TITLE>
+</HEAD>
+<BODY>
+<FORM ACTION="/ice-bin/oiice.#cgi#" METHOD="POST">
+
+<INPUT TYPE=hidden NAME="ii_application" VALUE="iceapp.#cgi#">
+
+Database: <INPUT TYPE=text NAME="ii_database" VALUE="icetutor">
+User: <INPUT TYPE=text NAME="ii_userid" VALUE="ingres">
+
+<TABLE>
+<TR>
+<TD>Value 1</TD><TD>Value 2</TD><TD>Value 3</TD><TD>Value 4</TD>
+</TR>
+<TD><INPUT TYPE=text NAME="arg1" VALUE=1></TD>
+<TD><INPUT TYPE=text NAME="arg2" VALUE=2></TD>
+<TD><INPUT TYPE=text NAME="arg3" VALUE=3></TD>
+<TD><INPUT TYPE=text NAME="arg4" VALUE=4></TD>
+</TR>
+</TABLE>
+<INPUT TYPE=SUBMIT VALUE="Execute">
+</FORM></BODY>
+</HTML>

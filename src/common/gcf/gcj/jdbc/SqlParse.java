@@ -1,0 +1,2666 @@
+/*
+** Copyright (c) 1999, 2009 Ingres Corporation All Rights Reserved.
+*/
+
+package com.ingres.gcf.jdbc;
+
+/*
+** Name: SqlParse.java
+**
+** Description:
+**	Defines a class which provides services for parsing SQL queries.
+**
+**  Classes:
+**
+**	SqlParse
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	12-Nov-99 (gordy)
+**	    Allow date formatter to be specified.
+**	11-Nov-99 (rajus01)
+**	    DatabaseMetaData Implementation: Add java.util.Enumeration.
+**	13-Jun-00 (gordy)
+**	    Made the function methods static.  Added support for 
+**	    procedure call requests.
+**	20-Oct-00 (gordy)
+**	    Added support for hex literals as parameters in procedure calls.
+**	28-Mar-01 (gordy)
+**	    ProcInfo now a parameter to parseCall() rather than return value.
+**	11-Apr-01 (gordy)
+**	    Do not include time with DATE datatypes.
+**	21-Jun-01 (gordy)
+**	    Transform JDBC 'SELECT FOR UPDATE' syntax.  Check for
+**	    'FOR UPDATE' and 'FOR READONLY' clauses.
+**      11-Jul-01 (loera01) SIR 105309
+**          Added support for Ingres syntax on DB procedures.
+**      13-Aug-01 (loera01) SIR 105521
+**          Added support for global temp table parameters in DB procedures.
+**	20-Aug-01 (gordy)
+**	    Extend the FOR UPDATE/READONLY code with default concurrency.
+**	    Add methods for common text manipulation functions.
+**	26-Oct-01 (gordy)
+**	    Relational gateways now translate date('now') into client time
+**	    rather than gateway time.  Since JDBC clients appear as GMT,
+**	    CURDATE and NOW functions must be built as date literals of 
+**	    the current client time.
+**	31-Oct-01 (gordy)
+**	    Some gateways don't currently accept the date format used by
+**	    the JDBC driver/server for literals.  It has been found that
+**	    all supported DBMS accept the date format YYYY_MM_DD HH:MM:SS.
+**	    Local date formatters are now declared and the timezone for
+**	    the associated connection is configured.
+**      27-Nov-01 (loera01) 
+**          Added support for standard JDBC syntax for global temp table
+**          parameters.
+**	 7-Aug-02 (gordy)
+**	    Allow empty strings in date/time escape sequences.
+**	31-Oct-02 (gordy)
+**	    Adapted for generic GCF driver.
+**	24-Feb-03 (gordy)
+**	    Parameter names allowd in JDBC call syntax.
+**	 3-Jul-03 (gordy)
+**	    Added support for DATABSE(), POWER(), and SOUNDEX() functions.
+**	21-Jul-03 (gordy)
+**	    Use local timezone with date literals since timezone independent.
+**	12-Sep-03 (gordy)
+**	    Date formatters moved to SqlDates utility.
+**	 1-Nov-03 (gordy)
+**	    Save table name from SELECT statement.
+**	19-Jun-06 (gordy)
+**	    ANSI Date/Time data type support.
+**	24-Dec-08 (gordy)
+**	    Use date/time formatters associated with connection.
+**      05-Jan-09 (rajus01) SIR 121238
+**          - Replaced SqlEx references with SQLException or SqlExFactory
+**            depending upon the usage of it. SqlEx becomes obsolete to
+**            support JDBC 4.0 SQLException hierarchy.
+**	 9-Jan-09 (gordy)
+**	    Cleanup related to problems reported by the findbugs utility.
+**	25-Jun-09 (rajus01) 121238
+**	    Added Numeric Fuctions: ACOS(),ASIN(),ATAN2(),CEILING(),FLOOR(),
+**	    PI(),ROUND(),SIGN(),TAN(),TRUNCATE(). 
+**	    Added String Functions: CHARACTER_LENGTH(), LOCATE(), LTRIM(), 
+**	    OCTET_LENGTH(), POSITION(), REPLACE(), SUBSTRING().
+**	    Added Time and Date Functions: HOUR(), MINUTE(), MONTH(),
+**	    SECOND(), WEEK(), YEAR().
+**	26-Oct-09 (gordy)
+**	    Added support for BOOLEAN.
+*/
+
+import	java.math.BigDecimal;
+import	java.util.Enumeration;
+import	java.util.Hashtable;
+import	java.sql.Date;
+import	java.sql.Time;
+import	java.sql.Timestamp;
+import	java.sql.SQLException;
+import	com.ingres.gcf.util.DbmsConst;
+import	com.ingres.gcf.util.SqlExFactory;
+import	com.ingres.gcf.util.GcfErr;
+
+
+/*
+** Name: SqlParse
+**
+** Description:
+**	Class providing SQL query text parsing and transformation.
+**
+**  Constants:
+**
+**	QT_UNKNOWN	    Unknown query type.
+**	QT_SELECT	    Select query.
+**	QT_DELETE	    Delete (cursor) query.
+**	QT_UPDATE	    Update (cursor) query.
+**	QT_PRODECURE	    Execute procedure (ODBC syntax).
+**	QT_NATIVE_PROC	    Execute procedure (Ingres syntax).
+**
+**  Public Methods:
+**
+**	getConvertTypes()   Get supported SQL types.
+**	getNumFuncs	    Get Ingres Numeric Functions.
+**	getStrFuncs	    Get Ingres String Functions.
+**	getTdtFuncs	    Get Ingres TimeDate Functions.
+**	getSysFuncs	    Get Ingres System Functions.
+**	getQueryType	    Determine type of SQL query/statement.
+**	getCursorName	    Get cursor for positioned UPDATE or DELETE.
+**	getTableName	    Get table name for SELECT FROM.
+**	getConcurrency	    Returns the statement concurrency type.
+**	parseSQL	    Convert SQL text to JDBC Server format.
+**	parseCall	    Convert CALL text to ProcInfo object.
+**
+**  Private Data:
+**	
+**	keywords	    SQL keywords.
+**	esc_seq		    ODBC escape sequences.
+**	esc_func	    ODBC functions.
+**	func_xlat	    Ingres functions (translated)
+**	types		    ODBC and Ingres conversion functions.
+**
+**	FUNC_IDATE_CONST    Ingres Date constant text.
+**	FUNC_ITIME_CONST    Ingres Time constant text.
+**	FUNC_ISTAMP_CONST   Ingres Timestamp constant text.
+**	FUNC_ADATE_CONST    ANSI Date constant text.
+**	FUNC_ATIME_CONST    ANSI Time constant text.
+**	FUNC_ASTAMP_CONST   ANSI Timestamp constant text.
+**	FUNC_IDATE_PREFIX   Ingres Date function prefix text.
+**	FUNC_IDATE_SUFFIX   Ingres Date function suffix text.
+**	FUNC_ADATE_PREFIX   ANSI Date literal prefix text.
+**	FUNC_ADATE_SUFFIX   ANSI Date literal suffix text.
+**	FUNC_TIME_PREFIX    ANSI Time literal prefix text.
+**	FUNC_TIME_SUFFIX    ANSI Time literal suffix text.
+**	FUNC_STAMP_PREFIX   ANSI Timestamp literal prefix text.
+**	FUNC_STAMP_SUFFIX   ANSI Timestamp literal suffix text.
+**
+**	conn		    Current connection.
+**	use_gmt		    Use GMT for date/time literals.
+**	sql		    Original SQL query.
+**	text		    Query text.
+**	txt_len		    Length of query in text.
+**	transformed	    True if query text has been modified.
+**	token_beg	    First character of current token in text.
+**	token_end	    Character following current token in text.
+**	nested		    True if nested character pairs found by match().
+**	query_type	    Query type.
+**	cursor		    Cursor name for positioned Delete/Update.
+**	table_name	    Table name for SELECT FROM.
+**	for_readonly	    Does query contain 'FOR READONLY'.
+**	for_update	    Does query contain 'FOR UPDATE'.
+**
+**  Private Methods:
+**
+**	parseNumeric	    Parse a full numeric value.
+**	parseESC	    Convert ODBC escape sequence.
+**	parseConvert	    Convert ODBC escape function CONVERT.
+**	append_escape	    Copy escape text and process nested sequences.
+**	append_text	    Copy text array to string buffer.
+**	save_text	    Copy string buffer to text array.
+**	hex2bin		    Convert hex string to byte array.
+**	nextToken	    Scan for next token.
+**	prevToken	    Scan for previous token.
+**	match		    Find match for character pair.
+**	keyword		    Determine keyword ID of a token.
+**	isIdentChar	    Is character permitted in an identifier.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	12-Nov-99 (gordy)
+**	    Allow date formatter to be specified.
+**	11-Nov-99 (rajus01)
+**	    DatabaseMetaData Implementation: Added getNumFuncs, getStrFuncs,
+**	    getTdtFuncs, gettSysFuncs, getSQLtypes.
+**	13-Jun-00 (gordy)
+**	    Added support for procedure call requests.  Enhanced scanning
+**	    of numerics.
+**	20-Oct-00 (gordy)
+**	    Added hex2bin().
+**	21-Jun-01 (gordy)
+**	    Added keywords 'FOR' and 'READONLY', flags for_readonly and 
+**	    for_update, and methods isForReadonly() and isForUpdate().
+**	20-Aug-01 (gordy)
+**	    Replaced isForReadonly() and isForUpdate() with getConcurrency()
+**	    to support default concurrency.  Added concurrency constants
+**	    CONCUR_DEFAULT, CONCUR_READONLY, CONCUR_UPDATE.  Added private
+**	    methods append_text() and save_text().
+**	26-Oct-01 (gordy)
+**	    Added FUNC_DATE_PREFIX, FUNC_DATE_SUFFIX to support date function.
+**	31-Oct-01 (gordy)
+**	    Added D_FMT, TS_FMT, df_ts, dt_date and changed dateFormat to
+**	    timeZone for local date formatting.
+**	31-Oct-02 (gordy)
+**	    Moved concurrancy and date literal format constants to 
+**	    DrvConst interface.  Renamed type to query_type.  Removed 
+**	    getNativeDBProcReturn() and isGTTParam() and moved 
+**	    functionality to parseCall().
+**	 3-Jul-02 (gordy)
+**	    Added FUNC_DB, FUNC_POWER, and FUNC_SNDEX.
+**	12-Sep-03 (gordy)
+**	    Replaced date formatters with utility SqlDates.  Timezone
+**	    replaced by GMT indicator use_gmt.
+**	 1-Nov-03 (gordy)
+**	    Added keyword FROM, table_name and getTableName().
+**	19-Jun-06 (gordy)
+**	    ANSI Date/Time data type support.  Added conn so all connection 
+**	    info is available. Added ANSI Date/Time literal prefix/suffix,
+**	    constants and escape functions.
+**	25-Jun-09 (rajus01)
+**	    Add FUNC_ACOS, FUNC_ASIN, FUNC_ATAN2, FUNC_CEILING, FUNC_FLOOR,
+**	    FUNC_PI, FUNC_ROUND, FUNC_SIGN, FUNC_TAN, FUNC_TRUNC, FUNC_CHARLEN,
+**	    FUNC_LOC, FUNC_LTRIM, FUNC_OCTLEN, FUNC_POS, FUN_REPLACE, 
+**	    FUNC_SUBSTR, FUNC_HOUR, FUNC_MIN, FUNC_MON, FUNC_SEC, FUNC_WEEK(),
+**	    FUNC_YEAR.
+*/
+
+class
+SqlParse
+    implements DrvConst, DbmsConst, GcfErr
+{
+    /*
+    ** Query types.
+    */
+    public static final int	QT_UNKNOWN  = 0;    // can't be UNKNOWN
+    public static final int	QT_SELECT   = 1;
+    public static final int	QT_DELETE   = 2;
+    public static final int	QT_UPDATE   = 3;
+    public static final int	QT_PROCEDURE= 4;
+    public static final int	QT_NATIVE_PROC = 5;
+
+    /*
+    ** General classification for tokens in SQL statements.
+    */
+    private static final int	UNKNOWN	    = -1;   // Unclassified.
+    private static final int	EOF	    = -2;   // End of query.
+    private static final int	STRING	    = 1;    // Quoted string
+    private static final int	IDENT	    = 2;    // Identifier, possible keyword.
+    private static final int	NUMBER	    = 3;    // Number.
+    private static final int	PUNCT	    = 4;    // General punctuation.
+    private static final int	ESCAPE	    = 5;    // ODBC escape sequence.
+
+    private static final int	P_LPAREN    = 10;   // Specific punctuation.
+    private static final int	P_RPAREN    = 11;
+    private static final int	P_LBRACE    = 12;
+    private static final int	P_RBRACE    = 13;
+    private static final int	P_COMMA	    = 14;
+    private static final int	P_QMARK	    = 15;
+    private static final int	P_EQUAL	    = 16;
+    private static final int	P_PLUS	    = 17;
+    private static final int	P_MINUS	    = 18;
+    private static final int	P_PERIOD    = 19;
+
+    /*
+    ** Numeric types
+    */
+    private static final int	NUM_INT	    = 0;    // Integer
+    private static final int	NUM_DEC	    = 1;    // Decimal
+    private static final int	NUM_FLT	    = 2;    // Float
+
+    /*
+    ** SQL keywords.
+    **
+    ** The keyword ID must match position in keywords array.
+    */
+    private static final int	KW_CALLPROC = 0;
+    private static final int	KW_CURRENT  = 1;
+    private static final int	KW_DELETE   = 2;
+    private static final int	KW_EXECUTE  = 3;
+    private static final int	KW_FOR	    = 4;
+    private static final int	KW_FROM	    = 5;
+    private static final int	KW_INTO     = 6;
+    private static final int	KW_OF	    = 7;
+    private static final int	KW_PROCEDURE = 8;
+    private static final int	KW_READONLY = 9;
+    private static final int	KW_SELECT   = 10;
+    private static final int	KW_SESSION  = 11;
+    private static final int	KW_UPDATE   = 12;
+    private static final int	KW_WHERE    = 13;
+
+    private static final String	keywords[] = 
+    {
+	"CALLPROC",	"CURRENT",	"DELETE",	"EXECUTE",	
+	"FOR",		"FROM",		"INTO",		"OF", 		
+	"PROCEDURE", 	"READONLY",	"SELECT",	"SESSION",	
+	"UPDATE",	"WHERE"
+    };
+
+    /*
+    ** ODBC escape sequences
+    **
+    ** The sequence ID must match position in esc_seq array.
+    */
+    private static final int	ESC_CALL    = 0;
+    private static final int	ESC_DATE    = 1;
+    private static final int	ESC_ESC	    = 2;
+    private static final int	ESC_FUNC    = 3;
+    private static final int	ESC_OJ	    = 4;
+    private static final int	ESC_TIME    = 5;
+    private static final int	ESC_STAMP   = 6;
+
+    private static final String esc_seq[] =
+    { "CALL", "D", "ESCAPE", "FN", "OJ", "T", "TS" };
+
+    /*
+    ** ODBC scalar functions
+    **
+    ** The function ID must match position in esc_func array.
+    ** The corresponding Ingres function must appear in the
+    ** same position in the func_xlat array.
+    */
+    private static final int	FUNC_ABS     = 0;
+    private static final int	FUNC_ACOS    = 1;
+    private static final int	FUNC_ASIN    = 2;
+    private static final int	FUNC_ATAN    = 3;
+    private static final int	FUNC_ATAN2   = 4;
+    private static final int	FUNC_CEIL    = 5;
+    private static final int	FUNC_CHARLEN = 6;
+    private static final int	FUNC_CONCAT  = 7;
+    private static final int	FUNC_CNVRT   = 8;
+    private static final int	FUNC_COS     = 9;
+    private static final int	FUNC_CDATE   = 10;
+    private static final int	FUNC_ANSICD  = 11;
+    private static final int	FUNC_ANSICT  = 12;
+    private static final int    FUNC_ANSICS  = 13;
+    private static final int	FUNC_CTIME   = 14;
+    private static final int	FUNC_DB	     = 15;
+    private static final int	FUNC_DOW     = 16;
+    private static final int	FUNC_EXP     = 17;
+    private static final int	FUNC_FLOOR   = 18;
+    private static final int	FUNC_HOUR    = 19;
+    private static final int	FUNC_IFNULL  = 20;
+    private static final int	FUNC_LCASE   = 21;
+    private static final int	FUNC_LEFT    = 22;
+    private static final int	FUNC_LENGTH  = 23;
+    private static final int	FUNC_LOC     = 24;
+    private static final int	FUNC_LOG     = 25;
+    private static final int	FUNC_LTRIM   = 26;
+    private static final int	FUNC_MIN     = 27;
+    private static final int	FUNC_MOD     = 28;
+    private static final int	FUNC_MON     = 29;
+    private static final int	FUNC_NOW     = 30;
+    private static final int	FUNC_OCTLEN  = 31;
+    private static final int	FUNC_PI      = 32;
+    private static final int	FUNC_POWER   = 33;
+    private static final int	FUNC_POS     = 34;
+    private static final int	FUNC_REPLACE = 35;
+    private static final int	FUNC_RIGHT   = 36;
+    private static final int	FUNC_ROUND   = 37;
+    private static final int	FUNC_RTRIM   = 38;
+    private static final int	FUNC_SEC     = 39;
+    private static final int	FUNC_SIGN    = 40;
+    private static final int	FUNC_SIN     = 41;
+    private static final int	FUNC_SNDEX   = 42;
+    private static final int	FUNC_SQRT    = 43;
+    private static final int	FUNC_SUBSTR  = 44;
+    private static final int	FUNC_TAN     = 45;
+    private static final int	FUNC_TRUNC   = 46;
+    private static final int	FUNC_UCASE   = 47;
+    private static final int	FUNC_USER    = 48;
+    private static final int	FUNC_WEEK    = 49;
+    private static final int	FUNC_YEAR    = 50;
+
+    private static final String esc_func[] = 
+    { "ABS",     "ACOS",             "ASIN",          "ATAN",        "ATAN2",
+      "CEILING", "CHARACTER_LENGTH", "CONCAT",        "CONVERT",     "COS", 
+      "CURDATE", "CURRENT_DATE",     "CURRENT_TIME",  "CURRENT_TIMESTAMP",
+      "CURTIME", "DATABASE",         "DAYNAME",       "EXP",         "FLOOR",
+      "HOUR",    "IFNULL",           "LCASE",         "LEFT",        "LENGTH",
+      "LOCATE",  "LOG",              "LTRIM",         "MINUTE",      "MOD", 
+      "MONTH",   "NOW",              "OCTET_LENGTH",  "PI",          "POWER",
+      "POSITION",                    "REPLACE",       "RIGHT",       "ROUND", 
+      "RTRIM",   "SECOND",           "SIGN",          "SIN",         "SOUNDEX",
+      "SQRT",    "SUBSTRING",        "TAN",           "TRUNCATE",    "UCASE",
+      "USER",    "WEEK",             "YEAR" };
+
+    private static final String func_xlat[] = 
+    { "ABS",      "ACOS",  "ASIN",    "ATAN",    "ATAN2",     "CEILING", 
+      "CHARACTER_LENGTH",  "CONCAT",  "CONVERT", "COS",       "?", 
+      "?",        "?",     "?",       "?",       "DBMSINFO('DATABASE')", 
+		  "DOW",   "EXP",     "FLOOR",   "HOUR",      "IFNULL",  
+      "LOWERCASE",         "LEFT",    "LENGTH",  "LOCATE",    "LOG", 
+      "LTRIM",    "MINUTE",           "MOD",     "MONTH",      "?", 
+      "OCTET_LENGTH",      "PI",      "POWER",   "POSITION",  "REPLACE",
+      "RIGHT",    "ROUND", "RTRIM",   "SECOND",  "SIGN",      "SIN",  
+      "SOUNDEX",  "SQRT",  "SUBSTRING",          "TAN",       "TRUNCATE",  
+      "UPPERCASE",         "USER",     "WEEK",    "YEAR" };
+
+    private static final Hashtable  types = new Hashtable();
+    
+    private static final String	FUNC_IDATE_CONST  = "date('today')";
+    private static final String	FUNC_ITIME_CONST  = "date('now')";
+    private static final String	FUNC_ISTAMP_CONST = "date('now')";
+    private static final String	FUNC_ADATE_CONST  = "CURRENT_DATE";
+    private static final String	FUNC_ATIME_CONST  = "CURRENT_TIME";
+    private static final String	FUNC_ASTAMP_CONST = "CURRENT_TIMESTAMP";
+    private static final String	FUNC_IDATE_PREFIX = "date('";
+    private static final String	FUNC_IDATE_SUFFIX = "')";
+    private static final String	FUNC_ADATE_PREFIX = "DATE'";
+    private static final String	FUNC_ADATE_SUFFIX = "'";
+    private static final String	FUNC_TIME_PREFIX  = "TIME'";
+    private static final String	FUNC_TIME_SUFFIX  = "'";
+    private static final String	FUNC_STAMP_PREFIX = "TIMESTAMP'";
+    private static final String	FUNC_STAMP_SUFFIX = "'";
+
+    private DrvConn		conn = null;
+    private boolean		use_gmt = false;
+    private boolean		ansi_date_syntax = false;
+    private String		sql = null;
+    private char[]		text = null;
+    private int			txt_len;
+    private boolean		transformed = false;
+    private int			token_beg = 0;	    // nextToken() locations
+    private int			token_end = 0;
+    private boolean		nested = false;	    // match() scanned nested pairs
+    private int			query_type = UNKNOWN;
+    private boolean		procedure_return = false;
+    private String		cursor = null;
+    private String		table_name = null;
+    private boolean		for_update = false;
+    private boolean		for_readonly = false;
+
+
+/*
+** Name: <class initializer>
+**
+** Description:
+**	Load the conversion function translation hashtable.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	22-Apr-09 (rajus01) SIR 121238
+**	    Added NCHAR and NVARCHAR.
+**	26-Oct-09 (gordy)
+**	    Added missing types.
+*/
+
+static // Class Initializer
+{
+    /*
+    ** Supported CONVERT() function SQL types and
+    ** their equivilent Ingres conversion function.
+    */
+    types.put( "BIGINT", "INT8" );
+    types.put( "BINARY", "BYTE" );
+    types.put( "BOOLEAN", "BOOLEAN" );
+    types.put( "CHAR", "CHAR" );
+    types.put( "DATE", "ANSIDATE" );
+    types.put( "DECIMAL", "DECIMAL" );
+    types.put( "DOUBLE", "FLOAT8" );
+    types.put( "FLOAT", "FLOAT8" );
+    types.put( "INTEGER", "INT4" );
+    types.put( "LONGNVARCHAR", "LONG_NVARCHAR" );
+    types.put( "LONGVARBINARY", "LONG_BYTE" );
+    types.put( "LONGVARCHAR", "LONG_VARCHAR" );
+    types.put( "NCHAR", "NCHAR" );
+    types.put( "NUMERIC", "DECIMAL" );
+    types.put( "NVARCHAR", "NVARCHAR" );
+    types.put( "REAL", "FLOAT4" );
+    types.put( "SMALLINT", "INT2" );
+    types.put( "TIME", "TIME" );
+    types.put( "TIMESTAMP", "DATE" );
+    types.put( "TINYINT", "INT1" );
+    types.put( "VARBINARY", "VARBYTE" );
+    types.put( "VARCHAR", "VARCHAR" );
+
+} // static
+
+
+/*
+** Name: getConvertTypes
+**
+** Description:
+**	Returns an enumeration of keys in the Hashtable.
+**
+** Input:
+**	None.
+**
+** Output:
+** 	None	
+**
+** Returns:
+**	Enumeration of keys. (SQL Types).
+**
+** History:
+**	11-Nov-99 (rajus01)
+**	    DatabaseMetaData Implementation: Created.
+**	13-Jun-00 (gordy)
+**	    Made static.
+*/
+
+public static Enumeration
+getConvertTypes()
+{
+    return( types.keys() );
+}
+
+
+/*
+** Name: getNumFuncs()
+**
+** Description:
+**	Returns a comma separated list of math functions.
+**
+** Input:
+**	None.
+**
+** Output:
+** 	None	
+**
+** Returns:
+** 	String	Math functions. 
+**
+** History:
+**	11-Nov-99 (rajus01)
+**	    DatabaseMetaData Implementation: Created.
+**	13-Jun-00 (gordy)
+**	    Made static.
+**	31-Oct-02 (gordy)
+**	    Use StringBuffer for efficiency.  Remove dependency on constants.
+**	 3-Jul-03 (gordy)
+**	    Add POWER() function.
+**	25-Jun-09 (rajus01) SIR 121238
+**	    Add ACOS(), ASIN(), ATAN2(), CEILING(), FLOOR(), PI(), ROUND(),
+**	    SIGN(), TAN(), TRUNCATE().
+*/
+
+public static String 
+getNumFuncs()
+{
+   StringBuffer funcs = new StringBuffer();
+
+   for( int i = 0; i < esc_func.length; i++ )
+	switch ( i )
+	{
+	case FUNC_ABS: 
+	case FUNC_ACOS:
+	case FUNC_ASIN:
+	case FUNC_ATAN: 
+	case FUNC_ATAN2: 
+	case FUNC_CEIL: 
+	case FUNC_COS: 
+	case FUNC_EXP: 
+	case FUNC_FLOOR: 
+	case FUNC_LOG: 
+	case FUNC_MOD: 
+	case FUNC_PI: 
+	case FUNC_POWER:
+	case FUNC_ROUND:
+	case FUNC_SIGN: 
+	case FUNC_SIN: 
+	case FUNC_SQRT: 
+	case FUNC_TAN: 
+	case FUNC_TRUNC: 
+	    if ( funcs.length() > 0 )  funcs.append( "," );
+	    funcs.append( esc_func[ i ] ); 
+	    break;
+	}
+
+   return( funcs.toString() );
+}
+
+
+/*
+** Name: getStrFuncs()
+**
+** Description:
+**	Returns a comma separated list of string functions.
+**
+** Input:
+**	None.
+**
+** Output:
+** 	None	
+**
+** Returns:
+** 	String	string functions. 
+**
+** History:
+**	11-Nov-99 (rajus01)
+**	    DatabaseMetaData Implementation: Created.
+**	13-Jun-00 (gordy)
+**	    Made static.
+**	31-Oct-02 (gordy)
+**	    Use StringBuffer for efficiency.  Remove dependency on constants.
+**	 3-Jul-03 (gordy)
+**	    Add SOUNDEX() function.
+**	25-Jun-09 (rajus01) SIR 121238
+**	    Add CHARACTER_LENGTH(), LOCATE(), LTRIM(), OCTET_LENGTH(), 
+**	    POSITION(), REPLACE(), SUBSTRING().
+*/
+
+public static String 
+getStrFuncs()
+{
+   StringBuffer funcs = new StringBuffer();
+
+   for( int i = 0; i < esc_func.length; i++ )
+	switch ( i )
+	{
+	case FUNC_CONCAT: 
+	case FUNC_CHARLEN: 
+	case FUNC_LCASE: 
+	case FUNC_LEFT: 
+	case FUNC_LENGTH: 
+	case FUNC_LOC: 
+	case FUNC_LTRIM: 
+	case FUNC_OCTLEN: 
+	case FUNC_POS: 
+	case FUNC_REPLACE: 
+	case FUNC_RIGHT: 
+	case FUNC_RTRIM:
+	case FUNC_SNDEX:
+	case FUNC_SUBSTR: 
+	case FUNC_UCASE: 
+	    if ( funcs.length() > 0 )  funcs.append( "," );
+	    funcs.append( esc_func[ i ] ); 
+	    break;
+	}
+
+   return( funcs.toString() );
+}
+
+
+/*
+** Name: getTdtFuncs()
+**
+** Description:
+**	Returns a comma separated list of time and date functions.
+**
+** Input:
+**	None.
+**
+** Output:
+** 	None	
+**
+** Returns:
+** 	String	time and date functions. 
+**
+** History:
+**	11-Nov-99 (rajus01)
+**	    DatabaseMetaData Implementation: Created.
+**	13-Jun-00 (gordy)
+**	    Made static.
+**	31-Oct-02 (gordy)
+**	    Use StringBuffer for efficiency.  Remove dependency on constants.
+**	25-Jun-09 (rajus01) SIR 121238
+**	    Add HOUR(), MINUTE(), MONTH(), SECOND(), WEEK(), YEAR().
+*/
+
+public static String 
+getTdtFuncs()
+{
+   StringBuffer funcs = new StringBuffer();
+
+   for( int i = 0; i < esc_func.length; i++ )
+	switch ( i )
+	{
+	case FUNC_CDATE: 
+	case FUNC_ANSICD:
+	case FUNC_ANSICT:
+	case FUNC_ANSICS:
+	case FUNC_CTIME:
+	case FUNC_DOW: 
+	case FUNC_HOUR: 
+	case FUNC_MIN: 
+	case FUNC_MON: 
+	case FUNC_NOW: 
+	case FUNC_SEC: 
+	case FUNC_WEEK: 
+	case FUNC_YEAR: 
+	    if ( funcs.length() > 0 )  funcs.append( "," );
+	    funcs.append( esc_func[ i ] ); 
+	    break;
+	}
+
+   return( funcs.toString() );
+}
+
+
+/*
+** Name: getSysFuncs()
+**
+** Description:
+**	Returns a comma separated list of system functions.
+**
+** Input:
+**	None.
+**
+** Output:
+** 	None	
+**
+** Returns:
+** 	String	system functions. 
+**
+** History:
+**	11-Nov-99 (rajus01)
+**	    DatabaseMetaData Implementation: Created.
+**	13-Jun-00 (gordy)
+**	    Made static.
+**	31-Oct-02 (gordy)
+**	    Use StringBuffer for efficiency.  Remove dependency on constants.
+**	 3-Jul-03 (gordy)
+**	    Add DATABASE() function.
+*/
+
+public static String 
+getSysFuncs()
+{
+   StringBuffer funcs = new StringBuffer();
+
+   for( int i = 0; i < esc_func.length; i++ )
+	switch ( i )
+	{
+	case FUNC_DB:
+	case FUNC_IFNULL: 
+	case FUNC_USER: 
+	    if ( funcs.length() > 0 )  funcs.append( "," );
+	    funcs.append( esc_func[ i ] ); 
+	    break;
+	}
+
+   return( funcs.toString() );
+}
+
+
+/*
+** Name: SqlParse
+**
+** Description:
+**	Class constructor.
+**
+** Input:
+**	sql	SQL query text.
+**	conn	Current connection.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	None.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	12-Nov-99 (gordy)
+**	    Allow date formatter to be specified.
+**	31-Oct-01 (gordy)
+**	    Parameter changed to timezone to use with local date formatters.
+**	12-Sep-03 (gordy)
+**	    Replaced timezone with GMT indicator.
+**	19-Jun-06 (gordy)
+**	    I give up... just pass connection so all info is available.
+**      11-Feb-10 (rajus01) Bug 123277
+**          Force date/time/timestamp values as INGRESDATE datatype if
+**          'send_ingres_dates' connection property is set.
+*/
+
+public
+SqlParse( String sql, DrvConn conn )
+{
+    this.sql = sql;
+    this.conn = conn;
+    ansi_date_syntax = (conn.sqlLevel >= DBMS_SQL_LEVEL_ANSI_DT &&
+                        !conn.snd_ing_dte);
+    use_gmt = conn.timeLiteralsInGMT();
+    text = sql.toCharArray();
+    txt_len = text.length;
+    return;
+} // Sqlparse
+
+
+/*
+** Name: getQueryType
+**
+** Description:
+**	Returns the type of SQL query/statement contained
+**	in the SQL text (currently only a limited number
+**	of query types are actually supported, QT_UNKNOWN
+**	is returned for all other types).
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	int	SQL query type.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	13-Jun-00 (gordy)
+**	    Support call procedure and determine if
+**	    procedure result is expected.
+**      11-Jul-01 (loera01) SIR 105309
+**          Added EXECUTE, PROCEDURE, and CALLPROC keywords to support
+**          Ingres syntax on DB procedures.
+**	31-Oct-02 (gordy)
+**	    Procedure return processing moved to parseCall().
+*/
+
+public int
+getQueryType()
+    throws SQLException
+{
+    int token;
+
+    if ( query_type == UNKNOWN )
+    {
+	token_beg = token_end = 0;
+	query_type = QT_UNKNOWN;
+
+	switch( nextToken( false ) )
+	{
+	case P_LPAREN :		query_type = QT_SELECT;		break;
+
+	case IDENT :
+	    switch( keyword( text, token_beg, token_end, keywords ) )
+	    {
+	    case KW_SELECT :	query_type = QT_SELECT;		break;
+	    case KW_DELETE :	query_type = QT_DELETE;		break;
+	    case KW_UPDATE :	query_type = QT_UPDATE;		break;
+	    case KW_CALLPROC :	query_type = QT_NATIVE_PROC;	break;
+
+	    case KW_EXECUTE :
+		if ( nextToken( false ) == IDENT  &&
+		     keyword( text, token_beg, 
+			      token_end, keywords ) == KW_PROCEDURE )
+		    query_type = QT_NATIVE_PROC;
+		break;
+	    }
+	    break;
+
+	case P_LBRACE :	
+	    if ( (token = nextToken( false )) == P_QMARK )
+		if ( nextToken( false ) != P_EQUAL )  
+		    break;  // Invalid syntax?
+		else
+		{
+		    procedure_return = true;
+		    token = nextToken( false );
+		}
+
+	    if ( token == IDENT  &&  
+		 keyword( text, token_beg, token_end, esc_seq ) == ESC_CALL )
+		query_type = QT_PROCEDURE;
+	    else
+		procedure_return = false;   // Invalid syntax?
+	    break;
+	}
+    }
+
+    return( query_type );
+} // getQueryType
+
+
+/*
+** Name: getCursorName
+**
+** Description:
+**	If the SQL text is a cursor positioned DELETE or UPDATE,
+**	the name of the cursor specified is returned.  The text
+**	is also modified by removing the WHERE clause as is
+**	required by the Ingres JDBC server.  This method should
+**	only be called prior to parseSQL().
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	String	    The cursor name, NULL if not a positioned DELETE or UPDATE.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	31-Oct-02 (gordy)
+**	    Don't allocate cursor name until syntax verified.
+*/
+
+public String
+getCursorName()
+    throws SQLException
+{
+    if ( cursor != null )  return( cursor );
+    if ( query_type == UNKNOWN )  getQueryType();
+
+    if ( query_type == QT_DELETE  ||  query_type == QT_UPDATE )
+    {
+	int token, prev_end;
+	token_beg = token_end = prev_end = 0;
+
+	while( (token = nextToken( false )) != EOF )
+	{
+	    /*
+	    ** Check for WHERE CURRENT OF <ident><eof>
+	    **
+	    ** If found, save cursor name and remove the
+	    ** WHERE clause from the query.  Otherwise,
+	    ** continue processing (no other parsing
+	    ** cares about these particular keywords).
+	    */
+	    if ( token == IDENT  &&  
+		 keyword( text, token_beg, token_end, keywords ) == KW_WHERE )
+	    {
+		int where_clause = prev_end;
+		
+		if ( 
+		     nextToken( false ) == IDENT  &&
+		     keyword(text,token_beg,token_end,keywords) == KW_CURRENT &&
+		     nextToken( false ) == IDENT  &&
+		     keyword(text, token_beg, token_end, keywords) == KW_OF  &&
+		     nextToken( false ) == IDENT
+		   )
+		{
+		    int	crsr_beg = token_beg;
+		    int crsr_end = token_end;
+
+		    if ( nextToken( false ) == EOF )
+		    {
+			cursor = new String(text,crsr_beg,crsr_end - crsr_beg);
+			txt_len = where_clause;
+			transformed = true;	// see parseSQL().
+			break;
+		    }
+		}
+	    }
+
+	    prev_end = token_end;
+	}
+
+	/*
+	** We are only interested in update and delete
+	** statements if they are cursor positioned.  If
+	** no cursor, reset the query type.
+	*/
+	if ( cursor == null )  query_type = QT_UNKNOWN;
+    }
+
+    return( cursor );
+} // getCursorName
+
+
+/*
+** Name: getTableName
+**
+** Description:
+**	Returns the table name referenced in a SELECT statement.  The 
+**	first table named in a FROM clause is returned exactly as it 
+**	exists in the query text including schema and delimiters.  NULL
+**	is returned if the statement is not a SELECT or FROM <table>
+**	could not be parsed.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	String	Table name or NULL.
+**
+** History:
+**	 1-Nov-03 (gordy)
+**	    Created.
+*/
+
+public String
+getTableName()
+{
+    return( table_name );
+} // getTableName
+
+
+/*
+** Name: getConcurrency
+**
+** Description:
+**	Returns the query concurrency based on presence of 'FOR UPDATE' 
+**	or 'FOR READONLY' clause in SQL text.  Only valid after calling
+**	parseSQL().
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	int	Concurrency: DRV_CRSR_{DBMS,READONLY,UPDATE}.
+**
+** History:
+**	20-Aug-01 (gordy)
+**	    Created.
+**	31-Oct-02 (gordy)
+**	    Concurrency constants moved to DrvConst interface.
+*/
+
+public int
+getConcurrency()
+{
+    int concurrency;
+
+    if ( for_readonly )
+	concurrency = DRV_CRSR_READONLY;
+    else  if ( for_update )
+	concurrency = DRV_CRSR_UPDATE;
+    else 
+	concurrency = DRV_CRSR_DBMS;
+
+    return( concurrency );
+} // getConcurrency
+
+
+/*
+** Name: parseSQL
+**
+** Description:
+**	Return the SQL text transformed into Ingres format.  
+**	This method should not be called before getCursorName()
+**	(getCursorName() is not required).
+**
+**	'SELECT FOR UPDATE ...' and 'SELECT FOR READONLY ...'
+**	are allowed.  The concurrency type is saved when a
+**	'FOR UPDATE' or 'FOR READONLY' clause is present.
+**	The 'FOR READONLY' clause is removed from the text.
+**	If the escapes parameter is true, escape sequences
+**	are transformed.
+**
+** Input:
+**	escapes	    Transform ODBC escape sequences?
+**
+** Output:
+**	None.
+**
+** Returns:
+**	String	    Transformed text.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	21-Jun-01 (gordy)
+**	    Transform JDBC 'SELECT FOR UPDATE' syntax.  Check for
+**	    'FOR UPDATE' and 'FOR READONLY' clauses.
+**	20-Aug-01 (gordy)
+**	    Remove 'FOR READONLY' clause as it is not a part of Ingres
+**	    SELECT syntax.
+**	 1-Nov-03 (gordy)
+**	    Save table name for 'SELECT ... FROM <table>'.
+*/
+
+public String
+parseSQL( boolean escapes )
+    throws SQLException
+{
+    StringBuffer    buff = null;
+    int		    token, tkn_beg, tkn_end, start;
+    
+    if ( query_type == UNKNOWN )  getQueryType();
+    start = token_beg = token_end = 0;
+
+    while( (token = nextToken( escapes )) != EOF )
+	switch( token )
+	{
+	case IDENT :
+	    switch( keyword( text, token_beg, token_end, keywords ) )
+	    {
+	    case KW_SELECT :
+		/*
+		** The JDBC spec requires support for the syntax
+		** 'SELECT FOR UPDATE ...' (we also support READONLY).
+		** Check for the syntax and transform into valid
+		** Ingres syntax.
+		*/
+		tkn_end = token_end;
+
+		if ( 
+		     nextToken( false ) != IDENT  ||
+		     keyword(text, token_beg, token_end, keywords) != KW_FOR ||
+		     nextToken( false ) != IDENT
+		   )
+		{
+		    // reset to original scan position.
+		    token_beg = token_end = tkn_end;
+		    break;
+		}
+
+		switch( keyword( text, token_beg, token_end, keywords ) )
+		{
+		case KW_READONLY :
+		    /*
+		    ** Remove 'FOR READONLY' as it isn't Ingres syntax.
+		    */
+		    buff = append_text( text, txt_len, start, tkn_end, buff );
+		    start = token_end;
+		    for_readonly = true;
+		    break;
+
+		case KW_UPDATE :
+		    /*
+		    ** Remove 'FOR UPDATE' as it isn't Ingres syntax.
+		    */
+		    buff = append_text( text, txt_len, start, tkn_end, buff );
+		    start = token_end;
+
+		    /*
+		    ** If this is the first instance, form Ingres syntax
+		    ** by appending the 'FOR UPDATE' clause to query.
+		    */
+		    if ( ! for_update )
+		    {
+			/*
+			** Copy remaining text to buffer and append the
+			** 'FOR UPDATE' clause.  The scan will resume at
+			** the point already processed in the buffer.
+			*/
+			token_beg = token_end = buff.length();
+			buff = append_text( text,txt_len,start,txt_len,buff );
+			buff.append( " for update" );
+			save_text( buff );
+			start = 0;
+			for_update = transformed = true;
+		    }
+		    break;
+
+		default :	// reset to original scan position.
+		    token_beg = token_end = tkn_end;
+		    break;
+		}
+		break;
+
+	    case KW_FOR :
+		/*
+		** Check 'FOR UPDATE' and 'FOR READONLY'
+		*/
+		if ( query_type != QT_SELECT )  break;
+		tkn_beg = token_beg;
+		tkn_end = token_end;
+
+		if ( (token = nextToken( false )) == IDENT )
+		    switch( keyword( text, token_beg, token_end, keywords ) )
+		    {
+		    case KW_READONLY :	// Remove 'FOR READONLY'
+			buff = append_text( text,txt_len,start,tkn_beg,buff );
+			start = token_end;
+			for_readonly = true;
+			break;
+
+		    case KW_UPDATE :
+			for_update = true;
+			break;
+
+		    default :	// reset to original scan position
+			token_beg = token_end = tkn_end;
+			break;
+		    }
+		break;
+		
+	    case KW_FROM :
+		/*
+		** Get table name for 'SELECT ... FROM <table>'
+		*/
+		if ( query_type != QT_SELECT  ||  table_name != null )
+		    break;
+		
+		tkn_beg = token_beg;	// Save in case no table name.
+		tkn_end = token_end;
+		    
+		switch( nextToken( false ) )
+		{
+		case IDENT :	// Identifier
+		case STRING :	// Delimited identifier
+		    /*
+		    ** The table reference could include a schema.
+		    ** Save the current token in case it is a simple
+		    ** table reference.
+		    */
+		    tkn_beg = token_beg;
+		    tkn_end = token_end;
+		
+		    /*
+		    ** Check for schema.table construct
+		    */
+		    if ( nextToken( false ) == P_PERIOD )
+		    {
+		        switch( nextToken( false ) )
+			{
+			case IDENT :	// Identifier
+			case STRING :	// Delimited identifier
+		    	    tkn_end = token_end;    // Include with schema
+			    break;
+			}
+		    }
+		    
+		    /*
+		    ** Now save the table reference as it appears.
+		    */
+		    table_name = new String(text, tkn_beg, tkn_end - tkn_beg);
+		    break;
+		}
+		
+		token_beg = tkn_beg;	// Reset to last valid token
+		token_end = tkn_end;
+		break;
+	    }
+	    break;
+
+	case ESCAPE :
+	    if ( escapes )
+	    {
+		/*
+		** Append leading text to buffer (allocate if needed),
+		** process escape sequence and continue processing
+		** following the token.
+		*/
+		buff = append_text( text, txt_len, start, token_beg, buff );
+		parseESC( token_beg, (start = token_end), nested, buff );
+		token_beg = token_end = start;
+	    }
+	    break;
+	}
+
+    /*
+    ** Update the original query text only if an
+    ** escape sequence was found and processed.
+    */
+    if ( buff != null  &&  start > 0 )
+    {
+	buff = append_text( text, txt_len, start, txt_len, buff );
+	save_text( buff );
+	transformed = true;
+    }
+
+    /*
+    ** If a transformation has occured, update
+    ** the SQL string.  Otherwise, the original
+    ** string is simply returned.  Note that 
+    ** this also handles the transformation in 
+    ** getCursorName().
+    */
+    if ( transformed )
+    {
+	sql = new String( text, 0, txt_len );
+	transformed = false;
+    }
+
+    return( sql );
+} // parseSQL
+
+
+/*
+** Name: parseCall
+**
+** Description:
+**	Populates a procedure information object with the info 
+**	parsed from the request text.
+**
+**	The following Database Procedure call syntax is accepted:
+**
+**	{[? =] CALL [schema.]name[( params )]}
+**	EXECUTE PROCEDURE [schema.]name[( params )] [INTO ?]
+**	CALLPROC [schema.]name[( params )] [INTO ?]
+**      
+**	params: param_spec | param_spec, params
+**	param_spec: [name =] [value]
+**	value: ? | numeric_literal | char_literal | hex_string |
+**		SESSION.table_name
+**
+**	Note that parameter values are optional and will be flagged
+**	as default parameters.  An empty parenthesis set implies a 
+**	single default parameter.
+**
+** Input:
+**	None.
+**
+** Output:
+**	procInfo    Procedure information.
+**
+** Returns:
+**	void.
+**
+** History:
+**	13-Jun-00 (gordy)
+**	    Created.
+**	28-Mar-01 (gordy)
+**	    ProcInfo now parameter rather than return value as
+**	    info needed for constructing ProcInfo is not available.
+**      11-Jul-01 (loera01) SIR 105309
+**          Added support for Ingres syntax.
+**      27-Nov-01 (loera01) 
+**          Added support for standard JDBC syntax for global temp table
+**          parameters.
+**	31-Oct-02 (gordy)
+**	    Moved procedure return value and global temp table parameter
+**	    parsing into this method.
+**	24-Feb-03 (gordy)
+**	    ProcInfo parameter index is now 0 based.  Permit named
+**	    parameters in JDBC escape syntax.
+**	 9-Jan-09 (gordy)
+**	    Cleanup related to problems reported by the findbugs utility.
+**	    Catching a general Exception can hide problems related to
+**	    runtime exceptions.  Specific exceptions are caught instead.
+*/
+
+public void
+parseCall( ProcInfo procInfo )
+    throws SQLException
+{
+    int		token, index;
+    String	name;
+
+    /*
+    ** By calling getQueryType() we verify that this is
+    ** a procedure call request, determine if procedure
+    ** return value is expected, and position the token
+    ** scanner to read the procedure name (need to force
+    ** type to UNKNOWN otherwise getQueryType() may not
+    ** do the proper scanning).
+    */
+    query_type = UNKNOWN;
+    getQueryType();
+    
+    if ( (query_type != QT_PROCEDURE  &&  query_type != QT_NATIVE_PROC)  ||  
+	 nextToken( false ) != IDENT )
+        throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+    
+    /*
+    ** Save the procedure name, but check for schema qualification.
+    */
+    name = new String( text, token_beg, token_end - token_beg );
+    token = nextToken( false );
+
+    if ( token == P_PERIOD )
+    {
+	if ( nextToken( false ) != IDENT )
+	    throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+	
+	procInfo.setSchema( name );
+	name = new String( text, token_beg, token_end - token_beg );
+	token = nextToken( false );
+    }
+
+    procInfo.setName( name );
+
+    /*
+    ** Process the optional parameter list.
+    */
+    if ( token == P_LPAREN )
+    {
+  for_loop:	
+	for(
+	     index = 0, token = nextToken( false );
+	     token != EOF;
+	     index++, token = nextToken( false )
+	   )
+	{
+	    /*
+	    ** Process next parameter value.
+	    */
+	    switch( token )
+	    {
+	    case P_RPAREN :	// End of parameter list.
+		procInfo.setParam( index, ProcInfo.PARAM_DEFAULT, null );
+		break for_loop;		// We be done.
+
+	    case P_COMMA :	// Missing parameter.
+		procInfo.setParam( index, ProcInfo.PARAM_DEFAULT, null );
+		continue for_loop;	// Ready for next parameter.
+
+	    case P_QMARK :	// Dynamic parameter marker
+		procInfo.setParam( index, ProcInfo.PARAM_DYNAMIC, null );
+		break;
+
+	    case STRING :	// String parameter value.
+		procInfo.setParam( index, ProcInfo.PARAM_CHAR,
+		    new String( text, token_beg + 1,
+				token_end - token_beg - 2 ) );	// skip quotes
+		break;
+
+	    case P_PLUS :	// Numeric parameter value.
+	    case P_MINUS :
+	    case P_PERIOD :
+	    case NUMBER :
+		try
+		{
+		    int	type;
+		    Object	value;
+		    String	str;
+
+		    type = parseNumeric( token_beg );
+		    str = new String( text, token_beg, 
+				      token_end - token_beg );
+		    switch( type )
+		    {
+		    case NUM_INT :
+			type = ProcInfo.PARAM_INT;
+			value = new Integer( str );
+			break;
+
+		    case NUM_DEC :
+			type = ProcInfo.PARAM_DEC;
+			value = new BigDecimal( str );
+			break;
+
+		    case NUM_FLT :
+			type = ProcInfo.PARAM_FLOAT;
+			value = new Double( str );
+			break;
+
+		    default :
+			throw new NumberFormatException();
+		    }
+
+		    procInfo.setParam( index, type, value );
+		}
+		catch( NumberFormatException nfEx )
+		{ 
+		    throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+		}
+		catch( IndexOutOfBoundsException ioobEx )
+		{ 
+		    throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+		}
+		break;
+
+            case IDENT:
+		/*
+		** This may be a Global Temp Table parameter, a hex 
+		** literal or parameter name.  The following token 
+		** differentiates between the three possibilities.
+		*/
+		int prev_end = token_end;
+		int prev_beg = token_beg;
+
+		switch( nextToken( false ) )
+		{
+		case P_PERIOD :	// Global Temp Table?
+		    if ( 
+			 keyword( text, prev_beg, 
+				  prev_end, keywords ) == KW_SESSION  && 
+			 nextToken( false ) == IDENT 
+		       )
+			procInfo.setParam( index, ProcInfo.PARAM_SESSION, 
+			    new String(text,token_beg,token_end - token_beg) );
+		    else
+			throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+		    break;
+
+		case STRING :	// Hex literal?
+		    if ( 
+			 (prev_end - prev_beg) == 1  &&
+			 (text[ prev_beg ] == 'X' || text[ prev_beg ] == 'x')
+		       )
+			procInfo.setParam( index, ProcInfo.PARAM_BYTE,
+				    hex2bin( text, token_beg + 1, 
+					     token_end - token_beg - 2 ) );
+		    else
+			throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+		    break;
+
+		case P_EQUAL :	// Parameter name
+		    procInfo.setParamName( index, 
+			new String( text, prev_beg, prev_end - prev_beg ) );
+
+		    /*
+		    ** The parameter value can be processed by
+		    ** restarting at the top of the loop (but
+		    ** need to avoid incrementing the index).
+		    */
+		    index--;
+		    continue for_loop;
+
+		default :
+		    throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+		}
+		break;
+
+	    default:
+		throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+	    }
+
+	    /*
+	    ** A parameter has just been processed.  Either another
+	    ** parameter follows, indicated by a separating comma,
+	    ** or the end of the parameter list is expected (the
+	    ** closing parenthesis).
+	    */
+	    if ( (token = nextToken( false )) == P_RPAREN )
+		break;
+	    else  if ( token != P_COMMA )
+		throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+	}
+
+	/*
+	** We should be at the end of the parameter list.
+	*/
+	if ( token == P_RPAREN )
+	    token = nextToken( false );
+	else
+	    throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+    }
+
+    /*
+    ** Check syntax termination.  For the JDBC escape sequence this
+    ** is just the closing brace: '}'.  For native Ingres, only the
+    ** optional return value is expected: 'INTO ?'.
+    */
+    if ( query_type == QT_PROCEDURE )
+    {
+	if ( token != P_RBRACE  ||  nextToken( false ) != EOF )  
+	    throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+    }
+    else  if ( token != EOF )
+    {
+	if ( 
+	     token == IDENT  &&
+	     keyword( text, token_beg, token_end, keywords ) == KW_INTO  &&
+	     nextToken( false ) == P_QMARK  &&
+	     nextToken( false ) == EOF 
+	   )
+	    procedure_return = true;
+	else
+	    throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+    }
+
+    procInfo.setReturn( procedure_return );
+    return;
+} // parseCall
+
+
+/*
+** Name: parseNumeric
+**
+** Description:
+**	Parses a full numeric value of type integer, decimal, or float.
+**	Sets token_beg and token_end to delimit the full numeric value.
+**	Returns the type of the numeric.
+**
+**	The supported syntax is as follows:
+**
+**	[+-][digits][.[digits]][eE[+-]digits]
+**
+**	
+** Input:
+**	beg	Beginning parse position.
+**
+** Ouput:
+**	None.
+**
+** Returns:
+**	int	Numeric type.
+**
+** History:
+**	13-Jun-00 (gordy)
+**	    Created.
+*/
+
+private int
+parseNumeric( int beg )
+    throws SQLException
+{
+    int	type = UNKNOWN;
+    int	token, end;
+
+    /*
+    ** Load the first token saving the start so
+    ** that all tokens can be included when done.
+    */
+    token_end = token_beg = beg;
+    token = nextToken( false );
+    beg = token_beg;
+    end = token_end;
+    
+    /*
+    ** Leading sign is optional.
+    */
+    if ( token == P_PLUS  ||  token == P_MINUS )
+	token = nextToken( false );
+
+    /*
+    ** An integer numeric requires a string of digits
+    ** following an optional sign.  This may also be
+    ** a subset of a decimal or float numeric.
+    */
+    if ( token == NUMBER )
+    {
+	end = token_end;
+	type = NUM_INT;
+	token = nextToken( false );
+    }
+
+    /*
+    ** A period is permitted following or proceding
+    ** a string of digits and identifies a decimal
+    ** or possibly a float.
+    */
+    if ( token == P_PERIOD )
+    {
+	end = token_end;
+	
+	if ( (token = nextToken( false )) == NUMBER )
+	{
+	    end = token_end;
+	    type = NUM_DEC;
+	    token = nextToken( false );
+	}
+	else  if ( type == NUM_INT )
+	    type = NUM_DEC;
+    }
+
+    /*
+    ** Float numerics require a leading integer or decimal.
+    */
+    if ( type == NUM_INT  ||  type == NUM_DEC )
+    {
+	/*
+	** This may or may not be a float value.
+	** We don't change the current type until
+	** a valid float has been scanned.
+	**
+	** Floats include an exponent.  The tokenizer 
+	** does not distinguish between an exponent 
+	** and an identifier containing digits, so we 
+	** must pick the current token apart.
+	*/
+	if ( token == IDENT  &&
+	     (text[ token_beg ] == 'e'  ||  text[ token_beg ] == 'E') )
+	{
+	    /*
+	    ** Begin scanning following the exponent character.
+	    */
+	    token_end = token_beg + 1;
+	    token = nextToken( false );
+
+	    if ( token == P_PLUS  ||  token == P_MINUS )
+		token = nextToken( false );
+
+	    if ( token == NUMBER )
+	    {
+		end = token_end;
+		type = NUM_FLT;
+	    }
+	}
+    }
+
+    token_beg = beg;
+    token_end = end;
+    return( type );
+}
+
+
+/*
+** Name: parseESC
+**
+** Description:
+**	Parses ODBC escape sequence text in the query buffer, 
+**	transforms sequence and appends to output buffer,
+**	Nested escape sequences are also handled if present.
+**	The instance variables token_beg, token_end and 
+**	nested are invalid when this method completes.
+**
+** Input:
+**	beg	Start of escape sequence.
+**	end	End of escape sequence.
+**	nested	Nested escape sequences?
+**
+** Output:
+**	buff	Output buffer.
+**
+** Returns:
+**	void.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	12-Nov-99 (gordy)
+**	    Allow date formatter to be specified.
+**	11-Apr-01 (gordy)
+**	    Ingres supports (to some extent) dates without time,
+**	    so do not include time with DATE datatypes.
+**	26-Oct-01 (gordy)
+**	    It has now been decided that gateways will use the client time
+**	    when supporting date('now').  Since all JDBC clients appear to
+**	    be GMT, we must produce a timestamp literal of the current time
+**	    rather than use date('now').  This is done for all DBMS servers
+**	    since we can't tell here if this is a gateway connection.
+**	31-Oct-01 (gordy)
+**	    Some gateways don't currently accept the date format used by
+**	    the JDBC driver/server for literals.  It has been found that
+**	    all supported DBMS accept the date format YYYY_MM_DD HH:MM:SS.
+**	    Local date formatters are now declared and the timezone for
+**	    the associated connection is configured.
+**	 7-Aug-02 (gordy)
+**	    Allow empty strings in date/time escape sequences which will
+**	    be translated as an Ingres empty date by DBMS/gateway.
+**	 3-Jul-03 (gordy)
+**	    Translate DATABASE() function.
+**	21-Jul-03 (gordy)
+**	    Use local timezone with date literals since timezone independent.
+**	12-Sep-03 (gordy)
+**	    Replaced date formatters with SqlDates utility.
+**	19-Jun-06 (gordy)
+**	    ANSI Date/Time data type support.
+**	15-Sep-06 (gordy)
+**	    Support empty date/time/timestamp literals with Ingres dates.
+**	    Use JDBC date/time/timestamp classes to parse JDBC escape
+**	    literals since they should be in JDBC format.  WITH TZ now
+**	    formats with local rather than UTC time.  Fractional
+**	    seconds supported for ANSI timestamps. 
+**	24-Dec-08 (gordy)
+**	    Use date/time formatters associated with connection.
+*/
+
+private void
+parseESC( int beg, int end, boolean nested, StringBuffer buff )
+    throws SQLException
+{
+    int type, token;
+
+    token_beg = token_end = beg + 1;
+
+    if ( (token = nextToken( false )) != IDENT  ||
+	 (type = keyword( text, token_beg, token_end, esc_seq )) == UNKNOWN )
+    {
+	/*
+	** This is not a recognized escape sequence.
+	** Append the entire sequence to the buffer
+	** and let the DBMS worry about it.  Must
+	** handle the surrounding braces here other-
+	** wise append_escape would recurse as if for
+	** nested escape sequence.
+	*/
+	buff.append( '{' );
+	append_escape( beg + 1, end - 1, nested, buff );
+	buff.append( '}' );
+	return;
+    }
+
+    switch( type )
+    {
+    case ESC_DATE :
+    case ESC_TIME :
+    case ESC_STAMP :
+    {
+	if ( (token = nextToken( false )) != STRING )
+	{
+	    /*
+	    ** Pass through argument without conversion.
+	    */
+	    append_escape( token_beg, end - 1, nested, buff );
+	    break;
+	}
+
+	String val = new String(text, token_beg + 1, token_end - token_beg - 2);
+
+	if ( val.length() == 0 )
+	{
+	    /*
+	    ** Empty dates are only supported by Ingres dates.
+	    */
+	    buff.append( FUNC_IDATE_PREFIX );
+	    buff.append( FUNC_IDATE_SUFFIX );
+	    break;
+	}
+
+	switch( type )
+	{
+	case ESC_DATE :
+	{
+	    /*
+	    ** Validate JDBC date literal format.
+	    */
+	    Date date = Date.valueOf( val );
+
+	    if ( ansi_date_syntax )
+	    {
+		/*
+		** ANSI date values are independent of 
+		** timezones.  Format into ANSI date 
+		** literal using local TZ.
+		*/
+		buff.append( FUNC_ADATE_PREFIX );
+		buff.append( conn.dt_frmt.formatDate( date, false ) );
+		buff.append( FUNC_ADATE_SUFFIX );
+	    }
+	    else
+	    {
+		/*
+		** Ingres date only values are independent
+		** of timezones.  Format into Ingres date 
+		** literal using local TZ.
+		*/
+		buff.append( FUNC_IDATE_PREFIX );
+		buff.append( conn.dt_lit.formatDate( date, false ) );
+		buff.append( FUNC_IDATE_SUFFIX );
+	    }
+	    break;
+	} // case ESC_DATE
+		
+	case ESC_TIME :
+	{
+	    /*
+	    ** Validate JDBC time literal format.
+	    */
+	    Time time = Time.valueOf( val );
+
+	    if ( ansi_date_syntax )
+	    {
+		/*
+		** Format into ANSI time literal.  For OpenSQL 
+		** use WITHOUT TZ format, WITH TZ otherwise.
+		** Both formats use local time values.  Java 
+		** applies TZ/DST of 'epoch' date: 1970-01-01.
+		** Ingres applies TZ/DST of todays date, so 
+		** use current date/time to determine explicit 
+		** TZ offset.
+		*/
+		buff.append( FUNC_TIME_PREFIX );
+		buff.append( conn.dt_frmt.formatTime( time, false ) );
+		if ( ! conn.osql_dates )
+		    buff.append( conn.dt_frmt.formatTZ(
+						System.currentTimeMillis() ) );
+		buff.append( FUNC_TIME_SUFFIX );
+	    }
+	    else
+	    {
+		/*
+		** Ingres forces current date for time only
+		** values while JDBC requires date EPOCH.
+		** Validate JDBC time literal format and
+		** format into Ingres timestamp (to enforce
+		** JDBC date component) using connection
+		** timezone.
+		*/
+		buff.append( FUNC_IDATE_PREFIX );
+		buff.append( conn.dt_lit.formatTimestamp( time, use_gmt ) );
+		buff.append( FUNC_IDATE_SUFFIX );
+	    }
+	    break;
+	} // case ESC_TIME
+		
+	case ESC_STAMP :
+	{
+	    /*
+	    ** Validate JDBC timestamp literal format.
+	    */
+	    Timestamp	ts = Timestamp.valueOf( val );
+	    int		nanos = ts.getNanos();
+
+	    if ( ansi_date_syntax )
+	    {
+		/*
+		** Format into ANSI timestamp literal.  For OpenSQL 
+		** use WITHOUT TZ format, WITH TZ otherwise.
+		** Both formats use local time values.
+		*/
+		buff.append( FUNC_STAMP_PREFIX );
+		buff.append( conn.dt_frmt.formatTimestamp( ts, false ) );
+		if ( nanos != 0 )  
+		    buff.append( conn.dt_frmt.formatFrac( nanos ) );
+		if ( ! conn.osql_dates )  
+		    buff.append( conn.dt_frmt.formatTZ( ts ) );
+		buff.append( FUNC_STAMP_SUFFIX );
+	    }
+	    else
+	    {
+		/*
+		** Format into Ingres timestamp using 
+		** connection timezone.
+		*/
+		buff.append( FUNC_IDATE_PREFIX );
+		buff.append( conn.dt_lit.formatTimestamp( ts, use_gmt ) );
+		buff.append( FUNC_IDATE_SUFFIX );
+	    }
+	    break;
+	} // case ESC_STAMP
+	} // switch()
+	break;
+    }
+    case ESC_FUNC :
+	if ( (token = nextToken( false )) != IDENT  ||
+	     (type = keyword(text, token_beg, token_end, esc_func)) == UNKNOWN )
+	{
+	    /*
+	    ** Unrecognized function. pass through as is.
+	    */
+	    append_escape( token_beg, end - 1, nested, buff );
+	}
+	else
+	{
+	    switch( type )
+	    {
+	    case FUNC_DB:
+		buff.append( func_xlat[ type ] );   // Function replacement.
+		break;
+		
+	    case FUNC_CNVRT :
+		parseConvert( token_beg, end - 1, nested, buff );
+		break;
+
+	    case FUNC_CDATE :		// TODO: enforce ()?
+	    case FUNC_ANSICD :
+		/*
+		** Date constants only work when DBMS knows client TZ.
+		*/
+		if ( ! conn.is_gmt )
+		    buff.append( ansi_date_syntax ? FUNC_ADATE_CONST 
+						  : FUNC_IDATE_CONST );
+		else  if ( ansi_date_syntax )
+		{
+	            /*
+	            ** Format current day as ANSI literal using 
+		    ** local TZ since date literals are not 
+		    ** dependent on timezone settings.
+	            */
+	            buff.append( FUNC_ADATE_PREFIX );
+	            buff.append( conn.dt_frmt.formatDate( new java.util.Date(),
+							  false ) );
+	            buff.append( FUNC_ADATE_SUFFIX );
+		}
+		else
+		{
+	            /*
+	            ** Format current day as Ingres literal using 
+		    ** local TZ since date only literals are not 
+		    ** dependent on timezone settings.
+	            */
+	            buff.append( FUNC_IDATE_PREFIX );
+	            buff.append( conn.dt_lit.formatDate( 
+					new java.util.Date(), false ) );
+	            buff.append( FUNC_IDATE_SUFFIX );
+		}
+		break;
+
+	    case FUNC_CTIME :		// TODO: enforce ()?
+	    case FUNC_ANSICT :
+		/*
+		** Time constants only work when DBMS knows client TZ.
+		*/
+		if ( ! conn.is_gmt )
+		    buff.append( ansi_date_syntax ? FUNC_ATIME_CONST 
+						  : FUNC_ITIME_CONST );
+		else  if ( ansi_date_syntax )
+		{
+	            /*
+	            ** Format current time as ANSI literal.  For OpenSQL
+		    ** use WITHOUT TZ format, WITH TZ otherwise.  Both
+		    ** formats use local time values.  Java applies TZ &
+		    ** DST of 'epoch' date: 1970-01-01.  Ingres applies 
+		    ** TZ & DST of todays date, so use current date/time 
+		    ** to determine explicit TZ offset.
+	            */
+		    java.util.Date date = new java.util.Date();
+	            buff.append( FUNC_TIME_PREFIX );
+		    buff.append( conn.dt_frmt.formatTime( date, false ) );
+		    if ( ! conn.osql_dates )  
+			buff.append( conn.dt_frmt.formatTZ(
+						System.currentTimeMillis() ) );
+	            buff.append( FUNC_TIME_SUFFIX );
+		}
+		else
+		{
+	            /*
+	            ** Format current time as Ingres literal using
+		    ** appropriate TZ for connection.  Note that
+		    ** Ingres only partially supports time-only
+		    ** values, so use timestamp format.
+	            */
+	            buff.append( FUNC_IDATE_PREFIX );
+	            buff.append( conn.dt_lit.formatTimestamp( 
+					new java.util.Date(), use_gmt ) );
+	            buff.append( FUNC_IDATE_SUFFIX );
+		}
+		break;
+
+	    case FUNC_NOW :		// TODO: enforce ()?
+	    case FUNC_ANSICS :
+		/*
+		** Timestamp constants only work when DBMS knows client TZ.
+		*/
+		if ( ! conn.is_gmt )
+		    buff.append( ansi_date_syntax ? FUNC_ASTAMP_CONST 
+						  : FUNC_ISTAMP_CONST );
+		else  if ( ansi_date_syntax )
+		{
+	            /*
+	            ** Format current timestamp as ANSI literal.
+		    ** For OpenSQL use WITHOUT TZ format, WITH TZ
+		    ** otherwise.  Both use local time values.
+	            */
+		    java.util.Date date = new java.util.Date();
+	            buff.append( FUNC_STAMP_PREFIX );
+		    buff.append( conn.dt_frmt.formatTimestamp( date, false ) );
+		    if ( ! conn.osql_dates )  
+			buff.append( conn.dt_frmt.formatTZ( date ) );
+	            buff.append( FUNC_STAMP_SUFFIX );
+		}
+		else
+		{
+	            /*
+	            ** Format current timestamp as Ingres literal 
+		    ** using appropriate TZ for connection.
+	            */
+	            buff.append( FUNC_IDATE_PREFIX );
+	            buff.append( conn.dt_lit.formatTimestamp( 
+					new java.util.Date(), use_gmt ) );
+	            buff.append( FUNC_IDATE_SUFFIX );
+		}
+		break;
+
+	    case FUNC_USER :		// TODO: enforce ()?
+		buff.append( func_xlat[ type ] );   // Function replacement.
+		break;
+
+	    default :
+		buff.append( func_xlat[ type ] );   // Translate function name.
+		append_escape( token_end, end - 1, nested, buff );
+		break;
+	    }
+	}
+	break;
+
+    case ESC_ESC :
+	/*
+	** No transformation required, simply remove the surrounding braces.
+	*/
+	append_escape( beg + 1, end - 1, nested, buff );
+	break;
+
+    case ESC_OJ :
+	/*
+	** No transformation required, simply remove escape syntax.
+	*/
+	nextToken( false );
+	append_escape( token_beg, end - 1, nested, buff );
+	break;
+
+    case ESC_CALL :
+	/*
+	** The escape sequence is supported through parseCall(),
+	** which does use this routine.  Therefore, the call
+	** escape sequence is not supported here.
+	*/
+
+    default :
+	// Should not appear in SQL text, hence should not happen!
+	buff.append( '{' );
+	append_escape( beg + 1, end - 1, nested, buff );
+	buff.append( '}' );
+	break;
+    }
+
+    return;
+} // parseESC
+
+
+/*
+** Name: parseConvert
+**
+** Description:
+**	Parse the ODBC escape sequence for the CONVERT function,
+**	transform into the corresponding Ingres conversion
+**	function, and append to output buffer.
+**
+** Input:
+**	beg	Beginning position for convert function.
+**	end	Ending position of convert function.
+**	nested	Is there a nested ODBC escape sequence.
+**
+** Output:
+**	buff	Output buffer.
+**
+** Returns:
+**	void
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+*/
+
+private void
+parseConvert( int beg, int end, boolean nested, StringBuffer buff )
+    throws SQLException
+{
+    int	    token;
+    boolean success = false;
+
+    token_beg = token_end = beg;
+    
+    if ( (token = nextToken( false )) == IDENT  &&
+	 (token = nextToken( false )) == P_LPAREN )
+    {
+	int start = token_end;
+	token_beg = token_end = end;
+	
+	if ( (token = prevToken()) == P_RPAREN  &&  (token = prevToken()) == IDENT )
+	{
+	    String sqlType = new String( text, token_beg, token_end - token_beg );
+		
+	    if ( (sqlType = (String)types.get( sqlType.toUpperCase() )) != null  &&
+		 (token = prevToken()) == P_COMMA )
+	    {
+		buff.append( sqlType );
+		buff.append( '(' );
+		append_escape( start, token_beg, nested, buff );
+		buff.append( ')' );
+		success = true;
+	    }
+	}
+    }
+
+    if ( ! success )  append_escape( beg, end, nested, buff );
+    return;
+} // parseConvert
+
+
+/*
+** Name: append_escape
+**
+** Description:
+**	Appends ODBC escape sequence text in query buffer
+**	to output buffer provided.  The escape sequence
+**	text should not include the surrounding braces.
+**	Nested escape sequences are transformed as part 
+**	of the text transfer.  The instance variables 
+**	token_beg, token_end and nested are not valid 
+**	when this method completes.
+**
+** Input:
+**	beg	Start of escape sequence.
+**	end	End of escape sequence.
+**	nested	Nested escape sequence.
+**
+** Output:
+**	buff	Output buffer.
+**
+** Returns:
+**	void.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+*/
+
+private void
+append_escape( int beg, int end, boolean nested, StringBuffer buff )
+    throws SQLException
+{
+    if ( ! nested )	// Easy case: no further processing needed.
+	buff.append( text, beg, end - beg );
+    else
+    {
+	int token, old_len = txt_len;
+
+	/*
+	** Trick nextToken() into only scanning
+	** the current escape sequence.
+	*/
+	txt_len = end;
+	token_beg = token_end = beg;
+
+	while( (token = nextToken( true )) != EOF )
+	    if ( token == ESCAPE )
+	    {
+		if ( token_beg > beg )		// append leading text.
+		    buff.append( text, beg, token_beg - beg );
+		parseESC( token_beg, (beg = token_end), this.nested, buff );
+		token_beg = token_end = beg;
+	    }
+
+	if ( beg < end )	// append trailing text.
+	    buff.append( text, beg, end - beg );
+	txt_len = old_len;
+    }
+
+    return;
+} // append_escape
+
+
+/*
+** Name: append_text
+**
+** Description:
+**	Copies text from a character array and appends to string buffer.
+**	Allocates string buffer if necessary.  The character marking the
+**	end of the text to be copied is not itself copied.
+**
+** Input:
+**	text		Source character array.
+**	txt_len		Length of text in array.
+**	start		Starting character to copy.
+**	end		End of text to copy (won't get copied)
+**
+** Output:
+**	buff		String buffer which receives text.
+**
+** Returns:
+**	StringBuffer	New string buffer.
+**
+** History:
+**	20-Aug-01 (gordy)
+**	    Created.
+*/
+
+private StringBuffer
+append_text( char text[], int txt_len, int start, int end, StringBuffer buff )
+{
+    if ( buff == null )  buff = new StringBuffer( txt_len );
+    if ( end > start )  buff.append( text, start, end - start );
+    return( buff );
+} // append
+
+
+/*
+** Name: save_text
+**
+** Description:
+**	Copies text from a string buffer into the SQL text character array.
+**	Array is expanded if necessary.  String buffer is emptied.
+**
+** Input:
+**	buff	String buffer.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	void
+**
+** History:
+**	20-Aug-01 (gordy)
+**	    Created.
+*/
+  
+private void
+save_text( StringBuffer buff )
+{
+    /*
+    ** Expand text array if needed.
+    */
+    if ( buff.length() > text.length )  text = new char[ buff.length() ];
+    txt_len = buff.length();
+    buff.getChars( 0, txt_len, text, 0 );
+    buff.setLength(0);
+    return;
+} // save_text
+
+
+/*
+** Name: hex2bin
+**
+** Description:
+**	Converts a hex string (subset of character array)
+**	into a byte array.
+**
+** Input:
+**	hex	    Character array containing hex string.
+**	offset	    Start of hex string in character array.
+**	length	    Number of characters in hex string.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	byte []	    Byte array contraining binary value of hex string.
+**
+** History:
+**	20-Oct-00 (gordy)
+**	    Created.
+**      14-Aug-01 (loera01)
+**          Use parseShort to parse the byte.  Otherwise, an exception is
+**          thrown when Byte.MAX_VALUE (127) is exceeded.
+*/
+
+private byte []
+hex2bin( char hex[], int offset, int len )
+    throws SQLException
+{
+    byte ba[] = new byte[ len / 2 ];
+    try
+    {
+	for( int i = 0; i < ba.length; i++, offset += 2 )
+	    ba[ i ] = (byte)Short.parseShort( new String( hex, offset, 2 ), 
+		16 );
+    }
+    catch( NumberFormatException ex )
+    {
+	throw SqlExFactory.get( ERR_GC4014_CALL_SYNTAX );
+    }
+
+    return( ba );
+} // hex2bin
+
+
+/*
+** Name: nextToken
+**
+** Description:
+**	Scan for the next token (starting at the end of 
+**	the current token, token_end) and return a general
+**	classification of the type of token found.  The 
+**	position of the token is saved in the instance 
+**	variables token_beg and token_end.
+**
+**	ODBC escape sequences may optionally be treated as
+**	a single token.  If this option is selected, the
+**	presence of nested escape sequences is indicated
+**	by the instance variable nested.
+**	
+**
+** Input:
+**	esc	Treat ODBC escape sequences as single token.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	int	Token ID.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	13-Jun-00 (gordy)
+**	    Support all specific punctuation.  Scanning of numerics now
+**	    done by helper method, so only scan integers not decimals.
+*/
+
+private int
+nextToken( boolean esc )
+    throws SQLException
+{
+    int	    type;
+    char    ch;
+
+    while( token_end < txt_len  &&  
+	   Character.isWhitespace( text[ token_end ] ) )  token_end++;
+
+    token_beg = token_end;
+    if ( token_end >= txt_len )  return( EOF );
+    token_end = token_beg + 1;
+
+    switch( (ch = text[ token_beg ]) )
+    {
+    case '(' :	type = P_LPAREN;    break;
+    case ')' :	type = P_RPAREN;    break;
+    case ',' :	type = P_COMMA;	    break;
+    case '?' :	type = P_QMARK;	    break;
+    case '=' :	type = P_EQUAL;	    break;
+    case '+' :	type = P_PLUS;	    break;
+    case '-' :	type = P_MINUS;	    break;
+    case '.' :	type = P_PERIOD;    break;
+    case '}' :	type = P_RBRACE;    break;
+
+    case '{' :
+	if ( ! esc )
+	    type = P_LBRACE;
+	else
+	{
+	    token_end = match( text, token_beg, txt_len, '}' ) + 1;
+	    type = ESCAPE;
+	}
+	break;
+
+    case '\'' :	
+    case '"' :
+	token_end = match( text, token_beg, txt_len, ch ) + 1;
+	type = STRING;
+	break;
+
+    default :
+	if ( isIdentChar( ch ) )
+	{
+	    type = IDENT;
+
+	    for( ; token_end < txt_len; token_end++ )
+	    {
+		ch = text[ token_end ];
+		if ( ! isIdentChar( ch )  &&  ! Character.isDigit( ch ) )
+		    break;
+	    }
+	}
+	else  if ( Character.isDigit( ch ) )
+	{
+	    type = NUMBER;
+
+	    while( token_end < txt_len  &&  
+		   Character.isDigit( text[ token_end ] ) )
+		 token_end++;
+	}
+	else
+	{
+	    type = PUNCT;
+	}
+	break;
+    }
+
+    return( type );
+} // nextToken
+
+
+/*
+** Name: prevToken
+**
+** Description:
+**	Scan backwards for the previous token (starting 
+**	at the beginning of the current token, token_beg) 
+**	and return a general classification of the type 
+**	of token found.  The position of the token is saved 
+**	in the instance variables token_beg and token_end.
+**
+**	This method does not currently support returning
+**	compound tokens which require matching of begin
+**	and end characters such as strings and ODBC escape
+**	sequences.  The last character of the compound
+**	token will be returned with a classification of
+**	punctuation.
+**
+**	Also, tokens ending in a decimal digit will be
+**	treated as a numeric literal while they may have
+**	identified as an identifier when scanned by
+**	nextToken().	
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	int	Token ID.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+**	13-Jun-00 (gordy)
+**	    Support all specific punctuation.  Scanning of numerics now
+**	    done by helper method, so only scan integers not decimals.
+*/
+
+private int
+prevToken()
+    throws SQLException
+{
+    int	    type;
+    char    ch;
+
+    while( --token_beg >= 0  &&  Character.isWhitespace( text[ token_beg ] ) );
+
+    if ( token_beg < 0 )  
+    {
+	token_end = token_beg = 0;
+	return( EOF );
+    }
+
+    token_end = token_beg + 1;
+
+    switch( (ch = text[ token_beg ]) )
+    {
+    case '(' :	type = P_LPAREN;    break;
+    case ')' :	type = P_RPAREN;    break;
+    case '{' :	type = P_LBRACE;    break;
+    case '}' :	type = P_RBRACE;    break;
+    case ',' :	type = P_COMMA;	    break;
+    case '?' :	type = P_QMARK;	    break;
+    case '=' :	type = P_EQUAL;	    break;
+    case '+' :	type = P_PLUS;	    break;
+    case '-' :	type = P_MINUS;	    break;
+    case '.' :	type = P_PERIOD;    break;
+
+    default :
+	if ( isIdentChar( ch ) )
+	{
+	    type = IDENT;
+
+	    for( ; token_beg > 0; token_beg-- )
+	    {
+		ch = text[ token_beg - 1 ];
+		if ( ! isIdentChar( ch )  &&  ! Character.isDigit( ch ) )
+		    break;
+	    }
+	}
+	else  if ( Character.isDigit( ch ) )
+	{
+	    type = NUMBER;
+
+	    while( token_beg > 0  &&
+		   Character.isDigit( text[ token_beg - 1 ] ) )
+		token_beg--;
+	}
+	else
+	{
+	    type = PUNCT;
+	}
+	break;
+    }
+
+    return( type );
+} // prevToken
+
+
+/*
+** Name: match
+**
+** Description:
+**	Find the position of the matching character for a pair 
+**	of characters which delimit text.  The first character 
+**	is the determined by the beginning position in the text.
+**	The second character is provided by the caller.  The two 
+**	characters may be the same, as for quoted strings, or 
+**	different, as for the pairs '(' and ')', '{' and '}', etc.
+**
+**	Nesting of the match characters is permitted.  An instance 
+**	variable, nested, indicates if nesting was detected.
+**
+** Input:
+**	txt	    Text.
+**	beg	    Position of starting character.
+**	end	    End of text.
+**	end_ch	    Matching character.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	int	    Position of matching character.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+*/
+
+private int
+match( char txt[], int beg, int end, char end_ch )
+    throws SQLException
+{
+    char    beg_ch = text[ beg ];
+    int	    nesting = 0;
+    
+    nested = false;
+
+    while( ++beg < end )  
+    {
+	char ch = text[ beg ];
+	
+	/*
+	** The begin and end characters may be the same,
+	** in which case nesting is not meaningful and
+	** the end character test must be done first.
+	*/
+	if ( ch == end_ch )
+	{
+	    if ( nesting > 0 )
+		nesting--;
+	    else
+		return( beg );
+	}
+	else  if ( ch == beg_ch )
+	{
+	    nesting++;
+	    nested = true;
+	}
+    }
+
+    throw SqlExFactory.get( ERR_GC4013_UNMATCHED );
+} // match
+
+
+/*
+** Name: keyword
+**
+** Description:
+**	Searches a string table for an entry matching
+**	a text token.  The string table must be upper-
+**	case and sorted alphabetically.  UNKNOWN is
+**	returned if token is not found in the table.
+**
+** Input:
+**	txt	Text containing keyword.
+**	beg	Beginning position of keyword.
+**	end	Ending position of keyword.
+**	table	Keyword table.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	int	Index in table of match, or UNKNOWN.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+*/
+
+private static int
+keyword( char txt[], int beg, int end, String table[] )
+{
+    int i, ix, length = end - beg;
+
+    for( ix = 0; ix < table.length; ix++ )
+	if ( length == table[ ix ].length() )
+	{
+	    for( i = 0; i < length; i++ )
+	        if ( table[ ix ].charAt( i ) !=
+		     Character.toUpperCase( txt[ beg + i ] ) )
+		    break;
+
+	    if ( i == length )  return( ix );
+	}
+
+    return( UNKNOWN );
+} // keyword
+
+
+/*
+** Name: isIdentChar
+**
+** Description:
+**	Determine if character is permitted in an identifier.
+**
+** Input:
+**	ch	Character to be tested.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	boolean	True if character is permitted in an identifier.
+**
+** History:
+**	26-Oct-99 (gordy)
+**	    Created.
+*/
+
+private static boolean
+isIdentChar( char ch )
+{
+    return( Character.isLetter( ch )  ||  ch == '_'  ||  
+	    ch == '$'  ||  ch == '@'  ||  ch == '#' );
+} // isIdentChar
+
+
+} // class SqlParse
+

@@ -1,0 +1,885 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<lo.h>
+#include	<nm.h>
+
+#include	<st.h>
+#include	<si.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<oosymbol.h>
+##include	<oocat.qsh>
+##include	<abclass.qsh>
+##include	"abclinfo.qsh"
+#include	<abfcompl.h>
+#include	"abfgolnk.h"
+#include	<abfglobs.h>
+#include	"erab.h"
+#include	<oodefine.h>
+
+/*
+fool ming:
+#include        <abclass.h>
+#include        "abclinfo.h"
+*/
+
+/**
+** Name:	editutil.qc -	ABF Application Component Object Edit Utilities.
+**
+** Description:
+**	Contains shared utilities for editing application component objects.
+**	Defines:
+**
+**	iiabApCompClass() return application component edit object class.
+**	iiabSrEdit()	edit component source-code file from field.
+**	iiabFileEdit()	edit a source-code file.
+**	iiabFormEdit()	edit a form for a component object.
+**	iiabPrintComp()	print a description of a component object.
+**	iiabScrPrint()	print the definition frame of a component object.
+**	iiabSfilePrint()print a description including a source file.
+**	iiabGetRetType()
+**	iiabSvComp()
+**	iiabSrCompile()
+**	iiabTstComp()	test an executable component.
+**	iiabVerifyType()	get return datatype information off a frame.
+**	iiabTG_TypeGet()	get datatype information off a frame.
+**	iiabTD_TypeDisplay()	display type information.
+**
+** History:
+**	Revision 6.4
+**	03/22/91 (emerson)
+**		Fix interoperability bug 36589:
+**		Change all calls to abexeprog to remove the 3rd parameter
+**		so that images generated in 6.3/02 will continue to work.
+**		(Generated C code may contain calls to abexeprog).
+**		This parameter was introduced in 6.3/03/00, but all calls
+**		to abexeprog specified it as TRUE.  See abfrt/abrtexe.c
+**		for further details.
+**
+**	Revision 6.2  89/02  wong
+**	Initial revision.
+**	12/19/89 (dkh) - VMS shared lib changes - References to IIarDbname
+**			 is now through IIar_Dbname.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	28-Mar-2005 (lakvi01)
+**	    Added oodefine.h for OO prototypes.
+**	23-Aug-2009 (kschendel) 121804
+**	    Need abfglobs.h to satisfy gcc 4.3.
+**/
+
+/*{
+** Name:	iiabApCompClass() -	Return Application Component Edit
+**						Object Class.
+** Description:
+**	Return a reference to the edit class descriptor of an application
+**	component object.  This is looked up using the input class ID.  As a 
+**	side effect, initialize the edit definition form for the component
+**	class if requested.
+**
+** Inputs:
+**	class	{OOID}  The ID of the class of the object.
+**	frminit	{bool}  Whether to initialize the edit definition form
+**				for the object.
+**
+** Returns:
+**	{COMP_CLASS_INFO *}  The reference to the edit class descriptor.
+**
+** History:
+**	032/89 (jhw) -- Written.
+*/
+
+GLOBALREF char			**IIar_Dbname;
+
+GLOBALREF COMP_CLASS_INFO	iiABuserFrame;
+GLOBALREF COMP_CLASS_INFO	iiAB4GLProc;
+GLOBALREF COMP_CLASS_INFO	iiABHLProc;
+GLOBALREF COMP_CLASS_INFO	iiABDBProc;
+GLOBALREF COMP_CLASS_INFO	iiABreportFrame;
+GLOBALREF COMP_CLASS_INFO	iiABqbfFrame;
+GLOBALREF COMP_CLASS_INFO	iiABgraphFrame;
+GLOBALREF COMP_CLASS_INFO	iiABconsts;
+GLOBALREF COMP_CLASS_INFO	iiABglobals;
+GLOBALREF COMP_CLASS_INFO	iiABrecords;
+GLOBALREF COMP_CLASS_INFO	iiABratts;
+
+GLOBALREF COMP_CLASS_INFO	iiABmuFrame;
+GLOBALREF COMP_CLASS_INFO	iiABapFrame;
+GLOBALREF COMP_CLASS_INFO	iiABupdFrame;
+GLOBALREF COMP_CLASS_INFO	iiABbrwFrame;
+
+typedef struct {
+		COMP_CLASS_INFO	*cp;
+		bool		forminit;
+} CLASS_INIT;
+
+static CLASS_INIT	_class_init[] = {
+	{&iiABuserFrame,	FALSE},
+	{&iiAB4GLProc,		FALSE},
+	{&iiABHLProc,		FALSE},
+	{&iiABDBProc,		FALSE},
+	{&iiABreportFrame,	FALSE},
+	{&iiABqbfFrame,		FALSE},
+	{&iiABgraphFrame,	FALSE},
+	{&iiABconsts,		FALSE},
+	{&iiABglobals,		FALSE},
+	{&iiABrecords,		FALSE},
+	{&iiABratts,		FALSE},
+	{&iiABmuFrame,		FALSE},
+	{&iiABapFrame,		FALSE},
+	{&iiABupdFrame,		FALSE},
+	{&iiABbrwFrame,		FALSE},
+	{NULL,			FALSE}
+};
+
+COMP_CLASS_INFO *
+iiabApCompClass ( class, frminit )
+OOID	class;
+bool	frminit;
+{
+	register CLASS_INIT		*cip;
+
+	for ( cip = _class_init ; cip->cp != NULL ; ++cip )
+	{
+		if ( cip->cp->class == class )
+		{
+			if ( frminit && !cip->forminit )
+			{
+				IIARiaForm( cip->cp->form );
+				cip->forminit = TRUE;
+			}
+			break;
+		}
+	}
+
+	return cip->cp;
+}
+
+/*{
+** Name:	iiabSrEdit() -	Edit Component Source-Code File from Field.
+**
+** Description:
+**	Edits the source-code file for a component as specified on the
+**	component object definition form.
+**
+** Inputs:
+**	app	{APPL *}  The application object.
+**	comp	{APPL_COMP *}  The component object.
+**	form	{char *}  The component object definition form name.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+
+STATUS
+##iiabSrEdit ( app, comp, form )
+register APPL	*app;
+APPL_COMP	*comp;
+##char		*form;
+##{
+##	char	srcfile[48+1];
+
+##	getform form ( srcfile = _srcfile );
+
+	return iiabFileEdit(app, comp, srcfile);
+##}
+
+/*{
+** Name:	iiabFileEdit() -	Edit an Application File.
+**
+** Description:
+**	Edit a file (usually of source-code) that belongs to the application
+**	(which will be found in the source-code directory for the application.)
+**	This routine builds the location for the file and then calls the editor
+**	for the file.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**			.source	{char *}  The application source-code directory.
+**	comp	{ APPL_COMP * } associated component, if non-NULL.
+**	srcfile	{char *}  The file name.
+**
+** Returns:
+**	{STATUS}	OK
+**
+** History:
+**	02/89 (jhw)  Written.
+**	2/90 (bobm) CUSTOM_EDIT logic added.
+*/
+STATUS
+iiabFileEdit ( app, comp, srcfile )
+register APPL	*app;
+APPL_COMP	*comp;
+char		*srcfile;
+{
+	LOCATION	*iiabMkLoc();
+	LOCATION	*loc;
+	LOINFORMATION	lin;
+	SYSTIME		ot;
+	i4		lflags;
+
+	if ( STtrmwhite(srcfile) <= 0 )
+	{
+		IIUGerr(E_AB003D_no_file, UG_ERR_ERROR, 0);
+		return FAIL;
+	}
+	else
+	{
+		loc = iiabMkLoc(app->source, srcfile);
+
+		/*
+		** if LOinfo fails, we set a time of Jan. 1, 1970 so
+		** that we will flag the file as editted.  This covers
+		** the "doesn't exist" case also.
+		*/
+		if (comp != NULL)
+		{
+			lflags = LO_I_LAST;
+			if (LOinfo(loc, &lflags, &lin) == OK )
+				STRUCT_ASSIGN_MACRO(lin.li_last,ot);
+			else
+				ot.TM_secs = 0;
+		}
+
+		if ( abexeedit( loc ) == OK)
+		{
+			if (comp != NULL && LOexist(loc) == OK)
+			{
+				lflags = LO_I_LAST;
+				if (LOinfo(loc, &lflags, &lin) != OK )
+					TMnow(&(lin.li_last));
+				if (TMcmp(&ot,&(lin.li_last)) < 0 &&
+					(comp->flags & CUSTOM_EDIT) == 0)
+				{
+					comp->flags |= CUSTOM_EDIT;
+					IIAMufqUserFrameQuick(comp);
+				}
+			}
+			return OK;
+		}
+
+		return FAIL;
+	}
+}
+
+/*
+** History:
+**	02/89 (jhw) -- Written.
+**	09/89 (jhw) -- Save form reference in case symbol and source-code name
+**			were added.  JupBug #7948.
+**	10/90 (Mike S) -- We don't compile forms here anymore.
+*/
+STATUS
+iiabFormEdit ( app, form)
+APPL			*app;
+register FORM_REF	*form;
+{
+	LOCATION	*iiabMkFormLoc();
+	char		*cp;
+
+	if ( form == NULL || *form->name == EOS )
+	{
+		IIUGerr(E_AB0132_NoForm, UG_ERR_ERROR, 0);
+	}
+	else
+	{
+# ifdef NO_CALLABLE_VIFRED
+		abexeprog( ERx("vifred"), ERx("abfform = %S"),
+				1, form->name
+		);
+# else
+		IIVFabvABVifred(*IIar_Dbname, form->name, FALSE,
+				(char *)NULL, (char *) NULL);
+# endif
+	}
+	return OK;
+}
+
+/*{
+** Name:	iiabPrint() -	Print a Description of a Component Object.
+**
+** Description:
+**	Prints a description of an application component object (which is just
+**	a copy of the edit definition frame for the component.)
+**
+** Inputs:
+**	app	{APPL *}  The application object.
+**	comp	{APPL_COMP *}  The component object.
+**
+** Returns:
+**	{STATUS}  Screen generation status.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/ 
+STATUS
+iiabPrint ( app, comp )
+APPL		*app;	/* unused */
+APPL_COMP	*comp;	/* unused */
+{
+	STATUS		stat;
+	LOCATION	ptmp;
+	char		buf[MAX_LOC+1];
+
+	if ( (stat = iiabScrPrint( &ptmp, buf )) == OK )
+		IIARprint((char *)NULL, &ptmp, TRUE);
+	return stat;
+}
+
+/*{
+** Name:	iiamScrPrint() -	Get a Copy of the Current Frame.
+**
+** Description:
+**	Prints a copy of the current frame (which should be one of the
+**	component edit definition frames) into a temporary file.  The
+**	location of this file is returned.
+**
+** Inputs:
+**	temp	{LOCATION *}  The location for the copy of the frame.
+**	lbuf	{char [MAX_LOC+1]}  The buffer for the location.
+**
+** Outputs:
+**	temp	{LOCATION *}  The location of the copy of the frame.
+**
+** Returns:
+**	{STATUS}  Location generation status.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+STATUS
+##iiabScrPrint ( temp, lbuf )
+LOCATION	*temp;
+char		lbuf[MAX_LOC+1];
+##{
+##	char		*file;
+	STATUS		stat;
+	LOCATION	path;
+
+	if ( (stat = NMloc(TEMP, PATH, (char *)NULL, &path)) == OK )
+	{
+		LOcopy(&path, lbuf, temp);
+		if ( (stat = LOuniq(ERx("ap"), ERx("tmp"), temp)) == OK )
+		{
+			LOtos(temp, &file);
+##			printscreen ( file = file );
+		}
+	}
+	return stat;
+##}
+
+/*{
+** Name:	iiamSfilePrint() -	Print a Description of a Component
+**						Object including a Source File.
+** Description:
+**	Prints a description of an application component object, which is just
+**	a copy of the edit definition frame for the component, and which will
+**	include a source file listing.
+**
+** Inputs:
+**	app	{APPL *}  The application object.
+**	srcfile	{char *}  The name of the source file.
+**
+** Returns:
+**	{STATUS}  Print status.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+STATUS
+iiabSfilePrint ( appl, srcfile )
+APPL		*appl;
+char		*srcfile;
+{
+	STATUS		stat;
+	FILE		*fp;
+	i4		junk;
+	LOCATION	ptmp;
+	char		buf[MAX_LOC+1];
+
+	LOCATION	*iiabMkLoc();
+
+	if ( (stat = iiabScrPrint(&ptmp, buf)) == OK &&
+		(stat = SIfopen(&ptmp, ERx("a"), SI_TXT, &junk, &fp)) == OK )
+	{
+		SIcat(iiabMkLoc(appl->source, srcfile), fp);
+		SIclose(fp);
+
+		IIARprint((char *)NULL, &ptmp, TRUE);
+	}
+	return stat;
+}
+
+/*{
+** Name:	iiabVerifyType() -	Verify Data Type on Form.
+**
+** Description:
+**	Reads the data type specification (type only) from the form and
+**	verifies that it's legit.
+**
+**	This routine is used as the "standard" COMP_INFO method for getting
+**	return datatypes.  (The error message is tailored to this.)
+**
+** Inputs:
+**	comp		{APPL_COMP *}  The object checking the type.
+**	desc		{char *}  	A string describing the type.
+**
+** Output:
+**	none.
+**
+** Returns:
+**	{STATUS}  OK if datatype is valid, FAIL otherwise.
+**
+** Side Effects:
+**	Turns the 'nullable' field invisible if the datatype is 'none'.
+**
+** History:
+**	08/89 (billc)  Written.
+*/
+STATUS
+iiabVerifyType ( comp, desc, dbdv )
+##APPL_COMP	*comp;
+char		*desc;
+DB_DATA_VALUE	*dbdv;
+{
+##	i4 n_inviz = 0;
+
+	if (iiabCkTypeSpec(desc, TRUE, dbdv) != OK)
+	{ 
+		/* invalid Return Type */
+		iiabTypeError(desc, E_AB0268_Ret_type);
+		return FAIL;
+	}
+
+	/* If user entered 'none', turn off the 'nullable' field.  */
+	if (dbdv->db_datatype == DB_NODT)
+		n_inviz = 1;
+
+##	set_frs field ERx("") ( invisible(_nullable) = n_inviz );
+
+	return OK;
+}
+
+/*{
+** Name:	iiabGetRetType() -	Get Return Type from Form.
+**
+** Description:
+**	Reads the return type specifiction (type and nullablility) from the form
+**	if it was changed.  Then, gets the internal data value representation
+**	for the type, and if it is different, sets the members of the input
+**	return type descriptor.
+**
+**	The type specification fields should have already been validated.
+**
+** Inputs:
+**	form		{char *}  The component object definition form name.
+**	tag		{u_i4}  Memory tag for allocation.
+**	type_desc	{DB_DATA_DESC *}  The return type descriptor.
+**				.db_data	{char *} The type specification.
+**				.db_datatype	{DB_DT_ID}  The data type.
+**				.db_length	{i4}  The data length.
+**				.db_scale	{i2}  The DB_DEC_TYPE scale.
+**
+** Output:
+**	type_desc	{DB_DATA_DESC *}  The new return type descriptor.
+**				.db_data	{char *} The type specification.
+**				.db_datatype	{DB_DT_ID}  The data type.
+**				.db_length	{i4}  The data length.
+**				.db_scale	{i2}  The DB_DEC_TYPE scale.
+**
+** Returns:
+**	{bool}  TRUE if the type was changed.
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+bool
+iiabGetRetType ( form, tag, type_desc )
+##char			*form;
+u_i4			tag;
+##register DB_DATA_DESC	*type_desc;
+##{
+	bool	nullable;
+
+##	i4	desc_change;
+##	i4	null_change;
+
+##	inquire_frs field form (
+##			desc_change = change(_return_type),
+##			null_change = change(_nullable)
+##	);
+
+	if ( desc_change == 0 && null_change == 0 )
+		return FALSE;
+	
+	if ( null_change == 0 )
+		nullable = AFE_NULLABLE(type_desc->db_datatype);
+	else
+##	{
+##		char	nullbuf[16];
+
+##		set_frs field form ( change(_nullable) = 0 );
+##		getform form ( nullbuf = _nullable );
+		/* Note:  The field must be validated "yes" or "no". */
+		nullable = IIUGyn(nullbuf, (STATUS *)NULL);
+##	}
+
+	if ( desc_change == 0 )
+	{
+		if ( nullable != AFE_NULLABLE(type_desc->db_datatype) )
+		{
+			AFE_SET_NULLABLE(nullable, type_desc);
+			return TRUE;
+		}
+	}
+	else
+##	{
+##		char		desc[FE_MAXNAME+1];
+		DB_DATA_VALUE	new;
+
+##		set_frs field form ( change(_return_type) = 0 );
+##		getform form ( desc = _return_type );
+		_VOID_ STtrmwhite(desc);
+		if ( !STequal(type_desc->db_data, desc) 
+		  && iiabCkTypeSpec(desc, nullable, &new) == OK 
+		  && ( type_desc->db_datatype != new.db_datatype 
+		     || ( new.db_datatype != DB_DYC_TYPE 
+			&& new.db_datatype != DB_NODT 
+			&& ( type_desc->db_length != new.db_length 
+			   || ( new.db_datatype == DB_DEC_TYPE 
+			      && type_desc->db_scale != new.db_prec
+				)
+			    )
+			)
+		) )
+		{ /* new data type */
+			register char	*cp;
+
+			type_desc->db_datatype = new.db_datatype;
+			type_desc->db_length = new.db_length;
+			type_desc->db_scale = new.db_prec;
+			if ( (cp = FEtsalloc(tag, desc)) != NULL )
+				type_desc->db_data = cp;
+
+			return TRUE;
+		}
+##	}
+
+	return FALSE;
+##}
+
+/*{
+** Name:	iiabSvComp() -	Save Component.
+*/
+static STATUS
+save ( id, ptr )
+OOID	id;
+PTR	ptr;
+{
+	STATUS	(*save)() = (STATUS (*)())ptr;
+
+	return (*save)(OOp(id));
+}
+
+STATUS
+iiabSvComp ( obj, func )
+APPL_COMP	*obj;
+STATUS		(*func)();
+{
+	return IIOOsave(&obj->ooid, (PTR)func, save, (STATUS (*)())NULL);
+}
+
+/*{
+** Name:	iiabSrCompile() -	Compile Source-Code Component Object.
+**
+** Description:
+**	Compiles a component object that contains a source specification file
+**	as part of its definition.  This saves the object first because the
+**	compilation may depend on the definition being in the database.
+**
+** Inputs:
+**	app	{APPL *}  The application object.
+**	class	{COMP_CLASS_INFO *}  The component class edit information.
+**	obj	{APPL_COMP *}  The component object.
+**
+** Returns:
+**	{STATUS}  OK, FAIL
+**
+** History:
+**	02/89 (jhw)  Written.
+**	04/90 (jhw)  Changed to call 'IIABfrcCompile()'.
+*/
+STATUS
+iiabSrCompile ( app, class, obj )
+APPL		*app;
+COMP_CLASS_INFO	*class;
+APPL_COMP	*obj;
+{
+	if ( (*class->save)( app, obj ) != OK )
+		return FAIL;
+
+	return IIABfrcCompile(app, obj);
+}
+
+/*{
+** Name:	iiabTstComp() -	Test Executable Component Object.
+**
+** Description:
+**	Utility to test application component objects that are executable.
+**	This includes user frames, and host-langauge and 4GL procedures.
+**
+** Inputs:
+**	app	{APPL *}  The application object.
+**	class	{COMP_CLASS_INFO *}  The component class edit information.
+**	obj	{APPL_COMP *}  The component object.
+**
+** Returns:
+**	{STATUS}  OK, FAIL
+**
+** History:
+**	02/89 (jhw)  Written.
+*/
+GLOBALREF ABLNKTST	iiAB_test_image;
+
+STATUS
+iiabTstComp ( app, class, obj )
+APPL		*app;
+COMP_CLASS_INFO	*class;
+APPL_COMP	*obj;
+{
+	STATUS		stat = OK;
+
+	iiAB_test_image.one_frame = obj;
+	iiAB_test_image.plus_tree = TRUE;
+
+	if ( (stat = (*class->save)( app, obj )) == OK &&
+		IIABchkSrcDir( app->source, FALSE ) &&
+			(stat = IIAMapFetch(app, OC_UNDEFINED, FALSE)) == OK)
+		stat = IIABarunApp(app, &iiAB_test_image, obj->name, obj->class);
+	return stat;
+}
+
+/*{
+** Name:	iiabTG_TypeGet() -	Get Datatype from Form.
+**
+** Description:
+**	Reads the datatype specification (type, nullablility, and array-ness)
+**	from the form
+**	if it was changed.  Then, gets the internal data value representation
+**	for the type, and if it is different, sets the members of the input
+**	return type descriptor.
+**
+**	This routine also allows user-defined record definition names as
+**	type specifications.
+**
+** Inputs:
+**	obj		{APPL_COMP*} the object we're defining/editing.
+**	form		{char *}  The component object definition form name.
+**	dbdv	{DB_DATA_DESC *}  The data type descriptor.
+**
+** Output:
+**	dbdv	{DB_DATA_DESC *}  The new return type descriptor.
+**
+** Returns:
+**	{bool}  TRUE if the type was changed.
+**
+** History:
+**	07/89 (billc)  Written.
+**	12-nov-93 (donc) Bugs 54823, 56189
+**		Modified cryptic if statement. Added abs() around
+**	 	Decimal datatype check as nullable decimal was passed
+**		on as a datatype error. Also let integer datatype being
+**		changed to int (both valid), or vice versa, be flagged
+**		as a datatype change, not an error.
+**	15-nov-93 (teresal)
+**		As part of bug fix 54182, allow user to change a decimal
+**		to a decimal with the same precision and scale. Got rid
+**		of unnecessary checking that was causing an "Invalid data type"
+**		error if the user modified a datatype to the same datatype.
+*/
+bool
+##iiabTG_TypeGet ( obj, form, dbdv )
+APPL_COMP	*obj;
+##char		*form;
+##DB_DATA_DESC	*dbdv;
+##{
+	bool	nullable;
+	i4	arraysize;
+##	char		desc[FE_MAXNAME+1];
+	DB_DATA_VALUE	new;
+
+##	i4	desc_change;
+##	char	buf[16];
+
+
+##	inquire_frs field form (
+##			desc_change = change(_data_type)
+##	);
+
+##	set_frs field form ( change(_nullable) = 0 );
+##	getform form ( buf = _nullable );
+
+	/* Note:  The field must be validated "yes" or "no". */
+	nullable = IIUGyn(buf, (STATUS *)NULL);
+
+	/* 'array' and 'nullable' are info we get from the same field. */
+	arraysize = nullable ? 1 : 0;
+
+	if ( desc_change == 0 )
+	{
+		/*
+		** nullability or arrayness changed, but not the
+		** datatype.  nullability and arrayness are mutually exclusive.
+		*/
+		if ( dbdv->db_datatype == DB_DMY_TYPE ) 
+		{
+			if ( arraysize != dbdv->db_length )
+			{
+				dbdv->db_length = arraysize;
+				return TRUE;
+			}
+		}
+		else if ( nullable != AFE_NULLABLE(dbdv->db_datatype) )
+		{
+			AFE_SET_NULLABLE(nullable, dbdv);
+			return TRUE;
+		}
+		return FALSE;
+	}
+
+	/* description changed */
+
+##	set_frs field form ( change(_data_type) = 0 );
+##	getform form ( desc = _data_type );
+	_VOID_ STtrmwhite(desc);
+
+	if ( OOsnd( OC_RECORD, _withName, desc, (char*)NULL,
+		obj->appl->ooid ) != nil
+	    )
+	{
+		dbdv->db_datatype = DB_DMY_TYPE;
+		dbdv->db_length = arraysize;
+		dbdv->db_scale = 0;
+		dbdv->db_data = FEtsalloc(obj->data.tag, desc);
+		return TRUE;
+	}
+	else if ( iiabCkTypeSpec(desc, nullable, &new) == OK )
+	{ 
+		/* new data type */
+		char	*cp;
+
+		dbdv->db_datatype = new.db_datatype;
+		dbdv->db_length = new.db_length;
+		dbdv->db_scale = new.db_prec;
+		if ( (cp = FEtsalloc(obj->data.tag, desc)) != NULL )
+			dbdv->db_data = cp;
+
+		return TRUE;
+	}
+
+	iiabTypeError(desc, E_AB0269_Data_type);
+
+	return FALSE;
+##}
+
+/*{
+** Name:	iiabTD_TypeDisplay() -	Display Datatype Information on Form.
+**
+** Description:
+**	Displays the data type specification (type and Nullablility or
+**	array-ness) on a form with last two overlayed in the same field.  Based
+**	on the type, this routine adjusts the title of this field as appropriate
+**	and then sets the value based on the type descriptor or DML unless the
+**	latter is specified as DB_NODT in which case the type must be checked to
+**	see if it was changed but not from a complex type to an INGRES type or
+**	visa-versa.  If the base type wasn't "toggled", then the Nullability /
+**	array-ness is left with its previous value.
+**
+** Inputs:
+**	formname {char *}  The form containing the data type specification.
+**	dbdv	{DB_DATA_DESC *}  The data type descriptor, NULL if we're
+**					initializing with no information.
+**	dml	{nat}		  The DML, which affects Nullability.  If set to
+**					DB_NODT the type may have been toggled
+**					between complex and INGRES datatypes.
+** History:
+**	12/89 (billc)  Written.
+*/
+VOID
+##iiabTD_TypeDisplay ( formname, dbdv, dml )
+##char		*formname;
+DB_DATA_DESC	*dbdv;
+i4		dml;
+##{
+##	char		*typename = ERx("");
+##	char		*yn_title;
+	ER_MSGID	yn_msg_id = F_UG0007_No2;
+
+	if ( dbdv == NULL )
+	{ /* . . . initialization; show "Nullable", with the DML default. */
+		if ( dml == DB_SQL )
+			yn_msg_id = F_UG0002_Yes2;
+		yn_title = ERget(F_AB009D_Nullable);
+	}
+	else
+	{
+##		char	old_title[FE_MAXNAME+1];
+
+		if ( dml == DB_NODT )
+##     			getform formname ( old_title = _yn_field_title );
+
+		if ( dbdv->db_datatype == DB_DMY_TYPE )
+		{ /* . . . a user-defined record type. */
+			yn_title = ERget(F_AB009E_Array);
+			if ( dml == DB_NODT )
+			{ /* may have been toggled, check it */
+				if ( STequal(yn_title, old_title) )
+					yn_msg_id = ER_OK; /* wasn't toggled;
+							   **	don't change.
+							   */
+				/* . . . otherwise set to "No". */
+			}
+			else if ( dbdv->db_length != 0 )
+				yn_msg_id = F_UG0002_Yes2;
+		}
+		else
+		{ /* . . . an INGRES type. */
+			yn_title = ERget(F_AB009D_Nullable);
+			if ( dml == DB_NODT && STequal(yn_title, old_title) )
+				yn_msg_id = ER_OK;	/* wasn't toggled;
+							** don't change.
+							*/
+			else if ( AFE_NULLABLE(dbdv->db_datatype) )
+				yn_msg_id = F_UG0002_Yes2;
+		}
+		typename = dbdv->db_data;
+	}
+
+##      putform formname ( _data_type = typename );
+
+	if ( yn_msg_id != ER_OK )
+	{ /* Nullability/Array-ness was changed */
+##		putform formname ( _nullable = ERget( yn_msg_id ),
+##		                   _yn_field_title = yn_title
+##		);
+	}
+
+##}

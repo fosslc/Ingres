@@ -1,0 +1,6 @@
+OpenROAD Runtime Client
+
+OpenROAD (Open, Rapid Object-oriented Application Development) is a
+GUI application development tool for creating industrial strength database 
+applications.  This package contains the runtime environment, and will 
+install Ingres/Net if not already installed.

@@ -1,0 +1,213 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<cv.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<ooclass.h>
+#include	<oocat.h>
+#include	<oosymbol.h>
+#include	<oodefine.h>
+#include	<ui.h>
+#include	"eroo.h"
+
+/**
+** Name:	oosave.c -	Object Module Save Module.
+**
+** Description:
+**	Contains routines used to save objects in the DBMS.  Defines:
+**
+**	IIOOsave()	save object in DBMS.
+**	IIOOdummy()	dummy routine.
+**	iiooCheckName()	check legality of name.
+**
+** History:
+**	Revision 6.0  87/04  peterk
+**	Initial revision.
+**	Revision 6.1 88/02/29  danielt
+**	Placed transactions around all database access in order to match SQL
+**	transactional semantics (and to do the right thing in case of deadlock.)
+**
+**	Revision 8.0  89/07  wong
+**	Moved and renamed 'iiooConfirmSave()' to "obconfrm.c".  Added
+**	'iiooCheckName()'.
+**
+**	8-feb-93 (blaise)
+**		Changed _flush, etc. to ii_flush because of conflict with
+**		Microsoft C library.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+char *UGcat_now();
+
+/*{
+** Name:	IIOOsave() -	Save an Object in the DBMS.
+**
+** Description:
+**	Invoke generic OO save function to save object in database
+**	and resolve a permanent object id for object if necessary.
+**	Passed in save function is called to complete any
+**	application-specific tasks.
+**
+** Input params:
+**	OOID	*id;		// ptr to object id
+**	PTR	ptr;		// PTR to application-specific data structure
+**	i4	(*save)();	// application-specific save function
+**
+** Output params:
+**	OOID	*id;		// filled in with saved id for object
+**
+** Returns:
+**	{STATUS}	OK		// a save actually happened
+**			FAIL	// save didn't happen (not nec. an error)
+**
+** Side Effects:
+**	object may be saved in database.
+**
+** History:
+**	4/87 (peterk) - created.
+**	29-feb-1988 (danielt) placed transactions around all database
+**  		access in order to match SQL transactional semantics (and
+** 		to do the right thing in case of deadlock).
+**	6-jan-1989 (danielt)
+**		performance/concurrency changes
+*/
+static VOID	now();
+
+STATUS
+IIOOsave ( id, ptr, save )
+OOID	*id;
+PTR	*ptr;
+STATUS	(*save)();
+{
+	register OO_OBJECT	*obj = OOp(*id);
+	STATUS			ret = OK;
+
+	IIUGmsg( ERget(S_OO000B_Save_Status), FALSE,
+			2, OOsnd(obj->class,_name), obj->name
+	);
+
+	now(obj, FALSE, &obj->create_date);
+	now(obj, TRUE, &obj->alter_date);
+
+	IIUIbeginXaction();
+
+	iiuicw1_CatWriteOn();
+	if ( ( save != NULL && (ret = (*save)(obj->ooid, ptr)) != OK )  ||
+			OOsndSelf(obj, ii_flushAll) == nil )
+	{
+		iiuicw0_CatWriteOff();
+		IIUIabortXaction();
+		return ret != OK ? ret : FAIL;
+	}
+	else
+	{
+		iiuicw0_CatWriteOff();
+		IIUIendXaction();
+		return OK;
+	}
+}
+
+/*
+** Name:	now() -	Set Object Date to "now".
+**
+** Description:
+**	changes the create_ or alter_date of an object to "now"
+**	either unconditionally or if the present date string is
+**	NULL or the empty string.
+**
+** Inputs:
+**	OO_OBJECT	*obj;		// object
+**	bool		force;		// if 1, set "now" unconditionally
+**					   if 0, set only if NULL or "".
+**	char		**dateptr;	// ptr to object date attribute
+**
+** History:
+**	5/18/87 (peterk) - created
+**	12-feb-1988 (danielt) changed to call UGcat_now (doesn't
+**		just put "now" in date string, but it puts the
+**		real current date in the FE catalog format).
+*/
+
+static VOID
+now ( obj, force, dateptr )
+OO_OBJECT	*obj;
+bool		force;
+char		**dateptr;
+{
+	char	*iiooStrAlloc();
+
+	if ( force || *dateptr == NULL || **dateptr == EOS )
+	{
+		*dateptr = iiooStrAlloc(obj, UGcat_now());
+	}
+}
+
+/*{
+** Name:	IIOOdummy() -	Do Nothing but Return OK.
+**
+** Description:
+**	Returns OK.  This routine is passed to the detail ('OOdetail()') when
+**	the "Save" menuitem is desired, but no object specific information
+**	need be saved.
+**
+** Returns:
+**	{STATUS}	OK, always.
+**
+** History:
+**	01/88 (jhw) -- Written.
+*/
+STATUS
+IIOOdummy()
+{
+	return OK;
+}
+
+/*{
+** Name:	iiooCheckName() -	Check Name for Legality.
+**
+** Description:
+**	Check that the name is a legal INGRES name.
+**
+** Input:
+**	name	{char *}  The name.
+**
+** Output:
+**	name	{char *}  The lowercased name.
+**
+** Returns:
+**	{STATUS}  OK, if the name is legal.
+**
+** History:
+**	07/89 (jhw) -- Abstracted from code in "oodetail.qsc" and "oocreate.qsc"
+*/
+
+STATUS
+iiooCheckName ( name )
+char	*name;
+{
+	if ( STtrmwhite(name) <= 0 )
+	{
+		IIUGerr( E_OO002A_No_name_specified_, UG_ERR_ERROR, 0 );
+		return FAIL;
+	}
+	CVlower(name);
+	if ( FEchkname(name) != OK )
+	{
+		IIUGerr( E_OO002B_Invalid_name_specifie, UG_ERR_ERROR, 0 );
+		return FAIL;
+	}
+	return OK;
+}

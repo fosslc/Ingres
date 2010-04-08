@@ -1,0 +1,16 @@
+#
+# Jamfile file for back!awsf!wmo
+#
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+
+SubDir ING_SRC back awsf wmo ;
+
+IISUBSYS back awsf wmo ;
+
+if $(BUILD_ICE)
+{
+IILIBRARY AWSFLIB : wmo_util.c wmo_user.c wmo_unit.c wmo_role.c
+	wmo_profile.c wmo_monitor.c wmo_loc.c wmo_init.c wmo_doc.c
+	wmo_dbuser.c wmo_db.c wmo_app.c ;
+}

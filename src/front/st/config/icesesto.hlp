@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+
+  The sess_timeout resource specifies the number of seconds a user session
+  must be inactive before its context is invalidated and any trasactions are
+  rolledback.
+
+  Default: 600

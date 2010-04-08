@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!tpf!tpd
+#
+
+SubDir ING_SRC back tpf tpd ;
+
+IISUBSYS back tpf tpd ;
+
+
+IILIBRARY TPFLIB : tpdutil.c tpdsvpt.c tpdprnt.c tpdmisc.c ;
+

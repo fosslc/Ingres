@@ -1,0 +1,18 @@
+#
+# Jamfile file for front!embed!libqxa
+#
+# History:
+#	20-dec-2004 (abbjo03)
+#	    Change directory name in order not to build on VMS.
+#	12-jan-2005 (abbjo03)
+#	    Revert to original directory name.
+
+SubDir ING_SRC front embed libqxa ;
+
+IISUBSYS front embed libqxa ;
+
+
+IILIBRARY LIBQXALIB : iixamain.sc iicxxa.sc iixautil.c
+	iixaswch.c iixainit.c iilbqhdl.c iicxutil.c iicxtx.c iicxmain.c
+	iicxinit.c iicxfe.c ;
+

@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The Gather Write resource determines if gather write algorithms
+  will be employed to assist cache flushes.

@@ -1,0 +1,15 @@
+;
+; History:
+;	18-may-2001 (somsa01)
+;	    Created.
+;	03-Aug-2001 (penga03)
+;	    Added ingres_rollback_odbc.
+;	21-Aug-2001 (penga03)
+;	    Added ingres_unset_odbc_reg_entries.
+;
+EXPORTS
+    ingres_remove_odbc_files
+    ingres_set_odbc_reg_entries
+    ingres_rollback_odbc
+    ingres_unset_odbc_reg_entries
+

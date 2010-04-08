@@ -1,0 +1,90 @@
+--
+--  Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+--
+--  This file contains the configuration rules for the SQL Server Gateway.
+--
+--# History:
+--#	26-mar-98 (mcgem01)
+--#		Created. 
+--#     03-dec-1998 (mcgem01)
+--#             Change parameter naming scheme to match the gateway
+--#             interpretation.   Increase the sqlda_size and pst_max
+--#             to a default value of 128.   Add an empty date.
+--#     07-dec-1998 (mcgem01)
+--#             Replace connect_max with connect_limit.
+--#	10-jun-02 (clach04)
+--#		Bug 107991
+--#		Added load_table_qualifier to crs.
+--#		Added empty_date_return.
+--#		Added squeeze_len.
+--#		Changed format of empty date value to be work irrespective
+--#		of II_DATE_FORMAT, this brings NT in line with VMS/Unix.
+--#	13-Aug-04 (wansh02)
+--#		Bug 104659
+--#		Added multiple_open_cursors.
+--#	19-Oct-04 (mofja02)
+--#		SIR 112273
+--#		Added support for new scalars, so the hex function
+--#		was fixed to return more lengths than just 30.
+--#	20-Oct-04 (mofja02)
+--#		SIR 113276
+--#		Added blob_data.
+--#     07-Dec-04 (mofja02)
+--#           SIR 113276
+--#           blob_data rules weren't really valid.
+--#     14-Jan-04 (mofja02)
+--#           BUG 113751
+--#           Now that gateways are in default.rfm
+--#           empty date return is wrong.
+--#     18-Mar-2005 (clach04)
+--#		Copied crs file from ingres!ingres26!wnt!front!st!crsfiles.
+--#
+--#             Removed connect_limit.
+--#             connect_limit setting did/does not have any impact
+--#             the limit code does not check the correct config.dat entries.
+--#             The check code is present but currently assumes -1 (unlimited).
+--#
+--#             Added trace flags so that they appear in CBF.
+--#
+--#     31-Aug-05 (mofja02)
+--#           BUG 115138
+--#           As part of an Oracle LOB bug related to handling multiple
+--#             LOB types, it was decided to change the default
+--#             for blob_data from memory to file for all gateways.
+--#     08-May-06 (wansh02)
+--#           BUG 105746 - added union_zerolength_column_padding
+--#     07-May-2007 (clach04)
+--#         SIR 118263
+--#         New gateway "string type cast length" help file added
+--#         It is number of characters and max value is (in theory)
+--#         max i4 value, in practice max OpenSQL/mssql string length is the ceiling.
+--#
+
+
+ii.$.ingstart.$.mssql:		1, MAX = 1;
+
+
+-- protocol port status initialization
+ii.$.gateway.mssql.sqlda_size:       128, MIN = 50, MAX = 256;
+ii.$.gateway.mssql.pst_max:          128, MIN = 50, MAX = 256;
+ii.$.gateway.mssql.empty_date:       "01-jan-1900 00:00:00";
+ii.$.gateway.mssql.empty_date_return: "OFF", VALID = {
+                                      "OFF","EMPTY"
+                                      };
+ii.$.gateway.mssql.load_table_qualifier: "USER";
+ii.$.gateway.mssql.varchar_comp:     OFF;
+ii.$.gateway.mssql.squeeze_len:      30, MIN = 0;
+ii.$.gateway.mssql.multiple_open_cursors: ON;
+ii.$.gateway.mssql.blob_data:	     "FILE", VALID = {
+         			     "MEMORY","FILE"
+ 					};
+ii.$.gateway.mssql.hex_len:      30, MIN = 1;
+ii.$.gateway.mssql.union_zerolength_column_padding:      255, MIN = 0, MAX = 8000;
+ii.$.gateway.mssql.typecast_strlen:  30, MIN = 1, SIGNED_INT;
+
+
+-- trace settings
+ii.$.gateway.mssql.trace_init:       "OFF";
+ii.$.gateway.mssql.trace_full:       "false", VALID = { "true", "false" };
+ii.$.gateway.mssql.trace_file:       "`iiconcat -s(II_SYSTEM) -s\ingres\files\gwmssql.log`";
+

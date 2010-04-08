@@ -1,0 +1,296 @@
+			.title	CSsprsm
+;
+;   25-may-93 (walt)
+;	Added two TRAPB instructions:
+;	    1)	at the end of the prologue
+;	    2)	just before exiting to the new thread
+;	so that pending hardware exceptions get handled by the correct
+;	thread.
+;   30-jun-93 (walt)
+;	Change STQ to STL for setting and clearing cs__inkernel to keep from
+;	changing someting else near it.  Also change LDQ to LDL getting
+;	cssrvblock into r0.
+;	If CS_move_async gets called, R25, R26, R27 need to be restored from
+;	the save area.
+;   23-dec-93 (walt)
+;	Zero out the quantum_ticks counter when starting a new thread.  This
+;	timer is incremented by CS_quantum (cshl.c) once each quantum.  It's
+;	used by CSswitch to force a thread switch if the current thread has
+;	been in for more than a quantum.
+;   13-jul-95 (dougb)
+;	Change name of quantum_ticks to CS_lastquant -- matching Unix CL.
+;	Correct $routine macro and prologue so that this routine may be
+;	debugged.  Restore r3, r25, r26 and r27 once only if CS_move_async()
+;	gets called.  Use r31 instead of clearing another register.
+;   05-dec-1995 (whitfield)
+;       Eliminate useless register save/restore operations. We only need to
+;       save and restore the registers required for a regular call or return.
+;       Initially, we'll "return" into a call to cs_jmp_start().  Later, this
+;       routine appears on the bottom of an idle thread's stack -- we return
+;       where-ever the thread left off.  For debugging purposes, we also try
+;       to save enough registers in order to "walk" the stack.  Also, remove
+;       a duplicate load of register r0.
+;   24-jan-1996 (dougb)
+;	Routine now takes a parameter -- indicates whether or not we should
+;	bother to pick a new thread and save the current regs.  Clean up
+;	parts of the previous integration.
+;   27-jul-2004 (abbjo03)
+;	Change title to be the same as the external filename.
+;
+; ---------------------------------------------------------------------------
+;
+; Local symbols
+;
+;
+;   DANGER DANGER DANGER -- These offset are calculated from the CS_SCB
+;		structure defined in <cs.h>.  Both must be identical
+;		for anything to work.
+
+CS__SCB_SELF		=   28
+CS__MACHINE_SPECIFIC	=   32	; Machine specific portion of the SCB
+CS__R0SAVE		=   00	;   ... to r0 save area
+CS__R1SAVE		=   08	;   ...  .. r1
+CS__R2SAVE		=   16	;   .
+CS__R3SAVE		=   24	;   .
+CS__R4SAVE		=   32	;   .
+CS__R5SAVE		=   40
+CS__R6SAVE		=   48
+CS__R7SAVE		=   56
+CS__R8SAVE		=   64
+CS__R9SAVE		=   72
+CS__R10SAVE		=   80
+CS__R11SAVE		=   88
+CS__R12SAVE		=   96
+CS__R13SAVE		=   104
+CS__R14SAVE		=   112
+CS__R15SAVE		=   120
+CS__R16SAVE		=   128
+CS__R17SAVE		=   136
+CS__R18SAVE		=   144
+CS__R19SAVE		=   152
+CS__R20SAVE		=   160
+CS__R21SAVE		=   168
+CS__R22SAVE		=   176
+CS__R23SAVE		=   184
+CS__R24SAVE		=   192
+CS__AISAVE		=   200
+CS__RASAVE		=   208
+CS__PVSAVE		=   216
+CS__R28SAVE		=   224
+CS__FPSAVE		=   232
+CS__SPSAVE		=   240
+;
+CS__F0SAVE		=   248	;   ... to f0 save area
+CS__F1SAVE		=   256	;   ...  .. f1
+CS__F2SAVE		=   264	;   .
+CS__F3SAVE		=   272	;   .
+CS__F4SAVE		=   280	;   .
+CS__F5SAVE		=   288
+CS__F6SAVE		=   296
+CS__F7SAVE		=   304
+CS__F8SAVE		=   312
+CS__F9SAVE		=   320
+CS__F10SAVE		=   328
+CS__F11SAVE		=   336
+CS__F12SAVE		=   344
+CS__F13SAVE		=   352
+CS__F14SAVE		=   360
+CS__F15SAVE		=   368
+CS__F16SAVE		=   376
+CS__F17SAVE		=   384
+CS__F18SAVE		=   392
+CS__F19SAVE		=   400
+CS__F20SAVE		=   408
+CS__F21SAVE		=  	416
+CS__F22SAVE		=   424
+CS__F23SAVE		=   432
+CS__F24SAVE		=   440
+CS__F25SAVE		=   448
+CS__F26SAVE		=   456
+CS__F27SAVE		=   464
+CS__F28SAVE		=   472
+CS__F29SAVE		=   480
+CS__F30SAVE		=   488
+;
+CS__READY_MASK		=   104	    ; Offset into Cs_srv_block for ready mask
+CS__CURRENT		=   184	    ; Offset into Cs_srv_block for current SCB
+CS__INKERNEL		=   204	    ; Offset into Cs_srv_block for in_kernel flag
+CS__ASYNC		=   208	    ; Offset into Cs_srv_block for async flag
+
+		$routine CS_ssprsm, kind=stack, saved_regs=<fp,r2>, -
+			standard_prologue=false, size=48
+
+		$linkage_section
+cssrvblock:	.address Cs_srv_block
+q_ticks:	.address CS_lastquant
+
+		$code_section
+cs_cssprsm::
+		LDA	SP, -$size(SP)		; get stack space
+		STQ	R27, (SP)		; save procedure descriptor pointer
+		STQ	R26, 8(SP)		; save return address
+
+		STQ	R2, 16(SP)		; save caller's r2 - we're going to use r2
+
+		STQ	FP, 24(SP)
+
+		LDA R0, $size(sp)
+		STQ R0, 32(sp)			; save a copy of caller's entering SP value
+
+		TRAPB				; force any pending hardware
+						; exceptions to be raised before
+						; we become the current routine.
+;;		6.4 version has a MB here.  Is that useful?
+		MOV	SP, FP
+	    $end_prologue
+
+		.base r2, $ls
+		mov r27, r2			; make r2 our base register
+;
+; Pick a new thread to run.  If there's no current thread (cs__current is zero)
+; don't have to save registers.
+;
+		ldl r0, cssrvblock		; r0 points to Cs_srv_block
+		mov 1, r1
+		stl r1, cs__inkernel(r0)	; turn on the inkernel flag
+
+		BEQ	R16, CS_do_save		; If ( R16 ) don't save
+						; regs or pick a new
+						; thread.
+		LDL	R0, cs__current(R0)	; R0 points to SCB of
+						; current thread.
+		BR	CS_insert_new		; Just restore the regs.
+
+CS_do_save:
+		ldl r1, cs__current(r0)		; r1 points to SCB of current thread
+		beq r1, CS_pick_new		; if none, don't have to save registers
+;
+; Save the current thread's registers into its SCB.
+;
+		lda r1, cs__machine_specific(r1)    ; point r1 to SCB reg save area
+;
+		ldq	r22, 16(fp)		; caller's saved r2
+		stq r22, cs__r2save(r1)
+		stq r3, cs__r3save(r1)
+		stq r4, cs__r4save(r1)
+		stq r5, cs__r5save(r1)
+		stq r6, cs__r6save(r1)
+		stq r7, cs__r7save(r1)
+		stq r8, cs__r8save(r1)
+		stq r9, cs__r9save(r1)
+		stq r10, cs__r10save(r1)
+		stq r11, cs__r11save(r1)
+		stq r12, cs__r12save(r1)
+		stq r13, cs__r13save(r1)
+		stq r14, cs__r14save(r1)
+		stq r15, cs__r15save(r1)
+		stq r25, cs__aisave(r1)
+		ldq r22, 8(fp)		; caller's saved r26  (return address)
+		stq r22, cs__rasave(r1)
+		ldq r22, 24(fp)			; caller's saved fp
+		stq r22, cs__fpsave(r1)
+		ldq r22, 32(fp)			; caller's saved sp
+		stq r22, cs__spsave(r1)
+;
+;;		Most FP registers are not relevant.  When calling
+;;		cs_jmp_start(), we certainly don't care -- it has no FP
+;;		arguments.  When returning (resuming a thread), this
+;;		routine is declared void.  Just save and restore the FP
+;;		registers known as "Conventional saved registers".
+;
+		stt	f2,	cs__f2save(r1)
+		stt	f3,	cs__f3save(r1)
+		stt	f4,	cs__f4save(r1)
+		stt	f5,	cs__f5save(r1)
+		stt	f6,	cs__f6save(r1)
+		stt	f7,	cs__f7save(r1)
+		stt	f8,	cs__f8save(r1)
+		stt	f9,	cs__f9save(r1)
+
+;
+; Find the next thread to run, restore its registers, and start it
+; up.  The new thread will immediately return to its caller and resume from
+; the point where it suspended.
+;
+CS_pick_new:
+;
+; CS_pick_new finds the next ready priority by doing the calculation formerly
+; done by 'ffs', then calls CS_xchng_thread to pick the next scb.
+;
+						; r0 still points to Cs_srv_block.
+		ldl r1, cs__current(r0)		; r1 points to SCB of current thread
+		ldl r0, cs__ready_mask(r0)	; r0 contains bit map of ready priorities
+;
+		$call pick_new_thread, args=<r1/l,r0/l>, scratch_regs=<r22,r23>
+
+CS_insert_new:
+;
+; R0 points to next SCB on return from pick_new_thread.  Restore its saved regs.
+;
+		lda r1, cs__machine_specific(r0)	; r1 -> SCB's register save area
+;
+; (Don't restore r2 here, it's in use as a base register.  Restore it later.)
+; Don't restore r3 yet either -- we may use it to store r1 during
+; CS_move_async() call.
+;
+		ldq r4, cs__r4save(r1)
+		ldq r5, cs__r5save(r1)
+		ldq r6, cs__r6save(r1)
+		ldq r7, cs__r7save(r1)
+		ldq r8, cs__r8save(r1)
+		ldq r9, cs__r9save(r1)
+		ldq r10, cs__r10save(r1)
+		ldq r11, cs__r11save(r1)
+		ldq r12, cs__r12save(r1)
+		ldq r13, cs__r13save(r1)
+		ldq r14, cs__r14save(r1)
+		ldq r15, cs__r15save(r1)
+;
+; Restore r25, r26 and r27 after possible CS_move_async() call.
+;
+
+		ldt	f2,	cs__f2save(r1)
+		ldt	f3,	cs__f3save(r1)
+		ldt	f4,	cs__f4save(r1)
+		ldt	f5,	cs__f5save(r1)
+		ldt	f6,	cs__f6save(r1)
+		ldt	f7,	cs__f7save(r1)
+		ldt	f8,	cs__f8save(r1)
+		ldt	f9,	cs__f9save(r1)
+;
+; Turn off cs_inkernel.  If cs_async, then an async routine was run while
+; we were inkernel.  We must call CS_mov_async to put needed information
+; in the server and session control block.
+;
+		ldl r22, cssrvblock
+		stl r31, cs__inkernel(r22)	; turn off the inkernel flag
+		ldl r23, cs__async(r22)		; get async flag
+		beq r23, no_async		; if zero, go start up the next thread
+;
+		mov	r1, r3			; save r1 across call  (r3 is preserved)
+		$call CS_move_async, args=<r0>, scratch_regs=<r24>
+		mov	r3, r1			; restore r1
+;
+no_async:
+		ldq r3, cs__r3save(r1)		; restore r3
+		ldq r25, cs__aisave(r1)		; restore r25
+		ldq r26, cs__rasave(r1)		; restore r26
+		ldq r27, cs__pvsave(r1)		; restore r27 (new threads
+						; need this the first time)
+;
+		$begin_epilogue
+		ldl r22, q_ticks
+		stl r31, (r22)			; clear the quantum tick counter
+		ldq r2, cs__r2save(r1)		; restore r2, nolonger needed as base reg
+
+		TRAPB				; force any pending hardware
+						; exceptions to be raised before
+						; we exit.
+
+;;		6.4 version has a MB here.  Is that useful?
+		ldq	r29, cs__fpsave(r1)	; install next thread's FP
+		ldq	r30, cs__spsave(r1)	; install next thread's SP
+		ret r26				; start up the next thread
+		$end_epilogue
+;
+		$end_routine	CS_ssprsm

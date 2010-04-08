@@ -1,0 +1,86 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+*/
+
+/*
+**    Source   : vcda.odl : type library source for ActiveX Control project
+**    Project  : INGRES II/ Visual Schema Diff Control (vcda.ocx).
+**    Author   : UK Sotheavut (uk$so01)
+**    Purpose  : This file will be processed by the Make Type Library (mktyplib) tool to
+**               produce the type library (vcda.tlb) that will become a resource in vcda.ocx.
+**
+** History:
+**
+** 02-Oct-2002 (uk$so01)
+**    Created
+**    SIR #109221, There should be a GUI tool for comparing ingres Configurations.
+*/
+
+#include <olectl.h>
+#include <idispids.h>
+
+[ uuid(EAF345E7-D514-11D6-87EA-00C04F1F754A), version(1.0),
+  helpfile("vcda.hlp"),
+  helpstring("vcda ActiveX Control module"),
+  control ]
+library VCDALib
+{
+	importlib(STDOLE_TLB);
+	importlib(STDTYPE_TLB);
+
+	//  Primary dispatch interface for CuVcdaCtrl
+
+	[ uuid(EAF345E8-D514-11D6-87EA-00C04F1F754A),
+	  helpstring("Dispatch interface for Vcda Control"), hidden ]
+	dispinterface _DVcda
+	{
+		properties:
+			// NOTE - ClassWizard will maintain property information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_PROP(CuVcdaCtrl)
+			//}}AFX_ODL_PROP
+
+		methods:
+			// NOTE - ClassWizard will maintain method information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_METHOD(CuVcdaCtrl)
+			[id(1)] void SaveInstallation(BSTR lpszFile);
+			[id(2)] void SetCompareFile(BSTR lpszFile);
+			[id(3)] void SetCompareFiles(BSTR lpszFile1, BSTR lpszFile2);
+			[id(4)] void Compare();
+			[id(5)] void HideFrame(short nShow);
+			[id(6)] void SetInvitationText(BSTR lpszText);
+			[id(7)] void RestoreInstallation();
+			//}}AFX_ODL_METHOD
+	};
+
+	//  Event dispatch interface for CuVcdaCtrl
+
+	[ uuid(EAF345E9-D514-11D6-87EA-00C04F1F754A),
+	  helpstring("Event interface for Vcda Control") ]
+	dispinterface _DVcdaEvents
+	{
+		properties:
+			//  Event interface has no properties
+
+		methods:
+			// NOTE - ClassWizard will maintain event information here.
+			//    Use extreme caution when editing this section.
+			//{{AFX_ODL_EVENT(CuVcdaCtrl)
+			//}}AFX_ODL_EVENT
+	};
+
+	//  Class information for CuVcdaCtrl
+
+	[ uuid(EAF345EA-D514-11D6-87EA-00C04F1F754A),
+	  helpstring("Vcda Control"), control ]
+	coclass Vcda
+	{
+		[default] dispinterface _DVcda;
+		[default, source] dispinterface _DVcdaEvents;
+	};
+
+
+	//{{AFX_APPEND_ODL}}
+	//}}AFX_APPEND_ODL}}
+};

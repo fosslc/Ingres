@@ -1,0 +1,9 @@
+! History:
+!	23-feb-2005 (abbjo03)
+!	    Created.
+!
+IDENT=iiuseradt
+GSMATCH=LEQUAL,126,0
+SYMBOL_VECTOR=(iiudadt_register=PROCEDURE,-
+		iiclsadt_register=PROCEDURE)
+INGLIB:libudt.olb/library

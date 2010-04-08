@@ -1,0 +1,127 @@
+#
+# Jamfile file for tools!port!shell_unix
+#
+# History:
+#	17-dec-2008 (joea)
+#	    Remove obsolete crdbtmplt.sh.
+
+SubDir ING_SRC tools port shell_unix ;
+
+IISUBSYS tools port shell_unix ;
+
+
+IITOOLSSH arc_lock : arc_lock.sh ;
+IITOOLSSH arc_unlock : arc_unlock.sh ;
+IITOOLSSH bang : bang.sh ;
+IITOOLSSH bats : bats.sh ;
+IITOOLSSH bget : bget.sh ;
+IITOOLSSH brget : brget.sh ;
+IITOOLSSH bucode : bucode.sh ;
+IITOOLSSH buildOR : buildOR.sh ;
+IITOOLSSH building : building.sh ;
+IITOOLSSH buildmw : buildmw.sh ;
+IITOOLSSH ccpp : ccpp.sh ;
+IITOOLSSH cleansrc : cleansrc.sh ;
+IITOOLSSH convusers : convusers.sh ;
+IITOOLSSH copyvec : copyvec.sh ;
+IITOOLSSH csshutdown : csshutdown.sh ;
+IITOOLSSH csstartup : csstartup.sh ;
+IITOOLSSH dirname : dirname.sh ;
+IITOOLSSH each : each.sh ;
+IITOOLSSH ensure : ensure.sh ;
+IITOOLSSH genrelid : genrelid.sh ;
+IITOOLSSH grepall : grepall.sh ;
+IITOOLSSH headers : headers.sh ;
+IITOOLSSH includes : includes.sh ;
+IITOOLSSH ingbatch : ingbatch.sh ;
+IITOOLSSH ingman : ingman.sh ;
+IITOOLSSH ipcsremove : ipcsremove.sh ;
+IITOOLSSH louf : louf.sh ;
+IIUTILSH mergelibs : mergelibs.sh ;
+IITOOLSSH mk3glfiles : mk3glfiles.sh ;
+IITOOLSSH mkapirel : mkapirel.sh ;
+IITOOLSSH mkbzarch : mkbzarch.sh ;
+IITOOLSSH mkdefault : mkdefault.sh ;
+IITOOLSSH mkfecat : mkfecat.sh ;
+IITOOLSSH mkfinal : mkfinal.sh ;
+IITOOLSSH mkgeneric : mkgeneric.sh ;
+IITOOLSSH mkgv : mkgv.sh ;
+IITOOLSSH mkidir : mkidir.sh ;
+IIUTILSH mkkrb5shlib : mkkrb5shlib.sh ;
+IITOOLSSH mkman : mkman.sh ;
+IITOOLSSH mkorrun : mkorrun.sh ;
+IITOOLSSH mkorruntime : mkorruntime.sh ;
+IITOOLSSH mkporth : mkporth.sh ;
+IITOOLSSH mkports : mkports.sh ;
+IIUTILSH mksaveset : mksaveset.sh ;
+IITOOLSSH mksecret : mksecret.sh ;
+IIUTILSH mkshlibs : mkshlibs.sh ;
+IITOOLSSH mkspechdr : mkspechdr.sh ;
+IIUTILSH mksvrarlib : mksvrarlib.sh ;
+IIUTILSH mksvrshlibs : mksvrshlibs.sh ;
+IITOOLSSH mkw4apped : mkw4apped.sh ;
+IITOOLSSH mkw4cat : mkw4cat.sh ;
+IITOOLSSH mkw4dir : mkw4dir.sh ;
+IITOOLSSH mkw4gldev : mkw4gldev.sh ;
+IITOOLSSH mkw4glrun : mkw4glrun.sh ;
+IITOOLSSH mkw4nms : mkw4nms.sh ;
+IITOOLSSH mkw4vers : mkw4vers.sh ;
+IITOOLSSH mkxbzarch : mkxbzarch.sh ;
+IITOOLSSH newbuild : newbuild.sh ;
+IITOOLSSH offend : offend.sh ;
+IITOOLSSH overwrite : overwrite.sh ;
+IITOOLSSH readvers : readvers.sh ;
+IITOOLSSH refresh : refresh.sh ;
+IITOOLSSH rofix : rofix.sh ;
+IIUTILSH shlibinfo : shlibinfo.sh ;
+IIUTILSH splitlibs : splitlibs.sh ;
+IIUTILSH taringres : taringres.sh ;
+IITOOLSSH tartools : tartools.sh ;
+IITOOLSSH tartoolsqa : tartoolsqa.sh ;
+IITOOLSSH unmksaveset : unmksaveset.sh ;
+IITOOLSSH w4bang : w4bang.sh ;
+IITOOLSSH whatunix : whatunix.sh ;
+IITOOLSSH whoami : whoami.sh ;
+IITOOLSSH yyfix : yyfix.sh ;
+IITOOLSSH yypp : yypp.sh ;
+
+IITMANFILES VERS.1
+arc_lock.1
+arc_unlock.1
+bang.1
+ccpp.1
+copyconv.1
+copyvec.1
+dirname.1
+each.1
+ensure.1
+getextra.1
+grepall.1
+headers.1
+includes.1
+ingman.1
+louf.1
+mantmplt.1
+mergelibs.1
+mk3glfiles.1
+mkbzarch.1
+mkfecat.1
+mkfill.1
+mkidir.1
+mkman.1
+mksecret.1
+mkw4cat.1
+mkw4dir.1
+mkw4vers.1
+needs.1
+offend.1
+overwrite.1
+picall.1
+project.1
+rcompall.1
+rofix.1
+w4bang.1
+whatunix.1
+whoami.1
+yyfix.1 ;
+

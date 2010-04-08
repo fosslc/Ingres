@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!st!iipostinst_win
+#
+
+SubDir ING_SRC front st iipostinst_win ;
+
+IISUBSYS front st iipostinst_win ;
+
+IISLN ingconfig.exe : iipostinst.sln ;
+

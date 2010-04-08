@@ -1,0 +1,379 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+*/
+# include	<compat.h>
+# include       <er.h>
+# include       <me.h>
+# include       <st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+##include       <abclass.qsh>
+##include       <metafrm.qsh>
+# include	"vqaclist.h"
+#include        <erug.h>
+#include        "ervq.h"
+
+
+/**
+** Name:	vqselcmp.qsc - Select application components
+**
+** Description:
+**	A popup form which allows the user to choose a group of 
+**	application components.
+**	This file defines:
+**
+**	IIVQcacChooseApplComp	- Choose an application component
+**	IIVQsvfSelVQFrames	- select VQ frames only
+**
+** History:
+**	12/22/89 (Mike S)	Initail version
+**	19-oct-1990 (mgw)
+**		Fixed #include of local vqaclist.h to use "" instead of <>
+**	01-may-91 (davel)
+**		Fixed bug 37301 (do not activate on 'cancel' or 'help'
+**		menuitems in IIVQcacChooseApplComp).
+**	25-Aug-1993 (fredv)
+**		Included <me.h>.
+**	26-Aug-1993 (fredv)
+**		Forgot to remove MEreqmem()'s declaration after I included
+**		<me.h>.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	24-Aug-2009 (kschendel) 121804
+**	    Need ug.h to satisfy gcc 4.3.
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+/* extern's */
+FUNC_EXTERN VOID        IIUGerr();
+FUNC_EXTERN VOID        IIUGmsg();
+FUNC_EXTERN VOID        IIUGqsort();
+
+/* static's */
+static const char routine[] = ERx("IIVQcacChooseApplComp");
+static  bool            init_done = FALSE;      /* Initialization flag */
+
+static const
+## char _form[]         = ERx("vqmarkfm"),
+##      _tf[]           = ERx("vqmarkfm"),
+##      _name[]         = ERx("name"),
+##      _use[]          = ERx("use"),
+##      _title[]        = ERx("title");
+
+static
+## char *_yes, *_no;
+
+static i4	cmp_comp();
+
+/*{
+** Name:	IIVQcacChooseApplComp   - Choose an application component
+**
+** Description:
+**	Allow the user to choose a set of application components.
+**
+**	Two functions are specified: 
+**
+**	sel_rtn selects which components the user sees:
+**
+**		bool sel_rtn(appl, comp)
+**		APPL *appl;		/* Application 
+**		APPL_COMP *comp;	/* Component 
+**
+**		Returns:	TRUE to select it
+**				FALSE otherwise
+**
+**	an example is IIVQsvfSelVQFrames, below.
+**	ok_rtn is called if the user chooses "OK" from the display, and
+**	at least one component was chosen.
+**
+**		STATUS ok_rtn(appl, comps, no_comps, data)
+**		APPL *appl;		/* Application
+**		AC_LIST *comps;		/* Component list 
+**		i4	no_comps;	/* Size of list
+**		PTR	data;		/* Passed-through data
+**
+**	If sel_rtn selects no components, IIVQcacChooseApplComp returns
+**	with a status of OK.
+**	
+** Inputs:
+**	appl		APPL * 		Application structure
+**	ok_rtn		STATUS () 	Routine to call on "OK"
+**	sel_rtn		bool () 	Routine to select components 
+**	defuse		bool		Default components to "yes" or "no"
+**	title		char *		Title for popup
+**	helpfile	char *		Help file for display loop
+**	banner		char *		Help display banner
+**	data		PTR		Data to pass to ok_rtn
+**
+** Outputs:
+**	any		bool *		Were any components selected by sel_rtn
+**
+**	Returns:
+**		STATUS		OK if Cancel is chosen
+**				OK if sel_rtn selects no components.	
+**				return from ok_rtn otherwise
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	12/22/89 (Mike S)	Initail version
+**	01-may-91 (davel)
+**		Fixed bug 37301 (do not activate on 'cancel' or 'help'
+**		menuitems).
+*/
+STATUS
+IIVQcacChooseApplComp(appl, ok_rtn, sel_rtn, defuse, title, helpfile, banner, 
+		      data, any)
+APPL	*appl;
+STATUS  (*ok_rtn)();   
+bool	(*sel_rtn)();
+bool	defuse;
+##char	*title;
+char	*helpfile;
+char	*banner;
+PTR	data;
+bool	*any;
+{
+	i4		no_comps;	/* Number of components selected */
+	STATUS		status;		/* Final status */
+##	i4		tfrec;		/* Current tablefield record */
+	APPL_COMP       *comp;
+	AC_LIST		*aclist;
+	AC_LIST		*acptr;
+		
+        /* Initialize, if need be */
+        if (!init_done)
+        {
+                IIARiaForm(_form);
+                _yes = ERget(F_UG0001_Yes1);
+                _no = ERget(F_UG0006_No1);
+                init_done = TRUE;
+        }
+
+	/* Collect and sort the components */
+	no_comps = 0;
+        for (comp = (APPL_COMP *)appl->comps; comp != NULL; comp = comp->_next)
+        {
+		if ((*sel_rtn)(appl, comp))
+			no_comps++;
+        }
+
+        /* Return if there are none */
+        if (no_comps == 0)
+	{
+		*any = FALSE;
+                return (OK);
+	}
+	*any = TRUE;
+ 
+        /* Create an array for them */
+        aclist = (AC_LIST *)
+                        MEreqmem( (u_i4)0, no_comps * sizeof(AC_LIST),
+                                  FALSE, NULL);
+        if (aclist == NULL)
+                IIUGbmaBadMemoryAllocation(routine);
+ 
+        /* Second pass, put them into the array */
+        acptr = aclist;
+        for (comp = (APPL_COMP *)appl->comps; comp != NULL; comp = comp->_next)
+	{
+		if ((*sel_rtn)(appl, comp))
+		{
+			acptr->comp = comp;
+			acptr->used = defuse;
+			acptr++;
+		}
+	}
+
+	/* Now sort them alphabetically */
+	IIUGqsort((char *)aclist, no_comps, sizeof(AC_LIST), cmp_comp);
+
+	/* Allow the user to choose which he wants */
+##      display _form FILL
+##      initialize
+##      {
+##              char *use;
+##              char *name;
+##              i4   i;
+
+##		putform _form (_title = title)
+
+                /* Initialize and load the tablefield */
+##              inittable _form _tf UPDATE
+                for (i = 0; i < no_comps; i++)
+                {
+                        use = aclist[i].used ? _yes : _no;
+                        name = aclist[i].comp->name;
+##                      loadtable _form _tf
+##                              (_name = name, _use = use)
+                }
+##      }
+
+##      activate menuitem ERget(FE_OK)
+##              (expl = ERget(F_VQ012E_UseMarkedComps), activate = 1),
+##              frskey4 (activate = 1)
+##      {
+##              char used[5];
+##              i4   comp_no;
+                i4   no_used = 0;
+
+                /* Go ahead and do it, using the currently marked comps */
+##              unloadtable _form _tf (used = _use, comp_no = _RECORD)
+##              {
+                        if (aclist[comp_no-1].used = 
+						IIUGyn(used,(STATUS *)NULL))
+                        	no_used++; 
+##              }
+
+                /* If no comps were marked, complain */
+                if (no_used == 0)
+                {
+                        IIUGerr(E_VQ009D_Nothing_marked, 0, 0);
+                }
+                else
+                {
+                       	status = (*ok_rtn)(appl, aclist, no_comps, data);
+##                      clear field _tf
+##                      breakdisplay
+                }
+##      }
+
+##      activate menuitem ERget(FE_Cancel)
+##                      (expl = ERget(F_FE0103_ExplCancel), activate = 0), 
+##			frskey9 (activate = 0)
+##      {
+                /* Don't do it */
+		status = OK;
+##              clear field _tf
+##              breakdisplay
+##      }
+
+##      activate menuitem ERget(FE_Help)
+##                      (expl = ERget(F_FE0100_ExplFrameHelp), activate = 0), 
+##			frskey1 (activate = 0)
+##      {
+                FEhelp(helpfile, banner);
+##      }
+ 
+##      activate column _tf _use
+##      {
+##              char use[5];
+ 
+##              getrow _form _tf (use = _use, tfrec = _RECORD)
+                if ((STcompare(use, _yes) == 0) || STcompare(use, _no) == 0)
+                {
+##                      resume next
+                }
+                else
+                {
+                        IIUGerr(E_VQ009F_Bad_mark, 0, 0);
+##                      resume
+                }
+##      }
+ 
+##      activate scrolldown _tf
+##      {
+                /* Avoid out-of-data message */
+                if (1 != tfrec)
+                {
+##                      scroll _form _tf down
+                }
+##      }
+ 
+##      activate scrollup _tf
+##      {
+                /* Avoid out-of-data message */
+##              i4 tfrows;
+ 
+##              inquire_frs table _form (tfrows = datarows(_tf))
+ 
+                if (tfrows != tfrec)
+                {
+##                      scroll _form _tf up
+                }
+##      }
+ 
+##      activate frskey5 (expl = ERget(F_FE0105_ExplTop))
+##      {
+                /* top */
+##             scroll _form _tf to 1
+##      }
+
+##      activate frskey6 (expl = ERget(F_FE0106_ExplBottom))
+##      {
+                /* bottom */
+##              scroll _form _tf to end
+##      }
+
+	MEfree((PTR)aclist);
+	return (status);
+}
+
+/*
+**      cmp_comp
+**
+**      Compare two components alphabetically
+*/
+static i4
+cmp_comp(comp1, comp2)
+char *comp1;
+char *comp2;
+{
+        return (STcompare(((AC_LIST *)comp1)->comp->name, 
+			  ((AC_LIST *)comp2)->comp->name));
+}
+
+/*{
+** Name:	IIVQsvfSelVQFrames -- selection routine to delect VQ frames
+**
+** Description:
+**	Return TRUE only for frames which contain a VQ
+**
+** Inputs:
+**	appl	APPL *		Application
+**	comp	APPL_COMP * 	Component
+**	
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		TRUE	if the component contains a visual query
+**		FALSE 	otherwise
+**
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**
+** History:
+**	12/22/89 (Mike S)	Initial version
+*/
+bool
+IIVQsvfSelVQFrames(appl, comp)	
+APPL	*appl;
+APPL_COMP	*comp;
+{
+	switch (comp->class)
+	{
+	    case OC_APPFRAME:
+	    case OC_UPDFRAME:
+	    case OC_BRWFRAME:
+		return (TRUE);
+
+	    default:
+		return (FALSE);
+	}
+}

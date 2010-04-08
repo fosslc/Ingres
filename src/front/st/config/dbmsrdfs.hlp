@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The rdf_tbl_synonyms resource gives the number of synonyms to allow for
+  in the Relation Definition (RDF) cache tables.
+
+  The default is 50.

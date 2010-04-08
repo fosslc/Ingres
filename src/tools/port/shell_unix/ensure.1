@@ -1,0 +1,29 @@
+.TH ENSURE 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History:
+.\"	15-jan-1990 (boba)
+.\"		Written.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+ensure \- Ensure that the effective user is correct.
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B ensure
+.I
+user1
+[ 
+.I
+user2 ... ]
+.SH DESCRIPTION
+.I Ensure
+makes sure that the current effective user is on the list of names
+passed as parameters.  
+.PP
+For example:  "ensure ingres rtingres" will
+return status "0" if the
+current effective user is either "ingres" or "rtingres".
+Otherwise, it will display the message
+"You must run this program as ingres or rtingres."
+and return status "1".
+.SH "SEE ALSO"
+.BR whoami(1)

@@ -1,0 +1,60 @@
+#
+# Jamfile file for dbutil!duf!duve
+#
+# History:
+#	21-dec-2004 (abbjo03)
+#	    Remove duvedata.c from DBUTILLIB on VMS.
+#	19-jan-2005 (abbjo03)
+#	    Reinstate duvedata.c on all platforms.
+#       4-apr-2008  (bolke01) 120219
+#          MANIFEST was not in sync with the .lot file
+
+SubDir ING_SRC dbutil duf duve ;
+
+IISUBSYS dbutil duf duve ;
+
+
+IIBINEXE testvdb : duvetest.sc ;
+if ! $(NT)
+{
+   if ! $(VMS)
+   {
+      IINEEDLIBS testvdb : DBUTILLIB SQLCALIB LIBQLIB LIBQGCALIB
+  	   GCFLIB UGLIB FMTLIB AFELIB ADFLIB ULFLIB CUFLIB COMPATLIB
+	   MALLOCLIB ;
+   }
+   else
+   {
+      IINEEDLIBS testvdb : DBUTILLIB LIBQLIB LIBQGCALIB GCFLIB CUFLIB UGLIB AFELIB DFLIB COMPATLIB ;
+   }
+}
+else
+{
+   IINEEDLIBS testvdb : DBUTILLIB ULFLIB CUFLIB
+	COMPATLIB SHEMBEDLIB SHLIBQLIB ;
+}
+
+if ! $(NT)
+{
+   IIBINEXE verifydb : duverify.c ;
+   if ! $(VMS)
+   {
+      IINEEDLIBS verifydb : DBUTILLIB SQLCALIB LIBQLIB LIBQGCALIB
+  	   GCFLIB UGLIB FMTLIB AFELIB ADFLIB ULFLIB CUFLIB COMPATLIB
+	   MALLOCLIB ;
+   }
+   else
+   {
+      IINEEDLIBS verifydb : DBUTILLIB LIBQLIB LIBQGCALIB GCFLIB CUFLIB UGLIB AFELIB DFLIB COMPATLIB ;
+   }
+}
+else
+{
+   IIBINEXE ntvrfydb : duverify.c ;
+   IINEEDLIBS ntvrfydb : DBUTILLIB ULFLIB CUFLIB COMPATLIB
+	SHEMBEDLIB SHLIBQLIB ;
+
+}
+
+IILIBRARY DBUTILLIB : duvestar.sc duvepurg.sc duvedbdb.sc
+	duvechk2.sc duvechk.sc duveutil.c duvetalk.c duvedata.c ;

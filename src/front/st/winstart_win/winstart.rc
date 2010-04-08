@@ -1,0 +1,227 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#include ""res\\winstart.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "\r\n"
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "#include ""afxres.rc""  // Standard components\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "winstart.ico"
+IDI_STOP                ICON                    "stop.ico"
+IDI_WAIT                ICON                    "icon1.ico"
+IDI_TLIGHT              ICON                    "ico00001.ico"
+IDR_START               ICON                    "start.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_WINSTART_DIALOG DIALOG  0, 0, 325, 190
+STYLE DS_SETFONT | DS_MODALFRAME | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres - Service Manager"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    PUSHBUTTON      "&Start",IDC_START,260,103,58,14
+    PUSHBUTTON      "E&xit",IDCANCEL,260,121,58,14
+    CONTROL         "S&tart as a service",IDC_START_AS_SERVICE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,9,141,107,10
+    CONTROL         "C&lient only",IDC_CLIENT,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,119,141,48,10
+    LTEXT           "Press the ""Start"" button to start Ingres...",
+                    IDC_MESSAGE,19,166,274,14
+    EDITTEXT        IDC_LOG,9,9,243,127,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL | WS_HSCROLL | 
+                    NOT WS_TABSTOP
+    CONTROL         "&Kill",IDC_KILL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    267,80,43,10
+    ICON            IDR_MAINFRAME,IDR_MAINFRAME,293,160,20,20,NOT WS_VISIBLE
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_TRANSPARENT | 
+                    WS_TABSTOP,269,15,42,35
+    GROUPBOX        "Status",IDC_STATIC,9,152,308,31
+    GROUPBOX        "",IDC_STATIC,260,6,58,59
+    CTEXT           "Status",IDC_STATUS,268,54,42,8
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_RED_AVI             AVI                     "Red.avi"
+IDR_GREEN_AVI           AVI                     "Green.avi"
+IDR_YELLOW_AVI          AVI                     "Yellow.avi"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+    IDS_ERROR_SERVICE_FAILED_TO_STOP 
+                            "The %s Service has failed to stop; rc = (%i).\r\n\r\n"
+    IDS_CREATEPIPEERROR     "Pipe creation failed. Error code = %d"
+    IDS_CREATEPROCESSERROR  "Process creation failed. Error code = %d"
+    IDS_READFILEERROR       "File read failed. Error code = %d"
+    IDS_WRITEFILEERROR      "File write failed. Error code = %d"
+    IDS_NOCMDLINE           "No BAT file specified, Error code = %d"
+    IDS_CREATEFILEERROR     "File creation failed. Error code = %d"
+    IDS_GLOBALALLOCERROR    "GlobalAlloc failed. Return code = %d"
+    IDS_CREATETHREADERROR   "Thread creation failed. Error code = %d"
+    IDS_DUPLICATEHANDLEEERROR "Handle duplication failed. Error code = %d"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_EXECTERMINATED      " "
+    IDS_EXIT                "&Exit"
+    IDS_GETEXITERROR        "Get exit code faild. Error code = %d"
+    IDS_TERMINATETHREADERROR "Terminate thread faild. Error code = %d"
+    IDS_CLOSEHANDLEERROR    "Close handle failed. Error code = %d"
+    IDS_TERMINATINGEXEC     "\r\n\r\nProcess is being terminated...\r\n\r\n"
+    IDS_AREYOUSURE          "Are you sure you want to terminate the process?"
+    IDS_TERMINATEPROCESSERROR "Terminate process failed.  Error code %d"
+    IDS_EXECSTARTED         "Starting execution...\r\n"
+    IDS_STOP                "&Stop"
+    IDS_STARTED             "II_DBMS_SERVER = II\\STAR\\"
+    IDS_CANCEL              "&Cancel"
+    IDS_SERVERSTARTED       "%s installation successfully started."
+    IDS_RUNNINGMESSAGE      "%s is up and running."
+    IDS_TERMINATINGMESSAGE  "Shutting down %s, please wait..."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_STARTINGMESSAGE     "Starting %s..."
+    IDS_STARTMESSAGE        "%s is currently stopped."
+    IDS_ALREADYRUNNING      "%s is already running.  Use %sstop to shut down Ingres."
+    IDS_START               "&Start"
+    IDS_CHECKINGMESSAGE     "Checking for active %s processes, please wait..."
+    IDS_UNABLETOREMOVE      "Unable to remove shared memory location:"
+    IDS_SERVERFAILED        "Server failed to start."
+    IDS_FAILEDMESSAGE       "The %s server failed to start."
+    IDS_PROCESSABORTED      "Process abnormally terminated."
+    IDS_CHECKING            "Checking..."
+    IDS_STOPPED             "Stopped."
+    IDS_STARTING            "Starting..."
+    IDS_RUNNING             "Running."
+    IDS_STOPPING            "Stopping..."
+    IDS_FAILED              "Failed."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_SERVICE_SERVER_SHORTNAME "Ingres_Database_%s"
+    IDS_STARTING_INGRES_AS_SERVICE 
+                            "Starting the %s service '%s'; please wait...\r\n\r\n"
+    IDS_STOPPING_INGRES_AS_SERVICE 
+                            "Stopping the %s service '%s'; please wait...\r\n\r\n"
+    IDS_ERROR_SERVICE_DOES_NOT_EXIST 
+                            "The %s Service does not exist.\r\nPlease be sure that %s is properly installed before starting it.\r\n\r\n"
+    IDS_ERROR_SERVICE_START_FAILED 
+                            "The %s Service has failed to start; rc = (%i).\r\n\r\n"
+    IDS_ERROR_SERVICE_TIMEOUT "The %s Service has timed out.\r\n\r\n"
+    IDS_SERVICE_SUCCESSFULLY_STOPPED 
+                            "The %s Service has been successfully stopped.\r\n\r\n"
+    IDS_SERVICE_SUCCESSFULLY_STARTED 
+                            "The %s Service has been successfully started.\r\n\r\n"
+    IDS_ERROR_SERVICE_FAILED_TO_START 
+                            "The %s Service has failed to start; rc = (%i).\r\n\r\n"
+    IDS_ERROR_OPENING_SERVICE 
+                            "Error opening the %s service; rc = (%i).\r\n\r\n"
+    IDS_ERROR_LOGON_FAILED  "Please be sure the userid and password are correct for the\r\n""%s"" service in the Control Panel.\r\n\r\n"
+    IDS_SERVICE_CLIENT_SHORTNAME "Ingres_Client"
+    IDS_SERVICE_SERVER_LONGNAME "Ingres Intelligent Database [%s]"
+    IDS_SERVICE_CLIENT_LONGNAME "Ingres Client"
+    IDS_II_SYSTEMNOTFOUND   "Error: %s is not set in the environment.  Winstart cannot continue; press 'OK' to exit."
+    IDS_CAPTIONTEXT         "Ingres Service Manager %s"
+    IDS_MUST_START_AS_SERVICE "You must start Ingres as a service on this platform."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#include "res\winstart.rc2"  // non-Microsoft Visual C++ edited resources
+
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+#include "afxres.rc"  // Standard components
+#ifndef MAINWIN
+#include "gv.rc"
+#endif    // not MAINWIN
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

@@ -1,0 +1,31 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Using this popup, you may specify if the highlighted page component should 
+be included in the report.  If included, the component will appear on each 
+report page:
+
+	Date - top left corner                           
+	Time - top right corner                          
+	Page - centered at the bottom of the page
+
+If the page component is included, you may then edit its format.
+
+To select a response, scroll to the desired option, and choose the 
+Select menu command. 
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	Yes		Include this report option in the report
+	No		Do not include this report option in the report
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select		If Yes, the component will be included in the 
+			report.  If No, then the component will not be 
+			included in the report.  
+
+        Cancel          Return to the Report Options frame without selecting 
+			a response.
+
+        Help            Print this message.

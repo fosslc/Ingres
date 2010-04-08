@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The psf_maxmemf resource represents the maximum percentage of the parser
+  facility (PSF) memory pool that any one session can acquire.
+
+  The default is 50 (50%).

@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!psf!psf
+#
+
+SubDir ING_SRC back psf psf ;
+
+IISUBSYS back psf psf ;
+
+
+IILIBRARY PSFLIB : psftrmwh.c psfsesscb.c psfmem.c 
+	psferror.c psfdebug.c psfcall.c psfmo.c ;
+
+IILIBRARY IMPPSFLIBDATA : psfglob.c ;

@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!handy_vms
+#
+
+SubDir ING_SRC cl clf handy_vms ;
+
+IISUBSYS cl clf handy_vms ;
+
+
+IILIBRARY COMPATLIB : iinap.c clfd.c mutex.c hdydata.c iicl.c ;
+

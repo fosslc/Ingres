@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE characterMapping SYSTEM "charactermapping.dtd">
+<!--
+** Copyright (c) 2004 Ingres Corporation
+**
+** =============================================================================
+** ICU License - ICU 1.8.1 and later
+** COPYRIGHT AND PERMISSION NOTICE
+** 
+** Copyright (c) 1995-2003 International Business Machines Corporation and others
+** All rights reserved.
+** 
+** Permission is hereby granted, free of charge, to any person obtaining a
+** copy of this software and associated documentation files (the
+** "Software"), to deal in the Software without restriction, including
+** without limitation the rights to use, copy, modify, merge, publish,
+** distribute, and/or sell copies of the Software, and to permit persons
+** to whom the Software is furnished to do so, provided that the above
+** copyright notice(s) and this permission notice appear in all copies of
+** the Software and that both the above copyright notice(s) and this
+** permission notice appear in supporting documentation.
+** 
+** THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+** OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+** OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+** HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL
+** INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING
+** FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+** NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
+** WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+** 
+** Except as contained in this notice, the name of a copyright holder
+** shall not be used in advertising or otherwise to promote the sale, use
+* or other dealings in this Software without prior written authorization
+* of the copyright holder.
+** =============================================================================
+*/
+##
+## History:
+##      25-Jan-2004 (gupsh01)
+##          Created from ibm-1255_P100-1995 .
+##
+-->
+<characterMapping id="ca-ibm1255-hebrew-2004" version="1">
+ <history>
+  <modified version="1" date="25-jan-2004"></modified>
+ </history>
+ <validity>
+  <state type="FIRST" next="VALID" s="00" e="FF" max="FFFF"/>
+ </validity>
+ <assignments sub="1A">
+  <!-- One to one mappings -->
+  <a u="0000" b="00"/>
+  <a u="0001" b="01"/>
+  <a u="0002" b="02"/>
+  <a u="0003" b="03"/>
+  <a u="0004" b="04"/>
+  <a u="0005" b="05"/>
+  <a u="0006" b="06"/>
+  <a u="0007" b="07"/>
+  <a u="0008" b="08"/>
+  <a u="0009" b="09"/>
+  <a u="000A" b="0A"/>
+  <a u="000B" b="0B"/>
+  <a u="000C" b="0C"/>
+  <a u="000D" b="0D"/>
+  <a u="000E" b="0E"/>
+  <a u="000F" b="0F"/>
+  <a u="0010" b="10"/>
+  <a u="0011" b="11"/>
+  <a u="0012" b="12"/>
+  <a u="0013" b="13"/>
+  <a u="0014" b="14"/>
+  <a u="0015" b="15"/>
+  <a u="0016" b="16"/>
+  <a u="0017" b="17"/>
+  <a u="0018" b="18"/>
+  <a u="0019" b="19"/>
+  <a u="001A" b="1A"/>
+  <a u="001B" b="1B"/>
+  <a u="001C" b="1C"/>
+  <a u="001D" b="1D"/>
+  <a u="001E" b="1E"/>
+  <a u="001F" b="1F"/>
+  <a u="0020" b="20" c=" "/>
+  <a u="0021" b="21" c="!"/>
+  <a u="0022" b="22" c="&quot;"/>
+  <a u="0023" b="23" c="#"/>
+  <a u="0024" b="24" c="$"/>
+  <a u="0025" b="25" c="%"/>
+  <a u="0026" b="26" c="&amp;"/>
+  <a u="0027" b="27" c="&apos;"/>
+  <a u="0028" b="28" c="("/>
+  <a u="0029" b="29" c=")"/>
+  <a u="002A" b="2A" c="*"/>
+  <a u="002B" b="2B" c="+"/>
+  <a u="002C" b="2C" c=","/>
+  <a u="002D" b="2D" c="-"/>
+  <a u="002E" b="2E" c="."/>
+  <a u="002F" b="2F" c="/"/>
+  <a u="0030" b="30" c="0"/>
+  <a u="0031" b="31" c="1"/>
+  <a u="0032" b="32" c="2"/>
+  <a u="0033" b="33" c="3"/>
+  <a u="0034" b="34" c="4"/>
+  <a u="0035" b="35" c="5"/>
+  <a u="0036" b="36" c="6"/>
+  <a u="0037" b="37" c="7"/>
+  <a u="0038" b="38" c="8"/>
+  <a u="0039" b="39" c="9"/>
+  <a u="003A" b="3A" c=":"/>
+  <a u="003B" b="3B" c=";"/>
+  <a u="003C" b="3C" c="&lt;"/>
+  <a u="003D" b="3D" c="="/>
+  <a u="003E" b="3E" c="&gt;"/>
+  <a u="003F" b="3F" c="?"/>
+  <a u="0040" b="40" c="@"/>
+  <a u="0041" b="41" c="A"/>
+  <a u="0042" b="42" c="B"/>
+  <a u="0043" b="43" c="C"/>
+  <a u="0044" b="44" c="D"/>
+  <a u="0045" b="45" c="E"/>
+  <a u="0046" b="46" c="F"/>
+  <a u="0047" b="47" c="G"/>
+  <a u="0048" b="48" c="H"/>
+  <a u="0049" b="49" c="I"/>
+  <a u="004A" b="4A" c="J"/>
+  <a u="004B" b="4B" c="K"/>
+  <a u="004C" b="4C" c="L"/>
+  <a u="004D" b="4D" c="M"/>
+  <a u="004E" b="4E" c="N"/>
+  <a u="004F" b="4F" c="O"/>
+  <a u="0050" b="50" c="P"/>
+  <a u="0051" b="51" c="Q"/>
+  <a u="0052" b="52" c="R"/>
+  <a u="0053" b="53" c="S"/>
+  <a u="0054" b="54" c="T"/>
+  <a u="0055" b="55" c="U"/>
+  <a u="0056" b="56" c="V"/>
+  <a u="0057" b="57" c="W"/>
+  <a u="0058" b="58" c="X"/>
+  <a u="0059" b="59" c="Y"/>
+  <a u="005A" b="5A" c="Z"/>
+  <a u="005B" b="5B" c="["/>
+  <a u="005C" b="5C" c="\"/>
+  <a u="005D" b="5D" c="]"/>
+  <a u="005E" b="5E" c="^"/>
+  <a u="005F" b="5F" c="_"/>
+  <a u="0060" b="60" c="`"/>
+  <a u="0061" b="61" c="a"/>
+  <a u="0062" b="62" c="b"/>
+  <a u="0063" b="63" c="c"/>
+  <a u="0064" b="64" c="d"/>
+  <a u="0065" b="65" c="e"/>
+  <a u="0066" b="66" c="f"/>
+  <a u="0067" b="67" c="g"/>
+  <a u="0068" b="68" c="h"/>
+  <a u="0069" b="69" c="i"/>
+  <a u="006A" b="6A" c="j"/>
+  <a u="006B" b="6B" c="k"/>
+  <a u="006C" b="6C" c="l"/>
+  <a u="006D" b="6D" c="m"/>
+  <a u="006E" b="6E" c="n"/>
+  <a u="006F" b="6F" c="o"/>
+  <a u="0070" b="70" c="p"/>
+  <a u="0071" b="71" c="q"/>
+  <a u="0072" b="72" c="r"/>
+  <a u="0073" b="73" c="s"/>
+  <a u="0074" b="74" c="t"/>
+  <a u="0075" b="75" c="u"/>
+  <a u="0076" b="76" c="v"/>
+  <a u="0077" b="77" c="w"/>
+  <a u="0078" b="78" c="x"/>
+  <a u="0079" b="79" c="y"/>
+  <a u="007A" b="7A" c="z"/>
+  <a u="007B" b="7B" c="{"/>
+  <a u="007C" b="7C" c="|"/>
+  <a u="007D" b="7D" c="}"/>
+  <a u="007E" b="7E" c="~"/>
+  <a u="007F" b="7F"/>
+  <a u="0080" b="80"/>
+  <a u="0081" b="81"/>
+  <a u="008A" b="8A"/>
+  <a u="008C" b="8C"/>
+  <a u="008D" b="8D"/>
+  <a u="008E" b="8E"/>
+  <a u="008F" b="8F"/>
+  <a u="0090" b="90"/>
+  <a u="009A" b="9A"/>
+  <a u="009C" b="9C"/>
+  <a u="009D" b="9D"/>
+  <a u="009E" b="9E"/>
+  <a u="009F" b="9F"/>
+  <a u="00A0" b="A0" c=" "/>
+  <a u="00A2" b="A2" c="¢"/>
+  <a u="00A3" b="A3" c="£"/>
+  <a u="00A5" b="A5" c="¥"/>
+  <a u="00A6" b="A6" c="¦"/>
+  <a u="00A7" b="A7" c="§"/>
+  <a u="00A8" b="A8" c="¨"/>
+  <a u="00A9" b="A9" c="©"/>
+  <a u="00AB" b="AB" c="«"/>
+  <a u="00AC" b="AC" c="¬"/>
+  <a u="00AD" b="AD" c="­"/>
+  <a u="00AE" b="AE" c="®"/>
+  <a u="00AF" b="AF" c="¯"/>
+  <a u="00B0" b="B0" c="°"/>
+  <a u="00B1" b="B1" c="±"/>
+  <a u="00B2" b="B2" c="²"/>
+  <a u="00B3" b="B3" c="³"/>
+  <a u="00B4" b="B4" c="´"/>
+  <a u="00B5" b="B5" c="µ"/>
+  <a u="00B6" b="B6" c="¶"/>
+  <a u="00B7" b="B7" c="·"/>
+  <a u="00B9" b="B9" c="¹"/>
+  <a u="00BB" b="BB" c="»"/>
+  <a u="00BC" b="BC" c="¼"/>
+  <a u="00BD" b="BD" c="½"/>
+  <a u="00BE" b="BE" c="¾"/>
+  <a u="0192" b="83" c="ƒ"/>
+  <a u="02C6" b="88" c="ˆ"/>
+  <a u="02DC" b="98" c="˜"/>
+  <a u="05B0" b="C0" c="ְ"/>
+  <a u="05B1" b="C1" c="ֱ"/>
+  <a u="05B2" b="C2" c="ֲ"/>
+  <a u="05B3" b="C3" c="ֳ"/>
+  <a u="05B4" b="C4" c="ִ"/>
+  <a u="05B5" b="C5" c="ֵ"/>
+  <a u="05B6" b="C6" c="ֶ"/>
+  <a u="05B7" b="C7" c="ַ"/>
+  <a u="05B8" b="C8" c="ָ"/>
+  <a u="05B9" b="C9" c="ֹ"/>
+  <a u="05BB" b="CB" c="ֻ"/>
+  <a u="05BC" b="CC" c="ּ"/>
+  <a u="05BD" b="CD" c="ֽ"/>
+  <a u="05BE" b="CE" c="־"/>
+  <a u="05BF" b="CF" c="ֿ"/>
+  <a u="05C0" b="D0" c="׀"/>
+  <a u="05C1" b="D1" c="ׁ"/>
+  <a u="05C2" b="D2" c="ׂ"/>
+  <a u="05C3" b="D3" c="׃"/>
+  <a u="05D0" b="E0" c="א"/>
+  <a u="05D1" b="E1" c="ב"/>
+  <a u="05D2" b="E2" c="ג"/>
+  <a u="05D3" b="E3" c="ד"/>
+  <a u="05D4" b="E4" c="ה"/>
+  <a u="05D5" b="E5" c="ו"/>
+  <a u="05D6" b="E6" c="ז"/>
+  <a u="05D7" b="E7" c="ח"/>
+  <a u="05D8" b="E8" c="ט"/>
+  <a u="05D9" b="E9" c="י"/>
+  <a u="05DA" b="EA" c="ך"/>
+  <a u="05DB" b="EB" c="כ"/>
+  <a u="05DC" b="EC" c="ל"/>
+  <a u="05DD" b="ED" c="ם"/>
+  <a u="05DE" b="EE" c="מ"/>
+  <a u="05DF" b="EF" c="ן"/>
+  <a u="05E0" b="F0" c="נ"/>
+  <a u="05E1" b="F1" c="ס"/>
+  <a u="05E2" b="F2" c="ע"/>
+  <a u="05E3" b="F3" c="ף"/>
+  <a u="05E4" b="F4" c="פ"/>
+  <a u="05E5" b="F5" c="ץ"/>
+  <a u="05E6" b="F6" c="צ"/>
+  <a u="05E7" b="F7" c="ק"/>
+  <a u="05E8" b="F8" c="ר"/>
+  <a u="05E9" b="F9" c="ש"/>
+  <a u="05EA" b="FA" c="ת"/>
+  <a u="05F0" b="D4" c="װ"/>
+  <a u="05F1" b="D5" c="ױ"/>
+  <a u="05F2" b="D6" c="ײ"/>
+  <a u="200E" b="FD" c="‎"/>
+  <a u="200F" b="FE" c="‏"/>
+  <a u="2013" b="96" c="–"/>
+  <a u="2014" b="97" c="—"/>
+  <a u="2018" b="91" c="‘"/>
+  <a u="2019" b="92" c="’"/>
+  <a u="201A" b="82" c="‚"/>
+  <a u="201C" b="93" c="“"/>
+  <a u="201D" b="94" c="”"/>
+  <a u="201E" b="84" c="„"/>
+  <a u="2020" b="86" c="†"/>
+  <a u="2021" b="87" c="‡"/>
+  <a u="2022" b="95" c="•"/>
+  <a u="2026" b="85" c="…"/>
+  <a u="2030" b="89" c="‰"/>
+  <a u="2039" b="8B" c="‹"/>
+  <a u="203A" b="9B" c="›"/>
+  <a u="20AA" b="A4" c="₪"/>
+  <a u="2122" b="99" c="™"/>
+  <!-- Fallback mappings from Unicode to bytes -->
+  <fub u="FF01" b="21" c="！"/>
+  <fub u="FF02" b="22" c="＂"/>
+  <fub u="FF03" b="23" c="＃"/>
+  <fub u="FF04" b="24" c="＄"/>
+  <fub u="FF05" b="25" c="％"/>
+  <fub u="FF06" b="26" c="＆"/>
+  <fub u="FF07" b="27" c="＇"/>
+  <fub u="FF08" b="28" c="（"/>
+  <fub u="FF09" b="29" c="）"/>
+  <fub u="FF0A" b="2A" c="＊"/>
+  <fub u="FF0B" b="2B" c="＋"/>
+  <fub u="FF0C" b="2C" c="，"/>
+  <fub u="FF0D" b="2D" c="－"/>
+  <fub u="FF0E" b="2E" c="．"/>
+  <fub u="FF0F" b="2F" c="／"/>
+  <fub u="FF10" b="30" c="０"/>
+  <fub u="FF11" b="31" c="１"/>
+  <fub u="FF12" b="32" c="２"/>
+  <fub u="FF13" b="33" c="３"/>
+  <fub u="FF14" b="34" c="４"/>
+  <fub u="FF15" b="35" c="５"/>
+  <fub u="FF16" b="36" c="６"/>
+  <fub u="FF17" b="37" c="７"/>
+  <fub u="FF18" b="38" c="８"/>
+  <fub u="FF19" b="39" c="９"/>
+  <fub u="FF1A" b="3A" c="："/>
+  <fub u="FF1B" b="3B" c="；"/>
+  <fub u="FF1C" b="3C" c="＜"/>
+  <fub u="FF1D" b="3D" c="＝"/>
+  <fub u="FF1E" b="3E" c="＞"/>
+  <fub u="FF1F" b="3F" c="？"/>
+  <fub u="FF20" b="40" c="＠"/>
+  <fub u="FF21" b="41" c="Ａ"/>
+  <fub u="FF22" b="42" c="Ｂ"/>
+  <fub u="FF23" b="43" c="Ｃ"/>
+  <fub u="FF24" b="44" c="Ｄ"/>
+  <fub u="FF25" b="45" c="Ｅ"/>
+  <fub u="FF26" b="46" c="Ｆ"/>
+  <fub u="FF27" b="47" c="Ｇ"/>
+  <fub u="FF28" b="48" c="Ｈ"/>
+  <fub u="FF29" b="49" c="Ｉ"/>
+  <fub u="FF2A" b="4A" c="Ｊ"/>
+  <fub u="FF2B" b="4B" c="Ｋ"/>
+  <fub u="FF2C" b="4C" c="Ｌ"/>
+  <fub u="FF2D" b="4D" c="Ｍ"/>
+  <fub u="FF2E" b="4E" c="Ｎ"/>
+  <fub u="FF2F" b="4F" c="Ｏ"/>
+  <fub u="FF30" b="50" c="Ｐ"/>
+  <fub u="FF31" b="51" c="Ｑ"/>
+  <fub u="FF32" b="52" c="Ｒ"/>
+  <fub u="FF33" b="53" c="Ｓ"/>
+  <fub u="FF34" b="54" c="Ｔ"/>
+  <fub u="FF35" b="55" c="Ｕ"/>
+  <fub u="FF36" b="56" c="Ｖ"/>
+  <fub u="FF37" b="57" c="Ｗ"/>
+  <fub u="FF38" b="58" c="Ｘ"/>
+  <fub u="FF39" b="59" c="Ｙ"/>
+  <fub u="FF3A" b="5A" c="Ｚ"/>
+  <fub u="FF3B" b="5B" c="［"/>
+  <fub u="FF3C" b="5C" c="＼"/>
+  <fub u="FF3D" b="5D" c="］"/>
+  <fub u="FF3E" b="5E" c="＾"/>
+  <fub u="FF3F" b="5F" c="＿"/>
+  <fub u="FF40" b="60" c="｀"/>
+  <fub u="FF41" b="61" c="ａ"/>
+  <fub u="FF42" b="62" c="ｂ"/>
+  <fub u="FF43" b="63" c="ｃ"/>
+  <fub u="FF44" b="64" c="ｄ"/>
+  <fub u="FF45" b="65" c="ｅ"/>
+  <fub u="FF46" b="66" c="ｆ"/>
+  <fub u="FF47" b="67" c="ｇ"/>
+  <fub u="FF48" b="68" c="ｈ"/>
+  <fub u="FF49" b="69" c="ｉ"/>
+  <fub u="FF4A" b="6A" c="ｊ"/>
+  <fub u="FF4B" b="6B" c="ｋ"/>
+  <fub u="FF4C" b="6C" c="ｌ"/>
+  <fub u="FF4D" b="6D" c="ｍ"/>
+  <fub u="FF4E" b="6E" c="ｎ"/>
+  <fub u="FF4F" b="6F" c="ｏ"/>
+  <fub u="FF50" b="70" c="ｐ"/>
+  <fub u="FF51" b="71" c="ｑ"/>
+  <fub u="FF52" b="72" c="ｒ"/>
+  <fub u="FF53" b="73" c="ｓ"/>
+  <fub u="FF54" b="74" c="ｔ"/>
+  <fub u="FF55" b="75" c="ｕ"/>
+  <fub u="FF56" b="76" c="ｖ"/>
+  <fub u="FF57" b="77" c="ｗ"/>
+  <fub u="FF58" b="78" c="ｘ"/>
+  <fub u="FF59" b="79" c="ｙ"/>
+  <fub u="FF5A" b="7A" c="ｚ"/>
+  <fub u="FF5B" b="7B" c="｛"/>
+  <fub u="FF5C" b="7C" c="｜"/>
+  <fub u="FF5D" b="7D" c="｝"/>
+  <fub u="FF5E" b="7E" c="～"/>
+  <!-- Fallback mappings from bytes to Unicode -->
+  <!-- NONE -->
+ </assignments>
+</characterMapping>

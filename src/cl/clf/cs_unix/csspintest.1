@@ -1,0 +1,35 @@
+.TH csspintest 1 "Ingres" "Ingres Corporation" "Ingres Corporation"
+.\" History:
+.\"	31-dec-1996 (walro03)
+.\"		Written.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+csspintest \- tests atomic test-and-set functions.
+.SH ORIGIN
+Ingres Corporation
+.SH SYNOPSIS
+.B csspintest
+[ -t ]
+[ locks [ children ] ]
+.SH DESCRIPTION
+.I csspintest
+tests the atomic test-and-set functions CS_getspin and CS_relspin.  If the
+.B -t
+flag is used, the tests will use CS_TAS and CS_ACLR.
+.PP
+csspintest will fork() a number of child processes, each of which will loop a
+number of times through a critical section of code, testing whether the spin
+lock functions actually provide atomic functionality.
+.SH OPTIONS
+.TP
+.B -t
+specifies that the CS_TAS and CS_ACLR calls be used to test atomic functions.
+If omitted, the CS_getspin and CS_relspin calls will be used.
+.TP
+.B locks
+is the number of times each child will execute the critical section of code.
+The default is 1000.
+.TP
+.B children
+is the number of child processes which will spin.
+The default is 1.

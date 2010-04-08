@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlpfil.hlp, help for "File" submenu in the local procedure source editor.
+/#-- 
+From this menu, you can either:
+     1. Write the current source code to a file.  
+     2. Read in the contents of a file to add to the source code.  
+You will be prompted for the filename when you select a menuitem.  
+
+The menuitems are:
+
+  ReadFile      Reads in the contents of the specified file.
+  WriteFile     Writes the entire source code block into the specified file.
+  Help          Displays this help text.
+  End           Returns back to the source code editor.
+
+When you read a file, the contents of the specified file are read in directly
+above the line where the cursor is positioned.  To read the file in at the
+bottom of the source code block, position the cursor on the line below the
+last line of the source code.

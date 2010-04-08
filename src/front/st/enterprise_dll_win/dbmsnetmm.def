@@ -1,0 +1,87 @@
+;
+; History:
+;	27-apr-2001 (somsa01)
+;	    Created.
+;	09-may-2001 (somsa01)
+;	    Changed name to ingres_set_dbmsnet_reg_entries().
+;	03-Aug-2001 (penga03)
+;	    Added ingres_rollback_dbmsnet.
+;	21-Aug-2001 (penga03)
+;	    Added ingres_unset_dbmsnet_reg_entries.
+;	30-Oct-2001 (penga03)
+;	    Added function ingres_delete_file_associations.
+;	10-dec-2001 (penga03)
+;	    Added function ingres_stop_ingres.
+;	12-feb-2002 (penga03)
+;	    Took the function ingres_set_timezone from setupmm.c.
+;	14-feb-2002 (penga03)
+;	    Added embedingres_cleanup_commit.
+;	14-may-2002 (penga03)
+;	    Added ingres_set_shortcuts.
+;	17-oct-2002 (penga03)
+;	    Removed ingres_set_timezone. Added 
+;	    ingres_set_timezone_auto, ingres_set_timezone_manual, 
+;	    ingres_set_charset_auto, ingres_set_chareset_manual 
+;	    and ingres_set_terminal_manual.
+;	16-jun-2003 (penga03)
+;	    Added ingres_check_installed_features.
+;	20-oct-2003 (penga03)
+;	    Added embedingres_set_target_path, embedingres_verify_instance 
+;	    and embedingres_prepare_upgrade.
+;	10-dec-2003 (penga03)
+;	    Added embedingres_verify_instance_ui.
+;	26-jan-2003 (penga03)
+;	    Added ingres_set_date_auto, ingres_set_date_manual, 
+;	    ingres_set_money_auto, ingres_set_money_manual, 
+;	    ingres_verify_money_format.
+;	19-feb-2004 (penga03)
+;	    Added ingres_remove_3rdparty_software.
+;	08-jun-2004 (penga03)
+;	    Added ingres_create_rspfile and ingres_browseforfile.
+;	11-nov-2004 (penga03)
+;	    Added ingres_installfinalize.
+;	11-jan-2005 (penga03)
+;	    Added ingres_pass_properties().
+;	31-jan-2005 (penga03)
+;	    Added ingres_set_terminal_auto.
+;	30-jun-2005 (penga03)
+;	    Added ingres_stop_ingres_ex.
+;	16-Nov-2006 (drivi01)
+;	    Added new function ingres_remove_from_path.
+;	24-Jul-2007 (drivi01)
+;	    Add new function ingres_create_vista_shortcut.
+;
+EXPORTS
+    ingres_remove_dbmsnet_files
+    ingres_set_dbmsnet_reg_entries
+    ingres_start_ingres_service
+    ingres_rollback_dbmsnet
+    ingres_unset_dbmsnet_reg_entries
+    ingres_delete_file_associations
+    ingres_stop_ingres
+    ingres_set_timezone_auto
+    ingres_set_timezone_manual
+    ingres_set_charset_auto
+    ingres_set_charset_manual
+    ingres_set_terminal_auto
+    ingres_set_terminal_manual
+    embedingres_cleanup_commit
+    ingres_set_shortcuts
+    ingres_check_installed_features
+    embedingres_set_target_path
+    embedingres_verify_instance
+    embedingres_prepare_upgrade
+    embedingres_verify_instance_ui
+    ingres_set_date_auto
+    ingres_set_date_manual
+    ingres_set_money_auto
+    ingres_set_money_manual
+    ingres_verify_money_format
+    ingres_remove_3rdparty_software
+    ingres_create_rspfile
+    ingres_browseforfile
+    ingres_installfinalize
+    ingres_pass_properties
+    ingres_stop_ingres_ex
+    ingres_remove_from_path
+    ingres_create_vista_shortcut

@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqedmen.hlp, VQ Frame Edit Options help.
+/#-- 
+To select a Frame Edit Option, move your cursor to the option and choose 
+Select. The options list varies according to the type of frame you are 
+editing.
+
+  Visual Query           - Append, Update, and Browse frames.
+  Data Entry Form        - Menu, Append, Update, Browse, and User frames.
+  Definition 
+    (QBF, Report, Graph) - QBF, Report, or Graph frames.
+  Menuitem Text          - All frame types, except the top menu frame.
+  Frame Parameters       - All frame types, except top menu frame, QBF 
+			   frames, and Graph frames.
+  Local Variables        - Menu, Append, Update, and Browse frames.
+  Local Procedures       - Menu, Append, Update, and Browse frames.
+  Global Objects         - All frame types.
+  Escape Code            - Menu, Append, Update, and Browse frames.
+  Source Code File       - Menu, Append, Update, Browse, and User frames 
+			   (available to ABF customers only).
+  Errors                 - All frame types.

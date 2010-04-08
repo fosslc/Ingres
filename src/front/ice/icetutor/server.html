@@ -1,0 +1,25 @@
+<!-- #ICE DECLARE=`session.api=:api` -->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Repository and Security&previous=intro.html&next=unitDef.html` -->
+Web Deployment Option uses a repository system to store information about your web site. You can also choose to store all of your web 
+resources, such as HTML pages and multimedia objects in the repository. The advantages of this include security, 
+administration and advanced backup. <P>
+<H4 CLASS="question">
+    Do you want to store your HTML resources in the Web Deployment Option repository system?
+</H4>
+<H4 CLASS="choice">
+<INPUT TYPE="RADIO" NAME="stored" VALUE="yes" <!-- #ICE IF (`:stored` == `yes`) THEN=`checked` -->>Yes<BR>
+<INPUT TYPE="RADIO" NAME="stored" VALUE="no" <!-- #ICE IF (`:stored` != `yes`) THEN=`checked` -->>No
+</H4>
+
+Web Deployment Option enables secure access to your HTML pages and resources. The security features of the Ingres RDBMS and 
+Ingres Web Deployment Option can both be used to provide limited access to mission-critical information. Access control can 
+be applied to users or roles. A role is a defined group of users with a common security profile.
+<H4 CLASS="question">
+Will your web site require security?
+</H4>
+<H4 CLASS="choice">
+<INPUT TYPE="RADIO" NAME="secured" VALUE="yes" <!-- #ICE IF (`:secured` == `yes`) THEN=`checked` -->>Yes<br>
+<INPUT TYPE="RADIO" NAME="secured" VALUE="no" <!-- #ICE IF (`:secured` != `yes`) THEN=`checked` -->>No
+</H4>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

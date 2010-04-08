@@ -1,0 +1,147 @@
+#
+# Jamfile file for common!adf!adn
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Replace non-portable INGFILES/ucharmaps with INGUCHARMAPS.
+#	07-jan-2005 (abbjo03)
+#	    This cannot be built on VMS until Xerces C++ 2.5 is ported.
+
+SubDir ING_SRC common adf adn ;
+
+IISUBSYS common adf adn ;
+
+if ! $(VMS)
+{
+IIUCHARFILES ca-big5-cht-2004.xml ca-big5-hkscs-cht-2004.xml
+	ca-cp852-slav852-latin2-2004.xml ca-cp856-hebrew_old-2004.xml
+	ca-cp874-thai_euro-th-2004.xml ca-cp943c-shiftjis-jp-2004.xml
+	ca-cp949-cn-2004.xml ca-cp950-big5_euro-cht-2004.xml
+	ca-ebcdic-ibm37-2004.xml ca-ebcdic-xml-us-2004.xml
+	ca-elot437-cp851-greek-2004.xml ca-euccn-gb2312-cn-2004.xml
+	ca-eucjp-kanjieuc-jp-2004.xml ca-euckr-kr-2004.xml
+	ca-euctw-chteuc-2004.xml ca-gb2312-80-cn-2004.xml
+	ca-gbk-csgbk-cn-2004.xml ca-hproman8-latin1-2004.xml
+	ca-ibm1251-cyrillic-2004.xml ca-ibm1255-hebrew-2004.xml
+	ca-ibm367-ascii-2004.xml ca-ibm855-alt-cyrillic-2004.xml
+	ca-ibm858-latin1_euro-2004.xml ca-ibm862-pchebrew-2004.xml
+	ca-ibm864-arabic-2004.xml ca-ibm866-cyrillic-2004.xml
+	ca-ibm867-hebrew-2004.xml ca-ibm869-greek-2004.xml
+	ca-ibmpc437-pcus-2004.xml ca-ibmpc850-latin1-2004.xml
+	ca-iso8859-1-latin1-2004.xml ca-iso8859-15-latin9-2004.xml
+	ca-iso8859-2-latin2-2004.xml ca-iso8859-5-cyrillic-2004.xml
+	ca-iso8859-6-arabic-2004.xml ca-iso8859-7-greek-2004.xml
+	ca-iso8859-8-hebrew-2004.xml ca-iso8859-9-turkish-2004.xml
+	ca-koi8-cyrillic-2004.xml ca-ksc5601-korean-kr-2004.xml
+	ca-pc857-turkish-2004.xml ca-tis620-wthai-th-2004.xml
+	ca-us-ascii-2004.xml ca-win1250-latin2-2004.xml
+	ca-win1251-cyrillic-2004.xml ca-win1252-latin1-2004.xml
+	ca-win1253-greek_euro-2004.xml ca-win1254-turkish-2004.xml
+	ca-win1255-whebrew-2004.xml ca-win1256-warabic-2004.xml
+	charmapalias.xml default.xml ;
+
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-big5-cht-2004 :
+	ca-big5-cht-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-big5-hkscs-cht-2004 :
+	ca-big5-hkscs-cht-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-cp852-slav852-latin2-2004 :
+	ca-cp852-slav852-latin2-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-cp856-hebrew_old-2004 :
+	ca-cp856-hebrew_old-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-cp874-thai_euro-th-2004 :
+	ca-cp874-thai_euro-th-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-cp943c-shiftjis-jp-2004 :
+	ca-cp943c-shiftjis-jp-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-cp949-cn-2004 :
+	ca-cp949-cn-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-cp950-big5_euro-cht-2004 :
+	ca-cp950-big5_euro-cht-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ebcdic-ibm37-2004 :
+	ca-ebcdic-ibm37-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ebcdic-xml-us-2004 :
+	ca-ebcdic-xml-us-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-elot437-cp851-greek-2004 :
+	ca-elot437-cp851-greek-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-euccn-gb2312-cn-2004 :
+	ca-euccn-gb2312-cn-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-eucjp-kanjieuc-jp-2004 :
+	ca-eucjp-kanjieuc-jp-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-euckr-kr-2004 :
+	ca-euckr-kr-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-euctw-chteuc-2004 :
+	ca-euctw-chteuc-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-gb2312-80-cn-2004 :
+	ca-gb2312-80-cn-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-gbk-csgbk-cn-2004 :
+	ca-gbk-csgbk-cn-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-hproman8-latin1-2004 :
+	ca-hproman8-latin1-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm1251-cyrillic-2004 :
+	ca-ibm1251-cyrillic-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm1255-hebrew-2004 :
+	ca-ibm1255-hebrew-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm367-ascii-2004 :
+	ca-ibm367-ascii-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm855-alt-cyrillic-2004 :
+	ca-ibm855-alt-cyrillic-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm858-latin1_euro-2004 :
+	ca-ibm858-latin1_euro-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm862-pchebrew-2004 :
+	ca-ibm862-pchebrew-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm864-arabic-2004 :
+	ca-ibm864-arabic-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm866-cyrillic-2004 :
+	ca-ibm866-cyrillic-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm867-hebrew-2004 :
+	ca-ibm867-hebrew-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibm869-greek-2004 :
+	ca-ibm869-greek-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibmpc437-pcus-2004 :
+	ca-ibmpc437-pcus-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ibmpc850-latin1-2004 :
+	ca-ibmpc850-latin1-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-iso8859-1-latin1-2004 :
+	ca-iso8859-1-latin1-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-iso8859-15-latin9-2004 :
+	ca-iso8859-15-latin9-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-iso8859-2-latin2-2004 :
+	ca-iso8859-2-latin2-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-iso8859-5-cyrillic-2004 :
+	ca-iso8859-5-cyrillic-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-iso8859-6-arabic-2004 :
+	ca-iso8859-6-arabic-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-iso8859-7-greek-2004 :
+	ca-iso8859-7-greek-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-iso8859-8-hebrew-2004 :
+	ca-iso8859-8-hebrew-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-iso8859-9-turkish-2004 :
+	ca-iso8859-9-turkish-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-koi8-cyrillic-2004 :
+	ca-koi8-cyrillic-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-ksc5601-korean-kr-2004 :
+	ca-ksc5601-korean-kr-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-pc857-turkish-2004 :
+	ca-pc857-turkish-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-tis620-wthai-th-2004 :
+	ca-tis620-wthai-th-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-us-ascii-2004 :
+	ca-us-ascii-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-win1250-latin2-2004 :
+	ca-win1250-latin2-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-win1251-cyrillic-2004 :
+	ca-win1251-cyrillic-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-win1252-latin1-2004 :
+	ca-win1252-latin1-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-win1253-greek_euro-2004 :
+	ca-win1253-greek_euro-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-win1254-turkish-2004 :
+	ca-win1254-turkish-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-win1255-whebrew-2004 :
+	ca-win1255-whebrew-2004.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)ca-win1256-warabic-2004 :
+	ca-win1256-warabic-2004.xml ;
+IIUCHARALIAS $(INGUCHARMAPS)$(DFS)aliasmaptbl : charmapalias.xml ;
+IIUCHARMAP $(INGUCHARMAPS)$(DFS)default : default.xml ;
+
+IIUCHARFILES charactermapping.dtd charactermappingaliases.dtd ;
+}

@@ -1,0 +1,25 @@
+;
+;  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+;
+
+;
+;    Source   : sqlquery.def.
+;    Project  : sqlquery.ocx 
+;    Author   : Sotheavut UK (uk$so01)
+;    Purpose  : Declares the module parameters
+;
+; History:
+;
+; 23-Oct-2001 (uk$so01)
+;    SIR #106057
+;    Transform code to be an ActiveX Control
+; 30-Jul-2004 (uk$so01)
+;    SIR #112708, Change the AboutBox due to UI Standard.
+;
+
+LIBRARY      "SQLQUERY.OCX"
+EXPORTS
+	DllCanUnloadNow     PRIVATE
+	DllGetClassObject   PRIVATE
+	DllRegisterServer   PRIVATE
+	DllUnregisterServer PRIVATE

@@ -1,0 +1,26 @@
+#
+# Jamfile file for front!report!sreport
+#
+
+SubDir ING_SRC front report sreport ;
+
+IISUBSYS front report sreport ;
+
+
+IIBINEXE sreport : main.c ;
+IINEEDLIBS sreport :  SREPORTLIB REPORTLIB MALLOCLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS sreport : II_copyright malloc ;
+
+IIMSGHDR ersr.msg ;
+
+IILIBRARY SREPORTLIB : sdelold.qsc scopynew.qsc sapprprt.qsc
+	sxns.c swrow.c swdthset.c swaction.c stokadd.c ssrtset.c
+	ssetcmd.c ssetcln.c ssbr.c srsoset.c srsofind.c srsoadd.c
+	sreset.c srenset.c sremset.c sreadin.c squerset.c sqadd.c
+	sprren.c sprocess.c soutset.c snxtline.c snamset.c sinit.c
+	sinclude.c sgtoken.c sgtcode.c sgstring.c sgskip.c sgset.c
+	sgparen.c sgop.c sgnumber.c sgname.c sglog.c sgint.c sgident.c
+	sgexpr.c serror.c sdclset.c sdatset.c scrack.c scmdskip.c
+	schkfile.c scat.c sbrkset.c sbreak.c saveem.c deadlock.c ;
+

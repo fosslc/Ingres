@@ -1,0 +1,577 @@
+/*
+**	frcreate.qsc
+**
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+
+/**
+** Name:	frcreate.qsc - Create form from system catalogs.
+**
+** Description:
+**	File contains routines to create a form from the system
+**	catalogs.  Routines defined here are:
+**	- FDfrcreate - Create form from system catalogs.
+**	- FDfrprint - Special image creation for printing a form.
+**
+**	This routine creates a frame for the frame driver by retrieving
+**	the compiled representation from the iicompfrm catalog.
+**	It first looks for the frame to see if it is owned by the user,
+**	then it looks to see if the frame is owned by the dba.
+**
+**	Arguments:  frmid  -  name of the frame
+**
+**	Returns:  pointer to the frame, NULL if it doesn't exist
+**
+**	History:  (jen) - 1 Nov 1981
+**
+**		  Changed FDwfrcreate to retrieve FRAME structure from
+**		  iicompfrm catalog, rather than reconstructing it from
+**		  the other forms catalogs.  1/9/85 (agh)
+**
+**		  02/07/86 (garyb) Changed ifdef CMS to ifdef FT3270.
+**		  8/18/86 (bab) Only STcopy the frame name if frm isn't -1.
+**	25-nov-86 (bab) Fix for bug 10486
+**		Changed from INnetrequest() (undocumented routine)
+**		to INdiffarch(0) as per daveb's suggestion.
+**	07/14/86 (scl) Removed FTmxcol wide form support; no
+**		longer required for CMS in 5.0
+**	02/15/87 (dkh) - Added header.
+**	05/21/87 (dkh) - Integrated VMS changes. (dkh)
+**	06/16/87 (dkh) - Eliminated code to set up a tag region since
+**			 callers should have one set up already.
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	08/14/87 (dkh) - ER changes.
+**	08/26/87 (dkh) - Changes for 8000 series error numbers.
+**	10/17/87 (dkh) - Fixed jup bug 1117.
+**	10/22/87 (dkh) - Changed INdiffarch to IIUGdaDiffArch.
+**	11/11/87 (dkh) - Code cleanup.
+**	12/19/87 (dkh) - Including ooclass.qsh instead of ooclass.qh.
+**	16-mar-88 (sylviap) 
+**		Added IIUIsdba and IIUIsuser.  Will have the username/dba as
+**		saved in the systems catalog.  May be uppercase.
+**		Deleted HACKFOR50.
+**	05/27/88 (dkh) - Changed to not increase size of form to width of
+**			 terminal since this does not work for popups.
+**	10/22/88 (dkh) - Added check to "commit" if not in a transaction.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	02/01/89 (dkh) - Fixed venus bug 4577.
+**	02/14/89 (dkh) - Added special hook to speed up vifred form retrieval.
+**	10/01/89 (dkh) - IBM porting change.  Removed assignment to frres1.
+**	11/11/89 (dkh) - Added changes to handle different size for
+**			 ii_encoded_forms catalog due to B1.
+**	12/23/89 (dkh) - VMS shared lib changes.
+**	12/30/89 (dkh) - Improved prepare/described on ii_encoded_forms.
+**	12/31/89 (dkh) - Integrated IBM porting changes for re-entrancy.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	    Also got rid of IIFDgd_GetDbinfo() since it is no longer need
+**	    because IIUIdbdata will retrieve information if needed.
+**	09/06/90 (dkh) - Changed to use IIFDgfdGetFdDstab() instead of
+**			 IIFDdstab directly.
+**	09/07/92 (dkh) - Updated with 6.5 call interface to FErelexists.
+**	10/14/92 (dkh) - Removed use of ArrayOf in favor of DSTARRAY.
+**			 ArrayOf confused the alpha C compiler.
+**	08/31/93 (dkh) - Fixed up compiler complaints due to prototyping.
+**      24-sep-96 (hanch04)
+**          Global data moved to data.c
+**   11-aug-97 (schte01) - added NO_OPTIM for axp_osf. Optimization 
+**         caused IIFDesEncodeSize to return size as 0.
+**   15-jan-98 (schte01) - removed NO_OPTIM for axp_osf to see if new
+**         c compiler still has this problem.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	21-May-2003 (bonro01)
+**	    Add protypes to prevent SEGV on HP Itanium (i64_hpu)
+**	14-jul-2003 (devjo01)
+**	    Remove local (incorrect) prototype for 'FDwfrcreate()'.
+**      17-Jul-2003 (hweho01)
+**          Avoid compiler errors in AIX platform, matched and rearranged 
+**          function parm lists in 'FDwfrcreate()', 'FDiwfrcreate()' and 
+**          'FDbincreate()' with the prototype declarations. 
+**	15-oct-2007 (toumi01)
+**	    For UTF8 force ii_encoded_forms.cfdata type to DB_VBYTE_TYPE.
+**	30-oct-2007 (toumi01)
+**	    Oops! For above change delete debugging sleep().
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+# include	<compat.h>
+# include	<me.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ds.h>
+# include	<feds.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<frserrno.h>
+# include	<encoding.h>
+# include	<afe.h>
+# include	<ui.h>
+## include	<ooclass.qsh>
+## include	<uigdata.qsh>
+# include	"erfd.h"
+# include	<erfi.h>
+
+EXEC SQL INCLUDE SQLDA;
+
+# ifndef	PCINGRES
+FUNC_EXTERN	STATUS	FErelexists();
+
+
+/*
+** Routine to get template table.
+*/
+FUNC_EXTERN	DSTARRAY	*IIFDgfdGetFdDstab();
+# endif		/* PCINGRES */
+
+GLOBALREF	i4	fdprform ;
+
+FRAME		*FDtxtcreate();
+i4		IItest_err();
+
+FRAME		*FDbincreate(char *frmid, bool wins, i4 id);
+FRAME		*FDwfrcreate(char *frmid, bool wins);
+
+FUNC_EXTERN	bool	FDbinfldcre(FRAME *frm, bool wins);
+FRAME   	*FDiwfrcreate(char *frame_id, bool wins);
+
+
+static	cfdata_size = 0;
+
+
+
+/*{
+** Name:	IIFDesEncodeSize - Get size of data column in ii_encoded_forms
+**
+** Description:
+**	This routine does a probe (the first time it is called) to determine
+**	the size of column "cfdata" in ii_encoded_forms catalog.
+**	Probe is done via a prepare statement.
+**
+**	We are assuming checks to see if ii_encoded_forms exists has
+**	already been done by the caller.
+**
+** Inputs:
+**	None.
+**
+** Outputs:
+**
+**	Returns:
+**		Size of "cfdata" column.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	None that I'm aware of.  A prepare should not lock system
+**	catalogs even if we are called within a transaction.
+**
+** History:
+**	12/10/89 (dkh) - Initial vesrion.
+*/
+i4
+IIFDesEncodeSize()
+{
+	IISQLDA_TYPE(frs_, frsda, 10);
+
+	if (!cfdata_size)
+	{
+		frsda.sqln = 10;
+		exec sql prepare iifrs_size into :&frsda using names
+			from 'select cfdata from ii_encoded_forms';
+		if (frsda.sqld == 1)
+		{
+			cfdata_size = frsda.sqlvar[0].sqllen;
+		}
+	}
+
+	return(cfdata_size);
+}
+
+/*{
+** Name:	FDfrprint - Set flag for special form image creation.
+**
+** Description:
+**	This routine set/resets a special flag (fdprform) that controls how
+**	boxes, table fields should look in the form image.  This
+**	is necessary to turn off special solid line images when
+**	building a form so that a form looks reasonable when printed.
+**
+** Inputs:
+**	val	Value to set flag to.
+**
+** Outputs:
+**	Returns:
+**		None.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	The flag is also passed down to the FT layer where the actual
+**	image of the form is built.
+**
+** History:
+**	02/15/87 (dkh) - Added procedure header.
+*/
+VOID
+FDfrprint(val)
+i4	val;
+{
+	fdprform = val;
+	FTfrprint(val);
+}
+
+
+
+
+/*{
+** Name:	FDfrcreate - Build a form from system catalogs.
+**
+** Description:
+**	Build a form from the system catalogs in the database.
+**	Calls FDwfrcreate() to do the actual work.  Form lookup
+**	is based on the name of the form and ownership.	 First
+**	check to see if form is owned by user, next check for
+**	a copy owned by the DBA.  In addition, the form will
+**	be obtained from the encoded version first (in iicompfrm).
+**	If it is not found there, the old catalogs are consulted
+**	(fdfields, fdtrim).  Always use the old catalogs if
+**	we are over a network for now.
+**
+** Inputs:
+**	frmid	Name of form to build from catalogs.
+**
+** Outputs:
+**	Returns:
+**		ptr	Pointer to created form.  NULL if no form found
+**			or error in processing the form.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	None.
+**
+** History:
+**	02/15/87 (dkh) - Added procedure header.
+**	10/10/87 (danielt) - SQLized the database access
+**	19-aug-88 (marian)
+**		Changed select statement to reflect column name changes in
+**		standard catalogs.
+**	10/22/88 (dkh) - Added check to "commit" if not in a transaction.
+**	01/19/89 (wolf)- "ii_encoded_forms" may need to be upper-cased
+**		before being passed to FErelexists.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	    Removed call to IIFDgd_GetDbinfo since IIUIdbdata will get
+**	    information if needed.
+**	    Also changed STequal of user and dba to reference of isdba.
+**	14-jul-2003 (devjo01)
+**	    Remove local (incorrect) prototype for 'FDwfrcreate()'.
+*/
+FRAME *
+FDfrcreate(frmid)
+char	*frmid;
+{
+	return FDwfrcreate(frmid, WIN);
+}
+
+
+FRAME *
+FDwfrcreate(char *frmid, bool wins)
+{
+	FRAME	*frm;
+EXEC SQL BEGIN DECLARE SECTION;
+	i4	was_inxaction;
+EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL inquire_ingres (:was_inxaction = transaction);
+
+	frm = FDiwfrcreate(frmid, wins);
+
+	if (!was_inxaction)
+	{
+		EXEC SQL COMMIT WORK;
+	}
+	return(frm);
+}
+
+
+FRAME	*
+FDiwfrcreate(char *frame_id, bool wins)
+{
+	FRAME	*frm;
+	EXEC SQL BEGIN DECLARE SECTION;
+        char    	*frmid;
+	char		*owner;
+	i4		oo_id;
+	UIDBDATA	*uidbdata;
+	EXEC SQL END DECLARE SECTION;
+	i4	found = 0;
+	bool	user_tried = FALSE;
+	char	tblname[FE_MAXTABNAME + 1];
+
+
+        frmid = frame_id; 
+	uidbdata = IIUIdbdata();
+	for (;;)
+	{
+		owner = !user_tried ? uidbdata->user : uidbdata->dba;
+
+		IIUIcnb_CatNolockBegin(ERx("ii_objects"));
+
+		EXEC SQL SELECT object_id
+			INTO :oo_id
+			FROM ii_objects
+			WHERE	object_name = :frmid
+			    AND	object_owner = :owner
+			    AND object_class = :OC_FORM;
+		EXEC SQL BEGIN;
+			found++;
+		EXEC SQL END;		
+
+		IIUIcne_CatNolockEnd(ERx("ii_objects"));
+
+		if (found == 0)
+		{
+			if (user_tried)
+			{
+				IIFDerror(CFNOFRM, 1, frmid);
+				return(NULL);
+			}
+			else
+			{
+				if (uidbdata->isdba)
+				{
+					IIFDerror(CFNOFRM, 1, frmid);
+					return(NULL);
+				}
+				user_tried = TRUE;
+				continue;
+			}
+		}
+		else if (found > 1)
+		{
+			IIFDerror(CFFRMS, 2, &found, frmid);
+			return(NULL);
+		}
+
+# ifndef	PCINGRES
+		STcopy(ERx("ii_encoded_forms"), tblname);
+		IIUGdbo_dlmBEobject(tblname, FALSE);
+		if (!IIUGdaDiffArch() && FErelexists(tblname, NULL) == OK)
+		{
+			if ((frm = FDbincreate(frmid, wins, oo_id)) != NULL)
+			{
+				/*
+				**  Make sure that the form name that is
+				**  in the frame structure matches the
+				**  one we want.  The form name is not
+				**  be updated in the binary version
+				**  of the form when a user renames a
+				**  form in VIFRED. (dkh)
+				**  Do only if legitimate frm ptr. (bab)
+				*/
+				if (frm != (FRAME *)(-1))
+					STcopy(frmid, frm->frname);
+				break;
+			}
+		}
+# endif		/* PCINGRES */
+
+		if ((frm = FDtxtcreate(frmid, wins, oo_id)) != NULL)
+		{
+			break;
+		}
+
+		if (user_tried)
+		{
+			IIFDerror(CFNOFRM, 1, frmid);
+			return(NULL);
+		}
+		else
+		{
+			if (uidbdata->isdba)
+			{
+				IIFDerror(CFNOFRM, 1, frmid);
+				return(NULL);
+			}
+			user_tried = TRUE;
+		}
+	}
+	if (frm == (FRAME *) -1)
+	{
+		return(NULL);
+	}
+
+	return(frm);
+}
+
+
+
+
+# ifndef	PCINGRES
+FRAME *
+FDbincreate(char *frmid, bool wins, i4 id)		/* FDWFRCREATE: */
+{
+	char	*formname = frmid;
+	char	name[FE_MAXNAME + 1];		/* name of frame */
+
+	FRAME	*frm;			/* pointer to the frame */
+	char	*block;			/* block of memory for frame */
+	char	*addr;			/* address to put decoded binary */
+	SH_DESC sh_desc;		/* shared data region descriptor */
+	EXEC SQL BEGIN DECLARE SECTION;
+        i4	ooid;
+	i4	seqno;			/* sequence no. of iicompfrm row */
+	i4	binsize;		/* binary size of one row */
+  	i4	totsize;		/* total binary size of frame */
+  	DB_DATA_VALUE	ldbv;
+	EXEC SQL END DECLARE SECTION;
+	i4	numfound = 0;		/* number of forms found */
+	bool	found = FALSE;		/* has form been found in catalogs? */
+	i4	CFdecode();
+	i4	encode_size;
+	AFE_DCL_TXT_MACRO(MAX_CFTXT)	txtdata;
+	DB_TEXT_STRING			*txtstr;
+	char	*tptr = ERx("ii_encoded_forms");
+	char	*IIENFORMS;
+
+        ooid = id; 
+	IIENFORMS = tptr;
+
+	ldbv.db_datatype = DB_VBYTE_TYPE;
+	ldbv.db_length = sizeof(txtdata);
+	ldbv.db_prec = 0;
+	ldbv.db_data = (PTR) &txtdata;
+
+	txtstr = (DB_TEXT_STRING *) &txtdata;
+
+	/*
+	**  Note that we assume MAX_CFTXT is big enough for
+	**  whatever IIFDesEncodeSize() returns.
+	*/
+	encode_size = IIFDesEncodeSize();;
+
+	/*
+	** Retrieve compiled representation of form
+	*/
+
+	IIUIcnb_CatNolockBegin(IIENFORMS);
+
+	STcopy(formname, name);
+	EXEC SQL SELECT cfseq, cfdatsize, cftotdat, cfdata
+		INTO :seqno, :binsize, :totsize, :ldbv
+		FROM ii_encoded_forms
+		WHERE object_id = :ooid;
+	EXEC SQL BEGIN;
+		if (!found)
+		{
+			found = TRUE;	/* form has been found */
+			/*
+			** allocate space for the FRAME structure
+			*/
+			if ((block = (char *)MEreqmem((u_i4)0, (u_i4)totsize,
+			    TRUE, (STATUS *)NULL)) == NULL)
+			{
+				IIUGbmaBadMemoryAllocation(ERx("FDbincreate"));
+				IIUIcne_CatNolockEnd(IIENFORMS);
+				return((FRAME *) -1);
+			}
+		}
+
+		/*
+		** Check number of forms found.
+		*/
+		if (seqno == 0)
+			numfound++;
+
+		/*
+		** Place the decoded piece of the FRAME structure in the
+		** appropriate place in the block of memory already
+		** allocated.
+		*/
+		addr = &block[seqno * encode_size];
+		MEcopy((PTR) txtstr->db_t_text, (u_i2) binsize, (PTR) addr);
+	EXEC SQL END;
+
+
+	IIUIcne_CatNolockEnd(IIENFORMS);
+
+	if (IItest_err())
+	{
+		return(NULL);
+	}
+
+	if (!found)	/* if no frames retrieved */
+	{
+		return(NULL);
+	}
+
+	/*
+	** If more than one form was retrieved, ERROR.
+	*/
+	else if (numfound > 1)
+	{
+		IIFDerror(CFFRMS, 2, &numfound, formname);
+		return((FRAME *) -1);
+	}
+
+	/*
+	** Relocate pointers within FRAME structure
+	*/
+	sh_desc.sh_type = IS_MEM;
+	sh_desc.sh_keep = 0;
+	sh_desc.size = totsize;
+	if (DSload(&sh_desc, &block, IIFDgfdGetFdDstab()) != OK)
+	{
+		syserr(ERget(E_FD0009_DSload_Error));
+	}
+	frm = (FRAME *) block;
+
+
+
+	/*
+	**  Code no longer increases the size of the form to the
+	**  size of the terminal since this is not right for popups.
+	*/
+
+	/* set frame driver mode */
+	frm->frmode = fdcmINSRT;
+
+	/* create field structures for frame */
+	if (!FDbinfldcre(frm, wins))
+		return((FRAME *) -1);
+
+	frm->frscr = NULL;
+	frm->unscr = NULL;
+	frm->untwo = NULL;
+
+	/*
+	**  Call FTnewfrm to allocate FT specific structures if we
+	**  really need it.  VIFRED won't need FT stuff (i.e., WINDOWS).
+	*/
+	if (wins)
+	{
+		FTnewfrm(frm);
+	}
+
+	/* return a pointer to the frame */
+
+	return(frm);
+}
+# endif		/* PCINGRES */

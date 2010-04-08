@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlkqual.hlp, subtopic 'Qualifications' of subtopic 'Lookup tables' 
+/#-- behind the main VQ Editor help screen.
+/#-- 
+By default, when the user calls a Lookup table, the system displays all the 
+records in the table.  However, you can let the user "qualify" (restrict) 
+the query so that only certain Lookup table records are displayed.  
+
+The default is to NOT allow user qualifications.  If you want to let the 
+user enter qualifications, move the cursor to the "Qualification (y/n)" 
+field and type a "y" over the "n."

@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  When set to ON, the opf_stats_nostats_max resource causes OPF to
+  apply a maximum row estimate for joins where one relation has
+  statistics and the other does not. This maximum is defined as:
+  <rows in relation with stats> * <rows in relation without stats>/
+  <unique values in relation with stats>.
+
+  This maximum can be scaled using opf_stats_nostats_factor which
+  must be greater than 0.0 and less than or equal to 1.0.
+
+  If this resource is OFF, the optimizer will assume that both relations
+  to be joined have the same statistics.  In some cases when the relation
+  with statistics is much larger than the one without, this can lead to
+  excessive row estimates and poor query plans.  In many other cases
+  the OFF algorithm is appropriate.
+
+  The default value for opf_stats_nostats_max is OFF and the default
+  value for opf_stats_nostats_factor is 1.0.

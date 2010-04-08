@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqrecapd.hlp, help when the Reconcile utility is finished reconciling 
+/#-- VQs with changed database tables.
+/#-- 
+The Reconcile utility is finished; you can now write the reconciliation 
+report to a file.
+
+To write the report to a file, select WriteFile.

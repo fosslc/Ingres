@@ -1,0 +1,44 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcfgmen.hlp
+CONFIGURATION MENU
+
+This menu is used to select tasks for configuring the Replicator system.
+
+The following choices are available:
+
+        SELECTION       ALLOWS YOU TO
+        ---------       -------------
+        Databases       Define the replicated databases that will send
+                        and/or receive replicated data.
+
+        CDDS            Define Consistent Distributed Data Sets (CDDS),
+                        CDDS to database relationships, and Data
+                        Propagation Paths (DPP).
+
+        Tables          Register tables to process and transmit the
+                        replication and create Replicator tables and
+                        database procedures that support the replication
+                        of those tables.
+
+        MoveConfig      Move the configuration information to the other
+                        databases participating in the replication
+                        scheme.
+
+        Activate        Enable or disable change recording for selected
+                        CDDS's and databases.
+
+        MailList        Specify e-mail addresses of the users who will
+                        receive Replicator messages through e-mail.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Select          Choose the currently highlighted option.
+
+        Help            Access the Help facility.
+
+        End             Return to the Main Menu.
+
+        Quit            Exit Replicator Manager.

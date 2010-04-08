@@ -1,0 +1,26 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You may specify whether or not this aggregate is to be cumulative.  The 
+default is to create a simple aggregate. A simple aggregate produces a single 
+value, calculated on all the values in the aggregate column up to a break in 
+the specified footer.  A cumulative aggregate calculates a running total for 
+each value in the aggregate column since the start of the report up to the 
+break in the specified footer.
+
+	OPTIONS		DESCRIPTIONS
+	-------		------------
+	No		Do not make this aggregate cumulative.
+	Yes		Make this aggregate cumulative.
+
+The menu commands are as follows:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+	Select	        If No then the aggregate will be a simple aggregate;
+			no cumulative aggregation will be performed.  If Yes,
+			the aggregate will become a cumulative aggregate;
+			cumulative aggregation will be performed.
+			
+        Cancel          Return to the Aggregate Selection Popup.  No
+			aggregate is selected.
+
+        Help            Print this message.

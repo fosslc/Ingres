@@ -1,0 +1,9 @@
+Ingres Object Management (64-bit Support)
+
+Ingres Object Management is an extension to the Ingres
+Intelligent DBMS which simplifies management and storage of complex
+data types - such as graphical, time-series, or multi-currency data. 
+The Ingres Object Management Extension (OME) allows the Ingres
+DBMS server to be extended to support complex data types, by linking
+in libraries which enable manipulation of complex data types using
+standard SQL commands and operators.

@@ -1,0 +1,26 @@
+#
+# MANIFEST file for common!gcf!specials_win
+#
+# History:
+#	25-Aug-2004 (drivi01)
+#	     Created. Creates iilibgcf.dll and iilibgcfdata.dll
+#       18-Nov-2004 (Viktoriya.Driker@ca.com and Ralph.Loen@ca.com)
+#            Removed private sub-facility libraries GCC and GCD from
+#            the GCF DLL.
+#	19-Oct-2005 (drivi01)
+#	     r30 builds SHGCFLIBDATA, change was submitted before it
+#	     was branched, bring this file in sync with r30.
+#
+
+SubDir ING_SRC front gcf specials_win ;
+
+IISUBSYS front gcf specials_win ;
+
+IIIMPLIBRARY $(IMPGCFLIB) : $(GCFLIB) ;
+
+
+IISHLIBRARY $(SHGCFLIB) : $(IMPGCFLIBDATA) $(GCFLIB) 
+	$(IMPCOMPATLIBDATA) $(IMPCOMPATLIB) $(SHAPILIB)
+	$(IMPCUFLIB) $(IMPADFLIB) ;
+
+IISHLIBRARY $(SHGCFLIBDATA) : $(SHGCFLIB) $(GCFLIBDATA) $(IMPCOMPATLIB) ;

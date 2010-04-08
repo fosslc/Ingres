@@ -1,0 +1,16 @@
+#
+# Jamfile file for front!frame!formindex
+#
+
+SubDir ING_SRC front frame formindex ;
+
+IISUBSYS front frame formindex ;
+
+
+IIBINEXE formindex : formindx.c ;
+IINEEDLIBS formindex :  FORMINDEXLIB COPYFORMLIB MALLOCLIB
+	SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS formindex : II_copyright malloc ;
+
+IILIBRARY FORMINDEXLIB : frmindex.qsc ;
+

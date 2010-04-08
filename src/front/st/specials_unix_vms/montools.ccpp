@@ -1,0 +1,80 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for montools
+*/
+
+/*
+** History
+**	29-jan-1993 (jonb)
+**		Created.
+**	16-mar-1993 (dianeh)
+**		Corrections; added History.
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	03-aug-1993 (dianeh)
+**		Moved a brace (that's superfluous anyway, and Rick's going to
+**		delete all of them soon, but for now, I'm just fixing them.)
+**	03-nov-1993 (kellyp)
+**		Removed support map files in VOLUME E.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	20-Feb-2008 (bonro01)
+**	    Move iimonitor to setupsup.ccpp so that it is available to both
+**	    dbms and client installs.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+/*
+** Default directory: ingres/files/english
+*/
+
+PART  montools
+
+   BUILD_DIR (ING_BUILD)!files!english
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY ingres!files!english
+#endif
+      FILE ipmdbaop.hlp
+      FILE ipmdplgd.hlp
+      FILE ipmdplgp.hlp
+      FILE ipmdplkl.hlp
+      FILE ipmdplkr.hlp
+      FILE ipmdslgt.hlp
+      FILE ipmdspdb.hlp
+      FILE ipmdsplt.hlp
+      FILE ipmdspsv.hlp
+      FILE ipmlkltd.hlp
+      FILE ipmlkrdt.hlp
+      FILE ipmmain.hlp
+      FILE ipmsesdt.hlp
+      FILE ipmshlgh.hlp
+      FILE ipmshlgs.hlp
+      FILE ipmshlks.hlp
+      FILE ipmshopr.hlp
+      FILE ipmshses.hlp
+      FILE ipmshut.hlp
+      FILE ipmshwbk.hlp
+      FILE ipmshwop.hlp
+      FILE ipmsvdet.hlp
+
+   BUILD_DIR (ING_BUILD)!bin
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY ingres!bin
+#endif
+      EXECUTABLE ipm
+
+# ifdef VMS
+   BUILD_DIR (ING_BUILD)!debug
+   DIRECTORY ingres!debug
+         FILE ipm.stb
+# endif /* VMS */

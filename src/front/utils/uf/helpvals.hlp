@@ -1,0 +1,44 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This display gives you information about the values allowed in the field
+upon which your cursor was positioned when you asked for Help.  The table
+lists information about the validations in effect for that field (if any.)
+
+The name of the field is shown at the top of the screen, followed by one
+of the following kinds of information in the table:
+
+    -  The datatype for the field, indicating whether you should
+       enter 'Integer' (whole numbers), 'Floating Point' (numbers
+       with optional decimal parts) or 'Character' (any mix of
+       characters and digits).  This is followed by a listing of
+       the validation rules in effect for that field, if any.  Refer
+       to the Character-based Querying and Reporting Tools User Guide
+       for a description of the rules.
+
+    -  If a single list of valid values is allowed for the field, the
+       list is displayed for you in the table.  You may scroll through
+       the list, using the displayed menu commands, or any other
+       scrolling commands.  You can use the "Select" menuitem to choose
+       the item upon which your cursor is placed, transferring it to
+       the field where you originated the request for help.
+
+The menu commands are:
+
+        MENU COMMAND         SYNOPSIS
+        ------------         --------
+
+        Select               Transfer the value you are currently positioned
+                             upon directly to the field where you originated
+                             the help request.  (Only available if a list 
+                             is in effect.)
+
+        NextPage             Display the next page of help for this screen.
+                             Note that this menu command is the same as the
+                             scrollup function key.
+
+        PrevPage             Display the previous page of help for this screen.
+                             Note that this menu command is the same as the
+                             scrolldown function key.
+
+        Help                 Print this message.
+
+        End                  Return to your current screen.

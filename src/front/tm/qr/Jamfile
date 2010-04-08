@@ -1,0 +1,23 @@
+#
+# Jamfile file for front!tm!qr
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front tm qr ;
+
+IISUBSYS front tm qr ;
+
+
+IIMSGHDR erqr.msg ;
+
+IIQSHHDR qrcol.h : qrcol.qsh ;
+
+File $(INGMSG)$(DFS)qrhlpsql.hlp : qrhlpsql.hlp ;
+
+IILIBRARY QRLIB : qrwldcrd.qsc qrutil.qsc qrtxthlp.qsc
+	qrtabhlp.qsc qrmlthlp.qsc qrloghlp.qsc qrhlputl.qsc qrhelp.qsc
+	qrerror.qsc qrsql.c qrsqhelp.c qrrun.c qrretsel.c qrreleas.c
+	qrquel.c qrmklist.c qrinit.c qrformat.c qrdata.c qrbdump.c ;
+

@@ -1,0 +1,12 @@
+#
+# wgl_32s.hnt file for  front\utils\oo
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+objonly = oodata.obj 
+objonly = levelmas.obj 
+objonly = ooclass.obj 
+objonly = ooproctb.obj 
+objonly = oosymbol.obj 
+

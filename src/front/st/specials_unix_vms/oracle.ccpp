@@ -1,0 +1,182 @@
+/*
+** Copyright (c) 2006 Ingres Corporation. All Rights Reserved.
+*/
+
+/*
+** Generic part file for Oracle Gateway
+** History
+**	25-mar-1998 (canor01)
+**	    Created.
+**	16-apr-1998 (canor01)
+**	    iigwora and iigworad need to be setuid.
+**	01-jul-1998 (hanch04)
+**	    moved iigwstart and iigwstop to utility
+**	07-jul-1998 (hanch04)
+**	    moved iigwstart and iigwcatora to utility
+**	26-Apr-99 (GordonW)
+**	    Added iichkora, iigwcatora in utility
+**	    removed iigwstart/iigwstop goes in gateway.ccpp
+**	    removed message files, into gateway.ccpp
+**	    removed setuid, not needed.
+**	29-apr-1999 (kinte01)
+**	    Updated locations of VMS files
+**	29-apr-1999 (kinte01)
+**	    Add iigwora_sysinput.com
+**	08-jun-1999 (kinte01)
+**	    Add iioralog.com
+**      05-oct-2000 (chash01)
+**          copy multiple oracle gateway executables
+**      15-nov-2000 (chash01)
+**          remove iioralog.com, no longer needed.
+**	26-feb-2001 (clach04)
+**	    Added iigwuseora for Unix
+**	    Added multiple versions of iigwora, iigworad, iigwcatora for Solaris
+**      23-mar-2001 (chash01)
+**          #elif is illegal, changes to #else #if and do some reorganization
+**          to make it more readable.
+**	16-May-2002 (clach04)
+**	   For Solaris: renamed 8.1.6 to 8i, added 9i
+**	19-Jun-2003 (clach04)
+**	   For Unixware: add unix ware 8.0.5, 8.0.6 and 8i
+**	   The ifdefs do not properly deal with a default Oracle version (i.e.
+**	   oracle exe names without version string on the end) so removed
+**	   some of the code that implemented this. This in turn means the
+**	   ifdefs are easier to navigate as they would have become more and
+**	   more complex as I added versions (aix, hp8, hpb...)
+**	   Now there is an ifdef section for each platform, at some point the
+**	   unix ones could be simplified so that all the 8i file references are
+**	   shared but this is a future project.
+**	29-Jan-2003 (ahaal01)
+**	    Added 7.3.2 and 8.0.6 for hp8 and added 8.0.6, 8i and 9i for hpb.
+**	08-Apr-2003 (musro02)
+**	   cope with the fact that when hpb_us5 is set hp8_us5 is also set
+**	   (We don't want to execute both sets of code)
+**	29-Jan-2004 (ahaal01)
+**	    Added 9i_43x and 9i_5L for AIX to create separate Oracle 9i entries
+**	    for AIX 4.3.x and AIX 5L.
+**	21-Apr-2004 (ahaal01)
+**	    Removed Oracle 7.3.3, 8.0.4, 8.0.5, 8.0.6 and added Oracle 10g for
+**	    hpb, rs4 and su4 platforms.
+**	10-Aug-2004 (clach04)
+**	    Support for AIX 4.3 dropped, which means no 8i or 9i for AIX 4.x
+**      09-Dec-2004 (clach04)
+**          Changed ifdefs for iigwuseora to be "if UNIX"
+**          Changed ifdefs for 10g oracle to be only have one instance
+**          of 10g but multiple ifdefs. Adding/removing support for 10g
+**          on any platform is now much easier (and a smaller change).
+**      28-Jan-2005 (mofja02)
+**		 bug 112048
+**          Removed Oracle 8, hp8 and usl_us5(unixware?).
+**  07-Oct-2005 (clach04)
+**      Bug 115374
+**      Removed obsolete release.ora file
+**  02-Nov-2005 (clach04)
+**      Updated AIX 9i file name to match other platforms.
+**      AIX now only supports 9i2 on 5L.
+**      9i1 on 4.3.3 is not supported in EA 2.6
+**       6-Nov-2006 (hanal04) SIR 117044
+**          Add int.rpl for Intel Rpath Linux build.
+**  28-May-2008 (wansh02/clach04)
+**      Added 10g for AMD Solaris platform
+**  03-Jun-2008 (clach04)
+**      Bug 120431 - Jam and AMD port
+**      Generic handling of jam built exe name changes.
+**      All platforms now use underscore for filename of version,
+**      there is no other text other than the version number (no "i", no "g"),
+**      e.g. "_10" not "_10g" nor "_10g2". I.e. file name match jam file
+**      names (see jam files for details).
+**      Removed iigworad* and added iigworad.
+**      Removed VMS
+**      Removed 8i
+**  13-Mar-2009 (clach04)
+**      Bug/Sir 121362 (11g)
+**      Bug/Sir 121654 (9i)
+**      Remove Oracle 9i support from SPARC EA 2.7.
+**      Added 11g support for SPARC EA 2.7.
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**  17-Dec-2009 (clach04)
+**      SIR 123077
+**      Added 11g support for AMD EA 2.7 (SP1).
+*/
+
+PART oracle
+    capability CI_ORACLE_GATEWAY
+
+/*
+** ingres!bin
+*/
+
+   DIRECTORY ingres!bin
+   BUILD_DIR (ING_BUILD)!bin
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigworad
+   }
+
+#if  defined ( a64_sol ) || defined ( sparc_sol )
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwora_11
+   }
+#endif /* 11g platforms */
+
+#if defined ( a64_sol ) ||defined ( thr_hpux ) || defined ( any_aix ) || defined ( sparc_sol ) || defined ( int_lnx ) || defined ( int_rpl )
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwora_10
+   }
+#endif /* 10g platforms */
+
+#if defined ( any_aix ) || defined ( thr_hpux )
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwora_9
+   }
+#endif /* 9i platforms */
+
+/*
+** ingres!utility
+*/
+
+   DIRECTORY ingres!utility
+   BUILD_DIR (ING_BUILD)!utility
+
+   SCRIPT SETUP iisuoracle
+   SCRIPT iichkora
+
+#if  defined ( a64_sol ) || defined ( sparc_sol )
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwcatora_11
+   }
+#endif /* 11g platforms */
+
+#if defined ( a64_sol ) || defined ( thr_hpux ) || defined ( any_aix ) || defined ( sparc_sol ) || defined ( int_lnx ) || defined ( int_rpl )
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwcatora_10
+   }
+#endif /* 10g platforms */
+
+#  if defined ( any_aix ) ||defined ( thr_hpux )
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwcatora_9
+   }
+#endif /* su4_us5 */
+
+   {
+     PERMISSION s:rwed,o:rwed,g:re,w:re
+     EXECUTABLE iigwuseora
+   }
+
+/*
+** ingres!files
+*/
+
+   DIRECTORY ingres!files
+   BUILD_DIR (ING_BUILD)!files
+   FILE oracle.crs
+   FILE oracle.rfm
+

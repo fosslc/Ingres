@@ -1,0 +1,40 @@
+#
+# Jamfile file for front!st!specials_nt_win
+#
+
+SubDir ING_SRC front st specials_nt_win ;
+
+IISUBSYS front st specials_nt_win ;
+
+IIBINEXE isql : isql.c ;
+IINEEDLIBS isql : COMPATLIB ;
+
+IIBINEXE iquel : iquel.c ;
+IINEEDLIBS iquel : COMPATLIB ;
+
+IIBINEXE abf : abf.c ;
+IINEEDLIBS abf : COMPATLIB ;
+
+IIBINEXE vision : vision.c ;
+IINEEDLIBS vision : COMPATLIB ;
+
+IIBINEXE esqlcc : esqlcc.c ;
+IINEEDLIBS esqlcc : COMPATLIB ;
+
+IIBINEXE wrapsql : wrapsql.c ;
+IINEEDLIBS wrapsql : COMPATLIB SHEMBEDLIB ;
+
+IIBINEXE sql : sql.c ;
+IINEEDLIBS sql : COMPATLIB ;
+
+IIBINEXE quel : quel.c ;
+IINEEDLIBS quel : COMPATLIB ;
+
+IIBINEXE accessdb : accessdb.c ;
+IINEEDLIBS accessdb : COMPATLIB ;
+
+IIBINEXE catalogdb : catalogdb.c ;
+IINEEDLIBS catalogdb : COMPATLIB ;
+
+IIBINEXE ingsql : ingsql.c ;
+IINEEDLIBS ingsql : COMPATLIB ;

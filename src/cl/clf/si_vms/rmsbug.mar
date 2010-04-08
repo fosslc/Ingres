@@ -1,0 +1,108 @@
+	.TITLE RMSBUG
+
+	$SSDEF
+	$CHFDEF
+
+; /*
+; **	RMSBUG.mar
+; **
+; **	This file contains the interface to vms RMS calls
+; **	sys$get() and sys$put.  The file exists for the following
+; **	reason:  RMS has a bug wherein if a sys$put() or sys$get()
+; **	is interrupted, and then the stack unwound so that the RMS call
+; **	never completes, the RMS stream is unusable.  Any further access to
+; **	it fails with status RMS$_BUSY.
+; **
+; **	To combat this problem, the following code exists.
+; **	It establishes a condition handler before calling sys$put or sys$get.
+; **	If a ^C	occurs while the RMS operation is being done, the handler sets
+; **	a flag and declares the exception handled. Then ^C is signaled after 
+; **	the RMS operation completes.
+; **
+; **	History:
+; **		17-jan-85 (fhc) -- written
+; **		20-mar-85 (fhc) -- Modified RMS_IS_BUGGY decision to handle
+; **				   microVMS 1.0 for the microVAXes, since
+; **				   microVMS 1.0 is really VMS 4.0.  See
+; **				   proof below.
+; **		18-apr-85 (fhc) -- modified rms_get and _put to handle the new
+; **				   timeout facility in ingres version 3.0/20.
+; **				   When ast's are disabled, rms_get and _put
+; **				   keep track of the elasped time the user took
+; **				   to enter or accept data;  if the time is too
+; **				   long, the user is punted.
+; **		4/91 (Mike S)	-- Use a condition handler instead of disabling
+; **				   and re-enabling ASTs.  This saves overhead in
+; **				   the normal case (no ^C).
+; **				   Remove version checking.  This is how VMS
+; **				   behaves, now and forever.
+; **				   Change to a .mar to allow re-entrancy.
+; **	11/05/92 (dkh) - Changed CHF$L_MCH_FRAME to CHF$PH_MCH_FRAME for
+; **			 alpha.  Also, Walt added the .call_entry directive.
+; **	05/01/95 (albany) - Integrated markg's change from 6.4 AXP/VMS CL:
+; **		10/04/94 (markg)
+; **		    Modified to push correct values onto the stack before calling
+; **		    LIB$MATCH_COND.  Also updated psect attributes so they don't
+; **		    conflict with other $CODE$ psects.
+; **	16-may-95 (albany)
+; **	    Really update psect attributes to be in line with other
+; **	    CL psects.
+; */
+	.PSECT	$CODE$	PIC,CON,REL,LCL,SHR,EXE,NORD,NOWRT,NOVEC,4
+
+;	i4 rms_get(struct RAB *rabaddr);
+;	.ENTRY  RMS_GET, ^M<>
+RMS_GET::
+	.call_entry max_args=6,home_args=true
+	MOVAB	G^SYS$GET, R1		; Save RMS routine address
+	BRB	RMS_COMMON		; Branch to common code
+
+;	i4 rms_put(struct RAB *rabaddr);
+	.ENTRY  RMS_PUT, ^M<>
+	MOVAB	G^SYS$PUT, R1		; Save RMS routine address
+					; Fall through to common code
+
+RMS_COMMON:
+	CLRL	-(SP)			; Make a space for '^C occurred' flag
+					; --- Begin critical section
+	MOVAB	HANDLER, (FP)		; Establish condition handler
+	CALLG	(AP), (R1)		; Do the RMS operation
+	CLRL	(FP)			; Remove handler
+					; --- End critical section
+	TSTL	(SP)			; Did a ^C occur?
+	BEQL	99$			; If not, just return
+
+	; A ^C occurred while the handler was masking it.
+	MOVL	R0, (SP)		; Save RMS status
+	PUSHL	#SS$_CONTROLC		; Signal the
+	CALLS	#1, G^LIB$SIGNAL	;  ^C
+
+	; We may never return here.  If we do, return normally.
+	POPL	R0			; Restore RMS status
+
+99$:	RET				; Return
+
+;	Condition handler
+;	If ^C is signaled, set a flag at the first longword in the establisher's
+;	stack frame ( -4(FP) ).
+HANDLER:
+	.call_entry
+;	.WORD	^M<>
+
+	MOVL	CHF$L_SIGARGLST(AP), R1	; Get sigargs address
+	PUSHAL	#SS$_CONTROLC		; LIB$MATCH_COND(
+	PUSHAL 	CHF$L_SIG_NAME(R1)	;     exception,
+	CALLS	#2, G^LIB$MATCH_COND	;     SS$_CONTROLC)
+	TSTL	R0			; Is it a match?
+	BNEQ	10$			; If so, process it
+	MOVL	#SS$_RESIGNAL, R0	; If not, resignal
+	BRB	99$			; 
+
+10$:	MOVL	CHF$L_MCHARGLST(AP), R1	; Get mechanism args
+	MOVL	CHF$PH_MCH_FRAME(R1), R1	; Get establisher's FP
+	INCL	-4(R1)			; Increment ^C count
+	MOVL	#SS$_CONTINUE, R0	; Declare ^C handled
+
+99$:	RET
+
+	.END

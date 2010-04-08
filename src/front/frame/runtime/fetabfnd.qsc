@@ -1,0 +1,96 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<uf.h>
+
+/**
+** Name:    fetabfnd.c -	Front-End Find String in Table Field Routine.
+**
+** Description:
+**	This file defines:
+**
+**	FEtabfnd()	find string in a table field.
+**
+** History:
+**	Revision 6.4  89/08  wong
+**	Modified to be cover for 'IIFRfind_row()'.
+**
+**	Revision 6.1
+**	06/08/87 (dkh) - Put back 5.0 semantics.
+**	08/14/87 (dkh) - ER changes.
+**	11/16/87 (dkh) - Fixed jup bug 1218.
+**	12/10/87 (dkh) - Fixed jup bug 1486.
+**	10/1/87 (daveb) -- remove erronerous declarations of CL
+**		routines, conflicting with correct decls. in CLentry.h
+**	25-feb-88 (kenl)
+**		Changed DB_MAXNAME to FE_MAXNAME for colnam.
+**
+**	Revision 6.0  22-oct-1986 (wong)
+**	Optimized.
+**
+**	Revision 4.0  30-sep-1985 (peter)
+**	Initial revision.
+*/
+
+/*{
+** Name:     FEtabfnd() -	Find String in a Table Field.
+**
+** Description:
+**	Calls 'IIFRfind_row()', which prompts for a string from the user, looks
+**	for it in the column on which the cursor is positioned in the table
+**	field 'tabnam', then positions cursor on the next row that has that
+**	word.  It scrolls the table to the row and column, one-quarter of the
+**	way down in the table, if found.
+**
+**	'IIFRfind_row()' performs an end around search, as in vi.  That is, if
+**	it does not find the string below, it then starts at the top
+**	and searches down.
+**
+**	If a user enters a single period, it means to use the last string
+**	entered a second time.
+**
+** Inputs:
+**	frmnam	{char *}  name of form.
+**	tabnam	{char *}  name of table field.
+**
+** Returns:
+**	{STATUS}	OK if found, and FAIL if not found.
+**
+** Side Effects:
+**	Positions cursor in table field.
+**
+** History:
+**	30-sep-1985 (peter)	written.
+**	10-oct-1985 (grant)	now prompts for string, looks in column on
+**				which cursor is positioned, and gives error
+**				message if not found.
+**	21-oct-1985 (peter)	add end around search for string.  also, allow
+**				a '.' to mean use last string.
+**	22-oct-1986 (jhw)	Optimized.
+**	06/08/87 (dkh) - Put back 5.0 semantics.
+**	11/21/87 (dkh) - Fixed jup bug 1218.
+**	08/89 (jhw) -- Modified to call 'IIFRfind_row()'.
+**	06/90 (jhw) -- Modified to pass FLD_VALUE and 'noscroll' to
+**		'IIFRfind_row()'.
+*/
+
+STATUS
+FEtabfnd ( frmnam, tabnam )
+char	*frmnam;
+char	*tabnam;
+{
+	FLD_VALUE	fld;
+
+	fld._form = frmnam;
+	fld._field = tabnam;
+	fld._column = ERx("");
+	return IIFRfind_row(&fld, (DB_DATA_VALUE*)NULL, FALSE) <= 0 ? FAIL : OK;
+}

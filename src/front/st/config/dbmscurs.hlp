@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The cursor_limit resource specifies the maximum number of cursors which
+  a session may have open at one time.  The default is 16.

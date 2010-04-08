@@ -1,0 +1,21 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=WEB User/Role release&submit=actUserRole.html` -->
+		<INPUT TYPE="HIDDEN" NAME="action" VALUE="delete">
+		<INPUT TYPE="HIDDEN" NAME="user_id" VALUE="<!-- #ICE VAR=`:user` -->">
+		<INPUT TYPE="HIDDEN" NAME="role_id" VALUE="<!-- #ICE VAR=`:role` -->">
+		Do you want to release the following user/role association :
+		<BLOCKQUOTE>
+		The user is <!-- #ICE FUNCTION=`user?action=retrieve&user_id=:user`
+					 HTML=`:user_name <INPUT TYPE="HIDDEN" NAME="name" VALUE=":user_name">` --><p>
+		The role is <!-- #ICE FUNCTION=`role?action=retrieve&role_id=:role`
+					 HTML=`:role_name`	-->
+		</BLOCKQUOTE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

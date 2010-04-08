@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This is the help submenu, which allows you to select the type of help
+which you would like to see.  Select one of the submenu items shown
+below for the type of information described.
+
+        COMMAND         SYNOPSIS
+        -------         --------
+
+        WhatToDo        Displays help about the current screen and menu.
+                        This describes the overall purpose of the screen,
+                        and contains a description of the menu items.
+
+        Keys            Displays a table of the mapping between the function
+                        and control keys, and their current definition.
+
+        Help            Print this message.
+
+        End             Return to the current screen.

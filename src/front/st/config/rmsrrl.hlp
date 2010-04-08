@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+II_RMS_RRL dictates the RMS gateway server to read a record from the RMS file 
+regardless if the record is locked by other sessions or applications.
+

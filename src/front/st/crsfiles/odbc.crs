@@ -1,0 +1,26 @@
+--
+--  Copyright (c) 1998 Ingres Corporation
+--
+--  This file contains the configuration rules for the ODBC Gateway.
+--
+--# History:
+--#	26-mar-98 (mcgem01)
+--#		Created. 
+--#     03-dec-1998 (mcgem01)
+--#             Change parameter naming scheme to match the gateway
+--#             interpretation.   Increase the sqlda_size and pst_max
+--#             to a default value of 128.   Add an empty_date.
+--#     07-dec-1998 (mcgem01)
+--#             Replace connect_max with connect_limit.
+
+ii.$.ingstart.$.odbc:		1, MAX = 1;
+
+-- maximum connections of all ODBC Gateways configured for start-up
+ii.$.gateway.odbc.connect_limit:           1,
+					REQUIRES ii.$.ingstart.%.odbc;
+
+-- protocol port status initialization
+ii.$.gateway.odbc.sqlda_size:       128, MIN = 50, MAX = 256;
+ii.$.gateway.odbc.pst_max:          128, MIN = 50, MAX = 256;
+ii.$.gateway.odbc.varchar_comp:     OFF;
+ii.$.gateway.odbc.empty_date:       "01/01/1900";

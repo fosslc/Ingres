@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlkadd.hlp, subtopic 'Adding' of subtopic 'Lookup tables' behind the 
+/#-- main VQ Editor help screen.
+/#-- 
+To include a Lookup table in a Visual Query:
+     1. Position the cursor on the name of the column that is to activate 
+	the Lookup table.  
+     2. Select AddTable from the menu.

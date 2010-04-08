@@ -1,0 +1,147 @@
+;   Ingres ODBC Driver DLL DEF file for Windows NT/95
+;
+;   Used only to assign ordinal numbers to ODBC API functions
+;   for use by the Driver Manager.  All other settings are
+;   specified on the link command line by Visual C++.
+;
+
+;PROTMODE
+
+EXPORTS
+;
+;   Core functions:
+;
+    SQLAllocConnect     @1
+    SQLAllocEnv         @2
+    SQLAllocStmt        @3
+    SQLBindCol          @4
+    SQLCancel           @5
+;   SQLColAttributes    @6
+    SQLColAttribute     @6
+    SQLConnect          @7
+    SQLDescribeCol      @8
+    SQLDisconnect       @9
+    SQLError            @10
+    SQLExecDirect       @11
+    SQLExecute          @12
+    SQLFetch            @13
+    SQLFreeConnect      @14
+    SQLFreeEnv          @15
+    SQLFreeStmt         @16
+    SQLGetCursorName    @17
+    SQLNumResultCols    @18
+    SQLPrepare          @19
+    SQLRowCount         @20
+    SQLSetCursorName    @21
+;   SQLSetParam         @22     deprecated, use SQLBindParameter
+    SQLTransact         @23
+;
+;   Level 1 Extensions:
+;
+    SQLColumns          @40
+    SQLDriverConnect    @41
+    SQLGetConnectOption @42
+    SQLGetData          @43
+    SQLGetFunctions     @44     
+    SQLGetInfo          @45
+    SQLGetStmtOption    @46
+    SQLGetTypeInfo      @47
+    SQLParamData        @48
+    SQLPutData          @49
+    SQLSetConnectOption @50
+    SQLSetStmtOption    @51
+    SQLSpecialColumns   @52
+    SQLStatistics       @53
+    SQLTables           @54
+;
+;   Level 2 Extensions:
+;
+    SQLBrowseConnect    @55
+    SQLColumnPrivileges @56
+    SQLDescribeParam    @58
+    SQLExtendedFetch    @59
+    SQLForeignKeys      @60
+    SQLMoreResults      @61
+    SQLNativeSql        @62
+    SQLNumParams        @63
+    SQLParamOptions     @64
+    SQLPrimaryKeys      @65
+    SQLProcedureColumns @66
+    SQLProcedures       @67
+    SQLSetPos           @68
+    SQLSetScrollOptions @69
+    SQLTablePrivileges  @70
+;
+;   Level 1 again (new with ODBC 2.0):
+;
+    SQLBindParameter    @72
+;
+;   Other stuff:
+;
+    ConProcDriver       @203
+    ConProcDSN          @204
+;
+;   MS DTC to our driver interface:
+;
+    GetXaSwitch         @210
+
+;
+;   ODBC 3.x functions:
+;
+    SQLAllocHandle       @301
+    SQLCloseCursor       @303
+    SQLCopyDesc          @304
+    SQLEndTran           @305
+    SQLFetchScroll       @321
+    SQLFreeHandle        @306
+    SQLGetConnectAttr    @307
+    SQLGetDescField      @308
+    SQLGetDescRec        @309
+    SQLGetDiagField      @310
+    SQLGetDiagRec        @311
+    SQLGetEnvAttr        @312
+    SQLGetStmtAttr       @314
+    SQLSetConnectAttr    @316
+    SQLSetDescField      @317
+    SQLSetDescRec        @318
+    SQLSetEnvAttr        @319
+    SQLSetStmtAttr       @320
+
+;
+;   Wide (Unicode) Character interfaces:
+;
+    SQLColAttributeW     @496
+;   SQLColAttributesW    @406
+    SQLConnectW          @407
+    SQLDescribeColW      @408
+    SQLErrorW            @490
+    SQLGetDiagRecW       @409
+    SQLGetDiagFieldW     @410
+    SQLExecDirectW       @411
+    SQLGetStmtAttrW      @414
+    SQLDriverConnectW    @441
+    SQLSetConnectAttrW   @416
+    SQLGetCursorNameW    @417
+    SQLPrepareW          @419
+    SQLSetStmtAttrW      @420
+    SQLSetCursorNameW    @421
+    SQLGetConnectOptionW @442
+    SQLGetInfoW          @445
+    SQLColumnsW          @440
+    SQLGetTypeInfoW      @447
+    SQLSetConnectOptionW @450
+    SQLSpecialColumnsW   @452
+    SQLStatisticsW       @453
+    SQLTablesW           @454
+    SQLForeignKeysW      @460
+    SQLNativeSqlW        @462
+    SQLPrimaryKeysW      @465
+    SQLProcedureColumnsW @466
+    SQLProceduresW       @467
+    SQLSetDescFieldW     @487
+    SQLGetDescFieldW     @488
+    SQLGetDescRecW       @489
+    SQLGetConnectAttrW   @497
+    SQLBrowseConnectW    @498
+    SQLTablePrivilegesW  @499
+    SQLColumnPrivilegesW @500

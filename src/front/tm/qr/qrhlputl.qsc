@@ -1,0 +1,169 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<adf.h>
+# include	<afe.h>
+# include	<ui.h>
+# include	"qrhelp.h"
+# include       <libq.h>
+
+/**
+** Name:	qrhlputl.qsc -	Utility routines used by the help commands
+**
+** Description:
+**	This file contains routines that perform utility functions for
+**	help command operation.  The routines are:
+**
+**	IIQRgtl_GmtToLocal	Convert date string from GMT to local format
+**	IIQRisl_IndexStorageLoc	Determine storage location of indices
+**
+** History:
+**	16-sep-88 (bruceb)	Written.
+**	12-apr-89 (teresal)	Fixed 'help index' bug for gateways.  Changed
+**				IIQRisl_IndexStorageLoc to initialize loc. 
+**	10-may-89 (kathryn) - Bug #5382
+**		Changed select to repeated select.
+**	18-sep-89 (teresal)  	Eliminated table scan to determine if iitables
+**				or iiindexes should be used.  Certain gateways
+**				(IBM) were having concurrency and performance
+**				problems with this method.  Gateways will now
+**				just look at iiindexes.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      08-Jan-2009 (maspa05) Bug 123127
+**          IILQasGetThrAdfcb was not defined so the return type defaulted to
+**          an i4 leading to tm crashing on 64-bit platforms.
+**          Moved declaration of IILQasGetThrAdfcb to libq.h
+**/
+
+FUNC_EXTERN	ADF_CB	*FEadfcb();
+
+
+static DATE		Dstruct;
+static DB_DATA_VALUE	Ddate =
+	AFE_DCMP_INIT_MACRO(DB_DTE_TYPE, sizeof(Dstruct), (PTR)&Dstruct);
+
+static i4	indx_loc = NOT_YET_DETERMINED;
+
+
+/*{
+** Name:	IIQRgtl_GmtToLocal - Convert date string from GMT to local fmt
+**
+** Description:
+**	This routine takes a date string in GMT format and converts it to a
+**	string in local format.  This requires two steps.  First the date
+**	string is converted into a date structure.  Then, the date structure
+**	is converted into a date string, using the user's default format.
+**
+** Inputs:
+**	gmt_dstr	A string containing a valid GMT date format.
+**
+** Outputs:
+**	local_dstr	A string containing a valid local format date.
+**			This must be passed in to this routine already pointing
+**			to sufficient space for a date string (25 + 1).
+**			This may be the same address as gmt_dstr.
+**
+**	Returns:
+**		return value of afe_cvinto().
+**
+** Side Effects:
+**	May fail (if given bad data, etc), and thus incorrectly modify
+**	contents of local_dstr.
+**
+** History:
+**	16-sep-88 (bruceb)	Written.
+**      07-Dec-2009 (maspa05) bug 122806
+**         set date_format now changes the dynamically allocated ADF_CB
+**         rather than the static default one. This means that we need to
+**         initialize loc_cb to IILQasGetThrAdfcb() instead of FEadfcb()
+**         otherwise dates in help output will use the default setting
+**         rather than the latest set date_format one. 
+*/
+
+STATUS
+IIQRgtl_GmtToLocal(gmt_dstr, local_dstr)
+char	*gmt_dstr;
+char	*local_dstr;
+{
+    STATUS		stat;
+    ADF_CB		*loc_cb;
+    DB_DATA_VALUE	Dstr;
+
+    loc_cb = IILQasGetThrAdfcb();
+
+    Dstr.db_datatype = DB_CHA_TYPE;
+    Dstr.db_data = (PTR)gmt_dstr;
+    Dstr.db_length = STlength(gmt_dstr);
+
+    stat = afe_cvinto(loc_cb, &Dstr, &Ddate);
+    if (stat == OK)
+    {
+	Dstr.db_data = (PTR)local_dstr;
+	stat = afe_cvinto(loc_cb, &Ddate, &Dstr);
+    }
+
+    return(stat);
+}
+
+
+/*{
+** Name:	IIQRisl_IndexStorageLoc	- Determine storage location of indices
+**
+** Description:
+**	Determine which catalog is used to store indices.  Against INGRES this
+**	will always be iitables.  For gateways only look in iiindexes.
+**
+**	It is assumed that every gateway has an entry in iiindexes if an index
+**	exists.
+**
+** Inputs:
+**
+** Outputs:
+**
+**	Returns:
+**		USE_IITABLES	use iitables
+**		USE_IIINDEXES	use iiindexes
+**
+** Side Effects:
+**
+** History:
+**	13-oct-88 (bruceb)	Written.
+**	12-apr-89 (teresal)	Fixed 'help index' bug by intializing loc.
+**	18-sep-89 (teresal)	Rewritten to eliminate table scan of iitables.
+*/
+i4
+IIQRisl_IndexStorageLoc()
+{
+    i4		loc;
+EXEC SQL BEGIN DECLARE SECTION;
+    char	dummy[9];
+EXEC SQL END DECLARE SECTION;
+
+    loc = NOT_YET_DETERMINED;	
+
+    if (indx_loc != NOT_YET_DETERMINED)
+    {
+	loc = indx_loc;
+    }
+    else if (IIUIdcn_ingres())		/* it's INGRES */
+    {
+	indx_loc = loc = USE_IITABLES;
+    }
+    else				/* assume it's a gateway */
+    {
+	indx_loc = loc = USE_IIINDEXES;	/* default to using iiindexes */
+    }
+
+    return(loc);
+}

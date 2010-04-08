@@ -1,0 +1,86 @@
+
+<TAG NAME="CF_IceIf">
+    <EDITORLAYOUT HEIGHT="330" LFHEIGHT="330">
+
+	<control type="Image" name="imgEditor" width="170" height="MAXIMUM" corner="NE" right=5 down=5 filepath="../IngresIce/Icons/ingresii.bmp"/>
+
+		<CONTAINER TYPE="Panel" NAME="pnlCommon" CAPTION="" WIDTH="MAXIMUM" HEIGHT=250 LFHEIGHT=142 MAXWIDTHPADDING=0 ANCHOR="imgEditor" CORNER="NE" RIGHT=10>
+
+		    <CONTROL NAME="lblIf" TYPE="Label" CAPTION="If Condition:" DOWN="20" RIGHT="10" WIDTH="120"/>
+
+					<CONTROL TYPE="Label" NAME="lblExp1" ANCHOR="lblIf" WIDTH=50 LFWIDTH=72 RIGHT=120 CAPTION="Exp1:"/>
+					<CONTROL TYPE="TextBox" NAME="txtExp1" WIDTH=90 LFWIDTH=144 ANCHOR="lblExp1" CORNER="NE"/>
+
+					<CONTROL TYPE="Label" NAME="lblLabelOp" ANCHOR="lblIf" WIDTH=50 LFWIDTH=72 RIGHT=120 DOWN=22 CAPTION="Operator:"/>
+					<CONTROL TYPE="DropDown" NAME="dropLabelOp" WIDTH=90 LFWIDTH=144 ANCHOR="lblLabelOp" CORNER="NE">
+						<ITEM VALUE="=="		CAPTION="=="/>
+						<ITEM VALUE="!="		CAPTION="!="/>
+						<ITEM VALUE="<"		CAPTION="<"/>
+						<ITEM VALUE=">"		CAPTION=">"/>																		
+					</CONTROL>					
+					
+					<CONTROL TYPE="Label" NAME="lblExp2" ANCHOR="lblIf" WIDTH=50 LFWIDTH=72 RIGHT=120 DOWN=45 CAPTION="Exp2:"/>
+					<CONTROL TYPE="TextBox" NAME="txtExp2" WIDTH=90 LFWIDTH=144 ANCHOR="lblExp2" CORNER="NE"/>
+			
+
+			
+
+			<CONTROL NAME="lblThen" TYPE="Label" CAPTION="Then Condition:" DOWN="90" CORNER="NE" RIGHT="10" WIDTH="120"/>
+            <control type="TextArea" name="txtThen" width="MAXIMUM" height=50 lfheight=59 maxwidthpadding=10 anchor="lblThen" corner="NE" wrap horizresize="BODY"/>
+
+			<CONTROL NAME="lblElse" TYPE="Label" CAPTION="Else Condition:" DOWN="160" CORNER="NE" RIGHT="10" WIDTH="120"/>
+            <control type="TextArea" name="txtElse" width="MAXIMUM" height=50 lfheight=59 maxwidthpadding=10 anchor="lblElse" corner="NE" wrap horizresize="BODY"/>
+			
+		</CONTAINER>
+					
+		<CONTAINER TYPE="Panel" NAME="pnlRepeat" WIDTH="MAXIMUM" HEIGHT="50" MAXWIDTHPADDING=0 MAXHEIGHTPADDING=5 ANCHOR="pnlCommon" CORNER="SW" DOWN=10>			
+			<CONTROL TYPE="Label" NAME="lblRepeat" WIDTH=60 LFWIDTH=96 CORNER="NW" RIGHT=10 Down=20 CAPTION="Repeat:"/>
+			<CONTROL NAME="txtRepeat" TYPE="CheckBox" ANCHOR="lblRepeat" CORNER="NE"  WIDTH="MAXIMUM"/>			
+		</CONTAINER>
+      </CONTAINER>
+
+
+   </EDITORLAYOUT>
+
+   <ATTRIBUTES>
+   </ATTRIBUTES>
+
+   <ATTRIBCATEGORIES>
+   </ATTRIBCATEGORIES>
+
+   <TAGLAYOUT>      
+   
+   <WIZIF OPTIONLowerCaseTags EQ 'true'>
+			<WIZSET TIMEOUT	= 'timeout'>
+			<WIZSET MIMEATTACH = 'mimeattach'>
+		<WIZELSE>
+			<WIZSET TIMEOUT	= 'TIMEOUT'>
+			<WIZSET MIMEATTACH = 'MIMEATTACH'>
+		</WIZIF>
+		
+		<WIZIF OPTIONLinearLayout EQ 'true'>
+			<WIZSET verticalSpacingGap =  ' ' >
+		<WIZELSE>
+			<WIZSET verticalSpacingGap =  Chr(13) & Chr(10) & '        ' >
+		</WIZIF>
+
+		<WIZIF txtRepeat EQ 'true'>
+			<WIZSET repeatDec = ' REPEAT ' >
+		<WIZELSE>
+			<WIZSET repeatDec = ' ' >
+		</WIZIF>
+
+  		<WIZSET Exclaim =  '!' >
+		
+<$${Exclaim}-- #ICE$${repeatDec}IF (`$${txtExp1}` $${dropLabelOp} `$${txtExp2}`)
+	THEN=`$${txtThen}`
+<WIZIF txtElse NEQ ''>	ELSE=`$$txtElse`
+</WIZIF>-->
+</TAGLAYOUT>
+
+
+   <TAGDESCRIPTION HELPFILE="../../TagDefs/IngresIce/Docs/cfIf.html"/>
+
+
+</TAG>
+

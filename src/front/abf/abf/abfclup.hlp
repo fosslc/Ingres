@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- abfclup.hlp, help for confirmation popup about cleanup operation
+/#--
+You have chosen the Cleanup operation, which will check the system catalogs 
+for database objects that have been destroyed. If any are found, the catalog 
+entries for these objects will be removed to free up space on your disk.  This
+operation can take a significant amount of time.  You are being asked to 
+confirm that the Cleanup should take place.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        Select                  If Yes is selected, the Cleanup will start.
+
+                                If No is selected, the Cleanup will not take
+				place.  You will be put back into the
+				Utilities submenu.
+
+        Cancel                  Like selecting No.
+
+        Help                    Access the Ingres Help facility.
+

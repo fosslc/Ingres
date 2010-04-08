@@ -1,0 +1,22 @@
+#
+# Copyright (c) 1992, 2004 Ingres Corporation
+#
+# The configuration rule specifications listed in this file are used
+# by the Ingres configuration utility to process configuration changes
+# requested by the user.  Note that the named files are assumed to exist
+# in the "files" (or II_CONFIG) directory.
+# 
+
+rulefile.01:	net.crs
+rulefile.02:	dbms.crs
+rulefile.03:	all.crs
+rulefile.04:	star.crs
+rulefile.05:	secure.crs
+rulefile.06:	icesvr.crs
+rulefile.07:	bridge.crs
+rulefile.08:	tz.crs
+rulefile.10:    rms.crs
+rulefile.11:    das.crs
+rulefile.12:    db2udb.crs
+rulefile.13:    mssql.crs
+rulefile.14:    oracle.crs

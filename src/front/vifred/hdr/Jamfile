@@ -1,0 +1,9 @@
+#
+# Jamfile file for front!vifred!hdr
+#
+
+SubDir ING_SRC front vifred hdr ;
+
+IISUBSYS front vifred hdr ;
+
+

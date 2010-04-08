@@ -1,0 +1,230 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic contents file for the INGRES release
+*/
+ 
+/*
+** History
+**	27-mar-2000 (hanch04)
+**		Created from release.ccpp for jdbc only
+**	26-apr-2000 (somsa01)
+**		Added support for other products.
+**	22-may-2000 (somsa01)
+**		The MainWin packages are only for other products.
+**	09-jan-2001 (somsa01)
+**		Added Kerberos.
+**	19-mar-2001 (somsa01)
+**		Added the precompilers, as supported on other UNIX products
+**		only.
+**	24-mar-2003 (wansh01)
+**		Added support for DAS
+**	11-Jun-2004 (somsa01)
+**		Cleaned up code for Open Source.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+RELEASE (PROD1NAME)
+
+# ifdef VMS
+/*
+** All files go in saveset "B" on VMS unless otherwise specified.
+*/
+VOLUME	B
+
+# include "packdefs.h"
+# endif /* VMS */
+
+/*
+** Group product definitions
+*/
+
+PACKAGE jdbcsrv
+ 
+   VISIBLEPKG 
+ 
+   INCLUDE das
+   INCLUDE jdbc
+   INCLUDE net
+   INCLUDE tm
+/*
+** Include INSTALL pkg for VMS since it is not automatically included.
+*/
+# ifdef VMS
+   INCLUDE install
+# endif /* VMS */
+ 
+/*
+** End Group product definitions
+*/
+
+/*
+** Various useful INVISIBLE PACKAGEs
+*/
+
+PACKAGE basic 
+
+   INVISIBLE
+
+   PART charsets
+      DEFINITION charsets.prt
+
+   PART collation
+      DEFINITION collation.prt
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY (PROD2NAME)!files
+#endif
+   PART frs
+      DEFINITION frs.prt
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files!english
+#else
+	DIRECTORY (PROD2NAME)!files!english
+#endif
+   PART messages
+      DEFINITION messages.prt
+
+   PART ingenv
+      DEFINITION ingenv.prt
+
+   PART name-server
+      DEFINITION namesrv.prt
+
+# ifdef R_SHADOW
+   PART shadow-pwd
+      DEFINITION shadow-pwd.prt
+# endif /* R_SHADOW */
+
+   PART utdef
+      DEFINITION utdef.prt
+
+   PART zoneinfo
+      DEFINITION zoneinfo.prt
+
+   PART fegeneric
+      DEFINITION fegeneric.prt
+
+   PART sharelib
+      DEFINITION sharelib.prt
+
+   PART release-notes
+      DEFINITION relnotes.prt
+
+PACKAGE setupsup 
+
+   INVISIBLE 
+
+   PART setupsup
+      DEFINITION setupsup.prt
+
+PACKAGE tm 
+
+   VISIBLE CI_PER_USER_LICENSING
+
+   INCLUDE setupsup
+
+   PART tm
+      DEFINITION tm.prt
+
+# ifdef R_NET
+/*
+** Ingres Networking
+*/
+
+PACKAGE net 
+
+   INCLUDE basic
+   INCLUDE setupsup
+   INCLUDE config
+
+   PART net
+      DEFINITION net.prt
+
+# ifdef R_STREAM
+   PART stream
+      DEFINITION stream.prt
+# endif /* R_STREAM */
+# ifdef R_MIT_KERBEROS
+   PART kerberos
+      DEFINITION kerberos.prt
+# endif /* R_MIT_KERBEROS */
+# endif /* R_NET */
+
+PACKAGE das
+
+   NEED net
+
+   PART das
+      DEFINITION das.prt
+
+PACKAGE jdbc
+
+   NEED net
+
+   PART jdbc
+      DEFINITION jdbcsrv.prt
+
+/*
+** Interactive configuration utility
+*/
+
+PACKAGE config 
+
+   INVISIBLE
+
+   PART config
+      DEFINITION config.prt
+
+/*
+** The installation utility package
+*/
+
+# ifdef VMS
+/*
+** Installation package needs to go in saveset "A" on VMS.
+*/
+VOLUME	A
+# endif /* VMS */
+
+PACKAGE install 
+
+   INVISIBLE
+
+# ifndef VMS
+   INCLUDE messages
+   INCLUDE frs 
+# endif /* VMS */
+
+   DIRECTORY (PROD2NAME)!install
+
+/*
+** Replace 'messages' part on VMS with 'kitinstal-msgs' (stripped version)...
+*/
+# ifdef VMS
+   PART kitinstal-msgs
+      DEFINITION kitinstal-msgs.prt
+# else /* VMS */
+   PART messages
+      DEFINITION messages.prt
+# endif /* VMS */
+
+   PART install
+      DEFINITION install.prt
+
+# ifndef VMS
+   PART frs
+      DEFINITION frs.prt
+# endif /* VMS */
+
+/*
+** Warning: the installation package must be the last thing in this file. 
+*/

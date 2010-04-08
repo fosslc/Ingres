@@ -1,0 +1,17 @@
+To build accessdb/catalogdb on UNIX:
+
+	% ming ingcntrl
+
+To run accessdb:
+
+	% accessdb
+
+  or
+
+	% ingcntrl -m
+
+To run catalogdb:
+
+	% ingcntrl
+
+build with CL_BUILD_WITH_PROTOS defined for good checking.

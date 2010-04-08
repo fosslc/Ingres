@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+ When using string date literals without date typecasts, the date
+ must be in a pre-determined format. II_DATE_FORMAT has NO effect on
+ the interpretation of strings without type casts, the host DBMS is 
+ responsible for date interpretation.
+
+ This parameter allows the DBMS (Oracle) date format to be specified. 
+ The setting for this variable is the Oracle setting for NLS_DATE_FORMAT 
+ for the session. ONLY certain settings are valid.
+
+ Valid settings:
+
+     'YYYY-MM-DD HH24:MI:SS' (ANSI format)
+     'DD-MON-YYYY HH24:MI:SS' (only valid if English language is used)
+     'DD.MM.YYYY HH24:MI:SS'
+
+ The settings are similar to the output (and input) format for 
+ II_DATE_FORMAT settings of:
+
+     FINLAND
+     US
+     GERMAN
+
+ Default setting is the ANSI setting of 'YYYY-MM-DD HH24:MI:SS' which
+ returns dates numerically and specifies the time component in 24 hour
+ format.
+
+ This setting also effects the format that dates are returned when typecast
+ into strings. For example:
+
+      select char(date('now'));
+
+

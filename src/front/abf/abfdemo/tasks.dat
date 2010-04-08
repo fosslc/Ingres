@@ -1,0 +1,200 @@
+   13Alcott, Scott    9Advertise    9Implement            5
+
+   13Alcott, Scott    9Advertise    4Test            8
+
+   17Applegate, Donald    9Advertise    4Test            8
+
+   17Applegate, Donald    7Graphic    6Design           16
+
+   17Applegate, Donald    8TextProc    6Design           10
+
+   17Applegate, Donald    8TextProc    9Implement           10
+
+   12Bee, Charles    9Portfolio    6Design           10
+
+   12Bee, Charles    9Portfolio    9Implement           24
+
+   12Belter, Kris    9Advertise    9Implement           16
+
+   12Belter, Kris    8TextProc    5Debug            8
+
+   12Belter, Kris    8TextProc    9Implement           12
+
+   13Beringer, Tom    9Advertise    5Debug           18
+
+   13Beringer, Tom    5Asset    5Debug           16
+
+   13Beringer, Tom    5Asset    9Implement           32
+
+   15Beveridge, Fern    5Asset    6Design           24
+
+   15Beveridge, Fern    5Asset    6Manage           10
+
+   15Beveridge, Fern    5Asset    4Test            8
+
+   15Bluff, Clarence    9EmployBen    9Implement           38
+
+   15Bluff, Clarence    9EmployBen    4Test           32
+
+   15Bluff, Clarence    9Portfolio    9Implement           12
+
+   14Bridges, Debra    7Graphic    6Design           42
+
+   14Bridges, Debra    7Graphic    9Implement           18
+
+   13Chung, Arthur    9Advertise    5Debug           24
+
+   13Chung, Arthur    8TextProc    5Debug           48
+
+   13Chung, Arthur    8TextProc    9Implement           48
+
+   14Downing, Susan    7Expense    9Implement           16
+
+   14Downing, Susan    9Portfolio    5Debug            8
+
+   14Downing, Susan    9Portfolio    9Implement           12
+
+   14Downing, Susan    8SalesFor    9Implement            8
+
+   17Fielding, Wallace    9Portfolio    6Design           16
+
+   17Fielding, Wallace    9Portfolio    6Manage            8
+
+   17Fielding, Wallace    9Portfolio    4Test            8
+
+   14Fine, Laurence    8SalesFor    6Design           22
+
+   14Fine, Laurence    8SalesFor    9Implement           36
+
+   14Hilton, Connie    7Graphic    9Implement           48
+
+   14Hilton, Connie    7Graphic    4Test           36
+
+   14Hilton, Connie    8TextProc    5Debug           10
+
+   14Hilton, Connie    8TextProc    9Implement           12
+
+   13Jones, Ashley    9EmployBen    6Design           44
+
+   13Jones, Ashley    9EmployBen    9Implement           32
+
+   12Jones, Betty    7Expense    6Design           12
+
+   12Jones, Betty    7Expense    9Implement            8
+
+   12Jones, Betty    7Expense    6Manage            5
+
+   12Jones, Betty    8SalesFor    6Design           16
+
+   12Jones, Betty    8SalesFor    9Implement            6
+
+   12Jones, Betty    8SalesFor    6Manage            8
+
+   13King, Richard    5Asset    6Design           15
+
+   13King, Richard    5Asset    9Implement           32
+
+   12Lorenzo, Sue    9Advertise    6Design           12
+
+   12Lorenzo, Sue    7Graphic    6Design           32
+
+   12Lorenzo, Sue    7Graphic    9Implement           52
+
+   12Lorenzo, Sue    8TextProc    6Design           18
+
+   12Lorenzo, Sue    8TextProc    4Test            8
+
+   12Moore, Holly    7Expense    5Debug           18
+
+   12Moore, Holly    7Expense    9Implement           12
+
+   12Moore, Holly    8SalesFor    5Debug           24
+
+   12Noonan, Brad    9EmployBen    5Debug           18
+
+   12Noonan, Brad    9EmployBen    9Implement           32
+
+   12Noonan, Brad    8SalesFor    9Implement           20
+
+   16O'Foote, Suzanne    7Graphic    5Debug           24
+
+   16O'Foote, Suzanne    7Graphic    4Test           26
+
+   16O'Foote, Suzanne    8TextProc    4Test           10
+
+   13Ortega, Julio    8TextProc    6Design           24
+
+   13Ortega, Julio    8TextProc    9Implement           48
+
+   14Parsons, Carol    7Graphic    9Implement           12
+
+   14Parsons, Carol    7Graphic    6Manage           24
+
+   14Parsons, Carol    7Graphic    4Test           24
+
+   14Peterson, Jean    9Advertise    6Design           16
+
+   14Peterson, Jean    9Advertise    9Implement           12
+
+   14Randall, David    9Advertise    9Implement           14
+
+   14Randall, David    9Advertise    4Test           12
+
+   14Rolls, Richard    5Asset    5Debug           12
+
+   14Rolls, Richard    5Asset    9Implement           24
+
+   14Smith, Chester    9Advertise    9Implement           12
+
+   14Smith, Chester    5Asset    4Test           24
+
+   14Smith, Chester    9Portfolio    5Debug           12
+
+   14Smith, Chester    9Portfolio    9Implement           36
+
+   12Smith, Peggy    9EmployBen    6Design            8
+
+   12Smith, Peggy    7Expense    6Design           24
+
+   12Smith, Peggy    7Expense    9Implement            5
+
+   12Smith, Peggy    9Portfolio    6Design           10
+
+   12Smith, Peggy    8SalesFor    6Design           12
+
+   12Stein, Frank    7Expense    5Debug           12
+
+   12Stein, Frank    7Expense    9Implement           12
+
+   16Thompson, Howard    7Expense    6Design            8
+
+   16Thompson, Howard    7Expense    4Test           24
+
+   15Turner, Russell    9EmployBen    6Design           32
+
+   15Turner, Russell    9EmployBen    6Manage           22
+
+   15Turner, Russell    9EmployBen    4Test            8
+
+   16Walters, Lindsay    7Graphic    6Design           12
+
+   16Walters, Lindsay    9Portfolio    6Design            8
+
+   16Walters, Lindsay    8SalesFor    6Design            8
+
+   16Walters, Lindsay    8SalesFor    4Test           36
+
+   16Walters, Lindsay    8TextProc    6Design           24
+
+   11Wolfe, Neal    9Advertise    6Design           12
+
+   11Wolfe, Neal    9Advertise    9Implement           12
+
+   11Wolfe, Neal    9Advertise    6Manage            6
+
+   11Wolfe, Neal    8TextProc    9Implement           24
+
+   11Wolfe, Neal    8TextProc    6Manage            8
+
+   11Wolfe, Neal    8TextProc    4Test           16
+

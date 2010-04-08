@@ -1,0 +1,15 @@
+;
+; History:
+;	18-may-2001 (somsa01)
+;	    Created.
+;	03-Aug-2001 (penga03)
+;	    Added ingres_rollback_rep.
+;	21-Aug-2001 (penga03)
+;	    Added ingres_unset_rep_reg_entries.
+;
+EXPORTS
+    ingres_remove_rep_files
+    ingres_set_rep_reg_entries
+    ingres_rollback_rep
+    ingres_unset_rep_reg_entries
+

@@ -1,0 +1,248 @@
+/*
+** lists.qh	- header file for list manager routines
+**
+** (c) 1989 Relational Technology
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+**
+**
+** History
+**	2/89	tmt	written
+**	8/11/89	tmt	added constants for log info list
+**	8/16/89 tmt	added logging structs
+**	5/3/90	tomt	added new lk_summ struct and made changes
+**			to integrate changes made to iimonitor info.
+**			Made portability fixes.
+**	28 Mar 1991 jpk added cs_waitfor, what event is waiting for
+**	29 Mar 1991 jpk added db_exclusive, whether db is locked exclusively
+**      13 Dec 1992 jpk support DB_MAXNAME 24 -> 32 project
+**	10 Feb 1993 jpk add new manifest constant for LGshow lookup
+**			of logfile space reserved for use by recovery system;
+**			increase size of terminal variable. 
+**	15-nov-93 (robf)
+**         Add sess_desc for session description
+**      08-Dec-94 (liibi01)
+**         Cross integration from 6.4, bugs fixed 46411, 46455, 49084.
+**         changed SERVER_INFO to use defined lengths.
+**      21-jan-1999 (hanch04)
+**          replace nat and longnat with i4
+**	08-Dec-1999 (jenjo02)
+**	    Added thread_id to SESSION_INFO.
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      24-Oct-2001 (horda03)
+**         Changes to the layout of "SHOW SERVER" and "FORMAT USER" in IIMONITOR
+**         results in bad information being displayed by IPM for Idle Quantum
+**         count and Process Info for Batch processes (processes where the
+**         terminal type is unknown).
+**         SHOW SERVER now returns the "Active High Water" value, also for user
+**         sessions the Client PID is returned. Bugs 105200 and 104438.
+**	18-mar-2003 (devjo01 for hanal04) b109580
+**	   Increase size of 'querytext' field to accomodate EOS char.
+**	26-Feb-2009 (thaju02)
+**	   Add lastquery for last query text. (B121890)
+**      23-Sep-2009 (hanal04) Bug 115316
+**         Added has_clients to SERVER_INFO. Set true if this is a server
+**         type that handles user sessions.
+*/
+
+/*
+** INGDBA versions of RTI header files.  Contain structs which need
+** to be known to the frs.  Only those structs used with LGshow and LKshow
+** are contained in the below files.  The INGDBA versions of these structs
+** should only be used when getting the info from l_retrieve and placing onto
+** the form(s)
+*/
+/*
+**  commented out to avoid double includes - these are now pulled in by each
+**  source file  tmt 30-jan-90
+** include <locks.qh>
+** include <logging.qh>
+*/
+
+#include "dba.h"
+
+/*
+** Forward and external references
+*/
+VOID	l_add();
+VOID	l_free();
+PTR	l_retrieve();
+VOID	l_ressort();
+i4	l_num_elements();
+
+/*
+** define list management constants.  These constants indicate which list
+** the caller wants to work with.
+*/
+#define SERVERINFO 0	/* listcb[0] is for the server list */
+#define DBINFO 1	/* listcb[1] is for the dblist */
+#define LOCKINFO 2	/* same here except listcb[2] */
+#define RESINFO 3	/* same except listcb[3] */
+#define LOGDBINFO 4	/* ditto */
+#define LOGXACTINFO 5	/* ditto */
+#define LOGPROCINFO 6	/* ditto */
+
+#define MAX_LISTS 7	/* number of listcb elements */
+
+/*
+** define the constants for calls to get_lklgstats.  The caller
+** specifies one of the following to indicate which information
+** they want
+*/
+#define GET_LOCKSTAT 0
+#define GET_LOCKLIST 1
+#define GET_LOCKRES 2
+#define GET_LOGSTAT 3
+#define	GET_LOGPROCESS 4
+#define GET_LOGDBLIST 5
+#define GET_LOGXACTLIST 6
+#define GET_LOGHEADER 7
+#define GET_LOGFJNLCP 8
+#define GET_LOGLJNLCP 9
+#define GET_LOGSTS 10
+#define GET_LOGBCNT 11
+#define GET_LOCKSUMM 12
+#define GET_LG_A_RES_SPACE 13
+
+/*
+** Maximum length of session description returned via iimonitor
+*/
+# define MAX_DESC_LEN    256
+
+typedef struct _COMMON_LIST {		/* linked list part of all structs */
+    PTR next;		/* pointer to next element */
+    PTR previous;	/* pointer to previous element */
+} COMMON_LIST;
+
+typedef struct _LISTCB {	/* list control block - access to lists is via this struct */
+    PTR		head;		/* head of current linked list */
+    PTR		tail;		/* tail of current linked list */
+    PTR		freehead;	/* head of free list for current linked list */
+    PTR		freetail;	/* tail of free list for current linked list */
+    PTR		subfreehead;	/* head of free list for sublists (if any) */
+    PTR		subfreetail;	/* head of free list for sublists (if any) */
+    PTR		current;	/* current element of linked list - used for l_retrieve() */
+    bool	retstat;	/* FALSE if l_retrieve() has not been called for this list */
+    i4		element_count;	/* the number of elements in this list */
+    char	*list_name;	/* name of current element */
+} LISTCB;
+
+typedef struct _LOG_STAT {	/* the log summary info */
+    LG_STAT *lgstat;		/* the log statistics structure */
+} LOG_STAT;
+
+typedef struct _LOCK_STAT {	/* lock summary information */
+    LK_STAT *lkstat;		/* the lock statistics structure */
+} LOCK_STAT;
+
+typedef struct _LOCK_LIST {	/* lock list header */
+    COMMON_LIST common;		/* linked list part */
+    LK_LKB_INFO *current;	/* pointer to current lock - used for l_retrieve() */
+    u_i4 cnt;			/* the number of locks in this list */
+    u_i4 locks_left;		/* the remaining # to retrieve used by l_retrieve() */
+    LK_LLB_INFO *llbinfo;	/* lock list header info */
+} LOCK_LIST;
+
+typedef struct _LOCK_RES {	/* resource list */
+    COMMON_LIST common;		/* linked list part */
+    LK_LKB_INFO *current;	/* ptr to current lock, for l_retrieve() */
+    u_i4 cnt;			/* number of locks in this list */
+    u_i4 locks_left;		/* remaining # to retrieve, for l_retrieve() */
+    LK_RSB_INFO *rsbinfo;	/* locks by resource header info */
+} LOCK_RES;
+
+typedef struct _LOGPROC_LIST
+{
+    COMMON_LIST common;		/* linked list part */
+    LG_PROCESS *lgprocinfo;	/* logging process data */
+} LOGPROC_LIST;
+
+typedef struct _LOGDB_LIST 	/* log info list header */
+{
+    COMMON_LIST common;		/* linked list part */
+    LG_DATABASE *lgdbinfo;	/* log list header info */
+} LOGDB_LIST;
+
+typedef struct _LOGXACT_LIST 	/* log info list header */
+{
+    COMMON_LIST common;		/* linked list part */
+    LG_TRANSACTION *lgxactinfo;	/* log list header info */
+} LOGXACT_LIST;
+
+typedef struct _DB_INFO 
+{
+    char dbname[FE_MAXNAME + 1];
+    u_i4 db_id;
+} DB_INFO;
+
+typedef struct _DB_LIST 
+{
+    COMMON_LIST common;
+    DB_INFO *dbinfo;
+} DB_LIST;
+typedef struct _SERVER_INFO 
+{
+    char server[GCN_TYP_MAX_LEN + 1];
+    char service[GCN_VAL_MAX_LEN + 1]; /* may be a user defined class name */
+    char database[GCN_OBJ_MAX_LEN + 1]; /* may be several databases listed */
+    u_i4 ssn_cur;
+    u_i4 ssn_max;
+    u_i4 act_cur;
+    u_i4 act_max;
+    u_i4 act_hw;
+    char ready_mask[HEXID_SIZE + 1];
+    char state[HEXID_SIZE + 1];
+    u_i4 q_cur;
+    u_i4 q_max;
+    bool has_clients; /* Is a STAR or DBMS server */
+} SERVER_INFO;
+
+typedef struct _SERVER_LIST
+{
+    COMMON_LIST common;
+    LISTCB ssnlst;
+    SERVER_INFO *srvinfo;
+} SERVER_LIST;
+
+typedef struct _SESSION_INFO 
+{
+    char session_id[HEXID_SIZE + 1];
+    char thread_id[HEXID_SIZE + 1];
+    char session_name[FE_MAXNAME + 1];
+    char cs_state[MMAXSTR];
+    char cs_mask[MMAXSTR];
+    char waitfor[HEXID_SIZE + 1];		/* who we're waiting for */
+    char cndwait[HEXID_SIZE + 1];		/* what we're waiting for */
+    char mutex_sx[2];				/* (s)hared or e(x)clusive */
+    char mutex_sess[HEXID_SIZE + 1];		/* other session mutexing */
+    char terminal[20];				/* at last 16 from scf */
+    PID  client_pid;                            /* for User sessions */
+    char roleid[FE_MAXNAME + 1];
+    char startup_roleid[FE_MAXNAME + 1];
+    char groupid[FE_MAXNAME + 1];
+    char startup_groupid[FE_MAXNAME + 1];
+    char database[FE_MAXNAME + 1];
+    bool db_exclusive;				/* db exclusively locked */
+    char dba[FE_MAXNAME + 1];
+    char apparent_user[FE_MAXNAME + 1];
+    char real_user[FE_MAXNAME + 1];
+    char startup_user[FE_MAXNAME + 1];
+    char cur_fac[HEXID_SIZE + 1];
+    char cur_facname[15];			/* currently [3] is enough */
+    char appcode[HEXID_SIZE + 1];
+    char activity[MMAXSTR];
+    u_i4 act_records;
+    char  act_det[150];
+    char act_logaddr[25];
+    char querytext[ER_MAX_LEN+1];
+    char lastquery[ER_MAX_LEN+1];
+    char sess_desc[MAX_DESC_LEN+1];
+} SESSION_INFO;
+
+typedef struct _SESSION_LIST
+{
+    COMMON_LIST common;
+    SESSION_INFO *sessinfo;
+} SESSION_LIST;

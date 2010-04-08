@@ -1,0 +1,134 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/*****************************************************************************/
+/*  Mapping file for BULL BDS1 terminal in Wyse50 mode -- F1-F10, PF1-PF4    */
+/*      Last update:  13 May 1991                                            */
+/*  Function key layout is as follows:                                       */
+/*	pf1     (PF1)                   = Menu                                   */
+/*	pf2     (PF2)                   = frskey1 (Help)                         */
+/*	pf3     (PF3)                   = frskey3 (End)                          */
+/*	pf4     (PF4)                   = frskey2 (Quit)                         */
+/*  pf5-8   (F1-F4)                 = menuitems 1-4                          */
+/*	pf9     (F5)                    = frskey4 (Go)                           */
+/*	pf10    (F6)                    = frskey5 (Top)                          */
+/*	pf11    (F7)                    = frskey6 (Bottom)                       */
+/*	pf12    (F8)                    = frskey7 (Find)                         */
+/*	pf13    (F9)                    = frskey8 (Save)                         */
+/*	pf14    (F10)                   = frskey9 (Forget)                       */
+/*  pf15-18 (Sh+PF1-Sh+PF4)         = menuitems 5-8                          */
+/*  pf19-28 (Sh+F1-Sh+F10)          = menuitems 9-18                         */
+/*  pf29-32 (Ctl+PF1-Ctl+PF4)       = menuitems 19-22                        */
+/*  pf33-36 (Ctl+Sh+PF1-Ctl+Sh+PF4) = menuitems 23-25,??                     */
+/*****************************************************************************/
+
+/* Menu Key */
+	menu = pf1 (PF1)
+
+/* Help facility */
+	frskey1 = pf2 (PF2)
+
+/* Quit from program */
+	frskey2	= pf4 (PF4)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (PF3)
+
+/* Go or execute function */
+	frskey4 = pf9 (F5)
+
+/* Put cursor on top of form or table field */
+	frskey5 = pf10 (F6)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= pf11 (F7)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= pf12 (F8)
+
+/* Save object in database */
+	frskey8 = pf13 (F9)
+
+/* Forget and Undo */
+	frskey9 = pf14 (F10)
+
+/* Scroll page or form left */
+	scrollleft = controlL (^L)
+
+/* Scroll page or form right */
+	scrollright = controlU (^U)
+
+/* Move up one word within field */
+	nextword = controlB (^B)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Next screen or set of rows in table field */
+	scrollup = controlT (^T)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = controlY (^Y)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select menu items */
+	menuitem1 = pf5 (F1)
+	menuitem2 = pf6 (F2)
+	menuitem3 = pf7 (F3)
+	menuitem4 = pf8 (F4)
+	menuitem5 = pf15 (Sh+PF1)
+	menuitem6 = pf16 (Sh+PF2)
+	menuitem7 = pf17 (Sh+PF3)
+	menuitem8 = pf18 (Sh+PF4)
+	menuitem9 = pf19 (Sh+F1)
+	menuitem10 = pf20 (Sh+F2)
+	menuitem11 = pf21 (Sh+F3)
+	menuitem12 = pf22 (Sh+F4)
+	menuitem13 = pf23 (Sh+F5)
+	menuitem14 = pf24 (Sh+F6)
+	menuitem15 = pf25 (Sh+F7)
+	menuitem16 = pf26 (Sh+F8)
+	menuitem17 = pf27 (Sh+F9)
+	menuitem18 = pf28 (Sh+F10)
+	menuitem19 = pf29 (Ctl+PF1)
+	menuitem20 = pf30 (Ctl+PF2)
+	menuitem21 = pf31 (Ctl+PF3)
+	menuitem22 = pf32 (Ctl+PF4)
+	menuitem23 = pf33 (Ctl+Sh+PF1)
+	menuitem24 = pf34 (Ctl+Sh+PF2)
+	menuitem25 = pf35 (Ctl+Sh+PF3)
+	pf36       = off
+/* Only 25 menuitems allowed -- pf36 is Ctl+Sh+PF4 */
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlH (Backspace)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)

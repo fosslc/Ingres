@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!ice!cf_win!td
+#
+
+SubDir ING_SRC front ice cf_win td ;
+
+IISUBSYS front ice cf_win td ;
+
+IIINCLUDE front ice cf_win td CFML_win ;
+IIINCLUDE front ice cf_win td IngresIce ;

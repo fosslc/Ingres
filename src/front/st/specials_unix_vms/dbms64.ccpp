@@ -1,0 +1,215 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for dbms64
+*/
+
+/*
+** History
+**	27-Aug-2002 (hanch04)
+**	    Created from dbms.ccpp
+**	05-Sep-2002 (somsa01)
+**	    Added iimklog.
+**	14-mar-2003 (hanch04)
+**	    removed iislave for Solaris, we don't run internal threads.
+**	17-Feb-2004 (gupsh01, sheco02)
+**	    Added unicode mapping files and directories.
+**	11-Jun-2004 (somsa01)
+**	    Cleaned up code for Open Source.
+**       8-Oct-2007 (hanal04) Bug 119262
+**          Added archive iimerge.a alternative to shared library server.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**       02-jun-2008 (horda03)
+**          Typo in DIRECTORY specification
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Hybrid add-on symbol changed, fix here.
+*/
+
+PART   dbms64
+   capability CI_BACKEND
+
+/*
+** ingres!utility
+*/
+   DIRECTORY ingres!utility
+   BUILD_DIR (ING_BUILD)!utility
+      SCRIPT SETUP iisudbms64
+
+/*
+** ingres!utility!lp64
+*/
+   DIRECTORY ingres!utility!lp64
+   BUILD_DIR (ING_BUILD)!utility!lp64
+      EXECUTABLE iimklog
+
+/*
+** ingres!bin
+*/
+
+   DIRECTORY ingres!bin!lp64
+   BUILD_DIR (ING_BUILD)!bin!lp64
+   {
+   PERMISSION s:rwed,o:rwed,g:re,w:re,setuid
+      EXECUTABLE iimerge
+      LINK cacheutil
+      LINK dmfacp
+      LINK dmfjsp
+      LINK dmfrcp
+      LINK iidbms
+      LINK iishowres
+      LINK iistar
+      LINK lartool
+      LINK lockstat
+      LINK logdump
+      LINK logstat
+      LINK rcpconfig
+      LINK rcpstat
+      LINK repstat
+   }
+# if defined(conf_BUILD_ARCH_32_64) && !defined(sparc_sol)
+      EXECUTABLE iislave
+# endif
+
+/*
+** ingres!lib
+*/
+
+    DIRECTORY ingres!LIB_TGT!lp64
+    BUILD_DIR (ING_BUILD)!LIB_BLD!lp64
+	FILE iimerge.o
+
+/* If using archive server lib, include it */
+
+# ifdef conf_SVR_AR
+
+   BUILD_DIR (ING_BUILD)!lib!lp64
+   DIRECTORY (PROD2NAME)!lib!lp64
+     {
+      FILE iimerge.a
+      }
+
+# endif /* conf_SVR_AR */
+
+/*
+** ingres!files!ucharmaps
+*/
+
+   DIRECTORY (PROD2NAME)!files!ucharmaps!lp64
+   BUILD_DIR (ING_BUILD)!files!ucharmaps!lp64
+	FILE aliasmaptbl
+	FILE ca-big5-cht-2004
+	FILE ca-big5-cht-2004.xml
+	FILE ca-big5-hkscs-cht-2004
+	FILE ca-big5-hkscs-cht-2004.xml
+	FILE ca-cp852-slav852-latin2-2004
+	FILE ca-cp852-slav852-latin2-2004.xml
+	FILE ca-cp856-hebrew_old-2004
+	FILE ca-cp856-hebrew_old-2004.xml
+	FILE ca-cp874-thai_euro-th-2004
+	FILE ca-cp874-thai_euro-th-2004.xml
+	FILE ca-cp943c-shiftjis-jp-2004
+	FILE ca-cp943c-shiftjis-jp-2004.xml
+	FILE ca-cp949-cn-2004
+	FILE ca-cp949-cn-2004.xml
+	FILE ca-cp950-big5_euro-cht-2004
+	FILE ca-cp950-big5_euro-cht-2004.xml
+	FILE ca-ebcdic-ibm37-2004
+	FILE ca-ebcdic-ibm37-2004.xml
+	FILE ca-ebcdic-xml-us-2004
+	FILE ca-ebcdic-xml-us-2004.xml
+	FILE ca-elot437-cp851-greek-2004
+	FILE ca-elot437-cp851-greek-2004.xml
+	FILE ca-euccn-gb2312-cn-2004
+	FILE ca-euccn-gb2312-cn-2004.xml
+	FILE ca-eucjp-kanjieuc-jp-2004
+	FILE ca-eucjp-kanjieuc-jp-2004.xml
+	FILE ca-euckr-kr-2004
+	FILE ca-euckr-kr-2004.xml
+	FILE ca-euctw-chteuc-2004
+	FILE ca-euctw-chteuc-2004.xml
+	FILE ca-gb2312-80-cn-2004
+	FILE ca-gb2312-80-cn-2004.xml
+	FILE ca-gbk-csgbk-cn-2004
+	FILE ca-gbk-csgbk-cn-2004.xml
+	FILE ca-hproman8-latin1-2004
+	FILE ca-hproman8-latin1-2004.xml
+	FILE ca-ibm1251-cyrillic-2004
+	FILE ca-ibm1251-cyrillic-2004.xml
+	FILE ca-ibm1255-hebrew-2004
+	FILE ca-ibm1255-hebrew-2004.xml
+	FILE ca-ibm367-ascii-2004
+	FILE ca-ibm367-ascii-2004.xml
+	FILE ca-ibm855-alt-cyrillic-2004
+	FILE ca-ibm855-alt-cyrillic-2004.xml
+	FILE ca-ibm858-latin1_euro-2004
+	FILE ca-ibm858-latin1_euro-2004.xml
+	FILE ca-ibm862-pchebrew-2004
+	FILE ca-ibm862-pchebrew-2004.xml
+	FILE ca-ibm864-arabic-2004
+	FILE ca-ibm864-arabic-2004.xml
+	FILE ca-ibm866-cyrillic-2004
+	FILE ca-ibm866-cyrillic-2004.xml
+	FILE ca-ibm867-hebrew-2004
+	FILE ca-ibm867-hebrew-2004.xml
+	FILE ca-ibm869-greek-2004
+	FILE ca-ibm869-greek-2004.xml
+	FILE ca-ibmpc437-pcus-2004
+	FILE ca-ibmpc437-pcus-2004.xml
+	FILE ca-ibmpc850-latin1-2004
+	FILE ca-ibmpc850-latin1-2004.xml
+	FILE ca-iso8859-1-latin1-2004
+	FILE ca-iso8859-1-latin1-2004.xml
+	FILE ca-iso8859-15-latin9-2004
+	FILE ca-iso8859-15-latin9-2004.xml
+	FILE ca-iso8859-2-latin2-2004
+	FILE ca-iso8859-2-latin2-2004.xml
+	FILE ca-iso8859-5-cyrillic-2004
+	FILE ca-iso8859-5-cyrillic-2004.xml
+	FILE ca-iso8859-6-arabic-2004
+	FILE ca-iso8859-6-arabic-2004.xml
+	FILE ca-iso8859-7-greek-2004
+	FILE ca-iso8859-7-greek-2004.xml
+	FILE ca-iso8859-8-hebrew-2004
+	FILE ca-iso8859-8-hebrew-2004.xml
+	FILE ca-iso8859-9-turkish-2004
+	FILE ca-iso8859-9-turkish-2004.xml
+	FILE ca-koi8-cyrillic-2004
+	FILE ca-koi8-cyrillic-2004.xml
+	FILE ca-ksc5601-korean-kr-2004
+	FILE ca-ksc5601-korean-kr-2004.xml
+	FILE ca-pc857-turkish-2004
+	FILE ca-pc857-turkish-2004.xml
+	FILE ca-tis620-wthai-th-2004
+	FILE ca-tis620-wthai-th-2004.xml
+	FILE ca-us-ascii-2004
+	FILE ca-us-ascii-2004.xml
+	FILE ca-win1250-latin2-2004
+	FILE ca-win1250-latin2-2004.xml
+	FILE ca-win1251-cyrillic-2004
+	FILE ca-win1251-cyrillic-2004.xml
+	FILE ca-win1252-latin1-2004
+	FILE ca-win1252-latin1-2004.xml
+	FILE ca-win1253-greek_euro-2004
+	FILE ca-win1253-greek_euro-2004.xml
+	FILE ca-win1254-turkish-2004
+	FILE ca-win1254-turkish-2004.xml
+	FILE ca-win1255-whebrew-2004
+	FILE ca-win1255-whebrew-2004.xml
+	FILE ca-win1256-warabic-2004
+	FILE ca-win1256-warabic-2004.xml
+	FILE charactermapping.dtd
+	FILE charactermappingaliases.dtd
+	FILE charmapalias.xml
+	FILE default
+	FILE default.xml
+
+/*
+** ingres!utility!lp64
+*/
+
+   DIRECTORY (PROD2NAME)!utility!lp64
+   BUILD_DIR (ING_BUILD)!utility!lp64
+      EXECUTABLE unimapcompile 
+      EXECUTABLE unialscompile 

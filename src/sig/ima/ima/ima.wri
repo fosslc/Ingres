@@ -1,0 +1,46 @@
+1¾«ÄIMA
+
+The program in this directory serves as an example of using Ingres and the Ingres Management Architecture (IMA) to provide a monitoring utility for threads in each of the servers in the installation.
+
+This code is provided as an example only. It is an unsupported example provided by Computer Associates to help customers who wish to use the IMA facilities in Ingres. The code in this directory is Copyright (c) 1995 Computer Associates. 
+
+Computer Associates accepts no responsibility for any damage or action arising from the use of this code.
+
+For a discussion of IMA - see the Ingres System Reference Manual and Advisor doc US-126867
+
+The program is written in embedded SQL with FRS calls. It makes use of two IMA registered tables 'ima_server_sessions' and 'ima_unix_sessions' to get information about the relative I/O rates of sessions within the INGRES server processes. In addition - it makes use of an Ingres 'DBMS global temporary' table.
+
+Files in this directory:
+
+makefile		Makefile for the utility - this file will need to 
+			be edited to add the relevant libraries for each 
+			platform. Change the LIBS line to contain the library 
+			list specified in the LDLIBMACH variable in the file:
+
+				%II_SYSTEM%\ingres\utility\iisysdep 
+
+iomon.form		Copyform output of the form used in the application
+
+iomon.sc		The source code for the utility
+
+iomon.sql		SQL script to register the required tables
+
+To setup the utility, as privileged INGRES user, create a database as the '$ingres' user, then register the IMA tables and procedures.
+
+c:>createdb -u\$ingres imadb
+c:>nmake
+
+To run the application, use
+
+c:>iomon [database] [-rTIMEOUT_SECONDS]
+
+Where:
+
+database			is the name of the database containing the IMA tables.
+TIMEOUT_SECONDS		is the number of seconds for the refresh interval.
+procedures.
+
+c:>createdb -u\$ingres imadb
+c:>nmake
+
+To €ƒvÖrúnÚjüfÄb€…x‡ÿÿTÿÿVÿÿIÿÿKÿÿ¶ÿÿ¸ÿÿÿÿÿÿVÿÿXÿÿrÿÿtÿÿ²ÿÿèÿÿ#ÿÿ]ÿÿ_ÿÿ‰ÿÿ<‰‹ÿÿÌÿÿÎÿÿùÿÿûÿÿ2ÿÿ4ÿÿ¼ÿÿ¾ÿÿÜÿÿæÿÿèÿÿÿÿÿÿ0ÿÿ2ÿÿ:ÿÿ<ÿÿÿÿÄÿÿ<ÄÆÿÿÌÿÿÎÿÿùÿÿûÿÿ2ÿÿ4ÿÿ¼ÿÿ¾ÿÿÜÿÿæÿÿèÿÿÿÿÿÿ0ÿÿ2ÿÿ:ÿÿ<ÿÿÿÿÄÿÿ< Arialÿÿkÿÿ…ÿÿ‡ÿÿÅÿÿûÿÿ6ÿÿpÿÿrÿÿœÿÿžÿÿßÿÿáÿÿÿÿÿÿEÿÿGÿÿ“ÿÿÑÿÿ<

@@ -1,0 +1,22 @@
+# sgi_u5 is a 32+64 hybrid build on Silicon Graphics MIPS IRIX
+# Note: I suspect that this build is broken (kschendel june 2009)
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+
+#set: config32 sgi_us5
+#set: config64 sgi_us5
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
+BUILD_ICE = "" ;	##set: option BUILD_ICE (off)
+
+BUILD_ARCH = "32+64" ;	#set: arch 32+64
+XERCES_ARCH ?= 32 ;
+PLATFORM_JAMDEFS = sgi_us5 ;

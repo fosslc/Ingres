@@ -1,0 +1,541 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+/**
+**  getfrmnm.qsc
+**
+**  History:
+**	01/29/85 (drh)	Moved vfchkfname here from db.qc and corrected
+**			getFrmName to call it.
+**	02/04/85 (drh)	Added calls to vfdmpon and vfdmpoff
+**	2/85	(ac)	- Made necessary changes for vifred
+**			  calling writefrm module at different
+**			  point.
+**	2/85	(ac)	- Clear screen after calling qbfnames module.
+**	09/27/86 (a.dea) -- Moved definition inside of FORRBF.
+**	10-oct-86 (marian)	bug # 10453
+**		Return value from CHtolower to reply[0] so the prompt will
+**		not care about case.
+**	15-oct-86 (marian)	bug # 9205
+**		Don't prompt for saving over existing form twice.  Add new
+**		variable no_prompt to signal when to prompt.  Change made
+**		in getFrmNam().
+**	03/23/87 (dkh) -Added support for ADTs.
+**	10/20/86 (KY)  -- Changed CH.h to CM.h.
+**	05/03/87 (dkh) - Changed for generic catalogs.
+**	05/21/87 (dkh) - Integrated VMS changes.
+**	08/14/87 (dkh) - ER changes.
+**	10/25/87 (dkh) - Error message cleanup.
+**	16-nov-87 (bruceb)
+**		Check for scrolling fields at save time.
+**	03-dec-87 (bruceb)
+**		Changed from a qc to a qsc file; include qsh files.
+**	12/11/87 (dkh) - Made form name "blank" an ER message - F_VF0045_blank.
+**	12/19/87 (dkh) - Including .qsh instead of .qh headers.
+**	09-feb-88 (bruceb)
+**		Modify fhd2flags instead of fhdflags for the scrolling-field
+**		indicator; can't set most significant bit of fhdflags
+**	17-feb-88 (sylviap)
+**		Added CVlower to lower case the frame name and the table field
+**		name.
+**	10-may-88 (sylviap)
+**		Changed the string literal "now" to call UGcat_now().
+**		Added checkFlds to the OOsaveSequence parameter list.  Will
+**		  be called to check validation strings before the save 
+**		  transaction begins.
+**		Added SQL COMMIT after OO calls to release the locks on the
+**		  system catalogs.
+**		Moved vfseqbuild from vfsvfrm to getFrmName.  The frame needs
+**		  to be built before checkFlds can be called.  Now vfseqbuild
+**		  is called outside the transaction block.
+**	05/26/88 (dkh) - Added user support for scrollable fields.
+**	20-july-88 (sylviap)
+**		Added SQL COMMIT after OOcatObject to release locks on
+**		  system catalogs.
+**	06-oct-88 (sylviap)
+**		Deleted lbuf, sbuf and datebuf.  Not used in getFrmName.
+**	27-oct-88 (sylviap)
+**		Deleted declaration of chgscrlflds.  No longer used.
+**	10/28/88 (dkh) - Performance changes.
+**	03-nov-88 (sylviap)
+**		Added NULL to the OOsaveSequence parameter list.  Parameter
+**		 is the customized help screen for the save frame.
+**	11-dec-1988 (danielt)
+**		removed commits.
+**	05-apr-89 (bruceb)
+**		Removed IIVFirtInternalRTI; no longer used.
+**	12-apr-89 (bruceb)
+**		Changed name of setscrlflds() to setflagvals() and added
+**		code to turn off VQ restrict flags if not in VQ.
+**		Also, zap reference to number of nonseq fields; there aren't
+**		any such fields.
+**	19-may-89 (bruceb)
+**		Changed to turn off VQ restrict flags if not in VQ AND also
+**		being saved with new name.
+**	31-may-89 (bruceb)
+**		Removed unnecessary allocation of cr_date.
+**	22-jun-89 (bruceb)
+**		Set up for long jump if the user decides to 'forget' the
+**		save action from the 'valerr' form.
+**	28-jun-89 (bruceb)
+**		Use vfcatalog and vfsave instead of iicatalog and iisave.
+**	31-oct-89 (bruceb)
+**		Leave form name blank instead of setting it to 'blank'.
+**	12/15/89 (dkh) - VMS shared lib changes.
+**	29-jan-90 (bruceb)
+**		VQLOCK restrict flags are retained if form saved with same
+**		name (regardless of owner), with no regard to whether or
+**		not called from emerald/abf.
+**	28-feb-90 (bruceb)
+**		New parameter (bypass_submenu) to getFrmName() that is
+**		passed through to OOsaveSequence().  Indicates whether or
+**		not the 'EditInfo  Save' submenu is displayed or bypassed.
+**	10/19/90 (dkh) - Fixed bug 33920.
+**	12/05/90 (dkh) - Fixed code to handle screen updates correctly
+**			 if an error occurs during save sequence.
+**	09/20/92 (dkh) - Fixed bug 40600.  If duplicating a form and
+**			 vifred was called by vision, then don't remove
+**			 the VQLOCK bits.
+**      15-jan-1996 (toumi01; from 1.1 axp_osf port)
+**              Added kchin's change (from 6.4) for axp_osf
+**              10/15/93 (kchin)
+**              Cast argument to PTR when calling IIOOidObject(), this
+**              is due to the change of datatype of variable parameters
+**              in IIOOidObject() routine itself.  The change is made in
+**              getFrmName().
+**      25-sep-96 (mcgem01)
+**              Global data moved to vfdata.c
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	21-Aug-2009 (kschendel) 121804
+**	    Need frame.h to satisfy gcc 4.3.
+*/
+
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<st.h>
+# include	<lo.h>
+# include	<ut.h>
+# include	<ex.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"decls.h"
+# include	<uf.h>
+# include	<ug.h>
+## include	<ooclass.qsh>
+## include	<oocat.qsh>
+## include	<uigdata.qsh>
+# include	"ervf.h"
+# include	<frame.h>
+
+GLOBALREF	OO_CATREC	vfoocatrec;
+GLOBALREF	i4	vffrmid;
+GLOBALREF	i4	tnumfld;
+GLOBALREF	bool	IIVFnnNewName;
+
+OO_OBJECT	*OOp();
+
+FUNC_EXTERN	char	*UGcat_now();
+FUNC_EXTERN	STATUS	writefrm();
+FUNC_EXTERN 	STATUS  checkFlds();
+
+STATUS OOsaveSequence( OOID *id, char *savename, char *catform,
+	char *cattabl, char *saveform, char *title,
+	PTR ptr, i4 (*display)(), i4 (*save)(),
+	MENUPARAM *menup, STATUS (*setup)(), char *help_scr,
+	bool bypass);
+
+
+GLOBALREF	bool	IIVFneedclr;
+static	bool	vfsvcalled = FALSE;
+static	bool	writeok = FALSE;
+static	bool	svfrm_alloc = FALSE;
+##static char	*_vfsave = ERx("vfsave");
+
+# ifndef FORRBF
+static	VOID	setflagvals();	/* set certain flags at Save as appropriate */
+
+
+VOID
+IIVFasfAllocSaveFrm()
+{
+	LOCATION	*fnx;
+
+	if (!svfrm_alloc)
+	{
+		FDsetparse(FALSE);
+
+		/*
+		**  Grab the vfsave and valerr form from
+		**  the index file.
+		*/
+		fnx = IIUFlcfLocateForm();
+
+		if ( IIUFgtfGetForm(fnx, _vfsave) != OK )
+		{
+			syserr(ERget(S_VF0001_Can_not_access_form), _vfsave);
+		}
+
+		allocvalerr();
+		svfrm_alloc = TRUE;
+
+		FDsetparse(TRUE);
+	    }
+}
+
+
+
+STATUS
+vfsvfrm(id, aptr)
+OOID	id;
+PTR	aptr;
+{
+	OO_OBJECT	*object;
+	STATUS		stat;
+	bool		zaprestrict = FALSE;
+
+	vffrmid = (i4) id;
+
+	/*
+	**  Need to do QBFNAMES check before doing anything else.
+	*/
+
+	object = (OO_OBJECT *) OOp(id);
+
+	/*
+	**  DO NOT SQL COMMIT because already in the middle of a transaction
+	**  started in OO.
+	*/
+
+	/*
+	**  Don't remove the VQLOCK bits when duplicating a form and
+	**  we have been called from vision.
+	*/
+	if (Vfeqlcall)
+	{
+		zaprestrict = FALSE;
+	}
+	else
+	{
+		zaprestrict = IIVFnnNewName;
+	}
+
+	/*
+	**  Lower case the frame name.  It is possible the default table name
+	**  is mixed case, but all front end objects are lower case.
+	*/
+	STcopy(object->name, frame->frname);
+	CVlower(frame->frname);
+
+	vfLast(frame->frname);
+
+
+	frame->frfldno = tnumfld;
+	frame->frnsno = 0;
+
+	setflagvals(zaprestrict);
+
+	vfsvcalled = TRUE;
+
+	writeok = FALSE;
+	if ((stat = writefrm()) == OK)
+	{
+		writeok = TRUE;
+	}
+	return(stat);
+}
+
+
+/*{
+** Name:	setflagvals	- Set flag bits at Save time.
+**
+** Description:
+**	For all sequenced fields, check if a scrolling field and
+**	set the frame flag stating that such fields exist.
+**	If requested, turn off any restricted field flags.
+**
+**	Note that once the frame scrolling flag is set, can break
+**	out of the per-field loop UNLESS zaprestrict is on, in
+**	which case need to turn off any restrict bits in all fields.
+**
+** Inputs:
+**	zaprestrict	Indicate if restrict bits are to be retained.
+**
+** Outputs:
+**
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**		None
+**
+** Side Effects:
+**	None
+**
+** History:
+**	09-nov-87 (bruceb)	Initial implementation.
+*/
+static VOID
+setflagvals(zaprestrict)
+bool	zaprestrict;
+{
+	i4		i;
+	FLDHDR		*hdr;
+	FIELD		*fld;
+	TBLFLD		*tbl;
+	bool		all_fields;
+
+	all_fields = zaprestrict;
+
+	frame->frmflags &= ~fdSCRLFD;	/* clear now, set below */
+	for (i = 0; i < frame->frfldno; i++)
+	{
+		fld = frame->frfld[i];
+		if (fld->fltag == FTABLE)
+		{
+			tbl = fld->fld_var.fltblfld;
+			if (zaprestrict)
+			{
+				hdr = &(tbl->tfhdr);
+				hdr->fhd2flags &= ~fdVQLOCK;
+			}
+			for (tbl->tfcurcol = 0;
+				tbl->tfcurcol < tbl->tfcols;
+				tbl->tfcurcol++)
+			{
+				hdr = FDgethdr(fld);
+				if (zaprestrict)
+				{
+					hdr->fhd2flags &= ~fdVQLOCK;
+				}
+				if (hdr->fhd2flags & fdSCRLFD)
+				{
+					frame->frmflags |= fdSCRLFD;
+					if (!all_fields)
+						break;
+				}
+			}
+			tbl->tfcurcol = 0;
+			if ((frame->frmflags & fdSCRLFD) && !all_fields)
+			{
+				/* Break out of per-field loop if done. */
+				break;
+			}
+		}
+		else	/* FREGULAR */
+		{
+			hdr = FDgethdr(fld);
+			if (zaprestrict)
+			{
+				hdr->fhd2flags &= ~fdVQLOCK;
+			}
+			if (hdr->fhd2flags & fdSCRLFD)
+			{
+				frame->frmflags |= fdSCRLFD;
+				if (!all_fields)
+					break;
+			}
+		}
+	}
+}
+
+
+
+static STATUS
+vfsvdisp()
+{
+	IIVFneedclr = TRUE;
+
+	if (vfspec == 'F')
+	{
+##		set_frs field _vfsave (mode(_name) = query)
+	}
+##	putform _vfsave (xfield1 = ERx(""), xfield2 = ERx(""),
+##		xfield3 = ERx(""), xfield4 = ERx(""))
+	return(OK);
+}
+
+
+/*{
+** Name:	IIVFsljSvLongjump	- Set up for longjump on Save.
+**
+** Description:
+**	Set up for a longjump on the Save if the user decides to Forget
+**	that save while on the 'valerr' form.  Used by getFrmName().
+**
+** Inputs:
+**	exargs		EX argument.
+**
+** Outputs:
+**
+**	Returns:
+**		EXDECLARE if signal is the longjump, or EXRESIGNAL.
+**
+**	Exceptions:
+**		None
+**
+** Side Effects:
+**	None
+**
+** History:
+**	22-jun-89 (bruceb)	Written.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**      15-Apr-2003 (bonro01)
+**              Added prototype for OOsaveSequence() to prevent core dump.
+*/
+i4
+IIVFsljSvLongjump(exargs)
+EX_ARGS	*exargs;
+{
+    if (exargs->exarg_num != EXVFLJMP)
+	return(EXRESIGNAL);
+    else
+	return(EXDECLARE);
+}
+
+
+i4
+getFrmName(bypass_submenu)
+bool	bypass_submenu;
+{
+	char		*savename;
+	i4		env = 0;
+	char		*owner;
+	i4		is_current = 1;
+	char		*short_rem;
+	char		*long_rem;
+	OO_OBJECT	*object;
+	EX_CONTEXT	context;
+
+
+	IIVFasfAllocSaveFrm();
+
+	IIVFneedclr = FALSE;
+	vfsvcalled = FALSE;
+
+	if (*(frame->frname) == EOS || vfspec == 'F')
+	{
+		if (Vfformname)
+		{
+			if (vfspec == 'F' &&
+					!STequal(Vfformname, frame->frname) )
+			{
+				vfoocatrec.id = -1;
+			}
+			STcopy(Vfformname, frame->frname);
+		}
+	}
+
+	/*
+	**  Lower case the frame name.
+	*/
+
+	CVlower(frame->frname);
+
+	STcopy(frame->frname, vfoocatrec.name);
+
+	/*
+	**  Owner is always set to current user.
+	*/
+	STcopy(IIUIdbdata()->user, vfoocatrec.owner);
+
+	/*
+	**  Check to see how we want to create a new object.
+	**  An id of -1 means that the form was created from
+	**  a blankform, tables in a db or from a joindef.
+	*/
+	short_rem = vfoocatrec.short_remark;
+	long_rem = vfoocatrec.long_remark;
+	owner = vfoocatrec.owner;
+	savename = vfoocatrec.name;
+	if (vfoocatrec.id == -1)
+	{
+		*short_rem = EOS;
+		*long_rem = EOS;
+		if ( IIOOidObject(OC_FORM, &(vfoocatrec.id), savename, (PTR)env,
+				owner, (PTR)is_current, short_rem, (char *)NULL,
+				(char *)NULL, long_rem) != OK )
+		{
+			IIUGerr(E_VF010D_Error_occurred_while,
+				UG_ERR_ERROR, 0);
+			return(FALSE);
+		}
+		/*
+		**  Put information into vfoocatrec in case user continues
+		**  to edit the object after having saved it.
+		*/
+		object = OOp(vfoocatrec.id);
+
+		vfoocatrec.create_date[0] = EOS;
+		vfoocatrec.alter_date[0] = EOS;
+		STcopy(object->short_remark, vfoocatrec.short_remark);
+		STcopy(object->long_remark, vfoocatrec.long_remark);
+		STcopy(object->owner, vfoocatrec.owner);
+	}
+	else
+	{
+		if (OOcatObject(OC_FORM, &vfoocatrec) != OK)
+		{
+			IIUGerr(E_VF010E_Could_not_create_obje,
+				UG_ERR_ERROR, 0);
+			return(FALSE);
+		}
+	}
+
+	/*  Build the frame.  */
+
+	vfseqbuild(FALSE);
+
+	if (EXdeclare(IIVFsljSvLongjump, &context) != OK)
+	{
+		EXdelete();
+		/* No need to call FTclear() since done by valerrCom(). */
+		return(FALSE);
+	}
+
+	/*
+	**  Will need to create QBFNAMES object that will be used later.
+	*/
+
+	OOsaveSequence(&(vfoocatrec.id), savename, ERx("vfcatalog"), _cattable,
+		_vfsave, ERget(S_VF0078_VIFRED_Saving_a_Form),
+		(PTR) frame, vfsvdisp, vfsvfrm, NULL, checkFlds, NULL,
+		bypass_submenu);
+
+	if (vfsvcalled)
+	{
+		object = (OO_OBJECT *) OOp(vfoocatrec.id);
+
+		STcopy(object->name, vfoocatrec.name);
+		STcopy(object->create_date, vfoocatrec.create_date);
+		STcopy(object->alter_date, vfoocatrec.alter_date);
+		STcopy(object->short_remark, vfoocatrec.short_remark);
+		if (object->long_remark != NULL)
+		{
+			STcopy(object->long_remark, vfoocatrec.long_remark);
+		}
+		else
+		{
+			vfoocatrec.long_remark[0] = EOS;
+		}
+	}
+
+	if (IIVFneedclr)
+	{
+		FTclear();
+	}
+
+	EXdelete();
+	return(writeok);
+}
+# endif

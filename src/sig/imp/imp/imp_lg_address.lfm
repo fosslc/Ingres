@@ -1,0 +1,16 @@
+COPYFORM:	6.4	2002_06_28 07:26:04 GMT  
+FORM:	imp_lg_address		
+	69	10	0	0	5	0	6	9	0	0	0	0	0	129	0	5
+FIELD:
+	0	bof	-21	28	0	25	1	38	2	2	25	0	13	Begin (BOF):	0	0	0	0	512	0	0		c25			0	0
+	1	eof	-21	28	0	25	1	36	3	4	25	0	11	End (EOF):	0	0	0	0	512	0	0		c25			0	1
+	2	last_tx_id	-21	23	0	20	1	20	3	45	20	0	0		0	0	0	0	512	0	0		c20			0	2
+	3	prev_cp	-21	28	0	25	1	38	4	2	25	0	13	Previous CP:	0	0	0	0	512	0	0		c25			0	3
+	4	jnl_window	-21	58	0	55	1	55	8	2	55	0	0		0	0	0	0	512	0	0		c55			0	4
+TRIM:
+	1	1	5:40:0	1	0	0	0
+	1	7	3:57:2	1	0	0	0
+	2	1	Log address for	0	0	0	0
+	2	7	Journal Window	0	0	0	0
+	44	2	3:22:1	1	0	0	0
+	45	2	Last Transaction ID	0	0	0	0

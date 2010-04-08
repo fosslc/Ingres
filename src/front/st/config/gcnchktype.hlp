@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Name Server bedchecking type list.  Determines what server characteristics
+ are checked when the Name Server periodically checks the server status
+ --also called bedchecking.
+ Use commas to separate items in the list.  Valid entries are:
+     connect - Check permissions.
+     install - Check Installation ID.
+     class - Check server type.
+     none - Disables bedchecking.

@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The List of Forms in the Database Frame displays a list of forms that you
+have access to.  This allows you to create a field based on the definition
+of a field in another form.  Move the cursor up/down the displayed list
+until the desired form is highlighted.  The list will scroll if there are
+more forms than currently displayed.
+
+Choose the `Select' menuitem to display a list of fields contained in the
+highlighted form.
+
+The menu command are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+
+        Select                  Bring up a list of fields contained
+                                in the highlighted form.
+
+        Cancel                  Return to the Layout Frame of Vifred.
+
+        Help                    Access the Ingres Help facility.

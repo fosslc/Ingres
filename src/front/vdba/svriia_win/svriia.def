@@ -1,0 +1,11 @@
+; svriia.def : Declares the module parameters for the DLL.
+
+LIBRARY      "svriia"
+DESCRIPTION  'svriia Windows Dynamic Link Library'
+
+EXPORTS
+    DllGetClassObject PRIVATE
+    DllCanUnloadNow PRIVATE
+    DllRegisterServer PRIVATE
+    DllUnregisterServer PRIVATE
+ 

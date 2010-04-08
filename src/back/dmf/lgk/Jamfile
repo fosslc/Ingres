@@ -1,0 +1,32 @@
+#
+# Jamfile file for back!dmf!lgk
+#
+# History:
+#	14-jan-2005 (abbjo03)
+#	    On VMS, iishowres is a standalone executable.
+#       13-aug-2009 (horda03)
+#           Add all needed libraries
+#       31-Dec-2009 (horda03)
+#            Correct VMS library dependancies.
+
+SubDir ING_SRC back dmf lgk ;
+
+IISUBSYS back dmf lgk ;
+
+if $(VMS)
+{
+    IIBINEXE iishowres : lgkmemusg.c ;
+    IINEEDLIBS iishowres : ADFLIB CUFLIB DMFLIB GCFLIB GWFLIB OPFLIB PSFLIB QEFLIB 
+			   QSFLIB RDFLIB RQFLIB SCFLIB SXFLIB TPFLIB ULFLIB COMPATLIB ;
+}
+
+IILIBRARY DMFLIB : lgkparms.c
+	lgkm.c
+	lgkinit.c ;
+
+IILIBRARY IMPDMFLIBDATA : lgkdata.c ;
+
+if ! $(VMS)
+{
+    IILIBRARY DMFLIB : lgkmemusg.c ;
+}

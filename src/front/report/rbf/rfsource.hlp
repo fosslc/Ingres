@@ -1,0 +1,31 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This form contains options for the basis of a new report.  A new
+report may be based on an existing report, a table or view or a JoinDef.
+
+After choosing the basis type of your new report, you will be prompted for
+the name of the report, table or JoinDef on which to base your report.  A
+list of existing report, tables or JoinDefs will be available.
+
+If you choose Table or JoinDef, you will then be given a choice of
+Report Styles which will determine the initial layout of your new report.  
+
+The selections on the form are:
+
+     SELECTION       DESCRIPTION
+     ---------       -----------
+     Duplicate       Select an existing RBF report as the basis of your
+                     new report.  Reports saved via SREPORT may not be used.
+
+     Table           Select a table or view as the basis of your new report.
+
+     JoinDef         Select a JoinDef as the basis of your new report.
+
+The menu commands are the following: 
+
+     MENU COMMAND    SYNOPSIS
+     ------------    --------
+     Select          Select one of the choices.
+
+     Cancel          Return to previous frame.
+
+     Help            Print this message.

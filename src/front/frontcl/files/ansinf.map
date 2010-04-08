@@ -1,0 +1,65 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* FRS mapping file for ansi terminal with no function keys on PC keyboard */
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Move up one word within field */
+	nextword = controlB (^B)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlH (BackSpace)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move left one space within a field */
+	leftchar = controlT (^T)
+
+/* Move right one space within a field */
+	rightchar = controlL (^L)
+
+/* Move down one line */
+	downline = controlJ (^J)
+
+/* Move up one line */
+	upline = controlK (^K)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlY (^Y)
+
+/* Next screen or set of rows in table field */
+	scrollup = controlF (^F)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = controlG (^G)
+
+/* Scroll left on a form */
+	scrollleft = controlO (^O)
+
+/* Scroll right on a form */
+	scrollright = controlU (^U)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)

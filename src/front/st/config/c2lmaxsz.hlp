@@ -1,0 +1,3 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The c2.max_log_size parameter indicates the maximum size of the security
+ audit log represented in kilobytes (KB.)

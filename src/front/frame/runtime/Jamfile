@@ -1,0 +1,29 @@
+#
+# Jamfile file for front!frame!runtime
+#
+
+SubDir ING_SRC front frame runtime ;
+
+IISUBSYS front frame runtime ;
+
+
+IIMSGHDR erfr.msg ;
+
+
+IILIBRARY RUNTIMELIB : findrow.qsc fetabfnd.qsc uffindex.c
+	rtsitbl.c rtsisys.c rtsirc.c rtsifrm.c rtsifld.c
+	rtsicol.c rtgtmode.c rtgettbl.c rtgetfrm.c rtgetfld.c
+	rtgetcol.c rtfndfrm.c rtchkfrs.c iitoact.c iitest.c iistparm.c
+	iistartf.c iisleep.c iisfparm.c iisetio.c iisetinq.c iisetrnd.c
+	iisetfld.c iiscrmsg.c iirunfrm.c iirtparm.c iirowset.c
+	iirfparm.c iiretval.c iiretfld.c iiredisp.c iiqryop.c
+	iiqryfld.c iiqbfutl.c iiqbfraw.c iiprompt.c iiprnscr.c
+	iinewent.c iimenu.c iimapfle.c iiinvis.c iigtoper.c
+	iigp.c iigotonx.c iigotofd.c iigetqry.c iifsz.c iifsvars.c
+	iifsinit.c iifrssql.c iifrskac.c iifrmini.c iifrmerr.c
+	iiforms.c iifndfrm.c iifnames.c iifldclr.c iifbrk.c iierrdsp.c
+	iiendfrm.c iiendfor.c iiclrscr.c iiclrfds.c iichkfrm.c
+	iichkfld.c iibserr.c iiboxerr.c iiaddrun.c iiaddfrm.c
+	iiaddcom.c iiactfrm.c ii40stiq.c fetfile.c fetest.c fefile.c ;
+
+IILIBRARY IMPFRAMELIBDATA : rundata.c iiifsvar.c ;

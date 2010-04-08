@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Defines the number of entries in the buffer manager closed-database cache.   
+ 
+ It determines how many databases will be cached even though they are 
+ closed ( to enable pages relating to these to remain in cache even though 
+ they are not in use ).
+
+
+ Default: 40

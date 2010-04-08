@@ -1,0 +1,21 @@
+#
+# MANIFEST file for tools!port!conf
+#
+# History:
+#    27-Aug-2004 (hanje04)
+#	Created to replace Jamfiles and add IIMKVERS.
+#	03-dec-2004 (abbjo03)
+#	    Remove unneeded IICCPPFILE entry.
+#	20-Jun-2009 (kschendel) SIR 122138
+#	    Arrange for a copy of VERS in ingres/files.
+#	24-Aug-2009 (bonro01)
+#	    Make the VERS override file optional.
+
+SubDir ING_SRC tools port conf ;
+
+IISUBSYS tools port conf ;
+
+# Since VERS controls so many build parameters, keep a copy
+# in ingres/files/build.vers for support to look at.
+
+IIFILE build.vers : $(VERSFILE) ;

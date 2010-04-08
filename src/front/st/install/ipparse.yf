@@ -1,0 +1,1820 @@
+/*
+**  Name: ipparse.y -- YACC grammar for INGRES installation manifest
+**			desctiption language and associated functions.
+**
+**  Entry point:
+**
+**	ip_parse() -- parse a manifest file and create internal lists
+**
+**  History:
+**      xx-xxx-92 (jonb)
+**		Created.
+**      05-mar-93 (jonb)
+**		Beautified and commented.
+**	16-mar-93 (jonb)
+**		Brought comment style into conformance with standards.
+**	22-mar-93 (jonb)
+**		Fixed computation of apparent sizes to follow subsumption
+**		chains recursively as far as they go.
+**      25-mar-93 (sweeney)
+**		undef abs() for usl_us5 - its yacc generates a #include
+**		of stdlib.h, which contains a forward reference for
+**		abs() which is getting macroexpanded into garbage.
+**	01-apr-93 ( kellyp)
+**		added Dynamic to flag those files whose checksum change
+**		during the setup phase
+**	13-jul-93 (tyler)
+**		Rewritten to support the portable manifest language as
+**		well as empty part/package files. 
+**	14-jul-93 (tyler)
+**		Modified LINK semantics.
+**	16-jul-93 (tyler)
+**		Fixed bug in LINK handling.
+**	21-jul-93 (kellyp)
+**		Corrected si_alloc_blk to ip_alloc_blk
+**	04-aug-93 (tyler)
+**		VOLUME attribute can now be declared outside of a
+**		PACKAGE specification (i.e. before or after).  Simplified
+**		the grammar in a few places.  Removed version_range
+**		production.
+**	05-aug-93 (tyler)
+**		Rearranged productions to make previous change meant to
+**		allow VOLUME declarations outside of PACKAGE specifications
+**		actually work.  BUILD_FILE automatically goes out of scope
+**		after one file reference.
+**	19-sep-93 (kellyp)
+**		Modified the way SETUP works
+**	19-sep-93 (kellyp)
+**		A new revision simply to add the previous History comment.
+**	20-sep-93 (kellyp)
+**		Changed the keyword SETUP to be a file option rather than
+**		a file attribute.
+**	24-sep-93 (tyler)
+**		Changed SETUP keyword usage yet again so that it must be 
+**		declared within a SCRIPT, EXECUTABLE, or FILE declaration.
+**		Fixed bug which broke FILE declarations on VMS for files
+**		without extensions.  Cast MEcopy() arguments to PTR.
+**	29-sep-93 (tyler)
+**		'.' doesn't get appended to VMS file names which already
+**		contain '.'.
+**	19-oct-93 (tyler)
+**		Link GVLIB and use global variable Version[] instead
+**		of calling a program to generate the version string
+**		when instances of '??' appear in the release description
+**		source.  Made initial VERSION specification optional and
+**		stopped calling ip_fix_version(). 
+**	02-nov-93 (tyler)
+**		Package lists are now sorted according to inter-dependency
+**		information by ip_parse().  This is necessary to ensure
+**		that setup programs are executed in the correct order.
+**		Removed references to defunct WEIGHT keyword.
+**	11-nov-93 (tyler)
+**		Changed CUSTOM and DYNAMIC to file_options.  Ported
+**		to IP Compatibility Layer.
+**	22-nov-93 (tyler)
+**		Removed unused GLOBALREF and cleaned up parts of the
+**		code in this file.
+**	26-nov-93 (tyler)
+**		Use II_MANIFEST_DIR to locate install.dat in the build
+**		environment.
+**	01-dec-93 (tyler)
+**		Improve error handling.
+**	05-jan-94 (tyler)
+**		install.dat must reside in the "files" directory since it
+**		will be over-written during upgrades otherwise.  Cleaned up
+**		interface to push_file().  If II_MANIFEST_DIR is not defined,
+**		set manifestDir variable to $II_SYSTEM/ingres/manifest if
+**		the directory exists (on the assumption that we're running
+**		in a build environment) before setting it to
+**		$II_SYSTEM/ingres/install.  Removed SUBSUME keyword from
+**		language.  Referenced but undefined packages now generate
+**		a parse error.  Eliminate FEATURENAME keyword and disable
+**		external package definitions.  Remove internationalizable
+**		text from manifest language and eliminate DESCRIPTION
+**		keyword.
+**	22-feb-94 (tyler)
+**		Fixed BUG 58928: compute_apparent_size() now estimates
+**		product sizes correctly. 
+**      21-nov-1994 (andyw)
+**          Solaris 2.4/Compiler 3.00 port fails with syntax error in
+**          /usr/include/stdlib.h where the macro abs is re-defined.
+**          therefore, changed to undef as we also define this in the CL.
+**	21-mar-95 (athda01)
+**		Fixed bug 67112;  allow currPkg->description information to
+**		be free of line format characters from the .hlp file. This  
+**		will let the correct formatting of the text into the forms
+**		pop-up box be handled by frs.
+**	01-may-1995 (wolf) 
+**		On VMS, assign same file protection to system as to owner.
+**		Should fix bug 63268/68398.
+**	31-aug-1995 (nick)
+**		Ensure batchOutf is set to a valid FILE when declared ; we
+**		can use this in a call to SIfprintf() before it is set in
+**		ip_batch().
+**	11-nov-1995 (hanch04)
+**		added new token tVISIBLEPKG
+**	19-jan-1996 (hanch04)
+**		RELEASE_MANIFEST is now releaseManifest
+**	19-mar-1996 (angusm)
+**		If in 'patch mode', build hash index of all files in installation.
+**		This is to enable faster lookup when replacing installation's
+**		SIZE/CHECKSUM data with new values for patched files.
+**	13-sep-1996 (canor01)
+**		Move SIclose() into the block for a successful SIfopen, so
+**		it will not be called on failed open.
+**      16-dec-96 (reijo01)
+**              Changed to use generic system variables.
+**      19-feb-1997 (boama01)
+**              Bug 80559: added new token tAGGREGATE for use within PACKAGE
+**              to indicate OR-ed capability/licensing approach.  This allows
+**              CUSTOMINST pkg to act as "bundled" set of mix-n-match parts,
+**              rather than requiring all parts to be licensed.  See
+**              ip_licensed() in ipfile.sc for details.
+**	18-mar-1997 (kamal03)
+**		Reverse back 31-aug-1995 (nick) change because it's causing
+**		VAX C Compiler to complain and moved initialization of 
+**		"batchOutf" into ipmain.
+**	29-jul-1997 (walro03)
+**		Undefined abs() for Tandem NonStop (ts2_us5) like other
+**		platforms.
+**      28-aug-1997 (musro02)
+**              Undef abs for sqs_ptx
+**      16-Jan-1997 (mosjo01 & linke01)
+**              Added function declaration for yyerror() in rs4_us5
+**              bwcause without the declaration, AIX machine supposes
+**              function yyerror returns "int" which doesn't match
+**              the function return datatype void.
+**	20-aug-1999 (popri01)
+**	    Eliminate "undef abs" for Unixware (usl_us5).
+**	    It's now done in compat hdr.
+**	28-apr-2000 (somsa01)
+**		Changed II_SYSTEM to SystemLocationVariable.
+**	17-Jun-2004 (schka24)
+**	    Safer env variable handling.
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	24-Nov-2009 (frima01) Bug 122490
+**	    Added header file includes to eliminate gcc 4.3 warnings.
+**
+# define DEBUG_COMPUTE_SIZE
+*/
+
+%{
+
+# include <compat.h>
+# include <st.h>
+# include <si.h>
+# include <lo.h>
+# include <nm.h>
+# include <er.h>
+# include <cm.h>
+# include <cv.h>
+# include <me.h>
+# include <gv.h>
+# include <iplist.h>
+# include <erst.h>
+# include <ip.h>
+# include <ipcl.h>
+# include <ipcibits.h>
+# include <iphash.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <ug.h>
+# include <equel.h>
+
+# ifdef VMS
+# define DEFAULT_FILE_PERMISSION	ERx( "s:rwd,o:rwd,g:r,w:r" )
+# define DEFAULT_SCRIPT_PERMISSION	ERx( "s:rwed,o:rwed,g:re,w:re" )
+# define DEFAULT_EXECUTABLE_PERMISSION	ERx( "s:rwed,o:rwed,g:re,w:re" )
+# else
+# define DEFAULT_FILE_PERMISSION	ERx( "s:r,o:rwd,g:r,w:r" )
+# define DEFAULT_SCRIPT_PERMISSION	ERx( "s:re,o:rwed,g:re,w:re" )
+# define DEFAULT_EXECUTABLE_PERMISSION	ERx( "s:re,o:rwed,g:re,w:re" )
+# endif
+# define COMMENT_CHAR	ERx( "#" )
+
+PKGBLK *currPkg;
+PRTBLK *currPrt;
+FILBLK *currFil;
+REFBLK *currRef;
+
+GLOBALREF char installDir[];
+GLOBALREF char releaseManifest[];
+GLOBALREF char Version[];
+GLOBALREF bool batchMode;
+GLOBALREF bool pmode;
+
+GLOBALDEF FILE *batchOutf = 0;
+GLOBALDEF FILE *rSTREAM = 0;
+
+static LIST *pkgListP;
+static char **releaseIdP;
+static char **prodNameP;
+static char manifestDir[ MAX_LOC + 1 ];
+
+static void ci2bit();
+static void init_reference( LIST *, char *, uchar );
+static void newfile( char *, PERMISSION, bool );
+static i4  compute_apparent_size( LIST*, PKGBLK *, i4  );
+
+/*
+** yacc on usl_us5 is about to spit out a #include for <stdlib.h>
+** which has a prototyped forward reference for abs(int).
+** Because we define abs as a macro in compat.h, this forward
+** ref gets macroexpanded into "extern int ((int) > 0? (int) : -(int))"
+** which is clearly garbage, and won't compile, so stomp on the macro
+*/
+# ifdef sqs_ptx
+# undef abs
+# endif
+
+# ifdef sparc_sol
+# undef abs
+# endif
+
+# ifdef ts2_us5
+# undef abs
+# endif
+
+/*
+** Forward declaration of yyerror for aix
+*/
+void yyerror(char *);
+
+/* structure is used to maintain the file attribute stack */
+
+typedef struct f_atts
+{
+	char		*build_dir;	/* build directory */
+	char		*build_file;	/* build file name */
+	char		*directory;	/* release directory */
+	char		*generic_dir;	/* generic release directory */ 
+	char		*volume;	/* release media volume */
+	char		*executable;	/* last executable referenced */
+	PERMISSION	permission;	/* permission string */
+	struct f_atts	*next;		/* next record in stack */
+
+} FILE_ATTRIBUTES;
+
+static FILE_ATTRIBUTES *f_atts;	/* top of file attribute stack pointer */
+
+static char where_line[ MAX_MANIFEST_LINE + 1 ];
+
+/*
+** The file stack is an array of files which are open at any point in
+** time.  Whenever we need to go to a new file -- in other words, when
+** we find that a package or a part is defined in an external file -- we
+** just push a new file on top of the stack.  The lexical scanner reads
+** from the file on top of the stack, and we pop the stack when we hit
+** either an end-of-file condition or an "End" statement.  When the
+** stack goes empty, that's a real EOF condition.
+*/
+
+# define FILE_STACK_SIZE 10	/* maximum nested file references */	
+
+static struct _file 
+{
+	FILE *fp;
+	char name[ 100 ];
+	i4 line;
+
+} file[ FILE_STACK_SIZE ];
+
+/*
+** Pointer to the topmost element on the file stack.
+*/
+
+static i4  filex = -1;
+
+/*
+** ip_lex_where() -- set up a text field describing the current location
+** in the input file.  (Used for error reporting.)
+*/
+
+static char *
+ip_lex_where()
+{
+	STprintf( where_line, "line %d of %s", file[ filex ].line,
+		file[ filex ].name );
+	return( where_line );
+}
+
+static bool parse_error;
+
+/*
+** ip_error() -- report a parse error.
+*/
+
+static void
+ip_error( char *s )
+{
+	SIfprintf( stderr, "Error detected at %s:\n\n\t%s\n\n",
+		ip_lex_where(), s );
+	parse_error = TRUE;
+}
+
+%}
+
+/*
+** YACC declarations - start symbol, data area, tokens...
+*/
+
+%union
+{
+	char *cptr;
+	char datatxt[ MAX_MANIFEST_LINE + 1 ];
+	uchar comparison;
+}
+
+%token <datatxt> tDATA
+
+%token <comparison> tCOMPARISON
+
+%token <cptr> tAGGREGATE
+%token <cptr> tBUILD_DIR
+%token <cptr> tBUILD_FILE
+%token <cptr> tCAPABILITY
+%token <cptr> tCHECKSUM
+%token <cptr> tCUSTOM
+%token <cptr> tDEFINITION
+%token <cptr> tDELETE
+%token <cptr> tDIRECTORY
+%token <cptr> tDYNAMIC
+%token <cptr> tEXECUTABLE
+%token <cptr> tFILE
+%token <cptr> tINCLUDE
+%token <cptr> tINVISIBLE
+%token <cptr> tLEFT_BRACE
+%token <cptr> tPREFER
+%token <cptr> tLINK
+%token <cptr> tNEED
+%token <cptr> tPACKAGE
+%token <cptr> tPART
+%token <cptr> tPERMISSION
+%token <cptr> tPRELOAD
+%token <cptr> tRELEASE
+%token <cptr> tRIGHT_BRACE
+%token <cptr> tSCRIPT
+%token <cptr> tSETUP
+%token <cptr> tSIZE
+%token <cptr> tSTATE
+%token <cptr> tVERSION
+%token <cptr> tVISIBLE
+%token <cptr> tVISIBLEPKG
+%token <cptr> tVOLUME
+%token <cptr> tEOF
+
+%{
+
+/*
+** map token text to identifiers...
+*/
+
+GLOBALDEF MAP 
+ip_tokenid[] =
+{
+        "AGGREGATE",    tAGGREGATE,
+        "BUILD_DIR",	tBUILD_DIR,
+        "BUILD_FILE",	tBUILD_FILE,
+        "CAPABILITY",	tCAPABILITY,
+        "CHECKSUM",	tCHECKSUM,
+        "CUSTOM",	tCUSTOM,
+        "DEFINITION",	tDEFINITION,
+        "DELETE",	tDELETE,
+        "DIRECTORY",	tDIRECTORY,
+        "DYNAMIC",	tDYNAMIC,
+        "EXECUTABLE",	tEXECUTABLE,
+        "FILE",		tFILE,
+        "INCLUDE",	tINCLUDE,
+        "INVISIBLE",	tINVISIBLE,
+        "LINK",		tLINK,
+        "PREFER",	tPREFER,
+        "NEED",		tNEED,
+        "PACKAGE",	tPACKAGE,
+        "PART",		tPART,
+        "PERMISSION",	tPERMISSION,
+        "PRELOAD",	tPRELOAD,
+        "RELEASE",	tRELEASE,
+        "SCRIPT",	tSCRIPT,
+        "SETUP",	tSETUP,
+        "SIZE",		tSIZE,
+        "STATE",	tSTATE,
+        "VERSION",	tVERSION,
+        "VISIBLE",	tVISIBLE,
+        "VISIBLEPKG",	tVISIBLEPKG,
+        "VOLUME",	tVOLUME,
+        "{",		tLEFT_BRACE,
+        "}",		tRIGHT_BRACE,
+	"",		-1
+};
+
+/*
+** map the text version of the comparison operators onto IDs...
+*/
+
+GLOBALDEF MAP
+ip_comparison[] =
+{
+	"==",	COMP_EQ,
+	"=",	COMP_EQ,
+	"<",	COMP_LT,
+	"<=",	COMP_LE,
+	">",	COMP_GT,
+	">=",	COMP_GE,
+	"",	0
+};
+
+static LOCATION
+*build_location( char *generic_path )
+{
+	LOCATION *loc = (LOCATION *) ip_alloc_blk( sizeof( LOCATION ) );
+
+	IPCL_LOfroms( PATH, IPCLbuildPath( generic_path, ip_error ), loc );
+	return( loc );
+}
+
+%}
+
+
+%%
+
+manifest:
+
+	tRELEASE tDATA 
+	{
+		if( prodNameP != NULL )
+			ip_list_assign_string( prodNameP, $2 );
+	}
+	release_version
+	manifest_body
+	;
+
+release_version:
+
+	/* empty */
+
+	| tVERSION tDATA
+	{
+		ip_list_assign_string( releaseIdP, $2 );
+	}
+	;
+
+manifest_body:
+
+	/* empty */
+
+	| manifest_body manifest_part 
+	;
+
+manifest_part:
+
+	file_attribute
+
+	| package
+	;
+
+package:
+
+	tPACKAGE tDATA 
+	{
+		char locBuf[ MAX_LOC + 1 ];
+		char buf[ 256 ];
+		LOCATION loc;
+		FILE *fp;
+		bool space;
+
+		currPkg = (PKGBLK *) ip_alloc_blk( sizeof( PKGBLK ) );
+		currPkg->file = NULL;
+		currPkg->feature = ip_stash_string( $2 );
+		currPkg->version = ip_stash_string( *releaseIdP );
+		currPkg->visible = VISIBLE;
+		ip_list_init( &currPkg->prtList );
+		ip_list_init( &currPkg->refList );
+		currPkg->selected = FALSE;
+		currPkg->actual_size = currPkg->apparent_size = 0;
+		currPkg->nfiles = 0;
+		currPkg->image_cksum = currPkg->image_size = 0;
+		currPkg->state = NOT_INSTALLED;
+                currPkg->aggregate = FALSE;
+# ifdef OMIT
+		currPkg->delete = FALSE;
+# endif /* OMIT */
+		ip_list_append( pkgListP, (PTR) currPkg );
+		/*
+		** Try to open package description file in release.dat 
+		** directory.  Look for file named "(feature).hlp",
+		** where "(feature)" is value of "feature" structure
+		** member.
+		*/
+		STcopy( manifestDir, locBuf );
+		IPCL_LOfroms( PATH, locBuf, &loc );
+		STprintf( buf, ERx( "%s.hlp" ), currPkg->feature ); 
+		LOfstfile( buf, &loc );
+		if( SIfopen( &loc, ERx( "r" ), SI_TXT, MAX_MANIFEST_LINE,
+			&fp ) == OK && SIgetrec( buf, MAX_MANIFEST_LINE,
+			fp ) == OK )
+		{
+			char msg[ 5000 ]; /* should be plenty */
+			/* bool described = FALSE, init = FALSE; */ /*b67112*/
+			bool described = FALSE;                     /*b67112*/
+			i4 len;
+
+			/* STcopy( buf, msg ); */                   /*b67112*/
+
+			(void) STtrmwhite( buf );
+
+			STcopy( buf, msg );                         /*b67112*/
+
+			currPkg->name = ip_stash_string( buf ); 
+
+			/* Use text on remaining lines as description. */
+			while( SIgetrec( buf, MAX_MANIFEST_LINE, fp ) == OK )
+			{
+				described = TRUE;
+
+				if( !batchMode )
+				{
+					/* 
+					** If not in batch mode, remove
+					** newlines from text (except for
+					** paragraph separators) so frs
+					** "message" statement can perform
+					** formatting.
+					*/
+
+					len = STlength( msg );
+					if( ( len + STlength( buf ) ) >=
+						sizeof( msg ) )
+					{
+						break;
+					}
+/*   b67112  */    /*  un-comment next line */
+					(void) STtrmwhite( buf );  /*b67112*/
+/*   b67112  */
+					if( *buf == EOS )
+					{
+						/* if( init ) */   /*b67112*/
+						/* {          */   /*b67112*/
+						/*   init = FALSE;  *b67112*/
+						/*   continue;      *b67112*/
+						/* }          */   /*b67112*/
+						STcopy( ERx( "\n\n" ),
+							&msg[ len ] );
+						space = FALSE;
+					}
+					else
+					{
+						if( space )
+							STcat( msg,
+							ERx( " " ) );
+						space = TRUE;
+					}
+					/* init = FALSE; */        /*b67112*/
+				}
+				STcat( msg, buf );
+			}
+			if( described )
+				currPkg->description = ip_stash_string( msg );
+			else
+				currPkg->description = NULL;
+			(void) SIclose( fp );
+		}
+		else
+		{
+			/* not description file found */
+			currPkg->name = currPkg->feature;
+			currPkg->description = NULL;
+		}
+	}	
+	package_options part_list
+	;
+
+package_options:
+
+	/* empty */
+
+	| package_option package_options
+	;
+
+package_option:
+
+	tCHECKSUM tDATA
+	{
+		(void) CVan( $2, &currPkg->image_cksum );
+	}
+
+	| tSTATE tDATA
+	{
+		(void) CVan($2, &currPkg->state);
+	}
+
+	| tINCLUDE tDATA
+	{
+		init_reference( &currPkg->refList, $2, INCLUDE );
+	}
+
+	| tINVISIBLE
+	{
+		if( currPkg->visible != VISIBLE &&
+			currPkg->visible != VISIBLEPKG &&
+			    currPkg->visible != INVISIBLE )
+		{
+			ip_error( "Package already declared visible." );
+		}
+		else
+			currPkg->visible = INVISIBLE;
+	}
+
+	| tVISIBLEPKG
+	{
+		if( currPkg->visible == INVISIBLE )
+			ip_error( "Package already declared INVISIBLE." );
+		else
+                        currPkg->visible = VISIBLEPKG;
+
+	}
+
+	| tPREFER tDATA
+	{
+		init_reference( &currPkg->refList, $2, PREFER );
+	}
+
+	| tNEED tDATA
+	{
+		init_reference( &currPkg->refList, $2, NEED );
+	}
+
+	| tSIZE tDATA
+	{
+		(void) CVan( $2, &currPkg->image_size );
+	}
+
+	| tVERSION tDATA
+	{
+		currPkg->version = ip_stash_string( $2 );
+	}
+
+	| tVISIBLE tDATA
+	{
+		if( currPkg->visible == INVISIBLE )
+			ip_error( "Package already declared INVISIBLE." );
+		else
+			ci2bit( $2, &currPkg->visible );
+	}
+
+	| tAGGREGATE
+        {
+                if( currPkg->aggregate == TRUE )
+                        ip_error( "Package already declared AGGREGATE." );
+                else
+                        currPkg->aggregate = TRUE;
+
+        }
+
+	;
+
+part_list:
+
+	/* empty */
+
+	| file_attribute part_list
+
+	| part part_list
+	;
+
+part:
+
+	tPART tDATA
+	{
+		FILE_ATTRIBUTES *tmp;
+
+		currPrt = (PRTBLK *) ip_alloc_blk( sizeof( PRTBLK ) );
+		currPrt->file = NULL;
+		currPrt->name = ip_stash_string( $2 );
+		currPrt->version = ip_stash_string( currPkg->version );
+		currPrt->preload = NULL;
+		currPrt->delete = NULL;
+		currPrt->size = 0;
+		ip_list_init( &currPrt->refList );
+		ip_list_init( &currPrt->capList );
+		ip_list_init( &currPrt->filList );
+		ip_list_append( &currPkg->prtList, (PTR) currPrt );
+	}
+	program_list part_spec
+	;
+
+part_spec:
+
+	capability_list part_body
+
+	| part_file_ref
+
+	;
+
+program_list:
+
+	/* empty */
+
+	| tPRELOAD tDATA program_list
+	{
+	    if (currPrt->preload == NULL)
+		currPrt->preload = ip_stash_string( $2 );
+	    else
+		ip_error( "Pre-load program redeclared." );
+	}
+
+	| tDELETE tDATA program_list
+	{
+	    if (currPrt->delete == NULL)
+		currPrt->delete = ip_stash_string( $2 );
+	    else
+		ip_error( "Deletion program redeclared." );
+	}
+	;
+
+capability_list:
+
+	/* empty */
+
+	| tCAPABILITY tDATA capability_list
+	{
+		i4 *bitp;
+		i4 bit;
+
+		ci2bit( $2, &bit );
+		*( bitp = (i4 *) ip_alloc_blk( sizeof( i4  ) ) ) = bit;
+		ip_list_append( &currPrt->capList, (PTR) bitp );
+	}
+	;
+
+part_body:
+
+	/* empty */
+
+	| part_body part_part
+	;
+
+part_part:
+
+	tLEFT_BRACE	
+	{
+		FILE_ATTRIBUTES *tmp;
+
+		/* create new file attribute context */
+		tmp = (FILE_ATTRIBUTES *) ip_alloc_blk(
+			sizeof( FILE_ATTRIBUTES ) );
+		MEcopy( (PTR) f_atts, sizeof( FILE_ATTRIBUTES ), (PTR) tmp );
+		tmp->next = f_atts;
+		f_atts = tmp;
+	}
+	part_body tRIGHT_BRACE
+	{
+		FILE_ATTRIBUTES *tmp = f_atts;
+
+		/* free (out of scope) attribute context */
+		f_atts = f_atts->next;	
+		MEfree( (PTR) tmp );
+	}
+
+	| file_spec file_options
+
+	| file_attribute
+	;
+
+file_spec:
+
+	tEXECUTABLE tDATA
+	{
+		i4 len = STlength( $2 ) + 1;
+		char *file;
+# ifdef VMS
+		len += 4;
+# endif
+		file = (char *) ip_alloc_blk( len ); 
+		STcopy( $2, file );
+# ifdef VMS
+		STcat( file, ERx( ".EXE" ) );
+# endif
+		newfile( file,
+			IPCLbuildPermission( DEFAULT_EXECUTABLE_PERMISSION,
+			ip_error ), FALSE );
+	}
+
+	| tEXECUTABLE tSETUP tDATA
+	{
+		i4 len = STlength( $3 ) + 1;
+		char *file;
+# ifdef VMS
+		len += 4;
+# endif
+		file = (char *) ip_alloc_blk( len ); 
+		STcopy( $3, file );
+# ifdef VMS
+		STcat( file, ERx( ".EXE" ) );
+# endif
+		newfile( file,
+			IPCLbuildPermission( DEFAULT_EXECUTABLE_PERMISSION,
+			ip_error ), FALSE );
+
+		currFil->setup = TRUE; 
+
+		init_reference( &currPrt->refList, currFil->name, SETUP );
+	}
+
+	| tSCRIPT tDATA
+	{
+		i4 len = STlength( $2 ) + 1;
+		char *file;
+# ifdef VMS
+		len += 4;
+# endif
+		file = (char *) ip_alloc_blk( len ); 
+		STcopy( $2, file );
+# ifdef VMS
+		STcat( file, ERx( ".COM" ) );
+# endif
+		newfile( file,
+			IPCLbuildPermission( DEFAULT_SCRIPT_PERMISSION,
+			ip_error ), FALSE );
+	}
+
+	| tSCRIPT tSETUP tDATA
+	{
+		i4 len = STlength( $3 ) + 1;
+		char *file;
+# ifdef VMS
+		len += 4;
+# endif
+		file = (char *) ip_alloc_blk( len ); 
+		STcopy( $3, file );
+# ifdef VMS
+		STcat( file, ERx( ".COM" ) );
+# endif
+		newfile( file,
+			IPCLbuildPermission( DEFAULT_SCRIPT_PERMISSION,
+			ip_error ), FALSE );
+
+		currFil->setup = TRUE; 
+
+		init_reference( &currPrt->refList, currFil->name, SETUP );
+	}
+
+	| tFILE tDATA 
+	{
+		char *file;
+# ifdef VMS
+		char *p;
+		bool dot_found = FALSE; 
+
+		/* scan file name to determine whether it contains '.' */
+		for( p = $2; *p != EOS; CMnext( p ) )
+		{
+			if( *p == '.' )
+			{
+				dot_found = TRUE;
+				break;
+			}
+		}
+	
+		/* append '.' if necessary */ 
+		if( !dot_found )
+		{
+			file = (char *) ip_alloc_blk( STlength( $2 ) + 2 ); 
+			STcopy( $2, file );
+			STcat( file, ERx( "." ) );
+		}
+		else
+			file = $2;
+# else /* VMS */
+		file = $2;
+# endif /* VMS */
+		newfile( file,
+			IPCLbuildPermission( DEFAULT_FILE_PERMISSION,
+			ip_error ), FALSE );
+	}
+
+	| tFILE tSETUP tDATA 
+	{
+		char *file;
+# ifdef VMS
+		char *p;
+		bool dot_found = FALSE; 
+
+		/* scan file name to determine whether it contains '.' */
+		for( p = $3; *p != EOS; CMnext( p ) )
+		{
+			if( *p == '.' )
+			{
+				dot_found = TRUE;
+				break;
+			}
+		}
+	
+		/* append '.' if necessary */ 
+		if( !dot_found )
+		{
+			file = (char *) ip_alloc_blk( STlength( $3 ) + 2 ); 
+			STcopy( $3, file );
+			STcat( file, ERx( "." ) );
+		}
+		else
+			file = $3;
+# else /* VMS */
+		file = $3;
+# endif /* VMS */
+
+		newfile( file,
+			IPCLbuildPermission( DEFAULT_FILE_PERMISSION,
+			ip_error ), FALSE );
+
+		currFil->setup = TRUE; 
+
+		init_reference( &currPrt->refList, currFil->name, SETUP );
+	}
+
+	| tLINK tDATA
+	{
+		newfile( $2,
+			IPCLbuildPermission( DEFAULT_EXECUTABLE_PERMISSION,
+			ip_error ), TRUE );
+	}
+	;
+
+file_options:
+
+	/* empty */
+
+	| file_option file_options
+	;
+
+file_option:
+
+	tSIZE tDATA
+	{
+		if( !currFil->link )
+		{
+			(void) CVan( $2, &currFil->size );
+			currPkg->actual_size += currFil->size;
+			currPrt->size += currFil->size;
+		}
+	}
+
+	| tCHECKSUM tDATA
+	{
+		if( !currFil->link )
+			(void) CVan( $2, &currFil->checksum );
+	}
+
+	| tCUSTOM
+	{
+		currFil->custom = TRUE; 
+	}
+
+	| tDYNAMIC
+	{
+		currFil->dynamic = TRUE; 
+	}
+	;
+	
+file_attribute:
+
+	tBUILD_DIR tDATA
+	{
+		f_atts->build_dir = IPCLbuildPath( $2, ip_error );
+	}
+
+	| tBUILD_FILE tDATA
+	{
+		f_atts->build_file = ip_stash_string( $2 );
+	}
+
+	| tDIRECTORY tDATA
+	{
+		f_atts->directory = IPCLbuildPath( $2, ip_error );
+		f_atts->generic_dir = ip_stash_string( $2 );
+	}
+
+	| tVOLUME tDATA
+	{
+		f_atts->volume = ip_stash_string( $2 );
+	}
+
+	| tPERMISSION tDATA
+	{
+		f_atts->permission = IPCLbuildPermission( $2, ip_error );
+	}
+	;
+
+part_file_ref:
+
+	tDEFINITION tDATA
+	{ 
+		currPrt->file = ip_stash_string( $2 );
+		if( OK != push_file( manifestDir, $2 ) )
+		{
+			ip_error( "Cannot open part descriptor file:" );
+			SIfprintf( stderr, "\t%s\n", $2 );
+		}
+	}
+	part_file
+	;
+
+part_file:
+
+	/* allow empty part files */
+	{
+		currPrt->file = NULL;
+	}
+
+	| tPART tDATA capability_list 
+	{
+		if( STbcompare( $2, 0, currPrt->name, 0, TRUE ) )
+		{
+			ip_error( "Part names do not match:" );
+			SIfprintf( stderr, "\t[%s]\n\t[%s]\n",
+				currPrt->name, $2 );
+		}
+	}
+ 	program_list part_body
+	;
+
+%%
+
+static char input_line[ MAX_MANIFEST_LINE + 1 ];
+static char *dataptr = NULL;
+
+/*
+** push_file() -- start parsing a different file.  
+**
+** Open the file, and create an entry on top of the file stack for it.
+**
+** Returns OK if the file opened OK, and something else if it didn't.
+*/
+
+static STATUS
+push_file( char *dir, char *fil )
+{
+	LOCATION loc;
+	char locBuf[ MAX_LOC + 1 ];
+	FILE *rfile;
+	i4 rtn = 0;
+
+	if( filex >= FILE_STACK_SIZE )
+		rtn = 999; /* file stack overflow */
+	else
+	{
+		STcopy( dir, locBuf );
+		IPCL_LOfroms( PATH, locBuf, &loc );
+		LOfstfile( fil, &loc );
+		if( OK == (rtn = SIfopen( &loc, ERx("r"), SI_TXT,
+			MAX_MANIFEST_LINE, &rfile) ) )
+		{
+			/* Create a new entry on the stack... */
+			file[ ++filex ].fp = rfile;
+			STlcopy( fil, file[ filex ].name,
+				sizeof( file[ filex ].name ) );
+				file[ filex ].line = 0;
+			return( OK );
+		}
+		rtn = FAIL;
+	}
+	return( rtn );
+}
+
+/* ip_lex_pop_file() -- close a file and remove it from the stack. */
+
+static bool
+ip_lex_pop_file()
+{
+    SIclose(file[filex--].fp);
+    if( filex < 0 )
+	return( FALSE );
+    return( TRUE );
+}
+
+/* yyerror -- handle parse error discovered inside the yacc grammar. */
+
+void
+yyerror(s)
+char *s;
+{
+    SIfprintf( stderr, ERget( E_ST0110_parse_failed ), ip_lex_where(), s );
+    parse_error = TRUE;
+}
+
+
+/*
+** ip_lex_read_line() -- read a line from the current input file.
+**
+** This function will keep reading until it finds a "good" line, i.e.
+** one which isn't all whitespace and has something on it besides a comment.
+*/
+
+# define END_OF_LINE(x) (*x == EOS || !CMcmpcase(x,COMMENT_CHAR))
+
+static char*
+ip_lex_read_line()
+{
+    char *cp;
+    do
+    {
+	if( OK != SIgetrec( input_line, MAX_MANIFEST_LINE, file[filex].fp ) )
+	    return NULL;
+	file[filex].line++;
+	for (cp=input_line; CMwhite(cp); CMnext(cp))
+	    ;
+    } while( END_OF_LINE( cp ) );
+
+    return cp;
+}
+
+/*
+** ip_lex_next_line() -- read and parse an input file line.
+**
+** Reads in a line from the input file, and parses it.  Sets the two
+** argument pointers to, respectively, the keyword and the data fields
+** on the line, and EOS-terminates both fields.
+**
+** Returns OK unless it encounters an EOF condition, i.e. end of file
+** and no further files on the stack.
+*/
+
+STATUS 
+ip_lex_next_line(kword, data)
+char **kword, **data;
+{
+    char *cp;
+    STATUS rtn;
+
+    while( NULL == (cp = ip_lex_read_line() ) )
+    {
+	if( ! ip_lex_pop_file() )
+	    return tEOF;  /* final EOF reached */
+    }
+
+    *data = NULL;  /* Initially assume no data field. */
+
+    /* 
+    ** The keyword is the first non-blank thing on the line; that's what
+    ** ip_lex_read_line returned, so we know that already.  Now we have
+    ** to move ahead to the data field, which follows the whitespace
+    ** that follows the keyword. 
+    */
+
+    for ( *kword = cp ; !CMwhite(cp) && !END_OF_LINE(cp) ; CMnext(cp) )
+	;
+
+    /* If we found some whitespace after the keyword... */
+
+    if (*cp != EOS && CMcmpcase(cp,COMMENT_CHAR))
+    {
+	*cp = EOS;   /* Null-terminate the keyword */
+
+	/* Find whatever follows the whitespace... */
+	for (CMnext(cp) ; CMwhite(cp) ; CMnext(cp))
+	    ;
+
+	if (!END_OF_LINE(cp))  /* If there's something there... */
+	{
+	    /* Find the end-of-line position... */
+	    for (*data = cp ; !END_OF_LINE(cp) ; CMnext(cp))
+		;
+
+	    /* ...and then back up to the end of the data field. */
+	    for (CMprev(cp,cp-2); CMwhite(cp); CMprev(cp,cp-2))
+		;
+
+	    /* Null-terminate the data field. */
+	    CMnext(cp);
+	    *cp = EOS;
+	}
+    }
+    return OK;
+}
+
+/*
+** comparison() -- parse a comparison operator.
+**
+** Checks to see if the data field (global "dataptr") begins with a
+** comparison operator.  If not, returns 0; if so, returns the "id"
+** field of the MAP structure that corresponds to the operator.  If
+** a comparison operator is found, advances the "dataptr" pointer to
+** point at whatever follows the operator.
+**
+** Example: this deals with constructs like this:
+**
+**    Version    >= 6.5/00
+*/
+
+static uchar
+comparison()
+{
+    uchar len;
+    uchar mlen = 0;  /* Length of longest operator matched so far. */
+    uchar comp = 0;
+    MAP *compid;
+
+    for (compid = ip_comparison; *compid->token; compid++)
+    {
+	len = STlength(compid->token);
+	if ( len > mlen &&   /* If this potentially matches a longer operator */
+	     !STbcompare(compid->token, len, dataptr, 99, FALSE) )
+	{
+	    mlen = len;
+	    comp = compid->id;
+	}
+	     
+    }
+
+    for (dataptr += mlen ; CMwhite(dataptr) ; CMnext(dataptr))
+	;
+
+    return comp;
+}
+
+
+/*
+** yylex() -- lexical scanner for the yacc parser.
+**
+** Returns the ID of the next token, and sets up the fields of the "yylval"
+** union as required by yacc.  (The yylval fields are defined by the
+** "%union" declaration; see a yacc manual for details on how this stuff
+** works.)
+*/
+
+yylex()
+{
+	static char *kwordptr = NULL;
+	MAP *tkid;
+	uchar comp;
+		STATUS status;
+
+	/*
+	** If kwordptr is NULL, get another line of input
+	** until a non-blank line is read or until EOF.
+	*/
+	while( kwordptr == NULL && (status = ip_lex_next_line(
+		&kwordptr, &dataptr )) != tEOF );
+
+	if( status == tEOF )
+		return( 0 );
+
+	/* check whether kwordptr points to a keyword */ 
+	for( tkid = ip_tokenid; *tkid->token; tkid++ )
+	{
+		if( !STbcompare( kwordptr, 0, tkid->token, 0, TRUE ) )
+   		{
+			char *p;
+
+			/*
+			** Keyword found.  Before returning, modify
+			** kwordptr to point to next possible keyword,
+			** if one exists.  Also, modify dataptr to
+			** point to remainder of buffer. 
+			**
+			** Code mostly stolen from ip_lex_next_line().
+			*/
+   			yylval.cptr = tkid->token;
+
+			if( (kwordptr = dataptr) != NULL )
+			{
+				/*
+				** scan until EOS, whitespace or comment
+				** character.
+				*/
+   				for( p = kwordptr; !CMwhite( p ) &&
+					!END_OF_LINE( p ) ; CMnext( p ) );
+
+				if( *p != EOS && CMcmpcase( p, COMMENT_CHAR ) )
+    				{
+					/* tDATA may follow */
+					char *pp;
+
+					*p = EOS; /* terminate keyword */
+
+					/* scan to non-whitespace */
+					for( pp = p, CMnext( pp );
+						CMwhite( pp ); CMnext( pp ) );
+
+					/* check whether tDATA follows */
+					if( !END_OF_LINE( pp ) )
+						dataptr = CMnext( p );
+					else
+						dataptr = NULL;
+    				}
+				else
+				{
+					/* tDATA does not follow */
+					dataptr = NULL;
+				}
+			}
+	   		return( tkid->id );
+		}
+	}
+
+	if( *tkid->token == 0 )
+	{
+		/*
+		** kwordptr doesn't point to a keyword,
+		** so rejoin kwordptr and dataptr (if not
+		** NULL) and break out to dataptr section. 
+		*/
+		if( dataptr != NULL )
+		{
+			while( *dataptr != EOS ) CMprev( dataptr, kwordptr ); 
+				*dataptr = ' ';
+		}
+		dataptr = kwordptr;
+		kwordptr = NULL;
+	}	
+
+	/* assume dataptr is not NULL */
+	comp = comparison();
+	if( comp )  /* Is it a comparison operator? */
+	{
+		yylval.comparison = comp;
+		dataptr = NULL;
+		return( tCOMPARISON );
+	}
+	else
+	{
+		/* copy in the data text */
+		STcopy( dataptr, yylval.datatxt );
+		dataptr = NULL;
+		return( tDATA );
+	}
+}
+
+/*
+** Return TRUE if the first package is in the second's reference list.
+*/
+
+static bool
+pkg_depends_on_pkg( PKGBLK *p1, PKGBLK *p2 )
+{
+	REFBLK *ref;
+
+	SCAN_LIST( p1->refList, ref )
+	{
+		if( ref->type == INCLUDE )
+			continue;
+		if( STbcompare( ref->name, 0, p2->feature, 0, TRUE ) == 0 )
+			return( TRUE );
+	}
+	SCAN_LIST( p2->refList, ref )
+	{
+		if( ref->type == INCLUDE )
+		{
+			PKGBLK *ipkg;
+
+			if( (ipkg = ip_find_package( ref->name,
+				DISTRIBUTION )) != NULL &&
+				pkg_depends_on_pkg( p1, ipkg ) )
+			{
+				return( TRUE );
+			}
+		}
+	}
+	return( FALSE );
+}
+
+/*
+** ip_parse() -- manifest parser interface
+**
+** Reads a manifest-format file, and creates an internal list that corresponds
+** to the definitions on the file.
+**
+** Inputs:
+**    
+**    which		INSTALLATION or DISTRIBUTION
+**    pkgList		Pointer to the list we're creating
+**    relidptr		Pointer to where to store the pointer to the
+**			release ID
+**    prodnamep		Pointer to where to store the pointer to the
+**			product name
+**
+** Returns OK if the parse succeeded, FAIL if there were errors.
+*/
+
+STATUS
+ip_parse( i4  which, LIST *pkgList, char **relidptr, char **prodnamep,
+	bool complain )
+{
+	STATUS st;
+	PKGBLK *pkg;
+	REFBLK *ref;
+	bool flag;
+	char *cp;
+	LISTELE	*lp1;
+
+	ip_list_init( pkgListP = pkgList );
+
+	*(releaseIdP = relidptr) = ip_stash_string( Version );
+
+	if( NULL != (prodNameP = prodnamep) )
+		*prodNameP = NULL;
+
+	/* set manifestDir variable */
+	NMgtAt( ERx( "II_MANIFEST_DIR" ), &cp );
+	if( cp != NULL && *cp != EOS )
+		STlcopy( cp, manifestDir, sizeof(manifestDir)-1 );
+	else
+	{
+		LOCATION loc;
+		char locBuf[ MAX_LOC + 1 ];
+
+		NMgtAt( SystemLocationVariable, &cp );
+		STlcopy( cp, locBuf, sizeof(locBuf)-20-1 );
+		IPCL_LOfroms( PATH, locBuf, &loc );
+		LOfaddpath( &loc, SystemLocationSubdirectory, &loc );
+		LOfaddpath( &loc, ERx( "manifest" ), &loc );
+
+		if( LOexist( &loc ) == OK )
+		    STlcopy( locBuf, manifestDir, sizeof(manifestDir)-1 );
+		else
+		    STlcopy( ip_install_loc(), manifestDir, sizeof(manifestDir)-1 );
+	}
+
+	switch( which )
+	{
+		case INSTALLATION:
+		{
+			LOCATION loc;
+			char locBuf[ MAX_LOC + 1 ];
+
+			NMgtAt( SystemLocationVariable, &cp );
+			STlcopy( cp, locBuf, sizeof(locBuf)-20-1 );
+			IPCL_LOfroms( PATH, locBuf, &loc );
+			LOfaddpath( &loc, SystemLocationSubdirectory, &loc );
+			LOfaddpath( &loc, ERx( "files" ), &loc );
+			
+			if( OK != (st = push_file( locBuf,
+				INSTALLATION_MANIFEST )) )
+			{
+				if( complain ) 
+				{
+					IIUGerr( E_ST0140_no_manifest,
+						0, 1, INSTALLATION_MANIFEST );
+					return( st );
+				}
+				return( OK );
+			}
+			break;
+		}
+	
+		case DISTRIBUTION:
+
+			if( OK != (st = push_file( manifestDir,
+				releaseManifest )) )
+			{
+				if( complain )
+				{
+					IIUGerr( E_ST0140_no_manifest,
+						0, 1, releaseManifest );
+					return( st );
+				}
+				return( OK );
+			}
+			break;
+	}
+
+	/* initialize file attributes */
+	f_atts = (FILE_ATTRIBUTES *) ip_alloc_blk( sizeof( FILE_ATTRIBUTES ) );
+	f_atts->build_dir = NULL;
+	f_atts->build_file = NULL;
+	f_atts->directory = NULL;
+	f_atts->generic_dir = NULL;
+	f_atts->volume = NULL;
+	f_atts->executable = NULL;
+	f_atts->next = NULL;
+	f_atts->permission = NULL_PERMISSION;
+
+	parse_error = FALSE;
+
+	yyparse();
+
+	if( parse_error )
+		return( PARSE_FAIL );
+
+	/*
+	** Report all undefined but referenced packages (then fail).
+	*/
+	for( lp1 = pkgList->head; lp1 != NULL; lp1 = lp1->cdr )
+	{
+		LISTELE *lp2;
+
+		/* Allow INVISIBLE packages to reference undefined packages */
+		if( !ip_is_visible( (PKGBLK *) lp1->car ) )
+			continue;
+
+		/* Scan referenced packages to verify existence */
+		for( lp2 = ((PKGBLK *) lp1->car)->refList.head; lp2 != NULL;
+			lp2 = lp2->cdr )
+		{
+			bool found;
+			LISTELE *lp3;
+
+			ref = (REFBLK *) lp2->car;
+
+			if( ref->type == PREFER )
+				continue;
+
+			found = FALSE;
+			for( lp3 = pkgList->head; lp3 != NULL; lp3 = lp3->cdr )
+			{
+				if( STequal( ref->name,
+					((PKGBLK *) lp3->car)->feature ) )
+				{
+					found = TRUE;
+				}
+			}
+			if( !found )
+			{
+				SIfprintf( stderr, ERx( "Package \"%s\" is referenced but not defined.\n" ), ref->name );
+				if( complain )
+					parse_error = TRUE;
+			}
+		}
+	}
+
+	if( parse_error )
+		return( PARSE_FAIL );
+
+	/*
+	** Perform insertion sort on list of packages so that setup
+	** programs are run in the correct order.
+	*/
+	for( lp1 = pkgList->head; lp1 != NULL; lp1 = lp1->cdr )
+	{
+		LISTELE *lp2;
+
+		for( lp2 = lp1->cdr; lp2 != NULL; lp2 = lp2->cdr )
+		{
+			if( pkg_depends_on_pkg( (PKGBLK *) lp1->car,
+				(PKGBLK *) lp2->car ) )
+			{
+				PTR tmp;
+
+				tmp = lp1->car;
+				lp1->car = lp2->car;
+				lp2->car = tmp;
+			}
+		}
+	}
+
+	/* Compute the apparent sizes of all package. */
+	for( lp1 = pkgList->head; lp1 != NULL; lp1 = lp1->cdr )
+	{
+		pkg = (PKGBLK *) lp1->car;
+		pkg->apparent_size =
+			compute_apparent_size( pkgList, pkg, 0 );
+	}
+
+	return( OK );
+}
+
+/*
+** compute_apparent_size() -- compute the size of a package.  The size of
+** a package is the sum of the sizes of all files contained in the package
+** and all INCLUDEd packages.
+**
+** This function finds all packages INCLUDEd by the one it's called for
+** and calls itself recursively to compute the total size.
+**
+** This number is displayed by the installation utility as a worst-case
+** estimate of the size of a package.  When installing multiple packages,
+** the actual disk space required will be less if packages share files.
+*/
+
+# ifdef DEBUG_COMPUTE_SIZE
+# define INDENT(N) { i4  i; for( i = 0; i <= N; i++ ) SIprintf( "\t" ); }
+# endif /* DEBUG_COMPUTE_SIZE */
+
+static i4
+compute_apparent_size( LIST *pkgList, PKGBLK *pkg, i4  nest )
+{
+	LISTELE *lp1;
+	REFBLK *ref;
+	i4 apparent_size = 0;
+
+	if( nest == 0 )
+	{
+# ifdef DEBUG_COMPUTE_SIZE
+INDENT(nest);
+SIprintf( "marking all visited.\n" );
+# endif /* DEBUG_COMPUTE_SIZE */ 
+		/* mark all packages "not visited" */
+		for( lp1 = pkgList->head; lp1 != NULL; lp1 = lp1->cdr )
+		{
+			PKGBLK *spkg = (PKGBLK *) lp1->car;
+			spkg->visited = FALSE;
+		}
+	}
+# ifdef DEBUG_COMPUTE_SIZE
+else
+{
+INDENT(nest);
+SIprintf( "visiting %s.\n", pkg->feature );
+}
+# endif /* DEBUG_COMPUTE_SIZE */ 
+
+	/* return 0 if package's actual size already counted */
+	if( pkg->visited )
+# ifdef DEBUG_COMPUTE_SIZE
+{
+INDENT(nest);
+SIprintf( "\t%s already visited. return( 0 );\n", pkg->feature );
+# endif /* DEBUG_COMPUTE_SIZE */ 
+		return( 0 );
+# ifdef DEBUG_COMPUTE_SIZE
+}
+# endif /* DEBUG_COMPUTE_SIZE */ 
+
+	pkg->visited = TRUE;
+
+	/* scan all packages in this package's refList */
+	for( lp1 = pkg->refList.head; lp1 != NULL; lp1 = lp1->cdr )
+	{
+		ref = (REFBLK *) lp1->car;
+		if( ref->type == INCLUDE )
+		{
+			LISTELE *lp2;
+
+			for( lp2 = pkgList->head; lp2 != NULL; lp2 = lp2->cdr )
+			{
+				PKGBLK *spkg = (PKGBLK *) lp2->car;
+
+				if( !STbcompare( ref->name, 0, spkg->feature,
+					0, TRUE ) )
+				{
+					apparent_size +=
+						compute_apparent_size( pkgList,
+							spkg, nest + 1 );
+				}
+			}
+		}
+	}
+	apparent_size += pkg->actual_size;
+
+# ifdef DEBUG_COMPUTE_SIZE
+INDENT(nest);
+SIprintf( "return( %d );\n", apparent_size );
+# endif /* DEBUG_COMPUTE_SIZE */ 
+	return( apparent_size );
+}
+
+/*
+** init_reference() -- create and populate a reference block.
+**
+** Creates a reference block of the type specified by the "type"
+** argument, defining a reference to the object named by the "name"
+** parameter, and then appends it onto the reference list specified
+** by the "list" parameter.
+*/
+
+static void
+init_reference( LIST *list, char *name, uchar type)
+{
+	currRef = (REFBLK *) ip_alloc_blk( sizeof( REFBLK ) );
+	currRef->type = type;
+	currRef->version = NULL;
+	currRef->comparison = 0;
+	currRef->name = ip_stash_string( name );
+	ip_list_append( list, (PTR) currRef );
+}
+
+/*
+** ci2bit() -- translate a capability name to a bit number.
+**
+** The capability name is specified by the "ciname" parameter; the
+** corresponding bit number is left where "cival" points.  An unrecognized
+** capability name causes a syntax error.
+**
+** If the capability name is preceded by an exclamation point, the
+** bit number is biased by the constant NOT_BIAS.  This will have the
+** effect of inverting any tests made on the value of the bit.
+*/
+
+static void
+ci2bit( char *ciname, i4  *cival )
+{
+    CIBIT *ci;
+    i4  bias = 0;
+    
+    if (!CMcmpcase(ciname, ERx("!")))
+    {
+	bias = NOT_BIAS;
+	CMnext(ciname);
+    }
+
+    for (ci=cibits; ci->name; ci++)
+    {
+        if (!STbcompare(ciname, 0, ci->name, 0, TRUE))
+	{
+	    *cival = ci->bitno + bias;
+	    return;
+	}
+    }
+
+    ip_error( "Invalid capability name." );
+}
+
+
+/*
+** ip_bit2ci() -- convert a bit number, possibly biased, to a capability name.
+**
+** This routine is the inverse of ci2bit.  It's not really used in parsing;
+** it's just located in this file because the conversion table is defined
+** here.  The parameter is a capability bit number, possibly biased by the
+** constant NOT_BIAS.  The return code is a pointer to a static character
+** string containing the corresponding capability name, preceded by an
+** exclamation point if the input value was biased.
+*/
+
+char *
+ip_bit2ci( i4  cibitno )
+{
+    CIBIT *ci;
+    static char name[ MAX_MANIFEST_LINE ];
+
+    if (cibitno >= NOT_BIAS)
+    {
+	STcopy(ERx("!"), name);
+	cibitno -= NOT_BIAS;
+    }
+    else
+    {
+	*name = EOS;
+    }
+
+    for (ci=cibits; ci->name; ci++)
+    {
+	if (ci->bitno == cibitno)
+	{
+	    STcat(name, ci->name);
+	    break;
+	}
+    }
+
+    return name;
+}
+
+/*
+** newfile() -- create and populate a file block.
+**
+** Creates a FILBLK structure corresponding to the file named by the
+** "file" parameter.  This is done as a separate function, rather
+** than directly in the code generated in the yacc pattern, because
+** there are two different declarations that create a file block: "file"
+** and "link".  The "linkflag" parameter tells us which one we're processing;
+** the value of "linkflag" becomes the value of the "link" boolean field
+** in the FILBLK that's created.
+**
+** The created block is linked onto the end of the file list for the
+** part that's currently being created.
+**
+** If in 'patch mode', add dir+name of file and FILBLK address to
+** hash index.
+*/
+
+static void
+newfile( char *file, PERMISSION permission, bool link )
+{
+	currPkg->nfiles++;
+	currFil = (FILBLK *) ip_alloc_blk( sizeof( FILBLK ) );
+	ip_list_assign_new( &currFil->name, file );
+	currFil->directory = f_atts->directory;
+	currFil->generic_dir = f_atts->generic_dir;
+	currFil->build_dir = f_atts->build_dir;
+	if( link )
+	{
+		if( f_atts->executable == NULL ) 
+		{
+			/* no EXECUTABLE is defined to link to */
+			ip_error( "LINK requires prior EXECUTABLE specification." );
+		}
+		currFil->build_file = f_atts->executable;	
+	}
+	else
+	{
+		currFil->build_file = f_atts->build_file;
+		f_atts->executable = file;	
+	}
+	f_atts->build_file = NULL;
+	currFil->volume = f_atts->volume;
+	currFil->exists = TRUE;
+	currFil->setup = FALSE;
+	currFil->checksum = -1;
+	currFil->size = 0;
+	currFil->link = link;
+	if( f_atts->permission != NULL_PERMISSION )
+		currFil->permission_sb = f_atts->permission;
+	else
+		currFil->permission_sb = permission;
+	currFil->custom = FALSE;
+	currFil->dynamic = FALSE;
+	ip_list_append( &currPrt->filList, (PTR) currFil );
+	if ( (link == FALSE) && (pmode == TRUE))
+		ip_hash_file_put(currFil->directory, currFil->name, (PTR)currFil);
+}

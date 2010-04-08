@@ -1,0 +1,1534 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+#include "rctools.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\vcbf.ico"
+IDR_VCBFTYPE            ICON                    "res\\vcbfdoc.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+IDR_MAINFRAME TOOLBAR  16, 15
+BEGIN
+    BUTTON      ID_FILE_NEW
+    BUTTON      ID_FILE_OPEN
+    BUTTON      ID_FILE_SAVE
+    SEPARATOR
+    BUTTON      ID_EDIT_CUT
+    BUTTON      ID_EDIT_COPY
+    BUTTON      ID_EDIT_PASTE
+    SEPARATOR
+    BUTTON      ID_FILE_PRINT
+    BUTTON      ID_APP_ABOUT
+    BUTTON      ID_CONTEXT_HELP
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME_SAVE MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",                ID_FILE_NEW
+        MENUITEM "&Open...\tCtrl+O",            ID_FILE_OPEN
+        MENUITEM "&Save\tCtrl+S",               ID_FILE_SAVE
+        MENUITEM "Save &As...",                 ID_FILE_SAVE_AS
+        MENUITEM SEPARATOR
+        MENUITEM "&Print...\tCtrl+P",           ID_FILE_PRINT
+        MENUITEM "Print Pre&view",              ID_FILE_PRINT_PREVIEW
+        MENUITEM "P&rint Setup...",             ID_FILE_PRINT_SETUP
+        MENUITEM SEPARATOR
+        MENUITEM "Recent File",                 ID_FILE_MRU_FILE1, GRAYED
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Undo\tCtrl+Z",               ID_EDIT_UNDO
+        MENUITEM SEPARATOR
+        MENUITEM "Cu&t\tCtrl+X",                ID_EDIT_CUT
+        MENUITEM "&Copy\tCtrl+C",               ID_EDIT_COPY
+        MENUITEM "&Paste\tCtrl+V",              ID_EDIT_PASTE
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Help Topics",                ID_HELP_FINDER
+        MENUITEM SEPARATOR
+        MENUITEM "&About vcbf...",              ID_APP_ABOUT
+    END
+END
+
+IDR_MAINFRAME MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",                ID_FILE_NEW
+        MENUITEM "&Open...\tCtrl+O",            ID_FILE_OPEN
+        MENUITEM SEPARATOR
+        MENUITEM "&Print...\tCtrl+P",           ID_FILE_PRINT
+        MENUITEM "Print Pre&view",              ID_FILE_PRINT_PREVIEW
+        MENUITEM "P&rint Setup...",             ID_FILE_PRINT_SETUP
+        MENUITEM SEPARATOR
+        MENUITEM "Recent File",                 ID_FILE_MRU_FILE1, GRAYED
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Undo\tCtrl+Z",               ID_EDIT_UNDO
+        MENUITEM SEPARATOR
+        MENUITEM "Cu&t\tCtrl+X",                ID_EDIT_CUT
+        MENUITEM "&Copy\tCtrl+C",               ID_EDIT_COPY
+        MENUITEM "&Paste\tCtrl+V",              ID_EDIT_PASTE
+        MENUITEM SEPARATOR
+        MENUITEM "&Find...\tCtrl+F",            ID_MENUITEM32783
+    END
+    POPUP "Configuration"
+    BEGIN
+        MENUITEM "Edit Name",                   ID_MENU_EDITNAME
+        MENUITEM "Edit Count",                  ID_MENUITEM32777
+        MENUITEM SEPARATOR
+        MENUITEM "Duplicate",                   ID_MENUITEM32778
+        MENUITEM "Delete",                      ID_MENUITEM32779
+        MENUITEM "Properties",                  ID_MENUITEM32780
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Help Topics",                ID_HELP_FINDER
+        MENUITEM SEPARATOR
+        MENUITEM "&About vcbf...",              ID_APP_ABOUT
+    END
+END
+
+IDR_TREE_POPUP MENU 
+BEGIN
+    POPUP "Popup"
+    BEGIN
+        MENUITEM "Edit &Name",                  ID_MENU_EDITNAME
+        MENUITEM "Edit &Count",                 ID_MENU_EDITCOUNT
+        MENUITEM SEPARATOR
+        MENUITEM "Add New XXX Based On ""(default)""", 
+                                                ID_MENU_DUPLICATE_DEFAULT
+        MENUITEM "Add New XXX Based On ""YYY""", ID_MENU_DUPLICATE
+        MENUITEM "&Delete",                     ID_MENU_DELETE
+        MENUITEM SEPARATOR
+        MENUITEM "&Properties",                 ID_MENU_PROPERTIES
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS 
+BEGIN
+    "N",            ID_FILE_NEW,            VIRTKEY, CONTROL
+    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL
+    "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL
+    "P",            ID_FILE_PRINT,          VIRTKEY, CONTROL
+    "Z",            ID_EDIT_UNDO,           VIRTKEY, CONTROL
+    "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL
+    "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL
+    "V",            ID_EDIT_PASTE,          VIRTKEY, CONTROL
+    VK_BACK,        ID_EDIT_UNDO,           VIRTKEY, ALT
+    VK_DELETE,      ID_EDIT_CUT,            VIRTKEY, SHIFT
+    VK_INSERT,      ID_EDIT_COPY,           VIRTKEY, CONTROL
+    VK_INSERT,      ID_EDIT_PASTE,          VIRTKEY, SHIFT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY 
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT
+    VK_F1,          ID_CONTEXT_HELP,        VIRTKEY, SHIFT
+    VK_F1,          ID_HELP,                VIRTKEY 
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG  0, 0, 217, 55
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About vcbf"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,11,17,20,20
+    LTEXT           "vcbf Version 1.0",IDC_STATIC,40,10,119,8,SS_NOPREFIX
+    LTEXT           "Copyright © 1997",IDC_STATIC,40,25,119,8
+    DEFPUSHBUTTON   "OK",IDOK,178,7,32,14,WS_GROUP
+END
+
+IDD_WAIT_DIALOG1 DIALOG  0, 0, 240, 60
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Please Wait..."
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Please Wait...",IDC_TEXT,61,27,165,17,SS_NOPREFIX
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_TRANSPARENT | 
+                    ACS_AUTOPLAY | WS_TABSTOP,17,22,31,26
+    GROUPBOX        "",IDC_STATIC,7,7,226,46
+END
+
+IDD_WAIT_DIALOG DIALOG  0, 0, 209, 66
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Please Wait..."
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Please Wait...",IDC_TEXT,20,48,182,15,SS_NOPREFIX
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_TRANSPARENT | 
+                    ACS_AUTOPLAY | WS_TABSTOP,23,5,179,36
+END
+
+IDD_FIND_DIALOG DIALOG  0, 0, 236, 63
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Find"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Fi&nd what:",IDC_STATIC,4,9,34,8
+    EDITTEXT        IDC_FIND_TEXT,44,7,128,12,ES_AUTOHSCROLL
+    CONTROL         "Match &case",IDC_MATCH_CASE,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,4,45,53,10
+    GROUPBOX        "Direction",IDC_STATIC,99,28,74,28
+    CONTROL         "&Up",IDC_RB_UP,"Button",BS_AUTORADIOBUTTON | WS_GROUP | 
+                    WS_TABSTOP,105,41,25,10
+    CONTROL         "&Down",IDC_RB_DOWN,"Button",BS_AUTORADIOBUTTON,135,41,
+                    35,10
+    DEFPUSHBUTTON   "&Find Next",IDB_FIND_NEXT,179,5,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,179,23,50,14
+END
+
+IDD_WAIT_DIALOG_PROGRESS DIALOG  0, 0, 209, 82
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Please Wait..."
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Please Wait...",IDC_TEXT,14,51,191,8,SS_NOPREFIX
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_TRANSPARENT | 
+                    ACS_AUTOPLAY | WS_TABSTOP,23,5,179,36
+    CONTROL         "Progress1",IDC_PROGRESS1,"msctls_progress32",0x0,13,62,
+                    183,13
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDR_MAINFRAME           "Configuration Manager\n\nConfiguration Manager\n\n\nVcbf.Document\nVcbf Document"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Configuration Manager"
+    AFX_IDS_IDLEMESSAGE     "For Help, press F1"
+    AFX_IDS_HELPMODEMESSAGE "Select an object on which to get Help"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+    ID_FILE_PAGE_SETUP      "Change the printing options\nPage Setup"
+    ID_FILE_PRINT_SETUP     "Change the printer and printing options\nPrint Setup"
+    ID_FILE_PRINT           "Print the active document\nPrint"
+    ID_FILE_PRINT_PREVIEW   "Display full pages\nPrint Preview"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_APP_ABOUT            "Display program information, version number and copyright\nAbout"
+    ID_APP_EXIT             "Quit the application; prompts to save documents\nExit"
+    ID_HELP_INDEX           "Opens Help\nHelp Topics"
+    ID_HELP_FINDER          "List Help topics\nHelp Topics"
+    ID_HELP_USING           "Display instructions about how to use help\nHelp"
+    ID_CONTEXT_HELP         "Display help for clicked on buttons, menus and windows\nHelp"
+    ID_HELP                 "Display help for current task or command\nHelp"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_MRU_FILE1       "Open this document"
+    ID_FILE_MRU_FILE2       "Open this document"
+    ID_FILE_MRU_FILE3       "Open this document"
+    ID_FILE_MRU_FILE4       "Open this document"
+    ID_FILE_MRU_FILE5       "Open this document"
+    ID_FILE_MRU_FILE6       "Open this document"
+    ID_FILE_MRU_FILE7       "Open this document"
+    ID_FILE_MRU_FILE8       "Open this document"
+    ID_FILE_MRU_FILE9       "Open this document"
+    ID_FILE_MRU_FILE10      "Open this document"
+    ID_FILE_MRU_FILE11      "Open this document"
+    ID_FILE_MRU_FILE12      "Open this document"
+    ID_FILE_MRU_FILE13      "Open this document"
+    ID_FILE_MRU_FILE14      "Open this document"
+    ID_FILE_MRU_FILE15      "Open this document"
+    ID_FILE_MRU_FILE16      "Open this document"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or hide the toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or hide the status bar\nToggle StatusBar"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCSIZE          "Change the window size"
+    AFX_IDS_SCMOVE          "Change the window position"
+    AFX_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    AFX_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    AFX_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    AFX_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCRESTORE       "Restore the window to normal size"
+    AFX_IDS_SCTASKLIST      "Activate Task List"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_PREVIEW_CLOSE   "Close print preview mode\nCancel Preview"
+    IDS_TAB_MAIN_CONFIGURE  "Configure"
+    IDS_TAB_MAIN_HISTORY    "History of Changes"
+    IDS_TAB_MAIN_PREFERENCES "Preferences"
+    IDS_TAB_CONFRIGHT_CACHE "Cache"
+    IDS_TAB_CONFRIGHT_DATABASES "Databases"
+    IDS_TAB_CONFRIGHT_DERIVED "Derived"
+    IDS_TAB_CONFRIGHT_PARAMETERS "Parameters"
+    IDS_TAB_CONFRIGHT_PROTOCOL "Protocols"
+    IDS_TAB_CONFRIGHT_CONFIGURE "Configure"
+    IDS_TAB_CONFRIGHT_OPTION "Options"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TAB_CONFRIGHT_AUDITING "Auditing"
+    IDS_TAB_CONFRIGHT_AUDITDERIVED "Auditing Derived"
+    IDS_TAB_CONFRIGHT_LOGFILE "Log Files"
+    IDS_TAB_CONFRIGHT_PRIMARYLOG "Primary Log"
+    IDS_TAB_CONFRIGHT_SECONDARYLOG "Dual Log"
+    IDS_TAB_CONFRIGHT_STARTUP_COUNT "Startup Count"
+    IDS_APP_EDBC_TITLE      "EDBC Configuration Manager"
+    IDS_TAB_CONFRIGHT_SYSTEM "System"
+    IDS_TAB_CONFRIGHT_MECHANISM "Mechanisms"
+    IDS_TAB_CONFRIGHT_REGISTRY "Registry"
+    IDS_TAB_CONFRIGHT_VNODE "Vnodes"
+    IDS_CHOOSE_FOLDER       "Please Select a Folder Name:"
+    IDS_BUTTON_EDIT_VALUE   "Edit Value"
+    IDS_BUTTON_RESTORE      "Restore"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_BUTTON_RECALCULATE  "Recalculate"
+    IDS_BUTTON_LISTEN_ADDRESS "Listen Address"
+    IDS_BUTTON_ADD          "Add"
+    IDS_BUTTON_DELETE       "Delete"
+    IDS_BUTTON_REMOVE       "Remove"
+    IDS_BUTTON_REFORMAT     "Reformat"
+    IDS_BUTTON_DISABLE      "Disable"
+    IDS_BUTTON_ERASE        "Erase"
+    IDS_BUTTON_DESTROY      "Destroy"
+    IDS_BUTTON_CREATE       "Create..."
+    IDS_COL_PROTOCOL        "Protocol"
+    IDS_COL_STATUS          "Status"
+    IDS_COL_LISTEN_ADDRESS  "Listen Address"
+    IDS_COL_VNODE           "VNode"
+    IDS_COL_CACHE           "Cache"
+    IDS_COL_COMPONENT       "Component"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_COL_CONFIG          "Config Name"
+    IDS_COL_STARTUP         "Startup Count"
+    IDS_COL_ENABLED         "Enabled"
+    IDS_COL_MECHANISM       "Mechanism"
+    IDS_COL_CROSSHATCH      "#"
+    IDS_COL_AUDIT_LOG       "Audit Log File"
+    IDS_COL_PARAMETER       "Parameter"
+    IDS_COL_VALUE           "Value"
+    IDS_COL_UNIT            "Unit"
+    IDS_COL_PROTECTED       "Protected"
+    IDS_ERR_CREATE_LIST     "Fatal: Could not Create Component List"
+    IDS_ERR_DELETE_ITEM     "You cannot delete the item ""%1"""
+    IDS_CONFIRM_DELETE      "Are you sure you want to delete ""%1""?"
+    IDS_CHANGE_STARTUP_COUNT 
+                            "Would you like to change the startup count from ""%1"" to ""0"" and delete this item automatically?"
+    IDS_ENTER_NAME          "You must enter a value for 'Name'"
+    IDS_ENTER_STARTUP_COUNT "You must enter a value for 'Startup Count'"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_PATH_FOR_TRANSAC_LOG 
+                            "You must enter a fully qualified path for the transaction log file."
+    IDS_EMPTY_DBNAME        "Empty Database Name"
+    IDS_INVALID_DBNAME      "Invalid Database Name"
+    IDS_MAX_LOG_FILES       "You cannot add any more log files; the maximum number of log files is '%i'."
+    IDS_TRANSACTION_LOG_ONE "You may only have one partition to create the %s Transaction Log since the %s Transaction Log has one partition."
+    IDS_ERR_TRANSACTION_PART 
+                            "You must have %i partitions to create the %s Transaction Log since the %s Transaction Log has %i partitions."
+    IDS_AT_LEAST_ONE_LOG    "You must enter at least one log file in order to continue."
+    IDS_ERR_NOT_SPACE       "Error:  There is not enough space on '%s'.\n\nDisk Space Available: %i MB.\nDisk Space Required: %i MB."
+    IDS_ERR_CREATE_DIR      "Error:  Cannot create directory: '%s'; rc = (%i)"
+    IDS_ERR_UNDERSCORE      "Underscore not Accepted in Component Name - Restoring"
+    IDS_ERR_DUPLICATE_NAME  "Duplicate Name not Accepted - Restoring"
+    IDS_ERR_NOT_FOUND       "Cannot Find ""%s""."
+    IDS_ERR_LOAD_HISTORY    "Could not load history file"
+    IDS_CONTINUE_AND_LOSE   "WARNING!  You have transactions pending.\n\n*** Performing this operation may cause databases to become inconsistent! ***\n\nAre you sure that you want continue and lose all pending changes?"
+    IDS_ERR_CREATE_PROTO_LIST "Fatal: Could not Create Protocol List"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ERR_INITIALIZE      "Cannot initialize CBF data !\nThe application will terminate."
+    IDS_CONFIGURATION_FILE_LOCKED 
+                            "The configuration file is locked by another application (config.lck exists)"
+    IDS_MENU_DUPLICATE_DEFAULT "&Add New ""%s"" based on ""%s"""
+    IDS_MENU_DUPLICATE_BASED "Add &New ""%s"" based on ""%s"""
+    IDS_MENU_DUPLICATE      "Add &New ""%s"""
+    IDS_MENU_DELETE         "&Delete ""%s"""
+    IDS_WAIT_DELETE         "Deleting item '%s'..."
+    IDS_WAIT_CREATING       "Creating '%s' based on '%s'..."
+    IDS_WAIT_UPDATING       "Updating '%s'..."
+    IDS_TITLE_PROPERTIES    "Properties for ""%s"""
+    IDS_TOOLSTIP_RIGHT_CLICK "Right click on a component for a pop-up menu"
+    IDS_USAGE_ERROR         "Usage: VCBF [host]"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_CHECK               BITMAP                  "res\\check.bmp"
+IDB_BITMAP1             BITMAP                  "res\\bitmap1.bmp"
+IDB_BITMAP2             BITMAP                  "res\\bitmap2.bmp"
+IDB_RED                 BITMAP                  "res\\red.bmp"
+IDB_YELLOW              BITMAP                  "res\\yellow.bmp"
+IDB_GREEN               BITMAP                  "res\\green.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_CONFIG_LEFT_PROPERTIES DIALOG  0, 0, 185, 98
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Properties"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "&Component:",IDC_STATIC,17,23,46,8
+    EDITTEXT        IDC_COMPONENT,77,21,94,13,ES_AUTOHSCROLL
+    LTEXT           "&Name:",IDC_STATIC,17,40,46,8
+    EDITTEXT        IDC_NAME,77,37,94,13,ES_AUTOHSCROLL
+    LTEXT           "&Startup Count:",IDC_STATIC,17,56,46,8
+    EDITTEXT        IDC_STARTUP_COUNT,77,53,94,13,ES_AUTOHSCROLL | ES_NUMBER
+    DEFPUSHBUTTON   "OK",IDOK,7,80,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,61,80,50,14
+    GROUPBOX        "Properties",IDC_STATIC,7,7,172,68
+END
+
+IDD_LAYOUTCTRLEDIT2 DIALOG  0, 0, 159, 15
+STYLE DS_SETFONT | WS_CHILD | WS_BORDER
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,1,1,136,13,ES_AUTOHSCROLL
+    PUSHBUTTON      ">>",IDC_BUTTON_ASSIST2,137,1,11,13
+END
+
+IDD_HISTORY DIALOG  0, 0, 183, 92
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,7,169,78,ES_MULTILINE | ES_READONLY | 
+                    WS_VSCROLL | WS_HSCROLL
+END
+
+IDD_PREFERENCES DIALOG  0, 0, 246, 92
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "Resource Checking at Ingres Startup",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,7,7,232,24
+END
+
+IDD_CONFIG DIALOG  0, 0, 184, 93
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Frame support",IDC_STATIC,13,15,46,8,NOT WS_VISIBLE
+END
+
+IDD_CONFIG_RIGHT DIALOG  0, 0, 295, 123
+STYLE DS_SETFONT | WS_CHILD | WS_CLIPSIBLINGS
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,7,7,281,91
+    PUSHBUTTON      "&Default",IDC_BUTTON1,5,102,50,14
+    PUSHBUTTON      "&Restore",IDC_BUTTON2,59,102,50,14
+    PUSHBUTTON      "Button &3",IDC_BUTTON3,113,102,50,14
+    PUSHBUTTON      "Button &4",IDC_BUTTON4,168,102,50,14
+    PUSHBUTTON      "Button &5",IDC_BUTTON5,222,102,50,14
+END
+
+IDD_DBMS_PAGE_DATABASE DIALOG  0, 0, 140, 99
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Databases:",IDC_STATIC,7,7,85,8
+    LISTBOX         IDC_LIST_DATABASES,7,16,126,56,LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_DBMS_PAGE_CACHE DIALOG  0, 0, 300, 126
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Frame Support Only",IDC_STATIC,7,7,286,112,SS_SUNKEN | 
+                    NOT WS_VISIBLE | WS_BORDER
+END
+
+IDD_DBMS_PAGE_DERIVED DIALOGEX 0, 0, 187, 99
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,173,85,WS_EX_CLIENTEDGE
+END
+
+IDD_NET_PAGE_PROTOCOL DIALOG  0, 0, 255, 144
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SORTASCENDING | 
+                    LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,13,17,219,77
+END
+
+IDD_CONFIG_LEFT DIALOG  0, 0, 233, 110
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | 
+                    LVS_OWNERDRAWFIXED | NOT WS_VISIBLE | WS_BORDER | 
+                    WS_TABSTOP,6,7,107,77
+    PUSHBUTTON      "Edit &Name",IDC_BUTTON1,6,89,50,14,NOT WS_VISIBLE | 
+                    WS_DISABLED
+    PUSHBUTTON      "Edit &Count",IDC_BUTTON2,53,89,50,14,NOT WS_VISIBLE | 
+                    WS_DISABLED
+    PUSHBUTTON      "&Duplicate",IDC_BUTTON3,105,89,50,14,NOT WS_VISIBLE | 
+                    WS_DISABLED
+    PUSHBUTTON      "Dele&te",IDC_BUTTON4,157,89,50,14,NOT WS_VISIBLE | 
+                    WS_DISABLED
+    CONTROL         "Tree2",IDC_TREE1,"SysTreeView32",TVS_HASBUTTONS | 
+                    TVS_HASLINES | TVS_SHOWSELALWAYS | WS_BORDER | 
+                    WS_TABSTOP,119,7,107,77
+END
+
+IDD_DBMS_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_NAME_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_NET_PAGE_PARAMETER DIALOGEX 0, 0, 247, 104
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,7,7,233,90,WS_EX_CLIENTEDGE
+END
+
+IDD_DBMS_PAGE_CACHE_PARAMETER DIALOG  0, 0, 187, 99
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,7,7,173,85
+END
+
+IDD_DBMS_PAGE_CACHE_DERIVED DIALOG  0, 0, 187, 99
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,7,7,173,85
+END
+
+IDD_MAINTAB_DLG DIALOGEX 0, 0, 314, 140
+STYLE DS_SETFONT | WS_CHILD | WS_CLIPSIBLINGS
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,7,22,299,92
+    PUSHBUTTON      "Help",IDC_BUTTON1,203,119,50,14
+    PUSHBUTTON      "Close",IDC_BUTTON2,256,119,50,14
+    PUSHBUTTON      "OK",IDC_BUTTON3,150,119,50,14,NOT WS_VISIBLE
+    LTEXT           "Installation: II   Host: FRNAGP10   IISYSTEM: D:PING20",
+                    IDC_STATIC1,7,118,13,15,SS_CENTERIMAGE | NOT WS_VISIBLE,
+                    WS_EX_DLGMODALFRAME | WS_EX_STATICEDGE
+    LTEXT           "II_INSTALLATION",IDC_STATIC_NAME_INSTALL,8,5,73,10
+    RTEXT           "Host",IDC_STATIC,109,5,25,8
+    RTEXT           "II_SYSTEM",IDC_STATIC_IISYSTEM_NAME,213,5,53,8
+    LTEXT           "Static",IDC_STATIC_INSTALL,84,4,18,11,0,
+                    WS_EX_STATICEDGE
+    LTEXT           "Static",IDC_STATIC_HOST,142,4,64,11,0,WS_EX_STATICEDGE
+    LTEXT           "Static",IDC_STATIC_II_SYSTEM,274,4,31,11,0,
+                    WS_EX_STATICEDGE
+END
+
+IDD_SECURITY_PAGE_OPTION DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_SECURITY_PAGE_DERIVED DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_SECURITY_PAGE_AUDITING DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_SECURITY_PAGE_AUDITDERIVED DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_SECURITY_PAGE_LOGFILE DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_LOCKINGSYS_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_LOCKINGSYS_PAGE_DERIVED DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_LOGGINGSYS_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_LOGGINGSYS_PAGE_DERIVED DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_STAR_PAGE_DERIVED DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_STAR_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_INTERNET_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_LOGFILE_PAGE_CONFIGURE DIALOG  0, 0, 237, 157
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Logging Status:",IDC_STATIC,7,10,56,8
+    LTEXT           "On-Line/Off-Line",IDC_STATIC_STATUS,107,11,113,8
+    LTEXT           "Log File Name:",IDC_STATIC,7,27,74,8
+    EDITTEXT        IDC_FILE,94,24,135,13,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Size Per File (in MB):",IDC_STATIC,7,44,78,8
+    EDITTEXT        IDC_SIZEINK,94,41,40,13,ES_AUTOHSCROLL | ES_READONLY | 
+                    ES_NUMBER
+    CONTROL         "Enabled",IDC_ENABLED,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,59,47,10
+    LISTBOX         IDC_FILENAME_LIST,7,83,147,67,LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Log File Root Locations:",IDC_STATIC,7,73,78,8
+    CONTROL         "",IDC_STATUS_BITMAP,"Static",SS_BITMAP,94,10,15,13
+    CONTROL         "Raw",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT 
+                    WS_VISIBLE | WS_DISABLED | WS_TABSTOP,93,60,30,10
+END
+
+IDD_LOGFILE_PAGE_SECONDARY DIALOG  0, 0, 237, 157
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Logging Status:",IDC_STATIC,7,10,70,8
+    LTEXT           "On-Line/Off-Line",IDC_STATIC_STATUS,107,11,123,8
+    LTEXT           "Log File Name:",IDC_STATIC,7,27,73,8
+    EDITTEXT        IDC_FILE,94,24,136,13,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Size Per File (in MB):",IDC_STATIC,7,44,82,8
+    EDITTEXT        IDC_SIZEINK,94,41,40,13,ES_AUTOHSCROLL | ES_READONLY | 
+                    ES_NUMBER
+    CONTROL         "Enabled",IDC_ENABLED,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,59,47,10
+    LISTBOX         IDC_FILENAME_LIST,7,83,147,67,LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Log File Root Locations:",IDC_STATIC,7,73,99,8
+    CONTROL         "",IDC_STATUS_BITMAP,"Static",SS_BITMAP,94,10,16,14
+    CONTROL         "Raw",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT 
+                    WS_VISIBLE | WS_DISABLED | WS_TABSTOP,93,60,30,10
+END
+
+IDD_LOGFILE_CREATE DIALOG  0, 0, 185, 175
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Create Transaction Log"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_SIZE_TOTAL,78,132,36,13,ES_AUTOHSCROLL | ES_NUMBER
+    DEFPUSHBUTTON   "OK",IDOK,6,154,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,60,154,50,14
+    LISTBOX         IDC_ROOT_LOCS,13,21,159,67,LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Add...",IDC_ADD,14,91,50,14
+    PUSHBUTTON      "&Remove",IDC_REMOVE,68,91,50,14
+    LTEXT           "&Size Per File (in MB):",IDC_STATIC,6,119,66,8
+    EDITTEXT        IDC_SIZE_PER_FILE,78,116,36,13,ES_AUTOHSCROLL | 
+                    ES_READONLY
+    LTEXT           "&Total Size (in MB):",IDC_STATIC,6,135,58,8
+    GROUPBOX        "Log File Root Locations:",IDC_STATIC,6,7,172,104
+    LTEXT           "(Same As Other)",IDC_SIZE_LOG_TEXT,119,135,59,8
+END
+
+IDD_CACHE_TAB DIALOG  0, 0, 188, 98
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,7,7,174,84
+END
+
+IDD_CACHE_LIST DIALOGEX 0, 0, 188, 98
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,7,7,174,84,WS_EX_CLIENTEDGE
+END
+
+IDD_BRIDGE_PAGE_PARAMETER DIALOGEX 0, 0, 188, 98
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,174,84,WS_EX_CLIENTEDGE
+END
+
+IDD_BRIDGE_PAGE_PROTOCOL DIALOGEX 0, 0, 188, 98
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,174,84,WS_EX_CLIENTEDGE
+END
+
+IDD_GENERIC_PAGE_STARTUP_COUNT DIALOGEX 0, 0, 188, 98
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    NOT WS_VISIBLE | WS_BORDER | WS_TABSTOP,7,59,174,32,
+                    WS_EX_CLIENTEDGE
+    LTEXT           "&Startup Count:",IDC_STATIC,7,16,46,8
+    EDITTEXT        IDC_STARTUP_COUNT,60,14,31,12,ES_AUTOHSCROLL | ES_NUMBER
+END
+
+IDD_RECOVERY_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_RECOVERY_PAGE_DERIVED DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_LOGFILE_ADDFILE DIALOG  0, 0, 234, 87
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add New Transaction Log File Folder"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_LOG_FILENAME,45,31,130,13,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,7,66,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,62,66,50,14
+    LTEXT           "Folder:",IDC_STATIC,16,34,28,8
+    PUSHBUTTON      "&Browse...",IDC_BROWSE,180,30,46,14
+    GROUPBOX        "Please enter the name of the log file folder to add:",
+                    IDC_STATIC,7,11,223,48
+END
+
+IDD_GW_ORACLE_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_GW_DB2UDB_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_GW_INFORMIX_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_GW_SYBASE_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_GW_ODBC_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_GW_MSSQL_PAGE_PARAMETER DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_JDBC_PAGE_PARAMETER DIALOGEX 0, 0, 247, 104
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,7,7,233,90,WS_EX_CLIENTEDGE
+END
+
+IDD_DASVR_PAGE_PROTOCOL DIALOG  0, 0, 255, 144
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SORTASCENDING | 
+                    LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,13,17,219,77
+END
+
+IDD_SECURITY_PAGE_SYSTEM DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_SECURITY_PAGE_MECHANISM DIALOGEX 0, 0, 244, 136
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,230,122,WS_EX_CLIENTEDGE
+END
+
+IDD_NET_PAGE_REGISTRY DIALOG  0, 0, 255, 144
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SORTASCENDING | 
+                    LVS_SHAREIMAGELISTS | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,13,17,219,77
+END
+
+IDD_BRIDGE_PAGE_VNODE DIALOGEX 0, 0, 188, 98
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_OWNERDRAWFIXED | 
+                    WS_BORDER | WS_TABSTOP,7,7,174,84,WS_EX_CLIENTEDGE
+END
+
+IDD_XVNODE DIALOG  0, 0, 214, 76
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Virtual Node"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,73,7,73,12,ES_AUTOHSCROLL
+    COMBOBOX        IDC_COMBO1,73,27,73,42,CBS_DROPDOWN | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_EDIT2,73,50,73,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,157,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,157,24,50,14
+    RTEXT           "Virtual Node:",IDC_STATIC,7,9,54,8
+    RTEXT           "Protocol:",IDC_STATIC,7,29,54,8
+    RTEXT           "Listen Address:",IDC_STATIC,7,52,54,8
+END
+
+IDD_DASVR_PAGE_PARAMETER DIALOGEX 0, 0, 247, 104
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_OWNERDRAWFIXED | WS_BORDER | 
+                    WS_TABSTOP,7,7,233,89,WS_EX_CLIENTEDGE
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_LAYOUTCTRLEDIT2, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 157
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 14
+    END
+
+    IDD_HISTORY, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 176
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 85
+    END
+
+    IDD_PREFERENCES, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 239
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 85
+    END
+
+    IDD_CONFIG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 177
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 86
+    END
+
+    IDD_CONFIG_RIGHT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 288
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 116
+    END
+
+    IDD_DBMS_PAGE_DATABASE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 133
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_DBMS_PAGE_CACHE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 119
+    END
+
+    IDD_DBMS_PAGE_DERIVED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_NET_PAGE_PROTOCOL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 248
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 137
+    END
+
+    IDD_CONFIG_LEFT, DIALOG
+    BEGIN
+        LEFTMARGIN, 6
+        RIGHTMARGIN, 226
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 103
+    END
+
+    IDD_DBMS_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_NAME_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_NET_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 240
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 97
+    END
+
+    IDD_DBMS_PAGE_CACHE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_DBMS_PAGE_CACHE_DERIVED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_MAINTAB_DLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 306
+        TOPMARGIN, 3
+        BOTTOMMARGIN, 133
+    END
+
+    IDD_SECURITY_PAGE_OPTION, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_SECURITY_PAGE_DERIVED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_SECURITY_PAGE_AUDITING, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_SECURITY_PAGE_AUDITDERIVED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_SECURITY_PAGE_LOGFILE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_LOCKINGSYS_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_LOCKINGSYS_PAGE_DERIVED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_LOGGINGSYS_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_LOGGINGSYS_PAGE_DERIVED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_STAR_PAGE_DERIVED, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_STAR_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_INTERNET_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_LOGFILE_PAGE_CONFIGURE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 230
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 150
+    END
+
+    IDD_LOGFILE_PAGE_SECONDARY, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 230
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 150
+    END
+
+    IDD_LOGFILE_CREATE, DIALOG
+    BEGIN
+        LEFTMARGIN, 6
+        RIGHTMARGIN, 178
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 168
+    END
+
+    IDD_CACHE_TAB, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 181
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 91
+    END
+
+    IDD_CACHE_LIST, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 181
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 91
+    END
+
+    IDD_BRIDGE_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 181
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 91
+    END
+
+    IDD_BRIDGE_PAGE_PROTOCOL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 181
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 91
+    END
+
+    IDD_GENERIC_PAGE_STARTUP_COUNT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 181
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 91
+    END
+
+    IDD_LOGFILE_ADDFILE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 230
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 80
+    END
+
+    IDD_JDBC_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 240
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 97
+    END
+
+    IDD_DASVR_PAGE_PROTOCOL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 248
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 137
+    END
+
+    IDD_SECURITY_PAGE_SYSTEM, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_SECURITY_PAGE_MECHANISM, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 129
+    END
+
+    IDD_NET_PAGE_REGISTRY, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 248
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 137
+    END
+
+    IDD_BRIDGE_PAGE_VNODE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 181
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 91
+    END
+
+    IDD_XVNODE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 207
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 69
+    END
+
+    IDD_DASVR_PAGE_PARAMETER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 240
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 96
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_CLOCK_AVI           AVI                     "res\\Clock.avi"
+IDR_DELETE_AVI          AVI                     "res\\Delete.avi"
+IDR_COPY_AVI            AVI                     "res\\copy.avi"
+IDR_TRANSLOG_AVI        AVI                     "res\\translog.avi"
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "#include ""rctools.h""\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\vcbf.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#include ""afxprint.rc""       // printing/print preview resources\r\n"
+    "#include ""rctools.rc"" \r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\vcbf.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "afxprint.rc"       // printing/print preview resources
+#include "rctools.rc" 
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

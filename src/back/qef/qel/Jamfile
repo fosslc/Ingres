@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!qef!qel
+#
+
+SubDir ING_SRC back qef qel ;
+
+IISUBSYS back qef qel ;
+
+
+IILIBRARY QEFLIB : qelupd.c qelsel.c qelrem.c qelins.c qelext.c
+	qeldes.c qelcre.c qelaux.c qel8st.c qel7nx.c qel6hi.c qel5dd.c
+	qel3st.c qel2nx.c qel1hi.c qel0dd.c ;
+

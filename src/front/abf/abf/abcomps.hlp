@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at a pop-up menu of the other global components that an
+application defines (which are global variables, constants, or record type
+definitions).  You may view a list of each type defined for the application
+in a catalog by positioning the cursor on the row of the table field that
+describes the component type and then choosing the Select menu item.  You
+can also create, edit, or destroy them through these catalog frames.
+
+The menu options are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Select          Call the catalog frame for the component type.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the application catalog frame.

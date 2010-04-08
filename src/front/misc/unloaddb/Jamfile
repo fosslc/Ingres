@@ -1,0 +1,22 @@
+#
+# Jamfile file for front!misc!unloaddb
+#
+
+SubDir ING_SRC front misc unloaddb ;
+
+IISUBSYS front misc unloaddb ;
+
+
+IIBINEXE unloaddb : udmain.sc ;
+IINEEDLIBS unloaddb :  XFERDBLIB GNLIB MALLOCLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IINEEDLIBSW unloaddb : SHADFLIB ;
+IIUNDEFS unloaddb : II_copyright malloc ;
+
+if $(VERS) = rs4_us5 || $(VERS) = r64_us5
+{
+  IILDFLAGS unloaddb : CCLDBMAX ;
+}
+
+IIMSGHDR erud.msg ;
+

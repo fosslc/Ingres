@@ -1,0 +1,423 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+/* # include's */
+
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ui.qsh>
+/*
+	tell MING about the ui.qsh dependency.
+#include	<ui.h>
+*/
+# include	<uigdata.h>
+# include	<ug.h>
+# include	<cm.h>
+# include	<er.h>
+# include	"ertu.h"
+# include	"tuconst.h"
+##include	"tutblinf.qsh"
+/*
+	this tells MING about tutblinf.qsh dependency.
+#include	"tutblinf.h"
+*/
+
+/**
+** Name:	tutabinf	- Get table information.
+**
+** Description:
+**	This file defines:
+**
+**	tutabdet	Get detailed table information.
+**
+** History:
+**	25-nov-1987 (peter)
+**		Moved from util.qc, and broke turelexists into
+**		two parts.
+**	19-aug-1988 (peter)
+**		update column names in catalogs for 6.1.
+**	11/1/88 (pete)
+**		change to use new "kitchen sink" iitables view.
+**	2-jul-1992 (mgw)
+**		Changed the form "tuexaminefr" to make the labels for the
+**		"storage" and "page" fields to be fields themselves so these
+**		labels could be set to "Storage Structure:" and
+**		"Pages/Overflow:" in the non-synonym case, and to "Base Table:"
+**		and "Base Table Owner:" in the synonym case. Also blank out
+**		"journaled" and "rows" fields in the synonym case.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+/* # define's */
+/* extern's */
+
+## static TBLINFO tblinfo[] =
+##{
+/*
+**	disp,	 form_fldname, value
+**	----	 ------------  -----
+**	suppress  name of     value to
+**	or dis-   field on    display
+**	play fld  form        in field
+*/
+##      { TRUE, ERx("name"), ERx("")},
+#define R_NAME          0
+##      { TRUE, ERx("owner"), ERx("")},
+#define R_OWNER         1
+##      { TRUE, ERx("rtype"), ERx("")},         /* table type (View, Table)*/
+#define R_RTYPE         2
+##      { TRUE, ERx("width"), ERx("")},		/* row width.*/
+#define R_WIDTH         3
+##      { TRUE, ERx("storage"), ERx("")},       /* storage structure */
+#define R_STORAGE       4
+##      { TRUE, ERx("number"), ERx("")},        /* #columns. */
+#define R_NUMBER        5
+##      { TRUE, ERx("pages"), ERx("")},		/* #pages/#overflow pages */
+#define R_PAGES         6
+##      { TRUE, ERx("rows"), ERx("")},		/* #rows in table */
+#define R_ROWS          7
+##      { TRUE, ERx("journaled"), ERx("")},	/* jrnling enabled/disabled */
+#define R_JOURNALED     8
+##      { TRUE, ERx("stostru_bastab"), ERx("")},/* label: Storage Structure */
+#define R_STOSTRU_BASTAB 9			/* or Base Table (synonym)  */
+##      { TRUE, ERx("ovpag_basown"), ERx("")},	/* label: Pages/Overflow or */
+#define R_OVPAG_BASOWN  10			/* Base Table Owner (syn)   */
+##};
+#define tblinfo_cnt (sizeof(tblinfo)/sizeof(TBLINFO))
+
+/* static's */
+
+/**
+** Name:	tutabdet	- get detailed table information
+**
+** Description:
+**	Get details on a table, view, index, or synonym.
+**
+** Inputs:
+**	rel_info	- a pointer to an UI_HELP_INFO structure,
+**			  appropriately filled in.
+**	basename	- Base table name and owner in an FE_RSLV_NAME struct.
+**			  This is NULL unless rel_info has info on a synonym.
+**	attrcount	- number of columns in table
+**	tupwidth	- width of a row
+**	tblinfo		- array of TBLINFO structures to be filled in.
+**
+** Outputs:
+**	- filled in 'tblinfo' array of structures.
+**	- filled in array_cnt (# of simple fields on the form)
+**
+** History:
+**	1-dec-1987 (peter)
+**		Changed call to get rel_info handle.
+**	19-aug-1988 (peter)
+**		update column names in catalogs for 6.1.
+**	11/1/88 (pete)	removed queries, since IIUIrel_help
+**		returns all relation info.
+**	25-may-1989 (pete)  change to use tblinfo structure, rather than
+**		individual variables.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	18-jun-1992 (mgw)
+**		Added support for getting info on a synonym.
+**	2-Dec-2007 (kibro01) b119562
+**	    Allow larger table sizes by turning size display into K
+*/
+
+tutabdet(rel_info, basename, attrcount, tupwidth, p_tblinfo, array_cnt)
+UI_HELP_INFO	*rel_info;
+FE_RSLV_NAME	*basename;
+i4		attrcount;
+char		*tupwidth;
+TBLINFO		**p_tblinfo;
+i4		*array_cnt;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	char		jnlchar[2];
+	char		cmpchar[2];
+	i4		rpages = -1;
+	i4		oflow = -1;
+	STATUS		rval;
+	EXEC SQL END DECLARE SECTION;
+	i4		i;
+
+	/* caller needs address of this structure array & row count */
+	*p_tblinfo = tblinfo;
+	*array_cnt = tblinfo_cnt;
+
+	/* must initialize the display attribute each time */
+	for (i=0; i<tblinfo_cnt; i++) {
+	    tblinfo[i].disp = TRUE;
+	}
+
+	/* table name */
+	STcopy(rel_info->table_name, tblinfo[R_NAME].value);
+	STcopy(rel_info->table_owner, tblinfo[R_OWNER].value);
+
+	/* number of columns in table */
+	CVna(attrcount, tblinfo[R_NUMBER].value);
+
+	/* width of row */
+	STcopy(tupwidth, tblinfo[R_WIDTH].value);
+
+	/* table type: View, Index, etc */
+	if (rel_info->system_use[0] == 'S')
+	{
+	    STcopy(ERget(F_TU001B_SYSTEM_CATALOG), tblinfo[R_RTYPE].value);
+	}
+	else
+	{
+	    switch (rel_info->table_type[0])
+	    {
+		case 'V':
+			STcopy(ERget(F_TU001C_VIEW),
+				tblinfo[R_RTYPE].value);
+			break;
+		case 'I':
+			STcopy(ERget(F_TU001D_INDEX),
+				tblinfo[R_RTYPE].value);
+			break;
+		case 'S':
+			STcopy(ERget(F_TU006E_Synonym),
+				tblinfo[R_RTYPE].value);
+			break;
+		case 'T':
+		default:
+			STcopy(ERget(F_TU001E_USER_RELATION),
+				tblinfo[R_RTYPE].value);
+			break;
+	    }
+	}
+
+	/*
+	** If the type is anything BUT a view, then set up the rows,
+	** storage structure, pages/overflow & journaling information.
+	** If it is a view, then blank out these fields.
+	*/
+	if (rel_info->table_type[0] == 'V')
+	{   /* It's a view. Set all 4 fields to Unknown or Not Applicable*/
+	    STcopy(ERget(F_TU001F_Unknown), tblinfo[R_STORAGE].value);
+	    tblinfo[R_STORAGE].disp = FALSE;
+
+	    STcopy(ERget(F_TU001F_Unknown), tblinfo[R_ROWS].value);
+	    tblinfo[R_ROWS].disp = FALSE;
+
+	    STcopy(ERget(F_TU0025_Not_Applicable), 
+		tblinfo[R_PAGES].value);
+	    tblinfo[R_PAGES].disp = FALSE;
+
+	    STcopy(ERget(F_TU0025_Not_Applicable),
+		tblinfo[R_JOURNALED].value);
+	    tblinfo[R_JOURNALED].disp = FALSE;
+
+	    /* leave "stostru_bastab" and "ovpag_basown" labels blank */
+	    STcopy(ERget(F_TU0004_Storage_Struct),
+		tblinfo[R_STOSTRU_BASTAB].value);
+	    tblinfo[R_STOSTRU_BASTAB].disp = FALSE;
+	    STcopy(ERget(F_TU0005_Pages_Overflow),
+		tblinfo[R_OVPAG_BASOWN].value);
+	    tblinfo[R_OVPAG_BASOWN].disp = FALSE;
+	}
+	else if (rel_info->table_type[0] == 'S')
+	{	/* it's a synonym */
+
+		/* blank set row count */
+		STcopy(ERget(F_TU001F_Unknown), tblinfo[R_ROWS].value);
+		tblinfo[R_ROWS].disp = FALSE;
+
+		/* set base table where storage_structure would be */
+		STcopy(ERget(F_TU000A_Base_Table),
+		    tblinfo[R_STOSTRU_BASTAB].value);
+		STcopy(basename->name_dest, tblinfo[R_STORAGE].value);
+
+		/* set base table owner where Pages/Overflow would be */
+		STcopy(ERget(F_TU0016_Base_Table_Owner),
+		    tblinfo[R_OVPAG_BASOWN].value);
+		STcopy(basename->owner_dest, tblinfo[R_PAGES].value);
+
+		STcopy(ERget(F_TU0025_Not_Applicable),
+		    tblinfo[R_JOURNALED].value);
+		tblinfo[R_JOURNALED].disp = FALSE;
+	}
+	else
+	{
+		/* it's not a view or a synonym */
+
+		/* set row count */
+		if (rel_info->num_rows == -1)
+		{
+		    STcopy(ERget(F_TU001F_Unknown), tblinfo[R_ROWS].value);
+	    	    tblinfo[R_ROWS].disp = FALSE;
+		}
+		else
+		    CVna(rel_info->num_rows, tblinfo[R_ROWS].value);
+
+		/* set storage_structure */
+		STtrmwhite(rel_info->storage_structure);
+		if (rel_info->storage_structure[0] != EOS)
+		{
+		    if (rel_info->is_compressed[0] == 'Y')
+		    {
+		    	/* compressed, so tack 'c' on front of storage struct */
+		    	STpolycat(2, ERx("c"), rel_info->storage_structure,
+				tblinfo[R_STORAGE].value);
+		    }
+		    else
+		        STcopy (rel_info->storage_structure,
+				tblinfo[R_STORAGE].value);
+
+# ifdef HACKFOR50
+		    if (rel_info->unique_rule[0] == 'Y')
+# else
+		    if (rel_info->unique_rule[0] == 'U')
+# endif
+		    {
+			STcat(tblinfo[R_STORAGE].value, ERget(F_TU0020_unique));
+		    }
+
+		    CVlower(tblinfo[R_STORAGE].value);
+		    STcopy(ERget(F_TU0004_Storage_Struct),
+			tblinfo[R_STOSTRU_BASTAB].value);
+		}
+		else
+		{
+		    STcopy(ERget(F_TU001F_Unknown), tblinfo[R_STORAGE].value);
+	    	    tblinfo[R_STORAGE].disp = FALSE;
+		    STcopy(ERget(F_TU0004_Storage_Struct),
+			tblinfo[R_STOSTRU_BASTAB].value);
+	    	    tblinfo[R_STOSTRU_BASTAB].disp = FALSE;
+		}
+
+		/* set Pages/Overflow */
+		STcopy(ERget(F_TU0005_Pages_Overflow),
+		    tblinfo[R_OVPAG_BASOWN].value);
+		if (   rel_info->number_pages   == -1
+		    || rel_info->overflow_pages == -1)
+		{
+		    STcopy(ERget(F_TU0025_Not_Applicable), 
+			tblinfo[R_PAGES].value);
+	    	    tblinfo[R_PAGES].disp = FALSE;
+		    tblinfo[R_OVPAG_BASOWN].disp = FALSE;
+		}
+		else
+		{
+		    char np[10],op[10];
+		    bool pagesk=FALSE, overflowk=FALSE;
+
+		    /* If >=10,000,000 - i.e. if 8 digits long, then display
+		    ** the size in K-pages and change the title
+		    ** (kibro01) b119562
+		    */
+		    if (rel_info->number_pages >= 100000000)
+		    {
+			pagesk=TRUE;
+			STprintf(np,ERx("%d"),rel_info->number_pages / 1000);
+		    } else
+		    {
+			STprintf(np,ERx("%d"),rel_info->number_pages);
+		    }
+		    if (rel_info->overflow_pages >= 100000000)
+		    {
+			overflowk=TRUE;
+			STprintf(op,ERx("%d"),rel_info->overflow_pages / 1000);
+		    } else
+		    {
+			STprintf(op,ERx("%d"),rel_info->overflow_pages);
+		    }
+		    if (pagesk && overflowk)
+			STcopy(ERget(F_TU0093_PagesK_OverflowK),
+			    tblinfo[R_OVPAG_BASOWN].value);
+		    else if (pagesk)
+			STcopy(ERget(F_TU0091_PagesK_Overflow),
+			    tblinfo[R_OVPAG_BASOWN].value);
+		    else if (overflowk)
+			STcopy(ERget(F_TU0092_Pages_OverflowK),
+			    tblinfo[R_OVPAG_BASOWN].value);
+		    STprintf(tblinfo[R_PAGES].value, ERx("%s/%s"),np,op);
+		}
+
+		/* set journalling */
+		switch (rel_info->is_journalled[0])
+		{
+	    	    case 'Y':
+		    	STcopy(ERget(F_TU0022_Enabled),
+			    tblinfo[R_JOURNALED].value);
+		    	break;
+	            case 'N':
+		    	STcopy(ERget(F_TU0023_Disabled),
+			    tblinfo[R_JOURNALED].value);
+		    	break;
+	            case 'C':
+		    	STcopy(ERget(F_TU0024_At_Next_Chkpt),
+			    tblinfo[R_JOURNALED].value);
+		    	break;
+	    	    default:
+		    	STcopy(ERget(F_TU0025_Not_Applicable),
+			    tblinfo[R_JOURNALED].value);
+	            	tblinfo[R_JOURNALED].disp = FALSE;
+		    	break;
+		}
+	}
+
+	return;
+}
+
+/*{
+** Name:	IITUputform - PUTFORM values from tblinfo to form.
+**
+** Description:
+**	<comments>
+**
+** Inputs:
+**	p_tblinfo - pointer to array of TBLINFO structures.
+**	frm 	  - name of form to PUTFORM to.
+**
+** Outputs:
+**	form 'frm' is ready to display.
+**
+**	Returns:
+**		NONE.
+**
+**	Exceptions:
+**		NONE.
+**
+** Side Effects:
+**
+** History:
+**	25-may-1989 (pete) written.
+*/
+## IITUputform (p_tblinfo, array_cnt, frm)
+## TBLINFO *p_tblinfo;
+i4	   array_cnt;	/* nmbr items in array pointed to by p_tblinfo */
+## char    *frm;
+## {
+	register i4  i=0 ;	
+
+	/* write all fields to screen -- even write fields that will be made
+	   invisible right after that! Why? because invisible fields don't
+	   work on IBM, and we want things like "Rows: Unknown" to show
+	   up in places where invisible fields don't work. */
+	for ( ; i < array_cnt; i++, p_tblinfo++)
+	{
+	    /* make field visible (it may have been made invisible last time)*/
+##	    set_frs field frm (invisible(p_tblinfo->form_fldname)=0)
+
+##	    putform frm (p_tblinfo->form_fldname = p_tblinfo->value)
+
+	    /* make certain fields invisible */
+	    if (p_tblinfo->disp == FALSE)
+	    {
+##	        set_frs field frm (invisible(p_tblinfo->form_fldname)=1)
+	    }
+	}
+## }

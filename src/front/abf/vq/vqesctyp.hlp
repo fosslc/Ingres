@@ -1,0 +1,110 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqesctyp.hlp       Top level escape code help
+/#subtopic "Form-Start" vqescfs.hlp
+/#subtopic "Form-End" vqescfe.hlp
+/#--
+/#subtopic "Query-Start" vqescqs.hlp
+/#subtopic "Query-New-Data" vqescqnd.hlp
+/#subtopic "Query-End" vqescqe.hlp
+/#--
+/#subtopic "Append-Start" vqescas.hlp
+/#subtopic "Append-End" vqescae.hlp
+/#--
+/#subtopic "Update-Start" vqescus.hlp
+/#subtopic "Update-End" vqescue.hlp
+/#--
+/#subtopic "Delete-Start" vqescds.hlp
+/#subtopic "Delete-End" vqescde.hlp
+/#--
+/#subtopic "Menu-Start" vqescms.hlp
+/#subtopic "Menu-End" vqescme.hlp
+/#--
+/#subtopic "Before-Field-Entry" vqescbfe.hlp
+/#subtopic "After-Field-Change" vqescafc.hlp
+/#subtopic "After-Field-Exit" vqescafe.hlp
+/#--
+/#subtopic "Before-Lookup" vqescbl.hlp
+/#subtopic "After-Lookup" vqescal.hlp
+/#--
+/#subtopic "Table-Field-Menuitems" vqescum.hlp
+/#subtopic "Menuline-Menuitems" vqescmm.hlp
+/#--
+/#subtopic "On-Timeout" vqescot.hlp
+/#subtopic "On-Dbevent" vqescod.hlp
+Types of escape code (select menuitem "SubTopics" for details):
+
+    Escape Name         Description
+    ------------------  ------------------------
+    Form-Start          Runs before form is displayed.
+    Form-End            Runs before RETURNing from the frame.
+
+    Query-Start         Runs before the SELECT in Update and Browse frames.
+    Query-New-Data      Runs each time new data is put on the form (for
+                        example, after a "Go" or "Next" menuitem is selected).
+                        Update and Browse frames only.
+    Query-End           Runs after the query is finished and the user has 
+			finished working with the Selected data. Update and 
+			Browse frames only.
+
+    Append-Start        Runs before INSERT statement(s) in the "Save"
+                        menuitem of Append frames or the "AddNew"
+                        menuitem of Update frames that allow Inserting
+                        master data.
+    Append-End          Runs after INSERT statement(s) and before the
+                        COMMIT WORK in the "Save" menuitem of Append frames
+                        and "AddNew" menuitem of Update frames that allow
+                        Inserting master data.
+
+    Update-Start        Runs before the UPDATE statement(s) in Update frames.
+    Update-End          Runs after the UPDATE statement(s) and before
+                        the COMMIT WORK in Update frames.
+
+    Delete-Start        Runs before the DELETE statement(s) in Update frames.
+    Delete-End          Runs after the DELETE statement(s) and before
+                        the COMMIT WORK in Update frames.
+
+    Menu-Start          Runs before the CALLFRAME/CALLPROC statement in
+                        a user-defined menuitem.
+    Menu-End            Runs after the called frame or procedure returns
+                        in a user-defined menuitem.
+
+    Before-Field-Entry  Runs as the cursor enters a field.
+    After-Field-Change  Runs when the cursor leaves a field, but only if
+                        the user has typed a value in the field.
+    After-Field-Exit    Runs when the cursor leaves a field, whether the
+                        value in the field has changed or not.
+
+    Before-Lookup	Runs before the CALLFRAME look_up() in the
+                        "ListChoices" menuitem
+    After-Lookup	Runs after the CALLFRAME look_up() in the
+                        "ListChoices" menuitem
+
+    Table-Field-Menuitems  Runs in a ListChoices-style Menu frame when the
+			   user's choice isn't a child frame.
+    Menuline-Menuitems  Runs after user-defined menuitems.
+
+    On-Timeout          Runs when the default timeout period has elapsed.
+    On-Dbevent		Runs when a registered database event is raised.
+
+Escape code can contain any valid 4GL statement, with the following
+exceptions:
+
+   1. RESUME statements (and the RESUME statement variants: RESUME FIELD 
+      and RESUME NEXT) should only be issued in "Query-New-Data," 
+      "Before-Field-Entry," and "After-Field-Exit" escapes. This is because 
+      the RESUME statement effectively branches control out of the 4gl 
+      operation; any 4GL statements in the operation following the RESUME 
+      are skipped. The three escapes listed above are the only ones not 
+      followed by additional 4GL statements.
+
+      However, there may be cases where you want to skip the 4GL statements 
+      following an escape. For example, if an "Update-Start" escape code 
+      segment detects an error in what the user entered on the screen, you 
+      could have it skip the subsequent database update statements. In these 
+      cases, it is okay to issue a RESUME statement, but it is still a good 
+      idea to Edit the source code and review which 4gl statements will be 
+      skipped.
+
+   2. Escape code should not contain activate blocks, such as Menuitems
+      or Field Activates (although SUBMENUs and queries with attached
+      menus are okay.)

@@ -1,0 +1,2761 @@
+/*
+**  Copyright (c) 2001, 2006 Ingres Corporation.
+*/
+
+/*
+**  Name: PreInstallation.cpp: implementation of the CPreInstallation class.
+**
+**  History:
+**	05-Jun-2001 (penga03)
+**	    Created.
+**	06-jun-2001 (somsa01)
+**	    Update more properties which use the installation identifier.
+**	07-Jun-2001 (penga03)
+**	    In function LaunchWindowsInstaller, before launching
+**	    msiexec.exe, check if Windows installer is currently installed
+**	    on the target machine. If it is not installed, run
+**	    InstMsiW.exe (for Windows NT / 2000) or InstMsiA.exe (for
+**	    Windows 9x) to install windows installer on the target
+**	    machine. 
+**	    Note that: Windows Installer installation on
+**	    Windows NT / 2000 requires administrative priviledge.
+**	14-Jun-2001 (penga03)
+**	    Changed the name of the cabinet file copied to the temp
+**	    directory to the same name as the MSI file.
+**	14-Jun-2001 (penga03)
+**	    Save the directory where MSI and Cabinet files are located
+**	    in property INGRES_MSI_LOC.
+**	15-Jun-2001 (penga03)
+**	    If Ingres is already installed, copy the MSI and Cabinet files
+**	    to the temp directory defined by II_TEMPORARY, otherwise,
+**	    copy to the temp directory defined by the system.
+**	15-Jun-2001 (penga03)
+**	    Save the path of license files to property INGRES_LIC_LOC.
+**	23-July-2001 (penga03)
+**	    Do some preparations so that the user can upgrade the
+**	    installation installed by old installer. If we checked there
+**	    exists an installation installed by old installar, and 
+**	    user wants to upgrade this installation, set INGRES_VER25 to
+**	    "1" and pass this property to MsiExec. In addition, if an
+**	    Ingres package was installed, change the attribute of
+**	    corresponding feature to be Required so that the user cannot
+**	    remove this feature during upgrade. Finally, after upgrade is  
+**	    done, we change features' attributes back to default in both
+**	    MSI and cached MSI.
+**	15-aug-2001 (somsa01)
+**	    Added spaces between the installation identifier and '[]'.
+**	    Also, update the IVM Startup folder shortcut with the proper
+**	    II_INSTALLATION.
+**	17-Aug-2001 (penga03)
+**	    We took away the function that set the feature attributes during an 
+**	    upgrade from pre-installation process, and created a custom action 
+**	    to achieve this.
+**	23-Aug-2001 (penga03)
+**	    Added UpdateComponentId(), that changes the component GUID
+**	    to completely separate the components between different
+**	    installations.
+**	04-oct-2001 (somsa01)
+**	    Changed the name of the default Cabinet file.
+**	24-Oct-2001 (penga03)
+**	    Windows Installer used to register components in the following
+**	    key HKLY\Software\Microsoft\Windows\Currentversion\Installer\
+**	    Components, however, after I reinstalled OS and ugraded Windows
+**	    Installer from 1.0 to 2.0, the key doesn't exist any more. As
+**	    a result, we can't share IngresDoc among Ingres installations.
+**	    In UpdateComponentId(), we have to change the components GUID
+**	    of IngresDoc to separate the components between different
+**	    installations.
+**	05-nov-2001 (penga03)
+**	    Created a new class CInstallation to save the installation id,
+**	    installation path (i.e. II_SYSTEM) of an existing Ingres
+**	    installation. This class also has a BOOL variable that
+**	    indicates whether the installation needs to be upgrade or not.
+**	    Added a new member function FindOldInstallation(), and a new
+**	    member variable m_Installations to find and save all the
+**	    existing installations. To find existing Ingres installations,
+**	    func FindOldInstallation first checks HKLM\\SOFTWARE\\
+**	    ComputerAssociates\\IngresII, then checks the environment 
+**	    variable II_SYSTEM under both HKLM\\SYSTEM\\CurrentControlSet\\
+**	    Control\\SessionManager\\Environment, and HKCU\\Environment,
+**	    finally checks II_SYSTEM may defined by user in command 
+**	    line by using func GetEnvironmentVariable. If there exists an
+**	    installation that doesn't has a key registred in HKLM\\
+**	    SOFTWARE\\ComputerAssociates\\IngresII, a key will be created
+**	    for it.
+**	08-nov-2001 (somsa01)
+**	    Made changes corresponding to the new CA branding.
+**	12-nov-2001 (somsa01)
+**	    Make sure we compare the version of the Windows Installer, as
+**	    there are multiple versions of it now. Also, cleaned up 64-bit
+**	    warnings.
+**	31-dec-2001 (penga03)
+**	    Do not set the property INGRES_LICENSE_CHECKED any more, since 
+**	    during setup we will always install Ingres license instead of 
+**	    checking the license.
+**	30-jan-2002 (penga03)
+**	    Changed the Ingres registry key from 
+**	    "HKEY_LOCAL_MACHINE\\Software\\ComputerAssociates\\IngresII\\" to 
+**	    "HKEY_LOCAL_MACHINE\\Software\\ComputerAssociates\\Advantage Ingres\\".
+**	30-aug-2002 (penga03)
+**	    Added a new command line option, /l, so that a verbose log 
+**	    file will be generated by Windows Installer. The log file 
+**	    will be placed in the system temp directory.
+**	17-jan-2003 (penga03)
+**	    Using MsiCloseHandle to close the handles that are opened by 
+**	    MsiDatabaseOpenView or MsiViewFetch.
+**	06-feb-2004 (somsa01)
+**	    Use WinVer.h instead of version.h.
+**	19-feb-2004 (penga03)
+**	    Added installing Microsoft redistributions.
+**	07-jun-2004 (penga03)
+**	    Peform a completely silent install if using response file, and also
+**	    for this case install.exe will wait until the installing completes.
+**	17-jun-2004 (somsa01)
+**	    In LaunchWindowsInstaller(), if we're dealing with 64-bit
+**	    Windows, launch and wait for the licensing install here before
+**	    running the main Ingres installer. A Merge Module version of
+**	    licensing will not be available in time for this product to go GA,
+**	    and since we cannot run child msi's from a parent msi, we need to
+**	    run the licensing install outside of the main install.
+**	21-jun-2004 (penga03)
+**	    Corrected the error introduced by the change 468841.
+**	15-jul-2004 (penga03)
+**	    Set the temporary cab and msi files writable.
+**	16-jul-2004 (penga03)
+**	    If /nomdb, pass '0' to the property INGRES_INSTALL_MDB.
+**	26-jul-2004 (penga03)
+**	    Removed all references to "Advantage".
+**	03-aug-2004 (penga03)
+**	    Pass the default value of INGRES_INSTALL_MDB while launching 
+**	    MsiExec.exe.
+**	10-sep-2004 (penga03)
+**	    Removed MDB.
+**	14-sep-2004 (penga03)
+**	    Replaced "Ingres Enterprise Edition" with "Ingres".
+**	22-sep-2004 (penga03)
+**	    Removed installing license and changed licloc to cdimage, 
+**	    INGRES_LIC_LOC to INGRES_CDIMAGE.
+**	27-sep-2004 (penga03)
+**	    Moved launching iipostinst from main setup to preinstall if 
+**	    install Ingres using response file (ie. silently).
+**	17-nov-2004 (penga03)
+**	    Call iipostinst.exe only if PostInstallationNeeded is set 
+**	    to "YES".
+**	06-dec-2004 (penga03)
+**	    Clean up LaunchWindowsInstaller() and changed the formulation to
+**	    generate GUIDs since the old one doesn't work for id from A1 to A9.
+**	10-dec-2004 (penga03)
+**	    Corrected the error introduced by last change. Should pass the 
+**	    root of temp directory, instead of the full temp directory to 
+**	    GetDiskFreeSpace().
+**	13-dec-2004 (penga03)
+**	    Added the ability to upgrade a MSI-version of Ingres to a
+**	    MSI-version of Ingres.
+**	15-dec-2004 (penga03)
+**	    Backed out the change to generate ProductCode. If the installation
+**	    id is between A0-A9, use the new formulation.
+**	11-jan-2005 (penga03)
+**	    Pass the upgrade type (1, minor upgrade; 2, major upgrade) to the 
+**	    setup msi.
+**	11-feb-2005 (penga03)
+**	    When copying the cab file to the temp directory, try 10 times.
+**	    This will allow recovery if the file copy fails due to the bug in 
+**	    VMware. Related issue is 13776102.
+**	16-feb-2005 (penga03)
+**	    Use GetFileSizeEx and GetDiskFreeSpaceEx to retrieve a file size
+**	    and a disk space that are larger than a DWORD value.
+**	28-feb-2005 (penga03)
+**	    Restart Ingres if necessary on re-install.
+**	03-march-2005 (penga03)
+**	    Added Ingres cluster support.
+**	01-apr-2005 (penga03)
+**	    Made a change so that we always do major upgrade.
+**	23-jun-2005 (penga03)
+**	    Made changes to get the exit code from msiexec.exe.
+**	24-jun-2005 (penga03)
+**	    Modified LaunchWindowsInstaller() to run setupmdb.bat
+**	    for silent install.
+**	13-jul-2005 (penga03)
+**	    Corrected the error in LaunchWindowsInstaller() while puting MDB 
+**	    start/complete message in the install.log.
+**	28-jul-2005 (penga03)
+**	    Add return code to the log file.
+**	10-aug-2005 (penga03)
+**	    Made following changes in LaunchWindowsInstaller(): 
+**	    (1) close all opened handles before exit;
+**	    (2) instead of using GetExitCodeProcess to get the exit code of 
+**	    setupmdb.bat, we get its exit code from the Ingres symbol table, 
+**	    in which setupmdb.bat sets MDB_RC and MDB_RC_MSG.
+**	12-aug-2005 (penga03)
+**	    Set return code to GetLastError() in GetExitCodeProcess or
+**	    CreateProcess fails. 
+**	17-aug-2005 (penga03)
+**	    Before closing the handles created for setupmdb.bat, check if 
+**	    they are empty.
+**	18-aug-2005 (penga03) 
+**	    Do not write the return code to the install.log in 
+**	    LaunchWindowsInstaller().
+**	26-oct-2005 (penga03)
+**	    Dynamically allocate the buffer for PATH.
+**	15-Dec-2005 (drivi01)
+**	    Change #480007 BUG 115042 
+**	    Moved AppendToLog function to enterprise.cpp
+**	5-Jan-2006 (drivi01)
+**	    SIR 115615
+**	    Modified registry Keys to be SOFTWARE\IngresCorporation\Ingres
+**	    instead of SOFTWARE\ComputerAssociates\Ingres.
+**	    Updated shortcuts to point to Start->Programs->Ingres->
+**	    Ingres [II_INSTALLATION] and updated location to
+**	    C:\Program Files\Ingres\Ingres [II_INSTALLATION].
+**	19-Jan-2006 (drivi01)
+**	    SIR 115615
+**	    Fixed FindOldInstallations function to ignore old style registry
+**	    keys when the same installation was detected under new style
+**	    registry keys.
+**	1-Feb-2006 (drivi01)
+**	    SIR 155688 
+**	    Modified preinstaller to load rtf formatted licensing file on the
+**	    fly upon preinstaller launch depending on which license file is
+**	    included on the image. Added function setupii_license which 
+**	    is responsible for updating MSI database with a entire text
+**          of the license file before it is displayed by installer.
+**	28-Jun-2006 (drivi01)
+**	    SIR 116381
+**	    iipostinst.exe is renamed to ingconfig.exe. Fix all calls to
+**	    iipostinst.exe to call ingconfig.exe instead.
+**	06-Sep-2006 (drivi01)
+**	    SIR 116599
+**	    As part of the initial changes for this SIR.  Modify Ingres
+**	    name to "Ingres II" instead of "Ingres [ II ]", Ingres location
+**	    to "C:\Program Files\Ingres\IngresII" instead of 
+**	    C:\Program Files\Ingres\Ingres [ II ].
+**  15-Nov-2006 (drivi01)
+**	    SIR 116599
+**	    Enhanced pre-installer in effort to improve installer usability.
+**	    Cdimage structure was modified, Data cab and msi were moved into
+**	    files directory on cdimage.  
+**	    This module detects documentation and .NET packages on the 
+**	    restructured image, which are now separate installs, and
+**	    notifies MSI to display them as features or not.
+**	    In silent mode is now responsible for installing documentation
+**	    and .NET Data Provider.
+**  09-Jan-2007 (drivi01)
+**	    Add special treatement of II installations back to skip some 
+**	    portions of the code. Updates to installer were made to set all
+**	    defaults for II installation.
+**  10-Jan-2007 (drivi01)
+**	    Update queries to use new defaults when update instance name.
+**  06-Feb-2007 (drivi01)
+**	    BUG 117635
+**	    Added "User Defined Properties" section to the response file.
+**	    Any property can be now moved to "User Defined Properties" section
+**	    and it will be properly processed by the installer.
+**	    Added routines to search for properties in "User Defined Properties"
+**	    section if the property isn't found in the proper section.
+**  25-May-2007 (drivi01)
+**	    Added new property to installer INGRES_WAIT4GUI which will force 
+**	    setup.exe to wait for post installer to finish if this property 
+**	    is set to 1. INGRES_WAIT4GUI which is referred to as m_Wait4GUI
+**	    within setup.exe is set to TRUE if "/w" flag is passed to setup.exe.
+**	    /w is a new flag within setup.exe.
+**  22-Jun-2007 (horda03)
+**          It has been known for a SP installation to fail because there are files
+**          and/or registry entries left over for the Installation ID, when the
+**          Ingres installation really doesn't exist. So for a new installaiton install,
+**          parse the registry/install file area and remove any entries that should only
+**          exist once the installaion has successfully completed.
+**  18-Aug-2007 (drivi01)
+**	    Fix bad submission, remove garbage symbols at the end of the file.
+**  11-Dec-2007 (horda03)
+**          Close comment that was inadvertanltly left open which prevented MSI file
+**          from being removed.
+**  04-Apr-2008 (drivi01)
+**	    Adding functionality for DBA Tools installer to the Ingres code.
+**	    DBA Tools installer is a simplified package of Ingres install
+**	    containing only NET and Visual tools component.  
+**	    Update the necessary routines to work with DBA installer update/copy
+**	    msi files and msi database in the context relative to DBA installer.
+**  12-Jun-2008 (drivi01)
+**	    In efforts to rebrand Ingres to just Ingres change product code for
+**	    documentation package.
+**  14-Jul-2009 (drivi01)
+**	    SIR 122309
+**	    Add new variable m_ConfigType to keep track of selected configuration
+**	    system.  Update msiexec.exe parameters to include the new CONFIG_TYPE
+**	    parameter which will pass an integer between 0 and 3 to represent
+**          a chosen configuration type.
+**  04-Nov-2009 (drivi01)
+**	    Update licensing information in this module, primarily for DBA Tools.
+**	    Ingres installer will load the license file in pre-installer, but
+**	    DBA Tools will call traditional setupii_license function to update
+**	    DBA Tools ism database to include license text.
+**	    The update will happen at runtime therefore the license on the image
+**	    can be replaced at anytime before setup.exe is executed.
+**	    In case if the license file is not found, users will be directed
+**	    to the file on disk that they must agree to.
+**  18-Nov-2009 (drivi01)
+**	    Force the copy of msi database for default (VT) installations
+**	    to force the update of the license.  If the rtf file is not
+**	    available to be loaded, then get users to view the pdf version
+** 	    of the license on the image.
+*/
+
+#include "stdafx.h"
+#include "enterprise.h"
+#include "PreInstallation.h"
+#include <msiquery.h>
+#include <Winsvc.h>
+#include <WinVer.h>
+
+#ifdef _DEBUG
+#undef THIS_FILE
+static char THIS_FILE[]=__FILE__;
+#define new DEBUG_NEW
+#endif
+
+char nfname[MAX_PATH+1], efname[MAX_PATH+1], ndcab[MAX_PATH+1], edcab[MAX_PATH+1];
+CStringList CodeList;
+time_t t;
+
+void AppendToLog(LPCSTR p);
+BOOL setupii_edit(char *iicode, char *path);
+BOOL setupii_license(char *licPath, char *path);
+BOOL setupii_vexe(MSIHANDLE hDatabase, char *szQuery, char *szValue=0);
+DWORD ThreadCopyCab(LPVOID lpParameter);
+void check_for_old_reg_entries(char *iicode);
+BOOL check_windowsinstaller(void);
+BOOL IsAdmin(void);
+BOOL UpdateComponentId(MSIHANDLE hDatabase, int id);
+INT CompareVersion(char *file1, char *file2);
+BOOL RemoveOneDir(char *DirName);
+INT CompareIngresVersion(char *ii_system);
+DWORD GetProductCode(char *path, char *guid, DWORD size);
+/*
+** Construction/Destruction
+*/
+
+CPreInstallation::CPreInstallation()
+: m_UpgradeType(0)
+, m_RestartIngres(0)
+{
+    m_CreateResponseFile="0";
+    m_EmbeddedRelease="0";
+    m_InstallCode="II";
+    m_ResponseFile="";
+    m_Ver25="0";
+    m_MSILog="";
+    m_InstallType=-1;
+    m_express=1;
+    m_ConfigType=0;
+    m_UpgradeDatabases=0;
+    m_Wait4GUI=0;
+    m_DBATools=0;
+
+    FindOldInstallations();
+}
+
+CPreInstallation::~CPreInstallation()
+{
+    for(int i=0; i<m_Installations.GetSize(); i++)
+    {
+	CInstallation *inst=(CInstallation *) m_Installations.GetAt(i);
+
+	if(inst)
+	    delete inst;
+    }
+    m_Installations.RemoveAll();
+}
+
+/*
+**  History:
+**	05-nov-2001 (penga03)
+**	    Created. 
+**	28-jan-2001 (penga03)
+**	    Also check the current Ingres registry key 
+**	    "HKLM\\SOFTWARE\\ComputerAssociates\\Advantage Ingres".
+**	31-jul-2002 (penga03)
+**	    Modified FindOldInstallations() to double check each 
+**	    Ingres instance found by checking the existence of its 
+**	    config.dat. In addition, for each instance, determine 
+**	    it was installed as embedded or enterprise by checking 
+**	    whether or not the string 
+**	    ii.<computer name>.setup.embed_installation is set to 
+**	    ON in config.dat.
+**	 21-oct-2002 (penga03)
+**	    Add the installation id found to the CodeList only after 
+**	    checking existence the corresponding config.dat.
+*/
+void 
+CPreInstallation::FindOldInstallations()
+{
+    char CurKey[1024], Key[1024];
+    HKEY hCurKey=0, hKey=0;
+    char ii_code[3], ii_system[MAX_PATH], file2check[MAX_PATH];
+    CStringList CodeList;
+    CString Host, ConfigKey, ConfigKeyValue, embedded;
+    char strBuffer[MAX_COMPUTERNAME_LENGTH+1];
+    DWORD dwSize=sizeof(strBuffer);
+    BOOL nonmsi;
+	
+    GetComputerName(strBuffer, &dwSize);
+    Host=CString(strBuffer);
+    Host.MakeLower();
+
+
+    sprintf(CurKey, "SOFTWARE\\IngresCorporation\\Ingres");
+    if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE,CurKey,0,KEY_ENUMERATE_SUB_KEYS,&hCurKey))
+    {
+	LONG retCode;
+	int i=0;
+	
+	for (i, retCode=0; !retCode; i++) 
+	{
+	    char SubKey[16];
+	    DWORD dwTemp=sizeof(SubKey);
+	    
+	    retCode=RegEnumKeyEx(hCurKey,i,SubKey,&dwTemp,NULL,NULL,NULL,NULL);
+	    if(!retCode)
+	    {			
+		HKEY hSubKey=0;
+
+		if(!RegOpenKeyEx(hCurKey,SubKey,0,KEY_QUERY_VALUE,&hSubKey))
+		{
+		    DWORD dwType, dwSize=sizeof(ii_system);
+		    
+		    if(!RegQueryValueEx(hSubKey,"II_SYSTEM",NULL,&dwType,(BYTE *)ii_system,&dwSize))
+		    {
+			strncpy(ii_code, SubKey, 2);
+			ii_code[2]='\0';
+		
+			sprintf(file2check, "%s\\ingres\\files\\config.dat", ii_system);
+			if (GetFileAttributes(file2check)!=-1)
+			{
+			    CodeList.AddTail(ii_code);
+				
+			    ConfigKey.Format("ii.%s.setup.embed_installation", Host);
+			    if (Local_PMget(ConfigKey, ii_system, ConfigKeyValue) 
+			        && !ConfigKeyValue.CompareNoCase("ON"))
+				embedded="1";
+			    else
+				embedded="0";
+
+			    sprintf(file2check, "%s\\CAREGLOG.LOG", ii_system);
+			    if (GetFileAttributes(file2check)!=-1)
+				nonmsi=1;
+			    else 
+				nonmsi=0;
+
+			    AddInstallation(ii_code, ii_system, nonmsi, embedded);
+
+
+			}
+		    }
+		    RegCloseKey(hSubKey);
+		}
+	    }
+	} /* end of for loop */		
+	RegCloseKey(hCurKey);
+    }
+
+
+    sprintf(Key, "SOFTWARE\\ComputerAssociates\\Ingres");
+    if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE,Key,0,KEY_ENUMERATE_SUB_KEYS,&hKey))
+    {
+	LONG retCode;
+	int i=0;
+	
+	for (i, retCode=0; !retCode; i++) 
+	{
+	    char SubKey[16];
+	    DWORD dwTemp=sizeof(SubKey);
+	    
+	    retCode=RegEnumKeyEx(hKey,i,SubKey,&dwTemp,NULL,NULL,NULL,NULL);
+	    if(!retCode)
+	    {	
+		strncpy(ii_code, SubKey, 2);
+		ii_code[2]='\0';
+		if (!CodeList.Find(ii_code))
+		{
+			HKEY hSubKey=0;
+			if(!RegOpenKeyEx(hKey,SubKey,0,KEY_QUERY_VALUE,&hSubKey))
+			{
+		    DWORD dwType, dwSize=sizeof(ii_system);
+		    
+		    if(!RegQueryValueEx(hSubKey,"II_SYSTEM",NULL,&dwType,(BYTE *)ii_system,&dwSize))
+		    {
+  			    sprintf(file2check, "%s\\ingres\\files\\config.dat", ii_system);
+			    if (GetFileAttributes(file2check)!=-1)
+			    {
+			     CodeList.AddTail(ii_code);
+
+			     ConfigKey.Format("ii.%s.setup.embed_installation", Host);
+			     if (Local_PMget(ConfigKey, ii_system, ConfigKeyValue) 
+			         && !ConfigKeyValue.CompareNoCase("ON"))
+			      embedded="1";
+			      else
+				  embedded="0";
+
+			      sprintf(file2check, "%s\\CAREGLOG.LOG", ii_system);
+			      if (GetFileAttributes(file2check)!=-1)
+				  nonmsi=1;
+			      else 
+				  nonmsi=0;
+		         
+				  AddInstallation(ii_code, ii_system, nonmsi, embedded);
+				
+				
+				  sprintf(CurKey, "SOFTWARE\\IngresCorporation\\Ingres\\%s_Installation", ii_code);
+				  if (!RegCreateKeyEx(HKEY_LOCAL_MACHINE, CurKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hCurKey, NULL))
+				  {
+				    RegSetValueEx(hCurKey, "installationcode", 0, REG_SZ, (BYTE *)ii_code, (DWORD)strlen(ii_code)+1);
+				    RegSetValueEx(hCurKey, "II_SYSTEM", 0, REG_SZ, (BYTE *)ii_system, (DWORD)strlen(ii_system)+1);
+				    RegCloseKey(hCurKey);
+				  }
+				}
+			}
+			}
+		    RegCloseKey(hSubKey);
+		}
+	    }
+	} /* end of	for loop */	
+	RegCloseKey(hKey);
+    }
+
+    sprintf(Key, "SOFTWARE\\ComputerAssociates\\Advantage Ingres");
+    if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE,Key,0,KEY_ENUMERATE_SUB_KEYS,&hKey))
+    {
+	LONG retCode;
+	int i=0;
+
+	for (i, retCode=0; !retCode; i++) 
+	{
+	    char SubKey[16];
+	    DWORD dwTemp=sizeof(SubKey);
+	    
+	    retCode=RegEnumKeyEx(hKey,i,SubKey,&dwTemp,NULL,NULL,NULL,NULL);
+	    if(!retCode)
+	    {
+		strncpy(ii_code, SubKey, 2);
+		ii_code[2]='\0';
+		if(!CodeList.Find(ii_code))
+		{
+		    HKEY hSubKey=0;
+
+		    if(!RegOpenKeyEx(hKey,SubKey,0,KEY_QUERY_VALUE,&hSubKey))
+		    {
+			DWORD dwType, dwSize=sizeof(ii_system);
+		    
+			if(!RegQueryValueEx(hSubKey,"II_SYSTEM",NULL,&dwType,(BYTE *)ii_system,&dwSize))
+			{				
+			    sprintf(file2check, "%s\\ingres\\files\\config.dat", ii_system);
+			    if (GetFileAttributes(file2check)!=-1)
+			    {
+				CodeList.AddTail(ii_code);
+				
+				ConfigKey.Format("ii.%s.setup.embed_installation", Host);
+				if (Local_PMget(ConfigKey, ii_system, ConfigKeyValue) 
+				    && !ConfigKeyValue.CompareNoCase("ON"))
+				    embedded="1";
+				else
+				    embedded="0";
+				
+				sprintf(file2check, "%s\\CAREGLOG.LOG", ii_system);
+				if (GetFileAttributes(file2check)!=-1)
+				    nonmsi=1;
+				else 
+				    nonmsi=0;
+				
+				AddInstallation(ii_code, ii_system, nonmsi, embedded);
+				
+				sprintf(CurKey, "SOFTWARE\\IngresCorporation\\Ingres\\%s_Installation", ii_code);
+				if (!RegCreateKeyEx(HKEY_LOCAL_MACHINE, CurKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hCurKey, NULL))
+				{
+				    RegSetValueEx(hCurKey, "installationcode", 0, REG_SZ, (BYTE *)ii_code, (DWORD)strlen(ii_code)+1);
+				    RegSetValueEx(hCurKey, "II_SYSTEM", 0, REG_SZ, (BYTE *)ii_system, (DWORD)strlen(ii_system)+1);
+				    RegCloseKey(hCurKey);
+				}
+				}
+			}
+		    }
+		    RegCloseKey(hSubKey);
+		}
+	    }
+	} /* end of for loop */		
+	RegCloseKey(hKey);
+    }
+    
+    sprintf(Key, "SOFTWARE\\ComputerAssociates\\IngresII");
+    if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE,Key,0,KEY_ENUMERATE_SUB_KEYS,&hKey))
+    {
+	LONG retCode;
+	int i=0;
+
+	for (i, retCode=0; !retCode; i++) 
+	{
+	    char SubKey[16];
+	    DWORD dwTemp=sizeof(SubKey);
+	    
+	    retCode=RegEnumKeyEx(hKey,i,SubKey,&dwTemp,NULL,NULL,NULL,NULL);
+	    if(!retCode)
+	    {
+		strncpy(ii_code, SubKey, 2);
+		ii_code[2]='\0';
+		if(!CodeList.Find(ii_code))
+		{
+		    HKEY hSubKey=0;
+
+		    if(!RegOpenKeyEx(hKey,SubKey,0,KEY_QUERY_VALUE,&hSubKey))
+		    {
+			DWORD dwType, dwSize=sizeof(ii_system);
+		    
+			if(!RegQueryValueEx(hSubKey,"II_SYSTEM",NULL,&dwType,(BYTE *)ii_system,&dwSize))
+			{				
+			    sprintf(file2check, "%s\\ingres\\files\\config.dat", ii_system);
+			    if (GetFileAttributes(file2check)!=-1)
+			    {
+				CodeList.AddTail(ii_code);
+				
+				ConfigKey.Format("ii.%s.setup.embed_installation", Host);
+				if (Local_PMget(ConfigKey, ii_system, ConfigKeyValue) 
+				    && !ConfigKeyValue.CompareNoCase("ON"))
+				    embedded="1";
+				else
+				    embedded="0";
+				
+				sprintf(file2check, "%s\\CAREGLOG.LOG", ii_system);
+				if (GetFileAttributes(file2check)!=-1)
+				    nonmsi=1;
+				else 
+				    nonmsi=0;
+				
+				AddInstallation(ii_code, ii_system, nonmsi, embedded);
+				
+				sprintf(CurKey, "SOFTWARE\\IngresCorporation\\Ingres\\%s_Installation", ii_code);
+				if (!RegCreateKeyEx(HKEY_LOCAL_MACHINE, CurKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hCurKey, NULL))
+				{
+				    RegSetValueEx(hCurKey, "installationcode", 0, REG_SZ, (BYTE *)ii_code, (DWORD)strlen(ii_code)+1);
+				    RegSetValueEx(hCurKey, "II_SYSTEM", 0, REG_SZ, (BYTE *)ii_system, (DWORD)strlen(ii_system)+1);
+				    RegCloseKey(hCurKey);
+				}
+			    }
+			}
+		    }
+		    RegCloseKey(hSubKey);
+		}
+	    }
+	} /* end of for loop */		
+	RegCloseKey(hKey);
+    }
+
+    if (IsWindows9X())
+	strcpy(Key, "SYSTEM\\CurrentControlSet\\Control\\SessionManager\\Environment");
+    else
+	strcpy(Key, "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment");
+    
+    if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, Key, 0,KEY_QUERY_VALUE, &hKey))
+    {
+	DWORD dwType, dwSize=sizeof(ii_system);
+	
+	if (!RegQueryValueEx(hKey, "II_SYSTEM", 0, &dwType, (BYTE *)ii_system, &dwSize))
+	{	
+	    CString temp;
+	    
+	    if (Local_NMgtIngAt("II_INSTALLATION", ii_system, temp) && !CodeList.Find(temp))
+	    {
+		strcpy(ii_code, temp.GetBuffer(2));
+
+		ConfigKey.Format("ii.%s.setup.embed_installation", Host);
+		if (Local_PMget(ConfigKey, ii_system, ConfigKeyValue) 
+		    && !ConfigKeyValue.CompareNoCase("ON"))
+		    embedded="1";
+		else
+		    embedded="0";
+
+		sprintf(file2check, "%s\\ingres\\files\\config.dat", ii_system);
+		if (GetFileAttributes(file2check)!=-1)
+		{
+		    CodeList.AddTail(ii_code);
+
+		    sprintf(file2check, "%s\\CAREGLOG.LOG", ii_system);
+		    if(GetFileAttributes(file2check)!=-1)
+			nonmsi=1;
+		    else
+			nonmsi=0;
+			
+		    AddInstallation(ii_code, ii_system, nonmsi, embedded);
+		
+		    sprintf(CurKey, "SOFTWARE\\IngresCorporation\\Ingres\\%s_Installation", ii_code);
+		    if (!RegCreateKeyEx(HKEY_LOCAL_MACHINE, CurKey, 0, NULL, REG_OPTION_NON_VOLATILE, 
+				   KEY_ALL_ACCESS, NULL, &hCurKey, NULL))
+		    {
+			RegSetValueEx(hCurKey, "installationcode", 0, REG_SZ, (BYTE *)ii_code, (DWORD)strlen(ii_code)+1);
+			RegSetValueEx(hCurKey, "II_SYSTEM", 0, REG_SZ, (BYTE *)ii_system, (DWORD)strlen(ii_system)+1);
+			RegCloseKey(hCurKey);
+		    }
+		}
+	    }
+	}
+	RegCloseKey(hKey);
+    }
+    
+    if(!RegOpenKeyEx(HKEY_CURRENT_USER, "Environment", 0, KEY_QUERY_VALUE, &hKey))
+    {
+	DWORD dwType, dwSize=sizeof(ii_system);
+	
+	if(!RegQueryValueEx(hKey, "II_SYSTEM", 0, &dwType, (BYTE *)ii_system, &dwSize))
+	{	
+	    CString temp;
+	    
+	    if (Local_NMgtIngAt("II_INSTALLATION", ii_system, temp) && !CodeList.Find(temp))
+	    {
+		strcpy(ii_code, temp.GetBuffer(2));
+
+		ConfigKey.Format("ii.%s.setup.embed_installation", Host);
+		if (Local_PMget(ConfigKey, ii_system, ConfigKeyValue) 
+		    && !ConfigKeyValue.CompareNoCase("ON"))
+		    embedded="1";
+		else
+		    embedded="0";
+
+		sprintf(file2check, "%s\\ingres\\files\\config.dat", ii_system);
+		if (GetFileAttributes(file2check)!=-1)
+		{
+		    CodeList.AddTail(ii_code);
+
+		    sprintf(file2check, "%s\\CAREGLOG.LOG", ii_system);
+		    if(GetFileAttributes(file2check)!=-1)
+			nonmsi=1;
+		    else
+			nonmsi=0;
+			
+		    AddInstallation(ii_code, ii_system, nonmsi, embedded);
+
+		    sprintf(CurKey, "SOFTWARE\\IngresCorporation\\Ingres\\%s_Installation", ii_code);
+		    if (!RegCreateKeyEx(HKEY_LOCAL_MACHINE, CurKey, 0, NULL, REG_OPTION_NON_VOLATILE, 
+				   KEY_ALL_ACCESS, NULL, &hCurKey, NULL))
+		    {
+			RegSetValueEx(hCurKey, "installationcode", 0, REG_SZ, (BYTE *)ii_code, (DWORD)strlen(ii_code)+1);
+			RegSetValueEx(hCurKey, "II_SYSTEM", 0, REG_SZ, (BYTE *)ii_system, (DWORD)strlen(ii_system)+1);
+			RegCloseKey(hCurKey);
+		    }
+		}
+	    }
+	}
+	RegCloseKey(hKey);
+    }
+    
+    if(GetEnvironmentVariable("II_SYSTEM", ii_system, sizeof(ii_system)))
+    {
+	CString temp;
+	
+	if (Local_NMgtIngAt("II_INSTALLATION", ii_system, temp) && !CodeList.Find(temp))
+	{
+	    strcpy(ii_code, temp.GetBuffer(2));
+
+	    ConfigKey.Format("ii.%s.setup.embed_installation", Host);
+	    if (Local_PMget(ConfigKey, ii_system, ConfigKeyValue) 
+	        && !ConfigKeyValue.CompareNoCase("ON"))
+		embedded="1";
+	    else
+		embedded="0";
+
+	    sprintf(file2check, "%s\\ingres\\files\\config.dat", ii_system);
+	    if (GetFileAttributes(file2check)!=-1)
+	    {
+		CodeList.AddTail(ii_code);
+
+		sprintf(file2check, "%s\\CAREGLOG.LOG", ii_system);
+		if (GetFileAttributes(file2check)!=-1)
+		    nonmsi=1;
+		else
+		    nonmsi=0;
+
+		AddInstallation(ii_code, ii_system, nonmsi, embedded);
+
+		sprintf(CurKey, "SOFTWARE\\IngresCorporation\\Ingres\\%s_Installation", ii_code);
+		if (!RegCreateKeyEx(HKEY_LOCAL_MACHINE, CurKey, 0, NULL, REG_OPTION_NON_VOLATILE, 
+				   KEY_ALL_ACCESS, NULL, &hCurKey, NULL))
+		{
+		    RegSetValueEx(hCurKey, "installationcode", 0, REG_SZ, (BYTE *)ii_code, (DWORD)strlen(ii_code)+1);
+		    RegSetValueEx(hCurKey, "II_SYSTEM", 0, REG_SZ, (BYTE *)ii_system, (DWORD)strlen(ii_system)+1);
+		    RegCloseKey(hCurKey);
+		}
+	    }
+	}
+    }
+}
+
+/*
+**  History:
+**	23-July-2001 (penga03)
+**	    Set INGRES_VER25 to "1" and pass it to MsiExec to indicate that
+**	    this installation was installed by old installer and will be
+**	    upgraded.
+**	23-July-2001 (penga03)
+**	    Because we changed the attributes of those features installed by
+**	    old installer during upgrade. After upgrade is done, we need to
+**	    change the features' attributes back to default in both MSI and
+**	    cached MSI.
+**	17-Aug-2001 (penga03)
+**	    Take away the change made in 23-July-2001 (penga03).
+**	28-Aug-2001 (penga03)
+**	    If update Msi database failed, clean up the temporary Msi and
+**	    Cabinet files.
+**	12-Sep-2001 (penga03)
+**	    If cannot find II_TEMPORARY, get the system temp directory. Also,
+**	    correct some errors while calculating free disk space.
+**	14-jan-2002 (penga03)
+**	    If install Ingres using response file, the user interface level
+**	    of MsiExec is set to be /qb-, which means "Basic UI with no modal
+**	    dialog boxes displayed at the end of the installation".
+**	17-jun-2004 (somsa01)
+**	    If we're dealing with 64-bit Windows, launch and wait for the
+**	    licensing install here before running the main Ingres installer.
+**	    A Merge Module version of licensing will not be available in time
+**	    for this product to go GA, and since we cannot run child msi's
+**	    from a parent msi, we need to run the licensing install outside of
+**	    the main install.
+**	08-feb-2005 (penga03)
+**	    Return more information if copy cab file fails.
+**	08-march-2005 (penga03)
+**	    Pass the Cdimage (the directory containing the installation package)
+**	    during upgrade.
+**	01-jul-2005 (penga03)
+**	    Add log information for mdb install.
+**      22-Jun-2007 (horda03)
+**          Parameter added. If TRUE, then need to remove any stale files/registry
+**          entries for the installation.
+**	31-Jul-2008 (drivi01)
+**	    Update product code for .NET Data Provider 2.1.
+**	14-Nov-2008 (drivi01)
+**	    Automatically retrieve product code for documentation and .NET
+**	    Data Provider to check for existing installations.
+**		For silent installs for documentation and .NET Data Provider
+**		packages, replace INGRESCORPFOLDER msi parameter with INSTALLDIR.
+*/
+char *MdbSizes[]=
+{
+"tiny", "small", "medium", "large", "huge", 0
+};
+BOOL 
+IsValidMdbSize(char *MdbSize)
+{
+    int i;
+
+    if (!MdbSize[0])
+	return FALSE;
+
+    i=0;
+    while(MdbSizes[i])
+    {
+	if (!_stricmp(MdbSize, MdbSizes[i]))
+	    return TRUE;
+	i++;
+    }
+    return FALSE;
+}
+
+BOOL
+CPreInstallation::LaunchWindowsInstaller(BOOL CheckReg)
+{
+    char cmd[1024], ach[1024], *p;
+    char SubKey[128];
+    HKEY hkSubKey;
+    DWORD size, dw;
+    PROCESS_INFORMATION pi; 
+    STARTUPINFO si;
+    char msiloc[1024], cdimage[1024], installdir[MAX_PATH+1], sourcedir[MAX_PATH+1];
+    HANDLE hFile, hThread, handle;
+    LARGE_INTEGER FileSize, FreeBytesToCaller, TotalBytes;
+    CString ii_temporary;
+    CWaitCursor wait;
+    WIN32_FIND_DATA wfd;
+    int bDocPack = 0, bDotNetPack = 0;
+    char ii_system[1024];
+    char licPath[1024];
+
+    if (!m_DBATools)
+    {
+        if (!check_windowsinstaller())
+		return FALSE;
+	InstallMSRedistributions();
+    }
+
+    GetModuleFileName(AfxGetInstanceHandle(),ach,sizeof(ach));
+    p=_tcsrchr(ach,'\\');
+    if(*p) *(p)=0;
+	if (thePreInstall.m_DBATools)
+	{
+		sprintf(efname, "%s\\files\\Ingres DBA Tools.msi", ach);
+		sprintf(msiloc, ach);
+		sprintf(cdimage, ach);
+		sprintf(nfname, "%s\\files\\Ingres DBA Tools.msi", ach);
+	}
+	else
+	{
+	    sprintf(efname, "%s\\files\\IngresII.msi", ach);
+		sprintf(edcab, "%s\\files\\Data1.cab", ach);
+		sprintf(msiloc, ach);
+		sprintf(cdimage, ach);
+		sprintf(nfname, "%s\\files\\IngresII.msi", ach);
+	}
+	//Put together license path
+	sprintf(licPath, "%s\\LICENSE.rtf", ach);	
+
+    if (CheckReg)
+    {
+       check_for_old_reg_entries( m_InstallCode.GetBuffer(3) );
+    }
+	
+
+    if((_stricmp(m_InstallCode, "II") && !thePreInstall.m_DBATools) || (thePreInstall.m_DBATools))
+	{
+	BOOL found=FALSE;
+	
+
+	/* Get the directory designated for temporary msi and cab. */
+	sprintf(SubKey, "SOFTWARE\\IngresCorporation\\Ingres\\%s_Installation", m_InstallCode);
+	if(!RegOpenKeyEx(HKEY_LOCAL_MACHINE, SubKey, 0, KEY_QUERY_VALUE, &hkSubKey))
+	{
+	    size=sizeof(ach);
+	    RegQueryValueEx(hkSubKey,"II_SYSTEM",0,0,(BYTE *)ach,&size);
+	    Local_NMgtIngAt("II_TEMPORARY", ach, ii_temporary);
+	    if(!ii_temporary.IsEmpty() && GetFileAttributes(ii_temporary)!=-1)
+	    {
+		    found=TRUE;
+		    sprintf(ach, "%s", ii_temporary);
+	    }
+	    RegCloseKey(hkSubKey);
+	}
+	if(!found && !GetTempPath(sizeof(ach), ach))
+	{
+	    Error(IDS_NOTEMPPATH);
+	    return FALSE;
+	}
+	if (ach[strlen(ach)-1] == '\\') ach[strlen(ach)-1]='\0';
+
+	if (thePreInstall.m_DBATools)
+	{
+		sprintf(nfname, "%s\\Ingres DBA Tools[%s].msi", ach, m_InstallCode);
+		sprintf(msiloc, "%s\\files", ach);
+	}
+	else
+	{
+		sprintf(nfname, "%s\\IngresII[%s].msi", ach, m_InstallCode);
+		sprintf(ndcab, "%s\\IngresII[%s].cab", ach, m_InstallCode);
+		sprintf(msiloc, "%s\\files", ach);
+	}
+	
+	if (!thePreInstall.m_DBATools)
+	{
+	/* Check if the directory has enough space for the cab file. */
+	p=_tcschr(ach, '\\');
+	if(*p) *(p+1)=0;
+	hFile=CreateFile(edcab, 0, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	GetFileSizeEx(hFile, &FileSize);
+	GetDiskFreeSpaceEx(ach, (PULARGE_INTEGER)&FreeBytesToCaller, (PULARGE_INTEGER)&TotalBytes, NULL);
+	if (FileSize.QuadPart > FreeBytesToCaller.QuadPart)
+	{
+	    char szTemp1[512], szTemp2[512];
+	    
+	    sprintf(szTemp1, "%d kbytes", FileSize.QuadPart/1024);
+	    sprintf(szTemp2, "%d kbytes", FreeBytesToCaller.QuadPart/1024);
+	    Error(IDS_NOENOUGHSPACE, szTemp1, ach, szTemp2);
+	    return FALSE;
+	}
+	
+	/* Copy cab and msi. */
+	if (m_ResponseFile.IsEmpty())
+	{
+	    CWaitDlg dlgWait(IDS_WAITDLGTEXT);
+	    hThread=CreateThread(0, 0, (LPTHREAD_START_ROUTINE)ThreadCopyCab, 0, 0, &dw);
+	    dlgWait.m_hThreadWait=hThread;
+	    dlgWait.DoModal();
+	    GetExitCodeThread(hThread, &dw);
+	    if (!dw)
+	    {
+		sprintf(ach, "%d", GetLastError());
+		Error(IDS_CANNOTCOPYCABFILE, edcab, ndcab, ach);
+		return FALSE;
+	    }
+	}
+	else //silent install
+	{
+	    BOOL bRet;
+
+	    for (int i=0; i<10; i++)
+	    {
+		bRet=CopyFile(edcab, ndcab, FALSE);
+		if (bRet)
+		    break;
+		Sleep(1000);
+	    }
+	    if (!bRet)
+	    {
+		sprintf(ach, "%d", GetLastError());
+		Error(IDS_CANNOTCOPYCABFILE, edcab, ndcab, ach);
+		return FALSE;
+	    }
+	}	
+	}
+
+	if(!CopyFile(efname, nfname, FALSE))
+	{			
+	    Error(IDS_CANNOTCOPYMSIFILE, nfname);
+	    return FALSE;
+	}
+
+	/*
+	** Load license
+	*/
+	setupii_license(licPath, nfname);
+
+	/* Update the msi to embed the installation identifier. */
+	SetFileAttributes(nfname, FILE_ATTRIBUTE_NORMAL+FILE_ATTRIBUTE_ARCHIVE);
+	SetFileAttributes(ndcab, FILE_ATTRIBUTE_NORMAL+FILE_ATTRIBUTE_ARCHIVE);
+	
+	if(!setupii_edit(m_InstallCode.GetBuffer(3), nfname))
+	{
+	    Error(IDS_CANNOTUPDATEWIDB);
+	    return FALSE;
+	}
+    }
+
+	/* Detect documentation and .NET packages */
+	GetModuleFileName(AfxGetInstanceHandle(),ach,sizeof(ach));
+    p=_tcsrchr(ach,'\\');
+    if(*p) *(p+1)=0;
+
+	sprintf(cmd, "%s\\files\\documentation\\*.msi", ach);
+	if ((handle=FindFirstFile(cmd, &wfd)) != INVALID_HANDLE_VALUE)
+	{
+		sprintf(sourcedir, "%s\\files\\documentation\\%s", ach, wfd.cFileName);
+		if (_access(sourcedir, 00) == 0)
+			bDocPack = 1;
+	}
+	sprintf(cmd, "%s\\files\\dotnet\\*.msi", ach);
+	if ((handle=FindFirstFile(cmd, &wfd)) != INVALID_HANDLE_VALUE)
+	{
+		sprintf(sourcedir, "%s\\files\\dotnet\\%s", ach, wfd.cFileName);
+		if (_access(sourcedir, 00) == 0)
+			bDotNetPack = 1;
+	}
+
+    /* Launch the installation. */
+    if ((m_UpgradeType == 1 || m_UpgradeType == 2) 
+		&& !m_Ver25.Compare("0"))
+    {
+	if (m_ResponseFile.IsEmpty())
+	{
+	    if (m_MSILog.IsEmpty())
+		sprintf(cmd, "MsiExec.exe /i \"%s\" REINSTALL=ALL REINSTALLMODE=vomus INGRES_UPGRADE=%d INGRES_RESTART=%d INGRES_CDIMAGE=\"%s\" INGRES_WAIT4GUI=%d INGRES_UPGRADE_USERDB=%d DOC_PACKAGE=\"%d\" DOTNET_PACKAGE=\"%d\" CONFIG_TYPE=%d", nfname, m_UpgradeType, m_RestartIngres, cdimage, m_Wait4GUI, m_UpgradeDatabases, bDocPack, bDotNetPack, m_ConfigType);
+	    else
+		sprintf(cmd, "MsiExec.exe /i \"%s\" /l*v \"%s\" REINSTALL=ALL REINSTALLMODE=vomus INGRES_UPGRADE=%d INGRES_RESTART=%d INGRES_CDIMAGE=\"%s\" INGRES_WAIT4GUI=%d, INGRES_UPGRADE_USERDB=%d DOC_PACKAGE=\"%d\" DOTNET_PACKAGE=\"%d\" CONFIG_TYPE=%d", nfname, m_MSILog, m_UpgradeType, m_RestartIngres, cdimage, m_Wait4GUI, m_UpgradeDatabases, bDocPack, bDotNetPack, m_ConfigType);
+	}
+	else
+	{
+	    if (m_MSILog.IsEmpty())
+		sprintf(cmd, "MsiExec.exe /fvomus \"%s\" /qn INGRES_UPGRADE=%d INGRES_RESTART=%d INGRES_RSP_LOC=\"%s\" INGRES_CDIMAGE=\"%s\"", nfname, m_UpgradeType, m_RestartIngres, m_ResponseFile, cdimage);
+	    else
+		sprintf(cmd, "MsiExec.exe /fvomus \"%s\" /qn /l*v \"%s\" INGRES_UPGRADE=%d INGRES_RESTART=%d INGRES_RSP_LOC=\"%s\" INGRES_CDIMAGE=\"%s\"", nfname, m_MSILog, m_UpgradeType, m_RestartIngres, m_ResponseFile, cdimage);
+	}	
+	}
+    else { /* new install, modify/repair, upgrade a non-msi version of ingres */
+    if (m_ResponseFile.IsEmpty())
+    {
+	if (m_MSILog.IsEmpty())
+	    sprintf(cmd, "MsiExec.exe /i \"%s\" INGRES_CREATE_RSP=\"%s\" INGRES_MSI_LOC=\"%s\" INGRES_CDIMAGE=\"%s\" INGRES_VER25=\"%s\" INGRES_RESTART=%d INGRES_INSTALL_MODE=%d INGRES_WAIT4GUI=%d DOC_PACKAGE=\"%d\" DOTNET_PACKAGE=\"%d\" CONFIG_TYPE=%d", nfname, m_CreateResponseFile, msiloc, cdimage, m_Ver25, m_RestartIngres, m_express, m_Wait4GUI, bDocPack, bDotNetPack, m_ConfigType);
+	else
+	    sprintf(cmd, "MsiExec.exe /i \"%s\" /l*v \"%s\" INGRES_CREATE_RSP=\"%s\" INGRES_MSI_LOC=\"%s\" INGRES_CDIMAGE=\"%s\" INGRES_VER25=\"%s\" INGRES_RESTART=%d INGRES_INSTALL_MODE=%d INGRES_WAIT4GUI=%d DOC_PACKAGE=\"%d\" DOTNET_PACKAGE=\"%d\" CONFIG_TYPE=%d", nfname, m_MSILog, m_CreateResponseFile, msiloc, cdimage, m_Ver25, m_RestartIngres, m_express, m_Wait4GUI, bDocPack, bDotNetPack, m_ConfigType);
+    }
+    else
+    {
+	if (m_MSILog.IsEmpty())
+	    sprintf(cmd, "MsiExec.exe /i \"%s\" /qn INGRES_RSP_LOC=\"%s\" INGRES_CREATE_RSP=\"%s\" INGRES_MSI_LOC=\"%s\" INGRES_CDIMAGE=\"%s\" INGRES_VER25=\"%s\" INGRES_RESTART=%d", nfname, m_ResponseFile, m_CreateResponseFile, msiloc, cdimage, m_Ver25, m_RestartIngres);
+	else
+	    sprintf(cmd, "MsiExec.exe /i \"%s\" /qn /l*v \"%s\" INGRES_RSP_LOC=\"%s\" INGRES_CREATE_RSP=\"%s\" INGRES_MSI_LOC=\"%s\" INGRES_CDIMAGE=\"%s\" INGRES_VER25=\"%s\" INGRES_RESTART=%d", nfname, m_MSILog, m_ResponseFile, m_CreateResponseFile, msiloc, cdimage, m_Ver25, m_RestartIngres);
+    }}
+
+    memset((char*)&pi,0,sizeof(pi));
+    memset((char*)&si,0,sizeof(si));
+    si.cb=sizeof(si);
+    if(!CreateProcess(NULL,cmd,NULL,NULL,FALSE,NORMAL_PRIORITY_CLASS,NULL,NULL,&si,&pi))
+    {
+	if(_stricmp(m_InstallCode, "II"))
+	{
+	    DeleteFile(ndcab);  
+	    DeleteFile(nfname);
+	}
+	Error(IDS_CANNOTCREATEPROCESS, cmd);
+	return FALSE;
+    }
+
+    /* Launch the documentation, dotnet installers and ingconfig.exe and setupmdb.bat if silent. */
+    if (!m_ResponseFile.IsEmpty() || m_Wait4GUI)
+    {
+	DWORD   dw=1;
+	char	/*ii_system[1024],*/ curdir[1024], pBuf[2048];
+	
+	WaitForSingleObject(pi.hProcess, INFINITE);
+	if (GetExitCodeProcess(pi.hProcess, &dw)) 
+	    return_code=dw;
+	else return_code=GetLastError();
+	if (dw)
+	{
+	    CloseHandle(pi.hProcess);
+	    CloseHandle(pi.hThread);
+	    return FALSE;
+	}
+	
+	if (!m_Wait4GUI)
+	{
+
+	/* Launch documentation and dotnet installers if silent */
+	char regloc[MAX_PATH+1];
+	int bUpgrade=0;
+	char *idirs[] = {"documentation", "dotnet", '\0'};
+	int bSelected=0;
+
+
+	for (int i = 0; idirs[i]!=NULL; i++)
+	{
+	sprintf(sourcedir, "%s\\files\\%s\\*.msi", ach, idirs[i]);
+	if ((handle=FindFirstFile(sourcedir, &wfd)) != INVALID_HANDLE_VALUE)
+	{
+		char pathvar[MAX_PATH+1], component[MAX_PATH+1], buff[MAX_PATH];
+		CString var(idirs[i]);
+		sprintf(pathvar, "II_LOCATION_%s", var.MakeUpper());
+		sprintf(component, "II_COMPONENT_%s", var.MakeUpper());
+		
+		GetPrivateProfileString("Ingres Locations", pathvar, "", installdir, sizeof(installdir), m_ResponseFile);
+		if (strlen(installdir)==0)
+			GetPrivateProfileString("Ingres Configuration", pathvar, "", installdir, sizeof(installdir), m_ResponseFile);
+		if (strlen(installdir)==0)
+			GetPrivateProfileString("User Defined Properties", pathvar, "", installdir, sizeof(installdir), m_ResponseFile);
+		
+		if (strstr(component, "DOTNET") != NULL)
+		{
+			GetPrivateProfileString("Ingres Configuration", "Ingres .NET Data Provider", "", buff, sizeof(buff), m_ResponseFile);
+			if (strlen(buff)==0)
+				GetPrivateProfileString("User Defined Properties", "Ingres .NET Data Provider", "", buff, sizeof(buff), m_ResponseFile);
+		}
+		else if (strstr(component, "DOC") != NULL)
+		{
+			GetPrivateProfileString("Ingres Configuration", "Ingres Online Documentation", "", buff, sizeof(buff), m_ResponseFile);
+			if (strlen(buff)==0)
+				GetPrivateProfileString("User Defined Properties", "Ingres Online Documentation", "", buff, sizeof(buff), m_ResponseFile);
+		}
+		if (strlen(buff) == 0)
+			GetPrivateProfileString("Ingres Components", component, "", buff, sizeof(buff), m_ResponseFile);
+		if (strcmp(buff, "YES") == 0)
+			bSelected=1;
+        
+		if (bSelected)
+		{
+			//retrieve the product code guid
+			char path[MAX_PATH+1];
+			char guid[MAX_PATH];
+			*guid='\0';
+			sprintf(path, "%s\\files\\%s\\%s", ach, idirs[i], wfd.cFileName);
+			if ((dw=GetProductCode(path, (char *)&guid, sizeof(guid))) != ERROR_SUCCESS)
+			{
+				CString s;
+				s.Format("Failed to retrieve product code guid for %s. System error %d.\nThe package will not be installed.", path, dw);
+				AppendToLog(s);
+				continue;
+			}
+			
+			//check if hte product with this guid already exists
+			sprintf(regloc, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\%s", guid);
+			if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, regloc, 0, KEY_QUERY_VALUE, &hkSubKey))
+			{
+			bUpgrade=1;
+			RegCloseKey(hkSubKey);
+			}
+			if (!bUpgrade)
+			{
+				if (strlen(installdir)==0)
+				sprintf(cmd, "MsiExec.exe /i \"%s\\files\\%s\\%s\" /qn ", ach, idirs[i], wfd.cFileName);
+				else
+	     		sprintf(cmd, "MsiExec.exe /i \"%s\\files\\%s\\%s\" /qn INSTALLDIR=\"%s\"", ach, idirs[i], wfd.cFileName, installdir);
+			}
+		     else
+				sprintf(cmd, "MsiExec.exe /i \"%s\\files\\%s\\%s\" /qn REINSTALL=ALL REINSTALLMODE=vomus", ach, idirs[i], wfd.cFileName);
+			FindClose(handle);
+
+			if (!CreateProcess(NULL,cmd,NULL,NULL,FALSE,NORMAL_PRIORITY_CLASS,NULL,NULL,&si,&pi))
+			{
+				return_code=GetLastError();
+				return FALSE;
+			}
+			WaitForSingleObject(pi.hProcess, INFINITE);
+			if (GetExitCodeProcess(pi.hProcess, &dw)) 
+				return_code=dw;
+			else return_code=GetLastError();
+			if (dw)
+			{
+				CloseHandle(pi.hProcess);
+				CloseHandle(pi.hThread);
+				return FALSE;
+			}
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+		}
+	}
+	else
+	{
+		CString s;
+		s.Format("%s_rc=%d", idirs[i], GetLastError());
+		AppendToLog(s);
+	}
+	} /*for */
+	} /*if (!m_Wait4GUI)*/
+
+	/* Launch ingconfig.exe and setupmdb.bat if silent */
+	sprintf(SubKey, "SOFTWARE\\IngresCorporation\\Ingres\\%s_Installation", m_InstallCode);
+	if(!RegOpenKeyEx(HKEY_LOCAL_MACHINE, SubKey, 0, KEY_QUERY_VALUE, &hkSubKey))
+	{
+	    size=sizeof(ii_system); *ii_system=0;
+	    RegQueryValueEx(hkSubKey,"II_SYSTEM",0,0,(BYTE *)ii_system,&size);
+
+	    size=sizeof(ach); *ach=0;
+	    RegQueryValueEx(hkSubKey,"PostInstallationNeeded",0,0,(BYTE *)ach,&size);
+		RegCloseKey(hkSubKey);
+
+	    /* launch ingconfig.exe */
+	    if (!_stricmp(ach, "YES"))
+	    {
+		dw=1;
+		sprintf(cmd, "\"%s\\ingres\\bin\\ingconfig.exe\"", ii_system);
+		memset((char*)&pi,0,sizeof(pi));
+		memset((char*)&si,0,sizeof(si));
+		si.cb=sizeof(si);
+
+		if (!CreateProcess(NULL,cmd,NULL,NULL,FALSE,NORMAL_PRIORITY_CLASS,NULL,NULL,&si,&pi))
+		{
+			return_code=GetLastError();
+		    return FALSE;
+		}
+	
+		WaitForSingleObject(pi.hProcess, INFINITE);
+		if (GetExitCodeProcess(pi.hProcess, &dw)) 
+		    return_code=dw;
+		else return_code=GetLastError();
+		if (dw)
+		{
+		    CloseHandle(pi.hProcess);
+		    CloseHandle(pi.hThread);
+		    return FALSE;
+		}
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+		}
+	    
+	    /* launch setupmdb.bat */
+	    GetPrivateProfileString("Ingres Configuration", "II_MDB_INSTALL", "", ach, sizeof(ach), m_ResponseFile);
+	    if (strlen(ach)==0)
+		    GetPrivateProfileString("User Defined Properties", "II_MDB_INSTALL", "", ach, sizeof(ach), m_ResponseFile);
+	    sprintf(pBuf, "%s\\ingres\\bin\\iidbms.exe", ii_system);
+	    if (ach[0] && !_stricmp(ach, "YES") && GetFileAttributes(pBuf) != -1 )
+	    {
+		
+		CTime cTime;
+		CString s;
+		
+		sprintf(pBuf, "%s\\ingres\\files\\install.log", ii_system);
+		hLogFile=CreateFile(pBuf, GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL, 0);
+		if (hLogFile == INVALID_HANDLE_VALUE)
+		    hLogFile=0;
+		else
+		{
+		    SetFilePointer(hLogFile, 0, 0, FILE_END);
+
+		    time(&t);
+		    cTime=t;
+		    s=cTime.Format(IDS_DATEFORMAT);
+		    AppendToLog(s);
+		}
+
+		SetEnvironmentVariable("II_SYSTEM", ii_system);
+
+		DWORD dwRet=GetEnvironmentVariable("PATH", NULL, 0);
+		if (dwRet)
+		{
+		    char *szCurPath=(char *) malloc(dwRet);
+		    GetEnvironmentVariable("PATH", szCurPath, dwRet);
+		
+		    char *szPath=(char *) malloc(dwRet+2*sizeof(ii_system)+516);
+		    sprintf(szPath, "%s\\ingres\\bin;%s\\ingres\\utility;%s", ii_system, ii_system, szCurPath);
+		    SetEnvironmentVariable("PATH", szPath);
+		    free(szCurPath);
+		    free(szPath);
+		}
+		else
+		{
+		    GetSystemDirectory(ach, sizeof(ach));
+		    sprintf(pBuf, "%s\\ingres\\bin;%s\\ingres\\utility;%s", ii_system, ii_system, ach);
+		    SetEnvironmentVariable("PATH", pBuf);
+		}
+
+		GetCurrentDirectory(sizeof(curdir), curdir);
+		SetCurrentDirectory(ii_system);
+
+		sprintf(cmd, "\"%s\\mdb\\setupmdb.bat\" -II_MDB_PATH=\"%s\\mdb\"", cdimage, cdimage);
+		GetPrivateProfileString("Ingres Configuration", "II_MDB_NAME", "", ach, sizeof(ach), m_ResponseFile);
+		if (strlen(ach)==0)
+   		     GetPrivateProfileString("User Defined Properties", "II_MDB_NAME", "", ach, sizeof(ach), m_ResponseFile);
+		if (ach[0])
+		{
+		    strcat(cmd, " ");
+		    strcat(cmd, "-II_MDB_NAME=");
+		    strcat(cmd, ach);
+		}
+		GetPrivateProfileString("Ingres Configuration", "II_MDB_SIZE", "", ach, sizeof(ach), m_ResponseFile);
+		if (strlen(ach)==0)
+		     GetPrivateProfileString("User Defined Properties", "II_MDB_SIZE", "", ach, sizeof(ach), m_ResponseFile);
+		if (ach[0] && IsValidMdbSize(ach))
+		{
+		    strcat(cmd, " ");
+		    strcat(cmd, "-II_MDB_SIZE=");
+		    strcat(cmd, ach);
+		}
+		GetPrivateProfileString("Ingres Configuration", "II_MDB_DEBUG", "", ach, sizeof(ach), m_ResponseFile);
+		if (strlen(ach)==0)
+  		      GetPrivateProfileString("User Defined Properties", "II_MDB_DEBUG", "", ach, sizeof(ach), m_ResponseFile);
+		if (ach[0] && !_stricmp(ach, "YES"))
+		{
+		    strcat(cmd, " ");
+		    strcat(cmd, "-debug");
+		}
+
+		dw=1;
+		memset((char*)&pi,0,sizeof(pi));
+		memset((char*)&si,0,sizeof(si));
+		si.cb=sizeof(si);
+		DWORD dwCreationFlags=CREATE_NO_WINDOW | NORMAL_PRIORITY_CLASS;
+		
+		AppendToLog(cmd);
+
+		if (!CreateProcess(NULL,cmd,NULL,NULL,FALSE,dwCreationFlags,NULL,NULL,&si,&pi))
+		{		
+		    if (hLogFile)
+			CloseHandle(hLogFile);
+
+		    return_code=GetLastError();
+		    SetCurrentDirectory(curdir);
+		    return FALSE;
+		}
+		WaitForSingleObject(pi.hProcess, INFINITE);
+		if (Local_NMgtIngAt("MDB_RC", ii_system, s))
+		    dw = atoi(s.GetBuffer(s.GetLength()+1));
+		return_code = dw;
+		if (dw)
+		{
+		    time(&t);
+		    cTime=t;
+		    s=cTime.Format(IDS_DATEFORMATF);
+		    AppendToLog(s);
+		    //s.Format("RC=%d", return_code);
+		    //AppendToLog(s);
+			
+		    if (hLogFile)
+			CloseHandle(hLogFile);
+
+		    if (pi.hProcess) CloseHandle(pi.hProcess);
+		    if (pi.hThread) CloseHandle(pi.hThread);
+
+		    SetCurrentDirectory(curdir);
+		    return FALSE;
+		}
+		
+		time(&t);
+		cTime=t;
+		s=cTime.Format(IDS_DATEFORMATS);
+		AppendToLog(s);
+		//s.Format("RC=%d", return_code);
+		//AppendToLog(s);
+
+		if (hLogFile)
+		    CloseHandle(hLogFile);
+
+		if (pi.hProcess) CloseHandle(pi.hProcess);
+		if (pi.hThread) CloseHandle(pi.hThread);
+
+		SetCurrentDirectory(curdir);
+	    }
+	}
+    }//end of if (!m_ResponseFile.IsEmpty())
+	if (m_Wait4GUI)
+	{
+		/*open log file*/
+		HANDLE hLogFile;
+		char installLoc[MAX_PATH+1];
+		sprintf(installLoc, "%s%s", ii_system, "\\ingres\\files\\install.log");
+		hLogFile = CreateFile( installLoc, GENERIC_WRITE, 0, NULL,
+			    OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,0 );
+		if (hLogFile != INVALID_HANDLE_VALUE)
+		{
+			char s[MAX_PATH];
+			DWORD dwSize, dwError;
+			if (SetFilePointer(hLogFile, 0, 0, FILE_END) != -1)
+			{
+			sprintf(s, "setup.exe RC = %d\r\n", return_code);
+			if (!WriteFile(hLogFile, s, strlen(s), &dwSize, NULL))
+				dwError=GetLastError();
+			}
+			CloseHandle(hLogFile);
+		}
+
+	}
+
+    return TRUE;
+}
+
+/*
+**  History:
+**	23-July-2001 (penga03)
+**	    Change the brandings on each dialog from "InstallShield"
+**	    to "Ingres II".
+**	23-July-2001 (penga03)
+**	    If this is a upgrade, set each feature attribute to be
+**	    Required or not according to correspondig package installed
+**	    or not.
+**	15-aug-2001 (somsa01)
+**	    Change the IVM Startup folder shortcut name to include the
+**	    proper II_INSTALLATION.
+**	17-Aug-2001 (penga03)
+**	    Take away the change made in 23-July-2001 (penga03).
+**	05-Sep-2001 (penga03)
+**	    Don't change the brandings in pre-installer process any more. 
+**	13-Sep-2001 (penga03)
+**	    Don't open the MSI database if the installation identifier is II, 
+**	    since we will do nothing on the database under such condition.
+**	30-jan-2002 (penga03)
+**	    Changed the default Ingres directory to 
+**	    "Programs Files\\CA\\Advantage Ingres" with installation id is II 
+**	    or "Programs Files\\CA\\Advantage Ingres [ %II_INSTALLATION% ] with 
+**	    installation id is other than II.
+**	    Also, changed the Ingres menu items under 
+**	    "Start\\Programs\\Computer Associates\\Advantage\\Advantage Ingres 
+**	    [ %II_INSTALLATION% ]".
+**	29-Apr-2008 (drivi01)
+**	    Add UPDATE statement to update IngresII string with correct
+**	    installation id.
+**  	30-Apr-2008 (drivi01)
+**	    Added setup statements for DBA Tools installer.
+*/
+BOOL
+setupii_edit(char *iicode, char *path)
+{
+    MSIHANDLE	msih, sumh;
+    int		idx;
+    char	pack[64], code[64], guid[64], view[2048];
+	int i=0;
+	
+    if ((_stricmp(iicode, "II")!=0 && !thePreInstall.m_DBATools) || 
+			(_stricmp(iicode, "VT")!=0 && thePreInstall.m_DBATools))
+    {
+	if (!(MsiOpenDatabase(path, MSIDBOPEN_DIRECT, &msih)==ERROR_SUCCESS))
+	    return FALSE;
+
+	/* Compute the GUID index from the installation code */
+	idx = (toupper(iicode[0]) - 'A') * 26 + toupper(iicode[1]) - 'A';
+	if (idx <= 0)
+	    idx = (toupper(iicode[0]) - 'A') * 26 + toupper(iicode[1]) - '0';
+
+	/* Update PackageCode */
+	sprintf(pack,"{A78C%04X-2979-11D5-BDFA-00B0D0AD4485}",idx);
+	if (!(MsiGetSummaryInformation(msih, 0, 1, &sumh)==ERROR_SUCCESS))
+	    return FALSE;
+	if (!(MsiSummaryInfoSetProperty(sumh,9,VT_LPSTR,0,NULL,pack)==ERROR_SUCCESS))
+	    return FALSE;
+	if (!(MsiSummaryInfoPersist(sumh)==ERROR_SUCCESS))
+	    return FALSE;
+	MsiCloseHandle(sumh);
+	
+	
+	/* Update UpgradeCode property */
+	sprintf(code,"{A78B%04X-2979-11D5-BDFA-00B0D0AD4485}",idx);
+	sprintf(view,"UPDATE Property SET Value = '%s' WHERE Property = 'UpgradeCode'",code);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+	
+	/* Update II_INSTALLATION property */
+	sprintf(view,"UPDATE Property SET Value = '%s' WHERE Property = 'II_INSTALLATION'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+	
+	/* Update ProductCode property */
+	sprintf(guid,"{A78D%04X-2979-11D5-BDFA-00B0D0AD4485}",idx);
+	sprintf(view,"UPDATE Property SET Value = '%s' WHERE Property = 'ProductCode'",guid);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+
+	if (!thePreInstall.m_DBATools)
+	{
+	/* Update ProductName property */
+	sprintf(view,"UPDATE Property SET Value = 'Ingres %s' WHERE Property = 'ProductName'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+	
+	/* Update DisplayNameMinimal property */
+	sprintf(view,"UPDATE Property SET Value = 'Ingres %s' WHERE Property = 'DisplayNameMinimal'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+	
+	/* Update DisplayNameCustom property */
+	sprintf(view,"UPDATE Property SET Value = 'Ingres %s' WHERE Property = 'DisplayNameCustom'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+	
+	/* Update DisplayNameTypical property */
+	sprintf(view,"UPDATE Property SET Value = 'Ingres %s' WHERE Property = 'DisplayNameTypical'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+
+	/* Update INGRES_CLUSTER_RESOURCE property */
+	sprintf(view,"UPDATE Property SET Value = 'Ingres Service [ %s ]' WHERE Property = 'INGRES_CLUSTER_RESOURCE'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+
+	/* Update shortcut folder display name */
+	sprintf(view,"UPDATE Directory SET DefaultDir = 'Ingres II [ %s ]' WHERE DefaultDir = 'Ingres II [ II ]'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+	sprintf(view,"UPDATE Directory SET DefaultDir = 'Ingres %s' WHERE DefaultDir = 'Ingres II'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+	sprintf(view,"UPDATE Directory SET DefaultDir = 'Ingres%s' WHERE DefaultDir = 'IngresII'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+
+	/* Upgrade display name in the registry */
+	sprintf(view, "UPDATE Registry SET Value = 'Ingres %s' WHERE Name = 'DisplayName'", iicode);
+	if (!setupii_vexe(msih, view))
+	     return FALSE;
+	
+	/* Update IVM Startup shortcut display name */
+	sprintf(view,"UPDATE Shortcut SET Name = 'Ingres Visual Manager %s' WHERE Name = 'INGRES~1|Ingres Visual Manager II'",iicode);
+	if(!setupii_vexe(msih,view))
+	    return FALSE;
+	
+	/* Update the Media table */
+	sprintf(view,"UPDATE Media SET Cabinet = 'IngresII[%s].cab' WHERE Cabinet = 'Data1.cab'",iicode);
+	if (!setupii_vexe(msih,view))
+	    return FALSE;
+	}
+	else
+	{
+		if (_stricmp(iicode, "VT"))
+		{
+		sprintf(view, "UPDATE Directory SET DefaultDir = 'PROGRA~1|program files:PROGRA~1|program files[%s]' WHERE DefaultDir = '.:PROGRA~1|program files'", iicode);
+		if (!setupii_vexe(msih, view))
+			return FALSE;
+
+		sprintf(view, "UPDATE Directory SET DefaultDir = 'DBATOO~1|DBA Tools %s:DBATOO~1|DBA Tools' WHERE DefaultDir = 'DBATOO~1|DBA Tools:DBATOO~1|DBA Tools'", iicode);
+		if (!setupii_vexe(msih, view))
+			return FALSE;
+
+		sprintf(view,"UPDATE Shortcut SET Name = 'Ingres Visual Manager %s' WHERE Name = 'INGRES~1|Ingres Visual Manager II'",iicode);
+		if(!setupii_vexe(msih,view))
+			return FALSE;
+
+		sprintf(view,"UPDATE Directory SET DefaultDir = 'DBATOO~1|DBA Tools %s' WHERE DefaultDir = 'DBATOO~1|DBA Tools'",iicode);
+		if(!setupii_vexe(msih,view))
+		    return FALSE;
+
+		/* Update ProductName property */
+		sprintf(view,"UPDATE Property SET Value = 'Ingres DBA Tools %s' WHERE Property = 'ProductName'",iicode);
+		if(!setupii_vexe(msih,view))
+			return FALSE;
+
+		}
+
+	}
+	/* Update Component GUIDs */
+	if (!UpdateComponentId(msih, idx))
+	    return FALSE;
+
+	/* Commit changes to the MSI database */
+	if (!(MsiDatabaseCommit(msih)==ERROR_SUCCESS))
+	    return FALSE;
+	
+	if (!(MsiCloseHandle(msih)==ERROR_SUCCESS))
+	    return FALSE;
+
+	  return TRUE;
+    }
+	
+    return TRUE;
+}
+
+/*
+** This function is now absolete.
+** History:
+**	07-apr-2008 (drivi01)
+**		Even though this function is absolete,
+**		malloc for txt_buf shows up as a potential
+**		memory leak.  Fixed the potential memory leak.
+*/
+
+BOOL
+setupii_license(char *licensePath, char *path)
+{
+	char *txt_buf = NULL;
+	char cmd[255];
+	MSIHANDLE msih, hView, hRec;
+	FILE *stream;
+	fpos_t pos;
+	BOOL	alloc = FALSE;
+	int	read_count = 0;
+	int final_read_count = 0;
+	int ret_val=1;
+
+	/* load license into a buffer */
+	if ((stream = fopen(licensePath, "r")) != NULL)
+	{
+		/* count length of file to determine size of the buffer */
+		if (!fseek(stream, 0, SEEK_END))
+		{
+			fgetpos(stream, &pos);
+			if (pos > 0)
+			{
+				txt_buf = (char *)malloc((int)pos + 1);
+			}
+			else
+			{
+				fclose(stream);
+				ret_val=0;
+				goto CLEANUP;
+			}
+		}
+		fseek(stream, 0, SEEK_SET);
+		/* read license file into a buffer */
+		while (!feof(stream))
+		{
+			read_count = fread(txt_buf, sizeof(char), (int)pos, stream);
+			final_read_count = final_read_count + read_count;
+		}
+		if (!txt_buf && !final_read_count)
+		{
+			fclose(stream);
+			ret_val=0;
+			goto CLEANUP;
+		}
+		else
+			txt_buf[final_read_count] = '\0';
+
+		fclose(stream);
+	}
+	else
+	{
+		CString str;
+		CString licPath(licensePath);
+		licPath.Replace("\\", "\\\\");
+		licPath.Replace(".rtf", ".pdf");
+		str.Format(IDS_ACCEPT_TERMS, licPath.GetBuffer());
+		txt_buf = (char *)malloc(MAX_PATH*2);
+		memcpy(txt_buf, str.GetBuffer(), str.GetLength());
+	}
+
+	/* Update a License Record with license retrieved from the image */
+	if (!(MsiOpenDatabase(path, MSIDBOPEN_DIRECT, &msih)==ERROR_SUCCESS))
+	{
+	    ret_val=0;
+		goto CLEANUP;
+	}
+
+	sprintf(cmd, "SELECT * FROM Control WHERE Dialog_ = 'LicenseAgreement' AND Control = 'Memo'");
+	if (!(MsiDatabaseOpenView(msih, cmd, &hView) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewExecute(hView, 0) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewFetch(hView, &hRec) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiRecordSetString(hRec, 10, txt_buf) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewModify(hView, MSIMODIFY_UPDATE,hRec) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiCloseHandle(hRec) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewClose( hView ) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiCloseHandle(hView) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	/* Commit changes to the MSI database */
+	if (!(MsiDatabaseCommit(msih)==ERROR_SUCCESS))
+	{
+	    ret_val=0;
+		goto CLEANUP;
+	}
+	
+	if (!(MsiCloseHandle(msih)==ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+
+CLEANUP:
+	if (txt_buf)
+	{
+		free(txt_buf);
+		txt_buf = NULL;
+	}
+
+	return ret_val;
+}
+
+/*
+**  History:
+**	23-July-2001 (penga03)
+**	    Modified function setupii_vexe so that it can retrieve the string value of 
+**	    a record field.
+*/
+BOOL 
+setupii_vexe(MSIHANDLE hDatabase, char *szQuery, char *szValue)
+{
+    MSIHANDLE hView, hRecord;
+    char szValueBuf[64];
+    DWORD cchValueBuf=sizeof(szValueBuf);
+	DWORD dwError;
+    
+    if (!((dwError=MsiDatabaseOpenView(hDatabase, szQuery, &hView))==ERROR_SUCCESS))
+	return FALSE;
+
+    if (!(MsiViewExecute(hView, 0)==ERROR_SUCCESS))
+	return FALSE;
+    
+    if (szValue)
+    {
+	MsiViewFetch(hView, &hRecord);
+	MsiRecordGetString(hRecord, 1, szValueBuf, &cchValueBuf);
+	strcpy(szValue, szValueBuf);
+	MsiCloseHandle(hRecord);
+    }
+
+    if (!(MsiCloseHandle(hView)==ERROR_SUCCESS))
+	return FALSE;
+
+    return TRUE;
+}
+
+DWORD
+ThreadCopyCab(LPVOID lpParameter)
+{
+	if (!thePreInstall.m_DBATools)
+	{
+		for (int i=0; i<10; i++)
+		{
+		if (CopyFile(edcab, ndcab, FALSE))
+			return 1;
+		Sleep(1000);
+		}
+	}
+    return 0;
+}
+
+BOOL
+RemoveOneDir(char *DirName)
+{
+    HANDLE hFind;
+    WIN32_FIND_DATA FindFileData;
+    DWORD dwAttrib;
+    char FileName[MAX_PATH], FullFileName[MAX_PATH];
+    BOOL status=TRUE;
+
+    dwAttrib = GetFileAttributes(DirName);
+
+    if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
+    {
+        sprintf(FileName, "%s\\*.*", DirName);
+        hFind = FindFirstFile(FileName, &FindFileData);
+        if (hFind != INVALID_HANDLE_VALUE)
+        {
+            do
+            {
+                if (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                    continue;
+
+                sprintf(FullFileName, "%s\\%s", DirName, FindFileData.cFileName);
+                status = DeleteFile(FullFileName);
+                if (!status)
+                    break;
+
+            } while (FindNextFile(hFind, &FindFileData));
+            FindClose(hFind);
+        }
+        status = RemoveDirectory(DirName);
+    }
+    else
+        status = DeleteFile(DirName);
+
+    return status;
+}
+/*
+**  History:
+**      22-Jun-2007 (horda03)
+**          Check the registry looking for entries for the Installation code that
+**          are from a previous installation. Remove the entries and any stale MSI
+**          files.
+*/
+
+char reg_with_with_inst [][MAX_PATH] =
+   { { "SOFTWARE\\Classes\\Ingres.IIA.%s\\shell\\open\\command" },
+     { "SOFTWARE\\Classes\\Ingres.IIA.%s\\shell\\open" },
+     { "SOFTWARE\\Classes\\Ingres.IIA.%s\\shell\\open" },
+     { "SOFTWARE\\Classes\\Ingres.IIA.%s\\shell" },
+     { "SOFTWARE\\Classes\\Ingres.IIA.%s" },
+     { "SOFTWARE\\Classes\\Ingres.VDBA.%s\\shell\\open\\command" },
+     { "SOFTWARE\\Classes\\Ingres.VDBA.%s\\shell\\open" },
+     { "SOFTWARE\\Classes\\Ingres.VDBA.%s\\shell" },
+     { "SOFTWARE\\Classes\\Ingres.VDBA.%s" },
+     { "SOFTWARE\\Classes\\Ingres_Database_%s\\shell" },
+     { "SOFTWARE\\Classes\\Ingres_Database_%s" },
+     { "SOFTWARE\\IngresCorporation\\Ingres\\%s_Installation" },
+     { "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Ingres %s" },
+     { "SYSTEM\\ControlSet001\\Services\\Eventlog\\Application\\Ingres_Database_%s" },
+     { "SYSTEM\\ControlSet001\\Services\\Ingres_Database_%s" }
+   };
+     
+char reg_with_code [][MAX_PATH] =
+   { { "SOFTWARE\\Classes\\Installer\\Features\\%s" },
+     { "SOFTWARE\\Classes\\Installer\\Products\\%s\\SourceList\\Media" },
+     { "SOFTWARE\\Classes\\Installer\\Products\\%s\\SourceList\\Net" },
+     { "SOFTWARE\\Classes\\Installer\\Products\\%s\\SourceList" },
+     { "SOFTWARE\\Classes\\Installer\\Products\\%s" },
+     { "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\5-1-5-18\\Products\\%s\\Features" },
+     { "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\5-1-5-18\\Products\\%s\\InstallProperties" },
+     { "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\5-1-5-18\\Products\\%s\\Patches" },
+     { "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\5-1-5-18\\Products\\%s\\Usage" },
+     { "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\5-1-5-18\\Products\\%s" }
+   };
+
+char reg_with_guid [][MAX_PATH] =
+   { { "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\%s" }
+   };
+
+void
+check_for_old_reg_entries( char *iicode )
+{
+   char code[64], guid [64];
+   int  i, idx;
+   char *cp;
+   char key [1024];
+   HKEY hkey = 0;
+   DWORD dwType;
+   DWORD dwSize;
+   char path [MAX_PATH];
+
+   /* Compute the GUID index from the installation code */
+   idx = (toupper(iicode[0]) - 'A') * 26 + toupper(iicode[1]) - 'A';
+
+   sprintf(guid, "{A78D%04X-2979-11D5-BDFA-00B0D0AD4485}",idx);
+
+   /* Convert the GUID to the microsoft code
+   ** E.G. A78D027A-2979-11D5-BDFA-00B0D0AD4485 ==> A720D87A97295D11DBFA000B0DDA4458
+   */
+
+   cp = code;
+
+   for(i= 8; i >= 1; i--)
+   {
+      *(cp++) = guid [i];
+   }
+
+   for(i = 13; i >= 10; i--)
+   {
+      *(cp++) = guid [i];
+   }
+
+   for(i = 18; i >= 15; i--)
+   {
+      *(cp++) = guid [i];
+   }
+
+   for(i = 20; i <  23; i += 2)
+   {
+      *(cp++) = guid [i+1];
+      *(cp++) = guid [i];
+   }
+
+   for(i = 25; i < 37; i += 2)
+   {
+      *(cp++) = guid [i+1];
+      *(cp++) = guid [i];
+   }
+
+   *cp = '\0';
+
+   /* Delete the Installer directory */
+
+   sprintf(key, "SOFTWARE\\Classes\\Installer\\Products\\%s", code);
+   if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, key, 0, KEY_QUERY_VALUE, &hkey)==ERROR_SUCCESS)
+   {
+      if(RegQueryValueEx(hkey,"ProductIcon",NULL,&dwType,(BYTE *)path,&dwSize) == ERROR_SUCCESS)
+      {
+         /* Have the path to the product ICON, so remove the directory where it resides. */
+
+         for( cp = path; *cp && *cp != '}'; cp++);
+
+         if (*cp)
+         {
+           *(++cp) = '\0';
+         }
+         RemoveOneDir( path );
+      }
+
+      RegCloseKey(hkey);
+   }
+        
+   /* Remove the MSI file */
+   sprintf(key, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\5-1-5-18\\Products\\%s", code);
+   if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, key, 0, KEY_QUERY_VALUE, &hkey)==ERROR_SUCCESS)
+   {
+      if(RegQueryValueEx(hkey,"LocalPackage",NULL,&dwType,(BYTE *)path,&dwSize) == ERROR_SUCCESS)
+      {
+         DeleteFile(path);
+      }
+
+      RegCloseKey(hkey);
+   }
+
+   /* Now delete the Registry entries */
+   for(i = 0; i < (sizeof(reg_with_with_inst)/sizeof(reg_with_with_inst[0])); i++)
+   {
+      sprintf(key, reg_with_with_inst [i], iicode);
+      RegDeleteKey(HKEY_LOCAL_MACHINE, key);
+   }
+
+   for(i = 0; i < (sizeof(reg_with_code)/sizeof(reg_with_code[0])); i++)
+   {
+      sprintf(key, reg_with_code [i], code);
+      RegDeleteKey(HKEY_LOCAL_MACHINE, key);
+   }
+
+   for(i = 0; i < (sizeof(reg_with_guid)/sizeof(reg_with_guid[0])); i++)
+   {
+      sprintf(key, reg_with_guid [i], guid);
+      RegDeleteKey(HKEY_LOCAL_MACHINE, key);
+   }
+}
+
+
+
+/*
+**  History:
+**	06-Sep-2001 (penga03)
+**	    Determine whether windows installer installed or not by checking 
+**	    the presence of MSI.DLL in the system directory.
+**	12-nov-2001 (somsa01)
+**	    Make sure we compare the version of the Windows Installer, as
+**	    there are multiple versions of it now.
+**	05-Aug-2008 (drivi01)
+**	    Add routines for insalling installer 3.0 if the version is of 
+**	    the existing installer is lower than 3.0.  
+**	    Microsoft redistributable package can not install with 
+**	    installer 2.0 b/c it includes 2005 redistributables.
+**	    Ingres Installer on Windows versions before Windows 2000 
+**	    is not supported.
+**	27-Mar-2009 (drivi01)
+**          Cleaned up warnings.
+*/
+BOOL 
+check_windowsinstaller()
+{
+    char ach[MAX_PATH+1], *p;
+    DWORD dwHandle;    
+    DWORD dwSize;
+    int majver=0, minver=0, relno=0;
+    const int inst_majver=3, inst_minver=0, inst_relno=0; /*installer version constant of 3.0.0*/
+
+    /* If Windows 9X version of OS then just return. Not supported. */
+    if (IsWindows9X())
+    {
+	Error(IDS_INVALIDWINVER);
+	return FALSE;
+    }
+    GetSystemDirectory(ach, sizeof(ach));
+    strcat(ach, "\\msi.dll");
+    if(GetFileAttributes(ach)!=-1)
+    {
+	if ((dwSize = GetFileVersionInfoSize(ach, &dwHandle))>0)
+	{
+	    LPVOID lpData = NULL;
+	    LPVOID lpValue = NULL;
+	    UINT wBytes = 0L;
+	    WORD wlang =0, wcset=0;
+	    char cBuf[MAX_PATH];
+	    lpData = (LPVOID)malloc(dwSize);
+	    if (GetFileVersionInfo(ach, dwHandle, dwSize, lpData))
+	    {
+		/* Retrieve the Language and Character Set Codes */
+		VerQueryValue(lpData, TEXT("\\VarFileInfo\\Translation"), &lpValue, &wBytes);
+		wlang = *((WORD *)lpValue);
+		wcset = *(((WORD *)lpValue) + 1);
+
+		/* Retrieve FileVersion Information */
+	        sprintf(cBuf, "\\StringFileInfo\\%.4x%.4x\\FileVersion", wlang, wcset);
+    		VerQueryValue(lpData, TEXT(cBuf), &lpValue, &wBytes);
+
+		sscanf((char *)lpValue, "%d.%d.%d", &majver, &minver, &relno);
+	    }
+  	    if (lpData)
+		free(lpData);
+	}
+	/* if version of the installer on the machine is greater than 3.0.0, continue*/
+	if (majver >= inst_majver && inst_minver>=0 && inst_relno>=0)
+		return TRUE;
+    }
+
+    if (!AskUserYN(IDS_INSTALLERVER, ""))
+    {
+	Error(IDS_MUSTINSTALL);
+	return FALSE;
+    }
+
+    /* install windows installer */
+    GetModuleFileName(AfxGetInstanceHandle(),ach,sizeof(ach));
+    p=_tcsrchr(ach,'\\');
+    if(*p) *(p+1)=0;
+
+    if(!IsWindows9X())
+    {
+	/* Windows NT, Windows 2000 need administrative privilege */
+	if(!IsAdmin())
+	{
+	    Error(IDS_NOTADMINISTRATOR);
+	    return FALSE;
+	}
+	strcat(ach, "files\\instmsi30.exe");
+	if(!ExecuteEx(ach))
+	{
+	    Error(IDS_INSTALLWIFAILED);
+	    return FALSE;
+	}
+	return TRUE;
+    }
+
+
+    return FALSE;
+}
+
+BOOL 
+IsAdmin()
+{
+    /* Determine whether the current process is running under a 
+       local administrator account. */
+
+    HANDLE hAccessToken;
+    UCHAR InfoBuffer[1024];
+    DWORD dwInfoBufferSize;
+    BOOL bSuccess;
+    SID_IDENTIFIER_AUTHORITY sidNtAuthority=SECURITY_NT_AUTHORITY;
+    PSID psidAdministrators;
+    PTOKEN_GROUPS ptgGroups=(PTOKEN_GROUPS)InfoBuffer;
+    UINT x;
+
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hAccessToken))
+	return FALSE;
+    bSuccess=GetTokenInformation(hAccessToken, TokenGroups, InfoBuffer, 1024, &dwInfoBufferSize);
+    CloseHandle(hAccessToken);
+    if (!bSuccess)
+	return FALSE;
+    if (!AllocateAndInitializeSid(&sidNtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID,
+	DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &psidAdministrators))
+    {
+	return FALSE;
+    }
+    
+    bSuccess=FALSE;
+    for (x=0; x<ptgGroups->GroupCount; x++)
+    {
+	if (EqualSid(psidAdministrators, ptgGroups->Groups[x].Sid))
+	{
+	    bSuccess=TRUE;
+	    break;
+	}
+    }
+    FreeSid(psidAdministrators);
+    return bSuccess;
+}
+
+/*
+**	History:
+**	23-Aug-2001 (penga03)
+**	    Created.
+*/
+BOOL 
+UpdateComponentId(MSIHANDLE hDatabase, int id)
+{
+    MSIHANDLE hView, hRecord;
+
+    if (!(MsiDatabaseOpenView(hDatabase, "SELECT Component, ComponentId FROM Component", 
+	&hView)==ERROR_SUCCESS))
+    {
+	return FALSE;
+    }
+
+    if (!(MsiViewExecute(hView, 0)==ERROR_SUCCESS))
+	return FALSE;
+    
+    while (MsiViewFetch(hView, &hRecord)!=ERROR_NO_MORE_ITEMS)
+    {
+	char szValueBuf[39];
+	DWORD cchValueBuf=sizeof(szValueBuf);
+	char *token, *tokens[5];
+	int num=0;
+
+	MsiRecordGetString(hRecord, 2, szValueBuf, &cchValueBuf);
+	
+	token=strtok(szValueBuf, "{-}");
+	while (token != NULL )
+	{
+	    tokens[num]=token;
+	    token=strtok(NULL, "{-}");
+	    num++;
+	}
+	sprintf(szValueBuf, "{%s-%s-%s-%04X-%012X}", tokens[0], tokens[1], tokens[2], id, id*id);
+
+	MsiRecordSetString(hRecord, 2, szValueBuf);
+	
+	if (!(MsiViewModify(hView, MSIMODIFY_UPDATE, hRecord)==ERROR_SUCCESS))
+	    return FALSE;
+	
+	MsiCloseHandle(hRecord);
+    }
+    
+    if (!(MsiCloseHandle(hView)==ERROR_SUCCESS))
+	return FALSE;
+
+    return TRUE;
+}
+
+void 
+CPreInstallation::AddInstallation(LPCSTR id, LPCSTR path, BOOL ver25, LPCSTR embedded)
+{
+    CInstallation *inst=new CInstallation(id, path, ver25, embedded);
+    if (inst)
+	m_Installations.Add(inst);
+}
+
+/*
+**  Name: CompareVersion
+**
+**  Return Codes:
+**	 0 = Files are the same version
+**	 1 = File1 is a newer version than file2
+**	 2 = File2 is a newer version than file1
+**	-1 = Error getting information on file1
+**	-2 = Error getting information on file2
+**	-3 = Memory allocation error
+*/
+INT
+CompareVersion(char *file1, char *file2 )
+{
+    DWORD  dwHandle = 0L;	/* Ignored in call to GetFileVersionInfo */
+    DWORD  cbBuf1   = 0L, cbBuf2 = 0L;
+    LPVOID lpvData1 = NULL, lpvData2 = NULL;
+    LPVOID lpValue1 = NULL, lpValue2 = NULL;
+    UINT   wBytes1 = 0L, wBytes2 = 0L;
+    WORD   wlang1 = 0, wcset1 = 0, wlang2 = 0, wcset2 = 0;
+    char   SubBlk1[81], SubBlk2[81];
+    INT    rcComp = 0;
+
+    /* Retrieve Size of Version Resource */
+    if ((cbBuf1 = GetFileVersionInfoSize(file1, &dwHandle)) == 0)
+    {
+	rcComp = -1;
+	goto QuickExit;
+    }
+	
+    if ((cbBuf2 = GetFileVersionInfoSize(file2, &dwHandle)) == 0)
+    {
+	rcComp = -2;
+ 	goto QuickExit;
+    }
+
+    lpvData1 = (LPVOID)malloc(cbBuf1);
+    lpvData2 = (LPVOID)malloc(cbBuf2);
+
+    if (!lpvData1 && lpvData2)
+    {
+	rcComp = -3;
+	goto QuickExit;
+    }
+
+    /* Retrieve Version Resource */
+    if (GetFileVersionInfo(file1, dwHandle, cbBuf1, lpvData1) == FALSE)
+    {
+	rcComp = -1;
+ 	goto QuickExit;
+    }
+	
+    if (GetFileVersionInfo(file2, dwHandle, cbBuf2, lpvData2) == FALSE)
+    {
+	rcComp = -2 ;
+ 	goto QuickExit;
+    }
+
+    /* Retrieve the Language and Character Set Codes */
+    VerQueryValue(lpvData1, TEXT("\\VarFileInfo\\Translation"), &lpValue1, &wBytes1);
+    wlang1 = *((WORD *)lpValue1);
+    wcset1 = *(((WORD *)lpValue1) + 1);
+	                   
+    VerQueryValue(lpvData2, TEXT("\\VarFileInfo\\Translation"), &lpValue2, &wBytes2);
+    wlang2 = *((WORD *)lpValue2);
+    wcset2 = *(((WORD *)lpValue2) + 1);
+
+    /* Retrieve FileVersion Information */
+    sprintf(SubBlk1, "\\StringFileInfo\\%.4x%.4x\\FileVersion", wlang1, wcset1);
+    VerQueryValue(lpvData1, TEXT(SubBlk1), &lpValue1, &wBytes1);
+    sprintf(SubBlk2, "\\StringFileInfo\\%.4x%.4x\\FileVersion", wlang2, wcset2);
+    VerQueryValue(lpvData2, TEXT( SubBlk2), &lpValue2, &wBytes2);
+
+    {
+	int majver1=0, minver1=0, relno1=0, majver2=0, minver2=0, relno2=0;
+
+	sscanf((char *)lpValue1, "%d.%d.%d", &majver1, &minver1, &relno1);
+	sscanf((char *)lpValue2, "%d.%d.%d", &majver2, &minver2, &relno2);
+
+	/* Check Major Version Number */
+	if (majver1 == majver2)
+	{
+	    /* Check Minor Version Number */
+	    if (minver1 == minver2)
+	    {
+		/* Check Release Number */
+		if (relno1 == relno2)
+		    rcComp = 0;
+		else
+		{
+		    if (relno1 > relno2)
+			rcComp = 1;
+		    else
+			rcComp = 2;
+		}
+	    }
+	    else
+	    {
+		if (minver1 > minver2)
+		    rcComp = 1;
+		else
+		    rcComp = 2;
+	    }
+	}
+	else
+	{
+	    if (majver1 > majver2)
+		rcComp = 1;
+  	    else
+		rcComp = 2;
+	}
+    }
+
+QuickExit:
+    if (lpvData1)
+	free(lpvData1);
+    if (lpvData2 )
+	free(lpvData2);
+    return (rcComp);
+}
+
+
+/*
+**  Name: CompareIngresVersion
+**
+**  Return Codes:
+**	 0 = same version
+**	 1 = newer version, update/minor upgrade
+**	 2 = newer version, major upgrade (need re-run ingconfig.exe)
+**	 3 = older version
+**	-1 = error 
+*/
+INT
+CompareIngresVersion(char *ii_system)
+{
+    char strFile01[1024], strFile02[1024];
+    DWORD dwHandle=0;	/* Ignored in call to GetFileVersionInfo */
+    DWORD dwVerInfoSize=0;
+    UINT nSize=0;
+    void *pVerData=NULL;
+    VS_FIXEDFILEINFO *pFixedFileInfo=NULL;
+    DWORD MajVer1=0, MinVer1=0, PthNo1=0, BldNo1=0;
+    DWORD MajVer2=0, MinVer2=0, PthNo2=0, BldNo2=0;
+    INT rcComp = 0;
+
+    if (!ii_system[0])
+    {
+	rcComp=-1;
+	goto QuickExit;
+    }
+
+    /* Get the file version of install.exe. */
+	HINSTANCE instance = AfxGetInstanceHandle();
+    GetModuleFileName(AfxGetInstanceHandle(), strFile01, sizeof(strFile01));
+
+    if (!(dwVerInfoSize=GetFileVersionInfoSize(strFile01, &dwHandle)))
+    {
+	rcComp=-1;
+	goto QuickExit;  
+    }
+	
+    pVerData=(LPVOID)malloc(dwVerInfoSize);
+    if (!pVerData)
+    {
+	rcComp=-1;
+	goto QuickExit;
+    }
+
+    if (!GetFileVersionInfo(strFile01, dwHandle, dwVerInfoSize, pVerData))
+    {
+	rcComp = -1;
+ 	goto QuickExit;
+    }
+	
+    VerQueryValue(pVerData, TEXT("\\"), (void **)&pFixedFileInfo, &nSize);
+    MajVer1=HIWORD(pFixedFileInfo->dwFileVersionMS);
+    MinVer1=LOWORD(pFixedFileInfo->dwFileVersionMS);
+    PthNo1=HIWORD(pFixedFileInfo->dwFileVersionLS);
+    BldNo1=LOWORD(pFixedFileInfo->dwFileVersionLS);
+
+    /* Get the version of the installation being upgraded/modified. */
+    FILE *fp;
+    char s[512], *p, *q, *tokens[3];
+    int count;
+
+    sprintf(strFile02, "%s\\ingres\\version.rel", ii_system);
+    fp=fopen(strFile02, "r");
+    if (fp)
+    {
+	fscanf(fp, "%s", s ); /* II */
+
+	fscanf(fp, "%s", s ); /* 3.0.1 */
+	p=s;
+	for (count=0; count<=2; count++)
+	{
+	    q=strchr(p, '.');
+	    if (q) *q='\0';
+	    tokens[count]=p;
+	    if (q) p=q+1;
+	}
+	MajVer2=atoi(tokens[0]);
+	MinVer2=atoi(tokens[1]);
+	PthNo2=atoi(tokens[2]);
+
+	fscanf(fp, "%s", s ); /* (int.w32/108) */
+	s[strlen(s)-1]=0;
+	p=strchr(s, '/');
+	if (p) BldNo2=atoi(p+1)*100;
+	fclose(fp);
+    }
+
+    /*
+    **	 0 = same version
+    **	 1 = newer version, update/minor upgrade
+    **	 2 = newer version, major upgrade
+    **	 3 = older version 
+    */
+
+    if (MajVer1 == MajVer2)
+    {
+		if (MinVer1 == MinVer2)
+		{
+			if (PthNo1 == PthNo2)
+			{
+				if (BldNo1 == BldNo2)
+				{
+					rcComp=0;
+				}
+				else if (BldNo1 > BldNo2)
+				{
+					//rcComp=1;
+					rcComp=2;
+				}
+				else
+				{
+					rcComp=3;
+				}
+			} /* end of if (PthNo1 == PthNo2) */
+			else if (PthNo1 > PthNo2)
+			{
+				rcComp=2;
+			}
+			else
+			{
+				rcComp=3;
+			}
+		} /* end of if (MinVer1 == MinVer2) */
+		else if (MinVer1 > MinVer2)
+		{
+			rcComp=2;
+		}
+		else
+		{
+			rcComp=3;
+		}
+    } /* end of if (MajVer1 == MajVer2) */
+    else if (MajVer1 > MajVer2)
+    {
+	rcComp=2;
+    }
+    else
+    {
+	rcComp=3;
+    }
+
+QuickExit:
+    if (pVerData)
+	free(pVerData);
+    return (rcComp);
+}
+
+/*
+**  Name: GetVersion
+**  Description: Retrieves the version of the installation from 
+**				 version.rel given ii_system path.
+**				 This function is added to support version numbers
+**				 in the instance list of InstanceList dialog.
+**
+**	History:
+**	15-Nov-2006 (drivi01)
+**	    Created.
+**	24-Jul-2007 (drivi01)
+**	    Only close file if pointer to it is not null.
+**	    Otherwise, this can result in SEGV.
+** 
+*/
+CString 
+GetVersion(char *ii_system)
+{
+	char strFile01[MAX_PATH];
+    FILE *fp;
+    char s[512], s2[512];
+
+	sprintf(strFile01, "%s\\ingres\\version.rel", ii_system);
+    fp=fopen(strFile01, "r");
+    if (fp)
+    {
+	fscanf(fp, "%s", s ); /* II */
+
+	fscanf(fp, "%s", s ); /* 3.0.1 */
+	fscanf(fp, "%s", s2);
+
+	}
+	if (fp)
+		fclose(fp);
+	
+	CString str1(s);
+	CString str2(s2);
+	str1=str1+" "+str2;
+
+	return str1;
+}
+
+/*
+**  Name: IsPre92Release
+**  Description: This function was created to find instances of Ingres
+**               that are earlier than 9.2 release.
+**				 This information is only relevant in the case of UTF8
+**               installations or installations with II_CHARSETXX set to
+**               UTF8 to find invalid instances of UTF8 installations
+**               from earlier releases as they do not qualify for 
+**               UTF8 upgrade.  Any instance of Ingres with character
+**               set of UTF8 is not truly a UTF8 installation and
+**               doesn't contain unicode databases and will result
+**               in the upgrade failure. This function will aid
+**               in diverting that failure early in the upgrade before
+**				 the installation is corrupted.
+**
+**	History:
+**	14-Sep-2009 (drivi01)
+**	    Created.
+*/
+int IsPre92Release(CString version)
+{
+	char s[512], s2[512];
+	int v1, v2;
+	int index=0;
+
+	sscanf(version, "%d", &v1);
+	index = version.FindOneOf(".");
+	sscanf(version.Mid(index+1, version.GetLength()-1-(index+1)), "%d", &v2);
+
+	if (v1 < 9)
+		return 1;
+	if (v1 == 9 && v2 < 2)
+		return 1;
+	
+	return 0;
+}
+
+/*
+**  Name: CalculateInstallCode
+**  Description: This function contains algorithm for calculating instance id.
+**
+**	History:
+**	15-Nov-2006 (drivi01)
+**	    Created.
+**	04-Apr-2008 (drivi01)
+**      Updated the function to take an installation id as an argument.
+**      It will find indexes for the installation id entered and begin
+**      calculating new installation code with consequitive letters/numbers
+**      to the instance code specified.
+** 
+*/
+CString CalculateInstallCode(char *ii_code)
+{ 
+	char iicode1[] = {'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', '\0'};
+	char iicode2[] = {'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '\0'};
+	char *piicode1 = (char *)&iicode1;
+	char *piicode2 = (char *)&iicode2;
+	char char1, char2, echar1, echar2;
+	int index1=0;
+	int index2=0;
+	BOOL found2 = FALSE;
+
+	//first value in an instance id
+	for (int i=0; i<=sizeof(iicode1)-1; i++)
+	{
+		if (ii_code[0]==piicode1[i])
+		{
+			char1 = piicode1[i];
+			index1=i;
+			break;
+		}
+	}
+	//second value in an instance id
+	for (int i=0; i<=sizeof(iicode2)-1; i++)
+	{
+		if (ii_code[1]==piicode2[i])
+		{
+			char2 = piicode2[i];
+			index2=i;
+			break;
+		}
+	}
+
+	while (found2 == FALSE && thePreInstall.m_Installations.GetSize()>0)
+	{
+		for(int i=0; i<thePreInstall.m_Installations.GetSize(); i++)
+		{
+			int size = thePreInstall.m_Installations.GetSize();
+			CInstallation *inst=(CInstallation *) thePreInstall.m_Installations.GetAt(i);
+			
+			if (inst)
+			{
+				echar1 = inst->m_id.GetAt(0);  //first char of instance id
+				echar2 = inst->m_id.GetAt(1);  //second char of instance id
+
+				//compare existing instance id to chosen instance id
+				if (char1 == echar1 && char2 == echar2)
+				{
+					/*instance id in use, increment second character first
+					**unless at the end of the list, then increment first 
+					**character and start from the beginning of the list on 2nd
+					*/
+					piicode1=&iicode1[index1];
+					piicode2=&iicode2[index2];
+					if (piicode2 != '\0')
+					{
+						char2 = *++piicode2;
+						index2++;
+					}
+					else
+					{
+						char2 = *piicode2 = iicode2[0];
+						index2=0;
+						if (piicode1 != '\0')
+						{
+							char1 = *++piicode1;
+							index1++;
+						}
+						else
+						{
+							char1 = *piicode1 = iicode1[0];
+							index1=0;
+						}
+					}
+					break;
+				}
+				if (i == thePreInstall.m_Installations.GetSize()-1)
+				{
+					found2 = TRUE;
+				}
+
+			}
+
+		}
+
+	}
+	ii_code[0]=char1;
+	ii_code[1]=char2;
+	ii_code[2]='\0';
+	return CString(ii_code);
+}
+/*
+**  Name: CalculateInstallCode
+**  Description: This function contains algorithm for calculating instance id.
+**				 This function takes no arguments and calls the main CalculateInstallCode
+**				 function with default ID of "II"
+**
+**	History:
+**	15-Nov-2006 (drivi01)
+**	    Created.
+*/
+CString CalculateInstallCode()
+{
+	char ii_code[3]="II";
+	return CalculateInstallCode(ii_code);
+}
+/*
+**  Name: isValidUser
+**  Description: This function detects illegal characters in userNames and stopps the install.
+**
+**	History:
+**	16-Apr-2007 (drivi01)
+**	    Created.
+** 
+*/
+BOOL isValidUser(CString userName)
+{
+	int index = userName.Find(' ');
+	if (index > 0)
+		return FALSE;
+
+	return TRUE;
+}
+/*
+**  Name: GetProductCode
+**  Description: Retrieves product code guid from msi
+**
+**  Parameters:
+**			path - Full path to the msi 
+**			guid - Pointer to the buffer where product code guid will be stored
+**			size - Size of the buffer to hold product code guid
+**
+**	Returns:
+**			0 - Success
+**			1 or above - System Error
+**
+**	History:
+**	18-Nov-2008 (drivi01)
+**	    Created.
+** 
+*/
+DWORD GetProductCode(char *path, char *guid, DWORD size)
+{
+	DWORD dwError=0;
+	MSIHANDLE msih=NULL, hView=NULL, hRec=NULL;
+	char cmd[MAX_PATH];
+	
+	if (!((dwError=MsiOpenDatabase(path, MSIDBOPEN_READONLY, &msih))==ERROR_SUCCESS))
+	{
+		goto CLEANUP;
+	}
+
+	sprintf(cmd, "SELECT * FROM Property WHERE Property = 'ProductCode'");
+	if (!(MsiDatabaseOpenView(msih, cmd, &hView) == ERROR_SUCCESS))
+	{
+		dwError=GetLastError();
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewExecute(hView, 0) == ERROR_SUCCESS))
+	{
+		dwError=GetLastError();
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewFetch(hView, &hRec) == ERROR_SUCCESS))
+	{
+		dwError=GetLastError();
+		goto CLEANUP;
+	}
+
+	if (!(MsiRecordGetString(hRec, 2, (LPSTR)guid, &size) == ERROR_SUCCESS))
+	{
+		dwError=GetLastError();
+		goto CLEANUP;
+	}
+
+
+CLEANUP:
+
+	if (hRec)
+		MsiCloseHandle(hRec);
+
+	if (hView)
+		if (MsiViewClose( hView )==ERROR_SUCCESS)
+			MsiCloseHandle(hView);
+	
+	if (msih)
+		MsiCloseHandle(msih);
+
+	return dwError;
+}
+
+/*
+** CInstallation Class
+*/
+
+/*
+** Construction/Destruction
+*/
+
+CInstallation::CInstallation()
+{
+
+}
+
+CInstallation::~CInstallation()
+{
+
+}
+
+CInstallation::CInstallation(LPCSTR id, LPCSTR path, BOOL ver25, LPCSTR embedded)
+{
+    m_id=id;
+    m_path=path;
+    m_ver25=ver25;
+	m_embedded=embedded;
+	m_UpgradeCode = 0;
+	m_ReleaseVer="0.0.0";
+	m_BuildNum="100";
+	m_isDBATools = 0;
+
+}
+
+

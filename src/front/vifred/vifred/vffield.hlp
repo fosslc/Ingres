@@ -1,0 +1,47 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vffield.hlp       VIFRED Help on Create Field
+/#subtopic "Display Format Examples" vfformat.hlp
+You have elected to create a new field.  You must enter a title and
+a data window for all new fields, although you can specify them either
+title first or data window first.  You can move the cursor to any
+location on the form before selecting either the "Title" or "Data" menu 
+command.  Normally, the title is created first, followed by the data 
+window, and then the field attributes are edited.
+
+Once you have created the title (or data window,) you can move the
+cursor to any other location to position the data window (or title.)
+
+When you are satisfied with the new field, select the "End" menu command
+to commit the field to the form.  Select the "Cancel" menu command to
+return to the main layout without creating the field.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Title           Enter a new title for the field at this location.
+                        After you enter a title, the cursor will remain
+                        at the end of the title to facilitate entering
+                        data windows to the right of field titles.
+
+        DisplayFormat   Enter the data display format at this location.
+			After selecting the "DisplayFormat" menu command,
+			you should enter the data format for the data window.
+			The size of the data window is determined by the
+			entered display format and begins at the location
+			the display format is entered.  If no datatype
+			is specified (via the "Attributes" command), VIFRED
+			will infer a datatype based on the entered format.
+			See the Ingres Character-based Querying and Reporting
+                        Tools User Guide for more information.
+
+        Attributes      Edit the attributes for this field.  This will
+                        display a new form for specifying field attributes.
+
+        Cancel          Return to the Form Layout frame, without creating
+                        this field.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Form Layout frame, after having created  
+                        the new field.

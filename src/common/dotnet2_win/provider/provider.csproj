@@ -1,0 +1,417 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
+  <PropertyGroup>
+    <ProjectType>Local</ProjectType>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{0307F970-6AC8-4621-9DCD-34FDE1ED02E9}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ApplicationIcon>
+    </ApplicationIcon>
+    <AssemblyKeyContainerName>
+    </AssemblyKeyContainerName>
+    <AssemblyName>Ingres.Client</AssemblyName>
+    <AssemblyOriginatorKeyFile>..\specials\keypublic.snk</AssemblyOriginatorKeyFile>
+    <DefaultClientScript>JScript</DefaultClientScript>
+    <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
+    <DefaultTargetSchema>IE50</DefaultTargetSchema>
+    <DelaySign>true</DelaySign>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Ingres.Client</RootNamespace>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <StartupObject>
+    </StartupObject>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <SignAssembly>true</SignAssembly>
+    <OldToolsVersion>2.0</OldToolsVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE;DEBUG;INGRES</DefineConstants>
+    <DocumentationFile>bin\Ingres.Client.xml</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>
+    </NoWarn>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE;INGRES</DefineConstants>
+    <DocumentationFile>bin\Ingres.Client.xml</DocumentationFile>
+    <DebugSymbols>false</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>
+    </NoWarn>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System">
+      <Name>System</Name>
+    </Reference>
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Data">
+      <Name>System.Data</Name>
+    </Reference>
+    <Reference Include="System.Design">
+      <Name>System.Design</Name>
+    </Reference>
+    <Reference Include="System.Drawing">
+      <Name>System.Drawing</Name>
+    </Reference>
+    <Reference Include="System.EnterpriseServices">
+      <Name>System.EnterpriseServices</Name>
+    </Reference>
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Windows.Forms">
+      <Name>System.Windows.Forms</Name>
+    </Reference>
+    <Reference Include="System.XML" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\ingres\command.resx">
+      <Link>ingres\command.resx</Link>
+      <DependentUpon>command.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\ingres\connection.resx">
+      <Link>ingres\connection.resx</Link>
+      <DependentUpon>connection.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\res\IngresCommand.bmp">
+      <Link>IngresCommand.bmp</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\res\IngresConnection.bmp">
+      <Link>IngresConnection.bmp</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\res\IngresDataAdapter.bmp">
+      <Link>IngresDataAdapter.bmp</Link>
+    </EmbeddedResource>
+    <Compile Include="..\ingres\adapter.cs">
+      <Link>ingres\adapter.cs</Link>
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\ingres\assemblyinfo.cs">
+      <Link>ingres\assemblyinfo.cs</Link>
+    </Compile>
+    <Compile Include="..\ingres\command.cs">
+      <Link>ingres\command.cs</Link>
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\ingres\commandbuilder.cs">
+      <Link>ingres\commandbuilder.cs</Link>
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\ingres\connection.cs">
+      <Link>ingres\connection.cs</Link>
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="..\ingres\connectionstringbuilder.cs">
+      <Link>ingres\connectionstringbuilder.cs</Link>
+    </Compile>
+    <Compile Include="..\ingres\datareader.cs">
+      <Link>ingres\datareader.cs</Link>
+    </Compile>
+    <Compile Include="..\ingres\error.cs">
+      <Link>ingres\error.cs</Link>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="..\ingres\ex.cs">
+      <Link>ingres\ex.cs</Link>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="..\ingres\factory.cs">
+      <Link>ingres\factory.cs</Link>
+    </Compile>
+    <Compile Include="..\ingres\metadata.cs">
+      <Link>ingres\metadata.cs</Link>
+    </Compile>
+    <Compile Include="..\ingres\param.cs">
+      <Link>ingres\param.cs</Link>
+    </Compile>
+    <Compile Include="..\ingres\permission.cs">
+      <Link>ingres\permission.cs</Link>
+    </Compile>
+    <Compile Include="..\ingres\transact.cs">
+      <Link>ingres\transact.cs</Link>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\advancall.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\advanconnect.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\advanconnectpool.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\advanprep.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\advanrslt.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\advanrsmd.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\advanstmt.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\advanxid.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\catalog.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\connectstringconfig.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\dbtype.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\drvconn.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\drvconst.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\drvobj.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\drvrsrc.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\metadata.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\paramset.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\procinfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\rsltbyref.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\rsltcurs.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\rsltdata.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\rsltftch.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\rsltslct.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\rsltupd.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\sqlparse.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\tracedv.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\xaenlist.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="advan\xaswitch.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dam\inbuff.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dam\iobuff.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dam\msgconn.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dam\msgin.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dam\msgio.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dam\msgout.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dam\outbuff.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="dam\tlconst.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\charset.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\ci.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\dateformat.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\dbmsconst.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\errrsrc.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\gcferr.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\ibytearray.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\ichararray.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\iconfig.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\idmap.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\ingresdate.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\itrace.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\ivararray.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\msgconst.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlbigint.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlbool.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlbyte.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlchar.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqldata.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqldate.cs" />
+    <Compile Include="util\sqldates.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqldecimal.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqldouble.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlex.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlint.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlinterval.cs" />
+    <Compile Include="util\sqllongbyte.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqllongchar.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqllongnchar.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlnchar.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlnull.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlnvarchar.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlreal.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlsmallint.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlstream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlstring.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqltime.cs" />
+    <Compile Include="util\sqltimestamp.cs" />
+    <Compile Include="util\sqltinyint.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlvarbyte.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\sqlvarchar.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\supportclass.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\timer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\tracing.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="util\tracingeventlog.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\specials\keypublic.snk">
+      <Link>keypublic.snk</Link>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+    <PostBuildEvent>@echo on
+@if not exist "$(TargetPath)"  goto end
+@if not exist "$(FrameworkSDKDir)bin\sn.exe"   goto end
+@if not exist "$(SolutionDir)specials\keypair.snk"   goto end
+"$(FrameworkSDKDir)bin\sn.exe" -Ra "$(TargetPath)" "$(SolutionDir)specials\keypair.snk"
+:end
+@echo off
+</PostBuildEvent>
+  </PropertyGroup>
+</Project>

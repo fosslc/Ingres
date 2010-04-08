@@ -1,0 +1,109 @@
+CACHELOCK
+---------
+
+Last Updated: 18 May 1992
+
+    This SIG directory contains a UNIX utility program used to lock the 
+    DMF cache.  This program accomplishes the same result as the server 
+    DMF.LOCK_CACHE server startup parameter, but is useful in
+    different circumstances.  Specifically,
+
+    1) CACHELOCK may be used to lock the DMF shared cache on systems
+       that do not support mmap() and mlock() (the functions
+       used by the server), but that do support locking shared 
+       memory via the operating system shmctl() function.  
+    2) CACHELOCK can be used on systems that support mmap() and 
+       mlock() but that cannot tolerate the server running
+       setuid ROOT.  (CACHELOCK must, however, be run as ROOT.)
+    3) CACHELOCK can be used on systems that support server-based 
+       cache locking to prototype its impact on system performance. 
+
+    Locking the DMF cache is not recommended on development systems
+    or on ANY system prior to accessing the performance impact.
+    Locking memory is controversial and the performance implications
+    are most often unclear.
+
+    CACHELOCK cannot be used on systems that do not support the
+    locking of shared memory.  Generally, UNIX systems either lock
+    shared memory via the mlock() function or by the SHM_LOCK request
+    on the shmctl() function.  If examination of the relevant man pages
+    on your system does not reveal either of these capabilities,
+    you cannot use CACHELOCK.  (For example, OSF/1 does currently 
+    possess any method of locking shared memory, nor does AIX.)  
+
+Compile Notes
+-------------
+
+    The program must be compiled with the appropriate version of the
+    "cachelock.h" header file.  Two header files are included:
+
+    1) cachelock.hm, for use on systems that have mmap() and mlock()
+       function calls (e.g. Sun).
+    2) cachelock.hn, for use on systems that employ shmctl() to
+       lock shared memory.  This version of the header file causes 
+       the compiler to pull in older System V shared memory functions 
+       (shmat(), shmget(), ...) instead of mmap() equivalents.  
+
+    The correct version of header file must be copied to "cachelock.h"
+    prior to compiling and linking the utility.  Compilation will
+    fail if the incorrect header file is used.  After setting up the
+    right header file, CACHELOCK can be compiled with a command of the form:
+
+       cc cachelock.c -ocachelock
+
+Usage Notes
+-----------
+
+    After successful compilation and linking, the program should be 
+    "chown"'d to ROOT:
+
+       (log on as ROOT)
+       chown root cachelock
+
+    CACHELOCK can then run by ROOT with a command of the form:
+
+       cachelock <shared_cache_file_name>
+
+    where <shared_cache_file_name> is the name of the file mapped to
+    the shared DMF data segment.  This file resides in the Ingres
+    "$II_SYSTEM/ingres/files/memory" directory, and the default file 
+    name is "cach_def.dat" (the cache name may be changed via 
+    the "cache_name" server startup parameter).  Typically, then, the 
+    program is run with a command of the form:
+
+       cachelock $II_SYSTEM/ingres/files/memory/cach_def.dat
+
+    The program locks the DMF cache and then waits indefinitely until
+    stopped.  The cache remains locked only as long as the program remains
+    running.  The program is stopped by a kill command, or if 
+    run interactively, by typing Control-C.
+
+MEMTEST
+-------
+
+    Also on the CACHELOCK SIG directory is a test program
+    called MEMTEST that may be used on some operating systems (e.g. 
+    Sun and other SVR4 compliant systems) to determine what part of
+    the DMF cache is memory resident. 
+
+    As with CACHELOCK, the correct version of the cachelock.h header file 
+    must be set up prior to compiling the program.
+
+    After successful compilation, MEMTEST can be run (owned and 
+    run by the "ingres" user) as follows:
+
+    memtest <shared_cache_file_name>
+
+    MEMTEST reports on the number of DMF cache pages that are core
+    resident, sleeping for 10 seconds between checks.  Output is
+    presented to the standard error device.  
+
+    MEMTEST should report that all DMF cache pages are core resident 
+    when the CACHELOCK program is running, or when cache locking is
+    enabled via the dmf.lock_cache server startup parameter.  When 
+    not locked, MEMTEST relates how much of the cache is retained by
+    the operating system.
+
+    The program is stopped by a kill command, or if run interactively,
+    by Control-C.
+

@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You must specify which column(s) should have break headers in an Indented 
+Style report. Scroll through the column names, and select the column(s) to 
+break on.  Select a break column by giving it a non-zero sort sequence.  
+A valid sort sequence must be between 0 - 300.  The breaks will appear in 
+the order specified by the sort sequence.  You must select at least one 
+column to have a break header.
+
+The menu commands are as follows:
+
+	MENU COMMANDS   SYNOPSIS
+	-------------   --------
+	OK		Done with selecting column(s) to have break 
+			headers and begin editing the default Indented 
+			Style report.
+
+	Cancel		Cancel the selection of the Indented Style and
+			return to choose another report style.
+
+	ListChoices	Produce a list of possible values to place
+			under the 'Sort Sequence' column.
+
+	Help            Print this message.

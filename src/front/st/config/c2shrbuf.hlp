@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The shared_buffer_count parameter configures the number of shared audit
+ record buffers stored in the SXF shared memory segment.  It is only used
+ when ii.*.c2.audit_mechanism is set to INGRES.  
+
+ The default value is 10 if the DBMS connected_sessions is less than 5,
+ otherwise the value is connected_sessions*2.
+
+ Setting the value of this option to zero restores the previous system
+ behavior of writing records directly into the single shared audit page.
+

@@ -1,0 +1,30 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for messages
+*/
+
+/*
+** History
+**	12-dec-95 (hanch04)
+**		Created.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+*/
+
+PART  oldmsg
+
+/*
+** DIRECTORY specified in release.ccpp 
+*/
+
+   BUILD_DIR (ING_BUILD)!files!english
+      FILE fast.mnx
+      FILE slow.mnx
+      FILE fast_v1.mnx
+      FILE slow_v1.mnx
+      FILE fast_v2.mnx
+      FILE slow_v2.mnx
+      FILE fast_v3.mnx
+      FILE slow_v3.mnx

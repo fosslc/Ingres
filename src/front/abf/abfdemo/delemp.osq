@@ -1,0 +1,18 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+** 
+** delemp.osq : Delete an employee and his/her tasks and dependents from
+**              the database.
+*/
+
+procedure del_emp (empname=varchar(20)) =
+begin
+	message  'Deleting employee ' +empname+ '. . .';
+		delete from tasks where name = :empname;
+		delete from emp where name = :empname;
+		delete from dependents where name = :empname;
+	commit;
+end

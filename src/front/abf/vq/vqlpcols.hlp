@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlpcols.hlp, help selecting an optimistic locking column
+/#-- 
+The selection list shows the names of columns you could use for optimistic
+locking:
+  * For an update counter, all integer columns are shown
+  * For a date/time stamp, all date columns are shown
+  * For a username, all char and varchar columns are shown
+
+The column you choose should be used exclusively for optimistic locking; your
+application should not attempt to store any other data in it.
+
+Move the cursor to the column name and press Select.

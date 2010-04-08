@@ -1,0 +1,32 @@
+<SCRIPT language="JavaScript">
+			var father
+			var name
+			var icon
+			<!-- #ICE REPEAT FUNCTION=`document?action=:action&doc_type=:type&doc_id=:id&doc_unit_id=:unit&doc_name=:name&doc_suffix=:suffix&doc_public=:public&:cache=checked&doc_file=:file&doc_ext_loc=:ext_loc&doc_ext_file=:ext_file&doc_ext_suffix=:ext_suffix&doc_transfer=:transfer`
+					 HTML=`
+ 			if (':doc_type' == 'page')
+			{
+				father = 'h'
+				page = 'buPCode'
+				if (':doc_ext_loc' == '')
+					icon = '<!-- #ICE INCLUDE=``icon_rpage.gif`` -->'
+				else
+					icon = '<!-- #ICE INCLUDE=``icon_page.gif`` -->'
+				
+			}
+			else
+			{
+				father = 'm'
+				page = 'buDView'
+				if (':doc_ext_loc' == '')
+					icon = '<!-- #ICE INCLUDE=``icon_rmulti.gif`` -->'
+				else
+					icon = '<!-- #ICE INCLUDE=``icon_multi.gif`` -->'
+			}
+			top.Main.item:action(4, father, :doc_unit_id, 'd', :doc_id, ':doc_name.:doc_suffix', icon, 'BLACK', 'buMain.html?unit_id=:doc_unit_id&doc=:doc_id&first=' + page)`
+			-->
+
+			top.Main.refresh()
+</SCRIPT>
+
+<!-- #ICE REPEAT INCLUDE=`result.html?submit=&cancel=&object=document` -->

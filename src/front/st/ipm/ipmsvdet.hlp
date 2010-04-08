@@ -1,0 +1,45 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Server Detail screen.  This screen displays information
+about the indicated server (the one that the cursor was placed on in the
+Server List screen).  Information displayed includes:
+
+Current total sessions   the number of users currently connected to the
+                         indicated server.
+
+Max total Sessions       the maximum number of users that the indicated
+                         server can handle at any one time. 
+
+Active current sessions  the number of sessions in a computable state.
+                         The active_sessions server parameter currently
+                         has no effect on the number of computable sessions
+                         allowed at any one time.  The server does not
+                         currently provide a count of the number of active
+                         transactions; therefore this number is always 0.
+
+Active maximum sessions  the maximum number of user sessions that can
+                         be in a computable state.
+
+The maximum and active maximum sessions are determined at server startup.
+See the Ingres Installation Guide for more information on server 
+parameters.
+
+The amount of CPU used is displayed in terms of Quantum, the basic time
+slice used by the server.  The first number represents the number of
+idle quantums, the second is the number of quantums since server startup.
+This applies to VMS only.
+
+The Name, Type, and Connecting To fields are repeated from the Server
+List screen.  If there are many databases or long database names, they
+will be displayed in full on this screen.
+
+Menuitems available on this screen include:
+
+Refresh        Queries the specified Ingres server for server detail
+               information.  If the specified server no longer exists,
+               a message is displayed.  
+
+Help           Displays this screen.
+
+End            Returns to the Server List screen.
+
+Quit           Exits IPM.

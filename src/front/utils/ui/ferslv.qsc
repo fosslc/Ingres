@@ -1,0 +1,896 @@
+/*
+**		Copyright (c) 2004 Ingres Corporation
+**		All rights reserved.
+*/
+
+# include   <compat.h>
+# include   <cm.h>
+# include   <cv.h>
+# include   <er.h>
+# include   <st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include   <fe.h>
+# include   <ui.h>
+# include   <uigdata.h>
+
+/*
+# include	<si.h>
+*/
+
+
+/*
+** Name:	FE_fullresolve()
+**
+** Description:
+**	Decomposes and dequotes a construct of the form
+**              [["]owner["].]["]object name["]
+**	where object_name may be a tablename or a database synonym, and passes
+**	the resultant components to the base FE_resolve() function.
+**
+**	This routine will NOT handle constructs with embedded periods when
+**	is_nrml is TRUE (see Input section below).  If these exist, then the
+**	caller should ensure that the construct has delimiting quotes and that
+**	is_nrml is specified as FALSE.
+**
+**	This routine is essentially a cover for the sequence
+**		FE_decompose()
+**		IIUGdlm_ChkdlmBEobject() (both components)
+**		FE_resolve()
+**	Actually, the FE shouldn't call FE_resolve() if the catalog level is
+**	not at least 6.5 - it should be calling FErel_ffetch() (which won't call
+**	FE_resolve() if not at least 6.5, so there's no circular dependency).
+**
+** Input:
+**	frn_ptr		Pointer to an FE_RSLV_NAME structure, which has been properly
+**				initialized.
+** Output:
+**	frn_ptr		Structure fields appropriately filled in.  If the owner and/or
+**				name destinations are not NULL, then the resolved components
+**				are copied to the specified locations.
+**
+** Returns:
+**	bool		TRUE/FALSE depending upon the return status of FE_resolve().
+**				FALSE may also mean a bogus owner and/or name specification.
+**
+** History:
+**	7-jul-1992 (rdrane)
+**		Created.
+**	17-jul-1992 (rdrane)
+**		Allocate the work buffers on the stack as local variables instead
+**		of dynamically allocating them (performance).
+**	31-jul-1992 (rdrane)
+**		Don't return VOID - return a bool which is either the result from
+**		FE_resolve() or FALSE to indicate a bogus name.
+**	18-sep-1992 (rdrane)
+**		If owner is the catowner (nominally $ingres), allow it.  Note that
+**		this should not normally be specified, and if it is, then it must
+**		not be explicitly delimited and must be cased properly.
+**	20-oct-1992 (rdrane)
+**		Handle cases where frn_ptr->owner_dest and/or frn_ptr->name_dest
+**		are NULL by using the work FE_RSLV_NAME structure through out.
+**		Guard against frn_ptr->name being NULL or EOS by immediately returning
+**		FALSE.
+**	14-dec-1992 (rdrane)
+**		Since the owner component can be un-normalized, effect casing of
+**		owner on UI_BOGUS_ID before comparing to UI_FE_CAT_ID_65.  Note the
+**		implied requirement that UI_FE_CAT_ID_65 may not be specified as
+**		an explicitly delimited identifier, and must be cased properly if
+**		frn_ptr->is_nrml is TRUE!
+**	22-jul-1993 (rdrane)
+**		Case the owner as a regular identifier if it may be the catowner,
+**		Compare the owner against UI_FE_CAT_ID_65 as case insensitive
+**		for FIPS support.  Note that this does not remove the restriction
+**		that any owner specification of the catowner must be cased properly
+**		(UPPER for FIPS) if frn_ptr->is_nrml is TRUE!.
+**	26-sep-1995 (sarjo01) Bug 71612
+**	        Restore delimiters back into resolved_name buffer for call
+**		to IIUGdlm_ChkdlmBEobject() if name has embedded spaces.	
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for database objects.
+*/
+
+bool
+FE_fullresolve(frn_ptr)
+			FE_RSLV_NAME	*frn_ptr;
+{
+			bool	resolve_status;
+			char	owner_buf[(FE_UNRML_MAXNAME + 1)];
+			char	object_buf[(FE_UNRML_MAXNAME + 1)];
+			FE_RSLV_NAME	w_frn;
+
+	
+	if  ((frn_ptr->name == NULL) || (*frn_ptr->name == EOS))
+	{
+		return(FALSE);
+	}
+
+	/*
+	** Break-up the name specification, and save the owner component indicator.
+	*/
+	w_frn.name = frn_ptr->name;
+	w_frn.is_nrml = frn_ptr->is_nrml;
+	w_frn.owner_dest = &owner_buf[0];
+	w_frn.name_dest = &object_buf[0];
+	FE_decompose(&w_frn);
+
+	frn_ptr->owner_spec =  w_frn.owner_spec;
+
+					/* Handle quote stripping and proper casing	*/
+	if  (frn_ptr->owner_spec)
+	{
+		switch(IIUGdlm_ChkdlmBEobject(w_frn.owner_dest,w_frn.owner_dest,
+									  frn_ptr->is_nrml))
+		{
+		case UI_REG_ID:
+			frn_ptr->owner_dlm = FALSE;
+			break;
+		case UI_DELIM_ID:
+			frn_ptr->owner_dlm = TRUE;
+			break;
+		default:
+			if  (!frn_ptr->is_nrml)
+			{
+				IIUGdbo_dlmBEobject(w_frn.owner_dest,FALSE);
+			}
+			if  (STbcompare(w_frn.owner_dest,0,UI_FE_CAT_ID_65,0,TRUE) == 0)
+			{
+				frn_ptr->owner_dlm = FALSE;
+			}
+			else
+			{
+				return(FALSE);
+			}
+			break;
+		}
+	}
+	else
+	{
+		frn_ptr->owner_dlm = FALSE;
+	}
+
+	switch(IIUGdlm_ChkdlmBEobject(w_frn.name_dest,w_frn.name_dest,
+								  frn_ptr->is_nrml))
+	{
+	case UI_REG_ID:
+		frn_ptr->name_dlm = FALSE;
+		break;
+	case UI_DELIM_ID:
+		frn_ptr->name_dlm = TRUE;
+		break;
+	default:
+		return(FALSE);
+		break;
+	}
+
+	resolve_status = FE_resolve(frn_ptr,w_frn.name_dest,w_frn.owner_dest);
+
+    return(resolve_status);
+}
+
+
+/*
+** Name:	FE_resolve()
+**
+** Description:
+**	Invokes the database function resolve_table() on a name and optional
+**	owner.  The result of the database function is temporarily stored in the
+**	FE_resolve() local variable resolved_name.  The owner name is placed into
+**	the first DB_MAXNAME bytes (blank padded), and the resolved object name is
+**	placed into the second DB_MAXNAME bytes (blank padded), and reflects its
+**	storage case in	the database.  The variable itself is NULL terminated.
+**
+**	The database function accepts components of size DB_GW1_MAXNAME.  It
+**	is assumed that DB_MAXNAME will always be at least that size.
+**	
+**	If object name either does not exist or resolves to a BE object which is
+**	not accesable by the supplied/implied owner, then the returned result is
+**	a empty string.
+**
+**	A wholly blank string should be interpreted as " "." ", i.e.,
+**	owner ==> BLANK and tablename ==> BLANK.  This is in accordance with the
+**	standard which states that trailing blanks of a delimited identifier are
+**	never significant.
+**
+**	If object name is a database synonym for a table, then the resultant owner
+**	component will reflect the owner of the table, not the owner of the
+**	database synonym.
+**
+**	The function returns an FE_RSLV_NAME structure with owner_dest, name_dest,
+**	and is_synonym filled in.  Note that if is_synonym is TRUE, then the
+**	*_dlm booleans are appropriately (re-)set as well.  When the object
+**	object name either does not exist or resolves to a BE object which is
+**	not accesable by the supplied/implied owner, then owner_dest and
+**	name_dest are set to empty strings and the function returns FALSE.
+**
+**	For connections to pre-6.5 databases, this routine invokes FErel_ffetch()
+**	(which is what the invoker should have done!), formats the returned
+**	table_name and table_owner into the resolved_name buffer, and pretends
+**	that everything is fine.  Note that the input owner is forced to NULL
+**	since FErel_ffetch() will ignore it and we don't want to signal the
+**	presence of a synonym.  Note that FErel_ffetch() will not call
+**	FE_resolve() if pre-6.5, so there's no circular dependency!
+**
+** Input:
+**	frn_ptr		Pointer to an FE_RSLV_NAME structure.  owner_dest and name_dest
+**				are expected to point to appropriately sized buffers or be
+**				NULL (if NULL, then just checks existence and set the booleans).
+**	name		Character pointer to NULL terminated string which is the
+**				tablename construct to be resolved.  This string is
+**				expected to be normalized.
+**	owner		Character pointer to NULL terminated string which is the
+**				owner specification.  If no specific owner is intended, then
+**				this should either point to an empty string or be NULL.
+**				This string is expected to be normalized.
+** Output:
+**	frn_ptr		Structure fields appropriately filled in.  If the owner and/or
+**				name destinations are not NULL, then the resolved components
+**				are copied to the specified locations.
+**				The synonym boolean is set appropriately and if TRUE, then
+**				the delimited/regular identifier booleans are set.
+**				The owner_spec boolean is appropriately set.
+** Returns:
+**	TRUE		An accesable table or synonym exists, or the connection is
+**				to a pre-6.5 database.
+**	FALSE		An accesable table or synonym does not exist.
+**
+** Side Effects:
+**	IIUIscl_StdCatLevel() calls IIUIdbdata(), which will set up the static
+**	DB capabilities structure if it is not already set up.
+**
+** History:
+**	8-jul-1992 (rdrane)
+**		Created.
+**	23-jul-1992 (rdrane)
+**		STtrmwhite() can return an empty string if all whitespace - need to
+**		detect this and force the result to be one space.  Significantly
+**		simplify the processing, since we don't need to save the contents
+**		of the resolved_name buffer.  Reversed order of owner and name
+**		parameters to be consistent with FErel_*() routines.  Allow owner
+**		to be specified as NULL.
+**	7-aug-1992 (rdrane)
+**		For pre-6.5 connections, use FErel_ffetch() instead of just parroting
+**		the owner and tablename.
+**	18-sep-1992 (rdrane)
+**		If owner resolves to the catowner (nominally $ingres), allow it.
+**	22-jul-1993 (rdrane)
+**		Compare the owner against UI_FE_CAT_ID_65 as case insensitive
+**		for FIPS support.
+**	31-dec-1993 (rdrane)
+**		Use OpenSQL level to determine 6.5 syntax features support.
+**	26-sep-1995 (sarjo01) Bug 71612
+**	        Restore delimiters back into resolved_name buffer for call
+**		to IIUGdlm_ChkdlmBEobject() if name has embedded spaces.	
+*/
+
+
+bool
+FE_resolve(frn_ptr,name,owner)
+			FE_RSLV_NAME	*frn_ptr;
+	EXEC SQL BEGIN DECLARE SECTION;
+			char	*name;
+			char	*owner;
+	EXEC SQL END DECLARE SECTION;
+{
+			char	*r_ptr;
+			char	*i_ptr;
+			char	*owner_ptr;
+			char	save_end_char;
+			bool	syn_owner_chk;
+			FE_RSLV_NAME	w_frn;
+			FE_REL_INFO		relinfo;
+			char	owner_buf[(DB_MAXNAME + 1)];
+	EXEC SQL BEGIN DECLARE SECTION;
+			/*
+			** The result of the database function is stored as follows:
+			** The owner name is placed into the first DB_MAXNAME bytes
+			** (blank padded), and the object name is placed in the
+			** second DB_MAXNAME bytes (blank padded).  Both reflect
+			** reflect their storage case in the database.  The variable
+			** itself is NULL terminated.
+			*/
+			char	resolved_name[((2 * DB_MAXNAME) + 1)];
+	EXEC SQL END DECLARE SECTION;
+
+
+	if  (owner == NULL)		/* Substitute empty string for NULL pointer	*/
+	{
+		owner = ERx("");
+	}
+
+	if  (*owner == EOS)		/* Check owner for synonym determination?	*/
+	{
+		syn_owner_chk = FALSE;
+	}
+	else
+	{
+		syn_owner_chk = TRUE;
+	}
+
+	/*
+	** Unless we FAIL, we'll always have a result owner
+	*/
+	frn_ptr->owner_spec = TRUE;
+
+	/*
+	** If we're not a 6.5 database, then we can't effect
+	** resolve_table(), so just fake it ...
+	*/
+	if  (STcompare(IIUIcsl_CommonSQLLevel(),UI_LEVEL_65) < 0)
+	{
+/*
+SIprintf("Effecting FErel_ffetch() for %s.%s\n",owner,name);
+*/
+		syn_owner_chk = FALSE;	/* Don't enable synonym detection!	*/
+		if  (FErel_ffetch(name,NULL,&relinfo) != OK)
+		{
+			resolved_name[0] = EOS;
+		}
+		else
+		{
+			MEfill((2 * DB_MAXNAME),' ',&resolved_name[0]);
+			STcopy(relinfo.owner,&resolved_name[0]);
+			*(&resolved_name[0] + STlength(relinfo.owner)) = ' ';
+			STcopy(relinfo.name,&resolved_name[DB_MAXNAME]);
+			*(&resolved_name[DB_MAXNAME] + STlength(relinfo.name)) = ' ';
+			*(&resolved_name[0] + (2 * DB_MAXNAME)) = EOS;
+		}
+	}
+	else
+	{
+/*
+SIprintf("Effecting resolve_table() for %s.%s\n",owner,name);
+*/
+		EXEC SQL SELECT resolve_table(:owner,:name)
+						INTO :resolved_name;
+	}
+
+/*
+SIprintf("Result from resolve_table() for %.64s\n",&resolved_name[0]);
+*/
+	if  (resolved_name[0] == EOS)	/* Not found or no access?	*/
+	{
+		frn_ptr->owner_spec = FALSE;
+		frn_ptr->owner_dlm = FALSE;
+		frn_ptr->name_dlm = FALSE;
+		frn_ptr->is_syn = FALSE;
+		if  (frn_ptr->owner_dest != NULL)
+		{
+			*frn_ptr->owner_dest = EOS;
+		}
+		if  (frn_ptr->name_dest != NULL)
+		{
+			*frn_ptr->name_dest = EOS;
+		}
+		return(FALSE);
+	}
+
+	/*
+	** Save the first character of the name in the resolve function's
+	** buffer, and replace it with a terminator for the owner component.
+	** Once the string is trimmed, it will have it's own null terminator.	
+	** for the owner component.  If max length, then terminating it will
+	** overwrite the first character of the name component.  So, copy it
+	** to a separate buffer and set owner_ptr to indicate whether or not
+	** it was moved.
+	*/
+	i_ptr = &resolved_name[DB_MAXNAME];
+	save_end_char = *i_ptr;
+	*i_ptr = EOS;
+	if  (resolved_name[(DB_MAXNAME - 1)] != ' ')
+	{
+		STcopy(&resolved_name[0],&owner_buf[0]);
+		owner_ptr = &owner_buf[0];
+	}
+	else
+	{
+		owner_ptr = &resolved_name[0];
+		if  (STtrmwhite(&resolved_name[0]) == 0)
+		{
+			STcopy(ERx(" "),&resolved_name[0]);
+		}
+	}
+	/*
+	** Replace the overlayed character in
+	** the resolve function's static buffer.
+	*/
+	*i_ptr = save_end_char;
+
+	i_ptr = &resolved_name[DB_MAXNAME];	/* Trim the name component	*/
+	if  (STtrmwhite(i_ptr) == 0)
+	{
+		STcopy(ERx(" "),i_ptr);
+	}
+
+	frn_ptr->is_syn = FALSE;			/* Assume it's not a synonym	*/
+	if  (!STequal(i_ptr,name))
+	{
+		frn_ptr->is_syn = TRUE;
+	}
+							/* Make sure we had an owner to begin with!	*/
+	else if ((syn_owner_chk) && (!STequal(owner_ptr,owner)))
+	{
+		frn_ptr->is_syn = TRUE;
+	}
+
+	/*
+	** If it's a synonym or we resolved an owner, then re-determine its
+	** delimited identifier status.  If we got the catowner, then it will
+	** return UI_BOGUS_ID, so watch for it, allow it, and explicitly copy it.
+	** Otherwise if the dest pointer is not NULL, then the determination does
+	** the copy "for free".  Otherwise, we have to explicitly copy it out.
+	*/
+	r_ptr = frn_ptr->owner_dest;
+	if  ((*owner == EOS) || (frn_ptr->is_syn))
+	{
+		char	ownbuf[(DB_MAXNAME + 3)];
+		bool	norml = TRUE;
+		if (*owner_ptr != '"' && STindex(owner_ptr, " ", 0) != NULL)
+		{ 
+			STpolycat(3, "\"", owner_ptr, "\"", ownbuf);
+			owner_ptr = ownbuf;
+		        norml = FALSE;
+		}
+		switch(IIUGdlm_ChkdlmBEobject(owner_ptr,r_ptr,norml))
+		{
+		case UI_REG_ID:
+			frn_ptr->owner_dlm = FALSE;
+			break;
+		case UI_DELIM_ID:
+			frn_ptr->owner_dlm = TRUE;
+			break;
+		default:
+			if  (STbcompare(owner_ptr,0,UI_FE_CAT_ID_65,0,TRUE) == 0)
+			{
+				if (r_ptr != NULL)
+				{
+					frn_ptr->owner_dlm = FALSE;
+					STcopy(owner_ptr,r_ptr);
+				}
+			}
+			else
+			{
+/*
+SIprintf("Internal Error!  Bad Syn RETURN!\n|%s| => |%s|\n",
+		 owner_ptr,UI_FE_CAT_ID_65);
+*/
+				return(FALSE);	/* This should NEVER occur!!!	*/
+			}
+			break;
+		}
+	}
+	else if (r_ptr != NULL)
+	{
+		STcopy(owner_ptr,r_ptr);
+	}
+								
+	/*
+	** The name runs the remainder of the resolve function's static buffer,
+	** and is NULL terminated, so we don't need to play the game that we did
+	** with the owner component.
+	*/
+	r_ptr = frn_ptr->name_dest;
+	if  (frn_ptr->is_syn)
+	{
+                char    *name_ptr, namebuf[(DB_MAXNAME + 3)];
+                bool    norml = TRUE;
+
+		name_ptr = &resolved_name[DB_MAXNAME];
+                if (*name_ptr != '"' && STindex(name_ptr, " ", 0) != NULL)
+                {
+                        STpolycat(3, "\"", name_ptr, "\"", namebuf);
+                        name_ptr = namebuf;
+                        norml = FALSE;
+                }
+		switch(IIUGdlm_ChkdlmBEobject(name_ptr,r_ptr,norml))
+		{
+		case UI_REG_ID:
+			frn_ptr->name_dlm = FALSE;
+			break;
+		case UI_DELIM_ID:
+			frn_ptr->name_dlm = TRUE;
+			break;
+		default:
+			return(FALSE);	/* This should NEVER occur!!!	*/
+			break;
+		}
+	}
+	else if (r_ptr != NULL)
+	{
+		STcopy(&resolved_name[DB_MAXNAME],r_ptr);
+	}
+
+	return(TRUE);
+}
+
+
+/*
+** Name:	FE_unresolve()
+**
+** Description:
+**	Re-composes and re-quotes a construct of the form
+**				[["]owner["].]["]object_name["]
+**	Note that an owner component should always be included in the resultant
+**	string.  Thus, owner_spec is ignored and owner_dest is not expected to
+**	be NULL (although it may point to a NULL string).
+**
+**	A wholly blank input string is returned as " "." ", i.e.,
+**	owner ==> BLANK and tablename ==> BLANK.  This is in accordance with the
+**	standard which states that trailing blanks of a delimited identifier are
+**	never significant.
+**
+**	This function assumes that its input is in normalized form always, and
+**	so will use case for determining whether or not the component string
+**	is a delimited identifier!  Thus, the is_nrml field is ignored!
+**
+** Input:
+**	frn_ptr		Pointer to an FE_RSLV_NAME structure, which has been properly
+**				initialized.  Note that for this routine, owner_dest and
+**				name_dest are input fields, and owner_dlm and name_dlm are
+**				expected to be properly set.  Note that owner may be NULL,
+**				or an empty string, but that name is never expected to be NULL
+**				or an empty string.
+** Output:
+**	frn_ptr		Structure fields appropriately filled in.  Note that for this
+**				routine, the name is an output field, is not expected to be
+**				NULL, and is expected to point to a buffer of length
+**						((((2 * DB_MAXNAME) + 2) * 2) + 1)
+**				which is FE_MAXTABNAME.
+**				None of the boolean indicators are set or otherwise referenced.
+** Returns:
+**	Nothing.
+**
+** History:
+**	7-jul-1992 (rdrane)
+**		Created.
+*/
+
+
+VOID
+FE_unresolve(frn_ptr)
+		FE_RSLV_NAME	*frn_ptr;
+{
+	register char	*o_ptr;
+
+	
+	o_ptr = frn_ptr->name;
+
+	if  ((frn_ptr->owner_dest != NULL) && (*frn_ptr->owner_dest != EOS))
+	{
+		o_ptr = FE_ur_partial(frn_ptr->owner_dest,o_ptr,frn_ptr->owner_dlm);
+						/*
+						** Reposition in result buf to end of whatever
+						** we put in as the owner and set the owner/tablename
+						** delimiter.  This will overlay the NULL put into
+						** the buffer by FE_ur_partial().
+						*/
+		*o_ptr++ = '.';
+	}
+						/*
+						** Set up to copy the tablename portion to the
+						** result buffer.  This operation parallels that
+						** which we (probably) just did for the owner portion.
+						*/
+	o_ptr = FE_ur_partial(frn_ptr->name_dest,o_ptr,frn_ptr->name_dlm);
+
+    return;
+}
+
+
+/*
+** Name:	FE_decompose()
+**
+** Description:
+**	Decomposes a construct of the form
+**              [["]owner["].]["]object_name["]
+**	where object_name may be a tablename or a database synonym, and returns
+**	each component as NULL terminated in separate buffers.
+**
+**	This routine will NOT handle constructs with embedded periods when
+**	is_nrml is TRUE (see Input section below).  If these exist, then the
+**	caller should ensure that the construct has delimiting quotes and that
+**	is_nrml is specified as FALSE.
+**
+** Input:
+**	frn_ptr		Pointer to an FE_RSLV_NAME structure, which has been properly
+**				initialized.  Specifically, name points to the string to
+**				decompose, owner_dest and name_dest point to buffers of at
+**				least (DB_MAXNAME + 1) bytes, and is_nrml is properly set.
+**				None of name, owner_dest, or name_dest are expected to be NULL.
+** Output:
+**	frn_ptr		Structure (discrete and referenced) appropriately filled in.
+**				The owner_spec boolean is set if an owner component is found.
+**				Note that owner_dest will be reflected as an empty string if
+**				no owner component is found.  The booleans related to
+**				delimited/regular identifier and synonym are NOT set.
+** Returns:
+**	Nothing.
+**
+** History:
+**	7-jul-1992 (rdrane)
+**		Created.
+*/
+
+VOID
+FE_decompose(frn_ptr)
+		FE_RSLV_NAME	*frn_ptr;
+{
+	register char	*i_ptr;
+	register char	*o_ptr;
+			bool	in_quote;
+
+
+
+	*frn_ptr->owner_dest = EOS;		/* Default output to empty strings.	*/
+	*frn_ptr->name_dest = EOS;
+	frn_ptr->owner_spec = FALSE;	/* Assume no owner component		*/
+
+	i_ptr = frn_ptr->name;
+	o_ptr = frn_ptr->owner_dest;	/* Start with the owner component.	*/
+						/* Component specified as delimited by user?	*/
+	if ((!frn_ptr->is_nrml) && (*i_ptr == '"'))
+	{
+		CMcpyinc(i_ptr,o_ptr);		/* Process it now!	*/
+		in_quote = TRUE;
+	}
+	else
+	{
+		in_quote = FALSE;
+	}
+
+	while (*i_ptr != EOS)
+	{
+		switch(*i_ptr)
+		{
+		case '"':
+			CMcpyinc(i_ptr,o_ptr);
+			/*
+			** Peek ahead for non-escaped subsequent quote
+			** which will end the delimited id
+			*/
+			if  ((*i_ptr != '"') && (in_quote))
+			{
+				in_quote = FALSE;
+			}
+			break;
+		case '.':
+			/*
+			** Period which is not in a delimited identifier separates
+			** owner from object name.
+			*/
+			if  (!in_quote)
+			{
+				*o_ptr = EOS;		/* Terminate the owner string.	*/
+				frn_ptr->owner_spec = TRUE;
+				CMnext(i_ptr);		/* Ignore the period.			*/
+				o_ptr = frn_ptr->name_dest;
+				/*
+				** Is component specified as delimited by user?
+				** If not, in_quote is FALSE here anyway, so no need
+				** to explicitly reset.
+				*/
+				if ((!frn_ptr->is_nrml) && (*i_ptr == '"'))
+				{
+					CMcpyinc(i_ptr,o_ptr);	/* Process it now!	*/
+					in_quote = TRUE;
+				}
+			}
+			else
+			{
+				CMcpyinc(i_ptr,o_ptr);
+			}
+			break;
+		default:
+			CMcpyinc(i_ptr,o_ptr);	/* Add the char to the current buffer.	*/
+			break;
+		}
+	}
+
+	*o_ptr = EOS;		/* Terminate whatever component we were parsing.	*/
+	/*
+	** If we have no table string, then we didn't have an owner, and so we
+	** need to swap the buffers.  An empty specification will produce the
+	** same symptom.
+	*/
+	if  (*frn_ptr->name_dest == EOS)
+	{
+		STcopy(frn_ptr->owner_dest,frn_ptr->name_dest);
+		*frn_ptr->owner_dest = EOS;
+	}
+
+	return;
+}
+
+
+/*
+** Name:	FE_ur_partial()
+**
+** Description:
+**	Re-composes and re-quotes a component of a string as returned by
+**	FE_resolve().
+**
+** Input:
+**	in_str		Character pointer to the resolved string component.
+**				Assumed to point to a buffer of (DB_MAXNAME + 1) length and
+**				assumed NOT to be necessarily NULL terminated.
+**	out_str		Character pointer into the buffer in which to place the
+**				result component, which may be delimited and have double
+**				quote characters escaped.  Assumed to go into a buffer with
+**				a minimum of (FE_UNRML_MAXNAME + 1) available length if
+**				p_dlm is TRUE.
+**	p_dlm		Set to TRUE if the component is to be considered a
+**				delimited identifer.
+** Returns:
+**	ptr			Pointer to the terminating NULL of the component in the buffer
+**				specified by out_str.  Thus, if this is not the initial
+**				component, then the subsequent component or delimiter should
+**				start/be placed at this location.
+**
+** History:
+**	29-jun-1992 (rdrane)
+**		Created.
+**	17-jul-1992 (rdrane)
+**		STtrmwhite() can return an empty string if all whitespace - need to
+**		detect this and force the result to be one space.
+*/
+
+char *
+FE_ur_partial(in_str,out_str,p_dlm)
+			char	*in_str;
+			char	*out_str;
+			bool	p_dlm;
+{
+			char	*i_ptr;
+			char	save_end_char;
+
+	
+	/*
+	** Save the last character, and force NULL termination.
+	*/
+	i_ptr = in_str + DB_MAXNAME;
+	save_end_char = *i_ptr;
+	*i_ptr = EOS;
+
+	if  (STtrmwhite(in_str) == 0)	/* Always trim any trailing blanks.	*/
+	{
+		STcopy(ERx(" "),in_str);
+	}
+
+	if  (p_dlm)						/* Treat as delimited identifer?	*/
+	{
+		IIUGrqd_Requote_dlm(in_str,out_str);
+	}
+	else
+	{
+		STcopy(in_str,out_str);
+	}
+
+	/*
+	** Replace the overlayed character in the input buffer, and return
+	** a pointer to the NULL at EOS.
+	*/
+	*i_ptr = save_end_char;
+								
+	return((out_str + STlength(out_str)));
+}
+
+
+/*
+** Name:	IIUIxrt_tbl()
+**
+** Description:
+**	Un-normalizes an owner and tablename for display in a
+**	user-modifiable or inclusion in generated procedural
+**	language output senario.  The identifier type of both
+**	both owner and tablename is determined, and then combined
+**	via FE_unresolve().
+**
+**	This routine is essentially a cover for the sequence
+**		IIUGdlm_ChkdlmBEobject(,,TRUE) (owner)
+**		IIUGdlm_ChkdlmBEobject(,,TRUE) (tablename)
+**		FE_unresolve()
+**	and is intended for clients which need to externalize discrete
+**	owner and tablename already in normalized form (e.g., from a
+**	ListPick) and which have not already determined and/or saved
+**	the identifiers' types.
+**
+**	If the client knows the identifier types, then it is much more
+**	efficient to call FE_unresolve() directly and avoid the
+**	non-trivial overhead of re-determination.
+**
+** Input:
+**	owner		Pointer to the owner component.  Assumed to be in normalized
+**				form.
+**	tablename	Pointer to the tablename component.  Assumed to be in
+**				normalized form.
+**	result_name	Pointer to a field in which to place the un-normalized
+**				owner.tablename construct.  This should be at least
+**				FE_MAXTABNAME bytes in length.
+** Output:
+**	result_name	Set to the un-normalized owner.tablename or EOS if
+**				either owner or tablename is UI_BOGUS_ID.
+**
+** Returns:
+**	bool		TRUE/FALSE depending upon the return status of
+**				IIUGdlm_ChkdlmBEobject().  FALSE is set only
+**				for UI_BOGUS_ID.
+**
+** History:
+**	30-sep-1992 (rdrane)
+**		Created.
+**	14-oct-1992 (rdrane)
+**		Renamed from FExrt_tbl() to be more in line with current
+**		module naming conventions.  If owner is the catowner (nominally
+**		$ingres), allow it.  Note that this should not normally be specified,
+**		and if it is, then it must not be explicitly delimited and must be
+**		cased properly.
+**	22-jul-1993 (rdrane)
+**		Compare the owner against UI_FE_CAT_ID_65 as case insensitive
+**		for FIPS support.  Note that this does not remove the restriction
+**		that any owner specification of the catowner must be cased properly
+**		(UPPER for FIPS).
+*/
+
+bool
+IIUIxrt_tbl(owner,tablename,result_name)
+			char	*owner;
+			char	*tablename;
+			char	*result_name;
+{
+			FE_RSLV_NAME w_frn;
+
+
+
+	if  (result_name == NULL)
+	{
+		return(FALSE);
+	}
+
+	w_frn.name = result_name;
+	w_frn.owner_dest = owner;
+	w_frn.name_dest = tablename;
+
+	if  ((owner != NULL) && (*owner != EOS))
+	{
+		switch(IIUGdlm_ChkdlmBEobject(owner,NULL,TRUE))
+		{
+		case UI_REG_ID:
+			w_frn.owner_dlm = FALSE;
+			break;
+		case UI_DELIM_ID:
+			w_frn.owner_dlm = TRUE;
+			break;
+		default:
+			if  (STbcompare(owner,0,UI_FE_CAT_ID_65,0,TRUE) == 0)
+			{
+				w_frn.owner_dlm = FALSE;
+			}
+			else
+			{
+				*result_name = EOS;
+				return(FALSE);	/* This should NEVER occur!!!   */
+			}
+			break;
+		}
+	}
+
+	switch(IIUGdlm_ChkdlmBEobject(tablename,NULL,TRUE))
+	{
+	case UI_REG_ID:
+		w_frn.name_dlm = FALSE;
+		break;
+	case UI_DELIM_ID:
+		w_frn.name_dlm = TRUE;
+		break;
+	default:
+		*result_name = EOS;
+		return(FALSE);	/* This should NEVER occur!!!	*/
+		break;
+	}
+
+	FE_unresolve(&w_frn);
+
+	return(TRUE);
+}
+

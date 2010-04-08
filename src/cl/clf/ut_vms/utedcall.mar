@@ -1,0 +1,129 @@
+	.TITLE	UTEDCALL
+	
+	$SSDEF 			; System status codes
+	$CHFDEF			; Condition handling definitions
+                                
+; 	Copyright (c) 1989, 2000 Ingres Corporation
+; 
+; 	Name:
+; 		UTedcall.mar
+; 
+; 	Function:
+; 		UTedtcall  
+; 
+; 	Inputs:
+; 		i4 (*)()		Function to call	
+;		i4 *			Argument list
+; 
+;	Outputs:
+;		none
+;
+;	Return:
+;		i4			Return status from editor.
+;
+; 	Result:
+; 		Call a callable editor.  If an error is returned or signaled,
+;		output the corresponding message to SYS$OUTPUT.  Return
+;		the editor's status back to our caller.
+;
+; 	Side Effects:
+; 		The edited file may change.
+;		The condition handler UTedh_handler is established.
+;
+; 	History:
+; 		18 May 1989 (Mike S)	Initial version
+;		6/91 (Mike S)		
+;			Only re-establish ^C handler if it was already on
+;	11/05/92 (dkh) - Changed CHF$L_MCH_SAVR0 to CHF$IH_MCH_SAVR0 for
+;			 the alpha.  Walt also made various compilation
+;			 fixes.
+;       03/30/94 (huffman)
+;                        change byte to quad for ansi compliance.
+;	04-may-95 (albany)
+;	    Updated $code -> $code$ and $data -> $data$ for AXP/VMS.
+;	16-may-95 (albany)
+;	    Updated psect attributes to be in line with other
+;	    CL psects.
+;	01-dec-2000	(kinte01)
+;	    Bug 103393 - removed nat, longnat, u_nat, & u_longnat
+;	    from VMS CL as the use is no longer allowed - Strictly 
+;	    documentation updates in this file
+;	25-apr-2003 (abbjo03)
+;	    Save R0 before possibly calling IItrap_ctrlc.
+;
+
+	.PSECT	$CODE$	PIC,CON,REL,LCL,SHR,EXE,NORD,NOWRT,NOVEC,4
+
+	.ENTRY	UTedcall,^m<R2>
+	MOVAB	UTedh_handler, (FP)	; Establish handler
+	CALLS	#0, IIctrlc_is_trapped	; Are we trapping ^C?
+	MOVL	R0, R2			; If not, don't bother turning it off
+	BEQL	5$			;
+	CALLS	#0, IInotrap_ctrlc	; Stop trapping ^C
+5$:	CALLG	@8(AP), @4(AP)		; Call editor
+	MOVL	R0, MSGCOND		; Copy condtion value to message vector
+	TSTL	R2			; Do we need to restore the ^C trap?
+	BEQL	6$			; If not, branch
+	CALLS	#0, IItrap_ctrlc	; Resume trapping ^C
+
+	;	If editor returned, rather than signaled, an error, it probably
+	;	didn't output the error to the user.  We'll do it.
+6$:	BLBS	MSGCOND, 10$		; Just return, if it worked
+	MOVAL	MSGVEC, R0		; Point to message vector
+	JSB	ERROR_OUT		; Output error
+10$:	MOVL	MSGCOND, R0		; Retrieve condition value
+	RET				; Return editor's return status
+
+;	If the editor signals, we copy the condition value into the
+;	mechanism args and unwind to UTedcall's caller.
+	.ENTRY	UTedh_handler,^m<R2>
+	MOVL	CHF$L_SIGARGLST(AP), R0	; Get address of signal args
+	MOVL	CHF$L_SIG_NAME(R0), R2	; Get condition being signaled
+	CMPL	R2, #SS$_UNWIND		; Are we being unwound?
+	BEQL	10$			; If so, nothing to do.
+					; If not ...
+	MOVL	CHF$L_MCHARGLST(AP), R1	;   get address of mechanism args
+	MOVL	R2, CHF$IH_MCH_SAVR0(R1)	;   put signaled status where it will
+					;	be restored into R0
+	JSB	ERROR_OUT		;   output error message
+	$UNWIND_S			;   unwind to establisher's caller
+10$:	RET
+
+
+;	Output an error message and wait two seconds.  The Message vector
+;	is pointed to by R0.
+ERROR_OUT:
+	.jsb_entry
+	BISL2	#^X0F@16, (R0) 		;   set message flags to "ALL"
+	$PUTMSG_S (R0)			;   output message
+	PUSHAF	TWO_SECONDS		;   Delay
+	CALLS	#1, G^LIB$WAIT		;	  two seconds
+	RSB
+
+
+;	Interface to LIB$FIND_IMAGE_SYMBOL
+;
+;	LIB$FIND_IMAGE_SYMBOL signals its errors, as well as returning them.
+;	To avoid showing the error to the user, we establish a condition
+;	handler.
+;
+;	Calling sequence is the same as LIB$FIND_IMAGE_SYMBOL:
+;	UTfind_image_symbol(filename, symbol_desc, symbol_val)
+
+;	.ENTRY UTfind_image_symbol, ^m<>
+UTfind_image_symbol::
+	.call_entry max_args=6,home_args=true
+	MOVAL	UTfind_image_handler, (FP)	; Establish handler
+	CALLG	(AP), G^LIB$FIND_IMAGE_SYMBOL	; Call the system routine
+	RET					; Return its return
+
+	.ENTRY UTfind_image_handler, ^m<>
+	MOVL	#SS$_CONTINUE, R0	; Handle it!
+	RET
+
+ 	.PSECT	$DATA$	NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,NOVEC,QUAD
+MSGVEC:		.LONG	1		; Number of longwords to follow
+MSGCOND:	.BLKL	1		; Condition value
+TWO_SECONDS:	.FLOAT 	2.0		; Number of seconds to wait
+
+	.END				

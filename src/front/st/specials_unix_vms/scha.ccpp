@@ -1,0 +1,42 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for Sun HA Cluster Ingres Data Service
+*/
+
+/*
+** History
+**      01-jan-2004 (hanch04)
+**              Created.
+**	03-Oct-2005 (bonro01)
+**		Change AdvantageIngres name to Ingres
+*/
+
+PART	scha
+
+/*
+** IngresSCAgent!bin
+*/
+
+   DIRECTORY opt!CA!IngresSCAgent!bin
+   BUILD_DIR (ING_BUILD)!opt!CA!IngresSCAgent!bin
+	SCRIPT envfile
+	EXECUTABLE gettime
+	SCRIPT ingres_monitor_check
+	SCRIPT ingres_monitor_start
+	SCRIPT ingres_monitor_stop
+	SCRIPT ingres_probe
+	SCRIPT ingres_server_manager
+	SCRIPT ingres_server_start
+	SCRIPT ingres_server_stop
+	SCRIPT ingres_update
+	SCRIPT ingres_validate
+
+/*
+** AdvantageIngresSCAgent!etc
+*/
+
+   DIRECTORY opt!CA!IngresSCAgent!etc
+   BUILD_DIR (ING_BUILD)!opt!CA!IngresSCAgent!etc
+	FILE CA.ingres_server

@@ -1,0 +1,6 @@
+INGRES 6.x Compatible Message Files
+
+CA-INGRES 6.4 message files contain the text for informational and
+error messages in the formats used by 6.4 and earlier releases. These
+files can optionally be installed if release 6.4 or earlier applications
+are to be run against an Ingres installation without recompilation.

@@ -1,0 +1,196 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word 9">
+<meta name=Originator content="Microsoft Word 9">
+<link rel=File-List href="./cfRollback_files/filelist.xml">
+<title>ROLLBACK Keyword</title>
+<!--[if gte mso 9]><xml>
+ <o:DocumentProperties>
+  <o:Author>Kawing Chiu</o:Author>
+  <o:LastAuthor>Kawing Chiu</o:LastAuthor>
+  <o:Revision>1</o:Revision>
+  <o:TotalTime>0</o:TotalTime>
+  <o:Created>1999-12-16T17:09:00Z</o:Created>
+  <o:LastSaved>1999-12-16T17:09:00Z</o:LastSaved>
+  <o:Pages>2</o:Pages>
+  <o:Words>70</o:Words>
+  <o:Characters>400</o:Characters>
+  <o:Company>Ingres Corporation</o:Company>
+  <o:Lines>3</o:Lines>
+  <o:Paragraphs>1</o:Paragraphs>
+  <o:CharactersWithSpaces>491</o:CharactersWithSpaces>
+  <o:Version>9.2720</o:Version>
+ </o:DocumentProperties>
+</xml><![endif]-->
+<style>
+<!--
+ /* Font Definitions */
+@font-face
+	{font-family:Courier;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:modern;
+	mso-font-format:other;
+	mso-font-pitch:fixed;
+	mso-font-signature:3 0 0 0 1 0;}
+@font-face
+	{font-family:AvantGarde;
+	panose-1:0 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:0;
+	mso-generic-font-family:swiss;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:3 0 0 0 1 0;}
+ /* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{mso-style-parent:"";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	font-family:"Times New Roman";
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";}
+h1
+	{mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:1;
+	font-size:16.0pt;
+	font-family:Arial;
+	mso-font-kerning:16.0pt;}
+h2
+	{mso-style-parent:"Heading 1";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:14.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:2;
+	tab-stops:48.0pt;
+	font-size:12.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+h3
+	{mso-style-next:Normal;
+	margin-top:12.0pt;
+	margin-right:0in;
+	margin-bottom:3.0pt;
+	margin-left:0in;
+	mso-pagination:widow-orphan;
+	page-break-after:avoid;
+	mso-outline-level:3;
+	font-size:13.0pt;
+	font-family:Arial;}
+h4
+	{mso-style-parent:"Heading 3";
+	mso-style-next:Normal;
+	margin-top:24.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:0in;
+	margin-bottom:.0001pt;
+	line-height:12.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	page-break-after:avoid;
+	mso-outline-level:4;
+	tab-stops:48.0pt;
+	font-size:10.0pt;
+	font-family:AvantGarde;
+	mso-bidi-font-weight:normal;}
+p.codefirst, li.codefirst, div.codefirst
+	{mso-style-name:codefirst;
+	mso-style-next:Normal;
+	margin-top:6.0pt;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:1.5in;
+	margin-bottom:.0001pt;
+	line-height:9.0pt;
+	mso-line-height-rule:exactly;
+	mso-pagination:widow-orphan lines-together;
+	tab-stops:1.75in 2.0in 2.25in;
+	font-size:9.0pt;
+	mso-bidi-font-size:10.0pt;
+	font-family:Courier;
+	mso-fareast-font-family:"Times New Roman";
+	mso-bidi-font-family:"Times New Roman";
+	font-weight:bold;
+	mso-bidi-font-weight:normal;}
+@page Section1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.25in 1.0in 1.25in;
+	mso-header-margin:.5in;
+	mso-footer-margin:.5in;
+	mso-paper-source:0;}
+div.Section1
+	{page:Section1;}
+-->
+</style>
+</head>
+
+<body lang=EN-US style='tab-interval:.5in'>
+
+<div class=Section1>
+
+<h2><a name="_Toc429385979">R</a>OLLBACK Keyword<!--[if supportFields]><span
+style='mso-element:field-begin'></span> tc &quot;ROLLBACK Keyword&quot; \L 3 <![endif]--><!--[if supportFields]><span
+style='mso-element:field-end'></span><![endif]--></h2>
+
+<h4>Purpose</h4>
+
+<p class=MsoNormal style='mso-outline-level:1'>Rolls back a previously started
+transaction.</p>
+
+<h4>Syntax</h4>
+
+<p class=MsoNormal><b style='mso-bidi-font-weight:normal'>&lt;!-- #ICE
+ROLLBACK=</b><b style='mso-bidi-font-weight:normal'><span style='font-family:
+Courier'>`</span></b><i style='mso-bidi-font-style:normal'>transaction_name</i><b
+style='mso-bidi-font-weight:normal'><span style='font-family:Courier'>`</span>--&gt;</b></p>
+
+<h4>Description</h4>
+
+<p class=MsoNormal>The ROLLBACK keyword rolls back the transaction specified by
+<i style='mso-bidi-font-style:normal'>transaction_name</i>.</p>
+
+<p class=MsoNormal>The transaction name must have been defined previously using
+the TRANSACTION option of the SQL keyword.</p>
+
+<p class=MsoNormal>This is the default action for a session that times out.</p>
+
+<b style='mso-bidi-font-weight:normal'><span style='font-size:10.0pt;
+font-family:AvantGarde;mso-fareast-font-family:"Times New Roman";mso-bidi-font-family:
+"Times New Roman";mso-ansi-language:EN-US;mso-fareast-language:EN-US;
+mso-bidi-language:AR-SA'><br clear=all style='page-break-before:always'>
+</span></b>
+
+<h4>Example</h4>
+
+<p class=codefirst>&lt;!-- #ICE ROLLBACK=`myTransaction` --&gt;</p>
+
+<h4>See Also</h4>
+
+<p class=MsoNormal>COMMIT keyword, SQL keyword</p>
+
+</div>
+
+</body>
+
+</html>

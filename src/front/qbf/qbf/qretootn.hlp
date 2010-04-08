@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+With the RETRIEVE function, you can view rows in your JoinDef without changing
+them. You can invoke the RETRIEVE function either by specifying the 
+"-mretrieve" flag in your command line or by typing the "Retrieve" command 
+in the QBF Query Execution Phase menu.
+
+You are in the GO state of the QBF RETRIEVE function.  Rows from a previously
+entered query are being displayed for you to browse.
+
+From the RETRIEVE Function menu you may start a new query by choosing the 
+"Query" command or leave the RETRIEVE Function by selecting "End". 
+
+To summarize, the commands for the Retrieve Function are:
+
+    COMMAND             FUNCTION
+    -------             --------
+    Query               Leave the Retrieve Function and go to QUERY State
+                        to enter a new query.  All fields are cleared.
+    Help                Print this message.
+    End                 Leave the Retrieve Function. 

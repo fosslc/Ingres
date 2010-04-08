@@ -1,0 +1,73 @@
+## This makefile has been generated automatically by mwgenmake.
+
+## You may define the following variables:
+## RUN.dir         : the directory where you want the executables to go
+## COMPILE_OPTION  : can have the values: debug, optimized
+## APP_CFLAGS      : additional compilation flags for C compiler
+##                   and Resource compiler
+## APP_CCPPFLAGS   : additional compilation flags for C++ compiler
+## APP_LDFLAGS     : additional link flags (maybe specifying DLLs)
+## MWINIT_DEFINES  : list of -D<symbols> used to initialize
+##                   Mainwin in certain specific ways 
+## MWLOCALES       : list of country codes corresponding to the
+##                   resources you have prepared in the res subdirectory
+## MIDL_IDL        : The IDL file to be compiled with MIDL
+## MIDL_IID        : The iid file from MIDL (defualt: <idl_name>_i.c)
+## MIDL_PROXY      : The proxy implementation from MIDL (defualt: <idl_name>_p.c)
+## MIDL_HEADER     : The header with the interfaces and GUIDs (defualt: <idl_name>.h)
+## MIDL_DLLDATA    : The dll data for the proxy from MIDL (defualt: dlldata.c)
+## MIDL_TLB        : The type lib information from MIDL (defualt: <idl_name>.tlb)
+##                   this will be created in the {RUN.dir} directory.
+
+
+SOURCES =  \
+	256bmp.cpp \
+	addfilename.cpp \
+	addstructname.cpp \
+	authpage.cpp \
+	dp.cpp \
+	faildlg.cpp \
+	inplaceedit.cpp \
+	locpage.cpp \
+	newlistctrl.cpp \
+	options2page.cpp \
+	options3page.cpp \
+	options4page.cpp \
+	optionspage.cpp \
+	propsheet.cpp \
+	splash.cpp \
+	stdafx.cpp \
+	successdlg.cpp \
+	waitdlg.cpp
+
+PROG	  = dp
+
+CPP_OBJS  = ${SOURCES:%.C=%.o}
+CPP_OBJS := ${CPP_OBJS:%.cpp=%.o}
+CPP_OBJS := ${CPP_OBJS:%.cxx=%.o}
+OBJS	  = ${CPP_OBJS:%.c=%.o}
+SRCS      = ${SOURCES}
+
+WRESOURCE = dp.rc   # Windows resource
+TRESOURCE = ${PROG}.rxt   # program
+APP_LDFLAGS = -lcomdlg32 -lcomctl32 -lshell32 -lshlwapi
+
+# COMPILE_OPTION can be one of the following: debug, optimized
+ifndef COMPILE_OPTION
+COMPILE_OPTION = debug
+endif
+
+__cplusplus = true
+
+# MFC library related definitions.
+# Removing these definitions disables linking with MFC.
+# MFC_MODULE_TYPE can be one of the following: DLL, EXTENSION_DLL, EXE
+MFC_MODULE_TYPE=EXE
+MFC_LIB_ROOT=mfc400
+
+include $(MWHOME)/make.rules.simple
+
+ifeq (${MW_CLEARMAKE},no)
+include depend-$(MWCONFIG_NAME)
+endif
+

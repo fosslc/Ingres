@@ -1,0 +1,75 @@
+#
+# Makefile for NT
+#
+# History:
+#	23-jul-95 (tutto01)
+#		Created.
+#	15-jan-95 (tutto01)
+#		Added iiname.all, chineset.xlt and japanese.xlt
+#	25-nov-1996 (donc)
+#		Ported to OpenrROAD build scheme
+#	16-dec-1996 (donc)
+#	    Make XCOPY copy to a directory
+#	31-dec-1996 (donc)
+#	   Pull extraneous \ingres(es) out.
+#	14-jan-1997 (donc)
+#	    sync-up with integrated OpenROAD/OpenINGRES 2.0 build
+#	    environment
+#	11-mar-97 (sandyd)
+#	    Rewrote the dependencies.  Previously, the source files were
+#	    listed as targets and there were no dependents.  The action
+#	    statements did the right thing, so this makefile "worked" when
+#	    used with "-a".  But without the -a, nothing would ever happen.
+#	27-mar-1997 (donc)
+#	    gcccset.nam needs to be in charsets, not name directory.
+#
+
+# Build Environment
+CONFIG = wgl_32s
+SDK = $(W32_SDK)
+PATH = $(SDK)\bin;$(ING_BUILD)\bin;$(PATH)
+
+!include "$(ING_SRC)\tools\port\nmake\$(CONFIG).ini"
+
+XLT_TARGETS = \
+	$(ING_BUILD)\files\charsets\gcccset.xlt \
+	$(ING_BUILD)\files\charsets\chineset.xlt \
+	$(ING_BUILD)\files\charsets\japanese.xlt
+
+NAME_TARGETS = \
+	$(ING_BUILD)\files\name\iiname.all
+
+CHARSET_TARGETS = \
+	$(ING_BUILD)\files\charsets\gcccset.nam 
+
+
+all install: $(XLT_TARGETS) $(NAME_TARGETS) $(CHARSET_TARGETS)
+
+initial:
+
+objfiles:
+
+derive:
+
+prh:
+
+hdr:
+
+pc:
+
+exe:
+
+lib:
+
+
+$(XLT_TARGETS): $$(@F)
+	$(MKRDIR) $(ING_BUILD)\files\charsets
+	yapp -H## -Dint_wnt $(@F) > $@
+
+$(NAME_TARGETS): $$(@F)
+	$(MKRDIR) $(ING_BUILD)\files\name
+	$(COPY) $(@F) $(ING_BUILD)\files\name
+
+$(CHARSET_TARGETS): $$(@F)
+	$(MKRDIR) $(ING_BUILD)\files\charsets
+	$(COPY) $(@F) $(ING_BUILD)\files\charsets

@@ -1,0 +1,50 @@
+#
+# Jamfile file for front!utils!uf
+#
+#    20-Oct-2009 (hweho01)
+#      Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front utils uf ;
+
+IISUBSYS front utils uf ;
+
+IINOOPTIM listpck.qsc : dgi_us5 ;
+
+IIMSGHDR eruf.msg ;
+
+IIFORM help2frm.frm ;
+IIFORM helpform.frm ;
+IIFORM helptype.frm ;
+IIFORM helpvmax.frm ;
+IIFORM keysform.frm ;
+IIFORM uffile.frm ;
+IIFORM uflstfrm.frm ;
+IIFORM ufprint.frm ;
+
+File $(INGMSG)$(DFS)frsubtop.hlp : frsubtop.hlp ;
+File $(INGMSG)$(DFS)helpfrm.hlp : helpfrm.hlp ;
+File $(INGMSG)$(DFS)helpkeys.hlp : helpkeys.hlp ;
+File $(INGMSG)$(DFS)helpvals.hlp : helpvals.hlp ;
+File $(INGMSG)$(DFS)hhfld.hlp : hhfld.hlp ;
+File $(INGMSG)$(DFS)hhnofld.hlp : hhnofld.hlp ;
+File $(INGMSG)$(DFS)ufcdelet.hlp : ufcdelet.hlp ;
+File $(INGMSG)$(DFS)ufcdstry.hlp : ufcdstry.hlp ;
+File $(INGMSG)$(DFS)ufcend.hlp : ufcend.hlp ;
+File $(INGMSG)$(DFS)ufcquit.hlp : ufcquit.hlp ;
+File $(INGMSG)$(DFS)ufcremov.hlp : ufcremov.hlp ;
+File $(INGMSG)$(DFS)ufdatlen.hlp : ufdatlen.hlp ;
+File $(INGMSG)$(DFS)ufdatprc.hlp : ufdatprc.hlp ;
+File $(INGMSG)$(DFS)ufdatype.hlp : ufdatype.hlp ;
+File $(INGMSG)$(DFS)uffile.hlp : uffile.hlp ;
+File $(INGMSG)$(DFS)ufprint.hlp : ufprint.hlp ;
+
+
+IILIBRARY UFLIB : ufrtm.qsc ufhlptyp.qsc ufchkend.qsc
+        ufbrsave.qsc ufbrowse.qsc ufask.qsc tfedit.qsc stdprmpt.qsc
+        rthelp.qsc listpck.qsc listobj.qsc fetrunc.qsc fetnames.qsc
+        fetfscrl.qsc fetbsins.qsc fehvals.qsc fehkeys.qsc fehframe.qsc
+        fefrsinq.qsc feforms.qsc fefedit.qsc uffldhlp.qc ufdisply.c
+        ufaddfrm.c iifhelp.c iideffrm.c frmfmt.c fetsting.c
+        fehelp.c dyn.c ;
+
+IILIBRARY IMPFRAMELIBDATA : ufdata.c ;

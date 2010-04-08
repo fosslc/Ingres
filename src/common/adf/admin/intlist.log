@@ -1,0 +1,252 @@
+INGRES TERMINAL MONITOR -- Copyright (c) 1981, 1992 Ingres Corporation
+E_US0AC1 DROP: 'ilist' does not exist or is not owned by you.
+    (Thu Feb 27 11:54:02 1992)
+
+create table ilist (list intlist(5));
+help ilist;
+Name:                 ilist
+Owner:                ingres
+Created:              27-feb-1992 11:54:00     
+Type:                 user table
+Version:              ING6.0  
+
+Column Information:
+                                                                  Key
+Column Name                      Type       Length Nulls Defaults Seq
+list                             intlist         5  yes      no   
+
+
+
+/* Place some values into this table -- these are converted to intlist
+	from character datatypes */
+
+insert into ilist values ('{1,2,3,4,5}');
+insert into ilist values ('{100, 200, 400, 800}');
+insert into ilist values ('{-2, -3}');
+insert into ilist values ('{-2, 3}');
+
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+
+/* Also use the intlist function to convert a single integer into a list */
+insert into ilist values (intlist(1000));
+(1 row)
+
+/* Display the resulting list on the screen */
+
+select * from ilist;
+
++--------------------------------------------------+
+|list                                              |
++--------------------------------------------------+
+|{ 1, 2, 3, 4, 5}                                  |
+|{ 100, 200, 400, 800}                             |
+|{ -2, -3}                                         |
+|{ -2, 3}                                          |
+|{ 1000}                                           |
++--------------------------------------------------+
+(5 rows)
+/* Using the element function, print the first element in each list */
+
+select first = element(list, 1) from ilist;
+
+
++-------------+
+|first        |
++-------------+
+|            1|
+|          100|
+|           -2|
+|           -2|
+|         1000|
++-------------+
+(5 rows)
+/* Determine the length of each list using the INGRES length()
+** function which has been enhanced to determine the lengths of
+** integer lists 
+*/
+select length = length(list), list from ilist;
+
+
++------+--------------------------------------------------+
+|length|list                                              |
++------+--------------------------------------------------+
+|     5|{ 1, 2, 3, 4, 5}                                  |
+|     4|{ 100, 200, 400, 800}                             |
+|     2|{ -2, -3}                                         |
+|     2|{ -2, 3}                                          |
+|     1|{ 1000}                                           |
++------+--------------------------------------------------+
+(5 rows)
+/* do the same, selecting only lists of length 2 */
+
+select length = length(list), list from ilist where length(list) = 2;
+
+
++------+--------------------------------------------------+
+|length|list                                              |
++------+--------------------------------------------------+
+|     2|{ -2, -3}                                         |
+|     2|{ -2, 3}                                          |
++------+--------------------------------------------------+
+(2 rows)
+
+/* Find the list which has 100 as its first member */
+
+select * from ilist where element(list, 1) = 100;
+
++--------------------------------------------------+
+|list                                              |
++--------------------------------------------------+
+|{ 100, 200, 400, 800}                             |
++--------------------------------------------------+
+(1 row)
+
+/* Use keying based on lists */
+
+modify ilist to btree;
+(5 rows)
+/* With BTREE's, lists are stored in sorted order */
+
+select * from ilist;
+
++--------------------------------------------------+
+|list                                              |
++--------------------------------------------------+
+|{ -2, -3}                                         |
+|{ -2, 3}                                          |
+|{ 1, 2, 3, 4, 5}                                  |
+|{ 100, 200, 400, 800}                             |
+|{ 1000}                                           |
++--------------------------------------------------+
+(5 rows)
+/* Note that list is used as a key */
+/* Also note that spaces make no difference in the format */
+set qep;
+select * from ilist where list = '{1,2,3,4,   5}';
+
+
+********************************************************************
+
+QUERY PLAN 1,1, no timeout, of main query 
+
+            Proj-rest
+            Sorted(list)
+            Pages 1 Tups 0
+            D2 C0
+ /
+ilist
+B-Tree(list)
+Pages 4 Tups 5
+
+
+********************************************************************
+
++--------------------------------------------------+
+|list                                              |
++--------------------------------------------------+
+|{ 1, 2, 3, 4, 5}                                  |
++--------------------------------------------------+
+(1 row)
+set noqep;
+
+select * from ilist where list > '{1,2,3,4,        5}';
+
++--------------------------------------------------+
+|list                                              |
++--------------------------------------------------+
+|{ 100, 200, 400, 800}                             |
+|{ 1000}                                           |
++--------------------------------------------------+
+(2 rows)
+
+/* Find that row whose last element is 1000 */
+
+select * from ilist where element(list, length(list)) = 1000;
+
++--------------------------------------------------+
+|list                                              |
++--------------------------------------------------+
+|{ 1000}                                           |
++--------------------------------------------------+
+(1 row)
+
+/* Find the total of the lists -- this uses the new function total */
+
+select list, total = total(list) from ilist;
+
++--------------------------------------------------+-------------+
+|list                                              |total        |
++--------------------------------------------------+-------------+
+|{ -2, -3}                                         |           -5|
+|{ -2, 3}                                          |            1|
+|{ 1, 2, 3, 4, 5}                                  |           15|
+|{ 100, 200, 400, 800}                             |         1500|
+|{ 1000}                                           |         1000|
++--------------------------------------------------+-------------+
+(5 rows)
+/* Find those lists whose totals are >= 1000 */
+
+select list from ilist where total(list) >= 1000;
+
++--------------------------------------------------+
+|list                                              |
++--------------------------------------------------+
+|{ 100, 200, 400, 800}                             |
+|{ 1000}                                           |
++--------------------------------------------------+
+(2 rows)
+/* And, the others */
+
+select list from ilist where total(list) < 1000;
+
+
++--------------------------------------------------+
+|list                                              |
++--------------------------------------------------+
+|{ -2, -3}                                         |
+|{ -2, 3}                                          |
+|{ 1, 2, 3, 4, 5}                                  |
++--------------------------------------------------+
+(3 rows)
+
+/* Demonstrate use of the + operator to concatenate lists */
+
+update ilist
+
+	set list = list + '{2000, 3000}'
+
+		where list = '{1000}';
+select * from ilist;
+(1 row)
+
++--------------------------------------------------+
+|list                                              |
++--------------------------------------------------+
+|{ -2, -3}                                         |
+|{ -2, 3}                                          |
+|{ 1, 2, 3, 4, 5}                                  |
+|{ 100, 200, 400, 800}                             |
+|{ 1000, 2000, 3000}                               |
++--------------------------------------------------+
+(5 rows)
+
+/*
+** The locate() function determines the index of a element of a list
+** or zero if the element is not contained in the list.
+**
+** Find the list which contains the value 200
+*/
+
+select ind = locate(list, 200), list, value = element(list, locate(list, 200))
+	from ilist
+    where locate(list, 200) != 0;
+
++------+--------------------------------------------------+-------------+
+|ind   |list                                              |value        |
++------+--------------------------------------------------+-------------+
+|     2|{ 100, 200, 400, 800}                             |          200|
++------+--------------------------------------------------+-------------+
+(1 row)

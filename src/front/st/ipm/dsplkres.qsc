@@ -1,0 +1,681 @@
+/*
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+/* includes and defines */
+#include <compat.h>
+#include <si.h>
+#include <cs.h>
+#include <dbms.h>
+#include <fe.h>
+#include <pc.h>
+#include <lk.h>
+#include <lg.h>
+#include <er.h>
+#include <st.h>
+#include        <adf.h>
+#include        <ft.h>
+#include        <fmt.h>
+#include        <frame.h>
+#include "lists.h"
+#include "msgs.h"
+#include "dba.h"
+
+/*
+**  File: dsplkres.qc
+**
+**  Purpose - this file contains the routines which display the lock
+**	resource list form.  
+**
+**  This file contains:
+**	displkres() - displays the lock resource list form
+**	printlkres() - gets and formats the resource info for output
+**
+**  History
+**	2/21/89		tomt	created
+**	8/21/89		tomt	use INGDBA versions of LK structs.
+**				They are used in place of the
+**				equivalent LK structs when getting
+**				info from l_retrieve()
+**	9/19/89		tomt	moved ##ADDFORMS here and made form names
+**				    readonly c vars
+**	10/2/89		tomt	need to check if there are no db resources
+**				    and open up a db if necessary
+**	10/5/89		tomt	made various fixes to filtering and formatting
+**				code
+**	3/21/91		tomt	changed title on form to trim.  Removed
+**                              variable used to hold title.
+**      5/26/93 (vijay)
+**              include pc.h
+**	26-Aug-1993 (fredv)
+**		Included <st.h>.
+**      21-Sep-1993 (smc)
+**              Added <cs.h> for CS_SID.
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+**      27-Dec-1994 (canor01)
+**              Added function declaration for lock_itoa()
+**      24-apr-95 (nick) Bug #67888
+**              Added LK_CKP_TXN
+**	 1-nov-95 (nick)
+**		Change display method for LK_CONTROL - the key is the 
+**		entire rsb_key and can't be broken down.  
+**		Remove unused variable.
+**		Added LK_ROW.
+**		Added LK_AUDIT.
+**      22-nov-1996 (dilma04) 
+**		Added LK_PH_PAGE and LK_VAL_LOCK for row level locking
+**		project.
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+/*
+** Forward declarations
+*/
+VOID close_db();
+VOID open_db();
+STATUS get_rel_name();
+STATUS get_db_name();
+VOID printlkres();
+VOID morelkres();
+VOID lockresdet();
+VOID string_move();
+FUNC_EXTERN VOID tablefield_find();
+FUNC_EXTERN VOID get_lklgstats();
+#ifdef VMS
+    VOID showproc();
+#endif 
+char	*lock_itoa();
+
+##GLOBALREF	char	*Invalid[];
+
+/*
+** Declares
+*/
+##static char Fdisplkres[] = "fdisplkres";
+##static char Fmorelkres[] = "fmorelkres";
+
+/*
+** displkres() - this routine displays a form with lock resources
+**	
+** Input: none
+**
+** Output: none
+**
+** Returns: none
+**
+** History
+**	9/19/89		tomt	moved ##ADDFORMS here and made form names
+**				    readonly c vars
+**	10/1/89		tomt	integrated 6.3 changes
+**	11/1/95		nick	remove flag_file
+*/
+VOID
+displkres()
+{
+##  int		list_position, resource_count;
+    bool	e_xit = FALSE;
+##  char	colname[FE_MAXNAME + 1];
+    static bool	forms_added = FALSE;
+
+##  GLOBALREF int *fdisplkres;
+##  GLOBALREF int *fshowlkres;
+##  GLOBALREF int *fmorelkres;
+
+    /*
+    **  Determine if forms are added, if not addform them.  Also
+    **  don't add forms if output is being directed to a file
+    */
+    if (!forms_added)
+    {
+##	ADDFORM fdisplkres;
+##	ADDFORM fshowlkres;
+##	ADDFORM	fmorelkres;
+	forms_added = TRUE;
+    }
+
+    /* Display the form and get the information */
+##  DISPLAY Fdisplkres READ WITH STYLE = popup
+##	(STARTCOLUMN = 2, STARTROW = 2, BORDER = none)
+##  INITIALIZE
+##  {
+	/* Put the info in the tablefield */
+##	INITTABLE Fdisplkres #reslist READ (#value = c18, #invalid = c10,
+##	    #rsb_count = i4, #row_num = i2)
+	printlkres();	/* populate the tablefield */
+
+	/* get number of lock resource */
+##	INQUIRE_FRS TABLE Fdisplkres (resource_count = DATAROWS(#reslist))
+
+	/* get number of lock resource */
+##	INQUIRE_FRS TABLE Fdisplkres (resource_count = DATAROWS(#reslist))
+##  }
+##  ACTIVATE MENUITEM "Refresh":
+##  {
+	/* Get lock resource info from INGRES */
+##	MESSAGE "Loading lock information..."
+        get_lklgstats(GET_LOCKRES, (PTR) 0);
+        get_lklgstats(GET_LOCKLIST, (PTR) 0);
+##	CLEAR FIELD reslist
+	printlkres();	/* populate the tablefield */
+
+	/* get number of lock resource */
+##	INQUIRE_FRS TABLE Fdisplkres (resource_count = DATAROWS(#reslist))
+
+##  }
+##  ACTIVATE MENUITEM "More_Info":
+##  {
+	if (resource_count == 0)
+	{
+	    POP_MSG("There are no resources to get information on");
+##	    RESUME
+	}
+	morelkres();
+##  }
+##  ACTIVATE MENUITEM "Examine":
+##  {
+	if (resource_count == 0)
+	{
+	    POP_MSG("There are no resources to examine");
+##	    RESUME
+	}
+##	MESSAGE "Loading lock information..."
+##	GETROW Fdisplkres #reslist (list_position = #row_num)
+	lockresdet(list_position);
+
+##  }
+##  ACTIVATE MENUITEM "Find", frskey7:
+##  {
+	if (resource_count == 0)
+	{
+	    POP_MSG("There is nothing to find");
+##	    RESUME
+	}
+##      INQUIRE_FRS COLUMN Fdisplkres #reslist (colname = name)
+	tablefield_find();
+##	RESUME COLUMN #reslist colname
+##  }
+##  ACTIVATE MENUITEM "Help", frskey1:
+##  {
+	my_help("ipmdplkr.hlp", "Locks by Resource List");
+##  }
+##  ACTIVATE MENUITEM "End", frskey3:
+##  {
+##	BREAKDISPLAY
+##  }
+##  ACTIVATE MENUITEM "Quit", frskey2:
+##  {
+	e_xit = TRUE;		/* user wants to leave */
+##	MESSAGE " "		/* force cursor to bottom of screen */
+##	BREAKDISPLAY
+##  }
+
+    if (e_xit)			/* user wants to leave */
+    {
+	terminate(OK);
+    }
+    return;
+}
+
+/*
+** morelkres() - This routine displays the popup form which show the
+**	less needed resource info.
+**
+** History
+**	3/2/89		tmt	written
+**	10/1/89		tomt	integrated 6.3 changes
+**
+*/
+VOID
+morelkres()
+{
+/*
+** Declare Variables
+*/
+##  char	cinvalid[10], cvalue[19];
+##  int		rsbcount;
+
+##  DISPLAY Fmorelkres READ
+##  INITIALIZE
+##  {
+
+	/*
+	**   Get the values off of the tablefield on the base form and
+	**   place them on the current form
+	*/
+##	GETROW Fdisplkres #reslist (cinvalid = #invalid, cvalue = #value,
+##	   rsbcount = #rsb_count)
+##	PUTFORM Fmorelkres (#invalid = cinvalid, #value = cvalue,
+##	   #rsb_count = rsbcount)
+##	REDISPLAY
+##	SUBMENU
+##	ACTIVATE MENUITEM "End", frskey3:
+##	{
+##	    BREAKDISPLAY
+##	}
+##  }
+
+    return;
+}
+
+/*
+** Routine: printlkres() - this routine gets the resource information,
+**	formats it and puts it onto the screen.  If output is to a file,
+**	this routine writes it there instead.
+**
+** Inputs: none
+**
+** Output: data written to screen or file
+**
+** Returns: none
+**
+** History
+**	3/15/89		tmt	written
+**	10/1/89		tomt	integrated 6.3 changes
+**	10/2/89		tomt	need to check if there are no db resources
+**				    and open up a db if necessary
+**	10/5/89		tomt	made various fixes to filtering and formatting
+**				code
+**	10 Aug 1991	jpk	modified to handle display of new lock types;
+**				makes it more robust as well.
+**      24/4/95         nick    Added LK_CKP_TXN
+**	11/1/95		nick	Change display of LK_CONTROL.
+**				Added LK_ROW
+**				Added LK_AUDIT
+**      4-oct-1995      canor01 close open databases on exit (B71791)
+**	22-nov-1996	dilma04 Added LK_PH_PAGE and LK_VAL_LOCK for row 
+**	                        level loking project.
+**      16-oct-1998     stial01 Correctly print last element of Lock_type array
+**      14-dec-1998     nanpr01 Correctly print Value locks.
+**	05-Mar-2002 (jenjo02)
+**	    Added LK_SEQUENCE
+**	17-Aug-2007 (kibro01) b118930
+**	    If the owner or tablename is a hashed value (i.e. the string
+**	    was >8 characters for username or >12 characters for tablename)
+**	    then simply print hashes so it doesn't look like the locklist is
+**	    corrupted - the values in key[n] are integers rather than a string.
+*/
+VOID
+printlkres()
+{
+##  int		counter;
+##  char	id[HEXID_SIZE + 1], lock_tp[15];
+##  char	value[17], ckey[200], tempbuf[25];
+##  char	tab_name[FE_MAXNAME + 1], oldtab_name[FE_MAXNAME + 1];
+##  char	crtblname[13], crownname[9];
+    char	dbbuf[FE_MAXNAME + 1];		/* for printing dbname */
+##  char	*dbname = dbbuf;
+    char	olddbname[FE_MAXNAME + 1];
+    bool	db_name_changed = FALSE;	/* flags unexpected change */
+    bool	reset = TRUE;		/* always start at list begin */
+    i4		lock_catagory;
+    LK_RSB_INFO *rsb;
+##  char	gr_str[5];
+##  i4	rsb_count;
+##  char	cv_str[5];
+##  i4	rsb_invalid;
+
+    /* Get the Info */
+    dbbuf[0] = EOS;
+    olddbname[0] = EOS;
+    counter = 0;
+    while ((rsb = (LK_RSB_INFO *)l_retrieve(RESINFO, 0, &reset)) != NULL) 
+    {
+	/*
+	** Filter out locks that the user does NOT want printed.  If they asked
+	** for certain lock types (table, database, etc...) we check now.
+	*/
+	counter++;	/* keep track of element number */
+	if (flag_locktype && (ing_locktype != rsb->rsb_key[0]))
+	{
+	    continue;
+	}
+
+	/* do formatting for display */
+	STprintf(id, "%x", rsb->rsb_id);
+	STprintf(value, "%x%08x", rsb->rsb_value[0], rsb->rsb_value[1]);
+	if (rsb->rsb_key[0] <= Lock_type_size)
+	    STcopy(Lock_type[rsb->rsb_key[0]], lock_tp);
+	else						/* new lock type! */
+	    STprintf(lock_tp, "<%d>", rsb->rsb_key[0]);
+
+        lock_catagory = getlockcat(rsb->rsb_key[0]); /* get general catagory */
+	switch(rsb->rsb_key[0]) {
+	    case LK_DATABASE:
+	    case LK_SV_DATABASE:
+	    case LK_OWNER_ID:
+	    case LK_JOURNAL:
+	    case LK_DB_TEMP_ID:
+	    case LK_CONFIG:
+	    case LK_OPEN_DB:
+	    case LK_CKP_CLUSTER:
+	    case LK_BM_DATABASE:
+
+		/* 
+		** Open the next database, if necessary, because you are going
+		** to have to print out relation name.  If the user wants only
+		** DB locks, do NOT open up databases
+		*/
+		if (rsb->rsb_key[0] == LK_BM_DATABASE)
+		    (VOID)get_db_name(dbname, rsb->rsb_key[1]);
+		else
+		    STcopy((char *) &rsb->rsb_key[1], dbname);
+
+		STprintf(ckey, "%-32s", dbname);
+		if (!(flag_locktype &&
+		    (getlockcat(ing_locktype) == DATABASE_LOCK)))
+		{
+		    if (STcompare(olddbname, dbname) != 0)
+		    {
+			close_db();
+			open_db(dbname);	/* open a database */
+		        STcopy(dbname, olddbname);
+		    }
+		}
+		break;
+
+	    case LK_CONTROL:
+		string_move(tempbuf, (PTR) &rsb->rsb_key[1], LK_KEY_LENGTH);
+		tempbuf[LK_KEY_LENGTH] = EOS;	/* null terminate */
+		STprintf(ckey, "SYS CONTROL: %s", tempbuf);
+		break;
+
+	    case LK_TABLE:
+	    case LK_BM_TABLE:
+	    case LK_SV_TABLE:
+	    case LK_EXTEND_FILE:
+	    case LK_TBL_CONTROL:
+
+		/* 
+		** Open the next database, if necessary, because you are going
+		** to have to print out relation name.  Ignore if user wants
+		** only database locks.
+		*/
+		(VOID)get_db_name(dbname, rsb->rsb_key[1]);
+		if (STcompare(olddbname, dbname) != 0) /* different */
+		{
+		    close_db();
+		    open_db(dbname);	/* open a database */
+		    STcopy(dbname, olddbname);
+		    db_name_changed = TRUE;
+		}
+		else
+		    db_name_changed = FALSE;
+
+		(VOID)get_rel_name(tab_name, rsb->rsb_key[2], rsb->rsb_key[3]);
+
+		STcopy(tab_name, oldtab_name);
+		if (db_name_changed)
+		{
+		    STprintf(ckey, "%s TABLE: %s", dbname, tab_name);
+		}
+		else
+		{
+		    STprintf(ckey, "     %-32s", tab_name);
+		}
+		break;
+
+	    case LK_PAGE:
+	    case LK_BM_PAGE:
+            case LK_PH_PAGE:	
+		/* 
+		** Open the next database, if necessary, because you are going
+		** to have to print out relation name.  Ignore if user wants
+		**  only database locks.
+		*/
+		(VOID)get_db_name(dbname, rsb->rsb_key[1]);
+		if (STcompare(olddbname, dbname) != 0) /* different */
+		{
+		    close_db();
+		    open_db(dbname);	/* open a database */
+		    STcopy(dbname, olddbname);
+		    db_name_changed = TRUE;
+	        }
+		else
+		    db_name_changed = FALSE;
+
+		(VOID)get_rel_name(tab_name, rsb->rsb_key[2], rsb->rsb_key[3]);
+		if (!STcompare(tab_name, oldtab_name))
+		{ /* only print page #*/
+		    STprintf(ckey, "%44d", rsb->rsb_key[4]);
+		}
+		else if (db_name_changed)
+		{
+		    STprintf(ckey, "%s TABLE: %s PAGE: %d", dbname,
+			tab_name, rsb->rsb_key[4]);
+		}
+		else
+		{
+		    STprintf(ckey, "     %-32s %6d", tab_name, rsb->rsb_key[4]);
+		}
+		STcopy(tab_name, oldtab_name);	/* for next time */
+		break;
+
+	    case LK_AUDIT:
+		if (rsb->rsb_key[1] == SXAS_LOCK)
+		{
+		    if (rsb->rsb_key[2] == SXAS_STATE_LOCK)
+			STprintf(ckey, "AUDIT: State(primary)");
+		    else if (rsb->rsb_key[2] == SXAS_SAVE_LOCK)
+			STprintf(ckey, "AUDIT: State(save)");
+		    else
+			STprintf(ckey, "AUDIT: State(oper=%d)", 
+				rsb->rsb_key[2]);
+		}
+		else if (rsb->rsb_key[1] == SXAP_LOCK)
+		{
+		    if (rsb->rsb_key[2] == SXAP_SHMCTL)
+			STprintf(ckey, 
+			    "AUDIT: Physical_layer(shmctl, node=%x)",
+			    rsb->rsb_key[3]);
+		    else if (rsb->rsb_key[2] == SXAP_ACCESS)
+			STprintf(ckey, "AUDIT: Physical_layer(access)");
+		    else if (rsb->rsb_key[2] == SXAP_QUEUE)
+			STprintf(ckey,
+			    "AUDIT: Physical_layer(queue, node=%x)",
+			    rsb->rsb_key[3]);
+		    else
+			STprintf(ckey, "AUDIT: Physical_layer(oper=%d)",
+			    rsb->rsb_key[2]);
+		}
+		else
+		{
+		    STprintf(ckey, "AUDIT: TYPE=%d, OPER=%d", rsb->rsb_key[1],
+			rsb->rsb_key[2]);
+		}
+		break;
+
+	    case LK_ROW:
+		(VOID)get_db_name(dbname, rsb->rsb_key[1]);
+		if (STcompare(olddbname, dbname) != 0) /* different */
+		{
+		    close_db();
+		    open_db(dbname);	/* open a database */
+		    STcopy(dbname, olddbname);
+		    db_name_changed = TRUE;
+	        }
+		else
+		{
+		    db_name_changed = FALSE;
+		}
+
+		(VOID)get_rel_name(tab_name, rsb->rsb_key[2], rsb->rsb_key[3]);
+		if (!STcompare(tab_name, oldtab_name))
+		{ /* only print page # and row # */
+		    STprintf(tempbuf, "%d[%d]", rsb->rsb_key[4],
+			rsb->rsb_key[5]);
+		    STprintf(ckey, "%44s", tempbuf);
+		}
+		else if (db_name_changed)
+		{
+		    STprintf(ckey, "%s TABLE: %s PAGE: %d ROW: %d", dbname,
+			tab_name, rsb->rsb_key[4], rsb->rsb_key[5]);
+		}
+		else
+		{
+		    STprintf(tempbuf, "%d[%d]", rsb->rsb_key[4],
+			rsb->rsb_key[5]);
+		    STprintf(ckey, "     %-26s %12s", tab_name, tempbuf);
+		}
+		STcopy(tab_name, oldtab_name);	/* for next time */
+		break;
+
+	    case LK_SS_EVENT:
+		STprintf(ckey, "SERVER = %x,[%x,%x])",
+		    rsb->rsb_key[1], rsb->rsb_key[2], rsb->rsb_key[3]);
+		break;
+
+	    case LK_EVCONNECT:
+		STprintf(ckey, "Server PID = %d", rsb->rsb_key[1]);
+		break;
+
+	    case LK_CKP_TXN:
+		if ((rsb->rsb_key[3] != 0) && (rsb->rsb_key[1] != 0))
+		{
+		    string_move(crtblname, (PTR) &rsb->rsb_key[3], 16);
+		    string_move(crownname, (PTR) &rsb->rsb_key[1], 8);
+		    crtblname[12] = crownname[8] = EOS;
+		}
+		else
+		{
+		    crtblname[0] = crownname[0] = EOS;
+		}
+		STprintf(tempbuf, "%s-%s", crtblname, crownname);
+		STzapblank(tempbuf, tempbuf);
+		STprintf(ckey, "     NAME = ('%s')", tempbuf);
+		break;
+
+	    case LK_CKP_DB:
+	    case LK_CREATE_TABLE:
+	    case LK_SEQUENCE:
+
+		/* 
+		** Open the next database, if necessary, because you are going
+		** to have to print out relation name.  Ignore if user wants
+		** only database locks.
+		*/
+		(VOID)get_db_name(dbname, rsb->rsb_key[1]);
+		if (STcompare(olddbname, dbname) != 0) /* different */
+		{
+		    close_db();
+		    open_db(dbname);	/* open a database */
+		    STcopy(dbname, olddbname);
+		    db_name_changed = TRUE;
+	        }
+		else
+		{
+		    db_name_changed = FALSE;
+		}
+
+		/*
+		** The values needed for display are stored as non null
+		** terminated strings.  That's handled here.  Also, sometimes
+		** the pointers are null, so we check that also
+		*/
+		if ((rsb->rsb_key[4] != 0) && (rsb->rsb_key[2] != 0))
+		{
+		    /* If the top byte of the key is 0, that means this is
+		    ** a hashed value - see HSH_char for the algorithm.
+		    ** (HSH_char always leaves the top byte set to 0)
+		    ** There is nothing useful we can print here since we
+		    ** cannot get back to the name (kibro01) b118930
+		    */
+		    if ((rsb->rsb_key[4] & 0xff000000) == 0)
+			string_move(crtblname, "############", 12);
+		    else
+			string_move(crtblname, (PTR) &rsb->rsb_key[4], 12);
+		    if ((rsb->rsb_key[2] & 0xff000000) == 0)
+			string_move(crtblname, "########", 8);
+		    else
+			string_move(crownname, (PTR) &rsb->rsb_key[2], 8);
+		    crtblname[12] = crownname[8] = EOS;
+		}
+		else
+		{
+		    crtblname[0] = crownname[0] = EOS;
+		}
+		STprintf(tempbuf, "%s-%s", crtblname, crownname);
+		STzapblank(tempbuf, tempbuf);
+
+		if (db_name_changed)
+		{
+		    STprintf(ckey, "%s, NAME = ('%s')", dbname, tempbuf);
+		}
+		else
+		{
+		    STprintf(ckey, "     NAME = ('%s')", tempbuf);
+		}
+		break;
+ 
+	    case LK_BM_LOCK:
+		string_move(tempbuf, (PTR) &rsb->rsb_key[1], HEXID_SIZE);
+		tempbuf[HEXID_SIZE] = EOS;	/* null terminate */
+		STprintf(ckey, "Buffer Manager = '%s'", tempbuf);
+		d_print(ckey);
+		break;
+
+            case LK_VAL_LOCK:
+                (VOID)get_db_name(dbname, rsb->rsb_key[1]);
+                (VOID)get_rel_name(tab_name, rsb->rsb_key[2], rsb->rsb_key[3]);
+                STprintf(ckey, "%s, %s, VALUE: <%d,%d,%d>",
+                    dbname, tab_name, rsb->rsb_key[4], rsb->rsb_key[5],
+                    rsb->rsb_key[6]);
+                break;
+
+	    default:
+		STprintf(ckey, "%d, (%x,%x,%x,%x,%x,%x)",
+		    rsb->rsb_key[0], rsb->rsb_key[1],
+                    rsb->rsb_key[2], rsb->rsb_key[3],
+		    rsb->rsb_key[4], rsb->rsb_key[5], rsb->rsb_key[6]); 
+	}
+
+	/*
+	** If user wants to view a specific table, filter out all other locks
+	** here. If the current table is not the one we want, don't put it
+	** into the tblfld. Note this is a special case of specifying a
+	** specific locktype (table) except we let all locks under it pass too
+	*/
+	if (flag_table &&
+	    (((lock_catagory != TABLE_LOCK) && (lock_catagory != PAGE_LOCK) &&
+              (lock_catagory != ROW_LOCK) && (lock_catagory != VALUE_LOCK)) || 
+	    (STcompare(ptr_tablename, tab_name) != 0)))
+	    {
+		continue;
+	    }
+
+	/*
+	** This checks whether or not the user wants null locks printed or not.
+	** flag_nl is set when null locks are to be printed.
+	*/
+	if (!flag_nl && (rsb->rsb_convert == 0) && (rsb->rsb_grant == 0))
+	{
+	    continue;
+	}
+
+	STcopy(lock_itoa(rsb->rsb_grant), gr_str);
+	STcopy(lock_itoa(rsb->rsb_convert), cv_str);
+
+	rsb_invalid = rsb->rsb_invalid;
+	rsb_count = rsb->rsb_count;
+
+##	LOADTABLE Fdisplkres #reslist (#id = id, 
+##		#grant = gr_str,
+##		#convert = cv_str,
+##	    	#value = value, #invalid = Invalid[rsb_invalid],
+##	    	#key = ckey, #row_num = counter, #lock_type = lock_tp,
+##	    	#rsb_count = rsb_count)
+    }
+
+    close_db();
+
+    return;
+}

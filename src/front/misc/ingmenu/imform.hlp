@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The INGRES/MENU forms menu allows you to either create and edit forms,
+or use the forms based query tool.
+
+The selections are:
+
+	Edit-Forms	Displays a list of stored forms in the database
+			for running or editing using the VISUAL-FORMS-
+			EDITOR.  You can also create and delete forms
+			using this selection.
+
+	Query-By-Forms	Use the QUERY-BY-FORMS tool to query and update
+			Join Definitions, QBFNames or tables in the 
+			database.
+
+The following additional menu items are available:
+
+	Help		Show this help text.
+
+	End		Return to the main menu of INGRES/MENU.
+
+	Quit		Leave INGRES/MENU.

@@ -1,0 +1,16 @@
+#
+# Jamfile file for front!utils!feds
+#
+
+SubDir ING_SRC front utils feds ;
+
+IISUBSYS front utils feds ;
+
+IILIBRARY FEDSLIB : dsdate.roc dsbool.roc dsstore.c 
+        dsmisc.c dsload.c ;
+
+IILIBRARY IMPFRAMELIBDATA : dschar.roc dsf8.roc dsfdtype.c 
+	dsfield.c dsfldcol.c dsfldhdr.c dsfldval.c dsframe.c
+	dsi4.roc dsregfld.c dstblfld.c dstrim.c dsstring.roc 
+	dsglob.c ;
+

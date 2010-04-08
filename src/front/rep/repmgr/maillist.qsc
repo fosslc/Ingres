@@ -1,0 +1,253 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <cm.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <adf.h>
+# include <fmt.h>
+# include <ft.h>
+# include <frame.h>
+# include <runtime.h>
+# include <uf.h>
+# include <ug.h>
+# include <stdprmpt.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	maillist.qsc - error mail list
+**
+** Description:
+**	Defines
+**		mail_list	- error mail list
+**		load_tblfld	- load table field
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on mailcat.osq in replicator library.
+**	14-nov-97 (joea)
+**		Correct call to IIUGerr.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF
+##char	RMdb_display[];
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmmail_catalog"),
+##	*tf_name = ERx("iitf"),
+##	*fmail_addr = ERx("mail_username"),
+##	*fold_mail_addr = ERx("old_mail_addr");
+
+
+static STATUS load_tblfld(void);
+
+
+/*{
+** Name:	mail_list	- error mail list
+**
+** Description:
+**	Update Error Mail List
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+mail_list()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	char	mail_addr[81];
+##	char	old_mail_addr[81];
+	EXEC SQL END DECLARE SECTION;
+##	i4	rownumber;
+##	i4	rowstate;
+##	i4	chng;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name fill (
+##		fold_mail_addr = varchar(80) not null)
+	if (load_tblfld() != OK)
+		return;
+
+##	display form_name fill
+##	initialize (db = RMdb_display)
+##	activate menuitem ERget(FE_Save) (expl = ERget(F_FE0117_SaveExpl)),
+##		FRSkey8
+##	{
+##		inquire_frs form (chng = change)
+		if (!chng)
+		{
+			IIUGerr(E_RM0029_No_changes_to_save, 0, 0);
+##			resume
+		}
+
+##		validate
+		IIUGmsg(ERget(F_RM0009_Saving), FALSE, 0);
+
+		/* Process deleted rows first. */
+##		unloadtable form_name tf_name (rowstate = _STATE,
+##			rownumber = _RECORD, old_mail_addr = fold_mail_addr)
+##		{
+			if (rowstate == stDELETE)
+			{
+				/*
+				** delete row using hidden field key in where
+				** clause.
+				*/
+				EXEC SQL REPEATED DELETE FROM dd_mail_alert
+					WHERE	mail_username = :old_mail_addr;
+				if (RPdb_error_check(DBEC_SINGLE_ROW, NULL)
+					!= OK)
+				{
+					EXEC SQL ROLLBACK;
+					IIUGerr(E_RM002A_Error_saving_tf,
+						UG_ERR_ERROR, 0);
+##					scroll form_name tf_name to rownumber
+##					resume field tf_name
+				}
+			}
+##		}
+
+		/* process all but Deleted rows */
+##		unloadtable form_name tf_name (rowstate = _STATE,
+##			rownumber = _RECORD, mail_addr = fmail_addr,
+##			old_mail_addr = fold_mail_addr)
+##		{
+			if (rowstate == stNEW)
+				EXEC SQL REPEATED INSERT INTO dd_mail_alert (
+						mail_username)
+					VALUES (:mail_addr);
+			else if (rowstate == stCHANGE)
+				/*
+				** Update row using hidden version of key field
+				** in where clause.
+				*/
+				EXEC SQL REPEATED UPDATE dd_mail_alert
+					SET	mail_username = :mail_addr
+					WHERE	mail_username = :old_mail_addr;
+			if (rowstate == stNEW || rowstate == stCHANGE)
+			{
+				if (RPdb_error_check(DBEC_SINGLE_ROW, NULL)
+					!= OK)
+				{
+					EXEC SQL ROLLBACK;
+					IIUGerr(E_RM002A_Error_saving_tf,
+						UG_ERR_ERROR, 0);
+##					scroll form_name tf_name to rownumber
+##					resume field tf_name
+				}
+			}
+##		}
+
+		EXEC SQL COMMIT;
+		if (RPdb_error_check(0, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM000A_Error_committing, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+##		set_frs form (change = 0)
+		IIUGmsg(ERget(F_RM0070_Changes_saved), FALSE, 0);
+		PCsleep(2000);
+
+##		clear field tf_name
+		if (load_tblfld() != OK)
+##			breakdisplay
+##	}
+
+##	activate menuitem ERget(F_RM0032_RowDelete) (activate = 0,
+##		validate = 0, expl = ERget(F_RM0033_RowDelete_expl)), FRSkey14
+##		(activate = 0, validate = 0)
+##	{
+##		deleterow form_name tf_name
+##		set_frs form (change = 1)
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmmaills.hlp"), ERget(F_RM0071_Update_error_mail));
+##	}
+
+##	activate menuitem ERget(FE_End) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0102_ExplEnd)), FRSkey3 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs form (chng = change)
+		if (chng && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM000E_End_no_save, S_RM000F_Yes_end,
+			S_RM0010_No_end, ERx(""), TRUE) != CONFCH_YES)
+##			resume
+
+##		breakdisplay
+##	}
+##}
+
+
+static STATUS
+load_tblfld()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	char	mail_addr[81];
+	EXEC SQL END DECLARE SECTION;
+
+	IIUGmsg(ERget(F_RM001C_Selecting_data), FALSE, 0);
+	EXEC SQL SELECT mail_username
+		INTO	:mail_addr
+		FROM	dd_mail_alert
+		ORDER	BY 1;
+	EXEC SQL BEGIN;
+##		loadtable form_name tf_name (fmail_addr = mail_addr,
+##			fold_mail_addr = mail_addr)
+	EXEC SQL END;
+	if (RPdb_error_check(DBEC_ZERO_ROWS_OK, NULL) != OK)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return (FAIL);
+	}
+	EXEC SQL COMMIT;
+
+	return (OK);
+##}

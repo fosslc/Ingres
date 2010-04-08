@@ -1,0 +1,51 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+NODES AND LOCAL DATABASES
+
+This form displays node and local database information about the current 
+distributed database. The LISTOBJ command displays the Distributed Database
+Contents screen. The LDBATTR command displays a popup window with local 
+database attribute information. To test the accessibility of
+the nodes of the current distributed database, use the TESTNODE
+command. To test the accessibility of local databases, use the TESTLDB 
+command. The LDBATTR, TESTNODE, and TESTLDB commands apply to the node/ldb
+currently highlighted in the Nodes/Local Databases table. The SQL command 
+invokes the Ingres/ISQL utility on the current distributed database, and 
+the TABLES command invokes the Ingres/TABLES utility on the current 
+distributed database.  The TOP/BOTTOM commands move the cursor to the 
+top/bottom of the Nodes/Local Databases table respectively. The FIND command 
+searches for a specified string within the Nodes/Local Databases table. The 
+HELP command displays this screen, and the END command returns to the STARVIEW 
+main menu.
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------         --------
+	ListObj		Display the Distributed Database Contents screen.
+
+	LDBAttr		Display the attributes of the selected local
+			database in a popup window.
+
+	TestNode	Test the accessibility of nodes.
+
+	TestLDB		Test the accessibility of local databases.
+
+	SQL	  	Invoke Ingres/ISQL on the current distributed 
+                        database.
+
+	Tables		Invoke Ingres/Tables on the current distributed 
+			database.
+
+	Top		Move the cursor to the top of the Nodes/Local Databases
+			table.
+
+	Bottom		Move the cursor to the bottom of the Nodes/Local 
+			Databases table.
+
+	Find		Search for a specified string of characters
+			within the Nodes/Local Databases table.
+
+	Help		Display this screen.
+
+	End		Exit to STARVIEW main menu.
+

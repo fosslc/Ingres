@@ -1,0 +1,1900 @@
+%{
+
+/* %L merge <esqlgram.my> -- get the master grammar */
+/* %L fake begin */
+# include <esqlgram.my>		-- fake out MING
+/* %L fake end */
+
+/*
+** Copyright (c) 2004 Ingres Corporation 
+** All Rights Reserved.
+*/
+
+/* %L language begin 
+** Define EQ_X_LANG where X is EUC or PL1 for the symbol table
+** Also define the real host lang (if different) for gr_mechanism
+*/
+# define	EQ_EUC_LANG
+# define	EQ_FOR_LANG
+/* %L language end */
+
+/* This file must pass a YACC and compilation test only */
+# include 	<compat.h>
+# include	<si.h>
+# include 	<st.h>
+/* Files from the SQL translator not needed for test */
+/* Files from EQUEL preprocessor */
+# include	<equel.h>
+# include	<eqlang.h>
+# include	<equtils.h>
+# include	<eqsym.h>
+# include	<eqgen.h>
+# include	<eqstmt.h>
+# include	<eqscan.h>
+# include	<ereq.h>
+# include	<ere1.h>
+# include	<eqgr.h>
+
+# include	<eqesql.h>
+# include       <er.h>
+%}
+
+/*
++* Filename:	fortransq.y
+** Purpose:	Defines FORTRAN dependent grammar for ESQL
+**
+** Defines:	yyparse		- YACC parser for FORTRAN dependent rules
+**		gr_mechanism	- Interface between grammar and the 'outside'.
+** Notes:
+-*		Can only be run when 'eqmerged' with the main ESQL grammar.
+**
+** Language dependent grammar for the PL1 statements that can be embedded in 
+** ESQL.  Basically parses declarations and usages of variables and constants.
+**
+**	1. We support all types.
+**	2. Indirection in the middle of structure references is not checked, 
+**	   only the indirection of the last member.
+**	
+**
+** History:
+**	17-may-1985	- written for VMS EQUEL/FORTRAN (mrw)
+**	15-may-1986	- modified for VMS ESQL/FORTRAN (bjb)
+**	09-may-1989	- added DG's file suffixes (sylviap)
+**	22-jun-1990	- Add decimal support. (teresal)
+**	14-feb-1991	- Added "double precision" as a valid data
+**			  type for SQL - bug 35410. (teresal)
+**	16-jul-92	- Apollo no longer needs .ftn extension (sweeney)
+**	24-sep-1992	- Fixed bug where incorrect code was generated for
+**			  statement following a DECLARE TABLE within declare
+**			  section.  Set flag to suppress printing. (lan)
+**      02-oct-1992 (larrym)
+**              grammer now sets a global (sc_hostvar = TRUE) when it's
+**              scanning a host variable reference.  Setting this variable
+**              to TRUE causes the scanner (scword) not to do keyword
+**              lookups.  The result of this is that you can now use reserved
+**              words in any element of a host variable reference.  See note
+**              at beginning of HOST VARIABLE USAGE section for more info.
+**	14-oct-1992 (lan)
+**		Also generate second word if present to line directive if mode
+**		is GR_sNODB or GR_sFORMS.
+**      16-dec-1992 (larrym)
+**              Fdec_var now checks (case sensitive) the name of the hostvar
+**              for SQLCOD.  If present, set's state flag EQ_SQLCODE.  This
+**              can be overridden by the -nosqlcode flag.  If that flag is
+**              set, then we ignore SQLCOD.  Also Fdec_var checks (case
+**              sensitive) the name of the hostvar for SQLSTATE.  If present,
+**              set's state flag EQ_SQLSTATE.
+**	08-Feb-1993	- Added ifdef's for hp9_mpe (MPE/iX) in
+**			  gr_mechanism(). (fredb)
+**	15-jun-1993 (larrym)
+**	    Fixed bug where we generated SQLCODE.  Since this is fortran,
+**	    we're susposed to generate SQLCOD.
+**	26-jul-1993 (lan)
+**	    Added GR_s4GL for EXEC 4GL.
+**	12-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**	22-feb-1994 (geri)
+**	    Fixed bug 59452: generate E_EQ050D warning when selecting
+**	    into a structure.element when using the -wsql=entry_sql92 option
+**	28-mar-1994 (larrym)
+**	    fixed bug 60322.  Now checks for SQLSTATE or SQLSTA.
+**	19-apr-1994 (geri)
+**	    Bug 54017 - Changed DECLARE TABLE within BEGIN/END DECLARE
+**	    SECTION to handle delimited ids.
+**	25-apr-1994 (johnst)
+**		Bug #59972
+**		Changed type of generic args in gr_mechanism to PTR to avoid
+**		truncations; cast them to the appropriate types when used in
+**		expressions to avoid compiler warnings.
+**      21-mar-94 (smc) Bug #60829
+**          Added #include header(s) required to define types passed
+**          in prototyped external function calls.
+**      23-apr-96 (thoda04) 
+**          gen_host() takes 2 parms, not 1 for NEWLINE generation.
+**          symDcEuc() in Fuse_hostvar rule was also missing last parm.
+**	20-apr-00 (inkdo01)
+**	    Added tempgr to pass "return" info during exec procedure parse.
+**
+** Conflicts with the main grammar:
+** 1. The left paren that may be used as an array subscript or an SQL
+**	left paren causes a shift-reduce conflict.  This will be no problem
+**	at runtime as the semantics explicitly back up the left paren if
+**	there is no array.
+** 2. Because of the changes to allow host variables to be reserved
+**    words (see HOST VARIABLE USAGE section for details) a
+**    new rule for host variable reference was introduced that
+**    allows a tNAME to follow a the old rule for a host variable
+**    reference.  In other words, a hostvar can now be a hostvar
+**    or a hostvar tNAME.  This conflicts with cases where the
+**    tNAME might be part of another rule.  The default behavior
+**    is correct.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	2-may-01 (inkdo01)
+**	    Added gr_rcnt for row procs.
+**	30-apr-2003 (devjo01)
+**	    Tighten up test for SQLSTATE variable. b93910.
+*/
+
+
+/* Special L tokens required by G and scanner to fill tok_special */
+%token	tHOSTCODE	/* Host language */
+	tCOMMENT	/* Comment token to trigger skipping comments */
+	tQUOTE		/* Triggers reading strings */
+	tTERMINATE	/* Statement terminators */
+	tEOFINC		/* Unexpected end of included file */
+
+/* %L tokens begin - FORTRAN tokens to import into G */
+
+/* Extra FORTRAN punctuation */
+
+%token	tFPERCENT	/* Prefix for FILL word on structures */
+
+/* Special FORTRAN tokens */
+%token
+	tFBYTE		/* BYTE keyword */
+	tFCHAR		/* CHARACTER keyword */
+	tFCOMPLEX	/* COMPLEX keyword */
+	tFDOUBLE	/* DOUBLE keyword */
+	tFINTEGER	/* INTEGER keyword */
+	tFLOGICAL	/* LOGICAL keyword */
+	tFMAP		/* MAP keyword */
+	tFPARAM		/* PARAMETER keyword */
+	tFPRECISION	/* PRECISION keyword */
+	tFREAL		/* REAL keyword */
+	tFRECORD	/* RECORD keyword */
+	tFSTRUCT	/* STRUCTURE keyword */
+
+/* %L tokens end */
+	 
+%nonassoc	tUNARYOP
+
+%start		Fprogram
+
+%{
+
+/* Structure from main grammar for test compilation */
+struct esq_struct {
+    i4		*csrroot;	/* Really an SQNODE */
+    i4		flag;		/* See flag bits below */
+    i4		level;		/* Sub-query nesting level */
+    i4		inc;		/* Include SQLCA used */
+    char	sbuf[ SC_STRMAX ];  /* Extra string working buffer */
+};
+GLOBALDEF struct esq_struct _esq_struct ZERO_FILL;
+GLOBALDEF struct esq_struct *esq = &_esq_struct;
+
+/* %L locals begin - local variables and gr structure for FORTRAN */
+
+# include	<eqf.h>
+# include	<ere1.h>
+
+struct	gr_state {
+	/* Members known to both G and L */
+	SYM	*gr_sym;
+	char	*gr_id;		/* Last full name used */
+	i4	gr_type;
+	i4	gr_flag;	/* Certain state information */
+	i4	gr_func;	/* I/O Function constant */
+	i4	gr_mode;	/* Mode of statement before entering block */
+	i4	gr_adjective;	/* Block modifier */
+	SYM	*gr_nlsym;	/* Symtab pointer to indicator var */
+	char	*gr_nlid;	/* Id of indicator var */
+	i4	gr_nltype;	/* Type of indicator var */
+	SYM	*gr_null;	/* Generic null symbol (for "= null" assgnmts */
+	i4      gr_rcnt;        /* count of result row entries (for RPPs) */
+
+	/* Add L (FORTRAN) dependent members after this statement */
+# define	F_BLOCK		1	/* No scope in ESQL */
+	i4	F_rec;		/* F record level */
+	i4	F_size;		/* Size of declaration */
+	i4	F_dims;		/* Number of dimensions of variable */
+	i4	F_intsize;	/* 2 or 4; the size of an integer */
+	SYM	*F_struct;	/* Special pointer for references to structs */
+};
+GLOBALDEF struct gr_state _gr_local ZERO_FILL;
+GLOBALDEF struct gr_state *gr = &_gr_local;
+struct gr_state tempgr;
+
+/* Where do FORTRAN array indices start? */
+# define F_ARR_BASE	1
+
+/* How do you index a FORTRAN array? */
+# define F_ARR_EXPR	ERx("(%d)")
+
+/* %L locals end */
+
+%}
+
+
+%%
+
+Fprogram:	/* EMPTY */
+	|	Fprogram statement
+		{
+		    gr_mechanism( GR_STMTFREE );
+		}
+;
+
+statement:	tFUSE tNAME host_term
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+	|	include_stmt
+	| 	host_declare
+	|	host_code
+	| 	error host_term
+		{
+		    gr_mechanism( GR_STMTFREE );
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		}
+;
+
+/*
+** FORTRAN dependent grammar
+*/
+
+/*
+** Connecting rules between a usage of FORTRAN variables, names and
+** string constants and equivalent ESQL objects.
+**
+** Objects that must be defined by the L grammar for use by G:
+**
+** 1. host_code	 	 	- Host code recognized, set L flags and
+**			   	  print code.
+** 2. host_declare		- Host language declaration sections.
+** 3. host_term			- Host language terminator.
+** 4. host_incterm		- Special host terminator for include 
+**				  statements.
+** 5. host_label		- Host label.
+** 6. host_retvar, host_setvar, host_fsetvar, host_intovar, host_insvar
+**				- Host language variables.
+** 7. host_indretvar, host_indsetvar - Host language indicator variables.
+** 8. block_open, block_close - SQL/FRS block control syntax.
+** 9. extra rules that may have alternative syntaxes for L.
+**
+** Note:
+** 	All host_XXvars must set gr->gr_sym, gr->gr_type and gr->gr_id
+** after freeing the current id space.  Callers above should be able to
+** access gr->gr_sym, gr->gr_type and gr->gr_id when wanting the variable.
+** The type of gr->gr_type should be the equivalent EQUEL type, not the
+** host language type.
+*/
+
+/* %L rules begin - FORTRAN dependent grammar */
+
+/*
+** FORTRAN-specific extensions of main grammar rules
+*/
+
+sql_id:		tFINTEGER
+		{
+		    db_key( $1.s );
+		}
+	|	tFCHAR
+		{
+		    db_key( $1.s );
+		}
+	|	tFDOUBLE
+		{
+		    db_key( $1.s );
+		}
+	|	tFPRECISION
+		{
+		    db_key( $1.s );
+		}
+;
+
+/* Declare table statement */
+dectab_type:	tFINTEGER
+	|	tFCHAR
+	|	tFDOUBLE tFPRECISION
+;
+
+/* INITTABLE hidden column type names */
+inithide_type:	tFINTEGER
+		{
+		    id_add( $1.s );
+		}
+	|	tFCHAR
+		{
+		    id_add( $1.s );
+		}
+;
+
+/*
+** Allow for word MAP in FRS statement - MAP is a FORTRAN reserved word
+*/
+frs_constname:	tFMAP
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/*
+** Allow for word STRUCTURE in WITH clause (CREATE INDEX/TABLE statements).
+** STRUCTURE is a FORTRAN reserved word.
+*/
+sql_wleft:	tFSTRUCT
+		{
+		    db_key( $1.s );
+		}
+;
+
+/*
+** G rules that must be defined by L because of differences between
+** languages and systems.
+*/
+
+/*
+** HOST TERMINATOR
+** 
+** host_term - ESQL/FORTRAN statements have no terminator.  However, to define
+** host_term as a null rule would lead to many conflicts.  Therefore, the
+** scanner provides the grammar with a "fake" terminator (a semi-colon).
+*/ 
+host_term:	tTERMINATE
+		{
+		    dml->dm_exec = DML_HOST;
+		}
+;
+
+/* 
+** host_incterm - special terminator for INCLUDE statement
+**
+** No (fake) terminators on INCLUDE statements for FORTRAN.
+** (If we allow FORTRAN fake terminators, the scanner will have
+** already looked ahead into the next line in the main file --
+** just at the moment when the grammar and scanner must be in sync.)
+** We explicitly turn on DML_HOST mode to prevent the scanner from
+** pushing back the fake terminator (it only pushes one back when
+** in EXEC mode).
+*/ 
+host_incterm:	/* EMPTY */
+		{
+		    dml->dm_exec = DML_HOST;
+		}
+;
+
+/*
+** HOST LABEL
+**
+** host_label - Can be preceded by an optional colon.
+**		Integers for GOTO conditions
+**		Names for CALL conditons
+*/
+host_label:	tCOLON tINTCONST
+		{
+		    $$.s = $2.s;
+		}
+	|	tINTCONST
+		{
+		    $$.s = $1.s;
+		}
+	|	tCOLON tNAME
+		{
+		    $$.s = $2.s;
+		}
+	|	tNAME
+		{
+		    $$.s = $1.s;
+		}
+	|	tSCONST
+		{
+		    $$.s = $1.s;
+		}
+;
+
+
+/* Host code production
+**
+** The scanner has passed the full line of host language code as
+** an argument.  The newline is include.
+*/
+host_code:	tHOSTCODE
+		{
+		    if ((gr->gr_flag & GR_HOSTCODE) == 0)
+		    {
+			gen_line( ERx("host_code") );
+			gr->gr_flag |= GR_HOSTCODE;
+		    }
+		    gen_host( G_H_CODE, $1.s );
+		    dml->dm_exec = DML_HOST;
+		}
+;
+
+/* FORTRAN declarations */
+		
+host_declare:	Fdec_head Fdec_block Fdec_end
+;
+
+Fdec_head:	tBEG_DECLARE tSECTION tTERMINATE
+		{
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"),
+							ERx("BEGIN DECLARE") );
+		    dml->dm_exec = DML_DECL;
+ 		    eq->eq_flags |= EQ_INDECL;	/* Scanner in declare mode */
+		}
+;
+Fdec_end:	tEND tDECLARE tSECTION tTERMINATE
+		{
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"),
+							ERx("END DECLARE") );
+		    dml->dm_exec = DML_HOST;
+		    eq->eq_flags &= ~EQ_INDECL;	/* Scanner exits declare mode */
+		}
+;
+Fdec_block:	/* No declarations */
+	|	Fdec_block Fdeclaration
+		{
+		    gr->F_rec = 0;
+		    gr->F_dims = 0;
+		    gr->F_size = 0;
+		    gr->gr_type = T_INT;
+		    gr->F_struct = (SYM *)0;
+		    gen_host( G_H_NEWLINE, (char *)0 );
+		    gr_mechanism( GR_STMTFREE );
+		}
+;
+
+/*
+** A VMS FORTRAN declaration is
+**	1. A normal declaration
+**	2. A record declaration
+**	3. A structure declaration
+** Only a normal declaration may be initialized.
+** A structure declaration does not declare any variables (reserve storage).
+**
+** Non-standard VMS extension:
+**   All extensions are commented with "VMS Extension".
+**	1. Record declarations
+**	2. Structure declarations (including unions)
+**	3. Initialization in a declaration
+*/
+
+/*
+** VMS FORTRAN structures are much like C structures (but of course
+** are more verbose).  Structures are defined with the
+**	STRUCTURE /struct-name/ {field-decl}+ END STRUCTURE
+** statement - the "multi-statement structure declaration",
+** where "field-decl" is:
+**	1. An ordinary FORTRAN declaration (possibly with initialization)
+**	2. A RECORD declaration
+**	3. A nested STRUCTURE declaration (a "substructure declaration")
+**	4. A UNION declaration
+**
+** Variables of structure-type are declared with the
+**	RECORD /tag/ name-list  {, /tag/ name-list}
+** statement, where "tag" is a previously declared "struct-name" and
+** "name-list" is "name {, name}".
+**
+** A substructure declaration is
+**	STRUCTURE [/tag/] [name-list] {field-decl}+ END STRUCTURE
+** At least one of [/tag/] and [name-list] must be present.
+**
+** A UNION declaration is
+**	UNION map_decl {map_decl}+ END UNION
+** where "map_decl" is
+**	MAP {field_decl}+ END MAP
+**
+** An ordinary declaration is
+**	CHARACTER [[char-len] [,]] name-len-init-list
+**	    where "name-len-init-list" is "name-len-init {, name-len-init}" and
+**	    "name-len-init" is "name [(...)] [*len] [/init-val/]" and "char-len"
+**	    is "*(*)" or "*len" "*(len)".
+** or
+**	type-name name-init-list
+**	    where "name-init-list" is "name-init {, name-init}" and
+**	    "name-init" is "name-len [/init-val/]" and "name-len" is
+**	    "name [*len] [(...)]" and "type-name" is
+**	    BYTE | LOGICAL [*1|*2|*4] | INTEGER [*2|*4] | REAL [*4|*8|*16]
+**		 | COMPLEX [*8|*16] | DOUBLE PRECISION | DOUBLE COMPLEX
+**
+**
+** Examples:
+**
+** STRUCTURE /name/ ... END STRUCTURE
+**   STRUCTURE /a/				! "a" not seen as a tag yet
+**	INTEGER b*2, c				! "b" is a 2-byte integer
+**   END STRUCTURE
+**
+** RECORD /tag/ declist
+**    RECORD /a/ b, c				! "a" already seen as a tag
+**
+** UNION map_decl {map_decl}+ END UNION
+** MAP {field_decl}+ END MAP
+**    UNION
+**	MAP
+**	    INTEGER		a(3)	! 1 3-integer array
+**	    LOGICAL*2		b	! 1 2-byte logical
+**	    CHARACTER*32	z(4)*8	! 4 8-byte character arrays
+**	END MAP
+**	MAP
+**	    LOGICAL*2		c	! 1 2-byte logical
+**	    INTEGER		d	! 1 integer
+**	END MAP
+**	MAP
+**	    STRUCTURE structa, structb	! 2 structs, each with 4 shorts, 1 int
+**		INTEGER b*2(4), c	! "b" is array of 2-byte integers
+**	    END STRUCTURE
+**	    RECORD /a/ bar
+**	END MAP
+**    END UNION
+*/
+
+Fdeclaration:	Fdecl
+	|	Fstruct_decl		/* VMS Extension */
+	|	Frec_decl		/* VMS Extension */
+	|	Fparameter
+	|	Fdec_include
+	|	Fdec_dectable
+	|	error
+		{
+		    /* 
+		    ** Important to get scanner out of EXEC mode to
+		    ** prevent it from continually pushing back fake
+		    ** terminator.
+		    */
+		    dml->dm_exec = DML_DECL;
+		}
+		    
+;
+
+/* structure declaration */
+Fstruct_decl:	Fstruct_key Fslash_name Ffld_lbrace Ffield_decl_list
+		    Ffld_rbrace Fend_key Fstruct_key
+;
+
+Fslash_name:	Fdivop_key Fname_key Fdivop_key
+		{
+		    register SYM	*sy;
+
+		  /* 
+		  ** If we have a prev tag by same name then we'll get a 
+		  ** symtab error here about redecl with incompatible types 
+		  */
+		    sy = $$.v = symDcEuc( $2.s, gr->F_rec, F_BLOCK, syFisTAG,
+			    F_CLOSURE, SY_TAG );
+		    gr->gr_type = T_STRUCT;
+		    if (sy)
+			sym_s_btype( sy, T_STRUCT );
+		}
+;
+
+Ffld_lbrace:
+		{
+		    gr->F_rec++;
+		    gen_host( G_H_INDENT | G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+Ffld_rbrace:
+		{
+		    gr->F_rec--;
+		    gen_host( G_H_OUTDENT | G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+Ffield_decl_list: Ffield_decl
+	|	Ffield_decl_list Fnewline_gen Ffield_decl
+;
+
+/* Insides of a structure declaration */
+Ffield_decl:	Ffield_decl_stuff
+		{
+		    gr->F_dims = 0;
+		}
+;
+
+Ffield_decl_stuff:
+		Fdecl
+	|	Frec_decl
+	|	Fsub_struct_decl
+	|	Funion_decl
+	|	tFPERCENT tNAME
+		{
+		    gen_host( G_H_OP, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+
+Fsub_struct_decl:
+		Fstruct_key Fopt_slashname Foptname_list Ffld_lbrace
+		    Ffield_decl_list Ffld_rbrace Fend_key Fstruct_key
+;
+
+Fopt_slashname:	/* EMPTY */
+		{
+		    /* BUG 2259 - Explicitly set type of nested struct */
+		    gr->gr_type = T_STRUCT;
+		}
+	|	Fslash_name
+;
+
+/*
+** Ordinary declarations
+*/
+
+Fdecl:		Fchar_decl		/* character declaration */
+	|	Fothr_decl		/* other declaration */
+;
+
+Fchar_decl:	Fchar_key Fopt_star_len_comma Fchar_init_list
+;
+
+Fothr_decl:	Ftype_key Fothr_star_len Fothr_dims_gen Fothr_init_list
+;
+
+Fothr_star_len:	/* EMPTY */
+	|	Fmulop_key tINTCONST
+		{
+		    gen_host( G_H_KEY, $2.s );
+		    CVan( $2.s, &gr->F_size );
+		    switch (gr->gr_type) {
+		      case T_INT:
+			if (gr->F_size != 1 && gr->F_size != 4 
+			    && gr->F_size != 2)
+			  er_write( E_E1000C_hfBADSIZE, EQ_ERROR, 0 );
+			break;
+		      case T_FLOAT:
+			if (gr->F_size != 4 && gr->F_size != 8)
+			  er_write( E_E1000C_hfBADSIZE, EQ_ERROR, 0);
+		      break;
+		    }
+		}
+;
+
+Fothr_dims_gen:
+		{
+		    gr->F_dims = 0;		/* not an array */
+		}
+;
+
+Fopt_star_len_comma: /* EMPTY */
+	|	Fstar_len Fopt_comma
+		{
+		    gen_host( G_H_OP, ERx(" ") );	/* last token was OP */
+		}
+;
+
+Fstar_len:	Fmulop_key tINTCONST
+		{
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	Fmulop_key Fparen_len	/* CHARACTER*(*) or CHARACTER*(expr) */
+;
+
+Fopt_comma:	/* EMPTY */
+	|	Fcomma_key
+;
+
+Fchar_init_list:
+		Fchar_init
+	|	Fchar_init_list Fcomma_key Fchar_init
+;
+
+Fothr_init_list:
+		Fothr_init
+	|	Fothr_init_list Fcomma_key Fothr_init
+;
+
+Fchar_init:	Fchar_name Fopt_init		/* Fopt_init is VMS Extension */
+;
+Fothr_init:	Fothr_name Fopt_init		/* Fopt_init is VMS Extension */
+;
+	/*
+	** character*7	nm(10)*(5*7)
+	**          ^       ^    ^
+	**          |       |    |
+	**          |       |    +------ String length (sc_eaten) 
+	**          |       +----------- This is an array ($2.i)
+	**          +------------------- Default string length (ignored)
+	**
+	*/
+Fchar_name:	Fname_key Fopt_paren_len Fopt_star_len
+		{
+		    SYM		*sy;
+
+    		    sym_hint_type( (SYM *)0, gr->gr_type, 0 );
+    		    sy = symDcEuc( $1.s, gr->F_rec, F_BLOCK, 
+			syFisVAR, F_CLOSURE, SY_NORMAL );
+		    if (sy)
+		    {
+			sym_s_btype( sy, gr->gr_type );
+			sym_s_dims( sy, $2.i );
+		    }
+		}
+;
+
+	/*
+	** integer*2	 nm*4(10)
+	**          ^       ^  ^
+	**          |       |  |
+	**          |       |  +-------- String length (sc_eaten) 
+	**          |       +----------- Variable size(gr->F_size gets reset)
+	**          +------------------- Default var size(gr->F_size)
+	**
+	*/
+Fothr_name:	Fname_key Fopt_star_len Fopt_paren_len
+		{
+		    SYM		*sy;
+
+    		    sym_hint_type( (SYM *)0, gr->gr_type, 0 );
+    		    sy = symDcEuc( $1.s, gr->F_rec, F_BLOCK, 
+			syFisVAR, F_CLOSURE, SY_NORMAL );
+		    if (sy)
+		    {
+			sym_s_btype( sy, gr->gr_type );
+			sym_s_dims( sy, $3.i );
+			sym_s_dsize( sy, gr->F_size );
+		    }
+		}
+;
+
+Fopt_paren_len:	/* EMPTY */
+		{
+		    $$.i = 0;
+		}
+	|	Fparen_len
+		{
+		    /* $$.i = 1; */
+		}
+;
+
+Fparen_len:	tLPAREN
+		{
+		    sc_eat( gen_code, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+		    $$.i = 1;
+		}
+;
+
+Fopt_star_len:	/* EMPTY */
+	|	Fstar_len
+;
+
+Fopt_init:	/* EMPTY */
+	|	tSLASH			/*  /stuff/  */
+		{
+		    sc_eat( gen_code, SC_SEEN, ERx("/"), '/', '/' );
+		}
+;
+
+Frec_decl:	Frecord_key Frec_list
+		{
+		    gr->gr_type = T_INT;
+		}
+;
+
+Frec_list:	Ftag Fname
+	|	Frec_list Fcomma_key Ftag_elm
+;
+
+Ftag_elm:	Fname
+	|	Ftag Fname
+;
+
+Ftag:		Fdivop_key Ftag_key Fdivop_key
+;
+
+Foptname_list:	/* EMPTY */
+	|	Fname_list
+;
+
+Fname_list:	Fname
+	|	Fname_list Fcomma_key Fname
+;
+
+Fname:		Fname_key Fopt_paren_len
+		{
+		    SYM		*sy;
+
+		    sym_hint_type( (SYM *)0, gr->gr_type, 0 );
+		    sy = symDcEuc( $1.s, gr->F_rec, F_BLOCK, 
+			syFisVAR, F_CLOSURE, SY_NORMAL );
+		    if (sy)
+		    {
+			sym_s_btype( sy, gr->gr_type );
+			sym_s_dims( sy, $2.i );
+		      /* assign type entry for structure variables */
+			if (gr->gr_type == T_STRUCT && gr->F_struct)
+			    sym_type_euc( sy, gr->F_struct );
+		    }
+		}
+;
+
+/* Union declaration */
+Funion_decl:	Funion_key Findent_gen Fmap_decl_list Foutdent_gen
+		    Fend_key Funion_key
+;
+
+Fmap_decl_list:
+		Fmap_decl
+	|	Fmap_decl_list Fnewline_gen Fmap_decl
+;
+
+Fmap_decl:	Fmap_key Findent_gen Ffield_decl_list Foutdent_gen
+		    Fend_key Fmap_key
+;
+
+/*
+ * generators
+ */
+
+Findent_gen:
+		{
+		    gen_host( G_H_INDENT | G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+Foutdent_gen:
+		{
+		    gen_host( G_H_OUTDENT | G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+Fnewline_gen:
+		{
+		    gen_host( G_H_NEWLINE, (char *) NULL );
+		}
+;
+
+/*
+ * keywords
+ */
+
+Fchar_key:	tFCHAR
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_size = 0;		/* for IIvmsret! */
+		    gr->F_dims = 0;
+		    gr->gr_type = T_CHAR;
+		}
+;
+
+Fcomma_key:	tCOMMA
+		{
+		    gen_host( G_H_OP, ERx(", ") );
+		}
+;
+
+Fdivop_key:	tSLASH
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Fend_key:	tEND
+		{
+		    gen_host( G_H_KEY, $1.s);
+		}
+;
+
+Fintconst_key:	tINTCONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	F_aruop tINTCONST	%prec tUNARYOP
+		{
+		    if (*($1.s) == '-')
+			gen_host( G_H_OP, ERx("-") );
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+
+F_aruop:	tPLUS /*	{ $$.s = $1.s; }	*/
+	|	tMINUS /*	{ $$.s = $1.s; }	*/
+;
+
+Fmap_key:	tFMAP
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Fmulop_key:	tSTAR
+		{
+		    gen_host( G_H_OP, $1.s);
+		}
+;
+
+Fname_key:	tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+
+		    if (STbcompare($1.s, 3, ERx("SQL"), 3, TRUE) == 0)
+		    {
+			/* Test for SQLCOD */
+			if (!(eq->eq_flags & EQ_NOSQLCODE)
+			 && (STbcompare($1.s, 0, ERx("SQLCOD"), 0, TRUE) == 0))
+			{
+			    if (!(eq->eq_flags & EQ_SQLCODE))
+			    {
+				/* 
+				** This is an error, because we probably 
+				** included the wrong eqslqca.
+				*/
+				er_write( E_E1000D_hfNOSQLCODE, EQ_ERROR, 0, 
+					  (char *)0 );
+				eq->eq_flags |= EQ_SQLCODE;
+			    }
+			    if (gr->gr_type != T_INT)
+			    {
+				er_write( E_EQ0517_SQLSTATUS_DECL, EQ_ERROR, 2,
+				   ERx("SQLCOD(E)"), ERx("integer"));
+			    }
+			    else
+			    {
+				eq->eq_flags |= EQ_SQLCODE;
+			    }
+
+			}
+
+			/* Test for SQLSTA */
+			if (STbcompare($1.s, 0, ERx("SQLSTA"), 0, TRUE) == 0)
+			{
+			    if (gr->gr_type != T_CHAR)
+			    {
+				er_write( E_EQ0517_SQLSTATUS_DECL, EQ_ERROR, 2,
+				   ERx("SQLSTA(TE)"), ERx("CHARACTER*5"));
+			    }
+			    else
+			    {
+				eq->eq_flags |= EQ_SQLSTATE | EQ_SQLSTA;
+			    }
+			}
+
+			/* Test for SQLSTATE */
+			if (STbcompare($1.s, 0, ERx("SQLSTATE"), 0, TRUE) == 0)
+			{
+			    if (gr->gr_type != T_CHAR)
+			    {
+				er_write( E_EQ0517_SQLSTATUS_DECL, EQ_ERROR, 2,
+				   ERx("SQLSTA(TE)"), ERx("CHARACTER*5"));
+			    }
+			    else
+			    {
+				eq->eq_flags |= EQ_SQLSTATE;
+			    }
+			}
+		    }
+		    $$.s = $1.s;
+		}
+;
+
+Frecord_key:	tFRECORD
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Fstruct_key:	tFSTRUCT
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+Ftag_key:	tNAME
+		{
+		    register SYM	*sy;
+
+		    gen_host( G_H_KEY, $1.s );
+		    sy = sym_resolve( (SYM *)0, $1.s, F_CLOSURE, syFisTAG );
+		    if (sy == (SYM *)0)
+			er_write( E_E1000A_hfNOSTRUCT, EQ_ERROR, 1, $1.s );
+		    else
+		    {
+			gr->F_struct = sy;
+			gr->gr_type = T_STRUCT;
+		    }
+		}
+;
+
+Ftype_key:	tFBYTE
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_size = 1;
+		    gr->gr_type = T_INT;
+		}
+	|	tFINTEGER
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_size = gr->F_intsize;
+		    gr->gr_type = T_INT;
+		}
+	|	tFLOGICAL
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_size = gr->F_intsize;
+		    gr->gr_type = T_INT;
+		}
+	|	tFREAL
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gr->F_size = 4;
+		    gr->gr_type = T_FLOAT;
+		}
+	|	tFDOUBLE tFPRECISION
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    gr->F_size = 8;
+		    gr->gr_type = T_FLOAT;
+		}
+	|	tFCOMPLEX
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    er_write( E_E10001_hfBADTYPE, EQ_ERROR, 1, ERx("COMPLEX") );
+		    gr->F_size = 8;
+		    gr->gr_type = T_FLOAT;
+		}
+	|	tFDOUBLE tFCOMPLEX
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_KEY, $2.s );
+		    gr->F_size = 8;
+		    gr->gr_type = T_FLOAT;
+		    er_write( E_E10001_hfBADTYPE, EQ_ERROR, 1,
+							ERx("DOUBLE COMPLEX") );
+		}
+;
+
+Funion_key:	tUNION
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+;
+
+/* More non-generator FORTRAN rules */
+
+Fparameter:	Fparameter_key Fparameter_list
+	|	Fparameter_key Flparen_key Fparameter_list Frparen_key
+;
+
+Fparameter_key:	tFPARAM
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_OP, ERx(" ") );
+		}
+;
+
+Fparameter_list: Fparameter_elm
+	|	Fparameter_list Fcomma_key Fparameter_elm
+;
+
+Fparam_name:	tNAME
+		{
+		    gen_host( G_H_KEY, $1.s );
+		    gen_host( G_H_OP, ERx("=") );
+		}
+;
+
+Fparameter_elm:	Fparam_name tEQOP Fdef_const
+		{
+		    register SYM	*sy;
+
+		    if (gr->gr_type != T_NONE)
+		    {
+			if (sy=symDcEuc($1.s, 0, F_BLOCK, syFisCONST,
+			    F_CLOSURE, SY_NORMAL))
+			{
+			    sym_s_btype( sy, gr->gr_type );
+			    sym_s_dsize( sy, gr->F_size );
+			}
+		    } else
+			er_write( E_E10002_hfDEFINE, EQ_ERROR, 1, $1.s );
+		}
+;
+
+Fdef_const:	Fintconst_key
+		{
+		    gr->gr_type = T_INT;
+		    gr->F_size = gr->F_intsize;
+		}
+	|	Ffltconst_key
+		{
+		    gr->gr_type = T_FLOAT;
+		    gr->F_size = sizeof(f4);	/* real constants are real*4 */
+		}
+	|	tSCONST
+		{
+		    gr->gr_type = T_CHAR;
+		    gen_host( G_H_SCONST, $1.s );
+		}
+	|	tNAME
+		{
+		    gr->gr_type = T_NONE;
+		}
+;
+
+Ffltconst_key:	tFLTCONST
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	F_aruop tFLTCONST	%prec tUNARYOP
+		{
+		    if (*($1.s) == '-')
+			gen_host( G_H_OP, ERx("-") );
+		    gen_host( G_H_KEY, $2.s );
+		}
+	|	tDECCONST	/* No decimal in FORTRAN, treat as a float */
+		{
+		    gen_host( G_H_KEY, $1.s );
+		}
+	|	F_aruop tDECCONST	%prec tUNARYOP
+		{
+		    if (*($1.s) == '-')
+			gen_host( G_H_OP, ERx("-") );
+		    gen_host( G_H_KEY, $2.s );
+		}
+;
+
+Flparen_key:	tLPAREN
+		{
+			gen_host( G_H_OP, $1.s );
+		}
+;
+
+Frparen_key:	tRPAREN
+		{
+			gen_host( G_H_OP, $1.s );
+		}
+;
+
+
+/*
+** EXEC SQL INCLUDE filename within declare section
+**
+** Generate a FORTRAN "include" statement and preprocess named file.
+** Note that no fake terminator will be pushed back by the scanner
+** because sc_reset() will make the scanner ready to get a newline
+** (the first line of the include file).  The newline on the current
+** line will not get processed and no fake terminator will be triggered.
+** Turn DML_DECL mode back on when the whole statement has been reduced.
+*/
+Fdec_include:	Finc_head Finc_name
+		{
+		    /*
+		    ** Inform scanner that we should read in a new line.
+		    */
+		    sc_reset();
+		    if (inc_parse_name($2.s, FALSE) == SC_INC)
+			inc_push_file();
+		    dml->dm_exec = DML_DECL;
+		}
+	|	tEOFINC			/* Eof of an included file */
+		{
+		    /* Better be "<EOF>" else Yacc will produce syntax error */
+		    dml->dm_exec = DML_DECL;
+		}
+;
+Finc_head:	tINCLUDE
+		{
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"),
+							    ERx("INCLUDE") );
+		}
+;
+Finc_name:	tNAME
+		{	
+		    $$.s = $1.s;
+		}
+	|	tSCONST
+		{
+		    $$.s = $1.s;
+		}
+;
+
+/*
+** EXEC SQL DECLARE TABLE within declare section
+**
+** Statement is parsed but no code is produced.  The rule "dectab_list"
+** is defined in G.
+** Don't turn on DML_DECL mode until whole statement has been reduced
+** otherwise scanner won't recognize FORTRAN line continuation.
+*/
+Fdec_dectable:	Fdec_tabhead tTABLE tLPAREN dectab_list tRPAREN 
+		{
+		    dml->dm_exec = DML_DECL;
+		}
+;
+Fdec_tabhead:	tDECLARE Fdec_tabname
+		{
+		    esq->flag |= ESQ_NOPRT;     /* Suppress printing */
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"),
+							ERx("DECLARE TABLE") );
+		}
+	|       tDECLARE Fdec_ownname tPERIOD Fdec_tabname
+		{
+		    esq->flag |= ESQ_NOPRT;     /* Suppress printing */
+		    if (dml->dm_exec != (DML_EXEC|DML__SQL))
+			er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"),
+							ERx("DECLARE TABLE") );
+		}
+;
+
+Fdec_tabname:	tNAME
+	|	tDELIMID
+;
+
+Fdec_ownname:	tNAME
+	|	tDELIMID
+;
+
+/* 
+** HOST VARIABLE USAGE
+** Now we allow the use of reserved words as host variables.  The way we do
+** this is set a global (sc_hostvar) to TRUE when we see a Ccolon (or a
+** Csqlda_colon).  The global tells scword (in the scanner) to ignore keyword
+** lookups and just returne a tNAME.  We turn it off when we're at the end
+** of the hostvar reference.  There's a problem, however, in that sometimes
+** the grammer doesn't know to turn the global off until after we've scanned
+** a real keyword.  For instance, in the statement:
+**      EXEC SQL CONNECT :connect SESSION :session;
+** by the time the grammer turns off the global for :connect we've already
+** scanned SESSION, and it has been returned as a tNAME instead of tSESSION.
+** what we do here is to introduce a new rule that allows a hostvar to be a
+** variable or a variable followed by a tNAME.  In either case, we turn off
+** the sc_hostvar global.  Additionally if we see a variable followed by a
+** tNAME we call a new function, sc_popscptr, which sets up the scanner to
+** rescan the word with keyword lookups enabled.  So in our example above
+** SESSION will get "scanned" twice, once as a tNAME and then as tSESSION.
+** the same thing is done for sqlda variables.
+** One other point, the ':' for indicator variables is processed in the
+** master grammer, not here.  So we set sc_hostvar there as well.
+*/
+
+/* Usage syntax is ":"NAME */
+Fcolon:		tCOLON
+		{
+		    sc_hostvar = TRUE;	/* disable keyword lookups */
+		}
+;
+
+/* Optional colon */
+Fopt_colon:	Fcolon
+	|	/* Missing colon */
+		{
+		    er_write( E_EQ0129_sqVARCOLON, EQ_ERROR, 0 );
+		}
+;
+
+
+/*
+** An indicator variable.
+** Note that it is the master grammar that copies the gr_id and gr_sym
+** fields to gr_nlid and gr_nlsym, so we use the originals here.
+*/
+host_indvar:	 F_retvar
+;
+
+/*
+** host_retvar - Result variables of an output statement.  Used by the
+**		 FRS statements.  Must be an elementary variable.
+**		 Fuse_set has checked that it is elementary and has
+**		 set gr_ fields; here we need check only that it's a variable 
+**		(not a const).
+*/
+host_retvar:	Fopt_colon F_retvar
+;
+
+F_retvar:	Fuse_retset
+		{
+		    if (gr->gr_sym != (SYM *)0)
+		    {
+			if (!syBitAnd(sym_g_useof(gr->gr_sym), syFisVAR))
+			    er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								    gr->gr_id );
+		    }
+		}
+;
+
+/*
+** host_setvar - Setting variables of an input statement.  Used by the
+**		 SQL UPDATE statement, and the FRS statements.  Can
+**		 be elementary variable or constant.
+**
+** host_fsetvar - Same as host_setvar, but in form system the colon
+**		 is optional.
+*/
+host_fsetvar:	Fopt_colon Fuse_retset
+;
+
+host_setvar:	Fcolon Fuse_retset
+;
+
+/*
+** Fuse_retset - used by host_retvar, host_setvar, host_fsetvar.
+**	         Variable/constant must be elementary level.
+**	 	 Fields in gr_ struct are set for use by G grammar.
+*/
+Fuse_retset:	Fuse_var
+		{
+		    SYM		*sy;
+
+		    gr->gr_type = T_UNDEF;		/* Default */
+		    if ((sy = $1.v) != (SYM *)0)
+		    {
+			if (sym_g_btype(sy) == T_STRUCT)
+			    er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								id_getname() );
+			else 
+			    gr->gr_type = sym_g_btype(sy);
+		    }
+		    gr->gr_sym = sy;
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		}
+			
+;
+
+/*
+** An SQLDA name -- we're liberal here, we allow anything.
+*/
+host_sqlda:	host_varsqlda
+		{
+		    sc_hostvar = FALSE;	/* re-enable keyword lookups */
+		}
+	|	host_varsqlda tNAME
+		{
+		    sc_hostvar = FALSE;	/* re-enable keyword lookups */
+		    sc_popscptr();	/* move SC_PTR back one word */
+		}
+;		
+host_varsqlda:	Fsqlda_colon Fuse_xvar
+		{
+		    gr->gr_id = str_add( STRNULL, id_getname() );
+		    id_free();
+		    sym_f_init(); 	/* Discard sym stuff - ignored */
+		}
+;
+Fsqlda_colon:	tCOLON
+		{
+		    sc_hostvar = TRUE;	/* disable keyword lookups */
+		}
+	|	/* EMPTY */
+;
+
+/* 
+** host_intovar - Result variables of an INTO clause.  Used by SELECT INTO
+**		 or FETCH INTO.	
+**
+** 1. For a simple variable, make an entry into result-variable storage
+**    or add a variable to the run-time FETCH call.
+** 2. For a structure variable, do this for each member name.
+** 3. Since the semantics are done here instead of in G, we do not
+**    need to set any gr_ fields.
+*/
+host_intovar:	Fopt_colon Fuse_var
+		{
+		    SYM		*sy, *mem;
+		    char	*sid, *mid;
+
+		    sid = str_add( STRNULL, id_getname() );
+		    if ((sy = $2.v) != (SYM *)0)
+		    {
+			if (sym_g_btype(sy) == T_STRUCT)
+			{
+			    for (mem=syStrInit(sy); mem; mem=syStrNext(mem))
+			    {
+				STprintf( esq->sbuf, ERx("%s.%s"), sid,
+					sym_str_name(mem) );
+				mid = str_add( STRNULL, esq->sbuf );
+			      /* Members must be elementary */
+				if (sym_g_btype(mem) == T_STRUCT
+				    || sym_g_dims(mem))
+				    er_write( E_E1000B_hfELEM, EQ_ERROR, 2, mid,
+								id_getname() );
+				erec_mem_add( mid, mem, sym_g_btype(mem) );
+			    }
+			}
+			else
+			{
+			    if (!syBitAnd(sym_g_useof(sy), syFisVAR))
+				er_write( E_EQ0057_grHOSTVAR, EQ_ERROR, 1,
+								id_getname() );
+			    erec_mem_add( sid, sy, sym_g_btype(sy) );
+			}
+		    }
+		    id_free();
+		}
+;
+
+/* 
+** host_insvar - INSERT VALUES clause variables.
+**
+** 1. For a simple variable, just add via erec_mem_add.
+** 2. For a structure variable, do this for each member.
+** 3. Since the semantics are done here instead of in G, we do not need 
+**    to set any gr_ fields, but we do need to return the created node.
+*/
+host_insvar:	Fcolon Fuse_var
+		{
+		    SYM		*sy, *mem;
+		    char	*sid, *mid;
+
+		    sid = str_add( STRNULL, id_getname() );
+		    if ((sy = $2.v) == (SYM *)0)
+		    {
+			/* Do nothing, as error already printed */
+		    }
+		    else
+		    {
+			if (sym_g_btype(sy) == T_STRUCT)
+			{
+			    for (mem=syStrInit(sy); mem; mem=syStrNext(mem))
+			    {
+				STprintf( esq->sbuf, ERx("%s.%s"), sid,
+				   	sym_str_name(mem) );
+				mid = str_add( STRNULL, esq->sbuf );
+			      /* Members must be elementary */
+				if (sym_g_btype(mem) == T_STRUCT
+				    || sym_g_dims(mem))
+				    er_write( E_E1000B_hfELEM, EQ_ERROR, 2, mid,
+								id_getname() );
+				erec_mem_add( mid, mem, sym_g_btype(mem) );
+			    }
+			}
+			else		/* btype != T_STRUCT */
+			{
+			    erec_mem_add( sid, sy, sym_g_btype(sy) );
+			}
+		    }
+		    id_free();
+		}
+;
+
+/* 
+** Fuse_var - Usage of FORTRAN variable.  Syntax is:
+**	usename { {.} usename } 
+**
+** where usename is:
+**	name [(]
+**
+** Examples:
+**	a.b.c 		a(4).b
+**	a() 		a
+**
+** Fuse_var returns resolved variable sym pointer.  
+** If no variable, it enters an undefined variable for later referencing.
+** Puse_xvar returns TRUE if a structure reference was used.
+*/
+Fuse_var:	Fuse_hostvar
+		{
+		    sc_hostvar = FALSE;	/* re-enable keyword lookups */
+		}
+	|	Fuse_hostvar tNAME
+		{
+		    sc_hostvar = FALSE;	/* re-enable keyword lookups */
+		    sc_popscptr();	/* move SC_PTR back a word */
+		}
+;
+Fuse_hostvar:	Fuse_setup Fuse_xvar
+		{
+		    SYM		*sy;
+		    i2		stat;
+
+		    sy = (SYM *)0;
+		    stat = symRsEuc( &sy, F_CLOSURE, syFisVAR|syFisCONST );
+		    if (stat != syL_OK)
+		    {
+			er_write( E_EQ0502_hNOVAR, EQ_ERROR, 2, ERx("FORTRAN"),
+								id_getname() );
+			sy = (SYM *)0;
+			/* 
+			** Undeclared?   Enter if no dims used and not a 
+			** structure reference
+			*/
+			if (gr->F_dims == 0 && !$2.i )
+			{
+			    /* Give hint for ESQL redecs */
+			    sym_hint_type( (SYM *)0, T_UNDEF, 0 );
+			    sy = symDcEuc( id_getname(), 0, F_BLOCK,
+				syFisVAR, F_CLOSURE, SY_NORMAL );
+			    if (sy)
+				sym_s_btype( sy, T_UNDEF );
+			}
+		    }
+		    else	/* state == syL_OK */
+		    {
+			/* 
+			** Are we following use of a structure variable?
+			** e.g., as in SELECT, FETCH or INSERT stmts).
+			** If so, this is probably an indicator array.
+			*/
+			if (erec_vars() > 0)
+			{
+			    /* Definitely an indicator array if it uses one 
+			    ** level of subscripting lower than that with 
+			    ** which it was declared.
+			    */
+			    if (sym_g_dims(sy) == gr->F_dims+1)
+			    {
+				erec_ind_add( F_ARR_BASE, id_getname(),
+					F_ARR_EXPR, sy );
+			    }
+			    else
+			    {
+				erec_ind_add( F_ARR_BASE, id_getname(),
+					(char *)0, sy );
+				if (gr->F_dims != sym_g_dims(sy))
+			    	    er_write( E_E10003_hfINDIR, EQ_ERROR, 3,
+					id_getname(), er_na(sym_g_dims(sy)),
+					er_na(gr->F_dims) );
+			    }
+			}
+			else	/* Not an indicator array */
+			{
+			    if (gr->F_dims != sym_g_dims(sy))
+				er_write( E_E10003_hfINDIR, EQ_ERROR, 3,
+				    id_getname(), er_na(sym_g_dims(sy)),
+				    er_na(gr->F_dims) );
+			}
+		    }
+		    $$.v = sy;		/* Return pointer to sym */
+		 }
+;
+
+Fuse_setup:	/* Set up variable reference (just in case was not reset) */
+		{
+		    sym_f_init();
+		    gr->F_dims = 0;
+		}
+;
+
+/*
+** Fuse_xvar - Usage of a simple name (with or without array
+**	       subscripts) or a structure list.
+**  	       Returns TRUE if structure reference was used.
+*/
+Fuse_xvar:	Fuse_name		/* Simple name */
+		{
+		    $$.i = FALSE;
+		}
+	|	Fuse_xvar Fselect_op Fuse_name	/* Structure use */
+		{
+		    $$.i = TRUE;
+		    gr->gr_type = T_STRUCT;
+		}
+;
+
+/*
+** Fuse_name - Name used in a variable reference;  may be followed by
+**	       a left paren if this is an array reference.
+*/
+Fuse_name:	Fuse_xname Fuse_paren
+;
+
+/* 
+** Fuse_xname - Name. 
+**		Symbol tab manager saves away componenents of variable
+**		references for later resolution.
+*/
+Fuse_xname:	tNAME
+		{
+		    id_add( $1.s );	/* Save string for output */
+		    sym_fpush( sym_find($1.s) );    /* Stack var ref */
+		}
+;
+
+/*
+** Fuse_paren -	Optional array reference after name.
+**		We resolve variable use at this point to decide whether
+** 		the left paren is an array reference or is part of ESQL 
+**		syntax.  Paren belongs to variable reference if variable
+**		was successfully resolved, is defined, and has dimensions.
+*/
+Fuse_paren:	/* No parens */
+	|	tLPAREN		/* Possibly an array */
+		{
+		    SYM		*sy;
+		    i2		stat;
+
+		    stat = symRsEuc( &sy, F_CLOSURE, syFisVAR|syFisCONST );
+		    if (stat == syL_OK 
+			&& (sym_g_dims(sy) || sym_g_btype(sy) == T_STRUCT))
+		    {
+			sc_eat( id_add, SC_SEEN|SC_NEST, ERx(")"), '(', ')' );
+			gr->F_dims = 1;
+		    }
+		    else
+			SC_PTR--;
+		}
+;
+
+/*
+** Fselect_op - Period separating fields in structure references
+*/
+Fselect_op:	tPERIOD
+		{
+		    id_add( $1.s );
+		    gr->F_dims = 0;
+		}
+;
+
+/* %L rules end */
+
+%%
+
+/* %L mechanism begin - All the stuff to do with gr_mechanism() */
+
+GLOBALDEF GR_TYPES	gr_typetab[] = {
+    { (char *)0,  		0,		0 }
+};
+
+/*
+** Gr_mechanism - Language dependent utility called from within the grammar
+**		  or from outside.
+**
+** Parameters:	flag       - Which mechanism to choose.
+**		arg1, arg2 - Whatever is needed for the particular flag.
+** Returns:	None
+*/
+
+void
+gr_mechanism( flag, arg1, arg2, arg3 )
+i4	flag;
+PTR	arg1;			/* Extra arguments for particular cases */
+PTR	arg2;
+PTR	arg3;
+{
+    register SYM	*sy;
+    i4			use_mask, ret_val;
+    static   i4	einit = 0;
+  /* DML routines */
+    extern	i4	gen__sqltab[];
+    i4			scStrIsCont(),
+			esq_repeat(),
+			yyesqlex(),
+			sc_iscomment();
+
+    switch (flag)
+    {
+      case GR_EQINIT:
+
+	eq->eq_lang = EQ_FORTRAN;
+	eq->eq_def_in = ERx("sf");
+# ifdef	NT_GENERIC
+	eq->eq_def_out = ERx("for");
+# endif	/* NT_GENERIC */
+# ifdef	UNIX
+	eq->eq_def_out = ERx("f");
+# endif	/* UNIX */
+# ifdef	hp9_mpe
+	eq->eq_def_out = ERx("for");
+# endif	/* hp9_mpe */
+# ifdef	VMS
+	eq->eq_def_out = ERx("for");
+# endif	/* VMS */
+# ifdef	CMS
+	eq->eq_def_out = ERx("fortran");
+# endif	/* CMS */
+# ifdef	DGC_AOS
+	eq->eq_def_out = ERx("f77");
+# endif	/* DGC_AOS */
+	if (!einit)
+	{
+	    eq->eq_in_ext = ERx("sf");
+# ifdef	UNIX
+	    eq->eq_out_ext = ERx("f");
+# endif	/* UNIX */
+# ifdef	hp9_mpe
+	    eq->eq_out_ext = ERx("for");
+# endif	/* hp9_mpe */
+# ifdef	VMS
+	    eq->eq_out_ext = ERx("for");
+# endif	/* VMS */
+# ifdef	NT_GENERIC
+	    eq->eq_out_ext = ERx("for");
+# endif	/* NT_GENERIC */
+# ifdef	CMS
+	    eq->eq_out_ext = ERx("copy");
+# endif	/* CMS */
+# ifdef	DGC_AOS
+	    eq->eq_out_ext = ERx("f77");
+# endif	/* DGC_AOS */
+	    einit = 1;
+	}
+
+	eq->eq_sql_quote = '\'';
+	eq->eq_quote_esc = '\'';
+	eq->eq_host_quote = '\'';
+
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->gr_id = ERx("");
+	gr->gr_flag = GR_HOSTCODE;
+	gr->F_intsize = sizeof(i4);
+
+      /* tell the world we're Embedded QUEL! */
+	dml->dm_lang = DML_ESQL;
+	dml->dm_exec = DML_HOST;
+	dml->dm_gentab = gen__sqltab;
+	dml->dm_lex = yyesqlex;
+	dml->dm_strcontin = scStrIsCont;
+	dml->dm_iscomment = sc_iscomment;
+	dml->dm_repeat = esq_repeat; 	/* Provide hook for REPEATED queries */
+
+      /* FORTRAN specific flags */
+	gr->F_rec = 0;
+	gr->F_size = 0;
+	gr->F_dims = 0;
+	gr->F_struct = (SYM *)0;
+
+	esq->inc = 0;
+	break;
+
+      case GR_SYMINIT:
+	sym_init( (bool)TRUE );
+	gen_init();
+
+      /* declare "generic null" as a symbol */
+	sy = symDcEuc( ERx(".null"), 0, F_BLOCK, syFisVAR|syFisSYS, 
+		      F_CLOSURE, SY_NORMAL );
+	sym_s_btype( sy, T_NUL );
+	sym_s_dsize( sy, sizeof(i4) );
+	gr->gr_null = sy;
+	break;
+
+      case GR_LOOKUP:
+	break;
+
+      case GR_STMTFREE:
+	str_reset();
+	sym_f_init();		/* clear the sym stack */
+	gr->gr_type = T_NONE;
+	gr->gr_sym = (SYM *)0;
+	gr->F_struct = (SYM *)0;
+	esq->flag = 0;
+	break;
+
+      case GR_DUMP:
+	{
+	    register FILE	*f = eq->eq_dumpfile;
+
+	    SIfprintf( f, ERx("GR_DUMP: gr_ \n") );
+	    SIfprintf( f,
+		       ERx("  sym = 0x%p, id = '%s', type = %d, flag = 0%o\n"),
+		       gr->gr_sym, gr->gr_id, gr->gr_type, gr->gr_flag );
+	    SIfprintf( f, ERx("  func = %d, mode = 0%o\n"),
+		       gr->gr_func, gr->gr_mode );
+	    SIfprintf( f, ERx("  F_rec = %d, F_size = %d, F_dims = %d\n"),
+		       gr->F_rec, gr->F_size, gr->F_dims );
+	    SIfprintf( f, ERx("  F_struct = 0x%p F_intsize = %d\n"),
+		       gr->F_struct, gr->F_intsize );
+	    SIfprintf( f, ERx("ESQ: esq_ \n") );
+	    SIfprintf( f, ERx("  flag = 0%o,"), esq->flag );
+	    SIfprintf( f, ERx(" inc = 0%o, dml_exec = 0%o\n"), 
+		       esq->inc, dml->dm_exec );
+	    SIflush( f );
+	}
+	break;
+
+      case GR_LENFIX:
+      /*
+      ** change the length of the type (in arg1) to the given length (in arg2).
+      ** for BASIC and FORTRAN.
+      */
+	if (STbcompare((char *)arg1, 0, ERx("integer"), 0, TRUE) == 0)
+	    /* get lint truncation warning if sizeof ptr > int, but 
+	       code is still valid. */
+	    gr->F_intsize = (i4)arg2;
+	else 
+	    gr->F_intsize = sizeof(i4);
+	break;
+
+      case GR_EQSTMT:
+	{
+	    /* get lint truncation warning if sizeof ptr > int, but 
+	       code is still valid. */
+	    i4		mode = (i4)arg1;
+	    char	*kword = (char *)arg2;
+	    char	*kw2 = (char *)arg3;
+	    char	buf[50];
+
+	    /* Turn off declarations flag and generate line directive */
+	    gr->gr_flag &= ~GR_HOSTCODE;
+
+	    if ((mode==GR_sSQL || mode==GR_sREPEAT
+		 || mode==GR_sNODB || mode==GR_sFORMS || mode==GR_s4GL)
+		 && kw2 != (char *)0)
+	    {
+		STprintf( buf, ERx("%s %s"), kword, kw2 );
+		kword = buf;
+	    }
+	    if ((esq->flag & ESQ_NOPRT) == 0)
+		gen_eqstmt( G_OPEN, kword );
+
+	    /* 
+	    ** Check if SQLCA is required for certain languages.
+	    ** If the language requires all externals are defined for type
+	    ** checking then make sure the user did an INCLUDE SQLCA.
+	    */
+	    if ((esq->inc & sqcaSQL) == 0)
+	    {
+		er_write( E_EQ0503_hSQLCA, EQ_ERROR, 1, kword );
+		esq->inc |= sqcaSQL;
+	    }
+
+	    /* Check that the correct EXEC was used */
+	    if (mode == GR_sFORMS && dml->dm_exec != (DML_EXEC|DML__FRS))
+		er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("FRS"), kword );
+	    else if (mode == GR_s4GL && dml->dm_exec != (DML_EXEC|DML__4GL))
+		er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("4GL"), kword );
+	    else if (mode != GR_sFORMS && mode != GR_s4GL &&
+		     dml->dm_exec != (DML_EXEC|DML__SQL))
+		er_write( E_EQ0127_sqEXECMD, EQ_ERROR, 2, ERx("SQL"), kword );
+	    /* Stay in EXEC mode but turn off SQL or FRS */
+	    dml->dm_exec = DML_EXEC;
+
+	    switch (mode)
+	    {
+
+	      case GR_sREPEAT:
+		if (gr->gr_flag & GR_RETRIEVE)
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		gr->gr_flag |= GR_REPEAT|GR_SQL;
+		/*
+		** rep_begin doesn't use the first arg, but for safety's sake,
+		** send only the keyword part, not the "repeat".
+		** definitely don't db_key( "repeat keyword" ), though.
+		*/
+		if (kw2)
+		    kword = kw2;
+		rep_begin( kword, NULL );
+		db_key( kword );
+		break;
+	      case GR_sSQL:		/* Reset SQL information */
+		if (gr->gr_flag & GR_RETRIEVE)
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		gr->gr_flag |= GR_SQL;
+		esq_init();
+		db_key( kword );
+		break;
+	      case GR_sLIBQ:
+		if (gr->gr_flag & GR_RETRIEVE)
+		    er_write( E_EQ0063_grNESTQUEL, EQ_ERROR, 1, kword );
+		gr->gr_flag |= GR_ESQL;
+		break;
+	      case GR_sNODB:
+	      case GR_sFORMS:
+	      case GR_s4GL:
+		gr->gr_flag |= GR_ESQL;
+		break;
+	    }
+	}
+	break;
+
+      default:
+	break;
+    }
+}
+/* %L mechanism end */

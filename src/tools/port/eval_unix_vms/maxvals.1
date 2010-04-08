@@ -1,0 +1,33 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/maxvals.1,v 1.1 90/03/09 09:17:34 source Exp $
+.TH MAXVALS 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+maxvals \- show min/max vals of integral `C' data types.
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B maxvals
+[ char ][ int ][ long ][ short ][ -v ]
+.SH DESCRIPTION
+.I Maxvals
+prints the signed and unsigned minimum and maximum values for the
+selected `C' data types.  If no types are selected, the values for all
+types are printed.  The default output on a Pyramid is:
+.br
+.nf
+
+	char: 255, -128, 127
+	short: 65535, -32768, 32767
+	int: 4294967295, -2147483648, 2147483647
+	long: 4294967295, -2147483648, 2147483647
+.fi
+.PP
+.B -v
+``verbose'' mode prints the program's name and indents the output one
+tab stop.  It also prints the number of bits in each type.
+.SH "SEE ALSO"
+\fIbitsin(1)\fP
+.SH BUGS
+.I Maxvals
+might have problems on one's complement machines.
+

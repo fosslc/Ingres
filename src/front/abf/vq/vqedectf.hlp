@@ -1,0 +1,51 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqedectf.hlp       Escape Code Help
+/#subtopic "4GL Examples" vq4glex.hlp
+/#subtopic "Escape Code Examples" vqesctyp.hlp
+/#subtopic "Generated Frame Details" vq4gldet.hlp
+Overview of Escape Code (select menuitem "Subtopics" for details).
+                                                                  
+  (NOTE -- General information about escape code is provided below the 
+   following description of Menu Items.  Simply scroll down the pages.)
+
+Menu Items
+----------
+     Edit        Puts you in the system text editor. You can use the editor
+                 to enter your escape code.
+
+     File        Displays the ReadFile and WriteFile menuitems, which you can 
+                 use to read from an existing file or write your escape code
+                 out to a file.
+
+     Blank       Clears the escape code window. Will ask if you want to save 
+                 your changes or not.
+
+     LineEdit    Allows you to move text in the escape code window. You can 
+                 insert, delete, split, or join lines.
+
+     Variables   Displays the Local/Global Components Menu. On this menu, you
+                 select a category: Local Variables, Global Variables, Global
+                 Constants, or Record Types. Vision displays an input form
+                 for the category you choose.
+
+     Save        Saves your changes to the database without leaving the
+                 screen. If you used ReadFile, changes are not saved to
+                 the file.
+
+You can write escape code to:
+
+   * Display messages or prompts when a user calls a frame, enters a field, or
+     selects a menuitem.
+   * Keep track of how many records are retrieved, updated, or appended, on a
+     frame.
+   * Set "if-then" conditions for calling frames or taking other actions.
+   * Assign an initial value to a global or local variable.
+
+You can use any 4GL statements in your escape code, subject to the restric-
+tions discussed in the "Subtopics" for this Help screen. Your code must
+follow the standard 4GL syntax, with multiple statements separated by a
+semicolon. (See the "Subtopics" for examples of 4GL code and the "Ingres 4GL
+Reference Manual" for instructions on writing 4GL code.)
+
+The escape code type specifies at what point your escape code will be 
+activated when Vision runs the frame.

@@ -1,0 +1,32 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for remote api sharelib
+*/
+
+/*
+** History
+**	29-Mar-2004 (hweho01)
+**              Created for remote API release. 
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+*/
+
+
+PART  remotesharelib
+
+# ifdef R_SHLIBS
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+   DIRECTORY (PROD2NAME)!LIB_TGT
+      {
+      EXECUTABLE lib(PROG0PRFX)compat.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)frame.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)q.1.$SLSFX
+      EXECUTABLE lib(PROG0PRFX)oiutil.1.$SLSFX
+      EXECUTABLE lib(PROG1PRFX)api.1.$SLSFX
+      PERMISSION s:re,o:rwed,g:re,w:re
+      }
+# endif /* R_SHLIBS */
+
+

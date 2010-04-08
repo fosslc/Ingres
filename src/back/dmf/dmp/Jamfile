@@ -1,0 +1,42 @@
+#
+# Jamfile file for back!dmf!dmp
+#
+# History:
+#       12-Jan-2005 (hweho01)
+#        1) Removed rs4_us5 from IINOOPTIM list.
+#        2) Corrected the IINOOPITM list. 
+#	26-jan-2005 (abbjo03)
+#	    Build dm1p.c with NOOPTIM on Alpha VMS.
+#	03-Aug-2005 (hweho01) 
+#	    Build dm1p.c with NOOPTIM on Tru64 (axp_osf) platform.
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+#
+
+SubDir ING_SRC back dmf dmp ;
+
+IISUBSYS back dmf dmp ;
+
+IINOOPTIM dm2t.c : dr6_us5 ;
+IINOOPTIM dm2r.c : dr6_us5 i64_aix ;
+IINOOPTIM dm2f.c : dr6_us5 pym_us5 ;
+IINOOPTIM dm2d.c : dr6_us5 pym_us5 ;
+IINOOPTIM dm1s.c : pym_us5 ;
+IINOOPTIM dm1cnv2.c : pym_us5 ;
+IINOOPTIM dm1cn.c : pym_us5 ;
+IINOOPTIM dm1bindex.c : pym_us5 ;
+IINOOPTIM dm1b.c : pym_us5 ;
+IINOOPTIM dm0p.c : dr6_us5 i64_aix ;
+IINOOPTIM dm1p.c : axm_vms axp_osf ;
+
+
+IILIBRARY DMFLIB : dmrfpsup.c dmckp.c dm2t.c dm2rep.c dm2r.c
+	dm2f.c dm2d.c dm2a.c dm1x.c dm1u.c dm1sbuild.c dm1s.c
+	dm1r.c dm1p.c dm1mindex.c dm1mbuild.c dm1m.c dm1ibuild.c
+	dm1i.c dm1hbuild.c dm1h.c dm1cnv2.c dm1cn.c dm1cidx.c
+	dm1ccmpn.c dm1ccmph.c dm1c.c dm1bmerge.c dm1bindex.c
+	dm1bbuild.c dm1b.c dm0s.c dm0pmo.c dm0p.c dm0m.c dm0l.c
+	dm0j.c dm0d.c dm0c.c ;
+
+IILIBRARY IMPDMFLIBDATA : dmpdata.c dmplkup.roc ;
+

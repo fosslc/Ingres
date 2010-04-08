@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are in the GO submenu of the QBF Tables Catalog.
+
+The SimpleFields operation indicates that you wish the table to appear
+with simple fields.
+
+The TableFields operation indicates that you wish the table to appear as a
+table field.
+
+After you make a selection, QBF will execute the query.

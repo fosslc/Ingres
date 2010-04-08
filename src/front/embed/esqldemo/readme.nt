@@ -1,0 +1,34 @@
+Instructions for compiling and running the sample "tmdemo" application:
+-----------------------------------------------------------------------
+
+This directory contains a sample program tmdemo.exe that shows how to
+create and run esqlc progams of your own.  The makefile is to be used in
+conjunction with Microsoft's NNAKE utility.  The command lines for esqlc,
+compiling and linking are all stipulated in the makefile.  The sample
+program is meant only to allow you to connect to a database and enter
+simple queries.  Building and executing this sample program is a good way
+of ensuring that your environment is set up correctly to use esqlc and
+Microsoft's tools.
+
+To build the sample program, go to directory %II_SYSTEM%\ingres\demo\esqlc
+and type:
+
+      nmake all
+
+
+For more details about command line specifics, see the comments in the
+makefile.
+
+
+Files included here are:
+
+tmdemo.sc
+makefile
+readme
+
+
+Note that you need access to the esqlc library, 'ingres.lib' in order to link 
+your application, and it should be available with the normal 
+Ingres ESQL/C installation (in %II_SYSTEM%\ingres\lib).  If you 
+modify paths or move files ensure that you continue to specify the 
+correct path for ingres.lib.

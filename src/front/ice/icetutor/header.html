@@ -1,0 +1,31 @@
+<!-- #ICE REPEAT IF (`:attr` != ``)
+		THEN=`<!-- #ICE DECLARE=``session.attr=:attr`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=How to customize your header?&previous=attr&next=header2.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`checkSQL.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`
+			<table>
+			<tr><td align=right>
+			Column Name:</td>
+			<td><SELECT NAME="name">
+			<OPTION VALUE="">none
+
+			<!-- #ICE 
+			SQL=``:dbquery`` 
+			DATABASE=``:dbname`` 
+			HTML=``<OPTION VALUE=":ColumnName">:ColumnName``
+			TYPE=``UNFORMATTED``
+			ROWS=``0`` 
+			-->
+			</SELECT>
+			</td></tr>
+			<tr><td align=right>New header:</td><td><INPUT SIZE="32" NAME="value" VALUE=""></td></tr>
+			</table>
+			<!-- #ICE REPEAT INCLUDE=``sqlResult.html`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

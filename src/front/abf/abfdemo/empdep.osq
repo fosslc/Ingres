@@ -1,0 +1,99 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+**
+** empdep.osq: Retrieve information on employees' dependents.
+*/
+
+initialize (resp = c3, curr_field = c32)=
+begin
+	mode query;
+	today = date('now');
+	callproc timer_on(secs=15);
+end
+
+GetEmployee, key frskey4 = 
+begin
+	empdep = select name, title, manager, hourly_rate
+		from emp
+		where qualification(name=name,title=title,
+			manager=manager, hourly_rate=hourly_rate)
+	dependents = select distinct *
+	 	from dependents
+		where name=:name
+		order by birth
+	begin
+
+		initialize =
+		begin
+			if :dependents[1].depname = '' then
+				set_forms field '' (invisible(dependents)=1);
+				deps = 'N';
+			else
+				set_forms field '' (invisible(dependents)=0);
+				deps = 'Y';
+			endif;
+			redisplay;
+		end
+
+		'Next', key frskey4 = 
+		begin
+			message 'Retrieving next Employee.';
+			next;
+			if :dependents[1].depname = '' then
+				set_forms field '' (invisible(dependents)=1);
+				deps = 'N';
+			else
+				set_forms field '' (invisible(dependents)=0);
+				deps = 'Y';
+			endif;
+			redisplay;
+		end
+
+		'Quit', key frskey3 = 
+		begin
+			endloop;
+		end
+
+		on timeout =
+		begin
+			today = date('now');
+		end
+
+	end;
+	set_forms field '' (invisible(dependents)=1);
+	clear field all;
+	today = date('now');
+	redisplay;
+end
+		
+'4GL', key frskey16 = 
+begin
+	helpfile 'Employee-Dependents Frame 4GL'
+			'II_SYSTEM:[INGRES.FILES.ABFDEMO]empdep.osq';
+end
+
+'Help', key frskey1 =
+begin
+	help_forms (subject = 'Employee Information',
+			file = 'II_SYSTEM:[INGRES.FILES.ABFDEMO]empdep.hlp');
+end
+
+'Quit', key frskey3 = 
+begin
+	callproc timer_on(secs=2);
+	return;
+end
+
+key frskey2 = 
+begin
+	 exit;
+end
+
+on timeout =
+begin
+	today = date('now');
+end
+

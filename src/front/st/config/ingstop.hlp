@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2005 Ingres Corporation
+
+ Ingstop.
+
+ The ingstop parameter determines the default behavior of the ingstop
+ command. Ingstop parameters and flags specified on the command line
+ overrides the value specified in CBF.
+
+ Choices are:
+
+        none         Specifies that ingstop run with no parameters or
+              flags.
+
+        -k, -kill    Specifies that ingstop run with -k or -kill.
+
+        -f, -force   Specifies that ingstop run with -f or -force.
+
+ Default: -force

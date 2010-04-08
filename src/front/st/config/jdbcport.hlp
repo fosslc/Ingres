@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+ The network port.  This may be a numeric port identifier or an
+ Ingres symbol port identifier such as II7.  This port must not be
+ used by any other JDBC or communication server on the platform.
+

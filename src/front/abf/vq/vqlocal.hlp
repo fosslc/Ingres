@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlocal.hlp, main Edit Local Variables help
+/#--
+Use local variables to hold information the user won't see.  Local variables 
+apply on a per-frame basis; globals apply throughout the application.
+
+To use a local variable, first Create it at the Edit Local Variables screen.
+Vision assigns an initial value of blanks for character datatypes and zeroes 
+for numeric datatypes. (You can use a previously defined record type as a 
+datatype when you create a local variable.) Depending on how you want to 
+use the local variable, you might want to change the initial value. Do this 
+by including a 4GL assignment statement in the escape code or by editing the 
+source code. 
+
+To retrieve the value of the variable, you must write 4GL escape code.  You 
+can use the value of the variable as follows:
+  * In a query restriction on a Browse or Update frame
+  * In an assigned value for a field on an Append frame
+  * To pass to another frame as a parameter
+  * To display to the user through 4GL escape code (for example, as part of 
+    a message)

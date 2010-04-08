@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!st!perfwiz_win
+#
+
+SubDir ING_SRC front st perfwiz_win ;
+
+IISUBSYS front st perfwiz_win ;
+
+
+IISLN perfwiz.exe : perfwiz.sln ;

@@ -1,0 +1,55 @@
+RELEASE Ingres
+PACKAGE orrunpkg
+   VISIBLEPKG 
+   INCLUDE orrun
+PACKAGE ordevpkg
+   VISIBLEPKG 
+   INCLUDE ordev
+   INCLUDE orrun
+PACKAGE ordev
+   NEED orrun
+   PART ordev
+      DEFINITION  ordev.prt
+PACKAGE orrun
+   NEED net
+   NEED tm
+   PART orrun
+      DEFINITION orrun.prt
+   PART ormw
+      DEFINITION ormw.prt
+PACKAGE net
+   NEED basic
+   NEED setupsup
+   NEED config
+   PART net
+	DEFINITION net.prt
+PACKAGE config
+   INVISIBLE
+   PART config
+	DEFINITION config.prt
+PACKAGE basic 
+   INVISIBLE
+   BUILD_DIR (ING_BUULD)!files
+   PART charsets
+      DEFINITION charsets.prt
+   DIRECTORY ingres!files!english
+   PART messages
+      DEFINITION messages.prt
+   PART ingenv
+      DEFINITION ingenv.prt
+   PART name-server
+      DEFINITION namesrv.prt
+   PART zoneinfo
+      DEFINITION zoneinfo.prt
+PACKAGE setupsup 
+   INVISIBLE 
+   PART setupsup
+      DEFINITION setupsup.prt
+PACKAGE tm 
+   VISIBLE CI_PER_USER_LICENSING
+   INCLUDE setupsup
+   PART tm
+      DEFINITION tm.prt
+PACKAGE install
+   PART install
+      DEFINITION install.prt

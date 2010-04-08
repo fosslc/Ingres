@@ -1,0 +1,1460 @@
+/*
+**    Copyright (c) 1986, 2009 Ingres Corporation
+*/
+
+/**
+** Name:    cm.h    - Character Manipulation library.
+**
+** Description:
+**      The CM library routines allow programmers to deal
+**	with characters independently as to whether the 
+**	character is one or two bytes.  This file defines:
+**
+**(	CM Routines for Checking Character Attributes
+**	---------------------------------------------
+**	CMalpha		test for alphabetic character
+**	CMdbl1st	test for 1st byte of double byte
+**	CMnmstart	test for leading character in name
+**	CMnmchar	test for trailing character in name
+**	CMprint		test for printing character
+**	CMdigit		test for digit
+**	CMcntrl		test for cntrol character
+**	CMlower		test for lowercase character
+**	CMupper		test for uppercase character
+**	CMwhite		test for white space
+**	CMspace		test for space character
+**	CMhex		test for hexadecimal digit
+**	CMoper		test for operator character
+**		NOTE: These test macros are notionally typed
+**		to return bool but will do so using the relaxed
+**		boolean form of 0 being FALSE and TRUE otherwise.
+**		Thus, checking whether a character is a digit
+**		should be done using either:
+**			if (CMdigit(ptr)) ...
+**		or:
+**			if (CMdigit(ptr) != FALSE) ...
+**		but never as:
+**			if (CMdigit(ptr) == TRUE) ...
+**
+**	CM Routines for String Movement
+**	-------------------------------
+**	CMnext		increment character pointer
+**	CMprev		decrement character pointer
+**	CMbyteinc	increment byte counter
+**	CMbytedec	decrement byte counter
+**	CMbytecnt	count the bytes in the next character
+**	
+**	CM Routines for Copying Characters
+**	----------------------------------
+**	CMcpychar	copy character to string
+**	CMcpyinc	copy character to string and increment
+**	CMtolower	copy lowercase character to string
+**	CMtoupper	copy uppercase character to string
+**	CMcopy		copy a character string of specified length
+**	CM_ISUTF8_BOM   tests for byte order mark in UTF8 install.
+**
+**	CM Routines for Comparing Characters
+**	------------------------------------
+**	CMcmpnocase	compare two characters, ignoring case
+**	CMcmpcase	compare two characters for exact match
+**)
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	23-feb-87 (yamamoto)
+**		Add CMhex and CMoper
+**	02-mar-87 (yamamoto)
+**		Added CMbytecnt
+**	09-mar-87 (peter)
+**		Moved from VMS --> UNIX.
+**	13-apr-87 (ncg)
+**		Added CMcopy (with _cmcopy).
+**	11-may-88 (ricks)
+**		Added character set defines - CSxxx
+**	29-nov-88 (nancy) -- fixed cmdblspace macro to use correct Kanji
+**		space value (A1) in both bytes.
+**	 1-Jun-89 (anton)
+**		Local collation support
+**	 7-Jun-89 (anton)
+**		Moving definition of BELL to cm.h from compat.h
+**	20-Jun-89 (anton)
+**		Add COL_BLOCK - block size of local collation file
+**	22-may-90 (blaise)
+**	    Integrated changes from 61 and ingresug:
+**		Added IBM's Code Page 0 8 bit character set;
+**		Added macro cmtolower and cmtoupper for CSIBM;
+**		Moved the #define of character set to bzarch.h, and add error
+**		if compat.h (and therefore bzarch.h) hasn't been included;
+**		Must declare extern CMshift[] if CSIBM is defined;
+**		Redeclare ccm_Character_Table as a GLOBALCONSTREF to match
+**		cl/clf/cmtypes.roc;
+**		Re-map CMcopy into MECOPY_VAR_MACRO call.
+**	23-Aug-90 (bobm)
+**		Changes to allow runtime loading of attribute table.
+**	24-Aug-90 (jkb)
+**		Backed out change " Re-map CMcopy into MECOPY_VAR_MACRO
+**		call" can't have switch statement in a comma separated list
+**	 1-Mar-91 (stevet)
+**              Changed CMcopy definition for DOUBLEBYTE to cmicopy, which was
+**              lost with no appearent reason.  Fixed DOUBLEBYTE definitions
+**              of CMcmpnocase and CMcmpcase for scrollable field problems.
+**      26-aug-93 (huffman)
+**              This is for the alpha branch of the vms cl.  MEcopy
+**              is really IIMEcopy.  and my doing it here we will
+**              save alot of changes to the framelib.exe shared library.
+**	20-apr-95 (albany)
+**		Integrate athda01's change to the VAX cl here:
+**		    11-apr-1995 (athda01)  forward fit of 6.4/03 ingres63p 
+**		    chg 274355; original fix for 6.4 coded by angusm.
+**		    Add extra constants to identify the default 'compiled-in'
+**		    charsets in cmtype.c
+**      03-jun-1998 (horda03)
+**              DOUBLEBYTE will now be defined by the Compile command, and
+**              if defined, define CSDECANJI else define CSDECMULTI
+**	01-dec-2000	(kinte01)
+**	    Bug 103393 - removed nat, longnat, u_nat, & u_longnat
+**	    from VMS CL as the use is no longer allowed
+**	14-jan-2004 (gupsh01)
+**	    Added location type for specifying output directory in CM routines.
+**	18-feb-2004 (gupsh01)
+**	    Added CM_DEFAULTFILE_LOC which allows looking for default unicode
+**	    coercion mapping file in $II_SYSTEM/ingres/files directory which
+**	    is not yet copied to $II_SYSTEM/ingres/files/ucharmaps directory,
+**	    at install time.
+**	14-Jun-2004 (schka24)
+**	    Added max locale name length for overrun safety.
+**	20-Oct-2006 (kiria01)
+**	    Increased the checking for doublebyte characters such as dblspace
+**	    and factored out the conditional code to aid readability and
+**	    reduce repetition.
+**	06-Nov-2006 (kiria01) b117042
+**	    Document the relaxed bool implementation of the CM macros following
+**	    the more efficient standard of 0 being false and non-zero being truth.
+**	03-Jun-2008 (gupsh01)
+**	    Added UTF8 support for VMS.
+**      05-feb-2009 (joea)
+**          Change CM_isUTF8 to a bool.
+**       5-Nov-2009 (hanal04) Bug 122807
+**          CM_CaseTab needs to be u_char or we get values wrapping and
+**          failing integer equality tests.
+**	 2-Dec-2009 (wanfr01) Bug 122994
+**	    Add CMGETDBL variable and use it to bypass Doublebyte checks if
+**	    you are running a platform that has no doublebyte characters
+**      04-Jan-2010 (horda03) Bug 122994
+**          Fix type with 2-Dec-2009's change. Missing ';'.
+*/
+
+
+/*
+** Bell character
+*/
+# define	BELL '\07'
+
+/*
+**	Local collation block size
+*/
+# define	COL_BLOCK	1024
+
+/*
+**	File output location types for CM*_col routines.
+*/
+# define	CM_COLLATION_LOC	0
+# define	CM_UCHARMAPS_LOC	1
+# define	CM_DEFAULTFILE_LOC	2
+
+/*
+** Character set
+*/
+# ifdef DOUBLEBYTE
+# define	CSDECKANJI
+# else
+# define	CSDECMULTI
+# endif
+
+/* 
+**	The character set being used is defined in bzarch.h, so error
+**	if compat.h, and therefore bzarch.h, has not been included.
+*/
+
+# ifndef        COMPAT_INCLUDE
+       # error "<compat.h> not included before <cm.h>"
+# endif
+
+/*
+**	Definitions of character classification.
+*/
+
+# define	CM_A_UPPER	1	/* Upper case ALPHA */
+# define	CM_A_LOWER	2	/* Lower case ALPHA */
+# define	CM_A_NCALPHA	4	/* non-cased alpha */
+# define	CM_A_DIGIT	8	/* DIGIT */
+# define	CM_A_SPACE	0x10	/* SPACE */
+# define	CM_A_PRINT	0x20	/* PRINTABLE */
+# define	CM_A_CONTROL	0x40	/* CONTROL */
+# define	CM_A_DBL1	0x80	/* 1st byte of double byte character */
+# define	CM_A_DBL2	0x100	/* 2nd byte of double byte character */
+# define	CM_A_NMSTART	0x200	/* Leading character of a name */
+# define	CM_A_NMCHAR	0x400	/* Trailing character of a name */
+# define	CM_A_HEX	0x800	/* Hexadecimal Digit */
+# define	CM_A_OPER	0x1000	/* Operator Character */
+
+# define	CM_A_ALPHA	(CM_A_UPPER|CM_A_LOWER|CM_A_NCALPHA)
+
+# define	CM_A_ILLEGALUNI	0x0000	/* Defined for UTF8 charset */
+
+/*
+**  Bug 56258:  identify 'compiled-in' default charset for some cases 
+**  where II_CHARSETxx is not set.
+**
+**  These constants mirror the values in common!gcf!files!gcccset.nam
+*/
+ 
+#define CM_88591		0x1		/* ISO 8859-1 */
+#define CM_DECMULTI		0x30		/* DEC MULTI */
+#define CM_IBM			0x14		/* IBM code page 850 */
+
+/*
+** maximum length for name identifying character set.
+*/
+# define	CM_MAXATTRNAME	8
+
+# define	CM_NOCHARSET	(E_CL_MASK + E_CM_MASK + 0x01)
+
+/* Maximum length we'll accept for an OS supplied locale / codepage name.
+** The aduconverter stuff calls this a platform character-set name.
+*/
+
+# define	CM_MAXLOCALE	50
+
+/*
+** CM_DEREF - dereference pointer and apply 8 bit mask
+*/
+# define	CM_DEREF(s)	(*(s) & 0xFF)
+
+/*
+** CM_UTF8MULTI - Checks if this is a multibyte UTF8 character.
+*/
+# define        CM_UTF8MULTI(s)   ((*(s) & 0xFF) & 0x80)
+
+/*
+** CM_UTF8LEAD - Checks whether a lead byte of a UTF8 character
+** Follows a pattern eg 0x11...
+*/
+# define        CM_UTF8LEAD(s)    (((*(s) & 0xFF) & 0x80) && ((*(s) & 0xFF) & 0x40))
+/*
+** CM_UTF8FOLLOW - Checks whether a following byte of a UTF8 character.
+** Follows a pattern eg 0x10...
+*/
+# define        CM_UTF8FOLLOW(s)  (((*(s) & 0xFF) & 0x80) && !(((*(s) & 0xFF) & 0x40)))
+
+/*
+** Name: CM_UTF8ATTR - UTF8 property definition structures
+**
+** Description:
+**
+**      Structure which defines the attribute and case translation tables
+**      for UTF8 character sets. This character set is larger then usual
+**      0-FF range and has special structures to store the values.
+*/
+typedef struct
+{
+        u_i2    property;
+        u_i2    caseindex;
+} CM_UTF8ATTR;
+
+#define         MAXCASECHARS        8   /* Max case translation characters */
+
+/*
+** Name: CM_UTF8CASE - UTF8 case definition structures
+**
+** Description:
+**
+**      Structure which defines the attribute and case translation tables
+*/
+typedef struct
+{
+        u_i2    codepoint;
+        u_i2    casecnt;
+        u_char  casechars[MAXCASECHARS];
+
+} CM_UTF8CASE;
+
+/*
+** attribute table and case translation table
+*/
+GLOBALREF  u_i2	*CM_AttrTab;
+GLOBALREF  u_char	*CM_CaseTab;
+GLOBALREF  bool    CM_isUTF8;
+GLOBALREF  bool    CM_isDBL;
+GLOBALREF  i4      *CM_UTF8Bytes;
+GLOBALREF  CM_UTF8ATTR     *CM_UTF8AttrTab;
+GLOBALREF  CM_UTF8CASE     *CM_UTF8CaseTab;
+
+/*
+** Define macros similar as in unix/win cmcl.h to get these files
+** much more common.
+*/
+# define CMGETATTRTAB	CM_AttrTab
+# define CMGETCASETAB	CM_CaseTab
+
+# define CMGETUTF8      CM_isUTF8
+# define CMGETDBL       CM_isDBL
+# define CMGETUTF8BYTES CM_UTF8Bytes
+# define CMGETUTF8ATTRTAB       CM_UTF8AttrTab
+# define CMGETUTF8CASETAB       CM_UTF8CaseTab
+
+FUNC_EXTERN u_i2        cmkcheck(
+#ifdef  CL_PROTOTYPED
+        u_char          *point,
+        u_char          *strstart
+#endif
+);
+FUNC_EXTERN u_i4       cmicopy(
+#ifdef  CL_PROTOTYPED
+        u_char          *source,
+        u_i4            len,
+        u_char          *dest
+#endif
+);
+
+
+FUNC_EXTERN i4          cmupct(
+#ifdef CL_PROTOTYPED
+        u_char          *str,
+        u_char          *startpos
+#endif
+);
+
+FUNC_EXTERN u_i2        cmu_getutf8property(
+#ifdef CL_PROTOTYPED
+        u_char  *key,
+        i4      keycnt
+#endif
+);
+
+FUNC_EXTERN u_i2        cmu_getutf8_toupper(
+#ifdef CL_PROTOTYPED
+        u_char  *src,
+        i4      srclen,
+        u_char  *dst,
+        i4      dstlen
+#endif
+);
+
+FUNC_EXTERN u_i2        cmu_getutf8_tolower(
+#ifdef CL_PROTOTYPED
+        u_char  *src,
+        i4      srclen,
+        u_char  *dst,
+        i4      dstlen
+#endif
+);
+
+# define CMGETATTR(s)   ((CMGETUTF8 && CM_UTF8MULTI(s)) ? (cmu_getutf8property((u_char *)(s), (i4)CMUTF8cnt(s))) : (CMGETATTRTAB[CM_DEREF(s)]))
+
+# define CMGETCASE(s)   CMGETCASETAB[CM_DEREF(s)]
+
+# define CMUTF8cnt(str) (CM_UTF8Bytes[CM_DEREF((u_char *)(str))])
+
+/*      define local macros     */
+/* For UTF8 character set the trailing bytes have their 2 high bits set as
+** 10 hence the bytes are in the form of 10xxxxxx
+*/
+
+# define cmdbl2nd(s)    ((CMGETUTF8 && CM_UTF8MULTI(s)) ? (CM_UTF8FOLLOW(s)) : (CMGETATTR(s) & CM_A_DBL2))
+
+/*	define local macros	*/
+# define cmdbl2nd(s)    ((CMGETUTF8 && CM_UTF8MULTI(s)) ? (CM_UTF8FOLLOW(s)) : (CMGETATTR(s) & CM_A_DBL2))
+
+/*
+** NOTE: The checks made for kanjii doublebyte space below do not regard
+** buffer length! Most of the CM* macros below access only the character
+** pointed at meaning that the calling code must assure that the character
+** is within the buffer. However, where spaces have to be checked for, the
+** space character could be a 2 byte long space and the check would have
+** to look beyond the assured character. The macro cmdblspace(s) provides
+** the means of checking for it but is unaware of buffer end!. To tighten
+** up this deficiency, short of adding length parameters to most CM* macros
+** we check the character attributes to see if the 0xA1 character is marked
+** as being both an initial and a following character in the two byte set.
+** This is reasonable check to make as it would otherwise not be stepped
+** over correctly by CMnext etc. This does mean that an ill-formed character
+** in a double byte cset could be reported as spanning the buffer end if
+** a 0xA1 character happend to be present beyond buffer end.
+*/
+#ifdef	DOUBLEBYTE
+# define KANJI_SPC 0xA1
+# define cmdblspace(s)	(((CM_DEREF(s)) == KANJI_SPC) && \
+	((CMGETATTR(s) & (CM_A_SPACE|CM_A_DBL1|CM_A_DBL2))==(CM_A_SPACE|CM_A_DBL1|CM_A_DBL2)) &&\
+	((CM_DEREF((s)+1)) == KANJI_SPC))
+#else
+/* Allow optimizer to cut out redundant DOUBLEBYTE code */
+# define cmdblspace(s)	(FALSE)
+#endif
+
+/*{
+** Name:	CMalpha	- test for alphabetic character
+**
+** Description:
+**	Test next character in string for alphabetic.
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool	CMalpha(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer to character to be checked
+**
+** Outputs:
+**	Returns:
+**		0	Char not alphabetic
+**		!=0	Char is alphabetic
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+*/
+
+# define CMalpha(str)	(CMGETATTR(str) & CM_A_ALPHA)
+
+
+/*{
+** Name:	CMdbl1st	- test for 1st byte of double byte character
+**
+** Description:
+**	Test next character in string for leading byte of a two byte character
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**      Note this routine doesn't need the (CMGETDBL?) check, because it has
+**      already been checked by the caller macro
+**
+**(Usage:
+**	bool	CMdbl1st(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer to character to be checked
+**
+** Outputs:
+**	Returns:
+**		0	Char not 2 byte leader
+**		!=0	Char is 2 byte leader
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+*/
+
+# ifdef	DOUBLEBYTE
+# define CMdbl1st(str)  ((CMGETUTF8 && CM_UTF8MULTI(str)) ? (CM_UTF8LEAD(str)) : (CMGETATTR(str) & CM_A_DBL1))
+# else
+/* Allow optimizer to cut out redundant DOUBLEBYTE code */
+# define CMdbl1st(str)	(FALSE)
+# endif
+
+
+/*{
+** Name:	CMnmstart	- check leading character of a name
+**
+** Description:
+**	Within a string, check the next character to see if
+**	it is a valid character as the first position of an
+**	INGRES name. 
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool	CMnmstart(nm)
+**	char	*nm;
+**)
+** Inputs:
+**	nm	pointer to character within a name
+**
+** Outputs:
+**	Returns:
+**		0	Char not name leader
+**		!=0	Char is name leader
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+*/
+
+# define CMnmstart(nm)	((CMGETATTR(nm) & CM_A_NMSTART) ? \
+	(CMdbl1st(nm) ? (cmdbl2nd((nm)+1) && !cmdblspace(nm)) : TRUE) : FALSE)
+
+
+/*{
+** Name:	CMnmchar	- check trailing character of a name
+**
+** Description:
+**	Within a string, check the next character to see if
+**	it is a valid character within an INGRES name. 
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool	CMnmchar(nm)
+**	char	*nm;
+**)
+** Inputs:
+**	nm	pointer to character within a name
+**
+** Outputs:
+**	Returns:
+**		0	Char not name character
+**		!=0	Char is name character
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+*/
+
+# define CMnmchar(nm)	((CMGETATTR(nm) & (CM_A_NMSTART|CM_A_NMCHAR)) ? \
+	(CMdbl1st(nm) ? (cmdbl2nd((nm)+1) && !cmdblspace(nm)) : TRUE) : FALSE)
+
+
+/*{
+** Name:	CMprint	- test for printing character
+**
+** Description:
+**	Test next character in string for printing character
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool	CMprint(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer to character to be checked
+**
+** Outputs:
+**	Returns:
+**		0	Char not printable
+**		!=0	Char is printable
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+
+# define CMprint(str)	((CMGETDBL)? (CMdbl1st(str) ? cmdbl2nd((str)+1) : \
+	(CMGETATTR(str) & (CM_A_PRINT|CM_A_ALPHA|CM_A_DIGIT))) : \
+	(CMGETATTR(str) & (CM_A_PRINT|CM_A_ALPHA|CM_A_DIGIT)))
+
+
+/*{
+** Name:	CMdigit	- test for digit
+**
+** Description:
+** 	Test next character in string for digit
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool	CMdigit(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer to character to be checked
+**
+** Outputs:
+**	Returns:
+**		0	Char not digit
+**		!=0	Char is digit
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+*/
+
+# define CMdigit(str)	(CMGETATTR(str) & CM_A_DIGIT)
+
+
+/*{
+** Name:	CMcntrl	- test for non-printing character
+**
+** Description:
+**	Test next character in string for non-printing character
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool	CMcntrl(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer to character to be checked
+**
+** Outputs:
+**	Returns:
+**		0	Char not control character
+**		!=0	Char is control character
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+*/
+
+# define CMcntrl(str)	(CMGETATTR(str) & CM_A_CONTROL)
+
+
+/*{
+** Name:	CMlower	- test for lowercase
+**
+** Description:
+**	Test next character in string for lowercase
+**	Is *str in [a-z]
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool	CMlower(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer to character to be checked
+**
+** Outputs:
+**	Returns:
+**		0	Char not lowercase
+**		!=0	Char is lowercase
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+*/
+
+# define CMlower(str)	(CMGETATTR(str) & CM_A_LOWER)
+
+/*	define local macros	*/
+
+# define cmtoupper(str)	(CMlower(str) ? CMGETCASE(str) : CM_DEREF(str))
+
+
+/*{
+** Name:	CMupper	- test for uppercase
+**
+** Description:
+**	Test next character in string for uppercase
+**	Is *str in [A-Z]
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool	CMupper(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer to character to be checked
+**
+** Outputs:
+**	Returns:
+**		0	Char not uppercase
+**		!=0	Char is uppercase
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+*/
+
+# define CMupper(str)	((CMGETATTR(str)) & CM_A_UPPER)
+
+/*	define local macros	*/
+
+# define cmtolower(str)	((CMupper(str)) ? (CMGETCASE(str)) : (CM_DEREF(str)))
+
+
+/*{
+** Name:	CMwhite	- check white space
+**
+** Description:
+**	Within a string, check to see if the next character
+**	is white space (either a space, tab, LF, NL, CR, FF 
+**	or double byte space.) 
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool	CMwhite(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer positioned at the point in the string
+**		to check a character for white space.	
+**
+** Outputs:
+**	Returns:
+**		0	Char not whitespace
+**		!=0	Char is whitespace
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	23-Oct-06 (kiria01)
+**		Tighten double byte space check and bias the evaluation to
+**		more efficiently identify the single byte whitespace
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+**	    Note this undoes the prior change so the code is easier to read.
+*/
+
+# define CMwhite(str) ((CMGETDBL)? ((CMGETUTF8 && CM_UTF8MULTI(str)) ? ((CMGETATTR(str)&CM_A_SPACE) ? TRUE : FALSE) : ((CM_AttrTab[*(str)&0377] & CM_A_SPACE) || cmdblspace(str))) : (CM_AttrTab[*(str)&0377] & CM_A_SPACE))
+
+
+/*{
+** Name:	CMspace	- check a space or double byte space
+**
+** Description:
+**	Within a string, check to see if the next character
+**	is a space or double byte space.
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool 	CMspace(str) 
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer positioned at the point in the string
+**		to check a character for space.
+**
+** Outputs:
+**	Returns:
+**		0	Char not space character
+**		!=0	Char is space character
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+
+# define CMspace(str)	(*(str) == ' ' || ((CMGETDBL) && cmdblspace(str)))
+
+
+/*{
+** Name:	CMhex() -	Test for Hexadecimal Digit.
+**
+** Description:
+**	Checks that the current character of the input string is a hexadecimal
+**	digit.  That is, one of [0-9A-Fa-f].
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	bool CMhex(str)
+**	char *str;
+**)
+** Inputs:
+**	str	{char *}  Pointer to character within a string.
+**
+** Outputs:
+**	Returns:
+**		0	Char not hex digit
+**		!=0	Char is hex digit
+**
+** Side Effects:
+**	None
+**
+** History:
+**	02/87 (jhw) -- Written.
+**	23-feb-1987 (yamamoto)
+**		written using _HEX.
+*/
+
+# define CMhex(str)	(CMGETATTR(str) & CM_A_HEX)
+
+
+/*{
+**  Name: CMoper - Test for operator character
+**
+**  Description:
+**	Test next character in a string for membership in the set of operators.
+**	This set of operators constitutes the set of all INGRES operators
+**	that are used throught the query languages and their various
+**	extensions.  These operators also include all the operators of
+**	host languages in which a query language may be embedded.
+**	The set of operators is made up of all printable characters, less
+**	the set of alphanumeric and space characters.  This set of operators
+**	may change across different character sets (ie, the EBCDIC value for
+**	^), and languages (ie, the Spanish question prefix, the upside down '?')
+**
+** 	For example, the set of ASCII (American) operators is:
+**
+**	    ! " # $ % & ' ( ) * + , - . / : ; < = > ? @ [ \ ] ^ `
+**	    { | } ~
+**
+**(Usage:
+**	bool CMoper(str)
+**	char *str;
+**)
+**
+**  Inputs:
+**	str	- Pointer to character to be checked.
+**
+**  Outputs:
+**	Returns:
+**		0	Char not oper character
+**		!=0	Char is oper character
+**	Errors:
+**	    None
+**
+**  Side Effects:
+**	None
+**	
+**  History:
+**	10-feb-1987 (neil)	- written.
+**	23-feb-1987 (yamamoto)
+**		written using _OPER.
+*/
+
+# define CMoper(str)	(CMGETATTR(str) & CM_A_OPER)
+
+/*{
+** Name:      CM_ISUTF8_BOM - Checks if the given source string is a UTF-8
+**                        byte order mark.
+**
+** Input:
+**    src             String to test for UTF8 byte order mark.
+**
+** History:
+**    16-Feb-2009 (gupsh01)
+**        Written
+*/
+# define CM_ISUTF8_BOM(src) ((CMGETUTF8) && ((CMbytecnt(src) == 3) && ((*((u_char *)src) == 0xEF) && (*((u_char *)src + 1) == 0xBB) && (*((u_char *)src + 2) == 0xBF)) ))
+
+
+/*{
+** Name:	CMcpychar	- copy one character to another
+**
+** Description:
+**	Copy one character (either one or two bytes) from
+**	string 'src' to the current position in string 'dst'.
+**	This mimics the (*d = *s) expression of C.
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	VOID	CMcpychar(src, dst)
+**	char	*src;
+**	char	*dst;
+**)
+** Inputs:
+**	src	pointer to character, which is positioned at the 
+**		point in string from which character is to be copied.
+**	dst	pointer in string into which character is to be copied.
+**
+** Outputs:
+**	Returns:
+**		VOID
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Jun-2008 (gupsh01)
+**		Add support for UTF8
+*/
+
+# ifdef	DOUBLEBYTE
+# define CMcpychar(src, dst) ( (CMbytecnt(src) == 1) ? (*(dst) = *(src)) :( (CMbytecnt(src) == 2) ?( (*((dst)+1) = *((src)+1)),(*(dst) = *(src))) :( (CMbytecnt(src) == 3) ? ( (*((dst)+2) = *((src)+2)),(*((dst)+1) = *((src)+1)),(*(dst) = *(src))) : ( (CMbytecnt(src) == 4) ? ( (*((dst)+3) = *((src)+3)),(*((dst)+2) = *((src)+2)), (*((dst)+1) = *((src)+1)),(*(dst) = *(src)) ) : 0))))
+# else
+# define CMcpychar(src, dst)	(*(dst) = *(src))
+# endif
+
+
+/*{
+** Name:	CMcpyinc	- copy one character to another
+**				(incrementing character pointer)
+**
+** Description:
+**	Copy one character (either one or two bytes) from
+**	string 'src' to the next position in string 'dst',
+**	incrementing the pointers for both strings by one or two bytes.  
+**	This mimics the (*c++ = *d++) expression of C.
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	VOID	CMcpyinc(src, dst)
+**	char	*src;
+**	char	*dst;
+**)
+** Inputs:
+**	src	pointer to character, which is positioned at the 
+**		point in string from which character is to be copied.
+**	dst	pointer in string into which character is to be copied. 
+**
+** Outputs:
+**	src, dst	pointer to character, incremented by 1 or 2 bytes.
+**
+**	Returns:
+**		VOID
+**
+** Side Effects:
+**	The passed strings, 'src' and 'dst', are both 
+**	changed upon return.
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Jun-2008 (gupsh01)
+**		Add support for UTF8
+*/
+
+# ifdef DOUBLEBYTE
+# define CMcpyinc(src,dst) ((CMbytecnt(src) == 1) ? (*(dst)++ = *(src)++) : ((CMbytecnt(src) == 2) ? (*(dst)++ = *(src)++, *(dst)++ = *(src)++) : ( (CMbytecnt(src) == 3) ? (*(dst)++ = *(src)++, *(dst)++ = *(src)++, *(dst)++ = *(src)++) : ((CMbytecnt(src) == 4) ? (*(dst)++ = *(src)++, *(dst)++ = *(src)++, *(dst)++ = *(src)++, *(dst)++ = *(src)++) : 0 ))))
+# else
+# define CMcpyinc(src, dst)     (*(dst)++ = *(src)++)
+# endif
+
+
+/*{
+** Name:	CMtolower	- convert to lowercase
+**
+** Description:
+**	Copy one character (either one or two bytes) from
+**	string 'src' to string 'dst'.  If a character lies in [A-Z],
+**	this routine converts it to lowercase in the 'dst' string.
+**
+**	Note that the copy can be done in place ('src' = 'dst').
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	VOID	CMtolower(src, dst)
+**	char	*src;
+**	char	*dst;
+**)
+** Inputs:
+**	src	pointer to character, which is positioned at the 
+**		point in string from which character is to be copied.
+**	des	pointer in string into which lower case version of
+**		character is to be placed.
+**
+** Outputs:
+**	Returns:
+**		VOID
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+# ifdef	DOUBLEBYTE
+# define CMtolower(src, dst) ((CMGETDBL)? ((CMGETUTF8 && CM_UTF8MULTI(src)) ? (cmu_getutf8_tolower((u_char *)src, CMUTF8cnt(src), (u_char *)dst, 0)) : (CMdbl1st(src) ? (*(dst) = *(src), *((dst)+1) = *((src)+1)) : (*(dst) = cmtolower(src)))) : (*(dst) = cmtolower(src)))
+# else 
+# define CMtolower(src, dst)	(*(dst) = cmtolower(src))
+# endif
+
+
+/*{
+** Name:	CMtoupper	- convert to uppercase
+**
+** Description:
+**	Copy one character (either one or two bytes) from
+**	string 'src' to string 'dst'.  If a character lies in [a-z], 
+**	this routine converts it to uppercase in the 'dst' string.
+**
+**	Note that the copy can be done in place ('src' = 'dst').
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	VOID	CMtoupper(src, dst)
+**	char	*src;
+**	char	*dst;
+**)
+** Inputs:
+**	src	pointer to character, which is positioned at the 
+**		point in string from which character is to be copied. 
+**	dst	pointer in string into which upper case version of
+**		character is to be placed.
+**
+** Outputs:
+**	Returns:
+**		VOID
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+# ifdef DOUBLEBYTE
+# define CMtoupper(src, dst) ((CMGETDBL)? ((CMGETUTF8 && CM_UTF8MULTI(src)) ? (cmu_getutf8_toupper((u_char *)src, CMUTF8cnt(src), (u_char *)dst, 0)) : (CMdbl1st(src) ? (*(dst) = *(src), *((dst)+1) = *((src)+1)) : (*(dst) = cmtoupper(src)))) : (*(dst) = cmtoupper(src)))
+# else
+# define CMtoupper(src, dst)    (*(dst) = cmtoupper(src))
+# endif
+
+
+/*{
+** Name:	CMbyteinc	- increment a byte counter
+**
+** Description:
+**	Increment a byte counter one or two bytes within a
+**	string, depending on whether the next character in
+**	the string pointed to by 'str' is one or two bytes long.
+**	This mimics the	++i expression of C when used in manipulating
+**	string pointers, but takes into account 2 byte characters.
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	i4	CMbyteinc(count, str)
+**	i4	count;
+**	char	*str;
+**)
+** Inputs:
+**	count	byte counter depending on 'str'
+**	str	pointer to character within a string.
+**
+** Outputs:
+**	count	This will change the value of the parameter 'count'
+**		either to 'count+1' or 'count+2'.
+**	Returns:
+**		The return value is set to the value of 'count',
+**		after increment (as done by ++i).
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Jun-2008 (gupsh01)
+**		Add support for UTF8
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+
+# ifdef DOUBLEBYTE
+# define CMbyteinc(count, str)  ((CMGETDBL)? ((CMGETUTF8) ? (count += CMUTF8cnt(str)) : (CMdbl1st(str) ? (count) += 2 : ++(count))) : (++count))
+# else
+# define CMbyteinc(count, str)  ((CMGETUTF8) ? (count += CMUTF8cnt(str)) : (++(count)))
+# endif
+
+
+/*{
+** Name:	CMbytedec	- decrement a byte counter
+**
+** Description:
+**	Decrement a byte counter one or two bytes within a
+**	string, depending on whether the next character in
+**	the string pointed to by 'str' is one or two bytes long.
+**	This mimics the --i expression of C when used in manipulating
+**	string pointers, but takes into account 2 byte characters.
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	i4	CMbytedec(count, str)
+**	i4	count;
+**	char	*str;
+**)
+** Inputs:
+**	count	byte counter depending on 'str'
+**	str	pointer to character within a string.
+**
+** Outputs:
+**	count	This will change the value of the parameter 'count'
+**		either to 'count-1' or 'count-2'.
+**	Returns:
+**		The return value is set to the value of 'count',
+**		after decrement (as done by --i).
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Jun-2008 (gupsh01)
+**		Added support for UTF8
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+
+# ifdef DOUBLEBYTE
+# define CMbytedec(count, str)  ((CMGETDBL)? ((CMGETUTF8) ? (count -= CMUTF8cnt(str)) : (CMdbl1st(str) ? (count) -= 2 : --(count))) : (--(count)))
+# else
+# define CMbytedec(count, str)  ((CMGETUTF8) ? (count -= CMUTF8cnt(str)) : (--(count)))
+# endif
+
+
+/*{
+** Name:	CMbytecnt	- count the bytes in the next character
+**
+** Description:
+**	Count the number of bytes in the next character, returning
+**	either 1 or 2.
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	i4	CMbytecnt(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer to character within a string.
+**
+** Outputs:
+**	Returns:
+**		The number of bytes in the next character, either 1 or 2.
+**
+** Side Effects:
+**	None
+**
+** History:
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+ 
+# ifdef DOUBLEBYTE
+# define CMbytecnt(ptr) ((CMGETDBL)? ((CMGETUTF8) ? (CMUTF8cnt(ptr)) : (CMdbl1st(ptr) ? 2 : 1)) : 1)
+# else
+# define CMbytecnt(ptr) ((CMGETUTF8) ? (CMUTF8cnt(ptr)) : (1))
+# endif
+
+
+/*{
+** Name:	CMnext	- increment a character string pointer
+**
+** Description:
+**	Move string pointer forward one character within a string.
+**	This mimics the ++c expression in C, but takes
+**	into account whether the next character is
+**	one or two bytes long.
+**
+**	Note that if you use this routine in conjunction with
+**	either CMbyteinc or CMbytedec, you should call the CMbyte* 
+**	routine first to make sure that you are pointing to the same character.  
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	char	*CMnext(str)
+**	char	*str;
+**)
+** Inputs:
+**	str	pointer to character to be incremented
+**
+** Outputs:
+**	str	This will change the value of the parameter 
+**		'str' to either 'str+1' or 'str+2', 
+**		depending on the size of the character.  
+**	Returns:
+**		The return value is set to the incremented value 
+**		sent to the routine (as done by ++c).  
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+
+# ifdef DOUBLEBYTE
+# define CMnext(str)    ((CMGETDBL)? ((CMGETUTF8) ? ((str) += (CMUTF8cnt(str))) : ((CMdbl1st(str)) ? ((str) += 2) : (++(str)))) : (++str))
+# else
+# define CMnext(str)    ((CMGETUTF8) ? ((str) += CMUTF8cnt(str)) : (++(str)))
+# endif
+
+
+/*{
+** Name:	CMprev	- decremenent a character pointer
+**
+** Description:
+**	Move backwards one character within a string.
+**	This mimics the --c expression in C, but takes
+**	into account whether the previous character is
+**	one or two bytes long.
+**
+**	Note that if you use this routine in conjunction with
+**	either CMbyteinc or CMbytedec, you should call
+**	the CMprev reoutine first to make sure that you
+**	are pointing to the same character.  
+**
+**	THE USE OF THIS ROUINE IS HIGHLY DISCOURAGED
+**	UNLESS ABSOLUTELY NECESSARY.  PLEASE TRY TO CODE
+**	SUCH THAT MOVING BACKWARDS WITHIN A STRING IS
+**	NOT NEEDED.
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	char	*CMprev(str, startpos)
+**	char	*str;
+**	char	*startpos;
+**)
+** Inputs:
+**	str	pointer to character to be decremented
+**	startpos	start pointer of the string being processed
+**		(or a location in the string which you know contains
+**		the start of a character) as double byte processing
+**		must reprocess the string from the start to find
+**		the previous character.
+**
+** Outputs:
+**	str	This will change the value of the parameter
+**		'str' to either 'str-1' or 'str-2',
+**		depending on the size of the character.
+**
+**	Returns:
+**		The return value is set to the value
+**		of 'str' after decrement (as done by --c). 
+**
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+
+#define CMuprev(str, startpos) ((str) -= (cmupct((u_char *)(str), (u_char *)startpos)))
+# ifdef DOUBLEBYTE
+# define CMprev(str, startpos)  ((CMGETDBL) ? ((CMGETUTF8) ? (CMuprev(str, startpos)) : ((cmkcheck((u_char *)((str)-1), (u_char *)startpos) == CM_A_DBL2) ? (str) -= 2 : --(str))) : (--(str)))
+# else
+# define CMprev(str, startpos)  ((CMGETUTF8) ? (CMuprev(str, startpos)) : (--(str)))
+# endif
+
+
+/*{
+** Name:	CMcmpnocase	- compare characters, ignoring case.
+**
+** Description:
+**	Compare the next character in each of two strings,
+**	either single or double byte characters.
+**	(Case is not significant)
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	i4	CMcmpnocase(str1, str2)
+**	char	*str1;
+**	char	*str2;
+**)
+** Inputs:
+**	str1, str2	pointer to characters, within strings, to be compared
+**
+** Outputs:
+**	Returns:
+**		<  0	if char1 < char2
+**		== 0	if char1 == char2
+**		>  0	if char1 > char2
+**
+**			(char1 and char2 is one character, include double
+**			byte character, within the string str1
+**			and str2.)
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+
+# ifdef	DOUBLEBYTE
+# define CMcmpnocase(str1, str2) ((CMGETDBL) ? (CMdbl1st(str1) ? CMcmpcase(str1, str2) : \
+	((i4)(cmtolower(str1)&0377) - (i4)(cmtolower(str2)&0377))) : \
+	((i4)(cmtolower(str1)&0377) - (i4)(cmtolower(str2)&0377)))
+# else
+# define CMcmpnocase(str1, str2)	((i4)(cmtolower(str1)&0377) - (i4)(cmtolower(str2)&0377))
+# endif
+
+
+/*{
+** Name:	CMcmpcase	- compare characters
+**
+** Description:
+**	Compare the next character in each of two strings,
+**	either single or double byte.  (Case is significance)
+**
+**	This routine, which is system-independent MACRO, requires 
+**	the user to include the global header CM.h.  
+**
+**(Usage:
+**	i4	CMcmpcase(str1, str2)
+**	char	*str1;
+**	char	*str2;
+**)
+** Inputs:
+**	str1, str2	pointer to characters, within strings, to be compared
+**
+** Outputs:
+**	Returns:
+**		<  0	if char1 < char2
+**		== 0	if char1 == char2
+**		>  0	if char1 > char2
+**
+**			(char1 and char2 is one character, include double
+**			byte character, within the string str1
+**			and str2.)
+** Side Effects:
+**	None
+**
+** History:
+**	18-sep-86 (yamamoto)
+**		first written
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+
+# ifdef	DOUBLEBYTE
+# define CMcmpcase(str1, str2)	((CMGETDBL)?  (CMdbl1st(str1) ? (((i4)(CM_DEREF(str1)) == (i4)(CM_DEREF(str2))) ? \
+	((i4)(CM_DEREF((str1)+1)) - (i4)(CM_DEREF((str2)+1))) : \
+	((i4)(CM_DEREF(str1)) - (i4)(CM_DEREF(str2)))) : ((i4)(CM_DEREF(str1)) - (i4)(CM_DEREF(str2)))) \
+	: ((i4)(CM_DEREF(str1)) - (i4)(CM_DEREF(str2))))
+# else
+# define CMcmpcase(str1, str2)	((i4)(CM_DEREF(str1)) - (i4)(CM_DEREF(str2)))
+# endif
+
+
+/*{
+**  Name: CMcopy - Copy character data from source to destination.
+**
+**  Description:
+**	CMcopy will copy (not necessarily null-terminated) character data
+**	from a source buffer into a destination buffer of a given length.
+**	Like STlcopy, CMcopy returns the number of bytes it copied
+**	(which may differ from the number of bytes requested to be copied
+**	if the last byte was double byte and could not be completely copied).
+**
+**	This routine, which is a system-independent macro, requires the user
+**	to include the global header <cm.h>.  Also note that because some of 
+**	the macro expansions may use copy_len twice, you should be aware of
+**	possible side effects (ie, ++ and -- operators).
+**
+**(Usage:
+**	u_i4	length, copy_len;
+**	char	*source, *dest;
+**)
+**	length = CMcopy(source, copy_len, dest);
+**
+**  Inputs:
+**	source    - Pointer to beginning of source buffer.
+**	copy_len  - Number of bytes to copy.
+**	dest	  - Pointer to beginning of destination buffer.
+**
+**  Outputs:
+**	Returns:
+**	    Number of bytes actually copied (this may be less than copy_len
+**	    in the case of double-byte characters, but will never be more).
+**
+**  Side Effects:
+**	None
+**	
+**  History:
+**	08-mar-1987	- Written (_cmcopy not yet written) (ncg)
+**	03-Dec-2009 (wanfr01) Bug 122994
+**	    Optimize code for single byte character sets
+*/
+
+#ifdef	DOUBLEBYTE
+#  define   CMcopy(source, copy_len, dest)				    \
+	((CMGETDBL)? (cmicopy((source), (copy_len), (dest))) : 		/* Uses for loop */ \
+	(IIMEcopy((PTR)(source), (u_i2)(copy_len), (PTR)(dest)),copy_len))
+#else
+#  define   CMcopy(source, copy_len, dest)		 		    \
+    (IIMEcopy((PTR)(source), (u_i2)(copy_len), (PTR)(dest)),copy_len)
+#endif
+
+/*
+** Name: CMATTR
+**
+** Description:
+**
+**	Structure which defines the attribute array and case translation
+**	table for a character set.
+**
+**	Both items are indexed by character value.  The attr item contains
+**	the bits used for character classification routines.  The xcase
+**	array contains the alternate case character if the character is
+**	upper or lower case.  It is meaningless otherwise.
+*/
+
+typedef struct
+{
+	u_i2 attr[256];
+	char xcase[256];
+} CMATTR;

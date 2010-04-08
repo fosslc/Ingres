@@ -1,0 +1,31 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlquery", "sqlquery.vcproj", "{6F2B20AA-927C-41BA-80F2-5612D9C22B11}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		DebugU|Win32 = DebugU|Win32
+		EDBC_Debug|Win32 = EDBC_Debug|Win32
+		EDBC_Release|Win32 = EDBC_Release|Win32
+		Release|Win32 = Release|Win32
+		ReleaseU|Win32 = ReleaseU|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.Debug|Win32.Build.0 = Debug|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.DebugU|Win32.ActiveCfg = DebugU|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.DebugU|Win32.Build.0 = DebugU|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.EDBC_Debug|Win32.ActiveCfg = EDBC_Debug|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.EDBC_Debug|Win32.Build.0 = EDBC_Debug|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.EDBC_Release|Win32.ActiveCfg = EDBC_Release|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.EDBC_Release|Win32.Build.0 = EDBC_Release|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.Release|Win32.ActiveCfg = Release|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.Release|Win32.Build.0 = Release|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.ReleaseU|Win32.ActiveCfg = ReleaseU|Win32
+		{6F2B20AA-927C-41BA-80F2-5612D9C22B11}.ReleaseU|Win32.Build.0 = ReleaseU|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

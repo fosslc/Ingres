@@ -1,0 +1,212 @@
+/*
+**	 Copyright (c) 2004 Ingres Corporation
+*/
+/* static char	Sccsid[] = "@(#)rfcopt.qc	30.1	11/14/84"; */
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"rbftype.h"
+# include	"rbfglob.h"
+# include	<cm.h>
+# include	<ug.h>
+# include	<flddesc.h>
+# include   "rbfcons.h"
+# include       "uf.h"
+
+/*
+**    RFAGG - called when the Create Aggregate selection is made on
+**	the main RBF layout form.  This displays a form which allows
+**	allows the user to create an aggregate in a footer section.
+**
+**	Parameters:
+**
+**	Returns:
+**		TRUE	if everything is OK,  FALSE if anything wrong.
+**
+**	Called by:
+**		VIFRED routines.
+**
+**	Side Effects:
+**
+**	Trace Flags:
+**
+**	History:
+**		30-oct-89 (cmr)	written.
+**		11/28/89  (matrym)  Included 'rbfcons.h'.
+**		11/29/89  (martym)  Took out the call to rFag_sel().
+**		03-jan-90 (cmr)	check that unique (prime) aggs only happen
+**				on break columns.  Also, rFagg() returns the
+**				index of the AGG_INFO not a ptr to it.
+**		15-jan-90 (cmr)	Put in support for Help.
+**		28-jan-90 (cmr) Sound bell if user tries to scroll beyond
+**				first or last row in the tablefield.
+**		06-feb-90 (cmr)	Cancel is mapped to FRSkey9 not FRSkey3.
+**		22-apr-90 (cmr)	When the user selects an agg function display
+**				another popup to allow the user to specify
+**				cumulative aggregation.
+**		4/25/90 (elein) Change ag_index from invisible column to a
+**				hidden column
+**		17-may-90 (cmr)	Limit the table fields rows to 10 when 
+**				calling IIFDlpListPick().
+**		06-sep-90 (sylviap)
+**			Added explanations to Help, Keys. #32699
+**		19-oct-1990 (mgw)
+**			Fixed include of local rbftype.h and rbfglob.h to ""
+**			instead of <>
+**              02-Jul-1999 (hweho01)
+**                      Included uf.h header file, it contains the function     
+**                      prototype of IIUFlcfLocateForm(). Without the explicit
+**                      declaration, the default int return value for a  
+**                      function will truncate a 64-bit address on ris_u64 
+**                      platform.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+##GLOBALREF	char	*Naggregates;
+GLOBALREF       bool    alloc_aggs;
+
+
+i4
+rFagg(ord, cum)
+i4	ord;
+bool	*cum;
+{
+	/* internal declarations */
+
+	COPT	*copt;			/* COPT struct for attribute */
+##	i4	i;			/* counter */
+##	i4	crow;			
+##	char	ibuf[33];		/* temporary buffer */
+##	char	*attname;
+##	i4	a_index = -1;
+##      char    *form;
+	i4	rows = 0;
+
+	Naggregates = F_AGGREGATES;
+
+	if (!alloc_aggs)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(),
+			(form = Naggregates))!=OK)
+		{
+	    		IIUGerr(E_RF002D_Cannot_locate_form, 0, 1, form);
+		    	return (0);
+		 }
+		 alloc_aggs = TRUE;
+	}        
+	*cum = FALSE;
+
+##	display Naggregates update
+##	initialize()
+##	{
+##		inittable Naggregates aggtbl  (ag_index = i4 )
+		/* Add the appropriate aggregate fields to the tablefield */
+
+		copt = rFgt_copt(ord);
+		/* for each aggregate for attribute */
+		for (i = 0; i < copt->num_ags; i++)
+		{
+			/* prime (unique) aggs are for break columns only. */
+			if ( copt->copt_break != 'y' &&
+				copt->agginfo[i].agnames->ag_prime == TRUE )
+					continue;
+
+			/*	Get the aggregate name */
+
+			STcopy(copt->agginfo[i].agnames->ag_framelabel, ibuf);
+
+##			loadtable Naggregates aggtbl
+##			 (ag_index = i,
+##			  ag_name = ibuf)
+
+			rows++;
+			}
+##		}
+##	activate menuitem ERget(FE_Select)(expl = ERget(F_RF0088_sel_agg)), 
+##		FRSkey4
+##	{
+##              getrow Naggregates aggtbl
+##                      (a_index = ag_index) 
+		
+		i = IIFDlpListPick( ERget(F_RF006F_Cum_Agg_Prompt),
+			ERget(F_RF0070_Cum_Agg_Choices), 10, LPGR_FLOAT, 
+			LPGR_FLOAT, ERget(F_RF0071_Cum_Agg_Help),
+			H_CUMAGGS, NULL, NULL);
+			if ( i >= 0)
+			{
+				*cum = (i != 0 ? TRUE : FALSE);
+			}
+			else	/* Cancel */
+			{
+				a_index = -1;
+##				resume
+			}
+##		breakdisplay
+##	}
+##      activate menuitem ERget(FE_Cancel)(expl = ERget(F_FE0103_ExplCancel),
+##              validate = 0, activate = 0), FRSkey9 (validate = 0,activate = 0)
+##      {
+##              breakdisplay
+##      }
+
+##	activate menuitem ERget(FE_Help)(expl=ERget(F_FE0100_ExplFrameHelp),
+##              validate=0), FRSkey1 (validate = 0)
+##	{
+		FEhelp(H_AGGREGATE, ERget(F_RF0061_Aggregate_Functions));
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##      {
+		FEtabfnd(Naggregates, ERx("aggtbl"));
+##      }
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##      {
+##              scroll Naggregates aggtbl to 1
+##      }
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##      {
+##              scroll Naggregates aggtbl to end
+##      }
+
+##	activate scrolldown aggtbl
+##	{
+##		getrow Naggregates aggtbl (crow = _RECORD)
+		if ( crow == 1 )
+		{
+			FTbell();
+		}
+		else
+		{
+##			scroll Naggregates aggtbl down
+		}
+##		resume field aggtbl
+##	}
+
+##	activate scrollup aggtbl
+##	{
+##		getrow Naggregates aggtbl (crow = _RECORD)
+		if ( crow == rows )
+		{
+			FTbell();
+		}
+		else
+		{
+##			scroll Naggregates aggtbl up
+		}
+##		resume field aggtbl
+##	}
+	return (a_index);
+}
+

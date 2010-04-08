@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!xiia_win
+#
+
+SubDir ING_SRC front vdba xiia_win ;
+
+IISUBSYS front vdba xiia_win ;
+
+
+IISLN iia.exe : iia.sln ;

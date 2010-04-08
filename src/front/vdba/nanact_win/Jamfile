@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!nanact_win
+#
+
+SubDir ING_SRC front vdba nanact_win ;
+
+IISUBSYS front vdba nanact_win ;
+
+
+IISLN ingrswin.dll : ingrswin.sln ;

@@ -1,0 +1,500 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\enterprise.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\enterprise.ico"
+IDI_ICON_INSTALL        ICON                    "res\\database2_next_48.ico"
+IDI_ICON_UPGRADE        ICON                    "res\\database2_up_48.ico"
+IDI_ICON_EXPRESS        ICON                    "res\\wizard_clock_48.ico"
+IDI_ICON_ADVANCED       ICON                    "res\\wizard_config_48.ico"
+IDI_ICON_DEFAULT3       ICON                    "res\\connect_to_db_next_48.ico"
+IDI_ICON_CUSTOM3        ICON                    "res\\connect_to_db_config_48.ico"
+IDI_ICON_MODIFY2        ICON                    "res\\database2_reload_48.ico"
+IDI_ICON_BI             ICON                    "res\\BI_48.ico"
+IDI_ICON_CM             ICON                    "res\\CM_48.ico"
+IDI_ICON_TXN            ICON                    "res\\TXN_48.ico"
+IDI_ICON_DEFAULT        ICON                    "res\\default_48.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_WELCOMEDLG DIALOGEX 0, 0, 318, 139
+STYLE DS_SETFONT | DS_SETFOREGROUND | DS_CENTER | WS_CHILD | WS_DISABLED
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    CONTROL         "Welcome to the Ingres Community!\n\n",IDC_STATIC1,
+                    "Static",SS_LEFTNOWORDWRAP | WS_GROUP,120,6,196,18,
+                    WS_EX_TRANSPARENT
+    LTEXT           "The Ingres Installation wizard will guide you through installing and setting up Ingres.\n\nClick Next to begin.",
+                    IDC_STATIC2,120,45,196,51,0,WS_EX_TRANSPARENT
+    CONTROL         175,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE | 
+                    NOT WS_VISIBLE,180,97,85,79,WS_EX_TRANSPARENT
+END
+
+IDD_INSTALLCODE DIALOGEX 0, 0, 318, 139
+STYLE DS_ABSALIGN | DS_SETFONT | DS_SETFOREGROUND | DS_FIXEDSYS | DS_CENTER | 
+    WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    LTEXT           "Installation Identifier:",IDC_STATIC,123,50,119,12,
+                    SS_CENTERIMAGE
+    EDITTEXT        IDC_INSTALLATIONCODE,249,50,36,12,ES_UPPERCASE | 
+                    ES_AUTOHSCROLL
+    GROUPBOX        "List of Existing Ingres Installations",IDC_STATIC,123,
+                    78,186,90
+    CONTROL         "List1",IDC_INSTALLEDLIST,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | 
+                    LVS_NOLABELWRAP | WS_BORDER | WS_TABSTOP,128,94,176,69
+    LTEXT           "Please provide an installation identifier:",IDC_STATIC,
+                    123,28,183,13
+    CONTROL         200,IDC_STATIC,"Static",SS_BITMAP,0,0,175,190
+END
+
+IDD_WAIT_DIALOG DIALOGEX 0, 0, 218, 58
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+CAPTION "Ingres Setup Wizard"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    CONTROL         "Animate1",IDC_AVI,"SysAnimate32",ACS_CENTER | 
+                    ACS_TRANSPARENT | ACS_AUTOPLAY | WS_TABSTOP,7,10,38,25
+    LTEXT           "Static",IDC_TEXT,49,10,162,40
+END
+
+IDD_INSTALLMODE DIALOGEX 0, 0, 318, 139
+STYLE DS_SETFONT | DS_3DLOOK | WS_POPUP | WS_SYSMENU
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    CONTROL         "Express",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,35,27,
+                    55,11,WS_EX_TRANSPARENT
+    CONTROL         "Advanced",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,35,77,
+                    55,11
+    LTEXT           "A default instance will be created. You will have the opportunity to select the components you would like to be installed.",
+                    IDC_STATIC,96,27,211,22
+    LTEXT           "A custom instance will be created.  You will have greater control over the installed components and configuration options available.",
+                    IDC_STATIC,96,77,211,28
+    ICON            IDI_ICON_EXPRESS,IDC_STATIC_EXPRESS,0,18,20,20,
+                    SS_REALSIZEIMAGE
+    ICON            IDI_ICON_ADVANCED,IDC_STATIC_ADVANCED,0,68,20,20,
+                    SS_REALSIZEIMAGE
+END
+
+IDD_CHOOSEINSTALLCODE DIALOGEX 0, 0, 318, 139
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Setup Wizard"
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    LTEXT           "Ingres supports multiple instances installed on the same server.  Each instance is uniquely identified by an instance name.",
+                    IDC_STATIC,5,0,285,22
+    LTEXT           "Specify a custom name or accept the default.",
+                    IDC_STATIC,5,27,169,9
+    GROUPBOX        "Instance Name",IDC_STATIC,5,42,307,93
+    CONTROL         "Default Instance Name",IDC_RADIO_DEFAULT,"Button",
+                    BS_AUTORADIOBUTTON,56,66,113,13,WS_EX_TRANSPARENT
+    CONTROL         "Custom Instance Name",IDC_RADIO_CUSTOM,"Button",
+                    BS_AUTORADIOBUTTON,56,101,114,12,WS_EX_TRANSPARENT
+    CONTROL         "Ingres",IDC_STATIC,"Static",SS_SIMPLE | WS_GROUP,175,68,
+                    21,13,WS_EX_TRANSPARENT
+    LTEXT           "II",IDC_STATIC_ID,199,68,18,13,0,WS_EX_TRANSPARENT
+    CONTROL         "Ingres",IDC_STATIC_INGRES,"Static",SS_SIMPLE | 
+                    WS_DISABLED | WS_GROUP,175,103,23,12,WS_EX_TRANSPARENT
+    EDITTEXT        IDC_EDIT_ID,199,100,26,12,ES_AUTOHSCROLL | WS_DISABLED
+    PUSHBUTTON      "IDB_BITMAP_INFO_16",IDC_BUTTON_INFO,227,100,13,12,
+                    BS_BITMAP,WS_EX_TRANSPARENT
+    ICON            IDI_ICON_DEFAULT3,IDC_STATIC_DEFAULT,15,57,20,20,
+                    SS_REALSIZEIMAGE
+    ICON            IDI_ICON_CUSTOM3,IDC_STATIC_CUSTOM,15,91,20,20,
+                    SS_REALSIZEIMAGE
+END
+
+IDD_DIALOG_INFO DIALOGEX 0, 0, 210, 147
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Ingres Setup Wizard"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,153,126,50,14
+    GROUPBOX        "Instance Name Description",IDC_STATIC,7,7,196,116
+    LTEXT           "Enter a two-character string to complete the instance name. The first character must be a letter and the second character can be a letter or a number.",
+                    IDC_STATIC,14,22,182,30,0,WS_EX_TRANSPARENT
+    LTEXT           "An instance consists of the selected product components installed in a unique location on your computer. More than one instance of Ingres can be installed on a machine as long as each has a unique instance name.",
+                    IDC_STATIC,14,65,182,47,0,WS_EX_TRANSPARENT
+END
+
+IDD_INSTALLTYPE DIALOGEX 0, 0, 318, 139
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_SYSMENU
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "The Ingres installer detected multiple instances of Ingres on your machine.",
+                    IDC_STATIC,30,0,245,16,0,WS_EX_TRANSPARENT
+    LTEXT           "Select an option to proceed.",IDC_STATIC,30,28,179,15,0,
+                    WS_EX_TRANSPARENT
+    GROUPBOX        "",IDC_STATIC_GROUP,30,40,281,98,WS_GROUP,
+                    WS_EX_TRANSPARENT
+    CONTROL         "Upgrade existing Ingres instance",IDC_RADIO_UPGRADE,
+                    "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,77,55,179,14,
+                    WS_EX_TRANSPARENT
+    CONTROL         "Modify/Repair/Remove existing Ingres instance",
+                    IDC_RADIO_MODIFY,"Button",BS_AUTORADIOBUTTON | 
+                    WS_TABSTOP,77,85,170,14,WS_EX_TRANSPARENT
+    CONTROL         "Install a new Ingres instance",IDC_RADIO_INSTALL,"Button",
+                    BS_AUTORADIOBUTTON | WS_TABSTOP,77,115,179,14,
+                    WS_EX_TRANSPARENT
+    ICON            IDI_ICON_UPGRADE,IDC_STATIC_UPGRADE,37,44,20,20,
+                    SS_REALSIZEIMAGE,WS_EX_TRANSPARENT
+    ICON            IDI_ICON_MODIFY2,IDC_STATIC_MODIFY,37,74,20,20,
+                    SS_REALSIZEIMAGE,WS_EX_TRANSPARENT
+    ICON            IDI_ICON_INSTALL,IDC_STATIC_INSTALL,37,105,20,20,
+                    SS_REALSIZEIMAGE,WS_EX_TRANSPARENT
+END
+
+IDD_INSTANCELIST DIALOGEX 0, 0, 318, 139
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+EXSTYLE WS_EX_TRANSPARENT
+CAPTION "Ingres Setup Wizard"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Ingres supports multiple instances installed on the same server.  Each instance is uniquely identified by an instance name.",
+                    IDC_STATIC1,7,2,316,20
+    LTEXT           "Select an Ingres instance from the list below.",
+                    IDC_STATIC2,7,27,316,11
+    GROUPBOX        "Existing Ingres Instances",IDC_STATIC3,5,39,308,88
+    CONTROL         "",IDC_INSTANCE_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | 
+                    LVS_NOLABELWRAP | WS_BORDER | WS_TABSTOP,10,51,297,67
+    CONTROL         "Automatically upgrade user databases for installation ",
+                    IDC_CHECK_AUTOUPGRADE,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,10,129,183,8,WS_EX_TRANSPARENT
+    LTEXT           "Ingres ??",IDC_STATIC_AUTOID,197,129,30,8,0,
+                    WS_EX_TRANSPARENT
+    LTEXT           "(Recommended)",IDC_STATIC_AUTOR,234,129,65,8,0,
+                    WS_EX_TRANSPARENT
+END
+
+IDD_CONFIGTYPE DIALOGEX 0, 0, 318, 139
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Ingres Setup Wizard"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "",IDC_EDIT_ID,0,0,317,137
+    CONTROL         "Transactional System",IDC_RADIO_TXN,"Button",
+                    BS_AUTORADIOBUTTON,40,13,269,8
+    CONTROL         "Business Intelligence System",IDC_RADIO_BI,"Button",
+                    BS_AUTORADIOBUTTON,40,41,272,8
+    CONTROL         "Content Management System",IDC_RADIO_CM,"Button",
+                    BS_AUTORADIOBUTTON,40,70,264,8
+    CONTROL         "Traditional Ingres System",IDC_RADIO_CLASSIC,"Button",
+                    BS_AUTORADIOBUTTON,39,99,265,8
+    LTEXT           "Optimized for business decision making:  reporting, analytics, data mining, business performance management, decision support and predictive analytics.",
+                    IDC_STATIC,51,50,263,16
+    LTEXT           "Optimized for transaction-oriented applications, such as ERP or CRM systems, electronic banking, order processing, time clock systems, and e-commerce systems.",
+                    IDC_STATIC,51,22,264,18
+    LTEXT           "Optimized for storing, controlling, versioning, and publishing information including files, image media, audio, video, electronic documents, and Web content.",
+                    IDC_STATIC,52,79,263,16
+    LTEXT           "High transaction isolation, low concurrency as if transactions are executed sequentially, rather than concurrently.  This level requires  transaction retries in the event of serialization failures.  Use this setting for a client only installation.",
+                    IDC_STATIC,51,108,263,24
+    ICON            IDI_ICON_BI,IDC_STATIC_BI,7,41,20,20,SS_REALSIZEIMAGE
+    ICON            IDI_ICON_TXN,IDC_STATIC_TXN,7,13,20,20,SS_REALSIZEIMAGE
+    ICON            IDI_ICON_CM,IDC_STATIC_CM,5,70,20,20,SS_REALSIZEIMAGE
+    ICON            IDI_ICON_DEFAULT,IDC_STATIC_DEFAULT,5,99,20,20,
+                    SS_REALSIZEIMAGE
+END
+
+IDD_LICENSEINFORMATION DIALOGEX 0, 0, 318, 139
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Setup Wizard"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    CONTROL         "I &accept the terms in the license agreement",
+                    IDC_RADIO1,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,2,
+                    119,155,10
+    CONTROL         "I &do not accept the terms in the license agreement",
+                    IDC_RADIO2,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,2,
+                    129,177,10
+    CONTROL         "",IDC_RICHEDIT21,"RichEdit20A",ES_MULTILINE | 
+                    ES_AUTOVSCROLL | ES_AUTOHSCROLL | WS_BORDER | WS_VSCROLL | 
+                    WS_HSCROLL,2,4,314,114
+    GROUPBOX        "",IDC_STATIC_GROUP_LIC,2,114,314,24,NOT WS_VISIBLE | 
+                    WS_GROUP,WS_EX_TRANSPARENT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_WELCOMEDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 316
+        TOPMARGIN, 7
+    END
+
+    IDD_WAIT_DIALOG, DIALOG
+    BEGIN
+        RIGHTMARGIN, 211
+        BOTTOMMARGIN, 51
+    END
+
+    IDD_CHOOSEINSTALLCODE, DIALOG
+    BEGIN
+        TOPMARGIN, 7
+    END
+
+    IDD_DIALOG_INFO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 140
+    END
+
+    IDD_INSTALLTYPE, DIALOG
+    BEGIN
+        LEFTMARGIN, 30
+        RIGHTMARGIN, 311
+    END
+
+    IDD_INSTANCELIST, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        TOPMARGIN, 7
+    END
+
+    IDD_CONFIGTYPE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        TOPMARGIN, 7
+    END
+
+    IDD_LICENSEINFORMATION, DIALOG
+    BEGIN
+        LEFTMARGIN, 2
+        RIGHTMARGIN, 316
+        TOPMARGIN, 4
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_200                 BITMAP                  "res\\Block01.bmp"
+IDB_SPLASH256           BITMAP                  "res\\ingsplash.bmp"
+IDB_BITMAPTOP           BITMAP                  "res\\install_top.bmp"
+IDB_BITMAP_INFO         BITMAP                  "res\\infoblue.bmp"
+IDB_SIDEBAR             BITMAP                  "res\\side_bar.bmp"
+IDB_LOGO                BITMAP                  "res\\logo.bmp"
+IDB_BITMAP_WORLD        BITMAP                  "res\\world_database.bmp"
+IDB_BITMAP_INFO_16      BITMAP                  "res\\info_16.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_CLOCK_AVI           AVI                     "res\\clock.avi"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_TITLE               "Ingres Setup Wizard"
+    IDS_ALREADYRUNNING      "Ingres Setup Wizard is already running."
+    IDS_INSTALLERUSAGE      "Ingres Setup Wizard Usage:\n\nsetup.exe /c  --  To generate a template response file.\nsetup.exe /r<response file> --  To run in unattended mode using a response file.\nsetup.exe /l -- To generate a log file in %TEMP%\\ingmsi.log.\nsetup.exe /w -- To write out return code for GUI installer."
+    IDS_AREYOUSURE          "Are you sure you want to exit?"
+    IDS_CREATINGRSPFILE     "This installation program is running in ""Response File"" mode.  It will only generate a response file intended for use with unattended installs. To use the response file, you must run this program with a /R<ResponseFileName> parameter.   After you have made your choices in this wizard, you will be prompted for a location and file name of the response file to be generated.\n\n  ***  No Ingres files will be installed at this time.  ***"
+    IDS_INVALIDINSTALLATIONCODE 
+                            "Invalid instance name : 'Ingres %s'\nAn instance name must end with 2 unique\ncharacters, the first character must be a letter\nthe second character may be a letter or a number."
+    IDS_CANNOTCREATEPROCESS "Failed execute '%s'!"
+    IDS_CANNOTUPDATEWIDB    "Update Windows Installer Database failed."
+    IDS_RESPONSEFILEDOESNOTEXIST 
+                            "Response file '%s' does not exist... exiting."
+    IDS_INVALIDINSTALLATIONPATH 
+                            "Please provide a valid II_SYSTEM, such as, 'C: \\IngresII'."
+    IDS_INVALIDINSTANCE     "There already exists an Ingres instance '%s' installed in '%s', you can NOT install another instance '%s' in the same directory!"
+    IDS_RSPMISSINGINSTALLCODE 
+                            " You must supply a value for ""installationcode"" in the [Ingres Configuration] section of the response file."
+    IDS_NOENOUGHSPACE       "There is no enough space to copy Data1.cab to your temp directory. The file size of Data1.cab is %s, the amount of free space on the disk %s is %s."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TITLE_DBATOOLS      "DBA Tools Setup Wizard"
+    IDS_INVALIDUSER         "Invalid Ingres username. Please, check username for invalid Ingres characters."
+    IDS_INVALIDWINVER       "This release of Ingres is not supported on Windows releases earlier than Windows 2000."
+    IDS_INSTALLERVER        "This release of Ingres requires Microsoft installer version 3.0 or later.\r\nWould you like to upgrade now?"
+    IDS_MUSTINSTALL         "You must upgrade your version of Microsoft installer before continuing with the Ingres installation."
+    IDS_CONFIGTITLE         "Ingres Configuration Type"
+    IDS_CONFIGSUBTITLE      "Select a configuration type from the list provided."
+    IDS_BLOCKUPGRADE        "Unable to upgrade. UTF8 installations prior to Ingres 9.2 cannot be upgraded."
+    IDS_LICTITLE            "License Agreement"
+    IDS_LICSUBTITLE         "Please read the following license agreement carefully."
+    IDS_ACCEPT_TERMS        "{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033{\\fonttbl{\\f0\\fnil\\fprq1\\fcharset0 Courier New;}{\\f1\\fswiss\\fcharset0 Arial;}}{\\colortbl ;\\red163\\green21\\blue21;}{\\*\\generator Msftedit 5.41.21.2500;}\\viewkind4\\uc1\\pard\\cf1\\f0\\fs20 Accept the terms in the license agreement in %s\\cf0\\f1\\par}"
+    IDS_ACCEPT_TERMS_TXT    "Accept the terms in the license agreement in %s"
+    IDS_GENERIC_LIC         "Generic Error while loading a license file."
+    IDS_SUPPORTVERSION      "Ingres supports Windows 98, Windows ME, Windows NT and Windows 2000."
+    IDS_CANNOTCOPYMSIFILE   "Copy 'IngresII.msi' to '%s' failed."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_DBATOOLSERROR       "Installing DBA Tools package over Ingres DBMS package is not supported."
+    IDS_UPGRADEORNEW        "DBA Tools Setup Wizard detected an existing DBA Tools instance.\nWould you like to upgrade an existing DBA Tools instance, or install a new instance of DBA Tools?\nClick Yes to upgrade; click No to install a new instance."
+    IDS_DBA_TITLE           "DBA Tools Setup Wizard"
+    IDS_INSTLISTTITLE2      "DBA Tools instances"
+    IDS_INSTLISTSUBTITLE2   "Select a DBA Tools instance."
+    IDS_NAMETAKEN           "Instance Name '%s' is already taken.  If you choose to continue,\nthe installation will perform modify or upgrade."
+    IDS_NAMETAKENBYDBATOOLS "Instance Name '%s' is being used by DBA Tools instance.  DBA Tools\ninstance can not be upgraded to Ingres DBMS instance."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_DATEFORMATS         "\r\nMDB installation completed on: %A, %B %d, %Y - %H:%M:%S"
+    IDS_DATEFORMATF         "\r\nMDB installation failed on: %A, %B %d, %Y - %H:%M:%S"
+    IDS_SEPARATOR           "\r\n******************************************************************************\r\n"
+    IDS_CANNOTUPDATELICENSE "Ingres Installer requires a license file.  License file provided maybe corrupted or doesn't exist."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_CANNOTCOPYCABFILE   "Copy '%s' to '%s' failed. GetLastError() returns: %s."
+    IDS_NOTEMPPATH          "Please create a temp directory for copying both MSI file and CAB file (Data1.Cab) temporarily.\n\nNote that: The CAB file  is very large (near 100MB), you need have enough space."
+    IDS_WAITDLGTEXT         "Ingres Setup is preparing the Installation Wizard which will guide you through the program setup process.  This may take several minutes."
+    IDS_INSTALLWIFAILED     "Windows Installer was unsuccessfully installed."
+    IDS_NOTADMINISTRATOR    "In Windows NT 4.0 and 2000, you must have administrative rights to complete this installation."
+    IDS_MUSTUPGRADEVER25    "The Ingres [ %s ] installation is currently accessable via the global machine environment. If you do not upgrade this installation, you will not be able to globally access it after installing a secondary Ingres installation. Do you want continue anyway?"
+    IDS_INGRESRUNNING       "Your Ingres is currently running. Would you like to shut it down now?"
+    IDS_UPGRADE             "The installation will be treated as an upgrade, \nand settings from this existing installation \nwill be used.  Before performing the upgrade, \nyou should review the README file for important \ninformation to help you with your installation \nand use of the product.\n\nDo you wish to continue?"
+    IDS_INGRESRUNNING2      "Your Ingres is currently running. You must first shut it down."
+    IDS_COPYRIGHT           "Copyright © 2005-2010 Ingres Corporation. All Rights Reserved."
+    IDS_UNKNOWN             "unknown"
+    IDS_LICENSE_TO          "This product is licensed to:"
+    IDS_SITEID              "Site ID:"
+    IDS_FINISH_TEXT         "Next >"
+    IDS_DATEFORMAT          "\r\nMDB installation started on: %A, %B %d, %Y - %H:%M:%S\r\n"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INSTNAMETITLE       "Ingres Instance Name"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INSTNAMESUBTITLE    "Select an Ingres Instance Name."
+    IDS_MODETITLE           "Installation Mode"
+    IDS_MODESUBTITLE        "Select installation mode."
+    IDS_INSTALLTYPETITLE    "Installation Type"
+    IDS_INSTALLTYPESUBTITLE "Select an installation type."
+    IDS_INSTLISTTITLE       "Ingres Instances"
+    IDS_INSTLISTSUBTITLE    "Select an Ingres instance."
+    IDS_MUSTCHOOSE          "You must select at least one installation before clicking Next."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\enterprise.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "gv.rc"
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

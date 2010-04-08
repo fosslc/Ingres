@@ -1,0 +1,36 @@
+#
+#   NMAKE makefile
+#
+#  History:
+#	05-dec-95 (tutto01)
+#		Created.
+#	13-dec-95 (emmag)
+#		Use iiapidep.wnt rather than iiapidep.w31.  
+#		Need a local copy of iiapidep.h also.
+#	6-jan-1996 (donc)
+#		Converted to wgl_32s build scheme.
+#
+
+# Build Environment
+CONFIG = wgl_32s
+SDK = $(W32_SDK)
+PATH = $(SDK)\bin;$(ING_BUILD)\bin;$(PATH)
+
+!INCLUDE "$(ING_SRC)\tools\port\nmake\$(CONFIG).ini"
+
+initial hdr derive all: iiapi.h iiapidep.h
+
+iiapi.h :
+	grep -v "^##" $@ > $*.grep
+	COPY $*.grep $(ING_BUILD)\files\$*.h
+	del $*.grep
+
+iiapidep.h :
+	grep -v "^##" $*.wnt > $*.grep
+	COPY $*.grep $(ING_BUILD)\files\$*.h
+	COPY $*.grep $*.h
+	del $*.grep
+
+lib:
+
+objfiles:

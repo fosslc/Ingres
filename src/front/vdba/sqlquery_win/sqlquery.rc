@@ -1,0 +1,800 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_QEP_TABLE           ICON                    "RES\\IDR_QEP_.ICO"
+IDR_QEP_PROJ_REST       ICON                    "RES\\QEP_PRST.ICO"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_SQLQUERY            BITMAP                  "res\\sqlqryct.bmp"
+IDB_QEP_D               BITMAP                  "res\\qep_d.bmp"
+IDB_QEP_DB              BITMAP                  "res\\qep_db.bmp"
+IDB_QEP_N               BITMAP                  "RES\\qep_n.bmp"
+IDB_QEP_PAGE            BITMAP                  "res\\qpage.bmp"
+IDB_QEP_TUPLE           BITMAP                  "res\\qtuplel.bmp"
+IDB_SQLACT_TABS         BITMAP                  "RES\\SQLACT_T.BMP"
+IDR_QEP_PROJ_REST       BITMAP                  "RES\\QEP_TABL.BMP"
+IDR_QEP_TABLE           BITMAP                  "RES\\table.bmp"
+IDB_QEP_C               BITMAP                  "res\\qep_c.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PROPPAGE_SQL DIALOG  0, 0, 250, 110
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "Auto Commit",IDC_CHECK_AUTOCOMMIT,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,7,61,10
+    CONTROL         "Read Lock",IDC_CHECK_READLOCK,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,20,54,10
+    LTEXT           "Timeout (second):",IDC_STATIC,7,39,55,8
+    EDITTEXT        IDC_EDIT_TIMEOUT,70,37,32,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN1,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,102,36,8,14
+    EDITTEXT        IDC_EDIT_MAXTUPLE,21,84,40,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN2,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,61,83,8,14
+    GROUPBOX        "Select Statement / Rows in Cache",IDC_STATIC,7,55,132,
+                    48,WS_GROUP
+    CONTROL         "All",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON | WS_GROUP,
+                    12,69,24,10
+    CONTROL         "",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,12,86,8,8
+END
+
+IDD_QEPBOX DIALOGEX 0, 0, 100, 53
+STYLE DS_SETFONT | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
+CAPTION "Proj-rest"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "",IDC_STATIC1,82,29,8,23,0,WS_EX_CLIENTEDGE
+    LTEXT           "",IDC_STATIC2,91,29,8,23,0,WS_EX_CLIENTEDGE
+    LTEXT           "8888888888",IDC_STATIC_PAGE,13,18,36,8
+    LTEXT           "8888888888",IDC_STATIC_TUPLE,63,18,36,8
+    LTEXT           "Sort On (col1)",IDC_STATIC_HEADER,1,1,98,16
+    LTEXT           "12345 / 23456",IDC_STATIC_C,13,40,66,8
+    LTEXT           "3333 / 4441",IDC_STATIC_D,13,30,65,8
+    LTEXT           "IDB_QEP_PAGE",IDC_BITMAP_PAGE,0,18,8,8
+    LTEXT           "IDB_QEP_TUPLE",IDC_BITMAP_TUPLE,50,18,8,8
+    LTEXT           "IDB_QEP_D",IDC_BITMAP_D,0,29,8,8
+    LTEXT           "IDB_QEP_C",IDC_BITMAP_C,0,39,8,8
+END
+
+IDD_QEPBOX_LEAF DIALOG  0, 0, 100, 31
+STYLE DS_SETFONT | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
+CAPTION "Proj-rest"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "8888888888",IDC_STATIC_PAGE,11,18,36,8
+    LTEXT           "8888888888",IDC_STATIC_TUPLE,63,18,36,8
+    LTEXT           "Sort On (col1)",IDC_STATIC_HEADER,1,1,98,16
+    LTEXT           "IDB_QEP_PAGE",IDC_BITMAP_PAGE,0,18,8,8
+    LTEXT           "IDB_QEP_TUPLE",IDC_BITMAP_TUPLE,50,18,8,8
+END
+
+IDD_QEPBOX_LEAF_OVERLAPPED DIALOG  0, 0, 100, 31
+STYLE DS_SETFONT | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
+CAPTION "Proj-rest"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "8888888888",IDC_STATIC_PAGE,11,18,36,8
+    LTEXT           "8888888888",IDC_STATIC_TUPLE,63,18,36,8
+    LTEXT           "Sort On (col1)",IDC_STATIC_HEADER,1,1,98,16
+    LTEXT           "IDB_QEP_PAGE",IDC_BITMAP_PAGE,0,18,8,8
+    LTEXT           "IDB_QEP_TUPLE",IDC_BITMAP_TUPLE,50,18,8,8
+END
+
+IDD_QEPBOX_OVERLAPPED DIALOGEX 0, 0, 100, 53
+STYLE DS_SETFONT | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
+CAPTION "Proj-rest"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "",IDC_STATIC1,82,29,8,23,0,WS_EX_CLIENTEDGE
+    LTEXT           "",IDC_STATIC2,91,29,8,23,0,WS_EX_CLIENTEDGE
+    LTEXT           "8888888888",IDC_STATIC_PAGE,13,18,36,8
+    LTEXT           "8888888888",IDC_STATIC_TUPLE,63,18,36,8
+    LTEXT           "Sort On (col1)",IDC_STATIC_HEADER,1,1,98,16
+    LTEXT           "12345 / 23456",IDC_STATIC_C,13,40,66,8
+    LTEXT           "3333 / 4441",IDC_STATIC_D,13,30,65,8
+    LTEXT           "IDB_QEP_PAGE",IDC_BITMAP_PAGE,0,18,8,8
+    LTEXT           "IDB_QEP_TUPLE",IDC_BITMAP_TUPLE,50,18,8,8
+    LTEXT           "IDB_QEP_D",IDC_BITMAP_D,0,29,8,8
+    LTEXT           "IDB_QEP_C",IDC_BITMAP_C,0,39,8,8
+END
+
+IDD_QEPBOX_PREVIEW DIALOGEX 0, 0, 58, 13
+STYLE DS_SETFONT | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "",IDC_COLOR,1,1,38,11
+    LTEXT           "",IDC_STATIC1,41,1,8,11,0,WS_EX_CLIENTEDGE
+    LTEXT           "",IDC_STATIC2,49,1,8,11,0,WS_EX_CLIENTEDGE
+END
+
+IDD_QEPBOX_STAR DIALOGEX 0, 0, 99, 77
+STYLE DS_SETFONT | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
+CAPTION "Proj-rest"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "",IDC_STATIC1,72,46,8,30,0,WS_EX_CLIENTEDGE
+    LTEXT           "",IDC_STATIC2,81,46,8,30,0,WS_EX_CLIENTEDGE
+    LTEXT           "8888888888",IDC_STATIC_PAGE,12,36,36,8
+    LTEXT           "8888888888",IDC_STATIC_TUPLE,62,36,36,8
+    LTEXT           "Sort On (col1)",IDC_STATIC_HEADER,1,19,97,8
+    LTEXT           "12345 / 23456",IDC_STATIC_C,12,58,57,8
+    LTEXT           "3333 / 4441",IDC_STATIC_D,12,48,57,8
+    LTEXT           "1->2 FRNASU02:DBPARIS",IDC_STATIC_DB,12,2,86,8
+    LTEXT           "-> AAAAAAAA",IDC_STATIC_NODE,12,11,84,8
+    LTEXT           "3333 / 4441",IDC_STATIC_N,12,68,56,8
+    LTEXT           "",IDC_STATIC3,90,46,8,30,0,WS_EX_CLIENTEDGE
+    LTEXT           "IDB_QEP_DB",IDC_BITMAP_DB,0,2,8,8
+    LTEXT           "IDB_QEP_PAGE",IDC_BITMAP_PAGE,0,36,8,8
+    LTEXT           "IDB_QEP_TUPLE",IDC_BITMAP_TUPLE,50,36,8,8
+    LTEXT           "IDB_QEP_D",IDC_BITMAP_D,0,47,8,8
+    LTEXT           "IDB_QEP_C",IDC_BITMAP_C,0,57,8,8
+    LTEXT           "IDB_QEP_N",IDC_BITMAP_N,0,66,8,8
+END
+
+IDD_QEPBOX_STAR_LEAF DIALOG  0, 0, 100, 42
+STYLE DS_SETFONT | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
+CAPTION "Proj-rest"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "8888888888",IDC_STATIC_PAGE,11,30,36,8
+    LTEXT           "8888888888",IDC_STATIC_TUPLE,63,30,36,8
+    LTEXT           "Sort On (col1)",IDC_STATIC_HEADER,1,12,98,16
+    LTEXT           "1->2 FRNASU02:DBPARIS",IDC_STATIC_DB,9,2,81,8
+    LTEXT           "IDB_QEP_DB",IDC_BITMAP_DB,0,2,8,8
+    LTEXT           "IDB_QEP_PAGE",IDC_BITMAP_PAGE,0,31,8,8
+    LTEXT           "IDB_QEP_TUPLE",IDC_BITMAP_TUPLE,50,31,8,8
+END
+
+IDD_QEPBOX_STAR_LEAF_OVERLAPPED DIALOG  0, 0, 100, 42
+STYLE DS_SETFONT | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
+CAPTION "Proj-rest"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "8888888888",IDC_STATIC_PAGE,11,30,36,8
+    LTEXT           "8888888888",IDC_STATIC_TUPLE,63,30,36,8
+    LTEXT           "Sort On (col1)",IDC_STATIC_HEADER,1,12,98,16
+    LTEXT           "1->2 FRNASU02:DBPARIS",IDC_STATIC_DB,9,2,81,8
+    LTEXT           "IDB_QEP_DB",IDC_BITMAP_DB,0,2,8,8
+    LTEXT           "IDB_QEP_PAGE",IDC_BITMAP_PAGE,0,31,8,8
+    LTEXT           "IDB_QEP_TUPLE",IDC_BITMAP_TUPLE,50,31,8,8
+END
+
+IDD_QEPBOX_STAR_OVERLAPPED DIALOGEX 0, 0, 99, 77
+STYLE DS_SETFONT | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
+CAPTION "Proj-rest"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "",IDC_STATIC1,72,46,8,30,0,WS_EX_CLIENTEDGE
+    LTEXT           "",IDC_STATIC2,81,46,8,30,0,WS_EX_CLIENTEDGE
+    LTEXT           "8888888888",IDC_STATIC_PAGE,12,36,36,8
+    LTEXT           "8888888888",IDC_STATIC_TUPLE,62,36,36,8
+    LTEXT           "Sort On (col1)",IDC_STATIC_HEADER,1,19,97,8
+    LTEXT           "12345 / 23456",IDC_STATIC_C,12,58,57,8
+    LTEXT           "3333 / 4441",IDC_STATIC_D,12,48,57,8
+    LTEXT           "1->2 FRNASU02:DBPARIS",IDC_STATIC_DB,12,2,86,8
+    LTEXT           "-> XXXXXXXX",IDC_STATIC_NODE,12,11,84,8
+    LTEXT           "3333 / 4441",IDC_STATIC_N,12,68,56,8
+    LTEXT           "",IDC_STATIC3,90,46,8,30,0,WS_EX_CLIENTEDGE
+    LTEXT           "IDB_QEP_DB",IDC_BITMAP_DB,0,2,8,8
+    LTEXT           "IDB_QEP_PAGE",IDC_BITMAP_PAGE,0,36,8,8
+    LTEXT           "IDB_QEP_TUPLE",IDC_BITMAP_TUPLE,50,36,8,8
+    LTEXT           "IDB_QEP_D",IDC_BITMAP_D,0,47,8,8
+    LTEXT           "IDB_QEP_C",IDC_BITMAP_C,0,57,8,8
+    LTEXT           "IDB_QEP_N",IDC_BITMAP_N,0,66,8,8
+END
+
+IDD_QEPBOX_STAR_PREVIEW DIALOGEX 0, 0, 66, 13
+STYLE DS_SETFONT | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "",IDC_COLOR,1,1,38,11
+    LTEXT           "",IDC_STATIC1,40,1,8,11,0,WS_EX_CLIENTEDGE
+    LTEXT           "",IDC_STATIC2,48,1,8,11,0,WS_EX_CLIENTEDGE
+    LTEXT           "",IDC_STATIC3,56,1,8,11,0,WS_EX_CLIENTEDGE
+END
+
+IDD_SQLQUERY_PAGEGENERIC DIALOG  0, 0, 187, 99
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Non-Select Statement",IDC_STATIC,107,2,73,8
+    EDITTEXT        IDC_EDIT1,7,18,173,74,ES_MULTILINE | ES_READONLY | 
+                    WS_VSCROLL | WS_HSCROLL
+    LTEXT           "Database:",IDC_STATIC2,7,3,32,8
+    EDITTEXT        IDC_EDIT2,43,2,57,12,ES_AUTOHSCROLL | ES_READONLY
+END
+
+IDD_SQLQUERY_PAGEQEP DIALOG  0, 0, 217, 99
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Statement:",IDC_STATIC1,91,5,38,8
+    EDITTEXT        IDC_EDIT1,131,4,79,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Database:",IDC_STATIC3,7,6,35,8,NOT WS_VISIBLE
+    EDITTEXT        IDC_EDIT2,48,4,41,12,ES_AUTOHSCROLL | ES_READONLY
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,7,18,203,74
+END
+
+IDD_SQLQUERY_PAGEQEP_INDIVIDUAL DIALOG  0, 0, 367, 110
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Aggregate\nExpressions:",IDC_STATIC1,1,18,43,22
+    EDITTEXT        IDC_EDIT1,111,2,43,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Frame support (CfQueryExecutionPlane)",IDC_STATIC2,1,46,
+                    359,57,NOT WS_VISIBLE | WS_BORDER
+    LTEXT           "Expression\nAttributes:",IDC_STATIC3,124,18,39,19,NOT 
+                    WS_VISIBLE
+    LTEXT           "Temporary Table:",IDC_STATIC,50,3,56,8
+    CONTROL         "",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,159,4,9,8
+    LTEXT           "Time Out",IDC_STATIC,168,3,29,8
+    CONTROL         "",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,202,4,9,8
+    LTEXT           "Large Temporaries",IDC_STATIC,213,3,65,8
+    CONTROL         "",IDC_CHECK4,"Button",BS_AUTOCHECKBOX | WS_DISABLED | 
+                    WS_TABSTOP,278,4,9,8
+    LTEXT           "Float/Integer Exception",IDC_STATIC,288,3,72,8
+    LISTBOX         IDC_LIST1,50,17,62,26,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    LISTBOX         IDC_LIST2,166,17,62,26,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Preview",IDC_BUTTON1,1,1,40,14
+END
+
+IDD_SQLQUERY_PAGERAW DIALOG  0, 0, 187, 99
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,1,173,91,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    ES_READONLY | WS_VSCROLL
+END
+
+IDD_SQLQUERY_PAGERESULT DIALOG  0, 0, 187, 99
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Statement:",IDC_STATIC1,90,5,36,8
+    EDITTEXT        IDC_EDIT1,128,4,52,12,ES_AUTOHSCROLL | ES_READONLY
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
+                    LVS_OWNERDRAWFIXED | WS_BORDER | WS_TABSTOP,7,19,173,56
+    LTEXT           "Database:",IDC_STATIC2,7,5,33,8
+    EDITTEXT        IDC_EDIT2,44,4,43,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Total Fetched Row(s):",IDC_STATIC3,7,80,173,12,
+                    SS_SUNKEN | WS_BORDER
+END
+
+IDD_SQLQUERY_PAGEXML DIALOG  0, 0, 308, 97
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "",IDC_EXPLORER1,"{8856F961-340A-11D0-A96B-00C04FD705A2}",
+                    WS_TABSTOP,1,17,306,73
+    PUSHBUTTON      "XML",IDC_BUTTON1,1,2,54,12
+    PUSHBUTTON      "Save...",IDC_BUTTON2,58,2,44,12
+    LTEXT           "Database/Statement:",IDC_STATIC1,108,3,69,8,NOT 
+                    WS_VISIBLE
+    EDITTEXT        IDC_EDIT1,181,2,38,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
+                    WS_VISIBLE
+    EDITTEXT        IDC_EDIT2,223,2,84,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
+                    WS_VISIBLE
+END
+
+IDD_SQLQUERY_RESULT DIALOG  0, 0, 187, 99
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",0x0,7,7,173,85
+END
+
+IDD_SQLQUERY_STATEMENT DIALOG  0, 0, 268, 14
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Com:",IDC_STATIC,7,2,17,8
+    LTEXT           "Val",IDC_STATIC1,28,2,39,10,SS_SUNKEN
+    LTEXT           "Exec:",IDC_STATIC,69,2,18,8
+    LTEXT           "EVal",IDC_STATIC2,89,2,44,10,SS_SUNKEN
+    LTEXT           "Elap:",IDC_STATIC,135,2,17,8
+    LTEXT           "Elval",IDC_STATIC3,154,2,42,10,SS_SUNKEN
+    LTEXT           "Cost:",IDC_STATIC,201,2,16,8
+    LTEXT           "Cval",IDC_STATIC4,219,2,42,10,SS_SUNKEN
+END
+
+IDD_PROPPAGE_TABLAYOUT DIALOG  0, 0, 250, 110
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Max Tabs:",IDC_STATIC,7,8,85,8
+    EDITTEXT        IDC_EDIT_MAXTAB,100,7,50,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN1,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,150,7,8,14
+    LTEXT           "Max Trace Tab Size (kB):",IDC_STATIC,7,25,87,8
+    EDITTEXT        IDC_EDIT_MAXTRACESIZE,100,24,50,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN2,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,150,23,8,14
+    CONTROL         "Non Select Statement Tabs",IDC_CHECK_SHOWDONSELECT,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,46,151,10
+    CONTROL         "Trace Tab Initially Visible",IDC_CHECK_ACTIVATETRACE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,61,151,10
+    CONTROL         "Trace Tab to Top",IDC_CHECK_TRACETOP,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,77,151,10
+END
+
+IDD_PROPPAGE_DISPLAY DIALOG  0, 0, 250, 110
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Float4 Columns Display",IDC_STATIC,7,7,138,44
+    LTEXT           "Precision:",IDC_STATIC,12,22,34,8
+    EDITTEXT        IDC_EDIT_F4WIDTH,48,20,31,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN1,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,75,19,10,14
+    LTEXT           "Scale:",IDC_STATIC,85,22,22,8
+    EDITTEXT        IDC_EDIT_F4SCALE,110,20,31,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN2,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,136,19,8,14
+    CONTROL         "Exponential Format",IDC_CHECK_F4EXPONENTIAL,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,36,74,10
+    GROUPBOX        "Float8 Columns Display",IDC_STATIC,7,59,138,44
+    LTEXT           "Precision:",IDC_STATIC,12,73,34,8
+    EDITTEXT        IDC_EDIT_F8WIDTH,48,71,31,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN3,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,75,70,10,14
+    LTEXT           "Scale:",IDC_STATIC,85,73,22,8
+    EDITTEXT        IDC_EDIT_F8SCALE,110,71,31,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN4,"msctls_updown32",UDS_SETBUDDYINT | 
+                    UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
+                    UDS_NOTHOUSANDS,139,70,8,14
+    CONTROL         "Exponential Format",IDC_CHECK_F8EXPONENTIAL,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,88,74,10
+    GROUPBOX        "Qep Initial Display Mode",IDC_STATIC,153,7,90,29,
+                    WS_GROUP
+    CONTROL         "Normal",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,156,20,38,10
+    CONTROL         "Preview",IDC_RADIO4,"Button",BS_AUTORADIOBUTTON,200,20,
+                    38,10
+    GROUPBOX        "XML Initial Display Mode",IDC_STATIC,153,42,90,44,
+                    WS_GROUP
+    CONTROL         "XML",IDC_RADIO7,"Button",BS_AUTORADIOBUTTON | WS_GROUP,
+                    162,55,29,10
+    CONTROL         "Tabular Form",IDC_RADIO8,"Button",BS_AUTORADIOBUTTON,
+                    162,69,57,10
+    CONTROL         "Grid",IDC_CHECK_SHOWGRID,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,162,93,61,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_PROPPAGE_SQL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 243
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 103
+    END
+
+    IDD_QEPBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 99
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 52
+    END
+
+    IDD_QEPBOX_LEAF, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 99
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 30
+    END
+
+    IDD_QEPBOX_LEAF_OVERLAPPED, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 99
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 30
+    END
+
+    IDD_QEPBOX_OVERLAPPED, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 99
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 52
+    END
+
+    IDD_QEPBOX_PREVIEW, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 57
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 12
+    END
+
+    IDD_QEPBOX_STAR, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 98
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 76
+    END
+
+    IDD_QEPBOX_STAR_LEAF, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 99
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 41
+    END
+
+    IDD_QEPBOX_STAR_LEAF_OVERLAPPED, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 99
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 41
+    END
+
+    IDD_QEPBOX_STAR_OVERLAPPED, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 98
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 76
+    END
+
+    IDD_QEPBOX_STAR_PREVIEW, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 65
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 12
+    END
+
+    IDD_SQLQUERY_PAGEGENERIC, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_SQLQUERY_PAGEQEP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 210
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_SQLQUERY_PAGEQEP_INDIVIDUAL, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 360
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 103
+    END
+
+    IDD_SQLQUERY_PAGERAW, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_SQLQUERY_PAGERESULT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_SQLQUERY_PAGEXML, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 307
+        TOPMARGIN, 2
+        BOTTOMMARGIN, 90
+    END
+
+    IDD_SQLQUERY_RESULT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_SQLQUERY_STATEMENT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 261
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 13
+    END
+
+    IDD_PROPPAGE_TABLAYOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 243
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 103
+    END
+
+    IDD_PROPPAGE_DISPLAY, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 243
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 103
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_SQLQUERY_PAGEXML DLGINIT
+BEGIN
+    IDC_EXPLORER1, 0x376, 156, 0
+0x0000, 0x0000, 0x004c, 0x0000, 0x329a, 0x0000, 0x0c12, 0x0000, 0x0001, 
+0x0000, 0x0005, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 
+0x0000, 0x0000, 0x004c, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 
+0x0000, 0xd0e0, 0x0057, 0x3573, 0x11cf, 0x69ae, 0x0008, 0x2e2b, 0x6212, 
+0x0008, 0x0000, 0x0000, 0x0000, 0x004c, 0x0000, 0x1401, 0x0002, 0x0000, 
+0x0000, 0x00c0, 0x0000, 0x0000, 0x4600, 0x0080, 0x0000, 0x0000, 0x0000, 
+0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 
+0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0000, 
+0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_RICHTEXT_POPUP MENU 
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "&Undo",                       ID_EDIT_UNDO
+        MENUITEM SEPARATOR
+        MENUITEM "Cu&t",                        ID_EDIT_CUT
+        MENUITEM "&Copy",                       ID_EDIT_COPY
+        MENUITEM "&Paste",                      ID_EDIT_PASTE
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_SQLQUERY            "Sqlquery Control"
+    IDS_SQLQUERY_PPG        "Sqlquery Property Page"
+    IDS_PRODUCT_VERSION     "Ingres Sql Query ActiveX Control version 1.0"
+    IDS_EDBQUERY            "Sqlquery (EDBC) Control"
+    IDS_EDBQUERY_PPG        "Sqlquery (EDBC) Property Page"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_SQLQUERY_PPG_CAPTION "Session"
+    IDS_SQLQUERY_PPGTABLAYOUT_CAPTION "Tab Layout"
+    IDS_SQLQUERY_PPGDISPLAY_CAPTION "Display"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_FILTER_SQL_FILES    "SQL Query Files (*.qry;*.sql)|*.qry;*.sql"
+    IDS_FILTER_ALL_FILES    "All Files (*.*)|*.*"
+    IDS_FILTER_SQL_FILES1   "SQL Query Files (*.qry)|*.qry"
+    IDS_FILTER_SQL_FILES2   "SQL Query Files (*.sql)|*.sql"
+    IDS_DATABASE_NONE       "(none)"
+    IDS_ROWS_FETCHED        "Rows fetched: %d."
+    IDS_TITLE_FETCHING_ROW  "Fetching Rows In Progress"
+    IDS_PREVIEW             "Tabular Form"
+    IDS_F_ROWS              "<%d row(s)>"
+    IDS_TOTAL_FETCHED_ROW   "Total Fetched Row(s): %1"
+    IDS_ALREADY_FETCHED_ROW "Already Fetched Row(s): %1"
+    IDS_NOT_AVAILABLE       "n/a"
+    IDS_INIFILENAME         "sqlquery.ini"
+    IDS_NON_SELECT_STATEMENT "Non-Select Statement"
+    IDS_TRACE_OUTPUT        "Trace Output:"
+    IDS_QEP_NORMAL          "Normal"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_SELECT_DATABASE "Please select a database."
+    IDS_MSG_REMOVE_COMMAND1 "The file contains commands such as '\\g', '\\q','\\s','\\shell', etc..\nDo you want to remove them?"
+    IDS_MSG_REMOVE_COMMAND2 "The file contains commands such as '\\a', '\\append','\\w','\\write', etc..\nThese commands will not work, but you may want to change them manually."
+    IDS_MSG_UNKNOWN_FAIL_2_OPENQUERY 
+                            "Unknown error:\nUnable to open the query."
+    IDS_MSG_FAIL_2_OPENQUERY "Cannot Load SQL Query : File Problem."
+    IDS_MSG_UNKNOWN_FAIL_2_SAVEQUERY 
+                            "Unknown error:\nUnable to save the query."
+    IDS_MSG_NONSELECT_IN_QEP 
+                            "No QEP will be displayed for the non-select statements."
+    IDS_MSG_NONSELECT_IN_XML 
+                            "No XML will be displayed for the non-select statements."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_FAIL_2_CREATE_PAGERAW "Failed to create theTrace Tab."
+    IDS_MSG_MULTI_STATEMENT "Execution of multiple select statements together\n is not available against this version of DBMS Server"
+    IDS_MSG_STATEMENT_COMMIT 
+                            "Execution of multiple statements including at least one select statement is not available when autocommit is on.\nPlease execute the statements separately, or set autocommit off."
+    IDS_MSG_UNKNOWN_FAIL_2_EXECUTE_STATEMENT 
+                            "Unknown error:\nUnable to execute the SQL statement.."
+    IDS_FAIL_2_FETCH_ROW    "Failed to fetch rows"
+    IDS_MSG_INTERRUPT_FETCHING "Do you wish to stop fetching rows?"
+    IDS_MSG_NO_FIRST_TUPLES "<The first %d tuples are no longer available>"
+    IDS_MSG_FAIL_2_CREATEFONT "Create font failed."
+    IDS_MSG_PREC_SCALE      "Some values may not be displayable unless the precision exceeeds the scale by at least 7.\n Continue ?"
+    IDS_MSG_FAIL_2_GETDATA_FOR_SAVE 
+                            "Failed to get data for saving the environment."
+    IDS_MSG_FAIL_2_CREATEBIN_TREE 
+                            "Failed to create the document for the QEP binary tree."
+    IDS_MSG_FAIL_2_INIT_DRAW_QEP_TREE "Failed to initialize the drawing area."
+    IDS_MSG_FAIL_2_CREATE_SQL_RESULT "Failed to create SQL Result Pane."
+    IDS_MSG_FAIL_2_CREATE_QEP_RESULT "Failed to create QEP Frame"
+    IDS_MSG_SIZE_BUFFER_REACHED 
+                            "The maximum size of the trace tab buffer has been reached.\nSome lines at the beginning of the buffer will no longer be available."
+    IDS_MSG_TRACE_TAB_SIZE_REACHED 
+                            "The maximum Trace Tab size (defined in the preferences) has been reached.\nThe first lines in the Trace Tab will be removed each time new lines will be added at the end."
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Sql Query"
+    IDS_MSG_SYSTEM_ERROR    "System error %1."
+    IDS_MSG_FAIL_2_LOCATEDLL "Failed to locate dll: '%1'."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_QEP_PREVIEW         "Preview"
+    IDS_PREVIOUS_LINE_UNAVAILABLE 
+                            "<Some previous lines are no more available>"
+    IDS_MAX_TAB_REACHED     "The max number of Tabs (defined in your preferences) is %d.\nIncoming new Tabs will destroy the oldest ones."
+    IDS_NEXT_TUPLES_UNAVAILABLE "< Next tuples not available >"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_FAIL_2_CREATE_SQL_PANE "Failted to  create SQL Statement Pane."
+    IDS_MSG_FAIL_2_SAVE_SETTINGS "Failed to save settings."
+    IDS_MSG_FAIL_2_DRAW_QEP_TREE "Failed to draw the QEP tree."
+    IDS_MSG_FAIL_2_QUERYINTERFACE_SQLASSISTANT 
+                            "Failed to query interface of SQL Assistant."
+    IDS_MSG_FAIL_2_CREATE_SQLASSISTANT 
+                            "Failed to create an SQL Assistant COM Object."
+    IDS_MSG_QEPUNAVAIABLE   "Cannot display a QEP on a Gateway Node."
+    IDS_MSG_IICHAREST_ERROR "II_CHARSET is not set or an error occured while querying the Character Encoding.\nThe XML will use the default UTF-8 encoding."
+    IDS_MSG_REMOVE_OLD_TAB  "Some old Tabs will be removed in order to reflect the setting changes."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "1 TYPELIB ""sqlquery.tlb""\r\n"
+    "#include ""gv.rc""\r\n"
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+1 TYPELIB "sqlquery.tlb"
+#include "gv.rc"
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

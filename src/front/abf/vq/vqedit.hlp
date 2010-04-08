@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqedit.hlp, help for the Edit Options pop-up at VQ Editor screen
+/#-- 
+To select a Visual Query Edit Option, move your cursor to the option and 
+choose Select. The options list varies according to the type of frame you 
+are editing.
+
+  Data Entry Form    - Edit the form that Vision generates for this frame.
+  Frame Behavior     - Edit various parts of this frame's behavior (Update 
+		       and Browse frames only).
+  Local Variables    - Define or change hidden fields for this frame.
+  Global Components  - Define or change global variables, constants, or 
+		       record type definitions.
+  Escape Code        - Define or change escape code for this frame.
+  Source Code File   - Edit the source code for this frame (available to 
+		       ABF customers only).
+  Errors             - Edit the errors generated during compilation of this 
+		       frame.

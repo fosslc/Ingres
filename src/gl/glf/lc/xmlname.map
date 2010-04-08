@@ -1,0 +1,65 @@
+
+##	Copyright (c) 2004 Ingres Corporation
+##	
+##	03-Oct-2002 (hanch04)
+##	  changed IS885015 to IS885915
+##	09-oct-2003 (schka70/abbjo03)
+##	    Correct spelling of DECMULTI.
+##	23-nov-2004 (gupsh01)
+##	    Map chineses to GBK. And others to approximate mappings.
+##	    Cannot find mapping for EUC_TW in IANA. 
+
+
+#This table is the mapping of Ingres Encoding name to the standard IANA character 
+#set name. The format of this file is as follows
+#
+# "Ingres Characterset"< TAB >"IANA standard encoding name"< TAB >#" Comments "
+#
+ISO88591	ISO-8859-1	#ISO 8859/1 (Latin) 
+ISO88592	ISO-8859-2	#ISO 8859/2 (Latin +some Greek)
+ISO88595	ISO-8859-5	#ISO 8859/5 (Latin + Cyrillic) 
+ISO88599	ISO-8859-9	#ISO 8859/9 (Latin + some Turkish, CP 920)
+IS885915	ISO-8859-15	#ISO 8859/15 (Latin + Euro sign)
+IBMPC_ASCII_INT	ASCII	#PC international ASCII
+IBMPC_ASCII	ASCII	#alias for IBMPC_ASCII_INT
+EBCDIC_C	IBM037	#USA EBCDIC with mappings for C language support
+EBCDIC-ICL	IBM037	#ICL's versions of EBCDIC for international chars
+EBCDIC-USA	IBM1140	#USA EBCDIC with mappings for text support
+HPROMAN8	hp-roman8	#HP Roman 8 
+SHIFTJIS	Shift_JIS	#Shift-JIS Japanese
+IBMPC437	IBM437	#IBM PC Code Page 437 (US and English) 
+IBMPC850	IBM850	#IBM PC Code Page 850 (Multilingual)
+IBMPC866	IBM866	#IBM PC 866 (Cyrillic for DOS)
+DECMULTI	DEC-MCS	#DEC Multinational
+PCHEBREW	HEBREW  #IBM PC / MSDOS Hebrew
+CHINESES	GBK	#Simplified Chinese - PRC
+KANJIEUC	EUC-JP	#EUC Japanese
+CSGB2312	GB2312	#Simplified Chinese - GB 2312
+CW	windows-1252	#Cyrillic on Windows 3.1 (CP 1251)
+ALT	cp866	#Support of Cyrillic on DOS
+WIN1250	windows-1250	#Eastern Europe (Windows page 1250)
+WIN1252	windows-1252	#Western Europe (Windows Code page 1252 - Latin1)
+ASCII	US-ASCII	#Plain 7 bit ASCII
+HEBREW	windows-1255	#DEC Hebrew
+THAI	THAI	#DEC Thai Tis
+ARABIC	cp1256	#Arabic 449 Modified
+WHEBREW	HEBREW	#Microsoft Windows Hebrew
+WARABIC	windows-1256	#Microsoft Windows Arabic
+DOSAMO	ISO-8859-6	#IBM DOS ASMO Arabic (cp 708) 
+WTHAI	IBM-Thai	#IBM / Windows Thai (cp 874)
+EBCDIC	EBCDIC_US	#same as EBCDIC-USA
+KOREAN	korean	#Korean 
+UCS2	UCS2	#ISO-10646-UCS-2 Universal charset requires 2 octets or 16 bits
+UCS4	UCS4	#ISO-10646-UCS-4 Universal charset requires 4 octets or 32 bits
+PC857	IBM857	#IBM PC Code page 857 - Turkish
+ELOT437	IBM437	#IBM PC
+SLAV852	IBM852	#IBM PC Code Page 852 (Slavic)
+GREEK	greek	#IBM PC Code Page 437 (US and English)
+KOI8	KOI8-R	#KOI 8-bit (ISO 6937/8), Russia
+CHTBIG5	BIG5	#Traditional Chinese - Taiwan, BIG5
+#CHTEUC	NOMAP	#Traditional Chinese - Taiwan, EUC 
+#CHTHP	NOMAP	#Traditional Chinese - Taiwan, HP ROC15 
+CSGBK	GBK	#Simplified Chinese
+#ANY	NOMAP	#Treat All characters as printable
+UTF7	UTF-7	#UTF-7, 7 bit UCS2 Transformation format
+UTF8	UTF-8	#UTF-8, 8 bit UCS2 Transformation format

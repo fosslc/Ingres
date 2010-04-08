@@ -1,0 +1,99 @@
+; History:
+;	27-may-98
+;	    Remove IIgcs_global
+;	13-jul-2001 (somsa01)
+;	    Removed gcxlevel.
+;	07-Mar-03 (wansh01)
+;	    Renamed gcd_xxxx to gco_xxxx 
+;	    Added GCD_global	
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	24-Aug-2004 (drivi01)
+;	    Renamed iigcfdata.def to iilibgcfdata.def
+;	    due to new build procedure.
+;	24-Aug-2004 (drivi01)
+;	    Removed IIGCn_static and gcn_classes due to
+;	    removal of B1 security code.
+;	25-Aug-2004 (drivi01)
+;	    Added gcn_getflag to the list.
+;       18-Nov-2004 (Gordon.Thorpe@ca.com and Ralph.Loen@ca.com)
+;           Removed GCD and GCC global symbols that are intended for the
+;           private use of GCD and GCC.
+;	19-Feb-2010 (bonro01)
+;	    Add functions for change 503021 bug 123289.
+;
+EXPORTS
+IIGCa_global		@1	DATA			
+;alfsm_entry		@2	DATA			
+;IIGCc_inxl_tbl		@3	DATA			
+;IIGCc_rev_lvl		@4	DATA			
+;IIGCc_global		@5	DATA			
+;alfsm_tbl		@6	DATA			
+;pbfsm_tbl		@7	DATA			
+;pbalfsm_tbl		@8	DATA			
+;pbalfsm_entry		@9	DATA			
+;plfsm_tbl		@10	DATA			
+;slfsm_tbl		@11	DATA			
+;tlfsm_tbl		@12	DATA			
+;pbfsm_entry		@13	DATA			
+;plfsm_entry		@14	DATA			
+;slfsm_entry		@15	DATA			
+;tlfsm_entry		@16	DATA			
+;GCD_global		@17	DATA			
+gco_msg_ods		@18	DATA			
+gco_l_msg_ods		@19	DATA			
+gco_ddt_ods		@20	DATA			
+gco_l_ddt_ods		@21	DATA			
+gco_tuple_prog		@22	DATA			
+gcx_datatype		@23	DATA			
+gcx_gca_elestat		@24	DATA			
+gcx_gca_msg		@25	DATA			
+;gcx_gcc_aal		@26	DATA			
+;gcx_gcc_apb		@27	DATA			
+;gcx_gcc_atl		@28	DATA			
+gcx_gcc_eop		@29	DATA			
+;gcx_gcc_ial		@30	DATA			
+;gcx_gcc_ipb		@31	DATA			
+;gcx_gcc_ipl		@32	DATA			
+;gcx_gcc_isl		@33	DATA			
+;gcx_gcc_itl		@34	DATA			
+;gcx_gcc_oal		@35	DATA			
+;gcx_gcc_opb		@36	DATA			
+;gcx_gcc_opl		@37	DATA			
+gcx_gco_ops		@38	DATA			
+;gcx_gcc_osl		@39	DATA			
+;gcx_gcc_otl		@40	DATA			
+;gcx_gcc_rq		@41	DATA			
+;gcx_gcc_sal		@42	DATA			
+;gcx_gcc_spb		@43	DATA			
+;gcx_gcc_spl		@44	DATA			
+;gcx_gcc_ssl		@45	DATA			
+;gcx_gcc_stl		@46	DATA			
+;gcx_mde_primitive		@47	DATA			
+;gcx_mde_service		@48	DATA			
+tabs8		@49	DATA			
+
+gco_trace_level		@50	DATA
+gco_ddt_map		@51 	DATA
+gca_classes		@52	DATA
+gcx_atoms		@53	DATA
+gcs_tr_ops		@54	DATA
+IIgcs_global		@55	DATA
+gcs_tr_parms		@56	DATA
+gcs_tr_objs		@57	DATA
+gco_msg_map		@58	DATA
+gcx_gco_type		@59	DATA
+;gco_od_obj_desc		@60	DATA
+gco_od_data_value	@61	DATA
+;gcx_gcb_sal		@62	DATA
+;gcx_gcb_ial		@63	DATA
+;gcx_gca_rq		@64	DATA
+;gcb_to_addr		@65	DATA
+;gcb_from_addr		@66	DATA
+;gcb_pm_reso		@67	DATA
+;IIGCn_static		@68	DATA
+;msgMap			@69	DATA
+;IIGCb_rev_lvl		@70	DATA
+;gcd_class_cnt		@71	DATA
+;gcd_classes		@72	DATA
+;gcn_classes		@73	DATA

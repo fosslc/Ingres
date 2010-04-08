@@ -1,0 +1,18 @@
+// domilist.h : header file
+//
+
+#ifndef DOMIMAGELIST_HEADER
+#define DOMIMAGELIST_HEADER
+
+/////////////////////////////////////////////////////////////////////////////
+// CuDomImageList window
+
+class CuDomImageList : public CImageList
+{
+public:
+  void AddIcon(WORD idIcon);
+};
+
+/////////////////////////////////////////////////////////////////////////////
+
+#endif  // DOMIMAGELIST_HEADER

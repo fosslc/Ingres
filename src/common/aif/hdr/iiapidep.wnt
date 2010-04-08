@@ -1,0 +1,60 @@
+/*
+** Name: iiapidep.h
+**
+## Description:
+##      API platform dependent definitions for MicroSoft Windows NT
+##
+## History:
+##      13-Dec-95 (emmag)
+##	    'Created', based on iiapidep.w31
+##	15-dec-95 (emmag)
+##	    Define II_printf.
+##	27-dec-95 (emmag)
+##	    Change short to int.      
+##      12-Apr-2005 (wansh01)
+##         Added C++ support for II_EXTERN.
+##         Removed II_printf, II_sprinf, II_scanf.
+##	09-May-2005 (wansh01) 
+##         Added II_printf, II_sprinf, II_scanf. These are used in 
+##	   QA api sep test pgms. 
+##	11-Aug-08 (gordy)
+##	    Added II_INT8 and II_UINT8.
+*/
+
+#ifndef __IIAPIDEP_H__
+#define __IIAPIDEP_H__
+
+
+typedef	int		II_BOOL;	/* Boolean */
+typedef	char		II_CHAR;	/* signed character */
+typedef	int		II_INT;		/* signed integer */
+typedef	char		II_INT1;	/*  8-bit, signed integer */
+typedef	short		II_INT2;	/* 16-bit, signed integer */
+typedef	long		II_INT4;	/* 32-bit, signed integer */
+typedef long long	II_INT8;	/* 64-bit, signed integer */
+typedef	float		II_FLOAT4;	/* 32-bit, signed float */
+typedef	double		II_FLOAT8;	/* 64-bit, signed float */
+typedef	long		II_LONG;	/* 32-bit, signed integer */
+typedef	void *		II_PTR;		/* void pointer */
+typedef	unsigned char	II_UCHAR;	/* unsignged character */
+typedef	unsigned char	II_UINT1;	/*  8-bit, unsigned integer */
+typedef	unsigned short	II_UINT2;	/* 16-bit, unsigned integer */
+typedef	unsigned long	II_UINT4;	/* 32-bit, unsigned integer */
+typedef unsigned long long II_UINT8;	/* 64-bit, unsigned integer */
+typedef	unsigned long	II_ULONG;	/* 32-bit, unsigned integer */
+typedef	void		II_VOID;	/* void */
+
+# define II_VOID	void		
+# define II_FAR		
+#ifdef __cplusplus
+# define II_EXTERN   extern "C"
+#else
+# define II_EXTERN   extern
+# endif
+# define II_EXPORT	
+# define II_CALLBACK	
+
+# define II_printf  printf
+# define II_sprintf sprintf
+# define II_scanf    
+#endif

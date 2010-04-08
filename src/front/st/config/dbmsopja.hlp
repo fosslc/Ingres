@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The opf_timeout_abort resource specifies the time in millesconds 
+  after which the optimizer will stop considering query plans and use the
+  best plan found to that point. If no plan has been found yet, an error
+  is generated. 
+
+  If 0 (the default) is specified, this timeout is disabled. 
+

@@ -1,0 +1,581 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+#include "rctools.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\xsql.ico"
+IDR_XSQLTYPE            ICON                    "res\\xsqldoc.ico"
+IDI_AUTOCOMIT_ON        ICON                    "res\\autocom1.ico"
+IDI_AUTOCOMIT_OFF       ICON                    "res\\autocom0.ico"
+IDI_READLOCK0           ICON                    "res\\readlck0.ico"
+IDI_READLOCK1           ICON                    "res\\readlck1.ico"
+IDR_MAINFRAME_EDBC      ICON                    "res\\edbc.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
+IDB_HOTMAINFRAME        BITMAP                  "res\\hotmainf.bmp"
+IDR_MAINFRAME_EDBC      BITMAP                  "res\\mainfram.bmp"
+IDB_HOTMAINFRAME_EDBC   BITMAP                  "res\\hotedbcf.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+IDR_MAINFRAME TOOLBAR  16, 15
+BEGIN
+    BUTTON      IDM_CLEAR
+    BUTTON      IDM_OPEN_QUERY
+    BUTTON      IDM_SAVE_QUERY
+    SEPARATOR
+    BUTTON      IDM_ASSISTANT
+    SEPARATOR
+    BUTTON      IDM_RUN
+    BUTTON      IDM_QEP
+    BUTTON      IDM_XML
+    SEPARATOR
+    BUTTON      IDM_COMMIT
+    SEPARATOR
+    BUTTON      IDM_TRACE
+    BUTTON      IDM_SETTING
+END
+
+IDR_MAINFRAME_EDBC TOOLBAR  16, 15
+BEGIN
+    BUTTON      IDM_CLEAR
+    BUTTON      IDM_OPEN_QUERY
+    BUTTON      IDM_SAVE_QUERY
+    SEPARATOR
+    BUTTON      IDM_ASSISTANT
+    SEPARATOR
+    BUTTON      IDM_RUN
+    BUTTON      IDM_QEP
+    BUTTON      IDM_XML
+    SEPARATOR
+    BUTTON      IDM_COMMIT
+    SEPARATOR
+    BUTTON      IDM_TRACE
+    BUTTON      IDM_SETTING
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",                IDM_NEW
+        MENUITEM "&Open...\tCtrl+O",            IDM_OPEN_ENVIRONMENT
+        MENUITEM "&Save...\tCtrl+S",            IDM_SAVE_ENVIRONMENT
+        MENUITEM "SQL Assistant",               IDM_ASSISTANT
+        MENUITEM "Go\tF5",                      IDM_RUN
+        MENUITEM "Query Execution Plan",        IDM_QEP
+        MENUITEM "XML",                         IDM_XML
+        MENUITEM "Commit",                      IDM_COMMIT
+        MENUITEM SEPARATOR
+        MENUITEM "&Print...\tCtrl+P",           ID_FILE_PRINT
+        MENUITEM SEPARATOR
+        MENUITEM "Preferences",                 IDM_PREFERENCE
+        MENUITEM "Save Preferences as Default", IDM_PREFERENCE_SAVE, CHECKED
+        MENUITEM "SQL &Error History\tCtrl+E",  32791
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tAlt+F4",               ID_APP_EXIT
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM SEPARATOR
+        MENUITEM "Trace Tab",                   IDM_TRACE, CHECKED
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Help Topics\tF1",            ID_DEFAULT_HELP
+	MENUITEM "Ingres Support &Online...",   ID_HELP_SUPPORTONLINE
+        MENUITEM "&About Ingres Visual SQL...", ID_APP_ABOUT
+    END
+END
+
+IDR_MAINFRAME_EDBC MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",                IDM_NEW
+        MENUITEM "&Open...\tCtrl+O",            IDM_OPEN_ENVIRONMENT
+        MENUITEM "&Save...\tCtrl+S",            IDM_SAVE_ENVIRONMENT
+        MENUITEM "SQL Assistant",               IDM_ASSISTANT
+        MENUITEM "Go\tF5",                      IDM_RUN
+        MENUITEM "Query Execution Plan",        IDM_QEP
+        MENUITEM "XML",                         IDM_XML
+        MENUITEM "Commit",                      IDM_COMMIT
+        MENUITEM SEPARATOR
+        MENUITEM "&Print...\tCtrl+P",           ID_FILE_PRINT
+        MENUITEM SEPARATOR
+        MENUITEM "Preferences",                 IDM_PREFERENCE
+        MENUITEM "Save Preferences as Default", IDM_PREFERENCE_SAVE, CHECKED
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tAlt+F4",               ID_APP_EXIT
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM SEPARATOR
+        MENUITEM "Trace Tab",                   IDM_TRACE, CHECKED
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Help Topics",                ID_DEFAULT_HELP
+	MENUITEM "Ingres Support &Online...",   ID_HELP_SUPPORTONLINE
+        MENUITEM "&About EDBC Visual SQL...",   ID_APP_ABOUT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS 
+BEGIN
+    "P",            ID_FILE_PRINT,          VIRTKEY, CONTROL, NOINVERT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY, NOINVERT
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
+    "E",            ID_SQL_ERROR,           VIRTKEY, CONTROL, NOINVERT
+    "N",            IDM_NEW,                VIRTKEY, CONTROL, NOINVERT
+    "O",            IDM_OPEN_ENVIRONMENT,   VIRTKEY, CONTROL, NOINVERT
+    VK_F5,          IDM_RUN,                VIRTKEY, NOINVERT
+    "S",            IDM_SAVE_ENVIRONMENT,   VIRTKEY, CONTROL, NOINVERT
+    VK_F1,          ID_DEFAULT_HELP,        VIRTKEY, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDR_MAINFRAME DIALOG  0, 0, 520, 16
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "",IDM_NODE,"ComboBoxEx32",CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP,1,2,68,70
+    CONTROL         "",IDM_DATABASE,"ComboBoxEx32",CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP,72,2,121,70
+    CONTROL         "",IDM_SERVER,"ComboBoxEx32",CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP,196,2,85,70
+    CONTROL         "",IDM_USER,"ComboBoxEx32",CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP,283,2,75,70
+    CONTROL         "",IDM_GROUP,"ComboBoxEx32",CBS_DROPDOWNLIST | CBS_SORT | 
+                    NOT WS_VISIBLE | WS_VSCROLL | WS_TABSTOP,364,2,75,70
+    CONTROL         "",IDM_ROLE,"ComboBoxEx32",CBS_DROPDOWNLIST | CBS_SORT | 
+                    NOT WS_VISIBLE | WS_VSCROLL | WS_TABSTOP,441,2,75,70
+END
+
+IDD_DIALOG_PASSWORD DIALOG  0, 0, 221, 43
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Please Enter the Password for Role '%s'"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,164,13,50,14
+    EDITTEXT        IDC_EDIT1,7,13,150,14,ES_PASSWORD | ES_AUTOHSCROLL
+END
+
+IDD_SQLERROR DIALOGEX 0, 0, 310, 234
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "History of SQL Statements errors"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Sql &Statement :",IDC_STATIC,8,6,248,8
+    EDITTEXT        IDC_SQLERR_STMT,5,20,290,50,ES_MULTILINE | ES_OEMCONVERT | 
+                    ES_READONLY | WS_VSCROLL | WS_HSCROLL
+    LTEXT           "Sql &Error Code :",IDC_STATIC,7,73,65,9
+    LTEXT           "Sql Error &Text :",IDC_STATIC,8,86,50,8
+    EDITTEXT        IDC_SQLERR_ERRTXT,5,100,290,100,ES_MULTILINE | 
+                    ES_OEMCONVERT | ES_READONLY | WS_VSCROLL | WS_HSCROLL
+    PUSHBUTTON      "&First",IDC_SQLERR_FIRST,5,215,50,14
+    PUSHBUTTON      "&Prev",IDC_SQLERR_PREV,60,215,50,14
+    PUSHBUTTON      "&Next",IDC_SQLERR_NEXT,115,215,50,14
+    PUSHBUTTON      "&Last",IDC_SQLERR_LAST,170,215,50,14
+    PUSHBUTTON      "Finis&h",IDOK,242,215,50,14
+    LTEXT           "",IDC_SQLERR_ERRCODE,75,73,100,9
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDR_MAINFRAME, DIALOG
+    BEGIN
+        RIGHTMARGIN, 516
+        VERTGUIDE, 187
+    END
+
+    IDD_DIALOG_PASSWORD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 214
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 36
+    END
+
+    IDD_SQLERROR, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 309
+        TOPMARGIN, 7
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDR_MAINFRAME           "xsql\n\nXsql\n\n\nXsql.Document\nXsql Document"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Ingres Visual SQL"
+    AFX_IDS_IDLEMESSAGE     "Ready"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+    ID_FILE_PAGE_SETUP      "Change the printing options\nPage Setup"
+    ID_FILE_PRINT_SETUP     "Change the printer and printing options\nPrint Setup"
+    ID_FILE_PRINT           "Print the active document\nPrint"
+    ID_FILE_PRINT_PREVIEW   "Display full pages\nPrint Preview"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_APP_ABOUT            "Display program information, version number and copyright\nAbout"
+    ID_APP_EXIT             "Quit the application; prompts to save documents\nExit"
+    ID_DEFAULT_HELP         "Help Topics\nHelp Topics"
+    ID_HELP_SUPPORTONLINE   "Ingres Support Online\nIngres Support Online"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_MRU_FILE1       "Open this document"
+    ID_FILE_MRU_FILE2       "Open this document"
+    ID_FILE_MRU_FILE3       "Open this document"
+    ID_FILE_MRU_FILE4       "Open this document"
+    ID_FILE_MRU_FILE5       "Open this document"
+    ID_FILE_MRU_FILE6       "Open this document"
+    ID_FILE_MRU_FILE7       "Open this document"
+    ID_FILE_MRU_FILE8       "Open this document"
+    ID_FILE_MRU_FILE9       "Open this document"
+    ID_FILE_MRU_FILE10      "Open this document"
+    ID_FILE_MRU_FILE11      "Open this document"
+    ID_FILE_MRU_FILE12      "Open this document"
+    ID_FILE_MRU_FILE13      "Open this document"
+    ID_FILE_MRU_FILE14      "Open this document"
+    ID_FILE_MRU_FILE15      "Open this document"
+    ID_FILE_MRU_FILE16      "Open this document"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or hide the toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or hide the status bar\nToggle StatusBar"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCSIZE          "Change the window size"
+    AFX_IDS_SCMOVE          "Change the window position"
+    AFX_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    AFX_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    AFX_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    AFX_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCRESTORE       "Restore the window to normal size"
+    AFX_IDS_SCTASKLIST      "Activate Task List"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_PREVIEW_CLOSE   "Close print preview mode\nCancel Preview"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_PRODUCT_VERSION     "Version %s"
+    IDS_MSG_FAIL_2_LOCATEDLL "Failed to locate dll '%1'."
+    IDS_DEFAULT_SERVER      "<Default Server>"
+    IDS_DEFAULT_USER        "<Default User>"
+    IDS_PLEASE_SELECT_DATABASE "Please select a database."
+    IDS_UNKNOWN_ENVIRONMENT_FILE 
+                            "Please select a file with a .vdbasql extension."
+    IDS_MSG_II_SYSTEM_NOT_DEFINED "II_SYSTEM is not defined."
+    IDS_MSG_FAILED_2_REGISTER_SERVER "Failed to register '%1' control."
+END
+
+STRINGTABLE 
+BEGIN
+    IDM_CLEAR               "Clear the sql text\nClear"
+    IDM_OPEN_QUERY          "Open query\nOpen"
+    IDM_SAVE_QUERY          "Save query as\nSave"
+    IDM_ASSISTANT           "Open the Sql Assistant\nAssistant"
+    IDM_RUN                 "Run the Query\nGo"
+    IDM_QEP                 "Display the Sql Query Plan\nQep"
+    IDM_XML                 "Run the query and display results in XML format\nXml"
+    IDM_TRACE               "Activate the trace ouput tab\nTrace"
+    IDM_SETTING             "Set the Sql Preferences\nOptions"
+    IDM_NODE                "Select a Virtual Node to connect to\nNode"
+    IDM_DATABASE            "Select a database in which the query is to be run\nDatabase"
+    IDM_USER                "Select user to be connected as\nUser"
+    IDM_SERVER              "Select a server to connect to\nServer Class"
+END
+
+STRINGTABLE 
+BEGIN
+    IDM_REFRESH             "Refresh list of nodes, servers, users and databases\nRefresh"
+    IDM_OPEN_ENVIRONMENT    "Open the evironment\nOpen environment"
+    IDM_SAVE_ENVIRONMENT    "Save environment\nSave environment"
+    IDM_COMMIT              "Commit the current session\nCommit"
+    IDM_PREFERENCE          "Preferences\nPreferences"
+    IDM_PREFERENCE_SAVE     "Save Preferences as Default\nSave as Default"
+    IDM_NEW                 "New\nNew"
+    IDM_GROUP               "Select a Group for the connection privilege\nGroup"
+    IDM_ROLE                "Select a Role for the connection privilege\nRole"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_DEFAULT_DATABASE    "<Please Select a Database>"
+    IDS_MSG_COMMIT_INVITATION 
+                            "The previous session has not been committed.\nDo you wish to commit it first ?"
+    IDS_MSG_FAIL_2_LOADENVIRONMENT "Failed to load the environment."
+    IDS_MSG_FAIL_2_SAVEENVIRONMENT "Failed to save the environment."
+    IDS_SQLPROPERTYFRAME_CAPTION "Ingres Visual SQL"
+    IDS_FAILED_2_OPENSTORAGE 
+                            "Failed to open the storage (configuration/setting) file."
+    IDS_FAILED_2_SAVESTORAGE 
+                            "Failed to save storage (configuration/setting) file."
+    IDS_MSG_ASKFORSAVING_WORKINGFILE "Do you want to save the current file ?"
+    IDS_MSG_USER_UNAVAILABLE 
+                            "Users are not available when connected to a Gateway."
+    IDS_INVALID_CMDLINE     "Invalid command line. The syntax is:\nvdbasql.exe \t[ -node=<node name> [/serverclass] [-database=<dbname>] [-u<username>]  ]  [-maxapp]"
+    IDS_MSG_REQUEST_TO_START_INSTALLATION 
+                            "Your Installation has not been started.\nDo you want to start it now ?"
+    IDS_MSG_INGRES_NOT_START "The Installation is not started."
+    IDS_MSG_INGRES_START_FAILED "Failed to start the Installation."
+    IDS_DEFAULT_GROUP       "<Default Group>"
+    IDS_DEFAULT_ROLE        "<No Role>"
+    IDS_MSG_GROUP_UNAVAILABLE 
+                            "Groups are not available when connected to a Gateway."
+END
+
+STRINGTABLE 
+BEGIN
+    ID_INDICATOR_AUTOCOMMIT_0 "Autocommit = OFF       "
+    ID_INDICATOR_AUTOCOMMIT_1 "Autocommit = ON        "
+    ID_INDICATOR_READLOCK_0 "Read Lock = NOLOCK        "
+    ID_INDICATOR_READLOCK_1 "Read Lock = SHARED        "
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_ROLE_UNAVAILABLE 
+                            "Roles are not available when connected to a Gateway."
+    IDS_CMDERROR_NODE       "Command Line Error: -node=<node name>\nThe node name does not exist or cannot query nodes."
+    IDS_CMDERROR_SERVER     "Command Line Error: -node=<node name>[/severclass]\nThe server class does not exist, or cannot query server classes."
+    IDS_CMDERROR_USER       "Command Line Error: -u<user name>\nThe user name does not exist, or cannot query users."
+    IDS_CMDERROR_DATABASE   "Command Line Error: -database=<database name>\nThe database name does not exist, or cannot query databases."
+    IDS_CMDERROR_GROUP      "Command Line Error: -G<group name>\nThe group name does not exist, or cannot query groups."
+    IDS_CMDERROR_ROLE       "Command Line Error: -R<role name>\nThe role name does not exist, or cannot query roles."
+    IDS_COMPOUNDFILE_ERROR  "Compound Storage error: %1\n(Unable to load or save the preferences"
+    IDS_EDBC_APP_TITLE      "EDBC Visual SQL"
+    IDS_EDBC_MSG_II_SYSTEM_NOT_DEFINED "EDBC_ROOT is not defined."
+    IDS_EDBC_INVALID_CMDLINE 
+                            "Invalid command line. The syntax is:\nedbquery.exe \t[-node=<node name> [/serverclass] [-connectinfo=<connect string>] -database=<dbname>]"
+    IDS_E_CREAT_TEMP_FILE   "Error creating temporary file for managing the SQL Error History.\nThis functionality will be disabled."
+    IDS_F_SQLERR_STMT       "Erroneous statement:"
+    IDS_FORMAT_SQLERR_ERRNUM "Sql error code: %s"
+    IDS_F_SQLERR_ERRTXT     "Sql error text:"
+    IDS_F_SQLERR_ERRNUM     "Sql error code:"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_S_ACCESS_ERROR      "Error while accessing the temporary file for the SQL Errors History."
+    IDS_INVALID_CMDLINE_WITH_GROUP_AND_ROLE 
+                            "Invalid command line. The syntax is:\nvdbasql.exe \t[ -node=<node name> [/serverclass] [-database=<dbname>] [-u<username>] [-G<group>] [-R<role>]  ]  [-maxapp]"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "#include ""rctools.h""\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\xsql.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#include ""afxprint.rc""       // printing/print preview resources\r\n"
+    "#include ""rctools.rc""       // from libwctrl.lib\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\xsql.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "afxprint.rc"       // printing/print preview resources
+#include "rctools.rc"       // from libwctrl.lib
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

@@ -1,0 +1,29 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/sysint.1,v 1.1 90/03/09 09:17:38 source Exp $
+.TH SYSINT 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+sysint \- Verify interruptability of system calls
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B sysint
+[ -v ]
+.SH DESCRIPTION
+.I Sysint
+makes sure a SIGALRM signal will abort a sleeping system call.  It opens
+a pipe, sets a timeout with \fIalarm(2)\fP and then hangs doing a
+\fIread(2)\fP on the empty pipe.  The program prints ``OK'' when the
+timout occurs.
+.PP
+.B -v
+``verbose'' mode prints the program's name and some progress messages,
+indented one tab stop.
+.PP
+BSD variants do not automatically abort a system call when a signal is
+processed.  It is believed that you must \fIlongjmp()\fP out of the
+handler to exit the kernal.  This is rumoured to be one of the ways that
+BSD ``broke'' signaling compared to V7 and System V.  This affects the
+ability to timeout lock waits in the lock driver for INGRES 3.0.
+.SH BUGS
+It is unclear whether this test proves anything at all.  If it doesn't
+work, the process will probably hang.

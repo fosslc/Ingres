@@ -1,0 +1,7 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The psort_bsize resource sets the size in rows of the exchange buffers
+  used to pass data between parent and child threads when doing a
+  parallel sort.
+
+  The default is 5000 rows.  The minimum setting is 100 rows.

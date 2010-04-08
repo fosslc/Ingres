@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- ablnkapp.hlp, help for an attempt an imaging or interpretive running of
+/#-- applications.
+/#--
+You have attempted to run or image an application.  Your choices depend on
+whether the build was successful.
+
+  Go            You attempted to run an application.  Errors occurred, but 
+                they don't prevent the application from running.  Choose Go 
+                to run the application.
+
+  Errors        Errors occurred.  Choose Errors to bring up the screen to 
+                display and fix the errors.
+
+  WriteFile     Write the log of what took place during the build to a file.
+
+  Help          Display this help screen.
+
+  End           Return to the previous screen.

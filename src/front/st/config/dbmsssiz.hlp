@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The stack_size resource specifies the amount of stack memory allocated
+  for each session within DBMS servers created with this definition.
+
+  Very complicated queries, deeply nested rule invocations, and other
+  complex situations may require a larger than normal stack_size.
+
+
+  The default is 150 Kbytes (256 Kb for 64-bit servers).

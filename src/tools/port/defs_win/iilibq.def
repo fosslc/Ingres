@@ -1,0 +1,190 @@
+;
+; History:
+;	25-Aug-2005 (drivi01)
+;	     Created to replace iiembdnt.def.
+;	     Right now iiembdnt.def is split into iilibq and iilibembed, however
+;            this file contains more libraries, for list of libraries please refer 
+;	     to Jamdefs in tools/port/jam.	
+;	05-Aug-2005 (drivi01)
+;	     Took out libabfrt symbols from this file, symbols will be exported
+;	     in iilibframe.def.
+;	3-Dec-2009 (kschendel) SIR 122974
+;	    Delete a bunch of COPY routines no longer global.
+;       28-Jan-2010 (horda03) Bug 121811
+;            Add Evidence Set functions.
+;
+
+EXPORTS
+IIcopy		@21				
+out_put_def		@278				
+EQFWgiget		@279				
+EQFWopen		@280				
+EQFWsuboption		@281				
+EQFWwcoption		@282				
+edb_unique		@283				
+frs_inqset		@284								
+frs_iqsave		@286				
+frs_object		@287				
+frs_parentname		@289				
+frsck_constant		@290				
+frsck_key		@291				
+frsck_mode		@292				
+frsck_valmap		@294				
+;IIG4xfers_proto		@295				
+;IIG4acArrayClear		@296				
+;IIG4bpByrefParam		@297				
+;IIG4ccCallComp		@298				
+;IIG4chkobj		@299				
+;IIG4drDelRow		@300				
+;IIG4fdFillDscr		@301				
+;IIG4gaGetAttr		@302				
+;IIG4ggGetGlobal		@303				
+;IIG4grGetRow		@304				
+;IIG4i4Inq4GL		@305				
+;IIG4icInitCall		@306				
+;IIG4irInsRow		@307				
+;IIG4rrRemRow		@308				
+;IIG4rvRetVal		@309				
+;IIG4s4Set4GL		@310				
+;IIG4saSetAttr		@311				
+;IIG4seSendEvent		@312				
+;IIG4sgSetGlobal		@313				
+;IIG4srSetRow		@314				
+;IIG4udUseDscr		@315				
+;IIG4vpValParam		@316				
+mod_dict_status		@319	
+modulestatus		@320
+iiugReqMem		@321
+IIUICheckDictVer	@322				
+IIUIClientInstalled	@323				
+IIUIadaAddDepAppl	@324				
+IIUIdgDeleteGarbage	@325				
+IIUIffuFidFixUp		@326				
+IIUInslNoSessionLocks	@327				
+IIUIfcFindClient	@328				
+IIUIfmFindModule	@329				
+IIUIfmsFindModuleStatus	@330				
+IIUISQLconnect		@331				
+ancstatus		@332				
+descstatus		@333				
+enter_client		@334				
+getchild		@335				
+init_clienttable	@336				
+init_moduletable	@337				
+mod_dict_status		@338				
+modulestatus		@339	
+	FEatt_close	@1429				
+	FEatt_dbdata	@1430				
+	FEatt_fetch	@1431				
+	FEatt_ffetch	@1432				
+	FEatt_fopen	@1433				
+	FEatt_open	@1434				
+	FEatt_utype	@1435				
+	IIUIgdt_GetDefaultType	@1436				
+	iiuiAttrInfo	@1437				
+	FEdbpipes	@1438				
+	FEchkerr	@1439				
+	FEinqerr	@1440				
+	FEinqrows	@1441				
+	FEing_cleanup	@1442				
+	FEing_exit	@1443				
+	FEingres	@1444				
+	FEningres	@1445				
+	IIUIck1stAutoCom	@1446				
+	IIUIswc_SetWithClause	@1447				
+	FEinMST	@1448				
+	FEnetname	@1449				
+	FEnumatts	@1450				
+	FErel_close	@1451				
+	FErel_fetch	@1452				
+	FErel_ffetch	@1453				
+	FErel_open	@1454				
+	FErel_access	@1455				
+	FErelexists	@1456				
+	FE_decompose	@1457				
+	FE_fullresolve	@1458				
+	FE_resolve	@1459				
+	FE_unresolve	@1460				
+	FE_ur_partial	@1461				
+	IIUIxrt_tbl	@1462				
+	FEtempname	@1463				
+	IIUIcddCheckDBdata	@1464				
+	IIUIdbdata	@1465				
+	IIUIfedata	@1466				
+	IIUIpsdPartialSessionData	@1467				
+	IIUIssdStoreSessionData	@1468				
+	iiuicr0_CatReadOff	@1469				
+	iiuicr1_CatReadOn	@1470				
+	iiuicw0_CatWriteOff	@1471				
+	iiuicw1_CatWriteOn	@1472				
+	IIUIea_escapos	@1481				
+	IIUIuea_unescapos	@1482								
+	IIUIcac_catClose	@1486				
+	IIUIcaf_catFetch	@1487				
+	IIUIcao_catOpen	@1488				
+	IIUIcnb_CatNolockBegin	@1489				
+	IIUIcne_CatNolockEnd	@1490				
+	IIUIgetData	@1491				
+	IIUIsetData	@1492				
+	IIUIsharedData	@1493				
+	IIUIcase	@1494				
+	IIUIcsl_CommonSQLLevel	@1495				
+	IIUIdcd_dist	@1496				
+	IIUIdce_escape	@1497				
+	IIUIdcg_group	@1498				
+	IIUIdci_initcap	@1499				
+	IIUIdck_req	@1500				
+	IIUIdcl_logkeys	@1501				
+	IIUIdcn_ingres	@1502				
+	IIUIdco_role	@1503				
+	IIUIdcq_quelLevel	@1504				
+	IIUIdcs_sqlLevel	@1505				
+	IIUIdct_use_iitables	@1506				
+	IIUIdcu_rules	@1507				
+	IIUIdcy_udt	@1508				
+	IIUIdlmcase	@1509				
+	IIUIiql_IngresQuelLevel	@1510				
+	IIUIisl_IngresSQLLevel	@1511				
+	IIUIscl_StdCatLevel	@1512				
+	iiuiDcRestoreCap	@1513				
+	iiuiDcapSave	@1514				
+	IIUIdeadlock	@1515				
+	IIUIdml	@1516				
+	IIUIinsert	@1517				
+	IIUIpassword	@1518				
+	IIUIrac_relClose	@1519				
+	IIUIraf_relFetch	@1520				
+	IIUIrao_relOpen	@1521				
+	IIUIrel_help	@1522				
+	IIUIroleID	@1523				
+	FEabortsp	@1524				
+	FEclearsp	@1525				
+	FEestabsp	@1526				
+	IIUIasp_abortSP	@1527				
+	IIUIcsp_clearSP	@1528				
+	IIUIesp_estabSP	@1529				
+	no_err	@1530				
+	IIUIsequence_value	@1531				
+	IIUIupdate	@1532				
+	IIUIabortXaction	@1533				
+	IIUIautocommit	@1534				
+	IIUIbeginXaction	@1535				
+	IIUIendXaction	@1536				
+	IIUIfxcForceXactCommit	@1537				
+	IIUIinXaction	@1538				
+	IIUIlxbLabelXactBegin	@1539				
+	IIUIlxeLabelXactEnd	@1540				
+	IIUIxc0_xConnOff	@1541				
+	IIUIxc1_xConnOn	@1542				
+	IIxflag	@1543				
+	IIUGwildcard	@1547
+	IIUGdaDiffArch	@1548	
+	IIUGdbo_dlmBEobject	@1549	
+	IIUGdlm_ChkdlmBEobject	@1550				
+	IIUGlbo_lowerBEobject	@1551				
+	IIUGrqd_Requote_dlm	@1552
+	IIUGxri_id	@1553
+	IIUGIsSQLKeyWord	@1554				
+	IIUGscanwildcard	@1555
+	IIUIpd_PartitionDesc	@1556
+	IILQint			@1557

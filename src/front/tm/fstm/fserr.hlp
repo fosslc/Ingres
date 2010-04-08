@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are currently in the OnError submenu of the Interactive Terminal
+Monitor input form.  The OnError command displays a pop-up form indicating
+what will happen if an error is encountered on one of your input statements.
+TERMINATE ends the processing of these statements.  CONTINUE does not stop 
+processing, the remaining statements will be executed.
+
+You may change this option by selecting the other setting. Use the
+UP-ARROW or DOWN-ARROW key to select your choice, then enter 'GO'.
+The selection becomes the new setting.
+     
+The Selections are:
+     
+      Terminate	  When an error is encountered, statement processing will
+		  terminate.  Statements following the one which produced
+		  the error will not be executed.
+
+      Continue	  When an error is encountered, continue processing the
+		  remaining statements.  Statements following the one which 
+		  produced the error will be executed.

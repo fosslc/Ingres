@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqfblist.hlp, help for the Frame Behavior pop-up at VQ Editor screen
+/#-- 
+This screen displays the current Frame Behaviors.  To change a Frame
+Behavior, move your cursor to the option and choose Select.  The list of
+behaviors varies according to the frame type:
+
+  * Qualification Processing - Determines whether the user can enter 
+    additional query qualifications for this frame.
+  * Next Master Menuitem - Controls whether the frame expects multiple 
+    masters to be returned from the query.
+  * Locks Held on Displayed Data - Controls how locks are held on data
+    returned from the query (Update frame only).
+  * Update Integrity Rule - Controls whether updates to the master join
+    columns are allowed when there are details associated with the master
+    (Update frame with detail table only).
+  * Delete Integrity Rule - Controls whether masters can be deleted when 
+    there are details associated with the master (Update frame
+    with detail table only).

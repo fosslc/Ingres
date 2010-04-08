@@ -1,0 +1,863 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<adf.h>
+# include	<afe.h>
+# include	<me.h>
+# include	<er.h>
+# include	<ug.h>
+# include	<st.h>
+# include	<cv.h>
+## include	<ui.qsh>
+/*
+	this tells MING about ui.qsh dependency.
+#include	<ui.h>
+*/
+# include	"ertu.h"
+# include	"tuconst.h"
+
+/**
+** Name:	prscreate.qc -	Parse the Create Table Screen.
+**
+** Description:
+**	The following routines are used to parse the create table screen
+**	in order to build a create table statement. This file defines:
+**
+**	parsecreate()	parse the create screen to make db statements
+**	tuaddkey()	add a key'd column to the list of key'd columns.
+**
+** History:
+**	24-mar-1987	(daver) First Modified from Rtingres code.
+**	14-apr-87	(daver) Added Comments, removed <ch.h> for Kanji.
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	22-oct-1987 (peter)
+**		Change FEmsg to IIUGerr.
+**	29-oct-87	(danielt) changed to produce an SQL attribute
+**			list for the create statement.  
+**	1-dec-1987 (peter)
+**		Fix bug 1219.
+**	24-may-1989 (pete) Add temporary support for logical keys.
+**	18-apr-1990 (pete) Don't tell user if find an empty row. Just
+**			silently skip it. Also, require the correct setting
+**			of Null/Defaults for logical key with system_maintained.
+**			Also, convert data type to lower case so can use
+**			CVlower; and use IITU_... strings in new file: 'tu.roc'.
+**	11/07/90 (emerson)
+**		Bug fix in parsecreate() (which see).
+**	17-sep-1992 (mgw)
+**		Added new default handling.
+**	10/11/92 (dkh) - Removed readonly qualification on reference
+**			 declarations.  Alpha cross compiler does not
+**			 like the qualification for globalrefs.
+**	12-jan-1992 (rogerl)
+**		Fix bug in E_TU0027, print name of problem relation.
+**		'buffer' was allocated with magic 100 bytes; since we use for
+**		holding a normalized relation name use FE_MAXNAME.  Increase
+**		size of buffer attrname to FE_UNRML_MAXNAME, since that's what
+**		might be stuffed into it.  Changed some \0's to EOS.
+**		Remove STskipblank() FUNC_EXTERN (it's in st.h).  Delete
+**		attrtmp[] buffer, since we really don't need it.
+**	8-apr-1993 (rogerl)
+**		Convert ordinal row defaults stuff to keying on hidden column
+**		Increase size of nullordef, as user-defined default string
+**		may be 1501 chars in length, + rest of query.
+**	15-apr-1993 (rogerl)
+**		After retrieving default value from list, escape any embedded
+**		"'" (single quotes).  Also double size of query holder, since
+**		with this change the size of the query might be doubled.
+**		(worst case: default length == DB_MAX_COLUMN_DEFAULT_LENGTH
+**		and it consists of entirely 's, so increases in size by 2)
+**		Bug 49210.
+**	19-apr-1993 (rogerl)
+**		Delete dml_def arg and support from parsecreate.  QUEL isn't
+**		ever used by tables-utility.
+**	21-apr-1993 (rogerl)
+**		Move check for illegal (no Nulls, null Default) to here from
+**		creattbl.qsc, since there is the possibility to create that
+**		nonsensical construct without ever tabbing through Defaults
+**		field on the form (where the check is currenty made).
+**	21-may-1993 (rogerl)
+**		Emit error message if user attempts to create illegal (for
+**		tables utility, for now only 'long varchar') type column.
+**		(51842)
+**	20-jul-1993 (rogerl)
+**		Don't expect the user to quote the user defined defaults value;
+**		don't display it quoted either.  User sees and types only what
+**		the value of the default is.
+**	17-sep-1993 (mgw)
+**		As per group concensus, allow TBLUTIL creation of columns
+**		with any datatype allowed by afe_tychk().
+**      01-nov-1994 (chech02)
+**              Don't put 'DEFAULT NULL' if datatype is a large object
+**              and Nulls is yes.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+/* # define's */
+	/* sizeof("object_key with system_maintained") */
+#define		TU_DATATYPE_SIZE	33 
+
+/* GLOBALDEF's */
+/* extern's */
+
+FUNC_EXTERN    i4	FEinqerr();
+FUNC_EXTERN    i4	tunmunique();
+FUNC_EXTERN    void	tustdel();
+FUNC_EXTERN    ADF_CB	*FEadfcb();
+FUNC_EXTERN    DB_STATUS   IIAFgtm_gtwTypeMap();
+FUNC_EXTERN	i4	IITUclkCheckLogKey();
+FUNC_EXTERN	char	*IITUgcdGetColumnDefault( i4  dkey );
+FUNC_EXTERN	char	*IITUeqEscapeQuotes( char *inbuf, char *outbuf );
+FUNC_EXTERN	bool	IITUnndNotNullDefaultNull( char *nable, char *def );
+
+/* prototypes */
+static	bool	tuquotdt( DB_DT_ID type);
+
+GLOBALREF char
+	IITU_Blank[],
+	IITU_Not[],
+	IITU_NotDef[],
+	IITU_NotNull[],
+	IITU_NotNullWithDef[],
+	IITU_ObjectKey[],
+	IITU_SysMaint[],
+	IITU_TableKey[],
+	IITU_With[],
+	IITU_WithNull[],
+	IITU_WithDef[],
+	IITU_Def[],
+	IITU_User[],
+	IITU_Null[],
+	IITU_WithSysMaint[];
+
+/* static's */
+
+/*{
+** Name:	parsecreate - parse the create screen to make db statements
+**
+** Description:
+**	This routine takes the information that's on the create table
+**	screen of the tables utility and builds the target list necessary
+**	for the resulting create table statement. It will also build a
+**	list of column name which are 'keyed', if so desired. If any of the
+**	columns have received legal key values, then the list of column
+**	names reflecting the order the user wanted will be created, and
+**	used in a modify to cbtree statement by this routine's caller,
+**	in createtbl.qc
+**
+** Inputs:
+**	attbuf		pointer to a char buffer large enough to hold
+**			the target list for the create table statement.
+**
+**	remain		length of buffer attbuf.
+**
+**	modcolbuf	pointer to a char buffer large enough to hold
+**			the list of column names which are to be keyed on.
+**
+**	modremain	length of modcolbuf buffer.
+**
+**	errcol		pointer to a i4  to hold the spot of a possible error.
+**
+** Outputs:
+**	attbuf		filled in with target list for create table statement.
+**
+**	modcolbuf	first char is EOS if no keys are requested; otherwise,
+**			contains list of column names to be used in statement:
+**				"modify tblname to cbtree on modcolbuf"
+**
+**	errcol		0 if no error occured; otherwise contains the line
+**			number in the tablefield where the error occured.
+**
+**	Returns:
+**		OK	everything is peachy.
+**		FAIL	something went wrong.
+**
+** History:
+**	24-mar-1987	(daver) First Modified from Rtingres code.
+**	21-jul-1987	(danielt) Changed DB_MAXNAME to FE_MAXNAME
+**	11/07/90 (emerson)
+**		Put out error message if column name is an SQL keyword
+**		(bug 33846).
+*/
+STATUS
+parsecreate(attbuf, remain, modcolbuf, modremain, errcol)
+char   *attbuf;		/* buffer to hold list of attributes for CREATE stmt */
+i4	remain;		/* max len of attbuf */
+char   *modcolbuf;	/* buffer to hold list of columns to MODIFY table on */
+i4	modremain;	/* max len of modcolbuf. */
+i4     *errcol;		/* scroll to this row if error occurs */
+{
+    bool	comma;
+##  char	attrname[FE_UNRML_MAXNAME + 1];
+##  char	dtype[TU_DATATYPE_SIZE+1];
+##  char	dtype2[TU_DATATYPE_SIZE+1];
+##  i4  ustate;
+##  i4  urow;
+    char	buffer[FE_MAXNAME + 1]; /* normalized names only */
+    i4  i = 0;		/* number of columns in the table (#rows in dataset)*/
+    i4  errs = 0;	/*
+			** Number of errors encountered while unloading and
+			** processing the table field. Row# of first error is
+			** saved and table field is scrolled to that row after
+			** unloadtable loop is done. If errs > 0, the CREATE
+			** is not done. All errors are detected and reported;
+			** then table field is scrolled to first one found.
+			*/
+    char	key_buf[FE_MAXNAME + 20];
+    char	*p_modcolbuf = modcolbuf;
+    i4		length;
+    i4		length2;	/* only >0 when data type = logical key */
+    i4		ndlen;
+##  i4		dkey;
+    register	char	*p_attbuf = attbuf;
+##  char	isnullable[5];
+##  char	deflt[7];
+##  char	keyno[5];
+    DB_USER_TYPE	utype;
+    DB_DATA_VALUE	dbv;
+    i4		kind;
+    DB_STATUS	rval;
+    char	nullordef[ DB_MAX_COLUMN_DEFAULT_LENGTH * 2 + 50 ];
+				/* note this magic 50 is an approximate size
+				** of the remainder of the query; inflation
+				** factor of 2 is due to possibly escaping '
+				*/
+    struct	TU_KEYSTRUCT	*keylist = NULL;
+    STATUS	defyorn;
+
+    *errcol = 0;
+    tustdel();		/* clear out the keylist symbol table */
+
+##  unloadtable ERx("tucreatefr") ERx("attributes") (attrname = name,
+##					dtype = datafmt,
+##					keyno = key,
+##					isnullable = nullable,
+##					deflt = defable,
+##					ustate = _STATE,
+##					dkey = default_lkey,
+##					urow = _RECORD)
+##  {
+
+	switch(ustate)
+	{
+	    case stNEW:
+	    case stUNCHANGED:
+	    case stCHANGE:
+			/* make sure row doesn't contain `Nulls no' &&
+			** `Defaults null'.  If it does, flag error.
+			*/
+		if ( IITUnndNotNullDefaultNull( isnullable, deflt ) )
+		{
+		    IIUGerr(E_TU001A_NotNull_NullDefault, UG_ERR_ERROR,
+			(i4) 1, (PTR) &urow);
+		    errs++;
+		    if (errs == 1)
+		    {
+			*errcol = urow;
+		    }
+		    break;
+		}
+
+		CVlower (dtype);
+		dtype2[0] = EOS;
+		i++;		/* unloadtable loop counter */
+		if (attrname[0] == EOS && dtype[0] == EOS)
+		{
+		    i--;		/* don't count this row. != error */
+		    /* (pete) changed to silently skip blank rows . . .
+		    ** IIUGerr(E_TU0024_Ignoring_blank_column, UG_ERR_ERROR,
+		    ** (i4) 1, (PTR) &urow);
+		    */
+		    break;
+		}
+		if (attrname[0] == EOS)
+		{
+		    IIUGerr(E_TU0025_Blank_name_on_row, UG_ERR_ERROR,
+			(i4) 1, (PTR) &urow);
+		    errs++;
+		    if (errs == 1)
+		    {
+			*errcol = urow;
+		    }
+		    break;
+		}
+
+		/*
+		** if case sensitive DBMS, then distinct columns can be 
+		** spelled the same, but with different case
+		*/
+
+		if (IIUGdlm_ChkdlmBEobject(attrname, NULL, FALSE) ==
+			UI_BOGUS_ID)
+		{
+			IIUGerr(E_TU0027_Illegal_column_name, UG_ERR_ERROR,
+				(i4) 1, (PTR) attrname);
+			errs++;
+			if (errs == 1)
+				*errcol = urow;
+			break;
+		}
+
+		if (tunmunique(attrname) == NM_FOUND)
+		{
+		    IIUGerr(E_TU0026_Duplicate_column_name, UG_ERR_ERROR,
+			(i4) 2, (PTR) attrname, (PTR) &urow);
+		    errs++;
+		    if (errs == 1)
+		    {
+			*errcol = urow;
+		    }
+		    break;
+		}
+		if (!errs && i > 1)
+		{
+		    if (remain)		/* if room in buffer, add a comma */
+		    {
+			*p_attbuf++ = ERx(',');
+			remain--;
+		    }
+		}
+
+		STcopy(attrname, buffer);
+
+		length = STlength(buffer) + 1; /* one more for the = */
+		if (length > remain)
+		{
+		    /* VARARGS3 */
+		    IIUGerr(E_TU0023_Out_of_space, UG_ERR_ERROR,
+			(i4) 1, (PTR) attrname);
+		    errs++;
+		    break;
+		}
+		MEcopy((PTR)buffer, (u_i2)(length-1), (PTR)p_attbuf);
+		/* one less for the length */
+		p_attbuf += length - 1;
+		*p_attbuf++ = ERx(' ');
+		remain -= length;
+
+		/*
+		** The size of 'dtype' was increased for Terminator project
+		** to support types like 'table_key with system_maintained'.
+		** (table field data type column was also made scrollable)
+		** That makes our 'dtype' quite a bit larger than DB_TYPE_SIZE,
+		** the size of utype.dbut_name, hence the limitation on number
+		** of characters copied below.
+		*/
+
+		/* set up the DB_USER_TYPE for type checking */
+		STlcopy(dtype, utype.dbut_name, (DB_TYPE_SIZE-1));
+
+			/* check for valid datatype */
+		rval = afe_tychk(FEadfcb(), &utype, &dbv);
+
+		if (IIUGyn(isnullable, NULL))	/* column is NULLable */
+		{
+		    kind = DB_UT_NULL;
+		    if (IIUIdml() == UI_DML_GTWSQL)
+		    {
+			STcopy(IITU_Blank, nullordef);
+		    }
+		    else
+		    {
+        		STcopy(IITU_WithNull, nullordef);
+		    }
+		}
+		else				/* column is not NULLable */
+		{
+		    STcopy(IITU_NotNull, nullordef);
+		}
+		if (IIUIdml() == UI_DML_GTWSQL)
+		{	/*
+			** "WITH DEFAULT" & "NOT DEFAULT" aren't valid in GTWSQL
+			*/
+			;
+		}
+		else if (IIUGyn(deflt, &defyorn))  /* INGRES: WITH DEFAULT */
+		{
+		    kind = DB_UT_DEF;
+		    STcat(nullordef, IITU_WithDef);
+		}	/* else could be no, user, null, or value */
+		else if (defyorn == E_UG0005_No_Response)
+		{
+		    STcat(nullordef, IITU_NotDef);
+		}
+		else if (STequal(deflt, ERget(F_TU0079_User2)))
+		{
+		    STcat(nullordef, IITU_Def);
+		    STcat(nullordef, IITU_User);
+		}
+		else if (STequal(deflt, ERget(F_TU007D_Null2)))
+		{
+                 /* #60821:Don't put 'DEFAULT NULL' if large object datatypes */
+		  if (!((dbv.db_datatype==DB_LVCH_TYPE ||
+                       dbv.db_datatype==DB_LBYTE_TYPE) &&
+                      IIUGyn(isnullable, NULL)))	/* column is NULLable */
+           {
+		    STcat(nullordef, IITU_Def);
+		    STcat(nullordef, IITU_Null);
+           }
+		}
+		else if (STequal(deflt, ERget(F_TU0074_Value2)))
+		{
+		char tbuf[ DB_MAX_COLUMN_DEFAULT_LENGTH * 2 + 1 ];
+
+		    STcat(nullordef, IITU_Def);
+		    STcat(nullordef, IITU_Blank);
+
+		    /* if it is a 'quotable' data type, quote it
+		    ** (not numeric) before sending to DBMS
+		    */
+
+		    if ( tuquotdt( dbv.db_datatype ) )
+		    {
+			STcat(nullordef, "'");
+			STcat( nullordef,
+			    IITUeqEscapeQuotes(
+			    IITUgcdGetColumnDefault( dkey ), tbuf ) );
+			STcat(nullordef, "'");
+		    }
+		    else  /* just crank value into buffer, it's a number */
+
+		    {
+			STcat( nullordef, IITUgcdGetColumnDefault( dkey ) );
+		    }
+		}
+
+		/*
+		** INSTEAD OF COUNTING
+		** THE BUFFER, WHICH HAS THE COLUMN NAME, THEN THE
+		** TYPE NAME LENGTH, THEN THE "WITH NULL" CLAUSE LENGTH,
+		** IS TO CONCATENATE THEM ALL INTO BUFFER, AND DEAL
+		** WITH IT IN ONE UNIT.
+		*/
+
+		if (IIUIdml() == UI_DML_GTWSQL && rval == OK)
+		{
+		    rval = IIAFgtm_gtwTypeMap(&dbv, &utype);
+		}
+		if (rval != OK)
+		{
+                    i4  lkey;
+
+                    /* check for logical key; set "dtype2" if Log key */
+                    lkey = IITUclkCheckLogKey(dtype, dtype2);
+                    if (lkey == TU_NOT_LOGKEY)
+                    {
+                        /* it's not a logical key, so must really be invalid */
+                        IIUGerr(E_TU0028_Bad_format_for_row, UG_ERR_ERROR,
+                            (i4) 3, (PTR) dtype, (PTR) attrname, (PTR) &urow);
+
+		    	errs++;
+		    	if (errs == 1)
+			    *errcol = urow;
+		    	break;
+		    }
+		}
+
+		/*
+		** building a 'create table' statement;
+		** want to find out how long the type string
+		** (i.e., 'varchar(10)' ) is. if it can't fit
+		** in the remaining space, generate an error.
+		*/
+		length  = STlength(dtype);
+		length2 = STlength(dtype2);
+		ndlen   = STlength(nullordef);
+
+		if (remain < length + length2 + ndlen + 1)
+		{
+		    IIUGerr(E_TU0023_Out_of_space, UG_ERR_ERROR,
+			(i4) 1, (PTR) attrname);
+		    errs++;
+		    break;
+		}
+		STcopy(dtype, p_attbuf);
+		p_attbuf += length;
+
+		/* 'us' item #693 - force "NOT NULL WITH DEFAULT" if logical
+		** key "with system_maintained".
+		*/
+		if (length2 > 0)
+		{
+		    if (  (STequal(IITU_WithSysMaint, dtype2))
+		       && (!STequal(nullordef, IITU_NotNullWithDef)))
+		    {
+			/* This logical key doesn't have correct settings
+			** of "NOT NULL WITH DEFAULT", so reset it to
+			** be correct, but warn user about it.
+			*/
+		    	IIUGerr(S_TU0059_ResetLogKey, UG_ERR_ERROR,
+			    (i4) 4, (PTR) attrname, (PTR) IITU_WithSysMaint,
+			    (PTR) nullordef, (PTR) IITU_NotNullWithDef);
+
+			STcopy(IITU_NotNullWithDef, nullordef);
+			ndlen = STlength(nullordef);
+		    }
+		}
+
+		STcopy(nullordef, p_attbuf);
+		p_attbuf += ndlen;
+
+		if (length2 > 0)	/* e.g. "with system_maintained" */
+		{
+		    STcopy (IITU_Blank, p_attbuf);
+		    p_attbuf++;
+		    STcopy (dtype2, p_attbuf);
+		    p_attbuf += length2;
+		}
+
+		remain -= length + length2 + ndlen;
+
+		/*
+		** now check to see if the keys field is filled in.
+		** if it is, "add" the column and key number to the
+		** list of already key'd columns. we'll dump the columns
+		** later in the order of preference
+		*/
+
+		if (keyno[0] != EOS)	/* is keyno NULL ? */
+		{
+		    struct    TU_KEYSTRUCT    *new;
+		    i4	      knum;
+
+		    rval = CVan(keyno, &knum);	/* not necessary if NULLABLE */
+		    if (rval != OK || knum <= 0)
+		    {
+			IIUGerr(E_TU0029_Bad_key_number_on_row, UG_ERR_ERROR,
+				(i4) 3, (PTR) keyno, (PTR) attrname,
+				(PTR) &urow);
+			errs++;
+			if (errs == 1)
+			    *errcol = urow;
+			break;
+		    }
+
+		    /* FIXME - Memory leak here ... */
+		    new = (struct TU_KEYSTRUCT *)MEreqmem((u_i4)0,
+			(u_i4)sizeof(struct TU_KEYSTRUCT),
+			FALSE, (STATUS *)NULL);
+		    STcopy(buffer, new->name);
+		    new->keynum = knum;
+		    new->next = NULL;
+		    rval = tuaddkey(&keylist,new);
+		    if (rval != OK)
+		    {
+			IIUGerr(E_TU002A_Duplicate_key_for_row, UG_ERR_ERROR,
+				(i4) 3, (PTR) keyno, (PTR) attrname, 
+				(PTR) &urow);
+			errs++;
+			if (errs == 1)
+			    *errcol = urow;
+			break;
+		    }
+		}   /* end if keyno is not "null" */
+		break;
+
+	    default:
+		    break;
+
+	}	/* end of switch() statement */
+##  }	    /* end of UNLOADTABLE loop */
+
+    *p_modcolbuf = EOS;
+    comma = FALSE;		/* don't precede the first item with a comma */
+    while (keylist != NULL)
+    {
+	STcopy(keylist->name, key_buf);
+	
+	length = STlength(key_buf);
+	/*
+	** Why use (length + 2)?  One for the comma, one more for the
+	** terminating null.
+	*/
+	if ( (length + 2) > modremain)
+	{
+	    IIUGerr(E_TU002B_Too_many_keyd_columns, UG_ERR_ERROR,
+		(i4) 0);
+	    errs++;
+	    if (errs == 1)
+	    {
+		*errcol = urow;
+	    }
+	    break;
+	}
+	else
+	{
+	    /* don't put a comma in front of the first element */
+	    if (comma)
+		*p_modcolbuf++ = ',';
+	    else
+		comma = TRUE;
+
+	    MEcopy((PTR)key_buf, (u_i2)(length), (PTR)p_modcolbuf);
+	    p_modcolbuf += length;
+	}
+	modremain -= length + 1;
+	keylist = keylist->next;
+    }
+    *p_modcolbuf++ = EOS;	/* null terminate the modify string */
+
+    if (i == 0)
+    {
+	IIUGerr(E_TU002E_No_attributes_for_tbl, UG_ERR_ERROR,
+		(i4) 0);
+    }
+    if (errs || i==0)
+    {
+	*attbuf = EOS;
+	*modcolbuf = EOS;
+	return(FAIL);
+    }
+    *p_attbuf = EOS;
+    return(OK);
+}
+
+
+
+/*{
+** Name:	IITUclkCheckLogKey - check validity of logical key data type.
+**
+** Description:
+**	See if a data type is a logical key -- if so then validate it
+**	and split out the "with|not system_maintained" part. If is is
+**	not a logical key, then return.
+**  valid syntax for logical key:
+**	key_type [system_maint]
+**	    key_type := [table_key | object_key]
+**	    system_maint := [with system_maintained | not system_maintained]
+**
+** Inputs:
+**	two character buffers: dtype and dtype2.
+**
+** Outputs:
+**	second character buffer gets set if logical key and "with|not
+**	system_maintained" was entered by user.
+**
+**	Returns:
+**		TU_NOT_LOGKEY if data type is not a logical key, or if it is
+**		a logical key, but has an invalid syntax.
+**		Otherwise, if valid logical key, returns TU_LOGKEY_WITH,
+**		TU_LOGKEY_NOT, or TU_LOGKEY.
+**
+**	Exceptions:
+**		NONE
+**
+** Side Effects:
+**	Both first and second arguments get written to if it's a logical key.
+**
+** History:
+**	05/24/89 (pete) Written
+**	06/12/89 (kathryn) Return FAIL if datatype (dtype) is NULL.
+**	03/14/90 (pete) Fix bug. Missing args in one of STbcompare calls
+**			were causing a case insensitive compare to fail.
+**	04/02/90 (pete) Change to return more types of values, so other
+**			routines can call it to tell what type of logical key
+**			info was specified.
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+i4
+IITUclkCheckLogKey(dtype, dtype2)
+char *dtype;	/* the data type input by user */
+char *dtype2;	/* This gets set, if valid logical key, to beginning of
+		** "with system_maintained" info.
+		*/
+{
+	char *p_util;
+	char *(p_wordarray[6]);	/* gets written to below by STgetwords */
+	i4   nmbr_words =6;
+	char  wbuf[TU_DATATYPE_SIZE+1];  
+	i4   stat = TU_NOT_LOGKEY;
+
+	if ((dtype == NULL) || (*dtype == EOS))
+		return stat ;
+
+	/* remove any leading blanks from 'dtype' */
+	dtype = STskipblank (dtype, STlength(dtype));
+
+	/*
+	** if data type begins with "table_key" or "object_key",
+	** then must parse it so can pick off the "with system_maintained"
+	** info, cause syntax requires it after NULLability info, default-
+	** ability info!
+	*/
+	if (   STbcompare (IITU_TableKey,  9, dtype, 9, TRUE) == 0
+	    || STbcompare (IITU_ObjectKey,10, dtype,10, TRUE) == 0 )
+	{
+	    CVlower(dtype);
+	    STcopy (dtype, wbuf);
+	    STgetwords ( wbuf, &nmbr_words, p_wordarray); /* parse wbuf */
+
+	    if (   STequal(IITU_TableKey, p_wordarray[0])
+	        || STequal (IITU_ObjectKey, p_wordarray[0]))
+	    {
+		if ( nmbr_words > 1 )
+		{
+		    if (   STequal(IITU_With, p_wordarray[1])
+		        || STequal(IITU_Not, p_wordarray[1]))
+		    {
+			if ((nmbr_words ==3)
+			    && (STequal (IITU_SysMaint, p_wordarray[2])))
+			{
+			    /* valid logical key. set dtype & dtype2 */
+			    STcopy (p_wordarray[0], dtype);
+			    STpolycat (3,p_wordarray[1], IITU_Blank,
+					 p_wordarray[2], dtype2);
+
+			    if (STequal(IITU_With, p_wordarray[1]))
+			        stat = TU_LOGKEY_WITH;
+			    else
+			        stat = TU_LOGKEY_NOT;
+
+			}
+			else
+			    ;	/* syntax error */
+		    }
+		    else
+			;	/* syntax error */
+		}
+		else
+		{
+		    /* valid logical key. set dtype & null out dtype2. */
+		    STcopy (p_wordarray[0], dtype);
+		    *dtype2 = EOS;
+
+		    stat = TU_LOGKEY;
+		}
+	    }
+	    else
+		;	/* syntax error */
+	}
+	else
+	    ;	/* not a logical key */
+
+	return stat;
+}
+
+/*{
+** Name:	tuaddkey - add a key'd column to the list of key'd columns.
+**
+** Description:
+**	This routine takes a TU_KEYSTRUCT filled in with information
+**	from a line on the tablefield, and adds it to the list of
+**	key'd columns. Since the Key order is important, items as
+**	they come in are added to the list sorted on keynum, a field
+**	within the TU_KEYSTRUCT structure. This routine deals with the
+**	3 possible senarios for adding an item to a sorted (or sordid)
+**	list: the list can be NULL, the item is to be placed at the head,
+**	or the item is to be placed somewhere in the list.
+**
+**	This routine returns an error if the key number of the item to
+**	be added matches the key number of an element already on the list.
+**
+** Inputs:
+**	list		the current list of columns which the user wants
+**			keys on.
+**
+**	item		the current item to be added to the list.
+**
+** Outputs:
+**	list		the list, with the item added to it.
+**
+**	Returns:
+**		OK	everything's kosher.
+**		FAIL	the item's key number match an existing item's number.
+**
+** History:
+**	24-mar-1987	(daver) First Written.
+*/
+STATUS
+tuaddkey(list,item)
+struct	TU_KEYSTRUCT	**list;
+struct	TU_KEYSTRUCT	*item;
+{
+    struct    TU_KEYSTRUCT    *temp;
+
+    /* if this is the first element we've seen, its the head, and exit */
+    if (*list == NULL)
+    {
+	*list = item;
+    }
+    else if (item->keynum == (*list)->keynum)
+    {
+	/* if it has the same key number, we have an error */
+	return FAIL;
+    }
+    else if (item->keynum < (*list)->keynum)
+    {
+	/* if number is less, our item is the head of the list */
+	item->next = *list;
+	*list = item;
+    }
+    else    /* item goes in somewhere inside the list */
+    {
+	temp = *list;
+	for (;;)
+	{
+	    /* no other items in the list, our item is last */
+	    if (temp->next == NULL)
+	    {
+		temp->next = item;
+		break;
+	    }
+	    else if (item->keynum == temp->next->keynum)
+	    {
+		/* same key number, we have an error */
+		return FAIL;
+	    }
+	    else if (item->keynum < temp->next->keynum)
+	    {
+		/*
+		** our item's key number is less than then next one's, so
+		** it goes behind the current temp, but in front of the next
+		*/
+		item->next = temp->next;
+		temp->next = item;
+		break;
+	    }
+	    else
+	    {
+		/* lets look at the next guy */
+		temp = temp->next;
+	    }
+
+	}   /* end for (;;) */
+
+    }	    /* end else item goes somewhere in the list */
+
+    return OK;
+}
+
+/*{
+** 	return TRUE if this is a data type which should be quoted
+**
+** Inputs:
+**	type	DB_DT_ID		- the type to check
+**
+*/
+
+static bool
+tuquotdt(
+DB_DT_ID type
+) {
+	switch( abs( type ) )
+	{
+		case DB_INT_TYPE:
+		case DB_FLT_TYPE:
+		case DB_MNY_TYPE:
+		case DB_DEC_TYPE:
+			return( FALSE );
+		default:
+			return ( TRUE );
+	}
+}

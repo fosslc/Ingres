@@ -1,0 +1,20 @@
+                    PROJECT MANAGEMENT DATABASE SCHEMA               
+
+                                  TASKS
+                             
+                       (Project  Task  Hours  Name)
+                        -------               ----  
+                          /                        \
+                         /                          \
+                        /
+ 	               /                                EMP
+                      /                    
+                     /                     (Name  Title  Hourly_rate  Manager)
+                    /                       ----
+                   /                             \    
+                  /                               \
+
+ 	    PROJECTS                                  DEPENDENTS
+                                           
+(Project  Desc  Dept  Budget  Due_date)         (Name  DepName  Birth)
+--------                                         ----

@@ -1,0 +1,12 @@
+#
+# Jamfile file for back!qef!qee
+#
+
+SubDir ING_SRC back qef qee ;
+
+IISUBSYS back qef qee ;
+
+IINOOPTIM qee.c : a64_sol ;
+
+IILIBRARY QEFLIB : qeeprt.c qeeddb.c qee.c qeehash.c ;
+

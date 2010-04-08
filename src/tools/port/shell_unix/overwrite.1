@@ -1,0 +1,32 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/overwrite.1,v 1.1 90/03/09 09:18:33 source Exp $
+.TH OVERWRITE 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History: 
+.\"     18-dec-1989 (boba) 
+.\"             Make name in title all caps like other porting tool man pages.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+overwrite \- copies stdin to output after EOF
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B overwrite
+file command [ args ... ]
+.SH DESCRIPTION
+.I overwrite
+catches the output of
+.B command
+and copies it to
+.B file
+at the end of successful execution.  The most common use is to overwrite
+a file using a filter without the visible use of a temporary file.
+.I Overwrite
+makes sure the command executed successfully before zapping the file.
+
+.nf
+
+	overwrite precious sed 'g/oldstring/s//newstring/' < precious
+
+.fi
+
+.SH AUTHORS
+From Kernighan & Pike's ``The Unix Programming Environment.''

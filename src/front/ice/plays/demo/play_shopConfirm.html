@@ -1,0 +1,77 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>Order Confirmed</title>
+</head>
+<body>
+<h1>Order Nr: <!-- #ICE VAR=`:e_orderNumber` --> Confirmed</h1>
+<!-- To Do:
+	Change status of order to 2
+	Commit the t_shopAdd transaction
+
+	Actions: OK (return to home)
+-->
+
+<!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`update play_order
+    set status = 2, timestamp = date('now')
+    where order_nr = :e_orderNumber 
+    and user_id = ':ii_userid'`
+    TRANSACTION=`t_shopAdd`
+-->
+<!-- Commit the transaction -->
+<!-- #ICE COMMIT=`t_shopAdd` -->
+<!-- Set the transaction to 'complete' as it is now committed -->
+<!-- #ICE DECLARE=`session.e_shopTxn=COMPLETE` -->
+
+<!-- Show the products ordered: -->
+<p>
+You have ordered the following:
+<br>
+<!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+	select name, cost
+	from play_item, play_order
+	where id = product_id and
+            (order_nr = :e_orderNumber and user_id = ':ii_userid')`
+    HEADERS=`name, Name, cost, Price`
+    TYPE=`TABLE`
+-->
+
+<!-- Show the total cost: -->
+<p>
+The total value of your order is:
+<br>
+<!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+         select sum(cost)
+	    from play_item, play_order
+	    where id = product_id and
+                (order_nr = :e_orderNumber 
+		    and user_id = ':ii_userid')`
+    TRANSACTION=`t_shopConfirmList`
+    HEADERS=`col1, Total`
+    TYPE=`TABLE`
+-->
+<!-- Commit the transaction -->
+<!-- #ICE COMMIT=`t_shopConfirmList` -->
+<p>
+<!-- #ICE VAR=`Your order number <b>:e_orderNumber</b> will now be processed.<br>
+Please quote this number in all correspondence` -->
+<p>
+We suggest you print this page for your records, 
+<p>
+Thank you for your custom,
+<br>
+<i>Your Globe Heritage Team</i>
+<!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]` -->
+<!-- Standard Session Control -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

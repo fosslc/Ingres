@@ -1,0 +1,745 @@
+
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h> 
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h> 
+# include	<er.h> 
+## include	<ui.qsh> 
+## include 	<uigdata.qsh>
+
+/**
+** Name:	ferelacc.qc - Relation info access a la cursor.
+**
+** Description:
+**	Presents a generalized cursor-like implementation for access to 
+**	relation info.  Since this is based on an EQUEL retrieve loop rather 
+**	than a cursor, only one database access may be active at a time.
+**
+**	This file defines:
+**	FErel_access	Allows access to a relation through OPEN, FETCH, and
+**			CLOSE operations.
+**
+** History:
+**	29-mar-1986 (rdesmond)
+**		first created for Jupiter release.
+**	18-jan-1988 (danielt)
+**		SQLized for DG project
+**	18-aug-1988 (peter)
+**		Update catalog column names for 6.1.
+**	10-nov-1988 (danielt)
+**		took out seperate select loops based on
+**		whether details are wanted.  The main concern
+**		here is keeping down the number of repeated
+**		queries in the DBMS shared query cache (for
+**		INGRES)
+**	10-oct-91 (seg)
+**		Changed "errno" to "errnum" to avoid naming conflict with
+**		c runtime library
+**	16-jul-1992 (rdrane)
+**		Add 6.5 support for owner.tablename, delimited identifiers,
+**		and synonyms.
+**	19-feb-1996 (pchang)
+**		Add dbmsinfo('group') to the qualification of permit_user for
+**		the iiaccess catalog in FErel_access() so that 'help' also 
+**		displays tables for which the user has been granted access via
+**	06-mar-1996 (harpa06)
+**		Changed UI_LEVEL_65 to UI_LEVEL_66 for VPS project.
+**	29-jan-1997 (hanch04)
+**		Changed UI_LEVEL_66 back to UI_LEVEL_65.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for database objects.
+**/
+
+/*{
+** Name:	FErel_access - cursor-like access to any relation.
+**
+** Description:
+**	This function presents a cursor-like abstraction for access relation
+**	information.  It is called in one of three modes: OPEN, FETCH
+**	or CLOSE.  When called in OPEN mode, a query must be specified.
+**	The query parameters are relation name, param target list, param
+**	address list, qualification and sort field(s).  When called in
+**	OPEN mode, the first tuple is returned.  For each call in FETCH
+**	mode, the next tuple is returned or, if the end of the set has been 
+**	reached, a flag to that effect.  Note that the end-of-set flag
+**	can be set returned from the OPEN operation.
+**
+** Inputs:
+**	mode		The mode in which the function is to operate:
+**				{MODE_OPEN | MODE_FETCH | MODE_CLOSE }
+**
+**	relname   	Qualification string to be used as a query restriction
+**			on the namestrings returned.  Any single value string,
+**			which will be compared with the relation name may be
+**			The matching templates "%", "_" and "\[...\]" may
+**			be used for partial match specification (backslash
+**			is always the escape character).  Use "%" to indicate
+**			that all names are desired.
+**
+**			The qualification string may not contain an owner
+**			specification, and must be otherwise normalized.
+**			Ignored for modes other than MODE_OPEN.
+**
+**	relowner	Qualification string to be used as a query restriction
+**			on the owner of the namestrings returned.  Passed
+**			through to FErel_access as is.  It may be NULL or an
+**			empty string, but must not contain SQL wildcards
+**			and must be normalized.  Ignored for pre-6.5 databases
+**			and modes other than MODE_OPEN.
+**
+**	relsource	pointer to an allocated FE_REL_SOURCE structure in
+**			which to return the results.
+**
+**	cats_wanted	Boolean to indicate whether catalogs should be
+**			included in the active set.
+**
+**	status		Pointer to allocated status of query, also set before 
+**			return; this field is significant only to this 
+**			procedure and should not be interpreted external to it:
+**				{ STATUS_CLOSED | STATUS_OPEN | STATUS_DONE }
+** Outputs:
+**	status		Pointer to allocated status of query, also set before 
+**			return; this field is significant only to this 
+**			procedure and should not be interpreted external to it:
+**				{ STATUS_CLOSED | STATUS_OPEN | STATUS_DONE }
+** Returns:
+**	OK			successful
+**	E_UI0002_EOS		no more tuples in active set
+**	E_UI0001_BLOCK_CLOSED	query block is not open (from status)
+**	other			dbms error
+**
+** History:
+**	29-mar-1986 rdesmond)
+**		first created for Jupiter release.
+**	28-jun-1987 (danielt) changed pointer args for recursive
+**		call to FErel_access from 0's to NULLs (cast to correct type)
+**	08-oct-1987 (rdesmond)
+**		removed call to FErel_access to close for open call.
+**	02-dec-1987 (rdesmond)
+**		rewrote using repeat retrieve statements.
+**	05-jan-1988 (rdesmond)
+**		took off @'s from IIUIuser and IIUIdba in repeat retrieves;
+**		removed EQUEL range statement.
+**	18-jan-1988 (danielt)
+**		SQLized for DG project
+**	2-mar-1988 (danielt)
+**		changed IIUIuser and IIUIdba to IIUIsuser and IIUIsdba
+**	18-aug-1988 (peter)
+**		Update catalog names for 6.1.
+**	10-oct-91 (seg)
+**		Changed "errno" to "errnum" to avoid naming conflict with
+**		c runtime library
+**	16-jul-1992 (rdrane)
+**		Add 6.5 support for owner.tablename, delimited identifiers,
+**		and synonyms.  Extensively reworked the entire routine.
+**		Added parameter to optionally specify owner when MODE_OPEN and
+**		6.5 database.  Removed the dets_wanted parameter since it was
+**		unused and the interface is changing anyway.
+**		STtrmwhite() can return an empty string if all whitespace -
+**		need to detect this and force the result to be one space.
+**		Include mode in the SQL variables so we can get around the
+**		ANSI compiler warnings.
+**	23-apr-1993 (rdrane)
+**		Correct 6.5 level SELECT's so that catalogs are included
+**		(cats_wanted == TRUE) only if their names match the supplied
+**		pattern (they were being included unconditionally).  Exclude
+**		data tables (begin w/ ii but have systenm_use of 'U').  This
+**		should be a temporary fix ...
+**	22-jul-1993 (rdrane)
+**		Effect case translation of UI_FE_CAT_ID_65 prior to use
+**		for FIPS support.
+**	14-oct-1993 (rdrane)
+**		Correct the usage of system_use in the SELECT's so Gateways
+**		that do not provide this information will still return the
+**		correct list of tables.
+**	15-dec-1993 (rdrane)
+**		Add PUBLIC to the permit_user qualifications for iiaccess,
+**      23-nov-1994 (chech02) bug#64468
+**              Add escape '\' in where clause for pre-65 catalogs also.
+**		since Gateways return this instead of ' ' (space) for public
+**		access.  Note that SQL92 says that an authorization ID of
+**		PUBLIC is not valid, and will not be confused with the
+**		FIPS case-sensitive delimited ID "public".
+**      10-apr-1995 (harpa06)
+**		Bug #68007 - Correct the usage of system_use in the SELECT so 
+**		that primary keys and references are not visible by the user.
+**	19-feb-1996 (pchang)
+**		Add dbmsinfo('group') to the qualification of permit_user for
+**		the iiaccess catalog so that 'help' also displays tables for
+**		which the user has been granted access via the user's group 
+**		(B73528).
+**	06-mar-1996 (harpa06)
+**		Changed UI_LEVEL_65 to UI_LEVEL_66.
+*/
+
+DB_STATUS
+FErel_access(mode, relname, relowner, relsource, cats_wanted, status)
+    EXEC SQL BEGIN DECLARE SECTION;
+	i4		mode;
+	char		*relname;
+	char		*relowner;
+	FE_REL_SOURCE	*relsource;
+    EXEC SQL END DECLARE SECTION;
+	bool		cats_wanted;
+	i4		*status;
+{
+	i4		sql_wild;
+    EXEC SQL BEGIN DECLARE SECTION;
+	i4		errnum;
+	bool		dummy;
+	char		*relowner_ptr;
+	UIDBDATA	*uidbdata;
+	char		pttrn_name[(DB_MAXNAME + 2 + 1)]; /* relname + " %" */
+	char		ii_pattern_string[4];
+	char		r65_cat_id[DB_MAXNAME];		/*
+							** Catalog Owner for
+							**  6.5 (the UI #define
+							** by itself is not
+							** compatible w/ SQL
+							** syntax).
+							*/
+    EXEC SQL END DECLARE SECTION;
+
+/*
+** This function must break into and out of the retrieve loop in an 
+** unorthodox manner; however, it works.  Unfortunately, the ANSI "C"
+** compiler flags each return out of the SELECT LOOP as
+**		warning: end-of-loop code not reached
+** So, make them conditional on a dummy variable which we'll always set
+** TRUE and fool the compiler. Sigh!
+*/
+
+    dummy = TRUE;
+    uidbdata = IIUIdbdata();
+    switch(mode)
+    {
+	case MODE_FETCH:
+		if (*status == STATUS_DONE)
+		{
+	    		/* No more records */
+	    		return(E_UI0002_EOS);
+		}
+		if (*status == STATUS_CLOSED)
+		{
+	    		/* illegal request */
+	    		return(E_UI0001_BLOCK_CLOSED);
+		}
+
+		/*
+		** In order to optimize the listpick/help query, we took a look
+		** at what the thing was actually returning to its clients. For
+		** historical reasons, things like create and alter dates and
+		** table version were returned; however, none of this routine's
+		** callers actually USE that for 6.5. So, we took it out of the
+		** 6.5 query (when you're specifically getting all the tables)
+		** to make listpicks and help\g (and the opening frame of
+		** tables utility) run fast. This means we need a second entry
+		** point, since the query is different; we goto _65fetchdets to
+		** get the EXEC SQL END that has the same number of columns
+		** returned as the 65 EXEC SQL BEGIN's.
+		*/
+		if  (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_65) < 0)
+		{
+   			goto fetchdets;
+		}
+		else
+		{
+			goto _65fetchdets;
+		}
+
+	case MODE_CLOSE:
+		if (*status == STATUS_DONE)
+		{
+			return (OK);
+		}
+		else
+		{
+			goto close;
+		}
+		break;
+
+	case MODE_OPEN:
+		/* All INGRES catalog table names are REGULAR identifiers! */
+		STcopy(ERx("ii%"),&ii_pattern_string[0]);
+		IIUGdbo_dlmBEobject(&ii_pattern_string[0],FALSE);
+		/*
+		**	This is the only way to ensure matches on equals and
+		**	when relname contains an '_' wildcard as the last
+		**	character.  The LIKE operator behaves strangely with
+		**	blank-padded char fields, which is how the columns
+		**	in the FE catalogs are defined.  
+		*/
+		STprintf(&pttrn_name[0],"%s %%",relname);
+		if  (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_65) < 0)
+		{
+		    if  (cats_wanted)
+		    {
+				/* Pre 6.5 WITH ii catalogs */
+
+				EXEC SQL REPEATED SELECT
+					table_name,
+					table_owner,
+					create_date,
+					alter_date,
+					table_type,
+					table_version,
+					system_use
+				INTO
+					:relsource->table_name,
+					:relsource->table_owner,
+					:relsource->create_date,
+					:relsource->alter_date,
+					:relsource->table_type,
+					:relsource->version,
+					:relsource->system_use
+				FROM iitables
+				WHERE
+					(table_name LIKE :relname escape '\' OR
+					 table_name LIKE :pttrn_name escape '\')
+					AND
+					(table_owner = :uidbdata->suser OR
+				 	 table_owner = :uidbdata->sdba OR
+				 	 table_owner = :uidbdata->catowner)
+				ORDER BY table_name;
+				EXEC SQL BEGIN;	
+					*status = STATUS_OPEN;
+					EXEC SQL INQUIRE_INGRES
+							(:errnum = errorno);
+					if (errnum == OK)
+					{
+						STtrmwhite(
+							relsource->table_name);
+						STtrmwhite(
+							relsource->table_owner);
+						STtrmwhite(
+							relsource->create_date);
+						STtrmwhite(
+							relsource->alter_date);
+						STtrmwhite(
+							relsource->table_type);
+						STtrmwhite(relsource->version);
+						STtrmwhite(
+							relsource->system_use);
+					}
+					if  (dummy)
+					{
+						return(errnum);
+					}
+			close:
+				/*
+				** any endretrieve will work, but it must be
+				** in a retrieve loop to pass the (dreaded!!)
+				** equel preprocessor.  This is the closest
+				** retrieve loop so here it is.
+				*/
+					EXEC SQL ENDSELECT;
+			fetchdets:
+					;
+				EXEC SQL END;
+				break;
+		    }
+		    else
+		    {
+				/* Pre 6.5 WITHOUT ii catalogs */
+
+				EXEC SQL REPEATED SELECT
+					table_name,
+					table_owner,
+					create_date,
+					alter_date,
+					table_type,
+					table_version,
+					system_use
+				INTO
+					:relsource->table_name,
+					:relsource->table_owner,
+					:relsource->create_date,
+					:relsource->alter_date,
+					:relsource->table_type,
+					:relsource->version,
+					:relsource->system_use
+				FROM iitables
+				WHERE
+					(table_name LIKE :relname ESCAPE '\' OR
+					 table_name LIKE :pttrn_name ESCAPE '\') AND
+					 table_name NOT LIKE
+							 :ii_pattern_string AND
+					 system_use <> 'S' AND
+					(table_owner = :uidbdata->suser OR
+					 table_owner = :uidbdata->sdba OR
+					 table_owner = :uidbdata->catowner)
+				ORDER BY table_name;
+				EXEC SQL BEGIN;	
+					*status = STATUS_OPEN;
+					EXEC SQL INQUIRE_INGRES
+							(:errnum = errorno);
+					if (errnum == OK)
+					{
+						STtrmwhite(
+							relsource->table_name);
+						STtrmwhite(
+							relsource->table_owner);
+						STtrmwhite(
+							relsource->create_date);
+						STtrmwhite(
+							relsource->alter_date);
+						STtrmwhite(
+							relsource->table_type);
+						STtrmwhite(relsource->version);
+						STtrmwhite(
+							relsource->system_use);
+					}
+					if  (dummy)
+					{
+						return(errnum);
+					}
+				EXEC SQL END;
+			}
+		}
+		else  /* Version is 6.5 or greater */
+		{
+			/*
+			** Catalog owner is ALWAYS a regular identifier.
+			*/
+			STcopy(UI_FE_CAT_ID_65,&r65_cat_id[0]);
+			IIUGdbo_dlmBEobject(&r65_cat_id[0],FALSE);
+			if  ((relowner == NULL) || (*relowner == EOS))
+			{
+				relowner_ptr = uidbdata->suser;
+			}
+			else
+			{
+				relowner_ptr = relowner;
+			}
+			/*
+			** If wildcards are present, we have to trust that the
+			** caller has specified the identifier exactly!
+			*/
+			if  (cats_wanted)
+			{
+				/* 6.5 or greater WITH ii catalogs */
+
+				EXEC SQL REPEATED SELECT
+					table_name,
+					table_owner,
+					table_type,
+					system_use
+				INTO
+					:relsource->table_name,
+					:relsource->table_owner,
+					:relsource->table_type,
+					:relsource->system_use
+				FROM	iitables
+				WHERE	(table_owner = :relowner_ptr OR
+					 table_owner = :r65_cat_id) AND
+					(table_name LIKE
+						:relname ESCAPE '\' OR 
+				         table_name LIKE
+						:pttrn_name ESCAPE '\')
+				UNION
+
+				SELECT
+					table_name,
+					table_owner,
+					table_type,
+					system_use
+				FROM	iiaccess
+				WHERE	(table_name LIKE
+						:relname ESCAPE '\' OR 
+				         table_name LIKE
+						:pttrn_name ESCAPE '\') AND
+					(permit_user = :relowner_ptr OR
+					 permit_user = ' ' OR
+					 permit_user = 'PUBLIC')
+				UNION
+
+				SELECT  isyn.synonym_name AS table_name,
+					isyn.synonym_owner AS table_owner,
+					'S' AS table_type,
+					itbl.system_use
+				FROM	iisynonyms isyn,iitables itbl
+
+				WHERE	isyn.table_name = itbl.table_name  AND
+					isyn.table_owner = itbl.table_owner AND
+					isyn.synonym_owner = :relowner_ptr AND
+					(isyn.synonym_name LIKE
+						:relname ESCAPE '\'  OR
+			    		 isyn.synonym_name LIKE
+						:pttrn_name ESCAPE '\')
+
+				ORDER BY table_name,table_owner;
+				EXEC SQL BEGIN;	
+					*status = STATUS_OPEN;
+					EXEC SQL INQUIRE_INGRES 
+							(:errnum = errorno);
+					if (errnum == OK)
+					{
+						if  (STtrmwhite(
+							relsource->table_name)
+									 == 0)
+						{
+							STcopy(ERx(" "),
+							relsource->table_name);
+						}
+						if  (STtrmwhite(
+							relsource->table_owner)
+									 == 0)
+						{
+							STcopy(ERx(" "),
+							relsource->table_owner);
+						}
+						STtrmwhite(
+							relsource->table_type);
+						STtrmwhite(
+							relsource->system_use);
+					}
+					if  (dummy)
+					{
+						return(errnum);
+					}
+				EXEC SQL END;
+			}
+			else if ((relname[0] == '%')&&(STlength(relname) == 1))
+			{
+				EXEC SQL REPEATED
+				SELECT	table_name,
+					table_owner,
+					table_type,
+					system_use
+				INTO	:relsource->table_name,
+					:relsource->table_owner,
+					:relsource->table_type,
+					:relsource->system_use
+				FROM	iitables
+				WHERE	table_owner = :relowner_ptr AND
+					system_use <> 'S' AND
+					system_use <> 'G' AND
+					table_name NOT LIKE
+						:ii_pattern_string
+					/*
+					** We can remove the above when BLOBs
+					** extension tables are no longer
+					** categorized as system_use  == 'U'
+					** (we say "<> 'S'" since Gateways may
+					** return system_use = ' ').
+					**
+					** Bug #68007 - Do not select tables that are 
+					** primary keys and references. These are visible
+					** through 'help\g' and should not be.
+					*/
+
+				UNION
+
+				SELECT
+					table_name,
+					table_owner,
+					table_type,
+					system_use
+				FROM	iiaccess
+				WHERE	(permit_user = :relowner_ptr OR
+					 permit_user = ' ' OR
+					 permit_user = 'PUBLIC' OR
+					 permit_user = dbmsinfo('group')) AND
+					system_use <> 'S' AND
+					table_name NOT LIKE
+						:ii_pattern_string
+					/*
+					** We can remove the above when BLOBs
+					** extension tables are no longer
+					** categorized as system_use  == 'U'
+					** (we say "<> 'S'" since Gateways may
+					** return system_use = ' ').
+					*/
+				UNION
+
+				SELECT	isyn.synonym_name AS table_name, 
+					isyn.synonym_owner AS table_owner,
+					'S' AS table_type,
+					itbl.system_use
+				FROM	iisynonyms isyn, iitables itbl
+				WHERE	isyn.table_name = itbl.table_name AND
+					isyn.table_owner = itbl.table_owner AND
+					synonym_owner = :relowner_ptr
+
+				ORDER BY table_name, table_owner;
+
+				EXEC SQL BEGIN;	
+					*status = STATUS_OPEN;
+					EXEC SQL INQUIRE_INGRES
+							(:errnum = errorno);
+					if (errnum == OK)
+					{
+						if  (STtrmwhite(
+							relsource->table_name)
+									 == 0)
+						{
+							STcopy(ERx(" "),
+							relsource->table_name);
+						}
+						if  (STtrmwhite(
+							relsource->table_owner)
+									 == 0)
+						{
+							STcopy(ERx(" "),
+							relsource->table_owner);
+						}
+						STtrmwhite(
+							relsource->table_type);
+						STtrmwhite(
+							relsource->system_use);
+					}
+					if (dummy)
+					{
+						return(errnum);
+					}
+			_65fetchdets:
+					/*
+					** We can remove this when BLOBs
+					** extension tables are no longer
+					** categorized as system_use 'U'
+					** (we say "!= 'S'" since Gateways may
+					** return system_use = ' ').
+					*/
+					if  ((STbcompare(relsource->table_name,
+							 2,
+							 ERx("ii"),
+							 2,TRUE) == 0) &&
+					      (*relsource->system_use != 'S'))
+					{
+						continue;
+					} 
+				EXEC SQL END;
+			}
+			/*
+			** end else-if all wild card query (help\g and listpick)
+			*/
+			else
+			{
+				/* 
+				** 6.5 or greater WITHOUT ii catalogs
+				*/
+
+				EXEC SQL REPEATED SELECT
+					table_name,
+					table_owner,
+					table_type,
+					system_use
+				INTO
+					:relsource->table_name,
+					:relsource->table_owner,
+					:relsource->table_type,
+					:relsource->system_use
+				FROM	iitables
+				WHERE	table_owner = :relowner_ptr AND
+					system_use <> 'S' AND
+					(table_name LIKE
+						:relname ESCAPE '\' OR
+					 table_name LIKE
+						:pttrn_name ESCAPE '\') AND
+					table_name NOT LIKE
+						:ii_pattern_string
+					/*
+					** We can remove the above when BLOBs
+					** extension tables are no longer
+					** categorized as system_use == 'U'
+					** (we say "<> 'S'" since Gateways may
+					** return system_use = ' ').
+					*/
+
+				UNION
+
+				SELECT
+					table_name,
+					table_owner,
+					table_type,
+					system_use
+				FROM	iiaccess
+				WHERE	(table_name LIKE
+						:relname ESCAPE '\' OR 
+				         table_name LIKE
+						:pttrn_name ESCAPE '\') AND
+					(permit_user = :relowner_ptr OR
+					 permit_user = ' ' OR
+					 permit_user = 'PUBLIC')
+				UNION 
+				
+				SELECT  isyn.synonym_name AS table_name,
+					isyn.synonym_owner AS table_owner,
+					'S' AS table_type,
+					system_use
+				FROM    iisynonyms isyn,iitables itbl
+
+				WHERE	isyn.table_name = itbl.table_name AND
+					isyn.table_owner = itbl.table_owner AND
+					synonym_owner = :relowner_ptr AND
+					(isyn.synonym_name LIKE
+						:relname ESCAPE '\'  OR
+					 isyn.synonym_name LIKE
+						:pttrn_name ESCAPE '\')
+
+				ORDER BY table_name,table_owner;
+				EXEC SQL BEGIN;	
+					*status = STATUS_OPEN;
+					EXEC SQL INQUIRE_INGRES
+							(:errnum = errorno);
+					if (errnum == OK)
+					{
+						if  (STtrmwhite(
+							relsource->table_name)
+									 == 0)
+						{
+							STcopy(ERx(" "),
+							relsource->table_name);
+						}
+						if  (STtrmwhite(
+							relsource->table_owner)
+									 == 0)
+						{
+							STcopy(ERx(" "),
+							relsource->table_owner);
+						}
+						STtrmwhite(
+							relsource->table_type);
+						STtrmwhite(
+							relsource->system_use);
+					}
+					if  (dummy)
+					{
+						return(errnum);
+					}
+				EXEC SQL END;
+			}
+			/* end */
+			break;
+		}
+		break;
+
+	default:
+		/*
+		** unknown operation - let it fall out and force STATUS_DONE
+		*/
+		break;
+	}
+			
+	if (mode == MODE_CLOSE)
+	{
+		*status = STATUS_CLOSED;
+		return(OK);
+	}
+			
+    *status = STATUS_DONE;
+    /* No more records */
+    return(E_UI0002_EOS);
+}
+

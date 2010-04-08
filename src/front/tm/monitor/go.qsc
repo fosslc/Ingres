@@ -1,0 +1,429 @@
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<me.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"monitor.h"
+# include	<fstm.h>
+# include	<qr.h>
+# include	<itline.h>
+# include	<er.h>
+# include	"ermo.h"
+# include       <ermf.h>
+
+/*
+** Copyright (c) 2004 Ingres Corporation
+**
+**	go.c	- handle \go command of the terminal monitor.
+**
+**	The appropriate messages are printed, and the go-block is
+**	passed on to the Query Runner (QR); qrrun() is called
+**	repeatedly to obtain formatted results which are then
+**	displayed on the standard output.
+**
+**	The go() routine controls the springing of macros before
+**	and after go-block execution.
+**
+**	Error conditions are handled in tmcont(), which will be called
+**	by QR after each query statement execution. It no longer
+**	prints the error message, as QRerror does that now, but will
+**	return FAIL if the severity of the error warrents it.
+**
+**	The tmcont() routine also provides the "continue-functions" of
+**	displaying the "row count" (or springing the {continuetrap}
+**	macro or springing a {catcherror} macro if appropriate.
+**
+** Returns:
+**	STATUS
+**		OK	
+**		FAIL	
+**
+**
+**	History:
+**		12/10/84 (lichtman) -- don't do special macros
+**			if macro processing is turned off (\nomacro).
+**			In this case, just print the row count in the
+**			standard format: (n row[s]).
+**		8/86 (peterk) - modified to work as standard FE for
+**			6.0.
+**		9/2/86 (peterk) - moved code to call {begintrap} and
+**			{endtrap} macros here, from mac.c; these
+**			macros will now only be called with \g;
+**			{endtrap} will be called after completion
+**			of query processing by BE.
+**		9/86 (peterk) - now using QR module for go-block
+**			execution.
+**		13-may-87 (daver)
+**			added the monitor's error printing routine, which
+**			is now passed to qrinit so qrerror will know how to
+**			print error messages. added for multiple error-message
+**			support.
+**		08/25/87 (scl) #ifdef out some VT100 specific code for
+**			FT3270 support
+**		04-aug-88 (bruceb)
+**			Changed args in call on putresults().
+**		12-aug-88 (bruceb)
+**			Added IIMOpfh_PutFlush as arg to call on qrinit.
+**		24-mar-89 (kathryn)  Bug# 4816
+**			Moved COMMIT statement from qrhelp to here so that
+**			continue function would execute before COMMIT, and 
+**			thus return the correct number of rows for "help\g".
+**		20-apr-89 (kathryn) -- Set qrb->severity to new global
+**			Err_terminate, which is set via the new 
+**			[no]continue command.
+**		02/10/90 (dkh) - Tuning changes.
+**		6-oct-92 (rogerl) - TRUE for qrinit tm field; allocate dbv
+**			buffer dynamically to avoid alignment hassle - it
+**			is used to buffer DB output, not only(?) error messages.
+**			Also, start with DB_MAXSTRING, not error length max.
+**		22-jan-93 (rogerl) - (delete bogus comment - LRC no approve!)
+**			cont function returns a STATUS
+**		26-Aug-1993 (fredv)
+**			Included <me.h>.
+**              20-apr-1994 (timt) bug 55911
+**                      Whenever there is a DIRECT CONNECT/DIRECT DISCONNECT/
+**                      SET SESSION AUTH., IItm_status will set the flag 
+**                      libq_connect_chgd to on, we will set the global variable
+**                      connect_chgd to TRUE.  This will be referenced by
+**                      qrhelp.qsc when a HELP statement is issued.  If
+**                      connect_chgd is TRUE, qrhelp.qsc will check the catalog
+**                      tables before issuing select stmt for help.
+**			connect_chgd will also reset to FALSE by qrhelp.qsc.
+**                      Side effect: since GCA_NEW_EFF_USER_MASK bit flag is
+**                                   also set on when SET SESSION AUTH. is
+**                                   issued this will cause unnecessary checking
+**                                   of catalog tables in qrhelp.qsc. This won't
+**                                   have any adverse effect except slowing down
+**                                   the help stmt a little bit after  SET 
+**                                   SESSION AUTH.
+**                      Search for b55911 to see all the changes.
+**	15-jan-1996 (toumi01; from 1.1 axp_osf port)
+**		Added kchin's changes (from 6.4) for axp_osf
+**		10/15/93 (kchin)
+**		Cast 2nd argument to PTR when calling putprintf(), this
+**		is due to the change of datatype of variable parameters
+**		in putprintf() routine itself.	The change is made in
+**		tmcont().
+**	18-jun-1996 (chech02)
+**		Added code to support non-blocking query mode for 
+**		windows 3.1 port.
+**      25-sep-96 (rodjo04) 
+**              BUG 77034: Fix given so that terminal monitor can use the
+**              environment variable II_TM_ON_ERROR to either terminate or
+**              continue on error. Added a boolean parameter to IItmmonitor().
+**              This new parameter is necessary so that we can tell the
+**              difference between stdin, redirected input, and the use
+**              of an include file.
+**	15-nov-1996 (bobmart)
+**		Touch up fix for 77034; needed consistent return arg; caused
+**		unexpected results with ris_us5.
+**	16-dec-1996 (donc)
+**	    Moved connect_chg to qrdata.c so that it can be shared with OpenROAD
+**      24-Nov-1997 (carsu07)
+**              Adding a new environment variable II_TM_SWITCH to allow users
+**              switch between the 6.4/06 functionality of II_TM_ON_ERROR and
+**              the 1.2/01 functionality. The difference is when
+**              II_TM_ON_ERROR is set to nocontinue and an error occurs -
+**              OI1.2 will terminate all processing while 6.4 will skip the
+**              rest of the block and continue processing at the next block.
+**              The default is OI1.2 functionality.
+**              When II_TM_SWITCH is set to 'true' then II_TM_ON_ERROR behaves
+**              as in 6.4/06. (Bug #87415)
+**	17-Mar-1999 (wanfr01)
+**		Added code for C_SUPPRESS to hide row output for select 
+**		statements.  This is useful for getting qe90 output of large
+**		queries.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-jun-2009 (maspa05) SIR 122324, trac 397
+**	    Added "truly silent" mode for terminal monitor
+**          In silent mode don't output the row count or even "output 
+**          suppressed"
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**	11-nov-2009 (wanfr01) b122875
+**	    Initialize Outisterm in qrinit.
+*/
+
+FUNC_EXTERN i4		q_getc();
+FUNC_EXTERN char	*qrrun();
+FUNC_EXTERN VOID	IIMOpfh_PutFlush();
+
+GLOBALREF bool connect_chgd;                    /* b55911 */
+GLOBALREF bool TrulySilent;   
+GLOBALREF ADF_CB	*Tm_adfscb;
+GLOBALREF bool	Tm_echo;
+GLOBALREF bool  Tm_suppress;
+GLOBALREF bool	Tm_semicolon;
+GLOBALREF QRB	*Tm_qrb;
+GLOBALREF i2	Term_format;
+
+
+STATUS
+go()
+{
+	char	c;
+	i4	cint;	  /* need an integer, not a char (scl) */
+	STATUS	tmcont();
+	VOID	tmouterr();	/* forward reference to routine below */
+	i4	outlen;
+        bool    err_term=FALSE;
+
+#ifdef WIN16
+	while (Tm_qrb != NULL)
+		WNyield(0);
+#endif
+
+	clrline(1);
+
+	if (q_ropen(Qryiop, 'r') == (struct qbuf *)NULL)
+	    /* go: ropen 1 */
+	    ipanic(E_MO0050_1500700);
+
+	if (Nodayfile >= 0)
+	    putprintf(ERget(F_MO0018_Executing_dot_dot));
+
+#	ifdef xMTM
+	if (tTf(76, 1))
+	    timtrace(3, 0);
+#	endif
+
+	if (!Nautoclear)
+	    Autoclear = 1;
+
+	macinit(q_getc, (char **)Qryiop);
+	if (Do_macros)
+	    macspring(ERx("{begintrap}"));
+
+	/* call the query runner */
+	{
+	    QRB			qrblock;
+	    DB_DATA_VALUE	dv;
+	    register char	*out;
+	    i4			count;
+
+	    /* allocate this dynamically - could be alignment problem, plus
+	    ** we want to be able to free this buffer
+	    */
+	    dv.db_data = (PTR)MEreqmem( (u_i4)0, (u_i4) DB_MAXSTRING, FALSE,
+					(STATUS *)0 );
+	    dv.db_length = DB_MAXSTRING;
+
+	    Tm_qrb = &qrblock;
+	    qrinit(Tm_qrb, Tm_semicolon, NULL, macgetch, tmcont,
+		NULL, Script, Tm_echo, &dv, Tm_adfscb, tmouterr, NULL,
+		IIMOpfh_PutFlush, TRUE, Outisterm);
+
+	    Tm_qrb->severity = Err_terminate;
+
+
+	    /*
+	    **  qrrun() now returns the length of the returned
+	    **  buffer so there will be no need to STlength
+	    **  the returned buffer.
+	    */
+            while (out = qrrun(Tm_qrb, &outlen))
+            {
+
+                if (Tm_qrb->error == 0 || Tm_qrb->severity == 0) 
+		{
+
+		    /*** If \suppress was done, skip row output ***/
+	            if ((Tm_suppress == FALSE) || (Tm_qrb->step < 4))
+                        putresults(out, outlen);
+
+		    /* output message to say rows have been suppressed, unless
+                    ** in silent mode
+                    */
+	    	    if ((Tm_suppress == TRUE) && (Tm_qrb->step == 3) && !TrulySilent)
+			putprintf(ERx(" *** Output suppressed *** \n"));
+                }
+                else
+                {
+                    if (Switch_func == FALSE)
+                    {
+                    err_term=TRUE;
+                    putprintf(ERget(F_MF000D_Terminated_by_Errors));
+                    putprintf(ERx("\r\n"));
+                    break;
+                    }
+                }
+            }
+
+	    if (Tm_qrb->endtrans)
+	    {
+		EXEC SQL COMMIT WORK;
+	    }
+	    qrrelease(Tm_qrb);
+	    Tm_qrb = NULL;
+	}
+
+	if (Do_macros)
+	    mcall(ERx("{endtrap}"));
+
+        if ((!err_term) || (err_term && Inisterm))
+            prompt(ERget(F_MO0019_continue));
+
+	if (q_ropen(Qryiop, 'a') == (struct qbuf *)NULL)
+	    /* go: ropen 2 */
+	    ipanic(E_MO0051_1500701);
+
+        if (err_term)
+            return(FAIL);
+	else
+            return(OK);
+}
+
+
+/*{
+** Name:	tmcont() - "continue-function" for QR
+**
+** Description:
+**	This routine is TM's "continue-function" passed to QR,
+**	i.e. it will be called by QR after every statement execution.
+**	This routine handles outputting of any error messages
+**	that may have been generated by the previous statement.
+**	It provides a hook for the TM to get control after every
+**	statement is executed and can determine whether query
+**	execution should continue.
+**
+** Inputs:
+**	QRB	*qrb;	// the active QR control block;
+**
+** Outputs:
+**	QRB	*qrb;	// the active QR control block
+**			   (possibly updated.)
+**
+** Returns:
+**	STATUS
+**		OK	// means continue go-block execution
+**		FAIL	// means terminate go-block execution
+**			   at this point.
+**
+** Side Effects:
+**	{catcherror} or {continuetrap} macros may be sprung.
+**
+** History:
+**	8/86 (peterk) - created
+**	24-mar-89 (kathryn) 	-- Fix Bug
+**		Change norowmsg to FALSE whether or not the previous stmt
+**		had a rowcount of -1.  - Moved from under (if rows != -1)
+**		to check every time whether norowmsg should be changed.
+**	27-dec-90 (kathryn) Bug 35101
+**		When Macros are enabled - tuplecount should not be defined
+**		when norowmsg is true.
+**	20-apr-94 (timt) bug 55911
+**		Add a parameter libq_connect_chgd to IItm_status.
+**
+*/
+
+STATUS
+tmcont(qrb)
+QRB	*qrb;
+{
+	i4	rows;
+	i4	err;
+	i4	status;
+	bool    libq_connect_chgd = FALSE;			/* b55911 */
+	STATUS	tmstat;
+
+	IItm_status(&rows, &err, &status, &libq_connect_chgd);	/* b55911 */
+
+	tmstat = OK;
+	if (qrb->error)
+	{
+	    /*
+	    ** Call the "catcherror" macro
+	    */
+	    mcall(ERx("{catcherror}"));
+
+	    /*
+	    ** no longer do we want to print the error message; this is
+	    ** done in qrerror itself.
+	    */
+
+	    /* test severity of error */
+	    if (qrb->severity > 0)
+		tmstat = FAIL;
+	}
+
+	/*
+	** This will leave {tuplecount} around if macros are turned off,
+	** but we save the overhead of doing this here if macros
+	** aren't wanted.
+	*/
+	if (Do_macros)
+	{
+	    macremove(ERx("{tuplecount}"));
+
+	    if ((rows != -1 ) && (!qrb->norowmsg))
+	    {
+		/* should be long enough to convert any i4 */
+		char	numconv[30];
+		CVla(rows, numconv);
+		macdefine(ERx("{tuplecount}"), numconv, (i4)TRUE);
+	    }
+
+	    /*
+	    ** Call the "continue" macro
+	    */
+	    mcall(ERx("{continuetrap}"));
+	}
+	/* suppress row count message in "truly silent" mode */
+	else if ((rows != -1) && (!qrb->norowmsg) && (!TrulySilent))
+	{
+		    if (rows == 1)
+		    	putprintf(ERget(F_MO001A_1_row));
+		    else
+		    	putprintf(ERget(F_MO001B_N_rows), (PTR)rows);
+	 }
+	 if (qrb->norowmsg)
+	 {
+	 	putprintf(ERx("\n"));
+	 	qrb->norowmsg = FALSE; 
+	 }
+         /* Indicate that a DIRECT [DIS]CONNECT may be issued   b55911 */
+         if ( (libq_connect_chgd) && (tmstat == OK) )
+         {
+         	connect_chgd = TRUE;                       
+         }
+ 
+	return tmstat;
+}
+
+
+/*{
+** Name:	tmouterr	- call putprintf to print an error message.
+**
+** Description:
+**	Called from qrerror, tmouterr simply ignores the 'context' parameter
+**	needed for fstm, and calls putprintf with the error message passed
+**	to it.
+**
+** Inputs:
+**	dummy		a PTR which contains context information for the
+**			fstm, but is NULL for the terminal monitor.
+**
+**	message		the error message to be printed.
+**
+** Outputs:
+**	none.
+**
+**	Returns:
+**		none.
+**
+** History:
+**	13-may-87 (daver) First Written.
+*/
+VOID
+tmouterr(dummy, message)
+PTR	dummy;
+char	*message;
+{
+	putprintf(ERx("%s"), message);
+}

@@ -1,0 +1,574 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <cm.h>
+# include <st.h>
+# include <cv.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <adf.h>
+# include <fmt.h>
+# include <ft.h>
+# include <frame.h>
+# include <runtime.h>
+# include <uf.h>
+# include <ug.h>
+# include <stdprmpt.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	cddspath.qsc - CDDS paths
+**
+** Description:
+**	Defines
+**		cdds_path	- CDDS paths
+**
+** History:
+**	05-dec-96 (joea)
+**		Created based on pathways.osq in replicator library.
+**	14-nov-97 (joea)
+**		Issue an error message if zero rows selected in ListChoices
+**		menu item.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF
+##char	RMdb_display[];
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmcdds_paths"),
+##	*tf_name = ERx("iitf"),
+##	*fcdds_no = ERx("cdds_no"),
+##	*fcdds_name = ERx("cdds_name"),
+##	*fsource_db = ERx("sourcedb"),
+##	*flocal_db = ERx("localdb"),
+##	*ftarget_db = ERx("targetdb"),
+##	*fold_source_db = ERx("old_source_db"),
+##	*fold_local_db = ERx("old_local_db"),
+##	*fold_target_db = ERx("old_target_db"),
+##	*fsource_name = ERx("s_name"),
+##	*flocal_name = ERx("l_name"),
+##	*ftarget_name = ERx("t_name");
+
+EXEC SQL BEGIN DECLARE SECTION;
+static i2	h_target_type;
+EXEC SQL END DECLARE SECTION;
+
+
+static STATUS get_database(i2 db_no, i2 cdds_no, char *db_name);
+
+
+/*{
+** Name:	cdds_path	- CDDS paths
+**
+** Description:
+**	Insert/Update/Delete Existing Data Propagation Pathways
+**
+** Inputs:
+**	cdds_no		- CDDS number
+**	cdds_name	- CDDS name
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+cdds_path(
+i2	cdds_no,
+char	*cdds_name)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+##i2	cdds_no;
+##char	*cdds_name;
+EXEC SQL END DECLARE SECTION;
+# endif
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i2	db_no;
+##	char	db_name[DB_MAXNAME*2+3];
+##	i2	source_db;
+##	i2	local_db;
+##	i2	target_db;
+##	i2	old_source_db;
+##	i2	old_local_db;
+##	i2	old_target_db;
+	i4	n;
+	EXEC SQL END DECLARE SECTION;
+##	i4	rowstate;
+##	i4	rownumber;
+##	i4	chng;
+##	i4	getmsg_stat;
+##	char	objname[FE_MAXNAME+1];
+	DBEC_ERR_INFO	errinfo;
+	i4	i;
+	i4	row;
+	char	*p1, *p2, *pend;
+	char	list_row[36];
+	char	list_rows[2048];
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name fill (fold_source_db = i2 not null,
+##		fold_local_db = i2 not null, fold_target_db = i2 not null)
+	IIUGmsg(ERget(F_RM001C_Selecting_data), FALSE, 0);
+	EXEC SQL SELECT sourcedb, localdb, targetdb
+		INTO	:source_db, :local_db, :target_db
+		FROM	dd_paths
+		WHERE	cdds_no = :cdds_no
+		ORDER	BY sourcedb, localdb, targetdb;
+	EXEC SQL BEGIN;
+##		loadtable form_name tf_name (fsource_db = source_db,
+##			fold_source_db = source_db, flocal_db = local_db,
+##			fold_local_db = local_db, ftarget_db = target_db,
+##			fold_target_db = target_db)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	EXEC SQL COMMIT;
+
+	if (errinfo.rowcount == 0)
+	{
+##		set_frs field form_name (mode(tf_name) = fill)
+	}
+	else
+	{
+##		unloadtable form_name tf_name (source_db = fsource_db,
+##			local_db = flocal_db, target_db = ftarget_db)
+##		{
+			if (get_database(source_db, cdds_no, db_name) != OK)
+				return;
+##			putrow form_name tf_name (fsource_name = db_name)
+
+			if (get_database(local_db, cdds_no, db_name) != OK)
+				return;
+##			putrow form_name tf_name (flocal_name = db_name)
+
+			if (get_database(target_db, cdds_no, db_name) != OK)
+				return;
+##			putrow form_name tf_name (ftarget_name = db_name,
+##				_STATE = 2)
+##		}
+##		set_frs field form_name (mode(tf_name) = update)
+	}
+
+##	inquire_frs frs (getmsg_stat = getmessages)
+##	set_frs frs (getmessages = 0)
+##	display form_name fill
+##	initialize (db = RMdb_display, fcdds_no = cdds_no,
+##		fcdds_name = cdds_name)
+##	activate column tf_name fsource_db
+##	{
+		target_db = 0;
+##		getrow form_name tf_name (source_db = fsource_db,
+##			target_db = ftarget_db)
+		if (source_db == target_db)
+		{
+			IIUGerr(E_RM002B_Orig_db_eq_target_db, UG_ERR_ERROR,
+				0);
+##			resume
+		}
+##		inquire_frs row form_name tf_name (chng = change)
+		if (chng)
+		{
+			if (get_database(source_db, cdds_no, db_name) != OK)
+##				resume
+			if (STequal(db_name, ERget(F_RM0035_None)))
+			{
+				i4 pdb_no = source_db;
+
+				FTbell();
+				IIUGerr(E_RM002C_Not_valid_value, UG_ERR_ERROR,
+					1, &pdb_no);
+##				resume
+			}
+			if (h_target_type != 1)
+			{
+				FTbell();
+				IIUGerr(E_RM002D_Orig_local_full_peer,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+##			putrow form_name tf_name (fsource_name = db_name)
+		}
+##		resume next
+##	}
+
+##	activate column tf_name flocal_db
+##	{
+		target_db = 0;
+##		getrow form_name tf_name (local_db = flocal_db,
+##			target_db = ftarget_db)
+		if (local_db == target_db)
+		{
+			IIUGerr(E_RM002E_Local_db_eq_target_db, UG_ERR_ERROR,
+				0);
+##			resume
+		}
+##		inquire_frs row form_name tf_name (chng = change)
+		if (chng)
+		{
+			if (get_database(local_db, cdds_no, db_name) != OK)
+##				resume
+			if (STequal(db_name, ERget(F_RM0035_None)))
+			{
+				i4 pdb_no = local_db;
+
+				FTbell();
+				IIUGerr(E_RM002C_Not_valid_value, UG_ERR_ERROR,
+					1, &pdb_no);
+##				resume
+			}
+			if (h_target_type != 1)
+			{
+				FTbell();
+				IIUGerr(E_RM002D_Orig_local_full_peer,
+					UG_ERR_ERROR, 0);
+##				resume
+			}
+##			putrow form_name tf_name (flocal_name = db_name)
+		}
+##		resume next
+##	}
+
+##	activate column tf_name ftarget_db
+##	{
+		source_db = local_db = 0;
+##		getrow form_name tf_name (source_db = fsource_db,
+##			local_db = flocal_db, target_db = ftarget_db)
+		if (source_db == target_db || local_db == target_db)
+		{
+			IIUGerr(E_RM002F_Target_db_eq_others, UG_ERR_ERROR,
+				0);
+##			resume
+		}
+##		inquire_frs row form_name tf_name (chng = change)
+		if (chng)
+		{
+			if (get_database(target_db, cdds_no, db_name) != OK)
+##				resume
+			if (STequal(db_name, ERget(F_RM0035_None)))
+			{
+				i4 pdb_no = target_db;
+
+				FTbell();
+				IIUGerr(E_RM002C_Not_valid_value, UG_ERR_ERROR,
+					1, &pdb_no);
+##				resume
+			}
+##			putrow form_name tf_name (ftarget_name = db_name)
+		}
+##		resume next
+##	}
+
+##	activate menuitem ERget(FE_Save) (expl = ERget(F_FE0117_SaveExpl)),
+##		FRSkey8
+##	{
+##		inquire_frs form (chng = change)
+		if (!chng)
+		{
+			IIUGerr(E_RM0029_No_changes_to_save, 0, 0);
+##			resume
+		}
+
+##		validate
+		IIUGmsg(ERget(F_RM0009_Saving), FALSE, 0);
+##		unloadtable form_name tf_name (rowstate = _STATE,
+##			rownumber = _RECORD, old_source_db = fold_source_db,
+##			old_local_db = fold_local_db,
+##			old_target_db = fold_target_db)
+##		{
+			if (rowstate == stDELETE)
+			{
+				EXEC SQL REPEATED DELETE FROM dd_paths
+					WHERE	sourcedb = :old_source_db
+					AND	localdb = :old_local_db
+					AND	targetdb = :old_target_db
+					AND	cdds_no = :cdds_no;
+				if (RPdb_error_check(DBEC_SINGLE_ROW, NULL)
+					!= OK)
+				{
+					EXEC SQL ROLLBACK;
+					IIUGerr(E_RM002A_Error_saving_tf,
+						UG_ERR_ERROR, 0);
+##					scroll form_name tf_name to rownumber
+##					resume field tf_name
+				}
+			}
+##		}
+
+		/* process all but Deleted rows */
+##		unloadtable form_name tf_name (rowstate = _STATE,
+##			rownumber = _RECORD, source_db = fsource_db,
+##			old_source_db = fold_source_db, local_db = flocal_db,
+##			old_local_db = fold_local_db, target_db = ftarget_db,
+##			old_target_db = fold_target_db)
+##		{
+			if (rowstate == stNEW)
+				EXEC SQL REPEATED INSERT INTO dd_paths (
+						localdb, sourcedb,
+						targetdb, cdds_no)
+					VALUES	(:local_db, :source_db,
+						:target_db, :cdds_no);
+			else if (rowstate == stCHANGE)
+				EXEC SQL REPEATED UPDATE dd_paths
+					SET	localdb = :local_db,
+						sourcedb = :source_db,
+						targetdb = :target_db
+					WHERE	sourcedb = :old_source_db
+					AND	localdb = :old_local_db
+					AND	targetdb = :old_target_db
+					AND	cdds_no = :cdds_no;
+			if (rowstate == stNEW || rowstate == stCHANGE)
+			{
+				if (RPdb_error_check(DBEC_SINGLE_ROW, NULL)
+					!= OK)
+				{
+					EXEC SQL ROLLBACK;
+					IIUGerr(E_RM002A_Error_saving_tf,
+						UG_ERR_ERROR, 0);
+##					scroll form_name tf_name to rownumber
+##					resume field tf_name
+				}
+			}
+##		}
+
+		if (db_config_changed(0) != OK)
+		{
+			EXEC SQL ROLLBACK;
+##			resume
+		}
+
+		EXEC SQL COMMIT;
+		if (RPdb_error_check(0, NULL) != OK)
+		{
+			EXEC SQL ROLLBACK;
+			IIUGerr(E_RM000A_Error_committing, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(FE_Insert)
+##		(expl = ERget(F_RM0036_Insert_expl)), FRSkey12
+##	{
+##		insertrow form_name tf_name (_STATE = 0)
+##	}
+
+##	activate menuitem ERget(F_RM0032_RowDelete) (activate = 0,
+##		validate = 0, expl = ERget(F_RM0033_RowDelete_expl)), FRSkey14
+##		(activate = 0, validate = 0)
+##	{
+##		deleterow form_name tf_name
+##		set_frs form (change = 1)
+##	}
+
+##	activate menuitem ERget(FE_Lookup) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0116_LookupExpl)), FRSkey10 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs column form_name tf_name (objname = name)
+		*list_rows = EOS;
+		if (STequal(objname, ftarget_db))
+		{
+##			getrow form_name tf_name (source_db = fsource_db,
+##				local_db = flocal_db)
+			EXEC SQL SELECT database_no, TRIM(vnode_name) + '::' +
+					database_name
+				INTO	:db_no, :db_name
+				FROM	dd_databases
+				WHERE	database_no != :source_db
+				AND	database_no != :local_db
+				AND	database_no in (
+					SELECT	database_no
+					FROM	dd_db_cdds
+					WHERE	cdds_no = :cdds_no)
+				ORDER	BY database_no;
+			EXEC SQL BEGIN;
+				STtrmwhite(db_name);
+				STprintf(list_row, ERx("%d;%s\n"), db_no,
+					db_name);
+				STcat(list_rows, list_row);
+			EXEC SQL END;
+		}
+		else	/* localdb or sourcedb */
+		{
+			EXEC SQL SELECT database_no, TRIM(vnode_name) + '::' +
+					database_name
+				INTO	:db_no, :db_name
+				FROM	dd_databases
+				WHERE	database_no in (
+					SELECT	database_no
+					FROM	dd_db_cdds
+					WHERE	cdds_no = :cdds_no
+					AND	target_type = 1)
+				ORDER BY database_no;
+			EXEC SQL BEGIN;
+				STtrmwhite(db_name);
+				STprintf(list_row, ERx("%d;%s\n"), db_no,
+					db_name);
+				STcat(list_rows, list_row);
+			EXEC SQL END;
+		}
+		EXEC SQL INQUIRE_SQL (:n = ROWCOUNT);
+		if (!n)
+		{
+			IIUGerr(E_RM0080_No_valid_choices, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+		EXEC SQL COMMIT;
+		row = IIFDlpListPick(NULL, list_rows, 5, -1, -1, NULL, NULL,
+			NULL, NULL);
+		if (row >= 0)
+		{
+			p1 = list_rows;
+			pend = STindex(p1, ERx("\n"), 0);
+			for (i = 0; i < row; ++i)
+			{
+				p1 = CMnext(pend);
+				pend = STindex(p1, ERx("\n"), 0);
+			}
+			*pend = EOS;
+			p2 = pend = STindex(p1, ERx(";"), 0);
+			CMnext(pend);
+			STcopy(pend, db_name);
+			*p2 = EOS;
+			CVan(p1, &i);
+			db_no = (i2)i;
+			if (STequal(objname, fsource_db))
+##				putrow form_name tf_name (fsource_db = db_no,
+##					fsource_name = db_name)
+			else if (STequal(objname, flocal_db))
+##				putrow form_name tf_name (flocal_db = db_no,
+##					flocal_name = db_name)
+			else
+##				putrow form_name tf_name (ftarget_db = db_no,
+##					ftarget_name = db_name)
+##			set_frs form (change = 1)
+		}
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1 (activate = 0,
+##		validate = 0)
+##	{
+		FEhelp(ERx("rmpaths.hlp"), ERget(F_RM0037_Update_paths));
+##	}
+
+##	activate menuitem ERget(FE_End) (activate = 0, validate = 0,
+##		expl = ERget(F_FE0102_ExplEnd)), FRSkey3 (activate = 0,
+##		validate = 0)
+##	{
+##		inquire_frs form (chng = change)
+		if (chng && IIUFccConfirmChoice(CONF_GENERIC, NULL, NULL,
+			NULL, NULL, S_RM000E_End_no_save, S_RM000F_Yes_end,
+			S_RM0010_No_end, ERx(""), TRUE) != CONFCH_YES)
+##			resume
+
+##		breakdisplay
+##	}
+
+##	set_frs frs (getmessages = getmsg_stat)
+##}
+
+
+/*{
+** Name:	get_database	- get database
+**
+** Description:
+**	get info for a database in a given CDDS
+**
+** Inputs:
+**	db_no		- database number
+**	cdds_no		- CDDS number
+**
+** Outputs:
+**	db_name		- database name
+**
+** Returns:
+**	OK if database found, FAIL otherwise
+*/
+static STATUS
+get_database(
+i2	db_no,
+i2	cdds_no,
+char	*db_name)
+# if 0
+EXEC SQL BEGIN DECLARE SECTION;
+i2	db_no;
+i2	cdds_no;
+char	*db_name;
+EXEC SQL END DECLARE SECTION;
+# endif
+{
+	DBEC_ERR_INFO	errinfo;
+
+	EXEC SQL REPEATED SELECT TRIM(d.vnode_name) + '::' +
+				TRIM(d.database_name),
+			c.target_type
+		INTO	:db_name, :h_target_type
+		FROM	dd_databases d, dd_db_cdds c
+		WHERE	d.database_no = :db_no
+		AND	c.database_no = d.database_no
+		AND	c.cdds_no = :cdds_no;
+	if (RPdb_error_check(DBEC_ZERO_ROWS_OK, &errinfo) != OK)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return (FAIL);
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		STcopy(ERget(F_RM0035_None), db_name);
+	}
+	EXEC SQL COMMIT;
+
+	return (OK);
+}

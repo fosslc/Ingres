@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!adf!adb
+#
+
+SubDir ING_SRC common adf adb ;
+
+IISUBSYS common adf adb ;
+
+
+IILIBRARY ADFLIB : adbdebug.c ;
+

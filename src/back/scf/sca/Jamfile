@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!scf!sca
+#
+
+SubDir ING_SRC back scf sca ;
+
+IISUBSYS back scf sca ;
+
+
+IILIBRARY SCFLIB : scaadddt.c ;
+

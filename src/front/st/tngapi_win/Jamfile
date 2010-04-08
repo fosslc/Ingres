@@ -1,0 +1,17 @@
+#
+# Jamfile file for front!st!tngapi_win
+#
+# History:
+#   11-Feb-2005 (fanra01)
+#       Sir 113881
+#       Merge Windows and UNIX sources.
+#       Move source files into generic tngapi directory.
+#
+
+SubDir ING_SRC front st tngapi_win ;
+
+IISUBSYS front st tngapi_win ;
+
+
+IIMCTOH $(HDRST)/tngmsg.h : tngmsg.mc ;
+

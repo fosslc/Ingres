@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- ablokadm.hlp, help for Locking administration.
+/#-- 
+The Lock Administration screen displays a list of the current sessions 
+in which locked frames exist. You can update the status of this screen 
+while it is displayed.
+
+If you are the DBA, you can delete a lock on a session that was abnormally 
+terminated.
+
+If you want to know more information (the type of lock in place and the 
+frame affected), you can view this information at the MoreInfo screen.
+
+Move your cursor to the session you want and select the appropriate menu
+operation.
+
+  Refresh   Updates the lock status.
+  Delete    Deletes the lock (only available to the DBA).
+  MoreInfo  Displays details about the type of lock and the frame affected.

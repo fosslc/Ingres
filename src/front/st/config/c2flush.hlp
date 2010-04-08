@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The force_flush parameter configures system behavior when an audit flush
+ is requested, allowing sites to choose whether or not to force the
+ audit log file to disk when a flush occurs.  
+
+ This option is only used when ii.*.c2.audit_mechanism is set to INGRES.
+
+ Choices are: 
+
+        ON    Indicating that an audit flush operation ensures all queued
+              audit records have been written to disk before returning.
+              This is the default.
+
+        OFF   Indicating that the audit flush causes all queued audit
+              records to be written into the audit page(s), but that the
+              pages are not forced to disk unless they are full.  This 
+              value is only checked when ii.*.c2.shared_buffer_count is
+              not zero.

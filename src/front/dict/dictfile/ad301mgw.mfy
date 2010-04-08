@@ -1,0 +1,35 @@
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_framevars_mod
+
+CREATE UNIQUE INDEX ii_framevars_mod
+	ON ii_framevars (object_id, fr_seq)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_menuargs_mod
+
+CREATE UNIQUE INDEX ii_menuargs_mod
+	ON ii_menuargs (object_id, mu_text, mu_seq)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_vqjoins_mod
+
+CREATE UNIQUE INDEX ii_vqjoins_mod
+	ON ii_vqjoins (object_id, vq_seq)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_vqtabcols_mod
+
+CREATE UNIQUE INDEX ii_vqtabcols_mod
+	ON ii_vqtabcols (object_id, vq_seq, tvq_seq)
+
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_vqtables_mod
+
+CREATE UNIQUE INDEX ii_vqtables_mod
+	ON ii_vqtables (object_id, vq_seq)
+

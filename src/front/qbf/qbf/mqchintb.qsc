@@ -1,0 +1,70 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+
+/*
+** mqchgintbl.qsc - This routine is called when the display format is 
+**		    changed from Table Field to One-row-at-a-time or vice
+**		    versa. It updates the "intbl" field of the attribute
+**		    structure so MQBF knows that those fields are or are
+**		    not in a table field.
+**
+**	History:
+**	02/18/86 (john)  Stolen from bldquery.qc
+**	6/15/87 (peterk) - combined mqchintb.qc & mqtblyes.qc;
+**		new paramter 'intbl' indicates which change was made;
+**		took out ##message stmt and renamed mqchintbl.c;
+**	07-dec-87 (kenl)
+**		Turned module into a .QSC file in order to incorporate
+**		the new header file: mqbf.qsh
+**	17-jan-95 (forky01)
+**		Added parameter in call to mqfindtbl to help fix bugs
+**		60504 & 66070
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+mqchgintbl(qdef, intbl)
+MQQDEF	*qdef;
+bool	intbl;		/* if TRUE then set .intbl TRUE for relevant
+			** attributes; else set all .intbl FALSE.
+			*/
+{
+	register ATTRIBINFO	*att;
+	register i4		i;
+	register i4		tindx;
+	register char		*rngvar;
+
+	for (i = 0; i < qdef->mqnumatts; i++)
+	{
+	    att = qdef->mqatts[i];
+
+	    if (!intbl)
+	    {
+		att->intbl = 0;
+		continue;
+	    }
+
+	    /* is this attrib part of a detail table? */
+
+	    rngvar = att->rvar;
+	    tindx = mqfindtbl(qdef, NULL, rngvar, NULL);
+	    if (qdef_type == 0) 	/* master detail qdef */
+		if (qdef->mqtabs[tindx]->mqtype)
+		    /* detail */
+		    att->intbl = 1;
+		else 
+		    /* master */
+		    att->intbl = 0;
+	    else 
+		att->intbl = 1;
+	}
+}

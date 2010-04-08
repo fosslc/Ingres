@@ -1,0 +1,44 @@
+   OpenIngres 2.0 Patch Notes                              	07-October-1997
+
+
+			  OpenIngres Patch Notes 
+
+			  OI 2.0/00 (int.wnt/01)
+
+			      Patch ID 4923
+
+
+
+				NOTES 
+				-----
+
+	a) This document assumes the OpenIngres 2.0/00 (int.wnt/01)
+	   product has been fully installed before this patch is
+	   subsequently installed.
+
+	b) Please read the complete document before installing
+	   this patch.
+
+	c) CAUTION: The patch release replaces some OpenIngres files. Be 
+	   sure you have a system backup should reinstallation be necessary.
+
+                        HOW TO INSTALL THIS PATCH
+                        -------------------------
+
+	Perform the following patch procedure for your OpenIngres
+	installation. The patch is supplied on two diskettes.
+
+	1. Insert the first diskette and type the following command at the 
+	   command prompt:
+
+           a:\install
+
+	2. Follow the instructions displayed on the screen to complete
+	   patch installation.
+
+
+			Problems Solved in Patch 4923
+			-----------------------------
+
+	A consistency check in OPF no longer occurs when running queries 
+	and views when using the OpenIngres ODBC driver.  (86216)

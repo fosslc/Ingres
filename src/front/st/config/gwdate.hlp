@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+ The empty_date parameter specifies the default value that should be substituted  
+ when an "Empty Date" is received from a client.  The value will be a 
+ valid OpenSQL date literal value enclosed in single quotes.  The server's 
+ II_DATE_FORMAT and II_DATE_CENTURY_BOUNDARY values will be used to perform 
+ this conversion. 
+
+ Default for empty_date is '01-jan-1900 00:00:00'.

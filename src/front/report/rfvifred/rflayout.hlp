@@ -1,0 +1,93 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The layout menu allows you to move the cursor around the report layout,
+either to position the location of new components, or to select existing
+components of the report for further editing.  The cursor movement commands 
+are single character commands, listed in Help for Keys.
+
+The report is shown as a collection of sections, which correspond to various 
+parts of the report.  The following sections are allowed:
+
+        SECTION         DESCRIPTION
+        -------         -----------
+        Report Header   This will be printed only on the first page of
+                        the report.
+
+        Page Header     This will be printed below the report header,
+                        and at the top of each page in the report.
+
+        Break Header    These will be printed above the detail lines
+                        in the order specified by the sort sequence
+                        of the break columns.
+
+        Detail Lines    These will be printed for each row in the data
+                        table associated with this report.
+
+        Break Footer    These will be printed below the detail lines
+                        in the order specified by the sort sequence
+                        of the break columns.
+
+        Page Footer     This will be printed above the report footer,
+                        and at the bottom of each page in the report.
+
+        Report Footer   This will be printed only at the end of the
+                        report.
+
+
+To create new components on the report, simply position the cursor to the 
+location on the screen where you want the new component created, select 
+the 'Create' menu command, and follow the submenu appropriate to that type 
+of component.
+
+To change aspects of existing components, position the cursor to anywhere
+on the component, and select the appropriate menu command.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Create          Create a new component at the current cursor
+                        position.  A submenu will be displayed containing
+                        the types of components from which to choose.
+                        If the new component will overlap some existing
+                        components, RBF will move the old components
+                        out of the way.
+
+        Delete          Delete the selected component, or the blank line 
+                        that the cursor is on.
+
+        Edit            Edit the selected component.  A submenu is brought
+                        up if you select a column to edit.
+
+        Move            Prepare to move the selected component to a new 
+                        location on the screen.  A submenu will be displayed
+                        containing options for movement, and the component
+                        will blink until the move operation is complete.
+
+        Layout          Create and delete Report Layout frame sections.
+
+        ColumnOptions   Change the properties of a column in the report
+                        (selection criteria, sort order, etc).
+
+        ReportOptions   Edit the global options for the report, such as
+                        page length.  
+
+        Rulers          Allows one to adjust the display of rulers and
+                        straight edges to help with aligning components
+                        on the same row or column.
+
+        Name            Display the base table column name of the field
+                        the cursor is on.
+
+        Undo            Undo the last command that changed the report in any
+                        way.  You can Undo the last undo as well.
+
+        Save            Save the report in the database.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the catalogs frame.  If you have not
+                        saved the report, you will be asked to confirm this
+                        decision.
+
+        Quit            Exit from RBF.  If you have not saved the report,
+                        you will be asked to confirm this decision.

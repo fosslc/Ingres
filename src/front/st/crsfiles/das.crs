@@ -1,0 +1,129 @@
+--
+--  Copyright (c) 2004 Ingres Corporation
+--
+--  This file contains the configuration for INGRES/DAS Server.
+--
+--# History:
+--#     19-Feb-03 (wnsh01) 
+--#             Added new configuration strings for DAS server.
+--#	17-May-2004 (hanje04)
+--#	    Change default startup count to 1.
+--#     10-28-04 (rajus01) Star problem # EDJDBC 93
+--#	    Changed config rule definition for client_max, connect_pool_size
+--#	    config parameters. SIR 112181 added support for negative integer
+--#	    handling in CBF.
+--#	18-Apr-2005 (drivi01)
+--#	    SIR: 114339
+--#	    Windows crsfiles are merged with generic.
+--#     25-may-2005 (bolke01) sir 114136
+--#             Corrected sysnam was sysname
+--#     13-feb-2006 (loera01) Bug 115533
+--#         Revised default startup count to one, and made the maximum
+--#         startup count one.  DAS servers do not have merged addresses like
+--#         Net servers do. 
+--#     07-nov-07 (Ralph Loen) Bug 119038
+--#         Make process resources dependent on ii.*gcd.*.client_max.
+--#     03-Jun-2008 (Ralph Loen) SIR 120437
+--#         Extend valid startup count to 16.  Extend range of port syntax
+--#         values for tcp_ip.  Default "II7" port becomes "II7+".
+--#     01-jul-08 (Ralph Loen) Bug 120581
+--#         Double the calculated value of buffer_limit.
+--#    
+--#
+-- DAS server resources
+
+-- Startup count (platform-specific)
+(PROG4PRFX).$.(PROG2PRFX)start.$.gcd:             1, MAX = 16;
+
+# ifdef VMS
+(PROG4PRFX).$.gcd.$.client_max:			64, MIN = 0;
+# elif NT_GENERIC
+(PROG4PRFX).$.gcd.$.client_max:			-1, MIN = -1, SIGNED_INT;
+# else
+(PROG4PRFX).$.gcd.$.client_max:			"-1";
+# endif
+(PROG4PRFX).$.gcd.$.client_timeout:		0;
+(PROG4PRFX).$.gcd.$.connect_pool_expire:	0;
+# ifndef NT_GENERIC
+(PROG4PRFX).$.gcd.$.connect_pool_size:		-1, MIN = -1, SIGNED_INT;	
+#else
+(PROG4PRFX).$.gcd.$.connect_pool_size:		"-1";	
+#endif /* NT_GENERIC */
+(PROG4PRFX).$.gcd.$.connect_pool_status:	"optional",
+						VALID = { "on", "off", "optional" };
+# ifndef NT_GENERIC
+-- protocol port status initialization
+# ifdef VMS
+(PROG4PRFX).$.gcd.$.tcp_dec.status:	ON;
+# else /* VMS */
+(PROG4PRFX).$.gcd.$.sockets.status:	OFF;
+(PROG4PRFX).$.gcd.$.sockets.port:       "";
+(PROG4PRFX).$.gcd.$.tcp_ip.status:	ON;
+(PROG4PRFX).$.gcd.$.tcp_ip.port:        "",
+					VALID = { "?", "??", "???", "????", "?????", "#", "#?" };
+# endif /* VMS */
+(PROG4PRFX).$.gcd.$.decnet.status:	OFF;
+(PROG4PRFX).$.gcd.$.decnet.port:  	"";
+(PROG4PRFX).$.gcd.$.async.status:	OFF;
+(PROG4PRFX).$.gcd.$.async.port:         "";
+(PROG4PRFX).$.gcd.$.iso_oslan.status:	OFF;
+(PROG4PRFX).$.gcd.$.iso_oslan.port:     "";
+(PROG4PRFX).$.gcd.$.iso_x25.status:	OFF;
+(PROG4PRFX).$.gcd.$.iso_x25.port:       "";
+(PROG4PRFX).$.gcd.$.sna_lu62.status:	OFF;
+(PROG4PRFX).$.gcd.$.sna_lu62.port:      "<none>";
+(PROG4PRFX).$.gcc.$.sna_lu62.poll:      4000;
+(PROG4PRFX).$.gcd.$.spx.status:		OFF;
+(PROG4PRFX).$.gcd.$.spx.port:           "";
+(PROG4PRFX).$.gcd.$.tcp_wol.status:	OFF;
+(PROG4PRFX).$.gcd.$.tcp_wol.port:       "";
+-- gcd process resources 
+# ifdef VMS
+(PROG4PRFX).$.config.ncp_buffer_size:	1504;
+(PROG4PRFX).$.gcd.connect_sum:          2 * (PROG4PRFX).$.gcd.$.client_max;
+(PROG4PRFX).$.gcd.$.vms_accounting:	ON;	
+(PROG4PRFX).$.gcd.$.vms_ast_limit:	7 * (PROG4PRFX).$.gcd.connect_sum + 20; 
+(PROG4PRFX).$.gcd.$.vms_buffer_limit:	(PROG4PRFX).$.gcd.connect_sum *
+				( 12 * ( (PROG4PRFX).$.config.ncp_buffer_size + 100 ) )
+					+ 16K + 5000;
+(PROG4PRFX).$.gcd.$.vms_enqueue_limit:	10 * (PROG4PRFX).$.gcd.connect_sum; 
+(PROG4PRFX).$.gcd.$.vms_error:		"NLA0:";
+(PROG4PRFX).$.gcd.$.vms_extent:		4000;	
+(PROG4PRFX).$.gcd.$.vms_file_limit:	3 * (PROG4PRFX).$.gcd.connect_sum + 10;
+(PROG4PRFX).$.gcd.$.vms_image:		"ii_system:[ingres.bin]iigcd.exe";
+(PROG4PRFX).$.gcd.$.vms_input:		"NLA0:";	
+(PROG4PRFX).$.gcd.$.vms_interval:	"";	
+(PROG4PRFX).$.gcd.$.vms_io_buffered:	6 * (PROG4PRFX).$.gcd.connect_sum + 10; 
+(PROG4PRFX).$.gcd.$.vms_io_direct:	2 * (PROG4PRFX).$.gcd.connect_sum + 50;
+(PROG4PRFX).$.gcd.$.vms_maximum_working_set: 4096; 
+(PROG4PRFX).$.gcd.$.vms_output:		"NLA0:";
+(PROG4PRFX).$.gcd.$.vms_page_file:	183 * (PROG4PRFX).$.gcd.connect_sum + 4500;
+(PROG4PRFX).$.gcd.$.vms_priority:	4;
+# ifdef SEVMSBUILD
+(PROG4PRFX).$.gcd.$.vms_privileges:	"(readall,prmmbx,sysnam,cmkrnl,sysprv,share,world,netmbx,tmpmbx,exquota,upgrade,downgrade)";
+# else
+(PROG4PRFX).$.gcd.$.vms_privileges:	"(readall,prmmbx,sysnam,cmkrnl,sysprv,share,world,netmbx,tmpmbx,exquota)";
+# endif /* SEVMSBUILD */
+(PROG4PRFX).$.gcd.$.vms_queue_limit:	2 * (PROG4PRFX).$.gcd.connect_sum + 10; 
+(PROG4PRFX).$.gcd.$.vms_working_set: 	2048;	
+# endif /* VMS */
+
+# else
+(PROG4PRFX).$.gcd.$.wintcp.status:			OFF;
+(PROG4PRFX).$.gcd.$.wintcp.port:			IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                          "II"
+                               		ELSE
+                                          "`(PROG2PRFX)prsym II_INSTALLATION`"
+                                   	ENDIF;
+(PROG4PRFX).$.gcd.$.tcp_ip.status:			ON;
+(PROG4PRFX).$.gcd.$.tcp_ip.port:			IF( "`(PROG2PRFX)prsym II_INSTALLATION`" == "" )
+                                          "II7+"
+                               		ELSE
+                                          "`(PROG4PRFX)concat -s(II_INSTALLATION) -s7`"
+                                   	ENDIF;
+(PROG4PRFX).$.gcd.$.lanman.status:   		OFF;
+(PROG4PRFX).$.gcd.$.lanman.port:      		((PROG4PRFX).$.gcd.wintcp.port);
+(PROG4PRFX).$.gcd.$.nvlspx.status:     	        OFF;
+(PROG4PRFX).$.gcd.$.nvlspx.port:           	((PROG4PRFX).$.gcd.wintcp.port);
+
+# endif /* NT_GENERIC */

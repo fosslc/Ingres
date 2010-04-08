@@ -1,0 +1,11 @@
+#
+# Jamfile file for front!report!hdr
+#
+
+SubDir ING_SRC front report hdr ;
+
+IISUBSYS front report hdr ;
+
+
+IIMSGHDR errw.msg ;
+

@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The resource cursor_update_mode gives the default cursor update mode.  The
+  cursor update modes are described in the SQL Reference manual.
+
+  Valid values are "deferred" and "direct".

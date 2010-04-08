@@ -1,0 +1,66 @@
+/* Copyright (c) 2004 Ingres Corporation*/
+/* Example of exchanging rows and columns in a report */
+
+.Name 	Experience
+
+.ShortRemark	Employee Experience Crossreference Report
+
+.LongRemark
+	7/1/88	Created
+.EndRemark
+
+.Query	select distinct name, task
+	from tasks 
+	where name like '$name' or name = '$name'
+
+.Sort	name
+
+.Head 	report
+	.Newpage
+
+.Head 	page
+	.Newline
+	.Underline .Center .Print "Employee Experience Summary Report"
+	.Nounderline 
+	.Newline 2
+	.Center .Print date("today")(d "February 3, 1901")
+	.Newline 4 
+	.Center 50 .Print "Assigned Tasks"
+	.Newline 2 
+	.Underline .Print "Name"
+	.Tab 25 .Print "Design"
+	.Tab 35 .Print "Implement"
+	.Tab 48	.Print "Test"
+	.Tab 58 .Print "Debug"
+	.Tab 68 .Print "Proj Mgr"
+	.Nounderline
+	.Newline 2
+
+.Head 	name
+	.Newline
+	.Print name(c23)
+.Detail	
+	.If task = "Design" .Then 
+		.Tab 25 .Print "Yes"
+	
+	.Elseif task = "Implement" .Then 
+		.Tab 35 .Print "Yes"
+
+	.Elseif task = "Test" .Then
+		.Tab 48 .Print "Yes"
+
+	.Elseif task = "Debug" .Then
+		.Tab 58 .Print "Yes"
+
+	.Elseif task = "Manage" .Then
+		.Tab 68 .Print "Yes"
+	
+	.Endif
+
+.Foot	page
+	.Need 3
+	.Newline 1
+	.Center .Print page_number("zn")
+	.Newline 1
+
+

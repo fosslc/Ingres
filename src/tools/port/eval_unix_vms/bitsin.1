@@ -1,0 +1,34 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/bitsin.1,v 1.1 90/03/09 09:17:31 source Exp $
+.TH BITSIN 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+bitsin \- show number of bits in `C' types
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B bitsin
+[ char ][ int ][ long ][ ptr ][ short ][ -v ]
+.SH DESCRIPTION
+.I Bitsin
+prints the number of bits in the selected types.  If no types are
+specified, the bitsize for all types is printed.  This is the default
+output on a Pyramid:
+.br
+.nf
+
+	char: 8
+	short: 16
+	int: 32
+	long: 32
+	ptr: 32
+.fi
+.PP
+.B -v
+``verbose'' mode prints the name of the program and indents the output
+one tab stop.
+.SH "SEE ALSO"
+\fImaxvals(1)\fP
+.SH BUGS
+.I Bitsin
+assumes that left shifting all ones out of a type will eventually result
+in a value of zero.  This might not be true of the \fBptr\fP type.

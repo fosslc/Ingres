@@ -1,0 +1,17 @@
+#
+# Jamfile file for back!scf!sc0
+#
+#    20-Oct-2009 (hweho01)
+#      Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back scf sc0 ;
+
+IISUBSYS back scf sc0 ;
+
+IINOOPTIM sc0m.c : dgi_us5 nc4_us5 i64_aix ;
+
+IIBINEXE iimonitor : iimonitor.c ;
+IINEEDLIBS iimonitor : GCFLIB COMPATLIB ;
+
+IILIBRARY SCFLIB : sc0m.c sc0e.c sc0a.c ;
+

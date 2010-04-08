@@ -1,0 +1,309 @@
+/*
+	Test Name: zaa02.sep
+	Time: 18-AUG-1991 12:17:07
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa02.sep
+	Purpose	: Test SEP 3gl tools functionality
+	Input Files  : none
+	Output Files : none
+	Database     : none
+	Tables       :
+	Synopsis     :	Tests different aspects of SEP 3gl functionality. In
+			particular, wrapper scripts for building 3gl stuff.
+
+	History: 18-AUG-1991	Created				DONJ
+          15-Jan-1992	(DonJ)
+		Add Unix cannon for matching trace file.
+          16-Jan-1992   (DonJ)
+                Fix any unix discrepencies in canons.
+
+          29-Jan-1992	(DonJ)
+		Changed final canon for content of trace1.stf
+           4-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+           5-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+          17-Feb-1992	(DonJ)
+		Check canons for UNIX. Also check for new functions.
+          25-Feb-1992	(DonJ)
+		Redo canons for UNIX. Also check for new functions.
+           6-Apr-1992	(DonJ)
+		Add UNIX canon for V3.2b.
+           4-NOV-1992	(DonJ)
+		Changed tokenizer slightly so token tables come out slightly
+		different than they did before.
+	  17-feb-1993   (DonJ)
+		Removed a delete command, UNIX uses a wrapper.exe not just a
+		wrapper.
+           9-JUL-1993	(DonJ)
+		Added Alpha REsult to "seplnk" command.
+	  29-Jan-1996	(somsa01)
+		Added NT_GENERIC stuff to test.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+? sepesqlc 
+<<
+
+Usage: sepesqlc <file1> [<file2> ... <filen>]
+
+        -c[onditional]   Conditional Processing. Preprocess only if
+                         source file does not exist.
+
+>>
+? sepcc 
+<<
+
+Usage: sepcc <file1> [<file2> ... <filen>]
+
+        -c[onditional]   Conditional Compilation. Compile only if
+                         object file doesn't exist.
+
+        -d[ebug]         Debug code included.
+
+        -I<directory>    Directory to search for include files.
+
+>>
+? seplib 
+<<
+
+Usage: seplib <libname> [<ofile1> ... <ofilen>]
+
+>>
+? seplnk 
+<< if VMS
+
+Usage: seplnk <file1> [<file2> ... <filen>]
+
+        -c[onditional]   Conditional Linking. Only Link if
+                         image file does not exist.
+
+        -d[ebug]         debug code included.
+
+        -f[orms]         forms code included.
+
+>>
+<< if UNIX
+
+Usage: seplnk <file1> [<file2> ... <filen>]
+
+        -c[onditional]   Conditional Linking. Only link if
+                         image file does not exist.
+
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+
+Usage: seplnk <file1> [<file2> ... <filen>]
+
+        -c[onditional]   Conditional Linking. Only link if                          -
+image file does not exist.
+>>
+? fill @file(ing_src,testtool,sep,wrapper.c) 
+!!
+/*
+**
+*/
+#include <compat.h>
+#include <si.h>
+#include <st.h>
+#include <me.h>
+#include <cm.h>
+#include <lo.h>
+#undef main
+
+i4  wrapper1a(), wrapper1b(), wrapper2a(), wrapper2b(), wrapper3();
+
+main(argc, argv)
+i4  argc;
+char *argv[];
+{
+    i4  i;
+
+    SIeqinit();
+
+    SIfprintf( stderr,"calling wrapper1a...\n");
+    i = wrapper1a();
+    SIfprintf( stderr,"calling wrapper1b...\n");
+    i = wrapper1b();
+    SIfprintf( stderr,"calling wrapper2a...\n");
+    i = wrapper2a();
+    SIfprintf( stderr,"calling wrapper2b...\n");
+    i = wrapper2b();
+    SIfprintf( stderr,"calling wrapper3...\n");
+    i = wrapper3();
+    exit (OK);
+}
+!!
+? fill @file(ing_src,testtool,sep,wrapper1.c) 
+!!
+/*
+**
+*/
+#include <compat.h>
+#include <si.h>
+#include <st.h>
+#include <me.h>
+#include <cm.h>
+
+i4  wrapper1a()
+{
+    SIfprintf( stderr,"inside wrapper1a...\n");
+}
+i4  wrapper1b()
+{
+    SIfprintf( stderr,"inside wrapper1b...\n");
+}
+!!
+? fill @file(ing_src,testtool,sep,wrapper2.c) 
+!!
+/*
+**
+*/
+#include <compat.h>
+#include <si.h>
+#include <st.h>
+#include <me.h>
+#include <cm.h>
+
+i4  wrapper2a()
+{
+    SIfprintf( stderr,"inside wrapper2a...\n");
+}
+i4  wrapper2b()
+{
+    SIfprintf( stderr,"inside wrapper2b...\n");
+}
+!!
+? fill @file(ing_src,testtool,sep,wrapper3.c) 
+!!
+/*
+**
+*/
+#include <compat.h>
+#include <si.h>
+#include <st.h>
+#include <me.h>
+#include <cm.h>
+
+i4  wrapper3()
+{
+    SIfprintf( stderr,"inside wrapper3...\n");
+}
+!!
+? sepcc @file(ing_src,testtool,sep,wrapper) @file(ing_src,testtool,sep,wrapper1) @file-
+(ing_src,testtool,sep,wrapper2) @file(ing_src,testtool,sep,wrapper3) 
+<<
+>>
+<< IF (NT_GENERIC) 
+wrapper.c
+wrapper1.c
+wrapper2.c
+wrapper3.c
+>>
+? seplib wraplib wrapper1 wrapper2 
+<<
+>>
+? seplnk wrapper wraplib wrapper3 
+<< IF (ALPHA) 
+ii_system:[ingres.library]iisqlca.obj
+ii_framelib/share
+ii_libqlib/share
+ii_compatlib/share
+>>
+<<
+>>
+? run wrapper.exe 
+<<
+calling wrapper1a...
+inside wrapper1a...
+calling wrapper1b...
+inside wrapper1b...
+calling wrapper2a...
+inside wrapper2a...
+calling wrapper2b...
+inside wrapper2b...
+calling wrapper3...
+inside wrapper3...
+>>
+.if VMS 
+? delete wrapper.obj 
+<<
+file was deleted
+>>
+? delete wrapper1.obj 
+<<
+file was deleted
+>>
+? delete wrapper2.obj 
+<<
+file was deleted
+>>
+? delete wrapper3.obj 
+<<
+file was deleted
+>>
+? delete wraplib.olb 
+<<
+file was deleted
+>>
+.endif 
+.if UNIX 
+? delete wrapper.o 
+<<
+file was deleted
+>>
+? delete wrapper1.o 
+<<
+file was deleted
+>>
+? delete wrapper2.o 
+<<
+file was deleted
+>>
+? delete wrapper3.o 
+<<
+file was deleted
+>>
+? delete wraplib.a 
+<<
+file was deleted
+>>
+.endif 
+.if NT_GENERIC 
+? delete wrapper.obj 
+<<
+file was deleted
+>>
+? delete wrapper1.obj 
+<<
+file was deleted
+>>
+? delete wrapper2.obj 
+<<
+file was deleted
+>>
+? delete wrapper3.obj 
+<<
+file was deleted
+>>
+? delete wraplib.lib 
+<<
+file was deleted
+>>
+.endif 
+? delete wrapper.exe 
+<<
+file was deleted
+>>
+
+
+Ending at: Mon Jan 29 15:31:34 1996

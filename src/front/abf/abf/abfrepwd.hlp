@@ -1,0 +1,70 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of a Report frame.  You may change
+the definition of the frame on the form and through some of the menu
+operations.  Within the running application, the frame will run the
+report named in the Report Name field.
+
+The report name is the name of an existing report in your database.  To
+create a new report, select the Edit menu operation, which will call RBF
+to specify the report.  If you wish to specify a new report using the
+Report-Writer command language, fill in the Report Source File field with
+the name of the file to contain the report specification before selecting
+the Edit menu item.  Edit can also be used to change the existing report
+definition.
+
+Use the Output File field to specify where the report output is to be
+directed when the application is executed.  This is either a file name
+or "printer" or "terminal."
+
+If the report has parameters, and you wish the user to specify the parameters
+in a VIFRED form, fill in the Report Form field.  Use the FormEdit menu item
+to create or edit the named form.  The form you specify here can be used to
+input the parameters for the report.  If the current application uses 
+some non-compiled forms, you can specify whether to use a compiled form or
+fetch the form from the database at run-time.
+
+Use the Command Line Flags field for any additional Report Writer flags
+you wish to use.  See the "Ingres: Report-Writer Reference
+Manual" for more information on the command line flags.
+
+The menu operations are:
+
+        MENU COMMAND            SYNOPSIS
+        ------------            --------
+        NewEdit                 Get or create the definition of a different
+                                application component object.  You will be
+                                prompted for the type and name of the object
+                                you wish to define.
+
+        Go                      Test the Report frame.
+
+        Edit                    Edit the specification for the report.  This
+				either edits the text file named in the Report
+                                Source File field using the system text editor
+                                or calls RBF to edit the specified report if
+                                no source file was specified.  If the report
+                                does not yet exist, RBF will allow you to
+                                create a new one.
+
+        Compile                 Call SREPORT to compile the source file 
+                                named in the Report Source File field.  Note
+                                that if this report is specified using RBF,
+                                then this menu item is not applicable.
+
+        FormEdit                Run VIFRED on the form for the frame.  If
+                                the form does not yet exist, VIFRED will
+                                allow you to create a new one.  Note that
+                                a form must be specified for this menu item
+                                to be applicable.
+
+        LongRemark              Display and allow editing of the long remarks.
+
+        Print                   Print the definition for the frame.
+
+        Help                    Access the Ingres Help facility.
+
+        Cancel                  Ignore any changes and return to the Edit 
+                                Application catalog frame.
+
+        End                     Save any changes and return to the Edit 
+                                Application catalog frame.

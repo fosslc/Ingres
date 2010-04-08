@@ -1,0 +1,14 @@
+#
+# Jamfile file for common!adf!adi
+#
+
+SubDir ING_SRC common adf adi ;
+
+IISUBSYS common adf adi ;
+
+
+IILIBRARY ADFLIB : adityname.c adityid.c aditycoerce.c
+	adirtree.c adirslv.c adiresty.c adipmencode.c adiopname.c
+	adiopinfo.c adiopid.c adifitab.c adifidesc.c adificoerce.c
+	adidtinfo.c adicolum.c adicastid.c adicalclen.c ;
+

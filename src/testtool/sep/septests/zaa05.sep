@@ -1,0 +1,409 @@
+/*
+	Test Name: zaa05.sep
+	Time: 18-AUG-1991 12:17:07
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa05.sep
+	Purpose	: Test SEP functionality
+	Input Files  : none
+	Output Files : none
+	Database     : Septools, created by zaa01.SEP.
+	Tables       :
+	Synopsis     :	Tests boundary conditions for datatypes.
+
+	History: 18-AUG-1991	Created				DONJ
+          15-Jan-1992	(DonJ)
+		Add Unix cannon for matching trace file.
+          16-Jan-1992   (DonJ)
+                Fix any unix discrepencies in canons.
+          29-Jan-1992	(DonJ)
+		Changed final canon for content of trace1.stf
+           4-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+           6-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+          25-Feb-1992	(DonJ)
+		Redo canons for UNIX. Also check for new functions.
+           4-MAR-1992	(DonJ)
+		Add @file() support to copy statements.
+	  12-oct-1993   (DonJ)
+		Add ABORT canons for "tm can't connect errors"
+
+*/
+.if !SEPPARAMDB
+? setenv SEPPARAMDB septools
+<<
+environment variable was defined
+>>
+.endif
+? sql -s SEPPARAMDB
+/*
+************************************************************************
+**
+**	Now lets do a boundary condition test for datatypes.
+**
+************************************************************************
+*/
+<<
+>>
+<<
+Terminal Monitor could not connect to database
+>> ABORT
+* set autocommit on;\g
+<<
+>>
+* drop table gca00;\g
+<<
+E_US0AC1 DROP: 'gca00' does not exist or is not owned by you.
+    (Thu Jan 30 14:14:31 1992)
+
+>>
+* create table gca00(c1i1 i1 with null,c2i2 i2 with null,c3i4 i4 with null,c4f4 f4 w-
+ith null,c5f8 f8 with null,c6d date with null,c7m money with null,shud_be char(20) w-
+ith null) with duplicates;\g
+<<
+>>
+* insert into gca00(c1i1,shud_be) values (-128,'-128');\g
+<<
+(1 row)
+>>
+* insert into gca00(c1i1,shud_be) values (127,'127');\g
+<<
+(1 row)
+>>
+* insert into gca00(c2i2,shud_be) values (-32768,'-32768');\g
+<<
+(1 row)
+>>
+* insert into gca00(c2i2,shud_be) values (32767,'32767');\g
+<<
+(1 row)
+>>
+* insert into gca00(c3i4,shud_be) values (-2147483648,'-2147483648');\g
+<<
+(1 row)
+>>
+* insert into gca00(c3i4,shud_be) values (2147483647,'2147483647');\g
+<<
+(1 row)
+>>
+* insert into gca00(c4f4,shud_be) values (-10.000e+37,'-10.000e+37');\g
+<<
+(1 row)
+>>
+* insert into gca00(c4f4,shud_be) values (10.000e+37,'10.000e+37');\g
+<<
+(1 row)
+>>
+* insert into gca00(c5f8,shud_be) values (-10.000e+37,'-10.000e+37');\g
+<<
+(1 row)
+>>
+* insert into gca00(c5f8,shud_be) values (10.000e+37,'10.000e+37');\g
+<<
+(1 row)
+>>
+* insert into gca00(c6d,shud_be) values ('01-jan-1582','01-jan-1582');\g
+<<
+(1 row)
+>>
+* insert into gca00(c6d,shud_be) values ('31-dec-2382','31-dec-2382');\g
+<<
+(1 row)
+>>
+* insert into gca00(c7m,shud_be) values ('$-999999999999.99','$-999999999999.99');\g
+<<
+(1 row)
+>>
+* insert into gca00(c7m,shud_be) values ('$999999999999.99','$ 999999999999.99');\g
+<<
+(1 row)
+>>
+* select c1i1,c2i2,c3i4,shud_be from gca00;\g 
+<<
+
++------+------+-------------+--------------------+
+|c1i1  |c2i2  |c3i4         |shud_be             |
++------+------+-------------+--------------------+
+|  -128|      |             |-128                |
+|   127|      |             |127                 |
+|      |-32768|             |-32768              |
+|      | 32767|             |32767               |
+|      |      |  -2147483648|-2147483648         |
+|      |      |   2147483647|2147483647          |
+|      |      |             |-10.000e+37         |
+|      |      |             |10.000e+37          |
+|      |      |             |-10.000e+37         |
+|      |      |             |10.000e+37          |
+|      |      |             |01-jan-1582         |
+|      |      |             |31-dec-2382         |
+|      |      |             |$-999999999999.99   |
+|      |      |             |$ 999999999999.99   |
++------+------+-------------+--------------------+
+(14 rows)
+>>
+* select c4f4,c5f8,shud_be from gca00;\g
+<<
+
++-----------+-----------+--------------------+
+|c4f4       |c5f8       |shud_be             |
++-----------+-----------+--------------------+
+|           |           |-128                |
+|           |           |127                 |
+|           |           |-32768              |
+|           |           |32767               |
+|           |           |-2147483648         |
+|           |           |2147483647          |
+|-1.000e+038|           |-10.000e+37         |
+| 1.000e+038|           |10.000e+37          |
+|           |-1.000e+038|-10.000e+37         |
+|           | 1.000e+038|10.000e+37          |
+|           |           |01-jan-1582         |
+|           |           |31-dec-2382         |
+|           |           |$-999999999999.99   |
+|           |           |$ 999999999999.99   |
++-----------+-----------+--------------------+
+(14 rows)
+>>
+<<
+
++-----------+-----------+--------------------+
+|c4f4       |c5f8       |shud_be             |
++-----------+-----------+--------------------+
+|           |           |-128                |
+|           |           |127                 |
+|           |           |-32768              |
+|           |           |32767               |
+|           |           |-2147483648         |
+|           |           |2147483647          |
+|-10.000e+37|           |-10.000e+37         |
+| 10.000e+37|           |10.000e+37          |
+|           |-10.000e+37|-10.000e+37         |
+|           | 10.000e+37|10.000e+37          |
+|           |           |01-jan-1582         |
+|           |           |31-dec-2382         |
+|           |           |$-999999999999.99   |
+|           |           |$ 999999999999.99   |
++-----------+-----------+--------------------+
+(14 rows)
+>>
+* select c6d,c7m,shud_be from gca00;\g
+<<
+
++-------------------------+--------------------+--------------------+
+|c6d                      |c7m                 |shud_be             |
++-------------------------+--------------------+--------------------+
+|                         |                    |-128                |
+|                         |                    |127                 |
+|                         |                    |-32768              |
+|                         |                    |32767               |
+|                         |                    |-2147483648         |
+|                         |                    |2147483647          |
+|                         |                    |-10.000e+37         |
+|                         |                    |10.000e+37          |
+|                         |                    |-10.000e+37         |
+|                         |                    |10.000e+37          |
+|01-jan-1582              |                    |01-jan-1582         |
+|31-dec-2382              |                    |31-dec-2382         |
+|                         |   $-999999999999.99|$-999999999999.99   |
+|                         |    $999999999999.99|$ 999999999999.99   |
++-------------------------+--------------------+--------------------+
+(14 rows)
+>>
+* copy gca00(c1i1=c0tab with null ('NULL'),c2i2=c0tab with null ('NULL'),c3i4=c0tab -
+with null ('NULL'),c4f4=c0tab with null ('NULL'),c5f8=c0tab with null ('NULL'),c6d=c-
+0tab with null ('NULL'),c7m=c0tab with null ('NULL'),shud_be=varchar(20) with null (-
+'NULL'),nl=d1) into '@file(ing_src,testtool,sep,septests,gca00.res)';\g
+<<
+(14 rows)
+>>
+<<
+>>
+* drop table gca00;\g
+<<
+>>
+* create table gca00(c1i1 i1 with null,c2i2 i2 with null,c3i4 i4 with null,c4f4 f4 w-
+ith null,c5f8 f8 with null,c6d date with null,c7m money with null,shud_be char(20) w-
+ith null) with duplicates;\g
+<<
+>>
+* copy gca00(c1i1=c0tab with null ('NULL'),c2i2=c0tab with null ('NULL'),c3i4=c0tab -
+with null ('NULL'),c4f4=c0tab with null ('NULL'),c5f8=c0tab with null ('NULL'),c6d=c-
+0tab with null ('NULL'),c7m=c0tab with null ('NULL'),shud_be=varchar(20) with null (-
+'NULL'),nl=d1) from '@file(ing_src,testtool,sep,septests,gca00.res)';\g
+<<
+(14 rows)
+>>
+<<
+>>
+* select c1i1,c2i2,c3i4,shud_be from gca00;\g 
+<<
+
++------+------+-------------+--------------------+
+|c1i1  |c2i2  |c3i4         |shud_be             |
++------+------+-------------+--------------------+
+|  -128|      |             |-128                |
+|   127|      |             |127                 |
+|      |-32768|             |-32768              |
+|      | 32767|             |32767               |
+|      |      |  -2147483648|-2147483648         |
+|      |      |   2147483647|2147483647          |
+|      |      |             |-10.000e+37         |
+|      |      |             |10.000e+37          |
+|      |      |             |-10.000e+37         |
+|      |      |             |10.000e+37          |
+|      |      |             |01-jan-1582         |
+|      |      |             |31-dec-2382         |
+|      |      |             |$-999999999999.99   |
+|      |      |             |$ 999999999999.99   |
++------+------+-------------+--------------------+
+(14 rows)
+>>
+* select c4f4,c5f8,shud_be from gca00;\g
+<<
+
++-----------+-----------+--------------------+
+|c4f4       |c5f8       |shud_be             |
++-----------+-----------+--------------------+
+|           |           |-128                |
+|           |           |127                 |
+|           |           |-32768              |
+|           |           |32767               |
+|           |           |-2147483648         |
+|           |           |2147483647          |
+|-1.000e+038|           |-10.000e+37         |
+| 1.000e+038|           |10.000e+37          |
+|           |-1.000e+038|-10.000e+37         |
+|           | 1.000e+038|10.000e+37          |
+|           |           |01-jan-1582         |
+|           |           |31-dec-2382         |
+|           |           |$-999999999999.99   |
+|           |           |$ 999999999999.99   |
++-----------+-----------+--------------------+
+(14 rows)
+>>
+<<
+
++-----------+-----------+--------------------+
+|c4f4       |c5f8       |shud_be             |
++-----------+-----------+--------------------+
+|           |           |-128                |
+|           |           |127                 |
+|           |           |-32768              |
+|           |           |32767               |
+|           |           |-2147483648         |
+|           |           |2147483647          |
+|-10.000e+37|           |-10.000e+37         |
+| 10.000e+37|           |10.000e+37          |
+|           |-10.000e+37|-10.000e+37         |
+|           | 10.000e+37|10.000e+37          |
+|           |           |01-jan-1582         |
+|           |           |31-dec-2382         |
+|           |           |$-999999999999.99   |
+|           |           |$ 999999999999.99   |
++-----------+-----------+--------------------+
+(14 rows)
+>>
+* select c6d,c7m,shud_be from gca00;\g
+<<
+
++-------------------------+--------------------+--------------------+
+|c6d                      |c7m                 |shud_be             |
++-------------------------+--------------------+--------------------+
+|                         |                    |-128                |
+|                         |                    |127                 |
+|                         |                    |-32768              |
+|                         |                    |32767               |
+|                         |                    |-2147483648         |
+|                         |                    |2147483647          |
+|                         |                    |-10.000e+37         |
+|                         |                    |10.000e+37          |
+|                         |                    |-10.000e+37         |
+|                         |                    |10.000e+37          |
+|01-jan-1582              |                    |01-jan-1582         |
+|31-dec-2382              |                    |31-dec-2382         |
+|                         |   $-999999999999.99|$-999999999999.99   |
+|                         |    $999999999999.99|$ 999999999999.99   |
++-------------------------+--------------------+--------------------+
+(14 rows)
+>>
+* \q 
+<<
+>>
+? sepset diff_numerics 
+<<
+>>
+? sql -s SEPPARAMDB
+<<
+>>
+<<
+Terminal Monitor could not connect to database
+>> ABORT
+* set autocommit on;\g
+<<
+>>
+* select c4f4,c5f8,shud_be from gca00;\g
+<<
+
++-----------+-----------+--------------------+
+|c4f4       |c5f8       |shud_be             |
++-----------+-----------+--------------------+
+|           |           |-128                |
+|           |           |127                 |
+|           |           |-32768              |
+|           |           |32767               |
+|           |           |-2147483648         |
+|           |           |2147483647          |
+|-1.000e+038|           |-10.000e+37         |
+| 1.000e+038|           |10.000e+37          |
+|           |-1.000e+038|-10.000e+37         |
+|           | 1.000e+038|10.000e+37          |
+|           |           |01-jan-1582         |
+|           |           |31-dec-2382         |
+|           |           |$-999999999999.99   |
+|           |           |$ 999999999999.99   |
++-----------+-----------+--------------------+
+(14 rows)
+>>
+* select c6d,c7m,shud_be from gca00;\g
+<<
+
++-----------+-----------------+-----------------+
+|c6d        |c7m              |shud_be          |
++-----------+-----------------+-----------------+
+|           |                 |-128             |
+|           |                 |127              |
+|           |                 |-32768           |
+|           |                 |32767            |
+|           |                 |-2147483648      |
+|           |                 |2147483647       |
+|           |                 |-10.000e+37      |
+|           |                 |10.000e+37       |
+|           |                 |-10.000e+37      |
+|           |                 |10.000e+37       |
+|01-jan-1582|                 |01-jan-1582      |
+|31-dec-2382|                 |31-dec-2382      |
+|           |$-999999999999.99|$-999999999999.99|
+|           | $999999999999.99|$ 999999999999.99|
++-----------+-----------------+-----------------+
+(14 rows)
+>>
+* drop table gca00;\g
+<<
+>>
+* \q 
+<<
+>>
+? unsepset diff_numerics 
+<<
+>>
+? delete @file(ing_src,testtool,sep,septests,gca00.res) 
+<<
+file was deleted
+>>
+
+
+Ending at:  4-MAR-1992 23:59:12

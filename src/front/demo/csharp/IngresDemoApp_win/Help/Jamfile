@@ -1,0 +1,36 @@
+#
+# Jamfile file for front!demo!csharp!IngresDemoApp_win!Help
+#
+
+SubDir ING_SRC front demo csharp IngresDemoApp_win Help ;
+
+IISUBSYS front demo csharp IngresDemoApp_win Help ;
+
+IIBFILES demo$(DFS)csharp$(DFS)travel$(DFS)solution$(DFS)Help : 1452.png 1457.html
+	1458.html 1476.png 1478.png 1480.png 1494.png 1495.png 1564.html 1568.html
+	1569.html 1572.html 1579.html 1580.html 1581.html 1582.html 1583.html
+	1585.html 1586.html 1587.png 1588.png 1589.png 1590.png 1591.html 1593.html
+	1593_1.html 1594.html 1595.html 1596.html 1602.html 1603.html 1604.html
+	1605.html 1609.html 1611.html 1612.html 1613.html 1614.png 1616.png
+	1617.png 1618.png 1619.png 1620.html 1621.html 1622.html 1623.html 1624.html
+	1628.png 1629.png 1630.png 1631.png 1632.png 1633.png 1634.html 1636.png 
+	1637.png 1638.png 1639.png 1642.html 1643.html 1644.html 1645.html 1650.html
+	1651.html 1652.html 1653.html 1663.html 1664.html 1665.html 1667.html 1668.html
+	1669.html 1670.html 1671.png 1672.html 1673.html 1674.png 1675.png 1676.png
+	1677.png 1678.html 1679.html 1680.html 1681.html 1682.html 1683.html 1703.png
+	1704.png 1708.png 573.png 574.png block.gif castyles.css cbook.gif 
+	contents1.gif contents2.gif contents3.gif dbschema.html dev_airportcode.html
+	dev_assistance.html dev_datagrid.html dev_dbschema.html dev_region.html
+	dev_routes.html dhtml_search.htm dhtml_search.js diamond.gif 
+	docsstylesheet.css help.png help_open.png horz1.gif horz2.gif hyphen.gif
+	index.htm index1.gif index2.gif index3.gif indexpage.htm map.html minus.gif
+	obook.gif plus.gif portal_tab_selected_center.png portal_tab_selected_left.png
+	portal_tab_selected_right.png portal_tab_unselected_center.png
+	portal_tab_unselected_left.png portal_tab_unselected_right.png
+	search1.gif search2.gif search3.gif space.gif space1x1.png stylesheet.css
+	tab_index.htm tab_search.htm tab_toc.htm toc.htm toc148610.htm toc148612.htm
+	toc148613.htm toc148614.htm toc148616.htm toc148618.htm toc148622.htm
+	toc148623.htm toc148624.htm toc148627.htm toc148629.htm toc148631.htm
+	toc148634.htm toc148637.htm toc14864.htm toc148640.htm toc148642.htm
+	toc148644.htm toc14865.htm toc148653.htm toc14866.htm toc14869.htm
+	topic.gif user_connect.html user_profile.html user_routes.html ;

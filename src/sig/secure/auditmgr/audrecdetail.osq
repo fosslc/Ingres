@@ -1,0 +1,29 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: audredetail
+**
+** Description: Display detail on a single audit record
+**
+** History:
+**	23-mar-94 (robf)
+*/
+initialize () = {
+	set_forms form (mode='read');
+}
+'End', key frskey3 = {
+	return 0;
+}
+'Next' = {
+	return 1;
+}
+'Previous' = {
+	return -1;
+}
+'Top' = {
+	return -2;
+}
+'Bottom' = {
+	return 2;
+}

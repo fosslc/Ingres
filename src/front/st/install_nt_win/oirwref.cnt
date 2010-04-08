@@ -1,0 +1,296 @@
+:Base oirwref.hlp
+:Title CA-OpenIngres Report-Writer Reference Guide
+:Index CA-OpenIngres Report-Writer Reference Guide=oirwref.hlp
+1 CA-OpenIngres Report-Writer Reference Guide
+2 Preface
+3 Before You Begin= RWPREFNT0000000
+3 Audience=RWPREFNT0000010
+3 Contents=RWPREFNT0000015
+3 Related Considerations=RWPREFNT0000020
+3 Document Conventions
+4 Conventions=RWPREFNT0000025
+4 Terminology=RWPREFNT0000030
+4 Syntax=RWPREFNT0000035
+4 Typeface=RWPREFNT0000040
+4 Screen Examples=RWPREFNT0000045
+3 Manuals
+3 Related Manuals=RWPREFNT0000050
+2 Chapter 1:  Overview of Report-Writer
+3 What is Report-Writer?=RW01NT0000000
+3 Report-Writer and RBF=RW01NT0000010
+3 Creating a Report
+4 Steps Needed to Create a Report=RW01NT0000015
+4 Creating a Specification=RW01NT0000020
+4 Saving the Report Specification=RW01NT0000025
+4 Executing the Report Specification=RW01NT0000030
+3 Fundamentals
+4 Report-Writer Fundamentals=RW01NT0000035
+4 Obtaining Data for Reports=RW01NT0000040
+4 Using Sorted Data=RW01NT0000045
+4 Breaks
+5 The Concept of Breaks=RW01NT0000050
+5 Automatic Report Breaks=RW01NT0000055
+5 Page Breaks =RW01NT0000060
+4 Specifications
+4 Headers and Footers=RW01NT0000065
+4 Detail Section=RW01NT0000070
+4 Summary of Report-Writer Specifications=RW01NT0000075
+3 Sample
+3 Sample Report=RW01NT0000080
+2 Chapter 2:  Overview of Report Specification Statements
+3 Overview of Report Specification=RW02NT0000000
+3 Types of Statements
+4 Types of Report Specification Statements=RW02NT0000010
+4 Report Setup Statements=RW02NT0000015
+4 Page Layout and Control Statements=RW02NT0000020
+4 Report Structure Statements=RW02NT0000025
+4 Column and Block Statements=RW02NT0000030
+4 Text Positioning Statements=RW02NT0000035
+4 Print Statements=RW02NT0000040
+4 Conditional and Assignment Statements=RW02NT0000045
+3 Formatting of Statements
+4 Format of Report Specification Statements=RW02NT0000050
+4 Statement and Parameter Delimiters=RW02NT0000055
+4 Using Schemas for Owner Qualification =RW02NT0000060
+2 Chapter 3:  Using Report-Writer
+3 Initial Setup Statements=RW03NT0000000
+3 Creating Reports with Variables=RW03NT0000010
+3 Creating Reports Using Several Tables=RW03NT0000015
+3 Specifying Sorts and Breaks=RW03NT0000020
+3 Pagination in Reports =RW03NT0000025
+3 Setting Report Margins=RW03NT0000030
+3 Printing Data
+4 Positioning, Formatting, and Printing Data=RW03NT0000035
+4 Setting Default Print Positions for Columns=RW03NT0000040
+4 Positioning Text=RW03NT0000045
+4 Specifying the Print Format=RW03NT0000050
+4 Specifying What to Print=RW03NT0000055
+3 Conditional and Assignment Statements
+4 Using Conditional and Assignment Statements=RW03NT0000060
+3 Summary Data
+4 Calculating and Printing Summary Data=RW03NT0000065
+3 Default Settings
+4 Automatic Determination of Default Settings=RW03NT0000070
+4 Analysis of Report Formatting Statements=RW03NT0000075
+4 Determining Default Page Width=RW03NT0000080
+4 Determining Default Margins=RW03NT0000085
+4 Determining Default Column Positions=RW03NT0000090
+4 Determining Default Column Formats=RW03NT0000095
+4 Determining Default Column Widths=RW03NT0000100
+2 Chapter 4:  Expressions and Formats
+3 Introduction=RW04NT0000000
+3 ANSI/ISO Entry SQL-92 Compliant Databases=RW04NT0000010
+3 Delimited Identifiers
+4 Delimited Identifiers=RW04NT0000015
+4 Using Delimited Identifiers=RW04NT0000020
+4 Specifying Delimited Identifiers
+5 Specifying Delimited Identifiers=RW04NT0000025
+5 Case Sensitivity =RW04NT0000030
+5 Multiple Delimited Identifiers=RW04NT0000035
+4 String Constants
+4 Precedence Over String Constants=RW04NT0000040
+3 Words
+3 Reserved Words=RW04NT0000045
+3 Expressions
+4 Types of Data in Expressions=RW04NT0000050
+4 String Constants=RW04NT0000055
+4 Hexadecimal Strings =RW04NT0000060
+4 Numeric Constants =RW04NT0000065
+4 Date Constants =RW04NT0000070
+4 Columns=RW04NT0000075
+4 Variables=RW04NT0000080
+4 Special Report Variables=RW04NT0000085
+4 Aggregates
+5 Aggregates=RW04NT0000090
+5 Syntax of Aggregates=RW04NT0000095
+5 Simple Non-Unique Aggregates=RW04NT0000100
+5 Unique Aggregates=RW04NT0000105
+5 Cumulative Aggregates=RW04NT0000110
+5 Rounded vs. Actual Values=RW04NT0000115
+5 Examples of Aggregates=RW04NT0000120
+3 Operations
+4 Arithmetic Operators  =RW04NT0000130
+4 Comparison Operators=RW04NT0000135
+4 Conditional Expressions =RW04NT0000140
+4 Wild Cards
+5 Pattern Matching with Wild Cards=RW04NT0000145
+5 Wild Cards in an .If Clause=RW04NT0000150
+5 Wild Cards in Queries=RW04NT0000155
+4 Other Operations
+4 Logical Operators =RW04NT0000160
+4 Built-in Functions =RW04NT0000165
+4 Boolean Functions=RW04NT0000170
+3 Specifications
+4 Format Specifications=RW04NT0000175
+4 Default Formats
+5 Default Format for Strings=RW04NT0000185
+5 Default Format for Columns=RW04NT0000190
+5 Default Format for Special Report Variables=RW04NT0000195
+5 Default Format for Aggregates=RW04NT0000200
+5 Default Format for Numbers=RW04NT0000205
+5 Default Format for Dates=RW04NT0000210
+4 Blanking and Character String Formats
+4 Blanking Format B=RW04NT0000215
+4 Character String Format C=RW04NT0000220
+4 Date Format
+5 Date Format D=RW04NT0000225
+5 Specifying Absolute Date and Time Templates=RW04NT0000230
+5 Specifying Date and Time Interval Templates=RW04NT0000235
+4 Numeric Formats
+4 Numeric Format E=RW04NT0000240
+4 Numeric Format F=RW04NT0000245
+4 Numeric Format G=RW04NT0000250
+4 Numeric Format I=RW04NT0000255
+4 Numeric Format N=RW04NT0000260
+4 Numeric Templates=RW04NT0000265
+4 Control Character Format Q0=RW04NT0000270
+4 Character String Format T=RW04NT0000275
+2 Chapter 5:  Report Setup Statements
+3 .Break=RW05NT0000000
+3 .Cleanup=RW05NT0000010
+3 Comments=RW05NT0000015
+3 .Data=RW05NT0000020
+3 .Declare=RW05NT0000025
+3  .Delimid=RW05NT0000030
+3 .Include=RW05NT0000035
+3 .Longremark/.Endremark=RW05NT0000040
+3 .Name=RW05NT0000045
+3 .Output=RW05NT0000050
+3 .Query=RW05NT0000055
+3 .Setup=RW05NT0000060
+3 .Shortremark=RW05NT0000065
+3 .Sort=RW05NT0000070
+2 Chapter 6:  Page Layout and Control
+3 .Formfeeds/.Noformfeeds=RW06NT0000000
+3 .Leftmargin=RW06NT0000010
+3 .Need=RW06NT0000015
+3 .Newpage=RW06NT0000020
+3 .Nofirstff=RW06NT0000025
+3 .Pagelength=RW06NT0000030
+3 .Pagewidth=RW06NT0000035
+3 .Rightmargin=RW06NT0000040
+2 Chapter 7:  Report Structure Statements
+3 .Detail=RW07NT0000000
+3 .Footer  =RW07NT0000010
+3 .Header=RW07NT0000015
+2 Chapter 8:  Column and Block Statements 
+3 .Block/.Endblock=RW08NT0000000
+3 .Bottom=RW08NT0000010
+3 .Format=RW08NT0000015
+3 .Position=RW08NT0000020
+3 .Tformat=RW08NT0000025
+3 .Top=RW08NT0000030
+3 .Width=RW08NT0000035
+3 .Within/.Endwithin=RW08NT0000040
+2 Chapter 9:  Text Positioning Statements
+3 .Center=RW09NT0000000
+3 .Left=RW09NT0000010
+3 .Lineend=RW09NT0000015
+3 .Linestart=RW09NT0000020
+3 .Newline=RW09NT0000025
+3 .Right=RW09NT0000030
+3  .Tab=RW09NT0000035
+2 Chapter 10:  Print Statements
+3 .Nullstring=RW10NT0000000
+3 .Print and .Println=RW10NT0000010
+3 .Ulcharacter=RW10NT0000015
+3 .Underline and .Nounderline=RW10NT0000020
+2 Chapter 11:  Conditional and Assignment Statements 
+3 .If=RW11NT0000000
+3 .Let=RW11NT0000010
+2 Chapter 12:  Report-Writer Commands and Utilities
+3 Standard Command Parameters=RW12NT0000000
+3 Copyrep=RW12NT0000010
+3 Delobj=RW12NT0000015
+3 Report
+4 Report=RW12NT0000020
+4 Passing Parameters
+5 Passing Parameters on the Command Line=RW12NT0000025
+5 Passing Numeric Variables=RW12NT0000030
+5 Passing String and Date Variables=RW12NT0000035
+5 Passing an Entire Where Clause=RW12NT0000040
+5 Passing Multiple Parameters=RW12NT0000045
+5 Passing Delimited Identifiers=RW12NT0000050
+5 Passing String Values with Embedded Quotes=RW12NT0000055
+5 Prompted Run-Time Variables as Parameters=RW12NT0000060
+4 Sending Reports
+5 Sending Reports To and From a Screen=RW12NT0000065
+5 Sending a Report to a Screen=RW12NT0000070
+5 Sending Reports from a Screen to a Printer=RW12NT0000075
+5 Sending Reports from a Screen to a File=RW12NT0000080
+5 Sending the Current Screen to a File or Printer=RW12NT0000085
+3 Sreport
+3 Sreport=RW12NT0000090
+2 Appendix A:  Report Examples
+3 Introduction=RWAPANT0000000
+3 Population Example=RWAPANT0000010
+3 Pop2 Example=RWAPANT0000015
+3 Account Example=RWAPANT0000020
+3 Dictionary Example=RWAPANT0000025
+3 Dict2 Example=RWAPANT0000030
+3 Label Example=RWAPANT0000035
+3 Creating Reports
+4 Creating Reports Using Several Tables=RWAPANT0000040
+4 Joining Tables for a Report=RWAPANT0000045
+4 Using a Union Clause=RWAPANT0000050
+4 Avoiding Awkward Page Breaks=RWAPANT0000055
+2 Appendix B:  Notes for QUEL Users
+3 Introduction=RWAPBNT0000000
+3 Notes on Chapter 2
+4 Using Schemas for Owner Qualification=RWAPBNT0000015
+3 Notes on Chapter 4
+4 Notes on Chapter 4=RWAPBNT0000020
+4 Delimited Identifiers=RWAPBNT0000025
+4 String Constants, Dates, and Numeric Templates=RWAPBNT0000030
+4 Hexadecimal Constants=RWAPBNT0000035
+4 Columns=RWAPBNT0000040
+4 Default Formats for Columns=RWAPBNT0000050
+3 Notes on Chapter 5
+4 .Delimid Statement with QUEL Query=RWAPBNT0000060
+4 .Query Statement for QUEL Users=RWAPBNT0000065
+3 Notes on Chapter 12
+4 Passing Parameters on the Command Line =RWAPBNT0000095
+4 Passing Numeric Variables=RWAPBNT0000100
+4 Passing String and Date Variables=RWAPBNT0000105
+4 Passing an Entire Where Clause=RWAPBNT0000110
+4 Passing Multiple Parameters=RWAPBNT0000115
+4 Passing String Values with Embedded Quotes=RWAPBNT0000120
+4 Prompted Run-Time Variables as Parameters=RWAPBNT0000125
+3 Notes on Appendix A
+4 Population Example=RWAPBNT0000135
+4 Account Example=RWAPBNT0000140
+4 Dictionary Example=RWAPBNT0000145
+4 Label Example=RWAPBNT0000150
+4 Creating ReportsUsing Several Tables
+5 Joining Tables for a Report=RWAPBNT0000160
+5 Avoiding Awkward Page Breaks=RWAPBNT0000165
+2 Appendix C:  Report-Writer Syntax Summary
+3 Statements=RWAPCNT0000000
+3 Expressions
+4 Special Report Variables=RWAPCNT0000015
+4 Arithmetic Operators=RWAPCNT0000020
+4 SQL Conversion Functions=RWAPCNT0000025
+4 QUEL Conversion Functions=RWAPCNT0000030
+4 Numeric Functions=RWAPCNT0000035
+4 SQL and QUEL String Functions=RWAPCNT0000040
+4 Date Functions=RWAPCNT0000045
+4 Boolean Function=RWAPCNT0000050
+4 Aggregates=RWAPCNT0000055
+4 Formats=RWAPCNT0000060
+3 Commands
+4 copyrep =RWAPCNT0000070
+4 delobj =RWAPCNT0000075
+4 report =RWAPCNT0000080
+4 sreport =RWAPCNT0000085
+2 Appendix D:  Troubleshooting
+3 Introduction=RWAPDNT0000000
+3 Parameter Substitution=RWAPDNT0000010
+3 Queries=RWAPDNT0000015
+3 Comments=RWAPDNT0000020
+3 Default Print Positions=RWAPDNT0000025
+3 Formfeeds=RWAPDNT0000030
+3 Performance
+4 Performance Problems=RWAPDNT0000035
+4 Query Problems=RWAPDNT0000040
+4 Conversion Functions=RWAPDNT0000045
+4 Memory Usage=RWAPDNT0000050

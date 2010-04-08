@@ -1,0 +1,40 @@
+<!--
+##{
+## History:
+##    04-May-1999 (peeje01)
+##        Replaced .exe with #cgi# for platform independance
+##}
+-->
+<HTML>
+<HEAD>
+<TITLE>Ingres/ICE - Publishing Reports</TITLE>
+</HEAD>
+<BODY>
+<CENTER><FONT SIZE=+2 FACE="Arial">
+<!-- #ICE SQL=`select long_remark from ii_longremarks
+where object_id = (select object_id from ii_objects where object_name=':object_name')`
+DATABASE=`icetutor`
+TYPE=`PLAIN`
+USER=`icedefdb`
+-->
+</FONT></CENTER>
+<FORM ACTION="/ice-bin/oiice.#cgi#" METHOD="POST">
+<INPUT TYPE=hidden NAME="ii_userid"   VALUE="icedefdb">
+<INPUT TYPE=hidden NAME="ii_database" VALUE="icetutor">
+<INPUT TYPE=hidden NAME="ii_report"   VALUE="<!-- #ICE VAR=`:object_name`-->">
+<CENTER>
+<BR>
+To display the report <FONT SIZE=+1><!-- #ICE VAR=`:object_name`--></FONT>.  Choose a type and click the button,<P>
+
+<!-- #ICE SQL=`select distinct type from plays`
+DATABASE=`icetutor`
+TYPE=`SELECTOR`
+ATTR=`NAME="type"`
+USER=`icedefdb`
+-->
+<INPUT TYPE=SUBMIT VALUE="Click here">
+</CENTER>
+</FORM>
+
+</BODY>
+</HTML>

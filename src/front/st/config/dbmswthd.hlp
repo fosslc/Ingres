@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The dmf_write_behind resource specifies whether or not write behind
+  threads are to be used in this cache.
+
+  DEFAULT: ON

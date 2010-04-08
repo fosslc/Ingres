@@ -1,0 +1,53 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="/ice/styles/play_public.css" TYPE="text/css" REL="STYLESHEET">
+<title>Shakespeare Plays </title>
+</HEAD>
+<body>
+<center>
+<H1>Shakespeare Plays </H1></TD>
+</center>
+Thank you for visiting the Globe centre for Shakespeare.
+<p>
+If you are a new visitor to our site, leave the
+user name and password fields <i>blank.</i> 
+<br>
+Click on the
+picture of the original Globe below from whence you
+will be able to register with us. 
+<p>
+If you already have an account, please fill in
+your user name and password below. 
+<br>
+Click on the
+picture of the original Globe below.
+<p>
+We hope you enjoy your visit!
+<HR>
+
+<BODY>
+<FORM ACTION="/ice-bin/oiice.#ext#/plays[play_home.html]" METHOD="POST">
+<INPUT TYPE=hidden NAME="ii_action" value="connect">
+<INPUT TYPE=hidden NAME="ii_error_url" value="/plays[play_autoUser.html]">
+<CENTER>
+<TABLE BORDER=0 ALIGN=CENTER VALIGN=CENTER>
+	<TR>
+		<TD>Please enter your:</TD>
+	</TR>
+	<TR>
+		<TD>Name: </TD>
+		<TD><INPUT SIZE=32 NAME="ii_userid"></TD>
+	</TR>
+	<TR>
+		<TD>Password: </TD>
+		<TD><INPUT SIZE=32 TYPE=PASSWORD NAME="ii_password"></TD>
+	</TR>
+</TABLE>		
+<INPUT TYPE="IMAGE" BORDER=0 NAME="connect" SRC="/ice/images/OldGlobe.gif" ALT="Press Here to Enter the Globe Experience">
+</CENTER>
+</FORM>
+</BODY>
+</HTML>

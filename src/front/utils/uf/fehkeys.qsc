@@ -1,0 +1,820 @@
+/*
+** Copyright (c) 1986, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<menu.h>
+# include	<runtime.h>
+# include	<fsicnsts.h>
+# include	<help.h>
+# include	<uf.h>
+# include	"helphlp.h"
+# include	"eruf.h"
+
+/**
+** Name:	fehkeys.qc -	help on command keys.
+**
+** Description:
+**	This contains the help for keys, which is called up by the
+**	standard help utility for RTI.
+**
+**	This file defines:
+**
+**	FEhkeys		- help for keys in effect.
+**
+** History:
+**	Revision 5.0
+**	07/03/86 (scl) Added code to supress commands not supported in 3270 mode
+**	8/26/86 (bruceb)
+**		Removed entries for Startfield and Endfield '[',']'
+**		keys since equel programs really can't make use of those keys.
+**	6-nov-86 (bruceb)	Fix for bug 9700
+**		shorten text for Bottomedge; change 'bottom' to 'lower'.
+**	07/23/87 (dkh) - Fixed jup bug 591.
+**	08/14/87 (dkh) - ER changes.
+**	09/17/87 (dkh) - Fixed problem with loading menu explanations.
+**	10/05/87 (dkh) - Help file changes.
+**	02/27/88 (dkh) - Added support for nextitem command.
+**	05/27/88 (dkh) - Enabled display of nextitem command.
+**	24-apr-89 (bruceb)
+**		Added display of shell command.
+**	27-sep-89 (bruceb)
+**		Added code for 'disabled' message on editor key.
+**	27-nov-89 (bruceb)
+**		Find/top/bottom no longer visible menuitems.
+**	29-nov-89 (bruceb)
+**		Now display information on frskeys.  Also, help is
+**		now displayed for menuitems, frskeys and frs commands,
+**		in that order.
+**	16-jan-90 (bruceb)
+**		Improved scroll code.
+**	22-jan-90 (bruceb)
+**		Only display information on frskeys if label text exists.
+**	16-mar-90 (swilson)
+**		Eliminated overlap between menu keys and frs keys.
+**	21-jan-92 (seg)
+**		needed to change NULL to 0 in initialization due to OS2
+**		porting peculiarity.
+**	10-mar-92 (leighb) Check for MU_GUIDIVIDER character in menu item
+**		name and replace with a '\0' if not using GUI menus.
+**	29-mar-93 (fraser)
+**		Removed ifdef on GUIMENU. 
+**	23-sep-93 (vijay)
+**		Remove STcompare defn. st.h is already included.
+**	15-Feb-1995 (canor01)
+**		Not finding the keys help form is non-fatal.
+**	23-apr-1996 (chech02)
+**		changed to FAR ptr for windows 3.1 port.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	26-Aug-2009 (kschendel) b121804
+**	    Prototype updates for gcc 4.3.
+*/
+
+# define	TITLELEN    80
+# define	LABELWIDTH  60
+# define	EXPLWIDTH   80
+
+	/* Define masks used for various combinations of keys */
+
+# define	HM_EQ	1		/* for EQUEL */
+# define	HM_VFRBF 2		/* for VIFRED */
+# define	HM_IQUEL 4		/* for IQUEL */
+# define	HM_VIG	 8		/* for VIGRAPH */
+# define	HM_ALL	15		/* for all of them */
+# define	HM_NONE 0		/* for none of them */
+
+# define	HM_FTASCII 1		/* supported in FT ASCII mode */
+# define	HM_FT3270  2		/* supported in FT 3270	 mode */
+# define	HM_FTBOTH  3		/* supported in both FT modes */
+
+	/* Typedef */
+
+##typedef struct
+##{
+##  i4		key_labseq;		/* Sequence in array of labels*/
+##  ER_MSGID	key_name;		/* Name of key */
+    const
+##  char	*key_label;		/* Label if not from FRS */
+##  i4		key_mask;		/* mask for which of
+					** the calls use this key,
+					** as combination of the
+					** masks defined above.
+					*/
+##  i4		key_FTmode;		/* FT modes (ASCII,3270) supported */
+##  ER_MSGID	key_desc;		/* Description */
+##} KEYDATA;
+
+typedef struct
+{
+	i4	val_vfrfiq;		/* For value of vfrfiq */
+	i4	val_mask;		/* ..use this mask */
+} VAL2HM;
+
+	/* Forward Refs and Externs */
+
+GLOBALREF	i4	form_mu;
+#ifdef WIN16
+GLOBALREF	FRS_CB	*FAR IIfrscb;
+#else
+GLOBALREF	FRS_CB	*IIfrscb;
+#endif /* WIN16 */
+
+
+	/* Statics */
+
+static bool	keysfadded = FALSE;
+static char	mu_guidivider[2] = {MU_GUIDIVIDER, '\0'};
+
+static const
+##	char	_KeysForm[]	= ERx("keysform"),
+##		_KeysTable[]	= ERx("keystable"),
+##		_Command[]	= ERx("command"),
+##		_Key[]		= ERx("key"),
+##		_Expl[]		= ERx("explanation"),
+##		_Empty[]	= ERx("");
+
+static VAL2HM Masktab[] = {
+	H_EQ,		HM_EQ,
+	H_VFRBF,	HM_VFRBF,
+	H_IQUEL,	HM_IQUEL,
+	H_VIG,		HM_VIG,
+	H_QBFSRT,	HM_EQ,
+	H_GREQ,		HM_EQ
+};
+
+##static KEYDATA Keytab[] = {
+    {1, F_UF000E_Menu,	_Empty,	HM_ALL,			HM_FTBOTH,
+	    F_UF000F_Menu_Desc},
+    {2, F_UF0010_Scup,	_Empty,	HM_ALL & ~HM_VIG,	HM_FTBOTH,
+	    F_UF0011_Scup_Desc},
+    {3, F_UF0012_Scdn,	_Empty,	HM_ALL & ~HM_VIG,	HM_FTBOTH,
+	    F_UF0013_Scdn_Desc},
+    {4, F_UF0014_Nfld,	_Empty,	HM_EQ|HM_VFRBF,		HM_FTASCII,
+	    F_UF0015_Nfld_Desc},
+    {4, F_UF0016_Next,	_Empty,	HM_VIG,			HM_FTASCII,
+	    F_UF0017_Next_Desc},
+    {5, F_UF0018_Pfld,	_Empty,	HM_EQ|HM_VFRBF,		HM_FTASCII,
+	    F_UF0019_Pfld_Desc},
+    {5, F_UF001A_Prev,	_Empty,	HM_VIG,			HM_FTASCII,
+	    F_UF001B_Prev_Desc},
+    {6, F_UF001C_Sclt,	_Empty,	HM_ALL & ~HM_VIG,	HM_FTBOTH,
+	    F_UF001D_Sclt_Desc},
+    {7, F_UF001E_Scrt,	_Empty,	HM_ALL & ~HM_VIG,	HM_FTBOTH,
+	    F_UF001F_Scrt_Desc},
+    {0, F_UF0020_Ledg,	ERx("["),	HM_VFRBF,		HM_FTASCII,
+	    F_UF0021_Ledg_Desc},
+    {0, F_UF0022_Ledg,	ERx("["),	HM_VIG,			HM_FTASCII,
+	    F_UF0023_Ledg_Desc},
+    {0, F_UF0024_Tedg,	ERx("{"),	HM_VIG,			HM_FTASCII,
+	    F_UF0025_Tedg_Desc},
+    {0, F_UF0026_Redg,	ERx("]"),	HM_VFRBF,		HM_FTASCII,
+	    F_UF0027_Redg_Desc},
+    {0, F_UF0028_Redg,	ERx("]"),	HM_VIG,			HM_FTASCII,
+	    F_UF0029_Redg_Desc},
+    {0, F_UF002A_Bedg,	ERx("}"),	HM_VIG,			HM_FTASCII,
+	    F_UF002B_Bedg_Desc},
+    {12, F_UF002C_Lchr,	_Empty,	HM_ALL,			HM_FTASCII,
+	    F_UF002D_Lchr_Desc},
+    {13, F_UF002E_Rchr,	_Empty,	HM_ALL,			HM_FTASCII,
+	    F_UF002F_Rchr_Desc},
+    {14, F_UF0030_Dnln,	_Empty,	HM_ALL,			HM_FTASCII,
+	    F_UF0031_Dnln_Desc},
+    {15, F_UF0032_Upln,	_Empty,	HM_ALL,			HM_FTASCII,
+	    F_UF0033_Upln_Desc},
+    {0, F_UF0034_Gcur,	ERx("^"),	HM_VIG,			HM_FTASCII,
+	    F_UF0035_Gcur_Desc},
+    {0, F_UF0036_Lerr,	ERx("="),	HM_VIG,			HM_FTASCII,
+	    F_UF0037_Lerr_Desc},
+    {16, F_UF0038_Nxwd,	_Empty,	HM_EQ|HM_VFRBF|HM_VIG,  HM_FTASCII,
+	    F_UF0039_Nxwd_Desc},
+    {17, F_UF003A_Pvwd,	_Empty,	HM_EQ|HM_VFRBF|HM_VIG,  HM_FTASCII,
+	    F_UF003B_Pvwd_Desc},
+    {18, F_UF003C_Mode,	_Empty,	HM_EQ|HM_VFRBF|HM_VIG,  HM_FTASCII,
+	    F_UF003D_Mode_Desc},
+    {19, F_UF003E_Redr,	_Empty,	HM_ALL,			HM_FTASCII,
+	    F_UF003F_Redr_Desc},
+    {20, F_UF0040_Dchr,	_Empty,	HM_EQ|HM_VFRBF|HM_VIG,  HM_FTASCII,
+	    F_UF0041_Dchr_Desc},
+    {21, F_UF0042_Rubout, _Empty,	HM_EQ|HM_VFRBF|HM_VIG,  HM_FTASCII,
+	    F_UF0043_Rubout_Desc},
+    {22, F_UF0044_Edit,	_Empty,	HM_EQ,			HM_FTBOTH,
+	    F_UF0045_Edit_Desc},
+    {23, F_UF0046_Nrow,	_Empty,	HM_EQ,			HM_FTASCII,
+	    F_UF0047_Nrow_Desc},
+    {24, F_UF0048_Clear,_Empty,	HM_EQ|HM_VFRBF|HM_VIG,  HM_FTASCII,
+	    F_UF0049_Clear_Desc},
+    {25, F_UF004A_Clst,	_Empty,	HM_EQ|HM_VFRBF|HM_VIG,  HM_FTASCII,
+	    F_UF004B_Clst_Desc},
+    {26, F_UF004C_Dup,	_Empty,	HM_EQ,			HM_FTASCII,
+	    F_UF004D_Dup_Desc},
+    {27, F_UF004E_Pscr,	_Empty,	HM_ALL & ~HM_VIG,	HM_FTBOTH,
+	    F_UF004F_Pscr_Desc},
+    {28, F_UF0050_Nitm, _Empty,	HM_ALL,			HM_FTASCII,
+	    F_UF0051_Nitm_Desc},
+    {29, F_UF0052_Shell, _Empty,	HM_ALL,			HM_FTASCII,
+	    F_UF0053_Shell_Desc},
+    {-1, 0,		_Empty,	HM_NONE,	HM_FTASCII, 0}
+};
+
+
+/*
+**  Maximum number of labels allocated in Keytab structure above.
+**  Please increase this number if you add entries to Keytab above.
+*/
+# define	HM_MAXLABEL	30
+
+# define	HM_SHELL	29
+# define	HM_EDITOR	22
+
+/*{
+** Name:	FEhkeys - print help on control and function keys.
+**
+** Description:
+**	Print help on the set of control keys, mapping menu items
+**	and FRS functions in the process.  This is called through
+**	the HELP/KEYS combination in the "help_frs" EQUEL
+**	command.
+**
+**	Depending on the value for vfrviq, different keys are
+**	available, and displayed.
+**
+** Inputs:
+**	subj		a name to be used at the top of the help screen, or
+**			printed as a message if the file is not found.
+**	menu		The current menu structure to use in mapping.
+**	frs_labels	Array of labels for the menu key mappings.
+**	frskey_expls	Array of explanations for the FRS keys.
+**	vfrfiq		special help processing flag from help.h.
+**			Values are H_EQ, H_VFRBF, H_IQUEL, H_VIG or
+**			H_QBFSRT (same as H_EQ for this)
+**
+** Outputs:
+**	Returns:
+**		VOID
+**
+** Side Effects:
+**
+** History:
+**	01-sep-1985 (grant)	Written.
+**	19-oct-1985 (peter)	Add differences for vifred/rbf and
+**				support of printscreen.
+**	13-jan-1986 (peter)	Changed last param to special case IQUEL.
+**	30-jan-1986 (peter)	Changed after code review.
+*/
+VOID
+FEhkeys(char *subj, MENU menu, char **frs_labels, char **frskey_expls, i4 vfrfiq)
+##{
+##	char	subject[TITLELEN+1];	/* subject buffer */
+	i4	i;
+##	char	menulabel[LABELWIDTH+1];
+	char	explanation[EXPLWIDTH+1];
+##	char	*expl;
+##	char	klabel[HM_MAXLABEL][LABELWIDTH+1];
+##	i4	numrecs;
+##	i4	numrows;
+##	i4	currrec;
+##	char	upmap[20];
+##	char	downmap[20];
+##	char	menu1map[20];
+##	char	menu2map[20];
+##	char	uplabel[50];
+##	char	downlabel[50];
+##	char	menu1label[50];
+##	char	menu2label[50];
+	i4	mask,FTmask;
+	bool	separator_needed = FALSE;
+	bool	match;
+
+	_VOID_ STlcopy(subj, subject, (i4) TITLELEN);
+	_VOID_ STtrmwhite(subject);
+
+	if (!keysfadded)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), _KeysForm) != OK)
+		{
+			/* 15-Feb-1995 (canor01) - not fatal */
+			/*IIUGerr(E_UF0026_BadForm,UG_ERR_FATAL,1,_KeysForm);*/
+			IIUGerr( E_UF0026_BadForm, UG_ERR_ERROR, 1, _KeysForm );
+			return;
+		}
+
+		keysfadded = TRUE;
+	}
+
+##	PUTFORM _KeysForm ( title = subject );
+##	INITTABLE _KeysForm _KeysTable READ;
+
+	/* First load the menu items */
+	if (menu != NULL)
+	{
+	    register i4	    mi;
+	    register struct com_tab *mutab;
+
+	    mutab = menu->mu_coms;
+	    for ( mi = 0 ; mutab[mi].ct_name != NULL ; ++mi )
+##	    {
+##	        char	*menuname;
+##	        char	*menuexpl;
+
+		char	ct_name[101];				 
+		char	*p;					 
+								 
+	    /*  The following code must not be ifdef-ed  */
+		STlcopy(mutab[mi].ct_name, ct_name, 100);	 
+		if (p = STindex(ct_name, mu_guidivider, STlength(ct_name)))	 
+		{						 
+			*p = EOS;				 
+			menuname = ct_name;			 
+		}						 
+		else						 
+			menuname = mutab[mi].ct_name;
+
+		if ((menuexpl = mutab[mi].description) == NULL)
+		{
+			menuexpl = _Empty;
+		}
+
+		if (frs_labels[mi] != NULL)
+		   STcopy(frs_labels[mi], menulabel);
+		else switch(mi+1)
+		{
+		  case 1:
+##		    inquire_frs frs (menulabel = label(menu1))
+		    break;
+		  case 2:
+##		    inquire_frs frs (menulabel = label(menu2))
+		    break;
+		  case 3:
+##		    inquire_frs frs (menulabel = label(menu3))
+		    break;
+		  case 4:
+##		    inquire_frs frs (menulabel = label(menu4))
+		    break;
+		  case 5:
+##		    inquire_frs frs (menulabel = label(menu5))
+		    break;
+		  case 6:
+##		    inquire_frs frs (menulabel = label(menu6))
+		    break;
+		  case 7:
+##		    inquire_frs frs (menulabel = label(menu7))
+		    break;
+		  case 8:
+##		    inquire_frs frs (menulabel = label(menu8))
+		    break;
+		  case 9:
+##		    inquire_frs frs (menulabel = label(menu9))
+		    break;
+		  case 10:
+##		    inquire_frs frs (menulabel = label(menu10))
+		    break;
+		  case 11:
+##		    inquire_frs frs (menulabel = label(menu11))
+		    break;
+		  case 12:
+##		    inquire_frs frs (menulabel = label(menu12))
+		    break;
+		  case 13:
+##		    inquire_frs frs (menulabel = label(menu13))
+		    break;
+		  case 14:
+##		    inquire_frs frs (menulabel = label(menu14))
+		    break;
+		  case 15:
+##		    inquire_frs frs (menulabel = label(menu15))
+		    break;
+		  case 16:
+##		    inquire_frs frs (menulabel = label(menu16))
+		    break;
+		  case 17:
+##		    inquire_frs frs (menulabel = label(menu17))
+		    break;
+		  case 18:
+##		    inquire_frs frs (menulabel = label(menu18))
+		    break;
+		  case 19:
+##		    inquire_frs frs (menulabel = label(menu19))
+		    break;
+		  case 20:
+##		    inquire_frs frs (menulabel = label(menu20))
+		    break;
+		  case 21:
+##		    inquire_frs frs (menulabel = label(menu21))
+		    break;
+		  case 22:
+##		    inquire_frs frs (menulabel = label(menu22))
+		    break;
+		  case 23:
+##		    inquire_frs frs (menulabel = label(menu23))
+		    break;
+		  case 24:
+##		    inquire_frs frs (menulabel = label(menu24))
+		    break;
+		  case 25:
+##		    inquire_frs frs (menulabel = label(menu25))
+		    break;
+		} /* end else-switch */
+
+##		LOADTABLE _KeysForm _KeysTable (
+##			_Command = menuname,
+##			_Key = menulabel,
+##			_Expl = menuexpl
+##		);
+##	    } /* end for */
+##	    LOADTABLE _KeysForm _KeysTable ( _Command = _Empty );
+	}
+
+	/* Then load the frskeys */
+	for ( i = Fsi_KEY_PF_MAX ; --i >= 0 ; )
+	{
+	    if ((expl = frskey_expls[i]) != NULL)
+	    {
+		switch(i+1)
+		{
+		  case 1:
+##		    inquire_frs frs (menulabel = label(frskey1))
+		    break;
+		  case 2:
+##		    inquire_frs frs (menulabel = label(frskey2))
+		    break;
+		  case 3:
+##		    inquire_frs frs (menulabel = label(frskey3))
+		    break;
+		  case 4:
+##		    inquire_frs frs (menulabel = label(frskey4))
+		    break;
+		  case 5:
+##		    inquire_frs frs (menulabel = label(frskey5))
+		    break;
+		  case 6:
+##		    inquire_frs frs (menulabel = label(frskey6))
+		    break;
+		  case 7:
+##		    inquire_frs frs (menulabel = label(frskey7))
+		    break;
+		  case 8:
+##		    inquire_frs frs (menulabel = label(frskey8))
+		    break;
+		  case 9:
+##		    inquire_frs frs (menulabel = label(frskey9))
+		    break;
+		  case 10:
+##		    inquire_frs frs (menulabel = label(frskey10))
+		    break;
+		  case 11:
+##		    inquire_frs frs (menulabel = label(frskey11))
+		    break;
+		  case 12:
+##		    inquire_frs frs (menulabel = label(frskey12))
+		    break;
+		  case 13:
+##		    inquire_frs frs (menulabel = label(frskey13))
+		    break;
+		  case 14:
+##		    inquire_frs frs (menulabel = label(frskey14))
+		    break;
+		  case 15:
+##		    inquire_frs frs (menulabel = label(frskey15))
+		    break;
+		  case 16:
+##		    inquire_frs frs (menulabel = label(frskey16))
+		    break;
+		  case 17:
+##		    inquire_frs frs (menulabel = label(frskey17))
+		    break;
+		  case 18:
+##		    inquire_frs frs (menulabel = label(frskey18))
+		    break;
+		  case 19:
+##		    inquire_frs frs (menulabel = label(frskey19))
+		    break;
+		  case 20:
+##		    inquire_frs frs (menulabel = label(frskey20))
+		    break;
+		  case 21:
+##		    inquire_frs frs (menulabel = label(frskey21))
+		    break;
+		  case 22:
+##		    inquire_frs frs (menulabel = label(frskey22))
+		    break;
+		  case 23:
+##		    inquire_frs frs (menulabel = label(frskey23))
+		    break;
+		  case 24:
+##		    inquire_frs frs (menulabel = label(frskey24))
+		    break;
+		  case 25:
+##		    inquire_frs frs (menulabel = label(frskey25))
+		    break;
+		  case 26:
+##		    inquire_frs frs (menulabel = label(frskey26))
+		    break;
+		  case 27:
+##		    inquire_frs frs (menulabel = label(frskey27))
+		    break;
+		  case 28:
+##		    inquire_frs frs (menulabel = label(frskey28))
+		    break;
+		  case 29:
+##		    inquire_frs frs (menulabel = label(frskey29))
+		    break;
+		  case 30:
+##		    inquire_frs frs (menulabel = label(frskey30))
+		    break;
+		  case 31:
+##		    inquire_frs frs (menulabel = label(frskey31))
+		    break;
+		  case 32:
+##		    inquire_frs frs (menulabel = label(frskey32))
+		    break;
+		  case 33:
+##		    inquire_frs frs (menulabel = label(frskey33))
+		    break;
+		  case 34:
+##		    inquire_frs frs (menulabel = label(frskey34))
+		    break;
+		  case 35:
+##		    inquire_frs frs (menulabel = label(frskey35))
+		    break;
+		  case 36:
+##		    inquire_frs frs (menulabel = label(frskey36))
+		    break;
+		  case 37:
+##		    inquire_frs frs (menulabel = label(frskey37))
+		    break;
+		  case 38:
+##		    inquire_frs frs (menulabel = label(frskey38))
+		    break;
+		  case 39:
+##		    inquire_frs frs (menulabel = label(frskey39))
+		    break;
+		  case 40:
+##		    inquire_frs frs (menulabel = label(frskey40))
+		    break;
+		} /* end else-switch */
+
+		if ( STtrmwhite(menulabel) > 0 )
+		{
+
+		    /*
+		    ** Check for overlap between FRSkey definitions and
+		    ** standard menuitems; eliminate those that share the
+		    ** key labels.
+		    */
+
+		    match = FALSE;
+		    if (menu != NULL)
+		    {
+			register i4	    mi;
+			register struct com_tab *mutab;
+
+			mutab = menu->mu_coms;
+			for ( mi = 0 ; mutab[mi].ct_name != NULL ; ++mi )
+			{
+			    if (frs_labels[mi] != NULL)
+			    {
+				if (STcompare(frs_labels[mi],menulabel) == 0)
+				{
+				    match = TRUE;
+				    break;
+				}
+			    }
+			}
+		    }
+
+		    if (!match)
+		    {
+
+			/*
+			** 'Activate frskey i' exists for this display loop
+			** with a non-blank label.
+			*/
+			separator_needed = TRUE;
+
+##			LOADTABLE _KeysForm _KeysTable (
+##			    _Command = _Empty,
+##			    _Key = menulabel,
+##			    _Expl = expl);
+		    }
+		}
+	    }
+	}
+	if (separator_needed)
+	{
+##	    LOADTABLE _KeysForm _KeysTable ( _Command = _Empty );
+	}
+
+	/* Then load the commands */
+	mask = HM_EQ;
+	for (i=0; i < (sizeof(Masktab)/sizeof(VAL2HM)); i++)
+	{	/* Find appropriate mask */
+		if (Masktab[i].val_vfrfiq == vfrfiq)
+		{
+			mask = Masktab[i].val_mask;
+			break;
+		}
+	}
+
+##	inquire_frs frs (
+##			klabel[1] = label(menu),
+##			klabel[2] = label(scrollup),
+##			klabel[3] = label(scrolldown),
+##			klabel[4] = label(nextfield),
+##			klabel[5] = label(previousfield),
+##			klabel[6] = label(scrollleft),
+##			klabel[7] = label(scrollright),
+##			klabel[12]= label(leftchar),
+##			klabel[13]= label(rightchar),
+##			klabel[14]= label(downline),
+##			klabel[15]= label(upline),
+##			klabel[16]= label(nextword),
+##			klabel[17]= label(previousword),
+##			klabel[18]= label(mode),
+##			klabel[19]= label(redraw),
+##			klabel[20]= label(deletechar),
+##			klabel[21]= label(rubout),
+##			klabel[22]= label(editor),
+##			klabel[23]= label(newrow),
+##			klabel[24]= label(clear),
+##			klabel[25]= label(clearrest),
+##			klabel[26]= label(duplicate),
+##			klabel[27]= label(printscreen),
+##			klabel[28]= label(nextitem),
+##			klabel[29]= label(shell)
+##			)
+
+	/*
+	**   Only display commands valid for this FT mode
+	*/
+#ifdef FT3270
+	FTmask = HM_FT3270;
+#else
+	FTmask = HM_FTASCII;
+#endif
+	for (i=0; Keytab[i].key_labseq>=0; i++)
+	{	/* Keytab is ordered */
+		if ( (Keytab[i].key_FTmode & FTmask) &&
+		     (Keytab[i].key_mask & mask) )
+		{	/* this row should be entered */
+			STcopy(Keytab[i].key_label, menulabel);
+			if (Keytab[i].key_labseq >0)
+			{	/* Move label from inquire above */
+				STcopy(klabel[Keytab[i].key_labseq], menulabel);
+			}
+
+			if (((Keytab[i].key_labseq == HM_SHELL)
+				&& !(IIfrscb->frs_globs->enabled & SHELL_FN))
+			    || ((Keytab[i].key_labseq == HM_EDITOR)
+				&& !(IIfrscb->frs_globs->enabled & EDITOR_FN)))
+			{
+			    STcopy(ERget(Keytab[i].key_desc), explanation);
+			    expl = STcat(explanation, ERget(F_UF0054_disabled));
+			}
+			else
+			{
+			    expl = ERget(Keytab[i].key_desc);
+			}
+
+##			LOADTABLE _KeysForm _KeysTable (
+##				_Command = ERget(Keytab[i].key_name),
+##				_Key = menulabel,
+##				_Expl = expl
+##			);
+		}
+	}
+
+##	inquire_frs frs (upmap = map(scrollup),
+##			 downmap = map(scrolldown),
+##			 menu1map = map(menu1),
+##			 menu2map = map(menu2),
+##			 uplabel = label(scrollup),
+##			 downlabel = label(scrolldown),
+##			 menu1label = label(menu1),
+##			 menu2label = label(menu2))
+	if (upmap[0] != EOS)
+	{
+##		set_frs frs (map(menu1) = upmap, label(menu1) = uplabel)
+	}
+	if (downmap[0] != EOS)
+	{
+##		set_frs frs (map(menu2) = downmap, label(menu2) = downlabel)
+	}
+
+##	DISPLAY _KeysForm READ
+##	ACTIVATE MENUITEM ERget(FE_NextPage)
+##	{
+##		inquire_frs table _KeysForm
+##			(numrecs = datarows(_KeysTable),
+##			 numrows = maxrow(_KeysTable))
+##		GETROW _KeysForm _KeysTable 1 ( currrec = _RECORD );
+		currrec = min(currrec+2*(numrows-1), numrecs);
+##		SCROLL _KeysForm _KeysTable TO currrec;
+##	}
+##	ACTIVATE MENUITEM ERget(FE_PrevPage)
+##	{
+##		inquire_frs table _KeysForm
+##			(numrows = maxrow(_KeysTable))
+##		GETROW _KeysForm _KeysTable 1 ( currrec = _RECORD );
+		currrec = max(1, currrec-(numrows-1));
+##		SCROLL _KeysForm _KeysTable TO currrec;
+##	}
+##	ACTIVATE FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		/* Implement the Find command. */
+		FEtabfnd(_KeysForm, _KeysTable);
+##	}
+##	ACTIVATE FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+		/* Implement the Top command. */
+##		SCROLL _KeysForm _KeysTable TO 1;
+##	}
+##	ACTIVATE FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+		/* Implement the Bottom command. */
+##		SCROLL _KeysForm _KeysTable TO END;
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Help), FRSkey1
+##	{
+		if (upmap[0] != EOS)
+		{
+##			set_frs frs (map(scrollup) = upmap,
+##				     label(scrollup) = uplabel)
+		}
+		if (menu1map[0] != EOS)
+		{
+##			set_frs frs (map(menu1) = menu1map,
+##				     label(menu1) = menu1label)
+		}
+		if (downmap[0] != EOS)
+		{
+##			set_frs frs (map(scrolldown) = downmap,
+##				     label(scrolldown) = downlabel)
+		}
+		if (menu2map[0] != EOS)
+		{
+##			set_frs frs (map(menu2) = menu2map,
+##				     label(menu2) = menu2label)
+		}
+
+		FEhhelp(HLPKEYS_HLP, ERget(S_UF0048_HELP_Command_Key));
+
+		if (upmap[0] != EOS)
+		{
+##			set_frs frs (map(menu1) = upmap,
+##				     label(menu1) = uplabel)
+		}
+		if (downmap[0] != EOS)
+		{
+##			set_frs frs (map(menu2) = downmap,
+##				     label(menu2) = downlabel)
+		}
+##	}
+##	ACTIVATE MENUITEM ERget(FE_End), FRSkey3
+##	{
+##		BREAKDISPLAY
+##	}
+##	FINALIZE()
+
+	if (upmap[0] != EOS)
+	{
+##		set_frs frs (map(scrollup) = upmap,
+##			     label(scrollup) = uplabel)
+	}
+	if (menu1map[0] != EOS)
+	{
+##		set_frs frs (map(menu1) = menu1map,
+##			     label(menu1) = menu1label)
+	}
+	if (downmap[0] != EOS)
+	{
+##		set_frs frs (map(scrolldown) = downmap,
+##			     label(scrolldown) = downlabel)
+	}
+	if (menu2map[0] != EOS)
+	{
+##		set_frs frs (map(menu2) = menu2map,
+##			     label(menu2) = menu2label)
+	}
+
+##	INITTABLE _KeysForm _KeysTable READ;
+##}

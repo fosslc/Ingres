@@ -1,0 +1,286 @@
+/*
+** Copyright 2010, Ingres Corporation
+*/
+
+/* If you edit this file, see the How-To below! */
+
+/*
+** Name: adudtab.txt - Date Input format templates.
+**
+** Description:
+**
+**  This file is a gperf input file for the date input templates
+**  used by the date scanner, adu_0parsedate.  For how to add another
+**  template, or change an existing one, skip down to the How-To section.
+**
+**  A multiplicity of date input formats is supported by Ingres.
+**  To make this work, the date scanner builds up a string indicating
+**  what it has seen (numbers, month names, delimiters, etc).  The
+**  spec string is matched against a list of date templates, using
+**  a machine generated Perfect Hash function.
+**
+**  The date templates are broadly grouped into "traditional Ingres"
+**  and "ANSI standard".  The traditional Ingres templates come in
+**  11 different styles, selected at connect time or with the
+**  set date_format statement.  In order to keep things straight,
+**  and still have one hash lookup, the spec string (and the template
+**  strings) are prefixed with a tag letter.  So, the scanner might see
+**  n-m-n (A standard US dd-mmm-yyyy form), and if the current date
+**  format setting in the ADF CB is US, the lookup will be for "Un-m-n".
+**  If the current date-format is MDY, the lookup will be for "Mn-m-n"
+**  (which will be not-found).  The date-formats are:
+**
+**	    II_DATE_FORMAT	Code found in ADF_CB	Prefix
+**	    --------------	--------------------	------------
+**	    "US"		DB_US_DFMT		U
+**
+**	    "MULTINATIONAL"	DB_MLTI_DFMT		N
+**
+**	    "FINLAND"		DB_FIN_DFMT		F
+**	    or "SWEDEN"
+**
+**	    "ISO"		DB_ISO_DFMT		I
+**
+**	    "GERMAN"		DB_GERM_DFMT		G
+**
+**	    "YMD"		DB_YMD_DFMT		Y
+**
+**	    "MDY"		DB_MDY_DFMT		M
+**
+**	    "DMY"		DB_DMY_DFMT		D
+**
+**	    "MULTINATIONAL4"	DB_MLT4_DFMT		N
+**
+**	    "ISO4"		DB_ISO4_DFMT		I
+**
+**	    "ANSI"		DB_ANSI_DFMT		X
+**
+**  Note that MULTINATIONAL and MULTINATIONAL4 are the same, as are
+**  ISO and ISO4.  The -4 forms differ only for output.
+**
+**  There is also a set of ANSI-standard forms, prefixed by A.  The
+**  ANSI-standard forms include various time formats.  The traditional
+**  Ingres forms do not include any time format.
+**  Format Legend For ANSI datetime template.
+**   y = year, x =-y,
+**   m = month, q=-m (dash m), d = day,  e = -d,
+**   h = hour, j = -h, i = minute, k = -i
+**   s = second p = -s
+**   b = hr component of time zone, c = -b
+**   v = minute component of time zone,
+**   l = second fraction precision, g = -l
+**
+**		
+**
+**	    =========================================================
+**	    *****     I M P O R T A N T     N O T E     # 1     *****
+**	    =========================================================
+**  In all of the tables below, the one format that MUST EXIST in every table
+**  is the { "n_n_n", "ymd" }, which is produced by the INGRES date_gmt()
+**  function, and is depended on by the standard catalog interface.
+**
+** How-To:
+**
+** Date scanning is performance sensitive, and it is undesirable to
+** do a series of string compares looking for a template match.
+** Instead, as explained above, a prefix-tagged input-spec is hashed,
+** and a hash lookup is used to find the matching template.
+**
+** A perfect-hash function is ideal in minimizing compares, but it's
+** infeasible to hand code one.  The "gperf" program takes a list of
+** strings and generates a perfect hash lookup function.  The gperf
+** output is #include'd into adudates.c.
+**
+** gperf is a GNU utility, and there's no guarantee that it exists on
+** all Ingres platforms.  Since template changes should be very rare,
+** I have decided that (for now anyway) it's good enough to keep
+** BOTH this file and the generated .h file under source control.
+** The adudtab.h file is NOT re-generated for each build.
+**
+** To add or change template (dt_tmplt) strings:
+**
+** 1) Open both adudtab.txt and adudtab.h for editing, on some
+**    platform that has a working gperf.  gperf 3.0.2 was used initially,
+**    any later version should be OK too.
+**
+** 2) Make the necessary change to adudtab.txt.
+**
+** 3) Re-run gperf:  gperf -m 50 adudtab.txt >adudtab.h
+**    The -m 50 option is not essential but it tells gperf to run more
+**    trials.  50 seems plenty to get the smallest output table.
+**
+** 4) Build, verify that the change is OK, and submit both adudtab.txt
+**    and adudtab.h back into source control.
+**
+** Edit History:
+**	12-Mar-2010 (kschendel) SIR 123275
+**	    Create: Speed up date scanning with perfect hash.
+**	    Correct a long-standing error with n-n in YMD format,
+**	    should be ingresdate only, not CHK.
+*/
+
+%readonly-tables
+%struct-type
+struct _ANSIDATETMPLT;
+%omit-struct-type
+
+%define slot-name dt_tmplt
+%define hash-function-name adu_dttemplate_hash
+%define lookup-function-name adu_dttemplate_lookup
+
+%enum
+
+%%
+# Don't use blank lines in this section, gperf thinks it's an empty key
+#
+# dt_tmplt ...........  dt_interp ....  dttype ........ dt_flags
+#
+# ANSI-standard templates
+#
+An-n-n,			"ymd",		DB_ADTE_TYPE,	DT_0 
+An-n-nn:n:n,		"ymdhis",	DB_TSWO_TYPE,	DT_T
+An-n-nn:n:n.n,		"ymdhisl",	DB_TSWO_TYPE,	DT_T
+An-n-nn:n:n-n:n,	"ymdhiscv",	DB_TSW_TYPE,	DT_T 
+An-n-nn:n:n.n-n:n,	"ymdhislcv",	DB_TSW_TYPE,	DT_T 
+An-n-nn:n:n.n+n:n,	"ymdhislbv",	DB_TSW_TYPE,	DT_T 
+An-n-nn:n:n+n:n,	"ymdhisbv",	DB_TSW_TYPE,	DT_T 
+An:n:n,			"his",		DB_TMWO_TYPE,	DT_T 
+An:n:n.n,		"hisl",		DB_TMWO_TYPE,	DT_T 
+An:n:n+n:n,		"hisbv",	DB_TMW_TYPE,	DT_T 
+An:n:n.n+n:n,		"hislbv",	DB_TMW_TYPE,	DT_T 
+An:n:n-n:n,		"hiscv",	DB_TMW_TYPE,	DT_T 
+An:n:n.n-n:n,		"hislcv",	DB_TMW_TYPE,	DT_T 
+An,			"y",		DB_INYM_TYPE,	DT_I 
+An-n,			"yq",		DB_INYM_TYPE,	DT_I 
+A+n,			"y",		DB_INYM_TYPE,	DT_I 
+A+n-n,			"yq",		DB_INYM_TYPE,	DT_I 
+A-n,			"x",		DB_INYM_TYPE,	DT_I 
+A-n-n,			"xq",		DB_INYM_TYPE,	DT_I 
+Ann,			"dh",		DB_INDS_TYPE,	DT_I|DT_T
+Ann:n,			"dhi",		DB_INDS_TYPE,	DT_I|DT_T
+Ann:n:n,		"dhis",		DB_INDS_TYPE,	DT_I|DT_T
+Ann:n:n.n,		"dhisl",	DB_INDS_TYPE,	DT_I|DT_T
+A+nn,			"dh",		DB_INDS_TYPE,	DT_I|DT_T
+A+nn:n,			"dhi",		DB_INDS_TYPE,	DT_I|DT_T
+A+nn:n:n,		"dhis",		DB_INDS_TYPE,	DT_I|DT_T
+A+nn:n:n.n,		"dhisl",	DB_INDS_TYPE,	DT_I|DT_T
+A-nn,			"eh",		DB_INDS_TYPE,	DT_I|DT_T
+A-nn:n,			"ehi",		DB_INDS_TYPE,	DT_I|DT_T
+A-nn:n:n,		"ehis",		DB_INDS_TYPE,	DT_I|DT_T
+A-nn:n:n.n,		"ehisl",	DB_INDS_TYPE,	DT_I|DT_T
+#
+# US style formats
+# K number is MMDDYY
+#
+Un_n_n,		"ymd", DB_DTE_TYPE, DT_0
+Un/n/n,		"mdy", DB_DTE_TYPE, DT_0
+Un-m-n,		"dmy", DB_DTE_TYPE, DT_0
+Un-n-n,		"mdy", DB_DTE_TYPE, DT_CHK
+Un.n.n,		"ymd", DB_DTE_TYPE, DT_0
+Un/n,		"md", DB_DTE_TYPE, DT_0
+Un-n,		"md", DB_DTE_TYPE, DT_TYP
+Un,		"K", DB_DTE_TYPE, DT_TYP
+Uz,		"f", DB_DTE_TYPE, DT_0
+Ur,		"r", DB_DTE_TYPE, DT_0
+#
+# Multi-national formats
+#
+Nn_n_n,		"ymd", DB_DTE_TYPE, DT_0
+Nn/n/n,		"dmy", DB_DTE_TYPE, DT_0
+Nn-m-n,		"dmy", DB_DTE_TYPE, DT_0
+Nn-n-n,		"mdy", DB_DTE_TYPE, DT_CHK
+Nn.n.n,		"ymd", DB_DTE_TYPE, DT_0
+Nn/n,		"md", DB_DTE_TYPE, DT_0
+Nn-n,		"md", DB_DTE_TYPE, DT_TYP
+Nn,		"K", DB_DTE_TYPE, DT_TYP
+Nz,		"f", DB_DTE_TYPE, DT_0
+Nr,		"r", DB_DTE_TYPE, DT_0
+#
+# Finland / Sweden formats
+#
+Fn_n_n,		"ymd", DB_DTE_TYPE, DT_0
+Fn/n/n,		"mdy", DB_DTE_TYPE, DT_0
+Fn-m-n,		"dmy", DB_DTE_TYPE, DT_0
+Fn-n-n,		"ymd", DB_DTE_TYPE, DT_CHK
+Fn.n.n,		"ymd", DB_DTE_TYPE, DT_0
+Fn/n,		"md", DB_DTE_TYPE, DT_0
+Fn-n,		"md", DB_DTE_TYPE, DT_TYP
+Fn,		"K", DB_DTE_TYPE, DT_TYP
+Fz,		"f", DB_DTE_TYPE, DT_0
+Fr,		"r", DB_DTE_TYPE, DT_0
+#
+# ISO format
+# Slightly different J form: MDD, MMDD, YMMDD, YYMMDD, YYYYMMDD
+#
+In_n_n,		"ymd", DB_DTE_TYPE, DT_0
+In/n/n,		"mdy", DB_DTE_TYPE, DT_0
+In-m-n,		"dmy", DB_DTE_TYPE, DT_0
+In-n-n,		"mdy", DB_DTE_TYPE, DT_CHK
+In.n.n,		"ymd", DB_DTE_TYPE, DT_0
+In/n,		"md", DB_DTE_TYPE, DT_0
+In-n,		"md", DB_DTE_TYPE, DT_TYP
+In,		"J", DB_DTE_TYPE, DT_TYP
+Iz,		"f", DB_DTE_TYPE, DT_0
+Ir,		"r", DB_DTE_TYPE, DT_0
+#
+# German format
+# Yet another single-number style: DMMYY, DDMMYY, DMMYYYY, DDMMYYYY
+#
+Gn_n_n,		"ymd", DB_DTE_TYPE, DT_0
+Gn/n/n,		"mdy", DB_DTE_TYPE, DT_0
+Gn-m-n,		"dmy", DB_DTE_TYPE, DT_0
+Gn-n-n,		"mdy", DB_DTE_TYPE, DT_CHK
+Gn.n.n,		"dmy", DB_DTE_TYPE, DT_0
+Gn/n,		"md", DB_DTE_TYPE, DT_0
+Gn-n,		"md", DB_DTE_TYPE, DT_TYP
+Gn,		"G", DB_DTE_TYPE, DT_TYP
+Gz,		"f", DB_DTE_TYPE, DT_0
+Gr,		"r", DB_DTE_TYPE, DT_0
+#
+# YMD format
+# Y is MMDD YYMDD YYMMDD YYYYMDD or YYYYMMDD
+#
+Yn_n_n,		"ymd", DB_DTE_TYPE, DT_0
+Yn/n/n,		"ymd", DB_DTE_TYPE, DT_0
+Yn-m-n,		"ymd", DB_DTE_TYPE, DT_0
+Yn-n-n,		"ymd", DB_DTE_TYPE, DT_CHK
+Yn.n.n,		"ymd", DB_DTE_TYPE, DT_0
+Yn/n,		"md", DB_DTE_TYPE, DT_0
+Yn-n,		"md", DB_DTE_TYPE, DT_TYP
+Yn,		"Y", DB_DTE_TYPE, DT_TYP
+Yz,		"f", DB_DTE_TYPE, DT_0
+Yr,		"r", DB_DTE_TYPE, DT_0
+#
+# MDY format
+# M is MMDD MDDYY MMDDYY MDDYYYY or MMDDYYYY
+#
+Mn_n_n,		"ymd", DB_DTE_TYPE, DT_0
+Mn/n/n,		"mdy", DB_DTE_TYPE, DT_0
+Mm-n-n,		"mdy", DB_DTE_TYPE, DT_0
+Mn-n-n,		"mdy", DB_DTE_TYPE, DT_CHK
+Mn.n.n,		"mdy", DB_DTE_TYPE, DT_0
+Mn/n,		"md", DB_DTE_TYPE, DT_0
+Mn-n,		"md", DB_DTE_TYPE, DT_TYP
+Mn,		"M", DB_DTE_TYPE, DT_TYP
+Mz,		"f", DB_DTE_TYPE, DT_0
+Mr,		"r", DB_DTE_TYPE, DT_0
+#
+# DMY format
+# D is DDMM DDMYY DDMMYY DDMYYYY DDMMYYYY
+#
+Dn_n_n,		"ymd", DB_DTE_TYPE, DT_0
+Dn/n/n,		"dmy", DB_DTE_TYPE, DT_0
+Dn-m-n,		"dmy", DB_DTE_TYPE, DT_0
+Dn-n-n,		"dmy", DB_DTE_TYPE, DT_CHK
+Dn.n.n,		"dmy", DB_DTE_TYPE, DT_0
+Dn/n,		"dm", DB_DTE_TYPE, DT_0
+Dn-n,		"dm", DB_DTE_TYPE, DT_TYP
+Dn,		"D", DB_DTE_TYPE, DT_TYP
+Dz,		"f", DB_DTE_TYPE, DT_0
+Dr,		"r", DB_DTE_TYPE, DT_0
+#
+# Standard ansi-date format for Ingres-dates.
+#
+Xn_n_n,		"ymd", DB_DTE_TYPE, DT_0
+Xn-n-n,		"ymd", DB_DTE_TYPE, DT_0
+%%

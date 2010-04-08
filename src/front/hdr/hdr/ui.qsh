@@ -1,0 +1,590 @@
+/*
+**      Copyright (c) 2009 Ingres Corporation
+**      All rights reserved.
+*/
+ 
+/*
+** Name:        ui.qsh -  Front-End DBMS Utilities Interface Definitions.
+**
+** Description:
+**      Interface definitions for the front-end DBMS utilities, UI, which
+**      should be included whenever accessing procedures in UI library.
+**
+** History:
+**	Revision 6.4  91/05/05  wong
+**	Added capability version levels, UI_LEVEL_*.
+**
+**	Revision 6.3  89/11  wong
+**	Added UI_SESSION identifier for multiple session support.
+**	18-apr-1990 (pete)  Add new columns to end of FE_ATT_INFO:
+**		sort_direction, column_internal_datatype,
+**		column_internal_length, column_internal_ingtype,
+**		column_system_maintained. (jupbug 9355)  Also, removed
+**		FE_ATT_SOURCE (replaced with FE_ATT_INFO.) (wong)
+**
+**      Revision 6.0  87/04/02  rdesmond.
+**      Initial version.
+**      15-apr-1987 (sandyd)
+**              Added function declarations for iiuicw module.
+**      05/21/87 (dkh) - Integrated VMS changes to FE_REL_SOURCE.
+**      23-nov-1987 (rdesmond)
+**              Converted to .qh file for improved relatt routines.
+**      06-jun-1988 (sandyd)
+**              Integrated IBM change from Emerson, which corrected
+**              function declarations IIUIdcd_dist() and IIUIdci_initcap()
+**              to match how they were spelled in the defining module.
+**      13-jan-1989 (wolf)
+**              Add UI_KEY_Y, UI_KEY_N and UI_KEY_U.
+**	21-may-1990 (rdesmond)
+**		added UI_INSTALLABLE, UI_NEEDS_UPGRADE, UI_UNINSTALLABLE and
+**		UI_DESUPPORTED.
+**	1-nov-1990 (pete)
+**		added UI_NO_CLIENT (removed NO_CLIENT from dictutil.qsh).
+**	20-mar-1991 (kathryn)
+**		added key_is_compressed to UI_HELP_INFO structure.
+**	10-jun-1992 (rdrane)
+**		Added declaration of IIUIdlmcase() and IIUIscl_StdCatLevel().
+**	9-jul-1992 (rdrane)
+**		Added declarations of delimited identifier and wildcard scan
+**		related routines.
+**	20-jul-1992 (rdrane)
+**		Added declaration of wildcard escape routine
+**		IIUGewc_EscapeWildcard(). Added definition of ICSYNONYM
+**		to support 6.5 database synonyms.
+**	23-jul-1992 (rdrane)
+**		Moved FE_RSLV_NAME typedef from fe.h so that ESQL can access
+**		it directly.
+**	31-jul-1992 (rdrane)
+**		Add IIUGdlm_ChkdlmBEobject() return value constant definitions.
+**	12-aug-1992 (rdrane)
+**		Add protection against multiple includes.  Add UI_EWC_ESC_CHAR
+**		constant to establish FE standard wildcard escape character.
+**		Add declaration of IIUIpassword().
+**	03-sep-1992 (rdrane)
+**		Replace declaration of IIUGsrw_LookUp() with IIUGIsSQLKeyWord(),
+**		as the former is now defunct and the latter has been upgraded.
+**	15-sep-1992 (rdrane)
+**		Add definition of catalog owner id.  It needs to be special
+**		cased since its value is not a valid identifier.
+**	1-oct-1992 (rdrane)
+**		Add declaration of IIUGxri_id().
+**	19-jul-1993 (rogerl)
+**		Add default_value to FE_ATT_INFO for tables utility
+**	31-dec-1993 (rdrane)
+**		Add UI_UNDEFCASE to denote the no delimitedc identifier case
+**		capability exists, and so delimited identifiers are not
+**		supported.  Add declration of IIUIcsl_CommonSQLLevel().
+**      27-feb-1996 (lawst01)
+**         Windows 3.1 port changes - add some fcn prototypes.
+**	06-may-1996 (chech02)
+**	   Added more function prototypes for windows 3.1 port.
+**	06-mar-1996 (harpa06 & stial01)
+**		Added UI_LEVEL_66.
+**              Added page_size to UI_HELP_INFO
+**	09-Aug-1996 (ramra01)
+**	   Added relversion and reltotwid to UI_HELP_INFO
+**	29-Jan-1997 (hanch04)
+**	   Added UI_LEVEL_800
+**	25-Mar-1997 (jenjo02)
+**	   Added cache_pri to UI_HELP_INFO
+**	03-feb-1998 (hanch04)
+**	   Added UI_LEVEL_850
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      02-Mar-2001 (hanch04)
+**          Bumped release id to external "II 2.6" internal 860 or 8.6
+**      07-Apr-2003 (hanch04)
+**          Bumped release id to external "II 2.65" internal 865 or 8.65
+**	12-Aug-2003 (yeema01) Bug# 110712
+**	   Reporter crashed due to pointer size problem. 
+**	   Need to explicitly define pointer size as 64-bits pointer since
+**	   OpenROAD is built in 32-bits pointer size context.
+**	30-Apr-2004 (schka24)
+**	    Release ID is now II3.0, internal 00900.
+**	    Added help stuff for partitioned tables.
+**	13-oct-05 (inkdo01)
+**	    Internal ID is 902 (collationIDs, other stuff?).
+**	17-Jan-2006 (hweho01)
+**	    Release ID is now 00904.
+**	27-Apr-2006 (hweho01)
+**	    Change release ID to 00910 for new release.
+**	10-May-2006 (jenjo02)
+**	    Add "is_clustered" to UI_HELP_INFO.
+**	30-May-2006 (jenjo02)
+**	    Removed "is_clustered"; "structure" will be "clustered"
+**	07-May-2007 (drivi01)
+**	    Updated internal version to 920.
+**	19-Nov-2008 (hweho01)
+**	    Updated version level to 930.
+**	14-Jan-2009 (kiria01) b120451
+**	    Applied fuller prototypes
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for database objects, DB_IITYPE_LEN for
+**          iitypename() result, DB_IISTRUCT_LEN for iistructure() result.
+**	10-Jun-2009 (hweho01)
+**	    Updated level number for release 10.0.
+**	26-Aug-2009 (kschendel) b121804
+**	    Bool prototypes to keep gcc 4.3 happy.
+**	    Drop the old WIN16 section, misleading and out of date.  Better
+**	    to just reconstruct as needed.
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+ 
+#ifndef UI_HDR_INCLUDED
+#define	UI_HDR_INCLUDED
+
+#include <erui.h>
+ 
+#if defined(xde) && defined(axp_osf)
+#pragma pointer_size save
+#pragma pointer_size long
+#endif
+
+EXEC SQL BEGIN DECLARE SECTION;
+
+/*
+** Name:	UI_SESSION -	Front-End Default Session ID.
+**
+** Description:
+**	Default front-end DBMS connection session ID.
+*/
+
+##define UI_SESSION	-2
+
+/*************************************************************************
+   This section is for FE{rel|att}_{open|fetch|close} and FErel_access
+*************************************************************************/
+ 
+ 
+/* Public Defined Constants */
+ 
+##define ICUNKNOWN      0
+##define ICINDEX        1000
+##define ICTABLE        2000
+##define ICVIEW         3000
+##define ICSYNONYM	4000
+ 
+/* Private Defined Constants */
+ 
+##define MODE_OPEN      1000
+##define MODE_FETCH     1100
+##define MODE_CLOSE     1200
+ 
+##define STATUS_OPEN    1000
+##define STATUS_DONE    1100
+##define STATUS_CLOSED  1200
+ 
+##define CURR_VALID     1000
+##define CURR_INVALID   1100
+ 
+##define UI_DATESIZE	25
+#define	 UI_SAVEBUF_SIZE 1000 
+
+/*************************************************************************
+	Capability Version Levels in UIDBDATA:
+		catalog_level
+		opensql_level
+		ingsql_level
+		ingquel_level
+*************************************************************************/
+#define UI_LEVEL_NONE			"00000" /* level for unavailable */
+#define UI_LEVEL_60			"00600" /* version 6.0 */
+#define UI_LEVEL_61			"00601" /* version 6.1 */
+#define UI_LEVEL_62			"00602" /* version 6.2 */
+#define UI_LEVEL_63			"00603" /* version 6.3 */
+#define UI_LEVEL_64			"00604" /* version 6.4 */
+#define UI_LEVEL_65			"00605" /* version 6.5 */
+#define UI_LEVEL_66			"00606" /* version 6.6 */
+#define UI_LEVEL_800			"00800" /* version OI 2.0 */
+#define UI_LEVEL_850			"00850" /* version OI 2.5 */
+#define UI_LEVEL_860			"00860" /* version II 2.6 */
+#define UI_LEVEL_900			"00900" /* version II3.0 */
+#define UI_LEVEL_902			"00902" /* version II3.0.2 */
+#define UI_LEVEL_904			"00904" /* version 9.04 */
+#define UI_LEVEL_910			"00910" /* version 9.10 */
+#define UI_LEVEL_920			"00920" /* version 9.20 */
+#define UI_LEVEL_930			"00930" /* version 9.30 */
+#define UI_LEVEL_1000			"01000" /* version 10.00 */
+ 
+/*************************************************************************
+   This section is for IIUIdci_initcap() IIUIdcs_sqllevel()
+   IIUIdcq_quellevel() and IIUIdml()
+*************************************************************************/
+ 
+#define UI_DML_NOLEVEL      0
+#define UI_DML_QUEL         1
+#define UI_DML_SQL          2
+#define UI_DML_GTWSQL       3
+#define UI_MAX_QBUF         5000
+ 
+ 
+/*************************************************************************
+   This section is for the transaction utilities.
+*************************************************************************/
+ 
+#define UI_AC_OFF           0
+#define UI_AC_ON            1
+ 
+ 
+ 
+/*************************************************************************
+   This section is for IIUIcase() and IIUIdlmcase()
+*************************************************************************/
+ 
+#define UI_LOWERCASE        1000
+#define UI_UPPERCASE        2000
+#define UI_MIXEDCASE        3000
+#define UI_UNDEFCASE        4000
+ 
+ 
+/*************************************************************************
+   This section is for IIUIdck()
+*************************************************************************/
+ 
+#define UI_KEY_Y            1
+#define UI_KEY_N            2
+#define UI_KEY_U            3
+ 
+ 
+#define UI_AC_OFF           0
+#define UI_AC_ON            1
+ 
+/* Typedefs */
+ 
+typedef i4 DBSTATUS;
+ 
+/*
+**      Structures for Relation Access
+*/
+ 
+/* This is internal to UI */
+
+/*
+** Name:	FE_RSLV_NAME
+**
+** Description:
+**	Data structure used for decomposing and dequoting a construct of the
+**	form
+**			[["]owner["].]["]object name["]
+**	where object_name may be a tablename, view name, or a database synonym.
+**	This represents the data interface to FE_fullresolve() and its
+**	associated routines.
+**
+** Input Attributes:
+**	name		Character pointer to NULL terminated string which is the
+**			owner.tablename construct to be resolved.
+**	owner_dest	Character pointer to a buffer of at least
+**			(DB_MAXNAME + 1) bytes to hold the resolved owner
+**			component.
+**	name_dest	Character pointer to a buffer of at least
+**			(DB_MAXNAME + 1) bytes to hold the resolved tablename
+**			component.
+**	is_nrml     	A boolean which indicates whether or not the string is
+**			in a normalized form (delimiting/escaped quotes
+**			stripped, no explicit wildcards, in proper case).  Names
+**			retrieved/constructed from the database are expected to
+**			be in this normalized form (TRUE), while names from
+**			user input (command line/procedural language) are not.
+**			This primarily indicates whether or not an initial
+**			quote is a delimiter or an embedded quote, but has
+**			additional and significant implications with regards to
+**			SQL wildcard detection.
+**
+** Output Attributes:
+**	owner_dest	If not NULL, then the owner component is copied to that
+**			location.
+**	name_dest	If not NULL, then the owner component is copied to that
+**			location.
+**	owner_spec	Set to TRUE if an owner component was included as part
+**			of the input string to be resolved.
+**	owner_dlm	Set to TRUE if the resultant owner component is a
+**			delimited identifier.
+**	name_dlm	Set to TRUE if the resultant tablename component is a
+**			delimited identifier.
+**	is_syn		Set to TRUE if the input string appears to have been a
+**			database synonym.
+**
+**	Notes:
+**		Both owner_dest and name_dest will be set to empty strings if
+**		the underlying resolve_table() does not find the object or the
+**		user does not have access to it.
+**
+**		Both owner_dest and name_dest should point to buffers of length
+**		((DB_MAXNAME * 2) + 2 + 1) when called in conjunction with
+**		FE_decompose(), and may not be NULL.
+**
+**		The sense of name, owner_dest, and name_dest are reversed when
+**		called in conjunction with FE_unresolve().
+** History:
+**	9-jul-1992 (rdrane)
+**		Created.
+**	20-jul-1992 (rdrane)
+**		Renamed from_db to is_nrml, since we're really interested
+**		in format, not the actual data source, and it's hoped that
+**		this will be less confusing.
+**	23-jul-1992 (rdrane)
+**		Moved here from fe.h so that ESQL can access it directly.
+*/
+
+##typedef struct
+##{
+##	char	*name;
+##	char	*owner_dest;
+##	char	*name_dest;
+##	bool	is_nrml;
+##	bool	owner_spec;
+##	bool	owner_dlm;
+##	bool	name_dlm;
+##	bool	is_syn;	
+##} FE_RSLV_NAME;
+
+##typedef struct
+##{
+##	char    table_name[DB_MAXNAME + 1];
+##	char    table_owner[DB_MAXNAME + 1];
+##	char    create_date[26];
+##	char    alter_date[26];
+##	char    table_type[9];
+##	char    version[9];
+##	char    system_use[2];
+##	char    unique_rule[2];
+##} FE_REL_SOURCE;
+ 
+##typedef struct
+##{
+##	i4             status; /* STATUS_OPEN | STATUS_DONE | STATUS_CLOSED */
+##	FE_REL_SOURCE   relsrcbuf[2];
+##	i4             bufstatus; /* This denotes what relsrcbuf has in it;
+##	                        -1:     buffer invalid
+##	                        (0|1):  corresponding element is valid */
+##	bool            dets_wanted;
+##	bool            cats_wanted;
+##} FE_REL_QBLK;
+ 
+##typedef struct
+##{
+##	char    name[DB_MAXNAME+1];
+##	char    owner[DB_MAXNAME+1];
+##	DATE    create_date;
+##	DATE    alter_date;
+##	char    version[9];
+##	i4     type;
+##	bool    catalog;
+##	bool    unique_keys;
+##} FE_REL_INFO;
+ 
+##typedef struct
+##{
+##	char    table_name[DB_MAXNAME+1];
+##	char    table_owner[DB_MAXNAME+1];
+##	char    create_date[UI_DATESIZE+1];
+##	char    alter_date[UI_DATESIZE+1];
+##	char    table_type[2];
+##	char    table_subtype[2];
+##	char    table_version[9];
+##	char    system_use[2];
+##	char    table_stats[2];
+##	char    table_indexes[2];
+##	char    is_readonly[2];
+##	i4      num_rows;
+##	char    storage_structure[DB_IISTRUCT_LEN + 1];
+##	char    is_compressed[2];
+##	char    duplicate_rows[2];
+##	char    unique_rule[2];
+##	i4      number_pages;
+##	i4      overflow_pages;
+##	char    expire_date[UI_DATESIZE + 1];
+##	char    table_integrities[2];
+##	char    table_permits[2];
+##	char    all_to_all[2];
+##	char    ret_to_all[2];
+##	i4      row_width;
+##	char    is_journalled[2];
+##	char    multi_locations[2];
+##	char    view_base[2];
+##	char    location_name[DB_MAXNAME + 1];
+##	char 	key_is_compressed[2];
+##      i4      page_size;
+##	i4	rel_version;
+##	i4	rel_totwid;
+##	i2	cache_pri;
+##	u_i2	phys_partitions;
+##	i2	partition_dimensions;
+##} UI_HELP_INFO;
+     
+     
+/*
+**      Structures for Attribute Access
+**
+** History:
+**	10/90 (jhw) - Added 'intern_prec' for decimal support and moved ADF
+**		internal fields to the end of the structure.
+**	13-dec-1992 (daver)
+**		Added column_mandatory and default_type for user-defined
+**		defaults support
+*/
+ 
+##typedef struct
+##{
+##	char    table_name[DB_MAXNAME+1];
+##	char    owner[DB_MAXNAME+1];
+##	char    column_name[DB_MAXNAME+1];
+##	DATE    create_date;
+##	DATE    alter_date;
+##	char    type[DB_IITYPE_LEN+1];
+##	i4 extern_length;
+##	i2	scale;
+##	bool    nulls;
+##	bool    defaults;
+##	i4     seq;
+##	i4     keyseq;
+##	char    sort_direction[2];
+##	char    column_internal_datatype[DB_IITYPE_LEN + 1];
+##	i2      column_internal_length;
+##	i2      column_internal_ingtype;
+##	char    column_system_maintained[2];
+##	char	column_has_default[2];
+	char	default_type[11];
+	char	default_value[ DB_MAX_COLUMN_DEFAULT_LENGTH + 1 ];
+	/* internal ADF datavalue description */
+	i2	adf_type;
+	i2	intern_prec;
+	i4	intern_length;
+##} FE_ATT_INFO;
+ 
+EXEC SQL END DECLARE SECTION;
+ 
+typedef struct
+{
+	i4		status; /* STATUS_OPEN | STATUS_DONE | STATUS_CLOSED */
+	FE_ATT_INFO	current_rec;
+	i4		current_status; /* CURR_VALID | CURR_INVALID */
+} FE_ATT_QBLK;
+
+/* prototypes */
+
+FUNC_EXTERN   i4	FEnumatts();
+ 
+/*
+** Declarations for iiuicw module (and others).
+*/
+VOID		iiuicw1_CatWriteOn();
+VOID		iiuicw0_CatWriteOff();
+i4		IIUIdml();
+DB_STATUS	IIUIdci_initcap();
+i4		IIUIdcq_quelLevel();
+i4		IIUIdcs_sqlLevel();
+bool            IIUIdeadlock (i4);
+i4		IIUIcase();
+i4		IIUIdlmcase();
+char		*IIUIscl_StdCatLevel();
+char		*IIUIcsl_CommonSQLLevel();
+bool		IIUIdcd_dist();
+DB_STATUS	IIUIcao_catOpen(char *relname,
+				char *target_list,
+				PTR target_addr[],
+				char *qual,
+				char *sortspec);
+DB_STATUS	IIUIcaf_catFetch();
+VOID		IIUIcac_catClose();
+bool		IIUIdce_escape(void);
+bool		IIUIdcg_group(void);
+bool		IIUIdcl_logkeys(void);
+bool		IIUIdcn_ingres(void);
+bool		IIUIdco_role(void);
+bool		IIUIdcu_rules(void);
+bool		IIUIdcy_udt(void);
+bool		IIUIesp_estabSP(char *sp, bool no_op);
+VOID		IIUIcsp_clearSP(bool mytrans);
+VOID		IIUIasp_abortSP(char *sp, bool mytrans, bool no_op);
+DB_STATUS	IIUIrao_relOpen(char *relname,
+				char *target_list,
+				DB_DATA_VALUE **target_addr,
+				char *qual,
+				char *sortspec,
+				i4 num_atts,
+				bool trim);
+DB_STATUS	IIUIraf_relFetch();
+VOID		IIUIrac_relClose();
+DB_STATUS	IIUIautocommit(i4 set_flag);
+DB_STATUS	IIUIlxeLabelXactBegin(i4 *label);
+DB_STATUS	IIUIlxeLabelXactEnd(i4 label);
+DB_STATUS	IIUIbeginXaction();
+DB_STATUS	IIUIendXaction();
+DB_STATUS	IIUIabortXaction();
+bool		IIUIinXaction();
+char		*IIUIpassword(char *flag);
+VOID		IIUIgdt_GetDefaultType(
+			char	*source,
+			i4	nullind,
+			char	*has_default,
+			char	*nulls,
+			char	*default_type,
+			char	*always_ident,
+			char	*bydefault_ident);
+
+
+/*
+** Return status codes for IIUICheckDictVer()
+*/
+#define UI_INSTALLABLE		101
+#define UI_NEEDS_UPGRADE	102
+#define UI_UNINSTALLABLE	103
+#define UI_DESUPPORTED		104
+
+#define UI_NO_CLIENT		202
+
+/*
+** Additional return code from IIUIClientInstalled()
+*/
+#define UI_NOTINSTALLED		200
+
+/* Return code from init_moduletable() */
+#define UI_NOTDIRECTORY		1000
+
+/*
+**	Delimited identifier related routine declarations
+*/
+i4	IIUGdlm_ChkdlmBEobject();
+VOID	IIUGdbo_dlmBEobject();
+VOID	IIUGrqd_Requote_dlm();
+bool	IIUGxri_id(char *, char *);
+bool	IIUGIsSQLKeyWord();
+
+/*
+** Return values from IIUGdlm_ChkdlmBEobject()
+*/
+#define UI_REG_ID		0	/* Valid Regular Identifier	*/
+#define UI_DELIM_ID		1	/* Valid Regular Identifier	*/
+#define UI_BOGUS_ID		-1	/* Invalid Identifier		*/
+
+/*
+**	Wildcard scan related routine declarations
+*/
+VOID	IIUGwildcard();
+bool	IIUGscanwildcard();
+VOID	IIUGewc_EscapeWildcard();
+
+/*
+** Standard wildcard escape character, as known to FErel*()
+** routines which employ LIKE predicates in their WHERE clauses
+*/
+#define UI_EWC_ESC_CHAR		('\\')
+
+/*
+** Owner ID for INGRES FE Catalogs.  FE_resolve() needs this string
+** so that it doesn't consider the returned owner as being an invalid
+** identifier and thus fail the table resolution.
+*/
+#define	UI_FE_CAT_ID_65		"$ingres"
+
+#if defined(xde) && defined(axp_osf)
+#pragma pointer_size restore
+#endif
+
+#endif

@@ -1,0 +1,624 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+/*
+** vifred.qsc
+**	Main loop for VIFRED.
+**
+** Copyright (c) 2004 Ingres Corporation
+**
+** History:
+**	03/13/87 (dkh) - Added support for ADTs.
+**	06/09/87 (dkh) - Deleted references to VfDict and VfDstab.
+**	08/14/87 (dkh) - ER changes.
+**	09/04/87 (dkh) - Moved IIVFstrinit() to menudef.c so RBF
+**			 won't pull in all of VIFRED.
+**	10/02/87 (dkh) - Help file changes.
+**	10/17/87 (dkh) - Changed to not clear the terminal if a bad
+**			 table name found.
+**	10/25/87 (dkh) - Error message cleanup.
+**	02/24/88 (dkh) - Fixed jup bug 1856.
+**	12-may-88 (sylviap)
+**		Added SQL COMMIT after FE calls to release the locks on the
+**		system catalogs.
+**	10/28/88 (dkh) - Performance changes.
+**	11/30/88 (tom) - moved vfTestAlloc call after the FEforms call
+**			because of dependancies associated with IBM product.
+**	11-dec-1988 (danielt)
+**		removed commits
+**	10-apr-89 (bruceb)
+**		Only VTaddcomm() the TAB key if that is not already the
+**		CMD_NEXT key for the user.  Needed so that an inquire on
+**		last command in VIFRED will return CMD_NEXT instead of
+**		CMD_UNDEF when hitting the nextfield key.  Needed to handle
+**		restricted field access in tfcreate where an inquire_frs
+**		on command is performed.
+**	11-apr-89 (bruceb)
+**		If Vfeqlcall, don't start the FRS or testing environment,
+**		and don't generate the VIFRED copyright message.
+**	04/19/89 (dkh) - Put in generic error changes.
+**	02-jun-89 (bruceb)
+**		Removed editcom()--not used.
+**	07/22/89 (dkh) - Integrated changes from IBM.
+**	08/09/89 (dkh) - Added support for DuplicateField feature.
+**	09/23/89 (dkh) - Porting changes integration.
+**	10/02/89 (dkh) - Changed IIVFdfDupFld() to IIVFfdFldDup().
+**	10-oct-89 (mgw)
+**		Backed out 9/23 change. See comment in types.h for details.
+**	22-nov-89 (cmr) RBF changes.
+**		Support for editable aggregates.  Add 'Aggregate' to the
+**		'Create' submenu and pass a bool flag to addColumn(). The
+**		flag is TRUE if we are creating an aggregate column.
+**	12/15/89 (dkh) - VMS shared lib changes.
+**	29-aug-90 (sylviap) 
+**		Added change so if creating in a label report, do not
+**		list 'Heading' as an option.  Users cannot create column
+**		headings in a label report. #32155.
+**	05-sep-90 (sylviap) 
+**		Added explanations to the activate menuitems. (#32699)
+**	11/02/90 (dkh) - Replaced IILIBQgdata with IILQgdata().
+**	09/07/92 (dkh) - Updated with 6.5 call interface to FErelexists.
+**	09/24/92 (dkh) - Added support for delimited identifiers.
+**	06/19/93 (dkh) - Fixed bug 52596.  Added additional checks to make
+**			 sure that user did not enter a table name that
+**			 begins or ends with a period that is not part of
+**			 a delimited id.
+**	21-jan-1994 (rdrane)
+**		Allow for $ingres as table owner, and verify that
+**		owner.tablename constructs are valid.  This addresses part of
+**		b58272, and all of b56418.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	21-Aug-2009 (kschendel) 121804
+**	    Need frame.h to satisfy gcc 4.3.
+**	03-Sep-2009 (frima01) 122490
+**	    Specify vifred() return type.
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"decls.h"
+# include	<cm.h>
+# include	<si.h>
+# include	<st.h>
+# include	<ut.h>
+# include	<ds.h>
+# include	<feds.h>
+# include	<lqgdata.h>
+# include	<me.h>
+# include	<er.h>
+# include	<ug.h>
+# include	<ui.h>
+# include	"ervf.h"
+# include	"vfhlp.h"
+# include	<frame.h>
+
+
+# define	WORD_ASIZE	100
+
+# ifndef FORRBF
+FUNC_EXTERN	STATUS	FErelexists();
+FUNC_EXTERN	STATUS	FEchkenv();
+FUNC_EXTERN	VOID	IIVFfdFldDup();
+FUNC_EXTERN	bool	IIRFisl_IsLabel();
+GLOBALREF	FILE	*vfdfile;
+GLOBALREF	FT_TERMINFO	IIVFterminfo;
+FUNC_EXTERN	STATUS	vftblnmchk();
+# endif
+
+# ifndef FORRBF
+
+i4
+vifred(argc, argv)
+i4	argc;
+char	**argv;
+{
+	vfgetargs(argc, argv);
+	if (!Vfeqlcall)
+	{
+		FEforms();
+		vfTestAlloc();
+		if (!IILQgdata()->form_on)
+			vfexit(-1);
+
+		FEcopyright(ERx("VIFRED"), ERx("1981"));
+	}
+
+	FTterminfo(&IIVFterminfo);
+
+	init_menu();
+	IIVFlninit();
+	IIVFstrinit();
+	vffrmtag = FEbegintag();
+	vfendfrmtag = TRUE;
+
+	/*
+	**  Check if user's temp area is writeable.  Temp area
+	**  is either pointed to by ING_TEMP or local directory.
+	*/
+	if (FEchkenv(FENV_TWRITE) != OK)
+	{
+		IIUGerr(E_VF0118_TEMP_NO_WRITE, UG_ERR_ERROR, 0);
+		if (!IIUFver(ERget(S_VF0119_WISH_TO_CONT), 0))
+		{
+			FEendforms();
+			vfexit(OK);
+		}
+	}
+
+	fdcats();
+
+	if (!Vfeqlcall)
+	{
+		FEendforms();
+		enddb();
+	}
+	vfexit(OK);
+}
+# endif
+
+
+/*
+** create a blank frame
+*/
+
+# ifndef FORRBF
+i4
+blankcom()
+{
+	frame = blankFrame();
+	if (frame == NULL)
+		syserr(ERget(S_VF0101_editcom_blank_frame));
+	vfchkmsg(FALSE);
+	vfcursor(TRUE, TRUE);
+
+}
+# endif
+
+
+# ifndef FORRBF
+STATUS
+vftblnmchk(names, nlist, olist, count)
+char	*names;
+LIST	**nlist;
+LIST	**olist;
+i4	*count;
+{
+	char		*np;
+	char		*np1;
+	LIST		*lt;
+	LIST		*lastptr;
+	LIST		*olt;
+	LIST		*olastptr;
+	i4		i = 0;
+	char		**wp;
+	char		name[FE_MAXTABNAME + 1];
+	char		table[FE_UNRML_MAXNAME + 1];
+	char		owner[FE_UNRML_MAXNAME + 1];
+	char		normal[FE_MAXNAME + 1];
+	char		buf[1000];
+	bool		first = TRUE;
+	FE_RSLV_NAME	delim_id;
+
+	buf[0] = '\0';
+	np = names;
+
+	if (np == NULL)
+	{
+		return(FAIL);
+	}
+
+	delim_id.is_nrml = FALSE;
+	delim_id.owner_dest = owner;
+	delim_id.name_dest = table;
+
+	while (*np != EOS)
+	{
+		/*
+		**  Throw away extraneous white space and comma characters.
+		**  Note that user has to quote things to use delimited
+		**  identifiers so this should not throw anything away
+		**  that is part of a delimited identifier.
+		*/
+		while (CMwhite(np) || *np == ',')
+		{
+			CMnext(np);
+		}
+
+		np1 = np;
+
+		/*
+		**  Start gathering up the next component until
+		**  we we run out or white space or comma is found.
+		*/
+		while (*np1 != EOS)
+		{
+			/*
+			**  If we have found a space or a comma,
+			**  then we can use it to break up the
+			**  string into separate table names.
+			**  Again, no need to worry about running
+			**  in delimited identifier components here
+			**  since user has to quote things and that
+			**  is taken care of separately.
+			*/
+			if (CMwhite(np1) || *np1 == ',')
+			{
+				break;
+			}
+			else if (*np1 == '"')
+			{
+				/*
+				**  We found a starting quote, start
+				**  skipping until we find a closing
+				**  quote.
+				**
+				**  First, skip the quote that we just saw.
+				*/
+				CMnext(np1);
+
+				/*
+				**  Now start skipping until we run out
+				**  or a closing quote was found.
+				*/
+				while (*np1 != EOS)
+				{
+					/*
+					**  We found a quote.
+					*/
+					if (*np1 == '"')
+					{
+						/*
+						**  Skip over it.
+						*/
+						CMnext(np1);
+
+						/*
+						**  If the next one is NOT
+						**  a quote, then it is
+						**  the ending quote.  If
+						**  it is a quote, then
+						**  it must be an escape
+						**  for an embedded quote.
+						**  Continue looking for the
+						**  closing quote.
+						**
+						**  Also, break out if we run
+						**  out of data.
+						*/
+						if (*np1 == EOS || *np1 != '"')
+						{
+							break;
+						}
+					}
+					CMnext(np1);
+				}
+			}
+			else
+			{
+				CMnext(np1);
+			}
+		}
+
+		if (*np1 != '\0')
+			*np1++ = '\0';
+
+		STcopy(np, name);
+		np = np1;
+
+		delim_id.name = name;
+
+		FE_decompose(&delim_id);
+
+		/*
+		** If we found an owner specification, make sure that it's
+		** allowed.
+		*/
+		if  ((STcompare(IIUIcsl_CommonSQLLevel(),UI_LEVEL_65) < 0) &&
+		     (delim_id.owner_spec))
+		{
+			IIUGerr(E_VF0171_BAD_TBL_NAME, UG_ERR_ERROR, 1, name);
+			return(FAIL);
+		}
+		/*
+		**  Check to make sure user did not enter a name that
+		**  simply begins or ends in a period outside of a delimited
+		**  identifier.  If the name
+		**  begins with a period, FE_decompose will have set
+		**  the owner_spec member of FE_RESLV_NAME but that
+		**  owner_dest contains an empty string.  If the name
+		**  ends in a period, then the name_dest member will
+		**  contain an empty string.
+		*/
+		if ((delim_id.owner_spec && delim_id.owner_dest[0] == EOS) ||
+			delim_id.name_dest[0] == EOS)
+		{
+			IIUGerr(E_VF0171_BAD_TBL_NAME, UG_ERR_ERROR, 1, name);
+			return(FAIL);
+		}
+
+		if (IIUGdlm_ChkdlmBEobject(table, normal, (bool) FALSE) ==
+			UI_BOGUS_ID)
+		{
+			IIUGerr(E_VF0171_BAD_TBL_NAME, UG_ERR_ERROR, 1,
+				table);
+			return (FAIL);
+		}
+		STcopy(normal, table);
+
+		if (owner[0] != EOS)
+		{
+			switch(IIUGdlm_ChkdlmBEobject(owner, normal,
+				(bool) FALSE))
+			{
+				case UI_REG_ID:
+				case UI_DELIM_ID:
+					STcopy(normal, owner);
+					break;
+				default:
+					if  (STbcompare(owner,0,
+						UI_FE_CAT_ID_65,0,TRUE) == 0)
+        				{
+            					IIUGdbo_dlmBEobject(owner,
+								    FALSE);
+						break;
+					}
+					IIUGerr(E_VF0170_BAD_OWNER_NAME,
+						UG_ERR_ERROR, 1, owner);
+					return (FAIL);
+					break;
+			}
+		}
+
+		if (FErelexists(table, owner) != OK)
+		{
+			IIUGerr(E_VF0102_Relation_does_not, UG_ERR_ERROR, 2,
+				name, dbname);
+			return (FAIL);
+		}
+
+		lt = lalloc();
+		olt = lalloc();
+		if (first)
+		{
+			*nlist = lt;
+			*olist = olt;
+			first = FALSE;
+		}
+		else
+		{
+			lastptr->lt_next = lt;
+			olastptr->lt_next = olt;
+		}
+
+		lt->lt_feat = saveStr(table);
+		lt->lt_next = NULL;
+		lastptr = lt;
+
+		olt->lt_feat = saveStr(owner);
+		olt->lt_next = NULL;
+		olastptr = olt;
+
+		i++;
+
+		/*
+		**  Save information away for qbfmap update, if necessary.
+		*/
+		if (i == 1)
+		{
+			STcopy(table, vforgname);
+			STcopy(owner, IIVFtoTblOwner);
+		}
+	}
+	if (i == 0)
+	{
+		return (FAIL);
+	}
+	*count = i;
+	return (OK);
+}
+# endif
+
+
+
+init_menu()
+{
+##	char	mapval[30];
+
+	/*
+	**  Get menu item names from ER message file.
+	*/
+	IIVFgetmu();
+
+	VTaddcomm('l', fdopRIGHT, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('L', fdopRIGHT, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('k', fdopUP, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('K', fdopUP, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('j', fdopDOWN, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('J', fdopDOWN, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('h', fdopLEFT, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('H', fdopLEFT, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('p', fdopPREV, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('P', fdopPREV, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('n', fdopNEXT, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('N', fdopNEXT, fdcmEDIT | fdcmBRWS);
+	VTaddcomm('[', fdopBEGF, fdcmEDIT | fdcmBRWS);
+	VTaddcomm(']', fdopENDF, fdcmEDIT | fdcmBRWS);
+
+# ifndef	FT3270
+##	inquire_frs frs (mapval = map(nextfield))
+	if (STcompare(ERx("ControlI"), mapval) != 0)
+# endif
+	{
+	    VTaddcomm('\t', fdopNEXT, fdcmEDIT | fdcmINSRT | fdcmBRWS);
+	}
+
+# ifndef FORRBF
+	initdb(dbname);
+# endif
+
+	/*
+	** Allocate frames used by vifred
+	** (Others are allocated in indivual modules.)
+	*/
+
+# ifndef FORRBF
+	FDsetparse(TRUE);
+# endif
+}
+
+VOID
+vfmu_put(mu)
+MENU	mu;
+{
+	FTputmenu(mu);
+	VTxydraw(frame, globy, globx);
+	vfTestDump();
+}
+
+
+vfcreate()
+{
+##	char boxitm[50];
+	i2   style;
+##	char *menu_heading;
+
+
+#ifndef BOX_DISABLE /* for FT3270 support */
+	/* must be ifdef'ed out this way because putting ifdef's between
+	the activations violates the syntax (not great syntax) */
+	STcopy(ERget(F_VF0048_Box), boxitm);
+#else
+	boxitm[0] = EOS;
+#endif
+
+# ifdef FORRBF
+
+	/* For a label report, cannot create column headings */
+	if (IIRFisl_IsLabel())
+		menu_heading = NULL;
+	else
+		menu_heading = ERget(F_VF0033_Heading);
+#endif
+
+	VTflashplus(frame, globy, globx, 1); /* turn on flashing plus sign */
+	for (;;)
+	{
+# ifndef FORRBF
+##		submenu
+##		activate menuitem ERget(FE_Trim)(expl=ERget(F_VF0096_cr_trim))
+##		{
+			VTflashplus(frame, 0, 0, 0);
+			createTrim();
+			break;
+##		}
+##		activate menuitem ERget(FE_Field)(expl=ERget(F_VF0097_cr_field))
+##		{
+			VTflashplus(frame, 0, 0, 0);
+			createField();
+			break;
+##		}
+##		activate menuitem ERget(FE_TblField)
+##			(expl=ERget(F_VF0098_cr_tbl_field))
+##		{
+			VTflashplus(frame, 0, 0, 0);
+			tblfldcreate();
+			break;
+##		}
+##		activate menuitem ERget(F_VF0055_BlankLine)
+##			(expl=ERget(F_VF0099_cr_line))
+##		{
+			VTflashplus(frame, 0, 0, 0);
+			createLine();
+			break;
+##		}
+##		activate menuitem boxitm
+##			(expl=ERget(F_VF009A_cr_box))
+##		{
+# ifdef IBM370
+			IIUGmsg(ERget(S_VF011A_Not_implemen), (bool)TRUE, 0);
+# else
+			/* createBox will call VTflashplus itself */
+			createBox();
+# endif
+			break;
+##		}
+##		activate menuitem ERget(F_VF0075_DuplicateFld)
+##			(expl=ERget(F_VF009B_dup_field))
+##		{
+			IIVFfdFldDup();
+			VTflashplus(frame, 0, 0, 0);
+			break;
+##		}
+##		activate menuitem ERget(FE_Help)
+##			(expl=ERget(F_FE0100_ExplFrameHelp),
+##               	validate=0), FRSkey1 (validate = 0)
+##		{
+			vfhelp(VFH_ECREATS, ERget(S_VF0104_Create_Submenu));
+			continue;
+##		}
+##		activate menuitem ERget(FE_End) (expl=ERget(F_VF00A5_rbf_end)), 
+##			FRSkey3
+##		{
+			VTflashplus(frame, 0, 0, 0);
+			break;
+##		}
+# else
+##		submenu
+##		activate menuitem ERget(FE_Trim)(expl=ERget(F_VF0096_cr_trim))
+##		{
+			createTrim();
+			break;
+##		}
+##		activate menuitem ERget(FE_Column)(expl=ERget(F_VF009D_column))
+##		{
+			addColumn(FALSE);
+			break;
+##		}
+	
+##		activate menuitem ERget(F_VF006F_Aggregate)
+##			(expl=ERget(F_VF009E_agg))
+##		{
+			addColumn(TRUE);
+			break;
+##		}
+##		activate menuitem menu_heading
+##			(expl=ERget(F_VF009F_heading))
+##		{
+			heading();
+			break;
+##		}
+##		activate menuitem ERget(FE_Line)
+##			(expl=ERget(F_VF0099_cr_line))
+##		{
+			createLine();
+			break;
+##		}
+##		activate menuitem ERget(FE_Help)
+##			(expl=ERget(F_FE0100_ExplFrameHelp),
+##               	validate=0), FRSkey1 (validate = 0)
+##		{
+			vfhelp(RFH_ECREATS,
+				ERget(S_VF0105_Create_Component_Subm));
+			continue;
+##		}
+##		activate menuitem ERget(FE_End) (expl=ERget(F_VF00A5_rbf_end)), 
+##			FRSkey3
+##		{
+			break;
+##		}
+# endif
+	}
+	vfTrigUpd();
+	vfUpdate(globy, globx, TRUE);
+}

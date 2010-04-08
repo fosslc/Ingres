@@ -1,0 +1,412 @@
+##Copyright (c) 2004 Ingres Corporation
+:
+#
+# Make a release tape.
+#
+# By default, you get a direct ship version.
+#
+# If the first argument is the magic word "oem", you get
+# a tape with the security-busting OEM authorization string.
+#
+# This script will make a 6250bpi tape, a compressed 1600bpi tape
+# or a compressed cartridge tape.
+#
+# History:
+#	17-may-1989 (boba)
+#		Created.
+#	18-may-1989 (boba)
+#		Fix check for verification directory.
+#	28-jun-89 (arana)
+#	    Fix compression logic, put quotes around $[CT]SKIP and $[CT]REWIND
+#	    in test and set REWIND equal to $[CT]REWIND instead of [CT]REWIND.
+#	07-jul-1989 (seng)
+#		Added items for installp
+#	26-jul-89 (daveb)
+#		fix echon test for sequent, add some quotes around a 
+#		possibly empty var used in a [ test ].
+#
+#		Don't put utility/uncompress on an uncompressed tape, 
+#		because readdist will try to uncompress it.
+#	08-aug-89 (arana)
+#	    Fix sed to correctly filter files from ilist.
+#	11-aug-89 (arana)
+#	    Fix the logic for making tapes with an oem authorization string.
+#	23-aug-1990 (jonb)
+#	    Add extra dummy parameter to sed to make it really act like cat
+#	    if all the other parameters are null.
+#	13-sep-1991 (jonb)
+#	    Fix compression logic some more: make it dependent on .COMPRESS
+#	    being present and matching VERSION.ING, and make output messages
+# 	    indicate that we're doing compression.  Explicitly write EOF
+#	    after compressed distribution files if an EOF command is defined;
+# 	    this seems to be necessary on at least some systems.  Explicitly
+#	    remove both .COMPRESS and uncompress from the ilist if we're
+#	    not doing compression.
+#	24-sep-1991 (jonb)
+#	    Single-archive distribution changes for 6.4.  Remove installp
+#	    option, which I'm pretty sure isn't used any more.  Add diff
+#	    of tape contents against what it should be following verify pass.
+#	2-mar-1992 (jab)
+#	    Used jonb's changes above (and in fact, stole the entire 6.4 script)
+#		for Windows4GL packaging. Really, very little is new: a new manifest
+#		file name, really.
+#	4-may-1992 (jab)
+#	    Changed so that "conv=block,sync" is replaced with "conv=sync",
+#		since the "conv=block" isn't on all platforms, and really, doesn't
+#		quite make sense anyhow.
+#	15-may-1992 (jab)
+#	    We keep accidently losing the HP 9000/700 DAT support. Readded it.
+#	13-aug-1992 (jab)
+#	    Changed VERDIR to default to "."
+#	14-aug-1992 (jab)
+#	    Adding video support for RS/6000.
+#	15-nov-1992 (jab)
+#	    Embarrassingly enough, the "tcio" line still runs cpio. Bad. Fixed it
+#		to run "tar" and "gtar".
+#	25-jan-1992 (szeng)
+#	    Ensured writedist.w4g run as release.
+#	26-jul-1993 (gillnh2o)
+#		Since no updates have been made to this file in the "ingres"
+#		library since an initial seeding took place, to pick up the
+#		latest changes since that time, I simply took the latest
+#		rev from the "ingres63p" library as a starting point for
+#		the W4GL3.0 port.
+
+#
+# Sanity checks
+#
+ensure release || exit 1
+
+PATH=${ING_SRC-/src/5004}/bin:/usr/local/bin:$PATH
+
+# If RELEASE is set (must be set by hand), this script will cd
+# to $RELEASE before writing the tape.  Otherwise, you must run
+# this script is the base directory of an ingres installation.
+RELEASE=
+
+# Prerls replaces the TAPE1= line with `ccpp -s RLS_TAPE`, which is the
+# same line filled out for the machine.  See conf/CONFIG for the usage
+# of these variables.
+TAPE1= TAPE1N= TAPE2= TAPE2N= CART= CARTN= TCMD= TBLOCK= TSKIP= TREWIND= CCMD= CBLOCK= CSKIP= CREWIND= CRETENSION= VERDIR= DAT1= DAT1N= DREWIND= DCMD= DBLOCK= VIDEO= VIDEON=
+
+# These defaults are redundant with the defaults in conf/CONFIG in case any of
+# them is not set in the RLS_TAPE variable.
+# (TAPE1 not at the beginning of the line so prerls won't trash these defaults.)
+# TAPE1N=${TAPE1N-/dev/nrmt0} TAPE1=${TAPE1-/dev/rmt0}
+# TAPE2N=${TAPE2N-/dev/nrmt0} TAPE2=${TAPE2-/dev/rmt0}
+# CARTN=${CARTN-/dev/rst8} CART=${CART-/dev/rst0}
+TBLOCK=${TBLOCK-20} TCMD=${TCMD-tar}
+CBLOCK=${CBLOCK-20} CCMD=${CCMD-tar}
+VERDIR=${VERDIR-.}
+
+[ "$RELEASE" ] && { cd $RELEASE || exit; }
+
+# Checks what echo style is on the system, for echo -n or echo ... \c
+case `echo -n hi` in
+-n*)	PROMPT="> \c";;
+*)	PROMPT="-n > "
+esac
+
+manifest=utility/w4mfest
+< $manifest || exit
+
+if [ "$1" = "oem" ]
+then
+	type=oem
+else
+	type=dir
+fi
+
+[ "$RLS_COMP" = "true" ] && COMP=true || COMP=false
+
+echo "The current version is:" `cat w4ingver.rel`
+
+cat <<!
+
+Indicate which type of release medium you wish to use.  If you wish to use
+a device which is not in the list, you may enter the device name at the
+prompt (example: /dev/rmt0)
+
+!
+if [ "$TAPE1" != "" ]
+then
+	echo " 1) 1600bpi magnetic tape    ($TAPE1)"
+fi
+if [ "$TAPE2" != "" ]
+then
+	echo " 2) 6250bpi magnetic tape    ($TAPE2)"
+fi
+if [ "$CART" != "" ]
+then
+	echo " c) data cartridge           ($CART)"
+fi
+if [ "$DAT1" != "" ]
+then
+	echo " d) DDS(DAT) tape            ($DAT1)"
+fi
+if [ "$VIDEO" != "" ]
+then
+	echo " v) video (8mm) tape         ($VIDEO)"
+fi
+echo " f) disk file archives"
+
+echo $PROMPT
+read MEDIUM
+
+case $MEDIUM in
+	1)	CMD="$TCMD"
+		DDEV="$TAPE1"
+		BLOCK="$TBLOCK"
+		[ "$TREWIND" ] && REWIND="$TREWIND"
+		;;
+	2)	CMD="$TCMD"
+		DDEV="$TAPE2"
+		BLOCK="$TBLOCK"
+		[ "$TREWIND" ] && REWIND="$TREWIND"
+		COMP=false
+		;;
+	/dev/*)	DDEV="$MEDIUM"
+		COMP=
+		;;
+	c)	CMD="$CCMD"
+		DDEV="$CART"
+		BLOCK="$CBLOCK"
+		[ "$CREWIND" ] && REWIND="$CREWIND"
+		if [ "$CRETENSION" ]
+		then
+			echo "Retensioning tape..."
+			eval $CRETENSION
+			echo "Tape retensioned."
+		fi
+		;;
+	d)	CMD="$DCMD"
+		DDEV="$DAT1"
+		BLOCK="$DBLOCK"
+		[ "$DREWIND" ] && REWIND="$DREWIND"
+		if [ "$DRETENSION" ]
+		then
+			echo "Retensioning tape..."
+			eval $DRETENSION
+			echo "Tape retensioned."
+		fi
+		;;
+	v)	CMD="$VCMD"
+		DDEV="$VIDEO"
+		BLOCK="$VBLOCK"
+		[ "$VREWIND" ] && REWIND="$VREWIND"
+		if [ "$VRETENSION" ]
+		then
+			echo "Retensioning tape..."
+			eval $VRETENSION
+			echo "Tape retensioned."
+		fi
+		;;
+	f)	CMD="$TCMD"
+		if [ ! -d "$VERDIR" ]
+		then
+			echo "Verification directory \"$VERDIR\" not found."
+			exit 1
+		fi
+		DDEV="$VERDIR/DISTRIB"
+		BLOCK="$TBLOCK"
+		COMP="true"
+		;;
+	*)	echo "Invalid medium type: $MEDIUM"
+		exit 1
+		;;
+esac
+
+while [ -z "$CMD" ] 
+do
+  cat << !
+Enter the output format (cpio or tar), or press enter for default: $CCMD
+!
+  echo $PROMPT
+  read CMD
+  case $CMD in
+    cpio|tar)  ;;
+    "")    CMD=$CCMD;;
+    *)     CMD=
+	   ;;	
+  esac
+done
+
+while [ -z "$BLOCK" ] 
+do
+  cat << !
+Enter the blocking factor (integer number of blocks per record), or press
+enter for default: $CBLOCK
+!
+  echo $PROMPT
+  read BLOCK
+  case $BLOCK in
+    "")    BLOCK=$CBLOCK;;
+    *)     expr "$BLOCK" : "^[0-9]*$" > /dev/null
+	   [ $? -ne 0 ] && BLOCK=
+	   ;;	
+  esac
+done
+
+while [ -z "$COMP" ] 
+do
+  cat << !
+Should the tape be compressed?  Enter Y or N.
+!
+  echo $PROMPT
+  read ans
+  case $ans in
+    Y*|y*)   COMP=true;;
+    N*|n*)   COMP=false;;
+  esac
+done
+
+$COMP && cat << !
+
+          ***** NOTE: The distribution will be compressed. *****
+
+!
+echo Writing distribution files...
+
+#
+#  If the command line specified "oem", we'll leave OEMSTRING in the
+#  distribution list; otherwise we'll remove it.
+#
+case $1 in
+	oem)	;;
+	*)	sedoem="-e /OEMSTRING/d";;
+esac
+
+#
+#  This is a bit weird, but it's right.  If we're writing a compressed
+#  tape (one archive, remember), we must be completely convinced that all
+#  target sites are always going to have uncompress, because if they don't,
+#  basically, they're sc***ed.  If we're _not_ writing a compressed tape,
+#  we're nevertheless going to have a whole bunch of compressed (.Z) files
+#  on it, so we'd like to have a safety net, so we'll let uncompress.ing
+#  get through.
+#
+case $COMP in
+	true)	sedcomp="-e /uncompress\.ing/d";;
+	*)	;;
+esac
+
+# sedoem and sedcomp may be null, in which case it's the same as cat
+
+sed -e 's/dummy/dummy/' $sedoem $sedcomp $manifest |
+(
+cmd=
+case $CMD in
+    tar) 
+	$COMP \
+	  && cmd="gtar cofT - - | \
+	       compress | dd of=$DDEV obs=${BLOCK}b conv=sync" \
+          || cmd="gtar cofTb $DDEV - $BLOCK"
+        ;;
+    cpio)	
+	$COMP \
+	&& cmd="cpio -oc | \
+	       compress | dd of=$DDEV obs=${BLOCK}b conv=sync" \
+	|| cmd="cpio -ocB > $DDEV" 
+	;;
+    tcio)
+	$COMP \
+	&& cmd="gtar cofT - - | \
+	       compress | tcio -o $DDEV" \
+	|| cmd="gtar cofT - - | tcio -o $DDEV" 
+	;;
+    wbak)
+	sed 's/[A-Z]/:&/g' |
+	tr '[A-Z]' '[a-z]' |
+	/com/wbak -f 2 -dev ${DDEV-ct} - ;;
+esac
+
+[ "$cmd" ] && 
+  {
+  echo Using: $cmd
+  eval $cmd
+  }
+) 
+
+[ $? -eq 0 ] &&	echo "Distribution files written OK." ||
+  {
+  echo "ERROR writing distribution files"
+  exit 1
+  }
+
+[ "$REWIND" ] && eval $REWIND
+
+echo Verifying distribution files...
+
+VERTMP=/tmp/vertmp.$$
+
+case $CMD in
+    tar)
+	if $COMP
+	then
+	  dd ibs=${BLOCK}b if=$DDEV | uncompress | tar tf -
+	else
+  	  tar tfb $DDEV $BLOCK 
+	fi
+	;;
+    cpio)
+	if $COMP
+	then
+	  dd ibs=${BLOCK}b if=$DDEV | uncompress | cpio -ict 
+	else
+	  cpio -ictB < $DDEV 
+	fi
+	;;
+    tcio)
+	if $COMP
+	then
+	  tcio -i $DDEV | uncompress | tar tf -
+	else
+	  tcio -i $DDEV | tar tf -
+	fi
+	;;
+    wbak)
+	rtn=0
+esac | sed 's:^\./::' | sort > $VERTMP
+
+[ $? -eq 0 ] && echo "Distribution files verified OK." || 
+	{
+ 	echo "ERROR verifying distribution files!"
+	rm -f $VERTMP
+	exit 1
+	}
+
+[ "$REWIND" ] && eval $REWIND
+
+[ "$MEDIUM" = "f" ] && chmod 777 $DDEV
+
+echo ""
+echo "The release medium is now complete."
+
+if [ `wc -l < $VERTMP` -ne 0 ]
+then
+    DIFFTMP=/tmp/diff.$$
+    sed 's:^\./::' $manifest | sort | diff - $VERTMP > $DIFFTMP
+
+    [ `wc -l < $DIFFTMP` -eq 0 ] ||
+        {
+        cat << !
+
+--------------------------------------------------------------------------
+Please examine the following list of differences between the distribution
+tape contents and the Manifest file, and verify that they are acceptable.
+
+Legend:  A line beginning with  <  indicates a file which is listed in the
+	 Manifest file, but not found on the tape.
+
+	 A line beginning with  >  indicates a file which is on the tape,
+	 but which is not listed in the Manifest file.
+--------------------------------------------------------------------------
+
+!
+        cat $DIFFTMP
+        }
+    rm -f $DIFFTMP
+fi
+
+rm -f $VERTMP 
+exit 0

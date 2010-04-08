@@ -1,0 +1,733 @@
+/*
+**Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Skeleton parser driver for yacc output
+**
+**
+** History
+**
+** 07-apr-93 (smc)
+**	Commented out YYREENTER text after endif.
+** 10-jan-1996 (toumi01; from 1.1 axp_osf port)
+**	Cast (long) 3rd... EXsignal args to avoid truncation.
+** 17-nov-99 (inkdo01)
+**	Changed YYACCEPT symbol to NOT EXsignal (because of kernel 
+**	overhead).
+** 17-dec-1999 (somsa01)
+**	Removed extra EXdelete() from YYACCEPT that was added.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	19-sep-01 (inkdo01)
+**	    Added code to error handling to retry reserved words as 
+**	    equivalent identifiers.
+**	25-jan-06 (dougi)
+**	    Changed action calls to pass YYVARS** instead of YYVARS* to
+**	    allow recursion on derived tables (subselects in FROM clauses).
+*/
+
+/*
+** yacc user known macros and defines
+*/
+#ifdef		YYFUNCTIONS
+#	ifdef    VMS
+#		define  YYACCVAL	MAXI4
+#		define  YYABORTVAL	E_DB_ERROR
+#	endif
+#	ifdef    UNIX
+#		define  YYACCVAL	MAXI4
+#		define  YYABORTVAL	E_DB_ERROR
+#	endif
+#	ifdef    DESKTOP
+#		define  YYACCVAL	MAXI4
+#		define  YYABORTVAL	E_DB_ERROR
+#	endif
+/*
+** ysstatusp is a pointer, and EXsignal expects i4, so this solution
+** is not very clean; there is no other option, however, so we will go
+** ahead and use it, should be OK for now.
+** This WAS OK until we ported to axp_osf, where i4 and i4 are 32 bits
+** and pointers are 64 bits.  EXsignal was (of course) modified as well.
+*/
+#	define YYERROR	(VOID)EXsignal(EX_PSF_LJMP, 2, (long)1,yystatusp)
+#	define YYACCEPT	\
+    {\
+	EXdelete();\
+	return(E_DB_OK);\
+    }
+#	define YYABORT	(VOID)EXsignal(EX_PSF_LJMP, 2, (long)YYABORTVAL,yystatusp)
+#else
+#	define YYERROR	goto yyerrlab
+#	define YYACCVAL	E_DB_OK
+#	define YYACCEPT	return(YYACCVAL)
+#	define YYABORT	return(E_DB_ERROR)
+#endif
+
+#define YYBACKUP( newtoken, newvalue )\
+{\
+	if ( $Cyychar >= 0 || ( $Fr2[ $Cyytmp ] >> 1 ) != 1 )\
+	{\
+		(*$Cyyerror)(1$I);\
+		goto yyerrlab;\
+	}\
+	$Cyychar = newtoken;\
+	$Cyystate = *$Cyyps;\
+	$Cyylval = newvalue;\
+	goto yynewstate;\
+}
+#define YYRECOVERING()	(!!$Cyyerrflag)
+
+/*
+** user known globals
+*/
+#ifndef	YYREENTER
+i4  $Fdebug;			/* set to 1 to get debugging */
+#endif
+
+/*
+** driver internal defines
+*/
+#define YYFLAG		(-1000)
+
+/* 
+** If not defined we need to define YYVARS, even though it won't be used,
+** because -S option requires it.
+*/
+#ifdef YACC_VARS
+#define	    YYVARS	PSS_YYVARS
+#else
+typedef	i4	YYVARS;
+#endif
+
+#ifdef		YYFUNCTIONS
+/*{
+** Name: YY_1HANDLER, YY_2HANDLER	- Exception handlers for the YACC generated
+** parser.
+**
+** Description:
+**      This function is the exception handler for quel and SQL parsers.
+**	Exceptions are caught here only if -S flag is specified to YACC.
+**	YY_2HANDLER handles exceptions that occur within YY_1HANDLER.
+**
+** Inputs:
+**      exargs                          The exception handler args, as defined
+**					by the CL spec.
+**
+** Outputs:
+**      None
+**	Returns:
+**	    EXDECLARE
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    Can send error message to terminal and/or log file
+**
+** History:
+**	11-nov-87 (stec)
+**          written
+*/
+
+i4
+YY_2HANDLER(exargs)
+EX_ARGS            *exargs;
+{
+	return(EXDECLARE);
+}
+
+i4
+YY_1HANDLER(exargs)
+EX_ARGS            *exargs;
+{
+    EX_CONTEXT	context;
+    i4		status;
+
+    /*
+    ** Handle exception handler exceptions here.
+    */
+    if (EXdeclare(YY_2HANDLER, &context) != OK)
+    {
+	EXdelete();
+	return(EXRESIGNAL);
+    }
+
+    if (EXmatch(EX_PSF_LJMP, 1, exargs->exarg_num))
+    {
+	if (exargs->exarg_count == 2)
+	{
+	    DB_STATUS *statp;
+
+	    statp =  (DB_STATUS *) exargs->exarg_array[1];
+	    *statp = (DB_STATUS) exargs->exarg_array[0];
+	    status = EXDECLARE;
+	}
+	else
+	{
+	    /* unexpected exceptions handled by psf_handle */
+	    status = EXRESIGNAL;
+	}
+    }
+    else
+    {
+	/* unexpected exceptions handled by psf_handle */
+	status = EXRESIGNAL;
+    }
+    EXdelete();
+    return(status);
+}
+#endif
+
+/*
+** yyparse - return E_DB_OK if worked, E_DB_ERROR if syntax error not recovered
+**	     from
+*/
+DB_STATUS
+$D
+{
+#ifndef	YYREENTER
+	register YYSTYPE *yypvt;	/* top of value stack for $vars */
+	i4		 yyerr_decl;
+	YYSTYPE yyv[ YYMAXDEPTH ];	/* value stack */
+	i4 yys[ YYMAXDEPTH ];		/* state stack */
+
+	YYSTYPE *yypv;			/* top of value stack */
+	i4 *yyps;			/* top of state stack */
+
+	i4 yystate;			/* current state */
+	i4 yytmp;			/* extra var (lasts between blocks) */
+
+	i4 yynerrs;			/* number of errors */
+	i4 yyerrflag;			/* error recovery flag */
+	i4 yychar;			/* current input token number */
+#else
+	YACC_CB *yacc_cb = $H;
+#endif
+
+#ifndef YACC_VARS
+	YYVARS	yyvars, *yyvarsp = &yyvars, **yyvarspp = &yyvarsp;
+#endif
+#ifdef	YYFUNCTIONS
+	EX_CONTEXT	context;
+	DB_STATUS	yystatus, *yystatusp = &yystatus;
+
+#ifdef YACC_VARS
+#include "yyvarsinit.h"	
+#endif
+	/*
+	** Handle all exceptions here, They will be primarily generated
+	** by execution of YYERROR, YYABORT, YYACCEPT.
+	*/
+	if (EXdeclare(YY_1HANDLER, &context) != OK)
+	{
+		if (yystatus == YYACCVAL)
+		{
+			EXdelete();
+			/* E_DB_OK should be returned */
+			yystatus = E_DB_OK;
+			return (yystatus);
+		}
+		else if (yystatus == YYABORTVAL)
+		{
+			EXdelete();
+			/* E_DB_ERROR should be returned */
+			yystatus = E_DB_ERROR;
+			return (yystatus);
+		}
+		else if (yystatus == 1)		/* YYERROR */
+		{
+			goto yyerrlab;
+		}
+		else	/* Should never be reached */
+		{
+			EXdelete();
+			/* E_DB_SEVERE should be returned */
+			yystatus = E_DB_SEVERE;
+			return (yystatus);
+		}
+	}
+#else
+#ifdef YACC_VARS
+#include "yyvarsinit.h"	
+#endif
+#endif
+
+	/*
+	** Initialize externals - yyparse may be called more than once
+	*/
+	$Cyypv = &$Cyyv[-1];
+	$Cyyps = &$Cyys[-1];
+	$Cyystate = 0;
+	$Cyytmp = 0;
+	$Cyynerrs = 0;
+	$Cyyerrflag = 0;
+	$Cyychar = -2;
+
+	goto yystack;
+	{
+		register YYSTYPE *yy_pv;	/* top of value stack */
+		register i4  *yy_ps;		/* top of state stack */
+		register i4  yy_state;		/* current state */
+		register i4   yy_n;		/* internal state number info */
+
+		/*
+		** get globals into registers.
+		** branch to here only if YYBACKUP was called.
+		*/
+	yynewstate:
+		yy_pv = $Cyypv;
+		yy_ps = $Cyyps;
+		yy_state = $Cyystate;
+		goto yy_newstate;
+
+		/*
+		** get globals into registers.
+		** either we just started, or we just finished a reduction
+		*/
+	yystack:
+		yy_pv = $Cyypv;
+		yy_ps = $Cyyps;
+		yy_state = $Cyystate;
+
+		/*
+		** top of for (;;) loop while no reductions done
+		*/
+	yy_stack:
+		/*
+		** put a state and value onto the stacks
+		*/
+#ifdef	xDEBUG
+		/*
+		** if debugging, look up token value in list of value vs.
+		** name pairs.  0 and negative (-1) are special values.
+		** Note: linear search is used since time is not a real
+		** consideration while debugging.
+		*/
+		if ( $Cyydebug )
+		{
+			register i4  yy_i;
+
+			YYPRINTF( "State %d, token ", yy_state );
+			if ( $Cyychar == 0 )
+				YYPRINTF( "end-of-file\n" );
+			else if ( $Cyychar < 0 )
+				YYPRINTF( "-none-\n" );
+			else
+			{
+				for ( yy_i = 0; $Ftoks[yy_i].t_val >= 0;
+					yy_i++ )
+				{
+					if ( $Ftoks[yy_i].t_val == $Cyychar )
+						break;
+				}
+				YYPRINTF( "%s\n", $Ftoks[yy_i].t_name );
+			}
+		}
+#endif /* xDEBUG */
+		if ( ++yy_ps >= &$Cyys[ YYMAXDEPTH ] )	/* room on stack? */
+		{
+			(*$Cyyerror)(2$I);
+			YYABORT;
+		}
+		*yy_ps = yy_state;
+		yy_pv++;
+		STRUCT_ASSIGN_MACRO($Cyyval, *yy_pv);
+
+		/*
+		** we have a new state - find out what to do
+		*/
+	yy_newstate:
+		if ( ( yy_n = $Fpact[ yy_state ] ) <= YYFLAG )
+			goto yydefault;		/* simple state */
+#ifdef	xDEBUG
+		/*
+		** if debugging, need to mark whether new token grabbed
+		*/
+		$Cyytmp = $Cyychar == -2;
+#endif
+		if ($Cyychar == -2)
+			$Cyychar = (*$Cyylex)($E);
+		if ($Cyychar == -1)
+			goto yyerrlab;
+/*		REPLACED WITH ABOVE 4 LINES
+/*		if ( ( $Cyychar == -2 ) && ( ( $Cyychar = (*$Cyylex)($E) ) < 0 ) )
+/*			$Cyychar = 0;		/* reached EOF */
+/**/
+#ifdef	xDEBUG
+		if ( $Cyydebug && $Cyytmp )
+		{
+			register i4  yy_i;
+
+			YYPRINTF( "Received token " );
+			if ( $Cyychar == 0 )
+				YYPRINTF( "end-of-file\n" );
+			else if ( $Cyychar < 0 )
+				YYPRINTF( "-none-\n" );
+			else
+			{
+				for ( yy_i = 0; $Ftoks[yy_i].t_val >= 0;
+					yy_i++ )
+				{
+					if ( $Ftoks[yy_i].t_val == $Cyychar )
+						break;
+				}
+				YYPRINTF( "%s\n", $Ftoks[yy_i].t_name );
+			}
+		}
+#endif /* xDEBUG */
+		if ( ( ( yy_n += $Cyychar ) < 0 ) || ( yy_n >= YYLAST ) )
+			goto yydefault;
+		if ( $Fchk[ yy_n = $Fact[ yy_n ] ] == $Cyychar ) /*valid shift*/
+		{
+			$Cyychar = -2;
+			STRUCT_ASSIGN_MACRO($Cyylval, $Cyyval);
+			yy_state = yy_n;
+			if ( $Cyyerrflag > 0 )
+				$Cyyerrflag--;
+			goto yy_stack;
+		}
+
+	yydefault:
+		if ( ( yy_n = $Fdef[ yy_state ] ) == -2 )
+		{
+#ifdef	xDEBUG
+			$Cyytmp = $Cyychar < 0;
+#endif
+			if ($Cyychar == -2)
+				$Cyychar = (*$Cyylex)($E);
+			if ($Cyychar == -1)
+				goto yyerrlab;
+/*			REPLACED WITH ABOVE 4 LINES
+/*			if ( ( $Cyychar < 0 ) &&
+/*			    ( ( $Cyychar = (*$Cyylex)($E) ) < 0 ) )
+/*			{
+/*				$Cyychar = 0;		/* reached EOF */
+/*			}
+/**/
+#ifdef	xDEBUG
+			if ( $Cyydebug && $Cyytmp )
+			{
+				register i4  yy_i;
+
+				YYPRINTF( "Received token " );
+				if ( $Cyychar == 0 )
+					YYPRINTF( "end-of-file\n" );
+				else if ( $Cyychar < 0 )
+					YYPRINTF( "-none-\n" );
+				else
+				{
+					for ( yy_i = 0;
+						$Ftoks[yy_i].t_val >= 0;
+						yy_i++ )
+					{
+						if ( $Ftoks[yy_i].t_val
+							== $Cyychar )
+						{
+							break;
+						}
+					}
+					YYPRINTF( "%s\n", $Ftoks[yy_i].t_name );
+				}
+			}
+#endif /* xDEBUG */
+			/*
+			** look through exception table
+			*/
+			{
+				register i4  *yyxi = (i4*)$Fexca;
+
+				while ( ( *yyxi != -1 ) ||
+					( yyxi[1] != yy_state ) )
+				{
+					yyxi += 2;
+				}
+				while ( ( *(yyxi += 2) >= 0 ) &&
+					( *yyxi != $Cyychar ) )
+					;
+				if ( ( yy_n = yyxi[1] ) < 0 )
+					YYACCEPT;
+			}
+		}
+
+		/*
+		** check for syntax error
+		*/
+		if ( yy_n == 0 )	/* have an error */
+		{
+			/* no worry about speed here! */
+			switch ( $Cyyerrflag )
+			{
+			case 0:		/* new error */
+				/* First try the new keyword-as-ident trick. */
+				if ($Cyyreswd)
+				{
+				    $Cyyrestok = $Cyychar;  /* save reswd token */
+				    $Cyyreswd = FALSE;	/* reset flag */
+				    $Cyylval.psl_strtype =
+					$Cyy_rwdstr;	/* retry as IDENT */
+				    $Cyychar = NAME;		/* new token type */
+				    goto yy_newstate;	/* try again */
+				}
+				/* Then, if we just tried it and still got error
+				** resend original reserved word. */
+				if ($Cyyrestok > 0)
+				{
+				    $Cyylval.psl_tytype = PSL_GOVAL;
+				    $Cyychar = $Cyyrestok;
+				    $Cyyrestok = 0;
+				    goto yy_newstate;
+				}
+				(*$Cyyerror)(3$I);
+				goto skip_init;
+			yyerrlab:
+				/*
+				** get globals into registers.
+				** we have a user generated syntax type error
+				*/
+				yy_pv = $Cyypv;
+				yy_ps = $Cyyps;
+				yy_state = $Cyystate;
+				$Cyynerrs++;
+			skip_init:
+			case 1:
+			case 2:		/* incompletely recovered error */
+					/* try again... */
+				$Cyyerrflag = 3;
+				/*
+				** find state where "error" is a legal
+				** shift action
+				*/
+/*
+** This comment supercedes the comment above.
+** VERY IMPORTANT! Based on the assumption that there will be never more than
+one statement to be parsed at a time, we have taken a different approach to
+error reporting/recovery; we have concluded that:
+- recovery is not needed
+- for certain most common errors `error' productions have been defined in the
+SQL grammar. This means that when a valid action cannot be taken, parser will
+conceptually recognize seeing a special `error' token and will perform an action
+specified. Reduction will follow, as if the rule was recognized. The `while'
+loop below searches that state stack backwards for the first state which allows
+handling of error token, this resulted in executing the `error' action for
+unrelated errors and display of messages that were meaningless. We have,
+therefore, decided to commnet out the `while' loop and let the code determine
+whether error handling is allowed for current state only. This caused some extra
+work with forming productions in such a way that `error' actions get executed
+when needed, but that was not tough to do, and we have achieved the desired
+result.
+*/
+/*
+** Fix for 2 bugs:  09-jun-89 (neil)
+** Both the following bugs occur if the scanner returns -1.  There are many
+** cases to force this (ie, a names too long, invalid operators).
+**	Bug 1: AV: If nothing has been reduced yet and yylex returned -1 then
+**	       yy_ps was not yet correctly set to point at any "saved
+**	       reduction stack".  The original "while" loop would never
+**	       have let us into this code.  Therefore I modified the commented
+**	       out "while" loop to a real "if" statement with the same
+**	       condition to check.  AV's occurring to statements such as
+**		    rollback aaaaaaaaaaaaaaaaaaaaaaa (> db_maxname chars)
+**	       which returned -1 and had no saved "reduction" stack yet no
+**	       longer occur as yy_ps is not yet pointing at a valid stack entry.
+**	Bug 2: Hangs: Some error rules would loop forever when trying to recover
+**	       to a YACC "error" rule in a list construct that occurred not
+**	       because of a real syntax error (which had pushed a syntax
+**	       state), such as:
+**		    create table tx (i varchar(abcde))
+**	       but because of a lex error in a list construct (-1 returned,
+**	       and pushed nothing):
+**		    create table tx (i integer, j varchar(^))
+**	       These latter types of errors all cause -1 to be returned.
+**	       The fix to this is to not even try the error recovery if the
+**	       yychar is -1 as the scanner has already reported an error.
+** Note both the above could be fixed by just checking yychar != -1, but
+** the extra check to confirm a valid value for yy_ps is done just a safety
+** check and will usually apply whenever yychar == -1.
+*/
+/*				while ( yy_ps >= $Cyys ) */
+				if (   $Cyychar != -1
+				    && yy_ps >= $Cyys )
+				{
+					yy_n = $Fpact[ *yy_ps ] + YYERRCODE;
+					if ( yy_n >= 0 && yy_n < YYLAST &&
+					    $Fchk[$Fact[yy_n]] == YYERRCODE)
+					{
+						/*
+						** simulate shift of "error"
+						*/
+						yy_state = $Fact[ yy_n ];
+						goto yy_stack;
+					}
+					/*
+					** current state has no shift on
+					** "error", pop stack
+					*/
+#ifdef	xDEBUG
+#	define _POP_ "Error recovery pops state %d, uncovers state %d\n"
+				/*	if ( $Cyydebug )
+						YYPRINTF( _POP_, *yy_ps,
+							yy_ps[-1] ); */
+#	undef _POP_
+#endif
+				/*	yy_ps--;
+					yy_pv--; */
+				}
+				/*
+				** there is no state on stack with "error" as
+				** a valid shift.  give up.
+				*/
+				YYABORT;
+			case 3:		/* no shift yet; eat a token */
+#ifdef	xDEBUG
+				/*
+				** if debugging, look up token in list of
+				** pairs.  0 and negative shouldn't occur,
+				** but since timing doesn't matter when
+				** debugging, it doesn't hurt to leave the
+				** tests here.
+				*/
+				if ( $Cyydebug )
+				{
+					register i4  yy_i;
+
+					YYPRINTF( "Error recovery discards " );
+					if ( $Cyychar == 0 )
+						YYPRINTF("token end-of-file\n");
+					else if ( $Cyychar < 0 )
+						YYPRINTF( "token -none-\n" );
+					else
+					{
+						for ( yy_i = 0;
+							$Ftoks[yy_i].t_val >= 0;
+							yy_i++ )
+						{
+							if ( $Ftoks[yy_i].t_val
+								== $Cyychar )
+							{
+								break;
+							}
+						}
+						YYPRINTF( "token %s\n",
+							$Ftoks[yy_i].t_name );
+					}
+				}
+#endif /* xDEBUG */
+				if ( $Cyychar == 0 )	/* reached EOF. quit */
+					YYABORT;
+				$Cyychar = -2;
+				goto yy_newstate;
+			}
+		}/* end if ( yy_n == 0 ) */
+		/*
+		** reduction by production yy_n
+		** put stack tops, etc. so things right after switch
+		*/
+#ifdef	xDEBUG
+		/*
+		** if debugging, print the string that is the user's
+		** specification of the reduction which is just about
+		** to be done.
+		*/
+		if ( $Cyydebug )
+			YYPRINTF( "Reduce by (%d) \"%s\"\n",
+				yy_n, $Freds[ yy_n ] );
+#endif
+		$Cyytmp = yy_n;			/* value to switch over */
+		$Cyypvt = yy_pv;			/* $vars top of value stack */
+		/*
+		** Look in goto table for next state
+		** Sorry about using yy_state here as temporary
+		** register variable, but why not, if it works...
+		** If $Fr2[ yy_n ] doesn't have the low order bit
+		** set, then there is no action to be done for
+		** this reduction.  So, no saving & unsaving of
+		** registers done.  The only difference between the
+		** code just after the if and the body of the if is
+		** the goto yy_stack in the body.  This way the test
+		** can be made before the choice of what to do is needed.
+		*/
+		{
+			/* length of production doubled with extra bit */
+			register i4  yy_len = $Fr2[ yy_n ];
+
+			if ( !( yy_len & 01 ) )
+			{
+				yy_len >>= 1;
+				/* $$ = $1 */
+				yy_pv -= yy_len;
+				STRUCT_ASSIGN_MACRO($Cyypv[1], $Cyyval);
+				yy_state = $Fpgo[ yy_n = $Fr1[ yy_n ] ] +
+					*( yy_ps -= yy_len ) + 1;
+				if ( yy_state >= YYLAST ||
+					$Fchk[ yy_state =
+					$Fact[ yy_state ] ] != -yy_n )
+				{
+					yy_state = $Fact[ $Fpgo[ yy_n ] ];
+				}
+				goto yy_stack;
+			}
+			yy_len >>= 1;
+			/* $$ = $1 */
+			yy_pv -= yy_len;
+			STRUCT_ASSIGN_MACRO(yy_pv[1], $Cyyval);
+			yy_state = $Fpgo[ yy_n = $Fr1[ yy_n ] ] +
+				*( yy_ps -= yy_len ) + 1;
+			if ( yy_state >= YYLAST ||
+				$Fchk[ yy_state = $Fact[ yy_state ] ] != -yy_n )
+			{
+				yy_state = $Fact[ $Fpgo[ yy_n ] ];
+			}
+		}
+					/* save until reenter driver code */
+		$Cyystate = yy_state;
+		$Cyyps = yy_ps;
+		$Cyypv = yy_pv;
+	}
+#ifdef		YYFUNCTIONS
+	if ($Ffunc[$Cyytmp] != (i4 (*)()) NULL)
+#ifdef		YYREENTER
+	    $Cyyerr_decl = (*$Ffunc[$Cyytmp])(yacc_cb, $Cyytmp,
+		yystatusp, yyvarspp$G);
+#else
+# ifdef rtp_us5
+	{
+	    /* AIX cc needs temp to avoid "compiler loop" fatal (daveb) */
+	    i4  (*f)() = $Ffunc[$Cyytmp];
+	    $Cyyerr_decl = (*f)(yacc.cb, $Cyytmp, yystatusp, yyvarspp$G);
+	}
+# else	
+	    $Cyyerr_decl = (*$Ffunc[$Cyytmp])($Cyypvt, &$Cyyval,
+		$Cyytmp, yystatusp$G);
+# endif
+#endif		/* YYREENTER */
+	else
+	    $Cyyerr_decl = 0;
+
+	if ($Cyyerr_decl == YYACCVAL)	/* TRUE iff YYACCEPT action was taken */
+	    YYACCEPT;
+
+	/* In case of RTI any other non-zero value indicates an error 
+	** returned from a semantic routine, so no error recovery (in YACC
+	** sense of the word) is needed, just report the error to caller.
+	*/
+	if ($Cyyerr_decl)		/* Production asked for */
+	{
+	     EXdelete();
+	     return ($Cyyerr_decl);
+	}
+	/*    goto yyerrlab;		 * Error recovery */
+#else
+	/*
+	** code supplied by user is placed in this switch
+	*/
+	switch( $Cyytmp )
+	{
+		$A
+	}
+#endif
+	goto yystack;		/* reset registers in driver code */
+}
+
+$B

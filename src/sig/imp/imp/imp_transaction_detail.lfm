@@ -1,0 +1,28 @@
+COPYFORM:	6.4	2003_12_02 15:58:10 GMT  
+FORM:	imp_transaction_detail		
+	62	15	0	0	21	0	2	9	0	0	0	0	0	193	0	21
+FIELD:
+	0	lxb_tran_id	20	32	0	20	1	33	0	0	20	0	13	Transaction:	0	0	0	65808	64	0	0		c20			0	0
+	1	lxb_status	20	60	0	54	1	62	1	0	54	0	8	Status:	0	0	0	65552	64	0	0		c54			0	1
+	2	vnode	21	62	0	20	1	27	0	35	20	0	7	Vnode:	0	0	0	65552	64	0	0		c20			0	2
+	3	lxb_user_name	20	100	0	16	1	27	3	2	16	0	11	User Name:	0	0	0	65552	64	0	0		c16			0	3
+	4	lxb_stat_write	30	4	0	17	1	25	3	35	17	0	8	Writes:	0	0	0	65552	0	0	0		-f17			0	4
+	5	lxb_db_name	20	32	0	12	1	22	4	3	12	0	10	Database:	0	0	0	65552	64	0	0		c12			0	5
+	6	lxb_reserved_space	30	4	0	17	1	27	4	33	17	0	10	Reserved:	0	0	0	65552	0	0	0		-f17			0	6
+	7	lxb_db_owner	20	32	0	16	1	26	5	3	16	0	10	DB Owner:	0	0	0	65536	64	0	0		c16			0	7
+	8	lxb_stat_split	30	4	0	17	1	24	5	36	17	0	7	Split:	0	0	0	65552	0	0	0		-f17			0	8
+	9	lxb_sid	21	34	0	16	1	28	6	1	16	0	12	Session Id:	0	0	0	65552	64	0	0		c16			0	9
+	10	lxb_stat_force	30	4	0	17	1	24	6	36	17	0	7	Force:	0	0	0	65552	0	0	0		-f17			0	10
+	11	lxb_pid	30	4	0	13	1	25	7	1	13	0	12	Process Id:	0	0	0	65552	0	0	0		-f13			0	11
+	12	lxb_stat_wait	30	4	0	17	1	23	7	37	17	0	6	Wait:	0	0	0	65552	0	0	0		-f17			0	12
+	13	lxb_first_lga	20	25	0	25	1	41	10	1	25	0	16	First Log Addr:	0	0	0	65552	0	0	0		c25			0	13
+	14	lxb_wait_reason	20	30	0	30	3	16	9	45	15	1	1	Wait Reason:	0	0	0	65552	0	0	0		cf30.15			0	14
+	15	lxb_last_lga	20	25	0	25	1	40	11	2	25	0	15	Last Log Addr:	0	0	0	65552	0	0	0		c25			0	15
+	16	lxb_last_lsn	20	30	0	25	1	35	12	7	25	0	10	Last LSN:	0	0	0	65552	64	0	0		c25			0	16
+	17	lxb_is_prepared	20	1	0	1	1	15	14	27	1	0	14	Txn Prepared?	0	0	0	65552	0	0	0		c1			0	17
+	18	lxb_id_instance	30	4	0	8	1	21	8	0	8	0	13	Id Instance:	0	0	0	16842768	0	0	0		-f8			0	18
+	19	lxb_id_id	30	4	0	7	1	14	14	44	7	0	7	Id Id:	0	0	0	16842768	0	0	0		-f7			0	19
+	20	lxb_is_xa_dis_tran_id	20	1	0	1	1	24	14	0	1	0	23	Distributed Trans Id?	0	0	0	65552	0	0	0		c1			0	20
+TRIM:
+	0	9	5:44:1	1	0	0	0
+	32	2	7:30:0	1	0	0	0

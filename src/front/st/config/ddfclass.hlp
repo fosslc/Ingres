@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The dictionary_class resource specifies the database class of the ICE
+  server repository and is used in making a connection with the repository.
+
+  Default: ingres

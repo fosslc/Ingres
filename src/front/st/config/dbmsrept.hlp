@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+ The rep_txq_size resource defines the number of queue entries allocated in
+ the replication transaction queue.   This queue holds a notification that
+ a replicating transaction has committed, and input queue records need to
+ be distributed.  If the queue fills up (or rep_txq_size is set to 0),
+ distribution will be done synchronously as part of the user transaction.
+
+ 
+ Default: 50

@@ -1,0 +1,13 @@
+COPYFORM:	6.4	2002_06_28 07:25:59 GMT  
+FORM:	ima_dio		
+	90	18	0	0	3	0	0	9	0	0	0	0	0	0	0	8
+FIELD:
+	0	server	-21	23	0	20	1	53	0	0	20	0	33	Relative I/O monitor for Server:	0	0	0	0	512	0	0		c20			0	0
+	1	ima_dio	0	8	0	5	12	79	3	0	1	3	0		1	1	0	33	0	0	0					1	1
+	0	session_id	-21	16	0	13	1	13	0	1	13	0	1	Session	1	1	0	0	0	0	0		c13			2	2
+	1	terminal	-21	9	0	6	1	6	0	15	6	0	15	Tty	15	1	0	0	0	0	0		c6			2	3
+	2	username	-21	18	0	15	1	15	0	22	15	0	22	User	22	1	0	0	0	0	0		c15			2	4
+	3	barchart	-21	38	0	35	1	35	0	38	35	0	38		38	1	0	0	0	0	0		c35			2	5
+	4	io_rate	-30	5	0	4	1	4	0	74	4	0	74	I/O	74	1	0	0	0	0	0		+i4			2	6
+	2	highval	-30	5	0	4	1	17	15	61	4	0	13	High Value :	0	0	0	0	512	0	0		+i4			0	7
+TRIM:

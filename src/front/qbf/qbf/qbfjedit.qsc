@@ -1,0 +1,320 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<st.h>
+# include	<si.h>
+# include	<tm.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+## include	"mqsymbol.qsh"
+# include	<oosymbol.h>
+# include	"erqf.h"
+# include	<ui.h>
+# include	<ug.h>
+
+/**
+** Name:	qbfjedit.qsc	- listpick related code for -J flag
+**
+** Description:
+**	This file contains the QBF routines to handle the listpick menus
+**	that were added to QBF to support the -J flag.  These routines are
+**	also used when the user creates a new JoinDef.  At that point a
+**	popup will appear asking the user whether he/she wants to start 
+**	with a blank or a duplicate of another JoinDef.
+**
+**	This file defines:
+**
+**	IIQFjl_JoindefListpick
+**	IIQFijf_InitJoinForms
+**	IIQFcjCreateJoin
+**	qf_j_dup
+**
+** History:
+**	01-dec-89  (kenl)  - created
+**	6/18/90 (martym)   - Wrapped ERx() around literal strings and 
+**			     added help files.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**    25-Oct-2005 (hanje04)
+**        Add prototype for qf_j_dup() to prevent compiler
+**        errors with GCC 4.0 due to conflict with implicit declaration.
+**	24-Aug-2009 (kschendel) 121804
+**	    Add bool externs for gcc 4.3.
+*/
+
+FUNC_EXTERN	bool	mqgetqname(MQQDEF *, bool);
+FUNC_EXTERN	bool	mqinitqcre(void);
+FUNC_EXTERN     char    *IIUFopObjPik();
+GLOBALREF	OOID	mq_joinid;
+
+i4  IIQFcjCreateJoin();
+static i4 qf_j_dup();
+
+# define _HelpExpl	F_FE0100_ExplFrameHelp
+# define NO_JOIN	-1	/* "cancel" */
+# define BLANK_JOIN	0
+# define DUP_JOIN	1
+
+
+
+/*{
+** Name:	IIQFjl_JoindefListpick	- main listpick routine for QBF
+**
+** Description:
+**	This is the main inteface for QBF with the ListPick routine.  This
+**	routine is call by both the -J flag processing code and for the
+**	JoinDef create option.  The difference between the two callings is
+**	in the name of the form used for the listpick.
+**
+** Inputs:
+**	MQQDEF *qdef		- ptr to query definition structure
+**	char *list_form		- ptr to name of form to use for listpick
+**
+** Outputs:
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	01-dec-89  (kenl)  - initial version
+*/
+IIQFjl_JoindefListpick(qdef, list_form)
+MQQDEF	*qdef;
+char	*list_form;
+{
+##	char		join_def[FE_MAXNAME + 1];
+	i4             cre_choice;     /* Type of JoinDef creation. */
+	char            hlpbuf[132+1];
+
+		/* loadtable with create options */
+		IIQFijf_InitJoinForms(list_form);
+
+		/* save JoinDef name in a global for later use */
+		STcopy(qdef->mqcr.name, join_def);
+
+		/* If using -J flag, put name of JoinDef on form */
+		if (mq_editjoin)
+		{
+##			putform _mqcrjoin (form_name = join_def)
+		}
+
+		STcopy(ERx("JoinDef Creation"), hlpbuf);
+		cre_choice = IIFRrlpRunListPick(list_form, _form_type, -1,
+			-1, hlpbuf, ERx("qsource.hlp"), IIQFcjCreateJoin,
+			(PTR)qdef);
+}
+
+
+/*{
+** Name:	IIQFijf_InitJoinForms	- initialize form with create options
+**
+** Description:
+**	This routine uses the form whose name was pass in and loads the
+**	tablefield with the options available for creating a new JoinDef.
+**
+** Inputs:
+**	char *formname		- ptr to name of form
+**
+** Outputs:
+**	Returns:
+**		VOID
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	01-dec-89  (kenl)  - initial version
+*/
+IIQFijf_InitJoinForms(formname)
+##char	*formname;
+{
+	if (mqinitqcre() != TRUE)
+	{
+		/* couldn't initialize catalog form */
+		FDerror(NOHELPFRMS, 0, ERx(""));
+	}
+
+##	inittable formname _form_type read
+##	loadtable formname _form_type (type = ERx("Blank"),
+##		description = ERx("Create a JoinDef starting with a blank"))
+##	loadtable formname _form_type (type = ERx("Duplicate"),
+##		description = ERx("Create a JoinDef by copying an existing JoinDef"))
+}
+
+
+/*{
+** Name:	IIQFcjCreateJoin	- handling of create option selection
+**
+** Description:
+**	This routine branches to the appropriate QBF routine to handle
+**	the type of create option the user selected.  If 'blank' was selected
+**	we just jump into QBF where we used to.  If 'duplicate' is picked
+**	we need to put up a new form that will allow 'ListChoices' for a 
+**	list of JoinDef names.
+**
+** Inputs:
+**	PTR dataptr		- ptr to QDEF structure
+**	i4 choice		- item user selected from listpick
+**	bool *resume		- should we give the user another try?
+**
+** Outputs:
+**	Returns:
+**		i4 - return listpick selection number back to caller
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	01-dec-89  (kenl)  - new interface
+*/
+i4
+IIQFcjCreateJoin(dataptr, choice, resume)
+PTR     dataptr;        /* ptr to QDEF structure */
+i4      choice;         /* Method of form creation. */
+bool    *resume;        /* Another chance to select form creation method? */
+{
+	MQQDEF	*qdef = (MQQDEF *)dataptr;
+
+	mq_lastsaved[0] = EOS;
+	if (choice == BLANK_JOIN) /* Blank JoinDef to be created. */
+	{
+	    mq_tables(qdef, FALSE);
+	}
+	else if (choice == DUP_JOIN) /* JoinDef created from duplicate */
+	{
+	    if (qf_j_dup((MQQDEF *)qdef) == NO_JOIN)
+	    {
+		*resume = TRUE; /* Resume back to choice of creation method. */
+	    }
+	}
+
+	return(choice);
+}
+
+
+/*{
+** Name:	qf_j_dup	- create a duplicate JoinDef
+**
+** Description:
+**	This routine handles the form whereby a user can create a JoinDef
+**	based upon an existing JoinDef.
+**
+** Inputs:
+**	MQQDEF *qdef		- ptr to query definition structure
+**
+** Outputs:
+**	Returns:
+**		i4 - returns DUP_JOIN is a duplicate JoinDef was 
+**		      successfully operated upon, otherwise returns NO_JOIN
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	01-dec-89  (kenl)  - new interface
+*/
+static i4
+qf_j_dup(qdef)
+MQQDEF	*qdef;
+{
+	i4     retval = DUP_JOIN;
+##      char    *jdefpik;
+##      char    jname[FE_MAXNAME + 1];
+	char    hlpbuf[132+1];
+
+##      display _mqjdup
+##      activate menuitem ERget(FE_OK), frskey4
+##      {
+##          getform _mqjdup (jname = dup_name)
+
+	    if (jname[0] == EOS)
+	    {
+		IIUGerr(E_QF0158_no_joindef_name, UG_ERR_ERROR, 0);
+##              resume
+	    }
+
+	    /*
+	    ** Copy the name the user entered into the main query definition
+	    ** structure.  This will be used temporarily to load JoinDef
+	    ** information but will be overwritten later by either blanks
+	    ** (for a new user created JoinDef) or by the name that was
+	    ** supplied along with the -J flag.
+	    */
+	    STcopy(jname, qdef->mqcr.name);
+	    if (!mqgetqname(qdef, FALSE))
+	    {
+	        FDerror(NOQUERYD, 1, qdef->mqcr.name);
+##		resume
+	    }
+
+	    OOcatRecord(qdef->mqcr.id, &qdef->mqcr);
+
+	    /* This will overwrite the OOID later on to force a new JoinDef */
+	    mq_joinid = -1;
+
+	    /* if not editing a JoinDef, blank out the old name */
+	    if (!mq_editjoin)
+	    {
+		*(qdef->mqcr.name) = EOS;
+	    }
+
+	    mq_tables(qdef, TRUE);
+
+	    /*
+	    ** If we are editing a JoinDef (-J) and qdef_type is set to -1
+	    ** then something went wrong.  We don't know where but we do
+	    ** know that QBF has already spit out an appropriate error.
+	    */
+	    if ((qdef_type == -1) && mq_editjoin)
+	    {
+		/* Error message has already been sent. */
+##              resume
+            }
+##          breakdisplay
+##      }
+##      activate menuitem ERget(FE_Cancel)
+##          (expl = ERget(F_FE0103_ExplCancel), validate = 0, activate = 0),
+##          frskey9 (validate = 0, activate = 0)
+##      {
+	    retval = NO_JOIN;
+##          breakdisplay
+##      }
+##	ACTIVATE MENUITEM ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##			EXPL = ERget(FE_LookupExpl)), 
+##			FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##      {
+	    STcopy(ERget(S_QF0159_JoinDefs), hlpbuf);
+	    jdefpik = IIUFopObjPik(hlpbuf, ERx("qlpjd.hlp"), OC_JOINDEF,
+		ERget(F_QF0028_JoinDefs),
+		ERget(F_QF0026_Selecting_JDef_names),
+		ERget(F_QF0027_JoinDef_Name));
+	    if ((jdefpik != NULL) && (*jdefpik != EOS))
+	    {
+##              putform mqjdup (dup_name = jdefpik)
+	    }
+##      }
+##      activate menuitem ERget(FE_Help)
+##          (expl = ERget(F_FE0100_ExplFrameHelp), validate = 0, activate = 0),
+##          FRSkey1 (validate = 0, activate = 0)
+##      {
+	    STcopy(ERget(S_QF015A_JoinDef_from_JoinDef), hlpbuf);
+	    FEhelp(ERx("qgtndup.hlp"), hlpbuf);
+##      }
+
+	return(retval);
+}

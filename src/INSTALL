@@ -1,0 +1,382 @@
+
+		Building and Installing Ingres ® on Linux
+
+
+  Note: this is a living document; for the latest version please see
+  http://www.ingres.com/.
+
+  Introduction
+  ------------
+
+  Ingres is renowned for its ease of installation and administration.
+  And, as you are about to find out, it can also be compiled quickly and
+  easily on Linux with the standard GNU toolset and the Jam build tool
+  (an enhanced replacement for Make).  The Ingres product itself is
+  advanced, complex, and full featured, and the build process requires
+  a very specific build order because of bootstrapping issues (e.g.,
+  the esqlc SQL precompiler must be built, and parts of Ingres are in
+  turn built with esqlc).  However, the Jam build definitions enable
+  a simple (from the programmer's point of view) build process by
+  automatically detecting and handling these build prerequisite issues.
+  For more information on Jam, see http://www.perforce.com/jam/jam.html
+  and http://freetype.sourceforge.net/jam/. Follow 
+  ftp://ftp.perforce.com/jam/ to obtain a copy of Perforce Jam. Version
+  2.5 is currently the recommended version
+
+  These instructions describe building Ingres on Linux.  However, the
+  same basic techniques are used for building the product on all Unix
+  variants, and the same underlying technology (i.e. Jam) is used for
+  the Windows and VMS builds as well.  For example, should an adventurous
+  individual decide to port Ingres to Apple's Intel version of Mac OS X
+  operating system, the same basic techniques would apply.
+
+
+  Hardware prerequisites
+  ----------------------
+
+  Ingres can be built on a modern computer running Linux (e.g. a machine
+  with a 2.6GHz processor and 1GB RAM) in less than an hour.  However, it
+  is possible to build, install, and run Ingres on less powerful machines.
+  Ingres recommends at least a PIII 500Mhz processor (or equivalent) and at
+  least 512MB RAM.  Free disk space of at least 2GB is recommended.
+
+
+  Software prerequisites
+  ----------------------
+
+  Ingres has been developed and tested at Ingres Corporation with
+  various Linux distributions running the Linux 2.4 & 2.6 kernels and GNU
+  GCC versions 3.3.2 and 3.3.3, along with the compatible GNU libraries and
+  tools.  Note: problems have been encountered compiling Ingres with GCC
+  release 4.0; for the present, please do not use that compiler version.
+
+
+  Preparing to build
+  ------------------
+
+  The compile must be done using an "ingres" user id.  This should be a
+  "normal" Linux user (no root privileges are required).  The UID
+  (numeric user id), default group, and GID (numeric group id) are not
+  significant; ingres can be assigned to group "ingres", "users", etc.
+  Please assign this user the bash login shell.
+
+  The build process requires the following tools:
+
+      o gcc and accompanying tools such as ar, ld, flex, etc.
+      o g++ development package
+      o Jam
+      o PAM development package
+
+  Most Linux distributions provide a "developer" logical package that
+  includes all the required components except for Jam.  Jam can be
+  installed from your Linux distribution's packages, or can be downloaded
+  from the websites mentioned above in the Introduction.
+
+  The Ingres build tree should be located in a directory owned by the
+  ingres user (/home/ingres is fine).  The root of this build tree is
+  known as ING_ROOT, and many build environment variables are assigned
+  relative to this setting.  Example: if the ingres_source directory
+  is located in the ingres user's home directory, then ING_ROOT is
+  /home/ingres/ingres_source.  Most of this environment setup is automated
+  by the bldenv script (located in $ING_ROOT/src/tools/port/jam).
+
+  The documentation files README, INSTALL, TESTING, etc. are located in
+  ING_ROOT, as are a number of subdirectories used for Ingres building
+  and testing:
+
+	ingres_source
+	|-- INSTALL	this file
+	|-- README	general introduction
+	|-- TESTING	acceptance testing directions
+	...
+	|-- Kerberos5/	Kerberos headers
+	|-- build/	output of Ingres build process
+	|-- install/	bootstrap partial install for build process
+	|-- pax/	special Portable Archive Interchange for Ingres
+	|-- release/	staging area for Ingres install media
+	|-- src/	Ingres source tree
+	|-- tools/	Ingres test tool executables
+	|-- tst/	Ingres test tool source and test scripts
+	|-- tstinst/	Ingres full installation for acceptance testing
+	`-- xerces-c-src_2_5_0/  Xerces C headers and library
+
+  Note:
+      o Xerces and Kerberos need not be located in this tree; see below
+	for details. Some of the directories are created during the 
+	build process. 
+      o The pax source is only required to be built on Linux
+
+
+  Build configuration
+  -------------------
+
+  The building of Ingres is conditional upon many environmental factors
+  (e.g. does the operating system support IEEE floats? what is the
+  bit length of an integer? are POSIX threads supported?).  Most of
+  these settings are already configured in the Ingres code base (using
+  platform conditional #ifdef expressions) or are automatically detected
+  by the build process.  A few settings, especially in a file called
+  $ING_ROOT/src/tools/port/conf/VERS, can be set by the programmer who is
+  building Ingres to control product options and identification.  The VERS
+  file provided in this source tree can be used as-is.  However, should
+  you build modified versions of the source code, you should change the
+  "build=" setting in VERS so that the product identification (visible
+  in various signon and log messages) clearly distinguishes the version
+  that your user is running.
+
+  For example, a setting of "build=42" in VERS would yield a message
+  like this:
+
+  $ sql iidbdb
+  INGRES TERMINAL MONITOR Copyright 2009 Ingres Corporation
+  Ingres Linux Version II 9.3.0 (int.lnx/42) login
+  Mon Feb 09 18:25:44 2009
+
+
+  Ingres facilities (in 150 words or less)
+  ----------------------------------------
+
+  The Ingres source tree is grouped by major component, further subdivided
+  by Ingres facility.  You do not need to know this to compile Ingres,
+  but understanding it should make watching the build messages more fun,
+  and will help with problem resolution should the product not build
+  cleanly for any reason.  The major components include "back" (dbms
+  engine), "cl" (OS compatibility layer), "gl" (other less OS sensitive
+  low level functions), "front" (user front ends), "common" (shared by
+  back and front), and "dbutil" (dbms utilities).  Facilities in back
+  include "opf" (optimizer), "qef" (query execution), and "dmf" (data
+  management); facilities in the cl include "me" (memory management),
+  "cs and csmt" (context switching internal and POSIX), and "handy"
+  (various handy things); facilities in front include "qbf" (query by
+  forms), "rep" (replication), and "embed" (language precompilers);
+  facilities in facilities in common include "adf" (data abstraction),
+  "gcf" (network communication), and "jdbc" (java support).
+
+
+  Building Ingres
+  ---------------
+
+  Sign on as the ingres user and untar the Ingres source code build tree.
+  The ingres_source directory at the root of this build tree is the ING_ROOT
+  location mentioned above.
+
+  In addition to the Ingres source code itself, you will need the Xerces
+  2.7 headers and library (which provide the XML link between Ingres
+  and the Apache web server), and you will need the Kerberos network
+  authentication protocol headers.  Both of these components can be
+  downloaded, for your convenience, from the same site from which you
+  downloaded the Ingres source code itself.  Alternatively, you may
+  already have these components installed on your system, or can find
+  them at the following web sites:
+
+	Xerces:		http://xml.apache.org/
+	Kerberos:	http://web.mit.edu/kerberos/www/
+  
+  The version of Xerces that you can download from the Ingres Corporation
+  web site includes only the source code.  Note that if you download
+  Xerces as source from there or from apache.org, you must build the
+  Xerces C library before you proceed with the Ingres build.  The Xerces
+  build process is straightforward and is well documented; please see
+  the instructions in the xerces-c-src_2_7_0 directory.  Alternatively,
+  you may be able to download a binary version of Xerces for your system
+  from the apache.org site. Note: This version of Xerces will NOT compile
+  under Red Hat Enterprise Server (RHEL) 4.0. If you wish to build the Ingres 
+  source code on this version of Linux, the Xerces library should be built
+  in a compatable environment and move to the RHEL 4.0 system.
+
+  For the Linux platform only, a special version of pax (the Portable Archive
+  Interchange program) is required for the build. Modifications have been
+  made to this program to allow it to work with the Ingres checkpoint process. 
+  (Support has been added for the OCFS file system and for Linux files up to 
+  8GB in length.  While the standard version of pax is adequate for creating 
+  the Ingres tar installation medium, it is not suitable for Ingres runtime 
+  operations.) This special version of pax is included with the Ingres source 
+  and should be present under $ING_ROOT/pax and can be built using Jam.
+
+  To build:
+
+	cd $ING_ROOT/pax
+	jam	
+
+  When all of the necessary components have been downloaded (Ingres source
+  tree, Xerces and Kerberos components, pax source tree), you are ready
+  to begin the actual Ingres build process.  First cd to the ING_ROOT
+  directory.  Then source a script to set up the build environment.
+  You can set some required environment variables before invoking
+  the script or can allow it to prompt you for any needed values.
+  For example:
+
+	export ING_ROOT=`pwd`
+	source src/tools/port/jam/bldenv
+
+  If you have downloaded the Xerces and Kerberos components to the
+  ING_ROOT tree, the script will automatically set up the environment
+  variables that point to these.  However, if either or both are located
+  elsewhere on your system, you will be prompted for the paths, or
+  you can set the required environment variables before sourcing the
+  bldenv script.  For example:
+
+	export ING_ROOT=`pwd`
+	export XERCESCROOT=/my/own/xerces-c-src_2_5_0
+	export XERCESLOC=$XERCESCROOT/lib
+	export KRB5HDR=/my/own/Kerberos5/hdr
+	source src/tools/port/jam/bldenv
+
+  The bldenv script establishes other variables necessary for
+  the compiling of Ingres, based on the user-supplied values.
+  Some environment variables of note are:
+
+  ING_SRCRULES	Jam build rules for Ingres
+  ING_BUILD	location of built components (programs, libraries, etc.)
+  ING_TST	path to the Ingres test tool source and test scripts
+  ING_TOOLS	path to the Ingres test tool executables
+  II_SYSTEM	run-time Ingres root location for the build process
+  II_MANIFEST_DIR  location of Ingres component inventories
+  TERM_INGRES	terminal setting for Ingres front end tools such as ABF
+
+  Note that the PATH and CDPATH settings are also modified for the build
+  process.
+
+  Next, bootstrap the build.  This includes building mkjam and mkjams,
+  which automate the creation of Jamfiles, and then invoking mkjams to
+  set up the build tree:
+
+	cd $ING_SRC/tools/port/jam
+	jam
+	mkjams
+	cd $ING_SRC
+
+  You are now ready to compile Ingres.  This is done with the following
+  command:
+
+	jam
+
+  Because of the voluminous output of the build process and because you
+  may want to examine the full output, it is wise to redirect the jam
+  output to a file.  For example:
+
+	jam >& jam.out &
+	tail -f jam.out
+
+
+  Auditing the build
+  ------------------
+
+  Some warning messages are expected during the build process (for
+  explanations of some of these, see the Ingres building FAQ at
+  http://www.ingres.com/).
+
+  How can you tell, then, if the build was successful?  First, look at
+  the final messages issued by jam.  Jam should report a (large) number
+  of targets "updated", and should NOT report any targets as "failed"
+  or "skipped".
+
+  You should also run two programs to check the status of the build
+  process for Ingres itself and for its testing tools.  To be sure that
+  the building of all Ingres components is successful, use the buildrel
+  program's audit option:
+
+	buildrel -a
+
+  Note that the buildrel audit step is required, since buildrel (in
+  addition to checking for missing files) adjusts the file permissions of
+  some of the built files.  If the Ingres build is successful, buildrel
+  will not report any missing files.
+  
+  As a final auditing step, make sure that all the files needed for
+  Ingres acceptance testing were correctly built:
+
+  	tartools -a
+
+  If this command too reports no missing files, your build is complete!
+
+
+  Packaging Ingres
+  ----------------
+
+  Ingres can be packaged for installation either as a standard tar ball
+  or as a set of RPM packages.  Use RPM only if your Linux distribution
+  supports this package format.
+
+  Whether you will be using the tar format or the RPM format, you must
+  first assemble the Ingres components for packaging using the buildrel
+  program.
+
+  First, set up a staging area for this assembly process.  Typically,
+  you would want to name this staging directory based on the "build="
+  line in $ING_SRC/tools/port/conf/VERS.  For example, if the VERS file
+  contains the line build=00 you would use the following commands:
+
+	mkdir -p $ING_ROOT/release/r00
+	cd $ING_ROOT/release/r00
+	export II_RELEASE_DIR=`pwd`
+	buildrel
+
+  To create an installable Ingres tar ball, simply create a tar file
+  that contains the components of this staging area:
+
+	tar cvf ../ingres.tar *
+
+  There is nothing magic about the name "ingres.tar".  For clarity
+  (keeping track of product builds and the resulting tar files) you
+  could call this, for example, "r00.tar" or "ingres_r00.tar".
+
+  To package Ingres for delivery in RPM format, make sure that the
+  Ingres components have been assembled as described above and that
+  II_RELEASE_DIR is correctly set.  Then issue the following commands:
+
+	buildrel -r
+	iirpmbuild
+
+  The RPM files are created in location $II_RPM_BUILDROOT/i386.
+
+
+  Installing Ingres
+  -----------------
+
+  To install Ingres from the tar ball, please see the document "Getting
+  Started" in file $ING_SRC/tools/techpub/pdf/gs.pdf
+
+  For more information regarding the RPM format and Ingres, and for
+  directions on installing the RPMs, please see the document "Getting
+  Started for Linux" in file $ING_SRC/tools/techpub/pdf/gs-linux.pdf.
+  Note: this latter document contains useful information regarding Ingres
+  on Linux quite apart from the RPM documentation.
+
+  If you install Ingres from RPMs, an environment setup script will be
+  created in the ingres home directory.  However, if you install from
+  the tar ball, you will need to create such a script yourself.  A
+  minimal script for running Ingres looks like this:
+
+  # Ingres bash shell environment setup script
+  export II_SYSTEM=/home/ingres/ingres2006/tstinst
+  export PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
+  if [ "$LD_LIBRARY_PATH" ] ; then
+      LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:$II_SYSTEM/ingres/lib
+  else
+      LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:$II_SYSTEM/ingres/lib
+  fi
+  export LD_LIBRARY_PATH
+  export TERM=vt100
+  export TERM_INGRES=vt100fx
+
+  Important: do not use the same ingres user signon for both building
+  and running Ingres, as problems will result because of conflicting
+  environment variables.  For installing and running Ingres, sign on as
+  the ingres user and then source the setup script; do NOT run bldenv.
+
+
+  Testing Ingres
+  --------------
+
+  The open source Ingres tree contains a limited set of acceptance tests
+  to verify the integrity of your Ingres build.  For this automated
+  testing the Ingres installation should be located in $ING_ROOT/tstinst.
+  Use the above Ingres runtime environment setup script as an example
+  for preparing for testing.  The example assumes that ING_ROOT is
+  /home/ingres/ingres2006; modify this as needed based on the location of
+  your Ingres build area.
+
+  For further information about the acceptance tests please see the file
+  named TESTING.
+

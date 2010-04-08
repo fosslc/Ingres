@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The server_class resource defines a server class that can be used to 
+  associate a name with one or more DBMS or Star Servers. The name can
+  then be used at connect time to specify that the connection should be 
+  made to a server of the specified class. 

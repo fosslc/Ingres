@@ -1,0 +1,570 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+#include <compat.h>
+#include <cs.h>
+#include <dbms.h>
+#include <me.h>
+#include <fe.h>
+#include <pc.h>
+#include <lg.h>
+#include <lk.h>
+#include <er.h>
+#include "lists.h"
+#include "dba.h"
+#define	    BUFSIZE 16384	/* this is the size of buf in RTI lockstat prog */
+
+/*
+** File: gtlklgst.qc - writes requested lock info to the appropriate list.
+**
+** Contains:
+**	get_lklgstats() - does the work.
+**
+** History:
+**	21-feb-1989 (tomt)
+**	    modified for use in INGDBA (r6 lockinfo)
+**	6-mar-1989 (tomt)
+**	    added call to resource sort routine
+**	9-jun-1989 (tomt)
+**	    made fixes to make code portable
+**	8-aug-1989 (tomt)
+**	    added logging options
+**	16-aug-1989 (tomt)
+**	    added more logging options
+**	9-sep-1989 (tomt)
+**	    fixed bug where length was assumed to be sizeof(struct)
+**	1-oct-1989 (tomt)
+**	    integrated 6.3 changes
+**	5-oct-1989 (tomt)
+**	    fixed problems with filtering code in lckresfilter()
+**	17-mar-1990 (tomt)
+**	    lckresfilter now accepts LK_PAGE and LK_TABLE locks when
+**	    flag_table filter is set.  It also used to let in
+**	    SV_PAGE and SV_TABLE locks which caused a noticable delay.
+**	21-jun-1990
+**	    Added locking summary quota option
+**	10-Feb-1993 (jpk)
+**	    Added new LGshow call to get amount of transaction logfile
+**	    space reserved for use by the recovery system.
+**      5/26/93 (vijay)
+**	    include pc.h
+**	30-July-1993 (jpk)
+**	    Update LGshow parameter name to reflect LGshow interface change.
+**      21-Sep-1993 (smc)
+**          Added <cs.h> for CS_SID.
+**      22-nov-1996 (dilma04)   
+**          Row-Level Locking Project:
+**          Also pass LK_ROW and LK_VAL_LOCK when the flag_table filter is set.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	03-Oct-2002 (hanch04)
+**	    Make sure the buffer passed to LKshow is aligned.
+**	18-sep-2003 (abbjo03)
+**	    Include pc.h ahead of lg.h.
+*/
+
+bool	lckresfilter();
+i4	getlockcat();
+
+/*
+** Name: get_lklgstats - gets lock/log info, allocates memory and puts it in
+**	a linked list
+**
+** Description:
+**	Write lock/log stats per request - request must be one of the choices
+**	listed below.  The results returned from LKshow/LGshow for
+**	locking/logging system statistics are returned via the stat argument.
+**	The results returned for lock, log xactions, log db or resource lists
+**	are placed in a linked list via the list management routines.
+**
+** Inputs:
+**	request - must be one of GET_LOCKSTAT, GET_LOCKLIST, GET_LOCKRES,
+**		GET_LOGDBLIST, GET_LOGXACTLIST, GET_LOGHEADER, GET_LOGFJNLCP,
+**		GET_LOGSTS, GET_LOCKSUMM and GET_LOGBCNT.  Indicates the 
+**		locking/logging information wanted
+**
+** Outputs:
+**	Returns:
+**		info_ptr - a pointer to a struct which describes
+**			the locking/logging system statistics.  This is returned
+**			only when the request is for LOCKSTAT, LOCKSUMM, LOGSTAT,
+**			LOGHEADER, LOGFJNLCP, LOGSTS, LOGLJNLCP and LOGBCNT
+**			info.
+**
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    none
+*/
+VOID
+get_lklgstats(request, info_ptr)
+i4  request;
+PTR info_ptr;
+{
+    CL_SYS_ERR	    sys_err;
+    LK_STAT	    lkstat;
+    LG_STAT	    lgstat;
+    LK_SUMM	    lksumm;
+    LG_HEADER	    lgheader;
+    LG_PROCESS	    lpb;
+    LG_DATABASE	    ldb;
+    LG_TRANSACTION  lxb;
+    LG_LA	    fcp;
+    LG_LA	    lcp;
+    STATUS	    memstat;
+
+    i4	    lgd_status;
+    i4	    bufcnt;
+    STATUS	    status;
+    u_i4	    length;
+    u_i4	    context;
+    PTR		    bufptr;
+    char	    buffer[BUFSIZE];
+    
+    /*
+    ** Make sure buffer is align on 8 bytes with LP64 or 4 bytes without 
+    */
+     ME_ALIGN_MACRO( buffer, sizeof(ALIGN_RESTRICT));
+
+    /*
+    ** Some of the info requested is returned via a pointer.  We check that the
+    ** pointer is valid
+    */
+    switch (request)
+    {
+	case GET_LOGSTAT:
+	case GET_LOCKSTAT:
+	case GET_LOCKSUMM:
+	case GET_LOGHEADER:
+	case GET_LOGFJNLCP:
+	case GET_LOGLJNLCP:
+	case GET_LOGSTS:
+	case GET_LOGBCNT:
+	case GET_LG_A_RES_SPACE:
+
+	    /*
+	    **     Check that passed pointer is good
+	    */
+	    if (info_ptr == NULL) 
+	    {
+		terminate(FAIL, "get_lklgstats: pointer passed for lock/logstat info is NULL");
+	    }
+
+	default:
+	    break;
+    }
+
+    /*
+    ** Get the requested info
+    */
+    switch (request) 
+    {
+	case GET_LOGSTAT:
+	    /*
+	    ** Get the info from LGshow.  We place the info into the struct
+	    ** indicated by the passed pointer.  We assume the caller has
+	    ** sufficient space allocated and LGshow is given the size of
+	    ** of the LG_STAT struct because thats the struct which the caller
+	    ** will be using.
+	    */
+	    if ((status = LGshow(LG_S_STAT, info_ptr, sizeof(lgstat), 
+                        (i4*)&length, &sys_err)) != OK)
+	    {
+		terminate(FAIL, "get_lklgstats: can't show logging stats");
+	    }
+	    break;
+
+	case GET_LOGHEADER:
+	    /*
+	    ** Get the info from LGshow.  We place the info into the struct
+	    ** indicated by the passed pointer.  We assume the caller has
+	    ** sufficient space allocated and LGshow is given the size of
+	    ** of the LG_HEADER struct because thats the struct which the
+	    ** caller will be using.
+	    */
+	    if ((status = LGshow(LG_A_HEADER, info_ptr, sizeof(lgheader), 
+                        (i4*)&length, &sys_err)) != OK) 
+	    {
+		terminate(FAIL, "get_lklgstats: can't show logging header");
+	    }
+	    break;
+
+	case GET_LG_A_RES_SPACE:
+	    /*
+	    ** Get the info from LGshow.  We place the info into the struct
+	    ** indicated by the passed pointer.  We assume the caller has
+	    ** sufficient space allocated and LGshow is given the size of
+	    ** of the LG_HEADER struct because thats the struct which the
+	    ** caller will be using.
+	    */
+	    if ((status = LGshow(LG_A_RES_SPACE, info_ptr, sizeof(lgheader), 
+                        (i4*)&length, &sys_err)) != OK) 
+	    {
+		terminate(FAIL, "get_lklgstats: can't show logging header");
+	    }
+	    break;
+
+	case GET_LOGFJNLCP:
+	    /*
+	    ** Get the info from LGshow.  We place the info into the struct
+	    ** indicated by the passed pointer.  We assume the caller has
+	    ** sufficient space allocated and LGshow is given the size of
+	    ** of the LG_LA struct because thats the struct which the caller
+	    ** will be using.
+	    */
+	    if ((status = LGshow(LG_S_ACP_START, info_ptr, sizeof(fcp), 
+                        (i4*)&length, &sys_err)) != OK)
+	    {
+		terminate(FAIL, "get_lklgstats: can't show first journal CP");
+	    }
+	    break;
+
+	case GET_LOGLJNLCP:
+	    /*
+	    ** Get the info from LGshow.  We place the info into the struct
+	    ** indicated by the passed pointer.  We assume the caller has
+	    ** sufficient space allocated and LGshow is given the size of
+	    ** of the LG_LA struct because thats the struct which the caller
+	    ** will be using.
+	    */
+	    if ((status = LGshow(LG_S_ACP_END, info_ptr, sizeof(lcp), 
+                        (i4*)&length, &sys_err)) != OK)
+	    {
+		terminate(FAIL, "get_lklgstats: can't show last journal CP");
+	    }
+	    break;
+
+	case GET_LOGSTS:
+	    /*
+	    ** Get the info from LGshow.  We place the info into the i4
+	    ** indicated by the passed pointer.  We assume the caller has 
+	    ** passed a i4 ptr
+	    */
+	    if ((status = LGshow(LG_S_LGSTS, info_ptr, sizeof(lgd_status), 
+                        (i4*)&length, &sys_err)) != OK)
+	    {
+		terminate(FAIL, "get_lklgstats: can't show logging system status.");
+	    }
+	    break;
+
+	case GET_LOGBCNT:
+	    /*
+	    ** Get the info from LGshow.  We place the info into the i4
+	    ** indicated by the passed pointer.  We assume the caller has 
+	    ** passed a i4 ptr
+	    */
+	    if ((status = LGshow(LG_A_BCNT, info_ptr, sizeof(bufcnt), 
+                        (i4*)&length, &sys_err)) != OK)
+	    {
+		terminate(FAIL, "get_lklgstats: can't show logging stats");
+	    }
+	    break;
+
+	case GET_LOGDBLIST:	/* get list of open dbs in logging system */
+	    l_free(LOGDBINFO, 0);	/* free previously held mem if any */
+	    length = 0;
+	    for (;;)
+	    {
+		if ((status = LGshow(LG_N_DATABASE, (PTR)&ldb, 
+			sizeof(ldb), (i4*)&length, &sys_err)) != OK)
+		{
+		    terminate("get_lklgstats: can't show db information");
+		}
+		if (length == 0) 
+		    break; /* nothing to get */
+
+		if ((bufptr = (PTR) MEreqmem((u_i4)0, (u_i4)sizeof(ldb), 
+			FALSE, &memstat)) == NULL) 
+		{
+		    terminate(FAIL, "get_lklgstats: error allocating memory for log information");
+		}
+		MEcopy((PTR)&ldb, (u_i2)sizeof(ldb), bufptr);
+
+		l_add(LOGDBINFO, 0, 0, bufptr); /* put it away */
+	    }
+	    break;
+
+	case GET_LOGPROCESS:	/* get list of processes in loggin system */
+	    l_free(LOGPROCINFO, 0);	/* free previously held mem if any */
+	    length = 0;
+	    for (;;)
+	    {
+		if ((status = LGshow(LG_N_PROCESS, (PTR)&lpb, 
+				sizeof(lpb), (i4*)&length, &sys_err)) != OK)
+		{
+		    terminate(FAIL, "get_lklgstats: can't show process information.");
+		}
+		if (length == 0) 
+		    break; /* nothing to get */
+
+		if ((bufptr = (PTR)MEreqmem((u_i4)0, (u_i4) sizeof(lpb), 
+			FALSE, &memstat)) == NULL) 
+		{ 
+		    terminate(FAIL, "get_lklgstats: error allocating memory for log information");
+		}
+		MEcopy((PTR)&lpb, (u_i2)sizeof(lpb), bufptr);
+		l_add(LOGPROCINFO, 0, 0, bufptr); /* put it away */
+	    }
+	    break;
+
+	case GET_LOGXACTLIST:	/* get transactions in the logging system */
+	    l_free(LOGXACTINFO, 0);	/* free previously held mem if any */
+	    length = 0;
+	    for (;;)
+	    {
+		if ((status = LGshow(LG_N_TRANSACTION, (PTR) &lxb, 
+				sizeof(lxb), (i4*)&length, &sys_err)) != OK)
+		{
+		    terminate(FAIL, "get_lklgstats: can't show logging transaction info");
+		}
+		if (length == 0) 
+		    break; /* nothing to get */
+
+		if ((bufptr = (PTR)MEreqmem((u_i4)0, (u_i4)sizeof(lxb), 
+		    	FALSE, &memstat)) == NULL) 
+		{ 
+		    terminate(FAIL, "get_lklgstats: error allocating memory for lock list information");
+		}
+		MEcopy((PTR)&lxb, (u_i2)sizeof(lxb), bufptr);
+		l_add(LOGXACTINFO, 0, (i4)length, bufptr); /* put it away */
+	    }
+	    break;
+
+	case GET_LOCKSTAT:
+	    /*
+	    ** Get the info from LKshow.  We place the info into the struct
+	    ** indicated by the passed pointer.  We assume the caller has
+	    ** sufficient space allocated and LKshow is given the size of
+	    ** of the LK_STAT struct because thats the struct which the caller
+	    ** will be using.
+	    */
+	    if ((status = LKshow(LK_S_STAT, (i4)0, (LK_LKID*)NULL,
+			(LK_LOCK_KEY*)NULL, (u_i4)sizeof(lkstat),
+                        info_ptr, &length, &context, &sys_err)) != OK)
+	    {
+		terminate(FAIL, "get_lklgstats: can't show locking stats");
+	    }
+	    break;
+
+	case GET_LOCKSUMM:
+	    /*
+	    ** Get the info from LKshow.  We place the info into the struct
+	    ** indicated by the passed pointer.  We assume the caller has
+	    ** sufficient space allocated and LKshow is given the size of
+	    ** of the LK_SUMM struct because thats the struct which the caller
+	    ** will be using.
+	    */
+	    if ((status = LKshow(LK_S_SUMM, (i4)0, (LK_LKID*)NULL,
+			(LK_LOCK_KEY*)NULL, (u_i4)sizeof(lksumm),
+                        info_ptr, &length, &context, &sys_err)) != OK)
+	    {
+		terminate(FAIL, "get_lklgstats: can't show locking stats");
+	    }
+	    break;
+
+	case GET_LOCKLIST:   /*  Get information about lock lists and locks. */
+	    /*
+	    ** Get the lock list info - we pass a large buffer area, LKshow 
+	    ** puts in the lock list header info followed by info on each 
+	    ** lock in an array fashion.  We need to pass the length of the 
+	    ** info placed there by LKshow to l_add().  This is used by 
+	    ** l_retrieve() to determine how many locks are in each list.
+	    */
+	    l_free(LOCKINFO, 0);	/* free previously held mem if any */
+	    for (context = 0;;) 
+	    {
+		if ((status = LKshow(LK_S_LOCKS, (i4)0, (LK_LKID*)NULL,
+			(LK_LOCK_KEY*)NULL, (u_i4)BUFSIZE,
+                        (PTR)buffer, &length, &context, &sys_err)) != OK)
+		{
+		    terminate(FAIL, "get_lklgstats: can't show locking stats");
+		}
+		if (length == 0) 
+		    break; /* nothing to get */
+
+		if ((bufptr = (PTR)MEreqmem((u_i4)0, (u_i4)length, 
+				    FALSE, &memstat)) == NULL) 
+		{ 
+		    terminate(FAIL, "get_lklgstats: error allocating memory for lock list information");
+		}
+		MEcopy((PTR)buffer, (u_i2)length, bufptr);
+		l_add(LOCKINFO, 0, (i4)length, bufptr); /* put it away */
+	    }
+	    break;
+
+	case GET_LOCKRES:	
+	    /*
+	    ** Get the lock list info - we pass a large buffer area, LKshow 
+	    ** puts in the lock list header info followed by info on each 
+	    ** lock in an array fashion.  We need to pass the length of the 
+	    ** info placed there by LKshow to l_add().  This is used by 
+	    ** l_retrieve() to determine how many locks are in each list.  
+	    ** We also filter out unwanted resources here
+	    */
+	    l_free(RESINFO, 0);	/* free up previously held mem if any */
+	    for (context = 0;;) 
+	    {
+		if ((status = LKshow(LK_S_RESOURCE, (i4)0,
+			 (LK_LKID*)NULL, (LK_LOCK_KEY*)NULL, (u_i4)BUFSIZE,
+                        buffer, &length, &context, &sys_err)) != OK)
+		{
+		    terminate(FAIL, "get_lklgstats: can't show locking stats");
+		}
+		if (length == 0) 
+		    break; /* nothing to get */
+		/*
+		** Perform the filtering - show the user only the resource 
+		** types they want see
+		*/
+		if (lckresfilter(buffer)) 
+		{
+		    if ((bufptr = (PTR)MEreqmem((u_i4)0, (u_i4)length,
+				    FALSE, &memstat)) == NULL) 
+		    { 
+			terminate(FAIL, "get_lklgstats: error allocating memory for lock list information");
+		    }
+		    MEcopy((PTR)buffer, (u_i2)length, bufptr);
+		    l_add(RESINFO, 0, (i4)length, bufptr); /* put it away */
+		} /* else user does not want this resource type */
+	    }
+	    l_ressort();	/* sort the resource info by database */
+	    break;
+
+	default:
+	    terminate(FAIL, "get_lklgstats: Invalid request (%d)\n", request);
+    }
+    return;
+}
+
+/*
+** lckresfilter - depending upon the globals set by the user,
+**	this routine will return TRUE if the resource type is one
+**	that the user wants, else FALSE.
+**
+** Inputs
+**	rsb - a pointer to the information returned by LKshow.
+**
+** Outputs
+**	none
+**
+** Returns
+**	TRUE - if the resource type is one we want to process
+**	FALSE - if the resource type is one we don't want
+**
+** History
+**	3.8.89		tomt	Written
+**	3/15/89 	tomt	added database filter - rejects unwanted dbs
+**				   if user specifies the -d flag.
+**	10/5/89 	tomt    fixed problems with filtering code.  Made
+**				other changes
+**	3/17/1990 	tomt	lckresfilter now allows only LK_PAGE and
+**				LK_TABLE locks to pass when the flag_table
+**	    			filter is set.  It also used to let in
+**	    			SV_PAGE and SV_TABLE locks which caused a
+**				noticable delay.
+**      22-nov-1996 (dilma04)   Also pass LK_ROW and LK_VAL_LOCK when the 
+**				flag_table filter is set.
+**	05-Mar-2002 (jenjo02)
+**	    Added LK_SEQUENCE.
+**          
+
+*/
+bool
+lckresfilter(buf)
+PTR buf;
+{
+    LK_RSB_INFO	    *rsb;
+    i4  lock_catagory;
+    i4  dbid;
+
+    rsb = (LK_RSB_INFO *)buf;
+    lock_catagory = getlockcat(rsb->rsb_key[0]);
+
+    /*
+    ** Check to see if user wants ALL resource types or specific types...
+    ** Filtering out unwanted resource types occurs in the display routines
+    ** for resource info if the user specifies a specific locktype.
+    **
+    ** We also check if user wants locks for a specific locktype
+    */
+    if (flag_db) /* filter out unwanted db's */
+    {
+	switch(lock_catagory) {
+	case DATABASE_LOCK:
+	    if ((rsb->rsb_key[0] == LK_BM_DATABASE) ||
+		(rsb->rsb_key[0] == LK_CKP_DB)) /* dbname handling */
+		dbid = rsb->rsb_key[1];
+	    else
+		dbid = get_db_id((PTR) &rsb->rsb_key[1]);
+
+	    if (dbid != dbname_id)
+		return(FALSE);
+
+	case OTHER_LOCK:
+	    break;
+
+	default:
+	    if (rsb->rsb_key[1] != dbname_id)
+		return(FALSE);
+	}
+    }
+
+    if (flag_all_locks)
+    {
+	return(TRUE);
+    } 
+    else if (flag_locktype)
+    {
+	/*
+	**   If it is does not match the right locktype, then we filter out
+	**   all other locktypes
+	*/
+	if (rsb->rsb_key[0] != ing_locktype) /* no match */
+	    return(FALSE);
+    }
+    else if (flag_table)
+    {
+	/*
+	**   If user wants to view a specific table, filter out OTHER_LOCK 
+	**   types here.  If the resource is in this database and its a page 
+	**   or table type, let it pass.
+	*/
+	if ((rsb->rsb_key[0] == LK_PAGE) || (rsb->rsb_key[0] == LK_TABLE) ||
+             (rsb->rsb_key[0] == LK_ROW) || (rsb->rsb_key[0] == LK_VAL_LOCK))
+	{
+	    return(TRUE);
+	}
+	else
+	{
+	    return(FALSE);
+	}
+    }
+    else
+    { 
+	/* otherwise, view only the "worthwhile looking at" locks */
+	switch(rsb->rsb_key[0]) {
+	case LK_DATABASE:
+	case LK_OWNER_ID:
+	case LK_JOURNAL:
+	case LK_DB_TEMP_ID:
+	case LK_OPEN_DB:
+	case LK_TABLE:
+	case LK_PAGE:
+        case LK_ROW:
+        case LK_VAL_LOCK:
+	case LK_CREATE_TABLE:
+	case LK_SEQUENCE:
+	    break;
+	default:
+	    return(FALSE);
+        }
+    }
+    return(TRUE);
+}
+

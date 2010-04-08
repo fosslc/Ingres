@@ -1,0 +1,97 @@
+#
+# Jamfile file for front!qbf!qbf
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front qbf qbf ;
+
+IISUBSYS front qbf qbf ;
+
+IINOOPTIM tables.qsc : i64_hpu ;
+IINOOPTIM mqbfmain.qsc : nc4_us5 ;
+IINOOPTIM initfrms.qsc : nc4_us5 ;
+
+IIBINEXE qbf : main.qsc ;
+IINEEDLIBS qbf :  QBFLIB SHFRAMELIB SHQLIB SHCOMPATLIB ;
+IINEEDLIBSW qbf : SHEMBEDLIB SHADFLIB ;
+IINEEDOBJ qbf : oosymbol.roc ;
+IIUNDEFS qbf : II_copyright malloc ;
+
+IIMSGHDR erqf.msg ;
+
+IIQSHHDR mqbf.h : mqbf.qsh ;
+IIQSHHDR mqsymbol.h : mqsymbol.qsh ;
+
+IIFORM mqbfjoin.frm ;
+IIFORM mqbfops.frm ;
+IIFORM mqbftbls.frm ;
+IIFORM mqchange.frm ;
+IIFORM mqcrjoin.frm ;
+IIFORM mqexec.frm ;
+IIFORM mqjdup.frm ;
+IIFORM mqnewjoi.frm ;
+IIFORM mqqfnms.frm ;
+IIFORM mqstart.frm ;
+
+File $(INGMSG)$(DFS)qappox.hlp : qappox.hlp ;
+File $(INGMSG)$(DFS)qapptx.hlp : qapptx.hlp ;
+File $(INGMSG)$(DFS)qcatlg.hlp : qcatlg.hlp ;
+File $(INGMSG)$(DFS)qchng.hlp : qchng.hlp ;
+File $(INGMSG)$(DFS)qdelsbmd.hlp : qdelsbmd.hlp ;
+File $(INGMSG)$(DFS)qdelsbtm.hlp : qdelsbtm.hlp ;
+File $(INGMSG)$(DFS)qdelsbto.hlp : qdelsbto.hlp ;
+File $(INGMSG)$(DFS)qfdelrow.hlp : qfdelrow.hlp ;
+File $(INGMSG)$(DFS)qfmodjf.hlp : qfmodjf.hlp ;
+File $(INGMSG)$(DFS)qfsavend.hlp : qfsavend.hlp ;
+File $(INGMSG)$(DFS)qfsvquit.hlp : qfsvquit.hlp ;
+File $(INGMSG)$(DFS)qgtndup.hlp : qgtndup.hlp ;
+File $(INGMSG)$(DFS)qjoin.hlp : qjoin.hlp ;
+File $(INGMSG)$(DFS)qlpjd.hlp : qlpjd.hlp ;
+File $(INGMSG)$(DFS)qmain.hlp : qmain.hlp ;
+File $(INGMSG)$(DFS)qmorinfo.hlp : qmorinfo.hlp ;
+File $(INGMSG)$(DFS)qqbfint.hlp : qqbfint.hlp ;
+File $(INGMSG)$(DFS)qqbfname.hlp : qqbfname.hlp ;
+File $(INGMSG)$(DFS)qqryint.hlp : qqryint.hlp ;
+File $(INGMSG)$(DFS)qqryints.hlp : qqryints.hlp ;
+File $(INGMSG)$(DFS)qqueryn.hlp : qqueryn.hlp ;
+File $(INGMSG)$(DFS)qqueryx.hlp : qqueryx.hlp ;
+File $(INGMSG)$(DFS)qretmdox.hlp : qretmdox.hlp ;
+File $(INGMSG)$(DFS)qretmdtn.hlp : qretmdtn.hlp ;
+File $(INGMSG)$(DFS)qretmdtx.hlp : qretmdtx.hlp ;
+File $(INGMSG)$(DFS)qretooon.hlp : qretooon.hlp ;
+File $(INGMSG)$(DFS)qretooox.hlp : qretooox.hlp ;
+File $(INGMSG)$(DFS)qretootn.hlp : qretootn.hlp ;
+File $(INGMSG)$(DFS)qretootx.hlp : qretootx.hlp ;
+File $(INGMSG)$(DFS)qrules.hlp : qrules.hlp ;
+File $(INGMSG)$(DFS)qsort.hlp : qsort.hlp ;
+File $(INGMSG)$(DFS)qsource.hlp : qsource.hlp ;
+File $(INGMSG)$(DFS)qtabgosb.hlp : qtabgosb.hlp ;
+File $(INGMSG)$(DFS)qtbls.hlp : qtbls.hlp ;
+File $(INGMSG)$(DFS)qupdmdon.hlp : qupdmdon.hlp ;
+File $(INGMSG)$(DFS)qupdmdox.hlp : qupdmdox.hlp ;
+File $(INGMSG)$(DFS)qupdmdtn.hlp : qupdmdtn.hlp ;
+File $(INGMSG)$(DFS)qupdmdtx.hlp : qupdmdtx.hlp ;
+File $(INGMSG)$(DFS)qupdooon.hlp : qupdooon.hlp ;
+File $(INGMSG)$(DFS)qupdooox.hlp : qupdooox.hlp ;
+File $(INGMSG)$(DFS)qupdootn.hlp : qupdootn.hlp ;
+File $(INGMSG)$(DFS)qupdootx.hlp : qupdootx.hlp ;
+
+IILIBRARY QBFLIB : wrtupd.qsc wrttodb.qsc wrtrec.qsc
+	vfmqbf.qsc vfbldqry.qsc update.qsc tables.qsc sort.qsc
+	rules.qsc qsutils.qsc qinitfrm.qsc qfsql.qsc qfgtargs.qsc
+	qexecute.qsc qexecsp.qsc qdescfrm.qsc qbfnames.qsc qbfjedit.qsc
+	mqtest.qsc mqtbload.qsc mqtbinfo.qsc mqsavrec.qsc mqrstwhr.qsc
+	mqretini.qsc mqqdesc.qsc mqmflds.qsc mqjncat.qsc mqinit.qsc
+	mqgtbrws.qsc mqgetfmt.qsc mqexit.qsc mqedata.qsc mqdatast.qsc
+	mqchintb.qsc mqbfmain.qsc mqbfhelp.qsc mqbfdata.qsc
+	maketbl.qsc makefrm.qsc joins.qsc initfrms.qsc iiqbf.qsc
+	handler.qsc getquery.qsc getqname.qsc getqdef.qsc getnewnm.qsc
+	getnames.qsc getinfo.qsc getchng.qsc getattr.qsc find.qsc
+	emisc.qsc doqexec.qsc defform.qsc dbexit.qsc catalog.qsc
+	browse.qsc bldwhere.qsc bldquery.qsc bldfrom.qsc append.qsc
+	addjoin.qsc qbferror.c mqsymbol.c mqlast.c ;
+

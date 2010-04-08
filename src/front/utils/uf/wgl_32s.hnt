@@ -1,0 +1,8 @@
+#
+# wgl_32s.hnt file for  front\utils\uf
+#
+# History:
+#	19-nov-96 (donc)
+#		Set up this hint file for the Win32s build.
+objonly = ufdata.obj 
+

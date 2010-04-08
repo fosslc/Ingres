@@ -1,0 +1,78 @@
+
+<TAG NAME="CF_IceFunction">
+    <EDITORLAYOUT HEIGHT="330" LFHEIGHT="330">
+
+	<control type="Image" name="imgEditor" width="170" height="MAXIMUM" corner="NE" right=5 down=5 filepath="../IngresIce/Icons/ingresii.bmp"/>
+
+	<CONTAINER TYPE="Panel" NAME="controlType" WIDTH="MAXIMUM" HEIGHT=190 LFHEIGHT=160 MAXWIDTHPADDING=0 MAXHEIGHTPADDING=0 ANCHOR="imgEditor" CORNER="NE">
+
+				    <CONTROL NAME="lblLibrary" TYPE="Label" CAPTION="Library Name:" DOWN="20" RIGHT="10" WIDTH="80"/>
+        		    <CONTROL NAME="txtLibrary" TYPE="TextBox" ANCHOR="lblLibrary" CORNER="NE" WIDTH="MAXIMUM"/>
+
+				    <CONTROL NAME="lblFunction" TYPE="Label" CAPTION="Function Name:" DOWN="45" RIGHT="10" WIDTH="80"/>
+        		    <CONTROL NAME="txtFunction" TYPE="TextBox" ANCHOR="lblFunction" CORNER="NE" WIDTH="MAXIMUM"/>
+			
+					<CONTROL NAME="lblNumValue" TYPE="Label" CAPTION="Number of Variable:" DOWN="70" CORNER="NE" RIGHT="10" WIDTH="130"/>
+		            <CONTROL NAME="txtNumValue" TYPE="TextBox" ANCHOR="lblNumValue" CORNER="NE" WIDTH="MAXIMUM" MAXWIDTHPADDING="10" HORIZRESIZE="BODY"/>
+			
+	    	        <CONTROL NAME="lblHTML" TYPE="Label" CAPTION="HTML Text:" DOWN="95" RIGHT="10" WIDTH="80"/>
+    	    	    <CONTROL TYPE="TextArea" NAME="txtHTML" WIDTH="MAXIMUM" HEIGHT=80 LFHEIGHT=59 ANCHOR="lblHTML" CORNER="NE" WRAP/>
+
+	</CONTAINER>	
+
+	<CONTAINER TYPE="Panel" NAME="pnlRepeat" WIDTH="MAXIMUM" HEIGHT=50 LFHEIGHT=59 MAXWIDTHPADDING=5 MAXHEIGHTPADDING=5 ANCHOR="controlType" CORNER="SW" DOWN=10>			
+		<CONTROL TYPE="Label" NAME="lblRepeat" WIDTH=60 LFWIDTH=96 CORNER="NW" RIGHT=10 DOWN=20 CAPTION="Repeat:"/>
+		<CONTROL NAME="txtRepeat" TYPE="CheckBox" ANCHOR="lblRepeat" CORNER="NE"  WIDTH="MAXIMUM"/>			
+	</CONTAINER>
+
+   </EDITORLAYOUT>
+
+   <ATTRIBUTES>
+   </ATTRIBUTES>
+
+   <ATTRIBCATEGORIES>
+   </ATTRIBCATEGORIES>
+
+   <TAGLAYOUT>      
+   
+   <WIZIF OPTIONLOWERCASETAGS EQ 'TRUE'>
+			<WIZSET TIMEOUT	= 'TIMEOUT'>
+			<WIZSET MIMEATTACH = 'MIMEATTACH'>
+		<WIZELSE>
+			<WIZSET TIMEOUT	= 'TIMEOUT'>
+			<WIZSET MIMEATTACH = 'MIMEATTACH'>
+		</WIZIF>
+		
+		<WIZIF OPTIONLINEARLAYOUT EQ 'TRUE'>
+			<WIZSET VERTICALSPACINGGAP =  ' ' >
+		<WIZELSE>
+			<WIZSET VERTICALSPACINGGAP =  CHR(13) & CHR(10) & '        ' >
+		</WIZIF>
+
+		<WIZIF TXTREPEAT EQ 'TRUE'>
+			<WIZSET REPEATDEC = ' REPEAT ' >
+		<WIZELSE>
+			<WIZSET REPEATDEC = ' ' >
+		</WIZIF>
+
+  		<WIZSET EXCLAIM =  '!' >
+  		<WIZSET amp =  '&' >
+<$${EXCLAIM}-- #ICE$${REPEATDEC}FUNCTION=`$${TXTLibrary}.$${TXTFunction}?
+	<WIZIF txtNumValue NEQ ''>
+	<WIZIF txtNumValue GT 0>
+	<WIZSET Tab = Chr(9)><WIZSET LoopNum = 1>
+	
+	<WIZLOOP CONDITION = "LoopNum LTE txtNumValue">
+	<WIZIF LoopNum NEQ '1'>$${amp}
+	</WIZIF>
+	<WIZIF 1>Variable_Name$${LoopNum}=Value$${LoopNum}</WIZIF><WIZSET LoopNum = LoopNum + 1></WIZLOOP>`
+</WIZIF>	HTML=`$${TXTHTML}`
+</WIZIF>-->
+
+   </TAGLAYOUT>
+
+
+   <TAGDESCRIPTION HELPFILE="../../TagDefs/IngresIce/Docs/cfextfunc.html"/>
+
+
+</TAG>

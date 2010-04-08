@@ -1,0 +1,26 @@
+<contexts>
+	<context id="RoutesCriteriaEditor" title="Routes Criteria Editor">
+		<!--<description></description>-->
+		<topic href="html/dev_routes_function.html" label="Developing the Routes Function"/>
+		<topic href="html/routes_form.html" label="Routes Form"/>
+		<topic href="html/load_country_combo_box_control.html" label="How You Load the Country Combo Box Control"/>
+		<topic href="html/load_region_combo_box_control.html" label="How You Load the Region Combo Box Control"/>
+	</context>
+	<context id="DatabaseConfigurationEditor" title="Database Configuration Editor">
+		<!--<description></description>-->
+		<topic href="html/dev_connect_function.html" label="Developing the Connect Function"/>
+		<topic href="html/ingres_instance_data_source_form.html" label="Ingres Instance Data Source Form "/>
+		<topic href="html/change_ingres_instance.html" label="How You Change the Ingres Instance "/>
+		<topic href="html/getdatasource_method.html" label="The getDataSource() Method "/>
+	</context>
+	<context id="UserProfileEditor" title="User Profile Editor">
+		<!--<description></description>-->
+		<topic href="html/dev_profile_function.html" label="Developing the Profile Function"/>
+		<topic href="html/user_profile_model.html" label="User Profile Model"/>
+		<topic href="html/profile_form.html" label="Profile Form"/>
+		<topic href="html/load_email_address_combo_box.html" label="How You Load the Email Address Combo Box Control"/>
+		<topic href="html/add_new_profile.html" label="How You Add a New Profile"/>
+		<topic href="html/change_profile.html" label="How You Change a Profile"/>
+		<topic href="html/remove_profile.html" label="How You Remove a Profile"/>
+	</context>
+</contexts>

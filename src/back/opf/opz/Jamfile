@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!opf!opz
+#
+
+SubDir ING_SRC back opf opz ;
+
+IISUBSYS back opf opz ;
+
+IINOOPTIM opzaddatts.c : nc4_us5 ;
+
+IILIBRARY OPFLIB : opzsvqua.c opzfmake.c opzfindatt.c
+	opzfattr.c opzcreate.c opzaddatts.c ;
+

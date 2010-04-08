@@ -1,0 +1,288 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<me.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<ui.h>
+##include	"mqbf.qsh"
+#include	"erqf.h"
+
+/**
+** Name:	getnames.qc -	Get Relation Name and Information Module.
+**
+** Description:
+**	Contains routines that check and fetch relation information for
+**	an input table name.  Defines:
+**
+**	IIqfGetRelInfo()	fetch relation information for table.
+**	IIqfChkRel()		check relation for existence.
+**	IIqfRvarUnique()	check correlation (range) name for uniqueness.
+**
+** History:
+**	Revision 6.5
+**	13-aug-1993 (rdrane)
+**		Remove mqgettname() routine.  It stopped prompting long ago,
+**		the initial 6.5 modifications were bogus, and the subsequent
+**		6.5 modifications have made it equivalent to IIqfChkRel(),
+**		except for the return code (STATUS vs bool).
+**		This addresses all/part of b54048, b51773, b51756, and b52570.
+**
+**	Revision 6.4
+**	08/12/91 (emerson)
+**		Fix for bug 37365 in IIqfChkRel.
+**	Revision 6.1  88/09  wong
+**	Moved 'mqgetrstat()' here as 'IIqfChkRel()' along with 'mqgettname()'.
+**	Modified 'IIqfGetRelInfo()' and 'mqgettname()' to call 'IIqfChkRel()'.
+**	03-oct-88 (kenl)
+**		Removed COMMIT.  We now use QUEL transaction semantics.
+**
+**	Revision 6.0
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**	Revision 5.0
+**	24-feb-87 (marian)	bug 10993
+**		Stole the retrieve qry from mqgetnames() to create
+**		mqgetrstat() to retrieve the relstat for the specified table.
+**	27-jun-95 (teresak)
+**	    Added undocumented support for II_QBF_DISABLE_VIEW_CHECK
+**	    to allow append, update, and deletes of single table views 
+**	    (Sir 37839)
+**	15-Oct-1997(angusm)
+**	    Redo allow_views as bool (bug 86168)
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+	bool	IIqfRvarUnique();
+
+/*{
+** Name:	IIufGetRelInfo() -	Fetch Relation Information for Table.
+**
+** Description:
+**
+** Input:
+**	qdef	{MQQDEF *}  Query definition.
+**	t_tbl	{char *}  Table (relation) name.
+**	t_range	{char *}  Table alias.
+**	type	{nat} _MASTER or _DETAIL type.
+**
+** Returns:
+**	{STATUS}  OK, found and fetched.
+**
+** History:
+**	7/87 (peterk) changed accesses to "relation" and "attribute" to
+**		calls on FErel_* and FEatt_* routines.
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	28-jan-1988 (peter)
+**		Use FErel_ffetch for performance.  Also, add the mqrelown
+**		field in the RELINFO structure.
+**	88/09  (jhw)  Modified to call 'IIqfChkRel()' and renamed from
+**		'mqgetnames()'.
+**	14-dec-88 (kenl)
+**		Set rel->keytype to be value of unique_rule in iitables.  This
+**		will later be used in conjuntion with key_sequence in iicolumns
+**		to determine if a unique key exists for this table.
+**	15-sep-92 (daver)
+** 		added t_owner parameter as part of 6.5 FIPS owner.table and 
+**		delimited identifier support. This routine is called by
+**		IIqfBldInfo (processing a single table from a command
+**		line) and IIqfGetInfo, which performs the unloadtable
+**		loop in the JoinDef Specification frame. An owner column
+**		is now included in the table field in that frame.
+**		Promoted _runique() to global and renamed to IIqfRvarUnique()
+**		since we now need to call it directly in IIqfGetInfo().
+*/
+
+STATUS
+IIqfGetRelInfo ( qdef, t_tbl, t_owner, t_range, type )
+register MQQDEF	*qdef;
+char		*t_tbl;
+char		*t_owner;
+char		*t_range;
+i4		type;
+{
+	FE_REL_INFO	relinfo;
+
+	if ( qdef->mqnumtabs == MQ_MAXRELS )
+	{
+		IIUGerr( E_QF003A_ExceedMaxTables, 0, 1, &qdef->mqnumtabs );
+		return FAIL;
+	}
+
+	/* 
+	** replace this call to IIqfChkRel with the following,
+	** which includes the new owner parameter:
+	*/
+	if ( IIqfChkRel(qdef, t_tbl, t_owner, TRUE, &relinfo) != OK )
+		return FAIL;
+	else
+	{
+		register RELINFO	*rel;
+		STATUS			rstat;
+
+		if ( (rel = (RELINFO *)MEreqmem((u_i4)0, (u_i4)sizeof(*rel),
+						TRUE, &rstat)) == NULL )
+		{
+			FDerror(ERRALLOC, 0, ERx(""));
+			return rstat;
+		}
+		else
+		{
+			STcopy(relinfo.name, rel->mqrelid);
+			STcopy(relinfo.owner, rel->mqrelown);
+			rel->keytype = (i4)relinfo.unique_keys;
+			rel->mqtype = type;
+			rel->opdelete = TRUE;
+
+			if ( t_range[0] == EOS )
+				STcopy(relinfo.name, t_range);
+			if (!IIqfRvarUnique(qdef, t_range))
+			{
+				return FAIL;
+			}
+			STcopy(t_range, rel->mqrangevar);
+
+			/* increment number of tables in JoinDef */
+			qdef->mqtabs[qdef->mqnumtabs] = rel;
+			++qdef->mqnumtabs;
+		}
+	}
+	return OK;
+}
+
+/*
+** IIqfRvarUnique  - routine to check if range variable specified is unique
+*/
+bool
+IIqfRvarUnique(qdef,t_range)
+register MQQDEF	*qdef;
+register char	*t_range;
+{
+	register i4	i;
+	i4		unique;
+
+	unique = TRUE;
+	for ( i = 0 ; i < qdef->mqnumtabs ; ++i )
+	{
+	    if ( STequal(t_range, qdef->mqtabs[i]->mqrangevar) )
+	    {
+		IIUGerr( E_QF003B_NonUniqueAbbrv, 0, 1, t_range );
+		unique = FALSE;
+		break;
+	    }
+	}
+	return unique;
+}
+
+/*{
+** Name:	IIqfChkRel() -	Check Relation For Existence.
+**
+** Description:
+**	Checks the named table for existence by calling 'FErel_ffetch()'
+**	for the relation.
+**
+** Input:
+**	qdef	{MQQDEF *}  Query definition.
+**	t_tbl	{char *}  Table (relation) name.
+**	t_owner	{char *}  Table (relation) owner (schema) name.
+**	notfound {bool}  Report error on lookup.
+**	relinfo	{FE_REL_INFO *}  Relation information structure (may be NULL.)
+**
+** Returns:
+**	{STATUS}  OK, if found.
+**
+** Side Effects:
+**	Sets 'any_cats' and 'any_views' if found.
+**
+** History:
+**	24-feb-87 (marian)	bug 10993
+**		Stole the retrieve qry from mqgetnames() to create mqgetrstat()
+**		to retrieve the relstat for the specified table.
+**	88/09  (jhw)  Renamed and added 'notfound' parameter.
+**	23-nov-88 (kenl)
+**		Added case check for table name.  Change came from the
+**		IBM group (wolf).
+**	08/12/91 (emerson)
+**		When FErel_ffetch encounters an error,
+**		display new error E_QF0175_BadTable
+**		instead of trying to treat the return code
+**		as a message ID (bug 37365).
+**	16-sep-92 (daver)
+**		FIPS owner.table and delimited identifier changes. Added
+**		owner parameter, as the new FErel_ffetch requires it. Callers
+**		to this routine will now need to determine the owner of the 
+**		desired table; either out of the new tablefield in the Joindef
+**		Specification frame, or via FE_fullresove().
+**		Also removed extraneous call to IIUGlbo_lowerBEobject.
+**	17-aug-1993 (rdrane)
+**		Now that mqgettname() is defunct, this routine has a
+**		more broad based clientel.  Note that name and owner must
+**		reflect fully normalized strings.
+**	26-aug-1993 (mgw)
+**		switched order of owner and name args to IIUIxrt_tbl() so
+**		the error gets reported against <owner.tblname> instead of
+**		against <tblname.owner>.
+*/
+
+STATUS
+IIqfChkRel(qdef,name,owner,notfound,relinfo)
+MQQDEF		*qdef;
+char		*name;
+char		*owner;
+bool		notfound;
+FE_REL_INFO	*relinfo;
+{
+	FE_REL_INFO	relbuf;
+	STATUS		rstat;
+	char		err_buf[FE_MAXTABNAME];
+
+	if ( relinfo == NULL )
+		relinfo = &relbuf;
+
+	/*
+	** Use the new FErel_ffetch for 6.5 --
+	** pass in an owner name instead of TRUE
+	*/
+	if ( (rstat = FErel_ffetch(name,owner,relinfo)) == OK )
+	{
+		if ( !any_cats )
+			any_cats = relinfo->catalog;
+		if ( !any_views && !allow_views )
+			any_views = relinfo->type == ICVIEW;
+	}
+
+	if ( rstat != OK )
+	{
+		if ( rstat == E_UI0002_EOS )
+		{ /* Table not found */
+			if ( !mq_lookup )
+			{
+				IIUIxrt_tbl(owner, name, &err_buf[0]);
+				FDerror(NOTABLE, 1, &err_buf[0]);
+			}
+			else if ( notfound )
+			{
+				FDerror(NAMENOTFOUND, 1, qdef->mqcr.name);
+			}
+		}
+		else
+		{ /* Probably a database error */
+			IIUGerr(E_QF0175_BadTable, 0, 1, qdef->mqcr.name);
+		}
+	}
+	return rstat;
+}
+

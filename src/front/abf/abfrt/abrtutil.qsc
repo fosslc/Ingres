@@ -1,0 +1,578 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+#include	<si.h>		/* 6-x_PC_80x86 */
+#include	<mh.h> 		/* 6-x_PC_80x86 */
+#include	<me.h>
+#include	<st.h>
+#include	<ol.h>
+#include	<er.h> 
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<feconfig.h>
+#include	<adf.h>
+#include	<afe.h>
+#ifdef IMINTERP
+#include	<si.h>
+#include	<lo.h>
+#include	<ade.h>
+#include	<frmalign.h>
+#include	<iltypes.h>
+#include	<ioi.h>
+#include	<ifid.h>
+#include	<ilrf.h>
+#endif
+#include	<abfcnsts.h>
+#include	<abftrace.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	"rts.h"
+
+/**
+** Name:	abrtutil.qc -	ABF RunTime System Utilities.
+**
+**	This is part of the runtime system.
+**
+**	IIARtyoTypeOutput()	get name description for data type.
+**	iiarOLstrType()		return name for OL type.
+**	iiarTypeName()		get name of datavalue type.
+**	iiarSvFerr()		save FRS error.
+**	iiarSetfErr()		restore FRS error.
+**
+** History:
+**	Revision 6.1
+**	21-sep-88 (kenl)
+**		Changed MEalloc() calls to MEreqmem() calls.
+**
+**	Revision 6.3  90/03  wong
+**	Moved 'iiarOLstrType()' here from "abfrdmp.qsc".
+**
+**	Revision 6.3/03/00  90/06  wong
+**	Moved 'abseterr()' and 'absaverr()' here from "abrtadd.qsc" renamed as
+**	'iiarSetfErr()' and 'iiarSvfErr()'.
+**	89/10  billc  Added 'iiarTypeName()'.
+**
+**	Revision 6.4
+**	03/09/91 (emerson)
+**		Integrated DESKTOP porting changes.
+**
+**	Revision 6.5
+**	22-dec-92 (davel)
+**		Minor modifcation to iiarTypeName: call to iiarCcnClassName
+**		takes an additional argument.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+*/
+
+/*{
+** Name:	abrtspred() -	Build Where Clause from a Predicate List.
+**
+** Description:
+**	Build a where clause from a predicate.
+**
+** Inputs:
+**	form	{char *}  The name of the form.
+**	preds	{ABRTSPR []}  The list of predicates.
+**
+** Output:
+**	str	{ABRTSSTR *}  The run-time string containing the where clause.
+**
+** History:
+**	03/15/88 (elein) b14582: scan character form values escaping '\\' and ".
+*/
+
+VOID
+##abrtspred ( form, preds, str )
+##char		*form;
+register ABRTSPR *preds;
+ABRTSSTR	*str;
+##{
+	bool	any;
+##	char	buf[2048];
+
+	char	*iiugOpRep();
+	bool	iiarCkQryMode();
+
+	if ( iiarCkQryMode( form ) )
+	{
+		for ( any = FALSE ; preds->abprfld != NULL ; ++preds )
+		{
+##			char	*flname;
+##			i4	op;
+
+			flname = preds->abprfld;
+##			getform form ( op = getoper(flname) );
+			if ( op != 0 )
+			{
+				if ( !any )
+					any = TRUE;
+				else /* another */
+					abstrcopy( ERx(" and "), str );
+
+				abstrcopy( preds->abprexpr, str );
+				abstrcopy( iiugOpRep(op), str );
+				switch (preds->abprtype)
+				{
+				  case 'i':
+##				  {
+##					i4	ivar;
+
+##					getform form (ivar = flname);
+					CVna(ivar, buf);
+					break;
+##				  }
+
+				  case 'f':
+##				  {
+##					f8	fvar;
+					i2	res_width;
+
+##					getform form (fvar = flname);
+					CVfa(fvar, 25, 18, 'e',
+						FEadfcb()->adf_decimal.db_decimal,
+						buf, &res_width
+						);
+					break;
+##				  }
+
+				  case 'c':
+##				  {
+##					register char	*cp;
+					register char	*tp;
+##					char		tbuf[2048];
+
+					cp = buf;
+					*cp++ = '\"';
+##					getform form (tbuf = flname);
+					for ( tp = tbuf ; *tp != EOS ; ++tp )
+					{
+						if ( *tp == '\\' || *tp == '"' )
+							*cp++ = '\\';
+						*cp++ = *tp;
+					}
+					*cp++ = '\"';
+					*cp = EOS;
+					break;
+##				  }
+				} /* end switch */
+				abstrcopy(buf, str);
+			}
+		} /* end for */
+	}
+	if ( !any )
+		abstrcopy( ERx("1 = 1"), str );
+##}
+
+/*
+** Routines for handling dynamic strings.  These routines deal
+** with variable length strings that can grow dynamically.
+*/
+
+STATUS
+abstrinit ( str )
+register ABRTSSTR	*str;
+{
+	STATUS	rval;
+
+	str->abstrall = 128;
+	str->abstrlen = 0;
+	if ( (str->abstrptr = (char *)MEreqmem((u_i4)0,
+		(u_i4)(128 * sizeof (char)), FALSE, &rval)) == NULL )
+	{
+		str->abstrall = 0;
+		return rval;
+	}
+	*(str->abstrptr) = EOS;
+
+	return OK;
+}
+
+STATUS
+abstrcopy ( cstr, str )
+register char		*cstr;
+register ABRTSSTR	*str;
+{
+	u_i4	len;
+	u_i4	total;
+	STATUS	rval;
+
+	len = STlength(cstr);
+	if ( (total = str->abstrlen + len + 1) > str->abstrall )
+	{
+		register char	*temp;
+
+		len = str->abstrall;
+		if ( str->abstrall+128 < total )
+			str->abstrall = total + 128;
+		else
+			str->abstrall += 128;
+		if ( (temp = (char *)MEreqmem((u_i4)0,
+			(u_i4)(str->abstrall * sizeof(char)), FALSE,
+			&rval)) == NULL )
+		{
+			str->abstrall = len;
+			return rval;
+		}
+		if ( str->abstrptr != NULL )
+		{
+			STcopy(str->abstrptr, temp);
+			MEfree(str->abstrptr);
+		}
+		str->abstrptr = temp;
+	}
+	STcopy(cstr, &(str->abstrptr[str->abstrlen]));
+	str->abstrlen += len;
+
+	return OK;
+}
+
+/*{
+** Name:	abstrsave	-	Save a returned string.
+**
+** Description:
+**	Abstrsave is called by OSL when it is going to return a string.
+**	Abstrsave puts the string into a global ABRTSSTR and returns the
+**	pointer.  This saves the string in a safe place for OSL.  OSL
+**	guarantees to copy the string somewhere before calling abstrsave again,
+**	so one global ABRTSSTR is enough.
+**
+** Inputs:
+**	str	A pointer to the string to save-normal C string.
+**
+** Outputs:
+**	Returns:
+**		A pointer to the saved string.
+**
+** History
+**	12/19/85 (joe)
+**		First written.
+*/
+static ABRTSSTR savestr ZERO_FILL;
+char *
+abstrsave(str)
+char	*str;
+{
+	if (savestr.abstrptr == str)
+		return str;
+	if (savestr.abstrptr != NULL)
+	{
+		savestr.abstrlen = 0;
+		*(savestr.abstrptr) = '\0';
+	}
+	else
+	{
+		abstrinit(&savestr);
+	}
+	abstrcopy(str, &savestr);
+	return savestr.abstrptr;
+}
+
+/*{
+** Name:	abstrfree	-	Free an rts string.
+*/
+STATUS
+abstrfree(str)
+register ABRTSSTR	*str;
+{
+	if (str->abstrptr != NULL)
+		MEfree(str->abstrptr);
+	str->abstrall = 0;
+	str->abstrlen = 0;
+	return OK;
+}
+
+/*{
+** Name:	abrtstype	-	Runtime type compatibility.
+**
+** Description:
+**	Checks to see whether runtime types t1 and t2 are compatible.
+**	Done in a very simple fashion for now since the combinations
+**	are small.  A table would be better if more types get added.
+**
+** Inputs:
+**	t1		One type to check.
+**	t2		The type to check t1 with.
+**
+** History
+**	13-jan-1986 (joe)
+**		First Written
+*/
+STATUS
+abrtstype(t1, t2)
+i4	t1;
+i4	t2;
+{
+	if (t1 == t2)
+		return OK;
+	if (t1 == OL_STR || t2 == OL_STR)
+		return FAIL;
+	if ((t1 == OL_I4 && t2 == OL_F8) ||
+		(t1 == OL_F8 && t2 == OL_I4))
+	{
+		return OK;
+	}
+	return FAIL;
+}
+
+/*{
+** Name:	abrtsconvert	-	Convert numeric types.
+**
+** Description:
+**	Convert between numeric types of integer and float.  In ABF
+**	all integers are i4 and all floats are f8s.
+**
+** Inputs:
+**	sptr		Pointer to source storage.  Could be pointer to
+**			i4 or f8.
+**	stype		Type of source.
+**	dtype		Type of destination.
+**
+** Outputs:
+**	dptr		Pointer to destination storage.	 Could be pointer to i4
+**			or f8.
+**
+** Side Effects:
+**	stype and dtype are assumed to be one of OL_I4 or OL_F8.  NO ERROR
+**	CHECKING IS DONE!
+**
+** History:
+**	13-jan-1986 (joe)
+**		First Written
+*/
+VOID
+abrtsconvert(sptr, stype, dptr, dtype)
+i4	*sptr;
+i4	stype;
+i4	*dptr;
+i4	dtype;
+{
+	if (stype == OL_I4)
+	{
+		if (dtype == OL_I4)
+			*((i4 *) dptr) = *((i4 *) sptr);
+		else
+#ifdef          __HIGHC__                               /* 6-x_PC_80x86 */
+		        MHf8eqi4(dptr, sptr);           /* 6-x_PC_80x86 */
+#else							/* 6-x_PC_80x86 */
+			*((f8 *) dptr) = *((i4 *) sptr);
+#endif							/* 6-x_PC_80x86 */
+	}
+	else
+	{
+		if (dtype == OL_F8)
+			*((f8 *) dptr) = *((f8 *) sptr);
+		else
+#ifdef          __HIGHC__                               /* 6-x_PC_80x86 */
+		        MHi4eqf8(dptr, sptr);           /* 6-x_PC_80x86 */
+#else							/* 6-x_PC_80x86 */
+			*((i4 *) dptr) = *((f8 *) sptr);
+#endif							/* 6-x_PC_80x86 */
+	}
+}
+
+/*{
+** Name:	abrtstab() -	Get a column from a table field.
+**
+** Description:
+**	Get a column from a table field checking the value of the subscript
+**	to make sure it is within the legal range of the table field.
+**	If the subscript is illegal, set it to 0.
+**	If row is NULL then the current row is being sought.
+**
+** Inputs:
+**	form		The name of the form.
+**	table		The name of the table field.
+**	column		The name of the column.
+**	ele		The address to store the value.	 If the subscript is
+**			not valid, then the ele will not point to a good
+**			storage location.
+**	row		The address of an integer holding the subscript.
+**	type		The type of the column.
+**
+** Returns:
+**	{bool}	TRUE if the row is okay.
+**		FALSE otherwise.
+**
+** Side Effects:
+**	Will set row to 0 if there is an error getting the row.
+**	Depends on EQUEL not moving anything into the address given by ele
+**	if the row is bad.
+**
+** History:
+**	14-jan-1986 (joe)
+**		First Written
+*/
+bool
+##abrtstab(form, table, column, ele, row, type)
+##char	*form;
+##char	*table;
+char	*column;
+i4	*ele;
+##i4	*row;
+i4	type;
+##{
+	char	*fmt;
+##	char	buf[FE_MAXNAME+6];	/* %xx=column */
+##	i4	*argv[1];
+	STATUS	olderr;
+
+	VOID	iiarSetfErr();
+
+	olderr = iiarSvfErr();
+	switch (type)
+	{
+	  case OL_I4:
+		fmt = ERx("i4");
+		break;
+	  case OL_F8:
+		fmt = ERx("f8");
+		break;
+	  case OL_STR:
+		fmt = ERx("c");
+		break;
+	}
+	_VOID_ STprintf( buf, ERx("%s=%s"), fmt, column );
+	argv[0] = ele;
+	if (row == NULL)
+	{
+##		getrow form table (param(buf, argv))
+	}
+	else
+	{
+##		getrow form table *row (param(buf, argv))
+	}
+	if ( FEinqferr() != OK )
+	{
+		if (row != NULL)
+			*row = 0;
+		return FALSE;
+	}
+	else
+	{
+		iiarSetfErr(olderr);
+		return TRUE;
+	}
+##}
+
+/*{
+** Name:	IIARtyoTypeOutput() -	Get Name Description for Data Type.
+**
+** Description:
+**	This routine generates a string indicating a DB_DATA_VALUE's
+**	datatype.  The string can then be used in an error message (or
+**	whatever) by the ABF runtime system.
+**	IIARtyoTypeOutput() acts as a cover for afe_tyoutput(), and, where
+**	appropriate, adds " with null" to the string produced by that
+**	routine.
+**
+** Inputs:
+**	dbdv		The DB_DATA_VALUE.
+**
+** Outputs:
+**	user_type	The DB_USER_TYPE in which to put the output.
+**
+** History:
+**	2-jul-1987 (agh)
+**		First written.
+*/
+VOID
+IIARtyoTypeOutput(dbdv, user_type)
+DB_DATA_VALUE	*dbdv;
+DB_USER_TYPE	*user_type;
+{
+	if ( afe_tyoutput(FEadfcb(), dbdv, user_type) != OK )
+		FEafeerr(FEadfcb());
+	else if (user_type->dbut_kind == DB_UT_NULL)
+		STcat(user_type->dbut_name, ERget(S_AR004E__with_NULL));
+}
+
+/*{
+** Name:	iiarOLstrType()	-	Return Name for OL Type.
+**
+** Description:
+**	Returns a string describing the OL type (OL_I4, OL_F8 ...).
+**
+** Inputs:
+**	type	{nat}  The OL type.
+**
+** Returns:
+**	{char *}  The name of the type.
+**
+** History:
+**	03/90 (jhw) - Renamed from 'aboltstr()' and moved here from
+**			"abfrdmp.qsc".
+*/
+char *
+iiarOLstrType ( type )
+i4	type;
+{
+	switch ( type > 0 ? type : -type )
+	{
+	  case OL_I4:
+		return ERget(S_AR0033_integer);
+	  case OL_F8:
+		return ERget(S_AR0030_floating_point);
+	  case OL_STR:
+		return ERget(S_AR0031_character);
+	  default:
+		return ERget(S_AR0032_none);
+	}
+}
+
+/*{
+** Name:	iiarTypeName() -	get name of datatype.
+**
+** History:
+**	10/89 (billc) 
+**		First Written.
+**	22-dec-92 (davel)
+**		Added 3rd argument to call to iiarCcnClassName (so that
+**		"array of" prefix is shown if object is an array).
+*/
+
+char *
+iiarTypeName( DB_DATA_VALUE *dbv, AB_TYPENAME typename )
+{
+	if (dbv->db_datatype == DB_DMY_TYPE)
+	{
+		iiarCcnClassName( dbv, typename, TRUE );
+	}
+	else
+	{
+		DB_USER_TYPE	utype;
+
+		IIARtyoTypeOutput(dbv, &utype);
+		_VOID_ STlcopy(utype.dbut_name, typename, sizeof(AB_TYPENAME));
+	}
+	return typename;
+}
+
+STATUS
+iiarSvfErr()
+{
+	STATUS	rval;
+
+	rval = FEinqferr();
+	if (rval != 0)
+		IIsetferr(0);
+	return rval;
+}
+
+VOID
+iiarSetfErr(oldval)
+STATUS	oldval;
+{
+	if (oldval != 0)
+		IIsetferr(oldval);
+}

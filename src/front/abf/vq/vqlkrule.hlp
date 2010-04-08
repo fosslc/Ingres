@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlkrule.hlp, subtopic 'Rules' of subtopic 'Lookup tables' behind the 
+/#-- main VQ Editor help screen.
+/#-- 
+The following rules apply when you include Lookup tables in your Visual Query:
+
+  * You can use Lookup tables with Append, Browse, or Update frames.
+
+  * The column that activates the Lookup table must be displayed as a
+    field on the form.
+
+  * You can include Lookup tables for any number of displayed columns in 
+    the Master and Detail tables.
+
+  * The Lookup table must share at least one join column with the table for 
+    which you specify it.  This join column does not have to be the same 
+    column that activates the lookup.

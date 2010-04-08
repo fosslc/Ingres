@@ -1,0 +1,66 @@
+#
+# Jamfile file for cl!clf!cs_unix
+#
+# History:
+#       17-Jul-2008 (hanal04) Bug 120647
+#           Set the sticky bit on csreport to allow non-installation owners
+#           to run csreport.
+#       22-Jul-2008 (coomi01) Bug 120312
+#           Remove optimisation on Tru64, axp_osf
+#       03-Feb-2009 (coomi01) Bug 121587
+#           Put a significant space in front of semi-colon after axp_osf.
+
+SubDir ING_SRC cl clf cs_unix ;
+
+IISUBSYS cl clf cs_unix ;
+
+IINOOPTIM iirun.c : i64_aix axp_osf ;
+IINOOPTIM csspintest.c : rmx_us5 rux_us5 sqs_ptx ris_u64 rs4_us5 i64_aix ;
+IINOOPTIM cssl.c : dr6_us5 dr6_ues i64_aix ;
+IINOOPTIM csinterface.c : dr6_us5 ibm_lnx int_lnx int_rpl i64_aix ;
+IINOOPTIM csinstall.c : ris_us5 i64_aix ;
+IINOOPTIM cshl.c : su4_us5 su4_u42 dr6_us5 su4_cmw i64_aix ;
+IINOOPTIM csev.c : dr6_us5 i64_aix ;
+IINOOPTIM cscp.c : hp3_us5 ;
+
+IIUTILEXE iirun : iirun.c ;
+IINEEDLIBS iirun : COMPATLIB MALLOCLIB ;
+
+IIUTILEXE dispsem : dispsem.c ;
+IINEEDLIBS dispsem :  COMPATLIB ;
+
+IIUTILEXE csspintest : csspintest.c ;
+IINEEDLIBS csspintest : COMPATLIB MALLOCLIB ;
+
+IIBINEXE iislave : csslave.c ;
+IINEEDLIBS iislave : COMPATLIB MALLOCLIB ;
+
+IIUTILEXE csshmemtest : csshmemtest.c ;
+IINEEDLIBS csshmemtest : COMPAT MALLOCLIB ;
+
+IIUTILEXE csreport : csreport.c ;
+IINEEDLIBS csreport : COMPATLIB MALLOCLIB ;
+IISETUID csreport ;
+
+IIUTILEXE csphil : csphil.c ;
+IINEEDLIBS csphil : COMPAT MALLOCLIB ;
+
+IIUTILEXE csinstall : csinstall.c ;
+IINEEDLIBS csinstall : COMPATLIB MALLOCLIB ;
+
+IIUTILEXE cscleanup : cscleanup.c ;
+IINEEDLIBS cscleanup : COMPATLIB MALLOCLIB ;
+
+IIUTILEXE cscastst : cscastst.c ;
+IINEEDLIBS cscastst :  COMPATLIB ;
+
+IIUTILSH iirundbms : iirundbms.sh ;
+IIUTILSH iirunice : iirunice.sh ;
+
+IITMANFILES csspintest.1 ;
+
+IILIBRARY COMPATLIB : csll.s cssl.c csshmem.c cssem.c
+	cssampler.c csrusage.c csoption.c csmoutil.c csmosem.c
+	csmoscb.c csmonitor.c csmomon.c csmocnd.c csmo.c csinterface.c
+	cshl.c csev.c csef.c csdiag.c cscpres.c cscp.c csclock.c ;
+

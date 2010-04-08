@@ -1,0 +1,24 @@
+#
+# Jamfile file for common!aif!acm
+#
+#       20-Aug-2009 (horda03)
+#          Identify targets built on VMS without a .LOT file
+#
+
+SubDir ING_SRC common aif acm ;
+
+IISUBSYS common aif acm ;
+
+
+IIBINEXE acmtest : acmtest.c ;
+IINEEDLIBS acmtest : ACMLIB SAWLIB APILIB CUFLIB GCFLIB ADFLIB
+	COMPATLIB ;
+
+
+VMS_NO_LOT acmmttest ;
+IIBINEXE acmmttest : acmmttest.c ;
+IINEEDLIBS acmmttest : ACMLIB SAWLIB APILIB CUFLIB GCFLIB ADFLIB
+	COMPATLIB ;
+
+IILIBRARY ACMLIB : acmsrc.c ;
+

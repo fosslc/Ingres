@@ -1,0 +1,58 @@
+#
+# Jamfile file for front!st!starview
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front st starview ;
+
+IISUBSYS front st starview ;
+
+
+IIBINEXE starview : dutmain.sc ;
+IINEEDLIBS starview : STARVIEWLIB SHEMBEDLIB SHQLIB SHFRAMELIB SHCOMPATLIB ;
+IIUNDEFS starview : IIeqiqio ;
+
+IIQSHHDR dut.h : dut.qsh ;
+
+IIFORM dut_f1.frm ;
+IIFORM dut_f2.frm ;
+IIFORM dut_f3.frm ;
+IIFORM dut_p11.frm ;
+IIFORM dut_p12.frm ;
+IIFORM dut_p13.frm ;
+IIFORM dut_p14.frm ;
+IIFORM dut_p15.frm ;
+IIFORM dut_p16.frm ;
+IIFORM dut_p2.frm ;
+IIFORM dut_p3.frm ;
+IIFORM dut_p6.frm ;
+IIFORM dut_p7.frm ;
+IIFORM dut_p7_1.frm ;
+IIFORM dut_p8.frm ;
+IIFORM dut_p9.frm ;
+
+File $(INGMSG)$(DFS)svhf11.hlp : svhf11.hlp ;
+File $(INGMSG)$(DFS)svhf21.hlp : svhf21.hlp ;
+File $(INGMSG)$(DFS)svhf22.hlp : svhf22.hlp ;
+File $(INGMSG)$(DFS)svhf25.hlp : svhf25.hlp ;
+File $(INGMSG)$(DFS)svhf31.hlp : svhf31.hlp ;
+File $(INGMSG)$(DFS)svhp121.hlp : svhp121.hlp ;
+File $(INGMSG)$(DFS)svhp131.hlp : svhp131.hlp ;
+File $(INGMSG)$(DFS)svhp141.hlp : svhp141.hlp ;
+File $(INGMSG)$(DFS)svhp151.hlp : svhp151.hlp ;
+File $(INGMSG)$(DFS)svhp161.hlp : svhp161.hlp ;
+File $(INGMSG)$(DFS)svhp162.hlp : svhp162.hlp ;
+File $(INGMSG)$(DFS)svhp21.hlp : svhp21.hlp ;
+File $(INGMSG)$(DFS)svhp31.hlp : svhp31.hlp ;
+File $(INGMSG)$(DFS)svhp41.hlp : svhp41.hlp ;
+File $(INGMSG)$(DFS)svhp51.hlp : svhp51.hlp ;
+File $(INGMSG)$(DFS)svhp61.hlp : svhp61.hlp ;
+File $(INGMSG)$(DFS)svhp71.hlp : svhp71.hlp ;
+File $(INGMSG)$(DFS)svhp72.hlp : svhp72.hlp ;
+File $(INGMSG)$(DFS)svhu11.hlp : svhu11.hlp ;
+
+IILIBRARY STARVIEWLIB : dututil.sc dutpopup.sc dutinit.sc
+	dutform.sc duterr.sc ;
+

@@ -1,0 +1,552 @@
+; History:
+;	02-jan-97 (mcgem01) 
+;	    Added IIfakeerr
+;	27-feb-97 (mcgem01)
+;	    Added IIG4xfers_proto for OpenROAD compatability.
+;	07-apr-97 (leighb)
+;	    Added missing IIG4*'s for OpenROAD compatability.
+;	26-jun-97 (mcgem01)
+;	    Add IILQprvProcGTTParm.
+;	09-jan-97 (mcgem01)
+;	    Add support for a multi-threaded LIBQ.
+;	13-mar-1998 (wonst02)
+;	    Move sqlca into oiembdnt.dll for backward compatibility with 2.0.
+;	02-nov-1998 (somsa01)
+;	    Added IILQasAdfcbChange.  (Bug #94058)
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	29-Jun-2004 (drivi01)
+;	    Removed duplicates of frs_inqset, frs_object, and
+;	    frsck_mode.
+;	25-Aug-2004 (drivi01)
+;	    Renamed from iiembdnt.def to iilibembed.def due to
+;	    new build procedures, in a new build originally was 
+;	    created to build precompilers (i.e. eqc and esqlc) 
+;	    and contained only enough libraries to build them, 
+;	    however, precompilers are being linked statically 
+;	    now and this library is no longer necessary and can be 
+;	    rolled into iilibq.dll. For list of libraries 
+;	    included please refer to Jamdefs in tools/port/jam.    
+;	16-Jun-2005 (gupsh01)
+;	    Added new functions IILQucolinit and IItm_adfucolset.
+;  	20-Sep-2005 (fanra01)
+;           Add missing function exports from cross integration.
+;	7-Jun-2006 (kschendel)
+;	    Add IIsqDescInput.
+;	09-apr-2007 (drivi01)
+;	    BUG 117501
+;	    Adding references to function IIcsRetScroll in order to fix
+;	    build on windows.
+;	07-Sep-2007 (lunbr01)  bug 118184
+;	    Renamed IIhelp to IIhelptoggle to avoid naming conflict
+;	    with runsys routines (on rmx.us5).
+;	26-Nov-2007 (kiria01) b119432
+;	    Added missing FEset_null FEset_decimal FEset_money_prec
+;	    FEset_money_format and FEset_date_format
+;       30-Dec-2009 (maspa05) b122806
+;           Added IILQasGetThrAdfcb
+;	15-Jan-2010 (maspa05) b123141
+;	    Removed FEset_null, FEset_decimal FEset_money_prec
+;	    FEset_money_format and FEset_date_format
+;	    Added FEapply_null, FEapply_decimal FEapply_money_prec
+;	    FEapply_money_format and FEapply_date_format
+
+EXPORTS
+out_put_def		@278				
+EQFWgiget		@279				
+EQFWopen		@280				
+EQFWsuboption		@281				
+EQFWwcoption		@282				
+edb_unique		@283				
+frs_inqset		@284								
+frs_iqsave		@286				
+frs_object		@287				
+frs_parentname		@289				
+frsck_constant		@290				
+frsck_key		@291				
+frsck_mode		@292				
+frsck_valmap		@294				
+
+	IIAFagFind	@782				
+	afe_agfind	@783				
+	afe_agnames	@784				
+	afe_numaggs	@785				
+	afe_cancoerce	@786				
+	afe_tycoerce	@787				
+	afe_clfunc	@788				
+	afe_clinstd	@789				
+	iiafComputeLen	@790				
+	afe_ctychk	@791				
+	IIAFcehConversionErrorHandler	@792				
+	IIAFcwhConvertWithHandler	@793				
+	IIAFadfxhdlr	@794				
+	afe_cvinto	@795				
+	iiafCvtNum	@796				
+	IIAFddcDetermineDatatypeClass	@797				
+	afe_dec_info	@798				
+	IIAFdsDmlSet	@799				
+	IIAFdmlStr	@800				
+	IIAFstrDml	@801				
+	afe_dplen	@802				
+	afe_dpvalue	@803				
+	afe_dtrimlen	@804				
+	afe_error	@805				
+	afe_errtostr	@806				
+	afe_fdesc	@807				
+	IIAFfifConv	@808				
+	IIAFfiType	@809				
+	afe_fitype	@810				
+	IIAFckFuncName	@811				
+	afe_ficoerce	@812				
+	afe_nullstring	@813				
+	afe_opid	@814				
+	afe_pad	@815				
+	IIAFcvWildCard	@816				
+	afe_preftype	@817				
+	IIAFfpcFindPatternChars	@818				
+	IIAFpmEncode	@819				
+	IIAFfedatatype	@820				
+	afe_tychk	@821				
+	iiafParseType	@822				
+	iiafScanNum	@823				
+	IIAFgtm_gtwTypeMap	@824				
+	iiafTypeHack	@825				
+	afe_tyoutput	@826				
+	afe_sqltrans	@827				
+	afe_vchconst	@828				
+	afe_vtychk	@829				
+	afe_vtyoutput	@830	
+	f_dayofyear	@880				
+	f_daysince1582	@881				
+	f_dkeyword	@882				
+	f_getcurryear	@883				
+	f_initlen	@884				
+	f_monthdayofmonth	@885				
+	f_yearmonthdayofmonth	@886				
+	f_colfmt	@887				
+	f_fmtdate	@888				
+	fmt_fmtstr	@889				
+	f_cvta	@890				
+	f_format	@891				
+	f_gnum	@892				
+	f_indate	@893				
+	f_escchrin	@894				
+	f_innt	@895				
+	f_substr	@896				
+	fmt_areasize	@897				
+	fcvt_sql	@898				
+	fmt_cvt	@899				
+	fmt_deffmt	@900				
+	fmt_ideffmt	@901				
+	fmt_sdeffmt	@902				
+	fmt_dispinfo	@903				
+	fmt_size	@904				
+	fmt_format	@905				
+	fmt_ftot	@906				
+	fmt_isreversed	@907				
+	fmt_isvalid	@908				
+	fmt_kind	@909				
+	IIfmt_init	@910				
+	fmt_multi	@911				
+	fmt_workspace	@912				
+	fmt_setfmt	@913				
+	f_copyword	@914				
+	f_formnumber	@915				
+	f_formword	@916				
+	f_getnumber	@917				
+	f_getword	@918				
+	f_strctr	@919				
+	f_strlft	@920				
+	f_strrgt	@921				
+	fmt_justify	@922				
+	fmt_vfvalid	@923				
+	f_nt	@924				
+	fmt_ntmodify	@925				
+	fmt_ntposition	@926				
+	f_setfmt	@927				
+	f_dtcheck	@928				
+	f_dtsetup	@929				
+	f_inst	@930				
+	f_stcheck	@931				
+	f_string	@932				
+	f_stsetup	@933				
+	fmt_stmand	@934				
+	fmt_stposition	@935				
+	fmt_stvalid	@936				
+	f_Tstr	@937				
+	f_lentrmwhite	@938				
+	f_revrsbuf	@939				
+	f_stcopy	@940				
+	f_strCformat	@941				
+	f_strT	@942				
+	f_strlen	@943				
+	f_wildcard	@944	
+	quel_patternmatch	@945				
+	sql_patternmatch	@946	
+	IIUGnfNowFunc	@1306				
+	IIUGprompt	@1307				
+	IIUGlocal_decimal	@1308				
+	iiugReqMem	@1309				
+	FEafeerr	@1310				
+	FEchkenv	@1311				
+	FEchkname	@1312				
+	IIUGcmInit	@1313				
+	IIUGinit	@1314				
+	FEcopyright	@1315				
+	FEdml	@1316				
+	IIUGfreetagblock	@1317				
+	FEclr_exit	@1318				
+	FEexits	@1319				
+	FEset_exit	@1320				
+	FEfree	@1321				
+;	FEgeterrmsg
+	FEhandler	@1322				
+	FEjmp_handler	@1323				
+	FElpcreate	@1324				
+	FElpdestroy	@1325				
+	FElpget	@1326				
+	FElpret	@1327				
+	FEmsg	@1328				
+	FEprefix	@1329				
+	FEpresearch	@1330				
+	FEprompt	@1331				
+	FEreqlng	@1332				
+	FEreqmem	@1333				
+	FEsalloc	@1334				
+	FEbegintag	@1335				
+	FEendtag	@1336				
+	FEgettag	@1337				
+	FElocktag	@1338				
+	FEtaglocked	@1339				
+	IIUGtagFree	@1340				
+	FEt_open_bin	@1341				
+	FEtsalloc	@1342				
+	FEutaclose	@1343				
+	FEutaerr	@1344				
+	FEutaget	@1345				
+	FEutaname	@1346				
+	FEutaopen	@1347				
+	FEutapfx	@1348				
+	FEutapget	@1349				
+	IIUGuapParse	@1350				
+	FEendvm	@1351				
+	FEgetvm	@1352				
+	FEvminit	@1353				
+	FEwrstat	@1354				
+	IIUGfnFeName	@1355				
+	IIftrim	@1356				
+	IIUGafAppendFile	@1357				
+	IIUGatoi	@1358				
+	IIUGbmaBadMemoryAllocation	@1359				
+	iiugbma_BadMemoryAllocation	@1360				
+	IIUGclCopyLong	@1361				
+	IIUGdfsDateFromSys	@1362				
+	IIUGdp_DateParts	@1363				
+	IIUGdtsDateToSys	@1364				
+	UGcat_now	@1365				
+	UGcat_to_dt	@1366				
+	UGdt_now	@1367				
+	UGdt_to_cat	@1368				
+	IIUGdmlStr	@1369				
+	IIUGstrDml	@1370				
+	IIUGber	@1371				
+	IIUGeppErrorPrettyPrint	@1372				
+	IIUGerr	@1373				
+	IIUGfemFormatErrorMessage	@1374				
+	IIUGfer	@1375				
+	IIUGsber	@1376				
+	ugstderr	@1377				
+	IIUGeceEvalCharExpr	@1378				
+	IIUGeeExprErr	@1379				
+	IIUGrefRegisterExpFns	@1380				
+	IIUGtcTypeCompat	@1381				
+	IIUGfmt	@1382				
+	IIUGcvnCheckVarname	@1383				
+	iiugfrs_setting	@1384				
+	IIUGhdHtabDel	@1385				
+	IIUGheHtabEnter	@1386				
+	IIUGhfHtabFind	@1387				
+	IIUGhiHtabInit	@1388				
+	IIUGhrHtabRelease	@1389				
+	IIUGhsHtabScan	@1390				
+	IIUGbfl_buildFilesLoc	@1391				
+	IIUGhlpname	@1392				
+	IIUGgci_getcid	@1393				
+	IIUGihdIntHtabDel	@1394				
+	IIUGiheIntHtabEnter	@1395				
+	IIUGihfIntHtabFind	@1396				
+	IIUGihiIntHtabInit	@1397				
+	IIUGihrIntHtabRelease	@1398				
+	IIUGihsIntHtabScan	@1399				
+	IIUGitoa		@1400				
+	iiuglcd_check		@1401				
+	iiuglcd_langcode	@1402				
+	IIUGmsg			@1403				
+	IIUGmllMaxLineLen	@1404				
+	iiugOpRep		@1405				
+	IIUGnpNextPrime		@1406				
+	IIUGpx_parmxtract	@1407				
+	IIUGqsort		@1408				
+	IIUGvfVerifyFile	@1409				
+	IIUGyn			@1410		
+	FEadfcb			@1412		
+
+IIcga1_open_stream		@1418				
+IIcga2_close_stream		@1419				
+IIcga3_load_stream		@1420				
+IIcga4_load_error		@1421				
+IIcga5_get_data		@1422				
+IIcga6_reset_stream		@1423				
+IIcc1_connect_params		@1424				
+IIcc2_connect_restore		@1425				
+IIcc3_discon_service		@1426				
+IIcgc_alloc_cgc		@1427				
+IIcgc_connect		@1428				
+IIcgc_disconnect		@1429				
+IIcgc_save		@1430				
+IIcgc_tail_connect		@1431				
+IIcgcp1_write_ack		@1432				
+IIcgcp2_write_response		@1433				
+IIcgcp3_write_data		@1434				
+IIcgcp4_write_read_poll		@1435				
+IIcgcp5_read_data		@1436				
+IIcc1_read_bytes		@1437				
+IIcc2_read_error		@1438				
+IIcc3_read_buffer		@1439				
+IIcgc_event_read		@1440				
+IIcgc_get_value		@1441				
+IIcgc_more_data		@1442				
+IIcgc_read_results		@1443				
+IIcgct1_set_trace		@1444				
+IIcgct2_gen_trace		@1445				
+IIcgct3_trace_data		@1446				
+IIcc1_util_error		@1447				
+IIcc2_util_type_name		@1448				
+IIcc3_util_status		@1449				
+IIcc1_put_qry		@1450			
+IIcc1_send		@1451				
+IIcc2_put_gcv		@1452				
+IIcc3_put_bytes		@1453				
+IIcgc_break		@1454				
+IIcgc_end_msg		@1455				
+IIcgc_init_msg		@1456				
+IIcgc_put_msg		@1457	
+IIcgc_find_cvar_len	@1458
+IIcgc_init		@1459
+IIcgc_term 		@1460
+IIcgc_free_cgc		@1463
+adh_charend		@1464				
+adh_chkeos		@1465				
+adh_dbcvtev		@1466				
+adh_dbtoev		@1467				
+adh_evcvtdb		@1468				
+adh_evtodb		@1469				
+adh_losegcvt		@1470	
+IIsqConnect		@1471				
+IIsqDisconnect		@1472				
+IIsqEnd		@1473				
+IIsqEvSetCode		@1474
+IIsqFlush		@1475				
+IIsqGdInit		@1476				
+IIsqInit		@1477				
+IIsqMods		@1478				
+IIsqPrint		@1479				
+IIsqSaveErr		@1480				
+IIsqSetSqlCode		@1481				
+IIsqStop		@1482				
+IIsqUser		@1483				
+IIsqWarn		@1484				
+IIsqlcdInit		@1485				
+IIsqlca		@1486				
+IIcsDaGet		@1487				
+IIsqDaIn		@1488				
+IIsqDescribe		@1489				
+IIsqExImmed		@1490				
+IIsqExStmt		@1491				
+IIsqPrepare		@1492				
+IIsq_RdDesc		@1493				
+IIsqdSetSqlvar		@1494				
+IIsqParms		@1495				
+IIstrconv		@1496				
+IIsyncup		@1497				
+IItm		@1498				
+IItm_dml		@1499				
+IItm_retdesc		@1500				
+IItm_status		@1501				
+IItm_trace		@1502				
+IIutsys		@1503				
+IIvarstrio		@1504				
+IIputctrl		@1505				
+IIwritedb		@1506				
+IIwritio		@1507				
+IIsqTPC		@1508				
+IIsqXATPC		@1509				
+IIxact		@1510	
+IIParProc		@1511				
+IIparret		@1512				
+IIparset		@1513				
+IIqid_add		@1514				
+IIqid_find		@1515				
+IIqid_free		@1516				
+IIqid_read		@1517				
+IIqid_send		@1518				
+IIqry_end		@1519				
+IIqry_read		@1520				
+IIqry_start		@1521				
+IIgetdomio		@1522				
+IIretdom		@1523				
+IIretinit		@1524				
+IIrdDescribe		@1525				
+IILQdtDbvTrim		@1526				
+IIputdomio		@1527				
+IIsetdom		@1528				
+IIseterr		@1529				
+IILQesaEmbSetArg		@1530				
+IILQpeProcEmbed		@1531				
+IILQreReadEmbed		@1532				
+IIsendlog		@1533				
+IIsqAbort		@1534	
+IIdbconnect		@1535	
+IIdbermsg		@1536				
+IIdberr		@1537				
+IIdbmsg_disp		@1538
+IIdbg_dump		@1539				
+IIdbg_info		@1540				
+IIdbg_gca		@1541				
+IIdbg_getquery		@1542				
+IIdbg_response		@1543				
+IIdbg_toggle		@1544	
+IIabort		@1545	
+IIbreak		@1546	
+IIconvert		@1547	
+;IIcopy		@1548
+IIcsAllFree		@1549				
+IIcsClose		@1550				
+IIcsDelete		@1551				
+IIcsERetrieve		@1552				
+IIcsERplace		@1553				
+IIcsGetio		@1554				
+IIcsOpen		@1555				
+IIcsParGet		@1556				
+IIcsQuery		@1557				
+IIcsRdO		@1558				
+IIcsReplace		@1559				
+IIcsRetrieve		@1560	
+IIdml		@1561	
+IIeqinq		@1562				
+IIeqiqio		@1563
+IIeqset		@1564				
+IIeqstio		@1565				
+IIerrnum		@1566				
+IIerrtest		@1567	
+IIexDefine		@1568				
+IIexExec		@1569		
+IIexit		@1570		
+IIfakeerr		@1571	
+IIfeDescribe		@1572				
+IIfePrepare		@1573				
+IIfeddb		@1574				
+IIlq_Protect		@1575				
+IIflush		@1576				
+IIhdl_gca		@1577
+IIgetdata		@1578	
+IIingopen		@1579		
+IIlang		@1580		
+IIlocerr		@1581	
+IIlqExit		@1582	
+IImain		@1583		
+IImsgutil		@1584	
+IInexec		@1585				
+IIsexec		@1586	
+IInextget		@1587	
+IIno_err		@1588				
+IIret_err		@1589				
+IIsdberr		@1590				
+IItest_err		@1591		
+IIrole_auth_server		@1592				
+IIuser_auth_server		@1593
+IIresync		@1594	
+IItupget		@1595
+IItuples		@1596	
+IIx_flag		@1597	
+syserr		@1598		
+IILQlag_LoAdpGet		@1599				
+IILQled_LoEndData		@1600				
+IILQlgd_LoGetData		@1601				
+IILQlmg_LoMoreGet		@1602				
+IILQlrs_LoReadSegment		@1603				
+IILQlvg_LoValueGet		@1604				
+IILQlap_LoAdpPut		@1605				
+IILQlmp_LoMorePut		@1606				
+IILQlpd_LoPutData		@1607				
+IILQlws_LoWriteSegment		@1608				
+IILQdbl		@1609				
+IILQint		@1610				
+IILQeaEvAdd		@1611	
+IILQedEvDisplay		@1612				
+IILQefEvFree		@1613				
+IILQesEvStat		@1614				
+IILQcnConName		@1615				
+IILQcseCopySessionError		@1616				
+IILQfsSessionHandle		@1617				
+IILQgsdGetSessionData		@1618				
+IILQncsNoCurSession		@1619				
+IILQpsdPutSessionData		@1620				
+IILQscConnNameHandle		@1621				
+IILQscSessionCompare		@1622				
+IILQsdSessionDrop		@1623				
+IILQsepSessionPush		@1624				
+IILQsidSessID		@1625				
+IILQsnSessionNew		@1626				
+IILQspSessionPop		@1627				
+IILQssSwitchSession		@1628				
+IILQsthSvrTraceHdlr		@1629				
+IILQstpSvrTracePrint		@1630	
+IILQasAdfcbSetup		@1631				
+IILQasAdfcbChange		@1632				
+IILQthThread		@1633											
+IILQcgdCursorGetDesc		@1634				
+IILQcgnCursorGetName		@1635				
+IILQcikCursorIsKnown		@1636				
+IILQcsgCursorSkipGet		@1637	
+IILQdaSIsetItem		@1638				
+IILQlcc_LoCbClear		@1639				
+IILQlcd_LoColDesc		@1640				
+IILQldh_LoDataHandler		@1641				
+IILQathAdminTraceHdlr		@1642				
+IILQcthCallTraceHdlrs		@1643				
+IILQqthQryTraceHdlr		@1644	
+IILQdbprompt		@1645				
+IILQpriProcInit		@1646				
+IILQprsProcStatus		@1647				
+IILQprvProcValio		@1648	
+IILQfrserror		@1649		
+IIer_save		@1650	
+IILQprvProcGTTParm		@1651				
+IILQaiAssocID		@1652	
+IILQgstGcaSetTrace		@1653				
+IILQgthGcaTraceHdlr		@1654				
+IILQgwtGcaWriteTrace		@1655		
+IILQisInqSqlio		@1656				
+IILQshSetHandler		@1657				
+IILQssSetSqlio		@1658		
+IILQgdata		@1659		
+sqlca			@1660	
+IILQucolinit		@1661		
+IItm_adfucolset		@1662
+IIhelptoggle            @1663
+IIsqDescInput		@1664
+IIcsRetScroll		@1665
+
+; FEset_null    @1666
+; FEset_decimal @1667
+; FEset_money_prec      @1668
+; FEset_money_format    @1669
+; FEset_date_format     @1670
+
+IILQasGetThrAdfcb	@1671
+FEapply_null	@1672
+FEapply_decimal	@1673
+FEapply_money_prec	@1674
+FEapply_money_format	@1675
+FEapply_date_format	@1676

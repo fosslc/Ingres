@@ -1,0 +1,33 @@
+#
+# Jamfile file for front!tm!monitor
+#
+# 13-aug-2009 (horda03)
+#   tm built with static libraries on VMS
+
+SubDir ING_SRC front tm monitor ;
+
+IISUBSYS front tm monitor ;
+
+
+IIBINEXE tm : tmmain.qsc ;
+if $(VMS)
+{
+   IINEEDLIBS tm : ADFLIB AFELIB CUFLIB FMTLIB FTLIB GCFLIB LIBQGCALIB LIBQLIB 
+	MONITORLIB QRLIB UGLIB UILIB COMPATLIB ;
+}
+else
+{
+   IINEEDLIBS tm :  MONITORLIB QRLIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB ;
+}
+IINEEDLIBSW tm : SHEMBEDLIB SHADFLIB ;
+IIUNDEFS tm : II_copyright malloc ;
+
+IIMSGHDR ermo.msg ;
+
+IILIBRARY MONITORLIB : montab.roc quit.qsc go.qsc xmacro.c
+	writeout.c tmprint.c shell.c qbuf.c prompt.c newdirec.c
+	monitor.c monglobs.c mcall.c mac.c ipanic.c include.c
+	getfname.c getch.c expr.c eval.c edit.c clrline.c clear.c
+	buf.c branch.c ;
+

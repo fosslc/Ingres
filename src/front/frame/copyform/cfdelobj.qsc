@@ -1,0 +1,84 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<cf.h>
+
+/*{
+** Name:	cf_delobj - delete an object from the database
+**
+** Description:
+**	delete a form-related object from the database.
+**
+** Input params:
+**	class		OO class of the object to delete.
+**	id		OOID of the object to delete.
+**
+** Output params:
+**	none.
+**
+** Returns:
+**	none.
+**
+** Exceptions:
+**	none.
+**
+** Side Effects:
+**
+** History:
+**	22-Apr-87 (rdesmond) - written.
+**	03-nov-87 (danielt) changed QUEL statements to vanilla SQL
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+*/
+VOID
+cf_delobj(class, id)
+EXEC SQL BEGIN DECLARE SECTION;
+i4	class;
+i4	id;
+EXEC SQL END DECLARE SECTION;
+{
+
+	iiuicw1_CatWriteOn();
+	EXEC SQL DELETE FROM ii_objects
+		WHERE object_id = :id;		
+	EXEC SQL DELETE FROM ii_longremarks
+		WHERE object_id = :id;
+	switch(class)
+	{
+		case OC_QBFNAME:
+			EXEC SQL DELETE FROM ii_qbfnames
+				WHERE object_id = :id;
+			break;
+
+		case OC_JOINDEF:
+			EXEC SQL DELETE FROM ii_joindefs
+				WHERE object_id = :id;
+			break;
+		case OC_FORM:
+			EXEC SQL DELETE FROM ii_forms
+				WHERE object_id = :id;
+
+			EXEC SQL DELETE FROM ii_fields
+				WHERE object_id = :id;
+
+			EXEC SQL DELETE FROM ii_trim
+				WHERE object_id = :id;
+
+
+			EXEC SQL DELETE FROM ii_encoded_forms
+				WHERE object_id = :id;
+
+			break;
+	}
+	iiuicw0_CatWriteOff();
+}

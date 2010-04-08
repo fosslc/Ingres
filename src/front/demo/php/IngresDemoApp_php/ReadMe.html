@@ -1,0 +1,57 @@
+<!--
+** Name: ReadMe.html
+**
+** Description:
+** Read me file for Ingres IFF PHP demo application
+**
+** History:
+**     16-nov-2007 (luemi01)
+**         Created
+**     26-nov-2007 (peeje01)
+**         corrected index file name to index.php
+-->
+<html>
+<head>
+<title>Ingres PHP IFF Demo - ReadMe</title>
+</head>
+<body>
+<img src="pictures/IngresBanner.jpg" />
+<h1>Welcome to the Ingres PHP IFF Demo</h1>
+<h2>Environment Requirements</h2>
+To run the Ingres Demo you need the following components
+<ul>
+<li>Apache Webserver (2.x or higher)</li>
+<li>PHP 5.x (or higher)</li>
+<li>Ingres DBMS (9.1.0 or higher)</li>
+<li>Ingres PHP driver 1.4.3 (available on 
+	<a href="http://pecl.php.net/package/ingres">http://pecl.php.net/package/ingres</a>).<br/>
+	If you need more help on installing and configuring the PHP driver please see 
+	<a href="http://community.ingres.com/wiki/PHP_Driver">http://community.ingres.com/wiki/PHP_Driver</a>
+</li>
+</ul>
+<h2>Unpacking the tarball</h2>
+To unpack the tarball just execute the command:
+<pre>
+	tar -xvzf ingresPhpIff.tgz
+</pre>
+This will create an subdirectory called IFF including all necessary files.
+<h2>Configuring the IFF application</h2>
+The configuration of the IFF is straight-forward. Just open the editor of your choice and point it to the file 
+LocalSettings.php that resides within the just created directory.
+You'll find three constants in there:
+<pre>
+define('DATABASE','demodb');
+define('USER','ingres');
+define('PASSWORD','');
+</pre>
+Please fill in the necessary information. This constants are used for the default connection to the Database. 
+You can change the connection information within the IFF too. But that's only for the lifetime of the PHP Session.
+<p>If you want the application to work after you <b>point your browser to the file "index.php" </b>in the directory where you just unpacked the application then
+you must fill in the correct values.
+</p>
+<p>
+After you changed the connection information within the application and you want to use the default credentials, just type "(local)"
+in the field named "hostname" and nothing else.
+</p>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<!--
+##{
+## History:
+##    04-May-1999 (peeje01)
+##        Replaced .dll with #ext#
+##}
+-->
+<HTML>
+<HEAD>
+<CENTER><H1>Tutorial</H1></CENTER>
+</HEAD>
+
+<BODY BGPROPERTIES=FIXED BGCOLOR=WHITE TEXT=#000000 LINK=#ff6600 VLINK=#330099>
+ 	<FORM ACTION="/ice-bin/oiice.#ext#/iceTutorial/tutorial[menu.html]" METHOD="POST">
+		<INPUT TYPE=hidden NAME="ii_action" value="connect">
+		<INPUT TYPE=hidden NAME="ii_error_url" value="/iceTutorial/icetutor/autodeclare.html">
+		<P>
+Ingres Web Deployment Option provides the foundation for Internet-based electronic commerce. Ingres
+Web Deployment Option allows developers to build World Wide Web applications in a multi-tier environment 
+that can access enterprise wide corporate data.
+		</P>
+		<P>
+        This tutorial demonstrates how simple it is to create applications with Ingres Web Deployment Option that are both Internet-enabled 
+and can access all enterprise data.
+		</P>
+
+		<TABLE BORDER=0 ALIGN=CENTER VALIGN=CENTER>
+			<TR>
+				<TD VALIGN="TOP" HEIGHT="50" COLSPAN="2">Please enter your user name and password. </TD>
+			</TR>
+			<TR>
+				<TD>User Name: </TD>
+				<TD><INPUT SIZE=32 NAME="ii_userid"></TD>
+			</TR>
+			<TR>
+				<TD>Password: </TD>
+				<TD><INPUT SIZE=32 TYPE=PASSWORD NAME="ii_password"></TD>
+			</TR>
+			<TR></TR>
+			<TR>
+                <TD VALIGN="MIDDLE" HEIGHT="50" COLSPAN="2"><FONT SIZE=2>(If you don't know it, please contact your Web Deployment Option security administrator)</FONT>
+			</TR>
+		</TABLE>
+		<CENTER>
+		<INPUT TYPE="submit" NAME="connect" VALUE="Login" ALT="Connect">
+		<INPUT TYPE="button" SRC="/iceimages/logout.gif" NAME="Cancel" VALUE="Cancel" ALT="Cancel" onClick="window.close()">
+
+		</CENTER>
+	</FORM>
+</BODY>
+</HTML>

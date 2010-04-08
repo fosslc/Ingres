@@ -1,0 +1,434 @@
+%{
+/*
+**	GRAMMAR.y  -  Grammar describing the Validation Strings
+**
+**	This is the grammar used for parsing the validation strings.
+**	Yacc compiles this grammar and places it the file "y.tab.c".
+**	The grammar is initialized by calling yyvinit() in lex.c
+**	and called as the routine yyparse().
+**
+**	History: 1-Aug-1981  -	written	  (JEN)
+**		14-Mar-1983  -	added routine decls of v_maketree,
+**				v_getlist, v_mklist - (nml)
+**	04/07/87 (dkh) - Added support for ADTs.
+**	08/14/87 (dkh) - ER changes.
+**	06/23/89 (dkh) - Added support for derived fields.  Essentially,
+**			 special macros have been added to allow two
+**			 different parsers to exist in the forms system.
+**			 This also allows users to pull in a standard
+**			 yacc parser into their forms applications.
+**	09/23/89 (dkh) - Porting changes integration.
+**	10/02/89 (dkh) - Changed IIFVvchk to IIFVvck.
+**	11/16/89 (dkh) - Put in support for owner.table.
+**      07/02/91 (johnr) 
+**		Put in YYSCLASS flag and define yymaxdepth for hp3_us5
+**	03/01/92 (dkh) - Changed ingres63p/264210 fix to be more generic so that
+**			 there is no possibility that either grammars in
+**			 the forms system will conflict with a user's grammar.
+**	09-Jun-92 (fredb)
+**		Added hp9_mpe to defines that solve multiple definition
+**		problem in linker due to dgrammar and grammar in the same lib.
+**	06/12/92 (dkh) - Added support for decimal for 6.5.
+**	06/18/92 (dkh) - Added support for owner.table in table lookup.
+**	23-Jun-92 (fredb)
+**		Added hp9_mpe to code to define __YYSCLASS.
+**	27-jul-1992 (thomasm) - Expand hp3 specific changes to Hp8
+**	28-aug-92 (sweeney)
+**		Apollo loader beefs about multiple global definitions.
+**	08/29/92 (dkh) - Fixed previous submission so that left off "|| \"
+**			 on line 88.
+**	09/02/92 (ricka)
+**		VMS compiler cannot handle extended by using a        
+**		" \ ".
+**      18-feb-93 (sweeney) 
+**              undef abs() for usl_us5 - its yacc generates a #include
+**              of stdlib.h, which contains a forward reference for 
+**              abs() which is getting macroexpanded into garbage.
+**      25-mar-93 (sweeney) 
+**		#define yy_yyv to be IIFVv_yyv, else it clashes with 
+**		the yacc'ed yy_yyv in front!st!install. I may be fixing this  
+**		in the wrong place, but it can't hurt. Plus a layout change.
+**      03-jun-93 (pauland)
+**              Change, as suggested by Tony Sweeney:
+**              undef abs() for usl_us5 - its yacc generates a #include
+**              of stdlib.h, which contains a forward reference for
+**              abs() which is getting macroexpanded into garbage.
+**	29-nov-93 (ricka)
+**		One more time, VAX/VMS CANNOT handle lines extended with an
+**		" \ ".
+**	20-nov-1994 (andyw)
+**	   	Solaris 2.4/Compiler 3.00 failed with macroexpand referenced
+**		function abs. changed as per Tony's previous change to usl_us5
+**	 	Solaris 2.4/Compiler 3.00 problems
+**	29-jul-1997 (walro03)
+**		Undefine abs() for Tandem NonStop (ts2_us5), like other
+**		platforms.
+**      28-aug-1997 (musro02)
+**              Undef abs for sqs_ptx
+**      12-Feb-1997 (mosjo01 & linke01)
+**              Added the forward declaration for IIFVveError();
+**              without the forward declaration, when this file is compiled
+**              , got error messages "redeclaration of IIFVveError differs
+**              previous declaration" and "return type (void) in IIFVveError
+**              redeclaration is not compatible with the previous return type
+**              (int)".  This is because IBM's yacc spits out the generated C
+**              code in a different order than other platforms' yacc.
+**	10-may-1999 (walro03)
+**		Remove obsolete version string apl_us5.
+** 
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<me.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<valid.h>
+# include	<er.h>
+# include	"erfv.h"
+
+# if defined(hp3_us5) || defined(hp9_mpe) || defined (any_hpux)
+# define __YYSCLASS
+# endif /* hp3_us5 || hp9_mpe || hpux */
+
+FUNC_EXTERN	VTREE	*vl_maketree();
+FUNC_EXTERN	VTREE	*vl_mkattrtree();
+FUNC_EXTERN	VTREE	*vl_mkcoltree();
+FUNC_EXTERN	VALROOT *vl_mklist();
+FUNC_EXTERN	VALROOT *vl_getlist();
+FUNC_EXTERN	VALROOT *IIFVotg_OwnerTableGetlist();
+FUNC_EXTERN	void	IIFVndNegateDecimal();
+FUNC_EXTERN	void	IIFVsdsScanDelimString();
+void    IIFVveError();
+
+/*
+** yacc on usl_us5 is about to spit out a #include for <stdlib.h>
+** which has a prototyped forward reference for abs(int).
+** Because we define abs as a macro in compat.h, this forward
+** ref gets macroexpanded into "extern int ((int) > 0? (int) : -(int))"
+** which is clearly garbage, and won't compile, so stomp the macro.
+*/
+# ifdef sqs_ptx 
+# undef abs
+# endif
+
+# ifdef usl_us5 
+# undef abs
+# endif
+
+# ifdef sparc_sol 
+# undef abs
+# endif
+
+# ifdef ts2_us5 
+# undef abs
+# endif
+
+/*
+**  Special defintions to enable having two
+**  yacc parsers in the forms system.
+*/
+# define	yyparse		IIFVvpParse
+# define	yyerror		IIFVveError
+# define	yylex		IIFVvlex
+# define	yylval		IIFVvlval
+# define	yyval		IIFVvval
+# define	YYSTYPE		IIFVvstype
+# define	yychar		IIFVvchar
+# define	yyerrflag	IIFVverrflag
+# define	yyexca		IIFVvexca
+# define	yyact		IIFVvact
+# define	yypact		IIFVvpact
+# define	yypgo		IIFVvpgo
+# define	yyr1		IIFVvr1
+# define	yyr2		IIFVvr2
+# define	yychk		IIFVvck
+# define	yydef		IIFVv1def
+# define	yydebug		IIFVv2debug
+# define	yynerrs		IIFVvnerrs
+# define	yyv		IIFVvv
+# define	yypvt		IIFVvpvt
+# define	yys		IIFVvs
+# define	yy_yyv		IIFVv_yyv
+# if defined(hp3_us5) || defined(hp9_mpe) || defined(any_hpux)
+# define	yymaxdepth	IIFVvmaxdepth
+# endif /* hp3_us5 || hp9_mpe || hpux */
+
+%}
+
+%start	stmt
+
+%token	LPAREN	RPAREN	IN	PERIOD	COMMA	LBRAK	RBRAK
+%token	IS
+%token	<name_type>	NAME
+%token	<string_type>	SCONST	SVCONST
+%token	<I4_type>	I4CONST
+%token	<F8_type>	F8CONST
+%token	<dec_type>	DECCONST
+
+%left	<type_type>	LBOP	NOT	LUOP UMINUS
+%token	<type_type>	RELOP	ANULL	LIKE
+
+%type	<I4_type>	inum
+%type	<F8_type>	fnum
+%type	<dec_type>	dnum
+%type	<tree_type>	expr	term	atfcn  attrib	vcconst	lookup	llist
+%type	<root_type>	list	clist	numlist strlist
+
+%%
+stmt	:	expr
+	{
+		vl_curtype->ftvalchk = $1;
+	}
+	|	error
+	{
+		vl_curtype->ftvalchk = NULL;
+		vl_par_error(ERx("PARSER"), ERget(E_FV001E_syntax_error));
+	}
+	;
+
+expr	:	LPAREN	expr	RPAREN
+	{
+		$$ = $2;
+	}
+	|	expr	LBOP	expr
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$2), vBOP, vLOGICAL, (VTREE *)$1, (VTREE *)$3);
+	}
+	|	NOT	expr
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$1), vUOP, vLOGICAL, (VTREE *)NULL, (VTREE *)$2);
+	}
+	|	term
+	{
+		$$ = $1;
+	}
+	;
+
+term	:	atfcn	RELOP	atfcn
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$2), vBOP, vLOGICAL, (VTREE *)$1, (VTREE *)$3);
+	}
+	|	lookup	list
+	{
+		/*
+		**  Turn off delim id scanning since we've successfully
+		**  handle a table lookup statement.
+		*/
+		IIFVsdsScanDelimString(FALSE);
+		$$ = vl_maketree((YYSTYPE *)NULL, vLIST, vLOGICAL, (VTREE *)$1, (VTREE *)$2);
+	}
+	|	llist	clist	RBRAK
+	{
+		$$ = vl_maketree((YYSTYPE *)NULL, vLIST, vLOGICAL, (VTREE *)$1, (VTREE *)$2);
+	}
+	|	attrib	IS	ANULL
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$3), vUOP, vLOGICAL,
+			(VTREE *) NULL, (VTREE *) $1);
+	}
+	|	attrib	IS	NOT	ANULL
+	{
+		$4 = v_opNOTNL;
+		$$ = vl_maketree((YYSTYPE *)(&$4), vUOP, vLOGICAL,
+			(VTREE *) NULL, (VTREE *) $1);
+	}
+	|	attrib	LIKE	vcconst
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$2), vBOP, vLOGICAL,
+			(VTREE *) $1, (VTREE *) $3);
+	}
+	;
+
+lookup	:	attrib	IN
+	{
+		/*
+		**  Turn on delimited id scanning in the scanner since
+		**  we may be dealing with a table lookup validation.
+		**  syntax.  This is necesssary to differentiate between
+		**  scanning for a double quoted string constant with
+		**  quel escapes versus delimited escapes.
+		*/
+		IIFVsdsScanDelimString(TRUE);
+		$$ = $1;
+	}
+	;
+
+llist	:	lookup	LBRAK
+	{
+		/*
+		**  Turn off delimited id scanning since we are now
+		**  handling a specific list as part of the validation
+		**  string.
+		*/
+		IIFVsdsScanDelimString(FALSE);
+		$$ = $1;
+	}
+	;
+
+atfcn	:	attrib
+	{
+		$$ = $1;
+	}
+	|	SCONST
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$1), vCONST, vSTRING, (VTREE *)NULL, (VTREE *)NULL);
+	}
+	|	inum
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$1), vCONST, vINT, (VTREE *)NULL, (VTREE *)NULL);
+	}
+	|	fnum
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$1), vCONST, vFLOAT, (VTREE *)NULL, (VTREE *)NULL);
+	}
+	|	dnum
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$1), vCONST, vDEC, (VTREE *)NULL, (VTREE *)NULL);
+	}
+	;
+
+vcconst :	SVCONST
+	{
+		$$ = vl_maketree((YYSTYPE *)(&$1), vCONST, vVCHSTRING,
+			(VTREE *) NULL, (VTREE *) NULL);
+	}
+/*
+** a regular field used as a value
+** or a column of a table field
+*/
+attrib :  NAME
+	{
+		$$ = vl_mkattrtree($1, vATTR, (FIELD **)NULL);
+	}
+	|	NAME PERIOD NAME
+	{
+		$$ = vl_mkcoltree($1, $3);
+	}
+	;
+
+list	:	NAME	PERIOD	NAME
+	{
+		/*
+		**  Calling vl_getlist() to make sure that the names
+		**  are valid.  vl_getlist() will return immediately
+		**  after checking the names if vl_syntax is TRUE.
+		*/
+		$$ = vl_getlist($1, $3, NULL);
+	}
+	|	NAME	PERIOD	NAME	PERIOD	NAME
+	{
+		/*
+		**  Calling vl_getlist() to make sure that the names
+		**  are valid.  vl_getlist() will return immediately
+		**  after checking the names if vl_syntax is TRUE.
+		*/
+		$$ = vl_getlist($3, $5, $1);
+	}
+	;
+
+clist	:	numlist
+	{
+		$$ = $1;
+	}
+	|	strlist
+	{
+		$$ = $1;
+	}
+	;
+numlist :	inum
+	{
+		$$ = vl_mklist(vINT);
+		vl_addlist((YYSTYPE *)(&$1), vINT);
+	}
+	|	fnum
+	{
+		$$ = vl_mklist(vFLOAT);
+		vl_addlist((YYSTYPE *)(&$1), vFLOAT);
+	}
+	|	dnum
+	{
+		$$ = vl_mklist(vDEC);
+		vl_addlist((YYSTYPE *)(&$1), vDEC);
+	}
+	|	numlist COMMA	inum
+	{
+		vl_addlist((YYSTYPE *)(&$3), vINT);
+	}
+	|	numlist COMMA fnum
+	{
+		vl_addlist((YYSTYPE *)(&$3), vFLOAT);
+	}
+	|	numlist COMMA dnum
+	{
+		vl_addlist((YYSTYPE *)(&$3), vDEC);
+	}
+	;
+
+inum	:	I4CONST
+	{
+		$$ = $1;
+	}
+	|	UMINUS	I4CONST
+	{
+		$2 = - ($2);
+		$$ = $2;
+	}
+	;
+
+fnum	:	F8CONST
+	{
+		$$ = $1;
+	}
+	|	UMINUS	F8CONST
+	{
+		$2 = - ($2);
+		$$ = $2;
+	}
+	;
+
+dnum	:	DECCONST
+	{
+		$$ = $1;
+	}
+	|	UMINUS DECCONST
+	{
+		IIFVndNegateDecimal($2, (i4) TRUE);
+		$$ = $2;
+	}
+
+strlist :	SCONST
+	{
+		$$ = vl_mklist(vSTRING);
+		vl_addlist((YYSTYPE *)(&$1), vSTRING);
+	}
+	|	strlist COMMA	SCONST
+	{
+		vl_addlist((YYSTYPE *)(&$3), vSTRING);
+	}
+	;
+%%
+
+# include	"tokens.h"
+
+/*
+**   YYERROR -- the routine which error routine yacc calls
+*/
+VOID
+yyerror(errmessage)
+char	*errmessage;
+{
+	vl_par_error(ERx("PARSER"), errmessage);
+}

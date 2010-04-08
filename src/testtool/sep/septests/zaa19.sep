@@ -1,0 +1,85 @@
+/*
+	Test Name: newtest.sep
+	Time: Thu Sep  9 19:39:20 1993
+	User Name: ingres
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename:
+	Purpose	:
+	Input Files  :
+	Output Files :
+	Database     :
+	Tables       :
+	Synopsis     :
+
+ History:  9-Sep-1993	(Author)	Created
+*/
+? setenv DUMMY "B" 
+<<
+environment variable was defined
+>>
+? setenv DUMMY "C" 
+<<
+environment variable was defined
+>>
+? setenv DUMMY "D" 
+<<
+environment variable was defined
+>>
+? echo @file(DUMMY,) 
+<<
+D
+>>
+? unsetenv DUMMY 
+<<
+environment variable was undefined
+>>
+? echo @file(DUMMY,) 
+<<
+C
+>>
+? setenv DUMMY E 
+<<
+environment variable was defined
+>>
+? echo @file(DUMMY,) 
+<<
+E
+>>
+? unsetenv DUMMY 
+<<
+environment variable was undefined
+>>
+? echo @file(DUMMY,) 
+<<
+C
+>>
+? unsetenv DUMMY 
+<<
+environment variable was undefined
+>>
+? echo @file(DUMMY,) 
+<<
+B
+>>
+? setenv DUMMY F 
+<<
+environment variable was defined
+>>
+? setenv DUMMY G 
+<<
+environment variable was defined
+>>
+? setenv DUMMY H 
+<<
+environment variable was defined
+>>
+? echo @file(DUMMY,) 
+<<
+H
+>>
+
+
+Ending at: Thu Sep  9 19:42:37 1993

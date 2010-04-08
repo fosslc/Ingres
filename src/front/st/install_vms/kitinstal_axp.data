@@ -1,0 +1,10 @@
+				KITINSTAL.DATA
+
+This data file is used to pass data which may change from time to time to the
+KITINSTAL.COM procedure, thus avoiding having to edit kitinstal.com. Please
+see the GET_KIT_DATA section of KITINSTAL.COM for usage information.
+
+RELEASE:	II 2.0/0001 (axp.vms/00)
+MINIMUM VMS:	071
+MINIMUM SPACE:	580000
+LAST SAVESET:	B

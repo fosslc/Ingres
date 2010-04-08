@@ -1,0 +1,38 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for stream
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+**	24-nov-93 (tyler)
+**		Cleaned up and removed VMS pre-processing directives.
+**	26-apr-2000 (somsa01)
+**		Added support for other products.
+**	11-Jun-2004 (somsa01)
+**		Cleaned up code for Open Source.
+**	20-Jan-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART stream
+
+/*
+** ingres!utility!iistream
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!bin
+#else
+	DIRECTORY (PROD2NAME)!utility!iistream
+#endif
+   BUILD_DIR (ING_BUILD)!utility!iistream
+      FILE iistream.cfg
+      FILE iistream.o

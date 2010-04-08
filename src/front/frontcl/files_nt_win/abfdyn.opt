@@ -1,0 +1,9 @@
+libingres.lib
+shell32.lib
+msvcrt.lib
+kernel32.lib
+user32.lib
+mpr.lib
+advapi32.lib
+netapi32.lib
+libcmt.lib

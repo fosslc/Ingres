@@ -1,0 +1,65 @@
+/*
+**  ingres.qsc
+**
+**  Copyright (c) 2004 Ingres Corporation
+**
+**	History:
+**		6/5/85 (prs)	Fix bug 5525.  Change INGRES to QUEL.
+**		11/11/85 (prs)	Put in IIbreak to clean up after call
+**				to FSTM.
+**		11/26/85 (prs)	Change SQL to ISQL and QUEL to IQUEL.
+**		10/05/89 (mdw)	When in CMS, make the sysname "fstm"
+**				instead of "isql". This is required
+**				because IBM's own interactive terminal
+**				monitor in CMS is called "ISQL".
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<er.h>
+# include	"erim.h"
+# include	"imconst.h"
+# include	"imextern.h"
+
+
+VOID
+ingresstart(cmd)
+i4	cmd;
+{
+	char	buffer[256];
+	char	*sysname = ERx("iquel");
+
+	char	*args[10];
+	i4	argcount = 0;
+
+	if (cmd == H_SQL)
+	{
+##		message ERget(F_IM0030_Starting_ISQL)
+#ifdef CMS
+		sysname = ERx("fstm");		/* mdw */
+#else
+		sysname = ERx("isql");
+#endif /* CMS */
+	}
+	else
+	{
+##		message ERget(F_IM002F_Starting_IQUEL)
+		sysname = ERx("iquel");
+	}
+	buffer[0] = EOS;
+
+	if (swspawn(sysname, buffer, argcount, args) != OK)
+	{
+		starterr(sysname);
+	}
+	/* VARARGS2 */
+##	clear screen
+}

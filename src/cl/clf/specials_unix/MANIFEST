@@ -1,0 +1,7 @@
+#
+# YAM MANIFEST file for cl!clf!specials
+#
+
+IISUBSYS cl clf specials_unix ;
+
+IIUUENCODELIB RPC102441LIB : dbesunlib.enc ;

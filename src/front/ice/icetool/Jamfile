@@ -1,0 +1,175 @@
+#
+# Jamfile file for front!ice!icetool
+#
+# History:
+#   15-Sep-2004 (fanra01)
+#       Add grist's to make the image files unique.
+#   22-Sep-2004 (fanra01)
+#       Add yet more grists to ensure unique files.
+#   06-Oct-2004 (hanje04)
+#	Remove grists as they are now added in IIICEFILE rule
+#	08-dec-2004 (abbjo03)
+#	    Use DFS instead of slash for portability.
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+#
+
+SubDir ING_SRC front ice icetool ;
+
+IISUBSYS front ice icetool ;
+
+if $(BUILD_ICE)
+{
+
+IIICEFILE icetool$(DFS)access.gif : access.gif ;
+IIICEFILE icetool$(DFS)act_sess.html : act_sess.html ;
+IIICEFILE icetool$(DFS)actapp.html : actapp.html ;
+IIICEFILE icetool$(DFS)actbucopy.html : actbucopy.html ;
+IIICEFILE icetool$(DFS)actbuloc.html : actbuloc.html ;
+IIICEFILE icetool$(DFS)actburole.html : actburole.html ;
+IIICEFILE icetool$(DFS)actbuuser.html : actbuuser.html ;
+IIICEFILE icetool$(DFS)actcache.html : actcache.html ;
+IIICEFILE icetool$(DFS)actconn.html : actconn.html ;
+IIICEFILE icetool$(DFS)actcursor.html : actcursor.html ;
+IIICEFILE icetool$(DFS)actdb.html : actdb.html ;
+IIICEFILE icetool$(DFS)actdbuser.html : actdbuser.html ;
+IIICEFILE icetool$(DFS)actdoc.html : actdoc.html ;
+IIICEFILE icetool$(DFS)actdocrole.html : actdocrole.html ;
+IIICEFILE icetool$(DFS)actdocuser.html : actdocuser.html ;
+IIICEFILE icetool$(DFS)action.html : action.html ;
+IIICEFILE icetool$(DFS)actloc.html : actloc.html ;
+IIICEFILE icetool$(DFS)actprofconn.html : actprofconn.html ;
+IIICEFILE icetool$(DFS)actprofile.html : actprofile.html ;
+IIICEFILE icetool$(DFS)actprofrole.html : actprofrole.html ;
+IIICEFILE icetool$(DFS)actrole.html : actrole.html ;
+IIICEFILE icetool$(DFS)acttrans.html : acttrans.html ;
+IIICEFILE icetool$(DFS)actunit.html : actunit.html ;
+IIICEFILE icetool$(DFS)actuser.html : actuser.html ;
+IIICEFILE icetool$(DFS)actuserconn.html : actuserconn.html ;
+IIICEFILE icetool$(DFS)actuserrole.html : actuserrole.html ;
+IIICEFILE icetool$(DFS)actusersess.html : actusersess.html ;
+IIICEFILE icetool$(DFS)actvar.html : actvar.html ;
+IIICEFILE icetool$(DFS)authorized.html : authorized.html ;
+IIICEFILE icetool$(DFS)begin.html : begin.html ;
+IIICEFILE icetool$(DFS)buLocs.html : buLocs.html ;
+IIICEFILE icetool$(DFS)bucopy.html : bucopy.html ;
+IIICEFILE icetool$(DFS)budright.html : budright.html ;
+IIICEFILE icetool$(DFS)buloc.html : buloc.html ;
+IIICEFILE icetool$(DFS)bumain.html : bumain.html ;
+IIICEFILE icetool$(DFS)bumenu.html : bumenu.html ;
+IIICEFILE icetool$(DFS)bumocs.html : bumocs.html ;
+IIICEFILE icetool$(DFS)bupages.html : bupages.html ;
+IIICEFILE icetool$(DFS)bupagesInfo.html : bupagesInfo.html ;
+IIICEFILE icetool$(DFS)bupagestorage.html : bupagestorage.html ;
+IIICEFILE icetool$(DFS)bupcode.html : bupcode.html ;
+IIICEFILE icetool$(DFS)bupdelete.html : bupdelete.html ;
+IIICEFILE icetool$(DFS)bupmenu.html : bupmenu.html ;
+IIICEFILE icetool$(DFS)buprop.html : buprop.html ;
+IIICEFILE icetool$(DFS)bupupdate.html : bupupdate.html ;
+IIICEFILE icetool$(DFS)bupview.html : bupview.html ;
+IIICEFILE icetool$(DFS)buright.html : buright.html ;
+IIICEFILE icetool$(DFS)buunit.html : buunit.html ;
+IIICEFILE icetool$(DFS)buunits.html : buunits.html ;
+IIICEFILE icetool$(DFS)buwelcome.html : buwelcome.html ;
+IIICEFILE icetool$(DFS)cache.html : cache.html ;
+IIICEFILE icetool$(DFS)cancel.gif : cancel.gif ;
+IIICEFILE icetool$(DFS)closed.gif : closed.gif ;
+IIICEFILE icetool$(DFS)code.gif : code.gif ;
+IIICEFILE icetool$(DFS)connection.html : connection.html ;
+IIICEFILE icetool$(DFS)cursor.html : cursor.html ;
+IIICEFILE icetool$(DFS)delete.gif : delete.gif ;
+IIICEFILE icetool$(DFS)dirfiles.html : dirfiles.html ;
+IIICEFILE icetool$(DFS)download.gif : download.gif ;
+IIICEFILE icetool$(DFS)empty.gif : empty.gif ;
+IIICEFILE icetool$(DFS)end.html : end.html ;
+IIICEFILE icetool$(DFS)filetable.html : filetable.html ;
+IIICEFILE icetool$(DFS)fill.html : fill.html ;
+IIICEFILE icetool$(DFS)icon_access.gif : icon_access.gif ;
+IIICEFILE icetool$(DFS)icon_act_sess.gif : icon_act_sess.gif ;
+IIICEFILE icetool$(DFS)icon_app.gif : icon_app.gif ;
+IIICEFILE icetool$(DFS)icon_apps.gif : icon_apps.gif ;
+IIICEFILE icetool$(DFS)icon_cache.gif : icon_cache.gif ;
+IIICEFILE icetool$(DFS)icon_copy.gif : icon_copy.gif ;
+IIICEFILE icetool$(DFS)icon_curs.gif : icon_curs.gif ;
+IIICEFILE icetool$(DFS)icon_db.gif : icon_db.gif ;
+IIICEFILE icetool$(DFS)icon_dbs.gif : icon_dbs.gif ;
+IIICEFILE icetool$(DFS)icon_dbu.gif : icon_dbu.gif ;
+IIICEFILE icetool$(DFS)icon_dbus.gif : icon_dbus.gif ;
+IIICEFILE icetool$(DFS)icon_loc.gif : icon_loc.gif ;
+IIICEFILE icetool$(DFS)icon_locs.gif : icon_locs.gif ;
+IIICEFILE icetool$(DFS)icon_monit.gif : icon_monit.gif ;
+IIICEFILE icetool$(DFS)icon_multi.gif : icon_multi.gif ;
+IIICEFILE icetool$(DFS)icon_multis.gif : icon_multis.gif ;
+IIICEFILE icetool$(DFS)icon_page.gif : icon_page.gif ;
+IIICEFILE icetool$(DFS)icon_pages.gif : icon_pages.gif ;
+IIICEFILE icetool$(DFS)icon_profile.gif : icon_profile.gif ;
+IIICEFILE icetool$(DFS)icon_profiles.gif : icon_profiles.gif ;
+IIICEFILE icetool$(DFS)icon_rmulti.gif : icon_rmulti.gif ;
+IIICEFILE icetool$(DFS)icon_role.gif : icon_role.gif ;
+IIICEFILE icetool$(DFS)icon_roles.gif : icon_roles.gif ;
+IIICEFILE icetool$(DFS)icon_rpage.gif : icon_rpage.gif ;
+IIICEFILE icetool$(DFS)icon_trans.gif : icon_trans.gif ;
+IIICEFILE icetool$(DFS)icon_unit.gif : icon_unit.gif ;
+IIICEFILE icetool$(DFS)icon_units.gif : icon_units.gif ;
+IIICEFILE icetool$(DFS)icon_user.gif : icon_user.gif ;
+IIICEFILE icetool$(DFS)icon_users.gif : icon_users.gif ;
+IIICEFILE icetool$(DFS)icon_var.gif : icon_var.gif ;
+IIICEFILE icetool$(DFS)icon_vars.gif : icon_vars.gif ;
+IIICEFILE icetool$(DFS)iipe_anim.gif : iipe_anim.gif ;
+IIICEFILE icetool$(DFS)jasmenu.html : jasmenu.html ;
+IIICEFILE icetool$(DFS)lastclosed.gif : lastclosed.gif ;
+IIICEFILE icetool$(DFS)lastleaf.gif : lastleaf.gif ;
+IIICEFILE icetool$(DFS)lastopened.gif : lastopened.gif ;
+IIICEFILE icetool$(DFS)leaf.gif : leaf.gif ;
+IIICEFILE icetool$(DFS)login.html : login.html ;
+IIICEFILE icetool$(DFS)logout.gif : logout.gif ;
+IIICEFILE icetool$(DFS)main.html : main.html ;
+IIICEFILE icetool$(DFS)menprop.html : menprop.html ;
+IIICEFILE icetool$(DFS)mentitle.html : mentitle.html ;
+IIICEFILE icetool$(DFS)menu.gif : menu.gif ;
+IIICEFILE icetool$(DFS)menu.html : menu.html ;
+IIICEFILE icetool$(DFS)nobranch.gif : nobranch.gif ;
+IIICEFILE icetool$(DFS)opened.gif : opened.gif ;
+IIICEFILE icetool$(DFS)result.html : result.html ;
+IIICEFILE icetool$(DFS)secdb.html : secdb.html ;
+IIICEFILE icetool$(DFS)secdbs.html : secdbs.html ;
+IIICEFILE icetool$(DFS)secdbu.html : secdbu.html ;
+IIICEFILE icetool$(DFS)secdbuprop.html : secdbuprop.html ;
+IIICEFILE icetool$(DFS)secdbus.html : secdbus.html ;
+IIICEFILE icetool$(DFS)secmenu.html : secmenu.html ;
+IIICEFILE icetool$(DFS)secprofconn.html : secprofconn.html ;
+IIICEFILE icetool$(DFS)secprofconns.html : secprofconns.html ;
+IIICEFILE icetool$(DFS)secprofile.html : secprofile.html ;
+IIICEFILE icetool$(DFS)secprofiles.html : secprofiles.html ;
+IIICEFILE icetool$(DFS)secprofrole.html : secprofrole.html ;
+IIICEFILE icetool$(DFS)secprofroles.html : secprofroles.html ;
+IIICEFILE icetool$(DFS)secrole.html : secrole.html ;
+IIICEFILE icetool$(DFS)secrols.html : secrols.html ;
+IIICEFILE icetool$(DFS)section.html : section.html ;
+IIICEFILE icetool$(DFS)security_anim.gif : security_anim.gif ;
+IIICEFILE icetool$(DFS)secuser.html : secuser.html ;
+IIICEFILE icetool$(DFS)secuserConn.html : secuserConn.html ;
+IIICEFILE icetool$(DFS)secuserConns.html : secuserConns.html ;
+IIICEFILE icetool$(DFS)secuserRole.html : secuserRole.html ;
+IIICEFILE icetool$(DFS)secuserRoles.html : secuserRoles.html ;
+IIICEFILE icetool$(DFS)secuses.html : secuses.html ;
+IIICEFILE icetool$(DFS)secwelcome.html : secwelcome.html ;
+IIICEFILE icetool$(DFS)serapp.html : serapp.html ;
+IIICEFILE icetool$(DFS)serapps.html : serapps.html ;
+IIICEFILE icetool$(DFS)serloc.html : serloc.html ;
+IIICEFILE icetool$(DFS)serlocs.html : serlocs.html ;
+IIICEFILE icetool$(DFS)sermenu.html : sermenu.html ;
+IIICEFILE icetool$(DFS)servar.html : servar.html ;
+IIICEFILE icetool$(DFS)servars.html : servars.html ;
+IIICEFILE icetool$(DFS)server_anim.gif : server_anim.gif ;
+IIICEFILE icetool$(DFS)serwelcome.html : serwelcome.html ;
+IIICEFILE icetool$(DFS)submit.gif : submit.gif ;
+IIICEFILE icetool$(DFS)submit.html : submit.html ;
+IIICEFILE icetool$(DFS)title.html : title.html ;
+IIICEFILE icetool$(DFS)transaction.html : transaction.html ;
+IIICEFILE icetool$(DFS)update.gif : update.gif ;
+IIICEFILE icetool$(DFS)upload.html : upload.html ;
+IIICEFILE icetool$(DFS)usr_sess.html : usr_sess.html ;
+IIICEFILE icetool$(DFS)view.gif : view.gif ;
+
+}

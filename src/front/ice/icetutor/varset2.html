@@ -1,0 +1,34 @@
+<!-- #ICE REPEAT IF (`:isvar` == `yes`)
+		THEN=`<!-- #ICE DECLARE=``page.varcurrent=:varcurrent::varvalue`` -->`
+		ELSE=`<!-- #ICE DECLARE=``page.varcurrent=:varcurrent:varvalue`` -->`
+-->
+
+<!-- #ICE REPEAT IF (`:varname` == ``)
+THEN=`<!-- #ICE REPEAT INCLUDE=``varget.html`` -->`
+ELSE=`
+<!-- #ICE REPEAT IF (``:isvar`` != ``first`` and ``:varvalue`` == ````)
+THEN=``<!-- #ICE REPEAT INCLUDE=````begin.html?title=ICE Variables (Set)&previous=varset.html&next=varget.html```` -->
+So, the corresponding macro command will be:
+<H4 CLASS="macro"><!-- #ICE VAR=````&lt;!-- #ICE DECLARE=````````:level.:varname=:varcurrent```````` --&gt;```` --></H4>``
+ELSE=``
+	<!-- #ICE REPEAT INCLUDE=````begin.html?title=ICE Variables (Set)&previous=varset.html&next=varset2.html```` -->
+	<INPUT TYPE="HIDDEN" NAME="varname" VALUE=":varname">
+	<INPUT TYPE="HIDDEN" NAME="varcurrent" VALUE=":varcurrent">
+	<INPUT TYPE="HIDDEN" NAME="level" VALUE=":level">
+
+	The value of the variable can consist of a hard-coded string, or of another variable. Please enter the string or
+	variable name you want to place in the <!-- #ICE VAR=````":varname"```` --> variable.
+	<H4 CLASS="macro">
+	<!-- #ICE VAR=````&lt;!-- #ICE DECLARE=````````:level.:varname=:varcurrent<INPUT SIZE="32" NAME="varvalue" VALUE="">```````` --&gt;```` -->
+	</H4>
+	<H4 CLASS="question">
+	This value is:
+	</H4>
+	<H4 CLASS="choice">
+	<INPUT TYPE="RADIO" NAME="isvar" VALUE="no" CHECKED>a string<BR>
+	<INPUT TYPE="RADIO" NAME="isvar" VALUE="yes">a variable
+	</H4>``
+-->
+
+<!-- #ICE REPEAT INCLUDE=``end.html`` -->`
+-->

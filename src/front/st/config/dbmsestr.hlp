@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The blob extension table structure (blob_etab_structure) of the dbms 
+  parameter is used during create table for tables having long datatypes.
+  Blob extension tables are created to hold the large object data.
+  Blob extension tables will be modified to the storage structure specified.
+  
+  The values for this parameter are BTREE, HASH and ISAM.

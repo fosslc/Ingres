@@ -1,0 +1,35 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** ABFDEMO
+**
+** list.osq: List all managers or all job titles.
+*/
+
+Select_value, key frskey4 = 
+begin
+	if vals.val IS NULL then
+		message 'No value selected.';
+	else
+		message vals.val + ' selected.';
+	endif;
+	return vals.val;
+end
+
+No_selection, key frskey3 = 
+begin
+	message 'No value selected.';
+	return '';
+end
+
+'4GL', key frskey16 = 
+begin
+	helpfile 'List Frame 4GL'
+	    'II_SYSTEM:[INGRES.FILES.ABFDEMO]list.osq';
+end
+
+on timeout =
+begin
+	callproc timer_off;
+end

@@ -1,0 +1,38 @@
+## History:
+##      15-Mar-2001 (bonro01)
+##          Comment lines were added to end of file to prevent future loss
+##          of the last line of the file by the sed command during the build
+##          process.  A common sed bug is to drop the last line of a file if
+##          it does not end with a line feed character.
+##
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=User sessions&submit=&cancel=` -->
+<TABLE BORDER=1 WIDTH="90%" CELLPADDING=5 CELLSPACING=2>
+	<TR>
+		<TH ALIGN="CENTER">Name (cookie)</TH>
+		<TH ALIGN="CENTER">Ice user</TH>
+		<TH ALIGN="CENTER">Active sessions</TH>
+		<TH ALIGN="CENTER">Timeout</TH>
+		<TH ALIGN="CENTER">Remove</TH>
+	</TR>
+	</TR>
+	<!-- #ICE REPEAT FUNCTION=`ice_users?action=select`
+			 HTML=`
+			 <TR><FORM ACTION="/ice-bin/oiice.:http_api_ext/iceTools/actUserSess.html" METHOD="POST"> 
+					<INPUT TYPE="HIDDEN" NAME="action" VALUE="delete">
+					<INPUT TYPE="HIDDEN" NAME="key" VALUE=":name">
+					<TD ALIGN="CENTER">:name</TD>
+					<TD ALIGN="CENTER">:user</TD>
+					<TD ALIGN="CENTER">:req_count</TD>
+					<TD ALIGN="CENTER">:timeout</TD>
+					<TD ALIGN="CENTER"><INPUT TYPE="image" NAME="Remove" BORDER=0 SRC="<!-- #ICE INCLUDE=``delete.gif`` -->"></TD>
+			 </FORM></TR>`
+	-->
+</TABLE>
+
+<!-- #ICE IF (`:ii_status_number` != `0`)
+THEN=`<p>You are not authorized to monitor the system. Please check with your administrator`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+##
+## (DO NOT REMOVE)

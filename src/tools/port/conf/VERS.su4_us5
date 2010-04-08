@@ -1,0 +1,38 @@
+# su4_us5 is the pure 32 bit build of the SPARC Solaris hybrid
+# capable platform.
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+
+#set: config32 su4_us5
+#set: config64 su9_us5
+#set: option DELIM_TEST
+#set: option B64
+##set: option MAINWIN_VDBA (off)
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
+BUILD_ICE = "TRUE" ; 	#set: option BUILD_ICE
+
+# Hybridization...
+# This is a pure 32 bit build.
+BUILD_ARCH = "32" ; 	#set: arch 32
+XERCES_ARCH ?= 32 ;
+
+# Overrides for building on Sun Studio 12 or later
+# These include TEMPORARY disablings of old-style-declaration and
+# implicit-function-declaration warnings, which are emitted in unbelievable
+# quantities by Studio 12 (as of July 2009).
+
+## CCSUN32 = "-m32 -erroff=E_OLD_STYLE_DECL_OR_BAD_TYPE,E_NO_IMPLICIT_DECL_ALLOWED" ;
+## CCSUN64 = "-m64 -erroff=E_OLD_STYLE_DECL_OR_BAD_TYPE,E_NO_IMPLICIT_DECL_ALLOWED" ;
+## C++SUN32 = "-m32 " ;
+## C++SUN64 = "-m64 " ;
+
+PLATFORM_JAMDEFS = sparc_sol ;

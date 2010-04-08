@@ -1,0 +1,667 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<adf.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	<ft.h>
+#include	<fmt.h>
+#include	<frame.h>
+#include	<flddesc.h>
+#include	"eruf.h"
+
+/*
+** Name:	ufhlptyp.qsc -	Front-End Help on DataType Selection Module.
+**
+** Description:
+**	Contains the routine that runs the data type selection frame for the
+**	Front-Ends.  Defines:
+**
+**	IIUFhlpType()	select list help for data type fields.
+**
+** History:
+**	Revision 6.2  89/01  wong
+**	Initial revision.
+**	Revision 6.4  90/04  wong
+**	Major re-work to use list choices.
+**	03-aug-1989	(mgw)
+**		adc_lenchk() interface changed to take DB_DATA_VALUE last
+**		argument instead of nat.
+**	23-apr-90 (rudyw)
+**		Set NO_OPTIM for ps2_us5 to avoid incorrect optimization.
+**	09-jul-1990 (sandyd)
+**		DB_LN_FRM_PR_MACRO was renamed to DB_PREC_TO_LEN_MACRO in
+**		the official 6.4 - 6.5  dbms.h.
+**	31-jul-92 (blaise)
+**		Added decimal to list of valid datatypes.
+**	04/06/93 (dkh) - Fixed bug 47214.  Code was passing a FRAME pointer
+**			 rather than the name of the form to delete.
+**	06/20/93 (dkh) - Fixed bug 49638.  Fixed the logic in _getPrecison()
+**			 so that selecting OK will properly detect the
+**			 fact that no scale value has been entered.
+**	14-sep-93 (dianeh)
+**		Removed NO_OPTIM setting for absolete PS/2 port (ps2_us5).
+**	11-nov-93 (teresal)
+**		Allow "1" to be a valid precision value. Bug 54182.
+**	19-nov-94 (HANCH04)
+**	    	made _colType not READONLY because robf writes to the variable
+**		in his change.
+**      15-jan-1996 (toumi01; from 1.1 axp_osf port)
+**              Added kchin's changes (from 6.4) for axp_osf
+**              10-sep-93 (kchin)
+**              Change type of frm from i4 to PTR in IIUFhlpType(),
+**              _getLength(), and _getPrecision(), since they hold pointers.
+**              Use of i4 can result in 64-bit address being truncated,
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	07-sep-2006 (gupsh01)
+**	    Added support for ANSI date/time types.
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	26-May-2009 (kschendel) b122041
+**	    Some compiler warning fixes.
+*/
+
+/* EQUEL Declaration:
+##typedef struct {
+##		char	*_form;
+##		char	*_field;
+##		char	*_column;
+##} FLD_VALUE;
+*/
+
+
+# define	FRS_KEY		2	/* frs key caused activation */
+# define	MENU_ITEM	3	/* menuitem caused activation */
+
+/*{
+** Name:	IIUFhlpType() -	Selection List Help for Data Type Fields.
+**
+** Description:
+**	Displays a pop-up table field containing a list of legal data types
+**	from which a user can select one to fill in in a field or column.
+**
+** Inputs:
+**	types		{DB_DT_ID []}  Array of legal types to be selected,
+**					NULL if all types.
+**	ntypes		{nat}  Number of legal types in array.
+**	need_length	{bool}  Whether a type length is required.
+**	fldv		{FLD_VALUE *}  Field or column in which to place
+**					selected type.
+**
+** History:
+**	03/89 (jhw)  Written.
+**	04/90 (jhw)  Major rewrite.
+**	05-oct-2006 (gupsh01)
+**	    Modify date to ingresdate.
+*/
+
+static const
+##	char	_types[]	= ERx("types"),
+##		_type[]		= ERx("type"),
+##		_desc[]		= ERx("desc"),
+##		_dt_type[]	= ERx("dt_type"),	/* hidden */
+##		_len_req[]	= ERx("len_req"),	/* hidden */
+##		_length[]	= ERx("length"),
+##		_prec[]		= ERx("prec"),
+##		_scale[]	= ERx("scale");
+
+##typedef struct {
+##		i2	dt_type;		/* internal data type */
+		bool	len_req;		/* requires length */
+		ER_MSGID desc;			/* description */
+##		char	typename[FE_MAXNAME+1];	/* data type name */
+##} TYPE_NAMES;
+
+static const
+##	TYPE_NAMES	_Types[] = {
+		{DB_CHA_TYPE,	TRUE,	F_UF0070_char,	ERx("char")},
+		{DB_DTE_TYPE,	FALSE,	F_UF0071_date,	ERx("ingresdate")},
+		{DB_DEC_TYPE,	TRUE,	F_UF0072_decimal,ERx("decimal")},
+		{DB_INT_TYPE,	FALSE,	F_UF0073_int,	ERx("integer")},
+		{DB_FLT_TYPE,	FALSE,	F_UF0074_float,	ERx("float")},
+		{DB_MNY_TYPE,	FALSE,	F_UF0075_money,	ERx("money")},
+		{DB_NODT,	FALSE,	F_UF0076_none,	ERx("none")},
+		{DB_LOGKEY_TYPE,FALSE,	F_UF0077_logical,ERx("object_key")},
+		{DB_INT_TYPE,	FALSE,	F_UF0078_short,	ERx("smallint")},
+		{DB_TABKEY_TYPE,FALSE,	F_UF0079_tab_key,ERx("table_key")},
+		{DB_VCH_TYPE,	TRUE,	F_UF007A_varchar,ERx("varchar")},
+		{DB_ADTE_TYPE,	FALSE,	F_UF0080_ansidate,ERx("ansidate")},
+		{DB_TMWO_TYPE,	FALSE,	F_UF0081_ansitmwo,ERx("time without time zone")},
+		{DB_TMW_TYPE,	FALSE,	F_UF0082_ansitmw,ERx("time with time zone")},
+		{DB_TME_TYPE,	FALSE,	F_UF0083_ansitme,ERx("time with local time zone")},
+		{DB_TSWO_TYPE,	FALSE,	F_UF0084_ansitswo,ERx("timestamp without time zone")},
+		{DB_TSW_TYPE,	FALSE,	F_UF0085_ansitsw,ERx("timestamp with time zone")},
+		{DB_TSTMP_TYPE,	FALSE,	F_UF0086_ansitstmp,ERx("timestamp with local timezone")},
+		{DB_INYM_TYPE,	FALSE,	F_UF0087_ansiinym,ERx("interval year to month")},
+		{DB_INDS_TYPE,	FALSE,	F_UF0088_ansiinds,ERx("interval day to second")},
+};
+
+#define _OKExpl		F_FE0108_ExplSelect
+#define	_HelpExpl	F_FE0100_ExplFrameHelp
+#define	_CancelExpl	F_FE0103_ExplCancel
+
+static i4	_select();
+
+VOID
+IIUFhlpType ( types, ntypes, need_length, fldv )
+DB_DT_ID	types[];
+register i4	ntypes;
+bool		need_length;
+##FLD_VALUE	*fldv;
+##{
+	static DB_DATA_VALUE	_colType = { NULL, 8, DB_CHR_TYPE, 0 };
+	static DB_DATA_VALUE	_colDesc = { NULL, 0, DB_CHR_TYPE, 0 };
+	static FLD_DESC		_colsDesc[] = {
+						{ _type, NULL, &_colType, 0 },
+						{ _desc, NULL, &_colDesc, 0 }
+	};
+
+	register i4		nlist;
+	const
+##	TYPE_NAMES	*tp;
+##	PTR			frm;
+##	char			typename[FE_MAXNAME+1];
+	const TYPE_NAMES	*type_list[sizeof(_Types)/sizeof(_Types[0])];
+
+/* No titles, yet.
+	if ( _colsDesc[0].title == NULL )
+	{
+		_colsDesc[0].title = ERget(F_UF0061_TypeTitle);
+	}
+*/
+
+	/* Find legal data types to be displayed */
+	nlist = 0;
+	for ( tp = _Types ; tp < &_Types[sizeof(_Types)/sizeof(_Types[0])] ;
+			++tp )
+	{
+		register const DB_DT_ID	*type;
+
+		if ( types == NULL )
+		{ /* all types ...
+			/* ... but logical keys */
+			type = ( tp->dt_type == DB_LOGKEY_TYPE
+					|| tp->dt_type == DB_TABKEY_TYPE )
+				? NULL : &tp->dt_type;
+		}
+		else
+		{
+			type = &types[ntypes-1];
+			do
+			{
+				if ( *type == tp->dt_type )
+					break;
+			} while ( --type >= types );
+		}
+		if ( type >= types && type != NULL )
+		{
+			i4	length;
+
+			type_list[nlist++] = tp;
+			length = STlength(ERget(tp->desc));
+			_colDesc.db_length = max(length, _colDesc.db_length);
+			
+			length = STlength(tp->typename);
+			_colType.db_length = max(length, _colType.db_length);
+		}
+	} /* end for */
+
+	if ( IIFRmdfMakeDefaultForm( ERget(F_UF0060_DT_Instr), _types, FALSE,
+					2, _colsDesc, nlist,
+					(FRAME **)&frm ) != OK )
+	{ /* couldn't make form */
+		return;
+	}
+
+##	addform frm;
+##	inittable _types _types READ ( _dt_type = i2, _len_req = i1 );
+
+	/* Load data types in table field */
+	ntypes = nlist;
+	while ( --nlist >= 0 )
+##	{
+##		i1	requires_length;
+
+		tp = type_list[ntypes - nlist - 1];
+		requires_length = need_length && tp->len_req;
+##		loadtable _types _types (
+##				_type = tp->typename,
+##				_desc = ERget(tp->desc),
+##				_dt_type = tp->dt_type,
+##				_len_req = requires_length
+##		);
+##	}
+
+	/* Display table field */
+	if ( IIFRrlpRunListPick( _types, _types, LPGR_FLOAT, LPGR_FLOAT,
+				ERget(F_UF0065_DT_Title), ERx("ufdatype.hlp"),
+				_select, (PTR)typename ) >= 0 )
+	{ /* type selected */
+		if ( fldv->_column == NULL || *fldv->_column == EOS )
+		{
+##			putform fldv->_form ( fldv->_field = typename );
+##			set_frs field fldv->_form ( change(fldv->_field) = 1 );
+		}
+		else
+		{
+##			putrow fldv->_form fldv->_field (
+##					fldv->_column = typename
+##			);
+##			set_frs row fldv->_form fldv->_field (
+##					change(fldv->_column) = 1
+##			);
+		}
+##		set_frs form ( change(fldv->_form) = 1 );
+	}
+	IIdelfrm(((FRAME *)frm)->frname);
+##}
+
+/*
+** Name:	_select() -	Handle Selected Type.
+**
+** Description:
+**	Called by "list pick" module when a data type has been selected, this
+**	routine checks if a length or precision and scale are required and
+**	calls the appropriate `get' routine if they are.
+**
+** Inputs:
+**	data	{PTR ==> char *}  The type name to be filled in.
+**	recno	{nat}  The selected row of the data type table field list.
+**
+** Outputs:
+**	data	{PTR ==> char *}  The specified type name.
+**	resume	{bool *}  Whether to resume or not.  FALSE as passed in,
+**				this will be set to TRUE if the `get'
+**				routines FAIL.
+** History:
+**	04/90 (jhw) -- Written.
+*/
+static STATUS	_getLength();
+static STATUS	_getPrecision();
+
+static i4
+_select ( data, recno, resume )
+PTR	data;
+i4	recno;
+bool	*resume;
+{
+	if ( recno >= 0 )
+	{ /* selected row */
+##		i2	dt_type;
+##		i1	len_req;
+##		char	*type = (char *)data;
+
+		/* assumes current row is the selected row */
+##		getrow _types _types (
+##			type = _type, dt_type = _dt_type, len_req = _len_req
+##		);
+
+		_VOID_ STtrmwhite(type);
+
+		if ( len_req )
+		{ /* length or precision/scale required */
+			STATUS	(*get)();
+
+			get = ( dt_type == DB_DEC_TYPE )
+				? _getPrecision : _getLength;
+
+			if ( (*get)( dt_type, type ) != OK )
+				*resume = TRUE;
+		}
+	}
+
+	return recno;
+}
+
+/*
+** Name:	_getLength() -	Prompt for Length.
+**
+** Description:
+**	Displays a pop-up frame that contains a table field column into which
+**	a length can be entered.  Character string types require a length.
+**
+**	The table field column is Nullable to detect if no value was entered.
+**	All numeric input is legal but will be verified through ADF (non-
+**	positive numbers will fail here.)
+**
+** Input:
+**	dt_type	{DB_DT_ID}  The data-type ID.
+**
+** Output:
+**	typename	{char *}  The type name with the length specification
+**					appended.
+** Returns:
+**	{STATUS}  OK if a valid length was entered,
+**		  FAIL otherwise if an error occurs or Cancel is selected.
+** History:
+**	04/90 (jhw) -- Written.
+*/
+static STATUS
+_getLength ( dt_type, typename )
+DB_DT_ID	dt_type;
+char		*typename;
+##{
+	static DB_DATA_VALUE	_lenType = {NULL, sizeof(i4)+1, -DB_INT_TYPE, 0};
+	static FLD_DESC		_lenDesc = { _length, NULL, &_lenType, 0 };
+
+##	PTR	frm;
+##	i4	row;
+##	i4	col;
+##	i4	svlength = 0;
+	bool	_1stlength = TRUE;
+	STATUS	rval;
+
+	if ( _lenDesc.title == NULL )
+		_lenDesc.title = ERget(F_UF0062_LenTitle);
+
+	/* No form title, one column with title, and one row */
+	if ( IIFRmdfMakeDefaultForm( (char *)NULL, _length, TRUE, 1, &_lenDesc,
+					1, (FRAME **)&frm ) != OK )
+		return FAIL;
+
+##	addform frm;
+
+##	inquire_frs frs ( row = cursorrow, col = cursorcolumn );
+	row -= 3;	/* size of boxed header */
+	col += 8;	/* just past name */
+
+##	display _length		/* default:  FILL */
+##	  with style = popup( startrow = row, startcolumn = col, border = none )
+
+##	initialize
+##	{
+		/* Table field in UPDATE mode with one row to be filled in */
+##		inittable _length _length UPDATE;
+##		insertrow _length _length 0;
+##	}
+
+##	activate scrolldown _length, scrollup _length
+##	{
+##		resume field _length;
+##	}
+
+##	activate column _length _length:
+##	{
+##		i4		length;
+##		i2		nulli;
+		DB_DATA_VALUE	dblen;
+	
+##		getrow _length _length ( length:nulli = _length );
+		if ( nulli != DB_EMB_NULL )
+		{ /* Length was entered */
+			DB_DATA_VALUE	dbv;
+
+			svlength = length;
+			_1stlength = FALSE;
+			dbv.db_datatype = dt_type;
+			dbv.db_length = length;
+			dbv.db_prec = 0;
+			if ( adc_lenchk(FEadfcb(), TRUE, &dbv, &dblen) != OK )
+			{
+				FEafeerr(FEadfcb());
+##				resume;	/* error */
+			}
+		}
+		else
+		{ /* Length was not entered */
+			if ( dt_type == DB_CHR_TYPE || dt_type == DB_TXT_TYPE
+					|| dt_type == DB_CHA_TYPE
+						|| dt_type == DB_VCH_TYPE )
+			{
+				IIUGerr(E_AD2008_DT_IS_VARLEN, UG_ERR_ERROR, 0);
+				if ( !_1stlength )
+##				    putrow _length _length (_length = svlength);
+##				resume;	/* error */
+			}
+		}
+##		resume next;
+##	}
+##	activate menuitem ERget(FE_OK)
+##			( expl = ERget(_OKExpl), validate = 1, activate = 1 ),
+##		frskey4 ( validate = 1, activate = 1 )
+##	{
+		/* note:  the field activation will have already
+		** validated the length for the data type.
+		*/
+##		i4	length;
+
+##		getrow _length _length ( length = _length );
+		_VOID_ STprintf( typename+STlength(typename),
+			ERx( dt_type == DB_INT_TYPE || dt_type == DB_FLT_TYPE
+					? "%d" : "(%d)"
+			),
+			length
+		);
+		rval = OK;
+##		breakdisplay;
+##	}
+
+##	activate menuitem ERget(FE_Cancel)( expl = ERget(_CancelExpl),
+##						validate = 0, activate = 0 ),
+##		FRSkey9 ( validate = 0, activate = 0 ):
+##	{
+		rval = FAIL;
+##		breakdisplay;
+##	}
+
+##	activate menuitem ERget(FE_Help) ( expl = ERget(_HelpExpl),
+##						validate = 0, activate = 0 ),
+##		FRSkey1 ( validate = 0, activate = 0 )
+##	{
+		FEhelp(ERx("ufdatlen.hlp"), ERget(F_UF0065_DT_Title));
+##	}
+
+	IIdelfrm(((FRAME *)frm)->frname);
+
+	return rval;
+##}
+
+/*
+** Name:	_getPrecision() -	Prompt for Precision and Scale.
+**
+** Description:
+**	Displays a pop-up frame that contains two columns in a table field into
+**	which a precision and scale can be entered.  This is for the "decimal"
+**	type.  Values are mandatory.
+**
+**	The table field columns are Nullable to detect if no values were
+**	entered.  All numeric input is legal as long as it is positive and meets
+**	the requirements for precision and scale; they will also verified
+**	through ADF.
+**
+** Input:
+**	dt_type	{DB_DT_ID}  The data-type ID.
+**
+** Output:
+**	typename	{char *}  The type name with the precision/scale
+**					specification appended.
+** Returns:
+**	{STATUS}  OK if a valid precision and scale were entered,
+**		  FAIL otherwise if an error occurs or Cancel is selected.
+** History:
+**	04/90 (jhw) -- Written.
+*/
+static STATUS
+_getPrecision ( dt_type, typename )
+DB_DT_ID	dt_type;
+char		*typename;
+##{
+	static DB_DATA_VALUE	_precType = {NULL, sizeof(i4)+1,-DB_INT_TYPE,0},
+				_scaleType ={NULL, sizeof(i4)+1,-DB_INT_TYPE,0};
+	static FLD_DESC		_colDesc[] = {
+					{ _prec, NULL, &_precType, 0 },
+					{ _scale, NULL, &_scaleType, 0 }
+	};
+
+##	PTR	frm;
+##	i4	row;
+##	i4	col;
+##	i4	actcmd;
+	STATUS	rval;
+	i4	maxprec = DB_MAX_DECPREC;
+
+	if ( _colDesc[0].title == NULL )
+	{
+		_colDesc[0].title = ERget(F_UF0063_PrecTitle);
+		_colDesc[1].title = ERget(F_UF0064_ScaleTitle);
+	}
+
+	/* No form title, two columns with titles, and one row */
+	if ( IIFRmdfMakeDefaultForm( (char *)NULL, _prec, TRUE, 2, _colDesc,
+					1, (FRAME **)&frm ) != OK )
+		return FAIL;
+
+##	addform frm;
+
+##	inquire_frs frs ( row = cursorrow, col = cursorcolumn );
+	row -= 3;	/* size of boxed header */
+	col += 8;	/* just past name */
+
+##	display _prec		/* default:  FILL */
+##	  with style = popup( startrow = row, startcolumn = col, border = none )
+
+##	initialize
+##	{
+		/* Table field in UPDATE mode with one row to be filled in */
+##		inittable _prec _prec UPDATE;
+##		insertrow _prec _prec 0;
+##	}
+
+##	activate scrolldown _prec, scrollup prec
+##	{
+##		resume field _prec;
+##	}
+
+##	activate column _prec _prec,
+##		column _prec _scale
+##	{
+##		i4		prec;
+##		i4		scale;
+##		i2		nulli[2];
+		DB_DATA_VALUE	dbprec;
+	
+##		getrow _prec _prec (
+##			prec:nulli[0] = _prec, scale:nulli[1] = _scale
+##		);
+
+		/* assert:  nulli[0] == DB_EMB_NULL ==> nulli[1] == DB_EMB_NULL
+		*/
+		if ( nulli[0] != DB_EMB_NULL )
+		{ /* Precision or scale was entered */
+			DB_DATA_VALUE	dbv;
+
+			if ( prec <= 0 || prec > DB_MAX_DECPREC )
+			{
+				IIUGerr(E_UF005B_NO_DEC_PREC, UG_ERR_ERROR, 1,
+					&maxprec);
+##				resume column _prec _prec;	/* error */
+			}
+			else
+			{
+##				char	fld[FE_MAXNAME+1];
+
+##				inquire_frs table _prec ( fld = column(_prec) );
+				if ( STequal(fld, _prec) )
+				{ /* precision OK, now get scale */
+##					inquire_Frs frs (actcmd = command)
+					/*
+					**  If user selected the OK menuitem
+					**  and the scale field is still null,
+					**  then we need to put out an error
+					**  message and move the cursor to
+					**  the scale field since no scale
+					**  value has been entered yet.
+					*/
+					if ((actcmd == FRS_KEY ||
+						actcmd == MENU_ITEM) &&
+						(nulli[1] == DB_EMB_NULL))
+					{
+						IIUGerr( E_UF005C_NO_DEC_SCALE,
+							UG_ERR_ERROR, 1,
+							&maxprec);
+##						resume column _prec _scale;
+					}
+					/*
+					**  Resume next here will either
+					**  move the cursor to the scale
+					**  field or cause the OK menuitem
+					**  block to get executed.
+					*/
+##					resume next
+				}
+				else if ( nulli[1] == DB_EMB_NULL
+						|| scale < 0 || scale > prec )
+				{
+					IIUGerr( E_UF005C_NO_DEC_SCALE,
+						UG_ERR_ERROR, 1, &maxprec);
+##					resume column _prec _scale;  /* error */
+				}
+			}
+
+			dbv.db_datatype = dt_type;
+			dbv.db_length = DB_PREC_TO_LEN_MACRO(prec);
+			dbv.db_prec = DB_PS_ENCODE_MACRO(prec,scale);
+			if ( adc_lenchk(FEadfcb(), TRUE, &dbv, &dbprec) != OK )
+			{
+				FEafeerr(FEadfcb());
+##				resume;	/* error */
+			}
+		}
+		else
+		{ /* Precision/Scale were not entered */
+			IIUGerr(E_UF005B_NO_DEC_PREC, UG_ERR_ERROR, 1,
+				&maxprec);
+##			resume;	/* error */
+		}
+##		resume next;
+##	}
+##	activate menuitem ERget(FE_OK)
+##			( expl = ERget(_OKExpl), validate = 1, activate = 1 ),
+##		frskey4 ( validate = 1, activate = 1 )
+##	{
+		/* note:  the field activation will have already
+		** validated the precesion and scalE for the data type.
+		*/
+##		i4	prec;
+##		i4	scale;
+
+##		getrow _prec _prec ( prec = _prec, scale = _scale );
+		_VOID_ STprintf( typename+STlength(typename),
+					ERx("(%d,%d)"), prec, scale
+		);
+		rval = OK;
+##		breakdisplay;
+##	}
+
+##	activate menuitem ERget(FE_Cancel)( expl = ERget(_CancelExpl),
+##						validate = 0, activate = 0 ),
+##		FRSkey9 ( validate = 0, activate = 0 ):
+##	{
+		rval = FAIL;
+##		breakdisplay;
+##	}
+
+##	activate menuitem ERget(FE_Help) ( expl = ERget(_HelpExpl),
+##						validate = 0, activate = 0 ),
+##		FRSkey1 ( validate = 0, activate = 0 )
+##	{
+		FEhelp(ERx("ufdatprc.hlp"), ERget(F_UF0065_DT_Title));
+##	}
+
+	IIdelfrm(((FRAME *)frm)->frname);
+
+	return rval;
+##}

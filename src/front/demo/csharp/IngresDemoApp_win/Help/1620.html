@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title> How You Load the Airport Code and Name into the DataGridView Control </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="Airport combo box control">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body  
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="1653.htm" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="1572.htm" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How You Load the Airport Code and Name into the DataGridView Control</h4>
+<p class="bodytext">When the user selects a different region: </p>
+<ul class="listbullet"><li class="listbullet">The event handler regionComboBox_SelectedIndexChanged is invoked. </li><li class="listbullet">The value selected in the Region combo box is used to retrieve the list of airport codes and their names.</li><li class="listbullet">The results of this query are bound to the DataGridView, and then displayed. </li></ul><p class="bodytext">The IngresDataAdapter used for this query is defined directly in the source code and not created using the Forms Designer.</p>
+<p class="bodytext">The IngresCommand and IngresDataAdapter are declared in the Ingres.cs source code file.</p>
+<p class="codefirst">IngresCommand ingresSelectCommand4;</p>
+<p class="codefirst">IngresDataAdapter ingresDataAdapter4;</p>
+<p class="bodytext">The Ingres Data Adapater ingresDataAdapter4 is initialized in the InitializeIngres method.</p>
+<p class="codefirst">private void InitializeIngres()</p>
+<p class="code">{</p>
+<p class="code">.</p>
+<p class="code">.</p>
+<p class="code">.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;ingresSelectCommand4 = new IngresCommand(</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;{ call get_my_airports( ccode = ?, area = ? ) }&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresConnection1);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;ingresSelectCommand4.Connection = ingresConnection1;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter4 = new IngresDataAdapter(ingresSelectCommand4);</p>
+<p class="code">.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;.</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">// The following query text shows the syntax for executing a database procedure.</p>
+<p class="code">ingresSelectCommand4 = new IngresCommand(</p>
+<p class="code">    &quot;{ call get_my_airports( ccode = ?, area = ? ) }&quot;,</p>
+<p class="code">    ingresConnection1);</p>
+<p class="bodytext">The database procedure, get_my_airports, is declared in the database, taking two parameters and returning rows that contain three columns: </p>
+<ul class="listbullet"><li class="listbullet">ap_iatacode</li><li class="listbullet">ap_place</li><li class="listbullet">ap_name</li></ul><p class="bodytext">These result columns are not returned with a relation header and cannot be referenced by name. </p>
+<p class="codefirst">CREATE PROCEDURE get_my_airports(</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;ccode&nbsp;&nbsp;&nbsp;NCHAR(2) NOT NULL NOT DEFAULT,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;area    NVARCHAR(30) NOT NULL NOT DEFAULT )</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;RESULT ROW( CHAR(3) NOT NULL, NVARCHAR(30) NOT NULL,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NVARCHAR(50) NOT NULL) AS</p>
+<p class="code">DECLARE</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;iatacode NCHAR(3);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;place    NVARCHAR(30);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;name     NVARCHAR(50);</p>
+<p class="code">BEGIN</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;FOR</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SELECT ap_iatacode, ap_place, ap_name</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;INTO :iatacode, :place, :name </p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FROM airport</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;WHERE ap_ccode like :ccode AND ap_place like :area</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ORDER BY ap_iatacode</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;DO</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RETURN ROW (:iatacode, :place, :name);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;ENDFOR;</p>
+<p class="code">END;</p>
+<p class="bodytext">The IngresDataAdapter overcomes this by assigning column names composed of a fixed portion &quot;result_column&quot; and a variable numerical portion, with an incrementing number beginning with zero, for example: result_column0, result_column1, and result_column2.</p>
+<p class="note"><strong class="bold">Note: </strong>There is currently no mechanism for obtaining metadata for a database procedure from the database server, which prevents the IngresDataAdapter from generating an automatic typed DataSet. The result table for the row producing procedure must be defined using the DataSet designer.</p>
+<p class="bodytext">Select the AirportDataSet.xsd in the Solution Explorer and open the DataSet Designer. Right-click the design panel and Add a DataTable.</p>
+<p class="bodytext"><img src="1631.png" alt="AirportDataSet.xsd" height="207" width="333" vspace="0" hspace="0" align="bottom" border="0"></p>
+<p class="bodytext">Rename the newly created data table in the Properties panel. In this example, the table is called airportName.</p>
+<p class="bodytext">Add two columns, called &quot;result_column0&quot; and &quot;result_column2&quot; and make &quot;result_column0&quot; a key column. Set the DataType property of each column to System.String. (This should be the default.)</p>
+<p class="bodytext"><img src="1632.png" alt="AirportName" height="63" width="151" vspace="0" hspace="0" align="bottom" border="0"></p>
+<p class="note"><strong class="bold">Note: </strong>The database procedure returns three columns, but the table defines only two: IATA code and airport name.</p>
+<p class="bodytext">The AirportDataSet now contains two definitions for tables: airport and airportName. These tables are identified by name in the AirportDataSet.Tables collection. </p>
+<p class="bodytext"><img src="1633.png" alt="AirportDataSet" height="172" width="198" vspace="0" hspace="0" align="bottom" border="0"></p>
+<p class="note"><strong class="bold">Note: </strong>Use an instance of the table defined in the AirportDataSet as a parameter to the ingresDataAdapter4.Fill method. For example:</p>
+<p class="codefirst">AirportDataSet airportDataSet = new AirportDataSet();</p>
+<p class="code">LoadAirportNames(direction, comboBox.SelectedValue.ToString(),</p>
+<p class="code">    airportDataSet.Tables[&quot;airportName&quot;]);</p>
+<p class="bodytext">Create a new binding source, airportNameBindingSource, and assign it to the dataGridView1.DataSource property.</p>
+<p class="bodytext">Assign the data table to the airportNameBindingSource.DataSource property to bind the results to the dataGridView1 control.</p>
+<p class="codefirst">BindingSource airportNameBindingSource = new BindingSource();</p>
+<p class="code">dataGridView1.DataSource = airportNameBindingSource;</p>
+<p class="code">airportNameBindingSource.DataSource =</p>
+<p class="code">    airportDataSet.Tables[&quot;airportName&quot;];</p>
+<p class="bodytext">Call the method ingresDataAdapter4.Fill in the source code to populate the data table:</p>
+<p class="codefirst">&nbsp;&nbsp;&nbsp;&nbsp;public void LoadAirportName(int direction, String area,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.Data.DataTable airportNameTable)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IngresParameter country =</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;new Ingres.Client.IngresParameter(&quot;ap_ccode&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IngresType.NChar);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IngresParameter region =</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;new Ingres.Client.IngresParameter(&quot;ap_place&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IngresType.NVarChar);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;region.Value = area;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;airportNameTable.Clear();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter4.SelectCommand.Connection.Open();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter4.SelectCommand.Prepare();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter4.SelectCommand.Parameters.Clear();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;switch (direction)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;case DEPART:</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;country.Value = departing.country;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;case ARRIVE:</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;country.Value = arriving.country;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter4.SelectCommand.Parameters.Add(country);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter4.SelectCommand.Parameters.Add(region);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter4.Fill(airportNameTable);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ingresDataAdapter4.SelectCommand.Connection.Close();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2006-2009 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>

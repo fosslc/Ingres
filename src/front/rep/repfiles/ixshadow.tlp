@@ -1,0 +1,19 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+**
+** Name:	ixshadow.tlp - index shadow template
+**
+** Description:
+**	Used to create an index on the shadow table.
+##
+## History:
+##	16-dec-96 (joea)
+##		Created based on ixshadow.tlp in replicator library.
+##	22-apr-97 (joea)
+##		Do not include in_archive as part of the shadow key.
+##	19-feb-98 (nicph02)
+##		Make shadow index persistent (bug 89077)
+**/
+
+CREATE INDEX $sx1 ON $sha($key, in_archive)
+	WITH STRUCTURE = BTREE, KEY = ($key), PERSISTENCE

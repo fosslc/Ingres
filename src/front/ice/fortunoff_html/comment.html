@@ -1,0 +1,83 @@
+<HTML>
+<HEAD>
+<META NAME="DESCRIPTION" CONTENT="Fortunoff, The Source. Online jewelry catalog. Extraordinary selection, exceptional quality, excellent service, all at everyday low prices... guaranteed! Secure shopping environment.">
+<META NAME="KEYWORDS" CONTENT="Fortunoff, Jewelry, Diamonds, Citrine, Onyx, Pearls, Gold, Charms, Gifts, Earrings, Rings, Bracelets, Pendants, Sapphire, Cultured Pearls, Mens, Ladies, Quality, Service, Shopping, Catalog">
+<TITLE>Fortunoff, Guestbook </TITLE>
+</HEAD>
+
+<BODY BGCOLOR=#FFFFFF>
+<FORM ACTION="/ice-bin/oiice.#ext#/fortunoff/insguest.html" METHOD="POST" target="main">
+<INPUT TYPE=hidden NAME="sess" value="<!-- #ICE SQL=`select ':session'` TYPE=`UNFORMATTED`-->">
+<INPUT TYPE=hidden NAME="ii_success_message" value="Guest Added">
+<INPUT TYPE=hidden NAME="ii_error_message" value="Could Not Add Guest">
+<CENTER>
+<BR>
+<IMG SRC="<!-- #ICE SQL=`select image from images where name = 'linkbar.gif'` TYPE=`UNFORMATTED`-->" Alt="FORTUNOFF">
+<P>
+<IMG SRC="<!-- #ICE SQL=`select image from images where name = 'talkhead.gif'` TYPE=`UNFORMATTED`-->" Alt="Can We Talk">
+<BR>
+<IMG SRC="<!-- #ICE SQL=`select image from images where name = 'book1.jpg'` TYPE=`UNFORMATTED`-->" Alt="Guestbook">
+<P>
+
+<I>We'd love to know more about you and how you found out about us.</I>
+<BR>
+If you don't mind, please take a minute to sign our guestbook and fill out our anonymous questionnaire. We'll be happy to send our latest catalogs and any additional information you desire.
+</CENTER>
+<P>
+<CENTER>
+<TABLE BORDER=2 width=650>
+<TR><TD>
+<B>
+	First Name: <INPUT SIZE=28 NAME="fname">
+ 	Last: <INPUT SIZE=25 NAME="lname">
+<P>
+	Street: <INPUT SIZE=43 NAME="street">
+	Apt: <INPUT SIZE=15 NAME="apt">
+<P>
+	City: <INPUT SIZE=25 NAME="city">
+	State: <INPUT SIZE=18 NAME="state">
+	Zip: <INPUT SIZE=10 NAME="zip">
+<P>
+	E-Mail Address: <INPUT SIZE=35 NAME="email">
+<P>
+	<INPUT TYPE="checkbox" Name="upd" value="Contact me when this site is updated."> Contact me when this site is updated.
+<P>
+	<INPUT TYPE="checkbox" Name="catalog" value="Jewelry Catalog">Send me your  Jewelry and/or <INPUT TYPE="checkbox" Name="catalog" value="Home Catalog">Home Catalog.
+<P>
+	<INPUT TYPE="checkbox" Name="credit" value="Send me an application for a credit card"> Send me an application for the Fortunoff Credit Card.
+<P>
+<IMG SRC="<!-- #ICE SQL=`select image from images where name = 'question.gif'` TYPE=`UNFORMATTED`-->" alt="Questionnaire">
+<P>
+How did you find our website?<BR>
+Search engine? Banner advertisement? Article? Word of mouth?
+<TEXTAREA NAME="find" ROWS=3 COLS=60></TEXTAREA>
+<P>
+Have you ever been to a "real" Fortunoff store? Which one?
+<TEXTAREA NAME="real" ROWS=3 COLS=60></TEXTAREA>
+<P>
+What do you look for on the web? Shopping? Entertainment? News?
+<TEXTAREA NAME="look" ROWS=3 COLS=60></TEXTAREA>
+<P>
+Have you ever purchased on the web? <INPUT TYPE="RADIO" NAME="purchase" VALUE="YES" CHECKED>YES <INPUT TYPE="RADIO" NAME="purchase" VALUE="NO">NO
+<P>
+Do you have any suggestions on ways to improve our website?
+<TEXTAREA NAME="suggest" ROWS=3 COLS=60></TEXTAREA>
+<P>
+<IMG SRC="<!-- #ICE SQL=`select image from images where name = 'thanks.gif'` TYPE=`UNFORMATTED`-->" ALT="thank you for visiting our website">
+
+<P><CENTER>
+<input type=submit value="MAIL">
+<input type=reset value="Start Over">
+</CENTER>
+
+</TD></TR>
+</TABLE>
+
+
+<INPUT TYPE="hidden" Name="update" value="">
+<INPUT TYPE="hidden" Name="catalog" value="">
+<INPUT TYPE="hidden" Name="credit"  value="">
+
+</FORM>
+</BODY>
+</HTML>

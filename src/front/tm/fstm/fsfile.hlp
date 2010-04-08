@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are currently in the FILE submenu of the Interactive Terminal
+Monitor input form.  The FILE command allows you to read and write 
+files from the table field in the input form and the query language
+statements it may contain.
+     
+Menu Items
+     
+      ReadFile    READFILE loads the contents of a file into the table
+                  field.  You will be prompted for the name of
+                  the file from which to load.
+     
+      WriteFile   WRITEFILE dumps the contents of the table field into
+                  a file.  You will be prompted for the name of the
+                  file into which to write.
+     
+      Help        Display this Help file.
+     
+      End         Return to the Input form of the Interactive Terminal
+                  Monitor.

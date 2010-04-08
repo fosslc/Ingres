@@ -1,0 +1,42 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Server List screen.  This screen displays the servers
+running in your installation that are registered with the Ingres name
+server.  The Name field displays the name of the server.  The Type field
+displays the type of server: INGRES (DBMS server), STAR, NET (communications
+server), BRIDGE (Protocol Bridge) or NAME (name server).  The Sessions field
+displays the number of sessions connected to that server (applies to INGRES
+and STAR servers only). The Active field displays how many of the connected
+sessions are currently active.
+
+If the server was started with a list of databases, the Database field
+will list them.  Otherwise it will display ALL to indicate this server will
+connect to any database in the current Ingres installation.  If there are
+many databases or long database names, they can be displayed using the
+More_info menuitem.
+
+Menuitems available on this screen include:
+
+More_Info      Displays more information about the indicated server (the one
+               that the cursor was placed on).  This applies to INGRES
+               and STAR servers only.
+
+Sessions       Displays user sessions for the indicated server.  Only INGRES
+               and STAR servers have sessions.
+
+Process_Info   Displays job and process information for the indicated server.
+               Parameters include CPU time, Direct I/O, Buffered I/O,
+               Enqueue limit, etc.  This menuitem is available on VMS only.
+
+Shutdown       Shuts down the indicated server.  This is limited to use by the
+               Ingres superuser and applies to INGRES and STAR servers only.
+               You may shut down a server in an orderly "nice" way or minimal
+               "hard" way.
+
+Refresh        Refreshes the screen.  Has the same effect as ending and
+               re-entering the screen.
+
+Help           Displays this screen.
+
+End            Returns to the Main Menu screen.
+
+Quit           Exits IPM.

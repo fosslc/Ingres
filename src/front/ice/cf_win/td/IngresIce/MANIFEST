@@ -1,0 +1,27 @@
+#
+# Jamfile file for front!ice!cf_win!td!IngresIce
+#
+#	17-Dec-2009 (bonro01)
+#	    Replace unix specific path separator
+
+SubDir ING_SRC front ice cf_win td IngresIce ;
+
+IISUBSYS front ice cf_win td IngresIce ;
+
+
+
+#IIINCLUDE front ice cf_win td IngresIce Docs_win ;
+#IIINCLUDE front ice cf_win td IngresIce Icons_win ;
+
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfCommit.html : Docs_win$(DFS)cfCommit.html ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfDeclare.html : Docs_win$(DFS)cfDeclare.html ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfFunction.html : Docs_win$(DFS)cfFunction.html ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfIf.html : Docs_win$(DFS)cfIf.html ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfInclude.html : Docs_win$(DFS)cfInclude.html ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfRollback.html : Docs_win$(DFS)cfRollback.html ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfSql.html : Docs_win$(DFS)cfSql.html ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfSwitch.html : Docs_win$(DFS)cfSwitch.html ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfVar.html : Docs_win$(DFS)cfVar.html ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Docs$(DFS)cfextfunc.html : Docs_win$(DFS)cfextfunc.html ;
+
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)IngresIce$(DFS)Icons$(DFS)ingresii.bmp : Icons_win$(DFS)ingresii.bmp ;

@@ -1,0 +1,71 @@
+#
+# Jamfile file for front!st!install_nt_win
+#
+
+SubDir ING_SRC front st install_nt_win ;
+
+IISUBSYS front st install_nt_win ;
+
+
+IIBINEXE wrapnosb : wrapnosb.c ;
+IINEEDLIBS wrapnosb :  COMPATLIB ;
+
+IIBINEXE wrapit : wrapit.c ;
+IINEEDLIBS wrapit :  COMPATLIB ;
+
+IIBINEXE msiupd : msiupd.c ;
+IINEEDLIBS msiupd :  COMPATLIB MSILIB  ;
+
+IIBINEXE msidepcheck : msidepcheck.c ;
+IINEEDLIBS msidepcheck :  COMPATLIB MSILIB  ;
+
+IIBINEXE msiversupdate : msiversupdate.c ;
+IINEEDLIBS msiversupdate :  COMPATLIB MSILIB  ;
+
+IIBINEXE ipwrite : ipwrite.c ;
+IINEEDLIBS ipwrite :  COMPATLIB ;
+
+IIBINEXE ipsetp : ipsetp.c ;
+IINEEDLIBS ipsetp :  COMPATLIB ;
+
+IIBINEXE ipreadp : ipreadp.c ;
+IINEEDLIBS ipreadp :  COMPATLIB ;
+
+IIBINEXE ipprod : ipprod.c ;
+IINEEDLIBS ipprod :  COMPATLIB ;
+
+IIBINEXE ipchoice : ipchoice.c ;
+IINEEDLIBS ipchoice :  COMPATLIB ;
+
+IIBINEXE ipcclean : ipcclean.c ;
+IINEEDLIBS ipcclean :  COMPATLIB GCFLIB ;
+
+IIBINEXE iitrue : iitrue.c ;
+IINEEDLIBS iitrue :  COMPATLIB ;
+
+IIBINEXE geningnt : geningnt.cpp ;
+IINEEDLIBS geningnt :  COMPATLIB ;
+
+IIBINEXE ingwrap : ingwrap.cpp ;
+IIBINEXE ingadminwrap : ingwrap.cpp ;
+IIAdminManifest ingadminwrap ;
+IIBINEXE gettimezone : gettimezone.cpp ;
+IIBINEXE getcp : getcp.cpp ;
+
+IIBINEXE updcoffbf : updcoffbf.c ;
+
+IILIBRARY INSTALLLIB : iitrue.c geningnt.cpp
+	ingwrap.cpp ;
+
+IIUTILBAT iiunloadfix.bat ;
+
+IIBINBAT setingenvs.bat ;
+
+IIBINBAT perfmonwrap.bat ;
+
+IIRFILES $(MSREDIST)$(DFS)mfc71.dll 
+	 $(MSREDIST)$(DFS)mfc71u.dll 
+	 $(MSREDIST)$(DFS)msvcp71.dll 
+	 $(MSREDIST)$(DFS)msvcr71.dll ;
+
+

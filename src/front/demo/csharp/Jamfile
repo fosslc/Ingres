@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!demo!csharp
+#
+
+SubDir ING_SRC front demo csharp ;
+
+IISUBSYS front demo csharp ;
+
+if $(NT)
+{
+IIINCLUDE front demo csharp IngresDemoApp_win ;
+}

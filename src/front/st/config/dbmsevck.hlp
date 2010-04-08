@@ -1,0 +1,6 @@
+
+  When set to a valid integer, and if II_THREAD_TYPE is set to 
+  INTERNAL, server scans the event queue at the specificed 
+  interval and checks whether or not an event is missed. 
+
+  The default value for event_paranoia_check_period is 0.

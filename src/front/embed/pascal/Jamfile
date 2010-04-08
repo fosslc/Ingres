@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!embed!pascal
+#
+
+SubDir ING_SRC front embed pascal ;
+
+IISUBSYS front embed pascal ;
+
+IIBINEXE eqp : pasmain.c ;
+IINEEDLIBS eqp : PASCALLIB EQUELLIB SHQLIB SHCOMPATLIB ;
+
+IILIBRARY PASCALLIB : pascal.sy ptokens.st pasutil.c pasgen.c paslab.c ;

@@ -1,0 +1,793 @@
+/*
+**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+**
+**    Source   : remotecm.scc
+**    Project  : IJA 
+**    Author   : UK Sotheavut (uk$so01)
+**    Purpose  : SQL file, use for remote command (RMCMD)
+
+** History :
+** 19-Jun-2000 (uk$so01)
+**    created
+**    (copy all codes of rmcmd client that previously, noifr01 added
+**    into the file ijadmlll.scc)
+** 03-Jan-2001 (noifr01)
+**    (SIR 103625) rmcmd now connects to imadb rather than iidbdb
+** 31-Oct-2001 (hanje04)
+**    Move declaration of cpt outside for loops to stop non-ANSI compiler 
+**    errors on Linux.
+** 05-Sep-2003 (uk$so01)
+**    SIR #106648, Integrate libraries libwctrl.lib, libingll.lib in Ija
+** 22-Oct-2003 (schph01)
+**    (SIR 111153) with DBMS ingres 2.65 or higher the rmcmd object owner is
+**    always '$ingres',skip the sql statement to get the rmcmd objects owner.
+** 15-Dec-2003 (schph01)
+**    SIR #111462, Put string into resource files
+** 23-Jan-2004 (schph01)
+**    (sir 104378) detect version 3 of Ingres, for managing
+**    new features provided in this version. replaced references
+**    to 2.65 with refereces to 3  in #define definitions for
+**    better readability in the future
+** 25-Jun-2004 (uk$so01)
+**    BUG #112557 / ISSUE 13527198
+**    Because to the change of the message texts in the back end (fastload.c), ija
+**    fails to work because it uses those message texts as template to determine
+**    if an error has occeured.
+** 28-Oct-2004 (noifr01)
+**    (bug 113217) (fix of deadlock situations in remotecmd tables):
+**    - set the lockmode of the session to exclusive
+**    - simplified the query sequence through usage of the value
+**      returned by the launchremotecmd procedure
+** 02-Jun-2005 (lakvi01)
+**    (BUG 114599) Made LaunchRemoteProcedure1 return RES_HDL_NOTGRANTED when the user
+**     is not granted rmcmd privileges. 
+** 07-May-2009 (drivi01)
+**     Clean up warnings in effort to port to Visual Studio 2008.
+**/
+
+
+#include <stdlib.h>
+#include "remotecm.h"
+
+
+#if !defined (SQLCA_HEADER)
+#define SQLCA_HEADER
+//
+// Declare the SQLCA structure and the SQLDA typedef 
+//
+extern "C"
+{
+EXEC SQL INCLUDE SQLCA;
+EXEC SQL INCLUDE SQLDA;
+}
+#endif
+extern LPTSTR suppspace(LPTSTR lpchar);
+
+
+/******************************************************/
+/* rmcmd management section                           */
+/******************************************************/
+
+extern CString mystring;
+static BOOL bTraceResult = TRUE;
+static BOOL bTraceLinesInit = FALSE;
+
+static void ReleaseTraceLines()
+{
+   if (!bTraceLinesInit)
+      return;
+   mystring.ReleaseBuffer();
+   mystring=_T("");
+   bTraceLinesInit=FALSE;
+   return;
+}
+
+static char TRACELINESEP = '\n';
+
+static char * TLCurPtr;
+
+char *GetNextTraceLine()
+{
+   if (!TLCurPtr) {
+      ReleaseTraceLines();
+      return (char *)NULL;
+   }
+   char * presult = TLCurPtr;
+   char * pc = strchr(TLCurPtr,TRACELINESEP);
+   if (pc) {
+      *pc='\0';
+      TLCurPtr=pc+1;
+      if (TLCurPtr[0]=='\0')
+         TLCurPtr=NULL;
+
+   }
+   else 
+      TLCurPtr=NULL;
+
+   while (strlen(presult) >0 ) {
+      char c = presult[strlen(presult)-1];
+      if (c=='\n' || c=='\r' || c==' ')
+         presult[strlen(presult)-1] ='\0';
+      else
+         break;
+   }
+   return presult;
+}
+
+char *GetFirstTraceLine()
+{
+   TLCurPtr=mystring.GetBuffer(0);
+   if (TLCurPtr[0]=='\0')
+      TLCurPtr=NULL;
+   bTraceLinesInit=TRUE;
+   return GetNextTraceLine();
+}
+
+exec sql whenever sqlerror continue;
+
+static BOOL ManageSqlError(void  *Sqlca)
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		char error_buf[255];
+	EXEC SQL END DECLARE SECTION;
+	IISQLCA *psqlca = (IISQLCA *) Sqlca;
+	long lerrcode  = psqlca->sqlcode;
+	if (lerrcode>=0)
+	return TRUE;
+	EXEC SQL INQUIRE_INGRES (:error_buf = ERRORTEXT);
+	AfxMessageBox((LPCTSTR)error_buf,MB_ICONSTOP | MB_OK );
+	psqlca->sqlcode = lerrcode;
+	return FALSE;
+}
+
+
+
+int GetRmcmdOutput(LPRMCMDPARAMS lpcmdparams,int maxlines,char * * resultlines)
+{
+  int i;
+  long l1;
+  CString strMsg;
+  exec sql begin declare section;
+    char buf[RMCMDLINELEN];
+    int prevordno,ordno,hdl;
+    char sqlstmt[400];
+  exec sql end declare section;
+  //ActivateSession(lpcmdparams->isession);
+
+  if (lpcmdparams->lastlinesent>lpcmdparams->lastlinesentread) {
+    int i	= 0;
+    hdl		= lpcmdparams->rmcmdhdl;
+    prevordno = lpcmdparams->lastlinesentread;
+
+    sprintf(sqlstmt,
+	"select orderno, instring from %s.remotecmdinview where handle = %d and orderno > %d order by orderno",
+	lpcmdparams->RmcmdObjects_Owner, hdl, prevordno);
+
+    exec sql execute immediate :sqlstmt into :ordno, :buf;
+    exec sql begin;
+      ManageSqlError(&sqlca); // Keep track of the SQL error if any
+      lpcmdparams->lastlinesentread++;
+      if (lpcmdparams->lastlinesentread!=ordno)
+      {
+        strMsg.LoadString(IDS_RMCMD_INTERNAL_ERROR);
+        AfxMessageBox(strMsg,MB_ICONEXCLAMATION | MB_OK );
+      }
+      strcpy(resultlines[i],buf);
+      i++;
+      if (i>=maxlines) {
+        exec sql endselect;
+      }
+    exec sql end;
+    ManageSqlError(&sqlca); // Keep track of the SQL error if any
+    l1=sqlca.sqlcode;
+    if (l1<0)
+    {
+        strMsg.LoadString(IDS_RMCMD_ACCESS_ERROR);
+        AfxMessageBox(strMsg,MB_ICONEXCLAMATION | MB_OK );
+    }
+    exec sql commit;
+    return i;
+  }
+
+  i=0;
+  prevordno = lpcmdparams->lastlineread;
+  hdl       = lpcmdparams->rmcmdhdl;
+
+  /*********** get returned line(s) *******************/
+  sprintf(sqlstmt,
+	"select orderno, outstring from %s.remotecmdoutview where handle = %d and orderno > %d order by orderno",
+	lpcmdparams->RmcmdObjects_Owner, hdl, prevordno);
+
+  exec sql execute immediate :sqlstmt into :ordno, :buf;
+  exec sql begin;
+    ManageSqlError(&sqlca); // Keep track of the SQL error if any
+    lpcmdparams->lastlineread++;
+    if (lpcmdparams->lastlineread!=ordno)
+    {
+        strMsg.LoadString(IDS_RMCMD_INTERNAL_ERROR);
+        AfxMessageBox(strMsg,MB_ICONEXCLAMATION | MB_OK );
+    }
+    strcpy(resultlines[i],buf);
+    i++;
+    if (i>=maxlines) {
+      exec sql endselect;
+    }
+  exec sql end;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+  l1=sqlca.sqlcode;
+  if (l1<0) {
+        strMsg.LoadString(IDS_RMCMD_ACCESSING_OUTPOUT);
+        AfxMessageBox(strMsg, MB_ICONEXCLAMATION | MB_OK );
+  }
+  exec sql commit;
+  if (i)
+    return i;
+
+  /*********** if no line returned, check if command finished***********/
+  if (GetRmCmdStatus(lpcmdparams)==RMCMDSTATUS_FINISHED) {
+    /* no line returned, and command finished. Set status to 3 for cleanup */
+    // TO BE FINISHED create a procedure for that
+    return (-1);
+  }
+  return 0;
+}
+
+// delete the tuples on the server side
+BOOL CleanupRemoteCommandTuples(LPRMCMDPARAMS lpcmdparams)
+{
+  CString strMsg;
+  exec sql begin declare section;
+    int hdl;
+    char sqlstmt[400];
+  exec sql end declare section;
+
+  hdl = lpcmdparams->rmcmdhdl;
+
+
+  sprintf(sqlstmt, "delete from %s.remotecmdinview where handle = %d",
+	lpcmdparams->RmcmdObjects_Owner, hdl);
+  exec sql execute immediate :sqlstmt;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+  
+
+  if (sqlca.sqlcode < 0) {
+    exec sql rollback;
+    goto ercleanup;
+  }
+
+  sprintf(sqlstmt, "delete from %s.remotecmdview where handle = %d",
+	lpcmdparams->RmcmdObjects_Owner, hdl);
+  exec sql execute immediate :sqlstmt;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+  
+
+  if (sqlca.sqlcode < 0) {
+    exec sql rollback;
+    goto ercleanup;
+  }
+
+  sprintf(sqlstmt, "delete from %s.remotecmdoutview where handle = %d",
+	lpcmdparams->RmcmdObjects_Owner, hdl);
+  exec sql execute immediate :sqlstmt;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+  if (sqlca.sqlcode < 0) {
+    exec sql rollback;
+    goto ercleanup;
+  }
+
+  exec sql commit;
+  return TRUE;
+
+ercleanup:
+  strMsg.LoadString(IDS_RMCMD_MANUALLY);
+
+  AfxMessageBox(strMsg, MB_ICONEXCLAMATION | MB_OK );
+return FALSE;
+}
+
+BOOL PutRmcmdInput(LPRMCMDPARAMS lpcmdparams,char * lpInputString, BOOL bNoReturn)
+{
+  CString strMsg;
+  exec sql begin declare section;
+    char sqlstmt[400];
+    int prevordno,ordno,hdl,cnt1,cnt2;
+  exec sql end declare section;
+  BOOL  bret=FALSE;
+
+  //ActivateSession(lpcmdparams->isession);
+
+  prevordno = lpcmdparams->lastlinesent;
+  hdl       = lpcmdparams->rmcmdhdl;
+
+  ordno=-1;
+
+  /*********** get last line sent *******************/
+  sprintf(sqlstmt,
+	"select orderno from %s.remotecmdinview where handle = %d order by orderno desc",
+	lpcmdparams->RmcmdObjects_Owner, hdl);
+  exec sql execute immediate :sqlstmt into :ordno;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+
+  if (lpcmdparams->lastlinesent!=ordno) {
+     strMsg.LoadString(IDS_RMCMD_INTERNAL_ERROR);
+     AfxMessageBox(strMsg,MB_ICONEXCLAMATION | MB_OK );
+     goto endin;
+  }
+
+  ordno++;
+
+  sprintf(sqlstmt, "select count(*) from %s.remotecmdinview", lpcmdparams->RmcmdObjects_Owner);
+  exec sql execute immediate :sqlstmt into :cnt1;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+	if (sqlca.sqlcode < 0) 
+     goto endin;
+
+  sprintf(sqlstmt,
+	"execute procedure %s.sendrmcmdinput(inputhandle=%d, inputstring='%s')",
+	lpcmdparams->RmcmdObjects_Owner,hdl,lpInputString);
+  exec sql execute immediate :sqlstmt;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+	if (sqlca.sqlcode < 0)   
+     goto endin;
+
+  sprintf(sqlstmt, "select count(*) from %s.remotecmdinview", lpcmdparams->RmcmdObjects_Owner);
+  exec sql execute immediate :sqlstmt into :cnt2;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+	if (sqlca.sqlcode < 0) 
+     goto endin;
+  if (cnt2!=cnt1+1) {
+     strMsg.LoadString(IDS_RMCMD_INTERNAL_ERROR);
+     AfxMessageBox(strMsg,MB_ICONEXCLAMATION | MB_OK );
+     goto endin;
+  }
+  if (lpcmdparams->bHasRmcmdEvents) {
+    wsprintf(sqlstmt,"raise dbevent %s.rmcmdnewinputline",lpcmdparams->RmcmdObjects_Owner);
+    exec sql execute immediate :sqlstmt;
+  }
+  bret = TRUE;
+  lpcmdparams->lastlinesent = ordno ;
+
+endin: 
+  if (bret)
+     exec sql commit;
+  else 
+     exec sql rollback;
+
+  return TRUE;
+}
+
+int GetRmCmdStatus(LPRMCMDPARAMS lpcmdparams)
+{
+  exec sql begin declare section;
+    int hdl,istatus;
+    char sqlstmt[400];
+  exec sql end declare section;
+
+  //ActivateSession(lpcmdparams->isession);
+
+  hdl       = lpcmdparams->rmcmdhdl;
+  istatus   = RMCMDSTATUS_ERROR;
+
+
+  sprintf(sqlstmt, "select status from %s.remotecmdview where handle = %d",
+	lpcmdparams->RmcmdObjects_Owner, hdl);
+  exec sql execute immediate :sqlstmt into :istatus;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+  exec sql commit;
+  return istatus;
+}
+
+BOOL ReleaseRemoteProcedureSession(LPRMCMDPARAMS lprmcmdparams)
+{
+    exec sql begin declare section;
+       char sqlstmt[400];
+    exec sql end declare section;
+	BOOL bres=TRUE;
+	BOOL bres1;
+    if (lprmcmdparams->bHasRmcmdEvents) {
+	    if (lprmcmdparams->bOutputEvents) {
+            wsprintf(sqlstmt, "remove dbevent %s.rmcmdnewoutputline", lprmcmdparams->RmcmdObjects_Owner);
+            exec sql execute immediate :sqlstmt;
+		    ManageSqlError(&sqlca); // Keep track of the SQL error if any
+			if (sqlca.sqlcode<0)
+				bres=FALSE;
+		}
+        wsprintf(sqlstmt, _T("remove dbevent %s.rmcmdcmdend"), lprmcmdparams->RmcmdObjects_Owner);
+        exec sql execute immediate :sqlstmt;
+	    ManageSqlError(&sqlca); // Keep track of the SQL error if any
+		if (sqlca.sqlcode<0)
+			bres=FALSE;
+	}
+	lprmcmdparams->bHasRmcmdEvents  = FALSE;
+	lprmcmdparams->bOutputEvents    = FALSE;
+	
+    CaSession* pSession = (CaSession*)lprmcmdparams->lSession;
+    if (pSession)
+    {
+       bres1 = pSession->Release(SESSION_COMMIT);
+       lprmcmdparams->lSession = NULL;
+    //bres1=INGRESII_llReleaseSession(lprmcmdparams->isession,TRUE);
+	}
+	if (! bres1)
+		bres=bres1;
+	return bres;
+}
+
+int LaunchRemoteProcedure1(char * lpVirtNode, char *lpcmd, LPRMCMDPARAMS lprmcmdparams, BOOL bOutputEvents)
+{
+  exec sql begin declare section;
+    char connectname[MAXOBJECTNAME];
+    char sqlstmt[400];
+    char procname[100];
+    int handl;
+    long cnt2;
+    char owner[33];
+  exec sql end declare section;
+  int i;
+  char * pdbname;
+
+  lprmcmdparams->lastlineread     = -1;
+  lprmcmdparams->lastlinesent     = -1;
+  lprmcmdparams->lastlinesentread = -1;
+  lprmcmdparams->bOutputEvents    = FALSE;
+  
+  for (i=0,pdbname = "imadb";i<2;i++,pdbname="iidbdb") {
+    if (!lpVirtNode || !(*lpVirtNode))
+      _tcscpy(connectname,pdbname);
+    else 
+      sprintf(connectname,"%s::%s",lpVirtNode,pdbname);
+
+    // Corrected 26/10/95 : READLOCK needed (instead of NOREADLOCK)
+	CaSessionManager& smgr = theApp.GetSessionManager();
+	CaSession session;
+	session.SetNode((LPTSTR)lpVirtNode);
+	session.SetDatabase((LPTSTR)pdbname);
+	session.SetIndependent(TRUE);
+	CaSession* pSession = smgr.GetSession(&session);
+	if (pSession)
+        lprmcmdparams->lSession = (LPARAM)pSession;
+    if (lprmcmdparams->lSession == NULL)
+       return RES_HDL_ERROR;
+
+    exec sql set lockmode session where readlock=exclusive;
+    if (sqlca.sqlcode < 0)
+    {
+         pSession->Release(SESSION_ROLLBACK);
+         lprmcmdparams->lSession = NULL;
+         return RES_HDL_ERROR;
+    }
+
+    handl=RES_HDL_ERROR;
+    if ( pSession->GetVersion() >= INGRESVERS_30) {
+      lstrcpy(owner,"$ingres");
+      lstrcpy(lprmcmdparams->RmcmdObjects_Owner,owner);
+      break;
+    }
+
+    /*
+    ** Get the owner of the rmcmd objects from iirelation.
+    */
+    exec sql repeated select relowner
+           into :owner
+           from iirelation
+           where relid='remotecmdview';
+    ManageSqlError(&sqlca); // Keep track of the SQL error if any
+    if (sqlca.sqlcode < 0 || sqlca.sqlcode==100)  {
+      if (i==0) {
+          CaSession* pSession = (CaSession*)lprmcmdparams->lSession;
+          if (pSession)
+          {
+              pSession->Release(SESSION_ROLLBACK);
+              lprmcmdparams->lSession = NULL;
+          //INGRESII_llReleaseSession(lprmcmdparams->isession, FALSE);
+          }
+          continue;
+      }
+      goto end;
+    }
+    suppspace(owner);
+    lstrcpy(lprmcmdparams->RmcmdObjects_Owner,owner);
+    break;
+  }
+
+ 
+  sprintf(procname,"%s.launchremotecmd",owner);
+  lstrcpy(sqlstmt, lpcmd);
+
+  exec sql execute procedure :procname(rmcmd=:sqlstmt) into :handl;
+  ManageSqlError(&sqlca); // Keep track of the SQL error if any
+  if (sqlca.sqlcode < 0 || handl<0){
+    if (sqlca.sqlcode < 0) 
+	  {
+      if (sqlca.sqlcode == -34000) 
+        {
+        handl=RES_HDL_NOTGRANTED;
+        }
+      else
+	    handl= RES_HDL_ERROR;
+      }
+	goto end;
+  }
+
+
+  exec sql repeated select count(*) into :cnt2 
+            from iievents where event_name='rmcmdnewoutputline' and event_owner=:owner;
+  if (sqlca.sqlcode < 0) {
+     handl=RES_HDL_ERROR;
+     goto end;
+  }
+  lprmcmdparams->bHasRmcmdEvents=FALSE;
+  if (cnt2>0) {
+    wsprintf(sqlstmt, "register dbevent %s.rmcmdcmdend", owner);
+    exec sql execute immediate :sqlstmt;
+    ManageSqlError(&sqlca); // Keep track of the SQL error if any
+	if (sqlca.sqlcode>=0) {
+		if (bOutputEvents) {
+            wsprintf(sqlstmt, _T("register dbevent %s.rmcmdnewoutputline"), owner);
+            exec sql execute immediate :sqlstmt;
+            if (sqlca.sqlcode<0) {
+                wsprintf(sqlstmt, _T("remove dbevent %s.rmcmdcmdend"), owner);
+                exec sql execute immediate :sqlstmt;
+			    ManageSqlError(&sqlca); // Keep track of the SQL error if any
+			}
+			else {
+				lprmcmdparams->bOutputEvents  = TRUE;
+		        lprmcmdparams->bHasRmcmdEvents= TRUE;
+			}
+		}
+		else 
+	        lprmcmdparams->bHasRmcmdEvents=TRUE;
+	}
+	if (!lprmcmdparams->bHasRmcmdEvents) {
+		 exec sql commit;
+	     handl=RES_HDL_ERROR;
+	     goto end;
+	}
+  }
+  exec sql commit;
+  if (sqlca.sqlcode < 0) {
+     handl=RES_HDL_ERROR;
+     goto end;
+  }
+
+end:
+  if (handl<0)
+  {
+    CaSession* pSession = (CaSession*)lprmcmdparams->lSession;
+    if (pSession)
+    {
+       pSession->Release(SESSION_ROLLBACK);
+       lprmcmdparams->lSession = NULL;
+     //INGRESII_llReleaseSession(lprmcmdparams->isession, FALSE);
+    }
+  }
+  return handl;
+}
+
+int LaunchRemoteProcedure(char * lpVirtNode, char *lpcmd, LPRMCMDPARAMS lprmcmdparams)
+{
+	return  LaunchRemoteProcedure1(lpVirtNode, lpcmd, lprmcmdparams,TRUE);
+}
+
+BOOL HasRmcmdEventOccured(LPRMCMDPARAMS lprmcmdparams)
+{
+   exec sql begin declare section;
+    char v_name [MAXOBJECTNAME];
+    char v_text [256];
+    char v_time[60];
+    char v_owner[MAXOBJECTNAME];
+   exec sql end declare section;
+
+   if (!lprmcmdparams->bHasRmcmdEvents)
+		return TRUE;
+
+   exec sql get dbevent;
+   ManageSqlError(&sqlca);
+
+   exec sql inquire_sql(:v_name=dbeventname,:v_owner=dbeventowner,
+                        :v_time=dbeventtime,:v_text =dbeventtext);
+   ManageSqlError(&sqlca);
+
+   exec sql commit;
+   suppspace(v_name);
+   if (v_name[0]=='\0')
+	  return FALSE;
+   else
+      return TRUE;
+}
+
+BOOL Wait4RmcmdEvent(LPRMCMDPARAMS lprmcmdparams, int nsec)
+{
+   exec sql begin declare section;
+    char v_name [MAXOBJECTNAME];
+    char v_text [256];
+    char v_time[60];
+    char v_owner[MAXOBJECTNAME];
+	int nsec1=nsec;
+   exec sql end declare section;
+
+   if (!lprmcmdparams->bHasRmcmdEvents) {
+		Sleep(nsec * 1000 );
+		return FALSE;
+   }
+
+   exec sql get dbevent with wait=:nsec1;
+   ManageSqlError(&sqlca);
+    exec sql inquire_sql(:v_name=dbeventname,:v_owner=dbeventowner,
+                        :v_time=dbeventtime,:v_text =dbeventtext);
+   ManageSqlError(&sqlca);
+
+   exec sql commit;
+   suppspace(v_name);
+   if (v_name[0]=='\0')
+	  return FALSE;
+
+   return TRUE;
+}
+
+#define RMCMD_MAXLINES 200
+
+BOOL ExecRmcmdInBackground(char * lpVirtNode, char *lpCmd, CString InputLines)
+{
+	CString strMsg;
+	RMCMDPARAMS rmcmdparams;
+	char *CurLine;
+	int i, ires,retval;
+	int istatus;
+	char * feedbackLines[RMCMD_MAXLINES];
+	int iTimerCount = 0;
+	int iCountLine = 0;
+	bool bServerActive = FALSE;
+   BOOL bHasTerminated = FALSE;
+   time_t tim1,tim2;
+   double d1;
+   BOOL bResult=TRUE;
+ 
+	ires=LaunchRemoteProcedure1( lpVirtNode, lpCmd, &rmcmdparams, FALSE);
+	if (ires<0) 	// Failure to launch remote command
+		return FALSE;
+	
+	rmcmdparams.rmcmdhdl=ires;
+
+   // send input lines
+   mystring=InputLines;
+   for (CurLine=GetFirstTraceLine();CurLine;CurLine = GetNextTraceLine()) 
+      	PutRmcmdInput(&rmcmdparams, (char *) CurLine, FALSE);
+
+	// allocate space for future incoming lines
+	memset(feedbackLines, 0, sizeof(feedbackLines));
+	int cpt=0;
+	for (cpt=0; cpt<RMCMD_MAXLINES; cpt++) {
+		feedbackLines[cpt] = (char *)malloc(RMCMDLINELEN);
+		if (!feedbackLines[cpt]) {
+			for (int cpt2=0; cpt2<cpt; cpt2++)
+				free(feedbackLines[cpt2]);
+			CleanupRemoteCommandTuples(&rmcmdparams);
+			//if (!rmcmdparams.bSessionReleased)
+			if (rmcmdparams.lSession)
+				ReleaseRemoteProcedureSession(&rmcmdparams);
+			return FALSE;
+		}
+	}
+	mystring=_T("");
+	time( &tim1 );
+	while (TRUE)	{
+		if (!bHasTerminated) 
+			bHasTerminated = Wait4RmcmdEvent(&rmcmdparams, 2);
+		retval = GetRmcmdOutput( &rmcmdparams,
+								 RMCMD_MAXLINES,
+								 feedbackLines);
+
+		if (retval < 0) 	// execution of the command is terminated!
+			break;			  
+		
+		if (retval > 0) {
+			for (i=0;i<retval;i++)	{
+				mystring+=(LPCSTR)feedbackLines[i];
+				mystring+= _T("\r\n");
+			}
+			istatus = GetRmCmdStatus(&rmcmdparams);
+			if ( istatus == RMCMDSTATUS_ERROR ) {
+				bResult=FALSE;
+				break;
+			}
+		}
+
+		if (retval == 0 && !bServerActive) {
+			time(&tim2);
+			d1= difftime( tim2,tim1);
+			if (d1>25) {
+				tim1=tim2;
+			istatus = GetRmCmdStatus(&rmcmdparams);
+			if (istatus==RMCMDSTATUS_ERROR)  {
+				strMsg.LoadString(IDS_RMCMD_COMMAND_NOT_ACCEPTED);
+				AfxMessageBox(strMsg, MB_ICONEXCLAMATION | MB_OK );
+				bResult=FALSE;
+				break;
+			}
+			if (istatus!=RMCMDSTATUS_SENT)
+				bServerActive=TRUE;
+			else  {
+				strMsg.LoadString(IDS_RMCMD_NO_ANSWER);
+				if (AfxMessageBox(strMsg,
+					MB_ICONQUESTION | MB_YESNO | MB_TASKMODAL) == IDNO){
+						bResult=FALSE;
+						break;
+					}
+				}
+			}
+		}
+	} // End while
+
+	CleanupRemoteCommandTuples(&rmcmdparams);
+//	if (!rmcmdparams.bSessionReleased)
+	if (rmcmdparams.lSession)
+		ReleaseRemoteProcedureSession(&rmcmdparams);
+	for (cpt=0; cpt<RMCMD_MAXLINES; cpt++)
+		free(feedbackLines[cpt]);
+	return bResult;
+}
+
+char * fastloadnormalstrings[]=
+{
+	"WARNING: Cannot determine record size of input file:",
+	"fastload expects this file to be in binary format and contain",
+	"records of ",                                      /*%d bytes in length (except when the record contains long",*/
+	"datatypes, in which case the record will be of variable length). Fastload",
+	"will load a record from each contiguous",          /*%d bytes of the file, a bad file"*/
+	"format will result in corrupted data being loaded into the table.",
+	"Begin load...",
+	"Load finished",
+	"Row size",
+	"Rows loaded",
+	"Total bytes",
+	"successive table columns.",
+	"data being loaded into the table.",
+	"each contiguous ",
+	"will result in corrupted data being loaded into the table.",
+	NULL
+};
+
+char * emptystringlist[]=
+{
+	NULL
+};
+
+BOOL ExecRmcmdTestOutPut (char * lpVirtNode, char *lpCmd, int iCmdType, CString & csCmdOutput)
+{
+	if (!ExecRmcmdInBackground(lpVirtNode, lpCmd, ""))
+		return FALSE;
+
+	csCmdOutput = mystring;
+
+	if (iCmdType == CMD_DBLEVEL_AUDITDB)  {
+		return TRUE;
+		// TO BE FINISHED: possibly detect errors at that level rather than at the parsing level
+	}
+	BOOL bResult = TRUE;
+	for ( char * CurLine=GetFirstTraceLine();CurLine;CurLine=GetNextTraceLine()){
+		if (CurLine[0]!='\0') {
+			char ** ppc;
+			BOOL bIsOK = FALSE;
+			switch (iCmdType) {
+				case CMD_FASTLOAD:
+					ppc=&(fastloadnormalstrings[0]);
+					break;
+				default:
+					ppc=&(emptystringlist[0]);;
+					break;
+			}
+			while (*ppc!=NULL) {
+				if (!strncmp(*ppc,CurLine,strlen(*ppc)))
+					bIsOK = TRUE;
+				ppc++;
+			}
+			if (! bIsOK)
+				bResult = FALSE;
+		}
+	}
+	return bResult;
+}
+
+
+

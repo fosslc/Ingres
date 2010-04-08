@@ -1,0 +1,227 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vfattr.hlp       Help for the Vifred "Attributes for Field" screen.
+/#subtopic "Field Validation Examples" vfvalex.hlp
+/#subtopic "Derived Field Examples" vfderex.hlp
+The Field Attributes frame allows you to change the displayable and 
+many of the non-displayable attributes of a field.  The displayable
+attributes include boxing a field and displaying the data portion of
+the field with various video attributes.  
+
+Non-displayable attributes include the datatype of the field (and
+whether it is NULLable or not), setting the field to be display only, 
+query only and changing the internal name of a field.
+
+Please note that changing the datatype of the field should not be
+taken lightly.  Changing a field's datatype may also necessitate
+changes to applications that use the form and possibly a table
+definition in the database as well.  In addition, the entered datatype must
+be compatible with the format specification for the field.  For example,
+a "varchar" datatype is not compatible with a "f10.2" format specification.
+
+To turn on attributes for the field, move the cursor to the line containing
+the desired attribute, using the cursor keys.  Type in "y" (for Yes) to
+enable the attribute, or "n" (for No) to disable.
+
+Use the "Next" and "Previous" menu commands to change the attributes of
+other fields on the form, without redrawing the layout frame first.
+
+
+The meaning of the attribute settings are:
+        
+        ATTRIBUTE NAME          SYNOPSIS
+        --------------          --------
+        Box Field               Draw a box around the field. A box requires
+                                extra spaces around the field.
+
+        Keep Previous Value     On data input, display the last value entered 
+                                in this field as the default value.
+
+        Mandatory Field         Data entry is required for this field.
+        
+        Reverse Video           Display the data portion of the field in
+                                reverse video.
+
+        Blinking                Display the data portion of the field as
+                                a blinking field.
+
+        Underline               Underline the data portion of the field.
+
+        Brightness Change       Display the data portion of the field in a
+                                a different brightness. Bold or half intensity
+                                depending on what your terminal supports.
+
+        Query Only              May enter data into this field if form is
+                                displayed in QUERY MODE.  Otherwise, user
+                                may not enter data into this field.
+
+        Force Upper Case        All data input to field is mapped to upper
+                                case letters.
+
+        Force Lower Case        All data input to field is mapped to lower
+                                case letters.
+
+        No Auto Tab             Do not automatically tab to the next field
+                                on the form when data has been entered into
+                                this field.  The user must depress the key
+                                for "nextfield" to get to the next field.
+
+        No Echo                 Do not echo the data to user in this field.
+                                This is used for password fields.
+
+        Display Only            User may not enter data into the field.
+                                Data is under the control of either a
+                                3GL or a 4GL program.
+
+        Invisible               Do not display this field.
+
+        Input Masking           Allow input masking to occur if the field
+                                is NOT scrollable and the format specification
+                                is compatible with input masking.  In essence,
+                                this tells the Forms Runtime System to perform
+                                input masking for the field, if all the
+                                requirements have been met.  If not, this
+                                attribute will be ignored at runtime.
+
+                                Please refer to the documentation for a
+                                complete description of the input masking
+                                functionality.
+
+Other field descriptions are:
+
+        FIELD NAME              SYNOPSIS
+        ----------              --------
+        Internal Name           This is used to match column names in QBF,
+                                or can be used by OSL, EQUEL or ESQL 
+                                programmers for special actions.
+
+        Data Type               This is the datatype for the field.  Any
+                                of the datatypes supported by the database
+                                may be entered here.  Valid SQL datatypes are:
+
+                                    float,float8  - 8 byte floating point
+                                    float4        - 4 byte floating point
+                                    integer       - 4 byte integer
+                                    smallint      - 2 byte integer
+                                    integer1      - 1 byte integer
+                                    decimal       - the decimal datatype 
+                                                    with up to 31 digits of
+                                                    precision
+                                    varchar       - variable length character
+                                    char          - constant length character
+                                    text          - variable length character
+                                    c             - constant length character
+                                    date          - date datatype
+                                    money         - money datatype
+
+                                For a complete description of the available
+                                datatypes, please consult your Ingres/SQL
+                                reference manual.
+
+                                Please note that when specifying any of the
+                                character datatypes ("c", "text", "char" and
+                                "varchar"), an explicit length must NOT be
+                                entered.  The length for a character datatype
+                                is obtained from the format specification of
+                                the field.  This restriction ensures that the
+                                two (datatype and format) lengths are always
+                                the same.
+
+        Nullable                This is a modifier to the datatype of
+                                the field.  A "y" indicates that the
+                                datatype is NULLable and the NULL value
+                                is a valid value for the field.  A "n"
+                                means the datatype is non NULLable and
+                                that the NULL value is invalid for this
+                                field.
+
+        Derived                 This is used to make a field derivable.  A
+                                derived field determines its value from a
+                                derivation formula, a function of other
+                                fields and constants.  If derived is "y" than
+                                the "Derivation Formula" field is displayed.
+                                If derived is "n" than the "Validation Check"
+                                and "Validation Message" fields are displayed.
+
+        Derivation Formula      The value of the field is determined by use
+                                of this formula.  This attribute is only
+                                accessible for derived fields.  Although this
+                                field is scrollable, the contents may be fully
+                                viewed and edited using the MoreEdit menuitem.
+
+        Validation Check        This check is performed whenever users enter 
+                                new or updated data into the field.  This
+                                attribute is only accessible for fields that
+                                are not derived.  Although this field is
+                                scrollable, the contents may be fully viewed
+                                and edited using the MoreEdit menuitem.
+
+        Validation Message      This is displayed if validation check fails.
+                                This attribute is only accessible for fields
+                                that are not derived.  Although this field is
+                                scrollable, the contents may be fully viewed
+                                and edited using the MoreEdit menuitem.
+
+        Default Value           This value will automatically be filled in
+                                when users are entering new data in the field.
+                                This attribute is not accessible if the field
+                                is a derived field.
+
+        Color                   Sets the color code (from 0-7) of the data
+                                window.  Only available for terminals that
+                                support color.
+
+        Scrollable              This is used to make a field scrollable.
+                                A scrollable field allows one to enter more
+                                data than can be displayed via the display
+                                format.  Current restrictions are that a
+                                field can be made scrollable only if the
+                                datatype for the field is a character
+                                datatype and that the display format
+                                must be a single line format.  This attribute
+                                is not accessible if the field does not
+                                meet the restrictions as stated above.
+                                Entering an "n" makes the field NOT scrollable.
+                                A "y" makes the field scrollable and will
+                                display the "Scroll Size" attribute
+                                (explained below).
+
+        Scroll Size             This attribute indicates how big to make
+                                the scrollable field.  Essentially, this
+                                sets the data length for the field.  Which
+                                must be greater than the display area as
+                                determined by the display format.  This
+                                attribute is not visible unless a "y" has
+                                been entered into the "Scrollable" attribute.
+
+The menu commands are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Next                    Commit the changes for the current field or
+                                column and bring in the attributes for the 
+                                next field/column.  This command is NOT 
+                                available when specifying the attributes 
+                                for a field that is being created.
+
+        Previous                Commit the changes for the current field or
+                                column and bring in the attributes for the 
+                                previous field/column.  This command is NOT 
+                                available when specifying the attributes 
+                                for a field that is being created.
+
+        MoreEdit                Display a pop-up form enabling the editing
+                                of validation information or a derivation
+                                formula.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Return to the previous menu. The field's
+                                attributes now have the values given in the
+                                form.  Note that if the attributes being
+                                edited are for an existing simple field,
+                                VIFRED will check that the datatype and
+                                format specification for the field are
+                                compatible.  This command will be canceled
+                                if the datatype and format are NOT compatible.
+                                This applies to the "Next" and "Previous"
+                                commands as well.

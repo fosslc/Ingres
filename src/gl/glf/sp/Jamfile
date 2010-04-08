@@ -1,0 +1,28 @@
+#
+# Jamfile file for gl!glf!sp
+#
+
+SubDir ING_SRC gl glf sp ;
+
+IISUBSYS gl glf sp ;
+
+
+IIBINEXE sptest : sptest.c ;
+IINEEDLIBS sptest : COMPAT ;
+
+IILIBRARY COMPATLIB : spsplay.c
+	spprev.c
+	spnext.c
+	splookup.c
+	spinstall.c
+	spinit.c
+	sphead.c
+	spftail.c
+	spfprev.c
+	spfnext.c
+	spfhead.c
+	spenq.c
+	spempty.c
+	spdeq.c
+	spdelete.c ;
+

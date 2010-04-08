@@ -1,0 +1,91 @@
+;
+;   History:
+;       31-jul-96 (emmag)
+;           Added change history section.   Added 2.0 data.
+;	21-oct-1998 (somsa01)
+;	    Removed file_name.
+;	17-jul-2000 (somsa01)
+;	    Removed functions from dm1cc.c and dm1cs.c .
+;	21-may-2001 (somsa01)
+;	    Removed fix for bug 103107, as it is not needed in 2.5 .
+;	28-jan-2004 (penga03)
+;	    Removed LK_my_pid.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	    Replaced iidmfdata.def with iilibdmfdata.def due to 
+; 	    new build procedures.
+;	10-Jun-2005 (drivi01)
+;	    SIR 111426
+;	    Added LK_main_dsmc.
+;   20-Sep-2005 (fanra01)
+;       Add missing function exports from cross integration.
+;	22-Mar-2007 (bonro01)
+;	    Remove LK_main_dsmc because of change 485548
+;	15-Feb-2008 (bonro01)
+;	    Add new function Db_incons_prompt for change 490649
+;       22-Jun-2009 (bonro01) 
+;	    b122205 Remove Db_incons_prompt, Db_incons_crash for change 497838
+;	    Add Db_pass_abort_error_action, Db_stop_on_incons_db,
+;	    Db_startup_error_action, Db_recovery_error_action
+;	4-Nov-2009 (bonro01)
+;	    Remove dm1ch_tlv and dm1cn_tlv because of change 501041
+;	    for bug 122739
+;	10-Nov-2009 (bonro01)
+;	    Add references because of change 501041 for bug 122739
+;	11-Feb-2010 (bonro01)
+;	    Add DM_sizeof_ucore_attr for change 502617 bug 121123
+EXPORTS
+dmf_jsp_dcb		@1	DATA			
+;Db_incons_crash		@2	DATA			
+bcp_la		@3	DATA			
+bcp_lsn		@4	DATA			
+rcp_db_id		@5	DATA			
+rcp_lg_id		@6	DATA			
+rcp_lx_id		@7	DATA			
+rcp_node_id		@8	DATA			
+rcp_tran_id		@9	DATA			
+dmf_rfp_dcb		@10	DATA			
+dmf_svcb		@11	DATA			
+DM_core_attributes		@12	DATA			
+DM_core_relations		@13	DATA			
+DM_sizeof_core_rel		@14	DATA			
+DM_sizeof_core_index		@15	DATA			
+DM_sizeof_core_attr		@16	DATA			
+DM_sizeof_core_rindex		@17	DATA			
+DM_ucore_attributes		@18	DATA			
+DM_ucore_relations		@19	DATA			
+Dmc_rep		@20	DATA			
+core_index		@21	DATA			
+ucore_rindex		@22	DATA			
+dm1cnv2_plv		@23	DATA			
+;dm1ch_tlv		@24	DATA			
+;dm1cn_tlv		@25	DATA			
+dm1cn_plv		@26	DATA			
+LG_logs_opened		@27	DATA			
+Lg_di_cbs		@28	DATA			
+;LGK_base		@29	DATA			
+;LK_mycbt		@30	DATA			
+;LK_compatible		@31	DATA			
+LGK_my_pid		@32	DATA
+LGK_base		@33	DATA
+LK_mycbt		@34	DATA
+LK_compatible		@35	DATA
+csp_debug		@36	DATA
+LG_my_pid		@37	DATA	
+core_rindex		@38	DATA
+LG_is_mt		@39	DATA
+Dmpp_pgtype     @40 DATA
+;LK_main_dsmc    @41 DATA
+;Db_incons_prompt	@42	DATA
+Db_pass_abort_error_action	@43	DATA
+Db_stop_on_incons_db	@44	DATA
+Db_startup_error_action	@45	DATA
+Db_recovery_error_action	@46	DATA
+dm1c_compress_v		@47	DATA
+dm1c_uncompress_v	@48	DATA
+dm1c_compexpand_v	@49	DATA
+dm1c_cmpcontrol_setup_v	@50	DATA
+dm1c_cmpcontrol_size_v	@51	DATA
+DM_sizeof_ucore_attr	@52	DATA
+

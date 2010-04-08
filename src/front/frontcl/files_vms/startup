@@ -1,0 +1,21 @@
+{define; {editor}; edit}
+{define; {continuetrap}; {ifsame; @{tuplecount}; {tuplecount};; {ifsame; @{tuplecount}; 1; {type (1 row)}; {type @({tuplecount} rows)}}}}
+{define; ret; retrieve}
+{define; outerjoin($m,$s,$c);\
+	(($m = $s) or \
+	((any($m by $m where $m=$s) = 0)  and $s=$c))}
+{define; char_to_date($d);\
+date (concat(concat(concat(left($d, 2), "."),\
+	concat(left(shift($d, -2), 2), ".")),\
+	right($d, 2)))}
+{define; int_to_date($d);\
+date (concat(concat(concat(ascii(int4($d/10000)), "."),\
+	concat(ascii(int4(mod($d, 10000)/100)), ".")),\
+	ascii(mod($d, 100))))}
+{define; bin_to_date($d);\
+date(concat(_date($d),shift(concat(_time($d)," "),1)))}
+{define; substring($c,$s,$e);\
+left(right(text($c),length(text($c))-($s-1)),\
+	(($e)-$s+1))}
+\v
+\r

@@ -1,0 +1,10 @@
+#
+# YAM MANIFEST file for cl!hdr!hdr
+#
+
+IISUBSYS cl hdr hdr_unix_win ;
+
+IIBZARCH bzarch.h ;
+
+IIGV gv.h ;
+

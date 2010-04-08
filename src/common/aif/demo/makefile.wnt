@@ -1,0 +1,32 @@
+CC          = cl -c
+LINK        = link
+LINKFLAGS   = /NOLOGO /MACHINE:i386 -entry:mainCRTStartup
+CCFLAGS     = -G4 -Di386=1 -D_X86_ -Od -D_DLL -D_MT /nologo -MD -I.\ -I$(INC)
+INC         = "$(II_SYSTEM)"\ingres\files 
+LIBS        = msvcrt.lib kernel32.lib user32.lib advapi32.lib \
+		"$(II_SYSTEM)"\ingres\lib\iilibapi.lib
+APIAEXE     = apiademo.exe
+APIAOBJS    = apiademo.obj apiaclnt.obj apiasvr.obj apiautil.obj 
+APISOBJS    = apis2ph1.obj apis2ph2.obj apisauto.obj apisblob.obj apiscdel.obj \
+              apiscomm.obj apisconn.obj apiscopy.obj apiscupd.obj apisdata.obj \
+	      apiserr.obj apisinit.obj apisname.obj apisparm.obj apisprbr.obj \
+	      apisprgt.obj apisproc.obj apisprrp.obj apisrept.obj apisroll.obj\
+	      apisselc.obj apissell.obj apisscrl.obj 
+APISEXE     = apis2ph1.exe apis2ph2.exe apisauto.exe apisblob.exe apiscdel.exe \
+              apiscomm.exe apisconn.exe apiscopy.exe apiscupd.exe apisdata.exe \
+	      apiserr.exe apisinit.exe apisname.exe apisparm.exe apisprbr.exe \
+	      apisprgt.exe apisproc.exe apisprrp.exe apisrept.exe apisroll.exe\
+	      apisselc.exe apissell.exe apisscrl.exe 
+
+all:  $(APIAOBJS) $(APISOBJS) $(APIAEXE) $(APISEXE)
+
+$(APIAOBJS):
+    $(CC) $(CCFLAGS) $**
+$(APISOBJS):
+    $(CC) $(CCFLAGS) $**
+
+$(APIAEXE):
+    $(LINK) $(LINKFLAGS) /OUT:$@ $(APIAOBJS) $(LIBS)
+
+$(APISEXE):
+    $(LINK) $(LINKFLAGS) /OUT:$@ $* $(LIBS)

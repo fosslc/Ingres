@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+
+ Maximum number of client connections permitted.  On VMS, the upper limit
+ is constrained by the available I/O buffer space.  On all other platforms,
+ set to -1 for no limit.

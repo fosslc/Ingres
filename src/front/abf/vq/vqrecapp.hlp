@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqrecapp.hlp, help for deciding whether to accept or reject changes to 
+/#-- the VQ during reconciliation.
+/#-- 
+For each frame that needs to be changed in order to match the database, 
+you must accept or reject all the proposed changes. To help you decide, you 
+can first look at the before and after Visual Query for the frame. If you are
+not sure, you can Cancel the changes, then write the report to a file. 
+This way, you can take your time and look over the report to see if you 
+really want to make all the changes. This is especially convenient for 
+"what if" scenarios.
+
+The menuitems are:
+ 
+  OK            Accepts the changes.
+  Cancel        Rejects the changes.
+  OldVQ         Displays the Visual Query for the frame as it looks before 
+                the proposed changes.
+  NewVQ         Displays the Visual Query for the frame as it will look after 
+                the proposed changes.
+  WriteFile     Writes the reconciliation report to a file.
+

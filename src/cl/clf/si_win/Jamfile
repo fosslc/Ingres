@@ -1,0 +1,31 @@
+#
+# Jamfile file for cl!clf!si_win
+#
+
+SubDir ING_SRC cl clf si_win ;
+
+IISUBSYS cl clf si_win ;
+
+
+IILIBRARY COMPATLIB : siwrite.c
+	siwinpr.c
+	siterm.c
+	siread.c
+	siputrec.c
+	siprintf.c
+	sipinit.c
+	siorgetrec.c
+	siopen.c
+	silogfil.c
+	siisopen.c
+	sigetrec.c
+	siftell.c
+	sifseek.c
+	sifixup.c
+	sieqinit.c
+	sidoform.c
+	sicreate.c
+	sicopy.c
+	sicat.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : sidata.c ;

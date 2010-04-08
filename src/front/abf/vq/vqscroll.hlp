@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqscroll.hlp, subtopic 'Scrolling' behind the main VQ Editor help screen.
+/#-- 
+You are at the Visual Query Editor screen in the normal display form, which
+shows the details of a query definition.  You can choose Zoomout from the 
+menu to see the "compressed display" and then choose End to see the normal, 
+detailed display again.  
+
+To move around the Visual Query Editor:
+
+  * Use the up and down arrow keys to scroll between rows in a table field.
+
+  * Use TAB to move to the next column in a row, to the next simple field, 
+    or to the next table from the last column in any row of a table field.
+
+  * Use Control-P to move back to the previous column in a row, to the 
+    previous simple field, or to the previous table field from the first 
+    column of any row in a table field.

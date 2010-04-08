@@ -1,0 +1,32 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have selected to send the query results to a file.  Please enter
+a valid file name.  You may also specify a full directory pathname
+with your file name.
+
+You have the option of sending all the results to a file (OK) or sending 
+just the results that have been viewed (FilePartial).  For large queries, 
+unless you have viewed the last screen, you will get only partial results 
+of the query.  For small queries, partial results may end up being the 
+complete dataset.
+
+The field on the popup is:
+
+	FIELD           DESCRIPTION
+	-----		-----------
+	File Name	Name of the file to contain the query output.
+
+
+The menu commands are as follows:
+
+
+      MENU COMMANDS	SYNOPSIS
+      -------------	--------
+
+      OK       		Save the results to the file specified.
+
+      FilePartial       Send the results seen thus far to a file.
+
+      Cancel		Return back to the Output Browser without saving the 
+			results to a file.
+
+      Help        	Display this Help file.

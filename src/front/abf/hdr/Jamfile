@@ -1,0 +1,16 @@
+#
+# Jamfile file for front!abf!hdr
+#
+
+SubDir ING_SRC front abf hdr ;
+
+IISUBSYS front abf hdr ;
+
+
+IIMSGHDR erar.msg erfg.msg erit.msg eros.msg ;
+
+IIQSHHDR abclass.h : abclass.qsh ;
+IIQSHHDR abfdbcat.h : abfdbcat.qsh ;
+IIQSHHDR acatrec.h : acatrec.qsh ;
+IIQSHHDR metafrm.h : metafrm.qsh ;
+

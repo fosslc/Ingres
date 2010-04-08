@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This is the list of default values that you can use to indicate the
+defaultability of this column. Position the cursor over the row that
+indicates the defaultability you want for the current column and then
+select OK.

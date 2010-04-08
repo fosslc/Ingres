@@ -1,0 +1,7 @@
+;
+; History:
+;	21-apr-2004 (penga03)
+;	    Created.
+;
+EXPORTS
+	ingres_install_dotnetfx

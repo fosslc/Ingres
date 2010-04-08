@@ -1,0 +1,79 @@
+
+<TAG NAME="CF_IceDeclare">
+    <EDITORLAYOUT HEIGHT="330" LFHEIGHT="330">
+
+		<control type="Image" name="imgEditor" width="170" height="MAXIMUM" corner="NE" right=5 down=5 filepath="../IngresIce/Icons/ingresii.bmp"/>
+
+		<CONTAINER TYPE="Panel" NAME="pnlCommon" CAPTION="" WIDTH="MAXIMUM" HEIGHT=100 LFHEIGHT=142 MAXWIDTHPADDING=0 ANCHOR="imgEditor" CORNER="NE" RIGHT=10>
+		    <CONTROL NAME="lblVariable" TYPE="Label" CAPTION="Variable Name:" DOWN="20" RIGHT="10" WIDTH="80"/>
+            <CONTROL NAME="txtVariable" TYPE="TextBox" ANCHOR="lblVariable" CORNER="NE" WIDTH="MAXIMUM"/>
+			
+			<CONTROL NAME="lblValue" TYPE="Label" CAPTION="Value:" DOWN="45" ANCHOR="txtValue" CORNER="NE" RIGHT="10" WIDTH="80"/>
+            <CONTROL NAME="txtValue" TYPE="TextBox" ANCHOR="lblValue" CORNER="NE" WIDTH="MAXIMUM" MAXWIDTHPADDING="10" HORIZRESIZE="BODY"/>
+
+			
+            <CONTROL NAME="lblLevel" TYPE="Label" CAPTION="Level:" DOWN="70" RIGHT="10" WIDTH="80"/>
+            <CONTROL NAME="txtLevel" TYPE="DropDown" EDITABLE="Yes" ANCHOR="lblLevel" CORNER="NE"  WIDTH="100">
+               <ITEM CAPTION="Server" VALUE="Server" SELECTED="Yes"/>
+               <ITEM CAPTION="Session" VALUE="Session"/>
+               <ITEM CAPTION="Page" VALUE="Page"/>
+			</CONTROL>
+		</CONTAINER>
+					
+		<CONTAINER TYPE="Panel" NAME="pnlRepeat" WIDTH="MAXIMUM" HEIGHT="50" MAXWIDTHPADDING=0 MAXHEIGHTPADDING=5 ANCHOR="pnlCommon" CORNER="SW" DOWN=10>			
+			<CONTROL TYPE="Label" NAME="lblRepeat" WIDTH=60 LFWIDTH=96 CORNER="NW" RIGHT=10 Down=20 CAPTION="Repeat:"/>
+			<CONTROL NAME="txtRepeat" TYPE="CheckBox" ANCHOR="lblRepeat" CORNER="NE"  WIDTH="MAXIMUM"/>			
+		</CONTAINER>
+      </CONTAINER>
+
+
+   </EDITORLAYOUT>
+
+   
+		<ATTRIB NAME="Variable"				CONTROL="txtVariable"/>
+		<ATTRIB NAME="Value"				CONTROL="txtValue"/>
+		
+		<ATTRIB NAME="Level"				CONTROL="txtLevel"			TYPE="Enumerated">
+			<ATTRIBOPTION VALUE="Server"	CAPTION="server"/>
+			<ATTRIBOPTION VALUE="Session"	CAPTION="session"/>
+			<ATTRIBOPTION VALUE="Page"		CAPTION="page"/>
+		</ATTRIB>
+
+	<ATTRIBCATEGORIES>
+		<attribgroup name="pnlCommon"	elements="Variable, Value, Level"/>
+	</ATTRIBCATEGORIES>
+   
+   
+   <TAGLAYOUT>      
+   
+   <WIZIF OPTIONLowerCaseTags EQ 'true'>
+			<WIZSET TIMEOUT	= 'timeout'>
+			<WIZSET MIMEATTACH = 'mimeattach'>
+		<WIZELSE>
+			<WIZSET TIMEOUT	= 'TIMEOUT'>
+			<WIZSET MIMEATTACH = 'MIMEATTACH'>
+		</WIZIF>
+		
+		<WIZIF OPTIONLinearLayout EQ 'true'>
+			<WIZSET verticalSpacingGap =  ' ' >
+		<WIZELSE>
+			<WIZSET verticalSpacingGap =  Chr(13) & Chr(10) & '        ' >
+		</WIZIF>
+
+		<WIZIF txtRepeat EQ 'true'>
+			<WIZSET repeatDec = ' REPEAT ' >
+		<WIZELSE>
+			<WIZSET repeatDec = ' ' >
+		</WIZIF>
+
+  		<WIZSET Exclaim =  '!' >
+		
+<$${Exclaim}-- #ICE$${repeatDec}DECLARE=`$${txtLevel}.$${txtVariable}=$${txtValue}` -->
+   </TAGLAYOUT>
+
+
+   <TAGDESCRIPTION HELPFILE="../../TagDefs/IngresIce/Docs/cfDeclare.html"/>
+
+
+</TAG>
+

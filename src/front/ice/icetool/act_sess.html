@@ -1,0 +1,29 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=&title=Active user sessions&submit=&cancel=` -->
+<TABLE BORDER=1 WIDTH="90%" CELLPADDING=5 CELLSPACING=2>
+	<TR>
+		<TH ALIGN="CENTER">Session number</TH>
+		<TH ALIGN="CENTER">Ice user session</TH>
+		<TH ALIGN="CENTER">Query</TH>
+		<TH ALIGN="CENTER">Http Host server</TH>
+		<TH ALIGN="CENTER">Error(s)</TH>
+	</TR>
+	</TR>
+	<!-- #ICE FUNCTION=`active_users?action=select`
+			 HTML=`
+			 <TR><FORM ACTION="" METHOD="POST"> 
+					<INPUT TYPE="HIDDEN" NAME="action" VALUE="delete">
+					<INPUT TYPE="HIDDEN" NAME="key" VALUE=":name">
+					<TD ALIGN="CENTER">:name</TD>
+					<TD ALIGN="CENTER">:ice_user</TD>
+					<TD ALIGN="CENTER">:host</TD>
+					<TD ALIGN="CENTER">:query</TD>
+					<TD ALIGN="CENTER">:err_count</TD>
+			 </FORM></TR>`
+	-->
+</TABLE>
+<!-- #ICE IF (`:ii_status_number` != `0`)
+THEN=`<p>You are not authorized to monitor the system. Please check with your administrator`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->
+

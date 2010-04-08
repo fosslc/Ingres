@@ -1,0 +1,60 @@
+APPLICATION_DEVELOPMENT_3 1 'Vision Catalogs'
+END
+CREATE TABLE ii_framevars
+    (
+        object_id	INTEGER NOT NULL,
+        fr_seq	SMALLINT NOT NULL,
+        var_field	VARCHAR(32) NOT NULL,
+        var_column	VARCHAR(32) NOT NULL,
+        var_datatype	VARCHAR(105) NOT NULL,
+        var_comment	VARCHAR(60) NOT NULL
+    )
+
+CREATE TABLE ii_menuargs
+    (
+        object_id	INTEGER NOT NULL,
+        mu_text	VARCHAR(32) NOT NULL,
+        mu_seq	SMALLINT NOT NULL,
+        mu_field	VARCHAR(32) NOT NULL,
+        mu_column	VARCHAR(32) NOT NULL,
+        mu_expr	VARCHAR(240) NOT NULL
+    )
+
+CREATE TABLE ii_vqjoins
+    (
+        object_id	INTEGER NOT NULL,
+        vq_seq	SMALLINT NOT NULL,
+        join_type	SMALLINT NOT NULL,
+        join_tab1	SMALLINT NOT NULL,
+        join_tab2	SMALLINT NOT NULL,
+        join_col1	SMALLINT NOT NULL,
+        join_col2	SMALLINT NOT NULL
+    )
+
+CREATE TABLE ii_vqtabcols
+    (
+        object_id	INTEGER NOT NULL,
+        vq_seq	SMALLINT NOT NULL,
+        tvq_seq	SMALLINT NOT NULL,
+        col_name	VARCHAR(32) NOT NULL,
+        ref_name	VARCHAR(32) NOT NULL,
+        adf_type	SMALLINT NOT NULL,
+        adf_length	INTEGER NOT NULL,
+        adf_scale	INTEGER NOT NULL,
+        col_flags	INTEGER NOT NULL,
+        col_sortorder	SMALLINT NOT NULL,
+        col_info	VARCHAR(240) NOT NULL
+    )
+
+CREATE TABLE ii_vqtables
+    (
+        object_id	INTEGER NOT NULL,
+        vq_seq	SMALLINT NOT NULL,
+        vq_mode	SMALLINT NOT NULL,
+        tab_name	VARCHAR(32) NOT NULL,
+        tab_owner	VARCHAR(32) NOT NULL,
+        tab_section	SMALLINT NOT NULL,
+        tab_usage	SMALLINT NOT NULL,
+        tab_flags	INTEGER NOT NULL
+    )
+

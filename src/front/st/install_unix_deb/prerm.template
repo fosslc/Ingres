@@ -1,0 +1,26 @@
+#
+## Copyright Ingres Corporation 2007. All Rights Reserved.
+##
+## Name: prerm.template
+##
+## Description:
+##	Generic template file for DEB prerm script. Not intended to
+##	be manually runnable
+##
+## History:
+##	05-Jul-2007 (hanje04)
+##	    SIR 118420
+##	    Created.
+##
+export II_SYSTEM=%rpm_prefix%
+rc=0
+
+if [ "$1" = "remove" ] ; then
+    $II_SYSTEM/ingres/utility/iigenpreun -r %rpm_basename% \
+        -v %rpm_version% -p %pkg_name% %pkg_sulist%
+    rc=$?
+fi
+
+
+exit $rc
+

@@ -1,0 +1,49 @@
+#
+# Jamfile file for gl!glf!mo
+#
+
+SubDir ING_SRC gl glf mo ;
+
+IISUBSYS gl glf mo ;
+
+
+IIBINEXE motest3 : motest3.c ;
+IINEEDLIBS motest3 : COMPAT ;
+
+IIBINEXE motest2 : motest2.c ;
+IINEEDLIBS motest2 : COMPAT ;
+
+IIBINEXE motest : motest.c ;
+IINEEDLIBS motest : COMPAT ;
+
+IILIBRARY COMPATLIB : mozget.c
+	moutil.c
+	mouivget.c
+	mouipset.c
+	mouipget.c
+	motrees.c
+	motmstr.c
+	mostrset.c
+	mostrget.c
+	mostr.c
+	mostpget.c
+	moset.c
+	mopvget.c
+	moptrget.c
+	mopidget.c
+	monoset.c
+	momutex.c
+	momon.c
+	mometa.c
+	momem.c
+	moivget.c
+	mointset.c
+	mointget.c
+	mogetnxt.c
+	moget.c
+	modebug.c
+	moclass.c
+	mobget.c
+	moattach.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : modata.c ;

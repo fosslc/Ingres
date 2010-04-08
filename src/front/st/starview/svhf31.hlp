@@ -1,0 +1,50 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+Distributed Database Contents
+
+The Distributed Database Contents form displays distributed object information 
+of the current distributed database. The information displayed include the 
+object name, object owner, and object type. The OBJATTR command displays
+the object attributes of the highlighted object. Object attributes include 
+information such as creation dates, and local/underlying object information. 
+The BROWSE command allows the ISQL and/or Tables utilities to be invoked on 
+a selected local database. Additionally, the BROWSE command allows
+selected local objects to be registered in the current distributed database.
+The REMOVE command deletes registrations from the current distributed
+database (underlying local objects are not deleted). The CRITERIA command 
+modifies the selection criteria of the displayed distributed objects - 
+only objects meeting the all of selection criteria are displayed.
+The TOP/BOTTOM commands move the cursor to the top/bottom of the OBJECTS 
+table field. The FIND command searches for a specified string within the 
+OBJECTS table field. The HELP command displays this screen, and 
+the END command returns to the Nodes and Local Databases form.
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	ObjAttr		Display attributes about the highlighted object.
+
+	Browse		Browse nodes, databases, and local objects; also
+			allow registration of local objects in the
+			current distributed database.
+
+	Remove		Remove the registration of the highlighted object
+			from the current distributed database (underlying local
+			objects are not removed from the local database).
+
+	Criteria	Modify the Object Selection Criteria to control the
+			display of distributed objects. The OBJECTS table field
+			may change if criteria is modified.
+
+	Top		Move the cursor to the top of the OBJECTS table field.
+
+	Bottom		Move the cursor to the bottom of the OBJECTS table 
+			field.
+
+	Find		Search for a specified string of characters within the 
+			OBJECTS table field.
+
+	Help		Display this screen.
+
+	End		Exit to the Nodes and Local Databases form.
+

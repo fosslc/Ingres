@@ -1,0 +1,157 @@
+INGRES TERMINAL MONITOR Copyright (c) 2004 Ingres Corporation
+Ingres Microsoft Windows 2000 Version II 2.5/0006 (int.w32/90) login
+Tue Feb 20 16:05:38 2001
+
+continue
+* Executing . . .
+
+continue
+* * * create table nc (f nvarchar(10) not null,
+		 n  nvarchar(20),
+		 l nvarchar(12) not null)
+Executing . . .
+
+continue
+* * * * * * * * * * * * * * * * * * * * * * * * * * * Executing . . .
+
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+continue
+* * Executing . . .
+
+(25 rows)
+
++------------------------+--------------------+
+|l                       |f                   |
++------------------------+--------------------+
+|Black                   |John                |
+|Bohl                    |Marilyn             |
+|Butterworth             |Paul                |
+|Carter                  |Fred                |
+|Collier                 |Cal                 |
+|Fried                   |Jeff                |
+|Hung                    |David               |
+|Leachman                |Claire              |
+|Lee                     |Carl                |
+|Lee                     |Shirley             |
+|Lyerla                  |Jennifer            |
+|Matrigali               |Mike                |
+|McCord                  |Rob                 |
+|McGhee                  |Claire              |
+|Park                    |Kelly               |
+|Pasker                  |Bob                 |
+|Rees                    |Steve               |
+|Schmitz                 |Peter               |
+|Seputis                 |Ed                  |
+|Simonson                |Dave                |
+|Taranto                 |Roger               |
+|White                   |Bill                |
+|Winning                 |Mike                |
+|Wong                    |Jon                 |
+|Wong                    |Marian              |
++------------------------+--------------------+
+(25 rows)
+continue
+* select l,f from nc where f='Bob'
+Executing . . .
+
+
++------------------------+--------------------+
+|l                       |f                   |
++------------------------+--------------------+
+|Pasker                  |Bob                 |
++------------------------+--------------------+
+(1 row)
+continue
+* select l,f from nc where f='bob'
+Executing . . .
+
+
++------------------------+--------------------+
+|l                       |f                   |
++------------------------+--------------------+
++------------------------+--------------------+
+(0 rows)
+continue
+* select f,l from nc where l='Wong'
+Executing . . .
+
+
++--------------------+------------------------+
+|f                   |l                       |
++--------------------+------------------------+
+|Jon                 |Wong                    |
+|Marian              |Wong                    |
++--------------------+------------------------+
+(2 rows)
+continue
+* select l,f from nc where l >= 'QUIGLEY' and l <= 'taranto'
+Executing . . .
+
+
++------------------------+--------------------+
+|l                       |f                   |
++------------------------+--------------------+
++------------------------+--------------------+
+(0 rows)
+continue
+* select l,f from nc where l like 'p%'
+Executing . . .
+
+
++------------------------+--------------------+
+|l                       |f                   |
++------------------------+--------------------+
++------------------------+--------------------+
+(0 rows)
+continue
+* Executing . . .
+
+
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|nick_name                                                                                                                                                                                             |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|John "back in" Black                                                                                                                                                                                  |
+|Marilyn "Manute" Bohl                                                                                                                                                                                 |
+|Paul "Line Drive" Butterworth                                                                                                                                                                         |
+|Fred "UDT" Carter                                                                                                                                                                                     |
+|Cal "Bears" Collier                                                                                                                                                                                   |
+|Carl "BRUCE" Lee                                                                                                                                                                                      |
+|Shirley "Don't call me Bruce" Lee                                                                                                                                                                     |
+|Jennifer "backend" Lyerla                                                                                                                                                                             |
+|Mike "hoops" Matrigali                                                                                                                                                                                |
+|Rob "Corcky" McCord                                                                                                                                                                                   |
+|Ed "buy some new pants" Seputis                                                                                                                                                                       |
+|Roger "NOT Montreal" Taranto                                                                                                                                                                          |
+|Bill "black and" White                                                                                                                                                                                |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(13 rows)
+continue
+* 
+Your SQL statement(s) have been committed.
+
+Ingres Version II 2.5/0006 (int.w32/90) logout
+Tue Feb 20 16:05:38 2001

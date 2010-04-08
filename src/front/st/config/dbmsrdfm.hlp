@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The rdf_memory resource specifies the size of the cache which will be
+  maintained by the Relation Description Facility (RDF) within DBMS servers
+  created with this definition.

@@ -1,0 +1,41 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at a catalog of the global variables defined and used 
+by an application.  The table field lists the names of all the global 
+variables along with their data type, nullability, and a short remark.
+
+To create a new global variable, use the Create menu operation.  To perform
+one of the menu operations on an existing global variable, first position the
+cursor on the row containing the name of the global variable of interest by
+using the cursor keys or the table field scrolling keys.  After the cursor
+has been positioned on the row containing the global variable of interest,
+select the desired menu operation.
+
+The menu options are:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Create          Create a definition of a new global variable.  If the
+                        variable does not exist, it will be created and
+                        you will be placed in the definition frame for that
+                        variable.
+
+        Destroy         Destroy the global variable you have selected.
+                        You will be asked to confirm this decision.  You may
+                        only destroy global variables that you are authorized
+                        to modify.
+
+        Edit            Edit the selected global variable.  This goes to an
+                        Edit Definition frame for the selected variable where
+                        you can change its definition.
+
+        Rename          Change the name of the global variable you have
+                        selected.  You are prompted for the new name of the
+                        global variable.  If you immediately press the
+                        RETURN key without entering a name, the command is
+                        cancelled and the cursor returns to the table field.  
+                        If you enter a legal name, the name of the component 
+                        is changed in the database. 
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the application catalog frame.

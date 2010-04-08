@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!libwctrl_win
+#
+
+SubDir ING_SRC front vdba libwctrl_win ;
+
+IISUBSYS front vdba libwctrl_win ;
+
+
+IISLN libwctrl.lib : ctrltool.sln ;

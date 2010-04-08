@@ -1,0 +1,22 @@
+#
+# Jamfile file for front!frame!copyform
+#
+
+SubDir ING_SRC front frame copyform ;
+
+IISUBSYS front frame copyform ;
+
+
+#IIBINEXE copyform : copyform.c cfglobs.c ;
+IIBINEXE copyform : copyform.c ;
+IINEEDLIBS copyform :  COPYFORMLIB VIFREDLIB MALLOCLIB
+	SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS copyform : II_copyright malloc ;
+
+IIMSGHDR ercf.msg ;
+
+IILIBRARY COPYFORMLIB : cfwrobj.qsc cfsave.qsc cfrdobj.qsc
+	cfobjexi.qsc cfdmpobj.qsc cfdelobj.qsc cfcomp.qsc cfaddobj.qsc
+	readform.c cfutils.c cfcnvt60.c ;
+
+IILIBRARY IMPFRAMELIBDATA : cpfmdata.c cfglobs.c ;

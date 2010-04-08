@@ -1,0 +1,215 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for timezone files. 
+*/
+
+/*
+** History
+**	27-Aug-2002 (hanch04)
+**	    Created from zoneinfo.ccpp
+**      05-feb-2004 (horda03) Bug 111114/INGSRV2698
+**          Added Moscow timezone.
+**      18-Apr-2005 (hanje04)
+**          Re-add astrl/yanco timezone files. Removed in error at some point.
+**	13-dec-2005 (drivi01)
+**	    SIR 115597
+**	    Added 11 Moscow timezones.
+**	28-nov-2006 (hayke02)
+**	    Add utility/lp64/[iizic,iizck] to allow hand-building and checking
+**	    of lp64 timezone files.
+**      22-Feb-2006 (hanal04) Bug 117753
+**          Make iiworld.tz available in sig along with instructions for
+**          Changing and build timezone files.
+**      17-nov-2009 (horda03) Bug 122916
+**          Add FIJI timezone.
+*/
+
+PART   zoneinfo64
+
+/*
+** ingres!utility!lp64
+*/
+
+   DIRECTORY (PROD2NAME)!utility!lp64
+   BUILD_DIR (ING_BUILD)!utility!lp64
+      EXECUTABLE (PROG1PRFX)zck
+      EXECUTABLE (PROG1PRFX)zic
+
+/*
+** ingres!files!zoneinfo!lp64!gmt
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp64!gmt
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp64!gmt
+      FILE gmt
+      FILE gmt-12
+      FILE gmt-11
+      FILE gmt-10
+      FILE gmt-9
+      FILE gmt-8
+      FILE gmt-7
+      FILE gmt-6
+      FILE gmt-5
+      FILE gmt-4
+      FILE gmt-3
+      FILE gmt-2
+      FILE gmt-1
+      FILE gmt1
+      FILE gmt2
+      FILE gmt3
+      FILE gmt4
+      FILE gmt5
+      FILE gmt6
+      FILE gmt7
+      FILE gmt8
+      FILE gmt9
+      FILE gmt10
+      FILE gmt11
+      FILE gmt12
+      FILE gmt13
+      FILE gmt-2half
+      FILE gmt-3half
+      FILE gmt3half
+      FILE gmt5half
+      FILE gmt9half
+      FILE gmt10half
+
+/*
+** ingres!files!zoneinfo!lp64!asia
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp64!asia
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp64!asia
+      FILE prc
+      FILE roc
+      FILE hongkong
+      FILE japan
+      FILE korea
+      FILE india
+      FILE pakistan
+      FILE moscow2
+      FILE moscow3
+      FILE moscow4
+      FILE moscow5
+      FILE moscow6
+      FILE moscow7
+      FILE moscow8
+      FILE moscow9
+
+
+/*
+** ingres!files!zoneinfo!lp64!astrl
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp64!astrl
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp64!astrl
+      FILE tsmni
+      FILE qnslnd
+      FILE ausnorth
+      FILE auswest
+      FILE aussouth
+      FILE vctr
+      FILE nsw
+      FILE lhi
+      FILE yanco
+
+/*
+** ingres!files!zoneinfo!lp64!mideast
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp64!mideast
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp64!mideast
+      FILE egypt
+      FILE kuwait
+      FILE iran
+      FILE israel
+      FILE saudi
+
+/*
+** ingres!files!zoneinfo!lp64!na
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp64!na
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp64!na
+      FILE eastern
+      FILE central
+      FILE mountain
+      FILE pacific
+      FILE alaska
+      FILE nwfdlnd
+      FILE atlantic
+      FILE yukon
+      FILE mxbajan
+      FILE mxbajas
+      FILE mxgen
+
+/*
+** ingres!files!zoneinfo!lp64!sp
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp64!sp
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp64!sp
+      FILE fiji
+      FILE hawaii
+      FILE nz
+      FILE nz-chat
+
+/*
+** ingres!files!zoneinfo!lp64!europe
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp64!europe
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp64!europe
+      FILE gb
+      FILE euwest
+      FILE eucntrl
+      FILE poland
+      FILE eueast
+      FILE moscow-1
+      FILE moscow
+      FILE moscow1
+      FILE turkey
+
+/*
+** ingres!files!zoneinfo!lp64!sa
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp64!sa
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp64!sa
+      FILE bzeast
+      FILE bzwest
+      FILE bzacre
+      FILE bzden
+      FILE chlcont
+      FILE easteris
+
+/*
+** ingres!files!zoneinfo!lp64!seasia
+*/
+
+   DIRECTORY (PROD2NAME)!files!zoneinfo!lp64!seasia
+   BUILD_DIR (ING_BUILD)!files!zoneinfo!lp64!seasia
+      FILE indowest
+      FILE indocntr
+      FILE indoeast
+      FILE malaysia
+      FILE phlppns
+      FILE sngpr
+      FILE thailand
+      FILE vietnam
+
+/*
+**	ingres!sig!tz
+*/
+
+# ifdef FULL_RELEASE
+   DIRECTORY (PROD2NAME)!sig!tz
+   BUILD_DIR (ING_BUILD)!sig!tz
+        FILE australasia.tz
+        FILE howto.txt
+	FILE readme.html
+	FILE iiworld.tz
+# endif /* FULL_RELEASE */
+

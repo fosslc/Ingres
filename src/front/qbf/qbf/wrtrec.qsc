@@ -1,0 +1,159 @@
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	"mqbf.qsh"
+# include	"mqeglobs.h"
+# include	<me.h>
+# include	<er.h>
+# include	"erqf.h"
+
+/*
+** Copyright (c) 2004 Ingres Corporation
+**
+**	WRTREC.QSC  -  Routines for writing records to temporary buffer
+**
+**	These routines store the changes made in MQBF for updating a
+**	table in INGRES.  Currently, INGRES cannot update a table and
+**	retrieve at the same time, therefore the changes must be
+**	buffered until the retrieve is finished.
+**
+**	Routines: mqwrtinit()
+**		  mqwrtrec()
+**		  mqwrtfin()
+**		  mqwrtdel()
+**
+**	History:
+**
+**		Revision 3.22.171.1  85/07/09  11:57:07	 wong
+**			Test for unopened file before trying to close
+**			in 'mqwrtfin()'.  BUG #3689.
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh
+**	09/17/93 (dkh) - Fixed up compiler warnings on prototype mismatches.
+**
+**	Written: 2/29/84 (NML)	-some routines stolen from qbf.
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      06-feb-2009 (stial01)
+**          Define stack buffer big enough for mgrangevar in RELINFO
+**          Copy mqrangevar for sizeof(mqrangevar)
+*/
+
+static	LOCATION	mqloc = {0};
+
+/*
+** mqwrtinit - routine to initialize MQBF's temporary buffer.
+*/
+mqwrtinit()					/* MQWRTINIT: */
+{
+	LOCATION	locate;
+	i4		status;
+
+
+	/* open a file in the temp directory */
+/*
+**	if ((status = NMt_open("w", "mq", "", &locate, &mq_tfile)) != OK)
+**		return(FALSE);
+*/
+
+	if ((status = FEt_open_bin(ERx("w"), ERx("mq"), ERx(""), &locate, &mq_tfile)) != OK)
+		return(FALSE);
+	Upd_exists = TRUE;	/* keep track of open update file for interrupt cleanup */
+
+	/* copy the loc for deletion and get the file name */
+	LOcopy(&locate, mqflnm, &mqloc);
+
+# ifdef lint
+	status = status;	/*use variable to keep lint happy */
+# endif
+	return(TRUE);
+}
+
+/*
+** mqwrtrec  - routine to write out the data just updated
+**	       for the current qdef to the temporary file.
+**	       A record's range variable, tid and status
+**	       is written first, followed by the actual
+**	       data record.  Status indicates whether the
+**	       record was changed, deleted or unchanged.
+*/
+mqwrtrec(tbl, reclen, status, tfirst)
+RELINFO *tbl;			/* individual relation info */
+i4	reclen;			/* length of record to be written */
+int	status;			/* status of record */
+i4	tfirst;			/* indicates if this is first tbl for the rec*/
+{
+	i4	bytcnt;
+	char	inforec[60 + sizeof(RELINFO)];
+	char	*infoptr = inforec;
+
+	*infoptr = '\0';
+
+	/* move the range var into inforrec */
+	MEcopy(tbl->mqrangevar, (sizeof tbl->mqrangevar), infoptr);
+	infoptr += (sizeof tbl->mqrangevar);
+
+	/* move the tuple id into inforec */
+	MEcopy(tbl->mqmtid.db_data, tbl->mqmtid.db_length, infoptr);
+	infoptr += tbl->mqmtid.db_length;
+
+
+	/* move the record status into inforec */
+	MEcopy((PTR) &status, sizeof(status), (PTR) infoptr);
+	infoptr += sizeof status;
+	MEcopy((PTR) &tfirst, sizeof(tfirst), (PTR) infoptr);
+	infoptr += sizeof tfirst;
+
+	/* write out the record */
+	if(SIwrite(infoptr-inforec, inforec, &bytcnt, mq_tfile) != OK)
+	{
+		FDerror(BADWRITE);
+	}
+	SIflush(mq_tfile);
+
+	/* now write out the data record */
+	if (tbl->mqtype == 0)
+	{
+		if(SIwrite(reclen, mqumrec, &bytcnt, mq_tfile) != OK)
+		{
+			FDerror(BADWRITE);
+		}
+	}
+	else
+	{
+		if (SIwrite(reclen, mqudrec, &bytcnt, mq_tfile) != OK)
+		{
+			FDerror(BADWRITE);
+		}
+	}
+	SIflush(mq_tfile);
+}
+
+/*
+** mqwrtfin()  - routine to close the temporary file.
+**
+**	History:
+**		07/09/85 (jhw) -- Test for unopened file before trying to close.
+**			BUG #3689.
+*/
+mqwrtfin()
+{
+	if (mq_tfile != (FILE *)NULL)
+		SIclose(mq_tfile);
+}
+
+/*
+** mqwrtdel() - Routine to remove the temporary file.
+*/
+mqwrtdel()
+{
+	LOdelete(&mqloc);
+	Upd_exists = FALSE;
+}

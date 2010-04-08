@@ -1,0 +1,495 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for remote API connection
+*/
+
+/*
+** History
+**	29-Mar-2004 (hweho01)
+**        Added for remote API package. 
+**	17-Jun-2004 (hweho01)
+**        Added iisyslim, iiread_response and ucharmaps files into the package. 
+**        Removed iibrowse from the package list.
+**	15-Jul-2004 (hanje04)
+**	  Remove ii from iiread_response because it uses (PROG1PRFX).
+**	20-Aug-2004 (hanje04)
+**	  Include gcnapi.h.
+**	23-feb-2005 (abbjo03)
+**	    Changes to build VMS using same directory structure as Unix.
+**	11-Jan-2006 (hweho01)
+**	    Added iipthreadtst which is called by iirundbms.
+**          Also added the 64-bit version syscheck for Solaris. 
+*/
+
+PART  remoteapicon
+   capability CI_INGRES_NET
+
+   DIRECTORY (PROD2NAME)
+      FILE version.rel
+
+/*
+** ingres!bin
+*/
+
+   DIRECTORY (PROD2NAME)!bin
+   BUILD_DIR (ING_BUILD)!bin
+      EXECUTABLE (PROG1PRFX)gcc
+      EXECUTABLE (PROG2PRFX)prenv
+      EXECUTABLE (PROG2PRFX)setenv
+      EXECUTABLE (PROG2PRFX)unset
+
+
+/*
+** ingres!utility
+*/
+
+   DIRECTORY (PROD2NAME)!utility
+   BUILD_DIR (ING_BUILD)!utility
+      {
+      PERMISSION s:rwed,o:rwed,g:re,w:re,setuid
+        EXECUTABLE (PROG0PRFX)csreport
+      }
+      EXECUTABLE (PROG1PRFX)genres
+      EXECUTABLE (PROG1PRFX)getenv
+      EXECUTABLE (PROG1PRFX)getres
+      EXECUTABLE (PROG1PRFX)read_response
+      EXECUTABLE (PROG1PRFX)initres
+      EXECUTABLE (PROG1PRFX)ingloc
+      EXECUTABLE (PROG1PRFX)pmhost
+      EXECUTABLE (PROG1PRFX)remres
+      EXECUTABLE (PROG1PRFX)resutl
+      EXECUTABLE (PROG1PRFX)run
+      EXECUTABLE (PROG1PRFX)setres
+      EXECUTABLE (PROG2PRFX)start
+      EXECUTABLE (PROG1PRFX)sulock
+      EXECUTABLE (PROG1PRFX)pthreadtst
+      EXECUTABLE syscheck
+      EXECUTABLE (PROG1PRFX)valres
+      SCRIPT (PROG1PRFX)dsfree
+      SCRIPT (PROG1PRFX)syslim
+      SCRIPT (PROG1PRFX)echonn
+      SCRIPT (PROG1PRFX)filsiz
+      SCRIPT (PROG1PRFX)gcfid
+      SCRIPT (PROG1PRFX)rundbms
+      SCRIPT (PROG1PRFX)shlib
+      SCRIPT (PROG1PRFX)startup
+      SCRIPT (PROG1PRFX)sysdep
+      SCRIPT (PROG2PRFX)stop
+      SCRIPT SETUP (PROG1PRFX)suapi
+
+#if defined(su4_us5) || defined(su9_us5)
+   DIRECTORY (PROD2NAME)!utility!lp64
+   BUILD_DIR (ING_BUILD)!utility!lp64
+      EXECUTABLE syscheck
+#endif 
+
+
+/*
+** ingres!files
+*/
+
+   DIRECTORY (PROD2NAME)!files
+   BUILD_DIR (ING_BUILD)!files
+      FILE all.crs
+      FILE net.crs
+      FILE tz.crs
+      FILE default.rfm
+      FILE net.rfm
+      FILE gcnapi.h
+
+/*
+** ingres!files!charsets
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets
+   BUILD_DIR (ING_BUILD)!files!charsets
+      FILE gcccset.nam
+      FILE gcccset.xlt
+
+/*
+** ingres!files!charsets!alt
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!alt
+   BUILD_DIR (ING_BUILD)!files!charsets!alt
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!arabic
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!arabic
+   BUILD_DIR (ING_BUILD)!files!charsets!arabic
+      FILE desc.chx
+
+# ifdef DOUBLEBYTE
+/*
+** ingres!files!charsets!chineses
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!chineses
+   BUILD_DIR (ING_BUILD)!files!charsets!chineses
+      FILE desc.chx
+
+# endif /* DOUBLEBYTE */
+
+/*
+** ingres!files!charsets!cw
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!cw
+   BUILD_DIR (ING_BUILD)!files!charsets!cw
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!decmulti
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!decmulti
+   BUILD_DIR (ING_BUILD)!files!charsets!decmulti
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!elot437
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!elot437
+   BUILD_DIR (ING_BUILD)!files!charsets!elot437
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!greek
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!greek
+   BUILD_DIR (ING_BUILD)!files!charsets!greek
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!hebrew
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!hebrew
+   BUILD_DIR (ING_BUILD)!files!charsets!hebrew
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!hproman8
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!hproman8
+   BUILD_DIR (ING_BUILD)!files!charsets!hproman8
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!ibmpc437
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!ibmpc437
+   BUILD_DIR (ING_BUILD)!files!charsets!ibmpc437
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!ibmpc850
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!ibmpc850
+   BUILD_DIR (ING_BUILD)!files!charsets!ibmpc850
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!ibmpc866
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!ibmpc866
+   BUILD_DIR (ING_BUILD)!files!charsets!ibmpc866
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!iso88591
+*/
+
+   BUILD_DIR (ING_BUILD)!files!charsets!iso88591
+   DIRECTORY (PROD2NAME)!files!charsets!iso88591
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!iso88592
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!iso88592
+   BUILD_DIR (ING_BUILD)!files!charsets!iso88592
+      FILE desc.chx
+/*
+** ingres!files!charsets!iso88595
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!iso88595
+   BUILD_DIR (ING_BUILD)!files!charsets!iso88595
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!iso88599
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!iso88599
+   BUILD_DIR (ING_BUILD)!files!charsets!iso88599
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!is885915
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!is885915
+   BUILD_DIR (ING_BUILD)!files!charsets!is885915
+      FILE desc.chx
+
+# ifdef DOUBLEBYTE
+/*
+** ingres!files!charsets!kanjieuc
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!kanjieuc
+   BUILD_DIR (ING_BUILD)!files!charsets!kanjieuc
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!korean
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!korean
+   BUILD_DIR (ING_BUILD)!files!charsets!korean
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!shiftjis
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!shiftjis
+   BUILD_DIR (ING_BUILD)!files!charsets!shiftjis
+      FILE desc.chx
+
+# endif /* DOUBLEBYTE */
+
+/*
+** ingres!files!charsets!slav852
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!slav852
+   BUILD_DIR (ING_BUILD)!files!charsets!slav852
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!thai
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!thai
+   BUILD_DIR (ING_BUILD)!files!charsets!thai
+      FILE desc.chx
+/*
+** ingres!files!charsets!win1250
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!win1250
+   BUILD_DIR (ING_BUILD)!files!charsets!win1250
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!win1252
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!win1252
+   BUILD_DIR (ING_BUILD)!files!charsets!win1252
+      FILE desc.chx
+
+
+# ifdef DOUBLEBYTE
+/*
+** ingres!files!charsets!chtbig5
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!chtbig5
+   BUILD_DIR (ING_BUILD)!files!charsets!chtbig5
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!chthp
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!chthp
+   BUILD_DIR (ING_BUILD)!files!charsets!chthp
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!chteuc
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!chteuc
+   BUILD_DIR (ING_BUILD)!files!charsets!chteuc
+      FILE desc.chx
+# endif /* #ifdef DOUBLEBYTE */
+
+/*
+** ingres!files!charsets!wthai
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!wthai
+   BUILD_DIR (ING_BUILD)!files!charsets!wthai
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!whebrew
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!whebrew
+   BUILD_DIR (ING_BUILD)!files!charsets!whebrew
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!pchebrew
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!pchebrew
+   BUILD_DIR (ING_BUILD)!files!charsets!pchebrew
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!warabic
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!warabic
+   BUILD_DIR (ING_BUILD)!files!charsets!warabic
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!dosasmo
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!dosasmo
+   BUILD_DIR (ING_BUILD)!files!charsets!dosasmo
+      FILE desc.chx
+
+/*
+** ingres!files!charsets!utf8
+*/
+
+   DIRECTORY (PROD2NAME)!files!charsets!utf8
+   BUILD_DIR (ING_BUILD)!files!charsets!utf8
+      FILE desc.chx
+
+
+/*
+** ingres!files!ucharmaps
+*/
+
+   DIRECTORY (PROD2NAME)!files!ucharmaps
+   BUILD_DIR (ING_BUILD)!files!ucharmaps
+	FILE aliasmaptbl
+	FILE ca-big5-cht-2004
+	FILE ca-big5-cht-2004.xml
+	FILE ca-big5-hkscs-cht-2004
+	FILE ca-big5-hkscs-cht-2004.xml
+	FILE ca-cp852-slav852-latin2-2004
+	FILE ca-cp852-slav852-latin2-2004.xml
+	FILE ca-cp856-hebrew_old-2004
+	FILE ca-cp856-hebrew_old-2004.xml
+	FILE ca-cp874-thai_euro-th-2004
+	FILE ca-cp874-thai_euro-th-2004.xml
+	FILE ca-cp943c-shiftjis-jp-2004
+	FILE ca-cp943c-shiftjis-jp-2004.xml
+	FILE ca-cp949-cn-2004
+	FILE ca-cp949-cn-2004.xml
+	FILE ca-cp950-big5_euro-cht-2004
+	FILE ca-cp950-big5_euro-cht-2004.xml
+	FILE ca-ebcdic-ibm37-2004
+	FILE ca-ebcdic-ibm37-2004.xml
+	FILE ca-ebcdic-xml-us-2004
+	FILE ca-ebcdic-xml-us-2004.xml
+	FILE ca-elot437-cp851-greek-2004
+	FILE ca-elot437-cp851-greek-2004.xml
+	FILE ca-euccn-gb2312-cn-2004
+	FILE ca-euccn-gb2312-cn-2004.xml
+	FILE ca-eucjp-kanjieuc-jp-2004
+	FILE ca-eucjp-kanjieuc-jp-2004.xml
+	FILE ca-euckr-kr-2004
+	FILE ca-euckr-kr-2004.xml
+	FILE ca-euctw-chteuc-2004
+	FILE ca-euctw-chteuc-2004.xml
+	FILE ca-gb2312-80-cn-2004
+	FILE ca-gb2312-80-cn-2004.xml
+	FILE ca-gbk-csgbk-cn-2004
+	FILE ca-gbk-csgbk-cn-2004.xml
+	FILE ca-hproman8-latin1-2004
+	FILE ca-hproman8-latin1-2004.xml
+	FILE ca-ibm1251-cyrillic-2004
+	FILE ca-ibm1251-cyrillic-2004.xml
+	FILE ca-ibm1255-hebrew-2004
+	FILE ca-ibm1255-hebrew-2004.xml
+	FILE ca-ibm367-ascii-2004
+	FILE ca-ibm367-ascii-2004.xml
+	FILE ca-ibm855-alt-cyrillic-2004
+	FILE ca-ibm855-alt-cyrillic-2004.xml
+	FILE ca-ibm858-latin1_euro-2004
+	FILE ca-ibm858-latin1_euro-2004.xml
+	FILE ca-ibm862-pchebrew-2004
+	FILE ca-ibm862-pchebrew-2004.xml
+	FILE ca-ibm864-arabic-2004
+	FILE ca-ibm864-arabic-2004.xml
+	FILE ca-ibm866-cyrillic-2004
+	FILE ca-ibm866-cyrillic-2004.xml
+	FILE ca-ibm867-hebrew-2004
+	FILE ca-ibm867-hebrew-2004.xml
+	FILE ca-ibm869-greek-2004
+	FILE ca-ibm869-greek-2004.xml
+	FILE ca-ibmpc437-pcus-2004
+	FILE ca-ibmpc437-pcus-2004.xml
+	FILE ca-ibmpc850-latin1-2004
+	FILE ca-ibmpc850-latin1-2004.xml
+	FILE ca-iso8859-1-latin1-2004
+	FILE ca-iso8859-1-latin1-2004.xml
+	FILE ca-iso8859-15-latin9-2004
+	FILE ca-iso8859-15-latin9-2004.xml
+	FILE ca-iso8859-2-latin2-2004
+	FILE ca-iso8859-2-latin2-2004.xml
+	FILE ca-iso8859-5-cyrillic-2004
+	FILE ca-iso8859-5-cyrillic-2004.xml
+	FILE ca-iso8859-6-arabic-2004
+	FILE ca-iso8859-6-arabic-2004.xml
+	FILE ca-iso8859-7-greek-2004
+	FILE ca-iso8859-7-greek-2004.xml
+	FILE ca-iso8859-8-hebrew-2004
+	FILE ca-iso8859-8-hebrew-2004.xml
+	FILE ca-iso8859-9-turkish-2004
+	FILE ca-iso8859-9-turkish-2004.xml
+	FILE ca-koi8-cyrillic-2004
+	FILE ca-koi8-cyrillic-2004.xml
+	FILE ca-ksc5601-korean-kr-2004
+	FILE ca-ksc5601-korean-kr-2004.xml
+	FILE ca-pc857-turkish-2004
+	FILE ca-pc857-turkish-2004.xml
+	FILE ca-tis620-wthai-th-2004
+	FILE ca-tis620-wthai-th-2004.xml
+	FILE ca-us-ascii-2004
+	FILE ca-us-ascii-2004.xml
+	FILE ca-win1250-latin2-2004
+	FILE ca-win1250-latin2-2004.xml
+	FILE ca-win1251-cyrillic-2004
+	FILE ca-win1251-cyrillic-2004.xml
+	FILE ca-win1252-latin1-2004
+	FILE ca-win1252-latin1-2004.xml
+	FILE ca-win1253-greek_euro-2004
+	FILE ca-win1253-greek_euro-2004.xml
+	FILE ca-win1254-turkish-2004
+	FILE ca-win1254-turkish-2004.xml
+	FILE ca-win1255-whebrew-2004
+	FILE ca-win1255-whebrew-2004.xml
+	FILE ca-win1256-warabic-2004
+	FILE ca-win1256-warabic-2004.xml
+	FILE charactermapping.dtd
+	FILE charactermappingaliases.dtd
+	FILE charmapalias.xml
+	FILE default
+	FILE default.xml
+

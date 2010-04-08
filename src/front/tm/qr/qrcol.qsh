@@ -1,0 +1,63 @@
+/*
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+/*
+** Name:        qrcol.qsh -- Definition(s) for Column Access
+**
+** Description:
+**	This structure is used to pull in all the info used when
+** gathering column information for the help command that looks like:
+** 
+** Column Information:
+**                                                                   Key
+** Column Name                      Type       Length Nulls Defaults Seq
+** team_no                          integer         4  yes      no     1
+** team_name                        varchar        20  yes      no   
+** conf_no                          integer         4  yes      no   
+**
+** History:
+**	29-dec-1992 (daver)
+**	First Written.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	13-nov-2008 (dougi)
+**	    Added identity (for identity columns).
+**      28-jan-2009 (stial01)
+**          Use DB_MAXNAME for db objects, DB_IITYPE_LEN for iitypename() result
+*/
+
+EXEC SQL BEGIN DECLARE SECTION;
+
+typedef struct
+{
+	char    colname[DB_MAXNAME+1];
+	char    datatype[DB_IITYPE_LEN+1];
+	i4	extern_len;
+	i4	scale;
+	char    nulls[2];
+	char    defaults[2];
+	i4     seq;
+	i4     keyseq;
+	char    sort_direction[2];
+	char    idatatype[DB_IITYPE_LEN + 1];
+	i4     intern_len;
+	char    sysmaint[2];
+	char    has_default[2];
+	char	def_value[1501];
+	char    always_ident[1];
+	char    bydefault_ident[1];
+	i2	nulli;			/* only default value can be null */
+	char    def_type[11];
+	i4	maxstats;
+	/* internal ADF datavalue description */
+	i2      adf_type;
+	i2      intern_prec;
+	i4 intern_length;
+} QR_COL_INFO;
+
+EXEC SQL END DECLARE SECTION;

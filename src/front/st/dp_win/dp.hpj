@@ -1,0 +1,22 @@
+; This file is maintained by HCW. Do not modify this file directly.
+
+[OPTIONS]
+COMPRESS=12 Hall Zeck
+LCID=0x409 0x0 0x0 ; English (United States)
+REPORT=Yes
+TITLE=Help for DP
+CNT=dp.cnt
+COPYRIGHT=Copyright © 2005-2006 Ingres Corporation. All Rights Reserved.  All product names referenced herein are trademarks of their respective companies.
+HLP=dp.hlp
+
+[FILES]
+dp.rtf
+
+[MAP]
+dp_wizard_auth=131175             ; IDD_AUTH_PAGE
+dp_wizard_checkopts=131207          ; IDD_OPTIONS3_PAGE
+dp_wizard_logopts=131208        ; IDD_OPTIONS4_PAGE
+dp_wizard_printopts=131206          ; IDD_OPTIONS2_PAGE
+dp_wizard_tableinfo=131177          ; IDD_LOC_PAGE
+dp_wizard_tableoptions=131204             ; IDD_OPTIONS_PAGE
+dp_wizard_welcome=0

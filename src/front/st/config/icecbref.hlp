@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The cgi-bin_ref parameter is the Web server's CGI directory reference.
+
+ If you refer to your CGI directory in a Uniform Resource Location (URL)
+ format as "http://<Web_server_name_and_port_number>/cgi-bin," the value for 
+ cgi-bin_ref must be "/cgi-bin."
+
+ If you are not sure how your CGI directory is being referenced, please 
+ consult your Web server configuration before continuing.
+
+ This field is mandatory. The Ingres/ICE install process and 
+ executing applications on your Web server will not work without a valid
+ entry in this field.

@@ -1,0 +1,32 @@
+#
+# Jamfile file for front!misc!ingmenu
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+
+SubDir ING_SRC front misc ingmenu ;
+
+IISUBSYS front misc ingmenu ;
+
+
+IIBINEXE ingmenu : immain.c ;
+IINEEDLIBS ingmenu :  INGMENULIB MALLOCLIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS ingmenu : II_copyright malloc ;
+
+IIMSGHDR erim.msg ;
+
+IIQSHHDR imnaive.h : imnaive.qsh ;
+
+IIFORM imtopfr.frm ;
+
+File $(INGMSG)$(DFS)imform.hlp : imform.hlp ;
+File $(INGMSG)$(DFS)imlang.hlp : imlang.hlp ;
+File $(INGMSG)$(DFS)immain.hlp : immain.hlp ;
+
+
+IILIBRARY INGMENULIB : imvql.qsc imvig.qsc
+	imvifred.qsc imtables.qsc imspawn.qsc imrbf.qsc imnaive.qsc
+	immqbf.qsc imingres.qsc imabf.qsc imfutil.c imdata.c ;
+

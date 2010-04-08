@@ -1,0 +1,15 @@
+/#-- Copyright 2009 Ingres Corporation
+  The qef_hash_cmp_threshold resource controls the row size at which
+  hash join and hash aggregation will consider run-length compression
+  of the rows during the operation.  Compression can fit more rows into
+  memory and makes spill files smaller, at the expense of some CPU
+  overhead.  Larger rows are more likely to benefit from compression,
+  hence the threshold.
+
+  The threshold applies only to the size of that part of the row which is
+  NOT the join key columns (or hash aggregation group-by columns).
+
+  To disable RLE compression during hash join / aggregation, set this
+  threshold to zero.
+
+  The default is 128 bytes.

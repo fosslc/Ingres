@@ -1,0 +1,208 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+** All rights reserved.
+*/
+
+#include <compat.h>
+#include <cs.h>
+#include <dbms.h>
+#include <fe.h>
+#include <pc.h>
+#include <lk.h>
+#include <lg.h>
+#include <er.h>
+#include "lists.h"
+#include "servinfo.h"
+#include "ingpriv.h"
+#include "msgs.h"
+#include "dba.h"
+
+VOID showsess();
+VOID sessdetail();
+i4   chkingpriv();
+FUNC_EXTERN VOID tablefield_find();
+
+/*
+** constants for session status - if user removes a session, we track it
+** to prevent them from doing it again.
+*/
+#define SESSION_OK		0
+#define SESSION_TERMINATED	1
+#define SESSION_SUSPENDED	2
+
+/*
+** Declare file wide statics
+*/
+#if defined(LP64)
+static char shwsess[] = "fshowsess64";
+#else
+static char shwsess[] = "fshowsess";
+#endif  /* LP64 */
+
+## static char *Fshowsess = shwsess;
+
+/*
+**
+**  File: showsess.qc
+**
+**  Purpose - this file contains the routines which display the session
+**	information form.  
+**
+**  This file contains:
+**	showsess - displays the session list form. 
+**
+**  History
+**	1/6/89		tomt	created
+**	4/5/89		tomt	added routines to display the data
+**	4/7/89		tomt	added sess suspend,resume and remove
+**				functionality
+**	8/24/89		tomt	eliminated dispsessinfo routine and replaced
+**				with dispsrvinfo.  Added refresh menuitem.
+**      3/12/90         tomt    changed appearance of showsess and sessdetail
+**                              forms.
+**	6/19/90		tomt	no need to connect with server to delete
+**				sessions since connection is already 
+**				established before this routine is called.
+**	3/21/91		tomt	changed title on form to trim.  Removed
+**                              variable used to hold title.
+**      5/26/93 (vijay)
+**              include pc.h
+**      21-Sep-1993 (smc)
+**              Added <cs.h> for CS_SID.
+**	18-may-1995 (harpa06)
+**		Cross Integration bug fix for 56349 by nick: ensure we
+**		disconnect from the server if processing Quit() ; End() 
+**		doesn't require this.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	13-oct-2001 (somsa01)
+**	    Added references to the 64-bit forms.
+*/
+VOID
+showsess(server_name)
+PTR server_name;	/* need this to physically connect to server */
+{
+    STATUS	status;
+    bool	e_xit = FALSE;
+##  int		session_stat;
+##  char	sess_id[HEXID_SIZE + 1], colname[FE_MAXNAME + 1];
+##  u_i4	currow;
+##  int		sess_count = 0;
+
+    /* Display the form and get the information */
+##  DISPLAY Fshowsess READ
+##  INITIALIZE
+##  {
+	/* Put information on the form */
+##	INITTABLE Fshowsess #sessdet READ (#sess_stat = i2)
+	dispsrvinfo(DISP_SESS_LIST, server_name, (char *)0);
+
+##  }
+##  ACTIVATE MENUITEM "More_Info":
+##  {
+##	GETROW Fshowsess #sessdet (session_stat = #sess_stat,
+##	    sess_id = #session_id)
+	if (session_stat == SESSION_TERMINATED) {
+	    POP_MSG("this session has been terminated by you");
+	}
+	sessdetail(server_name, sess_id);
+##  }
+##  ACTIVATE MENUITEM "DBA_Operations":
+##  {
+##	DISPLAY SUBMENU
+##	INITIALIZE
+##	{
+
+	    /* Verify the user is a superuser, else refuse access */
+	    if (chkingpriv(ING_SUPERUSER) != OK) {
+		POP_MSG("You are not a superuser, no privilege for attempted operation");
+##	        BREAKDISPLAY
+            }
+
+##	}
+##	ACTIVATE MENUITEM "Delete":
+##	{
+
+##	    GETROW Fshowsess #sessdet (session_stat = #sess_stat,
+##		sess_id = #session_id)
+	    if (session_stat == SESSION_TERMINATED) {
+		POP_MSG("This session has already been terminated by you");
+##		RESUME
+	    }
+
+	    status = dosrvoper(REMOVE_SESSION, sess_id);
+	    if (status != OK) {
+		POP_MSG("Error deleting session");
+##		RESUME
+	    }
+	    session_stat = SESSION_TERMINATED;
+##	    PUTROW Fshowsess #sessdet (#sess_stat = session_stat)
+##	}
+##      ACTIVATE MENUITEM "Find", frskey7:
+##      {
+##          INQUIRE_FRS COLUMN Fshowsess #sessdet (colname = name)
+	    tablefield_find();
+##	    RESUME COLUMN #sessdet colname
+##      }
+##	ACTIVATE MENUITEM "Help", frskey1:
+##	{
+	    my_help("ipmdbaop.hlp", "DBA Operations");
+##	}
+##	ACTIVATE MENUITEM "End", frskey3:
+##	{
+##	    BREAKDISPLAY
+##	}
+##  }
+##  ACTIVATE MENUITEM "Refresh":
+##  {
+##	MESSAGE "Loading session list..."
+##	GETROW Fshowsess #sessdet (currow = _RECORD)
+	if ((status = load_servinfo(GET_SERVINFO, server_name) != OK))
+	{
+	    POP_MSG("Error getting session list.  Server may not exist\
+ or server may not be accepting connects.  To get an updated list of servers,\
+ return to previous screen and select the 'Refresh' menuitem");
+##	    RESUME
+	}
+##	CLEAR FIELD #sessdet 	/* clear tblfld */
+	dispsrvinfo(DISP_SESS_LIST, server_name, (char *)0);
+##	INQUIRE_FRS TABLE Fshowsess (sess_count = DATAROWS(#sessdet))
+	if (currow > sess_count)
+	{
+	    currow = sess_count;
+	}
+##	SCROLL Fshowsess #sessdet to currow
+##  }
+##  ACTIVATE MENUITEM "Find", frskey7:
+##  {
+##      INQUIRE_FRS COLUMN Fshowsess #sessdet (colname = name)
+	tablefield_find();
+##	RESUME COLUMN #sessdet colname
+##  }
+##  ACTIVATE MENUITEM "Help", frskey1:
+##  {
+	my_help("ipmshses.hlp", "Session List");
+##  }
+##  ACTIVATE MENUITEM "End", frskey3:
+##  {
+##	BREAKDISPLAY
+##  }
+##  ACTIVATE MENUITEM "Quit", frskey2:
+##  {
+	e_xit = TRUE;		/* user wants to leave */
+        if (dosrvoper(GC_SERV_DISCONNECT, (char *)NULL) != OK)
+        {
+            POP_MSG("Error disconnecting from server");
+        }
+##	MESSAGE " "		/* force cursor to bottom of screen */
+##	BREAKDISPLAY
+##  }
+
+    if (e_xit) {		/* user wants to leave */
+	terminate(OK);
+    }
+    return;
+}

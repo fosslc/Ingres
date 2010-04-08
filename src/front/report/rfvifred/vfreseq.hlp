@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame is used to change the runtime tabbing sequence of fields
+in your form.  To change the tabbing sequence of a field, simply 
+place the cursor on the desired field and select the "Edit" menu
+command.  The cursor will be placed over the current sequence value
+for the field, allowing you to change it to a new value.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Edit            Change the sequence number of the field the cursor
+                        is currently on.  This puts the cursor over the
+                        current value, allowing you to change the value
+                        in the field.
+
+        DefaultOrder    The tabbing sequence for all fields is set back to 
+                        the VIFRED default:  that is, left to right, top 
+                        to bottom.
+
+        Cancel          Returns to the Form Layout Frame, restoring the
+                        original tabbing sequence no matter what changes
+                        you have made since entering this form.
+
+        Help            Access the Ingres Help facility.
+
+        End             Returns to the Form Layout Form, committing any 
+                        changes that you have made.

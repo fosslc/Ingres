@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How a Profile Is Changed </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="Profile function, UPDATE statement">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body  onload="if (isTOCLoaded()) {expand('3405');expand('3326');expand('3319');highlight('3309')}">
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="profile_remove.htm" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="dev_connect.htm" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How a Profile Is Changed</h4>
+<p class="bodytext">Clicking the Change button submits the forms data, which is evaluated in <a href="showSource.php?file=profile" target="_blank">profile.php</a> and put in a new array. The array is passed as an argument to the update method of the <a href="showSource.php?file=ProfileModel" target="_blank">ProfileModel</a> instance.</p>
+<p class="bodytext">The update method generates the SQL to update the database, based on the elements in the array. Every element with an index different from &quot;up_image&quot; is attached to the string. For the value of the column &quot;up_image,&quot; the placeholder &quot;?&quot; is attached.</p>
+<p class="bodytext">If all inputs have values, the following SQL command is executed:</p>
+<p class="codefirst">UPDATE user_profile</p>
+<p class="code">SET</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;up_last = &quot;.$credits['up_last'].&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;up_first = $credits['up_first'].&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;up_email = &quot;.$credits['up_email'].&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;up_airport = &quot;.$credits['up-airport'].&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;up_image = ?</p>
+<p class="code">WHERE up_email = &quot;.$credits['up_email']</p>
+<p class="bodytext">If no image was uploaded, the following query is assembled:</p>
+<p class="codefirst">UPDATE user_profile</p>
+<p class="code">SET</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;up_last = &quot;.$credits['up_last'].&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;up_first = &quot;.$credits['up_first'].&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;up_email = &quot;.$credits['up_email'].&quot;,</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;up_airport = &quot;.$credits['up_atirport']</p>
+<p class="code">WHERE up_email = ?</p>
+<p class="bodytext">But if an image was uploaded, a parameter array is composed and the mapping types specified. Then the query is executed:</p>
+<p class="codefirst">//if a picture has been uploaded we will get the binary contents   </p>
+<p class="code">//into a php variable</p>
+<p class="code">$handle = fopen($credits['up_image'],&quot;rB&quot;);</p>
+<p class="code">$image = stream_get_contents($handle);</p>
+<p class="code">fclose($handle);</p>
+<p class="code"></p>
+<p class="code">//now we need to say that the variable $image has binary content</p>
+<p class="code">$sqltypes = &quot;B&quot;; // B stands for LONG BINARY</p>
+<p class="code"></p>
+<p class="code">//here we created our parameter array to pass to the query method</p>
+<p class="code">$params = array(&quot;up_image&quot; =&gt; $image);</p>
+<p class="code"></p>
+<p class="code">//execute the query</p>
+<p class="code">$this-&gt;DBConn-&gt;query($sql,$params,$sqltypes);</p>
+<p class="bodytext">If no image is given, the query is sent to the database:</p>
+<p class="codefirst">$this-&gt;DBConn-&gt;query($sql);</p>
+<p class="bodytext">If an exception is caught during query execution, we rollback our work to the last committed point. If not, we commit.</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2007 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

@@ -1,0 +1,21 @@
+#
+# Jamfile file for front!utils!fmt
+#
+#    20-Oct-2009 (hweho01)
+#      Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC front utils fmt ;
+
+IISUBSYS front utils fmt ;
+
+IINOOPTIM fmdeffmt.c : dg8_us5 ;
+
+
+IILIBRARY FMTLIB : strutil.c fstring.c fsetfmt.c fnt.c
+	fmvvalid.c fmvright.c fmvleft.c fmvcentr.c fmtutil.c 
+	fmsetfmt.c fmmulti.c fmkind.c fmisvald.c fmisrvsd.c fmftot.c
+	fmformat.c fmfmtsz.c fmdspinf.c fmdeffmt.c fmcvt.c fmareasz.c
+	finnt.c findate.c fgnum.c fformat.c ffmtstr.c ffmtdate.c
+	fcolfmt.c dateutil.c ;
+
+IILIBRARY IMPEMBEDLIBDATA : fmtdata.c ;

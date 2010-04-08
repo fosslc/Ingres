@@ -1,0 +1,12 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The qef_dsh_memory resource controls the maximum size of the general QEF
+  (Query Execution Facility) memory pool.   All sessions allocate memory
+  from this memory pool during query execution;  there is no individual limit
+  on how much DSH memory any one session may allocate.  This memory pool is
+  used for QEF work space as well as intermediate and final query variables.
+  Sorting and hashing buffers are allocated from a different memory pool.
+
+  A reasonable starting point for this resource is 50K to 100K per session.
+  The number should be increased if very many sessions may be executing
+  queries simultaneously, or if queries are very complex, or if many very
+  wide columns are common in queries.

@@ -1,0 +1,36 @@
+.TH MKIDIR 1 "Ingres" "Building INGRES on UNIX" "Ingres"
+.\" History:
+.\"	18-dec-1989 (boba)
+.\"		Created (long overdue).
+.\"	03-dec-1992 (lauraw)
+.\"		Updated for 6.5. 
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+mkidir \- create directories needed to build INGRES
+.SH ORIGIN
+Ingres
+.SH SYNOPSIS
+.B mkidir
+.SH DESCRIPTION
+.I Mkidir
+creates all of the directories needed under \fB$ING_BUILD\fP and $ING_SRC
+to build the INGRES base product, including the directories needed
+for a working INGRES installation.   
+Permissions are set explicitly for each of the directories created.
+.PP
+.I Mkidir
+must be run by the "ingres" user.
+.PP
+You can run
+.I mkidir
+at any time during the build process.
+.I Mkidir
+creates directories that do not exist, and runs
+.I chmod
+on directories do exist to set permissions correctly.
+.SH "SEE ALSO"
+.BR prerls(1)
+.SH FILES
+.br
+$ING_SRC/tools/port/conf/idirs.ccpp lists the directories to be
+created and their permissions.

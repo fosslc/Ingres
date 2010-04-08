@@ -1,0 +1,3879 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"rbftype.h"
+# include	"rbfglob.h"
+# include	<cm.h>
+# include	<st.h>
+# include	<nm.h>
+# include	<ut.h>
+# include	<lo.h>
+# include	<uf.h>
+# include	<ug.h>
+# include	<ui.h>
+# include	<fedml.h>
+# include	<flddesc.h>
+## include	<ooclass.qsh>
+## include	<oocat.qsh>
+# include	<oodefine.h>
+## include	<uigdata.qsh>
+# include	<errw.h>
+# include       <erug.h>
+# include       <rcons.h>
+
+/**
+** Name:	rfcat.qsc - catalog frame for rbf.
+**
+** Description:
+**	This file defines:
+**
+**	rfLast		set name of last report edited.
+**	rFdetdsply	display report details frame.
+**	rFrunrep	cover to call IIRFcrp_Callreport.
+**	IIRFcrp_Callreport
+**			Gets output options (screen, filname, printer) from
+**			user and runs report by calling ReportWriter
+**	rFnoop		DUMMY noop for OO routines.
+**	rFdestroy	destroy report.
+**	IIRFgtn_getname Prompts user for object/file name.
+**	IIRFgts_getstyle  
+**			Gets report style (tabular, indented, block, labels, 
+**			or master/detail) from user.
+**
+** History:
+**	10/15/82 (jn)	written for GBF.
+**	10/31/82 (ps)	modified for RBF.
+**	5/5/83	 (gac)	now checks for no reports in catalog.
+**	7/14/83	 (ncg)	modified to use new table fields,
+**			and ate my lunch at Freddy's.
+**	2/22/84 (gac)	added mult-statement transactions.
+**	1/13/86 (prs)	change FEfehelp call to FEhelp.
+**	26-nov-1986 (yamamoto)
+**			Modified for double byte characters.
+**	27-jul-1987 (rdesmond)
+**			Modified for Jupiter.  Uses OO routines.
+**	04-jan-1988 (rdesmond)
+**			Changed initialize section to handle reports
+**			specified on command line correctly.
+**	10-feb-1988 (rdesmond)
+**			Now sets En_rid to appropriate value before
+**			calling rFget() (to avoid unnecessary DB access).
+**	18-feb-1988 (rdesmond)
+**			Removed range statements.
+**	12-jul-88 (sylviap)
+**			Changed the QUEL to SQL.
+**			Took out the HACKFOR50.
+**	22-aug-1988 (danielt)
+**			changed rename and destroy activate blocks to re-readin
+**			the reports  (a DBA owned report might be uncovered)
+**      25-aug-88 (sylviap)
+**                      Changed create so it can accept a mixed case table name.
+**	1-sep-1988 (danielt)
+**			took out MST (OOcatDestroy() takes care
+**			of it's own transaction).
+**	20-9-1988 (elein)
+**			B3376: Check report width before editing. Give error
+**			message and disallow it if it is wider that maximum
+**			width (-ln or terminal capability).  Also, pass on
+**			current value of max width (En_lmax) to report so
+**			that report can run reports as wide as rbf can.
+**	29-sep-1988 (sylviap)
+**			Took out transaction code in rFdestroy.
+**	10/4/88 (bobm)	Add "AutoReport" item.
+**	10-5-88 (elein)
+**		B3626: If rename or destroy fail, don't clear out
+**		catalog, just resume.
+**	11/1/88 (elein)
+**		B3751 -- changed declaration of repflags to correspond with
+**		autoreport declaration.  This will make the prompt for the
+**		file name a consistent size. The "60" is just leeway--
+**		there is nothing magic about it.
+**	08-nov-88 (sylviap)
+**		Added another paramter, a customized help screen, to the 
+**		parameter list calling OOdetail.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**      29-nov-88 (sylviap)
+**              Sets En_rid to -1 when before archiving a report.  Fixes bug
+**              when archiving multiple reports, first report archived is
+**              repeatedly archived, regardless of the report chosen.
+**	20-dec-88 (sylviap)
+**		Performance changes - reads in rfiidet.frm.
+**	13-jul-89 (sylviap)
+**		Added Direct Printing in rFrunrep.
+**	27-jul-89 (sylviap)
+**		Bug 7209 - For default reports, after rFget, if En_lmax is 
+**		smaller than the oldEn_lmax, reset En_lmax back to the old max.
+**	10-aug-89 (sylviap)
+**		Added Popups for AutoReport and Create menu options.
+**	9/22/89 (elein) UG changes ingresug change #90045
+**		changed <rbftype.h> & <rbfglob.h> to "rbftype.h" & "rbfglob.h"
+**	9/25/89 (martym)
+**		(GARNET) Added support for JoinDefs.
+**	03-sep-89 (cmr ) fix for bug 8149
+**		Change the singleton select to a select loop because
+**		there may be more than one row for the FROM clause.
+**	11/27/89 (martym) - Added support for RBF report template styles.
+**	12/12/89 (elein)
+**		*Substantial* changes to Go/AutoReport and Create and
+**		routines used by these functions in order to 
+**		implement Listpick and Listpick handlers.
+**      18-dec-89 (sylviap)
+**              Added Batch calls and batch report pop-ups.
+**	12/27/89 (elein)
+**		Added special case for RBF called from ABF.  Updated
+**		error messages (lots) that were numbered wrong
+**	1/4/90 (elein) again!
+**		Modified RBF called from ABF to use a real form
+**		instead of a default form.  Moved calls to do new edit
+**		to gtn and gts make error recovery better.
+**      09-jan-90 (sylviap)
+**		If in batch mode, does not print executing msgs ("Sending report
+**		  to file 'report.out'").
+**		If non-batch report, does not display declared variables screen.
+**      15-jan-90 (sylviap)
+**		Added Help files to the batch popups.
+**	1/23/90 (martym)
+**		Changed to check return code from rFdisplay() to detect when 
+**		En_lmax is exceeded for Indented and Master/Detail report 
+**		styles.
+**      30-jan-90 (sylviap)
+**		Fixed bug w/non-batch report so it  does not display declared 
+**		variables screen.
+**	2/7/90 (martym)
+**		Coding standards cleanup.
+**      15-feb-90 (sylviap)
+**		Initializes val_str in IIRFgdv_GetDeclaredVars. US #573 & #575.
+**      22-feb-90 (sylviap)
+**		Took out y/n abbreviations in the batch print and file popups.
+**	03/01/90 (dkh) - Changed to use IIUIgdata->prompt_func instead of
+**			 IIUFprompt() directly.
+**      19-mar-90 (sylviap)
+**		Only calls IIxflag if not batch report.
+**      20-mar-90 (sylviap)
+**		Fixed SIprintf.  Calls SIflush right after. Fixes bug on VMS.
+**      28-mar-90 (sylviap)
+**		If rbf is run w/o the -l flag, RBF can create a wide default
+**		report with no error messages.  If w/the -l, RBF will wrap, 
+**		displaying error message report is wrapping to stay within 
+**		the -l boundaries.  RBF will never allow a label style report 
+**		to wrap. (#396, #709)
+**      02-apr-90 (sylviap)
+**		New -l behavior.  If called w/-l flag, will now out up pop-up
+**		(IIRFwid_WideReport) prompting user to either continue or
+**		select another style.
+**	4/3/90 (martym)
+**		Added a parameter to call to IIRFwid_WideReport().
+**      03-apr-90 (sylviap)
+**		Fixed bug #788 - full prompt for declared variables.
+**      11-apr-90 (sylviap)
+**		Will pass NULL as the output file (location) to UTexe if not 
+**		in batch mode.  Necessary because CL checks if should re-direct
+**		output depending upon if the LOCATION is NULL or not.
+**	4/11/90 (martym)
+**              Fixed JUPBUG #4468. When using '-e' flag, and a wild
+**              card is used to retrieve report names, will not allow
+**              the user to trash the object names in the RBF catalog.	
+**      16-apr-90 (sylviap)
+**		Saves En_lmax when creating/editting a report and then resets 
+**		it back since it's now possible to create a wide report. 
+**      18-apr-90 (sylviap)
+**		Will only send -l flag to RW if set on the command line. (#847)
+**		Created the Archive pop-up.  Calls IIRFarp_ArchiveReport. (#243)
+**	6/18/90 (martym)
+**		Changed "rFdetdsply()" to display the name of the data source 
+**		for the report correctlly for case(s) when it is not a single 
+**		table (such as a JoinDef for now).
+**	6/21/90 (martym)
+**		Changed to use E_RF0090 & E_RF0091.
+**      17-aug-90 (sylviap)
+**		Uses global En_lmax_orig rather than old_En_lmax. En_lmax_orig
+**		is needed for label style reports in rfframe.c.
+**	27-aug-90 (cmr/esd/sylviap) Integration of VM Porting changes
+**		For CMS call TOwsnme() to convert 'file ext' to 'file.ext'
+**		before writing the report to the file (Preview/Go).
+**	28-aug-1990 (Joe)
+**	    	Changed references to IIUIgdata to the UIDBDATA structure
+**	    	returned from IIUIdbdata().
+**	04-sep-90 (sylviap)
+**		Changed call to UTexe so the user is passed through the 'user='.
+**		Now username will be portable to a platform that is case 
+**		sensitive.
+**	04-sep-90 (sylviap)
+**		Added explanations to the activate menuitems. #32699
+**	10-jan-91 (steveh)
+**		Fixed bug 35177 in which duplication of a report incorrectly
+**		set the right-hand margin of the new report.
+**	08-mar-91 (steveh)
+**		Fixed bug 34587 in which selecting the `default' printer
+**		actually attempted to print to the printer called "default."
+**	15-mar-91 (sylviap)
+**		Modified IIRFgfn_GetFilename and IIRFgpr_GetPrinter so the
+**		"batch" prompt is invisible for those platforms that cannot
+**		implement concurrent reports.  RBF checks if
+**		(UT_WAIT == UT_NOWAIT).  I changed the forms rffile and rfprint.
+**		I made the line "Wait for report" a field rather than trim so it
+**		could have the "invisible" attribute on platforms that do not
+**		need the "wait for completion" prompt.
+**		I also changed the "instuctions" from trim to a field.  At 
+**		runtime, RBF can change the instructions to reflect if there is
+**		a "wait" prompt or not.
+**	03/28/91 (dkh) - Replaced old inquire_frs syntax with new.
+**	04/17/91 (steveh) - Fixed bug 36997 in which default report widths
+**		were incorrectly detemined.
+**      05/20/91 (steveh) - Modified previous fix to bug 36997 in which
+**            	default report widths were incorrectly detemined.
+**            	Set return type for rfLast(), IIRFarp_ArchiveReport(),
+**            	rfabfcr(), IIRFgfn_GetFilename() and IIRFgpr_GetPrinter().
+**		This also corrects bugs 37574 and 37671.
+**	28-jun-91 (kirke)
+**		Added fnamefld initialization to IIRFarp_ArchiveReport().
+**      07/02/91 (steveh) Fixed declaration of IIOOidCheck.  Added missing
+**		final argument to call to IIOOidCheck. (bug 38996)
+**	07/02/91 (steveh) Removed unused variables.
+**	08/12/91 (steveh) Fixed bug 38434 where RBF failed to pause for
+**		the user to read any REPORT messages if REPORT failed.
+**	17-aug-91 (leighb) DeskTop Porting Change:
+**		Set value of IituMainform via a function to avoid data
+**		references across facilities (for DLL's on IBM/PC).
+**	12/31/91 (steveh) rFrunrep now properly returns status.  Lack of
+**		the proper status caused the caller to use the garbage
+**		value on the stack and caused spurious returns to the Report
+**		Catalog.  This fixes bug 39872.
+**	04/06/92 (rdrane) 41180
+**		When searching for the name of the object upon which a report is
+**		based (assuming it's not a single table), set rcosequence to a
+**		numeric "1" rather than a string (varchar) "1".  Some gateways
+**		see the string representation and do not effect a conversion
+**		to numeric, which is the defined format for the column.
+**	31-aug-1992 (rdrane)
+**		Prelim fixes for 6.5 - change over from IIUGlbo_lowerBEobject()
+**		and FErelexists() for FErel_ffetch().
+**	7-oct-1992 (rdrane)
+**		Use new constants in (s/r)_reset invocations.
+**	12/05/92 (dkh) - Added Choose Columns support for rbf.
+**	12/14/92 (dkh) - Changed to use set_frs interface instead of special
+**			 entry point to change number of rows of a table field.
+**	12/18/92 (dkh) - Added check to eliminate unsupported datatypes
+**			 from the ChooseColumns popup display.
+**	05-jan-93 (sylviap)
+**		Added a new menuitem 'Edit' to allow editing/creating of 
+**		joindefs from rbf.  Also changed the behavior to display an 
+**		error when creating a report.  If no report/table/joindef name 
+**		is entered in the 'create popup', then an error is displayed.
+**		This behavior is consistent with vifred's.
+**		Changed ChooseColumns menuitem only comes up for tables popup.
+**	21-jan-1993 (rdrane)
+**		Rework the ChooseColumns support to follow 6.5 protocols for
+**		owner.tablename and delimited identifiers.
+**		Removed external declaratiions which have been moved into
+**		included header files.  Redeclared other routines as being
+**		static.  This required that the statics preceed the GLOBALDEFs
+**		since one of the initializers is a static routine. Replaced
+**		instances of '\0' with EOS.
+**	10-feb-1993 (rdrane)
+**		Have IIRFgtn_getname() check for initial specification of owner
+**		and/or tablename -- ChooseColumn was failing if selected
+**		immediately after specifiing a table name for the first time
+**		after utility invocation. 
+**	11-mar-1993 (rdrane)
+**		Have rFdetdsply() use the r_g_ident() routine to extract the
+**		table name from the rcotext.  This prevents it from being
+**		confused by embedded spaces or commas in delimited identifiers.
+**	24-mar-1993 (lan)
+**		Fixed bug 49656 where RBF did not return an error when
+**		REPORT failed due to a machine resource limitation.  Report
+**		Operating System level error messages if available.
+**	15-Apr-93 (fredb) hp9_mpe
+**		Porting changes/fixes to IIRFcrp_Callreport. Bug #50554.
+**		Pass a LOCATION containing the filename, "$STDLIST" to UTexe
+**		as the err_log parameter to prevent i/o from going into the
+**		bit bucket when in interactive mode.
+**	7-jun-1993 (rdrane)
+**		Call r_g_skip() before calling r_g_ident(0 in rFdetdsply().
+**		Nothing was being returned if rcotext had leading white space
+**		(bug 52532).
+**	7-jul-1993 (rdrane)
+**		Fix-up all IIUGerr() invocations to use UG_ERR_ERROR or
+**		UG_ERR_FATAL #define instead of hard-coded constant.
+**	4-jan-1994 (rdrane)
+**		Check dlm_Case capability directly to determine if
+**		delimited identifiers are suppported, rather than
+**		trusting the StandardCatalogLevel.
+**      21-jun-1995 (harpa06)
+**              Convert tables names given into it's BE representation before 
+**              continuing to process the table so that delimited table name 
+**              output is correct.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      29-Nov-1999 (hanch04)
+**          First stage of updating ME calls to use OS memory management.
+**          Make sure me.h is included.  Use SIZE_TYPE for lengths.
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Moved rfLast declaration to rbfglob.h as neccessary
+**	    to eliminate gcc 4.3 warnings.
+[@history_template@]...
+**/
+
+/* static's */
+
+static		VOID    IIRFarp_ArchiveReport();
+static		VOID	IIRFccChooseColumns();
+static		i4	IIRFcrCreateReport();
+static		STATUS	IIRFcrp_Callreport();
+static		i4	IIRFdne_DoNewEdit();
+static		VOID    IIRFgfn_GetFilename();
+static		VOID    IIRFgpr_GetPrinter();
+static		i4	IIRFgtn_getname();
+static		i4	IIRFgts_getstyle();
+static		i4	IIRFgtd_getdest();
+static		char    *IIRFmps_MakeParams();
+static		char    *IIRFgdv_GetDeclaredVars();
+static		STATUS  IIRFSetReadOnly();
+static		VOID    rfabfcr();
+static		STATUS	rFdestroy();
+static		STATUS	rFdetdsply();
+static		STATUS	rFnoop();
+static		STATUS	rFrunrep();
+
+static	char	Lastname[(FE_MAXNAME + 1)] = ERx("");
+static	bool	Lastdifferent = FALSE;
+static	bool	Lastsaved     = FALSE;
+static	bool	name_frm = FALSE;	  /* TRUE= name frame initialized */ 
+static	char	oldlmax_str[20] = ERx("");	  /*B3376*/
+static	char	lmax_str[20] = ERx("");		  /*B3376*/
+static	bool	AutoReport = FALSE;
+
+static	bool	haveccform = FALSE;
+static	bool	haveacform = FALSE;
+static	char	ccol_name[(FE_MAXNAME + 1)] = ERx("");
+static	char	ccol_owner[(FE_MAXNAME + 1)] = ERx("");
+static	char	ob_ndest[(FE_MAXNAME + 1)] = ERx("");
+static	char	ob_odest[(FE_MAXNAME + 1)] = ERx("");
+
+static	RFCOLDESC *del_cols = (RFCOLDESC *)NULL;
+
+/* extern's */
+
+FUNC_EXTERN	STATUS	IIRFwid_WideReport();
+FUNC_EXTERN	STATUS	IIOOidCheck();
+FUNC_EXTERN	char	*IITUtpTblPik();
+FUNC_EXTERN	char	*IIUFopObjPik();
+FUNC_EXTERN	char	*IIRFfwd_FullWord();
+FUNC_EXTERN	char	*IIxflag();
+
+GLOBALREF       char    *Nrdetails;
+GLOBALREF       bool    alloc_detail;
+
+/* GLOBALDEF's */
+
+GLOBALDEF	OO_CATREC	rfoocatrec =
+{
+	0, 0, ERx(""), ERx(""),
+	0, 0, ERx(""),
+	ERx(""), ERx(""),
+	ERx(""), 0, ERx("")
+};
+
+GLOBALDEF 	MENUPARAM	rf_menup[] =
+{
+	{ NULL, 4, rFrunrep },
+	{ NULL, 0, NULL },
+};
+
+GLOBALDEF	RFCOLDESC	*IIRFcollist = NULL;
+GLOBALDEF	i4		IIRFcccount = 0;
+GLOBALDEF	i4		IIRFcdcount = 0;
+
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+#define _EndExpl	F_FE0102_ExplEnd
+#define _FindExpl	F_FE0104_ExplFind
+#define _TopExpl	F_FE0105_ExplTop
+#define _BottomExpl	F_FE0106_ExplBottom
+#define _MoreInfoExpl	F_FE0107_ExplMoreInfo
+
+# define	REP_LEN		FE_MAXNAME+FE_PROMPTSIZE+60
+
+# define        WANT_PROMPT     0
+# define        WANT_QUOTE      1
+# define        FOUND_PROMPT    2
+# define        BUF_SIZE        256  
+
+# define	ROW_DELETED	4
+# define	CHOOSE_MAX_ROWS	10
+# define	ADD_MAX_ROWS	5
+
+
+/*{
+** Name:	IIRFacAddColumn - Add back a deleted column name.
+**
+** Description:
+**	Allow user to add back a previously deleted column.  Deleted
+**	columns are obtained from the "del_cols" array.  On exit
+**	due to a "Select", the remaining columns are loaded back
+**	into "del_cols".
+**
+** Inputs:
+**
+** Outputs:
+**	aname		If return value is TRUE, contains name of column that
+**			was selected.
+**	alen		If return value is TRUE, contains datatype length of
+**			column that was selected.
+**	adt		If return value is TRUE, contains datatype of column
+**			that was selected.
+**	aprec		If return value is TRUE, contains precision of
+**			column that was selected.
+**
+**	Returns:
+**		TRUE	If a deleted column was selected.
+**		FALSE	If user selected "Cancel".
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	None.
+**
+** History:
+**	12/06/92 (dkh) - Initial version.
+*/
+bool
+IIRFacAddColumn(aname, alen, adt, aprec)
+##char	*aname;
+##i4	*alen;
+##i2	*adt;
+##i2	*aprec;
+{
+	i4		i;
+	RFCOLDESC	*coldesc;
+	bool		retval = TRUE;
+##	char		xname[FE_MAXNAME + 1];
+##	i4		xlen;
+##	i2		xdt;
+##	i2		xprec;
+##	i4		rstate;
+	i4		tblrows;
+
+	/*
+	**  Check to make sure that the rfadd_columns
+	**  form is available.
+	*/
+	if (!haveacform)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(),
+			ERx("rfadd_columns")) != OK)
+		{
+			IIUGerr(E_RF002D_Cannot_locate_form,
+				UG_ERR_ERROR, 1, ERx("rfadd_columns"));
+			return(FALSE);
+		}
+		haveacform = TRUE;
+	}
+
+	/* Adjust the size of the table field and form. */
+	if (IIRFcdcount > ADD_MAX_ROWS)
+	{
+		tblrows = ADD_MAX_ROWS;
+	}
+	else
+	{
+		tblrows = IIRFcdcount;
+	}
+	/*
+	**  Make call similar to a ## set_frs to changed the number
+	**  rows for a table field.
+	*/
+	if (IIiqset((int) 3, (int) 0, ERx("rfadd_columns"), (char *) 0,
+		(char *) 0) != (int) 0)
+	{
+		IIstfsio((int)30, ERx("colnames"), (int)0, (short *) 0,
+			(int) 1, (int)30, (int)4, &tblrows);
+	}
+
+##	display rfadd_columns read
+##	initialize
+##	{
+		/* Load the table field with the deleted column list */
+##		inittable rfadd_columns colnames read (len = i4, dt = i2,
+##			prec = i2)
+		for (i = 0, coldesc = del_cols; i < IIRFcdcount;
+			i++, coldesc++)
+		{
+			STcopy(coldesc->name, xname);
+			xlen = coldesc->length;
+			xdt = coldesc->datatype;
+			xprec = coldesc->prec;
+##			loadtable rfadd_columns colnames (colnames = xname,
+##				len = xlen, dt = xdt, prec = xprec)
+		}
+##	}
+##	activate menuitem ERget(FE_Select) (expl = ERget(F_FE0108_ExplSelect)),
+##		frskey4
+##	{
+		/* Get values for the row that has been selected */
+##		getrow rfadd_columns colnames (xname = colnames, xlen = len,
+##			xdt = dt, xprec = prec)
+		STcopy(xname, aname);
+		*adt = xdt;
+		*alen = xlen;
+		*aprec = xprec;
+
+		/*
+		**  Throw away the selected row so it will be ignore in the
+		**  unloadtable loop below.
+		*/
+##		deleterow rfadd_columns colnames
+
+		/*
+		**  Store the remaining deleted columns in the
+		**  del_cols array.
+		*/
+		coldesc = del_cols;
+
+##		unloadtable rfadd_columns colnames (xname = colnames,
+##			xlen = len, xdt = dt, xprec = prec,
+##			rstate = _STATE)
+##		{
+			if (rstate != ROW_DELETED)
+			{
+				STcopy(xname, coldesc->name);
+				coldesc->datatype = xdt;
+				coldesc->length = xlen;
+				coldesc->prec = xprec;
+				coldesc->deleted = TRUE;
+
+				coldesc++;
+			}
+##		}
+		IIRFcdcount--;
+##		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Cancel) (expl = ERget(F_FE0103_ExplCancel)),
+##		frskey9
+##	{
+		retval = FALSE;
+##		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl)),
+##		frskey1
+##	{
+		FEhelp(ERx("rfccadd.hlp"), ERget(S_RF00A7_ChCol_Add));
+##	}
+
+	return(retval);
+}
+
+
+
+/*{
+** Name:	IIRFccChooseColumns - Allow user to select which columns
+**				      to include in the default report.
+**
+** Description:
+**	This routine allows the user to edit the list of columns that
+**	will be used in the default report.  User may delete, put back
+**	and reorder the columns.
+**
+** Inputs:
+**	name	Name of table to list columns for.  Expected to be fully
+**		normalized.
+**	owner	Owner of table to list columns for.  Expected to be fully
+**		normalized.
+**
+** Outputs:
+**	None.
+**
+**	Returns:
+**		None.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	None.
+**
+** History:
+**	12/09/92 (dkh) - Initial version.
+**	21-jan-1993 (rdrane)
+**		Rework to follow 6.5 protocols for owner.tablename and
+**		delimited identifiers.  This primarily involved adding the
+**		owner parameter.  Disambiguate failed memory allocation
+**		message text.  Make routine static.
+**	13-apr-1993 (rdrane)
+**		Ensure that we don't try and delete columns after they've
+**		all been deleted (bugs 50683, 50685, and 50761)
+**	7-jul-1993 (rdrane)
+**		Put out the unsupported datatype message for any
+**		disqualified columns whenever we initially set-up the
+**		list.
+*/
+
+static
+VOID
+IIRFccChooseColumns(name,owner)
+char	*name;
+char	*owner;
+{
+	FE_ATT_QBLK	qblk;
+	FE_ATT_INFO	attinfo;
+	RFCOLDESC	*coldesc;
+	RFCOLDESC	*dcoldesc;
+	RFCOLDESC	*prev;
+	i4		count = 0;
+	i4		i;
+	DB_DATA_VALUE	dbv;
+##	i4		rowstate;
+##	i4		delrownum;
+##	i4		row;
+##	i4		db_len;
+##	i2		db_dt;
+##	i2		db_prec;
+##	char		cname[FE_MAXNAME + 1];
+	i4		orig_count;
+	i4		orig_dcount;
+	i4		tblrows;
+	char		dsply_name[(FE_UNRML_MAXNAME + 1)];
+
+	/*
+	**  Allocate the column descriptor arrays if they
+	**  have not been already.
+	*/
+	if (IIRFcollist == NULL)
+	{
+		if ((IIRFcollist = (RFCOLDESC *) MEreqmem((u_i4) 0,
+			(SIZE_TYPE)(sizeof(RFCOLDESC) * DB_GW2_MAX_COLS), FALSE,
+			(STATUS *) NULL)) == NULL)
+		{
+			/* This does not return */
+			IIUGbmaBadMemoryAllocation(
+				ERx("IIRFccChooseColumns - IIRFcollist"));
+		}
+		if ((del_cols = (RFCOLDESC *) MEreqmem((u_i4) 0,
+			(SIZE_TYPE)(sizeof(RFCOLDESC) * DB_GW2_MAX_COLS), FALSE,
+			(STATUS *) NULL)) == NULL)
+		{
+			/* This does not return */
+			IIUGbmaBadMemoryAllocation(
+				ERx("IIRFccChooseColumns - del_cols"));
+		}
+	}
+
+	coldesc = IIRFcollist;
+
+	/*
+	**  Save count information so that we can store state on
+	**  a cancel.  Note that the array pointed to by IIRFcollist
+	**  is not changed until the user selects OK.  This makes
+	**  it easy to do a cancel.
+	*/
+	orig_count = IIRFcccount;
+	orig_dcount = IIRFcdcount;
+
+	/*
+	**  If needed, get the column names for a table.  Only necessary
+	**  if we have a change in table name or this is first time
+	**  here in the change of events to create a report based on a
+	**  table.
+	**
+	**  We've already done a full resolve call earlier, so there
+	**  is no need to check the return value from FEatt_open().
+	*/
+	if (IIRFcccount == 0)
+	{
+		_VOID_ FEatt_open(&qblk, name, owner);
+
+		/*
+		**  Grab the column names and store it
+		**  in the IIRFcollist array.
+		*/
+		while(FEatt_fetch(&qblk, &attinfo) == OK)
+		{
+			FEatt_dbdata(&attinfo, &dbv);
+
+			/*
+			**  Skip any unsupported datatypes.
+			*/
+			if (!IIAFfedatatype(&dbv))
+			{
+				_VOID_ IIUGxri_id(&attinfo.column_name[0],
+						  &dsply_name[0]);
+				IIUGerr(E_RW1414_ignored_attrib,
+					UG_ERR_ERROR,1,&dsply_name[0]);
+				continue;
+			}
+
+			coldesc->datatype = dbv.db_datatype;
+			coldesc->length = dbv.db_length;
+			coldesc->prec = dbv.db_prec;
+			coldesc->deleted = FALSE;
+			STcopy(attinfo.column_name, coldesc->name);
+
+			coldesc++;
+			count++;
+		}
+
+		_VOID_ FEatt_close(&qblk);
+		/*
+		**  Set the total number of columns that were found.
+		*/
+
+		if (count == 0)
+		{
+			_VOID_ IIUGxri_id(name,&dsply_name[0]);
+			IIUGerr(E_RF00B5_NoSuppCols,
+				UG_ERR_ERROR,1,&dsply_name[0]);
+			return;
+		}
+		IIRFcccount = count;
+		IIRFcdcount = 0;
+	}
+	else
+	{
+		/*
+		**  Use existing count from a previous pass through here.
+		*/
+		count = IIRFcccount;
+	}
+
+	/*  Adjust size of table field and form. */
+	if (IIRFcccount - IIRFcdcount > CHOOSE_MAX_ROWS)
+	{
+		tblrows = CHOOSE_MAX_ROWS;
+	}
+	else
+	{
+		tblrows = IIRFcccount - IIRFcdcount;
+	}
+	/*
+	**  Make call similar to a ## set_frs to changed the number
+	**  rows for a table field.
+	*/
+	if (IIiqset((int) 3, (int) 0, ERx("rfchoose_columns"), (char *) 0,
+		(char *) 0) != (int) 0)
+	{
+		IIstfsio((int)30, ERx("colnames"), (int)0, (short *) 0,
+			(int) 1, (int)30, (int)4, &tblrows);
+	}
+
+##	display rfchoose_columns read
+##	initialize
+##	{
+##		inittable rfchoose_columns colnames read (len = i4,
+##			dt = i2, prec = i2)
+
+		dcoldesc = del_cols;
+
+		for (i = 0, coldesc = IIRFcollist; i < count; i++, coldesc++)
+		{
+			db_dt = coldesc->datatype;
+			db_len = coldesc->length;
+			db_prec = coldesc->prec;
+			STcopy(coldesc->name, cname);
+			if (coldesc->deleted)
+			{
+				STcopy(cname, dcoldesc->name);
+				dcoldesc->datatype = db_dt;
+				dcoldesc->length = db_len;
+				dcoldesc->prec = db_prec;
+				dcoldesc->deleted = TRUE;
+
+				dcoldesc++;
+			}
+			else
+			{
+##				loadtable rfchoose_columns colnames
+##					(colnames = cname, len = db_len,
+##					dt = db_dt, prec = db_prec)
+			}
+		}
+##	}
+##	activate menuitem ERget(FE_OK) (expl = ERget(F_RF0099_ExplOK)), frskey4
+##	{
+		/*
+		**  Check to make sure that there is at least one column
+		**  left.  If everything has been deleted, issue error
+		**  and resume.
+		*/
+		if (IIRFcccount == IIRFcdcount)
+		{
+			IIUGerr(E_RF00A8_NoColsLeft, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+		/*
+		**  Unload the values.
+		*/
+		coldesc = IIRFcollist;
+##		unloadtable rfchoose_columns colnames (cname = colnames,
+##			db_len = len, db_dt = dt, db_prec = prec,
+##			rowstate = _STATE)
+##		{
+			/*
+			**  Save away columns that are still part of
+			**  the report.
+			*/
+			if (rowstate != ROW_DELETED)
+			{
+				STcopy(cname, coldesc->name);
+				coldesc->datatype = db_dt;
+				coldesc->length = db_len;
+				coldesc->prec = db_prec;
+				coldesc->deleted = FALSE;
+
+				coldesc++;
+			}
+##		}
+
+		if (IIRFcdcount != 0)
+		{
+			dcoldesc = del_cols;
+
+			for (i = 0; i < IIRFcdcount; i++)
+			{
+				STcopy(dcoldesc->name, coldesc->name);
+				coldesc->datatype = dcoldesc->datatype;
+				coldesc->length = dcoldesc->length;
+				coldesc->prec = dcoldesc->prec;
+				coldesc->deleted = TRUE;
+
+				coldesc++;
+				dcoldesc++;
+			}
+		}
+
+##/*
+##		unloadtable rfadd_columns colnames (cname = colnames,
+##			db_len = len, db_dt = dt, db_prec = prec,
+##			rowstate = _STATE)
+##		{
+# ifdef x
+			**  Save columns that have been deleted but
+			**  not added back.
+# endif
+			if (rowstate != ROW_DELETED)
+			{
+				STcopy(cname, coldesc->name);
+				coldesc->datatype = db_dt;
+				coldesc->length = db_len;
+				coldesc->prec = db_prec;
+				coldesc->deleted = TRUE;
+
+				coldesc++;
+			}
+##		}
+##*/
+##		breakdisplay
+##	}
+##	activate menuitem ERget(F_RF0091_Add) (expl = ERget(F_RF0095_ExplAdd))
+##	{
+		/*
+		**  Nothing to add if user has not deleted anything.
+		*/
+		if (IIRFcdcount == 0)
+		{
+			IIUGerr(E_RF00A4_No_Del_Cols, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+		/*
+		**  Call routine to allow user to add backa deleted column.
+		*/
+		if (IIRFacAddColumn(cname, &db_len, &db_dt, &db_prec))
+		{
+##			inquire_frs table rfchoose_columns
+##				(row = rowno(colnames))
+
+			/*
+			**  Add column back.  Decrementing "row" puts
+			**  the column ABOVE the current row.
+			*/
+			row--;
+##			insertrow rfchoose_columns colnames row
+##				(colnames = cname, len = db_len,
+##				dt = db_dt, prec = db_prec)
+##/*
+##			loadtable rfchoose_columns colnames
+##				(colnames = cname, len = db_len,
+##				dt = db_dt, prec = db_prec)
+##*/
+		}
+##	}
+##	activate menuitem ERget(FE_Delete) (expl = ERget(F_RF009A_ExplDel))
+##	{
+		if (IIRFcccount == IIRFcdcount)
+		{
+			IIUGerr(E_RF00A8_NoColsLeft, UG_ERR_ERROR, 0);
+##			resume
+		}
+		/*
+		**  Get column being deleted.
+		*/
+##		getrow rfchoose_columns colnames (cname = colnames,
+##			db_len = len, db_prec = prec, db_dt = dt)
+
+		/*
+		**  Delete it from the table field.
+		*/
+##		deleterow rfchoose_columns colnames
+
+		/*
+		**  Save the column away so it can be brought back
+		**  via the "Add" menuitem.
+		*/
+
+		coldesc = &(del_cols[IIRFcdcount]);
+		STcopy(cname, coldesc->name);
+		coldesc->length = db_len;
+		coldesc->datatype = db_dt;
+		coldesc->prec = db_prec;
+		coldesc->deleted = TRUE;
+
+		IIRFcdcount++;
+##	}
+##	activate menuitem ERget(FE_Move) (expl = ERget(F_RF009B_ExplMove))
+##	{
+##		getrow rfchoose_columns colnames (cname = colnames,
+##			db_len = len, db_dt = dt, db_prec = prec,
+##			delrownum = _RECORD)
+		/*
+		**  Highlight the selected row.
+		*/
+##		unloadtable rfchoose_columns colnames (row = _RECORD)
+##		{
+			if (row == delrownum)
+			{
+##				set_frs row rfchoose_columns colnames
+##					(intensity(colnames) = 1)
+##				endloop
+			}
+##		}
+
+##		display submenu
+##		activate menuitem ERget(F_RF0093_Above)
+##			(expl = ERget(F_RF0097_ExplAbove))
+##		{
+			/*
+			**  If cursor is on same row as the one selected
+			**  for move, then there is nothing to do.  We
+			**  Just unhilight the row and breakout
+			*/
+##			getrow rfchoose_columns colnames (row = _RECORD)
+			if (row == delrownum)
+			{
+##				unloadtable rfchoose_columns colnames
+##					(row = _RECORD)
+##				{
+					if (row == delrownum)
+					{
+##						set_frs row rfchoose_columns
+##							colnames
+##							(normal(colnames) = 1)
+##						endloop
+					}
+##				}
+##				breakdisplay
+			}
+##			scroll rfchoose_columns colnames to delrownum
+##			deleterow rfchoose_columns colnames
+
+			/*
+			**  If the row to move comes before the destination,
+			**  then we must decrement the destination row number
+			**  to account for the deleted row.
+			*/
+			if (delrownum < row)
+			{
+				row--;
+			}
+##			scroll rfchoose_columns colnames to row
+##			inquire_frs table rfchoose_columns
+##				(row = rowno(colnames))
+			/*
+			**  Decrement so that we put the row being moved
+			**  above the target.
+			*/
+			row--;
+##			insertrow rfchoose_columns colnames row
+##				(colnames = cname, len = db_len,
+##				dt = db_dt, prec = db_prec)
+##			breakdisplay
+##		}
+##		activate menuitem ERget(F_RF0094_Below)
+##			(expl = ERget(F_RF0098_ExplBelow))
+##		{
+			/*
+			**  If cursor is on same row as the one selected
+			**  for move, then there is nothing to do.  We
+			**  Just unhilight the row and breakout
+			*/
+##			getrow rfchoose_columns colnames (row = _RECORD)
+			if (row == delrownum)
+			{
+##				unloadtable rfchoose_columns colnames
+##					(row = _RECORD)
+##				{
+					if (row == delrownum)
+					{
+##						set_frs row rfchoose_columns
+##							colnames
+##							(normal(colnames) = 1)
+##						endloop
+					}
+##				}
+##				breakdisplay
+			}
+##			scroll rfchoose_columns colnames to delrownum
+##			deleterow rfchoose_columns colnames
+
+			/*
+			**  If the row to move comes before the destination,
+			**  then we must decrement the destination row number
+			**  to account for the deleted row.
+			*/
+			if (delrownum < row)
+			{
+				row--;
+			}
+##			scroll rfchoose_columns colnames to row
+##			inquire_frs table rfchoose_columns
+##				(row = rowno(colnames))
+##			insertrow rfchoose_columns colnames row
+##				(colnames = cname, len = db_len,
+##				dt = db_dt, prec = db_prec)
+##			breakdisplay
+##		}
+##		activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl)),
+##			frskey1
+##		{
+			FEhelp(ERx("rfccmove.hlp"), ERget(S_RF00A6_ChCol_Move));
+##		}
+##		activate menuitem ERget(FE_End) (expl = ERget(_EndExpl)),
+##			FRSkey3
+##		{
+			/*
+			**  Unhighlight the selected row since user
+			**  decided not to move the column.
+			*/
+##			unloadtable rfchoose_columns colnames
+##				(row = _RECORD)
+##			{
+				if (row == delrownum)
+				{
+##					set_frs row rfchoose_columns
+##						colnames (normal(colnames) = 1)
+##					endloop
+				}
+##			}
+##			breakdisplay
+##		}
+##	}
+##	activate menuitem ERget(F_RF0092_RemoveAll)
+##		(expl = ERget(F_RF0096_ExplRemoveAll))
+##	{
+		if (IIRFcccount == IIRFcdcount)
+		{
+			IIUGerr(E_RF00A8_NoColsLeft, UG_ERR_ERROR, 0);
+##			resume
+		}
+		coldesc = &(del_cols[IIRFcdcount]);
+##		unloadtable rfchoose_columns colnames (cname = colnames,
+##			db_len = len, db_dt = dt, db_prec = prec,
+##			rowstate = _STATE)
+##		{
+			if (rowstate != ROW_DELETED)
+			{
+				STcopy(cname, coldesc->name);
+				coldesc->datatype = db_dt;
+				coldesc->length = db_len;
+				coldesc->prec = db_prec;
+				coldesc->deleted = TRUE;
+
+				coldesc++;
+				IIRFcdcount++;
+			}
+##		}
+##		inittable rfchoose_columns colnames read (len = i4, dt = i2,
+##			prec = i2)
+##	}
+##	activate menuitem ERget(FE_Cancel) (expl = ERget(F_FE0103_ExplCancel)),
+##		frskey9
+##	{
+		/*
+		**  Just restore the original state on a cancel.
+		*/
+		IIRFcccount = orig_count;
+		IIRFcdcount = orig_dcount;
+##		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl)), frskey1
+##	{
+		FEhelp(ERx("rfchcols.hlp"), ERget(S_RF00A5_ChooseColumns));
+##	}
+}
+
+
+VOID
+##rFcatalog()
+##{
+##	char		r_name[(FE_MAXTABNAME + 1)];
+##	char		*filename;
+	OOID		tmpclss;
+	LOCATION	tloc;
+##      char    	*form;
+##      char            buf[512];      	  	  /* temporary buffer */
+	char            help_scr[80];   	  /* the help screen buffer */
+##	char		*tname;
+	char		*title;
+	char		*prompt;
+	char		*choices;
+	bool		stat = TRUE;
+
+
+	IIOOinit((OO_OBJECT **)NULL);
+
+##	display _iicatalog read
+##	initialize
+##	{
+##		putform _iicatalog (title= ERget(F_RF0001_RBF___Report_Catalog))
+		En_SrcTyp = NoRepSrc;
+
+		rfLast(ERx(""));
+		if (STlength(En_report) > 0)
+		{
+		    if( Rbf_from_ABF == FALSE )
+		    {
+                    	OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+		    	En_rid = -1;
+			if( St_style == RS_NULL)
+			{
+				/*
+				** If St_repspec is FALSE, then En_report
+				** should reflect the full, unnormalized
+				** form of the table name.
+				*/
+		    		if (rFget(En_report, St_repspec, St_style))
+		    		{
+			    	   	rfLast(En_report);
+					_VOID_ rFdisplay();
+				}
+		    	}
+			else
+			{
+				En_SrcTyp = TabRepSrc;
+				stat = IIRFdne_DoNewEdit(En_report);
+			}
+		    }
+		    else /* Called from ABF */
+		    {
+                    	OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+			tmpclss = OC_RBFREP;
+                        if(IIOOidCheck( &tmpclss, &En_rid, En_report,
+				(char *)NULL, 0) == OK )
+			{
+				/*
+				** If St_repspec is FALSE, then En_report
+				** should reflect the full, unnormalized
+				** form of the table name.
+				*/
+		    		if (rFget(En_report, St_repspec, St_style))
+		    		{
+					if (St_style == RS_NULL)
+				    		rfLast(En_report);
+					_VOID_ rFdisplay();
+		    		}
+##				breakdisplay
+			}
+
+                        /* Display the name of requested form. */
+                        form = F_RBFABF;
+			rfabfcr(form);
+			tname = En_report;
+##                      putform form (rep_name = tname)
+			STcopy(ERget(S_RF005E_Create_Report), help_scr);
+                        En_SrcTyp = IIFRrlpRunListPick(form,
+                        	F_RFAFTYPE, LPGR_FLOAT, LPGR_FLOAT,
+				help_scr, H_SOURCE,
+                        	IIRFcrCreateReport, (PTR) En_report);
+
+##			breakdisplay
+		    }
+		}
+		if (Rbf_noload)
+		{
+			OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+		}
+		else
+		{
+			OOcatTableLoad(OC_REPORT, _iicatalog, _cattable,
+			    	(bool) TRUE, ERx("*"), Lastname, NULL);
+##                      set_frs form (mode = read)
+		}
+		En_SrcTyp = NoRepSrc;
+		St_style = NoStyle;
+##	}
+
+##	activate menuitem ERget(FE_Create)(expl = ERget(F_RF0078_create))
+##	{
+		/* 
+		** Display Popup with the 'source' options.  User may choose
+		** joindef, table, or view.  This begins a series
+		** of listpick handling routines.
+		**
+		** After this point we should have a valid name ,r_name,
+		** a style, St_style, and a data source, En_SrcTyp
+		*/
+		STcopy(ERget(S_RF005E_Create_Report), help_scr);
+                prompt    = ERget(F_RF0042_Source_Prompt);
+                choices   = ERget(F_RF0043_Source_Choices);
+		En_SrcTyp = IIFDlpListPick(prompt, choices, 0, LPGR_FLOAT,
+				LPGR_FLOAT, help_scr, H_SOURCE,
+				IIRFcrCreateReport, (PTR) r_name);
+
+
+		if (Rbf_noload)
+		{
+		    OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+		}
+		else if (Lastname[0] != EOS)
+		{
+		    OOcatTableLoad(OC_REPORT,
+		        _iicatalog, _cattable, 
+		        (bool) TRUE, ERx("*"), 
+			 Lastname, NULL);
+		}
+		En_SrcTyp = NoRepSrc;
+##	}
+
+##	activate menuitem ERget(FE_Destroy)(expl = ERget(F_RF0079_delete))
+##	{
+# ifdef DGC_AOS
+		/*
+		** Until INGRES supports a readonly mode, DG will use the
+		** following code to avoid ugly error messages that occur
+		** when trying to write to the database when we are only
+		** connected for readonly access.
+		*/
+		if (IIUIcro_CheckReadOnly())
+		{
+			IIUGerr(E_UI0016_ReadOnly_err, UG_ERR_ERROR, 0);
+##			resume
+		}
+# endif
+                /*
+		**  Currently (9/88), OOcatDestroy has transaction code
+		**  deleting ii_id.  If OOcatDestroy returns OK, then
+		**  effectively, the report has been deleted to the user since
+	        **  it will NOT show up in the RBF catalog frame even tho the
+		**  detail tables (ii_reports, ii_rcommands) have not yet been
+	        **  deleted.  There is NO transaction code in rFdestroy.
+		**  A possible change could be to get rid of all transaction
+		**  code in OOcatDestroy and surround OOcatDestroy AND rFdestroy
+		**  by transaction code. (sylviap/danielt)
+		*/
+		if (OOcatDestroy(OC_REPORT, _iicatalog, _cattable, &rfoocatrec,
+		    Rbf_noload) == OK)
+		{
+			rFdestroy(rfoocatrec.id, NULL);
+		}
+		else
+		{
+                        if (IIRFSetReadOnly() == OK)
+##				resume
+		}
+
+		if (Rbf_noload)
+		{
+			OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+		}
+		else 
+		{
+			STcopy(rfoocatrec.name, r_name);
+			OOcatTableLoad(OC_REPORT, _iicatalog, _cattable,
+				(bool) TRUE, ERx("*"), r_name, NULL);
+		}
+##	}
+
+##	activate menuitem ERget(FE_Edit)(expl = ERget(F_RF007A_edit))
+##	{
+		En_SrcTyp = NoRepSrc;
+		if (OOcatCheck(OC_RBFREP, _iicatalog, _cattable, &rfoocatrec)
+		    != OK)
+		{
+			_VOID_ IIRFSetReadOnly();
+##			resume
+		}
+
+		STcopy(rfoocatrec.name, r_name);
+
+		rfLast(r_name);
+		Lastdifferent = FALSE;
+		Lastsaved = FALSE;
+
+		En_lmax_orig = En_lmax;	/* save it cause it may change */
+
+		/* load report */
+		En_rid = rfoocatrec.id;
+		if (rFget(r_name, TRUE, RS_NULL))
+		    /* edit report */
+		    _VOID_ rFdisplay();
+
+		/* redisplay catalog frame */
+		if (Rbf_noload)
+		{
+			OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+		}
+		else if (Lastdifferent)
+		{
+			OOcatTableLoad(OC_REPORT, _iicatalog, _cattable,
+				(bool) TRUE, ERx("*"), Lastname, NULL);
+		}
+		else if (Lastsaved)
+		{
+			OOcatTableLoad(OC_REPORT, _iicatalog, _cattable,
+				(bool) TRUE, ERx("*"), r_name, NULL);
+		}
+		En_SrcTyp = NoRepSrc;
+		En_lmax = En_lmax_orig;	/* now reset back to original setting */
+##	}
+##	activate menuitem ERget(FE_Rename)(expl = ERget(F_RF007B_rename))
+##	{
+# ifdef DGC_AOS
+		/*
+		** Until INGRES supports a readonly mode, DG will use the
+		** following code to avoid ugly error messages that occur
+		** when trying to write to the database when we are only
+		** connected for readonly access.
+		*/
+		if (IIUIcro_CheckReadOnly())
+		{
+			IIUGerr(E_UI0016_ReadOnly_err, UG_ERR_ERROR, 0);
+##			resume
+		}
+# endif
+
+		if (OOcatRename(OC_REPORT, _iicatalog, _cattable, &rfoocatrec,
+			Rbf_noload) != OK )
+		{
+			_VOID_ IIRFSetReadOnly();
+##			resume
+		}
+		STcopy(rfoocatrec.name, r_name);
+		if (Rbf_noload)
+		{
+			OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+		}
+		else 
+		{
+			OOcatTableLoad(OC_REPORT, _iicatalog, _cattable,
+				(bool) TRUE, ERx("*"), r_name, NULL);
+		}
+##	}
+
+##	activate menuitem ERget(FE_MoreInfo) (expl = ERget(_MoreInfoExpl))
+##	{
+ 
+	 	/* See if the detail frame has already been initialized */
+		if (!alloc_detail)
+	 	{
+	 		Nrdetails = F_RDETAILS;
+			if (IIUFgtfGetForm(IIUFlcfLocateForm(),
+				(form = Nrdetails))!=OK)
+			{
+				IIUGerr(E_RF002D_Cannot_locate_form,
+					UG_ERR_ERROR,1,form);
+##				resume
+	     		}
+	     		alloc_detail = TRUE;
+	  	}        
+								      
+		if (OOcatCheck(OC_REPORT, _iicatalog, _cattable, &rfoocatrec)
+		    != OK)
+		{
+			_VOID_ IIRFSetReadOnly();
+##			resume
+		}
+
+		rf_menup[0].mpstring = ERget(FE_Go);
+		OOdetail(rfoocatrec.class, _iicatalog, _cattable,
+		    &rfoocatrec, Nrdetails, 
+		    ERget(F_RF0006_RBF___Detail_on_a_rep),
+		    NULL, rFdetdsply, rFnoop, rFnoop, rFdestroy, rFnoop,
+		    rf_menup, H_DETAIL);
+                if (Rbf_noload)
+			OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+##	}
+
+##	activate menuitem ERget(F_RF002C_AutoReport)
+##		(expl = ERget(F_RF007C_preview))
+##	{
+		STcopy (ERget(S_RF0049_Auto_Sub), buf);
+
+		/* 
+		** Get table name and mode.  Pass call to IIRFcrp_Callreport
+		** to execute report.
+		*/
+		prompt    = ERget(F_RF004A_Table_Name);
+		title     = ERget(F_RF004B_Run_Table_Report);
+		En_SrcTyp = TabRepSrc;
+		AutoReport = TRUE;
+
+    		stat = IIRFgtn_getname(F_GETNAME, F_GTNTITLE,
+			F_GTNPROMPT, F_GTNOBJECT, prompt, title,
+			H_GTNTBL, buf, (char *)r_name);
+		AutoReport = FALSE;
+
+		if (Rbf_noload)
+			OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+##	}
+
+##	activate menuitem ERget(FE_Utilities)(expl = ERget(F_RF007D_utilities))
+##	{
+		for (;;)
+		{
+##			submenu
+##			activate menuitem ERget(FE_Archive)
+##				(expl = ERget(F_RF007E_archive))
+##			{
+##				char	bufr[136];
+
+				if (OOcatCheck(OC_REPORT, _iicatalog, _cattable,
+				  &rfoocatrec) != OK)
+				{
+					_VOID_ IIRFSetReadOnly();
+##					resume
+				}
+
+				STcopy(rfoocatrec.name, r_name);
+
+				IIRFarp_ArchiveReport (bufr);
+
+				if ( STtrmwhite(bufr) <= 0 )
+				{
+					if (Rbf_noload)
+						OOcatEmpty(OC_REPORT, _iicatalog,_cattable);
+##					resume
+				}
+
+
+				filename = (char *) STalloc(s_chk_file(bufr));
+#ifdef CMS
+                 		/* accept fn ft; convert to fn.ft */
+                 		TOwscnme(filename);
+# endif
+
+				IIUGmsg(ERget(S_RF0018_Writing___s__to_file_),
+				    (bool) FALSE, 2, r_name, filename);
+
+				/*
+				** Now write out the report to a file.
+				** Initialize En_rid, so will archive report
+				** based on report name, not on previous id
+				** number.
+				*/
+
+				En_rid = rfoocatrec.id;
+				s_reset(RP_RESET_SRC_FILE,RP_RESET_REPORT,RP_RESET_LIST_END);
+				s_ren_set(r_name,
+				    (rfoocatrec.class == OC_RBFREP) ? ERx("f")
+				      : ERx("s"), En_rid);
+				if (!cr_dmp_rep(rfoocatrec.owner, Ptr_ren_top,
+				    filename, FALSE))
+				    /* something went wrong */
+				    IIUGerr(E_RF0011_Could_not_write_repor,
+					    UG_ERR_ERROR, 0);
+
+				if (Rbf_noload)
+				{
+				    OOcatEmpty(OC_REPORT, _iicatalog,_cattable);
+				}
+				MEfree((PTR)filename);
+				break;
+##			}
+##			activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl)), FRSkey1
+##			{
+				FEhelp(H_UTILS,
+				  ERget(S_RF001A_Utilities_Submenu));
+				continue;
+##			}
+##			activate menuitem ERget(FE_End) (expl = ERget(_EndExpl)), FRSkey3
+##			{
+				if (Rbf_noload)
+				    OOcatEmpty(OC_REPORT, _iicatalog,_cattable);
+				break;
+##			}
+		}
+		if (Rbf_noload)
+			OOcatEmpty(OC_REPORT, _iicatalog,_cattable);
+##	}
+
+##	activate menuitem ERget(FE_Go)(expl = ERget(F_RF007F_go)), FRSkey4
+##	{
+		if (OOcatCheck(OC_RBFREP, _iicatalog, _cattable, &rfoocatrec)
+		    != OK)
+		{
+			_VOID_ IIRFSetReadOnly();
+##			resume
+		}
+
+		/* run report */
+		_VOID_ rFrunrep();
+                if (Rbf_noload)
+			OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+##	}
+
+##	activate FRSkey7 (expl = ERget(_FindExpl))
+##	{
+		FEtabfnd(_iicatalog, _cattable);
+##	}
+
+##	activate FRSkey5 (expl = ERget(_TopExpl))
+##	{
+##		scroll _iicatalog _cattable to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(_BottomExpl))
+##	{
+##		scroll _iicatalog _cattable to end
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl), validate=0),
+##		FRSkey1 (validate = 0)
+##	{
+		FEhelp(H_RCATALOG, ERget(S_RF001C_Report_Catalogs));
+		if (Rbf_noload)
+			OOcatEmpty(OC_REPORT, _iicatalog, _cattable);
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_RF0080_quit)), FRSkey3
+##	{
+##		clear screen
+##		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Quit)(expl = ERget(F_RF0080_quit)), 
+##		FRSkey2 (validate = 0)
+##	{
+##		clear screen
+##		breakdisplay
+##	}
+	return;
+##}
+
+VOID
+rfLast(name)
+char	*name;
+{
+	if  ((!Lastdifferent) && (Lastname[0] != EOS))
+	{
+		if (STcompare(name, Lastname) != 0)
+		{
+			Lastdifferent = TRUE;
+		}
+	}
+
+	Lastsaved = TRUE;
+	STcopy(name, Lastname);
+}
+
+static
+STATUS
+rFdetdsply(id, none)
+
+EXEC SQL BEGIN DECLARE SECTION;
+OOID	id;
+PTR	none;
+EXEC SQL END DECLARE SECTION;
+
+{
+EXEC SQL BEGIN DECLARE SECTION;
+ 	char	rcotype[3];
+	char	rcosection[FE_MAXNAME+1];
+	char	rcotext[101];
+	char	rcotext2[101 + 5];
+EXEC SQL END DECLARE SECTION;
+
+##	char	*r_rbfedit;		/* rbf editable */
+##	char	*r_tname;		/* table name */
+##	char	*r_qlang;		/* query langauge */
+	i4	ql_def;			/* default query language */
+	i4	ql_avail;		/* available query languages */
+##	char	*formname;
+	char	*delim;
+	char 	*ptr;
+	i4 	srctyp;
+	bool	free_r_tname;
+
+	formname = Nrdetails;
+
+	/* set rbf editable field */
+	if (rfoocatrec.class == OC_RBFREP)
+		r_rbfedit = ERget(F_UG0002_Yes2);
+	else
+		r_rbfedit = ERget(F_UG0007_No2);
+##	putform formname (xfield1 = r_rbfedit)
+
+	r_tname = NULL;
+	free_r_tname = FALSE;
+	/*
+	** If the report is based on an object other than a single 
+	** table (such as a JoinDef), pull out the object's name.
+	** Remember that rcosequence is NUMERIC (b41180):
+	*/
+	EXEC SQL SELECT rcotext
+		INTO :rcotext2
+		FROM ii_rcommands
+		WHERE ii_rcommands.object_id = :id and
+		   (ii_rcommands.rcotype = :ERx("ac") and
+		    ii_rcommands.rcosection = :ERx("h") and
+		    ii_rcommands.rcosequence = 1 and
+		    ii_rcommands.rcocommand = :ERx("begin"));
+	EXEC SQL BEGIN;
+		if ((delim = STindex(rcotext2, ERx(","), 0)) != NULL)
+		{
+			CMnext(delim);
+			ptr = delim;
+			CMnext(ptr);
+			*ptr = EOS;
+			CVan(delim, &srctyp);
+			if (srctyp == JDRepSrc)
+			{
+				CMnext(delim); CMnext(delim);
+				_VOID_ STcat(delim, ERx(" (JD)"));
+				r_tname = delim;
+			}
+		}
+		EXEC SQL ENDSELECT;	/* forget about other rows */
+	EXEC SQL END;
+
+	/* grab base table and query language from rcommands */
+	EXEC SQL SELECT rcotype, rcosection, rcotext
+		INTO :rcotype, :rcosection, :rcotext
+		FROM ii_rcommands
+		WHERE ii_rcommands.object_id = :id and
+		  ((ii_rcommands.rcotype = :ERx("qu") and
+		    ii_rcommands.rcosection = :ERx("range")) or
+		   (ii_rcommands.rcotype = :ERx("sq") and
+		    ii_rcommands.rcosection = :ERx("from")) or
+		    ii_rcommands.rcotype = :ERx("ta"));
+	EXEC SQL BEGIN;
+		/*
+		** Set table name in form, must extract name from sql spec.
+		** This is returned as dynamically allocated storage, which
+		** is freed upon return from this routine.
+		*/
+		if (r_tname == NULL)
+		{
+			/*
+			** Skip leading space so r_g_ident() doesn't get
+			** confused and return nothing!  Bug 52532.
+			*/
+			r_g_set(rcotext);
+			_VOID_ r_g_skip();
+			r_tname = r_g_ident(TRUE);
+			free_r_tname = TRUE;
+		}
+
+		EXEC SQL ENDSELECT;	/* forget about other rows */
+	EXEC SQL END;
+
+##	putform formname (xfield2 = r_tname)
+
+	/* set query language field in form */
+	FEdml(&ql_def, &ql_avail);
+	if (ql_avail == FEDMLBOTH)
+	{
+		if (STcompare(rcotype, ERx("qu")) == 0)
+			r_qlang = ERget(F_RF0007_quel);
+		else if (STcompare(rcotype, ERx("sq")) == 0)
+			r_qlang = ERget(F_RF0008_sql);
+		else
+			r_qlang = (ql_def == FEDMLQUEL) ? ERget(F_RF0007_quel) :
+			  ERget(F_RF0008_sql);
+
+##		putform formname
+##		(
+##			xfield3 = ERget(F_RF0009_Query_Language_),
+##			xfield4 = r_qlang
+##		)
+	}
+	else
+	{
+##		clear field xfield3
+##		clear field xfield4
+	}
+
+	if  (free_r_tname)
+	{
+		_VOID_ MEfree(r_tname);
+	}
+
+	return (OK);
+}
+
+static
+STATUS
+##rFrunrep(id, none)
+OOID	id;
+PTR	none;
+##{
+	char	r_name[FE_MAXNAME + 1];
+	i4     dest;
+
+	STcopy(rfoocatrec.name, r_name);
+	St_style = RS_NULL;
+
+	/* Get Destination *and* call the report */
+	dest = IIRFgtd_getdest(r_name);
+
+	/* Return the status of the above operation.
+	   This fixes bug 39872 (steveh).           */
+	return dest >= 0 ? OK : FAIL;
+##}
+
+/*
+** Name: IIRFcrp_Callreport
+**
+** Description: This is a listpick handler function called 
+**		indirectly from the IIRFgtd_getdest() routine.
+**		The destination of the report is passed in as
+**		the choice.  If St_style is RS_NULL, there is
+**		no specified style so this is a "GO" function
+**		to run an existing report.  If St_Style has a
+**		value, this is a preview function.
+**
+**	26-jan-1994 (rdrane)
+**		Unnormalize userid as required before calling UTexe().
+**	15-feb-1994 (mgw) Bug #59800
+**		Take out the debugging noise left in from the previous
+**		change.
+*/
+
+static
+STATUS
+IIRFcrp_Callreport(obname, dest, resume )
+PTR  obname;	/* Report or table name */
+i4  dest;	/* destination of the report desired */
+bool  *resume;
+##{
+##	char	repflags[REP_LEN];
+##	char	*db_name;
+##  	char    *rep_mode;
+##  	char    *r_name;
+##	char	*printer;		   /* printer to send report to */
+##	i4	copy_num;		   /* number of copies to print out */
+	char	*form;
+	u_i4	len;
+	STATUS	rval;
+
+#ifdef hp9_mpe
+	char	err_locb[MAX_LOC + 1];	   /* buffer for err_loc */
+	LOCATION err_loc;		   /* MPE stdout name: $STDLIST */
+#endif
+	LOCATION *temp_loc;		   /* temporary location */
+	LOCATION log_loc;		   /* location for the error log name */
+	char    log_name[MAX_LOC + 1];	   /* buffer for error log name */
+##	char    buf[MAX_LOC + 1];
+	bool    decl_vars;		   /* TRUE if report has declared 
+					   ** variables */
+	bool    batch;			   /* TRUE if running report in batch */
+	bool    break_state;		   /* TRUE if hit CANCEL */
+	char    *param_buf;		   /* points to declared variables 
+					   ** values to send as a parameters to
+					   ** RW */
+	i4      mode;			   /* batch or interactive mode */
+	CL_ERR_DESC	err_code;
+	char	*cmdline;
+	char	*dbconnect;
+	i4	run_params;
+	char	unrml_uid[(FE_UNRML_MAXNAME + 1)];
+
+	r_name = (char *)obname;
+	batch = FALSE;
+	break_state = FALSE;
+
+	switch( dest)
+	{
+	case ToNowhere:
+		return (dest);
+	case ToDefault:
+##		clear screen
+		if (St_style == RS_NULL)
+    	   		IIUGmsg(ERget(S_RF001E_Running_report___s___), 
+			(bool) FALSE, 1, r_name);
+		else
+	   		IIUGmsg(ERget(S_RF004B_Running_auto), (bool) FALSE, 
+		 	1, r_name);
+		/* 
+		** Just run the report.  No flags since default is
+		** the screen.
+		*/
+    		*repflags = EOS;
+    		len = 0;
+		break;
+	case ToFile:
+		/* get file name to write report to */
+		IIRFgfn_GetFilename(buf, &break_state, &batch, &log_loc, 
+			log_name, &param_buf, &decl_vars); 
+
+		if ((break_state) || ((len = STtrmwhite(buf)) <= 0 ))
+		{
+			/* 
+			** If CANCEL, only want to return to last popup so set
+			** resume to TRUE.
+			*/
+			*resume = TRUE;
+			return(OK);
+		}
+#ifdef CMS
+		/* accept fn ft; convert to fn.ft */
+		TOwscnme(buf);
+# endif
+		/* create the report flag using the -f flag */
+		_VOID_ STprintf (repflags, ERx("-f%s"), buf);
+##		clear screen
+		if (St_style == RS_NULL)
+	    	  IIUGmsg(ERget(S_RF001F_Writing___s__to_file_), 
+			(bool) FALSE, 2, r_name, buf);
+		else
+		  IIUGmsg(ERget(S_RF004C_Writing_auto), (bool) FALSE, 
+			2, r_name, buf);
+	    	len += 2; /* length is 2 + length of filename */
+		break;
+
+	case ToPrinter:
+		/* option = Printer */
+		IIRFgpr_GetPrinter(buf, &copy_num, &break_state, &batch, 
+			&log_loc, log_name, &param_buf, &decl_vars); 
+
+		/* break_state is true if CANCEL is hit */
+		if (break_state)	
+		{
+			/* 
+			** Just return and set resume to TRUE to display last
+			** popup 
+			*/
+			*resume = TRUE;
+			return(OK);
+		}
+
+
+		/* set -o(output) option */
+		STcopy(ERx("-o"), repflags); 
+
+		/* get printer and number of copies */
+		printer = &repflags[2];	     
+		STcopy(buf, printer); 
+			
+		if ((len = STtrmwhite(printer)) > 0 ) 
+		{
+			/* check if default printer */
+			CVlower (buf);
+			if (STcompare(buf, ERget(F_RF0018_default)) == 0)
+			{
+				/* 
+				** Use default printer by
+				** only passing -o flag
+				*/
+	    			len = 2;
+			}
+			else
+			{
+				/* 
+				** include printer name in flag 
+				*/
+	    			len += 2;
+			}
+		}
+		else
+		{
+			/* No printer specified. Use default */
+	    		len = 2;
+		}
+
+		/* truncate the report flags string (bug34587) */
+		repflags[len] = 0;
+
+		if (copy_num > 1)
+		{
+			_VOID_ STprintf( repflags + len, ERx(" -n%d"), 
+				copy_num);
+			/*
+			**   3 = (" -n") 
+			** + 3 = (copy_num max is 3 digits,
+			** ----   controlled by the rfprint form)
+			**   6 =  more to add to current len
+			*/
+			len += 6; 
+		}
+##		clear screen
+	    	IIUGmsg (ERget(S_RF0052_Printing_report), (bool) FALSE, 1, 
+			r_name);
+		break;
+	}
+
+	/*
+	 * B3376: Pass along -l value only if specified on command line
+	 */
+	if (St_lspec)
+		_VOID_ STprintf( repflags + len, ERx(" -l%d"), En_lmax); 
+
+    	/* fix for bug 4465 */
+	if (St_silent)
+		STcat(repflags, ERx("-s"));
+
+	db_name = En_database;
+
+	if (batch)
+	{
+		/* 
+		** If batch, pass to RW the batch flag, '+e'  and don't wait
+		** for RW to finish execution.
+		*/
+		temp_loc = &log_loc;
+		mode = UT_NOWAIT;
+		STcat(repflags, ERx(" +e"));
+		dbconnect = NULL;	        /* no shared db connection */
+
+		/* 
+		** If any declared variables, then add the parameter list to 
+		** the report flags 
+		*/
+		if (decl_vars)
+			_VOID_ STpolycat(3, repflags, ERx(" "), param_buf, 
+				repflags);
+		if (St_style == RS_NULL)
+		{
+			cmdline=ERx("database=%S,report=%S,flags=%S,user=%S");
+			run_params = 4;
+		}
+		else
+		{
+		 	cmdline = 
+			   ERx("database=%S,name=%S,mode=%S,flags=%S,user=%S");
+			run_params = 5;
+		}
+	}
+	else
+	{
+#ifdef hp9_mpe
+		/* Bug #50554 */
+		temp_loc = &err_loc;
+		STcopy( ERx("$STDLIST"), err_locb);
+		LOfroms( FILENAME, err_locb, temp_loc);
+#else
+		temp_loc = (LOCATION *)NULL;
+#endif
+		mode = UT_WAIT;
+		dbconnect = IIxflag();	        /* shared db connection */
+		if (St_style == RS_NULL)
+		{
+			cmdline=
+			 ERx("database=%S,report=%S,flags=%S,user=%S,equel=%S");
+			run_params = 5;
+		}
+		else
+		{
+		 	cmdline = 
+			   ERx("database=%S,name=%S,mode=%S,flags=%S,user=%S,equel=%S");
+			run_params = 6;
+		}
+	}
+		
+	/* 
+	** Set up screen before calling UTexe - get out of 
+	** forms mode 
+	*/
+##	clear screen
+	FTrestore(FT_NORMAL); 
+	SIprintf(ERx("\n\n"));
+	SIflush(stdout);
+
+	/*
+	** Unnormalize the userid as required.  Note that in the case
+	** of a tablename, the tablename is already unnormalized.
+	*/
+	_VOID_ IIUGxri_id(IIUIdbdata()->suser,&unrml_uid[0]);
+
+	/* 
+	** Always pass dbconnect, even if in batch mode and don't need it.  
+	** run_params always has the correct number of parameters needed.  
+	** Makes it easier to only have two different UTexe calls, rather 
+	** than four calls.
+	*/
+	if (St_style == RS_NULL)
+	{
+		rval = UTexe(mode, temp_loc, NULL, 
+			(PTR)NULL,
+		 ERx ("report"),
+			 &err_code, cmdline, 
+			run_params,db_name,r_name,repflags,&unrml_uid[0],
+			dbconnect);
+	}
+	else
+	{
+		switch (St_style)
+		{
+			case RS_TABULAR:
+			case RS_COLUMN:
+				rep_mode = ERget(F_RF0019_column);
+				break;
+			case RS_BLOCK:
+				rep_mode = ERget(F_RF001B_block);
+				break;
+			case RS_WRAP:
+				rep_mode = ERget(F_RF001A_wrap);
+				break;
+			default:
+				rep_mode = ERx("");
+				break;
+		}
+
+		rval = UTexe(mode, temp_loc, NULL, 
+			(PTR)NULL,
+		 ERx ("report"),
+			 &err_code,
+		 	cmdline, run_params, db_name, r_name, rep_mode, 
+			repflags,&unrml_uid[0], dbconnect);
+	}
+
+	/*
+	** Emit a message and wait for the user to press RETURN
+	** if an error occurred while running report. (38434)
+	*/
+	if (rval != OK)
+	{
+		i4             msg_len = ER_MAX_LEN;
+		char            msg_buf[ER_MAX_LEN];
+		CL_ERR_DESC     sys_err;
+
+		msg_buf[0] = EOS;
+		/* Report OS level error messages if available - bug 49656 */
+		if  (ERlookup((i4)0, &err_code, 0, (i4 *)NULL,
+			      &msg_buf[0], msg_len, 1, &msg_len, &sys_err,
+			      (i4)0, (ER_ARGUMENT *)NULL) == OK)
+		{
+			if  (msg_buf[0] != EOS)
+			{
+				IIUGerr(E_RF0007_OSError, UG_ERR_ERROR, 1,
+					&msg_buf[0]);
+			}
+		}
+		IIUGmsg(ERget(S_RW0025_Hit_RETURN_when_done), (bool)TRUE, 0);
+	}
+
+	FTrestore(FT_FORMS); 
+	return (OK);
+##}
+
+static
+STATUS
+rFnoop(id, none)
+OOID	id;
+PTR	none;
+{
+	return (OK);
+}
+
+static
+STATUS
+rFdestroy(rfooid, none)
+
+EXEC SQL BEGIN DECLARE SECTION;
+OOID	rfooid;
+PTR	none;
+EXEC SQL END DECLARE SECTION;
+
+{
+	i4	tries;
+	i4	completed;
+
+	iiuicw1_CatWriteOn();
+
+	completed = FALSE;
+	for (tries = 0; tries < MAX_RETRIES; tries++)
+	{
+		ing_deadlock = FALSE;
+
+		EXEC SQL DELETE FROM ii_reports
+			WHERE object_id = :rfooid;
+
+		if (deadlock())
+		{
+			continue;
+		}
+		else if (FEinqerr())
+		{
+			break;
+		}
+
+		EXEC SQL DELETE FROM ii_rcommands
+			WHERE object_id = :rfooid;
+
+		if (deadlock())
+		{
+			continue;
+		}
+		else if (FEinqerr())
+		{
+			break;
+		}
+
+		completed = TRUE;
+		break;
+	}
+
+	iiuicw0_CatWriteOff();
+
+	if (!completed)
+	{
+		if (ing_deadlock)
+		    IIUGerr(E_RF0020_Deadlock_has_occurred,
+			    UG_ERR_ERROR, 0);
+		else
+		    IIUGerr(E_RF0021_Error_occurred_in_del, UG_ERR_ERROR, 0);
+	}
+	return (OK);
+}
+
+
+/*
+**  Name:  IIRFcrCreateReport
+**  Description:
+**      Displays the pop up to get the name of data source (JoinDef, Table, or 
+**      View), and calls the routine to get the style of report.
+*/
+
+static
+i4
+IIRFcrCreateReport(r_name, SrcTyp, resume)
+PTR     r_name;          /* Report name */
+i4      SrcTyp;         /* Method of form creation. */
+bool    *resume;        /* Another chance to select form creation method? */
+{
+	char *prompt;
+	char *title;
+	char *tname;
+	char *help;
+	i4  stat = TRUE;
+
+	*resume = FALSE;
+
+	/* Get the object name and report style  **/
+	En_SrcTyp = SrcTyp;
+	switch( En_SrcTyp)
+	{
+		case TabRepSrc:
+			prompt = ERget(F_RF004A_Table_Name);
+			title  = ERget(F_RF004C_Create_Table_Report);
+			help   = H_GTNTBL;
+			break;
+		case JDRepSrc:
+			prompt = ERget(F_RF0048_JoinDef_Name);
+			title  = ERget(F_RF004F_Create_JD_Report);
+			help   = H_GTNJD;
+			break;
+		case DupRepSrc:
+			prompt = ERget(F_RF004D_Existing_Report_Name);
+			title  = ERget(F_RF004E_Create_by_Dup);
+			help   = H_GTNDUP;
+			break;
+		case VQRepSrc:
+			/* WHOOPS--not implemented */
+			*resume = TRUE;
+			return(En_SrcTyp);
+		default:	/* FORGET */
+			return(En_SrcTyp);
+	}
+
+    	stat = IIRFgtn_getname(F_GETNAME, F_GTNTITLE,
+		F_GTNPROMPT, F_GTNOBJECT, prompt, title,
+		help, prompt, (char *)r_name);
+
+	/*
+	** If no name entered, resume
+	*/
+	if  (!stat)
+	{
+		*resume = TRUE;
+	}
+
+	return(En_SrcTyp);
+}
+
+
+/*
+**  Name:  IIRFgtn_getname
+**  Description:
+**      Displays the pop up to get the name of data source (JoinDef, Table, or 
+**      View), and calls the routine to get the style of report.
+**
+**	3-nov-1992 (rdrane)
+**		Replace FErelexists() call with FE_fullresolve() to support
+**		6.5 owner.tablename constructs.
+**	8-dec-1992 (rdrane)
+**		If creating a report based upon a JoinDef or a Table and
+**		the connection is to a 6.5 database, then enable expanded
+**		namespace.
+**	05-jan-93 (sylviap)
+**		Added a new menuitem 'Edit' to allow editing/creating of 
+**		joindefs from rbf.  Also changed the behavior to display an 
+**		error when creating a report.  If no report/table/joindef name 
+**		is entered in the 'create popup', then an error is displayed.
+**		This behavior is consistent with vifred's.
+**	21-jan-1993 (rdrane)
+**		Ensure that the object name (ob_name) buffer is large enough
+**		for an owner.tablename specification!
+**	13-apr-1993 (rdrane)
+**		Effect full resolution of table name before determining
+**		initial/changed specification (b50688).
+**	6-oct-1993 (rdrane)
+**		If AutoReport is TRUE, then we got here via Preview.  That
+**		being the case, ChooseColumns is NOT a valid option.   This
+**		addresses b54951.
+**	26-jan-1994 (rdrane)
+**		Unnormalize userid as required before calling UTexe.
+**	15-feb-1994 (mgw) Bug #59800
+**		Take out the debugging noise left in from the previous
+**		change.
+**	21-jun-1995 (harpa06)
+**		Convert tables names given into it's BE representation before 
+**		continuing to process the table so that delimited table name 
+**		output is correct.
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+static
+i4
+IIRFgtn_getname(form_name, title_fld, prompt_fld, name_fld,  prompt_str,
+		title_str, help_scrn, help_title, o_name )
+##char  *form_name;	/* form name */
+##char  *title_fld;	/* title field */
+##char  *prompt_fld;	/* prompt field */
+##char  *name_fld;	/* field user will enter in name */
+##char	*prompt_str;	/* prompt to get object name */
+##char	*title_str;	/* title to get object name */
+char	*help_scrn;	/* help screen file */
+char	*help_title;	/* help screen title */
+##char	*o_name;	/* Object name */
+{
+## 	char ob_name[(FE_MAXTABNAME +1)];/* object name */
+##	i2	null_ob;		/* null indicator for ** object name */
+##	char *lcpick;			/* List Choices selection */
+##	i4	joindef_flag;		/* True = 1 if creating report based on
+					** joindef */
+##	i4	tbl_flag;		/* True = 1 if creating report based on
+					** table */
+	FE_RSLV_NAME cat_ferslv;	/* Tablename validation work struct */
+    	FE_REL_INFO 	msg;
+	bool MasDet = FALSE;  /* If we are dealing with a JoinDef as 
+			the source of data see if it's a master/detail */
+	char lpbuf[1024];
+	char hlpbuf[80];
+	char *prompt;
+	char *title;
+        OOID    ooclass;
+        OOID    ooid;
+	i4	stat = TRUE;
+	char	unrml_uid[(FE_UNRML_MAXNAME + 1)];
+
+	/* 
+	** if popup not already initialized 
+	*/
+	if (!(name_frm))	
+##	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name)!=OK)
+		{  
+			IIUGerr(E_RF002D_Cannot_locate_form, UG_ERR_ERROR,
+				1, form_name);
+			return (FALSE);
+		}
+		name_frm = TRUE;
+##	}
+
+	/* 
+	** Display Popup that prompts to enter the table/view/joindef name 
+	*/
+##	display form_name fill with style = popup 
+##	initialize (prompt_fld = prompt_str, title_fld = title_str)
+##	{
+		St_style = RS_NULL;
+
+		/*
+		** Reset some stuff for the Choose Columns feature.
+		** Disable/enable 'ChooseColumns ' menuitem.  Disable if user 
+		** is not creating a report based on a table.  If user is
+		** creating a report based on a table, enable menuitem to 
+		** allow user to select which columns to base the report on.
+		** However, if this is an AutoReport (Preview), then
+		** ChooseColumns is disallowed (b54951).
+		*/
+		if ((En_SrcTyp == TabRepSrc) && (!AutoReport))
+			tbl_flag = 1;
+		else
+			tbl_flag = 0;
+## 		set_frs menu form_name 
+##			(active(ERget(F_RF008F_ChooseCols)) = tbl_flag)
+		
+		IIRFcccount = IIRFcdcount = 0;
+		ccol_owner[0] = EOS;
+		ccol_name[0] = EOS;
+
+		/* 
+		** Disable/enable 'Create Joindef' menuitem.  Disable if user 
+		** is not creating a report based on a joindef.  If user is
+		** creating a report based on a joindef, enable menuitem to 
+		** allow user to create/edit the joindef.
+		*/
+		if (En_SrcTyp == JDRepSrc)
+			joindef_flag = 1;
+		else
+			joindef_flag = 0;
+		
+## 		set_frs menu form_name (active(ERget(FE_Edit)) = joindef_flag)
+##	}
+
+##	activate menuitem ERget(FE_OK)(expl = ERget(F_RF0081_enter_object)),
+##		frskey4
+##	{
+		/* 
+		** Get the user specified object name:
+		*/
+##		getform (ob_name:null_ob = name_fld) 
+
+		switch (En_SrcTyp)
+		{
+		case JDRepSrc:
+			if ((null_ob == (-1)) || ( STtrmwhite(ob_name) <= 0 ))
+			{
+				/* If no name, then print error */
+				IIUGerr(E_RF00A9_NoJDName,UG_ERR_ERROR, 0);
+##				resume
+			}
+			ooclass = OC_JOINDEF;
+			ooid = -1;
+                        if(IIOOidCheck( &ooclass, &ooid, ob_name, (char *)NULL,
+				0) == OK )
+                        {
+				/* This should always be TRUE */
+				if (!r_JDLoad(ob_name, &MasDet))
+				{
+##					resume
+				}
+				STcopy(ob_name, o_name);
+			}
+			else
+			{
+				IIUGerr(E_RF0090_Bad_JoinDef,UG_ERR_ERROR,
+					1,ob_name);
+##				resume
+			}
+			break;
+		case TabRepSrc:
+			if ((null_ob == (-1)) || ( STtrmwhite(ob_name) <= 0 ))
+			{
+				/* If no name, then print error */
+				IIUGerr(E_RF00AA_NoTableName,UG_ERR_ERROR, 0);
+##				resume
+			}
+
+			/*
+			** If we are dealing with a table or view object,
+			** decompose any owner.tablename, and verify its
+			** existence/accessability.  If not found, 
+			** reset the counts to make it appear that
+			** the user did not do any Choose Columns work
+			** in case a name change occurred.
+			*/
+			cat_ferslv.name = ob_name;
+			cat_ferslv.owner_dest = &ob_odest[0];
+			cat_ferslv.name_dest = &ob_ndest[0];
+			cat_ferslv.is_nrml = FALSE;
+			if  (!(FE_fullresolve(&cat_ferslv)))
+			{
+				IIRFcccount = IIRFcdcount = 0;
+				ccol_owner[0] = EOS;
+				ccol_name[0] = EOS;
+				IIUGerr(E_RF004A_Bad_Table,UG_ERR_ERROR,
+					1,ob_name);
+##				resume
+			}
+		        /* convert the user table name input into it's BE
+			** representation for user output.
+			**/
+			if (STbcompare (cat_ferslv.owner_dest,
+				        STlength(cat_ferslv.owner_dest),
+				        Usercode,STlength(Usercode),TRUE) !=0)
+				              IIUIxrt_tbl(cat_ferslv.owner_dest,
+				                          cat_ferslv.name_dest,
+							  ob_name);
+			else 
+			{
+				if (IIUGdlm_ChkdlmBEobject(ob_name,NULL,FALSE) 
+				    !=UI_DELIM_ID)
+				    	STcopy(cat_ferslv.name_dest,ob_name);
+			}
+
+			/*
+			**  If user changed the name, then we just
+			**  reset the counts to make it appear that
+			**  the user did not do any Choose Columns work.
+			*/
+			if ((STcompare(&ob_odest[0], &ccol_owner[0]) != 0) ||
+			    (STcompare(&ob_ndest[0], &ccol_name[0]) != 0))
+			{
+				IIRFcccount = IIRFcdcount = 0;
+				ccol_owner[0] = EOS;
+				ccol_name[0] = EOS;
+			}
+			break;
+
+		case DupRepSrc:
+			if ((null_ob == (-1)) || ( STtrmwhite(ob_name) <= 0 ))
+			{
+				/* If no name, then print error */
+				IIUGerr(E_RF00AB_NoRWName,UG_ERR_ERROR, 0);
+##				resume
+			}
+			St_style = RS_NULL;
+			/* verifiy by checking catalog name and class */
+			ooid = -1;
+			ooclass = OC_RBFREP;
+                        if(IIOOidCheck( &ooclass, &ooid, ob_name, (char *)NULL,
+				0) == OK )
+                        {
+				STcopy(ob_name, o_name);
+				if( (stat = IIRFdne_DoNewEdit((char *)o_name)) 
+					== FALSE)
+				{
+##					resume
+				}
+##				breakdisplay
+			}
+			else
+			{
+				IIUGerr(E_RF0091_Bad_Report,UG_ERR_ERROR,
+					1,ob_name);
+##				resume
+			}
+			break;
+		}
+
+		/*
+		** ob_name & friends are valid at this point
+		*/
+		/*
+		** The order here is important
+		** It corresponds to the selections
+		** numbers defined in rbfcons.h
+		*/
+		prompt = ERget(F_RF0044_Style_Prompt);
+		STcopy(ERget(S_RF005A_Style_Choices),lpbuf);
+		STcopy(ERget(S_RF005F_Report_Styles),hlpbuf);
+		if (!AutoReport)
+		{
+			STcat(lpbuf,ERget(S_RF005B_IndStyle_Choice));
+			STcat(lpbuf,ERget(S_RF0063_Labels_Choice));
+			if (MasDet)
+			{
+				STcat(lpbuf,ERget(S_RF005C_MDStyle_Choice));
+			}
+		}
+
+		St_style = IIFDlpListPick(prompt,lpbuf,0,
+			LPGR_FLOAT,LPGR_FLOAT, hlpbuf,
+			H_STYLES, IIRFgts_getstyle, (PTR) ob_name );
+
+		if( St_style == RS_NULL )
+		{
+			/*
+			** no style was entered by user
+			** Return with empty name
+			*/
+			*o_name = EOS;
+##			resume
+		}
+		/*
+		** If the server supports delimited identifiers, then
+		** ensure that .DELIMID is enabled since we're doing a report
+		** based upon a table, and it may require such services.
+		*/
+		if  ((IIUIdlmcase() != UI_UNDEFCASE) &&
+		     (En_SrcTyp != DupRepSrc))
+		{
+			Rbf_xns_given = TRUE;
+			St_xns_given = TRUE;
+		}
+
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(FE_Edit) 
+##		(expl = ERget(F_RF009C_EditExpl))
+##	{
+		STATUS          rval;		/* return value from UTexe */
+		LOCATION        *temp_loc;      /* temporary location */
+		i4              mode;           /* batch or interactive mode */
+		CL_ERR_DESC     err_code;	/* error status from UTexe */
+		char            *cmdline;	/* cmdline for UTexe */
+		char            *dbconnect;	/* -X connection */
+		i4     	run_params;	/* # of parameters */
+		char		*db_name;	/* database name */
+
+
+
+		/* 
+		** Get the user specified object name:
+		*/
+##		getform (ob_name:null_ob = name_fld) 
+
+		if ((null_ob == (-1)) || ( STtrmwhite(ob_name) <= 0 ))
+		{
+			/* If no name, then print error */
+			IIUGerr(E_RF00A9_NoJDName,UG_ERR_ERROR, 0);
+##			resume
+		}
+		mode = UT_WAIT;		/* execute interactive, not batch */
+		temp_loc = NULL;	/* no log file */
+		dbconnect = IIxflag();  /* pass along db connection */
+		db_name = En_database;  /* database name */
+
+		cmdline=ERx("database=%S,nogo=%S,user=%S,equel=%S");
+		run_params = 4;
+
+##		clear screen;		/* clear screen so QBF banner does 
+					** not come up underlined. */
+
+		/*
+		** Unormalize the userid as required.
+		*/
+		_VOID_ IIUGxri_id(IIUIdbdata()->suser,&unrml_uid[0]);
+
+		rval = UTexe(mode, temp_loc, NULL, 
+			(PTR)NULL, ERx ("qbf"), &err_code, cmdline, 
+			run_params,db_name,ob_name,&unrml_uid[0],
+			dbconnect);
+
+                /* Check if any errors occurred */
+                if (rval != OK)
+                {
+                        i4 err = rval;
+
+                        IIUGerr(E_RF00AC_ExecutionError, UG_ERR_ERROR, 2,
+                                ERx("qbf"), (PTR)&err);
+                }
+##		clear screen;		/* so FRS will redraw the screen 
+					** correctly */ 
+##		redisplay;
+##		resume;
+##	}
+
+##	activate menuitem ERget(F_RF008F_ChooseCols)
+##		(expl = ERget(F_RF0090_ChColExpl))
+##	{
+		/*
+		**  Must check that there is a name, it is valid
+		**  and user has access to it.  Each of these
+		**  conditions must be caught and separate errors
+		**  issued.
+		*/
+
+		if (!haveccform)
+		{
+			if (IIUFgtfGetForm(IIUFlcfLocateForm(),
+				ERx("rfchoose_columns")) != OK)
+			{
+				IIUGerr(E_RF002D_Cannot_locate_form,
+					UG_ERR_ERROR,1,ERx("rfchoose_columns"));
+##				resume
+			}
+			haveccform = TRUE;
+		}
+
+		/*
+		**  Get the table name.
+		*/
+##		getform (ob_name:null_ob = name_fld) 
+
+		if (null_ob == (-1) || STtrmwhite(ob_name) <= 0)
+		{
+			/*
+			**  User has not entered a name yet.
+			**  Give error and continue.
+			*/
+			IIUGerr(E_RF00A3_No_Tbl_Name, UG_ERR_ERROR, 0);
+##			resume
+		}
+
+		/*
+		** In order to get an accurate indication of any initial
+		** or changed specification, effect a full resolve on the
+		** table name before checking against the saved values
+		** (b50688).  While this is a bit of overkill, the only
+		** superfluous operation is the resolve_table(), and it
+		** can be argued that the named table could have disappeared
+		** or otherwise become/changed as a synonym.  So,
+		** unconditionally determine if the table name is any good
+		** that user has access to it.
+		*/
+		cat_ferslv.name = ob_name;
+		cat_ferslv.owner_dest = &ob_odest[0];
+		cat_ferslv.name_dest = &ob_ndest[0];
+		cat_ferslv.is_nrml = FALSE;
+		if  (!(FE_fullresolve(&cat_ferslv)))
+		{
+			IIUGerr(E_RF004A_Bad_Table,UG_ERR_ERROR,1,ob_name);
+##			resume
+		}
+		/*
+		** Check for initial or changed specification
+		*/
+		if  ((STcompare(&ob_odest[0],&ccol_owner[0]) != 0) ||
+		     (STcompare(&ob_ndest[0],&ccol_name[0]) != 0))
+		{
+			STcopy(&ob_odest[0],&ccol_owner[0]);
+			STcopy(&ob_ndest[0],&ccol_name[0]);
+			IIRFcccount = IIRFcdcount = 0;
+		}
+
+		IIRFccChooseColumns(&ccol_name[0], &ccol_owner[0]);
+##	}
+##	activate menuitem ERget(FE_Cancel)(expl = ERget(F_FE0103_ExplCancel),
+##		validate = 0, activate = 0), FRSkey9 (validate = 0,activate = 0)
+##	{
+		stat = FALSE;
+##		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Lookup) (validate = 0, activate = 0,
+##			expl = ERget(FE_LookupExpl)), 
+##			FRSkey10 (validate = 0, activate = 0)
+##	{
+	    switch (En_SrcTyp)
+	    {
+	    	case TabRepSrc:
+			/* Don't allow table creation, examination. */
+			set_IituMainform(FALSE);		 
+			lcpick = IITUtpTblPik(NULL, ERget(F_RF0023_RBF));
+			break;
+	    	case DupRepSrc:
+			STcopy(ERget(F_RF0050_Existing_Reports), hlpbuf);
+			lcpick = IIUFopObjPik(hlpbuf, H_LPREPORTS,  OC_RBFREP,
+			    	ERget(F_RF0051_reports),
+			    	ERget(F_RF0052_Selecting_Reports),
+			    	ERget(F_RF0053_Report_Name));
+			break;
+	    	case JDRepSrc:
+			STcopy(ERget(S_RF005D_List_of_JD), hlpbuf);
+			lcpick = IIUFopObjPik(hlpbuf, H_LPJOINDEFS, OC_JOINDEF,
+				    ERget(F_RF0049_JoinDefs),
+				    ERget(F_RF0047_Selecting_Jdef_names),
+				    ERget(F_RF0048_JoinDef_Name));
+			break;
+	    }
+	    if ((lcpick != NULL) && (*lcpick != EOS))
+	    {
+##	        putform form_name (name_fld = lcpick)
+	    }
+##	}
+
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl), validate=0),
+##		FRSkey1 (validate = 0)
+##	{
+		FEhelp(help_scrn,help_title);
+##	}
+
+	return (stat);
+}
+
+/*
+**  Name:  IIRFgts_getstyle
+**  Description:
+**      Displays the pop up to the default style of the report.
+*/
+static
+i4
+ IIRFgts_getstyle(obname, choice, resume)
+PTR  obname;     /* If not NULL called from auto report--call callreport */
+i4  choice;     /* style/mode of the report desired */
+bool  *resume;
+{
+
+	i4 dest;
+	i4 stat;
+
+	/* 
+	** Display Popup with the 'style' options.  User may create the 
+	** report using the following styles: tabluar, indented, block
+	** or labels.
+	*/
+	switch (choice)
+	{
+
+		/* Tabular */
+		case TabStyle:
+			St_style = RS_TABULAR;
+			break;
+
+		/* Wrap */
+		case WrpStyle:
+			St_style = RS_WRAP;
+			break;
+
+		/* Indented */
+		case IndStyle:
+			St_style = RS_INDENTED;
+			break;
+
+		/* Block */
+		case BlkStyle:
+			St_style = RS_BLOCK;
+			break;
+
+		/* Labels */
+		case LblStyle:
+			St_style = RS_LABELS;
+			break;
+
+		/* Master/Detail */
+		case MDStyle:
+			St_style = RS_MASTER_DETAIL;
+			break;
+
+		/* Forget this */
+		case NoStyle:
+		default:
+			St_style = RS_NULL;
+			break;
+	}
+	/* If a style was chosen and
+	** we were called from auto report,
+	** get the destination of the report
+	** AND run it
+	**
+	** Otherwise do edit of new object
+	*/
+	if( St_style != RS_NULL )
+	{
+		if(  AutoReport )
+		{
+			if( (dest = IIRFgtd_getdest((char *)obname)) 
+						== ToNowhere )
+				*resume  = TRUE;
+		}
+		else 
+		{
+			if( (stat = IIRFdne_DoNewEdit((char *)obname)) == FALSE)
+				*resume  = TRUE;
+		}
+	}
+	return( St_style);
+
+}
+/*
+**  Name:  IIRFgtd_getdestination
+**  Description:
+**      Displays the pop up to the destination of the report.
+**      Calls Callreport to actually do the report handling, pasing
+**	along the name
+*/
+
+static
+i4
+IIRFgtd_getdest(obname)
+char *obname;
+{
+	i4 dest;
+	char *prompt;
+	char *choices;
+	char hlpbuf[80];
+
+	prompt  = ERget(F_RF0045_Dest_Prompt);
+	choices = ERget(F_RF0046_Dest_Choices);
+	STcopy( ERget(S_RF0060_Report_Dest),hlpbuf);
+	dest = IIFDlpListPick(prompt, choices, 0,
+		LPGR_FLOAT,LPGR_FLOAT, hlpbuf, H_DEST,
+		IIRFcrp_Callreport, (PTR) obname);
+
+	return (dest);
+}
+
+/*
+**  Name:  IIRFdne_DoNewEdit
+**  Description:
+**      Edit a new report
+*/
+static
+i4
+IIRFdne_DoNewEdit(obname)
+char *obname;
+{
+	bool stat = TRUE;
+
+	En_lmax_orig = En_lmax;     /*B3376*/
+
+	if ((En_SrcTyp != NoRepSrc) && (obname != NULL) && (*obname != EOS))
+	{
+
+	       	En_rid = -1;
+		if (En_SrcTyp == DupRepSrc)
+		{
+
+			rfLast(ERx(""));
+			Lastdifferent = TRUE;
+			Lastsaved = FALSE;
+			/* load report */
+	    		En_rid = -1;
+			stat = rFget(obname, TRUE, RS_NULL);
+			
+		}
+		else if (En_SrcTyp == JDRepSrc)
+		{
+			stat = r_JDrFget(obname, St_style);
+		}
+		else if (En_SrcTyp == TabRepSrc)
+		{
+			/*
+			** obname wants to be full, unnormalized spec
+			*/
+			stat = rFget(obname, FALSE, St_style);
+		}
+	    	if (stat)
+	   	{
+	            /* B3376: See if the default report was too 
+		    ** wide (It changes En_lmax!) Don't allow 
+		    ** that.  Give message and change it back.
+		    */
+		    if( En_lmax_orig >= En_lmax )
+		    {
+		  	/* 
+		   	** B7209: En_lmax get reset in rFget.
+		   	** If it comes back smaller than the 
+		   	** original, then set it back.  Reset 
+			** does not take place if we are dup-
+			** licating an already existing report.
+			** (fixes bug 35177 - steveh).
+		   	*/
+			if (Rbf_ortype != OT_DUPLICATE && Rbf_ortype != OT_EDIT)
+			{
+				En_lmax = En_lmax_orig;
+			}
+		    }
+		    else if (St_style == RS_LABELS)
+		    {
+			/* Never let a label report wrap */
+		        CVna(En_lmax,lmax_str);
+		        CVna(En_lmax_orig,oldlmax_str);
+		        IIUGerr (E_RW13E9_Default_rpt_too_wide,
+			   UG_ERR_ERROR,2,lmax_str,oldlmax_str);
+		        En_lmax = En_lmax_orig;
+			return(FALSE);
+		    }
+		    else if (St_lspec && 
+		       ((St_style == RS_TABULAR) || (St_style == RS_COLUMN)))
+		    {
+		       /* 
+		       ** Let the user choose whether to create the report
+		       ** greater than the -l flag specified.  #396, #709
+		       ** Indented and Master/Detail reports are caught 
+		       ** in r_IndentedSetUp and r_JDMasterDetailSetUp 
+		       ** (rbfstyles.c).
+		       */
+		       if (IIRFwid_WideReport(En_lmax, En_lmax_orig) != OK)
+		       {
+			   En_lmax = En_lmax_orig;
+			   return(FALSE);
+		       }
+		    }
+		   rfLast(ERx(""));
+		   if (!rFdisplay())
+			return(FALSE);
+		   /* Now reset back to original setting */
+		   En_lmax = En_lmax_orig;
+		}
+	}
+	return(stat);
+}
+/*
+**  Name:  IIRFmps_MakeParams
+**  Description:
+**      Creates the parameter list to send off to ReportWriter based
+**	on the declared variables in the report.  The values for the variables
+**	are entered in by the user on the 'declared variables' frame.
+**	IIRFmps_MakeParams then matches the values to the variable name to
+**	create the parameter list.
+**	12-nov-1992 (rdrane)
+**		Fix-up IIUGbmaBadMemoryAllocation() ambiguities.
+*/
+
+static
+char *
+IIRFmps_MakeParams (frmname, tblname, var_col, var_value)
+##char	*frmname;	/* form to get names/values from */
+##char	*tblname;	/* table name in form */
+##char	*var_col;	/* name of column in table that has variable name */
+##char	*var_value; 	/* name of column in table that has variable value */
+{
+
+EXEC SQL BEGIN DECLARE SECTION;
+## 	char	rcoattid[FE_MAXNAME + 1];
+##	char	val[101];
+EXEC SQL END DECLARE SECTION;
+
+	static  i4	max_buf;	/* memory management variables */
+	static  u_i4	param_tag;
+	static  u_i4	free_tag;
+	static  char	*start_buf;
+
+	u_i4	tag1, tag2, temp_tag;
+	bool	first_param;	/* TRUE=searching for first param */
+	i4	mem_used;	/* how much of param buffer has been used */
+	char	*param_buf;	/* points to the next open space */
+	char	*old_buf;
+	char	param[200];
+	i4	param_len;
+##	i2	null_ind;	/* null indicator */
+
+	/* is memory allocated to build the command line of parameters? */
+	if (max_buf == 0)
+	{
+		/* first allocate the buffer */
+		max_buf = BUF_SIZE;
+		tag1 = FEgettag();
+		tag2 = FEgettag();
+		param_tag = tag1;
+		free_tag = tag2;
+		if ((start_buf = (char *) FEreqmem (param_tag, max_buf, TRUE, 
+			(STATUS *) NULL)) == NULL)
+		{
+			IIUGbmaBadMemoryAllocation (
+				ERx("IIRFmps_MakeParams - max_buf"));
+		}
+	}
+	first_param = TRUE;	/* still looking for the first parameter */
+	mem_used = 0;		/* no memory in buffer has been used */
+	param_buf = start_buf;
+	STcopy(ERx("\"("),param_buf);
+	/* 
+	** We know the characters is a "( so don't 
+	** need to do a CMbyteinc
+	*/
+	param_buf += 2;		/* inc. counter */
+	mem_used += 2;
+
+	/* get values from frame */
+##      unloadtable frmname tblname (val:null_ind = var_value, 
+##		rcoattid = var_col)
+##	{
+		/*
+		** The declared variables are FE "things", and so can't be
+		** delimited identifiers.  But why are we bothering to case
+		** them?  RW should handle this at run time ...
+		*/
+
+		/* 
+		** If found the first parameter, then do NOT need a ","
+		** otherwise insert comma before parameter.
+		*/
+		if (first_param)
+		{
+			if (null_ind < 0)
+				STprintf(param,"%s=''", rcoattid);
+			else
+				STprintf(param,"%s='%s'", rcoattid,val);
+			first_param = FALSE;
+		}
+		else
+		{
+			if (null_ind < 0)
+				STprintf(param,",%s=''", rcoattid);
+			else
+				STprintf(param,",%s='%s'",rcoattid,val);
+		}
+		param_len = STlength (param);
+			
+		/* if parameter does not fit in buffer, allocate new buffer */
+		if (param_len + mem_used > max_buf)
+		{
+			max_buf = max(max_buf * 2,param_len+max_buf+1);
+			old_buf = start_buf;
+			if ((start_buf = (char *) FEreqmem(free_tag, 
+				max_buf, TRUE, (STATUS *)NULL))== NULL)
+			{
+				IIUGbmaBadMemoryAllocation 
+				   (ERx("IIRFmps_MakeParams - start_buf"));
+			}
+			_VOID_ CMcopy(old_buf, mem_used, start_buf);
+			_VOID_ FEfree(param_tag); 
+			temp_tag = free_tag;
+			free_tag = param_tag; 
+			param_tag = temp_tag;;
+			param_buf = start_buf + mem_used;
+		}
+		STcopy(param,param_buf);
+		while (*param_buf != EOS)
+			_VOID_ CMnext(param_buf);
+		mem_used += param_len;
+##	}	
+	STcopy(ERx(")\""),param_buf);
+	return (start_buf);
+}
+
+
+/*
+**  Name:  IIRFgdv_GetDeclaredVars
+**  Description:
+**	Displays the declared variable frame, so the user can enter in the
+**	values for the declared variables in the report.  The prompts are
+**	supplied by the 'with prompt' clause in the .DECLARE command.
+**	IIRFgdv_GetDeclaredVars queries the database for the .DECLARE,
+**	then parses for the prompt string.  A declared variable does not
+**	necessarily have a prompt associated with it.
+*/
+
+static
+char *
+IIRFgdv_GetDeclaredVars(break_state,declared)
+bool	*break_state;		/* TRUE if CANCEL was hit */
+bool	*declared;		/* TRUE if there are any declared variables */
+{
+EXEC SQL BEGIN DECLARE SECTION;
+	char    text[101];
+##      char    attid[FE_MAXNAME + 1];
+##      char    val_str[101];
+EXEC SQL END DECLARE SECTION;
+##	i2	null_val;		   
+##	i4	id;
+##      char    *prompt_string;
+##      char    *Nrvariable;		/* declared variables pop-up name */
+##      char    *var_tbl;		/* variable table name */
+##      char    *prmpt_fld;		/* prompt field name */
+##      char    *value_fld;		/* variable value field name */
+##      char    *Nrprompt;		/* full prompt pop-up name */
+##      char    *colname_fld;		/* column name field name */
+##      char    *fullpr_fld;		/* full prompt field name */
+	char    *string;
+	char    *token;
+	i4     state;
+	i4     token_type;
+	char	*form;
+	char	*params;
+	static  bool    decl_frm = FALSE;   /* TRUE = declared variable popup
+					    ** initialized */
+	static  bool    prompt_frm = FALSE; /* TRUE=prompt popup initialized */
+
+	/* set up the pop-up variables */
+	Nrvariable = F_VARIABLE;	/* pop up "rfvar" */
+	var_tbl = T_VAR;
+	prmpt_fld = F_PROMPT;
+	value_fld = F_VALUE;
+
+	Nrprompt = F_FPROMPT;		/* pop up "rfprompt" */
+	colname_fld = F_COLUMN;
+	fullpr_fld = F_FULLPR;
+
+	/* 
+	** Check if there are any declared variables with prompt 
+	** strings.
+	*/
+
+	state = WANT_PROMPT;	/* initialize state */
+	*break_state = FALSE;	/* did not hit CANCEL */
+	*declared = FALSE;      /* no declared variables found */
+
+	/* Initialize .DECLARE frame */
+	if (!decl_frm)	
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(),(form = Nrvariable))!=OK)
+		{  
+	      	   IIUGerr(E_RF002D_Cannot_locate_form,UG_ERR_ERROR,1,form);
+		   *break_state = TRUE;
+	      	   return (NULL);
+		}
+		else
+		{
+	      	   decl_frm = TRUE;
+		}
+	}
+	/* Init table with col_name as a hidden column */
+##	inittable Nrvariable var_tbl update (col_name = varchar(33)) 
+
+	/* Get all .DECLARE rows */
+
+	id = rfoocatrec.id;
+	EXEC SQL SELECT rcoattid, rcotext
+		INTO :attid, :text
+		FROM ii_rcommands
+		WHERE ii_rcommands.object_id = :id and
+		      ii_rcommands.rcotype = :ERx("de"); 
+	EXEC SQL BEGIN;
+
+	/* Check if this row has the prompt string */
+      	if((string = STindex(text,ERx("prompt"),100))!=NULL)
+       	{
+     	   	/* 
+   		** Found the word 'prompt', now look for either the 
+   		** single/double quote 
+   		*/
+   		state = WANT_QUOTE;
+   		r_g_set(string);
+	   	token = r_g_name();         /* should be "prompt" */
+	   	token_type = r_g_skip();
+	   	if (token_type == TK_QUOTE || token_type == TK_SQUOTE)
+	   	{
+			state = FOUND_PROMPT;
+	   	}
+	}
+	else
+	{
+	   	/* The word 'prompt' is not in this row... */
+	   	r_g_set(text);
+	   	switch (state)
+	   	{
+	   		case WANT_PROMPT:
+	      			break;
+	   		case WANT_QUOTE:
+	      			token_type = r_g_skip();
+	      			if (token_type == TK_QUOTE || 
+					token_type == TK_SQUOTE) 
+	      			{   
+		 			state = FOUND_PROMPT;
+	      			}
+	      			else 
+	      			{
+		 			/* error */
+					IIUGerr (E_RF0064_Bad_decl_var,
+						UG_ERR_FATAL, attid);
+	      			}
+	   	}
+	}
+	if (state == FOUND_PROMPT)
+	{
+	   	/* 
+		** Set flag cause found a declared variable with 
+		** prompt 
+		*/
+	   	if (!(*declared))
+			*declared = TRUE;
+
+	   	prompt_string = r_g_string(token_type);
+	   	r_strpslsh(prompt_string);
+
+	   	/* Put prompt string in the frame to be displayed */
+##	   	loadtable Nrvariable var_tbl (prmpt_fld = prompt_string, 
+##			col_name = attid)   
+	   	state=WANT_PROMPT;	/* get next prompt */
+	}
+	EXEC SQL END;
+
+	if (state != WANT_PROMPT)
+	{
+		/* error */
+		IIUGerr (E_RF0064_Bad_decl_var, UG_ERR_FATAL, attid);
+	}	
+	if (*declared)
+	{
+##		display Nrvariable
+
+##		activate menuitem ERget(FE_OK)(expl=ERget(F_RF0082_decl_vars)),
+##			frskey4
+##		{
+			/* 
+			** Build the parameter list from the values 
+			** filled in from the form.
+			*/
+			params = IIRFmps_MakeParams (Nrvariable,  var_tbl,
+			   ERx("col_name"), value_fld);
+##			enddisplay
+##		}
+##		activate menuitem ERget(F_RF0041_Full_Prompt)
+##			(expl=ERget(F_RF0083_full_prompt))
+##		{
+			/* 
+			** Get value, if any has been entered, to 
+			** initialize the full prompt pop-up 
+			*/
+##			getrow Nrvariable var_tbl(val_str:null_val = value_fld, 
+##				prompt_string = prmpt_fld, attid = col_name)
+			if (null_val < 0)
+			{
+				val_str[0]= EOS;
+			}
+			if (!prompt_frm)  /* if popup not already initialized */
+			{
+				if (IIUFgtfGetForm(IIUFlcfLocateForm(), 
+		         			(form = Nrprompt))!=OK)
+				{  
+		      			IIUGerr(E_RF002D_Cannot_locate_form,
+						UG_ERR_ERROR,1,form);
+					*break_state = TRUE;
+		      			return (NULL);
+				}
+				else
+				{
+		      			prompt_frm = TRUE;
+				}
+			}
+##			display Nrprompt fill
+##			initialize (colname_fld = attid, value_fld = val_str,
+##				fullpr_fld = prompt_string)
+##			activate menuitem ERget(FE_OK)
+##				(expl=ERget(F_RF0084_ok_full_prompt)), frskey4
+##			{
+##				getform Nrprompt (val_str:null_val= value_fld) 
+				if (null_val < 0)
+				{
+					val_str[0] = EOS;
+				}
+##		   		putrow Nrvariable var (value_fld = val_str)   
+##				enddisplay
+##			}
+##			activate menuitem ERget(FE_Cancel)
+##				(expl = ERget(F_FE0103_ExplCancel), 
+##			 	validate = 0, activate = 0), 
+##			 	FRSkey9 (validate = 0,activate = 0)
+##			{
+##				breakdisplay
+##			}
+##			activate menuitem ERget(FE_Help)(expl=ERget(_HelpExpl),
+##				validate=0), FRSkey1 (validate = 0)
+##			{
+				FEhelp(H_PROMPT,
+					ERget(S_RF006D_Full_Prompt));
+##			}
+##		}
+##		activate menuitem ERget(FE_Cancel)
+##			(expl = ERget(F_FE0103_ExplCancel),validate = 0,
+##		 	activate = 0), FRSkey9 (validate = 0,
+##			activate = 0)
+##		{
+			*break_state = TRUE;
+##			breakdisplay
+##		}
+##		activate menuitem ERget(FE_Help)(expl=ERget(_HelpExpl),
+##			validate=0), FRSkey1 (validate = 0)
+##		{
+			FEhelp(H_DECLVAR,
+				ERget(S_RF006A_Decl_Vars));
+##		}
+	}
+	return (params);
+}
+
+/*
+**  Name:  IIRFgpr_GetPrinter
+**  Description:
+**      Gets the printer name and the number of copies of the report to print
+**	out.  Also asks user for the mode (interactive or batch) to run the
+**	report in.  If batch, calls IIRFgdv_GetDeclaredVars to get the values
+**	for all the declared variables in the report.  IIRFgdv_GetDeclaredVars 
+**	is NOT called if the report is an Auto/Preview report since there 
+**	cannot be any declared variables. 
+*/
+
+static
+VOID
+IIRFgpr_GetPrinter(printer, copy_no, break_state, batch_fl,
+		   log_loc, log_name, params, d_vars)
+##char	*printer;		/* printer name */		 
+##i4	*copy_no;		/* number of copies to print out */
+bool	*break_state;		/* TRUE = user entered CANCEL */
+bool	*batch_fl;		/* TRUE = run report in batch */
+LOCATION *log_loc;		/* error log location */
+##char	*log_name;	   	/* error log name */
+char	**params;		/* parameter list */
+bool	*d_vars;		/* TRUE = report has declared variables */
+{
+##	i2	null_pr;		   /* null indicator for printer */
+##	i2	null_log;		   /* null indicator for logname */
+##	i2	null_batch;		   /* null indicator for batch */
+##	i2	null_copy;		   /* null indicator for copies */
+##	char	run_batch[2];
+##	char	*Nrprint;		   /* name of printer pop-up */
+##	char	*log_fld;		   /* error log field name */
+##	char	*copies_fld;		   /* copies field name */
+##	char	*printer_fld;		   /* printer field name */
+##	char	*batch_fld;		   /* batch field name */
+##	char	*batch1_fld;		   /* 1st row of batch field title */
+##	char	*instr_fld;		   /* instructions field */
+##	char	*yes_string;
+##	char	*fullwrd;
+##	char	*instructions;
+	static  bool    print_frm = FALSE; /* TRUE = Print popup initialized */
+	char	*form;
+	FILE	*fl_ptr;		   /* file pointer */
+	LOCATION tmp_loc;		   /* temporary location */
+	char	tmp_name[MAX_LOC + 1];	   /* temporary name */
+
+
+	/* set up the pop-up variables */
+	Nrprint = F_PRINT;
+	log_fld = F_LOGNAME;
+	printer_fld = F_PRINTER;
+	copies_fld = F_COPIES;
+	batch1_fld = F_BATCH1;
+	batch_fld = F_BATCH;
+	instr_fld = F_INSTR;
+
+	yes_string = yn_tbl[0];
+
+
+	if (!print_frm)	/* if popup not already initialized */
+##	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), (form = Nrprint))!=OK)
+		{  
+	      		IIUGerr (E_RF002D_Cannot_locate_form, UG_ERR_ERROR,
+				 1, form);
+			*break_state = TRUE;
+	      		return;
+		}
+		else
+		{
+	      		print_frm = TRUE;
+		}
+##	}
+	/* make the error log prompt invisible */
+##	set_frs field Nrprint (invisible(log_fld)=1)
+
+	/* 
+	** Make the "wait" prompt invisible if UT_WAIT == UT_NOWAIT.  This
+	** means this platform *cannot* spawn sub-processes or run a
+	** batch job.  In other words, this platform has no way of implementing
+	** a concurrent report, so don't even give the users the option.
+	*/
+	if (UT_WAIT == UT_NOWAIT)
+	{
+		/* make both lines of the "wait" prompt invisible */
+##      	set_frs field Nrprint (invisible(batch1_fld)=1)
+##      	set_frs field Nrprint (invisible(batch_fld)=1)
+
+		/* Display instructions that do not have "wait" prompt */
+		instructions = ERget (F_RF008C_pr_no_concurrent);
+	}
+	else
+	{
+		/* Display instructions that do have "wait" prompt */
+		instructions = ERget (F_RF008B_pr_yes_concurrent);
+	}
+##	display Nrprint fill with style = popup 
+##	initialize 
+##		(printer_fld = ERget(F_RF0018_default), 
+##		 instr_fld = instructions,
+##		 copies_fld = 1, 
+##		 batch_fld = yes_string)
+##	activate field batch_fld
+##	{
+##		getform (run_batch:null_batch = batch_fld)
+
+		 /* get the full word */
+		if ((null_batch < 0) || ((fullwrd =
+			IIRFfwd_FullWord (run_batch, 2, yn_tbl)) == NULL))
+		{
+			IIUGerr(E_RF009F_batch_report, UG_ERR_ERROR, 0);
+##                      resume
+		}
+##		putform Nrprint (batch_fld = fullwrd)
+
+		/* Does user want to run report in batch? */
+		if (!IIUGyn (fullwrd, NULL))
+		{
+			/*
+			** If want to run in batch, make the error log 
+			** prompt visible
+			*/
+##			set_frs field Nrprint (invisible(log_fld)=0)
+			*batch_fl = TRUE;
+		}
+		else
+		{
+			/*
+			** If interactive mode, make the error log 
+			** prompt invisible
+			*/
+##			set_frs field Nrprint (invisible(log_fld)=1)
+			*batch_fl = FALSE;
+		}
+##		resume next
+##	}
+##	activate menuitem ERget(FE_OK)(expl=ERget(F_RF0085_enter_printer)), 
+##		FRSkey4
+##	{
+##		getform (printer:null_pr = printer_fld, run_batch = batch_fld, 
+##			*copy_no:null_copy = copies_fld, 
+##			log_name:null_log = log_fld)
+
+		/* check that printer and number of copies have been entered */
+		if (null_pr < 0) 
+		{
+			IIUGerr (E_RF00A0_enter_printer, UG_ERR_ERROR, 0);
+##			resume field printer_fld
+		}
+		if (null_copy < 0) 
+		{
+			IIUGerr (E_RF00A1_enter_copy, UG_ERR_ERROR, 0);
+##			resume field copies_fld
+		}
+		if (!IIUGyn (run_batch, NULL))
+		{
+			if (null_log < 0)
+			{
+				IIUGerr (E_RF0072_Need_errorlog, UG_ERR_ERROR,
+					 0);
+##				resume field log_fld
+			}
+			else
+			{
+				/* 
+				** Verify if the error log name is a valid
+				** path/filename by creating a temp file in the
+				** specified directory.  LOfroms checks for a 
+				** valid filename. If the temp file can be 
+				** created, then the directory is writeable.
+				** Otherwise, tell user to enter a different
+				** name.  Delete the temp file created since 
+				** the real file will be created when the report
+				** runs in batch mode.
+				*/
+				if (LOfroms(PATH & FILENAME, log_name, 
+					log_loc) != OK)
+				{
+					IIUGerr (E_RF0082_bad_errorlog,
+						 UG_ERR_ERROR, 0);
+##					resume field log_fld
+				}
+				LOcopy (log_loc, tmp_name, &tmp_loc);
+				LOuniq (ERx("ra"),ERx("tmp"),&tmp_loc);
+				if (SIopen(&tmp_loc, ERx("w"), &fl_ptr) != OK)
+				{
+					IIUGerr (E_RF0084_cannot_open_file,
+						 UG_ERR_ERROR,0);
+##					resume field log_fld
+				}
+				SIclose(fl_ptr);
+				LOdelete(&tmp_loc);
+
+				if (St_style == RS_NULL)
+				{
+					/*
+					** If NOT executing an AutoReport, 
+					** then get any declared variables.
+					*/
+					*params = IIRFgdv_GetDeclaredVars
+						(break_state, d_vars);
+					if (*break_state)
+##						resume
+				}
+				else
+				{
+					/* no declared variables in an 
+					** AutoReport */
+					*d_vars = FALSE;
+				}
+			}
+		}
+		else
+		{
+			/* run the report in interactive mode */
+			*d_vars = FALSE;
+		}
+##		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Cancel) 
+##		(expl = ERget(F_FE0103_ExplCancel),validate = 0, 
+##		activate = 0), FRSkey9 (validate = 0, activate = 0)
+##	{
+		*break_state = TRUE;
+##	   	breakdisplay
+##	}
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl), validate=0),
+##		FRSkey1 (validate = 0)
+##	{
+		FEhelp(H_PRINT, ERget(S_RF006B_Get_Printer));
+##	}
+}
+
+/*
+**  Name:  IIRFgfn_GetFilename
+**  Description:
+**      Gets the file name to put the report output into.  Also asks user for 
+**	the mode (interactive or batch) to run the report in.  If batch, calls 
+**	IIRFgdv_GetDeclaredVars to get the values for all the declared 
+**	variables in the report.  IIRFgdv_GetDeclaredVars is NOT called if the
+**	report is an Auto/Preview report since there cannot be any declared 
+**	variables.
+*/
+
+static
+VOID
+IIRFgfn_GetFilename(filename, break_state, batch_fl,
+		    log_loc, logname, params, d_vars)
+##char	*filename;		/* file name */		 
+bool	*break_state;
+bool	*batch_fl;		/* TRUE = run report in batch */
+LOCATION *log_loc;
+##char	*logname;	   	/* error log name */
+char	**params;
+bool	*d_vars;		/* TRUE = report has declared variables */
+##{
+##	i2	null_file;		   /* null indicator for filename */
+##	i2	null_btch;		   /* null indicator for batch */
+##	i2	null_lg;		   /* null indicator for logname */
+##	char	batch_ans[2];
+##	char	*Nrfile;		   /* file name pop-up */
+##	char	*logfld;		   /* log name field */
+##	char	*batchfld;		   /* batch field */
+##	char	*batch1fld;		   /* batch field */
+##	char	*fnamefld;		   /* filename field */
+##	char	*instrfld;		   /* instructions field */
+##	char	*yes_str;
+##	char	*fullword;
+##	char	*instr;
+	char	*form;
+	LOCATION file_loc;
+	LOCATION tmp_loc;		   /* temporary location */
+	FILE	*fl_ptr;		   /* file pointer */
+	char	tmp_name[MAX_LOC + 1];	   /* temporary name */
+	static  bool    file_frm = FALSE;  /* TRUE=Filename popup initialized */
+
+	/* set up the pop-up variables */
+	Nrfile = F_FILE;
+	logfld = F_LOGNAME;
+	batchfld = F_BATCH;
+	batch1fld = F_BATCH1;
+	fnamefld = F_FNAME;
+	instrfld = F_INSTR;
+
+	yes_str = yn_tbl[0];
+
+	if (!file_frm)	/* if popup not already initialized */
+##	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), (form = Nrfile))!=OK)
+		{  
+	      		IIUGerr (E_RF002D_Cannot_locate_form, UG_ERR_ERROR,
+				 1, form);
+			*break_state = TRUE;
+	      		return; 
+		}
+		else
+		{
+	      		file_frm = TRUE;
+		}
+##	}
+	/* make the error log prompt invisible */
+##	set_frs field Nrfile (invisible(logfld)=1)
+
+	/* 
+	** Make the "wait" prompt invisible if UT_WAIT == UT_NOWAIT.  This
+	** means this platform *cannot* spawn sub-processes or run a
+	** batch job.  In other words, this platform has no way of implementing
+	** a concurrent report, so don't even give the users the option.
+	*/
+	if (UT_WAIT == UT_NOWAIT)
+	{
+		/* make both lines of the "wait" prompt invisible */
+##      	set_frs field Nrfile (invisible(batch1fld)=1)
+##      	set_frs field Nrfile (invisible(batchfld)=1)
+
+		/* Display instructions that do not have "wait" prompt */
+		instr = ERget(F_RF008E_fi_no_concurrent);
+	}
+	else
+	{
+		/* Display instructions that do have "wait" prompt */
+		instr = ERget(F_RF008D_fi_yes_concurrent);
+	}
+
+##	display Nrfile fill with style = popup 
+##	initialize (batchfld = yes_str, instrfld = instr)
+##	activate field batchfld
+##	{
+##		getform (batch_ans:null_btch = batchfld)
+ 
+		 /* get the full word */
+		if ((null_btch < 0) || ((fullword =
+			IIRFfwd_FullWord (batch_ans, 2, yn_tbl)) == NULL))
+		{
+			IIUGerr(E_RF009F_batch_report, UG_ERR_ERROR, 0);
+##                      resume
+		}
+##		putform Nrfile (batchfld = fullword) 
+
+		/* Does user want to run report in batch? */
+		if (!IIUGyn (fullword, NULL))
+		{
+			/*
+			** If want to run in batch, make the error log 
+			** prompt visible
+			*/
+##			set_frs field Nrfile (invisible(logfld)=0)
+			*batch_fl = TRUE;
+		}
+		else
+		{
+			/*
+			** If interactive mode, make the error log 
+			** prompt invisible
+			*/
+##			set_frs field Nrfile (invisible(logfld)=1)
+			*batch_fl = FALSE;
+		}
+##		resume next
+##	}
+##	activate menuitem ERget(FE_OK)(expl=ERget(F_RF0086_enter_filename)), 
+##		FRSkey4
+##	{
+##		getform (filename:null_file = fnamefld, batch_ans = batchfld, 
+##			logname:null_lg = logfld)
+
+		/* Verify the file name as a valid path/filename. */
+		
+		if ((null_file <0) || 
+			(LOfroms(PATH & FILENAME, filename, &file_loc) != OK))
+		{
+			IIUGerr (E_RF0083_bad_filename, UG_ERR_ERROR, 0);
+##			resume field fnamefld
+		}
+		LOcopy (&file_loc, tmp_name, &tmp_loc);
+		LOuniq (ERx("ra"),ERx("tmp"),&tmp_loc);
+		if (SIopen(&tmp_loc, ERx("w"), &fl_ptr) != OK)
+		{
+			IIUGerr (E_RF0084_cannot_open_file, UG_ERR_ERROR, 0);
+##			resume field fnamefld
+		}
+		SIclose(fl_ptr);
+		LOdelete(&tmp_loc);
+
+		if (!IIUGyn (batch_ans, NULL)) 
+		{
+			if (null_lg < 0)
+			{
+				IIUGerr (E_RF0072_Need_errorlog, UG_ERR_ERROR,
+					 0);
+##				resume field logfld
+			}
+			else
+			{
+				/* 
+				** Verify if the error log name is a valid
+				** path/filename by creating a temp file in the
+				** specified directory.  LOfroms checks for a 
+				** valid filename. If the temp file can be 
+				** created, then the directory is writeable.
+				** Otherwise, tell user to enter a different
+				** name.  Delete the temp file created since 
+				** the real file will be created when the report
+				** runs in batch mode.
+				*/
+				if (LOfroms(PATH & FILENAME, logname, 
+					log_loc) != OK)
+				{
+					IIUGerr (E_RF0082_bad_errorlog,
+						 UG_ERR_ERROR, 0);
+##					resume field logfld
+				}
+				LOcopy (log_loc, tmp_name, &tmp_loc);
+				LOuniq (ERx("ra"),ERx("tmp"),&tmp_loc);
+				if (SIopen(&tmp_loc, ERx("w"), &fl_ptr) != OK)
+				{
+					IIUGerr (E_RF0084_cannot_open_file,
+						 UG_ERR_ERROR,0);
+##					resume field logfld
+				}
+				SIclose(fl_ptr);
+				LOdelete(&tmp_loc);
+
+				if (St_style == RS_NULL)
+				{
+					*params = IIRFgdv_GetDeclaredVars
+						(break_state, d_vars);
+					if (*break_state)
+##						resume
+				}
+				else
+				{
+					/* no declared variables in an 
+					** AutoReport */
+					*d_vars = FALSE;
+				}
+			}
+		}
+		else
+		{
+			/* run the report in interactive mode */
+			*d_vars = FALSE;
+		}
+##		breakdisplay
+##	}
+##	activate menuitem ERget(FE_Cancel) 
+##		(expl = ERget(F_FE0103_ExplCancel),validate = 0, 
+##		activate = 0), FRSkey9 (validate = 0, activate = 0)
+##	{
+		*break_state = TRUE;
+##	   	breakdisplay
+##	}
+##	activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl), validate=0),
+##		FRSkey1 (validate = 0)
+##	{
+		FEhelp(H_FILE, ERget(S_RF006C_Send_File));
+##	}
+##}
+
+
+
+static
+VOID
+rfabfcr(form)
+##char *form;
+{
+##	char *rep_type = F_RFAFTYPE;
+
+	if (IIUFgtfGetForm(IIUFlcfLocateForm(), form)!=OK)
+	{
+		IIUGerr(E_RF002D_Cannot_locate_form, UG_ERR_ERROR, 1, F_RBFABF);
+		return ;
+	}
+
+##      inittable form rep_type read
+##      loadtable form rep_type (source = ERget(S_RF0065_Dup_Choice),
+##              expl = ERget(S_RF0066_Dup_Expl))
+##      loadtable form rep_type (source = ERget(S_RF0067_Tbl_Choice),
+##              expl = ERget(S_RF0068_Tbl_Expl))
+##      loadtable form rep_type (source = ERget(S_RF0069_JD_Choice),
+##              expl = ERget(S_RF0070_JD_Expl))
+}
+
+
+
+/*
+** Name:        IIRFSetReadOnly
+**
+** Description:
+**      If we are in expert mode ('-e' flag has been specified), and
+**      there are more than one rows being displayed in the RBF catalog
+**      the user must have used a wild card, so make the form read only.
+**
+** History:
+**      4/11/90 (martym)  Written for RBF.
+**
+** Parameters:
+**      None.
+**
+** Returns:
+**      o Will return OK if wild card is used and objects are found.
+**      o Will return FAIL if not in expert mode or user specified object
+**        was not found.
+**
+*/
+
+static
+STATUS
+IIRFSetReadOnly()
+{
+
+##      i4  rowcnt = 0;
+
+	if (!Rbf_noload)
+		return(FAIL);
+
+##      inquire_frs table _iicatalog (rowcnt = lastrow(_cattable))
+	if (rowcnt > 1)
+	{
+##              set_frs form (mode = read)
+		return(OK);
+	}
+
+	return(FAIL);
+
+}
+
+/*
+**  Name:  IIRFarp_ArchiveReport
+**  Description:  Displays pop-up that prompts user to enter the name of a
+**		  file to put the archived report.
+*/
+
+static
+VOID
+IIRFarp_ArchiveReport(fname)
+##char	*fname;		         	 /* file name */		 
+##{
+	char		*form;		 /* form name */
+	static bool	archive_frm = FALSE;
+					 /* TRUE = archive pop-up initialized*/
+##      char    	*Narchive;       /* archive file name pop-up */
+##      char    	*archivefld;
+##      i2      null_file;                 /* null indicator for filename */
+##      char    *fnamefld;                 /* filename field */
+	LOCATION file_loc;
+	LOCATION tmp_loc;                  /* temporary location */
+	FILE    *fl_ptr;                   /* file pointer */
+	char    tmp_name[MAX_LOC + 1];     /* temporary name */
+					   
+
+        Narchive = F_ARCHIVE;
+	archivefld = F_FNAME;
+	fnamefld = F_FNAME;
+
+	
+	/* if popup not already initialized */
+	if (!archive_frm)  
+##      {
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(),
+			(form = Narchive))!=OK)
+		{  
+			IIUGerr (E_RF002D_Cannot_locate_form, UG_ERR_ERROR,
+				 1, form);
+			return;
+		}
+		else
+		{
+			archive_frm = TRUE;
+		}
+##      }
+				 
+##      display Narchive fill with style = popup
+##      activate menuitem ERget(FE_OK)(expl=ERget(F_RF0087_archive_rep)), 
+##		FRSkey4
+##      {
+##              getform (fname:null_file = archivefld)
+ 
+		 /* Verify the file name as a valid path/filename. */
+
+		if (LOfroms(PATH & FILENAME, fname, &file_loc) != OK)
+		{
+			IIUGerr (E_RF0083_bad_filename, UG_ERR_ERROR, 0);
+##                      resume field fnamefld
+		}
+		LOcopy (&file_loc, tmp_name, &tmp_loc);
+		LOuniq (ERx("ra"),ERx("tmp"),&tmp_loc);
+		if (SIopen(&tmp_loc, ERx("w"), &fl_ptr) != OK)
+		{
+			IIUGerr (E_RF0084_cannot_open_file, UG_ERR_ERROR, 0);
+##                      resume field archivefld
+		}
+		SIclose(fl_ptr);
+		LOdelete(&tmp_loc);
+##              breakdisplay
+##      }
+##      activate menuitem ERget(FE_Cancel)
+##              (expl = ERget(F_FE0103_ExplCancel),validate = 0,
+##              activate = 0), FRSkey9 (validate = 0, activate = 0)
+##      {
+		*fname = EOS;
+##              breakdisplay
+##      }
+##      activate menuitem ERget(FE_Help) (expl = ERget(_HelpExpl), validate=0),
+##              FRSkey1 (validate = 0)
+##      {
+		FEhelp(H_ARCHIVE, ERget(S_RF0015_Archiving_Report));
+##      }
+##}
+

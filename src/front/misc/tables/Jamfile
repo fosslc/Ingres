@@ -1,0 +1,16 @@
+#
+# Jamfile file for front!misc!tables
+#
+
+SubDir ING_SRC front misc tables ;
+
+IISUBSYS front misc tables ;
+
+
+IIBINEXE tables : tables.c ;
+IINEEDLIBS tables :  TBLUTILLIB MALLOCLIB SHFRAMELIB SHQLIB
+	SHCOMPATLIB SHEMBEDLIB ;
+IIUNDEFS tables : II_copyright malloc ;
+
+IIMSGHDR ertl.msg ;
+

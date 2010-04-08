@@ -1,0 +1,30 @@
+# 64+32 bit reverse hybrid version of the int/a64_lnx pair.
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+
+#set: config32 int_lnx
+#set: config64 a64_lnx
+#set: option libc6
+#set: option DBL
+#set: option CAS_ENABLED
+#set: param ADI_MAX_OPERANDS 5
+#set: build 00
+#
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+BUILD_ICE = "TRUE" ;	#set: option BUILD_ICE
+SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
+
+# Hybridization...
+# a64_lnx normally builds reverse hybrid
+BUILD_ARCH = "64+32" ;	#set: arch 64+32
+XERCES_ARCH ?= 64 ;
+
+PAX_CHECK = TRUE ;
+PLATFORM_JAMDEFS = hyb86_lnx ;

@@ -1,0 +1,1107 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+
+/**
+** Name: dutform.qsh  Starview forms header
+**
+** Description:
+**
+** History:
+**      23-oct-88 (alexc)
+**          Creation for this header file.
+**	08-mar-1989 (alexc)
+**	    Alpha test version.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Nov-2009 (frima01) Bug 122490
+**	    Added prototypes for starview to eliminate gcc 4.3 warnings.
+**/
+
+/*
+**  Forward and/or External typedef/struct references.
+*/
+
+#define	   DDB_MAXNAME		        (32 + 8)
+#define	   DDB_2MAXNAME			(64 + 8)
+
+
+/*
+**	Ingres form declarations.
+*/
+
+EXEC SQL BEGIN DECLARE SECTION;
+typedef		char *	FORM;
+EXEC SQL END DECLARE SECTION;
+
+#ifdef	DUT_MAIN
+EXEC SQL BEGIN DECLARE SECTION;
+GLOBALDEF	FORM	dut_f1_intro;
+GLOBALDEF	FORM	dut_f2_ldblist;
+GLOBALDEF	FORM	dut_f3_objlist;
+GLOBALDEF	FORM	dut_p2_select;
+GLOBALDEF	FORM	dut_p3_register;
+GLOBALDEF	FORM	dut_p6_nodelist;
+GLOBALDEF	FORM	dut_p7_dbattr;
+GLOBALDEF	FORM	dut_p7_1dbname;
+GLOBALDEF	FORM	dut_p8_objattr;
+GLOBALDEF	FORM	dut_p9_viewattr;
+GLOBALDEF	FORM	dut_p11_perror;
+GLOBALDEF	FORM	dut_p12_ldblist;
+GLOBALDEF	FORM	dut_p13_ownlist;
+GLOBALDEF	FORM	dut_p14_node;
+GLOBALDEF	FORM	dut_p15_ldb;
+GLOBALDEF	FORM	dut_p16_table;
+EXEC SQL END DECLARE SECTION;
+#endif
+#ifndef	DUT_MAIN
+EXEC SQL BEGIN DECLARE SECTION;
+GLOBALREF	FORM	dut_f1_intro;
+GLOBALREF	FORM	dut_f2_ldblist;
+GLOBALREF	FORM	dut_f3_objlist;
+GLOBALREF	FORM	dut_p2_select;
+GLOBALREF	FORM	dut_p3_register;
+GLOBALREF	FORM	dut_p6_nodelist;
+GLOBALREF	FORM	dut_p7_dbattr;
+GLOBALREF	FORM	dut_p7_1dbname;
+GLOBALREF	FORM	dut_p8_objattr;
+GLOBALREF	FORM	dut_p9_viewattr;
+GLOBALREF	FORM	dut_p11_perror;
+GLOBALREF	FORM	dut_p12_ldblist;
+GLOBALREF	FORM	dut_p13_ownlist;
+GLOBALREF	FORM	dut_p14_node;
+GLOBALREF	FORM	dut_p15_ldb;
+GLOBALREF	FORM	dut_p16_table;
+EXEC SQL END DECLARE SECTION;
+#endif
+
+/*************************************************************************
+       S Q L   B E G I N   D E C L A R A T I O N   S E C T I O N.
+*************************************************************************/
+
+EXEC SQL BEGIN DECLARE SECTION;
+
+
+/*}
+** Name: DUT_F1_INTRO - structure same as form 'dut_f1_intro'
+**
+** Description:
+**	Introductory frame with node name, distributed database name on
+**	top, and a table field of all DDBs on specified node.
+**
+** History:
+**      1-Nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct  _DUT_T1_DDBLIST
+{
+    char	dut_t1_1ddbname[DDB_MAXNAME];	/* DDB name */
+    char	dut_t1_2ddbowner[DDB_MAXNAME];	/* DDB owner */
+    char	dut_3cdbname[DDB_MAXNAME];	/* CDB name */
+    char	dut_4nodename[DDB_MAXNAME];	/* Node of CDB */
+    struct _DUT_T1_DDBLIST  *dut_t1_4next;
+} DUT_T1_DDBLIST;
+
+typedef struct _DUT_F1_INTRO
+{
+    int		dut_f1_0ddb_num_entry;		/* number of entry */
+    int		dut_f1_0ddb_size;		/* size of MEcalloc */
+    char	dut_f1_1ddbname[DDB_MAXNAME];	/* DDB name */
+    char	dut_f1_2nodename[DDB_MAXNAME];	/* DDB node */
+    char	dut_f1_3nodename[DDB_MAXNAME];	/* This is only for
+						** FRS form use.
+						*/
+    DUT_T1_DDBLIST  *dut_f1_4ddblist;		/* Pointer to DDB list */
+    DUT_T1_DDBLIST  *dut_f1_4ddblist_curr_p;	/* Pointer to a memory
+						** location (Pre-allocated)
+						** that has the same data
+						** as in the current position
+						** of DDB list.
+						*/
+}   DUT_F1_INTRO;
+
+
+/*}
+** Name: DUT_F2_LDBLIST - structure same as form 'dut_f2_ldblist'.
+**
+** Description:
+**      Local database information frame.  List local database that this
+**	distributed database has a registered object from.
+**
+** History:
+**      1-nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T2_LDBLIST
+{
+    char	dut_t2_3ldbname[DDB_MAXNAME];	/* LDB name */
+    char	dut_t2_4ldbtype[DDB_MAXNAME];	/* LDB type */
+    int		dut_t2_0ldbid;			/* LDB id */
+    char	dut_t2_1status[DDB_MAXNAME];	/* Net/LDB status */
+    char	dut_t2_2nodename[DDB_MAXNAME];	/* LDB node name */
+}   DUT_T2_LDBLIST;
+
+typedef struct _DUT_F2_LDBLIST
+{
+    char	dut_f2_1ddbname[DDB_MAXNAME];	/* DDB name */
+    char	dut_f2_2nodename[DDB_MAXNAME];	/* DDB node name */
+    i4		dut_f2_0ldb_num_entry;		/* Number of LDB entry in
+						** Array.
+						*/
+    i4		dut_f2_0ldb_size;		/* Size of DUT_T2_LDBLIST
+						** buffer.
+						*/
+    i4		dut_f2_0modify;			/* Specify that the LDB list
+						** has changed, need to 
+						** redisplay.
+						*/
+    DUT_T2_LDBLIST  *dut_f2_3ldblist;		/* Pointer to list of LDBs */
+    DUT_T2_LDBLIST  *dut_f2_3ldblist_curr_p;	/* Current LDB data in LDB
+						** list.
+						*/
+}   DUT_F2_LDBLIST;
+
+
+/*}
+** Name: DUT_P3_REGISTER - structure for popup 'dut_p3_register'
+**
+** Description:
+**      Register syntax frame.
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_P3_REGISTER
+{
+    char    dut_p3_1table[DDB_MAXNAME];		/* Register table name */
+    char    dut_p3_2source[DDB_MAXNAME];	/* Register source object name 
+						*/
+    char    dut_p3_3dbms[DDB_MAXNAME];		/* DBMS type */
+    char    dut_p3_4node[DDB_MAXNAME];		/* Register source object node
+						*/
+    char    dut_p3_5database[DDB_MAXNAME];	/* Register source object
+						** database.
+						*/
+    char    dut_p3_0objtype[DDB_MAXNAME];	/* Register object type(not
+						** display.
+						*/
+    char    dut_p3_0objowner[DDB_MAXNAME];	/* Register object owner(not
+						** display.
+						*/
+}   DUT_P3_REGISTER;
+
+
+/*}
+** Name: DUT_F3_OBJLIST - structure same as form 'dut_f3_objlist'
+**
+** Description:
+**      Frame of distributed object information.
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T3_OBJLIST
+{
+    char    dut_t3_1objname[DDB_MAXNAME];	/* Object name */
+    char    dut_t3_2objtype[DDB_MAXNAME];	/* Object type - c11 */
+    i4	    dut_t3_0delete;	/* If the object is removed, it will have the
+				**	value: TRUE, else FALSE.
+				*/
+    i4	    dut_t3_0select;	/* If object has being selected according to
+				** the selection criteria.
+				*/
+    i4	    dut_t3_0objbase;	/* Object base */
+    char    dut_t3_0objtype[DDB_MAXNAME];	/* Object type */
+    char    dut_t3_0subtype[DDB_MAXNAME];	/* Object sub-type */
+    char    dut_t3_0system[DDB_MAXNAME];	/* System/User? */
+    char    dut_t3_0ldbname[DDB_MAXNAME];	/* LDB name of object(if any) */
+    char    dut_t3_0ldbnode[DDB_MAXNAME];	/* LDB node of object(if any) */
+    char    dut_t3_0objowner[DDB_MAXNAME];	/* Object owner */
+}   DUT_T3_OBJLIST;
+
+typedef struct _DUT_F3_OBJLIST
+{
+    i4	    dut_f3_0obj_num_entry;	/* Number of entry in Object list */
+    i4	    dut_f3_0obj_size;		/* Max number of entry allow in
+					** Object list at this time.
+					*/
+    DUT_P3_REGISTER	*dut_f3_0register;	/* Pointer to Register syntax */
+    char    dut_f3_1nodename[DDB_MAXNAME];	/* LDB node name in selection
+						** criteria.
+						*/
+    char    dut_f3_2dbname[DDB_MAXNAME];	/* LDB name in selection
+						** criteria.
+						*/
+    char    dut_f3_3owner[DDB_MAXNAME];		/* Object owner name */
+    char    dut_f3_3show_regist[DDB_MAXNAME];	/* Show register objects */
+		/* show native have being removed */
+    char    dut_f3_4show_natives[DDB_MAXNAME];	/* Show native objects */
+    char    dut_f3_5show_view[DDB_MAXNAME];	/* Show view objects */
+    char    dut_f3_6show_table[DDB_MAXNAME];	/* Show table objects */
+    char    dut_f3_7show_system[DDB_MAXNAME];	/* Show system objects */
+    char    dut_f3_8ddbname[DDB_MAXNAME];	/* DDB name */
+    DUT_T3_OBJLIST  *dut_f3_9objlist;		/* Pointer to Object list */
+    DUT_T3_OBJLIST  *dut_f3_9objlist_curr_p;	/* Data of current object */
+}   DUT_F3_OBJLIST;
+
+
+/*}
+** Name: DUT_P2_SELECT - structure for popup 'dut_p2_select'.
+**
+** Description:
+**      Frame of selection criteria, a sub-frame of DUT_F3_OBJLIST.
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_P2_SELECT
+{
+    char    dut_p2_1nodename[DDB_MAXNAME];	/* LDB node name */
+    char    dut_p2_2dbname[DDB_MAXNAME];	/* LDB name */
+    char    dut_p2_3show_regist[DDB_MAXNAME];	/* Show Register Object
+		^- not used */
+    char    dut_p2_4show_natives[DDB_MAXNAME];	/* Show Native Object */
+    char    dut_p2_5show_view[DDB_MAXNAME];	/* Show View Object */
+    char    dut_p2_6show_table[DDB_MAXNAME];	/* Show Table Object */
+    char    dut_p2_7show_system[DDB_MAXNAME];	/* Show System Object */
+}   DUT_P2_SELECT;
+
+
+/*}
+** Name: DUT_P4_DBLIST - structure for popup 'dut_p4_dblist'.
+**
+** Description:
+**      Frame of database list.
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T4_DBLIST
+{
+    char    dut_t4_1dbname[DDB_MAXNAME];	/* LDB name */
+    char    dut_t4_2owner[DDB_MAXNAME];		/* LDB owner */
+    struct _DUT_T4_DBLIST *dut_t4_3next;
+}   DUT_T4_DBLIST;
+
+typedef struct _DUT_P4_DBLIST
+{
+    int		dut_p4_0num_entry;	/* number of entry */
+    int		dut_p4_0size;		/* size of MEcalloc */
+    char	dut_p4_2nodename[DDB_MAXNAME];	/* Node name */
+    DUT_T4_DBLIST   *dut_p4_1dblist;		/* Pointer to DB list */
+    DUT_T4_DBLIST   *dut_p4_1dblist_curr_p;	/* Data of current DB */
+}   DUT_P4_DBLIST;
+
+
+/*}
+** Name: DUT_P5_TABLELIST - structure for popup 'dut_p5_dblist'.
+**
+** Description:
+**      Frame(popup) of table list.
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T5_TABLELIST
+{
+    char    dut_t5_1tablename[DDB_MAXNAME];	/* Table name */
+    char    dut_t5_2owner[DDB_MAXNAME];		/* Table owner */
+    struct _DUT_T5_TABLELIST	*dut_t5_3next;
+}   DUT_T5_TABLELIST;
+
+typedef struct _DUT_P5_TABLELIST
+{
+    int			dut_p5_0num_entry;	/* number of entry */
+    int			dut_p5_0size;		/* size of MEcalloc */
+    char		dut_p5_2nodename[DDB_MAXNAME];	/* Node of table */
+    char		dut_p5_3ldbname[DDB_MAXNAME];	/* LDB of table */
+    DUT_T5_TABLELIST	*dut_p5_1tablelist;		/* Pointer to table
+							** list.
+							*/
+    DUT_T5_TABLELIST	*dut_p5_1tablelist_curr_p;	/* Data of current
+							** table in table
+							** list.
+							*/
+}   DUT_P5_TABLELIST;
+
+
+/*}
+** Name: DUT_P6_NODELIST - structure for popup 'dut_p6_nodelist'.
+**
+** Description:
+**      Frame of node list.
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T6_NODELIST
+{
+    char    dut_t6_1nodename[DDB_MAXNAME];	/* Node name */
+}   DUT_T6_NODELIST;
+
+typedef struct _DUT_P6_NODELIST
+{
+    int		dut_p6_0num_entry;	/* number of entry */
+    int		dut_p6_0size;		/* size of MEcalloc */
+    DUT_T6_NODELIST *dut_p6_1nodelist;	/* Pointer to Node list */
+    DUT_T6_NODELIST *dut_p6_1nodelist_curr_p;	/* Data of current node
+						** in node list
+						*/
+}   DUT_P6_NODELIST;
+
+
+/*}
+** Name: DUT_P7_DBATTR	- structure for popup 'dut_p6_nodelist'.
+**
+** Description:
+**      Frame of Database attributes.
+**
+** History:
+**      11-jan-1989 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_P7_DBATTR
+{
+    int	    dut_p7_0access;
+    int     dut_p7_0dbservice;
+    char    dut_p7_0nodename[DDB_MAXNAME];
+    char    dut_p7_1dbname[DDB_MAXNAME];
+    char    dut_p7_2own[DDB_MAXNAME];
+    char    dut_p7_3dbdev[DDB_MAXNAME];
+    char    dut_p7_4ckpdev[DDB_MAXNAME];
+    char    dut_p7_5jnldev[DDB_MAXNAME];
+    char    dut_p7_6sortdev[DDB_MAXNAME];
+    char    dut_p7_7access[DDB_MAXNAME];
+    char    dut_p7_8dbservice[DDB_MAXNAME];
+}   DUT_P7_DBATTR;
+
+
+/*}
+** Name: DUT_P8_OBJATTR	- structure for popup 'dut_p8_objattr'.
+**
+** Description:
+**      Frame of distributed object attributes.
+**
+** History:
+**      11-jan-1989 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_P8_OBJATTR
+{
+    char    dut_p8_1objtype[DDB_MAXNAME];	/* Can be Registered table,
+						** 	Distributed table,
+						**	Registered View.
+						*/
+    char    dut_p8_2objname[DDB_MAXNAME];
+    char    dut_p8_3objowner[DDB_MAXNAME];
+    char    dut_p8_4create_date[DDB_MAXNAME];	/* Local object create date */
+    char    dut_p8_5alter_date[DDB_MAXNAME];	/* Alter-date of table
+						** definition
+						*/
+    char    dut_p8_6objsubtype[DDB_MAXNAME];	/* Object sub-type, Native or
+						** Link(register).
+						*/
+    char    dut_p8_7objversion[DDB_MAXNAME];	/* Ingres version.
+						*/
+    char    dut_p8_8system_use[DDB_MAXNAME];	/* System used object?(Y/N)
+						*/
+    char    dut_p8_9local_name[DDB_MAXNAME];	/* Registered object name
+						** at local.
+						*/
+    char    dut_p8_10dbmstype[DDB_MAXNAME];	/* DBMS type(INGRES/DG/...)
+						*/
+    char    dut_p8_11nodename[DDB_MAXNAME];	/* Node of object location */
+    char    dut_p8_12ldbname[DDB_MAXNAME];	/* Local database name */
+}   DUT_P8_OBJATTR;
+
+
+/*}
+** Name: DUT_P9_VIEWATTR	- structure for popup 'dut_p6_nodelist'.
+**
+** Description:
+**      Frame of View attributes.
+**
+** History:
+**      11-jan-1989 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_P9_VIEWATTR
+{
+    char    dut_p9_1dbname[DDB_MAXNAME];	/* Database name of View */
+    char    dut_p9_2nodename[DDB_MAXNAME];	/* Node name of View */
+    char    dut_p9_3view_name[DDB_MAXNAME];	/* Name of View */
+    char    dut_p9_4view_owner[DDB_MAXNAME];	/* Owner of View */
+    char    dut_p9_5view_dml[DDB_MAXNAME];	/* DML(??)size 8 */
+    char    dut_p9_6check_option[DDB_MAXNAME];	/* CHECKOPT(??)size 8 */
+    i4	    dut_p9_7text_sequence;		/* sequence number of view 
+						** i4 */
+    char    dut_p9_8text_segment[(DB_MAXNAME << 2)]; /* Test segment of view */
+}   DUT_P9_VIEWATTR;
+
+
+/*}
+** Name: DUT_P12_LDBLIST - structure for popup 'dut_p12_ldblist'.
+**
+** Description:
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T12_LDBLIST
+{
+    char    dut_t12_1ldbname[DDB_MAXNAME];
+    struct _DUT_T12_LDBLIST *dut_t12_2next;
+}   DUT_T12_LDBLIST;
+
+typedef struct _DUT_P12_LDBLIST
+{
+    int		dut_p12_0num_entry;	/* number of entry */
+    int		dut_p12_0size;	/* size of MEcalloc */
+    DUT_T12_LDBLIST *dut_p12_1ldblist;
+    DUT_T12_LDBLIST *dut_p12_1ldblist_curr_p;
+}   DUT_P12_LDBLIST;
+
+
+/*}
+** Name: DUT_P13_OWNLIST - structure for popup 'dut_p13_OWNlist'.
+**
+** Description:
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T13_OWNLIST
+{
+    char    dut_t13_1owner[DDB_MAXNAME];
+    struct _DUT_T13_OWNLIST *dut_t13_next;
+}   DUT_T13_OWNLIST;
+
+typedef struct _DUT_P13_OWNLIST
+{
+    int		dut_p13_0num_entry;	/* number of entry */
+    int		dut_p13_0size;	/* size of MEcalloc */
+    DUT_T13_OWNLIST *dut_p13_1ownlist;
+    DUT_T13_OWNLIST *dut_p13_1ownlist_curr_p;
+}   DUT_P13_OWNLIST;
+
+
+/*}
+** Name: DUT_P14_NODE - structure for popup 'dut_p14_node'.
+**
+** Description:
+**      struct for popup form dut_p14_node interface.
+**
+** History:
+**      3-may-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T14_NODE
+{
+    char    dut_t14_1node[DDB_MAXNAME];
+    struct _DUT_T14_NODE *dut_t14_next;
+}   DUT_T14_NODE;
+
+typedef struct _DUT_P14_NODE
+{
+    int		dut_p14_0num_entry;	/* number of entry */
+    int		dut_p14_0size;	/* size of MEcalloc */
+    DUT_T14_NODE *dut_p14_1node;
+    DUT_T14_NODE *dut_p14_1node_curr_p;
+}   DUT_P14_NODE;
+
+
+/*}
+** Name: DUT_P15_LDB - structure for popup 'dut_P15_LDB'.
+**
+** Description:
+**      struct for popup form dut_P15_LDB interface.
+**
+** History:
+**      3-may-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T15_LDB
+{
+    char    dut_t15_1ldb[DDB_MAXNAME];
+    char    dut_t15_2dbms_type[DDB_MAXNAME];
+    struct _DUT_T15_LDB *dut_t15_next;
+}   DUT_T15_LDB;
+
+typedef struct _DUT_P15_LDB
+{
+    int		dut_p15_0num_entry;	/* number of entry */
+    int		dut_p15_0size;	/* size of MEcalloc */
+    DUT_T15_LDB *dut_p15_1ldb;
+    DUT_T15_LDB *dut_p15_1ldb_curr_p;
+}   DUT_P15_LDB;
+
+
+/*}
+** Name: DUT_P16_TABLE - structure for popup 'dut_p16_table'.
+**
+** Description:
+**      struct for popup form dut_p16_table interface.
+**
+** History:
+**      3-may-1988 (alexc)
+**          Creation.
+*/
+
+typedef struct _DUT_T16_TABLE
+{
+    char    dut_t16_1table[DDB_MAXNAME];
+    char    dut_t16_2own[DDB_MAXNAME];  /* c8 */
+    char    dut_t16_3type[DDB_MAXNAME]; /* c10 */
+    char    dut_t16_4system[DDB_MAXNAME]; /* c6 */
+    struct _DUT_T16_TABLE *dut_t16_next;
+}   DUT_T16_TABLE;
+
+typedef struct _DUT_P16_TABLE
+{
+    int		dut_p16_0num_entry;	/* number of entry */
+    int		dut_p16_0size;	/* size of MEcalloc */
+    DUT_T16_TABLE *dut_p16_1table;
+    DUT_T16_TABLE *dut_p16_1table_curr_p;
+}   DUT_P16_TABLE;
+
+
+EXEC SQL END DECLARE SECTION;
+/**
+** Name: dut.qsh - INGRES/Star database management utility (StarView)
+**		    header file.
+**
+** Description:
+**      Define StarView system constants, and Control block structures
+**	for DUT_ERRCB, DUT_CB, and DUT_HELPCB;
+**
+** History:
+**      23-oct-88 (alexc)
+**          Creation for this header file.
+**	08-mar-1989 (alexc)
+**	    Alpha test version.
+**	25-jul-91 (fpang)
+**	    1. Constants to recognize forced consistent databases.
+**	    2. Change text of some strings.
+**/
+
+/*
+**  Forward and/or External typedef/struct references.
+*/
+
+
+/*
+**  Defines of other constants.
+*/
+
+#define	DUT_MASK		    (0x0000)
+
+/* Dut error */
+#define	   DUT_ERROR			(!E_DU_OK)
+
+/*
+** Name: DUT_STATUS - Status return by the DUT functions.
+**
+** Description:
+**
+** History:
+**	02-jul-91 (johnr)
+**		Removed excess digits from constants.
+*/
+
+#define	   DB_2MAXNAME		        (DB_MAXNAME << 1)
+#define	   DB_4MAXNAME		        (DB_MAXNAME << 2)
+#define	   DB_8MAXNAME		        (DB_MAXNAME << 3)
+#define	   DB_SHORTMSG			(256)
+#define	   DDB_MAXPATH			(256)
+#define	   DB_LONGMSG			(512)
+#define	   DUT_ME_EXTRA			(2)
+/*
+** Definitions for DUT_FLAGS.
+*/
+
+#define	   DUT_FLAG_MASK		(0x000)
+#define	   DUT_IIDBDBOPEN		(DUT_FLAG_MASK + 0x001)
+#define	   DUT_IIDBDBCLOSE		(DUT_FLAG_MASK + 0x002)
+#define	   DUT_DDBOPEN			(DUT_FLAG_MASK + 0x003)
+#define	   DUT_DDBCLOSE			(DUT_FLAG_MASK + 0x004)
+#define	   DUT_DIRECT_CONNECT		(DUT_FLAG_MASK + 0x005)
+#define	   DUT_DIRECT_DISCONNECT	(DUT_FLAG_MASK + 0x006)
+#define	   DUT_DIRECT_CONNECT_CDB	(DUT_FLAG_MASK + 0x007)
+#define	   DUT_DISCONNECT		(DUT_FLAG_MASK + 0x008)
+#define	   DUT_CK_NODENAME		(DUT_FLAG_MASK + 0x011)
+#define	   DUT_CK_DDBNAME		(DUT_FLAG_MASK + 0x012)
+#define	   DUT_STAR_SERVER_TYPE		(DUT_FLAG_MASK + 0x0F0)
+
+
+/**************************************************************************
+**      Object type for function dut_uu11_chk_criteria.
+**************************************************************************/
+#define		DUT_UNKNOWN_OBJ		(0xFFF) /* Unknown object type */
+#define		DUT_VIEW_MASK		(0x000) /* Mask for Views */
+#define		DUT_TABLE_MASK		(0x001) /* Mask for Tables */
+#define		DUT_INDEX_MASK		(0x002) /* Mask for Indexes */
+#define		DUT_PART_MASK		(0x004) /* Mask for Partition tables */
+#define		DUT_REPLIC_MASK		(0x008) /* Mask for Replicate tables */
+#define		DUT_REGISTER_MASK	(0x000) /* Mask for Registered 
+						* Objects.
+						*/
+#define		DUT_DD_MASK		(0x040) /* Mask for Distributed
+						* Objects.
+						*/
+#define		DUT_REG_VIEW		(DUT_VIEW_MASK + DUT_REGISTER_MASK)
+						/* Registered View */
+#define		DUT_REG_TABLE		(DUT_TABLE_MASK + DUT_REGISTER_MASK)
+						/* Registered Table */
+#define		DUT_DD_VIEW		(DUT_VIEW_MASK + DUT_DD_MASK)
+						/* Distributed View */
+#define		DUT_DD_TABLE		(DUT_TABLE_MASK + DUT_DD_MASK)
+						/* Distributed Table */
+#define		DUT_PART_TABLE		(DUT_PART_MASK)
+#define		DUT_INDEX		(DUT_INDEX_MASK)
+#define		DUT_REPLIC_TABLE	(DUT_REPLIC_MASK)
+
+/**************************************************************************
+**      DB connect status.(DUT_S_STATUS)
+**************************************************************************/
+#define		DUT_S_MASK			(0x000)
+#define		DUT_S_NULL			(DUT_S_MASK + 0x000)
+#define		DUT_S_CONNECT_IIDBDB		(DUT_S_MASK + 0x001)
+#define		DUT_S_DIRCONT_IIDBDB		(DUT_S_MASK + 0x002)
+#define		DUT_S_CONNECT_DDB		(DUT_S_MASK + 0x004)
+#define		DUT_S_DIRCONT_LDB		(DUT_S_MASK + 0x008)
+#define		DUT_S_DIRCONT_CDB		(DUT_S_MASK + 0x010)
+#define		DUT_S_NEW_OBJ_SELECT		(DUT_S_MASK + 0x020)
+
+
+/**************************************************************************
+**      DB connect status.(DUT_F_STATUS)
+**************************************************************************/
+#define		DUT_F_MASK			(0x000)
+#define		DUT_P_MASK			(0x010)
+#define		DUT_F_NULL			(E_DU_OK)
+#define		DUT_F_FORM_1			(DUT_F_MASK + 0x001)
+#define		DUT_F_FORM_2			(DUT_F_MASK + 0x002)
+#define		DUT_F_FORM_3			(DUT_F_MASK + 0x003)
+#define		DUT_P_POPUP_2			(DUT_P_MASK + 0x002)
+#define		DUT_P_POPUP_3			(DUT_P_MASK + 0x003)
+
+/**************************************************************************
+**	System wide constants.
+**************************************************************************/
+#define		DUT_X_MASK			(0x000)
+#define		DUT_NONE_STAR_SERVER		(DUT_X_MASK + 0xFFFFF63C)
+#define		DUT_IS_STAR_SERVER		(DUT_X_MASK + 0x01000000)
+#define		DUT_OBJLIST_CHANGED		(DUT_X_MASK + 0x00000010)
+#define		DUT_NO_OBJLIST_CHANGE		(DUT_X_MASK + 0x00000100)
+
+/* access field in iidatabase */
+#define		DUT_GLOBAL			1
+#define		DUT_RES_DDB			2
+#define		DUT_DESTROYDB			4
+#define		DUT_CREATEDB			8
+#define		DUT_OPERATIVE			16
+#define		DUT_CONVERTING			32
+
+/* dbservice field in iidatabase */
+#define		DUT_LDB_TYPE			0
+#define		DUT_DDB_TYPE			1
+#define		DUT_CDB_TYPE			2
+#define		DUT_RMS_TYPE			4
+#define		DUT_FRCD_CNST_TYPE		0x40000000
+
+/**************************************************************************
+**	DUT_DATATYPE
+**************************************************************************/
+#define		DUT_3_DATE	(3)
+#define		DUT_5_MONEY	(5)
+#define		DUT_20_CHAR	(20)
+#define		DUT_21_VARCHAR	(21)
+#define		DUT_30_INTEGER	(30)
+#define		DUT_31_FLOAT	(31)
+#define		DUT_32_C	(32)
+#define		DUT_37_VCHAR	(37)
+
+#define		DUT_NULL_3_DATE		(-3)
+#define		DUT_NULL_5_MONEY	(-5)
+#define		DUT_NULL_20_CHAR	(-20)
+#define		DUT_NULL_21_VARCHAR	(-21)
+#define		DUT_NULL_30_INTEGER	(-30)
+#define		DUT_NULL_31_FLOAT	(-31)
+#define		DUT_NULL_32_C		(-32)
+#define		DUT_NULL_37_VCHAR	(-37)
+
+#define		DUT_0_NONE_TABLE_TYPE	0
+#define		DUT_1_TABLE_TYPE	1
+
+
+/***************************************************************************
+**	B E G I N   S Q L   D E C L A R E   S E C T I O N 
+***************************************************************************/
+EXEC SQL BEGIN DECLARE SECTION;
+
+/*
+** Typedefs
+*/
+
+typedef		long			    DUT_STATUS;
+typedef		long			    DUT_S_STATUS;
+typedef		long			    DUT_F_STATUS;
+typedef		long			    DUT_X_STATUS;
+typedef		long			    DUT_FLAG;
+
+
+/*
+** Name: DUT_HELPCB - Names of Help files.
+**
+** Description:
+**      structure block for all help file names.
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+*/
+typedef struct _DUT_HELPCB
+{
+    char	dut_hf1_1name[DDB_MAXPATH];	/* FORM dut_f1_intro */
+    char	dut_hf2_1name[DDB_MAXPATH];	/* FORM dut_f2_ldblist */
+    char	dut_hf2_2name[DDB_MAXPATH];	/* OPTION TestNode in
+						** dut_f2_ldblist
+						*/
+    char	dut_hf2_5name[DDB_MAXPATH];	/* OPTION TestLDB in
+						** dut_f2_ldblist
+						*/
+    char	dut_hf3_1name[DDB_MAXPATH];	/* FORM dut_f3_objlist */
+    char	dut_hp2_1name[DDB_MAXPATH];	/* POPUP dut_p2_select */
+    char	dut_hp3_1name[DDB_MAXPATH];	/* POPUP dut_p3_register */
+    char	dut_hp4_1name[DDB_MAXPATH];	/* POPUP dut_p4_dblist */
+    char	dut_hp5_1name[DDB_MAXPATH];	/* POPUP dut_p5_tablelist */
+    char	dut_hp6_1name[DDB_MAXPATH];	/* POPUP dut_p6_nodelist */
+    char	dut_hp7_1name[DDB_MAXPATH];	/* POPUP dut_p7_dbattr */
+    char	dut_hp7_2name[DDB_MAXPATH];	/* POPUP dut_p7_xxx (not used)
+						*/
+    char	dut_hp12_1name[DDB_MAXPATH];	/* POPUP dut_p12_1ldblist */
+    char	dut_hp13_1name[DDB_MAXPATH];	/* POPUP dut_p13_1ownlist */
+    char	dut_hu1_1name[DDB_MAXPATH];	/* SUBMENU - options (not used)
+						*/
+    char	dut_hp14_1name[DDB_MAXPATH];	/* POPUP dut_p14_1node */
+    char	dut_hp15_1name[DDB_MAXPATH];	/* POPUP dut_p15_1ldb */
+    char	dut_hp16_1name[DDB_MAXPATH];	/* POPUP dut_p16_1table */
+    char	dut_hp16_2name[DDB_MAXPATH];	/* POPUP dut_p16_1table */
+}   DUT_HELPCB;
+
+
+/*
+** Name: DUT_CB - Global information is deposited in this structure.
+**
+** Description:
+**      Control Block for StarView function calls, it contains the
+**      necessary information on database, node, table names and status
+**      of StarView.  In addition to these important information, a pointer of
+**      all form structures and a pointer to a HELPCB is provided to reduce
+**      number of parameters in funciton calls.
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+**      15-mar-1989 (alexc)
+**          Alpha test version, and comments.
+*/
+typedef struct _DUT_CB
+{
+    i4	    dut_c0_server_type;	/*	has values:
+				**		DUT_NONE_STAR_SERVER
+				**		DUT_IS_STAR_SERVER
+				*/
+    char    dut_c0_buffer[DDB_MAXNAME];		/* General purpose buffer 1. */
+    char    dut_c0_buffer2[DDB_MAXNAME];	/* General purpose buffer 2. */
+    char    dut_c0_buffer3[DDB_MAXNAME];	/* General purpose buffer 3. */
+    char    dut_c0_iidbdbnode[DDB_MAXNAME];	/* Node iidbdb resides */
+    char    dut_curr_iidbdbnode[DDB_MAXNAME];	/* Node iidbdb connected to */
+    char    dut_c1_ddbname[DDB_MAXNAME];	/* ddb name. */
+    char    dut_c2_nodename[DDB_MAXNAME];	/* node ddb resides */
+    char    dut_c3_ldbname[DDB_MAXNAME];	/* ldb, direct connect mode */
+    char    dut_c4_ldbnode[DDB_MAXNAME];	/* ldb node, direct connect */
+    char    dut_c5_cdbname[DDB_MAXNAME];	/* cdb name. */
+    char    dut_c6_cdbnode[DDB_MAXNAME];
+				/*	Coordinator database
+				**	node name.
+				*/
+    char    dut_c7_currnode[DDB_MAXNAME];
+				/*	Current node name.
+				*/
+    char    dut_c8_prev_ldbnode[DDB_MAXNAME];	
+				/*	Previous direct connect
+				**	Local database name.
+				*/
+    char    dut_c9_prev_ldbname[DDB_MAXNAME];	
+				/*	Node of Previous direct 
+				**	connect local database name.
+				*/
+    char    dut_c10_prev_ddbnode[DDB_MAXNAME];	
+				/*	Previous distributed
+				**	database name.
+				*/
+    char    dut_c11_prev_ddbname[DDB_MAXNAME];	
+				/*	Previous distributed
+				**	database node name.
+				*/
+    char    dut_c12_username[DDB_MAXNAME];
+				/*	User name of Starview.
+				*/
+    char    dut_c13_vnodename[DDB_MAXNAME];
+				/*	II_GCNxx_LCL_VNODE value.
+				*/
+    char    dut_c15_username[DDB_MAXNAME];
+				/*	User name.
+				*/
+    char    dut_c16_browse_node[DDB_MAXNAME];
+    char    dut_c17_browse_database[DDB_MAXNAME];
+    char    dut_c18_browse_dbms[DDB_MAXNAME];
+    char    dut_c19_browse_table[DDB_MAXNAME];
+    char    dut_c20_browse_own[DDB_MAXNAME];
+    char    frs_message[DB_SHORTMSG];
+				/*	FRS message buffer.
+				*/
+    DUT_S_STATUS	dut_c7_status;
+				/*	Specify the mode of DB
+				**	connection.
+				*/
+    DUT_X_STATUS	dut_c8_status;
+				/*	Specify the error condition in
+				**	sub-routines, and for general
+				**	use.
+				*/
+    DUT_F_STATUS	dut_c9_status;	/* specify current form number */
+    DUT_HELPCB		*dut_helpcb;	/* Holds all help file names */
+
+
+    DUT_F1_INTRO	*dut_form_intro;	/* forward ref */
+    DUT_F2_LDBLIST	*dut_form_ldblist;	/* forward ref */
+    DUT_F3_OBJLIST	*dut_form_objlist;	/* forward ref */
+    DUT_P2_SELECT	*dut_popup_select;	/* forward ref */
+    DUT_P3_REGISTER	*dut_popup_register;	/* forward ref */
+    DUT_P6_NODELIST	*dut_popup_nodelist;	/* forward ref */
+    DUT_P7_DBATTR	*dut_popup_dbattr;	/* forward ref */
+    DUT_P8_OBJATTR	*dut_popup_objattr;	/* forward ref */
+    DUT_P9_VIEWATTR	*dut_popup_viewattr;	/* forward ref */
+    DUT_P12_LDBLIST	*dut_popup_ldblist;	/* forward ref */
+    DUT_P13_OWNLIST	*dut_popup_ownlist;	/* forward ref */
+    DUT_P14_NODE	*dut_popup_b_node;	/* forward ref */
+    DUT_P15_LDB		*dut_popup_b_ldb;	/* forward ref */
+    DUT_P16_TABLE	*dut_popup_b_table;	/* forward ref */
+    i2			dut_null_1;
+    i2			dut_null_2;
+    i2			dut_null_3;
+    i2			dut_null_4;
+    i2			dut_null_5;
+    i2			dut_null_6;
+    i2			dut_null_7;
+    DUT_STATUS		dut_on_error_exit; /* True - calls PCexit() whenever
+						a sql error occurs.
+					      False - return to Star*View
+						after a sql error message
+						has being print.
+						*/
+    DUT_STATUS		dut_on_error_noop; /* True - on error no op.
+					      False - on error print error
+						message and evaluate error
+						condition.
+						*/
+}   DUT_CB;
+
+
+/*
+** Name: DUT_ERRCB - Error Control Block.
+**
+** Description:
+**      Control block for error handling function.
+**
+** History:
+**      2-nov-1988 (alexc)
+**          Creation.
+**      15-mar-1989 (alexc)
+**          Alpha version and comments added.
+*/
+typedef struct _DUT_ERRCB
+{
+	DUT_STATUS	dut_e1_errno;
+	DUT_STATUS	dut_e2_erstatus;
+	DUT_STATUS	dut_e3_status;		/* du_errmsg status */
+	i4		dut_e4_ingerr;		/* INGRES err */
+	i4		dut_e5_utilerr;		/* dbutil err for msg or 0 */
+	STATUS		dut_e6_clerr;		/* CL error status or 0 */
+	char		*dut_e7_clsyserr;	/* OS error number */
+	char		dut_e8_errmsg[ER_MAX_LEN];/* buf to format msg in */
+	/* Note, du_reset_err() turns off all flags. */
+	i4		dut_e9_flags;		/* error handling flags */
+	i4		dut_e10_form_init;	/* TRUE if forms up */
+	DUT_CB		*dut_cb;
+}   DUT_ERRCB;
+
+
+/**************************************************************************
+* Internationalization string constants.
+**************************************************************************/
+#define	DUT_M00_DDBNAME	"Distributed database name"
+#define	DUT_M01_LOADDDB	"Loading a list of Distributed Database(s) from node %s. . ."
+#define	DUT_M02_NOTACCESS	"'%s::%s' is not accessible"
+#define	DUT_M03_ACCESS		"'%s::%s' is accessible"
+#define DUT_M04_OBJNAME		"Object name"
+#define DUT_M05_LOAD_DOBJ	"Loading Distributed Object: %s. . ."
+#define	DUT_M06_CONFIRM_REMOVE	"Confirm to remove object '%s'(y/n):"
+#define	DUT_M07_REMOVING_DOBJ	"Removing Object '%s'..."
+#define	DUT_M08_NODENAME	"Node Name"
+#define	DUT_M09_UNKNOWN_ACCESS	"Unknown value for access field in iidbdb(%d)"
+#define	DUT_M10_DB_IS_DDB	"Database is a Distributed database"
+#define	DUT_M11_DB_IS_DESTROY	"Database is being destroyed"
+#define	DUT_M12_DB_IS_CREATE	"Database is being create"
+#define	DUT_M13_DB_IS_OPERATE	"Database is marked operational"
+#define	DUT_M14_DB_IS_CONVERTING	"Database is being converted"
+#define	DUT_M15_LDB		"Local database"
+#define	DUT_M16_DDB		"Distributed database"
+#define	DUT_M17_CDB		"Coordinator database"
+#define	DUT_M18_UNKNOWN_DBSERV	"Unknown dbservice value (%d)"
+#define	DUT_M19_LDB_OR_CDB	"Local or Distributed Database"
+#define	DUT_M20_UNKNOWN		"Unknown"
+#define	DUT_M21_REGTABLE	"Registered Table"
+#define	DUT_M22_TABLE		"Table"
+#define	DUT_M23_REGVIEW		"Registered View"
+#define	DUT_M24_VIEW		"View"
+#define	DUT_M25_REGINDEX	"registered Index"
+#define	DUT_M26_INDEX		"Index"
+#define	DUT_M27_STAR_TABLE	"Star-Level Table"
+#define	DUT_M28_DIST_VIEW	"Distributed View"
+#define	DUT_M29_PART_TABLE	"Partitioned Table"
+#define	DUT_M30_REPLICATE_TABLE	"Replicate Table"
+#define	DUT_M31_NATIVE_INDEX	"Native Index"
+#define	DUT_M32_SYSTEM_OBJ	"(S) System object"
+#define	DUT_M33_USER_OBJ	"(U) User created object"
+#define	DUT_M34_NATIVE_OBJ	"(N) Native object"
+#define	DUT_M35_REG_OBJ		"(L) Registered object"
+#define	DUT_M36_LDB_NAME	"LDB Name"
+#define	DUT_M37_OWNER_NAME	"Owner Name"
+#define	DUT_M38_SYSTEM		"System"
+#define	DUT_M39_USER		"User"
+#define	DUT_M40_CREATE_REGIST	"Creating Register Object '%s'. . ."
+#define	DUT_M41_PROMPT00	"Enter %s: "
+#define	DUT_M42_PARTITION	"Partition"
+#define	DUT_M43_REPLICATE	"Replicate"
+#define	DUT_M44_VNODE00		"II_INS_VNODE"
+#define	DUT_M45_II_INSTALL	"II_INSTALLATION"
+#define	DUT_M46_II_GCN		"II_GCN"
+#define	DUT_M47_LCL_VNODE	"_LCL_VNODE"
+#define DUT_M48_PROMPT01	"Please enter VNODE name:"
+#define	DUT_M49_TEST_DB		"Testing Access to database: %s::%s"
+#define	DUT_M50_UP		"up"
+#define	DUT_M51_DOWN		"down"
+#define	DUT_M52_TEST_NODE	"Testing Access to node: %s"
+#define	DUT_M53_REG_SYNTAX	"REGISTER %s AS LINK FROM %s WITH DBMS = %s, NODE = %s, DATABASE = %s"
+#define DUT_M54_RMS		"RMS database"
+#define DUT_M55_FRCD_CNST	"Forced Consistent database"
+
+EXEC SQL END DECLARE SECTION;
+
+/* prototypes */
+
+GLOBALREF DUT_STATUS	dut_ee1_error();
+GLOBALREF DUT_STATUS	dut_ee2_exit();
+GLOBALREF DUT_STATUS	dut_ee3_error();
+GLOBALREF void		dut_ee4_dummy();
+GLOBALREF DUT_STATUS	dut_ee5_none_starview();
+GLOBALREF void		dut_ff1_1intro();
+GLOBALREF DUT_STATUS	dut_ff1_2load_ddb();
+GLOBALREF DUT_STATUS	dut_ff2_1ldblist();
+GLOBALREF DUT_STATUS	dut_ff2_2load_ldb();
+GLOBALREF DUT_STATUS	dut_ff2_3test_node();
+GLOBALREF DUT_STATUS	dut_ff2_4reload_ldb();
+GLOBALREF DUT_STATUS	dut_ff2_5test_ldb();
+GLOBALREF DUT_STATUS	dut_ff3_1objlist();
+GLOBALREF DUT_STATUS	dut_ff3_2load_obj();
+GLOBALREF DUT_STATUS	dut_ff3_3reload_obj();
+GLOBALREF DUT_STATUS	dut_ff3_4objinfo();
+GLOBALREF DUT_STATUS	dut_ff3_6remove_object();
+GLOBALREF DUT_STATUS	dut_ff3_7objects();
+GLOBALREF DUT_STATUS	dut_ff3_8fixlist();
+GLOBALREF DUT_STATUS	dut_ii1_init();
+GLOBALREF DUT_STATUS	dut_ii2_check_str();
+GLOBALREF DUT_STATUS	dut_ii3_form_init();
+GLOBALREF DUT_STATUS	dut_ii5_init_helpfile();
+GLOBALREF DUT_STATUS	dut_uu2_dbop();
+GLOBALREF DUT_STATUS	dut_uu4_cleanup();
+GLOBALREF DUT_STATUS	dut_uu5_chkdbname();
+GLOBALREF DUT_STATUS	dut_uu7_table_top();
+GLOBALREF DUT_STATUS	dut_uu8_table_bottom();
+GLOBALREF DUT_STATUS	dut_uu9_table_find();
+GLOBALREF DUT_STATUS	dut_uu11_chk_criteria();
+GLOBALREF DUT_STATUS	dut_uu12_empty_table();
+GLOBALREF DUT_STATUS	dut_uu13_buble_sort();
+GLOBALREF DUT_STATUS	dut_uu14_find_object();
+GLOBALREF DUT_STATUS	dut_uu15_goto_curr_obj();
+GLOBALREF DUT_STATUS	dut_uu16_get_vnode();
+GLOBALREF DUT_STATUS	dut_uu17_newldb();
+GLOBALREF DUT_STATUS	dut_uu18_chk_ldblist();
+GLOBALREF DUT_STATUS	dut_uu19_test_ldb();
+GLOBALREF void		dut_uu20_test_nodelist();
+GLOBALREF DUT_STATUS	dut_uu21_test_node();
+GLOBALREF void		dut_uu22_test_ldblist();
+GLOBALREF void		dut_uu23_reset_ldblist();
+GLOBALREF void		dut_uu23_reset_ldblist();
+GLOBALREF DUT_STATUS	dut_uu24_gcf_node();
+GLOBALREF DUT_STATUS	dut_uu25_insert_node();
+GLOBALREF DUT_STATUS	dut_uu26_retry_dircont();
+GLOBALREF void		dut_pp2_1criteria();
+GLOBALREF void		dut_pp6_1nodelist();
+GLOBALREF DUT_STATUS	dut_pp6_2load_nodelist();
+GLOBALREF DUT_STATUS	dut_pp6_3load_nodelist();
+GLOBALREF DUT_STATUS	dut_pp7_1dbattr();
+GLOBALREF void		dut_pp7_2get_dbname();
+GLOBALREF DUT_STATUS	dut_pp7_3load_dbattr();
+GLOBALREF DUT_STATUS	dut_pp8_1objattr();
+GLOBALREF DUT_STATUS	dut_pp9_1viewattr();
+GLOBALREF DUT_STATUS	dut_pp11_1perror();
+GLOBALREF void		dut_pp12_1ldblist();
+GLOBALREF DUT_STATUS	dut_pp12_2load_ldblist();
+GLOBALREF void		dut_pp13_1ownlist();
+GLOBALREF DUT_STATUS	dut_pp13_2load_ownlist();
+GLOBALREF DUT_STATUS	dut_pp14_1browse();
+GLOBALREF DUT_STATUS	dut_pp14_1browse_node();
+GLOBALREF DUT_STATUS	dut_pp14_2load_node();
+GLOBALREF DUT_STATUS	dut_pp15_1ldb();
+GLOBALREF void		dut_pp16_1browse_table();
+GLOBALREF DUT_STATUS	dut_pp16_2register();
+GLOBALREF DUT_STATUS	dut_pp16_3browse_load_table();
+
+#ifdef  DUT_MAIN
+GLOBALDEF       DUT_CB  *Dut_gcb;
+GLOBALDEF       DUT_ERRCB  *Dut_gerrcb;
+#endif
+#ifndef DUT_MAIN
+GLOBALREF       DUT_CB  *Dut_gcb;
+GLOBALREF       DUT_ERRCB  *Dut_gerrcb;
+#endif

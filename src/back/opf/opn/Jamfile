@@ -1,0 +1,32 @@
+#
+# Jamfile file for back!opf!opn
+# History: 
+#       08-Apr-2009 (hweho01) 
+#         1) Bug 121921, SD issue 135601 
+#            Turned off optimizer for opnprleaf.c on AIX 32-bit. 
+#            Compiler version is 6.006 (C for AIX, VisualAge).
+#         2) Removed rs4_us5 platform string from the IINOOPTIM list   
+#            of opnbfkhget.c and  opnarl, it should not be listed for 
+#            these two files. 
+#       20-Oct-2009 (hweho01)
+#            Remove the IINOOPTIM entries that were generated incorrectly.
+#            
+
+
+SubDir ING_SRC back opf opn ;
+
+IISUBSYS back opf opn ;
+
+IINOOPTIM opncalcost.c : dgi_us5 rs4_us5 sgi_us5 i64_aix ;
+IINOOPTIM opnprleaf.c : rs4_us5 ;
+
+IILIBRARY OPFLIB : opnurn.c opnukey.c opntree.c opntpblk.c opnsrchst.c
+	opnsmemory.c opnsm2.c opnsm1.c opnsavest.c opnro4.c opnro3.c
+	opnrmemory.c opnrefmt.c opnprocess.c opnprleaf.c opnprcost.c
+	opnpart.c opnnewenum.c opnncost.c opnncommon.c opnmemory.c
+	opnjmaps.c opniomake.c opnimtid.c opnhint.c opngnperm.c opnexit.c
+	opneqtamp.c opneprime.c opnenum.c opnememory.c opndsmem.c
+	opndrmem.c opndiff.c opndemem.c opndeltrl.c opndcmem.c
+	opncost.c opncoins.c opncmemory.c opncksrt.c opnceval.c
+	opncalcost.c opnbfkhget.c opnarl.c ;
+

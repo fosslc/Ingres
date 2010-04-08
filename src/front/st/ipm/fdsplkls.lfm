@@ -1,0 +1,22 @@
+COPYFORM:	6.4	1991_08_19 08:51:10 GMT  
+FORM:	fdisplklists	lock list info	
+	75	20	0	0	1	0	10	9	0	0	0	0	0	192	0	7
+FIELD:
+	0	locklists	0	15	0	6	17	75	3	0	1	1	0		1	1	0	1073758241	0	0	0					1	0
+	0	id	21	10	0	8	1	8	0	1	8	1	1	Id	1	-1	0	0	0	0	0		+c8			2	1
+	1	session_name	21	34	0	12	1	12	0	10	12	1	10	Session Name	10	-1	0	0	64	0	0		c12			2	2
+	2	llb_lkb_count	30	4	0	5	1	5	0	23	5	1	23	LKNum	23	-1	0	0	0	0	0		-i5			2	3
+	3	llb_llkb_count	30	4	0	5	1	7	0	29	5	1	29	LK  Lgc	29	-1	0	0	0	0	0		-i5			2	4
+	4	llb_max_lkb	30	4	0	5	1	5	0	37	5	1	37	LKMax	37	-1	0	0	0	0	0		-i5			2	5
+	5	liststat	21	42	0	31	1	31	0	43	31	1	43	Status	43	-1	0	0	64	0	0		c31			2	6
+TRIM:
+	0	0	4:75:0	1	0	0	0
+	1	0	Lock List Display	2048	0	0	0
+	1	2	ID	0	0	0	0
+	10	2	Session	0	0	0	0
+	23	1	1:19:1	1	0	0	0
+	23	2	Count	0	0	0	0
+	29	2	Logical	0	0	0	0
+	30	1	Locks	0	0	0	0
+	37	2	MaxL	0	0	0	0
+	43	2	Status	0	0	0	0

@@ -1,0 +1,29 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+BROWSE LDB
+
+This command displays local databases on the node selected from the 
+Browse Node form. The SELECT command selects the highlighted row
+in the LDB list and displays the Browse Objects popup form.  The 
+TOP/BOTTOM commands move the cursor to the top/bottom of the LDB list 
+respectively. The FIND command searches for a specific string within the 
+LDB list.  The HELP command displays this screen, and the END command 
+returns to the Browse Node form.
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	Select		Select the highlighted local database, and
+			display the Browse Objects popup form.
+
+	Top		Move the cursor to the top of the LDB list.
+
+	Bottom		Move the cursor to the bottom of the LDB list.
+
+	Find		Search for a specific string of characters
+			within the LDB list.
+
+	Help		Display this screen.
+
+	End		Exit to the Browse Node form.
+

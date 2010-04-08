@@ -1,0 +1,50 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: stopauditing
+**
+** Description: Stop security auditing
+**
+** History:
+**	17-feb-94 (robf)
+**	   Written
+*/
+
+procedure stopauditing () = 
+declare
+	errno=integer4 not null;
+	yn=char(1) not null;
+{
+	set session 
+	add privileges (maintain_audit);
+
+	inquire_sql (errno=errorno);
+	if(errno!=0)
+	then
+		message 'You lack appropriate privileges to perform this operation'
+		with style=popup;
+		return 0;
+	endif;
+	yn=prompt 'Really STOP security auditing ? [y/n]:';
+	if lowercase(yn)!='y'
+	then
+		message 'Auditing NOT stopped'
+		with style=popup;
+		return 0;
+	endif;
+	alter security_audit stop;
+	inquire_sql (errno=errorno);
+	if(errno!=0)
+	then
+		message 'Unable to stop security auditing.'
+		with style=popup;
+		return 0;
+	endif;
+	message 'Security auditing is stopped';
+	sleep  2;
+	set session 
+	with privileges=default;
+	return 1;
+}
+		

@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This menu option allows you to create new sections in the Report Layout 
+frame which correspond to various parts of the report.  Scroll to the
+section you would like to create and choose the Select menu option.
+If you decide to create a break header or footer section you will be
+prompted for more information.
+
+The menu commands are:
+
+	MENU COMMAND	SYNOPSIS
+	------------	--------
+	Select		Create the section that is highlighted.
+
+	Cancel		Return to the previous frame without
+			creating any sections.
+
+	Help		Print this message.
+

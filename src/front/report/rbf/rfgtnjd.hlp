@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to use a JoinDef to create the new report.  This 'default'
+can then be edited to create a saved report in the database.  This form
+allows you to specify the name of the JoinDef to use.
+
+
+The menu commands are:
+
+     MENU COMMANDS   SYNOPSIS
+     -------------   --------
+     OK              Create a new report based on a JoinDef.
+
+     Edit	     Edit/create a joindef on which to create the report.
+
+     Cancel          Return to the previous form without creating a new
+                     report.
+
+     ListChoices     Produce a list of the available JoinDefs from which
+                     to create a new report.
+
+     Help            Prints this message.

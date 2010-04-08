@@ -1,0 +1,86 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 1998 Ingres Corporation --> 
+
+<!-- #ICE REPEAT IF (`:id` != `none`)
+THEN=`
+<SCRIPT language="JavaScript">
+		var size
+		var position = 0
+		var head = '<STYLE>\nBODY {Arial;color:white;font-size="10pt";}\nA:link	{color: black;}\n</STYLE>\n'
+		var bodyProperties = 'bgcolor="#FFFFFF"'
+
+		function makeArray(n) {
+			this.length = n
+			for (var i = 1; i <= n; i++) {
+				this[i] = 0
+			}
+			return this
+		}
+
+		function declareFiles (size) {
+			position = 0
+			files = new makeArray(size)
+		}
+
+		function createFile(icon, name, suffix) 
+		{
+			this.name = name
+			this.suffix = suffix
+			this.icon = icon
+		}
+	
+		function add(icon, name, suffix) 
+		{
+			files[position] = new createFile(icon, name, suffix)
+			position++
+		}
+
+		function displayFiles() 
+		{
+			var first = 0
+			var count = 0
+
+			document.write('<HTML>\n<HEAD>\n')
+			document.write(head);
+			document.write('</HEAD>\n<BODY ' + bodyProperties + '>\n')
+
+			document.write('<table WIDTH="100%" CELLPADDING=0 CELLSPACING=0>\n')
+			while (first < position) 
+			{
+				if (count == 0)
+					document.write('<tr>');
+
+				document.write('<td VALIGN=MIDDLE><A HREF="JavaScript:top.Main.Info.questions.setFile(\'' + 
+							 files[first].name + '\', \'' +
+							 files[first].suffix + '\')"><IMG BORDER=0 SRC="' + 
+							 files[first].icon + '">' +
+							 files[first].name + '.' +
+							 files[first].suffix + '<A></td>\n')
+				first = first + 1
+				if (count == 3)
+				{
+					document.write('</tr>');
+					count = 0;
+				}
+				else
+					count  = count + 1
+			}
+			document.write('</table>\n')
+			document.write('</BODY>\n</HTML>\n')
+		}
+
+		function getFiles() {
+			<!-- #ICE REPEAT FUNCTION=``dir?location_id=:id``
+					 HTML=``<!-- #ICE REPEAT IF (````:suffix```` == ````html```` or ````:suffix```` == ````htm````)
+									 THEN=````add('<!-- #ICE INCLUDE=````````icon_page.gif```````` -->', ':prefix',':suffix');````
+									 ELSE=````add('<!-- #ICE INCLUDE=````````icon_multi.gif```````` -->', ':prefix',':suffix');````
+								 -->``
+			-->
+		}
+		declareFiles(<!-- #ICE VAR=``:ii_rowcount`` -->);
+		getFiles();
+		displayFiles();
+</SCRIPT>`
+-->
+
+</HTML>

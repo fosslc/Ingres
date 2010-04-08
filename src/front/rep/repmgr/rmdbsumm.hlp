@@ -1,0 +1,41 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmdbcat.hlp
+DATABASE SUMMARY
+
+This screen lists the databases that Replicator recognizes.  By default,
+the local database information that you entered in the Define Local
+Database form appears in the list.  You must add all other databases
+that belong to your replication scheme to the list.
+
+The columns of the list are:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        No.             The database number.  This is a unique
+                        system-wide identifier assigned by the user.
+
+        Database        The virtual node name plus the database name.
+
+        Owner           The owner (DBA) of the database.
+
+        DBMS Type       The type of database, for example, Ingres
+                        or CA-Datacom.
+
+        Remarks         A short comment.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Add             Add a new database to the list.
+
+        Delete          Delete the currently highlighted database.  You
+                        will be asked for confirmation.
+
+        Edit            Edit the information for the currently
+                        highlighted database.
+
+        Help            Access the Help facility.
+
+        End             Return to the Configuration Menu.

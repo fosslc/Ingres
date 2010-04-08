@@ -1,0 +1,173 @@
+KB doc: 418830
+
+
+inglogs.bat - A Windows script to collect some Ingres and OS information
+------------------------------------------------------------------------
+
+Summary:
+--------
+Latest version: 1.02
+Last Updated: 23-Oct-2009
+
+From time to time this script may be updated so check the version you have
+is the latest.
+ 
+Problem:
+--------
+
+inglogs.bat is a Windows batch script that can be used to get a snapshot of the
+state of an Ingres installation. 
+
+It was originally called "mut.bat" because it was designed to diagnose mutex 
+hangs, however it's also a good script to run to gather all the useful logs and 
+status information.
+
+It's similar to the inglogs script (see KB doc 415682) but is for Windows rather
+than unix
+ 
+Resolution:
+-----------
+
+Usage:
+
+open an Ingres command prompt 
+
+Change to a directory where you wish to create the output files e.g.
+
+   cd C:\temp
+   
+Note that the output files can be quite large (especially if you use the
+-logdump option) so make sure you are on a drive with plenty of space
+
+Then run the inglogs.bat file
+
+   %II_SYSTEM%\ingres\sig\inglogs\inglogs.bat
+
+at the prompt. It will create a sub-directory in the current directory which 
+includes the current date and time e.g. "INGLOGS_20091008_101649" 
+After it runs this directory contains all the files it has created. 
+If sending this to Support then it's a good idea to zip it up into a single 
+file.
+
+If you're using inglogs.bat to diagnose a situation where there is a hang then
+it's possible that it may not complete running. In which case after a few 
+minutes use ctrl-c to quit.
+
+Example output:
+---------------
+
+********************************************************
+Running INGLOGS - Ingres information gathering script
+---
+note:
+     if the script does not respond for a long time then
+     it's possible that it has hung - in which case 
+     ctrl-c to quit
+********************************************************
+
+Creating directory INGLOGS_20091022_193522 for logs
+
+Gathering Windows config information 
+ 
+Gathering Windows state information 
+ 
+Gathering Ingres configuration files
+ 
+Gathering Ingres logs 
+ 
+Getting a list of Servers from IINAMU 
+  Getting list of Ingres Servers of type INGRES 
+  Getting list of Ingres Servers of type IUSVR 
+  Getting list of Ingres Servers of type CUSTOM 
+ 
+Getting a list of servers attached to the logging system 
+  1184 is registered in IINAMU 
+  F4C looks like a de-registered/private server 
+    F4C seems to be a INGRES server, will connect using PM\INGRES\F4C  
+  EE0 is registered in IINAMU 
+ 
+Gathering Session and Mutex info for each Server 
+  for Server PM\INGRES\ee0 : 
+    gathering Session information 
+    checking for mutexes  
+  for Server PM\IUSVR\1184 : 
+    gathering Session information 
+    checking for mutexes  
+  for Server PM\INGRES\F4C : 
+    gathering Session information 
+    checking for mutexes  
+ 
+Gathering Locking information 
+.
+********************************************************
+INGLOGS completed - output in INGLOGS_20091022_193522
+********************************************************
+
+
+
+Output from inglogs --help:
+---------------------------
+
+INGLOGS version 1.02_WIN
+ 
+Usage: inglogs [-nosystemconfig] [-nosystemstate] [-nologfiles] 
+               [-noingresconfig] [-noingresstate] [-logdump]
+       inglogs [-h|-help]
+       inglogs [--help]
+       inglogs [-v|-version|--version]
+ 
+The inglogs script collects some information from your system which 
+might be helpful for analysis. By default it collects as much information 
+as possible, but you can switch off some "modules" if wanted. 
+ 
+The script connects to all DBMS via iimonitor, which may not  
+respond if there is a problem.In this case use C to interrupt. 
+ 
+To report on the state of custom DBMS server classes edit inglogs.bat 
+and look for the line with CUSTOM. Replace CUSTOM with your server 
+class name 
+ 
+The following information is collected: 
+ 
+module systemconfig: 
+  set 
+  ver 
+  systeminfo  
+module systemstate: 
+  tasklist /v  
+  tasklist /svc  
+  net start  
+  netstat -a 
+module ingconfig: 
+  config.dat, config.log, protect.dat,symbol.tbl, symbol.log 
+  ingprenv 
+  version.rel, version.dat 
+  syscheck -v 
+module inglogfiles: 
+  errlog.log, iircp.log, iiacp.log 
+  dbms logs 
+module ingstate: 
+  logstat, logstat -verbose 
+  lockstat, lockstat -dirty 
+  iimonitor: show all sessions, show all sessions formatted 
+  iimonitor: show mutex x 
+  iinamu 
+ 
+Flags: 
+-no<modulename> 
+  (-nosystemconfig -nosystemstate -nologfiles -noingresconfig -noingresstate) 
+  By default all the above modules are executed, you can switch off 
+  one or multiple modules by using -no<modulename> ...  
+ 
+-logdump 
+  By default inglogs does not perform a logdump as the output can be very 
+  large. You can tell it to do a logdump with -logdump 
+ 
+-help (-h) 
+  Prints out a short usage message and exits 
+ 
+--help 
+  Prints out this message and exits 
+ 
+--version (-v, -version) 
+  Prints out the version of inglogs and exits  

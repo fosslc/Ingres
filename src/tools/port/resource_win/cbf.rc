@@ -1,0 +1,96 @@
+//Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+STDIN DIALOG DISCARDABLE  36, 75, 249, 17
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+BEGIN
+    EDITTEXT        100,5,2,210,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "Enter",IDOK,220,2,24,12
+END
+
+DATABASE DIALOG DISCARDABLE  50, 50, 197, 38
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+FONT 8, "System"
+BEGIN
+    EDITTEXT        100,3,17,149,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,163,4,24,12,NOT WS_TABSTOP
+    LTEXT           "Enter database name:",IDC_STATIC,4,7,82,8
+    ICON            INGRES_ICON,IDC_STATIC,167,18,18,20
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+INGRES_ICON             ICON    DISCARDABLE     "cbf.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    WN_ID_PRODUCT_NAME      "CA-OpenIngres"
+    WN_ID_SHORT_APP_NAME    "CBF"
+    WN_ID_VERBOSE_APP_NAME  "Configure By Forms"
+    IDM_DATABASE            "Configure By Forms"
+END
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

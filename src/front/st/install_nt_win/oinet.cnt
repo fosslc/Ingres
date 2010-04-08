@@ -1,0 +1,249 @@
+:Base OInet.hlp
+:Title CA-OpenIngres Net User Guide
+:Index CA-OpenIngres Net User Guide =OInet.hlp
+1 CA-OpenIngres Net User Guide
+2 Preface=C00_NETJ0000000
+3 Overview=C00_NETJ0000003
+3 Purpose of This Manual=C00_NETJ0000005
+3 Audience=C00_NETJ0000010
+3 Contents=C00_NETJ0000015
+3 Conventions
+4 Conventions=C00_NETJ0000020
+4 Entering Data from the Keyboard=C00_NETJ0000025
+4 Statements and Commands=C00_NETJ0000030
+4 Terminology=C00_NETJ0000035
+4 Syntax=C00_NETJ0000040
+3 Related Manuals=C00_NETJ0000045
+2 Chapter 1:  Introducing Net
+3 Chapter 1:  Introducing Net=C01_NETJ0000000
+3 Overview=C01_NETJ0000005
+3 What is Net?
+4 What is Net?=C01_NETJ0000010
+4 Net Security=C01_NETJ0000015
+3 Net and CA-OpenIngres Products
+4 Net and CA-OpenIngres Products=C01_NETJ0000020
+4 Basic CA-OpenIngres and CA-OpenIngres Tools Components=C01_NETJ0000025
+4 The General Communication Facility=C01_NETJ0000030
+4 Net, Star, and Enterprise Access Products =C01_NETJ0000035
+4 What Constitutes a CA-OpenIngres Installation? =C01_NETJ0000040
+4 Which Installation Configurations Require Net? =C01_NETJ0000045
+4 Net and Star =C01_NETJ0000050
+3 The Benefits of Net 
+4 The Benefits of Net =C01_NETJ0000055
+4 Performance Improvement =C01_NETJ0000060
+4 Larger Applications =C01_NETJ0000065
+4 Hardware Resource Investment =C01_NETJ0000070
+4 Efficient Network Traffic=C01_NETJ0000075
+4 Resource Sharing=C01_NETJ0000080
+3 Net Architecture 
+4 Net Architecture =C01_NETJ0000085
+4 The Communications Server=C01_NETJ0000090
+4 The Netutil Utility=C01_NETJ0000095
+3 Basic Networking Concepts
+4 Basic Networking Concepts=C01_NETJ0000100
+4 Network=C01_NETJ0000105
+4 Heterogeneous environment=C01_NETJ0000110
+4 Homogeneous environment=C01_NETJ0000115
+4 Protocol=C01_NETJ0000120
+4 Node =C01_NETJ0000125
+4 Installation =C01_NETJ0000130
+4 Client installation =C01_NETJ0000135
+4 Server installation =C01_NETJ0000140
+4 Local and Remote Installations or Nodes =C01_NETJ0000145
+3 Net Concepts 
+4 Net Concepts =C01_NETJ0000150
+4 Netutil Overview =C01_NETJ0000155
+4 Virtual Node Names (vnodes) =C01_NETJ0000160
+4 Connection Data =C01_NETJ0000165
+4 The Listen Address =C01_NETJ0000170
+4 Remote User Authorizations =C01_NETJ0000175
+4 Installation Passwords versus Login Account Passwords =C01_NETJ0000180
+4  Installation Passwords vs. Login Account Passwords: Features=C01_NETJ0000185
+4  Installation Passwords vs. Login Account Passwords: Setup=C01_NETJ0000190
+4 Global versus Private =C01_NETJ0000195
+3 Who are the Net Users?
+4 Who are the Net Users?=C01_NETJ0000200
+4 The Operating System Administrator=C01_NETJ0000205
+4 The Network Administrator=C01_NETJ0000210
+4 The CA-OpenIngres System Administrator=C01_NETJ0000215
+4 The Database Administrator=C01_NETJ0000220
+4 The End Users=C01_NETJ0000225
+2 Chapter 2:  Installing Net
+3 Chapter 2:  Installing Net=C02_NETJ0000000
+3 Overview=C02_NETJ0000005
+3 An Introduction to the Installation Procedure
+4 An Introduction to the Installation Procedure=C02_NETJ0000010
+4 Preparation Steps =C02_NETJ0000015
+4 What Happens During Installation=C02_NETJ0000020
+4 After Installation=C02_NETJ0000025
+4 Defining Connection Data and Remote User Authorizations =C02_NETJ0000030
+4 Customizing the Installation =C02_NETJ0000035
+3 Before You Begin
+4 Before You Begin=C02_NETJ0000040
+4 Installing and Testing the Network=C02_NETJ0000045
+4 TCP/IP Installation =C02_NETJ0000050
+4 SPX/IPX Installation=C02_NETJ0000055
+4 Installing Net With Other Network Software=C02_NETJ0000060
+4 Setup Parameters for Net =C02_NETJ0000065
+4 The Installation Password and Remote User Authorization =C02_NETJ0000070
+4 Setup Parameters for a Client Installation=C02_NETJ0000075
+3 Installing Net as Part of a New or Existing Installation=C02_NETJ0000080
+2 Chapter 3:  Authorizing User Access—The Netutil Utility
+3 Chapter 3:  Authorizing User Access—The Netutil Utility=C03_NETJ0000000
+3 Overview=C03_NETJ0000005
+3 An Overview of User Authorization
+4 An Overview of User Authorization=C03_NETJ0000010
+4 Authorizing Access to CA-OpenIngres =C03_NETJ0000015
+4 Authorizing Access to Remote Installations =C03_NETJ0000020
+4 The Net Management Utility=C03_NETJ0000025
+4 Authorizing Access to Distributed Databases =C03_NETJ0000030
+3 The Netutil Utility
+4 The Netutil Utility=C03_NETJ0000035
+4 Starting Netutil =C03_NETJ0000040
+3 The Netutil Startup Screen 
+4 The Netutil Startup Screen =C03_NETJ0000045
+4 The Virtual Node Name (vnode) Table =C03_NETJ0000050
+4 The Virtual Node Name =C03_NETJ0000055
+4 Naming Rules for Vnodes =C03_NETJ0000060
+4 The Login/Password Data Table =C03_NETJ0000065
+4 The Login/Password Data Table=C03_NETJ0000070
+4 Task-specific Values for the Login/password Data Fields =C03_NETJ0000075
+4 The Connection Data Table =C03_NETJ0000080
+4 The Connection Data Table=C03_NETJ0000085
+4 Network Software Types=C03_NETJ0000090
+4 Network Protocol Type Key Words =C03_NETJ0000095
+4 Netutil Operations=C03_NETJ0000100
+3 Using Netutil to Establish and Maintain Remote Connections
+4 Using Netutil to Establish and Maintain Remote Connections=C03_NETJ0000105
+4 Establishing and Testing a Remote Connection =C03_NETJ0000110
+4 Creating an Additional Connection Data Entry =C03_NETJ0000115
+4 Creating an Additional Remote User Authorization =C03_NETJ0000120
+4 Deleting an Entry =C03_NETJ0000125
+4 Deleting a Vnode =C03_NETJ0000130
+4 Deleting a Connection Entry=C03_NETJ0000135
+4 Deleting a Remote User Authorization =C03_NETJ0000140
+4 Changing an Existing Record =C03_NETJ0000145
+4 Editing a Vnode Name =C03_NETJ0000150
+4 Editing a Remote User Authorization =C03_NETJ0000155
+4 Editing a Connection Data Entry =C03_NETJ0000160
+4 Defining an Installation Password for the Local Installation=C03_NETJ0000165
+3 Netutil Non-Interactive Mode 
+4 Netutil Non-Interactive Mode =C03_NETJ0000170
+4 Background Information =C03_NETJ0000175
+4 Command Line Flags =C03_NETJ0000180
+4 The Input Control File=C03_NETJ0000185
+4 Invariant Fields=C03_NETJ0000190
+4 Wildcards =C03_NETJ0000195
+4 Syntax and Examples for Specific Tasks =C03_NETJ0000200
+4 To Create a Remote User Authorization =C03_NETJ0000205
+4 To Destroy a Remote User Authorization =C03_NETJ0000210
+4 To Display Remote User Authorizations =C03_NETJ0000215
+4 To Define an Installation Password for the Local Installation =C03_NETJ0000220
+4 To Create a Connection Data Entry =C03_NETJ0000225
+4 To Destroy a Connection Data Entry =C03_NETJ0000230
+4 To Display Connection Data Entries =C03_NETJ0000235
+4 To Stop or Quiesce One or More Communications Servers =C03_NETJ0000240
+2 Chapter 4:  Using Net
+3 Chapter 4:  Using Net=C04_NETJ0000000
+3 Overview=C04_NETJ0000005
+3 Connecting to Remote Databases
+4 Connecting to Remote Databases=C04_NETJ0000010
+4 Database Access Syntax=C04_NETJ0000015
+4 Remote Database Access Syntax=C04_NETJ0000020
+4 Server Classes =C04_NETJ0000025
+4 CA-OpenIngres Server Classes=C04_NETJ0000030
+4 Using the SQL Connect Statement over Net=C04_NETJ0000035
+3 CA-OpenIngres Commands, Utilities, and Net=C04_NETJ0000040
+3 Who Am I on the Remote Installation?=C04_NETJ0000045
+2 Chapter 5:  Maintenance Procedures
+3 Chapter 5:  Maintenance Procedures=C05_NETJ0000000
+3 Overview=C05_NETJ0000005
+3 Starting the Net Communications Server =C05_NETJ0000010
+3 Stopping the Communications Server 
+4 Stopping the Communications Server =C05_NETJ0000015
+4 Stopping a Single Communications Server=C05_NETJ0000020
+4 Stopping Multiple Communications Servers=C05_NETJ0000025
+4 Quiescing a Single Communications Server=C05_NETJ0000030
+4 Quiescing Multiple Communications Servers=C05_NETJ0000035
+3 Changing the Inbound and Outbound Session Limits=C05_NETJ0000040
+3 Changing the Logging Level
+4 Changing the Logging Level=C05_NETJ0000045
+4 LOG_LEVEL =C05_NETJ0000050
+3 Directing Logging Output to a File=C05_NETJ0000055
+3 Setting Default Remote Nodes=C05_NETJ0000060
+2 Chapter 6:  Troubleshooting Net
+3 Chapter 6:  Troubleshooting Net=C06_NETJ0000000
+3 Overview=C06_NETJ0000005
+3 Tracing a Net Connection=C06_NETJ0000010
+3 Storing Net Configuration Information
+4 Storing Net Configuration Information=C06_NETJ0000015
+4 The Name Server Database Files=C06_NETJ0000020
+4 The iiname.all File=C06_NETJ0000025
+4 The IIINGRES_nodename file =C06_NETJ0000030
+4 The IICOMSVR_nodename File=C06_NETJ0000035
+4 The IISTAR_nodename File=C06_NETJ0000040
+4 The IINODE_nodename File=C06_NETJ0000045
+4 The IILOGIN_nodename File=C06_NETJ0000050
+3 Diagnosing Net Problems=C06_NETJ0000055
+3 General Net Installation Check =C06_NETJ0000060
+3 Resolving Connection Errors
+4 Resolving Connection Errors=C06_NETJ0000065
+4 Local Connection Errors=C06_NETJ0000070
+4 Remote Connection Errors=C06_NETJ0000075
+3 Resolving Net Registration Problems=C06_NETJ0000080
+2 Appendix A:  TCP/IP Protocol
+3 Appendix A:  TCP/IP Protocol=AA_NETJ0000000
+3 Overview=AA_NETJ0000005
+3 The Listen Address =AA_NETJ0000010
+3 Netutil Entries =AA_NETJ0000015
+2 Appendix B:  SPX/IPX Protocol
+3 Appendix B:  SPX/IPX Protocol=AB_NETJ0000000
+3 Overview=AB_NETJ0000005
+3 The Listen Address =AB_NETJ0000010
+3 Netutil Entries =AB_NETJ0000015
+2 Appendix C:  LAN Manager Protocol
+3 Appendix C:  LAN Manager Protocol=AC_NETJ0000000
+3 Overview=AC_NETJ0000005
+3 The Listen Address =AC_NETJ0000010
+3 Netutil Entries =AC_NETJ0000015
+2 Appendix D:  Netu Procedures
+3 Appendix D:  Netu Procedures=AD_NETJ0000000
+3 Overview=AD_NETJ0000005
+3 The Netu Utility
+4 The Netu Utility=AD_NETJ0000010
+4 The Netu User Interface=AD_NETJ0000015
+4 Stopping the Communications Server=AD_NETJ0000020
+4 Modify Node Entry=AD_NETJ0000025
+4 Modify Remote Authorization Entry=AD_NETJ0000030
+4 Exit=AD_NETJ0000035
+4 Exiting Netu=AD_NETJ0000040
+4 Using the Netu Interface=AD_NETJ0000045
+3 Remote Node Definition Operations
+4 Remote Node Definition Operations=AD_NETJ0000050
+4 Adding Remote Node Definitions=AD_NETJ0000055
+4 The Procedure=AD_NETJ0000060
+4 Deleting Remote Node Definitions=AD_NETJ0000065
+4 The Procedure=AD_NETJ0000070
+4 Changing Remote Node Definitions=AD_NETJ0000075
+4 Overwriting an Existing Definition=AD_NETJ0000080
+4 Deleting the Old and Adding the New Definition=AD_NETJ0000085
+4 Retrieving Remote Node Definition Information=AD_NETJ0000090
+4 The Procedure=AD_NETJ0000095
+4 Displayed Node Definition Examples=AD_NETJ0000100
+4 Displayed Node Definition Examples=AD_NETJ0000105
+3 Remote User Authorization Operations
+4 Remote User Authorization Operations=AD_NETJ0000110
+4 Defining Remote User Authorizations=AD_NETJ0000115
+4 The Procedure=AD_NETJ0000120
+4 Deleting Remote User Authorizations=AD_NETJ0000125
+4 The Procedure=AD_NETJ0000130
+4 Changing Remote User Authorizations=AD_NETJ0000135
+4 Overwriting an Incorrect Entry=AD_NETJ0000140
+4 Deleting the Old and Adding a New Entry=AD_NETJ0000145
+4 Retrieving Remote User Authorizations=AD_NETJ0000150
+4 The Procedure=AD_NETJ0000155
+4 Displayed Remote User Authorization Examples=AD_NETJ0000160
+3 Stopping the Communications Server Using Netu
+4 Stopping the Communications Server Using Netu=AD_NETJ0000165
+4 Obtaining the GCF Address=AD_NETJ0000170
+4 The Procedure for Stopping the Communications Server=AD_NETJ0000175

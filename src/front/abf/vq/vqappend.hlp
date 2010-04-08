@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqappend.hlp, subtopic 'Editing Append frames' behind the main VQ Editor 
+/#-- help.
+/#-- 
+Append frames let the user add records to tables.  The Visual Query 
+Editor lets you specify the following features for an Append frame:
+
+  * Sequenced fields for the Master table.
+
+  * Default values for displayed form fields in the Master table.
+
+  * Assigned values for hidden fields.
+
+Select Subtopics from the menu for more information about these features.
+
+/#subtopic 'Sequenced fields' vqseqfld.hlp
+/#subtopic 'Default values' vqdefval.hlp
+/#subtopic 'Assigned values' vqassign.hlp

@@ -1,0 +1,68 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+## History:
+##      02-Apr-2004 (fanra01)
+##          Bug 112091
+##          Editorial changes from griel02.
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>Create the Welcome Page</title>
+</head>
+<body>
+<h1>Create the Welcome Page</h1>
+
+The first page which the user encounters is the welcome page. This page lies outside the control of the
+ICE server and is a normal HTML page.
+<p>
+The welcome page is needed to provide access to
+the pages that <i>do</i> come under the control of
+the ICE server. It contains some welcome text and
+a link to the first page, which is a
+<span class="hiy">login page</span>
+and, as a result,
+<span class="hiy">must have public access.</span>
+<p>
+Here is an example:
+<h3>File: play_welcome.html</h3>
+
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt; Shakespeare Live &lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;center&gt;
+&lt;h1&gt; Shakespeare Live &lt;/h1&gt;
+&lt;/center&gt;
+&lt;center&gt;
+Welcome to the &lt;b&gt;globe&lt;/b&gt;
+site for Shakespeare Studies.
+&lt;p&gt;
+&lt;a href=/ice-bin/oiice.dll/plays[play_login.html]&gt;&lt;img src="OldGlobe.gif" alt="Enter the Globe Here"&lt;/a&gt;
+&lt;/center&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</tt></div>
+The line of interest here is the anchor:
+<p>
+<tt>
+&lt;a href=/ice-bin/oiice.dll/plays[play_login.html]&gt;Enter the Globe Here&lt;/a&gt;
+</tt>
+<p>
+This tells the ICE server to access the <tt>play_login</tt> page
+which resides in the <tt>plays</tt> location. The 
+brackets in the syntax show that
+<tt>play_login.html</tt> is a page in the plays location.
+<p>
+There is no support for <b>Session Groups</b> at this
+level because we have not yet logged in and
+therefore have not yet been asigned a session id.
+<p>
+The next page is the <a
+href="fr_login.html">login</a> page.
+</body>
+</html>

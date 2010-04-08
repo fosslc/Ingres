@@ -1,0 +1,70 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- absrchql.hlp, help for search criteria specified within a generated
+/#-- vision/abf application.
+/#--
+Search qualifications are indicated by using operators.  Some operators
+can only work on character strings (text).  Other operators can work on
+either character strings or numbers.
+
+  Character string pattern matching operators:
+    "*"         Matches any number of characters.
+    "?"         Matches any single character.
+    [...]       Matches characters between the brackets, including ranges
+
+  Examples of character string pattern matching operators:
+    C*          Finds text that begins with a capital "C".
+                (California, Colorado, Connecticut)
+    *JOHN*      Finds text that has "JOHN" somewhere within it.
+                (JOHN SMITH, TERRY JOHNSON, MARY ST. JOHN)
+    t*d         Finds text that begins with "t" and ends with "d".
+                (tabloid, timid, toad)
+    t?p         Finds text that begins with "t", ends with "p", and has only
+                three characters.  (tap, tip, top)
+    SD??-*      Finds text that begins with "SD", followed by any two
+                characters, a hyphen, and any trailing characters.
+                (SD37-XA-1992, SDRA-34A-WS49A, SD-X-A463)
+    [AD]*       Finds text that begins with either capital "A" or "D".
+                (Alaska, Alabama, Arizona, Delaware)
+    [A-D]*      Finds text that begins with capital letters "A" through "D".
+                (Alabama, Alaska, Arizona, California, ..., Delaware)
+    *[Aa]nn*    Finds text that has "Ann" or "ann" somewhere within it.
+                (Anne Johnson, Maryann Wilson)
+
+  Comparison operators:
+    "="         equal to
+    "<>", "!="  not equal to
+    "<"         less than
+    "<="        less than or equal to
+    ">"         greater than
+    ">="        greater than or equal to
+
+  Examples of comparison operators:
+    <10000      Finds numbers less than 10000.
+    >=37.5      Finds numbers greater than or equal to 37.5.
+    <>SOLD      Finds text that isn't equal to "SOLD".
+    
+  Notes:
+    Character string search conditions are case-sensitive.  For example, if
+    you enter "Franklin" as a search condition, INGRES won't find "FRANKLIN"
+    or "franklin" in the database.
+
+    You cannot mix pattern matching operators with comparison operators.
+    For example, "<>S*" is not permitted.
+
+    If no operator is specified and a value is entered in a field, then
+    the "=" operator is assumed.
+
+    If you wish to search for a string with a "*" or "?" in it, use the
+    backslash character to keep INGRES from treating it like a pattern
+    matching operator.  For example, "*\?" will find text that ends with a
+    question mark.
+
+    In some installations, the underscore (_) and percent sign (%) are
+    used in place of the "?" and "*" pattern matching characters (controlled
+    by II_PATTERN_MATCH).  Consult your system administrator if you are not
+    sure which pattern matching operators are in use.
+
+    On INGRES gateways, the range pattern matching operator "[...]", the
+    not equal operator (!=), and the backslash indicator (\) may not work.
+    Other restrictions may also apply - see your gateway Installation and
+    Operation Guide for further information.

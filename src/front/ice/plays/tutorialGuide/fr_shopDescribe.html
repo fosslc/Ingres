@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Describe Item: Select with HTML parameter and Link
+</title>
+</head>
+<body>
+
+<h1>
+Describe Item:
+<br>Select with HTML parameter and Link
+</h1>
+<p>
+The Description page selects the required product,
+passed in as the HTML variable <tt>id</tt>, and
+displays more information about the item (in this
+case, the price). In addition we also provide a link
+to add the item to the shopping bag and another to
+return back to the shop home page. The add item
+link passes the item id to the confirmation
+page.
+<h3>File: play_shopDescribe.html</h3>
+<p><div class="boxCode"><tt><pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Shop Description Page&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;center&gt;
+&lt;h1&gt;Shop Description Page&lt;/h1&gt;
+&lt;/center&gt;
+
+&lt;!-- #ICE REPEAT
+          DATABASE = `icetutor` 
+          SQL=`select id, name, cost from play_item where id = :id` 
+          TYPE=`UNFORMATTED`
+	  HTML=`&lt;p&gt;You have selected:&lt;br&gt;
+	      &lt;b&gt;:name&lt;/b&gt;
+	      @ :cost Silver Crown&lt;!-- #ICE IF ( ``1`` != ``:cost``)
+                      THEN=``s`` --&gt;
+	      &lt;br&gt;
+	      &lt;a href="plays[play_shopAdd.html]?id=:id"&gt;Add to Shopping Bag&lt;/a&gt;`
+--&gt;
+&lt;p&gt;
+&lt;!-- #ICE VAR=`
+&lt;A HREF="/ice-bin/oiice.dll/playgroup/plays[play_shopHome.html]"&gt;
+Select a new product&lt;/A&gt;` --&gt;
+
+&lt;!-- Standard Session Control --&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre></tt></div><p>
+First, we select the id, name and cost of
+the product from the table play_item, specifying
+the id in the where clause as passed in with the
+HTML variable <tt>id</tt>, specifying the
+UNFORMATTED type as follows:
+<tt><pre><p>
+          SQL=`select id, name, cost from play_item where id = :id` 
+          TYPE=`UNFORMATTED`
+</pre></tt><p>
+We need an unformatted output from the select
+statement because we wish to add the HTML code to
+add this item to the shopping bag, which we do as
+follows:
+<tt><pre><p>
+	  HTML=`&lt;p&gt;You have selected:&lt;br&gt;
+	      &lt;b&gt;:name&lt;/b&gt;
+	      @ :cost Silver Crown&lt;!-- #ICE IF ( ``1`` != ``:cost``)
+                      THEN=``s`` --&gt;
+	      &lt;br&gt;
+	      &lt;a href="plays[play_shopAdd.html]?id=:id"&gt;Add to Shopping Bag&lt;/a&gt;`
+</pre></tt><p>
+The anchor, in the last line, is built up by passing the item
+identifier held in the HTML variable <tt>id</tt>
+to the next document, <tt>play_shopAdd.html</tt>
+with the caption "Add to Shopping Bag" (we doubt
+that shopping carts existed in Elizabethian
+England).
+<p>
+For the final touch, we test to see if the cost
+of the item is one Silver
+Crown, if it is not then we pluralize the word
+Crown thus resulting in <tt>'Crown'</tt> or
+<tt>'Crown<b>s</b>'</tt> as required.
+
+<p>
+The following page examines the code necessary to
+<a href="fr_shopAdd.html" target="page">
+add 
+</a>
+the item to the shopping bag.
+</body>
+</html>

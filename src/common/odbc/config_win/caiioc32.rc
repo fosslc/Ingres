@@ -1,0 +1,226 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+DLG_ABOUT DIALOGEX 10, 15, 280, 172
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "About"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    CTEXT           "Version",IDC_VERSION,99,58,80,8,SS_CENTERIMAGE
+    CTEXT           "Data Source Administrator",IDC_DS_ADMIN,85,74,109,8,SS_CENTERIMAGE | NOT WS_GROUP
+    CTEXT           "Copyright © 2010 ",IDC_COPYRIGHT,83,106,117,8,SS_CENTERIMAGE | NOT WS_GROUP
+    GROUPBOX        "",IDC_STATIC,43,28,193,115
+    CTEXT           "Product",IDC_PRODUCT,89,42,100,12,SS_CENTERIMAGE
+    CTEXT           "Ingres Corporation",IDC_STATIC,103,122,78,8,SS_CENTERIMAGE
+END
+
+DLG_DATASOURCE DIALOG  15, 15, 335, 279
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Data Source"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Data Source:",IDC_DS,7,10,46,11
+    EDITTEXT        IDC_NAME,79,9,121,12,ES_AUTOHSCROLL
+    LTEXT           "D&escription",IDC_DESCRIPTION_TEXT,7,30,50,11,NOT WS_GROUP
+    EDITTEXT        IDC_DESCRIPTION,79,29,121,12,ES_AUTOHSCROLL
+    GROUPBOX        "Server ",IDC_SERVER,8,52,214,95
+    LTEXT           "&Vnode",IDC_VNODE_TEXT,16,69,42,11,NOT WS_GROUP
+    COMBOBOX        IDC_VNODE,81,71,127,67,CBS_DROPDOWNLIST | CBS_SORT | CBS_UPPERCASE | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "T&ype",IDC_TYPE,16,98,61,11,NOT WS_GROUP
+    COMBOBOX        IDC_SERVERTYPE,81,96,127,93,CBS_DROPDOWN | CBS_SORT | CBS_UPPERCASE | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "D&atabase",IDC_DATABASE,16,124,54,11,NOT WS_GROUP
+    COMBOBOX        IDC_DBNAME,81,122,127,65,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Connect Options",IDC_CONN_OPTS,11,156,311,91
+    CONTROL         "Pro&mpt User ID and Password To Override VNODE Login",IDC_PROMPTUIDPWD,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,176,201,10
+    LTEXT           "Enterprise Access (Gateway) &WITH Options",IDC_GATEWAY_OPTION_TEXT,15,194,150,11,NOT WS_GROUP
+    EDITTEXT        IDC_GATEWAY_OPTION,156,190,154,12,ES_AUTOHSCROLL
+    LTEXT           "&Role Name",IDC_ROLENAME_TEXT,15,210,35,11,NOT WS_GROUP
+    EDITTEXT        IDC_ROLENAME,55,208,85,12,ES_AUTOHSCROLL
+    LTEXT           "Role &Password",IDC_ROLEPWD_TEXT,156,210,60,11,NOT WS_GROUP
+    EDITTEXT        IDC_ROLEPWD,210,208,80,12,ES_PASSWORD | ES_AUTOHSCROLL
+    PUSHBUTTON      "&Test",IDC_TEST,251,136,54,17
+    CONTROL         "",IDC_BITMAPLOCATION,"Button",BS_OWNERDRAW,246,9,65,118
+    LTEXT           "&Group",IDC_GROUP_TEXT,15,226,29,11,NOT WS_GROUP
+    EDITTEXT        IDC_GROUP,52,226,85,12,ES_AUTOHSCROLL
+    CONTROL         "Read Only",IDC_READ_ONLY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,231,176,71,10
+END
+
+DLG_ADVANCED DIALOGEX 15, 15, 333, 381
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Advanced"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    GROUPBOX        "Select Loops versus Cursors",IDC_STATIC,8,10,315,65
+    CONTROL         "Select Loops (best performance but limited to one active result set per connection)",IDC_SELECT_LOOPS,
+                    "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,16,27,270,11
+    CONTROL         "Cursors (best application interoperability; see help for additional information)",IDC_CURSORS,
+                    "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,16,50,300,11
+    CONTROL         "Convert three-part ownername.tablename.columnname to tablename.columnname",IDC_3_PART_NAMES,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,89,294,10
+    CONTROL         "Include SYS* and sys* tables in SQLTables result set",IDC_SYSTABLES,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,105,294,10
+    CONTROL         "Return empty string DATE values as NULL.  \nForce DATE column result set descriptor and catalog descriptor as NULLABLE.",IDC_BLANKDATE,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,15,121,294,21
+    CONTROL         "Return DATE value '1582-01-01' as NULL.  \nForce DATE column result set descriptor and catalog descriptor as NULLABLE.",IDC_DATE1582,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,15,148,294,21
+    CONTROL         "Force separate database session for ODBC catalog functions",IDC_CATCONNECT,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,175,208,10
+    CONTROL         "Ignore arithmetic errors of numeric overflow, underflow, and divide by zero",IDC_NUMOVERFLOW,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,191,247,10
+    CONTROL         "Support II_DECIMAL",IDC_SUPPORT_II_DECIMAL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,207,82,10
+    CONTROL         "Return NULL for SCHEMA columns in ODBC catalog function result sets.  \nNote: option is not safe for duplicate table names owned within scope of user and dba.",IDC_CATSCHEMANULL,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,15,223,294,21
+    CONTROL         "Disable underscore wild-card search characters in catalog functions",IDC_UNDERSCORESEARCH,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,15,266,294,13
+    CONTROL         "Allow update in database procedure (Read Only Driver only)",IDC_ALLOWPROCEDUREUPDATE,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,15,250,204,10
+    EDITTEXT        IDC_MULTIBYTE_FILL_CHAR,15,281,10,14,ES_AUTOHSCROLL
+    LTEXT           "Fill character for failed Unicode/multibyte conversions",IDC_STATIC,28,284,183,8
+    CONTROL         "Convert int8 from DBMS to int4",IDC_CONVERTINT8TOINT4,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,299,113,10
+    CONTROL         "Allow update when using a pass-through query in MS Access",IDC_ALLOWUPDATE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,315,208,10
+    CONTROL         "Treat default Unicode characters as standard strings ",IDC_DEFAULT_TO_CHAR,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,331,183,10
+    CONTROL         "Send Date/Time as Ingres Date",IDC_INGRESDATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,347,117,10
+    CONTROL         "Force error on string truncation",IDC_STRINGTRUNCATION,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,362,112,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 3,5,100,24
+ PRODUCTVERSION 3,5,100,24
+ FILEFLAGSMASK 0x3L
+#ifdef _DEBUG
+ FILEFLAGS 0x3L
+#else
+ FILEFLAGS 0x2L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904e4"
+        BEGIN
+            VALUE "CompanyName", "Ingres Corp."
+            VALUE "FileDescription", "Ingres ODBC Configuration Page"
+            VALUE "FileVersion", "3.50.100.0024"
+            VALUE "LegalCopyright", "Copyright © 2010 Ingres"
+            VALUE "ProductName", "Ingres ODBC Configuration Page"
+            VALUE "ProductVersion", "3.50.100.0024"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_INGRES              BITMAP                  "ingres.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    DLG_DATASOURCE, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 247
+    END
+
+    DLG_ADVANCED, DIALOG
+    BEGIN
+        RIGHTMARGIN, 326
+        BOTTOMMARGIN, 378
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

@@ -1,0 +1,957 @@
+;
+;   History:
+;	31-jul-96 (emmag)
+;	    Added change history section.   Added 2.0 functions to the DLL.
+;	17-feb-97 (mcgem01)
+;	    Replace dm2t_check_setlock with dmt_check_table_lock
+;	12-mar-97 (mcgem01)
+;	    Replace dmve_btundo_check with dmve_bid_check
+;	21-mar-97 (mcgem01)
+;	    Remove dm0l_robt; it has been incorporated into dmxe_begin()
+;	01-may-97 (mcgem01)
+;	    Removed LK_rmutex, dm0p_gtbl_priority and dm0p_stbl_priority
+;       27-May-97 (fanra01)
+;           Removed dm1b_dupcheck and dm1badupcheck now static
+;       29-Sep-97 (fanra01)
+;           Removed duplicates.
+;           Add dm1cnv2_dput, dm1cc_dput, dm1cn_dput.
+;	24-Jan-2000 (rigka01)
+;	    Remove dm0d_scan as per change 444564/bug#97500,91957
+;	03-Nov-2000 (rigka01)
+;	    Remove LK_csp_mbx_create() due to change 447923/bug#101483
+;	    Replace LK_my_pid with LGK_my_PID due to same change
+;	31-dec-1997 (canor01)
+;	    Removed LG_rmutex.
+;	31-dec-1997 (canor01)
+;	    Add LGrcp_pid.
+;	24-feb-98 (mcgem01)
+;	    Add dmc_sort
+;	05-may-98 (mcgem01)
+;	    Remove dmc_sort and add dmse_child_thread.
+;	27-may-98 (mcgem01)
+;	    Replace dmc_write_behind with dmc_write_behind_primary and
+;	    dmc_write_behind_clone
+;	09-oct-1998 (somsa01)
+;	    Added dm1cnv2_put_hdr, dm1cn_put_hdr, dm1cc_put_hdr.
+;	10-may-1999 (cucjo01)
+;	    Removed dm0d_scan.
+;	04-jan-2000 (somsa01)
+;	    Added dm1cnv3* functions.
+;	17-jul-2000 (somsa01)
+;	    Removed LG_mutex, LG_unmutex. LK_mutex, LK_unmutex, LG_remove.
+;	    Also, removed functions from dm1cc.c, dm1cs.c, and dm1sd.c, and
+;	    added LG_unmutex_fcn and LG_mutex_fcn.
+;       21-Aug-2001 (rigka01)
+;	    Remove LK_do_convert due to change 452308, its now declared static
+;	11-oct-2000 (somsa01)
+;	    Removed dm0p_compute_checksum.
+;	11-jan-2001 (somsa01)
+;	    Removed dmf_gws_init.
+;	21-feb-2001 (mcgem01)
+;	    Removed dm1cnv3 functions and added teh hash join functions.
+;	29-mar-2001 (mcgem01)
+;	    Removed dm2f_alloc_rawextent and dm2u_raw_extend
+;	29-apr-2001 (mcgem01)
+;	    Removed dm2u_raw_totalblks
+;	21-may-2001 (somsa01)
+;	    Removed fix for bug 103107, as it is not needed in 2.5 .
+;	24-apr-2003 (somsa01)
+;	    Added dm1cxkperpage.
+;	07-jul-2003 (somsa01)
+;	    Removed LGK_destroy, now a static as of change 464047 (jenjo02).
+; 	28-jan-2004 (penga03)
+;	    Added export for new functions and removed obsolete functions.
+;	29-apr-2004 (gorvi01)
+;		Added dmve_del_location
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	29-Jun-2004 (drivi01)
+;	    Removed duplicate dmve_del_location.
+;	24-Aug-2004 (drivi01)
+;	    Replaced iidmfnt.def with iilibdmf.def due to new build
+;	    procedures.
+;	25-Aug-2004 (drivi01)
+;	    Removed some functions due to B1 security code removal.
+;	08-oct-2004 (somsa01)
+;	    Added dm0d_merge.
+;	26-Apr-2005 (drivi01)
+;	    Due to change #476248, dmve_get_tab needs to be exported.
+;	05-May-2005 (drivi01)
+;	    Added dmve_get_tab.
+;	21-Nov-2005 (drivi01)
+;	    Due to change #480203 exporting function 
+;	    dmf_write_msg_with_args.
+;	14-Dec-2005 (drivi01)
+;	    Adding new function dm0m_init due to change #480040
+;	15-Dec-2005 (drivi01)
+;	    BUG 90402
+;	    dmx_show is replaced with dmxCheckForInterrupt via change
+;	    480224.
+;	19-apr-2006 (drivi01)
+;	    Removed functions dmr_dump_log, dmr_format_dis_tran_id,
+;	    dmr_format_transaction, dmd_log_info due to change 
+;	    481145 bug 97706.
+;	30-Oct-2008 (jonj)
+;	    SIR 120874: Removed dmf_write_msg, dmf_write_msg_with_args,
+;	    added dmfWriteMsgFcn, dmf_write_msgNV, dmf_write_msg_with_argsNV
+;	04-Nov-2008 (jonj)
+;	    SIR 120874: Add dmfWriteMsgNV
+;	12-Nov-2008 (bonro01)
+;	    Remove destroy_loc_list because of change 494685 for SIR 120874
+;	15-Nov-2008 (jonj)
+;	    SIR 120874: Remove dmf_write_msgNV, dmf_write_msg_with_argsNV,
+;	    no longer needed. Remove dmr_log_error, add dmrLogErrorFcn.
+;	17-Nov-2008 (jonj)
+;	    SIR 120874: Remove dm1cxlog_error, add dm1cxLogErrorFcn.
+;	05-Dec-2008 (jonj)
+;	    SIR 120874: Remove dm1c_badtid, add dm1cBadTidFcn.
+;	12-Jan-2009 (jonj)
+;	    Remove LK_do_new_lock_request, now static, LK_release_lock.
+;	09-Mar-2009 (bonro01)
+;	    Add dmve_ufmap because of change 496577 for bug 121652.
+;	27-Oct-2009 (kschendel) SIR 122739
+;	    Remove dm1xheader.
+;	4-Nov-2009 (bonro01)
+;	    Remove dm1c_getaccessors because of change 501041 for bug 122739
+;	    Add dm1cn_cmpcontrol_size and dm1cn_cmpcontrol_setup 
+;	16-Nov-2009 (kschendel) SIR 122890
+;	    Remove dm1p_setfree, dm1p_testfree, LGidnum_from_id.
+;	23-Nov-2009 (bonro01)
+;	    Rename dmf_setup_optim to dmf_setup_directio because of
+;	    change 501253 for bug 122757
+;	23-Nov-2009 (bonro01)
+;	    Delete dm1h_hash because of change 501267 bug 122882
+; 	15-Jan-2010 (jonj)
+; 	    SIR 121619 MVCC: Remove dm0p_mutex, dm0p_unmutex.
+;	    Add dm0pPinBuf, dm0pUnpinBuf, dm0pMutex, dm0pUnmutex, dm0pMakeCRpage,
+;	    dm1cn_clean, dm1cnv2_clean,
+;	    dm1m_fix_page, dm1m_unfix_page, dm1m_mutex, dm1m_unmutex, dm1m_getfree,
+;	    dm1r_crow_lock, dm1r_check_lock.
+;       28-Jan-2010 (horda03) Bug 121811
+;           Add Evidence Set functions.
+;           Started funcs at 824 to avoid conflicts with main.
+;
+EXPORTS
+LGCnode_names		@1				
+LGK_initialize		@2				
+LGK_rundown		@3				
+LG_abort_oldest		@4				
+LG_adopt_xact		@5				
+LG_allocate_buffers		@6				
+LG_allocate_cb		@7				
+LG_allocate_lbb		@8				
+LG_archive_complete		@9				
+LG_build_file_name		@10				
+LG_calc_reserved_space		@11				
+LG_check_cp_servers		@12				
+LG_check_dead		@13				
+LG_check_logfull		@14				
+LG_check_logwriters		@15				
+LG_cleanup_checkpoint		@16				
+LG_compute_bof		@17				
+LG_dealloc_lfb_buffers		@18				
+LG_deallocate_cb		@19				
+LG_debug_wacky_ldb_found		@20				
+LG_disable_dual_logging		@21				
+LG_do_write		@22				
+LG_dump_logwriters		@23				
+LG_end_tran		@24				
+LG_force_abort		@25				
+LG_get_log_page_size		@26				
+LG_imutex		@27				
+LG_inline_hdr_write		@28				
+LG_last_cp_server		@29				
+LG_lpb_shrbuf_disconnect		@30				
+LG_lpb_shrbuf_nuke		@31				
+LG_meminit		@32				
+LG_mutex_fcn		@33				
+LG_orphan_xact		@34				
+LG_pgyback_write		@35				
+LG_queue_write		@36				
+LG_resume		@37				
+LG_rundown		@38				
+LG_signal_check		@39				
+LG_signal_event		@40				
+LG_size		@41				
+LG_suspend		@42				
+LG_unmutex_fcn		@43				
+LG_used_logspace		@44				
+LG_write_block		@45				
+LG_write_headers		@46				
+LG_write_log_headers		@47				
+LGadd		@48				
+LGalter		@49				
+LGbegin		@50				
+LGc_any_csp_online		@51				
+LGc_csp_online		@52				
+LGchk_sum		@53				
+LGclose		@54				
+LGcnode_info		@55				
+LGcopy		@56				
+LGend		@57				
+LGerase		@58				
+LGevent		@59				
+LGforce		@60				
+; xxx		@61				
+LGinit_lock		@62				
+LGinitialize		@63				
+LGintrack		@64				
+LGintrcvd		@65				
+LGlsn_init		@66				
+LGlsn_next		@67				
+LGlsn_term		@68				
+LGmo_attach_lg		@69				
+LGopen		@70				
+LGposition		@71				
+LGrcp_pid		@72				
+LGread		@73				
+LGremove		@74				
+LGreserve		@75				
+LGshow		@76				
+LGwrite		@77				
+LK_allocate_cb		@78				
+LK_cancel		@79				
+LK_cancel_event_wait		@80				
+LK_deallocate_cb		@81				
+LK_do_cancel		@82				
+;LK_do_new_lock_request		@83				
+LK_do_unlock		@84				
+LK_dump_stall_queue		@85				
+LK_event		@86				
+LK_imutex		@87				
+LK_llb_on_list		@88				
+LK_meminit		@89				
+;LK_release_lock		@90				
+LK_resume		@91				
+LK_rundown		@92				
+LK_size		@93				
+LK_suspend		@94				
+LK_try_convert		@95				
+LK_try_wait		@96				
+LKalter		@97				
+LKcreate_list		@98				
+LKevent		@99				
+LKinitialize		@100				
+LKintrack		@101				
+LKintrcvd		@102				
+LKmo_attach_lk		@103				
+LKrelease		@104				
+LKrequest		@105				
+LKshow		@106				
+build_loc		@107				
+check_start_backup		@108				
+;destroy_loc_list		@109				
+disconnect_willing_commit		@110				
+dm0c_close		@111				
+dm0c_dmp_filename		@112				
+dm0c_extend		@113				
+dm0c_mk_consistnt		@114				
+dm0c_open		@115				
+dm0d_close		@116				
+dm0d_config_restore		@117				
+dm0d_create		@118				
+dm0d_d_config		@119				
+dm0d_delete		@120				
+dm0d_filename		@121				
+dm0d_open		@122				
+dm0d_read		@123				
+dm0d_truncate		@124				
+dm0d_update		@125				
+dm0d_write		@126				
+dm0j_backread		@127				
+dm0j_close		@128				
+dm0j_create		@129				
+dm0j_delete		@130				
+dm0j_filename		@131				
+dm0j_merge		@132				
+dm0j_open		@133				
+dm0j_read		@134				
+dm0j_truncate		@135				
+dm0j_update		@136				
+dm0j_write		@137				
+dm0l_abortsave		@138				
+dm0l_ai		@139				
+dm0l_alloc		@140				
+dm0l_allocate		@141				
+dm0l_alter		@142				
+dm0l_archive		@143				
+dm0l_assoc		@144				
+dm0l_bcp		@145				
+dm0l_bi		@146				
+dm0l_bm		@147				
+dm0l_bt		@148				
+dm0l_btdel		@149				
+dm0l_btfree		@150				
+dm0l_btovfl		@151				
+dm0l_btput		@152				
+dm0l_btsplit		@153				
+dm0l_btupdovfl		@154				
+dm0l_closedb		@155				
+dm0l_crdb		@156				
+dm0l_create		@157				
+dm0l_crverify		@158				
+dm0l_dealloc		@159				
+dm0l_deallocate		@160				
+dm0l_del		@161				
+dm0l_destroy		@162				
+dm0l_disassoc		@163				
+dm0l_dmu		@164				
+dm0l_drain		@165				
+dm0l_ebackup		@166				
+dm0l_ecp		@167				
+dm0l_em		@168				
+dm0l_et		@169				
+dm0l_ext_alter		@170				
+dm0l_extend		@171				
+dm0l_fcreate		@172				
+dm0l_fmap		@173				
+dm0l_force		@174				
+dm0l_frename		@175				
+dm0l_index		@176				
+dm0l_jnleof		@177				
+dm0l_load		@178				
+dm0l_location		@179				
+dm0l_modify		@180				
+dm0l_nofull		@181				
+dm0l_opendb		@182				
+dm0l_ovfl		@183				
+dm0l_position		@184				
+dm0l_put		@185				
+dm0l_read		@186				
+dm0l_relocate		@187				
+dm0l_rep		@188				
+dm0l_repl_comp_info		@189				
+dm0l_row_unpack		@190				
+dm0l_savepoint		@191				
+dm0l_sbackup		@192				
+dm0l_secure		@193				
+dm0l_setbof		@194				
+dm0l_sm0_closepurge		@195				
+dm0l_sm1_rename		@196				
+dm0l_sm2_config		@197				
+dm0l_test		@198				
+dm0m_allocate		@199				
+dm0m_deallocate		@200				
+dm0m_destroy		@201				
+dm0m_info		@202				
+dm0m_search		@203				
+dm0m_verify		@204				
+dm0p_1toss_page		@205				
+dm0p_allocate		@206				
+dm0p_alloc_pgarray		@207				
+dm0p_before_image_check		@208				
+dm0p_bmid		@209				
+dm0p_cachefix_page		@210				
+dm0p_close_page		@211				
+dm0p_count_connections		@212				
+dm0p_cp_flush		@213				
+dm0p_cpdone		@214				
+dm0p_dbcache		@215				
+dm0p_deallocate		@216				
+dm0p_escalate		@217				
+dm0p_fix_page		@218				
+dm0p_flush_pages		@219				
+dm0p_force_pages		@220				
+dm0p_insert_checksum		@221				
+dm0p_lock_page		@222				
+dm0p_mo_init		@223				
+;dm0p_mutex		@224				
+dm0p_pagetype		@225				
+dm0p_pass_abort		@226				
+dm0p_recover_state		@227				
+dm0p_register_loghandles		@228				
+dm0p_reparent_pages		@229				
+dm0p_set_valid_stamp		@230				
+dm0p_tblcache		@231				
+dm0p_toss_pages		@232				
+dm0p_uncache_fix		@233				
+dm0p_unfix_page		@234				
+dm0p_unlock_page		@235				
+;dm0p_unmutex		@236				
+dm0p_validate_checksum		@237				
+dm0p_wbflush_wait		@238				
+dm0p_wpass_abort		@239				
+dm0p_write_along		@240				
+dm0s_elprepare		@241				
+dm0s_elrelease		@242				
+dm0s_elwait		@243				
+dm0s_erelease		@244				
+dm0s_eset		@245				
+dm0s_ewait		@246				
+dm0s_minit		@247				
+dm0s_mlock		@248				
+dm0s_mrelease		@249				
+dm0s_munlock		@250				
+dm0s_name		@251				
+dm1b_allocate		@252				
+;dm1b_badtid		@253				
+dm1b_bybid_get		@254				
+dm1b_count		@255				
+dm1b_delete		@256				
+dm1b_find_ovfl_space		@257				
+dm1b_get		@258				
+dm1b_put		@259				
+dm1b_rcb_update		@260				
+dm1b_replace		@261				
+dm1b_search		@262				
+dm1bbbegin		@263				
+dm1bbend		@264				
+dm1bbput		@265				
+dm1bmmerge		@266				
+dm1bxchain		@267				
+dm1bxdelete		@268				
+dm1bxdupkey		@269				
+dm1bxformat		@270				
+dm1bxfree_ovfl		@271				
+dm1bxinsert		@272				
+dm1bxjoin		@273				
+dm1bxnewroot		@274				
+dm1bxovfl_alloc		@275				
+dm1bxsearch		@276				
+dm1bxsplit		@277				
+;dm1c_badtid		@278				
+;dm1c_getaccessors		@279				
+dm1c_pdelete		@280				
+dm1c_pget		@281				
+dm1c_pput		@282				
+dm1c_preplace		@283				
+dm1c_sys_init		@284				
+dm1ch_compexpand		@285				
+dm1ch_compress		@286				
+dm1ch_uncompress		@287				
+dm1cn_allocate		@288				
+dm1cn_check_page		@289				
+dm1cn_compexpand		@290				
+dm1cn_compress		@291				
+dm1cn_delete		@292				
+dm1cn_dput		@293				
+dm1cn_format		@294				
+dm1cn_get		@295				
+dm1cn_get_offset		@296				
+dm1cn_getfree		@297				
+dm1cn_isnew		@298				
+dm1cn_ixsearch		@299				
+dm1cn_load		@300				
+dm1cn_put		@301				
+dm1cn_reallocate		@302				
+dm1cn_reclen		@303				
+dm1cn_tuplecount		@304				
+dm1cn_uncompress		@305				
+dm1cnv2_allocate		@306				
+dm1cnv2_check_page		@307				
+dm1cnv2_delete		@308				
+dm1cnv2_dput		@309				
+dm1cnv2_format		@310				
+dm1cnv2_get		@311				
+dm1cnv2_get_offset		@312				
+dm1cnv2_getfree		@313				
+dm1cnv2_isnew		@314				
+dm1cnv2_ixsearch		@315				
+dm1cnv2_load		@316				
+dm1cnv2_put		@317				
+dm1cnv2_reallocate		@318				
+dm1cnv2_reclen		@319				
+dm1cnv2_tuplecount		@320				
+dm1cxallocate		@321				
+dm1cxcomp_rec		@322				
+dm1cxdel		@323				
+dm1cxformat		@324				
+dm1cxget		@325				
+dm1cxhas_room		@326				
+dm1cxjoinable		@327				
+dm1cxkperpage		@328				
+;dm1cxlog_error		@329				
+dm1cxlshift		@330				
+dm1cxmax_length		@331				
+dm1cxmidpoint		@332				
+dm1cxput		@333				
+dm1cxrclaim		@334				
+dm1cxrecptr		@335				
+dm1cxreplace		@336				
+dm1cxrshift		@337				
+dm1cxtget		@338				
+dm1cxtput		@339				
+dm1h_allocate		@340				
+;dm1h_hash		@341				
+dm1h_newhash		@342				
+dm1h_nofull		@343				
+dm1h_search		@344				
+dm1hbbegin		@345				
+dm1hbend		@346				
+dm1hbput		@347				
+dm1i_allocate		@348				
+dm1i_search		@349				
+dm1ibbegin		@350				
+dm1ibend		@351				
+dm1ibput		@352				
+dm1p_add_extend		@353				
+dm1p_add_fmap		@354				
+dm1p_build_SMS		@355				
+dm1p_checkhwm		@356				
+dm1p_convert_table_to_65		@357				
+dm1p_dump		@358				
+dm1p_fmfree		@359				
+dm1p_fminit		@360				
+dm1p_fmused		@361				
+dm1p_free		@362				
+dm1p_getfree		@363				
+dm1p_init_fhdr		@364				
+dm1p_lastused		@365				
+dm1p_putfree		@366				
+dm1p_rebuild		@367				
+dm1p_repair		@368				
+;	notused @369
+dm1p_single_fmap_free		@370				
+;	notused @371				
+dm1p_used_range		@372				
+dm1p_verify		@373				
+dm1r_count		@374				
+dm1r_delete		@375				
+dm1r_get		@376				
+dm1r_lock_row		@377				
+dm1r_put		@378				
+dm1r_rcb_update		@379				
+dm1r_replace		@380				
+dm1s_allocate		@381				
+dm1s_deallocate		@382				
+dm1s_empty_table		@383				
+dm1s_search		@384				
+dm1sbbegin		@385				
+dm1sbend		@386				
+dm1sbput		@387				
+dm1u_talk		@388				
+dm1u_verify		@389				
+dm1xfinish		@390				
+dm1xfree		@391				
+dm1xnewpage		@393				
+dm1xnextpage		@394				
+dm1xreadpage		@395				
+dm1xreserve		@396				
+dm1xstart		@397				
+dm2a_simpagg		@398				
+dm2d_add_db		@399				
+dm2d_alter_db		@400				
+dm2d_check_db_backup_status		@401				
+dm2d_check_dir		@402				
+dm2d_close_db		@403				
+dm2d_del_db		@404				
+dm2d_extend_db		@405				
+dm2d_get_dcb		@406				
+dm2d_open_db		@407				
+dm2f_add_fcb		@408				
+dm2f_alloc_file		@409				
+dm2f_build_fcb		@410				
+dm2f_check_access		@411				
+dm2f_close_file		@412				
+dm2f_create_file		@413				
+dm2f_delete_file		@414				
+dm2f_file_size		@415				
+dm2f_filename		@416				
+dm2f_flush_file		@417				
+dm2f_force_file		@418				
+dm2f_galloc_file		@419				
+dm2f_guarantee_space		@420				
+dm2f_open_file		@421				
+dm2f_read_file		@422				
+dm2f_release_fcb		@423				
+dm2f_rename		@424				
+dm2f_round_up		@425				
+dm2f_sense_file		@426				
+dm2f_set_alloc		@427				
+dm2f_write_file		@428				
+dm2r_delete		@429				
+dm2r_get		@430				
+dm2r_load		@431				
+dm2r_position		@432				
+dm2r_put		@433				
+dm2r_rcb_allocate		@434				
+dm2r_release_rcb		@435				
+dm2r_replace		@436				
+dm2r_return_rcb		@437				
+dm2r_unfix_pages		@438				
+dm2rep_capture		@439				
+dm2rep_qman		@440				
+dm2t_add_tabio_file		@441				
+dm2t_awaken_tcb		@442				
+dm2t_bumplock_tcb		@443				
+dmt_check_table_lock		@444				
+dm2t_close		@445				
+dm2t_control		@446				
+dm2t_destroy_temp_tcb		@447				
+dm2t_fix_tcb		@448				
+dm2t_fx_tabio_cb		@449				
+dm2t_get_timeout		@450				
+dm2t_init_tabio_cb		@451				
+dm2t_lock_table		@452				
+dm2t_lookup_tabid		@453				
+dm2t_lookup_tabname		@454				
+dm2t_open		@455				
+dm2t_purge_tcb		@456				
+dm2t_reclaim_tcb		@457				
+dm2t_release_tcb		@458				
+dm2t_reserve_tcb		@459				
+dm2t_temp_build_tcb		@460				
+dm2t_ufx_tabio_cb		@461				
+dm2t_unfix_tcb		@462				
+dm2t_update_logical_key		@463				
+dm2t_wait_for_tcb		@464				
+dm2t_wt_tabio_ptr		@465				
+dm2u_alterstatus_upd_cats		@466				
+dm2u_calc_hash_buckets		@467				
+dm2u_ckp_lock		@468				
+dm2u_conv_rel_update		@469				
+dm2u_convert		@470				
+dm2u_create		@471				
+dm2u_destroy		@472				
+dm2u_file_create		@473				
+;dm2u_get_secid		@474				
+dm2u_get_tabid		@475				
+dm2u_index		@476				
+dm2u_load_table		@477				
+dm2u_modify		@478				
+dm2u_readonly_upd_cats		@479				
+dm2u_relocate		@480				
+dm2u_reorg_table		@481				
+dm2u_sysmod		@482				
+dm2u_update_catalogs		@483				
+dma_alloc_dbcb		@484				
+dma_archive		@485				
+dma_complete		@486				
+;dma_default_label		@487				
+dma_eoc		@488				
+dma_offline_context		@489				
+dma_online_context		@490				
+dma_prepare		@491				
+dma_row_access		@492				
+;dma_row_label		@493				
+dma_soc		@494				
+dma_table_access		@495				
+dma_write_audit		@496				
+dmc_add_db		@497				
+dmc_alter		@498				
+dmc_begin_session		@499				
+dmc_check_dead		@500				
+dmc_close_db		@501				
+dmc_cp_timer		@502				
+dmc_del_db		@503				
+dmc_end_session		@504				
+dmc_fast_commit		@505				
+dmc_force_abort		@506				
+dmc_group_commit		@507				
+dmc_logwriter		@508				
+dmc_open_db		@509				
+dmc_read_ahead		@510				
+dmc_recovery		@511				
+dmc_repq		@512				
+dmc_reset_eff_user_id		@513				
+dmc_set_logging		@514				
+dmc_setup_checksum		@515				
+dmc_show		@516				
+dmc_start_server		@517				
+dmc_stop_server		@518				
+dmc_write_along		@519				
+dmc_write_behind_primary		@520				
+dmc_write_behind_clone		@521				
+dmckp_begin_dump_phase		@522				
+dmckp_begin_journal_phase		@523				
+dmckp_begin_restore_db		@524				
+dmckp_begin_restore_tbl		@525				
+dmckp_begin_restore_tbls_at_loc		@526				
+dmckp_begin_save_db		@527				
+dmckp_begin_save_tbl		@528				
+dmckp_check_snapshot		@529				
+dmckp_delete_file		@530				
+dmckp_delete_loc		@531				
+dmckp_end_dump_phase		@532				
+dmckp_end_journal_phase		@533				
+dmckp_end_restore_db		@534				
+dmckp_end_restore_tbl		@535				
+dmckp_end_restore_tbls_at_loc		@536				
+dmckp_end_save_db		@537				
+dmckp_end_save_tbl		@538				
+dmckp_init		@539				
+dmckp_pre_restore_loc		@540				
+dmckp_pre_save_file		@541				
+dmckp_pre_save_loc		@542				
+dmckp_restore_file		@543				
+dmckp_restore_loc		@544				
+dmckp_save_file		@545				
+dmckp_save_loc		@546				
+dmckp_work_dump_phase		@547				
+dmckp_work_journal_phase		@548				
+dmd_buffer		@549				
+dmd_build_iotrace		@550				
+dmd_call		@551				
+dmd_dmp_pool		@552				
+dmd_fmt_cb		@553				
+dmd_format_dm_hdr		@554				
+dmd_format_lg_hdr		@555				
+dmd_format_log		@556				
+dmd_iotrace		@557				
+dmd_lkrqst_trace		@558				
+dmd_lock		@559				
+dmd_lock_info		@560				
+dmd_log		@561				
+dmd_logtrace		@562				
+dmd_petrace		@563				
+dmd_prall		@564				
+dmd_prdata		@565				
+dmd_prindex		@566				
+dmd_prkey		@567				
+dmd_prordered		@568				
+dmd_prrecord		@569				
+dmd_put_line		@570				
+dmd_return		@571				
+dmd_rstat		@572				
+dmd_siotrace		@573				
+dmd_timer		@574				
+dmd_txstat		@575				
+dmdprbrange		@576				
+dmf_call		@577				
+dmf_getadf		@578				
+dmf_gwf_init		@579				
+dmf_gwr_delete		@580				
+dmf_gwr_get		@581				
+dmf_gwr_position		@582				
+dmf_gwr_put		@583				
+dmf_gwr_replace		@584				
+dmf_gwt_close		@585				
+dmf_gwt_open		@586				
+dmf_gwt_register		@587				
+dmf_gwt_remove		@588				
+dmf_gwx_abort		@589				
+dmf_gwx_begin		@590				
+dmf_gwx_commit		@591				
+dmf_init		@592				
+dmf_jsp_abort_xact		@593				
+dmf_jsp_begin_xact		@594				
+dmf_jsp_commit_xact		@595				
+dmf_perftst		@596				
+dmf_put_line		@597				
+dmf_rfp_abort_transaction		@598				
+dmf_rfp_begin_transaction		@599				
+dmf_rfp_commit_transaction		@600				
+dmf_scc_trace		@601				
+dmf_setup_directio		@602				
+dmf_sxf_bgn_session		@603				
+dmf_sxf_end_session		@604				
+dmf_sxf_terminate		@605				
+dmf_tbl_info		@606				
+dmf_term		@607				
+dmf_tmmo_attach_tmperf		@608				
+dmf_trace		@609				
+dmf_udt_lkinit		@610				
+;dmf_write_msg		@611				
+dmfalter		@612				
+dmfatp		@613				
+dmfdtp		@614				
+dmffload		@615				
+dml_get_tabid		@616				
+dmm_add_create		@617				
+dmm_add_location		@618				
+dmm_alter		@619				
+dmm_config		@620				
+dmm_create		@621				
+dmm_del_config		@622				
+dmm_delete		@623				
+dmm_destroy		@624				
+dmm_do_del		@625				
+dmm_finddbs		@626				
+dmm_init_catalog_templates		@627				
+dmm_list		@628				
+dmm_loc_validate		@629				
+dmm_makelist		@630				
+dmm_message		@631				
+dmm_putlist		@632				
+dmpe_call		@633				
+dmpe_deallocate		@634				
+dmpe_delete		@635				
+dmpe_destroy		@636				
+dmpe_modify		@637				
+dmpe_move		@638				
+dmpe_relocate		@639				
+dmpe_replace		@640				
+dmr_alloc_rcp		@641				
+dmr_alter		@642				
+dmr_analysis_pass		@643				
+dmr_check_event		@644				
+dmr_cleanup		@645				
+dmr_complete_recovery		@646				
+dmr_delete		@647				
+dmr_dump_data		@648				
+dmr_dump_log		@649						
+dmr_get		@652				
+dmr_get_cp		@653				
+dmr_init_recovery		@654				
+dmr_load		@655				
+;dmr_log_error		@656				
+dmr_log_init		@657				
+dmr_offline_context		@659				
+dmr_online_context		@660				
+dmr_position		@661				
+dmr_put		@662				
+dmr_rcp_init		@663				
+dmr_recover		@664				
+dmr_redo_pass		@665				
+dmr_replace		@666				
+dmr_undo_pass		@667				
+dmse_begin		@668				
+dmse_compare		@669				
+dmse_cost		@670				
+dmse_end		@671				
+dmse_get_record		@672				
+dmse_input_end		@673				
+dmse_put_record		@674				
+dmse_child_thread		@675				
+dmt_alter		@676				
+dmt_close		@677				
+dmt_create_temp		@678				
+dmt_delete_temp		@679				
+dmt_open		@680				
+dmt_show		@681				
+dmt_sort_cost		@682				
+dmu_alter		@683				
+dmu_atable		@684				
+dmu_convert		@685				
+dmu_create		@686				
+dmu_destroy		@687				
+dmu_index		@688				
+dmu_modify		@689				
+dmu_relocate		@690				
+;dmu_secid		@691				
+dmu_show		@692				
+dmu_tabid		@693				
+dmve_aipage		@694				
+dmve_alloc		@695				
+dmve_alter		@696				
+dmve_assoc		@697				
+dmve_bipage		@698				
+dmve_btdel		@699				
+dmve_btfree		@700				
+dmve_btovfl		@701				
+dmve_btput		@702				
+dmve_btsplit		@703				
+dmve_bid_check		@704				
+dmve_btupdovfl		@705				
+dmve_crdb		@706				
+dmve_create		@707				
+dmve_crverify		@708				
+dmve_dealloc		@709				
+dmve_del		@710				
+dmve_destroy		@711				
+dmve_disassoc		@712				
+dmve_dmu		@713				
+dmve_ext_alter		@714				
+dmve_extend		@715				
+dmve_fcreate		@716				
+dmve_fix_tabio		@717				
+dmve_fmap		@718				
+dmve_frename		@719				
+dmve_index		@720				
+dmve_jnleof		@721				
+dmve_load		@722				
+dmve_location		@723				
+dmve_del_location		@724				
+dmve_location_check		@725				
+dmve_modify		@726				
+dmve_name_unpack		@727				
+dmve_nofull		@728				
+dmve_ovfl		@729				
+dmve_partial_recov_check		@730				
+dmve_put		@731				
+dmve_redo		@732				
+dmve_relocate		@733				
+dmve_rep		@734				
+dmve_rtput		@735				
+dmve_rtdel		@736				
+dmve_rtrep		@737				
+dmve_setbof		@738				
+dmve_sm0_closepurge		@739				
+dmve_sm1_rename		@740				
+dmve_sm2_config		@741				
+dmve_trace_page_contents		@742				
+dmve_trace_page_header		@743				
+dmve_trace_page_info		@744				
+dmve_trace_page_lsn		@745				
+dmve_undo		@746				
+dmve_unreserve_space		@747				
+dmx_abort		@748				
+dmx_begin		@749				
+dmx_commit		@750				
+dmx_resume		@751				
+dmx_savepoint		@752				
+dmx_secure		@753				
+;dmx_show		@754				
+dmxe_abort		@755				
+dmxe_begin		@756				
+dmxe_check_abort		@757				
+dmxe_commit		@758				
+dmxe_pass_abort		@759				
+dmxe_resume		@760				
+dmxe_savepoint		@761				
+dmxe_secure		@762				
+dmxe_writebt		@763				
+dump_cnf		@764				
+dump_dcb		@765				
+dump_dmp		@766				
+dump_dsc		@767				
+dump_ext		@768				
+dump_file		@769				
+dump_jnl		@770				
+dump_loc_entry		@771				
+dump_tcb		@772				
+jsp_file_maint		@773				
+jsp_get_case		@774				
+jsp_set_case		@775				
+lgk_calculate_size		@776				
+lgk_get_config		@777				
+lgkm_allocate_ext		@778				
+lgkm_deallocate_ext		@779				
+lgkm_initialize_mem		@780				
+open_iidbdb		@781				
+rfp_add_action		@782				
+rfp_lookup_action		@783				
+rfp_remove_action		@784				
+tbllst_delete		@785				
+dm1cnv2_isempty		@786				
+dm1cn_isempty		@787				
+dmh_write		@788				
+dmh_open		@789				
+dmh_read		@790				
+dmh_close		@791				
+LKkey_to_string		@792				
+lgk_get_counts		@793					
+dm0d_merge		@794
+dmve_get_tab		@795
+;dmf_write_msg_with_args	@796
+dm0m_init		@797
+dmxCheckForInterrupt	@798
+dmd_log_info		@799
+dmfWriteMsgFcn		@800
+;dmf_write_msgNV		@801
+;dmf_write_msg_with_argsNV	@802
+dmfWriteMsgNV		@803
+dmrLogErrorFcn		@804
+dm1cxLogErrorFcn	@805
+dm1cBadTidFcn		@806
+dmve_ufmap		@807
+dm1cn_cmpcontrol_size	@808
+dm1cn_cmpcontrol_setup	@809
+
+dm0pPinBuf		@810
+dm0pUnpinBuf		@811
+dm0pMutex		@812
+dm0pUnmutex		@813
+dm0pMakeCRpage		@814
+dm1cn_clean		@815
+dm1cnv2_clean		@816
+dm1m_fix_page		@817
+dm1m_unfix_page		@818
+dm1m_mutex		@819
+dm1m_unmutex		@820
+dm1m_getfree		@821
+dm1r_crow_lock		@822
+dm1r_check_lock		@823
+dmf_diag_dmp_pool	@824
+dmf_diag_dump_tables	@825
+dmd_summary_statistics	@826

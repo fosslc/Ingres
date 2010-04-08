@@ -1,0 +1,13 @@
+#
+# Jamfile file for back!gwf!gwfsxa
+#
+
+SubDir ING_SRC back gwf gwfsxa ;
+
+IISUBSYS back gwf gwfsxa ;
+
+
+IILIBRARY GWFLIB : gwfsxaut.c gwfsxamo.c gwfsxaer.c
+	gwfsxacv.c gwfsxa.c ;
+
+IILIBRARY IMPGWFLIBDATA : gwfsxadata.c ;

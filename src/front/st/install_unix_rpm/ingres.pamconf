@@ -1,0 +1,19 @@
+## Copyright (c) 2010 Ingres Corporation 
+## Name:
+##      ingres.pamconf
+##
+## Usage:
+##      /etc/pam.d/ingres
+##
+## Description:
+##      Pam configuration file for RH/Fedora Linux. Shipped as part of
+##	LSB builds
+##
+## History:
+##	12-Mar-2010 (hanje04)
+##	    SIR 123296
+##	    Created.
+##
+#%PAM-1.0
+auth       required     pam_unix.so
+account    required     pam_unix.so

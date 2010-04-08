@@ -1,0 +1,19 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqexpres.hlp, subtopic 'Valid expressions' subtopic of 'Default values'
+/#-- and 'Assigned values' behind subtopic 'Append frames'; subtopic of 
+/#-- 'Query restrictions' behind subtopics 'Update frames' and 'Browse frames' 
+/#-- all behind the main VQ Editor help screen.
+/#-- 
+4GL expressions contain values, are values, or produce values as a result of 
+processing.  For detailed information and examples of valid expressions, refer 
+to the Forms-based Application Development Tools User Guide.  The various types
+of expressions are:
+
+  * Constants (strings, numerics, and NULLs)
+  * Simple fields on a form
+  * Table-field columns on a form
+  * Hidden fields and columns
+  * Database retrievals through query statements
+  * Values returned by procedures
+  * Arithmetic and string expressions
+  * Logical (boolean) expressions

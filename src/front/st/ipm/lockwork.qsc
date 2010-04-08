@@ -1,0 +1,447 @@
+/*
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+/*
+** lock_work.qc
+**
+** This file contains the utility routines for getting lock information.
+** When new locktypes are added to INGRES, they must be added to these
+** routines.
+**
+** This file defines
+**    trans_lock_type() - given the locktype shorthand, returns
+**	full lock type name
+**    trns_lnm_to_lktyp() - given the full lock type name, returns the
+**	integer representation
+**    displktype() - displays a popup which lists the locktypes
+**
+** History
+**	-/-/-		tomt	written
+**	3/8/89 		tomt	created lockname popup help displktype()
+**	10/1/89		tomt	integrated 6.3 changes
+**	09/21/90	jpk	change "Forget" to "Cancel"
+**      5/26/93 (vijay)
+**              include pc.h
+**	26-Aug-1993 (fredv)
+**		Included <st.h>.
+**	2-Feb-1994 (fredv)
+**		Include <cs.h> so that CS_SID will be defined.
+**      12/8/94       liibi01  Cross integration from 6.4. removed some
+**                             unintentional trigraphs
+**      21-Apr-1995 (nick) Bug #67888
+**              Added lock type LK_CKP_TXN
+**	9/25/95 (nick)
+**		Remove another trigraph.
+**	11/1/95 (nick)
+**		Add support for LK_AUDIT and LK_ROW. #72320
+**	22-nov-1996 (dilma04)
+**		Row-level locking project:
+**		Add support for LK_PH_PAGE and LK_VAL_LOCK.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	05-Mar-2002 (jenjo02)
+**	    Added LK_SEQUENCE
+**	24-Nov-2009 (frima01) Bug 122490
+**	    Added include of cv.h to eliminate gcc 4.3 warnings.
+*/
+
+/* includes and globals */
+#include <compat.h>
+#include <st.h>
+#include <dbms.h>
+#include <fe.h>
+#include <pc.h>
+#include <cs.h>
+#include <cv.h>
+#include <lk.h>
+#include "dba.h"
+
+/*
+** Forward and External References
+*/
+i4  trans_lock_type();
+i4  trns_lnm_to_lktyp();
+PTR displktype();
+
+## static char Fdisplktype[] = "fdisplktype";
+
+
+/*
+** routine trns_lnm_to_lktyp()
+**
+** This routine will return the lock type for a given name
+**
+** Input: lock_name - the full name for a locktype
+**
+** Returns: the lock type, else 0 if a bad lock name was passed.
+**
+**    22-nov-1996 (dilma04)
+**            Row-level locking project:
+**            Add support for LK_PH_PAGE and LK_VAL_LOCK.
+*/
+i4
+trns_lnm_to_lktyp(name)
+PTR	name;
+{
+    /*
+    **  Determine lock type
+    */
+    CVlower(name);	/* lower case */
+    if (!STcompare(name, LN_DATABASE))
+    {
+	return(LK_DATABASE);
+    }
+    else if (!STcompare(name, LN_TABLE))
+    {
+	return(LK_TABLE);
+    }
+    else if (!STcompare(name, LN_PAGE))
+    {
+	return(LK_PAGE);
+    }
+    else if (!STcompare(name, LN_EXTEND_FILE))
+    {
+	return(LK_EXTEND_FILE);
+    }
+    else if (!STcompare(name, LN_BM_PAGE))
+    {
+	return(LK_BM_PAGE);
+    }
+    else if (!STcompare(name, LN_PH_PAGE))
+    {
+        return(LK_PH_PAGE);
+    }
+    else if (!STcompare(name, LN_CREATE_TABLE))
+    {
+	return(LK_CREATE_TABLE);
+    }
+    else if (!STcompare(name, LN_OWNER_ID))
+    {
+	return(LK_OWNER_ID);
+    }
+    else if (!STcompare(name, LN_CONFIG))
+    {
+	return(LK_CONFIG);
+    }
+    else if (!STcompare(name, LN_DB_TEMP_ID))
+    {
+	return(LK_DB_TEMP_ID);
+    }
+    else if (!STcompare(name, LN_SV_DATABASE))
+    {
+	return(LK_SV_DATABASE);
+    }
+    else if (!STcompare(name, LN_SV_TABLE))
+    {
+	return(LK_SV_TABLE);
+    }
+    else if (!STcompare(name, LN_SS_EVENT))
+    {
+	return(LK_SS_EVENT);
+    }
+    else if (!STcompare(name, LN_TBL_CONTROL))
+    {
+	return(LK_TBL_CONTROL);
+    }
+    else if (!STcompare(name, LN_JOURNAL)) 
+    {
+	return(LK_JOURNAL);
+    }
+    else if (!STcompare(name, LN_OPEN_DB))
+    {
+	return(LK_OPEN_DB);
+    }
+    else if (!STcompare(name, LN_CONTROL))
+    {
+	return(LK_CONTROL);
+    }
+    else if (!STcompare(name, LN_CKP_CLUSTER))
+    {
+	return(LK_CKP_CLUSTER);
+    }
+    else if (!STcompare(name, LN_CKP_DB))
+    {
+	return(LK_CKP_DB);
+    }
+    else if (!STcompare(name, LN_BM_LOCK))
+    {
+	return(LK_BM_LOCK);
+    }
+    else if (!STcompare(name, LN_BM_DATABASE))
+    {
+	return(LK_BM_DATABASE);
+    }
+    else if (!STcompare(name, LN_BM_TABLE))
+    {
+	return(LK_BM_TABLE);
+    }
+    else if (!STcompare(name, LN_EVENT))
+    {
+        return(LK_EVCONNECT);
+    }
+    else if (!STcompare(name, LN_CKP_TXN))
+    {
+	return(LK_CKP_TXN);
+    }
+    else if (!STcompare(name, LN_AUDIT))
+    {
+	return(LK_AUDIT);
+    }
+    else if (!STcompare(name, LN_ROW))
+    {
+	return(LK_ROW);
+    }
+    else if (!STcompare(name, LN_VALUE))
+    {
+        return(LK_VAL_LOCK);
+    }
+    else if (!STcompare(name, LN_SEQUENCE))
+    {
+        return(LK_SEQUENCE);
+    }
+
+    return(0);
+}
+
+/*
+** routine trans_lock_type()
+**
+** This routine will return the full name for a given locktype.
+**
+** Input: lock_type - the shorthand representation for a locktype
+**
+** Output: name - the full name for a given locktype
+**
+** Returns: FAIL or OK
+**
+** Side Effects: buffer to write name into must be long enough
+*/
+i4
+trans_lock_type(lock_type, name)
+i4  lock_type;
+PTR name;
+{
+    /*
+    **  Determine lock type name
+    */
+    switch (lock_type) {
+    case LK_DATABASE:
+	STcopy(LN_DATABASE, name);
+	break;
+
+    case LK_TABLE:
+	STcopy(LN_TABLE, name);
+	break;
+
+    case LK_PAGE:
+	STcopy(LN_PAGE, name);
+	break;
+
+    case LK_EXTEND_FILE:
+	STcopy(LN_EXTEND_FILE, name);
+	break;
+
+    case LK_BM_PAGE:
+	STcopy(LN_BM_PAGE, name);
+	break;
+
+    case LK_PH_PAGE:
+        STcopy(LN_PH_PAGE, name);
+        break;
+
+    case LK_CREATE_TABLE:
+	STcopy(LN_CREATE_TABLE, name);
+	break;
+
+    case LK_OWNER_ID:
+	STcopy(LN_OWNER_ID, name);
+	break;
+
+    case LK_CONFIG:
+	STcopy(LN_CONFIG, name);
+	break;
+
+    case LK_DB_TEMP_ID:
+	STcopy(LN_DB_TEMP_ID, name);
+	break;
+
+    case LK_SV_DATABASE:
+	STcopy(LN_SV_DATABASE, name);
+	break;
+
+    case LK_SV_TABLE:
+	STcopy(LN_SV_TABLE, name);
+	break;
+
+    case LK_SS_EVENT:
+	STcopy(LN_SS_EVENT, name);
+	break;
+
+    case LK_TBL_CONTROL:
+	STcopy(LN_TBL_CONTROL, name);
+	break;
+
+    case LK_JOURNAL:
+	STcopy(LN_JOURNAL, name);
+	break;
+
+    case LK_OPEN_DB:
+	STcopy(LN_OPEN_DB, name);
+	break;
+
+    case LK_CONTROL:
+	STcopy(LN_CONTROL, name);
+	break;
+
+    case LK_CKP_CLUSTER:
+	STcopy(LN_CKP_CLUSTER, name);
+	break;
+
+    case LK_CKP_DB:
+	STcopy(LN_CKP_DB, name);
+	break;
+
+    case LK_BM_LOCK:
+	STcopy(LN_BM_LOCK, name);
+	break;
+
+    case LK_BM_DATABASE:
+	STcopy(LN_BM_DATABASE, name);
+	break;
+
+    case LK_BM_TABLE:
+	STcopy(LN_BM_TABLE, name);
+	break;
+   
+    case LK_EVCONNECT:
+        STcopy(LN_EVENT, name);
+        break;
+
+    case LK_CKP_TXN:
+	STcopy(LN_CKP_TXN, name);
+	break;
+
+    case LK_AUDIT:
+	STcopy(LN_AUDIT, name);
+	break;
+
+    case LK_ROW:
+	STcopy(LN_ROW, name);
+	break;
+
+    case LK_VAL_LOCK:
+        STcopy(LN_VALUE, name);
+        break;
+
+    case LK_SEQUENCE:
+        STcopy(LN_SEQUENCE, name);
+        break;
+
+    default:
+        STprintf(name, "?? =%d", lock_type); /* return what they sent us */
+        return(FAIL);
+    }
+
+    return(OK);
+}
+
+/*
+**  displktype() - this routine displays
+**	a form which contains a list of lock names.
+**
+**  History
+**	3/8/89  tomt  Created
+**      4/24/95 nick  Added LK_CKP_TXN
+**      11/1/95 nick  Added LK_AUDIT and LK_ROW
+**      22-nov-1996   dilma04 Added LK_PH_PAGE for row level loking project.
+**
+*/
+PTR displktype()
+{
+##  static char	lock_name[14];
+##  char *lock_ptr;
+
+##  DISPLAY Fdisplktype READ
+##  INITIALIZE
+##  {
+##	INITTABLE Fdisplktype #locklist READ
+
+	lock_ptr = LN_DATABASE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_TABLE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_PAGE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_EXTEND_FILE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_BM_PAGE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+        lock_ptr =  LN_PH_PAGE;
+##      LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_CREATE_TABLE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_OWNER_ID;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_CONFIG;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_DB_TEMP_ID;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_SV_DATABASE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_SV_TABLE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_SS_EVENT;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_TBL_CONTROL;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_JOURNAL;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr =  LN_OPEN_DB;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_CKP_DB;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_CKP_CLUSTER;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_BM_LOCK;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_BM_DATABASE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_BM_TABLE;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_CONTROL;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_EVENT;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_CKP_TXN;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_AUDIT;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+	lock_ptr = LN_ROW;
+##	LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+        lock_ptr = LN_VALUE;
+##      LOADTABLE Fdisplktype #locklist (#lock_name = lock_ptr)
+
+
+##  }
+##  ACTIVATE MENUITEM "Help", frskey1:
+##  {
+	my_help("ipmdsplt.hlp", "Lock Type Name");
+##  }
+##  ACTIVATE MENUITEM "Select", frskey4:
+##  {
+##	GETROW Fdisplktype #locklist (lock_name = #lock_name)
+##      BREAKDISPLAY
+##  }
+##  ACTIVATE MENUITEM "Cancel", frskey9:
+##  {
+	lock_name[0] = EOS;	/* return null */	
+##      BREAKDISPLAY
+##  }
+
+    return(&lock_name[0]);
+}

@@ -1,0 +1,11 @@
+#
+# Jamfile file for testtool!sep!sepcl_vms
+#
+
+SubDir ING_SRC testtool sep sepcl_vms ;
+
+IISUBSYS testtool sep sepcl_vms ;
+
+IILIBRARY SEPCLLIB : getloc.c getu.c logical.c sepalloc.c sepcm.c
+	sepexit.c seplo.c sepnm.c sepspawn.c sepst.c septrace.c
+	setu.c termstuff.c ;

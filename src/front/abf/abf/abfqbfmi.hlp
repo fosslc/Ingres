@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at the definition of a QBF Frame.  You may change the
+definition of the frame on the form and through some of the menu operations.
+Within the running application, this frame will call QBF with the specified
+table or join definition, and optional form.  The specified command line
+flags will be passed to QBF as well.  See the "Using Ingres Through Forms
+and Menus" manual for more information on how QBF uses these values.
+
+The Query Object Name field specifies the name of a query object to be run
+by QBF.  This is either a join definition (JoinDef) or a database table as
+specified by the Query Object Type field.
+
+The Form Name field specifies the name of a form to be used by QBF when
+running the query object.  If not specified, QBF will create a default
+form to use with the query object.
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS
+        -------------           --------
+        Rename                  Give the frame a new name.
+
+        LongRemark              Display and allow editing of the long remarks.
+
+	ListChoices             Display choices for the current field.
+
+        Cancel                  Ignore any changes and return to the previous 
+                                frame.
+
+        Help                    Access the Ingres Help facility.
+
+        End                     Save any changes and return to the previous 
+                                frame.

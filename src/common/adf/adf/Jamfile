@@ -1,0 +1,12 @@
+#
+# Jamfile file for common!adf!adf
+#
+
+SubDir ING_SRC common adf adf ;
+
+IISUBSYS common adf adf ;
+
+
+IILIBRARY ADFLIB : adffunc.c adfagnext.c adfagend.c
+	adfagbegin.c ;
+

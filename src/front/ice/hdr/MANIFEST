@@ -1,0 +1,17 @@
+#
+# MANIFEST file for front!ice!hdr
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+
+
+SubDir ING_SRC front ice hdr ;
+
+IISUBSYS front ice hdr ;
+
+IIFILES ice_c_api.h ;
+
+IIMSGHDR erwu.msg ;
+

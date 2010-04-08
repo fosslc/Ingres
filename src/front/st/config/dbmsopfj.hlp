@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  When set to ON, the opf_old_jcard resource causes OPF to revert to the
+  pre-release 2.0 algorithm for computing join cardinalities. 
+ 
+  The default value for opf_old_jcard is OFF.

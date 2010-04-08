@@ -1,0 +1,149 @@
+.TH SEP 1 "30 August 1989"
+.SH NAME
+sep - run a Send Expect Process test
+.SH SYNOPSIS
+sep { [\-s[<file>]] [\-a{r|e|i}] |
+      <testname> [\-d<int>] [\-t<int>] {[\-m{a|m|o}] | [\-b]} [\-v[<int>]] }
+    [\-u<username>] [\-i] [\-w<int>] [-f[<int>]] [-o<path and/or file>]
+.SH DESCRIPTION
+.LP
+SEP (Send Expect Process) is a test development and execution 
+tool. It allows implementation of a Send/Expect methodology for 
+testing. With Send/Expect testing, both instructions and expected
+results from those instructions are interleaved in a single file.
+This file is read by SEP which passes instructions to the INGRES
+module being tested, receives results, and immediately compare 
+results against the expected results for these instructions.
+.SH OPTIONS
+.TP
+.B \-s[<file>]
+Shell mode. The shell mode is primarily used to create a
+test interactively. If users invoke SEP as a shell, it 
+will record all of the OS and TCL commands entered at 
+the '?' prompt in a file, as well as the output from
+those commands, thus creating a test instantly.
+Whenever results are generated, users are asked whether 
+the results should be ignored, accepted as canon, or if 
+it should be an empty canon. Users terminate the session
+by entering the command 'exit' at the '?' prompt.
+The test to be created will be named 'newtest.sep'. The
+user can specify a desired name by appending the name to
+the '-s' flag. For example, 'sep -sab001' will direct 
+SEP to enter in shell mode and to name the new test
+ab001.sep
+.TP
+.B \-a{r|e|i}
+When interactively creating a test, each time results
+are obtained, users are asked whether the results should
+be made canons,  should be ignored, or an empty canon
+should be created. By using the '-a' flag users can
+provide SEP with a default answer. '-ar' instructs SEP
+to make canons out of all the results obtained. '-ae'
+instructs SEP to only create empty canons. '-ai' instructs
+SEP to create ingnored canons.
+.TP
+.B <testname>
+Name of test to be executed
+.TP
+.B \-d<int>
+Diff level. Directs SEP to stop comparison of results 
+and canon if more than <int> differences are found. The
+default value is 40. If more than <int> differences are
+found between results and canon, the command is marked
+by SEP as a failed command.
+.TP
+.B \-t<int>
+Test level. Directs SEP to stop execution of the test if
+more that <int> commands are marked as failed during
+test execution. The default value is 3.
+.TP
+.B \-m{m|a|o}
+Maintenance mode. Tests are run in maintenance mode to
+either add alternate canons to a command or replace
+existing canons. The new test created is named 
+'testprefix.upd'. For example, 'sep -m ab001.sep' will
+produce a new test named ab001.upd .
+If the switch has a second letter, SEP will add canons
+automatically depending on the second letter. "a" is for
+alternate, "m" is for main and "o" is for only. These
+equate to the choices in the Canon Edit Prompt.
+.TP
+.B \-b
+Batch mode. Allows you to run the tests without having 
+to watch them. In fact, nothing will show up on the
+screen. This does not run the test as a background 
+process, it merely turns off the general I/O.
+.TP
+.B \-v[<int>]
+Verbose flag. While running a test, generate a log file
+even if all results match their respective canons. By
+default a log file is only created if the test shows
+some diffs.  A simple -v flag does simply that. A -v<int> where
+<int> is greater than 0, prints the results of all commands
+in the log file. If <int> is greater than 1, inhibits the
+deletion of fill files upon exiting SEP.
+.TP
+.B \-i
+Use as terminal type whatever terminal type is indicated
+by the environment variable TERM_INGRES. By default, SEP
+uses SEPTERM (a variation of VT100) as the terminal type.
+.TP
+.B \-u<usrnme>
+The name of the user executing the test.This is added as
+a comment in the output file.
+.TP
+.B \-w<int>
+Length of Timeout interval in seconds. 
+.TP
+.B\-f<int>
+Sets the precision of floating point matching in terms of
+the number (<int>) of significant digits.
+For Example, 'sep -f5 ac001.sep'
+.TP
+.B\-o<path and/or file>
+The -o output flag used to take only a path argument. It now
+takes a path, as it did before, or a full file specification
+as well.
+.SH FILES
+.LP
+The following files must be present in the directory
+specify by the environment variable TST_SEP :
+.TP 17
+.B commands.sep
+INGRES and TCL commands recognized by the SEP 
+.TP 17
+.B basickeys.sep
+file used by the SEP termcap facility
+.TP 17
+.B termcap.sep
+file used by the SEP termcap facility
+.TP 17
+.B vt100.sep
+file used by the SEP termcap facility
+.TP 17
+.B septerm.sep
+file used by the SEP termcap facility
+.SH EXAMPLES
+.TP 22
+.B sep -sab001
+Run SEP in shell mode to create test ab001.sep
+.TP 22
+.B sep ab001a.sep
+Run test 'ab001a.sep'. If diffs are found
+during execution, file 'ab001.log' will be produced
+.TP 22
+.B sep -v ab001.sep
+Run test 'ab001a.sep' and generate 'ab001.log'
+even if no diffs are found
+.TP 22
+.B sep -m ab001.sep
+Run SEP in maintenance mode to update test
+test 'ab001.sep'. New test produced will be named 'ab001.upd'.
+.TP 22
+.B sep -d30 ab001.sep
+Run test 'ab001.sep'. Stop comparison of
+results against canons if more than 30 differences are found.
+.TP 22
+.B sep -t5 -b ab001.sep
+Run test 'ab001.sep' in batch mode. Stop
+execution of the test if more than 5 commands fail.

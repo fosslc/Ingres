@@ -1,0 +1,54 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcddsca.hlp
+/#subtopic "Consistent Distributed Data Set" rmcdddef.hlp
+/#subtopic "Data Propagation Path" rmdppdef.hlp
+/#subtopic "Collision Modes" rmcolmod.hlp
+/#subtopic "Error Modes" rmerrmod.hlp
+CDDS SUMMARY
+
+This screen lists the Consistent Distributed Data Sets (CDDS) that have
+been defined.  CDDS number 0 is pre-defined as the default CDDS.  You
+must add all other CDDS required by your replication scheme.
+
+The columns of the list are:
+
+        COLUMN NAME     DESCRIPTION
+        -----------     -----------
+        No.             The CDDS number.  This is a unique
+                        system-wide identifier assigned by the user.
+
+        Name            User assigned name.
+
+        Collision Mode  The manner in which replication collisions
+                        should be detected or resolved.
+
+        Error Mode      The manner in which errors should be handled (if
+                        they cannot be resolved).
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Add             Add a new CDDS to the list.
+
+        Delete          Delete the currently highlighted CDDS.  You
+                        will be asked for confirmation.
+
+        Edit            Edit the information for the currently
+                        highlighted CDDS.
+
+        Databases       List the databases in which the CDDS is present.
+                        Allows addition and removal of databases to the
+                        CDDS and specification of the Replicator Server
+                        number that will service a database/CDDS.
+
+        Paths           List the Data Propagation Paths for the CDDS and
+                        allow modifications.
+
+        Tables          List the tables that have been registered under
+                        the CDDS.
+
+        Help            Access the Help facility.
+
+        End             Return to the Configuration Menu.

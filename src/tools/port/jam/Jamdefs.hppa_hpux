@@ -1,0 +1,117 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.hppa_hpux -- Variable definitions for HP-UX PA-RISC
+#
+#  Description:
+#       Platform specific variable definitions for HP-UX PA-RISC
+#	hybrid capable build.
+#
+# History:
+#       17-Sep-2004 (bonro01)
+#           Created.
+#	19-Nov-2004 (bonro01)
+#	    Removed -E linker option from 64-bit build.
+#	    It doesn't mean the same thing as in the 32-bit build.
+#	28-Mar-2005 (shaha03)
+#	    Added flex in place of lex.
+#	    Added CCSHLDMACH64.	
+#	28-Sep-2005 (bonro01)
+#	    Updated readme substitution variables.
+#	12-Oct-2005 (bonro01)
+#	    Fixed compiler optimization flags.
+#       16-Oct-2006 (hanal04) Bug 116866
+#           Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#           NOOPTIM does not strip this when explicitly set.
+#        8-Oct-2007 (hanal04) Bug 119262
+#           Added archive iimerge.a alternative to shared library server.
+#       25-Jun-2008 (rajus01) SIR 120420, SD issue 116370
+#           Added PAMLIB to resolve symbols defined in PAM library.
+#	22-Jun-2009 (kschendel) SIR 122138
+#	    Combine hpb and hp2 into hybrid capable jamdefs.
+#
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG 	= "-DNET_SSL -DHPUX -DXP_UNIX +z" ;
+APACHE_API_FLAG 	= "-DHPUX11 +z" ;
+
+VERS32 	= "hpb_us5" ;
+VERS64	= "hp2_us5" ;
+AS32	= $(AS) ;
+AS64	= $(AS) ;
+LD32	= $(LD) ;
+LD64	= $(LD) ;
+CCLD32	= $(CCLD) ;
+CCLD64	= $(CCLD) ;
+ASMACH32 = "" ;
+ASMACH64 = "" ;
+CC 	default = "c89" ;
+CCDEBUG = "-g" ;
+SHLIBLD = "ld" ;
+CPP 	default = "/lib/cpp" ;
+CCMACH32 = "-DBUILD_ARCH32 +e +Olibcalls -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DAportable +DS2.0a  -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
+CCMACH64 = "-DBUILD_ARCH64 +e +Olibcalls -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DChpux +DD64 +M2 +DS2.0a  -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
+CCLDMACH32 	= "-Wl,-E -Wl,-O -Wl,+s -Wl,+n" ;
+CCLDMACH64	= "+DD64 -Wl,+s -Wl,+n" ;
+
+# Note that this LDORIGIN is used for various distributed binaries,
+# but *NOT* for the dbms server.  The DBMS server is linked with iilink,
+# which uses an LDSRVORIGIN variable defined via mkdefault.sh via iisysdep.
+# Server-shared-library servers need to use an rpath of just $ORIGIN
+# for set-uid reasons, so there are various hoops;  but iilink takes
+# care of all that.
+LDORIGIN = -Wl,+b,'$ORIGIN/../lib' ;
+LDORIGINLP32 = -Wl,+b,'$ORIGIN/../../lib/lp32' ;
+LDORIGINLP64 = -Wl,+b,'$ORIGIN/../../lib/lp64' ;
+
+CCLDSERVER32 	= "" ;
+CCLDSERVER64 	= "" ;
+CCPICFLAG 	= "+Z" ;
+SLSFX 	= "sl" ;
+MWSLSFX 	= "sl" ;
+CGISFX 	= "cgi" ;
+LIBSFX = "a" ;
+OBJSFX = "o" ;
+EXESFX = ;
+LDLIBPATH32 	= "/lib /usr/lib /usr/local/lib" ;
+LDLIBPATH64 	= "/lib /usr/lib /usr/local/lib" ;
+LIBMACH 	= "" ;
+LDLIBMACH32 	= "-lpthread -lm -lrt -lcl" ;
+LDLIBMACH64 	= "-lpthread -lm -lrt -lcl" ;
+CCSHLDMACH32	= "+s -b -B immediate" ;
+CCSHLDMACH64	= "+s -b -B immediate" ;
+LD_ICE_FLAGS 	= "" ;
+ICE_EXT         = sl ;
+CGI_EXT         = cgi ;
+LONGLONG	= long long ;
+OPTIM 		= "" ;
+IIOPTIM 	?= "-O" ;
+NOOPTIM 	?= "" ;
+LEVEL1_OPTIM 	= "+O1" ;
+SHELLHEADER 	= ""#!/bin/sh"" ;
+BSD42 default = -DBSD42 ;
+DIRENT default = -DDIRENT ;
+DIRFUNC default = -DDIRFUNC ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 default = -DSYS5 ;
+C++	= "aCC" ;
+C++FLAGS32	= "-DBUILD_ARCH32 -D_HP_UX -DHPaCC -DHPUX11 +DAportable +Z" ;
+C++FLAGS64	= "-DBUILD_ARCH64 -D_HP_UX -DHPaCC -DHPUX11 +DA2.0W +Z" ;
+UNDEFFLAG	= "-u " ;
+XERC_DEFS	= "-DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET" ;
+XERC_LIBS	= "/usr/lib/libc.sl" ;
+LEX = flex ;
+if $(BUILD_ARCH) = "64" || $(BUILD_ARCH) = "64+32"
+{
+    DBMS_STACKSIZE = 262144 ;
+}
+else
+{
+    DBMS_STACKSIZE = 131072 ;
+}
+platform_string = "HP-UX PA-RISC" ;
+extension_string = $(config_string) ;
+PAMLIB 	= TRUE ;

@@ -1,0 +1,128 @@
+#
+# MANIFEST file for front!frontcl!files
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Updated to build Ingres r3 with jam for Open Source.
+#	27-Oct-2004 (hanje04)
+#	    Remove buildh.com
+#	28-Oct-2004 (hanje04)
+#	    Pull eqsqlca.h and eqsqlda.h out from Bulk copy into separate
+#	    rule.
+#	31-dec-2004 (abbjo03)
+#	    We do not deliver libingres on VMS.
+#	4-Jan-2004 (schka24)
+#	    Restore close-brace that wandered off a couple revs ago.
+#	27-Feb-2005 (schka24)
+#	    Stop annoying jam errors, sybase/informix rfm's were removed,
+#	    fix here too.
+#	29-Sep-2005 (schka24)
+#	    konsole.map addition.
+#	3-Nov-2005 (schka24)
+#	    Added gnome-sun maps.
+#	03-Jul-2006 (jonj)
+#	    xa.h moved from here to common!hdr!hdr
+#        9-Nov-2005 (hanal04) SIR 117044
+#           Added l inuxvc map file.
+#	12-Feb-2007 (bonro01)
+#	    Remove JDBC package.
+#	04-May-2007 (toumi01)
+#	    For -multi support add eqsqlcag.a[da].
+#       12-Aug-2007 (Ralph Loen) SIR 118898
+#           Removed kerberos.rfm.  Kerberos configuration is handled in
+#           all.crs.
+#	15-Aug-2007 (drivi01)
+#	    Remove kerberos.rfm from windows section.
+#	10-Oct-2007 (toumi01)
+#	    Modify Ada -multi: delete eqsqlcag.a[da], add eqsqlcam.a[da]
+#	01-May-2009 (drivi01)
+#	    Remove header iixa.h from the list.  The header in this
+#	    directory should not be built, instead the one in 
+#	    front/embed/hdr will be built as the correct tuxedo header.
+#	15-Nov-2009 (kschendel) SIR 122890
+#	    Add Datallegro's putty.map.
+#	15-Mar-2010 (hanje04)
+#	    SIR 123296
+#	    Add rfm file for LSB build
+
+
+SubDir ING_SRC front frontcl files ;
+
+IISUBSYS front frontcl files ;
+
+IIEsqlHdr $(EQSQLCA) : eqsqlca.h ;
+IIEsqlHdr $(EQSQLDA) : eqsqlda.h ;
+
+if ! $(NT)
+{
+IIFILES 97801f.map abfurts.h ansif.map ansinf.map at386.map
+	bar1.gr bar2.gr bar3.gr bridge.rfm  bull12.map
+	bull24.map bullbds1.map bullvtu10.map bullwv.map cbf.map
+	cbfhelp.dat cbfunits.dat das.rfm db2udb.rfm dbms.rfm
+	default.rfm dg100em.map dg220em.map dgxterm.map dtterm.map
+	eqddef.cob eqdef.a eqdef.ada eqdef.bas eqdef.cob eqdef.for
+	eqdef.in eqdef.pas eqdef_axp.bas eqdsqlda.cob eqenv.qp
+	eqfdef.f eqmdef.cbl eqmsqlca.cbl eqmsqlcd.cbl eqpname.h
+	eqsqlca.a eqsqlcam.a eqsqlca.ada eqsqlcam.ada
+	eqsqlca.bas eqsqlca.cob eqsqlca.f
+	eqsqlca.for eqsqlca.in eqsqlca.pas eqsqlca_for.w32
+	eqsqlcd.bas eqsqlcd.cob eqsqlcd.f eqsqlcd.for eqsqlcd.in
+	eqsqlcd_for.w32 eqsqlda.a eqsqlda.ada eqsqlda.bas eqsqlda.cob
+	eqsqlda.for eqsqlda.pas frame2.h frame60.h frame61.h
+	frs.map gateway.rfm gnome-sun.map gnome-sun4.map h19f.map
+	h19nk.map hp2392.map hp70092.map hpterm.map ibm5151f.map
+	ibmpc.map ice.rfm icl12.map icl34.map
+	icl5.map icldrs.map iiud.scr iiud64.scr iiud65.scr 
+	io8256.map ioalsys.a iris-ansi.map 
+	konsole.map line1.gr linuxvc.map m30n.map m91e.map mac2.map mssql.rfm
+	mws00.map mws01.map mws02.map mws03.map mws04.map mws05.map
+	mws06.map net.rfm odbc.rfm oracle.rfm pc-220.map pc-305.map
+	pc-386.map pckermit.map pie1.gr pt35.map pt35t.map putty.map rdb.rfm
+	rms.rfm scat1.gr secure.rfm sql_standard.a sql_standard.ada
+	star.rfm suncmdf.map sunf.map sunk.map sunm.map suntype5.map
+	termcap tk4105.map tng.rfm vt100hp.map vt220ak.map
+	wgl_32s.hrd winpcalt.map wview.map wy60at.map xsun.map lsb.rfm ;
+}
+else
+{
+IIFILES 97801f.map abfurts.h ansif.map ansinf.map at386.map
+	bar1.gr bar2.gr bar3.gr bridge.rfm  bull12.map
+	bull24.map bullbds1.map bullvtu10.map bullwv.map cbf.map
+	cbfhelp.dat cbfunits.dat das.rfm db2udb.rfm dbms.rfm
+	default.rfm dg100em.map dg220em.map dgxterm.map dtterm.map
+	eqddef.cob eqdef.a eqdef.ada eqdef.bas eqdef.cob eqdef.for
+	eqdef.in eqdef.pas eqdef_axp.bas eqdsqlda.cob eqenv.qp
+	eqfdef.f eqmdef.cbl eqmsqlca.cbl eqmsqlcd.cbl eqpname.h
+	eqsqlca.a eqsqlcam.a eqsqlca.ada eqsqlcam.ada
+	eqsqlca.bas eqsqlca.cob eqsqlca.f
+	eqsqlca.in eqsqlca.pas eqsqlcd.bas eqsqlcd.cob eqsqlcd.f 
+	eqsqlcd.in eqsqlda.a eqsqlda.ada eqsqlda.bas eqsqlda.cob
+	eqsqlda.for eqsqlda.pas frame2.h frame60.h frame61.h
+	frs.map gateway.rfm h19f.map h19nk.map hp2392.map hp70092.map
+	hpterm.map ibm5151f.map ibmpc.map ice.rfm icl12.map icl34.map
+	icl5.map icldrs.map iiud.scr iiud64.scr iiud65.scr io8256.map 
+	ioalsys.a iris-ansi.map	konsole.map line1.gr linuxvc.map 
+	m30n.map m91e.map mac2.map mssql.rfm mws00.map mws01.map 
+	mws02.map mws03.map mws04.map mws05.map	mws06.map net.rfm 
+	odbc.rfm oracle.rfm pc-220.map pc-305.map pc-386.map 
+	pckermit.map pie1.gr pt35.map pt35t.map putty.map rdb.rfm
+	rms.rfm scat1.gr secure.rfm sql_standard.a sql_standard.ada
+	star.rfm suncmdf.map sunf.map sunk.map sunm.map suntype5.map
+	termcap tk4105.map tng.rfm vt100hp.map vt220ak.map
+	wgl_32s.hrd winpcalt.map wview.map wy60at.map xsun.map ;
+
+IIFILE eqsqlca.for : eqsqlca_for.w32 ;
+IIFILE eqsqlcd.for : eqsqlcd_for.w32 ;
+}
+
+if ! $(VMS)
+{
+    IILIBINGRES INGRESLIB ;
+}
+
+if $(NT)
+{
+	IIMkPreInstall INGPREINSTALL ;
+	IIMkThinClient INGTHINCLIENT ;
+}

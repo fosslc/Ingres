@@ -1,0 +1,13 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:iisqlca.obj, -
+INGLIB:libcompat.olb/include=(gver), -  ! for II_copyright
+INGLIB:libimpexp.olb/library, -
+INGLIB:libcautil.olb/library, -
+INGLIB:libcopyutil.olb/library, -
+INGLIB:libcopyform.olb/library, -
+INGLIB:libiaom.olb/library, -
+INGLIB:liboo.olb/library, -
+II_FRAMELIB/share
+II_LIBQLIB/share
+II_COMPATLIB/share

@@ -1,0 +1,21 @@
+<!-- #ICE DECLARE=`session.dbquery=:dbquery` -->
+
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Transaction&previous=statement.html&next=cursor.html` -->
+
+<!-- #ICE REPEAT INCLUDE=`checkSQL.html` -->
+
+<!-- #ICE REPEAT IF (`:dbname` != `` and `:dbquery` != ``)
+THEN=`A major issue in any database design is concurrency management. An Web Deployment Option application must be carefully designed to
+ensure that tables are not being locked needlessly. A good locking schema helps to prevent the data in the 
+database from becoming inconsistent. Ingres Web Deployment Option allows the developer to create transactions that can include any
+number of queries across multiple HTML pages. Caution: this is an extremely powerful feature of Web Deployment Option that must be used
+with utmost care. 
+			<p>
+			The first macro which invokes the transaction will open it.
+			A transaction is closed when a commit or a rollback is executed.
+			<p>
+			Please enter a transaction name:
+			<!-- #ICE VAR=``<INPUT SIZE="32" NAME="transaction" VALUE=":transaction">`` -->`
+-->
+
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

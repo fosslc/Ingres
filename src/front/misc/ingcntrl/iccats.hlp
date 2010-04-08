@@ -1,0 +1,18 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The Catalog menu of ACCESSDB allows you to display lists of summary 
+system information.
+
+The menu commands are:
+
+	MENU COMMANDS   SYNOPSIS
+	-------------   --------
+	Databases       Display a read-only table field of all databases.
+	
+	LocationNames   Display a read-only table field of all LocationName - 
+			Area mappings.
+	
+	Users           Display a read-only table field of all users.
+	
+	Help            Access the Ingres help facility.
+	
+	End             Return to the main menu.

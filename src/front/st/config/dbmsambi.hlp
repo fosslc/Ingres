@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The ambig_replace_64compat resource controls the behavior of a
+  correlated update (UPDATE .. FROM) in certain circumstances.
+
+  Consider a correlated update such as:
+
+      UPDATE a FROM b
+          SET some_column = 1
+          WHERE a.other_column = b.other_column
+
+  If multiple "b" rows join to one "a" row, the update is potentially
+  ambiguous;  multiple replacements to the same "a" row occur, even
+  though they all have the same effect (setting some_column to 1).
+
+  In this situation, if ambig_replace_64compat is OFF (the default),
+  an ambiguous replace error is issued.  If however ambig_replace_64compat
+  is ON, no error occurs since all replacements to a row do the same thing.
+  (The latter is compatible with Ingres 6.4/05 and earlier versions,
+  hence the resource name.)
+
+  The default setting is OFF.

@@ -1,0 +1,6 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The resource dmf_wb_start is the threshold for modified pages in the 
+  buffer cache.  Write-behind thread(s) are awakened when this threshold
+  is reached.
+
+  The default is 50% of the page cache size..

@@ -1,0 +1,70 @@
+/* 
+** Name: iiapidep.ccpp 
+**
+** Description:
+**      API platform dependent definitions.
+**
+**	Prepend any pre-processor directives which are destined
+**	for the output file with XX so that CCPP will not process 
+**	them.
+**
+** History:
+**	16-May-95 (gordy)
+**	    Created as a merge of iiapidep.hux and iiapidep.w31.
+**	    Made into a ccpp file for preprocessing.
+**	25-may-1995 (wolf) 
+**	    VMS needs its own definition for II_EXTERN; make II_VOID 
+**	    a #define in non-WIN386 environments.
+**	01-dec-1997 (walro03)
+**	    On some platforms, "char" is unsigned.  Force II_INT1 to be signed.
+**	30-Jan-1998 (merja01)
+**	   Add definitions for 64 bit platforms (axp_osf) using PTR_BITS_64
+**	   The II_INT4 and II_LONG values were changed from long to int.
+**	15-May-2002 (hanch04)
+**	   Make LONG and ULONG default to a 32 bit integer for everything,
+**	   because the now 32/64 hybrid build uses the same hdr file.
+**      12-Apr-2005 (wansh01)
+**         Added C++ support for II_EXTERN.
+**         Removed II_printf, II_sprinf, II_scanf.
+**	09-May-2005 (wansh01) 
+**	   Added II_printf, II_spintf, II_scnaf. These are used in QA  
+**	   API test sep pgms. 
+**	11-Aug-08 (gordy)
+**	   Added II_INT8 and II_UINT8.
+*/
+XX
+XX# ifndef __IIAPIDEP_H__
+XX# define __IIAPIDEP_H__
+XX
+XXtypedef	int		II_BOOL;	/* boolean */
+XXtypedef	char		II_CHAR;	/* signed character */
+XXtypedef	int		II_INT;		/* signed integer */
+XXtypedef	signed char	II_INT1;	/*  8-bit, signed integer */
+XXtypedef	short		II_INT2;	/* 16-bit, signed integer */
+XXtypedef	int		II_INT4;	/* 32-bit, signed integer */
+XXtypedef	long long	II_INT8;	/* 64-bit, signed integer */
+XXtypedef	int		II_LONG;	/* 32-bit, signed integer */
+XXtypedef	float		II_FLOAT4;	/* 32-bit, signed float */
+XXtypedef	double		II_FLOAT8;	/* 64-bit, signed float */
+XXtypedef	void *		II_PTR;		/* void pointer */
+XXtypedef	unsigned char	II_UCHAR;	/* unsigned character */
+XXtypedef	unsigned char	II_UINT1;	/*  8-bit, unsigned integer */
+XXtypedef	unsigned short	II_UINT2;	/* 16-bit, unsigned integer */
+XXtypedef	unsigned int	II_UINT4;	/* 32-bit, unsigned integer */
+XXtypedef	unsigned long long II_UINT8;	/* 64-bit, unsigned integer */
+XXtypedef	unsigned int	II_ULONG;	/* 32-bit, unsigned integer */
+XX
+XX# define II_VOID	void 
+XX# define II_FAR
+XX#ifdef __cplusplus
+XX# define II_EXTERN   extern "C"
+XX#else
+XX# define II_EXTERN   extern
+XX# endif
+XX# define II_EXPORT
+XX# define II_CALLBACK
+XX
+XX# define II_printf  printf
+XX# define II_sprintf sprintf
+XX# define II_scanf    
+XX#endif /* __IIAPIDEP_H__ */

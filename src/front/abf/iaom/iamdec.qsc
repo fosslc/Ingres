@@ -1,0 +1,693 @@
+/*
+**	Copyright (c) 1986, 2004 Ingres Corporation
+*/
+
+/*
+NO_OPTIM = sgi_us5
+*/
+
+#include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+#include	<si.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#ifdef PCINGRES
+# include	<EX.h>
+#endif
+##include	<ooclass.qsh>;
+#include "iamstd.h"
+#include "iamtbl.h"
+#include "iamtok.h"
+#include "iamvers.h"
+#include "eram.h"
+
+/**
+** Name:	iamdec.sc -	IAOM Decode Interface.
+**
+** Description:
+**	AOM routine to decode object from ii_encodings table
+**
+** History:
+**	Revision 5.1  86/08  bobm
+**	Initial revision.
+**
+**	Revision 6.1  88/08  wong
+**	Modified to use 'FEreqmem()'.
+**	18-aug-88 (kenl)
+**		Changed QUEL to SQL.
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**	11/28/88 (dkh) - Changed "ORDER BY sequence" to
+**			 "ORDER BY encode_sequence".
+**
+**	Revision 6.3  90/03  wong
+**	Modified decode function call to pass local internal state.
+**
+**	Revision 6.3/03
+**	11/08/90 (emerson)
+**		Check the version number in the first token.
+**		If it's too high, it indicates that the program
+**		was compiled on a later release and can't be interpreted.
+**
+**	Revision 6.3/03/01
+**	01/09/91 (emerson)
+**		Expand the maximum permissible size of allocated objects.
+**		This entails changing the call to the allocation procedure
+**		(Tbl[Tidx].aproc); it now expects the size to be a u_i4.
+**
+**	Revision 6.4
+**	02-oct-91 (jillb--DGC)
+**		Changed exec include for ooclass.sh to ## include ooclass.qsh
+**		to prevent rebuilding everything everytime.
+**
+**	Revision 6.5
+**	22-jun-92 (davel)
+**		add logic to handle multiple versions of a structure to
+**		be decoded.  The structure version is kept in an i4 -
+**		when the state_handler encounters an i4, give the "vproc"
+**		routine a chance to modify the decode drive table if the
+**		version number is different than the current table version.
+**		Based on analogous changes made by Emerson for W4GL.
+**	11-jan-1996 (toumi01; from 1.1 axp_osf port)
+**		Added kchin's changes (from 6.4) for axp_osf - see comments
+**		under case LOOK_SIZE.
+**   08-sep-97 (schte01) - added NO_OPTIM for axp_osf. Optimization 
+**         caused conditional expression assignment of tblp->numel 
+**         to be incorrect causing the AM000/AM0010 error.
+**   28-Oct-98 (kosma01) - added NO OPTIM for sgi_us5. Optimization
+**         caused conditional expression assignment of tblp->numel 
+**         to be incorrect causing the AM000/AM0010 error.
+**   26-apr-99 (schte01) - removed NO_OPTIM for axp_osf to see if new 
+**         DEC C compiler has same problem.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+*/
+
+/*
+** State definitions for parser
+*/
+#define INIT_STATE 1	/* initial state of parser */
+#define LOOK_CURLY 2	/* looking for open curly on top object */
+#define TOP_OBJECT 3	/* inside top level object */
+#define LOOK_SIZE 4	/* looking for an array size */
+#define LOOK_ID 5	/* looking for an object id for an array */
+#define LOOK_ACURLY 6	/* looking for open curly for an array */
+#define CALLING_PROC 7	/* calling array decode procedure */
+#define ALL_DONE 8	/* all decoded */
+#define ALLOC_FAILED 9	/* an allocation failure has occurred */
+#define BAD_SYNTAX 10	/* a syntax error has occurred */
+
+/*
+** context for state driver during decoding
+*/
+static i4	State = INIT_STATE;	/* state variable */
+static i4	*Decaddr = NULL;	/* current address for data decoding */
+static i4	Tidx = 0;		/* current drive table index */
+static i4	Numarg = 0;	/* number of elements for decode procedure */
+
+/*
+** filled in from oo_decode arguments, and left alone
+*/
+static CODETABLE	*Tbl = NULL;	/* drive table */
+static i4		Tbl_len = 0;	/* drive table length */
+static u_i4		Tag = 0;	/* storage tag */
+static i4		*Obj_addr = NULL;/* base address for top level object */
+
+static i4	prog_err();
+static STATUS	state_handler();
+static i4	array_check();
+static i4	syntax_error();
+
+
+/*{
+** Name:	oo_decode -
+**
+** Description:
+**	USED ONLY INTERNALLY TO IAOM
+**
+**	Routine to decode an object from the ii_encodings table via a driver
+**	table.	This routine must decode the object without reading the
+**	entire oo string into memory.  The oo string is split accross DB
+**	records at arbitrary places.  We don't want multiple retrieve loops
+**	either.	 So this routine is constructed as a state-driven parser
+**	operating entirely underneath the retrieve loop.  When the "end-of-
+**	string" token is encountered, the retrieve loop fetches another buffer
+**	full of string, and reenters the parser.  The "lexical scanner" for
+**	the parser is the token handling interface: tok_setbuf, tok_next
+**	and tok_catbuf.	 In particular, these routines handle the fact that
+**	tokens can be split across strings.
+**
+**	For arrays contained in the object, driver table procedures are
+**	called to decode the entire array string.  This allows fast decoding
+**	of possibly long array elements, or juggling of datatypes for
+**	specialized arrays.  The decode procedure for an array will call
+**	tok_next repeatedly.
+**
+**	The driver table also provides a routine to call to allocate array
+**	space.	It will be a call to the same routine in most cases.
+**
+** Inputs:
+**	drv_table	driver table
+**	num		length of drv_tbl
+**	id		object id for retrieve
+**	st_tag		tag for storage allocation
+**
+** Outputs:
+**
+**	obj	filled in object from drv_tbl template
+**
+**	return:
+**		OK		success
+**		ILE_FID		id doesn't exist in ii_encodings table
+**		ILE_FRDWR	bad read or syntax error in table
+**		ILE_NOMEM	allocation failure
+**
+** History:
+**	8/86 (rlm)	written
+**	22-jun-92 (davel)
+**		added logic in state_handler() to check an i4 for a 
+**		possible version number - if so, the "vproc" routine
+**		may modify the drive table.
+*/
+
+
+#ifdef PCINGRES
+EX IIAMmeMemError();
+bool ME_recoverable;
+GLOBALREF i4	Iamtrycnt;	/* retry counter for retrieve loop in
+				   oo_decode */
+#endif
+
+STATUS
+oo_decode ( drv_tbl, num, id, st_tag, obj )
+CODETABLE *drv_tbl;
+i4	num;
+EXEC SQL BEGIN DECLARE SECTION;
+OOID	id;
+EXEC SQL END DECLARE SECTION;
+u_i4	st_tag;
+i4	*obj;
+{
+        EXEC SQL BEGIN DECLARE SECTION;
+                char *rdptr;
+                i4  nseq;
+		i4 err;
+        EXEC SQL END DECLARE SECTION;
+	STATUS	rc;
+	char	*tok_catbuf();
+	char	*tok_setbuf();
+#ifdef PCINGRES
+	i4	(*oldprinterr)();
+	i4	(*IIseterr())();	/* function returning "pointer to
+					   function returning nat" */
+	i4	iamerr1100();
+
+	/* intercept error 1100's and don't print anything.  The following
+	   retrieve seems to be a common place for run4gl code to cause the
+	   backend to get error 1100 */
+	oldprinterr = IIseterr(iamerr1100);
+	Iamtrycnt = 0;
+
+    TRYAGAIN:
+
+#endif
+
+	/* fill in globals */
+	Tbl = drv_tbl;
+	Tbl_len = num;
+	Tag = st_tag;
+	Obj_addr = obj;
+
+	/* initialize buffer for token parsing */
+	rdptr = tok_setbuf(TMAXLEN,Tag);
+	if (rdptr == NULL)
+		return ILE_NOMEM;
+
+	/* initialize state, set rc to correct return for empty retrieve */
+	State = INIT_STATE;
+	rc = ILE_FIDBAD;
+
+	/*
+	** retrieve and interpret string sections by calling state_handler
+	** Do not trim cstring since it is a text column and if there are
+	** trailing spaces they are significant (they may seperate key words)
+	** and no need to sort by sequence number because iicompobj is btree
+	** on object,seq.
+	*/
+	IIUIcnb_CatNolockBegin(ERx("ii_encodings"));
+
+        EXEC SQL SELECT encode_estring, encode_sequence
+            INTO :rdptr, :nseq
+            FROM ii_encodings
+            WHERE encode_object = :id
+            ORDER BY encode_sequence;
+        EXEC SQL BEGIN;
+# ifdef PCINGRES
+		/* how do I put an exception handler outside of the
+		   retrieve loop and still be able to do the ##endloop? */
+		bool oldreco;
+		EX_CONTEXT context;
+
+		oldreco = ME_recoverable;
+		ME_recoverable = TRUE;
+		if (EXdeclare(IIAMmeMemError, &context) != OK)
+		{
+			rc = ILE_NOMEM;
+			EXdelete();
+			EXEC SQL ENDSELECT;
+		}
+# endif
+		if ((rc = state_handler()) != OK)
+		{
+			EXEC SQL ENDSELECT;
+		}
+		if ((rdptr = tok_catbuf()) == NULL)
+		{
+			rc = ILE_NOMEM;
+			EXEC SQL ENDSELECT;
+		}
+	EXEC SQL END;
+
+	EXEC SQL INQUIRE_INGRES (:err = errorno);
+
+	IIUIcne_CatNolockEnd(ERx("ii_encodings"));
+
+#ifdef PCINGRES
+	/* if backend generated error 1100 (out of memory) then give it
+	   one more try cause the backend may have been able to free up some
+	   space */
+	if (err == 1100 && Iamtrycnt++ == 0)
+	{
+		rc = ILE_FRDWR;
+		goto TRYAGAIN;
+	}
+	else if (err != 0)
+		rc = ILE_FRDWR;
+#else
+	if (err != 0)
+		rc = ILE_FRDWR;
+#endif
+	else if (rc == OK && State != ALL_DONE)
+	{
+		syntax_error(ERget(S_AM0003_unexpected_end));
+		rc = ILE_FRDWR;
+	}
+
+#ifdef PCINGRES
+	/* restore old error printing routine */
+	_VOID_ IIseterr(oldprinterr);
+#endif
+
+	tok_bfree();
+	return (rc);
+}
+
+/*
+** state handler which interprets tokens according to current state of
+** the decoding process.
+*/
+static i4	state = 0;	/* local decode state */
+
+static STATUS
+state_handler ()
+{
+	i4 i;
+	TOKEN tok;
+
+	/*
+	** if in state CALLING_PROC, let procedure handle tokens of
+	** array elements.  This procedure processes tokens to an error,
+	** a close curly, or an end of string.
+	*/
+	if (State == CALLING_PROC)
+	{
+
+#ifdef AOMDTRACE
+		aomprintf(ERx("\nCALLING PROC %d with length %d"), Tidx, Numarg);
+#endif
+		i = (*(Tbl[Tidx].dproc))(&Decaddr, Numarg, &state);
+		Numarg = 0;
+#ifdef AOMDTRACE
+		aomprintf(ERx("\nPROC %d returned %d"), Tidx, i);
+		if (i > 0)
+			aomprintf(ERx("\nreturn end of string"));
+#endif
+
+		/* end of string encountered, fetch more */
+		if (i > 0)
+			return (OK);
+
+		/* syntax error */
+		if (i < 0)
+		{
+			syntax_error(ERget(S_AM0004_bad_array_decoding));
+			return (ILE_FRDWR);
+		}
+
+		/*
+		** got closed curly.  See if there are any more arrays to
+		** decode.  If so, state is LOOK_ID, otherwise ALL_DONE
+		*/
+		array_check();
+	}
+
+	/*
+	** loop on new tokens until error or end of (current) string
+	** Many error returns from inside loop.
+	*/
+	for ( _VOID_ tok_next(&tok) ; tok.type != TOK_eos ; _VOID_ tok_next(&tok) )
+	{
+#ifdef AOMDTRACE
+		aomprintf(ERx("state %d, idx %d"),State,Tidx);
+#endif
+		switch (State)
+		{
+		case INIT_STATE:
+			/*
+			**  Check the version number in the first token.
+			**  If it's too high, it indicates that the program
+			**  was compiled on a later release and can't be
+			**  interpreted by this release.
+			*/
+			if (tok.type == TOK_vers &&
+				tok.dat.i4val > IAOM_IL_VERSION)
+			{
+				IIUGerr(E_AM0017_badvers,0,0);
+				return (ILE_FRDWR);
+			}
+
+			/*
+			** initialize status
+			*/
+			Tidx = 0;
+			Decaddr = Obj_addr;
+			State = LOOK_CURLY;	/* !!! FALL THROUGH !!! */
+		case LOOK_CURLY:
+			/*
+			** Looking for leading curly of top level object
+			*/
+			if (tok.type == TOK_start)
+				State = TOP_OBJECT;
+			break;
+
+		case TOP_OBJECT:
+			/*
+			** processing items of top level object.
+			** if we are at the end of our table, we should
+			** see a closing curly.	 Set state to LOOK_ID or
+			** ALL_DONE on the basis of arrays in table
+			*/
+			if (Tidx == Tbl_len)
+			{
+				if (tok.type != TOK_end)
+				{
+					syntax_error(ERget(S_AM0005_exp_obj_end));
+					return (ILE_FRDWR);
+				}
+				array_check();
+				break;
+			}
+
+			/* mid-table - check for correct item */
+			switch (Tbl[Tidx].type)
+			{
+			case AOO_i4:
+				if (tok.type != TOK_i4 && tok.type != TOK_i2)
+				{
+					syntax_error(ERget(S_AM0006_exp_int));
+					return (ILE_FRDWR);
+				}
+				*Decaddr = (tok.type == TOK_i2)
+						? tok.dat.i2val : tok.dat.i4val;
+				/*
+				** Call the "vproc" routine.  If this i4 is a
+				** version number, the "vproc" routine should
+				** make appropriate adjustments to the address
+				** and size of the decode drive table.
+				*/
+				(*(Tbl[Tidx].vproc))(*Decaddr,&Tbl,&Tbl_len);
+
+				++Decaddr;
+				++Tidx;
+				break;
+			case AOO_f8:
+				if (tok.type != TOK_f8)
+				{
+					syntax_error(ERget(S_AM0007_exp_float));
+					return (ILE_FRDWR);
+				}
+				*((f8 *) Decaddr) = tok.dat.f8val;
+				Decaddr += sizeof(f8)/sizeof(i4);
+				++Tidx;
+				break;
+			case AOO_array:
+				/*
+				** an array.  We will go to state LOOK_SIZE
+				** to pick up the array size as the next token.
+				** fill in object id entry of Tbl.  DO NOT
+				** bump Decaddr yet - we have to call allocation
+				** procedure to fill in address.
+				*/
+				if (tok.type != TOK_obj)
+				{
+					syntax_error(ERget(S_AM0008_expected_array));
+					return (ILE_FRDWR);
+				}
+				if ((Tbl[Tidx].id = tok.dat.i4val) >= 0)
+				{
+					syntax_error(ERget(S_AM0009_array_id));
+					return (ILE_FRDWR);
+				}
+				State = LOOK_SIZE;
+				break;
+			default:
+				prog_err(1);
+				return (ILE_FRDWR);
+			}
+			break;
+
+		case LOOK_SIZE:
+		{
+			register CODETABLE	*tblp;
+
+			/*
+			** expecting an array size.  Go to state TOP_OBJECT
+			** again, after calling allocation procedure to get
+			** space for array.  Fill in addr and numel on Tbl.
+			** Fill in BOTH address and number of elements item
+			** in top level structure.
+			*/
+			if (tok.type != TOK_i2 && tok.type != TOK_i4)
+			{
+				syntax_error(ERget(S_AM000A_exp_size));
+				return (ILE_FRDWR);
+			}
+			tblp = &Tbl[Tidx];
+			tblp->numel = (tok.type == TOK_i2)
+					? tok.dat.i2val : tok.dat.i4val;
+			if ( tblp->numel < 0 )
+			{
+				syntax_error(ERget(S_AM000B_neg_length));
+				return (ILE_NOMEM);
+			}
+
+                        /*
+                        ** Need to align Decaddr to sizeof(PTR) boundary, this
+                        ** is especially important on 64-bit platform like
+                        ** Alpha where pointer size is 8 bytes.
+                        ** eg.  typedef struct
+                        **      {
+                        **              i4 version;
+                        **              MFESC   **esc;
+                        **              i4 numescs;
+                        **      } ESCDEC;
+                        ** ESCDEC is defined in iammpop.c.
+                        ** Since i4 is defined as int, the offset of esc
+                        ** should be 4, which is not true on Alpha, as the
+                        ** compiler will align the pointer element to 8 byte
+                        ** boundary, thus esc 's offset will be 8 then.
+                        ** The use of ME_ALIGN_MACRO here is to skip the extra
+                        ** 4 bytes pad added by the compiler after version.
+                        **                                      - kchin 2/5/93
+                        */
+
+                        Decaddr = (i4 *) ME_ALIGN_MACRO(Decaddr,sizeof(PTR));
+			/*
+			** Allocate array space - if we have zero elements
+			** clobber the id - there isn't really a string.
+                        **
+                        ** Change the cast of Decaddr from (i4 **) to (long **)
+                        ** since we are assigning pointer, and on Alpha,
+                        ** only sizeof(long) = sizeof(PTR).
+                        **                                      - kchin 2/5/93
+			*/
+			if ( tblp->numel > 0 )
+			{
+				if ( (tblp->addr = (i4 *)(*(tblp->aproc))(Tag,
+					(u_i4)tblp->numel*tblp->size)
+					) == NULL )
+				{
+					State = ALLOC_FAILED;
+					return ILE_NOMEM;
+				}
+				*((i4 **)Decaddr) = tblp->addr;
+			}
+			else
+			{
+				*((i4 **)Decaddr) = NULL;
+				tblp->id = 0;
+			}
+
+			Decaddr += sizeof(long *)/sizeof(i4);
+			*Decaddr = tblp->numel;
+                        /*
+                        ** On 32-bit platforms, ++Decaddr will position
+                        ** correctly to next element in 'Decaddr' (which is
+                        ** struct AOMFRAME in the caller), since pointer size
+                        ** is 4 bytes, no padding is added by the compiler to
+                        ** align the pointer element in structure(refer to
+                        ** struct AOMFRAME defined in iamfrm.h).  But, on
+                        ** 64-bit platform like Alpha, pointer size is 8
+                        ** bytes, any pointer element within a structure will
+                        ** be aligned to 8-byte boundary by the compiler,
+                        ** thus ++Decaddr will point to the padded 4 byte,
+                        ** which is wrong.
+                        **   Change  ++Decaddr  to
+                        **                 Decaddr += sizeof(PTR)/sizeof(i4);
+                        ** Note:this change only apply to the structure AOMFRAM\
+E
+                        **       defined in iafrm.h now, any change to the
+                        **       structure need recoding of the statment below.
+                        **      This change is good for 32-bit platform.
+                        **                                      - kchin
+                        */
+                        Decaddr += sizeof(PTR)/sizeof(i4);
+			++Tidx;
+			State = TOP_OBJECT;
+			break;
+		}
+
+		case LOOK_ID:
+			/*
+			** looking for an object id for the start of an array
+			** If we find it, set Tidx to point to appropriate
+			** row of Tbl, go to state LOOK_ACURLY to find leading
+			** curly of array.
+			*/
+			if (tok.type != TOK_id)
+			{
+				syntax_error(ERget(S_AM000C_exp_obj_id));
+				return (ILE_FRDWR);
+			}
+			for (Tidx = 0; Tidx < Tbl_len &&
+					Tbl[Tidx].id != tok.dat.i4val; ++Tidx)
+				;
+			if (Tidx >= Tbl_len)
+			{
+				syntax_error(ERget(S_AM000D_unexp_obj_id));
+				return (ILE_FRDWR);
+			}
+			Tbl[Tidx].id = 0;	/* for error check */
+			Decaddr = Tbl[Tidx].addr;
+			State = LOOK_ACURLY;
+			break;
+		case LOOK_ACURLY:
+			/*
+			** looking for leading curly of array.	If we find it,
+			** we want the decode procedure to start handling our
+			** tokens until it returns 0.  Thus, return result of
+			** recursive call to state handler, after setting
+			** CALLING_PROC state and initializing Numarg.
+			*/
+			if (tok.type != TOK_start)
+			{
+				syntax_error(ERget(S_AM000E_exp_start));
+				return (ILE_FRDWR);
+			}
+			Numarg = Tbl[Tidx].numel;
+			State = CALLING_PROC;
+#ifdef AOMDTRACE
+			aomprintf(ERx("\nRecursive state call"));
+#endif
+			return (state_handler());
+		case ALL_DONE:
+			syntax_error(ERget(S_AM000F_unexpected_characters));
+			return (ILE_FRDWR);
+		case ALLOC_FAILED:
+			return (ILE_NOMEM);
+		case BAD_SYNTAX:
+			return (ILE_FRDWR);
+		default:
+			prog_err(2);
+			return (ILE_FRDWR);
+		}
+	}
+#ifdef AOMDTRACE
+			aomprintf(ERx("\nReturn end of string"));
+#endif
+
+	/* end of string encountered */
+	return (OK);
+}
+
+/* set state to ALL_DONE or LOOK_ID, if there are any undecoded arrays */
+static i4
+array_check()
+{
+	register i4	i;
+
+	State = ALL_DONE;
+	for ( i = 0 ; i < Tbl_len ; ++i )
+	{
+		if (Tbl[i].type != AOO_array)
+			continue;
+		if (Tbl[i].numel == 0)
+			continue;
+		if (Tbl[i].id < 0)
+		{
+#ifdef AOMDTRACE
+			aomprintf(ERx("\nProcedure %d still uncalled"),i);
+#endif
+			State = LOOK_ID;
+			break;
+		}
+	}
+#ifdef AOMDTRACE
+	aomprintf(ERx("\nAll procedures called"));
+#endif
+}
+
+/* set BAD_SYNTAX state on first syntax error in encoding string */
+static i4
+syntax_error(s)
+char *s;
+{
+	char bufr[80];
+
+	State = BAD_SYNTAX;
+
+	/* argument may be a slow string */
+	STcopy(s,bufr);
+	IIUGerr(E_AM0010_encoding_syntax,0,1,bufr);
+}
+
+/* logic errors in program - FATAL */
+static i4
+prog_err(n)
+i4  n;
+{
+	i4 ln;
+
+	ln = n;
+	IIUGerr(S_AM0011_decode_err, UG_ERR_FATAL, 1, &ln);
+}

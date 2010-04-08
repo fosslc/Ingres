@@ -1,0 +1,20 @@
+#
+# Jamfile file for front!ice!samples!dbproc
+#
+#    06-Oct-2004 (hanje04)
+#	Remove grists as they are now added in IIICEFILE rule
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+#	17-Dec-2009 (bonro01)
+#	    Replace unix specific path separators
+
+SubDir ING_SRC front ice samples dbproc ;
+
+IISUBSYS front ice samples dbproc ;
+
+if $(BUILD_ICE)
+{
+IIICEFILE samples$(DFS)dbproc$(DFS)proc.html : proc.html ;
+IIICEFILE samples$(DFS)dbproc$(DFS)proc.sql : proc.sql ;
+IIICEFILE samples$(DFS)dbproc$(DFS)result.html : result.html ;
+}

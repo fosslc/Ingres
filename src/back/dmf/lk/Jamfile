@@ -1,0 +1,39 @@
+#
+# Jamfile file for back!dmf!lk
+#
+# History :
+#       16-Sep-2005 (hweho01)
+#           Remove IINOOPTIM for the files that are no longer needed on
+#           AIX.
+#	16-oct-2006 (abbjo03)
+#	    Remove obsolete lknode.c and lkcsp.c.
+#	16-oct-2009 (hweho01)
+#	    Remove IINOOPTIM entry for obsolete lknode.c.
+#	    Remove IINOOPTIM entries that were generated incorrectly.
+
+
+SubDir ING_SRC back dmf lk ;
+
+IISUBSYS back dmf lk ;
+
+IINOOPTIM lkshow.c : dr6_us5 ;
+IINOOPTIM lkrqst.c : dr6_us5 nc4_us5 ris_u64 i64_aix rs4_us5 r64_us5 i64_hpu ;
+IINOOPTIM lkrlse.c : dr6_us5 rs4_us5 ris_u64 i64_aix r64_us5 ;
+IINOOPTIM lkinit.c : dr6_us5 ;
+IINOOPTIM lkevent.c : rs4_us5 ris_u64 i64_aix r64_us5 ;
+IINOOPTIM lkclist.c : rs4_us5 ris_u64 i64_aix r64_us5 ;
+IINOOPTIM lkcback.c : dr6_us5 ;
+
+IIBINEXE lkevtst : lkevtst.c ;
+
+IINEEDLIBS lkevtst : SCFLIB UDTLIB QEFLIB DMFLIB CUFLIB OPFLIB
+	PSFLIB RDFLIB ULFLIB GCFLIB SXFLIB GWFLIB QSFLIB ADFLIB TPFLIB
+	RQFLIB COMPATLIB MALLOCLIB ;
+
+
+IILIBRARY DMFLIB : lksize.c lkshow.c lkrqst.c lkrlse.c
+	lkmutex.c lkmo.c lkinit.c lkevent.c lkdlock.c
+	lkclist.c lkcbmem.c lkcback.c lkalter.c ;
+
+IILIBRARY IMPDMFLIBDATA : lkdata.c ;
+

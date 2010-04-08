@@ -1,0 +1,12 @@
+#
+# Jamfile file for front!embed!basicsq
+#
+
+SubDir ING_SRC front embed basicsq ;
+
+IISUBSYS front embed basicsq ;
+
+IIBINEXE esqlb : bsqmain.c ;
+IINEEDLIBS esqlb : BASICSQLIB BASICLIB EQUELLIB SHQLIB SHCOMPATLIB ;
+
+IILIBRARY BASICSQLIB : basicsq.sy bsqtoks.st bsqscan.c bassqgen.c ;

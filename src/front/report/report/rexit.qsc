@@ -1,0 +1,237 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<adf.h>
+# include	<fmt.h>
+# include	<rtype.h>
+# include	<rglob.h>
+# include	<ex.h>
+# include	<errw.h>
+
+/*{
+** Name:	r_exit() -	Report Writer Exit & Interrupt Handler Routine.
+**
+** Description:
+**   R_EXIT - exit the report programs.	 All exits from the report
+**	programs (REPORT, SREPORT and RBF) come here to exit.
+**	The database and report files are closed and temporary relations
+**	are destroyed.
+**
+**	If a system error has occurred, this routine is considered to
+**	be the exception handler and is called by the system when
+**	access violations, etc, occur.
+**
+** Parameters:
+**	arg
+**		Arguments from the exception handlers.
+**
+** Returns:
+**	EXRESIGNAL	if not EXEXIT or EXINTR.
+**	EXDECLARE	otherwise.
+**
+** Trace Flags:
+**	2.0, 2.4.
+**
+** History:
+**	3/20/81 (ps)	written.
+**	1/26/82 (ps)	condition handling added.
+**	9/8/82	(jrc)	Added exit if called as subproc
+**	2/10/83 (gac)	now does not iibreak if CTRL-C.
+**	6/21/83 (nml)	Now does TErestore() if program was RBF.
+**	10/28/83(nml)	Took UNWIND out of r_exit and now use
+**			EXDECLARE.
+**	12/1/84 (rlm)	ACT reduction - remove temporary file.
+**	6/10/85 (ac)	Call IIbreak() to clear out the pipes after
+**			catching the interrup. Bug# 5847 fixes.
+**	6/14/85 (ac)	Disable interrupt before processing exception.
+**	4/11/86 (jhw)	Report writer no longer uses temporary view.
+**	4/28/87 (gac)	If ABF calls RW to a terminal, now prompts for a return.
+**	18-feb-1988 (rdesmond)
+**			Removed prompt for return if called from another
+**			program since that is now in r_rep_do().
+**	10/10/90 (elein) b33889
+**		Rollback transaction on error
+**	11/4/90 (elein) 34134
+**		Ensure a commit at the end.  Problem where REPORT
+**		called from rbf caused problems when autocommit
+**		state was reversed.
+**	16-apr-92 (deastman)
+**		Make sure sreport does not fclose a FILE * that's not open.
+**		It cause core dumps otherwise on pyr_u42_64.
+**	21-apr-92 (deastman)
+**	        Took out my workaround which was rejected.
+**	06-Dec-92 (fredb)
+**		SREPORT tries to close Fl_input when it is not open due to 
+**		sloppy handling of the St_txt_open global.  I've added an
+**		additional test to be sure the file is open before we try
+**		to close it.
+**	05-Apr-93 (fredb)
+**		Removed "St_txt_open", "Fl_input" is sufficient by itself.
+**	7-apr-1993 (rdrane)
+**		Added forms/display related cleanup procedures suggested by
+**		rogerl.  The intent is to ensure that the terminal is left in
+**		a sane state after SIGINTR, while still exiting to OS.
+**	13-Apr-93 (fredb)
+**		Make correction to test of "Fl_input" as pointed out by rdrane.
+**		"Fl_input" should be compared to a NULL FILE pointer, not
+**		tested as a boolean.
+**	12-jul-1993 (rdrane)
+**		Fine tune forms/display related cleanup procedures suggested by
+**		rogerl.  Use the r_end_frms() cover, and drop the call to
+**		IIUFdcl...(), since endforms will handle it.
+**	12-Dec-2000 (fruco01)
+**		Added an int flag send_abort which is set to TRUE should the
+**		exarg_array element of the passed argument be set to ABORT.
+**		Added the logic to test for this also.  Bug 102996.
+**		Note that exarg_array can be of variable length and I don't 
+**		think there is any specified order but all the calls to date
+**		pass this mode flag as the second argument so it was thought
+**		best to limit the changes for just such cases. 
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	12-oct-2005 (ianma02) Bug 115302 / INGCBT578
+**		Properly handle overflow exceptions.
+*/
+
+# ifdef CFEVMSTAT
+extern i2	R_vm_trace;
+# endif
+
+/*
+** This function pointer is filled in by RBF.  See the file
+** rfrep.qc in RBF for explanation.
+*/
+GLOBALDEF i4	(*rf_cl_func)() = NULL;
+
+EX
+r_exit (arg)
+register EX_ARGS	*arg;
+
+{
+	/* start of routine */
+
+    	int send_abort = FALSE;
+
+	EXinterrupt(EX_OFF);	/* turn off interrupt before processing
+				** exception
+				*/
+
+	if (arg->exarg_num == EXINTOVF || arg->exarg_num == EXFLTOVF ||
+		arg->exarg_num == EXDECOVF)
+	{
+		r_runerr(0x204, NONFATAL);
+		return EXDECLARE;
+	}
+
+
+	if (arg->exarg_num != EXEXIT && arg->exarg_num != EXINTR)
+	{
+		return EXRESIGNAL;
+	}
+
+
+        if(  arg->exarg_count == 2 && arg->exarg_num != EXINTR )
+	{
+            send_abort =  *(arg->exarg_array + (arg->exarg_count-1)) == ABORT;
+        }
+
+        /* 
+        ** rollback if errors in report OR queries
+        */
+              
+        if(St_db_open && (!St_called) && send_abort)
+        {
+                    IIbreak();
+        }
+
+	if( St_db_open && (Err_count != 0 || St_ing_error == TRUE) )
+	{
+		EXEC SQL ROLLBACK;
+	}
+	else if (St_db_open)
+	{
+		EXEC SQL COMMIT;
+	}
+
+	switch(En_program)
+	{
+	    case(PRG_REPORT):
+		r_ach_del (0);	/* remove temp file */
+		if (St_rf_open)
+		{	/* close the report file */
+			r_fclose(En_rf_unit);
+		}
+
+		/* stop any retrieval */
+		St_in_retrieve = FALSE;
+
+		if  (St_to_term)
+		{
+			r_end_frms();
+		}
+
+		break;
+
+	    case(PRG_RBF):
+
+		if (rf_cl_func != NULL)
+		{
+			(*rf_cl_func)(NULL);
+		}
+		else
+		{
+			r_end_frms();
+		}
+
+		break;
+
+	    case(PRG_SREPORT):
+
+		if (Fl_input != (FILE *)NULL)
+		{	/* input file for SREPORT */
+			r_fclose(Fl_input);
+		}
+
+		if (St_rco_open)
+		{
+			r_fclose(Fl_rcommand);
+			if (!St_keep_files)
+			{
+				r_fdelete(En_rcommands);
+			}
+		}
+		break;
+
+	    default:
+		break;
+	}
+
+
+            
+         if(St_db_open && (!St_called))
+         {
+	    /* close the data base */
+              FEing_exit();
+         }
+  
+	/*
+	** r_exit is declared by r_report, s_sreport, or rfrbf.
+	** In any case, doing an "EXDECLARE" causes them to handle
+	** the return like an exit.
+	*/
+# ifdef CFEVMSTAT
+	if (R_vm_trace)
+		FEendvm();
+# endif
+	return EXDECLARE;
+}

@@ -1,0 +1,739 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+#include "rctools.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PROPPAGE1 DIALOGEX 0, 0, 424, 210
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "1"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "&Load Import Parameters:",IDC_STATIC2,303,10,87,8
+    PUSHBUTTON      "...",IDC_BUTTON1,395,8,22,14,BS_ICON
+    GROUPBOX        "File to be imported:",IDC_STATIC,121,24,144,51
+    EDITTEXT        IDC_EDIT2,124,36,122,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_BUTTON2,246,36,16,14
+    GROUPBOX        "",IDC_STATIC,126,49,71,20
+    CONTROL         "&ANSI",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,129,56,28,10
+    CONTROL         "&OEM",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,164,56,27,10
+    LTEXT           "S&ize :",IDC_STATIC,200,56,18,10
+    RTEXT           "",IDC_STATICFILE_SIZE,219,56,27,10,SS_SUNKEN
+    LTEXT           "Kb",IDC_STATIC,250,56,9,8
+    CONTROL         "&Matches the Exact Number and Order of Ingres Table Columns",IDC_CHECK3,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,121,80,142,18
+    LTEXT           "[Optional] &Format Identification on First:",IDC_STATIC,121,104,122,8
+    EDITTEXT        IDC_EDIT3,121,114,39,13,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Kb of File",IDC_STATIC,165,116,49,8
+    LTEXT           "Ski&p First:",IDC_STATIC_SKIPFIRSTLINE,121,158,34,8
+    EDITTEXT        IDC_EDIT5,160,156,36,13,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN1,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,189,157,9,13
+    LTEXT           "lines",IDC_STATIC_FIRSTLINE,199,158,25,8
+    CONTROL         "Consider First Line as &Headers",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,121,141,123,10
+    EDITTEXT        IDC_EDIT4,218,186,24,13,ES_AUTOHSCROLL | WS_DISABLED
+    LTEXT           "Into Ingres &Table:",IDC_STATIC,276,24,66,10
+    CONTROL         "Tree1",IDC_TREE1,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_DISABLEDRAGDROP | TVS_SHOWSELALWAYS | WS_BORDER | WS_HSCROLL | WS_TABSTOP,274,36,143,134,WS_EX_CLIENTEDGE
+    LTEXT           "Ingres Table to be &Created:",IDC_STATIC1,274,177,97,8,WS_DISABLED
+    EDITTEXT        IDC_EDIT1,274,189,143,13,ES_AUTOHSCROLL | WS_DISABLED
+    LTEXT           "Zone of Bitmap",IDC_STATIC_IMAGE1,7,11,109,191,NOT WS_VISIBLE
+    CONTROL         "&Specify Custom Separator",IDC_CHECK_CUSTOM_SEPARATOR,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,121,188,95,10
+END
+
+IDD_PROPPAGE2 DIALOGEX 0, 0, 424, 210
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "2"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    LTEXT           "If one of the tabs below corresponds to the desired format, select 'Tab corresponds to expected results'. ",IDC_STATIC,125,5,254,18
+    CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",WS_TABSTOP,126,25,291,158
+    CONTROL         "&Define Your Own Fixed Width Fields Format",IDC_CHECK1,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,126,188,184,14
+    LTEXT           "Zone of Bitmap",IDC_STATIC_IMAGE1,7,11,109,191,NOT WS_VISIBLE
+    PUSHBUTTON      "Show Re&jected Solutions",IDC_BUTTON1,315,188,102,14
+END
+
+IDD_PROPPAGE3 DIALOGEX 0, 0, 424, 210
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "3"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    LTEXT           "Modify properties for each column of the new table by double-clicking each property. ",IDC_STATIC_TEXT1,152,5,265,24
+    LTEXT           "Zone for the special list 'CuListCtrlDouble'",IDC_STATIC1,128,53,289,149,NOT WS_VISIBLE | WS_BORDER
+    LTEXT           "Zone of Bitmap",IDC_STATIC_IMAGE1,7,11,109,191,NOT WS_VISIBLE
+    LTEXT           "Date Format:",IDC_STATIC,130,36,44,8,NOT WS_VISIBLE
+    COMBOBOX        IDC_COMBO1,177,34,80,64,CBS_DROPDOWNLIST | NOT WS_VISIBLE | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Numeric Format:",IDC_STATIC,272,36,54,8,NOT WS_VISIBLE
+    COMBOBOX        IDC_COMBO2,330,34,80,64,CBS_DROPDOWNLIST | NOT WS_VISIBLE | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "v",IDC_STATIC_CHECKMARK,128,10,17,12
+END
+
+IDD_PROPPAGE4 DIALOGEX 0, 0, 424, 210
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "4"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    LTEXT           "Zone of Bitmap",IDC_STATIC_IMAGE1,7,11,109,191,NOT WS_VISIBLE
+    GROUPBOX        "The Table is Currently Empty",IDC_STATIC_EMPTYTABLE,126,9,176,48,WS_GROUP
+    CONTROL         "&Append Imported Rows to the Existing Ones",IDC_RADIO1,
+                    "Button",BS_AUTORADIOBUTTON,132,22,164,10
+    CONTROL         "&Replace Existing Rows with the Imported Ones",IDC_RADIO2,
+                    "Button",BS_AUTORADIOBUTTON,132,38,164,10
+    LTEXT           "Final Preview:",IDC_STATIC,125,62,57,8
+    LTEXT           "Zone of control CuListCtrlHuge",IDC_STATIC1,126,75,291,127,NOT WS_VISIBLE | WS_BORDER
+    PUSHBUTTON      "...",IDC_BUTTON1,393,8,22,14,BS_ICON
+    LTEXT           "&Save Import Parameters:",IDC_STATIC2,308,11,84,8
+    CONTROL         "&Commit every ",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,308,39,58,10
+    EDITTEXT        IDC_EDIT1,368,38,28,12,ES_AUTOHSCROLL | ES_NUMBER | WS_DISABLED
+    LTEXT           "rows",IDC_STATIC,399,39,18,8
+END
+
+IDD_PROPPAGE_FORMAT_DBF DIALOG  0, 0, 280, 200
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Zone for Special ListCtrl with huge data",IDC_STATIC1,7,7,266,166,NOT WS_VISIBLE | WS_BORDER
+    CONTROL         "&Tab corresponds to expected result",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,7,183,266,10
+END
+
+IDD_PROPPAGE_FORMAT_FIX DIALOG  0, 0, 280, 200
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Static",IDC_STATIC_FRAME,7,7,266,161,NOT WS_VISIBLE | WS_BORDER
+    CONTROL         "Please check here if this Tab corresponds to the expected result.",IDC_CHECK1,
+                    "Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,7,183,266,10
+END
+
+IDD_PROPPAGE_FORMAT_CSV DIALOG  0, 0, 280, 200
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT        IDC_EDIT1,44,7,45,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Delimiter:",IDC_STATIC,7,9,32,8
+    CONTROL         "",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,7,21,9,10
+    LTEXT           "Group Separators Interpreted as One",IDC_STATIC,19,22,122,8
+    LTEXT           "Strings Embedded in:",IDC_STATIC,101,8,65,8
+    COMBOBOX        IDC_COMBO2,168,7,33,48,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Zone for Special ListCtrl with huge data",IDC_STATIC1,7,34,266,136,NOT WS_VISIBLE | WS_BORDER
+    CONTROL         "&Tab corresponds to expected result",IDC_CHECK2,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,7,183,266,10
+    CONTROL         "",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,168,21,9,10
+    LTEXT           "Ignore Trailing Separators",IDC_STATIC,180,22,93,8
+END
+
+IDD_XDETECTION_INFO DIALOG  0, 0, 456, 143
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Rejected Solutions"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "Close",IDOK,211,122,32,14
+    CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_OWNERDRAWFIXED | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,7,442,111
+END
+
+IDD_XNOSOLUTION_INFO DIALOG  0, 0, 222, 71
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Ingres Import Assistant"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    DEFPUSHBUTTON   "Yes",IDOK,103,50,50,14
+    PUSHBUTTON      "No",IDCANCEL,157,50,50,14
+    CTEXT           "There is no solution detected\nDo you wish to enforce the fixed width format ?",IDC_STATIC,32,18,154,22
+    ICON            "",IDC_STATIC_IMAGE1,7,21,20,20
+    PUSHBUTTON      "See the Rejected Solutions",IDC_BUTTON1,7,50,92,14
+END
+
+IDD_IEAPAGE1 DIALOGEX 0, 0, 424, 228
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "1"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "Zone of Bitmap",IDC_STATIC_IMAGE1,7,11,109,191,NOT WS_VISIBLE
+    LTEXT           "Load Export Parameters:",IDC_STATIC,308,9,81,8
+    PUSHBUTTON      "Load",IDC_BUTTON1,393,6,24,14,BS_ICON
+    GROUPBOX        "File to be Created",IDC_STATIC,118,21,164,62
+    EDITTEXT        IDC_EDIT1,124,37,136,14,ES_AUTOHSCROLL
+    LTEXT           "Format:",IDC_STATIC,124,59,29,8
+    COMBOBOX        IDC_COMBO1,155,57,122,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "...",IDC_BUTTON2,261,37,16,14
+    LTEXT           "Database:",IDC_STATIC,284,23,79,8
+    CONTROL         "Tree1",IDC_TREE1,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_DISABLEDRAGDROP | TVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,283,34,134,62,WS_EX_CLIENTEDGE
+    LTEXT           "Query:",IDC_STATIC,119,93,25,8
+    PUSHBUTTON      "Sql",IDC_BUTTON3,145,89,24,14,BS_ICON
+    EDITTEXT        IDC_EDIT2,119,107,298,56,ES_MULTILINE | ES_WANTRETURN | WS_VSCROLL
+    GROUPBOX        "Float4 Column Preferences",IDC_STATIC,119,170,145,50
+    LTEXT           "Precision:",IDC_STATIC,126,183,34,8
+    EDITTEXT        IDC_EDIT3,163,181,31,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN1,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,193,181,11,14
+    LTEXT           "Scale:",IDC_STATIC,203,182,23,8
+    EDITTEXT        IDC_EDIT4,229,181,31,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN2,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,259,180,11,14
+    GROUPBOX        "Float8 Column Preferences",IDC_STATIC,277,170,140,50
+    LTEXT           "Precision:",IDC_STATIC,283,182,36,8
+    EDITTEXT        IDC_EDIT5,319,181,31,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN3,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,343,181,8,14
+    LTEXT           "Scale:",IDC_STATIC,356,182,23,8
+    EDITTEXT        IDC_EDIT6,382,181,31,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Spin1",IDC_SPIN4,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,403,181,8,14
+    CONTROL         "Exponential Format",IDC_CHECK3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,126,201,108,10
+    CONTROL         "Exponential Format",IDC_CHECK5,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,283,201,107,10
+END
+
+IDD_IEAPAGE2_CSV DIALOGEX 0, 0, 424, 210
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "1"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    LTEXT           "Save Export Parameters:",IDC_STATIC,305,9,83,8
+    PUSHBUTTON      "Save",IDC_BUTTON1,394,6,24,14,BS_ICON
+    LTEXT           "Delimiter:",IDC_STATIC_DELIMITER,120,29,34,8
+    COMBOBOX        IDC_COMBO2,157,28,76,61,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Quotes:",IDC_STATIC_QUOTE,120,47,34,8
+    COMBOBOX        IDC_COMBO3,157,45,76,57,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Quotes only if String contains the delimiter",IDC_CHECK3,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,243,42,95,20
+    CONTROL         "Export Headers",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,345,33,72,10
+    CONTROL         "ReadLock",IDC_CHECK4,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,345,47,72,10
+    LTEXT           "Zone for the special list 'CuListCtrlDouble'",IDC_STATIC1,120,67,297,136,NOT WS_VISIBLE | WS_BORDER
+    LTEXT           "Zone of Bitmap",IDC_STATIC_IMAGE1,7,11,109,191,NOT WS_VISIBLE
+    LTEXT           "v",IDC_STATIC_CHECKMARK,132,7,13,12
+    LTEXT           "You have asked to export into a CSV file.",IDC_STATIC_TEXT1,152,5,142,17,SS_CENTERIMAGE
+END
+
+IDD_IEAPAGE2_COMMON DIALOGEX 0, 0, 424, 228
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "1"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    LTEXT           "Zone of Bitmap",IDC_STATIC_IMAGE1,7,11,109,191,NOT WS_VISIBLE
+    LTEXT           "You have asked to export into ??? file.",IDC_STATIC_TEXT1,132,5,175,17,SS_CENTERIMAGE
+    LTEXT           "v",IDC_STATIC_CHECKMARK,120,7,13,12
+    LTEXT           "Zone for the special list 'CuListCtrlDouble'",IDC_STATIC1,120,55,297,166,NOT WS_VISIBLE | WS_BORDER
+    PUSHBUTTON      "Save",IDC_BUTTON1,394,6,24,14,BS_ICON
+    LTEXT           "Save Export Parameters:",IDC_STATIC,310,9,81,8
+    CONTROL         "ReadLock",IDC_CHECK4,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,119,25,55,10
+    LTEXT           "Please set the additional parameters by double-clicking at the appropriate places",IDC_STATIC_TEXT2,119,38,298,13,SS_CENTERIMAGE
+    CONTROL         "Export Headers",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,178,25,82,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_PROPPAGE1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 417
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 202
+    END
+
+    IDD_PROPPAGE2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 417
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 202
+    END
+
+    IDD_PROPPAGE3, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 417
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 202
+    END
+
+    IDD_PROPPAGE4, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 417
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 202
+    END
+
+    IDD_PROPPAGE_FORMAT_DBF, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 273
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 193
+    END
+
+    IDD_PROPPAGE_FORMAT_FIX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 273
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 193
+    END
+
+    IDD_PROPPAGE_FORMAT_CSV, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 273
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 193
+    END
+
+    IDD_XDETECTION_INFO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 449
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 136
+    END
+
+    IDD_XNOSOLUTION_INFO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 215
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 64
+    END
+
+    IDD_IEAPAGE1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 417
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 221
+    END
+
+    IDD_IEAPAGE2_CSV, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 417
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+
+    IDD_IEAPAGE2_COMMON, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 417
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 221
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_PROPPAGE_FORMAT_CSV DLGINIT
+BEGIN
+    IDC_COMBO2, 0x403, 7, 0
+0x6e28, 0x6e6f, 0x2965, "\000" 
+    IDC_COMBO2, 0x403, 2, 0
+0x0027, 
+    IDC_COMBO2, 0x403, 2, 0
+0x0022, 
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON_LOAD           ICON                    "res\\load.ico"
+IDI_ICON_SAVE           ICON                    "res\\save.ico"
+IDI_ICON_ASSISTANT      ICON                    "res\\sqlassis.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_TITLE_IMPORT        "Ingres Import Assistant"
+    IDS_TITLE_EXPORT        "Ingres Export Assistant"
+    IDS_OWNERxITEM          "[%s].%s"
+    IDS_TABLE_EMPTY         "The table is currently empty."
+    IDS_COPY                "Copy"
+    IDS_COPY_WITH_TEMPORARY_FILE "Copy (Generate Temporary File)"
+    IDS_TABLE_EMPTY_NOT     "The table is not empty."
+    IDS_COLUMN_LAYOUT       "Optionally, you can change the Correspondence with the Ingres Table Columns (first line in the list)."
+    IDS_INPUTTABLE_CHARACTERISTICS 
+                            "Modify properties for each column of the new table by double-clicking each property. "
+    IDS_HEADER_SEPARATORS   "Separators"
+    IDS_HEADER_TEXTQUALIFIER "Text Qualifier"
+    IDS_HEADER_CS_ASONE     "Merge Consecutive Separators"
+    IDS_HEADER_LINE_NUMBER  "Line #"
+    IDS_HEADER_LINE_TEXT    "Text"
+    IDS_IIA_STEP_1          " - Step 1 of 4"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Ingres Import Assistant"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_IIA_STEP_2          " - Step 2 of 4 - File Format Identification"
+    IDS_IIA_STEP_3          " - Step 3 of 4 - Column Properties"
+    IDS_IIA_STEP_4          " - Step 4 of 4 - Import Preview"
+    IDS_IEA_STEP_1          " - Step 1 of 2"
+    IDS_IEA_STEP_2          " - Step 2 of 2"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INGRES_COLUMN_NAME  "Ingres Column Name:"
+    IDS_INGRES_COLUMN_TYPE  "Ingres Column Type:"
+    IDS_INGRES_COLUMN_LENGTH "Ingres Column Length:"
+    IDS_INGRES_COLUMN_NULLABILITY "Ingres Column Nullability:"
+    IDS_INGRES_COLUMN_DEFAULT "Ingres Column Default::"
+    IDS_SOURCE_FILE_FORMAT  "Source File Format:"
+    IDS_NOT_IMPORTED        "<not imported>"
+    IDS_SOURCE_DATA         "Source Data"
+    IDS_MULTIPLE_TEXT_QUALIFIER 
+                            "Some fields are qualified by "" and some by '.\nSuch a solution is not proposed."
+    IDS_CONFIRM_CHOICE_WITH_CHECKBOX 
+                            "You have already checked one.\nThe previous check will be cancelled."
+    IDS_FAIL_TO_CALCULATE_FILE_SIZE "Failed to calculate file size."
+    IDS_ALREADY_IMPORT_ROWS "Already imported: %d of %d row(s)"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ALREADY_IMPORT_BYTES "Already imported: %d of %d byte(s)"
+    IDS_SCANNING_FILE_ERROR "Unknow error has occurred while scanning the file."
+    IDS_UNSUPPORT_DBF_FILE  "This version of DBF file is not supported."
+    IDS_UNSUPPORT_DBF_WITH_MEMO 
+                            "This version of Import Assistant cannot handle DBF with a memo file."
+    IDS_COLUMNCOUNT_ERROR_IN_DBFxTABLE 
+                            "The number of columns in dbf file is not equal to the number of columns in the table."
+    IDS_UNSUPPORT_DBF_DATATYPE 
+                            "The DBF file has the column data type that cannot be supported.\nThe only supported data types are C (char), D (data), F (float), L (bool), N (number)."
+    IDS_FAIL_TO_OPEN_FILE   "Failed to open file."
+    IDS_LINE_TOO_LONG_ERROR "Line too long in the file..."
+    IDS_FAIL_TO_INITIALIZE_TABLES "Failed to initialize tables."
+    IDS_LOADPARAM_ERR_FILE_NOT_EXIST "The parameter file'%1' does not exist."
+    IDS_LOADPARAM_ERR_STEP1_NO_MATCH 
+                            "Some of the loaded parameters of Step 1 are no more valid (or you have changed them manually after the load operation)"
+    IDS_LOADPARAM_ERR_NO_MATCH_SOLUTION 
+                            "The detected valid formats don't include the format that was loaded upon the Load Import Parameters operation."
+    IDS_LOADPARAM_ERR_NO_MATCH_FORMAT 
+                            "Load Import Parameters error.\nThe loaded format is no longer matched with this current choice."
+    IDS_LOADPARAM_ERR_NO_MATCH_COLUMN_COUNT 
+                            "The number of columns is different from what it was upon the save export parameters operation.\n Stored parameters of steps 3 and 4 will not be taken into account."
+    IDS_LOADPARAM_ERR_NO_MATCH_COLUMN_LAYOUT 
+                            "The columns of the table are different from what they were upon the save export parameters operation. Stored parameters of steps 3 and 4 will not be taken into account."
+    IDS_SELECT_PARAM_FILE   "Wrong file type: please select the import parameter file (*.ii_imp)."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TOO_MANY_FORMAT1    "Too many possible formats.\nThe file format may be too ambiguous, or the file not be significant.\nDo you wish to enforce a fixed width format ?"
+    IDS_TOO_MANY_FORMAT2    "Too many possible formats.\nThis may be due to the non-standard separators that were entered in step 1.\nThe file format may be too ambiguous, or the file not be significant.\nDo you wish to enforce a fixed width format ?"
+    IDS_NO_TEXT_QUALIFIERxPARTIAL_SCAN 
+                            "No text qualifiers have been detected and the whole file has not been scanned."
+    IDS_NO_CONSECUTIVE_SEPARATORxPARTIAL_SCAN 
+                            "No consecutive separators considered as one have been detected and the whole file has not been scanned."
+    IDS_FAIL_TO_CONSTRUCT_FORMAT_IDENTIFICATION 
+                            "Failed to construct file format identification."
+    IDS_FAIL_TO_CHECK_FILE_STATUS "Failed to check the file status: \n%1"
+    IDS_PLEASE_SELECT_FILE_TO_IMPORT "Please select the file to import."
+    IDS_FILE_TO_IMPORT_NOT_EXIST "The file to be imported does not exist."
+    IDS_FILE_HAS_NO_CRLF    "The file to be imported has no ""Carriage Return / Line Feed (CRLF)"" sequences, or has too long lines."
+    IDS_PLEASE_SELECT_TABLE "Please select a table into which to import data."
+    IDS_PLEASE_ENTER_TABLE_NAME 
+                            "Please type the name of the table to be created."
+    IDS_RECORD_EXCEEDS_FIXWIDTH_LIMIT 
+                            "The record length exceeds the limit of %d characters.\nFixed widths formats cannot be handled and will not be proposed."
+    IDS_NOT_PROPOSE_AMBIGEOUS_FIXEDWIDTH 
+                            "Some fixed widths formats were detected, which are ambiguous because you have asked\nto pre-scan only %d K-bytes out of the %d K-bytes of the whole file.\nThese formats will not be proposed (you may need to define one manually)"
+    IDS_CHECK_ONEOF_PROPOSED_SOLUTION 
+                            "Please check one of the proposed solutions."
+    IDS_FIXEDWIDTH_COLUMNxNOT_MATCH_TABLE_COLUMNS 
+                            "The number of columns you set is not equal to the number of columns in the table."
+    IDS_FILE_HAS_NO_RECORDS "The file has no records. \nNothing to be imported."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_SUGGEST_OPTIMIZEDB 
+                            "The Ingres query optimizer is cost based and uses heuristics to\nfind the optimal query execution plan for your query. To do\nthat it needs to understand your data. It is recommended that you\ngenerate statistics for the imported data using Visual DBA."
+    IDS_FILE_EMPTY          "The imported file is empty."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_REJECTED_INFO1      "All possible formats were rejected at the first line of the file.\n\nIf you are importing into an existing table, the reason may be that you left the\n'Matches[...]Columns' checkbox checked in STEP 1, and the number of\ncolumns of the file to import is different from that of the Ingres Table. ]"
+    IDS_REJECTED_INFO2      "All other possible formats were rejected at the first line of the file."
+    IDS_NEWTABLE_NEEDS_COLUMNS 
+                            "You must provide the column name of the table to be created."
+    IDS_COLUMN_NEEDS_LENGTH1 "You must provide the precision of column '%1'."
+    IDS_COLUMN_NEEDS_LENGTH2 "Please enter a non-zero length for column '%1'."
+    IDS_COLUMN_NEEDS_LENGTH3 
+                            "You must provide the precision and scale of column '%1 using the 'p, s'  format."
+    IDS_COLUMN_NEEDS_LENGTH4 
+                            "You must provide the precision and scale of column '%1'"
+    IDS_DUPLICATE_COLUMN_NAME 
+                            "Duplicate column name '%s' at positions %d and %d."
+    IDS_PLEASE_SPECIFY_AT_LEAST_1COLUMN "Please specify at least one column."
+    IDS_COLUMN_HAS_TOOSHORT_LEN 
+                            "The length of column '%s' at position %d is too short.\nThe data will be truncated."
+    IDS_EMPTY_TABLE         "The table is currently empty"
+    IDS_NOT_EMPTY_TABLE     "The table has existing data"
+    IDS_IMPORT_OPERATION_CANCELLED 
+                            "\n\nThe Import operation has been cancelled."
+    IDS_FAIL_TO_LOAD_DLL    "Failed to load the dll %1."
+    IDS_IMPORT_OPERATION_CUCCESS 
+                            "The Import has completed successfully (%d row(s))."
+    IDS_IMPORT_OPERATION_INTERRUPTxCOMMIT 
+                            "The Import has been interrupted.\n%d row(s) were imported and committed."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_IMPORT_OPERATION_INTERRUPTxROLLBACK 
+                            "The import operation has been interrupted.\nAll data was rolled back successfully."
+    IDS_IMPORT_OPERATION_INTERRUPTxCONFIRM1 
+                            "%d row(s) were already imported but not committed.\nDo you want to commit these row(s) before interrupting the import ?"
+    IDS_IMPORT_OPERATION_INTERRUPTxCONFIRM2 
+                            "No row has been imported yet.\nDo you want to cancel the import operation ?"
+    IDS_SQLCOPY_RETURN_SMALL_LEN 
+                            "The length of buffer returned by SQL CopyRow callback is too short.\n"
+    IDS_INTERRUPT_KILL_TASK "The task has been killed.\nThere is no warranty that the table has been rollbacked properly."
+    IDS_SCROLL_TOLINE       "Scroll To Line (%d/%d)"
+    IDS_TASK_NOT_RESPOND1   "The task has not responded since %s. Would you like to kill it ?"
+    IDS_TASK_NOT_RESPOND2   "The task has not responded since %s. There might be a lock on database or table."
+    IDS_IMPORT_ANOTHER_FILE "Import another file ?"
+    IDS_IMPORT_OPERATION_INTERRUPTxCONFIRM3 
+                            "%d row(s) were already committed because you checked the option to commit every %d rows.\nDo you want to interrupt the import operation ?"
+    IDS_IMPORT_OPERATION_INTERRUPTxCONFIRM4 
+                            "%d row(s) were already committed because you checked the option to commit every %d rows.\n\n%d additional row(s) were also imported but not committed yet.\nDo you want to commit these row(s) before interrupting the import ?"
+    IDS_IMPORT_OPERATION_INTERRUPTxCOMMIT2 
+                            "The import operation has been interrupted.\n But %d rows were already committed."
+    IDS_IMPORT_ERRORxPARTIAL_COMMIT 
+                            "\n%d rows were already committed because you checked the option to commit every %d rows."
+    IDS_IMPORT_OPERATION_STOPPED "\nThe Import operation has been stopped."
+    IDS_QUERYING_RECORD_NofP "Already formatted : %d of %d."
+    IDS_INTERRUPT_DETECTING "Cancel the detection of valid formats ?"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ANIMATE_TITLE_DETECTING "Detecting Valid  Formats"
+    IDS_ANIMATE_TITLE_QUERYING "Populating the Preview Controls"
+    IDS_ANIMATE_TITLE_IMPORTING "Import File to Table"
+    IDS_STOP_QUERYING_RECORD "Limit the preview to the already scanned rows ?"
+    IDS_HEADER_IGNORE_TS    "Ignore Trailing Separators"
+    IDS_STOP_QUERYING_RECORD2 
+                            "Limit the preview to the already scanned rows ?\n\nWarning: you may need to increase the column lenghts in Step 3,\n because all data has not been scanned.\n"
+    IDS_COLUMN_LAYOUT2      "This is a preview only. You cannot edit the column properties."
+    IDS_LOADPARAM_ERR_STEP4_COPYOPTION 
+                            "The table was empty when the Import Parameters were saved. \nIt is now no more empty, and the Append imported rows to the Existing Ones option has been selected."
+    IDS_DBF_NOT_SUPPORTED   "The import of .dbf format files is not supported on this platform."
+    IDS_DELIMITER_COMMA     ", (comma)"
+    IDS_DELIMITER_SEMICOLON "; (semi colon)"
+    IDS_QUOTE_SINGLE        "' (single quote)"
+    IDS_QUOTE_DOUBLE        """ (double quotes)"
+    IDS_MSG_SELECT_DATABASE "Please select a database."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_EXPORT_CSV          "CSV, and other delimiter formats"
+    IDS_EXPORT_DBF          "DBF"
+    IDS_EXPORT_FIXED        "Fixed Width"
+    IDS_EXPORT_COPY         "Ingres ""Copy Statement Compliant"""
+    IDS_EXPORT_XML          "XML"
+    IDS_EXPORT_2_CSV        "You have asked to export into a CSV file."
+    IDS_EXPORT_2_XML        "You have asked to export into an XML file."
+    IDS_EXPORT_2_DBF        "You have asked to export into a DBF file."
+    IDS_EXPORT_2_FIXED      "You have asked to export into Fixed Width file."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_EXPORT_2_COPY       "You have asked to export into an ""Ingres Copy Statement"" file."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_SPECIFY_SELECT  "Please specify the select statement."
+    IDS_MSG_SPECIFY_EXPORT_FILE "Please specify the file to be created."
+    IDS_MSG_WRONG_EXTxFORMAT 
+                            "The file extension is not compatible with the export format."
+    IDS_MSG_FAIL_2_CREATE_SQLASSISTANT 
+                            "Failed to create an instance of Sql Assistant COM Object."
+    IDS_MSG_FAIL_2_QUERY_SQLASSISTANT_INF 
+                            "Failed to query interface of Sql Assistant."
+    IDS_MSG_DBFEXPORT_EXCEED_COLUMNSIZE 
+                            "The lenght of export column '%1' exceeds the maximum of 254 for this format."
+    IDS_MSG_DBFEXPORT_EXCEED_RECORDSIZE 
+                            "The record length (sum of column's size) exceeds 4000 bytes.\nThe limit is 4000 bytes per record."
+    IDS_MSG_DBFEXPORT_TRUNCATE_COLUMNNAME 
+                            "The maximum lenght for a column name is 11.\nAny column name that exceeds 11 characters will be truncated.\nDo you wish to continue ?"
+    IDS_MSG_SELECT_EXPORT_PARAM_FILE 
+                            "Wrong file type: please select the export parameter file (*.ii_exp)."
+    IDS_MSG_NOROWS_TO_EXPORT "There is no row to export."
+    IDS_MSG_INTERRUPT_EXPORT 
+                            "%d row(s) have been exported.\nDo you wish to save the file for the already exported row(s) ?"
+    IDS_FETCH_EXPORTING     "Already exported row(s): %d."
+    IDS_MSG_EXPORT_COMPLETE "The Export has completed successfully (%d row(s))."
+    IDS_TITLE_EXPORT_ANIMATION "Exporting..."
+    IDS_TITLE_EXPORT_ANIMATION_PREFETCH "Fetching Rows..."
+    IDS_FETCHING_ROWS       "Rows fetched : %d"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_EXPORT_FILEDS_TRUNCATED 
+                            "Some fields have been truncated during the export.\nDo you wish to continue ?"
+    IDS_EXPORT_HEADER_TEXT  "Export Header Text:"
+    IDS_EXPORT_COLUMN       "Export Column Name:"
+    IDS_EXPORT_LENGTH       "Export Width:"
+    IDS_EXPORT_NULL_AS      "Nulls Exported as:"
+    IDS_EXPORT_FORMAT       "Export Format:"
+    IDS_SOURCE_FORMAT       "Source Format:"
+    IDS_AUTO                "<auto>"
+    IDS_MSG_EXPORT_ANOTHER_FILE "Export to another file ?"
+    IDS_MSG_LOAD_EXPORT_PARAMFILE_ERROR 
+                            "Load Export Parameters error.\nThe parameter file does not exist."
+    IDS_MSG_EXPORT_RESULT_CHANGE 
+                            "The results of the select statement have changed \nsince the fetch for the step 2 preview.\n\nThe export operation has been canceled."
+    IDS_MSG_FAIL_TO_INITIALIZE_EXPORT_STEP1 
+                            "Failed to initialize Export Assistant Step 1."
+    IDS_MSG_CREATE_EMPTY_TABLE 
+                            "The .dbf file to be imported has no record. \nCreate an empty table anyway ?\n"
+    IDS_INPUTTABLE_CHARACTERISTICS_CREATEONLY 
+                            "You have asked to create an empty table. Please set the column names and properties by double-clicking at the appropriate places."
+    IDS_MSG_CREATE_TABLE_OK "The table has been created successfully."
+    IDS_DBFRECORDLEN_ERROR  "The record length in the dbf's header is greater than the sum of column's length."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_MSG_CANNOT_EXPORT_DATATYPE 
+                            "The result of the select statement contains a data type that cannot be exported."
+    IDS_OVERWRITE_FILE      "%1 already exists.\nDo you want to replace it?"
+    IDS_EXPORTFILE_EXIST    "%1  already exists."
+    IDS_MSG_ERROR_HEADERLINE 
+                            "The number of headers, in the skipped line, doesn't match the number of columns. \nDefault column names (col1, col2, etc...) will be used.\n"
+    IDS_MSG_DBF_LIMIT_FIELDLENGTH 
+                            "In the DBF file, the field length is limited to 254 characters."
+    IDS_MSG_DBF_LIMIT_RECORDLENGTH 
+                            "In the DBF file, the record length (sum of lengths of all fields) is limited to 4000 characters."
+    IDS_MSG_DBF_LIMIT_FIELDCOUNT 
+                            "In the DBF file, the number of fields is limited to 128."
+    IDS_MSG_INVALID_FILE_PATH 
+                            "The destination directory does not exist. Please enter a valid destination."
+    IDS_MSG_POSITIVE_INTEGER_ONLY "Please enter only positive integer values."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "#include ""rctools.h""\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 12, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\svriia.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""rctools.rc""         // custom controls \r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE 12, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\svriia.rc2"  // non-Microsoft Visual C++ edited resources
+#include "rctools.rc"         // custom controls 
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

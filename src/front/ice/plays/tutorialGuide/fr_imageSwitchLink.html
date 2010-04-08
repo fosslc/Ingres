@@ -1,0 +1,122 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Using the Switch Statement
+</title>
+</head>
+<body>
+
+<h1>
+Using the Switch Statement
+</h1>
+Building the hyperlink in the SQL select statement can
+be confusing and make code very difficult to maintain. An
+easier approach is to separate the HTML code from the SQL statement,
+and this is what the HTML keyword
+allows us to do. For each record returned we execute a
+SWITCH statement, embedding the image file name (now
+independent from the value of the type column) and, in
+addition, a
+different alternative text for each image.
+<h3>File: play_typeGSLink.html</h3>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Graphical Switched Hyper Link to Shakespeare's Plays by type&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Graphical Switched Hyper Link to Shakespeare's Plays by type&lt;/h1&gt;
+
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_TxnCndCmt_h.html]` --&gt;
+
+&lt;!-- #ICE REPEAT
+	DATABASE = `icetutor`
+		SQL=`select distinct type from plays`
+	TRANSACTION=`t_type`
+        CURSOR=`c_type`
+        ROWS=`10`
+        TYPE=`UNFORMATTED`
+	<span class="macro">HTML=`&lt;p&gt;&lt;!--
+		#ICE SWITCH=``:type``
+		CASE ``comedy``=
+		    ``&lt;a href=/ice-bin/oiice.dll/playgroup/plays[play_typeLinkSubSet.html]?type=:type&gt;
+		    &lt;img src="/ice-bin/oiice.dll/playgroup/plays[comedy.gif]" alt="Laugh at  the Comedy plays"&gt;
+		    &lt;/a&gt;``
+		CASE ``tragedy``=
+		    ``&lt;a href=/ice-bin/oiice.dll/playgroup/plays[play_typeLinkSubSet.html]?type=:type&gt;
+		    &lt;img src="/ice-bin/oiice.dll/playgroup/plays[tragedy.gif]" alt="Be moved by the tragedy plays"&gt;
+		    &lt;/a&gt;``
+		CASE ``history``=
+		``&lt;a href=/ice-bin/oiice.dll/playgroup/plays[play_typeLinkSubSet.html]?type=:type&gt;
+		&lt;img src="/ice-bin/oiice.dll/playgroup/plays[history.gif]" alt="Look back at the history plays"&gt;
+		&lt;/a&gt;``
+	    --&gt;`</span>
+--&gt;
+&lt;p&gt;
+&lt;!-- #ICE COMMIT=`t_type` --&gt;
+
+&lt;!-- #ICE DECLARE=`session.e_return=play_typeGSLink.html` --&gt;
+
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre></tt></div><p>
+The first thing we notice is that the select statement is 
+simple once again. Second, there is a
+large block of HTML code appearing at the end of the
+entire statement, following the HTML keyword. This
+implements a switch taking the value of the type column as
+its variable. There are three recognised play types in this
+application: comedy, tragedy and history. There is a
+CASE for each. <b>Note: </b> we have not made use of the DEFAULT case in
+this example. For each CASE we specify the same target
+document, pass in the variable <tt>type</tt> and set
+individual picture files and alternative text for them. The
+SWITCH statement appears in the HTML statement and this
+requires us to
+<ul>
+<li>Use the REPEAT keyword on the SQL statement
+<li>Double up the grave quotes "`"
+</ul>
+The REPEAT informs Web Deployment Option that it must evaluate a sub-statement
+(SWITCH in this case) and because of this we must protect
+the grave quotes in the SWITCH statement by doubling them
+up.
+<p><tt><pre>
+CASE ``comedy``=
+    ``&lt;a href=/ice-bin/oiice.dll/playgroup/plays[play_typeLinkSubSet.html]?type=:type&gt;
+    &lt;img src="/ice-bin/oiice.dll/playgroup/plays[comedy.gif]" alt="Laugh at  the Comedy plays"&gt;
+    &lt;/a&gt;``
+</pre></tt><p>
+Each CASE of the SWITCH statement is similar. Here we
+examine the comedy case. First, we build a hyperlink to the
+display document, <tt>play_typeLinkSubSet.html</tt> and pass
+in the variable <tt>type</tt> with the value <tt>:type</tt>,
+which comes from the column of that name. We then provide an
+image for this link and this is no longer constrained to
+be the value of the column; neither is the alternative
+text.
+
+<p>
+We have now covered most of the Web Deployment Options macro keywords
+and features. We would like to build an
+<a href="fr_shopHome.html"
+target="page">electronic commerce</a>
+application next.
+</body>
+</html>

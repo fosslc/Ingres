@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!ci_unix_win
+#
+
+SubDir ING_SRC cl clf ci_unix_win ;
+
+IISUBSYS cl clf ci_unix_win ;
+
+
+IILIBRARY COMPATLIB : ciunix.c cicrypt.c ci.c ;
+

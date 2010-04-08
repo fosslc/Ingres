@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqdefval.hlp, subtopic 'Default values' of subtopic 'Append frames' behind 
+/#-- the main VQ Editor help screen.
+/#-- 
+For a Master table, you can set a default value that a field or local 
+variable will be set to each time the form is cleared for new use.  
+(For example, by specifying 'today' as the default value, you can make the 
+system enter today's date in the "date" field each time the form is called.) 
+
+The following rules apply:
+  * You can set default values only for columns that represent a non-sequenced 
+    column.
+  * The value you set must be consistent with the column's datatype and can 
+    take the form of any valid 4GL expression.  See Subtopics for information 
+    about valid expressions.
+  * If this is a writable field, users can change the default value by  
+    typing over it.  To prevent this, use the forms editor to make the field 
+    "display-only." 
+
+To set a default value for a column, enter the default value across from the
+column name in the "Assignment/Default field" of the Master table.
+/#subtopic 'Valid expressions' vqexpres.hlp

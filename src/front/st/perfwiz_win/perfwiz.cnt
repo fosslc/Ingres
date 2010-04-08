@@ -1,0 +1,10 @@
+:Title Help for Ingres Performance Monitor Wizard
+1 Ingres Performance Monitor Wizard Help
+2 Using the Ingres Performance Monitor Wizard=perfmon_wizard_welcome@perfwiz.hlp
+2 Introduction Dialog=perfmon_wizard_intro@perfwiz.hlp
+2 Personal Group Dialog=perfmon_wizard_personal_groups@perfwiz.hlp
+2 Counter Creation Dialog=perfmon_wizard_counter_creation@perfwiz.hlp
+2 Counter Selection Dialog=perfmon_wizard_personal_counters@perfwiz.hlp
+2 Counter Customization Dialog=perfmon_wizard_personal_help@perfwiz.hlp
+2 Chart Creation Dialog=perfmon_wizard_chart_creation@perfwiz.hlp
+2 Ingres Server Selection Dialog=perfmon_wizard_server_select@perfwiz.hlp

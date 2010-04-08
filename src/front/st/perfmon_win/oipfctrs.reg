@@ -1,0 +1,11 @@
+REGEDIT4
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\oiPfCtrs\Performance]
+"Library" = "iipfctrs.dll"
+"Open" = "PFctrsOpen"
+"Collect" = "PFctrsCollect"
+"Close" = "PFctrsClose"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\EventLog\Application\oiPfCtrs]
+"EventMessageFile" = "%II_SYSTEM%\\ingres\\bin\\iipfctrs.dll"
+"TypesSupported" = dword:00000007

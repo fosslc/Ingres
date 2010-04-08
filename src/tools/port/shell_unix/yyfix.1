@@ -1,0 +1,32 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/shell/yyfix.1,v 1.1 90/03/09 09:18:35 source Exp $
+.TH YYFIX 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.\" History: 
+.\"     18-dec-1989 (boba) 
+.\"             Make name in title all caps like other porting tool man pages.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+yyfix \- split tables from y.tab.c into rodata.c
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B yyfix
+.SH DESCRIPTION
+.I yyfix
+is used to create maximally sharable parsers.  It edits a y.tab.c file
+written by yacc and creates rodata.c containing the declarations of the
+parser tables.  Rodata.c can then to be compiled to assembler for
+processing by
+.I rofix(1).
+The normal sequence is:
+.nf
+	$(YACC) grammar.y
+	yyfix
+	$(CC) -S rodata.c
+	rofix rodata.s
+	$(CC) -c $(CFLAGS) y.tab.c rodata.s
+	$(LD) -r y.tab.o rodata.o -o grammar.o
+	rm -f y.tab.c y.tab.o rodata*
+.fi
+.SH BUGS
+.I yyfix
+is an institutionalized hack.

@@ -1,0 +1,2563 @@
+/*
+	Test Name: zaa07.sep
+	Time: 18-AUG-1991 12:17:07
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa07.sep
+	Purpose	: Test SEP functionality
+	Input Files  : none
+	Output Files : none
+	Database     : Septools, destroyed and created by this test.
+	Tables       :
+	Synopsis     :	Tests different aspects of SEP qasetuser functionality.
+
+	History: 18-AUG-1991	Created				DONJ
+          16-Jan-1992   (DonJ)
+                Fix any unix discrepencies in canons.
+
+          29-Jan-1992	(DonJ)
+		Changed final canon for content of trace1.stf
+           4-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+           6-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+          25-Feb-1992	(DonJ)
+		Redo canons for UNIX. Also check for new functions.
+           6-Apr-1992	(DonJ)
+		Add UNIX canon for SEP V3.2b.
+	   5-jul-1992   (donj)
+		Made changes to test new functions.
+           5-NOV-1992	(DonJ)
+		Changed tokenizer slightly so token tables come out slightly
+		different than they did before.
+          12-Oct-1993	(donj)
+		Adding ABORT canons for "can't connect" errors.
+          01-Feb-1996	(parmi04) Added an alternate canon for NT_GENERIC
+*/
+.if !SEPPARAMDB 
+? setenv SEPPARAMDB septools 
+<<
+environment variable was defined
+>>
+.endif 
+? destroydb SEPPARAMDB 
+<<
+Destroying database 'septools' . . .
+ 
+E_US0003 User does not have permission to access this database.
+    (Mon Aug 23 13:19:45 1993)
+Destruction of database 'septools' abnormally terminated. 
+>>
+<<
+Destroying database 'septools' . . .
+ 
+E_US0010 Database does not exist.
+    (Mon Aug 23 13:52:20 1993)
+Destruction of database 'septools' abnormally terminated. 
+>>
+<<
+Destroying database 'septools' . . .
+ 
+
+Destruction of database 'septools' completed successfully.
+ 
+>>
+<<
+E_LQ0001 Failed to connect to DBMS session.
+E_LC0001 GCA protocol service (GCA_REQUEST) failure.
+    Internal service status E_GC0139 -- No INGRES DBMS servers (for the
+    specified database) are running in the target installation..
+Destruction of database 'septools' abnormally terminated. 
+>> ABORT
+? qasetuser testenv destroydb SEPPARAMDB 
+<<
+~
+>>
+? qasetuser testenv createdb SEPPARAMDB 
+<<
+Creating database 'septools' . . .
+ 
+  Creating DBMS System Catalogs . . . 
+  Modifying DBMS System Catalogs . . . 
+  Creating Standard Catalog Interface . . . 
+  Creating Front-end System Catalogs . . . 
+
+Creation of database 'septools' completed successfully.
+ 
+>>
+<<
+Creating database 'septools' . . .
+ 
+E_LQ0001 Failed to connect to DBMS session.
+E_LC0001 GCA protocol service (GCA_REQUEST) failure.
+    Internal service status E_GC0139 -- No INGRES DBMS servers (for the
+    specified database) are running in the target installation..
+
+Creation of database 'septools' abnormally terminated. 
+>> ABORT
+.if VMS 
+? fill donjt.osq 
+!!
+/*
+**  Frame:         donj_test
+**  Form:          donj_test
+**  Description:   donj's test application
+**
+**  Source File:   donj_test.osq
+**  Frame Type:    Menu
+**  Template File: ntmenu.tf, Version: 1.2
+*/
+INITIALIZE (
+
+    /* working variables needed by generated code */
+    IIobjname   = CHAR(32) NOT NULL,    /* Holds an object name */
+    IIchoice    = VARCHAR(80),          /* Menu item chosen */
+    IIfound     = INTEGER(4),           /* Was the chosen Menu item found */
+    IIint       = INTEGER(4)            /* General purpose integer */
+) =
+BEGIN
+    IIretval = 1;       /* Success. This built-in global is used for
+                        ** communication between frames.
+                        */
+    SET_FORMS FRS (VALIDATE(NEXTFIELD) = 1, VALIDATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(NEXTFIELD) = 1, ACTIVATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(MENUITEM) = 1,  ACTIVATE(KEYS) = 1,
+        GETMESSAGES = 0);
+
+    INITTABLE iitf READ;
+END
+
+'Select' (VALIDATE = 1, ACTIVATE = 1,
+         EXPLANATION = 'Select a command'),
+         KEY FRSKEY4 (VALIDATE = 1, ACTIVATE = 1) =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF (IIint != 1 OR IIobjname != 'iitf') THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'You can only "Select" when your cursor is in the' +
+                ' table field with the commands.'
+        WITH STYLE = POPUP;
+        RESUME;
+    ENDIF;
+    
+    INQUIRE_FORMS TABLE '' (IIint = DATAROWS(iitf));
+    IF (IIint = 0) THEN
+        RESUME;        /* No commands in tablefield */
+    ENDIF;
+
+    IIfound = 0;
+    IIchoice = iitf[].command;
+
+    IF (IIfound = 0) THEN
+        IF (IIfound = 0) THEN
+            MESSAGE '"' + IIchoice + '" is an unrecognized command.'
+            WITH STYLE = POPUP;
+	ENDIF;
+    ENDIF;
+
+    IF ((IIretval = 2) AND
+        (ii_frame_name('current') <> ii_frame_name('entry'))) THEN
+        /* Return to top (this is not the start frame) */
+         RETURN ;
+    ELSE
+        IIretval = 1;   /* restore default value */
+    ENDIF;
+END
+
+KEY FRSKEY7 (EXPLANATION = 'Search table field for a specified value') =
+BEGIN
+    IIint = CALLPROC find_record();
+END
+
+KEY FRSKEY5 (EXPLANATION = 'Scroll to top of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field'
+              + ' before selecting "Top".'
+              WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO 1;
+    ENDIF;
+END
+
+KEY FRSKEY6 (EXPLANATION = 'Scroll to bottom of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field before'
+          + ' selecting "Bottom".'
+          WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO END;
+    ENDIF;
+END
+
+'Help' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Display help for this frame'),
+        KEY FRSKEY1 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    HELPFILE 'donj''s test application'
+    'USR_SWIFT:[DONJ]donj_test.hlp';
+END
+
+'End' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Return to previous frame'),
+        KEY FRSKEY3 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    RETURN  ;
+END
+!!
+.else 
+? fill donjt.osq 
+!!
+/*
+**  Frame:         donj_test
+**  Form:          donj_test
+**  Description:   donj's test application
+**
+**  Source File:   donj_test.osq
+**  Frame Type:    Menu
+**  Template File: ntmenu.tf, Version: 1.2
+*/
+INITIALIZE (
+
+    /* working variables needed by generated code */
+    IIobjname   = CHAR(32) NOT NULL,    /* Holds an object name */
+    IIchoice    = VARCHAR(80),          /* Menu item chosen */
+    IIfound     = INTEGER(4),           /* Was the chosen Menu item found */
+    IIint       = INTEGER(4)            /* General purpose integer */
+) =
+BEGIN
+    IIretval = 1;       /* Success. This built-in global is used for
+                        ** communication between frames.
+                        */
+    SET_FORMS FRS (VALIDATE(NEXTFIELD) = 1, VALIDATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(NEXTFIELD) = 1, ACTIVATE(PREVIOUSFIELD) = 1,
+        ACTIVATE(MENUITEM) = 1,  ACTIVATE(KEYS) = 1,
+        GETMESSAGES = 0);
+
+    INITTABLE iitf READ;
+END
+
+'Select' (VALIDATE = 1, ACTIVATE = 1,
+         EXPLANATION = 'Select a command'),
+         KEY FRSKEY4 (VALIDATE = 1, ACTIVATE = 1) =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF (IIint != 1 OR IIobjname != 'iitf') THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'You can only "Select" when your cursor is in the' +
+                ' table field with the commands.'
+        WITH STYLE = POPUP;
+        RESUME;
+    ENDIF;
+
+    INQUIRE_FORMS TABLE '' (IIint = DATAROWS(iitf));
+    IF (IIint = 0) THEN
+        RESUME;        /* No commands in tablefield */
+    ENDIF;
+
+    IIfound = 0;
+    IIchoice = iitf[].command;
+
+    IF (IIfound = 0) THEN
+        IF (IIfound = 0) THEN
+            MESSAGE '"' + IIchoice + '" is an unrecognized command.'
+            WITH STYLE = POPUP;
+        ENDIF;
+    ENDIF;
+
+    IF ((IIretval = 2) AND
+        (ii_frame_name('current') <> ii_frame_name('entry'))) THEN
+        /* Return to top (this is not the start frame) */
+         RETURN ;
+    ELSE
+        IIretval = 1;   /* restore default value */
+    ENDIF;
+END
+
+KEY FRSKEY7 (EXPLANATION = 'Search table field for a specified value') =
+BEGIN
+    IIint = CALLPROC find_record();
+END
+
+KEY FRSKEY5 (EXPLANATION = 'Scroll to top of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field'
+              + ' before selecting "Top".'
+              WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO 1;
+    ENDIF;
+END
+
+KEY FRSKEY6 (EXPLANATION = 'Scroll to bottom of table field') =
+BEGIN
+    INQUIRE_FORMS FIELD '' (IIobjname = 'NAME', IIint = TABLE);
+    IF IIint = 0 THEN
+        CALLPROC beep();    /* 4gl built-in procedure */
+        MESSAGE 'Your cursor must be in a table field before'
+          + ' selecting "Bottom".'
+          WITH STYLE = POPUP ;
+    ELSE
+        SCROLL :IIobjname TO END;
+    ENDIF;
+END
+
+'Help' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Display help for this frame'),
+        KEY FRSKEY1 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    HELPFILE 'donj''s test application'
+    './donj_test.hlp';
+END
+
+'End' (VALIDATE = 0, ACTIVATE = 0,
+        EXPLANATION = 'Return to previous frame'),
+        KEY FRSKEY3 (VALIDATE = 0, ACTIVATE = 0) =
+BEGIN
+    RETURN  ;
+END
+!!
+.endif 
+? qasetuserfe testenv vision -e SEPPARAMDB 
+<<
+
+%%     
+%% INGRES Vision -- Copyright (c) 1982, 1991 Ingres Corporation
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+>>
+<< IF (NT_GENERIC) 
+
+%%     
+%% INGRES Vision Copyright (c) 1982, 1991 Computer Associates Intl, Inc.
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+>>
+^^ `ESC'
+<<
+
+%% MENU KEY selected
+>>
+^^ create`CR'donj_test`TAB'donj's test 4gl application`ESC'
+<<
+
+%% MENU RESPONSE: Create
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "Create"
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: _                                        Created: 12-dec-1991 18:59:55   |
+|                                                                                |
+| Owner: testenv                                Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: ING_SRC:[TESTTOOL.SEP]                                       |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% CHANGED FIELD Name:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: donj_test_                               Created: 12-dec-1991 18:59:55   |
+|                                                                                |
+| Owner: testenv                                Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: ING_SRC:[TESTTOOL.SEP]                                       |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: donj_test                               Created: 12-dec-1991 18:59:55   |
+|                                                                                |
+| Owner: testenv                                Modified:                        |
+|                                                                                |
+| Short Remark: _                                                                 |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: ING_SRC:[TESTTOOL.SEP]                                       |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+
+%% CHANGED FIELD Short Remark:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: donj_test                               Created: 12-dec-1991 18:59:55   |
+|                                                                                |
+| Owner: testenv                                Modified:                        |
+|                                                                                |
+| Short Remark: donj's test 4gl application_                                      |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: ING_SRC:[TESTTOOL.SEP]                                       |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: Create
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "Create"
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: _                                        Created: 01-feb-1996 04:09:43   |
+|                                                                                |
+| Owner: testenv                                Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: D:\USERS\DEFAULT\ingres\parmi04\vision                       |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|                                                                                |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% CHANGED FIELD Name:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: donj_test_                               Created: 01-feb-1996 04:09:43   |
+|                                                                                |
+| Owner: testenv                                Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: D:\USERS\DEFAULT\ingres\parmi04\vision                       |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|                                                                                |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: donj_test                               Created: 01-feb-1996 04:09:43   |
+|                                                                                |
+| Owner: testenv                                Modified:                        |
+|                                                                                |
+| Short Remark: _                                                                 |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: D:\USERS\DEFAULT\ingres\parmi04\vision                       |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|                                                                                |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+
+%% CHANGED FIELD Short Remark:
+##
+__________________________________________________________________________________
+|Vision - Create an Application                                                  |
+|                                                                                |
+|  Name: donj_test                               Created: 01-feb-1996 04:09:43   |
+|                                                                                |
+| Owner: testenv                                Modified:                        |
+|                                                                                |
+| Short Remark: donj's test 4gl application_                                      |
+|     Language: SQL            Style for new Menu Frames: tablefield             |
+|                                                                                |
+| Source Directory: D:\USERS\DEFAULT\ingres\parmi04\vision                       |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|                                                                                |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+>>
+^^ OK`CR'edit`CR's`CR'
+/*
+This is a Comment.
+*/
+<<
+
+%% MENU RESPONSE: OK
+%% MENU:   OK  Cancel  ListChoices  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "OK"
+
+%% Saving Application 'donj_test' . . .
+%% Retrieving Application catalogs . . .
+%% Saving Menu Frame 'donj_test' . . .
+%% Saving Application 'donj_test' . . .
+%% Retrieving Application catalogs . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +-----------New+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+_                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: Edit
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `2' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `2' is "Edit"
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +-----------New+                                   |
+|  +------------------+       |  donj_test   |                                   |
+|  |Frame Edit Options|       +--------<Menu>+                                   |
+|  |------------------|                                                          |
+|  |_Data Entry Form   |                                                          |
+|  |Local Variables   |                                                          |
+|  |Local Procedures  |                                                          |
+|  |Global Components |                                                          |
+|  |Escape Code       |                                                          |
+|  |Source Code File  |                                                          |
+|  |Errors            |                                                          |
+|  +------------------+                                                          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +-----------New+                                   |
+|  +------------------+       |  donj_test   |                                   |
+|  |Frame Edit Options|       +--------<Menu>+                                   |
+|  |------------------|                                                          |
+|  |Data Entry Form   |                                                          |
+|  |Local Variables   |                                                          |
+|  |Local Procedures  |                                                          |
+|  |Global Components |                                                          |
+|  |Escape Code       |                                                          |
+|  |_Source Code File  |                                                          |
+|  |Errors            |                                                          |
+|  +------------------+                                                          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% Creating form for 'donj_test' . . .
+%% Generating 4GL code for 'donj_teConnecting to SEP module
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: OK
+%% MENU:   OK  Cancel  ListChoices  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "OK"
+
+%% Saving Application 'donj_test' . . .
+%% Retrieving Application catalogs . . .
+%% Saving Menu Frame 'donj_test' . . .
+%% Saving Application 'donj_test' . . .
+%% Retrieving Application catalogs . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +-----------New+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+_                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: Edit
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `2' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `2' is "Edit"
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +-----------New+                                   |
+|  +------------------+       |  donj_test   |                                   |
+|  |Frame Edit Options|       +--------<Menu>+                                   |
+|  |------------------|                                                          |
+|  |_Data Entry Form   |                                                          |
+|  |Local Variables   |                                                          |
+|  |Local Procedures  |                                                          |
+|  |Global Components |                                                          |
+|  |Escape Code       |                                                          |
+|  |Source Code File  |                                                          |
+|  |Errors            |                                                          |
+|  +------------------+                                                          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +-----------New+                                   |
+|  +------------------+       |  donj_test   |                                   |
+|  |Frame Edit Options|       +--------<Menu>+                                   |
+|  |------------------|                                                          |
+|  |Data Entry Form   |                                                          |
+|  |Local Variables   |                                                          |
+|  |Local Procedures  |                                                          |
+|  |Global Components |                                                          |
+|  |Escape Code       |                                                          |
+|  |_Source Code File  |                                                          |
+|  |Errors            |                                                          |
+|  +------------------+                                                          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+Connecting to SEP module
+>>
+^^ donjt.osq`CR'y`CR'
+<<
+Enter name of file to be included: 
+source file was copied into target file
+st' . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+_                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+>>
+<< IF (NT_GENERIC) 
+Enter name of file to be included: 
+source file was copied into target file
+
+%% Creating form for 'donj_test' . . .
+%% Generating 4GL code for 'donj_test' . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+_                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+>>
+^^ compile`CR'y`CR'destroy`CR'`CR'go`CR'
+<<
+
+%% MENU RESPONSE: Compile
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `3' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `3' is "Compile"
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|            +------------------------------------------------------+            |
+|            |Frame 'donj_test' has been customized by having       |            |
+|            |its 4GL source file edited. Since 'donj_test' has been|            |
+|            |customized, 4GL code for it cannot be regenerated     |            |
+|            |without losing those customizations.                  |            |
+|            |                                                      |            |
+|            |Do you wish to keep the customizations instead of     |            |
+|            |regenerating the 4GL code?                            |            |
+|            |                                                      |            |
+|            |------------------------------------------------------|            |
+|            |_Yes              |Keep the customizations             |            |
+|            |No               |Regenerate the 4gl code             |            |
+|            +------------------------------------------------------+            |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|            +------------------------------------------------------+            |
+|            |Frame 'donj_test' has been customized by having       |            |
+|            |its 4GL source file edited. Since 'donj_test' has been|            |
+|            |customized, 4GL code for it cannot be regenerated     |            |
+|            |without losing those customizations.                  |            |
+|            |                                                      |            |
+|            |Do you wish to keep the customizations instead of     |            |
+|            |regenerating the 4GL code?                            |            |
+|            |                                                      |            |
+|            |------------------------------------------------------|            |
+|            |_Yes              |Keep the customizations             |            |
+|            |No               |Regenerate the 4gl code             |            |
+|            +------------------------------------------------------+            |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% Compiling 'donj_test.osq' . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|            _                                                                    |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: Destroy
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `1' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `1' is "Destroy"
+
+%% 
+DISPLAYING ERROR MESSAGE VIA IIFDERROR.
+
+%% 
+SHORT ERROR MESSAGE IS:
+
+%% Can't 'Destroy' the top frame  ... 
+
+%% 
+END OF SHORT ERROR MESSAGE.
+
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >_               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: Go
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `4' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `4' is "Go"
+
+%% 
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'donj_test'                                                |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'donj_test'                                                |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'donj_test'                                                |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||Processing frame 'donj_test' . . .                                            ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'donj_test'                                                |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||Processing frame 'donj_test' . . .                                            ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                          
+%%     
+%% Fetching 'donj_test' from the database ...
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|                    donj's test 4gl application                       Menu Frame|
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |_               |                                                            | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Help  End                                                             |
+__________________________________________________________________________________
+@@
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: Compile
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `3' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `3' is "Compile"
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|            +------------------------------------------------------+            |
+|            |Frame 'donj_test' has been customized by having       |            |
+|            |its 4GL source file edited. Since 'donj_test' has been|            |
+|            |customized, 4GL code for it cannot be regenerated     |            |
+|            |without losing those customizations.                  |            |
+|            |                                                      |            |
+|            |Do you wish to keep the customizations instead of     |            |
+|            |regenerating the 4GL code?                            |            |
+|            |                                                      |            |
+|            |------------------------------------------------------|            |
+|            |_Yes              |Keep the customizations             |            |
+|            |No               |Regenerate the 4gl code             |            |
+|            +------------------------------------------------------+            |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|            +------------------------------------------------------+            |
+|            |Frame 'donj_test' has been customized by having       |            |
+|            |its 4GL source file edited. Since 'donj_test' has been|            |
+|            |customized, 4GL code for it cannot be regenerated     |            |
+|            |without losing those customizations.                  |            |
+|            |                                                      |            |
+|            |Do you wish to keep the customizations instead of     |            |
+|            |regenerating the 4GL code?                            |            |
+|            |                                                      |            |
+|            |------------------------------------------------------|            |
+|            |_Yes              |Keep the customizations             |            |
+|            |No               |Regenerate the 4gl code             |            |
+|            +------------------------------------------------------+            |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% Compiling 'donj_test.osq' . . .
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                    _            |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: Destroy
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `1' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `1' is "Destroy"
+
+%% 
+DISPLAYING ERROR MESSAGE VIA IIFDERROR.
+
+%% 
+SHORT ERROR MESSAGE IS:
+
+%% Can't 'Destroy' the top frame  ... 
+
+%% 
+END OF SHORT ERROR MESSAGE.
+
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >_               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: Go
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `4' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `4' is "Go"
+
+%% 
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'donj_test'                                                |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'donj_test'                                                |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'donj_test'                                                |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||Processing frame 'donj_test' . . .                                            ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'donj_test'                                                |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||Processing frame 'donj_test' . . .                                            ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%%     
+%% Fetching 'donj_test' from the database ...
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|                    donj's test 4gl application                       Menu Frame|
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |_               |                                                            | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Select  Help  End                                                             |
+__________________________________________________________________________________
+@@
+>>
+^^ `ESC'
+<<
+
+%% MENU KEY selected
+>>
+^^ end`CR'
+<<
+
+%% MENU RESPONSE: End
+%% MENU:   Select  Help  End
+%% MENU AT POSITION `2' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `2' is "End"
+    ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+_                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: End
+%% MENU:   Select  Help  End
+%% MENU AT POSITION `2' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `2' is "End"
+
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+_                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+>>
+^^ mor`CR'`ESC'
+<<
+
+%% MENU RESPONSE: MoreInfo
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `7' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `7' is "MoreInfo"
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - MoreInfo about a MENU Frame Definition.                                |
+|                                                                                |
+|    Frame Name: donj_test                                                       |
+|                                                                                |
+|  Short Remark: donj's test 4gl application                                     |
+|                                                                                |
+|     Form Name: _donj_test                                                       |
+|   Source File: donj_test.osq                                                   |
+|   Return Type: none                                                            |
+|                                                                                |
+|        Static: no                                                              |
+|                                                    Menu style: tablefield      |
+|                                                                                |
+|       Created: 12-dec-1991 19:02:04  Owner: testenv                            |
+|                                                                                |
+| Last Modified: 12-dec-1991 19:00:39     By: testenv                            |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Rename  LongRemark  ListChoices  Cancel  Help  End                            |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: MoreInfo
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `7' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `7' is "MoreInfo"
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|Vision - MoreInfo about a MENU Frame Definition.                                |
+|                                                                                |
+|    Frame Name: donj_test                                                       |
+|                                                                                |
+|  Short Remark: donj's test 4gl application                                     |
+|                                                                                |
+|     Form Name: _donj_test                                                       |
+|   Source File: donj_test.osq                                                   |
+|   Return Type: none                                                            |
+|                                                                                |
+|        Static: no                                                              |
+|                                                    Menu style: tablefield      |
+|                                                                                |
+|       Created: 01-feb-1996 04:10:53  Owner: testenv                            |
+|                                                                                |
+| Last Modified: 01-feb-1996 04:09:56     By: testenv                            |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Rename  LongRemark  ListChoices  Cancel  Help  End                            |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ end`CR'exit`CR'`CR'quit`CR'
+<<
+
+%% MENU RESPONSE: End
+%% MENU:   Rename  LongRemark  ListChoices  Cancel  Help  End
+%% MENU AT POSITION `5' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `5' is "End"
+
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+| _                                                                               |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: exit
+%% 
+DISPLAYING ERROR MESSAGE VIA IIFDERROR.
+
+%% 
+SHORT ERROR MESSAGE IS:
+
+%% Input "exit" is not a correct prefix.  The current ... 
+
+%% 
+END OF SHORT ERROR MESSAGE.
+
+%% MENU RESPONSE: Quit
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `12' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `12' is "Quit"
+
+%% Exiting application . . .
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: End
+%% MENU:   Rename  LongRemark  ListChoices  Cancel  Help  End
+%% MENU AT POSITION `5' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `5' is "End"
+
+%% REDRAWING FRAME
+##
+__________________________________________________________________________________
+|Vision - Application Flow Diagram                                               |
+|Editing: donj_test           +--------Custom+                                   |
+|                             |  donj_test   |                                   |
+|                             +--------<Menu>+                                   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                             _   |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU RESPONSE: exit
+%% 
+DISPLAYING ERROR MESSAGE VIA IIFDERROR.
+
+%% 
+SHORT ERROR MESSAGE IS:
+
+%% Input "exit" is not a correct prefix.  The current ... 
+
+%% 
+END OF SHORT ERROR MESSAGE.
+
+%% MENU RESPONSE: Quit
+%% MENU:   Create  Destroy  Edit  Compile  Go  Insert  Remove  MoreInfo  >
+%% MENU AT POSITION `12' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `12' is "Quit"
+
+%% Exiting application . . .
+>>
+? qasetuserfe testenv vision SEPPARAMDB 
+<<
+
+%%     
+%% INGRES Vision -- Copyright (c) 1982, 1991 Ingres Corporation
+%% Retrieving Application catalogs . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_donj_test               |testenv |donj's test 4gl application               | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+>>
+<< IF (NT_GENERIC) 
+
+%%     
+%% INGRES Vision Copyright (c) 1982, 1991 Computer Associates Intl, Inc.
+%% Retrieving Application catalogs . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_donj_test               |testenv |donj's test 4gl application               | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+>>
+^^ `ESC'
+<<
+
+%% MENU KEY selected
+>>
+^^ destroy`CR'y`CR'`ESC'
+<<
+
+%% MENU RESPONSE: Destroy
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `1' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `1' is "Destroy"
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |donj_test               |testenv |donj's test 4gl application               | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                 +---------------------------------------+                  | |
+| |                 |                                       |                  | |
+| |                 |Really destroy Application 'donj_test'?|                  | |
+| |                 |                                       |                  | |
+| |                 |---------------------------------------|                  | |
+| |                 |_No      |Do not destroy application    |                  | |
+| |                 |Yes     |Destroy application           |                  | |
+| |                 +---------------------------------------+                  | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |donj_test               |testenv |donj's test 4gl application               | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                 +---------------------------------------+                  | |
+| |                 |                                       |                  | |
+| |                 |Really destroy Application 'donj_test'?|                  | |
+| |                 |                                       |                  | |
+| |                 |---------------------------------------|                  | |
+| |                 |No      |Do not destroy application    |                  | |
+| |                 |_Yes     |Destroy application           |                  | |
+| |                 +---------------------------------------+                  | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% Destroying Application 'donj_test' . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: Destroy
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `1' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `1' is "Destroy"
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |donj_test               |testenv |donj's test 4gl application               | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                 +---------------------------------------+                  | |
+| |                 |                                       |                  | |
+| |                 |Really destroy Application 'donj_test'?|                  | |
+| |                 |                                       |                  | |
+| |                 |---------------------------------------|                  | |
+| |                 |_No      |Do not destroy application    |                  | |
+| |                 |Yes     |Destroy application           |                  | |
+| |                 +---------------------------------------+                  | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |donj_test               |testenv |donj's test 4gl application               | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                 +---------------------------------------+                  | |
+| |                 |                                       |                  | |
+| |                 |Really destroy Application 'donj_test'?|                  | |
+| |                 |                                       |                  | |
+| |                 |---------------------------------------|                  | |
+| |                 |No      |Do not destroy application    |                  | |
+| |                 |_Yes     |Destroy application           |                  | |
+| |                 +---------------------------------------+                  | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Select  Cancel  Help                                                          |
+__________________________________________________________________________________
+@@
+
+%% Destroying Application 'donj_test' . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|Vision - Applications Catalog                                                   |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ quit`CR'
+<<
+
+%% MENU RESPONSE: Quit
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `9' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `9' is "Quit"
+>>
+? delete donj_test.osq 
+<<
+file was deleted
+>>
+? delete donj_test.hlp 
+<<
+file was deleted
+>>
+? sleep 2 
+<<
+>>
+? qasetuser pvusr1 destroydb SEPPARAMDB 
+<<
+Destroying database 'septools' . . .
+
+E_US0003 User does not have permission to access this database.
+    (Mon Aug 23 13:19:45 1993)
+Destruction of database 'septools' abnormally terminated.
+>>
+? qasetuser testenv destroydb SEPPARAMDB 
+<<
+Destroying database 'septools' . . .
+ 
+
+Destruction of database 'septools' completed successfully.
+ 
+>>
+? createdb SEPPARAMDB 
+/*
+	Recreate the original database.
+*/
+<<
+Creating database 'septools' . . .
+ 
+  Creating DBMS System Catalogs . . . 
+  Modifying DBMS System Catalogs . . . 
+  Creating Standard Catalog Interface . . . 
+  Creating Front-end System Catalogs . . . 
+
+Creation of database 'septools' completed successfully.
+ 
+>>
+? fill xbasis1.sql 
+!!
+drop table qebldg;\g
+drop table qedept;\g
+drop table qeemp;\g
+drop table qeparts;\g
+drop table qesalhist;\g
+drop table qereview;\g
+drop table qesuppliers;\g
+commit;\g
+!!
+? fill xbasis2.sql 
+!!
+create table qebldg (
+	qebldg		char(2),
+	qest_adr	char(30),
+	qecity		char(15),
+	qestate		char(2),
+	qezip		char(5));
+\g
+create table qedept (
+	qedname		char(8),
+	qediv		char(3),
+	qesales		float,
+	qebldg		char(2),
+	qefloor		smallint,
+	qenum_emp	smallint);
+\g
+create table qeemp (
+	qename		char(10),
+	qesalary	float,
+	qedept		char(8),
+	qediv		char(3),
+	qemgr		char(10),
+	qebirthdate	char(25),
+	qenum_dep	smallint);
+\g
+create table qesalhist (
+	qename		char(10),
+	qedate		char(25),
+	qesalary	float);
+\g
+create table qereview (
+	qename char(10),
+	qerev_date char(25),
+	qestrength char(250),
+	qeweakness char(250),
+	qegoals char(250));
+\g
+create table qesuppliers (
+	qesno		char(5),
+	qesname		char(20),
+	qestatus	smallint,
+	qecity		char(15));
+\g
+create view qelowpay (qename, qesalary)
+	as select qename, qesalary
+	from qeemp
+	where qesalary < 30000;
+\g
+create view qeempinfo (qename, qedept, qediv, qebldg, qefloor)
+	as select qeemp.qename, qeemp.qedept, qeemp.qediv,
+		qedept.qebldg, qedept.qefloor
+	from qeemp, qedept
+	where qeemp.qedept = qedept.qedname and qeemp.qediv = qedept.qediv;
+\g
+create view qeyoungemp (qename, qesalary)
+	as select qename, qesalary
+	from qeemp
+	where qebirthdate > '1/1/55';
+\g
+create table qeparts (
+	qepno		char(6),
+	qepname	        char(20),
+	qecolor		char(6),
+	qeweight	smallint,
+	qecity		char(15));
+\g
+!!
+? fill xbasis3.sql 
+!!
+insert into qebldg values
+('A', '1000 University Ave   ' ,'Berkeley  ',  'CA','94000');\g
+insert into qebldg values
+('B', '1800 Shattuck Ave     ' ,'Berkeley  ',  'CA','94100');\g
+insert into qebldg values
+('C', '900 Lake Shore Blvd   ' ,'Chicago   ',  'IL','60080');\g
+insert into qebldg values
+('D', '24130 Pennsylvania Ave' ,'Washington',  'DC','20198');\g
+insert into qebldg values
+('E', '42318 Woodsay Blvd    ' ,'Houston   ',  'TX','77009');\g
+insert into qebldg values
+('F', '1585 Eye St           ' ,'Washington',  'DC','20199');\g
+
+insert into qedept values
+('admin   ','NW',                 0.00,'C',  2,     4);\g
+insert into qedept values
+('market  ','NW',              9200.00,'A',  1,     2);\g
+insert into qedept values
+('sales   ','NC',            120000.00,'A',  2,     1);\g
+insert into qedept values
+('sales   ','NE',                 0.00,'D', 18,     4);\g
+insert into qedept values
+('sales   ','NW',            200000.00,'A',  2,     1);\g
+insert into qedept values
+('sales   ','SC',             95000.00,'E',  1,     1);\g
+insert into qedept values
+('sales   ','SE',            175000.00,'D', 18,     1);\g
+insert into qedept values
+('tech sup','NC',              5000.00,'C',  2,     3);\g
+insert into qedept values
+('tech sup','NE',             20000.00,'D', 17,     2);\g
+insert into qedept values
+('tech sup','NW',                 0.00,'B',  1,     1);\g
+insert into qedept values
+('tech sup','SE',                 0.00,'D', 19,     1);\g
+
+insert into qeemp values
+('Aitken    ',  50000.00,'sales   ','NE','Verducci', '12-mar-1947',   2);\g
+insert into qeemp values
+('Blumberg  ',  32000.00,'sales   ','SC','Clark   ', ' 6-dec-1952',   2);\g
+insert into qeemp values
+('Brodie    ',  40000.00,'sales   ','NC','Clark   ', ' 1-feb-1948',   2);\g
+insert into qeemp values
+('Cameron   ',  35000.00,'tech sup','SE','Shigio  ', '15-aug-1960',   0);\g
+insert into qeemp values
+('Clark     ',  40000.00,'sales   ','NC','Verducci', '18-nov-1949',   1);\g
+insert into qeemp values
+('Curan     ',  30000.00,'tech sup','NW','Shigio  ', '20-aug-1959',   0);\g
+insert into qeemp values
+('Curry     ',  32000.00,'tech sup','NW','Shigio  ', '30-nov-1955',   3);\g
+insert into qeemp values
+('Giller    ',  46000.00,'sales   ','NC','Clark   ', ' 9-jun-1953',   1);\g
+insert into qeemp values
+('Gordon    ',  27000.00,'tech sup','NC','Shigio  ', '23-may-1963',   0);\g
+insert into qeemp values
+('Green     ',  26000.00,'market  ','NW','McTigue ', '19-dec-1961',   0);\g
+insert into qeemp values
+('Gregori   ',  31000.00,'sales   ','NW','Verducci', '21-oct-1949',   2);\g
+insert into qeemp values
+('Huber     ',  32000.00,'sales   ','NC','Clark   ', '29-jun-1951',   2);\g
+insert into qeemp values
+('Kay       ',  38000.00,'sales   ','NC','Clark   ', '12-mar-1944',   3);\g
+insert into qeemp values
+('Kreseski  ',  24000.00,'tech sup','NC','Shigio  ', '11-sep-1955',   0);\g
+insert into qeemp values
+('Mandic    ',  43000.00,'sales   ','SE','Verducci', '10-jul-1964',   0);\g
+insert into qeemp values
+('McShane   ',  22000.00,'admin   ','NW','Clark   ', ' 3-mar-1943',   0);\g
+insert into qeemp values
+('McTigue   ',  41000.00,'sales   ','NW','Verducci', ' 9-apr-1953',   1);\g
+insert into qeemp values
+('Ming      ',  22000.00,'tech sup','SE','Shigio  ', ' 4-may-1956',   1);\g
+insert into qeemp values
+('Ramos     ',  30000.00,'tech sup','NW','Shigio  ', '21-jan-1941',   0);\g
+insert into qeemp values
+('Robinson  ',  80000.00,'sales   ','NE','Verducci', '20-nov-1952',   1);\g
+insert into qeemp values
+('Sabel     ',  21000.00,'tech sup','SE','Shigio  ', ' 8-jan-1958',   0);\g
+insert into qeemp values
+('Saxena    ',  22000.00,'tech sup','NC','Shigio  ', ' 8-may-1950',   0);\g
+insert into qeemp values
+('Shigio    ',  28000.00,'sales   ','SE','Verducci', ' 9-jul-1948',   3);\g
+insert into qeemp values
+('Stannich  ',  33000.00,'market  ','NW','McTigue ', '13-dec-1961',   0);\g
+insert into qeemp values
+('Stein     ',  40000.00,'sales   ','NE','Verducci', '25-dec-1952',   1);\g
+insert into qeemp values
+('Stover    ',  35000.00,'admin   ','NW','Clark   ', ' 3-oct-1940',   4);\g
+insert into qeemp values
+('Sullivan  ',  35000.00,'tech sup','NW','Shigio  ', '10-oct-1960',   1);\g
+insert into qeemp values
+('Verducci  ',  55000.00,'admin   ','NW','        ', '25-dec-1958',   2);\g
+insert into qeemp values
+('Zimmerman ',  25000.00,'tech sup','NE','Shigio  ', '28-aug-1962',   0);\g
+
+insert into qeparts values ('p1','nut','red',12,'London');
+insert into qeparts values ('p2','bolt','green',17,'Paris');
+insert into qeparts values ('p3','screw','blue',17,'Rome');
+insert into qeparts values ('p4','screw','red',14,'London');
+insert into qeparts values ('p5','cam','blue',12,'Paris');
+insert into qeparts values ('p6','cog','red',19,'London');
+\g
+
+insert into qereview values 
+('Ming','12-jun-1983','Shows mastery of current material and willingness to learn ne-
+w material.  Responds enthusiastically to customer''s questions.  Has been helpful t-
+raining less knowledgeable staff.','Has difficulty articulating complicated details -
+to unsophisticated customers.','Establish formal training of new staff and take resp-
+onsibility for their progress gaining mastery of new material.');\g 
+insert into qereview values 
+('Ramos','9-apr-1983','Seems willing to learn new material.  Shows eagerness to lear-
+n several new programming languages to broaden the base of customers to which she ca-
+n respond.  Has progressed greatly in amount of material she has mastered s','Has di-
+fficulty arriving on time for work.','Learn two new programming languages by next re-
+view in six months.');\g
+
+insert into qesuppliers values('s1','Smith',20,'London');
+insert into qesuppliers values ('s2','Jones',10,'Paris');
+insert into qesuppliers values ('s3','Blake',30,'Paris');
+insert into qesuppliers values ('s4','Clark',20,'London');
+insert into qesuppliers values ('s5','Adams',30,'Athens');
+\g
+!!
+? sql -s SEPPARAMDB 
+<<
+~
+>>
+* \i xbasis1.sql
+<<
+E_US0AC1 DROP: 'qebldg' does not exist or is not owned by you.
+    (Tue May  7 14:51:25 1991)
+
+E_US0AC1 DROP: 'qedept' does not exist or is not owned by you.
+    (Tue May  7 14:51:25 1991)
+
+E_US0AC1 DROP: 'qeemp' does not exist or is not owned by you.
+    (Tue May  7 14:51:25 1991)
+
+E_US0AC1 DROP: 'qeparts' does not exist or is not owned by you.
+    (Tue May  7 14:51:25 1991)
+
+E_US0AC1 DROP: 'qesalhist' does not exist or is not owned by you.
+    (Tue May  7 14:51:25 1991)
+
+E_US0AC1 DROP: 'qereview' does not exist or is not owned by you.
+    (Tue May  7 14:51:25 1991)
+
+E_US0AC1 DROP: 'qesuppliers' does not exist or is not owned by you.
+    (Tue May  7 14:51:25 1991)
+
+>>
+* \i xbasis2.sql
+<<
+  
+>>
+* \i xbasis3.sql
+<<
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+>>
+* select count(*) as qedept from qedept;\g;
+<<
+
++-------------+
+|qedept       |
++-------------+
+|           11|
++-------------+
+(1 row)
+>>
+* select count(*) as qeemp from qeemp;\g;
+<<
+
++-------------+
+|qeemp        |
++-------------+
+|           29|
++-------------+
+(1 row)
+>>
+* select count(*) as qeparts from qeparts;\g;
+<<
+
++-------------+
+|qeparts      |
++-------------+
+|            6|
++-------------+
+(1 row)
+>>
+* select count(*) as qereview from qereview;\g;
+<<
+
++-------------+
+|qereview     |
++-------------+
+|            2|
++-------------+
+(1 row)
+>>
+* select count(*) as qesuppliers from qesuppliers;\g;
+<<
+
++-------------+
+|qesuppliers  |
++-------------+
+|            5|
++-------------+
+(1 row)
+>>
+* \q;
+<<
+>>
+
+
+Ending at: Thu Feb 01 04:13:17 1996

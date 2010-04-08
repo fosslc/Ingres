@@ -1,0 +1,21 @@
+#
+# Jamfile file for front!misc!convtouni
+#
+# History:
+#	24-jan-2005 (abbjo03)
+#	    Unicode conversion is not yet delivered on VMS.
+
+SubDir ING_SRC front misc convtouni ;
+
+IISUBSYS front misc convtouni ;
+
+if ! $(VMS)
+{
+IIBINEXE convtouni : ctoumain.sc ;
+IINEEDLIBS convtouni :  XFERDBLIB GNLIB SHFRAMELIB
+	SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+IINEEDLIBSW convtouni : SHADFLIB ;
+IIUNDEFS convtouni : II_copyright malloc ;
+
+IIMSGHDR erctou.msg ;
+}

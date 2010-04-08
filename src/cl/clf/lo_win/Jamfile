@@ -1,0 +1,44 @@
+#
+# Jamfile file for cl!clf!lo_win
+#
+
+SubDir ING_SRC cl clf lo_win ;
+
+IISUBSYS cl clf lo_win ;
+
+
+IILIBRARY COMPATLIB : lowhat.c
+	lowcard.c
+	lovalid.c
+	louniq.c
+	lotos.c
+	lostfile.c
+	losize.c
+	lorename.c
+	loqueue.c
+	lopurge.c
+	lolist.c
+	lolast.c
+	loisfull.c
+	loisdir.c
+	loingpath.c
+	loinfo.c
+	logtfile.c
+	logt.c
+	lofstfile.c
+	lofroms.c
+	lofaddpath.c
+	loexist.c
+	loerrno.c
+	loendlist.c
+	lodetail.c
+	lodelete.c
+	lodbname.c
+	locurnode.c
+	locreate.c
+	locopy.c
+	locompos.c
+	lochange.c
+	loaddpath.c 
+	lotoes.c ;
+

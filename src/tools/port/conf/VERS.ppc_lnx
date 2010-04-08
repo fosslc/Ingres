@@ -1,0 +1,19 @@
+# PowerPC hardware (eg mac or PS/3) running Linux.
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+#set: config ppc_lnx
+#set: option libc6
+#set: option DBL
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;		#set: option SVR_AR
+BUILD_ICE = "" ;		##set: option BUILD_ICE (off)
+
+PLATFORM_JAMDEFS = ppc_lnx ;

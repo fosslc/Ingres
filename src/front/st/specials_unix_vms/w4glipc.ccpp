@@ -1,0 +1,32 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for w4glipcdemo
+*/
+
+/*
+** History
+**	13-jul-1993 (dianeh)
+**		Modified to generic.
+*/
+
+/*
+** Default directory: ingres/sig/w4glipc
+*/
+
+PART   w4glipcdemo
+
+# ifdef VMS
+   BUILD_DIR (sig_path)!w4glipc!w4glipc
+# else /* VMS */
+   BUILD_DIR (ING_BUILD)!sig!w4glipc
+# endif /* VMS */
+   DIRECTORY ingres!sig!w4glipc
+      FILE ipcdemo.app
+      FILE ipcdemo.sql
+      FILE read.me
+      FILE xdbevent.sc
+# ifdef VMS
+      FILE xdbevent.opt
+# endif /* VMS */

@@ -1,0 +1,107 @@
+/*
+	Test Name: zaa21.sep
+	Time: Tue Dec 14 15:56:40 1993
+	User Name: ingres
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename:
+	Purpose	:
+	Input Files  :
+	Output Files :
+	Database     :
+	Tables       :
+	Synopsis     :
+
+ History: 14-Dec-1993	(Author)	Created
+          31-Jan-1996	(somsa01)	Added NT_GENERIC stuff.
+*/
+.if QUIT_CMD = "" 
+? setenv QUIT_CMD "\q" 
+<<
+environment variable was defined
+>>
+.endif 
+.if !SEPPARAMDB 
+? setenv SEPPARAMDB septools 
+<<
+environment variable was defined
+>>
+.endif 
+? sql SEPPARAMDB 
+<<
+INGRES SunOS Version 6.5/00 (su4.u42/00) login Tue Dec 14 15:57:30 1993
+continue
+* 
+>>
+<< IF (NT_GENERIC) 
+OpenIngres Microsoft Windows NT Version OpING 1.2/00 (int.wnt/02) login
+Wed Jan 31 14:01:15 1996
+continue
+* 
+>>
+* @VALUE(QUIT_CMD) 
+<<
+INGRES Version 6.5/00 (su4.u42/00) logout
+Tue Dec 14 15:59:48 1993
+>>
+<< IF (NT_GENERIC) 
+OpenIngres Version OpING 1.2/00 (int.wnt/02) logout
+Wed Jan 31 14:01:32 1996
+>>
+? echo @VALUE(STATUS) @VALUE(DIFFS) 
+<<
+0 0
+>>
+? echo @VALUE(DIFFS) 
+<<
+0
+>>
+? echo @VALUE(NT_GENERIC) 
+<< if NT_GENERIC
+TRUE
+>>
+<<
+FALSE
+>>
+? echo @VALUE(UNIX) 
+<< if UNIX
+TRUE
+>>
+<<
+FALSE
+>>
+? echo @VALUE(VMS) 
+<< if VMS
+TRUE
+>>
+<<
+FALSE
+>>
+? echo @VALUE(ALPHA) 
+<< if ALPHA
+TRUE
+>>
+<<
+FALSE
+>>
+? echo @VALUE(MPE) 
+<< if MPE
+TRUE
+>>
+<<
+FALSE
+>>
+? echo @VALUE(ING_SRC) 
+<< IF (UNIX) 
+/taco/ingres65/src/65/02
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+D:\sep\wnt
+>>
+
+
+Ending at: Wed Jan 31 14:02:11 1996

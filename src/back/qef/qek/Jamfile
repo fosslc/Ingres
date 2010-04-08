@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!qef!qek
+#
+
+SubDir ING_SRC back qef qek ;
+
+IISUBSYS back qef qek ;
+
+
+IILIBRARY QEFLIB : qekcon.roc ;
+

@@ -1,0 +1,22 @@
+STACK = 200
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libscf.olb/library, -
+INGLIB:libqef.olb/library, -
+INGLIB:libdmf.olb/library, -
+INGLIB:libopf.olb/library, -
+INGLIB:libpsf.olb/library, -
+INGLIB:libqsf.olb/library, -
+INGLIB:librdf.olb/library, -
+INGLIB:libgwf.olb/include=(gwfcall,gwferror,gwffac,gwfidx,gwfrec,gwfses,-
+                           gwftab,gwfutil,gwfxact,gwftrace,gwfdata)
+INGLIB:libgwrms.olb/library, -
+INGLIB:libsxf.olb/library, -
+INGLIB:iiclsadt.obj, -
+INGLIB:libadf.olb/library, -
+INGLIB:libulf.olb/library, -
+INGLIB:libgcf.olb/library, -
+INGLIB:libcuf.olb/library, -
+INGLIB:librqf.olb/library, -
+INGLIB:libtpf.olb/library, -
+INGLIB:libcompat.olb/library

@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  When using internal (Ingres) threads:
+
+    The quantum_size resource specifies the number of CPU milliseconds after
+    which a session may be rescheduled within DBMS servers created with
+    this definition.  Sessions may be rescheduled sooner than quantum_size
+    if they have to wait for I/O or for some shared resource.
+
+    The default of 1 second favors CPU-bound sessions.  Lower values for
+    quantum_size may cause more reschedules and overhead, but may result
+    in better responsiveness and balance between CPU-bound and I/O-bound
+    sessions.
+
+  When using operating system threads:
+
+    The quantum_size resource specifies the minimum number of CPU 
+    milliseconds between asynchronous polls to see if the front-end client
+    has sent a message (such as an abort / interrupt message).
+    Lower values for quantum_size will cause extra polling overhead,
+    but will make the server respond to external interrupts more quickly.
+
+  The default setting is 1000 milliseconds (or one (1) second).

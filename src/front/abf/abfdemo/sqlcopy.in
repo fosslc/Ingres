@@ -1,0 +1,100 @@
+
+/* Create and load the projects, tasks and emp tables. */
+
+set autocommit on \g
+
+drop table projects;
+drop table emp;
+drop table tasks;
+drop table dependents;
+\p\g
+
+create table projects(
+	project varchar(10) not null with default,
+	description varchar(22) not null with default,
+	dept varchar(8) not null with default,
+	budget money with null,
+	due_date date with null
+)
+with noduplicates
+\p\g
+copy projects(
+	project= varchar(0),
+	description= varchar(0),
+	dept= varchar(0),
+	budget= c0tab with null ('NULL'),
+	due_date= c0nl with null ('NULL'),
+	nl= d1)
+from 'projects.dat'
+\p\g
+modify projects to btree on
+	project
+\p\g
+create table tasks(
+	name varchar(20) not null not default,
+	project varchar(12) not null not default,
+	task varchar(9) not null not default,
+	hours i4 with null
+)
+with duplicates
+\p\g
+copy tasks(
+	name= varchar(0),
+	project= varchar(0),
+	task= varchar(0),
+	hours= c0nl with null ('NULL'),
+	nl= d1)
+from 'tasks.dat'
+\p\g
+modify tasks to btree on
+	name,
+	project,
+	task
+\p\g
+create table emp(
+	name varchar(20) not null not default,
+	title varchar(15) not null with default,
+	hourly_rate money not null with default,
+	manager varchar(20) with null
+)
+with noduplicates
+\p\g
+copy emp(
+	name= varchar(0),
+	title= varchar(0),
+	hourly_rate= c0tab,
+	manager= varchar(0) with null('NULL'),
+	nl= d1)
+from 'emp.dat'
+\p\g
+modify emp to btree on
+	name
+\p\g
+create table dependents(
+	name varchar(20) not null not default,
+	depname varchar(15) not null not default,
+	birth date not null not default
+)
+with noduplicates
+\p\g
+copy dependents(
+	name= varchar(0),
+	depname= varchar(0),
+	birth= c0nl,
+	nl= d1)
+from 'dependen.dat'
+\p\g
+modify dependents to btree on
+	name,
+	depname
+\p\g
+
+/* Build Views */
+create view titles as select distinct title from emp;
+\p\g
+create view managers as select distinct manager from emp;
+\p\g
+create view project_hours as select project, avg_hours=avg(hours)
+from tasks
+group by project;
+\p\g

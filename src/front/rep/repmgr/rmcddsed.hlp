@@ -1,0 +1,47 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcddsed.hlp
+/#subtopic "Consistent Distributed Data Set" rmcdddef.hlp
+/#subtopic "Collision Modes" rmcolmod.hlp
+/#subtopic "Error Modes" rmerrmod.hlp
+EDIT A CONSISTENT DISTRIBUTED DATA SET
+
+This form is used to define a Consistent Distributed Data Sets (CDDS) in
+your replication scheme.
+
+To make a change, use the Tab key to move to the desired field and enter
+the new value.  To save the changed definition, select the Save
+operation.
+
+The fields on the form are:
+
+        FIELD NAME      DESCRIPTION
+        ----------      -----------
+        CDDS Number     This is a unique system-wide identifier
+                        assigned previously.  It cannot be changed.
+
+        CDDS Name       A descriptive name for the CDDS.
+
+        Collision Mode  The manner in which replication collisions
+                        should be detected or resolved.  Select the
+                        Subtopics menuitem for more information.  Use
+                        ListChoices to list acceptable values.
+
+        Error Mode      The manner in which errors should be handled (if
+                        they cannot be resolved).  Select the Subtopics
+                        menuitem for more information.  Use ListChoices
+                        to list acceptable values.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Save            Save the definition and return to the CDDS
+                        Summary screen.
+
+        ListChoices     Display a list of acceptable values for the
+                        current field.
+
+        Help            Access the Help facility.
+
+        End             Return to the CDDS Summary screen.

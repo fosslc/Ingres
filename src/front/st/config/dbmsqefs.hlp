@@ -1,0 +1,14 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The qef_sort_mem resource controls the maximum amount of memory
+  which can be allocated to any one session by the Query Execution Facility
+  (QEF) for in-memory sorting.  If a query expects to have multiple
+  sorts in progress, the qef_sort_mem allotment is evenly divided among
+  them.  Any sort that does not fit within qef_sort_mem will be executed
+  by the more general (but usually slower) disk-sorting facility.
+
+  The total QEF sort memory limit server-wide is controlled by the
+  related qef_sorthash_memory resource.
+
+
+  The default is 1 Mb.

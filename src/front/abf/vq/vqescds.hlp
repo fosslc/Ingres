@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescds.hlp                Delete-Start escape code examples.
+The Delete-Start escape executes just before the DELETE query(ies) in Update
+frames.

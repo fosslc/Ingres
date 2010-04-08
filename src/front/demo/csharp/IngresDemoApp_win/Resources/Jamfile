@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!demo!csharp!IngresDemoApp_win!Resources
+#
+
+SubDir ING_SRC front demo csharp IngresDemoApp_win Resources ;
+
+IISUBSYS front demo csharp IngresDemoApp_win Resources ;
+
+
+IIBFILES demo$(DFS)csharp$(DFS)travel$(DFS)solution$(DFS)Resources :
+	ConnectButton.bmp ExitButton.bmp IngresBanner.bmp NoPicture.bmp
+	PlaneSquareSymbol.ico ProfileButton.bmp RoutesButton.bmp
+	banner.png enterprise.ico ;

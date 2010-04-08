@@ -1,0 +1,27 @@
+;
+; History:
+;	27-apr-2001 (somsa01)
+;	    Created.
+;	09-may-2001 (somsa01)
+;	    Changed name to ingres_set_dbms_reg_entries().
+;	03-Aug-2001 (penga03)
+;	    Added ingres_rollback_dbms and ingres_cleanup_dbms_files.
+;	16-Aug-2001 (penga03)
+;	    Deleted ingres_cleanup_dbms_files, added 
+;	    ingres_prepare_remove_dbms_files.
+;	21-Aug-2001 (penga03)
+;	    Added ingres_unset_dbms_reg_entries.
+;	03-march-2005 (penga03)
+;	    Added Ingres cluster support.
+;	21-Mar-2005 (drivi01)
+;	    Removed symbol "<<<<" left behind by propagation.
+;
+EXPORTS
+    ingres_remove_dbms_files
+    ingres_set_dbms_reg_entries
+    ingres_rollback_dbms
+    ingres_prepare_remove_dbms_files
+    ingres_unset_dbms_reg_entries
+    ingres_cluster_isinstalled
+    ingres_cluster_unregister_service
+

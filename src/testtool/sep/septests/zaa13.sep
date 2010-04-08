@@ -1,0 +1,645 @@
+/*
+	Test Name: zaa13.sep
+	Time: 16-APR-1992 18:18:46
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename:
+	Purpose	:
+	Input Files  :
+	Output Files :
+	Database     :
+	Tables       :
+	Synopsis     :
+
+ History: 16-APR-1992	(DonJ)	Created
+	  05-apr-1993   (DonJ)  Updated canons.
+	  30-Jan-1996	(somsa01)	Added NT_GENERIC stuff.
+*/
+.if !SEPPARAMDB 
+? setenv SEPPARAMDB septools 
+<<
+environment variable was defined
+>>
+.endif 
+? fill zaa13.app 
+!!
+COPYAPP	6	4	1993_04_08 00:43:14 GMT  
+OC_APPL:	0	zaa13		
+	.		0		0	0	2				SQL			0
+CUC_ADEPEND:
+	DUMMY		0	0		0
+OC_OSLPROC:	1	zaa13_proc		
+	zaa13_proc.osq	II01b40284	0	none	0	0	2							0
+CUC_AODEPEND:
+	nested_rec		2130	3507		0
+	complex_rec		2130	3507		0
+OC_RECORD:	1	nested_rec		
+			0		0	0	2							0
+OC_RECMEM:	2	c1		
+	0	21	varchar(16)	18	0
+CUC_AODEPEND:
+	DUMMY		0	0		0
+OC_RECORD:	1	complex_rec		
+			0		0	0	2							0
+OC_RECMEM:	2	c3		
+	0	43	nested_rec	0	0
+OC_RECMEM:	2	c1		
+	0	21	varchar(16)	18	0
+OC_RECMEM:	2	c2		
+	0	21	varchar(16)	18	0
+CUC_AODEPEND:
+	nested_rec		2130	3507		0
+!!
+? fill zaa13_proc.osq 
+!!
+procedure zaa13_proc =
+declare
+	a = array of complex_rec,
+	n = nested_rec,
+	r = integer not null,
+	s = integer not null,
+	u = varchar(16) not null,
+	v = varchar(16) not null,
+{
+	a[1].c1 = 'rec 1, c1';
+	a[1].c2 = 'rec 1, c2';
+	a[2].c1 = 'rec 2, c1';
+	a[2].c2 = 'rec 2, c2';
+
+	unloadtable a
+	{
+		message '|' + a.c1 + '|' + a.c2 + '|' with style=popup;
+	};
+
+	unloadtable a(u = c1, v = c2, r = _record, s = _state)
+	{
+	};
+
+	u = 'SPLAT u';
+	v = 'SPLAT v';
+
+	unloadtable a
+	{
+		message '|' + a.c1 + '|' + a.c2 + '|' with style=popup;
+	};
+}
+!!
+.if NT_GENERIC
+? delobj SEPPARAMDB -application zaa13
+<<
+~
+>>
+.else
+? deleter -azaa13 SEPPARAMDB 
+<<
+~
+>>
+.endif
+? copyapp in SEPPARAMDB zaa13.app 
+<<
+INGRES COPYAPP -- Copyright (c) 1984, 1992 Ingres Corporation
+Copied Application `zaa13' to the database.
+Copied Procedure `zaa13_proc' to the database.
+Copied Record Type `nested_rec' to the database.
+Copied Record Attribute `c1' to the database.
+Copied Record Type `complex_rec' to the database.
+Copied Record Attribute `c3' to the database.
+Copied Record Attribute `c1' to the database.
+Copied Record Attribute `c2' to the database.
+>>
+? abf -e SEPPARAMDB 
+<<
+
+%%     
+%% INGRES ABF -- Copyright (c) 1982, 1992 Ingres Corporation
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|ABF - Applications Catalog                                                      |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+>>
+^^ zaa13`CR'`ESC'
+<<
+
+%% CHANGED FIELD Name
+##
+__________________________________________________________________________________
+|ABF - Applications Catalog                                                      |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |zaa13_                   |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+
+%% Retrieving Application catalogs . . .
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|ABF - Applications Catalog                                                      |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| |Name                    |Owner   |Short Remark                              | |
+| |------------------------+--------+------------------------------------------| |
+| |_zaa13                   |donj    |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| |                        |        |                                          | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ edit`CR'`CR'`ESC'
+<<
+
+%% MENU RESPONSE: Edit
+%% MENU:   Create  Destroy  Edit  Rename  MoreInfo  Go  Utilities  Help  >
+%% MENU AT POSITION `2' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `2' is "Edit"
+
+%% Retrieving Application catalogs . . .
+%% 
+DISPLAYING ERROR MESSAGE VIA IIFDERROR.
+
+%% 
+SHORT ERROR MESSAGE IS:
+
+%% Non-existent application object code directory.  ... 
+
+%% 
+END OF SHORT ERROR MESSAGE.
+
+%% Retrieving Application catalogs . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|ABF - Edit an Application                                                       |
+|                                                                                |
+|  Name: zaa13                            Default Start:                         |
+|                                        Query Language: SQL                     |
+|+------------------------------------------------------------------------------+|
+||Frame/Procedure Name    |Type         |Short Remark                           ||
+||------------------------+-------------+---------------------------------------||
+||_zaa13_proc              |4GL Procedure|                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  Go  Globals  Defaults  Errors  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ edit`CR'`ESC'
+<<
+
+%% MENU RESPONSE: Edit
+%% MENU:   Create  Destroy  Edit  Rename  Go  Globals  Defaults  Errors  >
+%% MENU AT POSITION `2' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `2' is "Edit"
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|ABF - Edit a 4GL Procedure Definition                                           |
+|                                                                                |
+|  Procedure Name: zaa13_proc                                                    |
+|                                                                                |
+| Short Remark:                                                                  |
+|                                                                                |
+| Source Language: 4GL                                                           |
+|                                                                                |
+|     Source File: _zaa13_proc.osq                                                |
+|     Return Type: none                                                          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|       Created: 07-apr-1993 16:55:20  Owner: donj                               |
+|                                                                                |
+| Last Modified: 07-apr-1993 16:55:20     By: donj                               |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  NewEdit  Go  Edit  Compile  LongRemark  Print  ListChoices  >                 |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ go`CR'`CR'`CR'`CR'`CR'
+<<
+
+%% MENU RESPONSE: Go
+%% MENU:   NewEdit  Go  Edit  Compile  LongRemark  Print  ListChoices  >
+%% MENU AT POSITION `1' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `1' is "Go"
+
+%% 
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'zaa13'                                                    |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'zaa13'                                                    |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'zaa13'                                                    |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||Processing procedure 'zaa13_proc' . . .                                       ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'zaa13'                                                    |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||Processing procedure 'zaa13_proc' . . .                                       ||
+||Forcing compilation to create internal object code.                           ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'zaa13'                                                    |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||Processing procedure 'zaa13_proc' . . .                                       ||
+||Forcing compilation to create internal object code.                           ||
+||Compiling 'zaa13_proc.osq' . . .                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% FORM REDISPLAYED
+##
+__________________________________________________________________________________
+|_Building application 'zaa13'                                                    |
+|                                                                                |
+|+------------------------------------------------------------------------------+|
+||Checking dates . . .                                                          ||
+||                                                                              ||
+||Processing procedure 'zaa13_proc' . . .                                       ||
+||Forcing compilation to create internal object code.                           ||
+||Compiling 'zaa13_proc.osq' . . .                                              ||
+||Compilation succeeded.                                                        ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                              ||
+||                                                                         
+%%     
+%% Fetching 'zaa13_proc' from the database ...##
+__________________________________________________________________________________
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| | |rec 1, c1|rec 1, c2|                                                      | |
+| |                                                        _[PRESS RETURN]      | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+__________________________________________________________________________________
+@@
+##
+__________________________________________________________________________________
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| | |rec 2, c1|rec 2, c2|                                                      | |
+| |                                                        _[PRESS RETURN]      | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+__________________________________________________________________________________
+@@
+##
+__________________________________________________________________________________
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| | |rec 1, c1|rec 1, c2|                                                      | |
+| |                                                        _[PRESS RETURN]      | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+__________________________________________________________________________________
+@@
+##
+__________________________________________________________________________________
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+| +----------------------------------------------------------------------------+ |
+| | |rec 2, c1|rec 2, c2|                                                      | |
+| |                                                        _[PRESS RETURN]      | |
+| +----------------------------------------------------------------------------+ |
+|                                                                                |
+__________________________________________________________________________________
+@@
+     ||
+||                                                                              ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|                                                                                |
+|                                                                                |
+__________________________________________________________________________________
+@@
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|ABF - Edit a 4GL Procedure Definition                                           |
+|                                                                                |
+|  Procedure Name: zaa13_proc                                                    |
+|                                                                                |
+| Short Remark:                                                                  |
+|                                                                                |
+| Source Language: 4GL                                                           |
+|                                                                                |
+|     Source File: _zaa13_proc.osq                                                |
+|     Return Type: none                                                          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|       Created: 07-apr-1993 16:55:20  Owner: donj                               |
+|                                                                                |
+| Last Modified: 07-apr-1993 16:55:20     By: donj                               |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  NewEdit  Go  Edit  Compile  LongRemark  Print  ListChoices  >                 |
+__________________________________________________________________________________
+@@
+>>
+
+
+Ending at:  7-APR-1993 16:56:38

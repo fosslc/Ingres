@@ -1,0 +1,27 @@
+#
+# Jamfile file for front!ice!fortunoff_cfg
+#
+# History:
+#	02-dec-2004 (abbjo03)
+#	    Use DFS as directory-file separator for portability.
+#	16-Jun-2009 (kschendel) b122138
+#	    Define build-ice config option.
+#	20-Aug-2009 (drivi01)
+#	    Replace File rule with FILE.
+
+SubDir ING_SRC front ice fortunoff_cfg ;
+
+IISUBSYS front ice fortunoff_cfg ;
+
+if $(BUILD_ICE)
+{
+
+FILE $(INGFILES)$(DFS)artcomments.cfg : artcomments.cfg ;
+FILE $(INGFILES)$(DFS)articles.cfg : articles.cfg ;
+FILE $(INGFILES)$(DFS)articles_ref.cfg : articles_ref.cfg ;
+FILE $(INGFILES)$(DFS)artmenu.cfg : artmenu.cfg ;
+FILE $(INGFILES)$(DFS)images.cfg : images.cfg ;
+FILE $(INGFILES)$(DFS)location.cfg : location.cfg ;
+FILE $(INGFILES)$(DFS)menu.cfg : menu.cfg ;
+
+}

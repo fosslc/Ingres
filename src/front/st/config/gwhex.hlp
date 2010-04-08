@@ -1,0 +1,11 @@
+ /#-- Copyright (c) 2007 Ingres Corporation.
+ In the Enterprise Access MS SQL Server gateway, the 
+ hex function cannot return a dynamic length based on the 
+ length of the input parameter.  Because of this limitation, 
+ a hex_len parameter is provided to allow configuration of 
+ the maximum number of input bytes the hex function will 
+ process. The output length will be two times the size of 
+ the input length.
+
+ Default for hex_len is 30 bytes.  
+

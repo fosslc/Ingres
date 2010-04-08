@@ -1,0 +1,480 @@
+/*
+**      Copyright (c) 2004 Ingres Corporation
+**      All rights reserved.
+*/
+
+/*
+** includes and defines
+*/
+#include <compat.h>
+#include <si.h>
+#include <st.h>
+#include <pc.h>
+#include <dbms.h>
+#include <fe.h>
+#include <cs.h>
+#include <lk.h>
+#include <lg.h>
+#include <er.h>
+#include <cv.h>
+#include        <adf.h>
+#include        <ft.h>
+#include        <fmt.h>
+#include        <frame.h>
+#include "lists.h"
+#include "msgs.h" 
+#include "dba.h"
+#include "block.h"
+
+FUNC_EXTERN VOID set_options();
+
+/*
+**  File: dsplklst.qc
+**
+**  Purpose - this file contains the routines which display the lock
+**	list information form.  
+**
+**  This file contains:
+**	displklists() - displays a list of lock list form. 
+**	printlklists() - gets, formats and outputs lock list information.
+**	getlk_trid() - gets the xaction id given an internal locklist id
+**
+**  History
+**	2/21/89		tomt	created
+**	3/15/89		tomt	modularized lock formatting code
+**				    -its in a seperate routine.
+**	4/13/89		tomt	made form a popup
+**	7/7/89		tomt	uses CL routines instead of strcpy etc..
+**	8/16/89		tomt	uses INGDBA version of LK structs.
+**				These are only used when getting info
+**				from l_retrieve!
+**	9/7/89		tomt	added getlk_trid - returns xaction id given
+**				    an internal lock list id.
+**	9/7/89		tomt	now display session name instead of lock list
+**				id.  id is now displayed on more info form
+**	9/13/89		tomt	added block info functionality
+**	9/19/89		tomt	moved ##ADDFORMS here and made form names
+**				    readonly c vars
+**	9/24/89		tomt	now call showblock() in SHOWBLOCK mode
+**	10/1/89		tomt	integrated 6.3 changes.  Don't need to
+**				call get_session_id, now call get_sessname.
+**				Also, the locklist status type constants
+**				are now a PTR defined in <locks.h>
+**	3/21/91		tomt	changed title on form to trim.  Removed
+**                              variable used to hold title.
+**      5/26/93 (vijay)
+**              include pc.h
+**	26-Aug-1993 (fredv)
+**		Included <st.h>.
+**	2-Feb-1994 (fredv)
+**		Moved <lk.h> after <cs.h> so that CS_SID will be defined.
+**	 1-Nov-1995 (nick)
+**		Remve unused variable.
+**
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	15-Feb-2007 (kschendel) SIR 122890
+**	    Add sid and pid to MoreInfo display, it's a pain to have to
+**	    go over to the log display to get it.
+**	24-Nov-2009 (frima01) Bug 122490
+**	    Added include of cv.h to eliminate gcc 4.3 warnings.
+*/
+
+/*
+** forward declarations
+*/
+VOID printlklists();
+VOID get_lklgstats();
+VOID morelklists();
+VOID locklistdet();
+#ifdef VMS
+    VOID showproc();
+#endif 
+VOID getlk_trid();
+VOID get_sessname();
+VOID stat_decode();
+FUNC_EXTERN VOID tablefield_find();
+VOID showblock();
+
+/*
+** Declares
+*/
+##static char Fdisplklists[] = "fdisplklists";
+##static char Fmorelklists[] = "fmorelklists";
+##static char Fingdba[] = "fingdba";
+
+/*
+** Routine: displklists()  displays a list of locklists on a popup form
+**
+** Inputs: none
+**
+** Outputs: displays a form
+**
+** Side effects: assumes the forms system is active
+**
+** History
+**	1/89		tomt	written
+**	9/13/89		tomt	added block info functionality
+**	9/19/89		tomt	moved ##ADDFORMS here and made form names
+**				    readonly c vars
+**	9/24/89		tomt	now call showblock() in SHOWBLOCK mode
+**	11/1/95		nick	remove flag_file
+**	12/05/1996	nanpr01 bug 77771 : takes out of lock screen.
+*/
+VOID
+displklists()
+{
+    bool	e_xit = FALSE;
+##  int		list_position, list_count, lock_count;
+    i4	iwaiting_rsb;
+##  char	colname[FE_MAXNAME + 1], dbnam[FE_MAXNAME + 1];
+##  char	waiting_rsb[HEXID_SIZE + 1];
+    static bool	forms_added = FALSE;
+
+##  GLOBALREF   int *fdisplklists;    
+##  GLOBALREF	int *fshowlklock;
+##  GLOBALREF 	int *fmorelklists;
+##  GLOBALREF	int *fmorelklock;
+##  GLOBALREF	int *fshowblock;
+
+    /*
+    **  Determine if forms are added, if not addform them.  Also
+    **  don't add forms if output is being directed to a file
+    */
+    if (!forms_added)
+    {
+##	ADDFORM fshowblock;
+##	ADDFORM fdisplklists;
+##	ADDFORM fshowlklock;
+##	ADDFORM	fmorelklists;
+##	ADDFORM	fmorelklock;
+	forms_added = TRUE;
+    }
+
+    /* Display the form and get the information */
+##  DISPLAY Fdisplklists READ WITH STYLE = popup (BORDER = none,
+##	STARTCOLUMN = 2, STARTROW = 2)
+##  INITIALIZE
+##  {
+        /* Put the info in the tablefield */
+##	INITTABLE Fdisplklists #locklists READ (#row_num = i2, #rllb = c8,
+##	    #rcnt = i4, #wait = c8, #key = c16, #llb_sid=c16, #llb_pid=c8)
+	printlklists();	/* put info in tablefield */
+
+        /* get number of lock lists */
+##	INQUIRE_FRS TABLE Fdisplklists (list_count = DATAROWS(#locklists))
+##  }
+##  ACTIVATE MENUITEM "Refresh":
+##  {
+        /* Get lock resource info from INGRES */
+##	MESSAGE "Loading lock information..."
+        get_lklgstats(GET_LOCKRES, (PTR) 0);
+        get_lklgstats(GET_LOCKLIST, (PTR) 0);
+
+        /* Put the info in the tablefield */
+##	CLEAR FIELD #locklists 
+	printlklists();	/* put info in tablefield */
+
+        /* get number of lock lists */
+##	INQUIRE_FRS TABLE Fdisplklists (list_count = DATAROWS(#locklists))
+##  }
+##  ACTIVATE MENUITEM "More_Info":
+##  {
+	if (list_count == 0) {
+	    POP_MSG("There are no lock lists to get information on");
+##	    RESUME
+	}
+	morelklists();
+##  }
+##  ACTIVATE MENUITEM "Examine":
+##  {
+	if (list_count == 0)
+	{
+	    POP_MSG("There are no lock lists to examine");
+##	    RESUME
+	}
+##	GETROW Fdisplklists #locklists (list_position = #row_num,
+##	    lock_count = #llb_lkb_count)
+##	MESSAGE "Loading lock information..."
+	locklistdet(list_position);
+##  }
+##  ACTIVATE MENUITEM "Block_Info":
+##  {
+	if (list_count == 0)
+	{
+	    POP_MSG("There are no lock lists to get block information on");
+##	    RESUME
+	}
+##	GETROW Fdisplklists #locklists (waiting_rsb = #wait)
+	CVahxl(waiting_rsb, &iwaiting_rsb);	/* to int */
+
+	/* If this lock list has no blocked locks, don't bother looking. */
+	if (iwaiting_rsb == 0)
+	{
+	    if (flag_cluster)	/* if on a VAXcluster print a different msg */
+	    {
+		POP_MSG("Either this locklist either has no locks\
+ that are currently blocked, or the blocking lock\
+ may be on another node of the VAXcluster");
+	    }
+	    else	/* print regular message */
+	    {
+		POP_MSG("This locklist has no currently blocked locks");
+	    }
+##	    RESUME
+	}
+##	MESSAGE "Finding blocking locks..."
+	showblock(iwaiting_rsb, SHOWBLOCK); /* go check for blocking lock */
+##  }
+##  ACTIVATE MENUITEM "Options":
+##  {
+	set_options();
+##  }
+##  ACTIVATE MENUITEM "Find", frskey7:
+##  {
+	if (list_count == 0)
+	{
+	    POP_MSG("There is nothing to find");
+##	    RESUME
+	}
+##      INQUIRE_FRS COLUMN Fdisplklists #locklists (colname = name)
+	tablefield_find();
+##	RESUME COLUMN #locklists colname
+##  }
+##  ACTIVATE MENUITEM "Help", frskey1:
+##  {
+	my_help("ipmdplkl.hlp", "Locks by Lock List");
+##  }
+##  ACTIVATE MENUITEM "End", frskey3:
+##  {
+##	BREAKDISPLAY
+##  }
+##  ACTIVATE MENUITEM "Quit", frskey2:
+##  {
+	e_xit = TRUE;		/* user wants to leave */
+##	MESSAGE " "		/* force cursor to bottom of screen */
+##	BREAKDISPLAY
+##  }
+
+    if (e_xit)			/* user wants to leave */
+    {
+	terminate(OK);
+    }
+    return;
+}
+
+/*
+** morelklists() - This routine displays the popup form which show the
+**	less needed resource info.
+**
+** History
+**	3/2/89		tomt	written
+**
+*/
+VOID
+morelklists()
+{
+/*
+** Declare Variables
+*/
+##  char	c_rllb[HEXID_SIZE + 1], c_wait[HEXID_SIZE + 1], c_rllb_key[17];
+##  char	c_llb_sid[HEXID_SIZE + 1], c_llb_pid[20 + 1];
+##  int		ircnt;
+
+##  DISPLAY Fmorelklists READ
+##  INITIALIZE
+##  {
+        /*
+        **   Get the values off of the tablefield on the base form and
+        **   place them on the current form
+        */
+##	GETROW Fdisplklists #locklists (c_rllb = #rllb, ircnt = #rcnt,
+##	    c_llb_sid = #llb_sid, c_llb_pid = #llb_pid,
+##	    c_wait = #wait, c_rllb_key = #key)
+##	PUTFORM Fmorelklists (#rllb = c_rllb, #rcnt = ircnt, #wait = c_wait,
+##	    #llb_sid = c_llb_sid, #llb_pid = c_llb_pid,
+##	    #key = c_rllb_key)
+##	REDISPLAY
+##	SUBMENU
+##	ACTIVATE MENUITEM "End", frskey3:
+##	{
+##	    BREAKDISPLAY
+##	}
+##  }
+
+    return;
+}
+
+/*
+** printlklists() - this routine gets, formats and outputs the lock list
+**	information.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	formatted lock list information to screen or file
+**
+** Returns:
+**	none
+**
+** History:
+**	3/15/89		tomt	written
+**	3/17/89		tomt	added filter to suppress display of lock lists
+**				with no locks.
+**	9/7/89		tomt	added display of session name
+**	10/1/89		tomt	integrated 6.3 changes.  Don't need to
+**				call get_session_id, now call get_sessname.
+**				Also, the locklist status type constants
+**				are now a PTR defined in <locks.h>
+**	21-mar-94 (smc) Bug #60829
+**		Added #include header(s) required to define types passed
+**		in prototyped external function calls.
+*/
+VOID
+printlklists()
+{
+    bool	refresh = TRUE; /* tell get_sessname to
+				** refresh before giving up search.
+				** It is toggled off after first
+				** refresh to avoid unneccesary overhead
+				*/
+    bool	reset = TRUE;	/* start at beginning of lk list */
+##  int		counter;
+##  char	cllb_id[HEXID_SIZE + 1], cllb_key[17], session_name[FE_MAXNAME + 1],
+##		crllb[HEXID_SIZE + 1], cwait[HEXID_SIZE + 1], cstat[101];
+##  char	cllb_sid[HEXID_SIZE + 1], cllb_pid[20 + 1];
+##  i4	l_r_cnt;
+##  i4	l_lkb_count;
+##  i4	l_llkb_count;
+##  i4	l_max_lkb;
+    LK_LLB_INFO *llb;
+
+    counter = 0;
+    while ((llb = (LK_LLB_INFO *)l_retrieve(LOCKINFO, 0, &reset)) != NULL)
+    {
+        /*
+        **    do formatting for display
+        */
+	counter++;	/* keep track of element number */
+
+        /*
+        **    Filter for suppression of nonprotected (i.e. system) locklists.
+        **    If the flag is set, system lock lists will be displayed
+        */
+	if (!flag_nonprot_lklists && (llb->llb_status & LLB_NONPROTECT))
+	    continue;
+
+	STprintf(cllb_id, "%x", llb->llb_id);
+	STprintf(cllb_key, "%x%08x", llb->llb_key[0], llb->llb_key[1]);
+	STprintf(crllb, "%x", llb->llb_r_llb_id);
+	STprintf(cwait, "%x", llb->llb_wait_rsb_id);
+	STprintf(cllb_sid, "%p", llb->llb_sid);
+	STprintf(cllb_pid, "%d", llb->llb_pid);
+
+	if (flag_cluster) 		/* on a VAXcluster */
+	{
+	    stat_decode(cstat, Lklststcl, (u_i4) llb->llb_status);
+	}
+	else
+	{
+	    stat_decode(cstat, Lklstst, (u_i4) llb->llb_status); 
+	}
+
+	get_sessname((u_i4)llb->llb_key[0],
+	    (u_i4)llb->llb_key[1], session_name, &refresh);
+
+	if (llb->llb_status == 0)	/* just in case, make it clear on scr */
+	    STcopy("<none>", cstat);
+
+	l_r_cnt = llb->llb_r_cnt;
+	l_lkb_count = llb->llb_lkb_count;
+	l_llkb_count = llb->llb_llkb_count;
+	l_max_lkb = llb->llb_max_lkb;
+
+##	LOADTABLE Fdisplklists #locklists (
+##	    #id = cllb_id, #key = cllb_key, #rllb = crllb,
+##	    #rcnt = l_r_cnt, #wait = cwait, #session_name = session_name,
+##	    #liststat = cstat, #row_num = counter,
+##	    #llb_lkb_count = l_lkb_count,
+##	    #llb_llkb_count = l_llkb_count,
+##	    #llb_max_lkb = l_max_lkb,
+##	    #llb_sid = cllb_sid,
+##	    #llb_pid = cllb_pid);
+    }
+    return;
+}
+
+/*
+** get_lktrid() - this routine gets the transaction id given a locklist id.
+**
+** Inputs:
+**	high_trid - a pointer to where the high order xaction id is placed
+**	low_trid - a pointer to where the low order xaction id is placed
+**	lklist_id - the lock list ID to get the transaction ID for.
+**
+** Outputs:
+**	the high and low order parts of the xaction id will be placed
+**	in the xaction id buffer.
+**
+** Returns:
+**	none
+**
+** History:
+**	9/7/89		tomt	written
+**	9/8/89		tomt	fixed routine to automatically refresh the
+**				lock list if it is empty
+*/
+VOID
+getlk_trid(high_trid, low_trid, lklist_id)
+u_i4 *high_trid;
+u_i4 *low_trid;
+i4  lklist_id;
+{
+    bool	looped_once = FALSE;	/* indicates if first time thru for */
+    bool	reset = TRUE;	/* start at beginning of linked list */
+    LK_LLB_INFO *llb;
+
+    /*
+    ** Check that a pointer was passed
+    */
+    if ((high_trid == NULL) || (low_trid == NULL))	/* bad ptrs */
+	return;
+
+    *high_trid = 0;	/* zero tells caller none found */
+    *low_trid = 0;
+    for (llb = (LK_LLB_INFO *)l_retrieve(LOCKINFO, 0, &reset);
+	;
+	llb = (LK_LLB_INFO *)l_retrieve(LOCKINFO, 0, &reset))
+    {
+        if (!looped_once && (llb == NULL)) /* GET LOCKLIST */
+	{
+	    get_lklgstats(GET_LOCKLIST, (PTR) 0);
+	    reset = TRUE;
+	    looped_once = TRUE;
+	    continue;		/* start over again */
+	}
+	else if (llb == NULL)	/* no more info, get out */
+	{
+	    break;
+	}
+	else
+	{
+	    looped_once = TRUE;	/* been through once - set */
+	}
+
+	/*
+	**    find the requested xaction ids
+	*/
+	if (lklist_id == llb->llb_id)	/* are the internal lklist ids =? */
+	{
+	    *high_trid = llb->llb_key[0];
+	    *low_trid = llb->llb_key[1];
+	    break;
+	}
+    }
+    return;
+}

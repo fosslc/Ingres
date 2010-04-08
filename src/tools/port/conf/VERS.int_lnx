@@ -1,0 +1,29 @@
+# int_lnx is the pure 32 bit build of the int/a64_lnx hybrid.
+
+# Edit History:
+#	20-Jun-2009 SIR 122138
+#	    Implement new Datallegro-style VERS file format which can
+#	    control jam variables as well as shell/compile options.
+
+
+#set: config32 int_lnx
+#set: config64 a64_lnx
+#set: option libc6
+#set: option DBL
+#set: option B64
+#set: option CAS_ENABLED
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
+BUILD_ICE = "TRUE" ; 	#set: option BUILD_ICE
+
+# Hybridization ...
+# int_lnx is a hybrid capable build that is built in pure 32 bits.
+BUILD_ARCH = "32" ;	#set: arch 32
+XERCES_ARCH ?= 32 ;	# but change to 64 if building on a 64-bit box
+
+PAX_CHECK = TRUE ;
+PLATFORM_JAMDEFS = hyb86_lnx ;

@@ -1,0 +1,51 @@
+;  History:
+;	14-jun-1999 (somsa01)
+;	    Added CUT functions.
+;       23-06-99 (kitch01)
+;           Added cui_chk1_dbname (bug 91603)
+;	14-may-2004 (penga03)
+;	    Added cut_writer_done.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	24-Aug-2004 (drivi01)
+;	    Renamed iicufnt.def to iilibcuf.def
+;	    due to new build procedure.	    
+;	08-Oct-2004 (somsa01)
+;	    Added cui_chk3_locname.
+;	21-Nov-2004 (drivi01)
+;	    Added new functions cut_read_complete and
+;	    cut_write_complete.
+;
+EXPORTS
+ss_2_ge		@1				
+ss_decode		@2				
+ss_encode		@3				
+cui_f_idxlate		@4				
+cui_idlen		@5				
+cui_idunorm		@6				
+cui_idxlate		@7				
+cui_chk1_dbname		@8				
+cus_trmwhite		@9				
+cut_create_buf		@10				
+cut_attach_buf		@11				
+cut_detach_buf		@12				
+cut_info		@13				
+cut_read_buf		@14				
+cut_write_buf		@15				
+cut_signal_status		@16				
+cut_event_wait		@17				
+cut_local_gca		@18				
+cut_init		@19				
+cut_thread_init		@20				
+cut_thread_term		@21				
+cut_writer_done		@22				
+IIcm_Initialize		@23				
+IIcm_Terminate		@24				
+IIcm_Cleanup		@25				
+ccm_AllocConn		@26				
+ccm_PurgeFree		@27				
+ccm_PurgeUsed		@28				
+cui_chk3_locname	@29
+pCM_cb		@30	DATA			
+cut_read_complete	@31
+cut_write_complete	@32<<<<

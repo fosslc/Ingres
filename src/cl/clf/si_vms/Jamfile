@@ -1,0 +1,23 @@
+#
+# Jamfile file for cl!clf!si_vms
+#
+#      22-dec-2008 (stegr01)
+#         replace .mar's by .c's
+#	16-jul-2009 (joea)
+#	    Only replace the .mar on Itanium.
+
+SubDir ING_SRC cl clf si_vms ;
+
+IISUBSYS cl clf si_vms ;
+
+IILIBRARY COMPATLIB : siopen.c siwrite.c siprintf.c sieqinit.c sicopy.c sicat.c
+	si.c sidata.c sidofmt.c ;
+
+if $(VERS) = axm_vms
+{
+   IILIBRARY COMPATLIB : rmsbug.mar ;
+}
+else
+{
+   IILIBRARY COMPATLIB : rmsbug.c ;
+}

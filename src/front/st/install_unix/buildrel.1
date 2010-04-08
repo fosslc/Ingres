@@ -1,0 +1,97 @@
+.TH BUILDREL 1 "Ingres" "Ingres Corporation" "Ingres Corporation"
+.\" History:
+.\"	8-mar-1993 (jonb)
+.\"		Written.
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+buildrel \- copy a build area to a release area
+.SH ORIGIN
+Ingres Corporation
+.SH SYNOPSIS
+.B buildrel
+[ options ] [ release-directory ]
+.SH DESCRIPTION
+.I Buildrel
+creates a release area from a build area.  A release area is defined
+to be a directory structure on disk from which a release medium can
+be made by copying with a standard archive program, e.g.
+.B tar.
+.PP
+.I Buildrel
+also creates the distribution version of the Manifest file.  The distribution
+version differs from the version that appears in the source tree in a couple
+of respects.  It contains no comments; it is completely self-contained (that
+is, the packages and parts are described directly instead of in separate
+files); it contains checksums and sizes for each file in the distribution.
+All processing required to create a distribution manifest is carried out
+by
+.I buildrel.
+.SH OPTIONS
+.TP
+.B -a
+Audit; just generate a list of bad files (missing or wrong permissions), but
+don't move anything or update anything.
+.TP
+.BI -l " logfile"
+Specify the name of a log file.  The file is actually created by the
+.B tar
+commands which move files onto the release area; the specified file will
+contain a log of all files moved by
+.B tar,
+in tar's ``verbose'' format.
+.TP
+.B -M
+Update the manifest file, but don't move any files to the release area.  This
+option requires that the release area already exist; it may be used when
+the only change required is to the file sizes or checksums, for example.
+.TP
+.B -n
+No questions; generate all the usual output, but assume default answers
+to all questions.
+.TP
+.BI -p " pkgname"
+Specify a single package to move.  This option requires that the release
+area already exist.  The specified package is moved onto the release
+area, and the manifest file is updated.
+.TP
+.B -s
+Silent running.  Generate no -- well, very little -- output, and don't
+ask any questions.  This option subsumes the -n option.
+.SH ENVIRONMENT
+.TP
+.B Build area
+If the environment variable
+.B ING_BUILD
+is set, its value is used as the location of the build area.  If it is not
+set, then the directory
+.B ingres
+under the path specified as the value of
+.B II_SYSTEM
+is used as the location of the build area.  If
+.B II_SYSTEM
+is not set, an error message is generated and the program exits.
+.TP
+.B Release area
+The location of the release area may be specified as the last parameter
+on the command line.  If it is not specified on the command line, the value of
+.B RELDIR
+is used as the location of the release area.  If no relase area is
+specified and
+.B RELDIR
+is not set, the program exits with an error message.
+.SH FILES
+.TP
+.B Manifest.ing
+The source manifest file; this is the main file which drives the process.
+.TP
+.B *.prt
+On the source tree, each ``part'' of the Ingres distribution is described
+in a separate file.
+.SH BUGS
+The ``usage'' message, generated as the result of an error on the
+command line, is pretty lame.
+.PP
+It would be nice if there were some way of directing the list of bad
+files (missing or wrong permission) into a file.  Failing that, it would
+be nice if there were some way to make the list pause at the end of
+every screenfull.

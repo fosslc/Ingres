@@ -1,0 +1,29 @@
+COPYFORM:	6.4	2002_06_28 07:26:08 GMT  
+FORM:	imp_lg_summary		
+	80	23	0	0	22	0	2	9	0	0	0	0	0	0	0	22
+FIELD:
+	0	vnode	-21	23	0	20	1	58	0	0	20	0	38	IMP Logging System Monitor for Vnode:	0	0	0	0	512	0	0		c20			0	0
+	1	db_adds	-30	5	0	8	1	23	4	10	8	0	15	Database Adds:	0	0	0	0	512	0	0		+i8			0	1
+	2	tx_begins	-30	5	0	8	1	28	4	40	8	0	20	Transaction Begins:	0	0	0	0	512	0	0		+i8			0	2
+	3	db_removes	-30	5	0	8	1	26	5	7	8	0	18	Database Removes:	0	0	0	0	512	0	0		+i8			0	3
+	4	tx_ends	-30	5	0	8	1	26	5	42	8	0	18	Transaction Ends:	0	0	0	0	512	0	0		+i8			0	4
+	5	log_writes	-30	5	0	8	1	20	7	13	8	0	12	Log Writes:	0	0	0	256	512	0	0		+i8			0	5
+	6	log_waits	-30	5	0	8	1	19	7	49	8	0	11	Log Waits:	0	0	0	0	512	0	0		+i8			0	6
+	7	log_write_ios	-30	5	0	8	1	25	8	8	8	0	17	Log Write I/O's:	0	0	0	256	512	0	0		+i8			0	7
+	8	log_split_waits	-30	5	0	8	1	25	8	43	8	0	17	Log Split Waits:	0	0	0	256	512	0	0		+i8			0	8
+	9	log_read_ios	-30	5	0	8	1	24	9	9	8	0	16	Log Read I/O's:	0	0	0	256	512	0	0		+i8			0	9
+	10	log_free_waits	-30	5	0	8	1	24	9	44	8	0	16	Log Free Waits:	0	0	0	256	512	0	0		+i8			0	10
+	11	log_stall_waits	-30	5	0	8	1	25	10	43	8	0	17	Log Stall Waits:	0	0	0	0	512	0	0		+i8			0	11
+	12	log_forces	-30	5	0	8	1	20	11	13	8	0	12	Log Forces:	0	0	0	0	512	0	0		+i8			0	12
+	13	log_group_commit	-30	5	0	8	1	26	12	42	8	0	18	Log Croup Commit:	0	0	0	0	512	0	0		+i8			0	13
+	14	check_commit_timer	-30	5	0	8	1	28	13	5	8	0	20	Check Commit Timer:	0	0	0	0	512	0	0		+i8			0	14
+	15	log_group_count	-30	5	0	8	1	25	13	43	8	0	17	Log Group Count:	0	0	0	0	512	0	0		+i8			0	15
+	16	timer_write	-30	5	0	8	1	21	14	12	8	0	13	Timer Write:	0	0	0	256	512	0	0		+i8			0	16
+	17	kbytes_written	-30	5	0	8	1	24	15	44	8	0	16	Kbytes Written:	0	0	0	0	512	0	0		+i8			0	17
+	18	inconsistent_db	-30	5	0	8	1	25	16	8	8	0	17	Inconsistent DB:	0	0	0	256	512	0	0		+i8			0	18
+	19	block_size	-30	5	0	6	1	19	17	47	6	0	13	Buffer Size:	0	0	0	0	512	0	0		+i6			0	19
+	20	avgtxnsize	-30	5	0	6	1	20	19	46	6	0	14	Avg Txn Size:	0	0	0	256	2560	0	0		+i6		(kbytes_written * 1024)/(tx_ends + (0** tx_ends))	0	20
+	21	bufferutilisation	-31	9	0	3	1	29	18	37	3	0	26	Buffer Utilisation(%):	0	0	0	256	2560	0	0		+i3		(kbytes_written * 102400.00) /((log_write_ios + (0**log_write_ios)) * block_size)	0	21
+TRIM:
+	0	2	19:72:0	1	0	0	0
+	4	2	Logging System Summary	0	0	0	0

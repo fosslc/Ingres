@@ -1,0 +1,165 @@
+/*
+**	 Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+# include	 "rbftype.h"
+# include	 "rbfglob.h"
+# include	 "errf.h"
+# include	 <erug.h>
+# include	 <si.h>
+# include	 <st.h>
+# include	 <cm.h>
+
+/*
+**   RFBREAK - display and control the BREAK form to select
+**	a sort column suitable for creating/deleting a break
+**	header or footer.
+**
+**	Note that this fills in the fields of the Break form
+**	from the current COPT structure, which should be up to date.
+**
+**	Parameters:
+**		sect		which break section (SEC_BRKHDR/SEC_BRKFTR)
+**		seq		ptr to sequence number of sort column
+**		name		ptr to name of the sort column
+**		
+**
+**	Returns:
+**		TRUE if a selection was made, FALSE otherwise.
+**
+**	Side Effects:
+**		Fields in the COPT structure.
+**		Sets seq and name.
+**
+**	Called By:
+**		rFcopt.
+**
+**	Trace Flags:
+**
+**	Error Messages:
+**		none.
+**
+**	History:
+**	22-aug-89 (cmr) -	written.
+**	16-oct-89 (cmr)	-	calculate a default sort seq if the
+**				user doesn't specify one.
+**	22-nov-89 (cmr)	-	sec_list* routines now take another argument.
+**	11/27/89  (martym) - Added parameter to indicate if rfvifred should 
+**			be called.
+**	03-jan-90 (cmr) -	uppercase first char of break name.
+**	08-jan-90 (cmr)	-	rewrite for new user interface changes.
+**	24-jan-90 (cmr) -	corrected order of menu commands.
+**	25-apr-90 (elein) -	change brk_srtord from invisible to hidden
+**	04-sep-90 (sylviap) -	Added explanations to the activate menuitems
+**				#32699
+**	19-oct-1990 (mgw)
+**		Fixed include of local errf.h, rbftype.h and rbfglob.h to ""
+**		instead of <>
+**	30-oct-1992 (rdrane)
+**		Ensure that unsupported datatype fields cannot be selected.
+**		Note that they shouldn't be able to assigned a sort sequence
+**		in the first place, and so we may just be being paranoid.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-Aug-2009 (kschendel) b121804
+**	    Bool prototypes to keep gcc 4.3 happy.
+*/
+
+bool
+rFbreak( i4 sect, i4 *seq, char *name )
+{
+	/* external declarations */
+##	GLOBALREF	char	*Nstructure;	/* STRUCTURE frame name */
+
+	/* internal declarations */
+	register COPT	*copt;			/* COPT structure */
+##	char		colname[FE_MAXNAME +1];
+##	char 		*attname;
+##	i4		i;
+	ATT		*att;
+	bool		selected, no_sort_cols = TRUE;
+
+	Nstructure = F_BREAK;
+
+##	display Nstructure update
+##	initialize()
+##	{
+
+##		inittable Nstructure brktbl update (brk_srtord = i2)
+
+		for ( i = 1; i <= En_n_attribs; i++ )
+		{
+			copt = rFgt_copt( i );
+			if ( !copt->copt_sequence )
+				continue;
+			if ( (sect == SEC_BRKHDR &&
+			    	copt->copt_brkhdr == 'n')
+			    || ( sect == SEC_BRKFTR &&
+			    	copt->copt_brkftr == 'n') )
+			{
+				/*
+				** Guard against unsupported datatype.
+				** Still, they shouldn't have a non-zero
+				** sort sequence.
+				*/
+				if  ((att = r_gt_att(i)) == (ATT *)NULL)
+				{
+					continue;
+				}
+				attname = att->att_name;
+				no_sort_cols = FALSE;
+##				loadtable Nstructure brktbl
+##				 (brk_srtord = i,
+##				  brk_srtcol = attname)
+			}
+		}
+		if ( no_sort_cols )
+		{
+			IIUGerr(E_RF0074_No_sort_cols, 0, 0);
+			selected = FALSE;
+##			breakdisplay
+		}
+##	}
+
+##	activate menuitem ERget(FE_Select) 
+##		(expl = ERget(F_RF0060_sel_sort_cols)), 
+##		FRSkey4 
+##	{
+##		getrow Nstructure brktbl
+##		(i = brk_srtord,
+##		  colname = brk_srtcol)
+
+		copt = rFgt_copt( i );
+		*seq = copt->copt_sequence;
+		STcopy( colname, name );
+		if ( sect == SEC_BRKHDR )
+			copt->copt_brkhdr = 'y';
+		else
+			copt->copt_brkftr = 'y';
+		selected = TRUE;
+##		breakdisplay;
+##	}
+
+##	activate menuitem ERget(FE_Cancel) (expl = ERget(F_FE0103_ExplCancel),
+##              validate = 0, activate = 0), FRSkey9 (validate = 0,activate = 0)
+##	{
+		selected = FALSE;
+##		breakdisplay
+##	}
+
+##	activate menuitem ERget(FE_Help)(expl=ERget(F_FE0100_ExplFrameHelp),
+##              validate=0), FRSkey1 (validate = 0)
+##	{
+		FEhelp(H_STRUCTURE, ERget(F_RF0028_Report_Sort_Order));
+##	}
+##	finalize
+	return(selected);
+}

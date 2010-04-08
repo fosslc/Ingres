@@ -1,0 +1,334 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+##include	<ooclass.qsh>
+##include	<oocat.qsh>
+#include	<oocatlog.h>
+#include	<oosymbol.h>
+#include	<oodefine.h>
+#include	"eroo.h"
+## include	<uigdata.qsh>
+
+/**
+** Name:	oocreate.qc -	Object Module Create Frame Routine.
+**
+** Description:
+**	Contains a routine that is the generic create frame for objects
+**	to be used when an object must be created before being editted
+**	(e.g., applications.)  (Objects that are editted before being
+**	save, such as forms, use 'IIOOsvFrame()' to save.)  Defines:
+**
+**	IIOOcreateFrame()	generic create object frame.
+**
+** History:
+**	Revision 6.2  89/01  wong
+**	Modified to use catalog object.
+**
+**	Revision 6.1  88/11  wong
+**	Added custom help-file parameter.
+**
+**	Revision 6.0  88/01/27  wong
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+char	*UGcat_now();
+
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+#define _ForgetExpl	F_FE0109_ExplForget
+
+FUNC_EXTERN VOID IIUFfieldHelp();
+
+/*{
+** Name:	IIOOcreateFrame() -	Generic OO Create Object Frame.
+**
+** Description:
+**	Display Catalog Create Frame, handling user interface interactions
+**	and calling OO routines to create generic Object DB Catalogs
+**	(ii_id, ii_objects, ii_longremarks.)  Invoke passed in
+**	application-specific display and save functions as appropriate
+**	to complete display and/or save tasks.
+**
+** Input params:
+**	id	{OOID *}	// ptr to object id
+**	class	{OOID}		// class for object
+**	catalog	{OO_CATALOG *}	// catalog form name
+**	saveform {char *}	// catalog save form name
+**	title	{char *}	// save frame title string
+**	ptr	{PTR}		// PTR to application-specific data structure
+**	display	{STATUS (*)()}	// application-specific display function
+**	save	{STATUS (*)()}	// application-specific save function
+**	setup	{STATUS (*)()}	// application-specific setup function
+**	menup	{MENUPARM []}	// dynamic menu specification array
+**	hlp_file {char *}	// custom help-file name.
+**
+** Output params:
+**	id	{OOID *}	// filled in with new ID for created object
+**
+** Returns:
+**	{STATUS}	OK	// a create actually happened
+**			FAIL	// create didn't happen (not nec. an error)
+**
+** Side Effects:
+**	displays Save sequence sub-menu; may invoke Save frame; object
+**	may be saved in database.
+**
+** History:
+**	01/88 (jhw) -- Modified from 'IIOOsvFrame()'.
+**	01/89 (jhw) -- Modified to use catalog object.
+**	08/89 (jhw) -- Added activate on Name field to check for legal INGRES
+**		name.  Also, resume on Name field if save confirmation fails.
+**      18-oct-1993 (kchin)
+**          	Since the return type of OOsnd() has been changed to PTR,
+**          	when being called in IIOOcreateFrame(), its return
+**          	type needs to be cast to the proper datatype.
+**      06-dec-93 (smc)
+**		Bug #58882
+**              Commented lint pointer truncation warning.
+*/
+
+STATUS
+IIOOcreateFrame ( id, class, catalog, saveform, title,
+			ptr, display, save, setup, menup, hlp_file )
+OOID		*id;
+OOID		class;
+OO_CATALOG	*catalog;
+##char		*saveform;
+##char		*title;
+PTR		ptr;
+STATUS		(*display)();
+STATUS		(*save)();
+STATUS		(*setup)();
+##MENUPARAM	*menup;
+char		*hlp_file;
+{
+	STATUS		dbchange = FAIL;
+##	UIDBDATA	*uidbdata;
+
+##	GLOBALREF MENUPARAM	lmenup[];
+
+	/* set up dynamic menuitems */
+	iiooMenuItem(menup, lmenup);
+
+	*id = OC_UNDEFINED;
+
+	uidbdata = IIUIdbdata();
+
+##	DISPLAY saveform	/* default:  FILL */
+##	INITIALIZE
+##	{
+		/* set up dynamic FRSKEY mappings */
+		iiooMenuFrsKey(menup, 0);
+
+		/* set mode of extra fields to be non-updateable */
+##		SET_FRS FIELD saveform (
+##			displayonly(xfield1) = 1,
+##			displayonly(xfield2) = 1,
+##			displayonly(xfield3) = 1,
+##			displayonly(xfield4) = 1
+##		)
+##		PUTFORM (
+##			_title = title,
+##			_name = _iiOOempty,
+##			_owner = uidbdata->user,
+##			_create_date = ERx(UGcat_now())
+##		)
+
+		/* Object specific attributes */
+		if ( display != NULL && (*display)(*id, ptr) != OK )
+##			BREAKDISPLAY;
+
+##		RESUME FIELD _name;
+##	}
+
+##	ACTIVATE FIELD _name:
+##	{
+##		i4 change;
+
+##		INQUIRE_FRS FIELD _iiOOempty ( change = change(_name) );
+		if ( change != 0 )
+##		{
+##			char	name[FE_MAXNAME+1];
+
+##			GETFORM ( name = _name );
+			if ( *name == EOS )
+			{
+				IIUGerr( E_OO002A_No_name_specified_,
+						UG_ERR_ERROR, 0
+				);
+##				RESUME FIELD _name;
+			}
+			else if ( FEchkname(name) != OK )
+			{
+				IIUGerr( E_UG000E_BadName, UG_ERR_ERROR,
+						1, name
+				);
+##				RESUME FIELD _name;
+			}
+##		}
+##		RESUME NEXT;
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_OK) (validate = 1, activate = 1),
+##			  frskey4 (validate = 1, activate = 1)
+##	{
+		char	*srem;
+		char	*lrem;
+		OOID	newid;
+		STATUS	ret;
+##		char	currname[FE_MAXNAME+1];
+##		char	buf[OOLONGREMSIZE+1];
+
+##		GETFORM ( currname = _name );
+
+		/* Perform basic names checks.  This should have been validated
+		** on the name field (which should be lowercase as well,) but
+		** double-check just to be sure.
+		*/
+		if ( iiooCheckName(currname) != OK )
+##			RESUME FIELD _name;
+
+##		GETFORM (buf = _short_remark);
+		srem = STtrmwhite(buf) <= 0 ? _iiOOempty : STalloc(buf);
+
+		OOget_long_remark(saveform, buf);
+		lrem = STtrmwhite(buf) <= 0 ? _iiOOempty : STalloc(buf);
+
+		if ( *id <= 0 )
+		{ /* allocate new DB object */
+    			/* lint truncation warning if size of ptr > OOID, 
+			   but code valid */
+			*id = (OOID)OOsnd( class, _newDb, FALSE, currname, 0,
+					uidbdata->user, 0,
+					srem, (char *)NULL, (char *)NULL, lrem
+			);
+			if ( *id == nil )
+			{
+				dbchange = FAIL;
+##				BREAKDISPLAY
+			}
+		}
+
+		if ( setup != NULL && (ret = (*setup)(*id, ptr)) != OK )
+		{ /* put error message here */
+##			resume
+		}
+
+    		/* lint truncation warning if size of ptr > OOID, 
+	`	   but code valid */
+		if ( (newid = (OOID)OOsnd( *id, _confirmName, currname, FALSE )) 
+		    == nil )
+##			RESUME FIELD _name;
+
+		*id = newid;
+		if ( IIOOsave( id, ptr, save ) == OK )
+		{
+##			OO_OBJECT	*obj = OOp(*id);
+
+##			PUTFORM (	_altr_date = obj->alter_date,
+##					_create_date = obj->create_date
+##			);
+
+##			SET_FRS FORM (change = 0);
+
+			/* update row on main catalog form */
+			_send(catInsertRow, catalog)( catalog, obj,
+				FEtbsins( catalog->c_form, catalog->c_tfield,
+					currname, _name, FALSE
+				)
+			);
+
+			dbchange = OK;
+##			BREAKDISPLAY
+		}
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Forget)
+##			(expl = ERget(_ForgetExpl), validate = 0, activate = 0),
+##		FRSkey9 (validate = 0, activate = 0)
+##	{
+##		BREAKDISPLAY
+##	}
+
+##	ACTIVATE MENUITEM lmenup[0].mpstring
+##		(activate = 0, validate = 0):
+##	{
+		if ((*lmenup[0].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+##	ACTIVATE MENUITEM lmenup[1].mpstring:
+##	{
+		if ((*lmenup[1].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+##	ACTIVATE MENUITEM lmenup[2].mpstring:
+##	{
+		if ((*lmenup[2].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+##	ACTIVATE MENUITEM lmenup[3].mpstring:
+##	{
+		if ((*lmenup[3].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+##	ACTIVATE MENUITEM lmenup[4].mpstring:
+##	{
+		if ((*lmenup[4].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+##	ACTIVATE MENUITEM lmenup[5].mpstring:
+##	{
+		if ((*lmenup[5].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+##	ACTIVATE MENUITEM lmenup[6].mpstring:
+##	{
+		if ((*lmenup[6].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+##	ACTIVATE MENUITEM lmenup[7].mpstring:
+##	{
+		if ((*lmenup[7].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+##	ACTIVATE MENUITEM lmenup[8].mpstring:
+##	{
+		if ((*lmenup[8].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+##	ACTIVATE MENUITEM lmenup[9].mpstring:
+##	{
+		if ((*lmenup[9].mpaction)(*id, ptr, &dbchange) != OK)
+##			BREAKDISPLAY;
+##	}
+
+##	ACTIVATE MENUITEM ERget(FE_Lookup) (VALIDATE = 0, ACTIVATE = 0,
+##			EXPL = ERget(FE_LookupExpl)), 
+##			FRSkey10 (VALIDATE = 0, ACTIVATE = 0)
+##	{
+		IIUFfieldHelp();
+##	}
+##	ACTIVATE MENUITEM ERget(FE_Help)
+##			(expl = ERget(_HelpExpl), validate = 0, activate = 0),
+##		FRSkey1 (validate = 0, activate = 0):
+##	{
+		FEhelp( ( hlp_file != NULL ) ? hlp_file : ERx("oocreate.hlp"),
+			title
+		);
+##	}
+
+	return dbchange;
+}

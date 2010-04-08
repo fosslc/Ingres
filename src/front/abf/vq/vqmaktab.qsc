@@ -1,0 +1,469 @@
+/* 
+**	Copyright (c) 2004 Ingres Corporation  
+*/
+#include	<compat.h> 
+# include	<me.h>
+# include	<gl.h>
+#include 	<er.h>
+# include	<iicommon.h>
+#include	<adf.h>
+#include	<fe.h> 
+#include	<afe.h>
+#include 	<uf.h>
+#include 	<ug.h>
+#include 	<st.h>
+##include 	<ui.qsh>
+/*
+#include	<ui.h>
+	..so ming knows about the dependency
+*/
+#include        <ooclass.h>
+#include        <abclass.h>
+#include	<metafrm.h>
+#include	"ervq.h"
+
+
+/**
+** Name:	vqmaktab -	Add a new table to the visual query
+**
+** Description:
+**	Several routines to add tables to the visual query.
+**
+**	This file defines:
+**		IIVQmmtMakeMfTable - Create new MFTAB structure 
+**
+** History:
+**	12/27/89  (tom) - extracted from vqdloop.qsc 
+**	26-aug-93 (dianeh)
+**		Added #include of <me.h> for MEcmp().
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	23-Aug-2009 (kschendel) 121804
+**	    Need adf.h, afe.h to satisfy gcc 4.3.
+**/
+
+FUNC_EXTERN PTR IIVQ_VAlloc();
+
+static STATUS	create_alias();
+
+
+/*{
+** Name:	IIVQmmtMakeMfTable	- create a new table structure
+**
+** Description:
+**	Given the name for the table allocate and fill in a MFTAB 
+** 	structure and post the caller's pointer to it.  
+**	This means reading the attribute definitions from
+**	the catalogs.. setting up MFCOL structures.. and
+**	inserting them into the MFTAB at the correct index.
+**	Errors are reported by the caller.
+**
+** Inputs:
+**	char name;	- ptr to the name to be added 
+**	i4 usage;	- table's usage
+**	i4 tabsect;	- table's section
+**	MFTAB *tabptr;	- ptr to caller's table pointer
+**
+** Outputs:
+**	Returns:
+**		bool	- TRUE means the table exists and structure
+**			  has been created.
+**			  FALSE means that the table doesn't 
+**			  exist or some other error.. it is up
+**			  to the caller to output the error message.
+**			  in this case the caller's pointer is not
+**			  updated.
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	06/16/89 (tom) - extracted and made global 
+**	12/27/89 (tom) - extracted to not contain references to the
+**			metaframe.
+**	8/15/90 (pete) - trim blanks off the column name in iialt_columns
+**			so unique keys in secondary indexes will be picked up.
+**	9-sept-92 (blaise)
+**	    Changed call to FErel_ffetch() to reflect changed parameters.
+**	15-sep-92 (blaise)
+**	    Added support for delimited identifiers. When creating the table
+**	    structure, if the table name or a column name is a delimited id,
+**	    store it in quotes and create a non-delimited alias for the column
+**	    name. Added create_alias() to create a column alias.
+**	7-jan-93 (blaise)
+**	    Added code to handle long varchar and long bit; these datatypes
+**	    aren't supported in 6.5. If we find a column of either of these
+**	    types while creating the metaframe, we issue a warning then skip
+**	    the column, i.e. it won't show up on the visual query or in the
+**	    generated code, and no field will be created for it on the form.
+**	12-mar-93 (blaise)
+**	    Now we have support for delimited ids in the dbms, fixed this
+**	    code so it handles them correctly.
+**	15-jul-93 (blaise)
+**	    Handle unsupported datatypes properly (bug #52978).
+**	15-sep-93 (connie) Bug #54047
+**	    Correct the parameter to FErel_ffetch & cleanup the codes for
+**	    building tab->name & col->alias
+**	15-sep-93 (connie) Bug #54207
+**	    Added E_VQ00F8_No_Valid_Column error message if no column of
+**	    supported datatypes are found
+**	24-jan-95 (forky01) Bug #60462 & 66529
+**	    Since a bug fix was made previously in ff.qsc so that ff_CheckRel
+**	    normalized the owner and table name, delimited id's became
+**	    broken here in vqmaktab.qsc(IIVQmmtMakeMfTable), since they were
+**	    assumed as unnormalized. Well, they are normalized if we were
+**	    called during frame creation stage.  They are unnormalized when
+**	    coming from Reconcile function.  Fix is to now assume that
+**	    names are normalized prior to arriving here, which will fix
+**	    66529.  Also, added routine in reconcile frame to normalize
+**	    name prior to coming here.  To fix 60462, we simply add compare
+**	    for $ingres id, since this is a special case which is not to be
+**	    delimited, (according to UI and UG code comments which do the
+**	    same special treatment). 
+*/
+bool
+IIVQmmtMakeMfTable(name, usage, tabsect, tabptr)
+char *name;
+i4  usage;
+i4  tabsect; 
+MFTAB **tabptr;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	FE_REL_INFO	relinfo;
+	char		colname[FE_MAXNAME+1];
+	EXEC SQL END DECLARE SECTION;
+	FE_ATT_QBLK	qblk;
+	FE_ATT_INFO	attinfo;
+	MFTAB		*tab;
+	DB_DATA_VALUE	dbv;
+	register i4	i;
+	register MFCOL	*col;
+	bool		unique_key;
+
+	/* for 6.5 ["]owner["].["]tablename["] support */
+	FE_RSLV_NAME    resolved_name;
+	char    owner_part[FE_MAXNAME + 1];
+	char    table_part[FE_MAXNAME + 1];
+	char    normalized_owner[FE_MAXNAME + 1];
+	char    normalized_table[FE_MAXNAME + 1];
+
+	resolved_name.name = name;
+	resolved_name.owner_dest = owner_part;
+	resolved_name.name_dest = table_part;
+	resolved_name.is_nrml = FALSE;
+	FE_decompose(&resolved_name);
+
+	if (STbcompare(resolved_name.owner_dest,0,UI_FE_CAT_ID_65,0,TRUE)==0)
+	{
+	    STcopy(resolved_name.owner_dest, normalized_owner);
+	    STcopy(resolved_name.name_dest, normalized_table);
+	}
+	else
+	{
+	    /* normalized the owner part if there is owner */
+	    if (resolved_name.owner_spec == TRUE )
+	    {
+		if (IIUGdlm_ChkdlmBEobject(resolved_name.owner_dest, 
+		    normalized_owner, TRUE) == UI_BOGUS_ID)
+			return(FALSE);
+	    }
+	    else normalized_owner[0] = '\0';
+
+	    /* normalized the tablename part */
+	    if (IIUGdlm_ChkdlmBEobject(resolved_name.name_dest,
+		normalized_table, TRUE) == UI_BOGUS_ID)
+		    return(FALSE);
+	}
+
+	/* fetch the details about the table */
+	if (FErel_ffetch(normalized_table, normalized_owner, &relinfo) != OK)
+	{
+		return (FALSE);
+	}
+
+	/* allocate the new table struct */
+	tab = (MFTAB*) IIVQ_VAlloc(sizeof(MFTAB), (char*)NULL);
+
+	/* assign passed arguments */
+	tab->tabsect = tabsect;
+	tab->usage = usage;
+	tab->name = IIVQ_VAlloc(0, name);
+
+	/* set default flags based on the table type */
+	if (usage == TAB_UPDATE)
+	{
+		tab->flags = TAB_DELFLG;
+
+		/* the default for master tables is to not allow inserts */
+		if (tabsect != TAB_MASTER)
+		{
+			tab->flags |= TAB_INSFLG;
+		}
+	}
+
+	/* allocate the array of pointers to the columns, 
+	   this array must be allocated at full size because
+	   it is apparently not possible to find out how many 
+	   columns are in a table before starting to fetch them */
+	tab->cols =  (MFCOL**) IIVQ_VAlloc(
+			sizeof(MFCOL*) * DB_GW2_MAX_COLS , (char*)NULL);
+
+	/* open up the qblk for attribute fetches, this should not
+	   happen because caller should have already checked that
+	   the table exists */
+	if (FEatt_fopen(&qblk, &relinfo) != OK)
+	{
+		/* error is reported by caller */
+		return (FALSE);
+	}
+
+	unique_key = FALSE;	/* initialize unique key flag */
+
+	while (FEatt_fetch(&qblk, &attinfo) == OK)
+	{
+		if (tab->numcols >= DB_GW2_MAX_COLS)
+		{
+			_VOID_ FEatt_close(&qblk);
+
+			/* !!! should report error */
+			break;
+		}
+
+		/* Skip unsupported datatypes */
+		FEatt_dbdata(&attinfo, &dbv);
+		if (!IIAFfedatatype(&dbv))
+		{
+			IIUGerr(E_VQ00F0_Unsupported_Type, UG_ERR_ERROR, 2,
+				attinfo.column_name, name);
+			continue;
+		}
+		
+		/* allocate a new column structure, and post in tab struct */
+
+		col = tab->cols[tab->numcols++] = 
+			(MFCOL*) IIVQ_VAlloc(sizeof(MFCOL), (char*)NULL);
+
+		col->name = IIVQ_VAlloc(0, attinfo.column_name);
+		if (IIUGdlm_ChkdlmBEobject(attinfo.column_name, NULL, FALSE) ==
+			UI_REG_ID) 
+		{
+			/** Regular id. Set the col->name and col->alias to the
+			** name of the column.
+			*/
+			col->alias = IIVQ_VAlloc(0, attinfo.column_name);
+		}
+		else	/* UI_DELIM_ID */
+		{
+			/* Delimited id. Set col->name to be the column name
+			** with enclosing quotes, and create an alias for the
+			** column.
+			*/
+			char	alias[FE_MAXNAME+1];
+
+			create_alias(tab, attinfo.column_name, alias);
+			col->alias = IIVQ_VAlloc(0, alias);
+		}
+
+		/* fill in the dbdata value of the column struct */
+		FEatt_dbdata(&attinfo, &col->type);
+		if (attinfo.defaults)
+		{
+			col->flags |= COL_DEFAULT;
+		}
+		/* if the table is not a lookup, then set the column flags 
+		   to indicate that they are to be "used" */
+		if (usage != TAB_LOOKUP)
+		{
+			col->flags |= (COL_USED);
+		}
+		/* set the unique key bit only if the relation supports
+		   unique keys and this is one of the keys */
+		if (relinfo.unique_keys && attinfo.keyseq)
+		{
+			if (usage != TAB_LOOKUP)
+			{
+				col->flags |= COL_UNIQKEY;
+				unique_key = TRUE;
+			}
+		}
+
+		col->info = ERx("");
+	}
+
+	_VOID_ FEatt_close(&qblk);
+
+	if (tab->numcols <= 0) /* no valid columns */
+	{
+		IIUGerr(E_VQ00F8_No_Valid_Column, UG_ERR_ERROR, 1, name);
+		return(FALSE);
+	}
+
+	/* if we have not found a unique key.. then search for a 
+	   2ndary index with a unique key..  we will do a scan 
+	   of iialt_columns and just take the first one that we find.... 
+	   NOTE: that this is done even for non-update tables.. because
+	   the frame type may be changed to update later */ 
+	if (usage != TAB_LOOKUP && unique_key == FALSE)
+	{
+		EXEC SQL BEGIN DECLARE SECTION;
+		i4 key_id;
+		EXEC SQL END DECLARE SECTION;
+		i4 key_use;
+
+		key_use = -1;
+
+		EXEC SQL SELECT key_id,    column_name
+			INTO 	:key_id,   :colname
+			FROM 	iialt_columns
+			WHERE 	table_name = :relinfo.name
+			AND	table_owner = :relinfo.owner;
+		EXEC SQL BEGIN;
+			/* just take the first one we encounter,
+			   this could be optimized to look for
+			   the one with the least number of columns
+			   or the one which requires the least
+			   amount of storage..  */
+			if (key_use == -1)
+			{
+				key_use = key_id;
+			}
+			/* is it the one we're interested in.. */
+			if (key_use == key_id)
+			{
+				for (i = 0; i < tab->numcols; i++)
+				{
+					col = tab->cols[i];
+					/* colname is char (blank padded) */
+					_VOID_ STtrmwhite(colname);
+					if (STequal(colname, col->name))
+					{
+						col->flags |= COL_UNIQKEY; 
+						unique_key = TRUE;
+					}
+				}
+			}
+		EXEC SQL END;
+	}
+
+	/* if there were no 2ndary indexes with unique keys either.. */ 
+	if (usage != TAB_LOOKUP && unique_key == FALSE)
+	{
+		tab->flags |= TAB_NOKEY;
+		/* say that all columns are needed for a unique key */ 
+		for (i = 0; i < tab->numcols; i++)
+		{
+			col = tab->cols[i];
+			col->flags |= COL_UNIQKEY; 
+		}
+	}
+
+	/* only after successfull completion we post caller's pointer */
+	*tabptr = tab;
+
+	return (TRUE);
+}
+
+/*{
+** Name:	create_alias	- create an alias for a delimite id column name
+**
+** Description:
+**	Given an MFTAB structure and a column name which is a delimited id,
+**	create an alias for the column name. The algorithm used is:
+**
+**	If the column name is a delimited id, construct the alias as follows:
+**	- Strip out any strange characters, e.g. "a%b" becomes "ab".
+**	- If this reduces the name to a zero length string, set the string
+**	  to "x", e.g. what was originally "!#%" becomes "x". (I don't
+**	  anticipate this happening very often!)
+**	- Append a 1, e.g. what was originally a%b becomes ab1, and "order"
+**	  becomes "order1"
+**	- Search through existing aliases in this table, making sure the one
+**	  we've just created is unique; if it isn't, change the appended digit
+**	  to the next number up, e.g. "order1" becomes "order2". Repeat until
+**	  we have a unique alias.
+**
+** Inputs:
+**	MFTAB	*tab	- Pointer to the table.
+**	char	*colname - column name for which we want to create an alias
+**
+** Outputs:
+**	Returns:
+**		char *alias	- the alias we've created
+**
+**	Exceptions:
+**
+** Side Effects:
+**
+** History:
+**	11-sep-92 (blaise)
+**	    Initial version.
+*/
+static STATUS
+create_alias(tab, colname, alias)
+MFTAB	*tab;
+char	*colname;
+char	*alias;
+{
+	MFCOL	*current_col;
+	i4	i;
+	i4	len;
+	i4	suffix = 1;
+	i4	tmp;
+
+	/*
+	** First strip out any strange characters, then take the first
+	** 12 characters of the new string and append a number (start
+	** with 1)
+	*/
+	IIUGfnFeName(colname, alias);
+	if (alias[0] == EOS)
+	{
+		/*
+		** If the string consisted entirely of strange characters,
+		** IIUGfnFeName will have returned an empty string, so assign
+		** the alias a one-character name. I'm not worrying about
+		** a more meaningful naming scheme for this type of identifier,
+		** since I don't really think too many users will construct ids
+		** consisting only of strange characters. (blaise, 11-sep-92)
+		*/
+		alias[0] = 'x';
+		alias[1] = EOS;
+	}
+	if ((len = STlength(alias)) > 12)
+	{
+		alias[12] = EOS;
+		len = 12;
+	}
+
+	/*
+	** Now check the new string against the other aliases in this
+	** MFTAB for uniqueness.
+	*/
+	for (i = 0; i < tab->numcols; i++)
+	{
+		current_col = tab->cols[i];
+		if (current_col->alias != NULL &&
+			MEcmp(alias, current_col->alias, len) == 0)
+		{
+			/*
+			** We've found an alias which matches ours. See what
+			** number is appended to this alias, and remember
+			** this number plus one
+			*/
+			if (CVan(current_col->alias + len, &tmp) == OK
+				&& tmp > 0
+				&& suffix <= tmp)
+			{
+				suffix = tmp + 1;
+			}
+		}
+	}
+
+	/* Append the right number to the alias */
+	CVna(suffix, alias + len);
+	return (OK);
+}

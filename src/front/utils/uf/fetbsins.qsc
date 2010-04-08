@@ -1,0 +1,115 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	Alls rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h> 
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+
+/**
+** Name:	FEtbsins.qc	- routine for insert row in sorted table
+**
+** Description:
+**	This file defines:
+**
+**	FEtbsins()	find insert row for a string in a sorted table
+**
+** History:
+**	Revision 4.0  85/01  bobm
+**	Initial revision.
+**	03/28/91 (dkh) - Replaced old inquire_frs syntax with new.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+/*{
+** Name:	FEtbsins - find row for inserting string into sorted table.
+**
+** Description:
+**
+**	Searches through a table assumed to be sorted, and finds 
+**	row for insert.
+**
+** Inputs:
+**	frmnam		- name of form.
+**	tabnam		- name of table field.
+**	name		- string to be inserted
+**	col		- sort column
+**	uniq		- if TRUE, delete row with identical key if found.
+**			  if FALSE, returned row inserts ahead of duplicate.
+**
+** Outputs:
+**
+**	Returns:  row number to insert
+**
+** Side Effects:
+**	Positions cursor in table field for insert.
+**
+** History:
+**	1/85 (rlm)	written.
+*/
+i4
+FEtbsins(frmnam, tabnam, name, col, uniq)
+## char	*frmnam;
+## char	*tabnam;
+## char *name;
+## char *col;
+bool uniq;
+##{
+##	i4 insrow;
+##	i4 trow;
+##	i4 drow;
+##	char buff[80];
+##	i4 state;
+	i4 comp;
+
+	comp = -1;
+	insrow = 0;
+##	UNLOADTABLE frmnam tabnam 
+##			(buff = col, trow = _RECORD, state = _STATE)
+##	{
+		if (state != 0 && state != 4 && trow > 0)
+		{
+			insrow = trow;
+			STtrmwhite(buff);
+			if ((comp = STcompare(buff,name)) >= 0)
+			{
+				--insrow;
+##				ENDLOOP
+			}
+		}
+##	}
+
+	if (uniq && comp == 0)
+	{
+##		SCROLL frmnam tabnam to trow
+##		DELETEROW frmnam tabnam
+	}
+
+	if (insrow == 0)
+	{
+##		SCROLL frmnam tabnam to 1
+		return (0);
+	}
+
+##	INQUIRE_FRS TABLE frmnam ( trow = datarows(tabnam) )
+	if (trow > (insrow+1))
+	{
+		insrow += 2;
+##		SCROLL frmnam tabnam to insrow
+##		INQUIRE_FRS TABLE frmnam ( drow = rowno(tabnam) )
+		drow -= 2;
+		if (drow > 0)
+			return (drow);
+	}
+##	SCROLL frmnam tabnam to insrow
+##	INQUIRE_FRS TABLE frmnam ( drow = rowno(tabnam) )
+	return (drow);
+## }

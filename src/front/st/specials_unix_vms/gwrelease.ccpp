@@ -1,0 +1,459 @@
+/*
+** Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+*/
+ 
+/*
+** Generic contents file for the Gateway release
+** History
+**	01-jul-1999 (matbe01)
+**	    Created from release.ccpp.
+**	23-apr-2001 (kinte01)
+**	    Add VMS Gateways - Currently VMS uses gateways.ccpp instead
+**	    of gwrelease.ccpp.  This change will merge the two files so
+**	    we only have the one file.
+**	14-feb-02 (chash01)
+**	    Modify for Rdb
+**	11-mar-2002 (mofja02)
+**	    Added DB2UDB Gateway.
+**	11-oct-2002 (mofja02)
+**	    Ported to AIX.
+**	22-apr-2004 (ahaal01)
+**	    Added ESQL/C and ESQL/C++ packages.
+**      11-nov-04 (mofja02)
+**		Bug 113440
+**              Removing informix, and sybase server classes.
+**    10-Dec-2004 (clach04)
+**            Added "Ingres client" software to gateway package.
+**            This includes:
+**                    JDBC (always there)
+**                    ODBC (controlled by R_ODBC)
+**                    (Open) API (always there)
+**                    ESQL Precompilers (at least C/C++)
+**                    Generic Error (GENERR) package/headers
+**            Took code from Ingres manifest (release.ccpp).
+**            NOTE 1: support for 64 bit targets is NOT present!
+**            the precompiler code is taken verbatim but only
+**            has partial 64 bit support.
+**            NOTE 2: The code taken from release.ccpp does not 
+**            include PREFER tags as these appear to be NEED
+**            tags in disguise, e.g. "PREFER dbms" prevents ingbuild
+**            from going past the customer install screen, pressing
+**            menu items "Install" or "ExpressInstall" does
+**            nothing and no errors are displayed.
+**
+**            OraclePackage, etc. have not been updated. I tested 
+**            updating the visible package installs and it made no 
+**            different to either Package installs or Customer installs.
+**            ODBC is ifdef'd as in Ingres release.ccpp as ODBC is 
+**            still not a package in the 2.6 codeline. ODBC will be
+**            addressed in another change.
+**
+**            Changed NEED's to INCLUDE's for net package as this
+**            caused conflicts with jdbc package.
+**    04-Jan-2005 (clach04)
+**            Added "PREFER net" for JDBC, this was incorrectly
+**            omitted from the previous change. Prefer is required
+**            to ensure that Net is setup before jdbc (the jdbc setup
+**            scripts can not be ran on their own).
+**    11-Jan-2005 (clach04)
+**            Added jdbc and esqlc to OraclePackage and DB2UDBPackage
+**    11-Oct-2005 (clach04)
+**            Bug 115372
+**            Added net and tm to OraclePackage and DB2UDBPackage
+**            Replaced OraclePackage and DB2UDBPackage include of
+**            esqlc with esql to include all precompilers.
+**      12-dec-2007 (bolke01) bug 119604
+**              Removed dependency on packdefs.h
+**  28-May-2008 (wansh02/clach04)
+**      Made EA 2.7 changes.
+**      Removed VMS defs (not really supported any more).
+**      ODBC driver is now included as a package rather than included in basic.
+**      JDBC server is now called DAS, updated to use DAS.
+**      Copied changes made to (Ingres) release.ccpp related 
+**      to VISIBLE !CI_PER_USER_LICENSING versus INVISIBLE copied.
+**      pl1 pre-compiler removed (like Ingres release.ccpp).
+**      Added ODBC to Oracle and db2 packages (renamed jdbc to das).
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Hybrid add-on symbol changed, fix here.
+*/
+
+RELEASE Ingres
+
+PACKAGE basic 
+
+   INVISIBLE
+
+   PART charsets
+      DEFINITION charsets.prt
+
+   DIRECTORY ingres!files
+   PART frs
+      DEFINITION frs.prt
+
+   DIRECTORY ingres!files!english
+   PART messages
+      DEFINITION messages.prt
+
+# ifdef FULL_RELEASE
+   PART errhelp
+      DEFINITION errhelp.prt
+
+# endif /* FULL_RELEASE */
+
+   PART ingenv
+      DEFINITION ingenv.prt
+
+   PART name-server
+      DEFINITION namesrv.prt
+
+   PART utdef
+      DEFINITION utdef.prt
+
+   PART zoneinfo
+      DEFINITION zoneinfo.prt
+
+   PART sharelib
+      DEFINITION sharelib.prt
+
+   PART api
+      DEFINITION api.prt
+
+PACKAGE generr
+
+   INVISIBLE
+
+   PART generr
+
+   DIRECTORY ingres!files
+   BUILD_DIR (ING_BUILD)!files
+      FILE generr.h
+
+PACKAGE setupsup 
+
+   INVISIBLE 
+
+   PART setupsup
+      DEFINITION setupsup.prt
+
+PACKAGE tm 
+
+   VISIBLE CI_PER_USER_LICENSING
+
+   INCLUDE setupsup
+
+   PART tm
+      DEFINITION tm.prt
+
+PACKAGE generr
+
+   INVISIBLE
+
+   PART generr
+
+   DIRECTORY ingres!files
+   BUILD_DIR (ING_BUILD)!files
+      FILE generr.h
+
+/*
+** Let's ifdef SIG stuff out for now
+*/
+# ifdef SIG_AVAILABLE_NOW
+   PART abf_patch
+      DEFINITION abf_patch.prt
+# endif /* SIG_AVAILABLE_NOW */
+
+
+/*
+** The precompilers for the embedded languages
+*/
+
+PACKAGE esqlsup 
+
+   INVISIBLE
+
+   INCLUDE setupsup
+   INCLUDE generr
+
+   PART library
+      DEFINITION lib.prt
+
+   PART dclgen
+      DEFINITION dclgen.prt
+
+#ifdef conf_BUILD_ARCH_32_64
+PACKAGE esqlsup64
+
+   INVISIBLE
+
+   NEED esqlsup
+
+   PART library64
+      DEFINITION lib64.prt
+#endif  /* hybrid */
+
+PACKAGE esqlc 
+
+   INVISIBLE
+   
+   INCLUDE esqlsup
+
+   PART emb-c
+      DEFINITION emb-c.prt
+
+PACKAGE esqlcc 
+
+   INVISIBLE
+
+   INCLUDE esqlsup
+
+   NEED esqlc
+
+   PART emb-cc
+      DEFINITION emb-cc.prt
+
+# ifdef FULL_RELEASE
+# ifdef R_ADA
+PACKAGE esqlada 
+
+   INVISIBLE
+
+   INCLUDE esqlsup
+
+   PART embedded-ada
+      DEFINITION emb-ada.prt
+# endif /* R_ADA */
+
+# ifdef R_COBOL
+PACKAGE esqlcob 
+
+   INVISIBLE
+
+   INCLUDE esqlsup
+
+   PART embedded-cobol
+      DEFINITION emb-cbl.prt
+# endif /* R_COBOL */
+
+# ifdef R_FORTRAN
+PACKAGE esqlfor 
+
+   INVISIBLE
+
+   INCLUDE esqlsup
+
+   PART embedded-fortran
+      DEFINITION  emb-ftn.prt
+# endif /* R_FORTRAN */
+
+# ifdef R_BASIC
+PACKAGE esqlbas 
+
+   INVISIBLE
+
+   INCLUDE esqlsup
+
+   PART embedded-basic
+      DEFINITION  emb-basic.prt
+# endif /* R_BASIC */
+
+# ifdef R_PASCAL
+PACKAGE esqlpas 
+
+   INVISIBLE
+
+   INCLUDE esqlsup
+
+   PART embedded-pascal
+      DEFINITION  emb-pascal.prt
+# endif /* R_PASCAL */
+   
+# endif /* FULL_RELEASE */
+   
+PACKAGE esql 
+
+   INCLUDE esqlc
+   INCLUDE esqlcc
+# ifdef FULL_RELEASE
+#ifdef R_ADA
+   INCLUDE esqlada
+#endif
+# ifdef R_COBOL
+   INCLUDE esqlcob
+# endif /* R_COBOL */
+# ifdef R_FORTRAN
+   INCLUDE esqlfor
+# endif /* R_FORTRAN */
+# ifdef R_PASCAL
+   INCLUDE esqlpas
+# endif /* R_PASCAL */
+# ifdef R_BASIC
+   INCLUDE esqlbas
+# endif /* R_BASIC */
+# endif /* FULL_RELEASE */
+
+# ifdef conf_BUILD_ARCH_32_64
+PACKAGE esql64
+
+   INCLUDE esqlsup64
+# endif  /* hybrid */
+
+PACKAGE das
+
+   INCLUDE basic
+   INCLUDE setupsup
+   INCLUDE config
+
+   /*
+   ** net is PREFERed as if omitted
+   ** JDBC is setup (iisujdbc) before Net
+   ** and there is no config.dat at this stage.
+   ** JDBC setup scripts require Net (or DBMS, etc.)
+   ** to already be installed.
+   */
+   PREFER net
+
+   PART das
+      DEFINITION das.prt
+
+PACKAGE odbc
+   INCLUDE basic
+   INCLUDE setupsup
+   INCLUDE config
+
+   PREFER net
+
+   PART odbc
+     DEFINITION odbc.prt
+
+/*
+** Ingres Networking
+*/
+
+PACKAGE net 
+
+   INCLUDE basic
+   INCLUDE setupsup
+   INCLUDE config
+   PART net
+      DEFINITION net.prt
+
+# ifdef R_SHADOW
+   PART shadow-pwd
+      DEFINITION shadow-pwd.prt
+# endif /* R_SHADOW */
+
+# ifdef R_STREAM
+   PART stream
+      DEFINITION stream.prt
+# endif /* R_STREAM */
+
+# ifdef R_ORACLE
+/*
+** Ingres Oracle Gateway
+*/
+
+PACKAGE OraclePackage
+   VISIBLEPKG
+   INCLUDE oracle
+   INCLUDE net
+   INCLUDE tm
+   INCLUDE das
+   INCLUDE odbc
+   INCLUDE esql
+
+PACKAGE oracle
+
+   NEED gateway
+   PART oracle
+       DEFINITION oracle.prt
+# endif /* R_ORACLE */
+
+# ifdef R_DB2UDB
+/*
+** Ingres DB2 UDB Gateway
+*/
+
+PACKAGE DB2UDBPackage
+   VISIBLEPKG
+   INCLUDE db2udb
+   INCLUDE net
+   INCLUDE tm
+   INCLUDE das
+   INCLUDE odbc
+   INCLUDE esql
+
+PACKAGE db2udb
+
+   NEED gateway
+   PART db2udb
+       DEFINITION db2udb.prt
+# endif /* R_DB2UDB */
+
+# ifdef R_RDB
+/*
+** Ingres RDB Gateway
+*/
+PACKAGE rdbgwpkg
+
+    VISIBLEPKG
+    INCLUDE Rdb
+
+PACKAGE Rdb
+
+    NEED gateway
+/*
+** Include INSTALL pkg for VMS since it is not automatically included.
+*/
+# ifdef VMS
+   INCLUDE install
+# endif /* VMS */
+
+    PART rdb
+       DEFINITION rdb.prt
+# endif /* R_RDB */
+
+PACKAGE gateway
+
+   INVISIBLE
+
+   NEED net
+   NEED tm
+   PART gateway
+      DEFINITION gateway.prt
+
+/*
+** Interactive configuration utility
+*/
+
+PACKAGE config 
+
+   INVISIBLE
+
+   PART config
+      DEFINITION config.prt
+
+
+/*
+** The installation utility package
+*/
+
+PACKAGE install 
+
+   INVISIBLE
+
+   DIRECTORY ingres!install
+
+   PART messages
+      DEFINITION messages.prt
+
+   PART install
+      DEFINITION install.prt
+
+# ifndef VMS
+   PART frs
+      DEFINITION frs.prt
+# endif /* VMS */
+
+/*
+** Warning: the installation package must be the last thing in this file. 
+*/

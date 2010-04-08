@@ -1,0 +1,420 @@
+* qac1.usr		lastmod 20 Jan 93boba
+*			created1 Nov 91  CEC
+*
+* copyright:	(c) 1991rogramming Research Ltd
+* version:	@(#)qac1.ex	1.5
+* date:		92/06/01
+*
+* purpose:	example user message file
+*
+* history:
+*	20 Jan 93boba	Started customization for Ingres Coding Standards
+*	20ov 91  SAC  Added information level (CR470)
+*	12ov 91  SAC  Added macro example (CR452)
+*	 1ov 91  SAC  Initial version (CR247)
+*
+******************************************************************************
+*
+* The format of this file is as follows:
+*
+*	* star indicates a comment
+*
+*	#define name digit comment
+*		defines name as a mnemonic for the error level digit
+*
+*	errorno level message
+*		messages (only) may be continued over several lines
+*		by using the \ character
+
+*eading whitespace (space and tab) is ignored on any line except a
+* continuation of a message.Any amount of whitespace may separate the
+* level from the errorno and the message.Similarly for the name in a
+* #define.The first character of any message is considered to be the
+* first non-whitespace character after the level.
+
+#define prl	    0 	PRL Standards
+#define layout	    0	PRL Source code layout standards
+#define obsol	    0	Obsolescent feature
+
+#define ingprq	    0	Ingres Coding Standards Pending Requirements
+#define ingreq	    4	Ingres Coding Standards Requirements
+#define ingcnv	    5	Ingres Coding Standards Conventions
+#define inghint	    0	Ingres Coding Standards Hint (turned off)
+#define ingsug	    0	Ingres Coding Standards Suggestion (turned off)
+#define inggld	    0	Ingres Coding Standards Guideline (turned off)
+
+#define Ningreq	    0	Ingres Coding Standards Requirements (to be impl next)
+
+#define ningprq	    0	Ingres Coding Standards Pending Requirements (not impl)
+#define ningreq	    4	Ingres Coding Standards Requirements (not implemented)
+#define ningcnv	    5	Ingres Coding Standards Conventions (not implemented)
+#define ninghint    0	Ingres Coding Standards Hint (not implemented)
+#define ningsug	    0	Ingres Coding Standards Suggestion (not implemented)
+#define ninggld	    0	Ingres Coding Standards Guideline (not implemented)
+#define notimpl	    0	Ingres Coding Standards NOT IMPLEMENTABLE
+
+
+* Note: "REQ" indicates that this rule will be implemented soon (if possible).
+
+5001	ningprq	PRQ-1 - C reserved words may not be used
+5002	ningcnv	CNV-2 - Reserved header file names may not be used
+5003	ningsug	SUG-3 - Other reserved words to be avoided
+5004	notimpl	REQ-4 - Avoid using system and user names
+5005	notimpl	CNV-5 - No conflicting two letter code prefixes
+5006	ningreq	REQ-6 - Directory name character set [a-z][a-z0-9]*
+5007	ningsug	SUG-7 - Extended directory name character set
+5008	ningreq	REQ-8 - Directory names 8 chars or shorter
+5009	ningreq	REQ-9 - Only one period (.) in generic file names
+5010	ninghint	HINT-10 - Files without extensions are system dependent
+5011	ningreq	REQ-11 - Filename character set [a-z][a-z0-9]*
+5012	ningreq	REQ-12 - Filenames 12 characters or less
+5013	ningreq	REQ-13 - Filename name part 8 characters or less
+5014	ningreq	REQ-14 - Filename extension part 3 characters or less
+5015	notimpl	SUG-15 - Filenames should be unique across the source tree
+5016	ningcnv	CNV-16 - Filename prefixes preferred
+5017	ningreq	REQ-17 - Known filename extensions
+5018	ningreq	REQ-18 - Resolving .sh SQL header and .sh UNIX shell
+5019	ningcnv	CNV-19 - Macro name character set [A-Z][A-Z0-9_]*
+5020	ningreq	REQ-20 - Macro names 31 chars or less in length
+5021	ningcnv	CNV-21 - Macro name prefixes
+5022	ningreq	REQ-22 - Identifier character set [a-zA-Z][a-zA-Z0-9_]*
+5023	notimpl	REQ-23 - Namespaces for identifiers
+5024	ningreq	REQ-24 - Automatic and static variables 31 characters or less
+5025	ningcnv	CNV-25 - Automatic variables should begin with a lower case letter
+5026	notimpl	SUG-26 - Globals should not conflict with system or user names
+5027	ningsug	SUG-27 - Global variable name prefixes
+5028	ningreq	REQ-28 - Globals unique in 7 case-insensitive chars (9 withI), <= 31 in length
+5029	ningreq	REQ-29 - Global references must match exactly over full length
+5030	ningreq	REQ-30 - Structure members must be <= 31 characters in length
+5031	ningreq	REQ-31 - Structure member references must be in the right structure
+5032	notimpl	SUG-32 - Structure member naming prefix
+5033	ningcnv	CNV-33 - Typedef names must be upper case
+5034	notimpl	CNV-34 - Source file organization
+5035	notimpl	CNV-35 - Header file organization
+5036	ningcnv	CNV-36 - Source files must include a Copyright notice
+5037	ningcnv	CNV-37 - Files inclusion location and ordering
+5038	ningcnv	CNV-38 - Include local headers with quotes
+5039	ningcnv	CNV-39 - Include non-local headers with angle-brackets
+5040	ningcnv	CNV-40 - No inclusions with paths
+5041	Ningreq	REQ-41 - Must include headers for referenced interfaces
+5042	ningsug	SUG-42 - Nested includes discouraged, illegal in DBMS
+5043	ningreq	REQ-43 - Multiple inclusion protection needed
+5044	ningcnv	CNV-44 - Data definitions and declarations must be in one place
+5045	ningsug	SUG-45 - Use whitespace after pre-processor # symbol
+5046	ningcnv	CNV-46 - Functions come last in source file
+5047	notimpl	REQ-47 - Third-party source code format exemption
+5048	ningcnv	CNV-48 - 80 character source file line length
+5049	ningcnv	CNV-49 - No code management system magic strings
+5050	notimpl	CNV-50 - Use lots of space formatting C statements
+5051	notimpl	CNV-51 - Do not rely on automatic beautifiers to format your code
+5052	notimpl	CNV-52 - Comments must reflect the code and change when code is changed
+5053	ningcnv	CNV-53 - Block comments use two asterisks
+5054	ningsug	SUG-54 - Comments on end of code line discouraged
+5055	notimpl	REQ-55 - Add change history when modifying files
+5056	ningcnv	CNV-56 - Indentation on 4 columns stops with 8 column tabs
+5057	ningcnv	CNV-57 - Whitespace
+5058	ningcnv	CNV-58 - Function name on new line in a function type defini- tion
+5059	ningcnv	CNV-59 - Splitting multi-line statements
+5060	ningcnv	CNV-60 - Statement Grouping
+5061	ningcnv	CNV-61 - Use of parentheses
+2002	ingcnv	Be defensive -\n\
+\tadd a 'default' to this 'switch' statement.\n\
+\tREFERENCE - PH-3.04_elseif\n\
+\tCNV-62 - Switch statements (NOTE: CNV-62 covers more)
+5062	ningcnv	CNV-62 - Switch statements (rest of Ingres stuff)
+5063	notimpl	SUG-63 - Example of recommended formatting
+5064	notimpl	SUG-64 - Irrelevant sections must be deleted from inserted templates
+5065	ningsug	SUG-65 - Comment sequences for extraction tools
+5066	notimpl	CNV-66 - Standard template directory
+5067	notimpl	CNV-67 - File prologue template
+5068	notimpl	CNV-68 - Function prologue template
+5069	notimpl	CNV-69 - Include file prologue template
+5070	notimpl	CNV-70 - typedef template
+5071	ningsug	SUG-71 - Use II_<typedef name> for structure tags
+5072	ningsug	SUG-72 - No MING hints inside ifdefs
+5073	ningreq	REQ-73 - Compatibility Library is opaque
+5074	ningreq	REQ-74 - Generic code may not do system calls or use system libraries
+5075	ningsug	SUG-75 - Coding standards may be relaxed in a Compatibility Library
+5076	ningsug	SUG-76 - Compatibility Library code should obey Coding Standards when possible
+5077	notimpl	SUG-77 - Understand what is in the CL, GL, and other libraries
+429   ingreq      [C] Argument should\n\
+\tbe arithmetic type.\n\
+\tREFERENCE - ANSI-3.3.2.2 Function calls\n\
+\tREQ-78 - C code must be type-correct (argument arithmetic)
+430   ingreq      [C] Argument should\n\
+\tbe compatible 'struct' / 'union' type.\n\
+\tREFERENCE - ANSI-3.3.2.2 Function calls\n\
+\tREQ-78 - C code must be type-correct (argument struct or union)
+431   ingreq      [C] Pointer argument\n\
+\thas differently qualified base type.\n\
+\tREFERENCE - ANSI-3.3.2.2 Function calls\n\
+\tREQ-78 - C code must be type-correct (argument pointer base)
+432   ingreq      [C] Argument should\n\
+\tbe compatible pointer type.\n\
+\tREFERENCE - ANSI-3.3.2.2 Function calls\n\
+\tREQ-78 - C code must be type-correct (argument pointer type)
+433   ingreq      [C] Argument should\n\
+\tbe compatible type.\n\
+\tREFERENCE - ANSI-3.3.2.2 Function calls\n\
+\tREQ-78 - C code must be type-correct (arguments misc.)
+5078	Ningreq	REQ-78 - C code must be type-correct (other cases)
+5079	notimpl	REQ-79 - Widening casts are legal
+5080	notimpl	REQ-80 - Casting pointers to related structures is legal
+5081	Ningreq	REQ-81 - Only one cast per sub expression
+5082	Ningreq	REQ-82 - Narrowing casts must be range checked, exceptions not assumed
+3305    ingreq	Pointer cast to potentially stricter\n\
+\talignment - this may cause address exceptions if the pointer is not\n\
+\tcorrectly aligned for the target type.\n\
+\tREFERENCE - PH-1.08_ptrtypes\n\
+\tREQ-83 - Alignment must be considered when casting pointers
+5084	ningsug	SUG-84 - Lvalue casting on aligned data sometimes legal
+5085	notimpl	SUG-85 - Casting any pointer to a PTR is legal
+5086	Ningreq	REQ-86 - Get aligned space with allocator, ALIGN_RESTRICT, ME_ALIGN_MACRO
+306   impldef         [I] Cast between pointer\n\
+\tand integral type is implementation defined.\n\
+\tREFERENCE - ANSI-3.3.4 Semantics\n\
+\tREQ-87 - Illegal to put integers in pointers, pointers in integers
+5088	Ningreq	REQ-88 - Alignment checks must use ME_ALIGN_MACRO
+5089	Ningreq	REQ-89 - Unions may not be used for type conversion
+5090	ningsug	SUG-90 - Use II_<typedef name> for union tags
+5091	ningreq	REQ-91 - ``Zero-points-to'' for member offsets is illegal
+5092	ningcnv	CNV-92 - All new code must be written to support prototypes
+5093	Ningreq	REQ-93 - Code must be correct with and without prototypes
+5094	Ningreq	REQ-94 - All calls to a function must use the same declarator
+5095	ningcnv	CNV-95 - Prototypes go in a header included by all callers
+5096	Ningreq	REQ-96 - Definitions must change when declarations change
+5097	Ningreq	REQ-97 - Pointers to prototyped functions must have fully typed parameters
+5098	Ningreq	REQ-98 - Don't rely on prototypes to fix broken code
+652	ingcnv                Identifiers should be\n\
+\tgiven for all or none of the parameters in a function prototype.\n\
+\tCNV-99 - Name all parameters in a prototype (but "none" allowed)
+5099	ningcnv	CNV-99 - Name all parameters in a prototype ("none" case)
+5100	ningreq	REQ-100 - No composite types implicitly declared in argument list of definition
+5101	ningsug	SUG-101 - Use flag words for one-bit values
+5102	notimpl	SUG-102 - Weigh bitfield space saving against access cost
+5103	Ningreq	REQ-103 - Must use CM macros when working with characters
+5104	ningcnv	CNV-104 - Use EOS as string terminator
+5105	notimpl	REQ-105 - Messages numbers may not be deleted or reused
+5106	notimpl	REQ-106 - Most recent document is authoritative
+3108  ingreq  Nested comments are outlawed by the\n\
+\tANSI standard and should not be used.\n\
+\tREFERENCE - ANSI-3.1.9 Comments (footnote 26)\n\
+\tREQ-107 - Comments do not nest
+5108	ningreq	REQ-108 - Do not use magic numbers
+5109	Ningreq	REQ-109 - Do not assume word size
+5110	ningprq	PRQ-110 - Surround unextracted string constants with ERx()
+5111	ningsug	SUG-111 - Use decimal, hex, and octal constants appropriately
+5112	ningreq	REQ-112 - No u suffixes to integer constants
+5113	ningcnv	CNV-113 - Use L suffix instead of confusing l suffix
+3609  ingreq        '\\a' is an ANSI escape sequence\n\
+\tand may not be available on all compilers.\n\
+\tREQ-114 - Only old-C char escapes are legal (\\a)\n\
+\tREQ-115 - New Standard C char escapes illegal (\\a)
+3610  portable        '\\x' is an ANSI escape sequence\n\
+\tand may not be available on all compilers.\n\
+\tREQ-114 - Only old-C char escapes are legal (\\x)\n\
+\tREQ-115 - New Standard C char escapes illegal (\\x)
+5114	Ningreq	REQ-114 - Only old-C char escapes are legal (need exhaustive list)
+5115	Ningreq	REQ-115 - New Standard C char escapes illegal (\\v and \\?)
+5116	ningreq	REQ-116 - Standard C prefix to chars illegal
+5117	ningsug	SUG-117 - Use .0 to create floating constants
+5118	ningreq	REQ-118 - Standard C f suffix illegal
+5119	ningreq	REQ-119 - Standard C long double illegal
+5120	ningreq	REQ-120 - Illegal to use long float, use double instead
+5121	ningreq	REQ-121 - Illegal to use enums
+683   ingreq  L"string" initializer\n\
+\tgiven for 'wchar_t' object - either the initializer should be'c'\n\
+\tor the object should have 'wchar_t *' type.\n\
+\tREFERENCE - ANSI-3.5.7 Semantics, ANSI-3.3.16.1 Constraints\n\
+\tREQ-122 - Standard C prefix to strings illegal
+5123	ningreq	REQ-123 - Do not modify string constants
+5124	ningreq	REQ-124 - Standard C string concatenation illegal
+5125	ningsug	SUG-125 - Use auto to note address of the variable will be taken
+5126	notimpl	SUG-126 - Use register to potentially increase performance
+454   constraint      [C] You cannot take\n\
+\tthe address of a variable declared with 'register'.\n\
+\tREFERENCE - ANSI-3.3.3.2 Constraints\n\
+\tREQ-127 - Illegal to take the address of a register variable
+5128	ningreq	REQ-128 - No default exports or imports
+5129	ningreq	REQ-129 - Only use static in approved ways
+5130	Ningreq	REQ-130 - Use INGRES types, not native C intrinsics
+5131	ningreq	REQ-131 - Signed qualifier illegal
+5132	ningsug	SUG-132 - Unsigned types should be used appropriately
+5133	Ningreq	REQ-133 - Sign extend i1 variables with I1_CHECK_MACRO
+5134	ningreq	REQ-134 - PTR must be a typedef
+5135	Ningreq	REQ-135 - Use MEcopy family to move arrays
+5136	Ningreq	REQ-136 - Do not assume padding in a structure
+5137	ningsug	SUG-137 - Try to define structures without holes
+5138	ningreq	REQ-138 - Illegal to use const and volatile
+5139	ningsug	SUG-139 - Avoid larger floating types
+5140	ningsug	SUG-140 - Avoid floating point when possible
+5141	REQ-141 - Don't rely on unsigned promotion rules, use casts (PR rules 2100 & 2101 are stupid about constants) 
+5142	ningreq	REQ-142 - Definition of NULL
+5143	ningreq	REQ-143 - Logical value of NULL is FALSE
+5144	Ningreq	REQ-144 - NULL may only be used as a pointer
+3114  ingreq  '%s()' has no explicit\n\
+\treturn type, so it returns an 'int' but no result is specified by\n\
+\ta 'return exp;' statement.\n\
+\tREQ-145 - Must use void for functions with no return value
+5146	Ningreq	REQ-146 - Must use (void) cast to ignore function return value
+5147	ningreq	REQ-147 - Use PTR instead of void *
+3314    ingreq	This control expression is an assignment -\n\
+\tbe explicit and test the result against zero.\n\
+\tREQ-148 - Don't confuse = and ==
+3401  ingreq  Possible precedence confusion:\n\
+\textra parentheses are recommended here!\n\
+\tREFERENCE - PH-2.03_parens\n\
+\tREQ-149 - Don't rely on expression evaluation order
+5150	Ningreq	REQ-150 - Don't rely on math exceptions 
+5151	ningreq	REQ-151 - Don't depend on byte-ordering
+5152	notimpl	REQ-152 - C operator precedence and associativity
+5153	ningsug	SUG-153 - Parenthesize when precedence is confusing
+5154	Ningreq	REQ-154 - Use explicit dereference calling with function pointers
+5155	Ningreq	REQ-155 - Arguments passed must match parameters declared
+5156	Ningreq	REQ-156 - Don't pass structures or unions by value
+5157	notimpl	REQ-157 - May drop trailing arguments to variable-argument functions
+3208  ingreq  '%s()' returns a value\n\
+\twhich is sometimes ignored.This may mean an error result value\n\
+\tis not being checked which could lead to unpredictable behaviour.\n\
+\tREQ-158 - Don't ignore the return value of a function (sometimes ignored)
+3209  ingreq  '%s()' returns\n\
+\ta value which is always ignored.Perhaps the function should\n\
+\thave a 'void' return type, or you should be checking the result.\n\
+\tREQ-158 - Don't ignore the return value of a function (always ignored)
+744   ingreq  [U] '%s()' has a result\n\
+\ttype other than 'void' but no 'return' statement specifies an\n\
+\texpression - the returned value is undefined.\n\
+\tREQ-159 - Always return a value, don't fall off the end
+5160	ningreq	REQ-160 - Don't dereference NULL
+5161	Ningreq	REQ-161 - Unary plus is illegal
+5162	ningprq	PRQ-162 - sizeof must be cast, and may be bigger than a i4
+5163	notimpl	HINT-163 - Use sizeof more often
+5164	notimpl	SUG-164 - Be careful using C % operator
+5165	ninghint	HINT-165 - Avoid computing addresses past the end of an array
+5166	notimpl	REQ-166 - Pointer difference may exceed the range of a i4
+5167	Ningreq	REQ-167 - Mask results of a right-shift to guarantee a proper result
+5168	ninghint	HINT-168 - Avoid comparing pointers past the end of an array
+5169	Ningreq	REQ-169 - Don't directly compare addresses of different members of a structure or union
+5170	ningsug	SUG-170 - Compare NULL against other pointers without a cast
+543   ingreq  [U] 'void' expressions\n\
+\thave no value and may not be used in expressions.\n\
+\tREFERENCE - ANSI-3.2.2.2 void\n\
+\tREQ-171 - Don't use void expressions in conditional operators
+5172	ningcnv	CNV-172 - Avoid complex expressions
+5173	ningsug	SUG-173 - ?: suggestins
+5174	ningcnv	CNV-174 - Use STRUCT_ASSIGN_MACRO or a comment for structure assignment
+5175	ningsug	SUG-175 - Use embedded assignments when necessary
+5176	ninghint	HINT-176 - Be wary assigning const to non-const
+5177	ninghint	HINT-177 - Avoid using the comma operator
+5178	ninghint	HINT-178 - External addresses may not be in a constant expres- sion
+5179	ninghint	HINT-179 - Static variables inside functions may cause reentrancy problems
+3113    ingreq	'%s()' has no explicit\n\
+\treturn type, so it returns an 'int' but this 'return' statement\n\
+\tdoes not specify a value.\n\
+\tREQ-180 - Don't default function return types to int (return only)
+3114    ingreq	'%s()' has no explicit\n\
+\treturn type, so it returns an 'int' but no result is specified by\n\
+\ta 'return exp;' statement.
+\tREQ-180 - Don't default function return types to int (no return exp)
+5180	Ningreq	REQ-180 - Don't default function return types to int (return int)
+5181	ningcnv	CNV-181 - Create a typedef for all structures and unions
+5182	Ningreq	REQ-182 - Don't use Standard C partial structure declarations
+5183	ninghint	HINT-183 - Bitfields are not portable
+2205	ingcvn  More than one declaration or\n\
+\tstatement on the same line.\n\
+\tREFERENCE - PH-1.01_lexdata, PH-3.01_lexctl\n\
+\tCNV-184 - Declarations, even of the same type, should be on separate lines
+3334	ingcvn  This declaration of '%s' hides\n\
+\ta more global declaration.This is a very confusing practice and\n\
+\tcan lead to bugs which are very difficult to track down.\n\
+\tCNV-185 - Avoid redeclarations that hide things
+5186	notimpl	REQ-186 - New code must support prototypes
+3321    ingreq	The variable '%s' may be unset at this point.\n\
+\tREQ-187 - Don't reference uninitialized variables
+5188	Ningreq	REQ-188 - Don't initialize automatic structures
+5189	Ningreq	REQ-189 - Don't initialize unions
+5190	Ningreq	REQ-190 - Don't initialize automatic arrays
+5191	Ningreq	REQ-191 - Initialize all persistent variables
+5192	Ningreq	REQ-192 - Use ZERO_FILL to initialize arbitrary persistent variables
+5193	ningsug	SUG-193 - Initialize writable persistent variables to zero
+5194	ningsug	SUG-194 - Only initialize READONLY persistent variables to non-zero
+5195	ningsug	SUG-195 - Don't put pointers to READONLY data in READONLY data
+672   ingsug  [U] The initializer for\n\
+\ta 'struct', 'union' or array should be enclosed in braces.\n\
+\tREFERENCE - ANSI-3.5.7 Semantics\n\
+\tSUG-196 - Structure initializations should be fully parenthesized with braces
+5197	ningreq	REQ-197 - Don't conceal an indirection in a typedef
+5198	ningreq	REQ-198 - Don't hide an array in a typedef
+5199	ningreq	REQ-199 - Don't use typedef without defining a type
+3605  ingprq  'switch' must have an 'int' in\n\
+\tK&R C.ANSI C allows any integral type.\n\
+\tPRQ-200 - Only int-sized expressions may be used in a switch
+5201	notimpl	HINT-201 - Forward gotos are acceptable
+2006  inghint '%s()' has more than one 'return' -\n\
+\tstructured programs have one entry, one exit!\n\
+\tHINT-202 - Use one return statement in a function
+5203	Ningreq	REQ-203 - No variable-type function arguments
+5204	notimpl	CNV-204 - Conventions for position in parameter lists
+5205	Ningreq	REQ-205 - Don't return a pointer to an automatic variable
+629   ingreq  [C] More than one definition\n\
+\tof '%s' (with internal linkage).\n\
+\tREFERENCE - ANSI-3.7 Constraints\n\
+\tREQ-206 - Only define an object once (internal linkage)
+630   ingreq  [U] More than one definition\n\
+\tof '%s' (with external linkage).\n\
+\tREFERENCE - ANSI-3.7 Semantics\n\
+\tREQ-206 - Only define an object once (external linkage)
+631   constraint      [C] More than one declaration\n\
+\tof '%s' (with no linkage).\n\
+\tREFERENCE - ANSI-3.5 Constraints\n\
+\tCNV-207 - Only declare an object once
+5208	ningsug	SUG-208 - Avoid global variables
+5209	ningreq	REQ-209 - Don't use extern
+5210	ningreq	REQ-210 - Don't use globaldef or globalref
+5211	ningreq	REQ-211 - Use GLOBALDEF to export a variable
+5212	ningreq	REQ-212 - GLOBALCONSTDEF exports read-only vars containing pointers
+5213	ningreq	REQ-213 - Use GLOBALREF to import a writable variable
+5214	ningreq	REQ-214 - Use GLOBALCONSTREF to import read-only variables
+5215	ningreq	REQ-215 - Use FUNC_EXTERN to import a function to call
+5216	ningcnv	CNV-216 - Ifdefed-out code must be syntactically correct
+5217	Ningreq	REQ-217 - Don't change syntax via macro substitution
+5218	Ningreq	REQ-218 - Simple macros must expand to a token replacement
+5219	ningprq	PRQ-219 - Defined constants must be properly typed
+5220	Ningreq	REQ-220 - Parenthesize outermost expression in a macro definition
+5221	ningcnv	CNV-221 - Don't short-cut structure or union references with a macro
+5222	ningreq	REQ-222 - Use typedef for new types, not define
+5223	ningreq	REQ-223 - Preprocessor # must be in column 0
+5224	notimpl	REQ-224 - Use \\t# error to cause a compilation error
+5225	ningcnv	CNV-225 - Conditionally compile against specific capabilities
+3601  ingreq  (??x) are an ANSI feature.\n\
+\tREFERENCE - PH-6.02_environ\n\
+\tREQ-226 - Don't use trigraphs
+3601  ingsug  Trigraphs (??x) are an ANSI feature.\n\
+\tREFERENCE - PH-6.02_environ\n\
+\tSUG-227 - Watch out for ?? sequences in strings
+5228	ningsug	SUG-228 - Use \\ to paste lines together
+5229	ningreq	REQ-229 - Don't use the Standard C ## token pasting operator
+5230	Ningreq	REQ-230 - Don't rely on macro substitution in strings
+5231	notimpl	REQ-231 - Function-like macros must be documented like a function
+5232	notimpl	REQ-232 - Don't assume preprocessor expansion of include file names
+5233	ningsug	SUG-233 - Avoid conditional compilation
+830   ingreq  ANSI C no longer allows\n\
+\ttext to appear after '#else' and '#endif'.You should use comments\n\
+\tto annotate preprocessor directives.\n\
+\tREQ-234 - Text after endif must be in a comment
+5235	notimpl	REQ-235 - Preprocessor # if may be used
+3608  ingreq  '#elif' is not supported by\n\
+\tall preprocessors.Use '#else'-'#if'-'#endif' for portability.\n\
+\tREQ-236 - Preprocessor # elif is illegal
+5237	ningcnv	CNV-237 - Don't ifdef statement fragments
+5238	ningsug	SUG-238 - Use macros, not ifdefs
+5239	ninghint	HINT-239 - Ifdefs around system, product or release are bad
+5240	ningsug	SUG-240 - Don't use conditional compilation to make modules
+5241	notimpl	CNV-241 - Don't ifdef or comment out obsolete code
+5242	ningsug	SUG-242 - Use line control when appropriate
+5243	ningreq	REQ-243 - pragma lines must be inside ifdefs
+899   ingreq	[C] The '#' token may appear\n\
+\tonly as a punctuator in a directive or operator in a '#define'\n\
+\tREQ-244 - Don't use # on a line by itself
+5245	Ningreq	REQ-245 - Don't use __DATE__, __TIME__, and __STDC__
+5246	notimpl	HINT-246 - Be careful using _FILE_

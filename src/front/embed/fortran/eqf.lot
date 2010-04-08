@@ -1,0 +1,7 @@
+INGLIB:frontmain.obj, -
+MAINOBJ.obj, -
+INGLIB:libcompat.olb/library/include=(gver), -	! for II_copyright
+INGLIB:libfortran.olb/library/include=(fortran,ftokens), -
+INGLIB:libequel.olb/library, -
+II_LIBQLIB/share
+II_COMPATLIB/share

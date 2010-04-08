@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+II_RMS_HASH_SIZE defines the hash table size used for hashing RMS file 
+information blocks.  This value should be about one-half to one-third of the 
+II_RMS_FAB_SIZE.

@@ -1,0 +1,1177 @@
+/*
+**Copyright (c) 1986, 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<me.h>
+#include	<lo.h>
+#include	<si.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<adf.h>
+#include	<ade.h>
+#include	<frmalign.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+#include	<abqual.h>
+#include	<iltypes.h>
+#include	<ilops.h>
+#include	<ioi.h>
+#include	<ifid.h>
+#include	<ilrf.h>
+#include	<ilrffrm.h>
+#include	<ilerror.h>
+#include	"il.h"
+#include	"if.h"
+#include	"ilgvars.h"
+
+/**
+** Name:	ilquery.qc -	Execute IL statements for queries
+**
+** Description:
+**	Executes IL statements for queries.
+**	The OSL interpreter builds the same QRY structure as in the
+**	compiled version of OSL, and calls on the same runtime routines
+**	to execute the query.
+**
+** History:
+**	Revision 5.1  86/04  arthur
+**	Initial revision.
+**
+**	Revision 6.3/03/00  89/09  wong
+**	Added support for separate query specification sections.
+**
+**	Revision 6.3/03/01
+**	01/09/91 (emerson)
+**		Remove 32K limit on IL (allow up to 2G of IL).
+**		This entails introducing a modifier bit into the IL opcode,
+**		which must be masked out to get the opcode proper.
+**
+**	Revision 6.4
+**	03/23/91 (emerson)
+**		Changed references to qr_argv in the QRY structure;
+**		Its declaration in abfosl.h has been changed to reflect
+**		its true type (QRY_ARGV *).
+**
+**	Revision 6.4/03
+**	09/20/92 (emerson)
+**		Created IIOqrQryRowchkExec and modified IIOqsQrySingleExec,
+**		IIOqgQryGenExec, IIOqnQryNextExec, and IIObqBuildQryExec
+**		to handle new QRYROWCHK and QRYROWGET (for bug 39582).
+**		Also part of fix for bug 46471 in IIOqnQryNextExec.
+**
+**	Revision 6.5
+**	26-jun-92 (davel)
+**		added new argument for IIOgvGetVal() calls.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	23-Aug-2009 (kschendel) 121804
+**	    Update some of the function declarations to fix gcc 4.3 problems.
+*/
+
+FUNC_EXTERN bool IIARgn1RtsgenV1();
+FUNC_EXTERN bool abrtsgen();
+FUNC_EXTERN bool abrtsnext();
+
+static STATUS	qrymem();
+
+/*}
+** Name:	ITQRY	- Special structure to store a tag with a QRY.
+**
+** Description:
+**	This structure is a template that is layed on top of memory
+**	allocated by the query build routine below.  This structure allows
+**	a FE allocation tag to be stored with a QRY structure.  Because
+**	of the fact that constants can get relocated during calls, QRY
+**	in the interpreter can't point directly at the constant table
+**	(see the comment in IIOqbQueryBuildExec for an explanation).  Thus,
+**	any strings in the query needs to be saved in dynamic memory.
+**
+**	The IIOqbQueryBuildExec allocates a block of memory.  The first
+**	thing on the block is a tag.  The next thing is a QRY structure.
+**	However, the only thing pointed to by any temporary variable
+**	in the frame is the QRY structure.  We need someway to store
+**	a tag with a QRY structure.  However, the QRY structure can't
+**	be changed, since it is used in the generated code, and changing
+**	it would cause backward compatibility problems.  Instead, this
+**	structure is used to get from a pointer to the QRY that
+**	IIOqbQueryBuildExec builds to a tag.
+**
+**	The top of the memory that IIOqbQueryBuildExec allocates is
+**	really an ITQRY.  The temporary variable for the query, points
+**	at the qry field of the ITQRY.  This gives us a way to get to
+**	the tag.
+**
+**	The saved_mode field will normally contain EOS.  If it contains
+**	something else, then it is the saved mode of the form before
+**	an attached query was started.  This mode will be restored
+**	when the query is freed.
+**
+** History:
+**	23-nov-1988 (Joe)
+**		First Written.
+**	2-dec-1988 (Joe)
+**		Added mode field to hold saved mode of form on attached
+**		queries.
+*/
+##typedef struct
+##{
+    u_i4	tag;
+##  char	saved_mode[FE_MAXNAME+1];	/* The saved form mode */
+    QRY		qry;
+##} ITQRY;
+/*
+** This variable contains the offset of the tag member from the qry
+** member.  This variable is used like a constant, but is computed
+** at runtime.
+*/
+static i4	ITQRYOFFSET;
+
+/*
+** Name:	QRYTOITQRY_MACRO	-	Get IQRY from address of QRY
+**
+** Description:
+**	Given the address of the qry field of an ITQRY, get the address
+**	of the ITQRY.
+**
+**	Will return NULL is qry is NULL.
+**
+** Inputs:
+**	qry	The address of a qry field on in ITQRY.
+**
+** History:
+**	2-dec-1988 (Joe)
+**		First Written
+*/
+# define QRYTOITQRY_MACRO(qry)   ((ITQRY *) ((qry) == NULL ? NULL : (char *) (qry) - ITQRYOFFSET))
+
+/*}
+** Name:	QMBLK	-	Information on memory for a query.
+**
+** Description:
+**	This is a local typedef that is only used to communicate
+**	information between the 2 routines IIOqbQueryBuildExec and qrymem
+**
+**	qm_pred		This points to the first IL_QRYPRED for the
+**			query.  Note that if the query has
+**			no qualification functions, this will not
+**			point at an IL_QRYPRED statement.  Rather it
+**			will point at the IL_TL2ELM for the first target
+**			list element.
+**
+**	qm_iqry		Points to the memory for the ITQRY.
+**
+**	qm_qry		Points to the memory for the QRY structure.
+**
+**	qm_qdesc	Points to the memory for the qdesc structures.
+**
+**	qm_qspecs	Points to an array of QRY_SPECs.
+**	qm_qwhere	References QRY_SPECs for a WHERE clause.
+**	qm_qother	References QRY_SPECs for the rest of the query.
+**	qm_qorder	References QRY_SPECs for the ORDER or SORT clause.
+**
+**	qm_qargvs	Points to an array of QRY_ARGVs.
+**
+**	qm_qgens	Points to an array of QSGENs.  This pointer can
+**			be NULL if the query does not have any qualification
+**			functions.
+**
+**	qm_quals	Points to an array of ABRT_QUALs.  This pointer can
+**			be NULL if the query does not have any qualification
+**			functions.
+**
+**	qm_qflds	Points to an array of ABRT_QFLDs.  This pointer can
+**			be NULL if the query does not have any qualification
+**			functions.
+**	
+** History:
+**	17-nov-1988 (Joe)
+**		First Written
+*/
+typedef struct
+{
+    IL		*qm_pred;	/* IL for first IL_QRYPRED */
+    ITQRY	*qm_iqry;	/* The memory for the QRY */
+    QRY		*qm_qry;	/* The memory for the QRY */
+    QDESC	*qm_qdesc;	/* The memory for the QDESC */
+    QRY_ARGV	*qm_qargvs;	/* The start of the memory for the QRY_ARGVs */
+    QRY_SPEC	*qm_qspecs;	/* The start of the memory for the QRY_SPECs */
+    QRY_SPEC	*qm_qwhere;	/* The start of the QRY_SPECs for the WHERE */
+    QRY_SPEC	*qm_qother;	/* The start of the QRY_SPECs for the rest */
+    QRY_SPEC	*qm_qorder;	/* The start of the QRY_SPECs for the ORDER */
+    QSGEN	*qm_qgens;	/* The start of the memory for the QSGENs */
+    ABRT_QUAL	*qm_quals;	/* The start of the memory for the ABRT_QUALs */
+    ABRT_QFLD	*qm_qflds;	/* The start of the memory for the ABRT_QFLDs */
+} QMBLK;
+
+/*{
+** Name:	IIOqpQryNoop	-	Dummy routine to pull in ilquery module
+**
+** Description:
+**	This is a dummy routine intended to pull in this module
+**	which, on the PC, is in an overlay.
+**	This call is required since the routines within this module
+**	are actually called through a table at runtime.
+**
+** Inputs:
+**	None.
+**
+** Outputs:
+**	None.
+**
+** History:
+**	6-nov-1986	Written (agh).
+**
+*/
+IIOqpQryNoop()
+{
+	return;
+}
+
+/*{
+** Name:	IIObqBuildQryExec	-	Builds QRY struct for OSL query
+**
+** Description:
+**	Builds a QRY structure for a 4GL retrieve or select.  The resulting
+**	structure is pointed at by one of the frame's temporary variables.
+**	This temporary variable will be used by later IL statements to
+**	find the QRY structure, when the QRY structure is actually used
+**	to run the query.
+**	
+**	In 6.0, the query structures that 4GL uses have changed considerably
+**	form 5.0.  In 6.0, a query is built of 4 (possibly 6) different kinds of
+**	structures.  The 4 certain ones are a QRY, a QDESC, several QRY_SPECs
+**	and several QRY_ARGVs.  The 2 possible structures are several ABRT_QUAL
+**	and several ABRT_QFLD.  This are present if the query contains any
+**	qualifications.
+**
+**	Using the information in the IL statements shown below, this routine
+**	must allocate and initialize the structures for the query.  The
+**	routine operates as follows:
+**
+**	First, it processes the IL_QRY, IL_QRYSZE and makes a preliminary
+**	pass through the IL_QRYPRED statements to compute the amount of
+**	memory needed for the structures for this query.  It then allocates
+**	a single block of memory that will contain these structures.  The
+**	memory is layed out as follows:
+**
+**		+-----------------------------+
+**		|Memory for ITQRY             |
+**		|    tag                      |
+**              |    mode                     |
+**              |    --------------           |
+**              |    QRY                      |
+**              |-----------------------------|
+**              |Memory for QDESC             |
+**              |-----------------------------|
+**		|Memory for several QRY_ARGVs |
+**              |-----------------------------|
+**              |Memory for several QRY_SPECs |
+**              |-----------------------------|
+**		|Memory for several QSGENs    |
+**              |-----------------------------|
+**		|Memory for several ABRT_QUALs|
+**              |-----------------------------|
+**		|Memory for several ABRT_QFLDs|
+**		+-----------------------------+
+**
+**	The boundary between each type of structure is aligned to the
+**	requirements for ALIGN_RESTRICT.  A variable points to
+**	each memory area for later use.  Note that the address of
+**	the QRY structure is the same as the allocated block of
+**	memory, so when the query is freed, the memory block can be freed
+**	by calling MEfree with the address of the QRY structure.
+**
+**	After the memory is allocated, the QRY and QDESC are filled in.
+**	Then the remaining IL statements are processed.  First the IL for
+**	the target list is processed.  This fills in the QRY_ARGV portion
+**	of the memory.  Then the IL statements for the body of the query
+**	are processed.  This fills in the QRY_SPEC portion of the memory.
+**	During this processing, if any QS_VALGEN QRY_SPECs are found,
+**	the corresponding QRYPRED statements are processed (see below) to
+**	build the QSGEN, ABRT_QUAL and ABRT_QFLD for the qualification function.
+**
+**	NOTE:  QRYs are structure whose lifetime are several IL statements.
+**	Most importantly, the QRY's lifetime may span a call of some
+**	kind.  Because of this, if any part of the QRY points at objects
+**	that can be relocated (example, string constants), then they must
+**	be saved.  There are three kinds of queries:
+**		1) the query is a parameter to a callframe,
+**		   In this case the entire query (both the master and detail)
+**		   must be saved.  This will be done by the parameter building
+**		   routine.
+**		2) The query is singleton query.  Since this kind of query
+**		   has a limited lifetime, it never needs to be saved.
+**		3) The query is an attached query.  Only the detail query
+**		   will get run several times, and thus only the detail query
+**		   could really span a CALL, so only it must be saved.
+**	The routine IIOqpsQryPrmSave was built to save the parts of a
+**	query necessary.
+**
+** IL statements:
+**
+**  IL_QRY      valQueryStructure       strFormName     strTableFieldName*
+**  IL_QRYSZE   int#ofFields    int#ofQuerySpecs
+**  [{
+**      IL_QRYPRED intTypeOfPredicate int#OfElementsInPredicate
+**      {
+**          IL_TL2ELM   strNameOfField strDatabaseLeftHandSide
+**      }
+**      IL_ENDLIST
+**  {]
+**  {
+**      IL_TL2ELM       strNameOfRetrievedItem  valPlaceToPutItem
+**  }
+**  IL_ENDLIST
+**  {
+**      IL_TL2ELM       valQuerySpec    intTypeOfQuerySpec
+**  }
+**  IL_ENDLIST
+**  [IL_QID   strvalQueryName intvalQueryId1 intvalQueryId2]
+**  IL_QRYEND intDMLForQuery  intQGModeOfQuery strPutParamStringForQuery.
+**  [
+**      QueryForChild
+**      IL_QRYCHILD     valParentQueryStructure valChildQueryStructure
+**  ]
+**
+**  intTypeOfQuerySpec  is one of QS_TEXT, QS_QRYVAL, QS_VALUE or QS_VALGEN.
+**      if it is QS_VALGEN, then it is in place of a qualification function.
+**      The structure for this qualification function is defined by
+**      one of the QRYPRED statements appearing above.  The QRYPRED statements
+**      correspond to the QS_VALGEN statements by order.  That is the first
+**      QRYPRED statement is for the first QS_VALGEN statement and so on.
+**
+**  IL_QID was added after support for repeated queries.  If a the IL
+**  was generated before IL_QID was added, then it is possible to have a repeat
+**  query without a IL_QID.  If this is found, then the query is run non
+**  repeated.  This fixes JupBug #10015 since the old way query ids were
+**  generated was not unique enough, but with IL_QID, they are generated
+**  like the embedded languages.
+**
+**
+** Inputs:
+**	stmt	The IL statement to execute.
+**
+**
+** History:
+**	17-nov-1988 (Joe)
+**	     Totally redone for 6.0.
+**	01/90 (jhw) -- Modified to use longs for query ID.  JupBug #7899.
+**	13-feb-1990 (Joe)
+**	  Added support for IL_QID to fix JupBug #10015.
+**	08/90 (jhw) - Modified to pass DBDV in QRY structure for arrays.  Bug
+**		#32963.
+**	09/20/92 (emerson)
+**		Set qry->qr_version to QR_VERSION instead of QG_VERSION.
+**		(Part of fix for bug 39582).
+*/
+VOID
+IIObqBuildQryExec(stmt)
+IL	*stmt;
+{
+    i4  	valQueryStructure;
+    char	*formName;
+    char	*tableField;
+    QMBLK	qmemblk;
+    QRY_ARGV	*qargv;
+    QRY_SPEC	*qspec;
+    QRY_SPEC	**qry_specs;
+    QSGEN	*qgen;
+    ABRT_QUAL	*qual;
+    ABRT_QFLD	*qfld;
+    IL		*qrypred;
+    ITQRY	*iqry;
+    QRY		*qry;
+    QDESC	*qdesc;
+    DB_DATA_VALUE	*dbv;
+    u_i4	tag;
+
+    STATUS	IIITbqsBuildQualStruct();
+    STATUS	IIARrpgRtsPredGen();
+
+    /*
+    ** Get the information from the IL_QRY statement
+    ** Save for later in the routine.
+    */
+    tag = FEgettag();
+    valQueryStructure = ILgetOperand(stmt, 1);
+    if ( ILgetOperand(stmt, 3) <= 0 )
+    {
+    	formName = FEtsalloc(tag, ILcharVal(ILgetOperand(stmt, 2), ""));
+	tableField = FEtsalloc(tag, ILcharVal(ILgetOperand(stmt, 3), ""));
+    }
+    else
+    { /* array reference */
+	formName = NULL;
+	tableField = (char *)IIOFdgDbdvGet(ILgetOperand(stmt, 3));
+    }
+    /*
+    ** Get the QRYSZE statement
+    */
+    stmt = IIOgiGetIl(stmt);
+    /*
+    ** Allocate the memory for the query.
+    ** qrymem is a local routine that communicates with a
+    ** QMBLK structure.
+    */
+    if (qrymem(tag, &stmt, &qmemblk) != OK)
+    {
+	/*
+	** Skip over the whole query statement, set the QRY
+	** temp to NULL and return.
+	*/
+	dbv = IIOFdgDbdvGet(valQueryStructure);
+	dbv->db_data = (PTR) NULL;
+	return;
+    }
+    /*
+    ** At this point stmt should be at the IL_TL2ELM for the target list
+    ** of the query. 
+    */
+    if ((*stmt&ILM_MASK) != IL_TL2ELM)
+    {
+	IIOerError(ILE_STMT, ILE_ILMISSING, ERx("IL_TL2ELM for target list"),
+		NULL);
+	return;
+    }
+    qargv = qmemblk.qm_qargvs;
+    do
+    {
+	qargv->qv_dbval = NULL;
+	/*
+	** This is the index in the array of DBVs.  Subtract
+	** one since the IL always has the index start at 1.
+	*/
+	qargv->qv_index = (i4) ILgetOperand(stmt, 2) - 1;
+	qargv->qv_base = 0;
+	qargv->qv_name = FEtsalloc(tag, ILcharVal(ILgetOperand(stmt, 1), NULL));
+	qargv++;
+	stmt = IIOgiGetIl(stmt);
+    } while ((*stmt&ILM_MASK) == IL_TL2ELM);
+    /*
+    ** There is room for one extra element that has NULL or 0
+    ** everywhere.
+    */
+    qargv->qv_dbval = NULL;
+    qargv->qv_index = 0;
+    qargv->qv_base = 0;
+    qargv->qv_name = NULL;
+    if ((*stmt&ILM_MASK) != IL_ENDLIST)
+    {
+	IIOerError(ILE_STMT, ILE_ILMISSING, ERx("IL_ENDLIST for target list"),
+		NULL);
+	return;
+    }
+    stmt = IIOgiGetIl(stmt);
+    /*
+    ** Now should be at TL2ELM for query specs.
+    */
+    if ((*stmt&ILM_MASK) != IL_TL2ELM)
+    {
+	IIOerError(ILE_STMT, ILE_ILMISSING, ERx("IL_TL2ELM for query specs"),
+		NULL);
+	return;
+    }
+    qual = qmemblk.qm_quals;
+    qgen = qmemblk.qm_qgens;
+    qfld = qmemblk.qm_qflds;
+    qrypred = qmemblk.qm_pred;
+
+    qry_specs = &qmemblk.qm_qspecs;
+    qspec = qmemblk.qm_qspecs;
+    do
+    {
+	do
+	{
+		qspec->qs_var = NULL;
+		qspec->qs_index = 0;
+		qspec->qs_base = 0;
+		switch (qspec->qs_type = (i4) ILgetOperand(stmt, 2))
+		{
+		  case QS_TEXT:
+	 		qspec->qs_var = (PTR)FEtsalloc(tag,
+				ILcharVal(ILgetOperand(stmt, 1), (char *)NULL)
+			);
+			break;
+
+		  case QS_QRYVAL:
+		  case QS_VALUE:
+			qspec->qs_type |= QS_BASE;
+			qspec->qs_index = (i4) ILgetOperand(stmt, 1) - 1;
+			break;
+
+		  case QS_VALGEN:
+			qspec->qs_var = (PTR) qgen;
+			qgen->qsg_value = (PTR) qual;
+			qgen->qsg_gen = IIARrpgRtsPredGen;
+			++qgen;
+			if ( IIITbqsBuildQualStruct(tag, &qrypred, &qual, &qfld)
+					!= OK )
+				return;
+
+			/* consume the ENDLIST */
+			qrypred = IIOgiGetIl(qrypred);
+			break;
+
+		  default:
+			IIOerError( ILE_STMT, ILE_ILMISSING,
+					ERx("Bad type in query specs"),
+					(char *)NULL
+			);
+			return;
+		} /* end switch */
+		++qspec;
+		stmt = IIOgiGetIl(stmt);
+   	 } while ((*stmt&ILM_MASK) == IL_TL2ELM);
+
+	/* Terminate with a NULL query specification. */
+	qspec->qs_var = NULL;
+	qspec->qs_type = QS_END;
+	qspec->qs_index = 0;
+	qspec->qs_base = 0;
+	if ( (*stmt&ILM_MASK) != IL_ENDLIST )
+	{
+		IIOerError( ILE_STMT, ILE_ILMISSING,
+				ERx("IL_ENDLIST for query specs"),
+				(char *)NULL
+		);
+		return;
+	}
+	do
+	{
+		stmt = IIOgiGetIl(stmt);
+		if ( (*stmt&ILM_MASK) == IL_TL2ELM || (*stmt&ILM_MASK) == IL_ENDLIST )
+		{
+			if ( qry_specs > &qmemblk.qm_qorder )
+			{
+				/* Order should be:
+				**
+				**	WHERE clause
+				**	other
+				**	ORDER BY clause
+				*/
+				IIOerError( ILE_STMT, ILE_ILMISSING,
+					ERx("too many query specs"), (char *)NULL
+				);
+			}
+			if ( (*stmt&ILM_MASK) == IL_TL2ELM )
+				++qspec;
+			*++qry_specs = qspec;
+		}
+	} while ( (*stmt&ILM_MASK) == IL_ENDLIST );
+    } while ( (*stmt&ILM_MASK) == IL_TL2ELM );
+    /*
+    ** The QRY and QDESC can start to be filled in at this point.
+    */
+    iqry = qmemblk.qm_iqry;
+    iqry->tag = tag;
+    iqry->saved_mode[0] = EOS;
+    /*
+    ** Compute this every time instead of testing for the first time,
+    ** just cause it probably doesn't cost much to do.
+    */
+    ITQRYOFFSET = (char *) &iqry->qry - (char*) &iqry->tag;
+    qry = qmemblk.qm_qry;
+    qdesc = qmemblk.qm_qdesc;
+    /*
+    ** Initialize the query id to empty values.
+    */
+    qdesc->qg_name = NULL;
+    qdesc->qg_num[0] = 0;
+    qdesc->qg_num[1] = 0;
+    /*
+    ** At this point stmt either points to a IL_QID or to an IL_QRYEND.
+    ** If it points to an IL_QRYEND, and the query is still marked 
+    ** as repeat, then it is an old query compiled before IL_QID
+    ** was supported, so we can't build a reliable query id.  In this case,
+    ** simply remark the query as non repeat.
+    ** If it is an IL_QID, then set up the query id.
+    */
+    if ((*stmt&ILM_MASK) == IL_QID)
+    {
+	qdesc->qg_name = FEtsalloc(tag, ILcharVal(ILgetOperand(stmt, 1), ""));
+	qdesc->qg_num[0] = (u_i4)*((i4 *)IIOgvGetVal(ILgetOperand(stmt, 2),
+					      DB_INT_TYPE, (i4 *)NULL));
+	qdesc->qg_num[1] = (u_i4)*((i4 *)IIOgvGetVal(ILgetOperand(stmt, 3),
+					      DB_INT_TYPE, (i4 *)NULL));
+	stmt = IIOgiGetIl(stmt);	/* Get to IL_QRYEND */
+    }
+    if ((*stmt&ILM_MASK) != IL_QRYEND)
+    {
+	IIOerError(ILE_STMT, ILE_ILMISSING, ERx("IL_QRYEND"), NULL);
+	return;
+    }
+    qdesc->qg_new = NULL;
+    qdesc->qg_dml = (i4) ILgetOperand(stmt, 1);
+    qdesc->qg_mode = (i4) ILgetOperand(stmt, 2);
+    /*
+    ** Check to see if the mode is repeat but there was not IL_QID.
+    ** If so, we have an old query and we can't generate a unique
+    ** query id, so mark the query unrepeated for safety.
+    */
+    if ((qdesc->qg_mode & QM_REPEAT) && qdesc->qg_name == NULL)
+	qdesc->qg_mode &= (~QM_REPEAT);
+    qdesc->qg_version = QG_VERSION;
+    qdesc->qg_argv = (QRY_ARGV (*)[]) qmemblk.qm_qargvs;
+    qdesc->qg_tlist = (QRY_SPEC (*)[]) qmemblk.qm_qspecs;
+    qdesc->qg_where = (QRY_SPEC (*)[]) qmemblk.qm_qwhere;
+    qdesc->qg_from = (QRY_SPEC (*)[]) qmemblk.qm_qother;
+    qdesc->qg_order = (QRY_SPEC (*)[]) qmemblk.qm_qorder;
+    qdesc->qg_child = NULL;
+    qdesc->qg_internal = NULL;
+    qdesc->qg_bcnt = QG_BCNT;
+    qdesc->qg_base[0] = (DB_DATA_VALUE (*)[]) IIOFdgDbdvGet(1);
+    qdesc->qg_base[1] = NULL;
+    qry->qr_zero = 0;
+    qry->qr_version = QR_VERSION;
+    qry->qr_argv = qmemblk.qm_qargvs;
+    qry->qr_putparam = FEtsalloc(tag, ILcharVal(ILgetOperand(stmt, 3), NULL));
+    qry->qr_form = formName;
+    qry->qr_table = tableField;
+    qry->qr_child = NULL;
+    qry->qr_qdesc = qdesc;
+
+    dbv = IIOFdgDbdvGet(valQueryStructure);
+    dbv->db_data = (PTR) qry;
+}
+
+/*
+** A macro for this file.  I would like to use some CL routine,
+** but I can't find a documented one.  This aligns a pointer
+** to the requirements of align restrict.
+*/
+# define ALIGN_MACRO(ptr)	(((i4) (ptr) % sizeof(ALIGN_RESTRICT)) == 0 ? 0 : sizeof(ALIGN_RESTRICT) - ((i4) (ptr) % sizeof(ALIGN_RESTRICT)))
+
+/*{
+** Name:	qrymem	- Allocate a block of memory for a query.
+**
+** Description:
+**	This is a local static routine that is used by IIObqBuildQryExec
+**	to allocate memory for a query.  This routine communicates
+** 	the memory gotten by a QMBLK structure.
+**
+**	N.B.  This routine makes one very important guarantee.  The
+**	memory that it allocates is dynamic memory. This memory is
+**	a single block allocated with the passed tag. The
+**	block is pointed to by the qm_iqry field of the QMBLK structure.
+**
+** Inputs:
+**	tag		The tag to allocate under.
+**
+** Outputs:
+**	stmt		A pointer to a pointer to a IL_QRYSZE statement for
+**			a query.  This pointer should be moved along
+**			the IL statements.  After the call, it will
+**			be left pointing at the IL_TL2ELM for the target
+**			list of the query.
+**
+**	memblk		A pointer to a QMBLK structure.
+**			Fills in the structure with the addresses
+**			of the various pieces of memory allocated
+**			and the pointer to the IL statement for
+**			the first QRY_PRED(if one exists).
+**
+**	Returns:
+**		OK	when successful,
+**		FAIL	otherwise.
+**
+** History:
+**	17-nov-1988 (Joe)
+**		First Written
+**	21-apr-88 (kenl)
+**		Changed how ALIGN_MACRO was being used.  When passed blk, the
+**		macro was causing problems on DG because blk, a byte pointer,
+**		is a negative number.  Now we call ALIGN_MACRO passing it
+**		the size of the structure that we just added to the memory
+**		pointer which still assures that we are aligned.
+**	31-aug-1993 (mgw)
+**		Fix casting for prototyping of MEreqmem() call.
+*/
+static STATUS
+qrymem(tag, stmt, memblk)
+i2	tag;
+IL	**stmt;
+QMBLK	*memblk;
+{
+    i4		memsize;
+    i4		qpreds;
+    i4		qflds;
+    char	*blk;
+    i4		qspecs;
+    i4		qargvs;
+    STATUS	rval;
+
+    /*
+    ** Must be a QRYSZE statement.
+    */
+    if ((**stmt&ILM_MASK) != IL_QRYSZE)
+    {
+	IIOerError(ILE_STMT, ILE_ILMISSING, ERx("IL_QRYSZE"), (char *) NULL);
+	return FAIL;
+    }
+    /*
+    ** Now start computing the size.
+    */
+    memsize = sizeof(ITQRY);
+    memsize += ALIGN_MACRO(memsize);
+    memsize += sizeof(QDESC);
+    memsize += ALIGN_MACRO(memsize);
+    /*
+    ** For both the QRY_ARGV and the QRY_SPEC we allocate room for
+    ** one more element to have a NULL entry.
+    */
+    qargvs = (i4) ILgetOperand(*stmt, 1) + 1;
+    memsize += sizeof(QRY_ARGV) * qargvs;
+    memsize += ALIGN_MACRO(memsize);
+    qspecs = (i4) ILgetOperand(*stmt, 2) + 1;
+    memsize += sizeof(QRY_SPEC) * qspecs;
+    /*
+    ** Now need to compute the number of predicates and the number
+    ** of ABRT_QFLDs needed.  To do this, we save a pointer to
+    ** the first QRYPRED, and then loop through them counting
+    ** the number of QRYPREDs, and the number of QFLDs needed.
+    ** Note that there might not be any QRYPREDs, but we still
+    ** save a pointer to this IL statement.
+    */
+    *stmt = IIOgiGetIl(*stmt);
+    memblk->qm_pred = *stmt;
+    qpreds = 0;
+    qflds = 0;
+    while ((**stmt&ILM_MASK) == IL_QRYPRED)
+    {
+	qpreds++;
+	qflds +=  (i4) ILgetOperand(*stmt, 2);
+	do
+	{
+	    *stmt = IIOgiGetIl(*stmt);
+	} while ((**stmt&ILM_MASK) != IL_ENDLIST);
+	*stmt = IIOgiGetIl(*stmt);
+    }
+    if (qpreds > 0)
+    {
+	memsize += ALIGN_MACRO(memsize);
+	memsize += sizeof(QSGEN) * qpreds;
+	memsize += ALIGN_MACRO(memsize);
+	memsize += sizeof(ABRT_QUAL) * qpreds;
+	memsize += ALIGN_MACRO(memsize);
+	memsize += sizeof(ABRT_QFLD) * qflds;
+    }
+
+    /*
+    ** Now allocate the memory and set the pointers to the
+    ** various sections.
+    */
+    blk = (char *) MEreqmem((u_i2)tag, (u_i4) memsize, FALSE, &rval);
+    if (rval != OK)
+    {
+	IIOerError(ILE_STMT, ILE_NOMEM, (char *) NULL);
+	return FAIL;
+    }
+    memblk->qm_iqry = (ITQRY *) blk;
+    memblk->qm_qry = &(memblk->qm_iqry->qry);
+    blk += sizeof(ITQRY) + ALIGN_MACRO(sizeof(ITQRY));
+    memblk->qm_qdesc = (QDESC *) blk;
+    blk += sizeof(QDESC) + ALIGN_MACRO(sizeof(QDESC));
+    memblk->qm_qargvs = (QRY_ARGV *) blk;
+    blk += sizeof(QRY_ARGV) * qargvs + ALIGN_MACRO(sizeof(QRY_ARGV) * qargvs);
+    memblk->qm_qspecs = (QRY_SPEC *) blk;
+    memblk->qm_qwhere = NULL;
+    memblk->qm_qother = NULL;
+    memblk->qm_qorder = NULL;
+    blk += sizeof(QRY_SPEC) * qspecs + ALIGN_MACRO(sizeof(QRY_SPEC) * qspecs);
+    if (qpreds > 0)
+    {
+	memblk->qm_qgens = (QSGEN *) blk;
+	blk += sizeof(QSGEN) * qpreds + ALIGN_MACRO(sizeof(QSGEN) * qpreds);
+	memblk->qm_quals = (ABRT_QUAL *) blk;
+	blk += sizeof(ABRT_QUAL) * qpreds 
+				+ ALIGN_MACRO(sizeof(ABRT_QUAL) * qpreds);
+	memblk->qm_qflds = (ABRT_QFLD *) blk;
+    }
+    else
+    {
+	memblk->qm_qgens = NULL;
+	memblk->qm_quals = NULL;
+	memblk->qm_qflds = NULL;
+    }
+    return OK;
+}
+
+/*{
+** Name:	IIOqsQrySingleExec	-	Execute a singleton query
+**
+** Description:
+**	Executes a query that does not have an attached submenu.
+**
+** IL statements:
+**	QRYSINGLE valQryTemporary sidEndOfQueryLoop
+** or
+**	QRYROWGET valQryTemporary sidEndOfQueryLoop
+**
+**
+**	if sidEndOfQueryLoop is NULL, then this is a singleton query.
+**	QRYROWGET differs from QRYSINGLE in that it will fall through
+**	if the query succeeds but returns zero rows.
+**
+** Inputs:
+**	stmt	The IL statement to execute.
+**
+** History:
+**	01/09/91 (emerson)
+**		Added some comments pertaining to long SIDs.
+**		Initialized rval to FALSE (indicating no rows found)
+**		to cover the case where there was a problem building the query.
+**	09/20/92 (emerson)
+**		Added logic to handle new QRYROWGET (for bug 39582).
+*/
+IIOqsQrySingleExec(stmt)
+IL	*stmt;
+{
+    i4			sid;
+    bool		rval;
+    QRY			*qry;
+
+    sid = ILgetOperand(stmt, 2);
+    qry = (QRY *) IIOgvGetVal(ILgetOperand(stmt, 1), DB_QUE_TYPE, (i4 *)NULL);
+
+    /*
+    ** A qry can be NULL if there was a problem building the query.
+    */
+    rval = FALSE;
+    if (qry != NULL)
+    {
+	/*
+	** Consider what to do if the query succeeds but returns 0 rows.
+	** If this is a QRYSINGLE, we want to branch.
+	** If this is a QRYROWGET, we want to fall through.
+	*/
+	qry->qr_version &= ~QR_0_ROWS_OK;
+
+	if ((*stmt&ILM_MASK) == IL_QRYROWGET)
+	{
+	    qry->qr_version |= QR_0_ROWS_OK;
+	}
+	rval = IIARgn1RtsgenV1(qry, QI_START);
+    }
+
+    /*
+    ** A null SID indicates a singleton query rather than a query loop.
+    */
+    if ILNULLSID(stmt, sid)
+    {
+	if (qry != NULL)
+	{
+	    IIARgn1RtsgenV1((QRY *) qry, QI_BREAK);
+	}
+    }
+    else if (!rval)
+    {
+	IIOsiSetIl(sid);
+    }
+}
+
+/*{
+** Name:	IIOqrQryRowchkExec -	Checks to see if a row was returned
+**
+** Description:
+**	Branches if a preceding QRYROWGET returned zero rows.
+**
+** IL statements:
+**	QRYROWCHK valQryTemporary sidEndOfQueryLoop
+**
+** Inputs:
+**	stmt	The IL statement to execute.
+**
+** History:
+**	09/20/92 (emerson)
+**		Created (for bug 39582).
+*/
+IIOqrQryRowchkExec(stmt)
+IL	*stmt;
+{
+    i4			sid;
+    QRY			*qry;
+
+    sid = ILgetOperand(stmt, 2);
+    qry = (QRY *)IIOgvGetVal(ILgetOperand(stmt, 1), DB_QUE_TYPE);
+
+    /*
+    ** A qry can be NULL if there was a problem building the query.
+    */
+    if (qry == NULL || (qry->qr_version & QR_ROWS_FOUND) == 0)
+    {
+	IIOsiSetIl(sid);
+    }
+}
+
+/*{
+** Name:	IIOqgQryGenExec		-	Begin an attached query
+**
+** Description:
+**	Attempts to get the first tuple for a query with an attached submenu.
+**	Outputs a message to the user if no rows were retrieved.
+**
+**	Also saves the mode of the form for later restore in QRYFREE.
+**
+** IL statements:
+**	QRYGEN valQryTemporary boolDisplayMessage sidEndOfQueryLoop
+**
+**
+** Inputs:
+**	stmt	The IL statement to execute.
+**
+** History:
+**	2-dec-1988 (Joe)
+**		Added save of form mode.
+**	07/90 (jhw) -- Save forms mode before starting query.  Bug #31929.
+**		Also, set of form mode to "update" has been moved to
+**		'IIARgn1RtsgenV1()' before the first data is displayed.
+**	10/90 (jhw) - Pass negative QI_START to 'IIARgn1RtsgenV1()' so it will
+**		set the form mode.
+**	09/20/92 (emerson)
+**		Added logic to clear QR_0_ROWS_OK before calling IIARgn1RtsgenV1
+**		(for bug 39582).
+*/
+VOID
+IIOqgQryGenExec(stmt)
+IL	*stmt;
+##{
+	QRY	*qry;
+	bool	rowsfound = FALSE;
+
+	qry = (QRY *) IIOgvGetVal(ILgetOperand(stmt, 1),
+					DB_QUE_TYPE, (i4 *)NULL);
+
+	if ( qry != NULL )
+##	{ /* set form mode before execution . . . */
+##		ITQRY	*iqry;
+
+		iqry = QRYTOITQRY_MACRO(qry);
+##		INQUIRE_FRS FORM ( iqry->saved_mode = mode );
+
+		qry->qr_version &= ~QR_0_ROWS_OK;
+		rowsfound = IIARgn1RtsgenV1(qry, -QI_START);
+##	}
+
+	if (!rowsfound)
+	{
+		if ((bool) ILgetOperand(stmt, 2))
+		{
+##			message ERget(S_IT001C_No_rows_retrieved);
+##			sleep 3;
+		}
+		IIOsiSetIl(ILgetOperand(stmt, 3));
+	}
+##}
+
+/*{
+** Name:	IIOqnQryNextExec	-	Get the next tuple for a query
+**
+** Description:
+**	Gets the next tuple for a query within an attached submenu.
+**
+** IL statements:
+**	QRYNEXT valQueryTemporary intGiveNoMoreRowsMessage sidEndOfQueryLoop
+**
+**		valQueryTemporary is NULL if the query has been passed in from
+**		another frame (as opposed to fully contained within the
+**		current frame).
+**		The SID indicates where to branch on success (if the
+**		ILM_BRANCH_ON_SUCCESS modifier bit is set) or on failure.
+**		For success, the SID indicates the top of the SELECT loop.
+**		For failure, the SID indicates the end of the entire query
+**		(including its attached submenu).
+**
+** Inputs:
+**	stmt	The IL statement to execute.
+**
+** History:
+**	09/20/92 (emerson)
+**		Added logic to clear QR_0_ROWS_OK before calling IIARgn1RtsgenV1
+**		(for bug 39582).  Also support new opcode modifier
+**		ILM_BRANCH_ON_SUCCESS (for bug 46761).
+*/
+IIOqnQryNextExec(stmt)
+IL	*stmt;
+{
+	ABRTSPRM	*prm;
+	bool		give_message;
+	bool		rowsfound;
+	QRY		*qry;
+
+	give_message = (bool) ILgetOperand(stmt, 2);
+	if (ILNULLVAL(ILgetOperand(stmt, 1)))
+	{
+		prm = IIOFgpGetPrm();
+		if (prm == NULL || !abrtsnext(prm))
+		{
+##			message ERget(S_IT001D_No_query_currently_ac);
+##			sleep 3;
+		}
+		else if (!abrtsgen(prm->pr_oldprm->pr_qry, QI_NMASTER))
+		{
+		    if (give_message)
+		    {
+##			message ERget(S_IT001E_No_more_rows);
+##			sleep 3;
+		    }
+		}
+		return;
+	}
+
+	rowsfound = FALSE;
+	qry = (QRY *)IIOgvGetVal(ILgetOperand(stmt, 1),
+						DB_QUE_TYPE, (i4 *)NULL);
+	if (qry != NULL)
+	{
+	    qry->qr_version &= ~QR_0_ROWS_OK;
+	    rowsfound = IIARgn1RtsgenV1(qry, QI_NMASTER);
+	}
+	if (!rowsfound)
+	{
+	    if (give_message)
+	    {
+##		message ERget(S_IT001E_No_more_rows);
+##		sleep 3;
+	    }
+	    if (!(*stmt & ILM_BRANCH_ON_SUCCESS))
+	    {
+		IIOsiSetIl(ILgetOperand(stmt, 3));
+	    }
+	}
+	else if (*stmt & ILM_BRANCH_ON_SUCCESS)
+	{
+	    IIOsiSetIl(ILgetOperand(stmt, 3));
+	}
+	return;
+}
+
+/*{
+** Name:	IIOqbQryBrkExec		-	Close a query
+**
+** Description:
+**	Breaks out of a query.
+**
+** IL statements:
+**	QRYBRK valQueryTemporary
+**
+**		The VALUE is the temp QRY structure which holds the query.
+**
+** Inputs:
+**	stmt	The IL statement to execute.
+**
+*/
+IIOqbQryBrkExec(stmt)
+IL	*stmt;
+{
+	ABRTSPRM	*prm;
+	QRY		*qry;
+
+	if (ILNULLVAL(ILgetOperand(stmt, 1)))
+	{
+		if ((prm = IIOFgpGetPrm()) != NULL &&
+		     prm->pr_oldprm->pr_qry != NULL)
+		{
+			abrtsgen(prm->pr_oldprm->pr_qry, QI_BREAK);
+		}
+	}
+	else
+	{
+	    if ( (qry = (QRY *)IIOgvGetVal(ILgetOperand(stmt, 1), 
+					DB_QUE_TYPE, (i4 *)NULL)
+		 ) != NULL)
+	    {
+		IIARgn1RtsgenV1(qry, QI_BREAK);
+	    }
+	}
+	return;
+}
+
+/*{
+** Name:	IIOqfQryFreeExec	-	Free up space used for a query
+**
+** Description:
+**	Frees up the memory used for a query.
+**
+** IL statements:
+**	QRYFREE valQueryTemporary
+**
+**		The VALUE is the temp QRY structure which holds the query.
+**
+** Inputs:
+**	stmt	The IL statement to execute.
+**
+*/
+IIOqfQryFreeExec(stmt)
+IL	*stmt;
+##{
+##	ITQRY		*iqry;
+	DB_DATA_VALUE	*dbv;
+
+	if (!(ILNULLVAL(ILgetOperand(stmt, 1))))
+	{
+		dbv = IIOFdgDbdvGet(ILgetOperand(stmt, 1));
+		/*
+		** The QRY structure pointed to by the DBV really points
+		** at the qry field of an ITQRY.  Get the ITQRY to
+		** free the memory and possibly restore a form mode.
+		*/
+		iqry = QRYTOITQRY_MACRO(dbv->db_data);
+		if (iqry != NULL)
+		{
+		    if (*iqry->saved_mode != EOS)
+		    {
+##			SET_FRS FORM (mode = iqry->saved_mode)
+		    }
+		    IIUGtagFree(iqry->tag);
+		    dbv->db_data = NULL;
+		}
+	}
+	return;
+##}
+
+/*{
+** Name:	IIOqcQryChildExec	-	Connect master-detail queries
+**
+** Description:
+**	Ties together master-detail queries.
+**	The 2 QRY structures (each pointing to a QDESC structure) have
+**	already been built by calls on IIObqBuildQryExec().
+**	This routine makes the 'child' elements of the master QRY and
+**	QDESC point to the detail QRY and QDESC respectively.
+**
+** IL statements:
+**	QRYCHILD valMasterQuery valDetailQuery
+**
+**		The first VALUE is the master query's QRY structure,
+**		the second the detail's QRY.
+**
+** Inputs:
+**	stmt	The IL statement to execute.
+**
+*/
+IIOqcQryChildExec(stmt)
+IL	*stmt;
+{
+	register QRY	*parent;
+	QRY		*child;
+
+	child = (QRY *) IIOgvGetVal(ILgetOperand(stmt, 2), 
+					DB_QUE_TYPE, (i4 *)NULL);
+
+	if ( (parent = (QRY *) IIOgvGetVal(ILgetOperand(stmt, 1), 
+						DB_QUE_TYPE, (i4 *)NULL)
+	     ) != NULL)
+	{
+		parent->qr_child = child;
+		parent->qr_qdesc->qg_child = child->qr_qdesc;
+	}
+	return;
+}

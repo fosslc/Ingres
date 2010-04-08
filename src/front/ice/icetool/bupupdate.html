@@ -1,0 +1,60 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?form=ENCTYPE="multipart/form-data"&title=Update&submit=actDoc.html` -->
+		<!-- #ICE VAR=`
+			<INPUT TYPE="HIDDEN" NAME="unit" VALUE=":unit_id">
+			<INPUT TYPE="HIDDEN" NAME="id" VALUE=":doc">
+			<INPUT TYPE="HIDDEN" NAME="action" VALUE="update">`
+		-->
+		<TABLE BORDER=0>
+		<!-- #ICE REPEAT FUNCTION=`document?action=retrieve&doc_id=:doc` 
+		HTML=`
+			<TR>
+				<TD>Type: </TD>
+				<TD>:doc_type</TD>
+			</TR>
+			<TR>
+				<TD>Name: </TD>
+				<TD><INPUT ALIGN="RIGHT" MAXLENGTH="32" SIZE="20" NAME="name" VALUE=":doc_name">.
+					<INPUT SIZE="4" NAME="suffix" VALUE=":doc_suffix">
+				</TD>
+			</TR>
+			<TR>
+				<TD>Owned by: </TD>
+				<TD> :doc_owner </TD>
+			</TR>
+			<TR>
+				<TD>General access: </TD>
+				<TD>
+				<INPUT TYPE="CHECKBOX" NAME="public" VALUE="checked" :doc_public>Public<BR>
+				</TD>
+			</TR>
+			<INPUT TYPE="HIDDEN" NAME="ext_loc" VALUE=":doc_ext_loc">
+			<INPUT TYPE="HIDDEN" NAME="ext_file" VALUE=":doc_ext_file">
+			<INPUT TYPE="HIDDEN" NAME="ext_suffix" VALUE=":doc_ext_suffix">
+			<!-- #ICE REPEAT IF (``:doc_ext_file`` == ````)
+			THEN=``<TR><TD>The document is: </TD>
+								 <TD>
+									<INPUT TYPE="RADIO" NAME="cache"	VALUE="pre_cache" :doc_pre_cache>Pre-cache<BR>
+									<INPUT TYPE="RADIO" NAME="cache"	VALUE="perm_cache" :doc_perm_cache>Permanent cache<BR>
+									<INPUT TYPE="RADIO" NAME="cache"	VALUE="session_cache" :doc_session_cache>Session cache<BR>
+								 </TD>
+						</TR>
+						</SELECT></TD>
+						</TR><TR><TD>new file: </TD>
+						<TD><INPUT NAME="file" TYPE="file" VALUE=""></TD>
+						</TR>``
+			ELSE=``<TR><TD>Location: </TD>
+								 <TD><!-- #ICE FUNCTION=````ice_locations?action=retrieve&loc_id=:doc_ext_loc````
+												HTML=````:loc_name````
+											 -->
+								 </TD>
+							</TR>
+							<TR><TD>file name:</TD>
+									<TD>:doc_ext_file.:doc_ext_suffix</TD>
+							</TR>
+							<TR><TD></TD>
+                                <TD><INPUT TYPE="CHECKBOX" NAME="transfer" VALUE="checked">I would like to move the external file into the Web Deployment Option repository<BR></TD>
+							</TR>``
+			-->`
+		-->
+		</TABLE>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

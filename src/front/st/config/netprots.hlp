@@ -1,0 +1,66 @@
+/#-- Copyright (c) 2008 Ingres Corporation
+
+  This form can be used to modify listen address information or enable
+  specific protocols for the selected Net or DAS (Data Access)
+  server definition.
+
+  For a Net or DAS server to use a supported protocol, it must have 
+  a valid listen address assigned to it which is unique with respect to
+  the listen addresses assigned to other Net or DAS servers for the
+  same protocol.
+
+  TCP/IP protocols allow "rollups".  Rollups mean that more than one
+  Net or DAS server can be started using the same port code.
+
+  TCP/IP ports can be set to port codes that are hashed into port numbers,
+  or the port number can be explicitly configured.
+
+  The following port codes allow rollups: 
+
+  1. The format "XX", where:
+      a.  The first character is a letter.
+      b.  The second character is a letter or number.  
+
+  Generally "XX" is set to the value of II_INSTALLATION, but any value 
+  conforming to this format is a valid port code.  A typical example
+  is the port code "II".
+
+  2. The format "N[N]+", where:
+      a.  N is a series of numbers representing a physical
+          port number.
+      b.  The last character is a plus sign "+".
+
+  An example of a port number that rolls up is "21064+".
+
+  3.  The format "XXn[n]+", where:
+      a.  The first character is a letter.
+      b.  The second character is a letter or a number.
+      c.  The third and optional fourth character represent a number
+          from 1 through 14.
+      d.  The last character is a plus sign "+".
+
+  CBF automatically adds a plus sign to the installation code if the start 
+  count is greater than one.
+
+  Port codes can be configured as port numbers or as port codes that do
+  not roll up.  
+
+  The following port codes do not allow rollups:
+
+  1.  The format "XXn[n]", where:
+      a.  The first character is a letter.
+      b.  The second character is a letter or a number.
+      c.  The third and optional fourth character represent a number
+          from 1 through 15.
+
+  The DAS server is set to the value of II_INSTALLATION plus the
+  number 7 by default (example: "II7"). 
+
+  2. The format "N[N]", where:
+      a.  N is a series of numbers representing a physical
+          port number.
+
+  An example of a port number that does not roll up is "21064".
+
+  Refer to the Ingres Connectivity Guide for details on the syntax of
+  Net and DAS server listen addresses for specific protocols.

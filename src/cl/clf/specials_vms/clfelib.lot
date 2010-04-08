@@ -1,0 +1,590 @@
+!
+! History:
+!	07-feb-1995 (wolf)
+!		Add entries for SL functions
+!	18-jul-1995 (duursma)
+!		Added new iisys* routines
+!		Added NMgtIngAt
+!	15-nov-1995 (duursma)
+!		Added EXgetctx
+!	15-feb-1996 (albany)
+!		Added NMpathIng for VDBA.
+!	23-mar-1996 (duursma)
+!		Added MEget_pages, MEfree_pages, PCis_alive 
+!		for batch mode server.
+!	26-mar-1996 (duursma)
+!		Added CKdelete
+!	18-dec-1996 (chech02)
+!		Added Mostrpget
+!	31-jul-1997 (teresak)
+!		Increased GSMATCH to 122 (1.2/01 uses 121 so increased by 2)
+!	23-feb-1998 (kinte01)
+!		Add IIMEtls_create,IIMEtls_destroy,IImetls_get,IImetls_set,
+! 	        TMtz_load. These are needed to be known for API shared executable
+!	27-may-1998 (kinte01)
+!		Add TMbreak. Make this visible as it is needed by Replicator.
+!	17-aug-1998 (kinte01)
+!		Added in calic_lib/lib option to link in the new CA
+!		licensing routines
+!	19-jan-1999 (kinte01)
+!		Add entry points for iibtand, iibtor, & iibtxor for change
+!		439696
+!	27-Apr-2000 (kinte01)
+!		Add TMconv needed as a result of change 445026
+!       08-Nov-2000 (horda03)
+!               Add IIMEsize needed as a result of change 448047.
+!	13-Feb-2001 (kinte01)
+!		Add MOINTSET, MOINTGET, MHRAND2, IIFPRAND, & the IDUUID_* 
+!		functions
+!	19-Mar-2001 (kinte01)
+!		Add GCshut 
+!	10-May-2001 (kinte01)
+!		Add TMTZ_lookup (Needed as a result of fix for bug 104334)
+!       28-feb-2002 (horda03) Bug 107171
+!               Add EXchkintr.
+!	02-Mar-2002 (kinte01)
+!		Add MEsmdestroy & TMcvtsecs for replicator
+!	29-Mar-2002 (loera01)
+!               Changed DLPREPARE_LOC to IIDLPREPARE_LOC.
+!       01-Apr-2002 (loera01)
+!               Added references to GCACL exported symbols, and 
+!               GetOpenRoadStyle().
+!	30-jul-2002 (horda03) bug 106435
+!		Add CVula.
+!	23-aug-2002 (abbjo03)
+!	    Add LC_getStdLocale.
+!	16-oct-2002 (abbjo03)
+!	    Remove STscanf.
+!	08-nov-2002 (abbjo03)
+!	    Remove GetOpenRoadStyle.
+!	19-dec-2002 (abbjo03)
+!	    Add MHi4add, MHi4sub, MHi4mul and MHi4div.
+!	22-jan-2003 (abbjo03)
+!	    Add IISTrstrindex.
+!	30-jan-2003 (abbjo03)
+!	    Remove STalfeq, STlength, STzprintf.
+!	09-may-2003 (abbjo03)
+!	    Increment major/minor version id to 126,0 for 2.6/0305. Clean up
+!	    unused and commented out entries.
+!	03-nov-2003 (kinte01)
+!	    Add CX routines for the Portable Cluster Project
+!	02-dec-2003 (kinte01)
+!	    Add MOptrout for SIR 110365 (Add MIB information for GCD and 
+!	    OpenAPI 
+!	07-jun-2004 (abbjo03)
+!	    Remove CVtolocal and CVtonet. Add MHi8add/sub/mul/div, CVal8/la8,
+!	    CVpkl8/l8pk, GVmo_init/cnf_init/cnf_term, CM_getcharset.
+!       08-Jun-2004 (loera01)
+!           Added DLload() and STnprintf().
+!	21-jun-2004 (abbjo03)
+!	    Remove CA licensing for open source.
+!	23-jun-2004 (abbjo03)
+!	    Add STlpolycat, CMget_charset_name, CMset_charset.
+!	05-jan-2005 (abbjo03)
+!	    Add CMget_attr. Comment out SLxxx, SIgetfd, SIinitfp and SIunbuf.
+!	    Changes to work with Jam and mkshlibs.
+!	30-mar-2005 (abbjo03)
+!	    Add CXnickname_from_node_name.
+!	25-may-2005 (abbjo03)
+!	    Add BTclear for ODBC driver.
+!	25-oct-2005 (abbjo03)
+!	    Add CXnode_number.
+!	05-may-2006 (abbjo03)
+!	    Add TMtz_isdst.
+!     01-Aug-2007 (Ralph Loen) SIR 118898
+!           Added GCdns_hostname().
+!       12-JUN-2007 (Ralph Loen) SIR 118032
+!           Add GCsetMode and GCgetMode.
+!	13-nov-2007 (joea)
+!	    Fix 1-aug change, which was missing a hyphen.  Add MHacos, MHasin,
+!	    MHatan2, MHtan, MHsrand2, CM_ischarsetUTF8.
+!	07-jan-2008 (abbjo03)
+!	    Remove CXnickname_from_node_name.
+!	12-feb-2008 (joea)
+!	    Add CXdlm_lock_info.
+!	05-jun-2008 (joea)
+!	    Add CM UTF8 data and procedures.
+!	03-jul-2008 (upake01)
+!           Add CMdump_col
+!	12-Aug-2008 (kiria01) SIR120473
+!	    Add TRwrite
+!	28-oct-2008 (joea)
+!	    Remove synchronous system services hack routines.
+!	05-dec-2008 (joea)
+!	    Add CM_UTF8_twidth.
+!	06-Jan-2009 (kibro01)
+! 	    Add BTclearmask
+!	14-jan-2009 (joea)
+!	    Add TMhrnow.
+!	21-jan-2009 (joea)
+!	    Correct cross-integration of 14-jan: missing continuation char.
+!	10-feb-2009 (joea)
+!	    Remove CMget_attr and CM_ischarsetUTF8.  Add CMischarset_doublebyte
+!	    and CMischarset_utf8.
+!	08-may-2009 (joea)
+!	    Add CM_isLegalUTF8Sequence.
+!       17-aug-2009 (horda03) B122364
+!           Add IISTtrmnwhite
+!       13-nov-2009 (joea)
+!           Add STxcompare.
+!       01-Dec-2009 (coomi01) b122980
+!           Add MHround
+!       11-dec-2009 (joea)
+!           Change STxcompare to IISTxcompare.
+!       08-jan-2010 (joea)
+!           Add CM_isDBL.
+!
+IDENT=compatlib
+GSMATCH=LEQUAL,126,0
+SYMBOL_VECTOR=(SIflush=PROCEDURE,-
+               SIfprintf=PROCEDURE,-
+               SIprintf=PROCEDURE,-
+               STcompare=PROCEDURE,-
+               STcopy=PROCEDURE,-
+               STlcopy=PROCEDURE,-
+               LOfroms=PROCEDURE,-
+               SIclose=PROCEDURE,-
+               SIfopen=PROCEDURE,-
+               SIread=PROCEDURE,-
+               IISTprintf=PROCEDURE,-
+               IDname=PROCEDURE,-
+               IIMEcopy=PROCEDURE,-
+               MEfill=PROCEDURE,-
+               MEfree=PROCEDURE,-
+               EXCATCH=PROCEDURE,-
+               EXSETUP=PROCEDURE,-
+               EXUNSAVE_HANDLER=PROCEDURE,-
+               PCexit=PROCEDURE,-
+               IISTtrmwhite=PROCEDURE,-
+               CVla=PROCEDURE,-
+               CVal=PROCEDURE,-
+               IISTcat=PROCEDURE,-
+               NMgtat=PROCEDURE,-
+               LOfstfile=PROCEDURE,-
+               SIopen=PROCEDURE,-
+               LOdelete=PROCEDURE,-
+               PCcmdline=PROCEDURE,-
+               IIMISCcommandline=PROCEDURE,-
+               IIMISCinredirect=PROCEDURE,-
+               IIMISCsysin=PROCEDURE,-
+               IIMISCoutredirect=PROCEDURE,-
+               IIMISCsyserr=PROCEDURE,-
+               IIcompatmain=PROCEDURE,-
+               TEcmdwrite=PROCEDURE,-
+               CVan=PROCEDURE,-
+               CVupper=PROCEDURE,-
+               CVlower=PROCEDURE,-
+               IISTscompare=PROCEDURE,-
+               MEalloc=PROCEDURE,-
+               MHrand=PROCEDURE,-
+               MHsrand=PROCEDURE,-
+               PCpid=PROCEDURE,-
+               TMsecs=PROCEDURE,-
+               TMend=PROCEDURE,-
+               TMstart=PROCEDURE,-
+               TRdisplay=PROCEDURE,-
+               TRset_file=PROCEDURE,-
+               IIMEadvise=PROCEDURE,-
+               IISTbcompare=PROCEDURE,-
+               IISTindex=PROCEDURE,-
+               IISTrindex=PROCEDURE,-
+               IIBTCOUNT=PROCEDURE,-
+               IIBTHIGH=PROCEDURE,-
+               IIBTNEXT=PROCEDURE,-
+               IIBTSET=PROCEDURE,-
+               IIBTTEST=PROCEDURE,-
+               SPARE, -			! CIcapability
+               CMCLOSE_COL=PROCEDURE,-
+               CMICOPY=PROCEDURE,-
+               CMKCHECK=PROCEDURE,-
+               CMOPEN_COL=PROCEDURE,-
+               CMREAD_COL=PROCEDURE,-
+               CMSET_ATTR=PROCEDURE,-
+               CPOPEN=PROCEDURE,-
+               CVAF=PROCEDURE,-
+               CVAHXL=PROCEDURE,-
+               CVAPK=PROCEDURE,-
+               CVFA=PROCEDURE,-
+               CVFPK=PROCEDURE,-
+               CVLPK=PROCEDURE,-
+               CVNA=PROCEDURE,-
+               CVOL=PROCEDURE,-
+               CVPKA=PROCEDURE,-
+               CVPKF=PROCEDURE,-
+               CVPKL=PROCEDURE,-
+               CVPKPK=PROCEDURE,-
+               SPARE, -			! CVtolocal
+               SPARE, -			! CVtonet
+               DSBEGIN=PROCEDURE,-
+               DSDECODE=PROCEDURE,-
+               DSEND=PROCEDURE,-
+               DSFINAL=PROCEDURE,-
+               DSINIT=PROCEDURE,-
+	       DSWRITE=PROCEDURE,-
+               ERGET=PROCEDURE,-
+               ERLANGCODE=PROCEDURE,-
+               ERLANGSTR=PROCEDURE,-
+               ERLOOKUP=PROCEDURE,-
+               ERREPORT=PROCEDURE,-
+               EXINTERRUPT=PROCEDURE,-
+               EXMATCH=PROCEDURE,-
+               EXSIGNAL=PROCEDURE,-
+               EXSYS_REPORT=PROCEDURE,-
+               IIMISCSYSOUT=PROCEDURE,-
+               LOADDPATH=PROCEDURE,-
+               LOCHANGE=PROCEDURE,-
+               LOCOMPOSE=PROCEDURE,-
+               LOCOPY=PROCEDURE)
+SYMBOL_VECTOR=(LOCREATE=PROCEDURE,-
+               LOCURNODE=PROCEDURE,-
+               LODETAIL=PROCEDURE,-
+               LOENDLIST=PROCEDURE,-
+               LOEXIST=PROCEDURE,-
+               LOFADDPATH=PROCEDURE,-
+               LOGT=PROCEDURE,-
+               LOINFO=PROCEDURE,-
+               LOINGPATH=PROCEDURE,-
+               LOISDIR=PROCEDURE,-
+               LOISFULL=PROCEDURE,-
+               LOLAST=PROCEDURE,-
+               LOLIST=PROCEDURE,-
+               LOPURGE=PROCEDURE,-
+               LORENAME=PROCEDURE,-
+               LOSIZE=PROCEDURE,-
+               LOSTFILE=PROCEDURE,-
+               LOTOS=PROCEDURE,-
+               LOUNIQ=PROCEDURE,-
+               LOWCARD=PROCEDURE,-
+               LOWEND=PROCEDURE,-
+               LOWHAT=PROCEDURE,-
+               LOWNEXT=PROCEDURE,-
+               MECALLOC=PROCEDURE,-
+               IIMECMP=PROCEDURE,-
+               MEINITBUF=PROCEDURE,-
+               IIMEMOVE=PROCEDURE,-
+               MENEED=PROCEDURE,-
+               IIMEREQLNG=PROCEDURE,-
+               IIMEREQMEM=PROCEDURE,-
+               METCALLOC=PROCEDURE,-
+               IIMETFREE=PROCEDURE,-
+               MHATAN=PROCEDURE,-
+               MHCEIL=PROCEDURE,-
+               MHCOS=PROCEDURE,-
+               MHEXP=PROCEDURE,-
+               MHEXP10=PROCEDURE,-
+               MHFDINT=PROCEDURE,-
+               MHIPOW=PROCEDURE,-
+               MHLN=PROCEDURE,-
+               MHPKABS=PROCEDURE,-
+               MHPKADD=PROCEDURE,-
+               MHPKCMP=PROCEDURE,-
+               MHPKDIV=PROCEDURE,-
+               MHPKMUL=PROCEDURE,-
+               MHPKNEG=PROCEDURE,-
+               MHPKSUB=PROCEDURE,-
+               MHPOW=PROCEDURE,-
+               MHSIN=PROCEDURE,-
+               MHSQRT=PROCEDURE,-
+               NMF_OPEN=PROCEDURE,-
+               NMLOC=PROCEDURE,-
+               NMT_OPEN=PROCEDURE,-
+               OLPCALL=PROCEDURE,-
+               PCATEXIT=PROCEDURE,-
+               PCSLEEP=PROCEDURE,-
+               PCUNIQUE=PROCEDURE,-
+               PERESET=PROCEDURE,-
+               PESAVE=PROCEDURE,-
+               PEUMASK=PROCEDURE,-
+               PEWORLD=PROCEDURE,-
+               QUINIT=PROCEDURE,-
+               QUINSERT=PROCEDURE,-
+               QUREMOVE=PROCEDURE,-
+               SICAT=PROCEDURE,-
+               SIEQINIT=PROCEDURE,-
+               SIFSEEK=PROCEDURE,-
+               SIFTELL=PROCEDURE,-
+               SPARE, -			! SIgetfd
+               SIGETREC=PROCEDURE,-
+               SPARE, -			! SIinitfp
+               SIISOPEN=PROCEDURE,-
+               SIPUTREC=PROCEDURE,-
+               SITERMINAL=PROCEDURE,-
+               SPARE, -			! SIunbuf
+               SIWRITE=PROCEDURE,-
+	       IISTALLOC=PROCEDURE,-
+               IISTGETWORDS=PROCEDURE,-
+               IISTMOVE=PROCEDURE,-
+               IISTNLENGTH=PROCEDURE,-
+               IISTPOLYCAT=PROCEDURE,-
+               IISTSKIPBLANK=PROCEDURE,-
+               IISTTALLOC=PROCEDURE,-
+               IISTZAPBLANK=PROCEDURE,-
+               TCCLOSE=PROCEDURE,-
+               TCFLUSH=PROCEDURE,-
+               TCGETC=PROCEDURE,-
+               TCOPEN=PROCEDURE,-
+               TCPUTC=PROCEDURE,-
+               TECLOSE=PROCEDURE,-
+               TEFLUSH=PROCEDURE,-
+               TEGBF=PROCEDURE,-
+               TEGET=PROCEDURE,-
+               TEINFLUSH=PROCEDURE,-
+               TELOCK=PROCEDURE,-
+               TEOPEN=PROCEDURE,-
+               TEPUT=PROCEDURE)
+SYMBOL_VECTOR=(TERESTORE=PROCEDURE,-
+               TESWITCH=PROCEDURE,-
+               TETEST=PROCEDURE,-
+               TEWRITE=PROCEDURE,-
+               TMCMP=PROCEDURE,-
+               TMCPU=PROCEDURE,-
+               TMFORMAT=PROCEDURE,-
+               TMGET_STAMP=PROCEDURE,-
+               TMNOW=PROCEDURE,-
+               TMSTAMP_STR=PROCEDURE,-
+               TMSTR=PROCEDURE,-
+               TMYRSIZE=PROCEDURE,-
+               TMZONE=PROCEDURE,-
+               TRGETTRACE=PROCEDURE,-
+               TRMAKETRACE=PROCEDURE,-
+               UTCOMPILE=PROCEDURE,-
+               UTEDIT=PROCEDURE,-
+               UTEXE=PROCEDURE,-
+               UTLINK=PROCEDURE,-
+               UTPRINT=PROCEDURE,-
+               CMunctrl=PROCEDURE,-
+               _FILBUF=PROCEDURE,-
+               _FLSBUF=PROCEDURE,-
+               SI_iobptr=DATA,-
+               CM_AttrTab=DATA,-
+               CM_CaseTab=DATA,-
+               UTdeffile=PROCEDURE,-
+               SI_iobuffers=DATA,-
+               CM_DefAttrTab=DATA,-
+               CM_DefCaseTab=DATA,-
+               SPARE, -			! SLcollate
+               SPARE, -			! SLcompare
+               SPARE, -			! SLempty
+               SPARE, -			! SLexternal
+               SPARE, -			! SLextlen
+               SPARE, -			! SLhaslabels
+               SPARE, -			! SLinternal
+               SPARE, -			! SLisvalid
+               SPARE, -			! SLlub
+               TRformat=PROCEDURE,-
+               TMtz_init=PROCEDURE,-
+               TMtz_search=PROCEDURE,-
+               TMtz_year_cutoff=PROCEDURE,-
+               CVLX=PROCEDURE,-
+               ERSLOOKUP=PROCEDURE,-
+               MOATTACH=PROCEDURE,-
+               MOCDATA_INDEX=PROCEDURE,-
+               MOCLASSDEF=PROCEDURE,-
+               MODETACH=PROCEDURE,-
+               MOGET=PROCEDURE,-
+               MOGETNEXT=PROCEDURE,-
+               MOIDATA_INDEX=PROCEDURE,-
+               MOINTGET=PROCEDURE,-
+               MOLONGOUT=PROCEDURE,-
+               MOPVGET=PROCEDURE,-
+               MONOSET=PROCEDURE,-
+               MOSET=PROCEDURE,-
+               MOSET_MONITOR=PROCEDURE,-
+               MOSTRGET=PROCEDURE,-
+               MOSTRPGET=PROCEDURE,-
+               MOSTROUT=PROCEDURE,-
+               MOULONGOUT=PROCEDURE,-
+               IIBTNOT=PROCEDURE,-
+               PMFREE=PROCEDURE,-
+               PMGET=PROCEDURE,-
+               PMINIT=PROCEDURE,-
+               PMLOAD=PROCEDURE,-
+               PMMDELETE=PROCEDURE,-
+               PMMEXPANDREQUEST=PROCEDURE,-
+               PMMEXPTOREGEXP=PROCEDURE,-
+               PMMFREE=PROCEDURE,-
+               PMMGET=PROCEDURE,-
+               PMMGETDEFAULT=PROCEDURE,-
+               PMMGETELEM=PROCEDURE,-
+               PMMINIT=PROCEDURE,-
+               PMMINSERT=PROCEDURE,-
+               PMMLOAD=PROCEDURE,-
+               PMMLOWERON=PROCEDURE,-
+               PMMNUMELEM=PROCEDURE,-
+               PMMSCAN=PROCEDURE,-
+               PMMSETDEFAULT=PROCEDURE,-
+               PMMWRITE=PROCEDURE,-
+               PMEXPTOREGEXP=PROCEDURE,-
+               PMGETELEM=PROCEDURE,-
+               PMNUMELEM=PROCEDURE,-
+               PMSCAN=PROCEDURE,-
+               PMSETDEFAULT=PROCEDURE,-
+               CIDECODE=PROCEDURE,-
+               CIENCODE=PROCEDURE,-
+               CISETKEY=PROCEDURE,-
+               CITOBIN=PROCEDURE,-
+               CITOTEXT=PROCEDURE,-
+               ERSEND=PROCEDURE,-
+               CVptra=PROCEDURE,-
+               CVaptr=PROCEDURE,-
+               CVaxptr=PROCEDURE,-
+               CVptrax=PROCEDURE,-
+               IIMEgettag=PROCEDURE,-
+               IIMEfreetag=PROCEDURE,-
+               IICSINITIATE=PROCEDURE,-
+               IICSSET_SID=PROCEDURE,-
+               DIALLOC=PROCEDURE,-
+               DICLOSE=PROCEDURE,-
+               DICREATE=PROCEDURE,-
+               DIDELETE=PROCEDURE,-
+               DIFLUSH=PROCEDURE,-
+               DIFORCE=PROCEDURE,-
+               DIOPEN=PROCEDURE,-
+               DIWRITE=PROCEDURE,-
+               TENAME=PROCEDURE,-
+               PMHOST=PROCEDURE,-
+               PMMHOST=PROCEDURE,-
+               IIEXSETCLIENT=PROCEDURE)
+SYMBOL_VECTOR=(MUi_semaphore=PROCEDURE,-
+               MUn_semaphore=PROCEDURE,-
+               MUp_semaphore=PROCEDURE,-
+               MUr_semaphore=PROCEDURE,-
+               MUv_semaphore=PROCEDURE,-
+               SPARE, -			! iisys_getjpiw
+               SPARE, -			! iisys_getdviw
+               SPARE, -			! iisys_getsyiw
+               SPARE, -			! iisys_getlkiw
+               SPARE, -			! iisys_qiow
+	       NMgtIngAt=PROCEDURE,-
+	       EXgetctx=PROCEDURE,-
+	       NMpathIng=PROCEDURE,-
+	       IIMEfree_pages=PROCEDURE,-
+	       IIMEget_pages=PROCEDURE,-
+	       PCis_alive=PROCEDURE,-
+	       CKdelete=PROCEDURE,-
+	       IIMEtls_create=PROCEDURE,-
+	       IIMEtls_destroy=PROCEDURE,-
+	       IImetls_get=PROCEDURE,-
+	       IImetls_set=PROCEDURE,-
+	       TMtz_load=PROCEDURE, -
+               TMbreak=PROCEDURE, -
+               IIBTAND=PROCEDURE,-
+               IIBTOR=PROCEDURE,-
+               IIBTXOR=PROCEDURE,-
+               TMconv=PROCEDURE,-
+               TMtz_lookup=PROCEDURE,-
+               IIMEsize=PROCEDURE,-
+	       CV0decerr=PROCEDURE,-
+	       MOintset=PROCEDURE,-
+	       IDUUID_CREATE=PROCEDURE,-
+	       IDUUID_COMPARE=PROCEDURE,-
+	       IDUUID_FROM_STRING=PROCEDURE,-
+	       IDUUID_TO_STRING=PROCEDURE,-
+	       IIFPRAND=PROCEDURE, -
+	       MOuintget=PROCEDURE, -
+	       MHRAND2=PROCEDURE, -
+	       IIDLBIND=PROCEDURE,-
+	       IIDLUNLOAD=PROCEDURE,-
+	       IIDLOSPREPARE=PROCEDURE,-
+	       IIDLPREPARE_LOC=PROCEDURE,-
+	       ERLOG=PROCEDURE,-
+	       HSH_CRC32=PROCEDURE, -
+	       IISTSTRINDEX=PROCEDURE, -
+	       GCshut=PROCEDURE,-
+               GCsync=PROCEDURE,-
+               CVFCVT=PROCEDURE,-
+               TM_LOOKUP_MONTH=PROCEDURE,-
+               GCDISCONN=PROCEDURE,-
+               GCHOSTNAME=PROCEDURE,-
+               GCINITIATE=PROCEDURE,-
+               GCLISTEN=PROCEDURE,-
+               GCNSID=PROCEDURE,-
+               GCPURGE=PROCEDURE,-
+               GCRECEIVE=PROCEDURE,-
+               GCREGISTER=PROCEDURE,-
+               GCRELEASE=PROCEDURE,-
+               GCREQUEST=PROCEDURE,-
+               GCRESTORE=PROCEDURE,-
+               GCSAVE=PROCEDURE,-
+               GCSEND=PROCEDURE,-
+               GCSIGNAL_STARTUP=PROCEDURE,-
+               GCTERMINATE=PROCEDURE,-
+               GCUSERNAME=PROCEDURE,-
+               GCUSRPWD=PROCEDURE,-
+               IIMEsmdestroy=PROCEDURE, - 
+               TMcvtsecs=PROCEDURE, -
+		LC_getStdLocale=PROCEDURE, -
+		MHi4add=PROCEDURE, -
+		MHi4sub=PROCEDURE, -
+		MHi4mul=PROCEDURE, -
+		MHi4div=PROCEDURE, -
+		IISTrstrindex=PROCEDURE, -
+		EXchkintr=PROCEDURE, -
+		CVula=PROCEDURE, -
+               CXCLUSTER_CONFIGURED=PROCEDURE, -
+	       CXCLUSTER_ENABLED=PROCEDURE, -
+	       CXDECORATE_FILE_NAME=PROCEDURE, -
+	       CXGET_CONTEXT=PROCEDURE, -
+	       CXNODE_INFO=PROCEDURE, -
+	       CXNODE_NAME=PROCEDURE, -
+	       CXNUMA_CLUSTER_CONFIGURED=PROCEDURE, -
+	       CXNUMA_RAD_CONFIGURED=PROCEDURE, -
+	       CXNUMA_RAD_COUNT=PROCEDURE, -
+	       CXSET_CONTEXT=PROCEDURE)
+SYMBOL_VECTOR=(MOptrout=PROCEDURE, -
+		CM_getcharset=PROCEDURE, -
+		CVal8=PROCEDURE, -
+		CVla8=PROCEDURE, -
+		CVpkl8=PROCEDURE, -
+		CVl8pk=PROCEDURE, -
+		GVmo_init=PROCEDURE, -
+		GVcnf_init=PROCEDURE, -
+		GVcnf_term=PROCEDURE, -
+		IIDLload=PROCEDURE,-
+		MHi8add=PROCEDURE, -
+		MHi8sub=PROCEDURE, -
+		MHi8mul=PROCEDURE, -
+		MHi8div=PROCEDURE, -
+		STnprintf=PROCEDURE, -
+		IISTlpolycat=PROCEDURE, -
+		CMget_charset_name=PROCEDURE, -
+		CMset_charset=PROCEDURE, -
+		SPARE, -		! CMget_attr
+		SPARE, -		! CXnickname_from_node_name
+		IIBTclear=PROCEDURE, -
+		CXnode_number=PROCEDURE, -
+		TMtz_isdst=PROCEDURE, -
+                GCdns_hostname=PROCEDURE, -
+		MHacos=PROCEDURE, -
+		MHasin=PROCEDURE, -
+		MHatan2=PROCEDURE, -
+		MHtan=PROCEDURE, -
+		MHsrand2=PROCEDURE, -
+		SPARE, -		! CM_ischarsetUTF8
+                PCtidx=PROCEDURE,-
+                GCsetMode=PROCEDURE,-
+                GCgetMode=PROCEDURE,-
+		CXdlm_lock_info=PROCEDURE, -
+ 		cmupct=PROCEDURE, -
+ 		cmu_getutf8property=PROCEDURE, -
+ 		cmu_getutf8_tolower=PROCEDURE, -
+ 		cmu_getutf8_toupper=PROCEDURE, -
+ 		CM_isUTF8=DATA, -
+ 		CM_UTF8Bytes=DATA, -
+                CMdump_col=PROCEDURE, -
+		CM_UTF8_twidth=PROCEDURE, -
+		TMhrnow=PROCEDURE, -
+		TRwrite=PROCEDURE, -
+		IIBTclearmask=PROCEDURE, -
+		CMischarset_doublebyte=PROCEDURE, -
+		CMischarset_utf8=PROCEDURE, -
+		CM_isLegalUTF8Sequence=PROCEDURE, -
+                IISTtrmnwhite=PROCEDURE, -
+                IISTxcompare=PROCEDURE, -
+		MHround=PROCEDURE, -
+		CM_isDBL=DATA)
+INGLIB:libcompat/library
+psect_attr=ii_address_data,nowrt,shr,lcl
+cluster=ii_address_data
+collect=ii_address_data,ii_address_data
+psect_attr=sqlca,noshr,lcl

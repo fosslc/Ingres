@@ -1,0 +1,28 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This popup allows you to select the columns that you want to be included
+in the default report.  You may delete, put back or change the order
+of the columns in this popup.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        OK              Done with making changes.  Return to the Create
+                        a Report Based on a Table frame.
+
+        Add             Display the Add Report Columns popup to add back
+                        a previously deleted column.  Column is added
+                        above the current row.
+
+        Delete          Delete the current column name.
+
+        Move            Select the current column name and display the
+                        Move submenu so the name can be moved to a
+                        new location.
+
+        RemoveAll       Delete all the column names.
+
+        Cancel          Discard all changes that have been made and return
+                        to the Create a Report Based on a Table frame.
+
+        Help            Print this message.

@@ -1,0 +1,15 @@
+#
+# Jamfile file for common!adf!ade
+#
+
+SubDir ING_SRC common adf ade ;
+
+IISUBSYS common adf ade ;
+
+IINOOPTIM afcexecute.c : rs4_us5 ;
+IINOOPTIM adeexecute.c : rs4_us5 su4_u42 su4_cmw i64_aix r64_us5 ;
+IINOOPTIM adecompile.c : nc4_us5 ;
+
+IILIBRARY ADFLIB : afcexecute.c afcdebug.c afccxini.c
+	afccompile.c adeexecute.c adedebug.c adecompile.c ;
+

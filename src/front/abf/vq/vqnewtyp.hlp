@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqnewtyp.hlp, behind the list of possible frame types to create.
+/#-- 
+Select the type of frame you are creating.
+
+  Menu      Contains a list of operations to call other frames or 
+            to interact with Ingres.
+  Append    Lets the user insert new records into tables in the database.
+  Browse    Displays records retrieved from the Master table and 
+            (optional) Detail table.
+  Update    Displays records like a Browse frame, but also lets the user 
+            modify the records.
+  Graph     Displays a graph created using VIGRAPH.
+  QBF       Lets the user run a query created using Query-By-Forms.
+  Report    Lets the user display a report designed with Report-By-Forms or
+            the Report-Writer.
+  User      Runs a frame created using 4GL.
+  4GL Proc  Runs a procedure created using 4GL.
+  3GL Proc  Runs a procedure created in a host language (3GL).
+  DB Proc   Runs a procedure in the server.

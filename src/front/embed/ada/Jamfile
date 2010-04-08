@@ -1,0 +1,20 @@
+#
+# Jamfile file for front!embed!ada
+#
+
+SubDir ING_SRC front embed ada ;
+
+IISUBSYS front embed ada ;
+
+IINOOPTIM adagen.c : vax_vms ;
+
+
+IIBINEXE eqa : adamain.c ;
+IINEEDLIBS eqa : ADALIB EQUELLIB UGLIB FMTLIB AFELIB ADFLIB
+	COMPATLIB ;
+
+
+IIUNDEFS eqa : tok_keytab yylex yyparse ;
+
+IILIBRARY ADALIB : ada.sy adatoks.st adautil.c adagen.c ;
+

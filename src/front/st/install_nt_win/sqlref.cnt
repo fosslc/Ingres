@@ -1,0 +1,1508 @@
+:Base sqlref.hlp
+:Title CA-OpenIngres SQL Reference Guide
+:Index CA-OpenIngres SQL Reference Guide=sqlref.hlp
+1 CA-OpenIngres SQL Reference Guide
+2 Preface
+3 Overview=C00_SQLE0000000
+3 Purpose of This Manual=C00_SQLE0000010
+3 Audience=C00_SQLE0000015
+3 Contents
+4 Overview=C00_SQLE0000020
+4 Special Considerations
+5 Overview=C00_SQLE0000025
+5 Knowledge Management Extension=C00_SQLE0000030
+5 Enterprise Access Compatibility=C00_SQLE0000035
+4 Conventions
+5 Overview=C00_SQLE0000040
+5 Statements and Commands=C00_SQLE0000045
+5 Terminology=C00_SQLE0000050
+5 Syntax=C00_SQLE0000055
+5 Embedded SQL Examples=C00_SQLE0000060
+3 Related Manuals
+4 Overview=C00_SQLE0000065
+2 Chapter 1:  An Introduction to SQL
+3 Overview=C01_SQLE0000000
+3 Interactive SQL=C01_SQLE0000010
+3 Embedded SQL
+4 Overview=C01_SQLE0000015
+4 Forms Statements=C01_SQLE0000020
+4 Dynamic Programming=C01_SQLE0000025
+3 Features and Extensions
+4 Overview=C01_SQLE0000030
+4 Database Procedures=C01_SQLE0000035
+4 The Knowledge Management Extension=C01_SQLE0000040
+4 The Object Management Extension=C01_SQLE0000045
+4 ANSI Compliance=C01_SQLE0000050
+4 OpenSQL=C01_SQLE0000055
+4 Security Levels=C01_SQLE0000060
+2 Chapter 2:  SQL Data Types
+3 Overview=C02_SQLE0000000
+3 Object Names=C02_SQLE0000010
+3 Regular and Delimited Identifiers
+4 Overview=C02_SQLE0000015
+4 Restrictions=C02_SQLE0000020
+4 Case Sensitivity of Identifiers=C02_SQLE0000025
+3 Comment Delimiters
+4 Overview=C02_SQLE0000030
+3 Statement Terminators
+4 Overview=C02_SQLE0000035
+3 Correlation Names
+4 Overview=C02_SQLE0000040
+3 Data Types
+4 Overview=C02_SQLE0000045
+4 Character Data Types
+5 Overview=C02_SQLE0000050
+5 The Char Data Type=C02_SQLE0000055
+5 The C Data Type=C02_SQLE0000060
+5 The Varchar Data Type=C02_SQLE0000065
+5 The Long Varchar Data Type=C02_SQLE0000070
+5 The Text Data Type=C02_SQLE0000075
+4 Numeric Data Types
+5 Overview=C02_SQLE0000080
+5 The Integer Data Types=C02_SQLE0000085
+5 The Decimal Data Type=C02_SQLE0000090
+5 The Floating Point Data Types=C02_SQLE0000095
+4 The Date Data Type
+5 Overview=C02_SQLE0000100
+5 Absolute Date Input Formats=C02_SQLE0000105
+5 Absolute Time Input Formats=C02_SQLE0000110
+5 Combined Date and Time Input=C02_SQLE0000115
+5 Date Interval Formats=C02_SQLE0000120
+5 Time Interval Formats=C02_SQLE0000125
+5 Date and Time Display Formats=C02_SQLE0000130
+4 The Money Data Type
+5 Overview=C02_SQLE0000135
+4 The Logical Key Data Types
+5 Overview=C02_SQLE0000140
+4 Binary Data Types
+5 Overview=C02_SQLE0000145
+5 The Byte Data Type=C02_SQLE0000150
+5 The Byte Varying Data Type=C02_SQLE0000155
+5 The Long Byte Data Type=C02_SQLE0000160
+4 Storage Formats of Data Types
+5 Overview=C02_SQLE0000165
+3 Literals
+4 Overview=C02_SQLE0000170
+4 String Literals
+5 String Literals=C02_SQLE0000175
+5 Hexadecimal Representation=C02_SQLE0000180
+5 Quotes Within Strings=C02_SQLE0000185
+4 Numeric Literals
+5 Overview=C02_SQLE0000190
+5 Integer Literals=C02_SQLE0000195
+5 Decimal Literals=C02_SQLE0000200
+5 Floating Point Literals=C02_SQLE0000205
+3 SQL Constants
+4 Overview=C02_SQLE0000210
+3 Nulls
+4 Overview=C02_SQLE0000215
+4 Nulls and Comparisons=C02_SQLE0000220
+4 Nulls and Aggregate Functions=C02_SQLE0000225
+4 Nulls and Integrity Constraints=C02_SQLE0000230
+2 Chapter 3:  Elements of SQL Statements
+3 Overview=C03_SQLE0000000
+3 Operators
+4 Overview=C03_SQLE0000010
+4 Arithmetic Operators=C03_SQLE0000015
+4 Comparison Operators=C03_SQLE0000020
+4 Logical Operators=C03_SQLE0000025
+3 Operations
+4 Overview=C03_SQLE0000030
+4 String Concatenation=C03_SQLE0000035
+4 Assignment Operations
+5 Overview=C03_SQLE0000040
+5 Character String Assignments=C03_SQLE0000045
+5 String Truncation Errors=C03_SQLE0000050
+5 Numeric Assignments=C03_SQLE0000055
+5 Date Assignments=C03_SQLE0000060
+5 Logical Key Assignments=C03_SQLE0000065
+5 Null Assignments=C03_SQLE0000070
+4 Arithmetic Operations
+5 Overview=C03_SQLE0000075
+5 Default Type Conversion=C03_SQLE0000080
+5 Arithmetic Operations on Decimal Data Types=C03_SQLE0000085
+5 Arithmetic Errors=C03_SQLE0000090
+5 Adding and Subtracting Dates=C03_SQLE0000095
+5 Comparing Dates=C03_SQLE0000100
+3 Functions
+4 Overview=C03_SQLE0000105
+4 Scalar Functions
+5 Scalar Functions=C03_SQLE0000110
+5 Data Type Conversion Functions=C03_SQLE0000115
+5 Numeric Functions=C03_SQLE0000120
+4 String Functions
+5 Overview=C03_SQLE0000125
+5 String Concatenation Results=C03_SQLE0000130
+4 Date Functions
+5 Overview=C03_SQLE0000135
+5 Using the Date_trunc Function=C03_SQLE0000140
+5 Using the Date_part Function=C03_SQLE0000145
+4 Aggregate Functions
+5 Overview=C03_SQLE0000150
+5 Aggregate Functions and Decimal Data=C03_SQLE0000155
+5 The Count Function and Nulls=C03_SQLE0000160
+5 Using the Group By Clause with Aggregate Functions=C03_SQLE0000165
+5 Restrictions on the Use of Aggregate Functions=C03_SQLE0000170
+4 The Ifnull Function
+5 Overview=C03_SQLE0000175
+5 Data Type of Result=C03_SQLE0000180
+5 Ifnull and Decimal Data=C03_SQLE0000185
+3 Expressions
+4 Overview=C03_SQLE0000190
+3 Predicates
+4 Overview=C03_SQLE0000195
+4 Comparison Predicates=C03_SQLE0000200
+4 The Like Predicate=C03_SQLE0000205
+4 The Between Predicate=C03_SQLE0000210
+4 The In Predicate=C03_SQLE0000215
+4 The Any-or-All Predicate=C03_SQLE0000220
+4 The Exists Predicate=C03_SQLE0000225
+4 The Is null Predicate=C03_SQLE0000230
+3 Search Conditions
+4 Overview=C03_SQLE0000235
+3 Subqueries
+4 Overview=C03_SQLE0000240
+2 Chapter 4:  Embedded SQL
+3 Overview=C04_SQLE0000000
+3 General Syntax of an Embedded SQL Statement=C04_SQLE0000010
+3 Structure of Embedded SQL Programs=C04_SQLE0000015
+3 Host Language Variables
+4 Host Language Variables=C04_SQLE0000020
+4 Variable Declarations=C04_SQLE0000025
+4 The Include Statement=C04_SQLE0000030
+4 Variable Usage=C04_SQLE0000035
+4 Variable Structures=C04_SQLE0000040
+4 The Dclgen Utility=C04_SQLE0000045
+4 Indicator Variables
+5 Overview=C04_SQLE0000050
+5 Null Indicators and Data Retrieval=C04_SQLE0000055
+5 Using Null Indicators to Assign Nulls=C04_SQLE0000060
+5 Indicator Variables and Character Data Retrieval=C04_SQLE0000065
+4 Null Indicator Arrays and Host Structures
+5 Overview=C04_SQLE0000070
+3 Data Manipulation with Cursors
+4 Overview=C04_SQLE0000075
+4 An Example of Cursor Processing=C04_SQLE0000080
+4 Declaring a Cursor=C04_SQLE0000085
+4 Opening Cursors=C04_SQLE0000090
+4 Readonly Cursors=C04_SQLE0000095
+4 Open Cursors and Transaction Processing=C04_SQLE0000100
+4 Fetching the Data=C04_SQLE0000105
+4 Fetching Rows Inserted By Other Queries=C04_SQLE0000110
+4 Using Cursors to Update Data
+5 Overview=C04_SQLE0000115
+5 Deferred Mode for Update=C04_SQLE0000120
+5 Direct Mode for Update=C04_SQLE0000125
+4 Cursor Position for Updates=C04_SQLE0000130
+4 Using Cursors to Delete Data
+5 Overview=C04_SQLE0000135
+4 An Example of Updating and Deleting with Cursors
+5 Overview=C04_SQLE0000140
+4 Closing Cursors
+5 Overview=C04_SQLE0000145
+4 Summary of Cursor Positioning
+5 Overview=C04_SQLE0000150
+4 An Example of Dynamically Specified Cursor Names
+5 Overview=C04_SQLE0000155
+4 Cursors versus Select Loops
+5 Overview=C04_SQLE0000160
+3 Dynamic Programming
+4 Overview=C04_SQLE0000165
+4 The SQLDA
+5 The SQLDA=C04_SQLE0000170
+5 The Structure of the SQLDA=C04_SQLE0000175
+5 Including the SQLDA in a Program=C04_SQLE0000180
+5 The Describe Statement and the SQLDA=C04_SQLE0000185
+5 The Data Type Codes=C04_SQLE0000190
+4 The Using Clause
+5 Overview=C04_SQLE0000195
+4 Dynamic SQL Statements
+5 Overview=C04_SQLE0000200
+5 The Execute Immediate Statement=C04_SQLE0000205
+5 The Prepare and Execute Statements=C04_SQLE0000210
+5 The Describe Statement=C04_SQLE0000215
+4 Executing a Dynamic Non-select Statement
+5 Overview=C04_SQLE0000220
+5 Using Execute Immediate to Execute a Non-select Statement=C04_SQLE0000225
+5 Preparing and Executing a Non-select Statement=C04_SQLE0000230
+4 Executing a Dynamic Select Statement
+5 Overview=C04_SQLE0000235
+5 When the Result Column Data Types are Known=C04_SQLE0000240
+5 When the Result Column Data Types are Unknown=C04_SQLE0000245
+5 Preparing and Describing the Select Statement=C04_SQLE0000250
+5 Analyzing the Sqlvar Elements=C04_SQLE0000255
+4 Executing the Select with Execute Immediate
+5 Overview=C04_SQLE0000260
+4 Using a Cursor to Retrieve the Results
+5 Overview=C04_SQLE0000265
+3 Data Handlers for Large Objects
+4 Overview=C04_SQLE0000270
+4 Errors in Data Handlers=C04_SQLE0000275
+4 Restrictions on Data Handlers=C04_SQLE0000280
+4 Using Large Objects in Dynamic SQL
+5 Overview=C04_SQLE0000285
+5 Length Considerations=C04_SQLE0000290
+5 Using Data Handlers in Dynamic SQL=C04_SQLE0000295
+4 Examples of Data Handlers
+5 Overview=C04_SQLE0000300
+5 PUT DATA Handler Example=C04_SQLE0000305
+5 GET DATA Handler Example=C04_SQLE0000310
+5 Dynamic SQL Data Handler=C04_SQLE0000315
+3 4GL Interface=C04_SQLE0000320
+2 Chapter 5:  Transactions and Error Handling
+3 Overview=C05_SQLE0000000
+3 Transactions
+4 Overview=C05_SQLE0000010
+4 Controlling Transactions=C05_SQLE0000015
+4 Committing Transactions=C05_SQLE0000020
+4 Aborting Statements and Transactions
+5 Overview=C05_SQLE0000025
+5 Effects of Aborting Transactions =C05_SQLE0000030
+5 Interrupting Transactions=C05_SQLE0000035
+3 Two Phase Commit
+4 Overview=C05_SQLE0000040
+4 Using Two Phase Commit=C05_SQLE0000045
+4 Manual Termination of a Distributed Transaction=C05_SQLE0000050
+4 An Example of Using Two-Phase Commit=C05_SQLE0000055
+3 Retrieving Status Information
+4 Overview=C05_SQLE0000060
+4 The Session_seclabel Function=C05_SQLE0000065
+4 The Session_priv Function=C05_SQLE0000070
+4 The Dbmsinfo Function=C05_SQLE0000075
+4 The Inquire_sql Statement=C05_SQLE0000080
+4 The SQL Communications Area (SQLCA)=C05_SQLE0000085
+4 SQLCODE and SQLSTATE
+5 Overview=C05_SQLE0000090
+5 The SQLCODE Variable=C05_SQLE0000095
+5 The SQLSTATE Variable=C05_SQLE0000100
+3 Error Handling
+4 Overview=C05_SQLE0000105
+4 Types of Errors=C05_SQLE0000110
+4 Reading an Error Message=C05_SQLE0000115
+4 Displaying an Error Message=C05_SQLE0000120
+4 Handling Errors in Embedded Applications
+5 Overview=C05_SQLE0000125
+5 Obtaining Error Information from the SQLCA=C05_SQLE0000130
+5 SQLSTATE=C05_SQLE0000135
+5 Trapping Errors Using the Whenever Statement=C05_SQLE0000140
+5 Defining an Error Handler=C05_SQLE0000145
+5 Defining Other Types of Handlers=C05_SQLE0000150
+5 Obtaining Error Information Using Inquire Statements=C05_SQLE0000155
+4 Specifying Program Termination on Errors
+5 Overview=C05_SQLE0000160
+4 Handling Deadlock
+5 Overview=C05_SQLE0000165
+2 Chapter 6:  SQL Features
+3 Overview=C06_SQLE0000000
+3 Database Procedures
+4 Overview=C06_SQLE0000010
+4 Contents of Database Procedures=C06_SQLE0000015
+4 Permissions on Database Procedures=C06_SQLE0000020
+4 Executing a Procedure=C06_SQLE0000025
+4 Passing Parameters to Database Procedures=C06_SQLE0000030
+4 Handling Errors in Database Procedures
+5 Overview=C06_SQLE0000035
+5 Default Behavior=C06_SQLE0000040
+5 The iierrornumber and iirowcount variables=C06_SQLE0000045
+5 The Raise Error Statement=C06_SQLE0000050
+4 Handling Messages from Database Procedures
+5 Overview=C06_SQLE0000055
+5 Handling Messages Using the Whenever Statement=C06_SQLE0000060
+5 Handling Messages Using User-Defined Handler Routines=C06_SQLE0000065
+3 Rules
+4 Overview=C06_SQLE0000070
+3 Multiple Session Connections
+4 Overview=C06_SQLE0000075
+4 Connecting to Multiple Sessions=C06_SQLE0000080
+4 Identifying Sessions=C06_SQLE0000085
+4 Switching Sessions=C06_SQLE0000090
+4 Disconnecting a Session=C06_SQLE0000095
+4 Status Information in Multiple Sessions=C06_SQLE0000100
+4 Multiple Sessions and the DBMS=C06_SQLE0000105
+4 Multiple Session Examples=C06_SQLE0000110
+3 Database Events
+4 Overview=C06_SQLE0000115
+4 Using Database Events - An Example=C06_SQLE0000120
+4 Database Event Statements
+5 Overview=C06_SQLE0000125
+5 Creating a Database Event=C06_SQLE0000130
+5 Raising a Database Event=C06_SQLE0000135
+5 Registering to Receive a Database Event=C06_SQLE0000140
+5 Receiving a Database Event=C06_SQLE0000145
+5 Processing Database Events=C06_SQLE0000150
+5 Using GET DBEVENT=C06_SQLE0000155
+5 Using WHENEVER DBEVENT=C06_SQLE0000160
+5 Using User-Defined Database Event Handlers=C06_SQLE0000165
+5 Removing a Database Event Registration=C06_SQLE0000170
+5 Dropping a Database Event=C06_SQLE0000175
+5 Privileges and Database Events=C06_SQLE0000180
+5 Tracing Database Events=C06_SQLE0000185
+2 Chapter 7:  SQL Statements
+3 Overview
+4 Overview=C07A_SQL0000000
+4 SQL Version=C07A_SQL0000010
+4 SQL Statement Context=C07A_SQL0000015
+4 Forms Statements=C07A_SQL0000020
+4 Star Statements=C07A_SQL0000025
+3 Alter Group
+4 Overview=C07A_SQL0000030
+4 Syntax=C07A_SQL0000035
+4 Description
+5 Overview=C07A_SQL0000040
+5 The Add Clause=C07A_SQL0000045
+5 The Drop Clause=C07A_SQL0000050
+4 Embedded Usage
+5 Overview=C07A_SQL0000055
+4 Permissions
+5 Overview=C07A_SQL0000060
+4 Locking
+5 Overview=C07A_SQL0000065
+4 Related Statements
+5 Overview=C07A_SQL0000070
+4 Examples
+5 Overview=C07A_SQL0000075
+3 Alter Location
+4 Overview=C07A_SQL0000080
+4 Syntax=C07A_SQL0000085
+4 Description=C07A_SQL0000090
+4 Embedded Usage=C07A_SQL0000095
+4 Permissions=C07A_SQL0000100
+4 Locking=C07A_SQL0000105
+4 Related Statements=C07A_SQL0000110
+4 Examples=C07A_SQL0000115
+3 Alter Profile
+4 Overview=C07A_SQL0000120
+4 Syntax=C07A_SQL0000125
+4 Description=C07A_SQL0000130
+4 Embedded Usage=C07A_SQL0000135
+4 Permissions=C07A_SQL0000140
+4 Locking=C07A_SQL0000145
+4 Related Statements=C07A_SQL0000150
+4 Examples=C07A_SQL0000155
+3 Alter Role
+4 Overview=C07A_SQL0000160
+4 Syntax=C07A_SQL0000165
+4 Description=C07A_SQL0000170
+4 Embedded Usage=C07A_SQL0000175
+4 Permissions=C07A_SQL0000180
+4 Locking=C07A_SQL0000185
+4 Related Statements=C07A_SQL0000190
+4 Examples=C07A_SQL0000195
+3 Alter Security_Audit
+4 Overview=C07A_SQL0000200
+4 Syntax=C07A_SQL0000205
+4 Description
+5 Overview=C07A_SQL0000210
+5 Suspending and Resuming Auditing=C07A_SQL0000215
+5 Stopping and Restarting Auditing=C07A_SQL0000220
+5 Changing audit logs=C07A_SQL0000225
+4 Embedded Usage
+5 Overview=C07A_SQL0000230
+4 Permissions
+5 Overview=C07A_SQL0000235
+4 Related Statements
+5 Overview=C07A_SQL0000240
+4 Examples
+5 Overview=C07A_SQL0000245
+3 Alter Table
+4 Overview=C07A_SQL0000250
+4 Syntax=C07A_SQL0000255
+4 Description=C07A_SQL0000260
+4 The Constraint Specification=C07A_SQL0000265
+4 Named Constraints=C07A_SQL0000270
+4 Restrict and Cascade=C07A_SQL0000275
+4 Embedded Usage=C07A_SQL0000280
+4 Permissions=C07A_SQL0000285
+4 Related Statements=C07A_SQL0000290
+4 Examples=C07A_SQL0000295
+3 Alter User
+4 Overview=C07A_SQL0000300
+4 Syntax=C07A_SQL0000305
+4 Description=C07A_SQL0000310
+4 Embedded Usage=C07A_SQL0000315
+4 Permissions=C07A_SQL0000320
+4 Locking=C07A_SQL0000325
+4 Related Statements=C07A_SQL0000330
+4 Examples=C07A_SQL0000335
+3 Begin Declare Section
+4 Overview=C07A_SQL0000340
+4 Syntax=C07A_SQL0000345
+4 Description=C07A_SQL0000350
+4 Permissions=C07A_SQL0000355
+4 Related Statements=C07A_SQL0000360
+4 Example=C07A_SQL0000365
+3 Call
+4 Overview=C07A_SQL0000370
+4 Syntax=C07A_SQL0000375
+4 Description=C07A_SQL0000380
+4 Permissions=C07A_SQL0000385
+4 Performance=C07A_SQL0000390
+4 Examples=C07A_SQL0000395
+3 Close
+4 Overview=C07A_SQL0000400
+4 Syntax=C07A_SQL0000405
+4 Description=C07A_SQL0000410
+4 Embedded Usage=C07A_SQL0000415
+4 Permissions=C07A_SQL0000420
+4 Locking=C07A_SQL0000425
+4 Related Statements=C07A_SQL0000430
+4 Example=C07A_SQL0000435
+3 Comment On
+4 Overview=C07A_SQL0000440
+4 Syntax=C07A_SQL0000445
+4 Description=C07A_SQL0000450
+4 Embedded Usage=C07A_SQL0000455
+4 Permissions=C07A_SQL0000460
+4 Locking=C07A_SQL0000465
+4 Related Statements=C07A_SQL0000470
+4 Examples=C07A_SQL0000475
+3 Commit
+4 Overview=C07A_SQL0000480
+4 Syntax=C07A_SQL0000485
+4 Description=C07A_SQL0000490
+4 Embedded Usage=C07A_SQL0000495
+4 Permissions=C07A_SQL0000500
+4 Locking=C07A_SQL0000505
+4 Performance=C07A_SQL0000510
+4 Related Statements=C07A_SQL0000515
+4 Example=C07A_SQL0000520
+3 Connect
+4 Overview=C07A_SQL0000525
+4 Syntax=C07A_SQL0000530
+4 Description=C07A_SQL0000535
+4 Connecting with Distributed Transactions=C07A_SQL0000540
+4 Creating Multiple Sessions
+5 Overview=C07A_SQL0000545
+5 Using Session Identifiers=C07A_SQL0000550
+5 Using Connection Names=C07A_SQL0000555
+4 Permissions
+5 Overview=C07A_SQL0000560
+4 Locking
+5 Overview=C07A_SQL0000565
+4 Related Statements
+5 Overview=C07A_SQL0000570
+4 Examples
+5 Overview=C07A_SQL0000575
+3 Copy
+4 Overview=C07A_SQL0000580
+4 Syntax=C07A_SQL0000585
+4 Description
+5 Overview=C07A_SQL0000590
+5 Binary Copying=C07A_SQL0000595
+5 Bulk Copying=C07A_SQL0000600
+5 Data File Format versus Table Format=C07A_SQL0000605
+4 Column Formats
+5 Overview=C07A_SQL0000610
+5 Storage Format=C07A_SQL0000615
+5 Delimiters=C07A_SQL0000620
+5 The With Null Clause=C07A_SQL0000625
+4 Filename Specification
+5 Overview=C07A_SQL0000630
+4 The With Clause Options
+5 Overview=C07A_SQL0000640
+5 The On_error Option=C07A_SQL0000645
+5 The Error_count Option=C07A_SQL0000650
+5 The Log Option=C07A_SQL0000655
+5 The With Rollback Option=C07A_SQL0000660
+5 The With Row_estimate Option=C07A_SQL0000665
+4 Permissions
+5 Overview=C07A_SQL0000670
+4 Locking
+5 Overview=C07A_SQL0000675
+4 Restrictions and Considerations
+5 Overview=C07A_SQL0000680
+4 Related Statements
+5 Overview=C07A_SQL0000685
+4 Examples
+5 Overview=C07A_SQL0000690
+5 Data File Format Example=C07A_SQL0000695
+3 Create Dbevent
+4 Overview=C07A_SQL0000700
+4 Syntax=C07A_SQL0000705
+4 Description=C07A_SQL0000710
+4 Embedded Usage=C07A_SQL0000715
+4 Permissions=C07A_SQL0000720
+4 Locking=C07A_SQL0000725
+4 Related Statements=C07A_SQL0000730
+3 Create Group
+4 Overview=C07B_SQL0000735
+4 Syntax=C07B_SQL0000740
+4 Description=C07B_SQL0000745
+4 Embedded Usage=C07B_SQL0000750
+4 Permissions=C07B_SQL0000755
+4 Locking=C07B_SQL0000760
+4 Related Statements=C07B_SQL0000765
+4 Examples=C07B_SQL0000770
+3 Create Index
+4 Overview=C07B_SQL0000775
+4 Syntax=C07B_SQL0000780
+4 Description
+5 Overview=C07B_SQL0000785
+5 Index Storage Structure=C07B_SQL0000790
+5 Unique Indexes=C07B_SQL0000795
+5 Effect of the Unique_Scope Option on Updates=C07B_SQL0000800
+5 Index Location=C07B_SQL0000805
+4 Embedded Usage
+5 Overview=C07B_SQL0000810
+4 Permissions
+5 Overview=C07B_SQL0000815
+4 Locking
+5 Overview=C07B_SQL0000820
+4 Related Statements5 Overview=C07B_SQL0000825
+4 Examples
+5 Overview=C07B_SQL0000830
+3 Create Integrity
+4 Overview=C07B_SQL0000835
+4 Syntax=C07B_SQL0000840
+4 Description=C07B_SQL0000845
+4 Embedded Usage=C07B_SQL0000850
+4 Permissions=C07B_SQL0000855
+4 Locking=C07B_SQL0000860
+4 Performance=C07B_SQL0000865
+4 Related Statements=C07B_SQL0000870
+4 Examples=C07B_SQL0000875
+3 Create Location
+4 Overview=C07B_SQL0000880
+4 Syntax=C07B_SQL0000885
+4 Description=C07B_SQL0000890
+4 Embedded Usage=C07B_SQL0000895
+4 Permissions=C07B_SQL0000900
+4 Locking=C07B_SQL0000905
+4 Related Statements=C07B_SQL0000910
+3 Create Procedure
+4 Overview=C07B_SQL0000925
+4 Syntax=C07B_SQL0000930
+4 Description=C07B_SQL0000935
+4 Nullability and Default Values for Parameters=C07B_SQL0000940
+4 Embedded Usage=C07B_SQL0000945
+4 Permissions=C07B_SQL0000950
+4 Related Statements=C07B_SQL0000955
+4 Examples=C07B_SQL0000960
+3 Create Role
+4 Overview=C07B_SQL0000965
+4 Syntax=C07B_SQL0000970
+4 Description=C07B_SQL0000975
+4 Embedded Usage=C07B_SQL0000980
+4 Permissions=C07B_SQL0000985
+4 Locking=C07B_SQL0000990
+4 Related Statements=C07B_SQL0000995
+4 Examples=C07B_SQL0001000
+3 Create Profile
+4 Overview=C07B_SQL0001005
+4 Syntax=C07B_SQL0001010
+4 Description=C07B_SQL0001015
+4 Embedded Usage=C07B_SQL0001020
+4 Permissions=C07B_SQL0001025
+4 Locking=C07B_SQL0001030
+4 Related Statements=C07B_SQL0001035
+4 Examples=C07B_SQL0001040
+3 Create Rule
+4 Overview=C07B_SQL0001045
+4 Syntax=C07B_SQL0001050
+4 Description
+5 Overview=C07B_SQL0001055
+5 Table Conditions=C07B_SQL0001060
+5 The Database Procedure=C07B_SQL0001065
+4 Embedded Usage
+5 Overview=C07B_SQL0001070
+4 Permissions
+5 Overview=C07B_SQL0001075
+4 Locking
+5 Overview=C07B_SQL0001080
+4 Related Statements
+5 Overview=C07B_SQL0001085
+4 Examples
+5 Overview=C07B_SQL0001090
+3 Create Schema
+4 Overview=C07B_SQL0001095
+4 Syntax=C07B_SQL0001100
+4 Description=C07B_SQL0001105
+4 Embedded Usage=C07B_SQL0001110
+4 Permissions=C07B_SQL0001115
+4 Locking=C07B_SQL0001120
+4 Related Statements=C07B_SQL0001125
+4 Examples=C07B_SQL0001130
+3 Create Security_Alarm
+4 Overview=C07B_SQL0001135
+4 Syntax=C07B_SQL0001140
+4 Description=C07B_SQL0001145
+4 Embedded Usage=C07B_SQL0001150
+4 Permissions=C07B_SQL0001155
+4 Locking=C07B_SQL0001160
+4 Related Statements=C07B_SQL0001165
+4 Examples=C07B_SQL0001170
+3 Create Synonym
+4 Overview=C07B_SQL0001175
+4 Syntax=C07B_SQL0001180
+4 Description=C07B_SQL0001185
+4 Embedded Usage=C07B_SQL0001190
+4 Permissions=C07B_SQL0001195
+4 Locking=C07B_SQL0001200
+4 Related Statements=C07B_SQL0001205
+4 Examples=C07B_SQL0001210
+3 Create Table
+4 Overview=C07B_SQL0001215
+4 Syntax=C07B_SQL0001220
+4 Description=C07B_SQL0001225
+4 Column Specifications=C07B_SQL0001230
+4 Column Defaults and Nullability
+5 Overview=C07B_SQL0001235
+5 Default Values=C07B_SQL0001240
+5 Nullability=C07B_SQL0001245
+5 System-Maintained Logical Keys=C07B_SQL0001250
+4 Constraints
+5 Overview=C07B_SQL0001255
+5 The Unique Constraint=C07B_SQL0001260
+5 The Check Constraint=C07B_SQL0001265
+5 The References Constraint=C07B_SQL0001270
+5 The Primary Key Constraint=C07B_SQL0001275
+4 Column-Level Constraints versus Table-Level Constraints
+5 Overview=C07B_SQL0001280
+4 Constraints versus Integrities
+5 Overview=C07B_SQL0001285
+4 The With_clause Options
+5 Overview=C07B_SQL0001290
+5 The Location Option=C07B_SQL0001295
+5 The [No]jounaling Option=C07B_SQL0001300
+5 The [No]duplicates=C07B_SQL0001305
+5 The Label Granularity Option=C07B_SQL0001310
+5 The Security_Audit Option=C07B_SQL0001315
+5 The Security_Audit_Key Option=C07B_SQL0001320
+4 Create Table...as Select Options
+5 Overview=C07B_SQL0001325
+5 The Allocation Option=C07B_SQL0001330
+5 The Extend Option=C07B_SQL0001335
+5 The Structure Option=C07B_SQL0001340
+5 The Key Option=C07B_SQL0001345
+5 The Fillfactor Option=C07B_SQL0001350
+5 The Minpages Option=C07B_SQL0001355
+5 The Maxpages Option=C07B_SQL0001360
+5 The Compression Option=C07B_SQL0001365
+5 The Leaffill Option=C07B_SQL0001370
+5 The Nonleaffill Option=C07B_SQL0001375
+4 Using "Create table...as Select" 
+5 Overview=C07B_SQL0001380
+4 Embedded Usage
+5 Overview=C07B_SQL0001385
+4 Permissions
+5 Overview=C07B_SQL0001390
+4 Locking
+5 Overview=C07B_SQL0001395
+4 Related Statements
+5 Overview=C07B_SQL0001400
+4 Examples
+5 Overview=C07B_SQL0001405
+3 Create User
+4 Overview=C07B_SQL0001410
+4 Syntax=C07B_SQL0001415
+4 Description=C07B_SQL0001420
+4 Embedded Usage=C07B_SQL0001425
+4 Permissions=C07B_SQL0001430
+4 Locking=C07B_SQL0001435
+4 Related Statements=C07B_SQL0001440
+4 Examples=C07B_SQL0001445
+3 Create View
+4 Overview=C07C_SQL0001450
+4 Syntax=C07C_SQL0001455
+4 Description=C07C_SQL0001460
+4 The With Check Option Clause=C07C_SQL0001465
+4 Embedded Usage=C07C_SQL0001470
+4 Permissions=C07C_SQL0001475
+4 Locking=C07C_SQL0001480
+4 Related Statements=C07C_SQL0001485
+4 Example=C07C_SQL0001490
+3 Declare
+4 Overview=C07C_SQL0001495
+4 Syntax=C07C_SQL0001500
+4 Description=C07C_SQL0001505
+4 Permissions=C07C_SQL0001510
+4 Related Statements=C07C_SQL0001515
+4 Example=C07C_SQL0001520
+3 Declare Cursor
+4 Overview=C07C_SQL0001525
+4 Syntax=C07C_SQL0001530
+4 Description
+5 Overview=C07C_SQL0001535
+5 Cursor Updates=C07C_SQL0001540
+5 Cursor Modes=C07C_SQL0001545
+4 Embedded Usage
+5 Overview=C07C_SQL0001550
+4 Permissions
+5 Overview=C07C_SQL0001555
+4 Locking
+5 Overview=C07C_SQL0001560
+4 Related Statements
+5 Overview=C07C_SQL0001565
+4 Examples
+5 Overview=C07C_SQL0001570
+3 Declare Global Temporary Table
+4 Overview=C07C_SQL0001575
+4 Syntax=C07C_SQL0001580
+4 Description=C07C_SQL0001585
+4 Embedded Usage=C07C_SQL0001590
+4 Restrictions=C07C_SQL0001595
+4 Permissions=C07C_SQL0001600
+4 Locking=C07C_SQL0001605
+4 Related Statements=C07C_SQL0001610
+4 Examples=C07C_SQL0001615
+3 Declare Statement
+4 Overview=C07C_SQL0001620
+4 Syntax=C07C_SQL0001625
+4 Description=C07C_SQL0001630
+4 Related Statements=C07C_SQL0001635
+4 Example=C07C_SQL0001640
+3 Declare Table
+4 Overview=C07C_SQL0001645
+4 Syntax=C07C_SQL0001650
+4 Description=C07C_SQL0001655
+4 Permissions=C07C_SQL0001660
+4 Example=C07C_SQL0001665
+3 Delete
+4 Overview=C07C_SQL0001670
+4 Syntax=C07C_SQL0001675
+4 Description=C07C_SQL0001680
+4 The Delete Statement in Embedded SQL
+5 Overview=C07C_SQL0001685
+5 Non-Cursor Delete=C07C_SQL0001690
+5 Cursor Delete=C07C_SQL0001695
+4 Embedded Usage
+5 Overview=C07C_SQL0001700
+4 Permissions
+5 Overview=C07C_SQL0001705
+4 Locking
+5 Overview=C07C_SQL0001710
+4 Performance
+5 Overview=C07C_SQL0001715
+4 Related Statements
+5 Overview=C07C_SQL0001720
+4 Example
+5 Overview=C07C_SQL0001725
+3 Describe
+4 Overview=C07C_SQL0001730
+4 Syntax=C07C_SQL0001735
+4 Description=C07C_SQL0001740
+4 Permissions=C07C_SQL0001745
+4 Locking=C07C_SQL0001750
+4 Related Statements=C07C_SQL0001755
+3 Disable Security_Audit
+4 Overview=C07C_SQL0001760
+4 Syntax=C07C_SQL0001765
+4 Description=C07C_SQL0001770
+4 Embedded Usage=C07C_SQL0001775
+4 Permissions=C07C_SQL0001780
+4 Locking=C07C_SQL0001785
+4 Related Statements=C07C_SQL0001790
+4 Examples=C07C_SQL0001795
+3 Disconnect
+4 Overview=C07C_SQL0001800
+4 Syntax=C07C_SQL0001805
+4 Description=C07C_SQL0001810
+4 Permissions=C07C_SQL0001815
+4 Locking=C07C_SQL0001820
+4 Related Statements=C07C_SQL0001825
+4 Examples=C07C_SQL0001830
+3 Drop
+4 Overview=C07C_SQL0001835
+4 Syntax=C07C_SQL0001840
+4 Description=C07C_SQL0001845
+4 Embedded Usage=C07C_SQL0001850
+4 Permissions=C07C_SQL0001855
+4 Locking=C07C_SQL0001860
+4 Related Statements=C07C_SQL0001865
+4 Examples=C07C_SQL0001870
+3 Drop Dbevent
+4 Overview=C07C_SQL0001875
+4 Syntax=C07C_SQL0001880
+4 Description=C07C_SQL0001885
+4 Embedded Usage=C07C_SQL0001890
+4 Permissions=C07C_SQL0001895
+4 Related Statements=C07C_SQL0001900
+3 Drop Group
+4 Overview=C07C_SQL0001905
+4 Syntax=C07C_SQL0001910
+4 Description=C07C_SQL0001915
+4 Embedded Usage=C07C_SQL0001920
+4 Permissions=C07C_SQL0001925
+4 Locking=C07C_SQL0001930
+4 Related Statements=C07C_SQL0001935
+4 Examples=C07C_SQL0001940
+3 Drop Integrity
+4 Overview=C07C_SQL0001945
+4 Syntax=C07C_SQL0001950
+4 Description=C07C_SQL0001955
+4 Embedded Usage=C07C_SQL0001960
+4 Permissions=C07C_SQL0001965
+4 Related Statements=C07C_SQL0001970
+4 Examples=C07C_SQL0001975
+3 Drop Location
+4 Overview=C07C_SQL0001980
+4 Syntax=C07C_SQL0001985
+4 Description=C07C_SQL0001990
+4 Embedded Usage=C07C_SQL0001995
+4 Permissions=C07C_SQL0002000
+4 Locking=C07C_SQL0002005
+4 Related Statements=C07C_SQL0002010
+4 Examples=C07C_SQL0002015
+3 Drop Procedure
+4 Overview=C07C_SQL0002020
+4 Syntax=C07C_SQL0002025
+4 Description=C07C_SQL0002030
+4 Embedded Usage=C07C_SQL0002035
+4 Permissions=C07C_SQL0002040
+4 Related Statements=C07C_SQL0002045
+4 Examples=C07C_SQL0002050
+3 Drop Profile
+4 Overview=C07C_SQL0002055
+4 Syntax=C07C_SQL0002060
+4 Description=C07C_SQL0002065
+4 Permissions=C07C_SQL0002070
+4 Locking=C07C_SQL0002075
+4 Related Statements=C07C_SQL0002080
+4 Examples=C07C_SQL0002085
+3 Drop Role
+4 Overview=C07C_SQL0002090
+4 Syntax=C07C_SQL0002095
+4 Description=C07C_SQL0002100
+4 Embedded Usage=C07C_SQL0002105
+4 Permissions=C07C_SQL0002110
+4 Locking=C07C_SQL0002115
+4 Related Statements=C07C_SQL0002120
+4 Example=C07C_SQL0002125
+3 Drop Rule
+4 Overview=C07C_SQL0002130
+4 Syntax=C07C_SQL0002135
+4 Description=C07C_SQL0002140
+4 Embedded Usage=C07C_SQL0002145
+4 Permissions=C07C_SQL0002150
+4 Related Statements=C07C_SQL0002155
+4 Example=C07C_SQL0002160
+3 Drop Security_Alarm
+4 Overview=C07C_SQL0002165
+4 Syntax=C07C_SQL0002170
+4 Description=C07C_SQL0002175
+4 Embedded Usage=C07C_SQL0002180
+4 Permissions=C07C_SQL0002185
+4 Locking=C07C_SQL0002190
+4 Related Statements=C07C_SQL0002195
+4 Examples=C07C_SQL0002200
+3 Drop Synonym
+4 Overview=C07C_SQL0002205
+4 Syntax=C07C_SQL0002210
+4 Description=C07C_SQL0002215
+4 Embedded Usage=C07C_SQL0002220
+4 Permissions=C07C_SQL0002225
+4 Locking=C07C_SQL0002230
+4 Related Statements=C07C_SQL0002235
+4 Examples=C07C_SQL0002240
+3 Drop User
+4 Overview=C07C_SQL0002245
+4 Syntax=C07C_SQL0002250
+4 Description=C07C_SQL0002255
+4 Embedded Usage=C07C_SQL0002260
+4 Permissions=C07C_SQL0002265
+4 Locking=C07C_SQL0002270
+4 Related Statements=C07C_SQL0002275
+4 Examples=C07C_SQL0002280
+3 Enable Security_Audit
+4 Overview=C07C_SQL0002285
+4 Syntax=C07C_SQL0002290
+4 Description=C07C_SQL0002295
+4 Embedded Usage=C07C_SQL0002300
+4 Permissions=C07C_SQL0002305
+4 Locking=C07C_SQL0002310
+4 Related Statements=C07C_SQL0002315
+4 Examples=C07C_SQL0002320
+3 Enddata
+4 Overview=C07C_SQL0002325
+4 Syntax=C07C_SQL0002330
+4 Description=C07C_SQL0002335
+4 Permissions=C07C_SQL0002340
+4 Examples=C07C_SQL0002345
+3 End Declare Section
+4 Overview=C07C_SQL0002350
+4 Syntax=C07C_SQL0002355
+4 Description=C07C_SQL0002360
+4 Permissions=C07C_SQL0002365
+4 Related Statements=C07C_SQL0002370
+3 Endselect
+4 Overview=C07C_SQL0002375
+4 Syntax=C07C_SQL0002380
+4 Description=C07C_SQL0002385
+4 Permissions=C07C_SQL0002390
+4 Locking=C07C_SQL0002395
+4 Related Statements=C07C_SQL0002400
+4 Example=C07C_SQL0002405
+3 Execute
+4 Overview=C07C_SQL0002410
+4 Syntax=C07C_SQL0002415
+4 Description=C07C_SQL0002420
+4 Permissions=C07C_SQL0002425
+4 Locking=C07C_SQL0002430
+4 Related Statements=C07C_SQL0002435
+4 Examples=C07C_SQL0002440
+3 Execute Immediate
+4 Overview=C07C_SQL0002445
+4 Syntax=C07C_SQL0002450
+4 Description=C07C_SQL0002455
+4 Permissions=C07C_SQL0002460
+4 Locking=C07C_SQL0002465
+4 Related Statements=C07C_SQL0002470
+4 Examples=C07C_SQL0002475
+3 Execute Procedure
+4 Overview=C07D_SQL0002480
+4 Syntax=C07D_SQL0002485
+4 Description
+5 Overview=C07D_SQL0002490
+5 Passing Parameters - Non-Dynamic Version=C07D_SQL0002495
+5 Passing Parameters - Dynamic Version=C07D_SQL0002500
+4 Permissions
+5 Overview=C07D_SQL0002505
+4 Locking
+5 Overview=C07D_SQL0002510
+4 Performance
+5 Overview=C07D_SQL0002515
+4 Related Statements
+5 Overview=C07D_SQL0002520
+4 Examples
+5 Overview=C07D_SQL0002525
+3 Fetch
+4 Overview=C07D_SQL0002530
+4 Syntax=C07D_SQL0002535
+4 Description=C07D_SQL0002540
+4 Permissions=C07D_SQL0002545
+4 Readonly Cursors and Performance=C07D_SQL0002550
+4 Related Statements=C07D_SQL0002555
+4 Examples=C07D_SQL0002560
+3 Get Data
+4 Overview=C07D_SQL0002565
+4 Syntax=C07D_SQL0002570
+4 Description=C07D_SQL0002575
+4 Permissions=C07D_SQL0002580
+4 Related Statements=C07D_SQL0002585
+4 Examples=C07D_SQL0002590
+3 Get Dbevent
+4 Overview=C07D_SQL0002595
+4 Syntax=C07D_SQL0002600
+4 Description=C07D_SQL0002605
+4 Permissions=C07D_SQL0002610
+4 Related Statements=C07D_SQL0002615
+3 Grant
+4 Overview=C07D_SQL0002620
+4 Syntax=C07D_SQL0002625
+4 Description=C07D_SQL0002630
+4 Types of Privileges=C07D_SQL0002635
+4 Table Privileges=C07D_SQL0002640
+4 Table Privileges for Views=C07D_SQL0002645
+4 Database Procedure Privileges=C07D_SQL0002650
+4 Database Privileges=C07D_SQL0002655
+4 Database Event Privileges=C07D_SQL0002660
+4 Role Privileges=C07D_SQL0002665
+4 Privilege Defaults=C07D_SQL0002670
+4 The Grant All Privileges Option
+5 Overview=C07D_SQL0002675
+5 Installation and Database Privileges=C07D_SQL0002680
+5 Other Privileges=C07D_SQL0002685
+5 Granting All Privileges on Views=C07D_SQL0002690
+4 The Grant Option Clause
+5 Overview=C07D_SQL0002695
+4 Embedded Usage
+5 Overview=C07D_SQL0002700
+4 Permissions
+5 Overview=C07D_SQL0002705
+4 Locking
+5 Overview=C07D_SQL0002710
+4 Related Statements
+5 Overview=C07D_SQL0002715
+4 Examples
+5 Overview=C07D_SQL0002720
+3 Help
+4 Overview=C07D_SQL0002725
+4 Syntax=C07D_SQL0002730
+4 Description=C07D_SQL0002735
+4 Wildcards and Help=C07D_SQL0002740
+4 Permissions=C07D_SQL0002745
+4 Locking=C07D_SQL0002750
+4 Related Statements=C07D_SQL0002755
+4 Examples=C07D_SQL0002760
+3 If-Then-Else
+4 Overview=C07D_SQL0002765
+4 Syntax=C07D_SQL0002770
+4 Description
+5 Overview=C07D_SQL0002775
+5 The IF Statement=C07D_SQL0002780
+5 The IF...THEN Statement=C07D_SQL0002785
+5 The IF...THEN...ELSEIF Statement=C07D_SQL0002790
+5 Nesting IF Statements=C07D_SQL0002795
+4 Permissions
+5 Overview=C07D_SQL0002800
+4 Example
+5 Overview=C07D_SQL0002805
+3 Include
+4 Overview=C07D_SQL0002810
+4 Syntax=C07D_SQL0002815
+4 Description=C07D_SQL0002820
+4 Permissions=C07D_SQL0002825
+4 Related Statements=C07D_SQL0002830
+4 Examples=C07D_SQL0002835
+3 Inquire_sql
+4 Overview=C07D_SQL0002840
+4 Syntax=C07D_SQL0002845
+4 Description=C07D_SQL0002850
+4 Inquiring about Logical Keys=C07D_SQL0002855
+4 Inquiring About Database Events=C07D_SQL0002860
+4 Types of Inquiries=C07D_SQL0002865
+4 Permissions=C07D_SQL0002870
+4 Related Statements=C07D_SQL0002875
+4 Examples=C07D_SQL0002880
+3 Insert
+4 Overview=C07D_SQL0002885
+4 Syntax=C07D_SQL0002890
+4 Description=C07D_SQL0002895
+4 Embedded Usage=C07D_SQL0002900
+4 Repeated Queries=C07D_SQL0002905
+4 Error Handling=C07D_SQL0002910
+4 Permissions=C07D_SQL0002915
+4 Locking=C07D_SQL0002920
+4 Related Statements=C07D_SQL0002925
+4 Examples=C07D_SQL0002930
+3 Message
+4 Overview=C07D_SQL0002935
+4 Syntax=C07D_SQL0002940
+4 Description=C07D_SQL0002945
+4 Permissions=C07D_SQL0002950
+4 Related Statements=C07D_SQL0002955
+4 Examples=C07D_SQL0002960
+3 Modify
+4 Overview=C07D_SQL0002965
+4 Syntax=C07D_SQL0002970
+4 Description=C07D_SQL0002975
+4 The Storage Structure Specification=C07D_SQL0002980
+4 The Modify...to Merge Option=C07D_SQL0002985
+4 The Modify...to Relocate Option=C07D_SQL0002990
+4 The Modify...to Reorganize Option=C07D_SQL0002995
+4 The Modify...to Truncated Option=C07D_SQL0003000
+4 The Modify...to Add_extend Option=C07D_SQL0003005
+4 The With Clause Options
+5 Overview=C07D_SQL0003010
+5 The Fillfactor, Minpages, and Maxpages Options=C07D_SQL0003015
+5 The Leaffill and Nonleaffill Options=C07D_SQL0003020
+5 The Allocation Option=C07D_SQL0003025
+5 The Extend Option=C07D_SQL0003030
+5 The Compression Option=C07D_SQL0003035
+5 The Location Option=C07D_SQL0003040
+5 The Unique_scope Option=C07D_SQL0003045
+5 The [No]persistence Option=C07D_SQL0003050
+4 Embedded Usage
+5 Overview=C07D_SQL0003055
+4 Permissions
+5 Overview=C07D_SQL0003060
+4 Locking
+5 Overview=C07D_SQL0003065
+4 Related Statements
+5 Overview=C07D_SQL0003070
+4 Examples
+5 Overview=C07D_SQL0003075
+3 Open
+4 Overview=C07E_SQL0003080
+4 Syntax=C07E_SQL0003085
+4 Description=C07E_SQL0003090
+4 Permissions=C07E_SQL0003095
+4 Locking=C07E_SQL0003100
+4 Related Statements=C07E_SQL0003105
+4 Examples=C07E_SQL0003110
+3 Prepare
+4 Overview=C07E_SQL0003115
+4 Syntax=C07E_SQL0003120
+4 Description=C07E_SQL0003125
+4 Permissions=C07E_SQL0003130
+4 Related Statements=C07E_SQL0003135
+4 Example=C07E_SQL0003140
+3 Prepare to Commit
+4 Overview=C07E_SQL0003145
+4 Syntax=C07E_SQL0003150
+4 Description=C07E_SQL0003155
+4 Permissions=C07E_SQL0003160
+4 Performance=C07E_SQL0003165
+4 Related Statements=C07E_SQL0003170
+4 Example=C07E_SQL0003175
+3 Put Data
+4 Overview=C07E_SQL0003180
+4 Syntax=C07E_SQL0003185
+4 Description=C07E_SQL0003190
+4 Permissions=C07E_SQL0003195
+4 Related Statements=C07E_SQL0003200
+4 Examples=C07E_SQL0003205
+3 Raise Dbevent
+4 Overview=C07E_SQL0003210
+4 Syntax=C07E_SQL0003215
+4 Description=C07E_SQL0003220
+4 Embedded Usage=C07E_SQL0003225
+4 Permissions=C07E_SQL0003230
+4 Related Statements=C07E_SQL0003235
+3 Raise Error
+4 Overview=C07E_SQL0003240
+4 Syntax=C07E_SQL0003245
+4 Description=C07E_SQL0003250
+4 Permissions=C07E_SQL0003255
+4 Related Statements=C07E_SQL0003260
+4 Example=C07E_SQL0003265
+3 Register Dbevent
+4 Overview=C07E_SQL0003270
+4 Syntax=C07E_SQL0003275
+4 Description=C07E_SQL0003280
+4 Permissions=C07E_SQL0003285
+4 Related Statements=C07E_SQL0003290
+3 Register Table
+4 Overview=C07E_SQL0003295
+4 Syntax=C07E_SQL0003300
+4 Description=C07E_SQL0003305
+4 Security Log Files=C07E_SQL0003310
+4 With Clause Options=C07E_SQL0003315
+4 Embedded Usage=C07E_SQL0003320
+4 Permissions=C07E_SQL0003325
+4 Locking=C07E_SQL0003330
+4 Related Statements=C07E_SQL0003335
+4 Example=C07E_SQL0003340
+3 Remove Dbevent
+4 Overview=C07E_SQL0003345
+4 Syntax=C07E_SQL0003350
+4 Description=C07E_SQL0003355
+4 Permissions=C07E_SQL0003360
+4 Related Statements=C07E_SQL0003365
+3 Remove Table
+4 Overview=C07E_SQL0003370
+4 Syntax=C07E_SQL0003375
+4 Description=C07E_SQL0003380
+4 Permissions=C07E_SQL0003385
+4 Embedded Usage=C07E_SQL0003390
+4 Locking=C07E_SQL0003395
+4 Related Statements=C07E_SQL0003400
+4 Examples=C07E_SQL0003405
+3 Return
+4 Overview=C07E_SQL0003410
+4 Syntax=C07E_SQL0003415
+4 Description=C07E_SQL0003420
+4 Permissions=C07E_SQL0003425
+4 Related Statements=C07E_SQL0003430
+4 Example=C07E_SQL0003435
+3 Revoke
+4 Overview=C07E_SQL0003440
+4 Syntax=C07E_SQL0003445
+4 Description=C07E_SQL0003450
+4 Revoking the Grant Option=C07E_SQL0003455
+4 Restrict versus Cascade=C07E_SQL0003460
+4 Embedded Usage=C07E_SQL0003465
+4 Permissions=C07E_SQL0003470
+4 Locking=C07E_SQL0003475
+4 Related Statements=C07E_SQL0003480
+4 Examples=C07E_SQL0003485
+3 Rollback
+4 Overview=C07E_SQL0003490
+4 Syntax=C07E_SQL0003495
+4 Description=C07E_SQL0003500
+4 Embedded Usage=C07E_SQL0003505
+4 Permissions=C07E_SQL0003510
+4 Locking=C07E_SQL0003515
+4 Performance=C07E_SQL0003520
+4 Related Statements=C07E_SQL0003525
+3 Save
+4 Overview=C07E_SQL0003530
+4 Syntax=C07E_SQL0003535
+4 Description=C07E_SQL0003540
+4 Embedded Usage=C07E_SQL0003545
+4 Permissions=C07E_SQL0003550
+4 Locking=C07E_SQL0003555
+4 Example=C07E_SQL0003560
+3 Savepoint
+4 Overview=C07E_SQL0003565
+4 Syntax=C07E_SQL0003570
+4 Description=C07E_SQL0003575
+4 Embedded Usage=C07E_SQL0003580
+4 Permissions=C07E_SQL0003585
+4 Related Statements=C07E_SQL0003590
+4 Example=C07E_SQL0003595
+3 Select (interactive)
+4 Overview=C07E_SQL0003600
+4 Syntax=C07E_SQL0003605
+4 Description=C07E_SQL0003610
+4 Select Statement Clauses=C07E_SQL0003615
+4 Query Evaluation=C07E_SQL0003620
+3 The Select Clause
+4 Overview=C07E_SQL0003625
+3 The From Clause
+4 Overview=C07E_SQL0003630
+4 Specifying Tables and Views=C07E_SQL0003635
+4 Outer Joins=C07E_SQL0003640
+3 The Where Clause
+4 Overview=C07E_SQL0003645
+4 Simple Where Clauses=C07E_SQL0003650
+4 Joins
+5 Overview=C07E_SQL0003655
+5 Join Relationships=C07E_SQL0003660
+5 Subqueries=C07E_SQL0003665
+3 The Order By Clause
+4 Overview=C07E_SQL0003675
+3 The Having Clause
+4 Overivew=C07E_SQL0003680
+3 The Union Clause
+4 Overview=C07E_SQL0003685
+4 Permissions=C07E_SQL0003690
+4 Examples=C07E_SQL0003695
+3 Select (embedded)
+4 Overview=C07E_SQL0003700
+4 Syntax=C07E_SQL0003705
+4 Description=C07E_SQL0003710
+4 Non-Cursor Select=C07E_SQL0003715
+4 Select Loops=C07E_SQL0003720
+4 Retrieving Values into Host Language Variables=C07E_SQL0003725
+4 Retrieving Long Varchar and Long Byte Values=C07E_SQL0003730
+4 Host Language Variables in the Union Clause=C07E_SQL0003735
+4 Repeated Queries=C07E_SQL0003740
+4 Cursor Select=C07E_SQL0003745
+4 Error Handling=C07E_SQL0003750
+4 Embedded Usage=C07E_SQL0003755
+4 Related Statements=C07E_SQL0003760
+4 Examples=C07E_SQL0003765
+3 Set
+4 Overview=C07F_SQL0003770
+4 Syntax=C07F_SQL0003775
+4 Description=C07F_SQL0003780
+4 Embedded Usage=C07F_SQL0003785
+4 Permissions=C07F_SQL0003790
+4 The Autocommit Option=C07F_SQL0003795
+4 The [No]journaling Option=C07F_SQL0003800
+4 The Result_Structure Option=C07F_SQL0003805
+4 The Lockmode Option=C07F_SQL0003810
+4 The [No]Printqry Option=C07F_SQL0003815
+4 The [No]Qep Option=C07F_SQL0003820
+4 The Joinop [No]Timeout Option=C07F_SQL0003825
+4 The [No]Rules Option=C07F_SQL0003830
+4 The [No]Printrules Option=C07F_SQL0003835
+4 The [No]Maxio Option=C07F_SQL0003840
+4 The [No]Maxquery Option=C07F_SQL0003845
+4 The [No]Maxrow Option=C07F_SQL0003850
+4 The [No]Maxidle Option=C07F_SQL0003855
+4 The [No]Maxconnect Option=C07F_SQL0003860
+4 The Set Role Option=C07F_SQL0003865
+4 The [No]Printdbevents Option=C07F_SQL0003870
+4 The [No]Logdbevents Option=C07F_SQL0003875
+4 The Session with On_error Option=C07F_SQL0003880
+4 The Session with Security Label Option=C07F_SQL0003885
+4 The Session with [No]Description Option=C07F_SQL0003890
+4 The Session with Priority Option=C07F_SQL0003895
+4 The Session with [No]Privileges Option=C07F_SQL0003900
+4 The [No]Logging Option
+5 Overview=C07F_SQL0003905
+5 The Set Nologging Option=C07F_SQL0003910
+5 The Set Logging Option=C07F_SQL0003915
+4 The [No]Optimizeonly Option
+5 Overview=C07F_SQL0003920
+4 The Connection Option
+5 Overview=C07F_SQL0003925
+4 The Work Locations Option
+5 Overview=C07F_SQL0003930
+4 The Update_Rowcount Option
+5 Overview=C07F_SQL0003935
+4 The [No]Set Rowlabel _Visible Option
+5 Overview=C07F_SQL0003940
+4 Related Statements
+5 Overview=C07F_SQL0003945
+4 Examples
+5 Overview=C07F_SQL0003950
+3 Set_sql
+4 Overview=C07F_SQL0003955
+4 Syntax=C07F_SQL0003960
+4 Description=C07F_SQL0003965
+4 Related Statements=C07F_SQL0003970
+4 Permissions=C07F_SQL0003975
+3 Update
+4 Overview=C07F_SQL0003980
+4 Syntax=C07F_SQL0003985
+4 Description=C07F_SQL0003990
+4 Embedded Usage=C07F_SQL0003995
+4 Cursor Updates=C07F_SQL0004000
+4 Permissions=C07F_SQL0004005
+4 Locking=C07F_SQL0004010
+4 Related Statements=C07F_SQL0004015
+4 Examples=C07F_SQL0004020
+3 Whenever
+4 Overview=C07F_SQL0004025
+4 Syntax=C07F_SQL0004030
+4 Description=C07F_SQL0004035
+4 Embedded Usage=C07F_SQL0004040
+4 Permissions=C07F_SQL0004045
+4 Locking=C07F_SQL0004050
+4 Related Statements=C07F_SQL0004055
+4 Examples=C07F_SQL0004060
+3 While - Endwhile
+4 Overview=C07F_SQL0004065
+4 Syntax=C07F_SQL0004070
+4 Description=C07F_SQL0004075
+4 Permissions=C07F_SQL0004080
+4 Example=C07F_SQL0004085
+2 Appendix A:  Key Words
+3 Overview=AA_SQLE0000000
+3 ANSI SQL=AA_SQLE0000010
+2 Appendix B:  Terminal Monitor
+3 Overview=AB_SQLE0000000
+3 Accessing the Terminal Monitor=AB_SQLE0000010
+3 The Query Buffer=AB_SQLE0000015
+3 The Terminal Monitor Commands=AB_SQLE0000020
+3 Messages and Prompts=AB_SQLE0000025
+3 Character Input and Output=AB_SQLE0000030
+3 Help=AB_SQLE0000035
+2 Appendix C:  Calling CA-OpenIngres Tools from Embedded SQL
+3 Overview=AC_SQLE0000000
+3 CA-OpenIngres Tools and Parameters
+4 Overview=AC_SQLE0000010
+4 The report Command=AC_SQLE0000015
+4 The sreport Command=AC_SQLE0000020
+4 The rbf Command=AC_SQLE0000025
+4 The qbf Command=AC_SQLE0000030
+4 The vifred Command=AC_SQLE0000035
+4 The abf Command=AC_SQLE0000040
+4 The sql Command=AC_SQLE0000045
+4 The isql Command=AC_SQLE0000050
+4 The ingmenu Command=AC_SQLE0000055
+4 The system Command=AC_SQLE0000060
+2 Appendix D:  Statements from Earlier Releases of CA-Ingres
+3 Introduction=AD_SQLE0000000
+3 Abort
+4 Overview=AD_SQLE0000010
+4 Syntax=AD_SQLE0000015
+4 Description=AD_SQLE0000020
+4 Examples=AD_SQLE0000025
+3 Begin Transaction
+4 Overview=AD_SQLE0000030
+4 Syntax=AD_SQLE0000035
+4 Description=AD_SQLE0000040
+4 Examples=AD_SQLE0000045
+3 Create Permit
+4 Overview=AD_SQLE0000050
+4 Syntax=AD_SQLE0000055
+4 Description=AD_SQLE0000060
+4 Example=AD_SQLE0000065
+3 Drop Permit
+4 Overview=AD_SQLE0000070
+4 Syntax=AD_SQLE0000075
+4 Description=AD_SQLE0000080
+4 Embedded Usage=AD_SQLE0000085
+4 Permissions=AD_SQLE0000090
+4 Locking=AD_SQLE0000095
+4 Examples=AD_SQLE0000100
+3 End Transaction
+4 Overview=AD_SQLE0000105
+4 Syntax=AD_SQLE0000110
+4 Description=AD_SQLE0000115
+4 Examples=AD_SQLE0000120
+3 Inquire_ingres
+4 Overview=AD_SQLE0000125
+4 Syntax=AD_SQLE0000130
+4 Description=AD_SQLE0000135
+3 Relocate
+4 Overview=AD_SQLE0000140
+4 Syntax=AD_SQLE0000145
+4 Description=AD_SQLE0000150
+4 Examples=AD_SQLE0000155
+3 Set_ingres
+4 Overview=AD_SQLE0000160
+4 Syntax=AD_SQLE0000165
+4 Description=AD_SQLE0000170
+4 Permissions=AD_SQLE0000175
+2 Appendix E:  Generic Error Codes and SQLSTATE
+3 Overview=AE_SQLE0000000
+3 SQLSTATE Values=AE_SQLE0000010
+3 Generic Error Codes=AE_SQLE0000015
+3 Generic Error Data Exception Subcodes=AE_SQLE0000020
+3 SQLSTATE and Equivalent Generic Errors=AE_SQLE0000025
+2 Appendix F:  ANSI Compliance Settings
+3 Overview=AF_SQLE0000000
+3 Configuration-By-Forms Settings=AF_SQLE0000010
+3 Case Sensitivity for Identifiers
+4 Overview=AF_SQLE0000015
+4 Regular Identifiers=AF_SQLE0000020
+4 Delimited Identifiers=AF_SQLE0000025
+4 User Names=AF_SQLE0000030
+3 Default Cursor Mode
+4 Overview=AF_SQLE0000035
+3 Query Flattening
+4 Overview=AF_SQLE0000040
+3 Connection Flags
+4 Overview=AF_SQLE0000045
+4 The -string_truncation Flag=AF_SQLE0000050
+4 The -numeric_overflow Flag=AF_SQLE0000055
+3 ESQL Preprocessor Flags
+4 Overview=AF_SQLE0000060
+4 The -wsql Flag=AF_SQLE0000065
+4 The -blank_pad Flag=AF_SQLE0000070
+4 The -sqlcode Flag=AF_SQLE0000075
+4 The -check_eos Flag (C only)=AF_SQLE0000080
+2 Appendix G:  Security Labels
+3 Overview=AG_SQLE0000000
+3 Security Label Concepts
+4 Overview=AG_SQLE0000010
+4 Labels, Levels and Categories =AG_SQLE0000015
+4 Label Domination and Comparisons
+5 Overview=AG_SQLE0000020
+5 Disjoint Comparisons =AG_SQLE0000025
+4 LUB (Lowest Upper Bound)
+5 Overview=AG_SQLE0000030
+3 Using Security Labels with CA-OpenIngres
+4 Overview=AG_SQLE0000035
+4 The Security_label Data Type=AG_SQLE0000040
+4 The Short Security_Label Data Type=AG_SQLE0000045
+4 Choosing Security Label Storage Formats
+5 Overview=AG_SQLE0000050
+5 Disk Storage Requirements=AG_SQLE0000055
+5 Performance=AG_SQLE0000060
+5 Row Width=AG_SQLE0000065
+5 External Representation=AG_SQLE0000070
+5 Truncation=AG_SQLE0000075
+5 Input and Display of Security Labels=AG_SQLE0000080
+5 Accessing Internal Label Value=AG_SQLE0000085
+4 Comparison Operators 
+5 Overview =AG_SQLE0000090
+5 Comparing Disjoint Comparisons=AG_SQLE0000095
+5 Inverse Operators=AG_SQLE0000100
+5 Examples=AG_SQLE0000105
+4 Coercions
+5 Overview=AG_SQLE0000110
+4 Functions and Operators 
+5 Overview =AG_SQLE0000115
+5 The Security Label Function=AG_SQLE0000120
+5 The Short_Seclabel Function=AG_SQLE0000125
+5 The Char Function=AG_SQLE0000130
+5 The Varchar Function=AG_SQLE0000135
+5 The C Function=AG_SQLE0000140
+5 The Vchar Function=AG_SQLE0000145
+5 The Ascii Function=AG_SQLE0000150
+5 The Hex Function=AG_SQLE0000155
+5 The Byte Function=AG_SQLE0000160
+5 The Seclabel_Disjoint Function=AG_SQLE0000165
+5 The Length Function=AG_SQLE0000170
+5 The Seclabel_Lub Function=AG_SQLE0000175
+5 The Session_Seclabel Function=AG_SQLE0000180
+3 Collation and Grouping of Security Labels
+4 Overview=AG_SQLE0000185
+3 Security Labels in Keys
+4 Overview=AG_SQLE0000190
+3 Using Security Labels in Database Procedures
+4 Overview=AG_SQLE0000195
+3 Using Security labels with the Copy Statement
+4 Overview=AG_SQLE0000200
+3 Availability with CA-OpenIngres Tools
+4 Overview=AG_SQLE0000205
+3 Embedded SQL
+4 Overview=AG_SQLE0000210
+4 Manipulating Security Labels=AG_SQLE0000215
+4 Dynamic SQL=AG_SQLE0000220
+4 DCLGEN=AG_SQLE0000225
+3 Tool Support
+4 Overview=AG_SQLE0000230
+4 4GL/Report-Writer Security Label Variables=AG_SQLE0000235
+4 Passing Security_labels from 4GL to 3GL Procedures=AG_SQLE0000240
+4 FRS Fields and Display Formats=AG_SQLE0000245
+4 QBF=AG_SQLE0000250
+4 Vifred=AG_SQLE0000255
+4 Report-Writer=AG_SQLE0000260
+

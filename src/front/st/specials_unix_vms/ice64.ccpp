@@ -1,0 +1,50 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for ice
+*/
+
+/*
+** History
+**
+**	27-Aug-2002 (hanch04)
+**		Created from ice.ccpp
+**      21-Jan-2002 (hweho01)
+**          For the 32/64 hybrid build on AIX, the shared libraries
+**          that require the library path to be loaded will have a 
+**          suffix '64' and reside in $II_SYSTEM/ingres/lib directory.
+**          Because the alternate shared library path is not available.
+**      18-Jun-2003 (hanch04)
+**          Fix previous change for AIX
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Hybrid add-on symbol changed, fix here.
+*/
+
+PART   ice64
+
+/*
+** ingres!lib
+*/
+#if defined(any_aix) && defined(conf_BUILD_ARCH_32_64)
+   DIRECTORY ingres!LIB_TGT!lp64
+   BUILD_DIR (ING_BUILD)!LIB_BLD!lp64
+      FILE liboiicecapi.a
+   DIRECTORY ingres!LIB_TGT
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+      EXECUTABLE liboiddi64.$SLSFX.2.0
+#else
+   DIRECTORY ingres!LIB_TGT!lp64
+   BUILD_DIR (ING_BUILD)!LIB_BLD!lp64
+      FILE liboiicecapi.a
+      EXECUTABLE liboiddi.$SLSFX.2.0
+#endif  /*  aix hybrid*/
+/*
+** ingres!bin
+*/
+
+   DIRECTORY ingres!bin!lp64
+   BUILD_DIR (ING_BUILD)!bin!lp64
+      EXECUTABLE icesvr

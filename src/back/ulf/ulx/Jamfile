@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!ulf!ulx
+#
+
+SubDir ING_SRC back ulf ulx ;
+
+IISUBSYS back ulf ulx ;
+
+
+IILIBRARY ULFLIB : ulxquery.c ulx.c ;
+

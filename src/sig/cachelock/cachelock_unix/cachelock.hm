@@ -1,0 +1,16 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/* 
+** CACHELOCK.HM
+**
+** Header file for mmap/mlock versions of the DMF CACHELOCK utility.
+**
+** Copy this file to cachelock.h if your operating system supports 
+** mmap and mlock.  Note that the Ingres server must
+** be configured in a manner consistent with this header file.
+**
+*/
+
+#define mmap_exists
+

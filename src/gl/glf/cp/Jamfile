@@ -1,0 +1,11 @@
+#
+# Jamfile file for gl!glf!cp
+#
+
+SubDir ING_SRC gl glf cp ;
+
+IISUBSYS gl glf cp ;
+
+
+IILIBRARY COMPATLIB : cp.c ;
+

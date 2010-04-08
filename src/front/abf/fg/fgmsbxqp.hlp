@@ -1,0 +1,8 @@
+/#-- Help File: fgmsbxqp.hlp
+/#-- Master in simple fields browse frame, with Next, user Qual, primary help.
+This screen allows you to browse data. Select "Next" to browse
+selected data.
+
+  Next        Get the next record.
+  Help        Get help about this screen.
+  End         Stop browsing data and enter a new query.

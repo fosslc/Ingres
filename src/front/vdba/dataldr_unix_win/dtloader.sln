@@ -1,0 +1,19 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dtloader", "dtloader.vcproj", "{C9F7FAF5-6EB2-4BFD-A839-25A8A6389893}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Default = Debug|Default
+		Release|Default = Release|Default
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C9F7FAF5-6EB2-4BFD-A839-25A8A6389893}.Debug|Default.ActiveCfg = Debug|Win32
+		{C9F7FAF5-6EB2-4BFD-A839-25A8A6389893}.Debug|Default.Build.0 = Debug|Win32
+		{C9F7FAF5-6EB2-4BFD-A839-25A8A6389893}.Release|Default.ActiveCfg = Release|Win32
+		{C9F7FAF5-6EB2-4BFD-A839-25A8A6389893}.Release|Default.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,86 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmbuild.hlp
+TABLE INTEGRITY REPORT
+
+This form is to used specify a report to compare a replicated table in
+two different databases.  You specify the criteria for the comparison
+based on transaction begin and end time, and if desired, a CDDS number.
+You can also designate the sort order of the report by replicated column
+or transaction time.
+
+When you execute the report, it first checks that the table keys are
+forced to be unique either by the table structure or by a secondary
+index.  If they are not, a message appears on the report.  It then
+compares the tables in the two databases and reports any rows that are
+present in one but not in the other.  This comparison is performed on
+the entire row.  If there is a row that differs in only one column, it
+appears on the report as having one set of data missing from the second
+database, and the slightly different data is reported as missing from
+the first database.  The report shows which database holds the data, and
+all of the columns and values.
+
+The fields on the form are:
+
+        FIELD NAME              DESCRIPTION
+        ----------              -----------
+        Compare contents of     The name of the replicated table that
+                                you want to compare.
+
+        for owner               If there is only one owner with a table
+                                by that name, this field is
+                                automatically filled in with the table
+                                owner.
+
+                                For tables with multiple owners, a
+                                pop-up table appears when you land on
+                                the field, allowing you to select the
+                                appropriate owner.
+
+        in Consistent           If the table is not horizontally
+        Distributed Data Set    partitioned, this field is automatically
+                                filled in with the CDDS number under
+                                which the table is registered.
+
+                                For horizontally partitioned tables,
+                                enter a CDDS number from the CDDS lookup
+                                table.  You can use ListChoices to view
+                                a list of acceptable values.
+
+        in Database Number 1    The number of the first database that
+                                you want to compare with a second
+                                replicated database.
+
+        and Database Number 2   The number of the second database that
+                                you want to compare with the first.
+
+        Begin                   This is an optional field to enter the
+                                beginning of a date range in standard
+                                Ingres date and time format.
+
+        End                     This is an optional field to enter the
+                                end of a date range in standard
+                                Ingres date and time format.
+
+        Column Name             When you enter a table name, this column
+                                displays the names of all registered
+                                columns for the specified table.  It
+                                also adds a 'trans_time' column
+                                representing the transaction time.
+
+        Order                   To display rows in a specific order,
+                                enter values beside each column name
+                                (from 1 to number of columns displayed).
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Go              Run the report as specified.
+
+        ListChoices     Display a list of acceptable values for the
+                        current field.
+
+        Help            Access the Help facility.
+
+        End             Return to the Reports Menu.

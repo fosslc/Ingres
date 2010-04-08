@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!abf!gn
+#
+
+SubDir ING_SRC front abf gn ;
+
+IISUBSYS front abf gn ;
+
+
+IILIBRARY GNLIB : gnstspc.c gnoldnm.c gnmknam.c gnlegal.c
+	gninspc.c gnhfunc.c gnglob.c gngennm.c gnfind.c gnendsp.c
+	gndelnm.c ;
+

@@ -1,0 +1,420 @@
+/*
+** Copyright (c) 2004, 2010 Ingres Corporation
+*/
+/*
+**
+** RPM spec file configuration
+**
+** Generate RPM spec files from template spec files using the
+** options listed here.
+**
+** %%attr entries are simply appended to the bottom of the template.
+** Make sure the %%files section is present.
+**
+*************
+**
+*******
+** Replacement options substitute the value of the named string
+** specified here into the output spec file.
+**
+** sub global substitution definitions will replace occurances
+** of $<subname> in the spec template file with the value specified
+** here.
+**
+** esub global substitution definitions will replace occurances
+** of $<esubname> in the spec template file with the value of the
+** environment variable specified here.  Or the environment variable
+** name itself if it is not defined.
+**
+** Repeated spaces or tabs will be compressed to a single space.
+**
+** Internally defined substitutions:
+**   %specname% - declared for each spec file generated.
+**   %specname% is set to "-<spec name>" if a name is given or ""
+**   (empty) if not.  Cannot be overridden.
+**
+**   %rpm_buildroot% - defined by environment variable II_RPM_BUILDROOT
+**   unless it is overridden here.
+**
+** User defined substitutions:
+**   $sub <subname> <value>
+**   $esub <subname> <environment variable name>
+**
+** Substitutions required for buildrel operation:
+**   $sub %rpm_basename% <name> base product and spec file name (def: Ingres)
+**   $esub %rpm_prefix% <name> is the RPM prefix setting (beneath buildroot)
+**   $esub %rpm_emb)prefix% <name> is the RPM prefix setting for the embedded
+**   (EI) core package (beneath buildroot)
+**   $sub %rpm_version% <version> Ingres/RPM version number (def: 1.0.0000)
+**
+** The order substitutions occur in is not specified.  Do not create
+** dependencies between them.
+**
+*******
+** spec file generation options specify which features are to be
+** included into specified spec files.  The generated RPM %%files
+** section is appended at the end of the spec file.
+**
+**  $spec [<name>] entry for each spec file (def: <empty>)
+**   $feature <manifest group> multiple entries specifying a group
+**    of files as named in the manifest that belong to the spec file
+**
+*******
+** Referenced files:
+**  ${rpm_basename}[-${rpm_specname}].template
+**
+** Generated files:
+**  ${rpm_basename}-${rpm_version}[-${rpm_specname}][-${rpm_release}].spec
+**
+** Referenced files (generated spec files and their references) are
+** located under:
+**  BUILDROOT/${rpm_prefix}/<ingres manifest file path+name>
+**
+** History:
+**	05-Feb-2004 (hanje04)
+**	    Added history.
+**	    Added $spec and $feature definitions for the documentation
+**	    package.
+**	22-Mar-2004 (hanje04)
+**	    Add comment and missing / from previous change.
+**	    Add spatial package
+**	14-Apr-2004 (hanje04)
+** 	    Add Embedded Ingres core package ca-ingres-EI
+**	05-Jun-2004 (hanje04)
+**	    Move uadtsup from basic to dbms to resolve conflict with
+**	    iimerge.o apearing in both basic and dbms.
+**	22-Jul-2004 (hanje04)
+**	    Remove secure package.
+**    28-Jun-2004 (hanje04)
+**        Add rpm_emb_prefix which is defined as $II_RPM_EMB_PREFIX 
+**	  and use it instead of rpm_prefix for the embedded (EI) base package.
+**	30-Jul-2004 (hanje04)
+**	    Replace EULA with CATOSL for Open Source.
+**    30-Jul-2004 (hanje04)
+**	  Conditionalize building of ca-ingres-EI package
+**    22-Sep-2004 (hanje04)
+**	    Update version info.
+**	05-Oct-2004 (hanch04)
+**	    Update version info. 102
+**	06-Oct-2004 (hanch04)
+**	    Update version info. 103
+**	22-Oct-2004 (sheco02)
+**	    Update version info. 104
+**	25-Oct-2004 (hanje04)
+**	    Defined MDB version info.
+**	01-Nov-2004 (hanje04)
+**	    Wrap MDB package in R_MDB
+**	02-Nov-2004 (hanje04)
+**	    Update version info. 105
+**	20-Nov-2004 (hanje04)
+** 	    Tokenize version info
+**	24-Nov-2004 (hanje04)
+**          Wrap MDB package in R_MDB - again
+**	21-Jan-2005 (hanje04)
+**	    Add i18n (alternate language message files) to core package
+**	07-Mar-2005 (hanje04)
+**	    SIR 113787
+**	    Make i18n a separate RPM package
+**	16-Mar-2005 (hanje04)
+**	    SIR 114034
+** 	    Add 32bit RPM for reverse hyrbrid builds.
+**	09-Aug-2005 (sheco02)
+**	    Update rpm_version to 3.0.3 and product_release to 0.3.
+**	15-Jan-2006 (hanje04)
+**	    SIR 115662
+**	    Update version and product info for Ingres 2006 release.
+**	    Remove CATOSL, no replacement available yet.
+**	30-Jan-2006 (hanje04)
+**	    SIR 115688
+**	    Defined %rpm_license% and add license $spec/$feature
+**	    Correct typeo in %rpm_product%
+**	    BUG 115698
+**	    Define rpm_doc_prefix for generating file info for the
+**	    doc RPM.
+**	07-May-2006 (hanje04)
+**	    Bump version number to 9.1.0 and release name to Ingres 2007
+**	25-Oct-2006 (hanje04)
+**	    SIR 116911
+**	    Add packman package to core RPM.
+**	27-Oct-2006 (hanje04)
+**	    SIR 116911
+**	    Remove 'packman' package. It was added in error as it's already 
+**	    part of basic.
+**      12-Dec-2007 (hanje04)
+**          SIR 117341
+**          Remove JDBC package from saveset.
+**	23-Feb-2007 (hanje04)
+**          SIR 117784
+**          Add demodb.ccpp for setup and creation of demo database
+**	22-Jan-2007 (bonro01)
+**	    Change version back for ingres2006 release 3
+**	13-Jun-2007 (bonro01)
+**	    Only include Tuxedo if R_TUXEDO is defined.
+**	11-Feb-2008 (bonro01)
+**	    Include Spatial object package into standard ingbuild and RPM
+**	    install images instead of having a separate package.
+**      11-Aug-2008 (hweho01)
+**          Change product name from Ingres 2006 to Ingres for 9.2 release.
+**	22-Jun-2009 (kschendel) SIR 122138
+**	    Hybrid add-on symbol changed, fix here.  Use BUILD_ICE.
+**      04-Jun-2009 (bonro01)
+**          Change product release for Ingres 9.4 release.
+**      10-Jun-2009 (hweho01)
+**          Change product release for Ingres 10.0 release.
+**	05-Feb-2010 (bonro01)
+**	    Newer versions of rpmbuild have introduced newer processing macros
+**	    which strip executables before they are packages into RPM's.
+**	    Fix RPM packages so the files are identical to the ingbuild version
+**	    Add an override for the RPM macro %__spec_install_post
+**	    to prevent it from processing any files being added to an RPM.
+**	24-Feb-2010 (hanje04)
+**	    SIR 123296
+**	    Add support for LSB builds
+**	09-Mar-2010 (hanje04)
+**	    SIR 123296 
+**	    Move tuxedo, api and sig packages to devel for LSB build to satify
+**	    packaging requirements for 'devel' files.
+*/
+
+
+/* packaging tool info */
+$sub %summary_tag% Summary:
+$sub %pkgname_tag% Name:
+$sub %version_tag% Version:
+$sub %release_tag% Release:
+$sub %license_tag% License:
+$sub %group_tag% Group:
+$sub %source_tag% <skip>
+$sub %patch_tag% <skip>
+$sub %maintainer_tag% <skip>
+$sub %url_tag% URL:
+$sub %buildroot_tag% BuildRoot:
+$sub %prefix_tag% Prefix:
+# ifdef conf_LSB_BUILD
+$sub %rpmprereq_tag% Requires:
+# else
+$sub %rpmprereq_tag% PreReq:
+# endif
+$sub %debprereq_tag% <skip>
+$sub %provides_tag% Provides:
+$sub %replaces_tag% Obsoletes:
+$sub %rpm_descrip_tag% %description
+$sub %deb_descrip_tag% 
+$sub %autoreq_tag% <skip>
+$sub %define_tag% <skip>
+$sub %arch_tag% <skip>
+
+/* product info */
+$sub %product_name% (PROD1NAME)
+$sub %product_brandname% Ingres
+$sub %product_version% 10
+$sub %product_release% 0.0
+$sub %rpm_product% (PROD1NAME) Business Open Source Database
+$sub %rpm_basename% (PROD_PKGNAME)
+$sub %rpm_version% 10.0.0
+$sub %rpm_release% BUILD_NO
+$sub %rpm_doc_prefix% /usr/share/doc
+$sub %mdb_version% 1.0.0
+$esub %mdb_release% MDB_BUILD_NO
+$sub %rpm_vendor% Ingres Corporation
+$sub %rpm_license% GPLv2 
+$sub %rpm_copyright% Copyright © 2005-2010 Ingres Corporation. All Rights Reserved.
+$sub %rpm_group% Applications/Databases
+$sub %rpm_url% http://www.ingres.com/products/ingres-database.php
+$sub %rpm_autoreq_off% 0
+$sub %rpm_unpack_term_off% _unpackaged_files_terminate_build 0
+$sub %rpm_missing_doc_term_off% _missing_doc_files_terminate_build 0
+$esub %rpm_prefix% II_RPM_PREFIX
+$esub %rpm_emb_prefix% II_RPM_EMB_PREFIX
+$esub %mdb_prefix% II_MDB_PREFIX
+$sub %rpm_spec_install_post% __spec_install_post /bin/true
+$sub %rpm_lsb_prefix% %{_libexecdir}
+
+/* package info */
+# ifdef conf_LSB_BUILD
+$spec client
+$feature basic
+$feature setupsup
+$feature config
+$feature generr
+$feature formtool
+$feature tm
+$feature qr_run
+# ifdef R_NET
+$feature net
+$feature das
+# endif /* R_NET */
+# ifdef R_ODBC
+$feature odbc
+# endif /* R_ODBC */
+
+$spec devel
+$feature abf
+$feature vision
+$feature esqlsup
+$feature esqlc
+$feature esqlcc
+$feature devel
+# ifdef R_ADA
+$feature esqlada
+# endif /* R_ADA */
+# ifdef R_COBOL
+$feature esqlcob
+# endif /* R_COBOL */
+# ifdef R_FORTRAN
+$feature esqlfor
+# endif /* R_FORTRAN */
+# ifdef R_PASCAL
+$feature esqlpas
+# endif /* R_PASCAL */
+$feature uadtsup
+# ifdef R_OME
+$feature ome
+# endif /* R_OME */
+# ifdef R_TUXEDO
+$feature tuxedo
+# endif /* R_TUXEDO */
+
+$spec server
+$feature dbms
+$feature dbatools
+$feature demodb
+$feature montools
+$feature rmcmd
+$feature c2audit
+# ifdef R_REPLIC
+$feature rep
+# endif /* R_REPLIC */
+
+$spec documentation
+$feature documentation
+# else /* conf_LSB_BUILD */
+$spec
+$feature basic
+$feature setupsup
+$feature config
+$feature generr
+$feature formtool
+$feature tm
+$feature qr_run
+$feature esqlsup
+$feature esqlc
+$feature esqlcc
+# ifdef R_ADA
+$feature esqlada
+# endif /* R_ADA */
+# ifdef R_COBOL
+$feature esqlcob
+# endif /* R_COBOL */
+# ifdef R_FORTRAN
+$feature esqlfor
+# endif /* R_FORTRAN */
+# ifdef R_PASCAL
+$feature esqlpas
+# endif /* R_PASCAL */
+
+
+$spec i18n
+$feature i18n
+
+#ifdef R_EMBEDDED
+$spec EI
+$feature basic
+$feature setupsup
+$feature config
+$feature generr
+$feature formtool
+$feature tm
+$feature basic
+#endif
+
+$spec dbms
+$feature dbms
+$feature dbatools
+$feature demodb
+$feature montools
+$feature rmcmd
+$feature uadtsup
+# ifdef R_TUXEDO
+$feature tuxedo
+# endif /* R_TUXEDO */
+# ifdef R_OME
+$feature ome
+# endif /* R_OME */
+$feature c2audit
+# ifdef R_SPATIAL
+$feature spatial
+# endif /* SPATIAL */
+
+/*
+** Merged with DBMS package
+** $spec c2audit
+*/
+
+$spec abf
+$feature abf
+$feature vision
+
+/*
+** Moved to abf
+** $spec vision
+*/
+
+/*
+** Moved to core package
+** $spec esql
+*/
+
+# ifdef R_NET
+$spec net
+$feature net
+$feature das
+# ifdef R_BRIDGE
+$feature bridge
+# endif /* R_BRIDGE */
+# endif /* R_NET */
+
+/*
+** Moved to net package
+** $spec das
+** $spec bridge
+*/
+
+# ifdef R_STAR
+$spec star
+$feature star
+# endif /* R_STAR */
+
+# ifdef R_REPLIC
+$spec rep
+$feature rep
+# endif /* R_REPLIC */
+
+#if defined(conf_BUILD_ICE)
+$spec ice
+$feature ice
+#endif
+
+# ifdef R_ODBC
+$spec odbc
+$feature odbc
+# endif /* R_ODBC */
+
+$spec documentation
+$feature documentation
+
+# ifdef R_MDB
+$spec mdb
+$feature mdb
+# endif
+
+# ifdef conf_BUILD_ARCH_64_32
+$spec 32bit
+$feature supp32
+# endif
+
+$spec LICENSE
+$feature LICENSE
+
+# endif /* conf_BUILD_LSB */
+

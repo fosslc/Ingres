@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!ddf!ddi
+#
+
+SubDir ING_SRC common ddf ddi ;
+
+IISUBSYS common ddf ddi ;
+
+
+IILIBRARY DDILIB : drviiutil.c drviidb.c drvii.c ;
+

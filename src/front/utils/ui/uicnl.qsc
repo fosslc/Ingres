@@ -1,0 +1,124 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ui.h>
+
+/**
+** Name:	uicnl.qc - FE Catalog Nolock routines
+**
+** Description:
+**	Because of the default transaction semantics in SQL (i.e., implicit
+**	multistatement transactions), we have to be careful about the
+**	performance implications of concurrency control.
+**
+**	The routines in this file are used to temporarily set readlock=nolock
+**	so that we don't lock up our catalogs unnecessarily.  These routines
+**	only need to be used by the portions of our code which could be
+**	executed from within USER PROGRAMS.
+**
+**	This file defines:
+**
+**	IIUIcnb_CatNolockBegin()	Begin catalog nolock mode on 
+**					specified catalog.
+**	
+**	IIUIcne_CatNolockEnd()		End catalog nolock mode on 
+**					specified catalog.
+**
+** History:
+**	24-apr-1987 (sandyd)
+**		Created.
+**	12/11/87 (dkh) - Fixed jup bug 1584.
+**/
+
+/* # define's */
+/* GLOBALDEF's */
+/* extern's */
+/* static's */
+
+/*{
+** Name:	IIUIcnb_CatNolockBegin() - Begin catalog nolock mode
+**
+** Description:
+**	This routine sets the lockmode of the specified table so that
+**	we won't inadvertently lock up our catalogs just by reading them.
+**	(SQL implicit multistatement transactions makes this a significant 
+**	danger.)
+**
+**	This should be called prior to reading any FE catalogs (in code
+**	which might get executed from within USER APPLICATIONS -- i.e.,
+**	FRS, OSL).
+**
+** Inputs:
+**	catname		Name of catalog you want to start reading.
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		none
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**	none
+**
+** History:
+**	24-apr-1987 (sandyd)
+**		Created.
+**	12/11/87 (dkh) - Fixed jup bug 1584.
+*/
+VOID
+##IIUIcnb_CatNolockBegin(catname)
+##char	*catname;
+##{
+##/*  Comment this out for now since it does not work in a transaction.
+	if (IIUIdml() == UI_DML_QUEL)
+	{
+##		set lockmode on catname where readlock = nolock
+	}
+##*/
+##}
+
+/*{
+** Name:	IIUIcne_CatNolockEnd() - End catalog nolock mode
+**
+** Description:
+**	This routine resets the lockmode of the specified FE catalog.
+**	It should be called after you are done reading it.
+**
+** Inputs:
+**	catname		Name of catalog you are done reading.
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**		none
+**	Exceptions:
+**		none
+**
+** Side Effects:
+**	none
+**
+** History:
+**	24-apr-1987 (sandyd)
+**		Created.
+**	12/11/87 (dkh) - Fixed jup bug 1584.
+*/
+VOID
+##IIUIcne_CatNolockEnd(catname)
+##char	*catname;
+##{
+##/*  Comment this out for now since it does not work in a transaction.
+	if (IIUIdml() == UI_DML_QUEL)
+	{
+##		set lockmode on catname where readlock = shared
+	}
+##*/
+##}

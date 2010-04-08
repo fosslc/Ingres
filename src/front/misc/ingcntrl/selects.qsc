@@ -1,0 +1,502 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<er.h>
+#include	<gl.h>
+#include	<sl.h>
+#include	<iicommon.h>
+#include	<fe.h>
+#include	<erfe.h>
+#include	<ug.h>
+#include	<uf.h>
+#include	"eric.h"
+#include	"global.h"
+##include	"ictables.qsh"
+/*
+fool ming:
+#include	"ictables.h"
+*/
+
+/**
+** Name:	selects.qsc	- Select queries. Return counts or single rows.
+**
+** Description:
+**	Routines which do repeated SELECTs of single rows in tables. Information
+**	is selected into structures whose names match up with the corresponding
+**	table. Arguments to each routine are the primary key of the table.
+**	The "Exists" routines return a count and generally the arguments only
+**	give part of a composite primary key.
+**
+**	These routines maximize performance and query sharing and help
+**	minimize the number of repeated queries in the server.
+**
+** Defines:
+**	iiicsuSelectUser	- select info about a user from iiuser.
+**	iiicsgSelectUsergroup	- select info about a group from iiusergroup.
+**	iiicsrSelectRole	- select info about a role from iirole.
+**	iiicsdSelectDatabase	- select database info from iidatabase.
+**	iiicsp2SelectDbpriv2	- select info from iidbpriv where gtype=~V.
+**
+**	iiicueUsergroupExists	- Count number of rows in iiusergroup with
+**				  a particular group name.
+**	iiicaeAreaExists	- Check if a location's area exists.
+** History:
+**	6-nov-1990 (pete)
+**		Initial Version.
+**	20-sep-93 (robf)
+**              Update queries to use standard catalogs (e.g iiusers) instead
+**		of base catalogs (iiuser) this allows users without
+**	        QUERY_SYSCAT privilege to get appricable info.
+**	7-dec-1994 (andyw)
+**	  	Update query to handle valid work location for purposes
+**		of partial backup & recovery
+**      25-sep-96 (mcgem01)
+**              Global data moved to ingdata.c
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	23-May-2001 (jenjo02)
+**	    Added iiicaeAreaExists().
+**	15-Oct-2001 (jenjo02)
+**	    Removed short-lived iiicaeAreaExists(). Area directories
+**	    are now made by CREATE/ALTER LOCATION, obviating the
+**	    need to check existence.
+**/
+
+EXEC SQL INCLUDE SQLCA ;
+EXEC SQL WHENEVER SQLERROR CALL SQLPRINT ;
+
+EXEC SQL BEGIN DECLARE SECTION;
+## GLOBALREF IIUSER Iiuser;
+## GLOBALREF IIUSERGROUP Iiusergroup;
+## GLOBALREF IIROLE Iirole;
+## GLOBALREF IIDBPRIV Iidbpriv;
+## GLOBALREF IIDATABASE Iidatabase;
+EXEC SQL END DECLARE SECTION;
+
+/**
+** Name:        iiicsuSelectUser - select info about a user from iiuser.
+**
+** Description:
+**	Select all info about a particular user from catalog "iiuser".
+**
+** Inputs:
+**      char    *u_user           name of user to select info for.
+**      IIUSER  *iiuser         structure to select user info into.
+**
+** Returns:     OK if SELECT query ran without error.
+**		FAIL if error occurred during SELECT.
+**
+** History:
+**      6-nov-1990 (pete)
+**              Initial Version.
+**	20-jul-94 (robf)
+**              Save internal flags and default privileges for iiusers.
+*/
+
+STATUS
+iiicsuSelectUser(u_name, iiuser)
+EXEC SQL BEGIN DECLARE SECTION;
+char	*u_name;
+IIUSER	*iiuser;
+EXEC SQL END DECLARE SECTION;
+{
+    /* Look up user.
+    ** Following 2 queries changed from QUEL to SQL so pattern match
+    ** characters in "U_name" will be treated as literals (jupbug 20469).
+    */
+    EXEC SQL REPEATED SELECT user_name, 0, 
+			internal_status, 
+			default_group,
+			profile_name,
+			expire_date,
+			internal_flags,
+			internal_def_priv
+		 INTO	:iiuser->name, :iiuser->gid,
+			:iiuser->status, :iiuser->default_group,
+			:iiuser->profile,
+			:iiuser->expire_date,
+			:iiuser->internal_flags,
+			:iiuser->default_status
+		 FROM	iiusers
+		 WHERE	user_name = :u_name;
+
+    STtrmwhite(iiuser->name);
+    STtrmwhite(iiuser->default_group);
+
+    return (FEinqerr());
+}
+
+/**
+** Name:        iiicsgSelectUsergroup - select group info from iiusergroup.
+**
+** Description:
+**	Select all info about a particular group from catalog "iiusergroup".
+**
+** Inputs:
+**      char    *u_group        name of group to select info for.
+**	char	*groupmem	user who belongs to this group.
+**      IIUSERGROUP  *iiusergroup  structure to select user info into.
+**
+** Returns:     OK if SELECT query ran without error.
+**		FAIL if error occurred during SELECT.
+**
+** History:
+**      6-nov-1990 (pete)
+**              Initial Version.
+*/
+
+STATUS
+iiicsgSelectUsergroup(u_group, groupmem, iiusergroup)
+EXEC SQL BEGIN DECLARE SECTION;
+char		*u_group;
+char		*groupmem;
+IIUSERGROUP	*iiusergroup;
+EXEC SQL END DECLARE SECTION;
+{
+    EXEC SQL REPEATED SELECT groupid, groupmem
+		 INTO	:iiusergroup->groupid, :iiusergroup->groupmem
+		 FROM	iiusergroup
+		 WHERE	groupid  = :u_group
+		 AND	groupmem = :groupmem;
+
+    STtrmwhite(iiusergroup->groupid);
+    STtrmwhite(iiusergroup->groupmem);
+
+    if (FEinqerr() != OK)
+	    return FAIL;
+    else
+	    return OK;
+}
+
+/**
+** Name:        iiicsrSelectRole - select role info from iirole.
+**
+** Description:
+**	Select all info about a particular role from catalog "iirole".
+**
+** Inputs:
+**      char    *u_role         name of role to select info for.
+**      IIROLE  *iirole  	structure to select user info into.
+**
+** Returns:     OK if SELECT query ran without error.
+**		FAIL if error occurred during SELECT.
+**
+** History:
+**      6-nov-1990 (pete)
+**              Initial Version.
+*/
+
+STATUS
+iiicsrSelectRole(u_role, iirole)
+EXEC SQL BEGIN DECLARE SECTION;
+char	*u_role;
+IIROLE	*iirole;
+EXEC SQL END DECLARE SECTION;
+{
+    EXEC SQL REPEATED SELECT roleid, rolepass
+		 INTO	:iirole->roleid, :iirole->rolepass
+		 FROM	iirole
+		 WHERE	roleid = :u_role;
+
+    STtrmwhite(iirole->roleid);
+
+    return FEinqerr();
+}
+
+/**
+** Name:        iiicsdSelectDatabase - select database info from iidatabase.
+**
+** Description:
+**	Select all info about a particular database from catalog "iidatabase".
+**
+** Inputs:
+**	char	    *dbname	name of database to select info for.
+**	IIDATABASE  *iirole	structure to select user info into.
+**
+** Returns:     OK if SELECT query ran without error.
+**		FAIL if error occurred during SELECT.
+**
+** History:
+**      8-nov-1990 (pete)
+**              Initial Version.
+**	17-dec-93 (robf)
+**              Updated attributes names in iidatabase_info after LRC
+**		review.
+**	7-dec-1994 (andyw)
+**		Added valid work_location display when using the partial
+**	  	backup and recovery
+*/
+
+STATUS
+iiicsdSelectDatabase(dbname, iidatabase)
+EXEC SQL BEGIN DECLARE SECTION;
+char		*dbname;
+IIDATABASE	*iidatabase;
+EXEC SQL END DECLARE SECTION;
+{
+    EXEC SQL REPEATED SELECT
+			database_name,
+			database_owner,
+			data_location,
+			ckp_location,
+			jnl_location,
+			work_location,
+			access,
+			database_service,
+			compat_level,
+			compat_level_minor,
+			database_id,
+			dump_location
+		 INTO	:iidatabase->name,
+			:iidatabase->own,
+			:iidatabase->dbdev,
+			:iidatabase->ckpdev,
+			:iidatabase->jnldev,
+			:iidatabase->sortdev,
+			:iidatabase->access,
+			:iidatabase->dbservice,
+			:iidatabase->dbcmptlvl,
+			:iidatabase->dbcmptminor,
+			:iidatabase->db_id,
+			:iidatabase->dmpdev
+		 FROM	iidatabase_info
+		 WHERE	database_name = :dbname;
+
+    if (FEinqerr() != OK)
+    {
+	    IIUGerr(E_IC0068_Retrieve_Error, UG_ERR_ERROR,(i4) 1, dbname);
+	    return FAIL;
+    }
+    else if (FEinqrows() <= 0 )
+    {
+	    IIUGerr( E_IC0020_Database_doesnt_exist, UG_ERR_ERROR,
+		    (i4) 1, dbname);
+	    return FAIL;
+    }
+
+    STtrmwhite(iidatabase->name);
+    STtrmwhite(iidatabase->own);
+    STtrmwhite(iidatabase->dbdev);
+    STtrmwhite(iidatabase->ckpdev);
+    STtrmwhite(iidatabase->jnldev);
+    STtrmwhite(iidatabase->sortdev);
+    STtrmwhite(iidatabase->dmpdev);
+
+    return (OK);
+}
+
+/**
+** Name:      iiicspSelectDbpriv - select database privilege info from iidbpriv.
+**
+** Description:
+**	Select all info on database privileges from the iidbpriv catalog.
+**	Selects multiple rows -- caller must provide function to handle
+**	the selected rows.
+**
+** Inputs:
+**	char	    *dbname	name of database to select info for.
+**	IIDBPRIV    *iidbpriv	structure to select each row of dbpriv info to.
+**	STATUS      (*func)()	function to call inside loop. This function
+**				should return a STATUS. If returns FAIL, then
+**				iiicspSelectDbpriv will terminate the SELECT
+**				loop. If set to NULL, then function is not
+**				called.
+**
+** Returns:     OK if SELECT query ran without error.
+**		FAIL if error occurred during SELECT.
+**
+** History:
+**      9-nov-1990 (pete)
+**              Initial Version.
+**	2-dec-1991 (pete)
+**		Change "fill1" to "dbflags" to match 6.5 table definition.
+**      19-Oct-1998 (wanya01)
+**              Bug 93383. Add new parameter dflag.
+*/
+
+STATUS
+iiicspSelectDbpriv(dbname, iidbpriv, func, dflag)
+EXEC SQL BEGIN DECLARE SECTION;
+char		*dbname;
+IIDBPRIV	*iidbpriv;
+EXEC SQL END DECLARE SECTION;
+int            *dflag;
+STATUS		(*func)();
+{
+    STATUS stat = OK;
+
+    EXEC SQL REPEATED SELECT
+			dbname,
+			grantee,
+			gtype,
+			dbflags,
+			control,
+			flags,
+			qrow_limit,
+			qdio_limit,
+			qcpu_limit,
+			qpage_limit,
+			qcost_limit
+		 INTO	:iidbpriv->dbname,
+			:iidbpriv->grantee,
+			:iidbpriv->gtype,
+			:iidbpriv->dbflags,
+			:iidbpriv->control,
+			:iidbpriv->flags,
+			:iidbpriv->qrow_limit,
+			:iidbpriv->qdio_limit,
+			:iidbpriv->qcpu_limit,
+			:iidbpriv->qpage_limit,
+			:iidbpriv->qcost_limit
+		 FROM	iidbpriv
+		 WHERE	dbname = :dbname
+		 ORDER BY dbname, gtype;
+    EXEC SQL BEGIN;
+    {
+    	STtrmwhite(iidbpriv->dbname);
+    	STtrmwhite(iidbpriv->grantee);
+
+        if (!STbcompare(iidbpriv->grantee,6,ERget(F_IC000C_public),6,1))
+           *dflag =  ((iidbpriv->flags & DB_ACCESS) != 0) ? TRUE : FALSE ;
+
+	if ( (*func) != NULL)
+	{
+	    stat = (*func)(iidbpriv);
+	}
+	    
+	if (stat == FAIL)
+	    EXEC SQL ENDSELECT;
+    }
+    EXEC SQL END;
+
+    if (FEinqerr() != OK)	/* error in above SELECT */
+	stat = FAIL;
+
+    return stat;
+}
+
+/**
+** Name:      iiicsp2SelectDbpriv2 - select from iidbpriv where gtype=~V.
+**
+** Description:
+**	Select all info on database privileges from the iidbpriv catalog
+**	for a particular Grantee type. Order by database name.
+**	Selects multiple rows -- caller must provide function to handle
+**	the selected rows.
+**
+** Inputs:
+**	i4	    gtype	Grantee type to select.
+**	IIDBPRIV    *iidbpriv	structure to select each row of dbpriv info to.
+**	STATUS      (*func)()	function to call inside loop. This function
+**				should return a STATUS. If returns FAIL, then
+**				iiicsp2SelectDbpriv2 will terminate the SELECT
+**				loop. If set to NULL, then function is not
+**				called.
+**
+** Returns:     OK if SELECT query ran without error.
+**		FAIL if error occurred during SELECT.
+**
+** History:
+**      15-nov-1990 (pete)
+**              Initial Version.
+*/
+
+STATUS
+iiicsp2SelectDbpriv2(gtype, iidbpriv, func)
+EXEC SQL BEGIN DECLARE SECTION;
+i4		gtype;
+IIDBPRIV	*iidbpriv;
+EXEC SQL END DECLARE SECTION;
+STATUS		(*func)();
+{
+    STATUS stat = OK;
+
+    EXEC SQL REPEATED SELECT
+			dbname,
+			grantee,
+			gtype,
+			dbflags,
+			control,
+			flags,
+			qrow_limit,
+			qdio_limit,
+			qcpu_limit,
+			qpage_limit,
+			qcost_limit
+		 INTO	:iidbpriv->dbname,
+			:iidbpriv->grantee,
+			:iidbpriv->gtype,
+			:iidbpriv->dbflags,
+			:iidbpriv->control,
+			:iidbpriv->flags,
+			:iidbpriv->qrow_limit,
+			:iidbpriv->qdio_limit,
+			:iidbpriv->qcpu_limit,
+			:iidbpriv->qpage_limit,
+			:iidbpriv->qcost_limit
+		 FROM	iidbpriv
+		 WHERE	gtype = :gtype
+		 ORDER BY dbname, gtype;
+    EXEC SQL BEGIN;
+    {
+    	STtrmwhite(iidbpriv->dbname);
+    	STtrmwhite(iidbpriv->grantee);
+
+	if ( (*func) != NULL)
+	{
+	    stat = (*func)(iidbpriv);
+	}
+	    
+	if (stat == FAIL)
+	    EXEC SQL ENDSELECT;
+    }
+    EXEC SQL END;
+
+    if (FEinqerr() != OK)	/* error in above SELECT */
+	stat = FAIL;
+
+    return stat;
+}
+
+/**
+** Name:        iiicueUsergroupExists - Check if usergroup exists.
+**
+** Description:
+**	Select count of how many usergroups with a particular group name
+**	exist.
+**
+** Inputs:
+**      char    *u_group           name of group to check.
+**
+** Returns:
+**	Number of rows in iiusergroup with this group.
+**
+** History:
+**      6-nov-1990 (pete)
+**              Initial Version.
+*/
+
+i4
+iiicueUsergroupExists(u_group)
+EXEC SQL BEGIN DECLARE SECTION;
+char		*u_group;
+EXEC SQL END DECLARE SECTION;
+{
+EXEC SQL BEGIN DECLARE SECTION;
+    i4	cnt =0;
+EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL REPEATED SELECT count(*)
+		 INTO	:cnt
+		 FROM	iiusergroup
+		 WHERE	groupid = :u_group;
+
+    return cnt;
+}

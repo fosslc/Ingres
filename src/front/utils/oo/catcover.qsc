@@ -1,0 +1,492 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ooclass.h>
+#include	<oodefine.h>
+#include	<oocat.h>
+##include	<oocatlog.qsh>
+#include	"eroo.h"
+
+/**
+** Name:	catcover.qc -	Object Catalog TableField Utilities.
+**
+** Description:
+**	Contains utilities used to access the rows in an object catalog
+**	table field of a form.	These routines are now covers for the
+**	Visual Object Catalog Methods.  This file defines:
+**
+**	OOcatTableLoad() load catalog frame table field.
+**	OOcatEmpty()	initialize empty table field with blank row.
+**	OOcatCheck()	get row in catalog table field.
+**	OOcatDestroy()	destroy object in row.
+**	OOcatRename()	rename object in row.
+**	OOdetail()	detail frame for row.
+**	OOcatRead()	read in object in row.
+**	OOcatWrite()	write out object to database.
+**
+** History:
+**	Revision 6.2  89/01  wong
+**	Moved from "catutil.qsc" and rewrote as covers for Visual Object Catalog
+**	methods, which now implement all the functionality that these routines
+**	did.  Also, added 'OOdetail()' as cover from "oodetail.qsc".
+**	10/15/93 (kchin)
+**		Changed datatype of variable parameters to PTR in OOcatWrite(),
+**		this is to make it tally with the change made in IIOOidWrite(),
+**		in front/utils/oo/ooidutil.qsc.
+**
+**	Revision 6.0
+**	10/17/87 (dkh) - Fixed jup bug 1122.
+**	10/19/87 (dkh) - Fixed jup bug 666.
+**
+**	Revision 4.0  86/01  wong
+**	Initial revision.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	19-Apr-2005 (hweho01)
+**	    Avoid fatal compiler error on AIX, modified parameter  
+**          list for OOcatTableLoad(), OOcatDestroy() and OOcatRename() 
+**          routines.
+*/
+
+GLOBALREF C_OO_CATALOG	IIooCatClass;
+
+/*{
+** Name:	OOcatTableLoad() -	load catalog frame table field.
+**
+** Description:
+**	Initialize OO catalog form tableField; load
+**	tableField with all objects in database of given 'class'
+**	accessible to current user (i.e. owned by user or DBA.)
+**
+**	If 'retSubclasses' is TRUE, include all instances of any
+**	subclasses of 'class' in search as well.
+**
+**	On return leave the cursor on the catalog tableField on
+**	the row with object whose name is 'lastname'.
+**
+**	The class, formname and tablename are saved, so that an active
+**	cache of objects of the specified class can be used.
+**
+** Input params:
+**	OOID	class;		// id of object class 
+**	char	*form;		// name of catalog form
+**	char	*table;		// name of catalog tableField
+**	bool	subClasses;	// if TRUE include subclass instances
+**	char	*pattern;	// pattern for RETRIEVE qualification
+**				   (use "*" for all.)
+**	char	*lastname;	// name of object to place cursor on
+**				   (if NULL goes to 1st row.)
+**	char	*qualclause;	// optional additional qualification
+**				   clause, for application-specific
+**				   retrieval conditions, e.g. Vifred
+**				   only wants to retrieve QBFNames
+**				   associated with its current form.
+**
+** Side Effects:
+**	Retrieves from database; form display is updated.
+*/
+
+VOID
+OOcatTableLoad (
+OOID	class,
+char	*form,
+char	*table,
+bool	subClasses,
+char	*pattern,
+char	*lastname,
+char	*qualclause )
+{
+	OO_CLASS	*cp = OOpclass(class);
+
+	OBcatInit(cp, form, table, (char *)NULL);
+	OBcatForm(cp, form, table, subClasses, pattern, lastname, qualclause);
+}
+
+
+/*{
+** Name:	OOcatEmpty()	initialize empty table field with blank row.
+**
+** Description:
+**	Initialize OO catalog tableField with blank row
+**	and set form in UPDATE mode.
+**
+** Input params:
+**	OOID	class;		// id of object class 
+**	char	*form;		// name of catalog form
+**	char	*tabl;		// name of catalog tableField
+**
+** Side Effects:
+**	may change mode of form to UPDATE.
+**
+** History:
+**	11/89 (jhw)  Set forms mode for the passed in form, not necessarily
+**			the current form.
+*/
+ 
+VOID
+OOcatEmpty (class, form, table)
+OOID	class;
+##char	*form;
+##char	*table;
+##{
+	OBcatInit(OOpclass(class), form, table, ERx("UPDATE"));
+##	SET_FRS FORM ( mode(form) = UPDATE );
+##}
+
+
+/*
+** Name:	OOcatCheck() -	Check OO Catalog TableField for Row.
+**
+** Description:
+**	Gets current non-empty row from the object catalog table field.
+**
+**	If object name contains a "wild-card" pattern (as in
+**	expert-mode), a retrieve against the database is run and
+**	the tableField is loaded with info representing objects
+**	whose names match pattern.  A value of FALSE is returned
+**	in this case to indicate that no idividual row record has
+**	been obtained.
+**
+** Input params:
+**	OOID	class;		// id of object class 
+**	char	*form;		// name of catalog form
+**	char	*tabl;		// name of catalog tableField
+**	OO_CATREC *record;	// ptr to row structure
+**
+** Output params:
+**	OO_CATREC *record;	// row structure is filled in
+**
+** Returns:
+**	STATUS
+**	    OK		if non-empty row extracted.
+**	    FAIL	no row fetched.
+**
+** Side Effects:
+**	object information may be fetched from database and
+**	display may be updated in expert-mode;
+**
+** History:
+**	01/89 (jhw) -- Rewrote as cover to visual object catalog method.
+*/
+
+STATUS
+##OOcatCheck (class, form, tabl, record)
+OOID		class;
+##char		*form;
+##char		*tabl;
+OO_CATREC	*record;
+##{
+##	char		mode[10];
+	OO_CATALOG	cat;
+
+	cat.class = &IIooCatClass;
+	cat.c_form = form;
+	cat.c_tfield = tabl;
+	cat.c_class = OOpclass(class);
+
+##	inquire_frs table form ( mode = mode(tabl) );
+	cat.c_noload = mode[0] != 'R';
+
+	return _send(catCheck, &cat)(&cat, record);
+##}
+
+
+/*{
+** Name:	OOcatDestroy() -	destroy object in row.
+**
+** Description:
+**	Gets row from catalog tableField, prompts for
+**	confirmation, checks owner authorization (fetching
+**	object info from database if necessary for expert-mode),
+**	invokes Destroy operation on object, and updates catalog
+**	tableField display.
+**
+** Input params:
+**	OOID	class;		// id of object class 
+**	char	*form;		// name of catalog form
+**	char	*tabl;		// name of catalog tableField
+**	OO_CATREC	*row;	// ptr to row buffer or NULL
+**	bool	empty;		// if TRUE, leave an empty tableField
+**
+** Output params:
+**	OO_CATREC	*row;	/* if not NULL will be filled in
+**	
+** Returns:
+**	STATUS
+**		OK	// operation succeeds
+**		FAIL	// operation fails
+**
+** Side Effects:
+**	object may be fetched from database and allocated;
+**	display may be updated;
+**
+** History:
+**	01/89 (jhw) -- Rewrote as cover to visual object catalog method.
+*/
+
+STATUS
+OOcatDestroy (OOID class, char *form, char *tabl, OO_CATREC *row, bool empty)
+{
+	OO_CATALOG	cat;
+
+	cat.class = &IIooCatClass;
+	cat.c_form = form;
+	cat.c_tfield = tabl;
+	cat.c_noload = empty;
+	cat.c_class = OOpclass(class);
+	return _send(catDestroy, &cat)(&cat, row);
+}
+
+
+/*{
+** Name:	OOcatRename() -	rename object in row.
+**
+** Description:
+**	Gets row from catalog tableField, prompts for new object
+**	name, checks validity, checks owner authorization (fetching
+**	object info from database if necessary for expert-mode),
+**	invokes Rename operation on object, and updates catalog
+**	tableField display.
+**
+** Input params:
+**	OOID	class;		// id of object class 
+**	char	*form;		// name of catalog form
+**	char	*tabl;		// name of catalog tableField
+**	OO_CATREC	*row;	// ptr to row buffer or NULL
+**	bool	empty;		// if TRUE, leave an empty tableField
+**
+** Output params:
+**	OO_CATREC	*row;	/* if not NULL will be filled in
+**
+** Returns:
+**	STATUS
+**		OK	// operation succeeds
+**		FAIL	// operation fails
+**
+** Side Effects:
+**	object may be fetched from database and allocated;
+**	display may be updated;
+**
+** History:
+**	01/89 (jhw) -- Rewrote as cover to visual object catalog method.
+*/
+
+STATUS
+##OOcatRename (OOID class_i, char *form_i, char *tabl_i, OO_CATREC *row_i, bool empty_i )
+##{
+OOID            class = class_i;
+##char          *form = form_i;
+##char          *tabl = tabl_i; 
+OO_CATREC       *row = row_i; 
+bool            empty = empty_i;           
+##	OO_CATALOG	cat;
+
+	cat.class = &IIooCatClass;
+	cat.c_form = form;
+	cat.c_tfield = tabl;
+##	INQUIRE_FRS TABLE form ( cat.c_maxrow = MAXROW( tabl ) );
+	cat.c_noload = empty;
+	cat.c_class = OOpclass(class);
+	return _send(catRename, &cat)(&cat, row, (char *)NULL);
+##}
+
+/*{
+** Name:	OOdetail() -	Invoke generic Catalog Details frame
+**
+** Description:
+**	Display Catalog Details Frame, invoking passed in
+**	application-specific functions as appropriate.
+**
+** Input params:
+**	OOID	class;		// object class id
+**	char	*catform;	// catalog form name
+**	char	*cattabl;	// catalog form tableField name
+**	OO_CATREC *row;		// reference to row structure or NULL
+**	char	*detform;	// catalog detail form name
+**	char	*title;		// detail frame title string
+**	PTR	data;		// reference to application data structure
+**	STATUS	(*display)();	// application-specific display function
+**	STATUS	(*reinit)();	// application-specific reinitialize function
+**	STATUS	(*rename)();	// application-specific rename function
+**	STATUS	(*destroy)();	// application-specific destroy function
+**	STATUS	(*save)();	// application-specific save function
+**	MENUPARM menup[];	// dynamic menu specification array
+**
+** Returns:
+**	{bool}		// TRUE if any change in database
+**
+** Side Effects:
+**	display Catalog Details frame; objects may be modified and saved
+**	in database; catalog table field may be updated.
+**
+** History:
+**	01/89 (jhw) -- Rewrote as cover to visual object catalog method.
+*/
+
+bool
+OOdetail ( class, catform, cattabl, row, detfrm, title, data, display,
+				reinit, rename, destroy, save, menup, help_scr )
+OOID			class;
+char			*catform;
+char			*cattabl;
+register OO_CATREC	*row;
+char			*detfrm;
+char			*title;
+PTR			data;
+STATUS			(*display)(), (*reinit)(), (*rename)(),
+			(*destroy)(), (*save)();
+MENUPARAM		*menup;
+char    		*help_scr;
+{
+        OO_CATALOG      cat;
+
+	cat.class = &IIooCatClass;
+	cat.c_form = catform;
+	cat.c_tfield = cattabl;
+	cat.c_class = OOpclass(class);
+	return _send(catDetail, &cat)( &cat, row, detfrm, title, data, display,
+					reinit, rename, destroy, save,
+					menup, help_scr
+	);
+}
+
+
+/*{
+** Name:	OOcatRead() -	read in object in row.
+**
+** Description:
+**	Gets row from catalog tableField, 
+**	fetches object info from database if necessary for expert-mode,
+**	invokes OO method given by 'sym' on object, passing it
+**	arbitrary args a0 ... a6; 
+**
+**	This routine will probably only be used by Vigraph at present.
+**
+** Input params:
+**	OOID	class;		// id of object class 
+**	char	sym[];		// method selector string
+**	char	*form;		// name of catalog form
+**	char	*tabl;		// name of catalog tableField
+**	OO_CATREC	*row;	// ptr to row buffer or NULL
+**	i4	a0, a1, ... a6; // arbitrary args
+**
+** Output params:
+**	OO_CATREC	*row;	/* if not NULL will be filled in
+**
+** Returns:
+**	STATUS
+**		OK	// operation succeeds
+**		FAIL	// if row fetch failed or as returned by
+**			   named method.
+**
+** Side Effects:
+**	object may be fetched from database and allocated;
+**
+** History:
+**	01/89 (jhw) -- Rewrote as cover to visual object catalog method.
+**	17-aug-91 (leighb) DeskTop Porting Change: must have all 6 i4  *'s!
+*/
+
+STATUS
+OOcatRead (class, sym, form, table, row, a0, a1, a2, a3, a4, a5, a6)
+OOID	class;
+char	sym[];
+char	*form;
+char	*table;
+OO_CATREC	*row;
+i4	*a0,*a1,*a2,*a3,*a4,*a5,*a6;		 
+{
+	OO_CATALOG	cat;
+
+	cat.class = &IIooCatClass;
+	cat.c_form = form;
+	cat.c_tfield = table;
+	cat.c_class = OOpclass(class);
+	return _send(catFetch, &cat)(&cat, row, sym,
+			a0, a1, a2, a3, a4, a5, a6
+	);
+}
+
+
+/*{
+** Name:	OOcatWrite() -	write out object in row to database.
+**
+** Description:
+**	Writes object (given by id) to database.  If id is negative
+**	a permanent id is generated and returned.
+**	Catalog form tableField row is updated if no error.
+**
+**	This routine assumes that owner authorization has already been
+**	checked.  If a user is editing a DBA-owner object, the id
+**	should be set to UNKNOWN to ensure that a new object, owner by user,
+**	is created.
+**
+**	Arbitrary args a0, a1, ... a8 are passed to the OO Object
+**	initialization method for database objects (_initDb).
+**
+** Input params:
+**	OOID	class;		// id of object class 
+**	OOID	*id;		// PTR to object id
+**	char	*name;		// name of object 
+**	char	*form;		// name of catalog form
+**	char	*tabl;		// name of catalog tableField
+**	i4	a0, a1, ... a8;	// arbitrary args for initialization
+**
+** Output params:
+**	OOID	*id		// filled in
+**
+** Returns:
+**	STATUS
+**		OK	// operation succeeds
+**		FAIL	// operation fails
+**
+** Side Effects:
+**	object may be fetched from database and allocated;
+**	display may be updated to reflect ownership change;
+**
+*/
+
+STATUS
+##OOcatWrite (class, id, name, form, table, a0, a1, a2, a3, a4, a5, a6, a7, a8)
+OOID	class;
+OOID	*id;
+char	*name;
+##char	*form;
+##char	*table;
+PTR	a0,a1,a2,a3,a4,a5,a6,a7,a8;
+##{
+##	OO_CATALOG	cat;
+
+	cat.class = &IIooCatClass;
+	cat.c_form = form;
+	cat.c_tfield = table;
+	cat.c_class = OOpclass(class);
+	IIUGmsg( ERget(S_OO000B_Save_Status), FALSE,
+			2, cat.c_class->name, name
+	);
+	if ( IIOOidWrite(class, id, a0,a1,a2,a3,a4,a5,a6,a7,a8) != OK )
+	{
+		IIUGmsg( ERget(E_OO000C_Save_Error), TRUE,
+				2, cat.c_class->name, name
+		);
+		return FAIL;
+	}
+
+##	INQUIRE_FRS TABLE form ( cat.c_maxrow = MAXROW( table ) );
+
+	_send(catInsertRow, &cat)(
+		&cat, OOp(*id), FEtbsins(form, table, name, _name, TRUE)
+	);
+	return OK;
+##}

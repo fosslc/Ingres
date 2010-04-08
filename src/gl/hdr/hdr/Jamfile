@@ -1,0 +1,9 @@
+#
+# Jamfile file for gl!hdr!hdr
+#
+
+SubDir ING_SRC gl hdr hdr ;
+
+IISUBSYS gl hdr hdr ;
+
+

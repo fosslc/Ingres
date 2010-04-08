@@ -1,0 +1,36 @@
+ /#-- Copyright (c) 2007 Ingres Corporation.
+ The trace_init parameter determines which facilities will be traced in
+ the gateway. This parameter should only be used if requested by support
+ personnel as its usage adversely affects gateway performance.
+
+ The following values are allowed:
+
+        OFF - Tracing is not enabled. (Default)
+
+        ON  - Full tracing is enabled.
+
+        ALL - Full tracing is enabled.
+
+        DA  - Dynamic SQL data
+
+        ER  - Error data
+
+        EV  - DBEvent (database events)
+
+        EX  - Statement execution
+
+        HO  - Host DBMS query
+
+        IB  - Incoming GCA messages
+
+        ME  - Memory allocation
+
+        OB  - Outgoing GCA messages
+
+        RS  - SQL execution results
+
+        TR  - General trace messages
+
+        WR  - Warning message
+
+

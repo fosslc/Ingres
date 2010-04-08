@@ -1,0 +1,4 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescus.hlp                Update-Start escape code examples.
+The Update-Start escape executes just before the UPDATE query(ies) in Update
+frames.

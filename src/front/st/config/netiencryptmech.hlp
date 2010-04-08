@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Specifies the desired inbound encryption mechanism.  Only one mechanism 
+ is allowed.  If an asterisk ("*") is specified, the most secure mechanism 
+ will be selected.
+

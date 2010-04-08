@@ -1,0 +1,33 @@
+#
+# Jamfile file for tools!port!resource_win
+#
+
+SubDir ING_SRC tools port resource_win ;
+
+IISUBSYS tools port resource_win ;
+
+
+FILE $(INGBIN)/caingres.ico 	: caingres.ico ;
+FILE $(INGBIN)/cbf.ico 		: cbf.ico ;
+FILE $(INGBIN)/fstm.ico 	: fstm.ico ;
+FILE $(INGBIN)/iiabf.ico 	: iiabf.ico ;
+FILE $(INGBIN)/iinamu.ico 	: iinamu.ico ;
+FILE $(INGBIN)/ingcntrl.ico 	: ingcntrl.ico ;
+FILE $(INGBIN)/ingmenu.ico 	: ingmenu.ico ;
+FILE $(INGBIN)/ipm.ico 		: ipm.ico ;
+FILE $(INGBIN)/nets.ico 	: nets.ico ;
+FILE $(INGBIN)/netu.ico 	: netu.ico ;
+FILE $(INGBIN)/qbf.ico 		: qbf.ico ;
+FILE $(INGBIN)/rbf.ico 		: rbf.ico ;
+FILE $(INGBIN)/report.ico 	: report.ico ;
+FILE $(INGBIN)/server.ico 	: server.ico ;
+FILE $(INGBIN)/start.ico 	: start.ico ;
+FILE $(INGBIN)/stop.ico 	: stop.ico ;
+FILE $(INGBIN)/tables.ico 	: tables.ico ;
+FILE $(INGBIN)/vifred.ico 	: vifred.ico ;
+
+
+FILE $(INGFILES)/ingcache.ico 	: ingcache.ico ;
+FILE $(INGFILES)/ingcmd.ico 	: ingcmd.ico ;
+
+

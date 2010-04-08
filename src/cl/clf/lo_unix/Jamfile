@@ -1,0 +1,20 @@
+#
+# Jamfile file for cl!clf!lo_unix
+#
+#   20-Oct-2009 (hweho01)
+#     Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC cl clf lo_unix ;
+
+IISUBSYS cl clf lo_unix ;
+
+IINOOPTIM louniq.c : i64_aix ;
+
+IILIBRARY COMPATLIB : lownext.c lowhat.c lowend.c lowcard.c
+	louniq.c lotos.c lostfile.c losize.c lorename.c loqueue.c
+	lopurge.c lolist.c lolast.c loisfull.c loisdir.c loingpath.c
+	loinfo.c logtfile.c logt.c lofstfile.c lofroms.c lofaddpath.c
+	loexist.c loerrno.c loendlist.c lodetail.c lodelete.c
+	lodbname.c locurnode.c locreate.c locopy.c lochange.c
+	loaddpath.c lotoes.c ;
+

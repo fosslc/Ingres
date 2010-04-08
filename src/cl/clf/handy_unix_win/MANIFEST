@@ -1,0 +1,50 @@
+#
+# MANIFEST file for cl!clf!handy_unix_win
+#
+# History:
+#	30-dec-2005 (abbjo03)
+#	    Moved machconf.c to the GL.
+#	 7-oct-2006 (lunbr01)  Sir 116548
+#	    Added bssocktcp6.c for IPv6 support.
+#	21-May-2008 (rajus01) SIR 120420, SD issue 116370
+#	    Build ingvalidpam executable for PAM support.
+#	17-Jul-2008 (bonro01)
+#	    IIBINEXE rule in Jam for Hybrid builds creates both
+#	    32bit and 64bit executables, so -lpam needs to be
+#	    specified for the 64bit executable as well.
+
+SubDir ING_SRC cl clf handy_unix_win ;
+
+IISUBSYS cl clf handy_unix_win ;
+
+if ! $(NT)
+{
+IIBINSH bvalidpw : bvalidpw.sh ;
+IIBINSH cltest : cltest.sh ;
+IIBINSH mkvalidpw : mkvalidpw.sh ;
+
+if $(PAMLIB)
+{
+   IIBINEXE ingvalidpam : ingvalidpam.c ingpwutil.c ;
+   LINKLIBS on ingvalidpam += -lpam ;
+
+   if $(VERSHB)
+   {
+      LINKLIBS on $(SUFHB)/ingvalidpam += -lpam ;
+   }
+}
+
+IIPWD ingvalidpw ;
+
+IILIBRARY COMPATLIB : mutex.c itimer.c iisubst.c
+	iinap.c iicl.c histo.c hdydata.c ftok.c dup2.c diremul.c
+	clpoll.c clfd.c cldio.c bsunixaddr.c bstliunix.c bstlitcp.c
+	bstlispx.c bstliosi.c bstliio.c bstcpport.c bstcpaddr.c
+	bssockunix.c bssocktcp.c bssockio.c bssockdnet.c bsshmio.c
+	usrauthosx.c bssocktcp6.c ;
+}
+else
+{
+IILIBRARY COMPATLIB : mutex.c iinap.c iicl.c clfd.c ;
+IILIBRARY IMPCOMPATLIBDATA : hdydata.c ;		
+}

@@ -1,0 +1,183 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	movecfg.qsc - move replication configuration
+**
+** Description:
+**	Defines
+**		move_config	- move replication configuration
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on movecfg.osq in replicator library.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF
+##char	RMdb_display[];
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmmovecfg"),
+##	*tf_name = ERx("iitf"),
+##	*fdb_no = ERx("database_no"),
+##	*fvnode_name = ERx("vnode_name"),
+##	*fdb_name = ERx("database_name"),
+##	*ffull_db_name = ERx("vnode_dbname"),
+##	*fdbms_type = ERx("dbms_type"),
+##	*fremark = ERx("remark");
+
+
+/*{
+** Name:	move_config - move replication configuration
+**
+** Description:
+**	Move configuration data to the selected target databases.
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+move_config()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	i2	db_no;
+##	char	vnode_name[DB_MAXNAME+1];
+##	char	db_name[DB_MAXNAME+1];
+##	char	dbms_type[9];
+##	char	remark[81];
+	EXEC SQL END DECLARE SECTION;
+##	char	full_db_name[DB_MAXNAME*2+3];
+	STATUS	retval;
+	DBEC_ERR_INFO	errinfo;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name read (fvnode_name = char(32) not null,
+##		fdb_name = char(32) not null)
+	IIUGmsg(ERget(F_RM001C_Selecting_data), FALSE, 0);
+	EXEC SQL SELECT DISTINCT d.database_no, database_name, vnode_name,
+			dbms_type, remark
+		INTO	:db_no, :db_name, :vnode_name,
+			:dbms_type, :remark
+		FROM	dd_databases d, dd_db_cdds c
+		WHERE	d.local_db = 0
+		AND	d.database_no = c.database_no
+		AND	c.target_type IN (1, 2)
+		AND	d.vnode_name != 'mobile';
+	EXEC SQL BEGIN;
+		STtrmwhite(db_name);
+		STtrmwhite(vnode_name);
+		STprintf(full_db_name, ERx("%s::%s"), vnode_name, db_name);
+##		loadtable form_name tf_name (fdb_no = db_no,
+##			fvnode_name = vnode_name, fdb_name = db_name,
+##			ffull_db_name = full_db_name, fdbms_type = dbms_type,
+##			fremark = remark)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0013_No_data_found, UG_ERR_ERROR, 0);
+		return;
+	}
+	EXEC SQL COMMIT;
+
+##	display form_name read
+##	initialize (db = RMdb_display)
+##	activate menuitem ERget(F_RM005A_ThisDatabase)
+##		(expl = ERget(F_RM005B_ThisDatabase_expl)), FRSkey4
+##	{
+##		getrow form_name tf_name (db_no = fdb_no,
+##			vnode_name = fvnode_name, db_name = fdb_name)
+##		clear screen
+		retval = move_1_config(db_no, vnode_name, db_name);
+		PCsleep(2000);
+##		clear screen
+##		redisplay
+		if (retval)
+			IIUGerr(E_RM0053_Error_moving_config, UG_ERR_ERROR,
+				2, vnode_name, db_name);
+##	}
+
+##	activate menuitem ERget(F_RM005C_AllDatabases)
+##		(expl = ERget(F_RM005D_AllDatabases_expl))
+##	{
+##		clear screen
+##		unloadtable form_name tf_name (db_no = fdb_no,
+##			vnode_name = fvnode_name, db_name = fdb_name)
+##		{
+			retval = move_1_config(db_no, vnode_name, db_name);
+			if (retval)
+				IIUGerr(E_RM0053_Error_moving_config,
+					UG_ERR_ERROR, 2, vnode_name, db_name);
+##		}
+		PCsleep(2000);
+##		clear screen
+##		redisplay
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmmovcfg.hlp"), ERget(F_RM005E_Move_config_data));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##}

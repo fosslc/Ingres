@@ -1,0 +1,766 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include <compat.h>
+# include <cv.h>
+# include <st.h>
+# include <cm.h>
+# include <ex.h>
+# include <er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include <fe.h>
+# include <adf.h>
+# include <afe.h>
+# include <fmt.h>
+# include <ft.h>
+# include <ug.h>
+# include <uf.h>
+# include <frame.h>
+# include <flddesc.h>
+# include "eruf.h"
+# include <erug.h>
+# include <erfe.h>
+# include <stdprmpt.h>
+# include <stdarg.h>
+
+/**
+** Name:	stdprmpt.qsc - Confirmation popup
+**
+** Description:
+**	Confirmation popups for destroy / quit / end
+**	Standardized popup prompt.
+**
+** Defines:
+**
+**	IIUFccConfirmChoice - Confirmation Popup
+**	IIUFbpBoxPrompt - popup prompt.
+**
+** History;
+**	20-nov-89 (bruceb)
+**		Moved code from runtime to uf.  Changed names to match the
+**		new home directory.
+**	12/28/92 (dkh) - Fixed code so that the input field for BoxPrompt
+**			 is set to scrollable correctly.
+**      24-nov-1993 (smc)
+**		Bug #58882
+**          	Made ldaddr a portable PTR rather than i4
+**	05-sep-1995 (abowler)
+**		Bugs 70968 -> 70990(!) - If there is no help file given to
+**		IIUFccConfirmChoice() then don't set help title, as this
+**	  	then causes help to be listed as a choice (which was then
+**		accvioing when selected).
+**	23-apr-1996 (chech02)
+**		added function prototypes for windows 3.1 port.
+**		
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	31-oct-2003 (hanch04)
+**	    Since IIUFccConfirmChoice is now prototyped, the function needs
+**	    to properly use variable arguments.
+**	17-Feb-2004 (hanje04)
+**	    Changed usecancel in IIUFccConfirmChoice to i4 as gcc on Linux
+**	    promotes bool to i4 when used with the varagrs macros. This 
+**	    causes the causes a SEGV when the function is called.
+**	13-May-2005 (kodse01)
+**	    replace %ld with %d for old nat and long nat variables.
+**      05-Sep-2007 (ashco01)
+**          In IIUFccConfirmChoice() coerce pointer 'p' to CONF_VAR to 
+**          prevent potential SIGSEGV on some platforms.
+**      16-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**	18-May-2009 (kschendel) b122041
+**	    Compiler warning fixes.
+**	24-Aug-2009 (kschendel) 121804
+**	    Update some of the function declarations to fix gcc 4.3 problems.
+**/
+
+typedef i4	(*FUNCPTR)();
+
+FRAME *IIFDofOpenFrame();
+FUNCPTR	IIFRkeystroke();
+
+static bool make_frame();
+static i4  keycatch();
+#ifdef WIN16
+static PTR loc_alloc(TAGID, i4, char *);
+#endif
+
+static i4	Pcount = 0;
+static bool	On_menu = FALSE;
+static i4	Om_count = 0;	/* count of characters while on menu line */
+
+/*{
+** Name:	IIUFccConfirmChoice - confirmation popup.
+**
+** Description:
+**	Display standardized popup form to handle confirmation of user
+**	action.  This routine is currently used to cover three cases, as
+**	indicated by the type variable:
+**
+**		CONF_DELETE,DESTROY,REMOVE - confirm removal of something.
+**			The only difference in these three is the "operation"
+**			word used.
+**
+**		CONF_END - "End" operation where changes have been made and
+**			"Save" operation has not been performed by the user.
+**
+**		CONF_QUIT - "Quit" operation without saving.
+**
+**		CONF_GENERIC - generic confirmation popup with text provided
+**			by caller.
+**
+**	One of three integer codes will be returned:
+**
+**		CONFCH_YES - user confirmed.  That is, "save" operation
+**			is to take place, or object in question is to
+**			be deleted.
+**
+**		CONFCH_NO - user reneged.  That is, deletion of the object
+**			is not to take place, or "save" operation is not to
+**			take place.  User still wants to "end" or "quit".
+**
+**		CONFCH_CANCEL - Not applicable to CONF_DELETE, etc.  User wants
+**			to cancel the "end" or "quit".
+**
+**	NOTE:
+**		We don't pass in message text here in order to keep this
+**		popup very standardized.  We use an encode rather than
+**		passing in the word "end" or "quit" to avoid grammatical
+**		problems which might arise for internationalization
+**		when too many individual arguments are substituted into a
+**		message.
+**
+**		CONF_GENERIC is used to allow caller to pass in the text.
+**		If CONF_GENERIC is being used for similar purposes
+**		in too many places, it is an indication that we need a
+**		new CONF_ code.
+**
+**	The popup looks something like:
+**
+**		+----------------------------------------------+
+**		|Save changes to <object> '<name>'?            |
+**		+----------------------------------------------+
+**		| yes | save changes, then quit                |
+**		+----------------------------------------------+
+**		| no  | quit without saving changes            |
+**		+----------------------------------------------+
+**
+**		Select  Cancel  Help
+**
+** Inputs:
+**		type - CONF_DELETE, CONF_END, CONF_QUIT
+**		name - name of object.
+**		obj - type of object, ie. "form", "report", "graph", etc.
+**		htitle - help screen title, NULL to supress "Help" item.
+**		hfile - help file.
+**
+**		ttl - title string, which may have an object / "name" argument.
+**		yex - explanation string for "yes".
+**		nex - explanation string for "no".
+**		yna - argument for yex / nex.
+**		usec - whether or not to use cancel.  This is overloaded
+**			in that it also sets "Yes" as the default answer
+**			if TRUE (like for "quit"), "no" as the default
+**			answer if FALSE (like for "destroy").
+**
+**		ttl, yex, nex, yna and usec only apply for CONF_GENERIC.
+**		for the other cases, these arguments need not be used.
+**
+** Returns:
+**	{nat}	User choice.
+**
+**		Error returns (internal errors are the only kind possible):
+**			explanatory message printed, and least "harmful"
+**			action, CONFCH_CANCEL if applicable, or CONFCH_NO
+**			otherwise, returned.  If the error was an unknown
+**			type code, CONFCH_CANCEL is returned.
+**
+** Example:
+**
+** ##	activate menuitem ERget(FE_End), FRSkey?
+** ##	{
+**		if (Changes)
+**		{
+**			n = IIUFccConfirmChoice(CONF_END, name, ERget(FE_form),
+**			ERget(F_VF0090_EndConfirm), ERx("vfendcnf.hlp"));
+**
+**			switch(n)
+**			{
+**			case CONFCH_YES:
+**				save_form();	/* fall through
+**			case CONFCH_NO:
+** ##				breakdisplay
+**			default:
+**				break;
+**			}
+**		}
+** ##	}
+**
+*/
+ 
+typedef struct {
+	i4		conf_type;	/* confirmation type */
+	ER_MSGID	title;		/* title message */
+	ER_MSGID	yes_exp;	/* yes explanation */
+	ER_MSGID	no_exp;		/* no explanation */
+	ER_MSGID	ynobj;		/* yes/no argument object */
+	bool		cancel;		/* cancel distinct from no action */
+	char		helpfile[HLP_FILE_NAME_SIZE+1];
+} CONF_VAR;
+
+static const	CONF_VAR	_confVar[]
+= {
+	{ CONF_DESTROY,	S_UF0029_Destroy, S_UF002A_Ydest, S_UF002B_Ndest, 0,
+		FALSE, "ufcdstry.hlp"
+	},
+	{ CONF_DELETE,	S_UF0037_Delete, S_UF0038_Ydel, S_UF0039_Ndel, 0,
+		FALSE, "ufcdelet.hlp"
+	},
+	{ CONF_REMOVE,	S_UF003A_Remove, S_UF003B_Yrem, S_UF003C_Nrem, 0,
+		FALSE, "ufcremov.hlp"
+	},
+	{ CONF_END,	S_UF002C_Save, S_UF002D_Ysave, S_UF002E_Nsave, FE_End,
+		TRUE,	"ufcend.hlp"
+	},
+	{ CONF_QUIT,	S_UF002C_Save, S_UF002D_Ysave, S_UF002E_Nsave, FE_Quit,
+		TRUE,	"ufcquit.hlp"
+	},
+};
+
+#define MAX_CONFVAR	(sizeof(_confVar)/sizeof(_confVar[0]))
+
+/*VARARGS6*/
+i4
+IIUFccConfirmChoice(i4 type, char *name, char *obj, char *htitle, char *hfile,...)
+/*
+ER_MSGID ttl;
+ER_MSGID yex;
+ER_MSGID nex;
+char *yna;
+bool usec;
+*/
+{
+	char nbuf[FE_MAXNAME+4];
+	char stitle[800];
+	char lbuf[480];
+	ER_MSGID yexpl,nexpl,title;
+	char *ynarg, *ptr;
+	i4 usecancel;
+	i4 ch;
+	i4 rem;
+	i4 l;
+
+	/*
+	** NOTE: usecancel also serves as a flag which says that "yes"
+	** comes first, rather than "no".
+	*/
+	if ( type == CONF_GENERIC )
+	{
+		va_list ap;
+
+		va_start(ap, hfile);
+		title = (ER_MSGID) va_arg(ap, ER_MSGID);
+		yexpl = (ER_MSGID) va_arg(ap, ER_MSGID);
+		nexpl = (ER_MSGID) va_arg(ap, ER_MSGID);
+		ynarg = (char *) va_arg(ap, char *);
+		usecancel = (i4) va_arg(ap, i4);
+		va_end(ap);
+	}
+	else
+	{
+		register CONF_VAR	*p;
+
+		for ( p = (CONF_VAR *)&_confVar ; p < &_confVar[MAX_CONFVAR] ; ++p )
+		{
+			if ( p->conf_type == type )
+				break;
+		}
+		if ( p < &_confVar[MAX_CONFVAR] )
+		{
+			title = p->title;
+			yexpl = p->yes_exp;
+			nexpl = p->no_exp;
+			ynarg = p->ynobj == 0 ? obj : ERget(p->ynobj);
+			usecancel = p->cancel;
+			if ( hfile == NULL || *hfile == EOS )
+				hfile = p->helpfile;
+			/*
+			** if we're not in GENERIC mode, and name is not empty, 
+			** add a space and a single quote string to it.  It is
+			** run-in in the message text, so that if we have an
+			** empty name, it appears not to have been formatted
+			** into the message at all.
+			*/
+			name = ( name != NULL && *name != EOS )
+					? STprintf(nbuf," '%s'",name) : "";
+		}
+		else
+		{
+			IIUGerr(E_UF002F_BadType, UG_ERR_ERROR, 0);
+			return CONFCH_CANCEL;
+		}
+	}
+
+	IIUGfmt(stitle, sizeof(stitle)-1, ERget(title), 2, obj, name);
+	if ( (htitle == NULL || *htitle == EOS) 
+	    && !(hfile == NULL || *hfile == EOS) )
+		htitle = *stitle != '\n' ? stitle : (stitle + 1);
+
+	/*
+	** we concatenate the listpick string together, fixing up case
+	** as we go.  We don't know if the argument is going to wind up
+	** in the middle of the string or not, so we format, then force
+	** appropriate case.
+	*/
+	rem = sizeof(lbuf)-2;
+	ptr = lbuf;
+	ptr = STprintf( lbuf, ERx("%s;"),
+			ERget(usecancel ? F_UG0002_Yes2 : F_UG0007_No2)
+	);
+	if (CMlower(ptr))
+		CMtoupper(ptr,ptr);
+	ptr += (l = STlength(ptr));
+	rem -= l;
+	_VOID_ IIUGfmt(ptr, rem, ERget(usecancel ? yexpl : nexpl), 1, ynarg);
+	if (CMlower(ptr))
+		CMtoupper(ptr,ptr);
+	CMnext(ptr);
+	CVlower(ptr);
+	ptr += (l = STlength(ptr));
+	rem -= l + 1;
+	*ptr++ = '\n';
+	_VOID_ STprintf( ptr, ERx("%s;"),
+			ERget(usecancel ? F_UG0007_No2 : F_UG0002_Yes2)
+	);
+	if (CMlower(ptr))
+		CMtoupper(ptr,ptr);
+	ptr += (l = STlength(ptr));
+	rem -= l;
+	_VOID_ IIUGfmt( ptr, rem, ERget(usecancel ? nexpl : yexpl), 1, ynarg );
+	if (CMlower(ptr))
+		CMtoupper(ptr,ptr);
+	CMnext(ptr);
+	CVlower(ptr);
+	ptr += STlength(ptr);
+	*ptr = '\n';
+	*++ptr = '\0';
+
+	ch = IIFDlpListPick( stitle, lbuf, 0, LPGR_CENTER, LPGR_CENTER, 
+				htitle, hfile, (char *)NULL, (char *)NULL
+	);
+
+	switch(ch)
+	{
+	case 0:
+		if (usecancel)
+			return CONFCH_YES;
+		return CONFCH_NO;
+	case 1:
+		if (usecancel)
+			return CONFCH_NO;
+		return CONFCH_YES;
+	default:
+		if (usecancel)
+			return CONFCH_CANCEL;
+		return CONFCH_NO;
+	}
+}
+ 
+/*{
+** Name:	IIUFbpBoxPrompt - popup prompt.
+**
+** Description:
+**	Display popup prompt.
+**
+** Inputs:
+**	bp - control structure.
+**
+** Outputs:
+**	Returns:
+**		TRUE if user entered something.
+**		FALSE if "cancel".
+**
+**		Error returns (internal errors):
+**		Message produced, and FALSE returned.
+*/
+ 
+#define _CancelExpl	F_FE0109_ExplForget
+#define _HelpExpl	F_FE0100_ExplFrameHelp
+
+bool
+IIUFbpBoxPrompt(BOXPROMPT *bp)
+## {
+##  char	name[FE_MAXNAME+1];
+    TAGID	tag;
+    FRAME	*lf;
+##  i4		srow, scol;
+##  PTR		lfadd;
+##  char	*val;
+##  char 	*hitem;
+##  char	*lchoice;
+    bool	rval;
+    FUNCPTR	fptr;
+
+    if (! make_frame(&tag,&lf,name,bp->text,bp->short_text,bp->len,bp->displen))
+	return FALSE;
+
+    lfadd = (PTR) lf;
+##  addform lfadd
+
+    val =  ( bp->initbuf != NULL ) ? bp->initbuf : ERx("");
+##  putform name ( promptarea = val );
+
+    hitem = ( bp->htitle != NULL ) ? ERget(FE_Help) : NULL;
+
+    lchoice =  ( bp->lfn != NULL ) ? ERget(F_FE0068_Lookup) : NULL;
+
+    srow = bp->y;
+    scol = bp->x;
+
+    On_menu = FALSE;
+    fptr = IIFRkeystroke(keycatch);
+
+##  display name with style = popup (startrow = srow, startcolumn = scol)
+
+##  activate menuitem ERget(FE_OK), FRSkey0
+##  {
+	val = bp->buffer;
+##	getform name (val = promptarea)
+	_VOID_ IIFRkeystroke((FUNCPTR)NULL);
+	if (bp->vfn == NULL || (*(bp->vfn))(val,bp->len))
+	{
+	    rval = TRUE;
+##	    enddisplay;
+	}
+	_VOID_ IIFRkeystroke(keycatch);
+	On_menu = FALSE;
+##  }
+
+##  activate menuitem ERget(FE_Cancel) ( expl = ERget(_CancelExpl) ),
+##		FRSkey9 ( expl = ERget(_CancelExpl) ):
+##  {
+	rval = FALSE;
+##	enddisplay
+##  }
+
+##  activate menuitem hitem ( expl = ERget(_HelpExpl ) ),
+##			FRSkey1 ( expl = ERget(_HelpExpl) ):
+##  {
+	if ( bp->hfile != NULL )
+	{
+		_VOID_ IIFRkeystroke((FUNCPTR)NULL);
+		FEhelp(bp->hfile, bp->htitle);
+		_VOID_ IIFRkeystroke(keycatch);
+		On_menu = FALSE;
+	}
+##  }
+
+##  activate menuitem lchoice:
+##  {
+	val = bp->buffer;
+##	getform name (val = promptarea)
+	_VOID_ IIFRkeystroke((FUNCPTR)NULL);
+	if ((*(bp->lfn))(val,bp->len))
+	{
+	    rval = TRUE;
+##	    enddisplay;
+	}
+	_VOID_ IIFRkeystroke(keycatch);
+	On_menu = FALSE;
+##  }
+
+    _VOID_ IIFRkeystroke(fptr);
+    IIUGtagFree(tag);
+    return rval;
+## }
+
+/*
+** we use an exception for out-of-memory conditions.  Otherwise,
+** EXRESIGNAL.
+*/
+static i4
+ex_hdlr(ex_args)
+EX_ARGS ex_args;
+{
+    if (ex_args.exarg_num == EXFEMEM)
+	return (EXDECLARE);
+    return (EXRESIGNAL);
+}
+
+
+/*
+** allocator used under build_list - returns only if successful - generates
+** exception on failure.  If str argument is non-NULL, a string allocation
+** is desired, and size is irrelevent.
+*/
+static PTR
+loc_alloc(tag, size,str)
+TAGID	tag;
+i4	size;
+char	*str;
+{
+    PTR mem;
+
+    if (str != NULL)
+	size = STlength(str)+1;
+
+    mem = FEreqmem((u_i4)tag, (u_i4)size, FALSE, (STATUS *)NULL);
+    if (mem == NULL)
+	EXsignal(EXFEMEM,0);
+
+    if (str != NULL)
+	STcopy(str,(char *) mem);
+
+    return (mem);
+}
+
+/*
+** local routine to build popup prompt form.
+**
+**	tag - returned tag for storage to be blown away after interacting
+**		with the form.
+**	lf - returned FRAME structure.
+**	name - returned name.
+**	text - prompt text.
+**	sh_text - optional text for same line as field.
+**	len - length of buffer WITHOUT counting terminating EOS.
+**	displen - length of field.  displen < len -> scrolling field.
+*/
+static bool
+make_frame(tag, lf, name, text, sh_text, len, displen)
+TAGID *tag;
+FRAME **lf;
+char *name;
+char *text;
+char *sh_text;
+i4  len;
+i4  displen;
+{
+    EX_CONTEXT	ex;
+    i4		frmwidth;
+    FLD_DESC	fds;
+    i4		shtxlen;
+    char	*ptr;
+    i4		curline;
+    FIELD	*fld;
+    FLDHDR	*fhdr;
+    FLDTYPE	*ftype;
+    i4		fcol,tcol;
+    i4		i;
+    STATUS	rc;
+    ER_MSGID	errid;
+    char	*errarg;
+    i4		fflg;
+    char	*ftitle;
+
+    DB_DATA_VALUE	*dbd;
+
+    /*
+    ** On error, return FALSE.  An exception is specifically for out of
+    ** memory,  we jump into errrtn for other errors.
+    */
+    if (EXdeclare(ex_hdlr, &ex) != OK)
+    {
+	errid = E_UF0030_Alloc;
+	errarg = ERx("");
+errrtn:
+	IIUGerr(errid, UG_ERR_ERROR, 1, errarg);
+	IIUGtagFree(*tag);
+	EXdelete();
+	return FALSE;
+    }
+
+    *tag = FEgettag();
+
+    /*
+    ** make sure displen is reasonable, given that len is.  If len isn't
+    ** attempts to construct the field will fail.
+    */
+    if (displen <= 0 || displen > len)
+	displen = len;
+
+    /*
+    ** error for all unexpected fail returns.
+    */
+    errid = E_UF0031_Unexpected;
+
+    /*
+    ** create a copy we can destroy
+    */
+    text = (char *) loc_alloc(*tag,0,text);
+
+    /*
+    ** allocate DB_DATA_VALUE
+    */
+    dbd = (DB_DATA_VALUE *) loc_alloc(*tag,sizeof(DB_DATA_VALUE),NULL);
+    dbd->db_data = loc_alloc(*tag,displen+3,NULL);
+    dbd->db_length = displen;
+    dbd->db_datatype = DB_CHA_TYPE;
+    dbd->db_prec = 0;
+
+    STprintf(name,"iipr%d",Pcount++);
+
+    if ((*lf = IIFDofOpenFrame(name)) == NULL)
+    {
+	errarg = ERx("IIFDofOpenFrame");
+	goto errrtn;
+    }
+
+    /*
+    ** chop up the text string into individual trim items and add
+    */
+    curline = 0;
+    frmwidth = 2;
+    while (*text != EOS)
+    {
+	ptr = STindex(text, "\n", 0);
+	if (ptr != NULL)
+	{
+	    *ptr++ = '\0';
+	}
+	else
+	{
+	    ptr = text + STlength(text);
+	}
+	i = STlength(text) + 1;
+	if (i > frmwidth)
+	    frmwidth = i;
+	if (IIFDattAddTextTrim(*lf, curline, 0, 0, text) == NULL)
+	{
+	    errarg = ERx("IIFDattAddTextTrim");
+	    goto errrtn;
+	}
+	++curline;
+	text = ptr;
+    }
+
+    /*
+    ** figure out columns for field title and field column.
+    ** It turns out that the form system will actually accept ""
+    ** for a title, which makes this easy.
+    */
+    if (sh_text != NULL)
+    {
+	ftitle = sh_text;
+    	fcol = STlength(sh_text)+1;
+	tcol = 0;
+    }
+    else
+    {
+	ftitle = ERx("");
+	fcol = 0;
+	tcol = 0;
+    }
+
+    /*
+    ** frmwidth is actually just an advisory to IIFDffFormatField().
+    ** The dyn stuff actually sets the real width.
+    */
+    if ((i= fcol + displen + 1) > frmwidth)
+	frmwidth = i;
+
+    /*
+    **  If user wants scrollable fields, make sure the
+    **  appropriate flag is set in the form structure.
+    */
+    if (displen < len)
+    {
+	(*lf)->frmflags |= fdSCRLFD;
+    }
+
+    /*
+    ** set NOAUTOTAB, or we have a very strange behaviour in a
+    ** form with only one field.
+    */
+    fflg = fdUNLN | fdNOAUTOTAB;
+
+    rc = IIFDffFormatField(ERx("promptarea"), 0, curline, fcol, tcol,
+			ftitle, frmwidth, fflg, dbd, 0, displen, &fld);
+
+    if (rc != OK)
+    {
+	errarg = ERx("IIFDffFormatField");
+	goto errrtn;
+    }
+
+    if (displen < len)
+    {
+	/*
+	**  If the user wants scrollable fields, set things
+	**  up correctly.  Note that we are assuming the
+	**  datatype is still DB_CHA_TYPE so the value
+	**  in ftlength does not include a two byte counter
+	**  for varying length string datatypes.
+	*/
+	ftype = &(fld->fld_var.flregfld->fltype);
+	fhdr = &(fld->fld_var.flregfld->flhdr);
+
+	ftype->ftlength = len;
+	fhdr->fhd2flags |= fdSCRLFD;
+    }
+
+    rc = IIFDaefAddExistFld(*lf, fld, 0, 0);
+
+    if (rc != OK)
+    {
+	errarg = ERx("IIFDaefAddExistField");
+	goto errrtn;
+    }
+
+    /*
+    ** In theory, IIFDcfCloseFrame only fails if it runs out of memory
+    */
+    if ( ! IIFDcfCloseFrame(*lf))
+	EXsignal(EXFEMEM,0);
+
+    EXdelete();
+    return TRUE;
+}
+
+/*
+** keystroke intercept routine.
+*/
+static i4
+keycatch(cmd,ktype,buf)
+i4  cmd;
+i4  ktype;
+char *buf;
+{
+	i4 len;
+
+	if (cmd == fdopMENU)
+	{
+		On_menu = TRUE;
+		Om_count = 0;
+		return FRS_PROCESS;
+	}
+
+
+	switch(ktype)
+	{
+	case CONTROL_KEY:
+		if (On_menu && (*buf == '\r' || *buf == '\n'))
+		{
+			if (Om_count == 0)
+				On_menu = FALSE;
+			Om_count = 0;
+			return FRS_PROCESS;
+		}
+		if (*buf == '\r')
+			return FRS_RETURN;
+		return FRS_PROCESS;
+	case NORM_KEY:
+		if (On_menu)
+			++Om_count;
+		return FRS_PROCESS;
+	default:
+		return FRS_PROCESS;
+	}
+}

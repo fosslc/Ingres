@@ -1,0 +1,13 @@
+#
+# Jamfile file for cl!clf!sa_unix_win
+#
+
+SubDir ING_SRC cl clf sa_unix_win ;
+
+IISUBSYS cl clf sa_unix_win ;
+
+
+IILIBRARY COMPATLIB : sahpbls.c
+	sadummy.c
+	sacmw.c ;
+

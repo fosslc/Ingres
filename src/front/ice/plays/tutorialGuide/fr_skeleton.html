@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+## 28-June-2005 (zhahu02)
+##     Updated due to a typo (INGICE112/b114742).
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+Create Skeleton HTML Files
+</title>
+</head>
+<body>
+
+<h1>
+Create Skeleton HTML Files
+</h1>
+
+To save time, we will create all the files we will
+need and then, register them with the ICE
+server.
+<p>
+Either use the example files that you received on
+your distribution or, using your favorite HTML editor, create the
+following template in the directory you 
+<a href="fr_directory.html">created</a> for the
+purpose:
+<div class="boxCode"><tt>
+<table border=0 cellspacing=1 cellpadding=1>
+<tr><td>&nbsp;<td>&nbsp;<td>&nbsp;
+<tr><td><td>&lt;!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN"&gt;<td>
+<tr><td><td>&lt;html&gt;<td>
+<tr><td><td>&lt;head&gt;<td>
+<tr><td><td>&lt;META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css"&gt;<td>
+<tr><td><td><span class="macro">&lt;LINK HREF="&lt;!-- #ICE INCLUDE=`plays[play_styleSheet.css]` --&gt;" TYPE="text/css" REL="STYLESHEET"&gt;</span><td>
+<tr><td><td>&lt;title&gt;<i>Title of page</i>&lt;/title&gt;<td>
+<tr><td><td>&lt;/head&gt;<td>
+<tr><td><td>&lt;body&gt;<td>
+<tr><td><td>&lt;h1&gt;<i>Title of page</i>&lt;/h1&gt;<td>
+<tr><td><td><td>
+<tr><td><td><td>
+<tr><td><td>&lt;/body&gt;<td>
+<tr><td><td>&lt;/html&gt;<td>
+<tr><td>&nbsp;&nbsp;<td>&nbsp;<td>&nbsp;
+</table>
+</tt></div>
+
+and then copy it to the following filenames:
+<ol class="level-1">
+<li>play_login.html
+<li>play_autoUser.html
+<li>play_home.html
+<li>play_all.html
+<li>plays_subSet.html
+<li>play_TxnCndCmt_h.html
+<li>plsy_typeGLink.html
+<li>play_allWrap.html
+<li>play_allWrapSub.html
+<li>play_SessionControl_h.html
+<li>play_typeList.html
+<li>play_subSet.html
+<li>play_typeLink.html
+<li>play_typeLinkSubSet.html
+<li>play_typeGLink.html
+<li>play_typeGSLink.html
+<li>play_shopHome.html
+<li>play_shopDescribe.html
+<li>play_shopAdd.html
+<li>play_shopConfirm.html
+<li>play_shopView.html
+<li>play_shopRemove.html
+</ol>
+<p>
+The line
+
+<div class="boxCode"><tt>
+<table border=0 cellspacing=1 cellpadding=1>
+<tr><td>&nbsp;<td>&nbsp;<td>&nbsp;
+<tr><td><td><span class="macro">&lt;LINK HREF="&lt;!-- #ICE INCLUDE=`plays[play_styleSheet.css]` --&gt;" TYPE="text/css" REL="STYLESHEET"&gt;</span><td>
+</table>
+</tt></div><p>
+includes a reference to the style sheet that 
+determines the styles that apply to the
+various elements in the tutorial.
+<p>Style sheets
+help us to <b>separate</b> appearance or <i>style</i>
+from the information or <i>content</i> of our website.
+By including the style sheet using this
+technique, we are able to bring the style,
+in addition to the content, of our site under Web Deployment Option
+control. In this tutorial
+we use level 1 of the cascading style sheet mechanism,
+recommended by the W3C at
+<a href="http://www.w3.org/TR/REC-CSS1">http://www.w3.org/TR/REC-CSS1</a>
+</body>
+</html>

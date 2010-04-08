@@ -1,0 +1,182 @@
+/*
+** Copyright (c) 1989, 2008 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>
+#include	<lo.h>
+#include	<si.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<adf.h>
+#include	<afe.h>
+#include	<fdesc.h>
+#include	<abfrts.h>
+##include	<abclass.qsh>
+#include        <dmchecks.h>
+##include	"abclinfo.qsh"
+#include	"gncode.h"
+#include	"erab.h"
+
+/**
+** Name:	abrcedit.qc -	ABF Record Definition Component Edit Module.
+**
+** Description:
+**	Contains the definition of the component class edit information
+**	structure for the application record definition component objects.  
+**	Defines:
+**
+**	iiABrecords	ABF record definition component class edit information.
+**
+** History:
+**	Revision 6.3/03/00  89/06  billc
+**	Initial revision.
+**
+**	16-Nov-92 (donc)
+**	Modifications to COMP_CLASS_INFO initialization for 44162 bug fix.
+**      17-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+GLOBALREF char *IIabExename;
+
+STATUS	iiabPrint();
+
+static VOID	_rc_display();
+static STATUS	_rc_save();
+static VOID	_rc_destroy();
+
+/*:
+** Name:	iiABrecords -	ABF record definition Class Edit Information.
+**
+** Description:
+**	Defines additional class information for the record definition component
+**	objects for use in editing.
+**
+** NOTE: This struct is never used by IIABeditComp, which can't handle 
+** 	catalog-style forms.  However, various parts of ABF access these 
+**	structs, so it's wise policy to have them around.
+*/
+
+#define _EditExpl	F_AB0339_EditRec_expl
+#define _PrintExpl	F_AB0380_ObjPrint_expl
+#define _EmptyExpl 	F_AB005E_Empty_expl
+
+GLOBALDEF const COMP_CLASS_INFO iiABrecords = {
+	OC_RECORD,
+	ERx("abfrecd"), ERx("abedtcls.hlp"), ERx(""), 2,
+	F_AB006A_AReDef_title,
+	F_AB004E_AReDet_title,
+	0,	NULL,	/* no types legal */
+	{NULL,	NULL},	NULL,	NULL, NULL, NULL, 	/* Fields */
+	{NULL,		ER_OK,		_EmptyExpl,	0}, 	/* Go */
+	{NULL,		ER_OK,		_EmptyExpl,	0},	/* Edit */
+	{NULL,		ER_OK,		_EmptyExpl,	0}, 	/* Compile */
+	{NULL,		ER_OK,		_EmptyExpl,	0}, 	/* FormEdit */
+	{iiabPrint,	FE_Print,	_PrintExpl,	0},	/* Print */
+	_rc_display, _rc_save, _rc_destroy, NULL
+};
+
+/*
+** Name:	_rc_display() -	Display a Record Type Component Definition
+**
+** Description:
+**	Displays the attributes of a application class type component on its
+**	definition form.
+**
+** Inputs:
+**	rdef	{RECDEF *}  The record definition component.
+**
+** History:
+**	06/89 (billc)  Written.
+*/
+
+static VOID
+##_rc_display ( rdef )
+##register RECDEF	*rdef; 
+##{
+##	char	*formname = iiABrecords.form;
+##	char	title[63+1];
+
+	IIUGfmt(title,sizeof(title)-1,ERget(iiABrecords.title), 1, IIabExename);
+
+##	putform formname (	
+##		_title = title,
+##		name = rdef->name
+##	);
+
+	/*
+	** When editing, user can't twiddle the objects' name.  Also, we
+	** may have set some fields invisible (we use this form for creation
+	** as well as editing) so set them visible, just in case.
+	*/
+##	set_frs field formname ( 
+##			displayonly(name) = 1, 
+##			underline(name) = 0, 
+##			invisible(_owner) = 0, 
+##			invisible(_create_date) = 0, 
+##			invisible(_altr_date) = 0, 
+##			invisible(_last_altered_by) = 0 
+##	);
+##}
+
+/*
+** Name:	_rc_save() -	Save Record Definition Component Definition from
+**					the Form.
+** Description:
+**	Saves the attributes for a record definition component object from the
+**	component definition form for this class.  This checks if any values
+**	changed before modifying the object's attributes and only then writing
+**	the object to the database.
+**
+** Input:
+**	app	{APPL *}  The application object.
+**	rdef	{RECDEF *}  The record definition component object.
+**
+** Returns:
+**	{STATUS}  OK, if no errors.
+**
+** History:
+**	07/89 (billc)  Written.
+*/
+static STATUS
+##_rc_save ( app, rdef )
+APPL		*app;
+register RECDEF	*rdef;
+##{
+	STATUS	IIAMwrRecord();
+
+	if ( rdef->data.dirty )
+	{
+		return iiabSvComp((APPL_COMP *)rdef, IIAMwrRecord);
+	}
+	return OK;
+##}
+
+/*
+** Name:	_rc_destroy() -	Destroy a Record Definition Component Object.
+**
+** Description:
+**	ABF specific destroy simply removes names for the object.
+**
+** Input:
+**	rdef	{RECDEF *}  The record definition component.
+**
+** History:
+**	08/89 (billc)  Written.
+*/
+static VOID
+_rc_destroy ( rdef )
+RECDEF	*rdef;
+{
+	if (rdef->recmems != NULL)
+	{
+		IIAMccClearClass(rdef);
+		rdef->recmems = NULL;
+	}
+}

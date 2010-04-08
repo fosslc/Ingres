@@ -1,0 +1,79 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmcolmod.hlp
+COLLISION MODES
+
+How a Replicator Server acts when it detects a collision depends on the
+collision mode of the CDDS to which the colliding records belong.
+
+The available collision modes are listed in the following list:
+
+o  PassiveDetection (0)
+
+   This mode detects insert collisions and delete collisions where the
+   row to be deleted does not exist.
+
+   This is the default setting.  The server does not resolve the
+   collision.  The collision is an error and the server action is
+   dependent on the error mode setting.
+
+   This mode requires you to perform manual collision resolution.
+
+
+o  ActiveDetection (1)
+
+   This mode detects all collisions, but does not resolve them.  The
+   server does not resolve the collision.  The collision is an error and
+   the server action is dependent on the error mode setting.
+
+   This mode requires you to perform manual collision resolution.
+
+
+o  BenignResolution (2)
+
+   This mode detects and resolves benign collisions (when the same row
+   with the same transaction ID arrives at the same target more than
+   once).
+
+   Before distributing the row, the Replicator Server searches the
+   target database to see if the row already exists.  If the row does
+   exist and it came from the same transaction, the Replicator Server
+   issues a warning message and removes the operation from the
+   distribution queue.  Otherwise, the server action is dependent on the
+   error mode setting.
+
+   This mode requires you to perform manual collision resolution on all
+   but benign collisions.
+
+
+o  PriorityResolution (3)
+
+   This mode detects all collisions and resolves them by comparing the
+   priority number assigned to the underlying row; the row with the
+   highest priority number prevails.  If the priorities are the same or
+   do not exist, then the row with the lower database number survives
+   the collision.
+
+   Priority numbers are assigned in a priority collision resolution
+   lookup table.
+
+   In this mode, all collisions are resolved automatically.
+
+
+o  LastWriteWins (4)
+
+   This mode detects all collisions and resolves them by comparing the
+   timestamps; the row with the later timestamp prevails.
+
+   The collision is resolved by transmitting the insert or update
+   transaction if the local row was created later than the target row.
+   Otherwise, the row is deleted from the distribution queue.
+
+   For a delete transaction, if the primary key is found, the row is
+   deleted.  If no key is found, the server removes the insert, update,
+   or delete operation from the distribution queue.  No delete collision
+   will occur with this mode.
+
+   If the timestamps are identical, the row with the lower database
+   number survives the collision.
+
+   In this mode, all collisions are resolved automatically.

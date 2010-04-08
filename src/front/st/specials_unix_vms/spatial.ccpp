@@ -1,0 +1,94 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for Spatial Object Library 
+*/
+
+/*
+** History:
+**	05-jan-1994 (tyler)
+**		Created.	
+**      23-mar-1994 (stevet)
+**              Added spcircc.h 
+**	28-apr-95 (forky01)
+**		Uncomment capability check for spatial.
+**	30-oct-96 (hanch04)
+**		Added spcirf.h spplyf.h splinf.h spsegf.h spboxf.h sppntf.h
+**	20-Jan-2004 (bonro01)
+**		Removed duplicate spcirf.h file.
+**	20-Sep-2005 (hanje04)
+**		SIR 115239
+**		Add setup script for spatial on UNIX.
+**	26-Oct-2005 (hanje04)
+**	    SIR 115239
+**	    Spatial OBjects needs to be shared library
+**      04-May-2007 (hweho01)
+**          Ship Spatial Objects as archive library for Tru64 
+**          (axp_osf) platform.
+**       08-jan-2008 (bolke01)
+**          Bring VMS inline with UNIX and build into install directory
+**	16-jun-2009 (joea)
+**	    Deliver spatial objects on VMS.
+**	20-Feb-2010 (hanje04)
+**	    SIR 123296
+**          Add support for LSB builds, server binaries live under
+**          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
+**          libraries under /usr/lib/ingres and config under /usr/share/ingres
+*/
+
+PART   spatial
+   capability CI_CLASSOBJ_ADT
+
+/*
+** ingres!{lib,library}
+*/
+
+# ifdef VMS
+	DIRECTORY ingres!LIB_TGT
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+      BUILD_FILE libspat.olb
+      FILE spat.olb
+# else /* VMS */
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!lib!ingres
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+      EXECUTABLE libspat.${slvers}.$SLSFX
+      LINK libspat.1.$SLSFX
+#else
+	DIRECTORY ingres!LIB_TGT
+   BUILD_DIR (ING_BUILD)!LIB_BLD
+#if defined(axp_osf)
+      FILE  libspat.a
+#else
+      EXECUTABLE libspat.1.$SLSFX
+#endif   /* if defined(axp_osf) */ 
+#endif /* LSB */
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!libexec!ingres!utility
+#else
+	DIRECTORY ingres!utility
+#endif
+   BUILD_DIR (ING_BUILD)!utility
+	SCRIPT SETUP iisuspat
+# endif /* VMS */
+
+/*
+** ingres!files
+*/
+
+#ifdef conf_LSB_BUILD
+	DIRECTORY usr!share!ingres!files
+#else
+	DIRECTORY ingres!files
+#endif
+   BUILD_DIR (ING_BUILD)!files
+      FILE spatial.h
+      FILE spatialc.h
+      FILE spboxf.h
+      FILE spcirf.h
+      FILE splinf.h
+      FILE spsegf.h
+      FILE sppntf.h
+      FILE spplyf.h

@@ -1,0 +1,1099 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\vnodemgr.ico"
+IDR_VNODEMTYPE          ICON                    "res\\maindoc.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+#if defined(APSTUDIO_INVOKED) || \
+    !(defined(VDBAICONS) || defined(EDBC))
+IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
+#endif
+#if defined(APSTUDIO_INVOKED) || !defined(VDBAICONS)
+IDB_NODETREE            BITMAP                  "res\\nodetree.bmp"
+#endif
+#if defined(APSTUDIO_INVOKED) || defined(VDBAICONS)
+#if defined(APSTUDIO_INVOKED)
+IDR_MAINFRAME$(VDBAICONS) BITMAP                  "res\\mainfram.bmp"
+#else
+IDR_MAINFRAME           BITMAP                  "res\\mainfram.bmp"
+#endif
+#endif
+#if defined(APSTUDIO_INVOKED) || defined(VDBAICONS)
+#if defined(APSTUDIO_INVOKED)
+IDB_NODETREE$(VDBAICONS) BITMAP                  "res\\bmp00001.bmp"
+#else
+IDB_NODETREE            BITMAP                  "res\\bmp00001.bmp"
+#endif
+#endif
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDR_MAINFRAME$(EDBC)    BITMAP                  "res\\bmp00002.bmp"
+#else
+IDR_MAINFRAME           BITMAP                  "res\\bmp00002.bmp"
+#endif
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+#if defined(APSTUDIO_INVOKED) || \
+    !(defined(VDBAICONS) || defined(EDBC))
+IDR_MAINFRAME TOOLBAR  16, 16
+BEGIN
+    BUTTON      ID_NODE_ADD
+    BUTTON      ID_NODE_ALTER
+    BUTTON      ID_NODE_DROP
+    SEPARATOR
+    BUTTON      ID_NODE_REFRESH
+    BUTTON      ID_APP_ABOUT
+    SEPARATOR
+    BUTTON      ID_NODE_DOM
+    BUTTON      ID_NODE_SQLTEST
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(VDBAICONS)
+#if defined(APSTUDIO_INVOKED)
+IDR_MAINFRAME$(VDBAICONS) TOOLBAR  16, 16
+#else
+IDR_MAINFRAME TOOLBAR  16, 16
+#endif
+BEGIN
+    BUTTON      ID_NODE_ADD
+    BUTTON      ID_NODE_ALTER
+    BUTTON      ID_NODE_DROP
+    SEPARATOR
+    BUTTON      ID_NODE_REFRESH
+    BUTTON      ID_APP_ABOUT
+    SEPARATOR
+    BUTTON      ID_MANAGE_LOCALVNODE
+    SEPARATOR
+    BUTTON      ID_NODE_DOM
+    BUTTON      ID_NODE_SQLTEST
+    BUTTON      ID_NODE_MONITOR
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDR_MAINFRAME$(EDBC) TOOLBAR  16, 16
+#else
+IDR_MAINFRAME TOOLBAR  16, 16
+#endif
+BEGIN
+    BUTTON      ID_SERVER_ADD
+    BUTTON      ID_SERVER_ALTER
+    BUTTON      ID_SERVER_DROP
+    SEPARATOR
+    BUTTON      ID_NODE_REFRESH
+    BUTTON      ID_APP_ABOUT
+    SEPARATOR
+    BUTTON      ID_NODE_DOM
+    BUTTON      ID_NODE_SQLTEST
+END
+#endif
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+#if defined(APSTUDIO_INVOKED) || \
+    !(defined(VDBAICONS) || defined(EDBC))
+IDR_MAINFRAME MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&Node"
+    BEGIN
+        MENUITEM "&Add...",                     ID_NODE_ADD
+        MENUITEM "A&lter...",                   ID_NODE_ALTER
+        MENUITEM "&Drop...",                    ID_NODE_DROP
+        MENUITEM "Add &Installation Password...", ID_NODE_ADD_INSTALLATION
+        MENUITEM SEPARATOR
+        MENUITEM "Database &Object Manager...", ID_NODE_DOM
+        MENUITEM "&SQL Scratchpad...",          ID_NODE_SQLTEST
+        MENUITEM "&Test Node",                  ID_NODE_TEST
+        MENUITEM SEPARATOR
+        MENUITEM "&Force Refresh",              ID_NODE_REFRESH
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "Help Topics",                 ID_DEFAULT_HELP
+        MENUITEM "Ingres Support &Online...",   ID_HELP_SUPPORTONLINE
+        MENUITEM "&About EDBC Network Utility...", ID_APP_ABOUT
+    END
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || !defined(EDBC)
+IDR_NODE_POPUP MENU 
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "&Add...",                     ID_NODE_ADD
+        MENUITEM "A&lter...",                   ID_NODE_ALTER
+        MENUITEM "&Drop...",                    ID_NODE_DROP
+        MENUITEM "Add &Installation Password...", ID_NODE_ADD_INSTALLATION
+        MENUITEM SEPARATOR
+        MENUITEM "&Test Node",                  ID_NODE_TEST
+        MENUITEM SEPARATOR
+        MENUITEM "&Nodes Defined on Selected Node...", ID_POPUP_NODE_EDIT_VIEW
+        MENUITEM SEPARATOR
+        MENUITEM "Database &Object Manager...", ID_NODE_DOM
+        MENUITEM "&SQL Scratchpad...",          ID_NODE_SQLTEST
+        MENUITEM "&Performance Monitor...",     ID_NODE_MONITOR
+        MENUITEM SEPARATOR
+        MENUITEM "&Force Refresh",              ID_NODE_REFRESH
+    END
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(VDBAICONS)
+#if defined(APSTUDIO_INVOKED)
+IDR_MAINFRAME$(VDBAICONS) MENU 
+#else
+IDR_MAINFRAME MENU 
+#endif
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&Node"
+    BEGIN
+        MENUITEM "&Add...",                     ID_NODE_ADD
+        MENUITEM "A&lter...",                   ID_NODE_ALTER
+        MENUITEM "&Drop...",                    ID_NODE_DROP
+        MENUITEM "Add &Installation Password...", ID_NODE_ADD_INSTALLATION
+        MENUITEM SEPARATOR
+        MENUITEM "&Test Node",                  ID_NODE_TEST
+        MENUITEM SEPARATOR
+        MENUITEM "&Nodes Defined on Selected Node...", ID_NODE_EDIT_VIEW
+        MENUITEM SEPARATOR
+        MENUITEM "Database &Object Manager...", ID_NODE_DOM
+        MENUITEM "&SQL Scratchpad...",          ID_NODE_SQLTEST
+        MENUITEM "&Performance Monitor...",     ID_NODE_MONITOR
+        MENUITEM SEPARATOR
+        MENUITEM "&Force Refresh",              ID_NODE_REFRESH
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "Help Topics",                 ID_DEFAULT_HELP
+        MENUITEM "Ingres Support &Online...",   ID_HELP_SUPPORTONLINE
+        MENUITEM "&About Ingres Network Utility...", ID_APP_ABOUT
+    END
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDR_MAINFRAME$(EDBC) MENU 
+#else
+IDR_MAINFRAME MENU 
+#endif
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&Server"
+    BEGIN
+        MENUITEM "&Add...",                     ID_SERVER_ADD
+        MENUITEM "A&lter...",                   ID_SERVER_ALTER
+        MENUITEM "&Drop...",                    ID_SERVER_DROP
+        MENUITEM "Add &Installation Password...", ID_NODE_ADD_INSTALLATION
+        MENUITEM SEPARATOR
+        MENUITEM "Database &Object Manager...", ID_NODE_DOM
+        MENUITEM "&SQL Scratchpad...",          ID_NODE_SQLTEST
+        MENUITEM "&Test Server",                ID_SERVER_TEST
+        MENUITEM SEPARATOR
+        MENUITEM "&Force Refresh",              ID_NODE_REFRESH
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "Help Topics",                 ID_DEFAULT_HELP
+        MENUITEM "Ingres Support &Online...",   ID_HELP_SUPPORTONLINE
+        MENUITEM "&About EDBC Network Utility...", ID_APP_ABOUT
+    END
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDR_NODE_POPUP$(EDBC) MENU 
+#else
+IDR_NODE_POPUP MENU 
+#endif
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "&Add...",                     ID_SERVER_ADD
+        MENUITEM "A&lter...",                   ID_SERVER_ALTER
+        MENUITEM "&Drop...",                    ID_SERVER_DROP
+        MENUITEM "Add &Installation Password...", ID_NODE_ADD_INSTALLATION
+        MENUITEM SEPARATOR
+        MENUITEM "Database &Object Manager...", ID_NODE_DOM
+        MENUITEM "&SQL Scratchpad...",          ID_NODE_SQLTEST
+        MENUITEM "&Performance Monitor...",     ID_NODE_MONITOR
+        MENUITEM "&Test Server",                ID_SERVER_TEST
+        MENUITEM SEPARATOR
+        MENUITEM "&Force Refresh",              ID_NODE_REFRESH
+    END
+END
+#endif
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS 
+BEGIN
+    "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
+    "V",            ID_EDIT_PASTE,          VIRTKEY, CONTROL, NOINVERT
+    VK_BACK,        ID_EDIT_UNDO,           VIRTKEY, ALT, NOINVERT
+    VK_DELETE,      ID_EDIT_CUT,            VIRTKEY, SHIFT, NOINVERT
+    VK_F1,          ID_CONTEXT_HELP,        VIRTKEY, NOINVERT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY, NOINVERT
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
+    VK_INSERT,      ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
+    VK_INSERT,      ID_EDIT_PASTE,          VIRTKEY, SHIFT, NOINVERT
+    "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL, NOINVERT
+    "Z",            ID_EDIT_UNDO,           VIRTKEY, CONTROL, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDD_XVIRTUALNODE$(EDBC) DIALOG  0, 0, 279, 172
+#else
+IDD_XVIRTUALNODE DIALOG  0, 0, 279, 172
+#endif
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add Server Definition"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Server Name:",IDC_STATIC,11,9,48,8
+    EDITTEXT        IDC_MFC_EDIT1,63,7,109,12,ES_AUTOHSCROLL
+    GROUPBOX        "Login Information",IDC_STATIC,7,38,265,60,BS_LEFT
+    LTEXT           "User Name:",IDC_STATIC,11,52,66,8
+    EDITTEXT        IDC_MFC_EDIT2,82,50,90,12,ES_AUTOHSCROLL
+    LTEXT           "Password:",IDC_STATIC,11,66,66,8
+    EDITTEXT        IDC_MFC_EDIT3,82,65,90,12,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Confirm Password:",IDC_STATIC,11,81,66,8
+    EDITTEXT        IDC_MFC_EDIT4,82,80,90,12,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Host:",IDC_STATIC,11,114,66,8
+    EDITTEXT        IDC_MFC_EDIT5,82,113,90,12,ES_AUTOHSCROLL
+    LTEXT           "Protocol:",IDC_STATIC,11,130,66,8
+    COMBOBOX        IDC_MFC_COMBO1,82,128,90,40,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Listen Address:",IDC_STATIC,11,146,66,8
+    EDITTEXT        IDC_MFC_EDIT6,82,144,90,12,ES_AUTOHSCROLL
+    CONTROL         "Private",IDC_MFC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,7,21,32,10
+    DEFPUSHBUTTON   "OK",IDOK,222,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,222,22,50,14
+    CONTROL         "Private",IDC_MFC_CHECK_LOGIN_PRIVATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,48,37,10
+    GROUPBOX        "Connection Information",IDC_STATIC,7,102,265,63,BS_LEFT
+    CONTROL         "Private",IDC_MFC_CHECK_COM_PRIVATE,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE,186,111,37,10
+    CONTROL         "Installation Password",IDC_MFC_CHECK_INSTALLATION,
+                    "Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,63,25,79,10
+    CONTROL         "Save userid/password",IDC_MFC_CHECK_LOGIN_SAVE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,66,79,10
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDD_XVNODE_ATTRIBUTE$(EDBC) DIALOG  0, 0, 238, 68
+#else
+IDD_XVNODE_ATTRIBUTE DIALOG  0, 0, 238, 68
+#endif
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add a Server Attribute"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Attribute:",IDC_STATIC,11,10,37,8
+    COMBOBOX        IDC_MFC_COMBO1,50,8,122,63,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Value:",IDC_STATIC,11,27,28,8
+    EDITTEXT        IDC_MFC_EDIT1,50,25,122,12,ES_AUTOHSCROLL
+    CONTROL         "Private",IDC_MFC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,11,46,37,10
+    DEFPUSHBUTTON   "OK",IDOK,181,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,181,22,50,14
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDD_XVNODEDATA$(EDBC) DIALOG  0, 0, 244, 95
+#else
+IDD_XVNODEDATA DIALOG  0, 0, 244, 95
+#endif
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add Server Connection Data Definition"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Server Name:",IDC_STATIC,11,9,48,8
+    EDITTEXT        IDC_MFC_EDIT1,63,7,109,12,ES_AUTOHSCROLL | ES_READONLY | WS_DISABLED
+    GROUPBOX        "Description",IDC_STATIC,7,26,174,63,BS_LEFT
+    LTEXT           "Host:",IDC_STATIC,11,36,66,8
+    EDITTEXT        IDC_MFC_EDIT2,82,36,90,12,ES_AUTOHSCROLL
+    LTEXT           "Protocol:",IDC_STATIC,11,53,66,8
+    COMBOBOX        IDC_MFC_COMBO1,82,52,90,40,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Listen Address:",IDC_STATIC,11,71,66,8
+    EDITTEXT        IDC_MFC_EDIT3,82,69,90,12,ES_AUTOHSCROLL
+    CONTROL         "Private",IDC_MFC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE,187,78,50,10
+    DEFPUSHBUTTON   "OK",IDOK,187,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,187,22,50,14
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDD_XVNODELOGIN$(EDBC) DIALOG  0, 0, 244, 95
+#else
+IDD_XVNODELOGIN DIALOG  0, 0, 244, 95
+#endif
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add Server Login Definition"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Server Name:",IDC_STATIC,11,9,48,8
+    EDITTEXT        IDC_MFC_EDIT1,63,7,109,12,ES_AUTOHSCROLL | ES_READONLY | WS_DISABLED
+    GROUPBOX        "Description",IDC_STATIC,7,26,174,63,BS_LEFT
+    LTEXT           "User Name:",IDC_STATIC,11,38,66,8
+    EDITTEXT        IDC_MFC_EDIT2,82,36,90,12,ES_AUTOHSCROLL
+    LTEXT           "Password:",IDC_STATIC,11,54,66,8
+    EDITTEXT        IDC_MFC_EDIT3,82,52,90,12,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Confirm Password:",IDC_STATIC,11,71,66,8
+    EDITTEXT        IDC_MFC_EDIT4,82,69,90,12,ES_PASSWORD | ES_AUTOHSCROLL
+    CONTROL         "Private",IDC_MFC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,78,50,10
+    DEFPUSHBUTTON   "OK",IDOK,187,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,187,22,50,14
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDD_VNODELOGINPROMPT$(EDBC) DIALOG  0, 0, 244, 80
+#else
+IDD_VNODELOGINPROMPT DIALOG  0, 0, 244, 80
+#endif
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Enter Server Login Information"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Server Name:",-1,11,9,48,8
+    EDITTEXT        IDC_MFC_EDIT1,63,7,109,12,ES_AUTOHSCROLL | ES_READONLY | WS_DISABLED
+    GROUPBOX        "Description",-1,7,25,174,43,BS_LEFT
+    LTEXT           "User Name:",-1,11,38,66,8
+    EDITTEXT        IDC_MFC_EDIT2,82,36,90,12,ES_AUTOHSCROLL
+    LTEXT           "Password:",-1,11,54,66,8
+    EDITTEXT        IDC_MFC_EDIT3,82,52,90,12,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,187,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,187,22,50,14
+END
+#endif
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    "IDD_XVIRTUALNODE$(EDBC)", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 272
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 165
+    END
+
+    "IDD_XVNODE_ATTRIBUTE$(EDBC)", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 231
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 61
+    END
+
+    "IDD_XVNODEDATA$(EDBC)", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+
+    "IDD_XVNODELOGIN$(EDBC)", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+
+    "IDD_VNODELOGINPROMPT$(EDBC)", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 73
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDD_XVIRTUALNODE$(EDBC) DLGINIT
+#else
+IDD_XVIRTUALNODE DLGINIT
+#endif
+BEGIN
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6374, 0x5f70, 0x7069, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x616c, 0x6d6e, 0x6e61, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x766e, 0x736c, 0x7870, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6564, 0x6e63, 0x7465, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6977, 0x746e, 0x7063, "\000" 
+    0
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDD_XVNODE_ATTRIBUTE$(EDBC) DLGINIT
+#else
+IDD_XVNODE_ATTRIBUTE DLGINIT
+#endif
+BEGIN
+    IDC_MFC_COMBO1, 0x403, 25, 0
+0x7561, 0x6874, 0x6e65, 0x6974, 0x6163, 0x6974, 0x6e6f, 0x6d5f, 0x6365, 
+0x6168, 0x696e, 0x6d73, "\000" 
+    IDC_MFC_COMBO1, 0x403, 21, 0
+0x6e65, 0x7263, 0x7079, 0x6974, 0x6e6f, 0x6d5f, 0x6365, 0x6168, 0x696e, 
+0x6d73, "\000" 
+    IDC_MFC_COMBO1, 0x403, 16, 0
+0x6e65, 0x7263, 0x7079, 0x6974, 0x6e6f, 0x6d5f, 0x646f, 0x0065, 
+    IDC_MFC_COMBO1, 0x403, 16, 0
+0x6f63, 0x6e6e, 0x6365, 0x6974, 0x6e6f, 0x745f, 0x7079, 0x0065, 
+    0
+END
+#endif
+
+#if defined(APSTUDIO_INVOKED) || defined(EDBC)
+#if defined(APSTUDIO_INVOKED)
+IDD_XVNODEDATA$(EDBC) DLGINIT
+#else
+IDD_XVNODEDATA DLGINIT
+#endif
+BEGIN
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6374, 0x5f70, 0x7069, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x616c, 0x6d6e, 0x6e61, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x766e, 0x736c, 0x7870, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6564, 0x6e63, 0x7465, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6977, 0x746e, 0x7063, "\000" 
+    0
+END
+#endif
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDR_MAINFRAME           "vnodemgr\n\nVnodem\n\n\nVnodemgr.Document\nVnodem Document"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "EDBC Network Utility"
+    AFX_IDS_IDLEMESSAGE     "Ready"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+    ID_FILE_PAGE_SETUP      "Change the printing options\nPage Setup"
+    ID_FILE_PRINT_SETUP     "Change the printer and printing options\nPrint Setup"
+    ID_FILE_PRINT           "Print the active document\nPrint"
+    ID_FILE_PRINT_PREVIEW   "Display full pages\nPrint Preview"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_APP_ABOUT            "Display Program Information, Version Number and Copyright\nAbout"
+    ID_APP_EXIT             "Quit the Application\nExit"
+    ID_CONTEXT_HELP         "Context Help\nContext Help"
+    ID_DEFAULT_HELP         "Help Topics\nHelp topics"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_SERVER_TEST          "Test Server\nTest Server"
+    ID_MANAGE_LOCALVNODE    "View and Edit Nodes Defined on Selected Node.\nView and Edit Nodes Defined on Selected Node"
+    ID_POPUP_NODE_EDIT_VIEW "View and Edit Nodes Defined on Selected Node.\nView and Edit Nodes Defined on Selected Node"
+    ID_NODE_EDIT_VIEW       "View and Edit Nodes Defined on Selected Node.\nView and Edit Nodes Defined on Selected Node"
+    ID_HELP_SUPPORTONLINE   "Ingres Support Online\nIngres Support Online"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_MRU_FILE1       "Open this document"
+    ID_FILE_MRU_FILE2       "Open this document"
+    ID_FILE_MRU_FILE3       "Open this document"
+    ID_FILE_MRU_FILE4       "Open this document"
+    ID_FILE_MRU_FILE5       "Open this document"
+    ID_FILE_MRU_FILE6       "Open this document"
+    ID_FILE_MRU_FILE7       "Open this document"
+    ID_FILE_MRU_FILE8       "Open this document"
+    ID_FILE_MRU_FILE9       "Open this document"
+    ID_FILE_MRU_FILE10      "Open this document"
+    ID_FILE_MRU_FILE11      "Open this document"
+    ID_FILE_MRU_FILE12      "Open this document"
+    ID_FILE_MRU_FILE13      "Open this document"
+    ID_FILE_MRU_FILE14      "Open this document"
+    ID_FILE_MRU_FILE15      "Open this document"
+    ID_FILE_MRU_FILE16      "Open this document"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or Hide the Toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or Hide the Status Bar\nToggle StatusBar"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCSIZE          "Change the window size"
+    AFX_IDS_SCMOVE          "Change the window position"
+    AFX_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    AFX_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    AFX_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    AFX_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCRESTORE       "Restore the window to normal size"
+    AFX_IDS_SCTASKLIST      "Activate Task List"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_PREVIEW_CLOSE   "Close print preview mode\nCancel Preview"
+    IDS_ALTER_NODEDATA_TITLE "Alter Virtual Node Connection Data Definition"
+    IDS_ALTER_NODELOGIN_TITLE "Alter Virtual Node Login Definition"
+    IDS_ALTER_NODE_TITLE    "Alter Virtual Node/Remote Connection Definition"
+    IDS_DROP_NODE_DATA_FAILED 
+                            "Drop Connection Data definition on Node '%1' failed"
+    IDS_DROP_NODE_LOGIN_FAILED "Drop Login definition on Node '%1' failed"
+    IDS_ADD_NODE_FAILED     "Add Virtual Node Definition '%1' failed"
+    IDS_ADD_NODE_DATA_FAILED 
+                            "Add Connection Data Definition on Node '%1' failed"
+    IDS_ADD_NODE_LOGIN_FAILED "Add Login Definition on Node '%1' failed"
+    IDS_ALTER_NODE_FAILED   "Alter Virtual Node Definition '%1' failed"
+    IDS_ALTER_NODE_DATA_FAILED 
+                            "Alter Connection Data Definition on Node '%1' failed"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_NODE_ADD             "Add Virtual Node\nAdd Virtual Node"
+    ID_NODE_ALTER           "Alter Virtual Node\nAlter Virtual Node"
+    ID_NODE_DROP            "Drop Virtual Node\nDrop Virtual Node"
+    ID_NODE_REFRESH         "Force Refresh\nForce Refresh"
+    ID_NODE_SQLTEST         "SQL Scratchpad\nSQL Scratchpad"
+    ID_NODE_ADD_INSTALLATION "Add Installation Password\nInstallation"
+    ID_NODE_TEST            "Test Node\nTest Node"
+    ID_NODE_DOM             "Database Object Manager...\nDatabase Object Manager"
+    ID_NODE_MONITOR         "Performance Monitor\nPerformance Monitor"
+    ID_SERVER_ADD           "Add Server\nAdd Server"
+    ID_SERVER_ALTER         "Alter Server\nAlter Server"
+    ID_SERVER_DROP          "Drop Server\nDrop Server"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ALTER_NODE_LOGIN_FAILED "Alter Login Definition on Node '%1' failed"
+    IDS_E_PLEASE_RETYPE_PASSWORD 
+                            "The two passwords fields are not identical.\nPlease retype password in both fields."
+    IDS_E_VIRTUAL_NODE      "The Virtual Node name (which refers to a remote machine) must be different from the local hostname."
+    IDS_NODE_ALREADY_EXIST  "Virtual Node '%1' already exists.\n Please enter another name"
+    IDS_E_CURRENT_DEF       "The current definition will be lost.\nDo you wish to continue ?"
+    IDS_DROP_NODE           "Drop Virtual Node/Remote Connection definition '%1' ?"
+    IDS_DROP_NODE_FAILED    "Drop Virtual Node definition '%1' failed"
+    IDS_DROP_NODE_DATA      "Drop Connection Data definition '%1' on Node '%2' ?"
+    IDS_DROP_NODE_ATTRIBUTE "Drop Other attribute definition '%1' on Node '%2' ?"
+    IDS_DROP_NODE_ATTRIBUTE_FAILED 
+                            "Drop Other attribute definition '%1' failed"
+    IDS_DROP_INSTALLPASSWORD "Drop Installation Password definition ?"
+    IDS_FOLDER_NODE         "Nodes/Connections"
+    IDS_FOLDER_SERVER       "Servers"
+    IDS_FOLDER_LOGIN        "Logins"
+    IDS_FOLDER_CONNECTION   "Connection Data"
+    IDS_FOLDER_ATTRIBUTE    "Attributes"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_FOLDER_ADVANCEDNODE "Advanced Node Parameters"
+    IDS_UNAVAILABLE         "<Data Unavailable>"
+    IDS_NONODES             "<No Nodes>"
+    IDS_NODE_INSTALLATION   "<installation password node>"
+    IDS_NODE_NOTFOUND       "Node %1 not found"
+    IDS_NODE_HASADVANCED    "Node %1 had advanced node parameters, and cannot be altered."
+    IDS_NODE_INSTALLATION_EXIST 
+                            "Installation password already defined on the node"
+    IDS_ONLY_2LOGINS_PERNODE "You can only have two Logins per node."
+    IDS_ALREADY_HAS_PRIVATE "You already have a private Login for node %1. This one will be a GLOBAL Login."
+    IDS_ALREADY_HAS_GLOBAL  "You already have a global Login for node %1. This one will be a PRIVATE Login."
+    IDS_APP_TITLE           "Ingres Network Utility"
+    IDS_FOLDER_GATEWAY      "Gateways"
+    IDS_FOLDER_ADVANCEDSERVER "Advanced Server Parameters"
+    IDS_SERVER_HASADVANCED  "Server %1 had advanced server parameters, and cannot be altered."
+    IDS_NOSERVERS           "<No Servers>"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_DROP_SERVER         "Drop server definition '%1' ?"
+    IDS_DROP_SERVER_FAILED  "Drop server definition '%1' failed"
+    IDS_DROP_SERVER_DATA    "Drop Connection Data definition '%1' on Server '%2' ?"
+    IDS_DROP_SERVER_DATA_FAILED 
+                            "Drop Connection Data definition on Server '%1' failed"
+    IDS_DROP_SERVER_ATTRIBUTE 
+                            "Drop Other attribute definition '%1' on Server '%2' ?"
+    IDS_DROP_SERVER_LOGIN_FAILED "Drop Login Definition on Server '%1' failed"
+    IDS_ADD_SERVER_FAILED   "Add Server Definition '%1' failed"
+    IDS_ADD_SERVER_DATA_FAILED 
+                            "Add Connection Data Definition on Server '%1' failed"
+    IDS_ADD_SERVER_LOGIN_FAILED "Add Login Definition on Server '%1' failed"
+    IDS_ALTER_SERVERDATA_TITLE "Alter Server Connection Data Definition"
+    IDS_ALTER_SERVERLOGIN_TITLE "Alter Server Login Definition"
+    IDS_ALTER_SERVER_TITLE  "Alter Server Definition"
+    IDS_ALTER_SERVER_FAILED "Alter Server Definition '%1' failed"
+    IDS_ALTER_SERVER_DATA_FAILED 
+                            "Alter Server Connection Data on Server '%1' failed"
+    IDS_ALTER_SERVER_LOGIN_FAILED 
+                            "Alter Login Definition on Server '%1' failed"
+    IDS_SERVER_ALREADY_EXIST 
+                            "Server '%1' already exists.\n Please enter another name"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_SERVER_NOTFOUND     "Server '%1' not found"
+    IDS_PRODUCT_VERSION     "Version %s"
+    IDS_PRODUCT_VERSION_EDBC "EDBC Network Utility Version 1.0"
+    IDS_MSG_FAIL_2_LOCATEDLL "Failed to locate the DLL: '%1'."
+    IDS_REQUEST2START_INSTALLATION 
+                            "The %1 installation is not started.\nWould you like to start it ?"
+    IDS_MSG_INSTALLATION_START_FAILED "Failed to start the %1 installation."
+    IDS_MSG_II_SYSTEM_NOT_DEFINED "II_SYSTEM is not defined."
+    IDS_MSG_EDBCROOT_NOT_DEFINED "EDBC_ROOT is not defined."
+    IDS_INGRES              "Ingres"
+    IDS_EDBC                "EDBC"
+    IDS_INVALID_CMDLINE     "Invalid command line. The syntax is:\ningnet.exe \t[-vnode=<node name>]"
+    IDS_VNODELOCALTITLE     " - %1"
+    IDS_FOLDER_NET_NODE     " on %1"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_XVIRTUALNODE DIALOGEX 0, 0, 244, 171
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add Virtual Node/Remote Connection Definition"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    LTEXT           "Virtual Node Name:",IDC_STATIC,7,9,62,8
+    EDITTEXT        IDC_MFC_EDIT1,76,7,109,12,ES_AUTOHSCROLL
+    GROUPBOX        "Login Information",IDC_STATIC,7,38,230,60,BS_LEFT
+    LTEXT           "User Name:",IDC_STATIC,11,52,66,8
+    EDITTEXT        IDC_MFC_EDIT2,82,50,90,12,ES_AUTOHSCROLL
+    LTEXT           "Password:",IDC_STATIC,11,66,66,8
+    EDITTEXT        IDC_MFC_EDIT3,82,65,90,12,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Confirm Password:",IDC_STATIC,11,81,66,8
+    EDITTEXT        IDC_MFC_EDIT4,82,80,90,12,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Hostname:",IDC_STATIC,11,114,66,8
+    EDITTEXT        IDC_MFC_EDIT5,82,113,90,12,ES_AUTOHSCROLL
+    LTEXT           "Protocol:",IDC_STATIC,11,130,66,8
+    COMBOBOX        IDC_MFC_COMBO1,82,128,90,40,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Instance ID / Listen Address:",IDC_STATIC,11,141,60,18
+    EDITTEXT        IDC_MFC_EDIT6,82,144,90,12,ES_AUTOHSCROLL
+    CONTROL         "Private",IDC_MFC_CHECK1,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,7,21,32,10
+    DEFPUSHBUTTON   "OK",IDOK,187,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,187,22,50,14
+    CONTROL         "Private",IDC_MFC_CHECK_LOGIN_PRIVATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,186,48,37,10
+    GROUPBOX        "Connection Information",IDC_STATIC,7,101,230,63,BS_LEFT
+    CONTROL         "Private",IDC_MFC_CHECK_COM_PRIVATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,186,111,37,10
+    CONTROL         "Installation Password",IDC_MFC_CHECK_INSTALLATION,
+                    "Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,76,25,79,10
+END
+
+IDD_XVNODE_ATTRIBUTE DIALOG  0, 0, 238, 68
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add a Node Attribute"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Attribute:",IDC_STATIC,11,10,37,8
+    COMBOBOX        IDC_MFC_COMBO1,50,8,122,63,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Value:",IDC_STATIC,11,27,28,8
+    EDITTEXT        IDC_MFC_EDIT1,50,25,122,12,ES_AUTOHSCROLL
+    CONTROL         "Private",IDC_MFC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,11,46,37,10
+    DEFPUSHBUTTON   "OK",IDOK,181,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,181,22,50,14
+END
+
+IDD_XVNODE_INSTALLATION_PASSWORD DIALOG  0, 0, 238, 51
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Define an Installation Password"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Installation Password:",IDC_STATIC,11,9,68,8
+    EDITTEXT        IDC_MFC_EDIT1,90,7,82,12,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Confirm Password:",IDC_STATIC,11,25,66,8
+    EDITTEXT        IDC_MFC_EDIT2,90,23,82,12,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,181,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,181,22,50,14
+END
+
+IDD_XVNODEDATA DIALOG  0, 0, 244, 95
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add Virtual Node Connection Data Definition"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Virtual Node:",IDC_STATIC,11,9,48,8
+    EDITTEXT        IDC_MFC_EDIT1,63,7,109,12,ES_AUTOHSCROLL | ES_READONLY | WS_DISABLED
+    GROUPBOX        "Description",IDC_STATIC,7,26,174,63,BS_LEFT
+    LTEXT           "Node:",IDC_STATIC,11,36,66,8
+    EDITTEXT        IDC_MFC_EDIT2,82,36,90,12,ES_AUTOHSCROLL
+    LTEXT           "Protocol:",IDC_STATIC,11,53,66,8
+    COMBOBOX        IDC_MFC_COMBO1,82,52,90,40,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Listen Address:",IDC_STATIC,11,71,66,8
+    EDITTEXT        IDC_MFC_EDIT3,82,69,90,12,ES_AUTOHSCROLL
+    CONTROL         "Private",IDC_MFC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,78,50,10
+    DEFPUSHBUTTON   "OK",IDOK,187,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,187,22,50,14
+END
+
+IDD_XVNODELOGIN DIALOG  0, 0, 244, 95
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add Virtual Node Login Definition"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Virtual Node:",IDC_STATIC,11,9,48,8
+    EDITTEXT        IDC_MFC_EDIT1,63,7,109,12,ES_AUTOHSCROLL | ES_READONLY | WS_DISABLED
+    GROUPBOX        "Description",IDC_STATIC,7,26,174,63,BS_LEFT
+    LTEXT           "User Name:",IDC_STATIC,11,38,66,8
+    EDITTEXT        IDC_MFC_EDIT2,82,36,90,12,ES_AUTOHSCROLL
+    LTEXT           "Password:",IDC_STATIC,11,54,66,8
+    EDITTEXT        IDC_MFC_EDIT3,82,52,90,12,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Confirm Password:",IDC_STATIC,11,71,66,8
+    EDITTEXT        IDC_MFC_EDIT4,82,69,90,12,ES_PASSWORD | ES_AUTOHSCROLL
+    CONTROL         "Private",IDC_MFC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,78,50,10
+    DEFPUSHBUTTON   "OK",IDOK,187,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,187,22,50,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_XVIRTUALNODE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 164
+    END
+
+    IDD_XVNODE_ATTRIBUTE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 231
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 61
+    END
+
+    IDD_XVNODE_INSTALLATION_PASSWORD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 231
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 44
+    END
+
+    IDD_XVNODEDATA, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+
+    IDD_XVNODELOGIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 237
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_XVIRTUALNODE DLGINIT
+BEGIN
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6374, 0x5f70, 0x7069, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x616c, 0x6d6e, 0x6e61, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x766e, 0x736c, 0x7870, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6564, 0x6e63, 0x7465, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6977, 0x746e, 0x7063, "\000" 
+    0
+END
+
+IDD_XVNODE_ATTRIBUTE DLGINIT
+BEGIN
+    IDC_MFC_COMBO1, 0x403, 25, 0
+0x7561, 0x6874, 0x6e65, 0x6974, 0x6163, 0x6974, 0x6e6f, 0x6d5f, 0x6365, 
+0x6168, 0x696e, 0x6d73, "\000" 
+    IDC_MFC_COMBO1, 0x403, 21, 0
+0x6e65, 0x7263, 0x7079, 0x6974, 0x6e6f, 0x6d5f, 0x6365, 0x6168, 0x696e, 
+0x6d73, "\000" 
+    IDC_MFC_COMBO1, 0x403, 16, 0
+0x6e65, 0x7263, 0x7079, 0x6974, 0x6e6f, 0x6d5f, 0x646f, 0x0065, 
+    IDC_MFC_COMBO1, 0x403, 16, 0
+0x6f63, 0x6e6e, 0x6365, 0x6974, 0x6e6f, 0x745f, 0x7079, 0x0065, 
+    0
+END
+
+IDD_XVNODEDATA DLGINIT
+BEGIN
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6374, 0x5f70, 0x7069, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x616c, 0x6d6e, 0x6e61, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x766e, 0x736c, 0x7870, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6564, 0x6e63, 0x7465, "\000" 
+    IDC_MFC_COMBO1, 0x403, 7, 0
+0x6977, 0x746e, 0x7063, "\000" 
+    0
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\vnodemgr.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#include ""afxprint.rc""       // printing/print preview resources\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\vnodemgr.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "afxprint.rc"       // printing/print preview resources
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

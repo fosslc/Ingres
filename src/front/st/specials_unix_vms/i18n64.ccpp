@@ -1,0 +1,71 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for i18n - internationalization language packs
+*/
+
+/*
+** History
+**	06-Apr-2005 (sheco02)
+**	    Create 64 bit forms for i18n language packs.
+**	08-Apr-2005 (sheco02)
+**	    Fixed the missing lp64 in ptb. 
+*/
+
+PART  i18n64
+
+/* 
+** German
+** ingres!files!deu!lp64
+*/
+   DIRECTORY ingres!files!deu!lp64
+   BUILD_DIR (ING_BUILD)!files!deu!lp64
+      FILE rtiforms.fnx
+/* 
+** Spanish
+** ingres!files!esn!lp64
+*/
+   DIRECTORY ingres!files!esn!lp64
+   BUILD_DIR (ING_BUILD)!files!esn!lp64
+      FILE rtiforms.fnx
+
+/* 
+** French
+** ingres!files!fra!lp64
+*/
+   DIRECTORY ingres!files!fra!lp64
+   BUILD_DIR (ING_BUILD)!files!fra!lp64
+      FILE rtiforms.fnx
+
+/* 
+** Italian
+** ingres!files!ita!lp64
+*/
+   DIRECTORY ingres!files!ita!lp64
+   BUILD_DIR (ING_BUILD)!files!ita!lp64
+      FILE rtiforms.fnx
+
+/* 
+** Japanese
+** ingres!files!jpn!lp64
+*/
+   DIRECTORY ingres!files!jpn!lp64
+   BUILD_DIR (ING_BUILD)!files!jpn!lp64
+      FILE rtiforms.fnx
+
+/* 
+** Brazillian Portuguese
+** ingres!files!ptb!lp64
+*/
+   DIRECTORY ingres!files!ptb!lp64
+   BUILD_DIR (ING_BUILD)!files!ptb!lp64
+      FILE rtiforms.fnx
+
+/* 
+** Simplified Chinese
+** ingres!files!sch!lp64
+*/
+   DIRECTORY ingres!files!sch!lp64
+   BUILD_DIR (ING_BUILD)!files!sch!lp64
+      FILE rtiforms.fnx

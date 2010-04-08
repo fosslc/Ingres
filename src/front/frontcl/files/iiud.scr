@@ -1,0 +1,23 @@
+/* Copyright (c) 2004 Ingres Corporation */
+
+/* QUEL script iiud.scr */
+\quel
+\macro
+
+/* Check to make sure there are no frontend objects in the database. */
+retrieve (table_name=iitables.table_name, row_count=iitables.num_rows)
+where lowercase(iitables.table_owner) = "$ingres"
+	and iitables.num_rows > 0
+	and ( lowercase(iitables.table_name) = "ii_objects"
+		or lowercase(iitables.table_name) = "ii_entities"
+		or lowercase(iitables.table_name) = "ii_stored_bitmaps"
+		or lowercase(iitables.table_name) = "ii_stored_strings")
+\go
+\branch ?{ifgt;@{tuplecount};0;1;0}=0 HasNoObjects
+{type E_UD000C There are existing frontend objects in this database.  You}\v
+{type cannot use the reload scripts on a database that currently contains}\v
+{type frontend objects.}\v
+\quit
+\mark HasNoObjects
+\nomacro
+

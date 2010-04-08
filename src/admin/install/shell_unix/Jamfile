@@ -1,0 +1,23 @@
+#
+# Jamfile file for admin!install!shell_unix
+#
+
+SubDir ING_SRC admin install shell_unix ;
+
+IISUBSYS admin install shell_unix ;
+
+
+IIUTILEXE convacct : convacct.c ;
+IINEEDLIBS convacct : COMPAT ;
+
+IIBINSH clientchk : clientchk.sh ;
+IIUTILSH iilink : iilink.sh ;
+IIUTILSH iimkcluster : iimkcluster.sh ;
+IIUTILSH iiuncluster : iiuncluster.sh ;
+IIUTILSH ingprall : ingprall.sh ;
+IIUTILSH ingprsym : ingprsym.sh ;
+IIUTILSH ingsetall : ingsetall.sh ;
+IIUTILSH ingunsetall : ingunsetall.sh ;
+IIUTILSH mkrawarea : mkrawarea.sh ;
+IIUTILSH mkrawlog : mkrawlog.sh ;
+

@@ -1,0 +1,13 @@
+#
+# Jamfile file for front!abf!cautil
+#
+
+SubDir ING_SRC front abf cautil ;
+
+IISUBSYS front abf cautil ;
+
+
+IIMSGHDR erac.msg ;
+
+IILIBRARY CAUTILLIB : metautil.sc rtof.c ;
+

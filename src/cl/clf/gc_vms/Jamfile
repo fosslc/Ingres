@@ -1,0 +1,15 @@
+#
+# Jamfile file for cl!clf!gc_vms
+#
+# History:
+#	02-feb-2005 (abbjo03)
+#	    Add stub implementation of gcpport.c.
+
+SubDir ING_SRC cl clf gc_vms ;
+
+IISUBSYS cl clf gc_vms ;
+
+IILIBRARY COMPATLIB : gcexec.c gcccl.c gcblsio.c
+        gcblpgb.c gcblpack.c gcblcrc.c gcblast.c gcatrace.c
+        gcacl.c gccqio.c gcdecnet.c gcdectcp.c gcpinit.c gcsnalu0.c
+	gctcpaddr.c gcwoltcp.c gcpport.c ;

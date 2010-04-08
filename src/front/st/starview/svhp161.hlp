@@ -1,0 +1,33 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+BROWSE OBJECTS
+
+This command lists local database objects in the local database selected 
+from the Browse LDB form. The REGISTER command registers the highlighted 
+local database object. The SQL and TABLES commands invoke the Ingres/ISQL 
+and Ingres/TABLES utilities on the selected local database.  The TOP/BOTTOM 
+commands move the cursor to the top/bottom of the Objects list respectively. 
+The FIND command searches for a specific string within the Objects list.  
+The HELP command displays this screen, and the END command returns to the 
+Browse LDB form.
+
+	SUMMARY OF COMMANDS AND FUNCTIONS
+
+	COMMAND		FUNCTION
+	-------		--------
+	Register	Register the highlighted local database object.
+
+	SQL		Invoke Ingres/ISQL on the current Local database.
+
+	TABLES		Invoke Ingres/TABLES on the current Local database.
+
+	Top		Move the cursor to the top of the Objects list.
+
+	Bottom		Move the cursor to the bottom of the Objects list.
+
+	Find		Search for a specific string of characters
+			within the Objects list.
+
+	Help		Display this screen.
+
+	End		Exit to the Browse LDB form.
+

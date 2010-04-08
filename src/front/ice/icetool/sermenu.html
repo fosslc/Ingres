@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- Copyright (c) 1998 Ingres Corporation -->
+<HTML>
+<SCRIPT language="JavaScript">
+		var sgrp_count = 0
+		var location_count = 0
+		var var_count = 0
+
+		function SgrpList(level) {
+			<!-- #ICE REPEAT FUNCTION=`session_grp?action=select`
+					 HTML=`
+			top.Main.iteminsert(level, 'a', 0, 'a', :sess_id, ':sess_name', '<!-- #ICE INCLUDE=``icon_app.gif`` -->', 'BLACK', 'serApp.html?sess_id=:sess_id')`
+			-->
+		}
+		sgrp_count = <!-- #ICE VAR=`:ii_rowcount` -->
+
+		function LocationList(level) {
+			<!-- #ICE REPEAT FUNCTION=`ice_locations?action=select`
+					 HTML=`
+			top.Main.iteminsert(level, 'l', 0, 'l', :loc_id, ':loc_name', '<!-- #ICE INCLUDE=``icon_loc.gif`` -->', 'BLACK', 'serLoc.html?loc=:loc_id')`
+			-->
+		}
+		location_count = <!-- #ICE VAR=`:ii_rowcount` -->
+
+		function VarList(level) {
+			<!-- #ICE REPEAT FUNCTION=`getVariables?server=checked`
+					 HTML=`
+			top.Main.iteminsert(level, 'v', 0, ':name', 0, ':name', '<!-- #ICE INCLUDE=``icon_var.gif`` -->', 'BLACK', 'serVar.html?name=:name')`
+			-->
+		}
+		var_count = <!-- #ICE VAR=`:ii_rowcount` -->
+
+		top.Main.declareMenu(10 + location_count + var_count + sgrp_count, 5)
+
+		<!-- #ICE REPEAT VAR=`
+		top.Main.iteminsert(1, 't', 0, 'a', 0, 'Session Groups', '<!-- #ICE INCLUDE=``icon_apps.gif`` -->', 'GRAY', 'serApps.html', 'yes')
+		top.Main.iteminsert(1, 't', 0, 'l', 0, 'Locations', '<!-- #ICE INCLUDE=``icon_locs.gif`` -->', 'GRAY', 'serLocs.html', 'yes')
+		top.Main.iteminsert(1, 't', 0, 'v', 0, 'Server variables', '<!-- #ICE INCLUDE=``icon_vars.gif`` -->', 'GRAY', 'serVars.html', 'yes')
+		top.Main.iteminsert(1, 't', 0, 'm', 0, 'Monitoring', '<!-- #ICE INCLUDE=``icon_monit.gif`` -->', 'GRAY', '', 'yes')
+		top.Main.iteminsert(2, 'm', 0, 'm', 1, 'Active Sessions', '<!-- #ICE INCLUDE=``icon_act_sess.gif`` -->', 'GRAY', 'act_sess.html', 'yes')
+		top.Main.iteminsert(2, 'm', 0, 'm', 2, 'User Sessions', '<!-- #ICE INCLUDE=``icon_users.gif`` -->', 'GRAY', 'usr_sess.html', 'yes')
+		top.Main.iteminsert(2, 'm', 0, 'm', 3, 'Cache', '<!-- #ICE INCLUDE=``icon_cache.gif`` -->', 'GRAY', 'cache.html', 'yes')
+		top.Main.iteminsert(2, 'm', 0, 'm', 4, 'Transactions', '<!-- #ICE INCLUDE=``icon_trans.gif`` -->', 'GRAY', 'transaction.html', 'yes')
+		top.Main.iteminsert(2, 'm', 0, 'm', 5, 'Cursors', '<!-- #ICE INCLUDE=``icon_curs.gif`` -->', 'GRAY', 'cursor.html', 'yes')
+		top.Main.iteminsert(2, 'm', 0, 'm', 6, 'Database Connections', '<!-- #ICE INCLUDE=``icon_dbs.gif`` -->', 'GRAY', 'connection.html', 'yes')
+		` -->
+
+		SgrpList(2)
+		LocationList(2)
+		VarList(2)
+		top.Main.display();
+</SCRIPT>
+
+</HTML>

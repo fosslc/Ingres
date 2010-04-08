@@ -1,0 +1,56 @@
+#
+# MANIFEST file for front!ice!cgi
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	18-Aug-2004 (drivi01)
+#	    For windows only added rules to build ice executables
+#	    for apache and microsoft and copy them to 
+#	    II_SYSTEM/ingres/bin, II_SYSTEM/ingres/ice/bin/apache
+#	    and II_SYSTEM/ingres/ice/bin/microsoft.
+#	7-Aug-2004 (drivi01)
+#	    Modified the copying of iiice.exe to 4 different locations.
+#	13-Aug-2004 (drivi01)
+#	    Renamed iiice.exe back to oiice.exe to avoid compatability 
+#	    issues.
+#	02-dec-2004 (abbjo03)
+#	    ICE/WDO has not yet been ported to VMS.
+#	20-apr-2006 (drivi01)
+#	    Updated hardcoded slashes for windows to $(DFS).
+#	20-Jun-2009 (kschendel) SIR 122138
+#	    Place under BUILD_ICE control.
+#
+
+SubDir ING_SRC front ice cgi ;
+
+IISUBSYS front ice cgi ;
+
+if $(BUILD_ICE)
+{
+
+if $(UNIX)
+{
+
+IIICEBINEXE oiice.cgi : cgi.c ;
+IINEEDLIBS oiice.cgi :  C_APILIB ICECLILIB DDFLIB LIBINGRES
+	SHCOMPATLIB ;
+IIUNDEFS oiice.cgi :  malloc ;
+
+IICPEXE $(INGICE)/bin/apache/oiice.cgi : oiice.cgi ;
+IICPEXE $(INGICE)/bin/netscape/oiice.cgi : oiice.cgi ;
+IICPEXE $(INGICE)/bin/ice : oiice.cgi ;
+
+}
+else if $(NT)
+{
+IIICEBINEXE oiice : cgi.c ;
+IINEEDLIBS oiice : GCFLIB COMPATLIB ICECLILIB DDFLIB ;
+
+IICPEXE $(INGAPACHEICE)$(DFS)oiice.exe : oiice.exe ;
+IICPEXE $(INGMSICE)$(DFS)oiice.exe : oiice.exe ;
+IICPEXE $(INGICEBIN)$(DFS)ice.exe : oiice.exe ;
+}
+
+}

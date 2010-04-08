@@ -1,0 +1,17 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/* 
+** CACHELOCK.HN
+**
+** Header file for non-mmap versions of the DMF CACHELOCK utility.
+**
+** Copy this file to cachelock.h if your operating system does NOT 
+** support mmap() and mlock(), but does support the ability to lock 
+** shared memory via shmctl().  Note that the Ingres server must
+** be configured in a manner consistent with this header file.
+**
+*/
+
+#define no_mmap
+

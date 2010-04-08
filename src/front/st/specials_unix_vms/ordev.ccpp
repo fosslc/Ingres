@@ -1,0 +1,210 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Generic part file for OpenROAD development
+*/
+
+/*
+** History
+**	02-nov-1998 (dansa02)
+**		Created.
+**	20-nov-1998 (dansa02)
+**		More trial-and-error adjustments to the deliverables lists.
+**	22-mar-1999 (dansa02)
+**		Merged demo deliverables into dev package, just like on NT.
+**		Also changed to reflect the newly shortened names of the
+**		reporter sample reports.
+*/
+
+PART   ordev
+   capability CI_WINDOWS4GL_DEV 
+
+/*
+** ingres
+*/
+   DIRECTORY ingres
+   BUILD_DIR (ING_BUILD)
+      FILE w4gldev.rel
+
+/*
+** ingres!bin
+*/
+   DIRECTORY ingres!bin
+   BUILD_DIR (ING_BUILD)!bin
+      SCRIPT backupapp
+      SCRIPT compileapp
+      SCRIPT createapp
+      SCRIPT destroyapp
+      SCRIPT documentapp
+      SCRIPT exportapp
+      SCRIPT importapp
+      SCRIPT makeimage
+      SCRIPT monimage
+      SCRIPT openroad
+      SCRIPT purgeapp
+      SCRIPT queryimage
+      SCRIPT rundbapp
+      SCRIPT versionapp
+      EXECUTABLE w4gldev
+      FILE w4gldev.rxt
+      FILE w4gldev.rxb
+
+/*
+** ingres!files
+*/
+   DIRECTORY ingres!files
+   BUILD_DIR (ING_BUILD)!files
+      FILE w4glext.h
+
+/*
+** ingres!files!deffiles
+*/
+   DIRECTORY ingres!files!deffiles
+   BUILD_DIR (ING_BUILD)!files!deffiles
+      FILE backupap.def
+      FILE compilea.def
+      FILE createap.def
+      FILE destroya.def
+      FILE document.def
+      FILE makeimag.def
+      FILE purgeapp.def
+      FILE queryima.def
+      FILE rundbapp.def
+      FILE versiona.def
+
+/*
+** ingres!files!english
+*/
+   DIRECTORY ingres!files!english
+   BUILD_DIR (ING_BUILD)!files!english
+      FILE or40.cnt
+      FILE or40.hlp
+      FILE orgs.pdf
+      FILE orlr.pdf
+      FILE orpr.pdf
+      FILE orrr.pdf
+      FILE orug.pdf
+
+/*
+** ingres!files!w4gldemo
+*/
+   DIRECTORY ingres!files!w4gldemo
+   BUILD_DIR (ING_BUILD)!files!w4gldemo
+      FILE lvtvdemo.exp
+      FILE repcolor.bmp
+      FILE sis.exp
+      FILE sis.ico
+      FILE sis1.bmp
+      FILE sis2.bmp
+      FILE sis3.bmp
+      FILE sis4.bmp
+      FILE sis5.bmp
+      FILE sis6.bmp
+      FILE siscur.cur
+      FILE strans1.rep
+      FILE student.bmp
+      FILE student0.bmp
+      FILE student2.bmp
+      FILE student3.bmp
+      FILE track.bmp
+      FILE vid1.gif
+      FILE vid1.txt
+      FILE vid10.gif
+      FILE vid10.txt
+      FILE vid11.gif
+      FILE vid11.txt
+      FILE vid12.gif
+      FILE vid12.txt
+      FILE vid13.gif
+      FILE vid13.txt
+      FILE vid14.gif
+      FILE vid14.txt
+      FILE vid15.gif
+      FILE vid15.txt
+      FILE vid16.gif
+      FILE vid16.txt
+      FILE vid17.gif
+      FILE vid17.txt
+      FILE vid18.gif
+      FILE vid18.txt
+      FILE vid19.gif
+      FILE vid19.txt
+      FILE vid2.gif
+      FILE vid2.txt
+      FILE vid20.gif
+      FILE vid20.txt
+      FILE vid21.gif
+      FILE vid21.txt
+      FILE vid22.gif
+      FILE vid22.txt
+      FILE vid23.gif
+      FILE vid23.txt
+      FILE vid24.gif
+      FILE vid24.txt
+      FILE vid25.gif
+      FILE vid25.txt
+      FILE vid26.gif
+      FILE vid26.txt
+      FILE vid27.gif
+      FILE vid27.txt
+      FILE vid28.gif
+      FILE vid28.txt
+      FILE vid29.gif
+      FILE vid29.txt
+      FILE vid3.gif
+      FILE vid3.txt
+      FILE vid30.gif
+      FILE vid30.txt
+      FILE vid31.gif
+      FILE vid31.txt
+      FILE vid32.gif
+      FILE vid32.txt
+      FILE vid33.gif
+      FILE vid33.txt
+      FILE vid34.gif
+      FILE vid34.txt
+      FILE vid35.gif
+      FILE vid35.txt
+      FILE vid4.gif
+      FILE vid4.txt
+      FILE vid5.gif
+      FILE vid5.txt
+      FILE vid6.gif
+      FILE vid6.txt
+      FILE vid7.gif
+      FILE vid7.txt
+      FILE vid8.gif
+      FILE vid8.txt
+      FILE vid9.gif
+      FILE vid9.txt
+      FILE videos.exp
+/*
+** ingres!w4glapps
+*/
+   DIRECTORY ingres!w4glapps
+   BUILD_DIR (ING_BUILD)!w4glapps
+      FILE applytmp.img
+      FILE demobldr.img
+      FILE iidebug.img
+      FILE workbnch.img
+
+/*
+** ingres!w4glsamp!reporter
+*/
+   DIRECTORY ingres!w4glsamp!reporter
+   BUILD_DIR (ING_BUILD)!w4glsamp!reporter
+      FILE rep.bmp
+      FILE repsmall.bmp
+      FILE student.rep
+      FILE stu_simple.rep
+      FILE stu_dbimg.rep
+      FILE stu_diskimg.rep
+      FILE DemoRepProcs.exp
+
+/*
+** ingres!w4glsamp!tmdemo
+*/
+   DIRECTORY ingres!w4glsamp!tmdemo
+   BUILD_DIR (ING_BUILD)!w4glsamp!tmdemo
+      FILE tmdemo.exp

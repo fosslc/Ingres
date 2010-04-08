@@ -1,0 +1,47 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- iciwaccg.hlp        SubTopic help on Installation-Wide Access Grants.
+/#--
+GRANTing Access
+---------------
+If the following entries are added to the table field of Installation-Wide
+Access Grants:
+
+        +---------------+------+
+        |Authorization  |      |
+        |Identifier     |Access|
+        +---------------+------+
+        |prod           |y     |
+        |test           |n     |
+        +---------------+------+
+
+and then the "Save" menuitem is pressed, then the following SQL statements
+will be issued by Accessdb:
+
+        GRANT ACCESS ON INSTALLATION TO USER prod;
+        GRANT NOACCESS ON INSTALLATION TO USER test;
+
+REVOKEing Access
+----------------
+If an installation currently has the following Installation-Wide Access
+Grants:
+
+        +---------------+------+
+        |Authorization  |      |
+        |Identifier     |Access|
+        +---------------+------+
+        |prod           |y     |
+        |test           |n     |
+        +---------------+------+
+
+and you Delete each of these rows in Accessdb and press the "Save"
+menuitem, then Accessdb will issue the following SQL statements:
+
+        REVOKE ACCESS ON INSTALLATION FROM USER prod;
+        REVOKE NOACCESS ON INSTALLATION FROM USER test;
+
+Note that Accessdb users must have SECURITY privilege to issue these
+statements (Accessdb users with only MAINTAIN_LOCATIONS privilege will not
+have a "Save" menuitem, and the frame will be displayed in Read-only mode).
+
+Users with SECURITY privilege may issue these Ingres/SQL statements 
+directly, by connecting to the "iidbdb" database.

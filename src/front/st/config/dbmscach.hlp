@@ -1,0 +1,3 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+  The number of individual buffers ( single data pages ) in the
+  buffer manager.

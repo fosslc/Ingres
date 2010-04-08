@@ -1,0 +1,36 @@
+--
+--  Copyright (c) 2006 Ingres Corporation.  All Rights Reserved.
+--
+--  This file contains the configuration rules for the Sybase Gateway.
+--
+--# History:
+--#	26-mar-98 (mcgem01)
+--#		Created. 
+--#	15-may-02 (kinte01)
+--#		Cross integrate change 439134 made to wnt!front!st!crsfiles
+--#		so it can be reflected in the unix/vms crsfiles.  Using a
+--#		head revision of cbf will now be possible as it looks for
+--#		the gateway parameters in one form while unix/vms still
+--#		input data in the old form
+--#		Change parameter naming scheme to match the gateway
+--#		interpretation.   Increase the sqlda_size and pst_max
+--#		to a default value of 128.   Add an empty_date and
+--#		empty_date_return. (bug 107843)
+--#	10-jun-02 (clach04)
+--#		Bug 107991
+--#		Added load_table_qualifier to crs.
+--#
+
+ii.$.ingstart.$.sybase:		1, MAX = 1;
+
+-- maximum connections of all Sybase Gateways configured for start-up
+ii.$.gateway.sybase.connect_max:           1,
+					REQUIRES ii.$.ingstart.%.sybase;
+
+-- protocol port status initialization
+ii.$.gateway.sybase.sqlda_size:       128, MIN = 50, MAX = 256;
+ii.$.gateway.sybase.pst_max:          128,  MIN = 50, MAX = 256;
+ii.$.gateway.sybase.empty_date:       "01-jan-1900 00:00:00";
+ii.$.gateway.sybase.empty_date_return: OFF;
+ii.$.gateway.sybase.load_table_qualifier: "USER";
+ii.$.gateway.sybase.varchar_comp:     OFF;

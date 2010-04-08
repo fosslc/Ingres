@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+ Time, in minutes, to wait for client requests.  If the time expires
+ with no request from the client, the client and DBMS connections
+ are aborted.  Set to 0 for no timeout.

@@ -1,0 +1,21 @@
+#
+# Jamfile file for cl!clf!cm_unix_win
+#
+
+SubDir ING_SRC cl clf cm_unix_win ;
+
+IISUBSYS cl clf cm_unix_win ;
+
+
+IILIBRARY COMPATLIB : cmutil.c
+	cmunctrl.c
+	cmkcheck.c
+	cmicopy.c
+	cmccopy.c
+	cmfile.c
+	cmafile.c 
+	cmutf8.c 
+	cmgetcp.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : cmtype.roc cmutype.roc 
+	cmdata.c ;

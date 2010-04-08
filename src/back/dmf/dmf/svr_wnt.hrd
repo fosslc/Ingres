@@ -1,0 +1,331 @@
+###
+### makefile generated automatically by mknmake (3.02) for WNT.
+###	 date: Thu Nov 18 14:57:59 1993
+###	 path: D:\rplus\back\dmf\dmf
+###
+
+##
+## Start of extra control macros for the make.ini file.
+##
+
+# Set to sub system type, (windows, console, posix).
+!IF "$(SUBSYS)" == ""
+SUBSYS = windows
+!ENDIF
+
+# Set to true for proto typing.
+!IF "$(PROTO_TYPE)" == ""
+PROTO_TYPE = false
+!ENDIF
+
+# Local flags for the compiler.
+!IF "$(LCL_CFLAGS)" == ""
+LCL_CFLAGS =
+!ENDIF
+
+# Ingres path structure.
+PART = back
+FACILITY = dmf
+SUBSYSTEM = dmf
+LCLPATH = back\dmf\dmf
+
+# DOS file system type.
+FS_FAT = 1
+FS_CASE = 0
+
+##
+## End of extra control macros for the make.ini file.
+##
+
+!include "$(ING_SRC)\tools\port\nmake\make.ini"
+!include "deps.mak"
+
+QSHFILES = 
+
+MSGFILES = 
+
+QHFILES = 
+
+SHFILES = 
+
+QSCFILES = 
+
+SCFILES = 
+
+QCFILES = 
+
+SYFILES = 
+
+STFILES = 
+
+LFILES = 
+
+YFILES = 
+
+YIFILES = 
+
+OBJFILES = dmfaltdb.obj dmfarchive.obj dmfatp.obj  \
+	dmfcall.obj dmfcpp.obj dmfcsp.obj dmfdbg.obj dmfdtp.obj  \
+	dmfgw.obj dmfinfo.obj dmfinit.obj dmflki.obj \
+	dmfprftst.obj dmfrcp.obj dmfrecover.obj dmfrfp.obj dmfsvcb.obj  \
+	dmfterm.obj dmftinfo.obj dmftmmo.obj dmftrace.obj
+
+PROFILES = 
+
+PCFILES = 
+
+IIDMFLIB = $(LIBNAME) 
+
+# chiu 11/23/93 - maually added cacheutil and rcpconfig. edited dmgjsp.
+EXEFILES = cacheutil.exe dmfacp.exe dmfjsp.exe lartool.exe lockstat.exe  \
+	logdump.exe logstat.exe rcpconfig.exe
+
+
+OBJONLY =
+
+
+$(OBJFILES): $(QSCFILES) $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) \
+	 $(LFILES) $(YFILES) $(YIFILES)
+
+
+all: hdr prh pc lib exe
+hdr: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES)
+prh:
+pc:
+lib: $(IIDMFLIB) $(OBJONLY)
+exe: $(EXEFILES)
+
+derive: $(QSHFILES) $(MSGFILES) $(QHFILES) $(SHFILES) $(QSCFILES) \
+	 $(SCFILES) $(QCFILES) $(SYFILES) $(STFILES) $(LFILES) \
+	 $(YFILES) $(YIFILES)
+
+archive: atouch lib
+atouch:
+	$(TOUCH) $(OBJFILES)
+	$(SLEEP) 2
+
+
+##
+## Local .lib rule.
+##
+$(IIDMFLIB): $(OBJFILES)
+!IF [$(TEST) -f $(IIDMFLIB)] == 0
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS) $@
+$(OBJFILES)
+<<KEEP
+!ELSE
+	@echo >nul @<<lib.rf6
+/OUT:$@ $(LIBFLAGS)
+$(OBJFILES)
+<<KEEP
+!ENDIF
+	$(LIB_CMD) @lib.rf6 > lib.er6 2>&1
+
+
+
+##
+## Custom .exe rule.
+##
+cacheutil_deps = \
+	cacheutil.obj \
+	$(IIDMFLIB)
+
+# chiu 11/23/93 - added IIGCFLIB, IIULFLIB, IISCFLIB, IICUFLIB
+cacheutil.exe: $(cacheutil_deps)
+	@echo >nul @<<cacheutil.rf7
+$(LFLAGS) /OUT:cacheutil.exe
+$(cacheutil_deps)
+$(IIGCFLIB)
+$(IIULFLIB)
+$(IISCFLIB)
+$(IICUFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @cacheutil.rf7 > cacheutil.er7 2>&1
+
+
+##
+##
+##
+## Custom .exe rule.
+##
+dmfacp_deps = \
+	dmfacp.obj \
+	$(IIDMFLIB)
+
+# chiu 11/23/93 - added IICUFLIB, IISXFLIB
+dmfacp.exe: $(dmfacp_deps)
+	@echo >nul @<<dmfacp.rf7
+$(LFLAGS) /OUT:dmfacp.exe
+$(dmfacp_deps)
+$(IISCFLIB)
+$(IIADFLIB)
+$(IIGWFLIB)
+$(IIULFLIB)
+$(IIGCFLIB)
+$(IICUFLIB)
+$(IISXFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @dmfacp.rf7 > dmfacp.er7 2>&1
+
+
+##
+## Custom .exe rule.
+##
+dmfjsp_deps = \
+	dmfjsp.obj \
+	$(IIDMFLIB)
+
+# chiu 11/23/93 - added IICUFLIB, IISXFLIB
+dmfjsp.exe: $(dmfjsp_deps)
+	@echo >nul @<<dmfjsp.rf7
+$(LFLAGS) /OUT:dmfjsp.exe
+$(dmfjsp_deps)
+$(IISCFLIB)
+$(IIADFLIB)
+$(IIGWFLIB)
+$(IIULFLIB)
+$(IIGCFLIB)
+$(IICUFLIB)
+$(IISXFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @dmfjsp.rf7 > dmfjsp.er7 2>&1
+
+
+##
+## Custom .exe rule.
+##
+lartool_deps = \
+	lartool.obj \
+	$(IIDMFLIB)
+
+# chiu 11/23/93 - added IICUFLIB
+lartool.exe: $(lartool_deps)
+	@echo >nul @<<lartool.rf7
+$(LFLAGS) /OUT:lartool.exe
+$(lartool_deps)
+$(IISCFLIB)
+$(IIGCFLIB)
+$(IIULFLIB)
+$(IICUFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @lartool.rf7 > lartool.er7 2>&1
+
+
+##
+## Custom .exe rule.
+##
+lockstat_deps = \
+	lockstat.obj \
+	$(IIDMFLIB)
+
+# chiu 11/23/93 - added IICUFLIB
+lockstat.exe: $(lockstat_deps)
+	@echo >nul @<<lockstat.rf7
+$(LFLAGS) /OUT:lockstat.exe
+$(lockstat_deps)
+$(IIADFLIB)
+$(IIULFLIB)
+$(IIGCFLIB)
+$(IISCFLIB)
+$(IIDBUTILLIB)
+$(IIGWFLIB)
+$(IICUFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @lockstat.rf7 > lockstat.er7 2>&1
+
+
+##
+## Custom .exe rule.
+##
+logdump_deps = \
+	logdump.obj \
+	$(IIDMFLIB)
+
+# chiu 11/23/93 - added IICUFLIB, IISXFLIB
+logdump.exe: $(logdump_deps)
+	@echo >nul @<<logdump.rf7
+$(LFLAGS) /OUT:logdump.exe
+$(logdump_deps)
+$(IIADFLIB)
+$(IISCFLIB)
+$(IIGWFLIB)
+$(IIULFLIB)
+$(IIGCFLIB)
+$(IICUFLIB)
+$(IISXFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @logdump.rf7 > logdump.er7 2>&1
+
+
+##
+## Custom .exe rule.
+##
+logstat = \
+	logstat.obj \
+	$(IIDMFLIB)
+
+# chiu 11/23/93 - added IICUFLIB, IISXFLIB
+logstat.exe: $(logstat_deps)
+	@echo >nul @<<logstat.rf7
+$(LFLAGS) /OUT:logstat.exe
+$(logstat_deps)
+$(IISCFLIB)
+$(IIDMFLIB)
+$(IIADFLIB)
+$(IIULFLIB)
+$(IIGCFLIB)
+$(IIULFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @logstat.rf7 > logstat.er7 2>&1
+
+
+##
+## Custom .exe rule.
+##
+rcpconfig_deps = \
+	rcpconfig.obj \
+	$(IIDMFLIB)
+
+# chiu 11/23/93 - added IICUFLIB
+rcpconfig.exe: $(rcpconfig_deps)
+	@echo >nul @<<rcpconfig.rf7
+$(LFLAGS) /OUT:rcpconfig.exe
+$(rcpconfig_deps)
+$(IISCFLIB)
+$(IIULFLIB)
+$(IIGCFLIB)
+$(IICUFLIB)
+$(IICOMPATLIB)
+$(IIMALLOCLIB)
+$(SYSLIBS)
+<<KEEP
+	$(LINK_CMD) @rcpconfig.rf7 > rcpconfig.er7 2>&1
+
+##
+## Local install rule.
+##
+install: all
+	$(CP) *.exe $(ING_BUILD)\bin
+

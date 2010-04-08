@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ Indicates whether the "ingres" security mechanism is enabled.  "True" means
+ the Ingres security mechanism is enabled; "false" means the "ingres"
+ mechanism is disabled.  
+
+ Note: "ingres" is the preferred standard (static) security mechanism.  The
+ "ingres" mechanism provides better protection against malicious servers,
+ and employs a more secure encryption mechanism than the "system" security
+ mechanism.

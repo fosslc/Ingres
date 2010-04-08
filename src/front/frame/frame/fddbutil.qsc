@@ -1,0 +1,130 @@
+/*
+**	fddbutil.qsc
+**
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+/**
+** Name:	fddbutil.qsc - DB utility file for forms system.
+**
+** Description:
+**	This file contains some db utility routines for the forms
+**	system below the runtime layer.
+**
+** History:
+**	07/23/88 (dkh) - Initial version.
+**	03/20/91 (dkh) - Added support for (alerter) event in FRS.
+**	04/20/91 (dkh) - Changed support for alerter to conform to LRC
+**			 approved semantics.
+**	07/18/91 (dkh) - Updated syntax to use DBEVENT instead of EVENT.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-Aug-2009 (kschendel) b121804
+**	    Remove function defns now in headers.
+**/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<st.h>		 
+# include	<fe.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<ui.h>
+# include	<fsicnsts.h>
+
+
+/*{
+** Name:	IIFDesiExecSqlImm - Perform an EXEC SQL IMMEDIATE call.
+**
+** Description:
+**	This routine does an EXEC SQL IMMEDIATE call on the passed
+**	in buffer which is assumed to contain a sql statement to execute.
+**	We assume that the syntax is correct and that the statement is
+**	valid for whatever context the executing environment is in.
+**
+** Inputs:
+**	sqlstmt	Buffer containing sql statement to execute.
+**
+** Outputs:
+**	None.
+**
+**	Returns:
+**		None.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	Whatever the sql statement may cause.
+**
+** History:
+**	07/23/88 (dkh) - Initial version.
+**	17-aug-91 (leighb) DeskTop Porting Change: added st.h
+*/
+VOID
+IIFDesiExecSqlImm(sqlstmt)
+EXEC SQL BEGIN DECLARE SECTION;
+char	*sqlstmt;
+EXEC SQL END DECLARE SECTION;
+{
+	if (sqlstmt != NULL && *sqlstmt != EOS)
+	{
+		EXEC SQL EXECUTE IMMEDIATE :sqlstmt;
+	}
+}
+
+
+/*{
+** Name:	IIFDaeAlerterEvent - Check for an (alerter) event.
+**
+** Description:
+**	This routine simply checks for an (alerter) event by running
+**	a "get event" statement.  If one is found, it returns TRUE,
+**	FALSE otherwsie.
+**
+**	Side effects of this routine is that it will de-queue the
+**	(alerter) event so that the user must use inquire_frs to
+**	find out the specifics.  This routine also stores away the
+**	various values of the event to allow the application to
+**	inquire about the event later on.
+**
+** Inputs:
+**	None.
+**
+** Outputs:
+**
+**	Returns:
+**		TRUE	If an (alerter) event found.
+**		FALSE	If no (alerter) event found.
+**	Exceptions:
+**		None.
+**
+** Side Effects:
+**	None other than that listed above.
+**
+** History:
+**	03/20/91 (dkh) - Initial version.
+*/
+i4
+IIFDaeAlerterEvent()
+{
+EXEC SQL BEGIN DECLARE SECTION;
+	char	a_name[FE_MAXNAME + 1];
+EXEC SQL END DECLARE SECTION;
+
+	EXEC SQL GET DBEVENT WITH NOWAIT;
+
+	EXEC SQL INQUIRE_INGRES (:a_name = dbeventname);
+	if (a_name[0] != EOS)
+	{
+		return(TRUE);
+	}
+	return(FALSE);
+}

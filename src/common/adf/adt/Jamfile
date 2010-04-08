@@ -1,0 +1,13 @@
+#
+# Jamfile file for common!adf!adt
+#
+
+SubDir ING_SRC common adf adt ;
+
+IISUBSYS common adf adt ;
+
+
+IILIBRARY ADFLIB : adtwhichpart.c adtvvcmp.c adttupvcmp.c
+	adttupcmp.c adtsortcmp.c adtpcompute.c adtktktcmp.c adtkkcmp.c
+	adtkeytupcmp.c adtcompute.c ;
+

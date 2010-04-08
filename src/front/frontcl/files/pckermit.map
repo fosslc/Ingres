@@ -1,0 +1,82 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* Menu Key */
+	menu = pf10 (F10)
+
+/* Help facility */
+	frskey1 = pf11 (AF1)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf13 (AF3)
+
+/* Exit the system */
+	frskey2 = pf12 (AF2)
+
+/* Put cursor on top of form or table field */
+	frskey5 = pf15 (AF5)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= pf16 (AF6)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= pf17 (AF7)
+
+/* other FRSkey's */
+
+	frskey4 = pf14 (AF4)
+	frskey8 = pf18 (AF8)
+	frskey9 = pf19 (AF9)
+
+/* Bring up List Choices */
+	frskey10 = pf9 (F9)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select menu items */
+	menuitem1 = pf1 (F1)
+	menuitem2 = pf2 (F2)
+	menuitem3 = pf3 (F3)
+	menuitem4 = pf4 (F4)
+	menuitem5 = pf5 (F5)
+	menuitem6 = pf6 (F6)
+	menuitem7 = pf7 (F7)
+	menuitem8 = pf8 (F8)
+
+/* Move cursor to next field */
+	nextfield = controlI (Tab)
+
+/* Move cursor to previous field */
+	previousfield = controlP (^P)
+
+/* Move up one word within field */
+	nextword = controlU (^U)
+
+/* Move back one word within field */
+	previousword = controlR (^R)
+
+/* Switch between insert and overstrike mode */
+	mode = controlE (^E)
+
+/* Redraw the screen */
+	redraw = controlW (^W)
+
+/* Delete the character under the cursor */
+	deletechar = controlD (^D)
+
+/* Delete character immediately to left of cursor */
+	rubout = controlDEL (Delete)
+
+/* Start default text editor on field */
+	editor = controlV (^V)
+
+/* Move to first column of next row in table field */
+	newrow = controlN (^N)
+
+/* Clear out the rest of the field */
+	clear = controlX (^X)
+
+/* Clear out the rest of the field, and move to next field */
+	clearrest = controlM (Return)
+
+/* Auto-duplicate value while in fill mode */
+	duplicate = controlA (^A)

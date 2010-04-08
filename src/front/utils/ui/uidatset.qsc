@@ -1,0 +1,653 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<cv.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ui.h>
+#include	<ug.h>
+exec sql include	<uigdata.sh>;
+
+/**
+** Name:	uidatset.sc -	Front-End DBMS Data Set Module.
+**
+** Description:
+**	Contains routines that set up the database constants retrieved from
+**	the DBMS.  Defines:
+**
+**	IIUIsharedData()	get database constants from shared DBMS session.
+**	IIUIsetData()		set database constants for shared DBMS session.
+**	IIUIgetData()		get database constants from DBMS.
+**
+**	The data gathered here and in "uidbcap.qsc" is included in the informa-
+**	tion passed to a subprocess when spawned with the -X flag.  The
+**	routine 'IIUIsetData()' formats the information and gives it to LIBQ
+**	in the form of a textual string.  This routine is called by a parent
+**	process that might spawn children passing the -X flag.  If it the
+**	process does spawn a child, then the format string is included in the
+**	information given by the -X flag.  The child process reads the informa-
+**	tion, and the routine 'IIUIsharedData()' gets the information out of
+**	the formatted string rather than querying the database for it.
+**
+**	The format of the information is an issue with regards to inter-version
+**	compatibility.  The reason for this is that it is possible for an
+**	application linked under and older version of UI to call a FE (or
+**	application) linked under a newer version of UI.  Thus if the
+**	information put out with the -X flag changes between versions, the
+**	newer version of UI must react to this.  Furthermore it makes sense to
+**	make this generalized, and to assume that the parent process might be
+**	older than us, newer than us or the same version as us.
+**
+**	The following may seem like over kill for such a small feature, but
+**	as the FEs start to be unbundled, inter-version compatibility
+**	becomes a much bigger issue.
+**
+**	Unfortunately, the first versions of this routine did not account for
+**	inter-version compatibility, so there is nothing in the format of
+**	the early versions of this routine that tell what data is included.
+**
+**	For example, in 6.1 the string only included:
+**		"sdba suser catowner application autocommit"
+**			sdba is the DBA's name in the case the DBMS
+**				returned it.
+**
+**			suser is the user's name in the case the DBMS
+**			      returned it.
+**
+**			catowner is the name of the user that owns the
+**				 FE catalogs.
+**
+**			application is 1 if the parent process is a user
+**				    application, a 0 otherwise.
+**
+**			autocommit is 1 if the parent's IIui1stAutoCom was set.
+**
+**		An example string is:
+**			"joe rdesmond $ingres 1 0"
+**
+**	In 6.2/02p and 6.3 the capabilities were added to the string.  The
+**	format is:
+**		"sdba suser catowner application autocommit capstring"
+**
+**		capstring is a string for the capabilities.  It is really
+**		controlled by "uidbcap.qsc", but its format is given here.
+**		'capstring' is a string of characters, digits and an integer.
+**		I'll represent it using a c to represent a character,
+**		a d to represent a digit, and an n to represent a number.
+**
+**		Each c stands for a particular binary capability.  The c is
+**		either a 'y' if the capability is present, or an 'n' if the
+**		capability is not present.
+**		Each d and each n stand for a particular valued capability.
+**
+**		The capstring in 6.2/02p is:
+**
+**		cccccccccdddn
+**
+**		1st c is for INGRES_RULES capability
+**		2nd c is for INGRES_LOGICAL_KEY
+**		3rd c is for INGRES_UDT
+**		4th c is for INGRES_AUTH_GROUP
+**		5th c is for INGRES_AUTH_ROLES
+**		6th c is for ESCAPE
+**		7th c is for DISTRIBUTED
+**		8th c is for INGRES
+**		9th c is for PHYSICAL_SOURCE
+**		1st d is the value for sql_level
+**		2nd d is the value for quel_level
+**		3rd d is the value for key_req
+**		1st n is the value of name_Case
+**
+**		Note that sql_level, quel_level and key_req are single digits.
+**		The assumption is that the legal values are always single
+**		digits.  Note that name_Case's legal values are not single
+**		digits.
+**
+**		An example string from this version is:
+**
+**		"joe rdesmond $ingres 1 0 nnnnnyyny3023000"
+**			which says that the database has the capabilities:
+**				INGRES_RULES		NOT set
+**				INGRES_LOGICAL_KEY	NOT set
+**				INGRES_UDT		NOT set
+**				INGRES_AUTH_GROUP	NOT set
+**				INGRES_AUTH_ROLES	NOT set
+**				ESCAPE			set
+**				DISTRIBUTED		set
+**				INGRES			NOT set
+**				PHYSICAL_SOURCE		set
+**
+**				sql_level is 3 (UI_DML_GTWSQL)
+**				quel_level is 0 (UI_DML_NOLEVEL)
+**				key_req is 2 (UI_KEY_N)
+**				name_Case is 3000 (UI_MIXEDCASE)
+**
+**	Given this, it is obvious, that the formats between version 6.1 and
+**	6.3 are not compatible, but since 6.2/02 is the first version ported
+**	to most places it is important to maintain compatibility from that
+**	point on.
+**
+**	So, the 6.3 format is the base version.  Any new versions of this
+**	string must have the same starting format so they will work against
+**	6.3.  Words can be added to the end of the string, but the ones in
+**	front must be the same.
+**
+**	To support future changes, a version number is included after the
+**	capability bits.  This makes the new format:
+**
+**	    "sdba suser catowner application autocommit capstring[ uiversion X]"
+**
+**	If 'uiversion' is not present, then the string is a 6.3 string.  These
+**	are said to be version 0.  If 'uiversion' is present, it is an integer
+**	that gives the version number of the string.  All versions of the
+**	string are documented here.
+**
+**	X will be whatever data is appropriate for the given ui_version.
+**
+**	For example, 6.3/03 added the version string, which is the version of
+**	the DBMS.  6.3/03 is UI version number 1.  So the 6.3/03 format is:
+**
+**	    "sdba suser catowner application autocommit capstring 1 dbversion"
+**
+**		where capstring is the 6.3 capstring.
+**
+**	Note, if any new capabilities are added, there will have to be a second
+**	capstring added after dbversion (or whereever is appropriate).
+**
+**	To allow us to drastically change the syntax in the future, a conven-
+**	tion was made about whether a string of a given version number is
+**	compatible with a UI of a given version number. The version numbers are
+**	grouped into 100s so that version numbers of different groups means
+**	that the two versions aren't compatible.  For example, numbers from
+**	0-99 are in the first group.  Numbers from 100-199 are in the second
+**	group.  If the version number of a string is in the same group as that
+**	currently supported by a version of UI, then it means UI can read that
+**	string.  Practically, this means that between versions within a group,
+**	data can be added, but existing data can't be removed.  For example, if
+**	ever there is a version 99 string, then it can be read correctly by a
+**	6.3 UI (version 0 UI).
+**
+**	If a string given to a UI has a version number in a different group,
+**	then UI can simply ignore the string and fetch whatever information
+**	it wants from the DBMS.
+**
+**	Thus in the future when we no longer have to support 6.3 and we want
+**	to change how this is done, we simply have to up the version number
+**	to the next group.  When a 0-99 group UI reads such a string, it will
+**	ignore what it found and fetch the information from the DBMS.
+**	The string will still have to have at least as many words as version 1
+**	expects, but if we want to change this we could have a string like:
+**	"x x x x x x 100 <any thing is possible>"
+**
+**	Versions:
+**
+**	0
+**	    "sdba suser catowner application autocommit capstring"
+**		where capstring is:
+**
+**			cccccccccdddn
+**
+**			1st c is for INGRES_RULES capability
+**			2nd c is for INGRES_LOGICAL_KEY
+**			3rd c is for INGRES_UDT
+**			4th c is for INGRES_AUTH_GROUP
+**			5th c is for INGRES_AUTH_ROLES
+**			6th c is for ESCAPE
+**			7th c is for DISTRIBUTED
+**			8th c is for INGRES
+**			9th c is for PHYSICAL_SOURCE
+**			1st d is the value for sql_level
+**			2nd d is the value for quel_level
+**			3rd d is the value for key_req
+**			1st n is the value of name_Case
+**	1
+**	    "sdba suser catowner application autocommit capstring 1 dbversion"
+**
+**		dbversion is the version of the DBMS running, which was never
+**		used by Front-Ends before being replaced by the version levels.
+**
+**	2
+**	    "sdba suser catowner application autocommit capstring 2
+**		cat_level opensql_level sql_level quel_level"
+**
+**		cat_level is the Open (Standard) Catalog Level.
+**		opensql_level is the Open/SQL Level.
+**		ingsql_level is the INGRES/SQL Level.
+**		ingquel_level is the INGRES/QUEL Level.
+**
+**	NOTE:  6.4 GCA Save/Restore was made incompatible with all previous
+**	releases so compatability between versions 0 and 1 and version 2 isn't
+**	an issue.
+**
+**	3
+**	    "sdba suser catowner application autocommit capstring 3
+**		cat_level opensql_level sql_level quel_level dlm_case"
+**
+**		cat_level is the Open (Standard) Catalog Level.
+**		opensql_level is the Open/SQL Level.
+**		ingsql_level is the INGRES/SQL Level.
+**		ingquel_level is the INGRES/QUEL Level.
+**		dlm_case is the casing of delimited identifiers.
+**
+**	4
+**	    "sdba suser catowner application autocommit capstring 4
+**		cat_level opensql_level sql_level quel_level dlm_case
+**		max_cat_col_wid"
+**
+**		cat_level is the Open (Standard) Catalog Level.
+**		opensql_level is the Open/SQL Level.
+**		ingsql_level is the INGRES/SQL Level.
+**		ingquel_level is the INGRES/QUEL Level.
+**		dlm_case is the casing of delimited identifiers.
+**		max_cat_col_wid is the MAX_CATALOG_COLUMN_WIDTH dbcapability.
+**
+**
+** History:
+**	Revision 6.4  1991/05/05  wong
+**	Replaced DBMS 'version' with DB capability version levels as version 2.
+**
+**	Revision 6.1  89/03  wong
+**	Initial revision.  (Abstracted from 'FEingres()'.)
+**	24-aug-1990 (Joe)
+**	    Added the giant comment above about versions of the strings.
+**	21-jun-1991 (pete)	Removed couple unused variables (Saber C).
+**	10-jun-92 (rdrane)
+**		Added delimited identifier case for 6.5 FIPS support.  CUR_VERSION
+**		is now 3.  See above for full format.
+**	06-aug-92 (rdrane)
+**		Increment count of glob_array items since there are 12 now - forgot
+**		to do this last time here.
+**	23-apr-96 (chech02)
+**		cast some arguments to i4  for windows 3.1 port.
+**	05-feb-97 (sandyd)
+**	    	Appended new MAX_CATALOG_COLUMN_WIDTH iidbcapability to the
+**		shared data string, and incremented CUR_VERSION to 4 to
+**		reflect the expanded format.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+/*
+** This is the current version of string supported by UI.
+*/
+# define	CUR_VERSION	4
+
+char *IIUIscl_StdCatLevel();
+
+STATUS	FEinqerr();
+
+VOID	iiuiDcRestoreCap();
+VOID	iiuiDcapSave();
+
+/*{
+** Name:	IIUIsharedData() -	Get Database Constants for
+**						Shared DBMS Session.
+** Description:
+**	Retrieves the Front-End database constants from the shared communication
+**	channel (GCA) for a shared DBMS session.  This is checked to make
+**	sure the constants were passed.  If not, the caller should then call
+**	'IIUIgetData()' if this routine fails.
+**
+** Outputs:
+**	application	{bool *}  Whether session is shared with a user
+**					application.
+**
+** Returns:
+**	{STATUS}	OK	fetched constants from GCA.
+**			FAIL	failed to fetch constants.
+**
+** Side Effects:
+**	Sets up IIUIdbdata()->'user', 'dba', 'database', etc.
+**
+** History:
+**	4-sept-1988 (danielt)
+**		performance/transaction changes
+**	10/88 (jhw) corrected previous changes.
+**	8-dec-1988 (danielt)
+**		changed save buffer size to UI_SAVEBUF_SIZE
+**	03/89 (jhw)  Abstracted from 'FEingres()'.
+**	12/89 (jhw)  Added version.
+**	24-aug-1990 (Joe)
+**	    Change to read versioned strings as described above.
+**	05-may-1991 (jhw)  Replaced version with version levels.
+**	10-jun-92 (rdrane)
+**		Added delimited identifier case for 6.5 FIPS support.
+**	07-aug-92 (edf)
+**		Changed STcopy to CVan to load dlm_Case. 
+**	05-feb-97 (sandyd)
+**		Added decoding of version 4 glob string.
+*/
+
+STATUS
+IIUIsharedData ( application )
+bool	*application;
+{
+	register UIDBDATA	*uidbdata;
+
+	EXEC SQL BEGIN DECLARE SECTION;
+	    char		glob_buffer[UI_SAVEBUF_SIZE];
+	EXEC SQL END DECLARE SECTION;
+
+	/* shared session; restore from GCA */
+	EXEC SQL INQUIRE_INGRES (:glob_buffer = savestate);
+	if ( glob_buffer[0] != EOS )
+	{
+		i4	num_globs;
+		char	*glob_array[13];
+
+		uidbdata = IIUIdbdata();
+		num_globs = (sizeof(glob_array)/sizeof(char *));
+		STgetwords(glob_buffer, &num_globs, glob_array);
+		/*
+		** Make sure we got at least 6 words, so that we
+		** know it is a version 0 string.
+		*/
+		if ( num_globs <= (sizeof(glob_array)/sizeof(char *))
+				&& num_globs >= 6 )
+		{ /* restore from GCA */
+			i4 ui_version;
+
+			/* Get the version number before doing anything else. */
+			if (num_globs == 6)
+			{
+			    ui_version = 0;
+			}
+			else if ( num_globs <= 7 )
+			{
+			    /*
+			    ** Version 0 had 6 words, later versions have 8 or
+			    ** more, so 7 or less is an error of some kind.
+			    */
+			    return FAIL;
+			}
+			else
+			{
+			    if (CVan(glob_array[6], &ui_version) != OK)
+				return FAIL;
+			}
+			/*
+			** Do an integer division to check the version
+			** numbers.  If they aren't within the same group
+			** of 100, then we are incompatible.
+			*/
+			if ( ui_version/100 != CUR_VERSION/100 )
+			    return FAIL;
+
+			STcopy( glob_array[0], uidbdata->dba );
+			CVlower( uidbdata->dba );
+			STcopy( glob_array[0], uidbdata->sdba );
+
+			STcopy( glob_array[1], uidbdata->user );
+			CVlower( uidbdata->user );
+			STcopy( glob_array[1], uidbdata->suser );
+
+			STcopy( glob_array[2], uidbdata->catowner );
+
+			*application = (bool)( *glob_array[3] == '1' );
+
+			uidbdata->firstAutoCom = (bool)(*glob_array[4] == '1');
+
+			uidbdata->isdba = STequal(uidbdata->dba,uidbdata->user);
+
+			/*
+			** Start of Version 2 or later changes.
+			*/
+			if ( ui_version <= 1 )
+			{ /* version 1 or prior */
+				/* read capabilities to get version levels */
+				return IIUIdci_initcap();
+			}
+			else
+			{
+				/* restore shared capabilities */
+				iiuiDcRestoreCap(glob_array[5]);
+
+				STcopy(glob_array[7], uidbdata->catalog_level);
+				STcopy(glob_array[8], uidbdata->opensql_level);
+				STcopy(glob_array[9], uidbdata->ingsql_level);
+				STcopy(glob_array[10], uidbdata->ingquel_level);
+			}
+
+			/*
+			** End of Version 2
+			*/
+
+			if  (ui_version >= 3)
+			{
+				CVan(glob_array[11],&uidbdata->dlm_Case);
+			}
+
+			/*
+			** End of Version 3
+			*/
+
+			if  (ui_version >= 4)
+			{
+				CVan(glob_array[12],&uidbdata->max_cat_col_wid);
+			}
+
+			/*
+			** End of Version 4
+			*/
+
+			return OK;
+		}
+	}
+	return FAIL;
+}
+
+/*{
+** Name:	IIUIsetData() -	Set Database Constants for Shared DBMS Session.
+**
+** Description:
+**	Arranges to share the database constants using the shared communication
+**	channel (GCA) for a shared DBMS session.
+**
+** Inputs:
+**	application	{bool}  Setup for 4GL application.
+**
+** Side Effects:
+**	Sets up IIUIdbdata->'user', 'dba', 'database', etc. and passes them
+**	to the GCA channel.
+**
+** History:
+**	4-sept-1988 (danielt)
+**		performance/transaction changes
+**	10/88 (jhw) corrected previous changes.
+**	8-dec-1988 (danielt)
+**		changed save buffer size to UI_SAVEBUF_SIZE
+**	03/89 (jhw)  Abstracted from 'FEingres()'.
+**	12/89 (jhw)  Added version.
+**	24-aug-1990 (Joe)
+**	    Change to put uiversion into the string and to be
+**	    compatible with 6.3.
+**	05-may-1991 (jhw)  Replaced version with version levels.
+**	10-jun-92 (rdrane)
+**		Added delimited identifier case for 6.5 FIPS support.
+**	05-feb-97 (sandyd)
+**		Added encoding of max_cat_col_wid to the glob string.
+*/
+VOID
+IIUIsetData ( application )
+bool	application;
+{
+	register UIDBDATA	*uidbdata;
+	EXEC SQL BEGIN DECLARE SECTION;
+	    char		glob_buffer[UI_SAVEBUF_SIZE];
+	EXEC SQL END DECLARE SECTION;
+
+	char	*cp;
+
+	uidbdata = IIUIdbdata();
+	_VOID_ STprintf( glob_buffer, ERx("%s %s %s %d %d "),
+			uidbdata->sdba, uidbdata->suser, uidbdata->catowner,
+			(i4)application, (i4)uidbdata->firstAutoCom
+	);
+
+	/*
+	** Write the capabilities out.
+	*/
+	cp = glob_buffer + STlength(glob_buffer);
+	iiuiDcapSave( cp );
+
+	/*
+	** Write the version number and version levels, along with the
+	** casing of delimited identifiers, and max_cat_col_wid.
+	*/
+	cp = cp + STlength(cp);
+	_VOID_ STprintf(cp, ERx(" %d %s %s %s %s %d %d"), (i4)CUR_VERSION,
+			uidbdata->catalog_level, uidbdata->opensql_level,
+			uidbdata->ingsql_level, uidbdata->ingquel_level,
+			(i4)uidbdata->dlm_Case,
+			(i4)uidbdata->max_cat_col_wid);
+
+	EXEC SQL SET_INGRES (savestate = :glob_buffer);
+}
+
+/*{
+** Name:	IIUIgetData() -	Get Database Constants from DBMS.
+**
+** Description:
+**	Retrieves the Front-End database constants from the DBMS and arranges
+**	to share these constants using the shared communication channel (GCA)
+**	for a shared DBMS session.
+**
+** Inputs:
+**	application	{bool}  Setup for 4GL application.
+**
+** Returns:
+**	{STATUS}	OK	fetched constants from GCA.
+**			FAIL	failed to fetch constants.
+**
+** Side Effects:
+**	Sets up IIUIdbdata()->'user', 'dba', 'database', etc. and passes them
+**	to the GCA channel.
+**
+** History:
+**	4-sept-1988 (danielt)
+**		performance/transaction changes
+**	10/88 (jhw) corrected previous changes.
+**	8-dec-1988 (danielt)
+**		changed save buffer size to UI_SAVEBUF_SIZE
+**	03/89 (jhw)  Abstracted from 'FEingres()'.
+**	12/89 (jhw)  Added version.
+**	3/8/91 (pete) Added test for >= "6.4" standard catalogs for Gateways.
+**		If so, then select the new columm: iidbconstants.system_owner.
+**	05/05/91 (jhw)  Removed version, which has been subsumed by version
+**	levels.
+**	6/21/91 (pete)	Allow $ingres to be the system_owner for Distributed
+**			DBMS. Also return FAIL if Gateway select from
+**			iidbconstants returns 0 rows. Fix for Bug 38140.
+**			Later, added error message E_UI0037_NO_SYSTEM_OWNER.
+**	10-jun-92 (rdrane)
+**		INGRES catalog names should never be delimited identifiers, but
+**		use IIUIlbo_dlmBEobject() since we eventually want to obsolete
+**		IIUIlbo_lowerBEobject().
+**	1-jul-92 (rdrane)
+**		Rename IIUIlbo_dlmBEobject() to IIUIdbo_dlmBEobject() to ensure
+**		uniqueness within 7 characters and conform to general naming
+**		conventions.
+**	22-jul-1993 (rdrane)
+**		Effect case translation of INGRES catowner prior to setting
+**		uidbdata->catowner for FIPS support.
+**	23-jul-1993 (rdrane)
+**		Correct overzealousness in effecting case translation of
+**		INGRES catowner prior to setting uidbdata->catowner for FIPS
+**		support.
+*/
+STATUS
+IIUIgetData ( application )
+bool	application;
+{
+	STATUS	rval;
+	EXEC SQL BEGIN DECLARE SECTION;
+	    char	cat_name[FE_MAXNAME + 1];
+	    UIDBDATA	*uidbdata;
+	EXEC SQL END DECLARE SECTION;
+
+	/* Must fetch from DBMS */
+
+	uidbdata = IIUIdbdata();
+	/* Note:  'IIUIdml()' will call 'IIUIdci_initcap()' as a side-effect */
+	if (  ( IIUIdml() != UI_DML_GTWSQL )
+	   || ( IIUIdcd_dist() == TRUE)
+	   )
+	{ /* INGRES or Star DBMS */
+		STcopy(UI_FE_CAT_ID_65,uidbdata->catowner);
+		IIUGdbo_dlmBEobject(uidbdata->catowner,FALSE);
+		EXEC SQL SELECT user_name, dba_name
+				INTO :uidbdata->user, :uidbdata->dba
+			FROM iidbconstants;
+	}
+	else
+	{ /* Gateway */
+	    if ( (rval = FEinqerr()) == OK )
+	    {
+		    if (STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_64) >= 0)
+		    {
+			/* 6.4 or newer standard catalogs.
+			** Column iidbconstants.system_owner exists.
+			*/
+			EXEC SQL SELECT user_name, dba_name, system_owner
+				 INTO :uidbdata->user, :uidbdata->dba,
+				      :uidbdata->catowner
+				 FROM iidbconstants;
+		    }
+		    else
+		    {
+			STcopy(ERx("ii_objects"), cat_name);
+			IIUGdbo_dlmBEobject(cat_name,FALSE);
+			/* Note: DO NOT CHANGE the following query at this time;
+			** 6.3 and older Gateways scan for this exact query text
+			** (yuk!), and then change the query text, both because
+			** it performs badly due to the join, and concept of
+			** table_owner doesn't exist on some Gateways.  (pete)
+			** In 6.4 and later releases, the catalog owner is
+			** fetched from the "ii_dbcapabilities" table directly
+			** so this should disappear at some point.  (jhw)
+			*/
+			EXEC SQL SELECT table_owner, user_name, dba_name
+				    INTO :uidbdata->catowner, :uidbdata->user,
+					    :uidbdata->dba
+			    FROM iitables, iidbconstants
+			    WHERE table_name = :cat_name;
+
+			if ( FEinqrows() == 0 || FEinqerr() != 0 )
+			{
+			    /* can't find system owner. must exit. */
+			    IIUGerr(E_UI0037_NO_SYSTEM_OWNER, UG_ERR_ERROR,
+					(i4) 1, (PTR) cat_name);
+			    return FAIL;
+			}
+		    }
+	    }
+	    else
+	    {
+		return rval;
+	    }
+	}
+
+	if ( (rval = FEinqerr()) == OK && (rval = IIUIdci_initcap()) == OK )
+	{
+		_VOID_ STtrmwhite(uidbdata->user);
+		STcopy(uidbdata->user, uidbdata->suser);
+		CVlower(uidbdata->user);
+		_VOID_ STtrmwhite(uidbdata->dba);
+		STcopy(uidbdata->dba, uidbdata->sdba);
+		CVlower(uidbdata->dba);
+
+		uidbdata->isdba = STequal(uidbdata->dba, uidbdata->user);
+		IIUIsetData(application);
+	}
+	return rval;
+} /* end DBMS constants retrieve */

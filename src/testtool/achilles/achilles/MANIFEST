@@ -1,0 +1,42 @@
+#
+# MANIFEST file for testtool!achilles!achilles
+#
+# History:
+#	10-jan-2005 (abbjo03)
+#	    Don't build man files on VMS.
+
+IISUBSYS testtool achilles achilles ;
+
+if ! $(NT)
+{
+IITOOLSEXE readlog : readlog.c ;
+
+IITOOLSEXE achilles : achilles.c ;
+
+    if $(VMS)
+    {
+        IINEEDLIBS readlog : ACHILLESLIB COMPATLIB ;
+        IINEEDLIBS achilles : ACHILLESLIB COMPATLIB ;
+    }
+    else
+    {
+        IINEEDLIBS readlog : ACHILLESLIB LIBINGRES ACHILLES_WNTLIB ;
+        IINEEDLIBS achilles : ACHILLESLIB LIBINGRES ACHILLES_WNTLIB ;
+    }
+}
+else
+{
+IITOOLSWNTEXE readlog : readlog.c ;
+IINEEDLIBS readlog : ACHILLESLIB LIBINGRES ACHILLES_WNTLIB ;
+
+IITOOLSWNTEXE achilles : achilles.c ;
+IINEEDLIBS achilles : ACHILLESLIB LIBINGRES ACHILLES_WNTLIB ;
+}
+if $(UNIX)
+{
+    IITMANFILES achilles.1 ;
+}
+
+IILIBRARY ACHILLESLIB : strtchld.c prntstat.c logactns.c
+	actools.c abortit.c ;
+

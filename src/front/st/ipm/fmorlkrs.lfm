@@ -1,0 +1,10 @@
+COPYFORM:	6.4	1991_08_19 08:51:37 GMT  
+FORM:	fmorelkres	more info for lock resources	
+	37	5	0	0	3	0	2	9	0	0	0	0	0	128	0	3
+FIELD:
+	0	value	21	20	0	18	1	25	3	11	18	0	7	Value:	0	0	0	0	0	0	0		c18			0	0
+	1	invalid	21	12	0	10	1	19	2	9	10	0	9	Invalid:	0	0	0	0	0	0	0	<no>	c10			0	1
+	2	rsb_count	30	4	0	5	1	22	1	1	5	0	17	Number of locks:	0	0	0	0	512	0	0		-i5			0	2
+TRIM:
+	0	0	5:37:0	2049	0	0	0
+	1	0	More Info	2048	0	0	0

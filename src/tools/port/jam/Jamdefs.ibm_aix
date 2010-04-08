@@ -1,0 +1,125 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.r64_us5 -- Variable definitions for IBM/AIX 
+#
+#  Description:
+#       Platform specific variable definitions for AIX platform
+#
+# History:
+#	20-Oct-2004 (hweho01)
+#	    Initial creation
+#       30-Dec-2004 (hweho01)  
+#           Corrected the references to CPP and 64 bit ASM file.
+#       13-Jan-2005 (hweho01)  
+#           1)Due to the change in grammar.lex, need to define LEX to flex. 
+#           2)Corrected the setting for OPTIM and IIOPTIM. 
+#	04-Mar-2005 (hanje04)
+#	    SIR 114034
+#	    Define CCLDSRVOBJ64 for creating a 64bit iimerge.o. Only Linux
+#	    and AIX hybrid need it
+#       31-Mar-2005 (srisu02)
+#           Added CCSHLDMACH64 to fix jam warnings
+#       26_Aug-2005 (hweho01)
+#           Included -qthreaded in CCLDMACH.
+#       30-Sep-2005 (hweho01)
+#         Define platform_string & extension_string for readme file.
+#       05-Oct-2005 (hweho01)
+#         Added -brtl to build the UDT shared libraries. 
+#       10-Feb-2006 (hweho01)
+#         Included  -b64 in CCSHLDMACH64. 
+#       16-Oct-2006 (hanal04) Bug 116866
+#           Add CCDEBUG to hold the compiler's debug flag. Used to ensure
+#           NOOPTIM does not strip this when explicitly set.
+#       01-Mar-2006 (hweho01)
+#           Enable IIOPTIM for reset.  
+#       19-Jan-2009 (hanal04) Bug 121162
+#           Define CCLDBMAX and CCLDBMAXHB
+#       17-Mar-2009 (hweho01)
+#           Changed CCLDSERVER to be "-bmaxdata:0x40000000".
+#       05-May-2009 (bonro01)
+#           Create server using iimerge.a
+#       18-Mar-2009 (frima01) Bug 120874
+#           Enable c99 compiler flag for using variable argument lists
+#           in macros.
+#	22-Jun-2009 (kschendel) SIR 122138
+#	    Combine 32 and 64-bit IBM Power AIX.
+#	    Get rid of AIXASMFILE thing by changing jamrules to cpp assembly
+#	    files before m4'ing them.  (Would be nice to do it in as32/as64,
+#	    but maybe that can be worked out later.)
+#
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG 	= "-DNET_SSL -DAIX -D_REENTRANT -DMCC_HTTPD -DXP_UNIX -DSPAPI20" ;
+APACHE_API_FLAG 	= "-DAIX=43 -U__STR__" ;
+VERS32 	= "rs4_us5" ;
+VERS64	= "r64_us5" ;
+AS32	= $(AS) ;
+AS64	= $(AS) ;
+LD32	= $(LD) ;
+LD64	= $(LD) ;
+CCLD32	= $(CCLD) ;
+CCLD64	= $(CCLD) ;
+
+ASMACH32 = "-a32" ;
+ASMACH64 = "-a64" ;
+ASM4FLAGS32 = "/usr/include/sys/asdef.s" ; 
+ASM4FLAGS64 = "-D __64BIT__ /usr/include/sys/asdef.s" ;
+
+CC   = "xlc_r" ;
+CCDEBUG = "-g" ;
+CPP default = "/lib/cpp" ;
+M4              = "/usr/bin/m4" ; 
+CCMACH32	= "-DBUILD_ARCH32 -q32 -qlanglvl=extc99 -qhssngl -qchars=signed -qmaxmem=-1 -qcpluscmt -Q -D_BSD=43" ;
+CCMACH64 	= "-DBUILD_ARCH64 -q64 -qlanglvl=extc99 -qhssngl -qchars=signed -qmaxmem=-1 -qcpluscmt -Q -D_BSD=43" ;
+CCLDMACH32	= "-q32 -qthreaded" ;
+CCLDMACH64 	= "-q64 -qthreaded" ;
+CCLDSERVER32 	= "-bmaxdata:0x40000000" ;
+CCLDSERVER64 	= "-b64" ;
+CCPICFLAG 	= "" ;
+SLSFX 		= "a" ;
+LIBSFX 		= "a" ;
+OBJSFX 		= "o" ;
+MWSLSFX 	= "so" ;
+CGISFX 		= "cgi" ;
+LDLIBPATH32	= "/lib /usr/lib /usr/local/lib" ;
+LDLIBPATH64 	= "/lib /usr/lib /usr/local/lib" ;
+LIBMACH 	= "-lld -lnsl -lcurses" ;
+LDLIBMACH32	= "-ltli_r -liconv -lpthreads -ldl -lm -lbsd -lc_r -lC_r" ;
+LDLIBMACH64	= "-ltli_r -liconv -lpthreads -ldl -lm -lbsd -lc_r -lC_r" ; 
+CCSHLDMACH32    = "-b32 -K -bexpall -brtl -G -bnoentry" ;
+CCSHLDMACH64    = "-b64 -K -bexpall -brtl -G -bnoentry" ;
+LD_ICE_FLAGS 	= "-brtl -bexpall" ;
+LEVEL1_OPTIM 	= "-O" ;
+OPTIM 	        = "" ;
+IIOPTIM         ?= "-O" ;
+NOOPTIM         = "-qnooptimize" ;
+LONGLONG	= long long ;
+SHELLHEADER 	= ""#!/bin/sh"" ;
+BSD42 default = -DBSD42 ;
+DIRENT default = -DDIRENT ;
+DIRFUNC default = -DDIRFUNC ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 default = -DSYS5 ;
+C++	= "xlc_r" ;
+C++FLAGS32 = "-DBUILD_ARCH32 -q32" ;
+C++FLAGS64 = "-DBUILD_ARCH64 -qchars=signed -q64" ;
+UNDEFFLAG  = "-u " ;
+XERC_DEFS	= "-DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET" ;
+XERC_LIBS	= "-lc_r -lC_r" ;
+XERC64_LIBS     = "-lc_r -lC_r" ;
+DBMS_STACKSIZE = 131072 ;
+#
+#ICE File extensions
+#
+ICE_EXT = a ;
+CGI_EXT = cgi ;
+LEX = flex ;
+#
+# for readme.html 
+#
+platform_string = "IBM AIX" ;
+extension_string = $(config_string) ;

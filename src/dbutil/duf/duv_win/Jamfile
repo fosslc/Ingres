@@ -1,0 +1,12 @@
+#
+# Jamfile file for dbutil!duf!duv_win
+#
+
+SubDir ING_SRC dbutil duf duv_win ;
+
+IISUBSYS dbutil duf duv_win ;
+
+
+IIBINEXE upgradedb : upgrdwrp.c ;
+IINEEDLIBS upgradedb :  COMPATLIB ;
+

@@ -1,0 +1,614 @@
+/*
+	Test Name: zaa16.sep
+	Time: 16-AUG-1992 23:17:56
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename:
+	Purpose	:
+	Input Files  :
+	Output Files :
+	Database     :
+	Tables       :
+	Synopsis     :
+
+ History: 16-AUG-1992	(donj)	Created
+          25-AUG-1993	(donj)  Updated canons for VMS.
+	  10-SEP-1993   (donj)  Added new UPPERCASE object tokens.
+          31-Jan-1996	(somsa01)	Added NT_GENERIC canons.
+*/
+? fill zaa16.tmp 
+!!
+	Ingres Corporation
+
+ database  iidatabase   database,  iidatabase   database:  iidatabase
+ database  iidatabase,  database,  iidatabase,  database:  iidatabase,
+ database "iidatabase"  database, "iidatabase"  database: "iidatabase"
+ database "iidatabase", database, "iidatabase", database: "iidatabase",
+ database 'iidatabase'  database, 'iidatabase'  database: 'iidatabase'
+ database 'iidatabase', database, 'iidatabase', database: 'iidatabase',
+ Database  iidatabase   Database,  iidatabase   Database:  iidatabase
+ Database  iidatabase,  Database,  iidatabase,  Database:  iidatabase,
+ Database "iidatabase"  Database, "iidatabase"  Database: "iidatabase"
+ Database "iidatabase", Database, "iidatabase", Database: "iidatabase",
+ Database 'iidatabase'  Database, 'iidatabase'  Database: 'iidatabase'
+ Database 'iidatabase', Database, 'iidatabase', Database: 'iidatabase',
+ DATABASE  iidatabase   DATABASE,  iidatabase   DATABASE:  iidatabase
+ DATABASE  iidatabase,  DATABASE,  iidatabase,  DATABASE:  iidatabase,
+ DATABASE "iidatabase"  DATABASE, "iidatabase"  DATABASE: "iidatabase"
+ DATABASE "iidatabase", DATABASE, "iidatabase", DATABASE: "iidatabase",
+ DATABASE 'iidatabase'  DATABASE, 'iidatabase'  DATABASE: 'iidatabase'
+ DATABASE 'iidatabase', DATABASE, 'iidatabase', DATABASE: 'iidatabase',
+
+ rule  iirule   rule,  iirule   rule:  iirule
+ rule  iirule,  rule,  iirule,  rule:  iirule,
+ rule "iirule"  rule, "iirule"  rule: "iirule"
+ rule "iirule", rule, "iirule", rule: "iirule",
+ rule 'iirule'  rule, 'iirule'  rule: 'iirule'
+ rule 'iirule', rule, 'iirule', rule: 'iirule',
+ Rule  iirule   Rule,  iirule   Rule:  iirule
+ Rule  iirule,  Rule,  iirule,  Rule:  iirule,
+ Rule "iirule"  Rule, "iirule"  Rule: "iirule"
+ Rule "iirule", Rule, "iirule", Rule: "iirule",
+ Rule 'iirule'  Rule, 'iirule'  Rule: 'iirule'
+ Rule 'iirule', Rule, 'iirule', Rule: 'iirule',
+ RULE  iirule   RULE,  iirule   RULE:  iirule
+ RULE  iirule,  RULE,  iirule,  RULE:  iirule,
+ RULE "iirule"  RULE, "iirule"  RULE: "iirule"
+ RULE "iirule", RULE, "iirule", RULE: "iirule",
+ RULE 'iirule'  RULE, 'iirule'  RULE: 'iirule'
+ RULE 'iirule', RULE, 'iirule', RULE: 'iirule',
+
+ procedure  iiprocedure   procedure,  iiprocedure   procedure:  iiprocedure
+ procedure  iiprocedure,  procedure,  iiprocedure,  procedure:  iiprocedure,
+ procedure "iiprocedure"  procedure, "iiprocedure"  procedure: "iiprocedure"
+ procedure "iiprocedure", procedure, "iiprocedure", procedure: "iiprocedure",
+ procedure 'iiprocedure'  procedure, 'iiprocedure'  procedure: 'iiprocedure'
+ procedure 'iiprocedure', procedure, 'iiprocedure', procedure: 'iiprocedure',
+ Procedure  iiprocedure   Procedure,  iiprocedure   Procedure:  iiprocedure
+ Procedure  iiprocedure,  Procedure,  iiprocedure,  Procedure:  iiprocedure,
+ Procedure "iiprocedure"  Procedure, "iiprocedure"  Procedure: "iiprocedure"
+ Procedure "iiprocedure", Procedure, "iiprocedure", Procedure: "iiprocedure",
+ Procedure 'iiprocedure'  Procedure, 'iiprocedure'  Procedure: 'iiprocedure'
+ Procedure 'iiprocedure', Procedure, 'iiprocedure', Procedure: 'iiprocedure',
+ PROCEDURE  iiprocedure   PROCEDURE,  iiprocedure   PROCEDURE:  iiprocedure
+ PROCEDURE  iiprocedure,  PROCEDURE,  iiprocedure,  PROCEDURE:  iiprocedure,
+ PROCEDURE "iiprocedure"  PROCEDURE, "iiprocedure"  PROCEDURE: "iiprocedure"
+ PROCEDURE "iiprocedure", PROCEDURE, "iiprocedure", PROCEDURE: "iiprocedure",
+ PROCEDURE 'iiprocedure'  PROCEDURE, 'iiprocedure'  PROCEDURE: 'iiprocedure'
+ PROCEDURE 'iiprocedure', PROCEDURE, 'iiprocedure', PROCEDURE: 'iiprocedure',
+
+ table  iitable   table,  iitable   table:  iitable
+ table  iitable,  table,  iitable,  table:  iitable,
+ table "iitable"  table, "iitable"  table: "iitable"
+ table "iitable", table, "iitable", table: "iitable",
+ table 'iitable'  table, 'iitable'  table: 'iitable'
+ table 'iitable', table, 'iitable', table: 'iitable',
+ Table  iitable   Table,  iitable   Table:  iitable
+ Table  iitable,  Table,  iitable,  Table:  iitable,
+ Table "iitable"  Table, "iitable"  Table: "iitable"
+ Table "iitable", Table, "iitable", Table: "iitable",
+ Table 'iitable'  Table, 'iitable'  Table: 'iitable'
+ Table 'iitable', Table, 'iitable', Table: 'iitable',
+ TABLE  iitable   TABLE,  iitable   TABLE:  iitable
+ TABLE  iitable,  TABLE,  iitable,  TABLE:  iitable,
+ TABLE "iitable"  TABLE, "iitable"  TABLE: "iitable"
+ TABLE "iitable", TABLE, "iitable", TABLE: "iitable",
+ TABLE 'iitable'  TABLE, 'iitable'  TABLE: 'iitable'
+ TABLE 'iitable', TABLE, 'iitable', TABLE: 'iitable',
+
+ user  iiuser   user,  iiuser   user:  iiuser
+ user  iiuser,  user,  iiuser,  user:  iiuser,
+ user "iiuser"  user, "iiuser"  user: "iiuser"
+ user "iiuser", user, "iiuser", user: "iiuser",
+ user 'iiuser'  user, 'iiuser'  user: 'iiuser'
+ user 'iiuser', user, 'iiuser', user: 'iiuser',
+ User  iiuser   User,  iiuser   User:  iiuser
+ User  iiuser,  User,  iiuser,  User:  iiuser,
+ User "iiuser"  User, "iiuser"  User: "iiuser"
+ User "iiuser", User, "iiuser", User: "iiuser",
+ User 'iiuser'  User, 'iiuser'  User: 'iiuser'
+ User 'iiuser', User, 'iiuser', User: 'iiuser',
+ USER  iiuser   USER,  iiuser   USER:  iiuser
+ USER  iiuser,  USER,  iiuser,  USER:  iiuser,
+ USER "iiuser"  USER, "iiuser"  USER: "iiuser"
+ USER "iiuser", USER, "iiuser", USER: "iiuser",
+ USER 'iiuser'  USER, 'iiuser'  USER: 'iiuser'
+ USER 'iiuser', USER, 'iiuser', USER: 'iiuser',
+
+ owner  iiowner   owner,  iiowner   owner:  iiowner
+ owner  iiowner,  owner,  iiowner,  owner:  iiowner,
+ owner "iiowner"  owner, "iiowner"  owner: "iiowner"
+ owner "iiowner", owner, "iiowner", owner: "iiowner",
+ owner 'iiowner'  owner, 'iiowner'  owner: 'iiowner'
+ owner 'iiowner', owner, 'iiowner', owner: 'iiowner',
+ Owner  iiowner   Owner,  iiowner   Owner:  iiowner
+ Owner  iiowner,  Owner,  iiowner,  Owner:  iiowner,
+ Owner "iiowner"  Owner, "iiowner"  Owner: "iiowner"
+ Owner "iiowner", Owner, "iiowner", Owner: "iiowner",
+ Owner 'iiowner'  Owner, 'iiowner'  Owner: 'iiowner'
+ Owner 'iiowner', Owner, 'iiowner', Owner: 'iiowner',
+ OWNER  iiowner   OWNER,  iiowner   OWNER:  iiowner
+ OWNER  iiowner,  OWNER,  iiowner,  OWNER:  iiowner,
+ OWNER "iiowner"  OWNER, "iiowner"  OWNER: "iiowner"
+ OWNER "iiowner", OWNER, "iiowner", OWNER: "iiowner",
+ OWNER 'iiowner'  OWNER, 'iiowner'  OWNER: 'iiowner'
+ OWNER 'iiowner', OWNER, 'iiowner', OWNER: 'iiowner',
+
+ owned by  iiowner   owned by,  iiowner   owned by:  iiowner
+ owned by  iiowner,  owned by,  iiowner,  owned by:  iiowner,
+ owned by "iiowner"  owned by, "iiowner"  owned by: "iiowner"
+ owned by "iiowner", owned by, "iiowner", owned by: "iiowner",
+ owned by 'iiowner'  owned by, 'iiowner'  owned by: 'iiowner'
+ owned by 'iiowner', owned by, 'iiowner', owned by: 'iiowner',
+ Owned by  iiowner   Owned by,  iiowner   Owned by:  iiowner
+ Owned by  iiowner,  Owned by,  iiowner,  Owned by:  iiowner,
+ Owned by "iiowner"  Owned by, "iiowner"  Owned by: "iiowner"
+ Owned by "iiowner", Owned by, "iiowner", Owned by: "iiowner",
+ Owned by 'iiowner'  Owned by, 'iiowner'  Owned by: 'iiowner'
+ Owned by 'iiowner', Owned by, 'iiowner', Owned by: 'iiowner',
+ OWNED BY  iiowner   OWNED BY,  iiowner   OWNED BY:  iiowner
+ OWNED BY  iiowner,  OWNED BY,  iiowner,  OWNED BY:  iiowner,
+ OWNED BY "iiowner"  OWNED BY, "iiowner"  OWNED BY: "iiowner"
+ OWNED BY "iiowner", OWNED BY, "iiowner", OWNED BY: "iiowner",
+ OWNED BY 'iiowner'  OWNED BY, 'iiowner'  OWNED BY: 'iiowner'
+ OWNED BY 'iiowner', OWNED BY, 'iiowner', OWNED BY: 'iiowner',
+
+ column  iicolumn   column,  iicolumn   column:  iicolumn
+ column  iicolumn,  column,  iicolumn,  column:  iicolumn,
+ column "iicolumn"  column, "iicolumn"  column: "iicolumn"
+ column "iicolumn", column, "iicolumn", column: "iicolumn",
+ column 'iicolumn'  column, 'iicolumn'  column: 'iicolumn'
+ column 'iicolumn', column, 'iicolumn', column: 'iicolumn',
+ Column  iicolumn   Column,  iicolumn   Column:  iicolumn
+ Column  iicolumn,  Column,  iicolumn,  Column:  iicolumn,
+ Column "iicolumn"  Column, "iicolumn"  Column: "iicolumn"
+ Column "iicolumn", Column, "iicolumn", Column: "iicolumn",
+ Column 'iicolumn'  Column, 'iicolumn'  Column: 'iicolumn'
+ Column 'iicolumn', Column, 'iicolumn', Column: 'iicolumn',
+ COLUMN  iicolumn   COLUMN,  iicolumn   COLUMN:  iicolumn
+ COLUMN  iicolumn,  COLUMN,  iicolumn,  COLUMN:  iicolumn,
+ COLUMN "iicolumn"  COLUMN, "iicolumn"  COLUMN: "iicolumn"
+ COLUMN "iicolumn", COLUMN, "iicolumn", COLUMN: "iicolumn",
+ COLUMN 'iicolumn'  COLUMN, 'iicolumn'  COLUMN: 'iicolumn'
+ COLUMN 'iicolumn', COLUMN, 'iicolumn', COLUMN: 'iicolumn',
+
+ E_US1452 DESTROY  iiobject   E_US1452 DESTROY,  iiobject   E_US1452 DESTROY:  iiobj-
+ect
+ E_US1452 DESTROY  iiobject,  E_US1452 DESTROY,  iiobject,  E_US1452 DESTROY:  iiobj-
+ect,
+ E_US1452 DESTROY "iiobject"  E_US1452 DESTROY, "iiobject"  E_US1452 DESTROY: "iiobj-
+ect"
+ E_US1452 DESTROY "iiobject", E_US1452 DESTROY, "iiobject", E_US1452 DESTROY: "iiobj-
+ect",
+ E_US1452 DESTROY 'iiobject'  E_US1452 DESTROY, 'iiobject'  E_US1452 DESTROY: 'iiobj-
+ect'
+ E_US1452 DESTROY 'iiobject', E_US1452 DESTROY, 'iiobject', E_US1452 DESTROY: 'iiobj-
+ect',
+
+ E_US0AC1 DROP  iiobject   E_US0AC1 DROP,  iiobject   E_US0AC1 DROP:  iiobject
+ E_US0AC1 DROP  iiobject,  E_US0AC1 DROP,  iiobject,  E_US0AC1 DROP:  iiobject,
+ E_US0AC1 DROP "iiobject"  E_US0AC1 DROP, "iiobject"  E_US0AC1 DROP: "iiobject"
+ E_US0AC1 DROP "iiobject", E_US0AC1 DROP, "iiobject", E_US0AC1 DROP: "iiobject",
+ E_US0AC1 DROP 'iiobject'  E_US0AC1 DROP, 'iiobject'  E_US0AC1 DROP: 'iiobject'
+ E_US0AC1 DROP 'iiobject', E_US0AC1 DROP, 'iiobject', E_US0AC1 DROP: 'iiobject',
+
+   (owner donj)
+
+  Copyright (c) 1981, 1993
+
++-------+----------+----+
+|       |          |    |
++-------+----------+----+
+|       |          |    |
+|       |          |    |
+|       |          |    |
++-------+----------+----+
+
+11-nov-92 11-Nov-92 11-NOV-92 11/nov/92 11/Nov/92 11/NOV/92
+11_nov_92 11_Nov_92 11_NOV_92 Nov-11-92 nov-11-92 NOV-11-92
+Nov/11/92 nov/11/92 NOV/11/92 Nov_11_92 nov_11_92 NOV_11_92
+
+NOVEMBER 11, 1982
+
+11-nov-92 01:02:03  11-Nov-92 01:02:03  11-NOV-92 01:02:03  11/nov/92 01:02:03  11/N-
+ov/92 01:02:03  11/NOV/92 01:02:03
+11_nov_92 01:02:03  11_Nov_92 01:02:03  11_NOV_92 01:02:03  Nov-11-92 01:02:03  nov--
+11-92 01:02:03  NOV-11-92 01:02:03
+Nov/11/92 01:02:03  nov/11/92 01:02:03  NOV/11/92 01:02:03  Nov_11_92 01:02:03  nov_-
+11_92 01:02:03  NOV_11_92 01:02:03
+
+NOVEMBER 11, 1982 01:02:03
+
+11-nov-92 01:02  11-Nov-92 01:02  11-NOV-92 01:02  11/nov/92 01:02  11/Nov/92 01:02 -
+ 11/NOV/92 01:02
+11_nov_92 01:02  11_Nov_92 01:02  11_NOV_92 01:02  Nov-11-92 01:02  nov-11-92 01:02 -
+ NOV-11-92 01:02
+Nov/11/92 01:02  nov/11/92 01:02  NOV/11/92 01:02  Nov_11_92 01:02  nov_11_92 01:02 -
+ NOV_11_92 01:02
+
+NOVEMBER 11, 1982 01:02
+
+\x14ade 0xffff 0123456789abcdef
+
+
+ 6.4/00 (su4.u42/99)
+
+ [dir] ing_dir: ing_dir:[dir]  [dir.dir2.dir3.dir4] [-]
+
+ /dir $ing_dir $ing_dir/dir    /dir/dir2/dir3/dir4 ../
+
+INGRES ABF Version 6.4/00 (su4.u42/99) login what what?
+
+INGRES/ABF Version 6.4
+
+Wednesday, June 30 2:31:00 1993 (16-AUG-1992 23:18:26) 1992-JAN-01 23:13:01
+
+23:59:59 1567854
+
+34.567e-07 13.456 .007 1.0 1.23E+12 \12 0777
+INGRES VAX Version 6.4/02 (vax.vms/00) login 19-AUG-1992 17:36:43
+continue
+*
+
+    (19-AUG-1992 15:28:33)
+E_US0AC1 DROP: 'gca00' does not exist or is not owned by you.
+
+zzzzz (thu jan 30 14:30:30 1992) zzzzz
+
+11-nov-1992 11-Nov-1992 11-NOV-1992 11/nov/1992 11/Nov/1992 11/NOV/1992
+11_nov_1992 11_Nov_1992 11_NOV_1992 Nov-11-1992 nov-11-1992 NOV-11-1992
+Nov/11/1992 nov/11/1992 NOV/11/1992 Nov_11_1992 nov_11_1992 NOV_11_1992
+
+Ending at: Tue Feb  2 17:44:29 1993
+
+
+!!
+? type zaa16.tmp 
+<<
+	Ingres Corporation
+
+ database  zzdatabase   database,  zzdatabase   database:  zzdatabase
+ database  zzdatabase,  database,  zzdatabase,  database:  zzdatabase,
+ database "zzdatabase"  database, "zzdatabase"  database: "zzdatabase"
+ database "zzdatabase", database, "zzdatabase", database: "zzdatabase",
+ database 'zzdatabase'  database, 'zzdatabase'  database: 'zzdatabase'
+ database 'zzdatabase', database, 'zzdatabase', database: 'zzdatabase',
+ Database  zzdatabase   Database,  zzdatabase   Database:  zzdatabase
+ Database  zzdatabase,  Database,  zzdatabase,  Database:  zzdatabase,
+ Database "zzdatabase"  Database, "zzdatabase"  Database: "zzdatabase"
+ Database "zzdatabase", Database, "zzdatabase", Database: "zzdatabase",
+ Database 'zzdatabase'  Database, 'zzdatabase'  Database: 'zzdatabase'
+ Database 'zzdatabase', Database, 'zzdatabase', Database: 'zzdatabase',
+ Database  zzdatabase   Database,  zzdatabase   Database:  zzdatabase
+ Database  zzdatabase,  Database,  zzdatabase,  Database:  zzdatabase,
+ Database "zzdatabase"  Database, "zzdatabase"  Database: "zzdatabase"
+ Database "zzdatabase", Database, "zzdatabase", Database: "zzdatabase",
+ Database 'zzdatabase'  Database, 'zzdatabase'  Database: 'zzdatabase'
+ Database 'zzdatabase', Database, 'zzdatabase', Database: 'zzdatabase',
+
+ rule  zzrule   rule,  zzrule   rule:  zzrule
+ rule  zzrule,  rule,  zzrule,  rule:  zzrule,
+ rule "zzrule"  rule, "zzrule"  rule: "zzrule"
+ rule "zzrule", rule, "zzrule", rule: "zzrule",
+ rule 'zzrule'  rule, 'zzrule'  rule: 'zzrule'
+ rule 'zzrule', rule, 'zzrule', rule: 'zzrule',
+ Rule  zzrule   Rule,  zzrule   Rule:  zzrule
+ Rule  zzrule,  Rule,  zzrule,  Rule:  zzrule,
+ Rule "zzrule"  Rule, "zzrule"  Rule: "zzrule"
+ Rule "zzrule", Rule, "zzrule", Rule: "zzrule",
+ Rule 'zzrule'  Rule, 'zzrule'  Rule: 'zzrule'
+ Rule 'zzrule', Rule, 'zzrule', Rule: 'zzrule',
+ Rule  zzrule   Rule,  zzrule   Rule:  zzrule
+ Rule  zzrule,  Rule,  zzrule,  Rule:  zzrule,
+ Rule "zzrule"  Rule, "zzrule"  Rule: "zzrule"
+ Rule "zzrule", Rule, "zzrule", Rule: "zzrule",
+ Rule 'zzrule'  Rule, 'zzrule'  Rule: 'zzrule'
+ Rule 'zzrule', Rule, 'zzrule', Rule: 'zzrule',
+
+ procedure  zzprocedure   procedure,  zzprocedure   procedure:  zzprocedure
+ procedure  zzprocedure,  procedure,  zzprocedure,  procedure:  zzprocedure,
+ procedure "zzprocedure"  procedure, "zzprocedure"  procedure: "zzprocedure"
+ procedure "zzprocedure", procedure, "zzprocedure", procedure: "zzprocedure",
+ procedure 'zzprocedure'  procedure, 'zzprocedure'  procedure: 'zzprocedure'
+ procedure 'zzprocedure', procedure, 'zzprocedure', procedure: 'zzprocedure',
+ Procedure  zzprocedure   Procedure,  zzprocedure   Procedure:  zzprocedure
+ Procedure  zzprocedure,  Procedure,  zzprocedure,  Procedure:  zzprocedure,
+ Procedure "zzprocedure"  Procedure, "zzprocedure"  Procedure: "zzprocedure"
+ Procedure "zzprocedure", Procedure, "zzprocedure", Procedure: "zzprocedure",
+ Procedure 'zzprocedure'  Procedure, 'zzprocedure'  Procedure: 'zzprocedure'
+ Procedure 'zzprocedure', Procedure, 'zzprocedure', Procedure: 'zzprocedure',
+ Procedure  zzprocedure   Procedure,  zzprocedure   Procedure:  zzprocedure
+ Procedure  zzprocedure,  Procedure,  zzprocedure,  Procedure:  zzprocedure,
+ Procedure "zzprocedure"  Procedure, "zzprocedure"  Procedure: "zzprocedure"
+ Procedure "zzprocedure", Procedure, "zzprocedure", Procedure: "zzprocedure",
+ Procedure 'zzprocedure'  Procedure, 'zzprocedure'  Procedure: 'zzprocedure'
+ Procedure 'zzprocedure', Procedure, 'zzprocedure', Procedure: 'zzprocedure',
+
+ table  zztable   table,  zztable   table:  zztable
+ table  zztable,  table,  zztable,  table:  zztable,
+ table "zztable"  table, "zztable"  table: "zztable"
+ table "zztable", table, "zztable", table: "zztable",
+ table 'zztable'  table, 'zztable'  table: 'zztable'
+ table 'zztable', table, 'zztable', table: 'zztable',
+ Table  zztable   Table,  zztable   Table:  zztable
+ Table  zztable,  Table,  zztable,  Table:  zztable,
+ Table "zztable"  Table, "zztable"  Table: "zztable"
+ Table "zztable", Table, "zztable", Table: "zztable",
+ Table 'zztable'  Table, 'zztable'  Table: 'zztable'
+ Table 'zztable', Table, 'zztable', Table: 'zztable',
+ Table  zztable   Table,  zztable   Table:  zztable
+ Table  zztable,  Table,  zztable,  Table:  zztable,
+ Table "zztable"  Table, "zztable"  Table: "zztable"
+ Table "zztable", Table, "zztable", Table: "zztable",
+ Table 'zztable'  Table, 'zztable'  Table: 'zztable'
+ Table 'zztable', Table, 'zztable', Table: 'zztable',
+
+ user  zzuser   user,  zzuser   user:  zzuser
+ user  zzuser,  user,  zzuser,  user:  zzuser,
+ user "zzuser"  user, "zzuser"  user: "zzuser"
+ user "zzuser", user, "zzuser", user: "zzuser",
+ user 'zzuser'  user, 'zzuser'  user: 'zzuser'
+ user 'zzuser', user, 'zzuser', user: 'zzuser',
+ User  zzuser   User,  zzuser   User:  zzuser
+ User  zzuser,  User,  zzuser,  User:  zzuser,
+ User "zzuser"  User, "zzuser"  User: "zzuser"
+ User "zzuser", User, "zzuser", User: "zzuser",
+ User 'zzuser'  User, 'zzuser'  User: 'zzuser'
+ User 'zzuser', User, 'zzuser', User: 'zzuser',
+ User  zzuser   User,  zzuser   User:  zzuser
+ User  zzuser,  User,  zzuser,  User:  zzuser,
+ User "zzuser"  User, "zzuser"  User: "zzuser"
+ User "zzuser", User, "zzuser", User: "zzuser",
+ User 'zzuser'  User, 'zzuser'  User: 'zzuser'
+ User 'zzuser', User, 'zzuser', User: 'zzuser',
+
+ owner  zzowner   owner,  zzowner   owner:  zzowner
+ owner  zzowner,  owner,  zzowner,  owner:  zzowner,
+ owner "zzowner"  owner, "zzowner"  owner: "zzowner"
+ owner "zzowner", owner, "zzowner", owner: "zzowner",
+ owner 'zzowner'  owner, 'zzowner'  owner: 'zzowner'
+ owner 'zzowner', owner, 'zzowner', owner: 'zzowner',
+ Owner  zzowner   Owner,  zzowner   Owner:  zzowner
+ Owner  zzowner,  Owner,  zzowner,  Owner:  zzowner,
+ Owner "zzowner"  Owner, "zzowner"  Owner: "zzowner"
+ Owner "zzowner", Owner, "zzowner", Owner: "zzowner",
+ Owner 'zzowner'  Owner, 'zzowner'  Owner: 'zzowner'
+ Owner 'zzowner', Owner, 'zzowner', Owner: 'zzowner',
+ Owner  zzowner   Owner,  zzowner   Owner:  zzowner
+ Owner  zzowner,  Owner,  zzowner,  Owner:  zzowner,
+ Owner "zzowner"  Owner, "zzowner"  Owner: "zzowner"
+ Owner "zzowner", Owner, "zzowner", Owner: "zzowner",
+ Owner 'zzowner'  Owner, 'zzowner'  Owner: 'zzowner'
+ Owner 'zzowner', Owner, 'zzowner', Owner: 'zzowner',
+
+ owned by  zzowner   owned by,  zzowner   owned by:  zzowner
+ owned by  zzowner,  owned by,  zzowner,  owned by:  zzowner,
+ owned by "zzowner"  owned by, "zzowner"  owned by: "zzowner"
+ owned by "zzowner", owned by, "zzowner", owned by: "zzowner",
+ owned by 'zzowner'  owned by, 'zzowner'  owned by: 'zzowner'
+ owned by 'zzowner', owned by, 'zzowner', owned by: 'zzowner',
+ Owned by  zzowner   Owned by,  zzowner   Owned by:  zzowner
+ Owned by  zzowner,  Owned by,  zzowner,  Owned by:  zzowner,
+ Owned by "zzowner"  Owned by, "zzowner"  Owned by: "zzowner"
+ Owned by "zzowner", Owned by, "zzowner", Owned by: "zzowner",
+ Owned by 'zzowner'  Owned by, 'zzowner'  Owned by: 'zzowner'
+ Owned by 'zzowner', Owned by, 'zzowner', Owned by: 'zzowner',
+ Owned by  zzowner   Owned by,  zzowner   Owned by:  zzowner
+ Owned by  zzowner,  Owned by,  zzowner,  Owned by:  zzowner,
+ Owned by "zzowner"  Owned by, "zzowner"  Owned by: "zzowner"
+ Owned by "zzowner", Owned by, "zzowner", Owned by: "zzowner",
+ Owned by 'zzowner'  Owned by, 'zzowner'  Owned by: 'zzowner'
+ Owned by 'zzowner', Owned by, 'zzowner', Owned by: 'zzowner',
+
+ column  zzcolumn   column,  zzcolumn   column:  zzcolumn
+ column  zzcolumn,  column,  zzcolumn,  column:  zzcolumn,
+ column "zzcolumn"  column, "zzcolumn"  column: "zzcolumn"
+ column "zzcolumn", column, "zzcolumn", column: "zzcolumn",
+ column 'zzcolumn'  column, 'zzcolumn'  column: 'zzcolumn'
+ column 'zzcolumn', column, 'zzcolumn', column: 'zzcolumn',
+ Column  zzcolumn   Column,  zzcolumn   Column:  zzcolumn
+ Column  zzcolumn,  Column,  zzcolumn,  Column:  zzcolumn,
+ Column "zzcolumn"  Column, "zzcolumn"  Column: "zzcolumn"
+ Column "zzcolumn", Column, "zzcolumn", Column: "zzcolumn",
+ Column 'zzcolumn'  Column, 'zzcolumn'  Column: 'zzcolumn'
+ Column 'zzcolumn', Column, 'zzcolumn', Column: 'zzcolumn',
+ Column  zzcolumn   Column,  zzcolumn   Column:  zzcolumn
+ Column  zzcolumn,  Column,  zzcolumn,  Column:  zzcolumn,
+ Column "zzcolumn"  Column, "zzcolumn"  Column: "zzcolumn"
+ Column "zzcolumn", Column, "zzcolumn", Column: "zzcolumn",
+ Column 'zzcolumn'  Column, 'zzcolumn'  Column: 'zzcolumn'
+ Column 'zzcolumn', Column, 'zzcolumn', Column: 'zzcolumn',
+
+ E_US1452 DESTROY  zzobject   E_US1452 DESTROY,  zzobject   E_US1452 DESTROY:  zzobj-
+ect
+ E_US1452 DESTROY  zzobject,  E_US1452 DESTROY,  zzobject,  E_US1452 DESTROY:  zzobj-
+ect,
+ E_US1452 DESTROY "zzobject"  E_US1452 DESTROY, "zzobject"  E_US1452 DESTROY: "zzobj-
+ect"
+ E_US1452 DESTROY "zzobject", E_US1452 DESTROY, "zzobject", E_US1452 DESTROY: "zzobj-
+ect",
+ E_US1452 DESTROY 'zzobject'  E_US1452 DESTROY, 'zzobject'  E_US1452 DESTROY: 'zzobj-
+ect'
+ E_US1452 DESTROY 'zzobject', E_US1452 DESTROY, 'zzobject', E_US1452 DESTROY: 'zzobj-
+ect',
+
+ E_US0AC1 DROP  zzobject   E_US0AC1 DROP,  zzobject   E_US0AC1 DROP:  zzobject
+ E_US0AC1 DROP  zzobject,  E_US0AC1 DROP,  zzobject,  E_US0AC1 DROP:  zzobject,
+ E_US0AC1 DROP "zzobject"  E_US0AC1 DROP, "zzobject"  E_US0AC1 DROP: "zzobject"
+ E_US0AC1 DROP "zzobject", E_US0AC1 DROP, "zzobject", E_US0AC1 DROP: "zzobject",
+ E_US0AC1 DROP 'zzobject'  E_US0AC1 DROP, 'zzobject'  E_US0AC1 DROP: 'zzobject'
+ E_US0AC1 DROP 'zzobject', E_US0AC1 DROP, 'zzobject', E_US0AC1 DROP: 'zzobject',
+
+   (owner zzdonj)
+
+  Copyright (c) 1798, 1993
+
++-------+----------+----+
+|       |          |    |
++-------+----------+----+
+|       |          |    |
+|       |          |    |
+|       |          |    |
++-------+----------+----+
+
+11-sep-92 11-Sep-92 11-SEP-92 11/sep/92 11/Sep/92 11/SEP/92
+11_sep_92 11_Sep_92 11_SEP_92 Sep-11-92 sep-11-92 SEP-11-92
+Sep/11/92 sep/11/92 SEP/11/92 Sep_11_92 sep_11_92 SEP_11_92
+
+SEPTEMBER 11, 1982
+
+11-sep-92 01:02:03  11-Sep-92 01:02:03  11-SEP-92 01:02:03  11/sep/92 01:02:03  11/N-
+ov/92 01:02:03  11/SEP/92 01:02:03
+11_sep_92 01:02:03  11_Sep_92 01:02:03  11_SEP_92 01:02:03  Sep-11-92 01:02:03  sep--
+11-92 01:02:03  SEP-11-92 01:02:03
+Sep/11/92 01:02:03  sep/11/92 01:02:03  SEP/11/92 01:02:03  Sep_11_92 01:02:03  sep_-
+11_92 01:02:03  SEP_11_92 01:02:03
+
+SEPTEMBER 11, 1982 01:02:03
+
+11-sep-92 01:02  11-Sep-92 01:02  11-SEP-92 01:02  11/sep/92 01:02  11/Sep/92 01:02 -
+ 11/SEP/92 01:02
+11_sep_92 01:02  11_Sep_92 01:02  11_SEP_92 01:02  Sep-11-92 01:02  sep-11-92 01:02 -
+ SEP-11-92 01:02
+Sep/11/92 01:02  sep/11/92 01:02  SEP/11/92 01:02  Sep_11_92 01:02  sep_11_92 01:02 -
+ SEP_11_92 01:02
+
+SEPTEMBER 11, 1982 01:02
+
+\x14ade 0xffff 0123456789abcdef
+
+
+ 6.3/04 (su4.u42/01)
+
+ [dir] ing_dir: ing_dir:[dir]  [dir.dir2.dir3.dir4] [-]
+
+ /dir $ing_dir $ing_dir/dir    /dir/dir2/dir3/dir4 ../
+
+INGRES ABF Version 6.4/04 (su4.u42/00) login what what?
+
+INGRES/ABF Version 6.3
+
+Thursday, July 20 2:21:00 1991 (12-MAY-1991 13:13:16) 1982-FEB-03 22:03:31
+
+21:56:00 1567854
+
+34.567e-07 13.456 .007 1.0 1.23E+12 \12 0777
+INGRES VAX Version 6.3/02 (vax.vms/01) login 29-APR-1972 15:26:13
+continue
+*
+
+    (19-AUG-1992 15:28:33)
+E_US0AC1 DROP: 'gca00' does not exist or is not owned by you.
+
+zzzzz (thu jan 30 14:30:30 1992) zzzzz
+
+11-nov-1992 11-Nov-1992 11-NOV-1992 11/nov/1992 11/Nov/1992 11/NOV/1992
+11_nov_1992 11_Nov_1992 11_NOV_1992 Nov-11-1992 nov-11-1992 NOV-11-1992
+Nov/11/1992 nov/11/1992 NOV/11/1992 Nov_11_1992 nov_11_1992 NOV_11_1992
+
+Ending at: Tue Feb  2 17:44:29 1903
+
+
+>>
+? echo @file(ing_src,grammar2.c) 
+<< IF (unix) 
+/taco/ingres63p/src/grammar2.c
+>>
+<< IF (vms) 
+ing_src:grammar2.c
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+D:\sep\wnt\grammar2.c
+>>
+? echo @file(grammar2.c) 
+<< IF (unix) 
+grammar2.c
+>>
+<< IF (vms) 
+grammar2.c
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+grammar2.c
+>>
+? echo @file(,grammar2.c) 
+<< IF (unix) 
+grammar2.c
+>>
+<< IF (vms) 
+grammar2.c
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+grammar2.c
+>>
+? echo @file(ing_src,testtool,sep,sepdiff,grammar2.c) 
+<< IF (unix) 
+/taco/ingres63p/src/testtool/sep/sepdiff/grammar2.c
+>>
+<< IF (vms) 
+ing_src:[testtool.sep.sepdiff]grammar2.c
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+D:\sep\wnt	esttool\sep\sepdiff\grammar2.c
+>>
+? echo @file(,testtool,sep,sepdiff,grammar2.c) 
+<< IF (unix) 
+testtool/sep/sepdiff/grammar2.c
+>>
+<< IF (vms) 
+[testtool.sep.sepdiff]grammar2.c
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+testtool\sep\sepdiff\grammar2.c
+>>
+? echo @file(ing_src,testtool,sep,sepdiff,) 
+<< IF (unix) 
+/taco/ingres63p/src/testtool/sep/sepdiff
+>>
+<< IF (vms) 
+ing_src:[testtool.sep.sepdiff]
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+D:\sep\wnt	esttool\sep\sepdiff
+>>
+? echo @file(ing_src,) 
+<< IF (unix) 
+/taco/ingres63p/src
+>>
+<< IF (vms) 
+ing_src:
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+D:\sep\wnt
+>>
+? echo @file(,testtool,sep,sepdiff,) 
+<< IF (unix) 
+testtool/sep/sepdiff
+>>
+<< IF (vms) 
+[testtool.sep.sepdiff]
+>>
+<<
+>>
+<< IF (NT_GENERIC) 
+testtool\sep\sepdiff
+>>
+
+
+Ending at: Wed Jan 31 12:03:42 1996

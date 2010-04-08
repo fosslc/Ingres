@@ -1,0 +1,27 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The max_tuple_length dbms resource is the maximum tuple (row) length
+  supported in the installation.  This resource can take values between
+  0 and 32767.  Values above 2008 are accepted only if the corresponding
+  page-size cache is configured, as shown in the table below.
+
+  If 0 is specified, Ingres will use the largest row length compatible with
+  the page sizes in use.  We default to 2008 bytes to maintain compatibility
+  with previous versions and to optimize the session's memory requirement.
+  We DO NOT recommend a value between 1 and 2008.
+
+  The maximum tuple length for RMS gateway is 32660 because the maximum page
+  size for RMS Gateway is 32K, a limitation of VMS/RMS.
+
+  The following table describes the Max. Row length based on page size.
+ 
+	Page Size		Max. Row Length
+	---------		---------------
+	 2048 (2K)		 2008
+	 4096 (4K)		 3988
+	 8192 (8K)		 8084
+	16384 (16K)		16276
+	32768 (32K)		32660
+	65536 (64K)		32767
+
+  The default is 2008 bytes.

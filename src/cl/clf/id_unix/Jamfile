@@ -1,0 +1,11 @@
+#
+# Jamfile file for cl!clf!id_unix
+#
+
+SubDir ING_SRC cl clf id_unix ;
+
+IISUBSYS cl clf id_unix ;
+
+
+IILIBRARY COMPATLIB : iduuid.c idsetsys.c idname.c ;
+

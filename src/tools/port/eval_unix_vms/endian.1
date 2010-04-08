@@ -1,0 +1,39 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/endian.1,v 1.1 90/03/09 09:17:32 source Exp $
+.TH BYTESWAP 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+endian \- Reveal endian storage type for integers.
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B endian
+[ options ]
+.SH DESCRIPTION
+.I Endian
+shows the underlying byte order of the hardware.  The program prints
+.nf
+
+	little
+.PP
+if the storage format is little endian.  If the storage format is big endian,
+.nf
+
+	big
+.PP
+is printed.  Otherwise,
+.nf
+
+	other
+.PP
+is printed.
+
+.B -v
+``verbose'' mode prints the program's name and indents the output one
+tab stop.  The byte order for little and big endian integers as well
+as the local storage format is displayed in the for nnnn where n takes
+the values 1 to 4, 1 representing the most-significant-byte and 4 the
+least-significant-byte.
+.SH BUGS
+.I Endian
+will become very confused on non-32 bit systems.  Assumes 2 and 8 byte
+integers have same endianness as 4 byte integers.

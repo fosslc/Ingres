@@ -1,0 +1,16 @@
+#
+# Jamfile file for gl!glf!mm
+#
+
+SubDir ING_SRC gl glf mm ;
+
+IISUBSYS gl glf mm ;
+
+
+IILIBRARY COMPATLIB : mmpage.c
+	mmmicro.c
+	mmdflt.c
+	mmdebug.c
+	mmblock.c
+	mm.c ;
+

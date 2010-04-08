@@ -1,0 +1,12 @@
+#
+# Jamfile file for testtool!util!shell_vms
+#
+
+SubDir ING_SRC testtool util shell_vms ;
+
+IISUBSYS testtool util shell_vms ;
+
+
+IITOOLSSH iibuildtools : iibuildtools$(SUFSH) ;
+IITOOLSSH version : version$(SUFSH) ;
+

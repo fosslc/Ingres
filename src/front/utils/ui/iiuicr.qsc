@@ -1,0 +1,123 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include 	<er.h>
+#include 	<ui.h>
+
+/**
+** Name:	iiuicr.qc -	FE Catalog Read Control Module.
+**
+** Description:
+**	Because of the default transaction semantics in SQL (i.e., implicit
+**	multistatement transactions), we have to be careful about the
+**	performance implications of concurrency control.
+**
+**	The routines in this file are used to temporarily set readlock=nolock
+**	so that we don't lock up our catalogs unnecessarily.  These routines
+**	only need to be used by the portions of our code which could be
+**	executed from within USER PROGRAMS.
+**
+**	This file defines:
+**
+**	iiuicr1_CatReadOn()	turn on catalog reading mode.
+**	iiuicr0_CatReadOff()	turn off catalog reading mode.
+**
+**	(the mnemonic is based on 1/0 labels of hardware on/off switches)
+**
+** History:
+**	Revision 6.0  87/04/21  sandyd
+**	Initial revision.
+**/
+
+/*{
+** Name:	iiuicr1_CatReadOn() -	Turn on FE Catalog Read Mode.
+**
+** Description:
+**	Sets the lockmode of the specified table so that reading a catalog
+**	will not lock it.  (SQL's implicit multi-statement transactions makes
+**	this a significant problem.)
+**
+**	This should be called prior to reading any FE catalogs (in code
+**	that might get executed from within USER APPLICATIONS -- i.e.,
+**	FRS, OSL).
+**
+** Inputs:
+**	catname		{char *}  Name of catalog to be read.
+**
+** Side Effects:
+**	Sets the lockmode for the catalog to be "readlock = nolock."
+**	none
+**
+** Notes:
+**	Cannot be called while a DBMS transaction is active!
+**
+** History:
+**	21-apr-1987 (sandyd)
+**		Created.
+*/
+static VOID setlock();
+
+VOID
+iiuicr1_CatReadOn ( catname )
+EXEC SQL BEGIN DECLARE SECTION;
+char	*catname;
+EXEC SQL END DECLARE SECTION;
+{
+	setlock(catname, ERx("nolock"));
+}
+
+
+/*{
+** Name:	iiuicr0_CatReadOff() -	Turn off FE Catalog Read Mode.
+**
+** Description:
+**	Resets the lockmode of the specified FE catalog.  It should be called
+**	after the catalog has been read.
+**
+** Inputs:
+**	catname		{char *}  Name of catalog that was read.
+**
+** Side Effects:
+**	Sets the lockmode of the catalog to be "shared."
+**
+** Notes:
+**	Cannot be called while a DBMS transaction is active!
+**
+** History:
+**	21-apr-1987 (sandyd)
+**		Created.
+*/
+VOID
+iiuicr0_CatReadOff(catname)
+char	*catname;
+{
+	setlock(catname, ERx("shared"));
+}
+
+/* do the locking work */
+static VOID
+setlock(name, lockstr)
+char *name;
+char *lockstr;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	char	buf[UI_MAX_QBUF];
+	EXEC SQL END DECLARE SECTION;
+
+	/* Gateways DON'T support this. */
+	if ( IIUIdml() == UI_DML_GTWSQL )
+		return;
+
+	_VOID_ STprintf(buf, ERx("set lockmode on %s where readlock = %s"),
+					name, lockstr);
+
+	EXEC SQL EXECUTE IMMEDIATE :buf;
+}

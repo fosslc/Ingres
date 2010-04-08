@@ -1,0 +1,84 @@
+
+/* SQL script created by COPYDB, version II 9.0.4 (int.w32/105). */
+
+\sql
+set autocommit on
+\p\g
+set lockmode session where readlock=nolock
+\p\g
+\sql
+set session with privileges=all
+\p\g
+copy airline(
+	al_id= c0tab,
+	al_iatacode= nchar(0)tab,
+	al_icaocode= nchar(0)tab,
+	al_name= nvarchar(0)tab,
+	al_ccode= nchar(0)nl,
+	nl= d0nl)
+into './airline.ingres'
+\p\g
+copy airport(
+	ap_id= c0tab,
+	ap_iatacode= nchar(0)tab,
+	ap_place= nvarchar(0)tab with null(']^NULL^['),
+	ap_name= nvarchar(0)tab with null(']^NULL^['),
+	ap_ccode= nchar(0)nl with null(']^NULL^['),
+	nl= d0nl)
+into './airport.ingres'
+\p\g
+copy country(
+	ct_id= c0tab,
+	ct_code= nchar(0)tab,
+	ct_name= nvarchar(0)nl with null(']^NULL^['),
+	nl= d0nl)
+into './country.ingres'
+\p\g
+copy flight_day(
+	day_mask= nchar(0)tab,
+	day_code= c0tab,
+	day_name= nchar(0)nl,
+	nl= d0nl)
+into './flight_day.ingres'
+\p\g
+copy route(
+	rt_id= c0tab,
+	rt_airline= nchar(0)tab,
+	rt_flight_num= c0tab,
+	rt_depart_from= nchar(0)tab,
+	rt_arrive_to= nchar(0)tab,
+	rt_depart_at= c0tab,
+	rt_arrive_at= c0tab,
+	rt_arrive_offset= c0tab,
+	rt_flight_day= nchar(0)nl,
+	nl= d0nl)
+into './route.ingres'
+\p\g
+copy tz(
+	tz_id= c0tab,
+	tz_code= nchar(0)tab with null(']^NULL^['),
+	tz_name= nchar(0)tab with null(']^NULL^['),
+	tz_utc_offset= varchar(0)nl with null(']^NULL^['),
+	nl= d0nl)
+into './tz.ingres'
+\p\g
+copy user_profile(
+	up_id= c0tab,
+	up_last= nvarchar(0)tab,
+	up_first= nvarchar(0)tab,
+	up_email= nvarchar(0)tab,
+	up_airport= nchar(0)tab with null(']^NULL^['),
+	up_image= long byte(0)nl with null(']^NULL^['),
+	nl= d0nl)
+into './user_profile.bin'
+\p\g
+copy version(
+	ver_id= c0tab,
+	ver_major= c0tab,
+	ver_minor= c0tab,
+	ver_release= c0tab,
+	ver_date= c0tab,
+	ver_install= c0nl,
+	nl= d0nl)
+into './version.ingres'
+\p\g

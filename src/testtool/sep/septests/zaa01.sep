@@ -1,0 +1,651 @@
+/*
+	Test Name: zaa01.sep
+	Time: 18-AUG-1991 12:17:07
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa01.sep
+	Purpose	: Does environmental setup for Septools SEP tests.
+	Input Files  : none
+	Output Files : none
+	Database     : Septools, destroyed and created by this test.
+	Tables      : qebldg, qeemp, qedept, qeparts, qesalhist, qereview,
+		      qesuppliers
+	Synopsis     :	Creates Database for Septools SEP tests. Uses
+			a copy of ing_src:[basis.fe]basisdb.sep in
+			creating tables.
+
+	History: 18-AUG-1991	Created				DONJ
+          29-Jan-1992	(DonJ)
+		Changed final canon for content of trace1.stf
+	  02-Feb-1992   (DonJ)
+		Added Changed VMS canon for trace1.stf.
+           5-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+           1-SEP-1992   (DonJ)
+		Implement the (!) operator on .if !SEPPARAMDB and add a
+		trace parameter for creating trace files.
+           9-DEC-1992	(Author)
+		Update the results for the drop table statements.
+           9-DEC-1992	(Author)
+		Print out SQL statements ('\p\g' vs. '\g').
+          25-Jan-1993	(donj)
+		Add an alternate canon for drop tables.
+           8-Sep-1993	(donj)
+		Add canon to ABORT if destroydb can't destroy the database.
+	  12-oct-1993   (donj)
+		Add canon to ABORT if destroydb can't connect to database.
+	  14-apr-1994 (donj)
+		Added testcase support.
+*/
+.TEST_CASE intialization 1
+.if !SEPPARAMDB 
+? setenv SEPPARAMDB septools 
+<<
+environment variable was defined
+>>
+.endif 
+? destroydb SEPPARAMDB 
+<<
+Destroying database 'septools' . . .
+ 
+
+Destruction of database 'septools' completed successfully.
+ 
+>>
+<<
+Destroying database 'septools' . . .
+
+E_US0010 Database does not exist.
+    (Thu Sep  2 13:09:42 1993)
+Destruction of database 'septools' abnormally terminated.
+>>
+<<
+Destroying database 'septools' . . .
+ 
+E_US0003 User does not have permission to access this database.
+    (Wed Sep  8 14:33:22 1993)
+Destruction of database 'septools' abnormally terminated. 
+>> ABORT
+<<
+E_LQ0001 Failed to connect to DBMS session.
+E_LC0001 GCA protocol service (GCA_REQUEST) failure.
+    Internal service status E_GCfe05 -- Unable to make outgoing connection.
+    - System communication error: Connection refused..
+Destruction of database 'septools' abnormally terminated. 
+>> ABORT
+.TEST_CASE create_db 2
+? createdb SEPPARAMDB 
+<<
+Creating database 'septools' . . .
+ 
+  Creating DBMS System Catalogs . . . 
+  Modifying DBMS System Catalogs . . . 
+  Creating Standard Catalog Interface . . . 
+  Creating Front-end System Catalogs . . . 
+
+Creation of database 'septools' completed successfully.
+ 
+>>
+.TEST_CASE intialization 1
+? fill xbasis1.sql 
+!!
+drop table qebldg;\p\g
+drop table qedept;\p\g
+drop table qeemp;\p\g
+drop table qeparts;\p\g
+drop table qesalhist;\p\g
+drop table qereview;\p\g
+drop table qesuppliers;\p\g
+commit;\p\g
+!!
+? fill xbasis2.sql 
+!!
+create table qebldg (
+	qebldg		char(2),
+	qest_adr	char(30),
+	qecity		char(15),
+	qestate		char(2),
+	qezip		char(5));
+\p\g
+create table qedept (
+	qedname		char(8),
+	qediv		char(3),
+	qesales		float,
+	qebldg		char(2),
+	qefloor		smallint,
+	qenum_emp	smallint);
+\p\g
+create table qeemp (
+	qename		char(10),
+	qesalary	float,
+	qedept		char(8),
+	qediv		char(3),
+	qemgr		char(10),
+	qebirthdate	char(25),
+	qenum_dep	smallint);
+\p\g
+create table qesalhist (
+	qename		char(10),
+	qedate		char(25),
+	qesalary	float);
+\p\g
+create table qereview (
+	qename char(10),
+	qerev_date char(25),
+	qestrength char(250),
+	qeweakness char(250),
+	qegoals char(250));
+\p\g
+create table qesuppliers (
+	qesno		char(5),
+	qesname		char(20),
+	qestatus	smallint,
+	qecity		char(15));
+\p\g
+create view qelowpay (qename, qesalary)
+	as select qename, qesalary
+	from qeemp
+	where qesalary < 30000;
+\p\g
+create view qeempinfo (qename, qedept, qediv, qebldg, qefloor)
+	as select qeemp.qename, qeemp.qedept, qeemp.qediv,
+		qedept.qebldg, qedept.qefloor
+	from qeemp, qedept
+	where qeemp.qedept = qedept.qedname and qeemp.qediv = qedept.qediv;
+\p\g
+create view qeyoungemp (qename, qesalary)
+	as select qename, qesalary
+	from qeemp
+	where qebirthdate > '1/1/55';
+\p\g
+create table qeparts (
+	qepno		char(6),
+	qepname	        char(20),
+	qecolor		char(6),
+	qeweight	smallint,
+	qecity		char(15));
+\p\g
+!!
+? fill xbasis3.sql 
+!!
+insert into qebldg values
+('A', '1000 University Ave   ' ,'Berkeley  ',  'CA','94000');\p\g
+insert into qebldg values
+('B', '1800 Shattuck Ave     ' ,'Berkeley  ',  'CA','94100');\p\g
+insert into qebldg values
+('C', '900 Lake Shore Blvd   ' ,'Chicago   ',  'IL','60080');\p\g
+insert into qebldg values
+('D', '24130 Pennsylvania Ave' ,'Washington',  'DC','20198');\p\g
+insert into qebldg values
+('E', '42318 Woodsay Blvd    ' ,'Houston   ',  'TX','77009');\p\g
+insert into qebldg values
+('F', '1585 Eye St           ' ,'Washington',  'DC','20199');\p\g
+
+insert into qedept values
+('admin   ','NW',                 0.00,'C',  2,     4);\p\g
+insert into qedept values
+('market  ','NW',              9200.00,'A',  1,     2);\p\g
+insert into qedept values
+('sales   ','NC',            120000.00,'A',  2,     1);\p\g
+insert into qedept values
+('sales   ','NE',                 0.00,'D', 18,     4);\p\g
+insert into qedept values
+('sales   ','NW',            200000.00,'A',  2,     1);\p\g
+insert into qedept values
+('sales   ','SC',             95000.00,'E',  1,     1);\p\g
+insert into qedept values
+('sales   ','SE',            175000.00,'D', 18,     1);\p\g
+insert into qedept values
+('tech sup','NC',              5000.00,'C',  2,     3);\p\g
+insert into qedept values
+('tech sup','NE',             20000.00,'D', 17,     2);\p\g
+insert into qedept values
+('tech sup','NW',                 0.00,'B',  1,     1);\p\g
+insert into qedept values
+('tech sup','SE',                 0.00,'D', 19,     1);\p\g
+
+insert into qeemp values
+('Aitken    ',  50000.00,'sales   ','NE','Verducci', '12-mar-1947',   2);\p\g
+insert into qeemp values
+('Blumberg  ',  32000.00,'sales   ','SC','Clark   ', ' 6-dec-1952',   2);\p\g
+insert into qeemp values
+('Brodie    ',  40000.00,'sales   ','NC','Clark   ', ' 1-feb-1948',   2);\p\g
+insert into qeemp values
+('Cameron   ',  35000.00,'tech sup','SE','Shigio  ', '15-aug-1960',   0);\p\g
+insert into qeemp values
+('Clark     ',  40000.00,'sales   ','NC','Verducci', '18-nov-1949',   1);\p\g
+insert into qeemp values
+('Curan     ',  30000.00,'tech sup','NW','Shigio  ', '20-aug-1959',   0);\p\g
+insert into qeemp values
+('Curry     ',  32000.00,'tech sup','NW','Shigio  ', '30-nov-1955',   3);\p\g
+insert into qeemp values
+('Giller    ',  46000.00,'sales   ','NC','Clark   ', ' 9-jun-1953',   1);\p\g
+insert into qeemp values
+('Gordon    ',  27000.00,'tech sup','NC','Shigio  ', '23-may-1963',   0);\p\g
+insert into qeemp values
+('Green     ',  26000.00,'market  ','NW','McTigue ', '19-dec-1961',   0);\p\g
+insert into qeemp values
+('Gregori   ',  31000.00,'sales   ','NW','Verducci', '21-oct-1949',   2);\p\g
+insert into qeemp values
+('Huber     ',  32000.00,'sales   ','NC','Clark   ', '29-jun-1951',   2);\p\g
+insert into qeemp values
+('Kay       ',  38000.00,'sales   ','NC','Clark   ', '12-mar-1944',   3);\p\g
+insert into qeemp values
+('Kreseski  ',  24000.00,'tech sup','NC','Shigio  ', '11-sep-1955',   0);\p\g
+insert into qeemp values
+('Mandic    ',  43000.00,'sales   ','SE','Verducci', '10-jul-1964',   0);\p\g
+insert into qeemp values
+('McShane   ',  22000.00,'admin   ','NW','Clark   ', ' 3-mar-1943',   0);\p\g
+insert into qeemp values
+('McTigue   ',  41000.00,'sales   ','NW','Verducci', ' 9-apr-1953',   1);\p\g
+insert into qeemp values
+('Ming      ',  22000.00,'tech sup','SE','Shigio  ', ' 4-may-1956',   1);\p\g
+insert into qeemp values
+('Ramos     ',  30000.00,'tech sup','NW','Shigio  ', '21-jan-1941',   0);\p\g
+insert into qeemp values
+('Robinson  ',  80000.00,'sales   ','NE','Verducci', '20-nov-1952',   1);\p\g
+insert into qeemp values
+('Sabel     ',  21000.00,'tech sup','SE','Shigio  ', ' 8-jan-1958',   0);\p\g
+insert into qeemp values
+('Saxena    ',  22000.00,'tech sup','NC','Shigio  ', ' 8-may-1950',   0);\p\g
+insert into qeemp values
+('Shigio    ',  28000.00,'sales   ','SE','Verducci', ' 9-jul-1948',   3);\p\g
+insert into qeemp values
+('Stannich  ',  33000.00,'market  ','NW','McTigue ', '13-dec-1961',   0);\p\g
+insert into qeemp values
+('Stein     ',  40000.00,'sales   ','NE','Verducci', '25-dec-1952',   1);\p\g
+insert into qeemp values
+('Stover    ',  35000.00,'admin   ','NW','Clark   ', ' 3-oct-1940',   4);\p\g
+insert into qeemp values
+('Sullivan  ',  35000.00,'tech sup','NW','Shigio  ', '10-oct-1960',   1);\p\g
+insert into qeemp values
+('Verducci  ',  55000.00,'admin   ','NW','        ', '25-dec-1958',   2);\p\g
+insert into qeemp values
+('Zimmerman ',  25000.00,'tech sup','NE','Shigio  ', '28-aug-1962',   0);\p\g
+
+insert into qeparts values ('p1','nut','red',12,'London');
+insert into qeparts values ('p2','bolt','green',17,'Paris');
+insert into qeparts values ('p3','screw','blue',17,'Rome');
+insert into qeparts values ('p4','screw','red',14,'London');
+insert into qeparts values ('p5','cam','blue',12,'Paris');
+insert into qeparts values ('p6','cog','red',19,'London');
+\p\g
+
+insert into qereview values 
+('Ming','12-jun-1983','Shows mastery of current material and willingness to learn ne-
+w material.  Responds enthusiastically to customer''s questions.  Has been helpful t-
+raining less knowledgeable staff.','Has difficulty articulating complicated details -
+to unsophisticated customers.','Establish formal training of new staff and take resp-
+onsibility for their progress gaining mastery of new material.');\p\g 
+insert into qereview values 
+('Ramos','9-apr-1983','Seems willing to learn new material.  Shows eagerness to lear-
+n several new programming languages to broaden the base of customers to which she ca-
+n respond.  Has progressed greatly in amount of material she has mastered s','Has di-
+fficulty arriving on time for work.','Learn two new programming languages by next re-
+view in six months.');\p\g
+
+insert into qesuppliers values('s1','Smith',20,'London');
+insert into qesuppliers values ('s2','Jones',10,'Paris');
+insert into qesuppliers values ('s3','Blake',30,'Paris');
+insert into qesuppliers values ('s4','Clark',20,'London');
+insert into qesuppliers values ('s5','Adams',30,'Athens');
+\p\g
+!!
+.TEST_CASE load_db 3
+? sql -s SEPPARAMDB 
+<<
+>>
+* \i xbasis1.sql
+<<
+/* SQL Startup File */
+ drop table qebldg;
+drop table qedept;
+drop table qeemp;
+drop table qeparts;
+drop table qesalhist;
+drop table qereview;
+drop table qesuppliers;
+commit;
+>>
+<<
+/* SQL Startup File */
+ drop table qebldg;
+E_US0AC1 DROP: 'qebldg' does not exist or is not owned by you.
+    (Mon Jan 25 12:32:53 1993)
+
+drop table qedept;
+E_US0AC1 DROP: 'qedept' does not exist or is not owned by you.
+    (Mon Jan 25 12:32:53 1993)
+
+drop table qeemp;
+E_US0AC1 DROP: 'qeemp' does not exist or is not owned by you.
+    (Mon Jan 25 12:32:53 1993)
+
+drop table qeparts;
+E_US0AC1 DROP: 'qeparts' does not exist or is not owned by you.
+    (Mon Jan 25 12:32:53 1993)
+
+drop table qesalhist;
+E_US0AC1 DROP: 'qesalhist' does not exist or is not owned by you.
+    (Mon Jan 25 12:32:53 1993)
+
+drop table qereview;
+E_US0AC1 DROP: 'qereview' does not exist or is not owned by you.
+    (Mon Jan 25 12:32:53 1993)
+
+drop table qesuppliers;
+E_US0AC1 DROP: 'qesuppliers' does not exist or is not owned by you.
+    (Mon Jan 25 12:32:53 1993)
+
+commit;
+>>
+* \i xbasis2.sql
+<<
+ create table qebldg (
+	qebldg		char(2),
+	qest_adr	char(30),
+	qecity		char(15),
+	qestate		char(2),
+	qezip		char(5));
+create table qedept (
+	qedname		char(8),
+	qediv		char(3),
+	qesales		float,
+	qebldg		char(2),
+	qefloor		smallint,
+	qenum_emp	smallint);
+create table qeemp (
+	qename		char(10),
+	qesalary	float,
+	qedept		char(8),
+	qediv		char(3),
+	qemgr		char(10),
+	qebirthdate	char(25),
+	qenum_dep	smallint);
+create table qesalhist (
+	qename		char(10),
+	qedate		char(25),
+	qesalary	float);
+create table qereview (
+	qename char(10),
+	qerev_date char(25),
+	qestrength char(250),
+	qeweakness char(250),
+	qegoals char(250));
+create table qesuppliers (
+	qesno		char(5),
+	qesname		char(20),
+	qestatus	smallint,
+	qecity		char(15));
+create view qelowpay (qename, qesalary)
+	as select qename, qesalary
+	from qeemp
+	where qesalary < 30000;
+create view qeempinfo (qename, qedept, qediv, qebldg, qefloor)
+	as select qeemp.qename, qeemp.qedept, qeemp.qediv,
+		qedept.qebldg, qedept.qefloor
+	from qeemp, qedept
+	where qeemp.qedept = qedept.qedname and qeemp.qediv = qedept.qediv;
+create view qeyoungemp (qename, qesalary)
+	as select qename, qesalary
+	from qeemp
+	where qebirthdate > '1/1/55';
+create table qeparts (
+	qepno		char(6),
+	qepname	        char(20),
+	qecolor		char(6),
+	qeweight	smallint,
+	qecity		char(15));
+>>
+* \i xbasis3.sql
+<<
+ insert into qebldg values
+('A', '1000 University Ave   ' ,'Berkeley  ',  'CA','94000');
+(1 row)
+insert into qebldg values
+('B', '1800 Shattuck Ave     ' ,'Berkeley  ',  'CA','94100');
+(1 row)
+insert into qebldg values
+('C', '900 Lake Shore Blvd   ' ,'Chicago   ',  'IL','60080');
+(1 row)
+insert into qebldg values
+('D', '24130 Pennsylvania Ave' ,'Washington',  'DC','20198');
+(1 row)
+insert into qebldg values
+('E', '42318 Woodsay Blvd    ' ,'Houston   ',  'TX','77009');
+(1 row)
+insert into qebldg values
+('F', '1585 Eye St           ' ,'Washington',  'DC','20199');
+(1 row)
+
+insert into qedept values
+('admin   ','NW',                 0.00,'C',  2,     4);
+(1 row)
+insert into qedept values
+('market  ','NW',              9200.00,'A',  1,     2);
+(1 row)
+insert into qedept values
+('sales   ','NC',            120000.00,'A',  2,     1);
+(1 row)
+insert into qedept values
+('sales   ','NE',                 0.00,'D', 18,     4);
+(1 row)
+insert into qedept values
+('sales   ','NW',            200000.00,'A',  2,     1);
+(1 row)
+insert into qedept values
+('sales   ','SC',             95000.00,'E',  1,     1);
+(1 row)
+insert into qedept values
+('sales   ','SE',            175000.00,'D', 18,     1);
+(1 row)
+insert into qedept values
+('tech sup','NC',              5000.00,'C',  2,     3);
+(1 row)
+insert into qedept values
+('tech sup','NE',             20000.00,'D', 17,     2);
+(1 row)
+insert into qedept values
+('tech sup','NW',                 0.00,'B',  1,     1);
+(1 row)
+insert into qedept values
+('tech sup','SE',                 0.00,'D', 19,     1);
+(1 row)
+
+insert into qeemp values
+('Aitken    ',  50000.00,'sales   ','NE','Verducci', '12-mar-1947',   2);
+(1 row)
+insert into qeemp values
+('Blumberg  ',  32000.00,'sales   ','SC','Clark   ', ' 6-dec-1952',   2);
+(1 row)
+insert into qeemp values
+('Brodie    ',  40000.00,'sales   ','NC','Clark   ', ' 1-feb-1948',   2);
+(1 row)
+insert into qeemp values
+('Cameron   ',  35000.00,'tech sup','SE','Shigio  ', '15-aug-1960',   0);
+(1 row)
+insert into qeemp values
+('Clark     ',  40000.00,'sales   ','NC','Verducci', '18-nov-1949',   1);
+(1 row)
+insert into qeemp values
+('Curan     ',  30000.00,'tech sup','NW','Shigio  ', '20-aug-1959',   0);
+(1 row)
+insert into qeemp values
+('Curry     ',  32000.00,'tech sup','NW','Shigio  ', '30-nov-1955',   3);
+(1 row)
+insert into qeemp values
+('Giller    ',  46000.00,'sales   ','NC','Clark   ', ' 9-jun-1953',   1);
+(1 row)
+insert into qeemp values
+('Gordon    ',  27000.00,'tech sup','NC','Shigio  ', '23-may-1963',   0);
+(1 row)
+insert into qeemp values
+('Green     ',  26000.00,'market  ','NW','McTigue ', '19-dec-1961',   0);
+(1 row)
+insert into qeemp values
+('Gregori   ',  31000.00,'sales   ','NW','Verducci', '21-oct-1949',   2);
+(1 row)
+insert into qeemp values
+('Huber     ',  32000.00,'sales   ','NC','Clark   ', '29-jun-1951',   2);
+(1 row)
+insert into qeemp values
+('Kay       ',  38000.00,'sales   ','NC','Clark   ', '12-mar-1944',   3);
+(1 row)
+insert into qeemp values
+('Kreseski  ',  24000.00,'tech sup','NC','Shigio  ', '11-sep-1955',   0);
+(1 row)
+insert into qeemp values
+('Mandic    ',  43000.00,'sales   ','SE','Verducci', '10-jul-1964',   0);
+(1 row)
+insert into qeemp values
+('McShane   ',  22000.00,'admin   ','NW','Clark   ', ' 3-mar-1943',   0);
+(1 row)
+insert into qeemp values
+('McTigue   ',  41000.00,'sales   ','NW','Verducci', ' 9-apr-1953',   1);
+(1 row)
+insert into qeemp values
+('Ming      ',  22000.00,'tech sup','SE','Shigio  ', ' 4-may-1956',   1);
+(1 row)
+insert into qeemp values
+('Ramos     ',  30000.00,'tech sup','NW','Shigio  ', '21-jan-1941',   0);
+(1 row)
+insert into qeemp values
+('Robinson  ',  80000.00,'sales   ','NE','Verducci', '20-nov-1952',   1);
+(1 row)
+insert into qeemp values
+('Sabel     ',  21000.00,'tech sup','SE','Shigio  ', ' 8-jan-1958',   0);
+(1 row)
+insert into qeemp values
+('Saxena    ',  22000.00,'tech sup','NC','Shigio  ', ' 8-may-1950',   0);
+(1 row)
+insert into qeemp values
+('Shigio    ',  28000.00,'sales   ','SE','Verducci', ' 9-jul-1948',   3);
+(1 row)
+insert into qeemp values
+('Stannich  ',  33000.00,'market  ','NW','McTigue ', '13-dec-1961',   0);
+(1 row)
+insert into qeemp values
+('Stein     ',  40000.00,'sales   ','NE','Verducci', '25-dec-1952',   1);
+(1 row)
+insert into qeemp values
+('Stover    ',  35000.00,'admin   ','NW','Clark   ', ' 3-oct-1940',   4);
+(1 row)
+insert into qeemp values
+('Sullivan  ',  35000.00,'tech sup','NW','Shigio  ', '10-oct-1960',   1);
+(1 row)
+insert into qeemp values
+('Verducci  ',  55000.00,'admin   ','NW','        ', '25-dec-1958',   2);
+(1 row)
+insert into qeemp values
+('Zimmerman ',  25000.00,'tech sup','NE','Shigio  ', '28-aug-1962',   0);
+(1 row)
+
+insert into qeparts values ('p1','nut','red',12,'London');
+insert into qeparts values ('p2','bolt','green',17,'Paris');
+insert into qeparts values ('p3','screw','blue',17,'Rome');
+insert into qeparts values ('p4','screw','red',14,'London');
+insert into qeparts values ('p5','cam','blue',12,'Paris');
+insert into qeparts values ('p6','cog','red',19,'London');
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+
+insert into qereview values 
+('Ming','12-jun-1983','Shows mastery of current material and willingness to learn ne-
+w material.  Responds enthusiastically to customer''s questions.  Has been helpful t-
+raining less knowledgeable staff.','Has difficulty articulating complicated details -
+to unsophisticated customers.','Establish formal training of new staff and take resp-
+onsibility for their progress gaining mastery of new material.');
+(1 row)
+ 
+insert into qereview values 
+('Ramos','9-apr-1983','Seems willing to learn new material.  Shows eagerness to lear-
+n several new programming languages to broaden the base of customers to which she ca-
+n respond.  Has progressed greatly in amount of material she has mastered s','Has di-
+fficulty arriving on time for work.','Learn two new programming languages by next re-
+view in six months.');
+(1 row)
+
+insert into qesuppliers values('s1','Smith',20,'London');
+insert into qesuppliers values ('s2','Jones',10,'Paris');
+insert into qesuppliers values ('s3','Blake',30,'Paris');
+insert into qesuppliers values ('s4','Clark',20,'London');
+insert into qesuppliers values ('s5','Adams',30,'Athens');
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+(1 row)
+>>
+* select count(*) as qedept from qedept;\p\g;
+<<
+ select count(*) as qedept from qedept;
+
++-------------+
+|qedept       |
++-------------+
+|           11|
++-------------+
+(1 row)
+>>
+* select count(*) as qeemp from qeemp;\p\g;
+<<
+;
+ select count(*) as qeemp from qeemp;
+
++-------------+
+|qeemp        |
++-------------+
+|           29|
++-------------+
+(1 row)
+>>
+* select count(*) as qeparts from qeparts;\p\g;
+<<
+;
+ select count(*) as qeparts from qeparts;
+
++-------------+
+|qeparts      |
++-------------+
+|            6|
++-------------+
+(1 row)
+>>
+* select count(*) as qereview from qereview;\p\g;
+<<
+;
+ select count(*) as qereview from qereview;
+
++-------------+
+|qereview     |
++-------------+
+|            2|
++-------------+
+(1 row)
+>>
+* select count(*) as qesuppliers from qesuppliers;\p\g;
+<<
+;
+ select count(*) as qesuppliers from qesuppliers;
+
++-------------+
+|qesuppliers  |
++-------------+
+|            5|
++-------------+
+(1 row)
+>>
+* \q;
+<<
+>>
+.TEST_CASE_END
+
+
+Ending at: Wed Sep  8 14:34:19 1993

@@ -1,0 +1,74 @@
+#
+# MANIFEST file for sig!imp!imp
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           SIR 112651
+#           Added to build Ingres r3 with jam for Open Source.
+#	16-Jul-2004 (hanje04)
+#	    Remove unneed files, list too long
+#	28-Jul-2004 (hanje04)
+#	    Copy README and Makefile correctly
+#	7-Aug-2004 (drivi01)
+#	    Added copying of makefile.
+#	22-feb-2005 (abbjo03)
+#	    Use a common list of IISIGFILES.
+#	03-Mar-2005 (drivi01)
+#	    impcommon.sc should be available to windows also.
+#	23-Aug-2005 (bonro01)
+#	    Add IMP application to Ingres installation.
+#	13-Aug-2005 (hanje04)
+#	    Remove >>> tags and others from BAD X-integ
+
+
+SubDir ING_SRC sig imp imp ;
+
+IISUBSYS sig imp imp ;
+
+IISIGFILES imp : imp.forms imp.h imp.sql imp_dmf.incl impdbcon.sc
+	impdmf.sc impfrs.sc impinter.sc impio.sc implocks.sc implog.sc
+	impmain.sc impqsf.sc imprdf.sc impserver.sc impslave.sc
+	impstart.sc impstatic.sc ;
+
+if ! $(VMS)
+{
+    IILIBRARY SIGIMPLIB : ima_di_slave_info.lfm imp_client_info.lfm
+	    imp_lg_menu.lfm imp_lk_menu.lfm imp_server_diag.lfm
+	    ima_dio.lfm imp_dmf_cache_stats.lfm imp_lg_processes.lfm
+	    imp_lk_tx.lfm imp_server_list.lfm ima_qsf_cache_stats.lfm
+	    imp_dmfcache.lfm imp_lg_summary.lfm imp_lock_summary.lfm
+	    imp_server_parms.lfm ima_qsf_dbp.lfm imp_lg_address.lfm
+	    imp_lg_transactions.lfm imp_main_menu.lfm imp_server_popup.lfm
+	    ima_qsf_rqp.lfm imp_lg_databases.lfm imp_lk_list.lfm
+	    imp_res_list.lfm imp_session_detail.lfm ima_rdf_cache_info.lfm
+	    imp_lg_header.lfm imp_lk_locks.lfm imp_res_locks.lfm
+	    imp_session_list.lfm imp_query_forms.lfm imp_transaction_detail.lfm
+	    imp_gcc_info.lfm imp_transaction_hexdump.lfm
+	    impserver.sc impfrs.sc impdbcon.sc
+	    impstart.sc impstatic.sc implocks.sc implog.sc impinter.sc
+	    impqsf.sc imprdf.sc impio.sc impdmf.sc impslave.sc ;
+
+    IISHHDR impcommon.h : impcommon.sc ;
+    IISHHDR imp_dmf.h : imp_dmf.incl ;
+
+    IIBINEXE imp : impmain.sc ;
+    IINEEDLIBS imp : SIGIMPLIB SHFRAMELIB SHQLIB SHCOMPATLIB ;
+    IINEEDLIBSW imp : SHEMBEDLIB ;
+}
+
+if $(UNIX)
+{
+    IISIGFILES imp : imp_gcn_info.incl impcommon.sc impgcn.sc ;
+
+    IISIGFILE imp/README.DOC : README.lnx ;
+    IISIGFILE imp/Makefile : makefile.lnx ;
+    
+}
+else if $(NT)
+{
+    IISIGFILES imp : impcommon.sc  ;
+
+    IISIGFILES imp : imp.mak README.TXT ;
+    FILE $(INGSIG)/imp/makefile : makefile.w32 ;
+}
+

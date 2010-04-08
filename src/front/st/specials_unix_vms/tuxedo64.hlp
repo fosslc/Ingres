@@ -1,0 +1,5 @@
+Ingres DTP for Tuxedo (64-bit Support)
+
+Ingres/DTP for Tuxedo provides the necessary support to allow 
+Ingres to participate as a Resource Manager (RM) in an X/Open
+XA compliant global transaction, coordinated by Novell Tuxedo.

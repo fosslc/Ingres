@@ -1,0 +1,1399 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+The Interactive Terminal Monitor (ISQL) is an interactive interface
+for executing SQL statements and viewing the output.
+
+You are currently in the "input phase" of ISQL; the input form is
+a simple table field into which you may type SQL statements.
+When you are ready to execute your SQL input simply retrieve the
+"Go" or "Complete" menu items.  When the output is returned from the
+database DBMS it will be displayed in the "output phase", which
+will allow you to scroll through the results.
+     
+     (NOTE -- Help for the SQL query language syntax is available
+      below the description of Menu Commands shown here.  Simply 
+      scroll down another page for more information.)
+
+Menu Items
+----------     
+      Go          Submit the SQL statements to the DBMS for
+                  execution. The first "page" of output will be
+                  displayed as soon as it arrives from the DBMS.
+                  As you scroll forward the remaining pages will be
+                  displayed.  (See "Complete".)
+     
+      Resume      Return to the output phase to continue viewing the
+                  results from a previous request.
+     
+      Complete    Submit the SQL statements to the DBMS for
+                  execution. Don't display any of the results until
+                  the entire request is complete and all output has
+                  been returned to ISQL. (See "Go".)
+     
+      Blank       Delete all the SQL statements from the input
+                  table field.
+     
+      Edit        Edit the contents of the input table field using the
+                  system editor.
+     
+      File        Displays a submenu to READ or WRITE a file into or
+                  from the input table field.   WRITE dumps the contents
+                  of the table field into a file.  READ loads the
+                  contents of a file into the table field.  For both
+                  subcommands you will be prompted for the name of
+                  the file.
+
+      OnError	  Displays a pop-up form indicating what will happen if 
+		  an error is encountered on one of your SQL statements.
+		  TERMINATE ends the processing of these statements.  
+		  CONTINUE does not stop processing, the remaining statements 
+		  will be executed. You may change this option by selecting
+		  the appropriate setting.
+
+      LineEdit    Displays a submenu to Insert, Delete, Split, or Join
+		  lines in the input screen.
+
+      Help        Display this Help file.
+     
+      Quit        Exit from ISQL.
+     
+=============================================================================
+Help - SQL Summary of Commands
+
+Help is available on the following SQL commands.  Simply search for the
+command of interest, preceded by "HELP -", for detailed information.  For
+example, for help on SELECT, search for "HELP - SELECT"
+
+        ALTER TABLE
+	ALTER GROUP		DECLARE			GRANT
+	ALTER LOCATION 		DELETE			HELP
+	ALTER ROLE		DIRECT CONNECT		INSERT
+	ALTER USER		DIRECT DISCONNECT	MESSAGE
+	COMMENT 		DIRECT EXECUTE		MODIFY
+	COMMIT			DISABLE SECURITY_AUDIT	RAISE ERROR
+	COPY			DROP			RAISE DBEVENT
+	CREATE DBEVENT		DROP DBEVENT		REGISTER
+	CREATE GROUP		DROP GROUP		REGISTER DBEVENT
+	CREATE INDEX		DROP INTEGRITY		REMOVE
+	CREATE INTEGRITY	DROP LINK		REMOVE DBEVENT
+	CREATE LINK		DROP LOCATION		REVOKE
+	CREATE LOCATION		DROP PERMIT		ROLLBACK
+	CREATE PROCEDURE	DROP PROCEDURE		SAVE
+	CREATE ROLE		DROP ROLE		SAVEPOINT
+	CREATE RULE		DROP RULE		SELECT
+	CREATE SECURITY_ALARM	DROP SECURITY_ALARM	SET
+	CREATE TABLE		DROP USER		UPDATE
+	CREATE USER 		ENABLE SECURITY_AUDIT
+	CREATE VIEW		
+
+
+Help is also available on the following general topics:
+
+      datatypes 		set_functions 		type_functions
+      numeric_functions 	string_functions
+
+Some of the INGRES commands listed above are not supported by Open SQL.
+Open SQL is a subset of INGRES SQL that is supported by all Gateways.
+Gateways are interfaces between INGRES applications and non-INGRES databases.
+HELP on each individual topic will indicate if an INGRES command is not
+supported by Open SQL.
+=========================================================================
+HELP - ALTER TABLE.   Add and remove table-level constraints on existing
+		      tables.
+
+The syntax of an ALTER TABLE statement is:
+
+    ALTER TABLE [schema.]table_name
+       ADD [CONSTRAINT constraint_name] constraint_spec |
+	DROP CONSTRAINT constraint_name RESTRICT | CASCADE
+
+Example:
+    alter table departments drop constraint dept_unique
+    cascade;
+
+=========================================================================
+HELP - ALTER GROUP.   Add or drop users associated with a group.
+
+The syntax of an ALTER GROUP statement is:
+
+	ALTER GROUP groupid {,groupid}
+	ADD USERS (useid {,useid}) | DROP USERS (useid {,useid}) | DROP ALL
+
+This statement may not be available on your system.  Note: ALTER GROUP is not
+supported by Open SQL.
+
+Examples:
+	alter group sales_clerks add users (dannyh, helent);
+
+	alter group sales_clerks drop users (sallyt);
+=========================================================================
+HELP - ALTER LOCATION.   Change usage of a location.
+
+The syntax of an ALTER LOCATION statement is:
+
+	ALTER LOCATION location_name WITH
+	NOUSAGE | USAGE = (usage {, usage})
+
+usage represents one of the following:
+
+	ALL, CHECKPOINT, DATABASE, DUMP, SORT, JOURNAL, NONE
+
+This statement may not be available on your system.
+Note: ALTER LOCATION is not supported by Open SQL.
+
+Examples:
+
+	alter location mylocation with nousage;
+
+	alter location mylocation with usage = database, journal;
+=========================================================================
+HELP - ALTER ROLE.   Change or remove the password associated with a role.
+
+The syntax of an ALTER ROLE statement is:
+
+	ALTER ROLE role_id {,role_id}
+        [ADD PRIVILEGES | DROP PRIVILEGES (priv{,priv})]
+        [WITH with_option {,with_option}]
+ 
+        with_option = NOPASSWORD | PASSWORD = 'role_password'
+                    | EXTERNAL_PASSWORD
+                    | NOPRIVILEGES | PRIVILEGES = (priv{,priv})
+                    | NOSECURITY_AUDIT | SECURITY_AUDIT = (opt{,opt})
+ 
+This statement may not be available on your system.  Note: ALTER ROLE is not
+supported by Open SQL.
+  
+Examples:
+	alter role chk_inventory with nopassword;
+			   
+	alter role new_accounts with password; = 'eggbasket';
+=========================================================================
+HELP - ALTER USER.   Change group, privileges or password of a user.
+
+The syntax of an ALTER USER statement is:
+
+	ALTER USER [username] [ WITH
+	[ NOGROUP     | GROUP = 'group' ]]
+	[, NOPRIVILEGES | PRIVILEGES = (privilege {, privilege}) ]
+	[, NOPASSWORD  | PASSWORD = 'password' ]
+	[, OLDPASSWORD = 'password' ]
+
+privilege represents one of the following:
+
+	AUDIT_ALL, CREATEDB, OPERATOR, SECURITY, SYSTEM_ADMIN, TRACE
+
+This statement may not be available on your system.
+Note: ALTER USER is not supported by Open SQL.
+
+Examples:
+
+	alter user with password = 'mypassword', oldpassword = 'myoldpassword';
+
+	alter user username with privileges = createdb, group = 'mygroup';
+=========================================================================
+HELP - COMMENT.  Save comments about a table or column.
+
+The syntax of a COMMENT statement is:
+
+	COMMENT ON table tablename IS 'comment'
+	COMMENT ON COLUMN tablename.columnname IS 'comment';
+
+Examples:
+
+	comment on table mytable is 'This is a description of my table';
+
+	comment on column mytable.mycolumn is 'This column is in my table';
+=========================================================================
+HELP - COMMIT.   Commit the current transaction.
+
+The syntax of the COMMIT statement is:
+
+	COMMIT [WORK]
+
+The optional word WORK has no effect.  It is included for compatibility 
+with other versions of SQL.
+
+Examples:
+
+        insert into emp (name, sal, bdate)
+                values  ("smith", 13000, 1914)
+        commit;
+
+=========================================================================
+HELP - COPY.  Copy date from/into a table from/into a file.
+
+The syntax of the COPY statement is:
+
+        COPY TABLE tablename 
+                ( columnname = format [WITH NULL (value)]
+		{, columnname = format [WITH NULL (value)] } )
+                 INTO | FROM  'file_specification'
+		[WITH with_clause]
+
+This statement is not supported by Open SQL.
+
+Examples:
+
+        copy table employee ( eno = integer2, ename = vchar(10) )
+                from 'myfile.in';
+
+        copy table employee ( ename=d0comma, eno=d0comma )
+	into 'myfile.out';
+=========================================================================
+HELP - CREATE DBEVENT.  Define one dbevent.
+
+The syntax of a CREATE DBEVENT statement is:
+
+	CREATE DBEVENT dbevent_name
+
+
+This statement is not supported by Open SQL.
+
+Example:
+
+		create dbevent mydbevent;
+=========================================================================
+HELP - CREATE GROUP.  Define one or more group identifiers.
+
+The syntax of a CREATE GROUP statement is:
+ 
+	CREATE GROUP groupid {,groupid} [WITH USERS = (userid {,userid})]
+ 
+This statement may not be available on your system.  Note: CREATE GROUP is not
+supported by Open SQL.
+    
+Examples:
+	create group sales_clerks with users = (sallyt, larryl, louj);
+     
+	create group mygroup;
+=========================================================================
+HELP - CREATE INDEX.  Create an index on an existing base table.
+
+The syntax of a CREATE INDEX statement is:
+
+        CREATE [UNIQUE] INDEX indexname ON tablename
+        ( columnname [ASC] {, columnname [ASC] } )
+	[WITH with_clause]
+
+Examples:
+
+        create index pidx on parts ( pno );
+
+        create index spidx on sp ( sno, pno );
+
+=========================================================================
+HELP - CREATE INTEGRITY.  Define integrity constraints on a base table.
+
+The syntax of a CREATE INTEGRITY statement is:
+
+        CREATE INTEGRITY ON tablename IS qualification ;
+
+This statement is not supported by Open SQL.
+
+Examples:
+
+        create integrity on p is pno in ("p1", "p2", "p3", "p4", "p5");
+
+        create integrity on sp is qty > 0 and qty < 10000;
+
+=========================================================================
+HELP - CREATE LINK.   Define a link.
+
+The syntax of a CREATE LINK statement is:
+
+	CREATE LINK link_name [(column_list)]
+	[WITH
+		[NODE = [']node_name['], DATABASE = [']database_name[']]
+		[, DBMS = [']INGRES|DB2|IMS|RMS|DG ...[']]
+		[, TABLE = [']local_table_name[']]]
+
+This statement is only available with INGRES/STAR.
+
+Example:
+
+	create link distr (dcol1, dcol2, dcol3)
+	with table=local, node=farnode, database=mydb, dbms=dg;
+=========================================================================
+HELP - CREATE LOCATION.   Create a named location.
+
+The syntax of a CREATE LOCATION statement is:
+
+	CREATE LOCATION location_name WITH AREA = area_name
+	[ , USAGE = (usage{,usage})  |  NOUSAGE]
+usage represents one of the following:
+
+	ALL, CHECKPOINT, DATABASE, DUMP, SORT, JOURNAL, NONE
+
+This statement may not be available on your system.
+Note: CREATE LOCATION is not supported by Open SQL.
+
+Examples:
+
+	create location mylocation with nousage;
+
+	create location mylocation with usage = database,journal;
+=========================================================================
+HELP - CREATE PROCEDURE.   Create a named database procedure definition.
+
+The syntax of a CREATE PROCEDURE statement is:
+	
+	[CREATE] PROCEDURE proc_name
+	[(param_name [=] param_type {,param_name[=] param_type})]
+	= | AS
+	[declare_section]
+	BEGIN
+		statement {;statement}[;]
+	END;
+	
+This statement is not supported by Open SQL.
+
+Examples:
+	
+	create procedure mark_emp
+		(id INTEGER NOT NULL, label VARCHAR(100)) AS
+	BEGIN
+		UPDATE employee
+		SET comment = :label
+		WHERE id = :id;
+		IF iirowcount = 1 THEN
+			MESSAGE 'Employee was marked'
+			COMMIT;
+			RETURN 1;
+		ELSE
+			MESSAGE 'Employee was not marked - record error'
+			ROLLBACK;
+			RETURN 0;
+		ENDIF
+	END;
+=========================================================================
+HELP - CREATE ROLE.   Define one or more role identifiers.
+
+The syntax of a CREATE ROLE statement is:
+
+	CREATE ROLE role_id {,role_id}
+        [WITH with_option {,with_option}]
+
+        with_option = NOPASSWORD | PASSWORD = 'role_password'
+                    | EXTERNAL_PASSWORD
+                    | NOPRIVILEGES | PRIVILEGES = (priv{,priv})
+                    | NOSECURITY_AUDIT | SECURITY_AUDIT = (opt{,opt})
+
+This statement may not be available on your system.  Note: CREATE ROLE is not
+supported by Open SQL.
+
+Examples:
+	create role chk_inventory with nopassword;
+
+	create role daily_sales with password = terrific;
+=========================================================================
+HELP - CREATE RULE.   Create a rule.
+
+The syntax of a CREATE RULE statement is:
+
+	CREATE RULE rulename table_condition
+	EXECUTE PROCEDURE procname[(parameter = value {, parameter = value})]
+ 
+	The syntax of table_condition is:
+
+	AFTER statement_type {,statement_type} [ON|OF|FROM|INTO] tablename
+	[REFERENCING [OLD AS old_corr_name] [NEW AS new_corr_name]]
+	[WHERE qualification]
+
+This statement may not be available on your system.  Note: CREATE RULE is not
+supported by Open SQL.
+  
+Examples:
+	create rule insert_emp after insert into employee
+	execute procedure new_emp (name = new.name, addr = new.address);
+ 
+	create rule few_parts after update(quantity) of parts
+		where new.quantity < 50
+	execute procedure issue_order
+		(name = old.name, quantity = new.quantity);
+=========================================================================
+HELP - CREATE SECURITY_ALARM.  Create a security alarm on a table.
+
+The syntax of a CREATE SECURITY_ALARM statement is:
+
+      CREATE SECURITY_ALARM [alarmname] ON alarmobj
+                [IF alarmcond {,alarmcond}]
+                [WHEN statement_type {,statement_type}]
+                [BY [GROUP|ROLE|USER] alarmsubject | PUBLIC]
+                [RAISE DBEVENT [dbeventowner.]dbeventname ['dbeventtext']
+ 
+alarmobj is one of the following:
+        [TABLE] tablespec | DATABASE dbname | CURRENT INSTALLATION
+ 
+alarmcond is one of the following:
+        SUCCESS | FAILURE | SUCCESS,FAILURE
+ 
+statement_type  represents one of the following statements:
+ 
+        SELECT | INSERT | DELETE | UPDATE (for TABLE alarms)
+        CONNECT | DISCONNECT (for DATABASE alarms)
+
+This statement may not be available on your system.
+Note: CREATE SECURITY_ALARM is not supported by Open SQL.
+
+Examples:
+
+	create security_alarm on table tablename when select by user username;
+
+	create security_alarm on tablename if failure when select by username;
+=========================================================================
+HELP - CREATE USER.  Authorize a new user.
+
+The syntax of a CREATE USER statement is:
+
+	CREATE USER username [ WITH
+	[ PRIVILEGES = (privilege {, privilege}) | NOPRIVILEGES ]
+	[, GROUP = 'group' | NOGROUP ]]
+
+privilege represents one of the following:
+
+	AUDIT_ALL, CREATEDB, OPERATOR, SECURITY, SYSTEM_ADMIN, TRACE
+
+This statement may not be available on your system.
+Note: CREATE USER is not supported by Open SQL.
+
+Examples:
+
+	create user username with noprivileges;
+
+	create user username with privileges = createdb, group = 'mygroup';
+=========================================================================
+HELP - CREATE TABLE.  Create a new base table.
+
+The syntax of a CREATE TABLE statement is:
+
+        CREATE TABLE tablename 
+        [ ( columnname [format] {, columnname [format] } ) ]
+        [ AS subselect ]
+	[ WITH with_clause ]
+
+When running under INGRES/STAR, the following additional syntax applies:
+
+        CREATE TABLE linkname 
+        [ ( columnname [format] {, columnname [format] } ) ]
+        [ AS subselect ]
+	    [
+		WITH
+		[ NODE = nodename, DATABASE = databasename, ]
+		[ LOCATION	= location,	]
+		[ TABLE		= tablename,	]
+		[ JOURNALING	| NOJOURNALING	]
+	    ]
+
+Examples:
+
+        create table sample ( col1 integer, col2 varchar(6), col3 float );
+
+        create table sample as
+                select pno, pname, color 
+                from p
+                where weight > avg(weight);
+
+Additional help is available on "datatypes" and on SELECT.
+
+=========================================================================
+HELP - CREATE VIEW.  Define a virtual table.
+
+The syntax of a CREATE VIEW statement is:
+
+        CREATE VIEW viewname
+        [ ( columnname {, columnname } ) ]
+        AS subselect
+	[WITH CHECK OPTION]
+
+Examples:
+        create view pcolors ( partno, partcolor )
+                as select pno, color
+                from p;
+
+        create view notparis
+                as select *
+                from sp
+                where sno not in
+                        (select sno
+                        from s
+                        where city='paris');
+
+=========================================================================
+HELP - DECLARE.  Declare local variables for use in a database procedure.
+
+The syntax of a DECLARE statement is:
+
+	DECLARE  
+		var_name{,var_name} [=]var_type[ NOT NULL[WITH|NOT DEFAULT]
+						|WITH NULL ];
+
+		{var_name{,var_name}[=]var_type[ NOT NULL[WITH|NOT DEFAULT]
+						|WITH NULL ];}
+
+This statement can only be used in a database procedure definition.
+
+Example:
+	create procedure add_n_rows
+		(base integer, n integer, label varchar(100)) as
+	declare
+		limit   integer;
+		err     integer;
+	begin
+		limit = base + n;
+		err = 0;
+		while (base < limit) and (err = 0) do
+			insert into blocks values (:label, :base);
+			if iierrornumber > 0 then
+				err = 1;
+			else
+				base = base + 1;
+			endif;
+		endwhile;
+		return :base;
+	end;
+=========================================================================
+HELP - DELETE.  Delete rows from a table.
+
+The syntax of a DELETE statement is:
+
+        DELETE FROM tablename [corr_name]
+        [ WHERE search_condition ] 
+
+Examples:
+
+        delete from sp where sp.pno = 'p1';
+
+        delete from p;  (deletes all rows from p)
+
+        delete from sp where sno in
+                ( select sno
+                  from s
+                  where city="paris" );
+
+        delete from p where weight between 11 and 13;
+
+=========================================================================
+HELP - DIRECT CONNECT.
+
+The syntax of a DIRECT CONNECT statement is:
+
+	DIRECT CONNECT
+	[WITH
+		[NODE = [']node_name['], DATABASE = [']database_name[']]
+		[, DBMS = [']INGRES|DB2|IMS|RMS|DG ...[']]]
+
+This statement is only available with INGRES/STAR.
+
+Example:
+	direct connect with node = 'farnode', database = mydb;
+
+=========================================================================
+HELP - DIRECT DISCONNECT.
+
+The syntax of a DIRECT DISCONNECT statement is:
+ 
+	DIRECT DISCONNECT
+ 
+This statement is only available with INGRES/STAR.
+ 
+Example: 
+	direct disconnect;
+
+=========================================================================
+HELP - DIRECT EXECUTE IMMEDIATE. Send a string to the DBMS for execution.
+
+The syntax of a DIRECT EXECUTE IMMEDIATE statement is:
+ 
+	DIRECT EXECUTE IMMEDIATE 'string constant'
+	[WITH   
+		[NODE = [']node_name['], DATABASE = [']database_name[']]
+		[, DBMS = [']INGRES|DB2|IMS|RMS|DG ...[']]]
+
+This statement is only available with INGRES/STAR or Gateways.
+  
+Example:
+	direct execute immediate 'drop table mytable'
+	with node = 'farnode', database = mydb;
+
+=========================================================================
+HELP - DISABLE SECURITY_AUDIT.  Turn off auditing of users access to objects.
+
+The syntax of a DISABLE SECURITY_AUDIT statement is:
+
+	DISABLE SECURITY_AUDIT audit_type
+
+audit_type represents one of the following:
+
+	ALL
+	ALARM
+	DATABASE
+	EVENT
+	LOCATION
+	PROCEDURE
+	ROLE
+	ROW
+	RULE
+	SECURITY
+	TABLE
+	VIEW
+	USER
+
+This statement may not be available on your system.
+Note: DISABLE SECURITY_AUDIT is not supported by Open SQL.
+=========================================================================
+HELP - DROP.  Destroy one or more tables, indexes or views.
+
+The syntax of a DROP statement is:
+
+        DROP tablename|indexname|viewname {, tablename|indexname|viewname }
+
+Alternate forms:
+
+	DROP INDEX indexname {,indexname}
+	DROP TABLE tablename {,tablename}
+	DROP VIEW viewname {,viewname}
+
+Note: Open SQL supports only a single name for each DROP statement.
+
+Examples:
+
+        drop p, s, sp;
+
+=========================================================================
+HELP - DROP DBEVENT.  Drop one dbevent.
+
+The syntax of a DROP DBEVENT statement is:
+
+	DROP DBEVENT dbevent_name
+
+
+This statement is not supported by Open SQL.
+
+Example:
+		drop dbevent mydbevent;
+=========================================================================
+HELP - DROP GROUP.  Delete one or more group identifiers.
+
+The syntax of a DROP GROUP statement is:
+
+	DROP GROUP groupid {,groupid}
+
+This statement may not be available on your system.  Note: DROP GROUP is not
+supported by Open SQL.
+
+Examples:
+	drop group sales_clerks;
+
+	drop group mygroup, acct_clerk;
+
+=========================================================================
+HELP - DROP INTEGRITY.  Destroy one or more integrity constraints.
+
+The syntax of a DROP INTEGRITY statement is:
+
+        DROP INTEGRITY ON tablename integer {, integer } | ALL 
+
+The integer arguments are those displayed by a 
+"HELP INTEGRITY tablename" statement. 
+
+This statement is not supported by Open SQL.
+
+Example:
+
+        drop integrity on job 0, 4, 5;
+
+=========================================================================
+HELP - DROP LINK.  Destroy one or more links.
+
+The syntax of a DROP LINK statement is:
+
+	DROP LINK link_name {,link_name}
+
+This statement is only available with INGRES/STAR.
+
+Example:
+	drop link distr;
+
+=========================================================================
+HELP - DROP LOCATION.  Destroy location.
+
+The syntax of a DROP LOCATION statement is:
+
+	DROP LOCATION location_name
+
+This statement may not be available on your system.
+Note: DROP LOCATION is not supported by Open SQL.
+
+Example:
+		drop location mylocation;
+=========================================================================
+HELP - DROP PERMIT.  Destroy one or more permissions.
+
+The syntax of a DROP PERMIT statement is:
+
+For tables and views:
+
+        DROP PERMIT ON tablename 
+	integer {, integer } | ALL 
+
+For procedures:
+
+	DROP PERMIT ON PROCEDURE proc_name
+	integer | ALL
+
+For dbevents:
+
+        DROP PERMIT ON DBEVENT dbevent_name
+	integer | all
+
+	
+The integer arguments are those displayed by a 
+"HELP PERMIT tablename" statement.
+
+This statement is not supported by Open SQL.
+
+Examples:
+
+        drop permit on job all;
+
+	drop permit on procedure my_procedure 2;
+
+=========================================================================
+HELP - DROP PROCEDURE.  Remove a procedure definition from the database.
+
+The syntax of a DROP PROCEDURE statement is:
+
+	DROP PROCEDURE proc_name
+
+This statement is not supported by Open SQL.
+
+Example:
+
+	drop procedure my_procedure
+
+=========================================================================
+HELP - DROP ROLE.  Delete one or more role identifiers.
+
+The syntax of a DROP ROLE statement is:
+
+	DROP ROLE  role_id {,role_id}
+
+This statement may not be available on your system.  Note: DROP ROLE is not
+supported by Open SQL.
+
+Examples:
+	drop role sales_report;
+
+	drop role chk_inventory, daily_sales;
+
+=========================================================================
+HELP - DROP RULE.  Destroy a rule.
+
+The syntax of a DROP RULE statement is:
+
+	DROP RULE rulename
+
+This statement may not be available on your system.  Note: DROP RULE is not
+supported by Open SQL.
+
+Example:
+	drop rule chk_name;
+
+=========================================================================
+HELP - DROP SECURITY_ALARM.   Remove security_alarm from table.
+
+The syntax of a DROP SECURITY_ALARM statement is:
+
+	DROP SECURITY_ALARM ON tablename
+		integer {, integer }
+
+This statement may not be available on your system.
+Note: DROP SECURITY_ALARM is not supported by Open SQL.
+
+Example:
+	drop security_alarm on mytable 3;
+
+=========================================================================
+HELP - DROP USER.   Remove user.
+
+The syntax of a DROP USER statement is:
+
+	DROP USER username
+
+This statement may not be available on your system.
+Note: DROP USER is not supported by Open SQL.
+
+Example:
+
+	drop user myname;
+=========================================================================
+HELP - ENABLE SECURITY_AUDIT.   Audit user access to objects.
+
+The syntax of a ENABLE SECURITY_AUDIT statement is:
+
+	ENABLE SECURITY_AUDIT audit_type
+
+	audit_type represents one of the following:
+
+	ALL
+	ALARM
+	DATABASE
+	EVENT
+	LOCATION
+	PROCEDURE
+	ROLE
+	ROW
+	RULE
+	SECURITY
+	TABLE
+	VIEW
+	USER
+
+This statement may not be available on your system.
+Note: ENABLE SECURITY_AUDIT is not supported by Open SQL.
+=========================================================================
+HELP - GRANT.   Grant privileges on a table, view, or procedure.
+
+The syntax of the GRANT statement is:
+	
+	GRANT {priv{,priv} | ALL [PRIVILEGES]}
+	ON [TABLE] tablename {,tablename}
+	TO username{,username} | PUBLIC
+	
+	GRANT EXECUTE ON PROCEDURE proc_name
+	TO username{,username} | PUBLIC
+
+Enhanced GRANT syntax:
+
+	GRANT {priv{,priv} | ALL [PRIVILEGES]}
+	ON [TABLE] tablename {,tablename}
+	TO [USER | GROUP | ROLE] auth_id{,auth_id} | PUBLIC 
+
+	GRANT EXECUTE ON PROCEDURE proc_name
+	TO [USER | GROUP | ROLE] auth_id{,auth_id} | PUBLIC 
+
+	GRANT RAISE | REGISTER ON DBEVENT dbevent_name
+	TO [USER | GROUP | ROLE] auth_id{,auth_id} | PUBLIC
+
+	GRANT {dbpriv{,dbpriv} | ALL [PRIVILEGES]
+	ON DATABASE dbname {,dbname} | CURRENT INSTALLATION
+	TO [USER | GROUP | ROLE] auth_id{,auth_id} | PUBLIC 
+	
+priv represents one of the following privileges:
+	select
+	insert
+	delete
+	update (columnname{,columnname})
+
+dbpriv represents one of the following privileges:
+	[no]db_admin
+	[no]query_io_limit
+	[no]query_row_limit
+	[no]create_table
+	[no]create_procedure
+	[no]lockmode
+	
+The enhanced GRANT syntax may not be available on your system.
+Your system may not support all of the above database privileges (dbpriv).
+Note: The GRANT statement is not supported by Open SQL.
+
+Examples:
+	grant all on mytable to public;
+	
+	grant update (col1) on mytable to yourname;
+
+=========================================================================
+HELP - HELP.  Get information about tables, views, permits or integrities.
+
+The syntax of the help command is:
+
+	HELP [*]
+        HELP [tablename|viewname|indexname
+		{,tablename|viewname|indexname}]
+	HELP sql_statement
+	HELP COMMENT COLUMN tblname columnname {,columnname}
+	HELP COMMENT TABLE tblname {,tblname}
+	HELP HELP
+	HELP INDEX indexname {,indexname}
+        HELP INTEGRITY tablename {, tablename}
+        HELP PERMIT tablename {, tablename}
+        HELP PERMIT ON [ DBEVENT | PROCEDURE] object_name {, object_name}
+	HELP PROCEDURE procedure_name {,procedure_name}
+	HELP REGISTER linkname {,linkname}
+	HELP RULE rulename {,rulename}
+	HELP SQL
+	HELP SECURITY_ALARM tblname {,tblname}
+	HELP SYNONYM synonymname {,synonymname}
+        HELP TABLE tablename {, tablename}
+        HELP VIEW viewname {, viewname}
+
+Note: 
+The following HELP commands are not supported by Open SQL:
+
+	HELP INTEGRITY tablename {, tablename}
+	HELP PERMIT tablename {, tablename}
+	HELP PERMIT ON [ DBEVENT | PROCEDURE] object_name {, object_name}
+	HELP PROCEDURE procedure_name {,procedure_name}
+
+	
+The following HELP command is available only when running under INGRES/STAR
+or a Gateway:
+
+	HELP REGISTER linkname {, linkname}
+
+The following HELP commands are available only when running an INGRES
+extension and may not be available on your system:
+
+	HELP COMMENT COLUMN tblname columnname {,columnname}
+	HELP COMMENT TABLE tblname {,tblname}
+	HELP RULE rulename {, rulename}
+	HELP PERMIT ON DBEVENT dbevent_name {,dbevent_name}
+	HELP SECURITY_ALARM tblname {,tblname}
+	HELP SYNONYM synonymname {,synonymname}
+
+Examples:
+
+        help *;
+        help view job, employee;
+        help integrity job;
+        help permit employee, dept;
+
+=========================================================================
+HELP - INSERT.  Insert rows into a table.
+
+The syntax of an INSERT statement is:
+
+        INSERT INTO tablename  [ ( column {, column} ) ]
+        [ VALUES ( expression {, expression } ) | subquery ]
+
+Examples:
+
+        insert into sp (sno, pno, qty) values ('s1','p1',900);
+
+        insert into sp (sno)
+                select sno from s where city='london' or city='paris';
+
+=========================================================================
+HELP - MESSAGE. Issue a message from inside a database procedure.  
+
+The syntax of a MESSAGE statement is:
+
+	MESSAGE message_text | message_number | message_number message_text
+		[ WITH DESTINATION = ( message_dest {, message_dest } ) ]
+
+message_dest represents one of the following:
+	SESSION, ERROR_LOG
+
+This statement can only be used in a database procedure definition.
+
+=========================================================================
+HELP - MODIFY.  Convert the storage structure of a table or index.
+
+The syntax of a MODIFY statement is:
+
+        MODIFY tablename|indexname TO 
+	storage_structure | MERGE | RELOCATE | REORGANIZE | TRUNCATED
+	[UNIQUE]
+        [ ON column [ ASC ] {, column [ ASC ] } ]
+        [ WITH with_clause]
+
+This statement is not supported by Open SQL.
+
+Examples:
+
+        modify p to isam on pno;
+
+        modify sp to chash on sno, pno with minpages = 16;
+
+=========================================================================
+HELP - RAISE ERROR.  Notify INGRES if the database procedure has an error.
+
+The syntax of a RAISE ERROR statement is:
+
+	RAISE ERROR error_number [error_text]
+		[ WITH DESTINATION = ( message_dest {, message_dest } ) ]
+message_dest represents one of the following:
+	SESSION, LOG, AUDIT
+
+This statement can only be used in a database procedure definition, and it
+may not be available on your system.
+
+=========================================================================
+HELP - RAISE DBEVENT.  Raise a dbevent.
+
+The syntax of a RAISE DBEVENT statement is:
+
+	RAISE DBEVENT [dbevent_owner.]dbevent_name  [dbevent_text] 
+	[WITH [NO]SHARE]
+
+
+This statement is not supported by Open SQL.
+
+Example:
+		raise dbevent mydbevent;
+		raise dbevent myname.mydbevent;
+		raise dbevent mydbevent 'testing dbevents';
+		raise dbevent mydbevent with share;
+
+=========================================================================
+HELP - REGISTER.  Register an object.
+ 
+The syntax of a REGISTER statement is:
+
+	REGISTER [TABLE|VIEW] link_name [(column_list)]
+ 	AS LINK [FROM 
+ 		[[']local_owner_name['].][']local_object_name[']] 
+	[WITH
+		[NODE = [']node_name['], DATABASE = [']database_name[']]
+ 		[, DBMS = [']server_type[']]]
+
+	Or
+
+	REGISTER link_name AS LINK WITH REFRESH
+
+This statement is only available with INGRES/STAR or Gateways.
+
+
+The syntax to obtain access to security log files using SQL is:
+ 
+        REGISTER TABLE [schema.]table_name
+                (column_name col_type [IS 'external_name']
+                {,column_name col_type [IS 'external_name']})
+        AS IMPORT FROM 'security_log_file_name'
+        WITH DBMS=SXA
+                [,rows = integer_value];
+
+ 
+=========================================================================
+HELP - REGISTER DBEVENT.  Register a dbevent.
+
+The syntax of a REGISTER DBEVENT statement is:
+
+	REGISTER DBEVENT dbevent_name
+
+
+This statement is not supported by Open SQL.
+
+Example:
+		register dbevent mydbevent;
+=========================================================================
+HELP - REMOVE.  Remove the register description of an object.
+
+The syntax of a REMOVE statement is:
+ 
+	REMOVE [TABLE|VIEW] link_name {,link_name}
+
+This statement is only available with INGRES/STAR or Gateways.
+	   
+Example:
+	remove table distr;
+
+The syntax to remove registration of a security log file is:
+ 
+        REMOVE TABLE [schema.]table_name
+                {,[schema.]table_name};
+
+=========================================================================
+HELP - REMOVE DBEVENT.  Remove a dbevent.
+
+The syntax of a REMOVE DBEVENT statement is:
+
+	REMOVE DBEVENT [dbevent_owner.]dbevent_name
+
+
+This statement is not supported by Open SQL.
+
+Example:
+		remove dbevent mydbevent;
+=========================================================================
+HELP - REVOKE.  Revoke database privileges.
+
+The syntax of a REVOKE statement is:
+
+	REVOKE [GRANT OPTION FOR] ALL [PRIVILEGES] | <tbl_priv>(s)
+		ON [TABLE] <obj_spec>(s) FROM [<grantee type>] <grantee>(s)
+		RESTRICT | CASCADE or
+	REVOKE [GRANT OPTION FOR] ALL [PRIVILEGES] | EXECUTE
+		ON PROCEDURE <obj_spec>(s) FROM [<grantee type>] <grantee>(s)
+		RESTRICT | CASCADE or
+	REVOKE [GRANT OPTION FOR] ALL [PRIVILEGES] | <ev_priv>(s)
+		ON DBEVENT <obj_spec>(s) FROM [<grantee type>] <grantee>(s)
+		RESTRICT | CASCADE or
+	REVOKE ALL [PRIVILEGES] | <db_priv>(s)
+		ON CURRENT INSTALLATION | DATABASE <database name>(s)
+		FROM [<grantee type>] <grantee>(s)
+	where
+	  <tbl_priv> ::= SELECT | INSERT | DELETE | UPDATE[<column list>] |
+				REFERENCES[<column list>]
+	  <ev_priv>  ::= REGISTER | RAISE
+	  <grantee type> ::= [USER] | GROUP | ROLE
+	  <grantee> ::= <auth_id> | PUBLIC
+
+This statement may not be available on your system.  
+Your system may not support all of the database privileges.
+Note: REVOKE is not supported by Open SQL.
+
+Examples:
+        revoke grant option for select on employees from mike;
+
+        revoke select on employees from tom restrict;
+
+=========================================================================
+HELP - ROLLBACK.  Roll back the current transaction.
+
+The syntax of the ROLLBACK statement is:
+
+	ROLLBACK [WORK] [TO savepoint]
+
+The optional word WORK has no effect.  It is included for compatibility with
+other versions of SQL. The option [TO savepoint] is not supported by Open SQL.
+
+Examples:
+
+        	insert into emp (name, sal, bdate)
+                values  ('jones', 10000, 1923)
+        savepoint lastsave
+        	insert into emp (name, sal, bdate)
+                values  ('smith', 13000, 1914)
+        rollback to lastsave
+
+
+=========================================================================
+HELP - SAVE.  Save a base table until a specified date.
+
+The syntax of the SAVE statement is:
+
+        SAVE tablename UNTIL month day year;
+
+This statement is not supported by Open SQL.
+
+Examples:
+
+        save mytable until 12 27 1982;
+
+        save yourtable until JAN 1 1985;
+
+=========================================================================
+HELP - SAVEPOINT.  Declare a savepoint marker within a transaction.
+
+The syntax of the SAVEPOINT statement is:
+
+        SAVEPOINT savepoint_name ;
+
+This statement is not supported by Open SQL.
+
+Example:
+
+        insert into emp (name, sal, bdate)
+                values  ('jones', 10000, 1923)
+        savepoint lastsave
+        insert into emp (name, sal, bdate)
+                values  ('smith', 13000, 1914)
+        rollback to lastsave
+
+=========================================================================
+HELP - SELECT.  Select data from the database for display on your screen.
+
+The syntax of a SELECT statement is:
+
+        subselect { UNION [ALL] (subselect) }
+        [ ORDER BY column [ASC|DESC] {, column [ASC|DESC] } ]
+
+where a subselect has the syntax:
+
+        SELECT [ALL|DISTINCT] expression [AS column] {,expression [AS column]}
+        FROM tablename [corr_name] {, tablename [corr_name] }
+        [ WHERE search_condition]
+        [ GROUP BY column {, column} ]
+        [ HAVING search_condition ]
+
+Note: UNION [ALL] is not supported by Open SQL.
+
+Examples:
+        select pno, sno from sp;
+
+        select x.pno, y.sno from p x, s y
+        where x.color='red';
+
+        select sum(qty), pno
+        from sp
+        where sno != 's1'
+        group by pno;
+
+=========================================================================
+HELP - SET.  Set INGRES session option.
+
+The syntax of a SET statement is:
+	
+	SET AUTOCOMMIT ON | OFF
+	SET CONNECTION connection_name
+	SET CONNECTION NONE
+	SET JOINOP [NO]TIMEOUT
+	SET JOURNALING | NOJOURNALING [ON tablename]
+	SET RESULT_STRUCTURE HEAP | CHEAP | HEAPSORT | CHEAPSORT |
+			     HASH | CHASH | ISAM | CISAM | BTREE | CBTREE
+	SET LOCKMODE SESSION | ON tablename 
+	    WHERE [LEVEL = ROW | PAGE | TABLE | SESSION | SYSTEM]
+	    [, READLOCK = NOLOCK | SHARED | EXCLUSIVE | SESSION | SYSTEM]
+	    [, MAXLOCKS = n | SESSION | SYSTEM]
+	    [, TIMEOUT = n | SESSION | SYSTEM | NOWAIT]
+	SET [NO]LOGGING
+	SET [NO]OPTIMIZEONLY
+	SET [NO]PRINTQRY
+	SET [NO]QEP
+	SET SESSION session access mode
+	    [ADD PRIVILEGES (priv {,priv})
+	    | DROP PRIVILEGES (priv {,priv})]
+	    [WITH
+		ON_ERROR = ROLLBACK STATEMENT | TRANSACTION
+		| DESCRIPTION = 'session description'
+		| NODESCRIPTION
+		| PRIORITY = INITIAL | MINIMUM | MAXIMUM | priority
+		| PRIVILEGES = (priv {,priv}) | ALL | DEFAULT
+		| NOPRIVILEGES] 
+	SET SESSION READ ONLY | READ WRITE
+	    [, ISOLATION LEVEL SERIALIZABLE | REPEATED READ |
+	    READ COMMITTED | READ UNCOMMITTED]
+	    READ COMMITTED | READ UNCOMMITTED]
+	SET UPDATE_ROWCOUNT CHANGED | QUALIFIED
+	SET WORK LOCATIONS ADD | DROP | USE location {, location}
+	SET TRANSACTION READ ONLY | READ WRITE
+        SET TRANSACTION ISOLATION LEVEL 
+            READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ |
+            SERIALIZABLE 
+	SET [NO]RULES
+	SET [NO]PRINTRULES
+	SET NOMAXIO | MAXIO value
+	SET NOMAXROW | MAXROW value
+	SET NOMAXQUERY | MAXQUERY value
+	SET [NO]PRINTDBEVENTS
+	SET [NO]LOGDBEVENTS 
+	SET RANDOM_SEED [VALUE]
+	NOMAXIDLE | SET MAXIDLE value
+	NOMAXCONNECT | SET MAXCONNECT value
+	SET ROLE NONE | rolename [WITH PASSWORD = 'pwd'];
+
+The SET option SET AUTOCOMMIT is the only one supported by Open SQL.
+
+Examples:
+	set lockmode on mytable
+		where level = table, readlock = exclusive,
+		maxlocks = session, timeout = 0;
+	
+	set lockmode session where level = system, readlock = system
+		maxlocks = system, timeout = system;
+
+=========================================================================
+HELP - UPDATE.  Update values of columns in a table.
+
+The syntax of an UPDATE statement is:
+
+        UPDATE tablename [ corr_name ]
+        SET column = expression {, column = expression }
+        [ WHERE search_condition ];
+
+Examples:
+
+        update sp set qty=qty/2 where sno='s1';
+
+        update sp set qty=sqrt(qty) where sno in
+                (select sno from s where city='athens');
+
+=========================================================================
+HELP - Datatypes.  SQL valid datatypes.
+
+SQL datatypes include:
+
+	Abstract:	date
+			money
+			object_key      (Not available on all systems)
+			table_key       (Not available on all systems)
+
+	Character:	char	
+			cn              ( n is the maximum string length )
+			varchar( n )
+                        vchar( n ) 
+
+	Numeric:        float		( same as float8 )
+                        float4
+                        float8
+		        integer
+                        integer1
+                        integer2        ( same as smallint )
+                        integer4        ( same as integer )
+                        smallint
+
+Open SQL datatypes include:
+
+	Character:      char
+			varchar( n )
+
+	Numeric:        float           ( same as float8 )
+			integer
+			smallint
+=========================================================================
+HELP - Numeric_functions.  Functions on numeric values.
+
+Numeric functions include:
+                        abs( n )  
+                        atan( n ) 
+                        cos( n )  
+                        exp( n )  
+                        log( n )
+                        mod( n, b )
+                        sin( n )
+			sqrt( n )
+
+These functions are not supported by Open SQL.
+=========================================================================
+HELP - Set_functions.  Functions on sets of values.
+
+SQL set functions include:
+
+                        COUNT({ [ DISTINCT | ALL ] column_name} | * )
+                        SUM( [ DISTINCT | ALL ]column_name )
+                        AVG( [ DISTINCT | ALL ]column_name )
+                        MIN( column_name )
+                        MAX( column_name )
+
+=========================================================================
+HELP - String_functions.  Functions on string variables.
+                        
+String functions include:
+
+                        concat( string1, string2 )
+                        left( string1, length )
+                        length( string )
+                        locate( string1, string2 )
+                        lowercase( string )
+                        pad( string )
+                        right( string, length )
+                        shift( string, n_places )
+                        size( string )
+                        squeeze( string )
+                        trim( string )
+                        uppercase( string )
+
+These functions are not supported by Open SQL.
+=========================================================================
+HELP - Type_functions.   Functions to convert between datatypes.
+
+Type functions include:
+
+                        ascii( expr )
+			c( expr )
+			char( expr )
+                        date( expr )
+                        dow( expr )     convert absolute day to day of week
+                        float4( expr )
+                        float8( expr )
+			hex( expr )
+                        int1( expr )
+                        int2( expr )
+                        int4( expr )
+                        interval( x, y )
+                        money( expr )
+			varchar( expr )
+                        vchar( expr )
+
+These functions are not supported by Open SQL.
+=========================================================================

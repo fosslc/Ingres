@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqesclin.hlp, help for the "Line" submenu in the escape code or local
+/#-- procedure source code editor. Also used by fstm!fsrun.qsc
+/#-- 
+From this menu, you can edit code in a variety of ways:
+
+  InsertLine    Opens a new line above the current cursor position.
+  DeleteLine    Deletes the line the cursor is on.
+  SplitLine     Creates a new line starting with the character the
+                cursor is positioned on.
+  JoinLines     Joins the current and subsequent lines together.
+  Help          Displays this help text.
+  End           Returns to the previous menu.

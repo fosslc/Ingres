@@ -1,0 +1,445 @@
+/*
+	Test Name: zaa17.sep
+	Time: 28-AUG-1990 12:53:36
+	User Name: testenv     
+	Terminal type: septerm
+ 
+	Test ID : zaa17
+	Module  : abf
+	Filename: zaa17.sep
+	Purpose	: Destructive Cursory test of Create and Edit functions.
+	Input Files  : (none)
+	Output Files : (none)
+	Database     : SEPPARAMDB
+	Tables       : (none)
+	Synopsis     : Create applications using long names, illegal special
+                       characters, and maximum Short and Long remarks. Use
+                       special characters in the remarks, and assure that 
+                       these don't cause problems. Try creating applications
+                       with duplicate names, and try renaming applications to
+                       existing names. Clean up and exit.
+
+        NOTE: This combines 6.3 tests oca00 and oca01, and runs on INGRES 6.4.
+
+	History: 28-AUG-1990	Created			www
+          31-Jan-1996	(somsa01)	Added NT_GENERIC stuff.
+*/
+.if !SEPPARAMDB 
+? setenv SEPPARAMDB septools 
+<<
+environment variable was defined
+>>
+.endif 
+.if NT_GENERIC 
+? delobj SEPPARAMDB -application zaa17% -wildcard 
+<<
+~
+>>
+.else 
+? deleter SEPPARAMDB -azaa17% 
+<<
+~
+>>
+.endif 
+? abf SEPPARAMDB 
+<<
+~
+>>
+^^ `ESC'
+<<
+~
+>>
+^^ create`CR'zaa17_abcdefghijklmnopqrstuvwxyz`ESC'
+<<
+~
+>>
+^^ ok`CR'`ESC'
+<<
+
+%% MENU RESPONSE: OK
+%% MENU:   OK  Cancel  ListChoices  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "OK"
+
+%% Saving Application 'zaa17_abcdefghijklmnopqrstuvwxyz' . . .
+%% Retrieving Application catalogs . . .
+%% Retrieving Application catalogs . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|ABF - Edit an Application                                                       |
+|                                                                                |
+|  Name: zaa17_abcdefghijklmnopqrstuvwxyz Default Start:                         |
+|                                        Query Language: SQL                     |
+|+------------------------------------------------------------------------------+|
+||Frame/Procedure Name    |Type         |Short Remark                           ||
+||------------------------+-------------+---------------------------------------||
+||_                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  Go  Globals  Defaults  Errors  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: OK
+%% MENU:   OK  Cancel  ListChoices  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "OK"
+
+%% Saving Application 'zaa17_abcdefghijklmnopqrstuvwxyz' . . .
+%% Retrieving Application catalogs . . .
+%% Retrieving Application catalogs . . .
+%% BROWSE loop:
+##
+__________________________________________________________________________________
+|ABF - Edit an Application                                                       |
+|                                                                                |
+|  Name: zaa17_abcdefghijklmnopqrstuvwxyz Default Start:                         |
+|                                        Query Language: SQL                     |
+|+------------------------------------------------------------------------------+|
+||Frame/Procedure Name    |Type         |Short Remark                           ||
+||------------------------+-------------+---------------------------------------||
+||_                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+||                        |             |                                       ||
+|+------------------------------------------------------------------------------+|
+|                                                                                |
+|           Place cursor on row and select desired operation from menu.          |
+|                                                                                |
+|                                                                                |
+|  Create  Destroy  Edit  Rename  Go  Globals  Defaults  Errors  >               |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ end`CR'`ESC'
+<<
+~
+>>
+^^ moreinfo`CR'This is a "short remark" for zaa17_abcdefghijklmnopqrstuvwxyz. The "z-
+" fell off the short remark field, since the latter is limited to sixty (60) charact-
+ers. This field ("Long Remark") is much 
+<<
+~
+>>
+^^ longer, but I'll enter enough text to fill it completely. The text will include s-
+pecial characters like the quotes and parentheses I've used already, and it will als-
+o include ampersand (&), asterisk 
+<<
+~
+>>
+^^ (*), percent (%), pound (#), and a couple of other characters (~, @, !, $, ^, _, -
++, =, |, \, {, }, [, ]). One character that is missing from this list is the back qu-
+ote, which has special meaning 
+<<
+~
+>>
+^^ to SEP, and so must be excluded. This, then, is the testable list. (END)`ESC'
+<<
+
+%% CHANGED FIELD 
+##
+__________________________________________________________________________________
+|ABF - MoreInfo about an Application                                             |
+|                                                                                |
+|  Name: zaa17_abcdefghijklmnopqrstuvwxyz        Created: 28-aug-1990 12:55:51   |
+|                                                                                |
+| Owner: testenv                                Modified: 28-aug-1990 12:55:51   |
+|                                                                                |
+| Short Remark: This is a "short remark" for zaa17_abcdefghijklmnopqrstuvwxy     |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |z. The "z" fell off the short remark field, since the latter is limited to |  |
+| |sixty (60) characters. This field ("Long Remark") is much longer, but I'll |  |
+| |enter enough text to fill it completely. The text will include special char|  |
+| |acters like the quotes and parentheses I've used already, and it will also |  |
+| |include ampersand (&), asterisk (*), percent (%), pound (#), and a couple o|  |
+| |f other characters (~, @, !, $, ^, _, +, =, |, \, {, }, [, ]). One characte|  |
+| |r that is missing from this list is the back quote, which has special meani|  |
+| |ng to SEP, and so must be excluded. This, then, is the testable list. (END_)|  |
+| +---------------------------------------------------------------------------+  |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Next  Previous  Save  Defaults  Help  End                                     |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+<< IF (NT_GENERIC) 
+
+%% CHANGED FIELD 
+##
+__________________________________________________________________________________
+|ABF - MoreInfo about an Application                                             |
+|                                                                                |
+|  Name: zaa17_abcdefghijklmnopqrstuvwxyz        Created: 31-jan-1996 12:31:37   |
+|                                                                                |
+| Owner: ingres                                 Modified: 31-jan-1996 12:31:37   |
+|                                                                                |
+| Short Remark: This is a "short remark" for zaa17_abcdefghijklmnopqrstuvwxy     |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |z. The "z" fell off the short remark field, since the latter is limited to |  |
+| |sixty (60) characters. This field ("Long Remark") is much longer, but I'll |  |
+| |enter enough text to fill it completely. The text will include special char|  |
+| |acters like the quotes and parentheses I've used already, and it will also |  |
+| |include ampersand (&), asterisk (*), percent (%), pound (#), and a couple o|  |
+| |f other characters (~, @, !, $, ^, _, +, =, |, \, {, }, [, ]). One characte|  |
+| |r that is missing from this list is the back quote, which has special meani|  |
+| |ng to SEP, and so must be excluded. This, then, is the testable list. (END_)|  |
+| +---------------------------------------------------------------------------+  |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|  Next  Previous  Save  Defaults  Help  End                                     |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ save`CR'`ESC'
+<<
+~
+>>
+^^ end`CR'`ESC'
+<<
+~
+>>
+^^ rename`CR'~xyz`CR'`CR'`ESC'
+<<
+~
+>>
+^^ rename`CR'zaa17_1`CR'`ESC'
+<<
+~
+>>
+^^ create`CR'zaa17_1`ESC'
+<<
+~
+>>
+^^ ok`CR'h`CR'`ESC'
+<<
+
+%% MENU RESPONSE: OK
+%% MENU:   OK  Cancel  ListChoices  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "OK"
+
+%% 
+DISPLAYING ERROR MESSAGE VIA IIFDERROR.
+
+%% 
+SHORT ERROR MESSAGE IS:
+
+%% Duplicate application name `zaa17_1'  ... 
+
+%% 
+END OF SHORT ERROR MESSAGE.
+
+%% 
+LONG ERROR MESSAGE IS:
+
+%% Duplicate application name `zaa17_1'                                      
+
+%%  The application `zaa17_1' already exists in this database.  Application  
+
+%% names must be unique within a database.  Please enter another name for    
+
+%% this application. (E_AM0020)                                              
+
+%% 
+END OF LONG ERROR MESSAGE.
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|ABF - Create an Application                                                     |
+|                                                                                |
+|  Name: _zaa17_1                                 Created: 14-may-1991 14:00:25   |
+|                                                                                |
+| Owner: testenv                                Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL                                                              |
+|                                                                                |
+| Source Directory: ING63P_DEV:[INGTEST.FE.ABF.SEP]                              |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+<< IF (NT_GENERIC) 
+
+%% MENU RESPONSE: OK
+%% MENU:   OK  Cancel  ListChoices  Help
+%% MENU AT POSITION `0' SELECTED VIA A FUNCTION/PF KEY
+
+%% MENU AT POSITION `0' is "OK"
+
+%% 
+DISPLAYING ERROR MESSAGE VIA IIFDERROR.
+
+%% 
+SHORT ERROR MESSAGE IS:
+
+%% Duplicate application name `zaa17_1'  ... 
+
+%% 
+END OF SHORT ERROR MESSAGE.
+
+%% 
+LONG ERROR MESSAGE IS:
+
+%% Duplicate application name `zaa17_1'                                      
+
+%%  The application `zaa17_1' already exists in this database.  Application  
+
+%% names must be unique within a database.  Please enter another name for    
+
+%% this application. (E_AM0020)                                              
+
+%% 
+END OF LONG ERROR MESSAGE.
+
+%% INSERT loop:
+##
+__________________________________________________________________________________
+|ABF - Create an Application                                                     |
+|                                                                                |
+|  Name: _zaa17_1                                 Created: 31-jan-1996 12:09:27   |
+|                                                                                |
+| Owner: ingres                                 Modified:                        |
+|                                                                                |
+| Short Remark:                                                                  |
+|     Language: SQL                                                              |
+|                                                                                |
+| Source Directory: D:\sep\wnt\testtool\sep\septests                             |
+|                                                                                |
+|                                                                                |
+|  Long Remark:                                                                  |
+| +---------------------------------------------------------------------------+  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| |                                                                           |  |
+| +---------------------------------------------------------------------------+  |
+|                                                                                |
+|  OK  Cancel  ListChoices  Help                                                 |
+__________________________________________________________________________________
+@@
+
+%% MENU KEY selected
+>>
+^^ `CR'zaa17_2`ESC'
+<<
+~
+>>
+^^ ok`CR'`ESC'
+<<
+~
+>>
+^^ end`CR'`ESC'
+<<
+~
+>>
+^^ create`CR'zaa17_blah_blah_blah`ESC'
+<<
+~
+>>
+^^ ok`CR'`ESC'
+<<
+~
+>>
+^^ end`CR'`ESC'
+<<
+~
+>>
+^^ rename`CR'1_zaa17`CR'`CR'`ESC'
+<<
+~
+>>
+^^ rename`CR'zaa17_3`CR'`ESC'
+<<
+~
+>>
+^^ end`CR'
+<<
+~
+>>
+.if NT_GENERIC 
+? delobj SEPPARAMDB -application zaa17_1 
+<<
+~
+>>
+? delobj SEPPARAMDB -application zaa17_2 
+<<
+~
+>>
+? delobj SEPPARAMDB -application zaa17_3 
+<<
+~
+>>
+.else 
+? deleter SEPPARAMDB -azaa17_1 -azaa17_2 -azaa17_3 
+<<
+~
+>>
+.endif 
+
+
+Ending at: Wed Jan 31 12:34:09 1996

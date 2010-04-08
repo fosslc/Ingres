@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!containr_win
+#
+
+SubDir ING_SRC front vdba containr_win ;
+
+IISUBSYS front vdba containr_win ;
+
+
+IISLN ingr3cnt.dll : cato3cnt.sln ;

@@ -1,0 +1,28 @@
+#
+# MANIFEST file for front!embed!c
+#
+
+SubDir ING_SRC front embed c ;
+
+IISUBSYS front embed c ;
+
+IINOOPTIM cgen.c : vax_vms ;
+
+IIBINEXE eqc : cmain.c ;
+if ! $(NT)
+{
+IINEEDLIBS eqc : CLIB EQUELLIB UGLIB FMTLIB AFELIB ADFLIB
+	COMPATLIB ;
+}
+else
+{
+
+IINEEDLIBS eqc : CLIB EQUELLIB UGLIB COMPATLIB ;
+IINEEDOBJ eqc : eqglobs.c eqdata.c cgcdata.c iiglobal.c ugdata.c fe.c ;
+
+}
+IIUNDEFS eqc : tok_keytab yylex yyparse ;
+
+IILIBRARY CLIB : c.sy ctokens.st cgen.c ;
+
+IILIBOBJECT cgen.c ;

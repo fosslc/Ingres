@@ -1,0 +1,20 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are moving a group of components to a new location.  The relative spacing
+between the selected components will be maintained for the move.  If there
+is not enough room for the move, the form will be automatically expanded.
+
+To move the selected components, move the cursor to the new location that is
+to be the new anchor (reference) point for the selected components to move to
+and select the "Place" menu command.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Place           Place the selected component(s) relative to the
+                        newly selected anchor point.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Form Layout menu, without changing
+                        the location of any of the selected component(s).

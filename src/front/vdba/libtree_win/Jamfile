@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!libtree_win
+#
+
+SubDir ING_SRC front vdba libtree_win ;
+
+IISUBSYS front vdba libtree_win ;
+
+
+IISLN libtree.lib : libtree.sln ;

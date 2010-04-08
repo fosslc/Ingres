@@ -1,0 +1,245 @@
+; History:
+;	16-sep-97 (mcgem01)
+;	    Add scs_raat_term_msg.
+;       24-Sep-97 (fanra01)
+;           Add scs_self_get
+;       25-Feb-98 (fanra01)
+;           Renamed scs_detach_scb to scs_scb_detach
+;	08-apr-98 (mcgem01)
+;	    Remove scs_alloc_cbs and scs_dealloc_cbs
+;       16-Oct-98 (fanra01)
+;           Add scd_server_name_get and Sc_server_name
+;	23-aug-1999 (somsa01)
+;	    Added scd_start_sampler_set and scd_stop_sampler_set.
+;       31-Jan-2001 (fanra01)
+;           Bug 103817
+;           Removed Sc_main_cb as an export from this library for consistency
+;           between library contexts within a process.
+;	25-oct-2001 (somsa01)
+;	    Added scs_lquery_get.
+; 	28-jan-2004 (penga04)
+;	    Removed scs_open_iomdblist and scs_secaudit_writer_thread.
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	    Renamed iiscfnt.def to iilibscf.def due to new
+;	    build procedures.
+;	25-Aug-2004 (drivi01)
+;	    Removed scs_seclabel_get due to B1 security code removal.
+;	30-Oct-2008 (jonj)
+;	    SIR 120874: Removed sc0e_put, sc0e_0_put, sc0e_0_uput
+;	    added sc0e_putAsFcn, sc0ePut, sc0ePutNV.
+;       28-Jan-2010 (horda03) Bug 121811
+;           Add Evidence Set functions.
+;           Add function at 203 to avoid conflict with main.
+;	29-Mar-2010 (kschendel) SIR 123485
+;	    Delete copy functions no longer global.
+;
+
+EXPORTS
+sc0a_flush_audit		@1				
+sc0a_qrytext		@2				
+sc0a_qrytext_data		@3				
+sc0a_qrytext_param		@4				
+sc0a_write_audit		@5				
+;sc0e_0_put		@6				
+;sc0e_0_uput		@7				
+;sc0e_put		@8				
+sc0e_tput		@9				
+sc0e_trace		@10				
+sc0e_uput		@11				
+sc0m_allocate		@12				
+sc0m_check		@13				
+sc0m_deallocate		@14				
+sc0m_free_pages		@15				
+sc0m_gcalloc		@16				
+sc0m_gcdealloc		@17				
+sc0m_get_pages		@18				
+sc0m_initialize		@19				
+sca_add_datatypes		@20				
+sca_check		@21				
+sca_obtain_id		@22				
+sca_trace		@23				
+scc_dispose		@24				
+scc_error		@25				
+scc_fa_notify		@26				
+scc_gcomplete		@27				
+scc_iprime		@28				
+scc_prompt		@29				
+scc_recv		@30				
+scc_relay		@31				
+scc_send		@32				
+scc_trace		@33				
+scd_dbadd		@34				
+scd_dbdelete		@35				
+scd_adf_printf		@36				
+scd_dbinfo_fcn		@37				
+scd_terminate		@38				
+scd_mo_init		@39				
+scd_note		@40				
+scd_options		@41				
+sce_alter		@42				
+sce_dump		@43				
+sce_end_session		@44				
+sce_free_node		@45				
+sce_initialize		@46				
+sce_raise		@47				
+sce_register		@48				
+sce_remove		@49				
+sce_shutdown		@50				
+sce_thread		@51				
+sce_trname		@52				
+sce_chkstate		@53				
+sce_notify		@54				
+sce_trstate		@55				
+sce_econnect		@56				
+sce_ederegister		@57				
+sce_edisconnect		@58				
+sce_edump		@59				
+sce_efetch		@60				
+sce_einitialize		@61				
+sce_eregister		@62				
+sce_esignal		@63				
+sce_ewait		@64				
+sce_ewinit		@65				
+sce_ewset		@66				
+sce_mlock		@67				
+sce_munlock		@68				
+scf_call		@69				
+scf_trace		@70				
+scf_init_dbg		@71				
+scs_fire_db_alarms		@72				
+scs_get_db_alarms		@73				
+scs_trimwhite		@74				
+scs_copy_error		@75				
+;scs_cp_cpnify		@76				
+;scs_cp_redeem		@77				
+scs_cpinterrupt		@78				
+;scs_cpsave_err		@79				
+;scs_cpxmit_errors		@80				
+;scs_scopy		@81				
+scs_audit_thread		@82				
+scs_dbclose		@83				
+scs_dbms_task		@84				
+scs_dbopen		@85				
+scs_ddbadd		@86				
+scs_ddbclose		@87				
+scs_ddbdb_info		@88				
+scs_ddbremove		@89				
+scs_ddbsearch		@90				
+scs_cvt_dbpr_tuple		@91				
+scs_get_dbpriv		@92				
+scs_init_dbpriv		@93				
+scs_merge_dbpriv		@94				
+scs_put_sess_dbpriv		@95				
+scs_check_external_password		@96				
+scs_check_password		@97				
+scs_ctlc		@98				
+scs_dbdb_info		@99				
+scs_disassoc		@100				
+scs_dmf_to_user		@101				
+scs_icsxlate		@102				
+scs_initiate		@103				
+scs_log_event		@104				
+scs_propagate_privs		@105				
+scs_terminate		@106				
+scs_msequencer		@107				
+scs_remove_sess		@108				
+scs_scan_scbs		@109				
+scs_scb_detach		@110				
+scs_mo_init		@111				
+scs_scb_attach		@112				
+scs_access_error		@113				
+scs_blob_fetch		@114				
+scs_csr_find		@115				
+scs_cursor_remove		@116				
+scs_desc_send		@117				
+scs_fdbp_data		@118				
+scs_fetch_data		@119				
+scs_gca_error		@120				
+scs_input		@121				
+scs_lowksp_alloc		@122				
+scs_lquery_get		@123				
+scs_qef_error		@124				
+scs_qsf_error		@125				
+scs_qt_fetch		@126				
+scs_sequencer		@127				
+scs_set_priority		@128				
+scs_check_session_role		@129				
+scs_get_session_roles		@130				
+scs_load_role_dbpriv		@131				
+ldb_fetch		@132				
+scs_dccnct		@133				
+scs_dccont		@134				
+scs_dccopy		@135				
+scs_dccpmap		@136				
+scs_dcendcpy		@137				
+scs_dcexec		@138				
+scs_dcinput		@139				
+scs_dcinterrupt		@140				
+scs_dcmsg		@141				
+scs_dcsend		@142				
+scs_dctdesc		@143				
+scs_dcxproc		@144				
+scs_a_conn_get		@145				
+scs_a_host_get		@146				
+scs_a_pid_get		@147				
+scs_a_tty_get		@148				
+scs_a_user_get		@149				
+scs_attn		@150				
+scs_avformat		@151				
+scs_chk_priv		@152				
+scs_clear		@153				
+scs_declare		@154				
+scs_disable		@155				
+scs_enable		@156				
+scs_facility		@157				
+scs_fhandler		@158				
+scs_format		@159				
+scs_gwinfo_subget		@160				
+scs_i_interpret		@161				
+scs_iformat		@162				
+;    allocate_big_buffer
+allocate_message		@163				
+scs_raat_call		@164				
+scs_raat_term_msg		@165				
+;    scs_raat_load
+;    scs_raat_parse
+scs_self_get		@166				
+scu_idefine		@167				
+scu_information		@168				
+scu_malloc		@169				
+scu_mcount		@170				
+scu_mdump		@171				
+scu_mfind_mcb		@172				
+scu_mfree		@173				
+scu_xencode		@174				
+scs_pid_get		@175				
+scs_dblockmode_get		@176				
+scs_facility_name_get		@177				
+scs_act_detail_get		@178				
+scs_activity_get		@179				
+scs_description_get		@180				
+scs_query_get		@181				
+scs_assoc_get		@182				
+;scs_seclabel_get		@183				
+scs_remove_sess_set		@184				
+scs_crash_sess_set		@185				
+scd_state_get		@186				
+scd_listen_get		@187				
+scd_shutdown_get		@188				
+scd_capabilities_get		@189				
+scd_pid_get		@190				
+scd_server_name_get		@191				
+scd_crash_set		@192				
+scd_close_set		@193				
+scd_open_set		@194				
+scd_shut_set		@195				
+scd_stop_set		@196				
+scd_start_sampler_set		@197				
+scd_stop_sampler_set		@198				
+scd_initiate		@199				
+sc0ePutFcn		@200				
+sc0ePutNV		@201				
+sc0e_putAsFcn		@202				
+scd_diag		@203

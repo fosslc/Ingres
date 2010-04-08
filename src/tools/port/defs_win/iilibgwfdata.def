@@ -1,0 +1,32 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	    Renamed iigwfdata.def to iilibgwfdata.def
+;	    due to new build procedures.
+;
+
+EXPORTS
+Dmf_cptr		@1	DATA			
+Gwf_facility		@2	DATA			
+Gwf_itab		@3	DATA			
+GWsxa_sem		@4	DATA			
+GWsxa_version		@5	DATA			
+GWsxamsg_sem		@6	DATA			
+GWsxastats		@7	DATA			
+Gwsxa_xatt_tidp		@8	DATA			
+gwsxa_ulm		@9	DATA			
+Gwdmftst_version		@10	DATA			
+Gwlgtst_version		@11	DATA			
+GM_globals		@12	DATA			
+GM_version		@13	DATA			
+GM_classes		@14	DATA			
+GWsxa_sem		@15	DATA
+GWsxa_version		@16	DATA
+GWsxamsg_sem		@17	DATA
+GWsxastats		@18	DATA
+Gwsxa_xatt_tidp		@19	DATA
+SXAmo_stat_classes	@20	DATA
+gwsxa_ulm		@21	DATA
+GM_pmib_classes		@22	DATA
+GM_version		@23	DATA

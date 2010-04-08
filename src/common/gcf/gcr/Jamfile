@@ -1,0 +1,11 @@
+#
+# Jamfile file for common!gcf!gcr
+#
+
+SubDir ING_SRC common gcf gcr ;
+
+IISUBSYS common gcf gcr ;
+
+
+IILIBRARY GCFLIB : gcrgcc.c gcrgca.c ;
+

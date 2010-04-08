@@ -1,0 +1,148 @@
+/****************************************************************************************
+//                                                                                     //
+//  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.		       //
+//                                                                                     //
+//    Source   : starsel.scc                                                          //
+//                                                                                     //
+//                                                                                     //
+//    Project  : CA-OpenIngres                                                         //
+//    Author   : Emmanuel Blattes                                                      //
+//                                                                                     //
+//                                                                                     //
+//    Purpose  : Specific STAR statements                                              //
+****************************************************************************************/
+
+#define BUGNOTNULLABLE   // remove when bug is corrected at ingres level
+                         // Force to nullable whatever INGRES says.
+
+// compile:
+// esqlcc -fsqlselec.inc sqlselec.scc
+
+#include <stdlib.h>
+#include "starsel.h"
+
+extern "C" {
+EXEC SQL INCLUDE SQLCA;
+EXEC SQL INCLUDE SQLDA;
+BOOL ManageSqlError(void *psqlca);
+  #include "dba.h"
+  #include "domdata.h"
+  #include "main.h"
+  #include "dom.h"
+  #include "tree.h"
+  #include "dbaset.h"
+  #include "monitor.h"
+  #include "dbaginfo.h"
+  #include "tools.h"
+}
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+
+int GetStarObjSourceInfo (LPUCHAR NodeName, LPSTARSOURCEINFO lpSrcInfo)
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+  char ObjName[33];
+  char ObjOwner[33];
+  char ldbObjType[8];
+
+  char ldbobjname[33];
+  char ldbobjowner[33];
+  char ldbdbmstype[33];
+  char ldbdatabase[33];
+  char ldbnode[33];
+
+  EXEC SQL END DECLARE SECTION;
+  UCHAR szConnectName[2*MAXOBJECTNAME+2];
+  int iSession;
+  int iret;
+  char szNotAvailable [] = "N/A";
+
+  lstrcpy(lpSrcInfo->szLdbObjName ,szNotAvailable);
+  lstrcpy(lpSrcInfo->szLdbObjOwner,szNotAvailable);
+  lstrcpy(lpSrcInfo->szLdbDatabase,szNotAvailable);
+  lstrcpy(lpSrcInfo->szLdbNode    ,szNotAvailable);
+  lstrcpy(lpSrcInfo->szLdbDbmsType,szNotAvailable);
+
+  wsprintf( (char *)szConnectName, "%s::%s", (char *)NodeName, lpSrcInfo->DBName);
+  iret = Getsession(szConnectName,SESSION_TYPE_CACHENOREADLOCK, &iSession);
+  if (iret != RES_SUCCESS)
+     return RES_SQLNOEXEC;
+
+  // Prepare where clause : name, schema, type
+  lstrcpy(ObjName,(char *)lpSrcInfo->objectname);
+  lstrcpy(ObjOwner,(char *)lpSrcInfo->szSchema);
+  ldbObjType[0] = lpSrcInfo->objType;
+  ldbObjType[1] = '\0';
+
+  // WARNING: code for native kept for future use
+  // - at this time, does not work for native views
+  ASSERT (lpSrcInfo->bRegisteredAsLink);
+
+  if (lpSrcInfo->bRegisteredAsLink) {
+    // Registered as link : pick from iiregistered_objects
+    EXEC SQL REPEATED SELECT ldb_object_name ,ldb_object_owner ,ldb_database ,ldb_node ,ldb_dbmstype
+             INTO   :ldbobjname     ,:ldbobjowner     ,:ldbdatabase ,:ldbnode ,:ldbdbmstype
+             FROM   iiregistered_objects
+             WHERE  ddb_object_name   = :ObjName
+             AND    ddb_object_owner  = :ObjOwner
+             AND    ldb_object_type   = :ldbObjType;
+    EXEC SQL BEGIN;
+      ManageSqlError(&sqlca);
+      suppspace((unsigned char *)ldbobjname);
+      suppspace((unsigned char *)ldbobjowner);
+      suppspace((unsigned char *)ldbdatabase);
+      suppspace((unsigned char *)ldbnode);
+      suppspace((unsigned char *)ldbdbmstype);
+      if (ldbobjname[0])
+          lstrcpy(lpSrcInfo->szLdbObjName,ldbobjname);
+      if (ldbobjowner[0])
+          lstrcpy(lpSrcInfo->szLdbObjOwner,ldbobjowner);
+      if (ldbdatabase[0])
+          lstrcpy(lpSrcInfo->szLdbDatabase,ldbdatabase);
+      if (ldbnode[0])
+          lstrcpy(lpSrcInfo->szLdbNode,ldbnode);
+      if (ldbdbmstype[0])
+          lstrcpy(lpSrcInfo->szLdbDbmsType,ldbdbmstype);
+    EXEC SQL END;
+  }
+  else {
+    // Native: pick from several tables with 2 joints
+    // Kept for future use only
+    exec sql repeated select table_name,  table_owner,  ldb_database, ldb_node, ldb_dbms
+             into   :ldbobjname, :ldbobjowner, :ldbdatabase, :ldbnode, :ldbdbmstype
+             from   iiddb_objects a, iiddb_tableinfo b, iiddb_ldbids c
+             where  object_name = :ObjName and object_owner = :ObjOwner
+                    and b.object_base = a.object_base and c.ldb_id = b.ldb_id;
+    EXEC SQL BEGIN;
+      ManageSqlError(&sqlca);
+      suppspace((unsigned char *)ldbobjname);
+      suppspace((unsigned char *)ldbobjowner);
+      suppspace((unsigned char *)ldbdatabase);
+      suppspace((unsigned char *)ldbnode);
+      suppspace((unsigned char *)ldbdbmstype);
+      if (ldbobjname[0])
+          lstrcpy(lpSrcInfo->szLdbObjName,ldbobjname);
+      if (ldbobjowner[0])
+          lstrcpy(lpSrcInfo->szLdbObjOwner,ldbobjowner);
+      if (ldbdatabase[0])
+          lstrcpy(lpSrcInfo->szLdbDatabase,ldbdatabase);
+      if (ldbnode[0])
+          lstrcpy(lpSrcInfo->szLdbNode,ldbnode);
+      if (ldbdbmstype[0])
+          lstrcpy(lpSrcInfo->szLdbDbmsType,ldbdbmstype);
+    EXEC SQL END;
+  }
+  ManageSqlError(&sqlca);
+  if (sqlca.sqlcode < 0) {
+    ReleaseSession (iSession, RELEASE_ROLLBACK);
+    return RES_ERR;
+  }
+
+  ReleaseSession(iSession, RELEASE_COMMIT);
+  return RES_SUCCESS;
+}

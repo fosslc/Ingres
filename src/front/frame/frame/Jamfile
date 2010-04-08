@@ -1,0 +1,31 @@
+#
+# Jamfile file for front!frame!frame
+#
+
+SubDir ING_SRC front frame frame ;
+
+IISUBSYS front frame frame ;
+
+IINOOPTIM tbutil.c : i64_aix ;
+IINOOPTIM parse.c : i64_hpu ;
+IINOOPTIM fmtchg.c : dg8_us5 ;
+IINOOPTIM datafmt.c : r64_us5 ;
+
+IIMSGHDR erfd.msg ;
+
+IILIBRARY FDLIB : txtfdcre.qsc txtcreat.qsc frcreate.qsc
+	fdfrcrfl.qsc fddbutil.qsc crfrm.qsc trmdmp.c traverse.c
+	tbutil.c strverse.c setparse.c scrmsg.c scrlfmt.c rangechk.c
+	qryop.c qryfld.c qryfdop.c qrydata.c puttbl.c putfrm.c
+	putdata.c putcol.c parse.c nmretrv.c newtrim.c newtbl.c
+	newfrm.c newfld.c intrhdlr.c initfd.c gtname.c gtfldno.c
+	gotofld.c gettbl.c getfld.c getdata.c getcol.c frmisc.c
+	frmiread.c frmdmp.c frfldcre.c frecover.c 
+	formdata.c fmtchg.c fldval.c fldofmd.c fldname.c flddmp.c
+	fldclr.c fixstate.c fdvalid.c fdutil.c fdstruct.c fdstart.c
+	fdqbfraw.c fdmvtab.c fdmove.c fdinvis.c fdfndfld.c fdfndcol.c
+	fddstab.c fdderive.c fdcvto60.c error.c emptyrow.c dump.c
+	decoding.c datafmt.c copyup.c copy.c clrflds.c chkqry.c
+	chkfrm.c chkfld.c chgtbrow.c chgfmt.c ;
+
+IILIBRARY IMPFRAMELIBDATA : frdata.c frframe.c ;

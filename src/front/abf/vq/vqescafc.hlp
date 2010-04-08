@@ -1,0 +1,51 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqescafc.hlp               After-Field-Change escape code examples.
+Each form field and table field column can have an After-Field-Change 
+escape.  The After-Field-Change escape executes when the cursor leaves a 
+field or column, but only if the user typed a new value in that field.
+
+Any After-Field-Exit escape defined on the field will execute after the
+After-Field-Change escape. Also, for lookup join fields, the field value 
+will be validated against the lookup table after the After-Field-Change 
+escape runs.
+
+After-Field-Change escape code examples:
+
+    To control cursor movement to the next field:
+
+        IF (priority = 'high') THEN
+            RESUME FIELD remarks;
+        ELSE
+            RESUME NEXT;
+        ENDIF;
+
+    In an Update frame, to allow Lookup field values to be blanked out
+    without causing a validation error:
+
+        IF (cust_no = 0) THEN   /* User cleared the field */
+            RESUME NEXT;        /* RESUME will branch out of the code and
+                                ** skip over the lookup validation query
+                                ** that follows. (see note on this below)
+                                */
+        ENDIF;
+
+    (In an Append frame, Lookup fields CAN be left blank without causing
+    a validation error, unless you make the field Mandatory in Vifred.)
+
+Notes on the use of RESUME in After-Field-Change escapes: 
+
+   1. If a field has a Lookup defined on it in the Visual Query, then 
+      values entered in that field are validated against the lookup table. 
+      However, that validation will NOT take place if the After-Field-Change 
+      escape code issues a RESUME statement (or any of its variants, such as 
+      "RESUME NEXT").  This is because RESUME statements cause a branch out 
+      of the 4GL code and the Lookup validation follows the After-Field-
+      Escape.  Also, if the value entered in the field is valid (i.e., it 
+      exists in the lookup table), then a RESUME NEXT will be issued 
+      automatically following the validation.
+
+   2. If both an After-Field-Change escape and an After-Field-Exit escape 
+      exist for the same field, they are both placed in the same activate 
+      block in the generated file. If the After-Field-Change escape issues 
+      any type of RESUME statement, the After-Field-Exit escape will not 
+      execute (because RESUME causes a branch out of the 4GL code).

@@ -1,0 +1,22 @@
+#
+# Jamfile file for front!ice!cf_win!td!CFML_win
+#
+#	17-Dec-2009 (bonro01)
+#	    Replace unix specific path separators
+
+SubDir ING_SRC front ice cf_win td CFML_win ;
+
+IISUBSYS front ice cf_win td CFML_win ;
+
+
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceCommit.vtm : CF_IceCommit.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceDeclare.vtm : CF_IceDeclare.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceExtFunction.vtm : CF_IceExtFunction.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceFunction.vtm : CF_IceFunction.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceIf.vtm : CF_IceIf.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceInclude.vtm : CF_IceInclude.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceRollback.vtm : CF_IceRollback.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceSerFunction.vtm : CF_IceSerFunction.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceSql.vtm : CF_IceSql.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceSwitch.vtm : CF_IceSwitch.vtm ;
+IIICEFILE ColdFusion$(DFS)TagDefs$(DFS)CFML$(DFS)CF_IceVar.vtm : CF_IceVar.vtm  ;

@@ -1,0 +1,318 @@
+#ifdef HISTORY
+/*
+** Makefile.ccpp is the Makefile for various .o's in udtdemo.  Makefile is a 
+**	deliverable and is shipped to users.
+**
+**
+** History:
+**	26-aug-93 (dianeh)
+**		Created (from common!adf!admin!Makefile.ccpp, 6.4).
+**	17-nov-93 (tomm)
+**		Added HP8 entry for c89 and +O3
+**	23-nov-93 (geri)
+**		Added su4_u42 entry (uses acc and -O2)
+**	29-mar-94 (vijay)
+**		Change aix compiler to c89. else it gives warning messages for
+**		initializations of usc_error etc.
+**	14-apr-94 (johnst)
+**		Added axp_osf entry.
+**	18-apr-94 (vijay)
+**		Add -D_ALL_SOURCE to aix flags. else compile problems.
+**      09-feb-95 (chech02)
+**              Add rs4_us5 for AIX 4.1.       
+**	24-jan-95 (wadag01)
+**		Add sos_us5 entry for SCO OpenServer 5.0.
+**	21-feb-96 (toumi01)
+**		Turn on default optimization for axp_osf.
+**	26-feb-95 (smiba01)
+**		Add usl_us5 entry for Unixware 2.0.2
+**      05-feb-96 (morayf)
+**              Add rmx_us5 for SNI RMx00.
+**      01-mar-96 (morayf)
+**              Add pym_us5 for Pyramid NILE port (like rmx_us5).
+**	28-may-1997 (walro03)
+**		Unoptimize for AIX 3.2.5 (ris_us5).  Complex UDT was failing
+**		the udttest script when brackets used.  Since this directory
+**		uses make instead of ming, must unoptimize the entire directory.
+**	12-dec-97 (hweho01)
+**		Add dgi_us5 entry for DG/UX Intel platform.
+**	5-May-98 (bonro01)
+**      	Add dg8_us5 for Motorola DG/UX.
+**	5-dec-98 (nanpr01)
+**      	Add su4_us5 for Sun/Solaris.
+**	16-dec-98 (hanch04)
+**      	Update su4_us5 for Sun/Solaris.
+**	08-Jan-1999 (muhpa01)
+**              Modified CCFLAGS for HP: on hpb_us5 added +DA & +DS settings
+**              to allow for portability when building on PA 2.0.  For
+**              hp8_us5, changed +O3 to -O, just to get it line with the
+**              rest of the build.
+**	28-Sep-1998 (kosma01)
+**	        IRIX64 6.4 sgi_us5. Complier default is for chars to be unsigned.
+**		Ingres coding default if for chars to be signed. Always sign
+**		chars.
+**	22-jun-99 (toumi0)
+**		Add lnx_us5 entry for Linux.
+**	06-oct-1999 (toumi01)
+**		Change Linux config string from lnx_us5 to int_lnx.
+**	22-Nov-99 (hweho01)
+**      	Add ris_u64 for AIX 64-bit platform.
+**	14-Jun-2000 (hanje04)
+**		Added ibm_lnx entry for OS/390 Linux
+**	20-Feb-2001 (gupsh01)
+**		Added nvarchar data type for unicode variable text string type.
+**	04-Apr-2002 (somsa01)
+**		To prevent clashes with possible 64-bit binaries, tack on
+**		"32" to the object names.
+**      12-Jul-2002 (hanch04)
+**          remove "32" from object names, 64-bit objects will be in the
+**          lp64 dir.
+**	21-Mar-2003 (hanje04)
+**		Added entry for AMD 64bit linux (a64_lnx)
+**	21-May-2003 (bonro01)
+**	    Add support for HP Itanium (i64_hpu)
+**	26-Mar-2004 (somsa01)
+**	    Added support for Itanium Linux.
+**	24-Sep-2004 (hanje04)
+**	    BUG 113127
+**	    UDT's now shipped as shared library instead of UDT so
+**	    Makefile should also build shared library
+**	19-Jan-2005 (bonro01)
+**	    Add a64_sol for Solaris AMD64
+**      18-Apr-2005 (hanje04)
+**          Add support for Max OS X (mac_osx).
+**          Based on initial changes by utlia01 and monda07.
+**       6-Nov-2006 (hanal04) SIR 117044
+**          Add int.rpl for Intel Rpath Linux build.
+**	23-Mar-2007 (hanje04)
+**	    SIR 117985
+**	    Add support for 64bit PowerPC Linux (ppc_lnx)
+**	12-Feb-2008 (hanje04)
+**	    SIR S119978
+**	    Add support for Intel OSX
+**	23-Jun-2009 (kschendel) SIR 122138
+**	    Define BUILD_ARCHxx symbols for hybrid capable platforms.
+**	03-Sep-2009 (frima01) SIR 122138
+**	    Update CCFLAGS for i64_hpu.
+*/
+
+/* **** FIXME! **** The compile strings here assume the traditional
+** hybrid styles, i.e. 32 bits for 32+64 hybrids and 64 bits for
+** 64+32 hybrids.  It would be better to extract the proper compile
+** strings from e.g. default.h, which mkdefault has already laboriously
+** figured out.
+*/
+#endif
+
+
+#ifdef axp_osf
+#define GOT_IT
+CCFLAGS=-signed -Daxp_osf -O -o$@
+CC=cc
+#endif
+
+#ifdef ris_us5
+#define GOT_IT
+CCFLAGS=-Dris_us5 -D_ALL_SOURCE -qchars=signed -o$@
+CC=c89
+#endif
+
+#if defined(rs4_us5) || defined(r64_us5)
+#define GOT_IT
+CCFLAGS=-DBUILD_ARCH32 -Drs4_us5 -D_ALL_SOURCE -qchars=signed -O -o$@
+CC=c89
+#endif
+
+#ifdef ris_u64
+#define GOT_IT
+CCFLAGS=-Dris_u64 -D_ALL_SOURCE -q64 -qchars=signed -O -o$@
+CC=c89
+#endif
+
+#ifdef dg8_us5
+#define GOT_IT
+CCFLAGS=-O2 -o$@
+CC=cc
+#endif
+
+#if defined(i64_hpu)
+CCFLAGS=-DBUILD_ARCH32 -O -o$@
+#define GOT_IT
+CC=c89
+#endif
+
+#if defined(hpb_us5) || defined(hp2_us5)
+CCFLAGS=-DBUILD_ARCH32 -O +DAportable +DS2.0a -o$@
+#define GOT_IT
+CC=c89
+#endif
+
+#if defined(hp8_us5)
+CCFLAGS=-O -o$@
+#define GOT_IT
+CC=c89
+#endif
+
+#ifdef su4_u42
+#define GOT_IT
+CCFLAGS=-O2 -o$@
+CC=acc
+#endif
+
+#ifdef rmx_us5
+#define GOT_IT
+CCFLAGS=-Drmx_us5 -O -K signed -o$@
+CC=cc
+#endif
+
+#ifdef pym_us5
+#define GOT_IT
+CCFLAGS=-Dpym_us5 -O -K signed -o$@
+CC=cc
+#endif
+
+#ifdef sgi_us5
+#define GOT_IT
+CCFLAGS=-mips3 -n32 -O -signed -Dsgi_us5 -o$@
+CC=cc
+#endif
+
+#ifdef sos_us5
+#define GOT_IT
+CCFLAGS=-Dsos_us5 -O -o$@
+CC=cc
+#endif
+
+#ifdef usl_us5
+#define GOT_IT
+CCFLAGS=-Dusl_us5 -O -o$@
+CC=cc
+#endif
+
+#ifdef sui_us5
+#define GOT_IT
+CCFLAGS=-Dsui_us5 -O -o$@
+CC=cc
+#endif
+
+#if defined(su4_us5) || defined(su9_us5)
+#define GOT_IT
+CCFLAGS=-DBUILD_ARCH32 -Dsu4_us5 -O -o$@
+CC=cc
+#endif
+
+#ifdef a64_sol
+#define GOT_IT
+CCFLAGS=-DBUILD_ARCH32 -Da64_sol -O -o$@
+CC=cc
+#endif
+
+#ifdef rmx_us5
+#define GOT_IT
+CCFLAGS=-Drmx_us5 -O -K signed -o$@
+CC=cc
+#endif
+
+#ifdef dgi_us5
+#define GOT_IT
+CCFLAGS=-Ddgi_us5 -O -o$@
+CC=cc
+#endif
+
+#ifdef dg8_us5
+#define GOT_IT
+CCFLAGS=-Ddg8_us5 -O -o$@
+CC=cc
+#endif
+
+#ifdef int_lnx
+#define GOT_IT
+CCFLAGS=-DLNX -DBUILD_ARCH32 -Dint_lnx -fPIC -O -o$@
+LDFLAGS=-shared
+SHLSFX=so
+CC=cc
+#endif
+
+#ifdef int_rpl
+#define GOT_IT
+CCFLAGS=-DLNX -Dint_rpl -fPIC -O -o$@
+LDFLAGS=-shared
+SHLSFX=so
+CC=cc
+#endif
+
+#ifdef ibm_lnx
+#define GOT_IT
+CCFLAGS=-DLNX -Dibm_lnx -O -o$@
+LDFLAGS=-shared
+SHLSFX=so
+CC=cc
+#endif
+
+#ifdef a64_lnx
+#define GOT_IT
+CCFLAGS=-DLNX -DBUILD_ARCH64 -Da64_lnx -O -o$@
+LDFLAGS=-shared
+SHLSFX=so
+CC=cc
+#endif
+
+#ifdef i64_lnx
+#define GOT_IT
+CCFLAGS=-DLNX -DBUILD_ARCH64 -Di64_lnx -O -o$@
+LDFLAGS=-shared
+SHLSFX=so
+CC=cc
+#endif
+
+#if defined(mg5_osx) || defined(int_osx)
+#define GOT_IT
+CCFLAGS=-DOSX -dynamic -O -o$@
+LDFLAGS=-dynamiclib
+SHLSFX=dylib
+CC=cc
+#endif
+
+#ifdef ppc_lnx
+#define GOT_IT
+CCFLAGS=-m64 -DLNX -Dppc_lnx -O -o$@
+LDFLAGS=-melf64ppc -shared
+SHLSFX=so
+CC=cc
+#endif
+
+#ifndef GOT_IT
+CCFLAGS=-O -o$@
+CC=cc
+LDFLAGS=-shared
+SHLSFX=so
+#endif
+
+MESG="This source file is not delivered in the INGRES distribution."
+SHELL=/bin/sh
+INC=$(II_SYSTEM)/ingres/files
+CFLAGS=$(CCFLAGS) -I$(INC)
+
+all: libdemoudt.1.$(SHLSFX)
+common.o:	common.c $(INC)/iiadd.h
+	$(CC) $(CFLAGS) -c common.c
+cpx.o:	cpx.c $(INC)/iiadd.h udt.h
+	$(CC) $(CFLAGS) -c cpx.c
+intlist.o:	intlist.c $(INC)/iiadd.h udt.h
+	$(CC) $(CFLAGS) -c intlist.c
+op.o:	op.c $(INC)/iiadd.h udt.h
+	$(CC) $(CFLAGS) -c op.c
+zchar.o:	zchar.c $(INC)/iiadd.h udt.h
+	$(CC) $(CFLAGS) -c zchar.c
+iimhpk.o:	$(INC)/iiadd.h iipk.h
+	@[ -f iimhpk.c ] || echo $(MESG)
+	@[ -f iimhpk.c ] && $(CC) $(CFLAGS) -c iimhpk.c
+iicvpk.o:	$(INC)/iiadd.h iipk.h
+	@[ -f iicvpk.c ] || echo $(MESG) 
+	@[ -f iicvpk.c ] && $(CC) $(CFLAGS) -c iicvpk.c
+numeric.o:	numeric.c $(INC)/iiadd.h iipk.h udt.h
+	$(CC) $(CFLAGS) -c numeric.c
+nvarchar.o:	nvarchar.c $(INC)/iiadd.h udt.h
+	$(CC) $(CFLAGS) -c nvarchar.c
+libdemoudt.1.$(SHLSFX) : common.o cpx.o iicvpk.o iimhpk.o intlist.o numeric.o op.o zchar.o nvarchar.o
+	$(CC) $(LDFLAGS) -o libdemoudt.1.$(SHLSFX) common.o cpx.o iicvpk.o iimhpk.o intlist.o numeric.o op.o zchar.o nvarchar.o

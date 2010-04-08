@@ -1,0 +1,31 @@
+#
+# Jamfile file for cl!clf!me_win
+#
+
+SubDir ING_SRC cl clf me_win ;
+
+IISUBSYS cl clf me_win ;
+
+
+IILIBRARY COMPATLIB : mexdump.c
+	metls.c
+	metfree.c
+	metagutl.c
+	mesize.c
+	meshared.c
+	mereq.c
+	mepages.c
+	memove.c
+	meinitlst.c
+	mefree.c
+	mefill.c
+	medump.c
+	meconsist.c
+	mealloc.c
+	meadvise.c
+	meaddrmg.c
+	meactual.c
+	me.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : mefindpg.c
+	medata.c ;

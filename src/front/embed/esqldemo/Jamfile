@@ -1,0 +1,14 @@
+#
+# Jamfile file for front!embed!esqldemo
+#
+
+SubDir ING_SRC front embed esqldemo ;
+
+IISUBSYS front embed esqldemo ;
+
+FILE $(ESQLCDEMO)/esqldemo.wri : esqldemo.wri ;
+FILE $(ESQLCDEMO)/makefile : makefile.nt ;
+FILE $(ESQLCDEMO)/readme : readme.nt ;
+FILE $(ESQLCDEMO)/tmdemo.sc : tmdemo.sc ;
+
+

@@ -1,0 +1,23 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqmarkfm.hlp, help on marking frames to be reconciled by the 
+/#-- Reconcile utility.
+/#-- 
+The Reconcile utility allows you to adjust a frame's Visual Query, when the 
+table referenced by the frame has changed.
+
+The list includes all the frames in your application with Visual Queries, 
+even those Removed from the Application Flow Diagram. You can keep a frame 
+from being reconciled by changing its setting to 'n' before you select OK.
+
+The Reconcile utility reports on the reconciliation as it occurs. During 
+reconciliation, when a given frame needs to be changed to match the database, 
+you can accept or reject the changes for the frame; you cannot accept 
+some and reject others.
+
+To help you make a decision, you can view the Visual Query for the frame 
+as it is and as it will be if you accept the changes. You can also Cancel 
+the changes, then write the report to a file; this is especially convenient 
+if you want to examine the proposed changes before you decide.
+ 
+To reconcile a set of frames, change the setting to 'n' for any frames you 
+want to exclude and then select OK.

@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+
+  The privilege_user resource specifies the ICE server system administrator.
+  This user is permitted to perform all ICE server administration task which
+  include management of locations and variables, management of security
+  components, management of business units and monitoring of the ICE server.
+
+  Default: ingres

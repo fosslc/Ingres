@@ -1,0 +1,12 @@
+
+#
+# MANIFEST file for common!aif!specials_win
+#
+
+SubDir ING_SRC common aif specials_win ;
+
+IISUBSYS common aif specials_win ;
+
+
+IISHLIBRARY $(SHAPILIB) : $(API_LIBS) $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA)
+	 $(IMPADFLIB) $(IMPGCFLIB) $(IMPCUFLIB) ;

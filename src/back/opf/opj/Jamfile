@@ -1,0 +1,11 @@
+#
+# Jamfile file for back!opf!opj
+#
+
+SubDir ING_SRC back opf opj ;
+
+IISUBSYS back opf opj ;
+
+
+IILIBRARY OPFLIB : opjunion.c opjnorm.c opjjoinop.c ;
+

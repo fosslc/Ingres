@@ -1,0 +1,325 @@
+/*
+**Copyright (c) 2007 Ingres Corporation
+*/
+
+/**
+** Name: DUSTAR.QSH - Structures/constants used by createdb to build a
+**		      distributed database.
+**
+** Description:
+**      DU_link_object_entry	- Array of Link names and object names used
+**				for during initialization.
+**	DU_index_object_entry   - Array of Secondary indexes used for init.
+**      DU_dbcapabilities	- Array of dbcapabilities.
+**      DU_dbcaps_value		- Array of dbcaps.
+[@comment_line@]...
+**
+** History: 
+**      1-oct-1988 (alexc)
+**          Creation
+**	26-jun-1990 (teresa)
+**	    added DU_index_object_map
+**	24-jul-90 (teresa)
+**          renamed dustar.qh to dustar.qsh to solve unix/port build problem
+**	25-jul-90 (teresa)
+**	    iidd_views_cat -> iidd_views
+**	08-oct-90 (teresa)
+**	    now we are ready to integrate bugfix 30502, so
+**	    iidd_views -> iidd_ddb_views
+**	28-feb-91 (teresa)
+**	   pickup: 10-jan-1991 (neil) from 6.3.
+**	    removed ii_ catalogs that were FE catalogs.  Left one as comment.
+**	30-sep-91 (teresa)
+**	   Integrate 6.4 FCS bugfixes:
+**	    1-jul-91 (teresa)
+**		removed references to obsolete tables iidd_ddb_ldb_indexes,
+**		iidd_ddb_ldb_keycols, iidd_ddb_ldb_xcolumns from 
+**		DU_link_object_map as part of bugfix 38435.
+**	10 Jan 1993 (jpk)
+**	   Bugfix for 6.5: change iidbcapabilities STANDARD_CATALOG_LEVEL
+**	   to value 00602.
+**	10 Jan 1993 (jpk)
+**	   Bugfix for 6.5: change iidd_ddb_ldb_dbcaps
+**	22-May-1993 (jpk)
+**	   COMMON/SQL_LEVEL is now deprecated; added preferred OPEN/SQL_LEVEL
+**	   and set their values.  Also removed mapping for iiddb_finddbs;
+**	   no longer needed now that finddbs is gone.
+**	03-jun-1993 (barbara)
+**	   Added DB_DELIMITED_CASE initial value to iidd_ddb_ldb_dbcaps
+**	   and iidd_dbcapabilities.
+**	11-oct-1993 (barbara)
+**	   Add DB_REAL_USER_CASE initial value to iidd_ddb_ldb_dbcaps and
+**	   iidd_dbcapabilities.
+**      14-nov-1994 (chech02)
+**         Add iiprocedures entry in DU_upg_object_map[] for upgradedb.
+**      03-feb-1995 (chech02)
+**         we don't need to populate iiprocedures in cdb. 
+**      06-mar-1996 (nanpr01)
+**         For variable page size project, bump up the version numbers 
+**	   specifically "OPEN/SQL_LEVEL", "INGRES/SQL_LEVEL",
+**	   "STANDARD_CATALOG_LEVEL".
+**	29-jan-1997 (hanch04)
+**	   Changed LEVELs to 800
+**	03-feb-1997 (nanpr01)
+**	   Changed STANDARD_CATALOGUE_LEVEL back to 602.
+**	03-feb-1998 (hanch04)
+**	   Changed LEVELs to 850
+**      02-Mar-2001 (hanch04)
+**          Bumped release id to external "II 2.6" internal 860 or 8.6
+**      07-Apr-2003 (hanch04)
+**          Bumped release id to external "II 2.900" internal 865 or 8.65
+**      13-Jan-2004 (sheco02)
+**          Bumped release id to external "II 3.0" internal 900 or 9.0
+**	17-jan-2006 (hweho01)
+**	   Changed current levels to 904. 
+**	27-Apr-2006  (hweho01)
+**	   Changed current levels to 910 for new release. 
+**	12-Jul-2006 (kschendel)
+**	    OPEN/SQL_LEVEL should not have been advanced.
+**      23-Oct-2006 (stial01)
+**          STANDARD_CATALOG_LEVEL should not advance for ingres2006r2
+**	07-May-2007 (drivi01)
+**	    Changed release version for 9.2.0 release.
+**	14-Jun-2007 (bonro01)
+**	    Changed release version for 9.3.0 release.
+**	19-Nov-2008 (hweho01)
+**	    Changed standard catalog level for 9.3 release.
+**       7-Jan-2009 (hanal04) Bug 121470
+**          Make DU_link_object_map volatile to avoid SEGV in SQL-92
+**          installations during creation os a star DB.
+**	14-May-2009 (kschendel) b122041
+**	    Revert the above due to compiler complaints.  The proper fix
+**	    is in ducreate.qsc (don't try to alter the string constants).
+**	    In fact, make the static map const.
+**	10-Jun-2009 (hweho01)
+**	    Changed  level/version numbers for 10.0 release.
+**/
+
+/*
+[@forward_type_references@]
+[@forward_function_references@]
+*/
+
+/*
+**  Defines of other constants.
+*/
+
+/*
+**      Length of the Nodename buffer(make sure its long enough).
+[@comment_line@]...
+*/
+
+#define NODE_LEN    (128)
+
+/*
+**  DUD_STAR_STATUS
+*/
+#define DUD_0STAR_NONE		    0	/* 0x0000 */
+#define	DUD_1STAR_DISTRIB	    1	/* 0x0001 */
+#define DUD_2STAR_RM_DDB	    2	/* 0x0002 */
+#define DUD_3STAR_RM_CDB	    4	/* 0x0004 */
+#define DUD_4STAR_ABORT		    8	/* 0x0008 */
+#define DUD_5IISTARCDB_EXIST	    16	/* 0x0010 */
+#define DUD_6CDB_IN_IIDBDB	    32	/* 0x0020 */
+#define DUD_7DDB_IN_IIDBDB	    64	/* 0x0040 */
+#define DUD_8DDB_IN_STARCDB	    128	/* 0x0080 */
+#define DUD_9CDB_IN_STARCDB	    256	/* 0x0100 */
+#define DUD_10RM_STARDDB_ENTRY	    512	/* 0x0200 */
+#define DUD_11RM_STARCDB_ENTRY	    1024 /* 0x0400 */
+#define DUD_12RM_DDB_IIDBDB	    2048 /* 0x0800 */
+#define DUD_13RM_CDB_IIDBDB	    4096 /* 0x1000 */
+#define DUD_14DESTRY_CDB_AS_LDB	    8192 /* 0x2000 */
+#define DUD_15DESTRY_LDB	    16384 /* 0x4000 */
+#define DUD_16DESTRY_CDB	    32768 /* 0x8000 */
+
+/*
+[@defined_constants@]...
+[@group_of_defined_constants@]...
+*/
+
+/*
+** References to globals variables declared in other C files.
+*/
+
+/*
+[@global_variable_reference@]...
+*/
+
+/*
+** Initialization values for iidd_dbcapabilities.
+*/
+
+static	const struct	DU_dbcapabilities_struct
+    {
+	char	*cap_capability;
+	char	*cap_value;
+    }	DU_dbcapabilities[] = {
+	"COMMON/SQL_LEVEL",	"00601",
+	"OPEN/SQL_LEVEL",	"00601",
+	"DBMS_TYPE",		"STAR",
+	"DB_NAME_CASE",		"LOWER",
+	"DB_DELIMITED_CASE",	"LOWER",
+	"DB_REAL_USER_CASE",	"LOWER",
+	"DISTRIBUTED",		"Y",
+	"INGRES",		"N",
+	"INGRES/QUEL_LEVEL",	"00000",
+	"INGRES/SQL_LEVEL",	"00601",
+	"SAVEPOINTS",		"Y",
+	"OWNER_NAME",		"QUOTED",
+	"UNIQUE_KEY_REQ",	"N",
+	"PHYSICAL_SOURCE",	"T",
+	"STANDARD_CATALOG_LEVEL","00602",
+    	"",			""
+    };
+
+/*
+** Initialization values for iidd_ddb_ldb_dbcaps.
+*/
+
+static  const struct	DU_dbcaps_value_struct
+    {
+	i4	ldb_id;
+	char	*cap_capability;
+	char	*cap_value;
+	i4	cap_level;
+    }	DU_dbcaps_value[] = {
+	1,  "COMMON/SQL_LEVEL",	    "01000",    1000,
+	1,  "OPEN/SQL_LEVEL",	    "00904",    904,
+	1,  "DBMS_TYPE",	    "INGRES",   0,
+	1,  "DB_NAME_CASE",	    "LOWER",    0,
+	1,  "DB_DELIMITED_CASE",    "LOWER",    0,
+	1,  "DB_REAL_USER_CASE",    "LOWER",	0,
+	1,  "DISTRIBUTED",	    "N",	1,
+	1,  "INGRES",		    "Y",	1,
+	1,  "INGRES/QUEL_LEVEL",    "01000",	1000,
+	1,  "INGRES/SQL_LEVEL",	    "01000",    1000,
+	1,  "OWNER_NAME",	    "QUOTED",   2,
+	1,  "SAVEPOINTS",	    "Y",	1,
+	1,  "UNIQUE_KEY_REQ",	    "N",	1,
+	1,  "STANDARD_CATALOG_LEVEL", "01000",	1000,
+	1,  "PHYSICAL_SOURCE",      "T",        1,
+	0,  "",			    "",		0
+    };
+
+/*
+** Tuple count problem, fixed by replacing values into num_rows entry.
+*/
+
+##static    struct	DU_obj_statistic
+##  {
+##	char	*DU_table_name;
+##	char	*DU_local_name;
+##	i4	DU_num_rows;
+##	i4	DU_number_pages;
+##	i4	DU_overflow_pages;
+##	i4	DU_row_width;
+##  }	DU_obj_stat_list[] = {
+##	"iitables",	    "iidd_tables",	    -1, -1, -1, -1,
+##	"iicolumns",	    "iidd_columns",	    -1, -1, -1, -1,
+##	"iidbcapabilities", "iidd_dbcapabilities",  -1, -1, -1, -1,
+##	"iiddb_ldb_dbcaps", "iidd_ddb_ldb_dbcaps",  -1, -1, -1, -1,
+##	"iiddb_tableinfo",  "iidd_ddb_tableinfo",   -1, -1, -1, -1,
+##	"iiddb_objects",    "iidd_ddb_objects",	    -1, -1, -1, -1,
+##	"", "", -2, -2, -2, -2
+##  };
+/*
+** One-to-one mapping of STAR level object name to local object name and type.
+*/
+
+typedef	struct _DU_link_object_entry DU_link_object_entry;
+
+struct _DU_link_object_entry
+    {
+	char    *ii_name;	    /* Link name -- ie, name in LDB cats */
+	char    *iidd_name;	    /* OBJECT name -- ie, name CDB uses */
+	char    *obj_type;	    /* OBJECT types */
+	char    *loc_type;	    /* LOCAL types */
+	int	num_indexes;	    /* number entries in DU_index_object_map -
+				    ** indicates LDB secondary indexes to map*/
+    };
+
+static const DU_link_object_entry DU_link_object_map[] = {
+	"iialt_columns", 	"iidd_alt_columns", 	"L", "T", 0,
+	"iicolumns", 		"iidd_columns", 	"L", "T", 0,
+	"iidbcapabilities", 	"iidd_dbcapabilities",	"L", "T", 0,
+	"iidbconstants", 	"iidd_dbconstants", 	"L", "V", 0,
+	"iiddb_dbdepends",	"iidd_ddb_dbdepends", 	"L", "T", 0,
+	"iiddb_ldbids",		"iidd_ddb_ldbids",	"L", "T", 0,
+	"iiddb_ldb_columns",	"iidd_ddb_ldb_columns",	"L", "T", 0,
+	"iiddb_ldb_dbcaps",	"iidd_ddb_ldb_dbcaps",	"L", "T", 0,
+	"iiddb_ldb_tables",	"iidd_ddb_ldb_tables", "L", "T", 0,
+	"iiddb_long_ldbnames", 	"iidd_ddb_long_ldbnames", "L", "T", 0,
+	"iiddb_objects", 	"iidd_ddb_objects", 	"L", "T", 0,
+	"iiddb_object_base", 	"iidd_ddb_object_base", "L", "T", 0,
+	"iiddb_tableinfo",	"iidd_ddb_tableinfo",	"L", "T", 0,
+	"iiddb_tree", 		"iidd_ddb_tree",	"L", "T", 0,
+	"iihistograms", 	"iidd_histograms", 	"L", "T", 0,
+	"iiindexes", 		"iidd_indexes", 	"L", "T", 0,
+	"iiindex_columns", 	"iidd_index_columns", 	"L", "T", 0,
+	"iiintegrities", 	"iidd_integrities", 	"L", "T", 0,
+	"iimulti_locations", 	"iidd_multi_locations",	"L", "T", 0,
+	"iiprocedures",		"iidd_procedures", 	"L", "T", 0,
+	"iipermits", 		"iidd_permits", 	"L", "T", 0,
+	"iiphysical_tables",	"iidd_physical_tables", "L", "V", 0,
+	"iiprocedure", 		"iidd_procedure",	"L", "T", 0,
+	"iiregistrations",	"iidd_registrations",	"L", "T", 0,
+	"iistats", 		"iidd_stats", 		"L", "T", 0,
+	"iitables", 		"iidd_tables",		"L", "T", 0,
+	"iiviews", 		"iidd_ddb_views",	"L", "V", 0,
+	"iiregistered_objects",	"iidd_registered_objects", "L", "V", 0,
+	"",			"",			"",  "",  0
+    };	/* OBJECTS names to LINKS names system catalog mapping */
+
+static DU_link_object_entry DU_upg_object_map[] = {
+	"iiregistered_objects",	"iidd_registered_objects", "L", "V", 0,
+	"",			"",			    "",  "", 0
+    };	/* objects that upgradedb must register */
+    
+typedef struct _DU_index_object_entry DU_index_object_entry;
+
+struct _DU_index_object_entry
+    {
+	char    *loctab_name;	    /* Index name in LDB */
+	char    *link_name;	    /* INDEX name in CDB -- filled in dynamically
+				    ** by createdb as ddx_<baseid>_<idx_id> */
+	char    *locidx_name;	    /* Name of OBJECT's secondary index in LDB*/
+    } ;
+
+static  const DU_index_object_entry  DU_index_object_map[] = {
+/* Example:
+**	"ii_objects",   "ddx_                              ","ii_objects_index",
+*/
+	"",		"",				      ""
+    }; /* secondary indexes from objects in DU_link_object_map */
+
+static  const DU_index_object_entry DU_upg_idx_map[] = {
+/* Example:
+**	"ii_objects",   "ddx_                              ","ii_objects_index",
+*/
+	"",		"",				      ""
+    }; /* secondary indexes from upgradedb objects DU_upg_object_map */
+
+/*}
+** Name: DU_STARCB - [@comment_text@]
+**
+** Description:
+[@comment_line@]...
+**
+** History:
+**      12-apr-1989 (alexc)
+**          Created for Star Global information.
+[@history_template@]...
+*/
+##  typedef struct _DU_STARCB
+##  {
+##	char    ddb_name[DB_MAXNAME + 4];
+##	char    cdb_name[DB_MAXNAME + 4];
+##	char    dba_name[DB_MAXNAME + 4];
+##	char    current_node[DB_MAXNAME + 4];
+##	char    cdb_dbms[DB_MAXNAME + 4];
+##	i2	star_flag;
+##	i4	ddb_id;
+##	i4	cdb_id;
+##	i4	cdb_capability;
+##	char    cdb_create_date[DB_MAXNAME + 4];
+##  }   DU_STARCB;

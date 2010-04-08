@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The session_check_interval tells the DBMS how often to check for sessions
+ that should be terminated.  Reasons for termination include exceeding
+ an idle-time or connect-time limit.  The session_check_interval is
+ given in seconds.
+
+
+ Default: 30 seconds

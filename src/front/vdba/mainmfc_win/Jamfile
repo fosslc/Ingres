@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!mainmfc_win
+#
+
+SubDir ING_SRC front vdba mainmfc_win ;
+
+IISUBSYS front vdba mainmfc_win ;
+
+
+IISLN vdba.exe : vdba.sln ;

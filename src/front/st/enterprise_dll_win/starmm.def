@@ -1,0 +1,14 @@
+;
+; History:
+;	18-may-2001 (somsa01)
+;	    Created.
+;	03-Aug-2001 (penga03)
+;	    Added ingres_rollback_star.
+;	21-Aug-2001 (penga03)
+;	    Added ingres_unset_star_reg_entries.
+;
+EXPORTS
+    ingres_remove_star_files
+    ingres_set_star_reg_entries
+    ingres_rollback_star
+    ingres_unset_star_reg_entries

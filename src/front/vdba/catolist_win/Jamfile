@@ -1,0 +1,10 @@
+#
+# Jamfile file for front!vdba!catolist_win
+#
+
+SubDir ING_SRC front vdba catolist_win ;
+
+IISUBSYS front vdba catolist_win ;
+
+
+IISLN catolist.dll : catolist.sln ;

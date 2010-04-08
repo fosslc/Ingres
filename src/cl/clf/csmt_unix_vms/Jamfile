@@ -1,0 +1,25 @@
+#
+# Jamfile file for cl!clf!csmt_unix_vms
+#
+# History:
+#	20-nov-2008 (joea)
+#	    Change mapping to csmt_unix_vms to support OS threads on VMS.
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC cl clf csmt_unix_vms ;
+
+IISUBSYS cl clf csmt_unix_vms ;
+
+IINOOPTIM csmtspintest.c : sos_us5 ;
+IINOOPTIM csmtinterf.c : rs4_us5 i64_aix ;
+
+if ! $(VMS)
+{
+IIBINEXE csmtspintest : csmtspintest.c ;
+IINEEDLIBS csmtspintest : COMPATLIB MALLOCLIB ;
+}
+
+IILIBRARY COMPATLIB : csmttls.c csmtsem.c csmtsampler.c
+	csmtmonitor.c csmtinterf.c csmthl.c ;
+

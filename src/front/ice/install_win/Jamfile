@@ -1,0 +1,31 @@
+#
+# Jamfile file for front!ice!install_win
+#
+#	17-Dec-2009 (bonro01)
+#	    Replace unix specific path separators
+
+SubDir ING_SRC front ice install_win ;
+
+IISUBSYS front ice install_win ;
+
+
+IIBINEXE makeid : makeid.sc ;
+IINEEDLIBS makeid :  COMPATLIB ;
+IIUNDEFS makeid :  malloc ;
+
+IIBINEXE iceuser : iceuser.c ;
+IINEEDLIBS iceuser :  COMPATLIB SHEMBEDLIB C_APILIB ICECLILIB GCFLIB DDFLIB ;
+IIUNDEFS iceuser :  malloc ;
+
+IIBINEXE icesess : icesess.sc ;
+IINEEDLIBS icesess :  COMPATLIB SHEMBEDLIB ;
+IIUNDEFS icesess :  malloc ;
+
+IIBINEXE htmlroot : htmlroot.c ;
+IINEEDLIBS htmlroot :  COMPATLIB ;
+IIUNDEFS htmlroot :  malloc ;
+
+FILE $(INGBIN)$(DFS)iceinstall.bat : iceinstall.bat ;
+FILE $(INGBIN)$(DFS)iceload.bat : iceload.bat ;
+FILE $(INGBIN)$(DFS)icepublic.bat : icepublic.bat ;
+FILE $(INGBIN)$(DFS)iceupgrd.bat : iceupgrd.bat ;

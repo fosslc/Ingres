@@ -1,0 +1,114 @@
+#
+# Jamfile file for front!st!util
+#
+# History:
+#	24-jan-2005 (abbjo03)
+#	    syscheck, iivertst and iiread_response are not built on VMS.
+#	22-feb-2005 (abbjo03)
+#	    Add iilgkmem on VMS.
+#	03-aug-2005 (toumi01)
+#	    Add iipthreadtst on UNIX (actually needed for Linux).
+#        4-Apr-2007 (hanal04)
+#           Build what we install. It makes life easier for patching.
+#       03-Aug-2007 (Ralph Loen) SIR 118898
+#          Add iinethost.
+#	11-dec-2008 (joea)
+#	    Split out txlogutil.c from util.c.
+
+SubDir ING_SRC front st util ;
+
+IISUBSYS front st util ;
+
+if ! $(VMS)
+{
+IIUTILEXE syscheck : syscheck.c ;
+IINEEDLIBS syscheck : UTILLIB COMPATLIB ;
+IIUNDEFS syscheck : II_copyright ;
+
+IIUTILEXE iiutltst : iivertst.c ;
+IINEEDLIBS iiutltst : SHCOMPATLIB ;
+IIUNDEFS iiutltst : II_copyright ;
+
+IIBINEXE iibintst : iivertst.c ;
+IINEEDLIBS iibintst : SHCOMPATLIB ;
+IIUNDEFS iibintst : II_copyright ;
+
+IIUTILEXE iiread_response : iireadresp.c ;
+IINEEDLIBS iiread_response : UTILLIB SHCOMPATLIB ;
+IIUNDEFS iiread_response : II_copyright ;
+
+IIUTILEXE iigetenv : iigetenv.c ;
+IINEEDLIBS iigetenv : SHCOMPATLIB ;
+IIUNDEFS iigetenv : II_copyright ;
+}
+
+IIBINEXE pmtest : pmtest.c ;
+IINEEDLIBS pmtest : UTILLIB SHCOMPATLIB ;
+IIUNDEFS pmtest : II_copyright ;
+
+IIUTILEXE ingstart : ingstart.c ;
+IINEEDLIBS ingstart : UTILLIB GCFLIB SHCOMPATLIB GLLIB ;
+IIUNDEFS ingstart : II_copyright ;
+
+IIUTILEXE iisulock : iisulock.c ;
+IINEEDLIBS iisulock : UTILLIB SHCOMPATLIB ;
+IIUNDEFS iisulock : II_copyright ;
+
+IIUTILEXE iipmhost : iipmhost.c ;
+IINEEDLIBS iipmhost : SHCOMPATLIB ;
+IIUNDEFS iipmhost : II_copyright ;
+
+IIUTILEXE iinethost : iinethost.c ;
+IINEEDLIBS iinethost : SHCOMPATLIB ;
+IIUNDEFS iinethost : II_copyright ;
+
+IIUTILEXE iinumainfo : iinumainfo.c ;
+IINEEDLIBS iinumainfo : SHCOMPATLIB ;
+IIUNDEFS iinumainfo : II_copyright ;
+
+IIUTILEXE iimklog : iimklog.c ;
+IINEEDLIBS iimklog : UTILLIB SHCOMPATLIB ;
+IIUNDEFS iimklog : II_copyright ;
+
+IIUTILEXE iijobdef : iijobdef.c ;
+IINEEDLIBS iijobdef : UTILLIB SHCOMPATLIB GLLIB ;
+IIUNDEFS iijobdef : II_copyright ;
+
+IIUTILEXE iiingloc : iiingloc.c ;
+IINEEDLIBS iiingloc : UTILLIB SHCOMPATLIB ;
+IIUNDEFS iiingloc : II_copyright ;
+
+IIUTILEXE iigetres : iigetres.c ;
+IINEEDLIBS iigetres : UTILLIB SHCOMPATLIB ;
+IIUNDEFS iigetres : II_copyright ;
+
+IIUTILEXE iiermsg : iiermsg.c ;
+IINEEDLIBS iiermsg : SHCOMPATLIB ;
+IIUNDEFS iiermsg : II_copyright ;
+
+IIUTILEXE iicpydas : iicpydas.c ;
+IINEEDLIBS iicpydas : CONFIGLIB UTILLIB SHCOMPATLIB SHEMBEDLIB SHFRAMELIB ;
+IIUNDEFS iicpydas : II_copyright ;
+
+IIUTILEXE iiconcat : iiconcat.c ;
+IINEEDLIBS iiconcat : SHCOMPATLIB ;
+IIUNDEFS iiconcat : II_copyright ;
+
+IIUTILEXE iiaudloc : iiaudloc.c ;
+IINEEDLIBS iiaudloc : UTILLIB SHCOMPATLIB MALLOCLIB  ;
+IIUNDEFS iiaudloc : II_copyright ;
+
+if $(VMS)
+{
+    IIUTILEXE iilgkmem : iilgkmem.c ;
+    IINEEDLIBS iilgkmem : UTILLIB SHCOMPATLIB MALLOCLIB  ;
+}
+
+if $(UNIX)
+{
+    IIUTILEXE iipthreadtst : iipthreadtst.c ;
+    IINEEDLIBS iipthreadtst : SHCOMPATLIB ;
+    IIUNDEFS iipthreadtst : II_copyright ;
+}
+
+IILIBRARY UTILLIB : util.c txlogutil.c ;

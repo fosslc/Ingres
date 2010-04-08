@@ -1,0 +1,9 @@
+#
+# Jamfile file for common!adf!hdr
+#
+
+SubDir ING_SRC common adf hdr ;
+
+IISUBSYS common adf hdr ;
+
+

@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are moving a box or line to a new location.  Move the cursor to the new
+location and then use the "Place" menu command to put the box or line there.  
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Place           Place the upper left-hand corner of the box or line 
+			at the current cursor position.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Form Layout menu without changing 
+                        the location of the box or line.

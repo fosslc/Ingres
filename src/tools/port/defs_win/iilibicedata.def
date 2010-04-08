@@ -1,0 +1,40 @@
+;  History:
+;	11-Jun-2004 (drivi01)
+;	    Added ordinals.
+;	25-Aug-2004 (drivi01)
+;	    Created.  Contains data symbols
+;	    from ascf, ascs, and urs libraries
+;	    used for linking ice.
+;	7-Aug-2004 (drivi01)
+;	    Took out db_classes and db_access_name.
+;	02-feb-2005 (abbjo03)
+;	    Remove URS data.
+;
+
+EXPORTS
+AScs_classes		@2	DATA			
+asctentry		@3	DATA			
+asctfile		@4	DATA			
+asctbuf			@5	DATA			
+asctlogmsgsize		@6	DATA			
+asctlogsize		@7	DATA			
+asctthreshold		@8	DATA			
+asctlogtimeout		@9	DATA			
+ascttracemask		@10	DATA	
+act_classes		@11	DATA			
+act_index_name		@12	DATA			
+usr_classes		@13	DATA			
+usr_index_name		@14	DATA			
+usr_trans_classes	@15	DATA			
+usr_trans_index		@16	DATA			
+usr_curs_classes	@17	DATA			
+usr_curs_index		@18	DATA	
+wps_cache		@19	DATA			
+wps_cache_index		@20	DATA			
+;db_classes		@21	DATA
+;db_access_name		@22	DATA
+wcs_floc_index		@23	DATA			
+wcs_loc_class		@24	DATA			
+asct_class		@25	DATA
+asctsavemask		@26	DATA
+asctlogfile		@27	DATA

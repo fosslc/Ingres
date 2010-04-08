@@ -1,0 +1,297 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "idmsodrc.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
+#include "idmsoids.h"
+#include "idmsodlg.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DISCARDABLE
+//
+
+TEXTINCLUDE DISCARDABLE 
+BEGIN
+    0x4449, 0x534d, 0x444f, 0x474c, 0x482e, "\000" 
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+DLG_INGRES_DSN DIALOG  15, 30, 249, 137
+STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Ingres DriverConnect"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_DSN,54,8,120,12,ES_READONLY | WS_DISABLED | NOT 
+                    WS_TABSTOP
+    EDITTEXT        IDC_UID,54,24,119,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PWD,54,40,60,12,ES_PASSWORD | ES_AUTOHSCROLL
+    EDITTEXT        IDC_ROLENAME,54,56,119,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_ROLEPWD,54,72,60,12,ES_PASSWORD | ES_AUTOHSCROLL
+    EDITTEXT        IDC_GROUP,54,90,119,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DBMS_PWD,53,110,121,14,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDS_DLG_OK,196,6,48,14
+    PUSHBUTTON      "Cancel",IDS_DLG_CANCEL,196,23,48,14
+    PUSHBUTTON      "&Help",IDS_DLG_HELP,196,40,48,14,NOT WS_VISIBLE
+    LTEXT           "&Data Source:",IDS_DLG_DATASOURCE,6,10,44,10
+    LTEXT           "&User Id:",IDS_DLG_USERID,6,26,44,10,NOT WS_GROUP
+    LTEXT           "&Password:",IDS_DLG_PASSWORD,6,42,44,10,NOT WS_GROUP
+    LTEXT           "&Role Name:",IDS_DLG_ROLENAME,6,58,44,10,NOT WS_GROUP
+    LTEXT           "Role P&WD:",IDS_DLG_ROLEPWD,6,74,44,10,NOT WS_GROUP
+    LTEXT           "&Group:",IDC_GROUP_TEXT,6,90,44,10,NOT WS_GROUP
+    LTEXT           "DBMS PWD:",IDC_DLG_DBMS_PWD,6,112,45,8
+END
+
+DLG_INGRES_DRIVER DIALOG  15, 30, 238, 178
+STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Ingres DriverConnect"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_DICT,55,8,120,12,ES_AUTOHSCROLL
+    COMBOBOX        IDC_NODE,55,26,120,67,CBS_DROPDOWN | CBS_SORT | 
+                    CBS_UPPERCASE | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_SERVERTYPE,55,44,120,67,CBS_DROPDOWN | CBS_SORT | 
+                    CBS_UPPERCASE | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_UID,55,62,120,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PWD,55,80,60,12,ES_PASSWORD | ES_AUTOHSCROLL
+    EDITTEXT        IDC_ROLENAME,55,98,120,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_ROLEPWD,55,116,60,12,ES_PASSWORD | ES_AUTOHSCROLL
+    EDITTEXT        IDC_GROUP,53,133,120,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DBMS_PWD,54,153,121,14,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,181,6,48,14
+    PUSHBUTTON      "Cancel",IDCANCEL,181,23,48,14
+    PUSHBUTTON      "&Help",IDC_HELP,181,40,48,14,NOT WS_VISIBLE | NOT 
+                    WS_TABSTOP
+    LTEXT           "&Database:",IDS_DLG_DATABASE,6,10,44,10
+    LTEXT           "&ServerName:",IDS_DLG_SERVERNAME,6,28,44,10,NOT 
+                    WS_GROUP
+    LTEXT           "Server&Type:",IDS_DLG_SERVERTYPE,6,46,44,10,NOT 
+                    WS_GROUP
+    LTEXT           "&User Id:",IDS_DLG_USERID,6,64,44,10,NOT WS_GROUP
+    LTEXT           "&Password:",IDS_DLG_PASSWORD,6,82,44,10,NOT WS_GROUP
+    LTEXT           "&Role Name:",IDS_DLG_ROLENAME,6,100,44,10,NOT WS_GROUP
+    LTEXT           "Role P&WD:",IDS_DLG_ROLEPWD,6,118,44,10,NOT WS_GROUP
+    LTEXT           "&Group:",IDC_GROUP_TEXT,6,137,44,10,NOT WS_GROUP
+    LTEXT           "DBMS PWD:",IDS_DLG_DBMS_PWD,6,157,45,8
+END
+
+DLG_UNIX_DSN DIALOG  15, 30, 250, 60
+STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "CA-IDMS/UNIX DriverConnect"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Data Source:",IDS_DLG_DATASOURCE,6,10,44,10
+    EDITTEXT        IDC_DSN,54,8,120,12,ES_READONLY | WS_DISABLED | NOT 
+                    WS_TABSTOP
+    LTEXT           "&User Id:",IDS_DLG_USERID,6,26,44,10,NOT WS_GROUP
+    EDITTEXT        IDC_UID,54,24,119,12,ES_AUTOHSCROLL
+    LTEXT           "&Password:",IDS_DLG_PASSWORD,6,42,44,10,NOT WS_GROUP
+    EDITTEXT        IDC_PWD,54,40,32,12,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDS_DLG_OK,196,6,48,14
+    PUSHBUTTON      "Cancel",IDS_DLG_CANCEL,196,23,48,14
+    PUSHBUTTON      "&Help",IDS_DLG_HELP,196,40,48,14
+END
+
+DLG_UNIX_DRIVER DIALOG  15, 30, 250, 118
+STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "CA-IDMS/UNIX DriverConnect"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Database:",IDS_DLG_DATABASE,6,10,44,10
+    EDITTEXT        IDC_DICT,54,8,60,12,ES_AUTOHSCROLL
+    LTEXT           "&Node Name:",IDS_DLG_NODENAME,6,28,44,10,NOT WS_GROUP
+    EDITTEXT        IDC_NODE,54,26,59,12,ES_AUTOHSCROLL
+    LTEXT           "T&imeout:",IDS_DLG_TIMEOUT,6,46,44,10,NOT WS_GROUP
+    EDITTEXT        IDC_TIME,54,44,31,12,ES_AUTOHSCROLL
+    LTEXT           "&Task Code:",IDS_DLG_TASKCODE,6,64,44,10,NOT WS_GROUP
+    EDITTEXT        IDC_TASK,54,62,60,12,ES_AUTOHSCROLL
+    LTEXT           "&User Id:",IDS_DLG_USERID,6,82,44,10,NOT WS_GROUP
+    EDITTEXT        IDC_UID,54,80,120,12,ES_AUTOHSCROLL
+    LTEXT           "&Password:",IDS_DLG_PASSWORD,6,100,44,10,NOT WS_GROUP
+    EDITTEXT        IDC_PWD,54,98,60,12,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDS_DLG_OK,196,6,48,14
+    PUSHBUTTON      "Cancel",IDS_DLG_CANCEL,196,23,48,14
+    PUSHBUTTON      "&Help",IDS_DLG_HELP,196,40,48,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 3,50,100,116
+ PRODUCTVERSION 3,50,100,116
+ FILEFLAGSMASK 0x3L
+#ifdef _DEBUG
+ FILEFLAGS 0x23L
+#else
+ FILEFLAGS 0x22L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904e4"
+        BEGIN
+            VALUE "CompanyName", "Ingres Corp."
+            VALUE "FileDescription", "Ingres 32 Bit ODBC Driver"
+            VALUE "FileVersion", "3.50.100.0116"
+            VALUE "LegalCopyright", "Copyright © 2010 Ingres Corp."
+            VALUE "ProductName", "Ingres ODBC Driver"
+            VALUE "ProductVersion", " 3.50.100.0116"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "idmsodrc.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""idmsoids.h""\r\n"
+    "#include ""idmsodlg.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    DLG_INGRES_DSN, DIALOG
+    BEGIN
+        RIGHTMARGIN, 248
+        BOTTOMMARGIN, 131
+    END
+
+    DLG_INGRES_DRIVER, DIALOG
+    BEGIN
+        LEFTMARGIN, 6
+        RIGHTMARGIN, 229
+        BOTTOMMARGIN, 172
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_CAT_NAME            "NAME"
+    IDS_CAT_ORDER_COLUMNS   " ORDER BY table_owner, table_name, column_sequence"
+    IDS_CAT_ORDER_STATS     " ORDER BY 4, 7, 5, 6, 8"
+    IDS_CAT_ORDER_TABLES    " ORDER BY 4, 2, 3"
+    IDS_CAT_SCHEMA          "SCHEMA"
+    IDS_CAT_TABLE           "TABLE"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_IDMS_ISCHEMA        "I.SCHEMA"
+    IDS_IDMS_ITABLE         "I.TABLE"
+    IDS_IDMS_NOTNULL        "C.NLENGTH = 0 AND "
+    IDS_IDMS_ORDER_SETS     " ORDER BY OWNER_NAME, MEMBER_NAME, SET_NAME"
+    IDS_IDMS_REQ_NULL       "REQ_NULL = 1 "
+    IDS_IDMS_REQ_UNIQ       "REQ_UNIQ = 1 "
+    IDS_IDMS_RSYN           "SUBSTR(RSYN_NAME_079, 1, 18)"
+    IDS_IDMS_RSYN_MNAM      "SUBSTR(MNAM.RSYN_NAME_079, 1, 18)"
+    IDS_IDMS_RSYN_ONAM      "SUBSTR(ONAM.RSYN_NAME_079, 1, 18)"
+    IDS_IDMS_STATISTICS     "UPDATE STATISTICS FOR TABLE "
+    IDS_IDMS_TABLE_OWNER    "TABLE_OWNER"
+    IDS_IDMS_TABLE_NAME     "TABLE_NAME"
+    IDS_IDMS_UNIQUE         "UNIQUE = 'Y'"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_CADB_COLNAME        "COLNAME"
+    IDS_CADB_IOWNER         "I.OWNER"
+    IDS_CADB_ITABLENAME     "I.TABLENAME"
+    IDS_CADB_NOTNULL        "C.NULLS = 0 AND "
+    IDS_CADB_OWNER          "OWNER"
+    IDS_CADB_TABLENAME      "TABLENAME"
+    IDS_CADB_STATISTICS     "UPDATE STATISTICS FOR "
+    IDS_CADB_UNIQUE         "UNIQUE = 1"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INGRES_TABLE_OWNER  "table_owner"
+    IDS_INGRES_TABLE_NAME   "table_name"
+    IDS_INGRES_COLUMN_OWNER "c.table_owner"
+    IDS_INGRES_COLUMN_TABLE "c.table_name"
+    IDS_INGRES_COLUMN_NAME  "c.column_name"
+    IDS_INGRES_ITABLE_OWNER "i.base_owner"
+    IDS_INGRES_ITABLE_NAME  "i.base_name"
+    IDS_INGRES_PROC_OWNER   "procedure_owner"
+    IDS_INGRES_PROC_NAME    "procedure_name"
+    IDS_INGRES_PROCCOL_COLNAME "param_name"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+

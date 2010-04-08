@@ -1,0 +1,33 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+**
+** Name:	crshadow.tlp - Create shadow template
+**
+** Description:
+**	Used to create the shadow table.
+##
+## History:
+##	16-dec-96 (joea)
+##		Created based on crshadow.tlp in replicator library.
+##	17-sep-97 (joea)
+##		Add variable page size clause.
+##	08-mar-07 (gupsh01)
+##		Modified DATE to INGRESDATE.
+**/
+
+CREATE TABLE $sha (
+	$ddk,
+	sourcedb		SMALLINT	NOT NULL,
+	transaction_id		INTEGER		NOT NULL,
+	sequence_no		INTEGER		NOT NULL,
+	trans_time		INGRESDATE		WITH NULL,
+	distribution_time	INGRESDATE		WITH NULL,
+	in_archive		INTEGER1	NOT NULL WITH DEFAULT,
+	cdds_no			SMALLINT	NOT NULL WITH DEFAULT,
+	trans_type		SMALLINT	NOT NULL,
+	dd_priority		SMALLINT	NOT NULL WITH DEFAULT,
+	new_key			SMALLINT	NOT NULL WITH DEFAULT,
+	old_sourcedb		SMALLINT	NOT NULL WITH DEFAULT,
+	old_transaction_id	INTEGER		NOT NULL WITH DEFAULT,
+	old_sequence_no		INTEGER		NOT NULL WITH DEFAULT)
+WITH JOURNALING, PAGE_SIZE = $vps

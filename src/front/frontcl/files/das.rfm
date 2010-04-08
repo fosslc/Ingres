@@ -1,0 +1,12 @@
+#
+# Copyright (c) 2004 Ingres Corporation
+#
+# The configuration rule specifications listed in this file are used
+# to generate the default configuration for the DAS server during its 
+# setup procedure.  Note that the named files are assumed to exist
+# in the "files" directory.
+#
+
+rulefile.01:	das.crs
+rulefile.02:	all.crs
+rulefile.03:	tz.crs

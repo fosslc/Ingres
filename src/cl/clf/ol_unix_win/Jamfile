@@ -1,0 +1,14 @@
+#
+# Jamfile file for cl!clf!ol_unix_win
+#
+
+SubDir ING_SRC cl clf ol_unix_win ;
+
+IISUBSYS cl clf ol_unix_win ;
+
+IINOOPTIM ol.c : ris_us5 rs4_us5 ris_u64 i64_aix ;
+
+IILIBRARY COMPATLIB : olret.c
+	ol.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : ollang.roc ;

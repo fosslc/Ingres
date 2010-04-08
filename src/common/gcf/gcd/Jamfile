@@ -1,0 +1,22 @@
+#
+# Jamfile file for common!gcf!gcd
+#
+# History:
+#	11-feb-2005 (abbjo03)
+#	    On VMS, link iigcd with the shared API library.
+#       13-aug-2009 (horda03)
+#           iigcd now built on VMS using static (see Bug 118488)
+
+SubDir ING_SRC common gcf gcd ;
+
+IISUBSYS common gcf gcd ;
+
+
+IIBINEXE iigcd : iigcd.c ;
+IINEEDLIBS iigcd : GCDLIB APILIB GCFLIB ADFLIB CUFLIB COMPATLIB  ;
+
+IILIBRARY GCDLIB : gcdxact.c gcdutil.c gcdstmt.c gcdsess.c
+	gcdrqst.c gcdquery.c gcdpool.c gcdmsg.c gcdjctl.c
+	gcdgcc.c gcdgca.c gcddmtl.c gcddata.c gcdcrsr.c
+	gcdconn.c gcdbatch.c gcdapi.c gcdadm.c ;
+

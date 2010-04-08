@@ -1,0 +1,1053 @@
+#
+#	iiworld.tz - Rule file that describes most timezones in North
+#		     America, Europe and Asia
+#
+#	History: 
+#	    05-oct-1992 (stevet)
+#		Created.	
+#    	    13-sep-1993 (stevet)
+#   	    	Major changes to support new naming scheme for
+#   	    	timezone names and timezone files.  Also added a
+#   	    	number of timezone regions.
+#	    14-mar-1994 (kbrown, integrated by stevet)
+# 		Updated timezone rules for Australia/New Zealand, courtesy of 
+# 		George Sheppard of Sun MicroSystems.
+# 		The file used to generate 1.0 timezone rules was mostly 
+#		correct only to 1986/1987 for Australia, the same state 
+#		that the sunos 4.1.3 files were in.
+#
+# 		Updated rules includes:  
+#   		1) shift by Victoria and NSW to ending Summer Time earlier in
+#      		   90/91.  Corrects start to lastSun for many states.
+#   		2) WA and Queensland's short dallies into summer time.
+#   		3) SA extension of summer time for the Adelaide Festival in 
+#      		   even number years.
+#   	 	4) The town of Yancowinna (in NSW but uses CST .. mostly),
+#      		   and Lord Howe Island.
+#               Fixed bug B60566.
+#	15-may-1996 (angusm)
+#		Further changes to AUSTRALIA DST rules, supplied by Bill Allen
+#		CA level 1, Australia. Note that, due to pending legislation,
+#		there are liable to be more rule changes in coming years.
+#       28-feb-1997 (loera01)
+#               Added gmt/gmt10half file for South Australia 6.4 clients
+#               in Daylight Savings Time. (Bug 79659)
+#	08-aug-1997 (kitch01)
+#		Added europe/italy file for italy as their DST ends differently to
+#		the rest of europe.
+#	21-oct-1998 (kitch01)
+#		Re-instate YANCO timezone. The rules are reinstated upto the change
+#		by angus, then the rules are as for australia-south.
+#       25-jan-1999 (loera01) Bug 95023
+#               Added gmt/gmt-3half and gmt/gmt-2half files for Newfoundland 
+#		6.4 clients. 
+#	20-jan-1999 (kitch01) Bug 94926
+#		Canada-Yukon timezone is incorrect. Correct offset from GMT
+#		is -8 hours not -9. As per official Canadian web site.
+# 	22-Sep-1999 (kitch01) Bug 98866
+# 		United-Kingdom timezone has an incorrect end date for DST in
+#		1999. For complete reference see
+#		http://greenwhich2000.com/time  or
+#		http://www.rog.nmm.ac.uk/leaflets/summer/summer.html
+#	08-Nov-1999 (kitch01) Sir 97460
+#		Changes to Australian timezone rules specifically for the 2000
+#		olympics, as per Bill Allen:-
+# 	 Bill Allan - 05 Oct 1999
+#        DST is to start on 27-Aug-2000 so that the Olympic Games being
+#        held in Sydney (15-Sept-2000 to 01-Oct-2000) will be in DST.
+#        DST start times for 2001 will revert to the normally start
+#        dates in October
+#        The states involved are New South Wales, Victoria, Tasmania and
+#        Lord Howe Island.
+#        South Australia won't be changing.
+#        The other states don't have DST so they won't be changing.
+#       26-feb-2002 (rodjo04) bug 105597
+#               When using daylight savings time for Israel, The 
+#               GMT offset is incorrect. The GMT offsets are 3 and
+#               4 hour, when it should be 2 and 3 for daylight and 
+#               non-daylight hour times. 
+#       19-jan-2004 (horda03) Bug 111602
+#               TImezone for Turkey incorrect. Turkey is GMT+2.
+#       04-feb-2004 (horda03) Bug 111114/INGSRV2698
+#               Added MOSCOW timezone details
+#	25-Oct-2005 (ianma02) Bug 115535/INGSRV3510
+#        The end date for Daylight Savings in 2006 for Victoria, Tasmania,
+#        South Australia, New South Wales and ACT has been moved from the
+#        last Sunday in March to the first Sunday in April (2nd) to
+#        accommodate the Commonwealth Games.
+#	13-dec-2005 (drivi01)
+#	    	SIR 115597
+#	    	Added 11 Moscow timezones.
+#	29-aug-2006 (dougi)
+#	    Updates to the rules to allow for the US/Canada DST
+#	    changes starting in 2007.
+#	31-aug-2006 (dougi)
+#	    Mis-interpreted the rule format - 2nd Sunday is "sun>=8".
+#	22-nov-2006 (hayke02)
+#	    Add in Western Australia DST 3 year trial.
+#	    (1) From the hour of 2 a.m. on 3 December 2006 until the hour of 2
+#	    a.m. on 25 March 2007.
+#	    (2) From the hour of 2 a.m. on 28 October 2007 until the hour of 2
+#	    a.m. on 30 March 2008.
+#	    (3) From the hour of 2 a.m. on 26 October 2008 until the hour of 2
+#	    a.m. on 29 March 2009.
+#	    This change fixes SIR 117176.
+#	23-nov-2006 (hayke02)
+#	    The auswest end time is 3am not 2am. This change fixes SIR 117176.
+#	22-Feb-2006 (hanal04) Bug 117753
+#           Make correction to Mexico timezones. 
+#	30-jul-2007 (hayke02)
+#	    Changes to New Zealand DST (2007 onwards). DST period extended from
+#	    24 to 27 weeks: from September 2007 DST will be observed from the
+#	    last Sunday in September until the first Sunday in April. This
+#	    change fixes SIR 118865.
+#	19-nov-2007 (hayke02)
+#	    Changes to Australian DST. From 2008 onwards Daylight Savings for
+#	    Victoria, Tasmania, South Australia, New South Wales and ACT will be
+#	    from the first Sunday in October to the first Sunday in April. This
+#	    change  fixes bug 119466.
+#       06-Oct-2008 (horda03) Bug 121003
+#           Brasil have abolished the ACRE timezone (GMT-5) on June 24th 2008 (all 
+#           affected regions now in WEST (GMT-4) timezone. Also, the rules for the 
+#           DST have changed.
+#           As of October 2008, DST begins at 0:00 on the 3rd Sunday in October and
+#           end at 0:00 on the 3rd Sunday in February UNLESS the 3rd Sunday in
+#           February is the Sunday before Ash Wednesday; inthis case the end of DST
+#           is the 4th Sunday in February. As Ash Wednesday is based on Easter, which
+#           isn't a fixed date, I have entered rules to take into account the special
+#           case up to the year 2037.
+#       13-Nov-2009 (horda03) Bug 122916
+#           Add FIJI DST rules.
+#       15-Mar-2010 (hanal04) Bug 123406
+#           Fiji DST to end Mar 28th 2010. It's not yet clear what the 
+#           on-going rules will be.
+
+
+###############################################################################
+# Greenwich Mean Time
+###############################################################################
+
+# Zone	NAME		    GMTOFF	RULES/SAVE	FORMAT	    [UNTIL]
+Zone	gmt/gmt		    	0	-	    	GMT
+Zone	gmt/gmt-12		-12	-	    	GMT-1200
+Zone	gmt/gmt-11		-11	-	    	GMT-1100
+Zone	gmt/gmt-10		-10	-	    	GMT-1000
+Zone	gmt/gmt-9		-9	-	    	GMT-0900
+Zone	gmt/gmt-8		-8	-	    	GMT-0800
+Zone	gmt/gmt-7		-7	-	    	GMT-0700
+Zone	gmt/gmt-6		-6	-	    	GMT-0600
+Zone	gmt/gmt-5		-5	-	    	GMT-0500
+Zone	gmt/gmt-4		-4	-	    	GMT-0400
+Zone	gmt/gmt-3		-3	-	    	GMT-0300
+Zone	gmt/gmt-2		-2	-	    	GMT-0200
+Zone	gmt/gmt-1		-1	-	    	GMT-0100
+Zone	gmt/gmt1		1	-	    	GMT+0100
+Zone	gmt/gmt2		2	-	    	GMT+0200
+Zone	gmt/gmt3		3	-	    	GMT+0300
+Zone	gmt/gmt4		4	-	    	GMT+0400
+Zone	gmt/gmt5		5	-	    	GMT+0500
+Zone	gmt/gmt6		6	-	    	GMT+0600
+Zone	gmt/gmt7		7	-	    	GMT+0700
+Zone	gmt/gmt8		8	-	    	GMT+0800
+Zone	gmt/gmt9		9	-	    	GMT+0900
+Zone	gmt/gmt10		10	-	    	GMT+1000
+Zone	gmt/gmt11		11	-	    	GMT+1100
+Zone	gmt/gmt12		12	-	    	GMT+1200
+# GMT+12 with DST
+Zone	gmt/gmt13		13	-	    	GMT+1300 
+Zone	gmt/gmt-2half	    	-2:30	-   	    	GMT-0230
+Zone	gmt/gmt-3half	    	-3:30	-   	    	GMT-0330
+Zone	gmt/gmt3half	    	3:30	-   	    	GMT+0330
+Zone	gmt/gmt5half	    	5:30	-   	    	GMT+0530
+Zone	gmt/gmt9half	    	9:30	-   	    	GMT+0930
+Zone	gmt/gmt10half	    	10:30	-   	    	GMT+1030
+
+
+
+###############################################################################
+# Asia Timezone Region
+###############################################################################
+
+###############################################################################
+# People's Republic of China
+###############################################################################
+# From Guy Harris:
+# People's Republic of China.  Yes, they really have only one time zone.
+# From Bob Devine (January 28, 1988):
+# No they don't.  See TIME mag, February 17, 1986 p.52.  Even though
+# China is across 4 physical time zones, before Feb 1, 1986 only the
+# Peking (Bejing) time zone was recognized.  Since that date, China
+# has two of 'em -- Peking's and Urumqi (named after the capital of
+# the Xinjiang Uighur Autonomous Region).  I don't know about DST for it.
+#
+# . . .I just deleted the DST table and this editor makes it too
+# painful to suck in another copy..  So, here is what I have for
+# DST start/end dates for Peking's time zone (info from AP):
+#
+#     1986 May 4 - Sept 14
+#     1987 mid-April - ??
+# From U. S. Naval Observatory (January 19, 1989):
+# CHINA               8 H  AHEAD OF UTC  ALL OF CHINA, INCL TAIWAN
+# CHINA               9 H  AHEAD OF UTC  APR 17 - SEP 10
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	PRC	1970	max	-	Apr	Sun<=14	2:00	1:00	D
+Rule	PRC	1970	max	-	Sep	Sun<=14	3:00	0	S
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	asia/prc	8:00	PRC		C%sT
+
+###############################################################################
+# Republic of China
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	asia/roc	8:00	-		CST
+
+###############################################################################
+# Hongkong
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	asia/hongkong	8:00	-		HKT
+
+###############################################################################
+# Japan
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	asia/japan	9:00	-		JST
+
+###############################################################################
+# Republic of Korea
+###############################################################################
+# From Guy Harris:
+# According to someone at the Korean Times in San Francisco,
+# Daylight Savings Time was not observed until 1987.  He did not know
+# at what time of day DST starts or ends.
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	ROK	1987	max	-	May	Sun<=14	2:00	1:00	D
+Rule	ROK	1987	max	-	Oct	Sun<=14	3:00	0	S
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	asia/korea	9:00	ROK		K%sT
+
+
+###############################################################################
+# India
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	asia/india	5:30	-		IDT
+
+
+###############################################################################
+# Pakistan
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	asia/pakistan	5:00	-		PKT
+
+###############################################################################
+# Asian portion of Russia
+###############################################################################
+Zone	asia/moscow2	5:00	Moscow		MS%s
+Zone	asia/moscow3	6:00	Moscow		MS%s
+Zone	asia/moscow4	7:00	Moscow		MS%s
+Zone	asia/moscow5	8:00	Moscow		MS%s
+Zone	asia/moscow6	9:00	Moscow		MS%s
+Zone	asia/moscow7	10:00	Moscow		MS%s
+Zone	asia/moscow8	11:00	Moscow		MS%s
+Zone	asia/moscow9	12:00	Moscow		MS%s
+
+
+###############################################################################
+
+# Bill Allan 20-April-1996
+#
+# Updated timezone rules for Australia/New Zealand,
+# based on modifications made by Kathy Brown in 1994 based on rules
+# from George Sheppard of Sun MicroSystems.
+#
+# The file appended has been checked against information supplied by
+# appropriate government departments and is correct for 1996.
+# Future DST changes are based on legislation current in 1996 and may
+# change in future.
+#
+#
+# NOTE:
+#	Brokem Hill and district (in western NSW) observe the same
+#                   times as South Australia, including South Australian
+#		    Daylight Savings times. 
+#
+#	Lord Howe Island is 30 minutes ahead NSW during normal times
+#		    but during DST it advances only 30 minutes and so
+#		    the time is the same as NSW during DST.
+#
+# Bill Allan - 05 Oct 1999
+#        DST is to start on 27-Aug-2000 so that the Olympic Games being
+#        held in Sydney (15-Sept-2000 to 01-Oct-2000) will be in DST.
+#        DST start times for 2001 will revert to the normally start
+#        dates in October
+#        The states involved are New South Wales, Victoria, Tasmania and
+#        Lord Howe Island.
+#        South Australia won't be changing.
+#        The other states don't have DST so they won't be changing.
+# Marius Ianculovici - 25 Oct 2005
+#        The end date for Daylight Savings in 2006 for Victoria, Tasmania,
+#        South Australia, New South Wales and ACT has been moved from the
+#        last Sunday in March to the first Sunday in April (2nd) to
+#        accommodate the Commonwealth Games.
+#
+
+###############################################################################
+
+# AUSTRALIA
+
+# AUSTRALIA/NORTHERN TERRITORY
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/ausnorth          9:30    -       CST
+
+# AUSTRALIA/WESTERN AUSTRALIA
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/auswest           8:00    -       WST     1974 Oct lastSun 2:00
+                                8:00    1:00    WST     1975 Mar Sun>=1 3:00
+                                8:00    -       WST     1983 Oct lastSun 2:00
+                                8:00    1:00    WST     1984 Mar Sun>=1 3:00
+                                8:00    -       WST     1991 Nov 17 2:00
+                                8:00    1:00    WST     1992 Mar Sun>=1 3:00
+                                8:00	-	WST	2006 Dec 3 2:00
+                                8:00	1:00	WST	2007 Mar 25 3:00
+                                8:00	-	WST	2007 Oct 28 2:00
+                                8:00	1:00	WST	2008 Mar 30 3:00
+                                8:00	-	WST	2008 Oct 26 2:00
+                                8:00	1:00	WST	2009 Mar 29 3:00
+                                8:00    -       WST
+
+# AUSTRALIA/QUEENSLAND
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/qnslnd            10:00   -       EST     1971 Oct lastSun 2:00
+                                10:00   1:00    EST     1972 Feb lastSun 3:00
+                                10:00   -       EST     1989 Oct lastSun 2:00
+                                10:00   1:00    EST     1990 Mar Sun>=1 3:00
+                                10:00   -       EST     1990 Oct lastSun 2:00
+                                10:00   1:00    EST     1991 Mar Sun>=1 3:00
+                                10:00   -       EST     1991 Oct lastSun 2:00
+                                10:00   1:00    EST     1992 Mar Sun>=1 3:00
+                                10:00   -       EST
+
+# AUSTRALIA/SOUTH AUSTRALIA
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AS      1971    1985    -       Oct     lastSun 2:00    1:00    -
+Rule    AS      1972    1986    -       Mar     Sun>=1  3:00    0       -
+Rule    AS      1986    only    -       Oct     19      2:00    1:00    -
+Rule    AS      1987    1990    -       Mar     Sun>=15 3:00    0       -
+Rule    AS      1987    2007    -       Oct     lastSun 2:00    1:00    -
+Rule    AS      1991    only    -       Mar     3       3:00    0       -
+Rule    AS      1992    only    -       Mar     22      3:00    0       -
+Rule    AS      1993    only    -       Mar     7       3:00    0       -
+Rule    AS      1994    only    -       Mar     20      3:00    0       -
+Rule    AS      1995    2005    -       Mar     lastSun 3:00    0       -
+Rule    AS      2006    only    -       Apr     Sun>=1  3:00    0       -
+Rule    AS      2007    only    -       Mar     lastSun 3:00    0       -
+Rule    AS      2008    max     -       Apr     Sun>=1  3:00    0       -
+Rule    AS      2008    max     -       Oct     Sun>=1  2:00    1:00    -
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/aussouth          9:30    AS      CST
+
+# AUSTRALIA/TASMANIA
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AT      1967    only    -       Oct     1       2:00    1:00    -
+Rule    AT      1968    only    -       Mar     31      3:00    0       -
+Rule    AT      1968    1985    -       Oct     lastSun 2:00    1:00    -
+Rule    AT      1969    1971    -       Mar     Sun>=8  3:00    0       -
+Rule    AT      1972    only    -       Feb     27      3:00    0       -
+Rule    AT      1973    1981    -       Mar     Sun>=1  3:00    0       -
+Rule    AT      1982    1983    -       Mar     lastSun 3:00    0       -
+Rule    AT      1984    1986    -       Mar     Sun>=1  3:00    0       -
+Rule    AT      1986    only    -       Oct     19      2:00    1:00    -
+Rule    AT      1987    1990    -       Mar     Sun>=15 3:00    0       -
+Rule    AT      1991    2005    -       Mar     lastSun 3:00    0       -
+Rule    AT      1987    only    -       Oct     25      2:00    1:00    -
+Rule    AT      1988    1990    -       Oct     lastSun 2:00    1:00    -
+Rule    AT      1991    1999    -       Oct     Sun>=1  2:00    1:00    -
+Rule    AT      2000    only    -       Aug     27      2:00    1:00    -
+Rule    AT      2001    2007    -       Oct     Sun>=1  2:00    1:00    -
+Rule    AT      2006    only    -       Apr     Sun>=1  3:00    0       -
+Rule    AT      2007    only    -       Mar     lastSun 3:00    0       -
+Rule    AT      2008    max     -       Apr     Sun>=1  3:00    0       -
+Rule    AT      2008    max     -       Oct     Sun>=1  2:00    1:00    -
+
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/tsmni             10:00   AT      EST
+
+# AUSTRALIA/VICTORIA
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AV      1971    1985    -       Oct     lastSun 2:00    1:00    -
+Rule    AV      1972    only    -       Feb     27      3:00    0       -
+Rule    AV      1973    1985    -       Mar     Sun>=1  3:00    0       -
+Rule    AV      1986    1990    -       Mar     Sun>=15 3:00    0       -
+Rule    AV      1986    only    -       Oct     19      2:00    1:00    -
+Rule    AV      1987    1999    -       Oct     lastSun 2:00    1:00    -
+Rule    AV      1991    1994    -       Mar     Sun>=1  3:00    0       -
+Rule    AV      1995    2005    -       Mar     lastSun 3:00    0       -
+Rule    AV      2000    only    -       Aug     27      2:00    1:00    -
+Rule    AV      2001    2007    -       Oct     lastSun 2:00    1:00    -
+Rule    AV      2006    only    -       Apr     Sun>=1  3:00    0       -
+Rule    AV      2007    only    -       Mar     lastSun 3:00    0       -
+Rule    AV      2008    max     -       Apr     Sun>=1  3:00    0       -
+Rule    AV      2008    max     -       Oct     Sun>=1  2:00    1:00    -
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/vctr              10:00   AV      EST
+
+# AUSTRALIA/NEW SOUTH WALES and the ACT (Canberra)
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AN      1971    1985    -       Oct     lastSun 2:00    1:00    -
+Rule    AN      1972    only    -       Feb     27      3:00    0       -
+Rule    AN      1973    1981    -       Mar     Sun>=1  3:00    0       -
+Rule    AN      1982    only    -       Apr     4       3:00    0       -
+Rule    AN      1983    1985    -       Mar     Sun>=1  3:00    0       -
+Rule    AN      1986    only    -       Mar     16      3:00    0       -
+Rule    AN      1986    only    -       Oct     19      2:00    1:00    -
+Rule    AN      1987    only    -       Mar     15      3:00    0       -
+Rule    AN      1987    1999    -       Oct     lastSun 2:00    1:00    -
+Rule    AN      1988    1989    -       Mar     Sun>=15 3:00    0       -
+Rule    AN      1990    1995    -       Mar     Sun>=1  3:00    0       -
+Rule    AN      1996    2005    -       Mar     lastSun 3:00    0       -
+Rule    AN      2000    only    -       Aug     27      2:00    1:00    -
+Rule    AN      2001    2007    -       Oct     lastSun 2:00    1:00    -
+Rule    AN      2006    only    -       Apr     Sun>=1  3:00    0       -
+Rule    AN      2007    only    -       Mar     lastSun 3:00    0       -
+Rule    AN      2008    max     -       Apr     Sun>=1  3:00    0       -
+Rule    AN      2008    max     -       Oct     Sun>=1  2:00    1:00    -
+# Zone  NAME                    GMTOFF  RULES   FORMAT  [UNTIL]
+Zone    astrl/nsw               10:00   AN      EST
+
+# AUSTRALIA/YANCOWINNA  
+Zone    astrl/yanco             9:30    AN      CST     1995 Mar lastSun 3:00
+                                9:30    AS      CST
+
+# AUSTRALIA/LORD HOWE ISLAND
+# Rule  NAME    FROM    TO      TYPE    IN      ON      AT      SAVE    LETTER/S
+Rule    AL      1971    1985    -       Oct     lastSun 2:30    0:30    -
+Rule    AL      1972    only    -       Feb     27      3:00    0       -
+Rule    AL      1973    1981    -       Mar     Sun>=1  3:00    0       -
+Rule    AL      1982    only    -       Apr     4       3:00    0       -
+Rule    AL      1983    1985    -       Mar     Sun>=1  3:00    0       -
+Rule    AL      1986    only    -       Mar     16      3:00    0       -
+Rule    AL      1986    only    -       Oct     19      2:30    0:30    -
+Rule    AL      1987    only    -       Mar     15      3:00    0       -
+Rule    AL      1987    max     -       Oct     lastSun 2:30    0:30    -
+Rule    AL      1988    1989    -       Mar     Sun>=15 3:00    0       -
+Rule    AL      1990    1995    -       Mar     Sun>=1  3:00    0       -
+Rule    AL      1996    max     -       Mar     lastSun 3:00    0       -
+Rule    AL      2000    only    -       Aug     27      2:30    0:30    -
+Rule    AL      2001    max     -       Oct     lastSun 2:30    0:30    -
+Zone    astrl/lhi               10:30   AL      ???
+
+###############################################################################
+
+###############################################################################
+# Middle East Timezone Region
+###############################################################################
+
+###############################################################################
+# Egypt
+###############################################################################
+# From Bob Devine (January 28, 1988):
+# Egypt: DST from first day of May to first of October (ending may
+# also be on Sept 30th not 31st -- you might want to ask one of the
+# soc.* groups, you might hit someone who could ask an embassy).
+# DST since 1960 except for 1981-82.
+# From U. S. Naval Observatory (January 19, 1989):
+# EGYPT               2 H  AHEAD OF UTC
+# EGYPT               3 H  AHEAD OF UTC  MAY 17 - SEP 30 (AFTER
+# EGYPT                                  RAMADAN)
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	Egypt	1960	max	-	May	1	2:00	1:00	" DST"
+Rule	Egypt	1960	max	-	Oct	1	2:00	0	-
+
+# Zone	NAME	    	GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	mideast/egypt	2:00	Egypt		EET%s	1981
+		    	2:00	-		EET	1983
+		    	2:00	Egypt		EET%s
+
+###############################################################################
+# Kuwait
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	mideast/kuwait	3:00	-		KWT
+
+
+###############################################################################
+# Iran
+###############################################################################
+# From Bob Devine (January 28, 1988):
+# Iran: Last Sunday in March to third (?) Sunday in
+# September.  Since the revolution, the official calendar is Monarchic
+# calendar; I have no idea what the correspondence between dates are.
+# From U. S. Naval Observatory (January 19, 1989):
+# IRAN                3.5H AHEAD OF UTC
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	Iran	1988	max	-	Mar	lastSun	2:00	1:00	D
+Rule	Iran	1988	max	-	Sep	Sun>=15	2:00	0	S
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	mideast/iran	3:30	Iran		I%sT
+
+###############################################################################
+# Israel
+###############################################################################
+# From U. S. Naval Observatory (January 19, 1989):
+# ISRAEL              2 H  AHEAD OF UTC
+# ISRAEL              3 H  AHEAD OF UTC  APR 10 - SEP 3
+# From Arthur David Olson (January 21, 1989):
+# Stick with rules below (which were provided by Guy Harris and which were
+# posted in 1988) for now.
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	Israel	1987	max	-	Apr	Sun<=21	2:00	1:00	D
+Rule	Israel	1987	max	-	Aug	Sat<=28	2:00	0	S
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	mideast/israel	2:00	Israel		I%sT
+
+###############################################################################
+# Saudi Arabia
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	mideast/saudi	3:00	-		SDT
+
+
+###############################################################################
+# North America Timezone Region
+###############################################################################
+
+###############################################################################
+# United States
+###############################################################################
+# From Arthur David Olson:
+# US Daylight Saving Time ended on the last Sunday of *October* in 1974.
+# See, for example, the front page of the Saturday, October 26, 1974
+# and Sunday, October 27, 1974 editions of the Washington Post.
+# From seismo!munnari!kre:
+# I recall also being told by someone once that Canada didn't have
+# the DST variations in 74/75 that the US did, but I am not nearly
+# sure enough of this to add anything.
+# From Arthur David Olson:
+# The above has been confirmed by Bob Devine; we'll go with it here.
+# From Arthur David Olson:
+# Before the Uniform Time Act of 1966 took effect in 1967, observance of
+# Daylight Saving Time in the US was by local option, except during wartime.
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	US	1918	1919	-	Mar	lastSun	2:00	1:00	D
+Rule	US	1918	1919	-	Oct	lastSun	2:00	0	S
+Rule	US	1942	only	-	Feb	9	2:00	1:00	W # War
+Rule	US	1945	only	-	Sep	30	2:00	0	S
+Rule	US	1967	2006	-	Oct	lastSun	2:00	0	S
+Rule	US	2007	max	-	Nov	Sun>=1	2:00	0	S
+Rule	US	1967	1973	-	Apr	lastSun	2:00	1:00	D
+Rule	US	1974	only	-	Jan	6	2:00	1:00	D
+Rule	US	1975	only	-	Feb	23	2:00	1:00	D
+Rule	US	1976	1986	-	Apr	lastSun	2:00	1:00	D
+Rule	US	1987	2006	-	Apr	Sun>=1	2:00	1:00	D
+Rule	US	2007	max	-	Mar	Sun>=8	2:00	1:00	D
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	na/eastern	-5:00	US		E%sT
+Zone	na/central	-6:00	US		C%sT
+Zone	na/mountain	-7:00	US		M%sT
+Zone	na/pacific	-8:00	US		P%sT
+Zone	na/alaska	-9:00	US		AK%sT	# Abbreviation per USNO
+Zone	sp/hawaii	-10:30	US	H%sT	1933 Apr 30 2:00
+			-10:30	1:00	HDT	1933 May 1 2:00
+			-10:30	US	H%sT	1947 Jun 8 2:00
+			-10:00	-	HST
+
+###############################################################################
+# Canada
+###############################################################################
+# Canada is reportedly lots easier than the US--leastways since 1951.
+# I don't know what they did before then.
+# 4.3BSD claims that it's perfectly regular.
+# According to a posting in "comp.bugs.misc", "comp.unix.wizards", etc.
+# on February 8, 1987, by Dave Sherman of the Law Society of Upper Canada,
+# "...Canada (well, Ontario and at least some of the other provinces) are
+# adopting the new daylight savings time rules...".  We assume all of
+# Canada is doing so.
+# From Bob Devine (January 28, 1988):
+# All of Canada did have DST from your first rule except Saskatchewan.
+# Which parts did not observe DST is hard to pinpoint but most of the
+# province follows the rules.
+# NOTE: those that didn't have DST for that rule, also
+# probably did not have it for several years previous.
+# From U. S. Naval Observatory (January 19, 1989):
+# CANADA   NEW FDL    3.5H BEHIND UTC    ST.JOHN'S
+# CANADA   NEW FDL    1.5H BEHIND UTC    APR 3 - OCT 29
+# CANADA   ATLANTIC   4 H  BEHIND UTC    HALIFAX
+# CANADA   ATLANTIC   3 H  BEHIND UTC    APR 3 - OCT 29
+# CANADA   EASTERN    5 H  BEHIND UTC    TORONTO, MONTREAL, OTTAWA
+# CANADA   EASTERN    4 H  BEHIND UTC    APR 3 - OCT 29
+# CANADA   CENTRAL    6 H  BEHIND UTC    REGINA, WINNIPEG
+# CANADA   CENTRAL    5 H  BEHIND UTC    APR 3 - OCT 29
+# CANADA   MOUNTAIN   7 H  BEHIND UTC    CALGARY, EDMONTON
+# CANADA   MOUNTAIN   6 H  BEHIND UTC    APR 3 - OCT 29
+# CANADA   PACIFIC    8 H  BEHIND UTC    VANCOUVER
+# CANADA   PACIFIC    7 H  BEHIND UTC    APR 3 - OCT 29
+# CANADA   YUKON      SAME AS PACIFIC    DAWSON
+# From Arthur David Olson (January 21, 1989):
+# April 3 fell on a Sunday in 1988; October 29 fell on a Sunday in 1989.  Ahem.
+# Note claim that there's double DST in Newfoundland and that Yukon should
+# be same as Pacific.  Stick with rules posted in 1988 until more authoritative
+# information is available.
+#
+# Bug 94926. From official canadian web site www.nrc.ca/inms/faq/time.html
+# Canada-Yukon is -8 hours from GMT in standard time.
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	Canada	1969	2006	-	Oct	lastSun	2:00	0	S
+Rule	Canada	2007	max	-	Nov	Sun>=1	2:00	0	S
+Rule	Canada	1969	1986	-	Apr	lastSun	2:00	1:00	D
+Rule	Canada	1987	2006	-	Apr	Sun>=1	2:00	1:00	D
+Rule	Canada	2007	max	-	Mar	Sun>=8	2:00	1:00	D
+
+# Zone	NAME			GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	na/nwfdlnd  		-3:30	Canada		N%sT
+Zone	na/atlantic		-4:00	Canada		A%sT
+Zone	na/yukon		-8:00	Canada		Y%sT
+
+###############################################################################
+# Mexico
+###############################################################################
+# From Guy Harris:
+# Rules are from the Official Airline Guide, Worldwide Edition, for 1987.
+# Rules prior to 1987 are unknown.
+# The comments in the OAG say "Only Ensenada, Mexicale, San Felipe and Tijuana
+# observe DST."  This is presumably Baja California Norte, above 28th parallel,
+# as listed there; Mexico/BajaSur is for "Baja California Sur and N. Pacific
+# Coast (States of Sinaloa and Sonora)."
+# From Bob Devine (January 28, 1988):
+# The Federal District (where Mexico City is) has observed [DST] several
+# times but not recently.
+# I don't where to drawn the line in the North Baja area.  28th latitude
+# sounds good -- but it may be higher (how far [d]o radio stations from
+# San Diego affect culture?).
+# The dates of DST probably go back to 1981.  The rules are the same as
+# US's.  This is going to be a headache for US presidential electi[o]n years!
+# From Arthur David Olson (February 13, 1988)
+# Since the 1981 starting date is only "probable," we'll keep the 1987
+# starting date below.
+# From U. S. Naval Observatory (January 19, 1989):
+# MEXICO BAJA CAL N   7 H  BEHIND UTC    BAJA CALIFORNIA SUR AND
+# MEXICO BAJA CAL N                      N. PACIFIC COAST (STATES
+# MEXICO BAJA CAL N                      OF SINALOA AND SONORA)
+# MEXICO BAJA CAL N   8 H  BEHIND UTC    ABOVE 28TH PARALLAL APR 3
+# MEXICO BAJA CAL N                      - OCT 29
+# MEXICO BAJA CAL N   7 H  BEHIND UTC    ABOVE 28TH PARALLAL APR 3
+# MEXICO BAJA CAL N                      - 0CT 29
+# MEXICO              6 H  BEHIND UTC    STATES OF DURANGO,
+# MEXICO                                 COAHUILA, NUEVO LEON,
+# MEXICO                                 TAMAULIPAS
+# MEXICO              5 H  BEHIND UTC    STATES OF DURANGO,
+# MEXICO                                 COAHUILA, NUEVO LEON,
+# MEXICO                                 TAMAULIPAS  APR 3 - OCT 29
+# MEXICO              6 H  BEHIND UTC    GENERAL MEXICO, STATES OF
+# MEXICO                                 CAMPECHE, QUINTANA ROO AND
+# MEXICO                                 YUCATAN
+# From Arthur David Olson (January 21, 1989):
+# April 3 fell on a Sunday in 1988; October 29 fell on a Sunday in 1989.  Ahem.
+# USNO claims there should be four Mexican zones rather than three:
+# a zone that's GMT-8 with DST; a zone that's always GMT-7;
+# a zone that's GMT-6 with DST; and a zone that's always GMT-6.
+# Wait for more authoritative information before changing.
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	Mexico	1987	max	-	Oct	lastSun	2:00	0	S
+Rule	Mexico	1987	max	-	Apr	Sun>=1	2:00	1:00	D
+
+# Zone	NAME			GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	na/mxbajan  		-8:00	Mexico		P%sT
+Zone	na/mxbajas		-7:00	Mexico		M%sT
+Zone	na/mxgen		-6:00	Mexico		C%sT
+
+
+###############################################################################
+# Europe Timezone Region
+###############################################################################
+
+###############################################################################
+# United Kingdom
+###############################################################################
+# From Arthur David Olson (January 19, 1989):
+# The starting and ending dates below (from which the rules are derived)
+# are from Whitaker's Almanack for 1987, page 146.
+# 1960 is the earliest year for which dates are given;
+# Whitaker's notes that British Summer Time (and, in some years, Double Summer
+# Time) was observed in earlier years but does not give start and end dates.
+#
+# A source at the British Information Office in New York avers that it's
+# known as "British" Summer Time in all parts of the United Kingdom.
+#	1960	April 10	October 2 (yes, 2, according to the almanac)
+#	1961	March 26	October 29
+#	1962	March 25	October 28
+#	1963	March 31	October 27
+#	1964	March 22	October 25
+#	1965	March 21	October 24
+#	1966	March 20	October 23
+#	1967	March 19	October 29
+#	1968	February 18	October 27
+# "British Standard Time, also one hour ahead of G. M. T., was kept between
+# 1968 Oct. 27-1971 Oct. 31."
+#	1972	March 19	October 29
+#	1973	March 18	October 28
+#	1974	March 17	October 27
+#	1975	March 16	October 26
+#	1976	March 21	October 24
+#	1977	March 20	October 23
+#	1978	March 19	October 29
+#	1979	March 18	October 28
+#	1980	March 16	October 26
+#	1981	March 29	October 25
+#	1982	March 28	October 24
+#	1983	March 27	October 23
+#	1984	March 25	October 28
+#	1985	March 31	October 27
+#	1986	March 30	October 26
+#	1987	March 29	October 25
+# From an Anonymous U. K. Donor (January 4, 1989):
+#
+# It is NOT possible to predict when [British Summer Time] will change
+# in a future year.
+# 
+# (The admiralty calculate when they think it should be (no more that a couple
+# of years in advance) and advise the government who then decide whether or 
+# not they will take the admiralty's advice)
+# 
+# ...the Gre[e]nwich...observatory...[was] very helpful.
+# 
+# I was not able to track down the Admiralty formula (I tried hard but failed)
+# ...
+# Date: 4 Jan 89 08:57:25 GMT (Wed)
+# From: Jonathan Leffler <nih-csl!uunet!mcvax!sphinx.co.uk!john>
+# ...
+# [British Summer Time] is fixed annually by Act of Parliament.
+# If you can predict what Parliament will do, you should be in
+# politics making a fortune, not computing.
+#
+# Summer time ends on Sunday 29 October 1989.
+# ...
+# Date: 5 Jan 89 09:50:38 GMT (Thu)
+# From: Peter Kendell <nih-csl!uunet!mcvax!tcom.stc.co.uk!pete>
+# ...
+# 
+# From my Collins Diary for 1989 - 
+# 
+# "At the time of going to press the Home Office was unable to confirm
+# the 1989 starting and finishing dates for BST*, but expressed the 
+# view that 26 March and 29 October were the likeliest dates to be
+# adopted"
+# 
+# *British Summer Time.
+# From an Anonymous U. K. Donor (January 5, 1989):
+#
+# . . .our government is seriously considering applying Double Summer Time -
+# putting the clocks forwards and back TWO hours for daylight saving time.
+# This is advocated to standardise time in the EEC - we're all supposed to
+# keep the same time and to change the clocks on the same dates in the future.
+#
+# Charles Kitson 22-Sep-1999.
+# Bug 98866. I tracked down the following reference on BST dates after 1972.
+# Between 1968 and 1971 Britain kept British Standard Time, GMT+1, all year round.
+#
+# The Summer Time Act 1972 defined the period of British Summer Time to start at 
+# 2 am (GMT) on the morning of the day after the third Saturday in March or, if 
+# that was Easter Day, the day after the second Saturday. It was to end at 2 am (GMT)
+# on the day after the fourth Saturday in October.
+# The duration of British Summer Time (BST) can be varied by Order of Council and
+# in recent years has been changed so as to bring the date of the start of Summer Time
+# into line with that used in Europe.
+# The rule for 1981-1994 defined the start of Summer Time as the last Sunday in March
+# and the end as the day following the fourth Saturday in October. The time of change
+# was altered to 1 am (GMT).
+# There is no rule for the dates of Summer Time (BST) for the years 1995, 1996 and 1997.
+# The agreed dates are:
+# For 1995 BST started on March 26 and ended on October 22
+# For 1996 BST started on March 31 and ended on October 27
+# For 1997 BST started on March 30 and ended on October 26
+# In 1996 all clocks in Europe were changed the same date for the first time.
+# From 1998 BST will be kept from the last Sunday in March until the last Sunday in 
+# October. This has been adopted as a directive from the European Parliament and will 
+# be effective from 1998-2001 inclusive.
+# 1999: March 28 - October 31
+# 2000: March 26 - October 29
+# 2001: March 25 - October 28
+# All changes to be at 1 am GMT. 
+#
+# To allow dates to be entered beyond 2001, I am making the assumption that the current
+# rule will still apply. 
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+# Historic starting rules
+Rule	GB-Eire	1960	only	-	Apr	10	1:00s	1:00	BST
+Rule	GB-Eire	1961	1963	-	Mar	lastSun	1:00s	1:00	BST
+Rule	GB-Eire	1964	1967	-	Mar	Sun>=19	1:00s	1:00	BST
+Rule	GB-Eire	1968	only	-	Feb	18	1:00s	1:00	BST
+Rule	GB-Eire	1972	1980	-	Mar	Sun>=16	2:00s	1:00	BST
+# Historic ending rules
+Rule	GB-Eire	1960	only	-	Oct	2	1:00s	0	GMT
+Rule	GB-Eire	1961	1967	-	Oct	Sun>=23	1:00s	0	GMT
+Rule	GB-Eire	1971	only	-	Oct	31	1:00s	0	GMT
+Rule	GB-Eire	1972	1980	-	Oct	Sun>=23	2:00s	0	GMT
+Rule	GB-Eire	1981	1997	-	Oct	Sun>=22	1:00s	0	GMT
+# Current rules
+Rule	GB-Eire	1981	max	-	Mar	lastSun	1:00s	1:00	BST
+Rule	GB-Eire	1997	max	-	Oct	lastSun	1:00s	0	GMT
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	europe/gb  	0:00	GB-Eire		%s	1968 Oct 27 1:00s
+			1:00	-		BST	1971 Oct 31 1:00s
+			0:00	GB-Eire		%s
+
+###############################################################################
+
+# Continental Europe
+
+# The use of 1986 as starting years below is conservative.
+# Bug 82579. In 1996 Italy changed the DST period end to the last Sunday
+#	in October.
+# Bug 78894. Mainland Europe change DST end to the last Sunday in October
+# 	in 1996. As Italy is in Mainland Europe I have removed the above
+#	change.
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	W-Eur	1986	1995	-	Mar	lastSun	1:00s	1:00	" DST"
+Rule	W-Eur	1986	1995	-	Sep	lastSun	1:00s	0	-
+Rule	W-Eur	1996	max	-	Mar	lastSun	1:00s	1:00	" DST"
+Rule	W-Eur	1996	max	-	Oct	lastSun	1:00s	0	-
+
+Rule	M-Eur	1986	1995	-	Mar	lastSun	2:00s	1:00	" DST"
+Rule	M-Eur	1986	1995	-	Sep	lastSun	2:00s	0	-
+Rule	M-Eur	1996	max	-	Mar	lastSun	2:00s	1:00	" DST"
+Rule	M-Eur	1996	max	-	Oct	lastSun	2:00s	0	-
+
+Rule	E-Eur	1986	1995	-	Mar	lastSun	3:00s	1:00	" DST"
+Rule	E-Eur	1986	1995	-	Sep	lastSun	3:00s	0	-
+Rule	E-Eur	1996	max	-	Mar	lastSun	3:00s	1:00	" DST"
+Rule	E-Eur	1996	max	-	Oct	lastSun	3:00s	0	-
+
+
+Rule	Moscow	1957	only	-	Mar	3	0:00	0:00	K
+Rule	Moscow	1981	1984	-	Apr	1	0:00	1:00	D
+Rule	Moscow	1981	1983	-	Oct	1	0:00	0	K
+Rule	Moscow	1985	1990	-	Mar	lastSun	2:00	1:00	D
+Rule	Moscow	1984	1995	-	Sep	lastSun	3:00	0	K
+Rule	Moscow	1991	only	-	Mar	30	2:00	0	D
+Rule	Moscow	1991	only	-	Sep	29	3:00	0	K
+Rule	Moscow	1992	only	-	Jan	19	2:00	-1:00	K
+Rule	Moscow	1992	max	-	Mar	lastSun	2:00	1:00	D
+Rule	Moscow	1996	max	-	Oct	lastSun	3:00	0	K
+
+Rule	Turkey	1986	max	-	Mar	lastSun	1:00	1:00	" DST"
+Rule	Turkey	1986	max	-	Sep	lastSun	1:00	0	-
+
+Rule	W-SU	1986	max	-	Mar	lastSun	2:00s	1:00	" DST"
+Rule	W-SU	1986	max	-	Sep	lastSun	2:00s	0	-
+
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	europe/euwest	0:00	W-Eur		WET%s
+Zone	europe/eucntrl	1:00	M-Eur		MET%s
+Zone	europe/poland	1:00	W-Eur		MET%s
+Zone	europe/eueast	2:00	E-Eur		EET%s
+Zone	europe/moscow-1	2:00	Moscow		MS%s
+Zone	europe/moscow	3:00	Moscow		MS%s
+Zone	europe/moscow1	4:00	Moscow		MS%s
+Zone	europe/turkey	2:00	Turkey		EET%s
+
+
+
+
+
+###############################################################################
+# South America Timezone Region
+###############################################################################
+
+###############################################################################
+# Brazil
+###############################################################################
+# From Guy Harris:
+# The OAG lists October 25, 1987 and February 12, 1988 as the starting and
+# ending dates, giving them as "estimated date(s) based on previous year".  We
+# infer a rule here from one example, always a dangerous practice....  Yes,
+# they really do switch on Saturday, according to the OAG.
+# "Brazil/Acre" is for the Territory of Acre; "Brazil/DeNoronha" is for
+# Fernando De Noronha.
+# From Bob Devine (January 28, 1988):
+# The only information I found is that there was no DST up to 1985.
+# But there was some before 1952!
+# From U. S. Naval Observatory (January 16, 1989):
+# BRAZIL     WEST     5 H  BEHIND UTC    TERRITORY OF ACRE
+# BRAZIL     WEST     4 H  BEHIND UTC    ACRE OCT 23, '88-FEB 11,
+# BRAZIL                                 '89 (ESTIMATED)
+# BRAZIL     CENTRAL  4 H  BEHIND UTC    MANAUS
+# BRAZIL     CENTRAL  3 H  BEHIND UTC    MANAUS OCT 23, '88-FEB 11,
+# BRAZIL     CENTRAL                     '89 (ESTIMATED)
+# BRAZIL     EAST     3 H  BEHIND UTC    COASTAL STATES, RIO, SAO
+# BRAZIL     EAST                        PAULO, BRASILIA
+# BRAZIL     EAST     2 H  BEHIND UTC    COASTAL STATES, RIO, SAO
+# BRAZIL                                 PAULO, BRASILIA OCT 23,
+# BRAZIL                                 '88-FEB 11, '89
+# BRAZIL                                 (ESTIMATED)
+# BRAZIL              2 H  BEHIND UTC    ATLANTIC ISLANDS, FERNANDO
+# BRAZIL                                 DE NORONHA
+# BRAZIL              1 H  BEHIND UTC    OCT 23, '88-FEB 11, '89
+# BRAZIL                                 (ESTIMATED)
+# BRAZIL              3 H  BEHIND UTC    FOR MOST MAJOR AIRPORTS.
+###############################################################################
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule    Brazil      1987    2008    -       Feb     Sat<=14 2:00    0       S
+Rule    Brazil      1987    2007    -       Oct     Sat<=28 2:00    1:00    D
+Rule    Brazil      2009    2011    -       Feb     Sun>=15 0:00    0       S
+Rule    Brazil      2012    2012    -       Feb     Sun>=22 0:00    0       S
+Rule    Brazil      2013    2014    -       Feb     Sun>=15 0:00    0       S
+Rule    Brazil      2015    2015    -       Feb     Sun>=22 0:00    0       S
+Rule    Brazil      2016    2022    -       Feb     Sun>=15 0:00    0       S
+Rule    Brazil      2023    2023    -       Feb     Sun>=22 0:00    0       S
+Rule    Brazil      2024    2025    -       Feb     Sun>=15 0:00    0       S
+Rule    Brazil      2026    2026    -       Feb     Sun>=22 0:00    0       S
+Rule    Brazil      2027    2033    -       Feb     Sun>=15 0:00    0       S
+Rule    Brazil      2034    2034    -       Feb     Sun>=22 0:00    0       S
+Rule    Brazil      2035    2036    -       Feb     Sun>=15 0:00    0       S
+Rule    Brazil      2037    2037    -       Feb     Sun>=22 0:00    0       S
+Rule    Brazil      2038    max     -       Feb     Sun>=15 0:00    0       S
+Rule    Brazil      2008    max     -       Oct     Sun>=15 0:00    1:00    D
+ 
+
+# Zone	NAME			GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	sa/bzeast		-3:00	Brazil		E%sT
+Zone	sa/bzwest		-4:00	Brazil		W%sT
+Zone	sa/bzacre		-5:00	Brazil		A%sT	2008 Jun 24 0:00
+				-4:00	Brazil		W%sT
+Zone	sa/bzden    		-2:00	Brazil		F%sT
+
+###############################################################################
+# Chile
+###############################################################################
+# From Guy Harris:
+# The OAG lists October 11, 1987 and March 12, 1988 as the starting and
+# ending dates, giving them as "estimated date(s) based on previous year."
+# From Bob Devine (January 28, 1988):
+# Chile has had 2nd Sunday in October to 2nd Sunday in March DST since 1977.
+# Switch is at midnight. OAG is right.
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	Chile	1977	max	-	Oct	Sun>=8	0:00	1:00	D
+Rule	Chile	1978	max	-	Mar	Sun>=8	0:00	0	S
+
+# Zone	NAME			GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	sa/chlcont  		-4:00	Chile		C%sT
+Zone	sa/easteris 		-6:00	Chile		E%sT
+
+###############################################################################
+# South Pacific Timezone Region
+###############################################################################
+
+###############################################################################
+# New Zealand
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	NZ	1974	1988	-	Oct	lastSun	2:00	1:00	D
+# Rule	NZ	1989	max	-	Oct	Sun>=1	2:00	1:00	D
+Rule	NZ	1989	only	-	Oct	8	2:00	1:00	D #
+Rule	NZ	1990	2006	-	Oct	Sun>=1	2:00	1:00	D #
+Rule	NZ	2007	max	-	Sep	lastSun	2:00	1:00	D #
+Rule	NZ	1975	1989	-	Mar	Sun>=1	3:00	0	S
+Rule	NZ	1990	2007	-	Mar	Sun>=15	3:00	0	S
+Rule	NZ	2008	max	-	Apr	Sun>=1	3:00	0	S
+# Zone	NAME			GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	sp/nz			12:00	NZ		NZ%sT	# New Zealand
+Zone	sp/nz-chat		12:45	-		NZ-CHAT # Chatham Island
+
+
+###############################################################################
+# Fiji
+###############################################################################
+
+# Rule	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
+Rule	Fiji	1998	1999	-	Nov	Sun>=1	2:00	1:00	JS
+Rule	Fiji	1999	2000	-	Feb	lastSun	3:00	0	S
+Rule	Fiji	2009	2009	-	Nov	lastSun	2:00	1:00	JS
+Rule	Fiji	2010	max	-	Mar	lastSun	3:00	0	S
+
+# Zone  NAME     GMTOFF  RULES/SAVE      FORMAT  [UNTIL]
+Zone    sp/fiji  12:00   Fiji            F%sT
+
+###############################################################################
+
+
+###############################################################################
+# Southeast Asia Timezone Region
+###############################################################################
+
+###############################################################################
+# Indonesia
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	seasia/indowest	7:00	-		IWT
+Zone	seasia/indocntr	8:00	-		ICT
+Zone	seasia/indoeast	9:00	-		ICT
+
+###############################################################################
+# Malaysia
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	seasia/malaysia	8:00	-		MLT
+
+
+###############################################################################
+# Philippines
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	seasia/phlppns	8:00	-		PLT
+
+
+###############################################################################
+# Singapore
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	seasia/sngpr	8:00	-		SST
+
+
+###############################################################################
+# Thailand
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	seasia/thailand	7:00	-		TAT
+
+###############################################################################
+# Vietnam
+###############################################################################
+
+# Zone	NAME		GMTOFF	RULES/SAVE	FORMAT	[UNTIL]
+Zone	seasia/vietnam	7:00	-		VNT

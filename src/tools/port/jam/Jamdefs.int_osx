@@ -1,0 +1,82 @@
+#
+#  Copyright (c) 2004 Ingres Corporation
+#
+#  Name: Jamdefs.int_osx 
+#
+#  Description:
+#       Variable definitions for Mac OS X for Intel (x86)
+#
+# History:
+#       04-Feb-2008 (hanje04)
+#	    SIR S119978
+#           Add support for Intel Mac OS X (int_osx)
+#           Created from Jamdefs.mg5_osx
+#       05-May-2009 (bonro01)
+#           Create server using iimerge.a
+#
+#####
+
+# Tell Jamdefs that this include worked:
+JAMDEFS_INCLUDED = true ;
+
+NETSCAPE_API_FLAG 	= "" ;
+APACHE_API_FLAG 	= "-DOSX" ;
+VERS 	= "int_osx" ;
+if $(64BIT)
+{
+   OUTARCH = "-arch x86_64" ;
+}
+else
+{
+   OUTARCH = "-arch i386" ;
+}
+ASMACH  = $(OUTARCH) ;
+CC 	= "gcc" ;
+CCDEBUG = "-g" ;
+CPP 	= "/usr/bin/cpp" ;
+CCLDMACH 	= "$(OUTARCH) -framework System" ;
+SHLIBLD		= libtool ;
+CCSHLDMACH	= "-dynamic -framework System -undefined dynamic_lookup -dead_strip" ;
+CCLDSERVER 	= "" ;
+CCPICFLAG 	= "-fPIC" ;
+CCVERSFLAG	= "-D$(VERS)" ;
+CCMACH		= "$(CCVERSFLAG) -DDARWIN $(OUTARCH) -dynamic -fno-common -fsigned-char -fasm-blocks" ;
+SLSFX 	= "dylib" ;
+OBJSFX		= "o" ;
+LIBSFX		= "a" ;
+MWSLSFX 	= "dylib" ;
+CGISFX 	= "cgi" ;
+LDLIBPATH 	= "/usr/lib /usr/local/lib" ;
+LDLIBPATH64 	= "" ;
+LIBMACH 	= "" ;
+LDLIBMACH 	= "$(OUTARCH) -bind_at_load -framework CoreServices -framework DirectoryService -framework Security" ;
+LD_ICE_FLAGS 	= "" ;
+ICE_EXT		= so ;
+CGI_EXT		= cgi ;
+LONGLONG	= long long ;
+OPTIM		= ;
+IIOPTIM		?= "-O" ;
+IINOOPTIM 	?= "-O0" ;
+IIL1OPTIM 	?= "-O1" ;
+SHELLHEADER 	= ""#!/bin/sh"" ;
+BSD42 default = -DBSD42 ;
+LEX = flex ;
+DIRENT default = -DDIRENT ;
+DIRFUNC default = -DDIRFUNC ;
+NO_DIRFUNC default = -DNO_DIRFUNC ;
+SYS5 default = -DSYS5 ;
+CXX	= "g++" ;
+CXX_DEFS	= "" ;
+UNDEFFLAG  = "-u _" ;
+XERC_DEFS	= "-O -DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET" ;
+XERC_LIBS	= "" ;
+DBMS_STACKSIZE = 131072 ;
+if $(64BIT)
+{
+    platform_string = "Intel Mac OS X (Darwin) 64bit" ;
+}
+else
+{
+    platform_string = "Intel Mac OS X (Darwin)" ;
+}
+extension_string = $(config_string) ;

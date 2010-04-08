@@ -1,0 +1,139 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** Name: auditmasks
+**
+** Description: Disable/Enable audit event classes
+**
+** History:
+**	17-feb-94 (robf)
+**	   Written
+*/
+
+initialize () =
+declare
+	errno = integer4 not null;
+	cmd = varchar(256) not null;
+	dbname = varchar(32) not null;
+	connect_iidbdb = integer not null;
+	mname = varchar(32) not null;
+	yn = char(1) not null;
+	mstate = char(1) not null;
+	masks.orgyn=char(1) not null;
+	old_session=integer not null;
+{
+	inittable masks update;
+	set session add privileges (maintain_audit);
+	inquire_sql (errno=errorno);
+	if (errno!=0)
+	then
+		message 'You last sufficient privileges to perform this operation'
+			with style=popup;
+		return 0;
+	endif;
+	select mname=name,mstate=state
+	from iisecurity_state
+	where name not in ('Unknown','All', 'Installation')
+	order by 1
+	{
+		if uppercase(mname)='QRYTEXT'
+		then
+			mname='Query_text';
+		endif;
+		if uppercase(mstate)='D'
+		then
+			loadtable masks (name=mname,yn='n',orgyn='n');
+		else
+			loadtable masks (name=mname, yn='y',orgyn='y');
+		endif;
+	};
+	inquire_sql (errno=errorno);
+	commit;
+	if (errno!=0)
+	then
+		set session with privileges=default;
+		message 'Unable to determine current audit state'
+			with style=popup;
+		return 0;
+
+	endif;
+}
+'Save', key frskey4 = {
+	validate;
+	unloadtable masks 
+	{
+		if masks.yn!=masks.orgyn
+		then
+			if masks.yn='y'
+			then
+				cmd = 'enable security_audit '+:masks.name;
+			else
+				cmd = 'disable security_audit '+:masks.name;
+			endif;
+			execute immediate :cmd;
+			inquire_sql (errno=errorno);
+			if errno!=0
+			then
+				message 'Unable to change security audit for '+
+						masks.name
+				with style=popup;
+				resume;
+			endif;
+		endif;
+	};
+	set session with privileges=default;
+	message 'Audit masks updated';
+	sleep 1;
+	return 1;
+}
+'Cancel', key frskey9 = {
+	set session with privileges=default;
+	return 0;
+}
+'DisableAll' = {
+	yn=prompt 'Really disable all audit event classes ? [yn]';
+	if lowercase(yn)='y'
+	then
+		disable security_audit all;
+		inquire_sql (errno=errorno);
+		if errno!=0
+		then
+			message 'Unable to disable all audit event classes'
+			with style=popup;
+			resume;
+		else
+			message 'All audit event classes disabled';
+			sleep 2;
+			set session with privileges=default;
+			return 1;
+		endif;
+	else
+		message 'All audit event classes NOT disabled'
+		with style=popup;
+		resume;
+	endif;
+}
+'EnableAll' = {
+	yn=prompt 'Really enable all audit event classes ? [yn]';
+	if lowercase(yn)='y'
+	then
+		enable security_audit all;
+		inquire_sql (errno=errorno);
+		if errno!=0
+		then
+			message 'Unable to enable all audit event classes'
+			with style=popup;
+			resume;
+		else
+			message 'All audit event classes enabled';
+			sleep 2;
+			set session with privileges=default;
+			return 1;
+		endif;
+	else
+		message 'All audit event classes NOT enabled'
+		with style=popup;
+		resume;
+	endif;
+}

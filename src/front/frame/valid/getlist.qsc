@@ -1,0 +1,300 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<me.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<frame.h>
+# include	<valid.h>
+# include	<ui.h>
+# include	<frserrno.h>
+# include	"erfv.h"
+# include	<afe.h>
+
+/**
+** Name:	getlist.c  -  Get a list from the database.
+**
+**	This routine assumes the database is open so that the column of
+**	the table passed can be retrieved and a list created from them.
+**	A linear linked list is created and returned to be evaluated by
+**	the routines in chklist.c
+**
+**	Arguments:  rel	 -  relation to retrieve from
+**		    att	 -  attributes with valid columns
+**		    root -  root node for a list.
+**
+**	History:  15 Dec 1981  -  Written   (JEN)
+**		  21 Oct 1986  -  (sandyd) Added FEconnect() for SATURN
+**		  14-nov-86 (bab)	Fix for bug 9035
+**			For the first database access, set up special
+**			error message for more informative statement
+**			that db must be opened for this validation check.
+**			Special msg because this will typically happen
+**			when user program uses compiled forms and
+**			doesn't otherwise use a database.
+**		  05-jan-1987 (peter) - change calls to IIbadmem.
+**	04/04/87 (dkh) - Added support for ADTs.
+**	05/06/87 (dkh) - Fixed VMS compilation errors.
+**	05/08/87 (dkh) - Deleted old refrences to User and Dba.
+**	19-jun-87 (bab) Code cleanup.
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**	08/14/87 (dkh) ER changes.
+**	09/05/87 (dkh) - Changes for 8000 series error numbers. (dkh)
+**	11/01/87 (danielt) SQLized database access
+**	01/22/88 (dkh) - Changed to use FErel_ffetch & FEatt_fopen() for speed.
+**	05/20/88 (dkh) - More ER changes.
+**	04-aug-88 (sylviap) 
+**		Changed call to vl_nopar_error when a table is not found,
+**		error E_FV0007. (#3022)
+**	19-aug-88 (marian)
+**		Changed select statement to reflect column name changes in
+**		standard catalogs.
+**	10/22/88 (dkh) - Added check to "commit" if not in a transaction.
+**	12/08/88 (dkh) - Fixed venus bug 4033.
+**	02/01/89 (dkh) - Fixed venus bug 4577.
+**	16-may-89 (sylviap) 
+**		Changed to call vl_nopar_error for errors E_FV0006, 8-A.  
+**		(bug 3068)
+**	06/13/89 (dkh) - Fixed bug 6420.
+**	07/26/89 (dkh) - Moved call to FEatt_close() to its correct location.
+**	12/13/89 (dkh) - Added owner.table support.
+**	05/15/90 (jhw) - Changed back to use 'FEatt_open()'.
+**	28-aug-1990 (Joe)
+**	    Took out call to IIFDgd_... since IIUIdbdata will get the
+**	    information it needs.
+**	06/13/92 (dkh) - Added support for 6.5 features: decimal datatype and
+**			 ignoring UDTs and BLOBS.  We also assume that
+**			 FEatt_open() will do the right thing for with the
+**			 [owner.]table name with respect to supporting
+**			 delimited identifiers.
+**	09/07/92 (dkh) - Updated with 6.5 call interface to FEatt_open.
+**	07/24/93 (dkh) - Moved hardcoded string into message file.
+**	07/24/93 (dkh) - Moved hardcoded string into message file.
+**	08/31/93 (dkh) - Fixed up compiler complaints due to prototyping.
+**
+**	(c) 1981  RTI
+**
+**	26-apr-1999 (hanch04)
+**	    Added casts to quite compiler warnings
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+*/
+
+/* def of errNOINGRES must match def in libq!iiglobals.h */
+# define	erNOINGRES	1008
+
+GLOBALREF char	fruser[];
+GLOBALREF char	frdba[];
+GLOBALREF char	frusername[];
+
+FUNC_EXTERN	i4	(*IIseterr())();
+FUNC_EXTERN	VOID	IIFDsgvSetGetlistVar();
+
+VALROOT *
+vl_getlist(rel, att, own)
+register	char	*rel;
+register	char	*att;
+register	char	*own;
+{
+	VALROOT		*root;
+	register VALLIST	**current;
+	bool		found;
+	DB_DATA_VALUE	*target_addr[1];
+	DB_DATA_VALUE	*dbv;
+	DB_DATA_VALUE	ldbv;
+	FE_ATT_QBLK	qblk;
+	FE_ATT_INFO	attinfo;
+	i4		alloclength;
+	char		bad_type_name[FE_MAXNAME + 1];
+	char		table[FE_MAXNAME + 1];
+	char		owner[FE_MAXNAME + 1];
+	char		column[FE_MAXNAME + 1];
+	char		own_tbl[FE_PROMPTSIZE + 1];
+
+	/*
+	**  We call IIUGdlm_ChkdlmBEobject() to help us take care of
+	**  delimited ids, etc.
+	*/
+	if (IIUGdlm_ChkdlmBEobject(rel, table, FALSE) == UI_BOGUS_ID)
+	{
+		/*
+		**  Bad identifier for table name.  Call error
+		**  routine to terminate.
+		*/
+		vl_nopar_error(E_FV0027_BAD_TBL_ID, 1, rel);
+	}
+
+	if (IIUGdlm_ChkdlmBEobject(att, column, FALSE) == UI_BOGUS_ID)
+	{
+		/*
+		**  Bad identifier for column name.  Call error
+		**  routine to terminate.
+		*/
+		vl_nopar_error(E_FV0029_BAD_COL_ID, 1, att);
+	}
+	
+	if (own == NULL)
+	{
+		/*
+		**  No owner specified.  Just set things to an empty string.
+		*/
+		owner[0] = EOS;
+	}
+	else if (IIUGdlm_ChkdlmBEobject(own, owner, FALSE) == UI_BOGUS_ID)
+	{
+		/*
+		**  Bad identifier for owner name.  Call error
+		**  routine to terminate.
+		*/
+		vl_nopar_error(E_FV0028_BAD_OWN_ID, 1, own);
+	}
+
+	/*
+	**  If only doing syntax checking, return now.
+	*/
+	if (vl_syntax)
+	{
+		return(NULL);
+	}
+
+	IIFDsgvSetGetlistVar(TRUE);
+
+	if ((root = (VALROOT *)MEreqmem((u_i4)0, (u_i4)(sizeof(VALROOT)),
+	    TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("vl_getlist-1"));
+	}
+	root->vr_flags |= IS_TBL_LOOKUP;
+
+	/*
+	**  Set up info once for error messages below.
+	*/
+	if (own != NULL)
+	{
+		STcopy(own, own_tbl);
+		STcat(own_tbl, ERx("."));
+	}
+	else
+	{
+		own_tbl[0] = EOS;
+	}
+	STcat(own_tbl, rel);
+
+	if (FEatt_open(&qblk, table, owner) != OK)
+	{
+		vl_nopar_error(E_FV0007_table_not_found, 1, own_tbl);
+	}
+	if (IItest_err())
+	{
+		_VOID_ FEatt_close(&qblk);
+		vl_nopar_error(E_FV0008_Cant_get_table_attri, 0);
+	}
+	found = FALSE;
+
+	while (FEatt_fetch(&qblk, &attinfo) == OK)
+	{
+		/*
+		**  We assume that the name returned is in normalize
+		**  form as well.  So we can just do a simple compare
+		*/
+		if ( STequal(attinfo.column_name, column) )
+		{
+			found = TRUE;
+			FEatt_dbdata(&attinfo, &ldbv);
+			break;
+		}
+	}
+
+	if (IItest_err())
+	{
+		_VOID_ FEatt_close(&qblk);
+		vl_nopar_error(E_FV0009_No_attribute_found, 0);
+	}
+
+	_VOID_ FEatt_close(&qblk);
+
+	if (!found)
+	{
+		vl_nopar_error(E_FV000A_Table_column, 2, own_tbl, att);
+	}
+	alloclength = ldbv.db_length;
+
+	/*
+	**  User is trying to reference an unsupported datatype.
+	**  Issue error and jump out (vl_nopar_error will actually
+	**  jump out for us).
+	*/
+	if (!IIAFfedatatype(&ldbv))
+	{
+		vl_typstr(&ldbv, bad_type_name);
+		vl_nopar_error(E_FV0026_BAD_DATATYPE, 3, own_tbl, att,
+			bad_type_name);
+	}
+	if (ldbv.db_datatype == DB_CHR_TYPE)
+	{
+		/*
+		**  Add extra byte to hold EOS.
+		*/
+		++alloclength;
+	}
+	if ((dbv = (DB_DATA_VALUE *)MEreqmem((u_i4)0,
+	    (u_i4)sizeof(DB_DATA_VALUE), TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("vl_getlist-2"));
+	}
+	MEcopy((PTR) &ldbv, (u_i2) sizeof(DB_DATA_VALUE), (PTR) dbv);
+	if ((dbv->db_data = MEreqmem((u_i4)0, (u_i4)alloclength, TRUE,
+	    (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("vl_getlist-3"));
+	}
+
+	current = &root->listroot;
+	*current = NULL;
+
+	target_addr[0] =  dbv;
+
+	if (IIUIrao_relOpen(own_tbl, att, target_addr, ERx("1 = 1"), NULL,
+		1, (bool) FALSE) != OK)
+	{
+		vl_par_error(ERx("vl_getlist"),ERget(E_FV0030_CURSOR_OPEN_ERR));
+	}
+	while (IIUIraf_relFetch() != E_UI0002_EOS)
+	{
+		if ((*current = (VALLIST *)MEreqmem((u_i4)0,
+		    (u_i4)(sizeof(VALLIST)), TRUE, (STATUS *)NULL)) == NULL)
+		{
+			IIUGbmaBadMemoryAllocation(ERx("vl_getlist-4"));
+		}
+
+		MEcopy((PTR) dbv, (u_i2) sizeof(DB_DATA_VALUE),
+			(PTR) &((*current)->vl_dbv));
+
+		if ((dbv->db_data = MEreqmem((u_i4)0, (u_i4)alloclength, TRUE,
+		    (STATUS *)NULL)) == NULL)
+		{
+			IIUGbmaBadMemoryAllocation(ERx("vl_getlist-5"));
+		}
+
+		current = &((*current)->listnext);
+		*current = NULL;
+  	}
+	IIUIrac_relClose();
+	MEfree(dbv->db_data);
+	MEfree((PTR)dbv);
+
+	return (root);
+}

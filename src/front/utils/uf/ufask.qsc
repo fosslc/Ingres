@@ -1,0 +1,355 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include   <compat.h>
+#include   <st.h>
+#include   <er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include   <fe.h>
+#include   <uf.h>
+#include   <ug.h>
+
+/**
+** Name:	ufask.qc -	Front-End Forms Prompt Module.
+**
+** Description:
+**	This module has front end prompting routines.
+**
+**	IIUFprompt()	prompt for a value using a pop-up.
+**	IIUFask()	forms system parameterized prompt.
+**	IIUFver()	forms system parameterized verify.
+**
+** History:
+**	Revision 6.4  89/12  wong
+**	Abstracted 'IIUFprompt()', which prompts for a value using a
+**	pop-up box.
+**
+**	Revision 6.0  87/08/05  peter
+**	Initial revision.
+**	14-aug-1987 (rdesmond)
+**		Removed append of "?" to string; fixed bug in IIUFver.
+**	08/23/87 (dkh) - Fixed to pass address of var in call to
+**			 IIUGyn() from IIUFver().
+**	09/05/90 (dkh) - Integrated round 3 of MACWS changes.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	26-Aug-2009 (kschendel) b121804
+**	    Bool prototypes to keep gcc 4.3 happy.
+**/
+
+##static i4	_COLS = 0;
+##static i4	_ROWS = 0;
+
+
+/*{
+** Name:	IIUFprompt() -	Prompt for a Value using a Pop-up.
+**
+** Description:
+**	Prompts the user for input in a pop-up box, and allows formatting that
+**	supports internationalizable text .  See the 'IIUGfmt()' specification
+**	for a description of parameter format.  It also creates and centers a
+**	minimal box for the prompt message.  (The default pop-up prompt box is
+**	a box as wide as the screen at the bottom of the screen.)
+**
+**	This routine simplifies the call to 'IIUGfmt()' and ##prompt.
+**
+**	Note:  For compatability, the pop-up prompt is used only in the no-echo
+**	case at the moment.
+**
+** Input:
+**	prompt	{char *}  Prompt message to be output.
+**	forceit {nat}  Number of times user is to be prompted.
+**			1 = once,
+**			0 = (practically) infinite.
+**	noecho	{bool}  Whether the response is to be echoed.
+**	lsize	{nat}  The size of the line buffer for the response.
+**	parcount {nat}	Number of parameters in the prompt.
+**	a1-a10	{PTR}	Arguments (see 'IIUGfmt()'.)
+**
+** Output:
+**	linebuf	{char *}  Buffer to contain user response.  The size is given
+**			  by 'lsize'.
+**
+** History:
+**	05-aug-1987 (peter)	
+**		Taken from FEprompt.
+**	14-aug-1987 (rdesmond)
+**		Removed append of "?" to string.
+**	14-dec-1989 (jhw) -- Abstracted to support no-echo pop-up prompts.
+*/
+/*VARARGS4*/
+VOID
+IIUFprompt ( prompt, forceit, noecho, linebuf, lsize,
+			parcount, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 )
+char	*prompt;
+i4	forceit;
+bool	noecho;
+##char	linebuf[];
+i4	lsize;
+i4	parcount;
+PTR	a1;
+PTR	a2;
+PTR	a3;
+PTR	a4;
+PTR	a5;
+PTR	a6;
+PTR	a7;
+PTR	a8;
+PTR	a9;
+PTR	a10;
+{
+	register char	*cp;
+	bool		nopopup;
+##	i4		col;
+##	i4		row;
+##	i4		cols;
+##	char		*pptr;
+##	char		response[FE_PROMPTSIZE+1];
+	char		prompt_buf[ER_MAX_LEN+1];
+
+	if ( prompt == NULL )
+	{
+		prompt = ERx("");
+	}
+
+	if ( parcount <= 0 || *prompt == EOS )
+	{
+		pptr = prompt;
+	}
+	else
+	{
+		pptr = IIUGfmt( prompt_buf, sizeof(prompt_buf) - 1,
+				prompt, parcount, a1, a2, a3, a4, a5,
+						a6, a7, a8, a9, a10
+		);
+	}
+
+	if ( _COLS == 0 || _ROWS == 0 )
+	{
+##		inquire_frs frs ( _COLS = columns, _ROWS = rows );
+	}
+
+	/* Adjust display box so that it is centered and minimal.
+	**
+	**	This accounts for embedded newlines in the string,
+	**	which will each occupy a row in the display.
+	*/
+	nopopup = FALSE;
+	if ( (cp = STindex(pptr, "\n", 0)) == NULL )
+	{ /* no newlines */
+		i4	len = STlength(pptr);
+
+		nopopup = TRUE;
+		/* Set maximum width at 1/3 of the screen width unless the
+		** number of rows required to display the string is larger
+		** than half the screen height.
+		*/
+		cols = _COLS/3;
+		while ( len / cols > _ROWS / 2 )
+			cols += _COLS/3;
+		row = len / cols + 1;
+	}
+	else
+	{ /* contains embedded newlines */
+		register char	*start = pptr;
+
+		/* Determine maximum width for each newline
+		** terminated row and count the number of rows.
+		*/
+		row = 2;		/* first newline gives two rows */
+		cols = cp - start + 1;	/* initial width (of first line) */
+		while ( (cp = STindex(start = cp + 1, "\n", 0)) != NULL )
+		{
+			cols = max(cp - start + 1, cols);
+			++row;
+		}
+		if ( *start != EOS )
+		{ /* last row is not terminated with a newline */
+			i4	len = STlength(start);
+
+			cols = max(len + 1, cols);
+		}
+	}
+	if ( lsize > cols )
+	{ /* increase column width for response buffer */
+		cols = min(lsize, _COLS - 4);
+	}
+	/* Center display box */
+	row = ( _ROWS - row ) / 2;	/* centered */
+	cols += 4;	/* add line and space for border */
+	col = ( _COLS - cols ) / 2;	/* centered */
+
+	/* Prompt */
+	for (;;)	/* repeat until you get one */
+	{
+		if ( !noecho && nopopup )
+##			prompt ( pptr, response );
+		else if ( !noecho )
+##			prompt ( pptr, response )
+##				with style = popup ( columns = cols,
+##							startrow = row,
+##							startcolumn = col
+##				);
+		else
+##			prompt noecho ( pptr, response )
+##				with style = popup ( columns = cols,
+##							startrow = row,
+##							startcolumn = col
+##				);
+
+		/* strip off trailing blanks */
+
+		if ( STtrmwhite(response) > 0 || --forceit == 0 )
+		{
+			STlcopy(response, linebuf, lsize);
+			return;	/* response entered or user not to be forced */
+		}
+		
+		IIUGerr(E_UG0008_Required_Response, 0, 0);
+	}
+}
+
+
+/*{
+** Name:	IIUFask() -	in forms, prompt for user input.
+**
+** Description:
+**	This simply prompts the user for input, but it allows user
+**	formatting that supports international support.  See the
+**	IIUGfmt specification for a description of parameter format.
+**
+**	This routine simplifies the call to IIUGfmt and ##prompt.
+**
+** Input:
+**	prompt	{char *}  Prompt message to be output.
+**	forceit {bool}  Indicates if user should be reprompted until a value is
+**			entered (when TRUE.)
+**	parcount {nat}	Number of parameters to prompt.
+**	a1-a10	{PTR}	Arguments (see IIUGfmt)
+**
+** Output:
+**	linebuf	{char *}  Buffer to contain user response.  This must
+**			  be of size FE_PROMPTSIZE or more.
+** History:
+**	05-aug-1987 (peter)	
+**		Taken from FEprompt.
+**	14-aug-1987 (rdesmond)
+**		Removed append of "?" to string.
+**	12/89 (jhw) -- Abstracted functionality into 'IIUFprompt()'.
+*/
+/*VARARGS4*/
+VOID
+IIUFask(prompt, forceit, linebuf, parcount, a1, a2, a3, a4,
+	a5, a6, a7, a8, a9, a10)
+char	*prompt;
+bool	forceit;
+char	linebuf[];
+i4	parcount;
+PTR	a1;
+PTR	a2;
+PTR	a3;
+PTR	a4;
+PTR	a5;
+PTR	a6;
+PTR	a7;
+PTR	a8;
+PTR	a9;
+PTR	a10;
+{
+	IIUFprompt( prompt, forceit ? 0 : 1, (bool)FALSE,
+			linebuf, FE_PROMPTSIZE,
+    			parcount, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10
+	);
+}
+
+
+
+/*{
+** Name:    IIUFver	- in forms, prompt for y/n.
+**
+** Description:
+**	This simply prompts the user for input, but it allows user
+**	formatting that supports international support.  See the
+**	IIUGfmt specification for a description of parameter format.
+**
+**	This routine expects the answer to be either yes or no.  If
+**	the user enters return, then a 'n' is assumed. If garbage
+**	is entered, a 'n' is assumed.
+**
+** Input:
+**	prompt	{char *}  Prompt message to be output.
+**	parcount {nat}	Number of parameters to prompt.
+**	a1-a10	{PTR}	Arguments (see IIUGfmt)
+**
+** Returns:
+**	{bool}	TRUE if 'y' or other valid 'yes' entered.
+**		FALSE otherwise.
+**
+** History:
+**	05-aug-1987 (peter)	
+**		Written.
+**	14-aug-1987 (rdesmond)
+**		Removed bufsize argument in call to IIUFask.
+**	08/23/87 (dkh) - Fixed to pass address of var in call to
+**			 IIUGyn() from IIUFver().
+**	12/89 (jhw) -- Modified to call new 'IIUFprompt()'.
+*/
+/*VARARGS2*/
+bool
+IIUFver (prompt, parcount, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10)
+char	*prompt;
+i4	parcount;
+PTR	a1;
+PTR	a2;
+PTR	a3;
+PTR	a4;
+PTR	a5;
+PTR	a6;
+PTR	a7;
+PTR	a8;
+PTR	a9;
+PTR	a10;
+{
+# ifdef DATAVIEW
+    if (IIMWimIsMws())
+    {
+	char	pbuf[FE_PROMPTSIZE+1];
+	FUNC_EXTERN bool IIMWguvGetUsrVer();
+
+	if (prompt == NULL)
+	    prompt = ERx("");
+	else if (parcount > 0 && *prompt != EOS)
+	    prompt = IIUGfmt(pbuf, sizeof(pbuf) - 1, prompt,
+		parcount, a1, a2, a3, a4, a5, a6, a7, a8,
+		a9, a10);
+	return(IIMWguvGetUsrVer(prompt));
+    }
+# endif	/* DATAVIEW */
+		
+    for (;;)
+    {
+	STATUS	retcode;
+	bool	retact;
+	char	rbuf[15+1];
+
+        IIUFprompt( prompt, 1, (bool)FALSE, rbuf, sizeof(rbuf) - 1,
+			parcount, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10
+	);
+        retact = IIUGyn(rbuf, &retcode);
+        if (retcode == E_UG0007_Illegal_Response)
+        {
+	    IIUGerr(retcode, 0, 0);
+	}
+	else
+	{
+	    return retact;
+	}
+    }
+}

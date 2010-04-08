@@ -1,0 +1,539 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+#include	<compat.h>
+#include	<me.h>
+#include	<st.h>
+#include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+#include	<fe.h>
+#include	<ug.h>
+#include	<ui.h>
+exec sql include	<ooclass.sh>;
+#include	<oodefine.h>
+# include	"ooldef.h"
+exec sql include	<oosymbol.sh>;
+#include	"eroo.h"
+# include	<uigdata.h>
+
+/**
+** Name:	cmethod.sc -	Generic Class Method Routines.
+**
+** Description:
+**	This file contains generic class method prodcedures.
+**	OC_CLASS methods are invoked by OOsnding messages directly
+**	to a class object.  The normal class hierarchy is used
+**	to locate an implementing method as if the receiver were
+**	simply an instance of the receiver class, however methods
+**	are looked up in the "class methods" collection rather than
+**	the "instance methods" collection of the class.	 This approach
+**	avoids the necessity for explicitly representing meta-classes
+**	for this purpose.
+**
+**	This file defines:
+**
+**	iiooCnew(OO_CLASS, OOID, ...)	Create new instance of class.
+**	iiooC0new(OO_CLASS, OOID, ...)	Basic instance creation.
+**	iiooCDbnew(OO_CLASS, OOID, ...)	Create permanent instance of class.
+**	iiooCwithName(OO_CLASS, char *)	Search for instance of class with name
+**	iiooAlloc(OO_CLASS *, OOID)	Allocate memory for an instance.
+**	iiooMemAlloc(OO_CLASS *, OOID, u_i4, u_i4)	Allocate memory
+**	iiooStrAlloc(OO_OBJECT *, char *)	Allocate string for object.
+**	iiooClook(OO_CLASS, symbol, classmeth) Look up method in class hierarchy
+**
+** History:
+**
+**	Revision 4.0  85/12  peterk
+**	Initial revision.
+**
+**	Revision 6.0  87/07/13
+**	13-jul-87 (bab) Changed memory allocation to use [FM]Ereqmem.
+**
+** 	04-feb-88 (danielt) made nlo and nhi variables non-register
+**		in routine CwithName.
+**
+**	Revision 6.1  88/11  marian
+**	09-nov-88 (marian)
+**		Modified column names for extended catalogs to allow them
+**		to work with gateways.
+**
+**	Revision 7.0  89/07  wong
+**	Added 'iiooStrAlloc()' and abstracted 'iiooAlloc()' functionality into
+**	'iiooMemAlloc()' and made 'iiooAlloc()' a cover for this new routine
+**	without the 'varsize' parameter.
+**	89/08  wong  Changed "_new*" allocation for new Collection class
+**	allocation method.  JupBug #7745.
+**
+**	12/19/89 (dkh) - VMS shared lib changes - Added include of ooldef.h
+**      22-oct-90 (sandyd)
+**              Fixed #include of local ooldef.h to use "" instead of <>.
+**	8-feb-93 (blaise)
+**		Changed _flush, etc. to ii_flush because of conflict with
+**		Microsoft C library.
+**	27-jan-93 (blaise)
+**		The previous change changed all tabs in this file to spaces;
+**		changed back to tabs again.
+**      18-oct-1993 (kchin)
+**          	Since the return type of OOsnd(), OOsndSelf() and OOsndAt() 
+**		have been changed to PTR, when being called in 
+**		iiooCnew(), iiooC0new(), iiooCDbnew() and iiooCperform(), 
+**		their return types needs to be cast to the proper datatypes.
+**	15-Nov-1993 (tad)
+**		Bug #56449
+**		Replace %x with %p for pointer values where necessary.
+**      06-dec-93 (smc)
+**		Bug #58882
+**          	Commented lint pointer truncation warning.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**/
+
+#define OOTRAN_MAXTRIES 3
+
+OO_OBJECT	*iiooMemAlloc();
+
+/*{
+** Name:	iiooCnew() -	Create a New OO_OBJECT.
+**
+** Deescription:
+**	Create new OO_OBJECT structure (via _alloc) using ID passed, and then,
+**	send _init method to new object for class-specific initialization.
+*/
+
+/* VARARGS2 */
+OOID
+iiooCnew(self, id, a1, a2, a3, a4, a5, a6,a7,a8,a9,a10)
+OO_CLASS	*self;
+OOID		id;
+PTR		a1;		 
+PTR		a2;		 
+PTR		a3;		 
+PTR		a4;		 
+PTR		a5;		 
+PTR		a6;		 
+PTR		a7;		 
+PTR		a8;		 
+PTR		a9;		 
+PTR		a10;		 
+{
+	register OOID		objid;
+	register OO_OBJECT	*objp;
+
+	GLOBALREF i4	LevelMask[];
+
+	/* Note:  Only for OC_COLLECTION is the tag and size sent in 'a1' and
+	** 'a2' and only then is it used by the Collection allocation method,
+	** 'iioCOalloc()'.  Most other classes use 'iiooAlloc()' for allocation.
+	*/
+    	/* 2 lint truncation warnings if size of ptr > OOID, but code valid */
+	if ( (objid = (OOID)OOsndSelf(self, _alloc, id, a1, a2)) != nil &&
+		(objid = (OOID)OOsndSelf( (objp = OOp(objid)), _init,
+				a1, a2, a3, a4, a5, a6,a7,a8,a9,a10)) != nil )
+	{
+		objp->data.levelbits = LevelMask[self->level];
+	}
+
+	return objid;
+}
+
+/*{
+** Name:	iiooC0new() -	basic new, OOsnds init0 initialization
+*/
+
+/* VARARGS2 */
+OOID
+iiooC0new(self, id, a1, a2, a3, a4, a5, a6,a7,a8,a9,a10)
+OO_CLASS	*self;
+OOID		id;
+PTR		a1;		 
+PTR		a2;		 
+PTR		a3;		 
+PTR		a4;		 
+PTR		a5;		 
+PTR		a6;		 
+PTR		a7;		 
+PTR		a8;		 
+PTR		a9;		 
+PTR		a10;		 
+{
+	register OOID		objid;
+	register OO_OBJECT	*objp;
+
+	GLOBALREF i4	LevelMask[];
+
+	/* Note:  Only for OC_COLLECTION is the tag and size sent in 'a1' and
+	** 'a2' and only then is it used by the Collection allocation method,
+	** 'iioCOalloc()'.  Most other classes use 'iiooAlloc()' for allocation.
+	*/
+        /* 2 lint truncation warnings if size of ptr > OOID, but code valid */
+	if ( (objid = (OOID)OOsndSelf(self, _alloc, id, a1, a2)) != nil &&
+		(objid = (OOID)OOsndSelf( (objp = OOp(objid)), _init0,
+				a1, a2, a3, a4, a5, a6,a7,a8,a9,a10)) != nil )
+	{
+		objp->data.levelbits = LevelMask[self->level];
+	}
+	return objid;
+}
+
+/*{
+** Name:	iiooCDbnew() -	Create new (permanent) OO_OBJECT in database
+**
+**		generate new ID
+**		Send _initDb method to new object
+**		for class-specific initialization
+*/
+
+/* VARARGS2 */
+OOID
+iiooCDbnew(self, flush, a1, a2, a3, a4, a5, a6,a7,a8,a9,a10)
+OO_CLASS	*self;
+i4		flush;
+PTR		a1;		 
+PTR		a2;		 
+PTR		a3;		 
+PTR		a4;		 
+PTR		a5;		 
+PTR		a6;		 
+PTR		a7;		 
+PTR		a8;		 
+PTR		a9;		 
+PTR		a10;		 
+{
+	register OOID	obj;
+
+	GLOBALREF i4	LevelMask[];
+
+        /* 2 lint truncation warnings if size of ptr > OOID, but code valid */
+	if ( (obj = (OOID)OOsndSelf(self, _alloc, IIOOnewId()))
+			!= nil &&
+		(obj = (OOID)OOsnd(obj, _initDb, a1, a2, a3, a4, a5,a6,a7,a8,a9,a10))
+			!= nil )
+	{
+		register OO_OBJECT	*objp = OOp(obj);
+
+		objp->data.dbObject = TRUE;
+		objp->data.levelbits = LevelMask[self->level];
+		if ( flush )
+			OOsndSelf(objp, ii_flushAll);
+		else
+			objp->data.inDatabase = FALSE;
+	}
+
+	return obj;
+}
+
+/*{
+** Name:	iiooAlloc() -	Create New Object.
+**
+** Description:
+**	Allocates a new object for a class.
+*/
+
+OOID
+iiooAlloc ( self, id )
+OO_CLASS	*self;
+OOID		id;
+{
+	OO_OBJECT	*obj;
+
+	return (obj = iiooMemAlloc(self, id, FEgettag(), self->memsize)) != NULL
+		? obj->ooid : nil;
+}
+
+/*{
+** Name:	iiooMemAlloc() -	Allocates Memory for Object.
+**
+** Description:
+**	Allocates memory for an instance of a class (i.e., an object.)  Both
+**	a tag and a size are passed in as parameters.  The object data word
+**	will be initialized.
+**	
+** Inputs:
+**	self	{OO_CLASS *}  Class of object being allocated.
+**	id	{OOID}  ID for object.
+**	tag	{u_i4}  Memory tag for object.
+**	size	{u_i4}  Size of object.
+**
+** Returns:
+**	{OO_OBJECT *}  The allocated object or NULL.
+**
+** Side Effects:
+**	Allocates object from memory and enters it in the hash table.
+**
+** History:
+**	06/89 (jhw) - Abstracted from 'iiooAlloc()' with added tag and size
+**			arguments.
+*/
+OO_OBJECT *
+iiooMemAlloc ( self, id, tag, size )
+OO_CLASS	*self;
+OOID		id;
+u_i4		tag;
+u_i4		size;
+{
+	register OO_OBJECT	*obj;
+	STATUS			stat;
+
+	GLOBALREF i4	TempId;
+
+#ifdef DDEBUG
+	D(ERx("iiooAlloc(x%p (%s, %d), %d)"), self, self->name, self->ooid, id);
+#endif /* DDEBUG */
+	if ( id == UNKNOWN )
+		id = IIOOtmpId();	/* generate Temp ID */
+
+	if ( (obj = (OO_OBJECT *)FEreqmem(tag, size, TRUE, &stat)) == NULL )
+	{
+		IIUGerr( E_OO000D_Error_from_MEreqmem, UG_ERR_ERROR,
+				1, (PTR)&stat
+		);
+		return NULL;
+	}
+
+	obj->ooid = id;
+	obj->class = self->ooid;
+
+	BTsetF(0, obj->data.levelbits);
+	obj->data.dirty = TRUE;
+	if ( id < (unsigned)TempId )
+		obj->data.dbObject = TRUE;
+	obj->data.tag = tag;
+
+	if ( OOhash(id, obj) == 0 )
+	{
+		IIUGerr( E_OO000E_No_available_slot, UG_ERR_ERROR, 1, id );
+		return NULL;
+	}
+
+	return obj;
+}
+
+/*{
+** Name:	iiooStrAlloc() -	Allocate String for Object.
+**
+** Description:
+**	Allocates a string for an object in its tagged memory region.
+**
+** Input:
+**	self	{OO_OBJECT *}  The object.
+**	str	{char *}  The string.
+**
+** Returns:
+**	{char *}  The allocated string.
+**
+** History:
+**	07/89 (jhw) -- Written.
+*/
+char *
+iiooStrAlloc ( self, str )
+OO_OBJECT	*self;
+char		*str;
+{
+	return ( self->data.tag == 0 )
+		? STalloc(str) : FEtsalloc(self->data.tag, str);
+}
+
+OOID
+iiooClook(class, sym, classmeth)
+register OO_CLASS	*class;
+char		sym[];
+register bool	classmeth;	/* if TRUE look up class method */
+{
+	register OOID		mCollection;
+	register OO_COLLECTION	*col;
+	register OO_METHOD	*meth;
+	register i4		i;
+
+	/* look up method starting at class */
+
+	for (;;)
+	{
+	    do
+	    {
+		class = OOpclass(class->ooid);
+		if ( (mCollection = class->methods) != nil)
+		{
+		    /* For performance, assume knowledge of structure
+		    ** of OC_COLLECTION object holding methods.
+		    */
+
+		    col = (OO_COLLECTION *)OOp(mCollection);
+		    for (i = 0; i < col->size; i++)
+		    {
+			meth = (OO_METHOD *) OOp(col->array[i]);
+			if ((classmeth && !meth->classmeth) ||
+			    (!classmeth && meth->classmeth))
+				continue;
+
+			/* For performance, would like to compare selectors
+			** and method names directly since they should be
+			** symbols with the same pointer values, but cannot
+			** quite yet because of classout.
+			*/
+			if ( sym == meth->name || STequal(sym, meth->name) )
+			{
+			    return meth->ooid;
+			}
+		    }
+		}
+		class = (OO_CLASS *)OOp(class->super);
+	    } while (class->ooid != nil);
+
+	    if (classmeth)
+	    {
+		/* make one more cycle thru OC_OBJECT instance methods
+		** if we were searching for class methods.
+		** We special case OC_OBJECT as the rightful super
+		** of OC_CLASS since the instance methods of Class are
+		** represented as class methods of OC_OBJECT.
+		*/
+		classmeth = FALSE;
+		class = O1;
+		continue;
+	    }
+	    else
+		break;
+	}
+
+	/* ran out of supers (i.e. at OC_OBJECT) */
+	return nil;
+}
+
+/*
+**	17-aug-91 (leighb) DeskTop Porting Change: must have all 10 PTR's!
+*/
+/* VARARGS2 */
+OOID
+iiooCperform(class, msg, a1, a2,a3, a4,a5,a6,a7,a8,a9,a10)
+register OO_CLASS	*class;
+char	msg[];
+PTR		a1;		 
+PTR		a2;		 
+PTR		a3;		 
+PTR		a4;		 
+PTR		a5;		 
+PTR		a6;		 
+PTR		a7;		 
+PTR		a8;		 
+PTR		a9;		 
+PTR		a10;		 
+{
+    	/* lint truncation warning if size of ptr > OOID, but code valid */
+	return (OOID)OOsndAt(class, class, msg, a1,a2,a3,a4,a5,a6,a7,a8,a9,a10);
+}
+
+/*{
+** Name:	iiooCwithName() -	RETRIEVE from DB object(s) that are
+**						"a-kind-of" class matching name.
+**
+** History:
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	12/90 (Mike S)
+**	    Don't confuse a graphics profile (OC_GROPT = 131) with a graph 
+**	    (OC_GRAPH = 123) even though they're the same mod 100.
+**	    Bug 35107
+**	14-jan-1994 (rdrane)
+**	    Ensure that all potential owner names have any embedded single
+**	    quotes escaped to address a range of bugs regarding delimited
+**	    identifiers containing embedded single quotes.
+*/
+
+OOID
+iiooCwithName ( class, givenName, restrictOwnerTo )
+OO_CLASS	*class;
+char		*givenName;
+char		*restrictOwnerTo;
+{
+	register i4	i = 0, which = 0, found = 0;
+	char	*cp;
+	EXEC SQL BEGIN DECLARE SECTION;
+	OOID	id[2];
+	char	name[2][FE_MAXNAME+1];
+	char	owner[2][FE_MAXNAME+1];
+	char	where_clause[FE_MAXNAME*10];
+	EXEC SQL END DECLARE SECTION;
+	i4	nlo;
+	char	*o_buf_ptr;
+	char	o_buf[(FE_UNRML_MAXNAME + 1)];
+
+
+	cp = STprintf(where_clause, ERx(" object_name = '%s'"), givenName );
+	cp += STlength(cp);
+	if ( class->ooid <= OC_APPL || class->ooid >= OC_APPLFRAME + 99 ||
+			class->ooid == OC_QBFNAME )
+	{ /* non-application specific class */
+		if  (restrictOwnerTo != NULL)
+		{
+			o_buf_ptr = restrictOwnerTo;
+		}
+		else
+		{
+			o_buf_ptr = IIUIdbdata()->user;
+		}
+		IIUIea_escapos(o_buf_ptr,&o_buf[0]);
+		cp += STlength(STprintf(cp, ERx(" AND ( object_owner='%s'"),
+					&o_buf[0]));
+		if ( restrictOwnerTo == (char *) NULL && !IIUIdbdata()->isdba )
+		{
+			IIUIea_escapos(IIUIdbdata()->dba,&o_buf[0]);
+			cp += STlength(
+				STprintf(cp, ERx(" OR object_owner='%s'"),
+					&o_buf[0]));
+		}
+		*cp++ = ')';
+	}
+
+	nlo = class->ooid/100 * 100;
+	if ( class->ooid == OC_APPL || class->ooid == OC_QBFNAME ||
+			class->ooid == OC_OBJECT || nlo == 100)
+	{
+		cp += STlength(
+			STprintf(cp, ERx(" AND object_class=%d"), class->ooid)
+		);
+	}
+	else
+	{
+		cp += STlength(
+			STprintf(cp,
+			ERx(" AND object_class>=%d AND object_class<=%d"),
+				nlo, nlo + 99
+			)
+		);
+	}
+
+	EXEC SQL SELECT object_id, object_name, object_owner
+			INTO :id[i], :name[i], :owner[i]
+		FROM ii_objects
+		WHERE :where_clause
+		ORDER BY object_name, object_owner;
+	EXEC SQL BEGIN;
+		++found;
+
+		/* a hack to pick out user vs. dba objects */
+	        if (IIuserIndex == 0)
+		{
+			EXEC SQL ENDSELECT;
+		}
+
+		if (i == 0) 
+		{
+			++i;
+		}
+		else
+		{
+			which = ( STequal(name[0], name[1]) ) ? IIuserIndex : 0;
+			EXEC SQL ENDSELECT;
+		}
+	EXEC SQL END;
+
+	return ( found > 0 ) ? id[which] : nil;
+}

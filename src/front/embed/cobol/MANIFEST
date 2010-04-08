@@ -1,0 +1,34 @@
+#
+# MANIFEST file for front!embed!cobol
+#
+# History:
+#   23-Jan-2007 (fanra01)
+#       Bug 117474
+#       Removed linking with IMPEMBEDLIBDATA as adds imported data into
+#       the process.
+#       Removed explicit inclusion of eqmain object as this is included in
+#       EQUELLIB.
+#       Add required objects to replace IMPEMBEDLIBDATA.
+
+SubDir ING_SRC front embed cobol ;
+
+IISUBSYS front embed cobol ;
+
+IINOOPTIM cobgen.c : vax_vms rs4_us5 ;
+
+IIBINEXE eqcbl : cobmain.c ;
+if $(NT)
+{
+IINEEDLIBS eqcbl : COBOLLIB EQUELLIB UGLIB COMPATLIB ;
+IINEEDOBJ eqcbl : eqglobs.c eqdata.c cgcdata.c iiglobal.c ugdata.c fe.c ;
+}
+else
+{
+IINEEDLIBS eqcbl : COBOLLIB EQUELLIB UGLIB FMTLIB AFELIB
+	ADFLIB COMPATLIB ;
+}
+IIUNDEFS eqcbl : tok_keytab yylex yyparse ;
+
+IILIBRARY COBOLLIB : cobol.sy cobtoks.st cobtypes.c cobgen.c ;
+
+

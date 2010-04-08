@@ -1,0 +1,22 @@
+COPYFORM:	6.4	1998_05_28 21:05:28 GMT  
+FORM:	ipmainform1	inginstall main without "current"	
+	83	23	0	0	4	0	13	9	0	0	0	0	0	64	0	4
+FIELD:
+	0	root_dir	21	258	0	52	1	52	3	23	52	0	0		0	0	0	0	576	0	0		c52			0	0
+	1	dist_dev	21	258	0	52	1	52	4	23	52	0	0		0	0	0	1024	64	0	0		c52			0	1
+	2	menu_prompt_1	-21	75	0	72	1	72	20	4	72	0	0		0	0	0	2048	512	0	0		c72			0	2
+	3	menu_prompt_2	-21	75	0	72	1	72	21	4	72	0	0		0	0	0	2048	512	0	0		c72			0	3
+TRIM:
+	0	0	INGBUILD - Ingres Installation Utility	0	0	0	0
+	3	2	4:74:0	1	0	0	0
+	4	7	Custom	2048	0	0	0
+	4	12	Package	2048	0	0	0
+	4	14	Help	2048	0	0	0
+	9	4	Distribution:	0	0	0	0
+	12	3	II_SYSTEM:	0	0	0	0
+	12	7	- Select this option in order to view the contents of the	0	0	0	0
+	12	12	- Select predefined packages for installation on your system.	0	0	0	0
+	12	14	- See more instructions on using this program.	0	0	0	0
+	14	8	distribution medium and/or select components for installation	0	0	0	0
+	14	9	on your system.  This option will also allow you to upgrade	0	0	0	0
+	14	10	an existing installation of INGRES products.	0	0	0	0

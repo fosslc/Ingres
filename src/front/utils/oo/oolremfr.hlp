@@ -1,0 +1,16 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are looking at a long remark.  If you can modify the current object,
+you can edit its long remark; if not, the long remark is displayed
+readonly.
+
+The menu operations are:
+
+        MENU COMMANDS           SYNOPSIS 
+        -------------           --------
+        OK                      Save any changes to the long remark and
+                                return to the previous screen.
+
+        Cancel                  Ignore any changes to the long remark
+                                and return to the previous screen.
+
+        Help                    Access the INGRES Help facility.

@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2007 Ingres Corporation
+ Indicates whether the Name Server automatically rejects authentication
+ certificates without expiration times.
+
+ If expirations_required is set to 'true', the Name Server rejects 
+ authorization certificates without expiration times; if 'false', certificates
+ are accepted for further validation.
+ 
+ Authorization certificates with expiration times still must not have expired.

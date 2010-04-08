@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqcmper2.hlp, when viewing the compilation errors from ABF.
+/#-- 
+This screen allows you to process the compilation errors in your application.
+Errors for the current frame are displayed first, but you can access all the 
+errors for your application.  This screen has two main parts:
+  * A list of error summaries for the application is displayed at the top; 
+    the list starts with the current frame.
+  * Error output from compiling the current frame is displayed below.
+To work on the current problem, choose the menuitem "FixError".  When you
+finish, the error will be marked as fixed. To confirm that the errors for a 
+frame have been corrected, choose the menuitem "Compile".
+
+The menuitems are:
+  MarkFixed     Indicate that the current problem is fixed.
+  MarkUnfixed   Indicate that the current problem is still present.
+  FixError      Edit the part of the frame definition that caused the error.
+  Compile       Recompile the frame to see if the error(s) are corrected.
+  ListingFile   Expand the listing display at the bottom to fill the screen.
+  Help		Displays this help text.
+  End		Returns to the previous screen.

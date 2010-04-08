@@ -1,0 +1,21 @@
+<!-- #ICE REPEAT INCLUDE=`begin.html?title=Documents (Call)&previous=docCall.html&next=in.html` -->
+
+The document can be accessed using the following URL: <br>
+<H4 CLASS="question"><!-- #ICE VAR=`:dll` -->/<!-- #ICE REPEAT INCLUDE=`docLabel.html` --></H4>
+<p>
+For example,<p><H4 CLASS="macro">
+<!-- #ICE REPEAT IF (`:suffix` == `html` or `:suffix` == `HTML` or
+							`:suffix` == `htm` or `:suffix` == `HTM`)
+THEN=`
+&lt;FORM ACTION="<!-- #ICE VAR=``:dll`` -->/<!-- #ICE REPEAT INCLUDE=``docLabel.html`` -->" METHOD="POST"&gt;
+<br>...<br>
+&lt;/FORM&gt;
+<p>or<p>
+&lt;A HREF="<!-- #ICE VAR=``:dll`` -->/<!-- #ICE REPEAT INCLUDE=``docLabel.html`` -->"&gt;
+<br>...<br>
+&lt;/A&gt;<p>or<p>`
+-->
+&lt;!-- #ICE INCLUDE=`<!-- #ICE REPEAT INCLUDE=`docLabel.html` -->` --&gt;
+</H4>
+<p>
+<!-- #ICE REPEAT INCLUDE=`end.html` -->

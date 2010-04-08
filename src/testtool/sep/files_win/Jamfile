@@ -1,0 +1,14 @@
+#
+# Jamfile file for testtool!sep!files_win
+#
+
+SubDir ING_SRC testtool sep files_win ;
+
+IISUBSYS testtool sep files_win ;
+
+
+#IIFILES ibmpc.sep termcap.sep winpcalt.sep ;
+
+FILE $(INGTOOLSFILES)/ibmpc.sep : ibmpc.sep ;
+FILE $(INGTOOLSFILES)/termcap.sep : termcap.sep ;
+FILE $(INGTOOLSFILES)/winpcalt.sep : winpcalt.sep ;

@@ -1,0 +1,9 @@
+#
+# wgl_win.hnt file for front/tools/yacc
+#
+# Note:
+#	Ignore iyacc on wnt_win, it is only built on wgl_wnt.
+
+ignore = dextern.h files.h
+ignore = y1.c y2.c y3.c y4.c
+

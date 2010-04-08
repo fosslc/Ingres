@@ -1,0 +1,390 @@
+
+ INGRSWIN
+
+ Start     Length     Name                   Class
+ 0001:0000 00CD4H     SELWIN_TEXT            CODE 16-bit
+           at offset 00000H 00CD4H bytes from selwin.obj (selwin.c)
+
+ 0001:0CD4 0075AH     _TEXT                  CODE 16-bit
+           at offset 00000H 000FEH bytes from C:\MSVC15\LIB\ldllcew.lib (windows\crt0.asm)
+           at offset 000FEH 0000BH bytes from C:\MSVC15\LIB\ldllcew.lib (ulshr.asm)
+           at offset 0010AH 0002CH bytes from C:\MSVC15\LIB\ldllcew.lib (windows\stubmain.asm)
+           at offset 00136H 000E3H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\crt0dat.asm)
+           at offset 0021AH 00023H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\crt0msg.asm)
+           at offset 0023EH 00097H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\stdenvp.asm)
+           at offset 002D6H 0004EH bytes from C:\MSVC15\LIB\ldllcew.lib (dos\nmsghdr.asm)
+           at offset 00324H 00006H bytes from C:\MSVC15\LIB\ldllcew.lib (crt0fp.asm)
+           at offset 0032AH 0002DH bytes from C:\MSVC15\LIB\ldllcew.lib (dos\stdalloc.asm)
+           at offset 00358H 00010H bytes from C:\MSVC15\LIB\ldllcew.lib (windows\windgrp.asm)
+           at offset 00368H 00001H bytes from C:\MSVC15\LIB\ldllcew.lib (nearstub.asm)
+           at offset 0036AH 0004CH bytes from C:\MSVC15\LIB\ldllcew.lib (windows\fatal.asm)
+           at offset 003B6H 00117H bytes from C:\MSVC15\LIB\ldllcew.lib (growseg.asm)
+           at offset 004CEH 00014H bytes from C:\MSVC15\LIB\ldllcew.lib (windows\windgrpx.c)
+           at offset 004E2H 000C8H bytes from C:\MSVC15\LIB\ldllcew.lib (fmalloc.asm)
+           at offset 005AAH 00081H bytes from C:\MSVC15\LIB\ldllcew.lib (newseg.asm)
+           at offset 0062CH 0000DH bytes from C:\MSVC15\LIB\ldllcew.lib (fdata.asm)
+           at offset 0063AH 0007CH bytes from C:\MSVC15\LIB\ldllcew.lib (searchsg.asm)
+           at offset 006B6H 0002AH bytes from C:\MSVC15\LIB\ldllcew.lib (freelist.asm)
+           at offset 006E0H 00034H bytes from C:\MSVC15\LIB\ldllcew.lib (initseg.asm)
+           at offset 00714H 00036H bytes from C:\MSVC15\LIB\ldllcew.lib (linkseg.asm)
+
+ 0002:0000 00010H     NULL                   BEGDATA 16-bit
+           at offset 00000H 00010H bytes from C:\MSVC15\LIB\ldllcew.lib (windows\crt0.asm)
+
+ 0002:0010 00082H     _DATA                  DATA 16-bit
+           at offset 00000H 00010H bytes from selwin.obj (selwin.c)
+           at offset 00010H 00015H bytes from C:\MSVC15\LIB\ldllcew.lib (windows\crt0.asm)
+           at offset 00026H 00044H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\crt0dat.asm)
+           at offset 0006AH 00004H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\crt0msg.asm)
+           at offset 0006EH 00002H bytes from C:\MSVC15\LIB\ldllcew.lib (growseg.asm)
+           at offset 00070H 00004H bytes from C:\MSVC15\LIB\ldllcew.lib (fmalloc.asm)
+           at offset 00074H 0000EH bytes from C:\MSVC15\LIB\ldllcew.lib (fdata.asm)
+
+ 0002:0092 0000EH     CDATA                  DATA 16-bit
+           at offset 00000H 0000EH bytes from C:\MSVC15\LIB\ldllcew.lib (dos\crt0dat.asm)
+
+ 0002:00A0 00000H     XIFB                   DATA 16-bit
+ 0002:00A0 00000H     XIF                    DATA 16-bit
+ 0002:00A0 00000H     XIFE                   DATA 16-bit
+ 0002:00A0 00000H     XIB                    DATA 16-bit
+ 0002:00A0 00000H     XI                     DATA 16-bit
+ 0002:00A0 00000H     XIE                    DATA 16-bit
+ 0002:00A0 00000H     XPB                    DATA 16-bit
+ 0002:00A0 00000H     XP                     DATA 16-bit
+ 0002:00A0 00000H     XPE                    DATA 16-bit
+ 0002:00A0 00000H     XCB                    DATA 16-bit
+ 0002:00A0 00000H     XC                     DATA 16-bit
+ 0002:00A0 00000H     XCE                    DATA 16-bit
+ 0002:00A0 00000H     XCFB                   DATA 16-bit
+ 0002:00A0 00000H     XCFCRT                 DATA 16-bit
+ 0002:00A0 00000H     XCF                    DATA 16-bit
+ 0002:00A0 00000H     XCFE                   DATA 16-bit
+ 0002:00A0 00000H     XIFCB                  DATA 16-bit
+ 0002:00A0 00000H     XIFU                   DATA 16-bit
+ 0002:00A0 00000H     XIFL                   DATA 16-bit
+ 0002:00A0 00000H     XIFM                   DATA 16-bit
+ 0002:00A0 00000H     XIFCE                  DATA 16-bit
+ 0002:00A0 00000H     DBDATA                 DATA 16-bit
+ 0002:00A0 00000H     CONST                  CONST 16-bit
+ 0002:00A0 00008H     HDR                    MSG 16-bit
+           at offset 00000H 00008H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\nmsghdr.asm)
+
+ 0002:00A8 000D4H     MSG                    MSG 16-bit
+           at offset 00000H 000A5H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\crt0msg.asm)
+           at offset 000A5H 0002FH bytes from C:\MSVC15\LIB\ldllcew.lib (crt0fp.asm)
+
+ 0002:017C 00002H     PAD                    MSG 16-bit
+           at offset 00000H 00002H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\crt0msg.asm)
+           at offset 00000H 00002H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\nmsghdr.asm)
+           at offset 00000H 00002H bytes from C:\MSVC15\LIB\ldllcew.lib (crt0fp.asm)
+
+ 0002:017E 00001H     EPAD                   MSG 16-bit
+           at offset 00000H 00001H bytes from C:\MSVC15\LIB\ldllcew.lib (dos\nmsghdr.asm)
+
+ 0002:0180 00002H     _BSS                   BSS 16-bit
+           at offset 00000H 00002H bytes from selwin.obj (selwin.c)
+
+ 0002:0182 00000H     XOB                    BSS 16-bit
+ 0002:0182 00000H     XO                     BSS 16-bit
+ 0002:0182 00000H     XOE                    BSS 16-bit
+ 0002:0182 00000H     XOFB                   BSS 16-bit
+ 0002:0182 00000H     XOF                    BSS 16-bit
+ 0002:0182 00000H     XOFE                   BSS 16-bit
+
+ Origin   Group
+ 0002:0   DGROUP
+
+ Address   Export                  Alias
+
+ 0001:0A34 CallBack                CallBack
+ 0001:03FA EnumMDIChild            EnumMDIChild
+ 0001:0C88 MdiSelWinBox            MdiSelWinBox
+ 0001:0C30 MdiSelWinEnd            MdiSelWinEnd
+ 0001:0BE4 MdiSelWinInit           MdiSelWinInit
+ 0001:070A SelWinDlgProc           SelWinDlgProc
+ 0001:0028 WEP                     WEP
+ 0001:11B2 ___ExportedStub         ___ExportedStub
+
+  Address         Publics by Name
+
+ 0001:0A34       CallBack
+ 0000:0000  Imp  CALLWINDOWPROC       (USER.122)
+ 0000:0000  Imp  DIALOGBOXPARAM       (USER.239)
+ 0000:0000  Imp  DOS3CALL             (KERNEL.102)
+ 0000:0000  Imp  ENDDIALOG            (USER.88)
+ 0000:0000  Imp  ENUMCHILDWINDOWS     (USER.55)
+ 0001:03FA       EnumMDIChild
+ 0000:0000  Imp  FATALAPPEXIT         (KERNEL.137)
+ 0000:0000  Imp  FATALEXIT            (KERNEL.1)
+ 0000:0000  Imp  FREEPROCINSTANCE     (KERNEL.52)
+ 0000:0000  Imp  GETCURSORPOS         (USER.17)
+ 0000:0000  Imp  GETDIALOGBASEUNITS   (USER.243)
+ 0000:0000  Imp  GETDLGITEM           (USER.91)
+ 0000:0000  Imp  GETDOSENVIRONMENT    (KERNEL.131)
+ 0000:0000  Imp  GETDOUBLECLICKTIME   (USER.21)
+ 0000:0000  Imp  GETMESSAGETIME       (USER.120)
+ 0000:0000  Imp  GETMODULEUSAGE       (KERNEL.48)
+ 0000:0000  Imp  GETPARENT            (USER.46)
+ 0000:0000  Imp  GETPROP              (USER.25)
+ 0000:0000  Imp  GETSYSTEMMETRICS     (USER.179)
+ 0000:0000  Imp  GETVERSION           (KERNEL.3)
+ 0000:0000  Imp  GETWINDOWLONG        (USER.135)
+ 0000:0000  Imp  GETWINDOWRECT        (USER.32)
+ 0000:0000  Imp  GETWINDOWTEXT        (USER.36)
+ 0000:0000  Imp  GETWINDOWWORD        (USER.133)
+ 0000:0000  Imp  GLOBALALLOC          (KERNEL.15)
+ 0000:0000  Imp  GLOBALFREE           (KERNEL.17)
+ 0000:0000  Imp  GLOBALHANDLE         (KERNEL.21)
+ 0000:0000  Imp  GLOBALLOCK           (KERNEL.18)
+ 0000:0000  Imp  GLOBALREALLOC        (KERNEL.16)
+ 0000:0000  Imp  GLOBALSIZE           (KERNEL.20)
+ 0000:0000  Imp  GLOBALUNLOCK         (KERNEL.19)
+ 0000:0000  Imp  INITTASK             (KERNEL.91)
+ 0000:0000  Imp  ISICONIC             (USER.31)
+ 0000:0000  Imp  ISWINDOW             (USER.47)
+ 0001:0000       LIBMAIN
+ 0000:0000  Imp  LOADCURSOR           (USER.173)
+ 0000:0000  Imp  LOCALINIT            (KERNEL.4)
+ 0000:0000  Imp  LOCKSEGMENT          (KERNEL.23)
+ 0000:0000  Imp  MAKEPROCINSTANCE     (KERNEL.51)
+ 0001:0C88       MdiSelWinBox
+ 0001:0C30       MdiSelWinEnd
+ 0001:0BE4       MdiSelWinInit
+ 0000:0000  Imp  MOVEWINDOW           (USER.56)
+ 0000:0000  Imp  OFFSETRECT           (USER.77)
+ 0000:0000  Imp  POSTMESSAGE          (USER.110)
+ 0000:0000  Imp  REMOVEPROP           (USER.24)
+ 0002:0004       rsrvptrs
+ 0001:070A       SelWinDlgProc
+ 0000:0000  Imp  SENDMESSAGE          (USER.111)
+ 0000:0000  Imp  SETCURSOR            (USER.69)
+ 0000:0000  Imp  SETPROP              (USER.26)
+ 0000:0000  Imp  SETWINDOWLONG        (USER.136)
+ 0000:0000  Imp  SHOWWINDOW           (USER.42)
+ 0001:0028       WEP
+ 0002:002F       _aseghi
+ 0002:002D       _aseglo
+ 0002:0180       _edata
+ 0002:0182       _end
+ 0002:0044       _errno
+ 0002:001C       _lpFirstOldGlobals
+ 0002:0020       _STKHQQ
+ 0001:0B88       _SubClassMDIEnd
+ 0000:9876  Abs  __acrtmsg
+ 0000:9876  Abs  __acrtused
+ 0000:D6D6  Abs  __aDBdoswp
+ 0002:007A       __adbgmsg
+ 0000:D6D6  Abs  __aDBused
+ 0001:0DE2       __aFulshr
+ 0002:0036       __aintdiv
+ 0002:007E       __amblksiz
+ 0001:1058       __amsg_exit
+ 0001:0D28       __astart
+ 0001:0E62       __cexit
+ 0002:0077       __child
+ 0001:0E1A       __cinit
+ 0001:104E       __cintDIV
+ 0002:004F       __cpumode
+ 0001:0EC1       __ctermsub
+ 0001:0E73       __c_exit
+ 0002:002C       __dllinit
+ 0002:0050       __doserrno
+ 0002:0180       __edata
+ 0002:0182       __end
+ 0002:006E       __environ
+ 0002:0079       __exitflag
+ 0002:003A       __fac
+ 0001:11C6       __ffree
+ 0001:0EFE       __FF_MSGBANNER
+ 0002:0084       __fheap
+ 0001:1191       __findlast
+ 0001:11E7       __fmalloc
+ 0002:0094       __fpinit
+ 0000:9876  Abs  __fptaskdata
+ 0001:1008       __fptrap
+ 0001:1310       __freefarheap
+ 0001:139A       __freelist
+ 0001:103C       __GetDGROUP
+ 0001:109A       __growseg
+ 0002:0022       __hModule
+ 0001:112B       __incseg
+ 0001:13C4       __initseg
+ 0001:13F8       __linkseg
+ 0002:0028       __lpszCmdLine
+ 0001:100E       __myalloc
+ 0001:104C       __nearstub
+ 0001:128E       __newseg
+ 0002:0052       __nfile
+ 0001:0FBA       __NMSG_TEXT
+ 0001:0FF1       __NMSG_WRITE
+ 0001:0DCA       __nomain
+ 0002:0050       __oserr
+ 0002:0054       __osfile
+ 0002:004B       __osmajor
+ 0002:004A       __osminor
+ 0002:004E       __osmode
+ 0002:004A       __osver
+ 0002:004C       __osversion
+ 0002:0072       __pgmptr
+ 0002:0080       __pnhFarHeap
+ 0001:131E       __searchseg
+ 0001:0F22       __setenvp
+ 0000:0001  Abs  __sizec
+ 0000:0001  Abs  __sized
+ 0001:0DEE       __stubmain
+ 0002:0046       __umaskval
+ 0002:0024       __wDataSeg
+ 0001:0CE4       __wflags
+ 0002:0026       __wHeapSize
+ 0000:0000  Imp  __WINFLAGS           (KERNEL.178)
+ 0002:0049       __winmajor
+ 0002:0048       __winminor
+ 0002:0048       __winver
+ 0002:0033       ___aDBrterr
+ 0002:0031       ___aDBswpflg
+ 0002:0068       ___argc
+ 0002:006A       ___argv
+ 0001:11B2       ___ExportedStub
+
+  Address         Publics by Value
+
+ 0000:0000  Imp  MOVEWINDOW           (USER.56)
+ 0000:0000  Imp  GETSYSTEMMETRICS     (USER.179)
+ 0000:0000  Imp  GETCURSORPOS         (USER.17)
+ 0000:0000  Imp  GETDIALOGBASEUNITS   (USER.243)
+ 0000:0000  Imp  GLOBALSIZE           (KERNEL.20)
+ 0000:0000  Imp  GETWINDOWTEXT        (USER.36)
+ 0000:0000  Imp  GLOBALFREE           (KERNEL.17)
+ 0000:0000  Imp  SENDMESSAGE          (USER.111)
+ 0000:0000  Imp  SHOWWINDOW           (USER.42)
+ 0000:0000  Imp  GETPARENT            (USER.46)
+ 0000:0000  Imp  FATALEXIT            (KERNEL.1)
+ 0000:0000  Imp  GETMESSAGETIME       (USER.120)
+ 0000:0000  Imp  DOS3CALL             (KERNEL.102)
+ 0000:0000  Imp  ISWINDOW             (USER.47)
+ 0000:0000  Imp  CALLWINDOWPROC       (USER.122)
+ 0000:0000  Imp  FREEPROCINSTANCE     (KERNEL.52)
+ 0000:0000  Imp  ISICONIC             (USER.31)
+ 0000:0000  Imp  REMOVEPROP           (USER.24)
+ 0000:0000  Imp  __WINFLAGS           (KERNEL.178)
+ 0000:0000  Imp  GLOBALLOCK           (KERNEL.18)
+ 0000:0000  Imp  GETPROP              (USER.25)
+ 0000:0000  Imp  SETPROP              (USER.26)
+ 0000:0000  Imp  GETVERSION           (KERNEL.3)
+ 0000:0000  Imp  GETMODULEUSAGE       (KERNEL.48)
+ 0000:0000  Imp  ENUMCHILDWINDOWS     (USER.55)
+ 0000:0000  Imp  SETCURSOR            (USER.69)
+ 0000:0000  Imp  LOADCURSOR           (USER.173)
+ 0000:0000  Imp  GETWINDOWLONG        (USER.135)
+ 0000:0000  Imp  GETDLGITEM           (USER.91)
+ 0000:0000  Imp  MAKEPROCINSTANCE     (KERNEL.51)
+ 0000:0000  Imp  GETWINDOWRECT        (USER.32)
+ 0000:0000  Imp  SETWINDOWLONG        (USER.136)
+ 0000:0000  Imp  DIALOGBOXPARAM       (USER.239)
+ 0000:0000  Imp  OFFSETRECT           (USER.77)
+ 0000:0000  Imp  ENDDIALOG            (USER.88)
+ 0000:0000  Imp  GLOBALHANDLE         (KERNEL.21)
+ 0000:0000  Imp  GLOBALUNLOCK         (KERNEL.19)
+ 0000:0000  Imp  LOCALINIT            (KERNEL.4)
+ 0000:0000  Imp  LOCKSEGMENT          (KERNEL.23)
+ 0000:0000  Imp  GLOBALREALLOC        (KERNEL.16)
+ 0000:0000  Imp  GETDOUBLECLICKTIME   (USER.21)
+ 0000:0000  Imp  GETWINDOWWORD        (USER.133)
+ 0000:0000  Imp  INITTASK             (KERNEL.91)
+ 0000:0000  Imp  GLOBALALLOC          (KERNEL.15)
+ 0000:0000  Imp  POSTMESSAGE          (USER.110)
+ 0000:0000  Imp  FATALAPPEXIT         (KERNEL.137)
+ 0000:0000  Imp  GETDOSENVIRONMENT    (KERNEL.131)
+ 0000:0001  Abs  __sized
+ 0000:0001  Abs  __sizec
+ 0000:9876  Abs  __acrtused
+ 0000:9876  Abs  __acrtmsg
+ 0000:9876  Abs  __fptaskdata
+ 0000:D6D6  Abs  __aDBdoswp
+ 0000:D6D6  Abs  __aDBused
+ 0001:0000       LIBMAIN
+ 0001:0028       WEP
+ 0001:03FA       EnumMDIChild
+ 0001:070A       SelWinDlgProc
+ 0001:0A34       CallBack
+ 0001:0B88       _SubClassMDIEnd
+ 0001:0BE4       MdiSelWinInit
+ 0001:0C30       MdiSelWinEnd
+ 0001:0C88       MdiSelWinBox
+ 0001:0CE4       __wflags
+ 0001:0D28       __astart
+ 0001:0DCA       __nomain
+ 0001:0DE2       __aFulshr
+ 0001:0DEE       __stubmain
+ 0001:0E1A       __cinit
+ 0001:0E62       __cexit
+ 0001:0E73       __c_exit
+ 0001:0EC1       __ctermsub
+ 0001:0EFE       __FF_MSGBANNER
+ 0001:0F22       __setenvp
+ 0001:0FBA       __NMSG_TEXT
+ 0001:0FF1       __NMSG_WRITE
+ 0001:1008       __fptrap
+ 0001:100E       __myalloc
+ 0001:103C       __GetDGROUP
+ 0001:104C       __nearstub
+ 0001:104E       __cintDIV
+ 0001:1058       __amsg_exit
+ 0001:109A       __growseg
+ 0001:112B       __incseg
+ 0001:1191       __findlast
+ 0001:11B2       ___ExportedStub
+ 0001:11C6       __ffree
+ 0001:11E7       __fmalloc
+ 0001:128E       __newseg
+ 0001:1310       __freefarheap
+ 0001:131E       __searchseg
+ 0001:139A       __freelist
+ 0001:13C4       __initseg
+ 0001:13F8       __linkseg
+ 0002:0004       rsrvptrs
+ 0002:001C       _lpFirstOldGlobals
+ 0002:0020       _STKHQQ
+ 0002:0022       __hModule
+ 0002:0024       __wDataSeg
+ 0002:0026       __wHeapSize
+ 0002:0028       __lpszCmdLine
+ 0002:002C       __dllinit
+ 0002:002D       _aseglo
+ 0002:002F       _aseghi
+ 0002:0031       ___aDBswpflg
+ 0002:0033       ___aDBrterr
+ 0002:0036       __aintdiv
+ 0002:003A       __fac
+ 0002:0044       _errno
+ 0002:0046       __umaskval
+ 0002:0048       __winver
+ 0002:0048       __winminor
+ 0002:0049       __winmajor
+ 0002:004A       __osminor
+ 0002:004A       __osver
+ 0002:004B       __osmajor
+ 0002:004C       __osversion
+ 0002:004E       __osmode
+ 0002:004F       __cpumode
+ 0002:0050       __oserr
+ 0002:0050       __doserrno
+ 0002:0052       __nfile
+ 0002:0054       __osfile
+ 0002:0068       ___argc
+ 0002:006A       ___argv
+ 0002:006E       __environ
+ 0002:0072       __pgmptr
+ 0002:0077       __child
+ 0002:0079       __exitflag
+ 0002:007A       __adbgmsg
+ 0002:007E       __amblksiz
+ 0002:0080       __pnhFarHeap
+ 0002:0084       __fheap
+ 0002:0094       __fpinit
+ 0002:0180       __edata
+ 0002:0180       _edata
+ 0002:0182       __end
+ 0002:0182       _end
+
+Program entry point at 0001:0d28

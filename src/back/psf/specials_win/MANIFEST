@@ -1,0 +1,30 @@
+#
+# MANIFEST file for back!psf!specials_win
+# 
+# History:
+#	11-Jan-2005 (drivi01) 
+#		Now we build iilibpsfdata.dll.
+#
+# History :
+#	Mar-21-2005 (drivi01) 
+#		Added iilibpsfdata.dll to put newly added
+#	 	data globaldefs to the library.
+#
+
+SubDir ING_SRC back psf specials_win ;
+
+IISUBSYS back psf specials_win ;
+
+IIIMPLIBRARY $(IMPPSFLIB) : $(PSFLIB) ;
+
+IISHLIBRARY $(SHPSFLIBDATA) : $(PSFLIBDATA) $(SHPSFLIB) ;
+
+IISHLIBRARY $(SHPSFLIB) : $(IMPPSFLIBDATA) $(PSFLIB) $(IMPCOMPATLIB) 
+	$(IMPCOMPATLIBDATA) $(IMPADFLIB) $(IMPADFLIBDATA) $(IMPRDFLIB) 
+	$(IMPRDFLIBDATA) $(IMPSCFLIB) $(IMPSCFLIBDATA) $(IMPQEFLIB) 
+	$(IMPQEFLIBDATA) $(IMPQSFLIB) $(IMPQSFLIBDATA) $(IMPOPFLIB) 
+	$(IMPOPFLIBDATA) $(IMPSXFLIB) $(IMPSXFLIBDATA) $(IMPULFLIB) 
+	$(IMPULFLIBDATA) $(IMPDMFLIB) $(IMPDMFLIBDATA) $(IMPCUFLIB) 
+	$(IMPGWFLIB) $(IMPGWFLIBDATA) ;
+
+

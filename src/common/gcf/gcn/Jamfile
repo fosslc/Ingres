@@ -1,0 +1,26 @@
+#
+# Jamfile file for common!gcf!gcn
+#
+
+SubDir ING_SRC common gcf gcn ;
+
+IISUBSYS common gcf gcn ;
+
+IIBINEXE iigcn : iigcn.c ;
+IINEEDLIBS iigcn : GCNLIB GCFLIB CUFLIB COMPATLIB ;
+
+IILIBRARY GCNLIB : gcnstick.c
+	gcnsrslv.c
+	gcnsreg.c
+	gcnsoper.c
+	gcnslsn.c
+	gcnsinit.c
+	gcnshash.c
+	gcnsfile.c
+	gcnseror.c
+	gcnsdrct.c
+	gcnsbchk.c
+	gcnsdata.c 
+	gcnsauth.c 
+	gcnsadm.c ;
+

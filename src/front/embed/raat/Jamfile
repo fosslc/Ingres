@@ -1,0 +1,23 @@
+#
+# Jamfile file for front!embed!raat
+#
+# History:
+#	09-feb-2005 (abbjo03)
+#	    Don't build raattest on VMS.
+
+SubDir ING_SRC front embed raat ;
+
+IISUBSYS front embed raat ;
+
+if ! $(VMS)
+{
+IIBINEXE raattest : raattest.sc ;
+IINEEDLIBS raattest :  LIBINGRES SHCOMPATLIB ;
+IIUNDEFS raattest :  malloc ;
+}
+
+IILIBRARY RAATLIB : raatxcommit.qc raatxbegin.qc raatxabort.qc
+	raatcstart.qc raatcend.qc raatutils.c raattrace.c raattopen.c
+	raattlock.c raattclose.c raatrrepl.c raatrput.c raatrpos.c
+	raatrget.c raatrdel.c raatrblob.c raatcnvt.c raatcall.c ;
+

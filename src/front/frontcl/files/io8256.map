@@ -1,0 +1,116 @@
+/* Copyright (c) 2004 Ingres Corporation */
+/* UNIX FRS mapping file for IO-8256 with Function Keys */
+
+/* Menu Key */
+	menu = pf1 (F1)
+
+/* Help facility */
+	frskey1 = pf2 (F2)
+
+/* Quit from program */
+	frskey2	= pf4 (F4)
+
+/* End current screen and return to previous screen */
+	frskey3	= pf3 (F3)
+
+/* Go or execute function */
+	frskey4 = pf12 (F12)
+
+/* Put cursor on top of form or table field */
+	frskey5 = pf27 (Home)
+
+/* Put cursor on bottom of form or table field */
+	frskey6	= pf28 (End)
+
+/* Find next occurrence of string in this column of table field */
+	frskey7	= controlF (^F)
+
+/* Save object in database */
+	frskey8 = pf11 (F11)
+
+/* Forget and Undo */
+	frskey9 = pf22 (Sh+F10)
+
+/* ListChoices */
+	frskey10 = pf23 (Sh+F11)
+
+/* Previous screen or set of rows in table field */
+	scrolldown = pf26 (PgDn)
+
+/* Next screen or set of rows in table field */
+	scrollup = pf25 (PgUp)
+
+/* Print contents of current screen to file or printer */
+	printscreen = controlG (^G)
+
+/* Select first menu item */
+	menuitem1 = pf5 (F5)
+
+/* Select second menu item */
+	menuitem2 = pf6 (F6)
+
+/* Select third menu item */
+	menuitem3 = pf7 (F7)
+
+/* Select fourth menu item */
+	menuitem4 = pf8 (F8)
+
+/* Select fifth menu item */
+	menuitem5 = pf9 (F9)
+
+/* Select sixth menu item */
+	menuitem6 = pf10 (F10)
+
+/* Select seventh menu item */
+	menuitem7 = pf13 (Sh+F1)
+
+/* Select eighth menu item */
+	menuitem8 = pf14 (Sh+F2)
+
+/* Select ninth menu item */
+	menuitem9 = pf15 (Sh+F3)
+
+/* Select 10th menu item */
+	menuitem10 = pf16 (Sh+F4)
+
+/* Select 11th menu item */
+	menuitem11 = pf17 (Sh+F5)
+
+/* Select 12th menu item */
+	menuitem12 = pf18 (Sh+F6)
+
+/* Select 13th menu item */
+	menuitem13 = pf19 (Sh+F7)
+
+/* Select 14th menu item */
+	menuitem14 = pf20 (Sh+F8)
+
+/* Select 15th menu item */
+	menuitem15 = pf21 (Sh+F9)
+
+/* Select 16th menu item */
+	menuitem16 = pf24 (Sh+F12)
+
+/* Switch between insert and overstrike mode - controlE in frs.map */
+	mode = pf29 (Ins)
+
+/* Delete the character under the cursor - controlD in frs.map */
+	deletechar = controlDEL (Del)
+
+/* Delete character immediately to left of cursor - controlDEL in frs.map */
+	rubout = controlH (BackSpace)
+
+/* Clear out the rest of the field, and move to next field */
+	nextitem = controlM (Enter)
+
+/* Move left one space within a field */
+	leftchar = leftarrow
+
+/* Move right one space within a field */
+	rightchar = rightarrow
+
+/* Move down one line */
+	downline = downarrow
+
+/* Move up one line */
+	upline = uparrow

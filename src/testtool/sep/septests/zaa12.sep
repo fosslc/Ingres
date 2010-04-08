@@ -1,0 +1,59 @@
+/*
+	Test Name: zaa12.sep
+	Time:  6-APR-1992 19:12:22
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa12.sep
+	Purpose	: Test SEP functionality
+	Input Files  : none
+	Output Files : none
+	Database     : Septools, created by zaa01.sep.
+	Tables       :
+	Synopsis     :	Test Platform labelled .if,.else,.endif.
+
+ History:  6-APR-1992	(DonJ)	Created
+	  30-Jan-1996	(somsa01)
+		Added int.wnt and NT_GENERIC.
+*/
+.if VMS
+? echo "VMS OS" 
+<<
+VMS OS
+>>
+.endif
+.if vax.vms
+? echo "vax.vms" 
+<<
+vax.vms
+>>
+.endif
+.if UNIX
+? echo "UNIX OS" 
+<<
+UNIX OS
+>>
+.endif
+.if su4.u42
+? echo "su4.u42" 
+<<
+su4.u42
+>>
+.endif
+.if NT_GENERIC
+? echo "NT_GENERIC OS"
+<<
+NT_GENERIC OS
+>>
+.endif
+.if int.wnt
+? echo "int.wnt"
+<<
+int.wnt
+>>
+.endif
+
+
+Ending at:  6-APR-1992 19:13:05

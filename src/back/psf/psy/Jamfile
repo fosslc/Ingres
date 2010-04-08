@@ -1,0 +1,20 @@
+#
+# Jamfile file for back!psf!psy
+#
+#    20-Oct-2009 (hweho01)
+#      Remove the IINOOPTIM entries that were generated incorrectly.
+
+SubDir ING_SRC back psf psy ;
+
+IISUBSYS back psf psy ;
+
+IINOOPTIM psypermit.c : nc4_us5 ;
+
+IILIBRARY PSFLIB : psyview.c psyutil.c psyuser.c psytrscan.c
+	psysynonym.c psyseq.c psyrules.c psyrpriv.c psyrevoke.c
+	psyrereg.c psyqrymod.c psyprint.c psypermit.c psymxqry.c
+	psymapvar.c psyloc.c psykview.c psykperm.c psykintg.c 
+	psyinteg.c psygroup.c psyevent.c psydschm.c psydperm.c 
+	psydint.c psydgrant.c psydbproc.c psydbpriv.c psycomment.c 
+	psyaudit.c psyaplid.c psyalarm.c ;
+

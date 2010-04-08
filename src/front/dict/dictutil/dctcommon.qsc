@@ -1,0 +1,51 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+# include	<compat.h>
+# include	<gl.h>
+# include	<st.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ug.h>
+
+
+/*{
+** Name:        cat_exists - return whether system catalog exists
+**
+** Description:
+**      Handles FIPS databases, case normalizes the catname before
+**      calling FErelexists.
+**
+** Inputs:
+**      char            *catname    name of system catalog
+**		char			*dummy		backward compatible with DD_DRIVE types
+**
+** Outputs:
+**
+**      Returns:
+**              OK if named system catalog exists
+**              not OK otherwise
+**
+** History:
+**      22 July 1993 (jpk)
+**              Initial Version.
+**	9 Nov 1993 (jpk)
+**		Fix bug: oversight -- should use buff, not just
+**		copy parameter into it!
+*/
+STATUS
+cat_exists(catname, dummy)
+char	*catname, *dummy;
+{
+	char	buff[DB_MAXNAME + 1];
+
+	/* so in-place conversion works */
+	STlcopy(catname, buff, DB_MAXNAME);
+
+	/* normalize: upcase catname if db is FIPS and reg ids = UPPER */
+	IIUGdbo_dlmBEobject(buff, FALSE);
+
+	/* NULL owner assumes ii namespace can have but one owner, $ingres */
+	return FErelexists(buff, NULL);
+}

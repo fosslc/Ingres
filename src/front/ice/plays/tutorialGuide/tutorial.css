@@ -1,0 +1,35 @@
+/* Copyright (c) 2004 Ingres Corporation */
+A:link { color: maroon }
+A:visited { color: maroon }
+A:active { color: fuchsia }
+BODY { background: white; color: black}
+DIV.hi {background-color: yellow}
+H1 {text-align: center; color: blue}
+H5.eg {font-size: 15pt; color: blue}
+H4.macro {margin-left: 1cm; font-weight: bold,italic; text-align: left; color: red}
+OL.level-1 {list-style-type: }
+OL.level-I {list-style-type: upper-roman}
+OL.level-i {list-style-type: lower-roman}
+OL.level-4 {list-style-type: 1}
+p.box {align: center; border-color: solid black; background-color: grey}
+table.egb {border-width: 2; border-color: solid black; background-color: aqua}
+SPAN.hiy {background-color: yellow; font-weight: bold}
+SPAN.hib {background-color: aqua; font-weight: bold}
+SPAN.hig {background-color: lime; font-weight: bold}
+SPAN.hir {background-color: #FF5050; font-weight: bold}
+SPAN.hip {background-color: fuchsia; font-weight: bold}
+SPAN.link {color: blue}
+SPAN.macro {color: red; font-weight: bold}
+tt.hi {background-color: yellow}
+tt.boxCode {
+	color : black;
+	border: solid black;
+	border-width: 2;
+	background-color: #E0E0E0;
+	}
+div.boxCode {
+	color : black;
+	border: solid black;
+	border-width: 2;
+	background-color: #E0E0E0;
+	}

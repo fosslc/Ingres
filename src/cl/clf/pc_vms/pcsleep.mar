@@ -1,0 +1,46 @@
+	.title	PCsleep
+;
+;	sleep(msec)
+;	long	msec;
+;
+;	Copyright 1983 Ingres Corporation
+;	
+;	Lifted from [back.newback.src.gutil] on 9/26/83 (wood).
+;	Modified to pass the address of a quadword to setimr.
+;
+;	9/90 (Mike S)
+;	Use SYS$SCHDWK instead of event flag wake (lost 5.0 change)
+;	Do argument checking for long and 0-length waits.
+;	Check system-service return codes
+;	04-may-95 (albany)
+;	    Updated $code -> $code$ for AXP/VMS.
+;	16-may-95 (albany)
+;	    Updated psect attributes to be in line with other
+;	    CL psects.
+;
+	.psect	$code$	pic,con,rel,lcl,shr,exe,nord,nowrt,novec,4
+	.entry		PCsleep,0
+	movl		4(ap), r0	; Get time to sleep
+	beql		success		; If we're waiting for 0, we're done
+        blss		error		; Don't accept negative values
+	emul		r0, #-10000, #0, -(sp)
+					; Get time in VMS format
+	clrl		-(sp)		; no repeat time for wakeup	
+	pushal		4(sp)		; push wait time address
+	clrq		-(sp)		; don't specify a process
+	calls		#4, G^sys$schdwk; schedule wakeup
+	blbc		r0, error 	; branch on failure
+	calls		#0, G^sys$hiber	; wait for it
+	blbc		r0, error    	; branch on failure
+
+	; Success exit
+success:
+	clrl		r0		; return OK
+	ret
+
+				
+	; Error exit
+error:                                  
+	movl		#1, r0		; Return failure
+	ret
+	.end

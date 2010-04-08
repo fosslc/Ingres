@@ -1,0 +1,66 @@
+// Version control file
+//
+
+#include <ver.h>
+#include <cavover.h>
+
+#define VER_FILEDESCRIPTION_STR     "CA-Visual Objects IDE"
+#define VER_PRODUCTNAME_STR         "CAVO"
+#define VER_INTERNALNAME_STR        "CAVO"
+#define VER_ORIGINALFILENAME_STR    "CAVO.EXE"
+
+#define VER_COMPANYNAME_STR         "Ingres Corporation"
+#define VER_LEGALCOPYRIGHT_STR      "Copyright \251 2005-2010 Ingres Corporation\0"
+
+#define VER_FILETYPE                VFT_APP
+#define VER_FILESUBTYPE             VFT_UNKNOWN
+
+#ifdef DEBUG
+#define VER_FILEFLAGS               VS_FF_DEBUG
+#else
+#define VER_FILEFLAGS               0
+#endif
+
+#define VER_OS                      VOS_DOS_WINDOWS16
+
+// If FILEVERSION/FILEVERSION_STR aren't defined, use PRODUCTVERSION
+//
+#ifndef VER_FILEVERSION
+#define VER_FILEVERSION             VER_PRODUCTVERSION
+#define VER_FILEVERSION_STR         VER_PRODUCTVERSION_STR
+#endif
+
+#ifdef RC_INVOKED
+ 
+VS_VERSION_INFO VERSIONINFO 
+FILEVERSION    VER_FILEVERSION
+PRODUCTVERSION VER_PRODUCTVERSION
+FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+FILEFLAGS      VER_FILEFLAGS
+FILEOS         VER_OS
+FILETYPE       VER_FILETYPE
+FILESUBTYPE    VER_FILESUBTYPE
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN 
+            VALUE "CompanyName",     VER_COMPANYNAME_STR, "\0"
+            VALUE "FileDescription", VER_FILEDESCRIPTION_STR, "\0"
+            VALUE "FileVersion",     VER_FILEVERSION_STR, "\0"
+            VALUE "InternalName",    VER_INTERNALNAME_STR, "\0"
+            VALUE "LegalCopyright",  VER_LEGALCOPYRIGHT_STR, "\0"
+            VALUE "OriginalFilename",VER_ORIGINALFILENAME_STR, "\0"
+            VALUE "ProductName",     VER_PRODUCTNAME_STR, "\0"
+            VALUE "ProductVersion",  VER_PRODUCTVERSION_STR, "\0"
+        END 
+
+    END 
+ 
+    BLOCK "VarFileInfo" 
+    BEGIN 
+        VALUE "Translation", 0x0409, 0x04E4
+    END 
+END 
+
+#endif  /* RC_INVOKED */

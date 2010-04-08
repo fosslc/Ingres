@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+<html>
+<head>
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+<LINK HREF="<!-- #ICE INCLUDE=`plays[play_styleSheet.css]` -->" TYPE="text/css" REL="STYLESHEET">
+<title>View Bag Contents</title>
+</head>
+<body>
+<h1>View Bag Contents</h1>
+<!-- To Do:
+	Display the contents of the shopping bag for this
+	user (and order number)
+
+	Actions: Empty Bag, Confirm order, Return to shop
+	home
+-->
+
+<!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+	select name, cost
+	from play_item, play_order
+	where id = product_id and
+            (order_nr = :e_orderNumber and user_id = ':ii_userid')`
+    HEADERS=`name, Name, cost, Price`
+    TYPE=`TABLE`
+-->
+<!-- #ICE REPEAT IF (`:ii_rowcount` == `0`)
+THEN=`
+    <!-- #ICE DECLARE=``page.p_empty=No``-->
+    <!-- #ICE DECLARE=``page.p_conf=No``-->
+`
+ELSE=`
+    <!-- #ICE DECLARE=``page.p_empty=Yes``-->
+    <!-- #ICE DECLARE=``page.p_conf=Yes``-->
+`
+-->
+
+<!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+        select sum(cost) 
+	    from play_item, play_order
+	    where id = product_id and
+                (order_nr = :e_orderNumber and user_id = ':ii_userid')`
+    HEADERS=`col1, Total`
+    TYPE=`TABLE`
+-->
+<!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]?Remove=:p_empty&Confirm=:p_conf` -->
+<!-- Standard Session Control -->
+<!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` -->
+</body>
+</html>

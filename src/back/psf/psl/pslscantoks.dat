@@ -1,0 +1,102 @@
+/*
+** Copyright 2010, Ingres Corporation
+**
+**	psltoks.dat - token file for QUEL
+**
+** Input file for pslscanprep.awk to produce pslscantoks.h for inclusion
+** into pslscan.c
+**
+** The numbers correspond to the indes into Key_index tables in the scanner.
+** The tokens need to be ordered according to then and alphabetically within
+** the lengths. Violations of this will be reported,
+**
+** History:
+**	18-Mar-2010 (kiria01) b123438
+**	    Created for sanity sake.
+*/
+
+/* Keywords of length 0, and other non-existent lengths */
+/* Keywords of length 2 */
+  1 as
+  2 at
+  3 by
+  4 in
+  5 is
+  6 of
+  7 on
+  8 or
+  9 to
+/* Keywords of length 3 */
+ 10 all
+ 11 and
+ 12 any
+ 13 avg
+ 57 end
+ 61 for
+ 14 max
+ 15 min
+ 16 not
+ 17 set
+ 18 sum
+/* Keywords of length 4 */
+ 19 avgu
+ 20 copy
+ 21 from
+ 22 help
+ 23 into
+ 24 move
+ 56 only
+ 59 open
+ 67 read
+ 25 save
+ 26 sort
+ 27 sumu
+ 55 view
+ 28 with
+/* Keywords of length 5 */
+ 29 abort
+ 30 begin
+ 60 close
+ 31 count
+ 58 index
+ 69 level
+ 63 order
+ 32 print
+ 33 range
+ 34 until
+ 35 where
+ 68 write
+/* Keywords of length 6 */
+ 36 append
+ 37 countu
+ 38 create
+ 39 define
+ 40 delete
+ 41 modify
+ 64 permit
+ 42 rename
+ 43 unique
+ 62 update
+/* Keywords of length 7 */
+ 44 destroy
+ 45 exclude
+ 46 execute
+ 47 include
+ 49 replace
+/* Keywords of length 8 */
+ 50 relocate
+ 51 retrieve
+/* Keywords of length 9 */
+ 70 committed
+ 66 excluding
+ 65 integrity
+ 71 isolation
+ 52 replicate
+ 53 savepoint
+/* Keywords of length 10 */
+ 54 distribute
+ 72 repeatable
+/* Keywords of length 11 */
+ 73 uncommitted 
+/* Keywords of length 12 */
+ 74 serializable

@@ -1,0 +1,25 @@
+;
+;  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.		       
+;
+
+;
+;    Source   : ipm.def
+;    Project  : INGRES II/ Monitoring.
+;    Author   : UK Sotheavut (uk$so01)
+;    Purpose  :  Declares the module parameters.
+;
+; History:
+;
+; 12-Nov-2001 (uk$so01)
+;    Created
+;
+
+; ipm.def : Declares the module parameters.
+
+LIBRARY      "IPM.OCX"
+
+EXPORTS
+	DllCanUnloadNow      PRIVATE
+	DllGetClassObject    PRIVATE
+	DllRegisterServer    PRIVATE
+	DllUnregisterServer  PRIVATE

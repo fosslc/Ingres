@@ -1,0 +1,14 @@
+#
+# Jamfile file for back!opf!opv
+#
+
+SubDir ING_SRC back opf opv ;
+
+IISUBSYS back opf opv ;
+
+
+IILIBRARY OPFLIB : opvvarnode.c opvtsize.c opvsmap.c
+	opvresdom.c opvrelatts.c opvparser.c opvopnode.c opvmapvar.c
+	opvindex.c opvijnbl.c opvgrv.c opvgrtinit.c opvdeass.c
+	opvctrees.c opvcreate.c opvcpytr.c opvconst.c ;
+

@@ -1,0 +1,8 @@
+/#-- Copyright (c) 2007 Ingres Corporation.
+The blob_data parameter specifies whether memory or a temporary
+file is used when the Gateway processes long varchar and long byte
+data types.  Please see the Enterprise Access Administrator Guide
+for information on choosing the MEMORY or FILE option for
+blob_data.
+
+Default for blob_data is FILE.

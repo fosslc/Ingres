@@ -1,0 +1,69 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<er.h>
+# include	<cu.h>
+# include	<ug.h>
+
+/*
+** Name:	dl_app		Delete an application.
+**
+** Description:
+**	Deletes an application and it's object files for a 6.0 database.
+**	This routine is called by the dl_delobj routine, so be careful
+**	if you change the parameters.
+**
+**	The names etc come from a retrieve of the ii_objects table,
+**	so they should exist (except for any concurrency issues).
+**
+** Inputs:
+**	oname	- name of application.
+**	oowner  - owner name of application.
+**	oclass  - class id of application.
+**	oid	- id of application
+**
+** Outputs:
+**	STATUS of any database errors that may have occurred.
+**
+** History:
+**	19-nov-1987 (peter)
+**		Rewritten for 6.0.
+**	21-mar-1991 (bobm)
+**		Integrate desktop changes.
+**	27-jul-1992 (thomasm)
+**		Fix parameter list problems. abdirdestroy is declared
+**		having no parameters, but was sent one here. Same with
+**		abdirset: was expecting one parm, received 2. dl_app was
+**		being sent too few paramters.  the final paramter was not
+**		being sent or used, so it was removed.
+**	6-aug-1992 (thomasm)
+**		fixed typo from previous fix.  Oops.
+*/
+
+STATUS
+dl_app(oname, oowner, oclass, oid)
+char		*oname;
+char		*oowner;
+OOID		oclass;
+OOID		oid;
+{
+	STATUS		retstat;
+	STATUS		IICUdoDeleteObject();
+
+	retstat = IICUdoDeleteObject(oclass, oid);
+
+	/* Now delete the object directory */
+
+	abdirinit();
+	abdirset(oname);
+	abdirdestroy();
+
+	return(retstat);
+}

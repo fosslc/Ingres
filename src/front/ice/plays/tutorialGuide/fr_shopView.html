@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C/DTD HTML 4.0//EN">
+<!-- Copyright (c) 2004 Ingres Corporation --> 
+##
+## Document History
+##
+## Created (peeje01)
+## 27-Apr-1999 (peeje01)
+##     Change include file name from -h.html to _h.html
+## 02-Apr-2004 (fanra01)
+##     Bug 112091
+##     Editorial changes from griel02.
+##
+<html>
+<head>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link href="tutorial.css" rel="stylesheet" type="text/css">
+<title>
+View Contents of Bag
+</title>
+</head>
+<body>
+<h1>
+View Contents of Bag
+</h1>
+Doubtless the user will wish to view the contents
+of their shopping bag before confirming or
+cancelling the order. This page provides that
+important
+functionality, and consists of a select to present
+the entire contents of the bag. It also
+totals the cost and 
+activates the Remove and Confirm options from the 
+standard shop actions.
+<h3>File: play_shopView.html</h3>
+<p>
+<div class="boxCode"><tt>
+<pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;View Bag Contents&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;View Bag Contents&lt;/h1&gt;
+
+&lt;!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+	select name, cost
+	from play_item, play_order
+	where id = product_id and
+            (order_nr = :e_orderNumber and user_id = ':ii_userid')`
+    TYPE=`TABLE`
+--&gt;
+
+&lt;!-- #ICE 
+    DATABASE=`icetutor`
+    SQL=`set lockmode session where readlock = nolock;
+        select sum(cost)
+	    from play_item, play_order
+	    where id = product_id and
+                (order_nr = :e_orderNumber and user_id = ':ii_userid')`
+    <span class="macro">HEADERS=`col1, Total`</span>
+    TYPE=`TABLE`
+--&gt;
+<span class="macro">&lt;!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]?Remove=Yes&Confirm=Yes` --&gt;</span>
+&lt;!-- Standard Session Control --&gt;
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_SessionControl_h.html]` --&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre></tt></div><p>
+When Web Deployment Option does not have a column name specified in
+the select statement--for example when we use a
+function--it names the columns <tt>col1, col2,
+...</tt>. In this case we are summing the cost
+column and, rather than having the total cost of
+our order shown with the heading <tt>col1</tt>, we
+use the HEADERS keyword to replace the generated
+column name with a more descriptive one, "Total".
+The code fragments appear below:
+<p><tt><pre>
+select sum(cost)
+...
+HEADERS=`col1, Total`
+</pre></tt></div><p>
+
+This page requires that we pass <b>two</b>
+variables into the parameterized included file
+<tt>play_shopAction_h.html</tt>. The variables must
+be
+separated by the <tt><b>&</b></tt> symbol:
+<p><tt><pre>
+&lt;!-- #ICE REPEAT INCLUDE=`plays[play_shopAction_h.html]?Remove=Yes&Confirm=Yes` --&gt;
+</pre></tt></div><p>
+<p>
+Once satisfied with the contents of the shopping bag, the
+user will next want to
+<a href="fr_shopCommit.html" target="page">
+confirm
+</a>
+their purchases.
+</body>
+</html>

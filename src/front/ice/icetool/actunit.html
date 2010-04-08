@@ -1,0 +1,17 @@
+<SCRIPT language="JavaScript">
+			<!-- #ICE REPEAT FUNCTION=`unit?action=:action&unit_id=:id&unit_name=:name`
+					 HTML=`
+			top.Main.item:action(2, 't', 1, 'p', :unit_id, ':unit_name', '<!-- #ICE INCLUDE=``icon_unit.gif`` -->', 'BLACK', 'buUnit.html?unit=:unit_id')
+			if (':action' == 'insert')
+			{
+				top.Main.iteminsert(3, 'p', :unit_id, 'l', :unit_id, 'locations', '<!-- #ICE INCLUDE=``icon_locs.gif`` -->', 'GRAY', 'buLocs.html?unit=:unit_id', 'yes')
+				top.Main.iteminsert(3, 'p', :unit_id, 'h', :unit_id, 'pages', '<!-- #ICE INCLUDE=``icon_pages.gif`` -->', 'GRAY', 'buDocs.html?type=page&unit=:unit_id', 'yes')
+				top.Main.iteminsert(3, 'p', :unit_id, 'm', :unit_id, 'facets', '<!-- #ICE INCLUDE=``icon_multis.gif`` -->', 'GRAY', 'buDocs.html?type=facet&unit=:unit_id', 'yes')
+				top.Main.iteminsert(3, 'p', :unit_id, 's', :unit_id, 'security', '<!-- #ICE INCLUDE=``icon_access.gif`` -->', 'GRAY', 'buRight.html?unit=:unit_id', 'yes')
+				top.Main.iteminsert(3, 'p', :unit_id, 'c', :unit_id, 'copy', '<!-- #ICE INCLUDE=``icon_copy.gif`` -->', 'GRAY', 'buCopy.html?unit=:unit_id', 'yes')
+			}`
+			-->
+			top.Main.refresh()
+</SCRIPT>
+
+<!-- #ICE REPEAT INCLUDE=`result.html?submit=&cancel=&object=business unit` -->

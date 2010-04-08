@@ -1,0 +1,220 @@
+/*
+** Copyright (c) 2004 Ingres Corporation
+*/
+/*
+**	vfinittbl.qsc
+*/
+
+/*
+**  INITTBL.c - Initialize a Table
+**
+**  This routine reads in the information concerning the table
+**  whose name is given. It creates structures representing the
+**  relation and its attributes.  Also the relation is checked
+**  to see if it is a view.
+**
+**  Arguments: tblname - name of table to be initialized
+**
+**  History
+**	JEN - 30 Oct 1981
+**	1/2/85	drh  -- Changed all MEallocs and MEcallocs to FEallocs
+**		and FEcallocs
+**	09-oct-1986 (sandyd)
+**		Added Saturn support.  Must connect before accessing
+**		"relation" or "attribute" tables.
+**	03/13/87 (dkh) - Added support for ADTs and PC integration.
+**	04/25/87 (dkh) - Deleted FEconnect and FEdisconnect refs.
+**	13-jul-87 (bab)	Changed memory allocation to use [FM]Ereqmem.
+**	08/14/87 (dkh) - ER changes.
+**	09/05/87 (dkh) - Changes for 8000 series error numbers.
+**	11-jan-88 (sylviap)
+**		Created the .qsc file.
+**	01/22/88 (dkh) - Changed to use FErel_ffetch & FEatt_fopen() for speed.
+**	02-feb-88 (sylviap)
+**		Changed CVlower to IIUGlbo_lowerBEobject to accomodate
+**		mixed case table names. (gateway)
+**	26-feb-88 (sylviap)
+**		Deleted references to ldb_table and ldb_owner.  Originally set 
+**		up for Saturn.
+** 	12-may-88 (sylviap)
+**		Added SQL COMMIT after FE calls to release the locks on the 
+**		system catalogs.
+**	20-jul-88 (kenl)
+**		Bug fix 2191.  Set field vfqfmand of structure VFQFATT
+**		properly to indicate if a field should have its mandatory
+**		attribute set.  This will be the case when NOT NULL NOT
+**		DEFAULT is defined for the underlying column.
+**	12/23/89 (dkh) - Added support for owner.table.
+**	18-apr-1990 (jhw)  Modified back to use 'FEatt_open()'.
+**	10/14/90 (emerson)
+**		Added support for logical keys (bug 8593):
+**		Set lkeyinfo in ATTRIBINFO to indicate whether 
+**		column is a logical key, and, if so, whether it's
+**		system-maintained or user-maintained.
+**	09/07/92 (dkh) - Updated with 6.5 call interface to FEatt_open.
+**	09/20/92 (dkh) - Added support for owner.table.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**      13-oct-2008 (stial01)
+**          Limited support for object_key/table_key exported as byte
+**	23-Aug-2009 (kschendel) 121804
+**	    Need afe.h to satisfy gcc 4.3.
+**	24-Feb-2010 (frima01) Bug 122490
+**	    Update return types and add header files as neccessary
+**	    to eliminate gcc 4.3 warnings.
+*/
+
+
+# include	<compat.h>
+# include	<gl.h>
+# include	<er.h>
+# include	<st.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ft.h>
+# include	<fmt.h>
+# include	<adf.h>
+# include	<afe.h>
+# include	<frame.h>
+# include	<ui.h>
+# include	<ug.h>
+# include	<qg.h>
+# include	<cv.h>
+# include	<iisqlca.h>
+# include	<libq.h>
+## include	<mqtypes.qsh>
+# include	"vfqbf.h"
+# include	"ervf.h"
+
+
+
+
+
+VFQFTBL *
+vfinittbl(tblname, owner)			/* INITTBL: */
+##char	*tblname;				/* Table to be initialized */
+char	*owner;
+{
+	VFQFATT	*tatt;				/* temporary attribute struct */
+	VFQFATT	*tflds;				/* temporary field pointer */
+	VFQFTBL	*table;				/* table to be returned */
+##	char	*tblnm;				/* pointer to table search */
+						/* name */
+	i4	qbfldno;			/* count the number of */
+						/* attributes */
+	i4	IIerrstr;			/* pointer to error string */
+	FE_ATT_QBLK	qblk;
+	FE_ATT_INFO	attinfo;
+
+	/* Allocate space for table structure */
+	if ((table = (VFQFTBL *)FEreqmem((u_i4)0,
+	    (u_i4)sizeof(struct vfqftbl), TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("vfinittbl"));
+		return(NULL);
+	}
+
+	/* copy table name into table struct */
+	STcopy(tblname, table->vfqfrel);
+
+	tflds = table->vfqflds;			/* store fields array */
+
+	tblnm = qblk.current_rec.table_name;
+	if (FEatt_open(&qblk, tblname, owner) != OK)
+        {
+                IIUGerr(E_VF0113_NO_TABLE, 0, 1, tblnm);
+                return (NULL);
+        }
+
+	/* Check for INGRES Error */
+	if(IIerrstr = IItest_err())
+	{
+		IIUGerr(E_VF0112_ING_ERR, 0, 2, &IIerrstr, tblnm);
+		_VOID_ FEatt_close(&qblk);
+		return(NULL);
+	}
+
+	qbfldno = 0;				/* initialize field number */
+
+	/* Retrieve data from system catalogues into structs */
+
+	while(FEatt_fetch(&qblk, &attinfo) == OK)
+	{
+		tatt = &tflds[qbfldno];		/* get an attribute struct */
+		FEatt_dbdata(&attinfo, &(tatt->vfqfdbv));
+
+		/*
+		**  Skip unsupported datatypes.
+		*/
+		if (!IIAFfedatatype(&(tatt->vfqfdbv))
+		&& !STequal(attinfo.column_internal_datatype,ERx("TABLE_KEY"))
+		&& !STequal(attinfo.column_internal_datatype,ERx("OBJECT_KEY")))
+		{
+			table->vfqfflags |= VFQF_BAD_DTYPE;
+			continue;
+		}
+
+		IIUGfnFeName(attinfo.column_name, tatt->vfqfname);
+		STtrmwhite(tatt->vfqfname);	/* set attribute name */
+		CVlower(tatt->vfqfname);
+
+		/*
+		** Set lkeyinfo to indicate whether column
+		** is a logical key, and, if so, whether it's
+		** system-maintained or user-maintained.
+		** (bug 8593).
+		*/
+		tatt->lkeyinfo = 0;
+		if (STequal(attinfo.column_internal_datatype,
+			ERx("OBJECT_KEY")))
+		{
+			tatt->lkeyinfo = mqOBJECT_KEY;
+		}
+		if (STequal(attinfo.column_internal_datatype,
+			ERx("TABLE_KEY")))
+		{
+			tatt->lkeyinfo = mqTABLE_KEY;
+		}
+		if (tatt->lkeyinfo != 0 &&
+			STequal(attinfo.column_system_maintained,
+			ERx("Y")))
+		{
+			tatt->lkeyinfo |= mqSYSTEM_MAINT;
+		}
+
+		/* bug 2191
+		** initialize vfqfmand
+		*/
+		if (!attinfo.nulls && !attinfo.defaults)
+		{
+			tatt->vfqfmand = 1;
+		}
+		else
+		{
+			tatt->vfqfmand = 0;
+		}
+
+		qbfldno++;			/* Increment fldno count */
+	}
+	if(IIerrstr = IItest_err())	/* Check for INGRES Error */
+	{
+		IIUGerr(E_VF0112_ING_ERR, 0, 2, &IIerrstr, tblnm);
+		_VOID_ FEatt_close(&qblk);
+		return(NULL);
+	}
+
+	_VOID_ FEatt_close(&qblk);
+
+
+
+	/* Assign field number */
+	table->vfqfldno = qbfldno;
+
+
+	/* Other field set in TBLFRM */
+
+	return(table);			/* Return the table struct pointer */
+}

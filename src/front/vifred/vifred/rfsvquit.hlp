@@ -1,0 +1,21 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You have elected to end the editing session.  Would you like to save the
+report before leaving or quit without saving the report.  The table field
+lists options that may be used to decide whether or not to save the report.
+The options are:
+
+        Yes             Save changes, then quit
+        No              Quit without saving changes
+
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Select          Choose the option indicated by the current line of
+                        the table field.  Indicates whether or not to save
+                        the report.
+
+        Cancel          Decide not to quit at this time.
+
+        Help            Access the Ingres Help facility.

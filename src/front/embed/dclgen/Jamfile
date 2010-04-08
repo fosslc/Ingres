@@ -1,0 +1,22 @@
+#
+# Jamfile file for front!embed!dclgen
+#
+
+SubDir ING_SRC front embed dclgen ;
+
+IISUBSYS front embed dclgen ;
+
+
+IIBINEXE dclgen : dclgen.c ;
+if ! (NT)
+{
+IINEEDLIBS dclgen :  MALLOCLIB SHFRAMELIB SHQLIB SHCOMPATLIB ;
+}
+else
+{
+IINEEDLIBS dclgen :  MALLOCLIB SHFRAMELIB SHQLIB SHCOMPATLIB SHEMBEDLIB ;
+}
+IIUNDEFS dclgen : II_copyright malloc ;
+
+IIMSGHDR erdc.msg ;
+

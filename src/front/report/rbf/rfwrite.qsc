@@ -1,0 +1,546 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<cv.h>		/* 6-x_PC_80x86 */
+# include	<me.h>		/* 6-x_PC_80x86 */
+# include	<cm.h>
+# include	<st.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	"rbftype.h"
+# include	"rbfglob.h"
+# include	<ug.h>
+## include	<ui.qsh>
+# include	<fedml.h>
+## include	<ooclass.qsh>
+## include	<oocat.qsh>
+# include	<oodefine.h>
+# include	<uf.h>
+
+/*{
+**   RFWRITE - display and control the RSAVE form to write
+**	out the report.
+**
+**	Parameters:
+**		bypass_submenu	TRUE if 'EditInfo Save' submenu is to
+**				to be bypassed (on QUIT/END),
+**				FALSE if it is to be displayed (on SAVE)
+**
+**	Returns:
+**		1	if a report was written.
+**		0	if return before report written.
+**
+**	Side Effects:
+**		Will set En_report.
+**
+**	Called By:
+**		rFdisplay.
+**
+**	Trace Flags:
+**		230, 233.
+**
+**	Error Messages:
+**		none.
+**
+**	History:
+**		6/2/82 (ps)	written.
+**		1/20/83 (gac)	will not write report for a nonexistent table.
+**		7/11/85 (drh)	added query language to rsave frame, and
+**				valqlang routine to validate it.
+**		26-nov-1986 (yamamoto)
+**			Modified for double byte characters.
+**		1/15/87 (rld)	change syntax of SET_FRS calls.
+**		5/28/87 (rld)	completely changed to use OOsave...
+**		6/19/87 (rld)	changed call to OOcatObject to call to
+**				OOsaveSequence in rFwrite.
+**		7/27/87 (rld)	allowed long report report names. (bug #471)
+**		1-dec-1987 (rdesmond)
+**			fixed rfwrite() so non-dba can't overwrite dba's
+**			report definition.
+**		1-jan-1988 (rdesmond)
+**			changed references to rfoocatrec.id to En_rid;
+**			save En_rep_owner in rf_savsave() so report can be
+**			resaved as existing report.
+**		13-may-88 (sylviap)
+**			Added NULL, the set-up function call, to 
+**			OOsaveSequence parameter list.
+**		27-may-88 (sylviap)
+**			Changed MEcalloc to MEreqmen.
+**              24-aug-88 (sylviap)
+**                      Changed CVlower to IIUGlbo_lowerBEobject(r_tname) -
+**                      tablename can be mixed case on DG.
+**              08-nov-88 (sylviap)
+**			Added a new parameter, a customized help screen, when 
+**			  calling OOsaveSequence.
+**			Deleted 'RBF Editable' field from the save screen, 
+**			  because if this screen appears, then report MUST
+**			  be editable in RBF.this screen appears, then report 
+**			  MUST be editable in RBF.
+**		20-dec-88 (sylviap)
+**			Performance changes - reads in rfiisave.frm.
+**		7/25/89 (elein for Kenl)
+**			Add DG changes/change clear field to putform formname
+**      9/25/89 (martym)
+**			>> GARNET <<
+**			Changed not to check for the existence of only one 
+**			table since if the source of data is a joindef 
+**			there could be multiple tables 
+**			and this check will have already been done.
+**	12/14/89 (elein)
+**			Replaced reference to SourceIsJD with En_SrcTy
+**	12/27/89 (elein)
+**		Removed unused (now) rname, set name field if Rbf_from_ABF
+**  	1/13/90 (martym) 
+**      	Changed the size of r_tname[] from FE_MAXNAME to FE_MAXTABNAME.
+**		Also changed from FE_MAXNAME to FE_MAXTABNAME in valname().
+**	2/1/90 (martym)
+**		Changed so that the only query language available when 
+**		the source of data is a JoinDef is SQL.
+**	04-mar-90 (cmr)
+**		New parameter (bypass_submenu) to rFwrite() that is
+**              passed down to OOsaveSequence().  Indicates whether or
+**              not the 'EditInfo  Save' submenu is displayed or bypassed.
+**	23-aug-90 (cmr) fix for bug 32176
+**		Check return status of OOsaveSequence.
+**	27-aug-90 (sylviap) #32701
+**		Added parameter, right_margin to rFwrite.
+**	31-aug-1992 (rdrane)
+**		Prelim fixes for 6.5 - change over from IIUGlbo_lowerBEobject()
+**		and fix-up parameterization of FErelexists().
+**	9-oct-1992 (rdrane)
+**		Replace En_relation with reference to global
+**		FE_RSLV_NAME En_ferslv.name.
+**	4-nov-1992 (rdrane)
+**		Eliminate valname() in favor of 6.5 UI tablename validation
+**		routines.  Declare valqlang(), rFsavdsply(), and
+**		rFsavsave() as being static.
+**	13-jan-1993 (rdrane)
+**		Eliminate unused variable r_rbfedit in rFsavdsply().  Make
+**		Data Table name field (field2) non-modifiable if a JoinDef
+**		(bug 43398).  Use "READ" field mode instead of "QUERY" for
+**		clarity.  Rework rFsavsave() to eliminate unnecessary processing
+**		since name and q_lang fields are non-modifiable for JoinDef.
+**		Simplified valqlang() and reordered the comparisons since we
+**		expect SQL in the overwhelming majority of cases.
+**		Initialize and possibly set Rbf_xns_given here so that we
+**		account for the case of a default report on all columns of a
+**		table where the table name is a delimited identifier.
+**		valqlang() will fail QUEL if Rbf_xns_given is TRUE.  Fail QUEL
+**		selection if the table name has an owner specification
+**		(although we find out too late to set the field to "READ").
+**	21-jan-1993 (rdrane)
+**		Since we use FE_decompose directly, ensure that the name and
+**		and owner buffers will handle an unnormalized identifier!
+**	17-sep-1993 (rdrane)
+**		Eliminate the Rbf_xns_given check from valqlang, and test
+**		that separately so we can output a more appropriate message.
+**		This addresses bug 54946.
+**      10/15/93 (kchin)
+**              Cast argument to PTR when calling IIOOidObject(), this
+**              is due to the change of datatype of variable parameters
+**              in IIOOidObject() routine itself.  The change is made in
+**              rFwrite().
+**	4-jan-1994 (rdrane)
+**		Use OpenSQL level to determine 6.5 syntax features support,
+**		and check dlm_Case capability directly to determine if
+**		delimited identifiers are suppported.
+**	15-feb-1994 (mgw) Bug #59791
+**		Call FEreqmem() from rFsavsave() with (STlength(r_tname) + 1)
+**		not (STlength(r_tname + 1)) so as to prevent FEreqmem() failure
+**		when r_tname is only one character.
+**	8-apr-1994 (rdrane)
+**		Fix-up setting of owner_dlm (b62161).
+**      02-Jul-1999 (hweho01)
+**              Included uf.h header file, it contains the function     
+**              prototype of IIUFlcfLocateForm(). Without the explicit
+**              declaration, the default int return value for a  
+**              function will truncate a 64-bit address on ris_u64 
+**              platform.
+**
+**	Copyright (c) 2004 Ingres Corporation
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	21-May-2003 (bonro01)
+**	    Add prototype to prevent SEGV on HP Itanium (i64_hpu)
+*/
+
+static	bool		valqlang();	/* validate query language */
+static	STATUS		rFsavdsply();
+static	STATUS		rFsavsave();
+
+STATUS OOsaveSequence( OOID *id, char *savename, char *catform,
+	char *cattabl, char *saveform, char *title,
+	PTR ptr, i4 (*display)(), i4 (*save)(),
+	MENUPARAM *menup, STATUS (*setup)(), char *help_scr,
+	bool bypass);
+
+
+/* external declarations */
+	STATUS		rFsave();
+ 
+/* extern's */
+GLOBALREF char    *Nrsave;
+GLOBALREF bool    alloc_save;
+  
+i4
+rFwrite(bypass_submenu, right_margin)
+bool	bypass_submenu;
+i4	right_margin;
+{
+	char	*help_scr;
+	char	*form;
+	STATUS	status;
+
+
+ 	/* See if the save frame has already been initialized */
+	if (!alloc_save)
+	{
+	 	Nrsave = F_RSAVE;
+	 	if (IIUFgtfGetForm(IIUFlcfLocateForm(),(form = Nrsave))!=OK)
+	 	{
+		 	IIUGerr(E_RF002D_Cannot_locate_form, UG_ERR_ERROR, 1, form);
+			return(0);
+		}
+		alloc_save = TRUE;
+	}        
+ 
+
+	/* If non-dba editted dba's report, we must make a new copy */
+	if ( !STequal(En_rep_owner, Usercode) )
+	    En_rid = -1;
+
+	if (En_rid <= 0)
+	{ /* New object */
+	    if ( IIOOidObject(OC_RBFREP, &En_rid, En_report, (PTR)0, Usercode, (PTR)0,
+				ERget(F_RF0029_RBF), (char *)NULL, (char *)NULL,
+				_) != OK )
+		return (0);
+	}
+	else
+	{ /* Existing object */
+	    OOID class = OC_RBFREP;
+
+	    if ( IIOOidCheck(&class, &En_rid, (char *)NULL, (char*)NULL) != OK )
+		return (0);
+
+	    /*
+	    Since user may save directly from layout frame, report
+	    attributes must be set up on the save frame in advance.
+	    */
+	    rFsavdsply((OOID) NULL, NULL);
+	}
+	/* we now have a valid instance of OO_OBJECT and a permanent id */
+	help_scr = ERx("rfsave.hlp");
+
+	status =  OOsaveSequence(&En_rid, En_report, _iicatalog, _cattable, 
+			Nrsave, ERget(F_RF002A_RBF___Report_Save_Fra), 
+			&right_margin, rFsavdsply, rFsavsave, (MENUPARAM *)NULL,
+			(STATUS (*)())NULL, help_scr, bypass_submenu);
+
+##	clear screen
+
+	return (status == OK ? 1 : 0);
+}
+
+static
+STATUS
+##rFsavdsply(id,right_margin)
+##OOID	id;
+i4	*right_margin;
+##{
+##	char	*formname;
+##	char	*r_tname;		/* table name */
+##	char	*r_qlang;		/* query langauge */
+##	char	*r_name;		/* report name*/
+##	char	*fldmode;		/* mode for query only fields */
+	i4	ql_def;			/* default query language */
+	i4	ql_avail;		/* available query languages */
+
+
+	Rbf_xns_given = FALSE;
+	formname = Nrsave;
+
+	r_tname = En_ferslv.name;
+##	putform formname (xfield2 = r_tname)
+	/*
+	** Can't change name of JoinDef, since it's converted to a
+	** "hard" query upon creation.
+	** (bug 43398)
+	*/
+	if (En_SrcTyp == JDRepSrc)
+	{
+##		set_frs field formname (mode(xfield2) = read)
+	}
+	else
+	{
+##		set_frs field formname (mode(xfield2) = fill)
+	}
+	if  (Rbf_from_ABF)
+	{
+		r_name = Rbf_orname;
+##		putform formname (name = r_name)
+##		set_frs field formname (mode(name) = query)
+	}
+
+	/*
+	** Set query language field in form.  If JoinDef, force
+	** the language to SQL.  Note that RBF supports QUEL only
+	** if both languages area available
+	*/
+	if  (En_SrcTyp == JDRepSrc)
+	{
+		ql_avail = FEDMLSQL;
+		En_qlang = FEDMLSQL;
+	}
+	else
+	{
+		FEdml(&ql_def,&ql_avail);
+	}
+	if  (ql_avail == FEDMLBOTH)
+	{
+		if (En_qlang == FEDMLNONE)
+		{
+			En_qlang = ql_def;
+		}
+		r_qlang = (En_qlang == FEDMLQUEL) ? 
+		    ERget(F_RF0007_quel) : ERget(F_RF0008_sql);
+		fldmode = ERx("FILL");
+##		putform formname (xfield3 = ERget(F_RF002B_Query_language_))
+##		putform formname (xfield4 = r_qlang)
+	}
+	else
+	{
+		fldmode = ERx("READ");
+##		putform formname (xfield3 = ERget(F_RF002B_Query_language_))
+##		putform formname (xfield4 = ERget(F_RF0008_sql))
+	}
+##	set_frs field formname (mode(xfield4) = fldmode)
+
+	return (OK);
+##}
+
+static
+STATUS
+##rFsavsave(id, right_margin)
+##OOID	id;
+i4	*right_margin;
+##{
+##	char		*formname;
+	i4		ql_def;			/* default query language */
+	i4		ql_avail;		/* available query languages */
+	char		*r_rname;		/* report name */
+##	char		r_tname[FE_MAXTABNAME];	/* table name */
+##	char		r_qlang[FE_MAXNAME+1];	/* query langauge */
+	FE_RSLV_NAME	rfs_ferslv;
+
+
+	Rbf_xns_given = FALSE;
+	formname = Nrsave;
+
+##	getform formname (r_tname = xfield2)
+
+	/*
+	** Decompose any owner.tablename, validate the components,
+	** and normalize them for later use in FErelexists().  We don't
+	** use FE_fullresolve() because it doesn't differentiate between
+	** invalid name components and non-existent relations.
+	** Since JoinDef names are now non-modifiable (we never paid attention
+	** to changes anyway), skip the validation if it's a JoinDef.
+	** Similarly, the query language is fixed for Joindef, so skip that
+	** validation, too!
+	*/
+	if (En_SrcTyp != JDRepSrc)
+	{
+		if  ((rfs_ferslv.name_dest = (char *)MEreqmem((u_i4)0,
+			(u_i4)(FE_UNRML_MAXNAME+1),TRUE,
+			(STATUS *)NULL)) == NULL)
+		{
+			IIUGbmaBadMemoryAllocation(
+						ERx("rFsavsave - name_dest"));
+		}
+
+		if  ((rfs_ferslv.owner_dest = (char *)MEreqmem((u_i4)0,
+			(u_i4)(FE_UNRML_MAXNAME+1),TRUE,
+			(STATUS *)NULL)) == NULL)
+		{
+			IIUGbmaBadMemoryAllocation(
+						ERx("rFsavsave - owner_dest"));
+		}
+
+		rfs_ferslv.name = r_tname;
+		rfs_ferslv.is_nrml = FALSE;
+		FE_decompose(&rfs_ferslv);
+		if  ((rfs_ferslv.owner_spec) &&
+		     (STcompare(IIUIcsl_CommonSQLLevel(),UI_LEVEL_65) < 0))
+		{
+			IIUGerr(E_RF0044_Table_names_only_cont,
+				UG_ERR_ERROR,0);
+			MEfree((PTR)rfs_ferslv.name_dest);
+			MEfree((PTR)rfs_ferslv.owner_dest);
+			return (FAIL);
+		}
+		if  (((rfs_ferslv.name_dlm = IIUGdlm_ChkdlmBEobject(
+					    rfs_ferslv.name_dest,
+					    rfs_ferslv.name_dest,
+					    FALSE)) == UI_BOGUS_ID) ||
+		     ((rfs_ferslv.owner_spec) &&
+                      STcompare(rfs_ferslv.owner_dest, UI_FE_CAT_ID_65) &&
+		      ((rfs_ferslv.owner_dlm = IIUGdlm_ChkdlmBEobject(
+					      rfs_ferslv.owner_dest,
+					      rfs_ferslv.owner_dest,
+					      FALSE)) == UI_BOGUS_ID)))
+		{	/* Bad name for data for report */
+			if  (STcompare(IIUIcsl_CommonSQLLevel(),
+				       UI_LEVEL_65) >= 0)
+			{
+				IIUGerr(E_RF00A2_Invalid_table_name,
+					UG_ERR_ERROR,0);
+			}
+			else
+			{
+				IIUGerr(E_RF0044_Table_names_only_cont,
+					UG_ERR_ERROR,0);
+			}
+			MEfree((PTR)rfs_ferslv.name_dest);
+			MEfree((PTR)rfs_ferslv.owner_dest);
+			return (FAIL);
+		}
+
+		if  ((rfs_ferslv.name_dlm == UI_DELIM_ID) ||
+		     ((rfs_ferslv.owner_spec) &&
+		      (rfs_ferslv.owner_dlm == UI_DELIM_ID)))
+		{
+			Rbf_xns_given = TRUE;
+		}
+
+		if  (FErelexists(rfs_ferslv.name_dest,
+				 rfs_ferslv.owner_dest) != OK)
+		{	/* Table does not exist */
+			IIUGerr(E_RF0046_Table_does_not_exist_,UG_ERR_ERROR,0);
+			MEfree((PTR)rfs_ferslv.name_dest);
+			MEfree((PTR)rfs_ferslv.owner_dest);
+			return (FAIL);
+		}
+		MEfree((PTR)rfs_ferslv.name_dest);
+		MEfree((PTR)rfs_ferslv.owner_dest);
+
+		FEdml(&ql_def,&ql_avail);
+		if  (ql_avail == FEDMLBOTH)
+		{
+##			getform formname (r_qlang = xfield4)
+			if  (valqlang(r_qlang,ql_def,&En_qlang) == FALSE)
+			{	/* Bad query language specified */
+				IIUGerr(E_RF0045_Query_language_must_b,
+					UG_ERR_ERROR,0);
+				return (FAIL);
+			}
+			if  ((En_qlang == FEDMLQUEL) &&
+			     ((rfs_ferslv.owner_spec) || (Rbf_xns_given)))
+			{	/* Improper query language specified */
+				IIUGerr(E_RF00AD_XNS_QUEL, UG_ERR_ERROR, 0);
+				return (FAIL);
+			}
+		}
+		else
+		{
+			En_qlang = ql_def;
+		}
+	}
+	else
+	{
+		/*
+		** Ensure this is set for JoinDefs in case we skipped
+		** the SaveInfo screen ...
+		*/
+		En_qlang = FEDMLSQL;
+	}
+
+	/*
+	** Get report name and have En_report point to it
+	*/
+	r_rname = OOp(id)->name;
+	STtrmwhite(r_rname);
+	if ((En_report = (char *)MEreqmem((u_i4)1,
+		(u_i4)(STlength(r_rname)+1), TRUE, (STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("rFsavsave - En_report"));
+	}
+	CVlower(r_rname);
+	STcopy(r_rname,En_report);
+	rfLast(En_report);
+
+	/*
+	** Get table or JoinDef name and have En_ferslv.name point to it
+	** (Bug 59791 - get the STlength right)
+	*/
+	if  ((En_ferslv.name = (char *)FEreqmem((u_i4)Rst4_tag,
+		(u_i4)(STlength(r_tname) + 1),TRUE,
+		(STATUS *)NULL)) == NULL)
+	{
+		IIUGbmaBadMemoryAllocation(ERx("rFsavsave - En_ferslv.name"));
+	}
+	STcopy(r_tname,En_ferslv.name);
+
+	Rbf_ortype = OT_EDIT;
+
+	/*
+	** Set owner so that the report may be resaved as an existing report
+	*/
+	En_rep_owner = Usercode;
+
+	return(rFsave(right_margin));
+##}
+
+/*
+**	VALQLANG - validate the query language specified by the user
+**		(it must be a language available for the installation).
+**
+**		Parameters:
+**			specified	langauge specified on the form
+**			def		default query language
+**			ql_type		(returned) query langauge to use
+**					in writing, FEDMLSQL or FEDMLQUEL
+**
+**		Returns:
+**			TRUE if query language is valid, FALSE otherwise
+*/
+
+static
+bool
+valqlang(specified,def,ql_type)
+char	*specified;	/* name of query language from the form */
+i4	def;		/* default query language */
+i4	*ql_type;	/* returned with language to use */
+{
+	bool	lang_ok;
+ 
+
+	lang_ok = TRUE;		/* Assume success	*/
+	CVlower(specified);
+
+	if  (STequal(specified,ERget(F_RF0008_sql)))
+	{
+		*ql_type = FEDMLSQL;
+	}
+	else if (STequal(specified,ERget(F_RF0007_quel)))
+	{
+		*ql_type = FEDMLQUEL;
+	}
+	else
+	{
+		*ql_type = def;
+		lang_ok = FALSE;
+	}
+
+	return(lang_ok);
+}
+
+

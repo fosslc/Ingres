@@ -1,0 +1,167 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+*/
+/*
+** GETNEWNAM.QSC
+**
+**	getNewName() prompts the user for a new table, joindef or qbf
+**		     name.  If a name is valid some global variables
+**		     are set else FAIL is returned.  If QBF runs as
+**		     one process, this function is called from
+**		     mqqexecute(); if QBF runs as two process, it is
+**		     called from mq_go().
+**
+**	History --   taken out of mqqexecute(), 2/20/85 (kira).
+**		07-dec-87 (kenl)
+**			Turned module into a .QSC file in order to incorporate
+**			the new header file: mqbf.qsh.  Modified code to deal
+**			with case-sensitive backend object names.
+**		13-aug-1993 (rdrane)
+**			Significantly re-worked to support owner.tablename
+**			and delimited identifiers.  This addresses all/part
+**			of b54048, b51773, b51756, and b52570.
+**		18-nov-1993 (rdrane)
+**			Allow for owner to be $ingres.
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	5-May-2002 (bonro01)
+**	    Fix overlay caused by setting wrong byte to zero.
+**	24-Aug-2009 (kschendel) 121804
+**	    Define bool externs for gcc 4.3.
+**/
+
+# include	<compat.h>
+# include	<st.h>		/* 6-x_PC_80x86 */
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+# include	<ui.h>
+## include	"mqbf.qsh"
+# include	<er.h>
+# include	"erqf.h"
+
+FUNC_EXTERN bool mqgetfname(MQQDEF *, bool);
+
+getNewName(qdef)
+MQQDEF	*qdef;
+{
+	FE_RSLV_NAME	fe_rslv;
+	char	owner_buf[(FE_UNRML_MAXNAME + 1)];
+	char	tbl_buf[(FE_UNRML_MAXNAME + 1)];
+	char	buf[FE_MAXTABNAME + 1];
+
+
+		IIUFask(ERget(S_QF003C_Enter_a_QBFName__a_Jo), FALSE, buf,
+			(i4) 0);
+
+		buf[FE_MAXTABNAME] = EOS;
+		if  (STtrmwhite(buf) <= 0)
+		{
+			return(FAIL);
+		}
+
+# ifndef	NOLASTQRY
+		if (IIrngend(mq_frame) != OK)
+		{
+			IIUGerr(E_QF003D_mqqexecute__couldn_t_, 0, 0);
+		}
+# endif		/* NOLASTQRY */
+
+
+		/*
+		** Decompose and normalize any name construct.
+		** This will case as per identifiers, and so we'll
+		** be fine for table name look-ups.  If not a table,
+		** then we're still OK, since the subsequent routines
+		** which look for FE object names expect that they
+		** will need to force case things.
+		*/
+		fe_rslv.name = &buf[0];
+		fe_rslv.owner_dest = &owner_buf[0];
+		fe_rslv.name_dest = &tbl_buf[0];
+		fe_rslv.is_nrml = FALSE;
+		FE_decompose(&fe_rslv);
+		qdef->mqcr.owner[0] = EOS;
+		if  (((fe_rslv.name_dlm =
+			 IIUGdlm_ChkdlmBEobject(fe_rslv.name_dest,
+						qdef->mqcr.name,
+						FALSE)) == UI_BOGUS_ID) ||
+		     ((fe_rslv.owner_spec) &&
+		      ((fe_rslv.owner_dlm =
+			 IIUGdlm_ChkdlmBEobject(fe_rslv.owner_dest,
+						qdef->mqcr.owner,
+						FALSE)) == UI_BOGUS_ID)))
+		{
+			if  (STbcompare(fe_rslv.owner_dest,0,
+					UI_FE_CAT_ID_65,0,TRUE) != 0)
+			{
+				/*
+				** Find an error message ...
+				*/
+				return(FAIL);
+			}
+			else
+			{
+				STcopy(fe_rslv.owner_dest,qdef->mqcr.owner);
+			}
+		}
+
+		mq_lookup = TRUE;
+
+		/*
+		** Not sure why this global is used, when the qdef is 
+		** passed along everywhere. 
+		*/
+		STcopy(qdef->mqcr.name, qbf_name);
+		onetbl = FALSE;
+		mq_forms = FALSE;
+		mq_deffrm = FALSE;
+
+		if  ((fe_rslv.owner_spec) ||
+		     (fe_rslv.name_dlm) || (fe_rslv.name_dlm))
+		{
+			/*
+			** If this isn't a table, then it's invalid!
+			** FE objects can't be specified as owner.object
+			** constructs, and can't be delimited identifiers.
+			*/
+			if (IIqfChkRel(qdef,qdef->mqcr.name,qdef->mqcr.owner,
+				       FALSE,(RELINFO *)NULL) != OK)
+			{
+				/*
+				** Find an error message ...
+				*/
+				return(FAIL);
+			}
+			onetbl = TRUE;
+			any_cats = FALSE;
+			any_views = FALSE;
+			return(OK);
+		}
+
+		if  (mqgetfname(qdef,FALSE))
+		{
+			/*
+			** We found a QBFname or a JoinDef name
+			*/
+		}
+		else if (IIqfChkRel(qdef,qdef->mqcr.name,qdef->mqcr.owner,
+				    FALSE,(RELINFO *)NULL) == OK)
+		{
+			onetbl = TRUE;
+		}
+		else
+		{
+			FDerror(NAMENOTFOUND, 1, qdef->mqcr.name);
+			return(FAIL);
+		}
+
+		any_cats = FALSE;
+		any_views = FALSE;
+		return(OK);
+}
+

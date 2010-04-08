@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ The on_log_full parameter determines the type of action that occurs if no
+ further security audit logs are available.  
+ 
+ The following values are allowed:
+
+       SHUTDOWN  - Shuts down the Ingres DBMS server. New DBMS servers 
+                   will NOT start until the problem with the security audit 
+                   log has been resolved.
+
+       STOPAUDIT - This allows the Ingres installation to continue 
+                   running but shuts down auditing. Auditing will restart 
+                   automatically once the current audit log is once again 
+                   available for writing.
+
+       SUSPEND -   Suspends requests to write audit records until auditing
+                   is resumed.

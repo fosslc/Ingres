@@ -1,0 +1,9 @@
+#
+# Jamfile file for cl!clf!dl_vms
+#
+
+SubDir ING_SRC cl clf dl_vms ;
+
+IISUBSYS cl clf dl_vms ;
+
+IILIBRARY COMPATLIB : dltext.c dlos.c dl.c dladtreg.c ;

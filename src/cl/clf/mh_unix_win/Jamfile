@@ -1,0 +1,20 @@
+#
+# Jamfile file for cl!clf!mh_unix_win
+#
+#       20-Oct-2009 (hweho01)
+#           Remove the IINOOPTIM entries that were generated incorrectly.
+#       01-Dec-2009 (coomi01) b122980
+#           Add mhround.c to list
+#	11-Mar-2010 (kschendel) SIR 123275
+#	    Expose powers-of-10 table, add mhdata.roc.
+
+SubDir ING_SRC cl clf mh_unix_win ;
+
+IISUBSYS cl clf mh_unix_win ;
+
+IINOOPTIM mhexp.c : sgi_us5 ;
+
+IILIBRARY COMPATLIB : mhsrand.c mhsqrt.c mhsin.c mhrand.c
+	mhpow.c mhpk.c mhln.c mhipow.c mhint.c mhfdint.c mhexp.c
+	mhexp10.c mhcos.c mhceil.c mhatan.c mhround.c mhdata.roc ;
+

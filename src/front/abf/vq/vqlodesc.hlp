@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqlodesc.hlp, subtopic 'Layout description' of subtopic 'Screen layout' 
+/#-- behind the main VQ Editor help screen.
+/#-- 
+The Visual Query Editor displays information about the tables specified in 
+the current frame definition.  
+
+  * The frame name is displayed in the upper left corner of the screen.
+
+  * The table type is shown at the top of the table information.
+
+  * Lines drawn to the left of the tables indicate joins.  Multiple joins 
+    are marked "a," "b," and so on.
+
+  * The Display column lets you specify whether a field should be displayed 
+    on the form, generate a local variable or hidden column, or neither.
+
+  * Other fields (that vary according to type of frame) let you assign 
+    specific or general characteristics to a form or restrict a query.
+    (For detailed information, see Append, Browse, or Update frame 
+    definition help.)
+

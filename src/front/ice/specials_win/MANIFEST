@@ -1,0 +1,30 @@
+#
+# MANIFEST file for front!ice!specials_win
+#
+# History:
+#	25-Aug-2005 (drivi01)
+#		Created.
+#	12-Mar-2008 (drivi01)
+#		Add code for copying cazipxp to II_SYSTEM.
+#
+
+SubDir ING_SRC front ice specials_win ;
+
+IISUBSYS back opf specials_win ;
+
+
+IISHLIBRARY $(SHICELIBDATA) : $(SHICELIB) $(ICELIBDATA) $(IMPCOMPATLIB) ;
+
+IISHLIBRARY $(SHICELIB) : $(IMPICELIBDATA) $(ASCFLIB) $(URSLIB)
+	$(ASCSLIB) $(IMPSCFLIB) $(IMPSCFLIBDATA) $(AWSFLIB) $(IMPCOMPATLIBDATA) 
+	$(IMPCOMPATLIB)	$(DDFLIB) $(IMPGCFLIB) $(IMPGCFLIBDATA) $(IMPADFLIB) 
+	$(IMPADFLIBDATA) $(IMPULFLIB) $(IMPULFLIBDATA) $(IMPCUFLIB) $(IMPAPILIB) $(IMPDDILIB) ;
+
+
+IICPEXE $(INGICEBIN)/$(SHICE) : $(SHICELIB) ;
+IICPEXE $(INGICEBIN)/$(SHICELIB) : $(SHICELIB) ;
+
+
+IIBFILES bin : $(CAZIPXP)$(DFS)cazipxp.exe ;
+
+

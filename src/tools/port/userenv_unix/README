@@ -1,0 +1,57 @@
+This directory contains prototype files used to set up the environment
+for building INGRES on UNIX.
+
+
+1. Copy the appropriate setup.* file(s) to your home directory:
+
+	csh:		cp setup.csh ~/.setup
+	ksh or sh:	cp setup.ksh $HOME/.setup
+
+    If you have more than one INGRES build environment (for example,
+    a csh and a ksh environment, or a 6.5/01 build and a 6.5/02 build)
+    you will need a .setup file for each environment. You can name your
+    .setup files anything you want, but this document and all other INGRES
+    build documentation will refer to those files as ".setup".
+
+
+2. Edit your .setup file and customize environment variables as necessary.
+   The .setup file sets paths and variables that depend on local file systems
+   and whether the environment is BSD or System V.
+
+
+3. Invoke the .setup file:
+
+	csh:		source ~/.setup
+	ksh or sh:	. $HOME/.setup
+
+
+4. Modify your session startup script (.cshrc, .kshrc, etc.)
+
+   Since you must always invoke .setup before working on your INGRES
+   build, you should modify your session startup script to invoke .setup
+   each time you log in. If you have more than one build environment
+   you should set up shell aliases or functions so you can switch back
+   and forth between environments by invoking the various .setup files.
+
+
+
+============================================================================
+
+History: 
+	24-nov-1992 (lauraw)
+		Renamed 65* files to setup.*, so we don't have to update
+		this and other documentation each time we put together a
+		new release.
+		Elided previous history, since most of it applied to files
+		that no longer exist. The setup.* files will now contain 
+		their own history.
+		Removed cshrc*, kshrc*, profile*, and login* files, since
+		apparently nobody uses them.
+		Removed note about umask, because ming handles built file
+		permissions, and test environment setup scripts should handle
+		test environment umask.
+		Removed note about supp60, since you are not likely to be
+		looking in this file when you set up the supp60 account.
+	02-dec-1992 (lauraw)
+		Combined setup.c42 and setup.c5 into setup.csh.
+		Combined setup.k42 and setup.k5 into setup.ksh.

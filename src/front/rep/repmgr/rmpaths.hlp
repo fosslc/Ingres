@@ -1,0 +1,85 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- rmpaths.hlp
+/#subtopic "Consistent Distributed Data Set" rmcdddef.hlp
+/#subtopic "Data Propagation Path" rmdppdef.hlp
+DEFINE DATA PROPAGATION PATHS
+
+This form is used to view and define the Data Propagation Paths (DPP)
+for a given CDDS.  Data propagation is based on the database that
+originated the change to a table row.
+
+Changes can be sent directly or indirectly to a target from the
+originating database.  If sent directly, a path is defined with the same
+database number for the originating and local databases.  If sent via an
+intermediary database(s), two or more paths are defined, the first one
+with the first pass-through database as the target, the second one with
+the pass-through database as local and the final destination (or another
+intermediary) as target.
+
+To complete this screen, enter the appropriate values for the CDDS.  Use
+the Tab key to move from one column to the next.  Use the Newrow key or
+the arrow keys to move between lines.  To add a new path, use the
+Insert operation to open a blank row.  To remove a path, use the
+RowDelete operation.  To remove all paths for a CDDS, use the Delete
+operation.  To save the definition, select the Save operation.
+
+The columns on the list are:
+
+        COLUMN NAME             DESCRIPTION
+        -----------             -----------
+        Orig#                   The system-wide unique number for a
+                                database assigned by the user.  This is
+                                the database in which a user makes a
+                                change:  the origin of the replication.
+
+                                Select the Subtopics menuitem for more
+                                information.
+
+        Originator Database     The name of the originator database.
+                                This field is automatically filled in.
+
+        Loc#                    The system-wide unique number for a
+                                database assigned by the user.  This is
+                                the last database to forward on the
+                                replication.  It can be the same as the
+                                originator database, but cannot be equal
+                                to the target database.
+
+                                Select the Subtopics menuitem for more
+                                information.
+
+        Local Database          The name of the local database.  This
+                                field is automatically filled in.
+
+        Targ#                   The system-wide unique number for a
+                                database assigned by the user.  This is
+                                a destination of the replication.
+
+                                Select the Subtopics menuitem for more
+                                information.
+
+        Target Database         The name of the target database.  This
+                                field is automatically filled in.
+
+
+The menu commands are as follows:
+
+        MENU COMMAND    SYNOPSIS
+        ------------    --------
+        Save            Save the definition and return to the CDDS
+                        Summary screen.
+
+        Insert          Open a new, blank row below the currently
+                        highlighted row.
+
+        RowDelete       Delete the currently highlighted row.
+
+        Delete          Delete all Data Propagation Paths for this
+                        CDDS.
+
+        ListChoices     Display a list of acceptable values for the
+                        current column.
+
+        Help            Access the Help facility.
+
+        End             Return to the CDDS Summary screen.

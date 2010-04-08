@@ -1,0 +1,896 @@
+    71------	     1	    9MONDAY   
+
+    712-----	     1	    9MONDAY   
+
+    712-----	     2	    9TUESDAY  
+
+    7123----	     1	    9MONDAY   
+
+    7123----	     2	    9TUESDAY  
+
+    7123----	     3	    9WEDNESDAY
+
+    71234---	     1	    9MONDAY   
+
+    71234---	     2	    9TUESDAY  
+
+    71234---	     3	    9WEDNESDAY
+
+    71234---	     4	    9THURSDAY 
+
+    712345--	     1	    9MONDAY   
+
+    712345--	     2	    9TUESDAY  
+
+    712345--	     3	    9WEDNESDAY
+
+    712345--	     4	    9THURSDAY 
+
+    712345--	     5	    9FRIDAY   
+
+    7123456-	     1	    9MONDAY   
+
+    7123456-	     2	    9TUESDAY  
+
+    7123456-	     3	    9WEDNESDAY
+
+    7123456-	     4	    9THURSDAY 
+
+    7123456-	     5	    9FRIDAY   
+
+    7123456-	     6	    9SATURDAY 
+
+    71234567	     1	    9MONDAY   
+
+    71234567	     2	    9TUESDAY  
+
+    71234567	     3	    9WEDNESDAY
+
+    71234567	     4	    9THURSDAY 
+
+    71234567	     5	    9FRIDAY   
+
+    71234567	     6	    9SATURDAY 
+
+    71234567	     7	    9SUNDAY   
+
+    712345-7	     1	    9MONDAY   
+
+    712345-7	     2	    9TUESDAY  
+
+    712345-7	     3	    9WEDNESDAY
+
+    712345-7	     4	    9THURSDAY 
+
+    712345-7	     5	    9FRIDAY   
+
+    712345-7	     7	    9SUNDAY   
+
+    71234-6-	     1	    9MONDAY   
+
+    71234-6-	     2	    9TUESDAY  
+
+    71234-6-	     3	    9WEDNESDAY
+
+    71234-6-	     4	    9THURSDAY 
+
+    71234-6-	     6	    9SATURDAY 
+
+    71234-67	     1	    9MONDAY   
+
+    71234-67	     2	    9TUESDAY  
+
+    71234-67	     3	    9WEDNESDAY
+
+    71234-67	     4	    9THURSDAY 
+
+    71234-67	     6	    9SATURDAY 
+
+    71234-67	     7	    9SUNDAY   
+
+    71234--7	     1	    9MONDAY   
+
+    71234--7	     2	    9TUESDAY  
+
+    71234--7	     3	    9WEDNESDAY
+
+    71234--7	     4	    9THURSDAY 
+
+    71234--7	     7	    9SUNDAY   
+
+    7123-5--	     1	    9MONDAY   
+
+    7123-5--	     2	    9TUESDAY  
+
+    7123-5--	     3	    9WEDNESDAY
+
+    7123-5--	     5	    9FRIDAY   
+
+    7123-56-	     1	    9MONDAY   
+
+    7123-56-	     2	    9TUESDAY  
+
+    7123-56-	     3	    9WEDNESDAY
+
+    7123-56-	     5	    9FRIDAY   
+
+    7123-56-	     6	    9SATURDAY 
+
+    7123-567	     1	    9MONDAY   
+
+    7123-567	     2	    9TUESDAY  
+
+    7123-567	     3	    9WEDNESDAY
+
+    7123-567	     5	    9FRIDAY   
+
+    7123-567	     6	    9SATURDAY 
+
+    7123-567	     7	    9SUNDAY   
+
+    7123-5-7	     1	    9MONDAY   
+
+    7123-5-7	     2	    9TUESDAY  
+
+    7123-5-7	     3	    9WEDNESDAY
+
+    7123-5-7	     5	    9FRIDAY   
+
+    7123-5-7	     7	    9SUNDAY   
+
+    7123--6-	     1	    9MONDAY   
+
+    7123--6-	     2	    9TUESDAY  
+
+    7123--6-	     3	    9WEDNESDAY
+
+    7123--6-	     6	    9SATURDAY 
+
+    7123--67	     1	    9MONDAY   
+
+    7123--67	     2	    9TUESDAY  
+
+    7123--67	     3	    9WEDNESDAY
+
+    7123--67	     6	    9SATURDAY 
+
+    7123--67	     7	    9SUNDAY   
+
+    7123---7	     1	    9MONDAY   
+
+    7123---7	     2	    9TUESDAY  
+
+    7123---7	     3	    9WEDNESDAY
+
+    7123---7	     7	    9SUNDAY   
+
+    712-4---	     1	    9MONDAY   
+
+    712-4---	     2	    9TUESDAY  
+
+    712-4---	     4	    9THURSDAY 
+
+    712-45--	     1	    9MONDAY   
+
+    712-45--	     2	    9TUESDAY  
+
+    712-45--	     4	    9THURSDAY 
+
+    712-45--	     5	    9FRIDAY   
+
+    712-456-	     1	    9MONDAY   
+
+    712-456-	     2	    9TUESDAY  
+
+    712-456-	     4	    9THURSDAY 
+
+    712-456-	     5	    9FRIDAY   
+
+    712-456-	     6	    9SATURDAY 
+
+    712-4567	     1	    9MONDAY   
+
+    712-4567	     2	    9TUESDAY  
+
+    712-4567	     4	    9THURSDAY 
+
+    712-4567	     5	    9FRIDAY   
+
+    712-4567	     6	    9SATURDAY 
+
+    712-4567	     7	    9SUNDAY   
+
+    712-45-7	     1	    9MONDAY   
+
+    712-45-7	     2	    9TUESDAY  
+
+    712-45-7	     4	    9THURSDAY 
+
+    712-45-7	     5	    9FRIDAY   
+
+    712-45-7	     7	    9SUNDAY   
+
+    712-4-6-	     1	    9MONDAY   
+
+    712-4-6-	     2	    9TUESDAY  
+
+    712-4-6-	     4	    9THURSDAY 
+
+    712-4-6-	     6	    9SATURDAY 
+
+    712-4-67	     1	    9MONDAY   
+
+    712-4-67	     2	    9TUESDAY  
+
+    712-4-67	     4	    9THURSDAY 
+
+    712-4-67	     6	    9SATURDAY 
+
+    712-4-67	     7	    9SUNDAY   
+
+    712-4--7	     1	    9MONDAY   
+
+    712-4--7	     2	    9TUESDAY  
+
+    712-4--7	     4	    9THURSDAY 
+
+    712-4--7	     7	    9SUNDAY   
+
+    712--5--	     1	    9MONDAY   
+
+    712--5--	     2	    9TUESDAY  
+
+    712--5--	     5	    9FRIDAY   
+
+    712--56-	     1	    9MONDAY   
+
+    712--56-	     2	    9TUESDAY  
+
+    712--56-	     5	    9FRIDAY   
+
+    712--56-	     6	    9SATURDAY 
+
+    712--567	     1	    9MONDAY   
+
+    712--567	     2	    9TUESDAY  
+
+    712--567	     5	    9FRIDAY   
+
+    712--567	     6	    9SATURDAY 
+
+    712--567	     7	    9SUNDAY   
+
+    712--5-7	     1	    9MONDAY   
+
+    712--5-7	     2	    9TUESDAY  
+
+    712--5-7	     5	    9FRIDAY   
+
+    712--5-7	     7	    9SUNDAY   
+
+    712---6-	     1	    9MONDAY   
+
+    712---6-	     2	    9TUESDAY  
+
+    712---6-	     6	    9SATURDAY 
+
+    712---67	     1	    9MONDAY   
+
+    712---67	     2	    9TUESDAY  
+
+    712---67	     6	    9SATURDAY 
+
+    712---67	     7	    9SUNDAY   
+
+    712----7	     1	    9MONDAY   
+
+    712----7	     2	    9TUESDAY  
+
+    712----7	     7	    9SUNDAY   
+
+    71-3----	     1	    9MONDAY   
+
+    71-3----	     3	    9WEDNESDAY
+
+    71-34---	     1	    9MONDAY   
+
+    71-34---	     3	    9WEDNESDAY
+
+    71-34---	     4	    9THURSDAY 
+
+    71-345--	     1	    9MONDAY   
+
+    71-345--	     3	    9WEDNESDAY
+
+    71-345--	     4	    9THURSDAY 
+
+    71-345--	     5	    9FRIDAY   
+
+    71-3456-	     1	    9MONDAY   
+
+    71-3456-	     3	    9WEDNESDAY
+
+    71-3456-	     4	    9THURSDAY 
+
+    71-3456-	     5	    9FRIDAY   
+
+    71-3456-	     6	    9SATURDAY 
+
+    71-34567	     1	    9MONDAY   
+
+    71-34567	     3	    9WEDNESDAY
+
+    71-34567	     4	    9THURSDAY 
+
+    71-34567	     5	    9FRIDAY   
+
+    71-34567	     6	    9SATURDAY 
+
+    71-34567	     7	    9SUNDAY   
+
+    71-345-7	     1	    9MONDAY   
+
+    71-345-7	     3	    9WEDNESDAY
+
+    71-345-7	     4	    9THURSDAY 
+
+    71-345-7	     5	    9FRIDAY   
+
+    71-345-7	     7	    9SUNDAY   
+
+    71-34-6-	     1	    9MONDAY   
+
+    71-34-6-	     3	    9WEDNESDAY
+
+    71-34-6-	     4	    9THURSDAY 
+
+    71-34-6-	     6	    9SATURDAY 
+
+    71-34-67	     1	    9MONDAY   
+
+    71-34-67	     3	    9WEDNESDAY
+
+    71-34-67	     4	    9THURSDAY 
+
+    71-34-67	     6	    9SATURDAY 
+
+    71-34-67	     7	    9SUNDAY   
+
+    71-34--7	     1	    9MONDAY   
+
+    71-34--7	     3	    9WEDNESDAY
+
+    71-34--7	     4	    9THURSDAY 
+
+    71-34--7	     7	    9SUNDAY   
+
+    71-3-5--	     1	    9MONDAY   
+
+    71-3-5--	     3	    9WEDNESDAY
+
+    71-3-5--	     5	    9FRIDAY   
+
+    71-3-56-	     1	    9MONDAY   
+
+    71-3-56-	     3	    9WEDNESDAY
+
+    71-3-56-	     5	    9FRIDAY   
+
+    71-3-56-	     6	    9SATURDAY 
+
+    71-3-567	     1	    9MONDAY   
+
+    71-3-567	     3	    9WEDNESDAY
+
+    71-3-567	     5	    9FRIDAY   
+
+    71-3-567	     6	    9SATURDAY 
+
+    71-3-567	     7	    9SUNDAY   
+
+    71-3-5-7	     1	    9MONDAY   
+
+    71-3-5-7	     3	    9WEDNESDAY
+
+    71-3-5-7	     5	    9FRIDAY   
+
+    71-3-5-7	     7	    9SUNDAY   
+
+    71-3--6-	     1	    9MONDAY   
+
+    71-3--6-	     3	    9WEDNESDAY
+
+    71-3--6-	     6	    9SATURDAY 
+
+    71-3--67	     1	    9MONDAY   
+
+    71-3--67	     3	    9WEDNESDAY
+
+    71-3--67	     6	    9SATURDAY 
+
+    71-3--67	     7	    9SUNDAY   
+
+    71-3---7	     1	    9MONDAY   
+
+    71-3---7	     3	    9WEDNESDAY
+
+    71-3---7	     7	    9SUNDAY   
+
+    71--4---	     1	    9MONDAY   
+
+    71--4---	     4	    9THURSDAY 
+
+    71--45--	     1	    9MONDAY   
+
+    71--45--	     4	    9THURSDAY 
+
+    71--45--	     5	    9FRIDAY   
+
+    71--456-	     1	    9MONDAY   
+
+    71--456-	     4	    9THURSDAY 
+
+    71--456-	     5	    9FRIDAY   
+
+    71--456-	     6	    9SATURDAY 
+
+    71--4567	     1	    9MONDAY   
+
+    71--4567	     4	    9THURSDAY 
+
+    71--4567	     5	    9FRIDAY   
+
+    71--4567	     6	    9SATURDAY 
+
+    71--4567	     7	    9SUNDAY   
+
+    71--45-7	     1	    9MONDAY   
+
+    71--45-7	     4	    9THURSDAY 
+
+    71--45-7	     5	    9FRIDAY   
+
+    71--45-7	     7	    9SUNDAY   
+
+    71--4-6-	     1	    9MONDAY   
+
+    71--4-6-	     4	    9THURSDAY 
+
+    71--4-6-	     6	    9SATURDAY 
+
+    71--4-67	     1	    9MONDAY   
+
+    71--4-67	     4	    9THURSDAY 
+
+    71--4-67	     6	    9SATURDAY 
+
+    71--4-67	     7	    9SUNDAY   
+
+    71--4--7	     1	    9MONDAY   
+
+    71--4--7	     4	    9THURSDAY 
+
+    71--4--7	     7	    9SUNDAY   
+
+    71---5--	     1	    9MONDAY   
+
+    71---5--	     5	    9FRIDAY   
+
+    71---56-	     1	    9MONDAY   
+
+    71---56-	     5	    9FRIDAY   
+
+    71---56-	     6	    9SATURDAY 
+
+    71---567	     1	    9MONDAY   
+
+    71---567	     5	    9FRIDAY   
+
+    71---567	     6	    9SATURDAY 
+
+    71---567	     7	    9SUNDAY   
+
+    71---5-7	     1	    9MONDAY   
+
+    71---5-7	     5	    9FRIDAY   
+
+    71---5-7	     7	    9SUNDAY   
+
+    71----6-	     1	    9MONDAY   
+
+    71----6-	     6	    9SATURDAY 
+
+    71----67	     1	    9MONDAY   
+
+    71----67	     6	    9SATURDAY 
+
+    71----67	     7	    9SUNDAY   
+
+    71-----7	     1	    9MONDAY   
+
+    71-----7	     7	    9SUNDAY   
+
+    7-2-----	     2	    9TUESDAY  
+
+    7-23----	     2	    9TUESDAY  
+
+    7-23----	     3	    9WEDNESDAY
+
+    7-234---	     2	    9TUESDAY  
+
+    7-234---	     3	    9WEDNESDAY
+
+    7-234---	     4	    9THURSDAY 
+
+    7-2345--	     2	    9TUESDAY  
+
+    7-2345--	     3	    9WEDNESDAY
+
+    7-2345--	     4	    9THURSDAY 
+
+    7-2345--	     5	    9FRIDAY   
+
+    7-23456-	     2	    9TUESDAY  
+
+    7-23456-	     3	    9WEDNESDAY
+
+    7-23456-	     4	    9THURSDAY 
+
+    7-23456-	     5	    9FRIDAY   
+
+    7-23456-	     6	    9SATURDAY 
+
+    7-234567	     2	    9TUESDAY  
+
+    7-234567	     3	    9WEDNESDAY
+
+    7-234567	     4	    9THURSDAY 
+
+    7-234567	     5	    9FRIDAY   
+
+    7-234567	     6	    9SATURDAY 
+
+    7-234567	     7	    9SUNDAY   
+
+    7-2345-7	     2	    9TUESDAY  
+
+    7-2345-7	     3	    9WEDNESDAY
+
+    7-2345-7	     4	    9THURSDAY 
+
+    7-2345-7	     5	    9FRIDAY   
+
+    7-2345-7	     7	    9SUNDAY   
+
+    7-234-6-	     2	    9TUESDAY  
+
+    7-234-6-	     3	    9WEDNESDAY
+
+    7-234-6-	     4	    9THURSDAY 
+
+    7-234-6-	     6	    9SATURDAY 
+
+    7-234-67	     2	    9TUESDAY  
+
+    7-234-67	     3	    9WEDNESDAY
+
+    7-234-67	     4	    9THURSDAY 
+
+    7-234-67	     6	    9SATURDAY 
+
+    7-234-67	     7	    9SUNDAY   
+
+    7-234--7	     2	    9TUESDAY  
+
+    7-234--7	     3	    9WEDNESDAY
+
+    7-234--7	     4	    9THURSDAY 
+
+    7-234--7	     7	    9SUNDAY   
+
+    7-23-5--	     2	    9TUESDAY  
+
+    7-23-5--	     3	    9WEDNESDAY
+
+    7-23-5--	     5	    9FRIDAY   
+
+    7-23-56-	     2	    9TUESDAY  
+
+    7-23-56-	     3	    9WEDNESDAY
+
+    7-23-56-	     5	    9FRIDAY   
+
+    7-23-56-	     6	    9SATURDAY 
+
+    7-23-567	     2	    9TUESDAY  
+
+    7-23-567	     3	    9WEDNESDAY
+
+    7-23-567	     5	    9FRIDAY   
+
+    7-23-567	     6	    9SATURDAY 
+
+    7-23-567	     7	    9SUNDAY   
+
+    7-23-5-7	     2	    9TUESDAY  
+
+    7-23-5-7	     3	    9WEDNESDAY
+
+    7-23-5-7	     5	    9FRIDAY   
+
+    7-23-5-7	     7	    9SUNDAY   
+
+    7-23--6-	     2	    9TUESDAY  
+
+    7-23--6-	     3	    9WEDNESDAY
+
+    7-23--6-	     6	    9SATURDAY 
+
+    7-23--67	     2	    9TUESDAY  
+
+    7-23--67	     3	    9WEDNESDAY
+
+    7-23--67	     6	    9SATURDAY 
+
+    7-23--67	     7	    9SUNDAY   
+
+    7-23---7	     2	    9TUESDAY  
+
+    7-23---7	     3	    9WEDNESDAY
+
+    7-23---7	     7	    9SUNDAY   
+
+    7-2-4---	     2	    9TUESDAY  
+
+    7-2-4---	     4	    9THURSDAY 
+
+    7-2-45--	     2	    9TUESDAY  
+
+    7-2-45--	     4	    9THURSDAY 
+
+    7-2-45--	     5	    9FRIDAY   
+
+    7-2-456-	     2	    9TUESDAY  
+
+    7-2-456-	     4	    9THURSDAY 
+
+    7-2-456-	     5	    9FRIDAY   
+
+    7-2-456-	     6	    9SATURDAY 
+
+    7-2-4567	     2	    9TUESDAY  
+
+    7-2-4567	     4	    9THURSDAY 
+
+    7-2-4567	     5	    9FRIDAY   
+
+    7-2-4567	     6	    9SATURDAY 
+
+    7-2-4567	     7	    9SUNDAY   
+
+    7-2-45-7	     2	    9TUESDAY  
+
+    7-2-45-7	     4	    9THURSDAY 
+
+    7-2-45-7	     5	    9FRIDAY   
+
+    7-2-45-7	     7	    9SUNDAY   
+
+    7-2-4-6-	     2	    9TUESDAY  
+
+    7-2-4-6-	     4	    9THURSDAY 
+
+    7-2-4-6-	     6	    9SATURDAY 
+
+    7-2-4-67	     2	    9TUESDAY  
+
+    7-2-4-67	     4	    9THURSDAY 
+
+    7-2-4-67	     6	    9SATURDAY 
+
+    7-2-4-67	     7	    9SUNDAY   
+
+    7-2-4--7	     2	    9TUESDAY  
+
+    7-2-4--7	     4	    9THURSDAY 
+
+    7-2-4--7	     7	    9SUNDAY   
+
+    7-2--5--	     2	    9TUESDAY  
+
+    7-2--5--	     5	    9FRIDAY   
+
+    7-2--56-	     2	    9TUESDAY  
+
+    7-2--56-	     5	    9FRIDAY   
+
+    7-2--56-	     6	    9SATURDAY 
+
+    7-2--567	     2	    9TUESDAY  
+
+    7-2--567	     5	    9FRIDAY   
+
+    7-2--567	     6	    9SATURDAY 
+
+    7-2--567	     7	    9SUNDAY   
+
+    7-2--5-7	     2	    9TUESDAY  
+
+    7-2--5-7	     5	    9FRIDAY   
+
+    7-2--5-7	     7	    9SUNDAY   
+
+    7-2---6-	     2	    9TUESDAY  
+
+    7-2---6-	     6	    9SATURDAY 
+
+    7-2---67	     2	    9TUESDAY  
+
+    7-2---67	     6	    9SATURDAY 
+
+    7-2---67	     7	    9SUNDAY   
+
+    7-2----7	     2	    9TUESDAY  
+
+    7-2----7	     7	    9SUNDAY   
+
+    7--3----	     3	    9WEDNESDAY
+
+    7--34---	     3	    9WEDNESDAY
+
+    7--34---	     4	    9THURSDAY 
+
+    7--345--	     3	    9WEDNESDAY
+
+    7--345--	     4	    9THURSDAY 
+
+    7--345--	     5	    9FRIDAY   
+
+    7--3456-	     3	    9WEDNESDAY
+
+    7--3456-	     4	    9THURSDAY 
+
+    7--3456-	     5	    9FRIDAY   
+
+    7--3456-	     6	    9SATURDAY 
+
+    7--34567	     3	    9WEDNESDAY
+
+    7--34567	     4	    9THURSDAY 
+
+    7--34567	     5	    9FRIDAY   
+
+    7--34567	     6	    9SATURDAY 
+
+    7--34567	     7	    9SUNDAY   
+
+    7--345-7	     3	    9WEDNESDAY
+
+    7--345-7	     4	    9THURSDAY 
+
+    7--345-7	     5	    9FRIDAY   
+
+    7--345-7	     7	    9SUNDAY   
+
+    7--34-6-	     3	    9WEDNESDAY
+
+    7--34-6-	     4	    9THURSDAY 
+
+    7--34-6-	     6	    9SATURDAY 
+
+    7--34-67	     3	    9WEDNESDAY
+
+    7--34-67	     4	    9THURSDAY 
+
+    7--34-67	     6	    9SATURDAY 
+
+    7--34-67	     7	    9SUNDAY   
+
+    7--34--7	     3	    9WEDNESDAY
+
+    7--34--7	     4	    9THURSDAY 
+
+    7--34--7	     7	    9SUNDAY   
+
+    7--3-5--	     3	    9WEDNESDAY
+
+    7--3-5--	     5	    9FRIDAY   
+
+    7--3-56-	     3	    9WEDNESDAY
+
+    7--3-56-	     5	    9FRIDAY   
+
+    7--3-56-	     6	    9SATURDAY 
+
+    7--3-567	     3	    9WEDNESDAY
+
+    7--3-567	     5	    9FRIDAY   
+
+    7--3-567	     6	    9SATURDAY 
+
+    7--3-567	     7	    9SUNDAY   
+
+    7--3-5-7	     3	    9WEDNESDAY
+
+    7--3-5-7	     5	    9FRIDAY   
+
+    7--3-5-7	     7	    9SUNDAY   
+
+    7--3--6-	     3	    9WEDNESDAY
+
+    7--3--6-	     6	    9SATURDAY 
+
+    7--3--67	     3	    9WEDNESDAY
+
+    7--3--67	     6	    9SATURDAY 
+
+    7--3--67	     7	    9SUNDAY   
+
+    7--3---7	     3	    9WEDNESDAY
+
+    7--3---7	     7	    9SUNDAY   
+
+    7---4---	     4	    9THURSDAY 
+
+    7---45--	     4	    9THURSDAY 
+
+    7---45--	     5	    9FRIDAY   
+
+    7---456-	     4	    9THURSDAY 
+
+    7---456-	     5	    9FRIDAY   
+
+    7---456-	     6	    9SATURDAY 
+
+    7---4567	     4	    9THURSDAY 
+
+    7---4567	     5	    9FRIDAY   
+
+    7---4567	     6	    9SATURDAY 
+
+    7---4567	     7	    9SUNDAY   
+
+    7---45-7	     4	    9THURSDAY 
+
+    7---45-7	     5	    9FRIDAY   
+
+    7---45-7	     7	    9SUNDAY   
+
+    7---4-6-	     4	    9THURSDAY 
+
+    7---4-6-	     6	    9SATURDAY 
+
+    7---4-67	     4	    9THURSDAY 
+
+    7---4-67	     6	    9SATURDAY 
+
+    7---4-67	     7	    9SUNDAY   
+
+    7---4--7	     4	    9THURSDAY 
+
+    7---4--7	     7	    9SUNDAY   
+
+    7----5--	     5	    9FRIDAY   
+
+    7----56-	     5	    9FRIDAY   
+
+    7----56-	     6	    9SATURDAY 
+
+    7----567	     5	    9FRIDAY   
+
+    7----567	     6	    9SATURDAY 
+
+    7----567	     7	    9SUNDAY   
+
+    7----5-7	     5	    9FRIDAY   
+
+    7----5-7	     7	    9SUNDAY   
+
+    7-----6-	     6	    9SATURDAY 
+
+    7-----67	     6	    9SATURDAY 
+
+    7-----67	     7	    9SUNDAY   
+
+    7------7	     7	    9SUNDAY   
+

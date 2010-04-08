@@ -1,0 +1,93 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+You are viewing the Display Lock Type screen.  This popup screen contains the
+following list of lock/resource types.  Below is an explanation of what
+each lock type is used for:
+
+database         Any users in a database will hold a database lock
+                 on that database.
+
+table            Any user in a table will hold a table lock on that table.
+
+page             Any user accessing a page in a table will hold a page 
+                 lock on that page..
+
+row              This lock type is held on a user table row if row level  
+                 locking is enabled. It is also used for certain system 
+                 catalog operations.
+
+createtable      Any user creating a table will hold a createtable
+                 lock on that table
+
+svpage           Each page touched by a server on behalf of a session in
+                 that server will have a server page lock.
+
+extend           This lock type is used while extending (adding a new
+                 page to) a file.  It prevents two processes from
+                 trying to add pages to the same file at the same time.
+
+config           Used when accessing a database config file.  The
+                 config file holds database configuration information.
+
+dbtblid          Used to manage temp-table id's.  This does not
+                 actually lock anything, but the lock value is used to
+                 store the next table id to use for temp tables.
+
+svdatabase       Each database opened by a server will have a server
+                 database lock on it.
+
+svtable          Each table touched by a session in a server will have a
+                 server table resource lock.
+
+event            Used by Ingres processes that want to use the locking
+                 system as a means to signal events.  This does not
+                 actually lock anything.
+
+control          This is a table control lock.  It is requested in
+                 order to perform MODIFY, INDEX, RELOCATE, DESTROY,
+                 and CREATE SQL commands.  This lock is also held by
+                 sessions reading a table with readlock=nolock set.
+
+journal          This lock is used when accessing database journal
+                 files.  Held only by RCP (Recovery process) and ACP
+                 (Archiver process).
+
+opendb           There is an open database resource lock for each open
+                 database in a server
+
+checkpoint       Each database which has online backup running will have
+                 have a checkpoint resource lock on it.
+
+ckpcluster       Same as checkpoint but for VAXcluster installations
+                 of Ingres.
+
+buffermgr        Each multiserver data buffer holds a buffer manager
+                 lock.
+
+bufmgrdb         Buffer manager database lock.  Used to determine
+                 the validity of cache contents.  When a database
+                 is opened by a server, the value in this lock is
+                 used to determine if the cached information for the
+                 database is valid.  Doesn't actually lock anything.
+
+bufmgrtable      Used the same as the buffer manager database lock,
+                 but operates on tables rather than databases.
+
+syscontrol       This type is used in conjunction with user defined
+                 abstract datatypes.
+
+eventcontrol     This lock type is used in conjunction with event
+                 signaling.
+
+ckptxn           This lock type is used to coordinate online
+                 checkpoints of a database.  All transactions which
+                 have updated the database have this lock.
+
+audit            This lock type is used in conjunction with the
+                 auditing facility.
+
+phpage           This lock type is used when row locking to get
+                 shared/exclusive control of page.
+ 
+value            This lock type is used to lock a key value for duplicate 
+                 checking and phantom protection.
+

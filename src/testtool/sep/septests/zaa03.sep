@@ -1,0 +1,224 @@
+/*
+	Test Name: zaa03.sep
+	Time: 18-AUG-1991 12:17:07
+	User Name: donj
+	Terminal type: septerm
+ 
+	Test ID : (TBD)
+	Module  : 
+	Filename: zaa03.sep
+	Purpose	: Test SEP .if,.else functionality
+	Input Files  : none
+	Output Files : none
+	Database     : none
+	Tables       :
+	Synopsis     :	Tests .if,.else,.endif SEP functionality. Also
+			intersperses comments throughout so that a "SEP -m"
+			zaa03.upd file can be compared to the original
+			zaa03.sep file to double check comments retention.
+
+	History: 18-AUG-1991	Created				DONJ
+          15-Jan-1992   (DonJ)
+                Add Unix cannon for matching trace file.
+          16-Jan-1992   (DonJ)
+                Fix any unix discrepencies in canons.
+
+          29-Jan-1992	(DonJ)
+		Changed final canon for content of trace files, splitting
+		them into three and running them thru all the cases.
+           4-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+           5-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+           5-FEB-1992	(DonJ)
+		Fix VMS canons for new trace output.
+          17-Feb-1992	(DonJ)
+		Check canons for UNIX. Also check for new functions.
+          25-Feb-1992	(DonJ)
+		Redo canons for UNIX. Also check for new functions.
+
+	Comments 0.
+*/
+
+
+
+.if !sepparamif1
+
+
+
+? setenv sepparamif1 FALSE
+<<
+environment variable was defined
+>>
+
+
+
+
+.endif
+
+
+
+
+
+
+.if !sepparamif2
+
+
+
+
+? setenv sepparamif2 FALSE
+<<
+environment variable was defined
+>>
+
+
+
+.endif
+
+
+? echo "Before both ifs." 
+/*
+	Comments 1.
+*/
+<<
+Before both ifs.
+>>
+
+
+
+/*
+	Comments 2.
+*/
+
+
+
+
+.if sepparamif1 = "TRUE" 
+/*
+	Comments 3.
+*/
+? echo " TRUE ?." 
+/*
+	Comments 4.
+*/
+<<
+ TRUE ?.
+>>
+/*
+	Comments 5.
+*/
+.if sepparamif2 = "TRUE" 
+/*
+	Comments 6.
+*/
+? echo "TRUE TRUE" 
+/*
+	Comments 7.
+*/
+<<
+TRUE TRUE
+>>
+/*
+	Comments 8.
+*/
+.else 
+/*
+	Comments 9.
+*/
+? echo "TRUE FALSE" 
+/*
+	Comments 10.
+*/
+<<
+TRUE FALSE
+>>
+/*
+	Comments 11.
+*/
+.endif 
+/*
+	Comments 12.
+*/
+? echo " AFTER TRUE ?." 
+/*
+	Comments 13.
+*/
+<<
+ AFTER TRUE ?.
+>>
+/*
+	Comments 14.
+*/
+.else 
+/*
+	Comments 15.
+*/
+? echo " FALSE ?." 
+/*
+	Comments 16.
+*/
+<<
+ FALSE ?.
+>>
+/*
+	Comments 17.
+*/
+.if sepparamif2 = "TRUE" 
+/*
+	Comments 18.
+*/
+? echo "FALSE TRUE" 
+/*
+	Comments 19.
+*/
+<<
+FALSE TRUE
+>>
+/*
+	Comments 20.
+*/
+.else 
+/*
+	Comments 21.
+*/
+? echo "FALSE FALSE" 
+/*
+	Comments 22.
+*/
+<<
+FALSE FALSE
+>>
+/*
+	Comments 23.
+*/
+.endif 
+/*
+	Comments 24.
+*/
+? echo " AFTER FALSE ?." 
+/*
+	Comments 25.
+*/
+<<
+ AFTER FALSE ?.
+>>
+/*
+	Comments 26.
+*/
+.endif 
+/*
+	Comments 27.
+*/
+? echo "After both ifs." 
+/*
+	Comments 28.
+*/
+<<
+After both ifs.
+>>
+/*
+	Comments 29.
+*/
+
+
+Ending at: 13-MAR-1992 21:41:28

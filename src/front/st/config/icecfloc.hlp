@@ -1,0 +1,5 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ This is the location of your Web server's configuration files.
+
+ This field is mandatory. Internet communication cannot be installed nor used
+ without a valid entry in this field.

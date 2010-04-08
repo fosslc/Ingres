@@ -1,0 +1,4 @@
+MAINOBJ.obj
+dblib.obj
+II_APILIB/share
+II_COMPATLIB/share

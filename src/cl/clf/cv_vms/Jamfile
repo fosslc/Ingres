@@ -1,0 +1,10 @@
+#
+# Jamfile file for cl!clf!cv_vms
+#
+
+SubDir ING_SRC cl clf cv_vms ;
+
+IISUBSYS cl clf cv_vms ;
+
+IILIBRARY COMPATLIB : cv.c cvfa.c cvfcvt.c cvgcc.c cvpk.c cvlpk.c
+	cvpkl.c cvpkpk.c cvaptr.c cvaxptr.c cvptra.c cvptrax.c ;

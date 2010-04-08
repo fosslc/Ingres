@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0017)http://localhost/ -->
+<html>
+<head>
+<title> How the Country Select Box Is Loaded </title>
+<link rel="stylesheet" TYPE="text/css" HREF="stylesheet.css">
+<meta name="Generator" content="AITPublish">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta name="Keywords" content="UTF-8">
+<link rel="stylesheet" href="stylesheet.css">
+<script language="javascript" type="text/javascript" src="dhtml_toc.js"></script>
+</HEAD>
+<body  onload="if (isTOCLoaded()) {expand('3327');expand('3326');expand('3319');highlight('3312')}">
+<table cellpadding="0" cellspacing="0" border="0">
+<tr valign="top">
+<td width= "0">
+<p class="bodytext"><a href="routes_form.htm" target="_self"><img src="574.png" alt="Previous Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+<td width= "0">
+<p class="bodytext"><a href="region_load.htm" target="_self"><img src="573.png" alt="Next Topic" height="16px" width="16px" vspace="0" hspace="0" align="bottom" border="0"></a></p></td>
+</tr>
+</table>
+<h4 class="heading4">How the Country Select Box Is Loaded</h4>
+<p class="bodytext">In the Routes form, the country selected in the Country select box is loaded in the function getCountrySelect in <a href="showSource.php?file=airportAJAX" target="_blank">airport.ajax.php</a> </p>
+<p class="bodytext">The getCountrySelect function creates a new <a href="showSource.php?file=RoutesModel" target="_blank">RoutesModel</a> instance and calls the member function getCountrys. </p>
+<p class="bodytext">The getCountrys function returns a two dimensional array where each entry of the outer array is an array of the elements with index &quot;ct_name&quot; and &quot;ct_code&quot;.</p>
+<p class="bodytext">The getCountrys method executes the following query and gets the results as array. Then, it converts all values in the array from UTF-16LE to UTF-8:</p>
+<p class="codefirst">function getCountrys()</p>
+<p class="code">{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;$this-&gt;DBConn-&gt;query(</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;select ct_name, ct_code from country ORDER BY ct_name&quot;);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;$resultArray = $this-&gt;DBConn-&gt;getResultArray();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;$countryArray=array();</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;foreach($resultArray as $key =&gt; $value)</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;{</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$countryArray[$key]['ct_name'] =</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iconv(&quot;UTF-16LE&quot;,&quot;UTF-8&quot;,$value['ct_name']);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$countryArray[$key]['ct_code'] =</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iconv(&quot;UTF-16LE&quot;,&quot;UTF-8&quot;,$value['ct_code']);</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+<p class="code">&nbsp;&nbsp;&nbsp;&nbsp;return $countryArray;</p>
+<p class="code">}</p>
+<p class="bodytext">In the HTML code of the select box returned by getCountrySelect, the function fillRegion is set as event handler for onChange events of the select box. The parameter to the functions are the IDs of div elements to which the HTML code is assigned to.</p>
+
+
+<p>
+<hr>
+<font size="-2" face="Verdana">
+&#0169;&nbsp;<authorit:cdate>2007 Ingres Corporation.  
+All rights reserved.<br> &nbsp;
+</font>
+</body>
+</html>
+
+

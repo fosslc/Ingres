@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+This frame allows one to enable/disable the display of Rulers and Straight
+Edges in the Layout Form.  Rulers are section markers with a tick mark
+every fifth column and a digit every tenth column.  Straight Edges are a pair
+of lines (one vertical and one horizontal) that can be used to line up
+components on a column or row basis.
+
+To enable the display of Rulers or Straight Edges, enter a "y" into the
+appropriate field.  Entering an "n" will disable (i.e., remove) the display
+of Rulers or Straight Edges.
+
+The menu commands are:
+
+        MENU COMMANDS   SYNOPSIS
+        -------------   --------
+        Cancel          Return to the Form Layout menu, without changing
+                        the display of Rulers and Straight Edges.
+
+        Help            Access the Ingres Help facility.
+
+        End             Return to the Form Layout menu, changing the display
+                        of Rulers and Straight Edges as specified in the form.

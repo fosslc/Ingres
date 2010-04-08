@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+/#-- vqqparts.hlp, help on fixing compilation errors in VQ assignments,
+/#-- defaults, and restrictions.
+/#-- 
+On this screen you are expected to repair a problem with an assignment,
+restriction, or default specified in the Visual Query for this frame.  The 
+current assignments, restrictions, or defaults are displayed for correction.  
+
+Choose the menuitem 'Cancel' if you do not wish to save your changes.

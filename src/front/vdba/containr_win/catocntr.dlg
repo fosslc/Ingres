@@ -1,0 +1,52 @@
+DLGINCLUDE RCDATA DISCARDABLE
+BEGIN
+    "CNTDLG.H\0"
+END
+
+IDD_STYLEDIALOG DIALOG 90, 30, 165, 232
+STYLE DS_SYSMODAL | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "CA-Container Styles"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX        "Container Styles", IDC_NULL, 5, 4, 155, 72, WS_GROUP
+    CONTROL         "&Read Only", IDC_CHKREADONLY, "Button", BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP, 11, 18, 46, 10
+    CONTROL         "Sp&lit Bar", IDC_CHKSPLITBAR, "Button", BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP, 11, 32, 46, 10
+    CONTROL         "&Tab Stop", IDC_CHKTABSTOP, "Button", BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP, 11, 46, 63, 12
+    CONTROL         "&Group", IDC_CHKGROUP, "Button", BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP, 11, 60, 54, 12
+    CONTROL         "&Integral Width", IDC_CHKINTEGRALWIDTH, "Button", 
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP, 86, 18, 63, 10
+    CONTROL         "I&ntegral Height", IDC_CHKINTEGRALHEIGHT, "Button", 
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP, 86, 32, 63, 10
+    CONTROL         "&Expand Last Field", IDC_CHKEXPANDLASTFLD, "Button", 
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP, 86, 46, 70, 10
+    GROUPBOX        "Selection Style", IDC_NULL, 5, 82, 155, 42, WS_GROUP
+    RADIOBUTTON     "&Single Select", IDC_RADIOSINGLESEL, 11, 96, 58, 10, 
+                    WS_GROUP | WS_TABSTOP
+    RADIOBUTTON     "&Multiple Select", IDC_RADIOMULTIPLESEL, 11, 110, 65, 
+                    10, WS_TABSTOP
+    RADIOBUTTON     "E&xtended Select", IDC_RADIOEXTENDEDSEL, 86, 96, 69, 10, 
+                    WS_TABSTOP
+    RADIOBUTTON     "Bloc&k Select", IDC_RADIOBLOCKSEL, 86, 110, 65, 10, 
+                    WS_TABSTOP
+    GROUPBOX        "Frame Style", IDC_NULL, 5, 130, 155, 28, WS_GROUP
+    CONTROL         "&Border", IDC_CHKHASBORDER, "Button", BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP, 11, 144, 34, 10
+    CONTROL         "&Dialog (thick)", IDC_CHKHASDLGFRAME, "Button", 
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP, 86, 144, 56, 10
+    GROUPBOX        "Optional Controls", IDC_NULL, 5, 164, 155, 42
+    CONTROL         "&Caption", IDC_CHKHASCAPTION, "Button", BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP, 11, 178, 40, 10
+    CONTROL         "System Men&u", IDC_CHKSYSMENU, "Button", 
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP, 11, 192, 58, 10
+    CONTROL         "&Horz. Scroll Bar", IDC_CHKHORZSCROLL, "Button", 
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP, 86, 178, 64, 10
+    CONTROL         "&Vert. Scroll Bar", IDC_CHKVERTSCROLL, "Button", 
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP, 86, 192, 64, 10
+    DEFPUSHBUTTON   "OK", IDOK, 24, 214, 32, 14, WS_GROUP
+    PUSHBUTTON      "Cancel", IDCANCEL, 104, 214, 32, 14, WS_GROUP
+END

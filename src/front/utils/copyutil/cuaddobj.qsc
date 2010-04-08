@@ -1,0 +1,302 @@
+/*
+**	Copyright (c) 2004 Ingres Corporation
+**	All rights reserved.
+*/
+
+# include	<compat.h>
+# include	<st.h>
+# include	<er.h>
+# include	<gl.h>
+# include	<sl.h>
+# include	<iicommon.h>
+# include	<fe.h>
+## include	<ooclass.qsh>
+# include	<cu.h>
+# include	<ug.h>
+# include	"ercu.h"
+# include	<uigdata.h>
+
+/**
+** Name:	cuaddobj.qc - add an objec to the database
+**
+** Description:
+**	cu_addobj	add an object to the object catalog(s).
+**	cu_gbfadd	Add a GBF graph to the object catalogs.
+**
+** History:
+**	28-Apr-87 (rdesmond) - written.
+**	5-jul-1987 (Joe)
+**		Taken from copyform.
+**	3-mar-1988 (Joe)
+**		Cu_rdobj expects all the routines in here to
+**		start a transaction.  cu_addobj will do it
+**		by the call to 'IIOOidWrite()'.  Others do it themselves.
+**	27-jan-92 (davel)
+**		Fixed bug 40231 in cu_addobj().
+**	03-apr-92 (szeng/seng)
+**		Caste return value of cu_objexist().  This was making
+**		copyapp crash on the hp3_us5.  Integrated into ingres63p
+**		by seng.
+**	9-sept-92 (blaise)
+**		Added new argument to FErelexists().
+**	10/15/93 (kchin)
+**		Cast argument to PTR when calling IIOOidWrite(), this
+**		is due to the change of datatype of variable parameters
+**		to PTR in IIOOidWrite() routine.  The change here is made in 
+**		cu_addobj().
+**	21-jan-1999 (hanch04)
+**	    replace nat and longnat with i4
+**	31-aug-2000 (hanch04)
+**	    cross change to main
+**	    replace nat and longnat with i4
+**	24-Aug-2009 (kschendel) 121804
+**	    Update function declarations to fix gcc 4.3 problems.
+**/
+
+char	*UGcat_now();
+FUNC_EXTERN bool cu_gbfexist();
+
+/*{
+** Name:	cu_addobj - add an object to the object catalog(s).
+**
+** Description:
+**	For the object whose object catalog attributes are passed in, delete
+**	an object with the same class, name and owner, if it exists, and
+**	enter the description of the new object in the object catalog(s)
+**	(currently ii_objects and ii_longremarks).  Return the id of the
+**	new object.
+**
+** Input params:
+**	class		object class of the object add (OOID).
+**	level		The level number of the object.  If it
+**			is not a level 0 object, then we don't
+**			check for an existing one since it is
+**			dependent on a level 0 object.
+**	short_remark	short remark for the object.
+**	long_remark	long remark for the object.
+**	addfunc		A function to call before the object is added to
+**			see if the name is to be changed.
+**	name		A pointer to a buffer that is at least FE_MAXNAME+1
+**			characters long.  On input is must contain the
+**			name of the object to add.
+**	curr_id		pointer to OOID in which to return the ID.
+**			may be set to NULL if ID is not desired.
+**	conflict	A pointer to a CUCONFLICT.
+**
+** Output params:
+**	name		Will contain the name of the object added.
+**
+**	curr_id		pointer to OOID in which to return the ID.
+**
+**	conflict	Will be set appropriately.
+**
+**	addobj		If set to TRUE	the object and all its details should
+**			be added.  If FALSE, then the object should not
+**			be added.
+**
+**
+**
+** Returns:
+**	{STATUS}  OK	added object successfully.
+**		  FAIL	failed to add object successfully.
+**
+** History:
+**	28-Apr-87 (rdesmond) - written.
+**	5-jul-1987 (Joe)
+**		Taken from copyform.
+**	4-aug-1987 (Joe)
+**		Added conflict and addfunc.  Allowed for names changing.
+**	2-feb-1988 (Joe)
+**		Took out range statements, made deletes a repeat.
+**	28-aug-1990 (Joe)
+**	    Changed references to IIUIgdata to the UIDBDATA structure
+**	    returned from IIUIdbdata().
+**	27-jan-92 (davel) bug 40231
+**		Do not create a new constant object if addfunc() returns
+**		status of FAIL - this occurs if more than one language
+**		exists for a constant.
+*/
+STATUS
+cu_addobj(class, level, short_remark, long_remark, addfunc, name,
+			curr_id, conflict, addobj)
+OOID		class;
+i4		level;
+char		*short_remark;
+char		*long_remark;
+STATUS		(*addfunc)();
+char		*name;
+OOID		*curr_id;
+CUCONFLICT	*conflict;
+bool		*addobj;
+{
+	OOID	id;
+	i4	rval;
+	char	*now_str = STalloc(UGcat_now());
+
+	OO_OBJECT	*OOp();
+	bool		cu_objexist();
+
+	*addobj = TRUE;
+	/*
+	** Call user's add function if present.	 Allow
+	** them to change the name.
+	*/
+	iiuicw1_CatWriteOn();	/* Turn on catalogs writes */
+	if (addfunc != NULL)
+	{
+	    if ( ((*addfunc)(class, name) ) != OK && class == OC_CONST )
+	    {
+		return OK;
+	    }
+	}
+
+	/* If object exists, it must be deleted first */
+	if (level == 0 && (bool)cu_objexist(class, name, &id))
+	{
+	    if (conflict->cucheck)
+	    {
+		rval = (*conflict->cuconflict)(class, name);
+		IICUscsSetConflictState(rval, conflict);
+	    }
+	    if (!conflict->cureplace)
+	    {
+		*addobj = FALSE;
+		return OK;
+	    }
+	    iiuicw1_CatWriteOn();  /* In case it got turned off */
+	    IICUdoDeleteObject(class, id);
+	}
+
+	/* Save object in object catalog and get new id */
+	id = OC_UNDEFINED;
+	iiuicw1_CatWriteOn();  /* In case it got turned off */
+	if ( IIOOidWrite(class, &id, name, (PTR)0, IIUIdbdata()->user, (PTR)0,
+			 short_remark, now_str, now_str, long_remark) != OK )
+	{
+		return(FAIL);
+	}
+	else
+	{
+		/*
+		** Free up OOtable slot taken by object.
+		*/
+		IIOOforget(OOp(id));
+		/* set id for return */
+		if (curr_id != (OOID *)NULL)
+			*curr_id = id;
+
+		return(OK);
+	}
+}
+
+
+/*{
+** Name:	cu_gbfadd	- Add a gbf graph.
+**
+** Description:
+**	Add a gbf graph to the database.
+**
+**	Since GBF graphs aren't in the object utility, this
+**	doesn't have to add anything, but it does have to
+**	check that 1) the GBF catalogs are present on this
+**	DB and 2) if the graph already exists, then it
+**	must call the user's conflict routine and see if
+**	it should delete the graph.
+**
+** Inputs:
+**	class		object class of the gbf graph.
+**	addfunc		A function to call before the object is added to
+**			see if the name is to be changed.
+**	name		A pointer to a buffer that is at least FE_MAXNAME+1
+**			characters long.  On input is must contain the
+**			name of the object to add.
+**
+**	owner		The old owner code given in the input
+**			file.
+**
+**	conflict	A pointer to a CUCONFLICT.
+**
+** Output params:
+**	name		Will contain the name of the object added.
+**
+**	conflict	Will be set appropriately.
+**
+**	addobj		If set to TRUE	the object and all its details should
+**			be added.  If FALSE, then the object should not
+**			be added.
+**
+**
+**
+** Returns:
+**	OK		added object successfully.
+**	FAIL		failed to add object successfully.
+**
+** History:
+**	28-Apr-87 (rdesmond) - written.
+**	5-jul-1987 (Joe)
+**		Taken from copyform.
+**	4-aug-1987 (Joe)
+**		Added conflict and addfunc.  Allowed for names changing.
+**	7-aug-1987 (Joe)
+**		Modified addobj for gbf.
+**	3-mar-1988 (Joe)
+**		Since cu_rdobj expects all object add routines 
+**		to start a transaction, we do so here.
+*/
+STATUS
+cu_gbfadd(class, addfunc, name, owner, conflict, addobj)
+OOID		class;
+STATUS		(*addfunc)();
+
+EXEC SQL BEGIN DECLARE SECTION;
+    char		*name;
+    char		*owner;
+EXEC SQL END DECLARE SECTION;
+
+CUCONFLICT	*conflict;
+bool		*addobj;
+{
+	i4	rval;
+
+	*addobj = TRUE;
+	/*
+	** Call user's add function if present.	 Allow
+	** them to change the name.
+	*/
+	if (addfunc != NULL)
+	{
+	    iiuicw1_CatWriteOn();  /* In case it got turned off */
+	    (*addfunc)(class, name);
+	}
+
+	if (FErelexists(ERx("gcommands"), NULL) != OK)
+	{
+	    *addobj = FALSE;
+	    IIUGerr(E_CU0003_NO_GBF, 0, 1, name);
+	    return OK;
+	}
+
+	/* If object exists, it must be deleted first */
+	if (cu_gbfexist(class, name, owner))
+	{
+	    if (conflict->cucheck)
+	    {
+		rval = (*conflict->cuconflict)(class, name);
+		IICUscsSetConflictState(rval, conflict);
+	    }
+	    if (!conflict->cureplace)
+	    {
+		*addobj = FALSE;
+		return OK;
+	    }
+	    iiuicw1_CatWriteOn();  /* In case it got turned off */
+	    EXEC SQL REPEATED DELETE FROM graphs
+		WHERE graphid = :name AND gowner = :owner;
+	    EXEC SQL REPEATED DELETE FROM gcommands
+		WHERE graphid = :name AND gowner = :owner;
+
+	}
+	/* begin transaction */
+	IIUIbeginXaction();
+	return FEinqerr();
+}

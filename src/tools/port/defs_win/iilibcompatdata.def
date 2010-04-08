@@ -1,0 +1,413 @@
+;
+;  History:
+;	24-Aug-2004 (drivi01)
+;		Created by joining iigcfdata.def and iiclfdata.def
+;		into a single def file.  See one of those file for
+;		history previous to this file.
+;	24-Aug-2004 (drivi01)
+;		Removed SL functions which no longer exist due to
+;		B1 security code removal.
+;	13-Sep-2004 (drivi01)
+;		Removed duplicate SystemVarPrefix.
+;	24-Jan-2006 (drivi01)
+;	   	Added new globaldef data SystemServiceName.
+;	19-apr-2006 (drivi01)
+;		Added SystemNetutilName.
+;       06-Feb-2007 (Ralph Loen) SIR 117590
+;               Removed GCWINTCP_log_rem_host and GCTCPIP_log_rem_host, since 
+;               gethostbyaddr() and getnameinfo() are no longer invoked for 
+;               network listens.
+;	14-May-2007 (gupsh01)
+;		Added CM_isUTF8 etc.
+;	15-Jun-2007 (drivi01)
+;		Added CM_utf8attrtab, CM_utf8casetab,CM_UTF8AttrTab,
+;		CM_UTF8CaseTab.
+;       12-Aug-2008 (gupsh01)
+;               Renamed CM_utf8attrtab to CM_attrtab_UTF8 and CM_utf8casetab
+;               to CM_casetab_UTF8.
+;	06-Aug-2009 (Bruce Lunsford) Sir 122426
+;	    Remove hCompletion.
+;	    Change hMutexGccCompleteQ to GccCompleteQCritSect.
+;	17-Dec-2009 (bonro01)
+;	    Add CM_isDBL for change 501847 bug 122994
+;
+
+EXPORTS
+bt_bitmsk		@1	DATA			
+bt_clrmsk		@2	DATA			
+bt_cnttab		@3	DATA			
+bt_ffstab		@4	DATA			
+bt_flstab		@5	DATA			
+bt_highmsk		@6	DATA			
+bt_lowmsk		@7	DATA			
+CM_AttrTab		@8	DATA			
+CM_CaseTab		@9	DATA			
+CMdefcs		@10	DATA			
+CM_DefAttrTab		@11	DATA			
+CM_DefCaseTab		@12	DATA			
+CS_init_sem		@13	DATA			
+CS_int_classes		@14	DATA			
+CsMultiTaskEvent		@15	DATA			
+CsMultiTaskSem		@16	DATA			
+Cs_known_list_hdr		@17	DATA			
+Cs_known_list_sem		@18	DATA			
+Cs_main_scb		@19	DATA			
+Cs_numprocessors		@20	DATA			
+Cs_old_last_chance		@21	DATA			
+Cs_srv_block		@22	DATA			
+CS_classes		@23	DATA			
+CS_cnd_classes		@24	DATA			
+CS_mon_classes		@25	DATA			
+CS_scb_classes		@26	DATA			
+ER_langt		@27	DATA			
+ERmulti		@28	DATA			
+ERnames		@29	DATA			
+ERnumnames		@30	DATA			
+CL_acct_sem		@31	DATA			
+CL_misc_sem		@32	DATA			
+DI_sc_sem		@33	DATA			
+DMF_misc_sem		@34	DATA			
+FP_misc_sem		@35	DATA			
+GCC_ccb_sem		@36	DATA			
+GCevent_func		@37	DATA			
+GC_misc_sem		@38	DATA			
+GC_trace_sem		@39	DATA			
+hPurgeEvent		@40	DATA			
+LGK_misc_sem		@41	DATA			
+ME_init_mutex		@42	DATA			
+MEalloctab		@43	DATA			
+MEbase		@44	DATA			
+MEconttab		@45	DATA			
+MEmax_alloc		@46	DATA			
+ME_b_Status		@47	DATA			
+ME_page_sem		@48	DATA			
+ME_segpool		@49	DATA			
+ME_stream_sem		@50	DATA			
+MEtaglist_mutex		@51	DATA			
+NM_loc_sem		@52	DATA			
+NMBakSymloc		@53	DATA			
+NMLogSymloc		@54	DATA			
+NMSymloc		@55	DATA			
+NMtime		@56	DATA			
+PM_misc_sem		@57	DATA			
+Pipe_buffer_size		@58	DATA			
+SCF_misc_sem		@59	DATA			
+TR_context_sem		@60	DATA			
+;    MEp_page_sem                        DATA
+;    MEv_page_sem                        DATA
+SIchar_mode		@61	DATA			
+TraceWindowClass		@62	DATA			
+TraceWindowTitle		@63	DATA			
+;SLtm_got_labelset		@64	DATA			
+;SLtm_label_set		@65	DATA			
+TM_Dmsize		@66	DATA			
+TM_Monthtab		@67	DATA			
+TE2buttons		@68	DATA			
+;    TEbuffer                            DATA
+TEdbleSpeed		@69	DATA			
+TEcmdEnabled		@70	DATA			
+TEstreamEnabled		@71	DATA			
+TEcols		@72	DATA			
+;    TEfont                              DATA
+;    TEhDispAddr                         DATA
+;    TEhWndLastLine                      DATA
+TEhorzSpeed		@73	DATA			
+TEmenuSpeed		@74	DATA			
+TEmode		@75	DATA			
+TEmouse		@76	DATA			
+;    TEnobell                            DATA
+TEok2write		@77	DATA			
+;    TEpDispAddr                         DATA
+;    TEpaintLastLine                     DATA
+TErows		@78	DATA			
+;    TEscreenX                           DATA
+;    TEscreenY                           DATA
+;    TEstopPaste                         DATA
+;    TEstopPos                           DATA
+TEvertSpeed		@79	DATA			
+TExScreen		@80	DATA			
+TExlate		@81	DATA			
+TEyScreen		@82	DATA			
+TElstMouse		@83	DATA			
+;    TEKeyboardIn                        DATA
+;    TEKeyboardOut                       DATA
+IITCmaster		@84	DATA			
+UTminSw		@85	DATA			
+UTstatus		@86	DATA			
+;    UTdebug                             DATA
+;    Conn_id                             DATA
+GC_trace		@87	DATA			
+;    Is_server                           DATA
+GCCL_trace		@88	DATA			
+IIGCc_proto_threads		@89	DATA			
+;    Dummy_Buf                           DATA
+GCLANMAN_trace		@90	DATA			
+GCWINTCP_trace		@91	DATA			
+WS_wintcp		@92	DATA			
+IIGCc_gcc_pct		@93	DATA			
+IIGCc_prot_init		@94	DATA			
+IIGCc_prot_exit		@95	DATA			
+GCWINSOCK_trace		@96	DATA			
+WSAStartup_called		@97	DATA			
+GCNVLSPX_trace		@98	DATA			
+WS_nvlspx		@99	DATA			
+Terminal		@100	DATA			
+Env_ID		@101	DATA			
+II_copyright		@102	DATA			
+Reldate		@103	DATA			
+Version		@104	DATA			
+IIolLangInfo		@105	DATA			
+;    IIhWndIcon                          DATA
+;    IIhWndMain                          DATA
+;    WNDblClkOK                          DATA
+;    WNEnableFormsScrollBars             DATA
+;    WNResumeDefault                     DATA
+;    WNResumeSw                          DATA
+;    WNTimesUp                           DATA
+;    WNbDoSbarVert                       DATA
+;    WNbSbarHorz                         DATA
+;    WNbSbarVert                         DATA
+;    WNcloseEQexit                       DATA
+;    WNcursorCol                         DATA
+;    WNcursorRow                         DATA
+;    WNcxChar                            DATA
+;    WNcxClient                          DATA
+;    WNcxForm                            DATA
+;    WNcyCell                            DATA
+;    WNcyChar                            DATA
+;    WNcyClient                          DATA
+;    WNcyForm                            DATA
+;    WNexitCode                          DATA
+;    WNextIvRect                         DATA
+;    WNextLeading                        DATA
+;    WNfindkey                           DATA
+;    WNfocus                             DATA
+;    WNfp_stdin                          DATA
+;    WNgokey                             DATA
+;    WNhCaret                            DATA
+;    WNhFont1                            DATA
+;    WNhFont2                            DATA
+;    WNhInstance                         DATA
+;    WNhWndButton                        DATA
+;    WNhWndFHBar                         DATA
+;    WNhWndFVBar                         DATA
+;    WNhWndMore                          DATA
+;    WNhWndW4GL                          DATA
+;    WNiEditID                           DATA
+;    WNiFileID                           DATA
+;    WNiHelpID                           DATA
+;    WNiViewID                           DATA
+;    WNinitDone                          DATA
+;    WNmenukey                           DATA
+;    WNminHeight                         DATA
+;    WNmyParent                          DATA
+;    WNnCmdShow                          DATA
+;    WNnHoldMsgs                         DATA
+;    WNnoMousePos                        DATA
+;    WNpaintLastLine                     DATA
+;    WNpnProgName                        DATA
+;    WNquitkey                           DATA
+;    WNszIcon                            DATA
+;    WNszIngres                          DATA
+;    WNwCaret                            DATA
+;    WNwait                              DATA
+;    WNwinCols                           DATA
+;    WNwinRows                           DATA
+;    WNxForm                             DATA
+;    WNyForm                             DATA
+;    WNIconWndName                       DATA
+;    WNnyLength                          DATA
+;    WNnyString                          DATA
+;    WNpeLength                          DATA
+;    WNpeString                          DATA
+;    WNprLength                          DATA
+;    WNprString                          DATA
+;    WNynChars                           DATA
+;    WNynLength                          DATA
+;    WNynString                          DATA
+nonames_opt		@106	DATA			
+s_list		@107	DATA			
+;    bTrack                              DATA
+;    OrgX                                DATA
+;    OrgY                                DATA
+;    PrevX                               DATA
+;    PrevY                               DATA
+;    X                                   DATA
+;    Y                                   DATA
+;    ClipBRect                           DATA
+;    Shape                               DATA
+;    RetainShape                         DATA
+;    lBgnPt                              DATA
+;    lEndPt                              DATA
+;    lNxtBgnPt                           DATA
+;    bMoved                              DATA
+;    bMarked                             DATA
+;    moveInProgress                      DATA
+;    moveRestart                         DATA
+;    moveScnX                            DATA
+;    moveScnY                            DATA
+;    moveBgnx                            DATA
+;    moveBgny                            DATA
+;    moveEndx                            DATA
+;    moveEndy                            DATA
+;    bitMBgnx                            DATA
+;    bitMBgny                            DATA
+;    bitMEndx                            DATA
+;    bitMEndy                            DATA
+;    moveCurx                            DATA
+;    moveCury                            DATA
+;    moveAdjx                            DATA
+;    moveAdjy                            DATA
+;    hDCmove                             DATA
+;    oldMoveObject                       DATA
+ConditionCriticalSection		@108	DATA			
+Di_moinfo		@109	DATA			
+Di_moinited		@110	DATA			
+Di_reads		@111	DATA			
+Di_writes		@112	DATA			
+Gc_reads		@113	DATA			
+Gc_writes		@114	DATA			
+ME_segpool_sem		@115	DATA			
+ME_tlskeys		@116	DATA			
+SemaphoreInitCriticalSection		@117	DATA			
+TEcci		@118	DATA			
+TEcsbi		@119	DATA			
+TEsa		@120	DATA			
+TEwriteall		@121	DATA			
+bNewTEconsole		@122	DATA			
+IIte_fpin		@123	DATA			
+IIte_use_tc		@124	DATA			
+IItc_in		@125	DATA			
+IIte_fpout		@126	DATA			
+dio_resumes		@127	DATA			
+hAsyncEvents		@128	DATA			
+;    hCompletion		@129	DATA			
+GccCompleteQCritSect		@130	DATA			
+hSignalShutdown		@131	DATA			
+hTEconsole		@132	DATA			
+hWndStdout		@133	DATA			
+i_meactual		@134	DATA			
+i_meuser		@135	DATA			
+isProcess		@136	DATA			
+SystemLocationVariable		@137	DATA			
+SystemLocationSubdirectory		@138	DATA			
+SystemProductName		@139	DATA			
+SystemDBMSName		@140	DATA			
+SystemVarPrefix		@141	DATA			
+SystemCfgPrefix		@142	DATA			
+SystemCatPrefix		@143	DATA			
+SystemAdminUser		@144	DATA			
+SystemSyscatOwner		@145	DATA			
+SystemTermType		@146	DATA			
+SystemExecName		@147	DATA			
+SystemBuildName		@148	DATA			
+Ex_print_stack		@149	DATA			
+hTEprevconsole		@150	DATA			
+hTEprevconsoleInput		@151	DATA			
+GC_associd_sem		@152	DATA			
+CX_Proc_CB		@153	DATA			
+CX_cmo_data		@154	DATA			
+CX_Stats		@155	DATA			
+ii_ver		@156	DATA			
+gv_classes		@157	DATA			
+gv_cnf_classes		@158	DATA			
+gv_cnfdat_classes		@159	DATA			
+GLDLLdummy		@160				
+MO_nalloc		@161	DATA			
+MO_bytes_alloc		@162	DATA			
+MO_nfree		@163	DATA			
+MO_mem_limit		@164	DATA			
+MO_mem_classes		@165	DATA			
+MO_oid_map		@166	DATA			
+MO_map_time		@167	DATA			
+MO_meta_classes		@168	DATA			
+MO_mon_classes		@169	DATA			
+MO_max_str_bytes		@170	DATA			
+MO_str_defines		@171	DATA			
+MO_str_deletes		@172	DATA			
+MO_str_bytes		@173	DATA			
+MO_str_freed		@174	DATA			
+MO_str_classes		@175	DATA			
+MO_tree_classes		@176	DATA			
+MO_classes		@177	DATA			
+MO_disabled		@178	DATA			
+MO_instances		@179	DATA			
+MO_monitors		@180	DATA			
+;    MO_nattach                  DATA
+;    MO_nclassdef                DATA
+;    MO_ndel_monitor             DATA
+;    MO_ndetach                  DATA
+;    MO_nget                     DATA
+;    MO_ngetnext                 DATA
+;    MO_nmutex                   DATA
+;    MO_nset                     DATA
+;    MO_nset_monitor             DATA
+;    MO_ntell_monitor            DATA
+;    MO_nunmutex                 DATA
+MO_sem		@181	DATA			
+MO_semcnt		@182	DATA			
+MO_strings		@183	DATA			
+index_class		@184	DATA			
+
+MO_cdefs		@185	DATA
+    MO_nattach	@186                  DATA
+    MO_nclassdef    @187            DATA
+    MO_ndel_monitor     @188        DATA
+    MO_ndetach              @189    DATA
+    MO_nget                     @190	DATA
+    MO_ngetnext                 	@191 	DATA
+    MO_nmutex                   @192	DATA
+    MO_nset                     @193	DATA
+    MO_nset_monitor             @194	DATA
+    MO_ntell_monitor            @195	DATA
+    MO_nunmutex                 @196	DATA
+    Di_gather_io		@197	DATA
+    DI_misc_sem		@198	DATA
+    DI_lru_initialized		@199	DATA
+    DI_lru_queue		@200	DATA
+    Cs_desched_usec_sleep	@201	DATA
+    Cs_max_sem_loops		@202	DATA
+    CS_samp_threads		@203	DATA
+    CS_samp_classes		@204	DATA
+    CsSamplerBlkPtr		@205	DATA
+    CSsamp_stopping		@206	DATA
+    CSsamp_index_name		@207	DATA
+    hCsSamplerSem		@208	DATA
+    GCshutdownEvent		@209	DATA
+    SyncEvent			@210	DATA
+    is_comm_svr			@211	DATA
+    is_gcn		@212	DATA
+    WS_tcpip		@213	DATA
+    GCTCPIP_trace		@214	DATA	
+    GCWINSOCK2_trace		@215	DATA
+    hWndDummy		@216	DATA
+    SIlogit		@217	DATA
+    W4glErrorLog	@218	DATA
+    need2del_font	@219	DATA
+    tracewin_font	@220	DATA
+    SIhInst		@221	DATA
+    linebuf		@222	DATA
+    printbuf		@223	DATA
+    SIwantDialogBox	@224	DATA
+    NM_static		@225	DATA
+    Pidq_mutex		@226	DATA
+    Pidq		@227	DATA
+    Pidq_init		@228	DATA
+    hTEconsoleInput	@229	DATA
+    is_gcc		@230	DATA
+    
+    SystemAltExecName	@231	DATA
+;    SystemVarPrefix	@232	DATA
+;    SystemProductName 	@233	DATA
+    DSnat		@234    DATA
+    SystemNetutilName	@235	DATA
+    SystemServiceName	@236	DATA
+    CM_UTF8Bytes	@237	DATA			
+    CM_isUTF8		@238	DATA			
+    CM_BytesForUTF8	@239	DATA			
+    CM_attrtab_UTF8	@240	DATA
+    CM_casetab_UTF8	@241	DATA
+    CM_UTF8AttrTab	@242	DATA
+    CM_UTF8CaseTab	@243	DATA
+    NMLckSymloc         @244    DATA
+    CM_isDBL		@245	DATA

@@ -1,0 +1,473 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+#include "rctools.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\xipm.ico"
+IDR_XIPMTYPE            ICON    DISCARDABLE     "res\\ipmdoc.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_IPMCOMMAND          BITMAP  DISCARDABLE     "res\\ipmcmds.bmp"
+IDB_HOTMAINFRAME        BITMAP  DISCARDABLE     "res\\hotmainf.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+IDR_IPMCOMMAND TOOLBAR DISCARDABLE  16, 15
+BEGIN
+    BUTTON      IDM_GO
+    BUTTON      IDM_REFRESH
+    BUTTON      IDM_SHUT_DOWN
+    SEPARATOR
+    BUTTON      IDM_PREFERENCE
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENU PRELOAD DISCARDABLE 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "Open...\tCtr+O",              IDM_OPEN_ENVIRONMENT
+        MENUITEM "Save...\tCtrl+S",             IDM_SAVE_ENVIRONMENT
+        MENUITEM "Remove / Shutdown",           IDM_SHUT_DOWN
+        MENUITEM SEPARATOR
+        MENUITEM "Preferences",                 IDM_PREFERENCE
+        MENUITEM "Save Preferences as Default", IDM_PREFERENCE_SAVE, CHECKED
+        MENUITEM SEPARATOR
+        MENUITEM "SQL &Error History\tCtrl+E",  ID_SQL_ERROR
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR2
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM SEPARATOR
+        MENUITEM "Refresh",                     IDM_REFRESH
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Help Topics",                ID_DEFAULT_HELP
+	MENUITEM "Ingres Support &Online...",   ID_HELP_SUPPORTONLINE
+        MENUITEM "&About Ingres Visual Performance Monitor...", ID_APP_ABOUT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS PRELOAD MOVEABLE PURE 
+BEGIN
+    "E",            ID_SQL_ERROR,           VIRTKEY, CONTROL, NOINVERT
+    "N",            ID_FILE_NEW,            VIRTKEY, CONTROL, NOINVERT
+    "O",            IDM_OPEN_ENVIRONMENT,   VIRTKEY, CONTROL, NOINVERT
+    "P",            ID_FILE_PRINT,          VIRTKEY, CONTROL, NOINVERT
+    "S",            IDM_SAVE_ENVIRONMENT,   VIRTKEY, CONTROL, NOINVERT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY, NOINVERT
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDR_FILTER DIALOG DISCARDABLE  0, 0, 384, 26
+STYLE WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "Null Resources",IDM_NULL_RESOURCE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,0,4,73,10
+    CONTROL         "Internal Sessions",IDM_INTERNAL_SESSION,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,0,16,70,10
+    CONTROL         "System Lock Lists",IDM_SYSTEM_LOCKLIST,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,77,5,81,10
+    CONTROL         "Inactive Transactions",IDM_INACTIVE_TRANSACTION,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,77,16,86,10
+    CONTROL         "Quick Single Object Properties Refresh",
+                    IDM_EXPRESS_REFRESH,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,172,16,139,10
+    EDITTEXT        IDM_REFRESH_FREQUENCY,313,14,24,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    LTEXT           "Second(s)",IDC_STATIC,340,17,32,8
+    COMBOBOX        IDM_RESOURCE_TYPE,172,1,111,57,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+END
+
+IDR_CONNECTBAR DIALOG DISCARDABLE  0, 0, 248, 16
+STYLE WS_CHILD
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL         "",IDM_NODE,"ComboBoxEx32",CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP,2,1,68,70
+    CONTROL         "",IDM_SERVER_CLASS,"ComboBoxEx32",CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP,72,1,86,70
+    CONTROL         "",IDM_USER,"ComboBoxEx32",CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP,164,1,78,70
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDR_CONNECTBAR, DIALOG
+    BEGIN
+        RIGHTMARGIN, 218
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE PRELOAD DISCARDABLE 
+BEGIN
+    IDR_MAINFRAME           "Monitor\n\nXipm\n\n\nXipm.Document\nXipm Document"
+END
+
+STRINGTABLE PRELOAD DISCARDABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Ingres Visual Performance Monitor"
+    AFX_IDS_IDLEMESSAGE     "Ready"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+    ID_FILE_PAGE_SETUP      "Change the printing options\nPage Setup"
+    ID_FILE_PRINT_SETUP     "Change the printer and printing options\nPrint Setup"
+    ID_FILE_PRINT           "Print the active document\nPrint"
+    ID_FILE_PRINT_PREVIEW   "Display full pages\nPrint Preview"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_APP_ABOUT            "Display program information, version number and copyright\nAbout"
+    ID_APP_EXIT             "Quit the application; prompts to save documents\nExit"
+    ID_DEFAULT_HELP         "Help Topics\nHelp Topics"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_FILE_MRU_FILE1       "Open this document"
+    ID_FILE_MRU_FILE2       "Open this document"
+    ID_FILE_MRU_FILE3       "Open this document"
+    ID_FILE_MRU_FILE4       "Open this document"
+    ID_FILE_MRU_FILE5       "Open this document"
+    ID_FILE_MRU_FILE6       "Open this document"
+    ID_FILE_MRU_FILE7       "Open this document"
+    ID_FILE_MRU_FILE8       "Open this document"
+    ID_FILE_MRU_FILE9       "Open this document"
+    ID_FILE_MRU_FILE10      "Open this document"
+    ID_FILE_MRU_FILE11      "Open this document"
+    ID_FILE_MRU_FILE12      "Open this document"
+    ID_FILE_MRU_FILE13      "Open this document"
+    ID_FILE_MRU_FILE14      "Open this document"
+    ID_FILE_MRU_FILE15      "Open this document"
+    ID_FILE_MRU_FILE16      "Open this document"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or hide the toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or hide the status bar\nToggle StatusBar"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    AFX_IDS_SCSIZE          "Change the window size"
+    AFX_IDS_SCMOVE          "Change the window position"
+    AFX_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    AFX_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    AFX_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    AFX_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    AFX_IDS_SCRESTORE       "Restore the window to normal size"
+    AFX_IDS_SCTASKLIST      "Activate Task List"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    AFX_IDS_PREVIEW_CLOSE   "Close print preview mode\nCancel Preview"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_MAINTOOLBAR_TITLE   "Ingres Visual Performance Monitor"
+    IDS_DEFAULT_SERVER      "<Default Server>"
+    IDS_DEFAULT_USER        "<Default User>"
+    IDS_MSG_FAIL_2_LOCATEDLL "Failed to locate dll '%1'."
+    IDS_PRODUCT_VERSION     "Version %s"
+    IDS_ALLRESOURCETYPES    "<All Other Resource Types>"
+    IDS_MSG_II_SYSTEM_NOT_DEFINED "II_SYSTEM is not defined."
+    IDS_MSG_FAILED_2_REGISTER_SERVER "Failed to register '%1' control."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDM_NODE                "Virtual Node\nVirtual Node"
+    IDM_SERVER_CLASS        "Server Class\nServer Class"
+    IDM_USER                "User\nUser"
+    IDM_REFRESH             "Force Refresh\nRefresh"
+    IDM_SHUT_DOWN           "Shut Down or Remove\nShut Down"
+    IDM_EXPAND_BRANCH       "Expand Branch\nExpand Branch"
+    IDM_EXPAND_ALL          "Expand all Branches\nExpand all Branches"
+    IDM_COLLAPSE_BRANCH     "Collapse Branch\nCollapse Branch"
+    IDM_COLLAPSE_ALL        "Collapse all Branches\nCollapse all Branches"
+    ID_VIEW_TOOLBAR2        "Show or hide the toolbar\nToggle ToolBar"
+    IDM_OPEN_ENVIRONMENT    "Open the environment\nOpen environment"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDM_RESOURCE_TYPE       "Other Resource Types\nOther Resource Types"
+    IDM_NULL_RESOURCE       "Null Resource\nNull Resource"
+    IDM_INTERNAL_SESSION    "Internal Sessions\nInternal Sessions"
+    IDM_SYSTEM_LOCKLIST     "System Lock Lists\nSystem Lock Lists"
+    IDM_INACTIVE_TRANSACTION "Inactive Transaction\nInactive Transaction"
+    IDM_EXPRESS_REFRESH     "Quick Single Object Property Refresh\nQuick Single Object Property Refresh"
+    IDM_REFRESH_FREQUENCY   "Refresh Frequency (seconds)\nRefresh Frequency (seconds)"
+    IDM_GO                  "Apply\nApply"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_UNKNOWN_ENVIRONMENT_FILE 
+                            "Please select a file with a .vdbamon extension"
+    IDS_MSG_FAIL_2_SAVEENVIRONMENT "Failed to save the environment."
+    IDS_MSG_FAIL_2_LOADENVIRONMENT "Failed to load the environment."
+    IDS_FAILED_2_SAVESTORAGE 
+                            "Failed to save storage (configuration/setting) file."
+    IDS_FAILED_2_OPENSTORAGE 
+                            "Failed to open storage (configuration/setting) file."
+    IDS_MSG_ASKFORSAVING_WORKINGFILE "Do you want to save the current file ?"
+    IDS_MSG_USER_UNAVAILABLE "Users are not available on a Gateway Node."
+    IDS_INVALID_CMDLINE     "Invalid command line. The syntax is:\nvdbamon.exe \t[-node=<node name> [/serverclass]] [-u<username>] [-maxapp] [-noapply]"
+    IDS_CANNOT_CONNECT_TO   "Failed to connect to node '%s'."
+    IDS_MSG_REQUEST_TO_START_INSTALLATION 
+                            "Your ingres installation has not been started.\nDo you want to start it now ?"
+    IDS_MSG_INGRES_NOT_START "The ingres installation is not started."
+    IDS_MSG_INGRES_START_FAILED "Failed to start the ingres installation."
+    IDS_MSG_II_SYSYTEM_SET  "%s system variable not set."
+    IDS_F_SQLERR_STMT       "Erroneous statement:"
+    IDS_FORMAT_SQLERR_ERRNUM "Sql error code: %s"
+    IDS_F_SQLERR_ERRTXT     "Sql error text:"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDM_SAVE_ENVIRONMENT    "Save the environment\nSave environment"
+    IDM_PREFERENCE          "Preferences\nOptions"
+    IDM_PREFERENCE_SAVE     "Save the Preferences as Default\n"
+    ID_HELP_SUPPORTONLINE   "Ingres Support Online\nIngres Support Online"
+    ID_SQL_ERROR            "SQL Error History\nSQL Error History"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_F_SQLERR_ERRNUM     "Sql error code:"
+    IDS_E_CREAT_TEMP_FILE   "Error creating temporary file for managing the SQL Error History.\nThis functionality will be disabled."
+    IDS_S_UNKNOWN_STATEMENT "Unknown statement - statistic data only"
+    IDS_S_ACCESS_ERROR      "Error while accessing the temporary file for the SQL Error History."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_SQLERR DIALOG DISCARDABLE  15, 28, 310, 234
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "History of SQL Statements Errors"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "Sql &Statement :",IDC_STATIC,8,6,290,9
+    EDITTEXT        IDC_SQLERR_STMT,5,20,290,50,ES_MULTILINE | ES_OEMCONVERT | 
+                    ES_READONLY | WS_VSCROLL | WS_HSCROLL
+    LTEXT           "Sql &Error Code :",IDC_STATIC,8,76,65,9
+    LTEXT           "",IDC_SQLERR_ERRCODE,75,77,100,9
+    LTEXT           "Sql Error &Text :",IDC_STATIC,8,86,100,9
+    EDITTEXT        IDC_SQLERR_ERRTXT,5,100,290,100,ES_MULTILINE | 
+                    ES_OEMCONVERT | ES_READONLY | WS_VSCROLL | WS_HSCROLL
+    PUSHBUTTON      "&First",IDC_SQLERR_FIRST,5,215,50,14
+    PUSHBUTTON      "&Prev",IDC_SQLERR_PREV,60,215,50,14
+    PUSHBUTTON      "&Next",IDC_SQLERR_NEXT,115,215,50,14
+    PUSHBUTTON      "&Last",IDC_SQLERR_LAST,170,215,50,14
+    DEFPUSHBUTTON   "Finis&h",IDOK,245,215,50,14
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "#include ""rctools.h""\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\xipm.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#include ""afxprint.rc""       // printing/print preview resources\r\n"
+    "#include ""rctools.rc""       // from libwctrl.lib\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\xipm.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "afxprint.rc"       // printing/print preview resources
+#include "rctools.rc"       // from libwctrl.lib
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

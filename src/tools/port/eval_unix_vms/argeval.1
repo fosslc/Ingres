@@ -1,0 +1,45 @@
+.\"	$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/argeval.1,v 1.1 90/03/09 09:17:30 source Exp $
+.TH ARGEVAL 1 "rti" "Relational Technology, Inc." "Relational Technology, Inc."
+.ta 8n 16n 24n 32n 40n 48n 56n
+.SH NAME
+argeval \- Reveal the order of argument evaluation.
+.SH ORIGIN
+Relational Technology, Inc.
+.SH SYNOPSIS
+.B argeval
+[ -v ]
+.SH DESCRIPTION
+.I Argeval
+shows the order of argument evaluation.  It passes arguments with side
+effects to a function, which then figures out which one got evaluated
+first.  The output is either:
+.nf
+
+	right to left
+.fi
+.PP
+or:
+.nf
+
+	left to right
+.fi
+.PP
+.B -v
+``verbose'' output indents the output one tab stop and shows some
+internal details.  This is the output on the Pyramid:
+.nf
+
+	argeval:
+		a = 0, b = 1
+		left to right
+.fi
+.SH "SEE ALSO"
+\fIargorder(1)\fP, \fIargloc(1)\fP, \fIstackorder(1)\fP
+.SH BUGS
+.I Argeval
+assumes that the evaluation is consistent on the machine, either left to
+right or right to left.  This isn't always true.  On the Pyramid,
+arguments that fit in the \fBtr\fP registers are evaluated left to
+right; those that don't are pushed on the stack from right to left.  And
+structures and unions are \fBalways\fP put on the stack, wherever
+they're evaluated.

@@ -1,0 +1,33 @@
+#
+# Jamfile file for cl!clf!di_win
+#
+
+SubDir ING_SRC cl clf di_win ;
+
+IISUBSYS cl clf di_win ;
+
+
+IIBINEXE didump : didump.c ;
+IINEEDLIBS didump :  COMPATLIB ;
+
+IILIBRARY COMPATLIB : diwrite.c
+	disense.c
+	direname.c
+	diread.c
+	diopen.c
+	dimo.c
+	dilru.c
+	dilist.c
+	diguara.c
+	digather.c
+	digalloc.c
+	diforce.c
+	diflush.c
+	didelete.c
+	diddelet.c
+	didcreat.c
+	dicreate.c
+	diclose.c
+	dialloc.c ;
+
+IILIBRARY IMPCOMPATLIBDATA : didata.c ;

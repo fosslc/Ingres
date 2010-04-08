@@ -1,0 +1,22 @@
+/*
+** Copyright (c) 2007 Ingres Corporation
+*/
+/*
+** Generic part file for DTP for TUXEDO
+*/
+
+/*
+** History
+**	22-Aug-2007 (bonro01)
+**		Created.
+*/
+
+PART tuxedo32
+
+/*
+** ingres!lib!lp32
+*/
+
+   DIRECTORY ingres!lib!lp32
+   BUILD_DIR (ING_BUILD)!lib!lp32
+      FILE libiitux.a

@@ -1,0 +1,201 @@
+/*
+** Copyright (c) 1996, 2008 Ingres Corporation
+*/
+# include <compat.h>
+# include <cm.h>
+# include <st.h>
+# include <er.h>
+# include <gl.h>
+# include <iicommon.h>
+# include <fe.h>
+# include <erfe.h>
+# include <uf.h>
+# include <ug.h>
+# include <rpu.h>
+# include "errm.h"
+
+/**
+** Name:	evtlist.qsc - list of dbevents
+**
+** Description:
+**	Defines
+**		evt_list	- list of dbevents
+**
+** History:
+**	16-dec-96 (joea)
+**		Created based on events.osq in replicator library.
+**	07-feb-97 (joea)
+**		Add FRSkey4 to Send menu option.
+**	02-apr-97 (joea)
+**		Do not show dd_ping event.
+**	26-jun-98 (abbjo03) bug 91700
+**		Expand the startup_value buffer to the column length.
+**	18-aug-98 (mcgem01)
+**		Forms based utilities must use IIUFprompt in place of
+**		IIUGprompt.
+**      18-dec-2008 (joea)
+**          Replace READONLY/WSCREADONLY by const.
+**/
+
+# define	SEND_TO_ALL	((i2)-1)
+
+
+GLOBALREF
+##char	RMdb_display[];
+
+
+static bool	form_initd;
+static const
+##char	*form_name = ERx("rmevents"),
+##	*tf_name = ERx("iitf"),
+##	*fevt_name = ERx("dbevent"),
+##	*fs_flag = ERx("s_flag"),
+##	*fstartup_value = ERx("startup_value"),
+##	*fevt_descr = ERx("event_desc");
+
+
+FUNC_EXTERN void evt_raise(char *evt_name, char *flag_name, i2 server_no);
+FUNC_EXTERN void evt_send(char *evt_name, char *startup_value);
+
+
+/*{
+** Name:	evt_list	- list of dbevents
+**
+** Description:
+**	Send Events to Replication Servers
+**
+** Inputs:
+**	none
+**
+** Outputs:
+**	none
+**
+** Returns:
+**	none
+*/
+void
+evt_list()
+##{
+	EXEC SQL BEGIN DECLARE SECTION;
+##	char	evt_name[DB_MAXNAME+1];
+##	char	startup_value[9];
+##	i2	s_flag;
+	i4	sort_order;
+##	char	evt_descr[501];
+	EXEC SQL END DECLARE SECTION;
+##	char	buff[FE_PROMPTSIZE+1];
+	char	ans[6];		/* to get database or CDDS number */
+	DBEC_ERR_INFO	errinfo;
+
+	if (!form_initd)
+	{
+		if (IIUFgtfGetForm(IIUFlcfLocateForm(), form_name) != OK)
+		{
+			IIUGerr(E_RM0006_Get_form_failed, UG_ERR_ERROR, 1,
+				form_name);
+			return;
+		}
+		form_initd = TRUE;
+	}
+
+##	inittable form_name tf_name read (fs_flag = i2 not null)
+	IIUGmsg(ERget(F_RM001C_Selecting_data), FALSE, 0);
+	EXEC SQL SELECT dbevent, '', s_flag, sort_order,
+			event_desc
+		INTO	:evt_name, :startup_value, :s_flag, :sort_order,
+			:evt_descr
+		FROM	dd_events
+		WHERE	action IN (2, 4)
+		UNION
+		SELECT	'dd_set_server', startup_value, 1, 0,
+			flag_description
+		FROM	dd_flag_values
+		ORDER	BY sort_order, dbevent, 2;
+	EXEC SQL BEGIN;
+##		loadtable form_name tf_name (fevt_name = evt_name,
+##			fstartup_value = startup_value, fs_flag = s_flag,
+##			fevt_descr = evt_descr)
+	EXEC SQL END;
+	RPdb_error_check(0, &errinfo);
+	if (errinfo.errorno)
+	{
+		EXEC SQL ROLLBACK;
+		FTbell();
+		IIUGerr(E_RM0012_Error_selecting, UG_ERR_ERROR, 0);
+		return;
+	}
+	else if (errinfo.rowcount == 0)
+	{
+		EXEC SQL ROLLBACK;
+		IIUGerr(E_RM0013_No_data_found, UG_ERR_ERROR, 0);
+		return;
+	}
+	EXEC SQL COMMIT;
+
+##	display form_name read
+##	initialize (db = RMdb_display)
+##	activate menuitem ERget(F_RM008F_Send)
+##		(expl = ERget(F_RM0090_Send_expl)), FRSkey4
+##	{
+##		getrow form_name tf_name (evt_name = fevt_name,
+##			startup_value = fstartup_value, s_flag = fs_flag)
+		if (STequal(startup_value, ERx("QCDn")) ||
+			STequal(startup_value, ERx("UCDn")) ||
+			STequal(startup_value, ERx("QDBn")) ||
+			STequal(startup_value, ERx("UDBn")))
+		{
+			if (STequal(startup_value, ERx("QDBn")) ||
+					STequal(startup_value, ERx("UDBn")))
+				IIUFprompt(ERget(S_RM0065_Enter_db_no), 1,
+					FALSE, ans, sizeof(ans), 0);
+			else
+				IIUFprompt(ERget(S_RM0066_Enter_cdds_no), 1,
+					FALSE, ans, sizeof(ans), 0);
+			STlcopy(startup_value, buff, 3);
+			STcat(buff, ans);
+		}
+		else
+		{
+			STcopy(startup_value, buff);
+		}
+
+		if (s_flag == 0)
+			evt_raise(evt_name, ERx(""), SEND_TO_ALL);
+		else
+			evt_send(evt_name, buff);
+##	}
+
+##	activate menuitem ERget(F_RM0091_Description)
+##		(expl = ERget(F_RM0092_Description_expl))
+##	{
+##		getrow form_name tf_name (evt_descr = fevt_descr)
+##		message evt_descr with style = popup
+##	}
+
+##	activate FRSkey7 (expl = ERget(F_FE0104_ExplFind))
+##	{
+		FEtabfnd(form_name, tf_name);
+##	}
+
+##	activate FRSkey5 (expl = ERget(F_FE0105_ExplTop))
+##	{
+##		scroll form_name tf_name to 1
+##	}
+
+##	activate FRSkey6 (expl = ERget(F_FE0106_ExplBottom))
+##	{
+##		scroll form_name tf_name to end
+##	}
+
+##	activate menuitem ERget(FE_Help)
+##		(expl = ERget(F_FE0100_ExplFrameHelp)), FRSkey1
+##	{
+		FEhelp(ERx("rmevents.hlp"), ERget(F_RM0093_Send_events));
+##	}
+
+##	activate menuitem ERget(FE_End) (expl = ERget(F_FE0102_ExplEnd)),
+##		FRSkey3
+##	{
+##		breakdisplay
+##	}
+##}
